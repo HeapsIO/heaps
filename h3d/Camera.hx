@@ -60,7 +60,7 @@ class Camera {
 		mcam._43 = -az.dot3(pos);
 		mcam._44 = 1;
 		mproj = makeFrustumMatrix();
-		m.multiply4x4(mcam, mproj);
+		m.multiply(mcam, mproj);
 	}
 	
 	public function lostUp() {
@@ -71,7 +71,7 @@ class Camera {
 	
 	public function movePosAxis( dx : Float, dy : Float, dz = 0. ) {
 		var p = new Vector(dx, dy, dz);
-		p.project3x3(mcam);
+		p.project(mcam);
 		pos.x += p.x;
 		pos.y += p.y;
 		pos.z += p.z;
@@ -79,7 +79,7 @@ class Camera {
 
 	public function moveTargetAxis( dx : Float, dy : Float, dz = 0. ) {
 		var p = new Vector(dx, dy, dz);
-		p.project3x3(mcam);
+		p.project(mcam);
 		target.x += p.x;
 		target.y += p.y;
 		target.z += p.z;

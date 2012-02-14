@@ -23,7 +23,7 @@ class Engine {
 	var curShader : Shader.ShaderData;
 	var curBuffer : h3d.impl.MemoryManager.BigBuffer;
 	var curAttributes : Int;
-	var curTextures : Array<flash.display3D.textures.TextureBase>;
+	var curTextures : Array<h3d.mat.Texture>;
 	
 	public function new( width = 0, height = 0, software = false ) {
 		var stage = flash.Lib.current.stage;
@@ -43,6 +43,10 @@ class Engine {
 	
 	public function driverName() {
 		return ctx == null ? "None" : ctx.driverInfo.split(" ")[0];
+	}
+	
+	public function isReady() {
+		return ctx != null;
 	}
 	
 	public function selectShader( shader : Shader ) {
@@ -87,7 +91,7 @@ class Engine {
 				if( t == null )
 					throw "Texture #" + i + " not bound in shader " + shader;
 				if( t != curTextures[i] ) {
-					ctx.setTextureAt(i, t);
+					ctx.setTextureAt(i, t.t);
 					curTextures[i] = t;
 				}
 			}
@@ -103,6 +107,8 @@ class Engine {
 				ctx.setCulling(FACE[Type.enumIndex(m.culling)]);
 			if( m.ztest != old.ztest || m.zwrite != old.zwrite )
 				ctx.setDepthTest(m.zwrite, COMPARE[Type.enumIndex(m.ztest)]);
+			if( m.colorMask != old.colorMask )
+				ctx.setColorMask(m.colorMask & 1 != 0, m.colorMask & 2 != 0, m.colorMask & 4 != 0, m.colorMask & 8 != 0);
 			curMat = m;
 		}
 		selectShader(m.shader);
@@ -129,7 +135,7 @@ class Engine {
 		curAttributes = pos;
 	}
 	
-	public function drawBuffer( b : h3d.impl.Buffer, indexes ) {
+	public function renderBuffer( b : h3d.impl.Buffer, ?indexes ) {
 		if( indexes != null ) {
 			if( b.next != null ) throw "assert";
 			selectBuffer(b.b);
@@ -197,7 +203,7 @@ class Engine {
 	public function renderObject( o : Object ) {
 		selectMaterial(o.material);
 		if( o.primitive.buffer == null ) o.primitive.alloc(mem);
-		drawBuffer(o.primitive.buffer,o.primitive.indexes);
+		renderBuffer(o.primitive.buffer,o.primitive.indexes);
 	}
 	
 	public function end() {

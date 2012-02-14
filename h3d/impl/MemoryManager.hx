@@ -84,25 +84,21 @@ class MemoryManager {
 	public dynamic function garbage() {
 	}
 	
-	public function allocTexture( bmp : flash.display.BitmapData, mipMap = false ) {
-		var t = ctx.createTexture(bmp.width, bmp.height, flash.display3D.Context3DTextureFormat.BGRA, false);
-		t.uploadFromBitmapData(bmp);
-		if( !mipMap )
-			return t;
-		var w = bmp.width >> 1, h = bmp.height >> 1, mip = 1;
-		var m = new flash.geom.Matrix();
-		while( w > 0 && h > 0 ) {
-			var tmp = new flash.display.BitmapData(w, h, true);
-			m.identity();
-			m.scale(w / bmp.width, h / bmp.height);
-			tmp.draw(bmp, m);
-			t.uploadFromBitmapData(tmp, mip);
-			tmp.dispose();
-			mip++;
-			w >>= 1;
-			h >>= 1;
-		}
-		return t;
+	public function stats() {
+		var total = 0, free = 0, count = 0;
+		return {
+			bufferCount : count,
+			freeMemory : free,
+			totalMemory : total,
+		};
+	}
+	
+	public function allocTexture( width : Int, height : Int ) {
+		return new h3d.mat.Texture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), false);
+	}
+	
+	public function allocCubeTexture( size : Int ) {
+		return new h3d.mat.Texture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), true);
 	}
 	
 	public function allocIndex( indices : flash.Vector<UInt> ) {

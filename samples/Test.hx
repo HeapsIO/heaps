@@ -45,7 +45,9 @@ class Test {
 		obj = new h3d.Object(prim, new h3d.mat.Material(rgb));
 		var bmp = new flash.display.BitmapData(256, 256);
 		bmp.perlinNoise(64, 64, 3, 0, true, true, 7);
-		rgb.tex = e.mem.allocTexture(bmp, true);
+		rgb.tex = e.mem.allocTexture(bmp.width, bmp.height);
+		rgb.tex.uploadMipMap(bmp);
+		bmp.dispose();
 	}
 	
 	function update(_) {

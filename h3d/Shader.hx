@@ -21,7 +21,7 @@ class ShaderData {
 	public var texturesChanged : Bool;
 	public var vertexVars : flash.Vector<Float>;
 	public var fragmentVars : flash.Vector<Float>;
-	public var textures : flash.Vector<flash.display3D.textures.TextureBase>;
+	public var textures : flash.Vector<h3d.mat.Texture>;
 	
 	public function new( infos : ShaderInfos ) {
 		this.stride = infos.stride;

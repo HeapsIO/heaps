@@ -60,13 +60,15 @@ class Vector {
 		z *= f;
 	}
 	
-	public inline function project3x3( m : Matrix ) {
-		var px = x * m._11 + y * m._12 + z * m._13;
-		var py = x * m._21 + y * m._22 + z * m._23;
-		var pz = x * m._31 + y * m._32 + z * m._33;
-		x = px;
-		y = py;
-		z = pz;
+	public inline function project( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
+		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
+		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
+		var w = 1 / (x * m._14 + y * m._24 + z * m._34 + w * m._44);
+		x = px * w;
+		y = py * w;
+		z = pz * w;
+		w = 1;
 	}
 
 	public inline function copy() {

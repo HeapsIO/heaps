@@ -11,7 +11,7 @@ class Macros {
 		case TFloat2, TFloat3, TFloat4: { pack : ["h3d"], name : "Vector", params : [], sub : null };
 		case TInt: { pack : [], name : "Int", params : [], sub : null };
 		case TMatrix(_): { pack : ["h3d"], name: "Matrix", params : [], sub : null };
-		case TTexture(cube): { pack : ["flash","display3D","textures"], name : cube ? "CubeTexture" : "Texture", params : [], sub : null };
+		case TTexture(cube): { pack : ["h3d","mat"], name : "Texture", params : [], sub : null };
 		case TArray(t, size): { pack : ["h3d"], name : "Shader", sub : "FixedArray", params : [TPType(realType(t,p)), TPExpr( { expr : EConst(CInt(""+size)), pos : p } )] };
 		});
 	}
@@ -20,7 +20,7 @@ class Macros {
 		var pos = 0;
 		var fset = shader.vertex ? "data.vertexVars" : "data.fragmentVars";
 		for( c in shader.args.concat(shader.tex) ) {
-			var set = [];
+			var set = [], get = "null";
 			var old = pos;
 			function add(e) {
 				set.push(fset + "[" + pos + "]=" + e + ";");
@@ -57,8 +57,20 @@ class Macros {
 								add(n+"._"+y+x);
 						}
 				case TTexture(_):
+					get = "get_" + c.name;
 					set.push("data.textures[" + c.index + "] = " + n + ";");
 					set.push("data.texturesChanged = true;");
+					fields.push( {
+						name : get,
+						access : [APrivate],
+						kind : FFun( {
+							params : [],
+							args : [],
+							ret : null,
+							expr : Context.parse("return data.textures[" + c.index + "]", c.pos),
+						}),
+						pos : c.pos,
+					});
 				case TInt:
 					add("((" + n + ">>16) & 0xFF) / 255.0");
 					add("((" + n + ">>8) & 0xFF) / 255.0");
@@ -81,7 +93,7 @@ class Macros {
 			fields.push( {
 				name : c.name,
 				access : [APublic],
-				kind : FProp("null", "set_" + c.name, t),
+				kind : FProp(get, "set_" + c.name, t),
 				pos : c.pos,
 			});
 			fields.push( {
@@ -128,8 +140,11 @@ class Macros {
 		case TInst(c, _): c.get();
 		default: throw "assert";
 		}
-		if( shaderCode == null )
+		if( shaderCode == null ) {
+			if( cl.meta.has(":skip") )
+				return null;
 			Context.error("Shader SRC not found", cl.pos);
+		}
 		
 		var p = new format.hxsl.Parser();
 		p.includeFile = function(file) {
