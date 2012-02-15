@@ -136,7 +136,7 @@ class MemoryManager {
 		while( b != null ) {
 			free = b.free;
 			while( free != null ) {
-				if( free.count >= nvect )
+				if( free.count >= nvect && (split || free.pos == 0) )
 					break;
 				free = free.next;
 			}

@@ -10,15 +10,17 @@ class Texture {
 		this.isCubic = c;
 	}
 	
-	public function uploadMipMap( bmp : flash.display.BitmapData, side = 0 ) {
+	public function uploadMipMap( bmp : flash.display.BitmapData, smoothing = false, side = 0 ) {
 		upload(bmp, 0, side);
 		var w = bmp.width >> 1, h = bmp.height >> 1, mip = 1;
 		var m = new flash.geom.Matrix();
+		var draw : flash.display.IBitmapDrawable = bmp;
+		if( smoothing ) draw = new flash.display.Bitmap(bmp, flash.display.PixelSnapping.ALWAYS, true);
 		while( w > 0 && h > 0 ) {
 			var tmp = new flash.display.BitmapData(w, h, true);
 			m.identity();
 			m.scale(w / bmp.width, h / bmp.height);
-			tmp.draw(bmp, m);
+			tmp.draw(draw, m);
 			upload(tmp,mip,side);
 			tmp.dispose();
 			mip++;
@@ -28,10 +30,14 @@ class Texture {
 	}
 	
 	public function upload( bmp : flash.display.BitmapData, mipLevel = 0, side = 0 ) {
-		if( isCubic )
-			flash.Lib.as(t, flash.display3D.textures.CubeTexture).uploadFromBitmapData(bmp, side, mipLevel);
-		else
-			flash.Lib.as(t,  flash.display3D.textures.Texture).uploadFromBitmapData(bmp, mipLevel);
+		if( isCubic ) {
+			var t = flash.Lib.as(t, flash.display3D.textures.CubeTexture);
+			t.uploadFromBitmapData(bmp, side, mipLevel);
+		}
+		else {
+			var t = flash.Lib.as(t,  flash.display3D.textures.Texture);
+			t.uploadFromBitmapData(bmp, mipLevel);
+		}
 	}
 	
 	public function dispose() {

@@ -31,6 +31,15 @@ class Camera {
 		mcam = new Matrix();
 		update();
 	}
+	
+	public function clone() {
+		var c = new Camera(fov, zoom, ratio, zNear, zFar);
+		c.pos = pos.copy();
+		c.up = up.copy();
+		c.target = target.copy();
+		c.update();
+		return c;
+	}
 
 	public function update() {
 		var az = pos.sub(target);

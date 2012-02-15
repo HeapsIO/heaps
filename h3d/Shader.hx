@@ -61,6 +61,10 @@ class Shader {
 		return null;
 	}
 	
+	public function dispose() {
+		if( data.program != null ) data.program.dispose();
+	}
+	
 	public function toString() {
 		return Type.getClassName(Type.getClass(this));
 	}
