@@ -4,8 +4,8 @@ import h3d.mat.Data;
 class Material {
 	
 	public var culling : Face;
-	public var zwrite : Bool;
-	public var ztest : Compare;
+	public var depthWrite : Bool;
+	public var depthTest : Compare;
 	public var blendSrc : Blend;
 	public var blendDst : Blend;
 	public var colorMask : Int;
@@ -14,8 +14,8 @@ class Material {
 	public function new(shader) {
 		this.shader = shader;
 		this.culling = Face.Back;
-		this.zwrite = true;
-		this.ztest = Compare.Less;
+		this.depthWrite = true;
+		this.depthTest = Compare.Less;
 		this.blendSrc = Blend.One;
 		this.blendDst = Blend.Zero;
 		this.colorMask = 15;
@@ -26,9 +26,9 @@ class Material {
 		blendDst = dst;
 	}
 	
-	public function depth( zwrite, ztest ) {
-		this.zwrite = zwrite;
-		this.ztest = ztest;
+	public function depth( write, test ) {
+		this.depthWrite = write;
+		this.depthTest = test;
 	}
 	
 	public function setColorMask(r, g, b, a) {

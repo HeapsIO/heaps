@@ -25,9 +25,8 @@ class Skybox extends h3d.Shader {
 		var prim = new h3d.prim.Cube(2, 2, 2);
         prim.translate( -1, -1, -1);
 		obj = new h3d.Object(prim, new h3d.mat.Material(this));
-		obj.material.zwrite = false;
+		obj.material.depth(false, Compare.Always);
 		obj.material.culling = Face.Front;
-		obj.material.ztest = Compare.Always;
 		color = new h3d.Vector(1, 1, 1, 1);
 	}
 	

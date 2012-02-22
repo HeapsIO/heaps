@@ -105,8 +105,8 @@ class Engine {
 				ctx.setBlendFactors(BLEND[Type.enumIndex(m.blendSrc)], BLEND[Type.enumIndex(m.blendDst)]);
 			if( m.culling != old.culling )
 				ctx.setCulling(FACE[Type.enumIndex(m.culling)]);
-			if( m.ztest != old.ztest || m.zwrite != old.zwrite )
-				ctx.setDepthTest(m.zwrite, COMPARE[Type.enumIndex(m.ztest)]);
+			if( m.depthTest != old.depthTest || m.depthWrite != old.depthWrite )
+				ctx.setDepthTest(m.depthWrite, COMPARE[Type.enumIndex(m.depthTest)]);
 			if( m.colorMask != old.colorMask )
 				ctx.setColorMask(m.colorMask & 1 != 0, m.colorMask & 2 != 0, m.colorMask & 4 != 0, m.colorMask & 8 != 0);
 			curMat = m;
