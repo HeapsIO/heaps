@@ -135,11 +135,12 @@ class Engine {
 		curAttributes = pos;
 	}
 	
-	public function renderBuffer( b : h3d.impl.Buffer, ?indexes ) {
+	public function renderBuffer( b : h3d.impl.Buffer, ?indexes, ?ntri ) {
 		if( indexes != null ) {
 			if( b.next != null ) throw "assert";
 			selectBuffer(b.b);
-			var ntri = Std.int(indexes.count / 3);
+			if( ntri == null )
+				ntri = Std.int(indexes.count / 3);
 			ctx.drawTriangles(indexes.ibuf, b.pos, ntri);
 			triCount += ntri;
 			drawCalls++;
@@ -147,7 +148,7 @@ class Engine {
 		}
 		do {
 			selectBuffer(b.b);
-			var ntri = Std.int(b.nvect / 3);
+			var ntri = Std.int(b.nvert / 3);
 			ctx.drawTriangles(mem.indexes.ibuf, b.pos, ntri);
 			triCount += ntri;
 			drawCalls++;

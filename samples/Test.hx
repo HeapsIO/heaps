@@ -57,10 +57,10 @@ class Test {
 		e.camera.update();
 		rgb.mproj = e.camera.m;
 		e.begin();
-		e.renderObject(obj);
+		obj.render(e);
 		e.camera.m.prependRotate(new h3d.Vector(-0.5, 2, Math.cos(time)), time + Math.PI / 2);
 		rgb.mproj = e.camera.m;
-		e.renderObject(obj);
+		obj.render(e);
 		e.end();
 	}
 	

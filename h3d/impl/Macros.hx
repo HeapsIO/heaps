@@ -1,4 +1,6 @@
 package h3d.impl;
+
+#if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import format.hxsl.Data;
@@ -257,3 +259,4 @@ class Macros {
 	}
 	
 }
+#end

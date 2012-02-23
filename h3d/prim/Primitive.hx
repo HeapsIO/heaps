@@ -6,10 +6,12 @@ class Primitive {
 	public var indexes : h3d.impl.Indexes;
 	
 	public function triCount() {
+		if( indexes != null )
+			return Std.int(indexes.count / 3);
 		var count = 0;
 		var b = buffer;
 		while( b != null ) {
-			count += Std.int(b.nvect / 3);
+			count += Std.int(b.nvert / 3);
 			b = b.next;
 		}
 		return count;

@@ -66,6 +66,7 @@ class MemoryManager {
 	var empty : flash.utils.ByteArray;
 	public var buffers : Array<BigBuffer>;
 	public var indexes : Indexes;
+	public var quadIndexes : Indexes;
 	public var usedMemory : Int;
 	public var allocSize : Int;
 	
@@ -79,6 +80,19 @@ class MemoryManager {
 		var indices = new flash.Vector<UInt>();
 		for( i in 0...allocSize ) indices[i] = i;
 		indexes = allocIndex(indices);
+
+		var indices = new flash.Vector<UInt>();
+		var p = 0;
+		for( i in 0...allocSize >> 2 ) {
+			var k = i << 2;
+			indices[p++] = k;
+			indices[p++] = k + 1;
+			indices[p++] = k + 2;
+			indices[p++] = k + 1;
+			indices[p++] = k + 3;
+			indices[p++] = k + 2;
+		}
+		quadIndexes = allocIndex(indices);
 	}
 	
 	public dynamic function garbage() {
@@ -108,14 +122,9 @@ class MemoryManager {
 	}
 	
 	public function alloc( bytes : flash.utils.ByteArray, stride : Int, allowSplit = true ) {
-		var b = allocSub(Std.int(bytes.length / (stride * 4)), stride, allowSplit);
-		var tmp = b;
-		var pos = 0;
-		while( tmp != null ) {
-			tmp.b.vbuf.uploadFromByteArray(bytes, pos, tmp.pos, tmp.nvect);
-			pos += tmp.nvect * stride * 4;
-			tmp = tmp.next;
-		}
+		var count = Std.int(bytes.length / (stride * 4));
+		var b = allocSub(count, stride, allowSplit);
+		b.upload(bytes, 0, count);
 		return b;
 	}
 	
@@ -124,8 +133,8 @@ class MemoryManager {
 		var tmp = b;
 		var pos = 0;
 		while( tmp != null ) {
-			tmp.b.vbuf.uploadFromVector( pos == 0 ? v : v.slice(pos,tmp.nvect+pos), tmp.pos, tmp.nvect);
-			pos += tmp.nvect * stride;
+			tmp.b.vbuf.uploadFromVector( pos == 0 ? v : v.slice(pos,tmp.nvert+pos), tmp.pos, tmp.nvert);
+			pos += tmp.nvert * stride;
 			tmp = tmp.next;
 		}
 		return b;
