@@ -6,7 +6,7 @@ class Engine {
 	var s3d : flash.display.Stage3D;
 	var ctx : flash.display3D.Context3D;
 	
-	public var camera(default, null) : h3d.Camera;
+	public var camera : h3d.Camera;
 	public var mem(default,null) : h3d.impl.MemoryManager;
 	
 	public var software(default, null) : Bool;
@@ -200,12 +200,6 @@ class Engine {
 		return true;
 	}
 	
-	public function renderObject( o : Object ) {
-		selectMaterial(o.material);
-		if( o.primitive.buffer == null ) o.primitive.alloc(mem);
-		renderBuffer(o.primitive.buffer,o.primitive.indexes);
-	}
-	
 	public function end() {
 		ctx.present();
 		// reset
@@ -223,7 +217,7 @@ class Engine {
 	public function render( objects : Array<Object> ) {
 		if( !begin() ) return false;
 		for( o in objects )
-			renderObject(o);
+			o.render(this);
 		end();
 		return true;
 	}

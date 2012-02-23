@@ -10,4 +10,13 @@ class Object {
 		this.material = mat;
 	}
 	
+	public function render( engine : Engine ) {
+		engine.selectMaterial(material);
+		primitive.render(engine);
+	}
+	
+	public function dispose() {
+		primitive.dispose();
+	}
+	
 }

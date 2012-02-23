@@ -13,7 +13,7 @@ class Polygon extends Primitive {
 		this.idx = idx;
 	}
 
-	public override function alloc( mem : h3d.impl.MemoryManager ) {
+	override function alloc( engine : h3d.Engine ) {
 		dispose();
 		
 		var size = 3;
@@ -47,10 +47,10 @@ class Polygon extends Primitive {
 				buf[i++] = t.v;
 			}
 		}
-		buffer = mem.allocVector(buf, size, idx == null);
+		buffer = engine.mem.allocVector(buf, size, idx == null);
 		
 		if( idx != null )
-			indexes = mem.allocIndex(flash.Vector.ofArray(idx));
+			indexes = engine.mem.allocIndex(flash.Vector.ofArray(idx));
 	}
 
 

@@ -43,7 +43,7 @@ class Skybox extends h3d.Shader {
         m.translate(camera.pos.x, camera.pos.y, camera.pos.z);
         m.add(camera.m);
 		mproj = m;
-		engine.renderObject(obj);
+		obj.render(engine);
 	}
 	
 }

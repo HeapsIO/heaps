@@ -15,8 +15,13 @@ class Primitive {
 		return count;
 	}
 	
-	public function alloc( mem : h3d.impl.MemoryManager ) {
-		throw "assert";
+	public function alloc( engine : h3d.Engine ) {
+		throw "not implemented";
+	}
+
+	public function render( engine : h3d.Engine ) {
+		if( buffer == null ) alloc(engine);
+		engine.renderBuffer(buffer,indexes);
 	}
 	
 	public function dispose() {
