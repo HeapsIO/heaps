@@ -140,6 +140,22 @@ class MemoryManager {
 		return b;
 	}
 	
+	public function freeMemory() {
+		var size = 0;
+		for( b in buffers ) {
+			var b = b;
+			while( b != null ) {
+				var free = b.free;
+				while( free != null ) {
+					size += free.count * b.stride * 4;
+					free = free.next;
+				}
+				b = b.next;
+			}
+		}
+		return size;
+	}
+	
 	public function allocSub( nvect, stride, split ) {
 		var b = buffers[stride], free = null;
 		while( b != null ) {
@@ -170,9 +186,10 @@ class MemoryManager {
 		if( b == null ) {
 			var mem = allocSize * stride * 4;
 			if( usedMemory + mem > MAX_MEMORY ) {
+				var size = freeMemory();
 				garbage();
-				if( usedMemory + mem > MAX_MEMORY )
-					throw "Memory Full";
+				if( freeMemory() == size )
+					throw "Memory full";
 				return allocSub(nvect, stride, split);
 			}
 			var v = ctx.createVertexBuffer(allocSize, stride);
