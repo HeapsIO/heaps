@@ -17,7 +17,7 @@ class Texture {
 		var draw : flash.display.IBitmapDrawable = bmp;
 		if( smoothing ) draw = new flash.display.Bitmap(bmp, flash.display.PixelSnapping.ALWAYS, true);
 		while( w > 0 && h > 0 ) {
-			var tmp = new flash.display.BitmapData(w, h, true);
+			var tmp = new flash.display.BitmapData(w, h, true, 0);
 			m.identity();
 			m.scale(w / bmp.width, h / bmp.height);
 			tmp.draw(draw, m);
