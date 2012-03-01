@@ -63,7 +63,7 @@ class DynamicQuads extends h3d.prim.Primitive {
 
 	override function render(engine) {
 		if( buffer == null ) alloc(engine);
-		engine.renderBuffer(buffer, engine.mem.quadIndexes, count * 2);
+		engine.renderIndexes(buffer, engine.mem.quadIndexes, 2, count * 2);
 	}
 
 }

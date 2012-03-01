@@ -88,9 +88,9 @@ class MemoryManager {
 			indices[p++] = k;
 			indices[p++] = k + 1;
 			indices[p++] = k + 2;
+			indices[p++] = k + 2;
 			indices[p++] = k + 1;
 			indices[p++] = k + 3;
-			indices[p++] = k + 2;
 		}
 		quadIndexes = allocIndex(indices);
 	}
@@ -100,6 +100,19 @@ class MemoryManager {
 	
 	public function stats() {
 		var total = 0, free = 0, count = 0;
+		for( b in buffers ) {
+			var b = b;
+			while( b != null ) {
+				total += b.stride * allocSize * 4;
+				var f = b.free;
+				while( f != null ) {
+					free += f.count * b.stride * 4;
+					f = f.next;
+				}
+				count++;
+				b = b.next;
+			}
+		}
 		return {
 			bufferCount : count,
 			freeMemory : free,
@@ -171,10 +184,11 @@ class MemoryManager {
 		// second try : half size
 		if( b == null && split ) {
 			b = buffers[stride];
+			var size = (nvect >> 1) & ~3;
 			while( b != null ) {
 				free = b.free;
 				while( free != null ) {
-					if( free.count >= nvect>>1 )
+					if( free.count >= size )
 						break;
 					free = free.next;
 				}
@@ -199,7 +213,8 @@ class MemoryManager {
 			buffers[stride] = b;
 			free = b.free;
 		}
-		var alloc = nvect > free.count ? free.count : nvect;
+		// always alloc multiples of 4 (prevent quad split)
+		var alloc = nvect > free.count ? free.count & ~3 : nvect;
 		var fpos = free.pos;
 		free.pos += alloc;
 		free.count -= alloc;

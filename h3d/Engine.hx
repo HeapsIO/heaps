@@ -14,7 +14,7 @@ class Engine {
 	public var height(default, null) : Int;
 	public var debug(default, setDebug) : Bool;
 	
-	public var triCount(default, null) : Int;
+	public var drawTriangles(default, null) : Int;
 	public var drawCalls(default, null) : Int;
 	
 	public var backgroundColor : Int;
@@ -135,25 +135,36 @@ class Engine {
 		curAttributes = pos;
 	}
 	
-	public function renderBuffer( b : h3d.impl.Buffer, ?indexes, ?ntri ) {
-		if( indexes != null ) {
-			if( b.next != null ) throw "assert";
-			selectBuffer(b.b);
-			if( ntri == null )
-				ntri = Std.int(indexes.count / 3);
-			ctx.drawTriangles(indexes.ibuf, b.pos, ntri);
-			triCount += ntri;
-			drawCalls++;
-			return;
-		}
+	public function renderIndexes( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, vertPerTri : Int, drawTri = -1 ) {
 		do {
 			selectBuffer(b.b);
-			var ntri = Std.int(b.nvert / 3);
-			ctx.drawTriangles(mem.indexes.ibuf, b.pos, ntri);
-			triCount += ntri;
+			var ntri = Std.int(b.nvert / vertPerTri);
+			if( drawTri >= 0 ) {
+				drawTri -= ntri;
+				if( drawTri < 0 ) {
+					// maximize triangles to draw
+					ntri += drawTri;
+					drawTri = 0;
+				} else if( b.next == null ) {
+					// force rendering remaining triangles
+					// this is necessary when we have not-regular indexes
+					// in that case, vertPerTri does not have a real meaning since it's the indexes size that matters
+					ntri += drawTri;
+				}
+			}
+			ctx.drawTriangles(indexes.ibuf, Std.int(b.pos / vertPerTri) * 3, ntri);
+			drawTriangles += ntri;
 			drawCalls++;
 			b = b.next;
 		} while( b != null );
+	}
+	
+	public inline function renderQuads( b : h3d.impl.Buffer ) {
+		return renderIndexes(b, mem.quadIndexes, 2);
+	}
+	
+	public inline function renderBuffer( b : h3d.impl.Buffer ) {
+		return renderIndexes(b, mem.indexes, 3);
 	}
 	
 	function setDebug(d) {
@@ -191,7 +202,7 @@ class Engine {
 		}
 		
 		// init
-		triCount = 0;
+		drawTriangles = 0;
 		drawCalls = 0;
 		curMat = Type.createEmptyInstance(h3d.mat.Material);
 		

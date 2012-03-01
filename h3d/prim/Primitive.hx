@@ -23,7 +23,10 @@ class Primitive {
 
 	public function render( engine : h3d.Engine ) {
 		if( buffer == null ) alloc(engine);
-		engine.renderBuffer(buffer,indexes);
+		if( indexes == null )
+			engine.renderBuffer(buffer);
+		else
+			engine.renderIndexes(buffer,indexes,3,Std.int(indexes.count/3));
 	}
 	
 	public function dispose() {
