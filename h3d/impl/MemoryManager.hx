@@ -134,15 +134,15 @@ class MemoryManager {
 		return new Indexes(ibuf,indices.length);
 	}
 	
-	public function alloc( bytes : flash.utils.ByteArray, stride : Int, allowSplit = true ) {
+	public function allocBytes( bytes : flash.utils.ByteArray, stride : Int, align ) {
 		var count = Std.int(bytes.length / (stride * 4));
-		var b = allocSub(count, stride, allowSplit);
+		var b = alloc(count, stride, align);
 		b.upload(bytes, 0, count);
 		return b;
 	}
 	
-	public function allocVector( v : flash.Vector<Float>, stride : Int, allowSplit = true ) {
-		var b = allocSub(Std.int(v.length / stride), stride, allowSplit);
+	public function allocVector( v : flash.Vector<Float>, stride, align ) {
+		var b = alloc(Std.int(v.length / stride), stride, align);
 		var tmp = b;
 		var pos = 0;
 		while( tmp != null ) {
@@ -169,31 +169,36 @@ class MemoryManager {
 		return size;
 	}
 	
-	public function allocSub( nvect, stride, split ) {
+	public function alloc( nvect, stride, align ) {
 		var b = buffers[stride], free = null;
 		while( b != null ) {
 			free = b.free;
 			while( free != null ) {
-				if( free.count >= nvect && (split || free.pos == 0) )
+				if( free.count >= nvect && (free.pos == 0 || (align > 0 && free.pos % align == 0)) )
 					break;
 				free = free.next;
 			}
 			if( free != null ) break;
 			b = b.next;
 		}
-		// second try : half size
-		if( b == null && split ) {
-			b = buffers[stride];
-			var size = (nvect >> 1) & ~3;
-			while( b != null ) {
-				free = b.free;
-				while( free != null ) {
-					if( free.count >= size )
-						break;
-					free = free.next;
+		// try splitting big groups
+		if( b == null && align > 0 ) {
+			var size = nvect;
+			while( size > 1000 ) {
+				b = buffers[stride];
+				size >>= 1;
+				size -= size % align;
+				while( b != null ) {
+					free = b.free;
+					while( free != null ) {
+						if( free.count >= size && free.pos % align == 0 )
+							break;
+						free = free.next;
+					}
+					if( free != null ) break;
+					b = b.next;
 				}
-				if( free != null ) break;
-				b = b.next;
+				if( b != null ) break;
 			}
 		}
 		// buffer not found : allocate a new one
@@ -204,7 +209,7 @@ class MemoryManager {
 				garbage();
 				if( freeMemory() == size )
 					throw "Memory full";
-				return allocSub(nvect, stride, split);
+				return alloc(nvect, stride, align);
 			}
 			var v = ctx.createVertexBuffer(allocSize, stride);
 			usedMemory += mem;
@@ -214,14 +219,14 @@ class MemoryManager {
 			free = b.free;
 		}
 		// always alloc multiples of 4 (prevent quad split)
-		var alloc = nvect > free.count ? free.count & ~3 : nvect;
+		var alloc = nvect > free.count ? free.count - (free.count%align) : nvect;
 		var fpos = free.pos;
 		free.pos += alloc;
 		free.count -= alloc;
 		var b = new Buffer(b, fpos, alloc);
 		nvect -= alloc;
 		if( nvect > 0 )
-			b.next = this.allocSub(nvect, stride, split);
+			b.next = this.alloc(nvect, stride, align);
 		return b;
 	}
 	

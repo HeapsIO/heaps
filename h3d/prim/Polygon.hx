@@ -47,7 +47,7 @@ class Polygon extends Primitive {
 				buf[i++] = t.v;
 			}
 		}
-		buffer = engine.mem.allocVector(buf, size, idx == null);
+		buffer = engine.mem.allocVector(buf, size, idx == null ? 3 : 0);
 		
 		if( idx != null )
 			indexes = engine.mem.allocIndex(flash.Vector.ofArray(idx));

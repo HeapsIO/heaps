@@ -26,7 +26,7 @@ class Primitive {
 		if( indexes == null )
 			engine.renderBuffer(buffer);
 		else
-			engine.renderIndexes(buffer,indexes,3,Std.int(indexes.count/3));
+			engine.renderIndexes(buffer,indexes,3,0,Std.int(indexes.count/3));
 	}
 	
 	public function dispose() {

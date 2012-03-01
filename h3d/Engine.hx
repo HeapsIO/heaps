@@ -135,26 +135,41 @@ class Engine {
 		curAttributes = pos;
 	}
 	
-	public function renderIndexes( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, vertPerTri : Int, drawTri = -1 ) {
+	public function renderIndexes( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
 		do {
-			selectBuffer(b.b);
 			var ntri = Std.int(b.nvert / vertPerTri);
+			var pos = Std.int(b.pos / vertPerTri);
+			if( startTri > 0 ) {
+				if( startTri >= ntri ) {
+					startTri -= ntri;
+					b = b.next;
+					continue;
+				}
+				pos += startTri;
+				ntri -= startTri;
+				startTri = 0;
+			}
 			if( drawTri >= 0 ) {
+				if( drawTri == 0 ) return;
 				drawTri -= ntri;
 				if( drawTri < 0 ) {
 					// maximize triangles to draw
 					ntri += drawTri;
 					drawTri = 0;
 				} else if( b.next == null ) {
+					// we request to draw more triangles than available !
 					// force rendering remaining triangles
 					// this is necessary when we have not-regular indexes
 					// in that case, vertPerTri does not have a real meaning since it's the indexes size that matters
 					ntri += drawTri;
 				}
 			}
-			ctx.drawTriangles(indexes.ibuf, Std.int(b.pos / vertPerTri) * 3, ntri);
-			drawTriangles += ntri;
-			drawCalls++;
+			if( ntri > 0 ) {
+				selectBuffer(b.b);
+				ctx.drawTriangles(indexes.ibuf, pos * 3, ntri);
+				drawTriangles += ntri;
+				drawCalls++;
+			}
 			b = b.next;
 		} while( b != null );
 	}

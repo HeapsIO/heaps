@@ -57,13 +57,13 @@ class DynamicQuads extends h3d.prim.Primitive {
 	
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
-		buffer = engine.mem.allocSub(size * 4, STRIDE, false);
+		buffer = engine.mem.alloc(size * 4, STRIDE, 4);
 		buffer.upload(data, 0, count * 4);
 	}
 
 	override function render(engine) {
 		if( buffer == null ) alloc(engine);
-		engine.renderIndexes(buffer, engine.mem.quadIndexes, 2, count * 2);
+		engine.renderIndexes(buffer, engine.mem.quadIndexes, 2, 0, count * 2);
 	}
 
 }
