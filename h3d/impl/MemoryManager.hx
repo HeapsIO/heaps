@@ -121,11 +121,11 @@ class MemoryManager {
 	}
 	
 	public function allocTexture( width : Int, height : Int ) {
-		return new h3d.mat.Texture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), false);
+		return new h3d.mat.Texture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false);
 	}
 	
 	public function allocCubeTexture( size : Int ) {
-		return new h3d.mat.Texture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), true);
+		return new h3d.mat.Texture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), size, size, true);
 	}
 	
 	public function allocIndex( indices : flash.Vector<UInt> ) {

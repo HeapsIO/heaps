@@ -3,10 +3,14 @@ package h3d.mat;
 class Texture {
 	
 	public var t : flash.display3D.textures.TextureBase;
+	public var width(default, null) : Int;
+	public var height(default, null) : Int;
 	public var isCubic(default, null) : Bool;
 	
-	public function new(t,c) {
+	public function new(t,w,h,c) {
 		this.t = t;
+		this.width = w;
+		this.height = h;
 		this.isCubic = c;
 	}
 	
