@@ -67,7 +67,7 @@ class Bitmap extends h3d.CustomObject<BitmapShader> {
 	override function render( engine : h3d.Engine ) {
 		if( !visible ) return;
 		if( shader.texture == null ) alloc(engine);
-		shader.viewPos = new h3d.Vector(x * 2 / engine.width, y * 2 / engine.height);
+		shader.viewPos = new h3d.Vector(x * 2 / engine.width, -y * 2 / engine.height);
 		shader.viewSize = new h3d.Vector(bmp.width * 2 * scaleX / engine.width, bmp.height * 2 * scaleY / engine.height);
 		shader.color = new h3d.Vector(1, 1, 1, alpha);
 		super.render(engine);
