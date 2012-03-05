@@ -44,6 +44,17 @@ class Texture {
 		}
 	}
 	
+	public function uploadBytes( bmp : haxe.io.Bytes, mipLevel = 0, side = 0 ) {
+		if( isCubic ) {
+			var t = flash.Lib.as(t, flash.display3D.textures.CubeTexture);
+			t.uploadFromByteArray(bmp.getData(), 0, side, mipLevel);
+		}
+		else {
+			var t = flash.Lib.as(t,  flash.display3D.textures.Texture);
+			t.uploadFromByteArray(bmp.getData(), 0, mipLevel);
+		}
+	}
+	
 	public function dispose() {
 		if( t != null ) {
 			t.dispose();

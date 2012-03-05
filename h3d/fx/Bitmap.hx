@@ -22,7 +22,7 @@ private class BitmapShader extends h3d.Shader {
 
 class Bitmap extends h3d.CustomObject<BitmapShader> {
 
-	public var bmp(default,null) : flash.display.BitmapData;
+	public var bmp(default,null) : h3d.mat.Bitmap;
 	
 	public var x : Float;
 	public var y : Float;
@@ -34,7 +34,7 @@ class Bitmap extends h3d.CustomObject<BitmapShader> {
 	static var shader = null;
 	static var prim = null;
 	
-	public function new( bmp : flash.display.BitmapData ) {
+	public function new( bmp ) {
 		if( shader == null ) {
 			shader = new BitmapShader();
 			prim = new h3d.prim.Plan2D();
@@ -55,13 +55,8 @@ class Bitmap extends h3d.CustomObject<BitmapShader> {
 		while( w < bmp.width ) w <<= 1;
 		while( h < bmp.height ) h <<= 1;
 		shader.texture = engine.mem.allocTexture(w, h);
-		if( w != bmp.width || h != bmp.height ) {
-			var tmp = new flash.display.BitmapData(w, h, true, 0);
-			tmp.draw(new flash.display.Bitmap(bmp, flash.display.PixelSnapping.ALWAYS, true), new flash.geom.Matrix(w / bmp.width, 0, 0, h / bmp.height));
-			shader.texture.upload(tmp);
-			tmp.dispose();
-		} else
-			shader.texture.upload(bmp);
+		if( w != bmp.width || h != bmp.height ) throw bmp.width + "x" + bmp.height + " should be " + w + "x" + h;
+		shader.texture.uploadBytes(bmp.bytes);
 	}
 	
 	override function render( engine : h3d.Engine ) {
