@@ -12,12 +12,12 @@ enum Blend {
 	Zero;
 	SrcAlpha;
 	SrcColor;
-	DestAlpha;
-	DestColor;
+	DstAlpha;
+	DstColor;
 	OneMinusSrcAlpha;
 	OneMinusSrcColor;
-	OneMinusDestAlpha;
-	OneMinusDestColor;
+	OneMinusDstAlpha;
+	OneMinusDstColor;
 }
 
 enum Compare {
