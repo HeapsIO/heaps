@@ -12,15 +12,15 @@ class Plan2D extends Primitive {
 		v.push( 0);
 		v.push( 1);
 
-		v.push( 1);
 		v.push( -1);
 		v.push( 1);
-		v.push( 1);
+		v.push( 0);
+		v.push( 0);
 
+		v.push( 1);
 		v.push( -1);
 		v.push( 1);
-		v.push( 0);
-		v.push( 0);
+		v.push( 1);
 
 		v.push( 1);
 		v.push( 1);

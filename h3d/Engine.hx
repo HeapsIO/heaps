@@ -9,7 +9,7 @@ class Engine {
 	public var camera : h3d.Camera;
 	public var mem(default,null) : h3d.impl.MemoryManager;
 	
-	public var software(default, null) : Bool;
+	public var hardware(default, null) : Bool;
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var debug(default, setDebug) : Bool;
@@ -25,20 +25,20 @@ class Engine {
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
 	
-	public function new( width = 0, height = 0, software = false ) {
+	public function new( width = 0, height = 0, hardware = true ) {
 		var stage = flash.Lib.current.stage;
 		if( width == 0 ) width = stage.stageWidth;
 		if( height == 0 ) height = stage.stageHeight;
 		this.width = width;
 		this.height = height;
-		this.software = software;
+		this.hardware = hardware;
 		s3d = stage.stage3Ds[0];
 		camera = new Camera();
 	}
 	
 	public function init() {
 		s3d.addEventListener(flash.events.Event.CONTEXT3D_CREATE, function(_) onCreate());
-		s3d.requestContext3D( software ? "software" : "auto" );
+		s3d.requestContext3D( hardware ? "auto" : "software" );
 	}
 	
 	public function driverName() {
@@ -184,14 +184,14 @@ class Engine {
 	
 	function setDebug(d) {
 		debug = d;
-		if( ctx != null ) ctx.enableErrorChecking = d && !software;
+		if( ctx != null ) ctx.enableErrorChecking = d && hardware;
 		return d;
 	}
 	
 	function onCreate() {
 		ctx = s3d.context3D;
 		mem = new h3d.impl.MemoryManager(ctx, 65400);
-		software = ctx.driverInfo.toLowerCase().indexOf("software") != -1;
+		hardware = ctx.driverInfo.toLowerCase().indexOf("software") == -1;
 		setDebug(debug);
 		resize(width, height);
 		onReady();
