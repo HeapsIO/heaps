@@ -184,15 +184,15 @@ class Engine {
 	
 	function setDebug(d) {
 		debug = d;
-		if( ctx != null ) ctx.enableErrorChecking = d;
+		if( ctx != null ) ctx.enableErrorChecking = d && !software;
 		return d;
 	}
 	
 	function onCreate() {
 		ctx = s3d.context3D;
-		if( debug ) ctx.enableErrorChecking = true;
 		mem = new h3d.impl.MemoryManager(ctx, 65400);
 		software = ctx.driverInfo.toLowerCase().indexOf("software") != -1;
+		setDebug(debug);
 		resize(width, height);
 		onReady();
 	}
