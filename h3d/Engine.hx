@@ -40,6 +40,10 @@ class Engine {
 		s3d.addEventListener(flash.events.Event.CONTEXT3D_CREATE, function(_) onCreate());
 		s3d.requestContext3D( hardware ? "auto" : "software" );
 	}
+
+	public function saveTo( bmp : flash.display.BitmapData ) {
+		ctx.drawToBitmapData(bmp);
+	}
 	
 	public function driverName() {
 		return ctx == null ? "None" : ctx.driverInfo.split(" ")[0];
