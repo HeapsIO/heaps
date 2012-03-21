@@ -343,5 +343,29 @@ class Matrix {
 			"  [ " + Tools.f(_41) + ", " + Tools.f(_42) + ", " + Tools.f(_43) + ", " + Tools.f(_44) + " ]\n" +
 		"]";
 	}
+	
+	public static function I() {
+		var m = new Matrix();
+		m.identity();
+		return m;
+	}
+	
+	public static function T( x = 0., y = 0., z = 0. ) {
+		var m = new Matrix();
+		m.initTranslate(x, y, z);
+		return m;
+	}
 
+	public static function R(axis,angle) {
+		var m = new Matrix();
+		m.initRotate(axis, angle);
+		return m;
+	}
+
+	public static function S( x = 1., y = 1., z = 1.0 ) {
+		var m = new Matrix();
+		m.initScale(x, y, z);
+		return m;
+	}
+	
 }

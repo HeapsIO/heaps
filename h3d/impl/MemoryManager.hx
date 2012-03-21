@@ -124,6 +124,13 @@ class MemoryManager {
 		return new h3d.mat.Texture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false);
 	}
 	
+	public function makeTexture( bmp : flash.display.BitmapData ) {
+		var t = allocTexture(bmp.width, bmp.height);
+		t.upload(bmp);
+		bmp.dispose();
+		return t;
+	}
+	
 	public function allocCubeTexture( size : Int ) {
 		return new h3d.mat.Texture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), size, size, true);
 	}
