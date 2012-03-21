@@ -36,6 +36,14 @@ class Point {
 		y *= k;
 		z *= k;
 	}
+	
+	public function transform( m : Matrix ) {
+		return new Point(x * m._11 + y * m._21 + z * m._31 + m._41, x * m._12 + y * m._22 + z * m._32 + m._42, x * m._13 + y * m._23 + z * m._33 + m._43);
+	}
+	
+	public function toVector() {
+		return new Vector(x, y, z);
+	}
 
 	public inline function copy() {
 		return new Point(x,y,z);
