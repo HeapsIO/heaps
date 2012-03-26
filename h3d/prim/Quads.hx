@@ -2,12 +2,20 @@ package h3d.prim;
 
 class Quads extends Primitive {
 
-	var pts : Array<h3d.Vector>;
+	var pts : Array<h3d.Point>;
 	var uvs : Array<UV>;
 	
 	public function new( pts, ?uvs ) {
 		this.pts = pts;
 		this.uvs = uvs;
+	}
+	
+	public function scale( x : Float, y : Float, z : Float ) {
+		for( p in pts ) {
+			p.x *= x;
+			p.y *= y;
+			p.z *= z;
+		}
 	}
 	
 	public function addTCoords() {

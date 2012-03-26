@@ -124,10 +124,16 @@ class MemoryManager {
 		return new h3d.mat.Texture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false);
 	}
 	
-	public function makeTexture( bmp : flash.display.BitmapData ) {
-		var t = allocTexture(bmp.width, bmp.height);
-		t.upload(bmp);
-		bmp.dispose();
+	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap ) {
+		var t;
+		if( bmp != null ) {
+			t = allocTexture(bmp.width, bmp.height);
+			t.upload(bmp);
+			bmp.dispose();
+		} else {
+			t = allocTexture(mbmp.width, mbmp.height);
+			t.uploadBytes(mbmp.bytes);
+		}
 		return t;
 	}
 	
