@@ -10,7 +10,7 @@ class Cylinder extends Quads {
 		this.segs = segs;
 		for( s in 0...segs ) {
 			var a = s * ds;
-			var a2 = (s + 1) / ds;
+			var a2 = (s + 1) * ds;
 			var x = Math.cos(a) * ray, y = Math.sin(a) * ray;
 			var x2 = Math.cos(a2) * ray, y2 = Math.sin(a2) * ray;
 			pts.push(new Point(x, y, 0));
