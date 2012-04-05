@@ -2,7 +2,7 @@ package h3d.part;
 
 class Buffer extends h3d.prim.Primitive {
 	
-	static inline var STRIDE = 7;
+	static inline var STRIDE = 8;
 	
 	public var maxVert(default,null) : Int;
 	public var nvert(default, null) : Int;
@@ -34,6 +34,7 @@ class Buffer extends h3d.prim.Primitive {
 				flash.Memory.setFloat(pos, v.v); pos += 4;
 				flash.Memory.setFloat(pos, v.dx); pos += 4;
 				flash.Memory.setFloat(pos, v.dy); pos += 4;
+				flash.Memory.setFloat(pos, p.light); pos += 4;
 				nvert++;
 				v = v.next;
 			}

@@ -7,16 +7,21 @@ class DefaultShader extends h3d.Shader {
 			pos : Float3,
 			uv : Float2,
 			delta : Float2,
+			light : Float,
 		};
 		var tuv : Float2;
+		var tlight : Float;
 		function vertex( mproj : M44 ) {
 			var tpos = pos.xyzw * mproj;
 			tpos.xy += delta;
 			out = tpos;
 			tuv = uv;
+			tlight = light;
 		}
 		function fragment( tex : Texture ) {
-			out = tex.get(tuv,nearest);
+			var c = tex.get(tuv, nearest);
+			c.rgb *= tlight;
+			out = c;
 		}
 	};
 }

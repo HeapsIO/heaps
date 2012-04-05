@@ -19,13 +19,15 @@ class Particle {
 	public var x : Float;
 	public var y : Float;
 	public var z : Float;
+	public var light : Float;
 	
 	public var verts : ParticleVertex;
 	
-	public function new(x, y, z) {
+	public function new(x, y, z,l) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
+		this.light = l;
 	}
 	
 	public function initQuad( width : Float, height : Float ) {
