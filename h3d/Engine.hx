@@ -123,7 +123,7 @@ class Engine {
 			return;
 		curBuffer = buf;
 		if( buf.stride < curShader.stride )
-			throw "Buffer stride (" + buf.stride + ") and shader "+curShader+" stride (" + curShader.stride + ") mismatch";
+			throw "Buffer stride (" + buf.stride + ") and shader stride (" + curShader.stride + ") mismatch";
 		if( !buf.written )
 			mem.finalize(buf);
 		var pos = 0, offset = 0;
