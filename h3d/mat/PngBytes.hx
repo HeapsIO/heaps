@@ -3,7 +3,11 @@ package h3d.mat;
 class PngBytes extends flash.utils.ByteArray {
 
 	public function getBitmapBytes() {
-		var mem = new haxe.io.BytesInput(haxe.io.Bytes.ofData(this));
+		return decode(haxe.io.Bytes.ofData(this));
+	}
+	
+	public static function decode( b : haxe.io.Bytes ) {
+		var mem = new haxe.io.BytesInput(b);
 		var png = new format.png.Reader(mem);
 		var data = png.read();
 		var h = format.png.Tools.getHeader(data);
