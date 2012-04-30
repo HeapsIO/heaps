@@ -19,7 +19,7 @@ class Engine {
 	
 	public var backgroundColor : Int;
 	
-	var curMat : h3d.mat.Material;
+	var curMatBits : Int;
 	var curShader : Shader.ShaderData;
 	var curBuffer : h3d.impl.MemoryManager.BigBuffer;
 	var curAttributes : Int;
@@ -103,17 +103,17 @@ class Engine {
 	}
 	
 	public function selectMaterial( m : h3d.mat.Material ) {
-		if( curMat != m ) {
-			var old = curMat;
-			if( m.blendDst != old.blendDst || m.blendSrc != old.blendSrc )
-				ctx.setBlendFactors(BLEND[Type.enumIndex(m.blendSrc)], BLEND[Type.enumIndex(m.blendDst)]);
-			if( m.culling != old.culling )
+		var diff = curMatBits ^ m.bits;
+		if( diff != 0 ) {
+			if( diff&3 != 0 )
 				ctx.setCulling(FACE[Type.enumIndex(m.culling)]);
-			if( m.depthTest != old.depthTest || m.depthWrite != old.depthWrite )
+			if( diff & (0xFF << 6) != 0 )
+				ctx.setBlendFactors(BLEND[Type.enumIndex(m.blendSrc)], BLEND[Type.enumIndex(m.blendDst)]);
+			if( diff & (15 << 2) != 0 )
 				ctx.setDepthTest(m.depthWrite, COMPARE[Type.enumIndex(m.depthTest)]);
-			if( m.colorMask != old.colorMask )
+			if( diff & (15 << 14) != 0 )
 				ctx.setColorMask(m.colorMask & 1 != 0, m.colorMask & 2 != 0, m.colorMask & 4 != 0, m.colorMask & 8 != 0);
-			curMat = m;
+			curMatBits = m.bits;
 		}
 		selectShader(m.shader);
 	}
@@ -223,7 +223,7 @@ class Engine {
 		// init
 		drawTriangles = 0;
 		drawCalls = 0;
-		curMat = Type.createEmptyInstance(h3d.mat.Material);
+		curMatBits = 0;
 		
 		curShader = null;
 		curBuffer = null;
@@ -234,7 +234,7 @@ class Engine {
 	public function end() {
 		ctx.present();
 		// reset
-		curMat = null;
+		curMatBits = 0;
 		curShader = null;
 		curBuffer = null;
 		for( i in 0...curAttributes )
