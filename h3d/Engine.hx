@@ -24,16 +24,22 @@ class Engine {
 	var curBuffer : h3d.impl.MemoryManager.BigBuffer;
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
+	var antiAlias : Int;
 	
-	public function new( width = 0, height = 0, hardware = true ) {
+	public function new( width = 0, height = 0, hardware = true, aa = 0, stageIndex = 0 ) {
 		var stage = flash.Lib.current.stage;
 		if( width == 0 ) width = stage.stageWidth;
 		if( height == 0 ) height = stage.stageHeight;
 		this.width = width;
 		this.height = height;
 		this.hardware = hardware;
-		s3d = stage.stage3Ds[0];
+		this.antiAlias = aa;
+		s3d = stage.stage3Ds[stageIndex];
 		camera = new Camera();
+	}
+	
+	public function show( b ) {
+		s3d.visible = b;
 	}
 	
 	public function init() {
@@ -197,7 +203,7 @@ class Engine {
 		mem = new h3d.impl.MemoryManager(ctx, 65400);
 		hardware = ctx.driverInfo.toLowerCase().indexOf("software") == -1;
 		setDebug(debug);
-		resize(width, height);
+		resize(width, height, antiAlias);
 		onReady();
 	}
 	
@@ -207,6 +213,7 @@ class Engine {
 	public function resize(width, height, aa = 0) {
 		this.width = width;
 		this.height = height;
+		this.antiAlias = aa;
 		ctx.configureBackBuffer(width, height, aa);
 		camera.ratio = width / height;
 	}
@@ -251,6 +258,11 @@ class Engine {
 			o.render(this);
 		end();
 		return true;
+	}
+	
+	public function dispose() {
+		ctx.dispose();
+		ctx = null;
 	}
 
 	
