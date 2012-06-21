@@ -43,7 +43,7 @@ class Engine {
 	}
 	
 	public function init() {
-		s3d.addEventListener(flash.events.Event.CONTEXT3D_CREATE, function(_) onCreate());
+		s3d.addEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
 		s3d.requestContext3D( hardware ? "auto" : "software" );
 	}
 
@@ -198,7 +198,7 @@ class Engine {
 		return d;
 	}
 	
-	function onCreate() {
+	function onCreate(_) {
 		ctx = s3d.context3D;
 		mem = new h3d.impl.MemoryManager(ctx, 65400);
 		hardware = ctx.driverInfo.toLowerCase().indexOf("software") == -1;
@@ -261,6 +261,7 @@ class Engine {
 	}
 	
 	public function dispose() {
+		s3d.removeEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
 		ctx.dispose();
 		ctx = null;
 	}
