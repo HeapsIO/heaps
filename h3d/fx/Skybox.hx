@@ -12,8 +12,8 @@ class Skybox extends h3d.Shader {
 			out = pos.xyzw * mproj;
 			tuv = pos;
 		}
-		function fragment( texture : CubeTexture, color : Float4 ) {
-			out = texture.get(tuv, nearest) * color;
+		function fragment( texture : CubeTexture ) {
+			out = texture.get(tuv, nearest);
 		}
 	};
 
@@ -27,7 +27,6 @@ class Skybox extends h3d.Shader {
 		obj = new h3d.Object(prim, new h3d.mat.Material(this));
 		obj.material.depth(false, Compare.Always);
 		obj.material.culling = Face.Front;
-		color = new h3d.Vector(1, 1, 1, 1);
 	}
 	
 	public function render( engine : h3d.Engine, ?pos : h3d.Matrix ) {
