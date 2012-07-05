@@ -151,7 +151,7 @@ class Macros {
 		var p = new format.hxsl.Parser();
 		p.includeFile = function(file) {
 			var f = Context.resolvePath(file);
-			return Context.parse("{"+neko.io.File.getContent(f)+"}", Context.makePosition( { min : 0, max : 0, file : f } ));
+			return Context.parse("{"+sys.io.File.getContent(f)+"}", Context.makePosition( { min : 0, max : 0, file : f } ));
 		};
 		var v = try p.parse(shaderCode) catch( e : format.hxsl.Data.Error ) haxe.macro.Context.error(e.message, e.pos);
 		var c = new format.hxsl.Compiler();
