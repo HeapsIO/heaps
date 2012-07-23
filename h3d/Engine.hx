@@ -111,13 +111,13 @@ class Engine {
 	public function selectMaterial( m : h3d.mat.Material ) {
 		var diff = curMatBits ^ m.bits;
 		if( diff != 0 ) {
-			if( diff&3 != 0 )
+			if( curMatBits < 0 || diff&3 != 0 )
 				ctx.setCulling(FACE[Type.enumIndex(m.culling)]);
-			if( diff & (0xFF << 6) != 0 )
+			if( curMatBits < 0 || diff & (0xFF << 6) != 0 )
 				ctx.setBlendFactors(BLEND[Type.enumIndex(m.blendSrc)], BLEND[Type.enumIndex(m.blendDst)]);
-			if( diff & (15 << 2) != 0 )
+			if( curMatBits < 0 || diff & (15 << 2) != 0 )
 				ctx.setDepthTest(m.depthWrite, COMPARE[Type.enumIndex(m.depthTest)]);
-			if( diff & (15 << 14) != 0 )
+			if( curMatBits < 0 || diff & (15 << 14) != 0 )
 				ctx.setColorMask(m.colorMask & 1 != 0, m.colorMask & 2 != 0, m.colorMask & 4 != 0, m.colorMask & 8 != 0);
 			curMatBits = m.bits;
 		}
@@ -230,7 +230,7 @@ class Engine {
 		// init
 		drawTriangles = 0;
 		drawCalls = 0;
-		curMatBits = 0;
+		curMatBits = -1;
 		
 		curShader = null;
 		curBuffer = null;
@@ -241,7 +241,7 @@ class Engine {
 	public function end() {
 		ctx.present();
 		// reset
-		curMatBits = 0;
+		curMatBits = -1;
 		curShader = null;
 		curBuffer = null;
 		for( i in 0...curAttributes )
