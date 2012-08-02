@@ -49,7 +49,7 @@ class Buffer extends h3d.prim.Primitive {
 	
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
-		buffer = engine.mem.alloc(nvert, STRIDE, 4);
+		buffer = engine.mem.alloc(nvert, STRIDE, isQuads ? 4 : 3);
 		buffer.upload(data, 0, nvert);
 	}
 
