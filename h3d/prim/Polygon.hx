@@ -59,6 +59,18 @@ class Polygon extends Primitive {
 			var p = [];
 			for( i in idx )
 				p.push(points[i]);
+			if( normals != null ) {
+				var n = [];
+				for( i in idx )
+					n.push(normals[i]);
+				normals = n;
+			}
+			if( tcoords != null ) {
+				var t = [];
+				for( i in idx )
+					t.push(tcoords[i]);
+				tcoords = t;
+			}
 			points = p;
 			idx = null;
 		}
