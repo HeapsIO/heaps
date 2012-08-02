@@ -14,8 +14,8 @@ class Cylinder extends Quads {
 			var x = Math.cos(a) * ray, y = Math.sin(a) * ray;
 			var x2 = Math.cos(a2) * ray, y2 = Math.sin(a2) * ray;
 			pts.push(new Point(x, y, 0));
-			pts.push(new Point(x, y, height));
 			pts.push(new Point(x2, y2, 0));
+			pts.push(new Point(x, y, height));
 			pts.push(new Point(x2, y2, height));
 		}
 		super(pts);
@@ -27,9 +27,23 @@ class Cylinder extends Quads {
 			var u = s / segs;
 			var u2 = (s + 1) / segs;
 			uvs.push(new UV(u, 1));
-			uvs.push(new UV(u, 0));
 			uvs.push(new UV(u2, 1));
+			uvs.push(new UV(u, 0));
 			uvs.push(new UV(u2, 0));
 		}
 	}
+	
+	override public function addNormals() {
+		normals = new Array();
+		var ds = Math.PI * 2 / segs;
+		for( s in 0...segs ) {
+			var a = (s + 0.5) * ds;
+			var n = new Point(Math.cos(a), Math.sin(a), 0);
+			normals.push(n);
+			normals.push(n);
+			normals.push(n);
+			normals.push(n);
+		}
+	}
+
 }

@@ -4,10 +4,12 @@ class Quads extends Primitive {
 
 	var pts : Array<h3d.Point>;
 	var uvs : Array<UV>;
+	var normals : Array<h3d.Point>;
 	
-	public function new( pts, ?uvs ) {
+	public function new( pts, ?uvs, ?normals ) {
 		this.pts = pts;
 		this.uvs = uvs;
+		this.normals = normals;
 	}
 	
 	public function scale( x : Float, y : Float, z : Float ) {
@@ -32,6 +34,10 @@ class Quads extends Primitive {
 		}
 	}
 	
+	public function addNormals() {
+		throw "Not implemented";
+	}
+	
 	override function alloc( engine : Engine ) {
 		dispose();
 		var v = new flash.Vector();
@@ -41,13 +47,22 @@ class Quads extends Primitive {
 			v[p++] = pt.x;
 			v[p++] = pt.y;
 			v[p++] = pt.z;
+			if( normals != null ) {
+				var n = normals[i];
+				v[p++] = n.x;
+				v[p++] = n.y;
+				v[p++] = n.z;
+			}
 			if( uvs != null ) {
 				var t = uvs[i];
 				v[p++] = t.u;
 				v[p++] = t.v;
 			}
 		}
-		buffer = engine.mem.allocVector(v,uvs == null ? 3 : 5, 4);
+		var size = 3;
+		if( normals != null ) size += 3;
+		if( uvs != null ) size += 2;
+		buffer = engine.mem.allocVector(v,size, 4);
 	}
 	
 	override function render(engine) {

@@ -176,6 +176,7 @@ class Engine {
 			}
 			if( ntri > 0 ) {
 				selectBuffer(b.b);
+				// *3 because it's the position in indexes which are always by 3
 				ctx.drawTriangles(indexes.ibuf, pos * 3, ntri);
 				drawTriangles += ntri;
 				drawCalls++;
