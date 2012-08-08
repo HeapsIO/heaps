@@ -26,6 +26,8 @@ class Simplifier {
 		};
 		if( n.value != null )
 			n2.value = n.value;
+		if( n.attribs != null )
+			n2.attribs = n.attribs.copy();
 		if( n.subs != null ) {
 			n2.subs = [];
 			for( s in n.subs )

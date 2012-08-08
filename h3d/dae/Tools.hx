@@ -54,5 +54,26 @@ class Tools {
 			}
 		throw "Invalid value " + Std.string(v);
 	}
+
+	public static function toInts( v : DAEValue ) {
+		if( v != null )
+			switch( v ) {
+			case DInt(i): return makeTable([i]);
+			case DIntArray(v, _): return v;
+			default:
+			}
+		throw "Invalid value " + Std.string(v);
+	}
+	
+	public static function toFloats( v : DAEValue ) {
+		if( v != null )
+			switch( v ) {
+			case DInt(i): return makeTable([i * 1.0]);
+			case DFloat(v): return makeTable([v]);
+			case DFloatArray(v, _): return v;
+			default:
+			}
+		throw "Invalid value " + Std.string(v);
+	}
 	
 }
