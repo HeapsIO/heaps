@@ -1,10 +1,10 @@
 package h3d.prim;
 
-using h3d.impl.DAE.DAETools;
+using h3d.dae.Tools;
 
 class DAEModel extends Primitive {
 
-	var root : h3d.impl.DAE.DAE;
+	var root : h3d.dae.DAE;
 	var vertexes : flash.Vector<Float>;
 	var indices : flash.Vector<UInt>;
 	
@@ -26,13 +26,14 @@ class DAEModel extends Primitive {
 			case DFloatArray(vl, _): vl;
 			default: throw "assert";
 			}
-			var tcoords = switch( mesh.get("source[name=Texture].float_array").value ) {
+			var tcoords = switch( mesh.getValue("source[name=Texture].float_array",DFloatArray(null,0)) ) {
 			case DFloatArray(vl, _): vl;
 			default: throw "assert";
 			}
 			for( p in mesh.getAll("polylist") ) {
 				var vcount = switch( p.get("vcount").value ) {
 				case DIntArray(il, _): il;
+				case DInt(v): flash.Vector.ofArray([v]);
 				default: throw "assert";
 				}
 				var idx = switch( p.get("p").value ) {
@@ -56,8 +57,13 @@ class DAEModel extends Primitive {
 						vertexes[vp++] = normals[nidx];
 						vertexes[vp++] = normals[nidx + 2];
 						vertexes[vp++] = normals[nidx + 1];
-						vertexes[vp++] = tcoords[tidx];
-						vertexes[vp++] = tcoords[tidx + 1];
+						if( tcoords == null ) {
+							vertexes[vp++] = 0.;
+							vertexes[vp++] = 0.;
+						} else {
+							vertexes[vp++] = tcoords[tidx];
+							vertexes[vp++] = 1 - tcoords[tidx + 1]; // inverse Y
+						}
 						pos += stride;
 					}
 					for( tri in 0...n - 2 ) {

@@ -2,7 +2,7 @@ package h3d.prim;
 
 class Cube extends Polygon {
 
-	public function new( x = 1, y = 1, z = 1 )
+	public function new( x = 1., y = 1., z = 1. )
 	{
 		var p = [
 			new Point(0, 0, 0),
