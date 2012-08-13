@@ -21,14 +21,17 @@ class DAEModel extends Primitive {
 	
 	public function setup(mesh) {
 		this.mesh = mesh;
+		if( mesh == null )
+			throw "null mesh";
 		indices = new flash.Vector();
 		vertexes = new flash.Vector();
 		vertexMap = new flash.Vector();
 		var mesh = mesh.root.get("mesh");
-		var points = mesh.get("source[name=positions].float_array").value.toFloats();
+		
+		var points = mesh.get("source[id=&{_.vertices[id=&{_.?.input[semantic=VERTEX].source}].input[semantic=POSITION].source}].float_array").value.toFloats();
 		vertexCount = Std.int(points.length / 3);
-		var normals = mesh.get("source[name=normals].float_array").value.toFloats();
-		var tcoords = mesh.getValue("source[name=Texture].float_array", DFloatArray(null, 0)).toFloats();
+		var normals = mesh.get("source[id=&{_.?.input[semantic=NORMAL].source}].float_array").value.toFloats();
+		var tcoords = mesh.getValue("source[id=&{_.?.input[semantic=TEXCOORD].source}].float_array", DFloatArray(null, 0)).toFloats();
 		var ip = 0, vp = 0, vm = 0;
 		for( p in mesh.getAll("polylist") ) {
 			var vcount = p.get("vcount").value.toInts();
@@ -65,6 +68,38 @@ class DAEModel extends Primitive {
 					indices[ip++] = vbase + tri + 2;
 					indices[ip++] = vbase + tri + 1;
 				}
+			}
+		}
+		for( p in mesh.getAll("triangles") ) {
+			var tcount = p.attr("count").toInt();
+			var idx = p.get("p").value.toInts();
+			var stride = Std.int(idx.length / (tcount * 3));
+			var pos = 0;
+			for( i in 0...tcount ) {
+				var vbase = vp >> 3;
+				for( i in 0...3 ) {
+					var vidx = idx[pos] * 3;
+					var nidx = idx[pos + 1] * 3;
+					var tidx = idx[pos + 2] * 2;
+					vertexMap[vm++] = idx[pos];
+					vertexes[vp++] = points[vidx];
+					vertexes[vp++] = points[vidx + 1];
+					vertexes[vp++] = points[vidx + 2];
+					vertexes[vp++] = normals[nidx];
+					vertexes[vp++] = normals[nidx + 1];
+					vertexes[vp++] = normals[nidx + 2];
+					if( tcoords == null ) {
+						vertexes[vp++] = 0.;
+						vertexes[vp++] = 0.;
+					} else {
+						vertexes[vp++] = tcoords[tidx];
+						vertexes[vp++] = 1 - tcoords[tidx + 1]; // inverse Y
+					}
+					pos += stride;
+				}
+				indices[ip++] = vbase;
+				indices[ip++] = vbase + 1;
+				indices[ip++] = vbase + 2;
 			}
 		}
 	}

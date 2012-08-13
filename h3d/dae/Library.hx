@@ -13,12 +13,11 @@ class Library {
 		meshes = [];
 		for( m in root.getAll("library_geometries.geometry") ) {
 			var m = new Mesh(m);
+			var node = root.getAll("library_visual_scenes.node[name=" + m.name + "]")[0];
+			if( node != null )
+				m.controller = root.get("library_controllers.controller[id=" + node.get("instance_controller").attr("url").toString().substr(1) + "]");
 			hmeshes.set(m.name, m);
 			meshes.push(m);
-		}
-		for( c in root.getAll("library_controllers.controller") ) {
-			var name = c.attr("name").toString();
-			get(name).controller = c;
 		}
 	}
 	
