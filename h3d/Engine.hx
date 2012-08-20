@@ -25,6 +25,8 @@ class Engine {
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
 	var antiAlias : Int;
+	var debugPoint : h3d.CustomObject<h3d.impl.Shaders.PointShader>;
+	var debugLine : h3d.CustomObject<h3d.impl.Shaders.LineShader>;
 	
 	public function new( width = 0, height = 0, hardware = true, aa = 0, stageIndex = 0 ) {
 		var stage = flash.Lib.current.stage;
@@ -266,7 +268,40 @@ class Engine {
 		ctx.dispose();
 		ctx = null;
 	}
-
+	
+	// debug functions
+	public function point( x : Float, y : Float, z : Float, color = 0x80FF0000, size = 2.0, depth = false ) {
+		if( debugPoint == null ) {
+			debugPoint = new CustomObject(new h3d.prim.Plan2D(), new h3d.impl.Shaders.PointShader());
+			debugPoint.material.blend(SrcAlpha, OneMinusSrcAlpha);
+			debugPoint.material.depthWrite = false;
+		}
+		debugPoint.material.depthTest = depth ? LessEqual : Always;
+		debugPoint.shader.mproj = camera.m;
+		debugPoint.shader.delta = new Vector(x, y, z, 1);
+		debugPoint.shader.size = new Vector(size, size * width / height);
+		debugPoint.shader.color = color;
+		debugPoint.render(this);
+	}
+	
+	public function line( x1 : Float, y1 : Float, z1 : Float, x2 : Float, y2 : Float, z2 : Float, color = 0x80FF0000, depth = false ) {
+		if( debugLine == null ) {
+			debugLine = new CustomObject(new h3d.prim.Plan2D(), new h3d.impl.Shaders.LineShader());
+			debugLine.material.blend(SrcAlpha, OneMinusSrcAlpha);
+			debugLine.material.depthWrite = false;
+			debugLine.material.culling = None;
+		}
+		debugLine.material.depthTest = depth ? LessEqual : Always;
+		debugLine.shader.mproj = camera.m;
+		debugLine.shader.start = new Vector(x1, y1, z1);
+		debugLine.shader.end = new Vector(x2, y2, z2);
+		debugLine.shader.color = color;
+		debugLine.render(this);
+	}
+	
+	public function lineP( a : { x : Float, y : Float, z : Float }, b : { x : Float, y : Float, z : Float }, color = 0x80FF0000, depth = false ) {
+		line(a.x, a.y, a.z, b.x, b.y, b.z, color, depth);
+	}
 	
 	static var BLEND = [
 		flash.display3D.Context3DBlendFactor.ONE,

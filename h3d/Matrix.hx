@@ -325,14 +325,12 @@ class Matrix {
 		m._41 = _41; m._42 = _42; m._43 = _43; m._44 = _44;
 		return m;
 	}
-	
-	public function _toMatrix() {
-		return new flash.geom.Matrix3D(flash.Vector.ofArray([
-			_11, _12, _13, _14,
-			_21, _22, _23, _24,
-			_31, _32, _33, _34,
-			_41, _42, _43, _44,
-		]));
+
+	public function load( a : Array<Float> ) {
+		_11 = a[0]; _12 = a[1]; _13 = a[2]; _14 = a[3];
+		_21 = a[4]; _22 = a[5]; _23 = a[6]; _24 = a[7];
+		_31 = a[8]; _32 = a[9]; _33 = a[10]; _34 = a[11];
+		_41 = a[12]; _42 = a[13]; _43 = a[14]; _44 = a[15];
 	}
 	
 	public function toString() {
