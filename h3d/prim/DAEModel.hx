@@ -4,7 +4,7 @@ using h3d.dae.Tools;
 
 class DAEModel extends Primitive {
 
-	var mesh : h3d.dae.Mesh;
+	public var mesh : h3d.dae.Mesh;
 	var vertexes : flash.Vector<Float>;
 	var indices : flash.Vector<UInt>;
 	
@@ -14,6 +14,8 @@ class DAEModel extends Primitive {
 	var jointPerVertex : Int;
 	var jointIndexes : flash.Vector<Int>;
 	var jointWeights : flash.Vector<Float>;
+	var jointPos : flash.Vector<h3d.Matrix>;
+	var jointBind : flash.Vector<h3d.Matrix>;
 	
 	public function new(m) {
 		setup(m);
@@ -49,11 +51,11 @@ class DAEModel extends Primitive {
 					var tidx = idx[pos + 2] * 2;
 					vertexMap[vm++] = idx[pos];
 					vertexes[vp++] = points[vidx];
-					vertexes[vp++] = points[vidx + 2]; // inverse Y/Z
 					vertexes[vp++] = points[vidx + 1];
+					vertexes[vp++] = points[vidx + 2];
 					vertexes[vp++] = normals[nidx];
-					vertexes[vp++] = normals[nidx + 2];
 					vertexes[vp++] = normals[nidx + 1];
+					vertexes[vp++] = normals[nidx + 2];
 					if( tcoords == null ) {
 						vertexes[vp++] = 0.;
 						vertexes[vp++] = 0.;
@@ -65,8 +67,8 @@ class DAEModel extends Primitive {
 				}
 				for( tri in 0...n - 2 ) {
 					indices[ip++] = vbase;
-					indices[ip++] = vbase + tri + 2;
 					indices[ip++] = vbase + tri + 1;
+					indices[ip++] = vbase + tri + 2;
 				}
 			}
 		}
@@ -104,18 +106,59 @@ class DAEModel extends Primitive {
 		}
 	}
 	
+	function loadMatrix( m : h3d.Matrix, t : h3d.dae.DAE.DAETable<Float>, pos : Int ) {
+		m._11 = t[pos++];
+		m._12 = t[pos++];
+		m._13 = t[pos++];
+		m._14 = t[pos++];
+		m._21 = t[pos++];
+		m._22 = t[pos++];
+		m._23 = t[pos++];
+		m._24 = t[pos++];
+		m._31 = t[pos++];
+		m._32 = t[pos++];
+		m._33 = t[pos++];
+		m._34 = t[pos++];
+		m._41 = t[pos++];
+		m._42 = t[pos++];
+		m._43 = t[pos++];
+		m._44 = t[pos++];
+	}
+	
 	public function initSkeleton( jointPerVertex : Int ) {
 		if( mesh.controller == null )
 			throw mesh.name + " does not have a controller";
+		
+		var skin = mesh.controller.get("skin");
+		// joints bind pose matrix
+		var jointNames = ~/[ \t\r\n]+/g.split(StringTools.trim(skin.get("source.Name_array").value.toString()));
+		var njoints = jointNames.length;
+	
+		var jbind = skin.get("source[id=&{_.joints.input[semantic=INV_BIND_MATRIX].source}].float_array").value.toFloats();
+
+		this.jointBind = new flash.Vector(njoints);
+		var pos = 0;
+		for( i in 0...njoints ) {
+			var m = new h3d.Matrix();
+			loadMatrix(m, jbind, pos);
+			pos += 16;
+			this.jointBind[i] = m;
+		}
+			
+		// vertex weights
+		var jweights = skin.get("source[id=&{_.vertex_weights.input[semantic=WEIGHT].source}].float_array").value.toFloats();
+		var vcount = skin.get("vertex_weights.vcount").value.toInts();
+		
+		if( Std.int(vcount.length) != vertexCount )
+			throw "assert";
+		
+		var values = skin.get("vertex_weights.v").value.toInts();
+		var pos = 0, out = 0;
+
 		this.jointPerVertex = jointPerVertex;
 		this.jointIndexes = new flash.Vector(jointPerVertex * vertexCount);
 		this.jointWeights = new flash.Vector(jointPerVertex * vertexCount);
 		
-		var skin = mesh.controller.get("skin");
-		var jweights = skin.get("source[name=weights].float_array").value.toFloats();
-		var vcount = skin.get("vertex_weights.vcount").value.toInts();
-		var values = skin.get("vertex_weights.v").value.toInts();
-		var pos = 0, out = 0;
 		for( v in vcount ) {
 			if( v <= jointPerVertex ) {
 				for( i in 0...v ) {

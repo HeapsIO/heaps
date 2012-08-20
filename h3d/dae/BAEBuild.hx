@@ -59,7 +59,7 @@ class BAEBuild  {
 		s.keep("library_geometries.geometry.mesh.triangles.p");
 		
 		s.keep("library_controllers.controller.skin");
-		s.keep("library_visual_scenes.visual_scene.node[type=JOINT].matrix");
+		s.keep("library_visual_scenes.visual_scene.node");
 		d = s.simplify(d);
 		return d;
 	}
