@@ -161,6 +161,12 @@ class Matrix {
 		tmp.initRotate(axis, angle);
 		multiply(tmp, this);
 	}
+
+	public function prependScale( sx = 1., sy = 1., sz = 1. ) {
+		var tmp = tmp;
+		tmp.initScale(sx,sy,sz);
+		multiply(tmp, this);
+	}
 	
 	public function multiply3x4( a : Matrix, b : Matrix ) {
 		var m11 = a._11; var m12 = a._12; var m13 = a._13;
