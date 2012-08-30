@@ -37,12 +37,25 @@ class Cylinder extends Quads {
 		normals = new Array();
 		var ds = Math.PI * 2 / segs;
 		for( s in 0...segs ) {
-			var a = (s + 0.5) * ds;
-			var n = new Point(Math.cos(a), Math.sin(a), 0);
+			//var ac = (s + 0.5) * ds;
+			
+			var ac0 = (s - 0.5) * ds;
+			var ac1 = (s+ 0.5) * ds;
+			
+			//var n = new Point(Math.cos(ac), Math.sin(ac), 0);
+			var n0 = new Point(Math.cos(ac0), Math.sin(ac0), 0);
+			var n1 = new Point(Math.cos(ac1), Math.sin(ac1), 0);
+			/*
 			normals.push(n);
 			normals.push(n);
 			normals.push(n);
 			normals.push(n);
+			*/
+			
+			normals.push(n0);
+			normals.push(n1);
+			normals.push(n0);
+			normals.push(n1);
 		}
 	}
 
