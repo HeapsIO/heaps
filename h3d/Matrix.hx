@@ -372,4 +372,70 @@ class Matrix {
 		return m;
 	}
 	
+	/**
+	 * rx ry rz rw
+	 * ux uy ux uw
+	 * ax ay az aw
+	 * px py pz pw
+	 */
+	//retrieves pos vector from matrix
+	public inline function pos( ? v: Vector)
+	{
+		if( v == null )
+			return new Vector( _41, _42 , _43 , _44  );
+		else
+		{
+			v.x = _41;
+			v.y = _42;
+			v.z = _43;
+			v.w = _44;
+			return v;
+		}
+	}
+	
+	//retrieves at vector from matrix
+	public inline function at( ?v:Vector)
+	{
+		if( v == null )
+			return new Vector( _31, _32 , _33 , _34  );
+		else
+		{
+			v.x = _31;
+			v.y = _32;
+			v.z = _33;
+			v.w = _34;
+			return v;
+		}
+	}
+	
+	//retrieves up vector from matrix
+	public inline function up(?v:Vector)
+	{
+		if( v == null )
+			return new Vector( _21, _22 , _23 , _24  );
+		else
+		{
+			v.x = _21;
+			v.y = _22;
+			v.z = _23;
+			v.w = _24;
+			return v;
+		}
+	}
+	
+	//retrieves right vector from matrix
+	public inline function right(?v:Vector)
+	{
+		if( v == null )
+			return new Vector( _11, _12 , _13 , _14  );
+		else
+		{
+			v.x = _11;
+			v.y = _12;
+			v.z = _13;
+			v.w = _14;
+			return v;
+		}
+	}
+	
 }
