@@ -9,7 +9,7 @@ class PointShader extends Shader {
 		var tuv : Float2;
 		function vertex( mproj : Matrix, delta : Float4, size : Float2 ) {
 			var p = delta * mproj;
-			p.xy += pos.xy * size;
+			p.xy += pos.xy * size * p.z;
 			out = p;
 			tuv = pos;
 		}
@@ -36,7 +36,7 @@ class LineShader extends Shader {
 			
 			
 			var p = (epos - spos) * (pos.x + 1) * 0.5 + spos;
-			p.xy += delta.yx * pos.y;
+			p.xy += delta.yx * pos.y * p.z / 400;
 			out = p;
 		}
 		function fragment( color : Color ) {

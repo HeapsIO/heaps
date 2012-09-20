@@ -270,7 +270,7 @@ class Engine {
 	}
 	
 	// debug functions
-	public function point( x : Float, y : Float, z : Float, color = 0x80FF0000, size = 2.0, depth = false ) {
+	public function point( x : Float, y : Float, z : Float, color = 0x80FF0000, size = 1.0, depth = false ) {
 		if( debugPoint == null ) {
 			debugPoint = new CustomObject(new h3d.prim.Plan2D(), new h3d.impl.Shaders.PointShader());
 			debugPoint.material.blend(SrcAlpha, OneMinusSrcAlpha);
@@ -279,7 +279,8 @@ class Engine {
 		debugPoint.material.depthTest = depth ? LessEqual : Always;
 		debugPoint.shader.mproj = camera.m;
 		debugPoint.shader.delta = new Vector(x, y, z, 1);
-		debugPoint.shader.size = new Vector(size, size * width / height);
+		var gscale = 1 / 200;
+		debugPoint.shader.size = new Vector(size * gscale, size * gscale * width / height);
 		debugPoint.shader.color = color;
 		debugPoint.render(this);
 	}
