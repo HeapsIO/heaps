@@ -12,6 +12,8 @@ class Tools {
 			v = -v;
 		} else
 			neg = 1.0;
+		if( Math.isNaN(v) )
+			return v;
 		var digits = Std.int(4 - Math.log(v) / Math.log(10));
 		if( digits < 1 )
 			digits = 1;

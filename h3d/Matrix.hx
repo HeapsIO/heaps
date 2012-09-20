@@ -332,6 +332,13 @@ class Matrix {
 		return m;
 	}
 
+	public function loadFrom( m : Matrix ) {
+		_11 = m._11; _12 = m._12; _13 = m._13; _14 = m._14;
+		_21 = m._21; _22 = m._22; _23 = m._23; _24 = m._24;
+		_31 = m._31; _32 = m._32; _33 = m._33; _34 = m._34;
+		_41 = m._41; _42 = m._42; _43 = m._43; _44 = m._44;
+	}
+	
 	public function load( a : Array<Float> ) {
 		_11 = a[0]; _12 = a[1]; _13 = a[2]; _14 = a[3];
 		_21 = a[4]; _22 = a[5]; _23 = a[6]; _24 = a[7];
@@ -351,6 +358,12 @@ class Matrix {
 	public static function I() {
 		var m = new Matrix();
 		m.identity();
+		return m;
+	}
+
+	public static function L( a : Array<Float> ) {
+		var m = new Matrix();
+		m.load(a);
 		return m;
 	}
 	
