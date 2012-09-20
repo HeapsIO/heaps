@@ -24,8 +24,9 @@ class Macros {
 		for( c in shader.args.concat(shader.tex) ) {
 			var set = [], get = "null";
 			var old = pos;
+			var iPrefix = "";
 			function add(e) {
-				set.push(fset + "[" + pos + "]=" + e + ";");
+				set.push(fset + "[" + iPrefix + pos + "]=" + e + ";");
 				pos++;
 			}
 			function addType(n:String,t:VarType) {
@@ -79,11 +80,12 @@ class Macros {
 					add("(" + n + " & 0xFF) / 255.0");
 					add("(" + n + ">>>24) / 255.0");
 				case TArray(t, count):
-					var old = pos;
+					iPrefix += "_i*" + Tools.floatSize(t)+"+";
 					set.push("for( _i in 0..." + count + " ) {");
 					addType(n + "[_i]", t);
 					set.push("}");
-					pos += (pos - old) * (count - 1);
+					iPrefix = "";
+					pos += Tools.floatSize(t) * (count - 1);
 				}
 			}
 			addType(c.name, c.type);
@@ -163,6 +165,10 @@ class Macros {
 
 		var vscode = c.compile(v.vertex);
 		var fscode = c.compile(v.fragment);
+		
+		//trace("----");
+		//for( i in 0...vscode.code.length )
+		//	trace(i+": "+format.agal.Tools.opStr(vscode.code[i]));
 
 		var o = new haxe.io.BytesOutput();
 		new format.agal.Writer(o).write(vscode);
