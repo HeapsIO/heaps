@@ -91,5 +91,49 @@ class FbxTools {
 		default: throw "Invalid prop " + n;
 		}
 	}
+
+	public static function toFloat( n : FbxProp ) {
+		if( n == null ) throw "null prop";
+		return switch( n ) {
+		case PInt(v): v * 1.0;
+		case PFloat(v): v;
+		default: throw "Invalid prop " + n;
+		}
+	}
+
+	public static function toString( n : FbxProp ) {
+		if( n == null ) throw "null prop";
+		return switch( n ) {
+		case PString(v): v;
+		default: throw "Invalid prop " + n;
+		}
+	}
+	
+	public static function getId( n : FbxNode ) {
+		if( n.props.length != 3 )
+			throw n.name + " is not an object";
+		return switch( n.props[0] ) {
+		case PInt(id): id;
+		default: throw n.name + " is not an object";
+		}
+	}
+
+	public static function getName( n : FbxNode ) {
+		if( n.props.length != 3 )
+			throw n.name + " is not an object";
+		return switch( n.props[1] ) {
+		case PString(n): n;
+		default: throw n.name + " is not an object";
+		}
+	}
+
+	public static function getType( n : FbxNode ) {
+		if( n.props.length != 3 )
+			throw n.name + " is not an object";
+		return switch( n.props[2] ) {
+		case PString(n): n;
+		default: throw n.name + " is not an object";
+		}
+	}
 	
 }

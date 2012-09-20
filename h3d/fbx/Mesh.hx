@@ -30,4 +30,12 @@ class Mesh {
 		return uvs;
 	}
 	
+	public function getSkin( bonesPerVertex = 3 ) {
+		var skin = null;
+		for( v in lib.getSubs(root) )
+			if( v.getType() == "Skin" )
+				return new Skin(lib, v, Std.int(getVertices().length/3), bonesPerVertex);
+		return null;
+	}
+	
 }

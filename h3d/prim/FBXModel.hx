@@ -1,28 +1,36 @@
 package h3d.prim;
 using h3d.fbx.Data;
 
-class FBXModel extends Polygon {
+class FBXModel extends Primitive {
 
 	var mesh : h3d.fbx.Mesh;
+	var skin : h3d.fbx.Skin;
 	
 	public function new(m) {
-		super(null);
 		this.mesh = m;
-		buildMesh();
+		skin = m.getSkin();
 	}
 	
-	function buildMesh() {
-		var verts = makePoints(mesh.getVertices());
-		var norms = makePoints(mesh.getNormals());
-		var tuvs = mesh.getUVs()[0];
-		var uvs = [];
-		for( i in tuvs.index )
-			uvs.push(new UV(tuvs.values[i << 1], 1-tuvs.values[(i << 1) + 1]));
+	// not very good, but...
+	inline function int32ToFloat( ix : Int ) {
+		flash.Memory.setI32(0, ix);
+		return flash.Memory.getFloat(0);
+	}
+	
+	override function alloc( engine : h3d.Engine ) {
+		dispose();
 		
-		this.idx = [];
-		this.points = [];
-		this.tcoords = [];
-		this.normals = [];
+		var verts = mesh.getVertices();
+		var norms = mesh.getNormals();
+		var tuvs = mesh.getUVs()[0];
+		
+		var idx = new flash.Vector<UInt>();
+		var buf = new flash.Vector<Float>();
+		var out = 0;
+	
+		var tmp = new flash.utils.ByteArray();
+		tmp.length = 1024;
+		flash.Memory.select(tmp);
 		
 		// triangulize indexes : format is  A,B,...,-X : negative values mark the end of the polygon
 		var count = 0, pos = 0;
@@ -34,33 +42,45 @@ class FBXModel extends Polygon {
 				var start = pos - count + 1;
 				for( n in 0...count ) {
 					var k = n + start;
-					points.push(verts[index[k]]);
-					tcoords.push(uvs[k]);
-					normals.push(norms[k]);
+					var vidx = index[k];
+					
+					buf[out++] = verts[vidx*3];
+					buf[out++] = verts[vidx*3 + 1];
+					buf[out++] = verts[vidx*3 + 2];
+
+					buf[out++] = norms[k*3];
+					buf[out++] = norms[k*3 + 1];
+					buf[out++] = norms[k*3 + 2];
+
+					var iuv = tuvs.index[k];
+					buf[out++] = tuvs.values[iuv*2];
+					buf[out++] = 1 - tuvs.values[iuv*2 + 1];
+					
+					if( skin != null ) {
+						var p = vidx * skin.bonesPerVertex;
+						var idx = 0;
+						for( i in 0...skin.bonesPerVertex ) {
+							buf[out++] = skin.vertexWeights[p + i];
+							idx = (skin.vertexJoints[p + i] << (8*i)) | idx;
+						}
+						buf[out++] = int32ToFloat(idx);
+					}
 				}
 				// polygons are actually triangle fans
 				for( n in 0...count - 2 ) {
 					idx.push(start);
-					idx.push(start + n + 2); // inverse face
-					idx.push(start + n + 1);
+					idx.push(start + n + 1); // inverse face
+					idx.push(start + n + 2);
 				}
 				index[pos] = i; // restore
 				count = 0;
 			}
 			pos++;
 		}
-	}
-	
-	function makePoints( a : Array<Float> ) {
-		var pts = [];
-		var pos = 0;
-		for( i in 0...Std.int(a.length / 3) ) {
-			var x = a[pos++];
-			var y = a[pos++];
-			var z = a[pos++];
-			pts.push(new h3d.Point(x, z, y)); // inverse Y/Z
-		}
-		return pts;
+
+		var size = skin == null ? 8 : (8 + 1 + skin.bonesPerVertex);
+		buffer = engine.mem.allocVector(buf, size, 0);
+		indexes = engine.mem.allocIndex(idx);
 	}
 	
 }
