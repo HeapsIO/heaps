@@ -14,7 +14,7 @@ private enum Token {
 	TEof;
 }
 
-@:noDebug
+@:nodebug
 class Parser {
 
 	var line : Int;
@@ -124,7 +124,7 @@ class Parser {
 	function except( except : Token ) {
 		var t = next();
 		if( !Type.enumEq(t, except) )
-			error("Unexpected " + tokenStr(t) + " (" + tokenStr(except) + " expected)");
+			error("Unexpected '" + tokenStr(t) + "' (" + tokenStr(except) + " expected)");
 	}
 	
 	function peek() {
@@ -169,6 +169,10 @@ class Parser {
 		return StringTools.fastCodeAt(buf, pos++);
 	}
 	
+	inline function getBuf( pos : Int, len : Int ) {
+		return buf.substr(pos, len);
+	}
+	
 	inline function isIdentChar(c) {
 		return (c >= 'a'.code && c <= 'z'.code) || (c >= 'A'.code && c <= 'Z'.code) || (c >= '0'.code && c <= '9'.code) || c == '_'.code || c == '-'.code;
 	}
@@ -207,23 +211,23 @@ class Parser {
 					if( StringTools.isEOF(c) || c == '\n'.code )
 						error("Unclosed string");
 				}
-				return TString(buf.substr(start, pos - start - 1));
+				return TString(getBuf(start, pos - start - 1));
 			case '*'.code:
 				start = pos;
 				do {
 					c = nextChar();
 				} while( c >= '0'.code && c <= '9'.code );
 				pos--;
-				return TLength(Std.parseInt(buf.substr(start, pos - start)));
+				return TLength(Std.parseInt(getBuf(start, pos - start)));
 			default:
 				if( (c >= 'a'.code && c <= 'z'.code) || (c >= 'A'.code && c <= 'Z'.code) || c == '_'.code ) {
 					do {
 						c = nextChar();
 					} while( isIdentChar(c) );
 					if( c == ':'.code )
-						return TNode(buf.substr(start, pos - start - 1));
+						return TNode(getBuf(start, pos - start - 1));
 					pos--;
-					return TIdent(buf.substr(start, pos - start));
+					return TIdent(getBuf(start, pos - start));
 				}
 				if( (c >= '0'.code && c <= '9'.code) || c == '-'.code ) {
 					do {
@@ -231,7 +235,7 @@ class Parser {
 					} while( c >= '0'.code && c <= '9'.code );
 					if( c != '.'.code && pos - start < 10 ) {
 						pos--;
-						return TInt(buf.substr(start, pos - start));
+						return TInt(getBuf(start, pos - start));
 					}
 					if( c == '.'.code ) {
 						do {
@@ -247,7 +251,7 @@ class Parser {
 						} while( c >= '0'.code && c <= '9'.code );
 					}
 					pos--;
-					return TFloat(buf.substr(start, pos - start));
+					return TFloat(getBuf(start, pos - start));
 				}
 				if( StringTools.isEOF(c) ) {
 					pos--;

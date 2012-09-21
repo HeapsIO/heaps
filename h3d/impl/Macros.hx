@@ -80,8 +80,9 @@ class Macros {
 					add("(" + n + " & 0xFF) / 255.0");
 					add("(" + n + ">>>24) / 255.0");
 				case TArray(t, count):
-					iPrefix += "_i*" + Tools.floatSize(t)+"+";
-					set.push("for( _i in 0..." + count + " ) {");
+					iPrefix += "_i*" + Tools.floatSize(t) + "+";
+					set.push("var max = " + n + ".length;");
+					set.push("for( _i in 0...(max < " + count + "?max:"+count+") ) {");
 					addType(n + "[_i]", t);
 					set.push("}");
 					iPrefix = "";

@@ -3,12 +3,24 @@ using h3d.fbx.Data;
 
 class FBXModel extends Primitive {
 
-	var mesh : h3d.fbx.Mesh;
-	var skin : h3d.fbx.Skin;
+	public var mesh(default, null) : h3d.fbx.Mesh;
+	public var skin(default, null) : h3d.fbx.Skin;
+	var anims(default, null) : Hash<Skin.Animation>;
 	
 	public function new(m) {
 		this.mesh = m;
 		skin = m.getSkin();
+		anims = new Hash();
+	}
+	
+	public function getAnimation( name : String ) {
+		var a = anims.get(name);
+		if( a == null ) {
+			if( skin == null ) throw "No skin";
+			a = skin.getAnimation(name);
+			anims.set(name, a);
+		}
+		return a;
 	}
 	
 	// not very good, but...
@@ -69,7 +81,7 @@ class FBXModel extends Primitive {
 				// polygons are actually triangle fans
 				for( n in 0...count - 2 ) {
 					idx.push(start);
-					idx.push(start + n + 1); // inverse face
+					idx.push(start + n + 1);
 					idx.push(start + n + 2);
 				}
 				index[pos] = i; // restore
