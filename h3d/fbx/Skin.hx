@@ -125,6 +125,9 @@ class Skin extends h3d.prim.Skin {
 		return m;
 	}
 	
+	public function listAnimation()
+		return Lambda.map( lib.getRoot().getAll("Objects.AnimationStack"),function(a) return a.getName() )
+	
 	public function getAnimation( name : String ) {
 		var node = null;
 		for( a in lib.getRoot().getAll("Objects.AnimationStack") )

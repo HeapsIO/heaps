@@ -23,6 +23,8 @@ class FBXModel extends Primitive {
 		return a;
 	}
 	
+	public function listAnimations() return skin.listAnimation()
+	
 	// not very good, but...
 	inline function int32ToFloat( ix : Int ) {
 		flash.Memory.setI32(0, ix);

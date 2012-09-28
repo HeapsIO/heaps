@@ -88,6 +88,7 @@ class FbxTools {
 		if( n == null ) throw "null prop";
 		return switch( n ) {
 		case PInt(v): v;
+		case PFloat(f): return Std.int( f );
 		default: throw "Invalid prop " + n;
 		}
 	}
@@ -114,7 +115,8 @@ class FbxTools {
 			throw n.name + " is not an object";
 		return switch( n.props[0] ) {
 		case PInt(id): id;
-		default: throw n.name + " is not an object";
+		case PFloat(id) : Std.int( id );
+		default: throw n.name + " is not an object " + n.props;
 		}
 	}
 
