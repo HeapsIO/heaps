@@ -20,6 +20,10 @@ class Library {
 			init(n);
 	}
 	
+	public function load( x : Iterable<FbxNode> ) {
+		for ( r in x ) init( r );
+	}
+	
 	function init( n : FbxNode ) {
 		switch( n.name ) {
 		case "Connections":
