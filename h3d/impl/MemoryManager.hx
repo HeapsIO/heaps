@@ -159,7 +159,7 @@ class MemoryManager {
 		var tmp = b;
 		var pos = 0;
 		while( tmp != null ) {
-			tmp.b.vbuf.uploadFromVector( pos == 0 ? v : v.slice(pos,tmp.nvert+pos), tmp.pos, tmp.nvert);
+			tmp.b.vbuf.uploadFromVector( pos == 0 ? v : v.slice(pos,tmp.nvert*stride+pos), tmp.pos, tmp.nvert);
 			pos += tmp.nvert * stride;
 			tmp = tmp.next;
 		}
