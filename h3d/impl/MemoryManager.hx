@@ -14,6 +14,7 @@ class FreeCell {
 class BigBuffer {
 
 	public var stride : Int;
+	public var size : Int;
 	public var written : Bool;
 	public var vbuf : flash.display3D.VertexBuffer3D;
 	public var free : FreeCell;
@@ -21,11 +22,12 @@ class BigBuffer {
 
 	public function new(v, stride, size) {
 		written = false;
+		this.size = size;
 		this.stride = stride;
 		this.vbuf = v;
 		this.free = new FreeCell(0,size,null);
 	}
-	
+
 	public function freeCursor( pos, nvect ) {
 		var prev : FreeCell = null;
 		var f = free;
@@ -50,7 +52,7 @@ class BigBuffer {
 		}
 		throw "assert";
 	}
-	
+
 	public function dispose() {
 		vbuf.dispose();
 		vbuf = null;
@@ -61,22 +63,24 @@ class BigBuffer {
 class MemoryManager {
 
 	static inline var MAX_MEMORY = 250 << 20; // MB
-	
+	static inline var MAX_BUFFERS = 4096;
+
 	var ctx : flash.display3D.Context3D;
 	var empty : flash.utils.ByteArray;
 	public var buffers : Array<BigBuffer>;
 	public var indexes : Indexes;
 	public var quadIndexes : Indexes;
 	public var usedMemory : Int;
+	public var bufferCount : Int;
 	public var allocSize : Int;
-	
+
 	public function new(ctx,allocSize) {
 		this.ctx = ctx;
 		this.allocSize = allocSize;
-				
+
 		empty = new flash.utils.ByteArray();
 		buffers = new Array();
-		
+
 		var indices = new flash.Vector<UInt>();
 		for( i in 0...allocSize ) indices[i] = i;
 		indexes = allocIndex(indices);
@@ -94,10 +98,35 @@ class MemoryManager {
 		}
 		quadIndexes = allocIndex(indices);
 	}
-	
+
+	/**
+		Call user-defined garbage function that will cleanup some unused allocated objects.
+		Might be called several times if we need to allocate a lot of memory
+	**/
 	public dynamic function garbage() {
 	}
-	
+
+	/**
+		Clean empty (unused) buffers
+	**/
+	public function cleanBuffers() {
+		for( i in 0...buffers.length ) {
+			var b = buffers[i], prev = null;
+			while( b != null ) {
+				if( b.free.count == b.size ) {
+					b.dispose();
+					bufferCount--;
+					usedMemory -= b.size * b.stride * 4;
+					if( prev == null )
+						buffers[i] = b.next;
+					else
+						prev.next = b.next;
+				}
+				b = b.next;
+			}
+		}
+	}
+
 	public function stats() {
 		var total = 0, free = 0, count = 0;
 		for( b in buffers ) {
@@ -119,11 +148,11 @@ class MemoryManager {
 			totalMemory : total,
 		};
 	}
-	
+
 	public function allocTexture( width : Int, height : Int ) {
 		return new h3d.mat.Texture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false);
 	}
-	
+
 	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap ) {
 		var t;
 		if( bmp != null ) {
@@ -136,24 +165,24 @@ class MemoryManager {
 		}
 		return t;
 	}
-	
+
 	public function allocCubeTexture( size : Int ) {
 		return new h3d.mat.Texture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), size, size, true);
 	}
-	
+
 	public function allocIndex( indices : flash.Vector<UInt> ) {
 		var ibuf = ctx.createIndexBuffer(indices.length);
 		ibuf.uploadFromVector(indices, 0, indices.length);
 		return new Indexes(ibuf,indices.length);
 	}
-	
+
 	public function allocBytes( bytes : flash.utils.ByteArray, stride : Int, align ) {
 		var count = Std.int(bytes.length / (stride * 4));
 		var b = alloc(count, stride, align);
 		b.upload(bytes, 0, count);
 		return b;
 	}
-	
+
 	public function allocVector( v : flash.Vector<Float>, stride, align ) {
 		var b = alloc(Std.int(v.length / stride), stride, align);
 		var tmp = b;
@@ -165,7 +194,7 @@ class MemoryManager {
 		}
 		return b;
 	}
-	
+
 	public function freeMemory() {
 		var size = 0;
 		for( b in buffers ) {
@@ -181,7 +210,7 @@ class MemoryManager {
 		}
 		return size;
 	}
-	
+
 	public function alloc( nvect, stride, align ) {
 		var b = buffers[stride], free = null;
 		while( b != null ) {
@@ -216,17 +245,27 @@ class MemoryManager {
 		}
 		// buffer not found : allocate a new one
 		if( b == null ) {
-			var mem = allocSize * stride * 4;
-			if( usedMemory + mem > MAX_MEMORY ) {
+			var size;
+			if( align == 0 ) {
+				size = nvect;
+				if( size > allocSize ) throw "Too many vertex to allocate "+size;
+			} else
+				size = allocSize; // group allocations together to minimize buffer count
+			var mem = size * stride * 4;
+			if( usedMemory + mem > MAX_MEMORY || bufferCount >= MAX_BUFFERS ) {
 				var size = freeMemory();
 				garbage();
+				cleanBuffers();
+				if( bufferCount >= MAX_BUFFERS )
+					throw "Too many buffer";
 				if( freeMemory() == size )
 					throw "Memory full";
 				return alloc(nvect, stride, align);
 			}
-			var v = ctx.createVertexBuffer(allocSize, stride);
+			var v = ctx.createVertexBuffer(size, stride);
 			usedMemory += mem;
-			b = new BigBuffer(v, stride, allocSize);
+			bufferCount++;
+			b = new BigBuffer(v, stride, size);
 			b.next = buffers[stride];
 			buffers[stride] = b;
 			free = b.free;
@@ -242,7 +281,7 @@ class MemoryManager {
 			b.next = this.alloc(nvect, stride, align);
 		return b;
 	}
-	
+
 	public function finalize( b : BigBuffer ) {
 		if( !b.written ) {
 			b.written = true;
@@ -253,18 +292,22 @@ class MemoryManager {
 			}
 		}
 	}
-	
+
 	public function dispose() {
 		indexes.dispose();
 		indexes = null;
+		quadIndexes.dispose();
+		quadIndexes = null;
 		for( b in buffers ) {
 			var b = b;
 			while( b != null ) {
-				b.vbuf.dispose();
+				b.dispose();
 				b = b.next;
 			}
 		}
 		buffers = [];
+		bufferCount = 0;
+		usedMemory = 0;
 	}
-	
+
 }
