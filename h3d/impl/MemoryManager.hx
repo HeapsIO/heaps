@@ -211,6 +211,11 @@ class MemoryManager {
 		return size;
 	}
 
+	/**
+		Allocate a vertex buffer.
+		Align represent the number of vertex that represent a single primitive : 3 for triangles, 4 for quads
+		You can use 0 to allocate your own buffer but in that case you can't use pre-allocated indexes/quadIndexes
+	 **/
 	public function alloc( nvect, stride, align ) {
 		var b = buffers[stride], free = null;
 		while( b != null ) {
