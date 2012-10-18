@@ -30,8 +30,14 @@ class Engine {
 	
 	public function new( width = 0, height = 0, hardware = true, aa = 0, stageIndex = 0 ) {
 		var stage = flash.Lib.current.stage;
-		if( width == 0 ) width = stage.stageWidth;
-		if( height == 0 ) height = stage.stageHeight;
+		var Cap = flash.system.Capabilities;
+		if( Cap.os.indexOf("iPhone") != -1 ) {
+			if( width == 0 ) width = Std.int(Cap.screenResolutionX > Cap.screenResolutionY ? Cap.screenResolutionX : Cap.screenResolutionY);
+			if( height == 0 ) height = Std.int(Cap.screenResolutionX > Cap.screenResolutionY ? Cap.screenResolutionY : Cap.screenResolutionX);
+		} else {
+			if( width == 0 ) width = stage.stageWidth;
+			if( height == 0 ) height = stage.stageHeight;
+		}
 		this.width = width;
 		this.height = height;
 		this.hardware = hardware;
