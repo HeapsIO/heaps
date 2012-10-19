@@ -261,10 +261,9 @@ class Engine {
 		curTextures = [];
 	}
 	
-	public function render( objects : Array<Object> ) {
+	public function render( obj : { function render( engine : Engine ) : Void; } ) {
 		if( !begin() ) return false;
-		for( o in objects )
-			o.render(this);
+		obj.render(this);
 		end();
 		return true;
 	}
