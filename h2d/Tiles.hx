@@ -44,13 +44,11 @@ class Tiles {
 	
 	public function getTexture( engine : h3d.Engine ) {
 		if( tex == null ) {
-			tex = engine.mem.makeTexture(bmp);
-			bmp = null;
+			tex = engine.mem.allocTexture(bmp.width, bmp.height);
+			tex.upload(bmp);
 		}
 		return tex;
 	}
-	
-	static inline var EPSILON_PIXEL = 0.00001;
 	
 	public static function fromBitmap( bmp : flash.display.BitmapData ) {
 		var tl = new Tiles();
@@ -59,7 +57,6 @@ class Tiles {
 			w <<= 1;
 		while( h < bmp.height )
 			h <<= 1;
-		tl.elements.push([new TilePos(tl, 0, 0, (bmp.width - EPSILON_PIXEL) / w, (bmp.height - EPSILON_PIXEL) / h, 0, 0, bmp.width, bmp.height)]);
 		if( w != bmp.width || h != bmp.height ) {
 			var bmp2 = new flash.display.BitmapData(w, h, true, 0);
 			var p0 = new flash.geom.Point(0, 0);
@@ -68,6 +65,7 @@ class Tiles {
 			bmp.dispose();
 		} else
 			tl.bmp = bmp;
+		tl.elements.push([new TilePos(tl, 0, 0, tl.width, tl.height)]);
 		return tl;
 	}
 
@@ -82,7 +80,7 @@ class Tiles {
 				var sz = isEmpty(bmp, x * size, y * size, size, colorBG);
 				if( sz == null )
 					break;
-				a.push(new TilePos(tl,(x*size+sz.dx)/bmp.width,(y*size+sz.dy)/bmp.height,(x*size+sz.dx+sz.w - EPSILON_PIXEL)/bmp.width,(y*size+sz.dy+sz.h - EPSILON_PIXEL)/bmp.height,sz.dx,sz.dy,sz.w,sz.h));
+				a.push(new TilePos(tl, x*size+sz.dx, y*size+sz.dy, sz.w, sz.h, sz.dx, sz.dy));
 			}
 		}
 		return tl;
@@ -91,6 +89,7 @@ class Tiles {
 	public static function fromSprites( sprites : Array<flash.display.Sprite> ) {
 		var tl = new Tiles();
 		tl.elements[0] = [];
+		var tmp = [];
 		var width = 0;
 		var height = 0;
 		for( s in sprites ) {
@@ -99,8 +98,7 @@ class Tiles {
 			var dy = Math.floor(g.top);
 			var w = Math.ceil(g.right) - dx;
 			var h = Math.ceil(g.bottom) - dy;
-			var t = new TilePos(tl, width, 0, width + w, h, dx, dy, w, h);
-			tl.elements[0].push(t);
+			tmp.push( { s : s, x : width, dx : dx, dy : dy, w : w, h : h } );
 			width += w;
 			if( height < h ) height = h;
 		}
@@ -110,19 +108,14 @@ class Tiles {
 		while( rh < height )
 			rh <<= 1;
 		var bmp = new flash.display.BitmapData(rw, rh, true, 0);
-		var m = new flash.geom.Matrix();
-		for( i in 0...sprites.length ) {
-			var s = sprites[i];
-			var t = tl.get(i);
-			m.tx = t.u;
-			m.ty = t.v;
-			bmp.draw(s, m);
-			t.u /= rw;
-			t.v /= rh;
-			t.u2 /= rw;
-			t.v2 /= rh;
-		}
 		tl.bmp = bmp;
+		var m = new flash.geom.Matrix();
+		for( t in tmp ) {
+			m.tx = t.x-t.dx;
+			m.ty = -t.dy;
+			bmp.draw(t.s, m);
+			tl.elements[0].push(new TilePos(tl, t.x, 0, t.w, t.h, t.dx, t.dy));
+		}
 		return tl;
 	}
 	

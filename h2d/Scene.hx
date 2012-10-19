@@ -34,8 +34,8 @@ class Scene extends Sprite {
 		
 		// perform final rotation around center
 		if( rotation != 0 ) {
-			var cr = Math.cos(rotation * Math.PI / 180);
-			var sr = Math.sin(rotation * Math.PI / 180);
+			var cr = Math.cos(rotation * Sprite.ROT2RAD);
+			var sr = Math.sin(rotation * Sprite.ROT2RAD);
 			var tmpA = matA * cr + matB * sr;
 			var tmpB = matA * -sr + matB * cr;
 			var tmpC = matC * cr + matD * sr;
@@ -51,7 +51,7 @@ class Scene extends Sprite {
 		}
 	}
 	
-	override function render( engine : h3d.Engine ) {
+	override public function render( engine : h3d.Engine ) {
 		if( savedWidth != engine.width || savedHeight != engine.height ) {
 			savedWidth = engine.width;
 			savedHeight = engine.height;

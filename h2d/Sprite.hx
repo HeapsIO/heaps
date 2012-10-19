@@ -2,6 +2,8 @@ package h2d;
 
 class Sprite {
 
+	static inline var ROT2RAD = -0.017453292519943295769236907684886;
+	
 	var childs : Array<Sprite>;
 	public var parent(default,null) : Sprite;
 	
@@ -65,8 +67,8 @@ class Sprite {
 					matC = 0;
 					matD = scaleY;
 				} else {
-					cr = Math.cos(rotation * Math.PI/180);
-					sr = Math.sin(rotation * Math.PI/180);
+					cr = Math.cos(rotation * ROT2RAD);
+					sr = Math.sin(rotation * ROT2RAD);
 					matA = scaleX * cr;
 					matB = scaleX * -sr;
 					matC = scaleY * sr;
@@ -87,8 +89,8 @@ class Sprite {
 					matC = scaleY * parent.matC;
 					matD = scaleY * parent.matD;
 				} else {
-					var cr = Math.cos(rotation * Math.PI/180);
-					var sr = Math.sin(rotation * Math.PI / 180);
+					var cr = Math.cos(rotation * ROT2RAD);
+					var sr = Math.sin(rotation * ROT2RAD);
 					var tmpA = scaleX * cr;
 					var tmpB = scaleX * -sr;
 					var tmpC = scaleY * sr;
@@ -104,7 +106,7 @@ class Sprite {
 		}
 	}
 	
-	public function render( engine : h3d.Engine ) {
+	function render( engine : h3d.Engine ) {
 		updatePos();
 		draw(engine);
 		for( c in childs )

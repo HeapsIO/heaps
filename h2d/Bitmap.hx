@@ -35,6 +35,7 @@ class Bitmap extends Sprite {
 	}
 	
 	static var BITMAP_OBJ : h3d.CustomObject<BitmapShader> = null;
+	static var TMP_VECTOR = new h3d.Vector();
 	
 	override function draw( engine : h3d.Engine ) {
 		if( data == null )
@@ -52,11 +53,25 @@ class Bitmap extends Sprite {
 			b.material.culling = None;
 			b.material.depth(false, Always);
 		}
-		b.shader.size = new h3d.Vector(data.w, data.h, 1);
-		b.shader.mat1 = new h3d.Vector(matA, matC, absX + data.dx * matA + data.dy * matC);
-		b.shader.mat2 = new h3d.Vector(matB, matD, absY + data.dx * matB + data.dy * matD);
-		b.shader.uvPos = new h3d.Vector(data.u, data.v);
-		b.shader.uvScale = new h3d.Vector(data.u2 - data.u, data.v2 - data.v);
+		var tmp = TMP_VECTOR;
+		tmp.x = data.w;
+		tmp.y = data.h;
+		tmp.z = 1;
+		b.shader.size = tmp;
+		tmp.x = matA;
+		tmp.y = matC;
+		tmp.z = absX + data.dx * matA + data.dy * matC;
+		b.shader.mat1 = tmp;
+		tmp.x = matB;
+		tmp.y = matD;
+		tmp.z = absY + data.dx * matB + data.dy * matD;
+		b.shader.mat2 = tmp;
+		tmp.x = data.u;
+		tmp.y = data.v;
+		b.shader.uvPos = tmp;
+		tmp.x = data.u2 - data.u;
+		tmp.y = data.v2 - data.v;
+		b.shader.uvScale = tmp;
 		b.shader.color = color;
 		b.shader.tex = data.t.getTexture(engine);
 		b.render(engine);

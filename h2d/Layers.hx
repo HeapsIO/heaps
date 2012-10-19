@@ -2,45 +2,46 @@ package h2d;
 
 class Layers extends Sprite {
 	
-	var layers : Array<Array<Sprite>>;
+	var layers : Array<Int>;
+	var layerCount : Int;
 	
 	public function new(?parent) {
 		super(parent);
 		layers = [];
+		layerCount = 0;
 	}
 	
 	public function add( s : Sprite, layer : Int ) {
-		var l = layers[layer];
-		if( l == null ) {
-			l = [];
-			layers[layer] = l;
-		}
+		// new layer
+		while( layer > layerCount )
+			layers[layerCount++] = childs.length;
 		s.remove();
-		l.push(s);
+		if( layer == layerCount )
+			childs.push(s);
+		else {
+			childs.insert(layers[layer], s);
+			for( i in layer...layerCount )
+				layers[i]++;
+		}
 		s.parent = this;
 	}
 	
-	public function ysort( layer : Int ) {
-		var l = layers[layer];
-		if( l == null ) return;
-		l.sort(sortSprites);
-	}
-	
-	function sortSprites(s1:Sprite, s2:Sprite) {
-		var d = s1.y - s2.y;
-		if( d == 0 ) return 0;
-		return d > 0 ? 1 : -1;
-	}
-	
-	public function render( engine : h3d.Engine ) {
-		updatePos();
-		draw(engine);
-		for( l in layers ) {
-			if( l == null ) continue;
-			for( c in l )
-				c.render(engine);
+	override function removeChild( s : Sprite ) {
+		for( i in 0...childs.length ) {
+			if( childs[i] == s ) {
+				childs.splice(i, 1);
+				var k = layerCount - 1;
+				while( k >= 0 && layers[k] >= i ) {
+					layers[k]--;
+					k--;
+				}
+			}
 		}
-		posChanged = false;
 	}
+	
+	public function ysort( layer : Int ) {
+		// TODO
+	}
+
 	
 }
