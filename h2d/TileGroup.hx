@@ -124,10 +124,8 @@ class TileGroup extends Sprite {
 			object.material.shader = shader;
 		}
 		shader.tex = tiles.getTexture(engine);
-		var zx = 2 / engine.width;
-		var zy = -2 / engine.height;
-		shader.mat1 = new h3d.Vector(matA * zx, matC * zx, absX * zx);
-		shader.mat2 = new h3d.Vector(matB * zy, matD * zy, absY * zy);
+		shader.mat1 = new h3d.Vector(matA, matC, absX);
+		shader.mat2 = new h3d.Vector(matB, matD, absY);
 		shader.color = color == null ? new h3d.Vector(1,1,1,1) : color;
 		object.render(engine);
 	}

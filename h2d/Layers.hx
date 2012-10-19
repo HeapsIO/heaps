@@ -35,9 +35,11 @@ class Layers extends Sprite {
 	public function render( engine : h3d.Engine ) {
 		updatePos();
 		draw(engine);
-		for( l in layers )
+		for( l in layers ) {
+			if( l == null ) continue;
 			for( c in l )
 				c.render(engine);
+		}
 		posChanged = false;
 	}
 	

@@ -8,28 +8,56 @@ class Scene extends Sprite {
 	public function new() {
 		super(null);
 	}
+
+	override function updatePos() {
+		// don't take the parent into account
+		if( !posChanged )
+			return;
+			
+		// init matrix without rotation
+		matA = scaleX;
+		matB = 0;
+		matC = 0;
+		matD = scaleY;
+		absX = x;
+		absY = y;
+		
+		// adds a pixels-to-viewport transform
+		var w = 2 / savedWidth;
+		var h = -2 / savedHeight;
+		absX = absX * w - 1;
+		absY = absY * h + 1;
+		matA *= w;
+		matB *= h;
+		matC *= w;
+		matD *= h;
+		
+		// perform final rotation around center
+		if( rotation != 0 ) {
+			var cr = Math.cos(rotation * Math.PI / 180);
+			var sr = Math.sin(rotation * Math.PI / 180);
+			var tmpA = matA * cr + matB * sr;
+			var tmpB = matA * -sr + matB * cr;
+			var tmpC = matC * cr + matD * sr;
+			var tmpD = matC * -sr + matD * cr;
+			var tmpX = absX * cr + absY * sr;
+			var tmpY = absX * -sr + absY * cr;
+			matA = tmpA;
+			matB = tmpB;
+			matC = tmpC;
+			matD = tmpD;
+			absX = tmpX;
+			absY = tmpY;
+		}
+	}
 	
 	override function render( engine : h3d.Engine ) {
-		if( savedWidth != engine.width || savedHeight != engine.height )
-			posChanged = true;
-		updatePos();
-		if( posChanged ) {
-			// adds a pixels-to-viewport transform
-			var w = 2 / engine.width;
-			var h = -2 / engine.height;
-			absX = absX * w - 1;
-			absY = absY * h + 1;
-			matA *= w;
-			matB *= w;
-			matC *= h;
-			matD *= h;
+		if( savedWidth != engine.width || savedHeight != engine.height ) {
 			savedWidth = engine.width;
 			savedHeight = engine.height;
+			posChanged = true;
 		}
-		draw(engine);
-		for( c in childs )
-			c.render(engine);
-		posChanged = false;
+		super.render(engine);
 	}
 	
 	

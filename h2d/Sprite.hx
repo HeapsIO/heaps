@@ -7,8 +7,6 @@ class Sprite {
 	
 	public var x(default,set_x) : Float;
 	public var y(default, set_y) : Float;
-	public var centerX(default, set_centerX) : Float;
-	public var centerY(default, set_centerY) : Float;
 	public var scaleX(default,set_scaleX) : Float;
 	public var scaleY(default,set_scaleY) : Float;
 	public var rotation(default,set_rotation) : Float;
@@ -25,7 +23,6 @@ class Sprite {
 	public function new( ?parent : Sprite ) {
 		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
 		x = 0; y = 0; scaleX = 1; scaleY = 1; rotation = 0;
-		centerX = 0; centerY = 0;
 		posChanged = false;
 		childs = [];
 		if( parent != null )
@@ -63,38 +60,44 @@ class Sprite {
 				var cr, sr;
 				if( rotation == 0 ) {
 					cr = 1.; sr = 0.;
+					matA = scaleX;
+					matB = 0;
+					matC = 0;
+					matD = scaleY;
 				} else {
 					cr = Math.cos(rotation * Math.PI/180);
 					sr = Math.sin(rotation * Math.PI/180);
+					matA = scaleX * cr;
+					matB = scaleX * -sr;
+					matC = scaleY * sr;
+					matD = scaleY * cr;
 				}
-				matA = scaleX * cr;
-				matB = scaleX * -sr;
-				matC = scaleY * sr;
-				matD = scaleY * cr;
-				var ccx = scaleX * -centerX;
-				var ccy = scaleY * -centerY;
-				absX = cr * ccx + sr * ccy + x + centerX;
-				absY = cr * ccy - sr * ccx + y + centerY;
+				absX = x;
+				absY = y;
 			}
 		} else {
 			if( parent.posChanged )
 				posChanged = true;
 			if( posChanged ) {
-				var cr, sr;
+				// M(rel) = S . R . T
+				// M(abs) = M(rel) . P(abs)
 				if( rotation == 0 ) {
-					cr = 1.; sr = 0.;
+					matA = scaleX * parent.matA;
+					matB = scaleX * parent.matB;
+					matC = scaleY * parent.matC;
+					matD = scaleY * parent.matD;
 				} else {
-					cr = Math.cos(rotation * Math.PI/180);
-					sr = Math.sin(rotation * Math.PI/180);
+					var cr = Math.cos(rotation * Math.PI/180);
+					var sr = Math.sin(rotation * Math.PI / 180);
+					var tmpA = scaleX * cr;
+					var tmpB = scaleX * -sr;
+					var tmpC = scaleY * sr;
+					var tmpD = scaleY * cr;
+					matA = tmpA * parent.matA + tmpB * parent.matC;
+					matB = tmpA * parent.matB + tmpB * parent.matD;
+					matC = tmpC * parent.matA + tmpD * parent.matC;
+					matD = tmpC * parent.matB + tmpD * parent.matD;
 				}
-				var tmpA = scaleX * cr;
-				var tmpB = scaleX * -sr;
-				var tmpC = scaleY * sr;
-				var tmpD = scaleY * cr;
-				matA = tmpA * parent.matA + tmpB * parent.matC;
-				matB = tmpA * parent.matB + tmpB * parent.matD;
-				matC = tmpC * parent.matA + tmpD * parent.matC;
-				matD = tmpC * parent.matB + tmpD * parent.matD;
 				absX = x * parent.matA + y * parent.matC + parent.absX;
 				absY = x * parent.matB + y * parent.matD + parent.absY;
 			}
@@ -135,18 +138,6 @@ class Sprite {
 	
 	inline function set_rotation(v) {
 		rotation = v;
-		posChanged = true;
-		return v;
-	}
-
-	inline function set_centerX(v) {
-		centerX = v;
-		posChanged = true;
-		return v;
-	}
-
-	inline function set_centerY(v) {
-		centerY = v;
 		posChanged = true;
 		return v;
 	}
