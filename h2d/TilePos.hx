@@ -4,7 +4,7 @@ class TilePos {
 
 	static inline var EPSILON_PIXEL = 0.00001;
 	
-	public var t : Tiles;
+	public var tiles(default,null) : Tiles;
 	public var u : Float;
 	public var v : Float;
 	public var u2 : Float;
@@ -14,8 +14,9 @@ class TilePos {
 	public var w : Int;
 	public var h : Int;
 	
-	public function new(t, x, y, w, h, dx=0, dy=0) {
-		this.t = t;
+	@:allow(h2d.Tiles)
+	function new(t, x, y, w, h, dx=0, dy=0) {
+		this.tiles = t;
 		this.u = x / t.width;
 		this.v = y / t.height;
 		this.u2 = (x + w - EPSILON_PIXEL) / t.width;
@@ -27,11 +28,11 @@ class TilePos {
 	}
 	
 	public function getPosX() {
-		return Std.int(u * t.width);
+		return Std.int(u * tiles.width);
 	}
 
 	public function getPosY() {
-		return Std.int(v * t.height);
+		return Std.int(v * tiles.height);
 	}
 	
 	public function toString() {

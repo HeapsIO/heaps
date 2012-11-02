@@ -12,6 +12,10 @@ class Tiles {
 		elements = [];
 	}
 	
+	public function create( x, y, w, h, dx = 0, dy = 0 ) {
+		return new TilePos(this, x, y, w, h, dx, dy);
+	}
+	
 	function get_width() {
 		return tex == null ? bmp.width : tex.width;
 	}

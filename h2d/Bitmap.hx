@@ -73,7 +73,7 @@ class Bitmap extends Sprite {
 		tmp.y = data.v2 - data.v;
 		b.shader.uvScale = tmp;
 		b.shader.color = color;
-		b.shader.tex = data.t.getTexture(engine);
+		b.shader.tex = data.tiles.getTexture(engine);
 		b.render(engine);
 	}
 	
