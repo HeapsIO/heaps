@@ -26,7 +26,7 @@ class Bitmap extends Sprite {
 
 	public var data : TilePos;
 	public var color : h3d.Vector;
-	public var alpha(get_alpha, set_alpha) : Float;
+	public var alpha(get, set) : Float;
 	
 	public function new( ?data : TilePos, ?parent ) {
 		super(parent);

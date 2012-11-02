@@ -7,11 +7,11 @@ class Sprite {
 	var childs : Array<Sprite>;
 	public var parent(default,null) : Sprite;
 	
-	public var x(default,set_x) : Float;
-	public var y(default, set_y) : Float;
-	public var scaleX(default,set_scaleX) : Float;
-	public var scaleY(default,set_scaleY) : Float;
-	public var rotation(default,set_rotation) : Float;
+	public var x(default,set) : Float;
+	public var y(default, set) : Float;
+	public var scaleX(default,set) : Float;
+	public var scaleY(default,set) : Float;
+	public var rotation(default,set) : Float;
 
 	var matA : Float;
 	var matB : Float;
@@ -43,14 +43,22 @@ class Sprite {
 		s.parent = this;
 	}
 	
+	// kept for internal cleanup
+	function onRemove() {
+	}
+	
 	public function removeChild( s : Sprite ) {
-		if( childs.remove(s) )
+		if( childs.remove(s) ) {
 			s.parent = null;
+			s.onRemove();
+		}
 	}
 	
 	public inline function remove() {
-		if( this != null && parent != null )
+		if( this != null && parent != null ) {
 			parent.removeChild(this);
+			onRemove();
+		}
 	}
 	
 	function draw( engine : h3d.Engine ) {

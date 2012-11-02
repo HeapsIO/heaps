@@ -71,58 +71,52 @@ private class TileLayerContent extends h3d.prim.Primitive {
 
 class TileGroup extends Sprite {
 	
+	static var SHADER : TileShader2D = null;
+
 	var object : h3d.Object;
-	var shader : TileShader2D;
 	var content : TileLayerContent;
 	
 	public var tiles : Tiles;
-	public var alpha(default, setAlpha) : Bool;
-	public var color(default, setColor) : Null<h3d.Vector>;
+	public var color(default, set) : Null<h3d.Vector>;
 	
 	public function new(t,?parent) {
 		super(parent);
 		tiles = t;
 		content = new TileLayerContent();
-		object = new h3d.Object(content, new h3d.mat.Material(null));
+		if( SHADER == null )
+			SHADER = new TileShader2D();
+		object = new h3d.Object(content, new h3d.mat.Material(SHADER));
 		object.material.depth(false, Always);
 		object.material.culling = None;
+		setAlpha(true);
 	}
 	
 	public function reset() {
 		content.reset();
 	}
 	
+	override function onRemove() {
+		object.primitive.dispose();
+	}
+	
 	public inline function add(x, y, t) {
 		content.add(x, y, t);
 	}
 	
-	function killShader() {
-		if( shader != null ) {
-			shader.dispose();
-			shader = null;
-		}
-	}
-	
-	function setColor(c) {
+	function set_color(c) {
 		color = c;
-		killShader();
 		return c;
 	}
 	
-	function setAlpha(a) {
+	public function setAlpha(a) {
 		if( a )
 			object.material.blend(SrcAlpha, OneMinusSrcAlpha);
 		else
 			object.material.blend(One,Zero);
-		alpha = a;
-		return a;
 	}
 	
 	override function draw(engine:h3d.Engine) {
-		if( shader == null ) {
-			shader = new TileShader2D();
-			object.material.shader = shader;
-		}
+		var shader = SHADER;
 		shader.tex = tiles.getTexture(engine);
 		shader.mat1 = new h3d.Vector(matA, matC, absX);
 		shader.mat2 = new h3d.Vector(matB, matD, absY);

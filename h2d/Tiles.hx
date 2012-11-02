@@ -4,8 +4,8 @@ class Tiles {
 	
 	var bmp : flash.display.BitmapData;
 	var tex : h3d.mat.Texture;
-	public var width(get_width, null) : Int;
-	public var height(get_height, null) : Int;
+	public var width(get, null) : Int;
+	public var height(get, null) : Int;
 	public var elements : Array<Array<TilePos>>;
 	
 	public function new() {
