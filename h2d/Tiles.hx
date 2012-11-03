@@ -90,6 +90,12 @@ class Tiles {
 		return tl;
 	}
 	
+	public static function fromTexture( tex : h3d.mat.Texture ) {
+		var t = new Tiles();
+		t.tex = tex;
+		return t;
+	}
+	
 	public static function fromSprites( sprites : Array<flash.display.Sprite> ) {
 		var tl = new Tiles();
 		tl.elements[0] = [];

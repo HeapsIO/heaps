@@ -25,12 +25,12 @@ private class BitmapShader extends h3d.Shader {
 class Bitmap extends Sprite {
 
 	public var data : TilePos;
-	public var color : h3d.Vector;
+	public var color : h3d.Color;
 	public var alpha(get, set) : Float;
 	
 	public function new( ?data : TilePos, ?parent ) {
 		super(parent);
-		color = new h3d.Vector(1, 1, 1, 1);
+		color = new h3d.Color(1, 1, 1, 1);
 		this.data = data;
 	}
 	
@@ -38,7 +38,7 @@ class Bitmap extends Sprite {
 	static var TMP_VECTOR = new h3d.Vector();
 	
 	@:allow(h2d)
-	static function drawTile( engine : h3d.Engine, spr : Sprite, data : TilePos, color : h3d.Vector ) {
+	static function drawTile( engine : h3d.Engine, spr : Sprite, data : TilePos, color : h3d.Color ) {
 		var b = BITMAP_OBJ;
 		if( b == null ) {
 			var p = new h3d.prim.Quads([
@@ -78,7 +78,7 @@ class Bitmap extends Sprite {
 			tmp.w = 1;
 			b.shader.color = tmp;
 		} else
-			b.shader.color = color;
+			b.shader.color = color.toVector();
 		b.shader.tex = data.tiles.getTexture(engine);
 		b.render(engine);
 	}
@@ -88,11 +88,11 @@ class Bitmap extends Sprite {
 	}
 	
 	inline function get_alpha() {
-		return color.w;
+		return color.a;
 	}
 
 	inline function set_alpha(v) {
-		return color.w = v;
+		return color.a = v;
 	}
 		
 	public static function ofBitmap( bmp : flash.display.BitmapData ) {

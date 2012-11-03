@@ -41,6 +41,7 @@ class Sprite {
 			s.remove();
 		childs.push(s);
 		s.parent = this;
+		s.posChanged = true;
 	}
 	
 	// kept for internal cleanup
