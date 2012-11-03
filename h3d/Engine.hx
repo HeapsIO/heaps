@@ -12,7 +12,7 @@ class Engine {
 	public var hardware(default, null) : Bool;
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
-	public var debug(default, setDebug) : Bool;
+	public var debug(default, set) : Bool;
 	
 	public var drawTriangles(default, null) : Int;
 	public var drawCalls(default, null) : Int;
@@ -201,7 +201,7 @@ class Engine {
 		return renderIndexes(b, mem.indexes, 3);
 	}
 	
-	function setDebug(d) {
+	function set_debug(d) {
 		debug = d;
 		if( ctx != null ) ctx.enableErrorChecking = d && hardware;
 		return d;
@@ -211,7 +211,7 @@ class Engine {
 		ctx = s3d.context3D;
 		mem = new h3d.impl.MemoryManager(ctx, 65400);
 		hardware = ctx.driverInfo.toLowerCase().indexOf("software") == -1;
-		setDebug(debug);
+		set_debug(debug);
 		resize(width, height, antiAlias);
 		onReady();
 	}
