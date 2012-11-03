@@ -152,6 +152,10 @@ class MemoryManager {
 	public function allocTexture( width : Int, height : Int ) {
 		return new h3d.mat.Texture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false);
 	}
+	
+	public function allocTargetTexture( width : Int, height : Int ) {
+		return new h3d.mat.Texture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true), width, height, false);
+	}
 
 	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap ) {
 		var t;

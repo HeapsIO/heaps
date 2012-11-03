@@ -247,9 +247,7 @@ class Engine {
 		return true;
 	}
 	
-	public function end() {
-		ctx.present();
-		// reset
+	function reset() {
 		curMatBits = -1;
 		curShader = null;
 		curBuffer = null;
@@ -259,6 +257,28 @@ class Engine {
 		for( i in 0...curTextures.length )
 			ctx.setTextureAt(i, null);
 		curTextures = [];
+	}
+	
+	public function end() {
+		ctx.present();
+		reset();
+	}
+	
+	public function setTarget( tex : h3d.mat.Texture ) {
+		if( tex == null )
+			ctx.setRenderToBackBuffer();
+		else {
+			ctx.setRenderToTexture(tex.t);
+			reset();
+			ctx.clear(0, 0, 0, 0);
+		}
+	}
+	
+	public function setRenderZone( x = 0, y = 0, width = -1, height = -1 ) {
+		if( x == 0 && y == 0 && width < 0 && height < 0 )
+			ctx.setScissorRectangle(null);
+		else
+			ctx.setScissorRectangle(new flash.geom.Rectangle(x, y, width < 0 ? this.width : width, height < 0 ? this.height : height));
 	}
 	
 	public function render( obj : { function render( engine : Engine ) : Void; } ) {
