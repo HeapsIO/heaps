@@ -13,7 +13,6 @@ class Text extends Sprite {
 		super(parent);
 		this.font = font;
 		glyphs = new TileGroup(font, this);
-		glyphs.color = new h3d.Vector(1,1,1,1);
 		text = "";
 		textColor = 0xFFFFFF;
 		alpha = 1.0;
@@ -40,15 +39,13 @@ class Text extends Sprite {
 	
 	function set_textColor(c) {
 		this.textColor = c;
-		glyphs.color.x = ((c >> 16) & 0xFF) / 255.0;
-		glyphs.color.y = ((c >> 8) & 0xFF) / 255.0;
-		glyphs.color.z = (c & 0xFF) / 255.0;
+		glyphs.color.loadInt(c, alpa);
 		return c;
 	}
 	
 	function set_alpha(a) {
 		this.alpha = a;
-		glyphs.color.w = a;
+		glyphs.color.a = a;
 		return a;
 	}
 

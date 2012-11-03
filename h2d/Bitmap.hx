@@ -37,9 +37,8 @@ class Bitmap extends Sprite {
 	static var BITMAP_OBJ : h3d.CustomObject<BitmapShader> = null;
 	static var TMP_VECTOR = new h3d.Vector();
 	
-	override function draw( engine : h3d.Engine ) {
-		if( data == null )
-			return;
+	@:allow(h2d)
+	static function drawTile( engine : h3d.Engine, spr : Sprite, data : TilePos, color : h3d.Vector ) {
 		var b = BITMAP_OBJ;
 		if( b == null ) {
 			var p = new h3d.prim.Quads([
@@ -58,13 +57,13 @@ class Bitmap extends Sprite {
 		tmp.y = data.h;
 		tmp.z = 1;
 		b.shader.size = tmp;
-		tmp.x = matA;
-		tmp.y = matC;
-		tmp.z = absX + data.dx * matA + data.dy * matC;
+		tmp.x = spr.matA;
+		tmp.y = spr.matC;
+		tmp.z = spr.absX + data.dx * spr.matA + data.dy * spr.matC;
 		b.shader.mat1 = tmp;
-		tmp.x = matB;
-		tmp.y = matD;
-		tmp.z = absY + data.dx * matB + data.dy * matD;
+		tmp.x = spr.matB;
+		tmp.y = spr.matD;
+		tmp.z = spr.absY + data.dx * spr.matB + data.dy * spr.matD;
 		b.shader.mat2 = tmp;
 		tmp.x = data.u;
 		tmp.y = data.v;
@@ -72,9 +71,20 @@ class Bitmap extends Sprite {
 		tmp.x = data.u2 - data.u;
 		tmp.y = data.v2 - data.v;
 		b.shader.uvScale = tmp;
-		b.shader.color = color;
+		if( color == null ) {
+			tmp.x = 1;
+			tmp.y = 1;
+			tmp.z = 1;
+			tmp.w = 1;
+			b.shader.color = tmp;
+		} else
+			b.shader.color = color;
 		b.shader.tex = data.tiles.getTexture(engine);
 		b.render(engine);
+	}
+	
+	override function draw( engine : h3d.Engine ) {
+		drawTile(engine, this, data, color);
 	}
 	
 	inline function get_alpha() {
