@@ -80,6 +80,7 @@ class CachedBitmap extends Sprite {
 			b.material.blend(SrcAlpha, OneMinusSrcAlpha);
 			b.material.culling = None;
 			b.material.depth(false, Always);
+			BITMAP_OBJ = b;
 		}
 		var tmp = TMP_VECTOR;
 		tmp.x = tile.w;
