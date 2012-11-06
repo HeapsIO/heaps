@@ -98,8 +98,9 @@ class TileGroup extends Sprite {
 		content.reset();
 	}
 	
-	override function onRemove() {
+	override function onDelete() {
 		object.primitive.dispose();
+		super.onDelete();
 	}
 	
 	public inline function add(x, y, t) {

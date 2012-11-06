@@ -67,10 +67,6 @@ class SpriteBatch extends Sprite {
 		material.blend(SrcAlpha, OneMinusSrcAlpha);
 	}
 	
-	override function onRemove() {
-		tmpBuf = null;
-	}
-	
 	public function alloc(t) {
 		var e = new BatchElement(this, t);
 		if( first == null )

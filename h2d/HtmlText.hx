@@ -16,10 +16,6 @@ class HtmlText extends Sprite {
 		textColor = 0xFFFFFF;
 	}
 	
-	override function onRemove() {
-		glyphs.onRemove();
-	}
-	
 	function set_htmlText(t) {
 		this.htmlText = t;
 		glyphs.reset();

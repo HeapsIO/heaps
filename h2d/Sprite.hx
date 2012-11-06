@@ -21,6 +21,7 @@ class Sprite {
 	var absY : Float;
 	
 	var posChanged : Bool;
+	var allocated : Bool;
 	
 	public function new( ?parent : Sprite ) {
 		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
@@ -37,29 +38,48 @@ class Sprite {
 	}
 	
 	public function addChild( s : Sprite ) {
+		var p = this;
+		while( p != null ) {
+			if( p == s ) throw "Recursive addChild";
+			p = p.parent;
+		}
 		if( s.parent != null )
-			s.remove();
+			s.parent.childs.remove(s);
 		childs.push(s);
 		s.parent = this;
 		s.posChanged = true;
+		// ensure that proper alloc/delete is done if we change parent
+		if( allocated ) {
+			if( !s.allocated )
+				s.onAlloc();
+		} else if( s.allocated )
+			s.onDelete();
 	}
 	
+	// kept for internal init
+	function onAlloc() {
+		allocated = true;
+		for( c in childs )
+			c.onAlloc();
+	}
+		
 	// kept for internal cleanup
-	function onRemove() {
+	function onDelete() {
+		allocated = false;
+		for( c in childs )
+			c.onDelete();
 	}
 	
 	public function removeChild( s : Sprite ) {
 		if( childs.remove(s) ) {
 			s.parent = null;
-			s.onRemove();
+			if( s.allocated ) s.onDelete();
 		}
 	}
 	
+	// shortcut for parent.removeChild
 	public inline function remove() {
-		if( this != null && parent != null ) {
-			parent.removeChild(this);
-			onRemove();
-		}
+		if( this != null && parent != null ) parent.removeChild(this);
 	}
 	
 	function draw( engine : h3d.Engine ) {

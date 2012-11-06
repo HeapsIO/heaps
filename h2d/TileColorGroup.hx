@@ -117,8 +117,9 @@ class TileColorGroup extends Sprite {
 		content.reset();
 	}
 	
-	override function onRemove() {
+	override function onDelete() {
 		object.primitive.dispose();
+		super.onDelete();
 	}
 	
 	public function setColor( rgb : Int, alpha = 1.0 ) {

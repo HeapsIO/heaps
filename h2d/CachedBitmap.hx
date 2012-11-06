@@ -42,6 +42,14 @@ class CachedBitmap extends Sprite {
 		this.height = height;
 	}
 	
+	override function onDelete() {
+		if( tex != null ) {
+			tex.dispose();
+			tex = null;
+		}
+		super.onDelete();
+	}
+	
 	function set_width(w) {
 		if( tex != null ) {
 			tex.dispose();

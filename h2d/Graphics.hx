@@ -34,15 +34,23 @@ class Graphics extends Sprite {
 		return (ctx = new GraphicsContext(this));
 	}
 	
+	override function onDelete() {
+		if( tile != null ) {
+			tile.tiles.dispose();
+			tile = null;
+		}
+		super.onDelete();
+	}
+	
 	public function endDraw() {
-		if( ctx == null )
-			return;
+		if( ctx == null ) return;
+		if( tile != null ) tile.tiles.dispose();
 		tile = Tiles.fromSprites([ctx.mc]).get(0);
-		ctx = null;
 	}
 	
 	override function draw(engine) {
-		if( ctx != null ) endDraw();
+		if( tile == null ) endDraw();
+		if( tile == null ) return;
 		Bitmap.drawTile(engine, this, tile, null);
 	}
 
