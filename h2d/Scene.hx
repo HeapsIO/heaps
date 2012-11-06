@@ -2,11 +2,19 @@ package h2d;
 
 class Scene extends Sprite {
 
-	var savedWidth : Int;
-	var savedHeight : Int;
+	public var width(default,null) : Int;
+	public var height(default,null) : Int;
+	var fixedSize : Bool;
 	
 	public function new() {
 		super(null);
+	}
+	
+	public function setFixedSize( w, h ) {
+		width = w;
+		height = h;
+		fixedSize = true;
+		posChanged = true;
 	}
 
 	override function updatePos() {
@@ -23,8 +31,8 @@ class Scene extends Sprite {
 		absY = y;
 		
 		// adds a pixels-to-viewport transform
-		var w = 2 / savedWidth;
-		var h = -2 / savedHeight;
+		var w = 2 / width;
+		var h = -2 / height;
 		absX = absX * w - 1;
 		absY = absY * h + 1;
 		matA *= w;
@@ -52,9 +60,9 @@ class Scene extends Sprite {
 	}
 	
 	override public function render( engine : h3d.Engine ) {
-		if( savedWidth != engine.width || savedHeight != engine.height ) {
-			savedWidth = engine.width;
-			savedHeight = engine.height;
+		if( !fixedSize && (width != engine.width || height != engine.height) ) {
+			width = engine.width;
+			height = engine.height;
 			posChanged = true;
 		}
 		super.render(engine);
