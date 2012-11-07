@@ -40,6 +40,18 @@ class Engine {
 		var stage = flash.Lib.current.stage;
 		s3d = stage.stage3Ds[stageIndex];
 		camera = new Camera();
+		if( CURRENT == null )
+			CURRENT = this;
+	}
+	
+	static var CURRENT : Engine = null;
+	
+	public static function getCurrent() {
+		return CURRENT;
+	}
+	
+	public function setCurrent() {
+		CURRENT = this;
 	}
 
 	public function show( b ) {
