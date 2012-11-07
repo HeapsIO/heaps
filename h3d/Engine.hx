@@ -18,6 +18,8 @@ class Engine {
 	public var drawCalls(default, null) : Int;
 
 	public var backgroundColor : Int;
+	public var autoResize : Bool;
+	public var fullScreen(default, set) : Bool;
 
 	var curMatBits : Int;
 	var curShader : Shader.ShaderData;
@@ -37,7 +39,11 @@ class Engine {
 		this.height = height;
 		this.hardware = hardware;
 		this.antiAlias = aa;
+		this.autoResize = true;
+		fullScreen = !Caps.isWindowed;
 		var stage = flash.Lib.current.stage;
+		stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
+		stage.addEventListener(flash.events.Event.RESIZE, onStageResize);
 		s3d = stage.stage3Ds[stageIndex];
 		camera = new Camera();
 		if( CURRENT == null )
@@ -216,15 +222,50 @@ class Engine {
 	}
 
 	function onCreate(_) {
+		if( ctx != null ) {
+			if( ctx.driverInfo == "Disposed" ) {
+				ctx.dispose();
+				ctx = null;
+				onDisposed();
+			}
+			return;
+		}
 		ctx = s3d.context3D;
 		mem = new h3d.impl.MemoryManager(ctx, 65400);
 		hardware = ctx.driverInfo.toLowerCase().indexOf("software") == -1;
 		set_debug(debug);
+		set_fullScreen(fullScreen);
 		resize(width, height, antiAlias);
 		onReady();
 	}
+	
+	public dynamic function onDisposed() {
+		throw "3D Context Lost";
+	}
 
 	public dynamic function onReady() {
+	}
+	
+	function onStageResize(_) {
+		if( ctx != null && autoResize ) {
+			var w = Caps.width, h = Caps.height;
+			if( w != width || h != height )
+				resize(w, h, antiAlias);
+			onResized();
+		}
+	}
+	
+	function set_fullScreen(v) {
+		fullScreen = v;
+		if( ctx != null && Caps.isWindowed ) {
+			var stage = flash.Lib.current.stage;
+			var state = v ? flash.display.StageDisplayState.FULL_SCREEN : flash.display.StageDisplayState.NORMAL;
+			if( stage.displayState != state ) stage.displayState = state;
+		}
+		return v;
+	}
+	
+	public dynamic function onResized() {
 	}
 
 	public function resize(width, height, aa = 0) {
