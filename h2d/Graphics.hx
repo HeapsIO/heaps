@@ -5,22 +5,28 @@ class GraphicsContext {
 	
 	var g : Graphics;
 	var mc : flash.display.Sprite;
+	var mcg : flash.display.Graphics;
 	
 	function new(g) {
 		this.g = g;
 		this.mc = new flash.display.Sprite();
+		mcg = mc.graphics;
 	}
 	
 	public inline function beginFill( color : Int, alpha = 1. ) {
-		mc.graphics.beginFill(color, alpha);
+		mcg.beginFill(color, alpha);
+	}
+	
+	public inline function drawCircle(cx, cy, radius) {
+		mcg.drawCircle(cx, cy, radius);
 	}
 	
 	public inline function drawRect(x,y,width,height) {
-		mc.graphics.drawRect(x, y, width, height);
+		mcg.drawRect(x, y, width, height);
 	}
 	
 	public inline function endFill() {
-		mc.graphics.endFill();
+		mcg.endFill();
 	}
 	
 }
@@ -29,7 +35,7 @@ class Graphics extends Sprite {
 
 	var tile : TilePos;
 	var ctx : GraphicsContext;
-	
+		
 	public function beginDraw() {
 		return (ctx = new GraphicsContext(this));
 	}
@@ -51,7 +57,7 @@ class Graphics extends Sprite {
 	override function draw(engine) {
 		if( tile == null ) endDraw();
 		if( tile == null ) return;
-		Bitmap.drawTile(engine, this, tile, null);
+		Tools.drawTile(engine, this, tile, null, blendMode);
 	}
 
 }

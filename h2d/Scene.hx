@@ -3,14 +3,27 @@ package h2d;
 class Scene extends Sprite {
 
 	public var width(default,null) : Int;
-	public var height(default,null) : Int;
+	public var height(default, null) : Int;
+	
+	public var mouseX(get, null) : Float;
+	public var mouseY(get, null) : Float;
+	
 	var fixedSize : Bool;
 	var interactive : flash.Vector<Interactive>;
 	var pendingEvents : flash.Vector<Event>;
+	var stage : flash.display.Stage;
+	
+	
+	@:allow(h2d.Interactive)
+	var currentOver : Interactive;
+	var pushList : Array<Interactive>;
+	var currentDrag : Event -> Void;
 	
 	public function new() {
 		super(null);
 		interactive = new flash.Vector();
+		pushList = new Array();
+		stage = flash.Lib.current.stage;
 	}
 	
 	public function setFixedSize( w, h ) {
@@ -21,7 +34,6 @@ class Scene extends Sprite {
 	}
 
 	override function onDelete() {
-		var stage = flash.Lib.current.stage;
 		stage.removeEventListener(flash.events.MouseEvent.MOUSE_DOWN, onMouseDown);
 		stage.removeEventListener(flash.events.MouseEvent.MOUSE_MOVE, onMouseMove);
 		stage.removeEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
@@ -29,26 +41,33 @@ class Scene extends Sprite {
 	}
 	
 	override function onAlloc() {
-		var stage = flash.Lib.current.stage;
 		stage.addEventListener(flash.events.MouseEvent.MOUSE_DOWN, onMouseDown);
 		stage.addEventListener(flash.events.MouseEvent.MOUSE_MOVE, onMouseMove);
 		stage.addEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
 		super.onAlloc();
 	}
 	
+	function get_mouseX() {
+		return stage.mouseX * width / stage.stageWidth;
+	}
+
+	function get_mouseY() {
+		return stage.mouseY * height / stage.stageHeight;
+	}
+	
 	function onMouseDown(e:flash.events.MouseEvent) {
 		if( pendingEvents != null )
-			pendingEvents.push(new Event(EPush, e.localX, e.localY));
+			pendingEvents.push(new Event(EPush, mouseX, mouseY));
 	}
 
 	function onMouseUp(e:flash.events.MouseEvent) {
 		if( pendingEvents != null )
-			pendingEvents.push(new Event(ERelease, e.localX, e.localY));
+			pendingEvents.push(new Event(ERelease, mouseX, mouseY));
 	}
 	
 	function onMouseMove(e:flash.events.MouseEvent) {
 		if( pendingEvents != null )
-			pendingEvents.push(new Event(EMove, e.localX, e.localY));
+			pendingEvents.push(new Event(EMove, mouseX, mouseY));
 	}
 	
 	function emitEvent( event : Event ) {
@@ -56,8 +75,15 @@ class Scene extends Sprite {
 		var rx = x * matA + y * matB + absX;
 		var ry = x * matC + y * matD + absY;
 		var r = height / width;
-		
+		var checkOver = false, checkPush = false;
+		switch( event.kind ) {
+		case EMove: checkOver = true;
+		case EPush, ERelease: checkPush = true;
+		default:
+		}
 		for( i in interactive ) {
+			// TODO : we are not sure that the positions are correctly updated !
+			
 			// this is a bit tricky since we are not in the not-euclide viewport space
 			// (r = ratio correction)
 			var dx = rx - i.absX;
@@ -82,10 +108,54 @@ class Scene extends Sprite {
 			// bottom/right
 			if( ky > max || kx * r > max )
 				continue;
+
 						
 			event.relX = (kx * r / max) * i.width;
 			event.relY = (ky / max) * i.height;
+
 			i.handleEvent(event);
+			if( event.cancel )
+				event.cancel = false;
+			else if( checkOver ) {
+				if( currentOver != i ) {
+					var old = event.propagate;
+					if( currentOver != null ) {
+						event.kind = EOut;
+						// relX/relY is not correct here
+						currentOver.handleEvent(event);
+					}
+					event.kind = EOver;
+					event.cancel = false;
+					i.handleEvent(event);
+					if( event.cancel )
+						currentOver = null;
+					else {
+						currentOver = i;
+						checkOver = false;
+					}
+					event.kind = EMove;
+					event.cancel = false;
+					event.propagate = old;
+				} else
+					checkOver = false;
+			} else if( checkPush ) {
+				if( event.kind == EPush )
+					pushList.push(i);
+				else
+					pushList.remove(i);
+			}
+				
+			if( event.propagate ) {
+				event.propagate = false;
+				continue;
+			}
+			break;
+		}
+		if( checkOver && currentOver != null ) {
+			event.kind = EOut;
+			currentOver.handleEvent(event);
+			event.kind = EMove;
+			currentOver = null;
 		}
 	}
 	
@@ -99,10 +169,31 @@ class Scene extends Sprite {
 		if( old.length == 0 )
 			return;
 		pendingEvents = null;
-		for( e in old )
+		for( e in old ) {
+			if( currentDrag != null ) {
+				currentDrag(e);
+				if( e.cancel )
+					continue;
+			}
 			emitEvent(e);
+			if( e.kind == ERelease && pushList.length > 0 ) {
+				for( i in pushList ) {
+					// relX/relY is not correct here
+					i.handleEvent(e);
+				}
+				pushList = new Array();
+			}
+		}
 		if( interactive.length > 0 )
 			pendingEvents = new flash.Vector();
+	}
+	
+	public function startDrag( f : Event -> Void ) {
+		currentDrag = f;
+	}
+	
+	public function stopDrag() {
+		currentDrag = null;
 	}
 	
 	@:allow(h2d)

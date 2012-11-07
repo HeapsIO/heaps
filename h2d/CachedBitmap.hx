@@ -73,7 +73,7 @@ class CachedBitmap extends Sprite {
 	
 	override function draw( engine : h3d.Engine ) {
 		if( colorMatrix == null && colorAdd == null ) {
-			Bitmap.drawTile(engine, this, tile, new h3d.Color(1, 1, 1, 1));
+			Tools.drawTile(engine, this, tile, new h3d.Color(1, 1, 1, 1), blendMode);
 			return;
 		}
 		var b = BITMAP_OBJ;
@@ -85,11 +85,11 @@ class CachedBitmap extends Sprite {
 				new h3d.Point(1, 1),
 			]);
 			b = new h3d.CustomObject(p, new BitmapMatrixShader());
-			b.material.blend(SrcAlpha, OneMinusSrcAlpha);
 			b.material.culling = None;
 			b.material.depth(false, Always);
 			BITMAP_OBJ = b;
 		}
+		Tools.setBlendMode(b.material,blendMode);
 		var tmp = TMP_VECTOR;
 		tmp.x = tile.w;
 		tmp.y = tile.h;

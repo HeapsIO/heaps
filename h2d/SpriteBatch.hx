@@ -58,13 +58,18 @@ class SpriteBatch extends Sprite {
 	static var SHADER = null;
 	
 	public function new(t,?parent) {
-		super(parent);
 		tiles = t;
 		if( SHADER == null )
 			SHADER = new BatchShader();
 		material = new h3d.mat.Material(SHADER);
 		material.depth(false, Always);
-		material.blend(SrcAlpha, OneMinusSrcAlpha);
+		super(parent);
+	}
+	
+	override function set_blendMode(b) {
+		Tools.setBlendMode(material, b);
+		this.blendMode = b;
+		return b;
 	}
 	
 	public function alloc(t) {

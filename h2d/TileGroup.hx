@@ -79,10 +79,9 @@ class TileGroup extends Sprite {
 	var content : TileLayerContent;
 	
 	public var tiles : Tiles;
-	public var color(default,null) : h3d.Color;
+	public var color(default, null) : h3d.Color;
 	
 	public function new(t,?parent) {
-		super(parent);
 		tiles = t;
 		color = new h3d.Color(1, 1, 1, 1);
 		content = new TileLayerContent();
@@ -91,7 +90,7 @@ class TileGroup extends Sprite {
 		object = new h3d.Object(content, new h3d.mat.Material(SHADER));
 		object.material.depth(false, Always);
 		object.material.culling = None;
-		setTransparency(true);
+		super(parent);
 	}
 	
 	public function reset() {
@@ -112,11 +111,10 @@ class TileGroup extends Sprite {
 		return c;
 	}
 	
-	public function setTransparency(a) {
-		if( a )
-			object.material.blend(SrcAlpha, OneMinusSrcAlpha);
-		else
-			object.material.blend(One,Zero);
+	override function set_blendMode(b) {
+		this.blendMode = b;
+		Tools.setBlendMode(object.material, b);
+		return b;
 	}
 	
 	override function draw(engine:h3d.Engine) {

@@ -1,5 +1,6 @@
 package h2d;
 
+@:allow(h2d.Tools)
 class Sprite {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
@@ -12,6 +13,7 @@ class Sprite {
 	public var scaleX(default,set) : Float;
 	public var scaleY(default,set) : Float;
 	public var rotation(default,set) : Float;
+	public var blendMode(default,set) : BlendMode;
 
 	var matA : Float;
 	var matB : Float;
@@ -28,8 +30,14 @@ class Sprite {
 		x = 0; y = 0; scaleX = 1; scaleY = 1; rotation = 0;
 		posChanged = false;
 		childs = [];
+		blendMode = Normal;
 		if( parent != null )
 			parent.addChild(this);
+	}
+	
+	function set_blendMode(b) {
+		this.blendMode = b;
+		return b;
 	}
 	
 	public function getAbsolutePos( x = 0., y = 0. ) {
