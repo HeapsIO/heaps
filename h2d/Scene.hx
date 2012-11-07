@@ -21,6 +21,9 @@ class Scene extends Sprite {
 	
 	public function new() {
 		super(null);
+		var e = h3d.Engine.getCurrent();
+		width = e.width;
+		height = e.height;
 		interactive = new flash.Vector();
 		pushList = new Array();
 		stage = flash.Lib.current.stage;
@@ -48,11 +51,11 @@ class Scene extends Sprite {
 	}
 	
 	function get_mouseX() {
-		return stage.mouseX * width / stage.stageWidth;
+		return (stage.mouseX - x) * width / (stage.stageWidth * scaleX);
 	}
 
 	function get_mouseY() {
-		return stage.mouseY * height / stage.stageHeight;
+		return (stage.mouseY - y) * height / (stage.stageHeight * scaleY);
 	}
 	
 	function onMouseDown(e:flash.events.MouseEvent) {
@@ -106,13 +109,13 @@ class Scene extends Sprite {
 			
 			var max = h1 * w2 - w1 * h2;
 			// bottom/right
-			if( ky > max || kx * r > max )
+			if( ky >= max || kx * r >= max )
 				continue;
 
 						
 			event.relX = (kx * r / max) * i.width;
 			event.relY = (ky / max) * i.height;
-
+			
 			i.handleEvent(event);
 			if( event.cancel )
 				event.cancel = false;
