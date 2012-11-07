@@ -2,18 +2,18 @@ package h2d;
 
 class Bitmap extends Sprite {
 
-	public var data : TilePos;
+	public var tile : Tile;
 	public var color : h3d.Color;
 	public var alpha(get, set) : Float;
 	
-	public function new( ?data : TilePos, ?parent ) {
+	public function new( ?tile, ?parent ) {
 		super(parent);
 		color = new h3d.Color(1, 1, 1, 1);
-		this.data = data;
+		this.tile = tile;
 	}
 	
 	override function draw( engine : h3d.Engine ) {
-		Tools.drawTile(engine, this, data, color, blendMode);
+		Tools.drawTile(engine, this, tile, color, blendMode);
 	}
 	
 	inline function get_alpha() {
@@ -24,8 +24,8 @@ class Bitmap extends Sprite {
 		return color.a = v;
 	}
 		
-	public static function ofBitmap( bmp : flash.display.BitmapData ) {
-		return new Bitmap(Tiles.fromBitmap(bmp).get(0));
+	public static function create( bmp : flash.display.BitmapData ) {
+		return new Bitmap(Tile.fromBitmap(bmp));
 	}
 	
 }

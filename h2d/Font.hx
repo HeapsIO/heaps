@@ -1,11 +1,13 @@
 package h2d;
 
-class Font extends Tiles {
+class Font extends Tile {
 
 	static var DEFAULT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ?!,()-/'\"éèêëÉÈÊËàâäáÀÂÄÁùûüúÙÛÜÚîïíÎÏÍôóöõÔÓÖæÆœŒçÇñÑ";
+
+	public var glyphs : Array<Tile>;
 	
 	public function new( name : String, size : Int, aa = true, ?chars ) {
-		super();
+		super(null, 0, 0, 0, 0);
 		if( chars == null )
 			chars = DEFAULT_CHARS;
 		var tf = new flash.text.TextField();
@@ -25,12 +27,14 @@ class Font extends Tiles {
 			tf.antiAliasType = flash.text.AntiAliasType.ADVANCED;
 		}
 		var surf = 0;
+		var sizes = [];
 		for( i in 0...chars.length ) {
 			tf.text = chars.charAt(i);
 			var w = Math.ceil(tf.textWidth);
 			if( w == 0 ) continue;
 			var h = Math.ceil(tf.textHeight);
 			surf += (w + 1) * (h + 1);
+			sizes[i] = { w:w, h:h };
 		}
 		var side = Math.ceil( Math.sqrt(surf) );
 		var width = 1;
@@ -39,22 +43,23 @@ class Font extends Tiles {
 		var height = width;
 		while( width * height >> 1 > surf )
 			height >>= 1;
-		var letters;
+		var all, bmp;
 		do {
 			bmp = new flash.display.BitmapData(width, height, true, 0);
-			letters = [];
+			glyphs = [];
+			all = [];
 			var m = new flash.geom.Matrix();
 			var x = 0, y = 0, lineH = 0;
 			for( i in 0...chars.length ) {
-				tf.text = chars.charAt(i);
-				var w = Math.ceil(tf.textWidth);
-				if( w == 0 ) continue;
-				var h = Math.ceil(tf.textHeight);
+				var size = sizes[i];
+				if( size == null ) continue;
+				var w = size.w;
+				var h = size.h;
 				if( x + w > width ) {
 					x = 0;
 					y += lineH + 1;
 				}
-				// no space
+				// no space, resize
 				if( y + h > height ) {
 					bmp.dispose();
 					bmp = null;
@@ -63,14 +68,19 @@ class Font extends Tiles {
 				}
 				m.tx = x - 2;
 				m.ty = y - 2;
+				tf.text = chars.charAt(i);
 				bmp.draw(tf, m);
-				letters[chars.charCodeAt(i)] = create(x, y, w, h, 2, 2);
+				var t = sub(x, y, w, h, 2, 2);
+				all.push(t);
+				glyphs[chars.charCodeAt(i)] = t;
 				// next element
 				if( h > lineH ) lineH = h;
 				x += w + 1;
 			}
 		} while( bmp == null );
-		elements[0] = letters;
+		setTexture(Tile.fromBitmap(bmp).tex);
+		for( t in all )
+			t.setTexture(tex);
 	}
 	
 }

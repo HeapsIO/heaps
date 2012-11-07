@@ -29,7 +29,7 @@ class BatchElement {
 	public var x : Float;
 	public var y : Float;
 	public var alpha : Float;
-	public var t : TilePos;
+	public var t : Tile;
 	public var batch(default, null) : SpriteBatch;
 	
 	var prev : BatchElement;
@@ -49,7 +49,7 @@ class BatchElement {
 
 class SpriteBatch extends Sprite {
 
-	public var tiles : Tiles;
+	public var tile : Tile;
 	var first : BatchElement;
 	var last : BatchElement;
 	var tmpBuf : flash.Vector<Float>;
@@ -58,7 +58,7 @@ class SpriteBatch extends Sprite {
 	static var SHADER = null;
 	
 	public function new(t,?parent) {
-		tiles = t;
+		tile = t;
 		if( SHADER == null )
 			SHADER = new BatchShader();
 		material = new h3d.mat.Material(SHADER);
@@ -114,18 +114,18 @@ class SpriteBatch extends Sprite {
 			tmp[pos++] = t.u;
 			tmp[pos++] = t.v;
 			tmp[pos++] = e.alpha;
-			tmp[pos++] = sx + t.w + 0.1;
+			tmp[pos++] = sx + t.width + 0.1;
 			tmp[pos++] = sy;
 			tmp[pos++] = t.u2;
 			tmp[pos++] = t.v;
 			tmp[pos++] = e.alpha;
 			tmp[pos++] = sx;
-			tmp[pos++] = sy + t.h + 0.1;
+			tmp[pos++] = sy + t.height + 0.1;
 			tmp[pos++] = t.u;
 			tmp[pos++] = t.v2;
 			tmp[pos++] = e.alpha;
-			tmp[pos++] = sx + t.w + 0.1;
-			tmp[pos++] = sy + t.h + 0.1;
+			tmp[pos++] = sx + t.width + 0.1;
+			tmp[pos++] = sy + t.height + 0.1;
 			tmp[pos++] = t.u2;
 			tmp[pos++] = t.v2;
 			tmp[pos++] = e.alpha;
@@ -133,7 +133,7 @@ class SpriteBatch extends Sprite {
 		}
 		var buffer = engine.mem.allocVector(tmpBuf, 5, 4);
 		var shader = SHADER;
-		shader.tex = tiles.getTexture(engine);
+		shader.tex = tile.tex;
 		shader.mat1 = new h3d.Vector(matA, matC, absX);
 		shader.mat2 = new h3d.Vector(matB, matD, absY);
 		engine.selectMaterial(material);

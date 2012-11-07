@@ -20,7 +20,7 @@ class HtmlText extends Sprite {
 		this.htmlText = t;
 		glyphs.reset();
 		glyphs.setColor(textColor);
-		var letters = font.elements[0];
+		var letters = font.glyphs;
 		var x = 0, y = 0;
 		function loop( e : Xml ) {
 			if( e.nodeType == Xml.Element ) {
@@ -49,7 +49,7 @@ class HtmlText extends Sprite {
 					var e = letters[cc];
 					if( e == null ) continue;
 					glyphs.add(x, y, e);
-					x += e.w + 1;
+					x += e.width + 1;
 				}
 			}
 		}

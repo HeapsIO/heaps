@@ -29,7 +29,7 @@ class Tools {
 	static var TMP_VECTOR = new h3d.Vector();
 		
 	@:allow(h2d)
-	static function drawTile( engine : h3d.Engine, spr : Sprite, data : TilePos, color : h3d.Color, blendMode : BlendMode ) {
+	static function drawTile( engine : h3d.Engine, spr : Sprite, tile : Tile, color : h3d.Color, blendMode : BlendMode ) {
 		var b = BITMAP_OBJ;
 		if( b == null ) {
 			var p = new h3d.prim.Quads([
@@ -45,23 +45,23 @@ class Tools {
 		}
 		setBlendMode(b.material, blendMode);
 		var tmp = TMP_VECTOR;
-		tmp.x = data.w;
-		tmp.y = data.h;
+		tmp.x = tile.width;
+		tmp.y = tile.height;
 		tmp.z = 1;
 		b.shader.size = tmp;
 		tmp.x = spr.matA;
 		tmp.y = spr.matC;
-		tmp.z = spr.absX + data.dx * spr.matA + data.dy * spr.matC;
+		tmp.z = spr.absX + tile.dx * spr.matA + tile.dy * spr.matC;
 		b.shader.mat1 = tmp;
 		tmp.x = spr.matB;
 		tmp.y = spr.matD;
-		tmp.z = spr.absY + data.dx * spr.matB + data.dy * spr.matD;
+		tmp.z = spr.absY + tile.dx * spr.matB + tile.dy * spr.matD;
 		b.shader.mat2 = tmp;
-		tmp.x = data.u;
-		tmp.y = data.v;
+		tmp.x = tile.u;
+		tmp.y = tile.v;
 		b.shader.uvPos = tmp;
-		tmp.x = data.u2 - data.u;
-		tmp.y = data.v2 - data.v;
+		tmp.x = tile.u2 - tile.u;
+		tmp.y = tile.v2 - tile.v;
 		b.shader.uvScale = tmp;
 		if( color == null ) {
 			tmp.x = 1;
@@ -71,7 +71,7 @@ class Tools {
 			b.shader.color = tmp;
 		} else
 			b.shader.color = color.toVector();
-		b.shader.tex = data.tiles.getTexture(engine);
+		b.shader.tex = tile.tex;
 		b.render(engine);
 	}
 

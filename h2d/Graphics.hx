@@ -33,7 +33,7 @@ class GraphicsContext {
 
 class Graphics extends Sprite {
 
-	var tile : TilePos;
+	var tile : Tile;
 	var ctx : GraphicsContext;
 		
 	public function beginDraw() {
@@ -42,7 +42,7 @@ class Graphics extends Sprite {
 	
 	override function onDelete() {
 		if( tile != null ) {
-			tile.tiles.dispose();
+			tile.tex.dispose();
 			tile = null;
 		}
 		super.onDelete();
@@ -50,8 +50,8 @@ class Graphics extends Sprite {
 	
 	public function endDraw() {
 		if( ctx == null ) return;
-		if( tile != null ) tile.tiles.dispose();
-		tile = Tiles.fromSprites([ctx.mc]).get(0);
+		if( tile != null ) tile.tex.dispose();
+		tile = Tile.fromSprites([ctx.mc])[0];
 	}
 	
 	override function draw(engine) {

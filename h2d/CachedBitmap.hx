@@ -34,7 +34,7 @@ class CachedBitmap extends Sprite {
 	var renderDone : Bool;
 	var realWidth : Int;
 	var realHeight : Int;
-	var tile : TilePos;
+	var tile : Tile;
 	
 	public function new( ?parent, width = -1, height = -1 ) {
 		super(parent);
@@ -91,8 +91,8 @@ class CachedBitmap extends Sprite {
 		}
 		Tools.setBlendMode(b.material,blendMode);
 		var tmp = TMP_VECTOR;
-		tmp.x = tile.w;
-		tmp.y = tile.h;
+		tmp.x = tile.width;
+		tmp.y = tile.height;
 		tmp.z = 1;
 		b.shader.size = tmp;
 		tmp.x = matA;
@@ -119,7 +119,7 @@ class CachedBitmap extends Sprite {
 			tmp.w = colorAdd.a;
 		}
 		b.shader.acolor = tmp;
-		b.shader.tex = tile.tiles.getTexture(engine);
+		b.shader.tex = tile.tex;
 		b.render(engine);
 	}
 	
@@ -137,7 +137,7 @@ class CachedBitmap extends Sprite {
 			while( th < realHeight ) th <<= 1;
 			tex = engine.mem.allocTargetTexture(tw, th);
 			renderDone = false;
-			tile = Tiles.fromTexture(tex).create(0, 0, realWidth, realHeight);
+			tile = new Tile(tex,0, 0, realWidth, realHeight);
 		}
 		if( !freezed || !renderDone ) {
 			var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;

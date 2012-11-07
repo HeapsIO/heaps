@@ -38,23 +38,25 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		buffer = null;
 	}
 	
-	public function add( x : Int, y : Int, t : TilePos ) {
+	public function add( x : Int, y : Int, t : Tile ) {
 		var sx = x + t.dx;
 		var sy = y + t.dy;
+		var sx2 = sx + t.width + 0.1;
+		var sy2 = sy + t.height + 0.1;
 		tmp[pos++] = sx;
 		tmp[pos++] = sy;
 		tmp[pos++] = t.u;
 		tmp[pos++] = t.v;
-		tmp[pos++] = sx + t.w + 0.1;
+		tmp[pos++] = sx2;
 		tmp[pos++] = sy;
 		tmp[pos++] = t.u2;
 		tmp[pos++] = t.v;
 		tmp[pos++] = sx;
-		tmp[pos++] = sy + t.h + 0.1;
+		tmp[pos++] = sy2;
 		tmp[pos++] = t.u;
 		tmp[pos++] = t.v2;
-		tmp[pos++] = sx + t.w + 0.1;
-		tmp[pos++] = sy + t.h + 0.1;
+		tmp[pos++] = sx2;
+		tmp[pos++] = sy2;
 		tmp[pos++] = t.u2;
 		tmp[pos++] = t.v2;
 	}
@@ -78,11 +80,11 @@ class TileGroup extends Sprite {
 	var object : h3d.Object;
 	var content : TileLayerContent;
 	
-	public var tiles : Tiles;
+	public var tile : Tile;
 	public var color(default, null) : h3d.Color;
 	
 	public function new(t,?parent) {
-		tiles = t;
+		tile = t;
 		color = new h3d.Color(1, 1, 1, 1);
 		content = new TileLayerContent();
 		if( SHADER == null )
@@ -119,7 +121,7 @@ class TileGroup extends Sprite {
 	
 	override function draw(engine:h3d.Engine) {
 		var shader = SHADER;
-		shader.tex = tiles.getTexture(engine);
+		shader.tex = tile.tex;
 		shader.mat1 = new h3d.Vector(matA, matC, absX);
 		shader.mat2 = new h3d.Vector(matB, matD, absY);
 		shader.color = color.toVector();
