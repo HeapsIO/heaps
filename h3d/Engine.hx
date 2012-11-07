@@ -5,20 +5,20 @@ class Engine {
 
 	var s3d : flash.display.Stage3D;
 	var ctx : flash.display3D.Context3D;
-	
+
 	public var camera : h3d.Camera;
 	public var mem(default,null) : h3d.impl.MemoryManager;
-	
+
 	public var hardware(default, null) : Bool;
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var debug(default, set) : Bool;
-	
+
 	public var drawTriangles(default, null) : Int;
 	public var drawCalls(default, null) : Int;
-	
+
 	public var backgroundColor : Int;
-	
+
 	var curMatBits : Int;
 	var curShader : Shader.ShaderData;
 	var curBuffer : h3d.impl.MemoryManager.BigBuffer;
@@ -27,29 +27,25 @@ class Engine {
 	var antiAlias : Int;
 	var debugPoint : h3d.CustomObject<h3d.impl.Shaders.PointShader>;
 	var debugLine : h3d.CustomObject<h3d.impl.Shaders.LineShader>;
-	
+
 	public function new( width = 0, height = 0, hardware = true, aa = 0, stageIndex = 0 ) {
-		var stage = flash.Lib.current.stage;
-		var Cap = flash.system.Capabilities;
-		if( Cap.os.indexOf("iPhone") != -1 ) {
-			if( width == 0 ) width = Std.int(Cap.screenResolutionX > Cap.screenResolutionY ? Cap.screenResolutionX : Cap.screenResolutionY);
-			if( height == 0 ) height = Std.int(Cap.screenResolutionX > Cap.screenResolutionY ? Cap.screenResolutionY : Cap.screenResolutionX);
-		} else {
-			if( width == 0 ) width = stage.stageWidth;
-			if( height == 0 ) height = stage.stageHeight;
-		}
+		if( width == 0 )
+			width = Caps.width;
+		if( height == 0 )
+			height = Caps.height;
 		this.width = width;
 		this.height = height;
 		this.hardware = hardware;
 		this.antiAlias = aa;
+		var stage = flash.Lib.current.stage;
 		s3d = stage.stage3Ds[stageIndex];
 		camera = new Camera();
 	}
-	
+
 	public function show( b ) {
 		s3d.visible = b;
 	}
-	
+
 	public function init() {
 		s3d.addEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
 		s3d.requestContext3D( hardware ? "auto" : "software" );
@@ -58,15 +54,15 @@ class Engine {
 	public function saveTo( bmp : flash.display.BitmapData ) {
 		ctx.drawToBitmapData(bmp);
 	}
-	
+
 	public function driverName() {
 		return ctx == null ? "None" : ctx.driverInfo.split(" ")[0];
 	}
-	
+
 	public function isReady() {
 		return ctx != null;
 	}
-	
+
 	public function selectShader( shader : Shader ) {
 		var s = shader.getData();
 		if( s.program == null ) {
@@ -115,7 +111,7 @@ class Engine {
 			}
 		}
 	}
-	
+
 	public function selectMaterial( m : h3d.mat.Material ) {
 		var diff = curMatBits ^ m.bits;
 		if( diff != 0 ) {
@@ -131,7 +127,7 @@ class Engine {
 		}
 		selectShader(m.shader);
 	}
-	
+
 	function selectBuffer( buf : h3d.impl.MemoryManager.BigBuffer ) {
 		if( buf == curBuffer )
 			return;
@@ -152,7 +148,7 @@ class Engine {
 			ctx.setVertexBufferAt(i, null);
 		curAttributes = pos;
 	}
-	
+
 	public function renderIndexes( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
 		do {
 			var ntri = Std.int(b.nvert / vertPerTri);
@@ -192,21 +188,21 @@ class Engine {
 			b = b.next;
 		} while( b != null );
 	}
-	
+
 	public inline function renderQuads( b : h3d.impl.Buffer ) {
 		return renderIndexes(b, mem.quadIndexes, 2);
 	}
-	
+
 	public inline function renderBuffer( b : h3d.impl.Buffer ) {
 		return renderIndexes(b, mem.indexes, 3);
 	}
-	
+
 	function set_debug(d) {
 		debug = d;
 		if( ctx != null ) ctx.enableErrorChecking = d && hardware;
 		return d;
 	}
-	
+
 	function onCreate(_) {
 		ctx = s3d.context3D;
 		mem = new h3d.impl.MemoryManager(ctx, 65400);
@@ -215,10 +211,10 @@ class Engine {
 		resize(width, height, antiAlias);
 		onReady();
 	}
-	
+
 	public dynamic function onReady() {
 	}
-	
+
 	public function resize(width, height, aa = 0) {
 		this.width = width;
 		this.height = height;
@@ -226,7 +222,7 @@ class Engine {
 		ctx.configureBackBuffer(width, height, aa);
 		camera.ratio = width / height;
 	}
-	
+
 	public function begin() {
 		if( ctx == null ) return false;
 		try {
@@ -235,18 +231,18 @@ class Engine {
 			ctx = null;
 			return false;
 		}
-		
+
 		// init
 		drawTriangles = 0;
 		drawCalls = 0;
 		curMatBits = -1;
-		
+
 		curShader = null;
 		curBuffer = null;
 		curTextures = [];
 		return true;
 	}
-	
+
 	function reset() {
 		curMatBits = -1;
 		curShader = null;
@@ -258,12 +254,12 @@ class Engine {
 			ctx.setTextureAt(i, null);
 		curTextures = [];
 	}
-	
+
 	public function end() {
 		ctx.present();
 		reset();
 	}
-	
+
 	public function setTarget( tex : h3d.mat.Texture ) {
 		if( tex == null )
 			ctx.setRenderToBackBuffer();
@@ -273,27 +269,27 @@ class Engine {
 			ctx.clear(0, 0, 0, 0);
 		}
 	}
-	
+
 	public function setRenderZone( x = 0, y = 0, width = -1, height = -1 ) {
 		if( x == 0 && y == 0 && width < 0 && height < 0 )
 			ctx.setScissorRectangle(null);
 		else
 			ctx.setScissorRectangle(new flash.geom.Rectangle(x, y, width < 0 ? this.width : width, height < 0 ? this.height : height));
 	}
-	
+
 	public function render( obj : { function render( engine : Engine ) : Void; } ) {
 		if( !begin() ) return false;
 		obj.render(this);
 		end();
 		return true;
 	}
-	
+
 	public function dispose() {
 		s3d.removeEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
 		ctx.dispose();
 		ctx = null;
 	}
-	
+
 	// debug functions
 	public function point( x : Float, y : Float, z : Float, color = 0x80FF0000, size = 1.0, depth = false ) {
 		if( debugPoint == null ) {
@@ -309,7 +305,7 @@ class Engine {
 		debugPoint.shader.color = color;
 		debugPoint.render(this);
 	}
-	
+
 	public function line( x1 : Float, y1 : Float, z1 : Float, x2 : Float, y2 : Float, z2 : Float, color = 0x80FF0000, depth = false ) {
 		if( debugLine == null ) {
 			debugLine = new CustomObject(new h3d.prim.Plan2D(), new h3d.impl.Shaders.LineShader());
@@ -324,11 +320,11 @@ class Engine {
 		debugLine.shader.color = color;
 		debugLine.render(this);
 	}
-	
+
 	public function lineP( a : { x : Float, y : Float, z : Float }, b : { x : Float, y : Float, z : Float }, color = 0x80FF0000, depth = false ) {
 		line(a.x, a.y, a.z, b.x, b.y, b.z, color, depth);
 	}
-	
+
 	static var BLEND = [
 		flash.display3D.Context3DBlendFactor.ONE,
 		flash.display3D.Context3DBlendFactor.ZERO,
@@ -348,7 +344,7 @@ class Engine {
 		flash.display3D.Context3DTriangleFace.FRONT,
 		flash.display3D.Context3DTriangleFace.FRONT_AND_BACK,
 	];
-	
+
 	static var COMPARE = [
 		flash.display3D.Context3DCompareMode.ALWAYS,
 		flash.display3D.Context3DCompareMode.NEVER,
@@ -359,7 +355,7 @@ class Engine {
 		flash.display3D.Context3DCompareMode.LESS,
 		flash.display3D.Context3DCompareMode.LESS_EQUAL,
 	];
-	
+
 	static var FORMAT = [
 		flash.display3D.Context3DVertexBufferFormat.BYTES_4,
 		flash.display3D.Context3DVertexBufferFormat.FLOAT_1,
