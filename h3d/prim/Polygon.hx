@@ -6,7 +6,7 @@ class Polygon extends Primitive {
 	public var normals : Array<Point>;
 	public var tangents : Array<Point>;
 	public var tcoords : Array<UV>;
-	public var idx : Array<UInt>;
+	public var idx : Array<Int>;
 		
 	public function new( points, ?idx ) {
 		this.points = points;
@@ -49,8 +49,10 @@ class Polygon extends Primitive {
 		}
 		buffer = engine.mem.allocVector(buf, size, idx == null ? 3 : 0);
 		
-		if( idx != null )
+		if( idx != null ) {
+			var idx : Array<UInt> = cast idx;
 			indexes = engine.mem.allocIndex(flash.Vector.ofArray(idx));
+		}
 	}
 
 
