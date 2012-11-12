@@ -29,17 +29,28 @@ class Tile {
 		this.dy = dy;
 		if( tex != null ) setTexture(tex);
 	}
-	
-	public function setTexture(tex) {
+		
+	function setTexture(tex) {
 		this.tex = tex;
-		this.u = x / tex.width;
-		this.v = y / tex.height;
-		this.u2 = (x + width - EPSILON_PIXEL) / tex.width;
-		this.v2 = (y + height - EPSILON_PIXEL) / tex.height;
+		if( tex != null ) {
+			this.u = x / tex.width;
+			this.v = y / tex.height;
+			this.u2 = (x + width - EPSILON_PIXEL) / tex.width;
+			this.v2 = (y + height - EPSILON_PIXEL) / tex.height;
+		}
+	}
+	
+	public inline function switchTexture( t : Tile ) {
+		setTexture(t.tex);
 	}
 	
 	public function sub( x, y, w, h, dx = 0, dy = 0 ) {
 		return new Tile(tex, this.x + x, this.y + y, w, h, dx, dy);
+	}
+	
+	public function dispose() {
+		if( tex != null ) tex.dispose();
+		tex = null;
 	}
 	
 	public static function fromBitmap( bmp : flash.display.BitmapData, freeBitmap = true ) {
@@ -142,7 +153,7 @@ class Tile {
 					if( x > xmax ) xmax = x;
 					if( y > ymax ) ymax = y;
 				}
-				if( Std.int(color) == 0xFFFF00FF )
+				if( color == bg )
 					b.setPixel32(x+px, y+py, 0);
 			}
 		return empty ? null : { dx : xmin, dy : ymin, w : xmax - xmin + 1, h : ymax - ymin + 1 };
