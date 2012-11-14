@@ -15,6 +15,7 @@ class Event {
 	public var relY : Float;
 	public var propagate : Bool;
 	public var cancel : Bool;
+	public var touchId : Int;
 	
 	public function new(k,x=0.,y=0.) {
 		kind = k;

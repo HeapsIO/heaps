@@ -17,7 +17,7 @@ class Scene extends Sprite {
 	@:allow(h2d.Interactive)
 	var currentOver : Interactive;
 	var pushList : Array<Interactive>;
-	var currentDrag : Event -> Void;
+	var currentDrag : { f : Event -> Void, ref : Null<Int> };
 	
 	public function new() {
 		super(null);
@@ -37,40 +37,86 @@ class Scene extends Sprite {
 	}
 
 	override function onDelete() {
-		stage.removeEventListener(flash.events.MouseEvent.MOUSE_DOWN, onMouseDown);
-		stage.removeEventListener(flash.events.MouseEvent.MOUSE_MOVE, onMouseMove);
-		stage.removeEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
+		if( h3d.Caps.isTouch ) {
+			stage.removeEventListener(flash.events.TouchEvent.TOUCH_BEGIN, onTouchDown);
+			stage.removeEventListener(flash.events.TouchEvent.TOUCH_MOVE, onTouchMove);
+			stage.removeEventListener(flash.events.TouchEvent.TOUCH_END, onTouchUp);
+		} else {
+			stage.removeEventListener(flash.events.MouseEvent.MOUSE_DOWN, onMouseDown);
+			stage.removeEventListener(flash.events.MouseEvent.MOUSE_MOVE, onMouseMove);
+			stage.removeEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
+			flash.ui.Mouse.cursor = flash.ui.MouseCursor.AUTO;
+		}
 		super.onDelete();
 	}
 	
 	override function onAlloc() {
-		stage.addEventListener(flash.events.MouseEvent.MOUSE_DOWN, onMouseDown);
-		stage.addEventListener(flash.events.MouseEvent.MOUSE_MOVE, onMouseMove);
-		stage.addEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
+		if( h3d.Caps.isTouch ) {
+			flash.ui.Multitouch.inputMode = flash.ui.MultitouchInputMode.TOUCH_POINT;
+			stage.addEventListener(flash.events.TouchEvent.TOUCH_BEGIN, onTouchDown);
+			stage.addEventListener(flash.events.TouchEvent.TOUCH_MOVE, onTouchMove);
+			stage.addEventListener(flash.events.TouchEvent.TOUCH_END, onTouchUp);
+		} else {
+			stage.addEventListener(flash.events.MouseEvent.MOUSE_DOWN, onMouseDown);
+			stage.addEventListener(flash.events.MouseEvent.MOUSE_MOVE, onMouseMove);
+			stage.addEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
+		}
 		super.onAlloc();
 	}
 	
+	function screenXToLocal(mx:Float) {
+		return (mx - x) * width / (stage.stageWidth * scaleX);
+	}
+
+	function screenYToLocal(my:Float) {
+		return (my - x) * width / (stage.stageWidth * scaleX);
+	}
+	
 	function get_mouseX() {
-		return (stage.mouseX - x) * width / (stage.stageWidth * scaleX);
+		return screenXToLocal(stage.mouseX);
 	}
 
 	function get_mouseY() {
-		return (stage.mouseY - y) * height / (stage.stageHeight * scaleY);
+		return screenYToLocal(stage.mouseY);
 	}
-	
-	function onMouseDown(e:flash.events.MouseEvent) {
+			
+	function onMouseDown(e:Dynamic) {
 		if( pendingEvents != null )
 			pendingEvents.push(new Event(EPush, mouseX, mouseY));
 	}
 
-	function onMouseUp(e:flash.events.MouseEvent) {
+	function onMouseUp(e:Dynamic) {
 		if( pendingEvents != null )
 			pendingEvents.push(new Event(ERelease, mouseX, mouseY));
 	}
 	
-	function onMouseMove(e:flash.events.MouseEvent) {
+	function onMouseMove(e:Dynamic) {
 		if( pendingEvents != null )
 			pendingEvents.push(new Event(EMove, mouseX, mouseY));
+	}
+	
+	function onTouchDown(e:flash.events.TouchEvent) {
+		if( pendingEvents != null ) {
+			var ev = new Event(EPush, screenXToLocal(e.localX), screenYToLocal(e.localY));
+			ev.touchId = e.touchPointID;
+			pendingEvents.push(ev);
+		}
+	}
+
+	function onTouchUp(e:flash.events.TouchEvent) {
+		if( pendingEvents != null ) {
+			var ev = new Event(ERelease, screenXToLocal(e.localX), screenYToLocal(e.localY));
+			ev.touchId = e.touchPointID;
+			pendingEvents.push(ev);
+		}
+	}
+	
+	function onTouchMove(e:flash.events.TouchEvent) {
+		if( pendingEvents != null ) {
+			var ev = new Event(EMove, screenXToLocal(e.localX), screenYToLocal(e.localY));
+			ev.touchId = e.touchPointID;
+			pendingEvents.push(ev);
+		}
 	}
 	
 	function emitEvent( event : Event ) {
@@ -173,8 +219,8 @@ class Scene extends Sprite {
 			return;
 		pendingEvents = null;
 		for( e in old ) {
-			if( currentDrag != null ) {
-				currentDrag(e);
+			if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
+				currentDrag.f(e);
 				if( e.cancel )
 					continue;
 			}
@@ -191,8 +237,8 @@ class Scene extends Sprite {
 			pendingEvents = new flash.Vector();
 	}
 	
-	public function startDrag( f : Event -> Void ) {
-		currentDrag = f;
+	public function startDrag( f : Event -> Void, ?refEvent : Event ) {
+		currentDrag = { f : f, ref : refEvent == null ? null : refEvent.touchId };
 	}
 	
 	public function stopDrag() {
