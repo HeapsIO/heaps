@@ -107,6 +107,10 @@ class Tile {
 		return { main : main, tiles : tl };
 	}
 	
+	public static function fromTexture( t : h3d.mat.Texture ) {
+		return new Tile(t, 0, 0, t.width, t.height);
+	}
+	
 	public static function fromSprites( sprites : Array<flash.display.Sprite> ) {
 		var tmp = [];
 		var width = 0;
