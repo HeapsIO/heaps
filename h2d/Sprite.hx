@@ -46,6 +46,12 @@ class Sprite {
 	}
 	
 	public function addChild( s : Sprite ) {
+		addChildAt(s, childs.length);
+	}
+	
+	public function addChildAt( s : Sprite, pos : Int ) {
+		if( pos < 0 ) pos = 0;
+		if( pos > childs.length ) pos = childs.length;
 		var p = this;
 		while( p != null ) {
 			if( p == s ) throw "Recursive addChild";
@@ -53,7 +59,7 @@ class Sprite {
 		}
 		if( s.parent != null )
 			s.parent.childs.remove(s);
-		childs.push(s);
+		childs.insert(pos,s);
 		s.parent = this;
 		s.posChanged = true;
 		// ensure that proper alloc/delete is done if we change parent

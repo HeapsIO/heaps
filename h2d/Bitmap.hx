@@ -24,8 +24,8 @@ class Bitmap extends Sprite {
 		return color.a = v;
 	}
 		
-	public static function create( bmp : flash.display.BitmapData ) {
-		return new Bitmap(Tile.fromBitmap(bmp));
+	public static function create( bmp : flash.display.BitmapData, freeBitmap = true ) {
+		return new Bitmap(Tile.fromBitmap(bmp,freeBitmap));
 	}
 	
 }
