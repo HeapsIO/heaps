@@ -24,17 +24,17 @@ class Layers extends Sprite {
 		// new layer
 		while( layer >= layerCount )
 			layers[layerCount++] = childs.length;
-		s.remove();
-		childs.insert(layers[layer], s);
+		super.addChildAt(s,layers[layer]);
 		for( i in layer...layerCount )
 			layers[i]++;
-		s.parent = this;
 	}
 	
 	override function removeChild( s : Sprite ) {
 		for( i in 0...childs.length ) {
 			if( childs[i] == s ) {
 				childs.splice(i, 1);
+				s.parent = null;
+				if( s.allocated ) s.onDelete();
 				var k = layerCount - 1;
 				while( k >= 0 && layers[k] > i ) {
 					layers[k]--;
