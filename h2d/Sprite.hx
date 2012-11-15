@@ -40,6 +40,13 @@ class Sprite {
 		return b;
 	}
 	
+	public function getSpritesCount() {
+		var k = 0;
+		for( c in childs )
+			k += c.getSpritesCount() + 1;
+		return k;
+	}
+	
 	public function getAbsolutePos( x = 0., y = 0. ) {
 		updatePos();
 		return { x : x * matA + y * matC + absX, y : x * matB + y * matD + absY };
