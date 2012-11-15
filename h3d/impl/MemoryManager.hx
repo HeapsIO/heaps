@@ -1,26 +1,28 @@
 package h3d.impl;
 
+@:allow(h3d)
 class FreeCell {
-	public var pos : Int;
-	public var count : Int;
-	public var next : FreeCell;
-	public function new(pos,count,next) {
+	var pos : Int;
+	var count : Int;
+	var next : FreeCell;
+	function new(pos,count,next) {
 		this.pos = pos;
 		this.count = count;
 		this.next = next;
 	}
 }
 
+@:allow(h3d)
 class BigBuffer {
 
-	public var stride : Int;
-	public var size : Int;
-	public var written : Bool;
-	public var vbuf : flash.display3D.VertexBuffer3D;
-	public var free : FreeCell;
-	public var next : BigBuffer;
-
-	public function new(v, stride, size) {
+	var stride : Int;
+	var size : Int;
+	var written : Bool;
+	var vbuf : flash.display3D.VertexBuffer3D;
+	var free : FreeCell;
+	var next : BigBuffer;
+	
+	function new(v, stride, size) {
 		written = false;
 		this.size = size;
 		this.stride = stride;
@@ -28,7 +30,7 @@ class BigBuffer {
 		this.free = new FreeCell(0,size,null);
 	}
 
-	public function freeCursor( pos, nvect ) {
+	function freeCursor( pos, nvect ) {
 		var prev : FreeCell = null;
 		var f = free;
 		var end = pos + nvect;
@@ -58,7 +60,7 @@ class BigBuffer {
 			throw "assert";
 	}
 
-	public function dispose() {
+	function dispose() {
 		vbuf.dispose();
 		vbuf = null;
 	}
@@ -72,17 +74,23 @@ class MemoryManager {
 
 	var ctx : flash.display3D.Context3D;
 	var empty : flash.utils.ByteArray;
-	public var buffers : Array<BigBuffer>;
-	public var indexes : Indexes;
-	public var quadIndexes : Indexes;
-	public var usedMemory : Int;
-	public var bufferCount : Int;
-	public var allocSize : Int;
+	var buffers : Array<BigBuffer>;
+	
+	var tdict : flash.utils.TypedDictionary<h3d.mat.Texture,flash.display3D.textures.TextureBase>;
+	var textures : Array<flash.display3D.textures.TextureBase>;
+	
+	public var indexes(default,null) : Indexes;
+	public var quadIndexes(default,null) : Indexes;
+	public var usedMemory(default,null) : Int;
+	public var bufferCount(default,null) : Int;
+	public var allocSize(default,null) : Int;
 
 	public function new(ctx,allocSize) {
 		this.ctx = ctx;
 		this.allocSize = allocSize;
 
+		tdict = new flash.utils.TypedDictionary(true);
+		textures = new Array();
 		empty = new flash.utils.ByteArray();
 		buffers = new Array();
 
@@ -153,13 +161,30 @@ class MemoryManager {
 			totalMemory : total,
 		};
 	}
+		
+	function newTexture(t, w, h, cubic) {
+		var t = new h3d.mat.Texture(this, t, w, h, cubic);
+		tdict.set(t, t.t);
+		textures.push(t.t);
+		return t;
+	}
 
+	@:allow(h3d.mat.Texture.dispose)
+	function deleteTexture( t : h3d.mat.Texture ) {
+		textures.remove(t.t);
+		tdict.delete(t);
+		t.t.dispose();
+		t.t = null;
+	}
+	
 	public function allocTexture( width : Int, height : Int ) {
-		return new h3d.mat.Texture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false);
+		freeTextures();
+		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false);
 	}
 
 	public function allocTargetTexture( width : Int, height : Int ) {
-		return new h3d.mat.Texture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true), width, height, false);
+		freeTextures();
+		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true), width, height, false);
 	}
 
 	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap ) {
@@ -176,7 +201,8 @@ class MemoryManager {
 	}
 
 	public function allocCubeTexture( size : Int ) {
-		return new h3d.mat.Texture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), size, size, true);
+		freeTextures();
+		return newTexture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), size, size, true);
 	}
 
 	public function allocIndex( indices : flash.Vector<UInt> ) {
@@ -203,8 +229,31 @@ class MemoryManager {
 		}
 		return b;
 	}
+	
+	/**
+		This will automatically free all textures which are no longer referenced / have been GC'ed.
+		This is called before each texture allocation as well.
+		Returns the number of textures freed that way.
+	 **/
+	public function freeTextures() {
+		var tall = new flash.utils.TypedDictionary();
+		for( t in textures )
+			tall.set(t, true);
+		for( t in tdict )
+			tall.delete(tdict.get(t));
+		var count = 0;
+		for( t in tall ) {
+			t.dispose();
+			textures.remove(t);
+			count++;
+		}
+		return count;
+	}
 
-	public function freeMemory() {
+	/**
+		The amount of free buffers memory
+	 **/
+	function freeMemory() {
 		var size = 0;
 		for( b in buffers ) {
 			var b = b;
@@ -296,7 +345,8 @@ class MemoryManager {
 		return b;
 	}
 
-	public function finalize( b : BigBuffer ) {
+	@:allow(h3d)
+	function finalize( b : BigBuffer ) {
 		if( !b.written ) {
 			b.written = true;
 			if( b.free.count > 0 ) {
@@ -312,6 +362,8 @@ class MemoryManager {
 		indexes = null;
 		quadIndexes.dispose();
 		quadIndexes = null;
+		for( t in tdict.keys() )
+			t.dispose();
 		for( b in buffers ) {
 			var b = b;
 			while( b != null ) {

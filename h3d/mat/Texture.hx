@@ -1,13 +1,16 @@
 package h3d.mat;
 
+@:allow(h3d)
 class Texture {
 
-	public var t : flash.display3D.textures.TextureBase;
+	var t : flash.display3D.textures.TextureBase;
+	var mem : h3d.impl.MemoryManager;
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var isCubic(default, null) : Bool;
 
-	public function new(t,w,h,c) {
+	function new(m, t, w, h, c) {
+		this.mem = m;
 		this.t = t;
 		this.width = w;
 		this.height = h;
@@ -60,10 +63,8 @@ class Texture {
 	}
 
 	public function dispose() {
-		if( t != null ) {
-			t.dispose();
-			t = null;
-		}
+		if( t != null )
+			mem.deleteTexture(this);
 	}
 
 }
