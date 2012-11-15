@@ -132,7 +132,7 @@ class CachedBitmap extends Sprite {
 		}
 		b.shader.skew = tmp;
 		
-		b.shader.tex = tile.tex;
+		b.shader.tex = tile.getTexture();
 		b.render(engine);
 	}
 	

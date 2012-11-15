@@ -133,7 +133,7 @@ class SpriteBatch extends Sprite {
 		}
 		var buffer = engine.mem.allocVector(tmpBuf, 5, 4);
 		var shader = SHADER;
-		shader.tex = tile.tex;
+		shader.tex = tile.getTexture();
 		shader.mat1 = new h3d.Vector(matA, matC, absX);
 		shader.mat2 = new h3d.Vector(matB, matD, absY);
 		engine.selectMaterial(material);

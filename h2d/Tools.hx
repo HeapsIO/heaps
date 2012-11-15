@@ -71,7 +71,7 @@ class Tools {
 			b.shader.color = tmp;
 		} else
 			b.shader.color = color.toVector();
-		b.shader.tex = tile.tex;
+		b.shader.tex = tile.getTexture();
 		b.render(engine);
 	}
 
@@ -89,6 +89,19 @@ class Tools {
 		case Erase:
 			mat.blend(Zero, OneMinusSrcAlpha);
 		}
+	}
+
+	static var ETEX : h3d.mat.Texture = null;
+	public static function emptyTexture() {
+		if( ETEX == null || ETEX.isDisposed() ) {
+			ETEX = h3d.Engine.getCurrent().mem.allocTexture(1, 1);
+			var o = haxe.io.Bytes.alloc(4);
+			o.set(0, 0xFF);
+			o.set(2, 0xFF);
+			o.set(3, 0xFF);
+			ETEX.uploadBytes(o);
+		}
+		return ETEX;
 	}
 	
 }

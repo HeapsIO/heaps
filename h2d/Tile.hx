@@ -5,7 +5,7 @@ class Tile {
 	
 	static inline var EPSILON_PIXEL = 0.00001;
 	
-	var tex : h3d.mat.Texture;
+	var innerTex : h3d.mat.Texture;
 	
 	var u : Float;
 	var v : Float;
@@ -20,7 +20,7 @@ class Tile {
 	public var height(default,null) : Int;
 	
 	function new(tex, x, y, w, h, dx=0, dy=0) {
-		this.tex = tex;
+		this.innerTex = tex;
 		this.x = x;
 		this.y = y;
 		this.width = w;
@@ -29,9 +29,15 @@ class Tile {
 		this.dy = dy;
 		if( tex != null ) setTexture(tex);
 	}
+	
+	function getTexture() {
+		if( innerTex == null || innerTex.isDisposed() )
+			return Tools.emptyTexture();
+		return innerTex;
+	}
 		
 	function setTexture(tex) {
-		this.tex = tex;
+		this.innerTex = tex;
 		if( tex != null ) {
 			this.u = x / tex.width;
 			this.v = y / tex.height;
@@ -41,16 +47,16 @@ class Tile {
 	}
 	
 	public inline function switchTexture( t : Tile ) {
-		setTexture(t.tex);
+		setTexture(t.innerTex);
 	}
 	
 	public function sub( x, y, w, h, dx = 0, dy = 0 ) {
-		return new Tile(tex, this.x + x, this.y + y, w, h, dx, dy);
+		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
 	
 	public function dispose() {
-		if( tex != null ) tex.dispose();
-		tex = null;
+		if( innerTex != null ) innerTex.dispose();
+		innerTex = null;
 	}
 	
 	public static function fromBitmap( bmp : flash.display.BitmapData, freeBitmap = true ) {

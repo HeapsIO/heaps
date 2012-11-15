@@ -121,7 +121,7 @@ class TileGroup extends Sprite {
 	
 	override function draw(engine:h3d.Engine) {
 		var shader = SHADER;
-		shader.tex = tile.tex;
+		shader.tex = tile.getTexture();
 		shader.mat1 = new h3d.Vector(matA, matC, absX);
 		shader.mat2 = new h3d.Vector(matB, matD, absY);
 		shader.color = color.toVector();

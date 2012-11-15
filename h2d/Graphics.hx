@@ -42,7 +42,7 @@ class Graphics extends Sprite {
 	
 	override function onDelete() {
 		if( tile != null ) {
-			tile.tex.dispose();
+			tile.dispose();
 			tile = null;
 		}
 		super.onDelete();
@@ -50,7 +50,7 @@ class Graphics extends Sprite {
 	
 	public function endDraw() {
 		if( ctx == null ) return;
-		if( tile != null ) tile.tex.dispose();
+		if( tile != null ) tile.dispose();
 		tile = Tile.fromSprites([ctx.mc])[0];
 	}
 	

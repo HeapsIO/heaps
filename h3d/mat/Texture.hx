@@ -1,19 +1,23 @@
 package h3d.mat;
 
 class Texture {
-	
+
 	public var t : flash.display3D.textures.TextureBase;
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var isCubic(default, null) : Bool;
-	
+
 	public function new(t,w,h,c) {
 		this.t = t;
 		this.width = w;
 		this.height = h;
 		this.isCubic = c;
 	}
-	
+
+	public function isDisposed() {
+		return t == null;
+	}
+
 	public function uploadMipMap( bmp : flash.display.BitmapData, smoothing = false, side = 0 ) {
 		upload(bmp, 0, side);
 		var w = bmp.width >> 1, h = bmp.height >> 1, mip = 1;
@@ -32,7 +36,7 @@ class Texture {
 			h >>= 1;
 		}
 	}
-	
+
 	public function upload( bmp : flash.display.BitmapData, mipLevel = 0, side = 0 ) {
 		if( isCubic ) {
 			var t = flash.Lib.as(t, flash.display3D.textures.CubeTexture);
@@ -43,7 +47,7 @@ class Texture {
 			t.uploadFromBitmapData(bmp, mipLevel);
 		}
 	}
-	
+
 	public function uploadBytes( bmp : haxe.io.Bytes, mipLevel = 0, side = 0 ) {
 		if( isCubic ) {
 			var t = flash.Lib.as(t, flash.display3D.textures.CubeTexture);
@@ -54,12 +58,12 @@ class Texture {
 			t.uploadFromByteArray(bmp.getData(), 0, mipLevel);
 		}
 	}
-	
+
 	public function dispose() {
 		if( t != null ) {
 			t.dispose();
 			t = null;
 		}
 	}
-	
+
 }

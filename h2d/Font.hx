@@ -78,9 +78,9 @@ class Font extends Tile {
 				x += w + 1;
 			}
 		} while( bmp == null );
-		setTexture(Tile.fromBitmap(bmp).tex);
+		setTexture(Tile.fromBitmap(bmp).getTexture());
 		for( t in all )
-			t.setTexture(tex);
+			t.setTexture(innerTex);
 	}
 	
 }
