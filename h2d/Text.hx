@@ -18,28 +18,29 @@ class Text extends Sprite {
 		alpha = 1.0;
 	}
 	
-	override function onRemove() {
-		glyphs.onRemove();
+	override function onDelete() {
+		glyphs.onDelete();
+		super.onDelete();
 	}
 	
 	function set_text(t) {
 		this.text = t;
 		glyphs.reset();
-		var letters = font.elements[0];
+		var letters = font.glyphs;
 		var x = 0, y = 0;
 		for( i in 0...t.length ) {
 			var cc = t.charCodeAt(i);
 			var e = letters[cc];
 			if( e == null ) continue;
 			glyphs.add(x, y, e);
-			x += e.w + 1;
+			x += e.width + 1;
 		}
 		return t;
 	}
 	
 	function set_textColor(c) {
 		this.textColor = c;
-		glyphs.color.loadInt(c, alpa);
+		glyphs.color.loadInt(c, alpha);
 		return c;
 	}
 	
