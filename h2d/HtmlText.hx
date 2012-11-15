@@ -36,6 +36,9 @@ class HtmlText extends Sprite {
 						default:
 						}
 					}
+				case "br":
+					x = 0;
+					y += font.lineHeight;
 				default:
 				}
 				for( child in e )

@@ -5,6 +5,7 @@ class Font extends Tile {
 	static var DEFAULT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ?!,()-/'\"éèêëÉÈÊËàâäáÀÂÄÁùûüúÙÛÜÚîïíÎÏÍôóöõÔÓÖæÆœŒçÇñÑ";
 
 	public var glyphs : Array<Tile>;
+	public var lineHeight : Int;
 	
 	public function new( name : String, size : Int, aa = true, ?chars ) {
 		super(null, 0, 0, 0, 0);
@@ -34,6 +35,8 @@ class Font extends Tile {
 			if( w == 0 ) continue;
 			var h = Math.ceil(tf.textHeight);
 			surf += (w + 1) * (h + 1);
+			if( h > lineHeight )
+				lineHeight = h;
 			sizes[i] = { w:w, h:h };
 		}
 		var side = Math.ceil( Math.sqrt(surf) );

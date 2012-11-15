@@ -31,7 +31,13 @@ class Text extends Sprite {
 		for( i in 0...t.length ) {
 			var cc = t.charCodeAt(i);
 			var e = letters[cc];
-			if( e == null ) continue;
+			if( e == null ) {
+				if( cc == '\n'.code ) {
+					x = 0;
+					y += font.lineHeight;
+				}
+				continue;
+			}
 			glyphs.add(x, y, e);
 			x += e.width + 1;
 		}
