@@ -159,6 +159,7 @@ class MemoryManager {
 			bufferCount : count,
 			freeMemory : free,
 			totalMemory : total,
+			textureCount : textures.length,
 		};
 	}
 		
