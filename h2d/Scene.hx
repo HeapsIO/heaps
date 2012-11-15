@@ -1,6 +1,6 @@
 package h2d;
 
-class Scene extends Sprite {
+class Scene extends Layers {
 
 	public var width(default,null) : Int;
 	public var height(default, null) : Int;

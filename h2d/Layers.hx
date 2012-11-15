@@ -2,6 +2,7 @@ package h2d;
 
 class Layers extends Sprite {
 	
+	// the per-layer insert position
 	var layers : Array<Int>;
 	var layerCount : Int;
 	
@@ -11,18 +12,22 @@ class Layers extends Sprite {
 		layerCount = 0;
 	}
 	
-	public function add( s : Sprite, layer : Int ) {
+	override function addChild(s) {
+		addChildAt(s, layers.length);
+	}
+	
+	public inline function add(s, layer) {
+		return addChildAt(s, layer);
+	}
+	
+	override function addChildAt( s : Sprite, layer : Int ) {
 		// new layer
-		while( layer > layerCount )
+		while( layer >= layerCount )
 			layers[layerCount++] = childs.length;
 		s.remove();
-		if( layer == layerCount )
-			childs.push(s);
-		else {
-			childs.insert(layers[layer], s);
-			for( i in layer...layerCount )
-				layers[i]++;
-		}
+		childs.insert(layers[layer], s);
+		for( i in layer...layerCount )
+			layers[i]++;
 		s.parent = this;
 	}
 	
@@ -31,10 +36,11 @@ class Layers extends Sprite {
 			if( childs[i] == s ) {
 				childs.splice(i, 1);
 				var k = layerCount - 1;
-				while( k >= 0 && layers[k] >= i ) {
+				while( k >= 0 && layers[k] > i ) {
 					layers[k]--;
 					k--;
 				}
+				break;
 			}
 		}
 	}
