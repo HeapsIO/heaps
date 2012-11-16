@@ -27,6 +27,7 @@ class Scene extends Layers {
 		interactive = new flash.Vector();
 		pushList = new Array();
 		stage = flash.Lib.current.stage;
+		posChanged = true;
 	}
 	
 	public function setFixedSize( w, h ) {
