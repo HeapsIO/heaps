@@ -6,13 +6,13 @@ private class BitmapMatrixShader extends h3d.Shader {
 			pos : Float2,
 		};
 		var tuv : Float2;
-		function vertex( size : Float3, mat1 : Float3, mat2 : Float3, skew : Float3, uvScale : Float2 ) {
+		function vertex( size : Float3, mat1 : Float3, mat2 : Float3, skew : Float, uvScale : Float2 ) {
 			var tmp : Float4;
 			var spos = pos.xyw * size;
 			tmp.x = spos.dp3(mat1);
 			tmp.y = spos.dp3(mat2);
 			tmp.z = 0;
-			tmp.w = spos.dp3(skew);
+			tmp.w = 1 - skew * pos.y;
 			out = tmp;
 			tuv = pos * uvScale;
 		}
@@ -30,7 +30,7 @@ class CachedBitmap extends Sprite {
 	public var freezed : Bool;
 	public var colorMatrix : Null<h3d.Matrix>;
 	public var colorAdd : Null<h3d.Color>;
-	public var skew : Null<h3d.Vector>;
+	public var skew : Float;
 	
 	var renderDone : Bool;
 	var realWidth : Int;
@@ -41,6 +41,7 @@ class CachedBitmap extends Sprite {
 		super(parent);
 		this.width = width;
 		this.height = height;
+		skew = 0.;
 	}
 	
 	override function onDelete() {
@@ -73,7 +74,7 @@ class CachedBitmap extends Sprite {
 	static var TMP_VECTOR = new h3d.Vector();
 	
 	override function draw( engine : h3d.Engine ) {
-		if( colorMatrix == null && colorAdd == null && skew == null ) {
+		if( colorMatrix == null && colorAdd == null && skew == 0. ) {
 			Tools.drawTile(engine, this, tile, new h3d.Color(1, 1, 1, 1), blendMode);
 			return;
 		}
@@ -120,17 +121,7 @@ class CachedBitmap extends Sprite {
 			tmp.w = colorAdd.a;
 		}
 		b.shader.acolor = tmp;
-		
-		if( skew == null ) {
-			tmp.x = 0;
-			tmp.y = 0;
-			tmp.z = 1;
-		} else {
-			tmp.x = skew.x;
-			tmp.y = skew.y;
-			tmp.z = skew.z;
-		}
-		b.shader.skew = tmp;
+		b.shader.skew = skew;
 		
 		b.shader.tex = tile.getTexture();
 		b.render(engine);
