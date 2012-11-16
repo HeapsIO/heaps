@@ -45,8 +45,9 @@ class Tools {
 		}
 		setBlendMode(b.material, blendMode);
 		var tmp = TMP_VECTOR;
-		tmp.x = tile.width;
-		tmp.y = tile.height;
+		// adds 1/10 pixel size to prevent precision loss after scaling
+		tmp.x = tile.width + 0.1;
+		tmp.y = tile.height + 0.1;
 		tmp.z = 1;
 		b.shader.size = tmp;
 		tmp.x = spr.matA;
