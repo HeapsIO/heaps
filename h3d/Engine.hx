@@ -29,6 +29,7 @@ class Engine {
 	var antiAlias : Int;
 	var debugPoint : h3d.CustomObject<h3d.impl.Shaders.PointShader>;
 	var debugLine : h3d.CustomObject<h3d.impl.Shaders.LineShader>;
+	var inTarget : Bool;
 
 	public function new( width = 0, height = 0, hardware = true, aa = 0, stageIndex = 0 ) {
 		if( width == 0 )
@@ -289,7 +290,6 @@ class Engine {
 		drawTriangles = 0;
 		drawCalls = 0;
 		curMatBits = -1;
-
 		curShader = null;
 		curBuffer = null;
 		curTextures = [];
@@ -314,10 +314,14 @@ class Engine {
 	}
 
 	public function setTarget( tex : h3d.mat.Texture ) {
-		if( tex == null )
+		if( tex == null ) {
 			ctx.setRenderToBackBuffer();
-		else {
+			inTarget = false;
+		} else {
+			if( inTarget )
+				throw "Calling setTarget() while already set";
 			ctx.setRenderToTexture(tex.t);
+			inTarget = true;
 			reset();
 			ctx.clear(0, 0, 0, 0);
 		}
