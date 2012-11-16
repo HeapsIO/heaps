@@ -64,8 +64,13 @@ class Sprite {
 			if( p == s ) throw "Recursive addChild";
 			p = p.parent;
 		}
-		if( s.parent != null )
-			s.parent.childs.remove(s);
+		if( s.parent != null ) {
+			// prevent calling onDelete
+			var old = s.allocated;
+			s.allocated = false;
+			s.parent.removeChild(s);
+			s.allocated = old;
+		}
 		childs.insert(pos,s);
 		s.parent = this;
 		s.posChanged = true;
