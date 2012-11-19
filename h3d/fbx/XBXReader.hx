@@ -51,7 +51,6 @@ class XBXReader
 				a;
 			}
 		};
-		return r;
 	}
 
 	inline function readInt() {

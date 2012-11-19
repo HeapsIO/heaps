@@ -10,6 +10,10 @@ class Library {
 	
 	public function new() {
 		root = { name : "root", props : [], childs : [] };
+		reset();
+	}
+	
+	function reset() {
 		ids = new IntHash();
 		connect = new IntHash();
 		invConnect = new IntHash();
@@ -99,6 +103,12 @@ class Library {
 	
 	public function getRoot() {
 		return root;
+	}
+	
+	public function setRoot(root) {
+		this.root = root;
+		reset();
+		load(root.childs);
 	}
 	
 }
