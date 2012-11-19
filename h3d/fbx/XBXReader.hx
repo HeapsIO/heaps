@@ -67,7 +67,7 @@ class XBXReader
 		var t = switch( b )
 		{
 			case 0: PInt( readInt());
-			case 1: PFloat( i.readFloat() );
+			case 1: PFloat( i.readDouble() );
 			case 2: PString( readString() );
 			case 3: PIdent( readString() );
 			case 4:
@@ -82,7 +82,7 @@ class XBXReader
 				var a = [];
 				a[l - 1] = 0.;
 				for( idx in 0...l)
-					a[idx] = i.readFloat();
+					a[idx] = i.readDouble();
 				PFloats( a );
 			default:
 				error( "unknown prop " + b);

@@ -57,7 +57,7 @@ class XBXWriter
 		switch( p )
 		{
 			case PInt( v ):		writeInt( v );
-			case PFloat( v ):	o.writeFloat(v);
+			case PFloat( v ):	o.writeDouble(v);
 			case PString( v ):	writeString( v );
 			case PIdent( v ): 	writeString( v );
 			case PInts( va ):
@@ -65,7 +65,7 @@ class XBXWriter
 				for ( i in va ) writeInt( i );
 			case PFloats( va ):
 				o.writeInt31( va.length );
-				for ( i in va ) o.writeFloat(i);
+				for ( i in va ) o.writeDouble(i);
 		}
 	}
 
