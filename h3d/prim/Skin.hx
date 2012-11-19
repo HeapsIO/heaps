@@ -89,12 +89,14 @@ class Animation {
 	
 }
 
+private typedef Table<T> = #if flash flash.Vector<T> #else Array<T> #end
+
 class Skin {
 	
 	public var vertexCount(default, null) : Int;
 	public var bonesPerVertex(default,null) : Int;
-	public var vertexJoints : flash.Vector<Int>;
-	public var vertexWeights : flash.Vector<Float>;
+	public var vertexJoints : Table<Int>;
+	public var vertexWeights : Table<Float>;
 	public var boundJoints : Array<Joint>;
 	
 	var envelop : Array<Array<Influence>>;
@@ -102,8 +104,8 @@ class Skin {
 	public function new( vertexCount, bonesPerVertex ) {
 		this.vertexCount = vertexCount;
 		this.bonesPerVertex = bonesPerVertex;
-		vertexJoints = new flash.Vector(vertexCount * bonesPerVertex);
-		vertexWeights = new flash.Vector(vertexCount * bonesPerVertex);
+		vertexJoints = new Table(#if flash vertexCount * bonesPerVertex #end);
+		vertexWeights = new Table(#if flash vertexCount * bonesPerVertex #end);
 		envelop = [];
 	}
 	
