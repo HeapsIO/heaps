@@ -63,7 +63,7 @@ class Library {
 		}
 	}
 	
-	public function getMesh( name : String ) {
+	public function getMesh( name : String = "" ) {
 		var geom = null;
 		for( g in root.getAll("Objects.Geometry") )
 			if( g.hasProp(PString("Geometry::" + name)) ) {
@@ -108,7 +108,9 @@ class Library {
 	public function setRoot(root) {
 		this.root = root;
 		reset();
-		load(root.childs);
+		var old = root.childs;
+		root.childs = [];
+		load(old);
 	}
 	
 }
