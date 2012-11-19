@@ -14,17 +14,16 @@ private enum Token {
 	TEof;
 }
 
-@:nodebug
 class Parser {
 
 	var line : Int;
 	var buf : String;
 	var pos : Int;
 	var token : Null<Token>;
-	
+
 	function new() {
 	}
-	
+
 	function parseText( str ) {
 		this.buf = str;
 		this.pos = 0;
@@ -32,7 +31,7 @@ class Parser {
 		token = null;
 		return parseNodes();
 	}
-	
+
 	function parseNodes() {
 		var nodes = [];
 		while( true ) {
@@ -45,7 +44,7 @@ class Parser {
 		}
 		return nodes;
 	}
-	
+
 	function parseNode() : FbxNode {
 		var t = next();
 		var name = switch( t ) {
@@ -120,19 +119,19 @@ class Parser {
 		if( childs == null ) childs = [];
 		return { name : name, props : props, childs : childs };
 	}
-	
+
 	function except( except : Token ) {
 		var t = next();
 		if( !Type.enumEq(t, except) )
 			error("Unexpected '" + tokenStr(t) + "' (" + tokenStr(except) + " expected)");
 	}
-	
+
 	function peek() {
 		if( token == null )
 			token = nextToken();
 		return token;
 	}
-	
+
 	function next() {
 		if( token == null )
 			return nextToken();
@@ -140,16 +139,16 @@ class Parser {
 		token = null;
 		return tmp;
 	}
-	
+
 	function error( msg : String ) : Dynamic {
 		throw msg + " (line " + line + ")";
 		return null;
 	}
-	
+
 	function unexpected( t : Token ) : Dynamic {
 		return error("Unexpected "+tokenStr(t));
 	}
-	
+
 	function tokenStr( t : Token ) {
 		return switch( t ) {
 		case TEof: "<eof>";
@@ -164,19 +163,20 @@ class Parser {
 		case TLength(l): '*' + l;
 		};
 	}
-	
+
 	inline function nextChar() {
 		return StringTools.fastCodeAt(buf, pos++);
 	}
-	
+
 	inline function getBuf( pos : Int, len : Int ) {
 		return buf.substr(pos, len);
 	}
-	
+
 	inline function isIdentChar(c) {
 		return (c >= 'a'.code && c <= 'z'.code) || (c >= 'A'.code && c <= 'Z'.code) || (c >= '0'.code && c <= '9'.code) || c == '_'.code || c == '-'.code;
 	}
-	
+
+	@:noDebug
 	function nextToken() {
 		var start = pos;
 		while( true ) {
@@ -261,7 +261,7 @@ class Parser {
 			}
 		}
 	}
-	
+
 	public static function parse( text : String ) {
 		return new Parser().parseText(text);
 	}
