@@ -44,6 +44,8 @@ class Tools {
 			BITMAP_OBJ = b;
 		}
 		setBlendMode(b.material, blendMode);
+		if( tile == null )
+			tile = new Tile(emptyTexture(), 0, 0, 5, 5);
 		var tmp = TMP_VECTOR;
 		// adds 1/10 pixel size to prevent precision loss after scaling
 		tmp.x = tile.width + 0.1;
