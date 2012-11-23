@@ -3,15 +3,15 @@ using h3d.fbx.Data;
 
 class Joint extends h3d.prim.Skin.Joint {
 	
-	public var cluster : FbxNode;
 	public var model : FbxNode;
 	public var modelId : Int;
 	
-	public var linkPos : h3d.Matrix; // absolute pose matrix
+	public var defTrans : h3d.Point;
+	public var defScale : h3d.Point;
+	public var defRot : h3d.Point;
 	
-	public function new(n, m) {
+	public function new(m) {
 		super();
-		this.cluster = n;
 		this.model = m;
 	}
 
@@ -21,66 +21,63 @@ class Skin extends h3d.prim.Skin {
 	
 	var root : FbxNode;
 	var lib : Library;
-	var hJoints : IntHash<Joint>;
-	public var allJoints : Array<Joint>;
-	public var rootJoints : Array<Joint>;
+	var allJoints : Array<Joint>;
+	var rootJoints : Array<Joint>;
 	
-	public function new(lib, root, vertexCount, bonesPerVertex) {
+	public function new(lib, root, meshGeom : FbxNode, vertexCount, bonesPerVertex) {
 		super(vertexCount, bonesPerVertex);
 		
 		this.lib = lib;
 		this.root = root;
-		// init joints
-		allJoints = [];
-		for( v in lib.getSubs(root) )
-			if( v.getType() == "Cluster" ) {
-				var model = null;
-				for( s in lib.getSubs(v) )
-					if( s.getType() == "LimbNode" ) {
-						model = s;
-						break;
-					}
-				if( model == null )
-					throw "Missing LimbNode for " + v.getName();
-				allJoints.push(new Joint(v,model));
-			}
-		// do we have a root with no skinning ?
-		var root = lib.getParents(allJoints[0].model,"Model")[0];
-		if( root != null )
-			allJoints.unshift(new Joint(null, root));
-			
-		rootJoints = allJoints.copy();
 		
-		// init joint LimbNode
+		// list joints from clusters (bones with envelop)
 		var envelop = [];
-		hJoints = new IntHash();
-		for( j in allJoints ) {
-			j.modelId = j.model.getId();
+		var hJoints = new IntHash();
+		allJoints = [];
+		for( v in lib.getSubs(root) ) {
+			if( v.getType() != "Cluster" )
+				continue;
+			var model = null;
+			for( s in lib.getSubs(v) )
+				if( s.getType() == "LimbNode" ) {
+					model = s;
+					break;
+				}
+			if( model == null )
+				throw "Missing LimbNode for " + v.getName();
+			
+			var j = new Joint(model);
+			j.modelId = model.getId();
+			j.transPos = h3d.Matrix.L(v.get("Transform").getFloats());
+			var m = getMatrixes(model);
+			if( m.t != null )
+				j.defTrans = m.t;
+			if( m.r != null )
+				j.defRot = m.r;
+			if( m.s != null )
+				j.defScale = m.s;
+			allJoints.push(j);
 			hJoints.set(j.modelId, j);
 			
-			if( j.cluster == null ) {
-				j.transPos = h3d.Matrix.I();
-				j.linkPos = h3d.Matrix.I();
-			} else {
-				j.transPos = h3d.Matrix.L(j.cluster.get("Transform").getFloats());
-				j.linkPos = h3d.Matrix.L(j.cluster.get("TransformLink").getFloats());
-				var weights = j.cluster.getAll("Weights");
-				if( weights.length > 0 ) {
-					var weights = weights[0].getFloats();
-					var vertex = j.cluster.get("Indexes").getInts();
-					for( i in 0...vertex.length ) {
-						var w = weights[i];
-						if( w < 0.01 )
-							continue;
-						addInfluence(vertex[i], j, w);
-					}
+			// init envelop
+			var weights = v.getAll("Weights");
+			if( weights.length > 0 ) {
+				var weights = weights[0].getFloats();
+				var vertex = v.get("Indexes").getInts();
+				for( i in 0...vertex.length ) {
+					var w = weights[i];
+					if( w < 0.01 )
+						continue;
+					addInfluence(vertex[i], j, w);
 				}
 			}
 		}
-		
+	
+		// finalize envelop
 		initWeights();
 		
 		// init tree
+		rootJoints = allJoints.copy();
 		for( j in hJoints )
 			for( s in lib.getSubs(j.model,"Model") )
 				if( s.getType() == "LimbNode" ) {
@@ -93,15 +90,132 @@ class Skin extends h3d.prim.Skin {
 					j.subs.push(sub);
 					rootJoints.remove(sub);
 				}
+				
+		// if we have skinned bones having parents which are not skinned, add them to the list (recursively)
+		var found = true;
+		while( found ) {
+			found = false;
+			for( jsub in rootJoints )
+				for( p in lib.getParents(jsub.model, "Model") )
+					if( p.getType() == "LimbNode" ) {
+						var pid = p.getId();
+						var j = hJoints.get(pid);
+						if( j == null ) {
+							j = new Joint(p);
+							j.modelId = pid;
+							hJoints.set(pid, j);
+							allJoints.push(j);
+							rootJoints.push(j);
+						}
+						jsub.parent = j;
+						j.subs.push(jsub);
+						rootJoints.remove(jsub);
+						found = true;
+						break;
+					}
+		}
+		
+		// init transforms
+		
+		/*
+			From the FBX SDK, we have :
+				
+				VTM = (RGCP'-1 . CGCP) . (CGIP'-1 . RGIP)
+				
+				We have calculated that :
+				- RGCP = MeshPosition
+				- CGCP = (RootMeshPosition ... BipPosition) . (ParentFrame .... CurrentFrame)
+					We concat all position (either the Lcl one or the KeyFrame one if there is an AnimCurve)
+				- CGIP = TransformLink
+				- RGIP = TransformLink . Transform . MeshGeometryTransform
+				
+				As a result, we have :
+					
+				VTM = (MeshPosition.-1 . RootMeshPosition....BipPosition) . (ParentFrame .... CurrentFrame) . Transform . MeshGeometryTransform
+				
+				   Mesh : the geometry mesh
+				   Root : the mesh and skin/bip common ancestor ?
+				
+				/!\ FDK SDK and our implementation perform matrix multiplication is reverse order.
+				The order of this documentation matches the SDK one.
+				
+		*/
+		
+		var meshObj = lib.getParents(meshGeom,"Model")[0];
+
+		// assume that the mesh in on the stage (common ancestor = stage)
+		if( lib.getParents(meshObj).length > 0 )
+			throw "Mesh has parents";
+
+		// get the skin root
+		var skinRoot = lib.getParents(this.rootJoints[0].model, "Model")[0];
+
+		preTransform.identity();
+		while( skinRoot != null ) {
+			preTransform.multiply(preTransform, getMatrix(skinRoot));
+			skinRoot = lib.getParents(skinRoot)[0];
+		}
+			
+		var meshPos = getMatrix(meshObj);
+		meshPos.invert();
+		preTransform.multiply(preTransform, meshPos);
+			
+		// apply geometric translation as a post transform matrix
+		var geomTrans = null;
+		for( p in meshObj.getAll("Properties70.P") )
+			switch( p.props[0].toString() ) {
+			case "GeometricTranslation":
+				geomTrans = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+			default:
+			}
+		if( geomTrans != null ) {
+			var geomTransform = makeMatrix(null, null, null, null, geomTrans);
+			for( j in allJoints )
+				if( j.transPos != null )
+					j.transPos.multiply(geomTransform, j.transPos);
+		}
 	}
 	
-	function makeMatrix( trans : h3d.Point, rot : h3d.Point, scale : h3d.Point, ?preRot : h3d.Point ) {
+	function getMatrixes( model : FbxNode ) {
+		var preRot = null, trans = null, rot = null, scale = null, geomTrans = null;
+		var F = Math.PI / 180;
+		for( p in model.getAll("Properties70.P") )
+			switch( p.props[0].toString() ) {
+			case "GeometricTranslation":
+				geomTrans = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+			case "PreRotation":
+				preRot = new h3d.Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
+			case "Lcl Rotation":
+				rot = new h3d.Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
+			case "Lcl Translation":
+				trans = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+			case "Lcl Scaling":
+				scale = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+			case "RotationActive", "InheritType", "ScalingMin", "MaxHandle", "DefaultAttributeIndex", "Show", "UDP3DSMAX":
+			case "RotationMinX","RotationMinY","RotationMinZ","RotationMaxX","RotationMaxY","RotationMaxZ":
+			default:
+				#if debug
+				trace(p.props[0].toString());
+				#end
+			}
+		return { t : trans, r : rot, s : scale, preRot : preRot, geomTrans : geomTrans };
+	}
+	
+	function getMatrix(model) {
+		var m = getMatrixes(model);
+		return makeMatrix(m.t, m.r, m.s, m.preRot, m.geomTrans);
+	}
+
+	function makeMatrix( trans : h3d.Point, rot : h3d.Point, scale : h3d.Point, ?preRot : h3d.Point, ?geoTrans : h3d.Point ) {
 		var m = new h3d.Matrix();
 		
-		if( scale != null )
-			m.initScale(scale.x, scale.y, scale.z);
+		if( geoTrans != null )
+			m.initTranslate(geoTrans.x, geoTrans.y, geoTrans.z);
 		else
 			m.identity();
+		
+		if( scale != null )
+			m.scale(scale.x, scale.y, scale.z);
 			
 		if( rot != null ) {
 			var q = new h3d.Quat();
@@ -137,7 +251,7 @@ class Skin extends h3d.prim.Skin {
 			}
 		if( node == null )
 			throw "Anim " + name + " not found";
-		var anim = new h3d.prim.Skin.Animation(name);
+		var anim = new h3d.prim.Skin.Animation(this, name);
 		var layers = lib.getSubs(node,"AnimationLayer");
 		//if( layers.length != 1 )
 		//	throw "Anim " + name + " has " + layers.length + " layers";
@@ -173,11 +287,20 @@ class Skin extends h3d.prim.Skin {
 				}
 			
 			var frames = new Array();
-			if( anim.frameCount == 0 && ftrans != null )
-				anim.frameCount = ftrans[0].length;
-			var t = ftrans == null ? null : new h3d.Point();
-			var r = frot == null ? null : new h3d.Point();
-			var s = fscale == null ? null : new h3d.Point();
+			if( anim.frameCount == 0 ) {
+				if( ftrans != null )
+					anim.frameCount = ftrans[0].length;
+				else if( frot != null )
+					anim.frameCount = frot[0].length;
+				else if( fscale != null )
+					anim.frameCount = fscale[0].length;
+			}
+			
+			// for defaults, use the bone Lcl infos, if any
+			var t = ftrans == null ? j.defTrans : new h3d.Point();
+			var r = frot == null ? j.defRot : new h3d.Point();
+			var s = fscale == null ? j.defScale : new h3d.Point();
+			
 			for( i in 0...anim.frameCount ) {
 				if( ftrans != null ) {
 					t.x = ftrans[0][i];

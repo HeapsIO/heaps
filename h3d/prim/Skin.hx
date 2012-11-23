@@ -35,12 +35,14 @@ class AnimCurve {
 
 class Animation {
 	
+	public var skin : Skin;
 	public var name : String;
 	public var curves : Array<AnimCurve>;
 	public var hcurves : IntHash<AnimCurve>;
 	public var frameCount : Int;
 	
-	public function new(n) {
+	public function new(sk, n) {
+		this.skin = sk;
 		this.name = n;
 		curves = [];
 		hcurves = new IntHash();
@@ -56,8 +58,14 @@ class Animation {
 		if( c.absolute )
 			return;
 		c.absolute = true;
-		if( c.parent == null )
+		if( c.parent == null ) {
+			for( i in 0...frameCount ) {
+				var m = c.frames[i];
+				if( m == null ) break;
+				m.multiply3x4(m, skin.preTransform);
+			}
 			return;
+		}
 		computeAnimFrames(c.parent);
 		for( i in 0...frameCount ) {
 			var m = c.frames[i];
@@ -98,12 +106,14 @@ class Skin {
 	public var vertexJoints : Table<Int>;
 	public var vertexWeights : Table<Float>;
 	public var boundJoints : Array<Joint>;
+	public var preTransform : h3d.Matrix;
 	
 	var envelop : Array<Array<Influence>>;
 	
 	public function new( vertexCount, bonesPerVertex ) {
 		this.vertexCount = vertexCount;
 		this.bonesPerVertex = bonesPerVertex;
+		preTransform = h3d.Matrix.I();
 		vertexJoints = new Table(#if flash vertexCount * bonesPerVertex #end);
 		vertexWeights = new Table(#if flash vertexCount * bonesPerVertex #end);
 		envelop = [];

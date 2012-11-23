@@ -1,0 +1,7 @@
+-cp ..
+-swf anim.swf
+-swf-header 800:600:40:FFFFFF
+--flash-strict
+-swf-version 11.3
+-main Anim
+-lib format

@@ -34,7 +34,7 @@ class Mesh {
 		var skin = null;
 		for( v in lib.getSubs(root) )
 			if( v.getType() == "Skin" )
-				return new Skin(lib, v, Std.int(getVertices().length/3), bonesPerVertex);
+				return new Skin(lib, v, root, Std.int(getVertices().length/3), bonesPerVertex);
 		return null;
 	}
 	
