@@ -46,7 +46,28 @@ class Layers extends Sprite {
 	}
 	
 	public function ysort( layer : Int ) {
-		// TODO
+		if( layer >= layerCount ) return;
+		var start = layer == 0 ? 0 : layers[layer - 1];
+		var max = layers[layer];
+		if( start == max )
+			return;
+		var pos = start;
+		var ymax = childs[pos++].y;
+		while( pos < max ) {
+			var c = childs[pos];
+			if( c.y < ymax ) {
+				var p = pos - 1;
+				while( p >= start ) {
+					var c2 = childs[p];
+					if( c.y >= c2.y ) break;
+					childs[p + 1] = c2;
+					p--;
+				}
+				childs[p + 1] = c;
+			} else
+				ymax = c.y;
+			pos++;
+		}
 	}
 
 	
