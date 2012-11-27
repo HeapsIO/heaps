@@ -24,12 +24,16 @@ class Parser {
 	function new() {
 	}
 
-	function parseText( str ) {
+	function parseText( str ) : FbxNode {
 		this.buf = str;
 		this.pos = 0;
 		this.line = 1;
 		token = null;
-		return parseNodes();
+		return {
+			name : "Root",
+			props : [],
+			childs : parseNodes(),
+		};
 	}
 
 	function parseNodes() {

@@ -9,7 +9,7 @@ class Library {
 	var invConnect : IntHash<Array<Int>>;
 	
 	public function new() {
-		root = { name : "root", props : [], childs : [] };
+		root = { name : "Root", props : [], childs : [] };
 		reset();
 	}
 	
@@ -20,12 +20,14 @@ class Library {
 	}
 	
 	public function loadTextFile( data : String ) {
-		for( n in Parser.parse(data) )
-			init(n);
+		load(Parser.parse(data));
 	}
 	
-	public function load( x : Iterable<FbxNode> ) {
-		for ( r in x ) init( r );
+	public function load( root : FbxNode ) {
+		reset();
+		this.root = root;
+		for( c in root.childs )
+			init(c);
 	}
 	
 	function init( n : FbxNode ) {
@@ -57,9 +59,7 @@ class Library {
 		case "Objects":
 			for( c in n.childs )
 				ids.set(c.getId(), c);
-			root.childs.push(n);
 		default:
-			root.childs.push(n);
 		}
 	}
 	
@@ -103,14 +103,6 @@ class Library {
 	
 	public function getRoot() {
 		return root;
-	}
-	
-	public function setRoot(root) {
-		this.root = root;
-		reset();
-		var old = root.childs;
-		root.childs = [];
-		load(old);
 	}
 	
 }
