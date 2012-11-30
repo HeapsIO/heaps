@@ -1,9 +1,10 @@
 package h3d.fbx;
-import h3d.fbx.Data;
+using h3d.fbx.Data;
 
 class Filter {
 	
 	var ignoreList : Array<Array<String>>;
+	var removedObjects : IntHash<Bool>;
 	
 	public function new() {
 		ignoreList = [];
@@ -14,8 +15,22 @@ class Filter {
 	}
 	
 	public function filter( f : FbxNode ) : FbxNode {
+		removedObjects = new IntHash();
 		var f2 = filterRec(f, ignoreList, 0);
-		// TODO : rebuild connections !
+		for( i in 0...f2.childs.length ) {
+			var c = f2.childs[i];
+			if( c.name == "Connections" ) {
+				var cnx = [];
+				for( c in c.childs )
+					if( !removedObjects.exists(c.props[1].toInt()) && !removedObjects.exists(c.props[2].toInt()) )
+						cnx.push(c);
+				f2.childs[i] = {
+					name : c.name,
+					props : c.props,
+					childs : cnx,
+				};
+			}
+		}
 		return f2;
 	}
 	
@@ -34,11 +49,14 @@ class Filter {
 			props : f.props.copy(),
 			childs : [],
 		};
+		var isObjects = index == 1 && f.name == "Objects";
 		index++;
 		for( c in f.childs ) {
 			var fs = filterRec(c, sub, index);
 			if( fs != null )
 				f2.childs.push(fs);
+			else if( isObjects )
+				removedObjects.set(c.getId(),true);
 		}
 		return f2;
 	}
