@@ -66,5 +66,9 @@ class Texture {
 		if( t != null )
 			mem.deleteTexture(this);
 	}
+	
+	public static function ofBitmap( bmp : flash.display.BitmapData ) {
+		return h3d.Engine.getCurrent().mem.makeTexture(bmp);
+	}
 
 }
