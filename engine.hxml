@@ -6,3 +6,4 @@
 -main Test
 -lib format
 --macro include('h3d')
+--macro include('h2d')

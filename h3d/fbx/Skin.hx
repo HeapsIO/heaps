@@ -144,9 +144,10 @@ class Skin extends h3d.prim.Skin {
 		var meshObj = lib.getParents(meshGeom,"Model")[0];
 
 		// assume that the mesh in on the stage (common ancestor = stage)
-		if( lib.getParents(meshObj).length > 0 )
-			throw "Mesh has parents";
-
+		var parents = lib.getParents(meshObj);
+		if( parents.length > 0 )
+			throw "Mesh has parent [" + Lambda.map(parents, function(p) return try p.getName() catch( e : Dynamic ) p.name)+"]";
+		
 		// get the skin root
 		var skinRoot = lib.getParents(this.rootJoints[0].model, "Model")[0];
 
@@ -160,12 +161,13 @@ class Skin extends h3d.prim.Skin {
 		meshPos.invert();
 		preTransform.multiply(preTransform, meshPos);
 			
-		// apply geometric translation as a post transform matrix
+		// apply geometric translation as a pre AND post transform matrix
 		var geomTrans = null;
 		for( p in meshObj.getAll("Properties70.P") )
 			switch( p.props[0].toString() ) {
 			case "GeometricTranslation":
 				geomTrans = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+				preTransform.translate(geomTrans.x, geomTrans.y, geomTrans.z);
 			default:
 			}
 		if( geomTrans != null ) {
