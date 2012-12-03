@@ -162,7 +162,7 @@ class Macros {
 		var v = try c.compile(v) catch( e : format.hxsl.Data.Error ) haxe.macro.Context.error(e.message, e.pos);
 
 		var c = new format.agal.Compiler();
-		c.error = Context.error;
+		c.error = function(msg, p) { Context.error(msg, p); return null; }
 
 		var vscode = c.compile(v.vertex);
 		var fscode = c.compile(v.fragment);
