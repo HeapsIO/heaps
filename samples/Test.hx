@@ -22,14 +22,15 @@ class Test {
 	
 	var root : flash.display.Sprite;
 	var e : h3d.Engine;
-	var rgb : RGBShader;
 	var time : Float;
-	var obj : h3d.Object;
+	var camera : h3d.Camera;
+	var obj : h3d.CoreObject<RGBShader>;
 	
 	function new(root) {
 		this.root = root;
 		time = 0;
 		e = new h3d.Engine();
+		camera = new h3d.Camera();
 		e.debug = true;
 		e.backgroundColor = 0x202020;
 		e.onReady = start;
@@ -38,11 +39,11 @@ class Test {
 	
 	function start() {
 		root.addEventListener(flash.events.Event.ENTER_FRAME, update);
-		rgb = new RGBShader();
+		var rgb = new RGBShader();
 		var prim = new h3d.prim.Cube();
 		prim.translate( -0.5, -0.5, -0.5);
 		prim.addTCoords();
-		obj = new h3d.Object(prim, new h3d.mat.Material(rgb));
+		obj = new h3d.CoreObject(prim, rgb);
 		var bmp = new flash.display.BitmapData(256, 256);
 		bmp.perlinNoise(64, 64, 3, 0, true, true, 7);
 		rgb.tex = e.mem.makeTexture(bmp);
@@ -52,13 +53,13 @@ class Test {
 	function update(_) {
 		var dist = 5;
 		time += 0.01;
-		e.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
-		e.camera.update();
-		rgb.mproj = e.camera.m;
+		camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
+		camera.update();
+		obj.shader.mproj = camera.m;
 		e.begin();
 		obj.render(e);
-		e.camera.m.prependRotate(new h3d.Vector(-0.5, 2, Math.cos(time)), time + Math.PI / 2);
-		rgb.mproj = e.camera.m;
+		camera.m.prependRotate(new h3d.Vector(-0.5, 2, Math.cos(time)), time + Math.PI / 2);
+		obj.shader.mproj = camera.m;
 		obj.render(e);
 		e.end();
 	}

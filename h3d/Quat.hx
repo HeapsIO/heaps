@@ -59,6 +59,12 @@ class Quat {
 	}
 	
 	public function toMatrix() {
+		var m = new Matrix();
+		saveToMatrix(m);
+		return m;
+	}
+	
+	public function saveToMatrix( m : h3d.Matrix ) {
 		var xx = x * x;
 		var xy = x * y;
 		var xz = x * z;
@@ -68,7 +74,6 @@ class Quat {
 		var yw = y * w;
 		var zz = z * z;
 		var zw = z * w;
-		var m = new Matrix();
 		m._11 = 1 - 2 * ( yy + zz );
 		m._12 = 2 * ( xy - zw );
 		m._13 = 2 * ( xz + yw );

@@ -1,27 +1,5 @@
 package h2d;
 
-private class TileShader2D extends h3d.Shader {
-	static var SRC = {
-		var input : {
-			pos : Float2,
-			uv : Float2,
-		};
-		var tuv : Float2;
-		function vertex( mat1 : Float3, mat2 : Float3 ) {
-			var tmp : Float4;
-			tmp.x = pos.xyw.dp3(mat1);
-			tmp.y = pos.xyw.dp3(mat2);
-			tmp.z = 0;
-			tmp.w = 1;
-			out = tmp;
-			tuv = uv;
-		}
-		function fragment( tex : Texture, color : Float4 ) {
-			out = tex.get(tuv, nearest) * color;
-		}
-	}
-}
-
 private class TileLayerContent extends h3d.prim.Primitive {
 
 	var tmp : flash.Vector<Float>;
@@ -75,9 +53,6 @@ private class TileLayerContent extends h3d.prim.Primitive {
 
 class TileGroup extends Sprite {
 	
-	static var SHADER : TileShader2D = null;
-
-	var object : h3d.Object;
 	var content : TileLayerContent;
 	
 	public var tile : Tile;
@@ -87,11 +62,6 @@ class TileGroup extends Sprite {
 		tile = t;
 		color = new h3d.Color(1, 1, 1, 1);
 		content = new TileLayerContent();
-		if( SHADER == null )
-			SHADER = new TileShader2D();
-		object = new h3d.Object(content, new h3d.mat.Material(SHADER));
-		object.material.depth(false, Always);
-		object.material.culling = None;
 		super(parent);
 	}
 	
@@ -100,7 +70,7 @@ class TileGroup extends Sprite {
 	}
 	
 	override function onDelete() {
-		object.primitive.dispose();
+		content.dispose();
 		super.onDelete();
 	}
 	
@@ -113,18 +83,19 @@ class TileGroup extends Sprite {
 		return c;
 	}
 	
-	override function set_blendMode(b) {
-		this.blendMode = b;
-		Tools.setBlendMode(object.material, b);
-		return b;
-	}
-	
 	override function draw(engine:h3d.Engine) {
-		var shader = SHADER;
+		var core = Tools.getCoreObjects();
+		var shader = core.tileObj.shader;
+		var tmp = core.tmpVector;
+		tmp.set(matA, matC, absX);
+		shader.mat1 = tmp;
+		tmp.set(matB, matD, absY);
+		shader.mat2 = tmp;
+		tmp.set(color.r, color.g, color.b);
+		shader.color = tmp;
 		shader.tex = tile.getTexture();
-		shader.mat1 = new h3d.Vector(matA, matC, absX);
-		shader.mat2 = new h3d.Vector(matB, matD, absY);
-		shader.color = color.toVector();
-		object.render(engine);
+		Tools.setBlendMode(core.tileObj.material, blendMode);
+		engine.selectMaterial(core.tileObj.material);
+		content.render(engine);
 	}
 }

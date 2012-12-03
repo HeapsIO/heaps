@@ -15,24 +15,10 @@ class XBXFile extends flash.utils.ByteArray {
 		if( root.compressed )
 			ba.inflate();//??
 		
-		//trace(ba);
 		var inStream = new haxe.io.BytesInput( haxe.io.Bytes.ofData(ba) );
 		
-		var a = [];
 		var rdr = new XBXReader( inStream );
-		while ( true )
-		{
-			try {
-				a.push( rdr.read() );
-			}
-			catch( d:Dynamic )
-			{
-				trace("finished on " + d);
-				break;
-			}
-		}
-		l.load( a );
-		
+		l.load(rdr.read());
 		return l;
 	}
 }

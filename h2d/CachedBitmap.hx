@@ -1,27 +1,5 @@
 package h2d;
 
-private class BitmapMatrixShader extends h3d.Shader {
-	static var SRC = {
-		var input : {
-			pos : Float2,
-		};
-		var tuv : Float2;
-		function vertex( size : Float3, mat1 : Float3, mat2 : Float3, skew : Float, uvScale : Float2 ) {
-			var tmp : Float4;
-			var spos = pos.xyw * size;
-			tmp.x = spos.dp3(mat1);
-			tmp.y = spos.dp3(mat2);
-			tmp.z = 0;
-			tmp.w = 1 - skew * pos.y;
-			out = tmp;
-			tuv = pos * uvScale;
-		}
-		function fragment( tex : Texture, mcolor : M44, acolor : Float4 ) {
-			out = tex.get(tuv, nearest) * mcolor + acolor;
-		}
-	}
-}
-
 class CachedBitmap extends Sprite {
 
 	var tex : h3d.mat.Texture;
@@ -70,29 +48,15 @@ class CachedBitmap extends Sprite {
 		return h;
 	}
 
-	static var BITMAP_OBJ : h3d.CustomObject<BitmapMatrixShader> = null;
-	static var TMP_VECTOR = new h3d.Vector();
-	
 	override function draw( engine : h3d.Engine ) {
 		if( colorMatrix == null && colorAdd == null && skew == 0. ) {
 			Tools.drawTile(engine, this, tile, new h3d.Color(1, 1, 1, 1), blendMode);
 			return;
 		}
-		var b = BITMAP_OBJ;
-		if( b == null ) {
-			var p = new h3d.prim.Quads([
-				new h3d.Point(0, 0),
-				new h3d.Point(1, 0),
-				new h3d.Point(0, 1),
-				new h3d.Point(1, 1),
-			]);
-			b = new h3d.CustomObject(p, new BitmapMatrixShader());
-			b.material.culling = None;
-			b.material.depth(false, Always);
-			BITMAP_OBJ = b;
-		}
+		var core = Tools.getCoreObjects();
+		var b = core.cachedBitmapObj;
 		Tools.setBlendMode(b.material,blendMode);
-		var tmp = TMP_VECTOR;
+		var tmp = core.tmpVector;
 		tmp.x = tile.width;
 		tmp.y = tile.height;
 		tmp.z = 1;

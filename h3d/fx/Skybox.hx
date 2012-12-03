@@ -17,20 +17,19 @@ class Skybox extends h3d.Shader {
 		}
 	};
 
-	var obj : h3d.Object;
+	var obj : h3d.CoreObject<Skybox>;
 	
 	public function new(tex) {
 		super();
 		this.texture = tex;
 		var prim = new h3d.prim.Cube(2, 2, 2);
         prim.translate( -1, -1, -1);
-		obj = new h3d.Object(prim, new h3d.mat.Material(this));
+		obj = new h3d.CoreObject(prim, this);
 		obj.material.depth(false, Compare.Always);
 		obj.material.culling = Face.Front;
 	}
 	
-	public function render( engine : h3d.Engine, ?pos : h3d.Matrix ) {
-		var camera = engine.camera;
+	public function render( engine : h3d.Engine, camera : h3d.Camera, ?pos : h3d.Matrix ) {
         var size = camera.zFar / Math.sqrt(3);
         var m;
         if( pos == null ) {

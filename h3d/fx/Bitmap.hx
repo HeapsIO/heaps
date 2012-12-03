@@ -20,7 +20,7 @@ private class BitmapShader extends h3d.Shader {
 
 }
 
-class Bitmap extends h3d.CustomObject<BitmapShader> {
+class Bitmap extends h3d.CoreObject<BitmapShader> {
 
 	public var bmp(default,null) : h3d.mat.Bitmap;
 	
@@ -31,15 +31,15 @@ class Bitmap extends h3d.CustomObject<BitmapShader> {
 	public var scaleX : Float;
 	public var scaleY : Float;
 	
-	static var shader = null;
-	static var prim = null;
+	static var SHADER = null;
+	static var PRIM = null;
 	
 	public function new( bmp ) {
-		if( shader == null ) {
-			shader = new BitmapShader();
-			prim = new h3d.prim.Plan2D();
+		if( SHADER == null ) {
+			SHADER = new BitmapShader();
+			PRIM = new h3d.prim.Plan2D();
 		}
-		super(prim,shader);
+		super(PRIM,SHADER);
 		material.depth(false, Compare.Always);
 		material.blend(Blend.SrcAlpha, Blend.OneMinusSrcAlpha);
 		material.culling = Face.None;

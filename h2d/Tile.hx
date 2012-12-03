@@ -32,7 +32,7 @@ class Tile {
 	
 	function getTexture() {
 		if( innerTex == null || innerTex.isDisposed() )
-			return Tools.emptyTexture();
+			return Tools.getCoreObjects().getEmptyTexture();
 		return innerTex;
 	}
 		
