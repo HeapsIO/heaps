@@ -4,6 +4,6 @@
 --flash-strict
 -swf-version 11
 -main Test
--lib format
+-lib hxsl
 --macro include('h3d')
 --macro include('h2d')

@@ -3,12 +3,14 @@ package h3d.impl;
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
-import format.hxsl.Data;
+import hxsl.Data;
 
 class Macros {
 
 	static function realType( t : VarType, p : Position ) : ComplexType {
 		return TPath(switch( t ) {
+		case TNull: throw "assert";
+		case TBool: { pack : [], name : "Bool", params : [], sub : null };
 		case TFloat: { pack : [], name : "Float", params : [], sub : null };
 		case TFloat2, TFloat3, TFloat4: { pack : ["h3d"], name : "Vector", params : [], sub : null };
 		case TInt: { pack : [], name : "Int", params : [], sub : null };
@@ -18,114 +20,6 @@ class Macros {
 		});
 	}
 
-	static function makeShaderVars( shader : Code, fields : Array<Field> ) {
-		var pos = 0;
-		var fset = shader.vertex ? "data.vertexVars" : "data.fragmentVars";
-		for( c in shader.args.concat(shader.tex) ) {
-			var set = [], get = "null";
-			var old = pos;
-			var iPrefix = "";
-			function add(e) {
-				set.push(fset + "[" + iPrefix + pos + "]=" + e + ";");
-				pos++;
-			}
-			function addType(n:String,t:VarType) {
-				switch( t ) {
-				case TFloat:
-					add(n);
-					add(n);
-					add(n);
-					add(n);
-				case TFloat2:
-					add(n + ".x");
-					add(n + ".y");
-					add("1.");
-					add("1.");
-				case TFloat3:
-					add(n + ".x");
-					add(n + ".y");
-					add(n + ".z");
-					add("1.");
-				case TFloat4:
-					add(n + ".x");
-					add(n + ".y");
-					add(n + ".z");
-					add(n + ".w");
-				case TMatrix(w,h,t):
-					for( y in 1...w+1 )
-						for( x in 1...h+1 ) {
-							if( t.t )
-								add(n+"._"+x+y);
-							else
-								add(n+"._"+y+x);
-						}
-				case TTexture(_):
-					get = "get_" + c.name;
-					set.push("data.textures[" + c.index + "] = " + n + ";");
-					set.push("data.texturesChanged = true;");
-					fields.push( {
-						name : get,
-						access : [APrivate],
-						kind : FFun( {
-							params : [],
-							args : [],
-							ret : null,
-							expr : Context.parse("return data.textures[" + c.index + "]", c.pos),
-						}),
-						pos : c.pos,
-					});
-				case TInt:
-					add("((" + n + ">>16) & 0xFF) / 255.0");
-					add("((" + n + ">>8) & 0xFF) / 255.0");
-					add("(" + n + " & 0xFF) / 255.0");
-					add("(" + n + ">>>24) / 255.0");
-				case TArray(t, count):
-					iPrefix += "_i*" + Tools.floatSize(t) + "+";
-					set.push("var max = " + n + ".length;");
-					set.push("for( _i in 0...(max < " + count + "?max:"+count+") ) {");
-					addType(n + "[_i]", t);
-					set.push("}");
-					iPrefix = "";
-					pos += Tools.floatSize(t) * (count - 1);
-				}
-			}
-			addType(c.name, c.type);
-			if( pos > old )
-				set.push(fset + "Changed=true;");
-			set.push("return " + c.name + ";");
-			
-			var t = realType(c.type,c.pos);
-			fields.push( {
-				name : c.name,
-				access : [APublic],
-				kind : FProp(get, "set_" + c.name, t),
-				pos : c.pos,
-			});
-			fields.push( {
-				name : "set_" + c.name,
-				access : [APrivate],
-				kind : FFun( {
-					params : [],
-					args : [ { name : c.name, type : t, opt : false, value : null } ],
-					ret : t,
-					expr : Context.parse("{"+set.join("")+"}",c.pos),
-				}),
-				pos : c.pos,
-			});
-		}
-		var cst = [];
-		for( i in 0...pos )
-			cst.push("0.");
-		for( c in shader.consts ) {
-			for( i in 0...4 ) {
-				var v = c[i];
-				if( v == null ) v = "0";
-				cst.push(v);
-			}
-		}
-		return cst;
-	}
-	
 	public static function buildShader() {
 		var fields = Context.getBuildFields();
 		var shaderCode = null;
@@ -151,44 +45,90 @@ class Macros {
 			Context.error("Shader SRC not found", cl.pos);
 		}
 		
-		var p = new format.hxsl.Parser();
+		var p = new hxsl.Parser();
 		p.includeFile = function(file) {
 			var f = Context.resolvePath(file);
 			return Context.parse("{"+sys.io.File.getContent(f)+"}", Context.makePosition( { min : 0, max : 0, file : f } ));
 		};
-		var v = try p.parse(shaderCode) catch( e : format.hxsl.Data.Error ) haxe.macro.Context.error(e.message, e.pos);
-		var c = new format.hxsl.Compiler();
+
+		var data = try p.parse(shaderCode) catch( e : hxsl.Data.Error ) haxe.macro.Context.error(e.message, e.pos);
+		var c = new hxsl.Compiler();
 		c.warn = Context.warning;
-		var v = try c.compile(v) catch( e : format.hxsl.Data.Error ) haxe.macro.Context.error(e.message, e.pos);
+		var data = try c.compile(data) catch( e : hxsl.Data.Error ) haxe.macro.Context.error(e.message, e.pos);
 
-		var c = new format.agal.Compiler();
-		c.error = function(msg, p) { Context.error(msg, p); return null; }
-
-		var vscode = c.compile(v.vertex);
-		var fscode = c.compile(v.fragment);
+		var pos = Context.currentPos();
 		
-		//trace("----");
-		//for( i in 0...vscode.code.length )
-		//	trace(i+": "+format.agal.Tools.opStr(vscode.code[i]));
-
-		var o = new haxe.io.BytesOutput();
-		new format.agal.Writer(o).write(vscode);
-		var vsbytes = haxe.Serializer.run(o.getBytes());
-
-		var o = new haxe.io.BytesOutput();
-		new format.agal.Writer(o).write(fscode);
-		var fsbytes = haxe.Serializer.run(o.getBytes());
+		// store HXSL data for runtime compilation
+		fields.push( {
+			name : "HXSL",
+			kind : FVar(null,{ expr : EConst(CString(hxsl.Serialize.serialize(data))), pos : pos }),
+			access : [AStatic],
+			pos : pos,
+		});
 		
-		var max = 200;
-		if( vscode.code.length > max )
-			Context.error("This vertex shader uses " + vscode.code.length + " opcodes but only " + max + " are allowed by Flash11", v.vertex.pos);
-		if( fscode.code.length > max )
-			Context.error("This fragment shader uses " + fscode.code.length + " opcodes but only " + max + " are allowed by Flash11", v.fragment.pos);
-	
+		// create all the variables accessors
+		var allVars = data.globals.concat(data.vertex.args).concat(data.fragment.args);
+		for( v in data.vertex.tex.concat(data.fragment.tex) )
+			allVars.push(v);
+		for( v in allVars ) {
+			switch( v.kind ) {
+			case VConst, VParam:
+				fields.push( {
+					name : v.name,
+					kind : FProp("never", "set", realType(v.type, v.pos)),
+					pos : v.pos,
+					access : [APublic],
+				});
+				/*
+				fields.push({
+					name : "get_" + v.name,
+					kind : FFun({
+					}),
+					pos : v.pos,
+					access : [AInline],
+				});
+				fields.push( {
+					name : "set_" + v.name,
+					kind : FFun( {
+						ret : null,
+						params : [ { ]],
+						expr :
+					}),
+					pos : v.pos,
+					access : [AInline],
+				});
+				*/
+			case VTexture:
+				fields.push( {
+					name : v.name,
+					kind : FProp("never", "set", realType(v.type, v.pos)),
+					pos : v.pos,
+					access : [APublic],
+				});
+				/*
+				fields.push( {
+					name : "set_" + v.name,
+					kind : FFun({
+					}),
+					pos : v.pos,
+					access : [AInline],
+				});
+				*/
+			case VInput, VVar, VOut:
+				// skip
+			default:
+				Context.warning(v.name, v.pos);
+				throw "assert";
+			}
+		}
+		
+		
+		
+		/*
 		var stride = 0;
 		var fmt = 0;
 		var pos = 0;
-		for( i in v.input ) {
+		for( i in v ) {
 			function add(size) {
 				fmt |= size << (pos * 3);
 				pos++;
@@ -261,6 +201,8 @@ class Macros {
 				ret : tbytes,
 			}),
 		});
+		*/
+		
 		
 		return fields;
 	}
