@@ -54,6 +54,16 @@ class Tile {
 		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
 	
+	public function scrollDiscrete( dx : Float, dy : Float ) {
+		var tex = innerTex;
+		u += dx / tex.width;
+		v -= dy / tex.height;
+		u2 += dx / tex.width;
+		v2 -= dy / tex.height;
+		x = Std.int(u * tex.width);
+		v = Std.int(v * tex.height);
+	}
+	
 	public function dispose() {
 		if( innerTex != null ) innerTex.dispose();
 		innerTex = null;

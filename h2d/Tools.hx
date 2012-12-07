@@ -38,8 +38,17 @@ private class CachedBitmapShader extends h3d.Shader {
 			out = tmp;
 			tuv = pos * uvScale;
 		}
+		
+		var hasAlphaMap : Bool;
+		var alphaMap : Texture;
+		var alphaUV : Float4;
+		
 		function fragment( tex : Texture, mcolor : M44, acolor : Float4 ) {
-			out = tex.get(tuv, nearest) * mcolor + acolor;
+			var c = tex.get(tuv, nearest);
+			if( hasAlphaMap ) c.a *= alphaMap.get(tuv * alphaUV.zw + alphaUV.xy).r;
+			if( mcolor != null ) c *= mcolor;
+			if( acolor != null ) c += acolor;
+			out = c;
 		}
 	}
 }

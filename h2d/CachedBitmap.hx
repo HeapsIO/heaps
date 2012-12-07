@@ -9,6 +9,7 @@ class CachedBitmap extends Sprite {
 	public var colorMatrix : Null<h3d.Matrix>;
 	public var colorAdd : Null<h3d.Color>;
 	public var skew : Float;
+	public var alphaMap : Tile;
 	
 	var renderDone : Bool;
 	var realWidth : Int;
@@ -49,7 +50,7 @@ class CachedBitmap extends Sprite {
 	}
 
 	override function draw( engine : h3d.Engine ) {
-		if( colorMatrix == null && colorAdd == null && skew == 0. ) {
+		if( colorMatrix == null && colorAdd == null && skew == 0. && alphaMap == null ) {
 			Tools.drawTile(engine, this, tile, new h3d.Color(1, 1, 1, 1), blendMode);
 			return;
 		}
@@ -72,8 +73,8 @@ class CachedBitmap extends Sprite {
 		tmp.z = absY + tile.dx * matB + tile.dy * matD;
 		b.shader.mat2 = tmp;
 		var tmp = core.tmpUVScale;
-		tmp.x = tile.u2 - tile.u;
-		tmp.y = tile.v2 - tile.v;
+		tmp.x = tile.u2;
+		tmp.y = tile.v2;
 		b.shader.uvScale = tmp;
 		b.shader.mcolor = colorMatrix == null ? h3d.Matrix.I() : colorMatrix;
 		var tmp = core.tmpColor;
@@ -92,6 +93,16 @@ class CachedBitmap extends Sprite {
 		b.shader.skew = skew;
 		
 		b.shader.tex = tile.getTexture();
+		
+		if( alphaMap != null ) {
+			b.shader.hasAlphaMap = true;
+			b.shader.alphaMap = alphaMap.getTexture();
+			b.shader.alphaUV = new h3d.Vector(alphaMap.u, alphaMap.v, (alphaMap.u2 - alphaMap.u) / tile.u2, (alphaMap.v2 - alphaMap.v) / tile.v2);
+		} else {
+			b.shader.hasAlphaMap = false;
+			b.shader.alphaMap = null;
+		}
+			
 		b.render(engine);
 	}
 	
