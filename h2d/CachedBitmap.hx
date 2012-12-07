@@ -76,6 +76,7 @@ class CachedBitmap extends Sprite {
 		tmp.y = tile.v2 - tile.v;
 		b.shader.uvScale = tmp;
 		b.shader.mcolor = colorMatrix == null ? h3d.Matrix.I() : colorMatrix;
+		var tmp = core.tmpColor;
 		if( colorAdd == null ) {
 			tmp.x = 0;
 			tmp.y = 0;
