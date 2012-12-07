@@ -64,145 +64,224 @@ class Macros {
 			kind : FVar(null,{ expr : EConst(CString(hxsl.Serialize.serialize(data))), pos : pos }),
 			access : [AStatic],
 			pos : pos,
+			meta : [ { name:":keep", params : [], pos : pos } ],
+		});
+		fields.push( {
+			name : "GLOBALS",
+			kind : FVar(macro : h3d.Shader.ShaderGlobals),
+			access : [AStatic],
+			pos : pos,
+			meta : [ { name:":keep", params : [], pos : pos } ],
 		});
 		
 		// create all the variables accessors
-		var allVars = data.globals.concat(data.vertex.args).concat(data.fragment.args);
-		for( v in data.vertex.tex.concat(data.fragment.tex) )
-			allVars.push(v);
+		var allVars = Tools.getAllVars(data);
+		var constCount = 0, virtualIndex = 0, texCount = 0, updates = [];
+		
 		for( v in allVars ) {
+			var pos = v.pos;
 			switch( v.kind ) {
 			case VConst, VParam:
+				
+				v.index = virtualIndex;
+				if( v.type != TBool )
+					virtualIndex += Tools.floatSize(v.type);
+				
+				var t = realType(v.type, pos);
 				fields.push( {
 					name : v.name,
-					kind : FProp("never", "set", realType(v.type, v.pos)),
-					pos : v.pos,
+					kind : FProp("get", "set", t),
+					pos : pos,
 					access : [APublic],
 				});
-				/*
-				fields.push({
-					name : "get_" + v.name,
-					kind : FFun({
-					}),
-					pos : v.pos,
-					access : [AInline],
+				fields.push( {
+					name : v.name+"_",
+					kind : FVar(t),
+					pos : pos,
+					access : [],
 				});
+
+				var ev = { expr : EConst(CIdent("v")), pos : pos };
+				var evar = { expr : EConst(CIdent(v.name + "_")), pos : pos };
+				
+				var set = [
+					macro modified = true,
+					{ expr : EBinop(OpAssign,evar, ev), pos : pos },
+				];
+				if( v.name == "m2pos" )
+					trace(v.name+" "+v.kind);
+				if( v.kind == VConst ) {
+					if( constCount == 32 )
+						Context.error("Too many constants for this shader (max 32)", Context.currentPos());
+					var chk = v.type == TBool ? ev : { expr : EBinop(OpNotEq, ev, { expr : EConst(CIdent("null")), pos : pos } ), pos : pos };
+					var count = { expr : EConst(CInt(""+constCount)), pos : pos };
+					set.push(macro setConstFlag($count, $chk));
+					constCount++;
+				}
+				set.push(macro return v);
 				fields.push( {
 					name : "set_" + v.name,
 					kind : FFun( {
-						ret : null,
-						params : [ { ]],
-						expr :
+						ret : t,
+						params : [],
+						args : [{ name : "v",  type : t, opt : false }],
+						expr : {
+							expr : EBlock(set),
+							pos : pos,
+						},
+					}),
+					pos : pos,
+					access : [],
+				});
+				
+				var get = [];
+				switch( v.type ) {
+				case TInt, TFloat, TBool: // no allocation required
+				default:
+					function loadType( t : VarType, eindex, rec = 0 ) {
+						var args = [{ expr : eindex, pos : pos }];
+						var name = switch( t ) {
+						case TBool, TNull, TTexture(_): throw "assert";
+						case TInt: "Int";
+						case TFloat: "Float";
+						case TFloat2, TFloat3, TFloat4:
+							args.push( { expr : EConst(CInt(Tools.floatSize(v.type) + "")), pos : pos } );
+							"Floats";
+						case TMatrix(r, c, t):
+							args.push( { expr : EConst(CInt(r + "")), pos : pos } );
+							args.push( { expr : EConst(CInt(c + "")), pos : pos } );
+							if( t.t ) "MatrixT" else "Matrix";
+						case TArray(t, size):
+							var vi = "i" + rec;
+							var ei = { expr : EConst(CIdent(vi)), pos : pos };
+							var esize = { expr : EConst(CInt(size + "")), pos : pos };
+							var stride = Tools.regSize(t);
+							var load = loadType(t, EBinop(OpAdd, { expr : eindex, pos : pos }, { expr : EBinop(OpMult, { expr : EConst(CIdent(vi)), pos : pos }, { expr : EConst(CInt(stride + "")), pos : pos } ), pos : pos } ), rec + 1);
+							return macro {
+								var a = [];
+								for( $ei in 0...$esize )
+									a.push($load);
+								a;
+							}
+						}
+						return { expr : ECall( { expr : EConst(CIdent("load" + name)), pos : pos }, args), pos : pos };
+					}
+					var load = loadType(v.type, EConst(CInt(v.index + "")));
+					get.push(macro if( $evar == null ) { $evar = $load; modified = true; });
+				}
+				get.push(macro return $evar);
+				
+				if( v.type != TBool ) {
+					function saveType( t : VarType, eindex, evar, rec = 0 ) {
+						var args = [{ expr : eindex, pos : pos }, evar];
+						var name = switch( t ) {
+						case TBool, TNull, TTexture(_): throw "assert";
+						case TInt: "Int";
+						case TFloat: "Float";
+						case TFloat2, TFloat3, TFloat4:
+							args.push( { expr : EConst(CInt(Tools.floatSize(v.type) + "")), pos : pos } );
+							"Floats";
+						case TMatrix(r, c, t):
+							args.push( { expr : EConst(CInt(r + "")), pos : pos } );
+							args.push( { expr : EConst(CInt(c + "")), pos : pos } );
+							if( t.t ) "MatrixT" else "Matrix";
+						case TArray(t, size):
+							var vi = "i" + rec, vk = "k" + rec;
+							var ei = { expr : EConst(CIdent(vi)), pos : pos };
+							var ek = { expr : EConst(CIdent(vk)), pos : pos };
+							var esize = { expr : EConst(CInt(size + "")), pos : pos };
+							var stride = Tools.regSize(t);
+							var save = saveType(
+								t,
+								EBinop(OpAdd, { expr : eindex, pos : pos }, { expr : EBinop(OpMult, { expr : EConst(CIdent(vi)), pos : pos }, { expr : EConst(CInt(stride + "")), pos : pos } ), pos : pos } ),
+								ek,
+								rec + 1
+							);
+							return macro {
+								for( $ei in 0...$esize ) {
+									var $vk = $evar[$ei];
+									if( $ek == null ) break;
+									$save;
+								}
+							}
+						}
+						return { expr : ECall( { expr : EConst(CIdent("save" + name)), pos : pos }, args), pos : pos };
+					}
+					var save = saveType(v.type, EConst(CInt(v.index + "")), evar);
+					switch( v.type ) {
+					case TFloat, TInt:
+						updates.push(save);
+					default:
+						updates.push(macro if( $evar != null ) { $save; $evar = null; });
+					}
+				}
+				
+				fields.push({
+					name : "get_" + v.name,
+					kind : FFun( {
+						ret : t,
+						params : [],
+						args : [],
+						expr : { expr : EBlock(get), pos : pos },
 					}),
 					pos : v.pos,
-					access : [AInline],
+					access : [],
 				});
-				*/
+				
 			case VTexture:
+				var t = realType(v.type, pos);
+				var tid = { expr : EConst(CInt("" + texCount++)), pos : pos };
+				
 				fields.push( {
 					name : v.name,
-					kind : FProp("never", "set", realType(v.type, v.pos)),
-					pos : v.pos,
+					kind : FProp("get","set",t),
+					pos : pos,
 					access : [APublic],
 				});
-				/*
-				fields.push( {
-					name : "set_" + v.name,
-					kind : FFun({
+				
+				fields.push({
+					name : "get_" + v.name,
+					kind : FFun( {
+						ret : t,
+						params : [],
+						args : [],
+						expr : macro return allTextures[$tid],
 					}),
 					pos : v.pos,
 					access : [AInline],
 				});
-				*/
+
+				fields.push({
+					name : "set_" + v.name,
+					kind : FFun( {
+						ret : t,
+						params : [],
+						args : [{ name : "v", type : t, opt : false }],
+						expr : macro { allTextures[$tid] = v; return v; },
+					}),
+					pos : v.pos,
+					access : [AInline],
+				});
+			
 			case VInput, VVar, VOut:
 				// skip
 			default:
-				Context.warning(v.name, v.pos);
+				Context.warning(v.name, pos);
 				throw "assert";
 			}
 		}
 		
-		
-		
-		/*
-		var stride = 0;
-		var fmt = 0;
-		var pos = 0;
-		for( i in v ) {
-			function add(size) {
-				fmt |= size << (pos * 3);
-				pos++;
-				stride += size;
-			}
-			function addType(t:VarType) {
-				switch( t ) {
-				case TMatrix(r, c, t):
-					if( t.t ) {
-						var tmp = r;
-						r = c;
-						c = tmp;
-					}
-					for( i in 0...r )
-						add(c);
-				case TInt:
-					add(0);
-					stride++;
-				case TFloat: add(1);
-				case TFloat2: add(2);
-				case TFloat3: add(3);
-				case TFloat4: add(4);
-				case TArray(t, size):
-					for( i in 0...size )
-						addType(t);
-				case TTexture(_): throw "assert";
-				}
-			}
-			addType(i.type);
-		}
-		var max = 8;
-		if( pos > max )
-			Context.error("This shader uses to many input components, only " + max + " are allowed by Flash11", v.vertex.pos);
-		
-		var vvars = makeShaderVars(v.vertex,fields);
-		var fvars = makeShaderVars(v.fragment, fields);
-		
-		fields.push( {
-			name : "getShaderInfos",
-			pos : cl.pos,
-			access : [APublic,AOverride],
+		fields.push({
+			name : "updateParams",
 			kind : FFun( {
+				ret : null,
 				args : [],
 				params : [],
-				expr : Context.parse("return {stride:" + stride + ",format:"+fmt+",vertex:"+vvars+",fragment:"+fvars+",textures:"+v.fragment.tex.length+"}", cl.pos),
-				ret : TPath({ sub : "ShaderInfos", name : "Shader", pack : ["h3d"], params : [] }),
+				expr : { expr : EBlock(updates), pos : pos },
 			}),
+			access : [AOverride],
+			pos : pos,
 		});
-		
-		var tbytes = TPath( { pack : ["haxe", "io"], name : "Bytes", params : [] } );
-		fields.push( {
-			name : "getVertexProgram",
-			pos : cl.pos,
-			access : [APublic, AOverride],
-			kind : FFun( {
-				args : [],
-				params : [],
-				expr : Context.parse("return haxe.Unserializer.run('" + vsbytes + "')", cl.pos),
-				ret : tbytes,
-			}),
-		});
-		fields.push( {
-			name : "getFragmentProgram",
-			pos : cl.pos,
-			access : [APublic, AOverride],
-			kind : FFun( {
-				args : [],
-				params : [],
-				expr : Context.parse("return haxe.Unserializer.run('" + fsbytes + "')", cl.pos),
-				ret : tbytes,
-			}),
-		});
-		*/
-		
 		
 		return fields;
 	}

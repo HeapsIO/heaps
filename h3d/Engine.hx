@@ -21,7 +21,7 @@ class Engine {
 	public var fullScreen(default, set) : Bool;
 
 	var curMatBits : Int;
-	var curShader : Shader.ShaderData;
+	var curShader : Shader.ShaderInstance;
 	var curBuffer : h3d.impl.MemoryManager.BigBuffer;
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
@@ -85,42 +85,33 @@ class Engine {
 	}
 
 	public function selectShader( shader : Shader ) {
-		var s = shader.getData();
+		var s = shader.getInstance();
 		if( s.program == null ) {
 			s.program = ctx.createProgram();
-			var vdata = shader.getVertexProgram().getData();
-			var fdata = shader.getFragmentProgram().getData();
+			var vdata = s.vertexBytes.getData();
+			var fdata = s.fragmentBytes.getData();
 			vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 			fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 			s.program.upload(vdata,fdata);
 		}
 		if( s != curShader ) {
 			ctx.setProgram(s.program);
-			// changing the program is so much costly that reuploading the variables should not make big difference anyway
-			s.vertexVarsChanged = true;
-			s.fragmentVarsChanged = true;
+			s.varsChanged = true;
 			// unbind extra textures
 			var tcount : Int = s.textures.length;
 			while( curTextures.length > tcount ) {
 				curTextures.pop();
 				ctx.setTextureAt(curTextures.length, null);
 			}
-			s.texturesChanged = true;
 			// force remapping of vertex buffer
-			if( curShader == null || s.bufferFormat != curShader.bufferFormat || s.stride != curShader.stride )
+			if( curShader == null || s.bufferFormat != curShader.bufferFormat /*|| s.stride != curShader.stride*/ )
 				curBuffer = null;
 			curShader = s;
 		}
-		if( s.vertexVarsChanged ) {
-			s.vertexVarsChanged = false;
+		if( s.varsChanged ) {
+			s.varsChanged = false;
 			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, 0, s.vertexVars);
-		}
-		if( s.fragmentVarsChanged ) {
-			s.fragmentVarsChanged = false;
 			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, 0, s.fragmentVars);
-		}
-		if( s.texturesChanged ) {
-			s.texturesChanged = false;
 			for( i in 0...s.textures.length ) {
 				var t = s.textures[i];
 				if( t == null )
@@ -291,7 +282,7 @@ class Engine {
 		drawTriangles = 0;
 		drawCalls = 0;
 		curMatBits = -1;
-		curShader = null;
+//		curShader = null;
 		curBuffer = null;
 		curProjMatrix = null;
 		curTextures = [];
@@ -300,7 +291,7 @@ class Engine {
 
 	function reset() {
 		curMatBits = -1;
-		curShader = null;
+//		curShader = null;
 		curBuffer = null;
 		curProjMatrix = null;
 		for( i in 0...curAttributes )

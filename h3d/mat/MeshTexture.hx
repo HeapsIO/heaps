@@ -11,20 +11,22 @@ private class MeshShader extends h3d.Shader {
 		
 		var tuv : Float2;
 		
-		var useMatrixPos : Bool;
 		var uvScale : Float2;
 		var uvDelta : Float2;
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
-			out = if( useMatrixPos ) (pos.xyzw * mpos) * mproj else pos.xyzw * mproj;
-			var t = uv;
+			out = if( mpos != null ) (pos.xyzw * mpos) * mproj else pos.xyzw * mproj;
+			var t = uv + 0.0001;
 			if( uvScale != null ) t *= uvScale;
 			if( uvDelta != null ) t += uvDelta;
 			tuv = t;
 		}
 		
-		function fragment( tex : Texture, killAlpha : Bool, colorDelta : Float4, colorMult : Float4, colorMatrix : M44 ) {
-			var c = tex.get(tuv.xy);
+		var killAlpha : Bool;
+		var texNearest : Bool;
+		
+		function fragment( tex : Texture, colorDelta : Float4, colorMult : Float4, colorMatrix : M44 ) {
+			var c = tex.get(tuv.xy,filter=!(killAlpha || texNearest));
 			if( killAlpha ) kill(c.a - 0.001);
 			if( colorDelta != null ) c += colorDelta;
 			if( colorMult != null ) c = c * colorMult;
@@ -48,8 +50,8 @@ class MeshTexture extends MeshMaterial {
 
 	public var killAlpha(get,set) : Bool;
 
-	public var colorDelta(get,set) : Null<h3d.Color>;
-	public var colorMult(get,set) : Null<h3d.Color>;
+	public var colorDelta(get,set) : Null<h3d.Vector>;
+	public var colorMult(get,set) : Null<h3d.Vector>;
 	public var colorMatrix(get,set) : Null<h3d.Matrix>;
 	
 	public function new(texture) {
@@ -58,7 +60,7 @@ class MeshTexture extends MeshMaterial {
 		this.texture = texture;
 		useMatrixPos = true;
 	}
-	
+		
 	public override function setMatrixes( mpos, mproj ) {
 		mshader.mpos = useMatrixPos ? mpos : null;
 		mshader.mproj = mproj;
