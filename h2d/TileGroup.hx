@@ -86,13 +86,12 @@ class TileGroup extends Sprite {
 	override function draw(engine:h3d.Engine) {
 		var core = Tools.getCoreObjects();
 		var shader = core.tileObj.shader;
-		var tmp = core.tmpVector;
-		tmp.set(matA, matC, absX);
-		shader.mat1 = tmp;
-		tmp.set(matB, matD, absY);
-		shader.mat2 = tmp;
-		tmp.set(color.r, color.g, color.b);
-		shader.color = tmp;
+		core.tmpMat1.set(matA, matC, absX);
+		core.tmpMat2.set(matB, matD, absY);
+		core.tmpColor.set(color.r, color.g, color.b);
+		shader.mat1 = core.tmpMat1;
+		shader.mat2 = core.tmpMat2;
+		shader.color = core.tmpColor;
 		shader.tex = tile.getTexture();
 		Tools.setBlendMode(core.tileObj.material, blendMode);
 		engine.selectMaterial(core.tileObj.material);

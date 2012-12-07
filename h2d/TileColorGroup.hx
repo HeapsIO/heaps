@@ -107,9 +107,10 @@ class TileColorGroup extends Sprite {
 		var core = Tools.getCoreObjects();
 		var shader = core.tileColorObj.shader;
 		shader.tex = tile.getTexture();
-		var tmp = core.tmpVector;
+		var tmp = core.tmpMat1;
 		tmp.set(matA, matC, absX);
 		shader.mat1 = tmp;
+		var tmp = core.tmpMat2;
 		tmp.set(matB, matD, absY);
 		shader.mat2 = tmp;
 		Tools.setBlendMode(core.tileColorObj.material, blendMode);

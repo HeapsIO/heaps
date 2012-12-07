@@ -93,7 +93,12 @@ private class TileColorShader extends h3d.Shader {
 
 private class CoreObjects  {
 	
-	public var tmpVector : h3d.Vector;
+	public var tmpMat1 : h3d.Vector;
+	public var tmpMat2 : h3d.Vector;
+	public var tmpSize : h3d.Vector;
+	public var tmpUVPos : h3d.Vector;
+	public var tmpUVScale : h3d.Vector;
+	public var tmpColor : h3d.Vector;
 	public var tmpMatrix : h3d.Matrix;
 	public var bitmapObj : h3d.CoreObject<BitmapShader>;
 	public var cachedBitmapObj : h3d.CoreObject<CachedBitmapShader>;
@@ -102,7 +107,12 @@ private class CoreObjects  {
 	var emptyTexture : h3d.mat.Texture;
 	
 	public function new() {
-		tmpVector = new h3d.Vector();
+		tmpMat1 = new h3d.Vector();
+		tmpMat2 = new h3d.Vector();
+		tmpColor = new h3d.Vector();
+		tmpSize = new h3d.Vector();
+		tmpUVPos = new h3d.Vector();
+		tmpUVScale = new h3d.Vector();
 		tmpMatrix = new h3d.Matrix();
 		
 		var plan = new h3d.prim.Quads([
@@ -166,26 +176,31 @@ class Tools {
 		setBlendMode(b.material, blendMode);
 		if( tile == null )
 			tile = new Tile(core.getEmptyTexture(), 0, 0, 5, 5);
-		var tmp = core.tmpVector;
+		var tmp = core.tmpSize;
 		// adds 1/10 pixel size to prevent precision loss after scaling
 		tmp.x = tile.width + 0.1;
 		tmp.y = tile.height + 0.1;
 		tmp.z = 1;
 		b.shader.size = tmp;
+		var tmp = core.tmpMat1;
 		tmp.x = spr.matA;
 		tmp.y = spr.matC;
 		tmp.z = spr.absX + tile.dx * spr.matA + tile.dy * spr.matC;
 		b.shader.mat1 = tmp;
+		var tmp = core.tmpMat2;
 		tmp.x = spr.matB;
 		tmp.y = spr.matD;
 		tmp.z = spr.absY + tile.dx * spr.matB + tile.dy * spr.matD;
 		b.shader.mat2 = tmp;
+		var tmp = core.tmpUVPos;
 		tmp.x = tile.u;
 		tmp.y = tile.v;
 		b.shader.uvPos = tmp;
+		var tmp = core.tmpUVScale;
 		tmp.x = tile.u2 - tile.u;
 		tmp.y = tile.v2 - tile.v;
 		b.shader.uvScale = tmp;
+		var tmp = core.tmpColor;
 		if( color == null ) {
 			tmp.x = 1;
 			tmp.y = 1;
