@@ -1,6 +1,6 @@
 package h3d.part;
 
-class DefaultShader extends h3d.Shader {
+class DefaultShader extends hxsl.Shader {
 	
 	static var SRC = {
 		var input : {

@@ -1,6 +1,6 @@
 package h3d.mat;
 
-private class MeshShader extends h3d.Shader {
+private class MeshShader extends hxsl.Shader {
 	
 	static var SRC = {
 

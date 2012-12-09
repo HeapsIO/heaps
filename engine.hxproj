@@ -23,7 +23,7 @@
     <option flashStrict="True" />
     <option mainClass="Test" />
     <option enabledebug="False" />
-    <option additional="-lib hxsl&#xA;--macro include('h3d')&#xA;--macro include('h2d')" />
+    <option additional="-lib hxsl&#xA;-D h3d&#xA;--macro include('h3d')&#xA;--macro include('h2d')" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

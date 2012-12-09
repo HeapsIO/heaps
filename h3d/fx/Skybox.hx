@@ -1,7 +1,7 @@
 package h3d.fx;
 import h3d.mat.Data;
 
-class Skybox extends h3d.Shader {
+class Skybox extends hxsl.Shader {
 	
 	static var SRC = {
 		var input : {

@@ -1,6 +1,6 @@
 package h2d;
 
-private class BitmapShader extends h3d.Shader {
+private class BitmapShader extends hxsl.Shader {
 	static var SRC = {
 		var input : {
 			pos : Float2,
@@ -22,7 +22,7 @@ private class BitmapShader extends h3d.Shader {
 	}
 }
 
-private class CachedBitmapShader extends h3d.Shader {
+private class CachedBitmapShader extends hxsl.Shader {
 	static var SRC = {
 		var input : {
 			pos : Float2,
@@ -53,7 +53,7 @@ private class CachedBitmapShader extends h3d.Shader {
 	}
 }
 
-private class TileShader extends h3d.Shader {
+private class TileShader extends hxsl.Shader {
 	static var SRC = {
 		var input : {
 			pos : Float2,
@@ -75,7 +75,7 @@ private class TileShader extends h3d.Shader {
 	}
 }
 
-private class TileColorShader extends h3d.Shader {
+private class TileColorShader extends hxsl.Shader {
 	static var SRC = {
 		var input : {
 			pos : Float2,

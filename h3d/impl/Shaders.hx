@@ -1,6 +1,6 @@
 package h3d.impl;
 
-class PointShader extends Shader {
+class PointShader extends hxsl.Shader {
 
 	static var SRC = {
 		var input : {
@@ -21,7 +21,7 @@ class PointShader extends Shader {
 	
 }
 
-class LineShader extends Shader {
+class LineShader extends hxsl.Shader {
 
 	static var SRC = {
 		var input : {

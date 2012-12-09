@@ -1,6 +1,6 @@
 package h2d;
 
-private class BatchShader extends h3d.Shader {
+private class BatchShader extends hxsl.Shader {
 	static var SRC = {
 		var input : {
 			pos : Float2,

@@ -6,8 +6,8 @@ class Test {
 	var engine : h3d.Engine;
 	var time : Float;
 	var scene : Scene;
-	var obj1 : Mesh;
-	var obj2 : Mesh;
+	var obj1 : Mesh<h3d.mat.MeshTexture>;
+	var obj2 : Mesh<h3d.mat.MeshTexture>;
 	
 	function new(root) {
 		this.root = root;
