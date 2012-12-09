@@ -11,11 +11,11 @@
     <movie version="11" />
     <movie minorVersion="3" />
     <movie platform="Flash Player" />
-    <movie background="#FFFFFF" />
+    <movie background="#000000" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
-    <class path=".." />
+    <class path="..\.." />
   </classpaths>
   <!-- Build options -->
   <build>
@@ -23,7 +23,7 @@
     <option flashStrict="True" />
     <option mainClass="Anim" />
     <option enabledebug="False" />
-    <option additional="-lib format" />
+    <option additional="-lib hxsl&#xA;-D h3d" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

@@ -109,10 +109,10 @@ private class CoreObjects  {
 	public var tmpUVScale : h3d.Vector;
 	public var tmpColor : h3d.Vector;
 	public var tmpMatrix : h3d.Matrix;
-	public var bitmapObj : h3d.CoreObject<BitmapShader>;
-	public var cachedBitmapObj : h3d.CoreObject<CachedBitmapShader>;
-	public var tileObj : h3d.CoreObject<TileShader>;
-	public var tileColorObj : h3d.CoreObject<TileColorShader>;
+	public var bitmapObj : h3d.Drawable<BitmapShader>;
+	public var cachedBitmapObj : h3d.Drawable<CachedBitmapShader>;
+	public var tileObj : h3d.Drawable<TileShader>;
+	public var tileColorObj : h3d.Drawable<TileColorShader>;
 	var emptyTexture : h3d.mat.Texture;
 	
 	public function new() {
@@ -131,21 +131,21 @@ private class CoreObjects  {
 			new h3d.Point(1, 1),
 		]);
 		
-		var b = new h3d.CoreObject(plan, new BitmapShader());
+		var b = new h3d.Drawable(plan, new BitmapShader());
 		b.material.culling = None;
 		b.material.depth(false, Always);
 		bitmapObj = b;
 		
-		var b = new h3d.CoreObject(plan, new CachedBitmapShader());
+		var b = new h3d.Drawable(plan, new CachedBitmapShader());
 		b.material.culling = None;
 		b.material.depth(false, Always);
 		cachedBitmapObj = b;
 		
-		tileObj = new h3d.CoreObject(null, new TileShader());
+		tileObj = new h3d.Drawable(null, new TileShader());
 		tileObj.material.depth(false, Always);
 		tileObj.material.culling = None;
 		
-		tileColorObj = new h3d.CoreObject(null,new TileColorShader());
+		tileColorObj = new h3d.Drawable(null,new TileColorShader());
 		tileColorObj.material.depth(false, Always);
 		tileColorObj.material.culling = None;
 	}

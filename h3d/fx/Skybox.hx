@@ -17,14 +17,14 @@ class Skybox extends hxsl.Shader {
 		}
 	};
 
-	var obj : h3d.CoreObject<Skybox>;
+	var obj : h3d.Drawable<Skybox>;
 	
 	public function new(tex) {
 		super();
 		this.texture = tex;
 		var prim = new h3d.prim.Cube(2, 2, 2);
         prim.translate( -1, -1, -1);
-		obj = new h3d.CoreObject(prim, this);
+		obj = new h3d.Drawable(prim, this);
 		obj.material.depth(false, Compare.Always);
 		obj.material.culling = Face.Front;
 	}

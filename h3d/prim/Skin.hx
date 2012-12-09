@@ -73,11 +73,11 @@ class Animation {
 		}
 	}
 	
-	public function updateJoints( frame : Int, palette : Array<h3d.Matrix> ) {
+	public function updateJoints( frame : Int, palette : Table<h3d.Matrix> ) {
 		frame %= frameCount;
 		for( c in curves ) {
+			if( c.joint.bindId < 0 ) continue;
 			var m = palette[c.joint.bindId];
-			if( m == null ) continue;
 			m.loadFrom(c.joint.transPos);
 			var mf = c.frames[frame];
 			if( mf != null ) m.multiply3x4(m, mf);
@@ -89,7 +89,7 @@ class Animation {
 		for( c in curves )
 			if( c.joint.bindId >= max )
 				max = c.joint.bindId;
-		var a = [];
+		var a = new Table();
 		for( i in 0...max + 1 )
 			a.push(new h3d.Matrix());
 		return a;

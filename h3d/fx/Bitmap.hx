@@ -20,7 +20,7 @@ private class BitmapShader extends hxsl.Shader {
 
 }
 
-class Bitmap extends h3d.CoreObject<BitmapShader> {
+class Bitmap extends h3d.Drawable<BitmapShader> {
 
 	public var bmp(default,null) : h3d.mat.Bitmap;
 	

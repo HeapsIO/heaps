@@ -15,7 +15,7 @@
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
-    <class path="samples" />
+    <class path="samples\basic" />
   </classpaths>
   <!-- Build options -->
   <build>

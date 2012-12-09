@@ -4,7 +4,7 @@ package h3d;
 	A core object is a rendering context but completely outside of the 3d scene.
 	It is meant to be able to share a rendering context between several similar physical objects.
  **/
-class CoreObject<S:hxsl.Shader> {
+class Drawable<S:hxsl.Shader> implements IDrawable {
 
 	public var shader : S;
 	public var primitive : h3d.prim.Primitive;

@@ -28,8 +28,8 @@ class Engine {
 	var antiAlias : Int;
 	var inTarget : Bool;
 
-	var debugPoint : h3d.CoreObject<h3d.impl.Shaders.PointShader>;
-	var debugLine : h3d.CoreObject<h3d.impl.Shaders.LineShader>;
+	var debugPoint : h3d.Drawable<h3d.impl.Shaders.PointShader>;
+	var debugLine : h3d.Drawable<h3d.impl.Shaders.LineShader>;
 	
 	@:allow(h3d)
 	var curProjMatrix : h3d.Matrix;
@@ -104,7 +104,7 @@ class Engine {
 				ctx.setTextureAt(curTextures.length, null);
 			}
 			// force remapping of vertex buffer
-			if( curShader == null || s.bufferFormat != curShader.bufferFormat /*|| s.stride != curShader.stride*/ )
+			if( curShader == null || s.bufferFormat != curShader.bufferFormat || s.stride != curShader.stride )
 				curBuffer = null;
 			curShader = s;
 		}
@@ -340,7 +340,7 @@ class Engine {
 		if( curProjMatrix == null )
 			return;
 		if( debugPoint == null ) {
-			debugPoint = new h3d.CoreObject(new h3d.prim.Plan2D(), new h3d.impl.Shaders.PointShader());
+			debugPoint = new Drawable(new h3d.prim.Plan2D(), new h3d.impl.Shaders.PointShader());
 			debugPoint.material.blend(SrcAlpha, OneMinusSrcAlpha);
 			debugPoint.material.depthWrite = false;
 		}
@@ -357,7 +357,7 @@ class Engine {
 		if( curProjMatrix == null )
 			return;
 		if( debugLine == null ) {
-			debugLine = new h3d.CoreObject(new h3d.prim.Plan2D(), new h3d.impl.Shaders.LineShader());
+			debugLine = new Drawable(new h3d.prim.Plan2D(), new h3d.impl.Shaders.LineShader());
 			debugLine.material.blend(SrcAlpha, OneMinusSrcAlpha);
 			debugLine.material.depthWrite = false;
 			debugLine.material.culling = None;
