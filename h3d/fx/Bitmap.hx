@@ -1,7 +1,7 @@
 package h3d.fx;
 import h3d.mat.Data;
 
-private class BitmapShader extends h3d.Shader {
+private class BitmapShader extends hxsl.Shader {
 	
 	static var SRC = {
 		var input : {

@@ -21,7 +21,7 @@ class Engine {
 	public var fullScreen(default, set) : Bool;
 
 	var curMatBits : Int;
-	var curShader : Shader.ShaderInstance;
+	var curShader : hxsl.Shader.ShaderInstance;
 	var curBuffer : h3d.impl.MemoryManager.BigBuffer;
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
@@ -84,7 +84,7 @@ class Engine {
 		return ctx != null;
 	}
 
-	public function selectShader( shader : Shader ) {
+	public function selectShader( shader : hxsl.Shader ) {
 		var s = shader.getInstance();
 		if( s.program == null ) {
 			s.program = ctx.createProgram();

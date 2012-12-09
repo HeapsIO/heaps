@@ -10,7 +10,7 @@ class Material {
 	public var blendSrc(default,set) : Blend;
 	public var blendDst(default,set) : Blend;
 	public var colorMask(default,set) : Int;
-	public var shader : Shader;
+	public var shader : hxsl.Shader;
 	
 	public function new(shader) {
 		bits = 0;
