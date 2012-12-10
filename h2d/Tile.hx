@@ -69,7 +69,7 @@ class Tile {
 		innerTex = null;
 	}
 	
-	public static function fromBitmap( bmp : flash.display.BitmapData, freeBitmap = true ) {
+	public static function fromBitmap( bmp : flash.display.BitmapData ) {
 		var w = 1, h = 1;
 		while( w < bmp.width )
 			w <<= 1;
@@ -84,13 +84,10 @@ class Tile {
 			bmp2.dispose();
 		} else
 			tex.upload(bmp);
-		var t = new Tile(tex, 0, 0, bmp.width, bmp.height);
-		if( freeBitmap )
-			bmp.dispose();
-		return t;
+		return new Tile(tex, 0, 0, bmp.width, bmp.height);
 	}
 
-	public static function autoCut( bmp : flash.display.BitmapData, size : Int, freeBitmap = true ) {
+	public static function autoCut( bmp : flash.display.BitmapData, size : Int ) {
 		var colorBG = bmp.getPixel32(bmp.width - 1, bmp.height - 1);
 		var tl = new Array();
 		var w = 1, h = 1;
@@ -118,8 +115,6 @@ class Tile {
 		} else
 			tex.upload(bmp);
 		var main = new Tile(tex, 0, 0, bmp.width, bmp.height);
-		if( freeBitmap )
-			bmp.dispose();
 		return { main : main, tiles : tl };
 	}
 	
