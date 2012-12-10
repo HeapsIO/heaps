@@ -54,6 +54,11 @@ class Tile {
 		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
 	
+	public function scaleToSize( w, h ) {
+		this.width = w;
+		this.height = h;
+	}
+	
 	public function scrollDiscrete( dx : Float, dy : Float ) {
 		var tex = innerTex;
 		u += dx / tex.width;

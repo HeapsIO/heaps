@@ -9,6 +9,10 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		reset();
 	}
 	
+	public function isEmpty() {
+		return buffer == null;
+	}
+	
 	public function reset() {
 		tmp = new flash.Vector();
 		pos = 0;
@@ -88,7 +92,7 @@ class TileGroup extends Sprite {
 		var shader = core.tileObj.shader;
 		core.tmpMat1.set(matA, matC, absX);
 		core.tmpMat2.set(matB, matD, absY);
-		core.tmpColor.set(color.r, color.g, color.b);
+		core.tmpColor.set(color.r, color.g, color.b, color.a);
 		shader.mat1 = core.tmpMat1;
 		shader.mat2 = core.tmpMat2;
 		shader.color = core.tmpColor;
