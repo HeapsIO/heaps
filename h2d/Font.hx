@@ -2,7 +2,7 @@ package h2d;
 
 class Font extends Tile {
 
-	static var DEFAULT_CHARS = " !\"#$%&'()*+,-./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzéèêëÉÈÊËàâäáÀÂÄÁùûüúÙÛÜÚîïíÎÏÍôóöõÔÓÖæÆœŒçÇñÑ¡¿ß";
+	static var DEFAULT_CHARS = " ?!\"#$%&|<>@'()[]{}*+-=/.,:;0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzéèêëÉÈÊËàâäáÀÂÄÁùûüúÙÛÜÚîïíÎÏÍôóöõÔÓÖæÆœŒçÇñÑ¡¿ß";
 
 	public var glyphs : Array<Tile>;
 	public var lineHeight : Int;
