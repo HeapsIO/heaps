@@ -43,14 +43,26 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp[pos++] = t.v2;
 	}
 	
+	override public function triCount() {
+		if( buffer == null )
+			return tmp.length >> 3;
+		var v = 0;
+		var b = buffer;
+		while( b != null ) {
+			v += b.nvert;
+			b = b.next;
+		}
+		return v >> 1;
+	}
+	
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) reset();
 		buffer = engine.mem.allocVector(tmp, 4, 4);
 	}
 
-	override function render(engine) {
+	public function doRender(engine, min, len) {
 		if( buffer == null ) alloc(engine);
-		engine.renderIndexes(buffer, engine.mem.quadIndexes, 2);
+		engine.renderQuadBuffer(buffer, min, len);
 	}
 	
 }
@@ -61,9 +73,12 @@ class TileGroup extends Sprite {
 	
 	public var tile : Tile;
 	public var color(default, null) : h3d.Color;
+	public var rangeMin : Int;
+	public var rangeMax : Int;
 	
 	public function new(t,?parent) {
 		tile = t;
+		rangeMin = rangeMax = -1;
 		color = new h3d.Color(1, 1, 1, 1);
 		content = new TileLayerContent();
 		super(parent);
@@ -99,6 +114,9 @@ class TileGroup extends Sprite {
 		shader.tex = tile.getTexture();
 		Tools.setBlendMode(core.tileObj.material, blendMode);
 		engine.selectMaterial(core.tileObj.material);
-		content.render(engine);
+		var min = rangeMin < 0 ? 0 : rangeMin * 2;
+		var max = content.triCount();
+		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;
+		content.doRender(engine, min, max - min);
 	}
 }

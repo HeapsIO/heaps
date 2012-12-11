@@ -32,7 +32,7 @@ class Plan2D extends Primitive {
 	
 	override function render(engine:h3d.Engine) {
 		if( buffer == null ) alloc(engine);
-		engine.renderIndexes(buffer,engine.mem.quadIndexes,2);
+		engine.renderQuadBuffer(buffer);
 	}
 	
 }

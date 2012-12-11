@@ -24,9 +24,9 @@ class Primitive {
 	public function render( engine : h3d.Engine ) {
 		if( buffer == null ) alloc(engine);
 		if( indexes == null )
-			engine.renderBuffer(buffer);
+			engine.renderTriBuffer(buffer);
 		else
-			engine.renderIndexes(buffer,indexes,3,0,Std.int(indexes.count/3));
+			engine.renderIndexed(buffer,indexes);
 	}
 	
 	public function dispose() {

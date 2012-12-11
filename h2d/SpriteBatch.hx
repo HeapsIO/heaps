@@ -137,7 +137,7 @@ class SpriteBatch extends Sprite {
 		shader.mat1 = new h3d.Vector(matA, matC, absX);
 		shader.mat2 = new h3d.Vector(matB, matD, absY);
 		engine.selectMaterial(material);
-		engine.renderQuads(buffer);
+		engine.renderQuadBuffer(buffer);
 		buffer.dispose();
 	}
 	

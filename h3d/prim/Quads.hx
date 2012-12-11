@@ -71,7 +71,7 @@ class Quads extends Primitive {
 	
 	override function render(engine) {
 		if( buffer == null ) alloc(engine);
-		engine.renderIndexes(buffer, engine.mem.quadIndexes, 2);
+		engine.renderQuadBuffer(buffer);
 	}
 	
 }

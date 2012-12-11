@@ -56,9 +56,9 @@ class Buffer extends h3d.prim.Primitive {
 	override function render(engine) {
 		if( buffer == null ) alloc(engine);
 		if( isQuads )
-			engine.renderIndexes(buffer, engine.mem.quadIndexes, 2, 0, nvert >> 1);
+			engine.renderQuadBuffer(buffer);
 		else
-			engine.renderIndexes(buffer, engine.mem.indexes, 3, 0, Std.int(nvert / 3));
+			engine.renderTriBuffer(buffer);
 	}
 
 }
