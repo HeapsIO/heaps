@@ -54,6 +54,24 @@ class Tile {
 		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
 	
+	public function nextX() {
+		return sub(width, 0, width, height, dx, dy);
+	}
+
+	public function nextY() {
+		return sub(0, height, width, height, dx, dy);
+	}
+	
+	public function setSize(w, h) {
+		this.width = w;
+		this.height = h;
+		var tex = innerTex;
+		if( tex != null ) {
+			u2 = (w + x) / tex.width;
+			v2 = (h + y) / tex.height;
+		}
+	}
+	
 	public function scaleToSize( w, h ) {
 		this.width = w;
 		this.height = h;
