@@ -61,14 +61,24 @@ class Tile {
 	public function nextY() {
 		return sub(0, height, width, height, dx, dy);
 	}
+
+	public function setPos(x, y) {
+		this.x = x;
+		this.y = y;
+		var tex = innerTex;
+		if( tex != null ) {
+			u = x / tex.width;
+			v = y / tex.height;
+		}
+	}
 	
 	public function setSize(w, h) {
 		this.width = w;
 		this.height = h;
 		var tex = innerTex;
 		if( tex != null ) {
-			u2 = (w + x) / tex.width;
-			v2 = (h + y) / tex.height;
+			u2 = (w + x - EPSILON_PIXEL) / tex.width;
+			v2 = (h + y - EPSILON_PIXEL) / tex.height;
 		}
 	}
 	
