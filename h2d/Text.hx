@@ -7,6 +7,7 @@ class Text extends Sprite {
 	public var textColor(default, set) : Int;
 	public var alpha(default, set) : Float;
 	public var maxWidth(default, set) : Null<Float>;
+	public var dropShadow : { dx : Float, dy : Float, color : Int };
 	
 	var glyphs : TileGroup;
 	
@@ -22,6 +23,20 @@ class Text extends Sprite {
 	override function onDelete() {
 		glyphs.onDelete();
 		super.onDelete();
+	}
+	
+	override function draw(engine) {
+		if( dropShadow != null ) {
+			glyphs.x += dropShadow.dx;
+			glyphs.y += dropShadow.dy;
+			glyphs.updatePos();
+			glyphs.color.loadInt(dropShadow.color);
+			glyphs.draw(engine);
+			glyphs.x -= dropShadow.dx;
+			glyphs.y -= dropShadow.dy;
+			glyphs.color.loadInt(textColor);
+		}
+		super.draw(engine);
 	}
 	
 	function set_text(t) {
