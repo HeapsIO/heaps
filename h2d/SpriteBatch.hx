@@ -47,7 +47,7 @@ class BatchElement {
 	
 }
 
-class SpriteBatch extends Sprite {
+class SpriteBatch extends Drawable {
 
 	public var tile : Tile;
 	var first : BatchElement;

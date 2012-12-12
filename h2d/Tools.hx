@@ -109,10 +109,13 @@ private class CoreObjects  {
 	public var tmpUVScale : h3d.Vector;
 	public var tmpColor : h3d.Vector;
 	public var tmpMatrix : h3d.Matrix;
+	public var tmpMaterial : h3d.mat.Material;
 	public var bitmapObj : h3d.Drawable<BitmapShader>;
 	public var cachedBitmapObj : h3d.Drawable<CachedBitmapShader>;
 	public var tileObj : h3d.Drawable<TileShader>;
 	public var tileColorObj : h3d.Drawable<TileColorShader>;
+	public var planBuffer : h3d.impl.Buffer;
+	
 	var emptyTexture : h3d.mat.Texture;
 	
 	public function new() {
@@ -123,6 +126,19 @@ private class CoreObjects  {
 		tmpUVPos = new h3d.Vector();
 		tmpUVScale = new h3d.Vector();
 		tmpMatrix = new h3d.Matrix();
+		tmpMaterial = new h3d.mat.Material(null);
+		tmpMaterial.culling = None;
+		tmpMaterial.depth(false, Always);
+		
+		var vector = new flash.Vector<Float>();
+		for( pt in [[0, 0], [1, 0], [0, 1], [1, 1]] ) {
+			vector.push(pt[0]);
+			vector.push(pt[1]);
+			vector.push(pt[0]);
+			vector.push(pt[1]);
+		}
+		
+		planBuffer = h3d.Engine.getCurrent().mem.allocVector(vector, 4, 4);
 		
 		var plan = new h3d.prim.Quads([
 			new h3d.Point(0, 0),

@@ -7,7 +7,7 @@ class Text extends Sprite {
 	public var textColor(default, set) : Int;
 	public var alpha(default, set) : Float;
 	public var maxWidth(default, set) : Null<Float>;
-	public var dropShadow : { dx : Float, dy : Float, color : Int };
+	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
 	
 	var glyphs : TileGroup;
 	
@@ -30,11 +30,12 @@ class Text extends Sprite {
 			glyphs.x += dropShadow.dx;
 			glyphs.y += dropShadow.dy;
 			glyphs.updatePos();
-			glyphs.color.loadInt(dropShadow.color);
+			var old = glyphs.color;
+			glyphs.color = h3d.Color.ofInt(dropShadow.color, dropShadow.alpha).toVector();
 			glyphs.draw(engine);
 			glyphs.x -= dropShadow.dx;
 			glyphs.y -= dropShadow.dy;
-			glyphs.color.loadInt(textColor);
+			glyphs.color = old;
 		}
 		super.draw(engine);
 	}
@@ -83,13 +84,13 @@ class Text extends Sprite {
 	
 	function set_textColor(c) {
 		this.textColor = c;
-		glyphs.color.loadInt(c, alpha);
+		glyphs.color = h3d.Color.ofInt(c, alpha).toVector();
 		return c;
 	}
 	
 	function set_alpha(a) {
 		this.alpha = a;
-		glyphs.color.a = a;
+		glyphs.color.w = a;
 		return a;
 	}
 

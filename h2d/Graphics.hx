@@ -31,10 +31,14 @@ class GraphicsContext {
 	
 }
 
-class Graphics extends Sprite {
+class Graphics extends Drawable {
 
 	var tile : Tile;
 	var ctx : GraphicsContext;
+	
+	public function new(?parent) {
+		super(parent);
+	}
 		
 	public function beginDraw() {
 		return (ctx = new GraphicsContext(this));

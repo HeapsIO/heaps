@@ -65,7 +65,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 	
 }
 
-class TileColorGroup extends Sprite {
+class TileColorGroup extends Drawable {
 	
 	var content : TileLayerContent;
 	var curColor : h3d.Color;

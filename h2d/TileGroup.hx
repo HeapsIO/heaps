@@ -67,21 +67,20 @@ private class TileLayerContent extends h3d.prim.Primitive {
 	
 }
 
-class TileGroup extends Sprite {
+class TileGroup extends Drawable {
 	
 	var content : TileLayerContent;
 	
 	public var tile : Tile;
-	public var color(default, null) : h3d.Color;
 	public var rangeMin : Int;
 	public var rangeMax : Int;
 	
 	public function new(t,?parent) {
 		tile = t;
 		rangeMin = rangeMax = -1;
-		color = new h3d.Color(1, 1, 1, 1);
 		content = new TileLayerContent();
 		super(parent);
+		color = new h3d.Vector(1, 1, 1, 1);
 	}
 	
 	public function reset() {
@@ -96,24 +95,9 @@ class TileGroup extends Sprite {
 	public inline function add(x, y, t) {
 		content.add(x, y, t);
 	}
-	
-	function set_color(c) {
-		color = c;
-		return c;
-	}
-	
+		
 	override function draw(engine:h3d.Engine) {
-		var core = Tools.getCoreObjects();
-		var shader = core.tileObj.shader;
-		core.tmpMat1.set(matA, matC, absX);
-		core.tmpMat2.set(matB, matD, absY);
-		core.tmpColor.set(color.r, color.g, color.b, color.a);
-		shader.mat1 = core.tmpMat1;
-		shader.mat2 = core.tmpMat2;
-		shader.color = core.tmpColor;
-		shader.tex = tile.getTexture();
-		Tools.setBlendMode(core.tileObj.material, blendMode);
-		engine.selectMaterial(core.tileObj.material);
+		setupShader(engine, tile, 0);
 		var min = rangeMin < 0 ? 0 : rangeMin * 2;
 		var max = content.triCount();
 		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;

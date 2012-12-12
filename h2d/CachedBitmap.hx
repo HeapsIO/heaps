@@ -1,15 +1,11 @@
 package h2d;
 
-class CachedBitmap extends Sprite {
+class CachedBitmap extends Drawable {
 
 	var tex : h3d.mat.Texture;
 	public var width(default, set) : Int;
 	public var height(default, set) : Int;
 	public var freezed : Bool;
-	public var colorMatrix : Null<h3d.Matrix>;
-	public var colorAdd : Null<h3d.Color>;
-	public var skew : Float;
-	public var alphaMap : Tile;
 	
 	var renderDone : Bool;
 	var realWidth : Int;
@@ -20,7 +16,6 @@ class CachedBitmap extends Sprite {
 		super(parent);
 		this.width = width;
 		this.height = height;
-		skew = 0.;
 	}
 	
 	override function onDelete() {
@@ -50,60 +45,7 @@ class CachedBitmap extends Sprite {
 	}
 
 	override function draw( engine : h3d.Engine ) {
-		if( colorMatrix == null && colorAdd == null && skew == 0. && alphaMap == null ) {
-			Tools.drawTile(engine, this, tile, new h3d.Color(1, 1, 1, 1), blendMode);
-			return;
-		}
-		var core = Tools.getCoreObjects();
-		var b = core.cachedBitmapObj;
-		Tools.setBlendMode(b.material,blendMode);
-		var tmp = core.tmpSize;
-		tmp.x = tile.width;
-		tmp.y = tile.height;
-		tmp.z = 1;
-		b.shader.size = tmp;
-		var tmp = core.tmpMat1;
-		tmp.x = matA;
-		tmp.y = matC;
-		tmp.z = absX + tile.dx * matA + tile.dy * matC;
-		b.shader.mat1 = tmp;
-		var tmp = core.tmpMat2;
-		tmp.x = matB;
-		tmp.y = matD;
-		tmp.z = absY + tile.dx * matB + tile.dy * matD;
-		b.shader.mat2 = tmp;
-		var tmp = core.tmpUVScale;
-		tmp.x = tile.u2;
-		tmp.y = tile.v2;
-		b.shader.uvScale = tmp;
-		b.shader.mcolor = colorMatrix == null ? h3d.Matrix.I() : colorMatrix;
-		var tmp = core.tmpColor;
-		if( colorAdd == null ) {
-			tmp.x = 0;
-			tmp.y = 0;
-			tmp.z = 0;
-			tmp.w = 0;
-		} else {
-			tmp.x = colorAdd.r;
-			tmp.y = colorAdd.g;
-			tmp.z = colorAdd.b;
-			tmp.w = colorAdd.a;
-		}
-		b.shader.acolor = tmp;
-		b.shader.skew = skew;
-		
-		b.shader.tex = tile.getTexture();
-		
-		if( alphaMap != null ) {
-			b.shader.hasAlphaMap = true;
-			b.shader.alphaMap = alphaMap.getTexture();
-			b.shader.alphaUV = new h3d.Vector(alphaMap.u, alphaMap.v, (alphaMap.u2 - alphaMap.u) / tile.u2, (alphaMap.v2 - alphaMap.v) / tile.v2);
-		} else {
-			b.shader.hasAlphaMap = false;
-			b.shader.alphaMap = null;
-		}
-			
-		b.render(engine);
+		drawTile(engine, tile);
 	}
 	
 	override function render( engine : h3d.Engine ) {
