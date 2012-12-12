@@ -61,7 +61,7 @@ class Graphics extends Drawable {
 	override function draw(engine) {
 		if( tile == null ) endDraw();
 		if( tile == null ) return;
-		Tools.drawTile(engine, this, tile, null, blendMode);
+		drawTile(engine, tile);
 	}
 
 }

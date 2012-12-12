@@ -1,11 +1,10 @@
 package h2d;
 
-class Text extends Sprite {
+class Text extends Drawable {
 
 	public var font(default, null) : Font;
 	public var text(default, set) : String;
 	public var textColor(default, set) : Int;
-	public var alpha(default, set) : Float;
 	public var maxWidth(default, set) : Null<Float>;
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
 	
@@ -17,12 +16,11 @@ class Text extends Sprite {
 		glyphs = new TileGroup(font, this);
 		text = "";
 		textColor = 0xFFFFFF;
-		alpha = 1.0;
 	}
 	
-	override function onDelete() {
-		glyphs.onDelete();
-		super.onDelete();
+	override function onAlloc() {
+		super.onAlloc();
+		if( text != null ) initGlyphs();
 	}
 	
 	override function draw(engine) {
@@ -41,19 +39,24 @@ class Text extends Sprite {
 	}
 	
 	function set_text(t) {
-		this.text = t;
+		this.text = t == null ? "null" : t;
+		if( allocated ) initGlyphs();
+		return t;
+	}
+	
+	function initGlyphs() {
 		glyphs.reset();
 		var letters = font.glyphs;
 		var x = 0, y = 0;
-		for( i in 0...t.length ) {
-			var cc = t.charCodeAt(i);
+		for( i in 0...text.length ) {
+			var cc = text.charCodeAt(i);
 			var e = letters[cc];
 			// if the next word goes past the max width, change it into a newline
 			if( cc == ' '.code && maxWidth != null ) {
 				var size = x + e.width + 1;
-				var k = i + 1, max = t.length;
+				var k = i + 1, max = text.length;
 				while( size <= maxWidth ) {
-					var cc = t.charCodeAt(k++);
+					var cc = text.charCodeAt(k++);
 					if( cc == null || cc == ' '.code || cc == '\n'.code ) break;
 					var e = letters[cc];
 					if( e != null ) size += e.width + 1;
@@ -73,7 +76,6 @@ class Text extends Sprite {
 			glyphs.add(x, y, e);
 			x += e.width + 1;
 		}
-		return t;
 	}
 	
 	function set_maxWidth(w) {
@@ -86,12 +88,6 @@ class Text extends Sprite {
 		this.textColor = c;
 		glyphs.color = h3d.Color.ofInt(c, alpha).toVector();
 		return c;
-	}
-	
-	function set_alpha(a) {
-		this.alpha = a;
-		glyphs.color.w = a;
-		return a;
 	}
 
 }

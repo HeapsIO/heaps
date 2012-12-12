@@ -5,12 +5,15 @@ private class DrawableShader extends hxsl.Shader {
 		var input : {
 			pos : Float2,
 			uv : Float2,
+			valpha : Float,
 			vcolor : Float4,
 		};
 		var tuv : Float2;
 		var tcolor : Float4;
+		var talpha : Float;
 
 		var hasVertexColor : Bool;
+		var hasVertexAlpha : Bool;
 		var uvScale : Float2;
 		var uvPos : Float2;
 		var skew : Float;
@@ -29,10 +32,11 @@ private class DrawableShader extends hxsl.Shader {
 			var t = uv;
 			if( uvScale != null ) t *= uvScale;
 			if( uvPos != null ) t += uvPos;
-			tuv = uv;
+			tuv = t;
 			if( hasVertexColor ) tcolor = vcolor;
+			if( hasVertexAlpha ) talpha = valpha;
 		}
-
+		
 		var hasAlpha : Bool;
 		var alphaKill : Bool;
 		
@@ -47,9 +51,10 @@ private class DrawableShader extends hxsl.Shader {
 		var filter : Bool;
 
 		function fragment( tex : Texture ) {
-			var col = tex.get(tuv, filter=!!filter);
-			if( hasVertexColor ) col *= tcolor;
+			var col = tex.get(tuv, filter = ! !filter);
 			if( alphaKill ) kill(col.a - 0.001);
+			if( hasVertexAlpha ) col.a *= talpha;
+			if( hasVertexColor ) col *= tcolor;
 			if( hasAlphaMap ) col.a *= alphaMap.get(tuv * alphaUV.zw + alphaUV.xy).r;
 			if( hasAlpha ) col.a *= alpha;
 			if( colorMatrix != null ) col *= colorMatrix;
@@ -58,7 +63,9 @@ private class DrawableShader extends hxsl.Shader {
 			out = col;
 		}
 
+
 	}
+	
 }
 
 class Drawable extends Sprite {
@@ -84,6 +91,8 @@ class Drawable extends Sprite {
 	function new(parent) {
 		super(parent);
 		shader = new DrawableShader();
+		shader.alpha = 1;
+		shader.skew = 0;
 		blendMode = Normal;
 	}
 	

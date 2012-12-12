@@ -16,6 +16,18 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		buffer = null;
 	}
 	
+	override public function triCount() {
+		if( buffer == null )
+			return tmp.length >> 4;
+		var v = 0;
+		var b = buffer;
+		while( b != null ) {
+			v += b.nvert;
+			b = b.next;
+		}
+		return v >> 1;
+	}
+
 	public function add( x : Int, y : Int, r : Float, g : Float, b : Float, a : Float, t : Tile ) {
 		var sx = x + t.dx;
 		var sy = y + t.dy;
@@ -58,9 +70,9 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		buffer = engine.mem.allocVector(tmp, 8, 4);
 	}
 
-	override function render(engine) {
+	public function doRender(engine, min, len) {
 		if( buffer == null ) alloc(engine);
-		engine.renderQuadBuffer(buffer);
+		engine.renderQuadBuffer(buffer, min, len);
 	}
 	
 }
@@ -71,10 +83,14 @@ class TileColorGroup extends Drawable {
 	var curColor : h3d.Color;
 	
 	public var tile : Tile;
+	public var rangeMin : Int;
+	public var rangeMax : Int;
 	
 	public function new(t,?parent) {
 		super(parent);
 		tile = t;
+		rangeMin = rangeMax = -1;
+		shader.hasVertexColor = true;
 		curColor = new h3d.Color(1, 1, 1, 1);
 		content = new TileLayerContent();
 	}
@@ -88,7 +104,7 @@ class TileColorGroup extends Drawable {
 		super.onDelete();
 	}
 	
-	public function setColor( rgb : Int, alpha = 1.0 ) {
+	public function setDefaultColor( rgb : Int, alpha = 1.0 ) {
 		curColor.r = ((rgb >> 16) & 0xFF) / 255;
 		curColor.g = ((rgb >> 8) & 0xFF) / 255;
 		curColor.b = (rgb & 0xFF) / 255;
@@ -104,17 +120,10 @@ class TileColorGroup extends Drawable {
 	}
 	
 	override function draw(engine:h3d.Engine) {
-		var core = Tools.getCoreObjects();
-		var shader = core.tileColorObj.shader;
-		shader.tex = tile.getTexture();
-		var tmp = core.tmpMat1;
-		tmp.set(matA, matC, absX);
-		shader.mat1 = tmp;
-		var tmp = core.tmpMat2;
-		tmp.set(matB, matD, absY);
-		shader.mat2 = tmp;
-		Tools.setBlendMode(core.tileColorObj.material, blendMode);
-		engine.selectMaterial(core.tileColorObj.material);
-		content.render(engine);
+		setupShader(engine, tile, 0);
+		var min = rangeMin < 0 ? 0 : rangeMin * 2;
+		var max = content.triCount();
+		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;
+		content.doRender(engine, min, max - min);
 	}
 }

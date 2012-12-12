@@ -1,29 +1,5 @@
 package h2d;
 
-private class BatchShader extends hxsl.Shader {
-	static var SRC = {
-		var input : {
-			pos : Float2,
-			uva : Float3,
-		};
-		var tuva : Float3;
-		function vertex( mat1 : Float3, mat2 : Float3 ) {
-			var tmp : Float4;
-			tmp.x = pos.xyw.dp3(mat1);
-			tmp.y = pos.xyw.dp3(mat2);
-			tmp.z = 0;
-			tmp.w = 1;
-			out = tmp;
-			tuva = uva;
-		}
-		function fragment( tex : Texture ) {
-			var c = tex.get(tuva.xy, nearest);
-			c.a *= tuva.z;
-			out = c;
-		}
-	}
-}
-
 @:allow(h2d.SpriteBatch)
 class BatchElement {
 	public var x : Float;
@@ -53,23 +29,11 @@ class SpriteBatch extends Drawable {
 	var first : BatchElement;
 	var last : BatchElement;
 	var tmpBuf : flash.Vector<Float>;
-	var material : h3d.mat.Material;
-	
-	static var SHADER = null;
-	
+		
 	public function new(t,?parent) {
-		tile = t;
-		if( SHADER == null )
-			SHADER = new BatchShader();
-		material = new h3d.mat.Material(SHADER);
-		material.depth(false, Always);
 		super(parent);
-	}
-	
-	override function set_blendMode(b) {
-		Tools.setBlendMode(material, b);
-		this.blendMode = b;
-		return b;
+		tile = t;
+		shader.hasVertexAlpha = true;
 	}
 	
 	public function alloc(t) {
@@ -132,11 +96,7 @@ class SpriteBatch extends Drawable {
 			e = e.next;
 		}
 		var buffer = engine.mem.allocVector(tmpBuf, 5, 4);
-		var shader = SHADER;
-		shader.tex = tile.getTexture();
-		shader.mat1 = new h3d.Vector(matA, matC, absX);
-		shader.mat2 = new h3d.Vector(matB, matD, absY);
-		engine.selectMaterial(material);
+		setupShader(engine, tile, 0);
 		engine.renderQuadBuffer(buffer);
 		buffer.dispose();
 	}
