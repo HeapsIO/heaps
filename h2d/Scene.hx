@@ -318,5 +318,31 @@ class Scene extends Layers, implements h3d.IDrawable {
 		super.render(engine);
 	}
 	
+	public function captureBitmap( ?target : Tile ) {
+		var engine = h3d.Engine.getCurrent();
+		if( target == null ) {
+			var tw = 1, th = 1;
+			while( tw < width ) tw <<= 1;
+			while( th < height ) th <<= 1;
+			var tex = engine.mem.allocTargetTexture(tw, th);
+			target = new Tile(tex,0, 0, width, height);
+		}
+		engine.begin();
+		engine.setRenderZone(target.x, target.y, target.width, target.height);
+		var tex = target.getTexture();
+		engine.setTarget(tex);
+		var ow = width, oh = height, of = fixedSize;
+		setFixedSize(tex.width, tex.height);
+		render(engine);
+		width = ow;
+		height = oh;
+		fixedSize = of;
+		posChanged = true;
+		engine.setTarget(null);
+		engine.setRenderZone();
+		engine.end();
+		return new Bitmap(target);
+	}
+	
 	
 }
