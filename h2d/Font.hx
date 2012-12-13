@@ -73,7 +73,7 @@ class Font extends Tile {
 				m.ty = y - 2;
 				tf.text = chars.charAt(i);
 				bmp.draw(tf, m);
-				var t = sub(x, y, w, h, 2, 2);
+				var t = sub(x, y, w, h);
 				all.push(t);
 				glyphs[chars.charCodeAt(i)] = t;
 				// next element

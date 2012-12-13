@@ -80,7 +80,6 @@ class TileGroup extends Drawable {
 		rangeMin = rangeMax = -1;
 		content = new TileLayerContent();
 		super(parent);
-		color = new h3d.Vector(1, 1, 1, 1);
 	}
 	
 	public function reset() {

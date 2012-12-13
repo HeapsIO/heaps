@@ -8,6 +8,9 @@ class Text extends Drawable {
 	public var maxWidth(default, set) : Null<Float>;
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
 	
+	public var textWidth(get, null) : Int;
+	public var textHeight(get, null) : Int;
+	
 	var glyphs : TileGroup;
 	
 	public function new( font : Font, ?parent ) {
@@ -44,10 +47,10 @@ class Text extends Drawable {
 		return t;
 	}
 	
-	function initGlyphs() {
-		glyphs.reset();
+	function initGlyphs( rebuild = true ) {
+		if( rebuild ) glyphs.reset();
 		var letters = font.glyphs;
-		var x = 0, y = 0;
+		var x = 0, y = 0, xMax = 0;
 		for( i in 0...text.length ) {
 			var cc = text.charCodeAt(i);
 			var e = letters[cc];
@@ -68,14 +71,24 @@ class Text extends Drawable {
 			}
 			if( e == null ) {
 				if( cc == '\n'.code ) {
+					if( x > xMax ) xMax = x;
 					x = 0;
 					y += font.lineHeight;
 				}
 				continue;
 			}
-			glyphs.add(x, y, e);
+			if( rebuild ) glyphs.add(x, y, e);
 			x += e.width + 1;
 		}
+		return { width : x > xMax ? x : xMax, height : x > 0 ? y + font.lineHeight : y };
+	}
+
+	function get_textHeight() {
+		return initGlyphs(false).height;
+	}
+	
+	function get_textWidth() {
+		return initGlyphs(false).width;
 	}
 	
 	function set_maxWidth(w) {
