@@ -72,8 +72,10 @@ class HtmlText extends Drawable {
 	}
 	
 	function set_textColor(c) {
-		this.textColor = c;
-		if( allocated && htmlText != "" ) initGlyphs();
+		if( textColor != c ) {
+			this.textColor = c;
+			if( allocated && htmlText != "" ) initGlyphs();
+		}
 		return c;
 	}
 
