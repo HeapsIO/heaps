@@ -49,9 +49,12 @@ private class DrawableShader extends hxsl.Shader {
 		var alphaMap : Texture;
 		var alphaUV : Float4;
 		var filter : Bool;
+		
+		var sinusDeform : Float3;
+		var tileWrap : Bool;
 
 		function fragment( tex : Texture ) {
-			var col = tex.get(tuv, filter = ! !filter);
+			var col = tex.get(sinusDeform != null ? [tuv.x + sin(tuv.y*sinusDeform.y + sinusDeform.x) * sinusDeform.z, tuv.y] : tuv, filter = ! !filter, wrap=tileWrap);
 			if( alphaKill ) kill(col.a - 0.001);
 			if( hasVertexAlpha ) col.a *= talpha;
 			if( hasVertexColor ) col *= tcolor;
@@ -87,6 +90,8 @@ class Drawable extends Sprite {
 	public var blendMode(default, set) : BlendMode;
 	
 	public var alphaMap(default, set) : h2d.Tile;
+	public var sinusDeform(get, set) : h3d.Vector;
+	public var tileWrap(get, set) : Bool;
 	
 	function new(parent) {
 		super(parent);
@@ -114,7 +119,7 @@ class Drawable extends Sprite {
 	function get_skew() : Null<Float> {
 		return shader.hasSkew ? shader.skew : null;
 	}
-
+	
 	function set_skew(v : Null<Float> ) {
 		if( v == null ) {
 			shader.skew = 0;
@@ -130,6 +135,14 @@ class Drawable extends Sprite {
 		alphaMap = t;
 		shader.hasAlphaMap = t != null;
 		return t;
+	}
+	
+	inline function get_sinusDeform() {
+		return shader.sinusDeform;
+	}
+
+	inline function set_sinusDeform(v) {
+		return shader.sinusDeform = v;
 	}
 	
 	inline function get_colorMatrix() {
@@ -162,6 +175,14 @@ class Drawable extends Sprite {
 	
 	inline function set_filter(v) {
 		return shader.filter = v;
+	}
+
+	inline function get_tileWrap() {
+		return shader.tileWrap;
+	}
+	
+	inline function set_tileWrap(v) {
+		return shader.tileWrap = v;
 	}
 	
 	function drawTile( engine, tile ) {
