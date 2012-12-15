@@ -102,6 +102,14 @@ class Tile {
 		innerTex = null;
 	}
 	
+	public static function fromColor( color : Int ) {
+		var bmp = new flash.display.BitmapData(1, 1, true, 0);
+		bmp.setPixel32(0, 0, color);
+		var t = fromBitmap(bmp);
+		bmp.dispose();
+		return t;
+	}
+	
 	public static function fromBitmap( bmp : flash.display.BitmapData ) {
 		var w = 1, h = 1;
 		while( w < bmp.width )
