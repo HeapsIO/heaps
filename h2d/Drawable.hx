@@ -49,6 +49,11 @@ private class DrawableShader extends hxsl.Shader {
 		var alphaMap : Texture;
 		var alphaUV : Float4;
 		var filter : Bool;
+		
+		var hasMultMap : Bool;
+		var multMapFactor : Float;
+		var multMap : Texture;
+		var multUV : Float4;
 
 		function fragment( tex : Texture ) {
 			var col = tex.get(tuv, filter = ! !filter);
@@ -56,6 +61,7 @@ private class DrawableShader extends hxsl.Shader {
 			if( hasVertexAlpha ) col.a *= talpha;
 			if( hasVertexColor ) col *= tcolor;
 			if( hasAlphaMap ) col.a *= alphaMap.get(tuv * alphaUV.zw + alphaUV.xy).r;
+			if( hasMultMap ) col *= multMap.get(tuv * multUV.zw + multUV.xy) * multMapFactor;
 			if( hasAlpha ) col.a *= alpha;
 			if( colorMatrix != null ) col *= colorMatrix;
 			if( colorMul != null ) col *= colorMul;
@@ -87,6 +93,9 @@ class Drawable extends Sprite {
 	public var blendMode(default, set) : BlendMode;
 	
 	public var alphaMap(default, set) : h2d.Tile;
+
+	public var multiplyMap(default, set) : h2d.Tile;
+	public var multiplyFactor(get, set) : Float;
 	
 	function new(parent) {
 		super(parent);
@@ -124,6 +133,20 @@ class Drawable extends Sprite {
 			shader.hasSkew = true;
 		}
 		return v;
+	}
+
+	inline function get_multiplyFactor() {
+		return shader.multMapFactor;
+	}
+
+	inline function set_multiplyFactor(v) {
+		return shader.multMapFactor = v;
+	}
+	
+	function set_multiplyMap(t:h2d.Tile) {
+		multiplyMap = t;
+		shader.hasMultMap = t != null;
+		return t;
 	}
 	
 	function set_alphaMap(t:h2d.Tile) {
@@ -188,6 +211,8 @@ class Drawable extends Sprite {
 			mat.blend(DstColor, OneMinusSrcAlpha);
 		case Erase:
 			mat.blend(Zero, OneMinusSrcAlpha);
+		case Hide:
+			mat.blend(Zero, One);
 		}
 
 		if( options & HAS_SIZE != 0 ) {
@@ -214,6 +239,11 @@ class Drawable extends Sprite {
 			shader.alphaUV = new h3d.Vector(alphaMap.u, alphaMap.v, (alphaMap.u2 - alphaMap.u) / tile.u2, (alphaMap.v2 - alphaMap.v) / tile.v2);
 		}
 
+		if( shader.hasMultMap ) {
+			shader.multMap = multiplyMap.getTexture();
+			shader.multUV = new h3d.Vector(multiplyMap.u, multiplyMap.v, (multiplyMap.u2 - multiplyMap.u) / tile.u2, (multiplyMap.v2 - multiplyMap.v) / tile.v2);
+		}
+		
 		var tmp = core.tmpMat1;
 		tmp.x = matA;
 		tmp.y = matC;

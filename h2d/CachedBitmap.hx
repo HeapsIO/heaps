@@ -43,6 +43,21 @@ class CachedBitmap extends Drawable {
 		height = h;
 		return h;
 	}
+	
+	public function getTile() {
+		if( tile == null ) {
+			var tw = 1, th = 1;
+			var engine = h3d.Engine.getCurrent();
+			realWidth = width < 0 ? engine.width : width;
+			realHeight = height < 0 ? engine.height : height;
+			while( tw < realWidth ) tw <<= 1;
+			while( th < realHeight ) th <<= 1;
+			tex = engine.mem.allocTargetTexture(tw, th);
+			renderDone = false;
+			tile = new Tile(tex,0, 0, realWidth, realHeight);
+		}
+		return tile;
+	}
 
 	override function draw( engine : h3d.Engine ) {
 		drawTile(engine, tile);
@@ -54,16 +69,7 @@ class CachedBitmap extends Drawable {
 			tex.dispose();
 			tex = null;
 		}
-		if( tex == null ) {
-			var tw = 1, th = 1;
-			realWidth = width < 0 ? engine.width : width;
-			realHeight = height < 0 ? engine.height : height;
-			while( tw < realWidth ) tw <<= 1;
-			while( th < realHeight ) th <<= 1;
-			tex = engine.mem.allocTargetTexture(tw, th);
-			renderDone = false;
-			tile = new Tile(tex,0, 0, realWidth, realHeight);
-		}
+		var tile = getTile();
 		if( !freezed || !renderDone ) {
 			var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;
 			

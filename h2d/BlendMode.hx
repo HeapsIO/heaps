@@ -6,4 +6,5 @@ enum BlendMode {
 	Add;
 	Multiply;
 	Erase;
+	Hide;
 }
