@@ -28,6 +28,7 @@ class Text extends Drawable {
 	}
 	
 	override function draw(engine) {
+		glyphs.blendMode = blendMode;
 		if( dropShadow != null ) {
 			glyphs.x += dropShadow.dx;
 			glyphs.y += dropShadow.dy;
@@ -83,7 +84,7 @@ class Text extends Drawable {
 		}
 		return { width : x > xMax ? x : xMax, height : x > 0 ? y + font.lineHeight : y };
 	}
-
+	
 	function get_textHeight() {
 		return initGlyphs(false).height;
 	}
