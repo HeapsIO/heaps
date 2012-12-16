@@ -17,6 +17,7 @@ class Text extends Drawable {
 		super(parent);
 		this.font = font;
 		glyphs = new TileGroup(font, this);
+		shader = glyphs.shader;
 		text = "";
 		textColor = 0xFFFFFF;
 	}
