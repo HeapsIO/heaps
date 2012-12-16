@@ -102,11 +102,26 @@ class Tile {
 		innerTex = null;
 	}
 	
+	public function clone() {
+		var t = new Tile(null, x, y, width, height, dx, dy);
+		t.innerTex = innerTex;
+		t.u = u;
+		t.u2 = u2;
+		t.v = v;
+		t.v2 = v;
+		return t;
+	}
+	
+	static var COLOR_CACHE = new IntHash();
 	public static function fromColor( color : Int ) {
+		var t = COLOR_CACHE.get(color);
+		if( t != null )
+			return t;
 		var bmp = new flash.display.BitmapData(1, 1, true, 0);
 		bmp.setPixel32(0, 0, color);
-		var t = fromBitmap(bmp);
+		t = fromBitmap(bmp);
 		bmp.dispose();
+		COLOR_CACHE.set(color, t);
 		return t;
 	}
 	
