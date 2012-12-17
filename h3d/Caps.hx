@@ -13,7 +13,7 @@ class Caps {
 	}
 
 	static function get_isTouch() {
-		return flash.system.Capabilities.touchscreenType != flash.system.TouchscreenType.NONE;
+		return flash.system.Capabilities.touchscreenType == flash.system.TouchscreenType.FINGER;
 	}
 
 	static function get_width() {
