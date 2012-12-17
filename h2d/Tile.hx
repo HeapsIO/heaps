@@ -94,7 +94,7 @@ class Tile {
 		u2 += dx / tex.width;
 		v2 -= dy / tex.height;
 		x = Std.int(u * tex.width);
-		v = Std.int(v * tex.height);
+		y = Std.int(v * tex.height);
 	}
 	
 	public function dispose() {
