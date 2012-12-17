@@ -1,9 +1,10 @@
--cp samples
+-cp samples/basic
 -swf engine.swf
--swf-header 800:600:30:FFFFFF
+-swf-header 800:600:60:FFFFFF
 --flash-strict
 -swf-version 11
 -main Test
 -lib hxsl
+-D h3d
 --macro include('h3d')
 --macro include('h2d')
