@@ -23,6 +23,7 @@ class Engine {
 	var curMatBits : Int;
 	var curShader : hxsl.Shader.ShaderInstance;
 	var curBuffer : h3d.impl.MemoryManager.BigBuffer;
+	var curMultiBuffer : Array<h3d.impl.Buffer.BufferOffset>;
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
 	var antiAlias : Int;
@@ -104,8 +105,8 @@ class Engine {
 				ctx.setTextureAt(curTextures.length, null);
 			}
 			// force remapping of vertex buffer
-			if( curShader == null || s.bufferFormat != curShader.bufferFormat || s.stride != curShader.stride )
-				curBuffer = null;
+			curBuffer = null;
+			curMultiBuffer = null;
 			curShader = s;
 		}
 		if( s.varsChanged ) {
@@ -144,6 +145,7 @@ class Engine {
 		if( buf == curBuffer )
 			return;
 		curBuffer = buf;
+		curMultiBuffer = null;
 		if( buf.stride < curShader.stride )
 			throw "Buffer stride (" + buf.stride + ") and shader stride (" + curShader.stride + ") mismatch";
 		if( !buf.written )
@@ -216,6 +218,46 @@ class Engine {
 			drawTriangles += drawTri;
 			drawCalls++;
 		}
+	}
+	
+	public function renderMultiBuffers( buffers : Array<h3d.impl.Buffer.BufferOffset>, indexes : h3d.impl.Indexes ) {
+		var triCount = Std.int(indexes.count / 3);
+		if( triCount <= 0 ) return;
+		
+		// select the multiple buffers elements
+		var changed = curMultiBuffer == null || curMultiBuffer.length != buffers.length;
+		if( !changed )
+			for( i in 0...curMultiBuffer.length )
+				if( buffers[i] != curMultiBuffer[i] ) {
+					changed = true;
+					break;
+				}
+		if( changed ) {
+			var pos = 0, offset = 0;
+			var bits = curShader.bufferFormat;
+			while( offset < curShader.stride ) {
+				var size = bits & 7;
+				var b = buffers[pos];
+				if( b.b.next != null )
+					throw "Buffer is split";
+				if( !b.b.b.written )
+					mem.finalize(b.b.b);
+				ctx.setVertexBufferAt(pos, b.b.b.vbuf, b.offset, FORMAT[size]);
+				offset += size == 0 ? 1 : size;
+				bits >>= 3;
+				pos++;
+			}
+			for( i in pos...curAttributes )
+				ctx.setVertexBufferAt(i, null);
+			curAttributes = pos;
+			curBuffer = null;
+			curMultiBuffer = buffers;
+		}
+		
+		// render
+		ctx.drawTriangles(indexes.ibuf, 0, triCount);
+		drawTriangles += triCount;
+		drawCalls++;
 	}
 
 	function set_debug(d) {
@@ -291,8 +333,9 @@ class Engine {
 		drawTriangles = 0;
 		drawCalls = 0;
 		curMatBits = -1;
-//		curShader = null;
+		curShader = null;
 		curBuffer = null;
+		curMultiBuffer = null;
 		curProjMatrix = null;
 		curTextures = [];
 		return true;
@@ -300,8 +343,9 @@ class Engine {
 
 	function reset() {
 		curMatBits = -1;
-//		curShader = null;
+		curShader = null;
 		curBuffer = null;
+		curMultiBuffer = null;
 		curProjMatrix = null;
 		for( i in 0...curAttributes )
 			ctx.setVertexBufferAt(i, null);

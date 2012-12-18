@@ -14,9 +14,11 @@ class Buffer {
 	}
 
 	public function dispose() {
-		b.freeCursor(pos, nvert);
-		b = null;
-		if( next != null ) next.dispose();
+		if( b != null ) {
+			b.freeCursor(pos, nvert);
+			b = null;
+			if( next != null ) next.dispose();
+		}
 	}
 	
 	public function upload( data : flash.utils.ByteArray, dataPos : Int, nverts : Int ) {
@@ -31,4 +33,19 @@ class Buffer {
 		}
 	}
 	
+}
+
+class BufferOffset {
+	public var b : Buffer;
+	public var offset : Int;
+	public function new(b, offset) {
+		this.b = b;
+		this.offset = offset;
+	}
+	public function dispose() {
+		if( b != null ) {
+			b.dispose();
+			b = null;
+		}
+	}
 }

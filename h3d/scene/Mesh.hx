@@ -1,13 +1,14 @@
 package h3d.scene;
 
-class Mesh<M:h3d.mat.MeshMaterial> extends Object {
+class Mesh extends Object {
 
 	public var primitive : h3d.prim.Primitive;
-	public var material : M;
+	public var material : h3d.mat.MeshMaterial;
 	
-	public function new( prim, mat, ?parent ) {
+	public function new( prim, ?mat, ?parent ) {
 		super(parent);
 		this.primitive = prim;
+		if( mat == null ) mat = new h3d.mat.MeshMaterial(null);
 		this.material = mat;
 	}
 	

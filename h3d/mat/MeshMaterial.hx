@@ -1,14 +1,120 @@
 package h3d.mat;
 
-class MeshMaterial extends Material {
+private class MeshShader extends hxsl.Shader {
 	
-	// make constructor private (is abstract class)
-	function new(shader) {
-		super(shader);
+	static var SRC = {
+
+		var input : {
+			pos : Float3,
+			uv : Float2,
+		};
+		
+		var tuv : Float2;
+		
+		var uvScale : Float2;
+		var uvDelta : Float2;
+		
+		function vertex( mpos : Matrix, mproj : Matrix ) {
+			var tpos = pos.xyzw;
+			if( mpos != null ) tpos *= mpos;
+			out = tpos * mproj;
+			var t = uv;
+			if( uvScale != null ) t *= uvScale;
+			if( uvDelta != null ) t += uvDelta;
+			tuv = t;
+		}
+		
+		var killAlpha : Bool;
+		var texNearest : Bool;
+		
+		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
+			var c = tex.get(tuv.xy,filter=!(killAlpha || texNearest),wrap=(uvDelta != null));
+			if( killAlpha ) kill(c.a - 0.001);
+			if( colorAdd != null ) c += colorAdd;
+			if( colorMul != null ) c = c * colorMul;
+			if( colorMatrix != null ) c = c * colorMatrix;
+			out = c;
+		}
+		
 	}
 	
-	public function setMatrixes( mpos : h3d.Matrix, mproj : h3d.Matrix ) {
-		throw "Not implemented";
+}
+
+class MeshMaterial extends Material {
+
+	var mshader : MeshShader;
+	
+	public var texture : Texture;
+
+	public var useMatrixPos : Bool;
+	public var uvScale(get,set) : Null<h3d.Vector>;
+	public var uvDelta(get,set) : Null<h3d.Vector>;
+
+	public var killAlpha(get,set) : Bool;
+
+	public var colorAdd(get,set) : Null<h3d.Vector>;
+	public var colorMul(get,set) : Null<h3d.Vector>;
+	public var colorMatrix(get,set) : Null<h3d.Matrix>;
+	
+	public function new(texture) {
+		mshader = new MeshShader();
+		super(mshader);
+		this.texture = texture;
+		useMatrixPos = true;
+	}
+		
+	public function setMatrixes( mpos, mproj ) {
+		mshader.mpos = useMatrixPos ? mpos : null;
+		mshader.mproj = mproj;
+		mshader.tex = texture;
+	}
+	
+	inline function get_uvScale() {
+		return mshader.uvScale;
+	}
+
+	inline function set_uvScale(v) {
+		return mshader.uvScale = v;
+	}
+
+	inline function get_uvDelta() {
+		return mshader.uvDelta;
+	}
+
+	inline function set_uvDelta(v) {
+		return mshader.uvDelta = v;
+	}
+
+	inline function get_killAlpha() {
+		return mshader.killAlpha;
+	}
+
+	inline function set_killAlpha(v) {
+		return mshader.killAlpha = v;
+	}
+
+	inline function get_colorAdd() {
+		return mshader.colorAdd;
+	}
+
+	inline function set_colorAdd(v) {
+		return mshader.colorAdd = v;
+	}
+
+	inline function get_colorMul() {
+		return mshader.colorMul;
+	}
+
+	inline function set_colorMul(v) {
+		return mshader.colorMul = v;
+	}
+
+	inline function get_colorMatrix() {
+		return mshader.colorMatrix;
+	}
+
+	inline function set_colorMatrix(v) {
+		return mshader.colorMatrix = v;
 	}
 	
 }
