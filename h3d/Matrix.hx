@@ -83,7 +83,7 @@ class Matrix {
 	public function initRotate( axis : Vector, angle : Float ) {
 		var cos = Math.cos(angle), sin = Math.sin(angle);
 		var cos1 = 1 - cos;
-		var x = axis.x, y = axis.y, z = axis.z;
+		var x = -axis.x, y = -axis.y, z = -axis.z;
 		var xx = x * x, yy = y * y, zz = z * z;
 		var len = 1 / Math.sqrt(xx + yy + zz);
 		x *= len;
@@ -384,13 +384,7 @@ class Matrix {
 		m.initScale(x, y, z);
 		return m;
 	}
-	
-	/**
-	 * rx ry rz rw
-	 * ux uy ux uw
-	 * ax ay az aw
-	 * px py pz pw
-	 */
+
 	//retrieves pos vector from matrix
 	public inline function pos( ? v: Vector)
 	{
