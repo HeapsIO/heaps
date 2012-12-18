@@ -5,7 +5,7 @@
     <movie outputType="Application" />
     <movie input="" />
     <movie path="anim.swf" />
-    <movie fps="40" />
+    <movie fps="60" />
     <movie width="800" />
     <movie height="600" />
     <movie version="11" />

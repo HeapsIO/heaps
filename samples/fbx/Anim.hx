@@ -60,7 +60,7 @@ class Anim {
 	var model : h3d.prim.FBXModel;
 	var anim : h3d.prim.Skin.Animation;
 	var time : Float;
-	var palette : flash.Vector<h3d.Matrix>;
+	var palette : Array<h3d.Matrix>;
 	
 	var flag : Bool;
 	var view : Int;
@@ -78,15 +78,13 @@ class Anim {
 	function onReady() {
 		flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, function(_) onUpdate());
 		flash.Lib.current.stage.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, function(k:flash.events.KeyboardEvent ) {
-			switch( k.keyCode ) {
-			case K.NUMPAD_ADD:
+			var c = k.keyCode;
+			if( c == K.NUMPAD_ADD )
 				view++;
-			case K.NUMPAD_SUBTRACT:
+			else if( c == K.NUMPAD_SUBTRACT )
 				view--;
-			case K.SPACE:
+			else if( c == K.SPACE )
 				flag = !flag;
-			default:
-			}
 		});
 
 		var shader = new LightShader();
@@ -145,7 +143,7 @@ class Anim {
 		
 		time += 1;
 		
-		anim.updateJoints(Std.int(time), palette);
+		anim.updateJoints(Std.int(time * 0.5), palette);
 		if( flag )
 			for( p in palette )
 				p.identity();

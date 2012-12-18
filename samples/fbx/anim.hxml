@@ -1,7 +1,8 @@
--cp ..
+-cp ../..
 -swf anim.swf
--swf-header 800:600:40:FFFFFF
+-swf-header 800:600:60:000000
 --flash-strict
 -swf-version 11.3
 -main Anim
--lib format
+-lib hxsl
+-D h3d
