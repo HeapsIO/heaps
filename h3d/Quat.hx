@@ -19,14 +19,14 @@ class Quat {
 		return Math.sqrt(x * x + y * y + z * z + w * w);
 	}
 	
-	public function initAxis( x : Float, y : Float, z : Float, a : Float ) {
+	public function initRotateAxis( x : Float, y : Float, z : Float, a : Float ) {
 		var sin = Math.sin(a / 2);
 		var cos = Math.cos(a / 2);
 		this.x = x * sin;
 		this.y = y * sin;
 		this.z = z * sin;
-		this.w = cos;
-		this.normalize();
+		this.w = cos * Math.sqrt(x * x + y * y + z * z); // allow not normalized axis
+		normalize();
 	}
 	
 	public function normalize() {
@@ -43,19 +43,22 @@ class Quat {
 		}
 	}
 	
-	public function initRotation( ax : Float, ay : Float, az : Float ) {
-		var fSinPitch = Math.sin( ax * 0.5 );
-		var fCosPitch = Math.cos( ax * 0.5 );
-		var fSinYaw = Math.sin( ay * 0.5 );
-		var fCosYaw = Math.cos( ay * 0.5 );
-		var fSinRoll = Math.sin( az * 0.5 );
-		var fCosRoll = Math.cos( az * 0.5 );
-		var fCosPitchCosYaw = fCosPitch * fCosYaw;
-		var fSinPitchSinYaw = fSinPitch * fSinYaw;
-		x = fSinRoll * fCosPitchCosYaw - fCosRoll * fSinPitchSinYaw;
-		y = fCosRoll * fSinPitch * fCosYaw + fSinRoll * fCosPitch * fSinYaw;
-		z = fCosRoll * fCosPitch * fSinYaw - fSinRoll * fSinPitch * fCosYaw;
-		w = fCosRoll * fCosPitchCosYaw + fSinRoll * fSinPitchSinYaw;
+	public function initRotate( ax : Float, ay : Float, az : Float ) {
+		#if flash
+		var Math = Math;
+		#end
+		var sinX = Math.sin( ax * 0.5 );
+		var cosX = Math.cos( ax * 0.5 );
+		var sinY = Math.sin( ay * 0.5 );
+		var cosY = Math.cos( ay * 0.5 );
+		var sinZ = Math.sin( az * 0.5 );
+		var cosZ = Math.cos( az * 0.5 );
+		var cosYZ = cosY * cosZ;
+		var sinYZ = sinY * sinZ;
+		x = sinX * cosYZ - cosX * sinYZ;
+		y = cosX * sinY * cosZ + sinX * cosY * sinZ;
+		z = cosX * cosY * sinZ - sinX * sinY * cosZ;
+		w = cosX * cosYZ + sinX * sinYZ;
 	}
 	
 	public function toMatrix() {
