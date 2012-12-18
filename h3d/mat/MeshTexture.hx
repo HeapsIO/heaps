@@ -16,7 +16,7 @@ private class MeshShader extends hxsl.Shader {
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			out = if( mpos != null ) (pos.xyzw * mpos) * mproj else pos.xyzw * mproj;
-			var t = uv + 0.0001;
+			var t = uv;
 			if( uvScale != null ) t *= uvScale;
 			if( uvDelta != null ) t += uvDelta;
 			tuv = t;
@@ -25,11 +25,11 @@ private class MeshShader extends hxsl.Shader {
 		var killAlpha : Bool;
 		var texNearest : Bool;
 		
-		function fragment( tex : Texture, colorDelta : Float4, colorMult : Float4, colorMatrix : M44 ) {
-			var c = tex.get(tuv.xy,filter=!(killAlpha || texNearest));
+		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
+			var c = tex.get(tuv.xy,filter=!(killAlpha || texNearest),wrap=(uvDelta != null));
 			if( killAlpha ) kill(c.a - 0.001);
-			if( colorDelta != null ) c += colorDelta;
-			if( colorMult != null ) c = c * colorMult;
+			if( colorAdd != null ) c += colorAdd;
+			if( colorMul != null ) c = c * colorMul;
 			if( colorMatrix != null ) c = c * colorMatrix;
 			out = c;
 		}
@@ -50,8 +50,8 @@ class MeshTexture extends MeshMaterial {
 
 	public var killAlpha(get,set) : Bool;
 
-	public var colorDelta(get,set) : Null<h3d.Vector>;
-	public var colorMult(get,set) : Null<h3d.Vector>;
+	public var colorAdd(get,set) : Null<h3d.Vector>;
+	public var colorMul(get,set) : Null<h3d.Vector>;
 	public var colorMatrix(get,set) : Null<h3d.Matrix>;
 	
 	public function new(texture) {
@@ -72,8 +72,7 @@ class MeshTexture extends MeshMaterial {
 	}
 
 	inline function set_uvScale(v) {
-		mshader.uvScale = v;
-		return v;
+		return mshader.uvScale = v;
 	}
 
 	inline function get_uvDelta() {
@@ -81,8 +80,7 @@ class MeshTexture extends MeshMaterial {
 	}
 
 	inline function set_uvDelta(v) {
-		mshader.uvDelta = v;
-		return v;
+		return mshader.uvDelta = v;
 	}
 
 	inline function get_killAlpha() {
@@ -90,26 +88,23 @@ class MeshTexture extends MeshMaterial {
 	}
 
 	inline function set_killAlpha(v) {
-		mshader.killAlpha = v;
-		return v;
+		return mshader.killAlpha = v;
 	}
 
-	inline function get_colorDelta() {
-		return mshader.colorDelta;
+	inline function get_colorAdd() {
+		return mshader.colorAdd;
 	}
 
-	inline function set_colorDelta(v) {
-		mshader.colorDelta = v;
-		return v;
+	inline function set_colorAdd(v) {
+		return mshader.colorAdd = v;
 	}
 
-	inline function get_colorMult() {
-		return mshader.colorMult;
+	inline function get_colorMul() {
+		return mshader.colorMul;
 	}
 
-	inline function set_colorMult(v) {
-		mshader.colorMult = v;
-		return v;
+	inline function set_colorMul(v) {
+		return mshader.colorMul = v;
 	}
 
 	inline function get_colorMatrix() {
@@ -117,8 +112,7 @@ class MeshTexture extends MeshMaterial {
 	}
 
 	inline function set_colorMatrix(v) {
-		mshader.colorMatrix = v;
-		return v;
+		return mshader.colorMatrix = v;
 	}
 	
 }
