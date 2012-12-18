@@ -25,7 +25,7 @@ class Camera {
 		this.zNear = zNear;
 		this.zFar = zFar;
 		pos = new Vector(2, 3, 4);
-		up = new Vector(0, 0, -1);
+		up = new Vector(0, 0, 1);
 		target = new Vector(0, 0, 0);
 		m = new Matrix();
 		mcam = new Matrix();
@@ -44,7 +44,7 @@ class Camera {
 	public function update() {
 		var az = pos.sub(target);
 		az.normalize();
-		var ax = up.cross(az);
+		var ax = az.cross(up);
 		ax.normalize();
 		if( ax.length() == 0 ) {
 			ax.x = az.y;
