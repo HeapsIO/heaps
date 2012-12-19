@@ -7,6 +7,7 @@ class Object {
 	var childs : Array<Object>;
 	public var parent(default,null) : Object;
 	
+	public var name : Null<String>;
 	public var x(default,set) : Float;
 	public var y(default, set) : Float;
 	public var z(default, set) : Float;
@@ -14,6 +15,7 @@ class Object {
 	public var scaleY(default, set) : Float;
 	public var scaleZ(default,set) : Float;
 
+	public var defaultTransform(default,set) : h3d.Matrix;
 	var absPos : h3d.Matrix;
 	var qRot : h3d.Quat;
 	var posChanged : Bool;
@@ -27,6 +29,16 @@ class Object {
 		childs = [];
 		if( parent != null )
 			parent.addChild(this);
+	}
+	
+	public function getObjectByName( name : String ) {
+		if( this.name == name )
+			return this;
+		for( c in childs ) {
+			var o = c.getObjectByName(name);
+			if( o != null ) return o;
+		}
+		return null;
 	}
 	
 	public function getObjectsCount() {
@@ -60,12 +72,18 @@ class Object {
 			o.parent = null;
 	}
 	
+	public function toMesh() : Mesh {
+		if( Std.is(this, Mesh) )
+			return cast this;
+		throw (name == null ? "Object" : name) + " is not a Mesh";
+	}
+	
 	// shortcut for parent.removeChild
 	public inline function remove() {
 		if( this != null && parent != null ) parent.removeChild(this);
 	}
 	
-	function draw( engine : h3d.Engine ) {
+	function draw( ctx : RenderContext ) {
 	}
 	
 	function updatePos() {
@@ -86,16 +104,18 @@ class Object {
 			absPos._41 = x;
 			absPos._42 = y;
 			absPos._43 = z;
+			if( defaultTransform != null )
+				absPos.multiply3x4(absPos, defaultTransform);
 			if( parent != null )
 				absPos.multiply3x4(absPos, parent.absPos);
 		}
 	}
 	
-	function render( engine : h3d.Engine ) {
+	function renderContext( ctx : RenderContext ) {
 		updatePos();
-		draw(engine);
+		draw(ctx);
 		for( c in childs )
-			c.render(engine);
+			c.renderContext(ctx);
 		posChanged = false;
 	}
 	
@@ -135,6 +155,12 @@ class Object {
 		return v;
 	}
 	
+	inline function set_defaultTransform(v) {
+		defaultTransform = v;
+		posChanged = true;
+		return v;
+	}
+	
 	/*
 		Move along the current rotation axis
 	*/
@@ -156,12 +182,12 @@ class Object {
 	}
 	
 	public function setRotate( rx : Float, ry : Float, rz : Float ) {
-		qRot.initRotation(rx, ry, rz);
+		qRot.initRotate(rx, ry, rz);
 		posChanged = true;
 	}
 	
 	public function setRotateAxis( ax : Float, ay : Float, az : Float, angle : Float ) {
-		qRot.initAxis(ax, ay, az, angle);
+		qRot.initRotateAxis(ax, ay, az, angle);
 		posChanged = true;
 	}
 	
@@ -175,6 +201,10 @@ class Object {
 		scaleX = v;
 		scaleY = v;
 		scaleZ = v;
+	}
+	
+	public function toString() {
+		return Type.getClassName(Type.getClass(this)).split(".").pop() + (name == null ? "" : "(" + name + ")");
 	}
 	
 }

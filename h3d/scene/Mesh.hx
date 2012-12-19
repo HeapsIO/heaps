@@ -12,10 +12,10 @@ class Mesh extends Object {
 		this.material = mat;
 	}
 	
-	override function draw( engine : h3d.Engine ) {
-		material.setMatrixes(this.absPos, engine.curProjMatrix);
-		engine.selectMaterial(material);
-		primitive.render(engine);
+	override function draw( ctx : RenderContext ) {
+		material.setMatrixes(this.absPos, ctx.camera.m);
+		ctx.engine.selectMaterial(material);
+		primitive.render(ctx.engine);
 	}
 	
 }

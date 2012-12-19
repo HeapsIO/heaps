@@ -3,7 +3,7 @@ package h3d.scene;
 class Scene extends Layers, implements h3d.IDrawable {
 
 	public var camera : h3d.Camera;
-	var extraPasses : Array<{ function render( engine : h3d.Engine ) : Void; }>;
+	var extraPasses : Array<h3d.IDrawable>;
 	
 	public function new() {
 		super(null);
@@ -20,12 +20,14 @@ class Scene extends Layers, implements h3d.IDrawable {
 	}
 	
 	// make it public
-	public override function render( engine : h3d.Engine ) {
+	public function render( engine : h3d.Engine ) {
 		camera.ratio = engine.width / engine.height;
 		camera.update();
 		var oldProj = engine.curProjMatrix;
 		engine.curProjMatrix = camera.m;
-		super.render(engine);
+		var ctx = new RenderContext(engine, camera);
+		renderContext(ctx);
+		ctx.finalize();
 		for( p in extraPasses )
 			p.render(engine);
 		engine.curProjMatrix = oldProj;
