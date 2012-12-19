@@ -1,29 +1,15 @@
 package h3d.prim;
 using h3d.fbx.Data;
+import h3d.impl.Buffer.BufferOffset;
 
-class FBXModel extends Primitive {
+class FBXModel extends MeshPrimitive {
 
-	public var mesh(default, null) : h3d.fbx.Mesh;
-	public var skin(default, null) : h3d.fbx.Skin;
-	var anims(default, null) : Hash<Skin.Animation>;
+	public var geom(default, null) : h3d.fbx.Geometry;
+	public var skin : Skin;
 	
-	public function new(m) {
-		this.mesh = m;
-		skin = m.getSkin();
-		anims = new Hash();
+	public function new(g) {
+		this.geom = g;
 	}
-	
-	public function getAnimation( name : String ) {
-		var a = anims.get(name);
-		if( a == null ) {
-			if( skin == null ) throw "No skin";
-			a = skin.getAnimation(name);
-			anims.set(name, a);
-		}
-		return a;
-	}
-	
-	public function listAnimations() return skin.listAnimation()
 	
 	// not very good, but...
 	inline function int32ToFloat( ix : Int ) {
@@ -31,16 +17,20 @@ class FBXModel extends Primitive {
 		return flash.Memory.getFloat(0);
 	}
 	
+	public function getVerticesCount() {
+		return Std.int(geom.getVertices().length / 3);
+	}
+	
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
 		
-		var verts = mesh.getVertices();
-		var norms = mesh.getNormals();
-		var tuvs = mesh.getUVs()[0];
+		var verts = geom.getVertices();
+		var norms = geom.getNormals();
+		var tuvs = geom.getUVs()[0];
 		
 		var idx = new flash.Vector<UInt>();
-		var buf = new flash.Vector<Float>();
-		var out = 0;
+		var pbuf = new flash.Vector<Float>(), nbuf = (norms == null ? null : new flash.Vector<Float>()), sbuf = (skin == null ? null : new flash.Vector<Float>()), tbuf = (tuvs == null ? null : new flash.Vector<Float>());
+		var pout = 0, nout = 0, sout = 0, tout = 0;
 	
 		var tmp = new flash.utils.ByteArray();
 		tmp.length = 1024;
@@ -48,7 +38,7 @@ class FBXModel extends Primitive {
 		
 		// triangulize indexes : format is  A,B,...,-X : negative values mark the end of the polygon
 		var count = 0, pos = 0;
-		var index = mesh.getPolygons();
+		var index = geom.getPolygons();
 		for( i in index ) {
 			count++;
 			if( i < 0 ) {
@@ -58,42 +48,53 @@ class FBXModel extends Primitive {
 					var k = n + start;
 					var vidx = index[k];
 					
-					buf[out++] = verts[vidx*3];
-					buf[out++] = verts[vidx*3 + 1];
-					buf[out++] = verts[vidx*3 + 2];
+					pbuf[pout++] = verts[vidx*3];
+					pbuf[pout++] = verts[vidx*3 + 1];
+					pbuf[pout++] = verts[vidx*3 + 2];
 
-					buf[out++] = norms[k*3];
-					buf[out++] = norms[k*3 + 1];
-					buf[out++] = norms[k*3 + 2];
+					if( nbuf != null ) {
+						nbuf[nout++] = norms[k*3];
+						nbuf[nout++] = norms[k*3 + 1];
+						nbuf[nout++] = norms[k*3 + 2];
+					}
 
-					var iuv = tuvs.index[k];
-					buf[out++] = tuvs.values[iuv*2];
-					buf[out++] = 1 - tuvs.values[iuv*2 + 1];
+					if( tbuf != null ) {
+						var iuv = tuvs.index[k];
+						tbuf[tout++] = tuvs.values[iuv*2];
+						tbuf[tout++] = 1 - tuvs.values[iuv * 2 + 1];
+					}
 					
-					if( skin != null ) {
+					if( sbuf != null ) {
 						var p = vidx * skin.bonesPerVertex;
 						var idx = 0;
 						for( i in 0...skin.bonesPerVertex ) {
-							buf[out++] = skin.vertexWeights[p + i];
+							sbuf[sout++] = skin.vertexWeights[p + i];
 							idx = (skin.vertexJoints[p + i] << (8*i)) | idx;
 						}
-						buf[out++] = int32ToFloat(idx);
+						sbuf[sout++] = int32ToFloat(idx);
 					}
 				}
 				// polygons are actually triangle fans
 				for( n in 0...count - 2 ) {
 					idx.push(start);
-					idx.push(start + n + 1);
 					idx.push(start + n + 2);
+					idx.push(start + n + 1);
 				}
 				index[pos] = i; // restore
 				count = 0;
 			}
 			pos++;
 		}
-
-		var size = skin == null ? 8 : (8 + 1 + skin.bonesPerVertex);
-		buffer = engine.mem.allocVector(buf, size, 0);
+		
+		addBuffer("pos", engine.mem.allocVector(pbuf, 3, 0));
+		if( nbuf != null ) addBuffer("norm", engine.mem.allocVector(nbuf, 3, 0));
+		if( tbuf != null ) addBuffer("uv", engine.mem.allocVector(tbuf, 2, 0));
+		if( sbuf != null ) {
+			var skinBuf = engine.mem.allocVector(sbuf, skin.bonesPerVertex + 1, 0);
+			addBuffer("weights", skinBuf, 0);
+			addBuffer("indexes", skinBuf, skin.bonesPerVertex);
+		}
+		
 		indexes = engine.mem.allocIndex(idx);
 	}
 	
