@@ -80,10 +80,10 @@ class Matrix {
 		_41 = 0.0; _42 = 0.0; _43 = 0.0; _44 = 1.0;
 	}
 
-	public function initRotate( axis : Vector, angle : Float ) {
+	public function initRotateAxis( axis : Vector, angle : Float ) {
 		var cos = Math.cos(angle), sin = Math.sin(angle);
 		var cos1 = 1 - cos;
-		var x = axis.x, y = axis.y, z = axis.z;
+		var x = -axis.x, y = -axis.y, z = -axis.z;
 		var xx = x * x, yy = y * y, zz = z * z;
 		var len = 1 / Math.sqrt(xx + yy + zz);
 		x *= len;
@@ -103,6 +103,15 @@ class Matrix {
 		_33 = cos + z * zcos1;
 		_34 = 0.;
 		_41 = 0.; _42 = 0.; _43 = 0.; _44 = 1.;
+	}
+	
+	public function initRotate( x : Float, y : Float, z : Float ) {
+		initRotateX(x);
+		var tmp = tmp;
+		tmp.initRotateY(y);
+		multiply3x4(this, tmp);
+		tmp.initRotateZ(z);
+		multiply3x4(this, tmp);
 	}
 	
 	public function translate( x = 0., y = 0., z = 0. ) {
@@ -134,10 +143,16 @@ class Matrix {
 		_33 *= z;
 		_43 *= z;
 	}
-	
-	public function rotate( axis, angle ) {
+
+	public function rotate( x, y, z ) {
 		var tmp = tmp;
-		tmp.initRotate(axis, angle);
+		tmp.initRotate(x,y,z);
+		multiply(this, tmp);
+	}
+	
+	public function rotateAxis( axis, angle ) {
+		var tmp = tmp;
+		tmp.initRotateAxis(axis, angle);
 		multiply(this, tmp);
 	}
 	
@@ -156,9 +171,15 @@ class Matrix {
 		_44 = vw;
 	}
 
-	public function prependRotate( axis, angle ) {
+	public function prependRotate( x, y, z ) {
 		var tmp = tmp;
-		tmp.initRotate(axis, angle);
+		tmp.initRotate(x,y,z);
+		multiply(tmp, this);
+	}
+	
+	public function prependRotateAxis( axis, angle ) {
+		var tmp = tmp;
+		tmp.initRotateAxis(axis, angle);
 		multiply(tmp, this);
 	}
 
@@ -373,9 +394,9 @@ class Matrix {
 		return m;
 	}
 
-	public static function R(axis,angle) {
+	public static function R(x,y,z) {
 		var m = new Matrix();
-		m.initRotate(axis, angle);
+		m.initRotate(x,y,z);
 		return m;
 	}
 
@@ -384,13 +405,7 @@ class Matrix {
 		m.initScale(x, y, z);
 		return m;
 	}
-	
-	/**
-	 * rx ry rz rw
-	 * ux uy ux uw
-	 * ax ay az aw
-	 * px py pz pw
-	 */
+
 	//retrieves pos vector from matrix
 	public inline function pos( ? v: Vector)
 	{
