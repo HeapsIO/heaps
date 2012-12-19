@@ -29,15 +29,5 @@ class Geometry {
 			uvs.push({ values : v.get("UV").getFloats(), index : v.get("UVIndex").getInts() });
 		return uvs;
 	}
-	
-	/*
-	public function getSkin( bonesPerVertex = 3 ) {
-		var skin = null;
-		for( v in lib.getSubs(root) )
-			if( v.getType() == "Skin" )
-				return new Skin(lib, v, root, Std.int(getVertices().length/3), bonesPerVertex);
-		return null;
-	}
-	*/
 
 }
