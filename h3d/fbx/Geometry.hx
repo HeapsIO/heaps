@@ -1,7 +1,7 @@
 package h3d.fbx;
 using h3d.fbx.Data;
 
-class Mesh {
+class Geometry {
 
 	var lib : Library;
 	var root : FbxNode;
@@ -30,6 +30,7 @@ class Mesh {
 		return uvs;
 	}
 	
+	/*
 	public function getSkin( bonesPerVertex = 3 ) {
 		var skin = null;
 		for( v in lib.getSubs(root) )
@@ -37,5 +38,6 @@ class Mesh {
 				return new Skin(lib, v, root, Std.int(getVertices().length/3), bonesPerVertex);
 		return null;
 	}
-	
+	*/
+
 }
