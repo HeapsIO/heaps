@@ -1,11 +1,20 @@
 package h3d.scene;
 
+class Joint extends Object {
+	public var index : Int;
+	public function new(index) {
+		super(null);
+		this.index = index;
+	}
+}
+
 class Skin extends Mesh {
 	
 	var skinData : h3d.prim.Skin;
 	var currentRelPose : Array<h3d.Matrix>;
 	var currentAbsPose : Array<h3d.Matrix>;
 	var currentPalette : Array<h3d.Matrix>;
+	var jointsUpdated : Bool;
 
 	public var showJoints : Bool;
 	
@@ -22,7 +31,7 @@ class Skin extends Mesh {
 		if( skinData != null )
 			for( j in skinData.allJoints )
 				if( j.name == name ) {
-					var o = new Object();
+					var o = new Joint(j.index);
 					o.parent = this;
 					o.absPos = currentAbsPose[j.index];
 					o.defaultTransform = currentRelPose[j.index];
@@ -33,31 +42,41 @@ class Skin extends Mesh {
 	
 	public function setSkinData( s ) {
 		skinData = s;
+		jointsUpdated = true;
 		primitive = s.primitive;
+		material.hasSkin = true;
 		currentRelPose = [];
 		currentAbsPose = [];
 		currentPalette = [];
-		for( j in skinData.allJoints ) {
-			currentRelPose.push(h3d.Matrix.I());
+		for( j in skinData.allJoints )
 			currentAbsPose.push(h3d.Matrix.I());
-		}
 		for( i in 0...skinData.boundJoints.length )
 			currentPalette.push(h3d.Matrix.I());
 	}
 	
 	override function draw( ctx : RenderContext ) {
-		for( j in skinData.allJoints ) {
-			var id = j.index;
-			var m = currentAbsPose[id];
-			if( j.parent == null )
-				m.multiply(currentRelPose[id], absPos);
-			else
-				m.multiply(currentRelPose[id], currentAbsPose[j.parent.index]);
-			var bid = j.bindIndex;
-			if( bid >= 0 )
-				currentPalette[bid].multiply(j.transPos, m);
+		if( jointsUpdated ) {
+			for( j in skinData.allJoints ) {
+				var id = j.index;
+				var m = currentAbsPose[id];
+				var r = currentRelPose[id];
+				if( r == null ) {
+					var bid = j.bindIndex;
+					if( bid >= 0 )
+						currentPalette[bid].identity();
+					continue;
+				}
+				if( j.parent == null )
+					m.multiply(r, absPos);
+				else
+					m.multiply(r, currentAbsPose[j.parent.index]);
+				var bid = j.bindIndex;
+				if( bid >= 0 )
+					currentPalette[bid].multiply(j.transPos, m);
+			}
+			material.skinMatrixes = currentPalette;
+			jointsUpdated = false;
 		}
-		material.skinMatrixes = currentPalette;
 		super.draw(ctx);
 		if( showJoints )
 			ctx.addPass(drawJoints);

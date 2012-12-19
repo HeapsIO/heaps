@@ -56,11 +56,9 @@ class Anim {
 
 	var engine : h3d.Engine;
 	var scene : h3d.scene.Scene;
-//	var obj : h3d.Drawable<LightShader>;
-//	var model : h3d.prim.FBXModel;
-//	var anim : h3d.prim.Skin.Animation;
-//	var palette : Array<h3d.Matrix>;
+
 	var time : Float;
+	var anim : h3d.prim.Animation;
 	
 	var flag : Bool;
 	var view : Int;
@@ -86,32 +84,6 @@ class Anim {
 				flag = !flag;
 		});
 
-		/*
-		var shader = new LightShader();
-		var name = "";
-		
-		var file = new Model();
-		var lib = new h3d.fbx.Library();
-		lib.loadTextFile(file.readUTFBytes(file.length));
-		model = new h3d.prim.FBXModel(lib.getMesh(name));
-		var aname = model.listAnimations().first().split("::")[1];
-		try {
-			anim = model.getAnimation(aname);
-		} catch( d:Dynamic ) {
-			throw "no such anim " + aname + " in list : " + Std.string( [model.listAnimations()] );
-		}
-		anim.computeAbsoluteFrames();
-		palette = anim.allocPalette();
-		
-		obj = new h3d.Drawable(model, shader);
-		obj.material.culling = None;
-		obj.material.blend(SrcAlpha, OneMinusSrcAlpha);
-		obj.shader.tex = ;
-	
-		scene.addPass(obj);
-		*/
-		
-
 		var tex = engine.mem.makeTexture(new Tex(0, 0));
 		var file = new Model();
 		var lib = new h3d.fbx.Library();
@@ -120,20 +92,8 @@ class Anim {
 		scene = lib.makeScene(function(_) return tex);
 		scene.camera.rightHanded = true;
 
-		lib.loadAnimation();
+		anim = lib.loadAnimation().createInstance(scene);
 		
-		var o = scene.getObjectByName("Bip001");
-		if( o != null ) {
-			var mat = o.toMesh().material;
-			mat.killAlpha = true;
-			mat.culling = None;
-		}
-		/*
-		var s : h3d.scene.Skin = cast o;
-		trace(s);
-		trace(s.debugSkin.rootJoints[0].transPos);
-		trace(untyped s.skinData.rootJoints[0].transPos);
-		*/
 		scene.addPass(new Axis());
 	}
 	
@@ -172,22 +132,7 @@ class Anim {
 		}
 		
 		time += 1;
-		
-		/*
-		anim.updateJoints(Std.int(time * 0.5), palette);
-		if( flag )
-			for( p in palette )
-				p.identity();
-		
-		var lspeed = 0.03;
-		var light = new h3d.Vector( -Math.cos(time * lspeed), -Math.sin(time * lspeed), 3 );
-		light.normalize();
-		camera.update();
-		obj.shader.light = light;
-		obj.shader.mproj = camera.m;
-		obj.shader.mpos = h3d.Matrix.I();
-		obj.shader.bones = palette;
-		*/
+		anim.update(time * 0.5);
 		
 		engine.render(scene);
 	}

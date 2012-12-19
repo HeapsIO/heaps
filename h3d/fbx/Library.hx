@@ -6,6 +6,7 @@ class DefaultMatrixes {
 	public var scale : Null<h3d.Point>;
 	public var rotate : Null<h3d.Point>;
 	public var preRot : Null<h3d.Point>;
+	public var removedJoint : Bool;
 	
 	public function new() {
 	}
@@ -153,25 +154,31 @@ class Library {
 			load(root);
 			defaultModelMatrixes = old;
 		}
-		var anim = null;
+		var animNode = null;
 		for( a in this.root.getAll("Objects.AnimationStack") )
 			if( animName == null || a.getName()	== animName ) {
 				if( animName == null )
 					animName = a.getName();
-				anim = getChild(a, "AnimationLayer");
+				animNode = getChild(a, "AnimationLayer");
 				break;
 			}
-		if( anim == null )
+		if( animNode == null )
 			throw "Animation not found " + animName;
-		var a = new h3d.prim.Animation(animName);
+		var anim = new h3d.prim.Animation(animName);
 		var curves = new IntHash();
-		for( cn in getChilds(anim, "AnimationCurveNode") ) {
+		var P0 = new h3d.Point();
+		var P1 = new h3d.Point(1, 1, 1);
+		var F = Math.PI / 180;
+		for( cn in getChilds(animNode, "AnimationCurveNode") ) {
 			var model = getParent(cn, "Model");
 			var c = curves.get(model.getId());
 			if( c == null ) {
 				var name = model.getName();
 				var def = defaultModelMatrixes.get(name);
 				if( def == null ) throw "Default Matrixes not found for " + name + " in " + animName;
+				// if it's an animation on a terminal unskinned joint, let's skip it
+				if( def.removedJoint )
+					continue;
 				c = { def : def, t : null, r : null, s : null, name : name };
 				curves.set(model.getId(), c);
 			}
@@ -183,23 +190,99 @@ class Library {
 				y : data[1].get("KeyValueFloat").getFloats(),
 				z : data[2].get("KeyValueFloat").getFloats(),
 			};
-			switch( cn.getName() ) {
+			var cname = cn.getName();
+			/* DOES NOT WORK VERY WELL : rotations easily break
+		
+			// optimize empty animations out
+			var E = 1e-10, M = 1.0;
+			var def = switch( cname ) {
+			case "T": if( c.def.trans == null ) P0 else c.def.trans;
+			case "R": M = F; if( c.def.rotate == null ) P1 else c.def.rotate;
+			case "S": if( c.def.scale == null ) P0 else c.def.scale;
+			default:
+				throw "Unknown curve " + cname;
+			}
+			var hasValue = false;
+			for( v in data.x )
+				if( v*M < def.x-E || v*M > def.x+E ) {
+					hasValue = true;
+					break;
+				}
+			if( !hasValue ) {
+				for( v in data.y )
+					if( v*M < def.y-E || v*M > def.y+E ) {
+						hasValue = true;
+						break;
+					}
+			}
+			if( !hasValue ) {
+				for( v in data.z )
+					if( v*M < def.z-E || v*M > def.z+E ) {
+						hasValue = true;
+						break;
+					}
+			}
+			// no meaningful value found
+			if( !hasValue ) {
+				trace("SKIP " + model.getName() + " " + cname);
+				continue;
+			}
+			*/
+			switch( cname ) {
 			case "T": c.t = data;
 			case "R": c.r = data;
 			case "S": c.s = data;
-			default:
-				throw "Unknown curve " + cn.getName();
+			default: throw "Unknown curve " + cname;
 			}
 		}
 		for( c in curves ) {
-			var frames = new Array();
+			// skip empty curves
+			if( c.t == null && c.r == null && c.s == null )
+				continue;
+			var frames = new flash.Vector();
 			var aFrames = if( c.t != null ) c.t.x.length else if( c.r != null ) c.r.x.length else c.s.x.length;
-			if( a.numFrames == 0 )
-				a.numFrames = aFrames;
-			else if( a.numFrames != aFrames )
-				throw "Invalid frame number for " + c.name + " : " + aFrames + " should be " + a.numFrames;
+			if( anim.numFrames == 0 )
+				anim.numFrames = aFrames;
+			else if( anim.numFrames != aFrames )
+				throw "Invalid frame number for " + c.name + " : " + aFrames + " should be " + anim.numFrames;
+			var ctx = c.t == null ? null : c.t.x;
+			var cty = c.t == null ? null : c.t.y;
+			var ctz = c.t == null ? null : c.t.z;
+			var crx = c.r == null ? null : c.r.x;
+			var cry = c.r == null ? null : c.r.y;
+			var crz = c.r == null ? null : c.r.z;
+			var csx = c.s == null ? null : c.s.x;
+			var csy = c.s == null ? null : c.s.y;
+			var csz = c.s == null ? null : c.s.z;
+			var def = c.def;
+			for( i in 0...anim.numFrames ) {
+				var m = new h3d.Matrix();
+				m.identity();
+				if( c.s == null ) {
+					if( def.scale != null )
+						m.scale(def.scale.x, def.scale.y, def.scale.z);
+				} else
+					m.scale(csx[i], csy[i], csz[i]);
+
+				if( c.r == null ) {
+					if( def.rotate != null )
+						m.rotate(def.rotate.x, def.rotate.y, def.rotate.z);
+				} else
+					m.rotate(crx[i] * F, cry[i] * F, crz[i] * F);
+					
+				if( def.preRot != null )
+					m.rotate(def.preRot.x, def.preRot.y, def.preRot.z);
+
+				if( c.t == null ) {
+					if( def.trans != null )
+						m.translate(def.trans.x, def.trans.y, def.trans.z);
+				} else
+					m.translate(ctx[i], cty[i], ctz[i]);
+				frames[i] = m;
+			}
+			anim.addCurve(c.name, frames);
 		}
-		return a;
+		return anim;
 	}
 
 	public function makeScene( ?textureLoader : String -> h3d.mat.Texture, ?bonesPerVertex = 3 ) : h3d.scene.Scene {
@@ -235,10 +318,9 @@ class Library {
 				o = new h3d.scene.Skin(null,null,scene);
 			case "LimbNode":
 				var j = new h3d.prim.Skin.Joint();
-				var m = getDefaultMatrixes(model);
-				if( m.preRot != null )
-					throw "Invalid Joint Transform";
+				getDefaultMatrixes(model); // store for later usage in animation
 				j.index = model.getId();
+				j.name = model.getName();
 				hjoints.set(j.index, j);
 				joints.push({ model : model, joint : j });
 				continue;
@@ -326,7 +408,8 @@ class Library {
 		var skin = null;
 		var geomTrans = null;
 		for( j in allJoints.copy() ) {
-			var subDef = getParent(ids.get(j.index), "Deformer", true);
+			var jModel = ids.get(j.index);
+			var subDef = getParent(jModel, "Deformer", true);
 			if( subDef == null ) {
 				// if we have skinned subs, we need to keep in joint hierarchy
 				if( j.subs.length > 0 )
@@ -337,6 +420,7 @@ class Library {
 				else
 					j.parent.subs.remove(j);
 				allJoints.remove(j);
+				defaultModelMatrixes.get(jModel.getName()).removedJoint = true;
 				continue;
 			}
 			// create skin

@@ -15,7 +15,12 @@ class Object {
 	public var scaleY(default, set) : Float;
 	public var scaleZ(default,set) : Float;
 
-	public var defaultTransform(default,set) : h3d.Matrix;
+	/**
+		This is an additional optional transformation that is performed before other local transformations.
+		It is used by the animation system.
+	**/
+	public var defaultTransform(default, set) : h3d.Matrix;
+	
 	var absPos : h3d.Matrix;
 	var qRot : h3d.Quat;
 	var posChanged : Bool;
@@ -109,7 +114,7 @@ class Object {
 			absPos._42 = y;
 			absPos._43 = z;
 			if( defaultTransform != null )
-				absPos.multiply3x4(absPos, defaultTransform);
+				absPos.multiply3x4(defaultTransform, absPos);
 			if( parent != null )
 				absPos.multiply3x4(absPos, parent.absPos);
 		}
