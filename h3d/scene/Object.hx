@@ -72,8 +72,12 @@ class Object {
 			o.parent = null;
 	}
 	
+	public inline function isMesh() {
+		return Std.is(this, Mesh);
+	}
+	
 	public function toMesh() : Mesh {
-		if( Std.is(this, Mesh) )
+		if( isMesh() )
 			return cast this;
 		throw (name == null ? "Object" : name) + " is not a Mesh";
 	}

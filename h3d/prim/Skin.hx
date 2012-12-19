@@ -2,13 +2,17 @@ package h3d.prim;
 
 class Joint {
 
-	public var bindId : Int;
+	public var index : Int;
+	public var bindIndex : Int;
 	public var transPos : h3d.Matrix; // inverse pose matrix
 	public var parent : Joint;
 	public var subs : Array<Joint>;
-
+	public var defTrans : h3d.Point;
+	public var defScale : h3d.Point;
+	public var defRotate : h3d.Point;
+	
 	public function new() {
-		bindId = -1;
+		bindIndex = -1;
 		subs = [];
 	}
 	
@@ -23,80 +27,6 @@ private class Influence {
 	}
 }
 
-class AnimCurve {
-	public var joint : Joint;
-	public var parent : AnimCurve;
-	public var frames : Array<h3d.Matrix>;
-	public var absolute : Bool; // tells if the frames are baked
-	public function new(j) {
-		this.joint = j;
-	}
-}
-
-class Animation {
-	
-	public var skin : Skin;
-	public var name : String;
-	public var curves : Array<AnimCurve>;
-	public var hcurves : IntHash<AnimCurve>;
-	public var frameCount : Int;
-	
-	public function new(sk, n) {
-		this.skin = sk;
-		this.name = n;
-		curves = [];
-		hcurves = new IntHash();
-	}
-	
-	public function computeAbsoluteFrames() {
-		for( c in curves )
-			if( !c.absolute )
-				computeAnimFrames(c);
-	}
-	
-	function computeAnimFrames( c : AnimCurve ) {
-		if( c.absolute )
-			return;
-		c.absolute = true;
-		if( c.parent == null ) {
-			for( i in 0...frameCount ) {
-				var m = c.frames[i];
-				if( m == null ) break;
-				m.multiply3x4(m, skin.preTransform);
-			}
-			return;
-		}
-		computeAnimFrames(c.parent);
-		for( i in 0...frameCount ) {
-			var m = c.frames[i];
-			m.multiply3x4(m, c.parent.frames[i]);
-		}
-	}
-	
-	public function updateJoints( frame : Int, palette : Array<h3d.Matrix> ) {
-		frame %= frameCount;
-		for( c in curves ) {
-			if( c.joint.bindId < 0 ) continue;
-			var m = palette[c.joint.bindId];
-			m.loadFrom(c.joint.transPos);
-			var mf = c.frames[frame];
-			if( mf != null ) m.multiply3x4(m, mf);
-		}
-	}
-	
-	public function allocPalette() {
-		var max = -1;
-		for( c in curves )
-			if( c.joint.bindId >= max )
-				max = c.joint.bindId;
-		var a = new Array();
-		for( i in 0...max + 1 )
-			a[i] = new h3d.Matrix();
-		return a;
-	}
-	
-}
-
 private typedef Table<T> = #if flash flash.Vector<T> #else Array<T> #end
 
 class Skin {
@@ -105,21 +35,22 @@ class Skin {
 	public var bonesPerVertex(default,null) : Int;
 	public var vertexJoints : Table<Int>;
 	public var vertexWeights : Table<Float>;
+	public var rootJoints : Array<Joint>;
+	public var allJoints : Array<Joint>;
 	public var boundJoints : Array<Joint>;
-	public var preTransform : h3d.Matrix;
+	public var primitive : Primitive;
 	
 	var envelop : Array<Array<Influence>>;
 	
 	public function new( vertexCount, bonesPerVertex ) {
 		this.vertexCount = vertexCount;
 		this.bonesPerVertex = bonesPerVertex;
-		preTransform = h3d.Matrix.I();
 		vertexJoints = new Table(#if flash vertexCount * bonesPerVertex #end);
 		vertexWeights = new Table(#if flash vertexCount * bonesPerVertex #end);
 		envelop = [];
 	}
 	
-	inline function addInfluence( vid : Int, j : Joint, w : Float ) {
+	public inline function addInfluence( vid : Int, j : Joint, w : Float ) {
 		var il = envelop[vid];
 		if( il == null )
 			il = envelop[vid] = [];
@@ -130,7 +61,7 @@ class Skin {
 		return i2.w > i1.w ? 1 : -1;
 	}
 	
-	function initWeights() {
+	public function initWeights() {
 		boundJoints = [];
 		var pos = 0;
 		for( i in 0...vertexCount ) {
@@ -149,11 +80,11 @@ class Skin {
 					vertexJoints[pos] = 0;
 					vertexWeights[pos] = 0;
 				} else {
-					if( i.j.bindId == -1 ) {
-						i.j.bindId = boundJoints.length;
+					if( i.j.bindIndex == -1 ) {
+						i.j.bindIndex = boundJoints.length;
 						boundJoints.push(i.j);
 					}
-					vertexJoints[pos] = i.j.bindId;
+					vertexJoints[pos] = i.j.bindIndex;
 					vertexWeights[pos] = i.w;
 				}
 				pos++;

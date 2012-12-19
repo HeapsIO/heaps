@@ -7,16 +7,23 @@ private class MeshShader extends hxsl.Shader {
 		var input : {
 			pos : Float3,
 			uv : Float2,
+			weights : Float3,
+			indexes : Int,
 		};
 		
 		var tuv : Float2;
 		
 		var uvScale : Float2;
 		var uvDelta : Float2;
+		var hasSkin : Bool;
+		var skinMatrixes : M34<20>;
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = pos.xyzw;
-			if( mpos != null ) tpos *= mpos;
+			if( hasSkin )
+				tpos.xyz = tpos * weights.x * skinMatrixes[indexes.x * (255 * 3)] + tpos * weights.y * skinMatrixes[indexes.y * (255 * 3)] + tpos * weights.z * skinMatrixes[indexes.z * (255 * 3)];
+			else if( mpos != null )
+				tpos *= mpos;
 			out = tpos * mproj;
 			var t = uv;
 			if( uvScale != null ) t *= uvScale;
@@ -55,6 +62,9 @@ class MeshMaterial extends Material {
 	public var colorAdd(get,set) : Null<h3d.Vector>;
 	public var colorMul(get,set) : Null<h3d.Vector>;
 	public var colorMatrix(get,set) : Null<h3d.Matrix>;
+	
+	public var hasSkin(get,set) : Bool;
+	public var skinMatrixes(get,set) : Array<h3d.Matrix>;
 	
 	public function new(texture) {
 		mshader = new MeshShader();
@@ -115,6 +125,22 @@ class MeshMaterial extends Material {
 
 	inline function set_colorMatrix(v) {
 		return mshader.colorMatrix = v;
+	}
+	
+	inline function get_hasSkin() {
+		return mshader.hasSkin;
+	}
+	
+	inline function set_hasSkin(v) {
+		return mshader.hasSkin = v;
+	}
+	
+	inline function get_skinMatrixes() {
+		return mshader.skinMatrixes;
+	}
+	
+	inline function set_skinMatrixes(v) {
+		return mshader.skinMatrixes = v;
 	}
 	
 }

@@ -28,6 +28,9 @@ class FBXModel extends MeshPrimitive {
 		var norms = geom.getNormals();
 		var tuvs = geom.getUVs()[0];
 		
+		var gt = geom.getGeomTranslate();
+		if( gt == null ) gt = new h3d.Point();
+		
 		var idx = new flash.Vector<UInt>();
 		var pbuf = new flash.Vector<Float>(), nbuf = (norms == null ? null : new flash.Vector<Float>()), sbuf = (skin == null ? null : new flash.Vector<Float>()), tbuf = (tuvs == null ? null : new flash.Vector<Float>());
 		var pout = 0, nout = 0, sout = 0, tout = 0;
@@ -48,9 +51,9 @@ class FBXModel extends MeshPrimitive {
 					var k = n + start;
 					var vidx = index[k];
 					
-					pbuf[pout++] = verts[vidx*3];
-					pbuf[pout++] = verts[vidx*3 + 1];
-					pbuf[pout++] = verts[vidx*3 + 2];
+					pbuf[pout++] = verts[vidx*3] + gt.x;
+					pbuf[pout++] = verts[vidx*3 + 1] + gt.y;
+					pbuf[pout++] = verts[vidx*3 + 2] + gt.z;
 
 					if( nbuf != null ) {
 						nbuf[nout++] = norms[k*3];

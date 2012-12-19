@@ -29,5 +29,13 @@ class Geometry {
 			uvs.push({ values : v.get("UV").getFloats(), index : v.get("UVIndex").getInts() });
 		return uvs;
 	}
+	
+	public function getGeomTranslate() {
+		for( p in lib.getParent(root, "Model").getAll("Properties70.P") )
+			if( p.props[0].toString() == "GeometricTranslation" )
+				return new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+		return null;
+	}
+
 
 }
