@@ -31,7 +31,7 @@ class Parser {
 		token = null;
 		return {
 			name : "Root",
-			props : [],
+			props : [PInt(0),PString("Root"),PString("Root")],
 			childs : parseNodes(),
 		};
 	}
