@@ -224,23 +224,17 @@ class Library {
 					throw o.obj.name + ":" + o.model.getType() + " should be Root";
 				var skin : h3d.scene.Skin = cast o.obj;
 				var skinData = createSkin(hskins, hgeom, rootJoints, bonesPerVertex);
-				skin.setSkinData(skinData);
-				// if we have a skinned object, remove it (only keep the skin)
+				// if we have a skinned object, remove it (only keep the skin) and set the material
 				for( o in objects ) {
 					if( !o.obj.isMesh() ) continue;
 					var m = o.obj.toMesh();
 					if( m.primitive != skinData.primitive || m == skin )
 						continue;
-					var absPos = h3d.Matrix.I();
-					var cur : h3d.scene.Object = m;
-					while( cur != null ) {
-						if( cur.defaultTransform != null )
-							absPos.multiply(absPos, cur.defaultTransform);
-						cur = cur.parent;
-					}
 					skin.material = m.material;
 					scene.removeChild(m);
 				}
+				// set the skin data
+				skin.setSkinData(skinData);
 			}
 		}
 		return scene;
