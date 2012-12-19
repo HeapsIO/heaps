@@ -15,6 +15,22 @@ class Skin extends Mesh {
 			setSkinData(s);
 	}
 	
+	override function getObjectByName( name : String ) {
+		var o = super.getObjectByName(name);
+		if( o != null ) return o;
+		// create a fake object targeted at the bone, not persistant but matrixes are shared
+		if( skinData != null )
+			for( j in skinData.allJoints )
+				if( j.name == name ) {
+					var o = new Object();
+					o.parent = this;
+					o.absPos = currentAbsPose[j.index];
+					o.defaultTransform = currentRelPose[j.index];
+					return o;
+				}
+		return null;
+	}
+	
 	public function setSkinData( s ) {
 		skinData = s;
 		primitive = s.primitive;
@@ -22,14 +38,7 @@ class Skin extends Mesh {
 		currentAbsPose = [];
 		currentPalette = [];
 		for( j in skinData.allJoints ) {
-			var m = h3d.Matrix.I();
-			if( j.defScale != null )
-				m.initScale(j.defScale.x, j.defScale.y, j.defScale.z);
-			if( j.defRotate != null )
-				m.rotate(j.defRotate.x, j.defRotate.y, j.defRotate.z);
-			if( j.defTrans != null )
-				m.translate(j.defTrans.x, j.defTrans.y, j.defTrans.z);
-			currentRelPose.push(m);
+			currentRelPose.push(h3d.Matrix.I());
 			currentAbsPose.push(h3d.Matrix.I());
 		}
 		for( i in 0...skinData.boundJoints.length )
@@ -48,7 +57,6 @@ class Skin extends Mesh {
 			if( bid >= 0 )
 				currentPalette[bid].multiply(j.transPos, m);
 		}
-		material.hasSkin = true;
 		material.skinMatrixes = currentPalette;
 		super.draw(ctx);
 		if( showJoints )

@@ -3,13 +3,11 @@ package h3d.prim;
 class Joint {
 
 	public var index : Int;
+	public var name : String;
 	public var bindIndex : Int;
 	public var transPos : h3d.Matrix; // inverse pose matrix
 	public var parent : Joint;
 	public var subs : Array<Joint>;
-	public var defTrans : h3d.Point;
-	public var defScale : h3d.Point;
-	public var defRotate : h3d.Point;
 	
 	public function new() {
 		bindIndex = -1;

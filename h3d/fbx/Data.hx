@@ -124,7 +124,7 @@ class FbxTools {
 		if( n.props.length != 3 )
 			throw n.name + " is not an object";
 		return switch( n.props[1] ) {
-		case PString(n): n;
+		case PString(n): n.split("::").pop();
 		default: throw n.name + " is not an object";
 		}
 	}

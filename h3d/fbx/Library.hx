@@ -1,12 +1,35 @@
 package h3d.fbx;
 using h3d.fbx.Data;
 
+class DefaultMatrixes {
+	public var trans : Null<h3d.Point>;
+	public var scale : Null<h3d.Point>;
+	public var rotate : Null<h3d.Point>;
+	public var preRot : Null<h3d.Point>;
+	
+	public function new() {
+	}
+	
+	public function toMatrix() {
+		var m = new h3d.Matrix();
+		m.identity();
+		if( scale != null ) m.scale(scale.x, scale.y, scale.z);
+		if( rotate != null ) m.rotate(rotate.x, rotate.y, rotate.z);
+		if( preRot != null ) m.rotate(preRot.x, preRot.y, preRot.z);
+		if( trans != null ) m.translate(trans.x,trans.y,trans.z);
+		return m;
+	}
+	
+}
+
 class Library {
 
 	var root : FbxNode;
 	var ids : IntHash<FbxNode>;
 	var connect : IntHash<Array<Int>>;
 	var invConnect : IntHash<Array<Int>>;
+	
+	var defaultModelMatrixes : Hash<DefaultMatrixes>;
 	
 	public function new() {
 		root = { name : "Root", props : [], childs : [] };
@@ -17,6 +40,7 @@ class Library {
 		ids = new IntHash();
 		connect = new IntHash();
 		invConnect = new IntHash();
+		defaultModelMatrixes = new Hash();
 	}
 	
 	public function loadTextFile( data : String ) {
@@ -122,6 +146,61 @@ class Library {
 	public function getRoot() {
 		return root;
 	}
+	
+	public function loadAnimation( ?animName : String, ?root : FbxNode ) {
+		if( root != null ) {
+			var old = defaultModelMatrixes;
+			load(root);
+			defaultModelMatrixes = old;
+		}
+		var anim = null;
+		for( a in this.root.getAll("Objects.AnimationStack") )
+			if( animName == null || a.getName()	== animName ) {
+				if( animName == null )
+					animName = a.getName();
+				anim = getChild(a, "AnimationLayer");
+				break;
+			}
+		if( anim == null )
+			throw "Animation not found " + animName;
+		var a = new h3d.prim.Animation(animName);
+		var curves = new IntHash();
+		for( cn in getChilds(anim, "AnimationCurveNode") ) {
+			var model = getParent(cn, "Model");
+			var c = curves.get(model.getId());
+			if( c == null ) {
+				var name = model.getName();
+				var def = defaultModelMatrixes.get(name);
+				if( def == null ) throw "Default Matrixes not found for " + name + " in " + animName;
+				c = { def : def, t : null, r : null, s : null, name : name };
+				curves.set(model.getId(), c);
+			}
+			var data = getChilds(cn, "AnimationCurve");
+			if( data.length != 3 )
+				throw "assert";
+			var data = {
+				x : data[0].get("KeyValueFloat").getFloats(),
+				y : data[1].get("KeyValueFloat").getFloats(),
+				z : data[2].get("KeyValueFloat").getFloats(),
+			};
+			switch( cn.getName() ) {
+			case "T": c.t = data;
+			case "R": c.r = data;
+			case "S": c.s = data;
+			default:
+				throw "Unknown curve " + cn.getName();
+			}
+		}
+		for( c in curves ) {
+			var frames = new Array();
+			var aFrames = if( c.t != null ) c.t.x.length else if( c.r != null ) c.r.x.length else c.s.x.length;
+			if( a.numFrames == 0 )
+				a.numFrames = aFrames;
+			else if( a.numFrames != aFrames )
+				throw "Invalid frame number for " + c.name + " : " + aFrames + " should be " + a.numFrames;
+		}
+		return a;
+	}
 
 	public function makeScene( ?textureLoader : String -> h3d.mat.Texture, ?bonesPerVertex = 3 ) : h3d.scene.Scene {
 		var scene = new h3d.scene.Scene();
@@ -156,13 +235,7 @@ class Library {
 				o = new h3d.scene.Skin(null,null,scene);
 			case "LimbNode":
 				var j = new h3d.prim.Skin.Joint();
-				var m = getMatrixes(model);
-				if( m.t != null )
-					j.defTrans = m.t;
-				if( m.r != null )
-					j.defRotate = m.r;
-				if( m.s != null )
-					j.defScale = m.s;
+				var m = getDefaultMatrixes(model);
 				if( m.preRot != null )
 					throw "Invalid Joint Transform";
 				j.index = model.getId();
@@ -186,10 +259,10 @@ class Library {
 			case type:
 				throw "Unknown model type " + type+" for "+model.getName();
 			}
-			o.name = model.getName().split("::")[1];
-			var m = getMatrixes(model);
-			if( m.t != null || m.r != null || m.s != null || m.preRot != null )
-				o.defaultTransform = makeMatrix(m.t, m.r, m.s, m.preRot);
+			o.name = model.getName();
+			var m = getDefaultMatrixes(model);
+			if( m.trans != null || m.rotate != null || m.scale != null || m.preRot != null )
+				o.defaultTransform = m.toMatrix();
 			hobjects.set(model.getId(), o);
 			objects.push( { model : model, obj : o } );
 		}
@@ -231,7 +304,7 @@ class Library {
 					if( m.primitive != skinData.primitive || m == skin )
 						continue;
 					skin.material = m.material;
-					scene.removeChild(m);
+					m.remove();
 				}
 				// set the skin data
 				skin.setSkinData(skinData);
@@ -301,21 +374,21 @@ class Library {
 		return skin;
 	}
 	
-	function getMatrixes( model : FbxNode ) {
-		var preRot = null, trans = null, rot = null, scale = null, geomTrans = null;
+	function getDefaultMatrixes( model : FbxNode ) {
+		var d = new DefaultMatrixes();
 		var F = Math.PI / 180;
 		for( p in model.getAll("Properties70.P") )
 			switch( p.props[0].toString() ) {
 			case "GeometricTranslation":
 				// handle in Geometry directly
 			case "PreRotation":
-				preRot = new h3d.Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
+				d.preRot = new h3d.Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
 			case "Lcl Rotation":
-				rot = new h3d.Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
+				d.rotate = new h3d.Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
 			case "Lcl Translation":
-				trans = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+				d.trans = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
 			case "Lcl Scaling":
-				scale = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+				d.scale = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
 			case "RotationActive", "InheritType", "ScalingMin", "MaxHandle", "DefaultAttributeIndex", "Show", "UDP3DSMAX":
 			case "RotationMinX","RotationMinY","RotationMinZ","RotationMaxX","RotationMaxY","RotationMaxZ":
 			default:
@@ -323,31 +396,8 @@ class Library {
 				trace(p.props[0].toString());
 				#end
 			}
-		return { t : trans, r : rot, s : scale, preRot : preRot };
-	}
-	
-	function getMatrix(model) {
-		var m = getMatrixes(model);
-		return makeMatrix(m.t, m.r, m.s, m.preRot);
-	}
-
-	function makeMatrix( trans : h3d.Point, rot : h3d.Point, scale : h3d.Point, ?preRot : h3d.Point ) {
-		var m = new h3d.Matrix();
-		m.identity();
-		
-		if( scale != null )
-			m.scale(scale.x, scale.y, scale.z);
-			
-		if( rot != null )
-			m.rotate(rot.x, rot.y, rot.z);
-
-		if( preRot != null )
-			m.rotate(preRot.x, preRot.y, preRot.z);
-			
-		if( trans != null )
-			m.translate(trans.x,trans.y,trans.z);
-		
-		return m;
+		defaultModelMatrixes.set(model.getName(), d);
+		return d;
 	}
 	
 }

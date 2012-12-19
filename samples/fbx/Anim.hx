@@ -56,23 +56,22 @@ class Anim {
 
 	var engine : h3d.Engine;
 	var scene : h3d.scene.Scene;
-	var obj : h3d.Drawable<LightShader>;
-	var model : h3d.prim.FBXModel;
-	var anim : h3d.prim.Skin.Animation;
+//	var obj : h3d.Drawable<LightShader>;
+//	var model : h3d.prim.FBXModel;
+//	var anim : h3d.prim.Skin.Animation;
+//	var palette : Array<h3d.Matrix>;
 	var time : Float;
-	var palette : Array<h3d.Matrix>;
 	
 	var flag : Bool;
 	var view : Int;
 
 	function new() {
 		time = 0;
-		view = 3;
+		view = 4;
 		engine = new h3d.Engine();
 		engine.backgroundColor = 0xFF808080;
 		engine.onReady = onReady;
 		engine.init();
-		scene = new h3d.scene.Scene();
 	}
 	
 	function onReady() {
@@ -87,6 +86,7 @@ class Anim {
 				flag = !flag;
 		});
 
+		/*
 		var shader = new LightShader();
 		var name = "";
 		
@@ -106,9 +106,34 @@ class Anim {
 		obj = new h3d.Drawable(model, shader);
 		obj.material.culling = None;
 		obj.material.blend(SrcAlpha, OneMinusSrcAlpha);
-		obj.shader.tex = engine.mem.makeTexture(new Tex(0, 0));
+		obj.shader.tex = ;
 	
 		scene.addPass(obj);
+		*/
+		
+
+		var tex = engine.mem.makeTexture(new Tex(0, 0));
+		var file = new Model();
+		var lib = new h3d.fbx.Library();
+		lib.loadTextFile(file.readUTFBytes(file.length));
+		
+		scene = lib.makeScene(function(_) return tex);
+		scene.camera.rightHanded = true;
+
+		lib.loadAnimation();
+		
+		var o = scene.getObjectByName("Bip001");
+		if( o != null ) {
+			var mat = o.toMesh().material;
+			mat.killAlpha = true;
+			mat.culling = None;
+		}
+		/*
+		var s : h3d.scene.Skin = cast o;
+		trace(s);
+		trace(s.debugSkin.rootJoints[0].transPos);
+		trace(untyped s.skinData.rootJoints[0].transPos);
+		*/
 		scene.addPass(new Axis());
 	}
 	
@@ -120,22 +145,27 @@ class Anim {
 		var camera = scene.camera;
 		switch( view ) {
 		case 0:
-			camera.pos.set(0, height, dist);
-			camera.up.set(0, -1, 0);
-			camera.target.set(0, height, 0);
-		case 1:
-			camera.pos.set(0, dist, 0);
+			camera.pos.set(0, 0, dist);
 			camera.up.set(0, 1, 0);
 			camera.target.set(0, 0, 0);
+		case 1:
+			camera.pos.set(0, dist, height);
+			camera.up.set(0, 0, 1);
+			camera.target.set(0, 0, height);
 		case 2:
 			var K = Math.sqrt(2);
-			camera.pos.set(dist, height, 0);
-			camera.up.set(1, 0, 0);
-			camera.target.set(0, height, 0);
+			camera.pos.set(dist, 0, height);
+			camera.up.set(0, 0, 1);
+			camera.target.set(0, 0, height);
 		case 3:
+			var K = Math.sqrt(2);
+			camera.pos.set(dist, dist, height);
+			camera.up.set(0, 0, 1);
+			camera.target.set(0, 0, height);
+		case 4:
 			var speed = 0.02;
 			camera.pos.set(Math.cos(time * speed) * dist, Math.sin(time * speed) * dist, height);
-			camera.up.set(0, 0, -1);
+			camera.up.set(0, 0, 1);
 			camera.target.set(0, 0, height);
 		default:
 			view = 0;
@@ -143,6 +173,7 @@ class Anim {
 		
 		time += 1;
 		
+		/*
 		anim.updateJoints(Std.int(time * 0.5), palette);
 		if( flag )
 			for( p in palette )
@@ -156,6 +187,7 @@ class Anim {
 		obj.shader.mproj = camera.m;
 		obj.shader.mpos = h3d.Matrix.I();
 		obj.shader.bones = palette;
+		*/
 		
 		engine.render(scene);
 	}
