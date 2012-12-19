@@ -106,12 +106,33 @@ class Matrix {
 	}
 	
 	public function initRotate( x : Float, y : Float, z : Float ) {
-		initRotateX(x);
-		var tmp = tmp;
-		tmp.initRotateY(y);
-		multiply3x4(this, tmp);
-		tmp.initRotateZ(z);
-		multiply3x4(this, tmp);
+		#if flash
+		var Math = Math;
+		#end
+		var cx = Math.cos(x);
+		var sx = Math.sin(x);
+		var cy = Math.cos(y);
+		var sy = Math.sin(y);
+		var cz = Math.cos(z);
+		var sz = Math.sin(z);
+		var cxsy = cx * sy;
+		var sxsy = sx * sy;
+		_11 = cy * cz;
+		_12 = cy * sz;
+		_13 = -sy;
+		_14 = 0;
+		_21 = sxsy * cz - cx * sz;
+		_22 = sxsy * sz + cx * cz;
+		_23 = sx * cy;
+		_24 = 0;
+		_31 = cxsy * cz + sx * sz;
+		_32 = cxsy * sz - sx * cz;
+		_33 = cx * cy;
+		_34 = 0;
+		_41 = 0;
+		_42 = 0;
+		_43 = 0;
+		_44 = 1;
 	}
 	
 	public function translate( x = 0., y = 0., z = 0. ) {
@@ -221,8 +242,8 @@ class Matrix {
 	}
 
 	public function multiply( a : Matrix, b : Matrix ) {
-		var m11 = a._11; var m12 = a._12; var m13 = a._13; var m14 = a._14;
-		var m21 = a._21; var m22 = a._22; var m23 = a._23; var a24 = a._24;
+		var a11 = a._11; var a12 = a._12; var a13 = a._13; var a14 = a._14;
+		var a21 = a._21; var a22 = a._22; var a23 = a._23; var a24 = a._24;
 		var a31 = a._31; var a32 = a._32; var a33 = a._33; var a34 = a._34;
 		var a41 = a._41; var a42 = a._42; var a43 = a._43; var a44 = a._44;
 		var b11 = b._11; var b12 = b._12; var b13 = b._13; var b14 = b._14;
@@ -230,15 +251,15 @@ class Matrix {
 		var b31 = b._31; var b32 = b._32; var b33 = b._33; var b34 = b._34;
 		var b41 = b._41; var b42 = b._42; var b43 = b._43; var b44 = b._44;
 
-		_11 = m11 * b11 + m12 * b21 + m13 * b31 + m14 * b41;
-		_12 = m11 * b12 + m12 * b22 + m13 * b32 + m14 * b42;
-		_13 = m11 * b13 + m12 * b23 + m13 * b33 + m14 * b43;
-		_14 = m11 * b14 + m12 * b24 + m13 * b34 + m14 * b44;
+		_11 = a11 * b11 + a12 * b21 + a13 * b31 + a14 * b41;
+		_12 = a11 * b12 + a12 * b22 + a13 * b32 + a14 * b42;
+		_13 = a11 * b13 + a12 * b23 + a13 * b33 + a14 * b43;
+		_14 = a11 * b14 + a12 * b24 + a13 * b34 + a14 * b44;
 
-		_21 = m21 * b11 + m22 * b21 + m23 * b31 + a24 * b41;
-		_22 = m21 * b12 + m22 * b22 + m23 * b32 + a24 * b42;
-		_23 = m21 * b13 + m22 * b23 + m23 * b33 + a24 * b43;
-		_24 = m21 * b14 + m22 * b24 + m23 * b34 + a24 * b44;
+		_21 = a21 * b11 + a22 * b21 + a23 * b31 + a24 * b41;
+		_22 = a21 * b12 + a22 * b22 + a23 * b32 + a24 * b42;
+		_23 = a21 * b13 + a22 * b23 + a23 * b33 + a24 * b43;
+		_24 = a21 * b14 + a22 * b24 + a23 * b34 + a24 * b44;
 
 		_31 = a31 * b11 + a32 * b21 + a33 * b31 + a34 * b41;
 		_32 = a31 * b12 + a32 * b22 + a33 * b32 + a34 * b42;
