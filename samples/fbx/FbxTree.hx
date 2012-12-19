@@ -9,11 +9,7 @@ class FbxTree {
 			return;
 		}
 		var file = sys.io.File.getContent(path);
-		var root : FbxNode = {
-			name : "root",
-			props : [PInt(0),PString("ROOT"),PString("")],
-			childs : h3d.fbx.Parser.parse(file),
-		};
+		var root : FbxNode =  h3d.fbx.Parser.parse(file);
 		
 		var parents = new IntHash();
 		var childs = new IntHash();
