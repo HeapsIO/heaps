@@ -1,14 +1,5 @@
 typedef K = flash.ui.Keyboard;
 
-@:bitmap("res/texture.gif")
-class Tex extends flash.display.BitmapData {
-}
-
-@:file("res/model.fbx")
-class Model extends flash.utils.ByteArray {
-	
-}
-
 class Axis implements h3d.IDrawable {
 
 	public function new() {
@@ -30,12 +21,13 @@ class Anim {
 	var time : Float;
 	var anim : h3d.prim.Animation;
 	
-	var flag : Bool;
+	var pause : Bool;
 	var view : Int;
-
+	
 	function new() {
 		time = 0;
 		view = 4;
+
 		engine = new h3d.Engine();
 		engine.backgroundColor = 0xFF808080;
 		engine.onReady = onReady;
@@ -51,25 +43,49 @@ class Anim {
 			else if( c == K.NUMPAD_SUBTRACT )
 				view--;
 			else if( c == K.SPACE )
-				flag = !flag;
+				pause = !pause;
+			else if( c == K.F1 )
+				askLoad();
 		});
-
-		var tex = engine.mem.makeTexture(new Tex(0, 0));
-		var file = new Model();
-		var lib = new h3d.fbx.Library();
-		lib.loadTextFile(file.readUTFBytes(file.length));
-		
-		scene = lib.makeScene(function(_) {
-			var m = new h3d.mat.MeshMaterial(tex);
-			m.killAlpha = true;
-			m.culling = None;
-			return m;
-		});
-		scene.camera.rightHanded = true;
-
-		anim = lib.loadAnimation().createInstance(scene);
-		
+		scene = new h3d.scene.Scene();
 		scene.addPass(new Axis());
+		askLoad();
+	}
+	
+	function textureLoader( textureName : String ) {
+		var t = engine.mem.allocTexture(1024, 1024);
+		var bmp = new flash.display.BitmapData(1024, 1024, true, 0xFFFF0000);
+		var mat = new h3d.mat.MeshMaterial(t);
+		t.upload(bmp);
+		var loader = new flash.display.Loader();
+		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
+			mat.culling = None;
+		});
+		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
+			var c = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;
+			bmp.fillRect(bmp.rect, 0);
+			bmp.copyPixels(c, c.rect, new flash.geom.Point(0, 0), c, new flash.geom.Point(0, 0), true);
+			mat.uvScale = new h3d.Vector(c.width / bmp.width, c.height / bmp.height);
+			t.upload(bmp);
+			mat.culling = None;
+		});
+		loader.load(new flash.net.URLRequest(textureName));
+		mat.culling = Both;
+		mat.killAlpha = true;
+		return mat;
+	}
+	
+	function askLoad() {
+		var f = new flash.net.FileReference();
+		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
+			var fbx = new h3d.fbx.Library();
+			fbx.loadTextFile(f.data.readUTFBytes(f.data.length));
+			scene = fbx.makeScene(textureLoader);
+			scene.playAnimation(fbx.loadAnimation());
+			scene.addPass(new Axis());
+		});
+		f.addEventListener(flash.events.Event.SELECT, function(_) f.load());
+		f.browse([new flash.net.FileFilter("FBX File", "*.fbx")]);
 	}
 	
 	function onUpdate() {
@@ -105,10 +121,8 @@ class Anim {
 		default:
 			view = 0;
 		}
-		
-		time += 1;
-		anim.update(time);
-		
+		if( !pause )
+			time++;
 		engine.render(scene);
 	}
 	
