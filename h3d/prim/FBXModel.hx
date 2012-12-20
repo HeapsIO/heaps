@@ -6,7 +6,8 @@ class FBXModel extends MeshPrimitive {
 
 	public var geom(default, null) : h3d.fbx.Geometry;
 	public var skin : Skin;
-	
+	var bounds : Bounds;
+
 	public function new(g) {
 		this.geom = g;
 	}
@@ -19,6 +20,33 @@ class FBXModel extends MeshPrimitive {
 	
 	public function getVerticesCount() {
 		return Std.int(geom.getVertices().length / 3);
+	}
+	
+	override function getBounds() {
+		if( bounds != null )
+			return bounds;
+		bounds = new Bounds();
+		var verts = geom.getVertices();
+		var gt = geom.getGeomTranslate();
+		if( gt == null ) gt = new h3d.Point();
+		if( verts.length > 0 ) {
+			bounds.xMin = bounds.xMax = verts[0] + gt.x;
+			bounds.yMin = bounds.yMax = verts[1] + gt.y;
+			bounds.zMin = bounds.zMax = verts[2] + gt.z;
+		}
+		var pos = 3;
+		for( i in 1...Std.int(verts.length / 3) ) {
+			var x = verts[pos++] + gt.x;
+			var y = verts[pos++] + gt.y;
+			var z = verts[pos++] + gt.z;
+			if( x > bounds.xMax ) bounds.xMax = x;
+			if( x < bounds.xMin ) bounds.xMin = x;
+			if( y > bounds.yMax ) bounds.yMax = y;
+			if( y < bounds.yMin ) bounds.yMin = y;
+			if( z > bounds.zMax ) bounds.zMax = z;
+			if( z < bounds.zMin ) bounds.zMin = z;
+		}
+		return bounds;
 	}
 	
 	override function alloc( engine : h3d.Engine ) {
@@ -51,9 +79,12 @@ class FBXModel extends MeshPrimitive {
 					var k = n + start;
 					var vidx = index[k];
 					
-					pbuf[pout++] = verts[vidx*3] + gt.x;
-					pbuf[pout++] = verts[vidx*3 + 1] + gt.y;
-					pbuf[pout++] = verts[vidx*3 + 2] + gt.z;
+					var x = verts[vidx * 3] + gt.x;
+					var y = verts[vidx * 3 + 1] + gt.y;
+					var z = verts[vidx * 3 + 2] + gt.z;
+					pbuf[pout++] = x;
+					pbuf[pout++] = y;
+					pbuf[pout++] = z;
 
 					if( nbuf != null ) {
 						nbuf[nout++] = norms[k*3];

@@ -17,6 +17,11 @@ class Primitive {
 		return count;
 	}
 	
+	public function getBounds() : Bounds {
+		throw "not implemented";
+		return null;
+	}
+	
 	public function alloc( engine : h3d.Engine ) {
 		throw "not implemented";
 	}
