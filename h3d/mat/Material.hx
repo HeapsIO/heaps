@@ -30,12 +30,11 @@ class Material {
 	
 	public function clone( ?m : Material ) {
 		if( m == null ) m = new Material(null);
-		m.shader = shader;
 		m.culling = culling;
 		m.depthWrite = depthWrite;
 		m.depthTest = depthTest;
 		m.blendSrc = blendSrc;
-		m.blendSrc = blendDst;
+		m.blendDst = blendDst;
 		m.colorMask = colorMask;
 		return m;
 	}

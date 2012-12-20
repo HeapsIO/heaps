@@ -75,6 +75,7 @@ class MeshMaterial extends Material {
 	
 	override function clone( ?m : Material ) {
 		var m = m == null ? new MeshMaterial(texture) : cast m;
+		super.clone(m);
 		m.useMatrixPos = useMatrixPos;
 		m.uvScale = uvScale;
 		m.uvDelta = uvDelta;
