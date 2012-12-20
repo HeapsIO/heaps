@@ -20,6 +20,7 @@ class Object {
 		It is used by the animation system.
 	**/
 	public var defaultTransform(default, set) : h3d.Matrix;
+	public var currentAnimation(default, null) : h3d.prim.Animation;
 	
 	var absPos : h3d.Matrix;
 	var qRot : h3d.Quat;
@@ -36,11 +37,24 @@ class Object {
 			parent.addChild(this);
 	}
 	
+	public function playAnimation( a : h3d.prim.Animation, startTime = 0., speed = 1. ) {
+		currentAnimation = a.createInstance(this);
+		currentAnimation.time = startTime;
+		currentAnimation.speed = speed;
+	}
+	
 	public function getObjectsCount() {
 		var k = 0;
 		for( c in childs )
 			k += c.getObjectsCount() + 1;
 		return k;
+	}
+	
+	public function getBounds( ?b : h3d.prim.Bounds ) {
+		if( b == null ) b = new h3d.prim.Bounds();
+		for( c in childs )
+			c.getBounds(b);
+		return b;
 	}
 	
 	public function getObjectByName( name : String ) {
@@ -61,6 +75,9 @@ class Object {
 		o.scaleX = scaleX;
 		o.scaleY = scaleY;
 		o.scaleZ = scaleZ;
+		o.name = name;
+		if( defaultTransform != null )
+			o.defaultTransform = defaultTransform.copy();
 		for( c in childs ) {
 			var c = c.clone();
 			c.parent = o;
@@ -137,6 +154,10 @@ class Object {
 	}
 	
 	function renderContext( ctx : RenderContext ) {
+		if( currentAnimation != null ) {
+			currentAnimation.time += ctx.elapsedTime * currentAnimation.speed;
+			currentAnimation.update();
+		}
 		updatePos();
 		draw(ctx);
 		for( c in childs )

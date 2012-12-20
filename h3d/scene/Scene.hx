@@ -4,10 +4,12 @@ class Scene extends Layers, implements h3d.IDrawable {
 
 	public var camera : h3d.Camera;
 	var extraPasses : Array<h3d.IDrawable>;
+	var ctx : RenderContext;
 	
 	public function new() {
 		super(null);
 		camera = new h3d.Camera();
+		ctx = new RenderContext();
 		extraPasses = [];
 	}
 	
@@ -26,18 +28,25 @@ class Scene extends Layers, implements h3d.IDrawable {
 		extraPasses.remove(p);
 	}
 	
-	// make it public
+	public function setElapsedTime( elapsedTime ) {
+		ctx.elapsedTime = elapsedTime;
+	}
+
 	public function render( engine : h3d.Engine ) {
 		camera.ratio = engine.width / engine.height;
 		camera.update();
 		var oldProj = engine.curProjMatrix;
 		engine.curProjMatrix = camera.m;
-		var ctx = new RenderContext(engine, camera);
+		ctx.camera = camera;
+		ctx.engine = engine;
+		ctx.time += ctx.elapsedTime;
 		renderContext(ctx);
 		ctx.finalize();
 		for( p in extraPasses )
 			p.render(engine);
 		engine.curProjMatrix = oldProj;
+		ctx.camera = null;
+		ctx.engine = null;
 	}
 	
 }

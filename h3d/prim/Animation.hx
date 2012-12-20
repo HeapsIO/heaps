@@ -19,6 +19,10 @@ class Animation {
 	
 	public var name : String;
 	public var numFrames : Int;
+	
+	public var time : Float;
+	public var speed : Float;
+	
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
 	var curFrame : Int;
@@ -27,6 +31,8 @@ class Animation {
 		this.name = name;
 		this.objects = [];
 		curFrame = -1;
+		time = 0.;
+		speed = 1.;
 	}
 	
 	public function addCurve( objName, frames ) {
@@ -53,8 +59,10 @@ class Animation {
 	}
 	
 	@:access(h3d.scene.Skin)
-	public function update( frame : Float ) {
-		var iframe = Std.int(frame) % numFrames;
+	public function update() {
+		if( !isInstance )
+			throw "You must instanciate this animation first";
+		var iframe = Std.int(time) % numFrames;
 		if( iframe < 0 ) iframe += numFrames;
 		if( iframe == curFrame )
 			return;

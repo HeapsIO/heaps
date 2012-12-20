@@ -3,11 +3,13 @@ package h3d.scene;
 class RenderContext {
 	public var engine : h3d.Engine;
 	public var camera : h3d.Camera;
+	public var time : Float;
+	public var elapsedTime : Float;
 	var passes : Array<RenderContext -> Void>;
 	
-	public function new(e, c) {
-		this.engine = e;
-		this.camera = c;
+	public function new() {
+		time = 0.;
+		elapsedTime = 1.;
 	}
 	
 	public function addPass(p) {
