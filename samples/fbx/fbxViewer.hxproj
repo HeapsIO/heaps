@@ -4,8 +4,8 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="anim.swf" />
-    <movie fps="60" />
+    <movie path="fbxViewer.swf" />
+    <movie fps="30" />
     <movie width="800" />
     <movie height="600" />
     <movie version="11" />
@@ -21,7 +21,7 @@
   <build>
     <option directives="" />
     <option flashStrict="True" />
-    <option mainClass="Anim" />
+    <option mainClass="Viewer" />
     <option enabledebug="False" />
     <option additional="-lib hxsl&#xA;-D h3d" />
   </build>

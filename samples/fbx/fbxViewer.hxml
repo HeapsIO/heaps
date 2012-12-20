@@ -1,8 +1,8 @@
 -cp ../..
--swf anim.swf
--swf-header 800:600:60:000000
+-swf fbxViewer.swf
+-swf-header 800:600:30:000000
 --flash-strict
 -swf-version 11.3
--main Anim
+-main Viewer
 -lib hxsl
 -D h3d

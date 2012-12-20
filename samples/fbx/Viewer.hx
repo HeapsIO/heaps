@@ -13,21 +13,29 @@ class Axis implements h3d.IDrawable {
 	
 }
 
-class Anim {
+class Viewer {
 
 	var engine : h3d.Engine;
 	var scene : h3d.scene.Scene;
 
 	var time : Float;
 	var anim : h3d.prim.Animation;
+	var tf : flash.text.TextField;
 	
 	var pause : Bool;
 	var view : Int;
 	
+	var curFbx : h3d.fbx.Library;
+	var curFbxFile : String;
+	
 	function new() {
 		time = 0;
 		view = 4;
-
+		tf = new flash.text.TextField();
+		tf.x = tf.y = 5;
+		tf.textColor = 0xFFFFFF;
+		tf.filters = [new flash.filters.GlowFilter(0, 1, 2, 2, 20)];
+		flash.Lib.current.addChild(tf);
 		engine = new h3d.Engine();
 		engine.backgroundColor = 0xFF808080;
 		engine.onReady = onReady;
@@ -46,6 +54,13 @@ class Anim {
 				pause = !pause;
 			else if( c == K.F1 )
 				askLoad();
+			else if( c == K.S && k.ctrlKey ) {
+				if( curFbx == null ) return;
+				var data = FbxTree.toString(curFbx.getRoot());
+				var f = new flash.net.FileReference();
+				f.save(data, curFbxFile.substr(0, -4) + "_tree.txt");
+			}
+				
 		});
 		scene = new h3d.scene.Scene();
 		scene.addPass(new Axis());
@@ -78,10 +93,11 @@ class Anim {
 	function askLoad() {
 		var f = new flash.net.FileReference();
 		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			var fbx = new h3d.fbx.Library();
-			fbx.loadTextFile(f.data.readUTFBytes(f.data.length));
-			scene = fbx.makeScene(textureLoader);
-			scene.playAnimation(fbx.loadAnimation());
+			curFbxFile = f.name;
+			curFbx = new h3d.fbx.Library();
+			curFbx.loadTextFile(f.data.readUTFBytes(f.data.length));
+			scene = curFbx.makeScene(textureLoader);
+			scene.playAnimation(curFbx.loadAnimation());
 			scene.addPass(new Axis());
 		});
 		f.addEventListener(flash.events.Event.SELECT, function(_) f.load());
@@ -123,11 +139,13 @@ class Anim {
 		}
 		if( !pause )
 			time++;
+		tf.text = ""+engine.fps;
+		camera.rightHanded = true;
 		engine.render(scene);
 	}
 	
 	static function main() {
-		new Anim();
+		new Viewer();
 	}
 
 }

@@ -2,6 +2,7 @@ using h3d.fbx.Data;
 
 class FbxTree {
 
+	#if neko
 	public static function main() {
 		var path = Sys.args()[0];
 		if( path == null ) {
@@ -10,6 +11,12 @@ class FbxTree {
 		}
 		var file = sys.io.File.getContent(path);
 		var root : FbxNode =  h3d.fbx.Parser.parse(file);
+		var str = toString(root);
+	}
+	#end
+	
+	public static function toString( root : FbxNode ) {
+		var buf = new StringBuf();
 		
 		var parents = new IntHash();
 		var childs = new IntHash();
@@ -66,7 +73,7 @@ class FbxTree {
 		function genRec( o : FbxNode, tabs : String ) {
 			var id = o.props[0].toInt();
 			var m = marked.get(id);
-			Sys.println(tabs + id + " " + o.props[1].toString() + "(" + o.props[2].toString() + ")" + (m?" [REF]":""));
+			buf.add(tabs + id + " " + o.props[1].toString() + "(" + o.props[2].toString() + ")" + (m?" [REF]":"")+"\n");
 			if( m ) return;
 			tabs += "\t";
 			marked.set(id, true);
@@ -84,6 +91,8 @@ class FbxTree {
 		}
 		for( r in rootObjects )
 			genRec(r, "");
+			
+		return buf.toString();
 	}
 	
 }
