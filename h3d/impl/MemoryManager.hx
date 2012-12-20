@@ -193,7 +193,6 @@ class MemoryManager {
 		if( bmp != null ) {
 			t = allocTexture(bmp.width, bmp.height);
 			t.upload(bmp);
-			bmp.dispose();
 		} else {
 			t = allocTexture(mbmp.width, mbmp.height);
 			t.uploadBytes(mbmp.bytes);
