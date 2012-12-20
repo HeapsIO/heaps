@@ -148,7 +148,11 @@ class Library {
 		return root;
 	}
 	
-	public function loadAnimation( ?animName : String, ?root : FbxNode ) {
+	public function loadAnimation( ?animName : String, ?root : FbxNode, ?lib : Library ) {
+		if( lib != null ) {
+			lib.defaultModelMatrixes = defaultModelMatrixes;
+			return lib.loadAnimation(animName);
+		}
 		if( root != null ) {
 			var l = new Library();
 			l.load(root);
@@ -176,7 +180,12 @@ class Library {
 			if( c == null ) {
 				var name = model.getName();
 				var def = defaultModelMatrixes.get(name);
-				if( def == null ) throw "Default Matrixes not found for " + name + " in " + animName;
+				if( def == null ) {
+					// if it's an empty model with no sub nodes, let's ignore it (ex : Camera)
+					if( model.getType() == "Null" && getChilds(model, "Model").length == 0 )
+						continue;
+					throw "Default Matrixes not found for " + name + " in " + animName;
+				}
 				// if it's an animation on a terminal unskinned joint, let's skip it
 				if( def.removedJoint )
 					continue;
@@ -308,10 +317,17 @@ class Library {
 		for( model in root.getAll("Objects.Model") ) {
 			var o : h3d.scene.Object;
 			switch( model.getType() ) {
-			case "Null":
-				o = new h3d.scene.Object(scene);
-			case "Root":
-				o = new h3d.scene.Skin(null,null,scene);
+			case "Null", "Root":
+				var hasJoint = false;
+				for( c in getChilds(model, "Model") )
+					if( c.getType() == "LimbNode" ) {
+						hasJoint = true;
+						break;
+					}
+				if( hasJoint )
+					o = new h3d.scene.Skin(null, null, scene);
+				else
+					o = new h3d.scene.Object(scene);
 			case "LimbNode":
 				var j = new h3d.prim.Skin.Joint();
 				getDefaultMatrixes(model); // store for later usage in animation
@@ -332,7 +348,7 @@ class Library {
 				var mat = getChild(model, "Material");
 				var tex = getChilds(mat, "Texture")[0];
 				if( tex == null ) throw "No texture found for " + model.getName();
-				var mat = textureLoader(tex.get("RelativeFilename").props[0].toString());
+				var mat = textureLoader(tex.get("FileName").props[0].toString());
 				o = new h3d.scene.Mesh(prim, mat, scene);
 			case type:
 				throw "Unknown model type " + type+" for "+model.getName();
@@ -351,7 +367,7 @@ class Library {
 			if( jparent != null ) {
 				jparent.subs.push(j.joint);
 				j.joint.parent = jparent;
-			} else if( p.getType() != "Root" )
+			} else if( p.getType() != "Root" && p.getType() != "Null" )
 				throw "Parent joint not found " + p.getName();
 		}
 		// rebuild model hierarchy and additional inits
@@ -371,8 +387,8 @@ class Library {
 				o.obj.addChild(sobj);
 			}
 			if( rootJoints.length != 0 ) {
-				if( o.model.getType() != "Root" )
-					throw o.obj.name + ":" + o.model.getType() + " should be Root";
+				if( !Std.is(o.obj,h3d.scene.Skin) )
+					throw o.obj.name + ":" + o.model.getType() + " should be a skin";
 				var skin : h3d.scene.Skin = cast o.obj;
 				var skinData = createSkin(hskins, hgeom, rootJoints, bonesPerVertex);
 				// if we have a skinned object, remove it (only keep the skin) and set the material
@@ -434,13 +450,16 @@ class Library {
 			}
 			j.transPos = h3d.Matrix.L(subDef.get("Transform").getFloats());
 			
-			var weights = subDef.get("Weights").getFloats();
-			var vertex = subDef.get("Indexes").getInts();
-			for( i in 0...vertex.length ) {
-				var w = weights[i];
-				if( w < 0.01 )
-					continue;
-				skin.addInfluence(vertex[i], j, w);
+			var weights = subDef.getAll("Weights");
+			if( weights.length > 0 ) {
+				var weights = weights[0].getFloats();
+				var vertex = subDef.get("Indexes").getInts();
+				for( i in 0...vertex.length ) {
+					var w = weights[i];
+					if( w < 0.01 )
+						continue;
+					skin.addInfluence(vertex[i], j, w);
+				}
 			}
 		}
 		if( skin == null )
@@ -470,7 +489,7 @@ class Library {
 			case "Lcl Scaling":
 				d.scale = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
 			case "RotationActive", "InheritType", "ScalingMin", "MaxHandle", "DefaultAttributeIndex", "Show", "UDP3DSMAX":
-			case "RotationMinX","RotationMinY","RotationMinZ","RotationMaxX","RotationMaxY","RotationMaxZ":
+			case "RotationMinX","RotationMinY","RotationMinZ","RotationMaxX","RotationMaxY","RotationMaxZ", "Freeze":
 			default:
 				#if debug
 				trace(p.props[0].toString());

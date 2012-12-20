@@ -63,7 +63,7 @@ class Skin extends Mesh {
 	}
 	
 	override function draw( ctx : RenderContext ) {
-		if( jointsUpdated ) {
+		if( jointsUpdated || posChanged ) {
 			for( j in skinData.allJoints ) {
 				var id = j.index;
 				var m = currentAbsPose[id];
@@ -71,7 +71,7 @@ class Skin extends Mesh {
 				if( r == null ) {
 					var bid = j.bindIndex;
 					if( bid >= 0 )
-						currentPalette[bid].identity();
+						currentPalette[bid].loadFrom(absPos);
 					continue;
 				}
 				if( j.parent == null )
