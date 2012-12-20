@@ -19,7 +19,12 @@ class Engine {
 	public var backgroundColor : Int;
 	public var autoResize : Bool;
 	public var fullScreen(default, set) : Bool;
-
+	
+	public var fps(get, never) : Float;
+	
+	var realFps : Float;
+	var lastTime : Int;
+	
 	var curMatBits : Int;
 	var curShader : hxsl.Shader.ShaderInstance;
 	var curBuffer : h3d.impl.MemoryManager.BigBuffer;
@@ -47,6 +52,8 @@ class Engine {
 		this.autoResize = true;
 		fullScreen = !Caps.isWindowed;
 		var stage = flash.Lib.current.stage;
+		realFps = stage.frameRate;
+		lastTime = flash.Lib.getTimer();
 		stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
 		stage.addEventListener(flash.events.Event.RESIZE, onStageResize);
 		s3d = stage.stage3Ds[stageIndex];
@@ -385,6 +392,17 @@ class Engine {
 		if( !begin() ) return false;
 		obj.render(this);
 		end();
+				
+		var delta = flash.Lib.getTimer() - lastTime;
+		lastTime += delta;
+		// maximize the slowdown when doing some heavy computations on a single frame
+		var maxDelta = Std.int((10 / realFps) * 1000);
+		if( delta > maxDelta ) delta = maxDelta;
+		if( delta > 0 ) {
+			var curFps = 1000 / delta;
+			var f = curFps / 1000;
+			realFps = realFps * (1 - f) + curFps * f; // smooth a bit the fps
+		}
 		return true;
 	}
 	
@@ -431,6 +449,10 @@ class Engine {
 		s3d.removeEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
 		ctx.dispose();
 		ctx = null;
+	}
+	
+	function get_fps() {
+		return Math.ceil(realFps * 100) / 100;
 	}
 
 	static var BLEND = [
