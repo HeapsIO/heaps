@@ -22,36 +22,6 @@ class Axis implements h3d.IDrawable {
 	
 }
 
-class LightShader extends hxsl.Shader {
-	static var SRC = {
-		var input : {
-			pos : Float3,
-			norm : Float3,
-			uv : Float2,
-			weights : Float3,
-			index : Int,
-		};
-		var shade : Float;
-		var tuv : Float2;
-
-		function vertex( mpos : Matrix, mproj : Matrix, light : Float3, bones : M34<39> ) {
-			var p : Float4;
-			p.xyz = pos.xyzw * weights.x * bones[index.x * (255 * 3)] + pos.xyzw * weights.y * bones[index.y * (255 * 3)] + pos.xyzw * weights.z * bones[index.z * (255 * 3)];
-			p.w = 1;
-			out = (p * mpos) * mproj;
-			shade = (norm.xyzw * mpos).xyz.dot(light).sat() * 0.8 + 0.6;
-			tuv = uv;
-		}
-		
-		function fragment( tex : Texture ) {
-			var color = tex.get(tuv,nearest);
-			kill(color.a - 0.001);
-			color.rgb *= shade;
-			out = color;
-		}
-	}
-}
-
 class Anim {
 
 	var engine : h3d.Engine;
@@ -89,7 +59,12 @@ class Anim {
 		var lib = new h3d.fbx.Library();
 		lib.loadTextFile(file.readUTFBytes(file.length));
 		
-		scene = lib.makeScene(function(_) return tex);
+		scene = lib.makeScene(function(_) {
+			var m = new h3d.mat.MeshMaterial(tex);
+			m.killAlpha = true;
+			m.culling = None;
+			return m;
+		});
 		scene.camera.rightHanded = true;
 
 		anim = lib.loadAnimation().createInstance(scene);
@@ -132,7 +107,7 @@ class Anim {
 		}
 		
 		time += 1;
-		anim.update(time * 0.5);
+		anim.update(time);
 		
 		engine.render(scene);
 	}

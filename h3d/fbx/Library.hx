@@ -150,9 +150,10 @@ class Library {
 	
 	public function loadAnimation( ?animName : String, ?root : FbxNode ) {
 		if( root != null ) {
-			var old = defaultModelMatrixes;
-			load(root);
-			defaultModelMatrixes = old;
+			var l = new Library();
+			l.load(root);
+			l.defaultModelMatrixes = defaultModelMatrixes;
+			return l.loadAnimation(animName);
 		}
 		var animNode = null;
 		for( a in this.root.getAll("Objects.AnimationStack") )
@@ -191,14 +192,12 @@ class Library {
 				z : data[2].get("KeyValueFloat").getFloats(),
 			};
 			var cname = cn.getName();
-			/* DOES NOT WORK VERY WELL : rotations easily break
-		
 			// optimize empty animations out
 			var E = 1e-10, M = 1.0;
 			var def = switch( cname ) {
 			case "T": if( c.def.trans == null ) P0 else c.def.trans;
-			case "R": M = F; if( c.def.rotate == null ) P1 else c.def.rotate;
-			case "S": if( c.def.scale == null ) P0 else c.def.scale;
+			case "R": M = F; if( c.def.rotate == null ) P0 else c.def.rotate;
+			case "S": if( c.def.scale == null ) P1 else c.def.scale;
 			default:
 				throw "Unknown curve " + cname;
 			}
@@ -223,11 +222,8 @@ class Library {
 					}
 			}
 			// no meaningful value found
-			if( !hasValue ) {
-				trace("SKIP " + model.getName() + " " + cname);
+			if( !hasValue )
 				continue;
-			}
-			*/
 			switch( cname ) {
 			case "T": c.t = data;
 			case "R": c.r = data;
@@ -285,7 +281,7 @@ class Library {
 		return anim;
 	}
 
-	public function makeScene( ?textureLoader : String -> h3d.mat.Texture, ?bonesPerVertex = 3 ) : h3d.scene.Scene {
+	public function makeScene( ?textureLoader : String -> h3d.mat.MeshMaterial, ?bonesPerVertex = 3 ) : h3d.scene.Scene {
 		var scene = new h3d.scene.Scene();
 		var hobjects = new IntHash();
 		var hgeom = new IntHash();
@@ -305,7 +301,7 @@ class Library {
 					bytes.set(3, 0xFF);
 					tmpTex.uploadBytes(bytes);
 				}
-				return tmpTex;
+				return new h3d.mat.MeshMaterial(tmpTex);
 			}
 		}
 		// create all models
@@ -336,8 +332,8 @@ class Library {
 				var mat = getChild(model, "Material");
 				var tex = getChilds(mat, "Texture")[0];
 				if( tex == null ) throw "No texture found for " + model.getName();
-				var tex = textureLoader(tex.get("RelativeFilename").props[0].toString());
-				o = new h3d.scene.Mesh(prim, new h3d.mat.MeshMaterial(tex), scene);
+				var mat = textureLoader(tex.get("RelativeFilename").props[0].toString());
+				o = new h3d.scene.Mesh(prim, mat, scene);
 			case type:
 				throw "Unknown model type " + type+" for "+model.getName();
 			}
