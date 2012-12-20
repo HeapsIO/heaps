@@ -11,6 +11,13 @@ class Scene extends Layers, implements h3d.IDrawable {
 		extraPasses = [];
 	}
 	
+	override function clone( ?o : Object ) {
+		var s = o == null ? new Scene() : cast o;
+		s.camera = camera.clone();
+		super.clone(s);
+		return s;
+	}
+	
 	public function addPass(p) {
 		extraPasses.push(p);
 	}

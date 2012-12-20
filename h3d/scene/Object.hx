@@ -36,6 +36,13 @@ class Object {
 			parent.addChild(this);
 	}
 	
+	public function getObjectsCount() {
+		var k = 0;
+		for( c in childs )
+			k += c.getObjectsCount() + 1;
+		return k;
+	}
+	
 	public function getObjectByName( name : String ) {
 		if( this.name == name )
 			return this;
@@ -46,11 +53,20 @@ class Object {
 		return null;
 	}
 	
-	public function getObjectsCount() {
-		var k = 0;
-		for( c in childs )
-			k += c.getObjectsCount() + 1;
-		return k;
+	public function clone( ?o : Object ) : Object {
+		if( o == null ) o = new Object();
+		o.x = x;
+		o.y = y;
+		o.z = z;
+		o.scaleX = scaleX;
+		o.scaleY = scaleY;
+		o.scaleZ = scaleZ;
+		for( c in childs ) {
+			var c = c.clone();
+			c.parent = o;
+			o.childs.push(c);
+		}
+		return o;
 	}
 	
 	public function addChild( o : Object ) {

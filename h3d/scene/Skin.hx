@@ -24,6 +24,14 @@ class Skin extends Mesh {
 			setSkinData(s);
 	}
 	
+	override function clone( ?o : Object ) {
+		var s = o == null ? new Skin(null,material) : cast o;
+		super.clone(s);
+		s.setSkinData(skinData);
+		s.currentRelPose = currentRelPose.copy(); // copy current pose
+		return s;
+	}
+	
 	override function getObjectByName( name : String ) {
 		var o = super.getObjectByName(name);
 		if( o != null ) return o;

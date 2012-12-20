@@ -46,7 +46,7 @@ class Color {
 		return "{"+Tools.f(r)+","+Tools.f(g)+","+Tools.f(b)+","+Tools.f(a)+"}";
 	}
 
-	public static function ofInt( rgb : Int, alpha = 1.0 ) {
+	public static function fromInt( rgb : Int, alpha = 1.0 ) {
 		return new Color(((rgb>>16)&0xFF)/255.0,((rgb>>8)&0xFF)/255.0,(rgb&0xFF)/255.0,alpha);
 	}
 

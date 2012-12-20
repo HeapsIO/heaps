@@ -72,6 +72,20 @@ class MeshMaterial extends Material {
 		this.texture = texture;
 		useMatrixPos = true;
 	}
+	
+	override function clone( ?m : Material ) {
+		var m = m == null ? new MeshMaterial(texture) : cast m;
+		m.useMatrixPos = useMatrixPos;
+		m.uvScale = uvScale;
+		m.uvDelta = uvDelta;
+		m.killAlpha = killAlpha;
+		m.colorAdd = colorAdd;
+		m.colorMul = colorMul;
+		m.colorMatrix = colorMatrix;
+		m.hasSkin = hasSkin;
+		m.skinMatrixes = skinMatrixes;
+		return m;
+	}
 		
 	public function setMatrixes( mpos, mproj ) {
 		mshader.mpos = useMatrixPos ? mpos : null;

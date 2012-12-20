@@ -34,7 +34,7 @@ class Text extends Drawable {
 			glyphs.y += dropShadow.dy;
 			glyphs.updatePos();
 			var old = glyphs.color;
-			glyphs.color = h3d.Color.ofInt(dropShadow.color, dropShadow.alpha).toVector();
+			glyphs.color = h3d.Color.fromInt(dropShadow.color, dropShadow.alpha).toVector();
 			glyphs.draw(engine);
 			glyphs.x -= dropShadow.dx;
 			glyphs.y -= dropShadow.dy;
@@ -101,7 +101,7 @@ class Text extends Drawable {
 	
 	function set_textColor(c) {
 		this.textColor = c;
-		glyphs.color = h3d.Color.ofInt(c, alpha).toVector();
+		glyphs.color = h3d.Color.fromInt(c, alpha).toVector();
 		return c;
 	}
 

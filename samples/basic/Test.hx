@@ -28,7 +28,7 @@ class Test {
 		
 		var bmp = new flash.display.BitmapData(256, 256);
 		bmp.perlinNoise(64, 64, 3, 0, true, true, 7);
-		var mat = new h3d.mat.MeshMaterial(h3d.mat.Texture.ofBitmap(bmp));
+		var mat = new h3d.mat.MeshMaterial(h3d.mat.Texture.fromBitmap(bmp));
 		bmp.dispose();
 		
 		scene = new Scene();

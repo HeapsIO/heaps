@@ -12,6 +12,14 @@ class Mesh extends Object {
 		this.material = mat;
 	}
 	
+	override function clone( ?o : Object ) {
+		var m = o == null ? new Mesh(null,material) : cast o;
+		m.primitive = primitive;
+		m.material = material.clone();
+		super.clone(m);
+		return m;
+	}
+	
 	override function draw( ctx : RenderContext ) {
 		material.setMatrixes(this.absPos, ctx.camera.m);
 		ctx.engine.selectMaterial(material);

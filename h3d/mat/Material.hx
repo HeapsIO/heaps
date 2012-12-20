@@ -28,6 +28,18 @@ class Material {
 		blendDst = dst;
 	}
 	
+	public function clone( ?m : Material ) {
+		if( m == null ) m = new Material(null);
+		m.shader = shader;
+		m.culling = culling;
+		m.depthWrite = depthWrite;
+		m.depthTest = depthTest;
+		m.blendSrc = blendSrc;
+		m.blendSrc = blendDst;
+		m.colorMask = colorMask;
+		return m;
+	}
+	
 	public function depth( write, test ) {
 		this.depthWrite = write;
 		this.depthTest = test;

@@ -12,6 +12,14 @@ class Layers extends Object {
 		layerCount = 0;
 	}
 	
+	override function clone( ?o : Object ) {
+		var l = o == null ? new Layers() : cast o;
+		l.layers = layers.copy();
+		l.layerCount = layerCount;
+		super.clone(l);
+		return l;
+	}
+	
 	override function addChild(o) {
 		addChildAt(o, layers.length);
 	}
