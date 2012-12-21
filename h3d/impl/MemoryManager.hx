@@ -279,8 +279,31 @@ class MemoryManager {
 		while( b != null ) {
 			free = b.free;
 			while( free != null ) {
-				if( free.count >= nvect && (free.pos == 0 || (align > 0 && free.pos % align == 0)) )
+				if( free.count >= nvect ) {
+					// align 0 must be on first index
+					if( align == 0 ) {
+						if( free.pos != 0 )
+							free = null;
+						break;
+					} else {
+						// we can't alloc into a smaller buffer because we might use preallocated indexes
+						if( b.size < allocSize ) {
+							free = null;
+							break;
+						}
+						var d = (align - (free.pos % align)) % align;
+						if( d == 0 )
+							break;
+							
+						// insert some padding
+						if( free.count >= nvect + d ) {
+							free.next = new FreeCell(free.pos + d, free.count - d, free.next);
+							free = free.next;
+							break;
+						}
+					}
 					break;
+				}
 				free = free.next;
 			}
 			if( free != null ) break;
@@ -319,10 +342,11 @@ class MemoryManager {
 				var size = freeMemory();
 				garbage();
 				cleanBuffers();
-				if( bufferCount >= MAX_BUFFERS )
-					throw "Too many buffer";
-				if( freeMemory() == size )
+				if( freeMemory() == size ) {
+					if( bufferCount >= MAX_BUFFERS )
+						throw "Too many buffer";
 					throw "Memory full";
+				}
 				return alloc(nvect, stride, align);
 			}
 			var v = ctx.createVertexBuffer(size, stride);
