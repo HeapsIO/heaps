@@ -5,7 +5,8 @@ class Object {
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 	
 	var childs : Array<Object>;
-	public var parent(default,null) : Object;
+	public var parent(default, null) : Object;
+	public var numChildren(get, never) : Int;
 	
 	public var name : Null<String>;
 	public var x(default,set) : Float;
@@ -251,6 +252,14 @@ class Object {
 	
 	public function toString() {
 		return Type.getClassName(Type.getClass(this)).split(".").pop() + (name == null ? "" : "(" + name + ")");
+	}
+	
+	public function getChildAt( n ) {
+		return childs[n];
+	}
+	
+	function get_numChildren() {
+		return childs.length;
 	}
 	
 }

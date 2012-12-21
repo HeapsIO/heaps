@@ -279,7 +279,7 @@ class Library {
 			var crx = c.r == null ? null : c.r.x;
 			var cry = c.r == null ? null : c.r.y;
 			var crz = c.r == null ? null : c.r.z;
-			var crt = c.t == null ? [-1.] : c.r.t;
+			var crt = c.r == null ? [-1.] : c.r.t;
 			var csx = c.s == null ? null : c.s.x;
 			var csy = c.s == null ? null : c.s.y;
 			var csz = c.s == null ? null : c.s.z;

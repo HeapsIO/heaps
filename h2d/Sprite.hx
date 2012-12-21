@@ -6,7 +6,8 @@ class Sprite {
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 	
 	var childs : Array<Sprite>;
-	public var parent(default,null) : Sprite;
+	public var parent(default, null) : Sprite;
+	public var numChildren(get, never) : Int;
 	
 	public var x(default,set) : Float;
 	public var y(default, set) : Float;
@@ -190,6 +191,14 @@ class Sprite {
 		rotation = v;
 		posChanged = true;
 		return v;
+	}
+
+	public function getChildAt( n ) {
+		return childs[n];
+	}
+	
+	function get_numChildren() {
+		return childs.length;
 	}
 	
 }
