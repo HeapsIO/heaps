@@ -22,6 +22,7 @@ class Animation {
 	
 	public var time : Float;
 	public var speed : Float;
+	public var sampling : Float;
 	
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
@@ -33,6 +34,7 @@ class Animation {
 		curFrame = -1;
 		time = 0.;
 		speed = 1.;
+		sampling = 30;
 	}
 	
 	public function addCurve( objName, frames ) {
@@ -43,6 +45,8 @@ class Animation {
 		var anim = new Animation(name);
 		anim.isInstance = true;
 		anim.numFrames = numFrames;
+		anim.speed = speed;
+		anim.sampling = sampling;
 		for( a in objects ) {
 			var obj = base.getObjectByName(a.objectName);
 			if( obj == null )
@@ -62,7 +66,7 @@ class Animation {
 	public function update() {
 		if( !isInstance )
 			throw "You must instanciate this animation first";
-		var iframe = Std.int(time) % numFrames;
+		var iframe = Std.int(time * sampling) % numFrames;
 		if( iframe < 0 ) iframe += numFrames;
 		if( iframe == curFrame )
 			return;

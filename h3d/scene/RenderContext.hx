@@ -9,7 +9,7 @@ class RenderContext {
 	
 	public function new() {
 		time = 0.;
-		elapsedTime = 1.;
+		elapsedTime = 1. / flash.Lib.current.stage.frameRate;
 	}
 	
 	public function addPass(p) {

@@ -174,6 +174,7 @@ class Library {
 		var P0 = new h3d.Point();
 		var P1 = new h3d.Point(1, 1, 1);
 		var F = Math.PI / 180;
+		var allTimes = new IntHash();
 		for( cn in getChilds(animNode, "AnimationCurveNode") ) {
 			var model = getParent(cn, "Model");
 			var c = curves.get(model.getId());
@@ -195,11 +196,21 @@ class Library {
 			var data = getChilds(cn, "AnimationCurve");
 			if( data.length != 3 )
 				throw "assert";
+			// collect all the timestamps
+			var times = data[0].get("KeyTime").getFloats();
+			for( t in times ) {
+				// this should give significant-enough key
+				var it = Std.int(t / 200000);
+				allTimes.set(it, t);
+			}
 			var data = {
 				x : data[0].get("KeyValueFloat").getFloats(),
 				y : data[1].get("KeyValueFloat").getFloats(),
 				z : data[2].get("KeyValueFloat").getFloats(),
+				t : times,
 			};
+			if( data.y.length != times.length || data.z.length != times.length )
+				throw "Unsynchronized curve components";
 			var cname = cn.getName();
 			// optimize empty animations out
 			var E = 1e-10, M = 1.0;
@@ -240,54 +251,91 @@ class Library {
 			default: throw "Unknown curve " + cname;
 			}
 		}
+		
+		var allTimes = Lambda.array(allTimes);
+		allTimes.sort(sortDistinctFloats);
+		var maxTime = allTimes[allTimes.length - 1];
+		var minDT = maxTime;
+		var curT = allTimes[0];
+		for( i in 1...allTimes.length ) {
+			var t = allTimes[i];
+			var dt = t - curT;
+			if( dt < minDT ) minDT = dt;
+			curT = t;
+		}
+		var numFrames = maxTime == 0 ? 1 : 1 + Std.int(maxTime / minDT);
+		anim.numFrames = numFrames;
+		anim.sampling = 15.0 / (minDT / 3079077200); // this is the DT value we get from Max when using 15 FPS export
+		
 		for( c in curves ) {
 			// skip empty curves
 			if( c.t == null && c.r == null && c.s == null )
 				continue;
-			var frames = new flash.Vector();
-			var aFrames = if( c.t != null ) c.t.x.length else if( c.r != null ) c.r.x.length else c.s.x.length;
-			if( anim.numFrames == 0 )
-				anim.numFrames = aFrames;
-			else if( anim.numFrames != aFrames )
-				throw "Invalid frame number for " + c.name + " : " + aFrames + " should be " + anim.numFrames;
+			var frames = new flash.Vector(numFrames);
 			var ctx = c.t == null ? null : c.t.x;
 			var cty = c.t == null ? null : c.t.y;
 			var ctz = c.t == null ? null : c.t.z;
+			var ctt = c.t == null ? [-1.] : c.t.t;
 			var crx = c.r == null ? null : c.r.x;
 			var cry = c.r == null ? null : c.r.y;
 			var crz = c.r == null ? null : c.r.z;
+			var crt = c.t == null ? [-1.] : c.r.t;
 			var csx = c.s == null ? null : c.s.x;
 			var csy = c.s == null ? null : c.s.y;
 			var csz = c.s == null ? null : c.s.z;
+			var cst = c.s == null ? [-1.] : c.s.t;
 			var def = c.def;
-			for( i in 0...anim.numFrames ) {
-				var m = new h3d.Matrix();
-				m.identity();
-				if( c.s == null ) {
-					if( def.scale != null )
-						m.scale(def.scale.x, def.scale.y, def.scale.z);
-				} else
-					m.scale(csx[i], csy[i], csz[i]);
+			var tp = 0, rp = 0, sp = 0;
+			var curMat = null;
+			for( f in 0...numFrames ) {
+				var changed = false;
+				if( allTimes[f] == ctt[tp] ) {
+					changed = true;
+					tp++;
+				}
+				if( allTimes[f] == crt[rp] ) {
+					changed = true;
+					rp++;
+				}
+				if( allTimes[f] == cst[sp] ) {
+					changed = true;
+					sp++;
+				}
+				if( changed ) {
+					var m = new h3d.Matrix();
+					m.identity();
+					if( c.s == null ) {
+						if( def.scale != null )
+							m.scale(def.scale.x, def.scale.y, def.scale.z);
+					} else
+						m.scale(csx[sp-1], csy[sp-1], csz[sp-1]);
 
-				if( c.r == null ) {
-					if( def.rotate != null )
-						m.rotate(def.rotate.x, def.rotate.y, def.rotate.z);
-				} else
-					m.rotate(crx[i] * F, cry[i] * F, crz[i] * F);
-					
-				if( def.preRot != null )
-					m.rotate(def.preRot.x, def.preRot.y, def.preRot.z);
+					if( c.r == null ) {
+						if( def.rotate != null )
+							m.rotate(def.rotate.x, def.rotate.y, def.rotate.z);
+					} else
+						m.rotate(crx[rp-1] * F, cry[rp-1] * F, crz[rp-1] * F);
+						
+					if( def.preRot != null )
+						m.rotate(def.preRot.x, def.preRot.y, def.preRot.z);
 
-				if( c.t == null ) {
-					if( def.trans != null )
-						m.translate(def.trans.x, def.trans.y, def.trans.z);
-				} else
-					m.translate(ctx[i], cty[i], ctz[i]);
-				frames[i] = m;
+					if( c.t == null ) {
+						if( def.trans != null )
+							m.translate(def.trans.x, def.trans.y, def.trans.z);
+					} else
+						m.translate(ctx[tp-1], cty[tp-1], ctz[tp-1]);
+					curMat = m;
+				}
+				frames[f] = curMat;
 			}
+			
 			anim.addCurve(c.name, frames);
 		}
 		return anim;
+	}
+	
+	function sortDistinctFloats( a : Float, b : Float ) {
+		return if( a > b ) 1 else -1;
 	}
 
 	public function makeScene( ?textureLoader : String -> h3d.mat.MeshMaterial, ?bonesPerVertex = 3 ) : h3d.scene.Scene {
