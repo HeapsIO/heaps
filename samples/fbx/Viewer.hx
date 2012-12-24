@@ -27,10 +27,18 @@ class Viewer {
 	
 	var curFbx : h3d.fbx.Library;
 	var curFbxFile : String;
+	var curData : String;
+	
+	var rightHand : Bool;
+	var applySkin : Bool;
+	var showBones : Bool;
 	
 	function new() {
 		time = 0;
 		view = 4;
+		rightHand = false;
+		applySkin = true;
+		showBones = false;
 		tf = new flash.text.TextField();
 		tf.x = tf.y = 5;
 		tf.textColor = 0xFFFFFF;
@@ -43,8 +51,9 @@ class Viewer {
 	}
 	
 	function onReady() {
-		flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, function(_) onUpdate());
+		flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, function (_) onUpdate());
 		flash.Lib.current.stage.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, function(k:flash.events.KeyboardEvent ) {
+			var reload = false;
 			var c = k.keyCode;
 			if( c == K.NUMPAD_ADD )
 				view++;
@@ -59,8 +68,18 @@ class Viewer {
 				var data = FbxTree.toString(curFbx.getRoot());
 				var f = new flash.net.FileReference();
 				f.save(data, curFbxFile.substr(0, -4) + "_tree.txt");
+			} else if( c == K.R ) {
+				rightHand = !rightHand;
+				reload = true;
+			} else if( c == K.S ) {
+				applySkin = !applySkin;
+				reload = true;
+			} else if( c == K.K ) {
+				showBones = !showBones;
+				reload = true;
 			}
-				
+			if( reload && curData != null )
+				loadData(curData);
 		});
 		scene = new h3d.scene.Scene();
 		scene.addPass(new Axis());
@@ -94,14 +113,34 @@ class Viewer {
 		var f = new flash.net.FileReference();
 		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
 			curFbxFile = f.name;
-			curFbx = new h3d.fbx.Library();
-			curFbx.loadTextFile(f.data.readUTFBytes(f.data.length));
-			scene = curFbx.makeScene(textureLoader);
-			scene.playAnimation(curFbx.loadAnimation());
-			scene.addPass(new Axis());
+			loadData(f.data.readUTFBytes(f.data.length));
 		});
 		f.addEventListener(flash.events.Event.SELECT, function(_) f.load());
 		f.browse([new flash.net.FileFilter("FBX File", "*.fbx")]);
+	}
+	
+	function loadData( data : String ) {
+		curFbx = new h3d.fbx.Library();
+		curData = data;
+		var fbx = h3d.fbx.Parser.parse(data);
+		curFbx.load(fbx);
+		if( !rightHand )
+			curFbx.leftHandConvert();
+		var time = scene == null ? 0 : (scene.currentAnimation == null ? 0 : scene.currentAnimation.time);
+		scene = curFbx.makeScene(textureLoader, 3);
+		if( applySkin )
+			scene.playAnimation(curFbx.loadAnimation(), time );
+		if( showBones )
+			showBonesRec(scene);
+		scene.addPass(new Axis());
+	}
+	
+	function showBonesRec( o : h3d.scene.Object ) {
+		var s = flash.Lib.as(o, h3d.scene.Skin);
+		if( s != null )
+			s.showJoints = true;
+		for( i in 0...o.numChildren )
+			showBonesRec(o.getChildAt(i));
 	}
 	
 	function onUpdate() {
@@ -121,7 +160,7 @@ class Viewer {
 			camera.target.set(0, 0, height);
 		case 2:
 			var K = Math.sqrt(2);
-			camera.pos.set(dist, 0, height);
+			camera.pos.set(rightHand ? -dist : dist, 0, height);
 			camera.up.set(0, 0, 1);
 			camera.target.set(0, 0, height);
 		case 3:
@@ -137,10 +176,10 @@ class Viewer {
 		default:
 			view = 0;
 		}
+		camera.rightHanded = rightHand;
 		if( !pause )
 			time++;
-		tf.text = ""+engine.fps;
-		camera.rightHanded = true;
+		tf.text = (camera.rightHanded ? "R " : "")+engine.fps;
 		engine.render(scene);
 	}
 	

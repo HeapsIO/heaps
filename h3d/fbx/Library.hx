@@ -10,14 +10,27 @@ class DefaultMatrixes {
 	
 	public function new() {
 	}
+
+	public static inline function rightHandToLeft( m : h3d.Matrix ) {
+		// if [x,y,z] is our original point and M the matrix
+		// in right hand we have [x,y,z] * M = [x',y',z']
+		// we need to ensure that left hand matrix convey the x axis flip,
+		// in order to have [-x,y,z] * M = [-x',y',z']
+		m._12 *= -1;
+		m._13 *= -1;
+		m._21 *= -1;
+		m._31 *= -1;
+		m._41 *= -1;
+	}
 	
-	public function toMatrix() {
+	public function toMatrix(leftHand) {
 		var m = new h3d.Matrix();
 		m.identity();
 		if( scale != null ) m.scale(scale.x, scale.y, scale.z);
 		if( rotate != null ) m.rotate(rotate.x, rotate.y, rotate.z);
 		if( preRot != null ) m.rotate(preRot.x, preRot.y, preRot.z);
-		if( trans != null ) m.translate(trans.x,trans.y,trans.z);
+		if( trans != null ) m.translate(trans.x * (leftHand ? -1 : 1), trans.y, trans.z);
+		if( leftHand ) rightHandToLeft(m);
 		return m;
 	}
 	
@@ -29,6 +42,7 @@ class Library {
 	var ids : IntHash<FbxNode>;
 	var connect : IntHash<Array<Int>>;
 	var invConnect : IntHash<Array<Int>>;
+	var leftHand : Bool;
 	
 	var defaultModelMatrixes : Hash<DefaultMatrixes>;
 	
@@ -53,6 +67,27 @@ class Library {
 		this.root = root;
 		for( c in root.childs )
 			init(c);
+	}
+	
+	function convertPoints( a : Array<Float> ) {
+		var p = 0;
+		for( i in 0...Std.int(a.length / 3) ) {
+			a[p] = -a[p];
+			p++;
+			a[p] = a[p];
+			p++;
+			a[p] = a[p];
+			p++;
+		}
+	}
+	
+	public function leftHandConvert() {
+		if( leftHand ) return;
+		leftHand = true;
+		for( g in root.getAll("Objects.Geometry") ) {
+			convertPoints(g.get("Vertices").getFloats());
+			convertPoints(g.get("LayerElementNormal.Normals").getFloats());
+		}
 	}
 	
 	function init( n : FbxNode ) {
@@ -156,6 +191,7 @@ class Library {
 		if( root != null ) {
 			var l = new Library();
 			l.load(root);
+			if( leftHand ) l.leftHandConvert();
 			l.defaultModelMatrixes = defaultModelMatrixes;
 			return l.loadAnimation(animName);
 		}
@@ -324,6 +360,10 @@ class Library {
 							m.translate(def.trans.x, def.trans.y, def.trans.z);
 					} else
 						m.translate(ctx[tp-1], cty[tp-1], ctz[tp-1]);
+
+					if( leftHand )
+						DefaultMatrixes.rightHandToLeft(m);
+						
 					curMat = m;
 				}
 				frames[f] = curMat;
@@ -404,7 +444,7 @@ class Library {
 			o.name = model.getName();
 			var m = getDefaultMatrixes(model);
 			if( m.trans != null || m.rotate != null || m.scale != null || m.preRot != null )
-				o.defaultTransform = m.toMatrix();
+				o.defaultTransform = m.toMatrix(leftHand);
 			hobjects.set(model.getId(), o);
 			objects.push( { model : model, obj : o } );
 		}
@@ -497,6 +537,7 @@ class Library {
 				hskins.set(def.getId(), skin);
 			}
 			j.transPos = h3d.Matrix.L(subDef.get("Transform").getFloats());
+			if( leftHand ) DefaultMatrixes.rightHandToLeft(j.transPos);
 			
 			var weights = subDef.getAll("Weights");
 			if( weights.length > 0 ) {
