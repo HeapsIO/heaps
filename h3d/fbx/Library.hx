@@ -85,8 +85,10 @@ class Library {
 		if( leftHand ) return;
 		leftHand = true;
 		for( g in root.getAll("Objects.Geometry") ) {
-			convertPoints(g.get("Vertices").getFloats());
-			convertPoints(g.get("LayerElementNormal.Normals").getFloats());
+			for( v in g.getAll("Vertices") )
+				convertPoints(v.getFloats());
+			for( v in g.getAll("LayerElementNormal.Normals") )
+				convertPoints(v.getFloats());
 		}
 	}
 	
