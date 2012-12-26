@@ -36,15 +36,16 @@ class Skin extends Mesh {
 		var o = super.getObjectByName(name);
 		if( o != null ) return o;
 		// create a fake object targeted at the bone, not persistant but matrixes are shared
-		if( skinData != null )
-			for( j in skinData.allJoints )
-				if( j.name == name ) {
-					var o = new Joint(j.index);
-					o.parent = this;
-					o.absPos = currentAbsPose[j.index];
-					o.defaultTransform = currentRelPose[j.index];
-					return o;
-				}
+		if( skinData != null ) {
+			var j = skinData.namedJoints.get(name);
+			if( j != null ) {
+				var o = new Joint(j.index);
+				o.parent = this;
+				o.absPos = currentAbsPose[j.index];
+				o.defaultTransform = currentRelPose[j.index];
+				return o;
+			}
+		}
 		return null;
 	}
 	

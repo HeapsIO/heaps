@@ -33,9 +33,10 @@ class Skin {
 	public var bonesPerVertex(default,null) : Int;
 	public var vertexJoints : Table<Int>;
 	public var vertexWeights : Table<Float>;
-	public var rootJoints : Array<Joint>;
-	public var allJoints : Array<Joint>;
-	public var boundJoints : Array<Joint>;
+	public var rootJoints(default,null) : Array<Joint>;
+	public var namedJoints(default,null) : Hash<Joint>;
+	public var allJoints(default,null) : Array<Joint>;
+	public var boundJoints(default,null) : Array<Joint>;
 	public var primitive : Primitive;
 	
 	var envelop : Array<Array<Influence>>;
@@ -46,6 +47,15 @@ class Skin {
 		vertexJoints = new Table(#if flash vertexCount * bonesPerVertex #end);
 		vertexWeights = new Table(#if flash vertexCount * bonesPerVertex #end);
 		envelop = [];
+	}
+	
+	public function setJoints( joints : Array<Joint>, roots : Array<Joint> ) {
+		rootJoints = roots;
+		allJoints = joints;
+		namedJoints = new Hash();
+		for( j in joints )
+			if( j.name != null )
+				namedJoints.set(j.name, j);
 	}
 	
 	public inline function addInfluence( vid : Int, j : Joint, w : Float ) {

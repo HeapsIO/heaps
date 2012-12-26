@@ -228,12 +228,11 @@ class Library {
 				// if it's an animation on a terminal unskinned joint, let's skip it
 				if( def.removedJoint )
 					continue;
-				c = { def : def, t : null, r : null, s : null, name : name };
+				c = { def : def, t : null, r : null, s : null, a : null, name : name };
 				curves.set(model.getId(), c);
 			}
 			var data = getChilds(cn, "AnimationCurve");
-			if( data.length != 3 )
-				throw "assert";
+			var cname = cn.getName();
 			// collect all the timestamps
 			var times = data[0].get("KeyTime").getFloats();
 			for( t in times ) {
@@ -241,6 +240,20 @@ class Library {
 				var it = Std.int(t / 200000);
 				allTimes.set(it, t);
 			}
+			// handle special curves
+			if( data.length != 3 ) {
+				switch( cname ) {
+				case "Visibility":
+					c.a = {
+						v : data[0].get("KeyValueFloat").getFloats(),
+						t : times,
+					};
+					continue;
+				default:
+				}
+				throw cname+" has "+data.length+" curves";
+			}
+			// handle TRS curves
 			var data = {
 				x : data[0].get("KeyValueFloat").getFloats(),
 				y : data[1].get("KeyValueFloat").getFloats(),
@@ -249,7 +262,6 @@ class Library {
 			};
 			if( data.y.length != times.length || data.z.length != times.length )
 				throw "Unsynchronized curve components";
-			var cname = cn.getName();
 			// optimize empty animations out
 			var E = 1e-10, M = 1.0;
 			var def = switch( cname ) {
@@ -310,6 +322,7 @@ class Library {
 			if( c.t == null && c.r == null && c.s == null )
 				continue;
 			var frames = new flash.Vector(numFrames);
+			var alpha = c.a == null ? null : new flash.Vector(numFrames);
 			var ctx = c.t == null ? null : c.t.x;
 			var cty = c.t == null ? null : c.t.y;
 			var ctz = c.t == null ? null : c.t.z;
@@ -321,9 +334,11 @@ class Library {
 			var csx = c.s == null ? null : c.s.x;
 			var csy = c.s == null ? null : c.s.y;
 			var csz = c.s == null ? null : c.s.z;
-			var cst = c.s == null ? [-1.] : c.s.t;
+			var cst = c.s == null ? [ -1.] : c.s.t;
+			var cav = c.a == null ? null : c.a.v;
+			var cat = c.a == null ? null : c.a.t;
 			var def = c.def;
-			var tp = 0, rp = 0, sp = 0;
+			var tp = 0, rp = 0, sp = 0, ap = 0;
 			var curMat = null;
 			for( f in 0...numFrames ) {
 				var changed = false;
@@ -369,9 +384,16 @@ class Library {
 					curMat = m;
 				}
 				frames[f] = curMat;
+				if( alpha != null ) {
+					if( allTimes[f] == cat[ap] )
+						ap++;
+					alpha[f] = cav[ap - 1];
+				}
 			}
 			
 			anim.addCurve(c.name, frames);
+			if( alpha != null )
+				anim.addAlphaCurve(c.name, alpha);
 		}
 		return anim;
 	}
@@ -558,8 +580,7 @@ class Library {
 		allJoints.reverse();
 		for( i in 0...allJoints.length )
 			allJoints[i].index = i;
-		skin.rootJoints = rootJoints;
-		skin.allJoints = allJoints;
+		skin.setJoints(allJoints, rootJoints);
 		skin.initWeights();
 		return skin;
 	}
