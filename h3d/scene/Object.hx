@@ -30,7 +30,7 @@ class Object {
 	public function new( ?parent : Object ) {
 		absPos = new h3d.Matrix();
 		absPos.identity();
-		x = 0; y = 0; z = 0; scaleX = 1; scaleY = 1; scaleZ = 0;
+		x = 0; y = 0; z = 0; scaleX = 1; scaleY = 1; scaleZ = 1;
 		qRot = new h3d.Quat();
 		posChanged = false;
 		childs = [];
@@ -141,9 +141,9 @@ class Object {
 			absPos._21 *= scaleY;
 			absPos._22 *= scaleY;
 			absPos._23 *= scaleY;
-			absPos._31 *= scaleY;
-			absPos._32 *= scaleY;
-			absPos._33 *= scaleY;
+			absPos._31 *= scaleZ;
+			absPos._32 *= scaleZ;
+			absPos._33 *= scaleZ;
 			absPos._41 = x;
 			absPos._42 = y;
 			absPos._43 = z;
