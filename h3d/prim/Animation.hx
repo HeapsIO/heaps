@@ -48,6 +48,9 @@ class Animation {
 		objects.push(o);
 	}
 	
+	public dynamic function onAnimEnd() {
+	}
+	
 	@:access(h3d.scene.Skin.skinData)
 	public function createInstance( base : h3d.scene.Object ) {
 		var anim = new Animation(name);
@@ -97,6 +100,8 @@ class Animation {
 		if( iframe < 0 ) iframe += numFrames;
 		if( iframe == curFrame )
 			return;
+		if( iframe < curFrame )
+			onAnimEnd();
 		curFrame = iframe;
 		for( o in objects ) {
 			if( o.alphas != null ) {

@@ -158,6 +158,7 @@ class Object {
 		if( currentAnimation != null ) {
 			currentAnimation.time += ctx.elapsedTime * currentAnimation.speed;
 			currentAnimation.update();
+			if( parent == null ) return; // allow self-removal anim event
 		}
 		updatePos();
 		draw(ctx);
