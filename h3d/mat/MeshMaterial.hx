@@ -58,6 +58,7 @@ class MeshMaterial extends Material {
 	public var uvDelta(get,set) : Null<h3d.Vector>;
 
 	public var killAlpha(get,set) : Bool;
+	public var texNearest(get,set) : Bool;
 
 	public var colorAdd(get,set) : Null<h3d.Vector>;
 	public var colorMul(get,set) : Null<h3d.Vector>;
@@ -116,6 +117,14 @@ class MeshMaterial extends Material {
 
 	inline function set_killAlpha(v) {
 		return mshader.killAlpha = v;
+	}
+
+	inline function get_texNearest() {
+		return mshader.texNearest;
+	}
+
+	inline function set_texNearest(v) {
+		return mshader.texNearest = v;
 	}
 
 	inline function get_colorAdd() {
