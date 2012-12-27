@@ -162,8 +162,22 @@ class Object {
 		}
 		updatePos();
 		draw(ctx);
-		for( c in childs )
+		var p = 0, len = childs.length;
+		while( p < len ) {
+			var c = childs[p];
 			c.renderContext(ctx);
+			// check if the object was removed
+			if( childs[p] != c ) {
+				len = childs.length;
+				// look if the object was moved
+				for( i in 0...len )
+					if( childs[i] == c ) {
+						p = i + 1;
+						break;
+					}
+			} else
+				p++;
+		}
 		posChanged = false;
 	}
 	
