@@ -218,13 +218,12 @@ class Library {
 			var c = curves.get(model.getId());
 			if( c == null ) {
 				var name = model.getName();
+				// if it's an empty model with no sub nodes, let's ignore it (ex : Camera)
+				if( model.getType() == "Null" && getChilds(model, "Model").length == 0 )
+					continue;
 				var def = defaultModelMatrixes.get(name);
-				if( def == null ) {
-					// if it's an empty model with no sub nodes, let's ignore it (ex : Camera)
-					if( model.getType() == "Null" && getChilds(model, "Model").length == 0 )
-						continue;
+				if( def == null )
 					throw "Default Matrixes not found for " + name + " in " + animName;
-				}
 				// if it's an animation on a terminal unskinned joint, let's skip it
 				if( def.removedJoint )
 					continue;
