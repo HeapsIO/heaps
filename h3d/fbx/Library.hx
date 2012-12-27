@@ -207,7 +207,7 @@ class Library {
 			}
 		if( animNode == null )
 			throw "Animation not found " + animName;
-		var anim = new h3d.prim.Animation(animName);
+
 		var curves = new IntHash();
 		var P0 = new h3d.Point();
 		var P1 = new h3d.Point(1, 1, 1);
@@ -313,7 +313,7 @@ class Library {
 			curT = t;
 		}
 		var numFrames = maxTime == 0 ? 1 : 1 + Std.int(maxTime / minDT);
-		anim.numFrames = numFrames;
+		var anim = new h3d.prim.Animation(animName, numFrames);
 		anim.sampling = 15.0 / (minDT / 3079077200); // this is the DT value we get from Max when using 15 FPS export
 		
 		for( c in curves ) {

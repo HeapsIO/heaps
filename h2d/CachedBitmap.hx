@@ -17,20 +17,22 @@ class CachedBitmap extends Drawable {
 		this.width = width;
 		this.height = height;
 	}
-	
-	override function onDelete() {
+
+	function clean() {
 		if( tex != null ) {
 			tex.dispose();
 			tex = null;
 		}
+		tile = null;
+	}
+
+	override function onDelete() {
+		clean();
 		super.onDelete();
 	}
 	
 	function set_width(w) {
-		if( tex != null ) {
-			tex.dispose();
-			tex = null;
-		}
+		clean();
 		width = w;
 		return w;
 	}
@@ -65,10 +67,8 @@ class CachedBitmap extends Drawable {
 	
 	override function render( engine : h3d.Engine ) {
 		updatePos();
-		if( tex != null && ((width < 0 && tex.width < engine.width) || (height < 0 && tex.height < engine.height)) ) {
-			tex.dispose();
-			tex = null;
-		}
+		if( tex != null && ((width < 0 && tex.width < engine.width) || (height < 0 && tex.height < engine.height)) )
+			clean();
 		var tile = getTile();
 		if( !freezed || !renderDone ) {
 			var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;

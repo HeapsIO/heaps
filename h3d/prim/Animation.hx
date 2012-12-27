@@ -19,7 +19,9 @@ class AnimatedObject {
 class Animation {
 	
 	public var name : String;
-	public var numFrames : Int;
+	public var numFrames(default, null) : Int;
+	public var loopFrame : Int;
+	public var stopFrame : Int;
 	
 	public var time : Float;
 	public var speed : Float;
@@ -29,9 +31,11 @@ class Animation {
 	var objects : Array<AnimatedObject>;
 	var curFrame : Int;
 	
-	public function new(name) {
+	public function new(name,frames) {
 		this.name = name;
 		this.objects = [];
+		numFrames = frames;
+		stopFrame = -1;
 		curFrame = -1;
 		time = 0.;
 		speed = 1.;
@@ -53,11 +57,11 @@ class Animation {
 	
 	@:access(h3d.scene.Skin.skinData)
 	public function createInstance( base : h3d.scene.Object ) {
-		var anim = new Animation(name);
+		var anim = new Animation(name,numFrames);
 		anim.isInstance = true;
-		anim.numFrames = numFrames;
 		anim.speed = speed;
 		anim.sampling = sampling;
+		anim.loopFrame = loopFrame;
 		var currentSkin : h3d.scene.Skin = null;
 		for( a in objects ) {
 			var a2 = new AnimatedObject(a.objectName, a.frames);
@@ -100,8 +104,17 @@ class Animation {
 		if( iframe < 0 ) iframe += numFrames;
 		if( iframe == curFrame )
 			return;
-		if( iframe < curFrame )
+		if( stopFrame >= 0 && iframe >= stopFrame ) {
+			time += (stopFrame - iframe) / sampling;
+			iframe = stopFrame;
 			onAnimEnd();
+		} else if( iframe < curFrame ) {
+			if( iframe < loopFrame ) {
+				time += (loopFrame - iframe) / sampling;
+				iframe = loopFrame;
+			}
+			onAnimEnd();
+		}
 		curFrame = iframe;
 		for( o in objects ) {
 			if( o.alphas != null ) {
