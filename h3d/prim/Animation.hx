@@ -19,9 +19,10 @@ class AnimatedObject {
 class Animation {
 	
 	public var name : String;
-	public var numFrames(default, null) : Int;
-	public var loopFrame : Int;
-	public var stopFrame : Int;
+	public var maxFrames(default, null) : Int;
+	
+	public var startFrame : Int;
+	public var frameCount : Int;
 	
 	public var time : Float;
 	public var speed : Float;
@@ -34,8 +35,9 @@ class Animation {
 	public function new(name,frames) {
 		this.name = name;
 		this.objects = [];
-		numFrames = frames;
-		stopFrame = -1;
+		maxFrames = frames;
+		startFrame = 0;
+		frameCount = frames;
 		curFrame = -1;
 		time = 0.;
 		speed = 1.;
@@ -57,11 +59,12 @@ class Animation {
 	
 	@:access(h3d.scene.Skin.skinData)
 	public function createInstance( base : h3d.scene.Object ) {
-		var anim = new Animation(name,numFrames);
+		var anim = new Animation(name, maxFrames);
 		anim.isInstance = true;
 		anim.speed = speed;
 		anim.sampling = sampling;
-		anim.loopFrame = loopFrame;
+		anim.startFrame = startFrame;
+		anim.frameCount = frameCount;
 		var currentSkin : h3d.scene.Skin = null;
 		for( a in objects ) {
 			var a2 = new AnimatedObject(a.objectName, a.frames);
@@ -100,22 +103,15 @@ class Animation {
 	public function update() {
 		if( !isInstance )
 			throw "You must instanciate this animation first";
-		var iframe = Std.int(time * sampling) % numFrames;
-		if( iframe < 0 ) iframe += numFrames;
+		var iframe = Std.int(time * sampling) % frameCount;
+		if( iframe < 0 ) iframe += frameCount;
 		if( iframe == curFrame )
 			return;
-		if( stopFrame >= 0 && iframe >= stopFrame ) {
-			time += (stopFrame - iframe) / sampling;
-			iframe = stopFrame;
+		if( iframe < curFrame )
 			onAnimEnd();
-		} else if( iframe < curFrame ) {
-			if( iframe < loopFrame ) {
-				time += (loopFrame - iframe) / sampling;
-				iframe = loopFrame;
-			}
-			onAnimEnd();
-		}
 		curFrame = iframe;
+		var frame = iframe + startFrame;
+		if( frame < 0 ) frame = 0 else if( frame >= maxFrames ) frame = maxFrames - 1;
 		for( o in objects ) {
 			if( o.alphas != null ) {
 				var mat = o.targetObject.toMesh().material;
@@ -123,12 +119,12 @@ class Animation {
 					mat.colorMul = new Vector(1, 1, 1, 1);
 					mat.blend(SrcAlpha, OneMinusSrcAlpha);
 				}
-				mat.colorMul.w = o.alphas[iframe];
+				mat.colorMul.w = o.alphas[frame];
 			} else if( o.targetSkin != null ) {
-				o.targetSkin.currentRelPose[o.targetJoint] = o.frames[iframe];
+				o.targetSkin.currentRelPose[o.targetJoint] = o.frames[frame];
 				o.targetSkin.jointsUpdated = true;
 			} else
-				o.targetObject.defaultTransform = o.frames[iframe];
+				o.targetObject.defaultTransform = o.frames[frame];
 		}
 	}
 	
