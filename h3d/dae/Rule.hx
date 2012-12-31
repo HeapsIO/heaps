@@ -33,7 +33,7 @@ class Rule {
 					var pos = open + 1;
 					while( true ) {
 						var c = StringTools.fastCodeAt(rest, pos);
-						if( StringTools.isEOF(c) )
+						if( StringTools.isEof(c) )
 							throw "Unclosed }";
 						if( c == '{'.code )
 							count++;
