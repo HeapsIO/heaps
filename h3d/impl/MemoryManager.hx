@@ -318,9 +318,22 @@ class MemoryManager {
 				size -= size % align;
 				while( b != null ) {
 					free = b.free;
+					// skip not aligned buffers
+					if( b.size < allocSize )
+						free = null;
 					while( free != null ) {
-						if( free.count >= size && free.pos % align == 0 )
-							break;
+						if( free.count >= size ) {
+							// check alignment
+							var d = (align - (free.pos % align)) % align;
+							if( d == 0 )
+								break;
+							// insert some padding
+							if( free.count >= size + d ) {
+								free.next = new FreeCell(free.pos + d, free.count - d, free.next);
+								free = free.next;
+								break;
+							}
+						}
 						free = free.next;
 					}
 					if( free != null ) break;
