@@ -76,6 +76,8 @@ class BAEReader {
 			for( k in 0...i.readUInt24() )
 				a[k] = i.readFloat();
 			DFloatArray(a, g);
+		default:
+			throw "assert";
 		}
 	}
 }

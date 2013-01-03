@@ -194,7 +194,7 @@ class Parser {
 			case ';'.code:
 				while( true ) {
 					var c = nextChar();
-					if( StringTools.isEOF(c) || c == '\n'.code ) {
+					if( StringTools.isEof(c) || c == '\n'.code ) {
 						pos--;
 						break;
 					}
@@ -212,7 +212,7 @@ class Parser {
 					c = nextChar();
 					if( c == '"'.code )
 						break;
-					if( StringTools.isEOF(c) || c == '\n'.code )
+					if( StringTools.isEof(c) || c == '\n'.code )
 						error("Unclosed string");
 				}
 				return TString(getBuf(start, pos - start - 1));
@@ -257,7 +257,7 @@ class Parser {
 					pos--;
 					return TFloat(getBuf(start, pos - start));
 				}
-				if( StringTools.isEOF(c) ) {
+				if( StringTools.isEof(c) ) {
 					pos--;
 					return TEof;
 				}
