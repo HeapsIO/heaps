@@ -6,4 +6,4 @@
 -main Viewer
 -lib hxsl
 -D h3d
---dce full
+-dce full
