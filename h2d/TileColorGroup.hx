@@ -39,7 +39,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp[pos++] = g;
 		tmp[pos++] = b;
 		tmp[pos++] = a;
-		tmp[pos++] = sx + t.width + 0.1;
+		tmp[pos++] = sx + t.width;
 		tmp[pos++] = sy;
 		tmp[pos++] = t.u2;
 		tmp[pos++] = t.v;
@@ -48,15 +48,15 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp[pos++] = b;
 		tmp[pos++] = a;
 		tmp[pos++] = sx;
-		tmp[pos++] = sy + t.height + 0.1;
+		tmp[pos++] = sy + t.height;
 		tmp[pos++] = t.u;
 		tmp[pos++] = t.v2;
 		tmp[pos++] = r;
 		tmp[pos++] = g;
 		tmp[pos++] = b;
 		tmp[pos++] = a;
-		tmp[pos++] = sx + t.width + 0.1;
-		tmp[pos++] = sy + t.height + 0.1;
+		tmp[pos++] = sx + t.width;
+		tmp[pos++] = sy + t.height;
 		tmp[pos++] = t.u2;
 		tmp[pos++] = t.v2;
 		tmp[pos++] = r;
