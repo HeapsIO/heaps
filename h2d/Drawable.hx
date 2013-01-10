@@ -26,7 +26,6 @@ private class DrawableShader extends hxsl.Shader {
 			tmp.x = spos.dp3(mat1);
 			tmp.y = spos.dp3(mat2);
 			tmp.z = 0;
-			tmp.w = 1;
 			tmp.w = hasSkew ? 1 - skew * pos.y : 1;
 			out = tmp;
 			var t = uv;
