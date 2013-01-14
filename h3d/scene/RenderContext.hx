@@ -5,6 +5,7 @@ class RenderContext {
 	public var camera : h3d.Camera;
 	public var time : Float;
 	public var elapsedTime : Float;
+	public var currentPass : Int;
 	var passes : Array<RenderContext -> Void>;
 	
 	public function new() {
@@ -21,6 +22,7 @@ class RenderContext {
 		var old = passes;
 		while( old != null ) {
 			passes = null;
+			currentPass++;
 			for( p in old )
 				p(this);
 			old = passes;

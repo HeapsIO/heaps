@@ -40,6 +40,7 @@ class Scene extends Layers, implements h3d.IDrawable {
 		ctx.camera = camera;
 		ctx.engine = engine;
 		ctx.time += ctx.elapsedTime;
+		ctx.currentPass = 0;
 		renderContext(ctx);
 		ctx.finalize();
 		for( p in extraPasses )

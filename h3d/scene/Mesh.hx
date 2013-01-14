@@ -27,6 +27,10 @@ class Mesh extends Object {
 	}
 	
 	override function draw( ctx : RenderContext ) {
+		if( material.renderPass > ctx.currentPass ) {
+			ctx.addPass(draw);
+			return;
+		}
 		material.setMatrixes(this.absPos, ctx.camera.m);
 		ctx.engine.selectMaterial(material);
 		primitive.render(ctx.engine);

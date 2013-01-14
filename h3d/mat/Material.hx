@@ -11,9 +11,11 @@ class Material {
 	public var blendDst(default,set) : Blend;
 	public var colorMask(default,set) : Int;
 	public var shader : hxsl.Shader;
+	public var renderPass : Int;
 	
 	public function new(shader) {
 		bits = 0;
+		renderPass = 0;
 		this.shader = shader;
 		this.culling = Face.Back;
 		this.depthWrite = true;
