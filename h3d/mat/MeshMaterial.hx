@@ -16,7 +16,7 @@ private class MeshShader extends hxsl.Shader {
 		var uvScale : Float2;
 		var uvDelta : Float2;
 		var hasSkin : Bool;
-		var skinMatrixes : M34<20>;
+		var skinMatrixes : M34<39>;
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = pos.xyzw;
