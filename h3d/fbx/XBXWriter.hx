@@ -64,7 +64,11 @@ class XBXWriter
 				writeInt( va.length );
 				for ( i in va ) writeInt( i );
 			case PFloats( va ):
+				#if haxe3
+				o.writeInt32( va.length );
+				#else
 				o.writeInt31( va.length );
+				#end
 				for ( i in va ) o.writeDouble(i);
 		}
 	}
