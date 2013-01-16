@@ -6,6 +6,11 @@ class Buffer {
 	public var pos : Int;
 	public var nvert : Int;
 	public var next : Buffer;
+	#if debug
+	public var allocPos : haxe.PosInfos;
+	public var allocNext : Buffer;
+	public var allocPrev : Buffer;
+	#end
 	
 	public function new(b, pos, nvert) {
 		this.b = b;
@@ -16,6 +21,14 @@ class Buffer {
 	public function dispose() {
 		if( b != null ) {
 			b.freeCursor(pos, nvert);
+			#if debug
+			if( allocNext != null )
+				allocNext.allocPrev = allocPrev;
+			if( allocPrev != null )
+				allocPrev.allocNext = allocNext;
+			if( b.allocHead == this )
+				b.allocHead = allocNext;
+			#end
 			b = null;
 			if( next != null ) next.dispose();
 		}

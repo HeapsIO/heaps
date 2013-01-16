@@ -21,6 +21,9 @@ class BigBuffer {
 	var vbuf : flash.display3D.VertexBuffer3D;
 	var free : FreeCell;
 	var next : BigBuffer;
+	#if debug
+	public var allocHead : Buffer;
+	#end
 	
 	function new(v, stride, size) {
 		written = false;
@@ -145,7 +148,7 @@ class MemoryManager {
 		for( b in buffers ) {
 			var b = b;
 			while( b != null ) {
-				total += b.stride * allocSize * 4;
+				total += b.stride * b.size * 4;
 				var f = b.free;
 				while( f != null ) {
 					free += f.count * b.stride * 4;
@@ -162,7 +165,37 @@ class MemoryManager {
 			textureCount : textures.length,
 		};
 	}
-		
+
+	public function allocStats() : Array<{ file : String, line : Int, count : Int, size : Int }> {
+		#if !debug
+		return [];
+		#else
+		var h = new Hash();
+		var all = [];
+		for( buf in buffers ) {
+			var buf = buf;
+			while( buf != null ) {
+				var b = buf.allocHead;
+				while( b != null ) {
+					var key = b.allocPos.fileName + ":" + b.allocPos.lineNumber;
+					var inf = h.get(key);
+					if( inf == null ) {
+						inf = { file : b.allocPos.fileName, line : b.allocPos.lineNumber, count : 0, size : 0 };
+						h.set(key, inf);
+						all.push(inf);
+					}
+					inf.count++;
+					inf.size += b.nvert * b.b.stride * 4;
+					b = b.allocNext;
+				}
+				buf = buf.next;
+			}
+		}
+		all.sort(function(a, b) return b.size - a.size);
+		return all;
+		#end
+	}
+	
 	function newTexture(t, w, h, cubic) {
 		var t = new h3d.mat.Texture(this, t, w, h, cubic);
 		tdict.set(t, t.t);
@@ -211,15 +244,15 @@ class MemoryManager {
 		return new Indexes(ibuf,indices.length);
 	}
 
-	public function allocBytes( bytes : flash.utils.ByteArray, stride : Int, align ) {
+	public function allocBytes( bytes : flash.utils.ByteArray, stride : Int, align #if debug, ?allocPos : haxe.PosInfos #end ) {
 		var count = Std.int(bytes.length / (stride * 4));
-		var b = alloc(count, stride, align);
+		var b = alloc(count, stride, align #if debug, allocPos #end);
 		b.upload(bytes, 0, count);
 		return b;
 	}
 
-	public function allocVector( v : flash.Vector<Float>, stride, align ) {
-		var b = alloc(Std.int(v.length / stride), stride, align);
+	public function allocVector( v : flash.Vector<Float>, stride, align  #if debug, ?allocPos : haxe.PosInfos #end ) {
+		var b = alloc(Std.int(v.length / stride), stride, align #if debug, allocPos #end);
 		var tmp = b;
 		var pos = 0;
 		while( tmp != null ) {
@@ -274,7 +307,7 @@ class MemoryManager {
 		Align represent the number of vertex that represent a single primitive : 3 for triangles, 4 for quads
 		You can use 0 to allocate your own buffer but in that case you can't use pre-allocated indexes/quadIndexes
 	 **/
-	public function alloc( nvect, stride, align ) {
+	public function alloc( nvect : Int, stride, align #if debug, ?allocPos : haxe.PosInfos #end ) {
 		var b = buffers[stride], free = null;
 		while( b != null ) {
 			free = b.free;
@@ -360,7 +393,7 @@ class MemoryManager {
 						throw "Too many buffer";
 					throw "Memory full";
 				}
-				return alloc(nvect, stride, align);
+				return alloc(nvect, stride, align #if debug, allocPos #end);
 			}
 			var v = ctx.createVertexBuffer(size, stride);
 			usedMemory += mem;
@@ -377,8 +410,15 @@ class MemoryManager {
 		free.count -= alloc;
 		var b = new Buffer(b, fpos, alloc);
 		nvect -= alloc;
+		#if debug
+		var head = b.b.allocHead;
+		b.allocPos = allocPos;
+		b.allocNext = head;
+		if( head != null ) head.allocPrev = b;
+		b.b.allocHead = b;
+		#end
 		if( nvect > 0 )
-			b.next = this.alloc(nvect, stride, align);
+			b.next = this.alloc(nvect, stride, align #if debug, allocPos #end);
 		return b;
 	}
 
