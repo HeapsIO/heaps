@@ -110,8 +110,8 @@ class FBXModel extends MeshPrimitive {
 				}
 				// polygons are actually triangle fans
 				for( n in 0...count - 2 ) {
-					idx.push(start);
-					idx.push(start + n + 2);
+					idx.push(start + n);
+					idx.push(start + count - 1);
 					idx.push(start + n + 1);
 				}
 				index[pos] = i; // restore
