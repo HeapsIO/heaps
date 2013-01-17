@@ -18,6 +18,14 @@ class Tween {
 		return if( d > -min && d < min ) v2 else v1 + d * p;
 	}
 	
+	public static inline function squareDist( dx : Float, dy : Float, dz = 0. ) {
+		return dx * dx + dy * dy + dz * dz;
+	}
+	
+	public static inline function dist( dx : Float, dy : Float, dz = 0. ) {
+		return Math.sqrt(dx * dx + dy * dy + dz * dz);
+	}
+
 	public static function angleLerp( a1 : Float, a2 : Float, k : Float ) {
 		var da = (a2 - a1) % (PI * 2);
 		if( da > PI ) da -= 2 * PI else if( da <= -PI ) da += 2 * PI;
