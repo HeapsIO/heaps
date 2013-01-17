@@ -209,7 +209,7 @@ class MemoryManager {
 			inf.count++;
 			inf.size += t.width * t.height * 4;
 		}
-		all.sort(function(a, b) return b.size - a.size);
+		all.sort(function(a, b) return a.size == b.size ? a.line - b.line : b.size - a.size);
 		return all;
 		#end
 	}

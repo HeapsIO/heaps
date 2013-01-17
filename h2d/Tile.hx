@@ -35,6 +35,10 @@ class Tile {
 			return Tools.getCoreObjects().getEmptyTexture();
 		return innerTex;
 	}
+	
+	public function hasTexture() {
+		return innerTex != null && !innerTex.isDisposed();
+	}
 		
 	function setTexture(tex) {
 		this.innerTex = tex;
@@ -112,13 +116,12 @@ class Tile {
 		return t;
 	}
 	
-	static var COLOR_CACHE = new IntHash();
+	static var COLOR_CACHE = new IntHash<h2d.Tile>();
 	public static function fromColor( color : Int ) {
 		var t = COLOR_CACHE.get(color);
-		if( t != null )
+		if( t != null && t.hasTexture() )
 			return t;
-		var bmp = new flash.display.BitmapData(1, 1, true, 0);
-		bmp.setPixel32(0, 0, color);
+		var bmp = new flash.display.BitmapData(1, 1, true, color);
 		t = fromBitmap(bmp);
 		bmp.dispose();
 		COLOR_CACHE.set(color, t);

@@ -52,10 +52,10 @@ class Graphics extends Drawable {
 		super.onDelete();
 	}
 	
-	public function endDraw() {
+	public function endDraw( ?allocPos : h3d.impl.AllocPos ) {
 		if( ctx == null ) return;
 		if( tile != null ) tile.dispose();
-		tile = Tile.fromSprites([ctx.mc])[0];
+		tile = Tile.fromSprites([ctx.mc],allocPos)[0];
 	}
 	
 	override function draw(engine) {
