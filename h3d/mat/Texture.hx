@@ -5,6 +5,9 @@ class Texture {
 
 	var t : flash.display3D.textures.TextureBase;
 	var mem : h3d.impl.MemoryManager;
+	#if debug
+	var allocPos : h3d.impl.AllocPos;
+	#end
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var isCubic(default, null) : Bool;
@@ -67,8 +70,8 @@ class Texture {
 			mem.deleteTexture(this);
 	}
 	
-	public static function fromBitmap( bmp : flash.display.BitmapData ) {
-		return h3d.Engine.getCurrent().mem.makeTexture(bmp);
+	public static function fromBitmap( bmp : flash.display.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
+		return h3d.Engine.getCurrent().mem.makeTexture(bmp,allocPos);
 	}
 
 }

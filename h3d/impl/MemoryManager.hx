@@ -158,15 +158,22 @@ class MemoryManager {
 				b = b.next;
 			}
 		}
+		freeTextures();
+		var tcount = 0, tmem = 0;
+		for( t in tdict.keys() ) {
+			tcount++;
+			tmem += t.width * t.height * 4;
+		}
 		return {
 			bufferCount : count,
 			freeMemory : free,
 			totalMemory : total,
-			textureCount : textures.length,
+			textureCount : tcount,
+			textureMemory : tmem,
 		};
 	}
 
-	public function allocStats() : Array<{ file : String, line : Int, count : Int, size : Int }> {
+	public function allocStats() : Array<{ file : String, line : Int, count : Int, tex : Bool, size : Int }> {
 		#if !debug
 		return [];
 		#else
@@ -180,7 +187,7 @@ class MemoryManager {
 					var key = b.allocPos.fileName + ":" + b.allocPos.lineNumber;
 					var inf = h.get(key);
 					if( inf == null ) {
-						inf = { file : b.allocPos.fileName, line : b.allocPos.lineNumber, count : 0, size : 0 };
+						inf = { file : b.allocPos.fileName, line : b.allocPos.lineNumber, count : 0, size : 0, tex : false };
 						h.set(key, inf);
 						all.push(inf);
 					}
@@ -191,15 +198,29 @@ class MemoryManager {
 				buf = buf.next;
 			}
 		}
+		for( t in tdict.keys() ) {
+			var key = "$"+t.allocPos.fileName + ":" + t.allocPos.lineNumber;
+			var inf = h.get(key);
+			if( inf == null ) {
+				inf = { file : t.allocPos.fileName, line : t.allocPos.lineNumber, count : 0, size : 0, tex : true };
+				h.set(key, inf);
+				all.push(inf);
+			}
+			inf.count++;
+			inf.size += t.width * t.height * 4;
+		}
 		all.sort(function(a, b) return b.size - a.size);
 		return all;
 		#end
 	}
 	
-	function newTexture(t, w, h, cubic) {
+	function newTexture(t, w, h, cubic, allocPos) {
 		var t = new h3d.mat.Texture(this, t, w, h, cubic);
 		tdict.set(t, t.t);
 		textures.push(t.t);
+		#if debug
+		t.allocPos = allocPos;
+		#end
 		return t;
 	}
 
@@ -211,31 +232,31 @@ class MemoryManager {
 		t.t = null;
 	}
 	
-	public function allocTexture( width : Int, height : Int ) {
+	public function allocTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
 		freeTextures();
-		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false);
+		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false, allocPos);
 	}
 
-	public function allocTargetTexture( width : Int, height : Int ) {
+	public function allocTargetTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
 		freeTextures();
-		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true), width, height, false);
+		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true), width, height, false, allocPos);
 	}
 
-	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap ) {
+	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap, ?allocPos : AllocPos ) {
 		var t;
 		if( bmp != null ) {
-			t = allocTexture(bmp.width, bmp.height);
+			t = allocTexture(bmp.width, bmp.height, allocPos);
 			t.upload(bmp);
 		} else {
-			t = allocTexture(mbmp.width, mbmp.height);
+			t = allocTexture(mbmp.width, mbmp.height, allocPos);
 			t.uploadBytes(mbmp.bytes);
 		}
 		return t;
 	}
 
-	public function allocCubeTexture( size : Int ) {
+	public function allocCubeTexture( size : Int, ?allocPos : AllocPos ) {
 		freeTextures();
-		return newTexture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), size, size, true);
+		return newTexture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), size, size, true, allocPos);
 	}
 
 	public function allocIndex( indices : flash.Vector<UInt> ) {
@@ -244,15 +265,15 @@ class MemoryManager {
 		return new Indexes(ibuf,indices.length);
 	}
 
-	public function allocBytes( bytes : flash.utils.ByteArray, stride : Int, align #if debug, ?allocPos : haxe.PosInfos #end ) {
+	public function allocBytes( bytes : flash.utils.ByteArray, stride : Int, align, ?allocPos : AllocPos ) {
 		var count = Std.int(bytes.length / (stride * 4));
-		var b = alloc(count, stride, align #if debug, allocPos #end);
+		var b = alloc(count, stride, align, allocPos);
 		b.upload(bytes, 0, count);
 		return b;
 	}
 
-	public function allocVector( v : flash.Vector<Float>, stride, align  #if debug, ?allocPos : haxe.PosInfos #end ) {
-		var b = alloc(Std.int(v.length / stride), stride, align #if debug, allocPos #end);
+	public function allocVector( v : flash.Vector<Float>, stride, align, ?allocPos : AllocPos ) {
+		var b = alloc(Std.int(v.length / stride), stride, align, allocPos);
 		var tmp = b;
 		var pos = 0;
 		while( tmp != null ) {
@@ -307,7 +328,7 @@ class MemoryManager {
 		Align represent the number of vertex that represent a single primitive : 3 for triangles, 4 for quads
 		You can use 0 to allocate your own buffer but in that case you can't use pre-allocated indexes/quadIndexes
 	 **/
-	public function alloc( nvect : Int, stride, align #if debug, ?allocPos : haxe.PosInfos #end ) {
+	public function alloc( nvect : Int, stride, align, ?allocPos : AllocPos ) {
 		var b = buffers[stride], free = null;
 		while( b != null ) {
 			free = b.free;
@@ -393,7 +414,7 @@ class MemoryManager {
 						throw "Too many buffer";
 					throw "Memory full";
 				}
-				return alloc(nvect, stride, align #if debug, allocPos #end);
+				return alloc(nvect, stride, align, allocPos);
 			}
 			var v = ctx.createVertexBuffer(size, stride);
 			usedMemory += mem;

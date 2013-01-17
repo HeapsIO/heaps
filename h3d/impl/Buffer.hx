@@ -7,7 +7,7 @@ class Buffer {
 	public var nvert : Int;
 	public var next : Buffer;
 	#if debug
-	public var allocPos : haxe.PosInfos;
+	public var allocPos : AllocPos;
 	public var allocNext : Buffer;
 	public var allocPrev : Buffer;
 	#end

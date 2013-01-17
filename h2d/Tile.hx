@@ -125,13 +125,13 @@ class Tile {
 		return t;
 	}
 	
-	public static function fromBitmap( bmp : flash.display.BitmapData ) {
+	public static function fromBitmap( bmp : flash.display.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
 		var w = 1, h = 1;
 		while( w < bmp.width )
 			w <<= 1;
 		while( h < bmp.height )
 			h <<= 1;
-		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h);
+		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h, allocPos);
 		if( w != bmp.width || h != bmp.height ) {
 			var bmp2 = new flash.display.BitmapData(w, h, true, 0);
 			var p0 = new flash.geom.Point(0, 0);
@@ -143,7 +143,7 @@ class Tile {
 		return new Tile(tex, 0, 0, bmp.width, bmp.height);
 	}
 
-	public static function autoCut( bmp : flash.display.BitmapData, width : Int, ?height : Int ) {
+	public static function autoCut( bmp : flash.display.BitmapData, width : Int, ?height : Int, ?allocPos : h3d.impl.AllocPos ) {
 		if( height == null ) height = width;
 		var colorBG = bmp.getPixel32(bmp.width - 1, bmp.height - 1);
 		var tl = new Array();
@@ -152,7 +152,7 @@ class Tile {
 			w <<= 1;
 		while( h < bmp.height )
 			h <<= 1;
-		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h);
+		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h, allocPos);
 		for( y in 0...Std.int(bmp.height / height) ) {
 			var a = [];
 			tl[y] = a;
@@ -179,7 +179,7 @@ class Tile {
 		return new Tile(t, 0, 0, t.width, t.height);
 	}
 	
-	public static function fromSprites( sprites : Array<flash.display.Sprite> ) {
+	public static function fromSprites( sprites : Array<flash.display.Sprite>, ?allocPos : h3d.impl.AllocPos ) {
 		var tmp = [];
 		var width = 0;
 		var height = 0;
@@ -205,7 +205,7 @@ class Tile {
 			m.ty = -t.dy;
 			bmp.draw(t.s, m);
 		}
-		var main = fromBitmap(bmp);
+		var main = fromBitmap(bmp,allocPos);
 		var tiles = [];
 		for( t in tmp )
 			tiles.push(main.sub(t.x, 0, t.w, t.h, t.dx, t.dy));

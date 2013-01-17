@@ -26,12 +26,13 @@ class Mesh extends Object {
 		return m;
 	}
 	
+	@:access(h3d.mat.MeshMaterial.setup)
 	override function draw( ctx : RenderContext ) {
 		if( material.renderPass > ctx.currentPass ) {
 			ctx.addPass(draw);
 			return;
 		}
-		material.setMatrixes(this.absPos, ctx.camera.m);
+		material.setup(this.absPos, ctx.camera.m);
 		ctx.engine.selectMaterial(material);
 		primitive.render(ctx.engine);
 	}

@@ -13,8 +13,8 @@ class Bitmap extends Drawable {
 		drawTile(engine,tile);
 	}
 			
-	public static function create( bmp : flash.display.BitmapData ) {
-		return new Bitmap(Tile.fromBitmap(bmp));
+	public static function create( bmp : flash.display.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
+		return new Bitmap(Tile.fromBitmap(bmp,allocPos));
 	}
 	
 }

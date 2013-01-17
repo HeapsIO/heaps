@@ -88,8 +88,8 @@ class MeshMaterial extends Material {
 		m.skinMatrixes = skinMatrixes;
 		return m;
 	}
-		
-	public function setMatrixes( mpos, mproj ) {
+	
+	function setup( mpos, mproj ) {
 		mshader.mpos = useMatrixPos ? mpos : null;
 		mshader.mproj = mproj;
 		mshader.tex = texture;
