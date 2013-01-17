@@ -117,7 +117,8 @@ class Animation {
 				var mat = o.targetObject.toMesh().material;
 				if( mat.colorMul == null ) {
 					mat.colorMul = new Vector(1, 1, 1, 1);
-					mat.blend(SrcAlpha, OneMinusSrcAlpha);
+					if( mat.blendDst == Zero )
+						mat.blend(SrcAlpha, OneMinusSrcAlpha);
 				}
 				mat.colorMul.w = o.alphas[frame];
 			} else if( o.targetSkin != null ) {
