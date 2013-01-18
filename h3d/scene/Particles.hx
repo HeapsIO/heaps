@@ -7,6 +7,7 @@ class Particle {
 	public var z : Float;
 	public var alpha : Float;
 	public var group(default, null) : Particles;
+	public var frame : Int;
 	
 	var prev : Particle;
 	var next : Particle;
@@ -25,6 +26,7 @@ class Particle {
 class Particles extends Object {
 	
 	public var partSize : Float;
+	public var frameCount : Int;
 	public var material : h3d.mat.PartMaterial;
 
 	var first : Particle;
@@ -34,6 +36,7 @@ class Particles extends Object {
 	public function new( ?mat, ?parent ) {
 		super(parent);
 		partSize = 1.;
+		frameCount = 1;
 		if( mat == null ) mat = new h3d.mat.PartMaterial(null);
 		this.material = mat;
 	}
@@ -72,6 +75,8 @@ class Particles extends Object {
 		var pos = 0;
 		var p = first;
 		var tmp = tmpBuf;
+		var hasFrame = frameCount > 1;
+		var curFrame = 0.;
 		while( p != null ) {
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
@@ -79,29 +84,38 @@ class Particles extends Object {
 			tmp[pos++] = 0;
 			tmp[pos++] = 0;
 			tmp[pos++] = p.alpha;
+			if( hasFrame ) {
+				curFrame = p.frame / frameCount;
+				tmp[pos++] = curFrame;
+			}
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
 			tmp[pos++] = 0;
 			tmp[pos++] = 1;
 			tmp[pos++] = p.alpha;
+			if( hasFrame ) tmp[pos++] = curFrame;
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
 			tmp[pos++] = 1;
 			tmp[pos++] = 0;
 			tmp[pos++] = p.alpha;
+			if( hasFrame ) tmp[pos++] = curFrame;
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
 			tmp[pos++] = 1;
 			tmp[pos++] = 1;
 			tmp[pos++] = p.alpha;
+			if( hasFrame ) tmp[pos++] = curFrame;
 			p = p.next;
 		}
-		var buffer = ctx.engine.mem.allocVector(tmpBuf, 6, 4);
+		var stride = 6;
+		if( hasFrame ) stride++;
+		var buffer = ctx.engine.mem.allocVector(tmpBuf, stride, 4);
 		var size = partSize;
-		material.setup(this.absPos, ctx.camera.m, size, size * ctx.engine.width / ctx.engine.height);
+		material.setup(this.absPos, ctx.camera.m, size, size * ctx.engine.width / ctx.engine.height, frameCount);
 		ctx.engine.selectMaterial(material);
 		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();
@@ -109,6 +123,16 @@ class Particles extends Object {
 	
 	public inline function isEmpty() {
 		return first == null;
+	}
+	
+	public function getParticles() {
+		var a = [];
+		var p = first;
+		while( p != null ) {
+			a.push(p);
+			p = p.next;
+		}
+		return a;
 	}
 	
 }

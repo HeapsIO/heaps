@@ -8,11 +8,13 @@ private class PartShader extends hxsl.Shader {
 			pos : Float3,
 			uv : Float2,
 			alpha : Float,
+			frame : Float,
 		};
 		
 		var tuv : Float2;
 		var talpha : Float;
 		var partSize : Float2;
+		var frameCount : Float;
 
 		function vertex( mpos : M34, mproj : Matrix ) {
 			var tpos = pos.xyzw;
@@ -20,7 +22,7 @@ private class PartShader extends hxsl.Shader {
 			var tmp = tpos * mproj;
 			tmp.xy += (uv - 0.5) * partSize;
 			out = tmp;
-			tuv = uv;
+			tuv = if( frameCount != null ) [uv.x*frameCount + frame,uv.y] else uv;
 			talpha = alpha;
 		}
 		
@@ -71,12 +73,13 @@ class PartMaterial extends Material {
 		return m;
 	}
 
-	function setup( mpos, mproj, sizeX : Float, sizeY : Float ) {
+	function setup( mpos, mproj, sizeX : Float, sizeY : Float, frameCount : Int ) {
 		pshader.mpos = mpos;
 		pshader.mproj = mproj;
 		pshader.tex = texture;
 		pshader.partSize.x = sizeX;
 		pshader.partSize.y = sizeY;
+		pshader.frameCount = frameCount <= 1 ? null : 1 / frameCount;
 	}
 		
 	inline function get_killAlpha() {
