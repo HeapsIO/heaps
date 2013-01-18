@@ -17,7 +17,6 @@ private class DrawableShader extends hxsl.Shader {
 		var uvScale : Float2;
 		var uvPos : Float2;
 		var skew : Float;
-		var hasSkew : Bool;
 
 		function vertex( size : Float3, mat1 : Float3, mat2 : Float3 ) {
 			var tmp : Float4;
@@ -26,7 +25,7 @@ private class DrawableShader extends hxsl.Shader {
 			tmp.x = spos.dp3(mat1);
 			tmp.y = spos.dp3(mat2);
 			tmp.z = 0;
-			tmp.w = hasSkew ? 1 - skew * pos.y : 1;
+			tmp.w = skew != null ? 1 - skew * pos.y : 1;
 			out = tmp;
 			var t = uv;
 			if( uvScale != null ) t *= uvScale;
@@ -106,7 +105,6 @@ class Drawable extends Sprite {
 		super(parent);
 		shader = new DrawableShader();
 		shader.alpha = 1;
-		shader.skew = 0;
 		blendMode = Normal;
 	}
 	
@@ -125,19 +123,12 @@ class Drawable extends Sprite {
 		return b;
 	}
 	
-	function get_skew() : Null<Float> {
-		return shader.hasSkew ? shader.skew : null;
+	inline function get_skew() : Null<Float> {
+		return shader.skew;
 	}
 	
-	function set_skew(v : Null<Float> ) {
-		if( v == null ) {
-			shader.skew = 0;
-			shader.hasSkew = false;
-		} else {
-			shader.skew = v;
-			shader.hasSkew = true;
-		}
-		return v;
+	inline function set_skew(v : Null<Float> ) {
+		return shader.skew = skew;
 	}
 
 	inline function get_multiplyFactor() {
