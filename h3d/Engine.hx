@@ -367,14 +367,14 @@ class Engine {
 		reset();
 	}
 
-	public function setTarget( tex : h3d.mat.Texture ) {
+	public function setTarget( tex : h3d.mat.Texture, useDepth = false ) {
 		if( tex == null ) {
 			ctx.setRenderToBackBuffer();
 			inTarget = false;
 		} else {
 			if( inTarget )
 				throw "Calling setTarget() while already set";
-			ctx.setRenderToTexture(tex.t);
+			ctx.setRenderToTexture(tex.t, useDepth);
 			inTarget = true;
 			reset();
 			ctx.clear(0, 0, 0, 0);
