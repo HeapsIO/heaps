@@ -112,7 +112,7 @@ class Tile {
 		t.u = u;
 		t.u2 = u2;
 		t.v = v;
-		t.v2 = v;
+		t.v2 = v2;
 		return t;
 	}
 	
