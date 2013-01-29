@@ -19,6 +19,9 @@ class Camera {
 	public var pos : Vector;
 	public var up : Vector;
 	public var target : Vector;
+	public var viewport : Vector;
+	var minv : Matrix;
+	var needInv : Bool;
 
 	public function new( fov = 60., zoom = 1., ratio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
 		this.fov = fov;
@@ -32,6 +35,7 @@ class Camera {
 		target = new Vector(0, 0, 0);
 		m = new Matrix();
 		mcam = new Matrix();
+		viewport = new Vector(0, 0);
 		update();
 	}
 	
@@ -44,6 +48,21 @@ class Camera {
 		return c;
 	}
 
+	public function getInverseViewProj() {
+		if( minv == null ) minv = new h3d.Matrix();
+		if( needInv ) {
+			minv.inverse(m);
+			needInv = false;
+		}
+		return minv;
+	}
+
+	public function unproject( screenX : Float, screenY : Float, camZ ) {
+		var p = new h3d.Vector(screenX, screenY, camZ);
+		p.project(getInverseViewProj());
+		return p;
+	}
+	
 	public function update() {
 		var az = pos.sub(target);
 		az.normalize();
@@ -96,6 +115,7 @@ class Camera {
 		}
 		mproj = makeFrustumMatrix();
 		m.multiply(mcam, mproj);
+		needInv = true;		
 	}
 	
 	public function lostUp() {
@@ -137,6 +157,17 @@ class Camera {
 			m._34 = -1;
 			m._43 = (zNear * zFar) / (zNear - zFar);
 		}
+
+		m._11 += viewport.x * m._14;
+		m._21 += viewport.x * m._24;
+		m._31 += viewport.x * m._34;
+		m._41 += viewport.x * m._44;
+
+		m._12 += viewport.y * m._14;
+		m._22 += viewport.y * m._24;
+		m._32 += viewport.y * m._34;
+		m._42 += viewport.y * m._44;
+				
 		return m;
 	}
 		
