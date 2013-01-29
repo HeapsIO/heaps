@@ -71,7 +71,7 @@ class Vector {
 		w = 1;
 	}
 	
-	public inline function project3x4( m : Matrix ) {
+	public inline function transform3x4( m : Matrix ) {
 		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
 		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
 		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
@@ -80,6 +80,17 @@ class Vector {
 		z = pz;
 	}
 
+	public inline function transform( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
+		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
+		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
+		var pw = x * m._14 + y * m._24 + z * m._34 + w * m._44;
+		x = px;
+		y = py;
+		z = pz;
+		w = pw;
+	}
+	
 	public inline function copy() {
 		return new Vector(x,y,z,w);
 	}

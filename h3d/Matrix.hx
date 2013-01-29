@@ -297,7 +297,7 @@ class Matrix {
 		_43 = -m._43;
 		_44 = 1;
 		var det = m11 * _11 + m12 * _21 + m13 * _31;
-		if( det < Tools.EPSILON ) {
+		if(	det > -Tools.EPSILON && det < Tools.EPSILON ) {
 			zero();
 			return;
 		}
@@ -330,8 +330,8 @@ class Matrix {
 		_34 =  -m11 * m22 * m34 + m11 * m24 * m32 + m21 * m12 * m34 - m21 * m14 * m32 - m31 * m12 * m24 + m31 * m14 * m22;
 		_44 = m11 * m22 * m33 - m11 * m23 * m32 - m21 * m12 * m33 + m21 * m13 * m32 + m31 * m12 * m23 - m31 * m13 * m22;
 
-		var det = m11*_11 + m12*_21 + m13*_31 + m14*_41;
-		if(	det < Tools.EPSILON ) {
+		var det = m11 * _11 + m12 * _21 + m13 * _31 + m14 * _41;
+		if(	det > -Tools.EPSILON && det < Tools.EPSILON ) {
 			zero();
 			return;
 		}
