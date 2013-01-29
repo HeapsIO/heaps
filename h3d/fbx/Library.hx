@@ -428,7 +428,7 @@ class Library {
 		for( model in root.getAll("Objects.Model") ) {
 			var o : h3d.scene.Object;
 			switch( model.getType() ) {
-			case "Null", "Root":
+			case "Null", "Root", "Camera":
 				var hasJoint = false;
 				for( c in getChilds(model, "Model") )
 					if( c.getType() == "LimbNode" ) {
