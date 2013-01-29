@@ -278,4 +278,8 @@ class Object {
 		return childs.length;
 	}
 	
+	public inline function iterator() {
+		return childs.iterator();
+	}
+	
 }
