@@ -156,9 +156,12 @@ class Object {
 	
 	function renderContext( ctx : RenderContext ) {
 		if( currentAnimation != null ) {
-			var old = parent;
+			var old = parent, olda = currentAnimation;
 			currentAnimation.time += ctx.elapsedTime * currentAnimation.speed;
 			currentAnimation.update();
+			// one more sync in case we just changed animation
+			if( olda != currentAnimation && currentAnimation != null )
+				currentAnimation.update();
 			if( parent == null && old != null ) return; // allow self-removal anim event
 		}
 		updatePos();
