@@ -234,7 +234,13 @@ class Library {
 			var cname = cn.getName();
 			// collect all the timestamps
 			var times = data[0].get("KeyTime").getFloats();
-			for( t in times ) {
+			for( i in 0...times.length ) {
+				var t = times[i];
+				// fix rounding error
+				if( t % 100 != 0 ) {
+					t += 100 - (t % 100);
+					times[i] = t;
+				}
 				// this should give significant-enough key
 				var it = Std.int(t / 200000);
 				allTimes.set(it, t);
@@ -250,7 +256,7 @@ class Library {
 					continue;
 				default:
 				}
-				throw cname+" has "+data.length+" curves";
+				throw model.getName()+"."+cname + " has " + data.length + " curves";
 			}
 			// handle TRS curves
 			var data = {
@@ -259,8 +265,9 @@ class Library {
 				z : data[2].get("KeyValueFloat").getFloats(),
 				t : times,
 			};
-			if( data.y.length != times.length || data.z.length != times.length )
-				throw "Unsynchronized curve components";
+			// this can happen when resampling anims due to rounding errors, let's ignore it for now
+			//if( data.y.length != times.length || data.z.length != times.length )
+			//	throw "Unsynchronized curve components on " + model.getName()+"."+cname+" (" + data.x.length + "/" + data.y.length + "/" + data.z.length + ")";
 			// optimize empty animations out
 			var E = 1e-10, M = 1.0;
 			var def = switch( cname ) {
@@ -268,7 +275,7 @@ class Library {
 			case "R": M = F; if( c.def.rotate == null ) P0 else c.def.rotate;
 			case "S": if( c.def.scale == null ) P1 else c.def.scale;
 			default:
-				throw "Unknown curve " + cname;
+				throw "Unknown curve " + model.getName()+"."+cname;
 			}
 			var hasValue = false;
 			for( v in data.x )
@@ -297,7 +304,7 @@ class Library {
 			case "T": c.t = data;
 			case "R": c.r = data;
 			case "S": c.s = data;
-			default: throw "Unknown curve " + cname;
+			default: throw "assert";
 			}
 		}
 		
