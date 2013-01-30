@@ -1,4 +1,7 @@
 package h3d;
+#if macro
+import haxe.macro.Context;
+#end
 
 class Tween {
 
@@ -8,9 +11,33 @@ class Tween {
 		return v1 * (1 - k) + v2 * k;
 	}
 	
-	public static inline function moveTo( v1 : Float, v2 : Float, max : Float ) {
-		var d = v2 - v1;
-		return if( d > -max && d < max ) v2 else v1 + (d < 0 ? -max : max);
+	public static macro function moveTo( cur, target, speed : haxe.macro.Expr.ExprOf<Float> ) {
+		var t = Context.typeof(cur);
+		switch( t ) {
+		default:
+			// assume 3D
+			return macro {
+				var _max = $speed;
+				var _cur = $cur;
+				var _dst = $target;
+				var dx = _dst.x - _cur.x;
+				var dy = _dst.y - _cur.y;
+				var dz = _dst.z - _cur.z;
+				var d = dx * dx + dy * dy + dz * dz;
+				if( d < _max * _max ) {
+					_cur.x = _dst.x;
+					_cur.y = _dst.y;
+					_cur.z = _dst.z;
+					true;
+				} else {
+					d = _max / Math.sqrt(d);
+					_cur.x += dx * d;
+					_cur.y += dy * d;
+					_cur.z += dz * d;
+					false;
+				}
+			}
+		}
 	}
 	
 	public static inline function powTo( v1 : Float, v2 : Float, p : Float, min = 0.1 ) {
