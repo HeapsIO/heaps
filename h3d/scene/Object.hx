@@ -26,6 +26,7 @@ class Object {
 	var absPos : h3d.Matrix;
 	var qRot : h3d.Quat;
 	var posChanged : Bool;
+	var lastFrame : Int;
 	
 	public function new( ?parent : Object ) {
 		absPos = new h3d.Matrix();
@@ -103,6 +104,7 @@ class Object {
 			o.parent.removeChild(o);
 		childs.insert(pos,o);
 		o.parent = this;
+		o.lastFrame = -1;
 		o.posChanged = true;
 	}
 	
@@ -166,19 +168,17 @@ class Object {
 		}
 		updatePos();
 		draw(ctx);
+		lastFrame = ctx.frame;
 		var p = 0, len = childs.length;
 		while( p < len ) {
 			var c = childs[p];
-			c.renderContext(ctx);
-			// check if the object was removed
+			if( c.lastFrame != ctx.frame )
+				c.renderContext(ctx);
+			// if the object was removed, let's restart again.
+			// our lastFrame ensure that no object will get draw twice
 			if( childs[p] != c ) {
+				p = 0;
 				len = childs.length;
-				// look if the object was moved
-				for( i in 0...len )
-					if( childs[i] == c ) {
-						p = i + 1;
-						break;
-					}
 			} else
 				p++;
 		}

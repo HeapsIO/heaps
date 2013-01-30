@@ -6,6 +6,7 @@ class RenderContext {
 	public var time : Float;
 	public var elapsedTime : Float;
 	public var currentPass : Int;
+	public var frame : Int;
 	var passes : Array<RenderContext -> Void>;
 	
 	public function new() {
