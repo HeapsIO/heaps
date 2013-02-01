@@ -76,8 +76,8 @@ class Skin {
 			var il = envelop[i];
 			if( il == null ) il = [];
 			il.sort(sortInfluences);
-			if( il.length > 4 )
-				il = il.slice(0, 4);
+			if( il.length > bonesPerVertex )
+				il = il.slice(0, bonesPerVertex);
 			var tw = 0.;
 			for( i in il )
 				tw += i.w;
@@ -93,7 +93,7 @@ class Skin {
 						boundJoints.push(i.j);
 					}
 					vertexJoints[pos] = i.j.bindIndex;
-					vertexWeights[pos] = i.w;
+					vertexWeights[pos] = i.w * tw;
 				}
 				pos++;
 			}
