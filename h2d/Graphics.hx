@@ -63,5 +63,12 @@ class Graphics extends Drawable {
 		if( tile == null ) return;
 		drawTile(engine, tile);
 	}
+	
+	override public function free()
+	{
+		tile.dispose();
+		tile = null;
+		super.free();
+	}
 
 }

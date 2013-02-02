@@ -447,8 +447,10 @@ class Engine {
 
 	public function dispose() {
 		s3d.removeEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
-		ctx.dispose();
-		ctx = null;
+		if (ctx != null) {
+			ctx.dispose();
+			ctx = null;
+		}
 	}
 	
 	function get_fps() {

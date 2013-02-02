@@ -88,6 +88,10 @@ class Object {
 		return o;
 	}
 	
+	public function free() {
+		if (childs != null) for (c in childs) c.free();
+	}
+	
 	public function addChild( o : Object ) {
 		addChildAt(o, childs.length);
 	}

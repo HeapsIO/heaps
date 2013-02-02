@@ -37,4 +37,11 @@ class Mesh extends Object {
 		primitive.render(ctx.engine);
 	}
 	
+	override public function free() {
+		if (primitive != null) primitive.dispose();
+		if (material != null) material.free();
+		
+		super.free();
+	}
+	
 }

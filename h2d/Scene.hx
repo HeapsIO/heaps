@@ -344,5 +344,10 @@ class Scene extends Layers, implements h3d.IDrawable {
 		return new Bitmap(target);
 	}
 	
+	override public function free() 
+	{
+		super.free();
+		Tools.free();
+	}
 	
 }

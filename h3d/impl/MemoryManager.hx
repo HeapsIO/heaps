@@ -214,6 +214,13 @@ class MemoryManager {
 		#end
 	}
 	
+	function updateTexture(t:h3d.mat.Texture, target = false)
+	{
+		t.t = ctx.createTexture(t.width, t.height, flash.display3D.Context3DTextureFormat.BGRA, target);
+		tdict.set(t, t.t);
+		textures.push(t.t);
+	}
+	
 	function newTexture(t, w, h, cubic, allocPos) {
 		var t = new h3d.mat.Texture(this, t, w, h, cubic);
 		tdict.set(t, t.t);

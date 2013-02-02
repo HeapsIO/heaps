@@ -21,4 +21,10 @@ class Drawable<S:hxsl.Shader> implements IDrawable {
 		primitive.render(engine);
 	}
 	
+	public function free() : Void {
+		if (material != null) material.free();
+		else if (shader != null) shader.free();
+		if (primitive != null) primitive.dispose();
+	}
+	
 }

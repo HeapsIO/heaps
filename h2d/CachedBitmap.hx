@@ -113,4 +113,12 @@ class CachedBitmap extends Drawable {
 		posChanged = false;
 	}
 	
+	override public function free()
+	{
+		if (tile != null) tile.dispose();
+		tile = null;
+		tex = null;
+		super.free();
+	}
+	
 }

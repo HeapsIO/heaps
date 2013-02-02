@@ -163,6 +163,10 @@ class Sprite {
 		posChanged = false;
 	}
 	
+	public function free() {
+		if (childs != null) for (c in childs) c.free();
+	}
+	
 	inline function set_x(v) {
 		x = v;
 		posChanged = true;
