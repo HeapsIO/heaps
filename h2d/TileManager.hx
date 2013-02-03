@@ -74,7 +74,9 @@ class TileManager  {
 				t = bmpCache.get(bmp).innerTex;
 				e.mem.updateTexture(t);
 				t.mem = e.mem;
-				t.t = Tile.fromBitmap(bmp).innerTex.t;
+				var inner = Tile.fromBitmap(bmp).innerTex;
+				t.t = inner.t;
+				e.mem.deleteTexture(inner, false);
 			} catch (e:Dynamic) {}
 		}
 		

@@ -232,11 +232,13 @@ class MemoryManager {
 	}
 
 	@:allow(h3d.mat.Texture.dispose)
-	function deleteTexture( t : h3d.mat.Texture ) {
+	function deleteTexture( t : h3d.mat.Texture, dispose = false ) {
 		textures.remove(t.t);
 		tdict.delete(t);
-		t.t.dispose();
-		t.t = null;
+		if (dispose) {
+			t.t.dispose();
+			t.t = null;
+		}
 	}
 	
 	public function allocTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
