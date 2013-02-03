@@ -44,8 +44,9 @@ class Skybox extends hxsl.Shader {
 		obj.render(engine);
 	}
 	
-	public function free() {
+	override public function free() {
 		obj.free();
+		super.free();
 	}
 	
 }
