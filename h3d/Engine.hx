@@ -444,6 +444,11 @@ class Engine {
 	public function lineP( a : { x : Float, y : Float, z : Float }, b : { x : Float, y : Float, z : Float }, color = 0x80FF0000, depth = false ) {
 		line(a.x, a.y, a.z, b.x, b.y, b.z, color, depth);
 	}
+	
+	public function free() {
+		if (debugLine != null) { debugLine.free(); debugLine = null; }
+		if (debugPoint != null) { debugPoint.free(); debugPoint = null; }
+	}
 
 	public function dispose() {
 		s3d.removeEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
