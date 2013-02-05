@@ -16,6 +16,7 @@ private class MeshShader extends hxsl.Shader {
 		var uvScale : Float2;
 		var uvDelta : Float2;
 		var hasSkin : Bool;
+		var texWrap : Bool;
 		var skinMatrixes : M34<39>;
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
@@ -35,7 +36,7 @@ private class MeshShader extends hxsl.Shader {
 		var texNearest : Bool;
 		
 		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
-			var c = tex.get(tuv.xy,filter=!(killAlpha || texNearest),wrap=(uvDelta != null));
+			var c = tex.get(tuv.xy,filter=!(killAlpha || texNearest),wrap=(texWrap || uvDelta != null));
 			if( killAlpha ) kill(c.a - 0.001);
 			if( colorAdd != null ) c += colorAdd;
 			if( colorMul != null ) c = c * colorMul;
@@ -58,7 +59,8 @@ class MeshMaterial extends Material {
 	public var uvDelta(get,set) : Null<h3d.Vector>;
 
 	public var killAlpha(get,set) : Bool;
-	public var texNearest(get,set) : Bool;
+	public var texNearest(get, set) : Bool;
+	public var texWrap(get, set) : Bool;
 
 	public var colorAdd(get,set) : Null<h3d.Vector>;
 	public var colorMul(get,set) : Null<h3d.Vector>;
@@ -127,6 +129,14 @@ class MeshMaterial extends Material {
 		return mshader.texNearest = v;
 	}
 
+	inline function get_texWrap() {
+		return mshader.texWrap;
+	}
+
+	inline function set_texWrap(v) {
+		return mshader.texWrap = v;
+	}
+	
 	inline function get_colorAdd() {
 		return mshader.colorAdd;
 	}
