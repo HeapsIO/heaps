@@ -10,8 +10,8 @@ private class BitmapShader extends hxsl.Shader {
 		};
 		var tuv : Float2;
 		function vertex( viewSize : Float4, viewPos : Float4 ) {
-			out = pos.xyzw * viewSize + viewPos;
-			tuv = uv;
+			out = input.pos.xyzw * viewSize + viewPos;
+			tuv = input.uv;
 		}
 		function fragment( texture : Texture, color : Float4 ) {
 			out = texture.get(tuv) * color;

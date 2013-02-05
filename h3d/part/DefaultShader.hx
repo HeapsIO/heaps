@@ -12,11 +12,11 @@ class DefaultShader extends hxsl.Shader {
 		var tuv : Float2;
 		var tlight : Float;
 		function vertex( mproj : M44 ) {
-			var tpos = pos.xyzw * mproj;
-			tpos.xy += delta;
+			var tpos = input.pos.xyzw * mproj;
+			tpos.xy += input.delta;
 			out = tpos;
-			tuv = uv;
-			tlight = light;
+			tuv = input.uv;
+			tlight = input.light;
 		}
 		function fragment( tex : Texture ) {
 			var c = tex.get(tuv, nearest);

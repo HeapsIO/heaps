@@ -20,13 +20,13 @@ private class MeshShader extends hxsl.Shader {
 		var skinMatrixes : M34<39>;
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
-			var tpos = pos.xyzw;
+			var tpos = input.pos.xyzw;
 			if( hasSkin )
-				tpos.xyz = tpos * weights.x * skinMatrixes[indexes.x * (255 * 3)] + tpos * weights.y * skinMatrixes[indexes.y * (255 * 3)] + tpos * weights.z * skinMatrixes[indexes.z * (255 * 3)];
+				tpos.xyz = tpos * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)] + tpos * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)] + tpos * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)];
 			else if( mpos != null )
 				tpos *= mpos;
 			out = tpos * mproj;
-			var t = uv;
+			var t = input.uv;
 			if( uvScale != null ) t *= uvScale;
 			if( uvDelta != null ) t += uvDelta;
 			tuv = t;

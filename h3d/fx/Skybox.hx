@@ -9,8 +9,8 @@ class Skybox extends hxsl.Shader {
 		};
 		var tuv : Float3;
 		function vertex( mproj : M44 ) {
-			out = pos.xyzw * mproj;
-			tuv = pos;
+			out = input.pos.xyzw * mproj;
+			tuv = input.pos;
 		}
 		function fragment( texture : CubeTexture ) {
 			out = texture.get(tuv, nearest);

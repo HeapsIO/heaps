@@ -9,9 +9,9 @@ class PointShader extends hxsl.Shader {
 		var tuv : Float2;
 		function vertex( mproj : Matrix, delta : Float4, size : Float2 ) {
 			var p = delta * mproj;
-			p.xy += pos.xy * size * p.z;
+			p.xy += input.pos.xy * size * p.z;
 			out = p;
-			tuv = pos;
+			tuv = input.pos;
 		}
 		function fragment( color : Color ) {
 			kill( 1 - (tuv.x * tuv.x + tuv.y * tuv.y) );
@@ -35,8 +35,8 @@ class LineShader extends hxsl.Shader {
 			delta.xy *= 1 / sqrt(delta.x * delta.x + delta.y * delta.y);
 			
 			
-			var p = (epos - spos) * (pos.x + 1) * 0.5 + spos;
-			p.xy += delta.yx * pos.y * p.z / 400;
+			var p = (epos - spos) * (input.pos.x + 1) * 0.5 + spos;
+			p.xy += delta.yx * input.pos.y * p.z / 400;
 			out = p;
 		}
 		function fragment( color : Color ) {
