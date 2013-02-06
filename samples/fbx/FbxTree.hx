@@ -18,11 +18,11 @@ class FbxTree {
 	public static function toString( root : FbxNode ) {
 		var buf = new StringBuf();
 		
-		var parents = new IntHash();
-		var childs = new IntHash();
+		var parents = new Map();
+		var childs = new Map();
 
 		var rootObjects = [];
-		var objects = new IntHash();
+		var objects = new Map();
 		
 		objects.set(0, root);
 		rootObjects.push(root);
@@ -53,7 +53,7 @@ class FbxTree {
 			cl.push(cid);
 		}
 		
-		function highestDepth( id : Int, stack : IntHash<Bool> ) {
+		function highestDepth( id : Int, stack : Map<Int,Bool> ) {
 			if( stack.get(id) )
 				return 0;
 			var pl = parents.get(id);
@@ -69,7 +69,7 @@ class FbxTree {
 			return 1 + max;
 		}
 		
-		var marked = new IntHash();
+		var marked = new Map();
 		function genRec( o : FbxNode, tabs : String ) {
 			var id = o.props[0].toInt();
 			var m = marked.get(id);
@@ -83,7 +83,7 @@ class FbxTree {
 			var oc = [];
 			for( cid in childs ) {
 				var o = objects.get(cid);
-				oc.push( { o : o, d : highestDepth(cid,new IntHash()) } );
+				oc.push( { o : o, d : highestDepth(cid,new Map()) } );
 			}
 			//oc.sort(function(o1, o2) return o1.d - o2.d);
 			for( o in oc )

@@ -308,7 +308,10 @@ class Library {
 			}
 		}
 		
-		var allTimes = Lambda.array(allTimes);
+		var times = [];
+		for( a in allTimes )
+			times.push(a);
+		var allTimes = times;
 		allTimes.sort(sortDistinctFloats);
 		var maxTime = allTimes[allTimes.length - 1];
 		var minDT = maxTime;
