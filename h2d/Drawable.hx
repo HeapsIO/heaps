@@ -20,19 +20,19 @@ private class DrawableShader extends hxsl.Shader {
 
 		function vertex( size : Float3, mat1 : Float3, mat2 : Float3 ) {
 			var tmp : Float4;
-			var spos = pos.xyw;
+			var spos = input.pos.xyw;
 			if( size != null ) spos *= size;
 			tmp.x = spos.dp3(mat1);
 			tmp.y = spos.dp3(mat2);
 			tmp.z = 0;
-			tmp.w = skew != null ? 1 - skew * pos.y : 1;
+			tmp.w = skew != null ? 1 - skew * input.pos.y : 1;
 			out = tmp;
-			var t = uv;
+			var t = input.uv;
 			if( uvScale != null ) t *= uvScale;
 			if( uvPos != null ) t += uvPos;
 			tuv = t;
-			if( hasVertexColor ) tcolor = vcolor;
-			if( hasVertexAlpha ) talpha = valpha;
+			if( hasVertexColor ) tcolor = input.vcolor;
+			if( hasVertexAlpha ) talpha = input.valpha;
 		}
 		
 		var hasAlpha : Bool;

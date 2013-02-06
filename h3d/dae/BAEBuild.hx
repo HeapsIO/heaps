@@ -51,8 +51,8 @@ class BAEBuild  {
 			}
 			return false;
 		}
-		s.filter("library_geometries.geometry.mesh.triangles", callback(filterMesh, false));
-		s.filter("library_geometries.geometry.mesh.polylist", callback(filterMesh, true));
+		s.filter("library_geometries.geometry.mesh.triangles", filterMesh.bind(false));
+		s.filter("library_geometries.geometry.mesh.polylist", filterMesh.bind(true));
 		
 		s.keep("library_geometries.geometry.mesh.polylist.p");
 		s.keep("library_geometries.geometry.mesh.polylist.vcount");

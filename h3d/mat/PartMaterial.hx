@@ -17,13 +17,13 @@ private class PartShader extends hxsl.Shader {
 		var frameCount : Float;
 
 		function vertex( mpos : M34, mproj : Matrix ) {
-			var tpos = pos.xyzw;
-			tpos.xyz = pos.xyzw * mpos;
+			var tpos = input.pos.xyzw;
+			tpos.xyz = input.pos.xyzw * mpos;
 			var tmp = tpos * mproj;
-			tmp.xy += (uv - 0.5) * partSize;
+			tmp.xy += (input.uv - 0.5) * partSize;
 			out = tmp;
-			tuv = if( frameCount != null ) [uv.x*frameCount + frame,uv.y] else uv;
-			talpha = alpha;
+			tuv = if( frameCount != null ) [input.uv.x*frameCount + input.frame,input.uv.y] else input.uv;
+			talpha = input.alpha;
 		}
 		
 		var killAlpha : Bool;

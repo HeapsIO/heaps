@@ -4,13 +4,13 @@ using h3d.dae.Tools;
 class Library {
 	
 	public var root : DAE;
-	var hmeshes : Hash<Mesh>;
+	var hmeshes : Map<String,Mesh>;
 	var meshes : Array<Mesh>;
-	var hnodes : Hash<DAE>;
+	var hnodes : Map<String,DAE>;
 	
 	public function new( d : DAE ) {
 		root = d;
-		hmeshes = new Hash();
+		hmeshes = new Map();
 		meshes = [];
 		for( m in root.getAll("library_geometries.geometry") ) {
 			var m = new Mesh(this,m);

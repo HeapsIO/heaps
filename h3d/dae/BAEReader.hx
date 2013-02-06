@@ -55,7 +55,7 @@ class BAEReader {
 		case 0:
 			DEmpty;
 		case 1:
-			DInt(i.readInt31());
+			DInt(i.readInt32());
 		case 2:
 			DFloat(i.readFloat());
 		case 3:
@@ -68,7 +68,7 @@ class BAEReader {
 			var g = i.readByte();
 			var a = new DAETable();
 			for( k in 0...i.readUInt24() )
-				a[k] = i.readInt31();
+				a[k] = i.readInt32();
 			DIntArray(a, g);
 		case 7:
 			var g = i.readByte();

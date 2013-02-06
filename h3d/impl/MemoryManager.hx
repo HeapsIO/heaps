@@ -79,7 +79,7 @@ class MemoryManager {
 	var empty : flash.utils.ByteArray;
 	var buffers : Array<BigBuffer>;
 	
-	var tdict : flash.utils.TypedDictionary<h3d.mat.Texture,flash.display3D.textures.TextureBase>;
+	var tdict : Map<h3d.mat.Texture,flash.display3D.textures.TextureBase>;
 	var textures : Array<flash.display3D.textures.TextureBase>;
 	
 	public var indexes(default,null) : Indexes;
@@ -92,7 +92,7 @@ class MemoryManager {
 		this.ctx = ctx;
 		this.allocSize = allocSize;
 
-		tdict = new flash.utils.TypedDictionary(true);
+		tdict = new haxe.ds.ObjectMap(true);
 		textures = new Array();
 		empty = new flash.utils.ByteArray();
 		buffers = new Array();
@@ -177,7 +177,7 @@ class MemoryManager {
 		#if !debug
 		return [];
 		#else
-		var h = new Hash();
+		var h = new Map();
 		var all = [];
 		for( buf in buffers ) {
 			var buf = buf;
@@ -234,7 +234,7 @@ class MemoryManager {
 	@:allow(h3d.mat.Texture.dispose)
 	function deleteTexture( t : h3d.mat.Texture, dispose = false ) {
 		textures.remove(t.t);
-		tdict.delete(t);
+		tdict.remove(t);
 		if (dispose) {
 			t.t.dispose();
 			t.t = null;
@@ -299,13 +299,13 @@ class MemoryManager {
 		Returns the number of textures freed that way.
 	 **/
 	public function freeTextures() {
-		var tall = new flash.utils.TypedDictionary();
+		var tall = new Map();
 		for( t in textures )
 			tall.set(t, true);
 		for( t in tdict )
-			tall.delete(tdict.get(t));
+			tall.remove(t);
 		var count = 0;
-		for( t in tall ) {
+		for( t in tall.keys() ) {
 			t.dispose();
 			textures.remove(t);
 			count++;

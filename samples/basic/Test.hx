@@ -25,6 +25,7 @@ class Test {
 		var prim = new h3d.prim.Cube();
 		prim.translate( -0.5, -0.5, -0.5);
 		prim.addTCoords();
+		prim.addNormals();
 		
 		var bmp = new flash.display.BitmapData(256, 256);
 		bmp.perlinNoise(64, 64, 3, 0, true, true, 7);
@@ -34,6 +35,12 @@ class Test {
 		scene = new Scene();
 		obj1 = new Mesh(prim, mat, scene);
 		obj2 = new Mesh(prim, mat, scene);
+		
+		mat.lightSystem = {
+			ambient : new h3d.Vector(0, 0, 0),
+			dirs : [{ pos : new h3d.Vector(0.3,0.5,1), color : new h3d.Vector(1,1,1) }],
+			points : [{ pos : new h3d.Vector(1.5,0,0), pow : -2, color : new h3d.Vector(1,0,0) }],
+		};
 	}
 	
 	function update(_) {
