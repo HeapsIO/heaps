@@ -54,7 +54,7 @@ class BAEWriter {
 			o.writeByte(0);
 		case DInt(i):
 			o.writeByte(1);
-			o.writeInt31(i);
+			o.writeInt32(i);
 		case DFloat(f):
 			o.writeByte(2);
 			o.writeFloat(f);
@@ -68,7 +68,7 @@ class BAEWriter {
 			o.writeByte(g);
 			o.writeUInt24(v.length);
 			for( v in v )
-				o.writeInt31(v);
+				o.writeInt32(v);
 		case DFloatArray(v, g):
 			o.writeByte(7);
 			o.writeByte(g);

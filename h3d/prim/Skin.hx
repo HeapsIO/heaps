@@ -34,7 +34,7 @@ class Skin {
 	public var vertexJoints : Table<Int>;
 	public var vertexWeights : Table<Float>;
 	public var rootJoints(default,null) : Array<Joint>;
-	public var namedJoints(default,null) : Hash<Joint>;
+	public var namedJoints(default,null) : Map<String,Joint>;
 	public var allJoints(default,null) : Array<Joint>;
 	public var boundJoints(default,null) : Array<Joint>;
 	public var primitive : Primitive;
@@ -52,7 +52,7 @@ class Skin {
 	public function setJoints( joints : Array<Joint>, roots : Array<Joint> ) {
 		rootJoints = roots;
 		allJoints = joints;
-		namedJoints = new Hash();
+		namedJoints = new Map();
 		for( j in joints )
 			if( j.name != null )
 				namedJoints.set(j.name, j);

@@ -4,7 +4,7 @@ using h3d.fbx.Data;
 class Filter {
 	
 	var ignoreList : Array<Array<String>>;
-	var removedObjects : IntHash<Bool>;
+	var removedObjects : Map<Int,Bool>;
 	
 	public function new() {
 		ignoreList = [];
@@ -15,7 +15,7 @@ class Filter {
 	}
 	
 	public function filter( f : FbxNode ) : FbxNode {
-		removedObjects = new IntHash();
+		removedObjects = new Map();
 		var f2 = filterRec(f, ignoreList, 0);
 		for( i in 0...f2.childs.length ) {
 			var c = f2.childs[i];

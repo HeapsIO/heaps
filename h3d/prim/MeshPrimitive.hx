@@ -2,7 +2,7 @@ package h3d.prim;
 
 class MeshPrimitive extends Primitive {
 		
-	var bufferCache : Hash<h3d.impl.Buffer.BufferOffset>;
+	var bufferCache : Map<String,h3d.impl.Buffer.BufferOffset>;
 	
 	function allocBuffer( engine : h3d.Engine, name : String ) {
 		return null;
@@ -10,7 +10,7 @@ class MeshPrimitive extends Primitive {
 	
 	function addBuffer( name : String, buf, offset = 0 ) {
 		if( bufferCache == null )
-			bufferCache = new Hash();
+			bufferCache = new Map();
 		var old = bufferCache.get(name);
 		if( old != null ) old.dispose();
 		bufferCache.set(name, new h3d.impl.Buffer.BufferOffset(buf, offset));
@@ -29,7 +29,7 @@ class MeshPrimitive extends Primitive {
 		if( indexes == null )
 			alloc(engine);
 		if( bufferCache == null )
-			bufferCache = new Hash();
+			bufferCache = new Map();
 		var buffers = [];
 		for( name in engine.curShader.bufferNames ) {
 			var b = bufferCache.get(name);

@@ -39,12 +39,12 @@ class DefaultMatrixes {
 class Library {
 
 	var root : FbxNode;
-	var ids : IntHash<FbxNode>;
-	var connect : IntHash<Array<Int>>;
-	var invConnect : IntHash<Array<Int>>;
+	var ids : Map<Int,FbxNode>;
+	var connect : Map<Int,Array<Int>>;
+	var invConnect : Map<Int,Array<Int>>;
 	var leftHand : Bool;
 	
-	var defaultModelMatrixes : Hash<DefaultMatrixes>;
+	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
 	
 	public function new() {
 		root = { name : "Root", props : [], childs : [] };
@@ -52,10 +52,10 @@ class Library {
 	}
 	
 	function reset() {
-		ids = new IntHash();
-		connect = new IntHash();
-		invConnect = new IntHash();
-		defaultModelMatrixes = new Hash();
+		ids = new Map();
+		connect = new Map();
+		invConnect = new Map();
+		defaultModelMatrixes = new Map();
 	}
 	
 	public function loadTextFile( data : String ) {
@@ -208,11 +208,11 @@ class Library {
 		if( animNode == null )
 			throw "Animation not found " + animName;
 
-		var curves = new IntHash();
+		var curves = new Map();
 		var P0 = new h3d.Point();
 		var P1 = new h3d.Point(1, 1, 1);
 		var F = Math.PI / 180;
-		var allTimes = new IntHash();
+		var allTimes = new Map();
 		for( cn in getChilds(animNode, "AnimationCurveNode") ) {
 			var model = getParent(cn, "Model");
 			var c = curves.get(model.getId());
@@ -410,12 +410,12 @@ class Library {
 
 	public function makeScene( ?textureLoader : String -> h3d.mat.MeshMaterial, ?bonesPerVertex = 3 ) : h3d.scene.Scene {
 		var scene = new h3d.scene.Scene();
-		var hobjects = new IntHash();
-		var hgeom = new IntHash();
+		var hobjects = new Map();
+		var hgeom = new Map();
 		var objects = new Array();
-		var hjoints = new IntHash();
+		var hjoints = new Map();
 		var joints = new Array();
-		var hskins = new IntHash();
+		var hskins = new Map();
 		
 		if( textureLoader == null ) {
 			var tmpTex = null;
@@ -525,7 +525,7 @@ class Library {
 		return scene;
 	}
 	
-	function createSkin( hskins : IntHash<h3d.prim.Skin>, hgeom : IntHash<h3d.prim.FBXModel>, rootJoints : Array<h3d.prim.Skin.Joint>, bonesPerVertex ) {
+	function createSkin( hskins : Map<Int,h3d.prim.Skin>, hgeom : Map<Int,h3d.prim.FBXModel>, rootJoints : Array<h3d.prim.Skin.Joint>, bonesPerVertex ) {
 		var allJoints = [];
 		function collectJoints(j:h3d.prim.Skin.Joint) {
 			// collect subs first (allow easy removal of terminal unskinned joints)

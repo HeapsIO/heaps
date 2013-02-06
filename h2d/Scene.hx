@@ -1,6 +1,6 @@
 package h2d;
 
-class Scene extends Layers, implements h3d.IDrawable {
+class Scene extends Layers implements h3d.IDrawable {
 
 	public var width(default,null) : Int;
 	public var height(default, null) : Int;

@@ -1,6 +1,6 @@
 package h3d.scene;
 
-class Scene extends Layers, implements h3d.IDrawable {
+class Scene extends Layers implements h3d.IDrawable {
 
 	public var camera : h3d.Camera;
 	var extraPasses : Array<h3d.IDrawable>;

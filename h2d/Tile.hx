@@ -116,7 +116,7 @@ class Tile {
 		return t;
 	}
 	
-	static var COLOR_CACHE = new IntHash<h2d.Tile>();
+	static var COLOR_CACHE = new Map<Int,h2d.Tile>();
 	public static function fromColor( color : Int ) {
 		var t = COLOR_CACHE.get(color);
 		if( t != null && t.hasTexture() )
