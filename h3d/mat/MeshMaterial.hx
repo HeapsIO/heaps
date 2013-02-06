@@ -14,6 +14,7 @@ private class MeshShader extends hxsl.Shader {
 			pos : Float3,
 			normal : Float3,
 			uv : Float2,
+			color : Float3,
 			weights : Float3,
 			indexes : Int,
 		};
@@ -23,6 +24,7 @@ private class MeshShader extends hxsl.Shader {
 		var uvScale : Float2;
 		var uvDelta : Float2;
 		var hasSkin : Bool;
+		var hasVertexColor : Bool;
 		var texWrap : Bool;
 		var skinMatrixes : M34<35>;
 
@@ -52,14 +54,18 @@ private class MeshShader extends hxsl.Shader {
 				n = n.normalize();
 				for( d in lightSystem.dirs )
 					col += d.pos.dot(n).max(0) * d.color;
-				tcolor = col;
+				if( hasVertexColor )
+					tcolor = col * input.color;
+				else
+					tcolor = col;
 				var acol = [0, 0, 0];
 				for( p in lightSystem.points ) {
 					var dist = tpos.xyz - p.pos.xyz;
 					acol += pow(dist.dot(dist), p.pos.w) * p.color;
 				}
 				acolor = acol;
-			}
+			} else if( hasVertexColor )
+				tcolor = input.color;
 		}
 		
 		var killAlpha : Bool;
@@ -74,6 +80,8 @@ private class MeshShader extends hxsl.Shader {
 			if( lightSystem != null ) {
 				c.rgb *= tcolor;
 				c.rgb += acolor;
+			} else if( hasVertexColor ) {
+				c.rgb *= tcolor;
 			}
 			out = c;
 		}
@@ -96,6 +104,8 @@ class MeshMaterial extends Material {
 	public var texNearest(get, set) : Bool;
 	public var texWrap(get, set) : Bool;
 
+	public var hasVertexColor(get,set) : Bool;
+	
 	public var colorAdd(get,set) : Null<h3d.Vector>;
 	public var colorMul(get,set) : Null<h3d.Vector>;
 	public var colorMatrix(get,set) : Null<h3d.Matrix>;
@@ -204,6 +214,15 @@ class MeshMaterial extends Material {
 	inline function set_hasSkin(v) {
 		return mshader.hasSkin = v;
 	}
+
+	inline function get_hasVertexColor() {
+		return mshader.hasVertexColor;
+	}
+	
+	inline function set_hasVertexColor(v) {
+		return mshader.hasVertexColor = v;
+	}
+	
 	
 	inline function get_skinMatrixes() {
 		return mshader.skinMatrixes;
