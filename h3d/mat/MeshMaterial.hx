@@ -6,6 +6,7 @@ private class MeshShader extends hxsl.Shader {
 
 		var input : {
 			pos : Float3,
+			normal : Float3,
 			uv : Float2,
 			weights : Float3,
 			indexes : Int,
@@ -18,6 +19,13 @@ private class MeshShader extends hxsl.Shader {
 		var hasSkin : Bool;
 		var texWrap : Bool;
 		var skinMatrixes : M34<39>;
+		var tcolor : Float3;
+		
+		var lightSystem : Param<{
+			var ambient : Float3;
+			var dirs : Array<{ pos : Float3, color : Float3 }>;
+			var points : Array<{ pos : Float3, pow : Float, color : Float3 }>;
+		}>;
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
@@ -30,6 +38,18 @@ private class MeshShader extends hxsl.Shader {
 			if( uvScale != null ) t *= uvScale;
 			if( uvDelta != null ) t += uvDelta;
 			tuv = t;
+			if( lightSystem != null ) {
+				var col = lightSystem.ambient;
+				var n = if( mpos != null ) input.normal * mpos else input.normal;
+				n = n.normalize();
+				for( d in lightSystem.dirs )
+					col += d.pos.dot(n).max(0) * d.color;
+				for( p in lightSystem.points ) {
+					var dist = tpos.xyz - p.pos;
+					col += pow(dist.dot(dist), p.pow) * p.color;
+				}
+				tcolor = col;
+			}
 		}
 		
 		var killAlpha : Bool;
@@ -41,6 +61,7 @@ private class MeshShader extends hxsl.Shader {
 			if( colorAdd != null ) c += colorAdd;
 			if( colorMul != null ) c = c * colorMul;
 			if( colorMatrix != null ) c = c * colorMatrix;
+			if( lightSystem != null ) c.rgb *= tcolor;
 			out = c;
 		}
 		
@@ -68,6 +89,12 @@ class MeshMaterial extends Material {
 	
 	public var hasSkin(get,set) : Bool;
 	public var skinMatrixes(get,set) : Array<h3d.Matrix>;
+	
+	public var lightSystem(get,set) : {
+		var ambient : h3d.Vector;
+		var dirs : Array<{ pos : h3d.Vector, color : h3d.Vector }>;
+		var points : Array<{ pos : h3d.Vector, pow : Float, color : h3d.Vector }>;
+	};
 	
 	public function new(texture) {
 		mshader = new MeshShader();
@@ -175,6 +202,14 @@ class MeshMaterial extends Material {
 	
 	inline function set_skinMatrixes(v) {
 		return mshader.skinMatrixes = v;
+	}
+	
+	inline function get_lightSystem() {
+		return mshader.lightSystem;
+	}
+
+	inline function set_lightSystem(v) {
+		return mshader.lightSystem = v;
 	}
 	
 }
