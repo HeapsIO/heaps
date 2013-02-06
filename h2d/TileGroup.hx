@@ -103,7 +103,7 @@ class TileGroup extends Drawable {
 		content.doRender(engine, min, max - min);
 	}
 	
-	override public function free():Dynamic {
+	override public function free() {
 		content.dispose();
 		super.free();
 	}

@@ -5,61 +5,10 @@ import h3d.Engine;
 import h3d.mat.Bitmap;
 import h3d.mat.Texture;
 import h3d.impl.Shaders;
+import haxe.ds.ObjectMap;
 import hxsl.Shader;
 
-class Map < K, V > {
-	
-	var ks:Array<K>;
-	var vs:Array<V>;
-	
-	public function new() {
-		free();
-	}
-	
-	public function exists(k:K):Null<V> {
-		var pos = Lambda.indexOf(ks, k);
-		if (pos == -1) return null;
-		else return vs[pos];
-	}
-	
-	inline public function get(k:K):V return vs[Lambda.indexOf(ks, k)]
-	
-	public function set(k:K, v:V)
-	{
-		var pos = Lambda.indexOf(ks, k);
-		if (pos == -1) { ks.push(k); vs.push(v); }
-		else vs[pos] = v;
-	}
-	
-	public function remove(k:K):Bool
-	{
-		var pos = Lambda.indexOf(ks, k);
-		if (pos == -1) return false;
-		ks.splice(pos, 1);
-		vs.splice(pos, 1);
-		return true;
-	}
-	
-	public function removeValue(v:V):Bool
-	{
-		var pos = Lambda.indexOf(vs, v);
-		if (pos == -1) return false;
-		ks.splice(pos, 1);
-		vs.splice(pos, 1);
-		return true;
-	}
-	
-	inline public function keys() return ks.iterator()
-	
-	inline public function iterator() return vs.iterator()
-	
-	public function free()
-	{
-		ks = [];
-		vs = [];
-	}
-	
-}
+using Tools.MapTools;
 
 class TextureManager {
 
@@ -69,9 +18,9 @@ class TextureManager {
 	{
 		e = engine;
 		
-		bmpCache = new Map<BitmapData, Texture>();
-		bmpRefCache = new Map<Class<BitmapData>, Texture>();
-		mbmpCache = new Map<Bitmap, Texture>();
+		bmpCache = new Map();
+		bmpRefCache = new ObjectMap();
+		mbmpCache = new Map();
 	}
 	
 	var bmpCache : Map<BitmapData, Texture>;
@@ -81,18 +30,15 @@ class TextureManager {
 	public function makeTexture(?bmp:BitmapData, ?bmpRef:Class<BitmapData>, ?mbmp:Bitmap, ?allocPos : AllocPos):Texture {
 		var res:Texture;
 		if (bmp != null) {
-			res = bmpCache.exists(bmp);
-			if (res == null) res = e.mem.makeTexture(bmp, allocPos);
+			res = bmpCache.exists(bmp) ? bmpCache.get(bmp) : e.mem.makeTexture(bmp, allocPos);
 			bmpCache.set(bmp, res);
 		}
 		else if (mbmp != null) {
-			res = mbmpCache.exists(mbmp);
-			if (res == null) res = e.mem.makeTexture(mbmp, allocPos);
+			res = mbmpCache.exists(mbmp) ? mbmpCache.get(mbmp) : e.mem.makeTexture(mbmp, allocPos);
 			mbmpCache.set(mbmp, res);
 		}
 		else {
-			res = bmpRefCache.exists(bmpRef);
-			if (res == null) res = e.mem.makeTexture(Type.createInstance(bmpRef, [0, 0]), allocPos);
+			res = bmpRefCache.exists(bmpRef) ? bmpRefCache.get(bmpRef) : e.mem.makeTexture(Type.createInstance(bmpRef, [0, 0]), allocPos);
 			bmpRefCache.set(bmpRef, res);
 		}
 		return res;
@@ -141,9 +87,9 @@ class TextureManager {
 	// empty all caches
 	public function free()
 	{
-		bmpCache.free();
-		bmpRefCache.free();
-		mbmpCache.free();
+		bmpCache = new Map();
+		bmpRefCache = new ObjectMap();
+		mbmpCache = new Map();
 	}
 
 }

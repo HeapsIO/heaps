@@ -1,5 +1,18 @@
 package h3d.impl;
 
+class MapTools
+{
+	static public function removeValue<K, V>(m:Map<K, V>, value:V)
+	{
+		for (k in m.keys())
+			if (m.get(k) == value) {
+				m.remove(k);
+				return true;
+			}
+		return false;
+	}
+}
+
 class Tools {
 
 	public static inline var EPSILON = 1e-10;

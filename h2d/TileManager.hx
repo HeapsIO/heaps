@@ -5,6 +5,8 @@ import h3d.impl.AllocPos;
 import h3d.impl.TextureManager;
 import h3d.mat.Texture;
 
+using h3d.impl.Tools.MapTools;
+
 class TileManager  {
 	
 	var e:Engine;
@@ -15,18 +17,18 @@ class TileManager  {
 		e = engine;
 		tm = new TextureManager(engine);
 		
-		bmpCache = new Map<BitmapData, Tile>();
-		colorCache = new IntHash<Tile>();
+		bmpCache = new Map();
+		colorCache = new Map();
 	}
 	
 	public function makeTexture(?bmp:BitmapData, ?bmpRef:Class<BitmapData>, ?mbmp:h3d.mat.Bitmap, ?allocPos : AllocPos):Texture 
 		return tm.makeTexture(bmp, bmpRef, mbmp, allocPos)
 		
 	var bmpCache:Map<BitmapData, Tile>;
-	var colorCache:IntHash<Tile>;
+	var colorCache:Map<Int, Tile>;
 	
 	public function fromBitmap( bmp : BitmapData, ?allocPos : h3d.impl.AllocPos ):Tile {
-		var t = bmpCache.exists(bmp);
+		var t = bmpCache.get(bmp);
 		if (t != null) return t;
 		
 		t = Tile.fromBitmap(bmp, allocPos);
@@ -93,8 +95,8 @@ class TileManager  {
 	public function free()
 	{
 		tm.free();
-		bmpCache.free();
-		colorCache = new IntHash<Tile>();
+		bmpCache = new Map();
+		colorCache = new Map();
 	}
 
 }
