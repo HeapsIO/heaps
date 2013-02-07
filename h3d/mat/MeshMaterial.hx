@@ -15,6 +15,7 @@ private class MeshShader extends hxsl.Shader {
 			normal : Float3,
 			uv : Float2,
 			color : Float3,
+			colorAdd : Float3,
 			weights : Float3,
 			indexes : Int,
 		};
@@ -25,16 +26,20 @@ private class MeshShader extends hxsl.Shader {
 		var uvDelta : Float2;
 		var hasSkin : Bool;
 		var hasVertexColor : Bool;
+		var hasVertexColorAdd : Bool;
 		var texWrap : Bool;
 		var skinMatrixes : M34<35>;
 
 		var tcolor : Float3;
 		var acolor : Float3;
 		
+		var alphaMap : Texture;
+		var hasAlphaMap : Bool;
+		
 		var lightSystem : Param<{
 			var ambient : Float3;
 			var dirs : Array<{ pos : Float3, color : Float3 }>;
-			var points : Array<{ pos : Float4, color : Float3 }>;
+			var points : Array<{ pos : Float3, color : Float4 }>;
 		}>;
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
@@ -60,19 +65,27 @@ private class MeshShader extends hxsl.Shader {
 					tcolor = col;
 				var acol = [0, 0, 0];
 				for( p in lightSystem.points ) {
-					var dist = tpos.xyz - p.pos.xyz;
-					acol += pow(dist.dot(dist), p.pos.w) * p.color;
+					var dist = tpos.xyz - p.pos;
+					acol += p.color.rgb * (dist.dot(dist) + p.color.a).inv();
 				}
-				acolor = acol;
-			} else if( hasVertexColor )
-				tcolor = input.color;
+				if( hasVertexColorAdd )
+					acolor = acol + input.colorAdd;
+				else
+					acolor = acol;
+			} else {
+				if( hasVertexColor )
+					tcolor = input.color;
+				if( hasVertexColorAdd )
+					acolor = input.colorAdd;
+			}
 		}
 		
 		var killAlpha : Bool;
 		var texNearest : Bool;
 		
 		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
-			var c = tex.get(tuv.xy,filter=!(killAlpha || texNearest),wrap=(texWrap || uvDelta != null));
+			var c = tex.get(tuv.xy, filter = !(killAlpha || texNearest), wrap = (texWrap || uvDelta != null));
+			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,filter = !(killAlpha || texNearest)).b;
 			if( killAlpha ) kill(c.a - 0.001);
 			if( colorAdd != null ) c += colorAdd;
 			if( colorMul != null ) c = c * colorMul;
@@ -80,8 +93,11 @@ private class MeshShader extends hxsl.Shader {
 			if( lightSystem != null ) {
 				c.rgb *= tcolor;
 				c.rgb += acolor;
-			} else if( hasVertexColor ) {
-				c.rgb *= tcolor;
+			} else {
+				if( hasVertexColor )
+					c.rgb *= tcolor;
+				if( hasVertexColorAdd )
+					c.rgb += acolor;
 			}
 			out = c;
 		}
@@ -104,7 +120,8 @@ class MeshMaterial extends Material {
 	public var texNearest(get, set) : Bool;
 	public var texWrap(get, set) : Bool;
 
-	public var hasVertexColor(get,set) : Bool;
+	public var hasVertexColor(get, set) : Bool;
+	public var hasVertexColorAdd(get,set) : Bool;
 	
 	public var colorAdd(get,set) : Null<h3d.Vector>;
 	public var colorMul(get,set) : Null<h3d.Vector>;
@@ -113,7 +130,9 @@ class MeshMaterial extends Material {
 	public var hasSkin(get,set) : Bool;
 	public var skinMatrixes(get,set) : Array<h3d.Matrix>;
 	
-	public var lightSystem(get,set) : LightSystem;
+	public var lightSystem(get, set) : LightSystem;
+	
+	public var alphaMap(get, set): Texture;
 	
 	public function new(texture) {
 		mshader = new MeshShader();
@@ -223,6 +242,13 @@ class MeshMaterial extends Material {
 		return mshader.hasVertexColor = v;
 	}
 	
+	inline function get_hasVertexColorAdd() {
+		return mshader.hasVertexColorAdd;
+	}
+	
+	inline function set_hasVertexColorAdd(v) {
+		return mshader.hasVertexColorAdd = v;
+	}
 	
 	inline function get_skinMatrixes() {
 		return mshader.skinMatrixes;
@@ -242,6 +268,15 @@ class MeshMaterial extends Material {
 		if( v != null && hasSkin && v.dirs.length + v.points.length > 6 )
 			throw "Maximum 6 lights are allowed with skinning ("+(v.dirs.length+v.points.length)+" set)";
 		return mshader.lightSystem = v;
+	}
+	
+	inline function get_alphaMap() {
+		return mshader.alphaMap;
+	}
+	
+	inline function set_alphaMap(m) {
+		mshader.hasAlphaMap = m != null;
+		return mshader.alphaMap = m;
 	}
 	
 }
