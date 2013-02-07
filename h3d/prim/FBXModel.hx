@@ -121,7 +121,7 @@ class FBXModel extends MeshPrimitive {
 		}
 		
 		addBuffer("pos", engine.mem.allocVector(pbuf, 3, 0));
-		if( nbuf != null ) addBuffer("norm", engine.mem.allocVector(nbuf, 3, 0));
+		if( nbuf != null ) addBuffer("normal", engine.mem.allocVector(nbuf, 3, 0));
 		if( tbuf != null ) addBuffer("uv", engine.mem.allocVector(tbuf, 2, 0));
 		if( sbuf != null ) {
 			var skinBuf = engine.mem.allocVector(sbuf, skin.bonesPerVertex + 1, 0);
