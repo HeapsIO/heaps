@@ -48,6 +48,10 @@ private class MeshShader extends hxsl.Shader {
 		
 		var fog : Float4;
 		
+		var glowTexture : Texture;
+		var glowAmount : Float;
+		var hasGlow : Bool;
+		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
 			if( hasSkin )
@@ -112,6 +116,7 @@ private class MeshShader extends hxsl.Shader {
 				if( hasVertexColorAdd )
 					c.rgb += acolor;
 			}
+			if( hasGlow ) c.rgb += glowTexture.get(tuv.xy, filter = !(killAlpha || texNearest), wrap = (texWrap || uvDelta != null)).rgb * glowAmount;
 			out = c;
 		}
 		
@@ -124,6 +129,8 @@ class MeshMaterial extends Material {
 	var mshader : MeshShader;
 	
 	public var texture : Texture;
+	public var glowTexture(get,set) : Texture;
+	public var glowAmount(get,set) : Float;
 
 	public var useMatrixPos : Bool;
 	public var uvScale(get,set) : Null<h3d.Vector>;
@@ -147,7 +154,7 @@ class MeshMaterial extends Material {
 	
 	public var alphaMap(get, set): Texture;
 	
-	public var fog : Null<Float>;
+	public var fog(get, set) : h3d.Vector;
 	public var zBias(get,set) : Null<Float>;
 	
 	public function new(texture) {
@@ -181,7 +188,6 @@ class MeshMaterial extends Material {
 	}
 	
 	function setup( camera : h3d.Camera, mpos ) {
-		mshader.fog = fog == null ? null : new h3d.Vector(camera.pos.x, camera.pos.y, camera.pos.z, fog);
 		mshader.mpos = useMatrixPos ? mpos : null;
 		mshader.mproj = camera.m;
 		mshader.tex = texture;
@@ -312,6 +318,31 @@ class MeshMaterial extends Material {
 		mshader.hasZBias = v != null;
 		mshader.zBias = v;
 		return v;
+	}
+	
+	inline function get_glowTexture() {
+		return mshader.glowTexture;
+	}
+
+	inline function set_glowTexture(t) {
+		mshader.hasGlow = t != null;
+		return mshader.glowTexture = t;
+	}
+	
+	inline function get_glowAmount() {
+		return mshader.glowAmount;
+	}
+
+	inline function set_glowAmount(v) {
+		return mshader.glowAmount = v;
+	}
+
+	inline function get_fog() {
+		return mshader.fog;
+	}
+
+	inline function set_fog(v) {
+		return mshader.fog = v;
 	}
 	
 }
