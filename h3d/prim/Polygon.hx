@@ -29,6 +29,11 @@ class Polygon extends Primitive {
 			buf[i++] = p.x;
 			buf[i++] = p.y;
 			buf[i++] = p.z;
+			if( tcoords != null ) {
+				var t = tcoords[k];
+				buf[i++] = t.u;
+				buf[i++] = t.v;
+			}
 			if( normals != null ) {
 				var n = normals[k];
 				buf[i++] = n.x;
@@ -40,11 +45,6 @@ class Polygon extends Primitive {
 				buf[i++] = t.x;
 				buf[i++] = t.y;
 				buf[i++] = t.z;
-			}
-			if( tcoords != null ) {
-				var t = tcoords[k];
-				buf[i++] = t.u;
-				buf[i++] = t.v;
 			}
 		}
 		buffer = engine.mem.allocVector(buf, size, idx == null ? 3 : 0);
