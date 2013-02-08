@@ -32,6 +32,10 @@ private class MeshShader extends hxsl.Shader {
 
 		var tcolor : Float3;
 		var acolor : Float3;
+		var talpha : Float;
+		
+		var zBias : Float;
+		var hasZBias : Bool;
 		
 		var alphaMap : Texture;
 		var hasAlphaMap : Bool;
@@ -42,13 +46,17 @@ private class MeshShader extends hxsl.Shader {
 			var points : Array<{ pos : Float3, color : Float4 }>;
 		}>;
 		
+		var fog : Float4;
+		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
 			if( hasSkin )
 				tpos.xyz = tpos * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)] + tpos * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)] + tpos * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)];
 			else if( mpos != null )
 				tpos *= mpos;
-			out = tpos * mproj;
+			var ppos = tpos * mproj;
+			if( hasZBias ) ppos.z += zBias;
+			out = ppos;
 			var t = input.uv;
 			if( uvScale != null ) t *= uvScale;
 			if( uvDelta != null ) t += uvDelta;
@@ -78,6 +86,10 @@ private class MeshShader extends hxsl.Shader {
 				if( hasVertexColorAdd )
 					acolor = input.colorAdd;
 			}
+			if( fog != null ) {
+				var dist = tpos.xyz - fog.xyz;
+				talpha = (fog.w * dist.dot(dist).rsqrt()).min(1);
+			}
 		}
 		
 		var killAlpha : Bool;
@@ -85,6 +97,7 @@ private class MeshShader extends hxsl.Shader {
 		
 		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
 			var c = tex.get(tuv.xy, filter = !(killAlpha || texNearest), wrap = (texWrap || uvDelta != null));
+			if( fog != null ) c.a *= talpha;
 			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,filter = !(killAlpha || texNearest)).b;
 			if( killAlpha ) kill(c.a - 0.001);
 			if( colorAdd != null ) c += colorAdd;
@@ -134,6 +147,9 @@ class MeshMaterial extends Material {
 	
 	public var alphaMap(get, set): Texture;
 	
+	public var fog : Null<Float>;
+	public var zBias(get,set) : Null<Float>;
+	
 	public function new(texture) {
 		mshader = new MeshShader();
 		super(mshader);
@@ -148,17 +164,26 @@ class MeshMaterial extends Material {
 		m.uvScale = uvScale;
 		m.uvDelta = uvDelta;
 		m.killAlpha = killAlpha;
+		m.texNearest = texNearest;
+		m.texWrap = texWrap;
+		m.hasVertexColor = hasVertexColor;
+		m.hasVertexColorAdd = hasVertexColorAdd;
 		m.colorAdd = colorAdd;
 		m.colorMul = colorMul;
 		m.colorMatrix = colorMatrix;
 		m.hasSkin = hasSkin;
 		m.skinMatrixes = skinMatrixes;
+		m.lightSystem = lightSystem;
+		m.alphaMap = alphaMap;
+		m.fog = fog;
+		m.zBias = zBias;
 		return m;
 	}
 	
-	function setup( mpos, mproj ) {
+	function setup( camera : h3d.Camera, mpos ) {
+		mshader.fog = fog == null ? null : new h3d.Vector(camera.pos.x, camera.pos.y, camera.pos.z, fog);
 		mshader.mpos = useMatrixPos ? mpos : null;
-		mshader.mproj = mproj;
+		mshader.mproj = camera.m;
 		mshader.tex = texture;
 	}
 	
@@ -277,6 +302,16 @@ class MeshMaterial extends Material {
 	inline function set_alphaMap(m) {
 		mshader.hasAlphaMap = m != null;
 		return mshader.alphaMap = m;
+	}
+	
+	inline function get_zBias() {
+		return mshader.hasZBias ? mshader.zBias : null;
+	}
+
+	inline function set_zBias(v : Null<Float>) {
+		mshader.hasZBias = v != null;
+		mshader.zBias = v;
+		return v;
 	}
 	
 }
