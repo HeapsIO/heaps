@@ -352,6 +352,7 @@ class MemoryManager {
 						// insert some padding
 						if( free.count >= nvect + d ) {
 							free.next = new FreeCell(free.pos + d, free.count - d, free.next);
+							free.count = d;
 							free = free.next;
 							break;
 						}
@@ -384,6 +385,7 @@ class MemoryManager {
 							// insert some padding
 							if( free.count >= size + d ) {
 								free.next = new FreeCell(free.pos + d, free.count - d, free.next);
+								free.count = d;
 								free = free.next;
 								break;
 							}
