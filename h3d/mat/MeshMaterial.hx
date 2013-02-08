@@ -12,8 +12,8 @@ private class MeshShader extends hxsl.Shader {
 
 		var input : {
 			pos : Float3,
-			normal : Float3,
 			uv : Float2,
+			normal : Float3,
 			color : Float3,
 			colorAdd : Float3,
 			weights : Float3,
