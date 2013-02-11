@@ -449,10 +449,15 @@ class MemoryManager {
 	function finalize( b : BigBuffer ) {
 		if( !b.written ) {
 			b.written = true;
-			if( b.free.count > 0 ) {
-				var mem : UInt = b.free.count * b.stride * 4;
-				if( empty.length < mem ) empty.length = mem;
-				b.vbuf.uploadFromByteArray(empty, 0, b.free.pos, b.free.count);
+			// fill all the free positions that were unwritten with zeroes (necessary for flash)
+			var f = b.free;
+			while( f != null ) {
+				if( f.count > 0 ) {
+					var mem : UInt = f.count * b.stride * 4;
+					if( empty.length < mem ) empty.length = mem;
+					b.vbuf.uploadFromByteArray(empty, 0, f.pos, f.count);
+				}
+				f = f.next;
 			}
 		}
 	}
