@@ -67,6 +67,14 @@ class Quat {
 		return m;
 	}
 	
+	public function toEuler() {
+		return new Vector(
+			Math.atan2(2 * (y * w + x * z), 1 - 2 * (y * y + z * z)),
+			Math.asin(2 * (x * y + z * w)),
+			Math.atan2(2 * (x * w - y * z), 1 - 2 * (x * x + z * z))
+		);
+	}
+	
 	public function saveToMatrix( m : h3d.Matrix ) {
 		var xx = x * x;
 		var xy = x * y;

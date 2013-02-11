@@ -257,6 +257,10 @@ class Object {
 		posChanged = true;
 	}
 	
+	public function getRotation() {
+		return qRot.toEuler();
+	}
+	
 	public inline function scale( v : Float ) {
 		scaleX *= v;
 		scaleY *= v;
