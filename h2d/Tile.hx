@@ -58,14 +58,6 @@ class Tile {
 		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
 	
-	public function nextX() {
-		return sub(width, 0, width, height, dx, dy);
-	}
-
-	public function nextY() {
-		return sub(0, height, width, height, dx, dy);
-	}
-
 	public function setPos(x, y) {
 		this.x = x;
 		this.y = y;
