@@ -45,6 +45,19 @@ class Layers extends Sprite {
 		}
 	}
 	
+	public function over( s : Sprite ) {
+		for( i in 0...childs.length )
+			if( childs[i] == s ) {
+				for( l in layers )
+					if( l > i ) {
+						for( p in i...l-1 )
+							childs[p] = childs[p + 1];
+						childs[l - 1] = s;
+					}
+				break;
+			}
+	}
+	
 	public function ysort( layer : Int ) {
 		if( layer >= layerCount ) return;
 		var start = layer == 0 ? 0 : layers[layer - 1];
