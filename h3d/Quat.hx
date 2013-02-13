@@ -61,6 +61,17 @@ class Quat {
 		w = cosX * cosYZ + sinX * sinYZ;
 	}
 	
+	public function multiply( q : Quat ) {
+		var x2 = x * q.w + w * q.x + y * q.z - z * q.y;
+		var y2 = w * q.y - x * q.z + y * q.w + z * q.x;
+		var z2 = w * q.z + x * q.y - y * q.x + z * q.w;
+		var w2 = w * q.w - x * q.x - y * q.y - z * q.z;
+		x = x2;
+		y = y2;
+		z = z2;
+		w = w2;
+	}
+	
 	public function toMatrix() {
 		var m = new Matrix();
 		saveToMatrix(m);

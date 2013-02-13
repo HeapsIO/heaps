@@ -244,7 +244,10 @@ class Object {
 		Rotate around the current rotation axis.
 	*/
 	public function rotate( rx : Float, ry : Float, rz : Float ) {
-		throw "TODO";
+		var qTmp = new h3d.Quat();
+		qTmp.initRotate(rx, ry, rz);
+		qRot.multiply(qTmp);
+		posChanged = true;
 	}
 	
 	public function setRotate( rx : Float, ry : Float, rz : Float ) {
