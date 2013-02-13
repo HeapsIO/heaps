@@ -31,8 +31,8 @@ class CustomObject extends Object {
 			ctx.addPass(draw);
 			return;
 		}
-		try Reflect.setField(material.shader,__unprotect__("mproj"),ctx.camera.m) catch( e : Dynamic ) {};
-		try Reflect.setField(material.shader,__unprotect__("mpos"),absPos) catch( e : Dynamic ) {};
+		try Reflect.setProperty(material.shader,__unprotect__("mproj"),ctx.camera.m) catch( e : Dynamic ) {};
+		try Reflect.setProperty(material.shader,__unprotect__("mpos"),absPos) catch( e : Dynamic ) {};
 		ctx.engine.selectMaterial(material);
 		primitive.render(ctx.engine);
 	}
