@@ -65,4 +65,24 @@ class Tween {
 		return if( da > -max && da < max ) a2 else a1 + (da < 0 ? -max : max);
 	}
 	
+	public inline static function clamp( v : Float, min : Float, max : Float ) {
+		return v < min ? min : v > max ? max : v;
+	}
+	
+	public static function colorLerp( c1 : Int, c2 : Int, k : Float ) {
+		var a1 = c1 >>> 24;
+		var r1 = (c1 >> 16) & 0xFF;
+		var g1 = (c1 >> 8) & 0xFF;
+		var b1 = c1 & 0xFF;
+		var a2 = c2 >>> 24;
+		var r2 = (c2 >> 16) & 0xFF;
+		var g2 = (c2 >> 8) & 0xFF;
+		var b2 = c2 & 0xFF;
+		var a = Std.int(a1 * (1-k) + a2 * k);
+		var r = Std.int(r1 * (1-k) + r2 * k);
+		var g = Std.int(g1 * (1-k) + g2 * k);
+		var b = Std.int(b1 * (1 - k) + b2 * k);
+		return (a << 24) | (r << 16) | (g << 8) | b;
+	}
+	
 }
