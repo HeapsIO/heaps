@@ -10,11 +10,13 @@ class DummyScene extends h2d.Sprite {
 class Sprite extends Object {
 	
 	var dummy : DummyScene;
+	public var depthTest : Bool;
 	public var element(default,set) : h2d.Drawable;
 	
 	public function new(element, ?parent) {
 		super(parent);
 		dummy = new DummyScene();
+		depthTest = true;
 		this.element = element;
 	}
 	
@@ -32,7 +34,7 @@ class Sprite extends Object {
 			return;
 		var p = new h3d.Vector(absPos._41, absPos._42, absPos._43);
 		p.project(ctx.camera.m);
-		element.shader.zValue = p.z;
+		element.shader.zValue = depthTest ? p.z : 0;
 		if( !dummy.allocated )
 			dummy.onAlloc();
 		// base transformation
