@@ -57,7 +57,7 @@ class XBXMake
 		
 		var bout = new haxe.io.BytesOutput();
 		var writer = new h3d.fbx.XBXWriter( bout );
-		Lambda.iter( fbx, function(elem) writer.write(elem) );
+		writer.write(fbx);
 	
 		var b = bout.getBytes();
 		
@@ -70,7 +70,7 @@ class XBXMake
 				compressed:false,
 				dataSize:0,
 				data:b,
-				crc32:format.tools.CRC32.encode(b),
+				crc32:haxe.crypto.Crc32.make(b),
 				extraFields:new List(),
 			}
 			
@@ -82,7 +82,7 @@ class XBXMake
 				format.zip.Tools.compress( entry, 9);
 				
 			nl.add( entry);
-			zw.writeData(nl);
+			zw.write(nl);
 			var file = sys.io.File.write( outputFile, true);
 			file.write( zb.getBytes() );
 			file.flush();
@@ -111,27 +111,7 @@ class XBXMake
 						explore(n);
 				}
 				
-				var rfbx = [];
-				while ( true)
-				{
-					
-					try{
-						var n = reader.read();
-						rfbx.push( n );
-						/*
-						trace( n.name );
-						if ( n.name == "Connections" )
-							for ( n in n.childs)
-								explore(n);
-						trace( n.props);
-						*/
-					}
-					catch (d:Dynamic)
-					{
-						trace("finished reading " + d);
-						break;
-					}
-				}
+				var rfbx = reader.read();
 				
 				function cmp(t0:FbxNode,t1:FbxNode)
 				{
@@ -204,15 +184,7 @@ class XBXMake
 					return true;
 				}
 			
-				if (fbx.length != rfbx.length )
-				{
-					trace("test:not same root nums");
-				}
-				else
-				{
-					for( n in 0...fbx.length )
-						cmp( fbx[n], rfbx[n]);
-				}
+				cmp( fbx, rfbx);
 			}
 		}
 	}
