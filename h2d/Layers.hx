@@ -53,6 +53,7 @@ class Layers extends Sprite {
 						for( p in i...l-1 )
 							childs[p] = childs[p + 1];
 						childs[l - 1] = s;
+						break;
 					}
 				break;
 			}
