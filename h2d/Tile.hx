@@ -108,6 +108,15 @@ class Tile {
 		return t;
 	}
 	
+	
+	public function split( frames : Int ) {
+		var tl = [];
+		var stride = Std.int(width / frames);
+		for( i in 0...frames )
+			tl.push(sub(i * stride, 0, stride, height));
+		return tl;
+	}
+	
 	static var COLOR_CACHE = new Map<Int,h2d.Tile>();
 	public static function fromColor( color : Int ) {
 		var t = COLOR_CACHE.get(color);
