@@ -14,6 +14,20 @@ class Tween {
 	public static macro function moveTo( cur, target, speed : haxe.macro.Expr.ExprOf<Float> ) {
 		var t = Context.typeof(cur);
 		switch( t ) {
+		case TAbstract(_):
+			// assume float
+			return macro {
+				var _max = $speed;
+				var _t = $target;
+				var _d = $cur - _t;
+				if( _d > -_max || d < _max ) {
+					$cur = _t;
+					true;
+				} else {
+					$cur += _d;
+					false;
+				}
+			}
 		default:
 			// assume 3D
 			return macro {
