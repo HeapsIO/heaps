@@ -37,4 +37,8 @@ class Mesh extends Object {
 		primitive.render(ctx.engine);
 	}
 	
+	override function dispose() {
+		primitive.dispose();
+		super.dispose();
+	}
 }

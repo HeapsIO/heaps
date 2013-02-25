@@ -264,6 +264,15 @@ class Object {
 		return qRot.toEuler();
 	}
 	
+	public function getRotationQuat() {
+		return qRot;
+	}
+	
+	public function setRotationQuat(q) {
+		qRot = q;
+		posChanged = true;
+	}
+	
 	public inline function scale( v : Float ) {
 		scaleX *= v;
 		scaleY *= v;
@@ -290,6 +299,11 @@ class Object {
 	
 	public inline function iterator() {
 		return childs.iterator();
+	}
+	
+	public function dispose() {
+		for( c in childs )
+			c.dispose();
 	}
 	
 }
