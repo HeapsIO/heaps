@@ -86,6 +86,21 @@ class Quat {
 		);
 	}
 	
+	public inline function lerp( q1 : Quat, q2 : Quat, v : Float ) {
+		var x = q1.x * v + q2.x * (1 - v);
+		var y = q1.y * v + q2.y * (1 - v);
+		var z = q1.z * v + q2.z * (1 - v);
+		var w = q1.w * v + q2.w * (1 - v);
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		this.w = w;
+	}
+	
+	public inline function dot( q : Quat ) {
+		return x * q.x + y * q.y + z * q.z + w * q.w;
+	}
+	
 	public function saveToMatrix( m : h3d.Matrix ) {
 		var xx = x * x;
 		var xy = x * y;
