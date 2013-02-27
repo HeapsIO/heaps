@@ -327,11 +327,12 @@ class Library {
 		anim.sampling = 15.0 / (minDT / 3079077200); // this is the DT value we get from Max when using 15 FPS export
 		
 		for( c in curves ) {
-			// skip empty curves
-			if( c.t == null && c.r == null && c.s == null )
-				continue;
-			var frames = new flash.Vector(numFrames);
+			var frames = null, alpha = null;
+			var frames = c.t == null && c.r == null && c.s == null ? null : new flash.Vector(numFrames);
 			var alpha = c.a == null ? null : new flash.Vector(numFrames);
+			// skip empty curves
+			if( frames == null && alpha == null )
+				continue;
 			var ctx = c.t == null ? null : c.t.x;
 			var cty = c.t == null ? null : c.t.y;
 			var ctz = c.t == null ? null : c.t.z;
@@ -392,7 +393,8 @@ class Library {
 						
 					curMat = m;
 				}
-				frames[f] = curMat;
+				if( frames != null )
+					frames[f] = curMat;
 				if( alpha != null ) {
 					if( allTimes[f] == cat[ap] )
 						ap++;
@@ -400,7 +402,8 @@ class Library {
 				}
 			}
 			
-			anim.addCurve(c.name, frames);
+			if( frames != null )
+				anim.addCurve(c.name, frames);
 			if( alpha != null )
 				anim.addAlphaCurve(c.name, alpha);
 		}
