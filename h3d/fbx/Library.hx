@@ -29,7 +29,7 @@ class DefaultMatrixes {
 		if( scale != null ) m.scale(scale.x, scale.y, scale.z);
 		if( rotate != null ) m.rotate(rotate.x, rotate.y, rotate.z);
 		if( preRot != null ) m.rotate(preRot.x, preRot.y, preRot.z);
-		if( trans != null ) m.translate(trans.x * (leftHand ? -1 : 1), trans.y, trans.z);
+		if( trans != null ) m.translate(trans.x, trans.y, trans.z);
 		if( leftHand ) rightHandToLeft(m);
 		return m;
 	}
