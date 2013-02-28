@@ -54,9 +54,9 @@ class Tween {
 		}
 	}
 	
-	public static inline function powTo( v1 : Float, v2 : Float, p : Float, min = 0.1 ) {
+	public static inline function powTo( v1 : Float, v2 : Float, p : Float, minRecal = 0.1, minMove = 0. ) {
 		var d = v2 - v1;
-		return if( d > -min && d < min ) v2 else v1 + d * p;
+		return if( d > -minRecal && d < minRecal ) v2 else if( d * p > -minMove && d * p < minMove ) v1 + (d<0?-minMove:minMove) else v1 + d * p;
 	}
 	
 	public static inline function squareDist( dx : Float, dy : Float, dz = 0. ) {
