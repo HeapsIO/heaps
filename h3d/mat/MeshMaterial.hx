@@ -16,6 +16,7 @@ private class MeshShader extends hxsl.Shader {
 			normal : Float3,
 			color : Float3,
 			colorAdd : Float3,
+			blending : Float,
 			weights : Float3,
 			indexes : Int,
 		};
@@ -51,6 +52,10 @@ private class MeshShader extends hxsl.Shader {
 		var glowTexture : Texture;
 		var glowAmount : Float;
 		var hasGlow : Bool;
+		
+		var blendTexture : Texture;
+		var hasBlend : Bool;
+		var tblend : Float;
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
@@ -94,6 +99,7 @@ private class MeshShader extends hxsl.Shader {
 				var dist = tpos.xyz - fog.xyz;
 				talpha = (fog.w * dist.dot(dist).rsqrt()).min(1);
 			}
+			if( hasBlend ) tblend = input.blending;
 		}
 		
 		var killAlpha : Bool;
@@ -104,6 +110,7 @@ private class MeshShader extends hxsl.Shader {
 			if( fog != null ) c.a *= talpha;
 			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,filter = !(killAlpha || texNearest)).b;
 			if( killAlpha ) kill(c.a - 0.001);
+			if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy, filter = !(killAlpha || texNearest), wrap).rgb;
 			if( colorAdd != null ) c += colorAdd;
 			if( colorMul != null ) c = c * colorMul;
 			if( colorMatrix != null ) c = c * colorMatrix;
@@ -155,7 +162,9 @@ class MeshMaterial extends Material {
 	public var alphaMap(get, set): Texture;
 	
 	public var fog(get, set) : h3d.Vector;
-	public var zBias(get,set) : Null<Float>;
+	public var zBias(get, set) : Null<Float>;
+	
+	public var blendTexture(get, set) : Texture;
 	
 	public function new(texture) {
 		mshader = new MeshShader();
@@ -343,6 +352,15 @@ class MeshMaterial extends Material {
 
 	inline function set_fog(v) {
 		return mshader.fog = v;
+	}
+	
+	inline function get_blendTexture() {
+		return mshader.blendTexture;
+	}
+	
+	inline function set_blendTexture(v) {
+		mshader.hasBlend = v != null;
+		return mshader.blendTexture = v;
 	}
 	
 }
