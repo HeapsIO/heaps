@@ -70,7 +70,7 @@ class Scene extends Layers implements h3d.IDrawable {
 	}
 
 	function screenYToLocal(my:Float) {
-		return (my - x) * width / (stage.stageWidth * scaleX);
+		return (my - y) * height / (stage.stageHeight * scaleY);
 	}
 	
 	function get_mouseX() {
