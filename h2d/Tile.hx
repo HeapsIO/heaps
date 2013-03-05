@@ -118,13 +118,18 @@ class Tile {
 	}
 	
 	static var COLOR_CACHE = new Map<Int,h2d.Tile>();
-	public static function fromColor( color : Int ) {
+	public static function fromColor( color : Int, ?allocPos : h3d.impl.AllocPos ) {
 		var t = COLOR_CACHE.get(color);
 		if( t != null && t.hasTexture() )
 			return t;
-		var bmp = new flash.display.BitmapData(1, 1, true, color);
-		t = fromBitmap(bmp);
-		bmp.dispose();
+		var tex = h3d.Engine.getCurrent().mem.allocTexture(1, 1, allocPos);
+		var bmp = haxe.io.Bytes.alloc(4);
+		bmp.set(0, color & 0xFF);
+		bmp.set(1, (color >> 8) & 0xFF);
+		bmp.set(2, (color >> 16) & 0xFF);
+		bmp.set(3, color >>> 24);
+		tex.uploadBytes(bmp);
+		var t = new Tile(tex, 0, 0, 1, 1);
 		COLOR_CACHE.set(color, t);
 		return t;
 	}
