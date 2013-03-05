@@ -24,7 +24,7 @@ class Test {
 		
 		var prim = new h3d.prim.Cube();
 		prim.translate( -0.5, -0.5, -0.5);
-		prim.addTCoords();
+		prim.addUVs();
 		prim.addNormals();
 		
 		var bmp = new flash.display.BitmapData(256, 256);

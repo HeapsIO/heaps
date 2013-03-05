@@ -36,7 +36,7 @@ class Skybox extends hxsl.Shader {
         	m = new h3d.Matrix();
         	m.identity();
         } else
-        	m = pos.copy();
+        	m = pos.clone();
         m.scale(size, size, size);
         m.translate(camera.pos.x, camera.pos.y, camera.pos.z);
         m.add(camera.m);

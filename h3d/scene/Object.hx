@@ -79,7 +79,7 @@ class Object {
 		o.scaleZ = scaleZ;
 		o.name = name;
 		if( defaultTransform != null )
-			o.defaultTransform = defaultTransform.copy();
+			o.defaultTransform = defaultTransform.clone();
 		for( c in childs ) {
 			var c = c.clone();
 			c.parent = o;

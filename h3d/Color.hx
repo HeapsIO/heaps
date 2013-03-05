@@ -38,7 +38,7 @@ class Color {
 		return new Vector(r, g, b, a);
 	}
 
-	public inline function copy() {
+	public inline function clone() {
 		return new Color(r,g,b,a);
 	}
 

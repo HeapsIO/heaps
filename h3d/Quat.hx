@@ -19,6 +19,10 @@ class Quat {
 		return Math.sqrt(x * x + y * y + z * z + w * w);
 	}
 	
+	public function clone() {
+		return new Quat(x, y, z, w);
+	}
+	
 	public function initRotateAxis( x : Float, y : Float, z : Float, a : Float ) {
 		var sin = Math.sin(a / 2);
 		var cos = Math.cos(a / 2);

@@ -41,9 +41,9 @@ class Camera {
 	
 	public function clone() {
 		var c = new Camera(fov, zoom, ratio, zNear, zFar, rightHanded);
-		c.pos = pos.copy();
-		c.up = up.copy();
-		c.target = target.copy();
+		c.pos = pos.clone();
+		c.up = up.clone();
+		c.target = target.clone();
 		c.update();
 		return c;
 	}
@@ -115,11 +115,11 @@ class Camera {
 		}
 		mproj = makeFrustumMatrix();
 		m.multiply(mcam, mproj);
-		needInv = true;		
+		needInv = true;
 	}
 	
 	public function lostUp() {
-		var p2 = pos.copy();
+		var p2 = pos.clone();
 		p2.normalize();
 		return Math.abs(p2.dot3(up)) > 0.999;
 	}

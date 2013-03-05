@@ -45,7 +45,7 @@ class Point {
 		return new Vector(x, y, z);
 	}
 
-	public inline function copy() {
+	public inline function clone() {
 		return new Point(x,y,z);
 	}
 

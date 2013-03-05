@@ -365,7 +365,7 @@ class Matrix {
 		tmp = _34; _34 = _43; _43 = tmp;
 	}
 
-	public function copy() {
+	public function clone() {
 		var m = new Matrix();
 		m._11 = _11; m._12 = _12; m._13 = _13; m._14 = _14;
 		m._21 = _21; m._22 = _22; m._23 = _23; m._24 = _24;
