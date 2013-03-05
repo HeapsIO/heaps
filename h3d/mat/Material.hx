@@ -3,7 +3,7 @@ import h3d.mat.Data;
 
 class Material {
 	
-	public var bits(default,null) : Int;
+	var bits : Int;
 	public var culling(default,set) : Face;
 	public var depthWrite(default,set) : Bool;
 	public var depthTest(default,set) : Compare;

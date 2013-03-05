@@ -132,6 +132,7 @@ class Engine {
 		}
 	}
 
+	@:access(h3d.mat.Material.bits)
 	public function selectMaterial( m : h3d.mat.Material ) {
 		var diff = curMatBits ^ m.bits;
 		if( diff != 0 ) {
