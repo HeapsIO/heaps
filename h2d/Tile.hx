@@ -117,6 +117,10 @@ class Tile {
 		return tl;
 	}
 	
+	public function toString() {
+		return "Tile(" + x + "," + y + "," + width + "x" + height + (dx != 0 || dy != 0 ? "," + dx + ":" + dy:"") + ")";
+	}
+	
 	static var COLOR_CACHE = new Map<Int,h2d.Tile>();
 	public static function fromColor( color : Int, ?allocPos : h3d.impl.AllocPos ) {
 		var t = COLOR_CACHE.get(color);
