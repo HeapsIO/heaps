@@ -65,6 +65,9 @@ class Particles extends Object {
 				last = p.prev;
 		} else
 			p.next.prev = p.prev;
+		// prevent multiple remove() from affecting chain
+		p.prev = null;
+		p.next = null;
 	}
 	
 	@:access(h3d.mat.PartMaterial.setup)
@@ -113,7 +116,8 @@ class Particles extends Object {
 		}
 		var stride = 6;
 		if( hasFrame ) stride++;
-		var buffer = ctx.engine.mem.allocVector(tmpBuf, stride, 4);
+		var buffer = ctx.engine.mem.alloc(Std.int(tmp.length / stride), stride, 4);
+		buffer.uploadVector(tmpBuf, 0, buffer.nvert);
 		var size = partSize;
 		material.setup(this.absPos, ctx.camera.m, size, size * ctx.engine.width / ctx.engine.height, frameCount);
 		ctx.engine.selectMaterial(material);

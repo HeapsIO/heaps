@@ -34,6 +34,18 @@ class Buffer {
 		}
 	}
 	
+	public function uploadVector( data : flash.Vector<Float>, dataPos : Int, nverts : Int ) {
+		var cur = this;
+		while( nverts > 0 ) {
+			if( cur == null ) throw "Too many vertexes";
+			var count = nverts > cur.nvert ? cur.nvert : nverts;
+			cur.b.vbuf.uploadFromVector( dataPos == 0 ? data : data.slice(dataPos,count*b.stride+dataPos), cur.pos, count );
+			dataPos += count * b.stride;
+			nverts -= count;
+			cur = cur.next;
+		}
+	}
+	
 	public function upload( data : flash.utils.ByteArray, dataPos : Int, nverts : Int ) {
 		var cur = this;
 		while( nverts > 0 ) {
