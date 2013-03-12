@@ -52,6 +52,22 @@ class Object {
 		return k;
 	}
 	
+	public function localToGlobal( pt : h3d.Vector ) {
+		// todo : ensure position is updated
+		var pt2 = pt.clone();
+		pt2.transform3x4(absPos);
+		return pt2;
+	}
+
+	public function globalToLocal( pt : h3d.Vector ) {
+		// todo : ensure position is updated
+		var pt2 = pt.clone();
+		var tmp = new h3d.Matrix();
+		tmp.inverse(absPos);
+		pt2.transform3x4(tmp);
+		return pt2;
+	}
+
 	public function getBounds( ?b : h3d.prim.Bounds ) {
 		if( b == null ) b = new h3d.prim.Bounds();
 		for( c in childs )
