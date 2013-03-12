@@ -116,8 +116,9 @@ class Particles extends Object {
 		}
 		var stride = 6;
 		if( hasFrame ) stride++;
-		var buffer = ctx.engine.mem.alloc(Std.int(pos / stride), stride, 4);
-		buffer.uploadVector(tmpBuf, 0, buffer.nvert);
+		var nverts = Std.int(pos / stride);
+		var buffer = ctx.engine.mem.alloc(nverts, stride, 4);
+		buffer.uploadVector(tmpBuf, 0, nverts);
 		var size = partSize;
 		material.setup(this.absPos, ctx.camera.m, size, size * ctx.engine.width / ctx.engine.height, frameCount);
 		ctx.engine.selectMaterial(material);
