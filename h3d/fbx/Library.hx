@@ -322,7 +322,7 @@ class Library {
 			if( dt < minDT ) minDT = dt;
 			curT = t;
 		}
-		var numFrames = maxTime == 0 ? 1 : 1 + Std.int(maxTime / minDT);
+		var numFrames = maxTime == 0 ? 1 : 1 + Std.int((maxTime - allTimes[0]) / minDT);
 		var anim = new h3d.prim.Animation(animName, numFrames);
 		anim.sampling = 15.0 / (minDT / 3079077200); // this is the DT value we get from Max when using 15 FPS export
 		
