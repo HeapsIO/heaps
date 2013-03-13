@@ -273,8 +273,9 @@ class MemoryManager {
 	}
 
 	public function allocVector( v : flash.Vector<Float>, stride, align, ?allocPos : AllocPos ) {
-		var b = alloc(Std.int(v.length / stride), stride, align, allocPos);
-		b.uploadVector(v, 0, b.nvert);
+		var nvert = Std.int(v.length / stride);
+		var b = alloc(nvert, stride, align, allocPos);
+		b.uploadVector(v, 0, nvert);
 		return b;
 	}
 	
