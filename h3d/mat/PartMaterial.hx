@@ -9,18 +9,31 @@ private class PartShader extends hxsl.Shader {
 			uv : Float2,
 			alpha : Float,
 			frame : Float,
+			rotation : Float,
+			size : Float,
 		};
 		
 		var tuv : Float2;
 		var talpha : Float;
 		var partSize : Float2;
 		var frameCount : Float;
+		
+		var hasRotation : Bool;
+		var hasSize : Bool;
 
 		function vertex( mpos : M34, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
 			tpos.xyz = input.pos.xyzw * mpos;
 			var tmp = tpos * mproj;
-			tmp.xy += (input.uv - 0.5) * partSize;
+			var rpos = input.uv - 0.5;
+			if( hasRotation ) {
+				var cr = input.rotation.cos();
+				var sr = input.rotation.sin();
+				var tmp = rpos.x * cr + rpos.y * sr;
+				rpos.y = rpos.y * cr - rpos.x * sr;
+				rpos.x = tmp;
+			}
+			tmp.xy += rpos * (if( hasSize ) input.size * partSize else partSize);
 			out = tmp;
 			tuv = if( frameCount != null ) [input.uv.x*frameCount + input.frame,input.uv.y] else input.uv;
 			talpha = input.alpha;
@@ -73,10 +86,12 @@ class PartMaterial extends Material {
 		return m;
 	}
 
-	function setup( mpos, mproj, sizeX : Float, sizeY : Float, frameCount : Int ) {
+	function setup( mpos, mproj, sizeX : Float, sizeY : Float, frameCount : Int, hasRotation, hasSize ) {
 		pshader.mpos = mpos;
 		pshader.mproj = mproj;
 		pshader.tex = texture;
+		pshader.hasRotation = hasRotation;
+		pshader.hasSize = hasSize;
 		pshader.partSize.x = sizeX;
 		pshader.partSize.y = sizeY;
 		pshader.frameCount = frameCount <= 1 ? null : 1 / frameCount;
