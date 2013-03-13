@@ -59,4 +59,9 @@ class Scene extends Layers implements h3d.IDrawable {
 		ctx.engine = null;
 	}
 	
+	override public function free() {
+		if (extraPasses != null) for (p in extraPasses) p.free();
+		super.free();
+	}
+	
 }

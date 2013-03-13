@@ -104,5 +104,11 @@ class Text extends Drawable {
 		glyphs.color = h3d.Color.fromInt(c, alpha).toVector();
 		return c;
 	}
+	
+	override public function free()
+	{
+		glyphs.free();
+		super.free();
+	}
 
 }

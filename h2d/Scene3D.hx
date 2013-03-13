@@ -13,4 +13,9 @@ class Scene3D extends Sprite {
 		scene.render(engine);
 	}
 	
+	override public function free()	{
+		super.free();
+		scene.free();
+	}
+	
 }

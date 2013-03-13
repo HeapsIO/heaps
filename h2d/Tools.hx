@@ -49,6 +49,12 @@ private class CoreObjects  {
 		return emptyTexture;
 	}
 	
+	public function dispose() {
+		if (tmpMaterial.shader != null) tmpMaterial.shader.free();
+		if (emptyTexture != null) emptyTexture.dispose();
+		planBuffer.dispose();
+	}
+	
 }
 
 class Tools {
@@ -65,4 +71,13 @@ class Tools {
 		return c;
 	}
 	
+	@:allow(h2d)
+	static function free()
+	{
+		var c = CORE;
+		if( c != null ) {
+			c.dispose();
+			CORE = null;
+		}
+	}
 }

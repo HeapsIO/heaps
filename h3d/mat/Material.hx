@@ -46,6 +46,10 @@ class Material {
 		this.depthTest = test;
 	}
 	
+	public function free() {
+		if (shader != null) shader.free();
+	}
+	
 	public function setColorMask(r, g, b, a) {
 		this.colorMask = (r?1:0) | (g?2:0) | (b?4:0) | (a?8:0);
 	}

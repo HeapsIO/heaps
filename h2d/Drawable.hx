@@ -273,4 +273,10 @@ class Drawable extends Sprite {
 		engine.selectMaterial(mat);
 	}
 	
+	override public function free()
+	{
+		shader.free();
+		super.free();
+	}
+	
 }

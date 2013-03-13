@@ -44,6 +44,11 @@ class Particles extends Object {
 		if( mat == null ) mat = new h3d.mat.PartMaterial(null);
 		this.material = mat;
 	}
+	
+	override public function free() {
+		if (material != null) material.free();
+		super.free();
+	}
 
 	public function alloc() {
 		var p = new Particle(this);

@@ -126,4 +126,10 @@ class TileColorGroup extends Drawable {
 		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;
 		content.doRender(engine, min, max - min);
 	}
+	
+	override public function free()
+	{
+		content.dispose();
+		super.free();
+	}
 }
