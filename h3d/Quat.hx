@@ -19,6 +19,10 @@ class Quat {
 		return Math.sqrt(x * x + y * y + z * z + w * w);
 	}
 	
+	public function clone() {
+		return new Quat(x, y, z, w);
+	}
+	
 	public function initRotateAxis( x : Float, y : Float, z : Float, a : Float ) {
 		var sin = Math.sin(a / 2);
 		var cos = Math.cos(a / 2);
@@ -61,10 +65,44 @@ class Quat {
 		w = cosX * cosYZ + sinX * sinYZ;
 	}
 	
+	public function multiply( q : Quat ) {
+		var x2 = x * q.w + w * q.x + y * q.z - z * q.y;
+		var y2 = w * q.y - x * q.z + y * q.w + z * q.x;
+		var z2 = w * q.z + x * q.y - y * q.x + z * q.w;
+		var w2 = w * q.w - x * q.x - y * q.y - z * q.z;
+		x = x2;
+		y = y2;
+		z = z2;
+		w = w2;
+	}
+	
 	public function toMatrix() {
 		var m = new Matrix();
 		saveToMatrix(m);
 		return m;
+	}
+	
+	public function toEuler() {
+		return new Vector(
+			Math.atan2(2 * (y * w + x * z), 1 - 2 * (y * y + z * z)),
+			Math.asin(2 * (x * y + z * w)),
+			Math.atan2(2 * (x * w - y * z), 1 - 2 * (x * x + z * z))
+		);
+	}
+	
+	public inline function lerp( q1 : Quat, q2 : Quat, v : Float ) {
+		var x = q1.x * v + q2.x * (1 - v);
+		var y = q1.y * v + q2.y * (1 - v);
+		var z = q1.z * v + q2.z * (1 - v);
+		var w = q1.w * v + q2.w * (1 - v);
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		this.w = w;
+	}
+	
+	public inline function dot( q : Quat ) {
+		return x * q.x + y * q.y + z * q.z + w * q.w;
 	}
 	
 	public function saveToMatrix( m : h3d.Matrix ) {

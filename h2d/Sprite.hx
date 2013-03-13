@@ -3,8 +3,6 @@ package h2d;
 @:allow(h2d.Tools)
 class Sprite {
 
-	static inline var ROT2RAD = -0.017453292519943295769236907684886;
-	
 	var childs : Array<Sprite>;
 	public var parent(default, null) : Sprite;
 	public var numChildren(get, never) : Int;
@@ -116,8 +114,8 @@ class Sprite {
 					matC = 0;
 					matD = scaleY;
 				} else {
-					cr = Math.cos(rotation * ROT2RAD);
-					sr = Math.sin(rotation * ROT2RAD);
+					cr = Math.cos(rotation);
+					sr = Math.sin(rotation);
 					matA = scaleX * cr;
 					matB = scaleX * -sr;
 					matC = scaleY * sr;
@@ -138,8 +136,8 @@ class Sprite {
 					matC = scaleY * parent.matC;
 					matD = scaleY * parent.matD;
 				} else {
-					var cr = Math.cos(rotation * ROT2RAD);
-					var sr = Math.sin(rotation * ROT2RAD);
+					var cr = Math.cos(rotation);
+					var sr = Math.sin(rotation);
 					var tmpA = scaleX * cr;
 					var tmpB = scaleX * -sr;
 					var tmpC = scaleY * sr;
@@ -195,6 +193,30 @@ class Sprite {
 		rotation = v;
 		posChanged = true;
 		return v;
+	}
+	
+	public function move( dx : Float, dy : Float ) {
+		x += dx * Math.cos(rotation);
+		y += dy * Math.sin(rotation);
+	}
+
+	public inline function setPos( x : Float, y : Float ) {
+		this.x = x;
+		this.y = y;
+	}
+	
+	public inline function rotate( v : Float ) {
+		rotation += v;
+	}
+	
+	public inline function scale( v : Float ) {
+		scaleX *= v;
+		scaleY *= v;
+	}
+	
+	public inline function setScale( v : Float ) {
+		scaleX = v;
+		scaleY = v;
 	}
 
 	public function getChildAt( n ) {

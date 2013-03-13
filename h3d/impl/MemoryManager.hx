@@ -282,14 +282,9 @@ class MemoryManager {
 	}
 
 	public function allocVector( v : flash.Vector<Float>, stride, align, ?allocPos : AllocPos ) {
-		var b = alloc(Std.int(v.length / stride), stride, align, allocPos);
-		var tmp = b;
-		var pos = 0;
-		while( tmp != null ) {
-			tmp.b.vbuf.uploadFromVector( pos == 0 ? v : v.slice(pos,tmp.nvert*stride+pos), tmp.pos, tmp.nvert);
-			pos += tmp.nvert * stride;
-			tmp = tmp.next;
-		}
+		var nvert = Std.int(v.length / stride);
+		var b = alloc(nvert, stride, align, allocPos);
+		b.uploadVector(v, 0, nvert);
 		return b;
 	}
 	
@@ -458,10 +453,15 @@ class MemoryManager {
 	function finalize( b : BigBuffer ) {
 		if( !b.written ) {
 			b.written = true;
-			if( b.free.count > 0 ) {
-				var mem : UInt = b.free.count * b.stride * 4;
-				if( empty.length < mem ) empty.length = mem;
-				b.vbuf.uploadFromByteArray(empty, 0, b.free.pos, b.free.count);
+			// fill all the free positions that were unwritten with zeroes (necessary for flash)
+			var f = b.free;
+			while( f != null ) {
+				if( f.count > 0 ) {
+					var mem : UInt = f.count * b.stride * 4;
+					if( empty.length < mem ) empty.length = mem;
+					b.vbuf.uploadFromByteArray(empty, 0, f.pos, f.count);
+				}
+				f = f.next;
 			}
 		}
 	}

@@ -31,7 +31,7 @@ class Cube extends Polygon {
 		super(p, idx);
 	}
 	
-	override function addTCoords() {
+	override function addUVs() {
 		unindex();
 		
 		var z = new UV(0, 0);

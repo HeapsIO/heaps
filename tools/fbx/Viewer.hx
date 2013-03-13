@@ -106,6 +106,7 @@ class Viewer {
 		loader.load(new flash.net.URLRequest(textureName));
 		mat.culling = Both;
 		mat.killAlpha = true;
+		mat.blend(SrcAlpha, OneMinusSrcAlpha);
 		return mat;
 	}
 	

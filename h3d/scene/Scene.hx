@@ -3,6 +3,7 @@ package h3d.scene;
 class Scene extends Layers implements h3d.IDrawable {
 
 	public var camera : h3d.Camera;
+	var prePasses : Array<h3d.IDrawable>;
 	var extraPasses : Array<h3d.IDrawable>;
 	var ctx : RenderContext;
 	
@@ -11,6 +12,7 @@ class Scene extends Layers implements h3d.IDrawable {
 		camera = new h3d.Camera();
 		ctx = new RenderContext();
 		extraPasses = [];
+		prePasses = [];
 	}
 	
 	override function clone( ?o : Object ) {
@@ -20,12 +22,16 @@ class Scene extends Layers implements h3d.IDrawable {
 		return s;
 	}
 	
-	public function addPass(p) {
-		extraPasses.push(p);
+	public function addPass(p,before=false) {
+		if( before )
+			prePasses.push(p);
+		else
+			extraPasses.push(p);
 	}
 	
 	public function removePass(p) {
 		extraPasses.remove(p);
+		prePasses.remove(p);
 	}
 	
 	public function setElapsedTime( elapsedTime ) {
@@ -42,6 +48,8 @@ class Scene extends Layers implements h3d.IDrawable {
 		ctx.time += ctx.elapsedTime;
 		ctx.frame++;
 		ctx.currentPass = 0;
+		for( p in prePasses )
+			p.render(engine);
 		renderContext(ctx);
 		ctx.finalize();
 		for( p in extraPasses )

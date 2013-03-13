@@ -47,16 +47,16 @@ class Quads extends Primitive {
 			v[p++] = pt.x;
 			v[p++] = pt.y;
 			v[p++] = pt.z;
+			if( uvs != null ) {
+				var t = uvs[i];
+				v[p++] = t.u;
+				v[p++] = t.v;
+			}
 			if( normals != null ) {
 				var n = normals[i];
 				v[p++] = n.x;
 				v[p++] = n.y;
 				v[p++] = n.z;
-			}
-			if( uvs != null ) {
-				var t = uvs[i];
-				v[p++] = t.u;
-				v[p++] = t.v;
 			}
 		}
 		var size = 3;

@@ -59,18 +59,19 @@ class Polygon extends Primitive {
 	public function unindex() {
 		if( idx != null && points.length != idx.length ) {
 			var p = [];
+			var used = [];
 			for( i in idx )
-				p.push(points[i]);
+				p.push(points[i].clone());
 			if( normals != null ) {
 				var n = [];
 				for( i in idx )
-					n.push(normals[i]);
+					n.push(normals[i].clone());
 				normals = n;
 			}
 			if( tcoords != null ) {
 				var t = [];
 				for( i in idx )
-					t.push(tcoords[i]);
+					t.push(tcoords[i].clone());
 				tcoords = t;
 			}
 			points = p;
@@ -126,7 +127,7 @@ class Polygon extends Primitive {
 			n.normalize();
 	}
 
-	public function addTCoords() {
+	public function addUVs() {
 		throw "Not implemented for this polygon";
 	}
 	

@@ -17,6 +17,7 @@ private class DrawableShader extends hxsl.Shader {
 		var uvScale : Float2;
 		var uvPos : Float2;
 		var skew : Float;
+		var zValue : Float;
 
 		function vertex( size : Float3, mat1 : Float3, mat2 : Float3 ) {
 			var tmp : Float4;
@@ -24,7 +25,7 @@ private class DrawableShader extends hxsl.Shader {
 			if( size != null ) spos *= size;
 			tmp.x = spos.dp3(mat1);
 			tmp.y = spos.dp3(mat2);
-			tmp.z = 0;
+			tmp.z = zValue;
 			tmp.w = skew != null ? 1 - skew * input.pos.y : 1;
 			out = tmp;
 			var t = input.uv;
@@ -105,6 +106,7 @@ class Drawable extends Sprite {
 		super(parent);
 		shader = new DrawableShader();
 		shader.alpha = 1;
+		shader.zValue = 0;
 		blendMode = Normal;
 	}
 	

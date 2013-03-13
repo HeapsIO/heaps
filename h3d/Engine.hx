@@ -106,7 +106,7 @@ class Engine {
 			ctx.setProgram(s.program);
 			s.varsChanged = true;
 			// unbind extra textures
-			var tcount : Int = s.textures.length();
+			var tcount : Int = s.textures.length;
 			while( curTextures.length > tcount ) {
 				curTextures.pop();
 				ctx.setTextureAt(curTextures.length, null);
@@ -120,7 +120,7 @@ class Engine {
 			s.varsChanged = false;
 			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, 0, s.vertexVars.toData());
 			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, 0, s.fragmentVars.toData());
-			for( i in 0...s.textures.length() ) {
+			for( i in 0...s.textures.length ) {
 				var t = s.textures[i];
 				if( t == null )
 					throw "Texture #" + i + " not bound in shader " + shader;
@@ -132,6 +132,7 @@ class Engine {
 		}
 	}
 
+	@:access(h3d.mat.Material.bits)
 	public function selectMaterial( m : h3d.mat.Material ) {
 		var diff = curMatBits ^ m.bits;
 		if( diff != 0 ) {

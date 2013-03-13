@@ -91,7 +91,7 @@ class Vector {
 		w = pw;
 	}
 	
-	public inline function copy() {
+	public inline function clone() {
 		return new Vector(x,y,z,w);
 	}
 

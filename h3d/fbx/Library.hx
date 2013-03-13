@@ -29,7 +29,7 @@ class DefaultMatrixes {
 		if( scale != null ) m.scale(scale.x, scale.y, scale.z);
 		if( rotate != null ) m.rotate(rotate.x, rotate.y, rotate.z);
 		if( preRot != null ) m.rotate(preRot.x, preRot.y, preRot.z);
-		if( trans != null ) m.translate(trans.x * (leftHand ? -1 : 1), trans.y, trans.z);
+		if( trans != null ) m.translate(trans.x, trans.y, trans.z);
 		if( leftHand ) rightHandToLeft(m);
 		return m;
 	}
@@ -322,16 +322,17 @@ class Library {
 			if( dt < minDT ) minDT = dt;
 			curT = t;
 		}
-		var numFrames = maxTime == 0 ? 1 : 1 + Std.int(maxTime / minDT);
+		var numFrames = maxTime == 0 ? 1 : 1 + Std.int((maxTime - allTimes[0]) / minDT);
 		var anim = new h3d.prim.Animation(animName, numFrames);
 		anim.sampling = 15.0 / (minDT / 3079077200); // this is the DT value we get from Max when using 15 FPS export
 		
 		for( c in curves ) {
-			// skip empty curves
-			if( c.t == null && c.r == null && c.s == null )
-				continue;
-			var frames = new flash.Vector(numFrames);
+			var frames = null, alpha = null;
+			var frames = c.t == null && c.r == null && c.s == null ? null : new flash.Vector(numFrames);
 			var alpha = c.a == null ? null : new flash.Vector(numFrames);
+			// skip empty curves
+			if( frames == null && alpha == null )
+				continue;
 			var ctx = c.t == null ? null : c.t.x;
 			var cty = c.t == null ? null : c.t.y;
 			var ctz = c.t == null ? null : c.t.z;
@@ -392,7 +393,8 @@ class Library {
 						
 					curMat = m;
 				}
-				frames[f] = curMat;
+				if( frames != null )
+					frames[f] = curMat;
 				if( alpha != null ) {
 					if( allTimes[f] == cat[ap] )
 						ap++;
@@ -400,7 +402,8 @@ class Library {
 				}
 			}
 			
-			anim.addCurve(c.name, frames);
+			if( frames != null )
+				anim.addCurve(c.name, frames);
 			if( alpha != null )
 				anim.addAlphaCurve(c.name, alpha);
 		}
@@ -609,12 +612,7 @@ class Library {
 				d.trans = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
 			case "Lcl Scaling":
 				d.scale = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
-			case "RotationActive", "InheritType", "ScalingMin", "MaxHandle", "DefaultAttributeIndex", "Show", "UDP3DSMAX":
-			case "RotationMinX","RotationMinY","RotationMinZ","RotationMaxX","RotationMaxY","RotationMaxZ", "Freeze", "Visibility":
 			default:
-				#if debug
-				trace(p.props[0].toString());
-				#end
 			}
 		defaultModelMatrixes.set(model.getName(), d);
 		return d;

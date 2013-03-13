@@ -8,6 +8,8 @@ class Particle {
 	public var alpha : Float;
 	public var group(default, null) : Particles;
 	public var frame : Int;
+	public var rotation : Float;
+	public var size : Float;
 	
 	var prev : Particle;
 	var next : Particle;
@@ -27,6 +29,8 @@ class Particles extends Object {
 	
 	public var partSize : Float;
 	public var frameCount : Int;
+	public var hasRotation : Bool;
+	public var hasSize : Bool;
 	public var material : h3d.mat.PartMaterial;
 
 	var first : Particle;
@@ -70,6 +74,9 @@ class Particles extends Object {
 				last = p.prev;
 		} else
 			p.next.prev = p.prev;
+		// prevent multiple remove() from affecting chain
+		p.prev = null;
+		p.next = null;
 	}
 	
 	@:access(h3d.mat.PartMaterial.setup)
@@ -93,6 +100,8 @@ class Particles extends Object {
 				curFrame = p.frame / frameCount;
 				tmp[pos++] = curFrame;
 			}
+			if( hasRotation ) tmp[pos++] = p.rotation;
+			if( hasSize ) tmp[pos++] = p.size;
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
@@ -100,6 +109,8 @@ class Particles extends Object {
 			tmp[pos++] = 1;
 			tmp[pos++] = p.alpha;
 			if( hasFrame ) tmp[pos++] = curFrame;
+			if( hasRotation ) tmp[pos++] = p.rotation;
+			if( hasSize ) tmp[pos++] = p.size;
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
@@ -107,6 +118,8 @@ class Particles extends Object {
 			tmp[pos++] = 0;
 			tmp[pos++] = p.alpha;
 			if( hasFrame ) tmp[pos++] = curFrame;
+			if( hasRotation ) tmp[pos++] = p.rotation;
+			if( hasSize ) tmp[pos++] = p.size;
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
@@ -114,13 +127,19 @@ class Particles extends Object {
 			tmp[pos++] = 1;
 			tmp[pos++] = p.alpha;
 			if( hasFrame ) tmp[pos++] = curFrame;
+			if( hasRotation ) tmp[pos++] = p.rotation;
+			if( hasSize ) tmp[pos++] = p.size;
 			p = p.next;
 		}
 		var stride = 6;
 		if( hasFrame ) stride++;
-		var buffer = ctx.engine.mem.allocVector(tmpBuf, stride, 4);
+		if( hasRotation ) stride++;
+		if( hasSize ) stride++;
+		var nverts = Std.int(pos / stride);
+		var buffer = ctx.engine.mem.alloc(nverts, stride, 4);
+		buffer.uploadVector(tmpBuf, 0, nverts);
 		var size = partSize;
-		material.setup(this.absPos, ctx.camera.m, size, size * ctx.engine.width / ctx.engine.height, frameCount);
+		material.setup(this.absPos, ctx.camera.m, size, size * ctx.engine.width / ctx.engine.height, frameCount, hasRotation, hasSize);
 		ctx.engine.selectMaterial(material);
 		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();

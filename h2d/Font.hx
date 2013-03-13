@@ -22,8 +22,7 @@ class Font extends Tile {
 				tf.embedFonts = true;
 				break;
 			}
-		if( !aa ) {
-			tf.sharpness = 400;
+		if( aa ) {
 			tf.gridFitType = flash.text.GridFitType.PIXEL;
 			tf.antiAliasType = flash.text.AntiAliasType.ADVANCED;
 		}

@@ -9,5 +9,9 @@ class UV {
 		this.u = u;
 		this.v = v;
 	}
+	
+	public function clone() {
+		return new UV(u, v);
+	}
 
 }

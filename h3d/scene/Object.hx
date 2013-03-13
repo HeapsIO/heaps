@@ -52,6 +52,22 @@ class Object {
 		return k;
 	}
 	
+	public function localToGlobal( pt : h3d.Vector ) {
+		// todo : ensure position is updated
+		var pt2 = pt.clone();
+		pt2.transform3x4(absPos);
+		return pt2;
+	}
+
+	public function globalToLocal( pt : h3d.Vector ) {
+		// todo : ensure position is updated
+		var pt2 = pt.clone();
+		var tmp = new h3d.Matrix();
+		tmp.inverse(absPos);
+		pt2.transform3x4(tmp);
+		return pt2;
+	}
+
 	public function getBounds( ?b : h3d.prim.Bounds ) {
 		if( b == null ) b = new h3d.prim.Bounds();
 		for( c in childs )
@@ -79,7 +95,7 @@ class Object {
 		o.scaleZ = scaleZ;
 		o.name = name;
 		if( defaultTransform != null )
-			o.defaultTransform = defaultTransform.copy();
+			o.defaultTransform = defaultTransform.clone();
 		for( c in childs ) {
 			var c = c.clone();
 			c.parent = o;
@@ -248,7 +264,10 @@ class Object {
 		Rotate around the current rotation axis.
 	*/
 	public function rotate( rx : Float, ry : Float, rz : Float ) {
-		throw "TODO";
+		var qTmp = new h3d.Quat();
+		qTmp.initRotate(rx, ry, rz);
+		qRot.multiply(qTmp);
+		posChanged = true;
 	}
 	
 	public function setRotate( rx : Float, ry : Float, rz : Float ) {
@@ -258,6 +277,19 @@ class Object {
 	
 	public function setRotateAxis( ax : Float, ay : Float, az : Float, angle : Float ) {
 		qRot.initRotateAxis(ax, ay, az, angle);
+		posChanged = true;
+	}
+	
+	public function getRotation() {
+		return qRot.toEuler();
+	}
+	
+	public function getRotationQuat() {
+		return qRot;
+	}
+	
+	public function setRotationQuat(q) {
+		qRot = q;
 		posChanged = true;
 	}
 	
@@ -287,6 +319,11 @@ class Object {
 	
 	public inline function iterator() {
 		return childs.iterator();
+	}
+	
+	public function dispose() {
+		for( c in childs )
+			c.dispose();
 	}
 	
 }

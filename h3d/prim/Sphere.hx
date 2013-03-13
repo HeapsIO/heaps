@@ -41,7 +41,7 @@ class Sphere extends Polygon {
 		normals = points;
 	}
 	
-	override function addTCoords() {
+	override function addUVs() {
 		tcoords = [];
 		for( y in 0...segsH + 1 )
 			for( x in 0...segsW + 1 )
