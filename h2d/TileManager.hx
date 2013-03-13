@@ -22,7 +22,7 @@ class TileManager  {
 	}
 	
 	public function makeTexture(?bmp:BitmapData, ?bmpRef:Class<BitmapData>, ?mbmp:h3d.mat.Bitmap, ?allocPos : AllocPos):Texture 
-		return tm.makeTexture(bmp, bmpRef, mbmp, allocPos)
+		return tm.makeTexture(bmp, bmpRef, mbmp, allocPos);
 		
 	var bmpCache:Map<BitmapData, Tile>;
 	var colorCache:Map<Int, Tile>;
