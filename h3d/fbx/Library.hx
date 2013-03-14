@@ -6,7 +6,7 @@ class DefaultMatrixes {
 	public var scale : Null<h3d.Point>;
 	public var rotate : Null<h3d.Point>;
 	public var preRot : Null<h3d.Point>;
-	public var removedJoint : Bool;
+	public var wasRemoved : Bool;
 	
 	public function new() {
 	}
@@ -225,7 +225,7 @@ class Library {
 				if( def == null )
 					throw "Default Matrixes not found for " + name + " in " + animName;
 				// if it's an animation on a terminal unskinned joint, let's skip it
-				if( def.removedJoint )
+				if( def.wasRemoved )
 					continue;
 				c = { def : def, t : null, r : null, s : null, a : null, name : name };
 				curves.set(model.getId(), c);
@@ -523,6 +523,8 @@ class Library {
 						continue;
 					skin.material = m.material;
 					m.remove();
+					// ignore key frames for this object
+					defaultModelMatrixes.get(o.obj.name).wasRemoved = true;
 				}
 				// set the skin data
 				skin.setSkinData(skinData);
@@ -556,7 +558,8 @@ class Library {
 				else
 					j.parent.subs.remove(j);
 				allJoints.remove(j);
-				defaultModelMatrixes.get(jModel.getName()).removedJoint = true;
+				// ignore key frames for this joint
+				defaultModelMatrixes.get(jModel.getName()).wasRemoved = true;
 				continue;
 			}
 			// create skin
