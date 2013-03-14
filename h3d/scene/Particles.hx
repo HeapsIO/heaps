@@ -16,6 +16,7 @@ class Particle {
 	
 	function new(g) {
 		x = 0; y = 0; z = 0; alpha = 1;
+		rotation = 0.; size = 1.;
 		this.group = g;
 	}
 	
