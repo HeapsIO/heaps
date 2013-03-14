@@ -29,6 +29,10 @@ class GraphicsContext {
 		mcg.endFill();
 	}
 	
+	public function clear() {
+		mcg.clear();
+	}
+	
 }
 
 class Graphics extends Drawable {
@@ -68,6 +72,7 @@ class Graphics extends Drawable {
 	{
 		tile.dispose();
 		tile = null;
+		ctx = null;
 		super.free();
 	}
 

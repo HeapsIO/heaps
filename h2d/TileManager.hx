@@ -52,6 +52,12 @@ class TileManager  {
 		return res;
 	}
 	
+	public function font(name : String, size : Int, aa = true, ?chars):Font {
+		var f = new Font(name, size, aa, chars, true);
+		bmpCache.set(f.bmp, f);
+		return f;
+	}
+	
 	public function disposeTile(t:Tile)
 	{
 		t.dispose();

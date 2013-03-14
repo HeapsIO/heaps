@@ -39,6 +39,8 @@ class Engine {
 	
 	@:allow(h3d)
 	var curProjMatrix : h3d.Matrix;
+	
+	var shareContext:Bool = false;
 
 	public function new( width = 0, height = 0, hardware = true, aa = 0, stageIndex = 0 ) {
 		if( width == 0 )
@@ -78,6 +80,11 @@ class Engine {
 	public function init() {
 		s3d.addEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
 		s3d.requestContext3D( hardware ? "auto" : "software" );
+	}
+	
+	public function sharedContext() {
+		shareContext = true;
+		onCreate(null);
 	}
 
 	public function saveTo( bmp : flash.display.BitmapData ) {
@@ -329,13 +336,15 @@ class Engine {
 	}
 
 	public function begin() {
-		if( ctx == null ) return false;
-		try {
-			ctx.clear( ((backgroundColor>>16)&0xFF)/255 , ((backgroundColor>>8)&0xFF)/255, (backgroundColor&0xFF)/255, ((backgroundColor>>>24)&0xFF)/255);
-		} catch( e : Dynamic ) {
-			ctx = null;
-			return false;
-		}
+		if ( ctx == null ) return false;
+		
+		if (!shareContext)
+			try {
+				ctx.clear( ((backgroundColor>>16)&0xFF)/255 , ((backgroundColor>>8)&0xFF)/255, (backgroundColor&0xFF)/255, ((backgroundColor>>>24)&0xFF)/255);
+			} catch( e : Dynamic ) {
+				ctx = null;
+				return false;
+			}
 
 		// init
 		drawTriangles = 0;
@@ -364,7 +373,7 @@ class Engine {
 	}
 
 	public function end() {
-		ctx.present();
+		if (!shareContext) ctx.present();
 		reset();
 	}
 

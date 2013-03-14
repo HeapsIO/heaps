@@ -7,7 +7,9 @@ class Font extends Tile {
 	public var glyphs : Array<Tile>;
 	public var lineHeight : Int;
 	
-	public function new( name : String, size : Int, aa = true, ?chars ) {
+	public var bmp:flash.display.BitmapData;
+	
+	public function new( name : String, size : Int, aa = true, ?chars, ?storeBmp ) {
 		super(null, 0, 0, 0, 0);
 		if( chars == null )
 			chars = DEFAULT_CHARS;
@@ -81,6 +83,7 @@ class Font extends Tile {
 			}
 		} while( bmp == null );
 		setTexture(Tile.fromBitmap(bmp).getTexture());
+		if (storeBmp) this.bmp = bmp;
 		for( t in all )
 			t.setTexture(innerTex);
 	}
