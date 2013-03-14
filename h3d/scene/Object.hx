@@ -45,6 +45,10 @@ class Object {
 		currentAnimation.speed = speed;
 	}
 	
+	public function stopAnimation() {
+		currentAnimation = null;
+	}
+	
 	public function getObjectsCount() {
 		var k = 0;
 		for( c in childs )
@@ -166,7 +170,7 @@ class Object {
 			absPos._42 = y;
 			absPos._43 = z;
 			if( defaultTransform != null )
-				absPos.multiply3x4(defaultTransform, absPos);
+				absPos.multiply3x4(absPos, defaultTransform);
 			if( parent != null )
 				absPos.multiply3x4(absPos, parent.absPos);
 		}
