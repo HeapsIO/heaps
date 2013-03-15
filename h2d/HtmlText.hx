@@ -6,20 +6,23 @@ class HtmlText extends Drawable {
 	public var htmlText(default, set) : String;
 	public var textColor(default, set) : Int;
 	
+	public var textWidth(get, null) : Int;
+	public var textHeight(get, null) : Int;
+	
 	var glyphs : TileColorGroup;
 	
 	public function new( font : Font, ?parent ) {
 		super(parent);
 		this.font = font;
 		glyphs = new TileColorGroup(font, this);
-		shader = glyphs.shader;
 		htmlText = "";
+		shader = glyphs.shader;
 		textColor = 0xFFFFFF;
 	}
 	
 	override function onAlloc() {
 		super.onAlloc();
-		if( htmlText != "" ) initGlyphs();
+		if( htmlText != null ) initGlyphs();
 	}
 	
 	function set_htmlText(t) {
@@ -28,11 +31,11 @@ class HtmlText extends Drawable {
 		return t;
 	}
 	
-	function initGlyphs() {
-		glyphs.reset();
+	function initGlyphs( rebuild = true ) {
+		if( rebuild ) glyphs.reset();
 		glyphs.setDefaultColor(textColor);
 		var letters = font.glyphs;
-		var x = 0, y = 0;
+		var x = 0, y = 0, xMax = 0;
 		function loop( e : Xml ) {
 			if( e.nodeType == Xml.Element ) {
 				var colorChanged = false;
@@ -48,6 +51,7 @@ class HtmlText extends Drawable {
 						}
 					}
 				case "br":
+					if( x > xMax ) xMax = x;
 					x = 0;
 					y += font.lineHeight;
 				default:
@@ -62,13 +66,22 @@ class HtmlText extends Drawable {
 					var cc = t.charCodeAt(i);
 					var e = letters[cc];
 					if( e == null ) continue;
-					glyphs.add(x, y, e);
+					if( rebuild ) glyphs.add(x, y, e);
 					x += e.width + 1;
 				}
 			}
 		}
 		for( e in Xml.parse(htmlText) )
 			loop(e);
+		return { width : x > xMax ? x : xMax, height : x > 0 ? y + font.lineHeight : y };
+	}
+	
+	function get_textHeight() {
+		return initGlyphs(false).height;
+	}
+	
+	function get_textWidth() {
+		return initGlyphs(false).width;
 	}
 	
 	function set_textColor(c) {
