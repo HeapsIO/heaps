@@ -559,6 +559,7 @@ class Library {
 		for( j in allJoints.copy() ) {
 			var jModel = ids.get(j.index);
 			var subDef = getParent(jModel, "Deformer", true);
+			var defMat = defaultModelMatrixes.get(jModel.getName());
 			if( subDef == null ) {
 				// if we have skinned subs, we need to keep in joint hierarchy
 				if( j.subs.length > 0 )
@@ -570,7 +571,7 @@ class Library {
 					j.parent.subs.remove(j);
 				allJoints.remove(j);
 				// ignore key frames for this joint
-				defaultModelMatrixes.get(jModel.getName()).wasRemoved = -1;
+				defMat.wasRemoved = -1;
 				continue;
 			}
 			// create skin
@@ -587,6 +588,7 @@ class Library {
 				hskins.set(def.getId(), skin);
 			}
 			j.transPos = h3d.Matrix.L(subDef.get("Transform").getFloats());
+			j.defMat = defMat.toMatrix(leftHand);
 			if( leftHand ) DefaultMatrixes.rightHandToLeft(j.transPos);
 			
 			var weights = subDef.getAll("Weights");

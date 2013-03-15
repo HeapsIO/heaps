@@ -71,9 +71,7 @@ class Skin extends Mesh {
 				var r = currentRelPose[id];
 				if( r == null ) {
 					var bid = j.bindIndex;
-					if( bid >= 0 )
-						currentPalette[bid].loadFrom(absPos);
-					continue;
+					if( bid >= 0 ) r = j.defMat else continue;
 				}
 				if( j.parent == null )
 					m.multiply(r, absPos);
