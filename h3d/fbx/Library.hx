@@ -6,7 +6,7 @@ class DefaultMatrixes {
 	public var scale : Null<h3d.Point>;
 	public var rotate : Null<h3d.Point>;
 	public var preRot : Null<h3d.Point>;
-	public var wasRemoved : Bool;
+	public var wasRemoved : Null<Int>;
 	
 	public function new() {
 	}
@@ -224,11 +224,22 @@ class Library {
 				var def = defaultModelMatrixes.get(name);
 				if( def == null )
 					throw "Default Matrixes not found for " + name + " in " + animName;
-				// if it's an animation on a terminal unskinned joint, let's skip it
-				if( def.wasRemoved )
-					continue;
-				c = { def : def, t : null, r : null, s : null, a : null, name : name };
-				curves.set(model.getId(), c);
+				// if it's a move animation on a terminal unskinned joint, let's skip it
+				if( def.wasRemoved != null ) {
+					if( cn.getName() != "Visibility" )
+						continue;
+					// apply it on the skin instead
+					model = ids.get(def.wasRemoved);
+					name = model.getName();
+					c = curves.get(def.wasRemoved);
+					def = defaultModelMatrixes.get(name);
+					// todo : change behavior not to remove the mesh but the skin instead!
+					if( def == null ) throw "assert";
+				}
+				if( c == null ) {
+					c = { def : def, t : null, r : null, s : null, a : null, name : name };
+					curves.set(model.getId(), c);
+				}
 			}
 			var data = getChilds(cn, "AnimationCurve");
 			var cname = cn.getName();
@@ -516,15 +527,15 @@ class Library {
 				var skin : h3d.scene.Skin = cast o.obj;
 				var skinData = createSkin(hskins, hgeom, rootJoints, bonesPerVertex);
 				// if we have a skinned object, remove it (only keep the skin) and set the material
-				for( o in objects ) {
-					if( !o.obj.isMesh() ) continue;
-					var m = o.obj.toMesh();
+				for( osub in objects ) {
+					if( !osub.obj.isMesh() ) continue;
+					var m = osub.obj.toMesh();
 					if( m.primitive != skinData.primitive || m == skin )
 						continue;
 					skin.material = m.material;
 					m.remove();
 					// ignore key frames for this object
-					defaultModelMatrixes.get(o.obj.name).wasRemoved = true;
+					defaultModelMatrixes.get(osub.obj.name).wasRemoved = o.model.getId();
 				}
 				// set the skin data
 				skin.setSkinData(skinData);
@@ -559,7 +570,7 @@ class Library {
 					j.parent.subs.remove(j);
 				allJoints.remove(j);
 				// ignore key frames for this joint
-				defaultModelMatrixes.get(jModel.getName()).wasRemoved = true;
+				defaultModelMatrixes.get(jModel.getName()).wasRemoved = -1;
 				continue;
 			}
 			// create skin
