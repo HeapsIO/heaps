@@ -48,6 +48,9 @@ class Camera {
 		return c;
 	}
 
+	/**
+		Returns the inverse of the camera matrix view and projection. Cache the result until the next update().
+	**/
 	public function getInverseViewProj() {
 		if( minv == null ) minv = new h3d.Matrix();
 		if( needInv ) {
@@ -57,6 +60,13 @@ class Camera {
 		return minv;
 	}
 
+	/**
+		Transforms a 2D screen position into the 3D one according to the current camera.
+		The screenX and screenY values must be in the [-1,1] range.
+		The camZ value represents the normalized z in the frustum in the [0,1] range.
+		[unproject] can be used to get the ray from the camera position to a given screen position by using two different camZ values.
+		For instance the 3D ray between unproject(0,0,0) and unproject(0,0,1) is the center axis of the 3D frustum.
+	**/
 	public function unproject( screenX : Float, screenY : Float, camZ ) {
 		var p = new h3d.Vector(screenX, screenY, camZ);
 		p.project(getInverseViewProj());
