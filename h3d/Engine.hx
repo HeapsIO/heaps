@@ -279,6 +279,7 @@ class Engine {
 		if( old != null ) {
 			if( old.driverInfo != "Disposed" ) throw "Duplicate onCreate()";
 			old.dispose();
+			mem.dispose();
 			hxsl.Shader.ShaderGlobals.disposeAll();
 		}
 		ctx = s3d.context3D;
