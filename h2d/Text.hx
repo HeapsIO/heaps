@@ -2,7 +2,7 @@ package h2d;
 
 class Text extends Drawable {
 
-	public var font(default, null) : Font;
+	public var font(default, set) : Font;
 	public var text(default, set) : String;
 	public var textColor(default, set) : Int;
 	public var maxWidth(default, set) : Null<Float>;
@@ -16,10 +16,17 @@ class Text extends Drawable {
 	public function new( font : Font, ?parent ) {
 		super(parent);
 		this.font = font;
-		glyphs = new TileGroup(font, this);
-		shader = glyphs.shader;
 		text = "";
 		textColor = 0xFFFFFF;
+	}
+	
+	function set_font(font) {
+		this.font = font;
+		if( glyphs != null ) glyphs.remove();
+		glyphs = new TileGroup(font, this);
+		shader = glyphs.shader;
+		this.text = text;
+		return font;
 	}
 	
 	override function onAlloc() {
