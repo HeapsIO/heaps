@@ -275,13 +275,11 @@ class Engine {
 	}
 
 	function onCreate(_) {
-		if( ctx != null ) {
-			if( ctx.driverInfo == "Disposed" ) {
-				ctx.dispose();
-				ctx = null;
-				onDisposed();
-			}
-			return;
+		var old = ctx;
+		if( old != null ) {
+			if( old.driverInfo != "Disposed" ) throw "Duplicate onCreate()";
+			old.dispose();
+			hxsl.Shader.ShaderGlobals.disposeAll();
 		}
 		ctx = s3d.context3D;
 		mem = new h3d.impl.MemoryManager(ctx, 65400);
@@ -289,7 +287,10 @@ class Engine {
 		set_debug(debug);
 		set_fullScreen(fullScreen);
 		resize(width, height, antiAlias);
-		onReady();
+		if( old != null )
+			onDisposed();
+		else
+			onReady();
 	}
 	
 	public dynamic function onDisposed() {
@@ -339,14 +340,9 @@ class Engine {
 	}
 
 	public function begin() {
-		if( ctx == null ) return false;
-		try {
-			ctx.clear( ((backgroundColor>>16)&0xFF)/255 , ((backgroundColor>>8)&0xFF)/255, (backgroundColor&0xFF)/255, ((backgroundColor>>>24)&0xFF)/255);
-		} catch( e : Dynamic ) {
-			ctx = null;
+		if( ctx == null || ctx.driverInfo == "Disposed" )
 			return false;
-		}
-
+		ctx.clear( ((backgroundColor>>16)&0xFF)/255 , ((backgroundColor>>8)&0xFF)/255, (backgroundColor&0xFF)/255, ((backgroundColor>>>24)&0xFF)/255);
 		// init
 		drawTriangles = 0;
 		drawCalls = 0;
