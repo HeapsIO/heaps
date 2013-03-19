@@ -2,7 +2,7 @@ package h2d;
 
 class Font extends Tile {
 
-	static var DEFAULT_CHARS = " ?!\"#$%&|<>@'()[]{}*+-=/.,:;0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzéèêëÉÈÊËàâäáÀÂÄÁùûüúÙÛÜÚîïíÎÏÍôóöõÔÓÖæÆœŒçÇñÑ¡¿ß";
+	static var DEFAULT_CHARS = " ?!\"#$%&|<>@'()[]{}*+-=/.,:;0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzéèêëÉÈÊËàâäáÀÂÄÁùûüúÙÛÜÚîïíÎÏÍôóöõÔÓÖçÇñÑ¡¿ßæœÆŒ";
 
 	public var glyphs : Array<Tile>;
 	public var lineHeight : Int;
@@ -81,6 +81,7 @@ class Font extends Tile {
 			}
 		} while( bmp == null );
 		setTexture(Tile.fromBitmap(bmp).getTexture());
+		bmp.dispose();
 		for( t in all )
 			t.setTexture(innerTex);
 	}
