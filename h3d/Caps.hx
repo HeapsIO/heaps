@@ -9,7 +9,7 @@ class Caps {
 
 	static function get_isWindowed() {
 		var p = flash.system.Capabilities.playerType;
-		return p == "ActiveX" || p == "PlugIn" || p == "StandAlone";
+		return p == "ActiveX" || p == "PlugIn" || p == "StandAlone" || p == "Desktop";
 	}
 
 	static function get_isTouch() {

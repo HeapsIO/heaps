@@ -312,10 +312,20 @@ class Engine {
 		fullScreen = v;
 		if( ctx != null && Caps.isWindowed ) {
 			var stage = flash.Lib.current.stage;
-			var state = v ? flash.display.StageDisplayState.FULL_SCREEN : flash.display.StageDisplayState.NORMAL;
+			var isAir = flash.system.Capabilities.playerType == "Desktop";
+			var state = v ? (isAir ? flash.display.StageDisplayState.FULL_SCREEN_INTERACTIVE : flash.display.StageDisplayState.FULL_SCREEN) : flash.display.StageDisplayState.NORMAL;
 			if( stage.displayState != state ) stage.displayState = state;
 		}
 		return v;
+	}
+	
+	public function closeApp() {
+		var isAir = flash.system.Capabilities.playerType == "Desktop";
+		if( isAir ) {
+			var d : Dynamic = flash.Lib.current.loaderInfo.applicationDomain.getDefinition("flash.desktop.NativeApplication");
+			d.nativeApplication.exit();
+		} else
+			flash.system.System.exit(0);
 	}
 	
 	public dynamic function onResized() {
