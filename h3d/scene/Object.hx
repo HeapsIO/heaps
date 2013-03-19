@@ -15,6 +15,7 @@ class Object {
 	public var scaleX(default,set) : Float;
 	public var scaleY(default, set) : Float;
 	public var scaleZ(default,set) : Float;
+	public var visible : Bool = true;
 
 	/**
 		This is an additional optional transformation that is performed before other local transformations.
@@ -187,7 +188,9 @@ class Object {
 			if( parent == null && old != null ) return; // allow self-removal anim event
 		}
 		updatePos();
-		draw(ctx);
+		var old = ctx.visible;
+		ctx.visible = ctx.visible && visible;
+		if( ctx.visible ) draw(ctx);
 		lastFrame = ctx.frame;
 		var p = 0, len = childs.length;
 		while( p < len ) {
@@ -203,6 +206,7 @@ class Object {
 				p++;
 		}
 		posChanged = false;
+		ctx.visible = old;
 	}
 	
 	inline function set_x(v) {
