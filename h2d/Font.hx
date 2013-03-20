@@ -19,10 +19,10 @@ class Font extends Tile {
 		this.size = size;
 		this.chars = chars;
 		this.aa = aa;
-		reload();
+		init();
 	}
 	
-	public function reload() {
+	function init() {
 		lineHeight = 0;
 		var tf = new flash.text.TextField();
 		var fmt = tf.defaultTextFormat;
@@ -93,10 +93,16 @@ class Font extends Tile {
 				x += w + 1;
 			}
 		} while( bmp == null );
-		setTexture(Tile.fromBitmap(bmp).getTexture());
+		
+		if( innerTex == null ) {
+			setTexture(Tile.fromBitmap(bmp).getTexture());
+			for( t in all )
+				t.setTexture(innerTex);
+			innerTex.onContextLost = init;
+		} else
+			innerTex.upload(bmp);
+		
 		bmp.dispose();
-		for( t in all )
-			t.setTexture(innerTex);
 	}
 	
 }

@@ -82,6 +82,7 @@ class MemoryManager {
 	var ctx : flash.display3D.Context3D;
 	var empty : flash.utils.ByteArray;
 	var buffers : Array<BigBuffer>;
+	var idict : Map<Indexes,Bool>;
 	
 	var tdict : Map<h3d.mat.Texture,flash.display3D.textures.TextureBase>;
 	var textures : Array<flash.display3D.textures.TextureBase>;
@@ -96,11 +97,16 @@ class MemoryManager {
 		this.ctx = ctx;
 		this.allocSize = allocSize;
 
+		idict = new Map();
 		tdict = new haxe.ds.ObjectMap(true);
 		textures = new Array();
 		empty = new flash.utils.ByteArray();
 		buffers = new Array();
-
+		
+		initIndexes();
+	}
+	
+	function initIndexes() {
 		var indices = new flash.Vector<UInt>();
 		for( i in 0...allocSize ) indices[i] = i;
 		indexes = allocIndex(indices);
@@ -218,8 +224,8 @@ class MemoryManager {
 		#end
 	}
 	
-	function newTexture(t, w, h, cubic, allocPos) {
-		var t = new h3d.mat.Texture(this, t, w, h, cubic);
+	function newTexture(t, w, h, cubic, target, allocPos) {
+		var t = new h3d.mat.Texture(this, t, w, h, cubic, target);
 		tdict.set(t, t.t);
 		textures.push(t.t);
 		#if debug
@@ -228,6 +234,14 @@ class MemoryManager {
 		return t;
 	}
 
+	@:allow(h3d.impl.Indexes.dispose)
+	function deleteIndexes( i : Indexes ) {
+		idict.remove(i);
+		i.ibuf.dispose();
+		i.ibuf = null;
+		usedMemory -= i.count * 2;
+	}
+	
 	@:allow(h3d.mat.Texture.dispose)
 	function deleteTexture( t : h3d.mat.Texture ) {
 		textures.remove(t.t);
@@ -238,12 +252,12 @@ class MemoryManager {
 	
 	public function allocTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
 		freeTextures();
-		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false, allocPos);
+		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false, false, allocPos);
 	}
 
 	public function allocTargetTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
 		freeTextures();
-		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true), width, height, false, allocPos);
+		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true), width, height, false, true, allocPos);
 	}
 
 	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap, ?allocPos : AllocPos ) {
@@ -260,13 +274,16 @@ class MemoryManager {
 
 	public function allocCubeTexture( size : Int, ?allocPos : AllocPos ) {
 		freeTextures();
-		return newTexture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), size, size, true, allocPos);
+		return newTexture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), size, size, true, false, allocPos);
 	}
 
 	public function allocIndex( indices : flash.Vector<UInt> ) {
 		var ibuf = ctx.createIndexBuffer(indices.length);
 		ibuf.uploadFromVector(indices, 0, indices.length);
-		return new Indexes(ibuf,indices.length);
+		var idx = new Indexes(this, ibuf, indices.length);
+		idict.set(idx, true);
+		usedMemory += idx.count * 2;
+		return idx;
 	}
 
 	public function allocBytes( bytes : flash.utils.ByteArray, stride : Int, align, ?allocPos : AllocPos ) {
@@ -460,6 +477,37 @@ class MemoryManager {
 			}
 		}
 	}
+	
+	public function onContextLost( newContext ) {
+		ctx = newContext;
+		indexes.dispose();
+		quadIndexes.dispose();
+		for( t in tdict.keys() )
+			if( t.onContextLost == null )
+				t.dispose();
+			else {
+				textures.remove(t.t);
+				if( t.isCubic )
+					t.t = ctx.createCubeTexture(t.width, flash.display3D.Context3DTextureFormat.BGRA, false);
+				else
+					t.t = ctx.createTexture(t.width, t.height, flash.display3D.Context3DTextureFormat.BGRA, t.isTarget);
+				tdict.set(t, t.t);
+				t.onContextLost();
+			}
+		for( b in buffers ) {
+			var b = b;
+			while( b != null ) {
+				b.dispose();
+				b = b.next;
+			}
+		}
+		for( i in idict.keys() )
+			i.dispose();
+		buffers = [];
+		bufferCount = 0;
+		usedMemory = 0;
+		initIndexes();
+	}
 
 	public function dispose() {
 		indexes.dispose();
@@ -475,6 +523,8 @@ class MemoryManager {
 				b = b.next;
 			}
 		}
+		for( i in idict.keys() )
+			i.dispose();
 		buffers = [];
 		bufferCount = 0;
 		usedMemory = 0;

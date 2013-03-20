@@ -11,10 +11,18 @@ class Texture {
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var isCubic(default, null) : Bool;
+	public var isTarget(default, null) : Bool;
 
-	function new(m, t, w, h, c) {
+	/**
+		If this callback is set, the texture is re-allocated when the 3D context has been lost and the callback is called
+		so it can perform the necessary operations to restore the texture in its initial state
+	**/
+	public var onContextLost : Void -> Void;
+	
+	function new(m, t, w, h, c, ta) {
 		this.mem = m;
 		this.t = t;
+		this.isTarget = ta;
 		this.width = w;
 		this.height = h;
 		this.isCubic = c;

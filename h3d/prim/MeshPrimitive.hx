@@ -26,7 +26,8 @@ class MeshPrimitive extends Primitive {
 	
 	@:access(h3d.Engine.curShader)
 	override function render( engine : h3d.Engine ) {
-		if( indexes == null )
+		// the actual alloc() cache will be implemented by subclasses
+		if( indexes == null || indexes.isDisposed() )
 			alloc(engine);
 		if( bufferCache == null )
 			bufferCache = new Map();

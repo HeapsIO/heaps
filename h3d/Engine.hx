@@ -184,6 +184,8 @@ class Engine {
 
 	// we use preallocated indexes so all the triangles are stored inside our buffers
 	function renderBuffer( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
+		if( indexes.isDisposed() )
+			return;
 		do {
 			var ntri = Std.int(b.nvert / vertPerTri);
 			var pos = Std.int(b.pos / vertPerTri);
@@ -219,6 +221,8 @@ class Engine {
 	public function renderIndexed( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, startTri = 0, drawTri = -1 ) {
 		if( b.next != null )
 			throw "Buffer is split";
+		if( indexes.isDisposed() )
+			return;
 		var maxTri = Std.int(indexes.count / 3);
 		if( drawTri < 0 ) drawTri = maxTri - startTri;
 		if( drawTri > 0 && selectBuffer(b.b) ) {
@@ -263,6 +267,9 @@ class Engine {
 			curMultiBuffer = buffers;
 		}
 		
+		if( indexes.isDisposed() )
+			return;
+			
 		// render
 		ctx.drawTriangles(indexes.ibuf, 0, triCount);
 		drawTriangles += triCount;
@@ -280,23 +287,24 @@ class Engine {
 		if( old != null ) {
 			if( old.driverInfo != "Disposed" ) throw "Duplicate onCreate()";
 			old.dispose();
-			mem.dispose();
 			hxsl.Shader.ShaderGlobals.disposeAll();
+			ctx = s3d.context3D;
+			mem.onContextLost(ctx);
+		} else {
+			ctx = s3d.context3D;
+			mem = new h3d.impl.MemoryManager(ctx, 65400);
 		}
-		ctx = s3d.context3D;
-		mem = new h3d.impl.MemoryManager(ctx, 65400);
 		hardware = ctx.driverInfo.toLowerCase().indexOf("software") == -1;
 		set_debug(debug);
 		set_fullScreen(fullScreen);
 		resize(width, height, antiAlias);
 		if( old != null )
-			onDisposed();
+			onContextLost();
 		else
 			onReady();
 	}
 	
-	public dynamic function onDisposed() {
-		throw "3D Context Lost";
+	public dynamic function onContextLost() {
 	}
 
 	public dynamic function onReady() {

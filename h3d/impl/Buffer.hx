@@ -18,6 +18,10 @@ class Buffer {
 		this.nvert = nvert;
 	}
 
+	public function isDisposed() {
+		return b == null || b.isDisposed();
+	}
+	
 	public function dispose() {
 		if( b != null ) {
 			b.freeCursor(pos, nvert);

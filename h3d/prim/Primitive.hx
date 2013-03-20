@@ -27,7 +27,7 @@ class Primitive {
 	}
 
 	public function render( engine : h3d.Engine ) {
-		if( buffer == null ) alloc(engine);
+		if( buffer == null || buffer.isDisposed() ) alloc(engine);
 		if( indexes == null )
 			engine.renderTriBuffer(buffer);
 		else

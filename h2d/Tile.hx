@@ -120,7 +120,21 @@ class Tile {
 	public function toString() {
 		return "Tile(" + x + "," + y + "," + width + "x" + height + (dx != 0 || dy != 0 ? "," + dx + ":" + dy:"") + ")";
 	}
+
+	function upload(bmp:flash.display.BitmapData) {
+		var w = innerTex.width;
+		var h = innerTex.height;
+		if( w != bmp.width || h != bmp.height ) {
+			var bmp2 = new flash.display.BitmapData(w, h, true, 0);
+			var p0 = new flash.geom.Point(0, 0);
+			bmp2.copyPixels(bmp, bmp.rect, p0, bmp, p0, true);
+			innerTex.upload(bmp2);
+			bmp2.dispose();
+		} else
+			innerTex.upload(bmp);
+	}
 	
+
 	static var COLOR_CACHE = new Map<Int,h2d.Tile>();
 	public static function fromColor( color : Int, ?allocPos : h3d.impl.AllocPos ) {
 		var t = COLOR_CACHE.get(color);
@@ -133,6 +147,9 @@ class Tile {
 		bmp.set(2, (color >> 16) & 0xFF);
 		bmp.set(3, color >>> 24);
 		tex.uploadBytes(bmp);
+		tex.onContextLost = function() {
+			tex.uploadBytes(bmp);
+		};
 		var t = new Tile(tex, 0, 0, 1, 1);
 		COLOR_CACHE.set(color, t);
 		return t;
@@ -145,15 +162,9 @@ class Tile {
 		while( h < bmp.height )
 			h <<= 1;
 		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h, allocPos);
-		if( w != bmp.width || h != bmp.height ) {
-			var bmp2 = new flash.display.BitmapData(w, h, true, 0);
-			var p0 = new flash.geom.Point(0, 0);
-			bmp2.copyPixels(bmp, bmp.rect, p0, bmp, p0, true);
-			tex.upload(bmp2);
-			bmp2.dispose();
-		} else
-			tex.upload(bmp);
-		return new Tile(tex, 0, 0, bmp.width, bmp.height);
+		var t = new Tile(tex, 0, 0, bmp.width, bmp.height);
+		t.upload(bmp);
+		return t;
 	}
 
 	public static function autoCut( bmp : flash.display.BitmapData, width : Int, ?height : Int, ?allocPos : h3d.impl.AllocPos ) {
@@ -176,15 +187,8 @@ class Tile {
 				a.push(new Tile(tex,x*width+sz.dx, y*height+sz.dy, sz.w, sz.h, sz.dx, sz.dy));
 			}
 		}
-		if( w != bmp.width || h != bmp.height ) {
-			var bmp2 = new flash.display.BitmapData(w, h, true, 0);
-			var p0 = new flash.geom.Point(0, 0);
-			bmp2.copyPixels(bmp, bmp.rect, p0, bmp, p0, true);
-			tex.upload(bmp2);
-			bmp2.dispose();
-		} else
-			tex.upload(bmp);
 		var main = new Tile(tex, 0, 0, bmp.width, bmp.height);
+		main.upload(bmp);
 		return { main : main, tiles : tl };
 	}
 	
