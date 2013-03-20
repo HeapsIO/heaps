@@ -125,7 +125,7 @@ class Engine {
 				if( t == null )
 					throw "Texture #" + i + " not bound in shader " + shader;
 				if( t != curTextures[i] ) {
-					ctx.setTextureAt(i, t.t);
+					ctx.setTextureAt(i, t.isDisposed() ? h2d.Tile.fromColor(0xFFFF00FF).getTexture().t : t.t);
 					curTextures[i] = t;
 				}
 			}
@@ -150,8 +150,10 @@ class Engine {
 	}
 
 	function selectBuffer( buf : h3d.impl.MemoryManager.BigBuffer ) {
+		if( buf.isDisposed() )
+			return false;
 		if( buf == curBuffer )
-			return;
+			return true;
 		curBuffer = buf;
 		curMultiBuffer = null;
 		if( buf.stride < curShader.stride )
@@ -169,6 +171,7 @@ class Engine {
 		for( i in pos...curAttributes )
 			ctx.setVertexBufferAt(i, null);
 		curAttributes = pos;
+		return true;
 	}
 
 	public inline function renderTriBuffer( b : h3d.impl.Buffer, start = 0, max = -1 ) {
@@ -202,8 +205,7 @@ class Engine {
 					drawTri = 0;
 				}
 			}
-			if( ntri > 0 ) {
-				selectBuffer(b.b);
+			if( ntri > 0 && selectBuffer(b.b) ) {
 				// *3 because it's the position in indexes which are always by 3
 				ctx.drawTriangles(indexes.ibuf, pos * 3, ntri);
 				drawTriangles += ntri;
@@ -219,8 +221,7 @@ class Engine {
 			throw "Buffer is split";
 		var maxTri = Std.int(indexes.count / 3);
 		if( drawTri < 0 ) drawTri = maxTri - startTri;
-		if( drawTri > 0 ) {
-			selectBuffer(b.b);
+		if( drawTri > 0 && selectBuffer(b.b) ) {
 			// *3 because it's the position in indexes which are always by 3
 			ctx.drawTriangles(indexes.ibuf, startTri * 3, drawTri);
 			drawTriangles += drawTri;

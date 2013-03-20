@@ -315,6 +315,7 @@ class Scene extends Layers implements h3d.IDrawable {
 			height = engine.height;
 			posChanged = true;
 		}
+		Tools.checkCoreObjects();
 		super.render(engine);
 	}
 	

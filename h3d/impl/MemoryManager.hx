@@ -67,6 +67,10 @@ class BigBuffer {
 		vbuf.dispose();
 		vbuf = null;
 	}
+	
+	function isDisposed() {
+		return vbuf == null;
+	}
 
 }
 

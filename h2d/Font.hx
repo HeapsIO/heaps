@@ -4,13 +4,26 @@ class Font extends Tile {
 
 	static var DEFAULT_CHARS = " ?!\"#$%&|<>@'()[]{}*+-=/.,:;0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzéèêëÉÈÊËàâäáÀÂÄÁùûüúÙÛÜÚîïíÎÏÍôóöõÔÓÖçÇñÑ¡¿ßæœÆŒ";
 
+	public var name(default, null) : String;
+	public var size(default, null) : Int;
 	public var glyphs : Array<Tile>;
 	public var lineHeight : Int;
+	var chars : String;
+	var aa : Bool;
 	
 	public function new( name : String, size : Int, aa = true, ?chars ) {
 		super(null, 0, 0, 0, 0);
 		if( chars == null )
 			chars = DEFAULT_CHARS;
+		this.name = name;
+		this.size = size;
+		this.chars = chars;
+		this.aa = aa;
+		reload();
+	}
+	
+	public function reload() {
+		lineHeight = 0;
 		var tf = new flash.text.TextField();
 		var fmt = tf.defaultTextFormat;
 		fmt.font = name;

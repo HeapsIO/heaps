@@ -65,4 +65,14 @@ class Tools {
 		return c;
 	}
 	
+	@:allow(h2d)
+	@:access(h3d.impl.BigBuffer)
+	static function checkCoreObjects() {
+		var c = CORE;
+		if( c == null ) return;
+		// if we have lost our context
+		if( c.planBuffer.b.isDisposed() )
+			CORE = null;
+	}
+	
 }
