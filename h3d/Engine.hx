@@ -334,7 +334,7 @@ class Engine {
 		var isAir = flash.system.Capabilities.playerType == "Desktop";
 		if( isAir ) {
 			var d : Dynamic = flash.Lib.current.loaderInfo.applicationDomain.getDefinition("flash.desktop.NativeApplication");
-			d.nativeApplication.exit();
+			Reflect.field(Reflect.field(d,"nativeApplication"),"exit")();
 		} else
 			flash.system.System.exit(0);
 	}
