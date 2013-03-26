@@ -319,13 +319,23 @@ class Engine {
 		}
 	}
 	
+	var fsDelayed : Bool;
 	function set_fullScreen(v) {
 		fullScreen = v;
 		if( ctx != null && Caps.isWindowed ) {
 			var stage = flash.Lib.current.stage;
 			var isAir = flash.system.Capabilities.playerType == "Desktop";
 			var state = v ? (isAir ? flash.display.StageDisplayState.FULL_SCREEN_INTERACTIVE : flash.display.StageDisplayState.FULL_SCREEN) : flash.display.StageDisplayState.NORMAL;
-			if( stage.displayState != state ) stage.displayState = state;
+			if( stage.displayState != state ) {
+				var t = flash.Lib.getTimer();
+				// delay first fullsrceen toggle on OSX/Air to prevent the command window to spawn over
+				if( v && isAir && t < 5000 && !fsDelayed && flash.system.Capabilities.os.indexOf("Mac") != -1 ) {
+					fsDelayed = true;
+					haxe.Timer.delay(function() this.fullScreen = fullScreen, 1000);
+					return v;
+				}
+				stage.displayState = state;
+			}
 		}
 		return v;
 	}
