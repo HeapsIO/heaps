@@ -84,8 +84,8 @@ class Engine {
 		ctx.drawToBitmapData(bmp);
 	}
 
-	public function driverName() {
-		return ctx == null ? "None" : ctx.driverInfo.split(" ")[0];
+	public function driverName(details=false) {
+		return ctx == null ? "None" : (details ? ctx.driverInfo : ctx.driverInfo.split(" ")[0]);
 	}
 
 	public function isReady() {
