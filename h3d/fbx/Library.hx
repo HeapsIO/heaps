@@ -425,7 +425,7 @@ class Library {
 		return if( a > b ) 1 else -1;
 	}
 
-	public function makeScene( ?textureLoader : String -> h3d.mat.MeshMaterial, ?bonesPerVertex = 3 ) : h3d.scene.Scene {
+	public function makeScene( ?textureLoader : String -> FbxNode -> h3d.mat.MeshMaterial, ?bonesPerVertex = 3 ) : h3d.scene.Scene {
 		var scene = new h3d.scene.Scene();
 		var hobjects = new Map();
 		var hgeom = new Map();
@@ -436,7 +436,7 @@ class Library {
 		
 		if( textureLoader == null ) {
 			var tmpTex = null;
-			textureLoader = function(_) {
+			textureLoader = function(_,_) {
 				if( tmpTex == null ) {
 					tmpTex = h3d.Engine.getCurrent().mem.allocTexture(1, 1);
 					var bytes = haxe.io.Bytes.alloc(4);
@@ -483,7 +483,7 @@ class Library {
 				var mat = getChild(model, "Material");
 				var tex = getChilds(mat, "Texture")[0];
 				if( tex == null ) throw "No texture found for " + model.getName();
-				var mat = textureLoader(tex.get("FileName").props[0].toString());
+				var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
 				o = new h3d.scene.Mesh(prim, mat, scene);
 			case type:
 				throw "Unknown model type " + type+" for "+model.getName();
