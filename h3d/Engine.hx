@@ -356,7 +356,13 @@ class Engine {
 		this.width = width;
 		this.height = height;
 		this.antiAlias = aa;
-		ctx.configureBackBuffer(width, height, aa);
+		if( ctx.driverInfo != "Disposed" ) {
+			try {
+				ctx.configureBackBuffer(width, height, aa);
+			} catch( e : Dynamic ) {
+				throw Std.string(e) + " " + width + "x" + height;
+			}
+		}
 	}
 
 	public function begin() {
