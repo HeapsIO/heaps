@@ -205,8 +205,10 @@ class Library {
 				animNode = getChild(a, "AnimationLayer");
 				break;
 			}
-		if( animNode == null )
+		if( animNode == null ) {
+			if( animName == null ) return null;
 			throw "Animation not found " + animName;
+		}
 
 		var curves = new Map();
 		var P0 = new h3d.Point();
