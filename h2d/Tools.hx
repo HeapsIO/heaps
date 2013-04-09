@@ -53,7 +53,7 @@ private class CoreObjects  {
 
 class Tools {
 	
-	static var CORE = null;
+	static var CORE : CoreObjects = null;
 	
 	@:allow(h2d)
 	static function getCoreObjects() {
