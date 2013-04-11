@@ -256,12 +256,14 @@ class Object {
 	*/
 	public function move( dx : Float, dy : Float, dz : Float ) {
 		throw "TODO";
+		posChanged = true;
 	}
 
 	public inline function setPos( x : Float, y : Float, z : Float ) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
+		posChanged = true;
 	}
 	
 	/*
@@ -301,12 +303,14 @@ class Object {
 		scaleX *= v;
 		scaleY *= v;
 		scaleZ *= v;
+		posChanged = true;
 	}
 	
 	public inline function setScale( v : Float ) {
 		scaleX = v;
 		scaleY = v;
 		scaleZ = v;
+		posChanged = true;
 	}
 	
 	public function toString() {
