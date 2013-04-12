@@ -84,7 +84,7 @@ class MemoryManager {
 	var buffers : Array<BigBuffer>;
 	var idict : Map<Indexes,Bool>;
 	
-	var tdict : Map<h3d.mat.Texture,flash.display3D.textures.TextureBase>;
+	var tdict : haxe.ds.WeakMap<h3d.mat.Texture,flash.display3D.textures.TextureBase>;
 	var textures : Array<flash.display3D.textures.TextureBase>;
 	
 	public var indexes(default,null) : Indexes;
@@ -98,7 +98,7 @@ class MemoryManager {
 		this.allocSize = allocSize;
 
 		idict = new Map();
-		tdict = new haxe.ds.ObjectMap(true);
+		tdict = new haxe.ds.WeakMap();
 		textures = new Array();
 		empty = new flash.utils.ByteArray();
 		buffers = new Array();
