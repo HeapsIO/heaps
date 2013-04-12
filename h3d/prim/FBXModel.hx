@@ -5,7 +5,7 @@ import h3d.impl.Buffer.BufferOffset;
 class FBXModel extends MeshPrimitive {
 
 	public var geom(default, null) : h3d.fbx.Geometry;
-	public var skin : Skin;
+	public var skin : h3d.anim.Skin;
 	var bounds : Bounds;
 
 	public function new(g) {

@@ -22,7 +22,7 @@ class Object {
 		It is used by the animation system.
 	**/
 	public var defaultTransform(default, set) : h3d.Matrix;
-	public var currentAnimation(default, null) : h3d.prim.Animation;
+	public var currentAnimation(default, null) : h3d.anim.Animation;
 	
 	var absPos : h3d.Matrix;
 	var qRot : h3d.Quat;
@@ -40,10 +40,8 @@ class Object {
 			parent.addChild(this);
 	}
 	
-	public function playAnimation( a : h3d.prim.Animation, startTime = 0., speed = 1. ) {
-		currentAnimation = a.createInstance(this);
-		currentAnimation.time = startTime;
-		currentAnimation.speed = speed;
+	public function playAnimation( a : h3d.anim.Animation ) {
+		return currentAnimation = a.createInstance(this);
 	}
 	
 	public function stopAnimation() {
@@ -179,13 +177,13 @@ class Object {
 	
 	function renderContext( ctx : RenderContext ) {
 		if( currentAnimation != null ) {
-			var old = parent, olda = currentAnimation;
-			currentAnimation.time += ctx.elapsedTime * currentAnimation.speed;
-			currentAnimation.update();
-			// one more sync in case we just changed animation
-			if( olda != currentAnimation && currentAnimation != null )
-				currentAnimation.update();
-			if( parent == null && old != null ) return; // allow self-removal anim event
+			var old = parent;
+			var dt = ctx.elapsedTime;
+			while( dt > 0 && currentAnimation != null )
+				dt = currentAnimation.update(dt);
+			if( currentAnimation != null )
+				currentAnimation.sync();
+			if( parent == null && old != null ) return; // if we were removed by an animation event
 		}
 		updatePos();
 		var old = ctx.visible;

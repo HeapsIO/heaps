@@ -10,7 +10,7 @@ class Joint extends Object {
 
 class Skin extends Mesh {
 	
-	var skinData : h3d.prim.Skin;
+	var skinData : h3d.anim.Skin;
 	var currentRelPose : Array<h3d.Matrix>;
 	var currentAbsPose : Array<h3d.Matrix>;
 	var currentPalette : Array<h3d.Matrix>;

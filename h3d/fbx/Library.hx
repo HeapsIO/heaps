@@ -336,8 +336,8 @@ class Library {
 			curT = t;
 		}
 		var numFrames = maxTime == 0 ? 1 : 1 + Std.int((maxTime - allTimes[0]) / minDT);
-		var anim = new h3d.prim.Animation(animName, numFrames);
-		anim.sampling = 15.0 / (minDT / 3079077200); // this is the DT value we get from Max when using 15 FPS export
+		var sampling = 15.0 / (minDT / 3079077200); // this is the DT value we get from Max when using 15 FPS export
+		var anim = new h3d.anim.FrameAnimation(animName, numFrames, sampling);
 		
 		for( c in curves ) {
 			var frames = null, alpha = null;
@@ -466,7 +466,7 @@ class Library {
 				else
 					o = new h3d.scene.Object(scene);
 			case "LimbNode":
-				var j = new h3d.prim.Skin.Joint();
+				var j = new h3d.anim.Skin.Joint();
 				getDefaultMatrixes(model); // store for later usage in animation
 				j.index = model.getId();
 				j.name = model.getName();
@@ -546,9 +546,9 @@ class Library {
 		return scene;
 	}
 	
-	function createSkin( hskins : Map<Int,h3d.prim.Skin>, hgeom : Map<Int,h3d.prim.FBXModel>, rootJoints : Array<h3d.prim.Skin.Joint>, bonesPerVertex ) {
+	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,h3d.prim.FBXModel>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
 		var allJoints = [];
-		function collectJoints(j:h3d.prim.Skin.Joint) {
+		function collectJoints(j:h3d.anim.Skin.Joint) {
 			// collect subs first (allow easy removal of terminal unskinned joints)
 			for( j in j.subs )
 				collectJoints(cast j);
@@ -584,7 +584,7 @@ class Library {
 				if( skin != null )
 					return skin;
 				var geom = hgeom.get(getParent(def, "Geometry").getId());
-				skin = new h3d.prim.Skin(geom.getVerticesCount(), bonesPerVertex);
+				skin = new h3d.anim.Skin(geom.getVerticesCount(), bonesPerVertex);
 				geom.skin = skin;
 				skin.primitive = geom;
 				hskins.set(def.getId(), skin);

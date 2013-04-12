@@ -1,4 +1,4 @@
-package h3d.prim;
+package h3d.anim;
 
 class Joint {
 
@@ -38,7 +38,7 @@ class Skin {
 	public var namedJoints(default,null) : Map<String,Joint>;
 	public var allJoints(default,null) : Array<Joint>;
 	public var boundJoints(default,null) : Array<Joint>;
-	public var primitive : Primitive;
+	public var primitive : h3d.prim.Primitive;
 	
 	var envelop : Array<Array<Influence>>;
 	
