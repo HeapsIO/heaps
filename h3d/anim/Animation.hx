@@ -47,9 +47,9 @@ class Animation {
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
 	
-	function new(name, frameCoutn, sampling) {
+	function new(name, frameCount, sampling) {
 		this.name = name;
-		this.frameCount = frameCoutn;
+		this.frameCount = frameCount;
 		this.sampling = sampling;
 		objects = [];
 		frame = 0.;
