@@ -193,6 +193,8 @@ class Object {
 		var p = 0, len = childs.length;
 		while( p < len ) {
 			var c = childs[p];
+			if( c == null )
+				break;
 			if( c.lastFrame != ctx.frame )
 				c.renderContext(ctx);
 			// if the object was removed, let's restart again.
