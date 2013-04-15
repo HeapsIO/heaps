@@ -89,7 +89,7 @@ class Animation {
 		if( frame < 0 ) frame += frameCount;
 	}
 	
-	function clone( ?a ) {
+	function clone( ?a : Animation ) : Animation {
 		if( a == null )
 			a = new Animation(name, frameCount, sampling);
 		a.objects = objects;
