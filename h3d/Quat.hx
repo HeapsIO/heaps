@@ -15,6 +15,11 @@ class Quat {
 		this.w = w;
 	}
 	
+	public inline function identity() {
+		x = y = z = 0;
+		w = 1;
+	}
+	
 	public function length() {
 		return Math.sqrt(x * x + y * y + z * z + w * w);
 	}
