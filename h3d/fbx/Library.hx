@@ -525,6 +525,12 @@ class Library {
 							f.tz = ctz[tp - 1];
 						}
 
+						if( leftHand ) {
+							f.tx *= -1;
+							f.qy *= -1;
+							f.qz *= -1;
+						}
+						
 						curFrame = f;
 					}
 					if( frames != null )
