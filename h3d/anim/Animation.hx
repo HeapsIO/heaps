@@ -66,7 +66,7 @@ class Animation {
 		var prev = null;
 		var cur = waits;
 		while( cur != null ) {
-			if( cur.frame < f )
+			if( cur.frame > f )
 				break;
 			prev = cur;
 			cur = cur.next;
