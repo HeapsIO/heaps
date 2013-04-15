@@ -197,6 +197,8 @@ class Viewer {
 				f.save(data, curFbxFile.substr(0, -4) + "_tree.txt");
 			} else if( c == K.R ) {
 				rightHand = !rightHand;
+				camVars.x *= -1;
+				camVars.tx *= -1;
 				reload = true;
 			} else if( c == K.K ) {
 				showBones = !showBones;
