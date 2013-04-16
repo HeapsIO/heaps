@@ -76,6 +76,10 @@ class LinearAnimation extends Animation {
 		return a;
 	}
 	
+	override function endFrame() {
+		return loop ? frameCount : frameCount - 1;
+	}
+	
 	@:access(h3d.scene.Skin)
 	override function sync() {
 		if( frame == syncFrame )

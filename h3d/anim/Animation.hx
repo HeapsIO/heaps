@@ -147,6 +147,10 @@ class Animation {
 		return !pause && (speed < 0 ? -speed : speed) > EPSILON;
 	}
 
+	function endFrame() {
+		return frameCount;
+	}
+	
 	public function update(dt:Float) : Float {
 		if( !isInstance )
 			throw "You must instanciate this animation first";
@@ -179,9 +183,10 @@ class Animation {
 		
 		// check on anim end
 		if( onAnimEnd != null ) {
-			var et = (frameCount - frame) / (speed * sampling);
+			var end = endFrame();
+			var et = (end - frame) / (speed * sampling);
 			if( et <= dt ) {
-				var f = frameCount - EPSILON;
+				var f = end - EPSILON;
 				frame = f;
 				dt -= et;
 				onAnimEnd();
