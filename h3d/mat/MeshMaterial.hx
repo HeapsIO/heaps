@@ -106,11 +106,11 @@ private class MeshShader extends hxsl.Shader {
 		var texNearest : Bool;
 		
 		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
-			var c = tex.get(tuv.xy, filter = !(killAlpha || texNearest), wrap = (texWrap || uvDelta != null));
+			var c = tex.get(tuv.xy, filter = !texNearest, wrap = (texWrap || uvDelta != null));
 			if( fog != null ) c.a *= talpha;
-			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,filter = !(killAlpha || texNearest)).b;
-			if( killAlpha ) kill(c.a - 0.001);
-			if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy, filter = !(killAlpha || texNearest), wrap).rgb;
+			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,filter = !texNearest).b;
+			if( killAlpha ) kill(c.a - 0.999);
+			if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy, filter = !texNearest, wrap).rgb;
 			if( colorAdd != null ) c += colorAdd;
 			if( colorMul != null ) c = c * colorMul;
 			if( colorMatrix != null ) c = c * colorMatrix;
@@ -123,7 +123,7 @@ private class MeshShader extends hxsl.Shader {
 				if( hasVertexColorAdd )
 					c.rgb += acolor;
 			}
-			if( hasGlow ) c.rgb += glowTexture.get(tuv.xy, filter = !(killAlpha || texNearest), wrap = (texWrap || uvDelta != null)).rgb * glowAmount;
+			if( hasGlow ) c.rgb += glowTexture.get(tuv.xy, filter = !texNearest, wrap = (texWrap || uvDelta != null)).rgb * glowAmount;
 			out = c;
 		}
 		
