@@ -49,6 +49,8 @@ class FBXModel extends MeshPrimitive {
 		return bounds;
 	}
 	
+	static var TMP = null;
+	
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
 		
@@ -62,10 +64,16 @@ class FBXModel extends MeshPrimitive {
 		var idx = new flash.Vector<UInt>();
 		var pbuf = new flash.Vector<Float>(), nbuf = (norms == null ? null : new flash.Vector<Float>()), sbuf = (skin == null ? null : new flash.Vector<Float>()), tbuf = (tuvs == null ? null : new flash.Vector<Float>());
 		var pout = 0, nout = 0, sout = 0, tout = 0;
-	
-		var tmp = new flash.utils.ByteArray();
-		tmp.length = 1024;
-		flash.Memory.select(tmp);
+		
+		if( sbuf != null ) {
+			var tmp = TMP;
+			if( tmp == null ) {
+				tmp = new flash.utils.ByteArray();
+				tmp.length = 1024;
+				TMP = tmp;
+			}
+			flash.Memory.select(tmp);
+		}
 		
 		// triangulize indexes : format is  A,B,...,-X : negative values mark the end of the polygon
 		var count = 0, pos = 0;
