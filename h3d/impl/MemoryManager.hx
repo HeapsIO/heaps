@@ -346,6 +346,8 @@ class MemoryManager {
 	 **/
 	public function alloc( nvect : Int, stride, align, ?allocPos : AllocPos ) {
 		var b = buffers[stride], free = null;
+		if( nvect == 0 && align == 0 )
+			align = 3;
 		while( b != null ) {
 			free = b.free;
 			while( free != null ) {
