@@ -103,13 +103,14 @@ private class MeshShader extends hxsl.Shader {
 		}
 		
 		var killAlpha : Bool;
+		var killAlphaThreshold : Float;
 		var texNearest : Bool;
 		
 		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
 			var c = tex.get(tuv.xy, filter = !texNearest, wrap = (texWrap || uvDelta != null));
 			if( fog != null ) c.a *= talpha;
 			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,filter = !texNearest).b;
-			if( killAlpha ) kill(c.a - 0.999);
+			if( killAlpha ) kill(c.a - killAlphaThreshold);
 			if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy, filter = !texNearest, wrap).rgb;
 			if( colorAdd != null ) c += colorAdd;
 			if( colorMul != null ) c = c * colorMul;
@@ -166,11 +167,14 @@ class MeshMaterial extends Material {
 	
 	public var blendTexture(get, set) : Texture;
 	
+	public var killAlphaThreshold(get, set) : Float;
+	
 	public function new(texture) {
 		mshader = new MeshShader();
 		super(mshader);
 		this.texture = texture;
 		useMatrixPos = true;
+		killAlphaThreshold = 0.001;
 	}
 	
 	override function clone( ?m : Material ) {
@@ -361,6 +365,14 @@ class MeshMaterial extends Material {
 	inline function set_blendTexture(v) {
 		mshader.hasBlend = v != null;
 		return mshader.blendTexture = v;
+	}
+	
+	inline function get_killAlphaThreshold() {
+		return mshader.killAlphaThreshold;
+	}
+	
+	inline function set_killAlphaThreshold(v) {
+		return mshader.killAlphaThreshold = v;
 	}
 	
 }
