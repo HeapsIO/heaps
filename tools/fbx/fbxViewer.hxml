@@ -5,5 +5,6 @@
 -swf-version 11.3
 -main Viewer
 -lib hxsl
+-lib air3
 -D h3d
 -dce full

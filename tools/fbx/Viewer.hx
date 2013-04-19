@@ -31,17 +31,13 @@ class Cookie
 	}
 	
 	static public function read() {
-		if (_so.data.params) {
-			Viewer.curData = haxe.Unserializer.run(_so.data.fbx);
+		try {
 			Viewer.props = haxe.Unserializer.run(_so.data.params);
-			return Viewer.props.curFbxFile;
+		} catch( e : Dynamic ) {
 		}
-		return null;
 	}
 
-	static public function write(?saveFbx = false) {
-		if (saveFbx)
-			_so.data.fbx = haxe.Serializer.run(Viewer.curData);
+	static public function write() {
 		_so.data.params = haxe.Serializer.run(Viewer.props);
 		_so.flush();
 	}
@@ -92,6 +88,7 @@ class Viewer {
 		rightClick = false;
 		
 		props = { curFbxFile : "", camVars : { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 }, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false };
+		Cookie.read();
 		
 		tf = new flash.text.TextField();
 		var fmt = tf.defaultTextFormat;
@@ -102,6 +99,7 @@ class Viewer {
 		tf.y = 5;
 		tf.textColor = 0xFFFFFF;
 		tf.filters = [new flash.filters.GlowFilter(0, 1, 2, 2, 20)];
+		tf.selectable = false;
 		flash.Lib.current.addChild(tf);
 		
 		tf_keys = new flash.text.TextField();
@@ -111,6 +109,7 @@ class Viewer {
 		tf_keys.textColor = 0xFFFFFF;
 		tf_keys.filters = [new flash.filters.GlowFilter(0, 1, 2, 2, 20)];
 		tf_keys.visible = false;
+		tf_keys.selectable = false;
 		flash.Lib.current.addChild(tf_keys);
 		
 		tf_help = new flash.text.TextField();
@@ -120,6 +119,7 @@ class Viewer {
 		tf_help.text = "[H] Show/Hide keys";
 		tf_help.textColor = 0xFFFFFF;
 		tf_help.filters = [new flash.filters.GlowFilter(0, 1, 2, 2, 20)];
+		tf_help.selectable = false;
 		flash.Lib.current.addChild(tf_help);
 		
 		engine = new h3d.Engine();
@@ -237,9 +237,22 @@ class Viewer {
 		axis = new Axis();
 		scene.addPass(axis);
 		
-		if (Cookie.read() != null)
-			loadData(curData, false);
-		else askLoad();
+		if( props.curFbxFile != null )
+			loadFile(props.curFbxFile, false);
+		else
+			askLoad();
+	}
+	
+	function loadFile( file : String, newFbx = true ) {
+		props.curFbxFile = file;
+		var l = new flash.net.URLLoader();
+		l.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
+			if( newFbx ) haxe.Log.trace("Failed to load " + file,null);
+		});
+		l.addEventListener(flash.events.Event.COMPLETE, function(_) {
+			loadData(l.data, newFbx);
+		});
+		l.load(new flash.net.URLRequest(file));
 	}
 	
 	function textureLoader( textureName : String, matData : h3d.fbx.Data.FbxNode ) {
@@ -275,6 +288,7 @@ class Viewer {
 	function askLoad() {
 		var f = new flash.net.FileReference();
 		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
+			haxe.Log.clear();
 			props.curFbxFile = f.name;
 			loadData(f.data.readUTFBytes(f.data.length));
 		});
@@ -330,7 +344,7 @@ class Viewer {
 		setSmoothing();
 		setSkin();
 		
-		Cookie.write(newFbx);
+		Cookie.write();
 	}
 	
 	function getMeshes(obj : h3d.scene.Object) {
@@ -443,7 +457,7 @@ class Viewer {
 			"[A] Animation = "+animMode,
 			"[Y] Axis = "+props.showAxis,
 			"[K] Bones = "+props.showBones,
-			"[B] Bounds = "+props.showBox+" ["+fmt(box.scaleX)+" x "+fmt(box.scaleY)+" x "+fmt(box.scaleZ)+"]",
+			"[B] Bounds = "+props.showBox+(box == null ? "" : " ["+fmt(box.scaleX)+" x "+fmt(box.scaleY)+" x "+fmt(box.scaleZ)+"]"),
 			"[S] Slow Animation = "+props.slowDown,
 			"[R] Right-Hand Camera = "+rightHand,
 			"[N] Tex Smoothing = "+props.smoothing,
@@ -462,7 +476,8 @@ class Viewer {
 		engine.render(scene);
 		tf.text = [
 			(camera.rightHanded ? "R " : "") + fmt(engine.fps),
-			(engine.drawTriangles - (props.showBox ? 26 : 0)) + " tri",
+			props.curFbxFile.split("/").pop().split("\\").pop(),
+			(engine.drawTriangles - (props.showBox ? 26 : 0) - (props.showAxis ? 6 : 0)) + " tri",
 		].join("\n");
 	}
 	
@@ -470,8 +485,25 @@ class Viewer {
 		return Math.atan( (engine.width / engine.height) * Math.tan(fov * Math.PI / 180)) * 180 / Math.PI;
 	}
 	
+	static var inst : Viewer;
+	
+	static function checkInvoke() {
+		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.InvokeEvent.INVOKE, function(e:Dynamic) {
+			var e : flash.events.InvokeEvent = cast e;
+			if( e.arguments.length > 0 ) {
+				props.curFbxFile = e.arguments[0];
+				if( inst.scene != null ) {
+					inst.loadFile(props.curFbxFile);
+					flash.desktop.NativeApplication.nativeApplication.openedWindows[0].activate();
+				}
+			}
+		});
+	}
+	
 	static function main() {
-		new Viewer();
+		inst = new Viewer();
+		if( flash.system.Capabilities.playerType == "Desktop" )
+			checkInvoke();
 	}
 
 }
