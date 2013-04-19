@@ -94,7 +94,11 @@ class Viewer {
 		props = { curFbxFile : "", camVars : { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 }, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false };
 		
 		tf = new flash.text.TextField();
-		tf.x = flash.Lib.current.stage.stageWidth - 40;
+		var fmt = tf.defaultTextFormat;
+		fmt.align = flash.text.TextFormatAlign.RIGHT;
+		tf.defaultTextFormat = fmt;
+		tf.width = 200;
+		tf.x = flash.Lib.current.stage.stageWidth - (tf.width + 5);
 		tf.y = 5;
 		tf.textColor = 0xFFFFFF;
 		tf.filters = [new flash.filters.GlowFilter(0, 1, 2, 2, 20)];
@@ -102,7 +106,7 @@ class Viewer {
 		
 		tf_keys = new flash.text.TextField();
 		tf_keys.x = 5;
-		tf_keys.width = 200;
+		tf_keys.width = 500;
 		tf_keys.height = 1000;
 		tf_keys.textColor = 0xFFFFFF;
 		tf_keys.filters = [new flash.filters.GlowFilter(0, 1, 2, 2, 20)];
@@ -149,7 +153,7 @@ class Viewer {
 				Cookie.write();
 			});
 		flash.Lib.current.stage.addEventListener(flash.events.Event.RESIZE, function (e:flash.events.Event) {
-				tf.x = flash.Lib.current.stage.stageWidth - 40;
+				tf.x = flash.Lib.current.stage.stageWidth - (tf.width + 5);
 				tf_help.y = flash.Lib.current.stage.stageHeight - 25;
 				tf_keys.y = flash.Lib.current.stage.stageHeight - tf_keys.textHeight - 35;
 			});
@@ -289,7 +293,9 @@ class Viewer {
 		scene = curFbx.makeScene(textureLoader, 3);
 	
 		//
-		var b = scene.getChildAt(0).getBounds();
+		var b = scene.getBounds();
+		
+
 		var dx = b.xMax - b.xMin;
 		var dy = b.yMax - b.yMin;
 		var dz = b.zMax - b.zMin;
@@ -429,17 +435,18 @@ class Viewer {
 		camera.rightHanded = rightHand;
 		
 		time++;
-		tf.text = (camera.rightHanded ? "R " : "") + engine.fps;
+		
+		var fmt = h3d.impl.Tools.f;
 		
 		tf_keys.text = [
 			"[F1] Load model",
-			"[A] Animation : "+animMode,
-			"[Y] Axis : "+props.showAxis,
-			"[K] Bones : "+props.showBones,
-			"[B] Bounds : "+props.showBox,
-			"[S] Slow Animation : "+props.slowDown,
-			"[R] Right-Hand Camera : "+rightHand,
-			"[N] Tex Smoothing : "+props.smoothing,
+			"[A] Animation = "+animMode,
+			"[Y] Axis = "+props.showAxis,
+			"[K] Bones = "+props.showBones,
+			"[B] Bounds = "+props.showBox+" ["+fmt(box.scaleX)+" x "+fmt(box.scaleY)+" x "+fmt(box.scaleZ)+"]",
+			"[S] Slow Animation = "+props.slowDown,
+			"[R] Right-Hand Camera = "+rightHand,
+			"[N] Tex Smoothing = "+props.smoothing,
 			"[F] Default camera",
 			"[1~4] Views",
 			"",
@@ -453,7 +460,10 @@ class Viewer {
 		
 		scene.setElapsedTime((props.slowDown ? 0.1 : 1) / Math.max(engine.fps,60));
 		engine.render(scene);
-		
+		tf.text = [
+			(camera.rightHanded ? "R " : "") + fmt(engine.fps),
+			(engine.drawTriangles - (props.showBox ? 26 : 0)) + " tri",
+		].join("\n");
 	}
 	
 	function calcFov( fov : Float ) {
