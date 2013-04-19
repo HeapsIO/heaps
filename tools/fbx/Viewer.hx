@@ -2,59 +2,47 @@ using h3d.fbx.Data;
 using h3d.fbx.Data;
 
 typedef K = flash.ui.Keyboard;
-
+typedef Props = {
+	curFbxFile:String,
+	camVars:Camvars,
+	view:Int,
+	smoothing:Bool,
+	showAxis:Bool,
+	showBones:Bool,
+	showBox:Bool,
+	slowDown:Bool,
+};
+typedef Camvars = {
+	x:Float,
+	y:Float,
+	tx:Float,
+	ty:Float,
+	tz:Float,
+	dist:Float,
+	angCoef:Float,
+	zoom:Float
+};
+	
 class Cookie
 {
-	static var _so = flash.net.SharedObject.getLocal("fbxViewerData");
-	static public var params : {curFbxFile:String, camX:Float, camY:Float, camT:h3d.Vector, camAng:Float, camDist:Float, camZoom:Float, view:Int, smoothing:Bool, showAxis:Bool, showBones:Bool, showBox:Bool };
+	static var version = 0.1;
+	static var _so = flash.net.SharedObject.getLocal("fbxViewerData" + version);
 	static public function Cookie() {
 	}
 	
 	static public function read() {
-		params = { curFbxFile : "", camX:0, camY:0, camT:new h3d.Vector(), camAng:0, camDist:0, camZoom:0, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false };
 		if (_so.data.params) {
 			Viewer.curData = haxe.Unserializer.run(_so.data.fbx);
-			params = haxe.Unserializer.run(_so.data.params);
-			
-			Viewer.curFbxFile = params.curFbxFile;
-			Viewer.camVars.x = params.camX;
-			Viewer.camVars.y = params.camY;
-			if (params.camT != null) {
-				Viewer.camVars.tx = params.camT.x;
-				Viewer.camVars.ty = params.camT.y;
-				Viewer.camVars.tz = params.camT.z;
-			}
-			Viewer.camVars.angCoef = params.camAng;
-			Viewer.camVars.dist = params.camDist;
-			Viewer.camVars.zoom = params.camZoom;
-			Viewer.view = params.view;
-			Viewer.smoothing = params.smoothing;
-			Viewer.showAxis = params.showAxis;
-			Viewer.showBones = params.showBones;
-			Viewer.showBox = params.showBox;
+			Viewer.props = haxe.Unserializer.run(_so.data.params);
+			return Viewer.props.curFbxFile;
 		}
-		return Viewer.curFbxFile;
+		return null;
 	}
 
-	static public function write() {
-		if (params == null || params.curFbxFile != Viewer.curFbxFile)
+	static public function write(?saveFbx = false) {
+		if (saveFbx)
 			_so.data.fbx = haxe.Serializer.run(Viewer.curData);
-			
-		params = {
-			curFbxFile 	: Viewer.curFbxFile,
-			camX 		: Viewer.camVars.x,
-			camY 		: Viewer.camVars.y,
-			camT		: new h3d.Vector(Viewer.camVars.tx,Viewer.camVars.ty, Viewer.camVars.tz),
-			camAng 		: Viewer.camVars.angCoef,
-			camDist		: Viewer.camVars.dist,
-			camZoom 	: Viewer.camVars.zoom,
-			view		: Viewer.view,
-			smoothing 	: Viewer.smoothing,
-			showAxis 	: Viewer.showAxis,
-			showBones 	: Viewer.showBones,
-			showBox 	: Viewer.showBox,
-		}
-		_so.data.params = haxe.Serializer.run(params);
+		_so.data.params = haxe.Serializer.run(Viewer.props);
 		_so.flush();
 	}
 }
@@ -65,16 +53,12 @@ class Axis implements h3d.IDrawable {
 	}
 	
 	public function render( engine : h3d.Engine ) {
-		/*engine.line(0, 0, 0, 50, 0, 0, 0xFFFF0000);
-		engine.line(0, 0, 0, 0, 50, 0, 0xFF00FF00);
-		engine.line(0, 0, 0, 0, 0, 50, 0xFF0000FF);*/
-		engine.line(Viewer.camVars.tx, Viewer.camVars.ty, Viewer.camVars.tz, Viewer.camVars.tx + 50, Viewer.camVars.ty + 0, Viewer.camVars.tz + 0, 0xFFFF0000);
-		engine.line(Viewer.camVars.tx, Viewer.camVars.ty, Viewer.camVars.tz, Viewer.camVars.tx + 0, Viewer.camVars.ty + 50, Viewer.camVars.tz + 0, 0xFF00FF00);
-		engine.line(Viewer.camVars.tx, Viewer.camVars.ty, Viewer.camVars.tz, Viewer.camVars.tx + 0, Viewer.camVars.ty + 0, Viewer.camVars.tz + 50, 0xFF0000FF);
+		engine.line(Viewer.props.camVars.tx, Viewer.props.camVars.ty, Viewer.props.camVars.tz, Viewer.props.camVars.tx + 50, Viewer.props.camVars.ty + 0, Viewer.props.camVars.tz + 0, 0xFFFF0000);
+		engine.line(Viewer.props.camVars.tx, Viewer.props.camVars.ty, Viewer.props.camVars.tz, Viewer.props.camVars.tx + 0, Viewer.props.camVars.ty + 50, Viewer.props.camVars.tz + 0, 0xFF00FF00);
+		engine.line(Viewer.props.camVars.tx, Viewer.props.camVars.ty, Viewer.props.camVars.tz, Viewer.props.camVars.tx + 0, Viewer.props.camVars.ty + 0, Viewer.props.camVars.tz + 50, 0xFF0000FF);
 	}
 	
 }
-
 
 class Viewer {
 
@@ -89,16 +73,9 @@ class Viewer {
 	
 	var curFbx : h3d.fbx.Library;
 	static public var curData : String;
-	static public var curFbxFile : String;
-	static public var view : Int;
-	static public var showBones : Bool;
-	static public var showBox : Bool;
-	static public var showAxis : Bool;
-	static public var smoothing : Bool;
-	static public var slowDown : Bool;
+	static public var props : Props;
 	static public var animMode : h3d.fbx.Library.AnimationMode = LinearAnim;
-	static public var camVars : {x:Float, y:Float, tx:Float, ty:Float, tz:Float, dist:Float, angCoef:Float, zoom:Float };
-	
+
 	var rightHand : Bool;
 	var playAnim : Bool;
 	var rightClick : Bool;
@@ -109,16 +86,13 @@ class Viewer {
 	
 	function new() {
 		time = 0;
-		view = 3;
 		rightHand = false;
 		playAnim = true;
-		showBones = false;
-		showAxis = true;
 		freeMove = false;
-		showBox = false;
-		smoothing = false;
 		rightClick = false;
-		camVars = { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 };
+		
+		props = { curFbxFile : "", camVars : { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 }, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false };
+		
 		tf = new flash.text.TextField();
 		tf.x = flash.Lib.current.stage.stageWidth - 40;
 		tf.y = 5;
@@ -128,7 +102,6 @@ class Viewer {
 		
 		tf_keys = new flash.text.TextField();
 		tf_keys.x = 5;
-		tf_keys.y = flash.Lib.current.stage.stageHeight - 235;
 		tf_keys.width = 200;
 		tf_keys.height = 1000;
 		tf_keys.textColor = 0xFFFFFF;
@@ -154,7 +127,7 @@ class Viewer {
 	function onReady() {
 		flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, function (_) onUpdate());
 		flash.Lib.current.stage.addEventListener(flash.events.MouseEvent.MOUSE_DOWN, function (e:flash.events.MouseEvent) {
-			if (view < 3)	view = 3;
+			if (props.view < 3)	props.view = 3;
 			freeMove = true;
 			pMouse = new flash.geom.Point(flash.Lib.current.mouseX, flash.Lib.current.mouseY);
 			});
@@ -171,49 +144,49 @@ class Viewer {
 			Cookie.write();
 			});
 		flash.Lib.current.stage.addEventListener(flash.events.MouseEvent.MOUSE_WHEEL, function (e:flash.events.MouseEvent) {
-				var dz = (e.delta / Math.abs(e.delta)) * camVars.zoom / 8;
-				camVars.zoom = Math.min(4, Math.max(0.4, camVars.zoom + dz));
+				var dz = (e.delta / Math.abs(e.delta)) * props.camVars.zoom / 8;
+				props.camVars.zoom = Math.min(4, Math.max(0.4, props.camVars.zoom + dz));
 				Cookie.write();
 			});
 		flash.Lib.current.stage.addEventListener(flash.events.Event.RESIZE, function (e:flash.events.Event) {
 				tf.x = flash.Lib.current.stage.stageWidth - 40;
 				tf_help.y = flash.Lib.current.stage.stageHeight - 25;
-				tf_keys.y = flash.Lib.current.stage.stageHeight - 235;
+				tf_keys.y = flash.Lib.current.stage.stageHeight - tf_keys.textHeight - 35;
 			});
 		flash.Lib.current.stage.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, function(k:flash.events.KeyboardEvent ) {
 			var reload = false;
 			var c = k.keyCode;
 				
-			if ( c == 49 )			view = 1;
-			else if ( c == 50 )		view = 2;
-			else if ( c == 51 )		view = 3;
-			else if ( c == 52 )		view = 4;
+			if ( c == 49 )			props.view = 1;
+			else if ( c == 50 )		props.view = 2;
+			else if ( c == 51 )		props.view = 3;
+			else if ( c == 52 )		props.view = 4;
 			else if( c == K.F1 )
 				askLoad();
 			else if( c == K.S && k.ctrlKey ) {
 				if( curFbx == null ) return;
 				var data = FbxTree.toString(curFbx.getRoot());
 				var f = new flash.net.FileReference();
-				f.save(data, curFbxFile.substr(0, -4) + "_tree.txt");
+				f.save(data, props.curFbxFile.substr(0, -4) + "_tree.txt");
 			} else if( c == K.R ) {
 				rightHand = !rightHand;
-				camVars.x *= -1;
-				camVars.tx *= -1;
+				props.camVars.x *= -1;
+				props.camVars.tx *= -1;
 				reload = true;
 			} else if( c == K.K ) {
-				showBones = !showBones;
-				showBonesRec(scene, showBones);
+				props.showBones = !props.showBones;
+				showBonesRec(scene, props.showBones);
 			} else if ( c == K.Y ) {
-				showAxis = !showAxis;
-				if (showAxis)
+				props.showAxis = !props.showAxis;
+				if (props.showAxis)
 					scene.addPass(axis);
 				else scene.removePass(axis);
 			} else if ( c == K.N ) {
-				smoothing = !smoothing;
+				props.smoothing = !props.smoothing;
 				setSmoothing();
 			} else if ( c == K.B ) {
-				showBox = !showBox;
-				if (showBox && box != null)
+				props.showBox = !props.showBox;
+				if (props.showBox && box != null)
 					scene.addChild(box);
 				else scene.removeChild(box);
 			}
@@ -223,12 +196,12 @@ class Viewer {
 				var dy = b.yMax - b.yMin;
 				var dz = b.zMax - b.zMin;
 				var tdist = Math.max(dx * 4, dy * 4);
-				camVars = { x: tdist, y:0, tx:0, ty:0, tz:0, dist:tdist, angCoef:Math.PI / 7, zoom:1 };
-				var dist = camVars.dist;
+				props.camVars = { x: tdist, y:0, tx:0, ty:0, tz:0, dist:tdist, angCoef:Math.PI / 7, zoom:1 };
+				var dist = props.camVars.dist;
 				var ang = Math.PI / 4;
-				camVars.x = dist * Math.cos(ang);
-				camVars.y = dist * Math.sin(ang);
-				scene.camera.pos.set(camVars.tx + camVars.x * Math.cos(Math.PI / 2 * camVars.angCoef), camVars.ty + camVars.y * Math.cos(Math.PI / 2 * camVars.angCoef), camVars.tz + dist * Math.sin(Math.PI / 2 * camVars.angCoef));
+				props.camVars.x = dist * Math.cos(ang);
+				props.camVars.y = dist * Math.sin(ang);
+				scene.camera.pos.set(props.camVars.tx + props.camVars.x * Math.cos(Math.PI / 2 * props.camVars.angCoef), props.camVars.ty + props.camVars.y * Math.cos(Math.PI / 2 * props.camVars.angCoef), props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
 				scene.camera.zoom = 1.0;
 				scene.camera.fov = calcFov(40);
 				box.x = b.xMin + dx * 0.5;
@@ -237,7 +210,6 @@ class Viewer {
 				scene.getChildAt(0).x = 0;
 				scene.getChildAt(0).y = 0;
 				scene.getChildAt(0).z = 0;
-				Cookie.write();
 			}
 			else if ( c == K.H ) {
 				tf_keys.visible = !tf_keys.visible;
@@ -245,7 +217,7 @@ class Viewer {
 				if( scene.currentAnimation != null )
 					scene.currentAnimation.pause = !scene.currentAnimation.pause;
 			} else if( c == K.S ) {
-				slowDown = !slowDown;
+				props.slowDown = !props.slowDown;
 			} else if( c == K.A ) {
 				var cst = h3d.fbx.Library.AnimationMode.createAll();
 				animMode = cst[(Lambda.indexOf(cst, animMode) + 1) % cst.length];
@@ -262,7 +234,7 @@ class Viewer {
 		scene.addPass(axis);
 		
 		if (Cookie.read() != null)
-			loadData(curData);
+			loadData(curData, false);
 		else askLoad();
 	}
 	
@@ -299,14 +271,14 @@ class Viewer {
 	function askLoad() {
 		var f = new flash.net.FileReference();
 		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			curFbxFile = f.name;
+			props.curFbxFile = f.name;
 			loadData(f.data.readUTFBytes(f.data.length));
 		});
 		f.addEventListener(flash.events.Event.SELECT, function(_) f.load());
 		f.browse([new flash.net.FileFilter("FBX File", "*.fbx")]);
 	}
 	
-	function loadData( data : String ) {
+	function loadData( data : String, newFbx = true ) {
 		curFbx = new h3d.fbx.Library();
 		curData = data;
 		var fbx = h3d.fbx.Parser.parse(data);
@@ -315,7 +287,7 @@ class Viewer {
 			curFbx.leftHandConvert();
 		var frame = scene == null ? 0 : (scene.currentAnimation == null ? 0 : scene.currentAnimation.frame);
 		scene = curFbx.makeScene(textureLoader, 3);
-		
+	
 		//
 		var b = scene.getChildAt(0).getBounds();
 		var dx = b.xMax - b.xMin;
@@ -331,29 +303,28 @@ class Viewer {
 		box.z = b.zMin + dz * 0.5;
 
 		//init camera
-		
-		if (curFbxFile == Cookie.params.curFbxFile) {
-			scene.camera.pos.set(camVars.x * Math.cos(Math.PI/2 * camVars.angCoef), camVars.y * Math.cos(Math.PI/2 * camVars.angCoef), camVars.dist * Math.sin(Math.PI/2 * camVars.angCoef));
+		if (!newFbx) {
+			scene.camera.pos.set(props.camVars.x * Math.cos(Math.PI/2 * props.camVars.angCoef), props.camVars.y * Math.cos(Math.PI/2 * props.camVars.angCoef), props.camVars.dist * Math.sin(Math.PI/2 * props.camVars.angCoef));
 		}
 		else {
 			var tdist = Math.max(dx * 4, dy * 4);
-			camVars = { x: tdist, y:0, tx:0, ty:0, tz:0, dist:tdist, angCoef:Math.PI / 7, zoom:1 };
+			props.camVars = { x: tdist, y:0, tx:0, ty:0, tz:0, dist:tdist, angCoef:Math.PI / 7, zoom:1 };
 		}
-			
-		scene.camera.zFar *= camVars.dist * 0.1;
-		scene.camera.zNear *= camVars.dist * 0.1;
-		scene.camera.zoom = camVars.zoom;
+		
+		scene.camera.zFar *= props.camVars.dist * 0.1;
+		scene.camera.zNear *= props.camVars.dist * 0.1;
+		scene.camera.zoom = props.camVars.zoom;
 		scene.camera.fov = calcFov(40);
 		//
-		if (showBox)
+		if (props.showBox)
 			scene.addChild(box);
-		if (showAxis)
+		if (props.showAxis)
 			scene.addPass(axis);
-		showBonesRec(scene, showBones);
+		showBonesRec(scene, props.showBones);
 		setSmoothing();
 		setSkin();
 		
-		Cookie.write();
+		Cookie.write(newFbx);
 	}
 	
 	function getMeshes(obj : h3d.scene.Object) {
@@ -378,8 +349,8 @@ class Viewer {
 	function setSmoothing() {
 		var meshes = getMeshes(scene.getChildAt(0));
 		for (m in meshes) {
-			m.material.killAlpha = !smoothing;
-			m.material.texNearest = !smoothing;
+			m.material.killAlpha = !props.smoothing;
+			m.material.texNearest = !props.smoothing;
 		}
 	}
 	
@@ -393,20 +364,20 @@ class Viewer {
 		if( !engine.begin() )
 			return;
 			
-		var dist = camVars.dist;
+		var dist = props.camVars.dist;
 		var camera = scene.camera;
-		var ang = Math.atan2(camera.pos.y - camVars.ty, camera.pos.x - camVars.tx);
+		var ang = Math.atan2(camera.pos.y - props.camVars.ty, camera.pos.x - props.camVars.tx);
 		
 		//FREE MOUSE MOVE
 		if (freeMove) {
 			var dx = (flash.Lib.current.mouseX - pMouse.x) * 0.01;
 			var dy = (flash.Lib.current.mouseY - pMouse.y) * 0.01;
-			camVars.angCoef = Math.max( -0.99, Math.min(0.99, camVars.angCoef + dy * 0.5));
-			camVars.x = dist * Math.cos(ang + dx);
-			camVars.y = dist * Math.sin(ang + dx);
-			camera.pos.set(camVars.tx + camVars.x * Math.cos(Math.PI / 2 * camVars.angCoef), camVars.ty + camVars.y * Math.cos(Math.PI / 2 * camVars.angCoef), camVars.tz + dist * Math.sin(Math.PI / 2 * camVars.angCoef));
+			props.camVars.angCoef = Math.max( -0.99, Math.min(0.99, props.camVars.angCoef + dy * 0.5));
+			props.camVars.x = dist * Math.cos(ang + dx);
+			props.camVars.y = dist * Math.sin(ang + dx);
+			camera.pos.set(props.camVars.tx + props.camVars.x * Math.cos(Math.PI / 2 * props.camVars.angCoef), props.camVars.ty + props.camVars.y * Math.cos(Math.PI / 2 * props.camVars.angCoef), props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
 			camera.up.set(0, 0, 1);
-			camera.target.set(camVars.tx, camVars.ty, camVars.tz);
+			camera.target.set(props.camVars.tx, props.camVars.ty, props.camVars.tz);
 			pMouse = new flash.geom.Point(flash.Lib.current.mouseX, flash.Lib.current.mouseY);
 		}
 		else if (rightClick) {
@@ -414,21 +385,21 @@ class Viewer {
 			var dy = (pMouse.y - flash.Lib.current.mouseY);
 			
 			//horizontal mouse move
-			camVars.tx += Math.cos(ang + Math.PI / 2) * dx * 0.5;
-			camVars.ty += Math.sin(ang + Math.PI / 2) * dx * 0.5;
+			props.camVars.tx += Math.cos(ang + Math.PI / 2) * dx * 0.5;
+			props.camVars.ty += Math.sin(ang + Math.PI / 2) * dx * 0.5;
 			//vertical mouse move
-			camVars.tx -= Math.cos(ang) * Math.abs(camVars.angCoef) * dy * 0.5;
-			camVars.ty -= Math.sin(ang) * Math.abs(camVars.angCoef) * dy * 0.5;
-			camVars.tz += (1 - Math.abs(camVars.angCoef)) * dy;
+			props.camVars.tx -= Math.cos(ang) * Math.abs(props.camVars.angCoef) * dy * 0.5;
+			props.camVars.ty -= Math.sin(ang) * Math.abs(props.camVars.angCoef) * dy * 0.5;
+			props.camVars.tz += (1 - Math.abs(props.camVars.angCoef)) * dy;
 			
-			camera.pos.set(camVars.tx + Math.cos(ang) * Math.cos(Math.PI / 2 * camVars.angCoef) * dist, camVars.ty + Math.sin(ang) * Math.cos(Math.PI / 2 * camVars.angCoef) * dist, camVars.tz + dist * Math.sin(Math.PI / 2 * camVars.angCoef));
+			camera.pos.set(props.camVars.tx + Math.cos(ang) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.ty + Math.sin(ang) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
 			camera.up.set(0, 0, 1);
-			camera.target.set(camVars.tx, camVars.ty, camVars.tz);
+			camera.target.set(props.camVars.tx, props.camVars.ty, props.camVars.tz);
 			pMouse = new flash.geom.Point(flash.Lib.current.mouseX, flash.Lib.current.mouseY);
 		}
 		//VIEWS
 		else {
-			switch( view ) {
+			switch( props.view ) {
 			case 0:
 				camera.pos.set(0, 0, dist);
 				camera.up.set(0, 1, 0);
@@ -442,19 +413,19 @@ class Viewer {
 				camera.up.set(0, 0, 1);
 				camera.target.set(0, 0, 0);
 			case 3:
-				camera.pos.set(camVars.tx + Math.cos(ang) * Math.cos(Math.PI / 2 * camVars.angCoef) * dist, camVars.ty + Math.sin(ang) * Math.cos(Math.PI / 2 * camVars.angCoef) * dist, camVars.tz + dist * Math.sin(Math.PI / 2 * camVars.angCoef));
+				camera.pos.set(props.camVars.tx + Math.cos(ang) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.ty + Math.sin(ang) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
 				camera.up.set(0, 0, 1);
-				camera.target.set(camVars.tx, camVars.ty, camVars.tz);
+				camera.target.set(props.camVars.tx, props.camVars.ty, props.camVars.tz);
 			case 4:
-				camera.pos.set(camVars.tx + Math.cos(ang + 0.02) * Math.cos(Math.PI / 2 * camVars.angCoef) * dist, camVars.ty + Math.sin(ang + 0.02) * Math.cos(Math.PI / 2 * camVars.angCoef) * dist, camVars.tz + dist * Math.sin(Math.PI / 2 * camVars.angCoef));
+				camera.pos.set(props.camVars.tx + Math.cos(ang + 0.02) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.ty + Math.sin(ang + 0.02) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
 				camera.up.set(0, 0, 1);
-				camera.target.set(camVars.tx, camVars.ty, camVars.tz);
+				camera.target.set(props.camVars.tx, props.camVars.ty, props.camVars.tz);
 			default:
-				view < 0? view = 4 : view = 0;
+				props.view < 0? props.view = 4 : props.view = 0;
 			}
 		}
 		
-		camera.zoom += (camVars.zoom - camera.zoom) * 0.5;
+		camera.zoom += (props.camVars.zoom - camera.zoom) * 0.5;
 		camera.rightHanded = rightHand;
 		
 		time++;
@@ -463,12 +434,12 @@ class Viewer {
 		tf_keys.text = [
 			"[F1] Load model",
 			"[A] Animation : "+animMode,
-			"[Y] Axis : "+showAxis,
-			"[K] Bones : "+showBones,
-			"[B] Bounds : "+showBox,
-			"[S] Slow Animation : "+slowDown,
+			"[Y] Axis : "+props.showAxis,
+			"[K] Bones : "+props.showBones,
+			"[B] Bounds : "+props.showBox,
+			"[S] Slow Animation : "+props.slowDown,
 			"[R] Right-Hand Camera : "+rightHand,
-			"[N] Tex Smoothing : "+smoothing,
+			"[N] Tex Smoothing : "+props.smoothing,
 			"[F] Default camera",
 			"[1~4] Views",
 			"",
@@ -477,8 +448,10 @@ class Viewer {
 			"[RMB + Move] translation",
 			"[Wheel] Zoom"
 		].join("\n");
+		tf_keys.y = flash.Lib.current.stage.stageHeight - tf_keys.textHeight - 35;
 		
-		scene.setElapsedTime((slowDown ? 0.1 : 1) / Math.max(engine.fps,60));
+		
+		scene.setElapsedTime((props.slowDown ? 0.1 : 1) / Math.max(engine.fps,60));
 		engine.render(scene);
 		
 	}
