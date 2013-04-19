@@ -75,6 +75,35 @@ class Object {
 		if( b == null ) b = new h3d.prim.Bounds();
 		for( c in childs )
 			c.getBounds(b);
+		if( defaultTransform != null ) {
+			var xMin = b.xMin, yMin = b.yMin, zMin = b.zMin, xMax = b.xMax, yMax = b.yMax, zMax = b.zMax;
+			b.reset();
+			var v = new Vector();
+			v.set(xMin, yMin, zMin);
+			v.transform3x4(defaultTransform);
+			b.addPoint(v);
+			v.set(xMin, yMin, zMax);
+			v.transform3x4(defaultTransform);
+			b.addPoint(v);
+			v.set(xMin, yMax, zMin);
+			v.transform3x4(defaultTransform);
+			b.addPoint(v);
+			v.set(xMin, yMax, zMax);
+			v.transform3x4(defaultTransform);
+			b.addPoint(v);
+			v.set(xMax, yMin, zMin);
+			v.transform3x4(defaultTransform);
+			b.addPoint(v);
+			v.set(xMax, yMin, zMax);
+			v.transform3x4(defaultTransform);
+			b.addPoint(v);
+			v.set(xMax, yMax, zMin);
+			v.transform3x4(defaultTransform);
+			b.addPoint(v);
+			v.set(xMax, yMax, zMax);
+			v.transform3x4(defaultTransform);
+			b.addPoint(v);
+		}
 		return b;
 	}
 	
