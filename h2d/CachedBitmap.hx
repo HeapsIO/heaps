@@ -61,7 +61,7 @@ class CachedBitmap extends Drawable {
 		return tile;
 	}
 
-	override function draw( ctx : RenderContext ) {
+	override function drawRec( ctx : RenderContext ) {
 		drawTile(ctx.engine, tile);
 	}
 	
@@ -96,6 +96,7 @@ class CachedBitmap extends Drawable {
 			matC *= w;
 			matD *= h;
 
+			// force full resync
 			for( c in childs ) {
 				c.posChanged = true;
 				c.sync(ctx);
@@ -103,12 +104,8 @@ class CachedBitmap extends Drawable {
 
 			ctx.engine.setTarget(tex);
 			ctx.engine.setRenderZone(0, 0, realWidth, realHeight);
-
-			for( c in childs ) {
+			for( c in childs )
 				c.drawRec(ctx);
-				c.posChanged = true; // resync absPos
-			}
-			
 			ctx.engine.setTarget(null);
 			ctx.engine.setRenderZone();
 			
