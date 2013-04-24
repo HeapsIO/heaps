@@ -48,7 +48,6 @@ class Scene extends Object implements h3d.IDrawable {
 		ctx.time += ctx.elapsedTime;
 		ctx.frame++;
 		ctx.currentPass = 0;
-		ctx.visible = true;
 		for( p in prePasses )
 			p.render(engine);
 		sync(ctx);

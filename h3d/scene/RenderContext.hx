@@ -7,13 +7,11 @@ class RenderContext {
 	public var elapsedTime : Float;
 	public var currentPass : Int;
 	public var frame : Int;
-	public var visible : Bool;
 	var passes : Array<RenderContext -> Void>;
 	
 	public function new() {
 		time = 0.;
 		elapsedTime = 1. / flash.Lib.current.stage.frameRate;
-		visible = true;
 	}
 	
 	public function addPass(p) {
