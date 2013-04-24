@@ -11,6 +11,7 @@ class Camera {
 	public var zFar : Float;
 	
 	public var rightHanded : Bool;
+	public var orthographic : Bool;
 	
 	public var mproj : Matrix;
 	public var mcam : Matrix;
@@ -154,7 +155,30 @@ class Camera {
 		var scale = zoom / Math.tan(fov * Math.PI / 360.0);
 		var m = new Matrix();
 		m.zero();
-		if( rightHanded ) {
+		
+		// this will take into account the aspect ratio and normalize the z value into [0,1] once it's been divided by w
+		// Matrixes have to solve the following formulaes :
+		//
+		// transform P by Mproj and divide everything by
+		//    [x,y,-zNear,1] => [sx/zNear, sy/zNear, 0, 1]
+		//    [x,y,-zFar,1] => [sx/zFar, sy/zFar, 1, 1]
+		
+		if( orthographic ) {
+			var scale = zoom * 2 / pos.sub(target).length();
+			if( rightHanded ) {
+				m._11 = scale;
+				m._22 = scale * ratio;
+				m._33 = -1 / (zNear - zFar);
+				m._43 = zNear / (zNear - zFar);
+				m._44 = 1;
+			} else {
+				m._11 = scale;
+				m._22 = -scale * ratio;
+				m._33 = 1 / (zNear - zFar);
+				m._43 = zNear / (zNear - zFar);
+				m._44 = 1;
+			}
+		} else if( rightHanded ) {
 			m._11 = scale;
 			m._22 = scale * ratio;
 			m._33 = zFar / (zFar - zNear);
@@ -165,7 +189,7 @@ class Camera {
 			m._22 = -scale * ratio;
 			m._33 = zFar / (zNear - zFar);
 			m._34 = -1;
-			m._43 = (zNear * zFar) / (zNear - zFar);
+			m._43 = -(zNear * zFar) / (zFar - zNear);
 		}
 
 		m._11 += viewport.x * m._14;
