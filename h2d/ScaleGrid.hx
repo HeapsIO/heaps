@@ -37,7 +37,7 @@ class ScaleGrid extends h2d.TileGroup {
 		return h;
 	}
 	
-	override function draw( engine : h3d.Engine ) {
+	override function draw( ctx : RenderContext ) {
 		if( content.isEmpty() ) {
 			var bw = borderWidth, bh = borderHeight;
 			
@@ -100,7 +100,7 @@ class ScaleGrid extends h2d.TileGroup {
 			t.scaleToSize(width - bw * 2,height - bh * 2);
 			content.add(bw, bh, t);
 		}
-		super.draw(engine);
+		super.draw(ctx);
 	}
 	
 }

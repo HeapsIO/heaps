@@ -61,13 +61,18 @@ class CachedBitmap extends Drawable {
 		return tile;
 	}
 
-	override function draw( engine : h3d.Engine ) {
-		drawTile(engine, tile);
+	override function draw( ctx : RenderContext ) {
+		drawTile(ctx.engine, tile);
 	}
 	
-	override function render( engine : h3d.Engine ) {
-		updatePos();
-		if( tex != null && ((width < 0 && tex.width < engine.width) || (height < 0 && tex.height < engine.height)) )
+	override function sync( ctx : RenderContext ) {
+		if( posChanged ) {
+			calcAbsPos();
+			for( c in childs )
+				c.posChanged = true;
+			posChanged = false;
+		}
+		if( tex != null && ((width < 0 && tex.width < ctx.engine.width) || (height < 0 && tex.height < ctx.engine.height)) )
 			clean();
 		var tile = getTile();
 		if( !freezed || !renderDone ) {
@@ -90,13 +95,22 @@ class CachedBitmap extends Drawable {
 			matB *= h;
 			matC *= w;
 			matD *= h;
+
+			for( c in childs ) {
+				c.posChanged = true;
+				c.sync(ctx);
+			}
+
+			ctx.engine.setTarget(tex);
+			ctx.engine.setRenderZone(0, 0, realWidth, realHeight);
+
+			for( c in childs ) {
+				c.drawRec(ctx);
+				c.posChanged = true; // resync absPos
+			}
 			
-			engine.setTarget(tex);
-			engine.setRenderZone(0, 0, realWidth, realHeight);
-			for( c in childs )
-				c.render(engine);
-			engine.setTarget(null);
-			engine.setRenderZone();
+			ctx.engine.setTarget(null);
+			ctx.engine.setRenderZone();
 			
 			// restore
 			matA = oldA;
@@ -109,8 +123,7 @@ class CachedBitmap extends Drawable {
 			renderDone = true;
 		}
 
-		draw(engine);
-		posChanged = false;
+		super.sync(ctx);
 	}
 	
 }

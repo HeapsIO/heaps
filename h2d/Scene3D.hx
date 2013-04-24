@@ -9,8 +9,8 @@ class Scene3D extends Sprite {
 		this.scene = scene;
 	}
 	
-	override function draw( engine ) {
-		scene.render(engine);
+	override function draw( ctx : RenderContext ) {
+		scene.render(ctx.engine);
 	}
 	
 }

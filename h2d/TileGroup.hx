@@ -95,11 +95,11 @@ class TileGroup extends Drawable {
 		content.add(x, y, t);
 	}
 		
-	override function draw(engine:h3d.Engine) {
-		setupShader(engine, tile, 0);
+	override function draw(ctx:RenderContext) {
+		setupShader(ctx.engine, tile, 0);
 		var min = rangeMin < 0 ? 0 : rangeMin * 2;
 		var max = content.triCount();
 		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;
-		content.doRender(engine, min, max - min);
+		content.doRender(ctx.engine, min, max - min);
 	}
 }

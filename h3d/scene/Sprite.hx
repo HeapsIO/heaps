@@ -2,7 +2,7 @@ package h3d.scene;
 
 class DummyScene extends h2d.Sprite {
 	
-	override function updatePos() {
+	override function calcAbsPos() {
 	}
 	
 }
@@ -53,7 +53,8 @@ class Sprite extends Object {
 		// temporary enable z-compare
 		var c = h2d.Tools.getCoreObjects();
 		c.tmpMaterial.depthTest = LessEqual;
-		dummy.render(ctx.engine);
+		dummy.sync(ctx);
+		dummy.drawRec(ctx);
 		c.tmpMaterial.depthTest = Always;
 	}
 	

@@ -34,20 +34,20 @@ class Text extends Drawable {
 		if( text != null ) initGlyphs();
 	}
 	
-	override function draw(engine) {
+	override function draw(ctx:RenderContext) {
 		glyphs.blendMode = blendMode;
 		if( dropShadow != null ) {
 			glyphs.x += dropShadow.dx;
 			glyphs.y += dropShadow.dy;
-			glyphs.updatePos();
+			glyphs.calcAbsPos();
 			var old = glyphs.color;
 			glyphs.color = h3d.Color.fromInt(dropShadow.color, dropShadow.alpha).toVector();
-			glyphs.draw(engine);
+			glyphs.draw(ctx);
 			glyphs.x -= dropShadow.dx;
 			glyphs.y -= dropShadow.dy;
 			glyphs.color = old;
 		}
-		super.draw(engine);
+		super.draw(ctx);
 	}
 	
 	function set_text(t) {

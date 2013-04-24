@@ -12,7 +12,7 @@ class Scene extends Layers implements h3d.IDrawable {
 	var interactive : flash.Vector<Interactive>;
 	var pendingEvents : flash.Vector<Event>;
 	var stage : flash.display.Stage;
-	
+	var ctx : RenderContext;
 	
 	@:allow(h2d.Interactive)
 	var currentOver : Interactive;
@@ -22,6 +22,7 @@ class Scene extends Layers implements h3d.IDrawable {
 	public function new() {
 		super(null);
 		var e = h3d.Engine.getCurrent();
+		ctx = new RenderContext();
 		width = e.width;
 		height = e.height;
 		interactive = new flash.Vector();
@@ -260,11 +261,7 @@ class Scene extends Layers implements h3d.IDrawable {
 			}
 	}
 
-	override function updatePos() {
-		// don't take the parent into account
-		if( !posChanged )
-			return;
-			
+	override function calcAbsPos() {
 		// init matrix without rotation
 		matA = scaleX;
 		matB = 0;
@@ -307,16 +304,25 @@ class Scene extends Layers implements h3d.IDrawable {
 			onDelete();
 	}
 	
-	override public function render( engine : h3d.Engine ) {
+	public function render( engine : h3d.Engine ) {
+		ctx.engine = engine;
+		ctx.frame++;
+		ctx.time += ctx.elapsedTime;
+		ctx.currentPass = 0;
+		sync(ctx);
+		drawRec(ctx);
+	}
+	
+	override function sync( ctx : RenderContext ) {
 		if( !allocated )
 			onAlloc();
-		if( !fixedSize && (width != engine.width || height != engine.height) ) {
-			width = engine.width;
-			height = engine.height;
+		if( !fixedSize && (width != ctx.engine.width || height != ctx.engine.height) ) {
+			width = ctx.engine.width;
+			height = ctx.engine.height;
 			posChanged = true;
 		}
 		Tools.checkCoreObjects();
-		super.render(engine);
+		super.sync(ctx);
 	}
 	
 	public function captureBitmap( ?target : Tile ) {

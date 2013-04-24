@@ -58,10 +58,10 @@ class Graphics extends Drawable {
 		tile = Tile.fromSprites([ctx.mc],allocPos)[0];
 	}
 	
-	override function draw(engine) {
+	override function draw(ctx:RenderContext) {
 		if( tile == null ) endDraw();
 		if( tile == null ) return;
-		drawTile(engine, tile);
+		drawTile(ctx.engine, tile);
 	}
 
 }

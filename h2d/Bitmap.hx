@@ -9,8 +9,8 @@ class Bitmap extends Drawable {
 		this.tile = tile;
 	}
 	
-	override function draw( engine : h3d.Engine ) {
-		drawTile(engine,tile);
+	override function draw( ctx : RenderContext ) {
+		drawTile(ctx.engine,tile);
 	}
 			
 	public static function create( bmp : flash.display.BitmapData, ?allocPos : h3d.impl.AllocPos ) {

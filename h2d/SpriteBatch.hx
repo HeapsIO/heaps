@@ -62,7 +62,7 @@ class SpriteBatch extends Drawable {
 			e.next.prev = e.prev;
 	}
 	
-	override function draw( engine : h3d.Engine ) {
+	override function draw( ctx : RenderContext ) {
 		if( first == null )
 			return;
 		if( tmpBuf == null ) tmpBuf = new flash.Vector();
@@ -95,9 +95,9 @@ class SpriteBatch extends Drawable {
 			tmp[pos++] = e.alpha;
 			e = e.next;
 		}
-		var buffer = engine.mem.allocVector(tmpBuf, 5, 4);
-		setupShader(engine, tile, 0);
-		engine.renderQuadBuffer(buffer);
+		var buffer = ctx.engine.mem.allocVector(tmpBuf, 5, 4);
+		setupShader(ctx.engine, tile, 0);
+		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();
 	}
 	
