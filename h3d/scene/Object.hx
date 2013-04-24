@@ -56,14 +56,14 @@ class Object {
 	}
 	
 	public function localToGlobal( pt : h3d.Vector ) {
-		// todo : ensure position is updated
+		syncPos();
 		var pt2 = pt.clone();
 		pt2.transform3x4(absPos);
 		return pt2;
 	}
 
 	public function globalToLocal( pt : h3d.Vector ) {
-		// todo : ensure position is updated
+		syncPos();
 		var pt2 = pt.clone();
 		var tmp = new h3d.Matrix();
 		tmp.inverse(absPos);
@@ -72,6 +72,7 @@ class Object {
 	}
 
 	public function getBounds( ?b : h3d.prim.Bounds ) {
+		syncPos();
 		if( b == null ) b = new h3d.prim.Bounds();
 		for( c in childs )
 			c.getBounds(b);
@@ -179,32 +180,28 @@ class Object {
 	function draw( ctx : RenderContext ) {
 	}
 	
-	function updatePos() {
-		if( parent != null && parent.posChanged )
-			posChanged = true;
-		if( posChanged ) {
-			qRot.saveToMatrix(absPos);
-			// prepend scale
-			absPos._11 *= scaleX;
-			absPos._12 *= scaleX;
-			absPos._13 *= scaleX;
-			absPos._21 *= scaleY;
-			absPos._22 *= scaleY;
-			absPos._23 *= scaleY;
-			absPos._31 *= scaleZ;
-			absPos._32 *= scaleZ;
-			absPos._33 *= scaleZ;
-			absPos._41 = x;
-			absPos._42 = y;
-			absPos._43 = z;
-			if( defaultTransform != null )
-				absPos.multiply3x4(absPos, defaultTransform);
-			if( parent != null )
-				absPos.multiply3x4(absPos, parent.absPos);
-		}
+	function calcAbsPos() {
+		qRot.saveToMatrix(absPos);
+		// prepend scale
+		absPos._11 *= scaleX;
+		absPos._12 *= scaleX;
+		absPos._13 *= scaleX;
+		absPos._21 *= scaleY;
+		absPos._22 *= scaleY;
+		absPos._23 *= scaleY;
+		absPos._31 *= scaleZ;
+		absPos._32 *= scaleZ;
+		absPos._33 *= scaleZ;
+		absPos._41 = x;
+		absPos._42 = y;
+		absPos._43 = z;
+		if( defaultTransform != null )
+			absPos.multiply3x4(absPos, defaultTransform);
+		if( parent != null )
+			absPos.multiply3x4(absPos, parent.absPos);
 	}
 	
-	function renderContext( ctx : RenderContext ) {
+	function sync( ctx : RenderContext ) {
 		if( currentAnimation != null ) {
 			var old = parent;
 			var dt = ctx.elapsedTime;
@@ -214,28 +211,56 @@ class Object {
 				currentAnimation.sync();
 			if( parent == null && old != null ) return; // if we were removed by an animation event
 		}
-		updatePos();
-		var old = ctx.visible;
-		ctx.visible = ctx.visible && visible;
-		if( ctx.visible ) draw(ctx);
+		var changed = posChanged;
+		if( changed ) {
+			calcAbsPos();
+			posChanged = false;
+		}
+		
 		lastFrame = ctx.frame;
 		var p = 0, len = childs.length;
 		while( p < len ) {
 			var c = childs[p];
 			if( c == null )
 				break;
-			if( c.lastFrame != ctx.frame )
-				c.renderContext(ctx);
+			if( c.lastFrame != ctx.frame ) {
+				if( changed ) c.posChanged = true;
+				c.sync(ctx);
+			}
 			// if the object was removed, let's restart again.
-			// our lastFrame ensure that no object will get draw twice
+			// our lastFrame ensure that no object will get synched twice
 			if( childs[p] != c ) {
 				p = 0;
 				len = childs.length;
 			} else
 				p++;
 		}
-		posChanged = false;
-		ctx.visible = old;
+	}
+	
+	function syncPos() {
+		if( parent != null ) parent.syncPos();
+		if( posChanged ) {
+			calcAbsPos();
+			for( c in childs )
+				c.posChanged = true;
+			posChanged = false;
+		}
+	}
+	
+	function drawRec( ctx : RenderContext ) {
+		if( !visible ) return;
+		// fallback in case the object was added during a sync() event and we somehow didn't update it
+		if( posChanged ) {
+			// only sync anim, don't update() (prevent any event from occuring during draw())
+			if( currentAnimation != null ) currentAnimation.sync();
+			calcAbsPos();
+			for( c in childs )
+				c.posChanged = true;
+			posChanged = false;
+		}
+		draw(ctx);
+		for( c in childs )
+			c.drawRec(ctx);
 	}
 	
 	inline function set_x(v) {

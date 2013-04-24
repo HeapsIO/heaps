@@ -51,7 +51,8 @@ class Scene extends Object implements h3d.IDrawable {
 		ctx.visible = true;
 		for( p in prePasses )
 			p.render(engine);
-		renderContext(ctx);
+		sync(ctx);
+		drawRec(ctx);
 		ctx.finalize();
 		for( p in extraPasses )
 			p.render(engine);

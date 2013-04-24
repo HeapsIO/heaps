@@ -62,9 +62,10 @@ class Skin extends Mesh {
 		for( i in 0...skinData.boundJoints.length )
 			currentPalette.push(h3d.Matrix.I());
 	}
-	
-	override function draw( ctx : RenderContext ) {
+
+	override function sync( ctx : RenderContext ) {
 		if( jointsUpdated || posChanged ) {
+			super.sync(ctx);
 			for( j in skinData.allJoints ) {
 				var id = j.index;
 				var m = currentAbsPose[id];
@@ -83,7 +84,11 @@ class Skin extends Mesh {
 			}
 			material.skinMatrixes = currentPalette;
 			jointsUpdated = false;
-		}
+		} else
+			super.sync(ctx);
+	}
+	
+	override function draw( ctx : RenderContext ) {
 		super.draw(ctx);
 		if( showJoints )
 			ctx.addPass(drawJoints);
