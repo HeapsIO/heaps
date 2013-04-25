@@ -6,6 +6,13 @@ typedef LightSystem = {
 	var points : Array<{ pos : h3d.Vector, color : h3d.Vector }>;
 }
 
+typedef ShadowMap = {
+	var lightProj : h3d.Matrix;
+	var lightCenter : h3d.Matrix;
+	var color : h3d.Vector;
+	var texture : Texture;
+}
+
 private class MeshShader extends hxsl.Shader {
 	
 	static var SRC = {
@@ -56,6 +63,14 @@ private class MeshShader extends hxsl.Shader {
 		var blendTexture : Texture;
 		var hasBlend : Bool;
 		var tblend : Float;
+
+		var hasShadowMap : Bool;
+		var shadowLightProj : Matrix;
+		var shadowLightCenter : Matrix;
+		var shadowAmount : Float;
+		var shadowColor : Float3;
+		var shadowTexture : Texture;
+		var tshadowPos : Float4;
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
@@ -100,6 +115,8 @@ private class MeshShader extends hxsl.Shader {
 				talpha = (fog.w * dist.dot(dist).rsqrt()).min(1);
 			}
 			if( hasBlend ) tblend = input.blending;
+			if( hasShadowMap )
+				tshadowPos = tpos * shadowLightProj * shadowLightCenter;
 		}
 		
 		var killAlpha : Bool;
@@ -123,6 +140,11 @@ private class MeshShader extends hxsl.Shader {
 					c.rgb *= tcolor;
 				if( hasVertexColorAdd )
 					c.rgb += acolor;
+			}
+			if( hasShadowMap ) {
+				var shadow = (shadowTexture.get(tshadowPos.xy).dot([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)]) > tshadowPos.z) * shadowAmount + (1 - shadowAmount);
+				c.rgb *= shadow;
+				c.rgb += (1 - shadow) * shadowColor;
 			}
 			if( hasGlow ) c.rgb += glowTexture.get(tuv.xy, filter = !texNearest, wrap = (texWrap || uvDelta != null)).rgb * glowAmount;
 			out = c;
@@ -168,6 +190,9 @@ class MeshMaterial extends Material {
 	public var blendTexture(get, set) : Texture;
 	
 	public var killAlphaThreshold(get, set) : Float;
+	
+	
+	public var shadowMap(null, set) : ShadowMap;
 	
 	public function new(texture) {
 		mshader = new MeshShader();
@@ -374,5 +399,19 @@ class MeshMaterial extends Material {
 	inline function set_killAlphaThreshold(v) {
 		return mshader.killAlphaThreshold = v;
 	}
+	
+	inline function set_shadowMap(v:ShadowMap) {
+		if( v != null ) {
+			mshader.hasShadowMap = true;
+			mshader.shadowAmount = v.color.w;
+			mshader.shadowColor = v.color;
+			mshader.shadowTexture = v.texture;
+			mshader.shadowLightProj = v.lightProj;
+			mshader.shadowLightCenter = v.lightCenter;
+		} else
+			mshader.hasShadowMap = false;
+		return v;
+	}
+	
 	
 }
