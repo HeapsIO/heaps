@@ -428,11 +428,9 @@ class Engine {
 				
 		var delta = flash.Lib.getTimer() - lastTime;
 		lastTime += delta;
-		// maximize the slowdown when doing some heavy computations on a single frame
-		var maxDelta = Std.int((10 / realFps) * 1000);
-		if( delta > maxDelta ) delta = maxDelta;
 		if( delta > 0 ) {
 			var curFps = 1000 / delta;
+			if( curFps > realFps * 2 ) curFps = realFps * 2 else if( curFps < realFps * 0.5 ) curFps = realFps * 0.5;
 			var f = curFps / 1000;
 			realFps = realFps * (1 - f) + curFps * f; // smooth a bit the fps
 		}
