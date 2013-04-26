@@ -24,7 +24,7 @@ class Geometry {
 	}
 	
 	public function getColors() {
-		var color = root.get("LayerElementColor");
+		var color = root.get("LayerElementColor",true);
 		return color == null ? null : { values : color.get("Colors").getFloats(), index : color.get("ColorIndex").getInts() };
 	}
 	

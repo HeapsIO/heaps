@@ -17,7 +17,7 @@ typedef FbxNode = {
 
 class FbxTools {
 
-	public static function get( n : FbxNode, path : String ) {
+	public static function get( n : FbxNode, path : String, opt = false ) {
 		var parts = path.split(".");
 		var cur = n;
 		for( p in parts ) {
@@ -28,8 +28,11 @@ class FbxTools {
 					found = true;
 					break;
 				}
-			if( !found )
+			if( !found ) {
+				if( opt )
+					return null;
 				throw n.name + " does not have " + path+" ("+p+" not found)";
+			}
 		}
 		return cur;
 	}
