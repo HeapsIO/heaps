@@ -35,6 +35,10 @@ class Texture {
 	public function isDisposed() {
 		return t == null;
 	}
+	
+	public function resize(width, height) {
+		mem.resizeTexture(this, width, height);
+	}
 
 	public function uploadMipMap( bmp : flash.display.BitmapData, smoothing = false, side = 0 ) {
 		upload(bmp, 0, side);

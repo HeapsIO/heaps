@@ -249,12 +249,27 @@ class MemoryManager {
 		t.t.dispose();
 		t.t = null;
 	}
+
+	@:allow(h3d.mat.Texture.resize)
+	function resizeTexture( t : h3d.mat.Texture, width, height ) {
+		if( t.t != null ) {
+			textures.remove(t.t);
+			t.t.dispose();
+			t.t = null;
+		}
+		t.t = t.isCubic ? ctx.createCubeTexture(width, flash.display3D.Context3DTextureFormat.BGRA, t.isTarget) : ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, t.isTarget);
+		t.width = width;
+		t.height = height;
+		tdict.set(t, t.t);
+		textures.push(t.t);
+	}
+
 	
 	public function allocTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
 		freeTextures();
 		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false, false, allocPos);
 	}
-
+	
 	public function allocTargetTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
 		freeTextures();
 		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true), width, height, false, true, allocPos);
@@ -490,10 +505,11 @@ class MemoryManager {
 			else {
 				textures.remove(t.t);
 				if( t.isCubic )
-					t.t = ctx.createCubeTexture(t.width, flash.display3D.Context3DTextureFormat.BGRA, false);
+					t.t = ctx.createCubeTexture(t.width, flash.display3D.Context3DTextureFormat.BGRA, t.isTarget);
 				else
 					t.t = ctx.createTexture(t.width, t.height, flash.display3D.Context3DTextureFormat.BGRA, t.isTarget);
 				tdict.set(t, t.t);
+				textures.push(t.t);
 				t.onContextLost();
 			}
 		for( b in buffers ) {
