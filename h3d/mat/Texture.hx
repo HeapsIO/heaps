@@ -3,11 +3,14 @@ package h3d.mat;
 @:allow(h3d)
 class Texture {
 
+	static var UID = 0;
+	
 	var t : flash.display3D.textures.TextureBase;
 	var mem : h3d.impl.MemoryManager;
 	#if debug
 	var allocPos : h3d.impl.AllocPos;
 	#end
+	public var id(default,null) : Int;
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var isCubic(default, null) : Bool;
@@ -20,6 +23,7 @@ class Texture {
 	public var onContextLost : Void -> Void;
 	
 	function new(m, t, w, h, c, ta) {
+		this.id = ++UID;
 		this.mem = m;
 		this.t = t;
 		this.isTarget = ta;
