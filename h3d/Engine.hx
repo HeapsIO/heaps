@@ -400,7 +400,7 @@ class Engine {
 		reset();
 	}
 
-	public function setTarget( tex : h3d.mat.Texture, useDepth = false ) {
+	public function setTarget( tex : h3d.mat.Texture, useDepth = false, clearColor = 0 ) {
 		if( tex == null ) {
 			ctx.setRenderToBackBuffer();
 			inTarget = false;
@@ -410,7 +410,7 @@ class Engine {
 			ctx.setRenderToTexture(tex.t, useDepth);
 			inTarget = true;
 			reset();
-			ctx.clear(0, 0, 0, 0);
+			ctx.clear( ((clearColor>>16)&0xFF)/255 , ((clearColor>>8)&0xFF)/255, (clearColor&0xFF)/255, ((clearColor>>>24)&0xFF)/255);
 		}
 	}
 
