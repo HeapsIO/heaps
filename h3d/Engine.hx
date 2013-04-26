@@ -22,6 +22,9 @@ class Engine {
 	
 	public var fps(get, never) : Float;
 	
+	public var forcedMatBits : Int = 0;
+	public var forcedMatMask : Int = 0xFFFFFF;
+	
 	var realFps : Float;
 	var lastTime : Int;
 	
@@ -134,17 +137,18 @@ class Engine {
 
 	@:access(h3d.mat.Material.bits)
 	public function selectMaterial( m : h3d.mat.Material ) {
-		var diff = curMatBits ^ m.bits;
+		var mbits = (m.bits & forcedMatMask) | forcedMatBits;
+		var diff = curMatBits ^ mbits;
 		if( diff != 0 ) {
 			if( curMatBits < 0 || diff&3 != 0 )
-				ctx.setCulling(FACE[Type.enumIndex(m.culling)]);
+				ctx.setCulling(FACE[mbits&3]);
 			if( curMatBits < 0 || diff & (0xFF << 6) != 0 )
-				ctx.setBlendFactors(BLEND[Type.enumIndex(m.blendSrc)], BLEND[Type.enumIndex(m.blendDst)]);
+				ctx.setBlendFactors(BLEND[(mbits>>6)&15], BLEND[(mbits>>10)&15]);
 			if( curMatBits < 0 || diff & (15 << 2) != 0 )
-				ctx.setDepthTest(m.depthWrite, COMPARE[Type.enumIndex(m.depthTest)]);
+				ctx.setDepthTest((mbits >> 2) & 1 == 1, COMPARE[(mbits>>3)&7]);
 			if( curMatBits < 0 || diff & (15 << 14) != 0 )
-				ctx.setColorMask(m.colorMask & 1 != 0, m.colorMask & 2 != 0, m.colorMask & 4 != 0, m.colorMask & 8 != 0);
-			curMatBits = m.bits;
+				ctx.setColorMask((mbits >> 14) & 1 != 0, (mbits >> 14) & 2 != 0, (mbits >> 14) & 4 != 0, (mbits >> 14) & 8 != 0);
+			curMatBits = mbits;
 		}
 		selectShader(m.shader);
 	}
