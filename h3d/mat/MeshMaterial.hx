@@ -67,7 +67,7 @@ private class MeshShader extends hxsl.Shader {
 		var hasShadowMap : Bool;
 		var shadowLightProj : Matrix;
 		var shadowLightCenter : Matrix;
-		var shadowColor : Float3;
+		var shadowColor : Float4;
 		var shadowTexture : Texture;
 		var tshadowPos : Float4;
 		
@@ -141,8 +141,9 @@ private class MeshShader extends hxsl.Shader {
 					c.rgb += acolor;
 			}
 			if( hasShadowMap ) {
-				var shadow = shadowTexture.get(tshadowPos.xy).dot([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)]) > tshadowPos.z;
-				c.rgb *= (1 - shadow) * shadowColor + shadow.xxx;
+				// ESM filtering
+				var shadow = exp( shadowColor.w * (tshadowPos.z - shadowTexture.get(tshadowPos.xy).dot([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)]))).sat();
+				c.rgb *= (1 - shadow) * shadowColor.rgb + shadow.xxx;
 			}
 			if( hasGlow ) c.rgb += glowTexture.get(tuv.xy, filter = !texNearest, wrap = (texWrap || uvDelta != null)).rgb * glowAmount;
 			out = c;
