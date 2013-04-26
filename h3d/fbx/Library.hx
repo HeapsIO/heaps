@@ -615,6 +615,8 @@ class Library {
 				var tex = getChilds(mat, "Texture")[0];
 				if( tex == null ) throw "No texture found for " + model.getName();
 				var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
+				if( prim.geom.getColors() != null )
+					mat.hasVertexColor = true;
 				o = new h3d.scene.Mesh(prim, mat, scene);
 			case type:
 				throw "Unknown model type " + type+" for "+model.getName();

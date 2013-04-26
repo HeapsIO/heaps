@@ -23,6 +23,11 @@ class Geometry {
 		return root.get("LayerElementNormal.Normals").getFloats();
 	}
 	
+	public function getColors() {
+		var color = root.get("LayerElementColor");
+		return color == null ? null : { values : color.get("Colors").getFloats(), index : color.get("ColorIndex").getInts() };
+	}
+	
 	public function getUVs() {
 		var uvs = [];
 		for( v in root.getAll("LayerElementUV") )

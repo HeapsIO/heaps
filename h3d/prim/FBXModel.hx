@@ -57,13 +57,15 @@ class FBXModel extends MeshPrimitive {
 		var verts = geom.getVertices();
 		var norms = geom.getNormals();
 		var tuvs = geom.getUVs()[0];
+		var colors = geom.getColors();
 		
 		var gt = geom.getGeomTranslate();
 		if( gt == null ) gt = new h3d.Point();
 		
 		var idx = new flash.Vector<UInt>();
 		var pbuf = new flash.Vector<Float>(), nbuf = (norms == null ? null : new flash.Vector<Float>()), sbuf = (skin == null ? null : new flash.Vector<Float>()), tbuf = (tuvs == null ? null : new flash.Vector<Float>());
-		var pout = 0, nout = 0, sout = 0, tout = 0;
+		var cbuf = (colors == null ? null : new flash.Vector<Float>());
+		var pout = 0, nout = 0, sout = 0, tout = 0, cout = 0;
 		
 		if( sbuf != null ) {
 			var tmp = TMP;
@@ -115,6 +117,13 @@ class FBXModel extends MeshPrimitive {
 						}
 						sbuf[sout++] = int32ToFloat(idx);
 					}
+					
+					if( cbuf != null ) {
+						var icol = colors.index[k];
+						cbuf[cout++] = colors.values[icol * 4];
+						cbuf[cout++] = colors.values[icol * 4 + 1];
+						cbuf[cout++] = colors.values[icol * 4 + 2];
+					}
 				}
 				// polygons are actually triangle fans
 				for( n in 0...count - 2 ) {
@@ -136,6 +145,7 @@ class FBXModel extends MeshPrimitive {
 			addBuffer("weights", skinBuf, 0);
 			addBuffer("indexes", skinBuf, skin.bonesPerVertex);
 		}
+		if( cbuf != null ) addBuffer("color", engine.mem.allocVector(cbuf, 3, 0));
 		
 		indexes = engine.mem.allocIndex(idx);
 	}
