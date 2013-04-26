@@ -260,19 +260,9 @@ class Viewer {
 		var bmp = new flash.display.BitmapData(1024, 1024, true, 0xFFFF0000);
 		var mat = new h3d.mat.MeshMaterial(t);
 		t.upload(bmp);
-		var loader = new flash.display.Loader();
-		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
-			mat.culling = None;
-		});
-		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			var c = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;
-			bmp.fillRect(bmp.rect, 0);
-			bmp.copyPixels(c, c.rect, new flash.geom.Point(0, 0), c, new flash.geom.Point(0, 0), true);
-			mat.uvScale = new h3d.Vector(c.width / bmp.width, c.height / bmp.height);
-			t.upload(bmp);
-			mat.culling = None;
-		});
-		loader.load(new flash.net.URLRequest(textureName));
+		bmp.dispose();
+		loadTexture(textureName, mat);
+		mat.killAlpha = true;
 		mat.culling = Both;
 		mat.blend(SrcAlpha, OneMinusSrcAlpha);
 		for( p in matData.getAll("Properties70.P") )
@@ -283,6 +273,44 @@ class Viewer {
 				break;
 			}
 		return mat;
+	}
+	
+	function loadTexture( textureName : String, mat : h3d.mat.MeshMaterial, handleAlpha = true ) {
+		var t = mat.texture;
+		if( textureName.split(".").pop().toLowerCase() == "png" && handleAlpha ) {
+			var loader = new flash.net.URLLoader();
+			loader.dataFormat = flash.net.URLLoaderDataFormat.BINARY;
+			loader.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
+				mat.culling = None;
+			});
+			loader.addEventListener(flash.events.Event.COMPLETE, function(_) {
+				var bytes = haxe.io.Bytes.ofData(loader.data);
+				var png = new format.png.Reader(new haxe.io.BytesInput(bytes)).read();
+				var size = format.png.Tools.getHeader(png);
+				var pixels = try format.png.Tools.extract32(png) catch( e : Dynamic ) null;
+				// some unsupported formats such as 8 bits PNG
+				if( pixels == null ) {
+					loadTexture(textureName, mat, false);
+					return;
+				}
+				t.resize(size.width, size.height);
+				t.uploadBytes(pixels);
+				mat.culling = None;
+			});
+			loader.load(new flash.net.URLRequest(textureName));
+		} else {
+			var loader = new flash.display.Loader();
+			loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
+				mat.culling = None;
+			});
+			loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
+				var bmp = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;
+				t.resize(bmp.width, bmp.height);
+				t.upload(bmp);
+				mat.culling = None;
+			});
+			loader.load(new flash.net.URLRequest(textureName));
+		}
 	}
 	
 	function askLoad() {
@@ -368,10 +396,8 @@ class Viewer {
 	
 	function setSmoothing() {
 		var meshes = getMeshes(scene.getChildAt(0));
-		for (m in meshes) {
-			m.material.killAlpha = !props.smoothing;
+		for( m in meshes )
 			m.material.texNearest = !props.smoothing;
-		}
 	}
 	
 	function setSkin() {
