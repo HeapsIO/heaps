@@ -97,9 +97,9 @@ class FBXModel extends MeshPrimitive {
 					pbuf[pout++] = z;
 
 					if( nbuf != null ) {
-						nbuf[nout++] = norms[k*3];
-						nbuf[nout++] = norms[k*3 + 1];
-						nbuf[nout++] = norms[k*3 + 2];
+						nbuf[nout++] = norms[vidx*3];
+						nbuf[nout++] = norms[vidx*3 + 1];
+						nbuf[nout++] = norms[vidx*3 + 2];
 					}
 
 					if( tbuf != null ) {
