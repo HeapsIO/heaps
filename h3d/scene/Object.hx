@@ -71,9 +71,9 @@ class Object {
 		return pt2;
 	}
 
-	public function getBounds( ?b : h3d.prim.Bounds ) {
+	public function getBounds( ?b : h3d.col.Bounds ) {
 		syncPos();
-		if( b == null ) b = new h3d.prim.Bounds();
+		if( b == null ) b = new h3d.col.Bounds();
 		for( c in childs )
 			c.getBounds(b);
 		if( defaultTransform != null ) {

@@ -17,7 +17,7 @@ class Primitive {
 		return count;
 	}
 	
-	public function getBounds() : Bounds {
+	public function getBounds() : h3d.col.Bounds {
 		throw "not implemented";
 		return null;
 	}

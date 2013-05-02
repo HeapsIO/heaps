@@ -1,4 +1,4 @@
-package h3d.prim;
+package h3d.col;
 
 class Bounds {
 	
@@ -28,7 +28,7 @@ class Bounds {
 		if( b.zMax > zMax ) zMax = b.zMax;
 	}
 
-	public function addPoint( p : h3d.Vector ) {
+	public function addPoint( p : Vector ) {
 		if( p.x < xMin ) xMin = p.x;
 		if( p.x > xMax ) xMax = p.x;
 		if( p.y < yMin ) yMin = p.y;

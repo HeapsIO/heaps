@@ -6,7 +6,7 @@ class FBXModel extends MeshPrimitive {
 
 	public var geom(default, null) : h3d.fbx.Geometry;
 	public var skin : h3d.anim.Skin;
-	var bounds : Bounds;
+	var bounds : h3d.col.Bounds;
 
 	public function new(g) {
 		this.geom = g;
@@ -25,7 +25,7 @@ class FBXModel extends MeshPrimitive {
 	override function getBounds() {
 		if( bounds != null )
 			return bounds;
-		bounds = new Bounds();
+		bounds = new h3d.col.Bounds();
 		var verts = geom.getVertices();
 		var gt = geom.getGeomTranslate();
 		if( gt == null ) gt = new h3d.prim.Point();

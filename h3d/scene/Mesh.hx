@@ -12,8 +12,8 @@ class Mesh extends Object {
 		this.material = mat;
 	}
 	
-	override function getBounds( ?b : h3d.prim.Bounds ) {
-		if( b == null ) b = new h3d.prim.Bounds();
+	override function getBounds( ?b : h3d.col.Bounds ) {
+		if( b == null ) b = new h3d.col.Bounds();
 		b.add(primitive.getBounds());
 		return super.getBounds(b);
 	}

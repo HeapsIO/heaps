@@ -23,7 +23,7 @@ class Plan3D extends Primitive {
 	}
 	
 	override function getBounds() {
-		var b = new Bounds();
+		var b = new h3d.col.Bounds();
 		b.xMin = 0;
 		b.xMax = width;
 		b.yMin = 0;
