@@ -94,6 +94,13 @@ class TileGroup extends Drawable {
 	public inline function add(x, y, t) {
 		content.add(x, y, t);
 	}
+	
+	/**
+		Returns the number of tiles added to the group
+	**/
+	public function count() {
+		return content.triCount() >> 1;
+	}
 		
 	override function draw(ctx:RenderContext) {
 		setupShader(ctx.engine, tile, 0);

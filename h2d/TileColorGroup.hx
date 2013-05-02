@@ -99,6 +99,13 @@ class TileColorGroup extends Drawable {
 		content.reset();
 	}
 	
+	/**
+		Returns the number of tiles added to the group
+	**/
+	public function count() {
+		return content.triCount() >> 1;
+	}
+	
 	override function onDelete() {
 		content.dispose();
 		super.onDelete();
