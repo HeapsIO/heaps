@@ -1,5 +1,4 @@
 package h3d;
-import h3d.impl.Tools;
 
 class Color {
 
@@ -43,7 +42,7 @@ class Color {
 	}
 
 	public function toString() {
-		return "{"+Tools.f(r)+","+Tools.f(g)+","+Tools.f(b)+","+Tools.f(a)+"}";
+		return "{"+FMath.fmt(r)+","+FMath.fmt(g)+","+FMath.fmt(b)+","+FMath.fmt(a)+"}";
 	}
 
 	public static function fromInt( rgb : Int, alpha = 1.0 ) {

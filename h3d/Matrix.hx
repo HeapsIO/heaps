@@ -1,5 +1,4 @@
 package h3d;
-import h3d.impl.Tools;
 
 class Matrix {
 	
@@ -40,8 +39,8 @@ class Matrix {
 	}
 
 	public function initRotateX( a : Float ) {
-		var cos = Math.cos(a);
-		var sin = Math.sin(a);
+		var cos = FMath.cos(a);
+		var sin = FMath.sin(a);
 		_11 = 1.0; _12 = 0.0; _13 = 0.0; _14 = 0.0;
 		_21 = 0.0; _22 = cos; _23 = sin; _24 = 0.0;
 		_31 = 0.0; _32 = -sin; _33 = cos; _34 = 0.0;
@@ -49,8 +48,8 @@ class Matrix {
 	}
 
 	public function initRotateY( a : Float ) {
-		var cos = Math.cos(a);
-		var sin = Math.sin(a);
+		var cos = FMath.cos(a);
+		var sin = FMath.sin(a);
 		_11 = cos; _12 = 0.0; _13 = -sin; _14 = 0.0;
 		_21 = 0.0; _22 = 1.0; _23 = 0.0; _24 = 0.0;
 		_31 = sin; _32 = 0.0; _33 = cos; _34 = 0.0;
@@ -58,8 +57,8 @@ class Matrix {
 	}
 
 	public function initRotateZ( a : Float ) {
-		var cos = Math.cos(a);
-		var sin = Math.sin(a);
+		var cos = FMath.cos(a);
+		var sin = FMath.sin(a);
 		_11 = cos; _12 = sin; _13 = 0.0; _14 = 0.0;
 		_21 = -sin; _22 = cos; _23 = 0.0; _24 = 0.0;
 		_31 = 0.0; _32 = 0.0; _33 = 1.0; _34 = 0.0;
@@ -81,11 +80,11 @@ class Matrix {
 	}
 
 	public function initRotateAxis( axis : Vector, angle : Float ) {
-		var cos = Math.cos(angle), sin = Math.sin(angle);
+		var cos = FMath.cos(angle), sin = FMath.sin(angle);
 		var cos1 = 1 - cos;
 		var x = -axis.x, y = -axis.y, z = -axis.z;
 		var xx = x * x, yy = y * y, zz = z * z;
-		var len = 1 / Math.sqrt(xx + yy + zz);
+		var len = FMath.isqrt(xx + yy + zz);
 		x *= len;
 		y *= len;
 		z *= len;
@@ -106,15 +105,12 @@ class Matrix {
 	}
 	
 	public function initRotate( x : Float, y : Float, z : Float ) {
-		#if flash
-		var Math = Math;
-		#end
-		var cx = Math.cos(x);
-		var sx = Math.sin(x);
-		var cy = Math.cos(y);
-		var sy = Math.sin(y);
-		var cz = Math.cos(z);
-		var sz = Math.sin(z);
+		var cx = FMath.cos(x);
+		var sx = FMath.sin(x);
+		var cy = FMath.cos(y);
+		var sy = FMath.sin(y);
+		var cz = FMath.cos(z);
+		var sz = FMath.sin(z);
 		var cxsy = cx * sy;
 		var sxsy = sx * sy;
 		_11 = cy * cz;
@@ -297,7 +293,7 @@ class Matrix {
 		_43 = -m._43;
 		_44 = 1;
 		var det = m11 * _11 + m12 * _21 + m13 * _31;
-		if(	det > -Tools.EPSILON && det < Tools.EPSILON ) {
+		if(	FMath.abs(det) < FMath.EPSILON ) {
 			zero();
 			return;
 		}
@@ -331,7 +327,7 @@ class Matrix {
 		_44 = m11 * m22 * m33 - m11 * m23 * m32 - m21 * m12 * m33 + m21 * m13 * m32 + m31 * m12 * m23 - m31 * m13 * m22;
 
 		var det = m11 * _11 + m12 * _21 + m13 * _31 + m14 * _41;
-		if(	det > -Tools.EPSILON && det < Tools.EPSILON ) {
+		if(	FMath.abs(det) < FMath.EPSILON ) {
 			zero();
 			return;
 		}
@@ -394,10 +390,10 @@ class Matrix {
 	
 	public function toString() {
 		return "MAT=[\n" +
-			"  [ " + Tools.f(_11) + ", " + Tools.f(_12) + ", " + Tools.f(_13) + ", " + Tools.f(_14) + " ]\n" +
-			"  [ " + Tools.f(_21) + ", " + Tools.f(_22) + ", " + Tools.f(_23) + ", " + Tools.f(_24) + " ]\n" +
-			"  [ " + Tools.f(_31) + ", " + Tools.f(_32) + ", " + Tools.f(_33) + ", " + Tools.f(_34) + " ]\n" +
-			"  [ " + Tools.f(_41) + ", " + Tools.f(_42) + ", " + Tools.f(_43) + ", " + Tools.f(_44) + " ]\n" +
+			"  [ " + FMath.fmt(_11) + ", " + FMath.fmt(_12) + ", " + FMath.fmt(_13) + ", " + FMath.fmt(_14) + " ]\n" +
+			"  [ " + FMath.fmt(_21) + ", " + FMath.fmt(_22) + ", " + FMath.fmt(_23) + ", " + FMath.fmt(_24) + " ]\n" +
+			"  [ " + FMath.fmt(_31) + ", " + FMath.fmt(_32) + ", " + FMath.fmt(_33) + ", " + FMath.fmt(_34) + " ]\n" +
+			"  [ " + FMath.fmt(_41) + ", " + FMath.fmt(_42) + ", " + FMath.fmt(_43) + ", " + FMath.fmt(_44) + " ]\n" +
 		"]";
 	}
 	

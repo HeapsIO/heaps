@@ -1,7 +1,5 @@
 package h3d.prim;
 
-import h3d.impl.Tools;
-
 class Point {
 
 	public var x : Float;
@@ -27,12 +25,12 @@ class Point {
 	}
 	
 	public inline function length() {
-		return Math.sqrt(x * x + y * y + z * z);
+		return FMath.sqrt(x * x + y * y + z * z);
 	}
 
 	public function normalize() {
-		var k = length();
-		if( k < Tools.EPSILON ) k = 0 else k = 1.0 / k;
+		var k = x * x + y * y + z * z;
+		if( k < FMath.EPSILON ) k = 0 else k = FMath.isqrt(k);
 		x *= k;
 		y *= k;
 		z *= k;
@@ -51,7 +49,7 @@ class Point {
 	}
 
 	public function toString() {
-		return "{"+Tools.f(x)+","+Tools.f(y)+","+Tools.f(z)+"}";
+		return "{"+FMath.fmt(x)+","+FMath.fmt(y)+","+FMath.fmt(z)+"}";
 	}
 	
 }

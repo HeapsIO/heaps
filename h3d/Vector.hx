@@ -1,5 +1,4 @@
 package h3d;
-import h3d.impl.Tools;
 
 class Vector {
 
@@ -8,7 +7,7 @@ class Vector {
 	public var z : Float;
 	public var w : Float;
 
-	public function new( x = 0., y = 0., z = 0., w = 1. ) {
+	public inline function new( x = 0., y = 0., z = 0., w = 1. ) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -36,12 +35,12 @@ class Vector {
 	}
 	
 	public inline function length() {
-		return Math.sqrt(x * x + y * y + z * z);
+		return FMath.sqrt(x * x + y * y + z * z);
 	}
 
 	public function normalize() {
-		var k = length();
-		if( k < Tools.EPSILON ) k = 0 else k = 1.0 / k;
+		var k = x * x + y * y + z * z;
+		if( k < FMath.EPSILON ) k = 0 else k = FMath.isqrt(k);
 		x *= k;
 		y *= k;
 		z *= k;
@@ -96,7 +95,7 @@ class Vector {
 	}
 
 	public function toString() {
-		return "{"+Tools.f(x)+","+Tools.f(y)+","+Tools.f(z)+","+Tools.f(w)+"}";
+		return "{"+FMath.fmt(x)+","+FMath.fmt(y)+","+FMath.fmt(z)+","+FMath.fmt(w)+"}";
 	}
 
 }

@@ -1,5 +1,4 @@
 package h3d;
-import h3d.impl.Tools;
 
 class Quat {
 	
@@ -8,7 +7,7 @@ class Quat {
 	public var z : Float;
 	public var w : Float;
 	
-	public function new( x = 0., y = 0., z = 0., w = 1. ) {
+	public inline function new( x = 0., y = 0., z = 0., w = 1. ) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -21,7 +20,7 @@ class Quat {
 	}
 	
 	public function length() {
-		return Math.sqrt(x * x + y * y + z * z + w * w);
+		return FMath.sqrt(x * x + y * y + z * z + w * w);
 	}
 	
 	public function clone() {
@@ -29,22 +28,22 @@ class Quat {
 	}
 	
 	public function initRotateAxis( x : Float, y : Float, z : Float, a : Float ) {
-		var sin = Math.sin(a / 2);
-		var cos = Math.cos(a / 2);
+		var sin = FMath.sin(a / 2);
+		var cos = FMath.cos(a / 2);
 		this.x = x * sin;
 		this.y = y * sin;
 		this.z = z * sin;
-		this.w = cos * Math.sqrt(x * x + y * y + z * z); // allow not normalized axis
+		this.w = cos * FMath.sqrt(x * x + y * y + z * z); // allow not normalized axis
 		normalize();
 	}
 	
 	public function normalize() {
-		var len = length();
-		if( len < Tools.EPSILON ) {
+		var len = x * x + y * y + z * z + w * w;
+		if( len < FMath.EPSILON ) {
 			x = y = z = 0;
 			w = 1;
 		} else {
-			var m = 1 / len;
+			var m = FMath.isqrt(len);
 			x *= m;
 			y *= m;
 			z *= m;
@@ -53,15 +52,12 @@ class Quat {
 	}
 	
 	public function initRotate( ax : Float, ay : Float, az : Float ) {
-		#if flash
-		var Math = Math;
-		#end
-		var sinX = Math.sin( ax * 0.5 );
-		var cosX = Math.cos( ax * 0.5 );
-		var sinY = Math.sin( ay * 0.5 );
-		var cosY = Math.cos( ay * 0.5 );
-		var sinZ = Math.sin( az * 0.5 );
-		var cosZ = Math.cos( az * 0.5 );
+		var sinX = FMath.sin( ax * 0.5 );
+		var cosX = FMath.cos( ax * 0.5 );
+		var sinY = FMath.sin( ay * 0.5 );
+		var cosY = FMath.cos( ay * 0.5 );
+		var sinZ = FMath.sin( az * 0.5 );
+		var cosZ = FMath.cos( az * 0.5 );
 		var cosYZ = cosY * cosZ;
 		var sinYZ = sinY * sinZ;
 		x = sinX * cosYZ - cosX * sinYZ;
@@ -89,9 +85,9 @@ class Quat {
 	
 	public function toEuler() {
 		return new Vector(
-			Math.atan2(2 * (y * w + x * z), 1 - 2 * (y * y + z * z)),
+			FMath.atan2(2 * (y * w + x * z), 1 - 2 * (y * y + z * z)),
 			Math.asin(2 * (x * y + z * w)),
-			Math.atan2(2 * (x * w - y * z), 1 - 2 * (x * x + z * z))
+			FMath.atan2(2 * (x * w - y * z), 1 - 2 * (x * x + z * z))
 		);
 	}
 	
@@ -140,7 +136,7 @@ class Quat {
 	}
 	
 	public function toString() {
-		return "{"+Tools.f(x)+","+Tools.f(y)+","+Tools.f(z)+","+Tools.f(w)+"}";
+		return "{"+FMath.fmt(x)+","+FMath.fmt(y)+","+FMath.fmt(z)+","+FMath.fmt(w)+"}";
 	}
 	
 }
