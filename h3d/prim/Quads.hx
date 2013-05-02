@@ -2,9 +2,9 @@ package h3d.prim;
 
 class Quads extends Primitive {
 
-	var pts : Array<h3d.Point>;
+	var pts : Array<Point>;
 	var uvs : Array<UV>;
-	var normals : Array<h3d.Point>;
+	var normals : Array<Point>;
 	
 	public function new( pts, ?uvs, ?normals ) {
 		this.pts = pts;

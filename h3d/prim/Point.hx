@@ -1,4 +1,5 @@
-package h3d;
+package h3d.prim;
+
 import h3d.impl.Tools;
 
 class Point {

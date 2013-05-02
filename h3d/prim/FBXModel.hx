@@ -28,7 +28,7 @@ class FBXModel extends MeshPrimitive {
 		bounds = new Bounds();
 		var verts = geom.getVertices();
 		var gt = geom.getGeomTranslate();
-		if( gt == null ) gt = new h3d.Point();
+		if( gt == null ) gt = new h3d.prim.Point();
 		if( verts.length > 0 ) {
 			bounds.xMin = bounds.xMax = verts[0] + gt.x;
 			bounds.yMin = bounds.yMax = verts[1] + gt.y;
@@ -60,7 +60,7 @@ class FBXModel extends MeshPrimitive {
 		var colors = geom.getColors();
 		
 		var gt = geom.getGeomTranslate();
-		if( gt == null ) gt = new h3d.Point();
+		if( gt == null ) gt = new h3d.prim.Point();
 		
 		var idx = new flash.Vector<UInt>();
 		var pbuf = new flash.Vector<Float>(), nbuf = (norms == null ? null : new flash.Vector<Float>()), sbuf = (skin == null ? null : new flash.Vector<Float>()), tbuf = (tuvs == null ? null : new flash.Vector<Float>());

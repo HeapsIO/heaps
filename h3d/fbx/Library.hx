@@ -1,5 +1,6 @@
 package h3d.fbx;
 using h3d.fbx.Data;
+import h3d.prim.Point;
 
 enum AnimationMode {
 	FrameAnim;
@@ -7,10 +8,10 @@ enum AnimationMode {
 }
 
 class DefaultMatrixes {
-	public var trans : Null<h3d.Point>;
-	public var scale : Null<h3d.Point>;
-	public var rotate : Null<h3d.Point>;
-	public var preRot : Null<h3d.Point>;
+	public var trans : Null<Point>;
+	public var scale : Null<Point>;
+	public var rotate : Null<Point>;
+	public var preRot : Null<Point>;
 	public var wasRemoved : Null<Int>;
 	
 	public function new() {
@@ -216,8 +217,8 @@ class Library {
 		}
 
 		var curves = new Map();
-		var P0 = new h3d.Point();
-		var P1 = new h3d.Point(1, 1, 1);
+		var P0 = new h3d.prim.Point();
+		var P1 = new h3d.prim.Point(1, 1, 1);
 		var F = Math.PI / 180;
 		var allTimes = new Map();
 		for( cn in getChilds(animNode, "AnimationCurveNode") ) {
@@ -754,13 +755,13 @@ class Library {
 			case "GeometricTranslation":
 				// handle in Geometry directly
 			case "PreRotation":
-				d.preRot = new h3d.Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
+				d.preRot = new Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
 			case "Lcl Rotation":
-				d.rotate = new h3d.Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
+				d.rotate = new Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
 			case "Lcl Translation":
-				d.trans = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+				d.trans = new Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
 			case "Lcl Scaling":
-				d.scale = new h3d.Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+				d.scale = new Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
 			default:
 			}
 		defaultModelMatrixes.set(model.getName(), d);
