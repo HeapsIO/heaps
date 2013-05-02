@@ -164,8 +164,8 @@ class Sprite {
 				matC = 0;
 				matD = scaleY;
 			} else {
-				cr = Math.cos(rotation);
-				sr = Math.sin(rotation);
+				cr = h3d.FMath.cos(rotation);
+				sr = h3d.FMath.sin(rotation);
 				matA = scaleX * cr;
 				matB = scaleX * -sr;
 				matC = scaleY * sr;
@@ -182,8 +182,8 @@ class Sprite {
 				matC = scaleY * parent.matC;
 				matD = scaleY * parent.matD;
 			} else {
-				var cr = Math.cos(rotation);
-				var sr = Math.sin(rotation);
+				var cr = h3d.FMath.cos(rotation);
+				var sr = h3d.FMath.sin(rotation);
 				var tmpA = scaleX * cr;
 				var tmpB = scaleX * -sr;
 				var tmpC = scaleY * sr;
