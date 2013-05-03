@@ -17,6 +17,7 @@ class Skin extends Mesh {
 	var jointsUpdated : Bool;
 
 	public var showJoints : Bool;
+	public var syncIfHidden : Bool = true;
 	
 	public function new(s, ?mat, ?parent) {
 		super(null, mat, parent);
@@ -64,6 +65,8 @@ class Skin extends Mesh {
 	}
 
 	override function sync( ctx : RenderContext ) {
+		if( !(visible || syncIfHidden) )
+			return;
 		if( jointsUpdated || posChanged ) {
 			super.sync(ctx);
 			for( j in skinData.allJoints ) {
