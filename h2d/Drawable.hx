@@ -98,6 +98,7 @@ class Drawable extends Sprite {
 
 	public var sinusDeform(get, set) : h3d.Vector;
 	public var tileWrap(get, set) : Bool;
+	public var alphaKill(get, set) : Bool;
 
 	public var multiplyMap(default, set) : h2d.Tile;
 	public var multiplyFactor(get, set) : Float;
@@ -199,6 +200,14 @@ class Drawable extends Sprite {
 	
 	inline function set_tileWrap(v) {
 		return shader.tileWrap = v;
+	}
+
+	inline function get_alphaKill() {
+		return shader.alphaKill;
+	}
+	
+	inline function set_alphaKill(v) {
+		return shader.alphaKill = v;
 	}
 	
 	function drawTile( engine, tile ) {
