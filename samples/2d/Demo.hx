@@ -40,7 +40,7 @@ class Demo {
 	}
 	
 	function update(_) {
-		spr.rotation += 1;
+		spr.rotation += 0.01;
 		engine.render(scene);
 	}
 	
