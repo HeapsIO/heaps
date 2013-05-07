@@ -1,8 +1,0 @@
-<project name="h3d" url="https://github.com/ncannasse/h3d" license="BSD">
-    <user name="ncannasse"/>
-    <tag v="flash"/>
-    <tag v="3d"/>
-    <depends name="hxsl"/>
-    <description>Lightweight Stage3D engine</description>
-    <version name="0.1">Imported from MT</version>
-</project>
