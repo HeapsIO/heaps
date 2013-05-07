@@ -39,7 +39,7 @@ class Scene extends Object implements h3d.IDrawable {
 	}
 
 	public function render( engine : h3d.Engine ) {
-		camera.ratio = engine.width / engine.height;
+		camera.screenRatio = engine.width / engine.height;
 		camera.update();
 		var oldProj = engine.curProjMatrix;
 		engine.curProjMatrix = camera.m;

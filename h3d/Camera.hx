@@ -5,13 +5,20 @@ package h3d;
 class Camera {
 	
 	public var zoom : Float;
-	public var ratio : Float;
-	public var fov : Float;
+	
+	/**
+		The screenRatio represents the W/H screen ratio.
+	 **/
+	public var screenRatio : Float;
+	
+	/**
+		The horizontal FieldOfView, in degrees.
+	**/
+	public var fovX : Float;
 	public var zNear : Float;
 	public var zFar : Float;
 	
 	public var rightHanded : Bool;
-	public var orthographic : Bool;
 	
 	public var mproj : Matrix;
 	public var mcam : Matrix;
@@ -20,14 +27,13 @@ class Camera {
 	public var pos : Vector;
 	public var up : Vector;
 	public var target : Vector;
-	public var viewport : Vector;
 	var minv : Matrix;
 	var needInv : Bool;
 
-	public function new( fov = 60., zoom = 1., ratio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
-		this.fov = fov;
+	public function new( fovX = 60., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
+		this.fovX = fovX;
 		this.zoom = zoom;
-		this.ratio = ratio;
+		this.screenRatio = screenRatio;
 		this.zNear = zNear;
 		this.zFar = zFar;
 		this.rightHanded = rightHanded;
@@ -36,12 +42,19 @@ class Camera {
 		target = new Vector(0, 0, 0);
 		m = new Matrix();
 		mcam = new Matrix();
-		viewport = new Vector(0, 0);
+		mproj = new Matrix();
 		update();
 	}
 	
+	/**
+		Update the fovX value based on the requested fovY value (in degrees) and current screenRatio.
+	**/
+	public function setFovY( value : Float ) {
+		fovX = Math.atan( Math.tan(value * Math.PI / 180) / screenRatio ) * 180 / Math.PI;
+	}
+	
 	public function clone() {
-		var c = new Camera(fov, zoom, ratio, zNear, zFar, rightHanded);
+		var c = new Camera(fovX, zoom, screenRatio, zNear, zFar, rightHanded);
 		c.pos = pos.clone();
 		c.up = up.clone();
 		c.target = target.clone();
@@ -75,56 +88,8 @@ class Camera {
 	}
 	
 	public function update() {
-		var az = pos.sub(target);
-		az.normalize();
-		var ax;
-		if( rightHanded )
-			ax = up.cross(az);
-		else
-			ax = az.cross(up);
-		ax.normalize();
-		if( ax.length() == 0 ) {
-			ax.x = az.y;
-			ax.y = az.z;
-			ax.z = az.x;
-		}
-		var ay = az.cross(ax);
-		if( rightHanded ) {
-			mcam._11 = ax.x;
-			mcam._12 = ay.x;
-			mcam._13 = -az.x;
-			mcam._14 = 0;
-			mcam._21 = ax.y;
-			mcam._22 = ay.y;
-			mcam._23 = -az.y;
-			mcam._24 = 0;
-			mcam._31 = ax.z;
-			mcam._32 = ay.z;
-			mcam._33 = -az.z;
-			mcam._34 = 0;
-			mcam._41 = -ax.dot3(pos);
-			mcam._42 = -ay.dot3(pos);
-			mcam._43 = az.dot3(pos);
-			mcam._44 = 1;
-		} else {
-			mcam._11 = ax.x;
-			mcam._12 = ay.x;
-			mcam._13 = az.x;
-			mcam._14 = 0;
-			mcam._21 = ax.y;
-			mcam._22 = ay.y;
-			mcam._23 = az.y;
-			mcam._24 = 0;
-			mcam._31 = ax.z;
-			mcam._32 = ay.z;
-			mcam._33 = az.z;
-			mcam._34 = 0;
-			mcam._41 = -ax.dot3(pos);
-			mcam._42 = -ay.dot3(pos);
-			mcam._43 = -az.dot3(pos);
-			mcam._44 = 1;
-		}
-		mproj = makeFrustumMatrix();
+		makeCameraMatrix(mcam);
+		makeFrustumMatrix(mproj);
 		m.multiply(mcam, mproj);
 		needInv = true;
 	}
@@ -151,9 +116,38 @@ class Camera {
 		target.z += p.z;
 	}
 	
-	function makeFrustumMatrix() {
-		var scale = zoom / Math.tan(fov * Math.PI / 360.0);
-		var m = new Matrix();
+	function makeCameraMatrix( m : Matrix ) {
+		// in leftHanded the z axis is positive else it's negative
+		// this way we make sure that our [ax,ay,-az] matrix follow the same handness as our world
+		var az = rightHanded ? pos.sub(target) : target.sub(pos);
+		az.normalize();
+		var ax = up.cross(az);
+		ax.normalize();
+		if( ax.length() == 0 ) {
+			ax.x = az.y;
+			ax.y = az.z;
+			ax.z = az.x;
+		}
+		var ay = az.cross(ax);
+		m._11 = ax.x;
+		m._12 = ay.x;
+		m._13 = az.x;
+		m._14 = 0;
+		m._21 = ax.y;
+		m._22 = ay.y;
+		m._23 = az.y;
+		m._24 = 0;
+		m._31 = ax.z;
+		m._32 = ay.z;
+		m._33 = az.z;
+		m._34 = 0;
+		m._41 = -ax.dot3(pos);
+		m._42 = -ay.dot3(pos);
+		m._43 = -az.dot3(pos);
+		m._44 = 1;
+	}
+	
+	function makeFrustumMatrix( m : Matrix ) {
 		m.zero();
 		
 		// this will take into account the aspect ratio and normalize the z value into [0,1] once it's been divided by w
@@ -163,46 +157,20 @@ class Camera {
 		//    [x,y,-zNear,1] => [sx/zNear, sy/zNear, 0, 1]
 		//    [x,y,-zFar,1] => [sx/zFar, sy/zFar, 1, 1]
 		
-		if( orthographic ) {
-			var scale = zoom * 2 / pos.sub(target).length();
-			if( rightHanded ) {
-				m._11 = scale;
-				m._22 = scale * ratio;
-				m._33 = -1 / (zNear - zFar);
-				m._43 = zNear / (zNear - zFar);
-				m._44 = 1;
-			} else {
-				m._11 = scale;
-				m._22 = -scale * ratio;
-				m._33 = 1 / (zNear - zFar);
-				m._43 = zNear / (zNear - zFar);
-				m._44 = 1;
-			}
-		} else if( rightHanded ) {
-			m._11 = scale;
-			m._22 = scale * ratio;
-			m._33 = zFar / (zFar - zNear);
-			m._34 = 1;
-			m._43 = -(zNear * zFar) / (zFar - zNear);
-		} else {
-			m._11 = scale;
-			m._22 = -scale * ratio;
-			m._33 = zFar / (zNear - zFar);
-			m._34 = -1;
-			m._43 = -(zNear * zFar) / (zFar - zNear);
+		// we apply the screen ratio to the height in order to have the fov being a horizontal FOV. This way we don't have to change the FOV when the screen is enlarged
+		
+		var scale = zoom / Math.tan(fovX * Math.PI / 360.0);
+		m._11 = scale;
+		m._22 = scale * screenRatio;
+		m._33 = zFar / (zFar - zNear);
+		m._34 = 1;
+		m._43 = -(zNear * zFar) / (zFar - zNear);
+		
+		// our z is negative in that case
+		if( rightHanded ) {
+			m._33 *= -1;
+			m._34 *= -1;
 		}
-
-		m._11 += viewport.x * m._14;
-		m._21 += viewport.x * m._24;
-		m._31 += viewport.x * m._34;
-		m._41 += viewport.x * m._44;
-
-		m._12 += viewport.y * m._14;
-		m._22 += viewport.y * m._24;
-		m._32 += viewport.y * m._34;
-		m._42 += viewport.y * m._44;
-				
-		return m;
 	}
 		
 }

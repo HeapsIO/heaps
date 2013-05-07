@@ -207,7 +207,6 @@ class Viewer {
 				props.camVars.y = dist * Math.sin(ang);
 				scene.camera.pos.set(props.camVars.tx + props.camVars.x * Math.cos(Math.PI / 2 * props.camVars.angCoef), props.camVars.ty + props.camVars.y * Math.cos(Math.PI / 2 * props.camVars.angCoef), props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
 				scene.camera.zoom = 1.0;
-				scene.camera.fov = calcFov(40);
 				box.x = b.xMin + dx * 0.5;
 				box.y = b.yMin + dy * 0.5;
 				box.z = b.zMin + dz * 0.5;
@@ -362,7 +361,6 @@ class Viewer {
 		scene.camera.zFar *= props.camVars.dist * 0.1;
 		scene.camera.zNear *= props.camVars.dist * 0.1;
 		scene.camera.zoom = props.camVars.zoom;
-		scene.camera.fov = calcFov(40);
 		//
 		if (props.showBox)
 			scene.addChild(box);
@@ -476,7 +474,7 @@ class Viewer {
 		
 		time++;
 		
-		var fmt = h3d.impl.Tools.f;
+		var fmt = h3d.FMath.fmt;
 		
 		tf_keys.text = [
 			"[F1] Load model",
@@ -505,10 +503,6 @@ class Viewer {
 			props.curFbxFile.split("/").pop().split("\\").pop(),
 			(engine.drawTriangles - (props.showBox ? 26 : 0) - (props.showAxis ? 6 : 0)) + " tri",
 		].join("\n");
-	}
-	
-	function calcFov( fov : Float ) {
-		return Math.atan( (engine.width / engine.height) * Math.tan(fov * Math.PI / 180)) * 180 / Math.PI;
 	}
 	
 	static var inst : Viewer;
