@@ -18,6 +18,11 @@ class Camera {
 	public var zNear : Float;
 	public var zFar : Float;
 	
+	/**
+		Set orthographic bounds.
+	**/
+	public var orthoBounds : h3d.col.Bounds;
+	
 	public var rightHanded : Bool;
 	
 	public var mproj : Matrix;
@@ -159,12 +164,31 @@ class Camera {
 		
 		// we apply the screen ratio to the height in order to have the fov being a horizontal FOV. This way we don't have to change the FOV when the screen is enlarged
 		
-		var scale = zoom / Math.tan(fovX * Math.PI / 360.0);
-		m._11 = scale;
-		m._22 = scale * screenRatio;
-		m._33 = zFar / (zFar - zNear);
-		m._34 = 1;
-		m._43 = -(zNear * zFar) / (zFar - zNear);
+		var bounds = orthoBounds;
+		if( bounds != null ) {
+			
+			var w = 1 / (bounds.xMax - bounds.xMin);
+			var h = 1 / (bounds.yMax - bounds.yMin);
+			var d = 1 / (bounds.zMax - bounds.zMin);
+			
+			m._11 = 2 * w;
+			m._22 = 2 * h;
+			m._33 = d;
+			m._41 = -(bounds.xMin + bounds.xMax) * w;
+			m._42 = -(bounds.yMin + bounds.yMax) * h;
+			m._43 = -bounds.zMin * d;
+			m._44 = 1;
+			
+		} else {
+		
+			var scale = zoom / Math.tan(fovX * Math.PI / 360.0);
+			m._11 = scale;
+			m._22 = scale * screenRatio;
+			m._33 = zFar / (zFar - zNear);
+			m._34 = 1;
+			m._43 = -(zNear * zFar) / (zFar - zNear);
+			
+		}
 		
 		// our z is negative in that case
 		if( rightHanded ) {
