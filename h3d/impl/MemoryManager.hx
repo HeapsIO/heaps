@@ -436,7 +436,7 @@ class MemoryManager {
 			var size;
 			if( align == 0 ) {
 				size = nvect;
-				if( size > allocSize ) throw "Too many vertex to allocate "+size;
+				if( size > 0xFFFF ) throw "Too many vertex to allocate "+size;
 			} else
 				size = allocSize; // group allocations together to minimize buffer count
 			var mem = size * stride * 4;
