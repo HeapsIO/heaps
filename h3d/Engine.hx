@@ -237,9 +237,9 @@ class Engine {
 		}
 	}
 	
-	public function renderMultiBuffers( buffers : Array<h3d.impl.Buffer.BufferOffset>, indexes : h3d.impl.Indexes ) {
-		var triCount = Std.int(indexes.count / 3);
-		if( triCount <= 0 ) return;
+	public function renderMultiBuffers( buffers : Array<h3d.impl.Buffer.BufferOffset>, indexes : h3d.impl.Indexes, startTri = 0, drawTri = -1 ) {
+		var maxTri = Std.int(indexes.count / 3);
+		if( maxTri <= 0 ) return;
 		
 		// select the multiple buffers elements
 		var changed = curMultiBuffer == null || curMultiBuffer.length != buffers.length;
@@ -273,11 +273,14 @@ class Engine {
 		
 		if( indexes.isDisposed() )
 			return;
-			
-		// render
-		ctx.drawTriangles(indexes.ibuf, 0, triCount);
-		drawTriangles += triCount;
-		drawCalls++;
+		
+		if( drawTri < 0 ) drawTri = maxTri - startTri;
+		if( drawTri > 0 ) {
+			// render
+			ctx.drawTriangles(indexes.ibuf, startTri * 3, drawTri);
+			drawTriangles += drawTri;
+			drawCalls++;
+		}
 	}
 
 	function set_debug(d) {
