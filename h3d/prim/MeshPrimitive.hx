@@ -23,12 +23,9 @@ class MeshPrimitive extends Primitive {
 				b.dispose();
 		bufferCache = null;
 	}
-	
+
 	@:access(h3d.Engine.curShader)
-	override function render( engine : h3d.Engine ) {
-		// the actual alloc() cache will be implemented by subclasses
-		if( indexes == null || indexes.isDisposed() )
-			alloc(engine);
+	function getBuffers( engine : h3d.Engine ) {
 		if( bufferCache == null )
 			bufferCache = new Map();
 		var buffers = [];
@@ -41,7 +38,14 @@ class MeshPrimitive extends Primitive {
 			}
 			buffers.push(b);
 		}
-		engine.renderMultiBuffers(buffers, indexes);
+		return buffers;
+	}
+	
+	override function render( engine : h3d.Engine ) {
+		// the actual alloc() cache will be implemented by subclasses
+		if( indexes == null || indexes.isDisposed() )
+			alloc(engine);
+		engine.renderMultiBuffers(getBuffers(engine), indexes);
 	}
 	
 }
