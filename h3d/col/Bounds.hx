@@ -11,12 +11,11 @@ class Bounds {
 	public var zMax : Float;
 	
 	public inline function new() {
-		xMin = 1e20;
-		yMin = 1e20;
-		zMin = 1e20;
-		xMax = -1e20;
-		yMax = -1e20;
-		zMax = -1e20;
+		empty();
+	}
+	
+	public inline function collide( b : Bounds ) {
+		return !(xMin > b.xMax || yMin > b.yMax || zMin > b.zMax || xMax < b.xMin || yMax < b.yMin || zMax < b.zMin);
 	}
 	
 	public inline function add( b : Bounds ) {
@@ -37,21 +36,74 @@ class Bounds {
 		if( p.z > zMax ) zMax = p.z;
 	}
 	
+	public inline function setMin( p : Vector ) {
+		xMin = p.x;
+		yMin = p.y;
+		zMin = p.z;
+	}
+
+	public inline function setMax( p : Vector ) {
+		xMax = p.x;
+		yMax = p.y;
+		zMax = p.z;
+	}
+	
+	public function load( b : Bounds ) {
+		xMin = b.xMin;
+		yMin = b.yMin;
+		zMin = b.zMin;
+		xMax = b.xMax;
+		yMax = b.yMax;
+		zMax = b.zMax;
+	}
+	
+	public function scaleCenter( v : Float ) {
+		var dx = (xMax - xMin) * 0.5 * v;
+		var dy = (yMax - yMin) * 0.5 * v;
+		var dz = (zMax - zMin) * 0.5 * v;
+		var mx = (xMax + xMin) * 0.5;
+		var my = (yMax + yMin) * 0.5;
+		var mz = (zMax + zMin) * 0.5;
+		xMin = mx - dx * v;
+		yMin = my - dy * v;
+		zMin = mz - dz * v;
+		xMax = mx + dx * v;
+		yMax = my + dy * v;
+		zMax = mz + dz * v;
+	}
+	
 	public inline function getMin() {
 		return new Vector(xMin, yMin, zMin);
 	}
+	
+	public inline function getCenter() {
+		return new Vector((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, (zMin + zMax) * 0.5);
+	}
 
+	public inline function getSize() {
+		return new Vector(xMax - xMin, yMax - yMin, zMax - zMin);
+	}
+	
 	public inline function getMax() {
 		return new Vector(xMax, yMax, zMax);
 	}
 	
-	public inline function reset() {
+	public inline function empty() {
 		xMin = 1e20;
 		yMin = 1e20;
 		zMin = 1e20;
 		xMax = -1e20;
 		yMax = -1e20;
 		zMax = -1e20;
+	}
+
+	public inline function all() {
+		xMin = -1e20;
+		yMin = -1e20;
+		zMin = -1e20;
+		xMax = 1e20;
+		yMax = 1e20;
+		zMax = 1e20;
 	}
 	
 	public inline function clone() {
@@ -68,4 +120,12 @@ class Bounds {
 	public function toString() {
 		return "{" + getMin() + "," + getMax() + "}";
 	}
+	
+	public static inline function fromPoints( min : Vector, max : Vector ) {
+		var b = new Bounds();
+		b.setMin(min);
+		b.setMax(max);
+		return b;
+	}
+	
 }

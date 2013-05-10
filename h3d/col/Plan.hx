@@ -42,4 +42,16 @@ class Plan {
 		return new Plan(n.x,n.y,n.z,n.dot3(p));
 	}
 	
+	public static inline function X(v:Float) {
+		return new Plan( 1, 0, 0, v );
+	}
+	
+	public static inline function Y(v:Float) {
+		return new Plan( 0, 1, 0, v );
+	}
+
+	public static inline function Z(v:Float) {
+		return new Plan( 0, 0, 1, v );
+	}
+	
 }

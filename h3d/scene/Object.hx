@@ -78,7 +78,7 @@ class Object {
 			c.getBounds(b);
 		if( defaultTransform != null ) {
 			var xMin = b.xMin, yMin = b.yMin, zMin = b.zMin, xMax = b.xMax, yMax = b.yMax, zMax = b.zMax;
-			b.reset();
+			b.empty();
 			var v = new Vector();
 			v.set(xMin, yMin, zMin);
 			v.transform3x4(defaultTransform);
