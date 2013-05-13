@@ -14,6 +14,47 @@ class Bounds {
 		empty();
 	}
 	
+	public function inFrustum( m : Matrix ) {
+
+		// left
+		if( testPlane(new Plane(m._14 + m._11, m._24 + m._21 , m._34 + m._31, m._44 + m._41)) < 0 )
+			return false;
+		
+		// right
+		if( testPlane(new Plane(m._14 - m._11, m._24 - m._21 , m._34 - m._31, m._44 - m._41)) < 0 )
+			return false;
+
+		// bottom
+		if( testPlane(new Plane(m._14 + m._12, m._24 + m._22 , m._34 + m._32, m._44 + m._42)) < 0 )
+			return false;
+
+		// top
+		if( testPlane(new Plane(m._14 - m._12, m._24 - m._22 , m._34 - m._32, m._44 - m._42)) < 0 )
+			return false;
+
+		// near
+		if( testPlane(new Plane(m._13, m._23, m._33, m._43)) < 0 )
+			return false;
+
+		// far
+		if( testPlane(new Plane(m._14 - m._13, m._24 - m._23, m._34 - m._33, m._44 - m._43)) < 0 )
+			return false;
+			
+		return true;
+	}
+	
+	inline function testPlane( p : Plane ) {
+		var a = p.nx;
+		var b = p.ny;
+		var c = p.nz;
+		var dd = a * (xMax + xMin) + b * (yMax + yMin) + c * (zMax + zMin);
+		if( a < 0 ) a = -a;
+		if( b < 0 ) b = -b;
+		if( c < 0 ) c = -c;
+		var rr = a * (xMax - xMin) + b * (yMax - yMin) + c * (zMax - zMin);
+		return dd + rr + p.d*2;
+	}
+	
 	public inline function collide( b : Bounds ) {
 		return !(xMin > b.xMax || yMin > b.yMax || zMin > b.zMax || xMax < b.xMin || yMax < b.yMin || zMax < b.zMin);
 	}
