@@ -14,30 +14,30 @@ class Bounds {
 		empty();
 	}
 	
-	public function inFrustum( m : Matrix ) {
+	public function inFrustum( mvp : Matrix ) {
 
 		// left
-		if( testPlane(new Plane(m._14 + m._11, m._24 + m._21 , m._34 + m._31, m._44 + m._41)) < 0 )
+		if( testPlane(new Plane(mvp._14 + mvp._11, mvp._24 + mvp._21 , mvp._34 + mvp._31, mvp._44 + mvp._41)) < 0 )
 			return false;
 		
 		// right
-		if( testPlane(new Plane(m._14 - m._11, m._24 - m._21 , m._34 - m._31, m._44 - m._41)) < 0 )
+		if( testPlane(new Plane(mvp._14 - mvp._11, mvp._24 - mvp._21 , mvp._34 - mvp._31, mvp._44 - mvp._41)) < 0 )
 			return false;
 
 		// bottom
-		if( testPlane(new Plane(m._14 + m._12, m._24 + m._22 , m._34 + m._32, m._44 + m._42)) < 0 )
+		if( testPlane(new Plane(mvp._14 + mvp._12, mvp._24 + mvp._22 , mvp._34 + mvp._32, mvp._44 + mvp._42)) < 0 )
 			return false;
 
 		// top
-		if( testPlane(new Plane(m._14 - m._12, m._24 - m._22 , m._34 - m._32, m._44 - m._42)) < 0 )
+		if( testPlane(new Plane(mvp._14 - mvp._12, mvp._24 - mvp._22 , mvp._34 - mvp._32, mvp._44 - mvp._42)) < 0 )
 			return false;
 
 		// near
-		if( testPlane(new Plane(m._13, m._23, m._33, m._43)) < 0 )
+		if( testPlane(new Plane(mvp._13, mvp._23, mvp._33, mvp._43)) < 0 )
 			return false;
 
 		// far
-		if( testPlane(new Plane(m._14 - m._13, m._24 - m._23, m._34 - m._33, m._44 - m._43)) < 0 )
+		if( testPlane(new Plane(mvp._14 - mvp._13, mvp._24 - mvp._23, mvp._34 - mvp._33, mvp._44 - mvp._43)) < 0 )
 			return false;
 			
 		return true;
@@ -53,6 +53,64 @@ class Bounds {
 		if( c < 0 ) c = -c;
 		var rr = a * (xMax - xMin) + b * (yMax - yMin) + c * (zMax - zMin);
 		return dd + rr + p.d*2;
+	}
+	
+	/**
+	 * Check if the camera model-view-projection Matrix intersects with the Bounds. Returns -1 if outside, 0 if interests and 1 if fully inside.
+	 * @param	mvp : the model-view-projection matrix to test against
+	 * @param	checkZ : tells if we will check against the near/far plane
+	 */
+	public function inFrustumDetails( mvp : Matrix, checkZ = true ) {
+		var ret = 1;
+		
+		// left
+		var p = new Plane(mvp._14 + mvp._11, mvp._24 + mvp._21 , mvp._34 + mvp._31, mvp._44 + mvp._41);
+		var m = p.nx * (p.nx > 0 ? xMax : xMin) + p.ny * (p.ny > 0 ? yMax : yMin) + p.nz * (p.nz > 0 ? zMax : zMin);
+		if( m + p.d < 0 )
+			return -1;
+		var n = p.nx * (p.nx > 0 ? xMin : xMax) + p.ny * (p.ny > 0 ? yMin : yMax) + p.nz * (p.nz > 0 ? zMin : zMax);
+		if( n + p.d < 0 ) ret = 0;
+		// right
+		var p = new Plane(mvp._14 - mvp._11, mvp._24 - mvp._21 , mvp._34 - mvp._31, mvp._44 - mvp._41);
+		var m = p.nx * (p.nx > 0 ? xMax : xMin) + p.ny * (p.ny > 0 ? yMax : yMin) + p.nz * (p.nz > 0 ? zMax : zMin);
+		if( m + p.d < 0 )
+			return -1;
+		var n = p.nx * (p.nx > 0 ? xMin : xMax) + p.ny * (p.ny > 0 ? yMin : yMax) + p.nz * (p.nz > 0 ? zMin : zMax);
+		if( n + p.d < 0 ) ret = 0;
+		// bottom
+		var p = new Plane(mvp._14 + mvp._12, mvp._24 + mvp._22 , mvp._34 + mvp._32, mvp._44 + mvp._42);
+		var m = p.nx * (p.nx > 0 ? xMax : xMin) + p.ny * (p.ny > 0 ? yMax : yMin) + p.nz * (p.nz > 0 ? zMax : zMin);
+		if( m + p.d < 0 )
+			return -1;
+		var n = p.nx * (p.nx > 0 ? xMin : xMax) + p.ny * (p.ny > 0 ? yMin : yMax) + p.nz * (p.nz > 0 ? zMin : zMax);
+		if( n + p.d < 0 ) ret = 0;
+		
+		// top
+		var p = new Plane(mvp._14 - mvp._12, mvp._24 - mvp._22 , mvp._34 - mvp._32, mvp._44 - mvp._42);
+		var m = p.nx * (p.nx > 0 ? xMax : xMin) + p.ny * (p.ny > 0 ? yMax : yMin) + p.nz * (p.nz > 0 ? zMax : zMin);
+		if( m + p.d < 0 )
+			return -1;
+		var n = p.nx * (p.nx > 0 ? xMin : xMax) + p.ny * (p.ny > 0 ? yMin : yMax) + p.nz * (p.nz > 0 ? zMin : zMax);
+		if( n + p.d < 0 ) ret = 0;
+				
+		if( checkZ ) {
+			// nea
+			var p = new Plane(mvp._13, mvp._23, mvp._33, mvp._43);
+			var m = p.nx * (p.nx > 0 ? xMax : xMin) + p.ny * (p.ny > 0 ? yMax : yMin) + p.nz * (p.nz > 0 ? zMax : zMin);
+			if( m + p.d < 0 )
+				return -1;
+			var n = p.nx * (p.nx > 0 ? xMin : xMax) + p.ny * (p.ny > 0 ? yMin : yMax) + p.nz * (p.nz > 0 ? zMin : zMax);
+			if( n + p.d < 0 ) ret = 0;
+
+			var p = new Plane(mvp._14 - mvp._13, mvp._24 - mvp._23, mvp._34 - mvp._33, mvp._44 - mvp._43);
+			var m = p.nx * (p.nx > 0 ? xMax : xMin) + p.ny * (p.ny > 0 ? yMax : yMin) + p.nz * (p.nz > 0 ? zMax : zMin);
+			if( m + p.d < 0 )
+				return -1;
+			var n = p.nx * (p.nx > 0 ? xMin : xMax) + p.ny * (p.ny > 0 ? yMin : yMax) + p.nz * (p.nz > 0 ? zMin : zMax);
+			if( n + p.d < 0 ) ret = 0;
+		}
+		
+		return ret;
 	}
 	
 	public inline function collide( b : Bounds ) {
