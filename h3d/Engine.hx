@@ -21,6 +21,7 @@ class Engine {
 	public var fullScreen(default, set) : Bool;
 	
 	public var fps(get, never) : Float;
+	public var frameCount : Int = 0;
 	
 	public var forcedMatBits : Int = 0;
 	public var forcedMatMask : Int = 0xFFFFFF;
@@ -377,6 +378,7 @@ class Engine {
 			return false;
 		ctx.clear( ((backgroundColor>>16)&0xFF)/255 , ((backgroundColor>>8)&0xFF)/255, (backgroundColor&0xFF)/255, ((backgroundColor>>>24)&0xFF)/255);
 		// init
+		frameCount++;
 		drawTriangles = 0;
 		drawCalls = 0;
 		curMatBits = -1;
@@ -393,7 +395,6 @@ class Engine {
 		curShader = null;
 		curBuffer = null;
 		curMultiBuffer = null;
-		curProjMatrix = null;
 		for( i in 0...curAttributes )
 			ctx.setVertexBufferAt(i, null);
 		curAttributes = 0;
@@ -405,6 +406,7 @@ class Engine {
 	public function end() {
 		ctx.present();
 		reset();
+		curProjMatrix = null;
 	}
 
 	public function setTarget( tex : h3d.mat.Texture, useDepth = false, clearColor = 0 ) {
