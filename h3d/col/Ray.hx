@@ -25,7 +25,7 @@ class Ray {
 		return "{[" + FMath.fmt(px) + "," + FMath.fmt(py) + "," + FMath.fmt(pz) + "],[" + FMath.fmt(lx) + "," + FMath.fmt(ly) + "," + FMath.fmt(lz) + "]}";
 	}
 	
-	public inline function intersect( p : Plan ) : Vector {
+	public inline function intersect( p : Plane ) : Vector {
 		var d = lx * p.nx + ly * p.ny + lz * p.nz;
 		var nd = p.d - (px * p.nx + py * p.ny + pz * p.nz);
 		// line parallel with plane

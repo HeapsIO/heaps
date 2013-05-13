@@ -1,7 +1,7 @@
 package h3d.col;
 
 @:allow(h3d.col)
-class Plan {
+class Plane {
 	
 	var nx : Float;
 	var ny : Float;
@@ -19,7 +19,7 @@ class Plan {
 		var d1 = p1.sub(p0);
 		var d2 = p2.sub(p0);
 		var n = d1.cross(d2);
-		return new Plan(n.x,n.y,n.z,n.dot3(p0));
+		return new Plane(n.x,n.y,n.z,n.dot3(p0));
 	}
 	
 	public inline function normalize() {
@@ -39,19 +39,19 @@ class Plan {
 	}
 
 	public static inline function fromNormalPoint( n : Vector, p : Vector ) {
-		return new Plan(n.x,n.y,n.z,n.dot3(p));
+		return new Plane(n.x,n.y,n.z,n.dot3(p));
 	}
 	
 	public static inline function X(v:Float) {
-		return new Plan( 1, 0, 0, v );
+		return new Plane( 1, 0, 0, v );
 	}
 	
 	public static inline function Y(v:Float) {
-		return new Plan( 0, 1, 0, v );
+		return new Plane( 0, 1, 0, v );
 	}
 
 	public static inline function Z(v:Float) {
-		return new Plan( 0, 0, 1, v );
+		return new Plane( 0, 0, 1, v );
 	}
 	
 }
