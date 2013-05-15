@@ -263,7 +263,41 @@ class MemoryManager {
 		tdict.set(t, t.t);
 		textures.push(t.t);
 	}
+	
+	public function readAtfHeader( data : haxe.io.Bytes ) {
+		var cubic = (data.get(6) & 0x80) != 0;
+		var alpha = false, compress = false;
+		switch( data.get(6) & 0x7F ) {
+		case 0:
+		case 1: alpha = true;
+		case 2: compress = true;
+		case 3: alpha = true; compress = true;
+		case f: throw "Invalid ATF format " + f;
+		}
+		var width = 1 << data.get(7);
+		var height = 1 << data.get(8);
+		var mips = data.get(9) - 1;
+		return {
+			width : width,
+			height : height,
+			cubic : cubic,
+			alpha : alpha,
+			compress : compress,
+			mips : mips,
+		};
+	}
 
+	public function allocAtfTexture( width : Int, height : Int, mipLevels : Int = 0, alpha : Bool = false, compress : Bool = false, cubic : Bool = false, ?allocPos : AllocPos ) {
+		freeTextures();
+		var fmt = compress ? (alpha ? flash.display3D.Context3DTextureFormat.COMPRESSED_ALPHA : flash.display3D.Context3DTextureFormat.COMPRESSED) : flash.display3D.Context3DTextureFormat.BGRA;
+		var t = if( cubic )
+			ctx.createCubeTexture(width, fmt, false, mipLevels)
+		else
+			ctx.createTexture(width, height, fmt, false, mipLevels);
+		var t = newTexture(t, width, height, cubic, false, allocPos);
+		t.atfProps = { alpha : alpha, compress : compress, mips : mipLevels };
+		return t;
+	}
 	
 	public function allocTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
 		freeTextures();
@@ -504,10 +538,15 @@ class MemoryManager {
 				t.dispose();
 			else {
 				textures.remove(t.t);
+				var fmt = flash.display3D.Context3DTextureFormat.BGRA, mips = 0;
+				if( t.atfProps != null ) {
+					fmt = t.atfProps.compress ? (t.atfProps.alpha ? flash.display3D.Context3DTextureFormat.COMPRESSED_ALPHA : flash.display3D.Context3DTextureFormat.COMPRESSED) : flash.display3D.Context3DTextureFormat.BGRA;
+					mips = t.atfProps.mips;
+				}
 				if( t.isCubic )
-					t.t = ctx.createCubeTexture(t.width, flash.display3D.Context3DTextureFormat.BGRA, t.isTarget);
+					t.t = ctx.createCubeTexture(t.width, fmt, t.isTarget, mips);
 				else
-					t.t = ctx.createTexture(t.width, t.height, flash.display3D.Context3DTextureFormat.BGRA, t.isTarget);
+					t.t = ctx.createTexture(t.width, t.height, fmt, t.isTarget, mips);
 				tdict.set(t, t.t);
 				textures.push(t.t);
 				t.onContextLost();

@@ -7,6 +7,7 @@ class Texture {
 	
 	var t : flash.display3D.textures.TextureBase;
 	var mem : h3d.impl.MemoryManager;
+	var atfProps : { alpha : Bool, compress : Bool, mips : Int };
 	#if debug
 	var allocPos : h3d.impl.AllocPos;
 	#end
@@ -56,6 +57,17 @@ class Texture {
 			mip++;
 			w >>= 1;
 			h >>= 1;
+		}
+	}
+	
+	public function uploadAtfData( bytes : haxe.io.Bytes ) {
+		if( isCubic ) {
+			var t = flash.Lib.as(t, flash.display3D.textures.CubeTexture);
+			t.uploadCompressedTextureFromByteArray(bytes.getData(), 0);
+		}
+		else {
+			var t = flash.Lib.as(t,  flash.display3D.textures.Texture);
+			t.uploadCompressedTextureFromByteArray(bytes.getData(), 0);
 		}
 	}
 
