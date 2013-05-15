@@ -15,6 +15,7 @@ class Engine {
 
 	public var drawTriangles(default, null) : Int;
 	public var drawCalls(default, null) : Int;
+	public var shaderSwitches(default, null) : Int;
 
 	public var backgroundColor : Int;
 	public var autoResize : Bool;
@@ -108,6 +109,7 @@ class Engine {
 		}
 		if( s != curShader ) {
 			ctx.setProgram(s.program);
+			shaderSwitches++;
 			s.varsChanged = true;
 			// unbind extra textures
 			var tcount : Int = s.textures.length;
@@ -380,6 +382,7 @@ class Engine {
 		// init
 		frameCount++;
 		drawTriangles = 0;
+		shaderSwitches = 0;
 		drawCalls = 0;
 		curMatBits = -1;
 		curShader = null;
