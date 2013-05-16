@@ -30,3 +30,19 @@ enum Compare {
 	Less;
 	LessEqual;
 }
+
+enum MipMap {
+	None;
+	Nearest;
+	Linear;
+}
+
+enum Filter {
+	Nearest;
+	Linear;
+}
+
+enum Wrap {
+	Clamp;
+	Repeat;
+}

@@ -40,10 +40,11 @@ private class PartShader extends hxsl.Shader {
 		}
 		
 		var killAlpha : Bool;
+		var killAlphaThreshold : Float;
 		
 		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
-			var c = tex.get(tuv.xy,filter=!killAlpha);
-			if( killAlpha ) kill(c.a - 0.001);
+			var c = tex.get(tuv.xy);
+			if( killAlpha ) kill(c.a - killAlphaThreshold);
 			if( colorAdd != null ) c += colorAdd;
 			if( colorMul != null ) c = c * colorMul;
 			if( colorMatrix != null ) c = c * colorMatrix;
@@ -61,6 +62,7 @@ class PartMaterial extends Material {
 
 	public var texture : Texture;
 	public var killAlpha(get,set) : Bool;
+	public var killAlphaThreshold(get, set) : Float;
 
 	public var colorAdd(get,set) : Null<h3d.Vector>;
 	public var colorMul(get,set) : Null<h3d.Vector>;
@@ -127,6 +129,14 @@ class PartMaterial extends Material {
 
 	inline function set_colorMatrix(v) {
 		return pshader.colorMatrix = v;
+	}
+	
+	inline function get_killAlphaThreshold() {
+		return pshader.killAlphaThreshold;
+	}
+	
+	inline function set_killAlphaThreshold(v) {
+		return pshader.killAlphaThreshold = v;
 	}
 	
 }

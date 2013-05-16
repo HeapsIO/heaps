@@ -1,5 +1,7 @@
 package h3d.mat;
 
+import h3d.mat.Data;
+
 @:allow(h3d)
 class Texture {
 
@@ -7,7 +9,7 @@ class Texture {
 	
 	var t : flash.display3D.textures.TextureBase;
 	var mem : h3d.impl.MemoryManager;
-	var atfProps : { alpha : Bool, compress : Bool, mips : Int };
+	var atfProps : { alpha : Bool, compress : Bool };
 	#if debug
 	var allocPos : h3d.impl.AllocPos;
 	#end
@@ -16,6 +18,12 @@ class Texture {
 	public var height(default, null) : Int;
 	public var isCubic(default, null) : Bool;
 	public var isTarget(default, null) : Bool;
+	public var mipLevels(default, null) : Int;
+	
+	var bits : Int;
+	public var mipMap(default,set) : MipMap;
+	public var filter(default,set) : Filter;
+	public var wrap(default,set) : Wrap;
 
 	/**
 		If this callback is set, the texture is re-allocated when the 3D context has been lost and the callback is called
@@ -23,7 +31,7 @@ class Texture {
 	**/
 	public var onContextLost : Void -> Void;
 	
-	function new(m, t, w, h, c, ta) {
+	function new(m, t, w, h, c, ta, mm) {
 		this.id = ++UID;
 		this.mem = m;
 		this.t = t;
@@ -31,6 +39,33 @@ class Texture {
 		this.width = w;
 		this.height = h;
 		this.isCubic = c;
+		this.mipLevels = mm;
+		this.mipMap = mm > 0 ? Nearest : None;
+		this.filter = Linear;
+		this.wrap = Clamp;
+		bits &= 0x7FFF;
+	}
+
+	function set_mipMap(m:MipMap) {
+		bits |= 0x80000;
+		bits = (bits & ~(3 << 0)) | (Type.enumIndex(m) << 0);
+		return mipMap = m;
+	}
+
+	function set_filter(f:Filter) {
+		bits |= 0x80000;
+		bits = (bits & ~(3 << 3)) | (Type.enumIndex(f) << 3);
+		return filter = f;
+	}
+	
+	function set_wrap(w:Wrap) {
+		bits |= 0x80000;
+		bits = (bits & ~(3 << 6)) | (Type.enumIndex(w) << 6);
+		return wrap = w;
+	}
+	
+	inline function hasDefaultFlags() {
+		return bits & 0x80000 == 0;
 	}
 
 	public function isDisposed() {
@@ -98,8 +133,8 @@ class Texture {
 			mem.deleteTexture(this);
 	}
 	
-	public static function fromBitmap( bmp : flash.display.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
-		return h3d.Engine.getCurrent().mem.makeTexture(bmp,allocPos);
+	public static function fromBitmap( bmp : flash.display.BitmapData, hasMipMap = false, ?allocPos : h3d.impl.AllocPos ) {
+		return h3d.Engine.getCurrent().mem.makeTexture(bmp,hasMipMap,allocPos);
 	}
 
 }

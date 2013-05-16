@@ -23,7 +23,7 @@
     <option flashStrict="True" />
     <option mainClass="Demo" />
     <option enabledebug="False" />
-    <option additional="-lib h3d" />
+    <option additional="-lib h3d&#xA;-swf-version 11.6" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

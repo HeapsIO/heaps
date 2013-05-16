@@ -224,8 +224,8 @@ class MemoryManager {
 		#end
 	}
 	
-	function newTexture(t, w, h, cubic, target, allocPos) {
-		var t = new h3d.mat.Texture(this, t, w, h, cubic, target);
+	function newTexture(t, w, h, cubic, target, mm, allocPos) {
+		var t = new h3d.mat.Texture(this, t, w, h, cubic, target, mm);
 		tdict.set(t, t.t);
 		textures.push(t.t);
 		#if debug
@@ -294,36 +294,47 @@ class MemoryManager {
 			ctx.createCubeTexture(width, fmt, false, mipLevels)
 		else
 			ctx.createTexture(width, height, fmt, false, mipLevels);
-		var t = newTexture(t, width, height, cubic, false, allocPos);
-		t.atfProps = { alpha : alpha, compress : compress, mips : mipLevels };
+		var t = newTexture(t, width, height, cubic, false, mipLevels, allocPos);
+		t.atfProps = { alpha : alpha, compress : compress };
 		return t;
 	}
 	
-	public function allocTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
+	public function allocTexture( width : Int, height : Int, mipMap = false, ?allocPos : AllocPos ) {
 		freeTextures();
-		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false), width, height, false, false, allocPos);
+		var levels = 0;
+		if( mipMap ) {
+			while( width > (1 << levels) && height > (1 << levels) )
+				levels++;
+		}
+		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false, levels), width, height, false, false, levels, allocPos);
 	}
 	
 	public function allocTargetTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
 		freeTextures();
-		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true), width, height, false, true, allocPos);
+		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true, 0), width, height, false, true, 0, allocPos);
 	}
 
-	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap, ?allocPos : AllocPos ) {
+	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap, hasMipMap = false, ?allocPos : AllocPos ) {
 		var t;
 		if( bmp != null ) {
-			t = allocTexture(bmp.width, bmp.height, allocPos);
-			t.upload(bmp);
+			t = allocTexture(bmp.width, bmp.height, hasMipMap, allocPos);
+			if( hasMipMap ) t.uploadMipMap(bmp) else t.upload(bmp);
 		} else {
-			t = allocTexture(mbmp.width, mbmp.height, allocPos);
+			if( hasMipMap ) throw "No support for mipmap + bytes";
+			t = allocTexture(mbmp.width, mbmp.height, hasMipMap, allocPos);
 			t.uploadBytes(mbmp.bytes);
 		}
 		return t;
 	}
 
-	public function allocCubeTexture( size : Int, ?allocPos : AllocPos ) {
+	public function allocCubeTexture( size : Int, mipMap = false, ?allocPos : AllocPos ) {
 		freeTextures();
-		return newTexture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false), size, size, true, false, allocPos);
+		var levels = 0;
+		if( mipMap ) {
+			while( size > (1 << levels) )
+				levels++;
+		}
+		return newTexture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false, levels), size, size, true, false, levels, allocPos);
 	}
 
 	public function allocIndex( indices : flash.Vector<UInt> ) {
@@ -538,15 +549,13 @@ class MemoryManager {
 				t.dispose();
 			else {
 				textures.remove(t.t);
-				var fmt = flash.display3D.Context3DTextureFormat.BGRA, mips = 0;
-				if( t.atfProps != null ) {
+				var fmt = flash.display3D.Context3DTextureFormat.BGRA;
+				if( t.atfProps != null )
 					fmt = t.atfProps.compress ? (t.atfProps.alpha ? flash.display3D.Context3DTextureFormat.COMPRESSED_ALPHA : flash.display3D.Context3DTextureFormat.COMPRESSED) : flash.display3D.Context3DTextureFormat.BGRA;
-					mips = t.atfProps.mips;
-				}
 				if( t.isCubic )
-					t.t = ctx.createCubeTexture(t.width, fmt, t.isTarget, mips);
+					t.t = ctx.createCubeTexture(t.width, fmt, t.isTarget, t.mipLevels);
 				else
-					t.t = ctx.createTexture(t.width, t.height, fmt, t.isTarget, mips);
+					t.t = ctx.createTexture(t.width, t.height, fmt, t.isTarget, t.mipLevels);
 				tdict.set(t, t.t);
 				textures.push(t.t);
 				t.onContextLost();

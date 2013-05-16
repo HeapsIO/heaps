@@ -6,5 +6,6 @@
 -main Test
 -lib hxsl
 -D h3d
+-swf-version 11.6
 --macro include('h3d')
 --macro include('h2d')

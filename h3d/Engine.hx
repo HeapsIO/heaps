@@ -36,6 +36,7 @@ class Engine {
 	var curMultiBuffer : Array<h3d.impl.Buffer.BufferOffset>;
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
+	var curSamplerBits : Array<Int>;
 	var antiAlias : Int;
 	var inTarget : Bool;
 
@@ -128,11 +129,22 @@ class Engine {
 			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, 0, s.fragmentVars.toData());
 			for( i in 0...s.textures.length ) {
 				var t = s.textures[i];
-				if( t == null )
-					throw "Texture #" + i + " not bound in shader " + shader;
-				if( t != curTextures[i] ) {
-					ctx.setTextureAt(i, t.isDisposed() ? h2d.Tile.fromColor(0xFFFF00FF).getTexture().t : t.t);
+				if( t == null || t.isDisposed() )
+					t = h2d.Tile.fromColor(0xFFFF00FF).getTexture();
+				var cur = curTextures[i];
+				if( t != cur ) {
+					ctx.setTextureAt(i, t.t);
 					curTextures[i] = t;
+				}
+				// if we have set one of the texture flag manually or if the shader does not configure the texture flags
+				if( !t.hasDefaultFlags() || !s.texHasConfig[s.textureMap[i]] ) {
+					if( cur == null || t.bits != curSamplerBits[i] ) {
+						ctx.setSamplerStateAt(i, WRAP[t.wrap.getIndex()], FILTER[t.filter.getIndex()], MIP[t.mipMap.getIndex()]);
+						curSamplerBits[i] = t.bits;
+					}
+				} else {
+					// the texture flags has been set by the shader, so we are in an unkown state
+					curSamplerBits[i] = -1;
 				}
 			}
 		}
@@ -390,6 +402,7 @@ class Engine {
 		curMultiBuffer = null;
 		curProjMatrix = null;
 		curTextures = [];
+		curSamplerBits = [];
 		return true;
 	}
 
@@ -536,4 +549,21 @@ class Engine {
 		flash.display3D.Context3DVertexBufferFormat.FLOAT_3,
 		flash.display3D.Context3DVertexBufferFormat.FLOAT_4,
 	];
+	
+	static var WRAP = [
+		flash.display3D.Context3DWrapMode.CLAMP,
+		flash.display3D.Context3DWrapMode.REPEAT,
+	];
+	
+	static var FILTER = [
+		flash.display3D.Context3DTextureFilter.NEAREST,
+		flash.display3D.Context3DTextureFilter.LINEAR,
+	];
+	
+	static var MIP = [
+		flash.display3D.Context3DMipFilter.MIPNONE,
+		flash.display3D.Context3DMipFilter.MIPNEAREST,
+		flash.display3D.Context3DMipFilter.MIPLINEAR,
+	];
+	
 }

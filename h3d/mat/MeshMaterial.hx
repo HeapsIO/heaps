@@ -35,7 +35,6 @@ private class MeshShader extends hxsl.Shader {
 		var hasSkin : Bool;
 		var hasVertexColor : Bool;
 		var hasVertexColorAdd : Bool;
-		var texWrap : Bool;
 		var skinMatrixes : M34<35>;
 
 		var tcolor : Float3;
@@ -120,14 +119,13 @@ private class MeshShader extends hxsl.Shader {
 		
 		var killAlpha : Bool;
 		var killAlphaThreshold : Float;
-		var texNearest : Bool;
 		
 		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
-			var c = tex.get(tuv.xy, filter = !texNearest, wrap = (texWrap || uvDelta != null));
+			var c = tex.get(tuv.xy);
 			if( fog != null ) c.a *= talpha;
-			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,filter = !texNearest).b;
+			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy).b;
 			if( killAlpha ) kill(c.a - killAlphaThreshold);
-			if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy, filter = !texNearest, wrap).rgb;
+			if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy).rgb;
 			if( colorAdd != null ) c += colorAdd;
 			if( colorMul != null ) c = c * colorMul;
 			if( colorMatrix != null ) c = c * colorMatrix;
@@ -145,7 +143,7 @@ private class MeshShader extends hxsl.Shader {
 				var shadow = exp( shadowColor.w * (tshadowPos.z - shadowTexture.get(tshadowPos.xy).dot([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)]))).sat();
 				c.rgb *= (1 - shadow) * shadowColor.rgb + shadow.xxx;
 			}
-			if( hasGlow ) c.rgb += glowTexture.get(tuv.xy, filter = !texNearest, wrap = (texWrap || uvDelta != null)).rgb * glowAmount;
+			if( hasGlow ) c.rgb += glowTexture.get(tuv.xy).rgb * glowAmount;
 			out = c;
 		}
 		
@@ -166,8 +164,6 @@ class MeshMaterial extends Material {
 	public var uvDelta(get,set) : Null<h3d.Vector>;
 
 	public var killAlpha(get,set) : Bool;
-	public var texNearest(get, set) : Bool;
-	public var texWrap(get, set) : Bool;
 
 	public var hasVertexColor(get, set) : Bool;
 	public var hasVertexColorAdd(get,set) : Bool;
@@ -208,8 +204,6 @@ class MeshMaterial extends Material {
 		m.uvScale = uvScale;
 		m.uvDelta = uvDelta;
 		m.killAlpha = killAlpha;
-		m.texNearest = texNearest;
-		m.texWrap = texWrap;
 		m.hasVertexColor = hasVertexColor;
 		m.hasVertexColorAdd = hasVertexColorAdd;
 		m.colorAdd = colorAdd;
@@ -221,6 +215,8 @@ class MeshMaterial extends Material {
 		m.alphaMap = alphaMap;
 		m.fog = fog;
 		m.zBias = zBias;
+		m.blendTexture = blendTexture;
+		m.killAlphaThreshold = killAlphaThreshold;
 		return m;
 	}
 	
@@ -254,22 +250,6 @@ class MeshMaterial extends Material {
 		return mshader.killAlpha = v;
 	}
 
-	inline function get_texNearest() {
-		return mshader.texNearest;
-	}
-
-	inline function set_texNearest(v) {
-		return mshader.texNearest = v;
-	}
-
-	inline function get_texWrap() {
-		return mshader.texWrap;
-	}
-
-	inline function set_texWrap(v) {
-		return mshader.texWrap = v;
-	}
-	
 	inline function get_colorAdd() {
 		return mshader.colorAdd;
 	}
