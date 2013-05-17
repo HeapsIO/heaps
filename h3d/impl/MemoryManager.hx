@@ -271,7 +271,7 @@ class MemoryManager {
 		case 0:
 		case 1: alpha = true;
 		case 2: compress = true;
-		case 3: alpha = true; compress = true;
+		case 3, 4: alpha = true; compress = true;
 		case f: throw "Invalid ATF format " + f;
 		}
 		var width = 1 << data.get(7);
