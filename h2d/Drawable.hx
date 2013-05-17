@@ -103,11 +103,14 @@ class Drawable extends Sprite {
 	public var multiplyMap(default, set) : h2d.Tile;
 	public var multiplyFactor(get, set) : Float;
 	
+	public var writeAlpha : Bool;
+	
 	function new(parent) {
 		super(parent);
 		shader = new DrawableShader();
 		shader.alpha = 1;
 		shader.zValue = 0;
+		writeAlpha = true;
 		blendMode = Normal;
 	}
 	
@@ -266,6 +269,9 @@ class Drawable extends Sprite {
 			shader.multMap = multiplyMap.getTexture();
 			shader.multUV = new h3d.Vector(multiplyMap.u, multiplyMap.v, (multiplyMap.u2 - multiplyMap.u) / tile.u2, (multiplyMap.v2 - multiplyMap.v) / tile.v2);
 		}
+		
+		var cm = writeAlpha ? 15 : 7;
+		if( mat.colorMask != cm ) mat.colorMask = cm;
 		
 		var tmp = core.tmpMat1;
 		tmp.x = matA;
