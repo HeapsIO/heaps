@@ -119,13 +119,15 @@ private class MeshShader extends hxsl.Shader {
 		
 		var killAlpha : Bool;
 		var killAlphaThreshold : Float;
+		var isDXT1 : Bool;
+		var isDXT5 : Bool;
 		
 		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
-			var c = tex.get(tuv.xy);
+			var c = tex.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0);
 			if( fog != null ) c.a *= talpha;
-			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy).b;
+			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).b;
 			if( killAlpha ) kill(c.a - killAlphaThreshold);
-			if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy).rgb;
+			if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).rgb;
 			if( colorAdd != null ) c += colorAdd;
 			if( colorMul != null ) c = c * colorMul;
 			if( colorMatrix != null ) c = c * colorMatrix;
@@ -224,6 +226,19 @@ class MeshMaterial extends Material {
 		mshader.mpos = useMatrixPos ? mpos : null;
 		mshader.mproj = camera.m;
 		mshader.tex = texture;
+	}
+	
+	/**
+		Set the DXT compression access mode for all textures of this material.
+	**/
+	public function setDXTSupport( enable : Bool, alpha = false ) {
+		if( !enable ) {
+			mshader.isDXT1 = false;
+			mshader.isDXT5 = false;
+		} else {
+			mshader.isDXT1 = !alpha;
+			mshader.isDXT5 = alpha;
+		}
 	}
 	
 	inline function get_uvScale() {
