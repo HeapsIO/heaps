@@ -52,10 +52,17 @@ class Graphics extends Drawable {
 		super.onDelete();
 	}
 	
-	public function endDraw( ?allocPos : h3d.impl.AllocPos ) {
+	public function endDraw( restoreOnContextLost = false, ?allocPos : h3d.impl.AllocPos ) {
 		if( ctx == null ) return;
 		if( tile != null ) tile.dispose();
-		tile = Tile.fromSprites([ctx.mc],allocPos)[0];
+		tile = Tile.fromSprites([ctx.mc], allocPos)[0];
+		if( restoreOnContextLost ) {
+			var ctx = ctx;
+			tile.getTexture().onContextLost = function() {
+				this.ctx = ctx;
+				endDraw();
+			};
+		}
 	}
 	
 	override function draw(ctx:RenderContext) {
