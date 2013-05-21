@@ -63,10 +63,10 @@ class Vector {
 		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
 		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
 		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
-		var w = 1 / (x * m._14 + y * m._24 + z * m._34 + w * m._44);
-		x = px * w;
-		y = py * w;
-		z = pz * w;
+		var iw = 1 / (x * m._14 + y * m._24 + z * m._34 + w * m._44);
+		x = px * iw;
+		y = py * iw;
+		z = pz * iw;
 		w = 1;
 	}
 	
