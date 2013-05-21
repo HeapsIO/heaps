@@ -544,7 +544,10 @@ class MemoryManager {
 		ctx = newContext;
 		indexes.dispose();
 		quadIndexes.dispose();
-		for( t in tdict.keys() )
+		var tkeys = Lambda.array({ iterator : tdict.keys });
+		for( t in tkeys ) {
+			if( !tdict.exists(t) )
+				continue;
 			if( t.onContextLost == null )
 				t.dispose();
 			else {
@@ -560,6 +563,7 @@ class MemoryManager {
 				textures.push(t.t);
 				t.onContextLost();
 			}
+		}
 		for( b in buffers ) {
 			var b = b;
 			while( b != null ) {
