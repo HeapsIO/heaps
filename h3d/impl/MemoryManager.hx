@@ -419,7 +419,7 @@ class MemoryManager {
 						break;
 					} else {
 						// we can't alloc into a smaller buffer because we might use preallocated indexes
-						if( b.size < allocSize ) {
+						if( b.size != allocSize ) {
 							free = null;
 							break;
 						}
@@ -452,7 +452,7 @@ class MemoryManager {
 				while( b != null ) {
 					free = b.free;
 					// skip not aligned buffers
-					if( b.size < allocSize )
+					if( b.size != allocSize )
 						free = null;
 					while( free != null ) {
 						if( free.count >= size ) {
