@@ -18,9 +18,49 @@ class Geometry {
 	public function getPolygons() {
 		return root.get("PolygonVertexIndex").getInts();
 	}
+	
+	/**
+		Decode polygon informations into triangle indexes and vertexes indexes
+	**/
+	public function getIndexes() {
+		var count = 0, pos = 0;
+		var index = getPolygons();
+		var vout = [], iout = [];
+		for( i in index ) {
+			count++;
+			if( i < 0 ) {
+				index[pos] = -i - 1;
+				var start = pos - count + 1;
+				for( n in 0...count )
+					vout.push(n + start);
+				for( n in 0...count - 2 ) {
+					iout.push(start + n);
+					iout.push(start + count - 1);
+					iout.push(start + n + 1);
+				}
+				index[pos] = i; // restore
+				count = 0;
+			}
+		}
+		return { vidx : vout, idx : iout };
+	}
 
 	public function getNormals() {
-		return root.get("LayerElementNormal.Normals").getFloats();
+		var nrm = root.get("LayerElementNormal.Normals").getFloats();
+		// if by-vertice (Maya in some cases, unless maybe "Split per-Vertex Normals" is checked)
+		// let's reindex based on polygon indexes
+		if( root.get("LayerElementNormal.MappingInformationType").props[0].toString() == "ByVertice" ) {
+			var nout = [];
+			for( i in getPolygons() ) {
+				var vid = i;
+				if( vid < 0 ) vid = -vid;
+				nout.push(nrm[vid * 3]);
+				nout.push(nrm[vid * 3 + 1]);
+				nout.push(nrm[vid * 3 + 2]);
+			}
+			nrm = nout;
+		}
+		return nrm;
 	}
 	
 	public function getColors() {
