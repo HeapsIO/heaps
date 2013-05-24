@@ -53,7 +53,7 @@ class Geometry {
 			var nout = [];
 			for( i in getPolygons() ) {
 				var vid = i;
-				if( vid < 0 ) vid = -vid;
+				if( vid < 0 ) vid = -vid - 1;
 				nout.push(nrm[vid * 3]);
 				nout.push(nrm[vid * 3 + 1]);
 				nout.push(nrm[vid * 3 + 2]);
