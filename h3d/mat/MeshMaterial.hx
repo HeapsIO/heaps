@@ -227,7 +227,6 @@ class MeshMaterial extends Material {
 			var tmp = new h3d.Matrix();
 			tmp.inverse(mpos);
 			mshader.mposInv = tmp;
-			trace(tmp);
 		}
 		mshader.tex = texture;
 	}
