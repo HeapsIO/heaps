@@ -80,7 +80,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 class TileColorGroup extends Drawable {
 	
 	var content : TileLayerContent;
-	var curColor : h3d.Color;
+	var curColor : h3d.Vector;
 	
 	public var tile : Tile;
 	public var rangeMin : Int;
@@ -91,7 +91,7 @@ class TileColorGroup extends Drawable {
 		tile = t;
 		rangeMin = rangeMax = -1;
 		shader.hasVertexColor = true;
-		curColor = new h3d.Color(1, 1, 1, 1);
+		curColor = new h3d.Vector(1, 1, 1, 1);
 		content = new TileLayerContent();
 	}
 	
@@ -112,14 +112,14 @@ class TileColorGroup extends Drawable {
 	}
 	
 	public function setDefaultColor( rgb : Int, alpha = 1.0 ) {
-		curColor.r = ((rgb >> 16) & 0xFF) / 255;
-		curColor.g = ((rgb >> 8) & 0xFF) / 255;
-		curColor.b = (rgb & 0xFF) / 255;
-		curColor.a = alpha;
+		curColor.x = ((rgb >> 16) & 0xFF) / 255;
+		curColor.y = ((rgb >> 8) & 0xFF) / 255;
+		curColor.z = (rgb & 0xFF) / 255;
+		curColor.w = alpha;
 	}
 	
 	public inline function add(x, y, t) {
-		content.add(x, y, curColor.r, curColor.g, curColor.b, curColor.a, t);
+		content.add(x, y, curColor.x, curColor.y, curColor.z, curColor.w, t);
 	}
 	
 	public inline function addColor(x, y, r, g, b, a, t) {

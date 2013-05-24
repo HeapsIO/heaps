@@ -90,6 +90,10 @@ class Vector {
 		w = pw;
 	}
 	
+	public static inline function fromColor( c : Int, scale : Float = 1.0 ) {
+		return new Vector(((c>>16)&0xFF)*scale/255.0,((c>>8)&0xFF)*scale/255.0,(c&0xFF)*scale/255.0,(c >>> 24)*scale/255.0);
+	}
+	
 	public inline function clone() {
 		return new Vector(x,y,z,w);
 	}
