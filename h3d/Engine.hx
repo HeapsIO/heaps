@@ -106,7 +106,8 @@ class Engine {
 			var fdata = s.fragmentBytes.getData();
 			vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 			fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
-			s.program.upload(vdata,fdata);
+			s.program.upload(vdata, fdata);
+			curShader = null; // in case we had the same shader and it was disposed
 		}
 		if( s != curShader ) {
 			ctx.setProgram(s.program);
