@@ -557,8 +557,7 @@ class Library {
 		return if( a > b ) 1 else -1;
 	}
 
-	public function makeScene( ?textureLoader : String -> FbxNode -> h3d.mat.MeshMaterial, ?bonesPerVertex = 3 ) : h3d.scene.Scene {
-		var scene = new h3d.scene.Scene();
+	public function makeObject( ?textureLoader : String -> FbxNode -> h3d.mat.MeshMaterial, ?bonesPerVertex = 3 ) : h3d.scene.Object {
 		var hobjects = new Map();
 		var hgeom = new Map();
 		var objects = new Array();
@@ -592,9 +591,9 @@ class Library {
 						break;
 					}
 				if( hasJoint )
-					o = new h3d.scene.Skin(null, null, scene);
+					o = new h3d.scene.Skin(null, null);
 				else
-					o = new h3d.scene.Object(scene);
+					o = new h3d.scene.Object();
 			case "LimbNode":
 				var j = new h3d.anim.Skin.Joint();
 				getDefaultMatrixes(model); // store for later usage in animation
@@ -621,7 +620,7 @@ class Library {
 					var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
 					if( prim.geom.getColors() != null )
 						mat.hasVertexColor = true;
-					o = new h3d.scene.Mesh(prim, mat, scene);
+					o = new h3d.scene.Mesh(prim, mat);
 				} else {
 					var tmats = [];
 					var vcolor = prim.geom.getColors() != null;
@@ -641,7 +640,7 @@ class Library {
 					while( tmats.length > lastAdded )
 						tmats.pop();
 					prim.multiMaterial = true;
-					o = new h3d.scene.MultiMaterial(prim, tmats, scene);
+					o = new h3d.scene.MultiMaterial(prim, tmats);
 				}
 			case type:
 				throw "Unknown model type " + type+" for "+model.getName();
@@ -699,7 +698,12 @@ class Library {
 				skin.setSkinData(skinData);
 			}
 		}
-		return scene;
+		if( objects.length == 1 )
+			return objects[0].obj;
+		var o = new h3d.scene.Object();
+		for( s in objects )
+			o.addChild(s.obj);
+		return o;
 	}
 	
 	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,h3d.prim.FBXModel>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
