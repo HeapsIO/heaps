@@ -332,7 +332,7 @@ class Viewer {
 			curFbx.leftHandConvert();
 		var frame = scene == null ? 0 : (scene.currentAnimation == null ? 0 : scene.currentAnimation.frame);
 		scene = new h3d.scene.Scene();
-		scene.addChild(curFbx.makeObject(textureLoader, 3));
+		scene.addChild(curFbx.makeObject(textureLoader));
 	
 		//
 		var b = scene.getBounds();
