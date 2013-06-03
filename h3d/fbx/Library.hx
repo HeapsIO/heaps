@@ -596,7 +596,7 @@ class Library {
 						break;
 					}
 				if( hasJoint )
-					o = new h3d.scene.Skin(null, null);
+					o = new h3d.scene.Skin(null, null, scene);
 				else
 					o = new h3d.scene.Object(scene);
 			case "LimbNode":
