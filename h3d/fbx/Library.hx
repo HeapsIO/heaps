@@ -49,8 +49,12 @@ class Library {
 	var connect : Map<Int,Array<Int>>;
 	var invConnect : Map<Int,Array<Int>>;
 	var leftHand : Bool;
-	
 	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
+	
+	/**
+		Set how many bones per vertex should be created in skin data in makeObject(). Default is 3
+	**/
+	public var bonesPerVertex = 3;
 	
 	public function new() {
 		root = { name : "Root", props : [], childs : [] };
@@ -557,7 +561,8 @@ class Library {
 		return if( a > b ) 1 else -1;
 	}
 
-	public function makeObject( ?textureLoader : String -> FbxNode -> h3d.mat.MeshMaterial, ?bonesPerVertex = 3 ) : h3d.scene.Object {
+	public function makeObject( ?textureLoader : String -> FbxNode -> h3d.mat.MeshMaterial ) : h3d.scene.Object {
+		var scene = new h3d.scene.Object();
 		var hobjects = new Map();
 		var hgeom = new Map();
 		var objects = new Array();
@@ -593,7 +598,7 @@ class Library {
 				if( hasJoint )
 					o = new h3d.scene.Skin(null, null);
 				else
-					o = new h3d.scene.Object();
+					o = new h3d.scene.Object(scene);
 			case "LimbNode":
 				var j = new h3d.anim.Skin.Joint();
 				getDefaultMatrixes(model); // store for later usage in animation
@@ -620,7 +625,7 @@ class Library {
 					var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
 					if( prim.geom.getColors() != null )
 						mat.hasVertexColor = true;
-					o = new h3d.scene.Mesh(prim, mat);
+					o = new h3d.scene.Mesh(prim, mat, scene);
 				} else {
 					var tmats = [];
 					var vcolor = prim.geom.getColors() != null;
@@ -640,7 +645,7 @@ class Library {
 					while( tmats.length > lastAdded )
 						tmats.pop();
 					prim.multiMaterial = true;
-					o = new h3d.scene.MultiMaterial(prim, tmats);
+					o = new h3d.scene.MultiMaterial(prim, tmats, scene);
 				}
 			case type:
 				throw "Unknown model type " + type+" for "+model.getName();
@@ -698,12 +703,7 @@ class Library {
 				skin.setSkinData(skinData);
 			}
 		}
-		if( objects.length == 1 )
-			return objects[0].obj;
-		var o = new h3d.scene.Object();
-		for( s in objects )
-			o.addChild(s.obj);
-		return o;
+		return scene.numChildren == 1 ? scene.getChildAt(0) : scene;
 	}
 	
 	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,h3d.prim.FBXModel>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
