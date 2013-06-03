@@ -12,11 +12,17 @@ class XBXMake
 	{
 		
 	}
+
+	function usage() {
+		neko.Lib.println( "neko XBXMake.n <file> [-o|--output <file> ] [-z] ");
+		neko.Lib.println( "writes FBX <file> in XBX which is basically a stripped binary version of it." );
+		neko.Lib.println( "--no-zip impeach terminal fiel for compression (useful for debug)" );
+	}
 	
 	public function make(prm:Array<String>)
 	{
 		var params = prm;
-		
+
 		for ( a in 0...params.length )
 		{
 			var arg = params[a];
@@ -25,9 +31,7 @@ class XBXMake
 			switch(arg)
 			{
 				case "--usage", "/?":
-					neko.Lib.println( "neko XBXMake.n <file> [-o|--output <file> ] [-z] ");
-					neko.Lib.println( "writes FBX <file> in XBX which is basically a stripped binary version of it." );
-					neko.Lib.println( "--no-zip impeach terminal fiel for compression (useful for debug)" );
+					usage();
 					return;
 					
 				case "-o", "--output":
@@ -41,6 +45,11 @@ class XBXMake
 				default:
 					inFile = arg;
 			}
+		}
+		
+		if( inFile == null ) {
+			usage();
+			return;
 		}
 		
 		var idx = inFile.toLowerCase().lastIndexOf(".fbx");
