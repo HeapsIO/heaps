@@ -2,7 +2,7 @@
 -swf fbxViewer.swf
 -swf-header 800:600:60:000000
 --flash-strict
--swf-version 11.3
+-swf-version 11.6
 -main Viewer
 -lib hxsl
 -lib air3

@@ -395,7 +395,7 @@ class Viewer {
 	function setSmoothing() {
 		var meshes = getMeshes(scene.getChildAt(0));
 		for( m in meshes )
-			m.material.texNearest = !props.smoothing;
+			m.material.texture.filter = props.smoothing ? Linear : Nearest;
 	}
 	
 	function setSkin() {
