@@ -1,27 +1,19 @@
 package h3d.scene;
 
-class MultiMaterial extends Object {
+class MultiMaterial extends Mesh {
 
-	public var primitive : h3d.prim.Primitive;
 	public var materials : Array<h3d.mat.MeshMaterial>;
 	
 	public function new( prim, mats, ?parent ) {
-		super(parent);
-		this.primitive = prim;
+		super(prim, mats[0], parent);
 		this.materials = mats;
-	}
-	
-	override function getBounds( ?b : h3d.col.Bounds ) {
-		if( b == null ) b = new h3d.col.Bounds();
-		b.add(primitive.getBounds());
-		return super.getBounds(b);
 	}
 	
 	override function clone( ?o : Object ) {
 		var m = o == null ? new MultiMaterial(null,materials) : cast o;
-		m.primitive = primitive;
 		m.materials = [for( m in materials ) m.clone()];
 		super.clone(m);
+		m.material = m.materials[0];
 		return m;
 	}
 	
@@ -45,8 +37,4 @@ class MultiMaterial extends Object {
 			drawMaterial(ctx,mid);
 	}
 	
-	override function dispose() {
-		primitive.dispose();
-		super.dispose();
-	}
 }
