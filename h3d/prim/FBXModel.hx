@@ -6,10 +6,14 @@ class FBXModel extends MeshPrimitive {
 
 	public var geom(default, null) : h3d.fbx.Geometry;
 	public var skin : h3d.anim.Skin;
+	public var multiMaterial : Bool;
 	var bounds : h3d.col.Bounds;
+	var curMaterial : Int;
+	var matIndexes : Array<h3d.impl.Indexes>;
 
 	public function new(g) {
 		this.geom = g;
+		curMaterial = -1;
 	}
 	
 	// not very good, but...
@@ -50,6 +54,34 @@ class FBXModel extends MeshPrimitive {
 	}
 	
 	static var TMP = null;
+
+	override function render( engine : h3d.Engine ) {
+		if( curMaterial < 0 ) {
+			super.render(engine);
+			return;
+		}
+		if( indexes == null || indexes.isDisposed() )
+			alloc(engine);
+		var idx = indexes;
+		indexes = matIndexes[curMaterial];
+		if( indexes != null ) super.render(engine);
+		indexes = idx;
+		curMaterial = -1;
+	}
+	
+	override function selectMaterial( material : Int ) {
+		curMaterial = material;
+	}
+	
+	override function dispose() {
+		super.dispose();
+		if( matIndexes != null ) {
+			for( i in matIndexes )
+				if( i != null )
+					i.dispose();
+			matIndexes = null;
+		}
+	}
 	
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
@@ -58,11 +90,13 @@ class FBXModel extends MeshPrimitive {
 		var norms = geom.getNormals();
 		var tuvs = geom.getUVs()[0];
 		var colors = geom.getColors();
+		var mats = multiMaterial ? geom.getMaterials() : null;
 		
 		var gt = geom.getGeomTranslate();
 		if( gt == null ) gt = new h3d.prim.Point();
 		
 		var idx = new flash.Vector<UInt>();
+		var midx = new Array<flash.Vector<UInt>>();
 		var pbuf = new flash.Vector<Float>(), nbuf = (norms == null ? null : new flash.Vector<Float>()), sbuf = (skin == null ? null : new flash.Vector<Float>()), tbuf = (tuvs == null ? null : new flash.Vector<Float>());
 		var cbuf = (colors == null ? null : new flash.Vector<Float>());
 		var pout = 0, nout = 0, sout = 0, tout = 0, cout = 0;
@@ -78,7 +112,7 @@ class FBXModel extends MeshPrimitive {
 		}
 		
 		// triangulize indexes : format is  A,B,...,-X : negative values mark the end of the polygon
-		var count = 0, pos = 0;
+		var count = 0, pos = 0, matPos = 0;
 		var index = geom.getPolygons();
 		for( i in index ) {
 			count++;
@@ -131,6 +165,20 @@ class FBXModel extends MeshPrimitive {
 					idx.push(start + count - 1);
 					idx.push(start + n + 1);
 				}
+				// by-material index
+				if( mats != null ) {
+					var mid = mats[matPos++];
+					var idx = midx[mid];
+					if( idx == null ) {
+						idx = new flash.Vector<UInt>();
+						midx[mid] = idx;
+					}
+					for( n in 0...count - 2 ) {
+						idx.push(start + n);
+						idx.push(start + count - 1);
+						idx.push(start + n + 1);
+					}
+				}
 				index[pos] = i; // restore
 				count = 0;
 			}
@@ -148,6 +196,11 @@ class FBXModel extends MeshPrimitive {
 		if( cbuf != null ) addBuffer("color", engine.mem.allocVector(cbuf, 3, 0));
 		
 		indexes = engine.mem.allocIndex(idx);
+		if( mats != null ) {
+			matIndexes = [];
+			for( i in midx )
+				matIndexes.push(i == null ? null : engine.mem.allocIndex(i));
+		}
 	}
 	
 }

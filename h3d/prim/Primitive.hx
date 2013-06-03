@@ -26,6 +26,9 @@ class Primitive {
 		throw "not implemented";
 	}
 
+	public function selectMaterial( material : Int ) {
+	}
+	
 	public function render( engine : h3d.Engine ) {
 		if( buffer == null || buffer.isDisposed() ) alloc(engine);
 		if( indexes == null )

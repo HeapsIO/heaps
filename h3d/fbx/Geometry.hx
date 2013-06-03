@@ -18,7 +18,12 @@ class Geometry {
 	public function getPolygons() {
 		return root.get("PolygonVertexIndex").getInts();
 	}
-	
+
+	public function getMaterials() {
+		var mats = root.get("LayerElementMaterial",true);
+		return mats == null ? null : mats.get("Materials").getInts();
+	}
+
 	/**
 		Decode polygon informations into triangle indexes and vertexes indexes
 	**/
