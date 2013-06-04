@@ -615,35 +615,31 @@ class Library {
 					prim = new h3d.prim.FBXModel(new Geometry(this, g));
 					hgeom.set(g.getId(), prim);
 				}
-				// load material
+				// load materials
 				var mats = getChilds(model, "Material");
-				if( mats.length == 0 ) throw "No material found for " + model.getName();
-				if( mats.length == 1 ) {
-					var mat = mats[0];
+				var tmats = [];
+				var vcolor = prim.geom.getColors() != null;
+				var lastAdded = 0;
+				for( mat in mats ) {
 					var tex = getChilds(mat, "Texture")[0];
-					if( tex == null ) throw "No texture found for " + model.getName();
-					var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
-					if( prim.geom.getColors() != null )
-						mat.hasVertexColor = true;
-					o = new h3d.scene.Mesh(prim, mat, scene);
-				} else {
-					var tmats = [];
-					var vcolor = prim.geom.getColors() != null;
-					var lastAdded = 0;
-					for( mat in mats ) {
-						var tex = getChilds(mat, "Texture")[0];
-						if( tex == null ) {
-							tmats.push(null);
-							continue;
-						}
-						var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
-						if( vcolor )
-							mat.hasVertexColor = true;
-						tmats.push(mat);
-						lastAdded = tmats.length;
+					if( tex == null ) {
+						tmats.push(null);
+						continue;
 					}
-					while( tmats.length > lastAdded )
-						tmats.pop();
+					var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
+					if( vcolor )
+						mat.hasVertexColor = true;
+					tmats.push(mat);
+					lastAdded = tmats.length;
+				}
+				while( tmats.length > lastAdded )
+					tmats.pop();
+				if( tmats.length == 0 )
+					tmats.push(new h3d.mat.MeshMaterial(h2d.Tile.fromColor(0xFFFF00FF).getTexture()));
+				// create object
+				if( tmats.length == 1 )
+					o = new h3d.scene.Mesh(prim, tmats[0], scene);
+				else {
 					prim.multiMaterial = true;
 					o = new h3d.scene.MultiMaterial(prim, tmats, scene);
 				}
