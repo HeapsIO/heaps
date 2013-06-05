@@ -6,7 +6,7 @@ class Point {
 	public var y : Float;
 	public var z : Float;
 	
-	public function new(x=0.,y=0.,z=0.) {
+	public inline function new(x=0.,y=0.,z=0.) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -40,7 +40,7 @@ class Point {
 		return new Point(x * m._11 + y * m._21 + z * m._31 + m._41, x * m._12 + y * m._22 + z * m._32 + m._42, x * m._13 + y * m._23 + z * m._33 + m._43);
 	}
 	
-	public function toVector() {
+	public inline function toVector() {
 		return new Vector(x, y, z);
 	}
 
