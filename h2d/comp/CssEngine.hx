@@ -1,0 +1,101 @@
+package h2d.comp;
+
+enum Unit {
+	Pix( v : Float );
+	Percent( v : Float );
+	EM( v : Float );
+}
+
+enum FillStyle {
+	Color( c : Int );
+	Gradient( a : Int, b : Int, c : Int, d : Int );
+}
+
+typedef CssClass = {
+	var parent : Null<CssClass>;
+	var node : Null<String>;
+	var className : Null<String>;
+	var pseudoClass : Null<String>;
+	var id : Null<String>;
+}
+
+class CssRule {
+	public var c : CssClass;
+	public var priority : Int;
+	public var s : Style;
+	public function new() {
+	}
+}
+
+@:access(h2d.comp.Component)
+class CssEngine {
+	
+	var rules : Array<CssRule>;
+	
+	public function new() {
+		rules = [];
+	}
+	
+	public function applyClasses( c : Component ) {
+		var s = new Style();
+		c.style = s;
+		var rules = [];
+		for( r in this.rules ) {
+			if( !ruleMatch(r.c, c) )
+				continue;
+			rules.push(r);
+		}
+		rules.sort(sortByPriority);
+		for( r in rules )
+			s.apply(r.s);
+		if( c.customStyle != null )
+			s.apply(c.customStyle);
+	}
+	
+	function sortByPriority(r1:CssRule, r2:CssRule) {
+		return r1.priority - r2.priority;
+	}
+	
+	function ruleMatch( c : CssClass, d : Component ) {
+		if( c.className != null ) {
+			if( d.classes == null )
+				return false;
+			var found = false;
+			for( cc in d.classes )
+				if( cc == c.className ) {
+					found = true;
+					break;
+				}
+			if( !found )
+				return false;
+		}
+		if( c.node != null && c.node != d.name )
+			return false;
+		if( c.id != null && c.id != d.id )
+			return false;
+		if( c.parent != null && (d.parent == null || !ruleMatch(c.parent, d.parentComponent)) )
+			return false;
+		return true;
+	}
+	
+	public function addRules( text : String ) {
+		for( r in new CssParser().parseRules(text) ) {
+			var c = r.c;
+			var imp = r.imp ? 1 : 0;
+			var nids = 0, nothers = 0, nnodes = 0;
+			while( c != null ) {
+				if( c.id != null ) nids++;
+				if( c.node != null ) nnodes++;
+				if( c.pseudoClass != null ) nothers++;
+				if( c.className != null ) nothers++;
+				c = c.parent;
+			}
+			var rule = new CssRule();
+			rule.c = r.c;
+			rule.s = r.s;
+			rule.priority = (imp << 24) | (nids << 16) | (nothers << 8) | nnodes;
+			rules.push(rule);
+		}
+	}
+	
+}

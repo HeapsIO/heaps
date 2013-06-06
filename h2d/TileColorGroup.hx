@@ -65,6 +65,59 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp[pos++] = a;
 	}
 	
+	inline function insertColor( c : Int ) {
+		tmp[pos++] = ((c >> 16) & 0xFF) / 255.;
+		tmp[pos++] = ((c >> 8) & 0xFF) / 255.;
+		tmp[pos++] = (c & 0xFF) / 255.;
+		tmp[pos++] = (c >>> 24) / 255.;
+	}
+
+	public inline function rectColor( x : Float, y : Float, w : Float, h : Float, color : Int ) {
+		tmp[pos++] = x;
+		tmp[pos++] = y;
+		tmp[pos++] = 0;
+		tmp[pos++] = 0;
+		insertColor(color);
+		tmp[pos++] = x + w;
+		tmp[pos++] = y;
+		tmp[pos++] = 1;
+		tmp[pos++] = 0;
+		insertColor(color);
+		tmp[pos++] = x;
+		tmp[pos++] = y + h;
+		tmp[pos++] = 0;
+		tmp[pos++] = 1;
+		insertColor(color);
+		tmp[pos++] = x + w;
+		tmp[pos++] = y + h;
+		tmp[pos++] = 1;
+		tmp[pos++] = 1;
+		insertColor(color);
+	}
+	
+	public inline function rectGradient( x : Float, y : Float, w : Float, h : Float, ctl : Int, ctr : Int, cbl : Int, cbr : Int ) {
+		tmp[pos++] = x;
+		tmp[pos++] = y;
+		tmp[pos++] = 0;
+		tmp[pos++] = 0;
+		insertColor(ctl);
+		tmp[pos++] = x + w;
+		tmp[pos++] = y;
+		tmp[pos++] = 1;
+		tmp[pos++] = 0;
+		insertColor(ctr);
+		tmp[pos++] = x;
+		tmp[pos++] = y + h;
+		tmp[pos++] = 0;
+		tmp[pos++] = 1;
+		insertColor(cbl);
+		tmp[pos++] = x + w;
+		tmp[pos++] = y + h;
+		tmp[pos++] = 1;
+		tmp[pos++] = 0;
+		insertColor(cbr);
+	}
+	
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) reset();
 		buffer = engine.mem.allocVector(tmp, 8, 4);
@@ -124,6 +177,14 @@ class TileColorGroup extends Drawable {
 	
 	public inline function addColor(x, y, r, g, b, a, t) {
 		content.add(x, y, r, g, b, a, t);
+	}
+	
+	public inline function rectColor(x, y, w, h, c) {
+		content.rectColor(x, y, w, h, c);
+	}
+
+	public inline function rectGradient(x, y, w, h, ctl, ctr, cbl, cbr) {
+		content.rectGradient(x, y, w, h, ctl, ctr, cbl, cbr);
 	}
 	
 	override function draw(ctx:RenderContext) {
