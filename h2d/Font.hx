@@ -1,9 +1,11 @@
 package h2d;
 
-class Font extends Tile {
+class Font #if !macro extends Tile #end {
 
 	static var DEFAULT_CHARS = " ?!\"#$%&|<>@'()[]{}*+-=/.,:;0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzéèêëÉÈÊËàâäáÀÂÄÁùûüúÙÛÜÚîïíÎÏÍôóöõÔÓÖçÇñÑ¡¿ßæœÆŒ";
 
+	#if !macro
+	
 	public var name(default, null) : String;
 	public var size(default, null) : Int;
 	public var glyphs : Array<Tile>;
@@ -20,6 +22,17 @@ class Font extends Tile {
 		this.chars = chars;
 		this.aa = aa;
 		init();
+	}
+	
+	/**
+		Divides by two the glyphs size. This is meant to create smoother fonts by creating them with double size
+		while still keeping the original glyph size.
+	**/
+	public function halfSize() {
+		for( t in glyphs )
+			if( t != null )
+				t.scaleToSize(t.width >> 1, t.height >> 1);
+		lineHeight >>= 1;
 	}
 	
 	function init() {
@@ -94,15 +107,58 @@ class Font extends Tile {
 			}
 		} while( bmp == null );
 		
+		// let's remove alpha premult (all pixels should be white with alpha)
+		var bytes = bmp.getPixels(bmp.rect);
+		if( bytes.length < 1024 ) bytes.length = 1024;
+		flash.Memory.select(bytes);
+		inline function g(p) return flash.Memory.getByte(p);
+		inline function s(p,v) flash.Memory.setByte(p,v);
+		for( i in 0...bmp.width * bmp.height ) {
+			var p = i << 2;
+			var b = g(p);
+			if( b > 0 ) {
+				s(p, 0xFF);
+				s(p + 1, 0xFF);
+				s(p + 2, 0xFF);
+				s(p + 3, b);
+			}
+		}
+		var bytes = haxe.io.Bytes.ofData(bytes);
+		
 		if( innerTex == null ) {
-			setTexture(Tile.fromBitmap(bmp).getTexture());
+			var t = h3d.Engine.getCurrent().mem.allocTexture(bmp.width, bmp.height);
+			t.uploadBytes(bytes);
+			setTexture(t);
 			for( t in all )
 				t.setTexture(innerTex);
 			innerTex.onContextLost = init;
 		} else
-			innerTex.upload(bmp);
+			innerTex.uploadBytes(bytes);
 		
 		bmp.dispose();
+	}
+	
+	#end
+	
+	public macro static function embed( name : String, file : String, ?chars : String, ?skipErrors : Bool ) {
+		var ok = true;
+		var path = try haxe.macro.Context.resolvePath(file) catch( e : Dynamic ) if( skipErrors ) null else throw e;
+		if( path == null )
+			return macro false;
+		if( chars == null ) chars = DEFAULT_CHARS;
+		var pos = haxe.macro.Context.currentPos();
+		var safeName = "F_"+~/[^A-Za-z_]+/g.replace(name, "_");
+		haxe.macro.Context.defineType({
+			pack : ["_fonts"],
+			name : safeName,
+			meta : [{ name : ":font", pos : pos, params : [macro $v{file},macro $v{chars}] }],
+			kind : TDClass(),
+			params : [],
+			pos : pos,
+			isExtern : false,
+			fields : [],
+		});
+		return macro true;
 	}
 	
 }
