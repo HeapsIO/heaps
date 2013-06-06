@@ -21,6 +21,7 @@ typedef CssClass = {
 }
 
 class CssRule {
+	public var id : Int;
 	public var c : CssClass;
 	public var priority : Int;
 	public var s : Style;
@@ -54,10 +55,22 @@ class CssEngine {
 	}
 
 	function sortByPriority(r1:CssRule, r2:CssRule) {
-		return r1.priority - r2.priority;
+		var dp = r1.priority - r2.priority;
+		return dp == 0 ? r1.id - r2.id : dp;
 	}
 
 	function ruleMatch( c : CssClass, d : Component ) {
+		if( c.pseudoClass != null ) {
+			var pc = ":" + c.pseudoClass;
+			var found = false;
+			for( cc in d.classes )
+				if( cc == pc ) {
+					found = true;
+					break;
+				}
+			if( !found )
+				return false;
+		}
 		if( c.className != null ) {
 			if( d.classes == null )
 				return false;
@@ -92,6 +105,7 @@ class CssEngine {
 				c = c.parent;
 			}
 			var rule = new CssRule();
+			rule.id = rules.length;
 			rule.c = r.c;
 			rule.s = r.s;
 			rule.priority = (imp << 24) | (nids << 16) | (nothers << 8) | nnodes;

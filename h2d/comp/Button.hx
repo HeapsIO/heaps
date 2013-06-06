@@ -10,19 +10,23 @@ class Button extends Component {
 	
 	public function new(text, ?parent) {
 		super("button",parent);
-		input = new h2d.Interactive(0, 0, this);
+		bg = new Fill(this);
+		input = new h2d.Interactive(0, 0, bg);
 		var active = false, out = false;
 		input.onPush = function(_) {
 			active = true;
 		};
+		input.onOver = function(_) {
+			addClass(":hover");
+		};
 		input.onOut = function(_) {
 			active = false;
+			removeClass(":hover");
 		};
 		input.onRelease = function(_) {
 			if( active ) onClick();
 		};
-		bg = new Fill(this);
-		tf = new h2d.Text(null, this);
+		tf = new h2d.Text(null, bg);
 		this.text = text;
 	}
 
@@ -38,16 +42,17 @@ class Button extends Component {
 	override function rebuild() {
 		evalStyle();
 		tf.font = getFont();
+		tf.textColor = style.color;
 		tf.text = text;
 		tf.filter = true;
-		
-		var ext = style.padding + style.borderSize;
-		innerWidth = tf.textWidth + ext * 2;
-		innerHeight = tf.textHeight + ext * 2;
+		bg.x = style.offsetX;
+		bg.y = style.offsetY;
+		innerWidth = tf.textWidth + style.paddingLeft + style.paddingRight + style.borderSize * 2;
+		innerHeight = tf.textHeight + style.paddingTop + style.paddingBottom + style.borderSize * 2;
 		if( style.width != null ) innerWidth = style.width;
 		if( style.height != null ) innerHeight = style.height;
-		tf.x = (innerWidth - tf.textWidth) * 0.5;
-		tf.y = (innerHeight - tf.textHeight) * 0.5;
+		tf.x = style.paddingLeft + style.borderSize;
+		tf.y = style.paddingTop + style.borderSize;
 		input.width = innerWidth;
 		input.height = innerHeight;
 		bg.reset();

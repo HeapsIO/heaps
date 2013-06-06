@@ -66,7 +66,19 @@ class CssParser {
 		switch( r ) {
 		case "padding":
 			var i = getVal(v);
-			if( i != null ) { s.padding = i; return true; }
+			if( i != null ) { s.padding(i); return true; }
+		case "padding-top":
+			var i = getVal(v);
+			if( i != null ) { s.paddingTop = i; return true; }
+		case "padding-left":
+			var i = getVal(v);
+			if( i != null ) { s.paddingLeft = i; return true; }
+		case "padding-right":
+			var i = getVal(v);
+			if( i != null ) { s.paddingRight = i; return true; }
+		case "padding-bottom":
+			var i = getVal(v);
+			if( i != null ) { s.paddingBottom = i; return true; }
 		case "width":
 			var i = getVal(v);
 			if( i != null ) {
@@ -128,8 +140,22 @@ class CssParser {
 				s.borderColor = c;
 				return true;
 			}
+		case "offset":
+			return applyComposite(["offset-x", "offset-y"], v, s);
+		case "offset-x":
+			var i = getVal(v);
+			if( i != null ) {
+				s.offsetX = i;
+				return true;
+			}
+		case "offset-y":
+			var i = getVal(v);
+			if( i != null ) {
+				s.offsetY = i;
+				return true;
+			}
 		default:
-			throw "Not implemented '"+r+"' = "+Std.string(v);
+			throw "Not implemented '"+r+"' = "+valueStr(v);
 		}
 		return false;
 	}
