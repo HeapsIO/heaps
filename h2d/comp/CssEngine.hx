@@ -7,6 +7,7 @@ enum Unit {
 }
 
 enum FillStyle {
+	Transparent;
 	Color( c : Int );
 	Gradient( a : Int, b : Int, c : Int, d : Int );
 }
@@ -29,13 +30,13 @@ class CssRule {
 
 @:access(h2d.comp.Component)
 class CssEngine {
-	
+
 	var rules : Array<CssRule>;
-	
+
 	public function new() {
 		rules = [];
 	}
-	
+
 	public function applyClasses( c : Component ) {
 		var s = new Style();
 		c.style = s;
@@ -51,11 +52,11 @@ class CssEngine {
 		if( c.customStyle != null )
 			s.apply(c.customStyle);
 	}
-	
+
 	function sortByPriority(r1:CssRule, r2:CssRule) {
 		return r1.priority - r2.priority;
 	}
-	
+
 	function ruleMatch( c : CssClass, d : Component ) {
 		if( c.className != null ) {
 			if( d.classes == null )
@@ -77,7 +78,7 @@ class CssEngine {
 			return false;
 		return true;
 	}
-	
+
 	public function addRules( text : String ) {
 		for( r in new CssParser().parseRules(text) ) {
 			var c = r.c;
@@ -97,5 +98,5 @@ class CssEngine {
 			rules.push(rule);
 		}
 	}
-	
+
 }

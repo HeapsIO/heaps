@@ -123,7 +123,7 @@ class CssParser {
 			// not supported
 			return true;
 		case "border-color":
-			var c = getCol(v);
+			var c = getFill(v);
 			if( c != null ) {
 				s.borderColor = c;
 				return true;
@@ -197,7 +197,7 @@ class CssParser {
 			return (v == null) ? null : [v];
 		}
 	}
-	
+
 	function getInt( v : Value ) : Null<Int> {
 		return switch( v ) {
 		case VUnit(f, u):
@@ -254,14 +254,14 @@ class CssParser {
 		default: null;
 		};
 	}
-	
+
 	function getColAlpha( v : Value ) {
 		var c = getCol(v);
 		if( c != null && c >>> 24 == 0 )
 			c |= 0xFF000000;
 		return c;
 	}
-	
+
 	function getFill( v : Value ) {
 		var c = getColAlpha(v);
 		if( c != null )
@@ -274,6 +274,8 @@ class CssParser {
 			var cd = getColAlpha(d);
 			if( ca != null && cb != null && cc != null && cd != null )
 				return Gradient(ca, cb, cc, cd);
+		case VIdent("transparent"):
+			return Transparent;
 		default:
 		}
 		return null;
@@ -367,7 +369,7 @@ class CssParser {
 		case VSlash: "/";
 		}
 	}
-	
+
 	function parseStyle( eof ) {
 		while( true ) {
 			if( isToken(eof) )

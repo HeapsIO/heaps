@@ -3,7 +3,7 @@ package h2d.comp;
 class Button extends Component {
 	
 	var input : h2d.Interactive;
-	var bg : h2d.TileColorGroup;
+	var bg : Fill;
 	var tf : h2d.Text;
 	
 	public var text(default, set) : String;
@@ -21,7 +21,7 @@ class Button extends Component {
 		input.onRelease = function(_) {
 			if( active ) onClick();
 		};
-		bg = new h2d.TileColorGroup(h2d.Tile.fromColor(0xFFFFFFFF), this);
+		bg = new Fill(this);
 		tf = new h2d.Text(null, this);
 		this.text = text;
 	}
@@ -51,13 +51,8 @@ class Button extends Component {
 		input.width = innerWidth;
 		input.height = innerHeight;
 		bg.reset();
-		bg.rectColor(0, 0, innerWidth, innerHeight, style.borderColor | 0xFF000000);
-		switch( style.backgroundColor ) {
-		case Color(c):
-			bg.rectColor(style.borderSize, style.borderSize, innerWidth - style.borderSize * 2, innerHeight - style.borderSize * 2, c);
-		case Gradient(a, b, c, d):
-			bg.rectGradient(style.borderSize, style.borderSize, innerWidth - style.borderSize * 2, innerHeight - style.borderSize * 2, a, b, c, d);
-		}
+		bg.lineRect(style.borderColor, 0, 0, innerWidth, innerHeight, style.borderSize);
+		bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize, innerWidth - style.borderSize * 2, innerHeight - style.borderSize * 2);
 	}
 	
 	public dynamic function onClick() {

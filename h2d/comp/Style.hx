@@ -1,13 +1,14 @@
 package h2d.comp;
+import h2d.comp.CssEngine.FillStyle;
 
 class Style {
 	
 	public var fontName : Null<String>;
 	public var fontSize : Null<Float>;
 	public var color : Null<Int>;
-	public var backgroundColor : Null<CssEngine.FillStyle>;
+	public var backgroundColor : Null<FillStyle>;
 	public var borderSize : Null<Float>;
-	public var borderColor : Null<Int>;
+	public var borderColor : Null<FillStyle>;
 	public var padding : Null<Float>;
 	public var width : Null<Float>;
 	public var height : Null<Float>;
@@ -67,7 +68,7 @@ class Style {
 		button {
 			background-color : gradient(#333333,#3B3B3B,#282828,#2A2A2A);
 			color : #FFF;
-			border : 1px solid #808080;
+			border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
 			padding : 5px;
 		}
 	';
