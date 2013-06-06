@@ -31,7 +31,7 @@ class Text extends Drawable {
 	
 	override function onAlloc() {
 		super.onAlloc();
-		if( text != null ) initGlyphs();
+		if( text != null && font != null ) initGlyphs();
 	}
 	
 	override function draw(ctx:RenderContext) {
