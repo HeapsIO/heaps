@@ -11,10 +11,10 @@ class Slider extends Component {
 		super("slider", parent);
 		input = new h2d.Interactive(0, 0, this);
 		input.onPush = function(e) {
-			gotoValue(Std.int(e.relX) / input.width);
+			gotoValue(pixelToVal(e));
 			input.startDrag(function(e) {
 				if( e.kind == EMove )
-					gotoValue(Std.int(e.relX) / input.width);
+					gotoValue(pixelToVal(e));
 			});
 		};
 		input.onRelease = function(_) {
@@ -26,6 +26,10 @@ class Slider extends Component {
 			
 		};
 		value = 0.;
+	}
+	
+	function pixelToVal( e : h2d.Event ) {
+		return Std.int(e.relX - (style.borderSize + cursor.width * 0.5) ) / (input.width - (style.borderSize * 2 + cursor.width));
 	}
 	
 	function gotoValue( v : Float ) {
@@ -57,9 +61,9 @@ class Slider extends Component {
 	override function resize( ctx : Context ) {
 		super.resize(ctx);
 		if( !ctx.measure ) {
-			input.width = width - (style.marginLeft + style.marginRight + style.borderSize * 2);
+			input.width = width - (style.marginLeft + style.marginRight) + cursor.width;
 			input.height = cursor.height - (cursor.style.marginTop + cursor.style.marginBottom);
-			input.x = cursor.style.marginLeft;
+			input.x = cursor.style.marginLeft - style.borderSize - cursor.width * 0.5;
 			input.y = cursor.style.marginTop;
 			cursor.style.offsetX = contentWidth * value - cursor.width * 0.5;
 		}
