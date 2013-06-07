@@ -116,6 +116,10 @@ class Box extends Component {
 			var oldx = ctx.xPos, oldy = ctx.yPos;
 			ctx.xPos = null;
 			ctx.yPos = null;
+			if( ctx.measure ) {
+				ctx.maxWidth = contentWidth;
+				ctx.maxHeight = contentHeight;
+			}
 			for( c in components )
 				c.resizeRec(ctx);
 			ctx.xPos = oldx;

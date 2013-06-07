@@ -95,6 +95,11 @@ class Component extends Sprite {
 		return this;
 	}
 	
+	public function setClass( name : String, flag : Bool ) {
+		if( flag ) addClass(name) else removeClass(name);
+		return this;
+	}
+	
 	function set_id(id) {
 		this.id = id;
 		needRebuild = true;
@@ -174,6 +179,10 @@ class Component extends Sprite {
 		evalStyle();
 		for( c in components )
 			c.evalStyleRec();
+	}
+	
+	public function refresh() {
+		needRebuild = true;
 	}
 	
 	override function sync( ctx : RenderContext ) {
