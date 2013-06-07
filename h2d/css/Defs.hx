@@ -18,10 +18,12 @@ enum Layout {
 	Absolute;
 }
 
-typedef CssClass = {
-	var parent : Null<CssClass>;
-	var node : Null<String>;
-	var className : Null<String>;
-	var pseudoClass : Null<String>;
-	var id : Null<String>;
+class Class {
+	public var parent : Null<Class>;
+	public var node : Null<String>;
+	public var className : Null<String>;
+	public var pseudoClass : Null<String>;
+	public var id : Null<String>;
+	public function new() {
+	}
 }

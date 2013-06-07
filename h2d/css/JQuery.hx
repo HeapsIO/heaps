@@ -15,6 +15,37 @@ class JQuery {
 		select = getSet(query);
 	}
 	
+	public function toggleClass( cl : String ) {
+		for( s in select ) s.toggleClass(cl);
+		return this;
+	}
+
+	function _get_val() : Dynamic {
+		var c = select[0];
+		if( c == null ) return null;
+		return switch( c.name ) {
+		case "slider":
+			cast(c, h2d.comp.Slider).value;
+		case "checkbox":
+			cast(c, h2d.comp.Checkbox).checked;
+		default:
+			null;
+		}
+	}
+
+	function _set_val( v : Dynamic ) {
+		for( c in select )
+			switch( c.name ) {
+			case "slider":
+				cast(c, h2d.comp.Slider).value = v;
+			case "checkbox":
+				cast(c, h2d.comp.Checkbox).checked = v != null && v != false;
+			default:
+				null;
+			}
+		return this;
+	}
+
 	function _get_text() {
 		var c = select[0];
 		if( c == null ) return "";
@@ -58,8 +89,20 @@ class JQuery {
 	}
 	
 	function lookupSet( query : String ) {
-		throw "Invalid JQuery " + query;
-		return null;
+		var classes = new Parser().parseClasses(query);
+		var set = [];
+		lookupRec(root, classes, set);
+		return set;
+	}
+	
+	function lookupRec(comp:Component, classes:Array<Defs.Class>, set : Array<Component> ) {
+		for( c in classes )
+			if( Engine.ruleMatch(c, comp) ) {
+				set.push(comp);
+				break;
+			}
+		for( s in comp.components )
+			lookupRec(s, classes, set);
 	}
 	
 }

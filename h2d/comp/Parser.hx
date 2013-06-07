@@ -2,8 +2,11 @@ package h2d.comp;
 
 private class CustomInterp extends hscript.Interp {
 	override function fcall(o:Dynamic, f:String, args:Array<Dynamic>):Dynamic {
-		if( Std.is(o, h2d.css.JQuery) )
-			return args.length == 0 ? Reflect.callMethod(o, Reflect.field(o, "_get_" + f), args) : Reflect.callMethod(o, Reflect.field(o, "_set_" + f), args);
+		if( Std.is(o, h2d.css.JQuery) && Reflect.field(o,f) == null ) {
+			var rf = args.length == 0 ? "_get_" + f : "_set_" + f;
+			if( Reflect.field(o, rf) == null ) throw "JQuery don't have " + f + " implemented";
+			f = rf;
+		}
 		return super.fcall(o, f, args);
 	}
 }
