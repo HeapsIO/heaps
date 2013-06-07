@@ -158,7 +158,13 @@ class Parser {
 				return true;
 			}
 		case "border":
-			return applyComposite(["border-width", "border-style", "border-color"], v, s);
+			if( applyComposite(["border-width", "border-style", "border-color"], v, s) )
+				return true;
+			if( getIdent(v) == "none" ) {
+				s.borderSize = 0;
+				s.borderColor = Transparent;
+				return true;
+			}
 		case "border-width":
 			var i = getVal(v);
 			if( i != null ) {
@@ -166,9 +172,8 @@ class Parser {
 				return true;
 			}
 		case "border-style":
-			getIdent(v);
-			// not supported
-			return true;
+			if( getIdent(v) == "solid" )
+				return true;
 		case "border-color":
 			var c = getFill(v);
 			if( c != null ) {
@@ -219,6 +224,18 @@ class Parser {
 			var i = getVal(v);
 			if( i != null ) {
 				s.maxIncrement = i;
+				return true;
+			}
+		case "tick-color":
+			var i = getFill(v);
+			if( i != null ) {
+				s.tickColor = i;
+				return true;
+			}
+		case "tick-spacing":
+			var i = getVal(v);
+			if( i != null ) {
+				s.tickSpacing = i;
 				return true;
 			}
 		default:

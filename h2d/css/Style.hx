@@ -26,6 +26,8 @@ class Style {
 	public var marginBottom : Null<Float>;
 	public var increment : Null<Float>;
 	public var maxIncrement : Null<Float>;
+	public var tickColor : Null<FillStyle>;
+	public var tickSpacing : Null<Float>;
 	
 	public function new() {
 	}
@@ -54,6 +56,8 @@ class Style {
 		if( s.marginBottom != null ) marginBottom = s.marginBottom;
 		if( s.increment != null ) increment = s.increment;
 		if( s.maxIncrement != null ) maxIncrement = s.maxIncrement;
+		if( s.tickColor != null ) tickColor = s.tickColor;
+		if( s.tickSpacing != null ) tickSpacing = s.tickSpacing;
 	}
 	
 	public function padding( v : Float ) {

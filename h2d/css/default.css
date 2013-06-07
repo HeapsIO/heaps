@@ -3,7 +3,7 @@
 	font-size : 14px;
 	color : white;
 	offset : 0 0;
-	border : 0 solid transparent;
+	border : none;
 	background-color : transparent;
 }
 
@@ -33,11 +33,15 @@ box:absolute {
 	layout : absolute;
 }
 
+box.panel {
+	background-color : gradient(#303030,#353535,#202020,#252525);
+}
+
 slider {
 	width : 100px;
 	height : 3px;
 	margin : 7px 5px;
-	background-color : gradient(#303030,#353535,#202020,#252525);
+	background-color : #252525;
 	border : 1px solid gradient(#434343, #4B4B4B, #383838, #3A3A3A);
 }
 
@@ -45,3 +49,15 @@ slider button, slider button:hover {
 	margin-top : -4px;
 	padding : 5px 2px;
 }
+
+checkbox {
+	width : 9px;
+	height : 9px;
+	color : #fff;
+	margin-top : 3px;
+	tick-spacing : 2px;
+	tick-color : gradient(#C0C0C0,#B0B0B0,#888888,#707070);
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	background-color : gradient(#303030,#252525,#252525,#252525);
+}
+
