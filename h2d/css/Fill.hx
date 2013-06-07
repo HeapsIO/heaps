@@ -1,5 +1,5 @@
-package h2d.comp;
-import h2d.comp.CssDefs;
+package h2d.css;
+import h2d.css.Defs;
 
 class Fill extends h2d.TileColorGroup {
 

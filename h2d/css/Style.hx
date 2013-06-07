@@ -1,9 +1,7 @@
-package h2d.comp;
-import h2d.comp.CssDefs;
+package h2d.css;
+import h2d.css.Defs;
 
 class Style {
-	
-	#if !macro
 	
 	public var fontName : Null<String>;
 	public var fontSize : Null<Float>;
@@ -84,42 +82,5 @@ class Style {
 		}
 		return "{" + fields.join(", ") + "}";
 	}
-	
-	public static function getFont( name : String, size : Int ) {
-		var key = name + "#" + size;
-		var f = FONTS.get(key);
-		if( f != null )
-			return f;
-		f = new h2d.Font(name, size);
-		FONTS.set(key, f);
-		return f;
-	}
-	
-	public static function dispose() {
-		for( f in FONTS )
-			f.dispose();
-		FONTS = new Map();
-	}
-
-	static var FONTS = new Map<String,h2d.Font>();
-	
-	public static var DEFAULT_CSS = getFile("h2d/comp/default.css");
-	
-	static var DEF = null;
-	public static function getDefault() {
-		if( DEF != null )
-			return DEF;
-		var e = new CssEngine();
-		e.addRules(DEFAULT_CSS);
-		return e;
-	}
-	
-	#end
-	
-	static macro function getFile( file : String ) {
-		var file = haxe.macro.Context.resolvePath(file);
-		haxe.macro.Context.registerModuleDependency("h2d.comp.Style", file);
-		return macro $v{sys.io.File.getContent(file)};
-	}
-	
+		
 }

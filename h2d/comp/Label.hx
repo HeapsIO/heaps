@@ -21,8 +21,8 @@ class Label extends Component {
 		return text = t;
 	}
 	
-	override function resize( r : CssDefs.Resize ) {
-		if( r.measure ) {
+	override function resize( ctx : Context ) {
+		if( ctx.measure ) {
 			tf.font = getFont();
 			tf.textColor = style.color;
 			tf.text = text;
@@ -30,7 +30,7 @@ class Label extends Component {
 			contentWidth = tf.textWidth;
 			contentHeight = tf.textHeight;
 		}
-		super.resize(r);
+		super.resize(ctx);
 	}
 	
 }

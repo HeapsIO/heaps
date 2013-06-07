@@ -4,30 +4,28 @@ class Box extends Component {
 	
 	public function new(?layout,?parent) {
 		super("box", parent);
-		if( layout == null ) layout = CssDefs.Layout.Horizontal;
+		if( layout == null ) layout = h2d.css.Defs.Layout.Horizontal;
 		addClass(":"+layout.getName().toLowerCase());
 	}
 	
-	override function resizeRec( r : CssDefs.Resize ) {
+	override function resizeRec( ctx : Context ) {
 		var extX = extLeft();
 		var extY = extTop();
-		var r2 = new CssDefs.Resize(0, 0);
-		r2.measure = r.measure;
-		if( r.measure ) {
-			width = r.maxWidth;
-			height = r.maxHeight;
+		var ctx2 = new Context(0, 0);
+		ctx2.measure = ctx.measure;
+		if( ctx.measure ) {
+			width = ctx.maxWidth;
+			height = ctx.maxHeight;
 			if( style.width != null ) width = style.width;
 			if( style.height != null ) height = style.height;
 			contentWidth = width - (extX + extRight());
 			contentHeight = height - (extY + extBottom());
 		} else {
-			r2.maxWidth = r.maxWidth;
-			r2.maxHeight = r.maxHeight;
-			r2.xPos = r.xPos;
-			r2.yPos = r.yPos;
-			if( r2.xPos == null ) r2.xPos = 0;
-			if( r2.yPos == null ) r2.yPos = 0;
-			resize(r2);
+			ctx2.xPos = ctx.xPos;
+			ctx2.yPos = ctx.yPos;
+			if( ctx2.xPos == null ) ctx2.xPos = 0;
+			if( ctx2.yPos == null ) ctx2.yPos = 0;
+			resize(ctx2);
 		}
 		switch( style.layout ) {
 		case Horizontal:
@@ -35,12 +33,12 @@ class Box extends Component {
 			var xPos = 0., yPos = 0., maxPos = 0.;
 			var prev = null;
 			for( c in components ) {
-				if( r.measure ) {
-					r2.xPos = xPos;
-					r2.yPos = yPos;
-					r2.maxWidth = contentWidth;
-					r2.maxHeight = contentHeight - yPos;
-					c.resizeRec(r2);
+				if( ctx.measure ) {
+					ctx2.xPos = xPos;
+					ctx2.yPos = yPos;
+					ctx2.maxWidth = contentWidth;
+					ctx2.maxHeight = contentHeight - yPos;
+					c.resizeRec(ctx2);
 					var next = xPos + c.width;
 					if( prev != null ) next += style.horizontalSpacing;
 					if( xPos > 0 && next > contentWidth ) {
@@ -61,14 +59,14 @@ class Box extends Component {
 					} else {
 						if( c.height > lineHeight ) lineHeight = c.height;
 					}
-					r2.xPos = xPos;
-					r2.yPos = yPos;
-					c.resizeRec(r2);
+					ctx2.xPos = xPos;
+					ctx2.yPos = yPos;
+					c.resizeRec(ctx2);
 					xPos += c.width + style.horizontalSpacing;
 				}
 				prev = c;
 			}
-			if( r.measure ) {
+			if( ctx.measure ) {
 				if( maxPos < contentWidth ) contentWidth = maxPos;
 				if( yPos + lineHeight < contentHeight ) contentHeight = yPos + lineHeight;
 			}
@@ -77,12 +75,12 @@ class Box extends Component {
 			var xPos = 0., yPos = 0., maxPos = 0.;
 			var prev = null;
 			for( c in components ) {
-				if( r.measure ) {
-					r2.xPos = xPos;
-					r2.yPos = yPos;
-					r2.maxWidth = r.maxWidth - xPos;
-					r2.maxHeight = contentHeight;
-					c.resizeRec(r2);
+				if( ctx.measure ) {
+					ctx2.xPos = xPos;
+					ctx2.yPos = yPos;
+					ctx2.maxWidth = ctx.maxWidth - xPos;
+					ctx2.maxHeight = contentHeight;
+					c.resizeRec(ctx2);
 					var next = yPos + c.height;
 					if( prev != null ) next += style.verticalSpacing;
 					if( yPos > 0 && next > contentHeight ) {
@@ -103,27 +101,27 @@ class Box extends Component {
 					} else {
 						if( c.width > colWidth ) colWidth = c.width;
 					}
-					r2.xPos = xPos;
-					r2.yPos = yPos;
-					c.resizeRec(r2);
+					ctx2.xPos = xPos;
+					ctx2.yPos = yPos;
+					c.resizeRec(ctx2);
 					yPos += c.height + style.verticalSpacing;
 				}
 				prev = c;
 			}
-			if( r.measure ) {
+			if( ctx.measure ) {
 				if( xPos + colWidth < contentWidth ) contentWidth = xPos + colWidth;
 				if( maxPos < contentHeight ) contentHeight = maxPos;
 			}
 		case Absolute:
-			var oldx = r.xPos, oldy = r.yPos;
-			r.xPos = null;
-			r.yPos = null;
+			var oldx = ctx.xPos, oldy = ctx.yPos;
+			ctx.xPos = null;
+			ctx.yPos = null;
 			for( c in components )
-				c.resizeRec(r);
-			r.xPos = oldx;
-			r.yPos = oldy;
+				c.resizeRec(ctx);
+			ctx.xPos = oldx;
+			ctx.yPos = oldy;
 		}
-		if( r.measure ) {
+		if( ctx.measure ) {
 			width = contentWidth + extX + extRight();
 			height = contentHeight + extY + extBottom();
 		}

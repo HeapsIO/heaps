@@ -1,5 +1,5 @@
-package h2d.comp;
-import h2d.comp.CssDefs;
+package h2d.css;
+import h2d.css.Defs;
 
 enum Token {
 	TIdent( i : String );
@@ -37,7 +37,7 @@ enum Value {
 	VSlash;
 }
 
-class CssParser {
+class Parser {
 
 	var css : String;
 	var s : Style;

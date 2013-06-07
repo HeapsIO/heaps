@@ -54,9 +54,9 @@ class Slider extends Component {
 		return v;
 	}
 
-	override function resize(r:CssDefs.Resize) {
-		super.resize(r);
-		if( !r.measure ) {
+	override function resize( ctx : Context ) {
+		super.resize(ctx);
+		if( !ctx.measure ) {
 			input.width = width - (style.marginLeft + style.marginRight + style.borderSize * 2);
 			input.height = cursor.height - (cursor.style.marginTop + cursor.style.marginBottom);
 			input.x = cursor.style.marginLeft;

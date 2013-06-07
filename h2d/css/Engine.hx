@@ -1,7 +1,7 @@
-package h2d.comp;
-import h2d.comp.CssDefs;
+package h2d.css;
+import h2d.css.Defs;
 
-class CssRule {
+class Rule {
 	public var id : Int;
 	public var c : CssClass;
 	public var priority : Int;
@@ -11,15 +11,15 @@ class CssRule {
 }
 
 @:access(h2d.comp.Component)
-class CssEngine {
+class Engine {
 
-	var rules : Array<CssRule>;
+	var rules : Array<Rule>;
 
 	public function new() {
 		rules = [];
 	}
 
-	public function applyClasses( c : Component ) {
+	public function applyClasses( c : h2d.comp.Component ) {
 		var s = new Style();
 		c.style = s;
 		var rules = [];
@@ -35,12 +35,12 @@ class CssEngine {
 			s.apply(c.customStyle);
 	}
 
-	function sortByPriority(r1:CssRule, r2:CssRule) {
+	function sortByPriority(r1:Rule, r2:Rule) {
 		var dp = r1.priority - r2.priority;
 		return dp == 0 ? r1.id - r2.id : dp;
 	}
 
-	function ruleMatch( c : CssClass, d : Component ) {
+	function ruleMatch( c : CssClass, d : h2d.comp.Component ) {
 		if( c.pseudoClass != null ) {
 			var pc = ":" + c.pseudoClass;
 			var found = false;
@@ -74,7 +74,7 @@ class CssEngine {
 	}
 
 	public function addRules( text : String ) {
-		for( r in new CssParser().parseRules(text) ) {
+		for( r in new Parser().parseRules(text) ) {
 			var c = r.c;
 			var imp = r.imp ? 1 : 0;
 			var nids = 0, nothers = 0, nnodes = 0;
@@ -85,7 +85,7 @@ class CssEngine {
 				if( c.className != null ) nothers++;
 				c = c.parent;
 			}
-			var rule = new CssRule();
+			var rule = new Rule();
 			rule.id = rules.length;
 			rule.c = r.c;
 			rule.s = r.s;

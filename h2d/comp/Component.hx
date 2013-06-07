@@ -1,5 +1,5 @@
 package h2d.comp;
-import h2d.comp.CssDefs;
+import h2d.css.Defs;
 
 class Component extends Sprite {
 	
@@ -9,14 +9,14 @@ class Component extends Sprite {
 	var classes : Array<String>;
 	var components : Array<Component>;
 	
-	var bg : Fill;
+	var bg : h2d.css.Fill;
 	var width : Float;
 	var height : Float;
 	var contentWidth : Float = 0.;
 	var contentHeight : Float = 0.;
-	var style : Style;
-	var customStyle : Style;
-	var styleSheet : CssEngine;
+	var style : h2d.css.Style;
+	var customStyle : h2d.css.Style;
+	var styleSheet : h2d.css.Engine;
 	var needRebuild(default,set) : Bool;
 	
 	public function new(name,?parent) {
@@ -24,7 +24,7 @@ class Component extends Sprite {
 		this.name = name;
 		classes = [];
 		components = [];
-		bg = new Fill(this);
+		bg = new h2d.css.Fill(this);
 		needRebuild = true;
 	}
 	
@@ -102,13 +102,13 @@ class Component extends Sprite {
 	}
 	
 	function getFont() {
-		return Style.getFont(style.fontName, Std.int(style.fontSize));
+		return Context.getFont(style.fontName, Std.int(style.fontSize));
 	}
 	
 	function evalStyle() {
 		if( parentComponent == null ) {
 			if( styleSheet == null )
-				styleSheet = Style.getDefault();
+				styleSheet = Context.getDefaultCss();
 		} else {
 			styleSheet = parentComponent.styleSheet;
 			if( styleSheet == null ) {
@@ -135,15 +135,15 @@ class Component extends Sprite {
 		return style.paddingBottom + style.marginBottom + style.borderSize;
 	}
 	
-	function resize( r : Resize ) {
-		if( r.measure ) {
+	function resize( c : Context ) {
+		if( c.measure ) {
 			if( style.width != null ) contentWidth = style.width;
 			if( style.height != null ) contentHeight = style.height;
 			width = contentWidth + extLeft() + extRight();
 			height = contentHeight + extTop() + extBottom();
 		} else {
-			if( r.xPos != null ) x = r.xPos + style.offsetX + extLeft();
-			if( r.yPos != null ) y = r.yPos + style.offsetY + extTop();
+			if( c.xPos != null ) x = c.xPos + style.offsetX + extLeft();
+			if( c.yPos != null ) y = c.yPos + style.offsetY + extTop();
 			bg.reset();
 			bg.x = style.marginLeft - extLeft();
 			bg.y = style.marginTop - extTop();
@@ -152,20 +152,20 @@ class Component extends Sprite {
 		}
 	}
 	
-	function resizeRec( r : Resize ) {
-		resize(r);
-		if( r.measure ) {
+	function resizeRec( ctx : Context ) {
+		resize(ctx);
+		if( ctx.measure ) {
 			for( c in components )
-				c.resizeRec(r);
+				c.resizeRec(ctx);
 		} else {
-			var oldx = r.xPos;
-			var oldy = r.yPos;
-			r.xPos = 0;
-			r.yPos = 0;
+			var oldx = ctx.xPos;
+			var oldy = ctx.yPos;
+			ctx.xPos = 0;
+			ctx.yPos = 0;
 			for( c in components )
-				c.resizeRec(r);
-			r.xPos = oldx;
-			r.yPos = oldy;
+				c.resizeRec(ctx);
+			ctx.xPos = oldx;
+			ctx.yPos = oldy;
 		}
 	}
 	
@@ -179,10 +179,10 @@ class Component extends Sprite {
 	override function sync( ctx : RenderContext ) {
 		if( needRebuild ) {
 			evalStyleRec();
-			var r = new Resize(ctx.engine.width, ctx.engine.height);
-			resizeRec(r);
-			r.measure = false;
-			resizeRec(r);
+			var ctx = new Context(ctx.engine.width, ctx.engine.height);
+			resizeRec(ctx);
+			ctx.measure = false;
+			resizeRec(ctx);
 		}
 		super.sync(ctx);
 	}

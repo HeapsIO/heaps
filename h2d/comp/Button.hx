@@ -39,17 +39,17 @@ class Button extends Component {
 		return text = t;
 	}
 	
-	override function resize( r : CssDefs.Resize ) {
-		if( r.measure ) {
+	override function resize( ctx : Context ) {
+		if( ctx.measure ) {
 			tf.font = getFont();
 			tf.textColor = style.color;
 			tf.text = text;
 			tf.filter = true;
 			contentWidth = tf.textWidth;
 			contentHeight = tf.textHeight;
-			super.resize(r);
+			super.resize(ctx);
 		} else {
-			super.resize(r);
+			super.resize(ctx);
 			input.width = width - (style.marginLeft + style.marginRight);
 			input.height = height - (style.marginTop + style.marginBottom);
 		}

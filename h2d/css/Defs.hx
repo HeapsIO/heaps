@@ -1,4 +1,4 @@
-package h2d.comp;
+package h2d.css;
 
 enum Unit {
 	Pix( v : Float );
@@ -24,20 +24,4 @@ typedef CssClass = {
 	var className : Null<String>;
 	var pseudoClass : Null<String>;
 	var id : Null<String>;
-}
-
-class Resize {
-	// measure props
-	public var measure : Bool;
-	public var maxWidth : Float;
-	public var maxHeight : Float;
-	// arrange props
-	public var xPos : Null<Float>;
-	public var yPos : Null<Float>;
-	
-	public function new(w, h) {
-		this.maxWidth = w;
-		this.maxHeight = h;
-		measure = true;
-	}
 }
