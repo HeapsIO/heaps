@@ -151,7 +151,7 @@ class Font #if !macro extends Tile #end {
 		haxe.macro.Context.defineType({
 			pack : ["_fonts"],
 			name : safeName,
-			meta : [{ name : ":font", pos : pos, params : [macro $v{file},macro $v{chars}] }],
+			meta : [{ name : ":font", pos : pos, params : [macro $v{file},macro $v{chars}] }, { name : ":keep", pos : pos, params : [] }],
 			kind : TDClass(),
 			params : [],
 			pos : pos,
