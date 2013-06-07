@@ -10,6 +10,7 @@ class Component extends Sprite {
 	var components : Array<Component>;
 	
 	var bg : h2d.css.Fill;
+	// the total width and height (includes margin,borders and padding)
 	var width : Float;
 	var height : Float;
 	var contentWidth : Float = 0.;

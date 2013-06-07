@@ -16,10 +16,10 @@ class Box extends Component {
 		if( ctx.measure ) {
 			width = ctx.maxWidth;
 			height = ctx.maxHeight;
-			if( style.width != null ) width = style.width;
-			if( style.height != null ) height = style.height;
 			contentWidth = width - (extX + extRight());
 			contentHeight = height - (extY + extBottom());
+			if( style.width != null ) contentWidth = style.width;
+			if( style.height != null ) contentHeight = style.height;
 		} else {
 			ctx2.xPos = ctx.xPos;
 			ctx2.yPos = ctx.yPos;
