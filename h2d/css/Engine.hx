@@ -68,8 +68,16 @@ class Engine {
 			return false;
 		if( c.id != null && c.id != d.id )
 			return false;
-		if( c.parent != null && (d.parentComponent == null || !ruleMatch(c.parent, d.parentComponent)) )
-			return false;
+		if( c.parent != null ) {
+			var p = d.parentComponent;
+			while( p != null ) {
+				if( ruleMatch(c.parent, p) )
+					break;
+				p = p.parentComponent;
+			}
+			if( p == null )
+				return false;
+		}
 		return true;
 	}
 

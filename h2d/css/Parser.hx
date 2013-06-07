@@ -825,9 +825,9 @@ class Parser {
 			}
 			if( isIdentChar(c) ) {
 				var pos = pos - 1;
-				do c = next() while( isIdentChar(c) );
+				do c = next() while( isIdentChar(c) || isNum(c) );
 				this.pos--;
-				return TIdent(css.substr(pos,this.pos - pos).toLowerCase());
+				return TIdent(css.substr(pos,this.pos - pos));
 			}
 			switch( c ) {
 			case ":".code: return TDblDot;

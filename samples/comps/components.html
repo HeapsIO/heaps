@@ -24,9 +24,9 @@
 			<div>
 				<button value="Show Borders" onclick="$('.window').toggleClass('showBorders')"/>
 			</div>
-			<slider onchange="$('#lb1').text(h3d.FMath.fmt($(this).val()))"/>
+			<slider onchange="$('#lb1').text(api.fmt($(this).val()))"/>
 			<label id="lb1"></label>
-			<slider onchange="$('#lb2').text(h3d.FMath.fmt($(this).val()))" style="increment:0.1"/>
+			<slider onchange="$('#lb2').text(api.fmt($(this).val()))" style="increment:0.1"/>
 			<label id="lb2"></label>
 			<div>
 				<checkbox onchange="$('#lbc').text($(this).val()?'ON':'OFF')"/>
