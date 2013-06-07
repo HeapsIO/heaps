@@ -1,5 +1,5 @@
 package h2d.comp;
-import h2d.comp.CssEngine;
+import h2d.comp.CssDefs;
 
 enum Token {
 	TIdent( i : String );
@@ -154,6 +154,26 @@ class CssParser {
 				s.offsetY = i;
 				return true;
 			}
+		case "layout":
+			var i = mapIdent(v, [Horizontal, Vertical]);
+			if( i != null ) {
+				s.layout = i;
+				return true;
+			}
+		case "spacing":
+			return applyComposite(["vertical-spacing", "horizontal-spacing"], v, s);
+		case "horizontal-spacing":
+			var i = getVal(v);
+			if( i != null ) {
+				s.horizontalSpacing = i;
+				return true;
+			}
+		case "vertical-spacing":
+			var i = getVal(v);
+			if( i != null ) {
+				s.verticalSpacing = i;
+				return true;
+			}
 		default:
 			throw "Not implemented '"+r+"' = "+valueStr(v);
 		}
@@ -272,6 +292,15 @@ class CssParser {
 		default:
 			null;
 		};
+	}
+	
+	function mapIdent<T:EnumValue>( v : Value, vals : Array<T> ) : T {
+		var i = getIdent(v);
+		if( i == null ) return null;
+		for( v in vals )
+			if( v.getName().toLowerCase() == i )
+				return v;
+		return null;
 	}
 
 	function getIdent( v : Value ) : Null<String> {

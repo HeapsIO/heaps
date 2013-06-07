@@ -16,19 +16,26 @@ class Comps {
 	function init() {
 		flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, function(_) update());
 		scene = new h2d.Scene();
-		var window = new h2d.comp.Component("window", scene);
+		var window = new h2d.comp.Box(scene);
+		engine.onResized = function() window.setStyle(null);
 		window.addCss("
+			box {
+				border : 1px solid red;
+			}
 			button.big {
 				width : 500px;
 			}
 		");
-		new h2d.comp.Button("Click ME!", window).onClick = function() trace("CLICKED");
+		new h2d.comp.Button("H/V Box", window).onClick = function() window.toggleClass("vertical");
 		var b2 = new h2d.comp.Button("A slightly long one (styled with CSS)");
 		b2.x = 50;
 		b2.y = 100;
 		b2.addClass("big");
 		window.addChild(b2);
 		b2.onClick = function() trace("CLICKED");
+		
+		var b2 = new h2d.comp.Box(window);
+		new h2d.comp.Button("Second", b2);
 	}
 	
 	function update() {

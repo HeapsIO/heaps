@@ -1,24 +1,5 @@
 package h2d.comp;
-
-enum Unit {
-	Pix( v : Float );
-	Percent( v : Float );
-	EM( v : Float );
-}
-
-enum FillStyle {
-	Transparent;
-	Color( c : Int );
-	Gradient( a : Int, b : Int, c : Int, d : Int );
-}
-
-typedef CssClass = {
-	var parent : Null<CssClass>;
-	var node : Null<String>;
-	var className : Null<String>;
-	var pseudoClass : Null<String>;
-	var id : Null<String>;
-}
+import h2d.comp.CssDefs;
 
 class CssRule {
 	public var id : Int;

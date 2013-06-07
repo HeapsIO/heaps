@@ -1,5 +1,5 @@
 package h2d.comp;
-import h2d.comp.CssEngine.FillStyle;
+import h2d.comp.CssDefs;
 
 class Style {
 	
@@ -17,6 +17,9 @@ class Style {
 	public var height : Null<Float>;
 	public var offsetX : Null<Float>;
 	public var offsetY : Null<Float>;
+	public var layout : Null<Layout>;
+	public var horizontalSpacing : Null<Float>;
+	public var verticalSpacing : Null<Float>;
 	
 	public function new() {
 	}
@@ -36,6 +39,9 @@ class Style {
 		if( s.offsetY != null ) offsetY = s.offsetY;
 		if( s.width != null ) width = s.width;
 		if( s.height != null ) height = s.height;
+		if( s.layout != null ) layout = s.layout;
+		if( s.horizontalSpacing != null ) horizontalSpacing = s.horizontalSpacing;
+		if( s.verticalSpacing != null ) verticalSpacing = s.verticalSpacing;
 	}
 	
 	public function padding( v : Float ) {
@@ -82,6 +88,8 @@ class Style {
 			font-size : 14px;
 			color : #000;
 			offset : 0 0;
+			border : 0 solid transparent;
+			background-color : transparent;
 		}
 		button {
 			background-color : gradient(#434343, #4B4B4B, #383838, #3A3A3A);
@@ -94,6 +102,13 @@ class Style {
 			border : 1px solid gradient(#606060,#606060,#707070,#606060);
 			offset-y : 1px;
 			padding-bottom : 4px;
+		}
+		box {
+			layout : horizontal;
+			spacing : 5 5;
+		}
+		box.vertical {
+			layout : vertical;
 		}
 	';
 	
