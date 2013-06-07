@@ -16,6 +16,9 @@ class Comps {
 	function init() {
 		flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, function(_) update());
 		scene = new h2d.Scene();
+		var document = h2d.comp.Parser.fromHtml(h2d.comp.Context.getFile("components.html"));
+		scene.addChild(document);
+		/*
 		var window = new h2d.comp.Box(scene);
 		window.addClass("panel").addClass("window");
 		engine.onResized = function() window.refresh();
@@ -92,6 +95,7 @@ class Comps {
 		var bs = new h2d.comp.Button("Standalone", scene);
 		bs.x = scene.width - 100;
 		bs.y = scene.height - 30;
+		*/
 	}
 	
 	function update() {

@@ -1,0 +1,38 @@
+<body>
+	<style>
+		.window {
+			layout : absolute;
+			padding : 15;
+		}
+		button.big {
+			width : 500px;
+		}
+		
+		.showBorders box {
+			border : 1px solid red;
+		}
+		.showBorders label {
+			border : 1px solid #0FF;
+		}
+		
+	</style>
+	<div class="panel window">
+		<div class="main" id="box">
+			<button value="H/V Box" onclick="$('#box').toggleClass(':vertical')"/>
+			<button value="Absolute" onclick="$('#box').toggleClass(':absolute')"/>
+			<button class="big" value="A slightly long one (styled with CSS)" onclick="$(this).text('Clicked!')"/>
+			<div>
+				<button value="Show Borders" onclick="$('.window').toggleClass('showBorders')"/>
+			</div>
+			<slider onchange="$('#lb1').text(h3d.FMath.fmt($(this).val()))"/>
+			<label id="lb1"></label>
+			<slider onchange="$('#lb2').text(h3d.FMath.fmt($(this).val()))" style="increment:0.1"/>
+			<label id="lb2"></label>
+			<div>
+				<checkbox onchange="$('#lbc').text($(this).val()?'ON':'OFF')"/>
+				<label id="lbc">OFF</label>
+			</div>
+		</div>
+	</div>
+	<button value="Standalone" x="700" y="570"/>
+</body>
