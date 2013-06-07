@@ -7,6 +7,7 @@ class Component extends Sprite {
 	public var id(default, set) : String;
 	public var parentComponent(default, null) : Component;
 	var classes : Array<String>;
+	var components : Array<Component>;
 	
 	var bg : Fill;
 	var width : Float;
@@ -22,6 +23,7 @@ class Component extends Sprite {
 		super(parent);
 		this.name = name;
 		classes = [];
+		components = [];
 		bg = new Fill(this);
 		needRebuild = true;
 	}
@@ -35,17 +37,23 @@ class Component extends Sprite {
 		
 	override function onAlloc() {
 		// lookup our parent component
+		var old = parentComponent;
 		var p = parent;
 		while( p != null ) {
 			var c = flash.Lib.as(p, Component);
 			if( c != null ) {
 				parentComponent = c;
+				if( old != c ) {
+					if( old != null ) old.components.remove(this);
+					c.components.push(this);
+				}
 				needRebuild = true;
 				super.onAlloc();
 				return;
 			}
 			p = p.parent;
 		}
+		if( old != null ) old.components.remove(this);
 		parentComponent = null;
 		super.onAlloc();
 	}
@@ -111,18 +119,34 @@ class Component extends Sprite {
 		styleSheet.applyClasses(this);
 	}
 	
+	inline function extLeft() {
+		return style.paddingLeft + style.marginLeft + style.borderSize;
+	}
+
+	inline function extTop() {
+		return style.paddingTop + style.marginTop + style.borderSize;
+	}
+	
+	inline function extRight() {
+		return style.paddingRight + style.marginRight + style.borderSize;
+	}
+
+	inline function extBottom() {
+		return style.paddingBottom + style.marginBottom + style.borderSize;
+	}
+	
 	function resize( r : Resize ) {
 		if( r.measure ) {
-			width = contentWidth + style.paddingLeft + style.paddingRight + style.borderSize * 2;
-			height = contentHeight + style.paddingTop + style.paddingBottom + style.borderSize * 2;
+			width = contentWidth + extLeft() + extRight();
+			height = contentHeight + extTop() + extBottom();
 			if( style.width != null ) width = style.width;
 			if( style.height != null ) height = style.height;
 		} else {
-			if( r.xPos != null ) x = r.xPos + style.offsetX + style.paddingLeft + style.borderSize;
-			if( r.yPos != null ) y = r.yPos + style.offsetY + style.paddingTop + style.borderSize;
+			if( r.xPos != null ) x = r.xPos + style.offsetX + extLeft();
+			if( r.yPos != null ) y = r.yPos + style.offsetY + extTop();
 			bg.reset();
-			bg.x = -(style.paddingLeft + style.borderSize);
-			bg.y = -(style.paddingTop + style.borderSize);
+			bg.x = style.marginLeft-extLeft();
+			bg.y = style.marginTop-extTop();
 			bg.lineRect(style.borderColor, 0, 0, width, height, style.borderSize);
 			bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize, width - style.borderSize * 2, height - style.borderSize * 2);
 		}
@@ -130,19 +154,15 @@ class Component extends Sprite {
 	
 	function resizeRec( r : Resize ) {
 		resize(r);
-		for( c in childs ) {
-			var c = flash.Lib.as(c, Component);
-			if( c != null ) c.resizeRec(r);
-		}
+		for( c in components )
+			c.resizeRec(r);
 	}
 	
 	function evalStyleRec() {
 		needRebuild = false;
 		evalStyle();
-		for( c in childs ) {
-			var c = flash.Lib.as(c, Component);
-			if( c != null ) c.evalStyleRec();
-		}
+		for( c in components )
+			c.evalStyleRec();
 	}
 	
 	override function sync( ctx : RenderContext ) {

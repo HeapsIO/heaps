@@ -79,6 +79,21 @@ class CssParser {
 		case "padding-bottom":
 			var i = getVal(v);
 			if( i != null ) { s.paddingBottom = i; return true; }
+		case "margin":
+			var i = getVal(v);
+			if( i != null ) { s.margin(i); return true; }
+		case "margin-top":
+			var i = getVal(v);
+			if( i != null ) { s.marginTop = i; return true; }
+		case "margin-left":
+			var i = getVal(v);
+			if( i != null ) { s.marginLeft = i; return true; }
+		case "margin-right":
+			var i = getVal(v);
+			if( i != null ) { s.marginRight = i; return true; }
+		case "margin-bottom":
+			var i = getVal(v);
+			if( i != null ) { s.marginBottom = i; return true; }
 		case "width":
 			var i = getVal(v);
 			if( i != null ) {
@@ -155,7 +170,7 @@ class CssParser {
 				return true;
 			}
 		case "layout":
-			var i = mapIdent(v, [Horizontal, Vertical]);
+			var i = mapIdent(v, [Horizontal, Vertical, Absolute]);
 			if( i != null ) {
 				s.layout = i;
 				return true;

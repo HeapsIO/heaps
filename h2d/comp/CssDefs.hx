@@ -15,6 +15,7 @@ enum FillStyle {
 enum Layout {
 	Horizontal;
 	Vertical;
+	Absolute;
 }
 
 typedef CssClass = {

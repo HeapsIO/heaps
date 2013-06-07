@@ -26,7 +26,8 @@ class Comps {
 				width : 500px;
 			}
 		");
-		new h2d.comp.Button("H/V Box", window).onClick = function() window.toggleClass("vertical");
+		new h2d.comp.Button("H/V Box", window).onClick = function() window.toggleClass(":vertical");
+		new h2d.comp.Button("Absolute", window).onClick = function() window.toggleClass(":absolute");
 		var b2 = new h2d.comp.Button("A slightly long one (styled with CSS)");
 		b2.x = 50;
 		b2.y = 100;
@@ -36,6 +37,11 @@ class Comps {
 		
 		var b2 = new h2d.comp.Box(window);
 		new h2d.comp.Button("Second", b2);
+		
+		// since it's not in a container, it does no get animated on rollover (margin don't apply on free position)
+		var bs = new h2d.comp.Button("Standalone", scene);
+		bs.x = scene.width - 100;
+		bs.y = scene.height - 30;
 	}
 	
 	function update() {

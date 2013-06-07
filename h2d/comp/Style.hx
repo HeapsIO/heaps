@@ -20,6 +20,10 @@ class Style {
 	public var layout : Null<Layout>;
 	public var horizontalSpacing : Null<Float>;
 	public var verticalSpacing : Null<Float>;
+	public var marginTop : Null<Float>;
+	public var marginLeft : Null<Float>;
+	public var marginRight : Null<Float>;
+	public var marginBottom : Null<Float>;
 	
 	public function new() {
 	}
@@ -42,6 +46,10 @@ class Style {
 		if( s.layout != null ) layout = s.layout;
 		if( s.horizontalSpacing != null ) horizontalSpacing = s.horizontalSpacing;
 		if( s.verticalSpacing != null ) verticalSpacing = s.verticalSpacing;
+		if( s.marginLeft != null ) marginLeft = s.marginLeft;
+		if( s.marginRight != null ) marginRight = s.marginRight;
+		if( s.marginTop != null ) marginTop = s.marginTop;
+		if( s.marginBottom != null ) marginBottom = s.marginBottom;
 	}
 	
 	public function padding( v : Float ) {
@@ -49,6 +57,13 @@ class Style {
 		this.paddingLeft = v;
 		this.paddingRight = v;
 		this.paddingBottom = v;
+	}
+
+	public function margin( v : Float ) {
+		this.marginTop = v;
+		this.marginLeft = v;
+		this.marginRight = v;
+		this.marginBottom = v;
 	}
 	
 	public function toString() {
@@ -100,15 +115,18 @@ class Style {
 		button:hover {
 			background-color : gradient(#282828,#2A2A2A,#333333,#3B3B3B);
 			border : 1px solid gradient(#606060,#606060,#707070,#606060);
-			offset-y : 1px;
+			margin-top : 1px;
 			padding-bottom : 4px;
 		}
 		box {
 			layout : horizontal;
 			spacing : 5 5;
 		}
-		box.vertical {
+		box:vertical {
 			layout : vertical;
+		}
+		box:absolute {
+			layout : absolute;
 		}
 	';
 	
