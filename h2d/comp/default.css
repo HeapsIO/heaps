@@ -1,0 +1,47 @@
+* {
+	font-family : "Arial";
+	font-size : 14px;
+	color : white;
+	offset : 0 0;
+	border : 0 solid transparent;
+	background-color : transparent;
+}
+
+button {
+	background-color : gradient(#434343, #4B4B4B, #383838, #3A3A3A);
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	padding : 5px;
+}
+
+button:hover {
+	background-color : gradient(#282828,#2A2A2A,#333333,#3B3B3B);
+	border : 1px solid gradient(#606060,#606060,#707070,#606060);
+	margin-top : 1px;
+	padding-bottom : 4px;
+}
+
+box {
+	layout : horizontal;
+	spacing : 5 5;
+}
+
+box:vertical {
+	layout : vertical;
+}
+
+box:absolute {
+	layout : absolute;
+}
+
+slider {
+	width : 100px;
+	height : 3px;
+	margin : 7px 5px;
+	background-color : gradient(#303030,#353535,#202020,#252525);
+	border : 1px solid gradient(#434343, #4B4B4B, #383838, #3A3A3A);
+}
+
+slider button, slider button:hover {
+	margin-top : -4px;
+	padding : 5px 2px;
+}

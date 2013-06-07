@@ -25,6 +25,9 @@ class Comps {
 			button.big {
 				width : 500px;
 			}
+			slider.incr {
+				increment : 0.1;
+			}
 		");
 		new h2d.comp.Button("H/V Box", window).onClick = function() window.toggleClass(":vertical");
 		new h2d.comp.Button("Absolute", window).onClick = function() window.toggleClass(":absolute");
@@ -33,10 +36,24 @@ class Comps {
 		b2.y = 100;
 		b2.addClass("big");
 		window.addChild(b2);
-		b2.onClick = function() trace("CLICKED");
+		b2.onClick = function() b2.text = "Clicked!";
 		
 		var b2 = new h2d.comp.Box(window);
 		new h2d.comp.Button("Second", b2);
+		
+		var slider = new h2d.comp.Slider(window);
+		var label = new h2d.comp.Label("", window);
+		slider.onChange = function(v) {
+			label.text = ""+h3d.FMath.fmt(v);
+		};
+		
+		var slider = new h2d.comp.Slider(window);
+		var label = new h2d.comp.Label("", window);
+		slider.addClass("incr");
+		slider.onChange = function(v) {
+			label.text = ""+h3d.FMath.fmt(v);
+		};
+
 		
 		// since it's not in a container, it does no get animated on rollover (margin don't apply on free position)
 		var bs = new h2d.comp.Button("Standalone", scene);

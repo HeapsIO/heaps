@@ -13,6 +13,7 @@ class Button extends Component {
 		var active = false, out = false;
 		input.onPush = function(_) {
 			active = true;
+			onMouseDown();
 		};
 		input.onOver = function(_) {
 			addClass(":hover");
@@ -23,6 +24,7 @@ class Button extends Component {
 		};
 		input.onRelease = function(_) {
 			if( active ) onClick();
+			onMouseUp();
 		};
 		tf = new h2d.Text(null, this);
 		this.text = text;
@@ -48,11 +50,17 @@ class Button extends Component {
 			super.resize(r);
 		} else {
 			super.resize(r);
-			input.width = width;
-			input.height = height;
+			input.width = width - (style.marginLeft + style.marginRight);
+			input.height = height - (style.marginTop + style.marginBottom);
 		}
 	}
 		
+	public dynamic function onMouseDown() {
+	}
+
+	public dynamic function onMouseUp() {
+	}
+	
 	public dynamic function onClick() {
 	}
 	

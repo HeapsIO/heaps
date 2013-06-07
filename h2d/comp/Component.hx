@@ -137,25 +137,36 @@ class Component extends Sprite {
 	
 	function resize( r : Resize ) {
 		if( r.measure ) {
+			if( style.width != null ) contentWidth = style.width;
+			if( style.height != null ) contentHeight = style.height;
 			width = contentWidth + extLeft() + extRight();
 			height = contentHeight + extTop() + extBottom();
-			if( style.width != null ) width = style.width;
-			if( style.height != null ) height = style.height;
 		} else {
 			if( r.xPos != null ) x = r.xPos + style.offsetX + extLeft();
 			if( r.yPos != null ) y = r.yPos + style.offsetY + extTop();
 			bg.reset();
-			bg.x = style.marginLeft-extLeft();
-			bg.y = style.marginTop-extTop();
-			bg.lineRect(style.borderColor, 0, 0, width, height, style.borderSize);
-			bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize, width - style.borderSize * 2, height - style.borderSize * 2);
+			bg.x = style.marginLeft - extLeft();
+			bg.y = style.marginTop - extTop();
+			bg.lineRect(style.borderColor, 0, 0, width - (style.marginLeft + style.marginRight), height - (style.marginTop + style.marginBottom), style.borderSize);
+			bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize, contentWidth + style.paddingLeft + style.paddingRight, contentHeight + style.paddingTop + style.paddingBottom);
 		}
 	}
 	
 	function resizeRec( r : Resize ) {
 		resize(r);
-		for( c in components )
-			c.resizeRec(r);
+		if( r.measure ) {
+			for( c in components )
+				c.resizeRec(r);
+		} else {
+			var oldx = r.xPos;
+			var oldy = r.yPos;
+			r.xPos = 0;
+			r.yPos = 0;
+			for( c in components )
+				c.resizeRec(r);
+			r.xPos = oldx;
+			r.yPos = oldy;
+		}
 	}
 	
 	function evalStyleRec() {

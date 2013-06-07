@@ -6,6 +6,8 @@ class Interactive extends Sprite {
 	public var height : Float;
 	public var useMouseHand(default,set) : Bool;
 	public var isEllipse : Bool;
+	public var blockEvents : Bool = true;
+	public var propagateEvents : Bool = false;
 	var scene : Scene;
 	
 	public function new(width, height, ?parent) {
@@ -43,6 +45,8 @@ class Interactive extends Sprite {
 				return;
 			}
 		}
+		e.propagate = propagateEvents;
+		if( !blockEvents ) e.cancel = true;
 		switch( e.kind ) {
 		case EMove:
 			onMove(e);
@@ -64,6 +68,43 @@ class Interactive extends Sprite {
 		if( scene != null && scene.currentOver == this )
 			flash.ui.Mouse.cursor = v ? flash.ui.MouseCursor.BUTTON : flash.ui.MouseCursor.AUTO;
 		return v;
+	}
+	
+	public function startDrag(callb) {
+		scene.startDrag(function(event) {
+			// convert global event to our local space
+			var x = event.relX, y = event.relY;
+			var rx = x * scene.matA + y * scene.matB + scene.absX;
+			var ry = x * scene.matC + y * scene.matD + scene.absY;
+			var r = scene.height / scene.width;
+			
+			var i = this;
+			
+			var dx = rx - i.absX;
+			var dy = ry - i.absY;
+			
+			var w1 = i.width * i.matA * r;
+			var h1 = i.width * i.matC;
+			var ky = h1 * dx - w1 * dy;
+			
+			var w2 = i.height * i.matB * r;
+			var h2 = i.height * i.matD;
+			var kx = w2 * dy - h2 * dx;
+			
+			var max = h1 * w2 - w1 * h2;
+			
+			event.relX = (kx * r / max) * i.width;
+			event.relY = (ky / max) * i.height;
+			
+			callb(event);
+			
+			event.relX = x;
+			event.relY = y;
+		});
+	}
+	
+	public function stopDrag() {
+		scene.stopDrag();
 	}
 	
 	public dynamic function onOver( e : Event ) {

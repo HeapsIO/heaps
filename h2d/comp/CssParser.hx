@@ -65,8 +65,18 @@ class CssParser {
 	function applyStyle( r : String, v : Value, s : Style ) : Bool {
 		switch( r ) {
 		case "padding":
-			var i = getVal(v);
-			if( i != null ) { s.padding(i); return true; }
+			switch( v ) {
+			case VGroup([a, b]):
+				var a = getVal(a), b = getVal(b);
+				if( a != null && b != null ) {
+					s.paddingTop = s.paddingBottom = a;
+					s.paddingLeft = s.paddingRight = b;
+					return true;
+				}
+			default:
+				var i = getVal(v);
+				if( i != null ) { s.padding(i); return true; }
+			}
 		case "padding-top":
 			var i = getVal(v);
 			if( i != null ) { s.paddingTop = i; return true; }
@@ -80,8 +90,18 @@ class CssParser {
 			var i = getVal(v);
 			if( i != null ) { s.paddingBottom = i; return true; }
 		case "margin":
-			var i = getVal(v);
-			if( i != null ) { s.margin(i); return true; }
+			switch( v ) {
+			case VGroup([a, b]):
+				var a = getVal(a), b = getVal(b);
+				if( a != null && b != null ) {
+					s.marginTop = s.marginBottom = a;
+					s.marginLeft = s.marginRight = b;
+					return true;
+				}
+			default:
+				var i = getVal(v);
+				if( i != null ) { s.margin(i); return true; }
+			}
 		case "margin-top":
 			var i = getVal(v);
 			if( i != null ) { s.marginTop = i; return true; }
@@ -189,6 +209,18 @@ class CssParser {
 				s.verticalSpacing = i;
 				return true;
 			}
+		case "increment":
+			var i = getVal(v);
+			if( i != null ) {
+				s.increment = i;
+				return true;
+			}
+		case "max-increment":
+			var i = getVal(v);
+			if( i != null ) {
+				s.maxIncrement = i;
+				return true;
+			}
 		default:
 			throw "Not implemented '"+r+"' = "+valueStr(v);
 		}
@@ -203,10 +235,7 @@ class CssParser {
 		while( vl.length > 0 ) {
 			var found = false;
 			for( n in names ) {
-				var count = switch( n ) {
-				case "background-position": 2;
-				default: 1;
-				}
+				var count = 1;
 				if( count > vl.length ) count = vl.length;
 				while( count > 0 ) {
 					var v = (count == 1) ? vl[0] : VGroup(vl.slice(0, count));
@@ -748,14 +777,9 @@ class CssParser {
 
 				continue;
 			}
-			if( isIdentChar(c) ) {
-				var pos = pos - 1;
-				do c = next() while( isIdentChar(c) );
-				this.pos--;
-				return TIdent(css.substr(pos,this.pos - pos).toLowerCase());
-			}
-			if( isNum(c) ) {
-				var i = 0;
+			if( isNum(c) || c == '-'.code ) {
+				var i = 0, neg = false;
+				if( c == '-'.code ) { c = "0".code; neg = true; }
 				do {
 					i = i * 10 + (c - "0".code);
 					c = next();
@@ -768,10 +792,16 @@ class CssParser {
 						k *= 0.1;
 					}
 					pos--;
-					return TFloat(f);
+					return TFloat(neg? -f : f);
 				}
 				pos--;
-				return TInt(i);
+				return TInt(neg ? -i : i);
+			}
+			if( isIdentChar(c) ) {
+				var pos = pos - 1;
+				do c = next() while( isIdentChar(c) );
+				this.pos--;
+				return TIdent(css.substr(pos,this.pos - pos).toLowerCase());
 			}
 			switch( c ) {
 			case ":".code: return TDblDot;
