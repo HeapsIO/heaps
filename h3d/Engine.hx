@@ -376,6 +376,9 @@ class Engine {
 	}
 
 	public function resize(width, height, aa = 0) {
+		// minimum 32x32 size
+		if( width < 32 ) width = 32;
+		if( height < 32 ) height = 32;
 		this.width = width;
 		this.height = height;
 		this.antiAlias = aa;
