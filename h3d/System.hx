@@ -56,7 +56,8 @@ class System {
 	
 	public static macro function getFileContent( file : String ) {
 		var file = haxe.macro.Context.resolvePath(file);
-		haxe.macro.Context.registerModuleDependency("h2d.comp.Context", file);
+		var m = haxe.macro.Context.getLocalClass().get().module;
+		haxe.macro.Context.registerModuleDependency(m, file);
 		return macro $v{sys.io.File.getContent(file)};
 	}
 	
