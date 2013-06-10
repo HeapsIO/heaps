@@ -138,20 +138,37 @@ class Font #if !macro extends Tile #end {
 		bmp.dispose();
 	}
 	
+	#else
+	
+	static function locateFont( file : String ) {
+		try {
+			return haxe.macro.Context.resolvePath(file);
+		} catch( e : Dynamic ) {
+		}
+		if( Sys.systemName() == "Windows" ) {
+			var path = Sys.getEnv("SystemRoot") + "\\Fonts\\" + file;
+			if( sys.FileSystem.exists(path) )
+				return path;
+		}
+		return null;
+	}
 	#end
+		
 	
 	public macro static function embed( name : String, file : String, ?chars : String, ?skipErrors : Bool ) {
 		var ok = true;
-		var path = try haxe.macro.Context.resolvePath(file) catch( e : Dynamic ) if( skipErrors ) null else throw e;
-		if( path == null )
+		var path = locateFont(file);
+		if( path == null ) {
+			if( !skipErrors ) throw "Font file not found " + file;
 			return macro false;
+		}
 		if( chars == null ) chars = DEFAULT_CHARS;
 		var pos = haxe.macro.Context.currentPos();
 		var safeName = "F_"+~/[^A-Za-z_]+/g.replace(name, "_");
 		haxe.macro.Context.defineType({
 			pack : ["_fonts"],
 			name : safeName,
-			meta : [{ name : ":font", pos : pos, params : [macro $v{file},macro $v{chars}] }, { name : ":keep", pos : pos, params : [] }],
+			meta : [{ name : ":font", pos : pos, params : [macro $v{path},macro $v{chars}] }, { name : ":keep", pos : pos, params : [] }],
 			kind : TDClass(),
 			params : [],
 			pos : pos,
