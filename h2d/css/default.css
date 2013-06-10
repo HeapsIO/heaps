@@ -33,6 +33,10 @@ box:absolute {
 	layout : absolute;
 }
 
+box:dock {
+	layout : dock;
+}
+
 box.panel {
 	background-color : gradient(#303030,#353535,#202020,#252525);
 }

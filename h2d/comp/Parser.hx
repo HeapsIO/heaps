@@ -113,6 +113,8 @@ class Parser {
 		function lookupBody(x:Xml) {
 			if( x.nodeType == Xml.Element && x.nodeName.toLowerCase() == "body" )
 				return x;
+			if( x.nodeType == Xml.PCData )
+				return null;
 			for( e in x ) {
 				var v = lookupBody(e);
 				if( v != null ) return v;

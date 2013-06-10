@@ -195,7 +195,7 @@ class Parser {
 				return true;
 			}
 		case "layout":
-			var i = mapIdent(v, [Horizontal, Vertical, Absolute]);
+			var i = mapIdent(v, [Horizontal, Vertical, Absolute, Dock]);
 			if( i != null ) {
 				s.layout = i;
 				return true;
@@ -236,6 +236,12 @@ class Parser {
 			var i = getVal(v);
 			if( i != null ) {
 				s.tickSpacing = i;
+				return true;
+			}
+		case "dock":
+			var i = mapIdent(v, [Top, Bottom, Left, Right, Full]);
+			if( i != null ) {
+				s.dock = i;
 				return true;
 			}
 		default:

@@ -16,6 +16,15 @@ enum Layout {
 	Horizontal;
 	Vertical;
 	Absolute;
+	Dock;
+}
+
+enum DockStyle {
+	Top;
+	Left;
+	Right;
+	Bottom;
+	Full;
 }
 
 class Class {

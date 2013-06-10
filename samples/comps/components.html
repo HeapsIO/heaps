@@ -8,10 +8,18 @@
 			width : 500px;
 		}
 		
+		.border {
+			border : 1px solid #888;
+		}
+		
+		.dock {
+			layout:dock;
+		}
+		
 		.showBorders box {
 			border : 1px solid red;
 		}
-		.showBorders label {
+		.showBorders label, .showBorders box.dock {
 			border : 1px solid #0FF;
 		}
 		
@@ -31,6 +39,16 @@
 			<div>
 				<checkbox onchange="$('#lbc').text($(this).val()?'ON':'OFF')"/>
 				<label id="lbc">OFF</label>
+			</div>
+			
+			<div class="dock">
+				<div class="panel border" style="dock:top; height:60px"/>
+				<div class="panel border" style="dock:left; width:30px"/>
+				<div class="panel border" style="dock:right; width:40px"/>
+				<div class="panel border" style="dock:bottom; height:40px"/>
+				<div class="panel border" style="dock:left; width:20px"/>
+				<div class="panel border" style="dock:full"/>
+				<div class="panel border" style="dock:full; width : 20px; height : 20px"/>
 			</div>
 		</div>
 	</div>

@@ -34,10 +34,8 @@ class Box extends Component {
 			var prev = null;
 			for( c in components ) {
 				if( ctx.measure ) {
-					ctx2.xPos = xPos;
-					ctx2.yPos = yPos;
 					ctx2.maxWidth = contentWidth;
-					ctx2.maxHeight = contentHeight - yPos;
+					ctx2.maxHeight = contentHeight - (yPos + lineHeight + style.verticalSpacing);
 					c.resizeRec(ctx2);
 					var next = xPos + c.width;
 					if( prev != null ) next += style.horizontalSpacing;
@@ -66,9 +64,9 @@ class Box extends Component {
 				}
 				prev = c;
 			}
-			if( ctx.measure ) {
-				if( maxPos < contentWidth ) contentWidth = maxPos;
-				if( yPos + lineHeight < contentHeight ) contentHeight = yPos + lineHeight;
+			if( ctx.measure && style.dock == null ) {
+				if( maxPos < contentWidth && style.width == null ) contentWidth = maxPos;
+				if( yPos + lineHeight < contentHeight && style.height == null ) contentHeight = yPos + lineHeight;
 			}
 		case Vertical:
 			var colWidth = 0.;
@@ -76,9 +74,7 @@ class Box extends Component {
 			var prev = null;
 			for( c in components ) {
 				if( ctx.measure ) {
-					ctx2.xPos = xPos;
-					ctx2.yPos = yPos;
-					ctx2.maxWidth = ctx.maxWidth - xPos;
+					ctx2.maxWidth = ctx.maxWidth - (xPos + colWidth + style.horizontalSpacing);
 					ctx2.maxHeight = contentHeight;
 					c.resizeRec(ctx2);
 					var next = yPos + c.height;
@@ -108,22 +104,76 @@ class Box extends Component {
 				}
 				prev = c;
 			}
-			if( ctx.measure ) {
-				if( xPos + colWidth < contentWidth ) contentWidth = xPos + colWidth;
-				if( maxPos < contentHeight ) contentHeight = maxPos;
+			if( ctx.measure && style.dock == null ) {
+				if( xPos + colWidth < contentWidth && style.width == null ) contentWidth = xPos + colWidth;
+				if( maxPos < contentHeight && style.height == null ) contentHeight = maxPos;
 			}
 		case Absolute:
-			var oldx = ctx.xPos, oldy = ctx.yPos;
-			ctx.xPos = null;
-			ctx.yPos = null;
+			ctx2.xPos = null;
+			ctx2.yPos = null;
 			if( ctx.measure ) {
-				ctx.maxWidth = contentWidth;
-				ctx.maxHeight = contentHeight;
+				ctx2.maxWidth = contentWidth;
+				ctx2.maxHeight = contentHeight;
 			}
 			for( c in components )
-				c.resizeRec(ctx);
-			ctx.xPos = oldx;
-			ctx.yPos = oldy;
+				c.resizeRec(ctx2);
+		case Dock:
+			ctx2.xPos = 0;
+			ctx2.yPos = 0;
+			var xPos = 0., yPos = 0., w = contentWidth, h = contentHeight;
+			if( ctx.measure ) {
+				for( c in components ) {
+					ctx2.maxWidth = w;
+					ctx2.maxHeight = h;
+					c.resizeRec(ctx2);
+					var d = c.style.dock;
+					if( d == null ) d = Full;
+					switch( d ) {
+					case Left, Right:
+						w -= c.width;
+					case Top, Bottom:
+						h -= c.height;
+					case Full:
+					}
+					if( w < 0 ) w = 0;
+					if( h < 0 ) h = 0;
+				}
+			} else {
+				for( c in components ) {
+					ctx2.maxWidth = w;
+					ctx2.maxHeight = h;
+					var d = c.style.dock;
+					if( d == null ) d = Full;
+					ctx2.xPos = xPos;
+					ctx2.yPos = yPos;
+					switch( d ) {
+					case Left, Top:
+					case Right:
+						ctx2.xPos += w - c.width;
+					case Bottom:
+						ctx2.yPos += h - c.height;
+					case Full:
+						ctx2.xPos += Std.int((w - c.width) * 0.5);
+						ctx2.yPos += Std.int((h - c.height) * 0.5);
+					}
+					c.resizeRec(ctx2);
+					switch( d ) {
+					case Left:
+						w -= c.width;
+						xPos += c.width;
+					case Right:
+						w -= c.width;
+					case Top:
+						h -= c.height;
+						yPos += c.height;
+					case Bottom:
+						h -= c.height;
+					case Full:
+					}
+					if( w < 0 ) w = 0;
+					if( h < 0 ) h = 0;
+				}
+			}
 		}
 		if( ctx.measure ) {
 			width = contentWidth + extX + extRight();

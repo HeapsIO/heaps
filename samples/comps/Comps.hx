@@ -16,8 +16,9 @@ class Comps {
 	function init() {
 		flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, function(_) update());
 		scene = new h2d.Scene();
-		var document = h2d.comp.Parser.fromHtml(h2d.comp.Context.getFile("components.html"),{ fmt : h3d.FMath.fmt });
+		var document = h2d.comp.Parser.fromHtml(h3d.System.getFileContent("components.html"),{ fmt : h3d.FMath.fmt });
 		scene.addChild(document);
+		engine.onResized = function() document.setStyle(null);
 	}
 	
 	function update() {
