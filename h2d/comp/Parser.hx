@@ -1,5 +1,6 @@
 package h2d.comp;
 
+#if hscript
 private class CustomInterp extends hscript.Interp {
 	override function fcall(o:Dynamic, f:String, args:Array<Dynamic>):Dynamic {
 		if( Std.is(o, h2d.css.JQuery) && Reflect.field(o,f) == null ) {
@@ -10,6 +11,7 @@ private class CustomInterp extends hscript.Interp {
 		return super.fcall(o, f, args);
 	}
 }
+#end
 
 class Parser {
 	

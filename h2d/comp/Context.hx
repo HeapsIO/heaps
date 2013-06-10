@@ -2,8 +2,6 @@ package h2d.comp;
 
 class Context {
 	
-	#if !macro
-	
 	// measure props
 	public var measure : Bool;
 	public var maxWidth : Float;
@@ -38,7 +36,7 @@ class Context {
 
 	static var FONTS = new Map<String,h2d.Font>();
 	
-	public static var DEFAULT_CSS = getFile("h2d/css/default.css");
+	public static var DEFAULT_CSS = h3d.System.getFileContent("h2d/css/default.css");
 	
 	static var DEF = null;
 	public static function getDefaultCss() {
@@ -47,14 +45,6 @@ class Context {
 		var e = new h2d.css.Engine();
 		e.addRules(DEFAULT_CSS);
 		return e;
-	}
-	
-	#end
-	
-	public static macro function getFile( file : String ) {
-		var file = haxe.macro.Context.resolvePath(file);
-		haxe.macro.Context.registerModuleDependency("h2d.comp.Context", file);
-		return macro $v{sys.io.File.getContent(file)};
 	}
 	
 }

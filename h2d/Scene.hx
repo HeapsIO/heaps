@@ -39,7 +39,7 @@ class Scene extends Layers implements h3d.IDrawable {
 	}
 
 	override function onDelete() {
-		if( h3d.Caps.isTouch ) {
+		if( h3d.System.isTouch ) {
 			stage.removeEventListener(flash.events.TouchEvent.TOUCH_BEGIN, onTouchDown);
 			stage.removeEventListener(flash.events.TouchEvent.TOUCH_MOVE, onTouchMove);
 			stage.removeEventListener(flash.events.TouchEvent.TOUCH_END, onTouchUp);
@@ -53,7 +53,7 @@ class Scene extends Layers implements h3d.IDrawable {
 	}
 	
 	override function onAlloc() {
-		if( h3d.Caps.isTouch ) {
+		if( h3d.System.isTouch ) {
 			flash.ui.Multitouch.inputMode = flash.ui.MultitouchInputMode.TOUCH_POINT;
 			stage.addEventListener(flash.events.TouchEvent.TOUCH_BEGIN, onTouchDown);
 			stage.addEventListener(flash.events.TouchEvent.TOUCH_MOVE, onTouchMove);

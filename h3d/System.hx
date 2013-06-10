@@ -1,6 +1,8 @@
 package h3d;
 
 class System {
+	
+	#if !macro
 
 	public static var width(get,never) : Int;
 	public static var height(get,never) : Int;
@@ -49,6 +51,13 @@ class System {
 		} else
 			flash.system.System.exit(0);
 	}
+
+	#end
 	
+	public static macro function getFileContent( file : String ) {
+		var file = haxe.macro.Context.resolvePath(file);
+		haxe.macro.Context.registerModuleDependency("h2d.comp.Context", file);
+		return macro $v{sys.io.File.getContent(file)};
+	}
 	
 }
