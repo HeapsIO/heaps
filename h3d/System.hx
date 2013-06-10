@@ -1,6 +1,6 @@
 package h3d;
 
-class Caps {
+class System {
 
 	public static var width(get,never) : Int;
 	public static var height(get,never) : Int;
@@ -31,5 +31,24 @@ class Caps {
 	static function get_isAndroid() {
 		return flash.system.Capabilities.manufacturer.indexOf('Android') != -1;
 	}
+	
+	static var loop = null;
+	
+	public static function setLoop( f : Void -> Void ) {
+		if( loop != null )
+			flash.Lib.current.removeEventListener(flash.events.Event.ENTER_FRAME, loop);
+		loop = function(_) f();
+		flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, loop);
+	}
+
+	public static function exit() {
+		var isAir = flash.system.Capabilities.playerType == "Desktop";
+		if( isAir ) {
+			var d : Dynamic = flash.Lib.current.loaderInfo.applicationDomain.getDefinition("flash.desktop.NativeApplication");
+			Reflect.field(Reflect.field(d,"nativeApplication"),"exit")();
+		} else
+			flash.system.System.exit(0);
+	}
+	
 	
 }

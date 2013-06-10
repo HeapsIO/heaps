@@ -48,15 +48,15 @@ class Engine {
 
 	public function new( width = 0, height = 0, hardware = true, aa = 0, stageIndex = 0 ) {
 		if( width == 0 )
-			width = Caps.width;
+			width = System.width;
 		if( height == 0 )
-			height = Caps.height;
+			height = System.height;
 		this.width = width;
 		this.height = height;
 		this.hardware = hardware;
 		this.antiAlias = aa;
 		this.autoResize = true;
-		fullScreen = !Caps.isWindowed;
+		fullScreen = !System.isWindowed;
 		var stage = flash.Lib.current.stage;
 		realFps = stage.frameRate;
 		lastTime = flash.Lib.getTimer();
@@ -335,7 +335,7 @@ class Engine {
 	
 	function onStageResize(_) {
 		if( ctx != null && autoResize ) {
-			var w = Caps.width, h = Caps.height;
+			var w = System.width, h = System.height;
 			if( w != width || h != height )
 				resize(w, h, antiAlias);
 			onResized();
@@ -345,7 +345,7 @@ class Engine {
 	var fsDelayed : Bool;
 	function set_fullScreen(v) {
 		fullScreen = v;
-		if( ctx != null && Caps.isWindowed ) {
+		if( ctx != null && System.isWindowed ) {
 			var stage = flash.Lib.current.stage;
 			var isAir = flash.system.Capabilities.playerType == "Desktop";
 			var state = v ? (isAir ? flash.display.StageDisplayState.FULL_SCREEN_INTERACTIVE : flash.display.StageDisplayState.FULL_SCREEN) : flash.display.StageDisplayState.NORMAL;
@@ -361,15 +361,6 @@ class Engine {
 			}
 		}
 		return v;
-	}
-	
-	public function closeApp() {
-		var isAir = flash.system.Capabilities.playerType == "Desktop";
-		if( isAir ) {
-			var d : Dynamic = flash.Lib.current.loaderInfo.applicationDomain.getDefinition("flash.desktop.NativeApplication");
-			Reflect.field(Reflect.field(d,"nativeApplication"),"exit")();
-		} else
-			flash.system.System.exit(0);
 	}
 	
 	public dynamic function onResized() {
