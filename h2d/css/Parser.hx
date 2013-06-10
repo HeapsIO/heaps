@@ -519,19 +519,7 @@ class Parser {
 		while( true ) {
 			if( isToken(TEof) )
 				break;
-			var classes = [];
-			while( true ) {
-				spacesTokens = true;
-				isToken(TSpaces); // skip
-				var c = readClass(null);
-				spacesTokens = false;
-				if( c == null ) break;
-				classes.push(c);
-				if( !isToken(TComma) )
-					break;
-			}
-			if( classes.length == 0 )
-				unexpected(readToken());
+			var classes = readClasses();
 			expect(TBrOpen);
 			this.s = new Style();
 			this.simp = null;
@@ -544,17 +532,38 @@ class Parser {
 		}
 		return rules;
 	}
+	
+	public function parseClasses( css : String ) {
+		this.css = css;
+		pos = 0;
+		tokens = [];
+		var c = readClasses();
+		expect(TEof);
+		return c;
+	}
 
 	// ----------------- class parser ---------------------------
 
-	function readClass( parent ) : CssClass {
-		var c : CssClass = {
-			parent : parent,
-			node : null,
-			id : null,
-			className : null,
-			pseudoClass : null,
-		};
+	function readClasses() {
+		var classes = [];
+		while( true ) {
+			spacesTokens = true;
+			isToken(TSpaces); // skip
+			var c = readClass(null);
+			spacesTokens = false;
+			if( c == null ) break;
+			classes.push(c);
+			if( !isToken(TComma) )
+				break;
+		}
+		if( classes.length == 0 )
+			unexpected(readToken());
+		return classes;
+	}
+	
+	function readClass( parent ) : Class {
+		var c = new Class();
+		c.parent = parent;
 		var def = false;
 		var last = null;
 		while( true ) {
@@ -566,7 +575,7 @@ class Parser {
 				case TIdent(i): c.node = i; def = true;
 				case TSpaces:
 					return def ? readClass(c) : null;
-				case TBrOpen, TComma:
+				case TBrOpen, TComma, TEof:
 					push(t);
 					break;
 				default:
@@ -816,9 +825,9 @@ class Parser {
 			}
 			if( isIdentChar(c) ) {
 				var pos = pos - 1;
-				do c = next() while( isIdentChar(c) );
+				do c = next() while( isIdentChar(c) || isNum(c) );
 				this.pos--;
-				return TIdent(css.substr(pos,this.pos - pos).toLowerCase());
+				return TIdent(css.substr(pos,this.pos - pos));
 			}
 			switch( c ) {
 			case ":".code: return TDblDot;

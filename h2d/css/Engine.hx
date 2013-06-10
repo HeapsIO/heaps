@@ -3,7 +3,7 @@ import h2d.css.Defs;
 
 class Rule {
 	public var id : Int;
-	public var c : CssClass;
+	public var c : Class;
 	public var priority : Int;
 	public var s : Style;
 	public function new() {
@@ -40,7 +40,7 @@ class Engine {
 		return dp == 0 ? r1.id - r2.id : dp;
 	}
 
-	function ruleMatch( c : CssClass, d : h2d.comp.Component ) {
+	public static function ruleMatch( c : Class, d : h2d.comp.Component ) {
 		if( c.pseudoClass != null ) {
 			var pc = ":" + c.pseudoClass;
 			var found = false;
@@ -68,8 +68,16 @@ class Engine {
 			return false;
 		if( c.id != null && c.id != d.id )
 			return false;
-		if( c.parent != null && (d.parentComponent == null || !ruleMatch(c.parent, d.parentComponent)) )
-			return false;
+		if( c.parent != null ) {
+			var p = d.parentComponent;
+			while( p != null ) {
+				if( ruleMatch(c.parent, p) )
+					break;
+				p = p.parentComponent;
+			}
+			if( p == null )
+				return false;
+		}
 		return true;
 	}
 

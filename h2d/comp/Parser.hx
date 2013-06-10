@@ -2,15 +2,21 @@ package h2d.comp;
 
 private class CustomInterp extends hscript.Interp {
 	override function fcall(o:Dynamic, f:String, args:Array<Dynamic>):Dynamic {
-		if( Std.is(o, h2d.css.JQuery) )
-			return args.length == 0 ? Reflect.callMethod(o, Reflect.field(o, "_get_" + f), args) : Reflect.callMethod(o, Reflect.field(o, "_set_" + f), args);
+		if( Std.is(o, h2d.css.JQuery) && Reflect.field(o,f) == null ) {
+			var rf = args.length == 0 ? "_get_" + f : "_set_" + f;
+			if( Reflect.field(o, rf) == null ) throw "JQuery don't have " + f + " implemented";
+			f = rf;
+		}
 		return super.fcall(o, f, args);
 	}
 }
 
 class Parser {
 	
-	public function new() {
+	var api : {};
+	
+	public function new(?api) {
+		this.api = api;
 	}
 	
 	public function build( x : haxe.xml.Fast, parent : Component ) {
@@ -92,6 +98,7 @@ class Parser {
 			throw "Invalid Script line " + p.line + " (" + e+ ")";
 		}
 		var i = new CustomInterp();
+		i.variables.set("api", api);
 		i.variables.set("this", c);
 		i.variables.set("$", function(rq) return new h2d.css.JQuery(c,rq));
 		return function() try i.execute(e) catch( e : Dynamic ) throw "Error while running script " + script + " (" + e + ")";
@@ -100,7 +107,7 @@ class Parser {
 		#end
 	}
 	
-	public static function fromHtml( html : String ) : Component {
+	public static function fromHtml( html : String, ?api : {} ) : Component {
 		function lookupBody(x:Xml) {
 			if( x.nodeType == Xml.Element && x.nodeName.toLowerCase() == "body" )
 				return x;
@@ -113,7 +120,7 @@ class Parser {
 		var x = Xml.parse(html);
 		var body = lookupBody(x);
 		if( body == null ) body = x;
-		return new Parser().build(new haxe.xml.Fast(body),null);
+		return new Parser(api).build(new haxe.xml.Fast(body),null);
 	}
 	
 }
