@@ -74,12 +74,12 @@ class Box extends Component {
 			var prev = null;
 			for( c in components ) {
 				if( ctx.measure ) {
+					if( prev != null ) xPos += style.horizontalSpacing;
 					ctx2.maxWidth = contentWidth - xPos;
 					if( ctx2.maxWidth < 0 ) ctx2.maxWidth = 0;
 					ctx2.maxHeight = contentHeight;
 					c.resizeRec(ctx2);
 					xPos += c.width;
-					if( prev != null ) xPos += style.horizontalSpacing;
 					if( c.height > lineHeight ) lineHeight = c.height;
 				} else {
 					ctx2.xPos = xPos;
@@ -99,12 +99,12 @@ class Box extends Component {
 			var prev = null;
 			for( c in components ) {
 				if( ctx.measure ) {
+					if( prev != null ) yPos += style.verticalSpacing;
 					ctx2.maxWidth = contentWidth;
 					ctx2.maxHeight = contentHeight - yPos;
 					if( ctx2.maxHeight < 0 ) ctx2.maxHeight = 0;
 					c.resizeRec(ctx2);
 					yPos += c.height;
-					if( prev != null ) yPos += style.verticalSpacing;
 					if( c.width > colWidth ) colWidth = c.width;
 				} else {
 					ctx2.xPos = 0;
