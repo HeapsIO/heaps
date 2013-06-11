@@ -16,12 +16,14 @@ private class CustomInterp extends hscript.Interp {
 class Parser {
 	
 	var api : {};
+	var comps : Map<String, haxe.xml.Fast -> Component -> Component>;
 	
 	public function new(?api) {
 		this.api = api;
+		comps = new Map();
 	}
 	
-	public function build( x : haxe.xml.Fast, parent : Component ) {
+	public function build( x : haxe.xml.Fast, ?parent : Component ) {
 		var c : Component;
 		switch( x.name.toLowerCase() ) {
 		case "body":
@@ -42,7 +44,11 @@ class Parser {
 		case "itemlist":
 			c = new ItemList(parent);
 		case n:
-			throw "Unknown node " + n;
+			var make = comps.get(n);
+			if( make != null )
+				c = make(x, parent);
+			else
+				throw "Unknown node " + n;
 		}
 		for( n in x.x.attributes() ) {
 			var v = x.x.get(n);
@@ -107,6 +113,10 @@ class Parser {
 		for( e in x.elements )
 			build(e, c);
 		return c;
+	}
+	
+	public function register(name, make) {
+		this.comps.set(name, make);
 	}
 	
 	function makeScript( c : Component, script : String ) {
