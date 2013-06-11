@@ -4,7 +4,7 @@ class Box extends Component {
 	
 	public function new(?layout,?parent) {
 		super("box", parent);
-		if( layout == null ) layout = h2d.css.Defs.Layout.Horizontal;
+		if( layout == null ) layout = h2d.css.Defs.Layout.Inline;
 		addClass(":"+layout.getName().toLowerCase());
 	}
 	
@@ -28,7 +28,7 @@ class Box extends Component {
 			resize(ctx2);
 		}
 		switch( style.layout ) {
-		case Horizontal:
+		case Inline:
 			var lineHeight = 0.;
 			var xPos = 0., yPos = 0., maxPos = 0.;
 			var prev = null;
@@ -68,36 +68,46 @@ class Box extends Component {
 				if( maxPos < contentWidth && style.width == null ) contentWidth = maxPos;
 				if( yPos + lineHeight < contentHeight && style.height == null ) contentHeight = yPos + lineHeight;
 			}
-		case Vertical:
-			var colWidth = 0.;
-			var xPos = 0., yPos = 0., maxPos = 0.;
+		case Horizontal:
+			var lineHeight = 0.;
+			var xPos = 0.;
 			var prev = null;
 			for( c in components ) {
 				if( ctx.measure ) {
-					ctx2.maxWidth = ctx.maxWidth - (xPos + colWidth + style.horizontalSpacing);
+					ctx2.maxWidth = contentWidth - xPos;
+					if( ctx2.maxWidth < 0 ) ctx2.maxWidth = 0;
 					ctx2.maxHeight = contentHeight;
 					c.resizeRec(ctx2);
-					var next = yPos + c.height;
-					if( prev != null ) next += style.verticalSpacing;
-					if( yPos > 0 && next > contentHeight ) {
-						xPos += colWidth + style.horizontalSpacing;
-						yPos = c.height;
-						colWidth = c.width;
-					} else {
-						yPos = next;
-						if( c.width > colWidth ) colWidth = c.width;
-					}
-					if( yPos > maxPos ) maxPos = yPos;
+					xPos += c.width;
+					if( prev != null ) xPos += style.horizontalSpacing;
+					if( c.height > lineHeight ) lineHeight = c.height;
 				} else {
-					var next = yPos + c.height;
-					if( yPos > 0 && next > contentHeight ) {
-						xPos += colWidth + style.horizontalSpacing;
-						yPos = 0;
-						colWidth = c.width;
-					} else {
-						if( c.width > colWidth ) colWidth = c.width;
-					}
 					ctx2.xPos = xPos;
+					ctx2.yPos = 0;
+					c.resizeRec(ctx2);
+					xPos += c.width + style.horizontalSpacing;
+				}
+				prev = c;
+			}
+			if( ctx.measure && style.dock == null ) {
+				if( xPos < contentWidth && style.width == null ) contentWidth = xPos;
+				if( lineHeight < contentHeight && style.height == null ) contentHeight = lineHeight;
+			}
+		case Vertical:
+			var colWidth = 0.;
+			var yPos = 0.;
+			var prev = null;
+			for( c in components ) {
+				if( ctx.measure ) {
+					ctx2.maxWidth = contentWidth;
+					ctx2.maxHeight = contentHeight - yPos;
+					if( ctx2.maxHeight < 0 ) ctx2.maxHeight = 0;
+					c.resizeRec(ctx2);
+					yPos += c.height;
+					if( prev != null ) yPos += style.verticalSpacing;
+					if( c.width > colWidth ) colWidth = c.width;
+				} else {
+					ctx2.xPos = 0;
 					ctx2.yPos = yPos;
 					c.resizeRec(ctx2);
 					yPos += c.height + style.verticalSpacing;
@@ -105,8 +115,8 @@ class Box extends Component {
 				prev = c;
 			}
 			if( ctx.measure && style.dock == null ) {
-				if( xPos + colWidth < contentWidth && style.width == null ) contentWidth = xPos + colWidth;
-				if( maxPos < contentHeight && style.height == null ) contentHeight = maxPos;
+				if( colWidth < contentWidth && style.width == null ) contentWidth = colWidth;
+				if( yPos < contentHeight && style.height == null ) contentHeight = yPos;
 			}
 		case Absolute:
 			ctx2.xPos = null;

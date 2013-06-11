@@ -71,6 +71,14 @@ class Component extends Sprite {
 		return this;
 	}
 	
+	public function addStyle(s) {
+		if( customStyle == null )
+			customStyle = new h2d.css.Style();
+		customStyle.apply(s);
+		needRebuild = true;
+		return this;
+	}
+	
 	public function getClasses() : Iterable<String> {
 		return classes;
 	}

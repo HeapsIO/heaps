@@ -71,6 +71,14 @@ class JQuery {
 		return this;
 	}
 	
+	function _set_style(v:String) {
+		var s = new Style();
+		new Parser().parse(v, s);
+		for( c in select )
+			c.addStyle(s);
+		return this;
+	}
+	
 	function getSet( query : Dynamic ) {
 		var set;
 		if( query == null )

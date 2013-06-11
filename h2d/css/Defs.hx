@@ -17,6 +17,7 @@ enum Layout {
 	Vertical;
 	Absolute;
 	Dock;
+	Inline;
 }
 
 enum DockStyle {

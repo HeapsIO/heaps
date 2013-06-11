@@ -8,6 +8,18 @@
 			width : 500px;
 		}
 		
+		.main {
+			layout : inline;
+		}
+		
+		.main:vertical {
+			layout : vertical;
+		}
+
+		.main:absolute {
+			layout : absolute;
+		}
+		
 		.border {
 			border : 1px solid #888;
 		}
@@ -26,8 +38,9 @@
 	</style>
 	<div class="panel window">
 		<div class="main" id="box">
-			<button value="H/V Box" onclick="$('#box').toggleClass(':vertical')"/>
-			<button value="Absolute" onclick="$('#box').toggleClass(':absolute')"/>
+			<button value="V Box" onclick="$('#box').style('layout : vertical')"/>
+			<button value="H Box" onclick="$('#box').style('layout : horizontal')"/>
+			<button value="I Box" onclick="$('#box').style('layout : inline')"/>
 			<button class="big" value="A slightly long one (styled with CSS)" onclick="$(this).text('Clicked!')"/>
 			<div>
 				<button value="Show Borders" onclick="$('.window').toggleClass('showBorders')"/>

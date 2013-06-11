@@ -21,8 +21,16 @@ button:hover {
 }
 
 box {
-	layout : horizontal;
+	layout : inline;
 	spacing : 5 5;
+}
+
+:inline {
+	layout : inline;
+}
+
+:horizontal {
+	layout : horizontal;
 }
 
 :vertical {

@@ -195,7 +195,7 @@ class Parser {
 				return true;
 			}
 		case "layout":
-			var i = mapIdent(v, [Horizontal, Vertical, Absolute, Dock]);
+			var i = mapIdent(v, [Horizontal, Vertical, Absolute, Dock, Inline]);
 			if( i != null ) {
 				s.layout = i;
 				return true;

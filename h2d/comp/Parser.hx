@@ -89,6 +89,13 @@ class Parser {
 					c.selected = Std.parseInt(v);
 				default:
 				}
+			case "checked":
+				switch( c.name ) {
+				case "checkbox":
+					var c : Checkbox = cast c;
+					c.checked = true;
+				default:
+				}
 			case "x":
 				c.x = Std.parseFloat(v);
 			case "y":
