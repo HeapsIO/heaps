@@ -35,10 +35,12 @@ class Parser {
 			c = new Button(x.has.value ? x.att.value : "", parent);
 		case "slider":
 			c = new Slider(parent);
-		case "label":
+		case "label", "span":
 			c = new Label(x.x.firstChild() == null ? "" : x.innerData, parent);
 		case "checkbox":
 			c = new Checkbox(parent);
+		case "itemlist":
+			c = new ItemList(parent);
 		case n:
 			throw "Unknown node " + n;
 		}
@@ -70,12 +72,23 @@ class Parser {
 					var c : Checkbox = cast c;
 					var s = makeScript(c,v);
 					c.onChange = function(_) s();
+				case "itemlist":
+					var c : ItemList = cast c;
+					var s = makeScript(c,v);
+					c.onChange = function(_) s();
 				default:
 				}
 			case "style":
 				var s = new h2d.css.Style();
 				new h2d.css.Parser().parse(v, s);
 				c.setStyle(s);
+			case "selected":
+				switch( c.name ) {
+				case "itemlist":
+					var c : ItemList = cast c;
+					c.selected = Std.parseInt(v);
+				default:
+				}
 			case "x":
 				c.x = Std.parseFloat(v);
 			case "y":

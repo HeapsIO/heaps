@@ -29,6 +29,8 @@ class Style {
 	public var tickColor : Null<FillStyle>;
 	public var tickSpacing : Null<Float>;
 	public var dock : Null<DockStyle>;
+	public var cursorColor : Null<Int>;
+	public var selectionColor : Null<Int>;
 	
 	public function new() {
 	}
@@ -60,6 +62,8 @@ class Style {
 		if( s.tickColor != null ) tickColor = s.tickColor;
 		if( s.tickSpacing != null ) tickSpacing = s.tickSpacing;
 		if( s.dock != null ) dock = s.dock;
+		if( s.cursorColor != null ) cursorColor = s.cursorColor;
+		if( s.selectionColor != null ) selectionColor = s.selectionColor;
 	}
 	
 	public function padding( v : Float ) {

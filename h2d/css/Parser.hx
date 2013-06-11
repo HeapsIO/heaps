@@ -244,6 +244,18 @@ class Parser {
 				s.dock = i;
 				return true;
 			}
+		case "cursor-color":
+			var i = getColAlpha(v);
+			if( i != null ) {
+				s.cursorColor = i;
+				return true;
+			}
+		case "selection-color":
+			var i = getColAlpha(v);
+			if( i != null ) {
+				s.selectionColor = i;
+				return true;
+			}
 		default:
 			throw "Not implemented '"+r+"' = "+valueStr(v);
 		}

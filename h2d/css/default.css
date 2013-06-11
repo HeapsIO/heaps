@@ -25,15 +25,15 @@ box {
 	spacing : 5 5;
 }
 
-box:vertical {
+:vertical {
 	layout : vertical;
 }
 
-box:absolute {
+:absolute {
 	layout : absolute;
 }
 
-box:dock {
+:dock {
 	layout : dock;
 }
 
@@ -65,3 +65,11 @@ checkbox {
 	background-color : gradient(#303030,#252525,#252525,#252525);
 }
 
+itemlist {
+	padding : 5px;
+	vertical-spacing : 3px;
+	cursor-color : #333;
+	selection-color : #000;
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	background-color : gradient(#303030,#252525,#252525,#252525);
+}
