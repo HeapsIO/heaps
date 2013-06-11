@@ -60,6 +60,8 @@ class Interactive extends Sprite {
 		case EOut:
 			if( useMouseHand ) flash.ui.Mouse.cursor = flash.ui.MouseCursor.AUTO;
 			onOut(e);
+		case EWheel:
+			onWheel(e);
 		}
 	}
 	
@@ -120,6 +122,9 @@ class Interactive extends Sprite {
 	}
 	
 	public dynamic function onMove( e : Event ) {
+	}
+
+	public dynamic function onWheel( e : Event ) {
 	}
 	
 }

@@ -47,6 +47,7 @@ class Scene extends Layers implements h3d.IDrawable {
 			stage.removeEventListener(flash.events.MouseEvent.MOUSE_DOWN, onMouseDown);
 			stage.removeEventListener(flash.events.MouseEvent.MOUSE_MOVE, onMouseMove);
 			stage.removeEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
+			stage.removeEventListener(flash.events.MouseEvent.MOUSE_WHEEL, onMouseWheel);
 			flash.ui.Mouse.cursor = flash.ui.MouseCursor.AUTO;
 		}
 		super.onDelete();
@@ -62,6 +63,7 @@ class Scene extends Layers implements h3d.IDrawable {
 			stage.addEventListener(flash.events.MouseEvent.MOUSE_DOWN, onMouseDown);
 			stage.addEventListener(flash.events.MouseEvent.MOUSE_MOVE, onMouseMove);
 			stage.addEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
+			stage.addEventListener(flash.events.MouseEvent.MOUSE_WHEEL, onMouseWheel);
 		}
 		super.onAlloc();
 	}
@@ -95,6 +97,14 @@ class Scene extends Layers implements h3d.IDrawable {
 	function onMouseMove(e:Dynamic) {
 		if( pendingEvents != null )
 			pendingEvents.push(new Event(EMove, mouseX, mouseY));
+	}
+	
+	function onMouseWheel(e:flash.events.MouseEvent) {
+		if( pendingEvents != null ) {
+			var ev = new Event(EWheel, mouseX, mouseY);
+			ev.wheelDelta = -e.delta / 3.0;
+			pendingEvents.push(ev);
+		}
 	}
 	
 	function onTouchDown(e:flash.events.TouchEvent) {

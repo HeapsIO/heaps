@@ -6,6 +6,7 @@ enum EventKind {
 	EMove;
 	EOver;
 	EOut;
+	EWheel;
 }
 
 class Event {
@@ -16,6 +17,7 @@ class Event {
 	public var propagate : Bool;
 	public var cancel : Bool;
 	public var touchId : Int;
+	public var wheelDelta : Float;
 	
 	public function new(k,x=0.,y=0.) {
 		kind = k;
