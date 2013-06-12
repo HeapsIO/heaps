@@ -4,9 +4,9 @@ class Polygon extends Primitive {
 
 	public var points : Array<Point>;
 	public var normals : Array<Point>;
-	public var tangents : Array<Point>;
 	public var tcoords : Array<UV>;
 	public var idx : Array<Int>;
+	public var colors : Array<Point>;
 		
 	public function new( points, ?idx ) {
 		this.points = points;
@@ -21,6 +21,8 @@ class Polygon extends Primitive {
 			size += 3;
 		if( tcoords != null )
 			size += 2;
+		if( colors != null )
+			size += 3;
 			
 		var buf = new flash.Vector<Float>();
 		var i = 0;
@@ -40,11 +42,11 @@ class Polygon extends Primitive {
 				buf[i++] = n.y;
 				buf[i++] = n.z;
 			}
-			if( tangents != null ) {
-				var t = tangents[k];
-				buf[i++] = t.x;
-				buf[i++] = t.y;
-				buf[i++] = t.z;
+			if( colors != null ) {
+				var c = colors[k];
+				buf[i++] = c.x;
+				buf[i++] = c.y;
+				buf[i++] = c.z;
 			}
 		}
 		buffer = engine.mem.allocVector(buf, size, idx == null ? 3 : 0);
@@ -67,6 +69,12 @@ class Polygon extends Primitive {
 				for( i in idx )
 					n.push(normals[i].clone());
 				normals = n;
+			}
+			if( colors != null ) {
+				var n = [];
+				for( i in idx )
+					n.push(colors[i].clone());
+				colors = n;
 			}
 			if( tcoords != null ) {
 				var t = [];
