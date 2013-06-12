@@ -60,7 +60,13 @@ class Parser {
 				}
 			case "id":
 				c.id = v;
-			case "value": // skip
+			case "value":
+				switch( c.name ) {
+				case "slider":
+					var c : Slider = cast c;
+					c.value = Std.parseFloat(v);
+				default:
+				}
 			case "onclick":
 				switch( c.name ) {
 				case "button":

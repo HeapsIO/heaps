@@ -44,10 +44,11 @@ class ItemList extends Box {
 					}
 				} else {
 					int.onOver = function(_) {
+						if( cursor != null ) cursor.remove();
 						cursor = new h2d.Bitmap(h2d.Tile.fromColor(style.cursorColor, Std.int(int.width), Std.int(int.height)), int);
 					};
 					int.onOut = function(_) {
-						cursor.remove();
+						if( cursor != null ) cursor.remove();
 						cursor = null;
 					}
 					int.onPush = function(_) {

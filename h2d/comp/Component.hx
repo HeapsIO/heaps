@@ -29,6 +29,17 @@ class Component extends Sprite {
 		needRebuild = true;
 	}
 	
+	public function getElementById(id:String) {
+		if( this.id == id )
+			return this;
+		for( c in components ) {
+			var c = c.getElementById(id);
+			if( c != null )
+				return c;
+		}
+		return null;
+	}
+	
 	function set_needRebuild(v) {
 		needRebuild = v;
 		if( v && parentComponent != null && !parentComponent.needRebuild )
