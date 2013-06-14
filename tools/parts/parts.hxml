@@ -1,0 +1,9 @@
+-cp ../..
+-swf parts.swf
+-swf-header 1024:768:60:000000
+--flash-strict
+-swf-version 11.6
+-main Main
+-lib hxsl
+-D h3d
+-lib hscript
