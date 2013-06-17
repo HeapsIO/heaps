@@ -451,7 +451,8 @@ class Engine {
 		if( delta > 0 ) {
 			var curFps = 1000 / delta;
 			if( curFps > realFps * 2 ) curFps = realFps * 2 else if( curFps < realFps * 0.5 ) curFps = realFps * 0.5;
-			var f = curFps / 1000;
+			var f = delta / 500;
+			if( f > 0.3 ) f = 0.3;
 			realFps = realFps * (1 - f) + curFps * f; // smooth a bit the fps
 		}
 		return true;
