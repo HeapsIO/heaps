@@ -49,6 +49,13 @@ class Plane {
 		return new Vector(p.x + d * nx, p.y + d * ny, p.z + d * nz);
 	}
 
+	public inline function projectTo( p : Vector, out : Vector ) {
+		var d = distance(p);
+		out.x = p.x + d * nx;
+		out.y = p.y + d * ny;
+		out.z = p.z + d * nz;
+	}
+	
 	public static inline function fromPoints( p0 : Vector, p1 : Vector, p2 : Vector ) {
 		var d1 = p1.sub(p0);
 		var d2 = p2.sub(p0);
