@@ -14,6 +14,13 @@ class Quat {
 		this.w = w;
 	}
 	
+	public inline function set(x, y, z, w) {
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		this.w = w;
+	}
+	
 	public inline function identity() {
 		x = y = z = 0;
 		w = 1;
@@ -35,6 +42,39 @@ class Quat {
 		this.z = z * sin;
 		this.w = cos * FMath.sqrt(x * x + y * y + z * z); // allow not normalized axis
 		normalize();
+	}
+	
+	public function initRotateMatrix( m : Matrix ) {
+		var tr = m._11 + m._22 + m._33;
+		if( tr > 0 ) {
+			var s = FMath.sqrt(tr + 1.0) * 2;
+			var is = 1 / s;
+			x = (m._23 - m._32) * is;
+			y = (m._31 - m._13) * is;
+			z = (m._12 - m._21) * is;
+			w = 0.25 * s;
+		} else if( m._11 > m._22 && m._11 > m._33 ) {
+			var s = FMath.sqrt(1.0 + m._11 - m._22 - m._33) * 2;
+			var is = 1 / s;
+			x = 0.25 * s;
+			y = (m._21 + m._12) * is;
+			z = (m._31 + m._13) * is;
+			w = (m._23 - m._32) * is;
+		} else if( m._22 > m._33 ) {
+			var s = FMath.sqrt(1.0 + m._22 - m._11 - m._33) * 2;
+			var is = 1 / s;
+			x = (m._21 + m._12) * is;
+			y = 0.25 * s;
+			z = (m._32 + m._23) * is;
+			w = (m._31 - m._13) * is;
+		} else {
+			var s = FMath.sqrt(1.0 + m._33 - m._11 - m._22) * 2;
+			var is = 1 / s;
+			x = (m._31 + m._13) * is;
+			y = (m._32 + m._23) * is;
+			z = 0.25 * s;
+			w = (m._12 - m._21) * is;
+		}
 	}
 	
 	public function normalize() {
@@ -101,11 +141,53 @@ class Quat {
 		this.z = z;
 		this.w = w;
 	}
+
+	public function slerp( q1 : Quat, q2 : Quat, v : Float ) {
+		var cosHalfTheta = q1.dot(q2);
+		if( FMath.abs(cosHalfTheta) >= 1 ) {
+			this.x = q1.x;
+			this.y = q1.y;
+			this.z = q1.z;
+			this.w = q1.w;
+			return;
+		}
+		var halfTheta = Math.acos(cosHalfTheta);
+		var invSinHalfTheta = FMath.isqrt(1 - cosHalfTheta * cosHalfTheta);
+		if( FMath.abs(invSinHalfTheta) > 1e3 ) {
+			this.lerp(q1, q2, 0.5);
+			return;
+		}
+		var a = Math.sin((1 - v) * halfTheta) * invSinHalfTheta;
+		var b = Math.sin(v * halfTheta) * invSinHalfTheta;
+		this.x = q1.x * a + q2.x * b;
+		this.y = q1.y * a + q2.y * b;
+		this.z = q1.z * a + q2.z * b;
+		this.w = q1.w * a + q2.w * b;
+	}
+	
+	public inline function conjugate() {
+		x *= -1;
+		y *= -1;
+		z *= -1;
+	}
+	
+	/**
+		Negate the quaternion: this will not change the actual angle, use `conjugate` for that.
+	**/
+	public inline function negate() {
+		x *= -1;
+		y *= -1;
+		z *= -1;
+		w *= -1;
+	}
 	
 	public inline function dot( q : Quat ) {
 		return x * q.x + y * q.y + z * q.z + w * q.w;
 	}
 	
+	/**
+		Save to a Left-Handed matrix
+	**/
 	public function saveToMatrix( m : h3d.Matrix ) {
 		var xx = x * x;
 		var xy = x * y;
