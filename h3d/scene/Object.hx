@@ -44,6 +44,13 @@ class Object {
 		return currentAnimation = a.createInstance(this);
 	}
 	
+	/**
+		Changes the current animation. This animation should be an instance that was created by playAnimation!
+	**/
+	public function switchToAnimation( a : h3d.anim.Animation ) {
+		return currentAnimation = a;
+	}
+	
 	public function stopAnimation() {
 		currentAnimation = null;
 	}
