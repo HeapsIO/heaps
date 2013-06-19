@@ -138,7 +138,11 @@ class Animation {
 		return a;
 	}
 	
-	public function sync() {
+	/**
+		Synchronize the target object matrix.
+		If decompose is true, then the rotation quaternion is stored in [m12,m13,m21,m23] instead of mixed with the scale.
+	**/
+	public function sync( decompose : Bool = false ) {
 		// should be overridden in subclass
 		throw "assert";
 	}

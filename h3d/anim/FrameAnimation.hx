@@ -53,7 +53,8 @@ class FrameAnimation extends Animation {
 	}
 	
 	@:access(h3d.scene.Skin)
-	override function sync() {
+	override function sync( decompose = false ) {
+		if( decompose ) throw "Decompose not supported on Frame Animation";
 		var frame = Std.int(frame);
 		if( frame < 0 ) frame = 0 else if( frame >= frameCount ) frame = frameCount - 1;
 		if( frame == syncFrame )

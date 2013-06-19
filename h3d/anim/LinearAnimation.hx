@@ -81,7 +81,7 @@ class LinearAnimation extends Animation {
 	}
 	
 	@:access(h3d.scene.Skin)
-	override function sync() {
+	override function sync( decompose = false ) {
 		if( frame == syncFrame )
 			return;
 		var frame1 = Std.int(frame);
@@ -116,39 +116,50 @@ class LinearAnimation extends Animation {
 				var qz = f1.qz * k1 + f2.qz * k2;
 				var qw = f1.qw * k1 + f2.qw * k2;
 				
-				// quaternion to matrix
-				var xx = qx * qx;
-				var xy = qx * qy;
-				var xz = qx * qz;
-				var xw = qx * qw;
-				var yy = qy * qy;
-				var yz = qy * qz;
-				var yw = qy * qw;
-				var zz = qz * qz;
-				var zw = qz * qw;
-				m._11 = 1 - 2 * ( yy + zz );
-				m._12 = 2 * ( xy + zw );
-				m._13 = 2 * ( xz - yw );
-				m._21 = 2 * ( xy - zw );
-				m._22 = 1 - 2 * ( xx + zz );
-				m._23 = 2 * ( yz + xw );
-				m._31 = 2 * ( xz + yw );
-				m._32 = 2 * ( yz - xw );
-				m._33 = 1 - 2 * ( xx + yy );
-				
-				if( o.hasScale ) {
-					var sx = f1.sx * k1 + f2.sx * k2;
-					var sy = f1.sy * k1 + f2.sy * k2;
-					var sz = f1.sz * k1 + f2.sz * k2;
-					m._11 *= sx;
-					m._12 *= sx;
-					m._13 *= sx;
-					m._21 *= sy;
-					m._22 *= sy;
-					m._23 *= sy;
-					m._31 *= sz;
-					m._32 *= sz;
-					m._33 *= sz;
+				if( decompose ) {
+					m._12 = qx;
+					m._13 = qy;
+					m._21 = qz;
+					m._23 = qw;
+					if( o.hasScale ) {
+						m._11 = f1.sx * k1 + f2.sx * k2;
+						m._22 = f1.sy * k1 + f2.sy * k2;
+						m._33 = f1.sz * k1 + f2.sz * k2;
+					}
+				} else {
+					// quaternion to matrix
+					var xx = qx * qx;
+					var xy = qx * qy;
+					var xz = qx * qz;
+					var xw = qx * qw;
+					var yy = qy * qy;
+					var yz = qy * qz;
+					var yw = qy * qw;
+					var zz = qz * qz;
+					var zw = qz * qw;
+					m._11 = 1 - 2 * ( yy + zz );
+					m._12 = 2 * ( xy + zw );
+					m._13 = 2 * ( xz - yw );
+					m._21 = 2 * ( xy - zw );
+					m._22 = 1 - 2 * ( xx + zz );
+					m._23 = 2 * ( yz + xw );
+					m._31 = 2 * ( xz + yw );
+					m._32 = 2 * ( yz - xw );
+					m._33 = 1 - 2 * ( xx + yy );
+					if( o.hasScale ) {
+						var sx = f1.sx * k1 + f2.sx * k2;
+						var sy = f1.sy * k1 + f2.sy * k2;
+						var sz = f1.sz * k1 + f2.sz * k2;
+						m._11 *= sx;
+						m._12 *= sx;
+						m._13 *= sx;
+						m._21 *= sy;
+						m._22 *= sy;
+						m._23 *= sy;
+						m._31 *= sz;
+						m._32 *= sz;
+						m._33 *= sz;
+					}
 				}
 				
 			} else if( o.hasScale ) {
