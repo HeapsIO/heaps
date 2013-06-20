@@ -4,7 +4,7 @@ class Interactive extends Sprite {
 
 	public var width : Float;
 	public var height : Float;
-	public var useMouseHand(default,set) : Bool;
+	public var cursor(default,set) : h3d.System.Cursor;
 	public var isEllipse : Bool;
 	public var blockEvents : Bool = true;
 	public var propagateEvents : Bool = false;
@@ -14,7 +14,7 @@ class Interactive extends Sprite {
 		super(parent);
 		this.width = width;
 		this.height = height;
-		useMouseHand = true;
+		cursor = Button;
 	}
 
 	override function onAlloc() {
@@ -55,21 +55,21 @@ class Interactive extends Sprite {
 		case ERelease:
 			onRelease(e);
 		case EOver:
-			if( useMouseHand ) flash.ui.Mouse.cursor = flash.ui.MouseCursor.BUTTON;
+			h3d.System.setCursor(cursor);
 			onOver(e);
 		case EOut:
-			if( useMouseHand ) flash.ui.Mouse.cursor = flash.ui.MouseCursor.AUTO;
+			h3d.System.setCursor(Default);
 			onOut(e);
 		case EWheel:
 			onWheel(e);
 		}
 	}
 	
-	function set_useMouseHand(v) {
-		this.useMouseHand = v;
+	function set_cursor(c) {
+		this.cursor = c;
 		if( scene != null && scene.currentOver == this )
-			flash.ui.Mouse.cursor = v ? flash.ui.MouseCursor.BUTTON : flash.ui.MouseCursor.AUTO;
-		return v;
+			h3d.System.setCursor(cursor);
+		return c;
 	}
 	
 	public function startDrag(callb) {

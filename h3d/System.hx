@@ -1,5 +1,12 @@
 package h3d;
 
+enum Cursor {
+	Default;
+	Button;
+	Hand;
+	TextInput;
+}
+
 class System {
 	
 	#if !macro
@@ -50,6 +57,15 @@ class System {
 			Reflect.field(Reflect.field(d,"nativeApplication"),"exit")();
 		} else
 			flash.system.System.exit(0);
+	}
+	
+	public static function setCursor( c : Cursor ) {
+		flash.ui.Mouse.cursor = switch( c ) {
+		case Default: "auto";
+		case Button: "button";
+		case Hand: "hand";
+		case TextInput: "ibeam";
+		}
 	}
 
 	#end
