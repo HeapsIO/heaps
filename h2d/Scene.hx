@@ -16,6 +16,9 @@ class Scene extends Layers implements h3d.IDrawable {
 	
 	@:allow(h2d.Interactive)
 	var currentOver : Interactive;
+	@:allow(h2d.Interactive)
+	var currentFocus : Interactive;
+		
 	var pushList : Array<Interactive>;
 	var currentDrag : { f : Event -> Void, ref : Null<Int> };
 	
@@ -48,7 +51,10 @@ class Scene extends Layers implements h3d.IDrawable {
 			stage.removeEventListener(flash.events.MouseEvent.MOUSE_MOVE, onMouseMove);
 			stage.removeEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
 			stage.removeEventListener(flash.events.MouseEvent.MOUSE_WHEEL, onMouseWheel);
-			flash.ui.Mouse.cursor = flash.ui.MouseCursor.AUTO;
+			stage.removeEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
+			stage.removeEventListener(flash.events.KeyboardEvent.KEY_DOWN, onKeyDown);
+			stage.removeEventListener(flash.events.KeyboardEvent.KEY_UP, onKeyUp);
+			h3d.System.setCursor(Default);
 		}
 		super.onDelete();
 	}
@@ -64,6 +70,8 @@ class Scene extends Layers implements h3d.IDrawable {
 			stage.addEventListener(flash.events.MouseEvent.MOUSE_MOVE, onMouseMove);
 			stage.addEventListener(flash.events.MouseEvent.MOUSE_UP, onMouseUp);
 			stage.addEventListener(flash.events.MouseEvent.MOUSE_WHEEL, onMouseWheel);
+			stage.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, onKeyDown);
+			stage.addEventListener(flash.events.KeyboardEvent.KEY_UP, onKeyUp);
 		}
 		super.onAlloc();
 	}
@@ -107,6 +115,24 @@ class Scene extends Layers implements h3d.IDrawable {
 		}
 	}
 	
+	function onKeyUp(e:flash.events.KeyboardEvent) {
+		if( pendingEvents != null ) {
+			var ev = new Event(EKeyUp);
+			ev.keyCode = e.keyCode;
+			ev.charCode = e.charCode;
+			pendingEvents.push(ev);
+		}
+	}
+
+	function onKeyDown(e:flash.events.KeyboardEvent) {
+		if( pendingEvents != null ) {
+			var ev = new Event(EKeyDown);
+			ev.keyCode = e.keyCode;
+			ev.charCode = e.charCode;
+			pendingEvents.push(ev);
+		}
+	}
+	
 	function onTouchDown(e:flash.events.TouchEvent) {
 		if( pendingEvents != null ) {
 			var ev = new Event(EPush, screenXToLocal(e.localX), screenYToLocal(e.localY));
@@ -136,13 +162,20 @@ class Scene extends Layers implements h3d.IDrawable {
 		var rx = x * matA + y * matB + absX;
 		var ry = x * matC + y * matD + absY;
 		var r = height / width;
-		var checkOver = false, checkPush = false;
+		var checkOver = false, checkPush = false, cancelFocus = false;
 		switch( event.kind ) {
 		case EMove: checkOver = true;
-		case EPush, ERelease: checkPush = true;
+		case EPush: cancelFocus = true; checkPush = true;
+		case ERelease: checkPush = true;
+		case EKeyUp, EKeyDown:
+			if( currentFocus != null )
+				currentFocus.handleEvent(event);
+			return;
 		default:
 		}
 		for( i in interactive ) {
+			
+
 			// TODO : we are not sure that the positions are correctly updated !
 			
 			// this is a bit tricky since we are not in the not-euclide viewport space
@@ -175,6 +208,7 @@ class Scene extends Layers implements h3d.IDrawable {
 			event.relY = (ky / max) * i.height;
 			
 			i.handleEvent(event);
+			
 			if( event.cancel )
 				event.cancel = false;
 			else if( checkOver ) {
@@ -199,18 +233,28 @@ class Scene extends Layers implements h3d.IDrawable {
 					event.propagate = old;
 				} else
 					checkOver = false;
-			} else if( checkPush ) {
-				if( event.kind == EPush )
-					pushList.push(i);
-				else
-					pushList.remove(i);
+			} else {
+				if( checkPush ) {
+					if( event.kind == EPush )
+						pushList.push(i);
+					else
+						pushList.remove(i);
+				}
+				if( cancelFocus && i == currentFocus )
+					cancelFocus = false;
 			}
 				
 			if( event.propagate ) {
 				event.propagate = false;
 				continue;
 			}
+			
 			break;
+		}
+		if( cancelFocus && currentFocus != null ) {
+			event.kind = EFocusLost;
+			currentFocus.handleEvent(event);
+			event.kind = EPush;
 		}
 		if( checkOver && currentOver != null ) {
 			event.kind = EOut;

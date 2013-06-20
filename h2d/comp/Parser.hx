@@ -43,6 +43,8 @@ class Parser {
 			c = new Checkbox(parent);
 		case "itemlist":
 			c = new ItemList(parent);
+		case "input":
+			c = new Input(parent);
 		case n:
 			var make = comps.get(n);
 			if( make != null )
@@ -65,6 +67,9 @@ class Parser {
 				case "slider":
 					var c : Slider = cast c;
 					c.value = Std.parseFloat(v);
+				case "input":
+					var c : Input = cast c;
+					c.value = v;
 				default:
 				}
 			case "onclick":
@@ -86,6 +91,10 @@ class Parser {
 					c.onChange = function(_) s();
 				case "itemlist":
 					var c : ItemList = cast c;
+					var s = makeScript(c,v);
+					c.onChange = function(_) s();
+				case "input":
+					var c : Input = cast c;
 					var s = makeScript(c,v);
 					c.onChange = function(_) s();
 				default:

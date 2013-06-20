@@ -31,7 +31,7 @@ class Text extends Drawable {
 	
 	override function onAlloc() {
 		super.onAlloc();
-		if( text != null && font != null ) initGlyphs();
+		if( text != null && font != null ) initGlyphs(text);
 	}
 	
 	override function draw(ctx:RenderContext) {
@@ -53,11 +53,15 @@ class Text extends Drawable {
 	
 	function set_text(t) {
 		this.text = t == null ? "null" : t;
-		if( allocated ) initGlyphs();
+		if( allocated ) initGlyphs(text);
 		return t;
 	}
 	
-	function initGlyphs( rebuild = true ) {
+	public function calcTextWidth( text : String ) {
+		return initGlyphs(text,false).width;
+	}
+	
+	function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) glyphs.reset();
 		var letters = font.glyphs;
 		var x = 0, y = 0, xMax = 0;
@@ -94,11 +98,11 @@ class Text extends Drawable {
 	}
 	
 	function get_textHeight() {
-		return initGlyphs(false).height;
+		return initGlyphs(text,false).height;
 	}
 	
 	function get_textWidth() {
-		return initGlyphs(false).width;
+		return initGlyphs(text,false).width;
 	}
 	
 	function set_maxWidth(w) {

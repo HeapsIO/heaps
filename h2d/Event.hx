@@ -7,6 +7,10 @@ enum EventKind {
 	EOver;
 	EOut;
 	EWheel;
+	EFocus;
+	EFocusLost;
+	EKeyDown;
+	EKeyUp;
 }
 
 class Event {
@@ -17,6 +21,8 @@ class Event {
 	public var propagate : Bool;
 	public var cancel : Bool;
 	public var touchId : Int;
+	public var keyCode : Int;
+	public var charCode : Int;
 	public var wheelDelta : Float;
 	
 	public function new(k,x=0.,y=0.) {
