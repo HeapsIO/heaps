@@ -10,7 +10,7 @@ class Button extends Component {
 	public function new(text, ?parent) {
 		super("button",parent);
 		input = new h2d.Interactive(0, 0, bg);
-		var active = false, out = false;
+		var active = false;
 		input.onPush = function(_) {
 			active = true;
 			onMouseDown();

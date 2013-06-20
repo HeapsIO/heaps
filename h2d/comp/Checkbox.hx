@@ -8,7 +8,7 @@ class Checkbox extends Component {
 	public function new(?parent) {
 		super("checkbox", parent);
 		input = new h2d.Interactive(0, 0, this);
-		var active = false, out = false;
+		var active = false;
 		input.onPush = function(_) {
 			active = true;
 		};
