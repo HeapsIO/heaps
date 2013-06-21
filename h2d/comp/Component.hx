@@ -32,10 +32,23 @@ class Component extends Sprite {
 	public function getElementById(id:String) {
 		if( this.id == id )
 			return this;
+		if( !allocated )
+			return getElementByIdRec(this, id);
 		for( c in components ) {
 			var c = c.getElementById(id);
 			if( c != null )
 				return c;
+		}
+		return null;
+	}
+	
+	function getElementByIdRec( s : h2d.Sprite, id : String ) : Component {
+		var c = flash.Lib.as(s, Component);
+		if( c != null && c.id == id )
+			return c;
+		for( s in s.childs ) {
+			var c = getElementByIdRec(s, id);
+			if( c != null ) return c;
 		}
 		return null;
 	}
