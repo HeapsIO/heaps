@@ -53,7 +53,7 @@ class Text extends Drawable {
 	
 	function set_text(t) {
 		this.text = t == null ? "null" : t;
-		if( allocated ) initGlyphs(text);
+		if( allocated && font != null ) initGlyphs(text);
 		return t;
 	}
 	
