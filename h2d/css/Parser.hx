@@ -570,6 +570,11 @@ class Parser {
 			var c = readClass(null);
 			spacesTokens = false;
 			if( c == null ) break;
+			// map html types to comp ones
+			switch( c.node ) {
+			case "div": c.node = "box";
+			case "span": c.node = "label";
+			};
 			classes.push(c);
 			if( !isToken(TComma) )
 				break;
