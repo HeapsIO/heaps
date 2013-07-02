@@ -188,6 +188,40 @@ class Box extends Component {
 		if( ctx.measure ) {
 			width = contentWidth + extX + extRight();
 			height = contentHeight + extY + extBottom();
+		} else {
+			var overflow : h2d.css.Defs.Overflow = style.overflow != null ? style.overflow : Visible;
+			if( overflow == Inherit ) {
+				var p : Component = this;
+				while( p.parent != null && Std.is(p.parent, Component) ) {
+					p = cast(p.parent, Component);
+					if( p.style.overflow != null && p.style.overflow != Inherit ) {
+						overflow = p.style.overflow;
+						break;
+					}
+				}
+			}
+			var clip = false;
+			var showScrollH = false;
+			var showScrollV = false;
+			switch( overflow ) {
+			case Hidden:
+				clip = true;
+			case Scroll:
+				clip = showScrollH = showScrollV = true;
+			case Auto:
+				var w = 0.;
+				var h = 0.;
+				for( c in components ) {
+					if( c.width > w ) w = c.width;
+					if( c.height > h ) h = c.height;
+				}
+				if( w > contentWidth ) showScrollH = true;
+				if( h > contentHeight ) showScrollV = true;
+				clip = showScrollH || showScrollV;
+			default:
+			}
+			
+			//..
 		}
 	}
 	
