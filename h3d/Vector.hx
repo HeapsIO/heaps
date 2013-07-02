@@ -13,6 +13,17 @@ class Vector {
 		this.z = z;
 		this.w = w;
 	}
+	
+	public inline function distance( v : Vector ) {
+		return Math.sqrt(distanceSq(v));
+	}
+
+	public inline function distanceSq( v : Vector ) {
+		var dx = v.x - x;
+		var dy = v.y - y;
+		var dz = v.z - z;
+		return dx * dx + dy * dy + dz * dz;
+	}
 
 	public inline function sub( v : Vector ) {
 		return new Vector(x - v.x, y - v.y, z - v.z, w - v.w);
@@ -33,13 +44,17 @@ class Vector {
 	public inline function dot4( v : Vector ) {
 		return x * v.x + y * v.y + z * v.z + w * v.w;
 	}
-	
+
+	public inline function lengthSq() {
+		return x * x + y * y + z * z;
+	}	
+
 	public inline function length() {
-		return FMath.sqrt(x * x + y * y + z * z);
+		return FMath.sqrt(lengthSq());
 	}
 
 	public function normalize() {
-		var k = x * x + y * y + z * z;
+		var k = lengthSq();
 		if( k < FMath.EPSILON ) k = 0 else k = FMath.isqrt(k);
 		x *= k;
 		y *= k;
