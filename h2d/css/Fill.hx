@@ -14,6 +14,10 @@ class Fill extends h2d.TileColorGroup {
 	public inline function fillRectGradient(x, y, w, h, ctl, ctr, cbl, cbr) {
 		content.rectGradient(x, y, w, h, ctl, ctr, cbl, cbr);
 	}
+	
+	public inline function addPoint(x, y, color) {
+		content.addPoint(x, y, color);
+	}
 
 	public function fillRect(fill:FillStyle,x,y,w,h) {
 		switch( fill ) {

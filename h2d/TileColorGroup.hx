@@ -64,6 +64,14 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp[pos++] = b;
 		tmp[pos++] = a;
 	}
+	
+	public function addPoint( x : Float, y : Float, color : Int ) {
+		tmp[pos++] = x;
+		tmp[pos++] = y;
+		tmp[pos++] = 0;
+		tmp[pos++] = 0;
+		insertColor(color);
+	}
 
 	inline function insertColor( c : Int ) {
 		tmp[pos++] = ((c >> 16) & 0xFF) / 255.;
