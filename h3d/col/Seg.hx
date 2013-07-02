@@ -21,7 +21,7 @@ class Seg {
 			else if( t > 1 )
 				p.distanceSq(p2);
 			else
-				p.distanceSq(new Vector(p.x + t * (p2.x - p1.x), p.y + t * (p2.y + p1.y)));
+				p.distanceSq(new Vector(p.x + t * (p2.x - p1.x), p.y + t * (p2.y - p1.y)));
 		}
 	}
 	
