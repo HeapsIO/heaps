@@ -200,6 +200,12 @@ class Parser {
 				s.layout = i;
 				return true;
 			}
+		case "overflow":
+			var i = mapIdent(v, [Visible, Hidden, Scroll, Auto, Inherit]);
+			if( i != null ) {
+				s.overflow = i;
+				return true;
+			}
 		case "spacing":
 			return applyComposite(["vertical-spacing", "horizontal-spacing"], v, s);
 		case "horizontal-spacing":

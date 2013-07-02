@@ -18,6 +18,7 @@ class Style {
 	public var offsetX : Null<Float>;
 	public var offsetY : Null<Float>;
 	public var layout : Null<Layout>;
+	public var overflow : Null<Overflow>;
 	public var horizontalSpacing : Null<Float>;
 	public var verticalSpacing : Null<Float>;
 	public var marginTop : Null<Float>;
@@ -51,6 +52,7 @@ class Style {
 		if( s.width != null ) width = s.width;
 		if( s.height != null ) height = s.height;
 		if( s.layout != null ) layout = s.layout;
+		if( s.overflow != null ) overflow = s.overflow;
 		if( s.horizontalSpacing != null ) horizontalSpacing = s.horizontalSpacing;
 		if( s.verticalSpacing != null ) verticalSpacing = s.verticalSpacing;
 		if( s.marginLeft != null ) marginLeft = s.marginLeft;

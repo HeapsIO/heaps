@@ -20,6 +20,14 @@ enum Layout {
 	Inline;
 }
 
+enum Overflow {
+	Visible;
+	Hidden;
+	Scroll;
+	Auto;
+	Inherit;
+}
+
 enum DockStyle {
 	Top;
 	Left;
