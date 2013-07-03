@@ -43,5 +43,19 @@ class Seg2d {
 	public inline function distance( p : Point2d ) {
 		return FMath.sqrt(distanceSq(p));
 	}
+	
+	public inline function project( p : Point2d ) : Point2d {
+		var px = p.x - x;
+		var py = p.y - y;
+		var t = px * dx + py * dy;
+		return if( t < 0 )
+			new Point2d(x, y);
+		else if( t > lenSq )
+			new Point2d(x + dx, y + dy);
+		else {
+			var tl2 = t * invLenSq;
+			new Point2d(x + tl2 * dx, y + tl2 * dy);
+		}
+	}
 
 }
