@@ -438,9 +438,12 @@ class Cell {
 }
 
 class Edge {
-	
+
+	public var id : Int;
 	public var lPoint : Point2d;
 	public var rPoint : Point2d;
+	public var lCell : Null<Cell>;
+	public var rCell : Null<Cell>;
 	public var va : Null<Point2d>;
 	public var vb : Null<Point2d>;
 	
@@ -488,6 +491,10 @@ class Halfedge {
 	public inline function getEndpoint() {
 		return this.edge.lPoint == this.point ? this.edge.vb : this.edge.va;
     }
+	
+	public inline function getTarget() {
+		return this.edge.lCell != null && this.edge.lCell.point != point ? this.edge.lCell : this.edge.rCell;
+	}
 
 }
 
@@ -1446,6 +1453,13 @@ class Voronoi {
 
 		//   add missing edges in order to close opened cells
 		this.closeCells(bbox);
+		
+		var eid = 0;
+		for( e in edges ) {
+			e.id = eid++;
+			e.lCell = pointCell.get(e.lPoint);
+			e.rCell = pointCell.get(e.rPoint);
+		}
 
 		// to measure execution time
 		var stopTime = haxe.Timer.stamp();
