@@ -321,12 +321,12 @@ private class RBNode<T:RBNode<T>> {
 class Cell {
 	
 	public var id : Int;
-	public var site : Point2d;
+	public var point : Point2d;
 	public var halfedges : Array<Halfedge>;
 	
-	public function new(id, site) {
+	public function new(id, point) {
 		this.id = id;
-		this.site = site;
+		this.point = point;
 		this.halfedges = [];
     }
 
@@ -362,12 +362,12 @@ class Cell {
 			edge;
 		while (iHalfedge-- != 0){
 			edge = this.halfedges[iHalfedge].edge;
-			// NC : changes siteId check to object == check
-			if (edge.lSite != null && edge.lSite != this.site) {
-				neighbors.push(edge.lSite);
+			// NC : changes pointId check to object == check
+			if (edge.lPoint != null && edge.lPoint != this.point) {
+				neighbors.push(edge.lPoint);
 				}
-			else if (edge.rSite != null && edge.rSite != this.site){
-				neighbors.push(edge.rSite);
+			else if (edge.rPoint != null && edge.rPoint != this.point){
+				neighbors.push(edge.rPoint);
 				}
 			}
 		return neighbors;
@@ -439,14 +439,14 @@ class Cell {
 
 class Edge {
 	
-	public var lSite : Point2d;
-	public var rSite : Point2d;
+	public var lPoint : Point2d;
+	public var rPoint : Point2d;
 	public var va : Null<Point2d>;
 	public var vb : Null<Point2d>;
 	
-	public function new(lSite, rSite) {
-		this.lSite = lSite;
-		this.rSite = rSite;
+	public function new(lPoint, rPoint) {
+		this.lPoint = lPoint;
+		this.rPoint = rPoint;
 		this.va = this.vb = null;
     }
 }
@@ -454,39 +454,39 @@ class Edge {
 
 class Halfedge {
 	
-	public var site : Point2d;
+	public var point : Point2d;
 	public var edge : Edge;
 	public var angle : Float;
 	
-	public function new(edge, lSite:Point2d, rSite:Point2d) {
-		this.site = lSite;
+	public function new(edge, lPoint:Point2d, rPoint:Point2d) {
+		this.point = lPoint;
 		this.edge = edge;
 		// 'angle' is a value to be used for properly sorting the
 		// halfsegments counterclockwise. By convention, we will
-		// use the angle of the line defined by the 'site to the left'
-		// to the 'site to the right'.
-		// However, border edges have no 'site to the right': thus we
+		// use the angle of the line defined by the 'point to the left'
+		// to the 'point to the right'.
+		// However, border edges have no 'point to the right': thus we
 		// use the angle of line perpendicular to the halfsegment (the
 		// edge should have both end points defined in such case.)
-		if (rSite != null) {
-			this.angle = Math.atan2(rSite.y-lSite.y, rSite.x-lSite.x);
+		if (rPoint != null) {
+			this.angle = Math.atan2(rPoint.y-lPoint.y, rPoint.x-lPoint.x);
 		} else {
 			var va = edge.va,
 				vb = edge.vb;
 			// rhill 2011-05-31: used to call getStartpoint()/getEndpoint(),
 			// but for performance purpose, these are expanded in place here.
-			this.angle = edge.lSite == lSite
+			this.angle = edge.lPoint == lPoint
 				? Math.atan2(vb.x-va.x, va.y-vb.y)
 				: Math.atan2(va.x-vb.x, vb.y-va.y);
 		}
 	}
 	
 	public inline function getStartpoint() {
-		return this.edge.lSite == this.site ? this.edge.va : this.edge.vb;
+		return this.edge.lPoint == this.point ? this.edge.va : this.edge.vb;
     }
 
 	public inline function getEndpoint() {
-		return this.edge.lSite == this.site ? this.edge.vb : this.edge.va;
+		return this.edge.lPoint == this.point ? this.edge.vb : this.edge.va;
     }
 
 }
@@ -501,7 +501,7 @@ class Diagram {
 }
 
 private class Beachsection extends RBNode<Beachsection> {
-	public var site : Point2d;
+	public var point : Point2d;
 	public var edge : Edge;
 	public var circleEvent : CircleEvent;
 	public function new() {
@@ -509,7 +509,7 @@ private class Beachsection extends RBNode<Beachsection> {
 }
 
 private class CircleEvent extends RBNode<CircleEvent> {
-	public var site : Point2d;
+	public var point : Point2d;
 	public var arc : Beachsection;
 	public var x : Float;
 	public var y : Float;
@@ -528,7 +528,7 @@ class Voronoi {
 	var circleEventJunkyard : Array<CircleEvent>;
 	var circleEvents : RBTree<CircleEvent>;
 	var firstCircleEvent : CircleEvent;
-	var siteCell : Map<Point2d,Cell>;
+	var pointCell : Map<Point2d,Cell>;
 
 	public function new() {
 		this.vertices = null;
@@ -553,7 +553,7 @@ class Voronoi {
 		if (this.circleEvents == null) {
 			this.circleEvents = new RBTree<CircleEvent>();
 			}
-		siteCell = new Map();
+		pointCell = new Map();
 		this.circleEvents.root = this.firstCircleEvent = null;
 		this.vertices = [];
 		this.edges = [];
@@ -575,38 +575,38 @@ class Voronoi {
     }
 
 	// this create and add an edge to internal collection, and also create
-	// two halfedges which are added to each site's counterclockwise array
+	// two halfedges which are added to each point's counterclockwise array
 	// of halfedges.
 
-	function createEdge(lSite, rSite, va = null, vb = null) {
-		var edge = new Edge(lSite, rSite);
+	function createEdge(lPoint, rPoint, va = null, vb = null) {
+		var edge = new Edge(lPoint, rPoint);
 		this.edges.push(edge);
 		if (va != null) {
-			this.setEdgeStartpoint(edge, lSite, rSite, va);
+			this.setEdgeStartpoint(edge, lPoint, rPoint, va);
 			}
 		if (vb != null) {
-			this.setEdgeEndpoint(edge, lSite, rSite, vb);
+			this.setEdgeEndpoint(edge, lPoint, rPoint, vb);
 			}
-		siteCell.get(lSite).halfedges.push(new Halfedge(edge, lSite, rSite));
-		siteCell.get(rSite).halfedges.push(new Halfedge(edge, rSite, lSite));
+		pointCell.get(lPoint).halfedges.push(new Halfedge(edge, lPoint, rPoint));
+		pointCell.get(rPoint).halfedges.push(new Halfedge(edge, rPoint, lPoint));
 		return edge;
 	}
 
-	function createBorderEdge(lSite, va, vb) {
-		var edge = new Edge(lSite, null);
+	function createBorderEdge(lPoint, va, vb) {
+		var edge = new Edge(lPoint, null);
 		edge.va = va;
 		edge.vb = vb;
 		this.edges.push(edge);
 		return edge;
     }
 
-	function setEdgeStartpoint(edge:Edge, lSite, rSite, vertex) {
+	function setEdgeStartpoint(edge:Edge, lPoint, rPoint, vertex) {
 		if (edge.va == null && edge.vb == null) {
 			edge.va = vertex;
-			edge.lSite = lSite;
-			edge.rSite = rSite;
+			edge.lPoint = lPoint;
+			edge.rPoint = rPoint;
 			}
-		else if (edge.lSite == rSite) {
+		else if (edge.lPoint == rPoint) {
 			edge.vb = vertex;
 			}
 		else {
@@ -614,25 +614,25 @@ class Voronoi {
 			}
     }
 
-	function setEdgeEndpoint(edge, lSite, rSite, vertex) {
-		this.setEdgeStartpoint(edge, rSite, lSite, vertex);
+	function setEdgeEndpoint(edge, lPoint, rPoint, vertex) {
+		this.setEdgeStartpoint(edge, rPoint, lPoint, vertex);
     }
 	
 
 	// rhill 2011-06-02: A lot of Beachsection instanciations
 	// occur during the computation of the Voronoi diagram,
-	// somewhere between the number of sites and twice the
-	// number of sites, while the number of Beachsections on the
+	// somewhere between the number of points and twice the
+	// number of points, while the number of Beachsections on the
 	// beachline at any given time is comparatively low. For this
 	// reason, we reuse already created Beachsections, in order
 	// to avoid new memory allocation. This resulted in a measurable
 	// performance gain.
 
-	function createBeachsection(site:Point2d) {
+	function createBeachsection(point:Point2d) {
 		var beachsection = this.beachsectionJunkyard.pop();
 		if ( beachsection == null )
 			beachsection = new Beachsection();
-		beachsection.site = site;
+		beachsection.point = point;
 		return beachsection;
 	}
 
@@ -673,9 +673,9 @@ class Voronoi {
 		// reduce errors due to computers' finite arithmetic precision.
 		// Maybe can still be improved, will see if any more of this
 		// kind of errors pop up again.
-		var site = arc.site,
-			rfocx = site.x,
-			rfocy = site.y,
+		var point = arc.point,
+			rfocx = point.x,
+			rfocy = point.y,
 			pby2 = rfocy-directrix;
 		// parabola in degenerate case where focus is on directrix
 		if (pby2 == 0) {
@@ -685,9 +685,9 @@ class Voronoi {
 		if (lArc == null) {
 			return Math.NEGATIVE_INFINITY;
 			}
-		site = lArc.site;
-		var lfocx = site.x,
-			lfocy = site.y,
+		point = lArc.point;
+		var lfocx = point.x,
+			lfocy = point.y,
 			plby2 = lfocy-directrix;
 		// parabola in degenerate case where focus is on directrix
 		if (plby2 == 0) {
@@ -710,8 +710,8 @@ class Voronoi {
 		if (rArc != null) {
 			return this.leftBreakPoint(rArc, directrix);
 			}
-		var site = arc.site;
-		return site.y == directrix ? site.x : Math.POSITIVE_INFINITY;
+		var point = arc.point;
+		return point.y == directrix ? point.x : Math.POSITIVE_INFINITY;
     }
 
 	function detachBeachsection(beachsection) {
@@ -752,7 +752,7 @@ class Voronoi {
 		// even though it is not disappearing, I will also add the beach section
 		// immediately to the left of the left-most collapsed beach section, for
 		// convenience, since we need to refer to it later as this beach section
-		// is the 'left' site of an edge for which a start point is set.
+		// is the 'left' point of an edge for which a start point is set.
 		disappearingTransitions.unshift(lArc);
 		this.detachCircleEvent(lArc);
 
@@ -777,17 +777,17 @@ class Voronoi {
 		for( iArc in 1...nArcs ) {
 			rArc = disappearingTransitions[iArc];
 			lArc = disappearingTransitions[iArc-1];
-			this.setEdgeStartpoint(rArc.edge, lArc.site, rArc.site, vertex);
+			this.setEdgeStartpoint(rArc.edge, lArc.point, rArc.point, vertex);
 		}
 
 		// create a new edge as we have now a new transition between
 		// two beach sections which were previously not adjacent.
 		// since this edge appears as a new vertex is defined, the vertex
-		// actually define an end point of the edge (relative to the site
+		// actually define an end point of the edge (relative to the point
 		// on the left)
 		lArc = disappearingTransitions[0];
 		rArc = disappearingTransitions[nArcs-1];
-		rArc.edge = this.createEdge(lArc.site, rArc.site, null, vertex);
+		rArc.edge = this.createEdge(lArc.point, rArc.point, null, vertex);
 
 		// create circle events if any for beach sections left in the beachline
 		// adjacent to collapsed sections
@@ -795,9 +795,9 @@ class Voronoi {
 		this.attachCircleEvent(rArc);
     }
 
-	function addBeachsection(site:Point2d) {
-		var x = site.x,
-			directrix = site.y;
+	function addBeachsection(point:Point2d) {
+		var x = point.x,
+			directrix = point.y;
 
 		// find the left and right beach sections which will surround the newly
 		// created beach section.
@@ -850,8 +850,8 @@ class Voronoi {
 		// at this point, keep in mind that lArc and/or rArc could be
 		// undefined or null.
 
-		// create a new beach section object for the site and add it to RB-tree
-		var newArc = this.createBeachsection(site);
+		// create a new beach section object for the point and add it to RB-tree
+		var newArc = this.createBeachsection(point);
 		this.beachline.rbInsertSuccessor(lArc, newArc);
 
 		// cases:
@@ -880,12 +880,12 @@ class Voronoi {
 			this.detachCircleEvent(lArc);
 
 			// split the beach section into two separate beach sections
-			rArc = this.createBeachsection(lArc.site);
+			rArc = this.createBeachsection(lArc.point);
 			this.beachline.rbInsertSuccessor(newArc, rArc);
 
 			// since we have a new transition between two beach sections,
 			// a new edge is born
-			newArc.edge = rArc.edge = this.createEdge(lArc.site, newArc.site);
+			newArc.edge = rArc.edge = this.createEdge(lArc.point, newArc.point);
 
 			// check whether the left and right beach sections are collapsing
 			// and if so create circle events, to be notified when the point of
@@ -905,12 +905,12 @@ class Voronoi {
 		//   no collapsing beach section as a result
 		//   new beach section become right-most node of the RB-tree
 		if (lArc != null && rArc == null) {
-			newArc.edge = this.createEdge(lArc.site,newArc.site);
+			newArc.edge = this.createEdge(lArc.point,newArc.point);
 			return;
 			}
 
 		// [null,rArc]
-		// impossible case: because sites are strictly processed from top to bottom,
+		// impossible case: because points are strictly processed from top to bottom,
 		// and left to right, which guarantees that there will always be a beach section
 		// on the left -- except of course when there are no beach section at all on
 		// the beach line, which case was handled above.
@@ -928,7 +928,7 @@ class Voronoi {
 		//   the left and right beach section might be collapsing as a result
 		//   only one new node added to the RB-tree
 		if (lArc != rArc) {
-			// invalidate circle events of left and right sites
+			// invalidate circle events of left and right points
 			this.detachCircleEvent(lArc);
 			this.detachCircleEvent(rArc);
 
@@ -940,25 +940,25 @@ class Voronoi {
 			// http://mathforum.org/library/drmath/view/55002.html
 			// Except that I bring the origin at A to simplify
 			// calculation
-			var lSite = lArc.site,
-				ax = lSite.x,
-				ay = lSite.y,
-				bx=site.x-ax,
-				by=site.y-ay,
-				rSite = rArc.site,
-				cx=rSite.x-ax,
-				cy=rSite.y-ay,
+			var lPoint = lArc.point,
+				ax = lPoint.x,
+				ay = lPoint.y,
+				bx=point.x-ax,
+				by=point.y-ay,
+				rPoint = rArc.point,
+				cx=rPoint.x-ax,
+				cy=rPoint.y-ay,
 				d=2*(bx*cy-by*cx),
 				hb=bx*bx+by*by,
 				hc=cx*cx+cy*cy,
 				vertex = this.createVertex((cy*hb-by*hc)/d+ax, (bx*hc-cx*hb)/d+ay);
 
 			// one transition disappear
-			this.setEdgeStartpoint(rArc.edge, lSite, rSite, vertex);
+			this.setEdgeStartpoint(rArc.edge, lPoint, rPoint, vertex);
 
 			// two new transitions appear at the new vertex location
-			newArc.edge = this.createEdge(lSite, site, null, vertex);
-			rArc.edge = this.createEdge(site, rSite, null, vertex);
+			newArc.edge = this.createEdge(lPoint, point, null, vertex);
+			rArc.edge = this.createEdge(point, rPoint, null, vertex);
 
 			// check whether the left and right beach sections are collapsing
 			// and if so create circle events, to handle the point of collapse.
@@ -972,30 +972,30 @@ class Voronoi {
 		var lArc = arc.rbPrevious,
 			rArc = arc.rbNext;
 		if (lArc == null || rArc == null) {return;} // does that ever happen?
-		var lSite = lArc.site,
-			cSite = arc.site,
-			rSite = rArc.site;
+		var lPoint = lArc.point,
+			cPoint = arc.point,
+			rPoint = rArc.point;
 
-		// If site of left beachsection is same as site of
+		// If point of left beachsection is same as point of
 		// right beachsection, there can't be convergence
-		if (lSite==rSite) {return;}
+		if (lPoint==rPoint) {return;}
 
-		// Find the circumscribed circle for the three sites associated
+		// Find the circumscribed circle for the three points associated
 		// with the beachsection triplet.
 		// rhill 2011-05-26: It is more efficient to calculate in-place
 		// rather than getting the resulting circumscribed circle from an
 		// object returned by calling Voronoi.circumcircle()
 		// http://mathforum.org/library/drmath/view/55002.html
-		// Except that I bring the origin at cSite to simplify calculations.
+		// Except that I bring the origin at cPoint to simplify calculations.
 		// The bottom-most part of the circumcircle is our Fortune 'circle
 		// event', and its center is a vertex potentially part of the final
 		// Voronoi diagram.
-		var bx = cSite.x,
-			by = cSite.y,
-			ax = lSite.x-bx,
-			ay = lSite.y-by,
-			cx = rSite.x-bx,
-			cy = rSite.y-by;
+		var bx = cPoint.x,
+			by = cPoint.y,
+			ax = lPoint.x-bx,
+			ay = lPoint.y-by,
+			cx = rPoint.x-bx,
+			cy = rPoint.y-by;
 
 		// If points l->c->r are clockwise, then center beach section does not
 		// collapse, hence it can't end up as a vertex (we reuse 'd' here, which
@@ -1021,7 +1021,7 @@ class Voronoi {
 			circleEvent = new CircleEvent();
 			}
 		circleEvent.arc = arc;
-		circleEvent.site = cSite;
+		circleEvent.point = cPoint;
 		circleEvent.x = x+bx;
 		circleEvent.y = ycenter+Math.sqrt(x*x+y*y); // y bottom
 		circleEvent.ycenter = ycenter;
@@ -1088,12 +1088,12 @@ class Voronoi {
 			xr = bbox.xMax,
 			yt = bbox.yMin,
 			yb = bbox.yMax,
-			lSite = edge.lSite,
-			rSite = edge.rSite,
-			lx = lSite.x,
-			ly = lSite.y,
-			rx = rSite.x,
-			ry = rSite.y,
+			lPoint = edge.lPoint,
+			rPoint = edge.rPoint,
+			lx = lPoint.x,
+			ly = lPoint.y,
+			rx = rPoint.x,
+			ry = rPoint.y,
 			fx = (lx+rx)/2,
 			fy = (ly+ry)/2,
 			fm = 0., fb = 0.;
@@ -1104,7 +1104,7 @@ class Voronoi {
 			fb = fy-fm*fx;
 			}
 
-		// remember, direction of line (relative to left site):
+		// remember, direction of line (relative to left point):
 		// upward: left.x < right.x
 		// downward: left.x > right.x
 		// horizontal: left.x == right.x
@@ -1301,7 +1301,7 @@ class Voronoi {
 
 	// Close the cells.
 	// The cells are bound by the supplied bounding box.
-	// Each cell refers to its associated site, and a list
+	// Each cell refers to its associated point, and a list
 	// of halfedges ordered counterclockwise.
 	function closeCells(bbox:Bounds2d) {
 		// prune, order halfedges, then add missing ones
@@ -1330,7 +1330,7 @@ class Voronoi {
 			// does not match the start point of the following halfedge
 			halfedges = cell.halfedges;
 			nHalfedges = halfedges.length;
-			// special case: only one site, in which case, the viewport is the cell
+			// special case: only one point, in which case, the viewport is the cell
 			// ...
 			// all other cases
 			iLeft = 0;
@@ -1361,8 +1361,8 @@ class Voronoi {
 					else if (this.equalWithEpsilon(endpoint.y,yt) && this.greaterThanWithEpsilon(endpoint.x,xl)) {
 						vb = this.createVertex(this.equalWithEpsilon(startpoint.y,yt) ? startpoint.x : xl, yt);
 					}
-					edge = this.createBorderEdge(cell.site, va, vb);
-					halfedges.insert(iLeft+1, new Halfedge(edge, cell.site, null));
+					edge = this.createBorderEdge(cell.point, va, vb);
+					halfedges.insert(iLeft+1, new Halfedge(edge, cell.point, null));
 					nHalfedges = halfedges.length;
 				}
 				iLeft++;
@@ -1379,51 +1379,51 @@ class Voronoi {
 	}
 	
 	// rhill 2011-05-19:
-	//   Voronoi sites are kept client-side now, to allow
+	//   Voronoi points are kept client-side now, to allow
 	//   user to freely modify content. At compute time,
-	//   *references* to sites are copied locally.
-	public function compute(sites:Array<Point2d>, bbox:Bounds2d) {
+	//   *references* to points are copied locally.
+	public function compute(points:Array<Point2d>, bbox:Bounds2d) {
 		// to measure execution time
 		var startTime = haxe.Timer.stamp();
 
 		// init internal state
 		this.reset();
 
-		// Initialize site event queue
-		var siteEvents = sites.slice(0);
-		siteEvents.sort(sortByXY);
+		// Initialize point event queue
+		var pointEvents = points.slice(0);
+		pointEvents.sort(sortByXY);
 
 		// process queue
-		var site = siteEvents.pop(),
-			siteid = 0,
-			xsitex = Math.NEGATIVE_INFINITY, // to avoid duplicate sites
-			xsitey = Math.NEGATIVE_INFINITY,
+		var point = pointEvents.pop(),
+			pointid = 0,
+			xpointx = Math.NEGATIVE_INFINITY, // to avoid duplicate points
+			xpointy = Math.NEGATIVE_INFINITY,
 			cells = this.cells,
 			circle;
 
 		// main loop
 		while( true ) {
-			// we need to figure whether we handle a site or circle event
-			// for this we find out if there is a site event and it is
+			// we need to figure whether we handle a point or circle event
+			// for this we find out if there is a point event and it is
 			// 'earlier' than the circle event
 			circle = this.firstCircleEvent;
 
 			// add beach section
-			if (site != null && (circle == null || site.y < circle.y || (site.y == circle.y && site.x < circle.x))) {
-				// only if site is not a duplicate
-				if (site.x != xsitex || site.y != xsitey) {
-					// first create cell for new site
-					var c = new Cell(siteid, site);
-					cells[siteid] = c;
-					siteCell.set(site, c);
-					siteid++;
-					// then create a beachsection for that site
-					this.addBeachsection(site);
-					// remember last site coords to detect duplicate
-					xsitey = site.y;
-					xsitex = site.x;
+			if (point != null && (circle == null || point.y < circle.y || (point.y == circle.y && point.x < circle.x))) {
+				// only if point is not a duplicate
+				if (point.x != xpointx || point.y != xpointy) {
+					// first create cell for new point
+					var c = new Cell(pointid, point);
+					cells[pointid] = c;
+					pointCell.set(point, c);
+					pointid++;
+					// then create a beachsection for that point
+					this.addBeachsection(point);
+					// remember last point coords to detect duplicate
+					xpointy = point.y;
+					xpointx = point.x;
 					}
-				site = siteEvents.pop();
+				point = pointEvents.pop();
 				}
 
 			// remove beach section
