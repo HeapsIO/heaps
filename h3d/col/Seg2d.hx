@@ -9,7 +9,7 @@ class Seg2d {
 	public var lenSq : Float;
 	public var invLenSq : Float;
 	
-	public inline function new( p1 : Vector, p2 : Vector ) {
+	public inline function new( p1 : Point2d, p2 : Point2d ) {
 		x = p1.x;
 		y = p1.y;
 		dx = p2.x - x;
@@ -18,11 +18,11 @@ class Seg2d {
 		invLenSq = 1 / lenSq;
 	}
 	
-	public inline function side( p : h3d.Vector ) {
+	public inline function side( p : Point2d ) {
 		return dx * (p.y - y) - dy * (p.x - x);
 	}
 	
-	public inline function distanceSq( p : h3d.Vector ) {
+	public inline function distanceSq( p : Point2d ) {
 		var px = p.x - x;
 		var py = p.y - y;
 		var t = px * dx + py * dy;
@@ -40,7 +40,7 @@ class Seg2d {
 		}
 	}
 
-	public inline function distance( p : h3d.Vector ) {
+	public inline function distance( p : Point2d ) {
 		return FMath.sqrt(distanceSq(p));
 	}
 

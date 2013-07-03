@@ -21,20 +21,7 @@ package h3d.col;
 // Red-Black tree code (based on C version of "rbtree" by Franck Bui-Huu
 // https://github.com/fbuihuu/libtree/blob/master/rb.c
 
-class Bounds {
-	public var xl : Float;
-	public var xr : Float;
-	public var yt : Float;
-	public var yb : Float;
-	public function new(xl, xr, yt, yb) {
-		this.xl = xl;
-		this.xr = xr;
-		this.yt = yt;
-		this.yb = yb;
-	}
-}
-
-class RBNode<T:RBNode<T>> {
+private class RBNode<T:RBNode<T>> {
 	public var rbRed : Bool;
 	public var rbLeft : T;
 	public var rbRight : T;
@@ -43,7 +30,7 @@ class RBNode<T:RBNode<T>> {
 	public var rbPrevious : T;
 }
 
-@:generic class RBTree<T:RBNode<T>> {
+@:generic private class RBTree<T:RBNode<T>> {
 	
 	public var root : T;
 	
@@ -331,22 +318,14 @@ class RBNode<T:RBNode<T>> {
     }
 }
 
-class Site {
-	public var voronoiId : Int;
-	public var x : Float;
-	public var y : Float;
-	public function new(x, y) {
-		this.x = x;
-		this.y = y;
-	}
-}
-
 class Cell {
 	
-	public var site : Site;
+	public var id : Int;
+	public var site : Point2d;
 	public var halfedges : Array<Halfedge>;
 	
-	public function new(site) {
+	public function new(id, site) {
+		this.id = id;
 		this.site = site;
 		this.halfedges = [];
     }
@@ -383,11 +362,12 @@ class Cell {
 			edge;
 		while (iHalfedge-- != 0){
 			edge = this.halfedges[iHalfedge].edge;
-			if (edge.lSite != null && edge.lSite.voronoiId != this.site.voronoiId) {
-				neighbors.push(edge.lSite.voronoiId);
+			// NC : changes siteId check to object == check
+			if (edge.lSite != null && edge.lSite != this.site) {
+				neighbors.push(edge.lSite);
 				}
-			else if (edge.rSite != null && edge.rSite.voronoiId != this.site.voronoiId){
-				neighbors.push(edge.rSite.voronoiId);
+			else if (edge.rSite != null && edge.rSite != this.site){
+				neighbors.push(edge.rSite);
 				}
 			}
 		return neighbors;
@@ -424,7 +404,7 @@ class Cell {
 	//    0: point is on the perimeter of the cell
 	//    1: point is inside the perimeter of the cell
 	//
-	public function pointIntersection(x, y) {
+	public function pointIntersection(x:Float, y:Float) {
 		// Check if point in polygon. Since all polygons of a Voronoi
 		// diagram are convex, then:
 		// http://paulbourke.net/geometry/polygonmesh/
@@ -457,24 +437,12 @@ class Cell {
 	
 }
 
-class Vertex {
-
-	public var x : Float;
-	public var y : Float;
-	
-	public function new(x, y) {
-		this.x = x;
-		this.y = y;
-    }
-	
-}
-
 class Edge {
 	
-	public var lSite : Site;
-	public var rSite : Site;
-	public var va : Null<Vertex>;
-	public var vb : Null<Vertex>;
+	public var lSite : Point2d;
+	public var rSite : Point2d;
+	public var va : Null<Point2d>;
+	public var vb : Null<Point2d>;
 	
 	public function new(lSite, rSite) {
 		this.lSite = lSite;
@@ -486,11 +454,11 @@ class Edge {
 
 class Halfedge {
 	
-	public var site : Site;
+	public var site : Point2d;
 	public var edge : Edge;
 	public var angle : Float;
 	
-	public function new(edge, lSite:Site, rSite:Site) {
+	public function new(edge, lSite:Point2d, rSite:Point2d) {
 		this.site = lSite;
 		this.edge = edge;
 		// 'angle' is a value to be used for properly sorting the
@@ -512,27 +480,36 @@ class Halfedge {
 				: Math.atan2(va.x-vb.x, vb.y-va.y);
 		}
 	}
-		
-	public function getStartpoint() {
+	
+	public inline function getStartpoint() {
 		return this.edge.lSite == this.site ? this.edge.va : this.edge.vb;
     }
 
-	public function getEndpoint() {
+	public inline function getEndpoint() {
 		return this.edge.lSite == this.site ? this.edge.vb : this.edge.va;
     }
 
 }
 
-class Beachsection extends RBNode<Beachsection> {
-	public var site : Site;
+class Diagram {
+	public var cells : Array<Cell>;
+	public var points : Array<Point2d>;
+	public var edges : Array<Edge>;
+	public var execTime : Float;
+	public function new() {
+	}
+}
+
+private class Beachsection extends RBNode<Beachsection> {
+	public var site : Point2d;
 	public var edge : Edge;
 	public var circleEvent : CircleEvent;
 	public function new() {
 	}
 }
 
-class CircleEvent extends RBNode<CircleEvent> {
-	public var site : Site;
+private class CircleEvent extends RBNode<CircleEvent> {
+	public var site : Point2d;
 	public var arc : Beachsection;
 	public var x : Float;
 	public var y : Float;
@@ -544,13 +521,14 @@ class CircleEvent extends RBNode<CircleEvent> {
 class Voronoi {
 	
 	var beachline : RBTree<Beachsection>;
-	var vertices : Array<Vertex>;
+	var vertices : Array<Point2d>;
 	var edges : Array<Edge>;
 	var cells : Array<Cell>;
 	var beachsectionJunkyard : Array<Beachsection>;
 	var circleEventJunkyard : Array<CircleEvent>;
 	var circleEvents : RBTree<CircleEvent>;
 	var firstCircleEvent : CircleEvent;
+	var siteCell : Map<Point2d,Cell>;
 
 	public function new() {
 		this.vertices = null;
@@ -575,6 +553,7 @@ class Voronoi {
 		if (this.circleEvents == null) {
 			this.circleEvents = new RBTree<CircleEvent>();
 			}
+		siteCell = new Map();
 		this.circleEvents.root = this.firstCircleEvent = null;
 		this.vertices = [];
 		this.edges = [];
@@ -590,7 +569,7 @@ class Voronoi {
 	inline function lessThanOrEqualWithEpsilon(a:Float,b:Float) return a-b<EPSILON;
 
 	function createVertex(x, y) {
-		var v = new Vertex(x, y);
+		var v = new Point2d(x, y);
 		this.vertices.push(v);
 		return v;
     }
@@ -608,8 +587,8 @@ class Voronoi {
 		if (vb != null) {
 			this.setEdgeEndpoint(edge, lSite, rSite, vb);
 			}
-		this.cells[lSite.voronoiId].halfedges.push(new Halfedge(edge, lSite, rSite));
-		this.cells[rSite.voronoiId].halfedges.push(new Halfedge(edge, rSite, lSite));
+		siteCell.get(lSite).halfedges.push(new Halfedge(edge, lSite, rSite));
+		siteCell.get(rSite).halfedges.push(new Halfedge(edge, rSite, lSite));
 		return edge;
 	}
 
@@ -649,7 +628,7 @@ class Voronoi {
 	// to avoid new memory allocation. This resulted in a measurable
 	// performance gain.
 
-	function createBeachsection(site:Site) {
+	function createBeachsection(site:Point2d) {
 		var beachsection = this.beachsectionJunkyard.pop();
 		if ( beachsection == null )
 			beachsection = new Beachsection();
@@ -816,7 +795,7 @@ class Voronoi {
 		this.attachCircleEvent(rArc);
     }
 
-	function addBeachsection(site:Site) {
+	function addBeachsection(site:Point2d) {
 		var x = site.x,
 			directrix = site.y;
 
@@ -1098,17 +1077,17 @@ class Voronoi {
 	// return value:
 	//   false: the dangling endpoint couldn't be connected
 	//   true: the dangling endpoint could be connected
-	function connectEdge(edge:Edge, bbox) {
+	function connectEdge(edge:Edge, bbox:Bounds2d) {
 		// skip if end point already connected
 		var vb = edge.vb;
 		if (vb != null) {return true;}
 
 		// make local copy for performance purpose
 		var va = edge.va,
-			xl = bbox.xl,
-			xr = bbox.xr,
-			yt = bbox.yt,
-			yb = bbox.yb,
+			xl = bbox.xMin,
+			xr = bbox.xMax,
+			yt = bbox.yMin,
+			yb = bbox.yMax,
 			lSite = edge.lSite,
 			rSite = edge.rSite,
 			lx = lSite.x,
@@ -1220,7 +1199,7 @@ class Voronoi {
 	//   http://www.skytopia.com/project/articles/compsci/clipping.html
 	// Thanks!
 	// A bit modified to minimize code paths
-	function clipEdge(edge:Edge, bbox:Bounds) {
+	function clipEdge(edge:Edge, bbox:Bounds2d) {
 		var ax = edge.va.x,
 			ay = edge.va.y,
 			bx = edge.vb.x,
@@ -1230,7 +1209,7 @@ class Voronoi {
 			dx = bx-ax,
 			dy = by-ay;
 		// left
-		var q = ax-bbox.xl;
+		var q = ax-bbox.xMin;
 		if (dx==0 && q<0) {return false;}
 		var r = -q/dx;
 		if (dx<0) {
@@ -1242,7 +1221,7 @@ class Voronoi {
 			else if (r>t0) {t0=r;}
 			}
 		// right
-		q = bbox.xr-ax;
+		q = bbox.xMax-ax;
 		if (dx==0 && q<0) {return false;}
 		r = q/dx;
 		if (dx<0) {
@@ -1254,7 +1233,7 @@ class Voronoi {
 			else if (r<t1) {t1=r;}
 			}
 		// top
-		q = ay-bbox.yt;
+		q = ay-bbox.yMin;
 		if (dy==0 && q<0) {return false;}
 		r = -q/dy;
 		if (dy<0) {
@@ -1266,7 +1245,7 @@ class Voronoi {
 			else if (r>t0) {t0=r;}
 			}
 		// bottom
-		q = bbox.yb-ay;
+		q = bbox.yMax-ay;
 		if (dy==0 && q<0) {return false;}
 		r = q/dy;
 		if (dy<0) {
@@ -1300,7 +1279,7 @@ class Voronoi {
 	}
 
 	// Connect/cut edges at bounding box
-	function clipEdges(bbox:Bounds) {
+	function clipEdges(bbox:Bounds2d) {
 		// connect all dangling edges to bounding box
 		// or get rid of them if it can't be done
 		var edges = this.edges,
@@ -1324,13 +1303,13 @@ class Voronoi {
 	// The cells are bound by the supplied bounding box.
 	// Each cell refers to its associated site, and a list
 	// of halfedges ordered counterclockwise.
-	function closeCells(bbox) {
+	function closeCells(bbox:Bounds2d) {
 		// prune, order halfedges, then add missing ones
 		// required to close cells
-		var xl = bbox.xl,
-			xr = bbox.xr,
-			yt = bbox.yt,
-			yb = bbox.yb,
+		var xl = bbox.xMin,
+			xr = bbox.xMax,
+			yt = bbox.yMin,
+			yb = bbox.yMax,
 			cells = this.cells,
 			iCell = cells.length,
 			cell,
@@ -1394,7 +1373,7 @@ class Voronoi {
 	// ---------------------------------------------------------------------------
 	// Top-level Fortune loop
 
-	static function sortByXY(a:Site, b:Site) {
+	static function sortByXY(a:Point2d, b:Point2d) {
 		var r = b.y - a.y;
 		return r < 0 ? -1 : (r > 0 ? 1 : (b.x > a.x ? 1 : b.x < a.x ? -1 : 0));
 	}
@@ -1403,7 +1382,7 @@ class Voronoi {
 	//   Voronoi sites are kept client-side now, to allow
 	//   user to freely modify content. At compute time,
 	//   *references* to sites are copied locally.
-	public function compute(sites:Array<Site>, bbox:Bounds) {
+	public function compute(sites:Array<Point2d>, bbox:Bounds2d) {
 		// to measure execution time
 		var startTime = haxe.Timer.stamp();
 
@@ -1434,8 +1413,10 @@ class Voronoi {
 				// only if site is not a duplicate
 				if (site.x != xsitex || site.y != xsitey) {
 					// first create cell for new site
-					cells[siteid] = new Cell(site);
-					site.voronoiId = siteid++;
+					var c = new Cell(siteid, site);
+					cells[siteid] = c;
+					siteCell.set(site, c);
+					siteid++;
 					// then create a beachsection for that site
 					this.addBeachsection(site);
 					// remember last site coords to detect duplicate
@@ -1470,12 +1451,11 @@ class Voronoi {
 		var stopTime = haxe.Timer.stamp();
 
 		// prepare return values
-		var diagram = {
-			cells : this.cells,
-			edges : this.edges,
-			vertices : this.vertices,
-			execTime : stopTime - startTime,
-		};
+		var diagram = new Diagram();
+		diagram.cells = this.cells;
+		diagram.edges = this.edges;
+		diagram.points = this.vertices;
+		diagram.execTime = stopTime - startTime;
 
 		// clean up
 		this.reset();
