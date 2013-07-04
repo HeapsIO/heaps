@@ -1,5 +1,4 @@
 package h2d;
-import h2d.RenderContext;
 
 class Interactive extends Sprite {
 
@@ -39,11 +38,6 @@ class Interactive extends Sprite {
 			}
 		}
 		super.onDelete();
-	}
-	
-	override private function sync(ctx:RenderContext) 
-	{
-		super.sync(ctx);
 	}
 	
 	override function set_level(v) {
