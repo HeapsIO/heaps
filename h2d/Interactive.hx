@@ -1,4 +1,5 @@
 package h2d;
+import h2d.RenderContext;
 
 class Interactive extends Sprite {
 
@@ -8,7 +9,6 @@ class Interactive extends Sprite {
 	public var isEllipse : Bool;
 	public var blockEvents : Bool = true;
 	public var propagateEvents : Bool = false;
-	public var level:Int = 0;
 	var scene : Scene;
 	
 	public function new(width, height, ?parent) {
@@ -20,10 +20,8 @@ class Interactive extends Sprite {
 
 	override function onAlloc() {
 		var p : Sprite = this;
-		level = 0;
 		while( p.parent != null ) {
 			p = p.parent;
-			level ++;
 		}
 		if( Std.is(p, Scene) ) {
 			scene = cast p;
@@ -34,7 +32,6 @@ class Interactive extends Sprite {
 	
 	override function onDelete() {
 		if ( scene != null ) {
-			level = 0;
 			scene.removeEventTarget(this);
 			if( scene.currentOver == this ) {
 				scene.currentOver = null;
@@ -42,6 +39,20 @@ class Interactive extends Sprite {
 			}
 		}
 		super.onDelete();
+	}
+	
+	override private function sync(ctx:RenderContext) 
+	{
+		super.sync(ctx);
+	}
+	
+	override function set_level(v) {
+		if (level == v) return v;
+		if (scene != null) {
+			scene.removeEventTarget(this);
+			scene.addEventTarget(this);
+		}
+		return super.set_level(v);
 	}
 
 	function checkBounds( e : Event ) {

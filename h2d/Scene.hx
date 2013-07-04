@@ -307,7 +307,7 @@ class Scene extends Layers implements h3d.IDrawable {
 		//interactive.unshift(i);
 		var pos = 0;
 		for (curr in interactive) {
-			if (curr.level < i.level) break;
+			if (curr.level >= i.level) break;
 			pos ++;
 		}
 		if (pos == 0) interactive.unshift(i);

@@ -58,8 +58,10 @@ class ItemList extends Box {
 						}
 					}
 				}
-				childs.remove(int);
-				childs.insert(1,int); // insert over bg
+				//childs.remove(int);
+				//childs.insert(1, int); // insert over bg
+				addChildAt(int, 1);
+				addChild(c);
 			}
 		}
 	}
