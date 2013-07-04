@@ -8,6 +8,7 @@ class Interactive extends Sprite {
 	public var isEllipse : Bool;
 	public var blockEvents : Bool = true;
 	public var propagateEvents : Bool = false;
+	public var level:Int = 0;
 	var scene : Scene;
 	
 	public function new(width, height, ?parent) {
@@ -19,8 +20,11 @@ class Interactive extends Sprite {
 
 	override function onAlloc() {
 		var p : Sprite = this;
-		while( p.parent != null )
+		level = 0;
+		while( p.parent != null ) {
 			p = p.parent;
+			level ++;
+		}
 		if( Std.is(p, Scene) ) {
 			scene = cast p;
 			scene.addEventTarget(this);
@@ -29,7 +33,8 @@ class Interactive extends Sprite {
 	}
 	
 	override function onDelete() {
-		if( scene != null ) {
+		if ( scene != null ) {
+			level = 0;
 			scene.removeEventTarget(this);
 			if( scene.currentOver == this ) {
 				scene.currentOver = null;
