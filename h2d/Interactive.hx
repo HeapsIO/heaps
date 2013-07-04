@@ -19,8 +19,9 @@ class Interactive extends Sprite {
 
 	override function onAlloc() {
 		var p : Sprite = this;
-		while( p.parent != null )
+		while( p.parent != null ) {
 			p = p.parent;
+		}
 		if( Std.is(p, Scene) ) {
 			scene = cast p;
 			scene.addEventTarget(this);
@@ -29,7 +30,7 @@ class Interactive extends Sprite {
 	}
 	
 	override function onDelete() {
-		if( scene != null ) {
+		if ( scene != null ) {
 			scene.removeEventTarget(this);
 			if( scene.currentOver == this ) {
 				scene.currentOver = null;
@@ -37,6 +38,15 @@ class Interactive extends Sprite {
 			}
 		}
 		super.onDelete();
+	}
+	
+	override function set_level(v) {
+		if (level == v) return v;
+		if (scene != null) {
+			scene.removeEventTarget(this);
+			scene.addEventTarget(this);
+		}
+		return super.set_level(v);
 	}
 
 	function checkBounds( e : Event ) {

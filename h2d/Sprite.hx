@@ -13,7 +13,9 @@ class Sprite {
 	public var scaleY(default,set) : Float;
 	public var rotation(default, set) : Float;
 	public var visible : Bool;
-
+	
+	public var level(default, set):Int = 0;
+	
 	var matA : Float;
 	var matB : Float;
 	var matC : Float;
@@ -69,6 +71,7 @@ class Sprite {
 		childs.insert(pos,s);
 		s.parent = this;
 		s.posChanged = true;
+		s.level = level + 1;
 		// ensure that proper alloc/delete is done if we change parent
 		if( allocated ) {
 			if( !s.allocated )
@@ -94,6 +97,7 @@ class Sprite {
 	public function removeChild( s : Sprite ) {
 		if( childs.remove(s) ) {
 			s.parent = null;
+			s.level = 0;
 			if( s.allocated ) s.onDelete();
 		}
 	}
@@ -101,6 +105,14 @@ class Sprite {
 	// shortcut for parent.removeChild
 	public inline function remove() {
 		if( this != null && parent != null ) parent.removeChild(this);
+	}
+	
+	function set_level(v) {
+		if (level == v) return v;
+		level = v;
+		v++;
+		for (c in childs) c.level = v;
+		return level;
 	}
 	
 	function draw( ctx : RenderContext ) {

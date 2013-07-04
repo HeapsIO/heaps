@@ -302,9 +302,25 @@ class Scene extends Layers implements h3d.IDrawable {
 	}
 	
 	@:allow(h2d)
-	function addEventTarget(i) {
+	function addEventTarget(i:Interactive) {
 		// latest added gets priority
-		interactive.unshift(i);
+		//interactive.unshift(i);
+		var pos = 0;
+		for (curr in interactive) {
+			if (curr.level >= i.level) break;
+			pos ++;
+		}
+		if (pos == 0) interactive.unshift(i);
+		else {
+			var n = interactive.length;
+			if (n == pos) interactive.push(i);
+			else {
+				interactive.length = ++n;
+				for (j in 1...n-pos)
+					interactive[n - j] = interactive[n - j - 1];
+				interactive[pos] = i;
+			}
+		}
 	}
 	
 	@:allow(h2d)
