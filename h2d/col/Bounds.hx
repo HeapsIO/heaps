@@ -1,6 +1,6 @@
-package h3d.col;
+package h2d.col;
 
-class Bounds2d {
+class Bounds {
 	
 	public var xMin : Float;
 	public var yMin : Float;
@@ -12,35 +12,35 @@ class Bounds2d {
 		empty();
 	}
 	
-	public inline function collide( b : Bounds2d ) {
+	public inline function collide( b : Bounds ) {
 		return !(xMin > b.xMax || yMin > b.yMax || xMax < b.xMin || yMax < b.yMin);
 	}
 	
-	public inline function add( b : Bounds2d ) {
+	public inline function add( b : Bounds ) {
 		if( b.xMin < xMin ) xMin = b.xMin;
 		if( b.xMax > xMax ) xMax = b.xMax;
 		if( b.yMin < yMin ) yMin = b.yMin;
 		if( b.yMax > yMax ) yMax = b.yMax;
 	}
 
-	public inline function addPoint( p : Point2d ) {
+	public inline function addPoint( p : Point ) {
 		if( p.x < xMin ) xMin = p.x;
 		if( p.x > xMax ) xMax = p.x;
 		if( p.y < yMin ) yMin = p.y;
 		if( p.y > yMax ) yMax = p.y;
 	}
 	
-	public inline function setMin( p : Point2d ) {
+	public inline function setMin( p : Point ) {
 		xMin = p.x;
 		yMin = p.y;
 	}
 
-	public inline function setMax( p : Point2d ) {
+	public inline function setMax( p : Point ) {
 		xMax = p.x;
 		yMax = p.y;
 	}
 	
-	public function load( b : Bounds2d ) {
+	public function load( b : Bounds ) {
 		xMin = b.xMin;
 		yMin = b.yMin;
 		xMax = b.xMax;
@@ -59,19 +59,19 @@ class Bounds2d {
 	}
 	
 	public inline function getMin() {
-		return new Point2d(xMin, yMin);
+		return new Point(xMin, yMin);
 	}
 	
 	public inline function getCenter() {
-		return new Point2d((xMin + xMax) * 0.5, (yMin + yMax) * 0.5);
+		return new Point((xMin + xMax) * 0.5, (yMin + yMax) * 0.5);
 	}
 
 	public inline function getSize() {
-		return new Point2d(xMax - xMin, yMax - yMin);
+		return new Point(xMax - xMin, yMax - yMin);
 	}
 	
 	public inline function getMax() {
-		return new Point2d(xMax, yMax);
+		return new Point(xMax, yMax);
 	}
 	
 	public inline function empty() {
@@ -89,7 +89,7 @@ class Bounds2d {
 	}
 	
 	public inline function clone() {
-		var b = new Bounds2d();
+		var b = new Bounds();
 		b.xMin = xMin;
 		b.yMin = yMin;
 		b.xMax = xMax;
@@ -101,8 +101,8 @@ class Bounds2d {
 		return "{" + getMin() + "," + getMax() + "}";
 	}
 	
-	public static inline function fromPoints( min : Point2d, max : Point2d ) {
-		var b = new Bounds2d();
+	public static inline function fromPoints( min : Point, max : Point ) {
+		var b = new Bounds();
 		b.setMin(min);
 		b.setMax(max);
 		return b;

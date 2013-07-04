@@ -1,6 +1,6 @@
-package h3d.col;
+package h2d.col;
 
-class Point2d {
+class Point {
 	
 	public var x : Float;
 	public var y : Float;
@@ -11,7 +11,7 @@ class Point2d {
 	}
 	
 	public function toString() {
-		return "{" + FMath.fmt(x) + "," + FMath.fmt(y) + "}";
+		return "{" + h3d.FMath.fmt(x) + "," + h3d.FMath.fmt(y) + "}";
 	}
 	
 }

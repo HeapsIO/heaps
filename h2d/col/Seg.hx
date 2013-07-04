@@ -1,6 +1,6 @@
-package h3d.col;
+package h2d.col;
 
-class Seg2d {
+class Seg {
 
 	public var x : Float;
 	public var y : Float;
@@ -9,7 +9,7 @@ class Seg2d {
 	public var lenSq : Float;
 	public var invLenSq : Float;
 	
-	public inline function new( p1 : Point2d, p2 : Point2d ) {
+	public inline function new( p1 : Point, p2 : Point ) {
 		x = p1.x;
 		y = p1.y;
 		dx = p2.x - x;
@@ -18,11 +18,11 @@ class Seg2d {
 		invLenSq = 1 / lenSq;
 	}
 	
-	public inline function side( p : Point2d ) {
+	public inline function side( p : Point ) {
 		return dx * (p.y - y) - dy * (p.x - x);
 	}
 	
-	public inline function distanceSq( p : Point2d ) {
+	public inline function distanceSq( p : Point ) {
 		var px = p.x - x;
 		var py = p.y - y;
 		var t = px * dx + py * dy;
@@ -40,21 +40,21 @@ class Seg2d {
 		}
 	}
 
-	public inline function distance( p : Point2d ) {
-		return FMath.sqrt(distanceSq(p));
+	public inline function distance( p : Point ) {
+		return h3d.FMath.sqrt(distanceSq(p));
 	}
 	
-	public inline function project( p : Point2d ) : Point2d {
+	public inline function project( p : Point ) : Point {
 		var px = p.x - x;
 		var py = p.y - y;
 		var t = px * dx + py * dy;
 		return if( t < 0 )
-			new Point2d(x, y);
+			new Point(x, y);
 		else if( t > lenSq )
-			new Point2d(x + dx, y + dy);
+			new Point(x + dx, y + dy);
 		else {
 			var tl2 = t * invLenSq;
-			new Point2d(x + tl2 * dx, y + tl2 * dy);
+			new Point(x + tl2 * dx, y + tl2 * dy);
 		}
 	}
 

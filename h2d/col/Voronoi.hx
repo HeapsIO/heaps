@@ -15,7 +15,7 @@
 	Credits: See https://github.com/gorhill/Javascript-Voronoi/CREDITS.md
 	History: See https://github.com/gorhill/Javascript-Voronoi/CHANGELOG.md
 */
-package h3d.col;
+package h2d.col;
 
 // ---------------------------------------------------------------------------
 // Red-Black tree code (based on C version of "rbtree" by Franck Bui-Huu
@@ -321,7 +321,7 @@ private class RBNode<T:RBNode<T>> {
 class Cell {
 	
 	public var id : Int;
-	public var point : Point2d;
+	public var point : Point;
 	public var halfedges : Array<Halfedge>;
 	
 	public function new(id, point) {
@@ -440,12 +440,12 @@ class Cell {
 class Edge {
 
 	public var id : Int;
-	public var lPoint : Point2d;
-	public var rPoint : Point2d;
+	public var lPoint : Point;
+	public var rPoint : Point;
 	public var lCell : Null<Cell>;
 	public var rCell : Null<Cell>;
-	public var va : Null<Point2d>;
-	public var vb : Null<Point2d>;
+	public var va : Null<Point>;
+	public var vb : Null<Point>;
 	
 	public function new(lPoint, rPoint) {
 		this.lPoint = lPoint;
@@ -457,11 +457,11 @@ class Edge {
 
 class Halfedge {
 	
-	public var point : Point2d;
+	public var point : Point;
 	public var edge : Edge;
 	public var angle : Float;
 	
-	public function new(edge, lPoint:Point2d, rPoint:Point2d) {
+	public function new(edge, lPoint:Point, rPoint:Point) {
 		this.point = lPoint;
 		this.edge = edge;
 		// 'angle' is a value to be used for properly sorting the
@@ -500,7 +500,7 @@ class Halfedge {
 
 class Diagram {
 	public var cells : Array<Cell>;
-	public var points : Array<Point2d>;
+	public var points : Array<Point>;
 	public var edges : Array<Edge>;
 	public var execTime : Float;
 	public function new() {
@@ -508,7 +508,7 @@ class Diagram {
 }
 
 private class Beachsection extends RBNode<Beachsection> {
-	public var point : Point2d;
+	public var point : Point;
 	public var edge : Edge;
 	public var circleEvent : CircleEvent;
 	public function new() {
@@ -516,7 +516,7 @@ private class Beachsection extends RBNode<Beachsection> {
 }
 
 private class CircleEvent extends RBNode<CircleEvent> {
-	public var point : Point2d;
+	public var point : Point;
 	public var arc : Beachsection;
 	public var x : Float;
 	public var y : Float;
@@ -528,14 +528,14 @@ private class CircleEvent extends RBNode<CircleEvent> {
 class Voronoi {
 	
 	var beachline : RBTree<Beachsection>;
-	var vertices : Array<Point2d>;
+	var vertices : Array<Point>;
 	var edges : Array<Edge>;
 	var cells : Array<Cell>;
 	var beachsectionJunkyard : Array<Beachsection>;
 	var circleEventJunkyard : Array<CircleEvent>;
 	var circleEvents : RBTree<CircleEvent>;
 	var firstCircleEvent : CircleEvent;
-	var pointCell : Map<Point2d,Cell>;
+	var pointCell : Map<Point,Cell>;
 
 	public function new() {
 		this.vertices = null;
@@ -576,7 +576,7 @@ class Voronoi {
 	inline function lessThanOrEqualWithEpsilon(a:Float,b:Float) return a-b<EPSILON;
 
 	function createVertex(x, y) {
-		var v = new Point2d(x, y);
+		var v = new Point(x, y);
 		this.vertices.push(v);
 		return v;
     }
@@ -635,7 +635,7 @@ class Voronoi {
 	// to avoid new memory allocation. This resulted in a measurable
 	// performance gain.
 
-	function createBeachsection(point:Point2d) {
+	function createBeachsection(point:Point) {
 		var beachsection = this.beachsectionJunkyard.pop();
 		if ( beachsection == null )
 			beachsection = new Beachsection();
@@ -802,7 +802,7 @@ class Voronoi {
 		this.attachCircleEvent(rArc);
     }
 
-	function addBeachsection(point:Point2d) {
+	function addBeachsection(point:Point) {
 		var x = point.x,
 			directrix = point.y;
 
@@ -1084,7 +1084,7 @@ class Voronoi {
 	// return value:
 	//   false: the dangling endpoint couldn't be connected
 	//   true: the dangling endpoint could be connected
-	function connectEdge(edge:Edge, bbox:Bounds2d) {
+	function connectEdge(edge:Edge, bbox:Bounds) {
 		// skip if end point already connected
 		var vb = edge.vb;
 		if (vb != null) {return true;}
@@ -1206,7 +1206,7 @@ class Voronoi {
 	//   http://www.skytopia.com/project/articles/compsci/clipping.html
 	// Thanks!
 	// A bit modified to minimize code paths
-	function clipEdge(edge:Edge, bbox:Bounds2d) {
+	function clipEdge(edge:Edge, bbox:Bounds) {
 		var ax = edge.va.x,
 			ay = edge.va.y,
 			bx = edge.vb.x,
@@ -1286,7 +1286,7 @@ class Voronoi {
 	}
 
 	// Connect/cut edges at bounding box
-	function clipEdges(bbox:Bounds2d) {
+	function clipEdges(bbox:Bounds) {
 		// connect all dangling edges to bounding box
 		// or get rid of them if it can't be done
 		var edges = this.edges,
@@ -1310,7 +1310,7 @@ class Voronoi {
 	// The cells are bound by the supplied bounding box.
 	// Each cell refers to its associated point, and a list
 	// of halfedges ordered counterclockwise.
-	function closeCells(bbox:Bounds2d) {
+	function closeCells(bbox:Bounds) {
 		// prune, order halfedges, then add missing ones
 		// required to close cells
 		var xl = bbox.xMin,
@@ -1380,7 +1380,7 @@ class Voronoi {
 	// ---------------------------------------------------------------------------
 	// Top-level Fortune loop
 
-	static function sortByXY(a:Point2d, b:Point2d) {
+	static function sortByXY(a:Point, b:Point) {
 		var r = b.y - a.y;
 		return r < 0 ? -1 : (r > 0 ? 1 : (b.x > a.x ? 1 : b.x < a.x ? -1 : 0));
 	}
@@ -1389,7 +1389,7 @@ class Voronoi {
 	//   Voronoi points are kept client-side now, to allow
 	//   user to freely modify content. At compute time,
 	//   *references* to points are copied locally.
-	public function compute(points:Array<Point2d>, bbox:Bounds2d) {
+	public function compute(points:Array<Point>, bbox:Bounds) {
 		// to measure execution time
 		var startTime = haxe.Timer.stamp();
 

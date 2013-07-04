@@ -1,9 +1,9 @@
-package h3d.col;
+package h2d.col;
 
-class Poly2d {
+class Poly {
 
-	public var points : Array<Point2d>;
-	var segments : Array<Seg2d>;
+	public var points : Array<Point>;
+	var segments : Array<Seg>;
 	
 	public function new( points ) {
 		this.points = points;
@@ -25,20 +25,20 @@ class Poly2d {
 			return segments;
 		segments = [];
 		for( i in 0...points.length ) {
-			var s = new Seg2d(points[i], points[(i + 1) % points.length]);
+			var s = new Seg(points[i], points[(i + 1) % points.length]);
 			segments.push(s);
 		}
 		return segments;
 	}
 	
-	public function hasPoint( p : Point2d ) {
+	public function hasPoint( p : Point ) {
 		for( s in getSegments() )
 			if( s.side(p) < 0 )
 				return false;
 		return true;
 	}
 	
-	public function project( p : Point2d ) : Point2d {
+	public function project( p : Point ) : Point {
 		var dmin = 1e20, smin = null;
 		for( s in getSegments() ) {
 			var d = s.distanceSq(p);
@@ -50,7 +50,7 @@ class Poly2d {
 		return smin.project(p);
 	}
 	
-	public function distanceSq( p : Point2d ) {
+	public function distanceSq( p : Point ) {
 		var dmin = 1e20;
 		for( s in getSegments() ) {
 			var d = s.distanceSq(p);
@@ -59,8 +59,8 @@ class Poly2d {
 		return dmin;
 	}
 	
-	public inline function distance( p : Point2d ) {
-		return FMath.sqrt(distanceSq(p));
+	public inline function distance( p : Point ) {
+		return h3d.FMath.sqrt(distanceSq(p));
 	}
 	
 }
