@@ -10,4 +10,8 @@ class Point2d {
 		this.y = y;
 	}
 	
+	public function toString() {
+		return "{" + FMath.fmt(x) + "," + FMath.fmt(y) + "}";
+	}
+	
 }
