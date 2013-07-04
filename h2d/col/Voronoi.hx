@@ -329,6 +329,15 @@ class Cell {
 		this.point = point;
 		this.halfedges = [];
     }
+	
+	public function getCircle() {
+		var r = 0.;
+		for( e in halfedges ) {
+			var d = point.distanceSq(e.getStartpoint());
+			if( d > r ) r = d;
+		}
+		return new Circle(point.x, point.y, h3d.FMath.sqrt(r));
+	}
 
 	public function prepare() {
 		var halfedges = this.halfedges, iHalfedge = halfedges.length, edge;
