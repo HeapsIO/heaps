@@ -45,6 +45,10 @@ class Parser {
 			c = new ItemList(parent);
 		case "input":
 			c = new Input(parent);
+		case "colorpicker":
+			c = new ColorPicker(parent);
+		case "gradienteditor":
+			c = new GradientEditor(parent);
 		case n:
 			var make = comps.get(n);
 			if( make != null )

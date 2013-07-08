@@ -94,3 +94,20 @@ input:focus {
 	border : 1px solid white;
 	cursor-color : white;
 }
+
+colorpicker {
+	width : 200px;
+	height : 320px;
+	layout : absolute;
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	background-color : gradient(#303030,#252525,#252525,#252525);
+}
+
+gradienteditor {
+	width : 450px;
+	height : 200px;
+	layout : absolute;
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	background-color : gradient(#303030,#252525,#252525,#252525);
+}
+
