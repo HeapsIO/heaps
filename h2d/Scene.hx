@@ -203,7 +203,18 @@ class Scene extends Layers implements h3d.IDrawable {
 			if( ky >= max || kx * r >= max )
 				continue;
 
-						
+			// check visibility
+			var visible = true;
+			var p : Sprite = i;
+			while( p != null ) {
+				if( !p.visible ) {
+					visible = false;
+					break;
+				}
+				p = p.parent;
+			}
+			if( !visible ) continue;
+			
 			event.relX = (kx * r / max) * i.width;
 			event.relY = (ky / max) * i.height;
 			
