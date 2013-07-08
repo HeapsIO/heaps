@@ -16,7 +16,9 @@ class System {
 	public static var isTouch(get,never) : Bool;
 	public static var isWindowed(get,never) : Bool;
 	
-	public static var isAndroid(get,never) : Bool;
+	public static var isAndroid(get, never) : Bool;
+	
+	public static var screenDPI(get,never) : Float;
 
 	static function get_isWindowed() {
 		var p = flash.system.Capabilities.playerType;
@@ -39,6 +41,10 @@ class System {
 	
 	static function get_isAndroid() {
 		return flash.system.Capabilities.manufacturer.indexOf('Android') != -1;
+	}
+	
+	static function get_screenDPI() {
+		return flash.system.Capabilities.screenDPI;
 	}
 	
 	static var loop = null;
