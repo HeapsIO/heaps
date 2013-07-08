@@ -9,6 +9,11 @@ class Slider extends Component {
 	@:access(h2d.comp.Button)
 	public function new(?parent) {
 		super("slider", parent);
+		cursor = new Button("", this);
+		cursor.input.blockEvents = false;
+		cursor.onMouseDown = function() {
+			
+		};
 		input = new h2d.Interactive(0, 0, this);
 		input.onPush = function(e) {
 			gotoValue(pixelToVal(e));
@@ -20,11 +25,6 @@ class Slider extends Component {
 		input.onRelease = function(_) {
 			input.stopDrag();
 		}
-		cursor = new Button("", this);
-		cursor.input.blockEvents = false;
-		cursor.onMouseDown = function() {
-			
-		};
 		value = 0.;
 	}
 	

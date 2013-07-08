@@ -58,8 +58,11 @@ class ItemList extends Box {
 						}
 					}
 				}
-				childs.remove(int);
-				childs.insert(1,int); // insert over bg
+				if( Lambda.indexOf(childs,int) != 1 + i ) {
+					childs.remove(int);
+					childs.insert(1 + i, int); // insert over bg
+					int.onParentChanged();
+				}
 			}
 		}
 	}

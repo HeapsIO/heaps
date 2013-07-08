@@ -9,7 +9,7 @@ class Scene extends Layers implements h3d.IDrawable {
 	public var mouseY(get, null) : Float;
 	
 	var fixedSize : Bool;
-	var interactive : flash.Vector<Interactive>;
+	var interactive : Array<Interactive>;
 	var pendingEvents : flash.Vector<Event>;
 	var stage : flash.display.Stage;
 	var ctx : RenderContext;
@@ -28,7 +28,7 @@ class Scene extends Layers implements h3d.IDrawable {
 		ctx = new RenderContext();
 		width = e.width;
 		height = e.height;
-		interactive = new flash.Vector();
+		interactive = new Array();
 		pushList = new Array();
 		stage = flash.Lib.current.stage;
 		posChanged = true;
@@ -302,9 +302,55 @@ class Scene extends Layers implements h3d.IDrawable {
 	}
 	
 	@:allow(h2d)
-	function addEventTarget(i) {
-		// latest added gets priority
-		interactive.unshift(i);
+	function addEventTarget(i:Interactive) {
+		// sort by which is over the other in the scene hierarchy
+		inline function getLevel(i:Sprite) {
+			var lv = 0;
+			while( i != null ) {
+				i = i.parent;
+				lv++;
+			}
+			return lv;
+		}
+		inline function indexOf(p:Sprite, i:Sprite) {
+			var id = -1;
+			for( k in 0...p.childs.length )
+				if( p.childs[k] == i ) {
+					id = k;
+					break;
+				}
+			return id;
+		}
+		var level = getLevel(i);
+		for( index in 0...interactive.length ) {
+			var i1 : Sprite = i;
+			var i2 : Sprite = interactive[index];
+			var lv1 = level;
+			var lv2 = getLevel(i2);
+			var p1 : Sprite = i1;
+			var p2 : Sprite = i2;
+			while( lv1 > lv2 ) {
+				i1 = p1;
+				p1 = p1.parent;
+				lv1--;
+			}
+			while( lv2 > lv1 ) {
+				i2 = p2;
+				p2 = p2.parent;
+				lv2--;
+			}
+			while( p1 != p2 ) {
+				i1 = p1;
+				p1 = p1.parent;
+				i2 = p2;
+				p2 = p2.parent;
+			}
+			if( indexOf(p1,i1) > indexOf(p2,i2) ) {
+				interactive.insert(index, i);
+				return;
+			}
+		}
+		interactive.push(i);
 	}
 	
 	@:allow(h2d)
