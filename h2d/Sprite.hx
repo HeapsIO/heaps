@@ -73,8 +73,14 @@ class Sprite {
 		if( allocated ) {
 			if( !s.allocated )
 				s.onAlloc();
+			else
+				s.onParentChanged();
 		} else if( s.allocated )
 			s.onDelete();
+	}
+	
+	// called when we're allocated already but moved in hierarchy
+	function onParentChanged() {
 	}
 	
 	// kept for internal init

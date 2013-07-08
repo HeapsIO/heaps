@@ -28,6 +28,13 @@ class Interactive extends Sprite {
 		super.onAlloc();
 	}
 	
+	override function onParentChanged() {
+		if( scene != null ) {
+			scene.removeEventTarget(this);
+			scene.addEventTarget(this);
+		}
+	}
+	
 	override function onDelete() {
 		if( scene != null ) {
 			scene.removeEventTarget(this);
