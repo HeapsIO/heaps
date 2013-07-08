@@ -1,4 +1,3 @@
-
 class Comps {
 	
 	var engine : h3d.Engine;
@@ -14,7 +13,7 @@ class Comps {
 	}
 	
 	function init() {
-		flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, function(_) update());
+		h3d.System.setLoop(update);
 		scene = new h2d.Scene();
 		var document = h2d.comp.Parser.fromHtml(h3d.System.getFileContent("components.html"),{ fmt : h3d.FMath.fmt });
 		scene.addChild(document);
