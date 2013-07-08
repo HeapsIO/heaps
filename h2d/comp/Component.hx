@@ -198,8 +198,13 @@ class Component extends Sprite {
 		} else {
 			var oldx = ctx.xPos;
 			var oldy = ctx.yPos;
-			ctx.xPos = 0;
-			ctx.yPos = 0;
+			if( style.layout == Absolute ) {
+				ctx.xPos = null;
+				ctx.yPos = null;
+			} else {
+				ctx.xPos = 0;
+				ctx.yPos = 0;
+			}
 			for( c in components )
 				c.resizeRec(ctx);
 			ctx.xPos = oldx;
