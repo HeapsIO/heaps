@@ -1,6 +1,6 @@
 package h2d;
 
-class Interactive extends Sprite {
+class Interactive extends Drawable {
 
 	public var width : Float;
 	public var height : Float;
@@ -8,6 +8,7 @@ class Interactive extends Sprite {
 	public var isEllipse : Bool;
 	public var blockEvents : Bool = true;
 	public var propagateEvents : Bool = false;
+	public var backgroundColor : Null<Int>;
 	var scene : Scene;
 	
 	public function new(width, height, ?parent) {
@@ -26,6 +27,10 @@ class Interactive extends Sprite {
 			scene.addEventTarget(this);
 		}
 		super.onAlloc();
+	}
+	
+	override function draw( ctx : RenderContext ) {
+		if( backgroundColor != null ) drawTile(ctx.engine,h2d.Tile.fromColor(backgroundColor,Std.int(width),Std.int(height)));
 	}
 	
 	override function onParentChanged() {
