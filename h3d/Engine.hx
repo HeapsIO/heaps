@@ -334,7 +334,7 @@ class Engine {
 	}
 	
 	function onStageResize(_) {
-		if( ctx != null && autoResize ) {
+		if( ctx != null && autoResize && ctx.driverInfo != "Disposed" ) {
 			var w = System.width, h = System.height;
 			if( w != width || h != height )
 				resize(w, h, antiAlias);
