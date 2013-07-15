@@ -95,7 +95,10 @@ class SpriteBatch extends Drawable {
 			tmp[pos++] = e.alpha;
 			e = e.next;
 		}
-		var buffer = ctx.engine.mem.allocVector(tmpBuf, 5, 4);
+		var stride = 5;
+		var nverts = Std.int(pos / stride);
+		var buffer = ctx.engine.mem.alloc(nverts, stride, 4);
+		buffer.uploadVector(tmpBuf, 0, nverts);
 		setupShader(ctx.engine, tile, 0);
 		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();
