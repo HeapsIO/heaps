@@ -37,7 +37,7 @@ private class DrawableShader extends hxsl.Shader {
 		}
 		
 		var hasAlpha : Bool;
-		var alphaKill : Bool;
+		var killAlpha : Bool;
 		
 		var alpha : Float;
 		var colorAdd : Float4;
@@ -59,7 +59,7 @@ private class DrawableShader extends hxsl.Shader {
 
 		function fragment( tex : Texture ) {
 			var col = tex.get(sinusDeform != null ? [tuv.x + sin(tuv.y*sinusDeform.y + sinusDeform.x) * sinusDeform.z, tuv.y] : tuv, filter = ! !filter, wrap=tileWrap);
-			if( alphaKill ) kill(col.a - 0.001);
+			if( killAlpha ) kill(col.a - 0.001);
 			if( hasVertexAlpha ) col.a *= talpha;
 			if( hasVertexColor ) col *= tcolor;
 			if( hasAlphaMap ) col.a *= alphaMap.get(tuv * alphaUV.zw + alphaUV.xy).r;
@@ -98,7 +98,7 @@ class Drawable extends Sprite {
 
 	public var sinusDeform(get, set) : h3d.Vector;
 	public var tileWrap(get, set) : Bool;
-	public var alphaKill(get, set) : Bool;
+	public var killAlpha(get, set) : Bool;
 
 	public var multiplyMap(default, set) : h2d.Tile;
 	public var multiplyFactor(get, set) : Float;
@@ -205,12 +205,12 @@ class Drawable extends Sprite {
 		return shader.tileWrap = v;
 	}
 
-	inline function get_alphaKill() {
-		return shader.alphaKill;
+	inline function get_killAlpha() {
+		return shader.killAlpha;
 	}
 	
-	inline function set_alphaKill(v) {
-		return shader.alphaKill = v;
+	inline function set_killAlpha(v) {
+		return shader.killAlpha = v;
 	}
 	
 	function drawTile( engine, tile ) {
