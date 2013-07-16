@@ -75,9 +75,9 @@ class Font #if !macro extends Tile #end {
 		var sizes = [];
 		for( i in 0...charset.length ) {
 			tf.text = charset.charAt(i);
-			var w = Math.ceil(tf.textWidth);
+			var w = Math.ceil(tf.textWidth) + 1;
 			if( w == 0 ) continue;
-			var h = Math.ceil(tf.textHeight);
+			var h = Math.ceil(tf.textHeight) + 1;
 			surf += (w + 1) * (h + 1);
 			if( h > lineHeight )
 				lineHeight = h;
@@ -116,8 +116,9 @@ class Font #if !macro extends Tile #end {
 				m.tx = x - 2;
 				m.ty = y - 2;
 				tf.text = charset.charAt(i);
+				bmp.fillRect(new flash.geom.Rectangle(x, y, w, h), 0);
 				bmp.draw(tf, m);
-				var t = sub(x, y, w, h);
+				var t = sub(x, y, w - 1, h - 1);
 				all.push(t);
 				glyphs[charset.charCodeAt(i)] = t;
 				// next element
