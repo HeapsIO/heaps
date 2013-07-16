@@ -53,7 +53,21 @@ class Font #if !macro extends Tile #end {
 	public function hasChar( code : Int ) {
 		return glyphs[code] != null;
 	}
+
+	public function isSpace(code) {
+		return code == ' '.code || code == 0x3000;
+	}
 	
+	public function isBreakChar(code) {
+		return switch( code ) {
+		case ' '.code, 0x3000: true;
+		case '!'.code, '?'.code, '.'.code, ','.code, ':'.code: true;
+		case '！'.code, '？'.code, '．'.code, '，'.code, '：'.code: true; // full width
+		case '・'.code, '、'.code, '。'.code: true; // JP
+		default: false;
+		}
+	}
+		
 	function init() {
 		lineHeight = 0;
 		var tf = new flash.text.TextField();
@@ -158,7 +172,7 @@ class Font #if !macro extends Tile #end {
 		bmp.dispose();
 		
 		inline function map(code, to) {
-			if( glyphs[code] == null ) glyphs[code] = glyphs[to];
+			if( glyphs[code] == null ) glyphs[code] = glyphs[to] else if( glyphs[to] == null ) glyphs[to] = glyphs[code];
 		}
 		// fullwidth unicode to ASCII (if missing)
 		for( i in 1...0x5E )

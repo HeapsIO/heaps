@@ -60,11 +60,7 @@ class Text extends Drawable {
 	public function calcTextWidth( text : String ) {
 		return initGlyphs(text,false).width;
 	}
-	
-	function isSpace(code) {
-		return code == ' '.code || code == 0x3000;
-	}
-	
+
 	function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) glyphs.reset();
 		var letters = font.glyphs;
@@ -72,31 +68,31 @@ class Text extends Drawable {
 		for( i in 0...text.length ) {
 			var cc = text.charCodeAt(i);
 			var e = letters[cc];
+			var newline = cc == '\n'.code;
 			// if the next word goes past the max width, change it into a newline
-			if( isSpace(cc) && maxWidth != null ) {
+			if( font.isBreakChar(cc) && maxWidth != null ) {
 				var size = x + e.width + 1;
 				var k = i + 1, max = text.length;
 				while( size <= maxWidth ) {
 					var cc = text.charCodeAt(k++);
-					if( cc == null || isSpace(cc) || cc == '\n'.code ) break;
+					if( cc == null || font.isSpace(cc) || cc == '\n'.code ) break;
 					var e = letters[cc];
 					if( e != null ) size += e.width + 1;
 				}
 				if( size > maxWidth ) {
-					e = null;
-					cc = '\n'.code;
+					newline = true;
+					if( font.isSpace(cc) ) e = null;
 				}
 			}
-			if( e == null ) {
-				if( cc == '\n'.code ) {
-					if( x > xMax ) xMax = x;
-					x = 0;
-					y += font.lineHeight;
-				}
-				continue;
+			if( e != null ) {
+				if( rebuild ) glyphs.add(x, y, e);
+				x += e.width + 1;
 			}
-			if( rebuild ) glyphs.add(x, y, e);
-			x += e.width + 1;
+			if( newline ) {
+				if( x > xMax ) xMax = x;
+				x = 0;
+				y += font.lineHeight;
+			}
 		}
 		return { width : x > xMax ? x : xMax, height : x > 0 ? y + font.lineHeight : y };
 	}
