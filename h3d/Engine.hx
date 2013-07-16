@@ -46,13 +46,7 @@ class Engine {
 	@:allow(h3d)
 	var curProjMatrix : h3d.Matrix;
 
-	public function new( width = 0, height = 0, hardware = true, aa = 0, stageIndex = 0 ) {
-		if( width == 0 )
-			width = System.width;
-		if( height == 0 )
-			height = System.height;
-		this.width = width;
-		this.height = height;
+	public function new( hardware = true, aa = 0 ) {
 		this.hardware = hardware;
 		this.antiAlias = aa;
 		this.autoResize = true;
@@ -62,7 +56,7 @@ class Engine {
 		lastTime = flash.Lib.getTimer();
 		stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
 		stage.addEventListener(flash.events.Event.RESIZE, onStageResize);
-		s3d = stage.stage3Ds[stageIndex];
+		s3d = stage.stage3Ds[0];
 		if( CURRENT == null )
 			CURRENT = this;
 	}
@@ -307,6 +301,10 @@ class Engine {
 
 	function onCreate(_) {
 		var old = ctx;
+		if( autoResize ) {
+			width = System.width;
+			height = System.height;
+		}
 		if( old != null ) {
 			if( old.driverInfo != "Disposed" ) throw "Duplicate onCreate()";
 			old.dispose();
