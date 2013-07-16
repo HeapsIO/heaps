@@ -2,7 +2,22 @@ package h2d;
 
 class Font #if !macro extends Tile #end {
 
-	static var DEFAULT_CHARS = " ?!\"#$%&|<>@'()[]{}*+-=/.,:;0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzéèêëÉÈÊËàâäáÀÂÄÁùûüúÙÛÜÚîïíÎÏÍôóöõÔÓÖçÇñÑ¡¿ßæœÆŒ";
+	/**
+		Contains Hiragana, Katanaga, japanese punctuaction and full width space (0x3000) full width numbers (0-9) and some full width ascii punctuation (!:?%&()-). Does not include full width A-Za-z.
+	**/
+	public static var JP_KANA = "　あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわゐゑをんがぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽゃゅょアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲンガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポヴャぇっッュョァィゥェォ・ー「」、。『』“”！：？％＆（）－０１２３４５６７８９";
+	
+	/**
+		Contains the whole ASCII charset.
+	**/
+	public static var ASCII = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+	
+	/**
+		The Latin1 (ISO 8859-1) charset (only the extra chars, no the ASCII part)
+	**/
+	public static var LATIN1 = "¡¢£¤¥¦§¨©ª«¬-®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ";
+	
+	static var DEFAULT_CHARSET = ASCII + LATIN1;
 
 	#if !macro
 	
@@ -10,16 +25,16 @@ class Font #if !macro extends Tile #end {
 	public var size(default, null) : Int;
 	public var glyphs : Array<Tile>;
 	public var lineHeight : Int;
-	var chars : String;
+	var charset : String;
 	var aa : Bool;
 	
-	public function new( name : String, size : Int, aa = true, ?chars ) {
+	public function new( name : String, size : Int, aa = true, ?charset ) {
 		super(null, 0, 0, 0, 0);
-		if( chars == null )
-			chars = DEFAULT_CHARS;
+		if( charset == null )
+			charset = DEFAULT_CHARSET;
 		this.name = name;
 		this.size = size;
-		this.chars = chars;
+		this.charset = charset;
 		this.aa = aa;
 		init();
 	}
@@ -33,6 +48,10 @@ class Font #if !macro extends Tile #end {
 			if( t != null )
 				t.scaleToSize(t.width >> 1, t.height >> 1);
 		lineHeight >>= 1;
+	}
+	
+	public function hasChar( code : Int ) {
+		return glyphs[code] != null;
 	}
 	
 	function init() {
@@ -54,8 +73,8 @@ class Font #if !macro extends Tile #end {
 		}
 		var surf = 0;
 		var sizes = [];
-		for( i in 0...chars.length ) {
-			tf.text = chars.charAt(i);
+		for( i in 0...charset.length ) {
+			tf.text = charset.charAt(i);
 			var w = Math.ceil(tf.textWidth);
 			if( w == 0 ) continue;
 			var h = Math.ceil(tf.textHeight);
@@ -78,7 +97,7 @@ class Font #if !macro extends Tile #end {
 			all = [];
 			var m = new flash.geom.Matrix();
 			var x = 0, y = 0, lineH = 0;
-			for( i in 0...chars.length ) {
+			for( i in 0...charset.length ) {
 				var size = sizes[i];
 				if( size == null ) continue;
 				var w = size.w;
@@ -96,11 +115,11 @@ class Font #if !macro extends Tile #end {
 				}
 				m.tx = x - 2;
 				m.ty = y - 2;
-				tf.text = chars.charAt(i);
+				tf.text = charset.charAt(i);
 				bmp.draw(tf, m);
 				var t = sub(x, y, w, h);
 				all.push(t);
-				glyphs[chars.charCodeAt(i)] = t;
+				glyphs[charset.charCodeAt(i)] = t;
 				// next element
 				if( h > lineH ) lineH = h;
 				x += w + 1;
@@ -136,6 +155,26 @@ class Font #if !macro extends Tile #end {
 			innerTex.uploadBytes(bytes);
 		
 		bmp.dispose();
+		
+		inline function map(code, to) {
+			if( glyphs[code] == null ) glyphs[code] = glyphs[to];
+		}
+		// fullwidth unicode to ASCII (if missing)
+		for( i in 1...0x5E )
+			map(0xFF01 + i, 0x21 + i);
+		// unicode spaces
+		map(0x3000, 0x20); // full width space
+		map(0xA0, 0x20); // nbsp
+		// unicode quotes
+		map("«".code, '"'.code);
+		map("»".code, '"'.code);
+		map("“".code, '"'.code);
+		map("”".code, '"'.code);
+		map("‘".code, "'".code);
+		map("’".code, "'".code);
+		map("‘".code, "'".code);
+		map("‹".code, "<".code);
+		map("›".code, ">".code);
 	}
 	
 	#else
@@ -153,7 +192,13 @@ class Font #if !macro extends Tile #end {
 		return null;
 	}
 	#end
-		
+
+	/**
+		By default, the charset is ASCII+LATIN1
+	**/
+	public static function setDefaultCharset( chars ) {
+		DEFAULT_CHARSET = chars;
+	}
 	
 	public macro static function embed( name : String, file : String, ?chars : String, ?skipErrors : Bool ) {
 		var ok = true;
