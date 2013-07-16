@@ -61,6 +61,10 @@ class Text extends Drawable {
 		return initGlyphs(text,false).width;
 	}
 	
+	function isSpace(code) {
+		return code == ' '.code || code == 0x3000;
+	}
+	
 	function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) glyphs.reset();
 		var letters = font.glyphs;
@@ -69,12 +73,12 @@ class Text extends Drawable {
 			var cc = text.charCodeAt(i);
 			var e = letters[cc];
 			// if the next word goes past the max width, change it into a newline
-			if( cc == ' '.code && maxWidth != null ) {
+			if( isSpace(cc) && maxWidth != null ) {
 				var size = x + e.width + 1;
 				var k = i + 1, max = text.length;
 				while( size <= maxWidth ) {
 					var cc = text.charCodeAt(k++);
-					if( cc == null || cc == ' '.code || cc == '\n'.code ) break;
+					if( cc == null || isSpace(cc) || cc == '\n'.code ) break;
 					var e = letters[cc];
 					if( e != null ) size += e.width + 1;
 				}
