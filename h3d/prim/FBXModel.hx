@@ -53,8 +53,6 @@ class FBXModel extends MeshPrimitive {
 		return bounds;
 	}
 	
-	static var TMP = null;
-
 	override function render( engine : h3d.Engine ) {
 		if( curMaterial < 0 ) {
 			super.render(engine);
@@ -97,19 +95,11 @@ class FBXModel extends MeshPrimitive {
 		
 		var idx = new flash.Vector<UInt>();
 		var midx = new Array<flash.Vector<UInt>>();
-		var pbuf = new flash.Vector<Float>(), nbuf = (norms == null ? null : new flash.Vector<Float>()), sbuf = (skin == null ? null : new flash.Vector<Float>()), tbuf = (tuvs == null ? null : new flash.Vector<Float>());
+		var pbuf = new flash.Vector<Float>(), nbuf = (norms == null ? null : new flash.Vector<Float>()), sbuf = (skin == null ? null : new flash.utils.ByteArray()), tbuf = (tuvs == null ? null : new flash.Vector<Float>());
 		var cbuf = (colors == null ? null : new flash.Vector<Float>());
 		var pout = 0, nout = 0, sout = 0, tout = 0, cout = 0;
 		
-		if( sbuf != null ) {
-			var tmp = TMP;
-			if( tmp == null ) {
-				tmp = new flash.utils.ByteArray();
-				tmp.length = 1024;
-				TMP = tmp;
-			}
-			flash.Memory.select(tmp);
-		}
+		if( sbuf != null ) sbuf.endian = flash.utils.Endian.LITTLE_ENDIAN;
 		
 		// triangulize indexes : format is  A,B,...,-X : negative values mark the end of the polygon
 		var count = 0, pos = 0, matPos = 0;
@@ -146,10 +136,10 @@ class FBXModel extends MeshPrimitive {
 						var p = vidx * skin.bonesPerVertex;
 						var idx = 0;
 						for( i in 0...skin.bonesPerVertex ) {
-							sbuf[sout++] = skin.vertexWeights[p + i];
+							sbuf.writeFloat(skin.vertexWeights[p + i]);
 							idx = (skin.vertexJoints[p + i] << (8*i)) | idx;
 						}
-						sbuf[sout++] = int32ToFloat(idx);
+						sbuf.writeUnsignedInt(idx);
 					}
 					
 					if( cbuf != null ) {
@@ -189,7 +179,9 @@ class FBXModel extends MeshPrimitive {
 		if( nbuf != null ) addBuffer("normal", engine.mem.allocVector(nbuf, 3, 0));
 		if( tbuf != null ) addBuffer("uv", engine.mem.allocVector(tbuf, 2, 0));
 		if( sbuf != null ) {
-			var skinBuf = engine.mem.allocVector(sbuf, skin.bonesPerVertex + 1, 0);
+			var nverts = Std.int(sbuf.length / ((skin.bonesPerVertex + 1) * 4));
+			var skinBuf = engine.mem.alloc(nverts, skin.bonesPerVertex + 1, 0);
+			skinBuf.upload(sbuf, 0, nverts);
 			addBuffer("weights", skinBuf, 0);
 			addBuffer("indexes", skinBuf, skin.bonesPerVertex);
 		}
