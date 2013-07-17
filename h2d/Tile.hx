@@ -43,8 +43,8 @@ class Tile {
 	function setTexture(tex) {
 		this.innerTex = tex;
 		if( tex != null ) {
-			this.u = x / tex.width;
-			this.v = y / tex.height;
+			this.u = (x + EPSILON_PIXEL) / tex.width;
+			this.v = (y + EPSILON_PIXEL) / tex.height;
 			this.u2 = (x + width - EPSILON_PIXEL) / tex.width;
 			this.v2 = (y + height - EPSILON_PIXEL) / tex.height;
 		}
@@ -63,8 +63,8 @@ class Tile {
 		this.y = y;
 		var tex = innerTex;
 		if( tex != null ) {
-			u = x / tex.width;
-			v = y / tex.height;
+			u = (x + EPSILON_PIXEL) / tex.width;
+			v = (y + EPSILON_PIXEL) / tex.height;
 		}
 	}
 	
