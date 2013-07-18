@@ -16,12 +16,6 @@ class FBXModel extends MeshPrimitive {
 		curMaterial = -1;
 	}
 	
-	// not very good, but...
-	inline function int32ToFloat( ix : Int ) {
-		flash.Memory.setI32(0, ix);
-		return flash.Memory.getFloat(0);
-	}
-	
 	public function getVerticesCount() {
 		return Std.int(geom.getVertices().length / 3);
 	}
