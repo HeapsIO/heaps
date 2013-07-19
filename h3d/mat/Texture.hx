@@ -9,7 +9,6 @@ class Texture {
 	
 	var t : flash.display3D.textures.TextureBase;
 	var mem : h3d.impl.MemoryManager;
-	var atfProps : { alpha : Bool, compress : Bool };
 	#if debug
 	var allocPos : h3d.impl.AllocPos;
 	#end
@@ -19,6 +18,7 @@ class Texture {
 	public var isCubic(default, null) : Bool;
 	public var isTarget(default, null) : Bool;
 	public var mipLevels(default, null) : Int;
+	public var format(default, null) : TextureFormat;
 	
 	var bits : Int;
 	public var mipMap(default,set) : MipMap;
@@ -31,10 +31,10 @@ class Texture {
 	**/
 	public var onContextLost : Void -> Void;
 	
-	function new(m, t, w, h, c, ta, mm) {
+	function new(m, fmt, w, h, c, ta, mm) {
 		this.id = ++UID;
+		this.format = fmt;
 		this.mem = m;
-		this.t = t;
 		this.isTarget = ta;
 		this.width = w;
 		this.height = h;

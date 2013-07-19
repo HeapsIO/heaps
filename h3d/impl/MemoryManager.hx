@@ -224,14 +224,28 @@ class MemoryManager {
 		#end
 	}
 	
-	function newTexture(t, w, h, cubic, target, mm, allocPos) {
-		var t = new h3d.mat.Texture(this, t, w, h, cubic, target, mm);
-		tdict.set(t, t.t);
-		textures.push(t.t);
+	function newTexture(fmt, w, h, cubic, target, mm, allocPos) {
+		var t = new h3d.mat.Texture(this, fmt, w, h, cubic, target, mm);
 		#if debug
 		t.allocPos = allocPos;
 		#end
+		initTexture(t);
 		return t;
+	}
+	
+	function initTexture( t : h3d.mat.Texture ) {
+		var fmt = switch( t.format ) {
+		case Rgba, Atf:
+			flash.display3D.Context3DTextureFormat.BGRA;
+		case AtfCompressed(alpha):
+			alpha ? flash.display3D.Context3DTextureFormat.COMPRESSED_ALPHA : flash.display3D.Context3DTextureFormat.COMPRESSED;
+		}
+		if( t.isCubic )
+			t.t = ctx.createCubeTexture(t.width, fmt, t.isTarget, t.mipLevels);
+		else
+			t.t = ctx.createTexture(t.width, t.height, fmt, t.isTarget, t.mipLevels);
+		tdict.set(t, t.t);
+		textures.push(t.t);
 	}
 
 	@:allow(h3d.impl.Indexes.dispose)
@@ -252,16 +266,10 @@ class MemoryManager {
 
 	@:allow(h3d.mat.Texture.resize)
 	function resizeTexture( t : h3d.mat.Texture, width, height ) {
-		if( t.t != null ) {
-			textures.remove(t.t);
-			t.t.dispose();
-			t.t = null;
-		}
-		t.t = t.isCubic ? ctx.createCubeTexture(width, flash.display3D.Context3DTextureFormat.BGRA, t.isTarget) : ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, t.isTarget);
+		t.dispose();
 		t.width = width;
 		t.height = height;
-		tdict.set(t, t.t);
-		textures.push(t.t);
+		initTexture(t);
 	}
 	
 	public function readAtfHeader( data : haxe.io.Bytes ) {
@@ -290,13 +298,7 @@ class MemoryManager {
 	public function allocAtfTexture( width : Int, height : Int, mipLevels : Int = 0, alpha : Bool = false, compress : Bool = false, cubic : Bool = false, ?allocPos : AllocPos ) {
 		freeTextures();
 		var fmt = compress ? (alpha ? flash.display3D.Context3DTextureFormat.COMPRESSED_ALPHA : flash.display3D.Context3DTextureFormat.COMPRESSED) : flash.display3D.Context3DTextureFormat.BGRA;
-		var t = if( cubic )
-			ctx.createCubeTexture(width, fmt, false, mipLevels)
-		else
-			ctx.createTexture(width, height, fmt, false, mipLevels);
-		var t = newTexture(t, width, height, cubic, false, mipLevels, allocPos);
-		t.atfProps = { alpha : alpha, compress : compress };
-		return t;
+		return newTexture(compress ? AtfCompressed(alpha) : Atf, width, height, cubic, false, mipLevels, allocPos);
 	}
 	
 	public function allocTexture( width : Int, height : Int, mipMap = false, ?allocPos : AllocPos ) {
@@ -306,12 +308,12 @@ class MemoryManager {
 			while( width > (1 << levels) && height > (1 << levels) )
 				levels++;
 		}
-		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, false, levels), width, height, false, false, levels, allocPos);
+		return newTexture(Rgba, width, height, false, false, levels, allocPos);
 	}
 	
 	public function allocTargetTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
 		freeTextures();
-		return newTexture(ctx.createTexture(width, height, flash.display3D.Context3DTextureFormat.BGRA, true, 0), width, height, false, true, 0, allocPos);
+		return newTexture(Rgba, width, height, false, true, 0, allocPos);
 	}
 
 	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap, hasMipMap = false, ?allocPos : AllocPos ) {
@@ -334,7 +336,7 @@ class MemoryManager {
 			while( size > (1 << levels) )
 				levels++;
 		}
-		return newTexture(ctx.createCubeTexture(size, flash.display3D.Context3DTextureFormat.BGRA, false, levels), size, size, true, false, levels, allocPos);
+		return newTexture(Rgba, size, size, true, false, levels, allocPos);
 	}
 
 	public function allocIndex( indices : flash.Vector<UInt> ) {
@@ -552,15 +554,7 @@ class MemoryManager {
 				t.dispose();
 			else {
 				textures.remove(t.t);
-				var fmt = flash.display3D.Context3DTextureFormat.BGRA;
-				if( t.atfProps != null )
-					fmt = t.atfProps.compress ? (t.atfProps.alpha ? flash.display3D.Context3DTextureFormat.COMPRESSED_ALPHA : flash.display3D.Context3DTextureFormat.COMPRESSED) : flash.display3D.Context3DTextureFormat.BGRA;
-				if( t.isCubic )
-					t.t = ctx.createCubeTexture(t.width, fmt, t.isTarget, t.mipLevels);
-				else
-					t.t = ctx.createTexture(t.width, t.height, fmt, t.isTarget, t.mipLevels);
-				tdict.set(t, t.t);
-				textures.push(t.t);
+				initTexture(t);
 				t.onContextLost();
 			}
 		}
