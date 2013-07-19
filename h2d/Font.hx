@@ -69,6 +69,7 @@ class Font #if !macro extends Tile #end {
 	}
 		
 	function init() {
+		#if flash
 		lineHeight = 0;
 		var tf = new flash.text.TextField();
 		var fmt = tf.defaultTextFormat;
@@ -158,9 +159,10 @@ class Font #if !macro extends Tile #end {
 			}
 		}
 		var bytes = haxe.io.Bytes.ofData(bytes);
+		var width = bmp.width, height = bmp.height;
 		
 		if( innerTex == null ) {
-			var t = h3d.Engine.getCurrent().mem.allocTexture(bmp.width, bmp.height);
+			var t = h3d.Engine.getCurrent().mem.allocTexture(width, height);
 			t.uploadBytes(bytes);
 			setTexture(t);
 			for( t in all )
@@ -170,6 +172,11 @@ class Font #if !macro extends Tile #end {
 			innerTex.uploadBytes(bytes);
 		
 		bmp.dispose();
+		#else
+		
+		throw "TODO";
+		
+		#end
 		
 		inline function map(code, to) {
 			if( glyphs[code] == null ) glyphs[code] = glyphs[to] else if( glyphs[to] == null ) glyphs[to] = glyphs[code];
@@ -222,7 +229,7 @@ class Font #if !macro extends Tile #end {
 			if( !skipErrors ) throw "Font file not found " + file;
 			return macro false;
 		}
-		if( chars == null ) chars = DEFAULT_CHARS;
+		if( chars == null ) chars = DEFAULT_CHARSET;
 		var pos = haxe.macro.Context.currentPos();
 		var safeName = "F_"+~/[^A-Za-z_]+/g.replace(name, "_");
 		haxe.macro.Context.defineType({

@@ -354,8 +354,8 @@ class Library {
 		
 			for( c in curves ) {
 				var frames = null, alpha = null;
-				var frames = c.t == null && c.r == null && c.s == null ? null : new flash.Vector(numFrames);
-				var alpha = c.a == null ? null : new flash.Vector(numFrames);
+				var frames = c.t == null && c.r == null && c.s == null ? null : new haxe.ds.Vector(numFrames);
+				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
 				// skip empty curves
 				if( frames == null && alpha == null )
 					continue;
@@ -442,8 +442,8 @@ class Library {
 
 			for( c in curves ) {
 				var frames = null, alpha = null;
-				var frames = c.t == null && c.r == null && c.s == null ? null : new flash.Vector(numFrames);
-				var alpha = c.a == null ? null : new flash.Vector(numFrames);
+				var frames = c.t == null && c.r == null && c.s == null ? null : new haxe.ds.Vector(numFrames);
+				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
 				// skip empty curves
 				if( frames == null && alpha == null )
 					continue;

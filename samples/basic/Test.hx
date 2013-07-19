@@ -2,15 +2,13 @@ import h3d.scene.*;
 
 class Test {
 	
-	var root : flash.display.Sprite;
 	var engine : h3d.Engine;
 	var time : Float;
 	var scene : Scene;
 	var obj1 : Mesh;
 	var obj2 : Mesh;
 	
-	function new(root) {
-		this.root = root;
+	function new() {
 		time = 0;
 		engine = new h3d.Engine();
 		engine.debug = true;
@@ -20,15 +18,19 @@ class Test {
 	}
 	
 	function start() {
-		root.addEventListener(flash.events.Event.ENTER_FRAME, update);
+		hxd.System.setLoop(update);
 		
 		var prim = new h3d.prim.Cube();
 		prim.translate( -0.5, -0.5, -0.5);
 		prim.addUVs();
 		prim.addNormals();
 		
-		var bmp = new flash.display.BitmapData(256, 256);
-		bmp.perlinNoise(64, 64, 3, 0, true, true, 7);
+		var bmp : hxd.BitmapData = null;
+		#if flash
+		var tbmp = new flash.display.BitmapData(256, 256);
+		tbmp.perlinNoise(64, 64, 3, 0, true, true, 7);
+		bmp = hxd.BitmapData.fromNative(tbmp);
+		#end
 		var tex = h3d.mat.Texture.fromBitmap(bmp);
 		var mat = new h3d.mat.MeshMaterial(tex);
 		bmp.dispose();
@@ -44,7 +46,7 @@ class Test {
 		};
 	}
 	
-	function update(_) {
+	function update() {
 		var dist = 5;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
@@ -53,8 +55,10 @@ class Test {
 	}
 	
 	static function main() {
+		#if flash
 		haxe.Log.setColor(0xFF0000);
-		new Test(flash.Lib.current);
+		#end
+		new Test();
 	}
 	
 }

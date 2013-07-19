@@ -2,16 +2,14 @@ package h2d;
 
 private class TileLayerContent extends h3d.prim.Primitive {
 
-	var tmp : flash.Vector<Float>;
-	var pos : Int;
+	var tmp : hxd.FloatBuffer;
 
 	public function new() {
 		reset();
 	}
 
 	public function reset() {
-		tmp = new flash.Vector();
-		pos = 0;
+		tmp = new hxd.FloatBuffer();
 		if( buffer != null ) buffer.dispose();
 		buffer = null;
 	}
@@ -31,98 +29,98 @@ private class TileLayerContent extends h3d.prim.Primitive {
 	public function add( x : Int, y : Int, r : Float, g : Float, b : Float, a : Float, t : Tile ) {
 		var sx = x + t.dx;
 		var sy = y + t.dy;
-		tmp[pos++] = sx;
-		tmp[pos++] = sy;
-		tmp[pos++] = t.u;
-		tmp[pos++] = t.v;
-		tmp[pos++] = r;
-		tmp[pos++] = g;
-		tmp[pos++] = b;
-		tmp[pos++] = a;
-		tmp[pos++] = sx + t.width;
-		tmp[pos++] = sy;
-		tmp[pos++] = t.u2;
-		tmp[pos++] = t.v;
-		tmp[pos++] = r;
-		tmp[pos++] = g;
-		tmp[pos++] = b;
-		tmp[pos++] = a;
-		tmp[pos++] = sx;
-		tmp[pos++] = sy + t.height;
-		tmp[pos++] = t.u;
-		tmp[pos++] = t.v2;
-		tmp[pos++] = r;
-		tmp[pos++] = g;
-		tmp[pos++] = b;
-		tmp[pos++] = a;
-		tmp[pos++] = sx + t.width;
-		tmp[pos++] = sy + t.height;
-		tmp[pos++] = t.u2;
-		tmp[pos++] = t.v2;
-		tmp[pos++] = r;
-		tmp[pos++] = g;
-		tmp[pos++] = b;
-		tmp[pos++] = a;
+		tmp.push(sx);
+		tmp.push(sy);
+		tmp.push(t.u);
+		tmp.push(t.v);
+		tmp.push(r);
+		tmp.push(g);
+		tmp.push(b);
+		tmp.push(a);
+		tmp.push(sx + t.width);
+		tmp.push(sy);
+		tmp.push(t.u2);
+		tmp.push(t.v);
+		tmp.push(r);
+		tmp.push(g);
+		tmp.push(b);
+		tmp.push(a);
+		tmp.push(sx);
+		tmp.push(sy + t.height);
+		tmp.push(t.u);
+		tmp.push(t.v2);
+		tmp.push(r);
+		tmp.push(g);
+		tmp.push(b);
+		tmp.push(a);
+		tmp.push(sx + t.width);
+		tmp.push(sy + t.height);
+		tmp.push(t.u2);
+		tmp.push(t.v2);
+		tmp.push(r);
+		tmp.push(g);
+		tmp.push(b);
+		tmp.push(a);
 	}
 	
 	public function addPoint( x : Float, y : Float, color : Int ) {
-		tmp[pos++] = x;
-		tmp[pos++] = y;
-		tmp[pos++] = 0;
-		tmp[pos++] = 0;
+		tmp.push(x);
+		tmp.push(y);
+		tmp.push(0);
+		tmp.push(0);
 		insertColor(color);
 	}
 
 	inline function insertColor( c : Int ) {
-		tmp[pos++] = ((c >> 16) & 0xFF) / 255.;
-		tmp[pos++] = ((c >> 8) & 0xFF) / 255.;
-		tmp[pos++] = (c & 0xFF) / 255.;
-		tmp[pos++] = (c >>> 24) / 255.;
+		tmp.push(((c >> 16) & 0xFF) / 255.);
+		tmp.push(((c >> 8) & 0xFF) / 255.);
+		tmp.push((c & 0xFF) / 255.);
+		tmp.push((c >>> 24) / 255.);
 	}
 
 	public inline function rectColor( x : Float, y : Float, w : Float, h : Float, color : Int ) {
-		tmp[pos++] = x;
-		tmp[pos++] = y;
-		tmp[pos++] = 0;
-		tmp[pos++] = 0;
+		tmp.push(x);
+		tmp.push(y);
+		tmp.push(0);
+		tmp.push(0);
 		insertColor(color);
-		tmp[pos++] = x + w;
-		tmp[pos++] = y;
-		tmp[pos++] = 1;
-		tmp[pos++] = 0;
+		tmp.push(x + w);
+		tmp.push(y);
+		tmp.push(1);
+		tmp.push(0);
 		insertColor(color);
-		tmp[pos++] = x;
-		tmp[pos++] = y + h;
-		tmp[pos++] = 0;
-		tmp[pos++] = 1;
+		tmp.push(x);
+		tmp.push(y + h);
+		tmp.push(0);
+		tmp.push(1);
 		insertColor(color);
-		tmp[pos++] = x + w;
-		tmp[pos++] = y + h;
-		tmp[pos++] = 1;
-		tmp[pos++] = 1;
+		tmp.push(x + w);
+		tmp.push(y + h);
+		tmp.push(1);
+		tmp.push(1);
 		insertColor(color);
 	}
 
 	public inline function rectGradient( x : Float, y : Float, w : Float, h : Float, ctl : Int, ctr : Int, cbl : Int, cbr : Int ) {
-		tmp[pos++] = x;
-		tmp[pos++] = y;
-		tmp[pos++] = 0;
-		tmp[pos++] = 0;
+		tmp.push(x);
+		tmp.push(y);
+		tmp.push(0);
+		tmp.push(0);
 		insertColor(ctl);
-		tmp[pos++] = x + w;
-		tmp[pos++] = y;
-		tmp[pos++] = 1;
-		tmp[pos++] = 0;
+		tmp.push(x + w);
+		tmp.push(y);
+		tmp.push(1);
+		tmp.push(0);
 		insertColor(ctr);
-		tmp[pos++] = x;
-		tmp[pos++] = y + h;
-		tmp[pos++] = 0;
-		tmp[pos++] = 1;
+		tmp.push(x);
+		tmp.push(y + h);
+		tmp.push(0);
+		tmp.push(1);
 		insertColor(cbl);
-		tmp[pos++] = x + w;
-		tmp[pos++] = y + h;
-		tmp[pos++] = 1;
-		tmp[pos++] = 0;
+		tmp.push(x + w);
+		tmp.push(y + h);
+		tmp.push(1);
+		tmp.push(0);
 		insertColor(cbr);
 	}
 

@@ -1,5 +1,6 @@
 package h2d;
 
+#if flash
 @:allow(h2d.Graphics)
 class GraphicsContext {
 	
@@ -72,3 +73,5 @@ class Graphics extends Drawable {
 	}
 
 }
+
+#end

@@ -1,7 +1,8 @@
 package h3d.impl;
 
-class PointShader extends hxsl.Shader {
+class PointShader extends h3d.impl.Shader {
 
+#if flash
 	static var SRC = {
 		var input : {
 			pos : Float2,
@@ -18,11 +19,13 @@ class PointShader extends hxsl.Shader {
 			out = color;
 		}
 	}
+#end
 	
 }
 
-class LineShader extends hxsl.Shader {
+class LineShader extends h3d.impl.Shader {
 
+#if flash
 	static var SRC = {
 		var input : {
 			pos : Float2,
@@ -43,5 +46,6 @@ class LineShader extends hxsl.Shader {
 			out = color;
 		}
 	}
-	
+#end
+
 }

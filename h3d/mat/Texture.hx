@@ -7,7 +7,7 @@ class Texture {
 
 	static var UID = 0;
 	
-	var t : flash.display3D.textures.TextureBase;
+	var t : h3d.impl.Driver.Texture;
 	var mem : h3d.impl.MemoryManager;
 	#if debug
 	var allocPos : h3d.impl.AllocPos;
@@ -76,7 +76,8 @@ class Texture {
 		mem.resizeTexture(this, width, height);
 	}
 
-	public function uploadMipMap( bmp : flash.display.BitmapData, smoothing = false, side = 0 ) {
+	/*
+	public function uploadMipMap( bmp : hxd.BitmapData, smoothing = false, side = 0 ) {
 		upload(bmp, 0, side);
 		var w = bmp.width >> 1, h = bmp.height >> 1, mip = 1;
 		var m = new flash.geom.Matrix();
@@ -94,38 +95,14 @@ class Texture {
 			h >>= 1;
 		}
 	}
+	*/
 	
-	public function uploadAtfData( bytes : haxe.io.Bytes ) {
-		if( isCubic ) {
-			var t = flash.Lib.as(t, flash.display3D.textures.CubeTexture);
-			t.uploadCompressedTextureFromByteArray(bytes.getData(), 0);
-		}
-		else {
-			var t = flash.Lib.as(t,  flash.display3D.textures.Texture);
-			t.uploadCompressedTextureFromByteArray(bytes.getData(), 0);
-		}
-	}
-
-	public function upload( bmp : flash.display.BitmapData, mipLevel = 0, side = 0 ) {
-		if( isCubic ) {
-			var t = flash.Lib.as(t, flash.display3D.textures.CubeTexture);
-			t.uploadFromBitmapData(bmp, side, mipLevel);
-		}
-		else {
-			var t = flash.Lib.as(t,  flash.display3D.textures.Texture);
-			t.uploadFromBitmapData(bmp, mipLevel);
-		}
+	public function uploadBitmap( bmp : hxd.BitmapData, mipLevel = 0, side = 0 ) {
+		mem.driver.uploadTextureBitmap(this, bmp, mipLevel, side);
 	}
 
 	public function uploadBytes( bmp : haxe.io.Bytes, mipLevel = 0, side = 0 ) {
-		if( isCubic ) {
-			var t = flash.Lib.as(t, flash.display3D.textures.CubeTexture);
-			t.uploadFromByteArray(bmp.getData(), 0, side, mipLevel);
-		}
-		else {
-			var t = flash.Lib.as(t,  flash.display3D.textures.Texture);
-			t.uploadFromByteArray(bmp.getData(), 0, mipLevel);
-		}
+		mem.driver.uploadTextureBytes(this, bmp, mipLevel, side);
 	}
 
 	public function dispose() {
@@ -133,8 +110,11 @@ class Texture {
 			mem.deleteTexture(this);
 	}
 	
-	public static function fromBitmap( bmp : flash.display.BitmapData, hasMipMap = false, ?allocPos : h3d.impl.AllocPos ) {
-		return h3d.Engine.getCurrent().mem.makeTexture(bmp,hasMipMap,allocPos);
+	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
+		var mem = h3d.Engine.getCurrent().mem;
+		var t = mem.allocTexture(bmp.width, bmp.height, false, allocPos);
+		t.uploadBitmap(bmp);
+		return t;
 	}
 
 }

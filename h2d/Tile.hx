@@ -121,17 +121,20 @@ class Tile {
 		return "Tile(" + x + "," + y + "," + width + "x" + height + (dx != 0 || dy != 0 ? "," + dx + ":" + dy:"") + ")";
 	}
 
-	function upload(bmp:flash.display.BitmapData) {
+	function upload( bmp:hxd.BitmapData ) {
 		var w = innerTex.width;
 		var h = innerTex.height;
+		#if flash
 		if( w != bmp.width || h != bmp.height ) {
 			var bmp2 = new flash.display.BitmapData(w, h, true, 0);
 			var p0 = new flash.geom.Point(0, 0);
+			var bmp = bmp.toNative();
 			bmp2.copyPixels(bmp, bmp.rect, p0, bmp, p0, true);
-			innerTex.upload(bmp2);
+			innerTex.uploadBitmap(hxd.BitmapData.fromNative(bmp2));
 			bmp2.dispose();
 		} else
-			innerTex.upload(bmp);
+		#end
+			innerTex.uploadBitmap(bmp);
 	}
 	
 
@@ -158,7 +161,7 @@ class Tile {
 		return t;
 	}
 	
-	public static function fromBitmap( bmp : flash.display.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
+	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
 		var w = 1, h = 1;
 		while( w < bmp.width )
 			w <<= 1;
@@ -170,9 +173,9 @@ class Tile {
 		return t;
 	}
 
-	public static function autoCut( bmp : flash.display.BitmapData, width : Int, ?height : Int, ?allocPos : h3d.impl.AllocPos ) {
+	public static function autoCut( bmp : hxd.BitmapData, width : Int, ?height : Int, ?allocPos : h3d.impl.AllocPos ) {
 		if( height == null ) height = width;
-		var colorBG = bmp.getPixel32(bmp.width - 1, bmp.height - 1);
+		var colorBG = bmp.getPixel(bmp.width - 1, bmp.height - 1);
 		var tl = new Array();
 		var w = 1, h = 1;
 		while( w < bmp.width )
@@ -199,6 +202,7 @@ class Tile {
 		return new Tile(t, 0, 0, t.width, t.height);
 	}
 	
+	#if flash
 	public static function fromSprites( sprites : Array<flash.display.Sprite>, ?allocPos : h3d.impl.AllocPos ) {
 		var tmp = [];
 		var width = 0;
@@ -225,19 +229,21 @@ class Tile {
 			m.ty = -t.dy;
 			bmp.draw(t.s, m);
 		}
-		var main = fromBitmap(bmp,allocPos);
+		var main = fromBitmap(hxd.BitmapData.fromNative(bmp), allocPos);
+		bmp.dispose();
 		var tiles = [];
 		for( t in tmp )
 			tiles.push(main.sub(t.x, 0, t.w, t.h, t.dx, t.dy));
 		return tiles;
 	}
+	#end
 	
-	static function isEmpty( b : flash.display.BitmapData, px, py, width, height, bg : UInt ) {
+	static function isEmpty( b : hxd.BitmapData, px, py, width, height, bg : Int ) {
 		var empty = true;
 		var xmin = width, ymin = height, xmax = 0, ymax = 0;
 		for( x in 0...width )
 			for( y in 0...height ) {
-				var color = b.getPixel32(x+px, y+py);
+				var color : Int = b.getPixel(x+px, y+py);
 				if( color != bg ) {
 					empty = false;
 					if( x < xmin ) xmin = x;
@@ -246,7 +252,7 @@ class Tile {
 					if( y > ymax ) ymax = y;
 				}
 				if( color == bg )
-					b.setPixel32(x+px, y+py, 0);
+					b.setPixel(x+px, y+py, 0);
 			}
 		return empty ? null : { dx : xmin, dy : ymin, w : xmax - xmin + 1, h : ymax - ymin + 1 };
 	}

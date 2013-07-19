@@ -1,10 +1,11 @@
 package h3d.impl;
 
 @:allow(h3d.impl.MemoryManager)
+@:allow(h3d.Engine)
 class Indexes {
 
 	var mem : MemoryManager;
-	public var ibuf : flash.display3D.IndexBuffer3D;
+	var ibuf : Driver.IndexBuffer;
 	public var count(default,null) : Int;
 	
 	function new(mem, ibuf, count) {
@@ -15,6 +16,10 @@ class Indexes {
 	
 	public function isDisposed() {
 		return ibuf == null;
+	}
+	
+	public function upload( indexes : hxd.IndexBuffer, pos : Int, count : Int, bufferPos = 0 ) {
+		mem.driver.uploadIndexesBuffer(this.ibuf, pos, count, indexes, bufferPos);
 	}
 	
 	public function dispose() {

@@ -4,7 +4,7 @@ class Interactive extends Drawable {
 
 	public var width : Float;
 	public var height : Float;
-	public var cursor(default,set) : h3d.System.Cursor;
+	public var cursor(default,set) : hxd.System.Cursor;
 	public var isEllipse : Bool;
 	public var blockEvents : Bool = true;
 	public var propagateEvents : Bool = false;
@@ -45,13 +45,13 @@ class Interactive extends Drawable {
 			scene.removeEventTarget(this);
 			if( scene.currentOver == this ) {
 				scene.currentOver = null;
-				h3d.System.setCursor(Default);
+				hxd.System.setCursor(Default);
 			}
 		}
 		super.onDelete();
 	}
 
-	function checkBounds( e : Event ) {
+	function checkBounds( e : hxd.Event ) {
 		return switch( e.kind ) {
 		case EOut, ERelease, EFocus, EFocusLost: false;
 		default: true;
@@ -59,7 +59,7 @@ class Interactive extends Drawable {
 	}
 	
 	@:allow(h2d.Scene)
-	function handleEvent( e : Event ) {
+	function handleEvent( e : hxd.Event ) {
 		if( isEllipse && checkBounds(e) ) {
 			var cx = width * 0.5, cy = height * 0.5;
 			var dx = (e.relX - cx) / cx;
@@ -79,10 +79,10 @@ class Interactive extends Drawable {
 		case ERelease:
 			onRelease(e);
 		case EOver:
-			h3d.System.setCursor(cursor);
+			hxd.System.setCursor(cursor);
 			onOver(e);
 		case EOut:
-			h3d.System.setCursor(Default);
+			hxd.System.setCursor(Default);
 			onOut(e);
 		case EWheel:
 			onWheel(e);
@@ -102,11 +102,11 @@ class Interactive extends Drawable {
 	function set_cursor(c) {
 		this.cursor = c;
 		if( scene != null && scene.currentOver == this )
-			h3d.System.setCursor(cursor);
+			hxd.System.setCursor(cursor);
 		return c;
 	}
 	
-	function globalToLocal( e : Event ) {
+	function globalToLocal( e : hxd.Event ) {
 		// convert global event to our local space
 		var x = e.relX, y = e.relY;
 		var rx = x * scene.matA + y * scene.matB + scene.absX;
@@ -149,7 +149,7 @@ class Interactive extends Drawable {
 	public function focus() {
 		if( scene == null )
 			return;
-		var ev = new h2d.Event(null);
+		var ev = new hxd.Event(null);
 		if( scene.currentFocus != null ) {
 			if( scene.currentFocus == this )
 				return;
@@ -165,34 +165,34 @@ class Interactive extends Drawable {
 		return scene != null && scene.currentFocus == this;
 	}
 	
-	public dynamic function onOver( e : Event ) {
+	public dynamic function onOver( e : hxd.Event ) {
 	}
 
-	public dynamic function onOut( e : Event ) {
+	public dynamic function onOut( e : hxd.Event ) {
 	}
 	
-	public dynamic function onPush( e : Event ) {
+	public dynamic function onPush( e : hxd.Event ) {
 	}
 
-	public dynamic function onRelease( e : Event ) {
+	public dynamic function onRelease( e : hxd.Event ) {
 	}
 	
-	public dynamic function onMove( e : Event ) {
+	public dynamic function onMove( e : hxd.Event ) {
 	}
 
-	public dynamic function onWheel( e : Event ) {
+	public dynamic function onWheel( e : hxd.Event ) {
 	}
 
-	public dynamic function onFocus( e : Event ) {
+	public dynamic function onFocus( e : hxd.Event ) {
 	}
 	
-	public dynamic function onFocusLost( e : Event ) {
+	public dynamic function onFocusLost( e : hxd.Event ) {
 	}
 
-	public dynamic function onKeyUp( e : Event ) {
+	public dynamic function onKeyUp( e : hxd.Event ) {
 	}
 
-	public dynamic function onKeyDown( e : Event ) {
+	public dynamic function onKeyDown( e : hxd.Event ) {
 	}
 	
 }

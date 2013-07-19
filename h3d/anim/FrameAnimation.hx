@@ -2,8 +2,8 @@ package h3d.anim;
 import h3d.anim.Animation;
 
 class FrameObject extends AnimatedObject {
-	public var frames : flash.Vector<h3d.Matrix>;
-	public var alphas : flash.Vector<Float>;
+	public var frames : haxe.ds.Vector<h3d.Matrix>;
+	public var alphas : haxe.ds.Vector<Float>;
 	
 	override function clone() : AnimatedObject {
 		var o = new FrameObject(objectName);

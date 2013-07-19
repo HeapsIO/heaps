@@ -36,7 +36,7 @@ class Input extends Component {
 			removeClass(":focus");
 			cursor.visible = false;
 		};
-		input.onKeyDown = function(e:Event) {
+		input.onKeyDown = function(e:hxd.Event) {
 			if( input.hasFocus() ) {
 				// BACK
 				switch( e.keyCode ) {

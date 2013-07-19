@@ -11,7 +11,7 @@ class RenderContext {
 	
 	public function new() {
 		time = 0.;
-		elapsedTime = 1. / flash.Lib.current.stage.frameRate;
+		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
 	}
 	
 	public function addPass(p) {

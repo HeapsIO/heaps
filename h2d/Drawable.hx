@@ -1,6 +1,7 @@
 package h2d;
 
-private class DrawableShader extends hxsl.Shader {
+private class DrawableShader extends h3d.impl.Shader {
+	#if flash
 	static var SRC = {
 		var input : {
 			pos : Float2,
@@ -73,7 +74,7 @@ private class DrawableShader extends hxsl.Shader {
 
 
 	}
-	
+	#end
 }
 
 class Drawable extends Sprite {

@@ -43,7 +43,7 @@ class Component extends Sprite {
 	}
 	
 	function getElementByIdRec( s : h2d.Sprite, id : String ) : Component {
-		var c = flash.Lib.as(s, Component);
+		var c = Std.instance(s, Component);
 		if( c != null && c.id == id )
 			return c;
 		for( s in s.childs ) {
@@ -65,7 +65,7 @@ class Component extends Sprite {
 		var old = parentComponent;
 		var p = parent;
 		while( p != null ) {
-			var c = flash.Lib.as(p, Component);
+			var c = Std.instance(p, Component);
 			if( c != null ) {
 				parentComponent = c;
 				if( old != c ) {

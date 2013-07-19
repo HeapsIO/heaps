@@ -14,20 +14,19 @@ class Cube extends Polygon {
 			new Point(0, y, z),
 			new Point(x, y, z),
 		];
-		var idx = [
-			0, 1, 5,
-			0, 5, 3,
-			1, 4, 7,
-			1, 7, 5,
-			3, 5, 7,
-			3, 7, 6,
-			0, 6, 2,
-			0, 3, 6,
-			2, 7, 4,
-			2, 6, 7,
-			0, 4, 1,
-			0, 2, 4,
-		];
+		var idx = new hxd.IndexBuffer();
+		idx.push(0); idx.push(1); idx.push(5);
+		idx.push(0); idx.push(5); idx.push(3);
+		idx.push(1); idx.push(4); idx.push(7);
+		idx.push(1); idx.push(7); idx.push(5);
+		idx.push(3); idx.push(5); idx.push(7);
+		idx.push(3); idx.push(7); idx.push(6);
+		idx.push(0); idx.push(6); idx.push(2);
+		idx.push(0); idx.push(3); idx.push(6);
+		idx.push(2); idx.push(7); idx.push(4);
+		idx.push(2); idx.push(6); idx.push(7);
+		idx.push(0); idx.push(4); idx.push(1);
+		idx.push(0); idx.push(2); idx.push(4);
 		super(p, idx);
 	}
 	

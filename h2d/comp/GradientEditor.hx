@@ -2,7 +2,7 @@ package h2d.comp;
 import h2d.css.Defs;
 import h2d.css.Fill;
 
-private typedef Key = { x:Float, value:UInt };
+private typedef Key = { x:Float, value:Int };
 
 private enum KCursor {
 	KAlpha;
@@ -71,10 +71,10 @@ private class CFlag extends h2d.css.Fill {
 }
 
 private class Cursor extends h2d.Sprite {
-	public var value(default, set):UInt;
+	public var value(default, set):Int;
 	public var coeff(get, null):Float;
-	public var color:UInt = 0xFFFFFFFF;
-	public var bgcolor:UInt = 0xFFFF00FF;
+	public var color:Int = 0xFFFFFFFF;
+	public var bgcolor:Int = 0xFFFF00FF;
 	public var cursor:h2d.Sprite;
 	public var kind:KCursor;
 	var ang:Float;
@@ -251,7 +251,7 @@ private class ColorSelector extends h2d.Sprite {
 	var locInput:h2d.comp.Input;
 	var colorInput:h2d.comp.Input;
 	var canvas:h2d.css.Fill;
-	var color:UInt = 0xFFFFFFFF;
+	var color:Int = 0xFFFFFFFF;
 	var interact : h2d.Interactive;
 	
 	public function new (ix, iy, parent) {
@@ -418,11 +418,13 @@ class GradientEditor extends h2d.comp.Component {
 		updateTarget = colorsKeys[0];
 		updateKeys();
 		drawGradient();
-		
+	
+		#if flash
 		flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, doUpdate);
+		#end
 	}
 	
-	function doUpdate(e:flash.events.Event) {
+	function doUpdate(_) {
 		if(dragTarget != null) {
 			if(dragOut) {
 				switch(dragTarget.kind) {
@@ -612,7 +614,7 @@ class GradientEditor extends h2d.comp.Component {
 	}
 	
 	
-	inline public static function INTtoRGB(color:UInt) {
+	inline public static function INTtoRGB(color:Int) {
 		return [(color >> 16) & 0xFF, (color >> 8) & 0xFF,  color & 0xFF, color >>> 24];
 	}
 	

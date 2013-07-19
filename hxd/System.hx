@@ -1,4 +1,4 @@
-package h3d;
+package hxd;
 
 enum Cursor {
 	Default;
@@ -20,6 +20,8 @@ class System {
 	
 	public static var screenDPI(get,never) : Float;
 
+	#if flash
+	
 	static function get_isWindowed() {
 		var p = flash.system.Capabilities.playerType;
 		return p == "ActiveX" || p == "PlugIn" || p == "StandAlone" || p == "Desktop";
@@ -109,7 +111,35 @@ class System {
 		return name;
 	}
 	
+	#elseif js
 
+	static var LOOP = null;
+	
+	public static function setLoop( f : Void -> Void ) {
+		var window : Dynamic = js.Browser.window;
+		if( LOOP != null  ) {
+			var caf : Dynamic = window.cancelAnimationFrame ||
+			window.webkitCancelAnimationFrame ||
+			window.mozCancelAnimationFrame;
+			caf(LOOP);
+			LOOP = null;
+		}
+		if( f == null )
+			return;
+		var rqf : Dynamic = window.requestAnimationFrame ||
+			window.webkitRequestAnimationFrame ||
+			window.mozRequestAnimationFrame;
+		rqf(f);
+	}
+
+	public static function setCursor( c : Cursor ) {
+		throw "TODO";
+	}
+	
+	
+	#else
+
+	#end
 	#end
 	
 	public static macro function getFileContent( file : String ) {

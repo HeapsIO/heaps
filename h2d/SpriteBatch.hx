@@ -28,7 +28,7 @@ class SpriteBatch extends Drawable {
 	public var tile : Tile;
 	var first : BatchElement;
 	var last : BatchElement;
-	var tmpBuf : flash.Vector<Float>;
+	var tmpBuf : hxd.FloatBuffer;
 		
 	public function new(t,?parent) {
 		super(parent);
@@ -65,7 +65,7 @@ class SpriteBatch extends Drawable {
 	override function draw( ctx : RenderContext ) {
 		if( first == null )
 			return;
-		if( tmpBuf == null ) tmpBuf = new flash.Vector();
+		if( tmpBuf == null ) tmpBuf = new hxd.FloatBuffer();
 		var pos = 0;
 		var e = first;
 		var tmp = tmpBuf;

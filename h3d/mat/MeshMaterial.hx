@@ -13,8 +13,9 @@ typedef ShadowMap = {
 	var texture : Texture;
 }
 
-private class MeshShader extends hxsl.Shader {
+private class MeshShader extends h3d.impl.Shader {
 	
+#if flash
 	static var SRC = {
 
 		var input : {
@@ -148,6 +149,7 @@ private class MeshShader extends hxsl.Shader {
 		}
 		
 	}
+#end
 	
 }
 

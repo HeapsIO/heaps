@@ -15,18 +15,19 @@ class FreeCell {
 @:allow(h3d)
 class BigBuffer {
 
+	var mem : MemoryManager;
 	var stride : Int;
 	var size : Int;
-	var written : Bool;
-	var vbuf : flash.display3D.VertexBuffer3D;
+	
+	var vbuf : Driver.VertexBuffer;
 	var free : FreeCell;
 	var next : BigBuffer;
 	#if debug
 	public var allocHead : Buffer;
 	#end
 	
-	function new(v, stride, size) {
-		written = false;
+	function new(mem, v, stride, size) {
+		this.mem = mem;
 		this.size = size;
 		this.stride = stride;
 		this.vbuf = v;
@@ -64,7 +65,7 @@ class BigBuffer {
 	}
 
 	function dispose() {
-		vbuf.dispose();
+		mem.driver.disposeVertex(vbuf);
 		vbuf = null;
 	}
 	
@@ -79,13 +80,13 @@ class MemoryManager {
 	static inline var MAX_MEMORY = 250 << 20; // MB
 	static inline var MAX_BUFFERS = 4096;
 
-	var ctx : flash.display3D.Context3D;
-	var empty : flash.utils.ByteArray;
+	@:allow(h3d)
+	var driver : Driver;
 	var buffers : Array<BigBuffer>;
 	var idict : Map<Indexes,Bool>;
 	
-	var tdict : haxe.ds.WeakMap<h3d.mat.Texture,flash.display3D.textures.TextureBase>;
-	var textures : Array<flash.display3D.textures.TextureBase>;
+	var tdict : haxe.ds.WeakMap<h3d.mat.Texture,Driver.Texture>;
+	var textures : Array<Driver.Texture>;
 	
 	public var indexes(default,null) : Indexes;
 	public var quadIndexes(default,null) : Indexes;
@@ -93,34 +94,33 @@ class MemoryManager {
 	public var bufferCount(default,null) : Int;
 	public var allocSize(default,null) : Int;
 
-	public function new(ctx,allocSize) {
-		this.ctx = ctx;
+	public function new(driver,allocSize) {
+		this.driver = driver;
 		this.allocSize = allocSize;
 
 		idict = new Map();
 		tdict = new haxe.ds.WeakMap();
 		textures = new Array();
-		empty = new flash.utils.ByteArray();
 		buffers = new Array();
 		
 		initIndexes();
 	}
 	
 	function initIndexes() {
-		var indices = new flash.Vector<UInt>();
-		for( i in 0...allocSize ) indices[i] = i;
+		var indices = new hxd.IndexBuffer();
+		for( i in 0...allocSize ) indices.push(i);
 		indexes = allocIndex(indices);
 
-		var indices = new flash.Vector<UInt>();
+		var indices = new hxd.IndexBuffer();
 		var p = 0;
 		for( i in 0...allocSize >> 2 ) {
 			var k = i << 2;
-			indices[p++] = k;
-			indices[p++] = k + 1;
-			indices[p++] = k + 2;
-			indices[p++] = k + 2;
-			indices[p++] = k + 1;
-			indices[p++] = k + 3;
+			indices.push(k);
+			indices.push(k + 1);
+			indices.push(k + 2);
+			indices.push(k + 2);
+			indices.push(k + 1);
+			indices.push(k + 3);
 		}
 		quadIndexes = allocIndex(indices);
 	}
@@ -234,16 +234,7 @@ class MemoryManager {
 	}
 	
 	function initTexture( t : h3d.mat.Texture ) {
-		var fmt = switch( t.format ) {
-		case Rgba, Atf:
-			flash.display3D.Context3DTextureFormat.BGRA;
-		case AtfCompressed(alpha):
-			alpha ? flash.display3D.Context3DTextureFormat.COMPRESSED_ALPHA : flash.display3D.Context3DTextureFormat.COMPRESSED;
-		}
-		if( t.isCubic )
-			t.t = ctx.createCubeTexture(t.width, fmt, t.isTarget, t.mipLevels);
-		else
-			t.t = ctx.createTexture(t.width, t.height, fmt, t.isTarget, t.mipLevels);
+		t.t = driver.allocTexture(t);
 		tdict.set(t, t.t);
 		textures.push(t.t);
 	}
@@ -251,7 +242,7 @@ class MemoryManager {
 	@:allow(h3d.impl.Indexes.dispose)
 	function deleteIndexes( i : Indexes ) {
 		idict.remove(i);
-		i.ibuf.dispose();
+		driver.disposeIndexes(i.ibuf);
 		i.ibuf = null;
 		usedMemory -= i.count * 2;
 	}
@@ -260,7 +251,7 @@ class MemoryManager {
 	function deleteTexture( t : h3d.mat.Texture ) {
 		textures.remove(t.t);
 		tdict.remove(t);
-		t.t.dispose();
+		driver.disposeTexture(t.t);
 		t.t = null;
 	}
 
@@ -295,10 +286,9 @@ class MemoryManager {
 		};
 	}
 
-	public function allocAtfTexture( width : Int, height : Int, mipLevels : Int = 0, alpha : Bool = false, compress : Bool = false, cubic : Bool = false, ?allocPos : AllocPos ) {
+	public function allocCustomTexture( fmt : h3d.mat.Data.TextureFormat, width : Int, height : Int, mipLevels : Int = 0, cubic : Bool = false, target : Bool = false, ?allocPos : AllocPos ) {
 		freeTextures();
-		var fmt = compress ? (alpha ? flash.display3D.Context3DTextureFormat.COMPRESSED_ALPHA : flash.display3D.Context3DTextureFormat.COMPRESSED) : flash.display3D.Context3DTextureFormat.BGRA;
-		return newTexture(compress ? AtfCompressed(alpha) : Atf, width, height, cubic, false, mipLevels, allocPos);
+		return newTexture(fmt, width, height, cubic, target, mipLevels, allocPos);
 	}
 	
 	public function allocTexture( width : Int, height : Int, mipMap = false, ?allocPos : AllocPos ) {
@@ -316,19 +306,6 @@ class MemoryManager {
 		return newTexture(Rgba, width, height, false, true, 0, allocPos);
 	}
 
-	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap, hasMipMap = false, ?allocPos : AllocPos ) {
-		var t;
-		if( bmp != null ) {
-			t = allocTexture(bmp.width, bmp.height, hasMipMap, allocPos);
-			if( hasMipMap ) t.uploadMipMap(bmp) else t.upload(bmp);
-		} else {
-			if( hasMipMap ) throw "No support for mipmap + bytes";
-			t = allocTexture(mbmp.width, mbmp.height, hasMipMap, allocPos);
-			t.uploadBytes(mbmp.bytes);
-		}
-		return t;
-	}
-
 	public function allocCubeTexture( size : Int, mipMap = false, ?allocPos : AllocPos ) {
 		freeTextures();
 		var levels = 0;
@@ -339,23 +316,23 @@ class MemoryManager {
 		return newTexture(Rgba, size, size, true, false, levels, allocPos);
 	}
 
-	public function allocIndex( indices : flash.Vector<UInt> ) {
-		var ibuf = ctx.createIndexBuffer(indices.length);
-		ibuf.uploadFromVector(indices, 0, indices.length);
+	public function allocIndex( indices : hxd.IndexBuffer ) {
+		var ibuf = driver.allocIndexes(indices.length);
 		var idx = new Indexes(this, ibuf, indices.length);
+		idx.upload(indices, 0, indices.length);
 		idict.set(idx, true);
 		usedMemory += idx.count * 2;
 		return idx;
 	}
 
-	public function allocBytes( bytes : flash.utils.ByteArray, stride : Int, align, ?allocPos : AllocPos ) {
+	public function allocBytes( bytes : haxe.io.Bytes, stride : Int, align, ?allocPos : AllocPos ) {
 		var count = Std.int(bytes.length / (stride * 4));
 		var b = alloc(count, stride, align, allocPos);
-		b.upload(bytes, 0, count);
+		b.uploadBytes(bytes, 0, count);
 		return b;
 	}
 
-	public function allocVector( v : flash.Vector<Float>, stride, align, ?allocPos : AllocPos ) {
+	public function allocVector( v : hxd.FloatBuffer, stride, align, ?allocPos : AllocPos ) {
 		var nvert = Std.int(v.length / stride);
 		var b = alloc(nvert, stride, align, allocPos);
 		b.uploadVector(v, 0, nvert);
@@ -375,7 +352,7 @@ class MemoryManager {
 			tall.remove(t);
 		var count = 0;
 		for( t in tall.keys() ) {
-			t.dispose();
+			driver.disposeTexture(t);
 			textures.remove(t);
 			count++;
 		}
@@ -498,10 +475,13 @@ class MemoryManager {
 				}
 				return alloc(nvect, stride, align, allocPos);
 			}
-			var v = ctx.createVertexBuffer(size, stride);
+			var v = driver.allocVertex(size, stride);
 			usedMemory += mem;
 			bufferCount++;
-			b = new BigBuffer(v, stride, size);
+			b = new BigBuffer(this, v, stride, size);
+			#if flash
+			untyped v.b = b;
+			#end
 			b.next = buffers[stride];
 			buffers[stride] = b;
 			free = b.free;
@@ -525,25 +505,7 @@ class MemoryManager {
 		return b;
 	}
 
-	@:allow(h3d)
-	function finalize( b : BigBuffer ) {
-		if( !b.written ) {
-			b.written = true;
-			// fill all the free positions that were unwritten with zeroes (necessary for flash)
-			var f = b.free;
-			while( f != null ) {
-				if( f.count > 0 ) {
-					var mem : UInt = f.count * b.stride * 4;
-					if( empty.length < mem ) empty.length = mem;
-					b.vbuf.uploadFromByteArray(empty, 0, f.pos, f.count);
-				}
-				f = f.next;
-			}
-		}
-	}
-	
-	public function onContextLost( newContext ) {
-		ctx = newContext;
+	public function onContextLost() {
 		indexes.dispose();
 		quadIndexes.dispose();
 		var tkeys = Lambda.array({ iterator : tdict.keys });

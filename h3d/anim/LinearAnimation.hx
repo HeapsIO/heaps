@@ -19,8 +19,8 @@ class LinearFrame {
 class LinearObject extends AnimatedObject {
 	public var hasRotation : Bool;
 	public var hasScale : Bool;
-	public var frames : flash.Vector<LinearFrame>;
-	public var alphas : flash.Vector<Float>;
+	public var frames : haxe.ds.Vector<LinearFrame>;
+	public var alphas : haxe.ds.Vector<Float>;
 	public var matrix : h3d.Matrix;
 	override function clone() : AnimatedObject {
 		var o = new LinearObject(objectName);

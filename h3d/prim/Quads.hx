@@ -40,23 +40,22 @@ class Quads extends Primitive {
 	
 	override function alloc( engine : Engine ) {
 		dispose();
-		var v = new flash.Vector();
-		var p = 0;
+		var v = new hxd.FloatBuffer();
 		for( i in 0...pts.length ) {
 			var pt = pts[i];
-			v[p++] = pt.x;
-			v[p++] = pt.y;
-			v[p++] = pt.z;
+			v.push(pt.x);
+			v.push(pt.y);
+			v.push(pt.z);
 			if( uvs != null ) {
 				var t = uvs[i];
-				v[p++] = t.u;
-				v[p++] = t.v;
+				v.push(t.u);
+				v.push(t.v);
 			}
 			if( normals != null ) {
 				var n = normals[i];
-				v[p++] = n.x;
-				v[p++] = n.y;
-				v[p++] = n.z;
+				v.push(n.x);
+				v.push(n.y);
+				v.push(n.z);
 			}
 		}
 		var size = 3;

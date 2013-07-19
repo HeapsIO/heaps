@@ -26,7 +26,7 @@ private class CoreObjects  {
 		tmpMaterial.culling = None;
 		tmpMaterial.depth(false, Always);
 		
-		var vector = new flash.Vector<Float>();
+		var vector = new hxd.FloatBuffer();
 		for( pt in [[0, 0], [1, 0], [0, 1], [1, 1]] ) {
 			vector.push(pt[0]);
 			vector.push(pt[1]);

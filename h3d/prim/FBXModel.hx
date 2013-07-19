@@ -87,13 +87,10 @@ class FBXModel extends MeshPrimitive {
 		var gt = geom.getGeomTranslate();
 		if( gt == null ) gt = new h3d.prim.Point();
 		
-		var idx = new flash.Vector<UInt>();
-		var midx = new Array<flash.Vector<UInt>>();
-		var pbuf = new flash.Vector<Float>(), nbuf = (norms == null ? null : new flash.Vector<Float>()), sbuf = (skin == null ? null : new flash.utils.ByteArray()), tbuf = (tuvs == null ? null : new flash.Vector<Float>());
-		var cbuf = (colors == null ? null : new flash.Vector<Float>());
-		var pout = 0, nout = 0, sout = 0, tout = 0, cout = 0;
-		
-		if( sbuf != null ) sbuf.endian = flash.utils.Endian.LITTLE_ENDIAN;
+		var idx = new hxd.IndexBuffer();
+		var midx = new Array<hxd.IndexBuffer>();
+		var pbuf = new hxd.FloatBuffer(), nbuf = (norms == null ? null : new hxd.FloatBuffer()), sbuf = (skin == null ? null : new hxd.BytesBuffer()), tbuf = (tuvs == null ? null : new hxd.FloatBuffer());
+		var cbuf = (colors == null ? null : new hxd.FloatBuffer());
 		
 		// triangulize indexes : format is  A,B,...,-X : negative values mark the end of the polygon
 		var count = 0, pos = 0, matPos = 0;
@@ -110,20 +107,20 @@ class FBXModel extends MeshPrimitive {
 					var x = verts[vidx * 3] + gt.x;
 					var y = verts[vidx * 3 + 1] + gt.y;
 					var z = verts[vidx * 3 + 2] + gt.z;
-					pbuf[pout++] = x;
-					pbuf[pout++] = y;
-					pbuf[pout++] = z;
+					pbuf.push(x);
+					pbuf.push(y);
+					pbuf.push(z);
 
 					if( nbuf != null ) {
-						nbuf[nout++] = norms[k*3];
-						nbuf[nout++] = norms[k*3 + 1];
-						nbuf[nout++] = norms[k*3 + 2];
+						nbuf.push(norms[k*3]);
+						nbuf.push(norms[k*3 + 1]);
+						nbuf.push(norms[k*3 + 2]);
 					}
 
 					if( tbuf != null ) {
 						var iuv = tuvs.index[k];
-						tbuf[tout++] = tuvs.values[iuv*2];
-						tbuf[tout++] = 1 - tuvs.values[iuv * 2 + 1];
+						tbuf.push(tuvs.values[iuv*2]);
+						tbuf.push(1 - tuvs.values[iuv * 2 + 1]);
 					}
 					
 					if( sbuf != null ) {
@@ -133,14 +130,14 @@ class FBXModel extends MeshPrimitive {
 							sbuf.writeFloat(skin.vertexWeights[p + i]);
 							idx = (skin.vertexJoints[p + i] << (8*i)) | idx;
 						}
-						sbuf.writeUnsignedInt(idx);
+						sbuf.writeInt32(idx);
 					}
 					
 					if( cbuf != null ) {
 						var icol = colors.index[k];
-						cbuf[cout++] = colors.values[icol * 4];
-						cbuf[cout++] = colors.values[icol * 4 + 1];
-						cbuf[cout++] = colors.values[icol * 4 + 2];
+						cbuf.push(colors.values[icol * 4]);
+						cbuf.push(colors.values[icol * 4 + 1]);
+						cbuf.push(colors.values[icol * 4 + 2]);
 					}
 				}
 				// polygons are actually triangle fans
@@ -154,7 +151,7 @@ class FBXModel extends MeshPrimitive {
 					var mid = mats[matPos++];
 					var idx = midx[mid];
 					if( idx == null ) {
-						idx = new flash.Vector<UInt>();
+						idx = new hxd.IndexBuffer();
 						midx[mid] = idx;
 					}
 					for( n in 0...count - 2 ) {
@@ -175,7 +172,7 @@ class FBXModel extends MeshPrimitive {
 		if( sbuf != null ) {
 			var nverts = Std.int(sbuf.length / ((skin.bonesPerVertex + 1) * 4));
 			var skinBuf = engine.mem.alloc(nverts, skin.bonesPerVertex + 1, 0);
-			skinBuf.upload(sbuf, 0, nverts);
+			skinBuf.uploadBytes(sbuf.getBytes(), 0, nverts);
 			addBuffer("weights", skinBuf, 0);
 			addBuffer("indexes", skinBuf, skin.bonesPerVertex);
 		}
