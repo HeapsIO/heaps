@@ -25,15 +25,8 @@ class Test {
 		prim.addUVs();
 		prim.addNormals();
 		
-		var bmp : hxd.BitmapData = null;
-		#if flash
-		var tbmp = new flash.display.BitmapData(256, 256);
-		tbmp.perlinNoise(64, 64, 3, 0, true, true, 7);
-		bmp = hxd.BitmapData.fromNative(tbmp);
-		#end
-		var tex = h3d.mat.Texture.fromBitmap(bmp);
+		var tex = hxd.Resource.embed("texture.png").toTexture();
 		var mat = new h3d.mat.MeshMaterial(tex);
-		bmp.dispose();
 		
 		scene = new Scene();
 		obj1 = new Mesh(prim, mat, scene);

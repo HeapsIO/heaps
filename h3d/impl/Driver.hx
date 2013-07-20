@@ -4,6 +4,10 @@ package h3d.impl;
 typedef IndexBuffer = flash.display3D.IndexBuffer3D;
 typedef VertexBuffer = Stage3dDriver.VertexWrapper;
 typedef Texture = flash.display3D.textures.TextureBase;
+#elseif js
+typedef IndexBuffer = js.html.webgl.Buffer;
+typedef VertexBuffer = js.html.webgl.Buffer;
+typedef Texture = js.html.webgl.Texture;
 #else
 typedef IndexBuffer = Int;
 typedef VertexBuffer = Int;
@@ -76,18 +80,21 @@ class Driver {
 		return null;
 	}
 
-	public function disposeTexture( t : Texture ) {
-	}
-	
-	public function disposeVertex( v : VertexBuffer ) {
-	}
-	
 	public function allocIndexes( count : Int ) : IndexBuffer {
 		return null;
 	}
 
 	public function allocVertex( count : Int, stride : Int ) : VertexBuffer {
 		return null;
+	}
+	
+	public function disposeTexture( t : Texture ) {
+	}
+	
+	public function disposeIndexes( i : IndexBuffer ) {
+	}
+	
+	public function disposeVertex( v : VertexBuffer ) {
 	}
 	
 	public function uploadIndexesBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
@@ -100,9 +107,6 @@ class Driver {
 	}
 
 	public function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
-	}
-	
-	public function disposeIndexes( i : IndexBuffer ) {
 	}
 	
 	public function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {

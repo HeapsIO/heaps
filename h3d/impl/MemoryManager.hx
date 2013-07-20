@@ -1,5 +1,11 @@
 package h3d.impl;
 
+#if flash
+private typedef WeakMap<K,T> = haxe.ds.WeakMap<K,T>;
+#else
+private typedef WeakMap<K,T> = haxe.ds.ObjectMap<K,T>;
+#end
+
 @:allow(h3d)
 class FreeCell {
 	var pos : Int;
@@ -85,7 +91,7 @@ class MemoryManager {
 	var buffers : Array<BigBuffer>;
 	var idict : Map<Indexes,Bool>;
 	
-	var tdict : haxe.ds.WeakMap<h3d.mat.Texture,Driver.Texture>;
+	var tdict : WeakMap<h3d.mat.Texture,Driver.Texture>;
 	var textures : Array<Driver.Texture>;
 	
 	public var indexes(default,null) : Indexes;
@@ -99,7 +105,7 @@ class MemoryManager {
 		this.allocSize = allocSize;
 
 		idict = new Map();
-		tdict = new haxe.ds.WeakMap();
+		tdict = new WeakMap();
 		textures = new Array();
 		buffers = new Array();
 		

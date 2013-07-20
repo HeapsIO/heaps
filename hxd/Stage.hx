@@ -4,9 +4,9 @@ class Stage {
 	
 	#if flash
 	var stage : flash.display.Stage;
-	var resizeEvents : List<Void -> Void>;
 	var fsDelayed : Bool;
 	#end
+	var resizeEvents : List < Void -> Void > ;
 	var eventTargets : List<Event -> Void>;
 	
 	public var width(get, null) : Float;
@@ -16,11 +16,11 @@ class Stage {
 	
 	function new() {
 		eventTargets = new List();
+		resizeEvents = new List();
 		#if flash
 		stage = flash.Lib.current.stage;
 		stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
 		stage.addEventListener(flash.events.Event.RESIZE, onResize);
-		resizeEvents = new List();
 		if( hxd.System.isTouch ) {
 			flash.ui.Multitouch.inputMode = flash.ui.MultitouchInputMode.TOUCH_POINT;
 			stage.addEventListener(flash.events.TouchEvent.TOUCH_BEGIN, onTouchDown);
@@ -34,6 +34,12 @@ class Stage {
 			stage.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, onKeyDown);
 			stage.addEventListener(flash.events.KeyboardEvent.KEY_UP, onKeyUp);
 		}
+		#elseif js
+		js.Browser.window.addEventListener("mousedown", onMouseDown);
+		js.Browser.window.addEventListener("mouseup", onMouseUp);
+		js.Browser.window.addEventListener("keydown", onKeyDown);
+		js.Browser.window.addEventListener("keyup", onKeyUp);
+		js.Browser.window.addEventListener("resize", onResize);
 		#end
 	}
 	
@@ -51,19 +57,11 @@ class Stage {
 	}
 	
 	public function addResizeEvent( f : Void -> Void ) {
-		#if flash
 		resizeEvents.push(f);
-		#else
-		throw "TODO";
-		#end
 	}
 
 	public function removeResizeEvent( f : Void -> Void ) {
-		#if flash
-		resizeEvents.push(f);
-		#else
-		throw "TODO";
-		#end
+		resizeEvents.remove(f);
 	}
 	
 	public function getFrameRate() : Float {
@@ -170,7 +168,42 @@ class Stage {
 		ev.touchId = e.touchPointID;
 		event(ev);
 	}
-			
+	
+#elseif js
+
+	function get_width() {
+		return js.Browser.document.width;
+	}
+
+	function get_height() {
+		return js.Browser.document.height;
+	}
+
+	function get_mouseX() {
+		throw "TODO";
+		return 0.;
+	}
+
+	function get_mouseY() {
+		throw "TODO";
+		return 0.;
+	}
+	
+	function onMouseDown(e) {
+	}
+
+	function onMouseUp(e) {
+	}
+
+	function onKeyDown(e) {
+	}
+
+	function onKeyUp(e) {
+	}
+
+	function onResize(e) {
+	}
+
 #end
 
 }

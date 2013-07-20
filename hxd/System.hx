@@ -114,28 +114,52 @@ class System {
 	#elseif js
 
 	static var LOOP = null;
+	static var LOOP_INIT = false;
 	
-	public static function setLoop( f : Void -> Void ) {
+	static function loopFunc() {
 		var window : Dynamic = js.Browser.window;
-		if( LOOP != null  ) {
-			var caf : Dynamic = window.cancelAnimationFrame ||
-			window.webkitCancelAnimationFrame ||
-			window.mozCancelAnimationFrame;
-			caf(LOOP);
-			LOOP = null;
-		}
-		if( f == null )
-			return;
 		var rqf : Dynamic = window.requestAnimationFrame ||
 			window.webkitRequestAnimationFrame ||
 			window.mozRequestAnimationFrame;
-		rqf(f);
+		rqf(loopFunc);
+		if( LOOP != null ) LOOP();
+	}
+	
+	public static function setLoop( f : Void -> Void ) {
+		if( !LOOP_INIT ) {
+			LOOP_INIT = true;
+			loopFunc();
+		}
+		LOOP = f;
 	}
 
 	public static function setCursor( c : Cursor ) {
 		throw "TODO";
 	}
 	
+	static function get_screenDPI() {
+		return 72.;
+	}
+	
+	static function get_isAndroid() {
+		return false;
+	}
+	
+	static function get_isWindowed() {
+		return true;
+	}
+	
+	static function get_isTouch() {
+		return false;
+	}
+	
+	static function get_width() {
+		return js.Browser.document.width;
+	}
+	
+	static function get_height() {
+		return js.Browser.document.height;
+	}
 	
 	#else
 

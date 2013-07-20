@@ -47,6 +47,8 @@ class Engine {
 		stage.addResizeEvent(onStageResize);
 		#if flash
 		driver = new h3d.impl.Stage3dDriver();
+		#elseif js
+		driver = new h3d.impl.WebglDriver();
 		#else
 		throw "No driver";
 		#end

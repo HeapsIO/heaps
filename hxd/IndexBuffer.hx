@@ -23,8 +23,12 @@ abstract IndexBuffer(InnerData) {
 	
 	public var length(get, never) : Int;
 	
-	public inline function new(length=0) {
+	public inline function new(length = 0) {
+		#if js
+		this = untyped __new__(Array, length);
+		#else
 		this = new InnerData(length);
+		#end
 	}
 	
 	public inline function push( v : Int ) {
