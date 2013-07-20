@@ -12,7 +12,7 @@ class Test {
 		time = 0;
 		engine = new h3d.Engine();
 		engine.debug = true;
-		engine.backgroundColor = 0x202020;
+		engine.backgroundColor = 0xFF202020;
 		engine.onReady = start;
 		engine.init();
 	}

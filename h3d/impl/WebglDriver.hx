@@ -1,6 +1,8 @@
 package h3d.impl;
 import h3d.impl.Driver;
 
+#if js
+
 private typedef GL = js.html.webgl.GL;
 
 @:access(h3d.impl.Shader)
@@ -18,11 +20,17 @@ class WebglDriver extends Driver {
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
+		gl.enable(GL.DEPTH_TEST);
+	}
+	
+	override function selectMaterial( mbits : Int ) {
+		gl.depthFunc(GL.LESS);
+		gl.cullFace(GL.BACK);
 	}
 	
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
 		gl.clearColor(r, g, b, a);
-		gl.clearDepth(0);
+		gl.clearDepth(1);
 		gl.clear(GL.COLOR_BUFFER_BIT|GL.DEPTH_BUFFER_BIT);
 	}
 	
@@ -157,14 +165,22 @@ class WebglDriver extends Driver {
 		var mat : Matrix = shader.mproj;
 		gl.uniformMatrix4fv(mproj, false, new js.html.Float32Array(mat.getFloats()));
 		
+		var tex : h3d.mat.Texture = shader.tex;
+		gl.activeTexture(GL.TEXTURE0);
+		gl.bindTexture(GL.TEXTURE_2D, tex.t);
+		var flags = TFILTERS[Type.enumIndex(tex.mipMap)][Type.enumIndex(tex.filter)];
+		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
+		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
+		gl.uniform1i(gl.getUniformLocation(shader.program, "tex"), 0);
+		
 		return true;
 	}
 	
 	override function selectBuffer( v : VertexBuffer ) {
 		var stride : Int = untyped v.stride;
 		gl.bindBuffer(GL.ARRAY_BUFFER, v);
-		gl.vertexAttribPointer(0, 3, GL.FLOAT, false, stride * 4, 0);
-		//gl.vertexAttribPointer(1, 2, GL.FLOAT, false, stride * 4, 3 * 4);
+		gl.vertexAttribPointer(1, 3, GL.FLOAT, false, stride * 4, 0);
+		gl.vertexAttribPointer(0, 2, GL.FLOAT, false, stride * 4, 3 * 4);
 	}
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
@@ -184,4 +200,13 @@ class WebglDriver extends Driver {
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
 		haxe.Timer.delay(onCreate.bind(false), 1);
 	}
+	
+	static var TFILTERS = [
+		[[GL.NEAREST,GL.NEAREST],[GL.LINEAR,GL.LINEAR]],
+		[[GL.NEAREST,GL.NEAREST_MIPMAP_NEAREST],[GL.LINEAR,GL.LINEAR_MIPMAP_NEAREST]],
+		[[GL.NEAREST,GL.NEAREST_MIPMAP_LINEAR],[GL.LINEAR,GL.LINEAR_MIPMAP_LINEAR]],
+	];
+	
 }
+
+#end

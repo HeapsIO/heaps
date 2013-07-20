@@ -154,24 +154,27 @@ private class MeshShader extends h3d.impl.Shader {
 	static var VERTEX = "
 	
 		attribute vec3 pos;
-		//attribute vec2 uv;
+		attribute vec2 uv;
 
 		uniform mat4 mpos;
 		uniform mat4 mproj;
 		
-		//varying lowp vec2 tuv;
+		varying lowp vec2 tuv;
 
 		void main(void) {
 			gl_Position = mproj * mpos * vec4(pos, 1.0);
-			//tuv = uv;
+			tuv = uv;
 		}
 
 	";
 	
 	static var FRAGMENT = "
 	
+		varying lowp vec2 tuv;
+		uniform sampler2D tex;
+	
 		void main(void) {
-			gl_FragColor = vec4(1.0, 0, 0, 1.0);
+			gl_FragColor = texture2D(tex, tuv);
 		}
 			
 	";

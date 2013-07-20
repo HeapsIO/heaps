@@ -17,6 +17,15 @@ abstract BitmapRes(String) {
 			var png = new format.png.Reader(new haxe.io.BytesInput(res)).read();
 			var pngBytes = format.png.Tools.extract32(png);
 			var pngHeader = format.png.Tools.getHeader(png);
+			// converts BGRA to RGBA
+			var pos = 0;
+			for( i in 0...pngHeader.width * pngHeader.height ) {
+				var b = pngBytes.get(pos);
+				var r = pngBytes.get(pos + 2);
+				pngBytes.set(pos, r);
+				pngBytes.set(pos + 2, b);
+				pos += 4;
+			}
 			var tex = engine.mem.allocTexture(pngHeader.width, pngHeader.height);
 			tex.uploadBytes(pngBytes);
 			return tex;
@@ -25,6 +34,21 @@ abstract BitmapRes(String) {
 		}
 	}
 }
+
+#elseif flash
+
+abstract BitmapRes(Class<flash.display.BitmapData>) {
+	public function new( cl ) {
+		this = cl;
+	}
+	public function toTexture() {
+		var bmp = Type.createInstance(this, [0, 0]);
+		var tex = h3d.mat.Texture.fromBitmap(hxd.BitmapData.fromNative(bmp));
+		bmp.dispose();
+		return tex;
+	}
+}
+		
 #end
 
 
@@ -37,7 +61,19 @@ class Resource {
 			switch( ext ) {
 			case "png", "jpg":
 				if( Context.defined("flash") ) {
-					throw "TODO";
+					var className = "I_" + StringTools.urlEncode(path.split(".").join("_")).split("%").join("_").split(" ").join("_");
+					var pos = Context.currentPos();
+					Context.defineType( {
+						pos : pos,
+						params : [],
+						pack : ["res"],
+						name : className,
+						meta : [ { name : ":bitmap", params : [ { expr : EConst(CString(path)), pos : pos } ], pos : pos } ],
+						kind : TDClass({ pack : ["flash","display"], name : "BitmapData", params : [] }),
+						isExtern : false,
+						fields : [],
+					});
+					return macro new hxd.Resource.BitmapRes(res.$className);
 				} else if( Context.defined("js") ) {
 					Context.addResource(fileName, sys.io.File.getBytes(path));
 					return macro new hxd.Resource.BitmapRes($v{fileName});
