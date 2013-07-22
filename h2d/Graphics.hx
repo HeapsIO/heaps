@@ -99,6 +99,7 @@ class Graphics extends Drawable {
 				content.addIndex(p.id);
 				
 		prev = [];
+		content.dispose(); // add to content
 	}
 	
 	public function beginFill( rgba : Int = 0 ) {
