@@ -14,7 +14,7 @@ private class InnerIterator {
 	public inline function hasNext() {
 		return pos < len;
 	}
-	public inline function next() {
+	public inline function next() : Int {
 		return b[pos++];
 	}
 }
