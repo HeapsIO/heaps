@@ -19,13 +19,8 @@ class Demo {
 		tf.textColor = 0xFFFFFF;
 		tf.dropShadow = { dx : 2, dy : 2, color : 0xFF0000, alpha : 0.5 };
 		tf.text = "Hello h2d !";
-		flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, update);
 		
-		var b = new flash.display.BitmapData(64, 64, true, 0);
-		b.perlinNoise(64, 64, 3, 42, true, true, 7);
-		var tile = h2d.Tile.fromBitmap(b);
-		b.dispose();
-		
+		var tile = hxd.Resource.embed("texture.png").toTile();
 		spr = new h2d.Sprite(scene);
 		spr.x = engine.width >> 1;
 		spr.y = engine.height >> 1;
@@ -35,11 +30,12 @@ class Demo {
 			bmp.x = Math.cos(i * Math.PI / 8) * 100 - (tile.width>>1);
 			bmp.y = Math.sin(i * Math.PI / 8) * 100 - (tile.height>>1);
 			bmp.alpha = 0.5;
-			bmp.blendMode = Add;
 		}
+		
+		hxd.System.setLoop(update);
 	}
 	
-	function update(_) {
+	function update() {
 		spr.rotation += 0.01;
 		engine.render(scene);
 	}

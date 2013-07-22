@@ -9,8 +9,6 @@ enum Cursor {
 
 class System {
 	
-	#if !macro
-
 	public static var width(get,never) : Int;
 	public static var height(get,never) : Int;
 	public static var isTouch(get,never) : Bool;
@@ -164,13 +162,5 @@ class System {
 	#else
 
 	#end
-	#end
-	
-	public static macro function getFileContent( file : String ) {
-		var file = haxe.macro.Context.resolvePath(file);
-		var m = haxe.macro.Context.getLocalClass().get().module;
-		haxe.macro.Context.registerModuleDependency(m, file);
-		return macro $v{sys.io.File.getContent(file)};
-	}
 	
 }

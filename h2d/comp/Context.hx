@@ -36,7 +36,7 @@ class Context {
 
 	static var FONTS = new Map<String,h2d.Font>();
 	
-	public static var DEFAULT_CSS = hxd.System.getFileContent("h2d/css/default.css");
+	public static var DEFAULT_CSS = hxd.Resource.getFileContent("h2d/css/default.css");
 	
 	static var DEF = null;
 	public static function getDefaultCss() {

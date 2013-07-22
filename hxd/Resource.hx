@@ -8,7 +8,7 @@ abstract BitmapRes(String) {
 	public function new( resourceName : String ) {
 		this = resourceName;
 	}
-	public function toTexture() {
+	public function toTexture() : h3d.mat.Texture {
 		var engine = h3d.Engine.getCurrent();
 		var res = haxe.Resource.getBytes(this);
 		if( res == null ) throw "Missing resource " + this;
@@ -30,8 +30,13 @@ abstract BitmapRes(String) {
 			tex.uploadBytes(pngBytes);
 			return tex;
 		} else {
+			// need JPG support
 			throw "TODO";
 		}
+	}
+	public function toTile() : h2d.Tile {
+		throw "TODO";
+		return null;
 	}
 }
 
@@ -41,11 +46,38 @@ abstract BitmapRes(Class<flash.display.BitmapData>) {
 	public function new( cl ) {
 		this = cl;
 	}
-	public function toTexture() {
+	
+	function makeTexture( bmp : flash.display.BitmapData) {
+		var iw = 1, ih = 1;
+		while( iw < bmp.width ) iw <<= 1;
+		while( ih < bmp.height ) ih <<= 1;
+		var tex;
+		if( iw == bmp.width && ih == bmp.height )
+			tex = h3d.mat.Texture.fromBitmap(hxd.BitmapData.fromNative(bmp));
+		else {
+			var bmp2 = new flash.display.BitmapData(iw, ih);
+			bmp2.copyPixels(bmp, bmp.rect, new flash.geom.Point());
+			tex = h3d.mat.Texture.fromBitmap(hxd.BitmapData.fromNative(bmp2));
+			bmp2.dispose();
+		}
+		return tex;
+	}
+	
+	public function toTexture() : h3d.mat.Texture {
 		var bmp = Type.createInstance(this, [0, 0]);
-		var tex = h3d.mat.Texture.fromBitmap(hxd.BitmapData.fromNative(bmp));
+		var tex = makeTexture(bmp);
 		bmp.dispose();
 		return tex;
+	}
+	public function toTile() : h2d.Tile {
+		var bmp = Type.createInstance(this, [0, 0]);
+		var w = bmp.width, h = bmp.height;
+		var tex = makeTexture(bmp);
+		bmp.dispose();
+		var t = h2d.Tile.fromTexture(tex);
+		if( t.width != w || t.height != h )
+			t = t.sub(0, 0, w, h);
+		return t;
 	}
 }
 		
@@ -86,6 +118,13 @@ class Resource {
 			Context.error(msg, Context.currentPos());
 			return macro null;
 		}
+	}
+
+	public static macro function getFileContent( file : String ) {
+		var file = haxe.macro.Context.resolvePath(file);
+		var m = haxe.macro.Context.getLocalClass().get().module;
+		haxe.macro.Context.registerModuleDependency(m, file);
+		return macro $v{sys.io.File.getContent(file)};
 	}
 	
 }

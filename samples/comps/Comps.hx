@@ -13,9 +13,9 @@ class Comps {
 	}
 	
 	function init() {
-		h3d.System.setLoop(update);
+		hxd.System.setLoop(update);
 		scene = new h2d.Scene();
-		var document = h2d.comp.Parser.fromHtml(h3d.System.getFileContent("components.html"),{ fmt : h3d.FMath.fmt });
+		var document = h2d.comp.Parser.fromHtml(hxd.Resource.getFileContent("components.html"),{ fmt : h3d.FMath.fmt });
 		scene.addChild(document);
 		engine.onResized = function() document.setStyle(null);
 	}
