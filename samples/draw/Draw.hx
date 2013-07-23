@@ -14,15 +14,17 @@ class Draw {
 		scene = new h2d.Scene();
 		
 		var g = new h2d.Graphics(scene);
-		g.beginFill(0xFFFF0000);
+		g.beginFill(0xFF0000);
 		g.drawRect(10, 10, 100, 100);
 		g.addHole();
 		g.drawRect(20, 20, 80, 80);
-		g.beginFill(0x8000FF00);
+		g.beginFill(0x00FF00, 0.5);
+		g.lineStyle(1, 0xFF00FF);
 		g.drawCircle(100, 100, 30);
 		g.endFill();
 		
 		hxd.System.setLoop(update);
+		
 	}
 	
 	function update() {
