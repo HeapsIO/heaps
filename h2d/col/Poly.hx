@@ -19,6 +19,16 @@ class Poly {
 		}
 		return true;
 	}
+	
+	public function calculateArea() {
+		var s = 0.;
+		for( i in 0...points.length ) {
+			var p = points[i];
+			var n = points[(i + 1) % points.length];
+			s += p.y * n.x - p.x * n.y;
+		}
+		return s * 0.5;
+	}
 
 	public function getSegments() {
 		if( segments != null )
