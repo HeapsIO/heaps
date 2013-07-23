@@ -24,16 +24,12 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	var tmp : hxd.FloatBuffer;
 	var index : hxd.IndexBuffer;
 	
+	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.impl.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.impl.Indexes }>;
+	
 	public function new() {
-		reset();
+		buffers = [];
 	}
 
-	override public function triCount() {
-		if( indexes == null )
-			return Std.int(index.length / 3);
-		return Std.int(indexes.count / 3);
-	}
-	
 	public inline function addIndex(i) {
 		index.push(i);
 	}
@@ -49,21 +45,49 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		tmp.push(a);
 	}
 	
-	override function alloc( engine : h3d.Engine ) {
-		if( tmp == null ) reset();
-		buffer = engine.mem.allocVector(tmp, 8, 4);
-		indexes = engine.mem.allocIndex(index);
-	}
-	
-	public function reset() {
+	public function next() {
+		var nvect = tmp.length >> 3;
+		if( nvect < 1 << 15 )
+			return false;
+		buffers.push( { buf : tmp, idx : index, vbuf : null, ibuf : null } );
 		tmp = new hxd.FloatBuffer();
 		index = new hxd.IndexBuffer();
-		if( buffer != null ) {
-			buffer.dispose();
-			indexes.dispose();
+		super.dispose();
+		return true;
+	}
+	
+	override function alloc( engine : h3d.Engine ) {
+		buffer = engine.mem.allocVector(tmp, 8, 0);
+		indexes = engine.mem.allocIndex(index);
+		for( b in buffers ) {
+			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = engine.mem.allocVector(b.buf, 8, 0);
+			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = engine.mem.allocIndex(b.idx);
 		}
-		buffer = null;
-		indexes = null;
+	}
+	
+	override function render( engine : h3d.Engine ) {
+		if( buffer == null || buffer.isDisposed() ) alloc(engine);
+		for( b in buffers )
+			engine.renderIndexed(b.vbuf, b.ibuf);
+		super.render(engine);
+	}
+	
+	override function dispose() {
+		for( b in buffers ) {
+			if( b.vbuf != null ) b.vbuf.dispose();
+			if( b.ibuf != null ) b.ibuf.dispose();
+			b.vbuf = null;
+			b.ibuf = null;
+		}
+		super.dispose();
+	}
+	
+	
+	public function reset() {
+		dispose();
+		tmp = new hxd.FloatBuffer();
+		index = new hxd.IndexBuffer();
+		buffers = [];
 	}
 	
 }
@@ -154,7 +178,8 @@ class Graphics extends Drawable {
 			p = next;
 		}
 		linePts = [];
-		content.dispose();
+		if( content.next() )
+			pindex = 0;
 	}
 	
 	function flushFill() {
@@ -186,7 +211,8 @@ class Graphics extends Drawable {
 		}
 				
 		prev = [];
-		content.dispose();
+		if( content.next() )
+			pindex = 0;
 	}
 	
 	function flush() {
