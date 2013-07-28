@@ -7,18 +7,20 @@ class Demo {
 	function new() {
 		engine = new h3d.Engine();
 		engine.onReady = init;
-		engine.backgroundColor = 0;
+		engine.backgroundColor = 0xFF000000;
 		engine.init();
 	}
 	
 	function init() {
 		scene = new h2d.Scene();
 		
+		#if flash
 		var font = new h2d.Font("Arial", 16);
 		var tf = new h2d.Text(font, scene);
 		tf.textColor = 0xFFFFFF;
 		tf.dropShadow = { dx : 2, dy : 2, color : 0xFF0000, alpha : 0.5 };
 		tf.text = "Hello h2d !";
+		#end
 		
 		var tile = hxd.Resource.embed("texture.png").toTile();
 		spr = new h2d.Sprite(scene);

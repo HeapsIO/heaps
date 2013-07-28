@@ -13,15 +13,18 @@ class WebglDriver extends Driver {
 	
 	var curAttribs : Int;
 	var curShader : Shader.ShaderInstance;
+	var curMatBits : Int;
 	
 	public function new() {
+		curAttribs = 0;
 		canvas = cast js.Browser.document.getElementById("webgl");
 		if( canvas == null ) throw "Canvas #webgl not found";
 		gl = canvas.getContextWebGL();
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
-		gl.enable(GL.DEPTH_TEST);
+		curMatBits = -1;
+		selectMaterial(0);
 	}
 	
 	override function reset() {
@@ -30,8 +33,44 @@ class WebglDriver extends Driver {
 	}
 	
 	override function selectMaterial( mbits : Int ) {
-		gl.depthFunc(GL.LESS);
-		gl.cullFace(GL.BACK);
+		var diff = curMatBits ^ mbits;
+		if( diff == 0 )
+			return;
+		if( diff & 3 != 0 ) {
+			if( mbits & 3 == 0 )
+				gl.disable(GL.CULL_FACE);
+			else {
+				if( curMatBits & 3 == 0 ) gl.enable(GL.CULL_FACE);
+				gl.cullFace(FACES[mbits&3]);
+			}
+		}
+		if( diff & (0xFF << 6) != 0 ) {
+			var src = (mbits >> 6) & 15;
+			var dst = (mbits >> 10) & 15;
+			if( src == 0 && dst == 1 )
+				gl.disable(GL.BLEND);
+			else {
+				if( curMatBits < 0 || (curMatBits >> 6) & 0xFF == 0x10 ) gl.enable(GL.BLEND);
+				gl.blendFunc(BLEND[src], BLEND[dst]);
+			}
+		}
+	
+		if( diff & (15 << 2) != 0 ) {
+			var write = (mbits >> 2) & 1 == 1;
+			if( curMatBits < 0 || diff & 4 != 0 ) gl.depthMask(write);
+			var cmp = (mbits >> 3) & 7;
+			if( cmp == 0 )
+				gl.disable(GL.DEPTH_TEST);
+			else {
+				if( curMatBits < 0 || (curMatBits >> 3) & 7 == 0 ) gl.enable(GL.DEPTH_TEST);
+				gl.depthFunc(COMPARE[cmp]);
+			}
+		}
+			
+		if( diff & (15 << 14) != 0 )
+			gl.colorMask((mbits >> 14) & 1 != 0, (mbits >> 14) & 2 != 0, (mbits >> 14) & 4 != 0, (mbits >> 14) & 8 != 0);
+			
+		curMatBits = mbits;
 	}
 	
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
@@ -166,11 +205,16 @@ class WebglDriver extends Driver {
 		function compileShader(name, type) {
 			var code = Reflect.field(cl, name);
 			if( code == null ) throw "Missing " + Type.getClassName(cl) + "." + name + " shader source";
+			code = StringTools.trim(code);
 			var s = gl.createShader(type);
 			gl.shaderSource(s, code);
 			gl.compileShader(s);
-			if( !gl.getShaderParameter(s, GL.COMPILE_STATUS) )
-				throw "An error occurred compiling the shaders: " + gl.getShaderInfoLog(s);
+			if( !gl.getShaderParameter(s, GL.COMPILE_STATUS) ) {
+				var log = gl.getShaderInfoLog(s);
+				var line = code.split("\n")[Std.parseInt(log.substr(9)) - 1];
+				if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
+				throw "An error occurred compiling the shaders: " + log + line;
+			}
 			return s;
 		}
 		var vs = compileShader("VERTEX", GL.VERTEX_SHADER);
@@ -265,6 +309,17 @@ class WebglDriver extends Driver {
 				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
 				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
 				gl.uniform1i(u.loc, u.index);
+			case Float:
+				gl.uniform1f(u.loc, val);
+			case Vec2:
+				var v : h3d.Vector = val;
+				gl.uniform2f(u.loc, v.x, v.y);
+			case Vec3:
+				var v : h3d.Vector = val;
+				gl.uniform3f(u.loc, v.x, v.y, v.z);
+			case Vec4:
+				var v : h3d.Vector = val;
+				gl.uniform4f(u.loc, v.x, v.y, v.z, v.w);
 			default:
 				throw "Unsupported uniform " + u.type;
 			}
@@ -306,6 +361,42 @@ class WebglDriver extends Driver {
 		[[GL.NEAREST,GL.NEAREST_MIPMAP_LINEAR],[GL.LINEAR,GL.LINEAR_MIPMAP_LINEAR]],
 	];
 	
+	static var FACES = [
+		0,
+		GL.FRONT, // front/back reversed wrt stage3d
+		GL.BACK,
+		GL.FRONT_AND_BACK,
+	];
+	
+	static var BLEND = [
+		GL.ZERO,
+		GL.ONE,
+		GL.SRC_ALPHA,
+		GL.SRC_COLOR,
+		GL.DST_ALPHA,
+		GL.DST_COLOR,
+		GL.ONE_MINUS_SRC_ALPHA,
+		GL.ONE_MINUS_SRC_COLOR,
+		GL.ONE_MINUS_DST_ALPHA,
+		GL.ONE_MINUS_DST_COLOR,
+		GL.CONSTANT_COLOR,
+		GL.CONSTANT_ALPHA,
+		GL.ONE_MINUS_CONSTANT_COLOR,
+		GL.ONE_MINUS_CONSTANT_ALPHA,
+		GL.SRC_ALPHA_SATURATE,
+	];
+	
+	static var COMPARE = [
+		GL.ALWAYS,
+		GL.NEVER,
+		GL.EQUAL,
+		GL.NOTEQUAL,
+		GL.GREATER,
+		GL.GEQUAL,
+		GL.LESS,
+		GL.LEQUAL,
+	];
+
 }
 
 #end

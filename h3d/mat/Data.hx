@@ -18,6 +18,12 @@ enum Blend {
 	OneMinusSrcColor;
 	OneMinusDstAlpha;
 	OneMinusDstColor;
+	// only supported on WebGL
+	ConstantColor;
+	ConstantAlpha;
+	OneMinusConstantColor;
+	OneMinusConstantAlpha;
+	SrcAlphaSaturate;
 }
 
 enum Compare {

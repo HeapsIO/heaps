@@ -20,12 +20,12 @@ private class DrawableShader extends h3d.impl.Shader {
 		var skew : Float;
 		var zValue : Float;
 
-		function vertex( size : Float3, mat1 : Float3, mat2 : Float3 ) {
+		function vertex( size : Float3, matA : Float3, matB : Float3 ) {
 			var tmp : Float4;
 			var spos = input.pos.xyw;
 			if( size != null ) spos *= size;
-			tmp.x = spos.dp3(mat1);
-			tmp.y = spos.dp3(mat2);
+			tmp.x = spos.dp3(matA);
+			tmp.y = spos.dp3(matB);
 			tmp.z = zValue;
 			tmp.w = skew != null ? 1 - skew * input.pos.y : 1;
 			out = tmp;
@@ -74,6 +74,50 @@ private class DrawableShader extends h3d.impl.Shader {
 
 
 	}
+	
+	#elseif js
+	
+	static var VERTEX = "
+	
+		attribute vec2 pos;
+		attribute vec2 uv;
+
+		uniform vec3 size;
+		uniform vec3 matA;
+		uniform vec3 matB;
+		uniform lowp float zValue;
+		
+		varying lowp vec2 tuv;
+
+		void main(void) {
+			vec3 spos = vec3(pos.xy,1.0) * size;
+			vec4 tmp;
+			tmp.x = dot(spos,matA);
+			tmp.y = dot(spos,matB);
+			tmp.z = zValue;
+			tmp.w = 1.;
+			gl_Position = tmp;
+			tuv = uv;
+		}
+
+	";
+	
+	static var FRAGMENT = "
+	
+		varying lowp vec2 tuv;
+		uniform sampler2D tex;
+		
+		const bool hasAlpha = true;
+		uniform lowp float alpha;
+	
+		void main(void) {
+			lowp vec4 col = texture2D(tex, tuv);
+			if( hasAlpha ) col.w *= alpha;
+			gl_FragColor = col;
+		}
+			
+	";
+	
 	#end
 }
 
@@ -274,16 +318,16 @@ class Drawable extends Sprite {
 		var cm = writeAlpha ? 15 : 7;
 		if( mat.colorMask != cm ) mat.colorMask = cm;
 		
-		var tmp = core.tmpMat1;
+		var tmp = core.tmpMatA;
 		tmp.x = matA;
 		tmp.y = matC;
 		tmp.z = absX + tile.dx * matA + tile.dy * matC;
-		shader.mat1 = tmp;
-		var tmp = core.tmpMat2;
+		shader.matA = tmp;
+		var tmp = core.tmpMatB;
 		tmp.x = matB;
 		tmp.y = matD;
 		tmp.z = absY + tile.dx * matB + tile.dy * matD;
-		shader.mat2 = tmp;
+		shader.matB = tmp;
 		shader.tex = tile.getTexture();
 		mat.shader = shader;
 		engine.selectMaterial(mat);

@@ -2,8 +2,8 @@ package h2d;
 
 private class CoreObjects  {
 	
-	public var tmpMat1 : h3d.Vector;
-	public var tmpMat2 : h3d.Vector;
+	public var tmpMatA : h3d.Vector;
+	public var tmpMatB : h3d.Vector;
 	public var tmpSize : h3d.Vector;
 	public var tmpUVPos : h3d.Vector;
 	public var tmpUVScale : h3d.Vector;
@@ -15,8 +15,8 @@ private class CoreObjects  {
 	var emptyTexture : h3d.mat.Texture;
 	
 	public function new() {
-		tmpMat1 = new h3d.Vector();
-		tmpMat2 = new h3d.Vector();
+		tmpMatA = new h3d.Vector();
+		tmpMatB = new h3d.Vector();
 		tmpColor = new h3d.Vector();
 		tmpSize = new h3d.Vector();
 		tmpUVPos = new h3d.Vector();

@@ -35,8 +35,7 @@ abstract BitmapRes(String) {
 		}
 	}
 	public function toTile() : h2d.Tile {
-		throw "TODO";
-		return null;
+		return h2d.Tile.fromTexture(toTexture());
 	}
 }
 
