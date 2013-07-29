@@ -1,7 +1,8 @@
 package hxd;
 
 class Key {
-	public static inline var BACK 		= 8;
+	
+	public static inline var BACKSPACE	= 8;
 	public static inline var TAB		= 9;
 	public static inline var ENTER		= 13;
 	public static inline var SHIFT		= 16;
@@ -24,6 +25,17 @@ class Key {
 	public static inline var NUMPAD_0	= 96;
 	public static inline var A			= 65;
 	public static inline var F1			= 112;
+	public static inline var F2			= 113;
+	public static inline var F3			= 114;
+	public static inline var F4			= 115;
+	public static inline var F5			= 116;
+	public static inline var F6			= 117;
+	public static inline var F7			= 118;
+	public static inline var F8			= 119;
+	public static inline var F9			= 120;
+	public static inline var F10		= 121;
+	public static inline var F11		= 122;
+	public static inline var F12		= 123;
 	
 	public static inline var NUMPAD_MULT = 106;
 	public static inline var NUMPAD_ADD	= 107;
