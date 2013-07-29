@@ -1,4 +1,4 @@
-package h2d;
+package hxd;
 
 class Key {
 	public static inline var BACK 		= 8;
