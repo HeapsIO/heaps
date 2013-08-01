@@ -4,8 +4,13 @@ class Point
 {
 	public var id:Int;
 
+	#if fastPoly2tri
+	public var x:Int;
+	public var y:Int;
+	#else
 	public var x:Float;
 	public var y:Float;
+	#end
 
 	/// The edges this point constitutes an upper ending point
 	#if haxe3
@@ -33,9 +38,13 @@ class Point
 
 
 
-	public function equals(that:Point):Bool
+	public inline function equals(that:Point):Bool
 	{
+		#if fastPoly2Tri
+		return this == that;
+		#else
 		return (this.x == that.x) && (this.y == that.y);
+		#end
 	}
 
 	public static function sortPoints(points:Array<Point>)
@@ -45,7 +54,7 @@ class Point
 
 	public static function cmpPoints(l:Point,r:Point)
 	{
-		var ret:Float = l.y - r.y;
+		var ret = l.y - r.y;
 		if (ret == 0) ret = l.x - r.x;
 		if (ret <  0) return -1;
 		if (ret >  0) return 1;

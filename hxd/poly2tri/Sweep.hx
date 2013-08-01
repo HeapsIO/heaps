@@ -342,9 +342,9 @@ class Sweep
 	}
 
 
-	public function isShallow(node:Node):Bool
+	public inline function isShallow(node:Node):Bool
 	{
-		var height:Float = ( (this.context.basin.left_highest)
+		var height = ( (this.context.basin.left_highest)
 			? this.context.basin.left_node.point.y - node.point.y
 			: this.context.basin.right_node.point.y - node.point.y
 		);

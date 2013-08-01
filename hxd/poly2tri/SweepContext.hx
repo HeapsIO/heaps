@@ -94,6 +94,11 @@ class SweepContext
 
 		var dx = Constants.kAlpha * (xmax - xmin);
 		var dy = Constants.kAlpha * (ymax - ymin);
+		
+		#if fastPoly2tri
+		var dx = Math.ceil(dx);
+		var dy = Math.ceil(dy);
+		#end
 
 		this.head = new Point(xmax + dx, ymin - dy);
 		this.tail = new Point(xmin - dy, ymin - dy);

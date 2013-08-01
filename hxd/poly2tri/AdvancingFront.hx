@@ -12,7 +12,7 @@ class AdvancingFront
 		this.tail = tail;
 	}
 
-	public function locateNode(x:Float):Node
+	public function locateNode(x:Constants.Unit):Node
 	{
 		var node:Node = this.search_node;
 
@@ -44,10 +44,10 @@ class AdvancingFront
 
 	public function locatePoint(point:Point):Node
 	{
-		var px:Float = point.x;
+		var px = point.x;
 		//var node:* = this.FindSearchNode(px);
 		var node:Node = this.search_node;
-		var nx:Float = node.point.x;
+		var nx = node.point.x;
 
 		if (px == nx)
 		{

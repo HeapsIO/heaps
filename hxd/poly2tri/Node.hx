@@ -33,10 +33,10 @@ class Node
 		 * Where x = ax*bx + ay*by
 		 *       y = ax*by - ay*bx
 		 */
-		var ax:Float = this.next.point.x - this.point.x;
-		var ay:Float = this.next.point.y - this.point.y;
-		var bx:Float = this.prev.point.x - this.point.x;
-		var by:Float = this.prev.point.y - this.point.y;
+		var ax = this.next.point.x - this.point.x;
+		var ay = this.next.point.y - this.point.y;
+		var bx = this.prev.point.x - this.point.x;
+		var by = this.prev.point.y - this.point.y;
 		return Math.atan2(
 			ax * by - ay * bx,
 			ax * bx + ay * by

@@ -8,11 +8,15 @@ class Orientation
 
 	public static function orient2d(pa:Point, pb:Point, pc:Point):Int
 	{
-		var detleft:Float  = (pa.x - pc.x) * (pb.y - pc.y);
-		var detright:Float = (pa.y - pc.y) * (pb.x - pc.x);
-		var val:Float = detleft - detright;
+		var detleft  = (pa.x - pc.x) * (pb.y - pc.y);
+		var detright = (pa.y - pc.y) * (pb.x - pc.x);
+		var val = detleft - detright;
 
+		#if fastPoly2tri
+		if( val == 0 ) return COLLINEAR;
+		#else
 		if ((val > -Constants.EPSILON) && (val < Constants.EPSILON)) return Orientation.COLLINEAR;
+		#end
 		if (val > 0) return Orientation.CCW;
 		return Orientation.CW;
 	}

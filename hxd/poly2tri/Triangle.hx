@@ -147,45 +147,45 @@ class Triangle
 	inline static private var CW_OFFSET = 1;
 	inline static private var CCW_OFFSET = -1;
 
-	public function pointCW (p:Point):Point
+	public inline function pointCW (p:Point):Point
 	{
 		return this.points[getPointIndexOffset(p, CCW_OFFSET)];
 	}
 
-	public function pointCCW(p:Point):Point
+	public inline function pointCCW(p:Point):Point
 	{
 		return this.points[getPointIndexOffset(p, CW_OFFSET)];
 	}
 
-	public function neighborCW(p:Point):Triangle
+	public inline function neighborCW(p:Point):Triangle
 	{
 	 	return this.neighbors[getPointIndexOffset(p, CW_OFFSET)];
 	}
 	
-	public function neighborCCW(p:Point):Triangle
+	public inline function neighborCCW(p:Point):Triangle
 	{
 		return this.neighbors[getPointIndexOffset(p, CCW_OFFSET)];
 	}
 
-	public function getConstrainedEdgeCW(p:Point):Bool              { return this.constrained_edge[getPointIndexOffset(p, CW_OFFSET)]; }
-	public function setConstrainedEdgeCW(p:Point, ce:Bool):Bool  { return this.constrained_edge[getPointIndexOffset(p, CW_OFFSET)] = ce; }
+	public inline function getConstrainedEdgeCW(p:Point):Bool              { return this.constrained_edge[getPointIndexOffset(p, CW_OFFSET)]; }
+	public inline function setConstrainedEdgeCW(p:Point, ce:Bool):Bool  { return this.constrained_edge[getPointIndexOffset(p, CW_OFFSET)] = ce; }
 
-	public function getConstrainedEdgeCCW(p:Point):Bool             { return this.constrained_edge[getPointIndexOffset(p, CCW_OFFSET)]; }
-	public function setConstrainedEdgeCCW(p:Point, ce:Bool):Bool { return this.constrained_edge[getPointIndexOffset(p, CCW_OFFSET)] = ce; }
+	public inline function getConstrainedEdgeCCW(p:Point):Bool             { return this.constrained_edge[getPointIndexOffset(p, CCW_OFFSET)]; }
+	public inline function setConstrainedEdgeCCW(p:Point, ce:Bool):Bool { return this.constrained_edge[getPointIndexOffset(p, CCW_OFFSET)] = ce; }
 
-	public function getDelaunayEdgeCW(p:Point):Bool                 { return this.delaunay_edge[getPointIndexOffset(p, CW_OFFSET)]; }
-	public function setDelaunayEdgeCW(p:Point, e:Bool):Bool      { return this.delaunay_edge[getPointIndexOffset(p, CW_OFFSET)] = e; }
+	public inline function getDelaunayEdgeCW(p:Point):Bool                 { return this.delaunay_edge[getPointIndexOffset(p, CW_OFFSET)]; }
+	public inline function setDelaunayEdgeCW(p:Point, e:Bool):Bool      { return this.delaunay_edge[getPointIndexOffset(p, CW_OFFSET)] = e; }
 	
-	public function getDelaunayEdgeCCW(p:Point):Bool                { return this.delaunay_edge[getPointIndexOffset(p, CCW_OFFSET)]; }
-	public function setDelaunayEdgeCCW(p:Point, e:Bool):Bool     { return this.delaunay_edge[getPointIndexOffset(p, CCW_OFFSET)] = e; }
+	public inline function getDelaunayEdgeCCW(p:Point):Bool                { return this.delaunay_edge[getPointIndexOffset(p, CCW_OFFSET)]; }
+	public inline function setDelaunayEdgeCCW(p:Point, e:Bool):Bool     { return this.delaunay_edge[getPointIndexOffset(p, CCW_OFFSET)] = e; }
 
 
 	/**
 	 * The neighbor across to given point.
 	 */
-	public function neighborAcross(p:Point):Triangle { return this.neighbors[getPointIndexOffset(p, 0)]; }
+	public inline function neighborAcross(p:Point):Triangle { return this.neighbors[getPointIndexOffset(p, 0)]; }
 
-	public function oppositePoint(t:Triangle, p:Point):Point
+	public inline function oppositePoint(t:Triangle, p:Point):Point
 	{
 		return this.pointCW(t.pointCW(p));
 	}
@@ -227,14 +227,9 @@ class Triangle
 	 *
 	 * @param	p
 	 */
-	public function index(p:Point):Int
+	public inline function index(p:Point):Int
 	{
-		try {
-			return this.getPointIndexOffset(p, 0);
-		} catch (msg:String) {
-			trace(msg);
-		}
-		return -1;
+		return this.getPointIndexOffset(p, 0);
 	}
 
 
@@ -259,17 +254,7 @@ class Triangle
 	}
 
 
-	/**
-	 * Mark an edge of this triangle as constrained.<br>
-	 * This method takes either 1 parameter (an edge index or an Edge instance) or
-	 * 2 parameters (two Point instances defining the edge of the triangle).
-	 */
-	public function markConstrainedEdgeByIndex(index:Int)
-	{
-		this.constrained_edge[index] = true;
-	}
-
-	public function markConstrainedEdgeByEdge(edge:Edge)
+	public inline function markConstrainedEdgeByEdge(edge:Edge)
 	{
 		this.markConstrainedEdgeByPoints(edge.p, edge.q);
 	}
@@ -307,7 +292,13 @@ class Triangle
 		var index:Int = this.edgeIndex(ep, eq);
 		if (index == -1) return false;
 		
-		this.markConstrainedEdgeByIndex(index);
+		/**
+		 * Mark an edge of this triangle as constrained.<br>
+		 * This method takes either 1 parameter (an edge index or an Edge instance) or
+		 * 2 parameters (two Point instances defining the edge of the triangle).
+		 */
+		this.constrained_edge[index] = true;
+		
 		var that:Triangle = this.neighbors[index];
 		if (that != null) that.markConstrainedEdgeByPoints(ep, eq);
 		return true;
