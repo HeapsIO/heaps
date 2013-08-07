@@ -142,7 +142,7 @@ class Tile {
 	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?allocPos : h3d.impl.AllocPos ) {
 		var t = COLOR_CACHE.get(color);
 		if( t == null || t.isDisposed() ) {
-			t = h3d.Engine.getCurrent().mem.allocTexture(1, 1, allocPos);
+			t = h3d.Engine.getCurrent().mem.allocTexture(1, 1, false, allocPos);
 			var bmp = haxe.io.Bytes.alloc(4);
 			bmp.set(0, color & 0xFF);
 			bmp.set(1, (color >> 8) & 0xFF);
@@ -167,7 +167,7 @@ class Tile {
 			w <<= 1;
 		while( h < bmp.height )
 			h <<= 1;
-		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h, allocPos);
+		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h, false, allocPos);
 		var t = new Tile(tex, 0, 0, bmp.width, bmp.height);
 		t.upload(bmp);
 		return t;
@@ -182,7 +182,7 @@ class Tile {
 			w <<= 1;
 		while( h < bmp.height )
 			h <<= 1;
-		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h, allocPos);
+		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h, false, allocPos);
 		for( y in 0...Std.int(bmp.height / height) ) {
 			var a = [];
 			tl[y] = a;
