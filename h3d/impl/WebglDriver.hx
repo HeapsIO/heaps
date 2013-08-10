@@ -224,8 +224,10 @@ class WebglDriver extends Driver {
 		gl.attachShader(p, vs);
 		gl.attachShader(p, fs);
 		gl.linkProgram(p);
-		if( !gl.getProgramParameter(p, GL.LINK_STATUS) )
-			throw "Program linkage failure";
+		if( !gl.getProgramParameter(p, GL.LINK_STATUS) ) {
+			var log = gl.getProgramInfoLog(p);
+			throw "Program linkage failure: "+log;
+		}
 	
 		var inst = new Shader.ShaderInstance();
 			
