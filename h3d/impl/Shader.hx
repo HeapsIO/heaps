@@ -1,4 +1,7 @@
 package h3d.impl;
+#if macro
+import haxe.macro.Context;
+#end
 
 #if flash
 typedef Shader = hxsl.Shader;
@@ -31,7 +34,8 @@ class ShaderInstance {
 
 }
 
-class Shader implements Dynamic {
+@:autoBuild(h3d.impl.Shader.ShaderMacros.buildGLShader())
+class Shader {
 	
 	var instance : ShaderInstance;
 	
@@ -51,4 +55,58 @@ class Shader implements Dynamic {
 	}
 }
 
+#end
+
+#if macro
+class ShaderMacros {
+	
+	public static function buildGLShader() {
+		var pos = Context.getLocalClass().get().pos;
+		var fields = Context.getBuildFields();
+		var hasVertex = false, hasFragment = false;
+		var r_uni = ~/uniform[ \t]+((lowp|mediump|highp)[ \t]+)?([A-Za-z0-9_]+)[ \t]+([A-Za-z0-9_]+)/;
+		function addUniforms( code : String ) {
+			while( r_uni.match(code) ) {
+				var name = r_uni.matched(4);
+				var type = r_uni.matched(3);
+				code = r_uni.matchedRight();
+				var t = switch( type ) {
+				case "float": macro : Float;
+				case "vec2", "vec3", "vec4": macro : h3d.Vector;
+				case "mat3", "mat4": macro : h3d.Matrix;
+				case "sampler2D", "samplerCube": macro : h3d.mat.Texture;
+				default:
+					// most likely a struct, handle it manually
+					if( type.charCodeAt(0) >= 'A'.code && type.charCodeAt(0) <= 'Z'.code )
+						continue;
+					throw "Unsupported type " + type;
+				}
+				if( code.charCodeAt(0) == '['.code )
+					t = macro : Array<$t>;
+				fields.push( {
+					name : name,
+					kind : FVar(t),
+					pos : pos,
+					access : [APublic],
+				});
+			}
+		}
+		for( f in fields )
+			switch( [f.name, f.kind] ) {
+			case ["VERTEX", FVar(_,{ expr : EConst(CString(code)) }) ]:
+				hasVertex = true;
+				addUniforms(code);
+			case ["FRAGMENT", FVar(_,{ expr : EConst(CString(code)) })]:
+				hasFragment = true;
+				addUniforms(code);
+			default:
+			}
+		if( !hasVertex )
+			haxe.macro.Context.error("Missing VERTEX shader", pos);
+		if( !hasFragment )
+			haxe.macro.Context.error("Missing FRAGMENT shader", pos);
+		return fields;
+	}
+	
+}
 #end

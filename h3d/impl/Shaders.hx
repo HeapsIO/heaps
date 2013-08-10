@@ -19,6 +19,32 @@ class PointShader extends h3d.impl.Shader {
 			out = color;
 		}
 	}
+#elseif js
+
+	static var VERTEX = "
+		attribute vec2 pos;
+		varying mediump tuv;
+		uniform mat4 mproj;
+		uniform vec4 delta;
+		uniform vec2 size;
+		
+		void main(void) {
+			vec4 p = mproj * delta;
+			p.xy += pos.xy * size * p.z;
+			gl_Position = p;
+			tuv = pos;
+		}
+	";
+	static var FRAGMENT = "
+		varying mediump tuv;
+		uniform vec4 color;
+		
+		void main(void) {
+			if( 1 - dot(tuv, tuv) < 0 ) discard;
+			gl_FragColor = color;
+		}
+	";
+
 #end
 	
 }
@@ -46,6 +72,17 @@ class LineShader extends h3d.impl.Shader {
 			out = color;
 		}
 	}
+	
+#elseif js
+
+	public var mproj : Matrix;
+	public var start : Vector;
+	public var end : Vector;
+	public var color : Int;
+	
+	static var VERTEX = "TODO";
+	static var FRAGMENT = "TODO";
+	
 #end
 
 }

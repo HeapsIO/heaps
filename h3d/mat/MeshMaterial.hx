@@ -151,10 +151,18 @@ private class MeshShader extends h3d.impl.Shader {
 	}
 #else
 
+	public var maxSkinMatrixes : Int = 34;
 	public var hasVertexColor : Bool;
 	public var hasVertexColorAdd : Bool;
-	public var lightSystem(default,set) : LightSystem;
-
+	public var lightSystem(default, set) : LightSystem;
+	public var hasSkin : Bool;
+	public var hasZBias : Bool;
+	public var hasShadowMap : Bool;
+	public var killAlpha : Bool;
+	public var hasAlphaMap : Bool;
+	public var hasBlend : Bool;
+	public var hasGlow : Bool;
+	
 	var lights : {
 		ambient : h3d.Vector,
 		dirsDir : Array<h3d.Vector>,
@@ -181,12 +189,27 @@ private class MeshShader extends h3d.impl.Shader {
 		var cst = [];
 		if( hasVertexColor ) cst.push("#define hasVertexColor");
 		if( hasVertexColorAdd ) cst.push("#define hasVertexColorAdd");
+		if( fog != null ) cst.push("#define hasFog");
+		if( hasBlend ) cst.push("#define hasBlend");
+		if( hasShadowMap ) cst.push("#define hasShadowMap");
 		if( lightSystem != null ) {
 			cst.push("#define hasLightSystem");
 			cst.push("const int numDirLights = " + lightSystem.dirs.length+";");
 			cst.push("const int numPointLights = " + lightSystem.points.length+";");
 		}
-		if( hasVertexColorAdd || lightSystem != null ) cst.push("#define hasFragColor");
+		if( vertex ) {
+			if( mpos != null ) cst.push("#define hasPos");
+			if( hasSkin ) {
+				cst.push("#define hasSkin");
+				cst.push("const int maxSkinMatrixes = " + maxSkinMatrixes+";");
+			}
+			if( uvScale != null ) cst.push("#define hasUVScale");
+			if( uvDelta != null ) cst.push("#define hasUVDelta");
+			if( hasZBias ) cst.push("#define hasZBias");
+		} else {
+			if( killAlpha ) cst.push("#define killAlpha");
+			if( hasVertexColorAdd || lightSystem != null ) cst.push("#define hasFragColor");
+		}
 		return cst.join("\n");
 	}
 
@@ -195,8 +218,26 @@ private class MeshShader extends h3d.impl.Shader {
 		attribute vec3 pos;
 		attribute vec2 uv;
 		#if hasLightSystem
-		
 		attribute vec3 normal;
+		#end
+		#if hasVertexColor
+		attribute vec3 color;
+		#end
+		#if hasVertexColorAdd
+		attribute vec3 colorAdd;
+		#end
+		#if hasBlend
+		attribute float blending;
+		#end
+		#if hasSkin
+		uniform mat4 skinMatrixes[maxSkinMatrixes];
+		#end
+
+		uniform mat4 mpos;
+		uniform mat4 mproj;
+		uniform float zBias;
+		uniform vec2 uvScale;
+		uniform vec2 uvDelta;
 		
 		// we can't use Array of structures in GLSL
 		struct LightSystem {
@@ -208,44 +249,81 @@ private class MeshShader extends h3d.impl.Shader {
 			vec3 pointsAtt[numPointLights];
 		};
 		uniform LightSystem lights;
-		
-		#end
-		#if hasVertexColor
-		attribute vec3 color;
-		#end
-		#if hasVertexColorAdd
-		attribute vec3 colorAdd;
-		varying lowp vec3 acolor;
-		#end
+			
+		uniform mat4 shadowLightProj;
+		uniform mat4 shadowLightCenter;
 
-		#if hasFragColor
-		varying lowp vec3 tcolor;
-		#end
-
-		uniform mat4 mpos;
-		uniform mat4 mproj;
+		uniform vec4 fog;
 		
 		varying lowp vec2 tuv;
+		varying lowp vec3 tcolor;
+		varying lowp vec3 acolor;
+		varying mediump float talpha;
+		varying mediump float tblend;
+		varying mediump vec4 tshadowPos;
+		
+		uniform mat3 mposInv;
 
 		void main(void) {
-			vec4 tpos = mpos * vec4(pos,1.0);
-			gl_Position = mproj * tpos;
-			tuv = uv;
+			vec4 tpos = vec4(pos, 1.0);
+			#if hasSkin
+//				tpos.xyz = tpos * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)] + tpos * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)] + tpos * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)];
+			#elseif hasPos
+				tpos = mpos * tpos;
+			#end
+			vec4 ppos = mproj * tpos;
+			#if hasZBias
+				ppos.z += zBias;
+			#end
+			gl_Position = ppos;
+			vec2 t = uv;
+			#if hasUVScale
+				t *= uvScale;
+			#end
+			#if hasUVDelta
+				t += uvDelta;
+			#end
+			tuv = t;
 			#if hasLightSystem
-			vec3 n = mat3(mpos) * normal;
-			n = normalize(n);
-			vec3 col = lights.ambient;
-			for(int i = 0; i < numDirLights; i++ )
-				col += lights.dirsColor[i] * max(dot(n,-lights.dirsDir[i]),0.);
-			for(int i = 0; i < numPointLights; i++ ) {
-				vec3 d = tpos.xyz - lights.pointsPos[i];
-				float dist2 = dot(d,d);
-				float dist = sqrt(dist2);
-				col += lights.pointsColor[i] * (max(dot(n,d),0.) / dot(lights.pointsAtt[i],vec3(dist,dist2,dist2*dist)));
-			}
-			tcolor = col;
+				vec3 n = normal;
+				#if hasPos
+					n = mat3(mpos) * n;
+				#elseif hasSkin
+					//n = n * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)] + n * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)] + n * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)];
+					#if hasPos
+						n = mposInv * n;
+					#end
+				#end
+				n = normalize(n);
+				vec3 col = lights.ambient;
+				for(int i = 0; i < numDirLights; i++ )
+					col += lights.dirsColor[i] * max(dot(n,-lights.dirsDir[i]),0.);
+				for(int i = 0; i < numPointLights; i++ ) {
+					vec3 d = tpos.xyz - lights.pointsPos[i];
+					float dist2 = dot(d,d);
+					float dist = sqrt(dist2);
+					col += lights.pointsColor[i] * (max(dot(n,d),0.) / dot(lights.pointsAtt[i],vec3(dist,dist2,dist2*dist)));
+				}
+				#if hasVertexColor
+					tcolor = col * color;
+				#else
+					tcolor = col;
+				#end
 			#elseif hasVertexColor
-			tcolor = color;
+				tcolor = color;
+			#end
+			#if hasVertexColorAdd
+				acolor = colorAdd;
+			#end
+			#if hasFog
+				vec3 dist = tpos.xyz - fog.xyz;
+				talpha = (fog.w * dist.dot(dist).rsqrt()).min(1);
+			#end
+			#if hasBlend
+				tblend = blending;
+			#end
+			#if hasShadowMap
+				tshadowPos = shadowLightCenter * shadowLightProj * tpos;
 			#end
 		}
 
@@ -254,24 +332,79 @@ private class MeshShader extends h3d.impl.Shader {
 	static var FRAGMENT = "
 	
 		varying lowp vec2 tuv;
-		uniform sampler2D tex;
-
-		#if hasFragColor
 		varying lowp vec3 tcolor;
+		varying lowp vec3 acolor;
+		varying mediump float talpha;
+		varying mediump float tblend;
+		varying mediump vec4 tshadowPos;
+
+		uniform sampler2D tex;
+		uniform lowp vec3 colorAdd;
+		uniform lowp vec3 colorMul;
+		uniform mediump mat4 colorMatrix;
+		
+		uniform lowp float killAlphaThreshold;
+
+		#if hasAlphaMap
+		uniform sampler2D alphaMap;
+		#end
+		
+		#if hasBlend
+		uniform sampler2D blendTexture;
+		#end
+
+		#if hasGlow
+		uniform sampler2D glowTexture;
+		uniform float glowAmount;
+		#end
+
+		#if hasShadowMap
+		uniform sampler2D shadowTexture;
+		uniform vec4 shadowColor;
 		#end
 
 		void main(void) {
 			lowp vec4 c = texture2D(tex, tuv);
-			#if hasFragColor
-			c.rgb *= tcolor;
+			#if hasFog
+				c.a *= talpha;
+			#end
+			#if hasAlphaMap
+				c.a *= texture2D(alphaMap, tuv).b;
+			#end
+			#if killAlpha
+				if( c.a - killAlphaThreshold ) discard;
+			#end
+			#if hasBlend
+				c.rgb = c.rgb * (1 - tblend) + tblend * texture2D(blendTexture, tuv).rgb;
+			#end
+			#if hasColorAdd
+				c += colorAdd;
+			#end
+			#if hasColorMul
+				c *= colorMul;
+			#end
+			#if hasColorMatrix
+				c = colorMatrix * c;
 			#end
 			#if hasVertexColorAdd
-			c.rgb += acolor;
+				c.rgb += acolor;
+			#end
+			#if hasFragColor
+				c.rgb *= tcolor;
+			#end
+			#if hasShadowMap
+				// ESM filtering
+				mediump float shadow = exp( shadowColor.w * (tshadowPos.z - shadowTexture.get(tshadowPos.xy).dot([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)]))).sat();
+				c.rgb *= (1 - shadow) * shadowColor.rgb + shadow.xxx;
+			#end
+			#if hasGlow
+				c.rgb += texture2D(glowTexture,tuv).rgb * glowAmount;
 			#end
 			gl_FragColor = c;
 		}
-			
+
 	";
+
 
 #end
 	
@@ -361,6 +494,7 @@ class MeshMaterial extends Material {
 		Set the DXT compression access mode for all textures of this material.
 	**/
 	public function setDXTSupport( enable : Bool, alpha = false ) {
+		#if flash
 		if( !enable ) {
 			mshader.isDXT1 = false;
 			mshader.isDXT5 = false;
@@ -368,6 +502,9 @@ class MeshMaterial extends Material {
 			mshader.isDXT1 = !alpha;
 			mshader.isDXT5 = alpha;
 		}
+		#else
+		throw "Not implemented";
+		#end
 	}
 	
 	inline function get_uvScale() {
