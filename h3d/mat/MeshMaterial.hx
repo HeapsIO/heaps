@@ -89,10 +89,10 @@ private class MeshShader extends h3d.impl.Shader {
 			if( lightSystem != null ) {
 				// calculate normal
 				var n = input.normal;
-				if( mpos != null ) n *= mpos;
+				if( mpos != null ) n *= mpos; // WRONG : we should use m33 only
 				if( hasSkin ) {
 					n = n * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)] + n * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)] + n * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)];
-					if( mpos != null ) n = n * mposInv;
+					if( mpos != null ) n = n * mposInv; // should be the 3x3 part only
 				}
 				var col = lightSystem.ambient;
 				n = n.normalize();
@@ -151,10 +151,76 @@ private class MeshShader extends h3d.impl.Shader {
 	}
 #else
 
+	public var hasVertexColor : Bool;
+	public var hasVertexColorAdd : Bool;
+	public var lightSystem(default,set) : LightSystem;
+
+	var lights : {
+		ambient : h3d.Vector,
+		dirsDir : Array<h3d.Vector>,
+		dirsColor : Array<h3d.Vector>,
+		pointsPos : Array<h3d.Vector>,
+		pointsColor : Array<h3d.Vector>,
+		pointsAtt : Array<h3d.Vector>,
+	};
+	
+	function set_lightSystem(l) {
+		this.lightSystem = l;
+		lights = {
+			ambient : l.ambient,
+			dirsDir : [for( l in l.dirs ) l.dir],
+			dirsColor : [for( l in l.dirs ) l.color],
+			pointsPos : [for( p in l.points ) p.pos],
+			pointsColor : [for( p in l.points ) p.color],
+			pointsAtt : [for( p in l.points ) p.att],
+		};
+		return l;
+	}
+	
+	override function getConstants(vertex) {
+		var cst = [];
+		if( hasVertexColor ) cst.push("#define hasVertexColor");
+		if( hasVertexColorAdd ) cst.push("#define hasVertexColorAdd");
+		if( lightSystem != null ) {
+			cst.push("#define hasLightSystem");
+			cst.push("const int numDirLights = " + lightSystem.dirs.length+";");
+			cst.push("const int numPointLights = " + lightSystem.points.length+";");
+		}
+		if( hasVertexColorAdd || lightSystem != null ) cst.push("#define hasFragColor");
+		return cst.join("\n");
+	}
+
 	static var VERTEX = "
 	
 		attribute vec3 pos;
 		attribute vec2 uv;
+		#if hasLightSystem
+		
+		attribute vec3 normal;
+		
+		// we can't use Array of structures in GLSL
+		struct LightSystem {
+			vec3 ambient;
+			vec3 dirsDir[numDirLights];
+			vec3 dirsColor[numDirLights];
+			vec3 pointsPos[numPointLights];
+			vec3 pointsColor[numPointLights];
+			vec3 pointsAtt[numPointLights];
+		};
+		uniform LightSystem lights;
+		
+		#end
+		#if hasVertexColor
+		attribute vec3 color;
+		#end
+		#if hasVertexColorAdd
+		attribute vec3 colorAdd;
+		varying lowp vec3 acolor;
+		#end
+
+		#if hasFragColor
+		varying lowp vec3 tcolor;
+		#end
 
 		uniform mat4 mpos;
 		uniform mat4 mproj;
@@ -162,8 +228,25 @@ private class MeshShader extends h3d.impl.Shader {
 		varying lowp vec2 tuv;
 
 		void main(void) {
-			gl_Position = mproj * mpos * vec4(pos, 1.0);
+			vec4 tpos = mpos * vec4(pos,1.0);
+			gl_Position = mproj * tpos;
 			tuv = uv;
+			#if hasLightSystem
+			vec3 n = mat3(mpos) * normal;
+			n = normalize(n);
+			vec3 col = lights.ambient;
+			for(int i = 0; i < numDirLights; i++ )
+				col += lights.dirsColor[i] * max(dot(n,-lights.dirsDir[i]),0.);
+			for(int i = 0; i < numPointLights; i++ ) {
+				vec3 d = tpos.xyz - lights.pointsPos[i];
+				float dist2 = dot(d,d);
+				float dist = sqrt(dist2);
+				col += lights.pointsColor[i] * (max(dot(n,d),0.) / dot(lights.pointsAtt[i],vec3(dist,dist2,dist2*dist)));
+			}
+			tcolor = col;
+			#elseif hasVertexColor
+			tcolor = color;
+			#end
 		}
 
 	";
@@ -172,9 +255,20 @@ private class MeshShader extends h3d.impl.Shader {
 	
 		varying lowp vec2 tuv;
 		uniform sampler2D tex;
-	
+
+		#if hasFragColor
+		varying lowp vec3 tcolor;
+		#end
+
 		void main(void) {
-			gl_FragColor = texture2D(tex, tuv);
+			lowp vec4 c = texture2D(tex, tuv);
+			#if hasFragColor
+			c.rgb *= tcolor;
+			#end
+			#if hasVertexColorAdd
+			c.rgb += acolor;
+			#end
+			gl_FragColor = c;
 		}
 			
 	";

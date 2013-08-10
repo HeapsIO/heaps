@@ -196,16 +196,23 @@ class WebglDriver extends Driver {
 		case Mat2: 4;
 		case Mat3: 9;
 		case Mat4: 16;
-		case Tex2d, TexCube: throw "Unexpected " + t;
+		case Tex2d, TexCube, Struct(_), Index(_): throw "Unexpected " + t;
 		}
 	}
 	
 	function buildShaderInstance( shader : Shader ) {
 		var cl = Type.getClass(shader);
-		function compileShader(name, type) {
+		function compileShader(type) {
+			var vertex = type == GL.VERTEX_SHADER;
+			var name = vertex ? "VERTEX" : "FRAGMENT";
 			var code = Reflect.field(cl, name);
 			if( code == null ) throw "Missing " + Type.getClassName(cl) + "." + name + " shader source";
-			code = StringTools.trim(code);
+			var cst = shader.getConstants(vertex);
+			code = StringTools.trim(cst + code);
+			// replace haxe-like #if/#else/#end by GLSL ones
+			code = ~/#if ([A-Za-z0-9_]+)/g.replace(code, "#if defined($1)");
+			code = ~/#elseif ([A-Za-z0-9_]+)/g.replace(code, "#elif defined($1)");
+			code = code.split("#end").join("#endif");
 			var s = gl.createShader(type);
 			gl.shaderSource(s, code);
 			gl.compileShader(s);
@@ -217,8 +224,8 @@ class WebglDriver extends Driver {
 			}
 			return s;
 		}
-		var vs = compileShader("VERTEX", GL.VERTEX_SHADER);
-		var fs = compileShader("FRAGMENT", GL.FRAGMENT_SHADER);
+		var vs = compileShader(GL.VERTEX_SHADER);
+		var fs = compileShader(GL.FRAGMENT_SHADER);
 		
 		var p = gl.createProgram();
 		gl.attachShader(p, vs);
@@ -240,8 +247,28 @@ class WebglDriver extends Driver {
 			amap.set(inf.name, { index : k, inf : inf });
 		}
 		
+		
+		var code = gl.getShaderSource(vs);
+
+		// remove (and save) all #define's
+		var rdef = ~/#define ([A-Za-z0-9_]+)/;
+		var defs = new Map();
+		while( rdef.match(code) ) {
+			defs.set(rdef.matched(1), true);
+			code = rdef.matchedLeft() + rdef.matchedRight();
+		}
+		
+		// remove parts of the codes that are undefined
+		var rif = ~/#if defined\(([A-Za-z0-9_]+)\)([^#]+)#endif/;
+		while( rif.match(code) ) {
+			if( defs.get(rif.matched(1)) )
+				code = rif.matchedLeft() + rif.matched(2) + rif.matchedRight();
+			else
+				code = rif.matchedLeft() + rif.matchedRight();
+		}
+		
+		// extract attributes from code (so we know the offset and stride)
 		var r = ~/attribute[ \t\r\n]+([A-Za-z0-9_]+)[ \t\r\n]+([A-Za-z0-9_]+)/;
-		var code : String = Reflect.field(cl, "VERTEX");
 		var offset = 0;
 		while( r.match(code) ) {
 			var aname = r.matched(2);
@@ -255,23 +282,42 @@ class WebglDriver extends Driver {
 		}
 		inst.stride = offset;
 		
+		// list uniforms needed by shader
 		var nuni = gl.getProgramParameter(p, GL.ACTIVE_UNIFORMS);
 		inst.uniforms = [];
-		var texIndex = 0;
+		var texIndex = -1;
+		var r_array = ~/\[([0-9]+)\]$/;
 		for( k in 0...nuni ) {
 			var inf = gl.getActiveUniform(p, k);
+			if( inf.name.substr(0, 6) == "webgl_" )
+				continue; // skip native uniforms
 			var t = decodeTypeInt(inf.type);
-			inst.uniforms.push( {
-				name : inf.name,
-				type : t,
-				loc : gl.getUniformLocation(p, inf.name),
-				index : texIndex,
-			});
 			switch( t ) {
 			case Tex2d, TexCube:
 				texIndex++;
 			default:
 			}
+			var name = inf.name;
+			while( true ) {
+				if( r_array.match(name) ) {
+					name = r_array.matchedLeft();
+					t = Index(Std.parseInt(r_array.matched(1)), t);
+					continue;
+				}
+				var c = name.lastIndexOf(".");
+				if( c > 0 ) {
+					var field = name.substr(c + 1);
+					name = name.substr(0, c);
+					t = Struct(field, t);
+				}
+				break;
+			}
+			inst.uniforms.push( {
+				name : name,
+				type : t,
+				loc : gl.getUniformLocation(p, inf.name),
+				index : texIndex,
+			});
 		}
 			
 		inst.program = p;
@@ -299,35 +345,48 @@ class WebglDriver extends Driver {
 		for( u in curShader.uniforms ) {
 			var val : Dynamic = Reflect.field(shader, u.name);
 			if( val == null ) throw "Missing shader value " + u.name;
-			switch( u.type ) {
-			case Mat4:
-				var m : Matrix = val;
-				gl.uniformMatrix4fv(u.loc, false, new js.html.Float32Array(m.getFloats()));
-			case Tex2d:
-				var t : h3d.mat.Texture = val;
-				gl.activeTexture(GL.TEXTURE0 + u.index);
-				gl.bindTexture(GL.TEXTURE_2D, t.t);
-				var flags = TFILTERS[Type.enumIndex(t.mipMap)][Type.enumIndex(t.filter)];
-				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
-				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
-				gl.uniform1i(u.loc, u.index);
-			case Float:
-				gl.uniform1f(u.loc, val);
-			case Vec2:
-				var v : h3d.Vector = val;
-				gl.uniform2f(u.loc, v.x, v.y);
-			case Vec3:
-				var v : h3d.Vector = val;
-				gl.uniform3f(u.loc, v.x, v.y, v.z);
-			case Vec4:
-				var v : h3d.Vector = val;
-				gl.uniform4f(u.loc, v.x, v.y, v.z, v.w);
-			default:
-				throw "Unsupported uniform " + u.type;
-			}
+			setUniform(val, u, u.type);
 		}
 		
 		return change;
+	}
+	
+	function setUniform( val : Dynamic, u : Shader.Uniform, t : Shader.ShaderType ) {
+		switch( t ) {
+		case Mat4:
+			var m : Matrix = val;
+			gl.uniformMatrix4fv(u.loc, false, new js.html.Float32Array(m.getFloats()));
+		case Tex2d:
+			var t : h3d.mat.Texture = val;
+			gl.activeTexture(GL.TEXTURE0 + u.index);
+			gl.bindTexture(GL.TEXTURE_2D, t.t);
+			var flags = TFILTERS[Type.enumIndex(t.mipMap)][Type.enumIndex(t.filter)];
+			gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
+			gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
+			gl.uniform1i(u.loc, u.index);
+		case Float:
+			gl.uniform1f(u.loc, val);
+		case Vec2:
+			var v : h3d.Vector = val;
+			gl.uniform2f(u.loc, v.x, v.y);
+		case Vec3:
+			var v : h3d.Vector = val;
+			gl.uniform3f(u.loc, v.x, v.y, v.z);
+		case Vec4:
+			var v : h3d.Vector = val;
+			gl.uniform4f(u.loc, v.x, v.y, v.z, v.w);
+		case Struct(field, t):
+			var v = Reflect.field(val, field);
+			if( v == null ) throw "Missing shader field " + field;
+			setUniform(v, u, t);
+		case Index(index, t):
+			var v = val[index];
+			if( v == null ) throw "Missing shader index " + index;
+			setUniform(v, u, t);
+		default:
+			throw "Unsupported uniform " + u.type;
+		}
+		
 	}
 	
 	override function selectBuffer( v : VertexBuffer ) {
