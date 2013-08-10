@@ -1,4 +1,5 @@
 package h2d.comp;
+import hxd.Key;
 
 @:access(h2d.comp.Input.scene)
 class Input extends Component {
@@ -54,7 +55,7 @@ class Input extends Component {
 					value = value.substr(0, cursorPos) + value.substr(cursorPos + 1);
 					onChange(value);
 					return;
-				case Key.BACK:
+				case Key.BACKSPACE:
 					value = value.substr(0, cursorPos - 1) + value.substr(cursorPos);
 					cursorPos--;
 					onChange(value);
