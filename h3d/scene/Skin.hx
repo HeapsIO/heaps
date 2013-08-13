@@ -102,6 +102,11 @@ class Skin extends Mesh {
 			var m = currentAbsPose[j.index];
 			var mp = j.parent == null ? absPos : currentAbsPose[j.parent.index];
 			ctx.engine.line(mp._41, mp._42, mp._43, m._41, m._42, m._43, j.parent == null ? 0xFF0000FF : 0xFFFFFF00);
+			
+			var dz = new h3d.Vector(0, 0.01, 0);
+			dz.transform(m);
+			ctx.engine.line(m._41, m._42, m._43, dz.x, dz.y, dz.z, 0xFF00FF00);
+			
 			ctx.engine.point(m._41, m._42, m._43, j.bindIndex < 0 ? 0xFF0000FF : 0xFFFF0000);
 		}
 	}
