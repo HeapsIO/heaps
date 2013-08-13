@@ -11,6 +11,7 @@ typedef Props = {
 	showBones:Bool,
 	showBox:Bool,
 	slowDown:Bool,
+	loop:Bool,
 };
 typedef Camvars = {
 	x:Float,
@@ -87,7 +88,7 @@ class Viewer {
 		freeMove = false;
 		rightClick = false;
 		
-		props = { curFbxFile : "", camVars : { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 }, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false };
+		props = { curFbxFile : "", camVars : { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 }, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true };
 		Cookie.read();
 		
 		tf = new flash.text.TextField();
@@ -224,6 +225,9 @@ class Viewer {
 			} else if( c == K.A ) {
 				var cst = h3d.fbx.Library.AnimationMode.createAll();
 				animMode = cst[(Lambda.indexOf(cst, animMode) + 1) % cst.length];
+				reload = true;
+			} else if( c == K.L ) {
+				props.loop = !props.loop;
 				reload = true;
 			}
 			
@@ -401,8 +405,13 @@ class Viewer {
 	
 	function setSkin() {
 		var anim = curFbx.loadAnimation(animMode);
-		if( anim != null )
+		if( anim != null ) {
 			anim = scene.playAnimation(anim);
+			if( !props.loop ) {
+				anim.loop = false;
+				anim.onAnimEnd = function() anim.setFrame(0);
+			}
+		}
 	}
 	
 	function onUpdate() {
@@ -479,7 +488,8 @@ class Viewer {
 		
 		tf_keys.text = [
 			"[F1] Load model",
-			"[A] Animation = "+animMode,
+			"[A] Animation = " + animMode,
+			"[L] Loop = "+props.loop,
 			"[Y] Axis = "+props.showAxis,
 			"[K] Bones = "+props.showBones,
 			"[B] Bounds = "+props.showBox+(box == null ? "" : " ["+fmt(box.scaleX)+" x "+fmt(box.scaleY)+" x "+fmt(box.scaleZ)+"]"),
