@@ -353,7 +353,6 @@ class Library {
 			var anim = new h3d.anim.FrameAnimation(animName, numFrames, sampling);
 		
 			for( c in curves ) {
-				var frames = null, alpha = null;
 				var frames = c.t == null && c.r == null && c.s == null ? null : new flash.Vector(numFrames);
 				var alpha = c.a == null ? null : new flash.Vector(numFrames);
 				// skip empty curves
@@ -377,7 +376,7 @@ class Library {
 				var tp = 0, rp = 0, sp = 0, ap = 0;
 				var curMat = null;
 				for( f in 0...numFrames ) {
-					var changed = false;
+					var changed = curMat == null;
 					if( allTimes[f] == ctt[tp] ) {
 						changed = true;
 						tp++;
@@ -393,13 +392,13 @@ class Library {
 					if( changed ) {
 						var m = new h3d.Matrix();
 						m.identity();
-						if( c.s == null ) {
+						if( c.s == null || sp == 0 ) {
 							if( def.scale != null )
 								m.scale(def.scale.x, def.scale.y, def.scale.z);
 						} else
 							m.scale(csx[sp-1], csy[sp-1], csz[sp-1]);
 
-						if( c.r == null ) {
+						if( c.r == null || rp == 0 ) {
 							if( def.rotate != null )
 								m.rotate(def.rotate.x, def.rotate.y, def.rotate.z);
 						} else
@@ -408,7 +407,7 @@ class Library {
 						if( def.preRot != null )
 							m.rotate(def.preRot.x, def.preRot.y, def.preRot.z);
 
-						if( c.t == null ) {
+						if( c.t == null || tp == 0 ) {
 							if( def.trans != null )
 								m.translate(def.trans.x, def.trans.y, def.trans.z);
 						} else
@@ -441,7 +440,6 @@ class Library {
 			var q = new h3d.Quat(), q2 = new h3d.Quat();
 
 			for( c in curves ) {
-				var frames = null, alpha = null;
 				var frames = c.t == null && c.r == null && c.s == null ? null : new flash.Vector(numFrames);
 				var alpha = c.a == null ? null : new flash.Vector(numFrames);
 				// skip empty curves
@@ -465,7 +463,7 @@ class Library {
 				var tp = 0, rp = 0, sp = 0, ap = 0;
 				var curFrame = null;
 				for( f in 0...numFrames ) {
-					var changed = false;
+					var changed = curFrame == null;
 					if( allTimes[f] == ctt[tp] ) {
 						changed = true;
 						tp++;
@@ -480,7 +478,7 @@ class Library {
 					}
 					if( changed ) {
 						var f = new h3d.anim.LinearAnimation.LinearFrame();
-						if( c.s == null ) {
+						if( c.s == null || sp == 0 ) {
 							if( def.scale != null ) {
 								f.sx = def.scale.x;
 								f.sy = def.scale.y;
@@ -496,7 +494,7 @@ class Library {
 							f.sz = csz[sp - 1];
 						}
 
-						if( c.r == null ) {
+						if( c.r == null || rp == 0 ) {
 							if( def.rotate != null ) {
 								q.initRotate(def.rotate.x, def.rotate.y, def.rotate.z);
 							} else
@@ -514,7 +512,7 @@ class Library {
 						f.qz = q.z;
 						f.qw = q.w;
 
-						if( c.t == null ) {
+						if( c.t == null || tp == 0 ) {
 							if( def.trans != null ) {
 								f.tx = def.trans.x;
 								f.ty = def.trans.y;
