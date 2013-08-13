@@ -131,11 +131,16 @@ class Quat {
 		);
 	}
 	
-	public inline function lerp( q1 : Quat, q2 : Quat, v : Float ) {
-		var x = q1.x * v + q2.x * (1 - v);
-		var y = q1.y * v + q2.y * (1 - v);
-		var z = q1.z * v + q2.z * (1 - v);
-		var w = q1.w * v + q2.w * (1 - v);
+	public inline function lerp( q1 : Quat, q2 : Quat, v : Float, nearest = false ) {
+		var v2;
+		if( nearest && q1.dot(q2) < 0 )
+			v2 = v - 1;
+		else
+			v2 = 1 - v;
+		var x = q1.x * v + q2.x * v2;
+		var y = q1.y * v + q2.y * v2;
+		var z = q1.z * v + q2.z * v2;
+		var w = q1.w * v + q2.w * v2;
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -154,11 +159,11 @@ class Quat {
 		var halfTheta = Math.acos(cosHalfTheta);
 		var invSinHalfTheta = FMath.isqrt(1 - cosHalfTheta * cosHalfTheta);
 		if( FMath.abs(invSinHalfTheta) > 1e3 ) {
-			this.lerp(q1, q2, 0.5);
+			this.lerp(q1, q2, 0.5, true);
 			return;
 		}
 		var a = Math.sin((1 - v) * halfTheta) * invSinHalfTheta;
-		var b = Math.sin(v * halfTheta) * invSinHalfTheta;
+		var b = Math.sin(v * halfTheta) * invSinHalfTheta * (cosHalfTheta < 0 ? -1 : 1);
 		this.x = q1.x * a + q2.x * b;
 		this.y = q1.y * a + q2.y * b;
 		this.z = q1.z * a + q2.z * b;
