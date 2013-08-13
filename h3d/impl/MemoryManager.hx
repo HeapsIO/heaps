@@ -301,7 +301,7 @@ class MemoryManager {
 		return newTexture(compress ? AtfCompressed(alpha) : Atf, width, height, cubic, false, mipLevels, allocPos);
 	}
 	
-	public function allocTexture( width : Int, height : Int, mipMap = false, ?allocPos : AllocPos ) {
+	public function allocTexture( width : Int, height : Int, ?mipMap = false, ?allocPos : AllocPos ) {
 		freeTextures();
 		var levels = 0;
 		if( mipMap ) {
@@ -316,7 +316,7 @@ class MemoryManager {
 		return newTexture(Rgba, width, height, false, true, 0, allocPos);
 	}
 
-	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap, hasMipMap = false, ?allocPos : AllocPos ) {
+	public function makeTexture( ?bmp : flash.display.BitmapData, ?mbmp : h3d.mat.Bitmap, ?hasMipMap = false, ?allocPos : AllocPos ) {
 		var t;
 		if( bmp != null ) {
 			t = allocTexture(bmp.width, bmp.height, hasMipMap, allocPos);
@@ -329,7 +329,7 @@ class MemoryManager {
 		return t;
 	}
 
-	public function allocCubeTexture( size : Int, mipMap = false, ?allocPos : AllocPos ) {
+	public function allocCubeTexture( size : Int, ?mipMap = false, ?allocPos : AllocPos ) {
 		freeTextures();
 		var levels = 0;
 		if( mipMap ) {
