@@ -110,11 +110,13 @@ class LinearAnimation extends Animation {
 			m._43 = f1.tz * k1 + f2.tz * k2;
 			
 			if( o.hasRotation ) {
-				// qlerp
-				var qx = f1.qx * k1 + f2.qx * k2;
-				var qy = f1.qy * k1 + f2.qy * k2;
-				var qz = f1.qz * k1 + f2.qz * k2;
-				var qw = f1.qw * k1 + f2.qw * k2;
+				// qlerp nearest
+				var dot = f1.qx * f2.qx + f1.qy * f2.qy + f1.qz * f2.qz + f1.qw * f2.qw;
+				var q2 = dot < 0 ? -k2 : k2;
+				var qx = f1.qx * k1 + f2.qx * q2;
+				var qy = f1.qy * k1 + f2.qy * q2;
+				var qz = f1.qz * k1 + f2.qz * q2;
+				var qw = f1.qw * k1 + f2.qw * q2;
 				
 				if( decompose ) {
 					m._12 = qx;
