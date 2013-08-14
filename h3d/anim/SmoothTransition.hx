@@ -78,13 +78,7 @@ class SmoothTransition extends Transition {
 			q1.set(m1._12, m1._13, m1._21, m1._23);
 			q2.set(m2._12, m2._13, m2._21, m2._23);
 			// shortest path
-			if( q1.dot(q2) < 0 ) {
-				q1.x *= -1;
-				q1.y *= -1;
-				q1.z *= -1;
-				q1.w *= -1;
-			}
-			qout.lerp(q1, q2, a);
+			qout.lerp(q1, q2, a, true);
 			qout.saveToMatrix(m);
 			// interpolate scale
 			var sx = m1._11 * a + m2._11 * b;
