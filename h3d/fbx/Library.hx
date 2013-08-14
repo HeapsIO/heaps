@@ -195,6 +195,15 @@ class Library {
 		return root;
 	}
 	
+	public function ignoreMissingObject( name : String ) {
+		var def = defaultModelMatrixes.get(name);
+		if( def == null ) {
+			def = new DefaultMatrixes();
+			def.wasRemoved = -1;
+			defaultModelMatrixes.set(name, def);
+		}
+	}
+
 	public function loadAnimation( mode : AnimationMode, ?animName : String, ?root : FbxNode, ?lib : Library ) : h3d.anim.Animation {
 		if( lib != null ) {
 			lib.defaultModelMatrixes = defaultModelMatrixes;
