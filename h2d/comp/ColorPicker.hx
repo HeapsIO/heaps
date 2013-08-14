@@ -28,7 +28,7 @@ private enum CompStyle {
 }
 
 private class Style {
-	static public function new () {
+	public function new () {
 	}
 	
 	public static function get(kind:CompStyle) {
