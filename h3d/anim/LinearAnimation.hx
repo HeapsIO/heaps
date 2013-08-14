@@ -82,7 +82,7 @@ class LinearAnimation extends Animation {
 	
 	@:access(h3d.scene.Skin)
 	override function sync( decompose = false ) {
-		if( frame == syncFrame )
+		if( frame == syncFrame && !decompose )
 			return;
 		var frame1 = Std.int(frame);
 		var frame2 = (frame1 + 1) % frameCount;
