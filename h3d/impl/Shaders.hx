@@ -37,7 +37,7 @@ class PointShader extends h3d.impl.Shader {
 	";
 	static var FRAGMENT = "
 		varying mediump tuv;
-		uniform vec4 color;
+		uniform vec4 color /*byte4*/;
 		
 		void main(void) {
 			if( 1 - dot(tuv, tuv) < 0 ) discard;

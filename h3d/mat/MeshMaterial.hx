@@ -208,6 +208,11 @@ private class MeshShader extends h3d.impl.Shader {
 			if( hasZBias ) cst.push("#define hasZBias");
 		} else {
 			if( killAlpha ) cst.push("#define killAlpha");
+			if( colorAdd != null ) cst.push("#define hasColorAdd");
+			if( colorMul != null ) cst.push("#define hasColorMul");
+			if( colorMatrix != null ) cst.push("#define hasColorMatrix");
+			if( hasAlphaMap ) cst.push("#define hasAlphaMap");
+			if( hasGlow ) cst.push("#define hasGlow");
 			if( hasVertexColorAdd || lightSystem != null ) cst.push("#define hasFragColor");
 		}
 		return cst.join("\n");
@@ -339,8 +344,8 @@ private class MeshShader extends h3d.impl.Shader {
 		varying mediump vec4 tshadowPos;
 
 		uniform sampler2D tex;
-		uniform lowp vec3 colorAdd;
-		uniform lowp vec3 colorMul;
+		uniform lowp vec4 colorAdd;
+		uniform lowp vec4 colorMul;
 		uniform mediump mat4 colorMatrix;
 		
 		uniform lowp float killAlphaThreshold;
