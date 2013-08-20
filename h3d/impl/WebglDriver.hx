@@ -189,7 +189,7 @@ class WebglDriver extends Driver {
 	
 	function typeSize( t : Shader.ShaderType ) {
 		return switch( t ) {
-		case Float: 1;
+		case Float, Byte4: 1;
 		case Vec2: 2;
 		case Vec3: 3;
 		case Vec4: 4;
@@ -270,7 +270,8 @@ class WebglDriver extends Driver {
 		// extract attributes from code (so we know the offset and stride)
 		var r = ~/attribute[ \t\r\n]+([A-Za-z0-9_]+)[ \t\r\n]+([A-Za-z0-9_]+)/;
 		var offset = 0;
-		while( r.match(code) ) {
+		var ccode = code;
+		while( r.match(ccode) ) {
 			var aname = r.matched(2);
 			var atype = decodeType(r.matched(1));
 			var a = amap.get(aname);
@@ -278,11 +279,12 @@ class WebglDriver extends Driver {
 			if( a != null )
 				inst.attribs.push( { name : aname, type : atype, etype : GL.FLOAT, size : size, index : a.index, offset : offset } );
 			offset += size;
-			code = r.matchedRight();
+			ccode = r.matchedRight();
 		}
 		inst.stride = offset;
 		
 		// list uniforms needed by shader
+		var allCode = code + gl.getShaderSource(fs);
 		var nuni = gl.getProgramParameter(p, GL.ACTIVE_UNIFORMS);
 		inst.uniforms = [];
 		var texIndex = -1;
@@ -295,6 +297,14 @@ class WebglDriver extends Driver {
 			switch( t ) {
 			case Tex2d, TexCube:
 				texIndex++;
+			case Vec4:
+				var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "");
+				if( r.match(allCode) )
+					switch( r.matched(1) ) {
+					case "byte4":
+						t = Byte4;
+					default:
+					}
 			default:
 			}
 			var name = inf.name;
@@ -319,10 +329,8 @@ class WebglDriver extends Driver {
 				index : texIndex,
 			});
 		}
-			
 		inst.program = p;
 		return inst;
-		
 	}
 
 	override function selectShader( shader : Shader ) : Bool {
@@ -383,6 +391,9 @@ class WebglDriver extends Driver {
 			var v = val[index];
 			if( v == null ) throw "Missing shader index " + index;
 			setUniform(v, u, t);
+		case Byte4:
+			var v : Int = val;
+			gl.uniform4f(u.loc, ((v >> 16) & 0xFF) / 255, ((v >> 8) & 0xFF) / 255, (v & 0xFF) / 255, (v >>> 24) / 255);
 		default:
 			throw "Unsupported uniform " + u.type;
 		}

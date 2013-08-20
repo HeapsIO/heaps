@@ -17,6 +17,7 @@ enum ShaderType {
 	Mat4;
 	Tex2d;
 	TexCube;
+	Byte4;
 	Struct( field : String, t : ShaderType );
 	Index( index : Int, t : ShaderType );
 }
@@ -64,14 +65,16 @@ class ShaderMacros {
 		var pos = Context.getLocalClass().get().pos;
 		var fields = Context.getBuildFields();
 		var hasVertex = false, hasFragment = false;
-		var r_uni = ~/uniform[ \t]+((lowp|mediump|highp)[ \t]+)?([A-Za-z0-9_]+)[ \t]+([A-Za-z0-9_]+)/;
+		var r_uni = ~/uniform[ \t]+((lowp|mediump|highp)[ \t]+)?([A-Za-z0-9_]+)[ \t]+([A-Za-z0-9_]+)[ \t]*(\/\*([A-Za-z0-9_]+)\*\/)?/;
 		function addUniforms( code : String ) {
 			while( r_uni.match(code) ) {
 				var name = r_uni.matched(4);
 				var type = r_uni.matched(3);
+				var hint = r_uni.matched(6);
 				code = r_uni.matchedRight();
 				var t = switch( type ) {
 				case "float": macro : Float;
+				case "vec4" if( hint == "byte4" ): macro : Int;
 				case "vec2", "vec3", "vec4": macro : h3d.Vector;
 				case "mat3", "mat4": macro : h3d.Matrix;
 				case "sampler2D", "samplerCube": macro : h3d.mat.Texture;
