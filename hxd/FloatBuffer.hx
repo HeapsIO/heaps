@@ -46,6 +46,16 @@ abstract FloatBuffer(InnerData) {
 		while( this.length < v ) this.push(0.);
 		#end
 	}
+
+	public inline function resize( v : Int ) {
+		#if flash
+		this.length = v;
+		#else
+		while( this.length < v ) this.push(0.);
+		if( this.length > v ) this.splice(v, this.length - v);
+		#end
+	}
+	
 	
 	@:arrayAccess inline function arrayRead(key:Int) : Float {
 		return this[key];
