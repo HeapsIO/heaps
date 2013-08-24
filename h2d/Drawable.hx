@@ -57,9 +57,12 @@ private class DrawableShader extends h3d.impl.Shader {
 		var multMapFactor : Float;
 		var multMap : Texture;
 		var multUV : Float4;
+		var hasColorKey : Bool;
+		var colorKey : Int;
 
 		function fragment( tex : Texture ) {
-			var col = tex.get(sinusDeform != null ? [tuv.x + sin(tuv.y*sinusDeform.y + sinusDeform.x) * sinusDeform.z, tuv.y] : tuv, filter = ! !filter, wrap=tileWrap);
+			var col = tex.get(sinusDeform != null ? [tuv.x + sin(tuv.y * sinusDeform.y + sinusDeform.x) * sinusDeform.z, tuv.y] : tuv, filter = ! !filter, wrap = tileWrap);
+			if( hasColorKey ) kill(abs(col.rgb - colorKey.rgb).length() - 0.001);
 			if( killAlpha ) kill(col.a - 0.001);
 			if( hasVertexAlpha ) col.a *= talpha;
 			if( hasVertexColor ) col *= tcolor;
@@ -147,6 +150,8 @@ class Drawable extends Sprite {
 
 	public var multiplyMap(default, set) : h2d.Tile;
 	public var multiplyFactor(get, set) : Float;
+	
+	public var colorKey(get, set) : Int;
 	
 	public var writeAlpha : Bool;
 	
@@ -256,6 +261,15 @@ class Drawable extends Sprite {
 	
 	inline function set_killAlpha(v) {
 		return shader.killAlpha = v;
+	}
+
+	inline function get_colorKey() {
+		return shader.colorKey;
+	}
+	
+	inline function set_colorKey(v) {
+		shader.hasColorKey = true;
+		return shader.colorKey = v;
 	}
 	
 	function drawTile( engine, tile ) {
