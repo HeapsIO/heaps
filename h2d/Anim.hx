@@ -23,8 +23,12 @@ class Anim extends Drawable {
 		currentFrame %= frames.length;
 	}
 	
+	public function getFrame() {
+		return frames[Std.int(currentFrame)];
+	}
+	
 	override function draw( ctx : RenderContext ) {
-		var t = frames[Std.int(currentFrame)];
+		var t = getFrame();
 		if( t != null ) drawTile(ctx.engine,t);
 	}
 	
