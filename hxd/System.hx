@@ -13,7 +13,7 @@ class System {
 	public static var height(get,never) : Int;
 	public static var isTouch(get,never) : Bool;
 	public static var isWindowed(get,never) : Bool;
-	
+	public static var lang(get,never) : String;
 	public static var isAndroid(get, never) : Bool;
 	
 	public static var screenDPI(get,never) : Float;
@@ -107,6 +107,11 @@ class System {
 			name = "PC";
 		CACHED_NAME = name;
 		return name;
+	}
+	
+	
+	static function get_lang() {
+		return flash.system.Capabilities.language;
 	}
 	
 	#elseif js
