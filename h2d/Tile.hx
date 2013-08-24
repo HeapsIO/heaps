@@ -58,6 +58,10 @@ class Tile {
 		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
 	
+	public function center(dx, dy) {
+		return sub(0, 0, width, height, -dx, -dy);
+	}
+	
 	public function setPos(x, y) {
 		this.x = x;
 		this.y = y;
