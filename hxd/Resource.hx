@@ -99,7 +99,7 @@ class Resource {
 						params : [],
 						pack : ["res"],
 						name : className,
-						meta : [ { name : ":bitmap", params : [ { expr : EConst(CString(path)), pos : pos } ], pos : pos } ],
+						meta : [ { name : ":bitmap", params : [ { expr : EConst(CString(path)), pos : pos } ], pos : pos }, { name : ":keep", params : [], pos : pos } ],
 						kind : TDClass({ pack : ["flash","display"], name : "BitmapData", params : [] }),
 						isExtern : false,
 						fields : [],

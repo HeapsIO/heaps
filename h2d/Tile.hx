@@ -109,11 +109,17 @@ class Tile {
 	}
 	
 	
-	public function split( frames : Int ) {
+	public function split( frames : Int, vertical = false ) {
 		var tl = [];
-		var stride = Std.int(width / frames);
-		for( i in 0...frames )
-			tl.push(sub(i * stride, 0, stride, height));
+		if( vertical ) {
+			var stride = Std.int(height / frames);
+			for( i in 0...frames )
+				tl.push(sub(0, i * stride, width, stride));
+		} else {
+			var stride = Std.int(width / frames);
+			for( i in 0...frames )
+				tl.push(sub(i * stride, 0, stride, height));
+		}
 		return tl;
 	}
 	

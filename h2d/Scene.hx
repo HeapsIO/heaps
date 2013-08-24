@@ -341,6 +341,10 @@ class Scene extends Layers implements h3d.IDrawable {
 			onDelete();
 	}
 	
+	public function setElapsedTime( v : Float ) {
+		ctx.elapsedTime = v;
+	}
+	
 	public function render( engine : h3d.Engine ) {
 		ctx.engine = engine;
 		ctx.frame++;
