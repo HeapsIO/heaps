@@ -5,6 +5,7 @@ class Anim extends Drawable {
 	public var frames : Array<Tile>;
 	public var currentFrame : Float;
 	public var speed : Float;
+	public var loop : Bool = true;
 	
 	public function new( ?parent ) {
 		super(parent);
@@ -20,7 +21,10 @@ class Anim extends Drawable {
 	
 	override function sync( ctx : RenderContext ) {
 		currentFrame += speed * ctx.elapsedTime;
-		currentFrame %= frames.length;
+		if( loop )
+			currentFrame %= frames.length;
+		else if( currentFrame >= frames.length )
+			currentFrame = frames.length - 0.00001;
 	}
 	
 	public function getFrame() {
