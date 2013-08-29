@@ -322,10 +322,11 @@ class MemoryManager {
 		return newTexture(Rgba, size, size, true, false, levels, allocPos);
 	}
 
-	public function allocIndex( indices : hxd.IndexBuffer ) {
-		var ibuf = driver.allocIndexes(indices.length);
-		var idx = new Indexes(this, ibuf, indices.length);
-		idx.upload(indices, 0, indices.length);
+	public function allocIndex( indices : hxd.IndexBuffer, pos = 0, count = -1 ) {
+		if( count < 0 ) count = indices.length;
+		var ibuf = driver.allocIndexes(count);
+		var idx = new Indexes(this, ibuf, count);
+		idx.upload(indices, 0, count);
 		idict.set(idx, true);
 		usedMemory += idx.count * 2;
 		return idx;
