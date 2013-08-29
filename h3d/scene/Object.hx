@@ -378,16 +378,16 @@ class Object {
 		return Type.getClassName(Type.getClass(this)).split(".").pop() + (name == null ? "" : "(" + name + ")");
 	}
 	
-	public function getChildAt( n ) {
+	public inline function getChildAt( n ) {
 		return childs[n];
 	}
 	
-	function get_numChildren() {
+	inline function get_numChildren() {
 		return childs.length;
 	}
 	
-	public inline function iterator() {
-		return childs.iterator();
+	public inline function iterator() : hxd.impl.ArrayIterator<Object> {
+		return new hxd.impl.ArrayIterator(childs);
 	}
 	
 	public function dispose() {
