@@ -32,7 +32,8 @@ class Mesh extends Object {
 			ctx.addPass(draw);
 			return;
 		}
-		material.setup(ctx.camera, this.absPos);
+		ctx.localPos = absPos;
+		material.setup(ctx);
 		ctx.engine.selectMaterial(material);
 		primitive.render(ctx.engine);
 	}

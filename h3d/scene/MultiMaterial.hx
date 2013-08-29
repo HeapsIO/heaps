@@ -26,7 +26,8 @@ class MultiMaterial extends Mesh {
 			ctx.addPass(drawMaterial.bind(_,mid));
 			return;
 		}
-		m.setup(ctx.camera, this.absPos);
+		ctx.localPos = this.absPos;
+		m.setup(ctx);
 		ctx.engine.selectMaterial(m);
 		primitive.selectMaterial(mid);
 		primitive.render(ctx.engine);

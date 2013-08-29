@@ -25,6 +25,9 @@ class Material {
 		this.colorMask = 15;
 	}
 	
+	public function setup( ctx : h3d.scene.RenderContext ) {
+	}
+	
 	public function blend(src, dst) {
 		blendSrc = src;
 		blendDst = dst;

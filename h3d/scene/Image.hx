@@ -16,6 +16,9 @@ private class ImageShader extends h3d.impl.Shader {
 			out = tex.get(tuv);
 		}
 	}
+	#elseif js
+	static var VERTEX = "TODO";
+	static var FRAGMENT = "TODO";
 	#end
 }
 

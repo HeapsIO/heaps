@@ -7,6 +7,7 @@ class RenderContext {
 	public var elapsedTime : Float;
 	public var currentPass : Int;
 	public var frame : Int;
+	public var localPos : h3d.Matrix;
 	var passes : Array<RenderContext -> Void>;
 	
 	public function new() {

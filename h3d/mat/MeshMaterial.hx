@@ -484,12 +484,12 @@ class MeshMaterial extends Material {
 		return m;
 	}
 	
-	function setup( camera : h3d.Camera, mpos ) {
-		mshader.mpos = useMatrixPos ? mpos : null;
-		mshader.mproj = camera.m;
+	override function setup( ctx : h3d.scene.RenderContext ) {
+		mshader.mpos = useMatrixPos ? ctx.localPos : null;
+		mshader.mproj = ctx.camera.m;
 		if( mshader.hasSkin && useMatrixPos && mshader.lightSystem != null ) {
 			var tmp = new h3d.Matrix();
-			tmp.inverse(mpos);
+			tmp.inverse(ctx.localPos);
 			mshader.mposInv = tmp;
 		}
 		mshader.tex = texture;
