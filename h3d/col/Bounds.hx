@@ -135,6 +135,21 @@ class Bounds {
 		if( p.z > zMax ) zMax = p.z;
 	}
 	
+	public function intersection( a : Bounds, b : Bounds ) {
+		var xMin = FMath.max(a.xMin, b.xMin);
+		var yMin = FMath.max(a.yMin, b.yMin);
+		var zMin = FMath.max(a.zMin, b.zMin);
+		var xMax = FMath.max(a.xMax, b.xMax);
+		var yMax = FMath.max(a.yMax, b.yMax);
+		var zMax = FMath.max(a.zMax, b.zMax);
+		this.xMin = xMin;
+		this.yMin = yMin;
+		this.zMin = zMin;
+		this.xMax = xMax;
+		this.yMax = yMax;
+		this.zMax = zMax;
+	}
+	
 	public inline function setMin( p : Vector ) {
 		xMin = p.x;
 		yMin = p.y;
