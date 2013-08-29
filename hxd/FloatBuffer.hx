@@ -8,7 +8,7 @@ private class InnerIterator {
 	var pos : Int;
 	public inline function new( b : InnerData )  {
 		this.b = b;
-		this.len = b.length;
+		this.len = this.b.length;
 		this.pos = 0;
 	}
 	public inline function hasNext() {
