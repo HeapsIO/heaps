@@ -67,7 +67,7 @@ class Engine {
 	}
 
 	public function init() {
-		driver.init(onCreate);
+		driver.init(onCreate, !hardware);
 	}
 
 	public function driverName(details=false) {
