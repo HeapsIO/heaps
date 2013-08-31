@@ -73,7 +73,7 @@ class FileTree {
 				if( ignoredExt.exists(ext.toLowerCase()) )
 					continue;
 				if( embedFile(f, ext, relPath + "/" + f, path) )
-					Reflect.setField(data, f, null);
+					Reflect.setField(data, f, true);
 			}
 		}
 		return data;
@@ -181,14 +181,14 @@ class FileTree {
 			if( sys.FileSystem.isDirectory(path) ) {
 				if( ignoredDir.exists(f.toLowerCase()) )
 					continue;
-				field = handleDir(f, relPath+"/"+f, path);
+				field = handleDir(f, relPath.length == 0 ? f : relPath+"/"+f, path);
 			} else {
 				var extParts = f.split(".");
 				var noExt = extParts.shift();
 				ext = extParts.join(".");
 				if( ignoredExt.exists(ext.toLowerCase()) )
 					continue;
-				field = handleFile(f, ext, relPath + "/" + f, path);
+				field = handleFile(f, ext, relPath.length == 0 ? f : relPath + "/" + f, path);
 				f = noExt;
 			}
 			if( field != null ) {

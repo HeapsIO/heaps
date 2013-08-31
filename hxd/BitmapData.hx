@@ -53,6 +53,10 @@ abstract BitmapData(InnerData) {
 	inline function get_height() {
 		return this.height;
 	}
+	
+	public inline function getBytes() {
+		return nativeGetBytes(this);
+	}
 
 	public inline function toNative() : InnerData {
 		return this;
@@ -60,6 +64,30 @@ abstract BitmapData(InnerData) {
 	
 	public static inline function fromNative( bmp : InnerData ) : BitmapData {
 		return cast bmp;
+	}
+	
+	static function nativeGetBytes( b : InnerData ) {
+		#if flash
+		var bytes = haxe.io.Bytes.ofData(b.getPixels(b.rect));
+		// it is necessary to swap the bytes from BE to LE
+		var mem = hxd.impl.Memory.select(bytes);
+		for( i in 0...b.width*b.height ) {
+			var p = i << 2;
+			var a = mem.b(p);
+			var r = mem.b(p+1);
+			var g = mem.b(p+2);
+			var b = mem.b(p+3);
+			mem.wb(p, b);
+			mem.wb(p+1, g);
+			mem.wb(p+2, r);
+			mem.wb(p+3, a);
+		}
+		mem.end();
+		return bytes;
+		#else
+		throw "TODO";
+		return null;
+		#end
 	}
 	
 }

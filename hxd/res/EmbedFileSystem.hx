@@ -35,12 +35,20 @@ private class EmbedEntry extends FileEntry {
 		#if flash
 		if( bytes == null )
 			bytes = Type.createInstance(data, []);
+		bytes.position = 0;
+		#end
+	}
+	
+	override function readByte() : Int {
+		#if flash
+		return bytes.readUnsignedByte();
+		#else
+		return 0;
 		#end
 	}
 	
 	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
 		#if flash
-		if( bytes == null ) throw "File not opened";
 		bytes.readBytes(out.getData(), pos, size);
 		#end
 	}
@@ -132,7 +140,7 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	#if flash
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	static function resolve( path : String ) {
-		return "hxd._res.R"+invalidChars.replace(path,"_");
+		return "hxd._res.R_"+invalidChars.replace(path,"_");
 	}
 	#end
 	

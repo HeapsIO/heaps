@@ -10,7 +10,8 @@ class FileEntry {
 	
 	public function getBytes() : haxe.io.Bytes return null;
 	
-	public function open() {}
+	public function open() { }
+	public function readByte() : Int return 0;
 	public function read( out : haxe.io.Bytes, pos : Int, size : Int ) {}
 	public function close() {}
 	
