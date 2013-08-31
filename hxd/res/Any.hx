@@ -1,41 +1,26 @@
 package hxd.res;
 
-class Any {
-	
-	var path : String;
-	var r : Dynamic;
-	
-	public function new(path, r) {
-		this.path = path;
-		this.r = r;
-	}
-	
-	public function toModel() {
-		var m = Std.instance(r, Model);
-		if( m == null ) throw path + " is not a model";
-		return m.get();
+class Any extends Resource {
+		
+	public function toFbx() {
+		return new Model(entry).toFbx();
 	}
 
 	public function toTexture() {
-		var t = Std.instance(r, Texture);
-		if( t == null ) throw path + " is not a texture";
-		return t.load();
+		return new Texture(entry).toTexture();
+	}
+	
+	public function toTile() {
+		return new Texture(entry).toTile();
 	}
 
 	public function toSound() {
-		var s = Std.instance(r, Sound);
-		if( s == null ) throw path + " is not a sound";
-		return s;
+		return new Sound(entry);
 	}
 	
 	public function toDir() {
-		var d = Std.instance(r, Directory);
-		if( d == null ) throw path + " is not a directory";
-		return d;
-	}
-
-	public function get() {
-		return r;
+		if( !entry.isDirectory ) throw entry.path + " is not a directory ";
+		return new Directory(entry);
 	}
 	
 }

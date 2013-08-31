@@ -1,23 +1,17 @@
 package hxd.res;
 
-class Directory {
-	
-	var loader : Loader;
-	var path : String;
-	var dir : {};
-	
-	function new(loader, path, dir) {
-		this.loader = loader;
-		this.path = path;
-		this.dir = dir;
-	}
+class Directory extends Resource {
 	
 	public inline function iterator() {
-		return new hxd.impl.ArrayIterator([for( f in Reflect.fields(dir) ) loader.load(path+"/"+f)]);
+		return new hxd.impl.ArrayIterator([for( f in entry ) new Any(f)]);
 	}
 	
 	public function exists( name : String ) {
-		return loader.load(path + "/" + name);
+		return entry.exists(name);
 	}
-	
+
+	public function get( name : String ) {
+		return new Any(entry.get(name));
+	}
+
 }

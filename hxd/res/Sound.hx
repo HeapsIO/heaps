@@ -1,4 +1,9 @@
 package hxd.res;
 
-class Sound {
+class Sound extends Resource {
+	
+	public function play() {
+		trace("TODO");
+	}
+
 }

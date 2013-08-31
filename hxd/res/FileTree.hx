@@ -2,7 +2,7 @@ package hxd.res;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 
-typedef FileEntry = { e : Expr, t : ComplexType, ?d : Dynamic };
+private typedef FileEntry = { e : Expr, t : ComplexType };
 
 class FileTree {
 	
@@ -10,11 +10,21 @@ class FileTree {
 	var currentModule : String;
 	var pos : Position;
 	var loaderType : ComplexType;
+	var ignoredDir : Map<String,Bool>;
+	var ignoredExt : Map<String,Bool>;
+	var options : EmbedOptions;
 	
-	function new(dir) {
+	public function new(dir) {
 		this.path = resolvePath(dir);
 		currentModule = Std.string(Context.getLocalClass());
 		pos = Context.currentPos();
+		ignoredDir = new Map();
+		ignoredDir.set(".svn", true);
+		ignoredDir.set(".git", true);
+		ignoredDir.set(".tmp", true);
+		ignoredExt = new Map();
+		ignoredExt.set("gal", true); // graphics gale source
+		ignoredExt.set("lch", true); // labchirp source
 	}
 	
 	function resolvePath(dir:Null<String>) {
@@ -32,7 +42,107 @@ class FileTree {
 		return path;
 	}
 	
-	function scan() {
+	public function embed(options:EmbedOptions) {
+		if( options == null ) options = { };
+		var needTmp = options.compressSounds;
+		if( options.tmpDir == null ) options.tmpDir = path + "/.tmp/";
+		if( options.fontsChars == null ) options.fontsChars = h2d.Font.ASCII + h2d.Font.LATIN1;
+		if( needTmp && !sys.FileSystem.exists(options.tmpDir) )
+			sys.FileSystem.createDirectory(options.tmpDir);
+		this.options = options;
+		return embedRec("");
+	}
+	
+	function embedRec( relPath : String ) {
+		var dir = this.path + relPath;
+		var data = { };
+		// make sure to rescan if one of the directories content has changed (file added or deleted)
+		Context.registerModuleDependency(currentModule, dir);
+		for( f in sys.FileSystem.readDirectory(dir) ) {
+			var path = dir + "/" + f;
+			if( sys.FileSystem.isDirectory(path) ) {
+				if( ignoredDir.exists(f.toLowerCase()) )
+					continue;
+				var sub = embedDir(f, relPath + "/" + f, path);
+				if( sub != null )
+					Reflect.setField(data, f, sub);
+			} else {
+				var extParts = f.split(".");
+				var noExt = extParts.shift();
+				var ext = extParts.join(".");
+				if( ignoredExt.exists(ext.toLowerCase()) )
+					continue;
+				if( embedFile(f, ext, relPath + "/" + f, path) )
+					Reflect.setField(data, f, null);
+			}
+		}
+		return data;
+	}
+	
+	function embedDir( dir : String, relPath : String, fullPath : String ) {
+		var f = embedRec(relPath);
+		if( Reflect.fields(f).length == 0 )
+			return null;
+		return f;
+	}
+	
+	function getTime( file : String ) {
+		return try sys.FileSystem.stat(file).mtime.getTime() catch( e : Dynamic ) -1.;
+	}
+	
+	static var invalidChars = ~/[^A-Za-z0-9_]/g;
+	function embedFile( file : String, ext : String, relPath : String, fullPath : String ) {
+		var name = "R" + invalidChars.replace(relPath, "_");
+		if( Context.defined("flash") ) {
+			switch( ext.toLowerCase() ) {
+			case "wav" if( options.compressSounds ):
+				var tmp = options.tmpDir + name + ".mp3";
+				if( getTime(tmp) < getTime(fullPath) ) {
+					if( Sys.command("lame", ["--silent","-h",fullPath,tmp]) != 0 )
+						Context.warning("Failed to run lame on " + path, pos);
+					else {
+						fullPath = tmp;
+					}
+				} else {
+					fullPath = tmp;
+				}
+			case "ttf":
+				haxe.macro.Context.defineType({
+					pack : ["hxd","_res"],
+					name : name,
+					meta : [
+						{ name : ":font", pos : pos, params : [macro $v { fullPath }, macro $v { options.fontsChars } ] },
+						{ name : ":keep", pos : pos, params : [] },
+					],
+					kind : TDClass(),
+					params : [],
+					pos : pos,
+					isExtern : false,
+					fields : [],
+				});
+				return false; // don't embed font bytes in flash
+			default:
+			}
+			Context.defineType( {
+				params : [],
+				pack : ["hxd","_res"],
+				name : name,
+				pos : pos,
+				isExtern : false,
+				fields : [],
+				meta : [
+					{ name : ":keep", params : [], pos : pos },
+					{ name : ":file", params : [ { expr : EConst(CString(fullPath)), pos : pos } ], pos : pos },
+				],
+				kind : TDClass({ pack : ["flash","utils"], name : "ByteArray", params : [] }),
+			});
+		} else {
+			return false;
+		}
+		return true;
+	}
+	
+	public function scan() {
 		var fields = Context.getBuildFields();
 		var dict = new Map();
 		for( f in fields ) {
@@ -55,21 +165,12 @@ class FileTree {
 				pos : pos,
 			});
 		}
-		var data = scanRec("", fields, dict);
-		
-		fields.push({
-			name : "_ROOT",
-			access : [AStatic],
-			kind : FVar(null, { expr : EConst(CString(haxe.Serializer.run(data))), pos : pos } ),
-			pos : pos,
-		});
-		
+		scanRec("", fields, dict);
 		return fields;
 	}
 	
 	function scanRec( relPath : String, fields : Array<Field>, dict : Map<String,String> ) {
 		var dir = this.path + relPath;
-		var data = { };
 		// make sure to rescan if one of the directories content has changed (file added or deleted)
 		Context.registerModuleDependency(currentModule, dir);
 		for( f in sys.FileSystem.readDirectory(dir) ) {
@@ -78,16 +179,15 @@ class FileTree {
 			var field = null;
 			var ext = null;
 			if( sys.FileSystem.isDirectory(path) ) {
-				switch( f ) {
-				case ".svn", ".git":
-					// don't look into these
-				default:
-					field = handleDir(f, relPath+"/"+f, path);
-				}
+				if( ignoredDir.exists(f.toLowerCase()) )
+					continue;
+				field = handleDir(f, relPath+"/"+f, path);
 			} else {
 				var extParts = f.split(".");
 				var noExt = extParts.shift();
 				ext = extParts.join(".");
+				if( ignoredExt.exists(ext.toLowerCase()) )
+					continue;
 				field = handleFile(f, ext, relPath + "/" + f, path);
 				f = noExt;
 			}
@@ -116,21 +216,15 @@ class FileTree {
 					meta : [ { name:":extern", pos:pos, params:[] } ],
 					access : [AStatic, AInline],
 				});
-				if( field.d == null && ext != null )
-					field.d = ext;
-				else if( ext != null )
-					field.d._e = ext;
-				Reflect.setField(data, f, field.d);
 			}
 		}
-		return data;
 	}
 	
 	function handleDir( dir : String, relPath : String, fullPath : String ) : FileEntry {
 		var ofields = [];
 		var dict = new Map();
 		dict.set("loader", "reserved identifier");
-		var data = scanRec(relPath, ofields, dict);
+		scanRec(relPath, ofields, dict);
 		if( ofields.length == 0 )
 			return null;
 		var name = "R" + (~/[^A-Za-z0-9_]/g.replace(fullPath, "_"));
@@ -157,7 +251,6 @@ class FileTree {
 		return {
 			t : TPath(tpath),
 			e : { expr : ENew(tpath, [macro loader]), pos : pos },
-			d : data,
 		};
 	}
 	

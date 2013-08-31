@@ -2,60 +2,53 @@ package hxd.res;
 
 class Loader {
 	
-	var root : Dynamic;
+	var fs : FileSystem;
 	
-	public function new(?root) {
-		if( root == null )
-			root = @:privateAccess haxe.Unserializer.run(hxd.Res._ROOT);
-		this.root = root;
+	public function new(fs) {
+		this.fs = fs;
 	}
 
-	function get(path:String) : Dynamic {
-		var r = root;
-		for( p in path.split("/") )
-			r = Reflect.field(r, p);
-		return r;
-	}
-	
 	public function exists( path : String ) : Bool {
-		return get(path) != null;
+		return fs.exists(path);
 	}
 	
-	function resolveDynamic( path : String, ext : String ) : Dynamic {
-		return switch( ext.toLowerCase() ) {
-		case "fbx", "xbx": loadModel(path);
-		case "png", "jpg": loadTexture(path);
-		case "ttf": loadFont(path);
-		case "wav", "mp3": loadSound(path);
-		default: throw "Unknown extension " + ext;
+	function resolveDynamic( path : String ) : Dynamic {
+		var extParts = path.split(".");
+		extParts.shift();
+		var ext = extParts.join(".").toLowerCase();
+		switch( ext ) {
+		case "fbx", "xbx": return loadModel(path);
+		case "png", "jpg": return loadTexture(path);
+		case "ttf": return loadFont(path);
+		case "wav", "mp3": return loadSound(path);
+		case "":
+			var f = fs.get(path);
+			if( f.isDirectory )
+				return new Directory(f);
+		default:
 		};
+		throw "Unknown extension " + ext;
+		return null;
 	}
 	
 	public function load( path : String ) : Any {
-		var inf : Dynamic = get(path);
-		if( inf == null ) throw "Resource not found '" + path + "'";
-		if( Std.is(inf, String) )
-			return new Any(path, resolveDynamic(path, inf));
-		var ext = inf._e;
-		if( ext != null )
-			return new Any(path, resolveDynamic(path, ext));
-		return new Any(path, @:privateAccess new Directory(this,path,inf));
+		return new Any(fs.get(path));
 	}
 	
 	function loadModel( path : String ) : Model {
-		return null;
+		return new Model(fs.get(path));
 	}
 	
 	function loadTexture( path : String ) : Texture {
-		return null;
+		return new Texture(fs.get(path));
 	}
 	
 	function loadFont( path : String ) : Font {
-		return null;
+		return new Font(fs.get(path));
 	}
 	
 	function loadSound( path : String ) : Sound {
-		return null;
+		return new Sound(fs.get(path));
 	}
 
 }

@@ -1,8 +1,8 @@
 package hxd.res;
 
-class Model {
+class Model extends Resource {
 	
-	public function get() : h3d.fbx.Library {
+	public function toFbx() : h3d.fbx.Library {
 		return null;
 	}
 	

@@ -1,4 +1,4 @@
 package hxd.res;
 
-class Font {
+class Font extends Resource {
 }
