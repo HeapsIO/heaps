@@ -1,26 +1,33 @@
 package hxd.res;
 
+@:access(hxd.res.Loader)
 class Any extends Resource {
-		
+
+	var loader : Loader;
+	
+	public function new(loader, entry) {
+		super(entry);
+		this.loader = loader;
+	}
+	
 	public function toFbx() {
-		return new Model(entry).toFbx();
+		return loader.loadModel(entry.path).toFbx();
 	}
 
 	public function toTexture() {
-		return new Texture(entry).toTexture();
+		return loader.loadTexture(entry.path).toTexture();
 	}
 	
 	public function toTile() {
-		return new Texture(entry).toTile();
+		return loader.loadTexture(entry.path).toTile();
 	}
 
 	public function toSound() {
-		return new Sound(entry);
+		return loader.loadSound(entry.path);
 	}
 	
-	public function toDir() {
-		if( !entry.isDirectory ) throw entry.path + " is not a directory ";
-		return new Directory(entry);
+	public inline function iterator() {
+		return new hxd.impl.ArrayIterator([for( f in entry ) new Any(loader,f)]);
 	}
-	
+
 }
