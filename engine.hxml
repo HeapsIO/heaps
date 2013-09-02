@@ -3,16 +3,18 @@
 -main Test
 --macro include('h3d')
 --macro include('h2d')
---macro include('hxd')
+--macro include('hxd',true,['hxd.res.FileTree'])
 -lib format
+-D resourcesPath=samples/res
 --next
 -swf engine.swf
 -swf-header 800:600:60:000000
 -swf-version 11.6
 -lib hxsl
 -D h3d
+-D resourcesPath=samples/res
 -cp samples/basic
 -main Test
 --macro include('h3d')
 --macro include('h2d')
---macro include('hxd')
+--macro include('hxd',true,['hxd.res.FileTree'])

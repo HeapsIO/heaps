@@ -146,7 +146,9 @@ class Particles extends Object {
 		var buffer = ctx.engine.mem.alloc(nverts, stride, 4);
 		buffer.uploadVector(tmpBuf, 0, nverts);
 		var size = partSize;
-		material.setup(this.absPos, ctx.camera.m, size, size * ctx.engine.width / ctx.engine.height, frameCount, hasRotation, hasSize);
+		ctx.localPos = this.absPos;
+		material.setup(ctx);
+		material.init(size, size * ctx.engine.width / ctx.engine.height, frameCount, hasRotation, hasSize);
 		ctx.engine.selectMaterial(material);
 		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();

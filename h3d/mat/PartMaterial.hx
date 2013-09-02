@@ -55,6 +55,11 @@ private class PartShader extends h3d.impl.Shader {
 	
 	}
 
+#else
+
+	static var VERTEX = "TODO";
+	static var FRAGMENT = "TODO";
+	
 #end
 
 }
@@ -91,10 +96,13 @@ class PartMaterial extends Material {
 		return m;
 	}
 
-	function setup( mpos, mproj, sizeX : Float, sizeY : Float, frameCount : Int, hasRotation, hasSize ) {
-		pshader.mpos = mpos;
-		pshader.mproj = mproj;
+	override function setup( ctx : h3d.scene.RenderContext ) {
+		pshader.mpos = ctx.localPos;
+		pshader.mproj = ctx.camera.m;
 		pshader.tex = texture;
+	}
+	
+	public function init( sizeX : Float, sizeY : Float, frameCount : Int, hasRotation, hasSize ) {
 		pshader.hasRotation = hasRotation;
 		pshader.hasSize = hasSize;
 		pshader.partSize.x = sizeX;

@@ -24,7 +24,7 @@ class Test {
 		prim.addUVs();
 		prim.addNormals();
 		
-		var tex = hxd.Resource.embed("texture.png").toTexture();
+		var tex = hxd.Res.hxlogo.toTexture();
 		var mat = new h3d.mat.MeshMaterial(tex);
 		
 		scene = new Scene();
@@ -53,6 +53,7 @@ class Test {
 		#if flash
 		haxe.Log.setColor(0xFF0000);
 		#end
+		hxd.res.EmbedFileSystem.init();
 		new Test();
 	}
 	

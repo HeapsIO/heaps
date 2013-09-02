@@ -213,6 +213,10 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	
 	#end
 	
+	public static macro function init() {
+		return macro hxd.Res.loader = new hxd.res.Loader(hxd.res.EmbedFileSystem.create());
+	}
+	
 	public static macro function create( ?basePath : String, ?options : EmbedOptions ) {
 		var f = new FileTree(basePath);
 		var data = f.embed(options);
