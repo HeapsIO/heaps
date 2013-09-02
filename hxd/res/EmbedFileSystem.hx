@@ -25,6 +25,7 @@ private class EmbedEntry extends FileEntry {
 		#if flash
 		var old = bytes == null ? 0 : bytes.position;
 		open();
+		bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
 		var v = bytes.readUnsignedInt();
 		bytes.position = old;
 		return v;
