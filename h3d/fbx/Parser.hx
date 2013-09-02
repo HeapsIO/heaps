@@ -237,7 +237,7 @@ class Parser {
 					do {
 						c = nextChar();
 					} while( c >= '0'.code && c <= '9'.code );
-					if( c != '.'.code && pos - start < 10 ) {
+					if( c != '.'.code && c != 'E'.code && c != 'e'.code && pos - start < 10 ) {
 						pos--;
 						return TInt(getBuf(start, pos - start));
 					}

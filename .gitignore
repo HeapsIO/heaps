@@ -6,3 +6,6 @@
 *.n
 
 /samples/comps/arial.ttf
+/engine.js
+/engine.js.map
+/samples/2d/demo.js

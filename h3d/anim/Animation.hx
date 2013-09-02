@@ -123,7 +123,7 @@ class Animation {
 			var obj = base.getObjectByName(a.objectName);
 			if( obj == null )
 				throw a.objectName + " was not found";
-			var joint = flash.Lib.as(obj, h3d.scene.Skin.Joint);
+			var joint = Std.instance(obj, h3d.scene.Skin.Joint);
 			if( joint != null ) {
 				currentSkin = cast joint.parent;
 				a2.targetSkin = currentSkin;

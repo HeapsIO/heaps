@@ -36,7 +36,7 @@ class Particles extends Object {
 
 	var first : Particle;
 	var last : Particle;
-	var tmpBuf : flash.Vector<Float>;
+	var tmpBuf : hxd.FloatBuffer;
 
 	public function new( ?mat, ?parent ) {
 		super(parent);
@@ -90,7 +90,7 @@ class Particles extends Object {
 	override function draw( ctx : RenderContext ) {
 		if( first == null )
 			return;
-		if( tmpBuf == null ) tmpBuf = new flash.Vector();
+		if( tmpBuf == null ) tmpBuf = new hxd.FloatBuffer();
 		var pos = 0;
 		var p = first;
 		var tmp = tmpBuf;
@@ -100,8 +100,8 @@ class Particles extends Object {
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
-			tmp[pos++] = 0;
-			tmp[pos++] = 0;
+			tmp[pos++] = 0.;
+			tmp[pos++] = 0.;
 			tmp[pos++] = p.alpha;
 			if( hasFrame ) {
 				curFrame = p.frame / frameCount;
@@ -112,8 +112,8 @@ class Particles extends Object {
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
-			tmp[pos++] = 0;
-			tmp[pos++] = 1;
+			tmp[pos++] = 0.;
+			tmp[pos++] = 1.;
 			tmp[pos++] = p.alpha;
 			if( hasFrame ) tmp[pos++] = curFrame;
 			if( hasRotation ) tmp[pos++] = p.rotation;
@@ -121,8 +121,8 @@ class Particles extends Object {
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
-			tmp[pos++] = 1;
-			tmp[pos++] = 0;
+			tmp[pos++] = 1.;
+			tmp[pos++] = 0.;
 			tmp[pos++] = p.alpha;
 			if( hasFrame ) tmp[pos++] = curFrame;
 			if( hasRotation ) tmp[pos++] = p.rotation;
@@ -130,8 +130,8 @@ class Particles extends Object {
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
-			tmp[pos++] = 1;
-			tmp[pos++] = 1;
+			tmp[pos++] = 1.;
+			tmp[pos++] = 1.;
 			tmp[pos++] = p.alpha;
 			if( hasFrame ) tmp[pos++] = curFrame;
 			if( hasRotation ) tmp[pos++] = p.rotation;

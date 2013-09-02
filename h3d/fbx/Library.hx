@@ -195,6 +195,15 @@ class Library {
 		return root;
 	}
 	
+	public function ignoreMissingObject( name : String ) {
+		var def = defaultModelMatrixes.get(name);
+		if( def == null ) {
+			def = new DefaultMatrixes();
+			def.wasRemoved = -1;
+			defaultModelMatrixes.set(name, def);
+		}
+	}
+
 	public function loadAnimation( mode : AnimationMode, ?animName : String, ?root : FbxNode, ?lib : Library ) : h3d.anim.Animation {
 		if( lib != null ) {
 			lib.defaultModelMatrixes = defaultModelMatrixes;
@@ -353,8 +362,8 @@ class Library {
 			var anim = new h3d.anim.FrameAnimation(animName, numFrames, sampling);
 		
 			for( c in curves ) {
-				var frames = c.t == null && c.r == null && c.s == null ? null : new flash.Vector(numFrames);
-				var alpha = c.a == null ? null : new flash.Vector(numFrames);
+				var frames = c.t == null && c.r == null && c.s == null ? null : new haxe.ds.Vector(numFrames);
+				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
 				// skip empty curves
 				if( frames == null && alpha == null )
 					continue;
@@ -440,8 +449,8 @@ class Library {
 			var q = new h3d.Quat(), q2 = new h3d.Quat();
 
 			for( c in curves ) {
-				var frames = c.t == null && c.r == null && c.s == null ? null : new flash.Vector(numFrames);
-				var alpha = c.a == null ? null : new flash.Vector(numFrames);
+				var frames = c.t == null && c.r == null && c.s == null ? null : new haxe.ds.Vector(numFrames);
+				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
 				// skip empty curves
 				if( frames == null && alpha == null )
 					continue;

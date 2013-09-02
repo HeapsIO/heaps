@@ -2,8 +2,7 @@ package h2d;
 
 private class TileLayerContent extends h3d.prim.Primitive {
 
-	var tmp : flash.Vector<Float>;
-	var pos : Int;
+	var tmp : hxd.FloatBuffer;
 	
 	public function new() {
 		reset();
@@ -14,8 +13,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 	}
 	
 	public function reset() {
-		tmp = new flash.Vector();
-		pos = 0;
+		tmp = new hxd.FloatBuffer();
 		if( buffer != null ) buffer.dispose();
 		buffer = null;
 	}
@@ -25,22 +23,22 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		var sy = y + t.dy;
 		var sx2 = sx + t.width;
 		var sy2 = sy + t.height;
-		tmp[pos++] = sx;
-		tmp[pos++] = sy;
-		tmp[pos++] = t.u;
-		tmp[pos++] = t.v;
-		tmp[pos++] = sx2;
-		tmp[pos++] = sy;
-		tmp[pos++] = t.u2;
-		tmp[pos++] = t.v;
-		tmp[pos++] = sx;
-		tmp[pos++] = sy2;
-		tmp[pos++] = t.u;
-		tmp[pos++] = t.v2;
-		tmp[pos++] = sx2;
-		tmp[pos++] = sy2;
-		tmp[pos++] = t.u2;
-		tmp[pos++] = t.v2;
+		tmp.push(sx);
+		tmp.push(sy);
+		tmp.push(t.u);
+		tmp.push(t.v);
+		tmp.push(sx2);
+		tmp.push(sy);
+		tmp.push(t.u2);
+		tmp.push(t.v);
+		tmp.push(sx);
+		tmp.push(sy2);
+		tmp.push(t.u);
+		tmp.push(t.v2);
+		tmp.push(sx2);
+		tmp.push(sy2);
+		tmp.push(t.u2);
+		tmp.push(t.v2);
 	}
 	
 	override public function triCount() {

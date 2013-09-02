@@ -69,7 +69,7 @@ private class Cross extends h2d.css.Fill {
 		lineRect(FillStyle.Color(color), 0, 0, size, size, 1);
 	}
 	
-	public function setColor(color:UInt) {
+	public function setColor(color:Int) {
 		reset();
 		lineRect(FillStyle.Color(color), 0, 0, size, size, 1);
 	}
@@ -78,8 +78,8 @@ private class Cross extends h2d.css.Fill {
 private class Color extends h2d.Sprite{
 	public var width :Float;
 	public var height :Float;
-	public var color(default, set):UInt = 0xFFFFFFFF;
-	public var preview(default, set):UInt = 0xFFFFFFFF;
+	public var color(default, set):Int = 0xFFFFFFFF;
+	public var preview(default, set):Int = 0xFFFFFFFF;
 	public var alpha(default, set):Float = 1.;
 	
 	var canvas:h2d.css.Fill;
@@ -96,7 +96,7 @@ private class Color extends h2d.Sprite{
 		init();
 	}
 	
-	function set_color(v:UInt) {
+	function set_color(v:Int) {
 		if(v != color) {
 			color = v;
 			drawAll();
@@ -104,7 +104,7 @@ private class Color extends h2d.Sprite{
 		return color;
 	}
 	
-	function set_preview(v:UInt) {
+	function set_preview(v:Int) {
 		if(v != preview) {
 			preview = v;
 			drawAll();
@@ -118,7 +118,7 @@ private class Color extends h2d.Sprite{
 		return color;
 	}
 	
-	public function updateColor(v:UInt) {
+	public function updateColor(v:Int) {
 		color = v;
 		input.value = StringTools.hex(preview, 6).substr(2);
 	}
@@ -161,7 +161,7 @@ private class Color extends h2d.Sprite{
 private class Palette extends h2d.Sprite {
 	public var width :Float;
 	public var height :Float;
-	public var color(default, set):UInt;
+	public var color(default, set):Int;
 	
 	var canvas:h2d.css.Fill;
 	var interact:h2d.Interactive;
@@ -199,7 +199,7 @@ private class Palette extends h2d.Sprite {
 		drawAll();
 	}
 	
-	function set_color(v:UInt) {
+	function set_color(v:Int) {
 		color = v;
 		if(!ColorPicker.change.equals(SPalette))
 			updateCursor();
@@ -237,7 +237,7 @@ private class Palette extends h2d.Sprite {
 		return(ColorPicker.HSLtoINT(h, s, l));
 	}
 	
-	public function setColorFrom(newColor:UInt) {
+	public function setColorFrom(newColor:Int) {
 		var rgb = ColorPicker.INTtoRGB(newColor);
 		var hsl = ColorPicker.RGBtoHLS(rgb[0], rgb[1], rgb[2]);
 		hsl[1] = 1; hsl[2] = 0.5;
@@ -249,8 +249,8 @@ private class Palette extends h2d.Sprite {
 private class Chart extends h2d.Sprite{
 	public var width :Int;
 	public var height :Int;
-	public var refColor(default, set):UInt = 0xffffffff;
-	public var color:UInt = 0xffffffff;
+	public var refColor(default, set):Int = 0xffffffff;
+	public var color:Int = 0xffffffff;
 	
 	var ray :Float;
 	var canvas:h2d.css.Fill;
@@ -299,7 +299,7 @@ private class Chart extends h2d.Sprite{
 		cross.setColor(ColorPicker.complementaryColor(color));
 	}
 	
-	function set_refColor(v:UInt) {
+	function set_refColor(v:Int) {
 		refColor = v;
 		color = getColor(lastPos.x, lastPos.y);
 		cross.setColor(ColorPicker.complementaryColor(color));
@@ -348,7 +348,7 @@ private class Chart extends h2d.Sprite{
 		return ColorPicker.RGBtoINT(r, g, b);
 	}
 	
-	public function setColorFrom(newColor:UInt) {
+	public function setColorFrom(newColor:Int) {
 		var rgb = ColorPicker.INTtoRGB(newColor);
 		var hsl = ColorPicker.RGBtoHLS(rgb[0], rgb[1], rgb[2]);
 		hsl[1] = 1; hsl[2] = 0.5;
@@ -367,7 +367,7 @@ private class Chart extends h2d.Sprite{
 private class ColorGauge extends h2d.Sprite{
 	public var width :Int;
 	public var height :Int;
-	public var color(default, set):UInt = 0xffffffff;
+	public var color(default, set):Int = 0xffffffff;
 	public var ratio(get, null):Float;
 	
 	var canvas:h2d.css.Fill;
@@ -422,7 +422,7 @@ private class ColorGauge extends h2d.Sprite{
 		drawAll();
 	}
 	
-	function set_color(v:UInt) {
+	function set_color(v:Int) {
 		color = v;
 		if(!bindTo.equals(RGBA.A))
 			updateCursor();
@@ -475,8 +475,8 @@ private class ColorGauge extends h2d.Sprite{
 		var r = (color >> 16) & 0xFF;
 		var g =	(color >> 8) & 0xFF;
 		var b = color & 0xFF;
-		var left:UInt;
-		var right:UInt;
+		var left:Int;
+		var right:Int;
 		switch(bindTo) {
 			case RGBA.R: left = ColorPicker.RGBtoINT(0, g, b);	right = ColorPicker.RGBtoINT(255, g, b);
 			case RGBA.G: left = ColorPicker.RGBtoINT(r, 0, b);	right = ColorPicker.RGBtoINT(r, 255, b);
@@ -522,10 +522,12 @@ class ColorPicker extends h2d.comp.Component {
 		chart.refColor = palette.color;
 		change = SNone;
 		
+		#if flash
 		flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, doUpdate);
+		#end
 	}
-	
-	function doUpdate(e:flash.events.Event) {
+
+	function doUpdate(_) {
 		finalColor.preview = chart.color;
 		if(change.equals(SNone)) {
 			if(finalColor.color != chart.color) {
@@ -535,7 +537,6 @@ class ColorPicker extends h2d.comp.Component {
 			return;
 		}
 			
-		var p = new flash.geom.Point(flash.Lib.current.mouseX, flash.Lib.current.mouseY);
 		switch(change) {
 			case SColor:	palette.setColorFrom(finalColor.color);
 							chart.setColorFrom(finalColor.color);
@@ -555,7 +556,7 @@ class ColorPicker extends h2d.comp.Component {
 		gaugeBlue.color = chart.color;
 	}
 	
-	public function show (color:UInt) {
+	public function show(color:Int) {
 		finalColor.color = color;
 		palette.setColorFrom(finalColor.color);
 		chart.setColorFrom(finalColor.color);
@@ -565,15 +566,15 @@ class ColorPicker extends h2d.comp.Component {
 		visible = false;
 	}
 	
-	public dynamic function onChange( value : UInt ) {
+	public dynamic function onChange( value : Int ) {
 	}
 	
 //////////////////
-	inline public static function INTtoRGB(color:UInt) {
+	inline public static function INTtoRGB(color:Int) {
 		return [(color >> 16) & 0xFF, (color >> 8) & 0xFF,  color & 0xFF];
 	}
 	
-	inline public static function INTtoHSL(color:UInt) {
+	inline public static function INTtoHSL(color:Int) {
 		var rgb = INTtoRGB(color);
 		return RGBtoHLS(rgb[0], rgb[1], rgb[2]);
 	}
@@ -632,7 +633,7 @@ class ColorPicker extends h2d.comp.Component {
 		return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 	}
 	
-	inline public static function complementaryColor (color:UInt) {
+	inline public static function complementaryColor (color:Int) {
 		var rgb = INTtoRGB(color);
 		var r = rgb[0] ^ 0xFF;
 		var g = rgb[1] ^ 0xFF;

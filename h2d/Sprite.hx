@@ -274,16 +274,16 @@ class Sprite {
 		scaleY = v;
 	}
 
-	public function getChildAt( n ) {
+	public inline function getChildAt( n ) {
 		return childs[n];
 	}
 	
-	function get_numChildren() {
+	inline function get_numChildren() {
 		return childs.length;
 	}
 
 	public inline function iterator() {
-		return childs.iterator();
+		return new hxd.impl.ArrayIterator(childs);
 	}
 
 }

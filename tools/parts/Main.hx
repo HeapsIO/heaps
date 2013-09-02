@@ -27,7 +27,7 @@ class RangeSlider extends h2d.comp.Slider {
 		super(parent);
 		range = 0.;
 		this.cursor.customStyle = new h2d.css.Style();
-		input.onWheel = function(e:h2d.Event) {
+		input.onWheel = function(e:hxd.Event) {
 			range += e.wheelDelta * 0.01;
 			if( range < 0 ) range = 0;
 			onChange(value);
@@ -101,7 +101,7 @@ class Main {
 	}
 	
 	function init() {
-		h3d.System.setLoop(update);
+		hxd.System.setLoop(update);
 		s3d = new h3d.scene.Scene();
 		s2d = new h2d.Scene();
 		parts = [];
@@ -122,7 +122,7 @@ class Main {
 		};
 		var p = new h2d.comp.Parser( { props : props } );
 		p.register("range", function(x:haxe.xml.Fast, parent) return new RangeSlider(parent));
-		ui = p.build(new haxe.xml.Fast(Xml.parse(h3d.System.getFileContent("ui.html")).firstElement()));
+		ui = p.build(new haxe.xml.Fast(Xml.parse(hxd.System.getFileContent("ui.html")).firstElement()));
 		engine.onResized = function() ui.setStyle(null);
 		s2d.addChild(ui);
 		s3d.addPass(s2d);
@@ -131,10 +131,10 @@ class Main {
 		emit = new h3d.scene.Particles(s3d);
 		emit.hasRotation = true;
 		emit.hasSize = true;
-		setTexture(new DefaultPart(0, 0));
+		setTexture(hxd.BitmapData.fromNative(new DefaultPart(0, 0)));
 	}
 	
-	function setTexture( t : flash.display.BitmapData ) {
+	function setTexture( t : hxd.BitmapData ) {
 		if( emit.material.texture != null )
 			emit.material.texture.dispose();
 		emit.material.texture = h3d.mat.Texture.fromBitmap(t);
@@ -187,7 +187,7 @@ class Main {
 			emit.material.blend(SrcAlpha, OneMinusSrcAlpha);
 		if( addMode != props.add && props.tex == null ) {
 			addMode = props.add;
-			setTexture(addMode ? new DefaultPart(0, 0) : new DefaultPartAlpha(0, 0));
+			setTexture(hxd.BitmapData.fromNative(addMode ? new DefaultPart(0, 0) : new DefaultPartAlpha(0, 0)));
 		}
 		engine.render(s3d);
 		s2d.checkEvents();

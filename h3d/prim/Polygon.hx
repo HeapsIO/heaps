@@ -5,7 +5,7 @@ class Polygon extends Primitive {
 	public var points : Array<Point>;
 	public var normals : Array<Point>;
 	public var tcoords : Array<UV>;
-	public var idx : Array<Int>;
+	public var idx : hxd.IndexBuffer;
 	public var colors : Array<Point>;
 		
 	public function new( points, ?idx ) {
@@ -24,37 +24,34 @@ class Polygon extends Primitive {
 		if( colors != null )
 			size += 3;
 			
-		var buf = new flash.Vector<Float>();
-		var i = 0;
+		var buf = new hxd.FloatBuffer();
 		for( k in 0...points.length ) {
 			var p = points[k];
-			buf[i++] = p.x;
-			buf[i++] = p.y;
-			buf[i++] = p.z;
+			buf.push(p.x);
+			buf.push(p.y);
+			buf.push(p.z);
 			if( tcoords != null ) {
 				var t = tcoords[k];
-				buf[i++] = t.u;
-				buf[i++] = t.v;
+				buf.push(t.u);
+				buf.push(t.v);
 			}
 			if( normals != null ) {
 				var n = normals[k];
-				buf[i++] = n.x;
-				buf[i++] = n.y;
-				buf[i++] = n.z;
+				buf.push(n.x);
+				buf.push(n.y);
+				buf.push(n.z);
 			}
 			if( colors != null ) {
 				var c = colors[k];
-				buf[i++] = c.x;
-				buf[i++] = c.y;
-				buf[i++] = c.z;
+				buf.push(c.x);
+				buf.push(c.y);
+				buf.push(c.z);
 			}
 		}
 		buffer = engine.mem.allocVector(buf, size, idx == null ? 3 : 0);
 		
-		if( idx != null ) {
-			var idx : Array<UInt> = cast idx;
-			indexes = engine.mem.allocIndex(flash.Vector.ofArray(idx));
-		}
+		if( idx != null )
+			indexes = engine.mem.allocIndex(idx);
 	}
 
 
@@ -62,24 +59,24 @@ class Polygon extends Primitive {
 		if( idx != null && points.length != idx.length ) {
 			var p = [];
 			var used = [];
-			for( i in idx )
-				p.push(points[i].clone());
+			for( i in 0...idx.length )
+				p.push(points[idx[i]].clone());
 			if( normals != null ) {
 				var n = [];
-				for( i in idx )
-					n.push(normals[i].clone());
+				for( i in 0...idx.length )
+					n.push(normals[idx[i]].clone());
 				normals = n;
 			}
 			if( colors != null ) {
 				var n = [];
-				for( i in idx )
-					n.push(colors[i].clone());
+				for( i in 0...idx.length )
+					n.push(colors[idx[i]].clone());
 				colors = n;
 			}
 			if( tcoords != null ) {
 				var t = [];
-				for( i in idx )
-					t.push(tcoords[i].clone());
+				for( i in 0...idx.length )
+					t.push(tcoords[idx[i]].clone());
 				tcoords = t;
 			}
 			points = p;

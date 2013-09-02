@@ -7,11 +7,12 @@ class RenderContext {
 	public var elapsedTime : Float;
 	public var currentPass : Int;
 	public var frame : Int;
+	public var localPos : h3d.Matrix;
 	var passes : Array<RenderContext -> Void>;
 	
 	public function new() {
 		time = 0.;
-		elapsedTime = 1. / flash.Lib.current.stage.frameRate;
+		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
 	}
 	
 	public function addPass(p) {

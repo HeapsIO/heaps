@@ -1,7 +1,8 @@
 package h3d.mat;
 
-private class PartShader extends hxsl.Shader {
+private class PartShader extends h3d.impl.Shader {
 
+#if flash
 	static var SRC = {
 
 		var input : {
@@ -53,7 +54,9 @@ private class PartShader extends hxsl.Shader {
 		}
 	
 	}
-	
+
+#end
+
 }
 
 class PartMaterial extends Material {

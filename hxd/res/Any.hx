@@ -1,0 +1,33 @@
+package hxd.res;
+
+@:access(hxd.res.Loader)
+class Any extends Resource {
+
+	var loader : Loader;
+	
+	public function new(loader, entry) {
+		super(entry);
+		this.loader = loader;
+	}
+	
+	public function toFbx() {
+		return loader.loadModel(entry.path).toFbx();
+	}
+
+	public function toTexture() {
+		return loader.loadTexture(entry.path).toTexture();
+	}
+	
+	public function toTile() {
+		return loader.loadTexture(entry.path).toTile();
+	}
+
+	public function toSound() {
+		return loader.loadSound(entry.path);
+	}
+	
+	public inline function iterator() {
+		return new hxd.impl.ArrayIterator([for( f in entry ) new Any(loader,f)]);
+	}
+
+}

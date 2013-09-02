@@ -9,7 +9,7 @@ class Sphere extends Polygon {
 		this.segsH = segsH;
 		this.segsW = segsW;
 		var t = 0., dt = Math.PI / segsH, dp = Math.PI * 2 / segsW;
-		var pts = [], idx = [];
+		var pts = [], idx = new hxd.IndexBuffer();
 		var dx = 1, dy = segsW + 1;
 		for( y in 0...segsH ) {
 			var p = 0.;

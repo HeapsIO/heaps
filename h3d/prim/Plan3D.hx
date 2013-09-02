@@ -33,7 +33,7 @@ class Plan3D extends Primitive {
 	}
 
 	override function alloc( engine : h3d.Engine ) {
-		var v = new flash.Vector<Float>();
+		var v = new hxd.FloatBuffer();
 		var hw = width * 0.5, hh = height * 0.5;
 		v.push( -hw);
 		v.push( -hh);

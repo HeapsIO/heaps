@@ -262,7 +262,7 @@ class Viewer {
 		var t = engine.mem.allocTexture(1024, 1024);
 		var bmp = new flash.display.BitmapData(1024, 1024, true, 0xFFFF0000);
 		var mat = new h3d.mat.MeshMaterial(t);
-		t.upload(bmp);
+		t.uploadBitmap(hxd.BitmapData.fromNative(bmp));
 		bmp.dispose();
 		loadTexture(textureName, mat);
 		mat.killAlpha = true;
@@ -309,7 +309,7 @@ class Viewer {
 			loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
 				var bmp = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;
 				t.resize(bmp.width, bmp.height);
-				t.upload(bmp);
+				t.uploadBitmap(hxd.BitmapData.fromNative(bmp));
 				mat.culling = None;
 			});
 			loader.load(new flash.net.URLRequest(textureName));

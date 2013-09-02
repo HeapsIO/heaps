@@ -331,12 +331,23 @@ class Cell {
     }
 	
 	public function getCircle() {
+		// still not the best enclosing circle
+		// would require implementing http://www.personal.kent.edu/~rmuhamma/Compgeometry/MyCG/CG-Applets/Center/centercli.htm for complete solution
+		var p = new Point(), ec = 0;
+		for( e in halfedges ) {
+			var ep = e.getStartpoint();
+			p.x += ep.x;
+			p.y += ep.y;
+			ec++;
+		}
+		p.x /= ec;
+		p.y /= ec;
 		var r = 0.;
 		for( e in halfedges ) {
-			var d = point.distanceSq(e.getStartpoint());
+			var d = p.distanceSq(e.getStartpoint());
 			if( d > r ) r = d;
 		}
-		return new Circle(point.x, point.y, h3d.FMath.sqrt(r));
+		return new Circle(p.x, p.y, h3d.FMath.sqrt(r));
 	}
 
 	public function prepare() {
@@ -536,6 +547,7 @@ private class CircleEvent extends RBNode<CircleEvent> {
 
 class Voronoi {
 	
+	var epsilon : Float;
 	var beachline : RBTree<Beachsection>;
 	var vertices : Array<Point>;
 	var edges : Array<Edge>;
@@ -546,7 +558,8 @@ class Voronoi {
 	var firstCircleEvent : CircleEvent;
 	var pointCell : Map<Point,Cell>;
 
-	public function new() {
+	public function new( epsilon = 1e-9 ) {
+		this.epsilon = epsilon;
 		this.vertices = null;
 		this.edges = null;
 		this.cells = null;
@@ -576,13 +589,12 @@ class Voronoi {
 		this.cells = [];
 	}
 
-	static inline var EPSILON = 1e-9;
 	static inline function abs(x:Float) return x < 0 ? -x : x;
-	inline function equalWithEpsilon(a:Float,b:Float) return abs(a-b)<EPSILON;
-	inline function greaterThanWithEpsilon(a:Float,b:Float) return a-b>EPSILON;
-	inline function greaterThanOrEqualWithEpsilon(a:Float,b:Float) return b-a<EPSILON;
-	inline function lessThanWithEpsilon(a:Float,b:Float) return b-a>EPSILON;
-	inline function lessThanOrEqualWithEpsilon(a:Float,b:Float) return a-b<EPSILON;
+	inline function equalWithepsilon(a:Float,b:Float) return abs(a-b)<epsilon;
+	inline function greaterThanWithepsilon(a:Float,b:Float) return a-b>epsilon;
+	inline function greaterThanOrEqualWithepsilon(a:Float,b:Float) return b-a<epsilon;
+	inline function lessThanWithepsilon(a:Float,b:Float) return b-a>epsilon;
+	inline function lessThanOrEqualWithepsilon(a:Float,b:Float) return a-b<epsilon;
 
 	function createVertex(x, y) {
 		var v = new Point(x, y);
@@ -759,7 +771,7 @@ class Voronoi {
 
 		// look left
 		var lArc = previous;
-		while (lArc.circleEvent != null && abs(x-lArc.circleEvent.x)<1e-9 && abs(y-lArc.circleEvent.ycenter)<1e-9) {
+		while (lArc.circleEvent != null && abs(x-lArc.circleEvent.x)<epsilon && abs(y-lArc.circleEvent.ycenter)<epsilon) {
 			previous = lArc.rbPrevious;
 			disappearingTransitions.unshift(lArc);
 			this.detachBeachsection(lArc); // mark for reuse
@@ -774,7 +786,7 @@ class Voronoi {
 
 		// look right
 		var rArc = next;
-		while (rArc.circleEvent != null && abs(x-rArc.circleEvent.x)<1e-9 && abs(y-rArc.circleEvent.ycenter)<1e-9) {
+		while (rArc.circleEvent != null && abs(x-rArc.circleEvent.x)<epsilon && abs(y-rArc.circleEvent.ycenter)<epsilon) {
 			next = rArc.rbNext;
 			disappearingTransitions.push(rArc);
 			this.detachBeachsection(rArc); // mark for reuse
@@ -825,8 +837,8 @@ class Voronoi {
 
 		while (node != null) {
 			dxl = this.leftBreakPoint(node,directrix)-x;
-			// x lessThanWithEpsilon xl => falls somewhere before the left edge of the beachsection
-			if (dxl > 1e-9) {
+			// x lessThanWithepsilon xl => falls somewhere before the left edge of the beachsection
+			if (dxl > epsilon) {
 				// this case should never happen
 				// if (!node.rbLeft) {
 				//    rArc = node.rbLeft;
@@ -836,8 +848,8 @@ class Voronoi {
 				}
 			else {
 				dxr = x-this.rightBreakPoint(node,directrix);
-				// x greaterThanWithEpsilon xr => falls somewhere after the right edge of the beachsection
-				if (dxr > 1e-9) {
+				// x greaterThanWithepsilon xr => falls somewhere after the right edge of the beachsection
+				if (dxr > epsilon) {
 					if (node.rbRight == null) {
 						lArc = node;
 						break;
@@ -845,13 +857,13 @@ class Voronoi {
 					node = node.rbRight;
 					}
 				else {
-					// x equalWithEpsilon xl => falls exactly on the left edge of the beachsection
-					if (dxl > -1e-9) {
+					// x equalWithepsilon xl => falls exactly on the left edge of the beachsection
+					if (dxl > -epsilon) {
 						lArc = node.rbPrevious;
 						rArc = node;
 						}
-					// x equalWithEpsilon xr => falls exactly on the right edge of the beachsection
-					else if (dxr > -1e-9) {
+					// x equalWithepsilon xr => falls exactly on the right edge of the beachsection
+					else if (dxr > -epsilon) {
 						lArc = node;
 						rArc = node.rbNext;
 						}
@@ -1308,7 +1320,7 @@ class Voronoi {
 			// edge is removed if:
 			//   it is wholly outside the bounding box
 			//   it is actually a point rather than a line
-			if (!this.connectEdge(edge, bbox) || !this.clipEdge(edge, bbox) || (abs(edge.va.x-edge.vb.x)<1e-9 && abs(edge.va.y-edge.vb.y)<1e-9)) {
+			if (!this.connectEdge(edge, bbox) || !this.clipEdge(edge, bbox) || (abs(edge.va.x-edge.vb.x)<epsilon && abs(edge.va.y-edge.vb.y)<epsilon)) {
 				edge.va = edge.vb = null;
 				edges.splice(iEdge,1);
 			}
@@ -1356,26 +1368,26 @@ class Voronoi {
 				startpoint = halfedges[iRight].getStartpoint();
 				// if end point is not equal to start point, we need to add the missing
 				// halfedge(s) to close the cell
-				if (abs(endpoint.x-startpoint.x)>=1e-9 || abs(endpoint.y-startpoint.y)>=1e-9) {
+				if (abs(endpoint.x-startpoint.x)>=epsilon || abs(endpoint.y-startpoint.y)>=epsilon) {
 					// if we reach this point, cell needs to be closed by walking
 					// counterclockwise along the bounding box until it connects
 					// to next halfedge in the list
 					va = endpoint;
 					// walk downward along left side
-					if (this.equalWithEpsilon(endpoint.x,xl) && this.lessThanWithEpsilon(endpoint.y,yb)) {
-						vb = this.createVertex(xl, this.equalWithEpsilon(startpoint.x,xl) ? startpoint.y : yb);
+					if (this.equalWithepsilon(endpoint.x,xl) && this.lessThanWithepsilon(endpoint.y,yb)) {
+						vb = this.createVertex(xl, this.equalWithepsilon(startpoint.x,xl) ? startpoint.y : yb);
 					}
 					// walk rightward along bottom side
-					else if (this.equalWithEpsilon(endpoint.y,yb) && this.lessThanWithEpsilon(endpoint.x,xr)) {
-						vb = this.createVertex(this.equalWithEpsilon(startpoint.y,yb) ? startpoint.x : xr, yb);
+					else if (this.equalWithepsilon(endpoint.y,yb) && this.lessThanWithepsilon(endpoint.x,xr)) {
+						vb = this.createVertex(this.equalWithepsilon(startpoint.y,yb) ? startpoint.x : xr, yb);
 					}
 					// walk upward along right side
-					else if (this.equalWithEpsilon(endpoint.x,xr) && this.greaterThanWithEpsilon(endpoint.y,yt)) {
-						vb = this.createVertex(xr, this.equalWithEpsilon(startpoint.x,xr) ? startpoint.y : yt);
+					else if (this.equalWithepsilon(endpoint.x,xr) && this.greaterThanWithepsilon(endpoint.y,yt)) {
+						vb = this.createVertex(xr, this.equalWithepsilon(startpoint.x,xr) ? startpoint.y : yt);
 					}
 					// walk leftward along top side
-					else if (this.equalWithEpsilon(endpoint.y,yt) && this.greaterThanWithEpsilon(endpoint.x,xl)) {
-						vb = this.createVertex(this.equalWithEpsilon(startpoint.y,yt) ? startpoint.x : xl, yt);
+					else if (this.equalWithepsilon(endpoint.y,yt) && this.greaterThanWithepsilon(endpoint.x,xl)) {
+						vb = this.createVertex(this.equalWithepsilon(startpoint.y,yt) ? startpoint.x : xl, yt);
 					}
 					edge = this.createBorderEdge(cell.point, va, vb);
 					halfedges.insert(iLeft+1, new Halfedge(edge, cell.point, null));

@@ -1,11 +1,18 @@
 -cp samples/basic
--swf engine.swf
--swf-header 800:600:60:FFFFFF
---flash-strict
--swf-version 11
+-js engine.js
 -main Test
--lib hxsl
--D h3d
--swf-version 11.6
 --macro include('h3d')
 --macro include('h2d')
+--macro include('hxd')
+-lib format
+--next
+-swf engine.swf
+-swf-header 800:600:60:000000
+-swf-version 11.6
+-lib hxsl
+-D h3d
+-cp samples/basic
+-main Test
+--macro include('h3d')
+--macro include('h2d')
+--macro include('hxd')

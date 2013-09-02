@@ -10,7 +10,7 @@ class Material {
 	public var blendSrc(default,set) : Blend;
 	public var blendDst(default,set) : Blend;
 	public var colorMask(default,set) : Int;
-	public var shader : hxsl.Shader;
+	public var shader : h3d.impl.Shader;
 	public var renderPass : Int;
 	
 	public function new(shader) {
@@ -23,6 +23,9 @@ class Material {
 		this.blendSrc = Blend.One;
 		this.blendDst = Blend.Zero;
 		this.colorMask = 15;
+	}
+	
+	public function setup( ctx : h3d.scene.RenderContext ) {
 	}
 	
 	public function blend(src, dst) {

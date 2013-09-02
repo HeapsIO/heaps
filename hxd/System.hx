@@ -1,4 +1,4 @@
-package h3d;
+package hxd;
 
 enum Cursor {
 	Default;
@@ -9,17 +9,17 @@ enum Cursor {
 
 class System {
 	
-	#if !macro
-
 	public static var width(get,never) : Int;
 	public static var height(get,never) : Int;
 	public static var isTouch(get,never) : Bool;
 	public static var isWindowed(get,never) : Bool;
-	
+	public static var lang(get,never) : String;
 	public static var isAndroid(get, never) : Bool;
 	
 	public static var screenDPI(get,never) : Float;
 
+	#if flash
+	
 	static function get_isWindowed() {
 		var p = flash.system.Capabilities.playerType;
 		return p == "ActiveX" || p == "PlugIn" || p == "StandAlone" || p == "Desktop";
@@ -109,14 +109,63 @@ class System {
 		return name;
 	}
 	
+	
+	static function get_lang() {
+		return flash.system.Capabilities.language;
+	}
+	
+	#elseif js
+
+	static var LOOP = null;
+	static var LOOP_INIT = false;
+	
+	static function loopFunc() {
+		var window : Dynamic = js.Browser.window;
+		var rqf : Dynamic = window.requestAnimationFrame ||
+			window.webkitRequestAnimationFrame ||
+			window.mozRequestAnimationFrame;
+		rqf(loopFunc);
+		if( LOOP != null ) LOOP();
+	}
+	
+	public static function setLoop( f : Void -> Void ) {
+		if( !LOOP_INIT ) {
+			LOOP_INIT = true;
+			loopFunc();
+		}
+		LOOP = f;
+	}
+
+	public static function setCursor( c : Cursor ) {
+		throw "TODO";
+	}
+	
+	static function get_screenDPI() {
+		return 72.;
+	}
+	
+	static function get_isAndroid() {
+		return false;
+	}
+	
+	static function get_isWindowed() {
+		return true;
+	}
+	
+	static function get_isTouch() {
+		return false;
+	}
+	
+	static function get_width() {
+		return js.Browser.document.width;
+	}
+	
+	static function get_height() {
+		return js.Browser.document.height;
+	}
+	
+	#else
 
 	#end
-	
-	public static macro function getFileContent( file : String ) {
-		var file = haxe.macro.Context.resolvePath(file);
-		var m = haxe.macro.Context.getLocalClass().get().module;
-		haxe.macro.Context.registerModuleDependency(m, file);
-		return macro $v{sys.io.File.getContent(file)};
-	}
 	
 }

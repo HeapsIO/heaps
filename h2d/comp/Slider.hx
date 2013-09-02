@@ -28,7 +28,7 @@ class Slider extends Component {
 		value = 0.;
 	}
 	
-	function pixelToVal( e : h2d.Event ) {
+	function pixelToVal( e : hxd.Event ) {
 		return Std.int(e.relX - (style.borderSize + cursor.width * 0.5) ) / (input.width - (style.borderSize * 2 + cursor.width));
 	}
 	

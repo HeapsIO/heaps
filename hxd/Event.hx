@@ -1,4 +1,4 @@
-package h2d;
+package hxd;
 
 enum EventKind {
 	EPush;
