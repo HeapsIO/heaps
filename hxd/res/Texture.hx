@@ -84,7 +84,6 @@ class Texture extends Resource {
 				}
 				tex.uploadBytes(bytes);
 				hxd.impl.Tmp.saveBytes(bytes);
-				trace(flash.Lib.getTimer());
 			}
 			if( entry.isAvailable )
 				load();
@@ -116,7 +115,6 @@ class Texture extends Resource {
 					hxd.impl.Tmp.saveBytes(out);
 				}
 				bmp.dispose();
-				trace(flash.Lib.getTimer());
 			});
 		}
 	}
