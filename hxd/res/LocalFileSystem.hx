@@ -14,9 +14,49 @@ private class LocalEntry extends FileEntry {
 	#end
 
 	function new(fs, name, relPath, file) {
+		this.fs = fs;
 		this.name = name;
 		this.relPath = relPath;
 		this.file = file;
+		if( fs.createXBX && extension == "fbx" )
+			convertToXBX();
+	}
+	
+	static var INVALID_CHARS = ~/[^A-Za-z0-9_]/g;
+	
+	function convertToXBX() {
+		function getXBX() {
+			var fbx = h3d.fbx.Parser.parse(getBytes().toString());
+			fbx = fs.xbxFilter(this, fbx);
+			var out = new haxe.io.BytesOutput();
+			new h3d.fbx.XBXWriter(out).write(fbx);
+			return out.getBytes();
+		}
+		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".xbx";
+		#if air3
+		var target = new flash.filesystem.File(target);
+		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
+			var fbx = getXBX();
+			var out = new flash.filesystem.FileStream();
+			out.open(target, flash.filesystem.FileMode.WRITE);
+			out.writeBytes(fbx.getData());
+			out.close();
+		}
+		file = target;
+		#end
+	}
+
+	override function getSign() : Int {
+		#if air3
+		var old = fread == null ? -1 : fread.position;
+		open();
+		fread.endian = flash.utils.Endian.LITTLE_ENDIAN;
+		var i = fread.readUnsignedInt();
+		if( old < 0 ) close() else fread.position = old;
+		return i;
+		#else
+		return 0;
+		#end
 	}
 
 	override function getBytes() : haxe.io.Bytes {
@@ -34,15 +74,31 @@ private class LocalEntry extends FileEntry {
 	
 	override function open() {
 		#if air3
-		if( fread != null ) fread.close();
-		fread = new flash.filesystem.FileStream();
-		fread.open(file, flash.filesystem.FileMode.READ);
+		if( fread != null )
+			fread.position = 0;
+		else {
+			fread = new flash.filesystem.FileStream();
+			fread.open(file, flash.filesystem.FileMode.READ);
+		}
+		#end
+	}
+	
+	override function skip(nbytes:Int) {
+		#if air3
+		fread.position += nbytes;
+		#end
+	}
+	
+	override function readByte() {
+		#if air3
+		return fread.readUnsignedByte();
+		#else
+		return 0;
 		#end
 	}
 	
 	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
 		#if air3
-		if( fread == null ) throw "File not opened";
 		fread.readBytes(out.getData(), pos, size);
 		#end
 	}
@@ -57,7 +113,9 @@ private class LocalEntry extends FileEntry {
 	}
 	
 	override function load( ?onReady : Void -> Void ) : Void {
+		#if air3
 		if( onReady != null ) haxe.Timer.delay(onReady, 1);
+		#end
 	}
 	
 	override function loadBitmap( onLoaded : hxd.BitmapData -> Void ) : Void {
@@ -108,6 +166,7 @@ private class LocalEntry extends FileEntry {
 			}
 		return new hxd.impl.ArrayIterator(arr);
 		#else
+		return null;
 		#end
 	}
 	
@@ -117,17 +176,24 @@ class LocalFileSystem implements FileSystem {
 	
 	var baseDir : String;
 	var root : FileEntry;
+	public var createXBX : Bool;
+	public var tmpDir : String;
 	
-	public function new( baseDir : String ) {
-		this.baseDir = baseDir;
+	public function new( dir : String ) {
+		baseDir = dir;
 		#if air3
 		var froot = new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + baseDir);
-		if( !froot.exists ) throw "Could not find dir " + baseDir;
-		this.baseDir = froot.nativePath;
-		this.baseDir = this.baseDir.split("\\").join("/");
-		if( !StringTools.endsWith(this.baseDir, "/") ) this.baseDir += "/";
+		if( !froot.exists ) throw "Could not find dir " + dir;
+		baseDir = froot.nativePath;
+		baseDir = baseDir.split("\\").join("/");
+		if( !StringTools.endsWith(baseDir, "/") ) baseDir += "/";
 		root = new LocalEntry(this, "root", null, froot);
 		#end
+		tmpDir = baseDir + ".tmp/";
+	}
+	
+	public dynamic function xbxFilter( entry : FileEntry, fbx : h3d.fbx.Data.FbxNode ) : h3d.fbx.Data.FbxNode {
+		return fbx;
 	}
 	
 	public function getRoot() : FileEntry {

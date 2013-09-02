@@ -4,13 +4,18 @@ class FileEntry {
 	
 	public var name(default, null) : String;
 	public var path(get, never) : String;
+	public var extension(get, never) : String;
 	public var size(get, never) : Int;
 	public var isDirectory(get, never) : Bool;
 	public var isAvailable(get, never) : Bool;
 	
+	// first four bytes of the file
+	public function getSign() : Int return 0;
+	
 	public function getBytes() : haxe.io.Bytes return null;
 	
 	public function open() { }
+	public function skip( nbytes : Int ) { }
 	public function readByte() : Int return 0;
 	public function read( out : haxe.io.Bytes, pos : Int, size : Int ) {}
 	public function close() {}
@@ -27,5 +32,8 @@ class FileEntry {
 	function get_isDirectory() return false;
 	function get_size() return 0;
 	function get_path() return name;
-	
+	function get_extension() {
+		var np = name.split(".");
+		return np.length == 1 ? "" : np.pop().toLowerCase();
+	}
 }

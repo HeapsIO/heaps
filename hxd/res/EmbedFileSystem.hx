@@ -21,6 +21,18 @@ private class EmbedEntry extends FileEntry {
 		this.data = data;
 	}
 
+	override function getSign() : Int {
+		#if flash
+		var old = bytes == null ? 0 : bytes.position;
+		open();
+		var v = bytes.readUnsignedInt();
+		bytes.position = old;
+		return v;
+		#else
+		return 0;
+		#end
+	}
+	
 	override function getBytes() : haxe.io.Bytes {
 		#if flash
 		if( bytes == null )
@@ -36,6 +48,12 @@ private class EmbedEntry extends FileEntry {
 		if( bytes == null )
 			bytes = Type.createInstance(data, []);
 		bytes.position = 0;
+		#end
+	}
+	
+	override function skip( nbytes : Int ) {
+		#if flash
+		bytes.position += nbytes;
 		#end
 	}
 	

@@ -23,7 +23,6 @@ class Sound extends Resource {
 		default:
 			throw "Unsupported sound format " + entry.path;
 		}
-		hxd.impl.Tmp.saveBytes(bytes);
 		snd.play();
 		#else
 		#end

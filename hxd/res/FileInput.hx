@@ -9,6 +9,10 @@ class FileInput extends haxe.io.Input {
 		f.open();
 	}
 	
+	public function skip( nbytes : Int ) {
+		f.skip(nbytes);
+	}
+	
 	override function readByte() {
 		return f.readByte();
 	}
