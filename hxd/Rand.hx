@@ -6,6 +6,10 @@ class Rand {
 	var seed2 : Int;
 
 	public function new( seed : Int ) {
+		init(seed);
+	}
+	
+	public function init(seed : Int) {
 		this.seed = seed;
 		this.seed2 = hash(seed);
 		if( this.seed == 0 ) this.seed = 1;
