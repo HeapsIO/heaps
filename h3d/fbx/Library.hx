@@ -82,12 +82,8 @@ class Library {
 	function convertPoints( a : Array<Float> ) {
 		var p = 0;
 		for( i in 0...Std.int(a.length / 3) ) {
-			a[p] = -a[p];
-			p++;
-			a[p] = a[p];
-			p++;
-			a[p] = a[p];
-			p++;
+			a[p] = -a[p]; // inverse X axis
+			p += 3;
 		}
 	}
 	
