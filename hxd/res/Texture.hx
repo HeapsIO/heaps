@@ -15,6 +15,11 @@ class Texture extends Resource {
 	var tex : h3d.mat.Texture;
 	var inf : { width : Int, height : Int, isPNG : Bool };
 	
+	public function isPNG() {
+		getSize();
+		return inf.isPNG;
+	}
+	
 	public function getSize() : { width : Int, height : Int } {
 		if( inf != null )
 			return inf;
@@ -64,6 +69,37 @@ class Texture extends Resource {
 		return inf;
 	}
 	
+	public function getPixels() {
+		getSize();
+		if( inf.isPNG ) {
+			var png = new format.png.Reader(new haxe.io.BytesInput(entry.getBytes()));
+			png.checkCRC = false;
+			var bytes = hxd.impl.Tmp.getBytes(inf.width * inf.height * 4);
+			format.png.Tools.extract32(png.read(), bytes);
+			return bytes;
+		} else {
+			throw "getPixels not supported for " + name;
+			return null;
+		}
+	}
+	
+	function makeSquare( bmp : haxe.io.Bytes ) {
+		var tw = tex.width, th = tex.height, w = inf.width, h = inf.height;
+		var out = hxd.impl.Tmp.getBytes(tw * th * 4);
+		var p = 0, b = 0;
+		for( y in 0...h ) {
+			out.blit(p, bmp, b, w * 4);
+			p += w * 4;
+			b += w * 4;
+			for( i in 0...(tw - w) * 4 )
+				out.set(p++, 0);
+		}
+		for( i in 0...(th - h) * tw )
+			out.set(p++, 0);
+		hxd.impl.Tmp.saveBytes(bmp);
+		return out;
+	}
+	
 	function loadTexture() {
 		var tw = tex.width, th = tex.height;
 		var w =	inf.width, h = inf.height;
@@ -75,13 +111,8 @@ class Texture extends Resource {
 					needResize = false;
 				}
 				// immediately loading the PNG is faster than going through loadBitmap
-				var png = new format.png.Reader(new haxe.io.BytesInput(entry.getBytes()));
-				png.checkCRC = false;
-				var bytes = hxd.impl.Tmp.getBytes(tw * th * 4);
-				format.png.Tools.extract32(png.read(), bytes);
-				if( !isSquare ) {
-					throw "TODO";
-				}
+				var bytes = getPixels();
+				if( !isSquare ) bytes = makeSquare(bytes);
 				tex.uploadBytes(bytes);
 				hxd.impl.Tmp.saveBytes(bytes);
 			}
@@ -99,20 +130,9 @@ class Texture extends Resource {
 				if( isSquare )
 					tex.uploadBitmap(bmp);
 				else {
-					var out = hxd.impl.Tmp.getBytes(tw * th * 4);
-					var bmp = bmp.getBytes();
-					var p = 0, b = 0;
-					for( y in 0...h ) {
-						for( x in 0...w * 4 )
-							out.set(p++, bmp.get(b++));
-						for( i in 0...(tw - w) * 4 )
-							out.set(p++, 0);
-					}
-					for( i in 0...(th - h) * tw )
-						out.set(p++, 0);
-					hxd.impl.Tmp.saveBytes(bmp);
-					tex.uploadBytes(out);
-					hxd.impl.Tmp.saveBytes(out);
+					var bytes = makeSquare(bmp.getBytes());
+					tex.uploadBytes(bytes);
+					hxd.impl.Tmp.saveBytes(bytes);
 				}
 				bmp.dispose();
 			});

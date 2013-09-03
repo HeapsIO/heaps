@@ -10,6 +10,10 @@ class Any extends Resource {
 		this.loader = loader;
 	}
 	
+	public function toModel() {
+		return loader.loadModel(entry.path);
+	}
+	
 	public function toFbx() {
 		return loader.loadModel(entry.path).toFbx();
 	}
@@ -22,6 +26,10 @@ class Any extends Resource {
 		return loader.loadTexture(entry.path).toTile();
 	}
 
+	public function getTexture() {
+		return loader.loadTexture(entry.path);
+	}
+	
 	public function toSound() {
 		return loader.loadSound(entry.path);
 	}

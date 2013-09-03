@@ -26,7 +26,8 @@ private class LocalEntry extends FileEntry {
 	
 	function convertToXBX() {
 		function getXBX() {
-			var fbx = h3d.fbx.Parser.parse(getBytes().toString());
+			var fbx = null;
+			try fbx = h3d.fbx.Parser.parse(getBytes().toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
 			fbx = fs.xbxFilter(this, fbx);
 			var out = new haxe.io.BytesOutput();
 			new h3d.fbx.XBXWriter(out).write(fbx);
