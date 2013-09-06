@@ -16,6 +16,7 @@ private class EmbedEntry extends FileEntry {
 	#end
 
 	function new(fs, name, relPath, data) {
+		this.fs = fs;
 		this.name = name;
 		this.relPath = relPath;
 		this.data = data;
@@ -203,7 +204,7 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	public function get( path : String ) {
 		#if flash
 		var f = open(path);
-		if( f == null )
+		if( f == null && !isDirectory(path) )
 			throw "File not found " + path;
 		return new EmbedEntry(this, path.split("/").pop(), path, f);
 		#else
