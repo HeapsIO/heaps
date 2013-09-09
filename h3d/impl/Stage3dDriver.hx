@@ -125,7 +125,16 @@ class Stage3dDriver extends Driver {
 	}
 	
 	override function allocVertex( count : Int, stride : Int ) : VertexBuffer {
-		return new VertexWrapper(ctx.createVertexBuffer(count, stride), stride);
+		var v;
+		try {
+			v = ctx.createVertexBuffer(count, stride);
+		} catch( e : flash.errors.Error ) {
+			// too many resources / out of memory
+			if( e.errorID == 3691 )
+				return null;
+			throw e;
+		}
+		return new VertexWrapper(v, stride);
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {

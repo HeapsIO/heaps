@@ -40,7 +40,7 @@ class BigBuffer {
 		this.free = new FreeCell(0,size,null);
 	}
 
-	function freeCursor( pos, nvect ) {
+	function freeCursor( pos:Int, nvect:Int ) {
 		var prev : FreeCell = null;
 		var f = free;
 		var end = pos + nvect;
@@ -143,7 +143,7 @@ class MemoryManager {
 	**/
 	public function cleanBuffers() {
 		for( i in 0...buffers.length ) {
-			var b = buffers[i], prev = null;
+			var b = buffers[i], prev : BigBuffer = null;
 			while( b != null ) {
 				if( b.free.count == b.size ) {
 					b.dispose();
@@ -153,7 +153,8 @@ class MemoryManager {
 						buffers[i] = b.next;
 					else
 						prev.next = b.next;
-				}
+				} else
+					prev = b;
 				b = b.next;
 			}
 		}
@@ -470,19 +471,18 @@ class MemoryManager {
 				if( size > 0xFFFF ) throw "Too many vertex to allocate "+size;
 			} else
 				size = allocSize; // group allocations together to minimize buffer count
-			var mem = size * stride * 4;
-			if( usedMemory + mem > MAX_MEMORY || bufferCount >= MAX_BUFFERS ) {
-				var size = freeMemory();
+			var mem = size * stride * 4, v = null;
+			if( usedMemory + mem > MAX_MEMORY || bufferCount >= MAX_BUFFERS || (v = driver.allocVertex(size,stride)) == null ) {
+				var size = usedMemory - freeMemory();
 				garbage();
 				cleanBuffers();
-				if( freeMemory() == size ) {
+				if( usedMemory - freeMemory() == size ) {
 					if( bufferCount >= MAX_BUFFERS )
 						throw "Too many buffer";
 					throw "Memory full";
 				}
 				return alloc(nvect, stride, align, allocPos);
 			}
-			var v = driver.allocVertex(size, stride);
 			usedMemory += mem;
 			bufferCount++;
 			b = new BigBuffer(this, v, stride, size);
