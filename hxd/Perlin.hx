@@ -3,11 +3,9 @@ package hxd;
 class Perlin {
 
 	public var repeat : Int;
-	public var seed : Int;
 	var buf : flash.utils.ByteArray;
 	
-	public function new(seed) {
-		this.seed = seed;
+	public function new() {
 		repeat = 0x7FFFFFFF;
 		// space for gradients
 		buf = new flash.utils.ByteArray();
@@ -44,7 +42,7 @@ class Perlin {
 		return a * (1.0 - k) + b * k;
 	}
 	
-	public inline function gradient3D( x : Float, y : Float, z : Float, ix : Int, iy : Int, iz : Int, seed : Int ) {
+	inline function gradient3DAt( x : Float, y : Float, z : Float, ix : Int, iy : Int, iz : Int, seed : Int ) {
 		var index = seed * 1013 + (ix % repeat) * 1619 + (iy % repeat) * 31337 + iz * 6971;
 		index = ((index ^ (index >>> 8)) & 0xFF) << 5;
 		var gx = double(index);
@@ -53,7 +51,7 @@ class Perlin {
 		return gx * (x - ix) + gy * (y - iy) + gz * (z - iz);
 	}
 
-	inline function gradient( x : Float, y : Float, ix : Int, iy : Int, seed : Int ) {
+	inline function gradientAt( x : Float, y : Float, ix : Int, iy : Int, seed : Int ) {
 		var index = seed * 1013 + (ix%repeat) * 1619 + (iy%repeat) * 31337;
 		index = ((index ^ (index >>> 8)) & 0xFF) << 5;
 		var gx = double(index);
@@ -61,45 +59,74 @@ class Perlin {
 		return gx * (x - ix) + gy * (y - iy);
 	}
 	
-	public function init( seed ) {
-		this.seed = seed;
-	}
-	
 	public function adjustScale( size : Int, scale : Float ) {
 		repeat = Std.int(size * scale);
 		return repeat / size;
 	}
 	
-	public inline function gradient3DAt( x : Float, y : Float, z : Float ) {
+	public function gradient3D( seed : Int, x : Float, y : Float, z : Float ) {
 		var ix = Std.int(x), xs = scurve(x - ix);
 		var iy = Std.int(y), ys = scurve(y - iy);
 		var iz = Std.int(z), zs = scurve(z - iz);
 		
-		var ga = gradient3D(x, y, z, ix, iy, iz, seed);
-		var gb = gradient3D(x, y, z, ix + 1, iy, iz, seed);
-		var gc = gradient3D(x, y, z, ix, iy + 1, iz, seed);
-		var gd = gradient3D(x, y, z, ix + 1, iy + 1, iz, seed);
+		var ga = gradient3DAt(x, y, z, ix, iy, iz, seed);
+		var gb = gradient3DAt(x, y, z, ix + 1, iy, iz, seed);
+		var gc = gradient3DAt(x, y, z, ix, iy + 1, iz, seed);
+		var gd = gradient3DAt(x, y, z, ix + 1, iy + 1, iz, seed);
 		var v1 = linear(linear(ga, gb, xs), linear(gc, gd, xs), ys);
 		
-		var ga = gradient3D(x, y, z, ix, iy, iz + 1, seed);
-		var gb = gradient3D(x, y, z, ix + 1, iy, iz + 1, seed);
-		var gc = gradient3D(x, y, z, ix, iy + 1, iz + 1, seed);
-		var gd = gradient3D(x, y, z, ix + 1, iy + 1, iz + 1, seed);
+		var ga = gradient3DAt(x, y, z, ix, iy, iz + 1, seed);
+		var gb = gradient3DAt(x, y, z, ix + 1, iy, iz + 1, seed);
+		var gc = gradient3DAt(x, y, z, ix, iy + 1, iz + 1, seed);
+		var gd = gradient3DAt(x, y, z, ix + 1, iy + 1, iz + 1, seed);
 		var v2 = linear(linear(ga, gb, xs), linear(gc, gd, xs), ys);
 		
 		return linear(v1, v2, zs);
 	}
 
-	public inline function gradient2DAt( x : Float, y : Float ) {
+	public function gradient( seed : Int, x : Float, y : Float ) {
 		var ix = Std.int(x), xs = scurve(x - ix);
 		var iy = Std.int(y), ys = scurve(y - iy);
-		var ga = gradient(x, y, ix, iy, seed);
-		var gb = gradient(x, y, ix + 1, iy, seed);
-		var gc = gradient(x, y, ix, iy + 1, seed);
-		var gd = gradient(x, y, ix + 1, iy + 1, seed);
+		var ga = gradientAt(x, y, ix, iy, seed);
+		var gb = gradientAt(x, y, ix + 1, iy, seed);
+		var gc = gradientAt(x, y, ix, iy + 1, seed);
+		var gd = gradientAt(x, y, ix + 1, iy + 1, seed);
 		return linear(linear(ga, gb, xs), linear(gc, gd, xs), ys);
 	}
-
+	
+	public function perlin( seed : Int, x : Float, y : Float, octaves : Int, persist : Float = 0.5, lacunarity = 2.0 ) {
+		var v = 0.;
+		var k = 1.;
+		for( i in 0...octaves ) {
+			v += gradient(seed + i, x, y) * k;
+			k *= persist;
+			x *= lacunarity;
+			y *= lacunarity;
+		}
+		return v;
+	}
+	
+	public function ridged( seed : Int, x : Float, y : Float, octaves : Int, offset : Float = 0.5, gain : Float = 2.0, persist : Float = 0.5, lacunarity = 2.0 ) {
+		var v = 0.;
+		var p = 1.;
+		var s = lacunarity;
+		var weight = 1.;
+		var tot = 0.;
+		for( i in 0...octaves ) {
+			var g = gradient(seed + i, x * s, y * s) * p;
+			g = offset - h3d.FMath.abs(g);
+			g *= g;
+			g *= weight;
+			v += g * s;
+			tot += p;
+			weight = g * gain;
+			if( weight < 0 ) weight = 0 else if( weight > 1 ) weight = 1;
+			p *= persist;
+			s *= lacunarity;
+		}
+		return v / tot;
+	}
+	
 	// 256 randomized 3D gradients
 	static inline var NGRADS = 256;
 	static inline var GPREC = 65536;
