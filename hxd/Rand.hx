@@ -18,6 +18,10 @@ class Rand {
 	
 	// this is the Murmur3 hashing function which has both excellent distribution and good randomness
 	public static function hash(n, seed = 5381) {
+		return inlineHash(n, seed);
+	}
+	
+	public static inline function inlineHash(n,seed) {
 		n *= 0xcc9e2d51;
 		n = (n << 15) | (n >>> 17);
 		n *= 0x1b873593;
