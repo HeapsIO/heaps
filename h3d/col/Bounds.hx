@@ -150,6 +150,15 @@ class Bounds {
 		this.zMax = zMax;
 	}
 	
+	public inline function offset( dx : Float, dy : Float, dz : Float ) {
+		xMin += dx;
+		xMax += dx;
+		yMin += dy;
+		yMax += dy;
+		zMin += dz;
+		zMax += dz;
+	}
+	
 	public inline function setMin( p : Vector ) {
 		xMin = p.x;
 		yMin = p.y;

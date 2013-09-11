@@ -58,6 +58,13 @@ class Bounds {
 		yMax = my + dy * v;
 	}
 	
+	public inline function offset( dx : Float, dy : Float ) {
+		xMin += dx;
+		xMax += dx;
+		yMin += dy;
+		yMax += dy;
+	}
+	
 	public inline function getMin() {
 		return new Point(xMin, yMin);
 	}
