@@ -46,6 +46,7 @@ class Geometry {
 				index[pos] = i; // restore
 				count = 0;
 			}
+			pos++;
 		}
 		return { vidx : vout, idx : iout };
 	}
@@ -75,8 +76,15 @@ class Geometry {
 	
 	public function getUVs() {
 		var uvs = [];
-		for( v in root.getAll("LayerElementUV") )
-			uvs.push({ values : v.get("UV").getFloats(), index : v.get("UVIndex").getInts() });
+		for( v in root.getAll("LayerElementUV") ) {
+			var index = v.get("UVIndex", true);
+			var values = v.get("UV").getFloats();
+			var index = if( index == null ) {
+				// ByVertice/Direct (Maya sometimes...)
+				[for( i in getPolygons() ) if( i < 0 ) -i - 1 else i];
+			} else index.getInts();
+			uvs.push({ values : values, index : index });
+		}
 		return uvs;
 	}
 	
