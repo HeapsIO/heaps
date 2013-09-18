@@ -44,5 +44,58 @@ class Key {
 	public static inline var NUMPAD_DOT = 110;
 	public static inline var NUMPAD_DIV = 111;
 	
+	static var initDone = false;
+	static var keyPressed : Array<Int> = [];
+	
+	public static function isDown( code : Int ) {
+		return keyPressed[code] > 0;
+	}
+
+	public static function isPressed( code : Int ) {
+		return keyPressed[code] == h3d.Engine.getCurrent().frameCount+1;
+	}
+
+	public static function isReleased( code : Int ) {
+		return keyPressed[code] == -(h3d.Engine.getCurrent().frameCount+1);
+	}
+
+	public static function initialize() {
+		if( initDone )
+			dispose();
+		initDone = true;
+		keyPressed = [];
+		Stage.getInstance().addEventTarget(onKeyEvent);
+		#if flash
+		flash.Lib.current.stage.addEventListener(flash.events.Event.DEACTIVATE, onDeactivate);
+		#end
+	}
+	
+	public static function dispose() {
+		if( initDone ) {
+			Stage.getInstance().removeEventTarget(onKeyEvent);
+			#if flash
+			flash.Lib.current.stage.removeEventListener(flash.events.Event.DEACTIVATE, onDeactivate);
+			#end
+			initDone = false;
+			keyPressed = [];
+		}
+	}
+	
+	#if flash
+	static function onDeactivate(_) {
+		keyPressed = [];
+	}
+	#end
+	
+	static function onKeyEvent( e : Event ) {
+		switch( e.kind ) {
+		case EKeyDown:
+			keyPressed[e.keyCode] = h3d.Engine.getCurrent().frameCount+1;
+		case EKeyUp:
+			keyPressed[e.keyCode] = -(h3d.Engine.getCurrent().frameCount+1);
+		default:
+		}
+	}
+
 }
 
