@@ -62,7 +62,10 @@ private class DrawableShader extends h3d.impl.Shader {
 
 		function fragment( tex : Texture ) {
 			var col = tex.get(sinusDeform != null ? [tuv.x + sin(tuv.y * sinusDeform.y + sinusDeform.x) * sinusDeform.z, tuv.y] : tuv, filter = ! !filter, wrap = tileWrap);
-			if( hasColorKey ) kill(abs(col.rgb - colorKey.rgb).length() - 0.001);
+			if( hasColorKey ) {
+				var cdiff = col.rgb - colorKey.rgb;
+				kill(cdiff.dot(cdiff) - 0.001);
+			}
 			if( killAlpha ) kill(col.a - 0.001);
 			if( hasVertexAlpha ) col.a *= talpha;
 			if( hasVertexColor ) col *= tcolor;
@@ -80,15 +83,46 @@ private class DrawableShader extends h3d.impl.Shader {
 	
 	#elseif js
 	
+	public var hasColorKey : Bool;
+	
+	// not supported
+	public var skew : Float;
+	public var sinusDeform : h3d.Vector;
+	public var hasAlphaMap : Bool;
+	public var hasMultMap : Bool;
+	public var multMap : h3d.mat.Texture;
+	public var multUV : h3d.Vector;
+	public var multMapFactor : Float;
+	public var alphaMap : h3d.mat.Texture;
+	public var alphaUV : h3d.Vector;
+	// --
+	
+	public var filter : Bool;
+	public var tileWrap : Bool;
+	public var killAlpha : Bool;
+	public var hasAlpha : Bool;
+	public var hasVertexAlpha : Bool;
+	
+	override function customSetup(driver:h3d.impl.WebglDriver) {
+		driver.setupTexture(tex, None, filter ? Linear : Nearest, tileWrap ? Repeat : Clamp);
+	}
+	
 	static var VERTEX = "
 	
 		attribute vec2 pos;
 		attribute vec2 uv;
+		#if hasVertexAlpha
+		attribute float alpha;
+		varying lowp float talpha;
+		#end
 
 		uniform vec3 size;
 		uniform vec3 matA;
 		uniform vec3 matB;
 		uniform lowp float zValue;
+		
+		uniform vec2 uvPos;
+		uniform vec3 uvScale;
 		
 		varying lowp vec2 tuv;
 
@@ -100,7 +134,17 @@ private class DrawableShader extends h3d.impl.Shader {
 			tmp.z = zValue;
 			tmp.w = 1.;
 			gl_Position = tmp;
+			vec2 t = uv;
+			#if hasUVScale
+				t *= uvScale;
+			#end
+			#if hasUVPos
+				t += uvPos;
+			#end
 			tuv = uv;
+			#if hasVertexAlpha
+				talpha = alpha;
+			#end
 		}
 
 	";
@@ -110,12 +154,40 @@ private class DrawableShader extends h3d.impl.Shader {
 		varying lowp vec2 tuv;
 		uniform sampler2D tex;
 		
-		const bool hasAlpha = true;
+		#if hasVertexAlpha
+		varying lowp float talpha;
+		#end
+		
 		uniform lowp float alpha;
+		uniform lowp vec3 colorKey/*byte4*/;
 	
+		uniform lowp vec4 colorAdd;
+		uniform lowp vec4 colorMul;
+		uniform mediump mat4 colorMatrix;
+
 		void main(void) {
 			lowp vec4 col = texture2D(tex, tuv);
-			if( hasAlpha ) col.w *= alpha;
+			#if killAlpha
+				if( c.a - 0.001 ) discard;
+			#end
+			#if hasColorKey
+				if( col.rgb == colorKey ) discard;
+			#end
+			#if hasAlpha
+				col.w *= alpha;
+			#end
+			#if hasVertexAlpha
+				col.a *= talpha;
+			#end
+			#if hasColorMatrix
+				c = colorMatrix * c;
+			#end
+			#if hasColorMul
+				c *= colorMul;
+			#end
+			#if hasColorAdd
+				c += colorAdd;
+			#end
 			gl_FragColor = col;
 		}
 			

@@ -140,6 +140,10 @@ class System {
 		throw "TODO";
 	}
 	
+	static function get_lang() {
+		return "en";
+	}
+	
 	static function get_screenDPI() {
 		return 72.;
 	}

@@ -17,6 +17,7 @@ enum ShaderType {
 	Mat4;
 	Tex2d;
 	TexCube;
+	Byte3;
 	Byte4;
 	Struct( field : String, t : ShaderType );
 	Index( index : Int, t : ShaderType );
@@ -41,6 +42,9 @@ class Shader {
 	var instance : ShaderInstance;
 	
 	public function new() {
+	}
+	
+	function customSetup( driver : WebglDriver ) {
 	}
 	
 	function getConstants( vertex : Bool ) {
@@ -74,7 +78,7 @@ class ShaderMacros {
 				code = r_uni.matchedRight();
 				var t = switch( type ) {
 				case "float": macro : Float;
-				case "vec4" if( hint == "byte4" ): macro : Int;
+				case "vec4", "vec3" if( hint == "byte4" ): macro : Int;
 				case "vec2", "vec3", "vec4": macro : h3d.Vector;
 				case "mat3", "mat4": macro : h3d.Matrix;
 				case "sampler2D", "samplerCube": macro : h3d.mat.Texture;

@@ -9,7 +9,7 @@ private typedef GL = js.html.webgl.GL;
 class WebglDriver extends Driver {
 
 	var canvas : js.html.CanvasElement;
-	var gl : js.html.webgl.RenderingContext;
+	public var gl : js.html.webgl.RenderingContext;
 	
 	var curAttribs : Int;
 	var curShader : Shader.ShaderInstance;
@@ -189,7 +189,7 @@ class WebglDriver extends Driver {
 	
 	function typeSize( t : Shader.ShaderType ) {
 		return switch( t ) {
-		case Float, Byte4: 1;
+		case Float, Byte4, Byte3: 1;
 		case Vec2: 2;
 		case Vec3: 3;
 		case Vec4: 4;
@@ -297,6 +297,14 @@ class WebglDriver extends Driver {
 			switch( t ) {
 			case Tex2d, TexCube:
 				texIndex++;
+			case Vec3:
+				var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "");
+				if( r.match(allCode) )
+					switch( r.matched(1) ) {
+					case "byte4":
+						t = Byte3;
+					default:
+					}
 			case Vec4:
 				var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "");
 				if( r.match(allCode) )
@@ -355,8 +363,20 @@ class WebglDriver extends Driver {
 			if( val == null ) throw "Missing shader value " + u.name;
 			setUniform(val, u, u.type);
 		}
+		shader.customSetup(this);
 		
 		return change;
+	}
+	
+	public function setupTexture( t : h3d.mat.Texture, mipMap : h3d.mat.Data.MipMap, filter : h3d.mat.Data.Filter, wrap : h3d.mat.Data.Wrap ) {
+		gl.bindTexture(GL.TEXTURE_2D, t.t);
+		var flags = TFILTERS[Type.enumIndex(mipMap)][Type.enumIndex(filter)];
+		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
+		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
+		var w = TWRAP[Type.enumIndex(wrap)];
+		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, w);
+		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, w);
+		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
 	
 	function setUniform( val : Dynamic, u : Shader.Uniform, t : Shader.ShaderType ) {
@@ -367,11 +387,8 @@ class WebglDriver extends Driver {
 		case Tex2d:
 			var t : h3d.mat.Texture = val;
 			gl.activeTexture(GL.TEXTURE0 + u.index);
-			gl.bindTexture(GL.TEXTURE_2D, t.t);
-			var flags = TFILTERS[Type.enumIndex(t.mipMap)][Type.enumIndex(t.filter)];
-			gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
-			gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
 			gl.uniform1i(u.loc, u.index);
+			setupTexture(t, t.mipMap, t.filter, t.wrap);
 		case Float:
 			gl.uniform1f(u.loc, val);
 		case Vec2:
@@ -394,6 +411,9 @@ class WebglDriver extends Driver {
 		case Byte4:
 			var v : Int = val;
 			gl.uniform4f(u.loc, ((v >> 16) & 0xFF) / 255, ((v >> 8) & 0xFF) / 255, (v & 0xFF) / 255, (v >>> 24) / 255);
+		case Byte3:
+			var v : Int = val;
+			gl.uniform3f(u.loc, ((v >> 16) & 0xFF) / 255, ((v >> 8) & 0xFF) / 255, (v & 0xFF) / 255);
 		default:
 			throw "Unsupported uniform " + u.type;
 		}
@@ -431,6 +451,11 @@ class WebglDriver extends Driver {
 		[[GL.NEAREST,GL.NEAREST],[GL.LINEAR,GL.LINEAR]],
 		[[GL.NEAREST,GL.NEAREST_MIPMAP_NEAREST],[GL.LINEAR,GL.LINEAR_MIPMAP_NEAREST]],
 		[[GL.NEAREST,GL.NEAREST_MIPMAP_LINEAR],[GL.LINEAR,GL.LINEAR_MIPMAP_LINEAR]],
+	];
+	
+	static var TWRAP = [
+		GL.CLAMP_TO_EDGE,
+		GL.REPEAT,
 	];
 	
 	static var FACES = [
