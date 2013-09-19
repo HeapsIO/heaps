@@ -2,6 +2,8 @@ package h2d.comp;
 
 class Box extends Component {
 	
+	var input : h2d.Interactive;
+	
 	public function new(?layout,?parent) {
 		super("box", parent);
 		if( layout == null ) layout = h2d.css.Defs.Layout.Inline;
@@ -188,6 +190,19 @@ class Box extends Component {
 		if( ctx.measure ) {
 			width = contentWidth + extX + extRight();
 			height = contentHeight + extY + extBottom();
+		} else {
+			if( style.backgroundColor != Transparent ) {
+				if( input == null ) {
+					input = new h2d.Interactive(0, 0);
+					input.cursor = Default;
+					bg.addChildAt(input, 0);
+				}
+				input.width = width - (style.marginLeft + style.marginRight);
+				input.height = height - (style.marginTop + style.marginBottom);
+			} else if( input != null ) {
+				input.remove();
+				input = null;
+			}
 		}
 	}
 	
