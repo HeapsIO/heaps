@@ -505,10 +505,40 @@ class ColorPicker extends h2d.comp.Component {
 	var gaugeGreen : ColorGauge;
 	var gaugeBlue : ColorGauge;
 	var gaugeAlpha : ColorGauge;
+	var timer : haxe.Timer;
+	
+	public var color(get, set) : Int;
 	
 	public function new(?parent) {
 		super("colorpicker", parent);
 		init();
+	}
+	
+	inline function get_color() {
+		return finalColor.color;
+	}
+	
+	inline function set_color(v) {
+		finalColor.color = v;
+		palette.setColorFrom(v);
+		chart.setColorFrom(v);
+		return v;
+	}
+	
+	override function onAlloc() {
+		super.onAlloc();
+		if( timer == null ) {
+			timer = new haxe.Timer(10);
+			timer.run = doUpdate;
+		}
+	}
+	
+	override function onDelete() {
+		super.onDelete();
+		if( timer != null ) {
+			timer.stop();
+			timer = null;
+		}
 	}
 	
 	inline function init() {
@@ -521,13 +551,16 @@ class ColorPicker extends h2d.comp.Component {
 		gaugeAlpha = new ColorGauge(50, 295, 140, 15, RGBA.A, this);
 		chart.refColor = palette.color;
 		change = SNone;
-		
-		#if flash
-		flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, doUpdate);
-		#end
+		var close = new Button("X", this);
+		close.addStyleString("layout:absolute;font-size:12px;height:10px;width:10px;");
+		close.x = 175;
+		close.y = 10;
+		close.onClick = function() {
+			onClose();
+		};
 	}
 
-	function doUpdate(_) {
+	function doUpdate() {
 		finalColor.preview = chart.color;
 		if(change.equals(SNone)) {
 			if(finalColor.color != chart.color) {
@@ -556,14 +589,7 @@ class ColorPicker extends h2d.comp.Component {
 		gaugeBlue.color = chart.color;
 	}
 	
-	public function show(color:Int) {
-		finalColor.color = color;
-		palette.setColorFrom(finalColor.color);
-		chart.setColorFrom(finalColor.color);
-		visible = true;
-	}
-	public function hide () {
-		visible = false;
+	public dynamic function onClose() {
 	}
 	
 	public dynamic function onChange( value : Int ) {

@@ -151,7 +151,7 @@ private class Cursor extends h2d.Sprite {
 		flag = new CFlag(cursor, 0, 0, ang, color, bgcolor);
 		
 		if(GradientEditor.colorPicker.visible)
-			GradientEditor.colorPicker.show(color);
+			GradientEditor.colorPicker.color = color;
 	}
 	
 	public function unselect() {
@@ -290,8 +290,9 @@ private class ColorSelector extends h2d.Sprite {
 			if(target == null)
 				return;
 			
-			if(!GradientEditor.colorPicker.visible){
-				GradientEditor.colorPicker.show(color);
+			if(!GradientEditor.colorPicker.visible) {
+				GradientEditor.colorPicker.visible = true;
+				GradientEditor.colorPicker.color = color;
 				GradientEditor.colorPicker.y = 220;
 				GradientEditor.colorPicker.onChange = function(v) {
 					color = target.value = v;
@@ -301,7 +302,7 @@ private class ColorSelector extends h2d.Sprite {
 			}
 			else {
 				GradientEditor.colorPicker.onChange = function(v) { };
-				GradientEditor.colorPicker.hide();
+				GradientEditor.colorPicker.visible = false;
 				GradientEditor.colorPicker.y = -500;
 			}
 		};
@@ -375,6 +376,7 @@ class GradientEditor extends h2d.comp.Component {
 	
 	var interactUp:h2d.Interactive;
 	var interactDown:h2d.Interactive;
+		
 	
 	var holdCursor:Cursor;
 	
@@ -408,7 +410,7 @@ class GradientEditor extends h2d.comp.Component {
 		
 		colorPicker = new ColorPicker(this);
 		colorPicker.y = -500;
-		colorPicker.hide();
+		colorPicker.visible = false;
 		
 		//
 		colorsKeys.push( new Cursor(0, boxHeight, KColor, 0xFFFFFFFF, Math.PI,  box));
