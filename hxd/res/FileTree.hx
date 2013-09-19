@@ -266,7 +266,7 @@ class FileTree {
 		case "wav", "mp3":
 			return { e : macro loader.loadSound($epath), t : macro : hxd.res.Sound };
 		default:
-			Context.warning("File extension not supported '." + ext + "'", Context.makePosition( { min : 0, max : 0, file : fullPath } ));
+			return { e : macro loader.loadData($epath), t : macro : hxd.res.Resource };
 		}
 		return null;
 	}

@@ -2,7 +2,7 @@ package hxd.res;
 
 class Loader {
 	
-	var fs : FileSystem;
+	public var fs(default,null) : FileSystem;
 	var modelCache : Map<String,Model>;
 	var textureCache : Map<String,Texture>;
 	var soundCache : Map<String,Sound>;
@@ -51,6 +51,10 @@ class Loader {
 
 	function loadFont( path : String ) : Font {
 		return new Font(fs.get(path));
+	}
+	
+	function loadData( path : String ) {
+		return new Resource(fs.get(path));
 	}
 	
 }
