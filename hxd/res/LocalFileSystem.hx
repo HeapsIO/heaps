@@ -231,4 +231,14 @@ class LocalFileSystem implements FileSystem {
 		#end
 	}
 	
+	public function saveContent( path : String, data : haxe.io.Bytes ) {
+		#if air3
+		var f = open(path);
+		var o = new flash.filesystem.FileStream();
+		o.open(f, flash.filesystem.FileMode.WRITE);
+		o.writeBytes(data.getData());
+		o.close();
+		#end
+	}
+	
 }
