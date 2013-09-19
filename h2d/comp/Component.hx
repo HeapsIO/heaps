@@ -94,11 +94,19 @@ class Component extends Sprite {
 		needRebuild = true;
 		return this;
 	}
-	
+
 	public function addStyle(s) {
 		if( customStyle == null )
 			customStyle = new h2d.css.Style();
 		customStyle.apply(s);
+		needRebuild = true;
+		return this;
+	}
+
+	public function addStyleString(s) {
+		if( customStyle == null )
+			customStyle = new h2d.css.Style();
+		new h2d.css.Parser().parse(s, customStyle);
 		needRebuild = true;
 		return this;
 	}
