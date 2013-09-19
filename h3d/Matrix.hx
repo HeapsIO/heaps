@@ -397,6 +397,76 @@ class Matrix {
 		"]";
 	}
 	
+	// ---- COLOR MATRIX FUNCTIONS -------
+
+	static inline var lumR = 0.212671;
+	static inline var lumG = 0.71516;
+	static inline var lumB = 0.072169;
+	
+	public function colorHue( hue : Float ) {
+		if( hue == 0. )
+			return;
+		var cv = Math.cos(hue);
+		var sv = Math.sin(hue);
+		tmp._11 = lumR + cv * (1 - lumR) - sv * lumR;
+		tmp._12 = lumR - cv * lumR + sv * 0.143;
+		tmp._13 = lumR - cv * lumR - sv * (1 - lumR);
+		tmp._21 = lumG - cv * lumG - sv * lumG;
+		tmp._22 = lumG + cv * (1 - lumG) + sv * 0.140;
+		tmp._23 = lumG - cv * lumG + sv * lumG;
+		tmp._31 = lumB - cv * lumB - sv * lumB;
+		tmp._32 = lumB - cv * lumB - sv * 0.283;
+		tmp._33 = lumB + cv * (1 - lumB) + sv * lumB;
+		tmp._34 = 0;
+		tmp._41 = 0;
+		tmp._42 = 0;
+		tmp._43 = 0;
+		multiply3x4(this, tmp);
+	}
+	
+	public function colorSaturation( sat : Float ) {
+		var is = 1 - sat;
+		var r = is * lumR;
+		var g = is * lumG;
+		var b = is * lumB;
+		tmp._11 = r + sat;
+		tmp._12 = r;
+		tmp._13 = r;
+		tmp._21 = g;
+		tmp._22 = g + sat;
+		tmp._23 = g;
+		tmp._31 = b;
+		tmp._32 = b;
+		tmp._33 = b + sat;
+		tmp._41 = 0;
+		tmp._42 = 0;
+		tmp._43 = 0;
+		multiply3x4(this, tmp);
+	}
+	
+	public function colorContrast( contrast : Float ) {
+		var v = contrast + 1;
+		tmp._11 = v;
+		tmp._12 = 0;
+		tmp._13 = 0;
+		tmp._21 = 0;
+		tmp._22 = v;
+		tmp._23 = 0;
+		tmp._31 = 0;
+		tmp._32 = 0;
+		tmp._33 = v;
+		tmp._41 = -contrast*0.5;
+		tmp._42 = -contrast*0.5;
+		tmp._43 = -contrast*0.5;
+		multiply3x4(this, tmp);
+	}
+
+	public function colorBrightness( brightness : Float ) {
+		_41 += brightness;
+		_42 += brightness;
+		_43 += brightness;
+	}
+	
 	public static function I() {
 		var m = new Matrix();
 		m.identity();
