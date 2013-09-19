@@ -439,6 +439,20 @@ class Parser {
 			case "gray", "grey": 0x808080;
 			default: null;
 			}
+		case VCall("rgba", [r, g, b, a]):
+			var r = getVal(r), g = getVal(g), b = getVal(b), a = getVal(a);
+			inline function conv(k:Float) {
+				var v = Std.int(k * 255);
+				if( v < 0 ) v = 0;
+				if( v > 255 ) v = 255;
+				return v;
+			}
+			if( r != null && g != null && b != null && a != null ) {
+				var a = conv(a); if( a == 0 ) a = 1; // prevent setting alpha to FF afterwards
+				(a << 24) | (conv(r) << 16) | (conv(g) << 8) | conv(b);
+			}
+			else
+				null;
 		default:
 			null;
 		};
