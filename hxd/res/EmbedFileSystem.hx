@@ -12,7 +12,9 @@ private class EmbedEntry extends FileEntry {
 	var data : Class<flash.utils.ByteArray>;
 	var bytes : flash.utils.ByteArray;
 	#else
-	var data : Dynamic;
+	var data : String;
+	var bytes : haxe.io.Bytes;
+	var readPos : Int;
 	#end
 
 	function new(fs, name, relPath, data) {
@@ -31,7 +33,10 @@ private class EmbedEntry extends FileEntry {
 		bytes.position = old;
 		return v;
 		#else
-		return 0;
+		var old = readPos;
+		open();
+		readPos = old;
+		return bytes.get(0) | (bytes.get(1) << 8) | (bytes.get(2) << 16) | (bytes.get(3) << 24);
 		#end
 	}
 	
@@ -41,7 +46,9 @@ private class EmbedEntry extends FileEntry {
 			open();
 		return haxe.io.Bytes.ofData(bytes);
 		#else
-		return null;
+		if( bytes == null )
+			open();
+		return bytes;
 		#end
 	}
 	
@@ -50,12 +57,20 @@ private class EmbedEntry extends FileEntry {
 		if( bytes == null )
 			bytes = Type.createInstance(data, []);
 		bytes.position = 0;
+		#else
+		if( bytes == null ) {
+			bytes = haxe.Resource.getBytes(data);
+			if( bytes == null ) throw "Missing resource " + data;
+		}
+		readPos = 0;
 		#end
 	}
 	
 	override function skip( nbytes : Int ) {
 		#if flash
 		bytes.position += nbytes;
+		#else
+		readPos += nbytes;
 		#end
 	}
 	
@@ -63,24 +78,30 @@ private class EmbedEntry extends FileEntry {
 		#if flash
 		return bytes.readUnsignedByte();
 		#else
-		return 0;
+		return bytes.get(readPos++);
 		#end
 	}
 	
 	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
 		#if flash
 		bytes.readBytes(out.getData(), pos, size);
+		#else
+		out.blit(pos, bytes, readPos, size);
+		readPos += size;
 		#end
 	}
 
 	override function close() {
 		#if flash
 		bytes = null;
+		#else
+		bytes = null;
+		readPos = 0;
 		#end
 	}
 	
 	override function load( ?onReady : Void -> Void ) : Void {
-		#if flash
+		#if (flash || js)
 		if( onReady != null ) haxe.Timer.delay(onReady, 1);
 		#end
 	}
@@ -100,15 +121,12 @@ private class EmbedEntry extends FileEntry {
 		open();
 		loader.loadBytes(bytes);
 		#else
+		throw "TODO";
 		#end
 	}
 	
 	override function get_isDirectory() {
-		#if flash
 		return fs.isDirectory(relPath);
-		#else
-		return false;
-		#end
 	}
 	
 	override function get_path() {
@@ -128,15 +146,13 @@ private class EmbedEntry extends FileEntry {
 		open();
 		return bytes.length;
 		#else
-		return 0;
+		open();
+		return bytes.length;
 		#end
 	}
 
 	override function iterator() {
-		#if flash
 		return new hxd.impl.ArrayIterator(fs.subFiles(relPath));
-		#else
-		#end
 	}
 	
 }
@@ -157,10 +173,10 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		return new EmbedEntry(this,"root",null,null);
 	}
 
-	#if flash
+	#if (flash||js)
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	static function resolve( path : String ) {
-		return "hxd._res.R_"+invalidChars.replace(path,"_");
+		return #if flash "hxd._res." + #end "R_"+invalidChars.replace(path,"_");
 	}
 	#end
 	
@@ -175,6 +191,8 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		return cl;
 	}
 	
+	#end
+
 	function subFiles( path : String ) : Array<FileEntry> {
 		var r = root;
 		for( p in path.split("/") )
@@ -190,14 +208,14 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 			r = Reflect.field(r, p);
 		return r != null;
 	}
-	#end
-	
+
 	public function exists( path : String ) {
 		#if flash
 		var f = open(path);
 		return f != null;
 		#else
-		return false;
+		var id = resolve(path);
+		return haxe.Resource.listNames().remove(id);
 		#end
 	}
 	
@@ -208,7 +226,8 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 			throw "File not found " + path;
 		return new EmbedEntry(this, path.split("/").pop(), path, f);
 		#else
-		return null;
+		var id = resolve(path);
+		return new EmbedEntry(this, path.split("/").pop(), path, id);
 		#end
 	}
 	

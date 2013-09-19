@@ -13,6 +13,8 @@ class FileTree {
 	var ignoredDir : Map<String,Bool>;
 	var ignoredExt : Map<String,Bool>;
 	var options : EmbedOptions;
+	var isFlash : Bool;
+	var isJS : Bool;
 	
 	public function new(dir) {
 		this.path = resolvePath(dir);
@@ -25,6 +27,8 @@ class FileTree {
 		ignoredExt = new Map();
 		ignoredExt.set("gal", true); // graphics gale source
 		ignoredExt.set("lch", true); // labchirp source
+		isFlash = Context.defined("flash");
+		isJS = Context.defined("js");
 	}
 	
 	function resolvePath(dir:Null<String>) {
@@ -93,19 +97,24 @@ class FileTree {
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	function embedFile( file : String, ext : String, relPath : String, fullPath : String ) {
 		var name = "R" + invalidChars.replace(relPath, "_");
-		if( Context.defined("flash") ) {
-			switch( ext.toLowerCase() ) {
-			case "wav" if( options.compressSounds ):
-				var tmp = options.tmpDir + name + ".mp3";
-				if( getTime(tmp) < getTime(fullPath) ) {
-					if( Sys.command("lame", ["--silent","-h",fullPath,tmp]) != 0 )
-						Context.warning("Failed to run lame on " + path, pos);
-					else {
-						fullPath = tmp;
-					}
-				} else {
+		
+		switch( ext.toLowerCase() ) {
+		case "wav" if( options.compressSounds ):
+			var tmp = options.tmpDir + name + ".mp3";
+			if( getTime(tmp) < getTime(fullPath) ) {
+				if( Sys.command("lame", ["--silent","-h",fullPath,tmp]) != 0 )
+					Context.warning("Failed to run lame on " + path, pos);
+				else {
 					fullPath = tmp;
 				}
+			} else {
+				fullPath = tmp;
+			}
+		default:
+		}
+		
+		if( isFlash ) {
+			switch( ext.toLowerCase() ) {
 			case "ttf":
 				haxe.macro.Context.defineType({
 					pack : ["hxd","_res"],
@@ -136,6 +145,9 @@ class FileTree {
 				],
 				kind : TDClass({ pack : ["flash","utils"], name : "ByteArray", params : [] }),
 			});
+		} else if( isJS ) {
+			Context.addResource(name, sys.io.File.getBytes(fullPath));
+			return true;
 		} else {
 			return false;
 		}

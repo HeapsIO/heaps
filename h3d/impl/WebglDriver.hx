@@ -125,6 +125,18 @@ class WebglDriver extends Driver {
 	override function uploadTextureBytes( t : h3d.mat.Texture, bytes : haxe.io.Bytes, mipLevel : Int, side : Int ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
 		var pixels = new js.html.Uint8Array(bytes.getData());
+		// convert BGRA to RGBA
+		for( i in 0...t.width * t.height ) {
+			var p = i << 2;
+			var b = pixels[p + 0];
+			var g = pixels[p + 1];
+			var r = pixels[p + 2];
+			var a = pixels[p + 3];
+			pixels[p] = r;
+			pixels[p+1] = g;
+			pixels[p+2] = b;
+			pixels[p+3] = a;
+		}
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels);
 		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
@@ -376,7 +388,6 @@ class WebglDriver extends Driver {
 		var w = TWRAP[Type.enumIndex(wrap)];
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, w);
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, w);
-		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
 	
 	function setUniform( val : Dynamic, u : Shader.Uniform, t : Shader.ShaderType ) {
@@ -386,9 +397,9 @@ class WebglDriver extends Driver {
 			gl.uniformMatrix4fv(u.loc, false, new js.html.Float32Array(m.getFloats()));
 		case Tex2d:
 			var t : h3d.mat.Texture = val;
+			setupTexture(t, t.mipMap, t.filter, t.wrap);
 			gl.activeTexture(GL.TEXTURE0 + u.index);
 			gl.uniform1i(u.loc, u.index);
-			setupTexture(t, t.mipMap, t.filter, t.wrap);
 		case Float:
 			gl.uniform1f(u.loc, val);
 		case Vec2:

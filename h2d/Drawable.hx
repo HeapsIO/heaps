@@ -107,6 +107,24 @@ private class DrawableShader extends h3d.impl.Shader {
 		driver.setupTexture(tex, None, filter ? Linear : Nearest, tileWrap ? Repeat : Clamp);
 	}
 	
+	override function getConstants( vertex : Bool ) {
+		var cst = [];
+		if( vertex ) {
+			if( size != null ) cst.push("#define hasSize");
+			if( uvScale != null ) cst.push("#define hasUVScale");
+			if( uvPos != null ) cst.push("#define hasUVPos");
+		} else {
+			if( killAlpha ) cst.push("#define killAlpha");
+			if( hasColorKey ) cst.push("#define hasColorKey");
+			if( hasAlpha ) cst.push("#define hasAlpha");
+			if( colorMatrix != null ) cst.push("#define hasColorMatrix");
+			if( colorMul != null ) cst.push("#define hasColorMul");
+			if( colorAdd != null ) cst.push("#define hasColorAdd");
+		}
+		if( hasVertexAlpha ) cst.push("#define hasVertexAlpha");
+		return cst.join("\n");
+	}
+	
 	static var VERTEX = "
 	
 		attribute vec2 pos;
@@ -122,12 +140,15 @@ private class DrawableShader extends h3d.impl.Shader {
 		uniform lowp float zValue;
 		
 		uniform vec2 uvPos;
-		uniform vec3 uvScale;
+		uniform vec2 uvScale;
 		
 		varying lowp vec2 tuv;
 
 		void main(void) {
-			vec3 spos = vec3(pos.xy,1.0) * size;
+			vec3 spos = vec3(pos.xy, 1.0);
+			#if hasSize
+				spos = spos * size;
+			#end
 			vec4 tmp;
 			tmp.x = dot(spos,matA);
 			tmp.y = dot(spos,matB);
@@ -141,7 +162,7 @@ private class DrawableShader extends h3d.impl.Shader {
 			#if hasUVPos
 				t += uvPos;
 			#end
-			tuv = uv;
+			tuv = t;
 			#if hasVertexAlpha
 				talpha = alpha;
 			#end
@@ -180,13 +201,13 @@ private class DrawableShader extends h3d.impl.Shader {
 				col.a *= talpha;
 			#end
 			#if hasColorMatrix
-				c = colorMatrix * c;
+				col = colorMatrix * col;
 			#end
 			#if hasColorMul
-				c *= colorMul;
+				col *= colorMul;
 			#end
 			#if hasColorAdd
-				c += colorAdd;
+				col += colorAdd;
 			#end
 			gl_FragColor = col;
 		}

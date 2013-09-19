@@ -103,9 +103,11 @@ class ShaderMacros {
 			case ["VERTEX", FVar(_,{ expr : EConst(CString(code)) }) ]:
 				hasVertex = true;
 				addUniforms(code);
+				f.meta.push( { name : ":keep", params : [], pos : pos } );
 			case ["FRAGMENT", FVar(_,{ expr : EConst(CString(code)) })]:
 				hasFragment = true;
 				addUniforms(code);
+				f.meta.push( { name : ":keep", params : [], pos : pos } );
 			default:
 			}
 		if( !hasVertex )
