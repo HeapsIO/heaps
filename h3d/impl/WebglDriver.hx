@@ -477,8 +477,8 @@ class WebglDriver extends Driver {
 	];
 	
 	static var BLEND = [
-		GL.ZERO,
 		GL.ONE,
+		GL.ZERO,
 		GL.SRC_ALPHA,
 		GL.SRC_COLOR,
 		GL.DST_ALPHA,

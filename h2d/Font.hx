@@ -174,7 +174,8 @@ class Font #if !macro extends Tile #end {
 		bmp.dispose();
 		#else
 		
-		throw "TODO";
+		glyphs = [];
+		trace("TODO");
 		
 		#end
 		

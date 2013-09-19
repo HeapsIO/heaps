@@ -192,7 +192,8 @@ private class DrawableShader extends h3d.impl.Shader {
 				if( c.a - 0.001 ) discard;
 			#end
 			#if hasColorKey
-				if( col.rgb == colorKey ) discard;
+				lowp vec3 dc = col.rgb - colorKey;
+				if( dot(dc,dc) < 0.001 ) discard;
 			#end
 			#if hasAlpha
 				col.w *= alpha;

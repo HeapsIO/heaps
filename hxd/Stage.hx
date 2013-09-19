@@ -36,7 +36,9 @@ class Stage {
 		}
 		#elseif js
 		js.Browser.window.addEventListener("mousedown", onMouseDown);
+		js.Browser.window.addEventListener("mousemove", onMouseMove);
 		js.Browser.window.addEventListener("mouseup", onMouseUp);
+		js.Browser.window.addEventListener("mousewheel", onMouseWheel);
 		js.Browser.window.addEventListener("keydown", onKeyDown);
 		js.Browser.window.addEventListener("keyup", onKeyUp);
 		js.Browser.window.addEventListener("resize", onResize);
@@ -171,6 +173,9 @@ class Stage {
 	
 #elseif js
 
+	var curMouseX : Float;
+	var curMouseY : Float;
+
 	function get_width() {
 		return js.Browser.document.width;
 	}
@@ -180,28 +185,50 @@ class Stage {
 	}
 
 	function get_mouseX() {
-		throw "TODO";
-		return 0.;
+		return curMouseX;
 	}
 
 	function get_mouseY() {
-		throw "TODO";
-		return 0.;
+		return curMouseY;
+	}
+
+	function onMouseDown(e:js.html.MouseEvent) {
+		event(new Event(EPush, mouseX, mouseY));
+	}
+
+	function onMouseUp(e:js.html.MouseEvent) {
+		event(new Event(ERelease, mouseX, mouseY));
 	}
 	
-	function onMouseDown(e) {
+	function onMouseMove(e:js.html.MouseEvent) {
+		curMouseX = e.clientX;
+		curMouseY = e.clientY;
+		event(new Event(EMove, mouseX, mouseY));
+	}
+	
+	function onMouseWheel(e:js.html.MouseEvent) {
+		var ev = new Event(EWheel, mouseX, mouseY);
+		ev.wheelDelta = untyped -e.wheelDelta / 30.0;
+		event(ev);
+	}
+	
+	function onKeyUp(e:js.html.KeyboardEvent) {
+		var ev = new Event(EKeyUp);
+		ev.keyCode = e.keyCode;
+		ev.charCode = e.charCode;
+		event(ev);
 	}
 
-	function onMouseUp(e) {
+	function onKeyDown(e:js.html.KeyboardEvent) {
+		var ev = new Event(EKeyDown);
+		ev.keyCode = e.keyCode;
+		ev.charCode = e.charCode;
+		event(ev);
 	}
-
-	function onKeyDown(e) {
-	}
-
-	function onKeyUp(e) {
-	}
-
+	
 	function onResize(e) {
+		for( r in resizeEvents )
+			r();
 	}
 
 #end
