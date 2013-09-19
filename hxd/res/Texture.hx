@@ -94,7 +94,7 @@ class Texture extends Resource {
 			for( i in 0...(tw - w) * 4 )
 				out.set(p++, 0);
 		}
-		for( i in 0...(th - h) * tw )
+		for( i in 0...(th - h) * tw * 4 )
 			out.set(p++, 0);
 		hxd.impl.Tmp.saveBytes(bmp);
 		return out;
