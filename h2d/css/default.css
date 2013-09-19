@@ -7,6 +7,12 @@
 	background-color : transparent;
 }
 
+div.modal {
+	layout : dock;
+	dock : full;
+	background-color : rgba(0,0,0,0.8);
+}
+
 button {
 	background-color : gradient(#434343, #4B4B4B, #383838, #3A3A3A);
 	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
@@ -93,6 +99,17 @@ input {
 input:focus {
 	border : 1px solid white;
 	cursor-color : white;
+}
+
+color {
+	width : 16px;
+	height : 16px;
+	padding : 1px;
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+}
+
+color:hover {
+	border : 1px solid gradient(#C0C0C0,#B0B0B0,#888888,#707070);
 }
 
 colorpicker {

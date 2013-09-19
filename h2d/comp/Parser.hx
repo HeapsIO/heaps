@@ -45,6 +45,8 @@ class Parser {
 			c = new ItemList(parent);
 		case "input":
 			c = new Input(parent);
+		case "color":
+			c = new Color(parent);
 		case "colorpicker":
 			c = new ColorPicker(parent);
 		case "gradienteditor":
@@ -74,6 +76,9 @@ class Parser {
 				case "input":
 					var c : Input = cast c;
 					c.value = v;
+				case "color":
+					var c : Color = cast c;
+					c.value = Std.parseInt(v);
 				default:
 				}
 			case "onclick":
@@ -101,6 +106,10 @@ class Parser {
 					var c : Input = cast c;
 					var s = makeScript(c,v);
 					c.onChange = function(_) s();
+				case "color":
+					var c : Color = cast c;
+					var s = makeScript(c,v);
+					c.onChange = function(_) s();
 				default:
 				}
 			case "style":
@@ -125,6 +134,20 @@ class Parser {
 				c.x = Std.parseFloat(v);
 			case "y":
 				c.y = Std.parseFloat(v);
+			case "min":
+				switch( c.name ) {
+				case "slider":
+					var c : Slider = cast c;
+					c.minValue = Std.parseFloat(v);
+				default:
+				}
+			case "max":
+				switch( c.name ) {
+				case "slider":
+					var c : Slider = cast c;
+					c.maxValue = Std.parseFloat(v);
+				default:
+				}
 			case n:
 				throw "Unknown attrib " + n;
 			}

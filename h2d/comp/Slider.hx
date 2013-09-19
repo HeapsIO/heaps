@@ -4,6 +4,8 @@ class Slider extends Component {
 	
 	var cursor : Button;
 	var input : h2d.Interactive;
+	public var minValue : Float = 0.;
+	public var maxValue : Float = 1.;
 	public var value(default, set) : Float;
 	
 	@:access(h2d.comp.Button)
@@ -29,12 +31,12 @@ class Slider extends Component {
 	}
 	
 	function pixelToVal( e : hxd.Event ) {
-		return Std.int(e.relX - (style.borderSize + cursor.width * 0.5) ) / (input.width - (style.borderSize * 2 + cursor.width));
+		return (Std.int(e.relX - (style.borderSize + cursor.width * 0.5) ) / (input.width - (style.borderSize * 2 + cursor.width))) * (maxValue - minValue) + minValue;
 	}
 	
 	function gotoValue( v : Float ) {
-		if( v < 0 ) v = 0;
-		if( v > 1 ) v = 1;
+		if( v < minValue ) v = minValue;
+		if( v > maxValue ) v = maxValue;
 		if( v == value )
 			return;
 		var dv = Math.abs(value - v);
@@ -51,8 +53,8 @@ class Slider extends Component {
 	}
 	
 	function set_value(v:Float) {
-		if( v < 0 ) v = 0;
-		if( v > 1 ) v = 1;
+		if( v < minValue ) v = minValue;
+		if( v > maxValue ) v = maxValue;
 		value = v;
 		needRebuild = true;
 		return v;
@@ -65,7 +67,7 @@ class Slider extends Component {
 			input.height = cursor.height - (cursor.style.marginTop + cursor.style.marginBottom);
 			input.x = cursor.style.marginLeft - style.borderSize - cursor.width * 0.5;
 			input.y = cursor.style.marginTop;
-			cursor.style.offsetX = contentWidth * value - cursor.width * 0.5;
+			cursor.style.offsetX = contentWidth * (value - minValue) / (maxValue - minValue) - cursor.width * 0.5;
 		}
 	}
 
