@@ -28,6 +28,10 @@ class JQuery {
 			cast(c, h2d.comp.Slider).value;
 		case "checkbox":
 			cast(c, h2d.comp.Checkbox).checked;
+		case "input":
+			cast(c, h2d.comp.Input).value;
+		case "color":
+			cast(c, h2d.comp.Color).value;
 		default:
 			null;
 		}
@@ -40,6 +44,10 @@ class JQuery {
 				cast(c, h2d.comp.Slider).value = v;
 			case "checkbox":
 				cast(c, h2d.comp.Checkbox).checked = v != null && v != false;
+			case "input":
+				cast(c, h2d.comp.Input).value = Std.string(v);
+			case "color":
+				cast(c, h2d.comp.Color).value = v;
 			default:
 				null;
 			}
