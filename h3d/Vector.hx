@@ -86,6 +86,17 @@ class Vector {
 		w = 1;
 	}
 	
+	public inline function lerp( v1 : Vector, v2 : Vector, k : Float ) {
+		var x = Math.lerp(v1.x, v2.x, k);
+		var y = Math.lerp(v1.y, v2.y, k);
+		var z = Math.lerp(v1.z, v2.z, k);
+		var w = Math.lerp(v1.w, v2.w, k);
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		this.w = w;
+	}
+	
 	public inline function transform3x4( m : Matrix ) {
 		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
 		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
@@ -119,7 +130,7 @@ class Vector {
 	}
 	
 	public inline function toColor() {
-		return (Std.int(w.clamp() * 255) << 24) | (Std.int(x.clamp() * 255) << 16) | (Std.int(y.clamp() * 255) << 8) | Std.int(z.clamp() * 255);
+		return (Std.int(w.clamp() * 255 + 0.499) << 24) | (Std.int(x.clamp() * 255 + 0.499) << 16) | (Std.int(y.clamp() * 255 + 0.499) << 8) | Std.int(z.clamp() * 255 + 0.499);
 	}
 	
 	public static inline function fromColor( c : Int, scale : Float = 1.0 ) {
