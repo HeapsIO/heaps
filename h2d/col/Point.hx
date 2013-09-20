@@ -47,7 +47,7 @@ class Point {
 
 	public function normalize() {
 		var k = lengthSq();
-		if( k < Math.EPSILON ) k = 0 else k = Math.isqrt(k);
+		if( k < Math.EPSILON ) k = 0 else k = Math.invSqrt(k);
 		x *= k;
 		y *= k;
 	}

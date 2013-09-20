@@ -88,7 +88,7 @@ class Quat {
 			x = y = z = 0;
 			w = 1;
 		} else {
-			var m = len.isqrt();
+			var m = len.invSqrt();
 			x *= m;
 			y *= m;
 			z *= m;
@@ -162,7 +162,7 @@ class Quat {
 			return;
 		}
 		var halfTheta = cosHalfTheta.acos();
-		var invSinHalfTheta = (1 - cosHalfTheta * cosHalfTheta).isqrt();
+		var invSinHalfTheta = (1 - cosHalfTheta * cosHalfTheta).invSqrt();
 		if( invSinHalfTheta.abs() > 1e3 ) {
 			this.lerp(q1, q2, 0.5, true);
 			return;

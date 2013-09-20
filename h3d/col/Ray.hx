@@ -16,7 +16,7 @@ class Ray {
 	
 	public function normalize() {
 		var l = lx * lx + ly * ly + lz * lz;
-		if( l < Math.EPSILON ) l = 0 else l = Math.isqrt(l);
+		if( l < Math.EPSILON ) l = 0 else l = Math.invSqrt(l);
 		lx *= l;
 		ly *= l;
 		lz *= l;

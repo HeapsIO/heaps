@@ -16,7 +16,7 @@ class Math {
 		return std.Math.NEGATIVE_INFINITY;
 	}
 	
-	// round to 4 significant digits, eliminates <1e-10
+	// round to 4 significant digits, eliminates < 1e-10
 	public static function fmt( v : Float ) {
 		var neg;
 		if( v < 0 ) {
@@ -83,7 +83,7 @@ class Math {
 		return std.Math.sqrt(f);
 	}
 
-	public static inline function isqrt( f : Float ) {
+	public static inline function invSqrt( f : Float ) {
 		return 1. / sqrt(f);
 	}
 	
@@ -117,6 +117,67 @@ class Math {
 
 	public static inline function iclamp( v : Int, min : Int, max : Int ) {
 		return v < min ? min : (v > max ? max : v);
+	}
+
+	/**
+		Linear interpolation between two values. When k is 0 a is returned, when it's 1, b is returned.
+	**/
+	public inline static function lerp(a:Float, b:Float, k:Float) {
+		return a * (1 - k) + b * k;
+	}
+	
+	public inline static function bitCount(v:Int) {
+		var k = 0;
+		while( v != 0 ) {
+			k += v & 1;
+			v >>>= 1;
+		}
+		return k;
+	}
+	
+	public static inline function distanceSq( dx : Float, dy : Float, dz = 0. ) {
+		return dx * dx + dy * dy + dz * dz;
+	}
+	
+	public static inline function distance( dx : Float, dy : Float, dz = 0. ) {
+		return sqrt(distanceSq(dx,dy,dz));
+	}
+	
+	/**
+		Linear interpolation between two colors (ARGB).
+	**/
+	public static function colorLerp( c1 : Int, c2 : Int, k : Float ) {
+		var a1 = c1 >>> 24;
+		var r1 = (c1 >> 16) & 0xFF;
+		var g1 = (c1 >> 8) & 0xFF;
+		var b1 = c1 & 0xFF;
+		var a2 = c2 >>> 24;
+		var r2 = (c2 >> 16) & 0xFF;
+		var g2 = (c2 >> 8) & 0xFF;
+		var b2 = c2 & 0xFF;
+		var a = Std.int(a1 * (1-k) + a2 * k);
+		var r = Std.int(r1 * (1-k) + r2 * k);
+		var g = Std.int(g1 * (1-k) + g2 * k);
+		var b = Std.int(b1 * (1 - k) + b2 * k);
+		return (a << 24) | (r << 16) | (g << 8) | b;
+	}
+	
+	/*
+		Clamp an angle into the [-PI,+PI[ range. Can be used to measure the direction between two angles : if Math.angle(A-B) < 0 go left else go right.
+	*/
+	public static inline function angle( da : Float ) {
+		da %= PI * 2;
+		if( da > PI ) da -= 2 * PI else if( da <= -PI ) da += 2 * PI;
+		return da;
+	}
+	
+	/**
+		Move a towards b with a max increment. Return the new angle.
+	**/
+	public static inline function angleMove( a : Float, b : Float, max : Float ) {
+		var da = (b - a) % (PI * 2);
+		if( da > PI ) da -= 2 * PI else if( da <= -PI ) da += 2 * PI;
+		return if( da > -max && da < max ) b else a + (da < 0 ? -max : max);
 	}
 	
 }

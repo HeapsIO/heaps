@@ -85,7 +85,7 @@ class Matrix {
 		var cos1 = 1 - cos;
 		var x = -axis.x, y = -axis.y, z = -axis.z;
 		var xx = x * x, yy = y * y, zz = z * z;
-		var len = Math.isqrt(xx + yy + zz);
+		var len = Math.invSqrt(xx + yy + zz);
 		x *= len;
 		y *= len;
 		z *= len;

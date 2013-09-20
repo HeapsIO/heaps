@@ -56,7 +56,7 @@ class Vector {
 
 	public function normalize() {
 		var k = lengthSq();
-		if( k < hxd.Math.EPSILON ) k = 0 else k = k.isqrt();
+		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
 		x *= k;
 		y *= k;
 		z *= k;
@@ -112,6 +112,10 @@ class Vector {
 		y = ((c >> 8) & 0xFF) * s;
 		z = (c & 0xFF) * s;
 		w = (c >>> 24) * s;
+	}
+	
+	public inline function toPoint() {
+		return new h3d.col.Point(x, y, z);
 	}
 	
 	public inline function toColor() {
