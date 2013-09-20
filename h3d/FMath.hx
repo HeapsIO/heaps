@@ -23,6 +23,10 @@ class FMath {
 		return Math.floor(v * exp + .49999) * neg / exp;
 	}
 	
+	public static inline function clamp( f : Float, min = 0., max = 1. ) {
+		return f < min ? min : f > max ? max : f;
+	}
+	
 	public static inline function cos( f : Float ) {
 		return Math.cos(f);
 	}
@@ -65,6 +69,10 @@ class FMath {
 
 	public static inline function imin( a : Int, b : Int ) {
 		return a > b ? b : a;
+	}
+
+	public static inline function iclamp( v : Int, min : Int, max : Int ) {
+		return v < min ? min : (v > max ? max : v);
 	}
 	
 }
