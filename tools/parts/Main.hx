@@ -122,7 +122,7 @@ class Main {
 		};
 		var p = new h2d.comp.Parser( { props : props } );
 		p.register("range", function(x:haxe.xml.Fast, parent) return new RangeSlider(parent));
-		ui = p.build(new haxe.xml.Fast(Xml.parse(hxd.System.getFileContent("ui.html")).firstElement()));
+		ui = p.build(new haxe.xml.Fast(Xml.parse(hxd.res.Embed.getFileContent("ui.html")).firstElement()));
 		engine.onResized = function() ui.setStyle(null);
 		s2d.addChild(ui);
 		s3d.addPass(s2d);
@@ -180,7 +180,7 @@ class Main {
 				parts.remove(p);
 			}
 		}
-		stats.text = parts.length + " p\n" + h3d.FMath.fmt(engine.fps) + " fps";
+		stats.text = parts.length + " p\n" + hxd.Math.fmt(engine.fps) + " fps";
 		if( props.add )
 			emit.material.blend(SrcAlpha, One);
 		else

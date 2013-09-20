@@ -484,7 +484,7 @@ class Viewer {
 		
 		time++;
 		
-		var fmt = h3d.FMath.fmt;
+		var fmt = hxd.Math.fmt;
 		
 		tf_keys.text = [
 			"[F1] Load model",
