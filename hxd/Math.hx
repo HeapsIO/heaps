@@ -170,13 +170,16 @@ class Math {
 		if( da > PI ) da -= 2 * PI else if( da <= -PI ) da += 2 * PI;
 		return da;
 	}
+
+	public static inline function angleLerp( a : Float, b : Float, k : Float ) {
+		return a + angle(b - a) * k;
+	}
 	
 	/**
-		Move a towards b with a max increment. Return the new angle.
+		Move angle a towards angle b with a max increment. Return the new angle.
 	**/
 	public static inline function angleMove( a : Float, b : Float, max : Float ) {
-		var da = (b - a) % (PI * 2);
-		if( da > PI ) da -= 2 * PI else if( da <= -PI ) da += 2 * PI;
+		var da = angle(b - a);
 		return if( da > -max && da < max ) b else a + (da < 0 ? -max : max);
 	}
 	
