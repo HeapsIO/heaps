@@ -1,4 +1,5 @@
 package h2d.col;
+import hxd.Math;
 
 class Circle {
 
@@ -32,7 +33,7 @@ class Circle {
 	}
 
 	public function toString() {
-		return "{" + h3d.FMath.fmt(x) + "," + h3d.FMath.fmt(y) + "," + h3d.FMath.fmt(ray) + "}";
+		return '{${Math.fmt(x)},${Math.fmt(y)},${Math.fmt(ray)}}';
 	}
 	
 }

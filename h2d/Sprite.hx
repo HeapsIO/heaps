@@ -1,4 +1,5 @@
 package h2d;
+import hxd.Math;
 
 @:allow(h2d.Tools)
 class Sprite {
@@ -170,8 +171,8 @@ class Sprite {
 				matC = 0;
 				matD = scaleY;
 			} else {
-				cr = h3d.FMath.cos(rotation);
-				sr = h3d.FMath.sin(rotation);
+				cr = Math.cos(rotation);
+				sr = Math.sin(rotation);
 				matA = scaleX * cr;
 				matB = scaleX * -sr;
 				matC = scaleY * sr;
@@ -188,8 +189,8 @@ class Sprite {
 				matC = scaleY * parent.matC;
 				matD = scaleY * parent.matD;
 			} else {
-				var cr = h3d.FMath.cos(rotation);
-				var sr = h3d.FMath.sin(rotation);
+				var cr = Math.cos(rotation);
+				var sr = Math.sin(rotation);
 				var tmpA = scaleX * cr;
 				var tmpB = scaleX * -sr;
 				var tmpC = scaleY * sr;

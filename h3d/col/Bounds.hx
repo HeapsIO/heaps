@@ -1,4 +1,5 @@
 package h3d.col;
+import hxd.Math;
 
 class Bounds {
 	
@@ -126,7 +127,7 @@ class Bounds {
 		if( b.zMax > zMax ) zMax = b.zMax;
 	}
 
-	public inline function addPoint( p : Vector ) {
+	public inline function addPoint( p : Point ) {
 		if( p.x < xMin ) xMin = p.x;
 		if( p.x > xMax ) xMax = p.x;
 		if( p.y < yMin ) yMin = p.y;
@@ -136,12 +137,12 @@ class Bounds {
 	}
 	
 	public function intersection( a : Bounds, b : Bounds ) {
-		var xMin = FMath.max(a.xMin, b.xMin);
-		var yMin = FMath.max(a.yMin, b.yMin);
-		var zMin = FMath.max(a.zMin, b.zMin);
-		var xMax = FMath.max(a.xMax, b.xMax);
-		var yMax = FMath.max(a.yMax, b.yMax);
-		var zMax = FMath.max(a.zMax, b.zMax);
+		var xMin = Math.max(a.xMin, b.xMin);
+		var yMin = Math.max(a.yMin, b.yMin);
+		var zMin = Math.max(a.zMin, b.zMin);
+		var xMax = Math.max(a.xMax, b.xMax);
+		var yMax = Math.max(a.yMax, b.yMax);
+		var zMax = Math.max(a.zMax, b.zMax);
 		this.xMin = xMin;
 		this.yMin = yMin;
 		this.zMin = zMin;
@@ -159,13 +160,13 @@ class Bounds {
 		zMax += dz;
 	}
 	
-	public inline function setMin( p : Vector ) {
+	public inline function setMin( p : Point ) {
 		xMin = p.x;
 		yMin = p.y;
 		zMin = p.z;
 	}
 
-	public inline function setMax( p : Vector ) {
+	public inline function setMax( p : Point ) {
 		xMax = p.x;
 		yMax = p.y;
 		zMax = p.z;
@@ -244,7 +245,7 @@ class Bounds {
 		return "{" + getMin() + "," + getMax() + "}";
 	}
 	
-	public static inline function fromPoints( min : Vector, max : Vector ) {
+	public static inline function fromPoints( min : Point, max : Point ) {
 		var b = new Bounds();
 		b.setMin(min);
 		b.setMax(max);

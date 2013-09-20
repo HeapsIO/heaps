@@ -16,10 +16,14 @@ class Plane {
 	}
 	
 	/**
-		Returns the plan normal, with the distance in the w value
+		Returns the plan normal
 	**/
 	public inline function getNormal() {
-		return new h3d.Vector(nx, ny, nz, d);
+		return new Point(nx, ny, nz);
+	}
+	
+	public inline function getNormalDistance() {
+		return d;
 	}
 	
 	/**
@@ -34,37 +38,37 @@ class Plane {
 	}
 	
 	public function toString() {
-		return "{" + FMath.fmt(nx) + "," + FMath.fmt(ny) + "," + FMath.fmt(nz) + "," + FMath.fmt(d) + "}";
+		return "{" + getNormal()+","+ d + "}";
 	}
 	
 	/**
 		Returns the signed distance between a point an the plane. This requires the plan to be normalized. If the distance is negative it means that we are "under" the plan.
 	**/
-	public inline function distance( p : Vector ) {
+	public inline function distance( p : Point ) {
 		return nx * p.x + ny * p.y + nz * p.z - d;
 	}
 	
-	public inline function project( p : Vector ) : Vector {
+	public inline function project( p : Point ) : Point {
 		var d = distance(p);
-		return new Vector(p.x + d * nx, p.y + d * ny, p.z + d * nz);
+		return new Point(p.x + d * nx, p.y + d * ny, p.z + d * nz);
 	}
 
-	public inline function projectTo( p : Vector, out : Vector ) {
+	public inline function projectTo( p : Point, out : Point ) {
 		var d = distance(p);
 		out.x = p.x + d * nx;
 		out.y = p.y + d * ny;
 		out.z = p.z + d * nz;
 	}
 	
-	public static inline function fromPoints( p0 : Vector, p1 : Vector, p2 : Vector ) {
+	public static inline function fromPoints( p0 : Point, p1 : Point, p2 : Point ) {
 		var d1 = p1.sub(p0);
 		var d2 = p2.sub(p0);
 		var n = d1.cross(d2);
-		return new Plane(n.x,n.y,n.z,n.dot3(p0));
+		return new Plane(n.x,n.y,n.z,n.dot(p0));
 	}
 	
-	public static inline function fromNormalPoint( n : Vector, p : Vector ) {
-		return new Plane(n.x,n.y,n.z,n.dot3(p));
+	public static inline function fromNormalPoint( n : Point, p : Point ) {
+		return new Plane(n.x,n.y,n.z,n.dot(p));
 	}
 	
 	public static inline function X(v:Float) {

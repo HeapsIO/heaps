@@ -1,6 +1,6 @@
 package h3d.fbx;
 using h3d.fbx.Data;
-import h3d.prim.Point;
+import h3d.col.Point;
 
 enum AnimationMode {
 	FrameAnim;
@@ -226,8 +226,8 @@ class Library {
 		}
 
 		var curves = new Map();
-		var P0 = new h3d.prim.Point();
-		var P1 = new h3d.prim.Point(1, 1, 1);
+		var P0 = new Point();
+		var P1 = new Point(1, 1, 1);
 		var F = Math.PI / 180;
 		var allTimes = new Map();
 		for( cn in getChilds(animNode, "AnimationCurveNode") ) {

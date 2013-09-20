@@ -1,4 +1,5 @@
 package h2d.col;
+import hxd.Math;
 
 class Poly {
 
@@ -70,7 +71,7 @@ class Poly {
 	}
 	
 	public inline function distance( p : Point ) {
-		return h3d.FMath.sqrt(distanceSq(p));
+		return Math.sqrt(distanceSq(p));
 	}
 	
 }

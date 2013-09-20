@@ -16,6 +16,7 @@
 	History: See https://github.com/gorhill/Javascript-Voronoi/CHANGELOG.md
 */
 package h2d.col;
+import hxd.Math;
 
 // ---------------------------------------------------------------------------
 // Red-Black tree code (based on C version of "rbtree" by Franck Bui-Huu
@@ -347,7 +348,7 @@ class Cell {
 			var d = p.distanceSq(e.getStartpoint());
 			if( d > r ) r = d;
 		}
-		return new Circle(p.x, p.y, h3d.FMath.sqrt(r));
+		return new Circle(p.x, p.y, Math.sqrt(r));
 	}
 
 	public function prepare() {

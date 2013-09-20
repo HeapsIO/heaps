@@ -1,6 +1,7 @@
 package h3d.prim;
 using h3d.fbx.Data;
 import h3d.impl.Buffer.BufferOffset;
+import h3d.col.Point;
 
 class FBXModel extends MeshPrimitive {
 
@@ -26,7 +27,7 @@ class FBXModel extends MeshPrimitive {
 		bounds = new h3d.col.Bounds();
 		var verts = geom.getVertices();
 		var gt = geom.getGeomTranslate();
-		if( gt == null ) gt = new h3d.prim.Point();
+		if( gt == null ) gt = new Point();
 		if( verts.length > 0 ) {
 			bounds.xMin = bounds.xMax = verts[0] + gt.x;
 			bounds.yMin = bounds.yMax = verts[1] + gt.y;
@@ -85,7 +86,7 @@ class FBXModel extends MeshPrimitive {
 		var mats = multiMaterial ? geom.getMaterials() : null;
 		
 		var gt = geom.getGeomTranslate();
-		if( gt == null ) gt = new h3d.prim.Point();
+		if( gt == null ) gt = new Point();
 		
 		var idx = new hxd.IndexBuffer();
 		var midx = new Array<hxd.IndexBuffer>();

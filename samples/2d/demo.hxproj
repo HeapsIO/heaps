@@ -9,7 +9,7 @@
     <movie width="800" />
     <movie height="600" />
     <movie version="11" />
-    <movie minorVersion="0" />
+    <movie minorVersion="6" />
     <movie platform="Flash Player" />
     <movie background="#FFFFFF" />
   </output>
@@ -23,7 +23,7 @@
     <option flashStrict="True" />
     <option mainClass="Demo" />
     <option enabledebug="False" />
-    <option additional="-lib h3d&#xA;-swf-version 11.6" />
+    <option additional="-lib h3d&#xA;-D resourcesPath=../res" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

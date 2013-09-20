@@ -1,16 +1,25 @@
 package hxd.impl;
 
+@:access(hxd.impl.Memory)
 class MemoryReader {
 
 	public function new() {
 	}
 	
 	public inline function b( addr : Int ) {
+		#if flash
 		return flash.Memory.getByte(addr);
+		#else
+		return Memory.current.get(addr);
+		#end
 	}
 	
 	public inline function wb( addr : Int, v : Int ) {
+		#if flash
 		flash.Memory.setByte(addr, v);
+		#else
+		Memory.current.set(addr, v);
+		#end
 	}
 	
 	public inline function end() {
@@ -26,7 +35,9 @@ class Memory {
 	static var inst = new MemoryReader();
 	
 	public static function select( b : haxe.io.Bytes ) {
+		#if flash
 		flash.Memory.select(b.getData());
+		#end
 		if( current != null ) stack.push(current);
 		current = b;
 		return inst;
@@ -34,8 +45,10 @@ class Memory {
 	
 	static function end() {
 		current = stack.pop();
+		#if flash
 		if( current != null )
 			flash.Memory.select(current.getData());
+		#end
 	}
 
 }

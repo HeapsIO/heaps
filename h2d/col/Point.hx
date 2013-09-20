@@ -1,4 +1,5 @@
 package h2d.col;
+import hxd.Math;
 
 class Point {
 	
@@ -17,11 +18,11 @@ class Point {
 	}
 	
 	public inline function distance( p : Point ) {
-		return h3d.FMath.sqrt(distanceSq(p));
+		return Math.sqrt(distanceSq(p));
 	}
 	
 	public function toString() {
-		return "{" + h3d.FMath.fmt(x) + "," + h3d.FMath.fmt(y) + "}";
+		return "{" + Math.fmt(x) + "," + Math.fmt(y) + "}";
 	}
 		
 	public inline function sub( p : Point ) {
@@ -41,12 +42,12 @@ class Point {
 	}
 
 	public inline function length() {
-		return h3d.FMath.sqrt(lengthSq());
+		return Math.sqrt(lengthSq());
 	}
 
 	public function normalize() {
 		var k = lengthSq();
-		if( k < h3d.FMath.EPSILON ) k = 0 else k = h3d.FMath.isqrt(k);
+		if( k < Math.EPSILON ) k = 0 else k = Math.isqrt(k);
 		x *= k;
 		y *= k;
 	}

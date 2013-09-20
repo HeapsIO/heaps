@@ -1,4 +1,5 @@
 package h3d.col;
+import hxd.Math;
 
 @:allow(h3d.col)
 class Ray {
@@ -15,25 +16,33 @@ class Ray {
 	
 	public function normalize() {
 		var l = lx * lx + ly * ly + lz * lz;
-		if( l < FMath.EPSILON ) l = 0 else l = FMath.isqrt(l);
+		if( l < Math.EPSILON ) l = 0 else l = Math.isqrt(l);
 		lx *= l;
 		ly *= l;
 		lz *= l;
 	}
 	
-	public function toString() {
-		return "{[" + FMath.fmt(px) + "," + FMath.fmt(py) + "," + FMath.fmt(pz) + "],[" + FMath.fmt(lx) + "," + FMath.fmt(ly) + "," + FMath.fmt(lz) + "]}";
+	public inline function getPos() {
+		return new Point(px, py, pz);
+	}
+
+	public inline function getDir() {
+		return new Point(lx, ly, lz);
 	}
 	
-	public inline function intersect( p : Plane ) : Vector {
+	public function toString() {
+		return "{" + getPos() + "," + getDir() + "}";
+	}
+	
+	public inline function intersect( p : Plane ) : Null<Point> {
 		var d = lx * p.nx + ly * p.ny + lz * p.nz;
 		var nd = p.d - (px * p.nx + py * p.ny + pz * p.nz);
 		// line parallel with plane
-		if( FMath.abs(d) < FMath.EPSILON )
-			return FMath.abs(nd) < FMath.EPSILON ? new Vector(px, py, pz) : null;
+		if( Math.abs(d) < Math.EPSILON )
+			return Math.abs(nd) < Math.EPSILON ? new Point(px, py, pz) : null;
 		else {
 			var k = nd / d;
-			return new Vector(px + lx * k, py + ly * k, pz + lz * k);
+			return new Point(px + lx * k, py + ly * k, pz + lz * k);
 		}
 	}
 
@@ -47,8 +56,8 @@ class Ray {
 		var t4 = (b.yMax - py) * dy;
 		var t5 = (b.zMin - pz) * dz;
 		var t6 = (b.zMax - pz) * dz;
-		var tmin = FMath.max(FMath.max(FMath.min(t1, t2), FMath.min(t3, t4)), FMath.min(t5, t6));
-		var tmax = FMath.min(FMath.min(FMath.max(t1, t2), FMath.max(t3, t4)), FMath.max(t5, t6));
+		var tmin = Math.max(Math.max(Math.min(t1, t2), Math.min(t3, t4)), Math.min(t5, t6));
+		var tmax = Math.min(Math.min(Math.max(t1, t2), Math.max(t3, t4)), Math.max(t5, t6));
 		if( tmax < 0 ) {
 			// t = tmax;
 			return false;
@@ -61,7 +70,7 @@ class Ray {
 		}
 	}
 	
-	public static function fromPoints( p1 : Vector, p2 : Vector ) {
+	public static function fromPoints( p1 : Point, p2 : Point ) {
 		var r = new Ray();
 		r.px = p1.x;
 		r.py = p1.y;

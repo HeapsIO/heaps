@@ -1,9 +1,21 @@
-package h3d;
+package hxd;
 
-class FMath {
+class Math {
 	
+	public static inline var PI = 3.14159265358979323;
 	public static inline var EPSILON = 1e-10;
 
+	public static var POSITIVE_INFINITY(get, never) : Float;
+	public static var NEGATIVE_INFINITY(get, never) : Float;
+	
+	static inline function get_POSITIVE_INFINITY() {
+		return std.Math.POSITIVE_INFINITY;
+	}
+
+	static inline function get_NEGATIVE_INFINITY() {
+		return std.Math.NEGATIVE_INFINITY;
+	}
+	
 	// round to 4 significant digits, eliminates <1e-10
 	public static function fmt( v : Float ) {
 		var neg;
@@ -12,31 +24,63 @@ class FMath {
 			v = -v;
 		} else
 			neg = 1.0;
-		if( Math.isNaN(v) )
+		if( std.Math.isNaN(v) )
 			return v;
-		var digits = Std.int(4 - Math.log(v) / Math.log(10));
+		var digits = Std.int(4 - std.Math.log(v) / std.Math.log(10));
 		if( digits < 1 )
 			digits = 1;
 		else if( digits >= 10 )
 			return 0.;
-		var exp = Math.pow(10,digits);
-		return Math.floor(v * exp + .49999) * neg / exp;
+		var exp = pow(10,digits);
+		return floor(v * exp + .49999) * neg / exp;
+	}
+	
+	public static inline function floor( f : Float ) {
+		return std.Math.floor(f);
+	}
+
+	public static inline function ceil( f : Float ) {
+		return std.Math.ceil(f);
+	}
+
+	public static inline function round( f : Float ) {
+		return std.Math.round(f);
 	}
 	
 	public static inline function clamp( f : Float, min = 0., max = 1. ) {
 		return f < min ? min : f > max ? max : f;
 	}
+
+	public static inline function pow( v : Float, p : Float ) {
+		return std.Math.pow(v,p);
+	}
 	
 	public static inline function cos( f : Float ) {
-		return Math.cos(f);
+		return std.Math.cos(f);
 	}
 
 	public static inline function sin( f : Float ) {
-		return Math.sin(f);
+		return std.Math.sin(f);
+	}
+
+	public static inline function tan( f : Float ) {
+		return std.Math.tan(f);
+	}
+
+	public static inline function acos( f : Float ) {
+		return std.Math.acos(f);
+	}
+
+	public static inline function asin( f : Float ) {
+		return std.Math.asin(f);
+	}
+
+	public static inline function atan( f : Float ) {
+		return std.Math.atan(f);
 	}
 	
 	public static inline function sqrt( f : Float ) {
-		return Math.sqrt(f);
+		return std.Math.sqrt(f);
 	}
 
 	public static inline function isqrt( f : Float ) {
@@ -44,7 +88,7 @@ class FMath {
 	}
 	
 	public static inline function atan2( dy : Float, dx : Float ) {
-		return Math.atan2(dy,dx);
+		return std.Math.atan2(dy,dx);
 	}
 	
 	public static inline function abs( f : Float ) {

@@ -22,7 +22,7 @@ class Demo {
 		tf.text = "Hello h2d !";
 		#end
 		
-		var tile = hxd.Resource.embed("texture.png").toTile();
+		var tile = hxd.Res.hxlogo.toTile();
 		spr = new h2d.Sprite(scene);
 		spr.x = engine.width >> 1;
 		spr.y = engine.height >> 1;
@@ -43,6 +43,7 @@ class Demo {
 	}
 	
 	static function main() {
+		hxd.Res.loader = new hxd.res.Loader(hxd.res.EmbedFileSystem.create());
 		new Demo();
 	}
 	

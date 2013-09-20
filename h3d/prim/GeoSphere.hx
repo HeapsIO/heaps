@@ -1,4 +1,5 @@
 package h3d.prim;
+import h3d.col.Point;
 
 class GeoSphere extends Polygon {
 

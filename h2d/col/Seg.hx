@@ -1,4 +1,5 @@
 package h2d.col;
+import hxd.Math;
 
 class Seg {
 
@@ -41,7 +42,7 @@ class Seg {
 	}
 
 	public inline function distance( p : Point ) {
-		return h3d.FMath.sqrt(distanceSq(p));
+		return Math.sqrt(distanceSq(p));
 	}
 	
 	public inline function project( p : Point ) : Point {

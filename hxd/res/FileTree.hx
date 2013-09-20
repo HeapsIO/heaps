@@ -39,7 +39,7 @@ class FileTree {
 		}
 		var pos = Context.currentPos();
 		if( resolve )
-			dir = try Context.resolvePath(dir) catch( e : Dynamic ) Context.error("Resource directory not found in classpath '" + dir + "'", pos);
+			dir = try Context.resolvePath(dir) catch( e : Dynamic ) Context.error("Resource directory not found in classpath '" + dir + "' (use -D resourcesPath=DIR)", pos);
 		var path = sys.FileSystem.fullPath(dir);
 		if( !sys.FileSystem.exists(path) || !sys.FileSystem.isDirectory(path) )
 			Context.error("Resource directory does not exists '" + path + "'", pos);

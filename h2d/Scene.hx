@@ -1,4 +1,5 @@
 package h2d;
+import hxd.Math;
 
 class Scene extends Layers implements h3d.IDrawable {
 
@@ -319,8 +320,8 @@ class Scene extends Layers implements h3d.IDrawable {
 		
 		// perform final rotation around center
 		if( rotation != 0 ) {
-			var cr = h3d.FMath.cos(rotation);
-			var sr = h3d.FMath.sin(rotation);
+			var cr = Math.cos(rotation);
+			var sr = Math.sin(rotation);
 			var tmpA = matA * cr + matB * sr;
 			var tmpB = matA * -sr + matB * cr;
 			var tmpC = matC * cr + matD * sr;

@@ -15,7 +15,7 @@ class Comps {
 	function init() {
 		hxd.System.setLoop(update);
 		scene = new h2d.Scene();
-		var document = h2d.comp.Parser.fromHtml(hxd.Resource.getFileContent("components.html"),{ fmt : h3d.FMath.fmt });
+		var document = h2d.comp.Parser.fromHtml(hxd.res.Embed.getFileContent("components.html"),{ fmt : hxd.Math.fmt });
 		scene.addChild(document);
 		engine.onResized = function() document.setStyle(null);
 	}

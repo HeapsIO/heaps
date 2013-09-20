@@ -1,4 +1,5 @@
 package h2d;
+import hxd.Math;
 
 private typedef GraphicsPoint = hxd.poly2tri.Point;
 
@@ -151,10 +152,10 @@ class Graphics extends Drawable {
 			var next = linePts[(i + 1) % linePts.length];
 			var nx1 = prev.y - p.y;
 			var ny1 = p.x - prev.x;
-			var ns1 = h3d.FMath.isqrt(nx1 * nx1 + ny1 * ny1);
+			var ns1 = Math.isqrt(nx1 * nx1 + ny1 * ny1);
 			var nx2 = p.y - next.y;
 			var ny2 = next.x - p.x;
-			var ns2 = h3d.FMath.isqrt(nx2 * nx2 + ny2 * ny2);
+			var ns2 = Math.isqrt(nx2 * nx2 + ny2 * ny2);
 			
 			var nx = (nx1 * ns1 + nx2 * ns2) * lineSize * 0.5;
 			var ny = (ny1 * ns1 + ny2 * ns2) * lineSize * 0.5;

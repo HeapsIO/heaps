@@ -3,10 +3,15 @@ package hxd;
 class Perlin {
 
 	public var repeat : Int;
+	#if flash
 	var buf : flash.utils.ByteArray;
+	#else
+	var gradients : Array<Float>;
+	#end
 	
 	public function new() {
 		repeat = 0x7FFFFFFF;
+		#if flash
 		// space for gradients
 		buf = new flash.utils.ByteArray();
 		buf.length += NGRADS * 4 * 8;
@@ -19,19 +24,33 @@ class Perlin {
 			setDouble(p + 16, GRADIENTS[i * 3 + 2] * 2.12);
 			setDouble(p + 24, 0); // padding
 		}
+		#else
+		gradients = [];
+		for( i in 0...NGRADS ) {
+			gradients.push(GRADIENTS[i * 3] * 2.12);
+			gradients.push(GRADIENTS[i * 3 + 1] * 2.12);
+			gradients.push(GRADIENTS[i * 3 + 2] * 2.12);
+			gradients.push(0); // padding
+		}
+		#end
 	}
 
 	public inline function select() {
+		#if flash
 		flash.Memory.select(buf);
+		#end
 	}
 
+	#if flash
 	inline function setDouble( index : Int, v : Float )  {
 		flash.Memory.setDouble(index, v);
 	}
 	
 	inline function double( index : Int ) : Float {
 		return flash.Memory.getDouble(index);
+		
 	}
+	#end
 	
 	inline function scurve( a : Float ) {
 		var a2 = a * a;
@@ -44,18 +63,32 @@ class Perlin {
 	
 	inline function gradient3DAt( x : Float, y : Float, z : Float, ix : Int, iy : Int, iz : Int, seed : Int ) {
 		var index = seed * 1013 + (ix % repeat) * 1619 + (iy % repeat) * 31337 + iz * 6971;
-		index = ((index ^ (index >>> 8)) & 0xFF) << 5;
+		index = ((index ^ (index >>> 8)) & 0xFF);
+		#if flash
+		index <<= 5;
 		var gx = double(index);
 		var gy = double(index + 8);
 		var gz = double(index + 16);
+		#else
+		index <<= 2;
+		var gx = gradients[index];
+		var gy = gradients[index + 1];
+		var gz = gradients[index + 2];
+		#end
 		return gx * (x - ix) + gy * (y - iy) + gz * (z - iz);
 	}
 
 	inline function gradientAt( x : Float, y : Float, ix : Int, iy : Int, seed : Int ) {
 		var index = seed * 1013 + (ix%repeat) * 1619 + (iy%repeat) * 31337;
-		index = ((index ^ (index >>> 8)) & 0xFF) << 5;
+		index = ((index ^ (index >>> 8)) & 0xFF);
+		#if flash
+		index <<= 5;
 		var gx = double(index);
 		var gy = double(index + 8);
+		#else
+		var gx = gradients[index << 2];
+		var gy = gradients[(index << 2) + 1];
+		#end
 		return gx * (x - ix) + gy * (y - iy);
 	}
 	
@@ -114,7 +147,7 @@ class Perlin {
 		var tot = 0.;
 		for( i in 0...octaves ) {
 			var g = gradient(seed + i, x * s, y * s) * p;
-			g = offset - h3d.FMath.abs(g);
+			g = offset - hxd.Math.abs(g);
 			g *= g;
 			g *= weight;
 			v += g * s;

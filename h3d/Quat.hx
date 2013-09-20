@@ -1,4 +1,5 @@
 package h3d;
+using hxd.Math;
 
 class Quat {
 	
@@ -26,8 +27,12 @@ class Quat {
 		w = 1;
 	}
 	
-	public function length() {
-		return FMath.sqrt(x * x + y * y + z * z + w * w);
+	public inline function lengthSq() {
+		return x * x + y * y + z * z + w * w;
+	}
+	
+	public inline function length() {
+		return lengthSq().sqrt();
 	}
 	
 	public function clone() {
@@ -35,40 +40,40 @@ class Quat {
 	}
 	
 	public function initRotateAxis( x : Float, y : Float, z : Float, a : Float ) {
-		var sin = FMath.sin(a / 2);
-		var cos = FMath.cos(a / 2);
+		var sin = (a / 2).sin();
+		var cos = (a / 2).cos();
 		this.x = x * sin;
 		this.y = y * sin;
 		this.z = z * sin;
-		this.w = cos * FMath.sqrt(x * x + y * y + z * z); // allow not normalized axis
+		this.w = cos * (x * x + y * y + z * z).sqrt(); // allow not normalized axis
 		normalize();
 	}
 	
 	public function initRotateMatrix( m : Matrix ) {
 		var tr = m._11 + m._22 + m._33;
 		if( tr > 0 ) {
-			var s = FMath.sqrt(tr + 1.0) * 2;
+			var s = (tr + 1.0).sqrt() * 2;
 			var is = 1 / s;
 			x = (m._23 - m._32) * is;
 			y = (m._31 - m._13) * is;
 			z = (m._12 - m._21) * is;
 			w = 0.25 * s;
 		} else if( m._11 > m._22 && m._11 > m._33 ) {
-			var s = FMath.sqrt(1.0 + m._11 - m._22 - m._33) * 2;
+			var s = (1.0 + m._11 - m._22 - m._33).sqrt() * 2;
 			var is = 1 / s;
 			x = 0.25 * s;
 			y = (m._21 + m._12) * is;
 			z = (m._31 + m._13) * is;
 			w = (m._23 - m._32) * is;
 		} else if( m._22 > m._33 ) {
-			var s = FMath.sqrt(1.0 + m._22 - m._11 - m._33) * 2;
+			var s = (1.0 + m._22 - m._11 - m._33).sqrt() * 2;
 			var is = 1 / s;
 			x = (m._21 + m._12) * is;
 			y = 0.25 * s;
 			z = (m._32 + m._23) * is;
 			w = (m._31 - m._13) * is;
 		} else {
-			var s = FMath.sqrt(1.0 + m._33 - m._11 - m._22) * 2;
+			var s = (1.0 + m._33 - m._11 - m._22).sqrt() * 2;
 			var is = 1 / s;
 			x = (m._31 + m._13) * is;
 			y = (m._32 + m._23) * is;
@@ -79,11 +84,11 @@ class Quat {
 	
 	public function normalize() {
 		var len = x * x + y * y + z * z + w * w;
-		if( len < FMath.EPSILON ) {
+		if( len < hxd.Math.EPSILON ) {
 			x = y = z = 0;
 			w = 1;
 		} else {
-			var m = FMath.isqrt(len);
+			var m = len.isqrt();
 			x *= m;
 			y *= m;
 			z *= m;
@@ -92,12 +97,12 @@ class Quat {
 	}
 	
 	public function initRotate( ax : Float, ay : Float, az : Float ) {
-		var sinX = FMath.sin( ax * 0.5 );
-		var cosX = FMath.cos( ax * 0.5 );
-		var sinY = FMath.sin( ay * 0.5 );
-		var cosY = FMath.cos( ay * 0.5 );
-		var sinZ = FMath.sin( az * 0.5 );
-		var cosZ = FMath.cos( az * 0.5 );
+		var sinX = ( ax * 0.5 ).sin();
+		var cosX = ( ax * 0.5 ).cos();
+		var sinY = ( ay * 0.5 ).sin();
+		var cosY = ( ay * 0.5 ).cos();
+		var sinZ = ( az * 0.5 ).sin();
+		var cosZ = ( az * 0.5 ).cos();
 		var cosYZ = cosY * cosZ;
 		var sinYZ = sinY * sinZ;
 		x = sinX * cosYZ - cosX * sinYZ;
@@ -125,9 +130,9 @@ class Quat {
 	
 	public function toEuler() {
 		return new Vector(
-			FMath.atan2(2 * (y * w + x * z), 1 - 2 * (y * y + z * z)),
-			Math.asin(2 * (x * y + z * w)),
-			FMath.atan2(2 * (x * w - y * z), 1 - 2 * (x * x + z * z))
+			hxd.Math.atan2(2 * (y * w + x * z), 1 - 2 * (y * y + z * z)),
+			(2 * (x * y + z * w)).asin(),
+			hxd.Math.atan2(2 * (x * w - y * z), 1 - 2 * (x * x + z * z))
 		);
 	}
 	
@@ -149,21 +154,21 @@ class Quat {
 
 	public function slerp( q1 : Quat, q2 : Quat, v : Float ) {
 		var cosHalfTheta = q1.dot(q2);
-		if( FMath.abs(cosHalfTheta) >= 1 ) {
+		if( cosHalfTheta.abs() >= 1 ) {
 			this.x = q1.x;
 			this.y = q1.y;
 			this.z = q1.z;
 			this.w = q1.w;
 			return;
 		}
-		var halfTheta = Math.acos(cosHalfTheta);
-		var invSinHalfTheta = FMath.isqrt(1 - cosHalfTheta * cosHalfTheta);
-		if( FMath.abs(invSinHalfTheta) > 1e3 ) {
+		var halfTheta = cosHalfTheta.acos();
+		var invSinHalfTheta = (1 - cosHalfTheta * cosHalfTheta).isqrt();
+		if( invSinHalfTheta.abs() > 1e3 ) {
 			this.lerp(q1, q2, 0.5, true);
 			return;
 		}
-		var a = Math.sin((1 - v) * halfTheta) * invSinHalfTheta;
-		var b = Math.sin(v * halfTheta) * invSinHalfTheta * (cosHalfTheta < 0 ? -1 : 1);
+		var a = ((1 - v) * halfTheta).sin() * invSinHalfTheta;
+		var b = (v * halfTheta).sin() * invSinHalfTheta * (cosHalfTheta < 0 ? -1 : 1);
 		this.x = q1.x * a + q2.x * b;
 		this.y = q1.y * a + q2.y * b;
 		this.z = q1.z * a + q2.z * b;
@@ -223,7 +228,7 @@ class Quat {
 	}
 	
 	public function toString() {
-		return "{"+FMath.fmt(x)+","+FMath.fmt(y)+","+FMath.fmt(z)+","+FMath.fmt(w)+"}";
+		return '{${x.fmt()},${y.fmt()},${z.fmt()},${w.fmt()}}';
 	}
 	
 }

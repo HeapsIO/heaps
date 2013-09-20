@@ -1,4 +1,5 @@
 package h3d;
+using hxd.Math;
 
 class Vector {
 
@@ -50,12 +51,12 @@ class Vector {
 	}
 
 	public inline function length() {
-		return FMath.sqrt(lengthSq());
+		return lengthSq().sqrt();
 	}
 
 	public function normalize() {
 		var k = lengthSq();
-		if( k < FMath.EPSILON ) k = 0 else k = FMath.isqrt(k);
+		if( k < hxd.Math.EPSILON ) k = 0 else k = k.isqrt();
 		x *= k;
 		y *= k;
 		z *= k;
@@ -114,7 +115,7 @@ class Vector {
 	}
 	
 	public inline function toColor() {
-		return (Std.int(FMath.clamp(w) * 255) << 24) | (Std.int(FMath.clamp(x) * 255) << 16) | (Std.int(FMath.clamp(y) * 255) << 8) | Std.int(FMath.clamp(z) * 255);
+		return (Std.int(w.clamp() * 255) << 24) | (Std.int(x.clamp() * 255) << 16) | (Std.int(y.clamp() * 255) << 8) | Std.int(z.clamp() * 255);
 	}
 	
 	public static inline function fromColor( c : Int, scale : Float = 1.0 ) {
@@ -127,7 +128,7 @@ class Vector {
 	}
 
 	public function toString() {
-		return "{"+FMath.fmt(x)+","+FMath.fmt(y)+","+FMath.fmt(z)+","+FMath.fmt(w)+"}";
+		return '{${x.fmt()},${y.fmt()},${z.fmt()},${w.fmt()}}';
 	}
 
 }

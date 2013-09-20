@@ -92,7 +92,7 @@ class Geometry {
 	public function getGeomTranslate() {
 		for( p in lib.getParent(root, "Model").getAll("Properties70.P") )
 			if( p.props[0].toString() == "GeometricTranslation" )
-				return new h3d.prim.Point(p.props[4].toFloat() * (lib.leftHand ? -1 : 1), p.props[5].toFloat(), p.props[6].toFloat());
+				return new h3d.col.Point(p.props[4].toFloat() * (lib.leftHand ? -1 : 1), p.props[5].toFloat(), p.props[6].toFloat());
 		return null;
 	}
 
