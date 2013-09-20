@@ -47,7 +47,7 @@ class Vector {
 
 	public inline function lengthSq() {
 		return x * x + y * y + z * z;
-	}	
+	}
 
 	public inline function length() {
 		return FMath.sqrt(lengthSq());
@@ -104,9 +104,22 @@ class Vector {
 		z = pz;
 		w = pw;
 	}
+
+	public inline function loadColor( c : Int, scale : Float = 1.0 ) {
+		var s = scale / 255;
+		x = ((c >> 16) & 0xFF) * s;
+		y = ((c >> 8) & 0xFF) * s;
+		z = (c & 0xFF) * s;
+		w = (c >>> 24) * s;
+	}
+	
+	public inline function toColor() {
+		return (Std.int(FMath.clamp(w) * 255) << 24) | (Std.int(FMath.clamp(x) * 255) << 16) | (Std.int(FMath.clamp(y) * 255) << 8) | Std.int(FMath.clamp(z) * 255);
+	}
 	
 	public static inline function fromColor( c : Int, scale : Float = 1.0 ) {
-		return new Vector(((c>>16)&0xFF)*scale/255.0,((c>>8)&0xFF)*scale/255.0,(c&0xFF)*scale/255.0,(c >>> 24)*scale/255.0);
+		var s = scale / 255;
+		return new Vector(((c>>16)&0xFF)*s,((c>>8)&0xFF)*s,(c&0xFF)*s,(c >>> 24)*s);
 	}
 	
 	public inline function clone() {
