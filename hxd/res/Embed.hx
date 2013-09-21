@@ -52,12 +52,11 @@ class Embed {
 		var path = locateFont(file);
 		if( path == null ) {
 			if( !skipErrors ) Context.error("Font file not found " + file,Context.currentPos());
-			return macro false;
+			return macro null;
 		}
 		var safeName = "R_"+~/[^A-Za-z0-9_]+/g.replace(file, "_");
 		doEmbedFont(safeName, path, chars);
-		// this will force a dependency
-		return macro hxd._res.$safeName != null;
+		return macro new hxd._res.$safeName().fontName;
 	}
 
 }
