@@ -19,23 +19,9 @@ class Context {
 	// ------------- STATIC API ---------------------------------------
 	
 	public static function getFont( name : String, size : Int ) {
-		var key = name + "#" + size;
-		var f = FONTS.get(key);
-		if( f != null )
-			return f;
-		f = new h2d.Font(name, size);
-		FONTS.set(key, f);
-		return f;
+		return hxd.res.FontBuilder.getFont(name, size);
 	}
-	
-	public static function dispose() {
-		for( f in FONTS )
-			f.dispose();
-		FONTS = new Map();
-	}
-
-	static var FONTS = new Map<String,h2d.Font>();
-	
+		
 	public static var DEFAULT_CSS = hxd.res.Embed.getFileContent("h2d/css/default.css");
 	
 	static var DEF = null;

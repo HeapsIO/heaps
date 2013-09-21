@@ -13,15 +13,7 @@ class Demo {
 	
 	function init() {
 		scene = new h2d.Scene();
-		
-		#if flash
-		var font = new h2d.Font("Arial", 16);
-		var tf = new h2d.Text(font, scene);
-		tf.textColor = 0xFFFFFF;
-		tf.dropShadow = { dx : 2, dy : 2, color : 0xFF0000, alpha : 0.5 };
-		tf.text = "Hello h2d !";
-		#end
-		
+
 		var tile = hxd.Res.hxlogo.toTile();
 		spr = new h2d.Sprite(scene);
 		spr.x = engine.width >> 1;
@@ -33,7 +25,25 @@ class Demo {
 			bmp.y = Math.sin(i * Math.PI / 8) * 100 - (tile.height>>1);
 			bmp.alpha = 0.5;
 		}
+
+		var font = hxd.Res.CustomFont.build(32,{ antiAliasing : true });
+		var tf = new h2d.Text(font, scene);
+		tf.textColor = 0xFFFFFF;
+		tf.dropShadow = { dx : 0.5, dy : 0.5, color : 0xFF0000, alpha : 0.8 };
+		tf.text = "Héllò h2d !";
+		tf.x = 20;
+		tf.y = 450;
+		tf.scale(4);
+
+		var font = hxd.Res.Minecraftia.build(16,{ antiAliasing : false });
+		var tf = new h2d.Text(font, scene);
+		tf.textColor = 0xFFFFFF;
+		tf.dropShadow = { dx : 0.5, dy : 0.5, color : 0xFF0000, alpha : 0.8 };
+		tf.text = "Héllò h2d !";
+		tf.x = 20;
+		tf.scale(7);
 		
+
 		hxd.System.setLoop(update);
 	}
 	

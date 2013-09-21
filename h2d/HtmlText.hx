@@ -9,12 +9,14 @@ class HtmlText extends Drawable {
 	public var textWidth(get, null) : Int;
 	public var textHeight(get, null) : Int;
 	
+	public var letterSpacing : Int;
+	
 	var glyphs : TileColorGroup;
 	
 	public function new( font : Font, ?parent ) {
 		super(parent);
 		this.font = font;
-		glyphs = new TileColorGroup(font, this);
+		glyphs = new TileColorGroup(font.tile, this);
 		htmlText = "";
 		shader = glyphs.shader;
 		textColor = 0xFFFFFF;
@@ -34,7 +36,6 @@ class HtmlText extends Drawable {
 	function initGlyphs( rebuild = true ) {
 		if( rebuild ) glyphs.reset();
 		glyphs.setDefaultColor(textColor);
-		var letters = font.glyphs;
 		var x = 0, y = 0, xMax = 0;
 		function loop( e : Xml ) {
 			if( e.nodeType == Xml.Element ) {
@@ -62,12 +63,14 @@ class HtmlText extends Drawable {
 					glyphs.setDefaultColor(textColor);
 			} else {
 				var t = e.nodeValue;
+				var prevChar = -1;
 				for( i in 0...t.length ) {
 					var cc = t.charCodeAt(i);
-					var e = letters[cc];
-					if( e == null ) continue;
-					if( rebuild ) glyphs.add(x, y, e);
-					x += e.width + 1;
+					var e = font.getChar(cc);
+					x += e.getKerningOffset(prevChar);
+					if( rebuild ) glyphs.add(x, y, e.t);
+					x += e.width + letterSpacing;
+					prevChar = cc;
 				}
 			}
 		}

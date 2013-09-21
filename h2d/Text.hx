@@ -10,6 +10,7 @@ class Text extends Drawable {
 	
 	public var textWidth(get, null) : Int;
 	public var textHeight(get, null) : Int;
+	public var letterSpacing : Int;
 	
 	var glyphs : TileGroup;
 	
@@ -23,7 +24,7 @@ class Text extends Drawable {
 	function set_font(font) {
 		this.font = font;
 		if( glyphs != null ) glyphs.remove();
-		glyphs = new TileGroup(font, this);
+		glyphs = new TileGroup(font == null ? null : font.tile, this);
 		shader = glyphs.shader;
 		this.text = text;
 		return font;
@@ -63,36 +64,40 @@ class Text extends Drawable {
 
 	function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) glyphs.reset();
-		var letters = font.glyphs;
-		var x = 0, y = 0, xMax = 0;
+		var x = 0, y = 0, xMax = 0, prevChar = -1;
 		for( i in 0...text.length ) {
 			var cc = text.charCodeAt(i);
-			var e = letters[cc];
+			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
+			var esize = e.width + e.getKerningOffset(prevChar);
 			// if the next word goes past the max width, change it into a newline
-			if( font.isBreakChar(cc) && maxWidth != null ) {
-				var size = x + e.width + 1;
+			if( font.charset.isBreakChar(cc) && maxWidth != null ) {
+				var size = x + esize + letterSpacing;
 				var k = i + 1, max = text.length;
+				var prevChar = prevChar;
 				while( size <= maxWidth ) {
 					var cc = text.charCodeAt(k++);
-					if( cc == null || font.isSpace(cc) || cc == '\n'.code ) break;
-					var e = letters[cc];
-					if( e != null ) size += e.width + 1;
+					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
+					var e = font.getChar(cc);
+					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
+					prevChar = cc;
 				}
 				if( size > maxWidth ) {
 					newline = true;
-					if( font.isSpace(cc) ) e = null;
+					if( font.charset.isSpace(cc) ) e = null;
 				}
 			}
 			if( e != null ) {
-				if( rebuild ) glyphs.add(x, y, e);
-				x += e.width + 1;
+				if( rebuild ) glyphs.add(x, y, e.t);
+				x += esize + letterSpacing;
 			}
 			if( newline ) {
 				if( x > xMax ) xMax = x;
 				x = 0;
 				y += font.lineHeight;
-			}
+				prevChar = -1;
+			} else
+				prevChar = cc;
 		}
 		return { width : x > xMax ? x : xMax, height : x > 0 ? y + font.lineHeight : y };
 	}

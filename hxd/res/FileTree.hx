@@ -51,7 +51,6 @@ class FileTree {
 		if( options == null ) options = { };
 		var needTmp = options.compressSounds;
 		if( options.tmpDir == null ) options.tmpDir = path + "/.tmp/";
-		if( options.fontsChars == null ) options.fontsChars = hxd.Charset.ASCII + hxd.Charset.LATIN1;
 		if( needTmp && !sys.FileSystem.exists(options.tmpDir) )
 			sys.FileSystem.createDirectory(options.tmpDir);
 		this.options = options;
@@ -118,19 +117,7 @@ class FileTree {
 		if( isFlash ) {
 			switch( ext.toLowerCase() ) {
 			case "ttf":
-				haxe.macro.Context.defineType({
-					pack : ["hxd","_res"],
-					name : name,
-					meta : [
-						{ name : ":font", pos : pos, params : [macro $v { fullPath }, macro $v { options.fontsChars } ] },
-						{ name : ":keep", pos : pos, params : [] },
-					],
-					kind : TDClass(),
-					params : [],
-					pos : pos,
-					isExtern : false,
-					fields : [],
-				});
+				Embed.doEmbedFont(name, fullPath, options.fontsChars);
 				embedTypes.push("hxd._res." + name);
 				return false; // don't embed font bytes in flash
 			default:
