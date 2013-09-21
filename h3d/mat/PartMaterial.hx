@@ -60,6 +60,21 @@ private class PartShader extends h3d.impl.Shader {
 	static var VERTEX = "TODO";
 	static var FRAGMENT = "TODO";
 	
+	
+	// TODO
+	public var killAlpha : Bool;
+	public var killAlphaThreshold : Float;
+	public var colorAdd : h3d.Vector;
+	public var colorMul : h3d.Vector;
+	public var colorMatrix : h3d.Matrix;
+	public var mpos : h3d.Matrix;
+	public var mproj : h3d.Matrix;
+	public var hasRotation : Bool;
+	public var hasSize : Bool;
+	public var partSize : h3d.Vector;
+	public var frameCount : Float;
+	public var tex : h3d.mat.Texture;
+
 #end
 
 }
