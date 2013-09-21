@@ -15,6 +15,7 @@ class FileTree {
 	var options : EmbedOptions;
 	var isFlash : Bool;
 	var isJS : Bool;
+	var embedTypes : Array<String>;
 	
 	public function new(dir) {
 		this.path = resolvePath(dir);
@@ -50,11 +51,12 @@ class FileTree {
 		if( options == null ) options = { };
 		var needTmp = options.compressSounds;
 		if( options.tmpDir == null ) options.tmpDir = path + "/.tmp/";
-		if( options.fontsChars == null ) options.fontsChars = h2d.Font.ASCII + h2d.Font.LATIN1;
+		if( options.fontsChars == null ) options.fontsChars = hxd.Charset.ASCII + hxd.Charset.LATIN1;
 		if( needTmp && !sys.FileSystem.exists(options.tmpDir) )
 			sys.FileSystem.createDirectory(options.tmpDir);
 		this.options = options;
-		return embedRec("");
+		embedTypes = [];
+		return { tree : embedRec(""), types : embedTypes };
 	}
 	
 	function embedRec( relPath : String ) {
@@ -129,6 +131,7 @@ class FileTree {
 					isExtern : false,
 					fields : [],
 				});
+				embedTypes.push("hxd._res." + name);
 				return false; // don't embed font bytes in flash
 			default:
 			}
@@ -145,6 +148,7 @@ class FileTree {
 				],
 				kind : TDClass({ pack : ["flash","utils"], name : "ByteArray", params : [] }),
 			});
+			embedTypes.push("hxd._res." + name);
 		} else if( isJS ) {
 			Context.addResource(name, sys.io.File.getBytes(fullPath));
 			return true;

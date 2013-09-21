@@ -240,8 +240,12 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	public static macro function create( ?basePath : String, ?options : EmbedOptions ) {
 		var f = new FileTree(basePath);
 		var data = f.embed(options);
-		var sdata = haxe.Serializer.run(data);
-		return macro @:privateFields new hxd.res.EmbedFileSystem(haxe.Unserializer.run($v { sdata } ));
+		var sdata = haxe.Serializer.run(data.tree);
+		var types = {
+			expr : haxe.macro.Expr.ExprDef.EBlock([for( t in data.types ) haxe.macro.MacroStringTools.toFieldExpr(t.split("."))]),
+			pos : haxe.macro.Context.currentPos(),
+		};
+		return macro { $types; @:privateFields new hxd.res.EmbedFileSystem(haxe.Unserializer.run($v { sdata } )); };
 	}
 	
 }
