@@ -102,6 +102,7 @@ private class DrawableShader extends h3d.impl.Shader {
 	public var killAlpha : Bool;
 	public var hasAlpha : Bool;
 	public var hasVertexAlpha : Bool;
+	public var hasVertexColor : Bool;
 	
 	override function customSetup(driver:h3d.impl.WebglDriver) {
 		driver.setupTexture(tex, None, filter ? Linear : Nearest, tileWrap ? Repeat : Clamp);
@@ -122,6 +123,7 @@ private class DrawableShader extends h3d.impl.Shader {
 			if( colorAdd != null ) cst.push("#define hasColorAdd");
 		}
 		if( hasVertexAlpha ) cst.push("#define hasVertexAlpha");
+		if( hasVertexColor ) cst.push("#define hasVertexColor");
 		return cst.join("\n");
 	}
 	
@@ -130,8 +132,12 @@ private class DrawableShader extends h3d.impl.Shader {
 		attribute vec2 pos;
 		attribute vec2 uv;
 		#if hasVertexAlpha
-		attribute float alpha;
+		attribute float valpha;
 		varying lowp float talpha;
+		#end
+		#if hasVertexColor
+		attribute float4 vcolor;
+		varying lowp float4 tcolor;
 		#end
 
 		uniform vec3 size;
@@ -164,7 +170,10 @@ private class DrawableShader extends h3d.impl.Shader {
 			#end
 			tuv = t;
 			#if hasVertexAlpha
-				talpha = alpha;
+				talpha = valpha;
+			#end
+			#if hasVertexColor
+				tcolor = vcolor;
 			#end
 		}
 
@@ -200,6 +209,9 @@ private class DrawableShader extends h3d.impl.Shader {
 			#end
 			#if hasVertexAlpha
 				col.a *= talpha;
+			#end
+			#if hasVertexColor
+				col *= tcolor;
 			#end
 			#if hasColorMatrix
 				col = colorMatrix * col;
