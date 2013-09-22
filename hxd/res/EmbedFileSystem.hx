@@ -173,12 +173,14 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		return new EmbedEntry(this,"root",null,null);
 	}
 
-	#if (flash||js)
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	static function resolve( path : String ) {
-		return #if flash "hxd._res." + #end "R_"+invalidChars.replace(path,"_");
+		#if flash
+		return "hxd._res.R_" + invalidChars.replace(path, "_");
+		#else
+		return "R_" + invalidChars.replace(path, "_");
+		#end
 	}
-	#end
 	
 	#if flash
 	function open( path : String ) : Class<flash.utils.ByteArray> {
@@ -214,8 +216,12 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		var f = open(path);
 		return f != null;
 		#else
-		var id = resolve(path);
-		return haxe.Resource.listNames().remove(id);
+		var r = root;
+		for( p in path.split("/") ) {
+			r = Reflect.field(r, p);
+			if( r == null ) return false;
+		}
+		return true;
 		#end
 	}
 	
@@ -226,6 +232,8 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 			throw "File not found " + path;
 		return new EmbedEntry(this, path.split("/").pop(), path, f);
 		#else
+		if( !exists(path) )
+			throw "File not found " + path;
 		var id = resolve(path);
 		return new EmbedEntry(this, path.split("/").pop(), path, id);
 		#end

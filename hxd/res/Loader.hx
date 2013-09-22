@@ -6,12 +6,14 @@ class Loader {
 	var modelCache : Map<String,Model>;
 	var textureCache : Map<String,Texture>;
 	var soundCache : Map<String,Sound>;
+	var fontCache : Map<String,BitmapFont>;
 	
 	public function new(fs) {
 		this.fs = fs;
 		modelCache = new Map();
 		textureCache = new Map();
 		soundCache = new Map();
+		fontCache = new Map();
 	}
 
 	public function exists( path : String ) : Bool {
@@ -50,9 +52,19 @@ class Loader {
 	}
 
 	function loadFont( path : String ) : Font {
+		// no cache necessary (uses FontBuilder which has its own cache)
 		return new Font(fs.get(path));
 	}
-	
+
+	function loadBitmapFont( path : String ) : BitmapFont {
+		var f = fontCache.get(path);
+		if( f == null ) {
+			f = new BitmapFont(this,fs.get(path));
+			fontCache.set(path, f);
+		}
+		return f;
+	}
+
 	function loadData( path : String ) {
 		return new Resource(fs.get(path));
 	}

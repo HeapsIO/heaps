@@ -4,6 +4,10 @@ class Kerning {
 	public var prevChar : Int;
 	public var offset : Int;
 	public var next : Null<Kerning>;
+	public function new(c, o) {
+		this.prevChar = c;
+		this.offset = o;
+	}
 }
 
 class FontChar {
@@ -15,6 +19,12 @@ class FontChar {
 	public function new(t,w) {
 		this.t = t;
 		this.width = w;
+	}
+	
+	public function addKerning( prevChar : Int, offset : Int ) {
+		var k = new Kerning(prevChar, offset);
+		k.next = kerning;
+		kerning = k;
 	}
 	
 	public function getKerningOffset( prevChar : Int ) {

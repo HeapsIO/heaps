@@ -33,7 +33,15 @@ class Any extends Resource {
 	public function toSound() {
 		return loader.loadSound(entry.path);
 	}
-	
+
+	public function toFont() {
+		return loader.loadFont(entry.path);
+	}
+
+	public function toBitmapFont() {
+		return loader.loadBitmapFont(entry.path);
+	}
+
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator([for( f in entry ) new Any(loader,f)]);
 	}

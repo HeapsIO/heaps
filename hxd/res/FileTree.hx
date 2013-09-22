@@ -12,6 +12,8 @@ class FileTree {
 	var loaderType : ComplexType;
 	var ignoredDir : Map<String,Bool>;
 	var ignoredExt : Map<String,Bool>;
+	var pairedExt : Map<String,Array<String>>;
+	var ignoredPairedExt : Map<String,Array<String>>;
 	var options : EmbedOptions;
 	var isFlash : Bool;
 	var isJS : Bool;
@@ -28,6 +30,9 @@ class FileTree {
 		ignoredExt = new Map();
 		ignoredExt.set("gal", true); // graphics gale source
 		ignoredExt.set("lch", true); // labchirp source
+		pairedExt = new Map();
+		pairedExt.set("fnt", ["png"]);
+		pairedExt.set("fbx", ["png"]);
 		isFlash = Context.defined("flash");
 		isJS = Context.defined("js");
 	}
@@ -168,6 +173,17 @@ class FileTree {
 				pos : pos,
 			});
 		}
+		ignoredPairedExt = new Map();
+		for( e1 in pairedExt.keys() ) {
+			for( e2 in pairedExt.get(e1) ) {
+				var a = ignoredPairedExt.get(e2);
+				if( a == null ) {
+					a = [];
+					ignoredPairedExt.set(e2, a);
+				}
+				a.push(e1);
+			}
+		}
 		scanRec("", fields, dict);
 		return fields;
 	}
@@ -176,7 +192,8 @@ class FileTree {
 		var dir = this.path + "/" + relPath;
 		// make sure to rescan if one of the directories content has changed (file added or deleted)
 		Context.registerModuleDependency(currentModule, dir);
-		for( f in sys.FileSystem.readDirectory(dir) ) {
+		var allFiles = sys.FileSystem.readDirectory(dir);
+		for( f in allFiles ) {
 			var path = dir + "/" + f;
 			var fileName = f;
 			var field = null;
@@ -191,12 +208,30 @@ class FileTree {
 				ext = extParts.join(".");
 				if( ignoredExt.exists(ext.toLowerCase()) )
 					continue;
+				// when we have a pair file [a,b], ignore file.b if file.a is present
+				var a = ignoredPairedExt.get(ext.toLowerCase());
+				if( a != null ) {
+					var found = false;
+					for( e in a ) {
+						var otherFile = noExt + "." + e;
+						for( f in allFiles )
+							if( f == otherFile ) {
+								found = true;
+								break;
+							}
+						if( found ) break;
+					}
+					if( found ) continue;
+				}
 				field = handleFile(f, ext, relPath.length == 0 ? f : relPath + "/" + f, path);
 				f = noExt;
 			}
 			if( field != null ) {
 				var other = dict.get(f);
 				if( other != null ) {
+					var pe = pairedExt.get(other.split(".").pop().toLowerCase());
+					if( pe != null && Lambda.has(pe,ext.toLowerCase()) )
+						continue;
 					Context.warning("Resource " + relPath + "/" + f + " is used by both " + relPath + "/" + fileName + " and " + other, pos);
 					continue;
 				}
@@ -266,6 +301,8 @@ class FileTree {
 			return { e : macro loader.loadModel($epath), t : macro : hxd.res.Model };
 		case "ttf":
 			return { e : macro loader.loadFont($epath), t : macro : hxd.res.Font };
+		case "fnt":
+			return { e : macro loader.loadBitmapFont($epath), t : macro : hxd.res.BitmapFont };
 		case "wav", "mp3":
 			return { e : macro loader.loadSound($epath), t : macro : hxd.res.Sound };
 		default:
