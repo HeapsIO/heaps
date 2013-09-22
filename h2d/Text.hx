@@ -19,6 +19,7 @@ class Text extends Drawable {
 		this.font = font;
 		text = "";
 		textColor = 0xFFFFFF;
+		letterSpacing = 1;
 	}
 	
 	function set_font(font) {
