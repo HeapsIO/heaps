@@ -183,4 +183,17 @@ class Math {
 		return if( da > -max && da < max ) b else a + (da < 0 ? -max : max);
 	}
 	
+	
+	public inline static function random( max = 1.0 ) {
+		return std.Math.random() * max;
+	}
+	
+	/**
+		Returns a signed random between -max and max (both included).
+	**/
+	public static function srand( max = 1.0 ) {
+		return (std.Math.random() - 0.5) * (max * 2);
+	}
+	
+	
 }
