@@ -19,7 +19,7 @@ class PointShader extends h3d.impl.Shader {
 			out = color;
 		}
 	}
-#elseif js
+#elseif (js || cpp)
 
 	static var VERTEX = "
 		attribute vec2 pos;
@@ -73,7 +73,7 @@ class LineShader extends h3d.impl.Shader {
 		}
 	}
 	
-#elseif js
+#elseif (js || cpp)
 
 	public var mproj : Matrix;
 	public var start : Vector;

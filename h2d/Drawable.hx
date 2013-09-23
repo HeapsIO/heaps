@@ -81,7 +81,7 @@ private class DrawableShader extends h3d.impl.Shader {
 
 	}
 	
-	#elseif js
+	#elseif (js || cpp)
 	
 	public var hasColorKey : Bool;
 	
@@ -104,7 +104,7 @@ private class DrawableShader extends h3d.impl.Shader {
 	public var hasVertexAlpha : Bool;
 	public var hasVertexColor : Bool;
 	
-	override function customSetup(driver:h3d.impl.WebglDriver) {
+	override function customSetup(driver:h3d.impl.GlDriver) {
 		driver.setupTexture(tex, None, filter ? Linear : Nearest, tileWrap ? Repeat : Clamp);
 	}
 	

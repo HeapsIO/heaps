@@ -26,6 +26,8 @@ abstract IndexBuffer(InnerData) {
 	public inline function new(length = 0) {
 		#if js
 		this = untyped __new__(Array, length);
+		#elseif cpp
+		this = new InnerData();
 		#else
 		this = new InnerData(length);
 		#end

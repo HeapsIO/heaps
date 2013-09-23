@@ -1,28 +1,45 @@
 package h3d.impl;
 import h3d.impl.Driver;
 
-#if js
+#if (js||cpp)
 
+#if js
+import js.html.Uint16Array;
+import js.html.Uint8Array;
+import js.html.Float32Array;
 private typedef GL = js.html.webgl.GL;
+#elseif cpp
+import openfl.gl.GL;
+private typedef Uint16Array = openfl.utils.Int16Array;
+private typedef Uint8Array = openfl.utils.UInt8Array;
+private typedef Float32Array = openfl.utils.Float32Array;
+#end
 
 @:access(h3d.impl.Shader)
-class WebglDriver extends Driver {
+class GlDriver extends Driver {
 
+	#if js
 	var canvas : js.html.CanvasElement;
 	public var gl : js.html.webgl.RenderingContext;
+	#elseif cpp
+	static var gl = GL;
+	#end
 	
 	var curAttribs : Int;
 	var curShader : Shader.ShaderInstance;
 	var curMatBits : Int;
 	
 	public function new() {
-		curAttribs = 0;
+		#if js
 		canvas = cast js.Browser.document.getElementById("webgl");
 		if( canvas == null ) throw "Canvas #webgl not found";
 		gl = canvas.getContextWebGL();
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
+		#end
+
+		curAttribs = 0;
 		curMatBits = -1;
 		selectMaterial(0);
 	}
@@ -80,8 +97,12 @@ class WebglDriver extends Driver {
 	}
 	
 	override function resize(width, height, aa:Int) {
+		#if js
 		canvas.width = width;
 		canvas.height = height;
+		#elseif cpp
+		trace("TODO");
+		#end
 		gl.viewport(0, 0, width, height);
 	}
 	
@@ -95,18 +116,22 @@ class WebglDriver extends Driver {
 	
 	override function allocVertex( count : Int, stride : Int ) : VertexBuffer {
 		var b = gl.createBuffer();
+		#if js
 		gl.bindBuffer(GL.ARRAY_BUFFER, b);
 		gl.bufferData(GL.ARRAY_BUFFER, count * stride * 4, GL.STATIC_DRAW);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
+		#end
 		untyped b.stride = stride;
 		return b;
 	}
 	
 	override function allocIndexes( count : Int ) : IndexBuffer {
 		var b = gl.createBuffer();
+		#if js
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
 		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, count * 2, GL.STATIC_DRAW);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
+		#end
 		return b;
 	}
 
@@ -124,7 +149,7 @@ class WebglDriver extends Driver {
 	
 	override function uploadTextureBytes( t : h3d.mat.Texture, bytes : haxe.io.Bytes, mipLevel : Int, side : Int ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
-		var pixels = new js.html.Uint8Array(bytes.getData());
+		var pixels = new Uint8Array(bytes.getData());
 		// convert BGRA to RGBA
 		for( i in 0...t.width * t.height ) {
 			var p = i << 2;
@@ -143,31 +168,32 @@ class WebglDriver extends Driver {
 	
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
 		var stride : Int = untyped v.stride;
-		var buf = new js.html.Float32Array(buf.getNative());
+		var buf = new Float32Array(buf.getNative());
+		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride);
 		gl.bindBuffer(GL.ARRAY_BUFFER, v);
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, new js.html.Float32Array(buf.buffer, bufPos, vertexCount * stride));
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
 
 	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		var stride : Int = untyped v.stride;
-		var buf = new js.html.Uint8Array(buf.getData());
+		var buf = new Uint8Array(buf.getData());
 		gl.bindBuffer(GL.ARRAY_BUFFER, v);
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, new js.html.Uint8Array(buf.buffer, bufPos, vertexCount * stride * 4));
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, new Uint8Array(buf.buffer, bufPos, vertexCount * stride * 4));
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
 
 	override function uploadIndexesBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
-		var buf = new js.html.Uint16Array(buf.getNative());
+		var buf = new Uint16Array(buf.getNative());
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, new js.html.Uint16Array(buf.buffer, bufPos, indiceCount));
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, new Uint16Array(buf.buffer, bufPos, indiceCount));
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 
 	override function uploadIndexesBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
-		var buf = new js.html.Uint8Array(buf.getData());
+		var buf = new Uint8Array(buf.getData());
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, new js.html.Uint8Array(buf.buffer, bufPos, indiceCount * 2));
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, new Uint8Array(buf.buffer, bufPos, indiceCount * 2));
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 	
@@ -228,7 +254,7 @@ class WebglDriver extends Driver {
 			var s = gl.createShader(type);
 			gl.shaderSource(s, code);
 			gl.compileShader(s);
-			if( !gl.getShaderParameter(s, GL.COMPILE_STATUS) ) {
+			if( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
 				var log = gl.getShaderInfoLog(s);
 				var line = code.split("\n")[Std.parseInt(log.substr(9)) - 1];
 				if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
@@ -243,7 +269,7 @@ class WebglDriver extends Driver {
 		gl.attachShader(p, vs);
 		gl.attachShader(p, fs);
 		gl.linkProgram(p);
-		if( !gl.getProgramParameter(p, GL.LINK_STATUS) ) {
+		if( gl.getProgramParameter(p, GL.LINK_STATUS) != cast 1 ) {
 			var log = gl.getProgramInfoLog(p);
 			throw "Program linkage failure: "+log;
 		}
@@ -394,7 +420,7 @@ class WebglDriver extends Driver {
 		switch( t ) {
 		case Mat4:
 			var m : Matrix = val;
-			gl.uniformMatrix4fv(u.loc, false, new js.html.Float32Array(m.getFloats()));
+			gl.uniformMatrix4fv(u.loc, false, new Float32Array(m.getFloats()));
 		case Tex2d:
 			var t : h3d.mat.Texture = val;
 			setupTexture(t, t.mipMap, t.filter, t.wrap);

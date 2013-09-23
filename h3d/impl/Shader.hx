@@ -5,7 +5,7 @@ import haxe.macro.Context;
 
 #if flash
 typedef Shader = hxsl.Shader;
-#elseif js
+#elseif (js || cpp)
 
 enum ShaderType {
 	Float;
@@ -23,11 +23,11 @@ enum ShaderType {
 	Index( index : Int, t : ShaderType );
 }
 
-typedef Uniform = { name : String, loc : js.html.webgl.UniformLocation, type : ShaderType, index : Int }
+typedef Uniform = { name : String, loc : #if js js.html.webgl.UniformLocation #else openfl.gl.GLUniformLocation #end, type : ShaderType, index : Int }
 
 class ShaderInstance {
 
-	public var program : js.html.webgl.Program;
+	public var program : #if js js.html.webgl.Program #else openfl.gl.GLProgram #end;
 	public var attribs : Array<{ name : String, type : ShaderType, etype : Int, offset : Int, index : Int, size : Int }>;
 	public var uniforms : Array<Uniform>;
 	public var stride : Int;
@@ -44,7 +44,7 @@ class Shader {
 	public function new() {
 	}
 	
-	function customSetup( driver : WebglDriver ) {
+	function customSetup( driver : h3d.impl.GlDriver ) {
 	}
 	
 	function getConstants( vertex : Bool ) {

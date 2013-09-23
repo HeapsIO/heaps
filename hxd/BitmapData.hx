@@ -1,6 +1,6 @@
 package hxd;
 
-private typedef InnerData = #if flash flash.display.BitmapData #elseif js js.html.ImageData #else Int #end;
+private typedef InnerData = #if flash flash.display.BitmapData #elseif js js.html.ImageData #elseif cpp flash.display.BitmapData #else Int #end;
 
 abstract BitmapData(InnerData) {
 

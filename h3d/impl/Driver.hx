@@ -8,6 +8,10 @@ typedef Texture = flash.display3D.textures.TextureBase;
 typedef IndexBuffer = js.html.webgl.Buffer;
 typedef VertexBuffer = js.html.webgl.Buffer;
 typedef Texture = js.html.webgl.Texture;
+#elseif cpp
+typedef IndexBuffer = openfl.gl.GLBuffer;
+typedef VertexBuffer = openfl.gl.GLBuffer;
+typedef Texture = openfl.gl.GLTexture;
 #else
 typedef IndexBuffer = Int;
 typedef VertexBuffer = Int;

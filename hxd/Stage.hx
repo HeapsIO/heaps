@@ -231,6 +231,24 @@ class Stage {
 			r();
 	}
 
+#else
+
+	function get_mouseX() {
+		return 0;
+	}
+
+	function get_mouseY() {
+		return 0;
+	}
+	
+	function get_width() {
+		return 0;
+	}
+
+	function get_height() {
+		return 0;
+	}
+
 #end
 
 }

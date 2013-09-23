@@ -168,7 +168,46 @@ class System {
 		return js.Browser.document.height;
 	}
 	
-	#else
+	#elseif cpp
+
+	static var LOOP = null;
+	static var LOOP_INIT = false;
+	
+	public static function setLoop( f : Void -> Void ) {
+		trace("TODO");
+	}
+
+	public static function setCursor( c : Cursor ) {
+		throw "TODO";
+	}
+	
+	static function get_lang() {
+		return "en";
+	}
+	
+	static function get_screenDPI() {
+		return 72.;
+	}
+	
+	static function get_isAndroid() {
+		return false;
+	}
+	
+	static function get_isWindowed() {
+		return true;
+	}
+	
+	static function get_isTouch() {
+		return false;
+	}
+	
+	static function get_width() {
+		return 100;
+	}
+	
+	static function get_height() {
+		return 100;
+	}
 
 	#end
 	
