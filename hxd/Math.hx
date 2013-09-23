@@ -7,6 +7,7 @@ class Math {
 
 	public static var POSITIVE_INFINITY(get, never) : Float;
 	public static var NEGATIVE_INFINITY(get, never) : Float;
+	public static var NaN(get, never) : Float;
 	
 	static inline function get_POSITIVE_INFINITY() {
 		return std.Math.POSITIVE_INFINITY;
@@ -14,6 +15,14 @@ class Math {
 
 	static inline function get_NEGATIVE_INFINITY() {
 		return std.Math.NEGATIVE_INFINITY;
+	}
+
+	static inline function get_NaN() {
+		return std.Math.NaN;
+	}
+	
+	public static inline function isNaN(v:Float) {
+		return std.Math.isNaN(v);
 	}
 	
 	// round to 4 significant digits, eliminates < 1e-10
