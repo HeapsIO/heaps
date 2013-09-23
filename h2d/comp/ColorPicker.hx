@@ -75,7 +75,8 @@ private class Cross extends h2d.css.Fill {
 	}
 }
 
-private class Color extends h2d.Sprite{
+private class Color extends h2d.Sprite {
+	var picker : ColorPicker;
 	public var width :Float;
 	public var height :Float;
 	public var color(default, set):Int = 0xFFFFFFFF;
@@ -87,8 +88,9 @@ private class Color extends h2d.Sprite{
 	var input : h2d.comp.Input;
 	
 	
-	public function new (ix, iy, iw, ih, parent) {
+	public function new (picker,ix, iy, iw, ih, parent) {
 		super(parent);
+		this.picker = picker;
 		x = ix;
 		y = iy;
 		width = iw;
@@ -139,7 +141,7 @@ private class Color extends h2d.Sprite{
 			var v = Std.parseInt("0x" + input.value);
 			if (v != null) {
 				color = 255 << 24 | v;
-				ColorPicker.change = SColor;
+				picker.change = SColor;
 			}
 		};
 		
@@ -163,12 +165,14 @@ private class Palette extends h2d.Sprite {
 	public var height :Float;
 	public var color(default, set):Int;
 	
+	var picker : ColorPicker;
 	var canvas:h2d.css.Fill;
 	var interact:h2d.Interactive;
 	var cursor:h2d.Sprite;
 	
-	public function new (ix, iy, iw, ih, parent) {
+	public function new (picker, ix, iy, iw, ih, parent) {
 		super(parent);
+		this.picker = picker;
 		x = ix;
 		y = iy;
 		width = iw;
@@ -189,11 +193,11 @@ private class Palette extends h2d.Sprite {
 				if( e.kind == EMove )
 					setCursor(e.relY);
 			});
-			ColorPicker.change = SPalette;
+			picker.change = SPalette;
 		}
 		interact.onRelease = function(e) {
 			interact.stopDrag();
-			ColorPicker.change = SNone;
+			picker.change = SNone;
 		}
 		color = getColor(0);
 		drawAll();
@@ -201,7 +205,7 @@ private class Palette extends h2d.Sprite {
 	
 	function set_color(v:Int) {
 		color = v;
-		if(!ColorPicker.change.equals(SPalette))
+		if(!picker.change.equals(SPalette))
 			updateCursor();
 		drawAll();
 		return color;
@@ -252,6 +256,7 @@ private class Chart extends h2d.Sprite{
 	public var refColor(default, set):Int = 0xffffffff;
 	public var color:Int = 0xffffffff;
 	
+	var picker : ColorPicker;
 	var ray :Float;
 	var canvas:h2d.css.Fill;
 	var interact:h2d.Interactive;
@@ -259,8 +264,9 @@ private class Chart extends h2d.Sprite{
 	var lastPos:h3d.Vector;
 	var cross:Cross ;
 	
-	public function new (ix, iy, iw, ih, ray, parent) {
+	public function new (picker,ix, iy, iw, ih, ray, parent) {
 		super(parent);
+		this.picker = picker;
 		x = ix;
 		y = iy;
 		width = iw;
@@ -281,11 +287,11 @@ private class Chart extends h2d.Sprite{
 				if( e.kind == EMove )
 					setCursor(e.relX, e.relY);
 			});
-			ColorPicker.change = SChart;
+			picker.change = SChart;
 		}
 		interact.onRelease = function(e) {
 			interact.stopDrag();
-			ColorPicker.change = SNone;
+			picker.change = SNone;
 		}
 		drawAll();
 		setCursor(0, 0);
@@ -370,6 +376,7 @@ private class ColorGauge extends h2d.Sprite{
 	public var color(default, set):Int = 0xffffffff;
 	public var ratio(get, null):Float;
 	
+	var picker : ColorPicker;
 	var canvas:h2d.css.Fill;
 	var interact:h2d.Interactive;
 	var cursor:h2d.Sprite;
@@ -377,8 +384,9 @@ private class ColorGauge extends h2d.Sprite{
 	var label : h2d.comp.Label;
 	var input : h2d.comp.Input;
 	var isFinal:Bool;
-	public function new (ix, iy, iw, ih, rgba, parent) {
+	public function new (picker,ix, iy, iw, ih, rgba, parent) {
 		super(parent);
+		this.picker = picker;
 		x = ix;
 		y = iy;
 		width = iw;
@@ -417,7 +425,7 @@ private class ColorGauge extends h2d.Sprite{
 		}
 		interact.onRelease = function(e) {
 			interact.stopDrag();
-			ColorPicker.change = SNone;
+			picker.change = SNone;
 		}
 		drawAll();
 	}
@@ -431,11 +439,11 @@ private class ColorGauge extends h2d.Sprite{
 	}
 	
 	function setState() {
-		ColorPicker.change = switch(bindTo) {
-			case RGBA.R: ColorPicker.change = SRed;
-			case RGBA.G: ColorPicker.change = SGreen;
-			case RGBA.B: ColorPicker.change = SBlue;
-			case RGBA.A: ColorPicker.change = SAlpha;
+		picker.change = switch(bindTo) {
+			case RGBA.R: SRed;
+			case RGBA.G: SGreen;
+			case RGBA.B: SBlue;
+			case RGBA.A: SAlpha;
 		}
 	}
 	
@@ -493,10 +501,10 @@ private class ColorGauge extends h2d.Sprite{
 
 /////////////////////////////////////////////////////////////////
 
+@:allow(h2d.comp._ColorPicker)
 class ColorPicker extends h2d.comp.Component {
 	
 	public static var borderColor = 0xFFaaaaaa;
-	public static var change : ChangeState;
 	
 	var finalColor : Color;
 	var palette : Palette;
@@ -506,6 +514,7 @@ class ColorPicker extends h2d.comp.Component {
 	var gaugeBlue : ColorGauge;
 	var gaugeAlpha : ColorGauge;
 	var timer : haxe.Timer;
+	var change : ChangeState;
 	
 	public var color(get, set) : Int;
 	
@@ -542,13 +551,13 @@ class ColorPicker extends h2d.comp.Component {
 	}
 	
 	inline function init() {
-		finalColor = new Color(15, 8, 175, 45, this);
-		palette = new Palette(16, 65, 20, 140, this);
-		chart = new Chart(50, 65, 140, 140, 3.5, this);
-		gaugeRed = new ColorGauge(50, 220, 140, 15, RGBA.R, this);
-		gaugeGreen = new ColorGauge(50, 245, 140, 15, RGBA.G, this);
-		gaugeBlue = new ColorGauge(50, 270, 140, 15, RGBA.B, this);
-		gaugeAlpha = new ColorGauge(50, 295, 140, 15, RGBA.A, this);
+		finalColor = new Color(this, 15, 8, 175, 45, this);
+		palette = new Palette(this, 16, 65, 20, 140, this);
+		chart = new Chart(this,50, 65, 140, 140, 3.5, this);
+		gaugeRed = new ColorGauge(this, 50, 220, 140, 15, RGBA.R, this);
+		gaugeGreen = new ColorGauge(this, 50, 245, 140, 15, RGBA.G, this);
+		gaugeBlue = new ColorGauge(this, 50, 270, 140, 15, RGBA.B, this);
+		gaugeAlpha = new ColorGauge(this, 50, 295, 140, 15, RGBA.A, this);
 		chart.refColor = palette.color;
 		change = SNone;
 		var close = new Button("X", this);
@@ -573,6 +582,8 @@ class ColorPicker extends h2d.comp.Component {
 		switch(change) {
 			case SColor:	palette.setColorFrom(finalColor.color);
 							chart.setColorFrom(finalColor.color);
+							// require another change event since we have finalColor == chartColor
+							onChange(finalColor.color);
 			case SPalette:	chart.refColor = palette.color;
 			case SRed:		chart.setColorFrom(gaugeRed.color);
 							palette.color = chart.refColor;
