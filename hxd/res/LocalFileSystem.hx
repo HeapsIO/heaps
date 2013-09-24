@@ -10,7 +10,8 @@ private class LocalEntry extends FileEntry {
 	var file : flash.filesystem.File;
 	var fread : flash.filesystem.FileStream;
 	#else
-	var file : Dynamic;
+	var file : String;
+	var fread : sys.io.FileInput;
 	#end
 
 	function new(fs, name, relPath, file) {
@@ -44,6 +45,12 @@ private class LocalEntry extends FileEntry {
 			out.close();
 		}
 		file = target;
+		#else
+		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
+		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() ) {
+			var fbx = getXBX();
+			sys.io.File.saveBytes(target, fbx);
+		}
 		#end
 	}
 
@@ -56,7 +63,11 @@ private class LocalEntry extends FileEntry {
 		if( old < 0 ) close() else fread.position = old;
 		return i;
 		#else
-		return 0;
+		var old = if( fread == null ) -1 else fread.tell();
+		open();
+		var i = fread.readInt32();
+		if( old < 0 ) close() else fread.seek(old, SeekBegin);
+		return i;
 		#end
 	}
 
@@ -69,7 +80,7 @@ private class LocalEntry extends FileEntry {
 		fs.close();
 		return bytes;
 		#else
-		return null;
+		return sys.io.File.getBytes(file);
 		#end
 	}
 	
@@ -81,12 +92,19 @@ private class LocalEntry extends FileEntry {
 			fread = new flash.filesystem.FileStream();
 			fread.open(file, flash.filesystem.FileMode.READ);
 		}
+		#else
+		if( fread != null )
+			fread.seek(0, SeekBegin);
+		else
+			fread = sys.io.File.read(file);
 		#end
 	}
 	
 	override function skip(nbytes:Int) {
 		#if air3
 		fread.position += nbytes;
+		#else
+		fread.seek(nbytes, SeekCur);
 		#end
 	}
 	
@@ -94,18 +112,25 @@ private class LocalEntry extends FileEntry {
 		#if air3
 		return fread.readUnsignedByte();
 		#else
-		return 0;
+		return fread.readByte();
 		#end
 	}
 	
 	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
 		#if air3
 		fread.readBytes(out.getData(), pos, size);
+		#else
+		fread.readFullBytes(out, pos, size);
 		#end
 	}
 
 	override function close() {
 		#if air3
+		if( fread != null ) {
+			fread.close();
+			fread = null;
+		}
+		#else
 		if( fread != null ) {
 			fread.close();
 			fread = null;
@@ -116,6 +141,8 @@ private class LocalEntry extends FileEntry {
 	override function load( ?onReady : Void -> Void ) : Void {
 		#if air3
 		if( onReady != null ) haxe.Timer.delay(onReady, 1);
+		#else
+		throw "TODO";
 		#end
 	}
 	
@@ -132,6 +159,7 @@ private class LocalEntry extends FileEntry {
 		});
 		loader.load(new flash.net.URLRequest(file.url));
 		#else
+		throw "TODO";
 		#end
 	}
 	
@@ -151,7 +179,7 @@ private class LocalEntry extends FileEntry {
 		#if air3
 		return Std.int(file.size);
 		#else
-		return 0;
+		return sys.FileSystem.stat(file).size;
 		#end
 	}
 
@@ -167,7 +195,16 @@ private class LocalEntry extends FileEntry {
 			}
 		return new hxd.impl.ArrayIterator(arr);
 		#else
-		return null;
+		var arr = new Array<FileEntry>();
+		for( f in sys.FileSystem.readDirectory(file) ) {
+			switch( f ) {
+			case ".svn", ".git" if( sys.FileSystem.isDirectory(file+"/"+f) ):
+				continue;
+			default:
+				arr.push(new LocalEntry(fs, f, relPath == null ? f : relPath + "/" + f, file+"/"+f));
+			}
+		}
+		return new hxd.impl.ArrayIterator(arr);
 		#end
 	}
 	
@@ -189,6 +226,14 @@ class LocalFileSystem implements FileSystem {
 		baseDir = baseDir.split("\\").join("/");
 		if( !StringTools.endsWith(baseDir, "/") ) baseDir += "/";
 		root = new LocalEntry(this, "root", null, froot);
+		#else
+		var exePath = Sys.executablePath().split("\\").join("/").split("/");
+		exePath.pop();
+		var froot = sys.FileSystem.fullPath(exePath.join("/") + "/" + baseDir);
+		if( !sys.FileSystem.isDirectory(froot) ) throw "Could not find dir " + dir;
+		baseDir = froot.split("\\").join("/");
+		if( !StringTools.endsWith(baseDir, "/") ) baseDir += "/";
+		root = new LocalEntry(this, "root", null, baseDir);
 		#end
 		tmpDir = baseDir + ".tmp/";
 	}
@@ -201,22 +246,28 @@ class LocalFileSystem implements FileSystem {
 		return root;
 	}
 
-	#if air3
 	function open( path : String ) {
+		#if air3
 		var f = new flash.filesystem.File(baseDir + path);
 		// ensure exact case / no relative path
 		if( f.nativePath.split("\\").join("/") != baseDir + path )
 			return null;
 		return f;
+		#else
+		var f = sys.FileSystem.fullPath(baseDir + path).split("\\").join("/");
+		if( f != baseDir + path )
+			return null;
+		return f;
+		#end
 	}
-	#end
 	
 	public function exists( path : String ) {
 		#if air3
 		var f = open(path);
 		return f != null && f.exists;
 		#else
-		return false;
+		var f = open(path);
+		return f != null && sys.FileSystem.exists(f);
 		#end
 	}
 	
@@ -227,7 +278,10 @@ class LocalFileSystem implements FileSystem {
 			throw "File not found " + path;
 		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#else
-		return null;
+		var f = open(path);
+		if( f == null ||!sys.FileSystem.exists(f) )
+			throw "File not found " + path;
+		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#end
 	}
 	
@@ -238,6 +292,9 @@ class LocalFileSystem implements FileSystem {
 		o.open(f, flash.filesystem.FileMode.WRITE);
 		o.writeBytes(data.getData());
 		o.close();
+		#else
+		var f = open(path);
+		sys.io.File.saveBytes(f, data);
 		#end
 	}
 	

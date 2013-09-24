@@ -23,6 +23,7 @@ class GlDriver extends Driver {
 	public var gl : js.html.webgl.RenderingContext;
 	#elseif cpp
 	static var gl = GL;
+	var view : openfl.display.OpenGLView;
 	#end
 	
 	var curAttribs : Int;
@@ -37,6 +38,8 @@ class GlDriver extends Driver {
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
+		#elseif cpp
+		view = new openfl.display.OpenGLView();
 		#end
 
 		curAttribs = 0;
@@ -101,7 +104,7 @@ class GlDriver extends Driver {
 		canvas.width = width;
 		canvas.height = height;
 		#elseif cpp
-		trace("TODO");
+		// resize window
 		#end
 		gl.viewport(0, 0, width, height);
 	}
@@ -121,8 +124,7 @@ class GlDriver extends Driver {
 		gl.bufferData(GL.ARRAY_BUFFER, count * stride * 4, GL.STATIC_DRAW);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		#end
-		untyped b.stride = stride;
-		return b;
+		return { b : b, stride : stride };
 	}
 	
 	override function allocIndexes( count : Int ) : IndexBuffer {
@@ -144,7 +146,7 @@ class GlDriver extends Driver {
 	}
 	
 	override function disposeVertex( v : VertexBuffer ) {
-		gl.deleteBuffer(v);
+		gl.deleteBuffer(v.b);
 	}
 	
 	override function uploadTextureBytes( t : h3d.mat.Texture, bytes : haxe.io.Bytes, mipLevel : Int, side : Int ) {
@@ -170,7 +172,7 @@ class GlDriver extends Driver {
 		var stride : Int = untyped v.stride;
 		var buf = new Float32Array(buf.getNative());
 		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride);
-		gl.bindBuffer(GL.ARRAY_BUFFER, v);
+		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
@@ -178,7 +180,7 @@ class GlDriver extends Driver {
 	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		var stride : Int = untyped v.stride;
 		var buf = new Uint8Array(buf.getData());
-		gl.bindBuffer(GL.ARRAY_BUFFER, v);
+		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, new Uint8Array(buf.buffer, bufPos, vertexCount * stride * 4));
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
@@ -247,6 +249,9 @@ class GlDriver extends Driver {
 			if( code == null ) throw "Missing " + Type.getClassName(cl) + "." + name + " shader source";
 			var cst = shader.getConstants(vertex);
 			code = StringTools.trim(cst + code);
+			#if cpp
+			code = "#define lowp\n#define mediump\n#define highp\n"+code;
+			#end
 			// replace haxe-like #if/#else/#end by GLSL ones
 			code = ~/#if ([A-Za-z0-9_]+)/g.replace(code, "#if defined($1)");
 			code = ~/#elseif ([A-Za-z0-9_]+)/g.replace(code, "#elif defined($1)");
@@ -461,7 +466,7 @@ class GlDriver extends Driver {
 		var stride : Int = untyped v.stride;
 		if( stride < curShader.stride )
 			throw "Buffer stride (" + stride + ") and shader stride (" + curShader.stride + ") mismatch";
-		gl.bindBuffer(GL.ARRAY_BUFFER, v);
+		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		for( a in curShader.attribs )
 			gl.vertexAttribPointer(a.index, a.size, a.etype, false, stride * 4, a.offset * 4);
 	}

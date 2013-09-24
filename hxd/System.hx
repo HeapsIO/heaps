@@ -168,13 +168,19 @@ class System {
 		return js.Browser.document.height;
 	}
 	
-	#elseif cpp
+	#elseif openfl
 
-	static var LOOP = null;
-	static var LOOP_INIT = false;
+	static var loop = null;
 	
 	public static function setLoop( f : Void -> Void ) {
-		trace("TODO");
+		if( loop != null )
+			flash.Lib.current.removeEventListener(flash.events.Event.ENTER_FRAME, loop);
+		if( f == null )
+			loop = null;
+		else {
+			loop = function(_) f();
+			flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, loop);
+		}
 	}
 
 	public static function setCursor( c : Cursor ) {
