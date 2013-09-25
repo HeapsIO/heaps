@@ -170,17 +170,14 @@ class System {
 	
 	#elseif openfl
 
-	static var loop = null;
+	static var VIEW = null;
 	
 	public static function setLoop( f : Void -> Void ) {
-		if( loop != null )
-			flash.Lib.current.removeEventListener(flash.events.Event.ENTER_FRAME, loop);
-		if( f == null )
-			loop = null;
-		else {
-			loop = function(_) f();
-			flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, loop);
+		if( VIEW == null ) {
+			VIEW = new openfl.display.OpenGLView();
+			flash.Lib.current.addChild(VIEW);
 		}
+		VIEW.render = function(_) if( f != null ) f();
 	}
 
 	public static function setCursor( c : Cursor ) {
