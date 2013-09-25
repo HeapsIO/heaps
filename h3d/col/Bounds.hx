@@ -4,11 +4,10 @@ import hxd.Math;
 class Bounds {
 	
 	public var xMin : Float;
-	public var yMin : Float;
-	public var zMin : Float;
-
 	public var xMax : Float;
+	public var yMin : Float;
 	public var yMax : Float;
+	public var zMin : Float;
 	public var zMax : Float;
 	
 	public inline function new() {
@@ -114,6 +113,36 @@ class Bounds {
 		return ret;
 	}
 	
+	public function transform3x4( m : Matrix ) {
+		var xMin = xMin, yMin = yMin, zMin = zMin, xMax = xMax, yMax = yMax, zMax = zMax;
+		empty();
+		var v = new h3d.col.Point();
+		v.set(xMin, yMin, zMin);
+		v.transform(m);
+		addPoint(v);
+		v.set(xMin, yMin, zMax);
+		v.transform(m);
+		addPoint(v);
+		v.set(xMin, yMax, zMin);
+		v.transform(m);
+		addPoint(v);
+		v.set(xMin, yMax, zMax);
+		v.transform(m);
+		addPoint(v);
+		v.set(xMax, yMin, zMin);
+		v.transform(m);
+		addPoint(v);
+		v.set(xMax, yMin, zMax);
+		v.transform(m);
+		addPoint(v);
+		v.set(xMax, yMax, zMin);
+		v.transform(m);
+		addPoint(v);
+		v.set(xMax, yMax, zMax);
+		v.transform(m);
+		addPoint(v);
+	}
+	
 	public inline function collide( b : Bounds ) {
 		return !(xMin > b.xMax || yMin > b.yMax || zMin > b.zMax || xMax < b.xMin || yMax < b.yMin || zMax < b.zMin);
 	}
@@ -135,6 +164,15 @@ class Bounds {
 		if( p.z < zMin ) zMin = p.z;
 		if( p.z > zMax ) zMax = p.z;
 	}
+
+	public inline function addPos( x : Float, y : Float, z : Float ) {
+		if( x < xMin ) xMin = x;
+		if( x > xMax ) xMax = x;
+		if( y < yMin ) yMin = y;
+		if( y > yMax ) yMax = y;
+		if( z < zMin ) zMin = z;
+		if( z > zMax ) zMax = z;
+	}
 	
 	public function intersection( a : Bounds, b : Bounds ) {
 		var xMin = Math.max(a.xMin, b.xMin);
@@ -144,10 +182,10 @@ class Bounds {
 		var yMax = Math.max(a.yMax, b.yMax);
 		var zMax = Math.max(a.zMax, b.zMax);
 		this.xMin = xMin;
-		this.yMin = yMin;
-		this.zMin = zMin;
 		this.xMax = xMax;
+		this.yMin = yMin;
 		this.yMax = yMax;
+		this.zMin = zMin;
 		this.zMax = zMax;
 	}
 	
@@ -174,10 +212,10 @@ class Bounds {
 	
 	public function load( b : Bounds ) {
 		xMin = b.xMin;
-		yMin = b.yMin;
-		zMin = b.zMin;
 		xMax = b.xMax;
+		yMin = b.yMin;
 		yMax = b.yMax;
+		zMin = b.zMin;
 		zMax = b.zMax;
 	}
 	
@@ -214,29 +252,29 @@ class Bounds {
 	
 	public inline function empty() {
 		xMin = 1e20;
-		yMin = 1e20;
-		zMin = 1e20;
 		xMax = -1e20;
+		yMin = 1e20;
 		yMax = -1e20;
+		zMin = 1e20;
 		zMax = -1e20;
 	}
 
 	public inline function all() {
 		xMin = -1e20;
-		yMin = -1e20;
-		zMin = -1e20;
 		xMax = 1e20;
+		yMin = -1e20;
 		yMax = 1e20;
+		zMin = -1e20;
 		zMax = 1e20;
 	}
 	
 	public inline function clone() {
 		var b = new Bounds();
 		b.xMin = xMin;
-		b.yMin = yMin;
-		b.zMin = zMin;
 		b.xMax = xMax;
+		b.yMin = yMin;
 		b.yMax = yMax;
+		b.zMin = zMin;
 		b.zMax = zMax;
 		return b;
 	}
