@@ -344,16 +344,8 @@ class Viewer {
 
 		var dx = b.xMax - b.xMin;
 		var dy = b.yMax - b.yMin;
-		var dz = b.zMax - b.zMin;
 		
 		box = new h3d.scene.Box(0xFFFF9910);
-		box.scaleX = dx;
-		box.scaleY = dy;
-		box.scaleZ = dz;
-		box.x = b.xMin + dx * 0.5;
-		box.y = b.yMin + dy * 0.5;
-		box.z = b.zMin + dz * 0.5;
-
 		//init camera
 		if (!newFbx) {
 			scene.camera.pos.set(props.camVars.x * Math.cos(Math.PI/2 * props.camVars.angCoef), props.camVars.y * Math.cos(Math.PI/2 * props.camVars.angCoef), props.camVars.dist * Math.sin(Math.PI/2 * props.camVars.angCoef));
@@ -481,6 +473,19 @@ class Viewer {
 		
 		camera.zoom += (props.camVars.zoom - camera.zoom) * 0.5;
 		camera.rightHanded = rightHand;
+		
+		if( box != null ) {
+			var b = scene.getBounds();
+			var dx = b.xMax - b.xMin;
+			var dy = b.yMax - b.yMin;
+			var dz = b.zMax - b.zMin;
+			box.scaleX = dx;
+			box.scaleY = dy;
+			box.scaleZ = dz;
+			box.x = b.xMin + dx * 0.5;
+			box.y = b.yMin + dy * 0.5;
+			box.z = b.zMin + dz * 0.5;
+		}
 		
 		time++;
 		
