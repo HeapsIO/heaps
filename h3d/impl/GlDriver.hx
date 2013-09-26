@@ -23,7 +23,7 @@ class GlDriver extends Driver {
 	public var gl : js.html.webgl.RenderingContext;
 	#elseif cpp
 	static var gl = GL;
-	var view : openfl.display.OpenGLView;
+	var fixMult : Bool;
 	#end
 	
 	var curAttribs : Int;
@@ -39,7 +39,10 @@ class GlDriver extends Driver {
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
 		#elseif cpp
-		view = new openfl.display.OpenGLView();
+		// check for a bug in HxCPP handling of sub buffers
+		var tmp = new Float32Array(8);
+		var sub = new Float32Array(tmp.buffer, 0, 4);
+		fixMult = sub.length == 1; // should be 4
 		#end
 
 		curAttribs = 0;
@@ -123,6 +126,11 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ARRAY_BUFFER, b);
 		gl.bufferData(GL.ARRAY_BUFFER, count * stride * 4, GL.STATIC_DRAW);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
+		#else
+		var tmp = new Uint8Array(count * stride * 4);
+		gl.bindBuffer(GL.ARRAY_BUFFER, b);
+		gl.bufferData(GL.ARRAY_BUFFER, tmp, GL.STATIC_DRAW);
+		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		#end
 		return { b : b, stride : stride };
 	}
@@ -132,6 +140,11 @@ class GlDriver extends Driver {
 		#if js
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
 		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, count * 2, GL.STATIC_DRAW);
+		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
+		#else
+		var tmp = new Uint16Array(count);
+		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
+		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, tmp, GL.STATIC_DRAW);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		#end
 		return b;
@@ -169,33 +182,36 @@ class GlDriver extends Driver {
 	}
 	
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
-		var stride : Int = untyped v.stride;
+		var stride : Int = v.stride;
 		var buf = new Float32Array(buf.getNative());
-		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride);
+		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride #if cpp * (fixMult?4:1) #end);
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
 
 	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
-		var stride : Int = untyped v.stride;
+		var stride : Int = v.stride;
 		var buf = new Uint8Array(buf.getData());
+		var sub = new Uint8Array(buf.buffer, bufPos, vertexCount * stride * 4);
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, new Uint8Array(buf.buffer, bufPos, vertexCount * stride * 4));
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
 
 	override function uploadIndexesBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		var buf = new Uint16Array(buf.getNative());
+		var sub = new Uint16Array(buf.buffer, bufPos, indiceCount #if cpp * (fixMult?2:1) #end);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, new Uint16Array(buf.buffer, bufPos, indiceCount));
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 
 	override function uploadIndexesBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
 		var buf = new Uint8Array(buf.getData());
+		var sub = new Uint8Array(buf.buffer, bufPos, indiceCount * 2);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, new Uint8Array(buf.buffer, bufPos, indiceCount * 2));
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 	
@@ -463,7 +479,7 @@ class GlDriver extends Driver {
 	}
 	
 	override function selectBuffer( v : VertexBuffer ) {
-		var stride : Int = untyped v.stride;
+		var stride : Int = v.stride;
 		if( stride < curShader.stride )
 			throw "Buffer stride (" + stride + ") and shader stride (" + curShader.stride + ") mismatch";
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
