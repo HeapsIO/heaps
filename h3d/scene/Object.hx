@@ -25,6 +25,7 @@ class Object {
 	public var currentAnimation(default, null) : h3d.anim.Animation;
 	
 	var absPos : h3d.Matrix;
+	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
 	var posChanged : Bool;
 	var lastFrame : Int;
@@ -62,56 +63,46 @@ class Object {
 		return k;
 	}
 	
+	/**
+		Transform a point from the local object coordinates to the global ones. The point is modified and returned.
+	**/
 	public function localToGlobal( pt : h3d.Vector ) {
 		syncPos();
-		var pt2 = pt.clone();
-		pt2.transform3x4(absPos);
-		return pt2;
+		pt.transform3x4(absPos);
+		return pt;
 	}
 
+	/**
+		Transform a point from the global coordinates to the object local ones. The point is modified and returned.
+	**/
 	public function globalToLocal( pt : h3d.Vector ) {
 		syncPos();
-		var pt2 = pt.clone();
-		var tmp = new h3d.Matrix();
-		tmp.inverse(absPos);
-		pt2.transform3x4(tmp);
-		return pt2;
+		pt.transform3x4(getInvPos());
+		return pt;
+	}
+	
+	function getInvPos() {
+		if( invPos == null ) {
+			invPos = new h3d.Matrix();
+			invPos._44 = 0;
+		}
+		if( invPos._44 == 0 )
+			invPos.inverse3x4(absPos);
+		return invPos;
 	}
 
 	public function getBounds( ?b : h3d.col.Bounds ) {
-		syncPos();
-		if( b == null ) b = new h3d.col.Bounds();
+		if( b == null ) {
+			b = new h3d.col.Bounds();
+			syncPos();
+		} else if( posChanged ) {
+			for( c in childs )
+				c.posChanged = true;
+			calcAbsPos();
+			posChanged = false;
+		}
 		for( c in childs )
 			c.getBounds(b);
-		if( defaultTransform != null ) {
-			var xMin = b.xMin, yMin = b.yMin, zMin = b.zMin, xMax = b.xMax, yMax = b.yMax, zMax = b.zMax;
-			b.empty();
-			var v = new h3d.col.Point();
-			v.set(xMin, yMin, zMin);
-			v.transform(defaultTransform);
-			b.addPoint(v);
-			v.set(xMin, yMin, zMax);
-			v.transform(defaultTransform);
-			b.addPoint(v);
-			v.set(xMin, yMax, zMin);
-			v.transform(defaultTransform);
-			b.addPoint(v);
-			v.set(xMin, yMax, zMax);
-			v.transform(defaultTransform);
-			b.addPoint(v);
-			v.set(xMax, yMin, zMin);
-			v.transform(defaultTransform);
-			b.addPoint(v);
-			v.set(xMax, yMin, zMax);
-			v.transform(defaultTransform);
-			b.addPoint(v);
-			v.set(xMax, yMax, zMin);
-			v.transform(defaultTransform);
-			b.addPoint(v);
-			v.set(xMax, yMax, zMax);
-			v.transform(defaultTransform);
-			b.addPoint(v);
-		}
 		return b;
 	}
 	
@@ -206,6 +197,8 @@ class Object {
 			absPos.multiply3x4(absPos, defaultTransform);
 		if( parent != null )
 			absPos.multiply3x4(absPos, parent.absPos);
+		if( invPos != null )
+			invPos._44 = 0; // mark as invalid
 	}
 	
 	function sync( ctx : RenderContext ) {

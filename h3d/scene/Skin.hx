@@ -1,10 +1,44 @@
 package h3d.scene;
 
 class Joint extends Object {
+	public var skin : Skin;
 	public var index : Int;
-	public function new(index) {
+	
+	public function new(skin, index) {
 		super(null);
+		this.skin = skin;
+		// fake parent
+		this.parent = skin;
 		this.index = index;
+	}
+	
+	@:access(h3d.scene.Skin)
+	override function syncPos() {
+		// check if one of our parents has changed
+		// we don't have a posChanged flag since the Joint
+		// is not actualy part of the hierarchy
+		var changed = false;
+		var p = parent;
+		while( p != null ) {
+			if( p.posChanged )
+				break;
+			p = p.parent;
+		}
+		if( p == null ) {
+			if( lastFrame != skin.lastFrame ) {
+				lastFrame = skin.lastFrame;
+				// copy the one from the current animation
+				absPos.loadFrom(skin.currentAbsPose[index]);
+			}
+			return;
+		}
+		// we must offset the latest calculated position (which includes old parent absPos) with our new parent absPo
+		absPos.inverse3x4(parent.absPos);
+		parent.syncPos();
+		absPos.multiply3x4(absPos, parent.absPos);
+		absPos.multiply3x4(skin.currentAbsPose[index], absPos);
+		skin.currentAbsPose[index].loadFrom(absPos);
+		lastFrame = skin.lastFrame;
 	}
 }
 
@@ -33,21 +67,44 @@ class Skin extends Mesh {
 		return s;
 	}
 	
+	
+	override function getBounds( ?b : h3d.col.Bounds ) {
+		b = super.getBounds(b);
+		var tmp = primitive.getBounds().clone();
+		var b0 = skinData.allJoints[0];
+		// not sure if that's the good joint
+		if( b0 != null && b0.defMat != null && b0.parent == null ) {
+			var mtmp = absPos.clone();
+			var r = currentRelPose[b0.index];
+			if( r != null )
+				mtmp.multiply3x4(r, mtmp);
+			else
+				mtmp.multiply3x4(b0.defMat, mtmp);
+			mtmp.multiply3x4(b0.transPos, mtmp);
+			tmp.transform3x4(mtmp);
+		} else {
+			tmp.transform3x4(absPos);
+		}
+		b.add(tmp);
+		return b;
+	}
+
 	override function getObjectByName( name : String ) {
 		var o = super.getObjectByName(name);
 		if( o != null ) return o;
 		// create a fake object targeted at the bone, not persistant but matrixes are shared
 		if( skinData != null ) {
 			var j = skinData.namedJoints.get(name);
-			if( j != null ) {
-				var o = new Joint(j.index);
-				o.parent = this;
-				o.absPos = currentAbsPose[j.index];
-				o.defaultTransform = currentRelPose[j.index];
-				return o;
-			}
+			if( j != null )
+				return new Joint(this, j.index);
 		}
 		return null;
+	}
+	
+	override function calcAbsPos() {
+		super.calcAbsPos();
+		// if we update our absolute position, rebuild the matrixes
+		jointsUpdated = true;
 	}
 	
 	public function setSkinData( s ) {
@@ -67,7 +124,7 @@ class Skin extends Mesh {
 	override function sync( ctx : RenderContext ) {
 		if( !(visible || syncIfHidden) )
 			return;
-		if( jointsUpdated || posChanged ) {
+		if( jointsUpdated ) {
 			super.sync(ctx);
 			for( j in skinData.allJoints ) {
 				var id = j.index;
@@ -78,12 +135,12 @@ class Skin extends Mesh {
 					if( bid >= 0 ) r = j.defMat else continue;
 				}
 				if( j.parent == null )
-					m.multiply(r, absPos);
+					m.multiply3x4(r, absPos);
 				else
-					m.multiply(r, currentAbsPose[j.parent.index]);
+					m.multiply3x4(r, currentAbsPose[j.parent.index]);
 				var bid = j.bindIndex;
 				if( bid >= 0 )
-					currentPalette[bid].multiply(j.transPos, m);
+					currentPalette[bid].multiply3x4(j.transPos, m);
 			}
 			material.skinMatrixes = currentPalette;
 			jointsUpdated = false;
