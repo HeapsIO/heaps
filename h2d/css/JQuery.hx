@@ -111,7 +111,7 @@ class JQuery {
 		return set;
 	}
 	
-	function lookupRec(comp:Component, classes:Array<Defs.Class>, set : Array<Component> ) {
+	function lookupRec(comp:Component, classes:Array<Defs.CssClass>, set : Array<Component> ) {
 		for( c in classes )
 			if( Engine.ruleMatch(c, comp) ) {
 				set.push(comp);

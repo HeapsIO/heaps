@@ -28,8 +28,8 @@ enum DockStyle {
 	Full;
 }
 
-class Class {
-	public var parent : Null<Class>;
+class CssClass {
+	public var parent : Null<CssClass>;
 	public var node : Null<String>;
 	public var className : Null<String>;
 	public var pseudoClass : Null<String>;

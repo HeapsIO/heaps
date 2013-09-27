@@ -598,8 +598,8 @@ class Parser {
 		return classes;
 	}
 	
-	function readClass( parent ) : Class {
-		var c = new Class();
+	function readClass( parent ) : CssClass {
+		var c = new CssClass();
 		c.parent = parent;
 		var def = false;
 		var last = null;
