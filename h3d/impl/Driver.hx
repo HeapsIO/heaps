@@ -40,7 +40,7 @@ class Driver {
 	public function init( onCreate : Bool -> Void, forceSoftware = false ) {
 	}
 	
-	public function resize( width : Int, height : Int, aa : Int ) {
+	public function resize( width : Int, height : Int ) {
 	}
 	
 	public function selectMaterial( mbits : Int ) {

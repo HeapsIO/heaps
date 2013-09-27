@@ -102,7 +102,7 @@ class GlDriver extends Driver {
 		gl.clear(GL.COLOR_BUFFER_BIT|GL.DEPTH_BUFFER_BIT);
 	}
 	
-	override function resize(width, height, aa:Int) {
+	override function resize(width, height) {
 		#if js
 		canvas.width = width;
 		canvas.height = height;

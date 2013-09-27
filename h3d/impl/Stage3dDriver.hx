@@ -46,6 +46,7 @@ class Stage3dDriver extends Driver {
 	var curTextures : Array<h3d.mat.Texture>;
 	var curSamplerBits : Array<Int>;
 	var inTarget : Bool;
+	var antiAlias : Int;
 	
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -98,8 +99,8 @@ class Stage3dDriver extends Driver {
 		return ctx != null && ctx.driverInfo.toLowerCase().indexOf("software") == -1;
 	}
 	
-	override function resize(width, height, aa) {
-		ctx.configureBackBuffer(width, height, aa);
+	override function resize(width, height) {
+		ctx.configureBackBuffer(width, height, antiAlias);
 	}
 	
 	override function clear(r, g, b, a) {
