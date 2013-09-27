@@ -23,7 +23,7 @@
     <option flashStrict="True" />
     <option mainClass="Test" />
     <option enabledebug="False" />
-    <option additional="--macro include('h3d')&#xA;--macro include('h2d')&#xA;--macro include('hxd',true,['hxd.res.FileTree'])&#xA;-lib format&#xA;-D resourcesPath=samples/res&#xA;&#xA;--next&#xA;&#xA;-swf engine.swf&#xA;-swf-header 800:600:60:000000&#xA;-swf-version 11.6&#xA;-lib hxsl&#xA;-D h3d&#xA;-D resourcesPath=samples/res&#xA;-cp samples/basic&#xA;-main Test&#xA;--macro include('h3d')&#xA;--macro include('h2d')&#xA;--macro include('hxd',true,['hxd.res.FileTree'])" />
+    <option additional="--macro include('h3d')&#xA;--macro include('h2d')&#xA;--macro include('hxd',true,['hxd.res.FileTree'])&#xA;-lib format&#xA;-D resourcesPath=samples/res&#xA;&#xA;--next&#xA;&#xA;-swf engine.swf&#xA;-swf-header 800:600:60:000000&#xA;-swf-version 11.6&#xA;-lib hxsl&#xA;-D h3d&#xA;-D resourcesPath=samples/res&#xA;-cp samples/basic&#xA;-main Test&#xA;--macro include('h3d')&#xA;--macro include('h2d')&#xA;--macro include('hxd',true,['hxd.res.FileTree'])&#xA;&#xA;--next&#xA;-cpp bin&#xA;-lib format&#xA;-lib openfl-native&#xA;-debug&#xA;--macro allowPackage('flash')&#xA;-D h3d&#xA;-D openfl&#xA;-D resourcesPath=samples/res&#xA;-cp samples/basic&#xA;-main Test&#xA;--macro include('h3d')&#xA;--macro include('h2d')&#xA;--macro include('hxd',true,['hxd.res.FileTree'])" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -36,6 +36,7 @@
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
     <hidden path="engine.hxml" />
+    <hidden path="obj" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />

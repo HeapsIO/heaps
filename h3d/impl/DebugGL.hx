@@ -6,7 +6,7 @@ private typedef GL = js.html.webgl.GL;
 import openfl.gl.GL;
 #end
 
-#if !macro
+#if (!macro && (js || cpp))
 @:build(h3d.impl.DebugGL.buildProxy())
 #end
 class DebugGL {

@@ -72,7 +72,7 @@ private class PartShader extends h3d.impl.Shader {
 	public var hasRotation : Bool;
 	public var hasSize : Bool;
 	public var partSize : h3d.Vector;
-	public var frameCount : Float;
+	public var frameCount : Null<Float>;
 	public var tex : h3d.mat.Texture;
 
 #end

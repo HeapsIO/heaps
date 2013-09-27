@@ -36,10 +36,19 @@ class Engine {
 	@:allow(h3d)
 	var curProjMatrix : h3d.Matrix;
 
+	@:access(hxd.Stage)
 	public function new( hardware = true, aa = 0 ) {
 		this.hardware = hardware;
 		this.antiAlias = aa;
 		this.autoResize = true;
+		#if openfl
+		hxd.Stage.openFLBoot(start);
+		#else
+		start();
+		#end
+	}
+	
+	function start() {
 		fullScreen = !hxd.System.isWindowed;
 		var stage = hxd.Stage.getInstance();
 		realFps = stage.getFrameRate();
@@ -185,7 +194,7 @@ class Engine {
 		hardware = driver.isHardware();
 		set_debug(debug);
 		set_fullScreen(fullScreen);
-		resize(width, height, antiAlias);
+		resize(width, height);
 		if( disposed )
 			onContextLost();
 		else
@@ -202,7 +211,7 @@ class Engine {
 		if( autoResize && !driver.isDisposed() ) {
 			var w = hxd.System.width, h = hxd.System.height;
 			if( w != width || h != height )
-				resize(w, h, antiAlias);
+				resize(w, h);
 			onResized();
 		}
 	}
@@ -217,14 +226,13 @@ class Engine {
 	public dynamic function onResized() {
 	}
 
-	public function resize(width, height, aa = 0) {
+	public function resize(width, height) {
 		// minimum 32x32 size
 		if( width < 32 ) width = 32;
 		if( height < 32 ) height = 32;
 		this.width = width;
 		this.height = height;
-		this.antiAlias = aa;
-		if( !driver.isDisposed() ) driver.resize(width, height, aa);
+		if( !driver.isDisposed() ) driver.resize(width, height);
 	}
 
 	public function begin() {

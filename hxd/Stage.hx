@@ -2,7 +2,7 @@ package hxd;
 
 class Stage {
 	
-	#if flash
+	#if (flash || openfl)
 	var stage : flash.display.Stage;
 	var fsDelayed : Bool;
 	#end
@@ -17,7 +17,7 @@ class Stage {
 	function new() {
 		eventTargets = new List();
 		resizeEvents = new List();
-		#if flash
+		#if (flash || openfl)
 		stage = flash.Lib.current.stage;
 		stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
 		stage.addEventListener(flash.events.Event.RESIZE, onResize);
@@ -67,7 +67,7 @@ class Stage {
 	}
 	
 	public function getFrameRate() : Float {
-		#if flash
+		#if (flash || openfl)
 		return stage.frameRate;
 		#else
 		return 60.;
@@ -98,7 +98,7 @@ class Stage {
 		return inst;
 	}
 	
-#if flash
+#if (flash || openfl)
 
 	inline function get_mouseX() {
 		return stage.mouseX;
@@ -247,6 +247,44 @@ class Stage {
 
 	function get_height() {
 		return 0;
+	}
+
+#end
+
+#if openfl
+
+	static function openFLBoot(callb) {
+		// init done with OpenFL ApplicationMain
+		if( flash.Lib.current.stage != null ) {
+			callb();
+			return;
+		}
+		// init done by hand
+		var width = 750, height = 450, fps = 60, bgColor = 0x808080;
+		flash.Lib.create(
+			function() {
+				flash.Lib.current.stage.align = flash.display.StageAlign.TOP_LEFT;
+				flash.Lib.current.stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
+				flash.Lib.current.loaderInfo = flash.display.LoaderInfo.create (null);
+				callb();
+			},
+			width, height, fps, bgColor,
+			(true ? flash.Lib.HARDWARE : 0) |
+			(true ? flash.Lib.ALLOW_SHADERS : 0) |
+			(true ? flash.Lib.REQUIRE_SHADERS : 0) |
+			(false ? flash.Lib.DEPTH_BUFFER : 0) |
+			(false ? flash.Lib.STENCIL_BUFFER : 0) |
+			(true ? flash.Lib.RESIZABLE : 0) |
+			(false ? flash.Lib.BORDERLESS : 0) |
+			(false ? flash.Lib.VSYNC : 0) |
+			(false ? flash.Lib.FULLSCREEN : 0) |
+			(0 == 4 ? flash.Lib.HW_AA_HIRES : 0) |
+			(0 == 2 ? flash.Lib.HW_AA : 0),
+			"h3d", null
+			#if mobile
+			, null /* ScaledStage : TODO? */
+			#end
+		);
 	}
 
 #end

@@ -3,7 +3,7 @@ package hxd;
 enum Cursor {
 	Default;
 	Button;
-	Hand;
+	Move;
 	TextInput;
 }
 
@@ -76,7 +76,7 @@ class System {
 		flash.ui.Mouse.cursor = switch( c ) {
 		case Default: "auto";
 		case Button: "button";
-		case Hand: "hand";
+		case Move: "hand";
 		case TextInput: "ibeam";
 		}
 	}
@@ -137,7 +137,14 @@ class System {
 	}
 
 	public static function setCursor( c : Cursor ) {
-		throw "TODO";
+		var canvas = js.Browser.document.getElementById("webgl");
+		if( canvas != null )
+			canvas.style.cursor = switch( c ) {
+			case Default: "auto";
+			case Button: "pointer";
+			case Move: "move";
+			case TextInput: "text";
+			};
 	}
 	
 	static function get_lang() {
@@ -181,19 +188,29 @@ class System {
 	}
 
 	public static function setCursor( c : Cursor ) {
-		throw "TODO";
+		/* not supported by openFL
+		flash.ui.Mouse.cursor = switch( c ) {
+		case Default: "auto";
+		case Button: "button";
+		case Move: "hand";
+		case TextInput: "ibeam";
+		}*/
 	}
 	
 	static function get_lang() {
-		return "en";
+		return flash.system.Capabilities.language.split("-")[0];
 	}
 	
 	static function get_screenDPI() {
-		return 72.;
+		return flash.system.Capabilities.screenDPI;
 	}
 	
 	static function get_isAndroid() {
+		#if android
+		return true;
+		#else
 		return false;
+		#end
 	}
 	
 	static function get_isWindowed() {
@@ -205,11 +222,13 @@ class System {
 	}
 	
 	static function get_width() {
-		return 100;
+		var Cap = flash.system.Capabilities;
+		return isWindowed ? flash.Lib.current.stage.stageWidth : Std.int(Cap.screenResolutionX > Cap.screenResolutionY ? Cap.screenResolutionX : Cap.screenResolutionY);
 	}
-	
+
 	static function get_height() {
-		return 100;
+		var Cap = flash.system.Capabilities;
+		return isWindowed ? flash.Lib.current.stage.stageHeight : Std.int(Cap.screenResolutionX > Cap.screenResolutionY ? Cap.screenResolutionY : Cap.screenResolutionX);
 	}
 
 	#end

@@ -1,5 +1,7 @@
 package hxd.res;
 
+#if (air3 || sys)
+
 @:allow(hxd.res.LocalFileSystem)
 @:access(hxd.res.LocalFileSystem)
 private class LocalEntry extends FileEntry {
@@ -299,3 +301,30 @@ class LocalFileSystem implements FileSystem {
 	}
 	
 }
+
+#else
+
+class LocalFileSystem implements FileSystem {
+	
+	public function new( dir : String ) {
+		#if flash
+		if( flash.system.Capabilities.playerType == "Desktop" )
+			throw "Please compile with -lib air3";
+		#end
+		throw "Local file system is not supported for this platform";
+	}
+	
+	public function exists(path:String) {
+		return false;
+	}
+	
+	public function get(path:String) : FileEntry {
+		return null;
+	}
+
+	public function getRoot() : FileEntry {
+		return null;
+	}
+}
+
+#end

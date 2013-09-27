@@ -18,3 +18,17 @@
 --macro include('h3d')
 --macro include('h2d')
 --macro include('hxd',true,['hxd.res.FileTree'])
+--next
+-cpp bin
+-lib format
+-lib openfl-native
+-debug
+--macro allowPackage('flash')
+-D h3d
+-D openfl
+-D resourcesPath=samples/res
+-cp samples/basic
+-main Test
+--macro include('h3d')
+--macro include('h2d')
+--macro include('hxd',true,['hxd.res.FileTree'])

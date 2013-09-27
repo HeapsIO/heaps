@@ -16,7 +16,7 @@ private class ImageShader extends h3d.impl.Shader {
 			out = tex.get(tuv);
 		}
 	}
-	#elseif js
+	#elseif (js || cpp)
 	static var VERTEX = "TODO";
 	static var FRAGMENT = "TODO";
 	public var tex : h3d.mat.Texture;
