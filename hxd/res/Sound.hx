@@ -2,14 +2,18 @@ package hxd.res;
 
 class Sound extends Resource {
 	
+	public var volume(default, set) = 1.0;
+	
 	#if flash
 	var snd : flash.media.Sound;
+	var channel : flash.media.SoundChannel;
 	#end
 	
 	public function play() {
 		#if flash
 		if( snd != null ) {
-			snd.play();
+			channel = snd.play();
+			volume = volume;
 			return;
 		}
 		snd = new flash.media.Sound();
@@ -23,9 +27,19 @@ class Sound extends Resource {
 		default:
 			throw "Unsupported sound format " + entry.path;
 		}
-		snd.play();
+		channel = snd.play();
+		volume = volume;
 		#else
 		#end
+	}
+	
+	function set_volume( v : Float ) {
+		volume = v;
+		#if flash
+		if( channel != null )
+			channel.soundTransform = new flash.media.SoundTransform(v);
+		#end
+		return v;
 	}
 
 }
