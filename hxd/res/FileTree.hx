@@ -38,7 +38,7 @@ class FileTree {
 		isJS = Context.defined("js");
 	}
 	
-	function resolvePath(dir:Null<String>) {
+	public static function resolvePath( ?dir:String ) {
 		var resolve = true;
 		if( dir == null ) {
 			dir = Context.definedValue("resourcesPath");
