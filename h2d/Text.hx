@@ -76,7 +76,7 @@ class Text extends Drawable {
 				var size = x + esize + letterSpacing;
 				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
-				while( size <= maxWidth ) {
+				while( size <= maxWidth && k < text.length ) {
 					var cc = text.charCodeAt(k++);
 					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
 					var e = font.getChar(cc);
