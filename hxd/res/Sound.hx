@@ -3,16 +3,29 @@ package hxd.res;
 class Sound extends Resource {
 	
 	public var volume(default, set) = 1.0;
+	public var loop : Bool;
 	
 	#if flash
 	var snd : flash.media.Sound;
 	var channel : flash.media.SoundChannel;
 	#end
 	
+	public function getPosition() : Float {
+		#if flash
+		return channel.position;
+		#else
+		return 0.;
+		#end
+	}
+	
 	public function play() {
+		playAt(0);
+	}
+	
+	public function playAt( startPosition : Float ) {
 		#if flash
 		if( snd != null ) {
-			channel = snd.play();
+			channel = snd.play(startPosition);
 			volume = volume;
 			return;
 		}
@@ -30,6 +43,15 @@ class Sound extends Resource {
 		channel = snd.play();
 		volume = volume;
 		#else
+		#end
+	}
+	
+	public function stop() {
+		#if flash
+		if( channel != null ) {
+			channel.stop();
+			channel = null;
+		}
 		#end
 	}
 	
