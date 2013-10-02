@@ -83,6 +83,18 @@ class Texture extends Resource {
 		}
 	}
 	
+	public function toBitmap() : hxd.BitmapData {
+		var bmp = null;
+		#if flash
+		var size = getSize();
+		bmp = new flash.display.BitmapData(size.width, size.height, true, 0);
+		var bytes = getPixels();
+		bmp.setPixels(bmp.rect, bytes.getData());
+		hxd.impl.Tmp.saveBytes(bytes);
+		#end
+		return hxd.BitmapData.fromNative(bmp);
+	}
+	
 	function makeSquare( bmp : haxe.io.Bytes ) {
 		var tw = tex.width, th = tex.height, w = inf.width, h = inf.height;
 		var out = hxd.impl.Tmp.getBytes(tw * th * 4);

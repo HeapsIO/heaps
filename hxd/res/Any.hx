@@ -42,6 +42,10 @@ class Any extends Resource {
 		return loader.loadFont(entry.path);
 	}
 
+	public function toBitmap() {
+		return loader.loadTexture(entry.path).toBitmap();
+	}
+
 	public function toBitmapFont() {
 		return loader.loadBitmapFont(entry.path);
 	}
