@@ -67,15 +67,16 @@ class Font {
 	}
 	
 	/**
-		Divides by two the glyphs size. This is meant to create smoother fonts by creating them with double size
-		while still keeping the original glyph size.
+		This is meant to create smoother fonts by creating them with double size while still keeping the original glyph size.
 	**/
-	public function halfSize() {
+	public function resizeTo( size : Int ) {
+		var ratio = size / this.size;
 		for( c in glyphs ) {
-			c.width >>= 1;
-			c.t.scaleToSize(c.t.width >> 1, c.t.height >> 1);
+			c.width = Std.int(c.width * ratio);
+			c.t.scaleToSize(Std.int(c.t.width * ratio), Std.int(c.t.height * ratio));
 		}
-		lineHeight >>= 1;
+		lineHeight = Std.int(lineHeight * ratio);
+		this.size = size;
 	}
 	
 	public function hasChar( code : Int ) {
