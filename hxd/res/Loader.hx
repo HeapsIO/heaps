@@ -69,4 +69,8 @@ class Loader {
 		return new Resource(fs.get(path));
 	}
 	
+	function loadTiledMap( path : String ) {
+		return new TiledMap(fs.get(path));
+	}
+	
 }

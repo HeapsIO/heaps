@@ -75,6 +75,8 @@ class FileTree {
 			if( sys.FileSystem.isDirectory(path) ) {
 				if( ignoredDir.exists(f.toLowerCase()) )
 					continue;
+				if( f.charCodeAt(0) == "_".code )
+					continue;
 				var sub = embedDir(f, relPath + "/" + f, path);
 				if( sub != null )
 					Reflect.setField(data, f, sub);
@@ -309,6 +311,8 @@ class FileTree {
 			return { e : macro loader.loadBitmapFont($epath), t : macro : hxd.res.BitmapFont };
 		case "wav", "mp3":
 			return { e : macro loader.loadSound($epath), t : macro : hxd.res.Sound };
+		case "tmx":
+			return { e : macro loader.loadTiledMap($epath), t : macro : hxd.res.TiledMap };
 		default:
 			return { e : macro loader.loadData($epath), t : macro : hxd.res.Resource };
 		}
