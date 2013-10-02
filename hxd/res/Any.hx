@@ -25,6 +25,10 @@ class Any extends Resource {
 	public function toTile() {
 		return loader.loadTexture(entry.path).toTile();
 	}
+	
+	public function toString() {
+		return entry.getBytes().toString();
+	}
 
 	public function getTexture() {
 		return loader.loadTexture(entry.path);
