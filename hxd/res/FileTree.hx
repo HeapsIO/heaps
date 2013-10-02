@@ -30,6 +30,7 @@ class FileTree {
 		ignoredExt = new Map();
 		ignoredExt.set("gal", true); // graphics gale source
 		ignoredExt.set("lch", true); // labchirp source
+		ignoredExt.set("fla", true); // Adobe flash
 		pairedExt = new Map();
 		pairedExt.set("fnt", ["png"]);
 		pairedExt.set("fbx", ["png"]);
@@ -201,6 +202,8 @@ class FileTree {
 			var ext = null;
 			if( sys.FileSystem.isDirectory(path) ) {
 				if( ignoredDir.exists(f.toLowerCase()) )
+					continue;
+				if( f.charCodeAt(0) == "_".code )
 					continue;
 				field = handleDir(f, relPath.length == 0 ? f : relPath+"/"+f, path);
 			} else {
