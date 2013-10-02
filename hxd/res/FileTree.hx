@@ -33,6 +33,7 @@ class FileTree {
 		pairedExt = new Map();
 		pairedExt.set("fnt", ["png"]);
 		pairedExt.set("fbx", ["png"]);
+		pairedExt.set("cdb", ["img"]);
 		isFlash = Context.defined("flash");
 		isJS = Context.defined("js");
 	}
