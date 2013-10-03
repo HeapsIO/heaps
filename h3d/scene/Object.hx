@@ -326,7 +326,7 @@ class Object {
 	public function rotate( rx : Float, ry : Float, rz : Float ) {
 		var qTmp = new h3d.Quat();
 		qTmp.initRotate(rx, ry, rz);
-		qRot.multiply(qTmp);
+		qRot.add(qTmp);
 		posChanged = true;
 	}
 	

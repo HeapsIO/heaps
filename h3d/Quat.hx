@@ -39,6 +39,25 @@ class Quat {
 		return new Quat(x, y, z, w);
 	}
 	
+	public inline function initDirection( dir : Vector, ?up : Vector ) {
+		if( up == null ) {
+			// assume [0,0,1] UP version
+			x = -dir.y;
+			y = dir.x;
+			z = 0;
+			w = dir.z + dir.length();
+			normalize();
+		} else {
+			// LeftHanded (RH might use dir.cross(up) ?)
+			var tmp = up.cross(dir);
+			x = tmp.x;
+			y = tmp.y;
+			z = tmp.z;
+			w = dir.length() + dir.dot3(up);
+			normalize();
+		}
+	}
+	
 	public function initRotateAxis( x : Float, y : Float, z : Float, a : Float ) {
 		var sin = (a / 2).sin();
 		var cos = (a / 2).cos();
@@ -111,11 +130,15 @@ class Quat {
 		w = cosX * cosYZ + sinX * sinYZ;
 	}
 	
-	public function multiply( q : Quat ) {
-		var x2 = x * q.w + w * q.x + y * q.z - z * q.y;
-		var y2 = w * q.y - x * q.z + y * q.w + z * q.x;
-		var z2 = w * q.z + x * q.y - y * q.x + z * q.w;
-		var w2 = w * q.w - x * q.x - y * q.y - z * q.z;
+	public inline function add( q : Quat ) {
+		multiply(this, q);
+	}
+	
+	public function multiply( q1 : Quat, q2 : Quat ) {
+		var x2 = q1.x * q2.w + q1.w * q2.x + q1.y * q2.z - q1.z * q2.y;
+		var y2 = q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x;
+		var z2 = q1.w * q2.z + q1.x * q2.y - q1.y * q2.x + q1.z * q2.w;
+		var w2 = q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z;
 		x = x2;
 		y = y2;
 		z = z2;

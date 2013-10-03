@@ -509,7 +509,7 @@ class Library {
 							
 						if( def.preRot != null ) {
 							q2.initRotate(def.preRot.x, def.preRot.y, def.preRot.z);
-							q.multiply(q2);
+							q.multiply(q,q2);
 						}
 						
 						f.qx = q.x;
