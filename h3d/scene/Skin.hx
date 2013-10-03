@@ -17,28 +17,30 @@ class Joint extends Object {
 		// check if one of our parents has changed
 		// we don't have a posChanged flag since the Joint
 		// is not actualy part of the hierarchy
-		var changed = false;
 		var p = parent;
 		while( p != null ) {
-			if( p.posChanged )
+			if( p.posChanged ) {
+				// save the inverse absPos that was used to build the joints absPos
+				if( skin.jointsAbsPosInv == null ) {
+					skin.jointsAbsPosInv = new h3d.Matrix();
+					skin.jointsAbsPosInv.zero();
+				}
+				if( skin.jointsAbsPosInv._44 == 0 )
+					skin.jointsAbsPosInv.inverse3x4(parent.absPos);
+				parent.syncPos();
+				lastFrame = -1;
 				break;
+			}
 			p = p.parent;
 		}
-		if( p == null ) {
-			if( lastFrame != skin.lastFrame ) {
-				lastFrame = skin.lastFrame;
-				// copy the one from the current animation
-				absPos.loadFrom(skin.currentAbsPose[index]);
+		if( lastFrame != skin.lastFrame ) {
+			lastFrame = skin.lastFrame;
+			absPos.loadFrom(skin.currentAbsPose[index]);
+			if( skin.jointsAbsPosInv != null && skin.jointsAbsPosInv._44 != 0 ) {
+				absPos.multiply3x4(absPos, skin.jointsAbsPosInv);
+				absPos.multiply3x4(absPos, parent.absPos);
 			}
-			return;
 		}
-		// we must offset the latest calculated position (which includes old parent absPos) with our new parent absPo
-		absPos.inverse3x4(parent.absPos);
-		parent.syncPos();
-		absPos.multiply3x4(absPos, parent.absPos);
-		absPos.multiply3x4(skin.currentAbsPose[index], absPos);
-		skin.currentAbsPose[index].loadFrom(absPos);
-		lastFrame = skin.lastFrame;
 	}
 }
 
@@ -49,6 +51,7 @@ class Skin extends Mesh {
 	var currentAbsPose : Array<h3d.Matrix>;
 	var currentPalette : Array<h3d.Matrix>;
 	var jointsUpdated : Bool;
+	var jointsAbsPosInv : h3d.Matrix;
 
 	public var showJoints : Bool;
 	public var syncIfHidden : Bool = true;
@@ -143,6 +146,7 @@ class Skin extends Mesh {
 					currentPalette[bid].multiply3x4(j.transPos, m);
 			}
 			material.skinMatrixes = currentPalette;
+			if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
 			jointsUpdated = false;
 		} else
 			super.sync(ctx);
