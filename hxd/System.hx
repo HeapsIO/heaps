@@ -108,8 +108,7 @@ class System {
 		CACHED_NAME = name;
 		return name;
 	}
-	
-	
+
 	static function get_lang() {
 		return flash.system.Capabilities.language;
 	}
@@ -212,7 +211,29 @@ class System {
 		return false;
 		#end
 	}
+
+	static var CACHED_NAME = null;
+	public static function getDeviceName() {
+		if( CACHED_NAME != null )
+			return CACHED_NAME;
+		var name;
+		if( isAndroid ) {
+			try {
+				var content = sys.io.File.getContent("/system/build.prop");
+				name = StringTools.trim(content.split("ro.product.model=")[1].split("\n")[0]);
+			} catch( e : Dynamic ) {
+				name = "Android";
+			}
+		} else
+			name = "PC";
+		CACHED_NAME = name;
+		return name;
+	}
 	
+	public static function exit() {
+		Sys.exit(0);
+	}
+
 	static function get_isWindowed() {
 		return true;
 	}
