@@ -127,7 +127,7 @@ class Skin extends Mesh {
 	override function sync( ctx : RenderContext ) {
 		if( !(visible || syncIfHidden) )
 			return;
-		if( jointsUpdated ) {
+		if( jointsUpdated || posChanged ) {
 			super.sync(ctx);
 			for( j in skinData.allJoints ) {
 				var id = j.index;
