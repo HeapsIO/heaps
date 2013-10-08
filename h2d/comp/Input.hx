@@ -62,6 +62,9 @@ class Input extends Component {
 					cursorPos--;
 					onChange(value);
 					return;
+				case Key.ENTER:
+					input.blur();
+					return;
 				}
 				if( e.charCode != 0 ) {
 					value = value.substr(0, cursorPos) + String.fromCharCode(e.charCode) + value.substr(cursorPos);
