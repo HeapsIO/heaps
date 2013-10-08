@@ -256,6 +256,15 @@ class Parser {
 				s.selectionColor = i;
 				return true;
 			}
+		case "overflow":
+			switch( getIdent(v) ) {
+			case "hidden":
+				s.overflowHidden = true;
+				return true;
+			case "visible":
+				s.overflowHidden = false;
+				return true;
+			}
 		default:
 			throw "Not implemented '"+r+"' = "+valueStr(v);
 		}

@@ -31,6 +31,7 @@ class Style {
 	public var dock : Null<DockStyle>;
 	public var cursorColor : Null<Int>;
 	public var selectionColor : Null<Int>;
+	public var overflowHidden : Null<Bool>;
 	
 	public function new() {
 	}
@@ -64,6 +65,7 @@ class Style {
 		if( s.dock != null ) dock = s.dock;
 		if( s.cursorColor != null ) cursorColor = s.cursorColor;
 		if( s.selectionColor != null ) selectionColor = s.selectionColor;
+		if( s.overflowHidden != null ) overflowHidden = s.overflowHidden;
 	}
 	
 	public function padding( v : Float ) {

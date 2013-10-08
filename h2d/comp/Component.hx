@@ -220,6 +220,17 @@ class Component extends Sprite {
 		}
 	}
 	
+	override function drawRec( ctx : h2d.RenderContext ) {
+		if( style.overflowHidden ) {
+			var px = (absX + 1) / matA + 1e-10;
+			var py = (absY - 1) / matD + 1e-10;
+			ctx.engine.setRenderZone(Std.int(px + style.marginLeft - extLeft()), Std.int(py + style.marginTop - extTop()), Std.int(width - (style.marginLeft + style.marginRight)), Std.int(height - (style.marginTop + style.marginBottom)));
+		}
+		super.drawRec(ctx);
+		if( style.overflowHidden )
+			ctx.engine.setRenderZone();
+	}
+	
 	function evalStyleRec() {
 		needRebuild = false;
 		evalStyle();

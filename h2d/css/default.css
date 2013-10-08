@@ -86,6 +86,7 @@ itemlist {
 	selection-color : #000;
 	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
 	background-color : gradient(#303030,#252525,#252525,#252525);
+	overflow : hidden;
 }
 
 input {
@@ -94,6 +95,7 @@ input {
 	padding : 3px;
 	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
 	background-color : gradient(#303030,#252525,#252525,#252525);
+	overflow : hidden;
 }
 
 input:focus {
