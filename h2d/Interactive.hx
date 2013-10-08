@@ -161,6 +161,16 @@ class Interactive extends Drawable {
 		handleEvent(ev);
 	}
 	
+	public function blur() {
+		if( scene == null )
+			return;
+		if( scene.currentFocus == this ) {
+			var ev = new hxd.Event(null);
+			ev.kind = EFocusLost;
+			scene.currentFocus.handleEvent(ev);
+		}
+	}
+	
 	public function hasFocus() {
 		return scene != null && scene.currentFocus == this;
 	}
