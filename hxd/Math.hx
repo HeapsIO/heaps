@@ -132,7 +132,7 @@ class Math {
 		Linear interpolation between two values. When k is 0 a is returned, when it's 1, b is returned.
 	**/
 	public inline static function lerp(a:Float, b:Float, k:Float) {
-		return a * (1 - k) + b * k;
+		return a + k * (b - a);
 	}
 	
 	public inline static function bitCount(v:Int) {
