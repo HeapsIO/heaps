@@ -32,10 +32,12 @@ class Input extends Component {
 		input.onFocus = function(_) {
 			addClass(":focus");
 			cursor.visible = true;
+			onFocus();
 		};
 		input.onFocusLost = function(_) {
 			removeClass(":focus");
 			cursor.visible = false;
+			onBlur();
 		};
 		input.onKeyDown = function(e:hxd.Event) {
 			if( input.hasFocus() ) {
@@ -112,6 +114,12 @@ class Input extends Component {
 	}
 	
 	public dynamic function onChange( value : String ) {
+	}
+
+	public dynamic function onFocus() {
+	}
+	
+	public dynamic function onBlur() {
 	}
 	
 }

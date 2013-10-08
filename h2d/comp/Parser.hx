@@ -112,6 +112,20 @@ class Parser {
 					c.onChange = function(_) s();
 				default:
 				}
+			case "onblur":
+				switch( c.name ) {
+				case "input":
+					var c : Input = cast c;
+					c.onBlur = makeScript(c,v);
+				default:
+				}
+			case "onfocus":
+				switch( c.name ) {
+				case "input":
+					var c : Input = cast c;
+					c.onFocus = makeScript(c,v);
+				default:
+				}
 			case "style":
 				var s = new h2d.css.Style();
 				new h2d.css.Parser().parse(v, s);
