@@ -32,6 +32,8 @@ class JQuery {
 			cast(c, h2d.comp.Input).value;
 		case "color":
 			cast(c, h2d.comp.Color).value;
+		case "itemlist":
+			cast(c, h2d.comp.ItemList).selected;
 		default:
 			null;
 		}
@@ -48,6 +50,8 @@ class JQuery {
 				cast(c, h2d.comp.Input).value = Std.string(v);
 			case "color":
 				cast(c, h2d.comp.Color).value = v;
+			case "itemlist":
+				cast(c, h2d.comp.ItemList).selected = v;
 			default:
 				null;
 			}
