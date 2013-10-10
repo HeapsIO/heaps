@@ -81,13 +81,6 @@ class Parser {
 					c.value = Std.parseInt(v);
 				default:
 				}
-			case "onclick":
-				switch( c.name ) {
-				case "button":
-					var c : Button = cast c;
-					c.onClick = makeScript(c,v);
-				default:
-				}
 			case "onchange":
 				switch( c.name ) {
 				case "slider":
@@ -141,7 +134,7 @@ class Parser {
 				switch( c.name ) {
 				case "checkbox":
 					var c : Checkbox = cast c;
-					c.checked = true;
+					c.checked = v != "false";
 				default:
 				}
 			case "x":
@@ -162,6 +155,26 @@ class Parser {
 					c.maxValue = Std.parseFloat(v);
 				default:
 				}
+			case "onmouseover":
+				var int = Std.instance(c, Interactive);
+				if( int != null )
+					int.onMouseOver = makeScript(c, v);
+			case "onmouseout":
+				var int = Std.instance(c, Interactive);
+				if( int != null )
+					int.onMouseOut = makeScript(c, v);
+			case "onmousedown":
+				var int = Std.instance(c, Interactive);
+				if( int != null )
+					int.onMouseDown = makeScript(c, v);
+			case "onmouseup":
+				var int = Std.instance(c, Interactive);
+				if( int != null )
+					int.onMouseUp = makeScript(c, v);
+			case "onclick":
+				var int = Std.instance(c, Interactive);
+				if( int != null )
+					int.onClick = makeScript(c, v);
 			case n:
 				throw "Unknown attrib " + n;
 			}

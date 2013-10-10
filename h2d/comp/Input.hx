@@ -2,9 +2,8 @@ package h2d.comp;
 import hxd.Key;
 
 @:access(h2d.comp.Input.scene)
-class Input extends Component {
+class Input extends Interactive {
 	
-	var input : h2d.Interactive;
 	var tf : h2d.Text;
 	var cursor : h2d.Bitmap;
 	var cursorPos(default,set) : Int;
@@ -14,21 +13,9 @@ class Input extends Component {
 	public function new(?parent) {
 		super("input",parent);
 		tf = new h2d.Text(null, this);
-		input = new h2d.Interactive(0, 0, bg);
 		input.cursor = TextInput;
 		cursor = new h2d.Bitmap(null, bg);
 		cursor.visible = false;
-		var active = false;
-		input.onPush = function(_) {
-			focus();
-		};
-		input.onOver = function(_) {
-			addClass(":hover");
-		};
-		input.onOut = function(_) {
-			active = false;
-			removeClass(":hover");
-		};
 		input.onFocus = function(_) {
 			addClass(":focus");
 			cursor.visible = true;
@@ -109,13 +96,15 @@ class Input extends Component {
 		}
 		super.resize(ctx);
 		if( !ctx.measure ) {
-			input.width = width - (style.marginLeft + style.marginRight);
-			input.height = height - (style.marginTop + style.marginBottom);
 			cursor.y = extTop() - 1;
 			cursor.tile = h2d.Tile.fromColor(style.cursorColor | 0xFF000000, 1, Std.int(height - extTop() - extBottom() + 2));
 		}
 	}
-	
+
+	override function onClick() {
+		focus();
+	}	
+
 	public dynamic function onChange( value : String ) {
 	}
 

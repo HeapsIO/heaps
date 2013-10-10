@@ -1,26 +1,11 @@
 package h2d.comp;
 
-class Checkbox extends Component {
+class Checkbox extends Interactive {
 	
-	var input : h2d.Interactive;
 	public var checked(default, set) : Bool;
 	
 	public function new(?parent) {
 		super("checkbox", parent);
-		input = new h2d.Interactive(0, 0, this);
-		var active = false;
-		input.onPush = function(_) {
-			active = true;
-		};
-		input.onOut = function(_) {
-			active = false;
-		};
-		input.onRelease = function(_) {
-			if( active ) {
-				checked = !checked;
-				onChange(checked);
-			}
-		};
 		checked = false;
 	}
 	
@@ -39,6 +24,11 @@ class Checkbox extends Component {
 				bg.fillRect(style.tickColor, m, m, input.width - m * 2, input.height - m * 2);
 			}
 		}
+	}
+	
+	override function onClick() {
+		checked = !checked;
+		onChange(checked);
 	}
 	
 	public dynamic function onChange( checked : Bool ) {
