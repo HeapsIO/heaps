@@ -252,6 +252,7 @@ class LocalFileSystem implements FileSystem {
 		#if air3
 		var f = new flash.filesystem.File(baseDir + path);
 		// ensure exact case / no relative path
+		f.canonicalize();
 		if( f.nativePath.split("\\").join("/") != baseDir + path )
 			return null;
 		return f;
