@@ -99,25 +99,33 @@ class Animation {
 		return a;
 	}
 	
-	function initInstance(objects) {
+	function initInstance() {
 		isInstance = true;
-		this.objects = objects;
 	}
 	
-	@:access(h3d.scene.Skin.skinData)
 	public function createInstance( base : h3d.scene.Object ) {
 		var currentSkin : h3d.scene.Skin = null;
-		var objects = [];
-		for( a in this.objects ) {
-			var a2 = a.clone();
+		var objects = [for( a in this.objects ) a.clone()];
+		var a = clone();
+		a.objects = objects;
+		a.bind(base);
+		a.initInstance();
+		return a;
+	}
+	
+	/**
+		If one of the animated object has been changed, it is necessary to call bind() so the animation can keep with the change.
+	**/
+	@:access(h3d.scene.Skin.skinData)
+	public function bind( base : h3d.scene.Object ) {
+		var currentSkin : h3d.scene.Skin = null;
+		for( a in objects ) {
 			if( currentSkin != null ) {
 				// quick lookup for joints (prevent creating a temp object)
 				var j = currentSkin.skinData.namedJoints.get(a.objectName);
 				if( j != null ) {
-					a2.targetSkin = currentSkin;
-					a2.targetJoint = j.index;
-					objects.push(a2);
-					continue;
+					a.targetSkin = currentSkin;
+					a.targetJoint = j.index;
 				}
 			}
 			var obj = base.getObjectByName(a.objectName);
@@ -126,16 +134,12 @@ class Animation {
 			var joint = Std.instance(obj, h3d.scene.Skin.Joint);
 			if( joint != null ) {
 				currentSkin = cast joint.parent;
-				a2.targetSkin = currentSkin;
-				a2.targetJoint = joint.index;
+				a.targetSkin = currentSkin;
+				a.targetJoint = joint.index;
 			} else {
-				a2.targetObject = obj;
+				a.targetObject = obj;
 			}
-			objects.push(a2);
 		}
-		var a = clone();
-		a.initInstance(objects);
-		return a;
 	}
 	
 	/**

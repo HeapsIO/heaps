@@ -40,6 +40,11 @@ class Transition extends Animation {
 		anim2.sync();
 	}
 	
+	override function bind(base) {
+		anim1.bind(base);
+		anim2.bind(base);
+	}
+	
 	override function update(dt:Float) {
 		var rt = super.update(dt);
 		var st = dt - rt;

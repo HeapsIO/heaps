@@ -59,8 +59,8 @@ class LinearAnimation extends Animation {
 		return cast objects;
 	}
 	
-	override function initInstance(objects) {
-		super.initInstance(objects);
+	override function initInstance() {
+		super.initInstance();
 		for( a in getFrames() ) {
 			a.matrix = new h3d.Matrix();
 			a.matrix.identity();

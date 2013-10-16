@@ -38,8 +38,8 @@ class FrameAnimation extends Animation {
 		return cast objects;
 	}
 	
-	override function initInstance(objects) {
-		super.initInstance(objects);
+	override function initInstance() {
+		super.initInstance();
 		for( a in getFrames() )
 			if( a.alphas != null && (a.targetObject == null || !a.targetObject.isMesh()) )
 				throw a.objectName + " should be a mesh";

@@ -30,6 +30,10 @@ class SmoothTransition extends Transition {
 		if( !anim1.isInstance || !anim2.isInstance )
 			throw "Both animations must be instances";
 		this.isInstance = true;
+		initObjects();
+	}
+	
+	function initObjects() {
 		var allObjects = new Map();
 		var mzero = MZERO;
 		for( o in anim1.objects ) {
@@ -54,6 +58,12 @@ class SmoothTransition extends Transition {
 			}
 			so.isAnim2 = true;
 		}
+	}
+	
+	override function bind( base ) {
+		super.bind(base);
+		this.objects = [];
+		initObjects();
 	}
 	
 	@:access(h3d.scene.Skin)
