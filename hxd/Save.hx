@@ -2,7 +2,7 @@ package hxd;
 
 class Save {
 	
-	static var cur = new Map();
+	static var cur = new Map<String,String>();
 	
 	public static function load<T>( ?defValue : T, ?name = "save" ) : T {
 		#if flash
