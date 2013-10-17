@@ -16,6 +16,11 @@ class Object {
 	public var scaleY(default, set) : Float;
 	public var scaleZ(default,set) : Float;
 	public var visible : Bool = true;
+	
+	/**
+		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
+	**/
+	public var follow(default,set) : Object;
 
 	/**
 		This is an additional optional transformation that is performed before other local transformations.
@@ -178,6 +183,12 @@ class Object {
 	function draw( ctx : RenderContext ) {
 	}
 	
+	
+	function set_follow(v) {
+		posChanged = true;
+		return follow = v;
+	}
+	
 	function calcAbsPos() {
 		qRot.saveToMatrix(absPos);
 		// prepend scale
@@ -193,10 +204,16 @@ class Object {
 		absPos._41 = x;
 		absPos._42 = y;
 		absPos._43 = z;
-		if( defaultTransform != null )
-			absPos.multiply3x4(absPos, defaultTransform);
-		if( parent != null )
-			absPos.multiply3x4(absPos, parent.absPos);
+		if( follow != null ) {
+			follow.syncPos();
+			absPos.multiply3x4(absPos, follow.absPos);
+			posChanged = true;
+		} else {
+			if( defaultTransform != null )
+				absPos.multiply3x4(absPos, defaultTransform);
+			if( parent != null )
+				absPos.multiply3x4(absPos, parent.absPos);
+		}
 		if( invPos != null )
 			invPos._44 = 0; // mark as invalid
 	}
@@ -213,8 +230,8 @@ class Object {
 		}
 		var changed = posChanged;
 		if( changed ) {
-			calcAbsPos();
 			posChanged = false;
+			calcAbsPos();
 		}
 		
 		lastFrame = ctx.frame;
