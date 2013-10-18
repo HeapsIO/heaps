@@ -258,7 +258,7 @@ class FileTree {
 						expr : { expr : EMeta({ name : ":privateAccess", params : [], pos : pos }, { expr : EReturn(field.e), pos : pos }), pos : pos },
 					}),
 					meta : [ { name:":extern", pos:pos, params:[] } ],
-					access : [AStatic, AInline],
+					access : [AStatic, AInline, APrivate],
 				});
 			}
 		}
@@ -275,9 +275,9 @@ class FileTree {
 		for( f in ofields )
 			f.access.remove(AStatic);
 		var def = macro class {
-			public inline function new(loader) this = loader;
-			var loader(get,never) : $loaderType;
-			inline function get_loader() : $loaderType return this;
+			private inline function new(loader) this = loader;
+			private var loader(get,never) : $loaderType;
+			inline private function get_loader() : $loaderType return this;
 		};
 		for( f in def.fields )
 			ofields.push(f);
