@@ -78,8 +78,8 @@ class Texture extends Resource {
 			format.png.Tools.extract32(png.read(), bytes);
 			return bytes;
 		} else {
-			throw "getPixels not supported for " + name;
-			return null;
+			var bytes = entry.getBytes();
+			return NanoJpeg.decode(bytes);
 		}
 	}
 	
