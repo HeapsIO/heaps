@@ -79,7 +79,7 @@ class Texture extends Resource {
 			return bytes;
 		} else {
 			var bytes = entry.getBytes();
-			return NanoJpeg.decode(bytes);
+			return NanoJpeg.decode(bytes).pixels;
 		}
 	}
 	
@@ -89,7 +89,10 @@ class Texture extends Resource {
 		var size = getSize();
 		bmp = new flash.display.BitmapData(size.width, size.height, true, 0);
 		var bytes = getPixels();
-		bmp.setPixels(bmp.rect, bytes.getData());
+		var dat = bytes.getData();
+		dat.position = 0;
+		dat.endian = flash.utils.Endian.LITTLE_ENDIAN;
+		bmp.setPixels(bmp.rect, dat);
 		hxd.impl.Tmp.saveBytes(bytes);
 		#end
 		return hxd.BitmapData.fromNative(bmp);

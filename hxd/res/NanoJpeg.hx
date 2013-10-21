@@ -50,7 +50,8 @@ private class Component {
 	public function new() {
 	}
 }
-	
+
+@:noDebug
 class NanoJpeg {
 	
 	static inline var BLOCKSIZE = 64;
@@ -148,7 +149,7 @@ class NanoJpeg {
 	
 	inline function syntax( flag ) {
 		#if debug
-		if( flag ) throw SyntaxError;
+		if( flag ) throw "Invalid JPEG file";
 		#end
 	}
 	
@@ -695,12 +696,18 @@ class NanoJpeg {
 			case 0xDA:
 				njDecodeScan();
 				break; // DONE
-			case 0xFE: njSkipMarker();
+			case 0xFE: njSkipMarker(); // comment
+			case 0xC2: throw "Unsupported progressive JPG";
+			case 0xC3: throw "Unsupported lossless JPG";
 			default:
-				if( get(-1) & 0xF0 == 0xE0 )
+				switch( get( -1) & 0xF0 ) {
+				case 0xE0:
 					njSkipMarker();
-				else
-					notSupported();
+				case 0xC0:
+					throw "Unsupported jpeg type " + (get( -1) & 0xF);
+				default:
+					throw "Unsupported jpeg tag 0x" + StringTools.hex(get( -1), 2);
+				}
 			}
 		}
 		var pixels = njConvert();
