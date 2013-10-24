@@ -300,6 +300,23 @@ class LocalFileSystem implements FileSystem {
 		sys.io.File.saveBytes(f, data);
 		#end
 	}
+
+	public function saveContentAt( path : String, data : haxe.io.Bytes, dataPos : Int, dataSize : Int, filePos : Int ) {
+		#if air3
+		var f = open(path);
+		var o = new flash.filesystem.FileStream();
+		o.open(f, flash.filesystem.FileMode.APPEND);
+		if( filePos != o.position ) o.position = filePos;
+		if( dataSize > 0 ) o.writeBytes(data.getData(),dataPos,dataSize);
+		o.close();
+		#else
+		var f = open(path);
+		var fc = sys.io.File.append(f);
+		fc.seek(filePos, SeekCur);
+		fc.writeFullBytes(data, dataPos, dataSize);
+		fc.close();
+		#end
+	}
 	
 }
 
