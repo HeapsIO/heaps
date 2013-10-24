@@ -39,12 +39,8 @@ private class CoreObjects  {
 	
 	public function getEmptyTexture() {
 		if( emptyTexture == null || emptyTexture.isDisposed() ) {
-			emptyTexture = h3d.Engine.getCurrent().mem.allocTexture(1, 1);
-			var o = haxe.io.Bytes.alloc(4);
-			o.set(0, 0xFF);
-			o.set(2, 0xFF);
-			o.set(3, 0xFF);
-			emptyTexture.uploadBytes(o);
+			if( emptyTexture != null ) emptyTexture.dispose();
+			emptyTexture = h3d.mat.Texture.fromColor(0xFFFF00FF);
 		}
 		return emptyTexture;
 	}

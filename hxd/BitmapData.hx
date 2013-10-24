@@ -54,12 +54,12 @@ abstract BitmapData(InnerData) {
 		return this.height;
 	}
 	
-	public inline function getBytes() {
-		return nativeGetBytes(this);
+	public inline function getPixels() : Pixels {
+		return nativeGetPixels(this);
 	}
 
-	public inline function setBytes( bytes : haxe.io.Bytes ) {
-		nativeSetBytes(this, bytes);
+	public inline function setPixels( pixels : Pixels ) {
+		nativeSetPixels(this, pixels);
 	}
 	
 	public inline function toNative() : InnerData {
@@ -70,35 +70,28 @@ abstract BitmapData(InnerData) {
 		return cast bmp;
 	}
 	
-	static function nativeGetBytes( b : InnerData ) {
+	static function nativeGetPixels( b : InnerData ) {
 		#if flash
-		var bytes = haxe.io.Bytes.ofData(b.getPixels(b.rect));
-		// it is necessary to swap the bytes from BE to LE
-		var mem = hxd.impl.Memory.select(bytes);
-		for( i in 0...b.width*b.height ) {
-			var p = i << 2;
-			var a = mem.b(p);
-			var r = mem.b(p+1);
-			var g = mem.b(p+2);
-			var b = mem.b(p+3);
-			mem.wb(p, b);
-			mem.wb(p+1, g);
-			mem.wb(p+2, r);
-			mem.wb(p+3, a);
-		}
-		mem.end();
-		return bytes;
+		return new Pixels(b.width, b.height, haxe.io.Bytes.ofData(b.getPixels(b.rect)), ARGB);
 		#else
 		throw "TODO";
 		return null;
 		#end
 	}
 	
-	static function nativeSetBytes( b : InnerData, bytes : haxe.io.Bytes ) {
+	static function nativeSetPixels( b : InnerData, pixels : Pixels ) {
 		#if flash
-		var bytes = bytes.getData();
+		var bytes = pixels.bytes.getData();
 		bytes.position = 0;
-		bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
+		switch( pixels.format ) {
+		case BGRA:
+			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
+		case ARGB:
+			bytes.endian = flash.utils.Endian.BIG_ENDIAN;
+		case RGBA:
+			pixels.convert(BGRA);
+			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
+		}
 		b.setPixels(b.rect, bytes);
 		#else
 		throw "TODO";

@@ -101,13 +101,13 @@ class FontBuilder {
 			}
 		} while( bmp == null );
 		
-		// let's remove alpha premult (all pixels should be white with alpha)
-		var bytes = bmp.getPixels(bmp.rect);
-		if( bytes.length < 1024 ) bytes.length = 1024;
+		var pixels = hxd.BitmapData.fromNative(bmp).getPixels();
+		bmp.dispose();
 		
-		var bytes = haxe.io.Bytes.ofData(bytes);
-		var r = hxd.impl.Memory.select(bytes);
-		for( i in 0...bmp.width * bmp.height ) {
+		// let's remove alpha premult (all pixels should be white with alpha)
+		pixels.convert(BGRA);
+		var r = hxd.impl.Memory.select(pixels.bytes);
+		for( i in 0...pixels.width * pixels.height ) {
 			var p = i << 2;
 			var b = r.b(p);
 			if( b > 0 ) {
@@ -119,19 +119,15 @@ class FontBuilder {
 		}
 		r.end();
 		
-		var width = bmp.width, height = bmp.height;
-		
 		if( innerTex == null ) {
-			innerTex = h3d.Engine.getCurrent().mem.allocTexture(width, height);
-			innerTex.uploadBytes(bytes);
+			innerTex = h3d.mat.Texture.fromPixels(pixels);
 			font.tile = h2d.Tile.fromTexture(innerTex);
 			for( t in all )
 				t.setTexture(innerTex);
 			innerTex.onContextLost = build;
 		} else
-			innerTex.uploadBytes(bytes);
-		hxd.impl.Tmp.saveBytes(bytes);
-		bmp.dispose();
+			innerTex.uploadPixels(pixels);
+		pixels.dispose();
 		return font;
 	}
 	

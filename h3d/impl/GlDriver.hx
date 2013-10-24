@@ -162,21 +162,10 @@ class GlDriver extends Driver {
 		gl.deleteBuffer(v.b);
 	}
 	
-	override function uploadTextureBytes( t : h3d.mat.Texture, bytes : haxe.io.Bytes, mipLevel : Int, side : Int ) {
+	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
-		var pixels = new Uint8Array(bytes.getData());
-		// convert BGRA to RGBA
-		for( i in 0...t.width * t.height ) {
-			var p = i << 2;
-			var b = pixels[p + 0];
-			var g = pixels[p + 1];
-			var r = pixels[p + 2];
-			var a = pixels[p + 3];
-			pixels[p] = r;
-			pixels[p+1] = g;
-			pixels[p+2] = b;
-			pixels[p+3] = a;
-		}
+		pixels.convert(RGBA);
+		var pixels = new Uint8Array(pixels.bytes.getData());
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels);
 		gl.bindTexture(GL.TEXTURE_2D, null);
 	}

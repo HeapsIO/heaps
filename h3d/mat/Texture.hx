@@ -101,8 +101,8 @@ class Texture {
 		mem.driver.uploadTextureBitmap(this, bmp, mipLevel, side);
 	}
 
-	public function uploadBytes( bmp : haxe.io.Bytes, mipLevel = 0, side = 0 ) {
-		mem.driver.uploadTextureBytes(this, bmp, mipLevel, side);
+	public function uploadPixels( pixels : hxd.Pixels, mipLevel = 0, side = 0 ) {
+		mem.driver.uploadTexturePixels(this, pixels, mipLevel, side);
 	}
 
 	public function dispose() {
@@ -114,6 +114,30 @@ class Texture {
 		var mem = h3d.Engine.getCurrent().mem;
 		var t = mem.allocTexture(bmp.width, bmp.height, false, allocPos);
 		t.uploadBitmap(bmp);
+		return t;
+	}
+	
+	public static function fromPixels( pixels : hxd.Pixels, ?allocPos : h3d.impl.AllocPos ) {
+		var mem = h3d.Engine.getCurrent().mem;
+		var t = mem.allocTexture(pixels.width, pixels.height, false, allocPos);
+		t.uploadPixels(pixels);
+		return t;
+	}
+	
+	static var tmpPixels : hxd.Pixels = null;
+	/**
+		Creates a 1x1 texture using the ARGB color passed as parameter.
+	**/
+	public static function fromColor( color : Int, ?allocPos : h3d.impl.AllocPos ) {
+		var mem = h3d.Engine.getCurrent().mem;
+		var t = mem.allocTexture(1, 1, false, allocPos);
+		if( tmpPixels == null ) tmpPixels = new hxd.Pixels(1, 1, haxe.io.Bytes.alloc(4), BGRA);
+		tmpPixels.format = BGRA;
+		tmpPixels.bytes.set(0, color & 0xFF);
+		tmpPixels.bytes.set(1, (color>>8) & 0xFF);
+		tmpPixels.bytes.set(2, (color>>16) & 0xFF);
+		tmpPixels.bytes.set(3, color>>>24);
+		t.uploadPixels(tmpPixels);
 		return t;
 	}
 

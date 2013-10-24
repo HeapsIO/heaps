@@ -2,15 +2,6 @@ package hxd.res;
 
 class Texture extends Resource {
 	
-	static var TMP = {
-		var b = haxe.io.Bytes.alloc(4);
-		b.set(0, 0xFF);
-		b.set(1, 0x80);
-		b.set(2, 0x80);
-		b.set(3, 0xFF);
-		b;
-	}
-	
 	var needResize : Bool;
 	var tex : h3d.mat.Texture;
 	var inf : { width : Int, height : Int, isPNG : Bool };
@@ -18,6 +9,16 @@ class Texture extends Resource {
 	public function isPNG() {
 		getSize();
 		return inf.isPNG;
+	}
+
+	function checkResize() {
+		if( !needResize ) return;
+		var tw = tex.width, th = tex.height;
+		@:privateAccess {
+			tex.width = 1;
+			tex.height = 1;
+		}
+		tex.resize(tw,th);
 	}
 	
 	public function getSize() : { width : Int, height : Int } {
@@ -74,45 +75,23 @@ class Texture extends Resource {
 		if( inf.isPNG ) {
 			var png = new format.png.Reader(new haxe.io.BytesInput(entry.getBytes()));
 			png.checkCRC = false;
-			var bytes = hxd.impl.Tmp.getBytes(inf.width * inf.height * 4);
-			format.png.Tools.extract32(png.read(), bytes);
-			return bytes;
+			var pixels = Pixels.alloc(inf.width, inf.height, BGRA);
+			format.png.Tools.extract32(png.read(), pixels.bytes);
+			return pixels;
 		} else {
 			var bytes = entry.getBytes();
-			return NanoJpeg.decode(bytes).pixels;
+			var p = NanoJpeg.decode(bytes);
+			return new Pixels(p.width,p.height,p.pixels, BGRA);
 		}
 	}
 	
 	public function toBitmap() : hxd.BitmapData {
-		var bmp = null;
-		#if flash
-		var size = getSize();
-		bmp = new flash.display.BitmapData(size.width, size.height, true, 0);
-		var bytes = getPixels();
-		var dat = bytes.getData();
-		dat.position = 0;
-		dat.endian = flash.utils.Endian.LITTLE_ENDIAN;
-		bmp.setPixels(bmp.rect, dat);
-		hxd.impl.Tmp.saveBytes(bytes);
-		#end
-		return hxd.BitmapData.fromNative(bmp);
-	}
-	
-	function makeSquare( bmp : haxe.io.Bytes ) {
-		var tw = tex.width, th = tex.height, w = inf.width, h = inf.height;
-		var out = hxd.impl.Tmp.getBytes(tw * th * 4);
-		var p = 0, b = 0;
-		for( y in 0...h ) {
-			out.blit(p, bmp, b, w * 4);
-			p += w * 4;
-			b += w * 4;
-			for( i in 0...(tw - w) * 4 )
-				out.set(p++, 0);
-		}
-		for( i in 0...(th - h) * tw * 4 )
-			out.set(p++, 0);
-		hxd.impl.Tmp.saveBytes(bmp);
-		return out;
+		getSize();
+		var bmp = new hxd.BitmapData(inf.width, inf.height);
+		var pixels = getPixels();
+		bmp.setPixels(pixels);
+		pixels.dispose();
+		return bmp;
 	}
 	
 	function loadTexture() {
@@ -121,15 +100,13 @@ class Texture extends Resource {
 		var isSquare = w == tw && h == th;
 		if( inf.isPNG ) {
 			function load() {
-				if( needResize ) {
-					tex.resize(tw, th);
-					needResize = false;
-				}
+				checkResize();
+
 				// immediately loading the PNG is faster than going through loadBitmap
-				var bytes = getPixels();
-				if( !isSquare ) bytes = makeSquare(bytes);
-				tex.uploadBytes(bytes);
-				hxd.impl.Tmp.saveBytes(bytes);
+				var pixels = getPixels();
+				pixels.makeSquare();
+				tex.uploadPixels(pixels);
+				pixels.dispose();
 			}
 			if( entry.isAvailable )
 				load();
@@ -138,16 +115,15 @@ class Texture extends Resource {
 		} else {
 			// use native decoding
 			entry.loadBitmap(function(bmp) {
-				if( needResize ) {
-					tex.resize(tw, th);
-					needResize = false;
-				}
+				checkResize();
+
 				if( isSquare )
 					tex.uploadBitmap(bmp);
 				else {
-					var bytes = makeSquare(bmp.getBytes());
-					tex.uploadBytes(bytes);
-					hxd.impl.Tmp.saveBytes(bytes);
+					var pixels = bmp.getPixels();
+					pixels.makeSquare();
+					tex.uploadPixels(pixels);
+					pixels.dispose();
 				}
 				bmp.dispose();
 			});
@@ -173,9 +149,8 @@ class Texture extends Resource {
 			tex = h3d.Engine.getCurrent().mem.allocTexture(tw, th, false);
 		} else {
 			// create a temp 1x1 texture while we're loading
+			tex = h3d.mat.Texture.fromColor(0xFF0000FF);
 			needResize = true;
-			tex = h3d.Engine.getCurrent().mem.allocTexture(1, 1, false);
-			tex.uploadBytes(TMP);
 			@:privateAccess {
 				tex.width = tw;
 				tex.height = th;

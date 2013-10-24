@@ -576,14 +576,8 @@ class Library {
 		if( textureLoader == null ) {
 			var tmpTex = null;
 			textureLoader = function(_,_) {
-				if( tmpTex == null ) {
-					tmpTex = h3d.Engine.getCurrent().mem.allocTexture(1, 1);
-					var bytes = haxe.io.Bytes.alloc(4);
-					bytes.set(0, 0xFF);
-					bytes.set(2, 0xFF);
-					bytes.set(3, 0xFF);
-					tmpTex.uploadBytes(bytes);
-				}
+				if( tmpTex == null )
+					tmpTex = h3d.mat.Texture.fromColor(0xFFFF00FF);
 				return new h3d.mat.MeshMaterial(tmpTex);
 			}
 		}

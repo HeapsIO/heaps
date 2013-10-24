@@ -36,7 +36,9 @@ class Memory {
 	
 	public static function select( b : haxe.io.Bytes ) {
 		#if flash
-		flash.Memory.select(b.getData());
+		var data = b.getData();
+		if( data.length < 1024 ) data.length = 1024;
+		flash.Memory.select(data);
 		#end
 		if( current != null ) stack.push(current);
 		current = b;
