@@ -58,6 +58,10 @@ abstract BitmapData(InnerData) {
 		return nativeGetBytes(this);
 	}
 
+	public inline function setBytes( bytes : haxe.io.Bytes ) {
+		nativeSetBytes(this, bytes);
+	}
+	
 	public inline function toNative() : InnerData {
 		return this;
 	}
@@ -90,4 +94,15 @@ abstract BitmapData(InnerData) {
 		#end
 	}
 	
+	static function nativeSetBytes( b : InnerData, bytes : haxe.io.Bytes ) {
+		#if flash
+		var bytes = bytes.getData();
+		bytes.position = 0;
+		bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
+		b.setPixels(b.rect, bytes);
+		#else
+		throw "TODO";
+		return null;
+		#end
+	}
 }
