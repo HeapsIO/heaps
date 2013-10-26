@@ -599,13 +599,25 @@ class NanoJpeg {
 		while( c.width < width ) { c.width <<= 1; ++xshift; }
 		while( c.height < height ) { c.height <<= 1; ++yshift; }
 		var out = alloc(c.width * c.height);
-		var lout = new FastBytes(out);
 		var lin = new FastBytes(c.pixels);
 		var pout = 0;
+		#if flash
+		var dat = out.getData();
+		if( dat.length < 1024 ) dat.length = 1024;
+		flash.Memory.select(dat);
+		inline function write(pos, v) {
+			flash.Memory.setByte(pos, v);
+		}
+		#else
+		var lout = new FastBytes(out);
+		inline function write(pos, v) {
+			lout[pos] = v;
+		}
+		#end
 		for( y in 0...c.height ) {
 			var pin = (y >> yshift) * c.stride;
 			for( x in 0...c.width )
-				lout[pout++] = lin[(x >> xshift) + pin];
+				write(pout++, lin[(x >> xshift) + pin]);
 		}
 		c.stride = c.width;
 		free(c.pixels);
