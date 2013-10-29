@@ -53,7 +53,11 @@ class Scene extends Layers implements h3d.IDrawable {
 	}
 	
 	function onEvent( e : hxd.Event ) {
-		if( pendingEvents != null ) pendingEvents.push(e);
+		if( pendingEvents != null ) {
+			e.relX = screenXToLocal(e.relX);
+			e.relY = screenYToLocal(e.relY);
+			pendingEvents.push(e);
+		}
 	}
 	
 	function screenXToLocal(mx:Float) {
