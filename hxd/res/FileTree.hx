@@ -112,6 +112,7 @@ class FileTree {
 		case "wav" if( options.compressSounds ):
 			var tmp = options.tmpDir + name + ".mp3";
 			if( getTime(tmp) < getTime(fullPath) ) {
+				Sys.println("Converting " + relPath);
 				if( Sys.command("lame", ["--silent","-h",fullPath,tmp]) != 0 )
 					Context.warning("Failed to run lame on " + path, pos);
 				else {
@@ -120,6 +121,20 @@ class FileTree {
 			} else {
 				fullPath = tmp;
 			}
+			Context.registerModuleDependency(currentModule, fullPath);
+		case "fbx" if( options.createXBX ):
+			var tmp = options.tmpDir + name + ".xbx";
+			if( getTime(tmp) < getTime(fullPath) ) {
+				Sys.println("Converting " + relPath);
+				var fbx = h3d.fbx.Parser.parse(sys.io.File.getContent(fullPath));
+				if( options.xbxFilter != null )
+					fbx = options.xbxFilter(relPath,fbx);
+				var out = sys.io.File.write(tmp);
+				new h3d.fbx.XBXWriter(out).write(fbx);
+				out.close();
+			}
+			Context.registerModuleDependency(currentModule, fullPath);
+			fullPath = tmp;
 		default:
 		}
 		
