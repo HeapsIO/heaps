@@ -25,7 +25,11 @@ class Embed {
 			haxe.macro.Context.defineType({
 				pack : ["hxd","_res"],
 				name : name,
-				meta : [{ name : ":font", pos : pos, params : [macro $v{file},macro $v{chars}] }, { name : ":keep", pos : pos, params : [] }],
+				meta : [
+					{ name : ":native", pos : pos, params : [macro $v { "_"+name } ] },
+					{ name : ":font", pos : pos, params : [macro $v { file }, macro $v { chars } ] },
+					{ name : ":keep", pos : pos, params : [] }
+				],
 				kind : TDClass({ pack : ["flash","text"], name : "Font", params : [] }),
 				params : [],
 				pos : pos,
