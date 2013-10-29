@@ -139,6 +139,7 @@ class FileTree {
 				isExtern : false,
 				fields : [],
 				meta : [
+					{ name : ":native", params : [{ expr : EConst(CString("_"+name)), pos : pos }], pos : pos },
 					{ name : ":keep", params : [], pos : pos },
 					{ name : ":file", params : [ { expr : EConst(CString(fullPath)), pos : pos } ], pos : pos },
 				],

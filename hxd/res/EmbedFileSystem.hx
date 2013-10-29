@@ -176,7 +176,7 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	static function resolve( path : String ) {
 		#if flash
-		return "hxd._res.R_" + invalidChars.replace(path, "_");
+		return "_R_" + invalidChars.replace(path, "_");
 		#else
 		return "R_" + invalidChars.replace(path, "_");
 		#end
