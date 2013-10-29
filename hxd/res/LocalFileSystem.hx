@@ -305,7 +305,7 @@ class LocalFileSystem implements FileSystem {
 		#if air3
 		var f = open(path);
 		var o = new flash.filesystem.FileStream();
-		o.open(f, flash.filesystem.FileMode.APPEND);
+		o.open(f, flash.filesystem.FileMode.UPDATE);
 		if( filePos != o.position ) o.position = filePos;
 		if( dataSize > 0 ) o.writeBytes(data.getData(),dataPos,dataSize);
 		o.close();
