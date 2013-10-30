@@ -25,7 +25,8 @@ class Geometry {
 	}
 
 	/**
-		Decode polygon informations into triangle indexes and vertexes indexes
+		Decode polygon informations into triangle indexes and vertexes indexes.
+		Returns vidx, which is the list of vertices indexes and iout which is the index buffer for the full vertex model
 	**/
 	public function getIndexes() {
 		var count = 0, pos = 0;
@@ -37,7 +38,7 @@ class Geometry {
 				index[pos] = -i - 1;
 				var start = pos - count + 1;
 				for( n in 0...count )
-					vout.push(n + start);
+					vout.push(index[n + start]);
 				for( n in 0...count - 2 ) {
 					iout.push(start + n);
 					iout.push(start + count - 1);

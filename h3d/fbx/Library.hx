@@ -56,6 +56,11 @@ class Library {
 	**/
 	public var bonesPerVertex = 3;
 	
+	/**
+		If there are too many bones, the model will be split in separate render passes.
+	**/
+	public var maxBonesPerSkin = 34;
+	
 	public function new() {
 		root = { name : "Root", props : [], childs : [] };
 		reset();
@@ -693,6 +698,8 @@ class Library {
 					defaultModelMatrixes.get(osub.obj.name).wasRemoved = o.model.getId();
 				}
 				// set the skin data
+				if( skinData.boundJoints.length > maxBonesPerSkin )
+					skinData.split(maxBonesPerSkin, Std.instance(skinData.primitive,h3d.prim.FBXModel).geom.getIndexes().vidx);
 				skin.setSkinData(skinData);
 			}
 		}

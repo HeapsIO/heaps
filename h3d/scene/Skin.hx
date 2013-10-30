@@ -50,8 +50,10 @@ class Skin extends Mesh {
 	var currentRelPose : Array<h3d.Matrix>;
 	var currentAbsPose : Array<h3d.Matrix>;
 	var currentPalette : Array<h3d.Matrix>;
+	var splitPalette : Array<Array<h3d.Matrix>>;
 	var jointsUpdated : Bool;
 	var jointsAbsPosInv : h3d.Matrix;
+	var paletteChanged : Bool;
 
 	public var showJoints : Bool;
 	public var syncIfHidden : Bool = true;
@@ -118,10 +120,17 @@ class Skin extends Mesh {
 		currentRelPose = [];
 		currentAbsPose = [];
 		currentPalette = [];
+		paletteChanged = true;
 		for( j in skinData.allJoints )
 			currentAbsPose.push(h3d.Matrix.I());
 		for( i in 0...skinData.boundJoints.length )
 			currentPalette.push(h3d.Matrix.I());
+		if( skinData.splitJoints != null ) {
+			splitPalette = [];
+			for( a in skinData.splitJoints )
+				splitPalette.push([for( j in a ) currentPalette[j.bindIndex]]);
+		} else
+			splitPalette = null;
 	}
 
 	override function sync( ctx : RenderContext ) {
@@ -145,7 +154,7 @@ class Skin extends Mesh {
 				if( bid >= 0 )
 					currentPalette[bid].multiply3x4(j.transPos, m);
 			}
-			material.skinMatrixes = currentPalette;
+			paletteChanged = true;
 			if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
 			jointsUpdated = false;
 		} else
@@ -153,7 +162,19 @@ class Skin extends Mesh {
 	}
 	
 	override function draw( ctx : RenderContext ) {
-		super.draw(ctx);
+		if( splitPalette == null ) {
+			if( paletteChanged ) {
+				paletteChanged = false;
+				material.skinMatrixes = currentPalette;
+			}
+			super.draw(ctx);
+		} else {
+			for( i in 0...splitPalette.length ) {
+				material.skinMatrixes = splitPalette[i];
+				primitive.selectMaterial(i);
+				super.draw(ctx);
+			}
+		}
 		if( showJoints )
 			ctx.addPass(drawJoints);
 	}

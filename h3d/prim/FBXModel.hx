@@ -10,7 +10,7 @@ class FBXModel extends MeshPrimitive {
 	public var multiMaterial : Bool;
 	var bounds : h3d.col.Bounds;
 	var curMaterial : Int;
-	var matIndexes : Array<h3d.impl.Indexes>;
+	var groupIndexes : Array<h3d.impl.Indexes>;
 
 	public function new(g) {
 		this.geom = g;
@@ -56,7 +56,7 @@ class FBXModel extends MeshPrimitive {
 		if( indexes == null || indexes.isDisposed() )
 			alloc(engine);
 		var idx = indexes;
-		indexes = matIndexes[curMaterial];
+		indexes = groupIndexes[curMaterial];
 		if( indexes != null ) super.render(engine);
 		indexes = idx;
 		curMaterial = -1;
@@ -68,11 +68,11 @@ class FBXModel extends MeshPrimitive {
 	
 	override function dispose() {
 		super.dispose();
-		if( matIndexes != null ) {
-			for( i in matIndexes )
+		if( groupIndexes != null ) {
+			for( i in groupIndexes )
 				if( i != null )
 					i.dispose();
-			matIndexes = null;
+			groupIndexes = null;
 		}
 	}
 	
@@ -92,6 +92,13 @@ class FBXModel extends MeshPrimitive {
 		var midx = new Array<hxd.IndexBuffer>();
 		var pbuf = new hxd.FloatBuffer(), nbuf = (norms == null ? null : new hxd.FloatBuffer()), sbuf = (skin == null ? null : new hxd.BytesBuffer()), tbuf = (tuvs == null ? null : new hxd.FloatBuffer());
 		var cbuf = (colors == null ? null : new hxd.FloatBuffer());
+		
+		// skin split
+		var sidx = null, stri = 0;
+		if( skin != null && skin.isSplit() ) {
+			if( multiMaterial ) throw "Multimaterial not supported with skin split";
+			sidx = [for( _ in skin.splitJoints ) new hxd.IndexBuffer()];
+		}
 		
 		// triangulize indexes : format is  A,B,...,-X : negative values mark the end of the polygon
 		var count = 0, pos = 0, matPos = 0;
@@ -147,6 +154,15 @@ class FBXModel extends MeshPrimitive {
 					idx.push(start + count - 1);
 					idx.push(start + n + 1);
 				}
+				// by-skin-group index
+				if( skin != null && skin.isSplit() ) {
+					for( n in 0...count - 2 ) {
+						var idx = sidx[skin.triangleGroups[stri++]];
+						idx.push(start + n);
+						idx.push(start + count - 1);
+						idx.push(start + n + 1);
+					}
+				}
 				// by-material index
 				if( mats != null ) {
 					var mid = mats[matPos++];
@@ -181,9 +197,14 @@ class FBXModel extends MeshPrimitive {
 		
 		indexes = engine.mem.allocIndex(idx);
 		if( mats != null ) {
-			matIndexes = [];
+			groupIndexes = [];
 			for( i in midx )
-				matIndexes.push(i == null ? null : engine.mem.allocIndex(i));
+				groupIndexes.push(i == null ? null : engine.mem.allocIndex(i));
+		}
+		if( sidx != null ) {
+			groupIndexes = [];
+			for( i in sidx )
+				groupIndexes.push(i == null ? null : engine.mem.allocIndex(i));
 		}
 	}
 	
