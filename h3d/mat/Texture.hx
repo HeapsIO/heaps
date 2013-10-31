@@ -97,6 +97,20 @@ class Texture {
 	}
 	*/
 	
+	public function clear( color : Int ) {
+		var p = hxd.Pixels.alloc(width, height, BGRA);
+		var k = 0;
+		var b = color & 0xFF, g = (color >> 8) & 0xFF, r = (color >> 16) & 0xFF, a = color >>> 24;
+		for( i in 0...width * height ) {
+			p.bytes.set(k++,b);
+			p.bytes.set(k++,g);
+			p.bytes.set(k++,r);
+			p.bytes.set(k++,a);
+		}
+		uploadPixels(p);
+		p.dispose();
+	}
+	
 	public function uploadBitmap( bmp : hxd.BitmapData, mipLevel = 0, side = 0 ) {
 		mem.driver.uploadTextureBitmap(this, bmp, mipLevel, side);
 	}
