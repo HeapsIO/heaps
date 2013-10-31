@@ -71,8 +71,6 @@ private class MeshShader extends h3d.impl.Shader {
 		var shadowTexture : Texture;
 		var tshadowPos : Float4;
 		
-		var mposInv : Matrix;
-		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
 			if( hasSkin )
@@ -89,11 +87,10 @@ private class MeshShader extends h3d.impl.Shader {
 			if( lightSystem != null ) {
 				// calculate normal
 				var n = input.normal;
-				if( mpos != null ) n *= mpos; // WRONG : we should use m33 only
-				if( hasSkin ) {
-					n = n * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)] + n * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)] + n * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)];
-					if( mpos != null ) n = n * mposInv; // should be the 3x3 part only
-				}
+				if( hasSkin )
+					n = n * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)].m33 + n * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)].m33 + n * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)].m33;
+				else if( mpos != null )
+					n *= mpos.m33;
 				var col = lightSystem.ambient;
 				n = n.normalize();
 				for( d in lightSystem.dirs )
@@ -487,11 +484,6 @@ class MeshMaterial extends Material {
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		mshader.mpos = useMatrixPos ? ctx.localPos : null;
 		mshader.mproj = ctx.camera.m;
-		if( mshader.hasSkin && useMatrixPos && mshader.lightSystem != null ) {
-			var tmp = new h3d.Matrix();
-			tmp.inverse(ctx.localPos);
-			mshader.mposInv = tmp;
-		}
 		mshader.tex = texture;
 	}
 	
