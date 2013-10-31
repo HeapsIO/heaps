@@ -45,9 +45,11 @@ class Stage3dDriver extends Driver {
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
 	var curSamplerBits : Array<Int>;
-	var inTarget : Bool;
+	var inTarget : Texture;
 	var antiAlias : Int;
-	
+	var width : Int;
+	var height : Int;
+
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
 	
@@ -357,19 +359,29 @@ class Stage3dDriver extends Driver {
 	override function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
 		if( x == 0 && y == 0 && width < 0 && height < 0 )
 			ctx.setScissorRectangle(null);
-		else
+		else {
+			var x = x < 0 ? 0 : x;
+			var y = y < 0 ? 0 : y;
+			// todo : support target texture
+			var tw = this.width;
+			var th = this.height;
+			if( x+width > tw ) width = tw - x;
+			if( y+height > th ) height = th - y;
+			if( width < 0 ) { x = 0; width = 0; };
+			if( height < 0 ) { y = 0; height = 0; };
 			ctx.setScissorRectangle(new flash.geom.Rectangle(x, y, width, height));
+		}
 	}
 
 	override function setRenderTarget( tex : Null<Texture>, useDepth : Bool, clearColor : Int ) {
 		if( tex == null ) {
 			ctx.setRenderToBackBuffer();
-			inTarget = false;
+			inTarget = null;
 		} else {
-			if( inTarget )
+			if( inTarget != null )
 				throw "Calling setTarget() while already set";
 			ctx.setRenderToTexture(tex, useDepth);
-			inTarget = true;
+			inTarget = tex;
 			reset();
 			ctx.clear( ((clearColor>>16)&0xFF)/255 , ((clearColor>>8)&0xFF)/255, (clearColor&0xFF)/255, ((clearColor>>>24)&0xFF)/255);
 		}
