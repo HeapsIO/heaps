@@ -70,13 +70,40 @@ private class MeshShader extends h3d.impl.Shader {
 		var shadowColor : Float4;
 		var shadowTexture : Texture;
 		var tshadowPos : Float4;
+
+		var isOutline : Bool;
+		var outlineColor : Int;
+		var outlineSize : Float;
+		var outlinePower : Float;
+		var outlineProj : Float3;
 		
+		var cameraPos : Float3;
+		var worldNormal : Float3;
+		var worldView : Float3;
+
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
+			var tnorm : Float3 = [0, 0, 0];
+			
+			if( lightSystem != null || isOutline ) {
+				var n = input.normal;
+				if( hasSkin )
+					n = n * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)].m33 + n * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)].m33 + n * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)].m33;
+				else if( mpos != null )
+					n *= mpos.m33;
+				tnorm = n.normalize();
+			}
 			if( hasSkin )
 				tpos.xyz = tpos * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)] + tpos * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)] + tpos * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)];
 			else if( mpos != null )
 				tpos *= mpos;
+				
+			if( isOutline ) {
+				tpos.xy += tnorm.xy * outlineProj.xy * outlineSize;
+				worldNormal = tnorm;
+				worldView = (cameraPos - tpos.xyz).normalize();
+			}
+			
 			var ppos = tpos * mproj;
 			if( hasZBias ) ppos.z += zBias;
 			out = ppos;
@@ -86,20 +113,14 @@ private class MeshShader extends h3d.impl.Shader {
 			tuv = t;
 			if( lightSystem != null ) {
 				// calculate normal
-				var n = input.normal;
-				if( hasSkin )
-					n = n * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)].m33 + n * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)].m33 + n * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)].m33;
-				else if( mpos != null )
-					n *= mpos.m33;
 				var col = lightSystem.ambient;
-				n = n.normalize();
 				for( d in lightSystem.dirs )
-					col += d.color * n.dot(-d.dir).max(0);
+					col += d.color * tnorm.dot(-d.dir).max(0);
 				for( p in lightSystem.points ) {
 					var d = tpos.xyz - p.pos;
 					var dist2 = d.dot(d);
 					var dist = dist2.sqt();
-					col += p.color * (n.dot(d).max(0) / (p.att.x * dist + p.att.y * dist2 + p.att.z * dist2 * dist));
+					col += p.color * (tnorm.dot(d).max(0) / (p.att.x * dist + p.att.y * dist2 + p.att.z * dist2 * dist));
 				}
 				if( hasVertexColor )
 					tcolor = col * input.color;
@@ -124,25 +145,31 @@ private class MeshShader extends h3d.impl.Shader {
 		var isDXT5 : Bool;
 		
 		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
-			var c = tex.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0);
-			if( fog != null ) c.a *= talpha;
-			if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).b;
-			if( killAlpha ) kill(c.a - killAlphaThreshold);
-			if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).rgb;
-			if( colorAdd != null ) c += colorAdd;
-			if( colorMul != null ) c = c * colorMul;
-			if( colorMatrix != null ) c = c * colorMatrix;
-			if( hasVertexColorAdd )
-				c.rgb += acolor;
-			if( lightSystem != null || hasVertexColor )
-				c.rgb *= tcolor;
-			if( hasShadowMap ) {
-				// ESM filtering
-				var shadow = exp( shadowColor.w * (tshadowPos.z - shadowTexture.get(tshadowPos.xy).dot([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)]))).sat();
-				c.rgb *= (1 - shadow) * shadowColor.rgb + shadow.xxx;
+			if( isOutline ) {
+				var c = outlineColor;
+				var e = 1 - worldNormal.normalize().dot(worldView.normalize());
+				out = c * e.pow(outlinePower);
+			} else {
+				var c = tex.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0);
+				if( fog != null ) c.a *= talpha;
+				if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).b;
+				if( killAlpha ) kill(c.a - killAlphaThreshold);
+				if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).rgb;
+				if( colorAdd != null ) c += colorAdd;
+				if( colorMul != null ) c = c * colorMul;
+				if( colorMatrix != null ) c = c * colorMatrix;
+				if( hasVertexColorAdd )
+					c.rgb += acolor;
+				if( lightSystem != null || hasVertexColor )
+					c.rgb *= tcolor;
+				if( hasShadowMap ) {
+					// ESM filtering
+					var shadow = exp( shadowColor.w * (tshadowPos.z - shadowTexture.get(tshadowPos.xy).dot([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)]))).sat();
+					c.rgb *= (1 - shadow) * shadowColor.rgb + shadow.xxx;
+				}
+				if( hasGlow ) c.rgb += glowTexture.get(tuv.xy).rgb * glowAmount;
+				out = c;
 			}
-			if( hasGlow ) c.rgb += glowTexture.get(tuv.xy).rgb * glowAmount;
-			out = c;
 		}
 		
 	}
@@ -485,6 +512,10 @@ class MeshMaterial extends Material {
 		mshader.mpos = useMatrixPos ? ctx.localPos : null;
 		mshader.mproj = ctx.camera.m;
 		mshader.tex = texture;
+		if( mshader.isOutline ) {
+			mshader.outlineProj = new h3d.Vector(ctx.camera.mproj._11, ctx.camera.mproj._22);
+			mshader.cameraPos = ctx.camera.pos;
+		}
 	}
 	
 	/**
@@ -668,6 +699,42 @@ class MeshMaterial extends Material {
 			mshader.hasShadowMap = false;
 		return v;
 	}
+
+	public var isOutline(get, set) : Bool;
+	public var outlineColor(get, set) : Int;
+	public var outlineSize(get, set) : Float;
+	public var outlinePower(get, set) : Float;
 	
+	inline function get_isOutline() {
+		return mshader.isOutline;
+	}
+	
+	inline function set_isOutline(v) {
+		return mshader.isOutline = v;
+	}
+
+	inline function get_outlineColor() {
+		return mshader.outlineColor;
+	}
+	
+	inline function set_outlineColor(v) {
+		return mshader.outlineColor = v;
+	}
+
+	inline function get_outlineSize() {
+		return mshader.outlineSize;
+	}
+	
+	inline function set_outlineSize(v) {
+		return mshader.outlineSize = v;
+	}
+
+	inline function get_outlinePower() {
+		return mshader.outlinePower;
+	}
+	
+	inline function set_outlinePower(v) {
+		return mshader.outlinePower = v;
+	}
 	
 }
