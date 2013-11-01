@@ -512,10 +512,12 @@ class MeshMaterial extends Material {
 		mshader.mpos = useMatrixPos ? ctx.localPos : null;
 		mshader.mproj = ctx.camera.m;
 		mshader.tex = texture;
+		#if flash
 		if( mshader.isOutline ) {
 			mshader.outlineProj = new h3d.Vector(ctx.camera.mproj._11, ctx.camera.mproj._22);
 			mshader.cameraPos = ctx.camera.pos;
 		}
+		#end
 	}
 	
 	/**
@@ -699,6 +701,8 @@ class MeshMaterial extends Material {
 			mshader.hasShadowMap = false;
 		return v;
 	}
+	
+	#if flash
 
 	public var isOutline(get, set) : Bool;
 	public var outlineColor(get, set) : Int;
@@ -737,4 +741,5 @@ class MeshMaterial extends Material {
 		return mshader.outlinePower = v;
 	}
 	
+	#end
 }

@@ -55,6 +55,16 @@ class Pixels {
 				mem.wb(p+3, a);
 			}
 			mem.end();
+		case [BGRA, RGBA]:
+			var mem = hxd.impl.Memory.select(bytes);
+			for( i in 0...width*height ) {
+				var p = i << 2;
+				var b = mem.b(p);
+				var r = mem.b(p+2);
+				mem.wb(p, r);
+				mem.wb(p+2, b);
+			}
+			mem.end();
 		default:
 			throw "Cannot convert from " + format + " to " + target;
 		}
