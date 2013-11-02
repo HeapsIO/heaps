@@ -14,8 +14,12 @@ enum Type {
 	TMat3x4;
 	TSampler2D;
 	TSamplerCube;
-	TStruct( vl : Array<VarDecl> );
+	TUntypedStruct( vl : Array<VarDecl> );
+	TStruct( vl : Array<TVar> );
+	TFun( variants : Array<FunType> );
 }
+
+typedef FunType = { args : Array<{ name : String, type : Type }>, ret : Type };
 
 class Error {
 	
@@ -95,29 +99,66 @@ typedef TVar = {
 	var name : String;
 	var type : Type;
 	var kind : VarKind;
+	@:optional var parent : TVar;
 	@:optional var qualifiers : Null<Array<VarQualifier>>;
 }
 
-typedef TFun = {
+typedef TFunction = {
 	var name : String;
 	var args : Array<TVar>;
 	var ret : Type;
 	var expr : TExpr;
 }
 
+enum TGlobal {
+	Vec2;
+	Vec3;
+	Vec4;
+	Mat3;
+	Mat3x4;
+}
+
 enum TExprDef {
 	TConst( c : Const );
 	TVar( v : TVar );
+	TFunVar( f : TFunction );
+	TGlobal( g : TGlobal );
 	TParenthesis( e : TExpr );
 	TBlock( el : Array<TExpr> );
 	TBinop( op : Binop, e1 : TExpr, e2 : TExpr );
 	TUnop( op : Unop, e1 : TExpr );
 	TVarDecl( v : TVar, ?init : TExpr );
+	TCall( e : TExpr, args : Array<TExpr> );
 }
 
 typedef TExpr = { e : TExprDef, t : Type, p : Position }
 
 typedef Shader = {
 	var vars : Array<TVar>;
-	var funs : Array<TFun>;
+	var funs : Array<TFunction>;
+}
+
+class Tools {
+	
+	public static function isStruct( v : TVar ) {
+		return switch( v.type ) { case TStruct(_): true; default: false; }
+	}
+	
+	public static function toString( t : Type ) {
+		return switch( t ) {
+		case TUntypedStruct(vl): "{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
+		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
+		default: t.getName().substr(1);
+		}
+	}
+
+}
+
+class Tools2 {
+
+	public static function toString( g : TGlobal ) {
+		var n = g.getName();
+		return n.charAt(0).toLowerCase() + n.substr(1);
+	}
+
 }

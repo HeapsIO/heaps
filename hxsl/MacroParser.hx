@@ -44,7 +44,7 @@ class MacroParser {
 			case "String": return TString;
 			}
 		case TAnonymous(fl):
-			return TStruct([for( f in fl ) {
+			return TUntypedStruct([for( f in fl ) {
 				switch( f.kind ) {
 				case FVar(t,e):
 					var v : Ast.VarDecl = {

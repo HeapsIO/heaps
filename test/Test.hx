@@ -38,9 +38,9 @@ class Proto extends hxsl.Shader {
 	
 	// each __init__ expr is out of order dependency-based
 	function __init__() {
-		transformedPosition = input.position * global.modelView;
-		projectedPosition = float4(transformedPosition, 1) * camera.viewProj;
-		transformedNormal = input.normal * global.modelView.m33;
+		transformedPosition = global.modelView.mat3x4() * vec4(input.position, 1);
+		projectedPosition = camera.viewProj * vec4(transformedPosition, 1);
+		transformedNormal = global.modelViewInverse.mat3() * input.normal;
 		camera.dir = (camera.position - transformedPosition).normalize();
 		pixelColor = color;
 	}
