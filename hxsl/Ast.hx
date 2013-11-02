@@ -14,9 +14,14 @@ enum Type {
 	TMat3x4;
 	TSampler2D;
 	TSamplerCube;
-	TUntypedStruct( vl : Array<VarDecl> );
 	TStruct( vl : Array<TVar> );
 	TFun( variants : Array<FunType> );
+	TArray( t : Type, size : SizeDecl );
+}
+
+enum SizeDecl {
+	SConst( v : Int );
+	SVar( v : TVar );
 }
 
 typedef FunType = { args : Array<{ name : String, type : Type }>, ret : Type };
@@ -55,6 +60,7 @@ enum VarKind {
 enum VarQualifier {
 	Const;
 	Private;
+	Name( n : String );
 }
 
 typedef VarDecl = {
@@ -63,7 +69,6 @@ typedef VarDecl = {
 	var kind : Null<VarKind>;
 	var qualifiers : Array<VarQualifier>;
 	var expr : Null<Expr>;
-	@:optional var realName : Null<String>;
 }
 
 typedef FunDecl = {
@@ -93,6 +98,12 @@ enum ExprDef {
 	EBlock( el : Array<Expr> );
 	EVars( v : Array<VarDecl> );
 	EFunction( f : FunDecl );
+	EIf( econd : Expr, eif : Expr, eelse : Null<Expr> );
+	EDiscard;
+	EFor( v : String, loop : Expr, block : Expr );
+	EReturn( ?e : Expr );
+	EBreak;
+	EContinue;
 }
 
 typedef TVar = {
@@ -111,11 +122,62 @@ typedef TFunction = {
 }
 
 enum TGlobal {
+	Radians;
+	Degrees;
+	Sin;
+	Cos;
+	Tan;
+	Asin;
+	Acos;
+	Atan;
+	Pow;
+	Exp;
+	Log;
+	Exp2;
+	Log2;
+	Sqrt;
+	Inversesqrt;
+	Abs;
+	Sign;
+	Floor;
+	Ceil;
+	Fract;
+	Mod;
+	Min;
+	Max;
+	//Clamp;
+	//Mix;
+	//Step;
+	//SmoothStep;
+	Length;
+	Distance;
+	Dot;
+	Cross;
+	Normalize;
+	//Faceforward;
+	//Reflect;
+	//Refract;
+	//MatrixCompMult;
+	//Any;
+	//All;
+	Texture2D;
+	TextureCube;
+	// ...other texture* operations
+	// constructors
 	Vec2;
 	Vec3;
 	Vec4;
+	Mat2;
 	Mat3;
 	Mat3x4;
+	Mat4;
+}
+
+enum Component {
+	X;
+	Y;
+	Z;
+	W;
 }
 
 enum TExprDef {
@@ -129,6 +191,13 @@ enum TExprDef {
 	TUnop( op : Unop, e1 : TExpr );
 	TVarDecl( v : TVar, ?init : TExpr );
 	TCall( e : TExpr, args : Array<TExpr> );
+	TSwiz( e : TExpr, regs : Array<Component> );
+	TIf( econd : TExpr, eif : TExpr, eelse : Null<TExpr> );
+	TDiscard;
+	TReturn( ?e : TExpr );
+	TFor( v : TVar, it : TExpr, loop : TExpr );
+	TContinue;
+	TBreak;
 }
 
 typedef TExpr = { e : TExprDef, t : Type, p : Position }
@@ -143,11 +212,23 @@ class Tools {
 	public static function isStruct( v : TVar ) {
 		return switch( v.type ) { case TStruct(_): true; default: false; }
 	}
-	
+
+	public static function isArray( v : TVar ) {
+		return switch( v.type ) { case TArray(_): true; default: false; }
+	}
+
+	public static function hasQualifier( v : TVar, q ) {
+		if( v.qualifiers != null )
+			for( q2 in v.qualifiers )
+				if( q2 == q )
+					return true;
+		return false;
+	}
+
 	public static function toString( t : Type ) {
 		return switch( t ) {
-		case TUntypedStruct(vl): "{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
 		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
+		case TArray(t, s): toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		default: t.getName().substr(1);
 		}
 	}

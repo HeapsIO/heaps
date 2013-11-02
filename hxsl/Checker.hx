@@ -2,9 +2,15 @@ package hxsl;
 
 using hxsl.Ast;
 
-enum WithType {
+private enum FieldAccess {
+	FField( e : TExpr );
+	FGlobal( g : TGlobal, arg : TExpr, variants : Array<FunType> );
+}
+
+private enum WithType {
 	NoValue;
 	Value;
+	InBlock;
 	With( t : Type );
 }
 
@@ -13,24 +19,41 @@ class Checker {
 	var vars : Map<String,TVar>;
 	var globals : Map<String,{ g : TGlobal, t : Type }>;
 	var functions : Map<String,TFunction>;
-	var toRename : Array<{ v : TVar, name : String }>;
 	var curFun : TFunction;
+	var inLoop : Bool;
 
 	public function new() {
 		globals = new Map();
 		inline function g(gl:TGlobal, vars) {
-			globals.set(gl.toString(), { t : TFun(vars), g : gl } );
 		}
-		g(Vec4, []);
-		g(Vec3, []);
-		g(Vec2, []);
-		g(Mat3, [
-			{ args : [{ name : "matrix", type : TMat4 }], ret : TMat3 },
-			{ args : [ { name : "matrix", type : TMat3x4 } ], ret : TMat3 },
-		]);
-		g(Mat3x4, [
-			{ args : [{ name : "matrix", type : TMat4 }], ret : TMat3x4 },
-		]);
+		var genType = [TFloat, TVec2, TVec3, TVec4];
+		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
+		var genFloat2 = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
+		var genWithFloat = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : TFloat } ], ret : t } ];
+		for( g in Ast.TGlobal.createAll() ) {
+			var def = switch( g ) {
+			case Vec2, Vec3, Vec4, Mat2, Mat3, Mat3x4, Mat4: [];
+			case Radians, Degrees, Cos, Sin, Tan, Asin, Acos, Exp, Log, Exp2, Log2, Sqrt, Inversesqrt, Abs, Sign, Floor, Ceil, Fract: genFloat;
+			case Atan: genFloat.concat(genFloat2);
+			case Pow: genFloat2;
+			case Mod, Min, Max:
+				genFloat2.concat(genWithFloat);
+			case Length:
+				[for( t in genType ) { args : [ { name : "value", type : t } ], ret : TFloat } ];
+			case Distance, Dot:
+				[for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : TFloat } ];
+			case Normalize:
+				genFloat;
+			case Cross:
+				[ { args : [ { name : "a", type : TVec3 }, { name : "b", type : TVec3 } ], ret : TVec3 } ];
+			case Texture2D:
+				[ { args : [ { name : "tex", type : TSampler2D }, { name : "b", type : TVec2 } ], ret : TVec4 } ];
+			case TextureCube:
+				[ { args : [ { name : "tex", type : TSamplerCube }, { name : "b", type : TVec3 } ], ret : TVec4 } ];
+			}
+			if( def != null )
+				globals.set(g.toString(), { t : TFun(def), g : g } );
+		}
 	}
 	
 	function error( msg : String, pos : Position ) : Dynamic {
@@ -40,8 +63,8 @@ class Checker {
 	public function check( shader : Expr ) : Shader {
 		vars = new Map();
 		functions = new Map();
-		toRename = [];
-
+		inLoop = false;
+		
 		var funs = [];
 		checkExpr(shader, funs);
 		var tfuns = [];
@@ -52,7 +75,6 @@ class Checker {
 				if( a.expr != null ) error("Optional argument not supported", pos);
 				if( a.kind == null ) a.kind = Local;
 				if( a.kind != Local ) error("Argument should be local", pos);
-				if( a.realName != null ) error("No real name allowed for argument", pos);
 				if( a.qualifiers.length != 0 ) error("No qualifier allowed for argument", pos);
 				{ name : a.name, kind : Local, type : a.type };
 			}];
@@ -67,10 +89,6 @@ class Checker {
 		}
 		for( i in 0...tfuns.length )
 			typeFun(tfuns[i], funs[i].f.expr);
-			
-		for( n in toRename )
-			n.v.name = n.name;
-			
 		return {
 			vars : Lambda.array(vars),
 			funs : tfuns,
@@ -124,9 +142,21 @@ class Checker {
 				return;
 			default:
 			}
+		case TSwiz(e, _):
+			checkWrite(e);
+			checkWrite(e);
+			return;
 		default:
 		}
 		error("This expression cannot be assigned", e.p);
+	}
+	
+	function typeWith( e : Expr, ?t : Type ) {
+		if( t == null )
+			return typeExpr(e, Value);
+		var e = typeExpr(e, With(t));
+		unify(e.t, t, e.p);
+		return e;
 	}
 
 	function typeExpr( e : Expr, with : WithType ) : TExpr {
@@ -142,12 +172,30 @@ class Checker {
 			};
 			TConst(c);
 		case EBlock(el):
-			switch( with ) {
-			case NoValue:
-				TBlock([for( e in el ) typeExpr(e, NoValue)]);
-			default:
-				null;
+			var old = saveVars();
+			var el = el.copy(), tl = [];
+			with = propagate(with);
+			if( el.length == 0 && with != NoValue ) error("Value expected", e.pos);
+			while( true ) {
+				var e = el.shift();
+				if( e == null ) break;
+				// split vars decls
+				switch( e.expr ) {
+				case EVars(vl) if( vl.length > 1 ):
+					var v0 = vl.shift();
+					el.unshift(e);
+					e = { expr : EVars([v0]), pos : e.pos };
+				default:
+				}
+				var ew = switch( e.expr ) {
+				case EVars(_): InBlock;
+				default: if( el.length == 0 ) with else NoValue;
+				}
+				tl.push(typeExpr(e, ew));
 			}
+			vars = old;
+			type = with == NoValue ? TVoid : tl[tl.length - 1].t;
+			TBlock(tl);
 		case EBinop(op, e1, e2):
 			var e1 = typeExpr(e1, Value);
 			var e2 = typeExpr(e2, With(e1.t));
@@ -156,21 +204,12 @@ class Checker {
 				checkWrite(e1);
 				unify(e2.t, e1.t, e2.p);
 				type = e1.t;
-			case OpMult, OpAdd, OpSub, OpDiv:
-				type = switch( [e1.t, e2.t] ) {
-				case [TVec4, TMat4], [TMat4, TVec4]:
-					TVec4;
-				default:
-					var opName = switch( op ) {
-					case OpMult: "multiply";
-					case OpAdd: "add";
-					case OpSub: "subtract";
-					case OpDiv: "divide";
-					default: throw "assert";
-					}
-					error("Cannot " + opName + " " + e1.t.toString() + " and " + e2.t.toString(), e.pos);
-				}
+			case OpAssignOp(op):
+				checkWrite(e1);
+				unify(typeBinop(op, e1, e2, e.pos), e1.t, e2.p);
+				type = e1.t;
 			default:
+				type = typeBinop(op, e1, e2, e.pos);
 			}
 			TBinop(op, e1, e2);
 		case EIdent(name):
@@ -194,26 +233,156 @@ class Checker {
 			}
 		case EField(e1, f):
 			var e1 = typeExpr(e1, Value);
-			var ef = getField(e1, f, e.pos);
+			var ef = fieldAccess(e1, f, with, e.pos);
 			if( ef == null ) error(e1.t.toString() + " has no field '" + f + "'", e.pos);
-			type = ef.t;
-			ef.e;
-		case ECall(e1, args):
-			var e1 = typeExpr(e1, Value);
-			switch( e1.t ) {
-			case TFun(variants):
-				var e = unifyCallParams(e1, args, variants, e.pos);
-				type = e.t;
-				e.e;
-			default:
-				error(e1.t.toString() + " cannot be called", e.pos);
+			switch( ef ) {
+			case FField(ef):
+				type = ef.t;
+				ef.e;
+			case FGlobal(_):
+				// not closure support
+				error("Global function must be called immediately", e.pos);
 			}
-		default:
-			null;
+		case ECall(e1, args):
+			function makeCall(e1) {
+				return switch( e1.t ) {
+				case TFun(variants):
+					var e = unifyCallParams(e1, args, variants, e.pos);
+					type = e.t;
+					e.e;
+				default:
+					error(e1.t.toString() + " cannot be called", e.pos);
+				}
+			}
+			switch( e1.expr ) {
+			case EField(e1, f):
+				var e1 = typeExpr(e1, Value);
+				var ef = fieldAccess(e1, f, with, e.pos);
+				if( ef == null ) error(e1.t.toString() + " has no field '" + f + "'", e.pos);
+				switch( ef ) {
+				case FField(ef):
+					makeCall(ef);
+				case FGlobal(g, arg, variants):
+					var eg = { e : TGlobal(g), t : TFun(variants), p : e1.p };
+					if( variants.length == 0 ) {
+						var args = [for( a in args ) typeExpr(a, Value)];
+						args.unshift(arg);
+						var e = specialGlobal(g, eg, args, e.pos);
+						type = e.t;
+						e.e;
+					} else {
+						var e = unifyCallParams(eg, args, variants, e.pos);
+						switch( [e.e, eg.t] ) {
+						case [TCall(_, args), TFun([f])]:
+							args.unshift(arg);
+							f.args.unshift({ name : "_", type : arg.t });
+						default:
+							throw "assert";
+						}
+						type = e.t;
+						e.e;
+					}
+				}
+			default:
+				makeCall(typeExpr(e1, Value));
+			}
+		case EParenthesis(e):
+			var e = typeExpr(e, with);
+			type = e.t;
+			TParenthesis(e);
+		case EFunction(_):
+			throw "assert";
+		case EVars(vl):
+			if( with != InBlock )
+				error("Cannot declare a variable outside of a block", e.pos);
+			if( vl.length != 1 ) throw "assert";
+			var v = vl[0];
+			if( v.kind == null ) v.kind = Local;
+			if( v.kind != Local ) error("Should be local var", e.pos);
+			if( v.qualifiers.length != 0 ) error("Unexpected qualifier", e.pos);
+			var tv = makeVar(vl[0],e.pos);
+			var init = v.expr == null ? null : typeWith(v.expr, tv.type);
+			if( tv.type == null ) {
+				if( init == null ) error("Type required for unitialized local var", e.pos);
+				tv.type = init.t;
+			}
+			vars.set(tv.name, tv);
+			TVarDecl(tv, init);
+		case EUnop(op,e1):
+			var e1 = typeExpr(e1, Value);
+			switch( op ) {
+			case OpNot:
+				unifyExpr(e1, TBool);
+				type = TBool;
+				TUnop(op, e1);
+			case OpNeg:
+				switch( e1.t ) {
+				case TFloat, TInt, TVec2, TVec3, TVec4:
+				default: error("Cannot negate " + e1.t.toString(), e.pos);
+				}
+				type = e1.t;
+				TUnop(op, e1);
+			default:
+				error("Operation non supported", e.pos);
+			}
+		case EIf(cond, e1, e2):
+			with = propagate(with);
+			var cond = typeWith(cond, TBool);
+			var e1 = typeExpr(e1, with);
+			var e2 = e2 == null ? null : typeExpr(e2, with);
+			if( with == NoValue ) {
+				type = TVoid;
+				TIf(cond, e1, e2);
+			} else {
+				if( e2 == null ) error("Missing else", e.pos);
+				if( tryUnify(e1.t, e2.t) )
+					type = e1.t;
+				else {
+					unifyExpr(e2, e1.t);
+					type = e2.t;
+				}
+				TIf(cond, e1, e2);
+			}
+		case EDiscard:
+			type = TVoid;
+			TDiscard;
+		case EReturn(e):
+			if( (e == null) != (curFun.ret == TVoid) )
+				error("This function should return " + curFun.ret.toString(), e.pos);
+			var e = e == null ? null : typeWith(e, curFun.ret);
+			TReturn(e);
+		case EFor(v, loop, block):
+			var loop = typeExpr(loop, Value);
+			switch( loop.t ) {
+			case TArray(t, _):
+				var v : TVar = {
+					name : v,
+					type : t,
+					kind : Local,
+				};
+				var old = vars.get(v.name);
+				vars.set(v.name, v);
+				var block = typeExpr(block, NoValue);
+				if( old == null ) vars.remove(v.name) else vars.set(v.name, old);
+				TFor(v, loop, block);
+			default:
+				error("Cannot iterate on " + loop.t.toString(), loop.p);
+			}
+		case EContinue:
+			if( !inLoop ) error("Continue outside loop", e.pos);
+			TContinue;
+		case EBreak:
+			if( !inLoop ) error("Break outside loop", e.pos);
+			TBreak;
 		}
-		if( ed == null || type == null )
-			throw "TODO " + e.expr;
 		return { e : ed, t : type, p : e.pos };
+	}
+	
+	function propagate( with : WithType ) {
+		return switch( with ) {
+		case InBlock: NoValue;
+		default: with;
+		}
 	}
 	
 	function checkExpr( e : Expr, funs : Array<{ f : FunDecl, p : Position }> ) {
@@ -229,35 +398,52 @@ class Checker {
 				if( v.expr != null ) error("Cannot initialize variable declaration", v.expr.pos);
 				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
-				declVar(v);
+				vars.set(v.name, makeVar(v, e.pos));
 			}
 		default:
 			error("This expression is not allowed at shader declaration level", e.pos);
 		}
 	}
 	
-	function declVar( v : VarDecl, ?parent : TVar ) {
+	function makeVar( v : VarDecl, pos : Position ) {
 		var tv : TVar = {
 			name : v.name,
 			kind : v.kind,
 			type : v.type,
 		};
-		if( parent != null )
-			tv.parent = parent;
 		if( v.qualifiers.length > 0 )
 			tv.qualifiers = v.qualifiers;
-		vars.set(tv.name, tv);
-		if( v.realName != null )
-			toRename.push( { v : tv, name : v.realName } );
-		switch( v.type ) {
-		case TUntypedStruct(vl):
-			tv.type = TStruct([for( v in vl ) declVar(v, tv)]);
-		default:
-		}
+		if( tv.type != null )
+			tv.type = makeVarType(tv.type, tv, pos);
 		return tv;
 	}
 	
-	function getField( e : TExpr, f : String, pos : Position ) : TExpr {
+	function makeVarType( t : Type, parent : TVar, pos : Position ) {
+		switch( t ) {
+		case TStruct(vl):
+			var vl = vl.copy();
+			for( v in vl ) {
+				v.parent = parent;
+				if( v.kind == null ) v.kind = parent.kind;
+				v.type = makeVarType(v.type, v, pos);
+			}
+			return TStruct(vl);
+		case TArray(t, size):
+			var s = switch( size ) {
+			case SConst(_): size;
+			case SVar(v):
+				var v2 = vars.get(v.name);
+				if( v2 == null ) error("Array size variable not found", pos);
+				if( !v2.hasQualifier(Const) ) error("Array size variable should be a constant", pos);
+				SVar(v2);
+			}
+			return TArray(makeVarType(t,parent,pos), s);
+		default:
+			return t;
+		}
+	}
+	
+	function fieldAccess( e : TExpr, f : String, with : WithType, pos : Position ) : FieldAccess {
 		var ef = switch( e.t ) {
 		case TStruct(vl):
 			var found = null;
@@ -273,11 +459,62 @@ class Checker {
 		default:
 			null;
 		}
-		return ef;
+		if( ef != null )
+			return FField(ef);
+		var g = globals.get(f);
+		if( g == null ) {
+			var gl : TGlobal = switch( [f, e.t] ) {
+			case ["get", TSampler2D]: Texture2D;
+			case ["get", TSamplerCube]: TextureCube;
+			default: null;
+			}
+			if( gl != null )
+				g = globals.get(gl.toString());
+		}
+		if( g != null ) {
+			switch( g.t ) {
+			case TFun(variants):
+				var sel = [];
+				for( v in variants ) {
+					if( v.args.length == 0 || !tryUnify(e.t, v.args[0].type) ) continue;
+					var args = v.args.copy();
+					args.shift();
+					sel.push({ args : args, ret : v.ret });
+				}
+				if( sel.length > 0 || variants.length == 0 )
+					return FGlobal(g.g, e, sel);
+			default:
+			}
+		}
+		// swizzle ?
+		var ncomps = switch( e.t ) {
+		case TFloat: 1;
+		case TVec2: 2;
+		case TVec3: 3;
+		case TVec4: 4;
+		default: 0;
+		}
+		if( ncomps > 0 && f.length < 4 ) {
+			var str = "xrsygtabpwaq";
+			var comps = [X, Y, Z, W];
+			var cat = -1;
+			var out = [];
+			for( i in 0...f.length ) {
+				var idx = str.indexOf(f.charAt(i));
+				if( idx < 0 ) return null;
+				var icat = idx % 3;
+				if( cat < 0 ) cat = icat else if( icat != cat ) return null; // down't allow .ryz
+				var cid = Std.int(idx / 3);
+				if( cid >= ncomps )
+					error(e.t.toString() + " does not have component " + f.charAt(i), pos);
+				out.push(comps[cid]);
+			}
+			return FField( { e : TSwiz(e, out), t:[null, TFloat, TVec2, TVec3, TVec4][out.length], p:pos } );
+		}
+		return null;
 	}
 
-	function specialGlobal( g : TGlobal, e : TExpr, args : Array<Expr>, pos : Position ) : TExpr {
-		var args = [for( a in args ) typeExpr(a, Value)];
+	function specialGlobal( g : TGlobal, e : TExpr, args : Array<TExpr>, pos : Position ) : TExpr {
 		var type = null;
 		inline function checkLength(n) {
 			var t = 0;
@@ -304,6 +541,24 @@ class Checker {
 		case Vec4:
 			checkLength(4);
 			type = TVec4;
+		case Mat3x4:
+			switch( ([for( a in args ) a.t]) ) {
+			case [TMat4]: type = TMat3x4;
+			default:
+				error("Cannot apply " + g.toString() + " to these parameters", pos);
+			}
+		case Mat3:
+			switch( ([for( a in args ) a.t]) ) {
+			case [TMat3x4|TMat4]: type = TMat3;
+			default:
+				error("Cannot apply " + g.toString() + " to these parameters", pos);
+			}
+		case Mat4:
+			switch( ([for( a in args ) a.t]) ) {
+			case [TMat4]: type = TMat4;
+			default:
+				error("Cannot apply " + g.toString() + " to these parameters", pos);
+			}
 		default:
 		}
 		if( type == null )
@@ -323,7 +578,7 @@ class Checker {
 		case [] if( variants.length == 0 ):
 			switch( efun.e ) {
 			case TGlobal(g):
-				return specialGlobal(g, efun, args, pos);
+				return specialGlobal(g, efun, [for( a in args ) typeExpr(a,Value)], pos);
 			default:
 				throw "assert";
 			}
@@ -337,7 +592,7 @@ class Checker {
 				try {
 					unifyExpr(a, ft);
 				} catch( e : Error ) {
-					e.msg += " for arg " + f.args[i].name;
+					e.msg += " for argument '" + f.args[i].name + "'";
 					throw e;
 				}
 				targs.push(a);
@@ -367,12 +622,57 @@ class Checker {
 				try {
 					unify(targs[i].t, bestMatch.args[i].type, targs[i].p);
 				} catch( e : Error ) {
-					e.msg += " for arg " + bestMatch.args[i].name;
+					e.msg += " for argument '" + bestMatch.args[i].name + "'";
 					throw e;
 				}
 			throw "assert";
 		}
 		
 	}
+
 	
+	function typeBinop(op, e1:TExpr, e2:TExpr, pos : Position) {
+		return switch( op ) {
+		case OpAssign, OpAssignOp(_): throw "assert";
+		case OpMult, OpAdd, OpSub, OpDiv:
+			switch( [op, e1.t, e2.t] ) {
+			case [OpMult,TVec4, TMat4], [OpMult,TMat4, TVec4]:
+				TVec4;
+			case [OpMult,TMat3x4, TVec4]:
+				TVec3;
+			case [OpMult,TMat3, TVec3], [OpMult,TVec3, TMat3]:
+				TVec3;
+			case [_, TInt, TInt]: TInt;
+			case [_, TFloat, TFloat]: TFloat;
+			case [_, TVec2, TVec2]: TVec2;
+			case [_, TVec3, TVec3]: TVec3;
+			case [_, TVec4, TVec4]: TVec4;
+			case [_, TFloat, (TVec2 | TVec3 | TVec4)]: e2.t;
+			case [_, (TVec2 | TVec3 | TVec4), TFloat]: e1.t;
+			default:
+				var opName = switch( op ) {
+				case OpMult: "multiply";
+				case OpAdd: "add";
+				case OpSub: "subtract";
+				case OpDiv: "divide";
+				default: throw "assert";
+				}
+				error("Cannot " + opName + " " + e1.t.toString() + " and " + e2.t.toString(), pos);
+			}
+		case OpLt, OpGt, OpLte, OpGte, OpEq, OpNotEq:
+			switch( e1.t ) {
+			case TFloat, TBool, TInt, TString:
+				unifyExpr(e2, e1.t);
+				TBool;
+			default:
+				error("Cannot compare " + e1.t.toString() + " and " + e2.t.toString(), pos);
+			}
+		case OpBoolAnd, OpBoolOr:
+			unifyExpr(e1, TBool);
+			unifyExpr(e2, TBool);
+			TBool;
+		default:
+			error("TODO", pos);
+		}
+	}
 }

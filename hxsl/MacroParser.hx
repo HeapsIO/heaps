@@ -12,6 +12,13 @@ class MacroParser {
 	}
 	
 	function applyMeta( m : MetadataEntry, v : Ast.VarDecl ) {
+		switch( m.params ) {
+		case []:
+		case [ { expr : EConst(CString(n)), pos : pos } ]:
+			v.qualifiers.push(Name(n));
+		default:
+			error("Invalid meta parameter", m.pos);
+		}
 		switch( m.name ) {
 		case "var":
 			if( v.kind == null ) v.kind = Var else error("Duplicate type qualifier", m.pos);
@@ -23,7 +30,7 @@ class MacroParser {
 			if( v.kind == null ) v.kind = Input else error("Duplicate type qualifier", m.pos);
 		case "const":
 			v.qualifiers.push(Const);
-		case "Private":
+		case "private":
 			v.qualifiers.push(Private);
 		default:
 			error("Unsupported qualifier " + m.name, m.pos);
@@ -32,8 +39,10 @@ class MacroParser {
 	
 	public function parseType( t : ComplexType, pos : Position ) : Ast.Type {
 		switch( t ) {
-		case TPath( { pack : [], name : name, sub : null } ):
+		case TPath( { pack : [], name : name, sub : null, params : [] } ):
 			switch( name ) {
+			case "Int": return TInt;
+			case "Bool": return TBool;
 			case "Float": return TFloat;
 			case "Vec2": return TVec2;
 			case "Vec3": return TVec3;
@@ -42,21 +51,36 @@ class MacroParser {
 			case "Mat3": return TMat3;
 			case "Mat3x4": return TMat3x4;
 			case "String": return TString;
+			case "Sampler2D": return TSampler2D;
+			case "SamplerCube": return TSamplerCube;
 			}
+		case TPath( { pack : [], name : "Array", sub : null, params : [t, size] } ):
+			var t = switch( t ) {
+			case TPType(t): parseType(t, pos);
+			default: null;
+			}
+			var size : Ast.SizeDecl = switch( size ) {
+			case TPExpr({ expr : EConst(CInt(v)) }): SConst(Std.parseInt(v));
+			case TPType(TPath( { pack : [], name : name, sub : null, params : [] } )): SVar( { type : null, name : name, kind : null } );
+			default: null;
+			}
+			if( t != null && size != null )
+				return TArray(t, size);
 		case TAnonymous(fl):
-			return TUntypedStruct([for( f in fl ) {
+			return TStruct([for( f in fl ) {
 				switch( f.kind ) {
 				case FVar(t,e):
+					if( e != null ) error("No expression allowed in structure", e.pos);
 					var v : Ast.VarDecl = {
 						name : f.name,
 						type : t == null ? null : parseType(t, f.pos),
 						qualifiers : [],
 						kind : null,
-						expr : e == null ? null : parseExpr(e),
+						expr : null,
 					};
 					for( m in f.meta )
 						applyMeta(m,v);
-					v;
+					{ name : v.name, type : v.type, kind : v.kind, qualifiers : v.qualifiers };
 				default:
 					error("Only variables are allowed in structures", f.pos);
 				}
@@ -125,6 +149,8 @@ class MacroParser {
 				EConst(CTrue);
 			case CIdent("false"):
 				EConst(CFalse);
+			case CIdent("discard"):
+				EDiscard;
 			case CIdent(s):
 				EIdent(s);
 			case CFloat(f):
@@ -138,6 +164,16 @@ class MacroParser {
 			ECall(parseExpr(e), [for( a in args ) parseExpr(a)]);
 		case EParenthesis(e):
 			EParenthesis(parseExpr(e));
+		case EIf(cond, eif, eelse):
+			EIf(parseExpr(cond), parseExpr(eif), eelse == null ? null : parseExpr(eelse));
+		case EFor( { expr : EIn( { expr : EConst(CIdent(n)) }, eloop) }, eblock):
+			EFor(n, parseExpr(eloop), parseExpr(eblock));
+		case EReturn(e):
+			EReturn(e == null ? null : parseExpr(e));
+		case EBreak:
+			EBreak;
+		case EContinue:
+			EContinue;
 		default:
 			null;
 		};
