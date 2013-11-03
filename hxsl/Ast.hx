@@ -6,9 +6,7 @@ enum Type {
 	TBool;
 	TFloat;
 	TString;
-	TVec2;
-	TVec3;
-	TVec4;
+	TVec( size : Int, t : VecType );
 	TMat3;
 	TMat4;
 	TMat3x4;
@@ -17,6 +15,12 @@ enum Type {
 	TStruct( vl : Array<TVar> );
 	TFun( variants : Array<FunType> );
 	TArray( t : Type, size : SizeDecl );
+}
+
+enum VecType {
+	VInt;
+	VFloat;
+	VBool;
 }
 
 enum SizeDecl {
@@ -60,6 +64,7 @@ enum VarKind {
 enum VarQualifier {
 	Const;
 	Private;
+	Nullable;
 	Name( n : String );
 }
 
@@ -104,6 +109,7 @@ enum ExprDef {
 	EReturn( ?e : Expr );
 	EBreak;
 	EContinue;
+	EArray( e : Expr, eindex : Expr );
 }
 
 typedef TVar = {
@@ -167,10 +173,18 @@ enum TGlobal {
 	Vec2;
 	Vec3;
 	Vec4;
+	IVec2;
+	IVec3;
+	IVec4;
+	BVec2;
+	BVec3;
+	BVec4;
 	Mat2;
 	Mat3;
-	Mat3x4;
 	Mat4;
+	// extra (not in GLSL ES)
+	Mat3x4;
+	Saturate;
 }
 
 enum Component {
@@ -198,6 +212,7 @@ enum TExprDef {
 	TFor( v : TVar, it : TExpr, loop : TExpr );
 	TContinue;
 	TBreak;
+	TArray( e : TExpr, index : TExpr );
 }
 
 typedef TExpr = { e : TExprDef, t : Type, p : Position }
@@ -227,12 +242,27 @@ class Tools {
 
 	public static function toString( t : Type ) {
 		return switch( t ) {
+		case TVec(size, t):
+			var prefix = switch( t ) {
+			case VFloat: "";
+			case VInt: "I";
+			case VBool: "B";
+			}
+			prefix + "Vec" + size;
 		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
 		case TArray(t, s): toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		default: t.getName().substr(1);
 		}
 	}
 
+	public static function toType( t : VecType ) {
+		return switch( t ) {
+		case VFloat: TFloat;
+		case VBool: TBool;
+		case VInt: TInt;
+		};
+	}
+	
 }
 
 class Tools2 {

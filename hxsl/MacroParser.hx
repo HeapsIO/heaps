@@ -14,7 +14,7 @@ class MacroParser {
 	function applyMeta( m : MetadataEntry, v : Ast.VarDecl ) {
 		switch( m.params ) {
 		case []:
-		case [ { expr : EConst(CString(n)), pos : pos } ]:
+		case [ { expr : EConst(CString(n)), pos : pos } ] if( m.name == "var" || m.name == "global" || m.name == "input" ):
 			v.qualifiers.push(Name(n));
 		default:
 			error("Invalid meta parameter", m.pos);
@@ -32,6 +32,8 @@ class MacroParser {
 			v.qualifiers.push(Const);
 		case "private":
 			v.qualifiers.push(Private);
+		case "nullable":
+			v.qualifiers.push(Nullable);
 		default:
 			error("Unsupported qualifier " + m.name, m.pos);
 		}
@@ -44,9 +46,15 @@ class MacroParser {
 			case "Int": return TInt;
 			case "Bool": return TBool;
 			case "Float": return TFloat;
-			case "Vec2": return TVec2;
-			case "Vec3": return TVec3;
-			case "Vec4": return TVec4;
+			case "Vec2": return TVec(2,VFloat);
+			case "Vec3": return TVec(3,VFloat);
+			case "Vec4": return TVec(4,VFloat);
+			case "IVec2": return TVec(2,VInt);
+			case "IVec3": return TVec(3,VInt);
+			case "IVec4": return TVec(4,VInt);
+			case "BVec2": return TVec(2,VBool);
+			case "BVec3": return TVec(3,VBool);
+			case "BVec4": return TVec(4,VBool);
 			case "Mat4": return TMat4;
 			case "Mat3": return TMat3;
 			case "Mat3x4": return TMat3x4;
@@ -164,7 +172,7 @@ class MacroParser {
 			ECall(parseExpr(e), [for( a in args ) parseExpr(a)]);
 		case EParenthesis(e):
 			EParenthesis(parseExpr(e));
-		case EIf(cond, eif, eelse):
+		case EIf(cond, eif, eelse), ETernary(cond, eif, eelse):
 			EIf(parseExpr(cond), parseExpr(eif), eelse == null ? null : parseExpr(eelse));
 		case EFor( { expr : EIn( { expr : EConst(CIdent(n)) }, eloop) }, eblock):
 			EFor(n, parseExpr(eloop), parseExpr(eblock));
@@ -174,6 +182,8 @@ class MacroParser {
 			EBreak;
 		case EContinue:
 			EContinue;
+		case EArray(e1, e2):
+			EArray(parseExpr(e1), parseExpr(e2));
 		default:
 			null;
 		};

@@ -42,7 +42,7 @@ class Proto extends hxsl.Shader {
 	
 	// each __init__ expr is out of order dependency-based
 	function __init__() {
-		transformedPosition = global.modelView.mat3x4() * vec4(input.position, 1);
+		transformedPosition = global.modelView.mat3x4() * input.position;
 		projectedPosition = camera.viewProj * vec4(transformedPosition, 1);
 		transformedNormal = global.modelViewInverse.mat3() * input.normal;
 		camera.dir = (camera.position - transformedPosition).normalize();
@@ -206,6 +206,121 @@ static var SRC = {
 	function fragment() {
 		var e = 1. - transformedNormal.normalize().dot(camera.dir.normalize());
 		output.color = color * e.pow(power);
+	}
+
+}}
+
+// ----------------------------------------------------------------------------------------------------------------
+
+class Skinning extends hxsl.Shader {
+static var SRC = {
+
+	@input var input : {
+		pos : Vec3,
+		normal : Vec3,
+		weights : Vec3,
+		indexes : IVec3,
+	};
+	
+	var transformedPosition : Vec3;
+	var transformedNormal : Vec3;
+	
+	@const var MaxBones : Int;
+	@param var skinMatrixes : Array< Mat3x4, MaxBones >;
+	
+	function vertex() {
+		var p = input.pos, n = input.normal;
+		// TODO : accessing skimMatrixes should multiply by 255*3 in AGAL (byte converted to [0-1] float + stride for 3 vec4 per element)
+		transformedPosition = skinMatrixes[input.indexes.x] * (p * input.weights.x) + skinMatrixes[input.indexes.y] * (p * input.weights.y) + skinMatrixes[input.indexes.z] * (p * input.weights.z);
+		transformedNormal = skinMatrixes[input.indexes.x].mat3() * (n * input.weights.x) + skinMatrixes[input.indexes.y].mat3() * (n * input.weights.y) + skinMatrixes[input.indexes.z].mat3() * (n * input.weights.z);
+	}
+
+}}
+
+// ----------------------------------------------------------------------------------------------------------------
+
+class ApplyShadow extends hxsl.Shader {
+static var SRC = {
+	
+	@global var shadow : {
+		var map : Sampler2D;
+		var color : Vec3;
+		var power : Float;
+		var lightProj : Mat4;
+		var lightCenter : Mat4;
+	};
+
+	// Nullable params, allow to check them in shaders. Will create a isNull Const automatically
+	// actually use the global values unless object-specific local values are defined
+	@param @nullable var shadowColor : Vec3;
+	@param @nullable var shadowPower : Float;
+
+	var pixelColor : Vec4;
+	var transformedPosition : Vec3;
+
+	@private var tshadowPos : Vec3;
+	
+	function vertex() {
+		tshadowPos = shadow.lightProj.mat3x4() * (shadow.lightCenter.mat3x4() * transformedPosition);
+	}
+	
+	function fragment() {
+		var s = exp( (shadowPower == null ? shadow.power : shadowPower) * (tshadowPos.z - shadow.map.get(tshadowPos.xy).dot(vec4(1, 1. / 255., 1. / (255. * 255.), 1. / (255. * 255. * 255.))))).saturate();
+		pixelColor.rgb *= (1. - s) * (shadowColor == null ? shadow.color : shadowColor) + s.xxx;
+	}
+
+}}
+
+// ----------------------------------------------------------------------------------------------------------------
+
+class DepthMap extends hxsl.Shader {
+static var SRC = {
+
+	@global var depthDelta : Float;
+	@private var distance : Float;
+	
+	// the pass setup will have to declare that it will write distanceColor to its rendertarget
+	var depthColor : Vec4;
+
+	var projectedPosition : Vec4;
+	
+	function vertex() {
+		distance = projectedPosition.z / projectedPosition.w + depthDelta;
+	}
+	
+	function fragment() {
+		var color = (distance.xxxx * vec4(1.,255.,255.*255.,255.*255.*255.)).fract();
+		depthColor = color - color.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.);
+	}
+
+}}
+
+// ----------------------------------------------------------------------------------------------------------------
+
+class DistanceMap extends hxsl.Shader {
+static var SRC = {
+
+	@global var distance : {
+		var center : Vec3;
+		var scale : Float;
+		var power : Float;
+	};
+
+	@private var dist : Vec3;
+	
+	// the pass will have to declare that it will write distanceColor to its rendertarget
+	var distanceColor : Vec4;
+	
+	var transformedPosition : Vec3;
+
+	function vertex() {
+		dist = (transformedPosition - distance.center).abs();
+	}
+	
+	function fragment() {
+		var d = (dist.length() * distance.scale).pow(distance.power);
+		var color = (d.xxxx * vec4(1.,255.,255.*255.,255.*255.*255.)).fract();
+		distanceColor = color - color.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.);
 	}
 
 }}

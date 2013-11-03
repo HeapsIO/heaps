@@ -16,6 +16,10 @@ private enum WithType {
 
 class Checker {
 	
+	static var vec2 = TVec(2, VFloat);
+	static var vec3 = TVec(3, VFloat);
+	static var vec4 = TVec(4, VFloat);
+	
 	var vars : Map<String,TVar>;
 	var globals : Map<String,{ g : TGlobal, t : Type }>;
 	var functions : Map<String,TFunction>;
@@ -26,18 +30,20 @@ class Checker {
 		globals = new Map();
 		inline function g(gl:TGlobal, vars) {
 		}
-		var genType = [TFloat, TVec2, TVec3, TVec4];
+		var genType = [TFloat, vec2, vec3, vec4];
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var genFloat2 = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
 		var genWithFloat = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : TFloat } ], ret : t } ];
 		for( g in Ast.TGlobal.createAll() ) {
 			var def = switch( g ) {
-			case Vec2, Vec3, Vec4, Mat2, Mat3, Mat3x4, Mat4: [];
+			case Vec2, Vec3, Vec4, Mat2, Mat3, Mat3x4, Mat4, IVec2, IVec3, IVec4, BVec2, BVec3, BVec4: [];
 			case Radians, Degrees, Cos, Sin, Tan, Asin, Acos, Exp, Log, Exp2, Log2, Sqrt, Inversesqrt, Abs, Sign, Floor, Ceil, Fract: genFloat;
 			case Atan: genFloat.concat(genFloat2);
 			case Pow: genFloat2;
 			case Mod, Min, Max:
 				genFloat2.concat(genWithFloat);
+			case Saturate:
+				[ { args : [ { name : "value", type : TFloat } ], ret : TFloat } ];
 			case Length:
 				[for( t in genType ) { args : [ { name : "value", type : t } ], ret : TFloat } ];
 			case Distance, Dot:
@@ -45,11 +51,11 @@ class Checker {
 			case Normalize:
 				genFloat;
 			case Cross:
-				[ { args : [ { name : "a", type : TVec3 }, { name : "b", type : TVec3 } ], ret : TVec3 } ];
+				[ { args : [ { name : "a", type : vec3 }, { name : "b", type : vec3 } ], ret : vec3 } ];
 			case Texture2D:
-				[ { args : [ { name : "tex", type : TSampler2D }, { name : "b", type : TVec2 } ], ret : TVec4 } ];
+				[ { args : [ { name : "tex", type : TSampler2D }, { name : "b", type : vec2 } ], ret : vec4 } ];
 			case TextureCube:
-				[ { args : [ { name : "tex", type : TSamplerCube }, { name : "b", type : TVec3 } ], ret : TVec4 } ];
+				[ { args : [ { name : "tex", type : TSamplerCube }, { name : "b", type : vec3 } ], ret : vec4 } ];
 			}
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );
@@ -114,6 +120,11 @@ class Checker {
 	function tryUnify( t1 : Type, t2 : Type ) {
 		if( t1 == t2 )
 			return true;
+		switch( [t1, t2] ) {
+		case [TVec(s1, t1), TVec(s2, t2)] if( s1 == s2 && t1 == t2 ):
+			return true;
+		default:
+		}
 		return false;
 	}
 	
@@ -317,7 +328,7 @@ class Checker {
 				TUnop(op, e1);
 			case OpNeg:
 				switch( e1.t ) {
-				case TFloat, TInt, TVec2, TVec3, TVec4:
+				case TFloat, TInt, TVec(_,VFloat|VInt):
 				default: error("Cannot negate " + e1.t.toString(), e.pos);
 				}
 				type = e1.t;
@@ -374,6 +385,23 @@ class Checker {
 		case EBreak:
 			if( !inLoop ) error("Break outside loop", e.pos);
 			TBreak;
+		case EArray(e1, e2):
+			var e1 = typeExpr(e1, Value);
+			var e2 = typeWith(e2, TInt);
+			switch( e1.t ) {
+			case TArray(t, size):
+				switch( [size, e2.e] ) {
+				case [SConst(v), TConst(CInt(i))] if( i >= v ):
+					error("Indexing outside array bounds", e.pos);
+				case [_, TConst(CInt(i))] if( i < 0 ):
+					error("Cannot index with negative value", e.pos);
+				default:
+				}
+				type = t;
+				TExprDef.TArray(e1, e2);
+			default:
+				error("Cannot index " + e1.t.toString() + " : should be an array", e.pos);
+			}
 		}
 		return { e : ed, t : type, p : e.pos };
 	}
@@ -487,15 +515,16 @@ class Checker {
 			}
 		}
 		// swizzle ?
+		var stype;
 		var ncomps = switch( e.t ) {
-		case TFloat: 1;
-		case TVec2: 2;
-		case TVec3: 3;
-		case TVec4: 4;
+		case TFloat: stype = VFloat; 1;
+		case TInt: stype = VInt; 1;
+		case TBool: stype = VBool; 1;
+		case TVec(size, t): stype = t; size;
 		default: 0;
 		}
-		if( ncomps > 0 && f.length < 4 ) {
-			var str = "xrsygtabpwaq";
+		if( ncomps > 0 && f.length <= 4 ) {
+			var str = "xrsygtzbpwaq";
 			var comps = [X, Y, Z, W];
 			var cat = -1;
 			var out = [];
@@ -509,38 +538,56 @@ class Checker {
 					error(e.t.toString() + " does not have component " + f.charAt(i), pos);
 				out.push(comps[cid]);
 			}
-			return FField( { e : TSwiz(e, out), t:[null, TFloat, TVec2, TVec3, TVec4][out.length], p:pos } );
+			return FField( { e : TSwiz(e, out), t: out.length == 1 ? stype.toType() : TVec(out.length,stype), p:pos } );
 		}
 		return null;
 	}
 
 	function specialGlobal( g : TGlobal, e : TExpr, args : Array<TExpr>, pos : Position ) : TExpr {
 		var type = null;
-		inline function checkLength(n) {
-			var t = 0;
+		inline function checkLength(n,t) {
+			var tsize = 0;
 			for( a in args )
 				switch( a.t ) {
-				case TFloat: t++;
-				case TVec2: t += 2;
-				case TVec3: t += 3;
-				case TVec4: t += 4;
+				case TVec(size, k):
+					if( k.toType() != t )
+						unify(a.t, t, a.p);
+					tsize += size;
 				default:
-					unifyExpr(a, TFloat);
-					t++; // if we manage to unify
+					unifyExpr(a, t);
+					tsize++; // if we manage to unify
 				}
-			if( t != n )
-				error(g.toString() + " requires " + n + " floats but has " + t, pos);
+			if( tsize != n )
+				error(g.toString() + " requires " + n + " "+t.toString()+" values but has " + tsize, pos);
 		}
 		switch( g ) {
 		case Vec2:
-			checkLength(2);
-			type = TVec2;
+			checkLength(2,TFloat);
+			type = TVec(2,VFloat);
 		case Vec3:
-			checkLength(3);
-			type = TVec3;
+			checkLength(3,TFloat);
+			type = TVec(3,VFloat);
 		case Vec4:
-			checkLength(4);
-			type = TVec4;
+			checkLength(4,TFloat);
+			type = TVec(4,VFloat);
+		case IVec2:
+			checkLength(2,TInt);
+			type = TVec(2,VInt);
+		case IVec3:
+			checkLength(3,TInt);
+			type = TVec(3,VInt);
+		case IVec4:
+			checkLength(4,TInt);
+			type = TVec(4,VInt);
+		case BVec2:
+			checkLength(2,TBool);
+			type = TVec(2,VBool);
+		case BVec3:
+			checkLength(3,TBool);
+			type = TVec(3,VBool);
+		case BVec4:
+			checkLength(4,TBool);
+			type = TVec(4,VBool);
 		case Mat3x4:
 			switch( ([for( a in args ) a.t]) ) {
 			case [TMat4]: type = TMat3x4;
@@ -636,19 +683,17 @@ class Checker {
 		case OpAssign, OpAssignOp(_): throw "assert";
 		case OpMult, OpAdd, OpSub, OpDiv:
 			switch( [op, e1.t, e2.t] ) {
-			case [OpMult,TVec4, TMat4], [OpMult,TMat4, TVec4]:
-				TVec4;
-			case [OpMult,TMat3x4, TVec4]:
-				TVec3;
-			case [OpMult,TMat3, TVec3], [OpMult,TVec3, TMat3]:
-				TVec3;
+			case [OpMult,TVec(4,VFloat), TMat4], [OpMult,TMat4, TVec(4,VFloat)]:
+				vec4;
+			case [OpMult,TMat3x4, TVec(3,VFloat)]:
+				vec3;
+			case [OpMult,TMat3, TVec(3,VFloat)], [OpMult, TVec(3,VFloat), TMat3]:
+				vec3;
 			case [_, TInt, TInt]: TInt;
 			case [_, TFloat, TFloat]: TFloat;
-			case [_, TVec2, TVec2]: TVec2;
-			case [_, TVec3, TVec3]: TVec3;
-			case [_, TVec4, TVec4]: TVec4;
-			case [_, TFloat, (TVec2 | TVec3 | TVec4)]: e2.t;
-			case [_, (TVec2 | TVec3 | TVec4), TFloat]: e1.t;
+			case [_, TVec(a,VFloat), TVec(b,VFloat)] if( a == b ): TVec(a,VFloat);
+			case [_, TFloat, TVec(_,VFloat)]: e2.t;
+			case [_, TVec(_,VFloat), TFloat]: e1.t;
 			default:
 				var opName = switch( op ) {
 				case OpMult: "multiply";
@@ -661,11 +706,18 @@ class Checker {
 			}
 		case OpLt, OpGt, OpLte, OpGte, OpEq, OpNotEq:
 			switch( e1.t ) {
-			case TFloat, TBool, TInt, TString:
+			case TFloat, TBool, TInt, TString if( e2.t != TVoid ):
 				unifyExpr(e2, e1.t);
 				TBool;
 			default:
-				error("Cannot compare " + e1.t.toString() + " and " + e2.t.toString(), pos);
+				switch( [e1.e, e2.e] ) {
+				case [TVar(v), TConst(CNull)], [TConst(CNull), TVar(v)]:
+					if( !v.hasQualifier(Nullable) )
+						error("Variable is not declared as nullable", e1.p);
+					TBool;
+				default:
+					error("Cannot compare " + e1.t.toString() + " and " + e2.t.toString(), pos);
+				}
 			}
 		case OpBoolAnd, OpBoolOr:
 			unifyExpr(e1, TBool);
