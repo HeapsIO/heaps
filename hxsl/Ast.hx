@@ -85,8 +85,7 @@ typedef FunDecl = {
 
 enum Const {
 	CNull;
-	CTrue;
-	CFalse;
+	CBool( b : Bool );
 	CInt( v : Int );
 	CFloat( v : Float );
 	CString( v : String );
@@ -217,7 +216,7 @@ enum TExprDef {
 
 typedef TExpr = { e : TExprDef, t : Type, p : Position }
 
-typedef Shader = {
+typedef ShaderData = {
 	var vars : Array<TVar>;
 	var funs : Array<TFunction>;
 }

@@ -13,6 +13,8 @@ class Macros {
 					try {
 						var shader = new MacroParser().parseExpr(expr);
 						var shader = new Checker().check(shader);
+						var shader = new hxsl.Eval().eval(shader);
+						trace(hxsl.Printer.shaderToString(shader));
 					} catch( e : Ast.Error ) {
 						Context.error(e.msg, e.pos);
 					}

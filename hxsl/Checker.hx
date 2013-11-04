@@ -14,6 +14,9 @@ private enum WithType {
 	With( t : Type );
 }
 
+/**
+	Type Checker : will take an untyped Expr and turn it into a typed TExpr, resolving identifiers and ensuring type safety.
+**/
 class Checker {
 	
 	static var vec2 = TVec(2, VFloat);
@@ -66,7 +69,7 @@ class Checker {
 		return Ast.Error.t(msg,pos);
 	}
 
-	public function check( shader : Expr ) : Shader {
+	public function check( shader : Expr ) : ShaderData {
 		vars = new Map();
 		functions = new Map();
 		inLoop = false;
@@ -90,6 +93,10 @@ class Checker {
 				ret : f.ret == null ? TVoid : f.ret,
 				expr : null,
 			};
+			if( functions.exists(f.name) )
+				error("Duplicate function name", pos);
+			if( vars.exists(f.name) )
+				error("Name already used by variable", pos);
 			functions.set(f.name,f);
 			tfuns.push(f);
 		}
@@ -178,7 +185,7 @@ class Checker {
 			case CInt(_): TInt;
 			case CString(_): TString;
 			case CNull: TVoid;
-			case CTrue, CFalse: TBool;
+			case CBool(_): TBool;
 			case CFloat(_): TFloat;
 			};
 			TConst(c);
@@ -706,7 +713,10 @@ class Checker {
 			}
 		case OpLt, OpGt, OpLte, OpGte, OpEq, OpNotEq:
 			switch( e1.t ) {
-			case TFloat, TBool, TInt, TString if( e2.t != TVoid ):
+			case TFloat, TInt, TString if( e2.t != TVoid ):
+				unifyExpr(e2, e1.t);
+				TBool;
+			case TBool if( (op == OpEq || op == OpNotEq) && e2.t != TVoid ):
 				unifyExpr(e2, e1.t);
 				TBool;
 			default:

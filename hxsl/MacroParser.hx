@@ -154,9 +154,9 @@ class MacroParser {
 			case CIdent("null"):
 				EConst(CNull);
 			case CIdent("true"):
-				EConst(CTrue);
+				EConst(CBool(true));
 			case CIdent("false"):
-				EConst(CFalse);
+				EConst(CBool(false));
 			case CIdent("discard"):
 				EDiscard;
 			case CIdent(s):
