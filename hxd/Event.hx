@@ -20,6 +20,7 @@ class Event {
 	public var relY : Float;
 	public var propagate : Bool;
 	public var cancel : Bool;
+	public var button : Int;
 	public var touchId : Int;
 	public var keyCode : Int;
 	public var charCode : Int;

@@ -33,6 +33,8 @@ class Stage {
 			stage.addEventListener(flash.events.MouseEvent.MOUSE_WHEEL, onMouseWheel);
 			stage.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, onKeyDown);
 			stage.addEventListener(flash.events.KeyboardEvent.KEY_UP, onKeyUp);
+			stage.addEventListener(flash.events.MouseEvent.RIGHT_MOUSE_DOWN, onRMouseDown);
+			stage.addEventListener(flash.events.MouseEvent.RIGHT_MOUSE_UP, onRMouseUp);
 		}
 		#elseif js
 		js.Browser.window.addEventListener("mousedown", onMouseDown);
@@ -124,9 +126,21 @@ class Stage {
 	function onMouseDown(e:Dynamic) {
 		event(new Event(EPush, mouseX, mouseY));
 	}
-
+	
+	function onRMouseDown(e:Dynamic) {
+		var e = new Event(EPush, mouseX, mouseY);
+		e.button = 1;
+		event(e);
+	}
+	
 	function onMouseUp(e:Dynamic) {
 		event(new Event(ERelease, mouseX, mouseY));
+	}
+
+	function onRMouseUp(e:Dynamic) {
+		var e = new Event(ERelease, mouseX, mouseY);
+		e.button = 1;
+		event(e);
 	}
 	
 	function onMouseMove(e:Dynamic) {

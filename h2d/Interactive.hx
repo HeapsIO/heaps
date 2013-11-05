@@ -9,7 +9,9 @@ class Interactive extends Drawable {
 	public var blockEvents : Bool = true;
 	public var propagateEvents : Bool = false;
 	public var backgroundColor : Null<Int>;
+	public var enableRightButton : Bool;
 	var scene : Scene;
+	var isMouseDown : Int;
 	
 	public function new(width, height, ?parent) {
 		super(parent);
@@ -75,13 +77,22 @@ class Interactive extends Drawable {
 		case EMove:
 			onMove(e);
 		case EPush:
-			onPush(e);
+			if( enableRightButton || e.button == 0 ) {
+				isMouseDown = e.button;
+				onPush(e);
+			}
 		case ERelease:
-			onRelease(e);
+			if( enableRightButton || e.button == 0 ) {
+				onRelease(e);
+				if( isMouseDown == e.button )
+					onClick(e);
+			}
+			isMouseDown = -1;
 		case EOver:
 			hxd.System.setCursor(cursor);
 			onOver(e);
 		case EOut:
+			isMouseDown = -1;
 			hxd.System.setCursor(Default);
 			onOut(e);
 		case EWheel:
@@ -185,6 +196,9 @@ class Interactive extends Drawable {
 	}
 
 	public dynamic function onRelease( e : hxd.Event ) {
+	}
+
+	public dynamic function onClick( e : hxd.Event ) {
 	}
 	
 	public dynamic function onMove( e : hxd.Event ) {
