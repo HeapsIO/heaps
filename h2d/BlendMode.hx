@@ -4,6 +4,7 @@ enum BlendMode {
 	Normal;
 	None;
 	Add;
+	SoftAdd;
 	Multiply;
 	Erase;
 	Hide;

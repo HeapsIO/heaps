@@ -398,6 +398,8 @@ class Drawable extends Sprite {
 			mat.blend(One, Zero);
 		case Add:
 			mat.blend(SrcAlpha, One);
+		case SoftAdd:
+			mat.blend(OneMinusDstColor, One);
 		case Multiply:
 			mat.blend(DstColor, OneMinusSrcAlpha);
 		case Erase:
