@@ -265,6 +265,30 @@ class Parser {
 				s.overflowHidden = false;
 				return true;
 			}
+		case "icon":
+			var i = getImage(v);
+			if( i != null ) {
+				s.icon = i;
+				return true;
+			}
+		case "icon-color":
+			var c = getColAlpha(v);
+			if( c != null ) {
+				s.iconColor = c;
+				return true;
+			}
+		case "icon-left":
+			var i = getVal(v);
+			if( i != null ) {
+				s.iconLeft = i;
+				return true;
+			}
+		case "icon-top":
+			var i = getVal(v);
+			if( i != null ) {
+				s.iconTop = i;
+				return true;
+			}
 		default:
 			throw "Not implemented '"+r+"' = "+valueStr(v);
 		}
@@ -476,6 +500,20 @@ class Parser {
 		case VIdent(i): i;
 		default: null;
 		};
+	}
+	
+	function getImage( v : Value ) {
+		switch( v ) {
+		case VCall("url", [VString(url)]):
+			if( !StringTools.startsWith(url, "data:image/png;base64,") )
+				return null;
+			url = url.substr(22);
+			if( StringTools.endsWith(url, "=") ) url = url.substr(0, -1);
+			var bytes = haxe.crypto.Base64.decode(url);
+			return hxd.res.Any.fromBytes("icon",bytes).getTexture().getPixels();
+		default:
+			return null;
+		}
 	}
 
 	// ---------------------- generic parsing --------------------

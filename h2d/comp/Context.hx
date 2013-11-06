@@ -21,6 +21,17 @@ class Context {
 	public static function getFont( name : String, size : Int ) {
 		return hxd.res.FontBuilder.getFont(name, size);
 	}
+	
+	public static function makeTileIcon( pixels : hxd.Pixels ) : h2d.Tile {
+		var t = cachedIcons.get(pixels);
+		if( t != null && !t.isDisposed() )
+			return t;
+		t = h2d.Tile.fromPixels(pixels);
+		cachedIcons.set(pixels, t);
+		return t;
+	}
+	
+	static var cachedIcons = new Map<hxd.Pixels,h2d.Tile>();
 		
 	public static var DEFAULT_CSS = hxd.res.Embed.getFileContent("h2d/css/default.css");
 	
