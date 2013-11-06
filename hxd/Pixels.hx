@@ -13,12 +13,12 @@ class Pixels {
 		this.format = format;
 	}
 		
-	public function makeSquare() {
+	public function makeSquare( ?copy : Bool ) {
 		var w = width, h = height;
 		var tw = w == 0 ? 0 : 1, th = h == 0 ? 0 : 1;
 		while( tw < w ) tw <<= 1;
 		while( th < h ) th <<= 1;
-		if( w == tw && h == th ) return;
+		if( w == tw && h == th ) return this;
 		var out = hxd.impl.Tmp.getBytes(tw * th * 4);
 		var p = 0, b = 0;
 		for( y in 0...h ) {
@@ -30,10 +30,13 @@ class Pixels {
 		}
 		for( i in 0...(th - h) * tw * 4 )
 			out.set(p++, 0);
+		if( copy )
+			return new Pixels(tw, th, out, format);
 		hxd.impl.Tmp.saveBytes(bytes);
 		bytes = out;
 		width = tw;
 		height = th;
+		return this;
 	}
 	
 	public function convert( target : PixelFormat ) {

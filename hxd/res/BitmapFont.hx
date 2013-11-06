@@ -12,7 +12,7 @@ class BitmapFont extends Resource {
 	
 	@:access(h2d.Font)
 	public function toFont() : h2d.Font {
-		if( font != null && font.tile.hasTexture() )
+		if( font != null && !font.tile.isDisposed() )
 			return font;
 		var tile = loader.load(entry.path.substr(0, -3) + "png").toTile();
 		if( font != null ) {

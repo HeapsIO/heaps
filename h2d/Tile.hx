@@ -36,8 +36,8 @@ class Tile {
 		return innerTex;
 	}
 	
-	public function hasTexture() {
-		return innerTex != null && !innerTex.isDisposed();
+	public function isDisposed() {
+		return innerTex == null || innerTex.isDisposed();
 	}
 		
 	function setTexture(tex) {
@@ -201,6 +201,13 @@ class Tile {
 	
 	public static function fromTexture( t : h3d.mat.Texture ) {
 		return new Tile(t, 0, 0, t.width, t.height);
+	}
+	
+	public static function fromPixels( pixels : hxd.Pixels, ?allocPos : h3d.impl.AllocPos ) {
+		var pix2 = pixels.makeSquare(true);
+		var t = h3d.mat.Texture.fromPixels(pix2);
+		if( pix2 != pixels ) pix2.dispose();
+		return new Tile(t, 0, 0, pixels.width, pixels.height);
 	}
 	
 	#if flash
