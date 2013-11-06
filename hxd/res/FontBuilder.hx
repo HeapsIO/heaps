@@ -109,7 +109,7 @@ class FontBuilder {
 		var r = hxd.impl.Memory.select(pixels.bytes);
 		for( i in 0...pixels.width * pixels.height ) {
 			var p = i << 2;
-			var b = r.b(p);
+			var b = r.b(p+3);
 			if( b > 0 ) {
 				r.wb(p, 0xFF);
 				r.wb(p + 1, 0xFF);
