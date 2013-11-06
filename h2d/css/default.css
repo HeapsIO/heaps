@@ -13,7 +13,7 @@ div.modal {
 	background-color : rgba(0,0,0,0.8);
 }
 
-button {
+button, select {
 	background-color : gradient(#434343, #4B4B4B, #383838, #3A3A3A);
 	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
 	padding : 5px;
@@ -128,5 +128,23 @@ gradienteditor {
 	layout : absolute;
 	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
 	background-color : gradient(#303030,#252525,#252525,#252525);
+}
+
+select {
+	padding-left : 20px;
+	icon : url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAIAAAC0tAIdAAAAB3RJTUUH3QsGCg4t5gQ/sQAAABd0RVh0U29mdHdhcmUAR0xEUE5HIHZlciAzLjRxhaThAAAACHRwTkdHTEQzAAAAAEqAKR8AAAAEZ0FNQQAAsY8L/GEFAAAABmJLR0QA/wD/AP+gvaeTAAAAQElEQVR4nGP4z/CfeMSARRQOCKtGA/hUYwXYVeMBmKr34gZ4fUlamFBfNch9JPmSBNU4NeBxN7oGgr5EaKAwTABmAPc478+46wAAAABJRU5ErkJggg=');
+	icon-left : 3px;
+	icon-top : 5px;
+	icon-color : #999;
+	color : #999;
+}
+
+select:hover {
+	color : #FFF;
+	icon-color : #FFF;
+}
+
+itemlist.popup {
+	
 }
 

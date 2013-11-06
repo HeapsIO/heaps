@@ -51,6 +51,15 @@ class Parser {
 			c = new ColorPicker(parent);
 		case "gradienteditor":
 			c = new GradientEditor(parent);
+		case "select":
+			c = new Select(parent);
+		case "option":
+			if( parent == null || parent.name != "select" )
+				throw "<option/> needs 'select' parent";
+			var label = x.innerData;
+			var value = x.has.value ? x.att.value : null;
+			Std.instance(parent, Select).addOption(label, value);
+			return null;
 		case n:
 			var make = comps.get(n);
 			if( make != null )
