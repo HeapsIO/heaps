@@ -21,13 +21,8 @@ class Interactive extends Drawable {
 	}
 
 	override function onAlloc() {
-		var p : Sprite = this;
-		while( p.parent != null )
-			p = p.parent;
-		if( Std.is(p, Scene) ) {
-			scene = cast p;
-			scene.addEventTarget(this);
-		}
+		this.scene = getScene();
+		if( scene != null ) scene.addEventTarget(this);
 		super.onAlloc();
 	}
 	

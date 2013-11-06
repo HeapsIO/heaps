@@ -43,9 +43,25 @@ class Sprite {
 		return k;
 	}
 	
-	public function getAbsolutePos( x = 0., y = 0. ) {
+	public function localToGlobal( ?pt : h2d.col.Point ) {
 		syncPos();
-		return { x : x * matA + y * matC + absX, y : x * matB + y * matD + absY };
+		if( pt == null ) pt = new h2d.col.Point();
+		var px = pt.x * matA + pt.y * matC + absX;
+		var py = pt.x * matB + pt.y * matD + absY;
+		pt.x = (px + 1) * 0.5;
+		pt.y = (1 - py) * 0.5;
+		var scene = getScene();
+		if( scene != null ) {
+			pt.x *= scene.width;
+			pt.y *= scene.height;
+		}
+		return pt;
+	}
+	
+	function getScene() {
+		var p = this;
+		while( p.parent != null ) p = p.parent;
+		return Std.instance(p, Scene);
 	}
 	
 	public function addChild( s : Sprite ) {

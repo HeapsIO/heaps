@@ -71,8 +71,9 @@ class Object {
 	/**
 		Transform a point from the local object coordinates to the global ones. The point is modified and returned.
 	**/
-	public function localToGlobal( pt : h3d.Vector ) {
+	public function localToGlobal( ?pt : h3d.Vector ) {
 		syncPos();
+		if( pt == null ) pt = new h3d.Vector();
 		pt.transform3x4(absPos);
 		return pt;
 	}
