@@ -5,18 +5,22 @@ class Select extends Interactive {
 	var tf : h2d.Text;
 	var options : Array<{ label : String, value : Null<String> }>;
 	var list : ItemList;
-	public var value(get, set) : String;
-	public var selectedIndex : Int;
+	public var value(default, null) : String;
+	public var selectedIndex(default,set) : Int;
 	
 	public function new(?parent) {
 		super("select", parent);
 		tf = new h2d.Text(null, this);
-		selectedIndex = 0;
 		options = [];
+		selectedIndex = 0;
 	}
 
 	override function onClick() {
 		popup();
+	}
+	
+	public function getOptions() {
+		return options.copy();
 	}
 	
 	public function popup() {
@@ -44,13 +48,14 @@ class Select extends Interactive {
 	
 	public dynamic function onChange( value : String ) {
 	}
-	
-	function get_value() {
-		var o = options[selectedIndex];
-		return o == null ? "" : (o.value == null ? o.label : o.value);
+
+	function set_selectedIndex(i) {
+		var o = options[i];
+		value = o == null ? "" : (o.value == null ? o.label : o.value);
+		return selectedIndex = i;
 	}
 	
-	function set_value(v) {
+	public function setValue(v) {
 		selectedIndex = -1;
 		for( i in 0...options.length )
 			if( options[i].value == v ) {
@@ -100,6 +105,8 @@ class Select extends Interactive {
 	public function addOption(label, ?value) {
 		options.push( { label : label, value : value } );
 		needRebuild = true;
+		if( selectedIndex == options.length - 1 )
+			selectedIndex = selectedIndex; // update value
 	}
 
 	override function resize( ctx : Context ) {

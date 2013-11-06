@@ -1,5 +1,5 @@
-package h2d.css;
-import h2d.comp.Component;
+package h2d.comp;
+import h2d.css.Defs;
 
 @:access(h2d.comp.Component)
 @:keep
@@ -34,6 +34,8 @@ class JQuery {
 			cast(c, h2d.comp.Color).value;
 		case "itemlist":
 			cast(c, h2d.comp.ItemList).selected;
+		case "select":
+			cast(c, h2d.comp.Select).value;
 		default:
 			null;
 		}
@@ -52,6 +54,8 @@ class JQuery {
 				cast(c, h2d.comp.Color).value = v;
 			case "itemlist":
 				cast(c, h2d.comp.ItemList).selected = v;
+			case "select":
+				cast(c, h2d.comp.Select).value = v;
 			default:
 				null;
 			}
@@ -84,8 +88,8 @@ class JQuery {
 	}
 	
 	function _set_style(v:String) {
-		var s = new Style();
-		new Parser().parse(v, s);
+		var s = new h2d.css.Style();
+		new h2d.css.Parser().parse(v, s);
 		for( c in select )
 			c.addStyle(s);
 		return this;
@@ -109,15 +113,15 @@ class JQuery {
 	}
 	
 	function lookupSet( query : String ) {
-		var classes = new Parser().parseClasses(query);
+		var classes = new h2d.css.Parser().parseClasses(query);
 		var set = [];
 		lookupRec(root, classes, set);
 		return set;
 	}
 	
-	function lookupRec(comp:Component, classes:Array<Defs.CssClass>, set : Array<Component> ) {
+	function lookupRec(comp:Component, classes:Array<CssClass>, set : Array<Component> ) {
 		for( c in classes )
-			if( Engine.ruleMatch(c, comp) ) {
+			if( h2d.css.Engine.ruleMatch(c, comp) ) {
 				set.push(comp);
 				break;
 			}

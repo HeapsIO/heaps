@@ -3,7 +3,7 @@ package h2d.comp;
 #if hscript
 private class CustomInterp extends hscript.Interp {
 	override function fcall(o:Dynamic, f:String, args:Array<Dynamic>):Dynamic {
-		if( Std.is(o, h2d.css.JQuery) && Reflect.field(o,f) == null ) {
+		if( Std.is(o, h2d.comp.JQuery) && Reflect.field(o,f) == null ) {
 			var rf = args.length == 0 ? "_get_" + f : "_set_" + f;
 			if( Reflect.field(o, rf) == null ) throw "JQuery don't have " + f + " implemented";
 			f = rf;
@@ -56,9 +56,12 @@ class Parser {
 		case "option":
 			if( parent == null || parent.name != "select" )
 				throw "<option/> needs 'select' parent";
+			var select = Std.instance(parent, Select);
 			var label = x.innerData;
 			var value = x.has.value ? x.att.value : null;
-			Std.instance(parent, Select).addOption(label, value);
+			select.addOption(label, value);
+			if( x.has.checked && x.att.checked != "false" )
+				select.selectedIndex = select.getOptions().length - 1;
 			return null;
 		case n:
 			var make = comps.get(n);
@@ -110,6 +113,10 @@ class Parser {
 					c.onChange = function(_) s();
 				case "color":
 					var c : Color = cast c;
+					var s = makeScript(c,v);
+					c.onChange = function(_) s();
+				case "select":
+					var c : Select = cast c;
 					var s = makeScript(c,v);
 					c.onChange = function(_) s();
 				default:
@@ -210,7 +217,7 @@ class Parser {
 		var i = new CustomInterp();
 		i.variables.set("api", api);
 		i.variables.set("this", c);
-		i.variables.set("$", function(rq) return new h2d.css.JQuery(c,rq));
+		i.variables.set("$", function(rq) return new h2d.comp.JQuery(c,rq));
 		return function() try i.execute(e) catch( e : Dynamic ) throw "Error while running script " + script + " (" + e + ")";
 		#else
 		return function() throw "Please compile with -lib hscript to get script access";
