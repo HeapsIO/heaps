@@ -1,5 +1,22 @@
 package hxd.res;
 
+private class SingleFileSystem extends BytesFileSystem {
+
+	var path : String;
+	var bytes : haxe.io.Bytes;
+	
+	public function new(path, bytes) {
+		super();
+		this.path = path;
+		this.bytes = bytes;
+	}
+	
+	override function getBytes(p) {
+		return p == path ? bytes : null;
+	}
+	
+}
+
 @:access(hxd.res.Loader)
 class Any extends Resource {
 
@@ -52,6 +69,11 @@ class Any extends Resource {
 
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator([for( f in entry ) new Any(loader,f)]);
+	}
+	
+	public static function fromBytes( path : String, bytes : haxe.io.Bytes ) {
+		var fs = new SingleFileSystem(path,bytes);
+		return new Loader(fs).load(path);
 	}
 
 }
