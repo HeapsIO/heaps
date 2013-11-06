@@ -33,7 +33,10 @@ class ItemList extends Box {
 				int.width = contentWidth + style.paddingLeft + style.paddingRight;
 				int.height = c.height + style.verticalSpacing;
 				var oldCursor = int.getChildAt(0);
-				if( oldCursor != null ) oldCursor.remove();
+				if( oldCursor != null ) {
+					cursor = Std.instance(oldCursor, h2d.Bitmap);
+					if( cursor == null ) oldCursor.remove();
+				}
 				if( selected ) {
 					cursor = new h2d.Bitmap(h2d.Tile.fromColor(style.selectionColor, Std.int(int.width), Std.int(int.height)), int);
 					int.onOver = function(_) {

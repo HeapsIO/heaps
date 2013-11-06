@@ -32,6 +32,7 @@ class Style {
 	public var cursorColor : Null<Int>;
 	public var selectionColor : Null<Int>;
 	public var overflowHidden : Null<Bool>;
+	public var positionAbsolute : Null<Bool>;
 	public var icon:Null<hxd.Pixels>;
 	public var iconColor : Null<Int>;
 	public var iconLeft : Null<Float>;
@@ -74,6 +75,7 @@ class Style {
 		if( s.iconColor != null ) iconColor = s.iconColor;
 		if( s.iconLeft != null ) iconLeft = s.iconLeft;
 		if( s.iconTop != null ) iconTop = s.iconTop;
+		if( s.positionAbsolute != null ) positionAbsolute = s.positionAbsolute;
 	}
 	
 	public function padding( v : Float ) {

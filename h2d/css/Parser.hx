@@ -289,6 +289,16 @@ class Parser {
 				s.iconTop = i;
 				return true;
 			}
+		case "position":
+			switch( getIdent(v) ) {
+			case "absolute":
+				s.positionAbsolute = true;
+				return true;
+			case "relative":
+				s.positionAbsolute = false;
+				return true;
+			default:
+			}
 		default:
 			throw "Not implemented '"+r+"' = "+valueStr(v);
 		}

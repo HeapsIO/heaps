@@ -5,6 +5,7 @@ class Select extends Interactive {
 	var tf : h2d.Text;
 	var options : Array<{ label : String, value : Null<String> }>;
 	var list : ItemList;
+	public var value(get, set) : String;
 	public var selectedIndex : Int;
 	
 	public function new(?parent) {
@@ -21,9 +22,9 @@ class Select extends Interactive {
 	public function popup() {
 		if( list != null )
 			return;
-		var p : h2d.Sprite = this;
-		while( p.parent != null )
-			p = p.parent;
+		var p : Component = this;
+		while( p.parentComponent != null )
+			p = p.parentComponent;
 		list = new ItemList();
 		p.addChild(list);
 		list.addClass("popup");
@@ -37,8 +38,35 @@ class Select extends Interactive {
 			list.remove();
 			list = null;
 			tf.text = options[i].label;
+			this.onChange(value);
 		};
 	}
+	
+	public dynamic function onChange( value : String ) {
+	}
+	
+	function get_value() {
+		var o = options[selectedIndex];
+		return o == null ? "" : (o.value == null ? o.label : o.value);
+	}
+	
+	function set_value(v) {
+		selectedIndex = -1;
+		for( i in 0...options.length )
+			if( options[i].value == v ) {
+				selectedIndex = i;
+				break;
+			}
+		if( selectedIndex < 0 ) {
+			for( i in 0...options.length )
+				if( options[i].label == v ) {
+					selectedIndex = i;
+					break;
+				}
+		}
+		return value;
+	}
+	
 	
 	function updateListPos() {
 		var scene = getScene();
@@ -47,7 +75,6 @@ class Select extends Interactive {
 		s.offsetX = pos.x - extLeft();
 		s.offsetY = pos.y - extTop();
 		s.width = contentWidth + style.paddingLeft + style.paddingRight - (list.style.paddingLeft + list.style.paddingRight);
-		
 		var yMargin = (list.style.paddingBottom + list.style.paddingTop) * 0.5;
 		var xMargin = (list.style.paddingLeft + list.style.paddingRight) * 0.5;
 		var maxY = (scene != null ? scene.height : h3d.Engine.getCurrent().height) - (list.height + yMargin);

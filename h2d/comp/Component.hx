@@ -188,8 +188,14 @@ class Component extends Sprite {
 			width = contentWidth + extLeft() + extRight();
 			height = contentHeight + extTop() + extBottom();
 		} else {
-			if( c.xPos != null ) x = c.xPos + style.offsetX + extLeft();
-			if( c.yPos != null ) y = c.yPos + style.offsetY + extTop();
+			if( style.positionAbsolute ) {
+				var p = parent == null ? new h2d.col.Point() : parent.localToGlobal();
+				x = style.offsetX + extLeft() - p.x;
+				y = style.offsetY + extTop() - p.y;
+			} else {
+				if( c.xPos != null ) x = c.xPos + style.offsetX + extLeft();
+				if( c.yPos != null ) y = c.yPos + style.offsetY + extTop();
+			}
 			bg.reset();
 			bg.x = style.marginLeft - extLeft();
 			bg.y = style.marginTop - extTop();
