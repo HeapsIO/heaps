@@ -5,7 +5,7 @@ class Polygon extends Primitive {
 
 	public var points : Array<Point>;
 	public var normals : Array<Point>;
-	public var tcoords : Array<UV>;
+	public var uvs : Array<UV>;
 	public var idx : hxd.IndexBuffer;
 	public var colors : Array<Point>;
 		
@@ -20,7 +20,7 @@ class Polygon extends Primitive {
 		var size = 3;
 		if( normals != null )
 			size += 3;
-		if( tcoords != null )
+		if( uvs != null )
 			size += 2;
 		if( colors != null )
 			size += 3;
@@ -31,8 +31,8 @@ class Polygon extends Primitive {
 			buf.push(p.x);
 			buf.push(p.y);
 			buf.push(p.z);
-			if( tcoords != null ) {
-				var t = tcoords[k];
+			if( uvs != null ) {
+				var t = uvs[k];
 				buf.push(t.u);
 				buf.push(t.v);
 			}
@@ -74,11 +74,11 @@ class Polygon extends Primitive {
 					n.push(colors[idx[i]].clone());
 				colors = n;
 			}
-			if( tcoords != null ) {
+			if( uvs != null ) {
 				var t = [];
 				for( i in 0...idx.length )
-					t.push(tcoords[idx[i]].clone());
-				tcoords = t;
+					t.push(uvs[idx[i]].clone());
+				uvs = t;
 			}
 			points = p;
 			idx = null;
@@ -135,6 +135,15 @@ class Polygon extends Primitive {
 
 	public function addUVs() {
 		throw "Not implemented for this polygon";
+	}
+	
+	public function uvScale( su : Float, sv : Float ) {
+		if( uvs == null )
+			throw "Missing UVs";
+		for( t in uvs ) {
+			t.u *= su;
+			t.v *= sv;
+		}
 	}
 	
 	public override function triCount() {

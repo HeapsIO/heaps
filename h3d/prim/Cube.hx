@@ -39,7 +39,7 @@ class Cube extends Polygon {
 		var y = new UV(0, 1);
 		var o = new UV(1, 1);
 		
-		tcoords = [
+		uvs = [
 			z, x, o,
 			z, o, y,
 			x, z, y,

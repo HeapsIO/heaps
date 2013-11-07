@@ -43,10 +43,10 @@ class Sphere extends Polygon {
 	}
 	
 	override function addUVs() {
-		tcoords = [];
+		uvs = [];
 		for( y in 0...segsH + 1 )
 			for( x in 0...segsW + 1 )
-				tcoords.push(new UV(x / segsW, y / segsH));
+				uvs.push(new UV(x / segsW, y / segsH));
 	}
 	
 }
