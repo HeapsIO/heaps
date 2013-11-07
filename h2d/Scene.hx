@@ -21,7 +21,7 @@ class Scene extends Layers implements h3d.IDrawable {
 	var currentFocus : Interactive;
 		
 	var pushList : Array<Interactive>;
-	var currentDrag : { f : hxd.Event -> Void, ref : Null<Int> };
+	var currentDrag : { f : hxd.Event -> Void, onCancel : Void -> Void, ref : Null<Int> };
 	
 	public function new() {
 		super(null);
@@ -234,8 +234,10 @@ class Scene extends Layers implements h3d.IDrawable {
 			pendingEvents = new Array();
 	}
 	
-	public function startDrag( f : hxd.Event -> Void, ?refEvent : hxd.Event ) {
-		currentDrag = { f : f, ref : refEvent == null ? null : refEvent.touchId };
+	public function startDrag( f : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
+		if( currentDrag != null && currentDrag.onCancel != null )
+			currentDrag.onCancel();
+		currentDrag = { f : f, ref : refEvent == null ? null : refEvent.touchId, onCancel : onCancel };
 	}
 	
 	public function stopDrag() {

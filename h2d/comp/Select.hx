@@ -39,11 +39,23 @@ class Select extends Interactive {
 		list.selected = this.selectedIndex;
 		list.onChange = function(i) {
 			this.selectedIndex = i;
-			list.remove();
-			list = null;
-			tf.text = options[i].label;
+			needRebuild = true;
+			close();
 			this.onChange(value);
 		};
+		var scene = getScene();
+		scene.startDrag(function(e) {
+			if( e.kind == ERelease ) {
+				scene.stopDrag();
+				close();
+			}
+		},close);
+	}
+	
+	public function close() {
+		list.remove();
+		list = null;
+		getScene().stopDrag();
 	}
 	
 	public dynamic function onChange( value : String ) {

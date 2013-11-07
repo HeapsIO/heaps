@@ -44,7 +44,7 @@ class Color extends Component {
 		while( p.parentComponent != null )
 			p = p.parentComponent;
 		var b = new Box(p);
-		b.setClass("modal", true);
+		b.toggleClass("modal", true);
 		var pick = new ColorPicker(b);
 		pick.color = value;
 		pick.addStyleString("dock:full");

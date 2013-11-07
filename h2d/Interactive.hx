@@ -138,14 +138,14 @@ class Interactive extends Drawable {
 		e.relY = (ky / max) * i.height;
 	}
 	
-	public function startDrag(callb) {
+	public function startDrag(callb,?onCancel) {
 		scene.startDrag(function(event) {
 			var x = event.relX, y = event.relY;
 			globalToLocal(event);
 			callb(event);
 			event.relX = x;
 			event.relY = y;
-		});
+		},onCancel);
 	}
 	
 	public function stopDrag() {

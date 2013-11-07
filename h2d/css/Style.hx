@@ -15,6 +15,8 @@ class Style {
 	public var paddingBottom : Null<Float>;
 	public var width : Null<Float>;
 	public var height : Null<Float>;
+	public var autoWidth : Null<Bool>;
+	public var autoHeight : Null<Bool>;
 	public var offsetX : Null<Float>;
 	public var offsetY : Null<Float>;
 	public var layout : Null<Layout>;
@@ -37,6 +39,8 @@ class Style {
 	public var iconColor : Null<Int>;
 	public var iconLeft : Null<Float>;
 	public var iconTop : Null<Float>;
+	public var textAlign : Null<TextAlign>;
+	public var display : Null<Bool>;
 	
 	public function new() {
 	}
@@ -76,6 +80,16 @@ class Style {
 		if( s.iconLeft != null ) iconLeft = s.iconLeft;
 		if( s.iconTop != null ) iconTop = s.iconTop;
 		if( s.positionAbsolute != null ) positionAbsolute = s.positionAbsolute;
+		if( s.autoWidth != null ) {
+			autoWidth = s.autoWidth;
+			width = s.width;
+		}
+		if( s.autoHeight != null ) {
+			autoHeight = s.autoHeight;
+			height = s.height;
+		}
+		if( s.textAlign != null ) textAlign = s.textAlign;
+		if( s.display != null ) display = s.display;
 	}
 	
 	public function padding( v : Float ) {

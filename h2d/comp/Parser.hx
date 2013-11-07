@@ -63,6 +63,8 @@ class Parser {
 			if( x.has.checked && x.att.checked != "false" )
 				select.selectedIndex = select.getOptions().length - 1;
 			return null;
+		case "value":
+			c = new Value(parent);
 		case n:
 			var make = comps.get(n);
 			if( make != null )
@@ -119,6 +121,10 @@ class Parser {
 					var c : Select = cast c;
 					var s = makeScript(c,v);
 					c.onChange = function(_) s();
+				case "value":
+					var c : Value = cast c;
+					var s = makeScript(c,v);
+					c.onChange = function(_) s();
 				default:
 				}
 			case "onblur":
@@ -169,6 +175,12 @@ class Parser {
 				case "slider":
 					var c : Slider = cast c;
 					c.maxValue = Std.parseFloat(v);
+				default:
+				}
+			case "increment":
+				switch( c.name ) {
+				case "value":
+					Std.instance(c, Value).increment = Std.parseFloat(v);
 				default:
 				}
 			case "onmouseover":

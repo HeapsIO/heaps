@@ -88,6 +88,7 @@ class Input extends Interactive {
 			tf.textColor = style.color;
 			tf.text = value;
 			tf.filter = true;
+			textAlign(tf);
 			contentWidth = tf.textWidth;
 			contentHeight = tf.textHeight;
 			if( cursorPos < 0 ) cursorPos = 0;
@@ -103,7 +104,7 @@ class Input extends Interactive {
 
 	override function onClick() {
 		focus();
-	}	
+	}
 
 	public dynamic function onChange( value : String ) {
 	}

@@ -10,7 +10,7 @@ class Checkbox extends Interactive {
 	}
 	
 	function set_checked(b) {
-		setClass(":checked", b);
+		toggleClass(":checked", b);
 		return checked = b;
 	}
 	

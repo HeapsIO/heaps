@@ -5,6 +5,7 @@
 	offset : 0 0;
 	border : none;
 	background-color : transparent;
+	text-align : left;
 }
 
 div.modal {
@@ -148,3 +149,11 @@ itemlist.popup {
 	position : absolute;
 }
 
+value input {
+	width : 40px;
+	text-align : center;
+}
+
+value input:focus {
+	text-align : left;
+}

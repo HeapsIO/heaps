@@ -28,6 +28,12 @@ enum DockStyle {
 	Full;
 }
 
+enum TextAlign {
+	Left;
+	Right;
+	Center;
+}
+
 class CssClass {
 	public var parent : Null<CssClass>;
 	public var node : Null<String>;

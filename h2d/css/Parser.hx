@@ -120,10 +120,20 @@ class Parser {
 				s.width = i;
 				return true;
 			}
+			if( getIdent(v) == "auto" ) {
+				s.width = null;
+				s.autoWidth = true;
+				return true;
+			}
 		case "height":
 			var i = getVal(v);
 			if( i != null ) {
 				s.height = i;
+				return true;
+			}
+			if( getIdent(v) == "auto" ) {
+				s.height = null;
+				s.autoHeight = true;
 				return true;
 			}
 		case "background-color":
@@ -296,6 +306,29 @@ class Parser {
 				return true;
 			case "relative":
 				s.positionAbsolute = false;
+				return true;
+			default:
+			}
+		case "text-align":
+			switch( getIdent(v) ) {
+			case "left":
+				s.textAlign = Left;
+				return true;
+			case "right":
+				s.textAlign = Right;
+				return true;
+			case "center":
+				s.textAlign = Center;
+				return true;
+			default:
+			}
+		case "display":
+			switch( getIdent(v) ) {
+			case "none":
+				s.display = false;
+				return true;
+			case "block", "inline-block":
+				s.display = true;
 				return true;
 			default:
 			}
@@ -829,7 +862,7 @@ class Parser {
 	}
 
 	inline function isIdentChar(c) {
-		return (c >= "a".code && c <= "z".code) || (c >= "A".code && c <= "Z".code) || (c == "-".code);
+		return (c >= "a".code && c <= "z".code) || (c >= "A".code && c <= "Z".code) || (c == "-".code) || (c == "_".code);
 	}
 
 	inline function isNum(c) {

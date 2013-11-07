@@ -5,7 +5,7 @@ class Component extends Sprite {
 	
 	public var name(default, null) : String;
 	public var id(default, set) : String;
-	public var parentComponent(default, null) : Component;
+	var parentComponent : Component;
 	var classes : Array<String>;
 	var components : Array<Component>;
 	
@@ -27,6 +27,18 @@ class Component extends Sprite {
 		components = [];
 		bg = new h2d.css.Fill(this);
 		needRebuild = true;
+	}
+	
+	public function getParent() {
+		if( allocated )
+			return parentComponent;
+		var c = parent;
+		while( c != null ) {
+			var cm = Std.instance(c, Component);
+			if( cm != null ) return cm;
+			c = c.parent;
+		}
+		return null;
 	}
 	
 	public function getElementById(id:String) {
@@ -115,6 +127,10 @@ class Component extends Sprite {
 		return classes;
 	}
 	
+	public function hasClass( name : String ) {
+		return Lambda.has(classes, name);
+	}
+	
 	public function addClass( name : String ) {
 		if( !Lambda.has(classes, name) ) {
 			classes.push(name);
@@ -123,21 +139,23 @@ class Component extends Sprite {
 		return this;
 	}
 	
-	public function toggleClass( name : String ) {
-		if( !classes.remove(name) )
-			classes.push(name);
-		needRebuild = true;
+	public function toggleClass( name : String, ?flag : Null<Bool> ) {
+		if( flag != null ) {
+			if( flag )
+				addClass(name)
+			else
+				removeClass(name);
+		} else {
+			if( !classes.remove(name) )
+				classes.push(name);
+			needRebuild = true;
+		}
 		return this;
 	}
 	
 	public function removeClass( name : String ) {
 		if( classes.remove(name) )
 			needRebuild = true;
-		return this;
-	}
-	
-	public function setClass( name : String, flag : Bool ) {
-		if( flag ) addClass(name) else removeClass(name);
 		return this;
 	}
 	
@@ -203,8 +221,10 @@ class Component extends Sprite {
 			bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize, contentWidth + style.paddingLeft + style.paddingRight, contentHeight + style.paddingTop + style.paddingBottom);
 			if( style.icon != null ) {
 				var ic = Std.instance(bg.childs[0], h2d.Bitmap);
-				if( ic == null )
-					ic = new h2d.Bitmap(null, bg);
+				if( ic == null ) {
+					ic = new h2d.Bitmap(null);
+					bg.addChildAt(ic, 0);
+				}
 				ic.x = extLeft() - style.paddingLeft + style.iconLeft;
 				ic.y = extTop() - style.paddingTop + style.iconTop;
 				ic.tile = Context.makeTileIcon(style.icon);
@@ -251,8 +271,25 @@ class Component extends Sprite {
 	function evalStyleRec() {
 		needRebuild = false;
 		evalStyle();
+		if( style.display != null )
+			visible = style.display;
 		for( c in components )
 			c.evalStyleRec();
+	}
+	
+	function textAlign( tf : h2d.Text ) {
+		if( style.width == null ) {
+			tf.x = 0;
+			return;
+		}
+		switch( style.textAlign ) {
+		case Left:
+			tf.x = 0;
+		case Right:
+			tf.x = style.width - tf.textWidth;
+		case Center:
+			tf.x = Std.int((style.width - tf.textWidth) * 0.5);
+		}
 	}
 	
 	public function refresh() {

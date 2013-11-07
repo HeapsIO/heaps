@@ -3,11 +3,12 @@ package h2d.comp;
 class Interactive extends Component {
 	
 	var input : h2d.Interactive;
+	var active : Bool;
 	
 	function new(kind,?parent) {
 		super(kind,parent);
 		input = new h2d.Interactive(0, 0, bg);
-		var active = false;
+		active = false;
 		input.onPush = function(_) {
 			active = true;
 			onMouseDown();
