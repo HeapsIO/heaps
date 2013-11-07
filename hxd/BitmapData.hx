@@ -23,6 +23,28 @@ abstract BitmapData(InnerData) {
 		#end
 	}
 	
+	public inline function fill( rect : h2d.col.Bounds, color : Int ) {
+		#if flash
+		this.fillRect(new flash.geom.Rectangle(Std.int(rect.xMin), Std.int(rect.yMin), Math.ceil(rect.xMax - rect.xMin), Math.ceil(rect.yMax - rect.yMin)), color);
+		#else
+		throw "TODO";
+		#end
+	}
+
+	public function line( x0 : Int, y0 : Int, x1 : Int, y1 : Int, color : Int ) {
+		var dx = x1 - x0;
+		var dy = y1 - y0;
+		if( dx == 0 ) {
+			for( y in y0...y1 + 1 )
+				setPixel(x0, y, color);
+		} else if( dy == 0 ) {
+			for( x in x0...x1 + 1 )
+				setPixel(x, y0, color);
+		} else {
+			throw "TODO";
+		}
+	}
+	
 	public inline function dispose() {
 		#if flash
 		this.dispose();
