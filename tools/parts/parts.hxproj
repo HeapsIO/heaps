@@ -23,7 +23,7 @@
     <option flashStrict="True" />
     <option mainClass="Main" />
     <option enabledebug="False" />
-    <option additional="-lib hxsl&#xA;-D h3d&#xA;-lib hscript" />
+    <option additional="-lib hxsl&#xA;-D h3d&#xA;-lib hscript&#xA;-D advanced-telemetry" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -39,7 +39,7 @@
   </library>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
-    <!-- example: <hidden path="..." /> -->
+    <hidden path="obj" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />
@@ -49,6 +49,7 @@
   <options>
     <option showHiddenPaths="False" />
     <option testMovie="Default" />
+    <option testMovieCommand="" />
   </options>
   <!-- Plugin storage -->
   <storage />
