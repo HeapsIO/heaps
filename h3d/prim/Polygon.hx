@@ -140,7 +140,10 @@ class Polygon extends Primitive {
 	public function uvScale( su : Float, sv : Float ) {
 		if( uvs == null )
 			throw "Missing UVs";
+		var m = new Map<UV,Bool>();
 		for( t in uvs ) {
+			if( m.exists(t) ) continue;
+			m.set(t, true);
 			t.u *= su;
 			t.v *= sv;
 		}

@@ -13,5 +13,9 @@ class UV {
 	public function clone() {
 		return new UV(u, v);
 	}
+	
+	function toString() {
+		return "{" + hxd.Math.fmt(u) + "," + hxd.Math.fmt(v) + "}";
+	}
 
 }
