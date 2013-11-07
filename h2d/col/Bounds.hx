@@ -107,6 +107,15 @@ class Bounds {
 	public function toString() {
 		return "{" + getMin() + "," + getMax() + "}";
 	}
+
+	public static inline function fromValues( x0 : Float, y0 : Float, width : Float, height : Float ) {
+		var b = new Bounds();
+		b.xMin = x0;
+		b.yMin = y0;
+		b.xMax = x0 + width;
+		b.yMax = y0 + height;
+		return b;
+	}
 	
 	public static inline function fromPoints( min : Point, max : Point ) {
 		var b = new Bounds();
