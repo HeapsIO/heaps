@@ -38,6 +38,7 @@ class ItemList extends Box {
 					if( cursor == null ) oldCursor.remove();
 				}
 				if( selected ) {
+					if( cursor != null ) cursor.remove();
 					cursor = new h2d.Bitmap(h2d.Tile.fromColor(style.selectionColor, Std.int(int.width), Std.int(int.height)), int);
 					int.onOver = function(_) {
 					};

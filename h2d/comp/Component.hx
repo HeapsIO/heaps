@@ -8,7 +8,7 @@ class Component extends Sprite {
 	var parentComponent : Component;
 	var classes : Array<String>;
 	var components : Array<Component>;
-	
+	var iconBmp : h2d.Bitmap;
 	var bg : h2d.css.Fill;
 	// the total width and height (includes margin,borders and padding)
 	var width : Float;
@@ -220,17 +220,18 @@ class Component extends Sprite {
 			bg.lineRect(style.borderColor, 0, 0, width - (style.marginLeft + style.marginRight), height - (style.marginTop + style.marginBottom), style.borderSize);
 			bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize, contentWidth + style.paddingLeft + style.paddingRight, contentHeight + style.paddingTop + style.paddingBottom);
 			if( style.icon != null ) {
-				var ic = Std.instance(bg.childs[0], h2d.Bitmap);
-				if( ic == null ) {
-					ic = new h2d.Bitmap(null);
-					bg.addChildAt(ic, 0);
-				}
-				ic.x = extLeft() - style.paddingLeft + style.iconLeft;
-				ic.y = extTop() - style.paddingTop + style.iconTop;
-				ic.tile = Context.makeTileIcon(style.icon);
-				ic.colorKey = 0xFFFF00FF;
-				if( ic.color == null ) ic.color = new h3d.Vector(1, 1, 1, 1);
-				ic.color.loadColor(style.iconColor != null ? style.iconColor : 0xFFFFFFFF);
+				if( iconBmp == null )
+					iconBmp = new h2d.Bitmap(null);
+				bg.addChildAt(iconBmp, 0);
+				iconBmp.x = extLeft() - style.paddingLeft + style.iconLeft;
+				iconBmp.y = extTop() - style.paddingTop + style.iconTop;
+				iconBmp.tile = Context.makeTileIcon(style.icon);
+				iconBmp.colorKey = 0xFFFF00FF;
+				if( iconBmp.color == null ) iconBmp.color = new h3d.Vector(1, 1, 1, 1);
+				iconBmp.color.loadColor(style.iconColor != null ? style.iconColor : 0xFFFFFFFF);
+			} else if( iconBmp != null ) {
+				iconBmp.remove();
+				iconBmp = null;
 			}
 		}
 	}
