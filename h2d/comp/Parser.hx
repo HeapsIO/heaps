@@ -93,6 +93,9 @@ class Parser {
 				case "color":
 					var c : Color = cast c;
 					c.value = Std.parseInt(v);
+				case "value":
+					var c : Value = cast c;
+					c.value = Std.parseFloat(v);
 				default:
 				}
 			case "onchange":
