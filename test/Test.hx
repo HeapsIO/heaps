@@ -330,7 +330,11 @@ static var SRC = {
 class Test {
 	
 	static function main() {
-		trace("Hello World");
+		var shaders = [
+			new Proto().compile(),
+		];
+		var s = new hxsl.Linker().link(shaders, "vertex", "out.color");
+		trace("\n"+hxsl.Printer.shaderToString(s));
 	}
 		
 }

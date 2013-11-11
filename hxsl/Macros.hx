@@ -9,13 +9,17 @@ class Macros {
 			if( f.name == "SRC" ) {
 				switch( f.kind ) {
 				case FVar(_, expr) if( expr != null ):
-					fields.remove(f);
 					try {
 						var shader = new MacroParser().parseExpr(expr);
 						var shader = new Checker().check(shader);
-						var shader = new hxsl.Eval().eval(shader);
-						trace(hxsl.Printer.shaderToString(shader));
+						var str = Serializer.run(shader);
+						f.kind = FVar(null, { expr : EConst(CString(str)), pos : expr.pos } );
+						f.meta.push({
+							name : ":keep",
+							pos : expr.pos,
+						});
 					} catch( e : Ast.Error ) {
+						fields.remove(f);
 						Context.error(e.msg, e.pos);
 					}
 				default:

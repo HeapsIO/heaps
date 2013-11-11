@@ -262,6 +262,41 @@ class Tools {
 		};
 	}
 	
+	public static function iter( e : TExpr, f : TExpr -> Void ) {
+		switch( e.e ) {
+		case TParenthesis(e): f(e);
+		case TBlock(el): for( e in el ) f(e);
+		case TBinop(_, e1, e2): f(e1); f(e2);
+		case TUnop(_, e1): f(e1);
+		case TVarDecl(_,init): if( init != null ) f(init);
+		case TCall(e, args): f(e); for( a in args ) f(a);
+		case TSwiz(e, _): f(e);
+		case TIf(econd, eif, eelse): f(econd); f(eif); if( eelse != null ) f(eelse);
+		case TReturn(e): if( e != null ) f(e);
+		case TFor(_, it, loop): f(it); f(loop);
+		case TArray(e, index): f(e); f(index);
+		case TConst(_),TVar(_),TFunVar(_), TGlobal(_), TDiscard, TContinue, TBreak:
+		}
+	}
+
+	public static function map( e : TExpr, f : TExpr -> TExpr ) : TExpr {
+		var ed = switch( e.e ) {
+		case TParenthesis(e): TParenthesis(f(e));
+		case TBlock(el): TBlock([for( e in el ) f(e)]);
+		case TBinop(op, e1, e2): TBinop(op, f(e1), f(e2));
+		case TUnop(op, e1): TUnop(op, f(e1));
+		case TVarDecl(v,init): TVarDecl(v, if( init != null ) f(init) else null);
+		case TCall(e, args): TCall(f(e),[for( a in args ) f(a)]);
+		case TSwiz(e, c): TSwiz(f(e), c);
+		case TIf(econd, eif, eelse): TIf(f(econd),f(eif),if( eelse != null ) f(eelse) else null);
+		case TReturn(e): TReturn(if( e != null ) f(e) else null);
+		case TFor(v, it, loop): TFor(v, f(it), f(loop));
+		case TArray(e, index): TArray(f(e),f(index));
+		case TConst(_), TVar(_), TFunVar(_), TGlobal(_), TDiscard, TContinue, TBreak: e.e;
+		}
+		return { e : ed, t : e.t, p : e.p };
+	}
+
 }
 
 class Tools2 {
@@ -269,6 +304,22 @@ class Tools2 {
 	public static function toString( g : TGlobal ) {
 		var n = g.getName();
 		return n.charAt(0).toLowerCase() + n.substr(1);
+	}
+
+}
+
+class Tools3 {
+
+	public static function toString( s : ShaderData ) {
+		return Printer.shaderToString(s);
+	}
+
+}
+
+class Tools4 {
+
+	public static function toString( e : TExpr ) {
+		return Printer.toString(e);
 	}
 
 }
