@@ -527,7 +527,7 @@ class ColorPicker extends h2d.comp.Component {
 		return finalColor.color;
 	}
 	
-	inline function set_color(v) {
+	function set_color(v) {
 		finalColor.color = v;
 		palette.setColorFrom(v);
 		chart.setColorFrom(v);
@@ -550,7 +550,7 @@ class ColorPicker extends h2d.comp.Component {
 		}
 	}
 	
-	inline function init() {
+	function init() {
 		finalColor = new Color(this, 15, 8, 175, 45, this);
 		palette = new Palette(this, 16, 65, 20, 140, this);
 		chart = new Chart(this,50, 65, 140, 140, 3.5, this);
@@ -560,8 +560,9 @@ class ColorPicker extends h2d.comp.Component {
 		gaugeAlpha = new ColorGauge(this, 50, 295, 140, 15, RGBA.A, this);
 		chart.refColor = palette.color;
 		change = SNone;
-		var close = new Button("X", this);
-		close.addStyleString("layout:absolute;font-size:12px;height:10px;width:10px;");
+		var close = new Button("", this);
+		close.addClass(":close");
+//		close.addStyleString("layout:absolute;font-size:12px;height:10px;width:10px;");
 		close.x = 175;
 		close.y = 10;
 		close.onClick = function() {
@@ -607,20 +608,20 @@ class ColorPicker extends h2d.comp.Component {
 	}
 	
 //////////////////
-	inline public static function INTtoRGB(color:Int) {
+	public static function INTtoRGB(color:Int) {
 		return [(color >> 16) & 0xFF, (color >> 8) & 0xFF,  color & 0xFF];
 	}
 	
-	inline public static function INTtoHSL(color:Int) {
+	public static function INTtoHSL(color:Int) {
 		var rgb = INTtoRGB(color);
 		return RGBtoHLS(rgb[0], rgb[1], rgb[2]);
 	}
 	
-	inline public static function RGBtoINT(r:Int, g:Int, b:Int, a:Int = 255) {
+	public static function RGBtoINT(r:Int, g:Int, b:Int, a:Int = 255) {
 		return (a << 24) | (r << 16) | (g << 8) | b;
 	}
 	
-	inline public static function RGBtoHLS(r:Float, g:Float, b:Float) {
+	public static function RGBtoHLS(r:Float, g:Float, b:Float) {
 		r /= 255;
 		g /= 255;
 		b /= 255;
@@ -643,12 +644,12 @@ class ColorPicker extends h2d.comp.Component {
 		return [h, s, l];
 	}
 	
-	inline public static function HSLtoINT(h:Float, s:Float, l:Float) {
+	public static function HSLtoINT(h:Float, s:Float, l:Float) {
 		var rgb = HSLtoRGB(h, s, l);
 		return RGBtoINT(rgb[0], rgb[1], rgb[2]);
 	}
 	
-	inline public static function HSLtoRGB(h:Float, s:Float, l:Float) {
+	public static function HSLtoRGB(h:Float, s:Float, l:Float) {
 		var r, g, b;
 		if(s == 0)
 			r = g = b = l;
@@ -670,7 +671,7 @@ class ColorPicker extends h2d.comp.Component {
 		return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 	}
 	
-	inline public static function complementaryColor (color:Int) {
+	public static function complementaryColor (color:Int) {
 		var rgb = INTtoRGB(color);
 		var r = rgb[0] ^ 0xFF;
 		var g = rgb[1] ^ 0xFF;
