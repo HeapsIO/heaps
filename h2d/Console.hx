@@ -34,6 +34,7 @@ class Console extends h2d.Sprite {
 		height = font.lineHeight + 2;
 		logTxt = new h2d.HtmlText(font, this);
 		logTxt.x = 2;
+		logTxt.visible = false;
 		bg = new h2d.Bitmap(h2d.Tile.fromColor(0x80000000), this);
 		input = new h2d.Interactive(0, 0, this);
 		input.onKeyDown = handleKey;
@@ -134,8 +135,7 @@ class Console extends h2d.Sprite {
 			if( !logTxt.visible ) bg.visible = false;
 			return;
 		case Key.ESCAPE:
-			bg.visible = false;
-			tf.text = "";
+			hide();
 			return;
 		}
 		if( e.charCode != 0 ) {
@@ -144,9 +144,18 @@ class Console extends h2d.Sprite {
 		}
 	}
 	
+	function hide() {
+		bg.visible = false;
+		tf.text = "";
+	}
+	
 	function handleCommand( command : String ) {
 		command = StringTools.trim(command);
 		if( command.charCodeAt(0) == "/".code ) command = command.substr(1);
+		if( command == "" ) {
+			hide();
+			return;
+		}
 		var args = ~/[ \t]+/g.split(command);
 		var cmdName = args[0];
 		if( aliases.exists(cmdName) ) cmdName = aliases.get(cmdName);
