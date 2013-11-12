@@ -244,6 +244,10 @@ class Scene extends Layers implements h3d.IDrawable {
 		currentDrag = null;
 	}
 	
+	public function getFocus() {
+		return currentFocus;
+	}
+	
 	@:allow(h2d)
 	function addEventTarget(i:Interactive) {
 		// sort by which is over the other in the scene hierarchy

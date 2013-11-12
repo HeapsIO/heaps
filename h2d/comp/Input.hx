@@ -45,9 +45,11 @@ class Input extends Interactive {
 					onChange(value);
 					return;
 				case Key.BACKSPACE:
-					value = value.substr(0, cursorPos - 1) + value.substr(cursorPos);
-					cursorPos--;
-					onChange(value);
+					if( cursorPos > 0 ) {
+						value = value.substr(0, cursorPos - 1) + value.substr(cursorPos);
+						cursorPos--;
+						onChange(value);
+					}
 					return;
 				case Key.ENTER:
 					input.blur();
