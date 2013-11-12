@@ -11,7 +11,7 @@ enum Value {
 enum Shape {
 	SDir( x : Float, y : Float, z : Float );
 	SSphere( radius : Float );
-	SHemiSphere( radius : Float );
+	SSector( radius : Float, angle : Float  );
 	SCustom( initPartPosDir : Emiter -> Particle -> Void ); // Bool = on shell
 }
 
@@ -35,15 +35,13 @@ class ColorKey {
 	public var r : Float;
 	public var g : Float;
 	public var b : Float;
-	public var a : Float;
 	public var next : ColorKey;
 	
-	public function new(time, r, g, b, a) {
+	public function new(time, r, g, b) {
 		this.time = time;
 		this.r = r;
 		this.g = g;
 		this.b = b;
-		this.a = a;
 	}
 	
 }
@@ -76,15 +74,17 @@ class State {
 	public var globalSize : Value;
 	
 	// particle globals
-	public var startLife : Value;
-	public var startSize : Value;
-	public var startRotation : Value;
+	public var life : Value;
+	public var size : Value;
+	public var rotation : Value;
 	public var speed : Value;
 	public var gravity : Value;
 	
 	// effects
 	public var force : Null<ValueXYZ>;
-	public var colors : Null<Array<{ time : Float, rgba : h3d.Vector }>>;
+	public var colors : Null<Array<{ time : Float, color : Int }>>;
+	public var light : Value;
+	public var alpha : Value;
 	
 	public function new() {
 	}
@@ -107,14 +107,16 @@ class State {
 		globalSpeed = VConst(1);
 		globalSize = VConst(1);
 		// particles globals
-		startLife = VConst(1);
-		startSize = VConst(1);
-		startRotation = VConst(0);
+		life = VConst(1);
+		size = VConst(1);
+		rotation = VConst(0);
 		speed = VConst(0.1);
 		gravity = VConst(0);
 		// effects
 		force = null;
 		colors = null;
+		light = VConst(1);
+		alpha = VConst(1);
 	}
 	
 	public /*inline*/ function eval( v : Value, time : Float, rnd : Float ) : Float {

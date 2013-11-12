@@ -24,12 +24,6 @@ class Particle {
 	public var prev : Particle;
 	public var next : Particle;
 
-	public var fxRnd : Float;
-	public var fyRnd : Float;
-	public var fzRnd : Float;
-	public var speedRnd : Float;
-	public var gravRnd : Float;
-		
 	public function new() {
 		cr = 1;
 		cg = 1;

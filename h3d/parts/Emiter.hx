@@ -5,8 +5,9 @@ class Emiter extends h3d.scene.Object {
 
 	public var material : h3d.parts.Material;
 	public var count(default, null) : Int;
-	public var time : Float;
-	public var state(default,null) : State;
+	public var time(default,null) : Float;
+	public var state(default, null) : State;
+	public var pause : Bool;
 
 	var rnd : Float;
 	var emitCount : Float;
@@ -54,7 +55,7 @@ class Emiter extends h3d.scene.Object {
 		if( s.colors != null ) {
 			for( i in 0...s.colors.length ) {
 				var c = s.colors[s.colors.length - (1 + i)];
-				var k = new ColorKey(c.time, c.rgba.x, c.rgba.y, c.rgba.z, c.rgba.w);
+				var k = new ColorKey(c.time, ((c.color>>16)&0xFF)/255, ((c.color>>8)&0xFF)/255, (c.color&0xFF)/255);
 				k.next = colorMap;
 				colorMap = k;
 			}
@@ -115,9 +116,9 @@ class Emiter extends h3d.scene.Object {
 			p.x = p.dx * r;
 			p.y = p.dy * r;
 			p.z = p.dz * r;
-		case SHemiSphere(r):
+		case SSector(r,angle):
 			var theta = rand() * Math.PI * 2;
-			var phi = Math.acos(rand());
+			var phi = angle * Math.PI / 380;
 			var r = state.emitFromShell ? r : rand() * r;
 			p.dx = Math.sin(phi) * Math.cos(theta);
 			p.dy = Math.sin(phi) * Math.sin(theta);
@@ -140,14 +141,7 @@ class Emiter extends h3d.scene.Object {
 	function initPart(p:Particle) {
 		initPosDir(p);
 		p.time = 0;
-		p.size = eval(state.startSize, time, rand());
-		p.lifeTimeFactor = 1 / eval(state.startLife, time, rand());
-		p.rotation = eval(state.startRotation, time, rand());
-		p.speedRnd = rand();
-		p.gravRnd = rand();
-		p.fxRnd = rand();
-		p.fyRnd = rand();
-		p.fzRnd = rand();
+		p.lifeTimeFactor = 1 / eval(state.life, time, rand());
 	}
 	
 	public function emit() {
@@ -184,27 +178,35 @@ class Emiter extends h3d.scene.Object {
 			kill(p);
 			return;
 		}
+		var randIndex = 0;
+		inline function rand() {
+			randIndex++;
+			return 0.;
+		};
+		
 		// apply forces
 		if( state.force != null ) {
-			p.dx += eval(state.force.vx, time, p.fxRnd) * dt;
-			p.dy += eval(state.force.vy, time, p.fyRnd) * dt;
-			p.dz += eval(state.force.vz, time, p.fzRnd) * dt;
+			p.dx += eval(state.force.vx, time, rand()) * dt;
+			p.dy += eval(state.force.vy, time, rand()) * dt;
+			p.dz += eval(state.force.vz, time, rand()) * dt;
 		}
-		p.dz += eval(state.gravity, time, p.gravRnd) * dt;
+		p.dz -= eval(state.gravity, time, rand()) * dt;
 		// calc speed and update position
-		var speed = eval(state.speed, p.time, p.speedRnd);
+		var speed = eval(state.speed, p.time, rand());
 		var ds = speed * dt;
 		p.x += p.dx * ds;
 		p.y += p.dy * ds;
 		p.z += p.dz * ds;
+		p.size = eval(state.size, p.time, rand());
+		p.rotation = eval(state.rotation, p.time, rand());
 		// calc color
 		var ck = colorMap;
+		var light = eval(state.light, p.time, rand());
 		if( ck != null ) {
 			if( ck.time >= p.time ) {
 				p.cr = ck.r;
 				p.cg = ck.g;
 				p.cb = ck.b;
-				p.ca = ck.a;
 			} else {
 				var prev = ck;
 				ck = ck.next;
@@ -216,22 +218,28 @@ class Emiter extends h3d.scene.Object {
 					p.cr = prev.r;
 					p.cg = prev.g;
 					p.cb = prev.b;
-					p.ca = prev.a;
 				} else {
 					var b = (p.time - prev.time) / (ck.time - prev.time);
 					var a = 1 - b;
 					p.cr = prev.r * a + ck.r * b;
 					p.cg = prev.g * a + ck.g * b;
 					p.cb = prev.b * a + ck.b * b;
-					p.ca = prev.a * a + ck.a * b;
 				}
 			}
+			p.cr *= light;
+			p.cg *= light;
+			p.cb *= light;
+		} else {
+			p.cr = light;
+			p.cg = light;
+			p.cb = light;
 		}
+		p.ca = eval(state.alpha, p.time, rand());
 	}
 	
 	override function sync( ctx : h3d.scene.RenderContext ) {
 		super.sync(ctx);
-		update(ctx.elapsedTime);
+		if( !pause ) update(ctx.elapsedTime);
 	}
 	
 	@:access(h3d.parts.Material)
