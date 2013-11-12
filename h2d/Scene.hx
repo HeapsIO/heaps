@@ -86,7 +86,7 @@ class Scene extends Layers implements h3d.IDrawable {
 		case EMove: checkOver = true;
 		case EPush: cancelFocus = true; checkPush = true;
 		case ERelease: checkPush = true;
-		case EKeyUp, EKeyDown:
+		case EKeyUp, EKeyDown, EWheel:
 			if( currentFocus != null )
 				currentFocus.handleEvent(event);
 			return;

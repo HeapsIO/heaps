@@ -7,6 +7,7 @@ enum ConsoleArg {
 	AFloat;
 	AString;
 	ABool;
+	AEnum( values : Array<String> );
 }
 
 class Console extends h2d.Sprite {
@@ -18,24 +19,26 @@ class Console extends h2d.Sprite {
 	var bg : h2d.Bitmap;
 	var input : h2d.Interactive;
 	var tf : h2d.Text;
-	var log : h2d.HtmlText;
+	var logTxt : h2d.HtmlText;
 	var cursor : h2d.Bitmap;
 	var cursorPos(default, set) : Int;
 	var lastLogTime : Float;
 	var commands : Map < String, { help : String, args : Array<{ name : String, t : ConsoleArg, ?opt : Bool }>, callb : Dynamic } > ;
 	var aliases : Map<String,String>;
+	var logDY : Float = 0;
 	
 	public var shortKeyChar : Int = "/".code;
 	
 	public function new(font:h2d.Font,parent) {
 		super(parent);
 		height = font.lineHeight + 2;
+		logTxt = new h2d.HtmlText(font, this);
+		logTxt.x = 2;
 		bg = new h2d.Bitmap(h2d.Tile.fromColor(0x80000000), this);
 		input = new h2d.Interactive(0, 0, this);
 		input.onKeyDown = handleKey;
+		input.onWheel = onWheel;
 		bg.visible = false;
-		log = new h2d.HtmlText(font, this);
-		log.x = 2;
 		tf = new h2d.Text(font, bg);
 		tf.x = 2;
 		tf.y = 1;
@@ -53,6 +56,12 @@ class Console extends h2d.Sprite {
 	
 	public function addAlias( name, command ) {
 		aliases.set(name, command);
+	}
+	
+	function onWheel( e : hxd.Event ) {
+		logDY -= tf.font.lineHeight * e.wheelDelta * 3;
+		if( logDY < 0 ) logDY = 0;
+		if( logDY > logTxt.textHeight ) logDY = logTxt.textHeight;
 	}
 	
 	function showHelp( ?command : String ) {
@@ -79,7 +88,7 @@ class Console extends h2d.Sprite {
 				str += " " + (a.opt?"["+astr+"]":astr);
 			}
 			str += " : " + c.help;
-			addLog(str);
+			log(str);
 		}
 	}
 	
@@ -122,7 +131,7 @@ class Console extends h2d.Sprite {
 			tf.text = "";
 			cursorPos = 0;
 			handleCommand(cmd);
-			if( !log.visible ) bg.visible = false;
+			if( !logTxt.visible ) bg.visible = false;
 			return;
 		case Key.ESCAPE:
 			bg.visible = false;
@@ -144,7 +153,7 @@ class Console extends h2d.Sprite {
 		var cmd = commands.get(cmdName);
 		var errorColor = 0xC00000;
 		if( cmd == null ) {
-			addLog('Unknown command "${cmdName}"',errorColor);
+			log('Unknown command "${cmdName}"',errorColor);
 			return;
 		}
 		var vargs = new Array<Dynamic>();
@@ -156,21 +165,21 @@ class Console extends h2d.Sprite {
 					vargs.push(null);
 					continue;
 				}
-				addLog('Missing argument ${a.name}',errorColor);
+				log('Missing argument ${a.name}',errorColor);
 				return;
 			}
 			switch( a.t ) {
 			case AInt:
 				var i = Std.parseInt(v);
 				if( i == null ) {
-					addLog('$v should be Int for argument ${a.name}',errorColor);
+					log('$v should be Int for argument ${a.name}',errorColor);
 					return;
 				}
 				vargs.push(i);
 			case AFloat:
 				var f = Std.parseFloat(v);
 				if( Math.isNaN(f) ) {
-					addLog('$v should be Float for argument ${a.name}',errorColor);
+					log('$v should be Float for argument ${a.name}',errorColor);
 					return;
 				}
 				vargs.push(f);
@@ -179,25 +188,38 @@ class Console extends h2d.Sprite {
 				case "true", "1": vargs.push(true);
 				case "false", "0": vargs.push(false);
 				default:
-					addLog('$v should be Bool for argument ${a.name}',errorColor);
+					log('$v should be Bool for argument ${a.name}',errorColor);
 					return;
 				}
 			case AString:
 				vargs.push(v);
+			case AEnum(values):
+				var found = false;
+				for( v2 in values )
+					if( v == v2 ) {
+						found = true;
+						vargs.push(v2);
+					}
+				if( !found ) {
+					log('$v should be [${values.join("|")}] for argument ${a.name}', errorColor);
+					return;
+				}
 			}
 		}
 		try {
 			Reflect.callMethod(null, cmd.callb, vargs);
 		} catch( e : String ) {
-			addLog('ERROR $e', errorColor);
+			log('ERROR $e', errorColor);
 		}
 	}
 	
-	function addLog( text : String, ?color ) {
+	public function log( text : String, ?color ) {
 		if( color == null ) color = tf.textColor;
-		log.htmlText += '<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>';
-		log.alpha = 1;
-		log.visible = true;
+		var oldH = logTxt.textHeight;
+		logTxt.htmlText += '<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>';
+		if( logDY != 0 ) logDY += logTxt.textHeight - oldH;
+		logTxt.alpha = 1;
+		logTxt.visible = true;
 		lastLogTime = haxe.Timer.stamp();
 	}
 	
@@ -211,10 +233,11 @@ class Console extends h2d.Sprite {
 			if( scene.getFocus() == null )
 				input.focus();
 		}
+		var log = logTxt;
 		if( log.visible ) {
-			log.y = bg.y - log.textHeight;
+			log.y = bg.y - log.textHeight + logDY;
 			var dt = haxe.Timer.stamp() - lastLogTime;
-			if( dt > HIDE_LOG_TIMEOUT ) {
+			if( dt > HIDE_LOG_TIMEOUT && !bg.visible ) {
 				log.alpha -= ctx.elapsedTime * 4;
 				if( log.alpha <= 0 )
 					log.visible = false;
