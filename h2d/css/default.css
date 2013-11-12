@@ -131,6 +131,19 @@ gradienteditor {
 	background-color : gradient(#303030,#252525,#252525,#252525);
 }
 
+:close {
+	icon : url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAB3RJTUUH3QsICzInlD+yVAAAABd0RVh0U29mdHdhcmUAR0xEUE5HIHZlciAzLjRxhaThAAAACHRwTkdHTEQzAAAAAEqAKR8AAAAEZ0FNQQAAsY8L/GEFAAAABmJLR0QA/wD/AP+gvaeTAAAAOklEQVR4nGP4z/CfJMQw2DVAAJoiVEEMG9D0YBiBzUlwRdgsxOGH/9hVU0sDaU4izdPkBCuNY5oWGgC4sxwBPtUQzAAAAABJRU5ErkJggg=');
+	icon-color : #999;
+}
+
+button:close {
+	width : 10px;
+	height : 10px;
+	padding : 2px;
+	icon-left : -1px;
+	icon-top : -1px;
+}
+
 select {
 	padding-left : 20px;
 	icon : url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAIAAAC0tAIdAAAAB3RJTUUH3QsGCg4t5gQ/sQAAABd0RVh0U29mdHdhcmUAR0xEUE5HIHZlciAzLjRxhaThAAAACHRwTkdHTEQzAAAAAEqAKR8AAAAEZ0FNQQAAsY8L/GEFAAAABmJLR0QA/wD/AP+gvaeTAAAAQElEQVR4nGP4z/CfeMSARRQOCKtGA/hUYwXYVeMBmKr34gZ4fUlamFBfNch9JPmSBNU4NeBxN7oGgr5EaKAwTABmAPc478+46wAAAABJRU5ErkJggg=');
