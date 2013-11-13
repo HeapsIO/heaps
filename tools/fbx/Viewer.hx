@@ -297,7 +297,7 @@ class Viewer {
 					return;
 				}
 				t.resize(size.width, size.height);
-				t.uploadBytes(pixels);
+				t.uploadPixels(new hxd.Pixels(size.width,size.height,pixels,BGRA));
 				mat.culling = None;
 			});
 			loader.load(new flash.net.URLRequest(textureName));
