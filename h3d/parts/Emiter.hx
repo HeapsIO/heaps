@@ -8,6 +8,7 @@ class Emiter extends h3d.scene.Object {
 	public var time(default,null) : Float;
 	public var state(default, null) : State;
 	public var pause : Bool;
+	public var collider : Collider;
 
 	var rnd : Float;
 	var emitCount : Float;
@@ -17,6 +18,7 @@ class Emiter extends h3d.scene.Object {
 	var tail : Particle;
 	var pool : Particle;
 	
+	var tmp : h3d.Vector;
 	var tmpBuf : hxd.FloatBuffer;
 	
 	public function new(?state,?parent) {
@@ -25,6 +27,7 @@ class Emiter extends h3d.scene.Object {
 		time = 0;
 		emitCount = 0;
 		rnd = Math.random();
+		tmp = new h3d.Vector();
 		if( state == null ) {
 			state = new State();
 			state.setDefaults();
@@ -118,7 +121,7 @@ class Emiter extends h3d.scene.Object {
 			p.z = p.dz * r;
 		case SSector(r,angle):
 			var theta = rand() * Math.PI * 2;
-			var phi = angle * Math.PI / 380;
+			var phi = angle;
 			var r = state.emitFromShell ? r : rand() * r;
 			p.dx = Math.sin(phi) * Math.cos(theta);
 			p.dy = Math.sin(phi) * Math.sin(theta);
@@ -153,13 +156,26 @@ class Emiter extends h3d.scene.Object {
 			pool = p.next;
 		}
 		initPart(p);
-		if( head == null ) {
-			p.next = null;
-			head = tail = p;
-		} else {
-			head.prev = p;
-			p.next = head;
-			head = p;
+		switch( state.sortMode ) {
+		case Front, Sort, InvSort:
+			if( head == null ) {
+				p.next = null;
+				head = tail = p;
+			} else {
+				head.prev = p;
+				p.next = head;
+				head = p;
+			}
+		case Back:
+			if( head == null ) {
+				p.next = null;
+				head = tail = p;
+			} else {
+				tail.next = p;
+				p.prev = tail;
+				p.next = null;
+				tail = p;
+			}
 		}
 	}
 	
@@ -199,6 +215,21 @@ class Emiter extends h3d.scene.Object {
 		p.z += p.dz * ds;
 		p.size = eval(state.size, p.time, rand());
 		p.rotation = eval(state.rotation, p.time, rand());
+		
+		// collide
+		if( state.collide && collider != null && collider.collidePart(p, tmp) ) {
+			if( state.collideKill ) {
+				kill(p);
+				return;
+			} else {
+				var v = new h3d.Vector(p.dx, p.dy, p.dz).reflect(tmp);
+				p.dx = v.x * state.bounce;
+				p.dy = v.y * state.bounce;
+				p.dz = v.z * state.bounce;
+			}
+		}
+			
+		
 		// calc color
 		var ck = colorMap;
 		var light = eval(state.light, p.time, rand());
@@ -242,15 +273,36 @@ class Emiter extends h3d.scene.Object {
 		if( !pause ) update(ctx.elapsedTime);
 	}
 	
+	function sort( list : Particle ) {
+		return haxe.ds.ListSort.sort(list, function(p1, p2) return p1.w < p2.w ? 1 : -1);
+	}
+
+	function sortInv( list : Particle ) {
+		return haxe.ds.ListSort.sort(list, function(p1, p2) return p1.w < p2.w ? -1 : 1);
+	}
+	
 	@:access(h3d.parts.Material)
 	override function draw( ctx : h3d.scene.RenderContext ) {
 		if( head == null )
 			return;
+		switch( state.sortMode ) {
+		case Sort, InvSort:
+			var p = head;
+			var m = ctx.camera.m;
+			while( p != null ) {
+				p.w = (p.x * m._13 + p.y * m._23 + p.z * m._33 + m._43) / (p.x * m._14 + p.y * m._24 + p.z * m._34 + m._44);
+				p = p.next;
+			}
+			head = state.sortMode == Sort ? sort(head) : sortInv(head);
+			tail = head.prev;
+			head.prev = null;
+		default:
+		}
 		if( tmpBuf == null ) tmpBuf = new hxd.FloatBuffer();
 		var pos = 0;
 		var p = head;
 		var tmp = tmpBuf;
-		var hasColor = colorMap != null;
+		var hasColor = colorMap != null || !state.alpha.match(VConst(1)) || !state.light.match(VConst(1));
 		var surface = 0.;
 		while( p != null ) {
 			tmp[pos++] = p.x;
@@ -322,7 +374,7 @@ class Emiter extends h3d.scene.Object {
 		material.pshader.mpos = this.absPos;
 		material.pshader.mproj = ctx.camera.m;
 		material.pshader.partSize = new h3d.Vector(size, size * ctx.engine.width / ctx.engine.height);
-		material.pshader.hasColor = colorMap != null;
+		material.pshader.hasColor = hasColor;
 		
 		ctx.engine.selectMaterial(material);
 		ctx.engine.renderQuadBuffer(buffer);

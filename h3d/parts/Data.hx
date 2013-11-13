@@ -52,12 +52,20 @@ enum BlendMode {
 	SoftAdd;
 }
 
+enum SortMode {
+	Front;
+	Back;
+	Sort;
+	InvSort;
+}
+
 class State {
 	
 	// material
 	public var textureName : String;
 	public var texture : h3d.mat.Texture;
 	public var blendMode : BlendMode;
+	public var sortMode : SortMode;
 	
 	// emit
 	public var loop	: Bool;
@@ -86,6 +94,11 @@ class State {
 	public var light : Value;
 	public var alpha : Value;
 	
+	// collide
+	public var collide : Bool;
+	public var collideKill : Bool;
+	public var bounce : Float;
+	
 	public function new() {
 	}
 	
@@ -94,6 +107,7 @@ class State {
 		textureName = null;
 		texture = null;
 		blendMode = SoftAdd;
+		sortMode = Back;
 		// emit
 		loop = true;
 		emitRate = VConst(100);
@@ -117,6 +131,10 @@ class State {
 		colors = null;
 		light = VConst(1);
 		alpha = VConst(1);
+		// collide
+		collide = false;
+		collideKill = false;
+		bounce = 0;
 	}
 	
 	public /*inline*/ function eval( v : Value, time : Float, rnd : Float ) : Float {

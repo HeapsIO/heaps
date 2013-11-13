@@ -5,6 +5,7 @@ class Particle {
 	public var x : Float;
 	public var y : Float;
 	public var z : Float;
+	public var w : Float;
 	
 	public var time : Float;
 	public var lifeTimeFactor : Float;

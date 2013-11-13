@@ -78,6 +78,11 @@ class Editor extends h2d.Sprite {
 					* {
 						font-size : 12px;
 					}
+					
+					:h1 {
+						font-size : 10px;
+						color : #BBB;
+					}
 
 					.body {
 						layout : dock;
@@ -90,16 +95,25 @@ class Editor extends h2d.Sprite {
 					.main {
 						padding : 15px;
 						width : 202px;
-						dock : left;
+						dock : right;
 						layout : vertical;
 						vertical-spacing : 10px;
 					}
 
 					.col {
 						layout : vertical;
+						margin-bottom : 10px;
 					}
 					
-					.col.buttons {
+					.sep {
+						margin-top : -10px;
+						margin-bottom : -2px;
+						height : 1px;
+						width : 200px;
+						background-color : #555;
+					}
+					
+					.buttons {
 						layout : inline;
 					}
 
@@ -124,10 +138,6 @@ class Editor extends h2d.Sprite {
 						icon : url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAB3RJTUUH3QsICwAiCSUSqgAAABd0RVh0U29mdHdhcmUAR0xEUE5HIHZlciAzLjRxhaThAAAACHRwTkdHTEQzAAAAAEqAKR8AAAAEZ0FNQQAAsY8L/GEFAAAABmJLR0QA/wD/AP+gvaeTAAAAMklEQVR4nGMwIBEwAPFJWQVMlLHvLSYayRqcdmNBD8tFMNFI1kBa4vMnETD8Z/hPEgIAvqs9dJhBcSIAAAAASUVORK5CYII==");
 					}
 					
-					#curve {
-						padding-top : 10px;
-					}
-					
 					select, button, input {
 						icon-top : 2px;
 						width : 70px;
@@ -138,6 +148,24 @@ class Editor extends h2d.Sprite {
 					input {
 						height : 13px;
 						padding-top : 2px;
+					}
+
+					.curve_cont {
+						dock : right;
+						width : 310px;
+						layout : dock;
+					}
+					
+					.curve {
+						dock : bottom;
+						padding : 5px;
+						height : 165px;
+					}
+					
+					#curve {
+						width : 300px;
+						height : 110px;
+						border : 1px solid #333;
 					}
 					
 					.curve .val {
@@ -158,39 +186,48 @@ class Editor extends h2d.Sprite {
 					
 				</style>
 				<div class="main panel">
+				
+					<h1>Global</h1>
+					<div class="sep"></div>
 					<div class="col">
 						<div class="line">
+							<span>Life</span> <value value="${state.globalLife}" onchange="api.s.globalLife = this.value"/>
 							<checkbox checked="${state.loop}" onchange="api.s.loop = this.checked"/> <span>Loop</span>
 						</div>
 						<div class="line">
-							<span>Life</span> <value value="${state.globalLife}" onchange="api.s.globalLife = this.value"/>
+							<select onchange="api.s.blendMode = api.blendModes[api.parseInt(this.value)]">
+								<option value="0" checked="${state.blendMode == Add}">Additive</option>
+								<option value="1" checked="${state.blendMode == Alpha}">Alpha</option>
+								<option value="2" checked="${state.blendMode == SoftAdd}">Soft Add</option>
+							</select>
+							<select onchange="api.s.sortMode = api.sortModes[api.parseInt(this.value)]">
+								<option value="0" checked="${state.sortMode == Front}">Front</option>
+								<option value="1" checked="${state.sortMode == Back}">Back</option>
+								<option value="2" checked="${state.sortMode == Sort}">Sort</option>
+								<option value="2" checked="${state.sortMode == InvSort}">InvSort</option>
+							</select>
 						</div>
 						<div class="line">
 							<button class="ic" value="Speed" onclick="api.editCurve(\'globalSpeed\')"/>
-						</div>
-						<div class="line">
 							<button class="ic" value="Size" onclick="api.editCurve(\'globalSize\')"/>
 						</div>
-						<select onchange="api.s.blendMode = api.blendModes[api.parseInt(this.value)]">
-							<option value="0" checked="${state.blendMode == Add}">Additive</option>
-							<option value="1" checked="${state.blendMode == Alpha}">Alpha</option>
-							<option value="2" checked="${state.blendMode == SoftAdd}">Soft Add</option>
-						</select>
 					</div>
+					
+					<h1>Emit</h1>
+					<div class="sep"></div>
 					<div class="col">
-						<button class="ic" value="Emit Rate" onclick="api.editCurve(\'emitRate\')"/>
 						<div class="line">
-							<span>Bursts</span> <select/> <span>TODO</span>
+							<button class="ic" value="Emit Rate" onclick="api.editCurve(\'emitRate\')"/>
+							<span>Max</span> <value value="${state.maxParts}" increment="1" onchange="api.s.maxParts = this.value"/>
 						</div>
 						<div class="line">
-							<span>Max Parts</span> <value value="${state.maxParts}" increment="1" onchange="api.s.maxParts = this.value"/>
-						</div>
-						<div class="line" id="shape">
-							<select onchange="api.setCurShape(api.parseInt(this.value))">
+							<span>Emiter Type</span> <select onchange="api.setCurShape(api.parseInt(this.value))">
 								<option value="0" checked="${state.shape.match(SDir(_))}">Direction</option>
 								<option value="1" checked="${state.shape.match(SSphere(_))}">Sphere</option>
 								<option value="2" checked="${state.shape.match(SSector(_))}">Sector</option>
 							</select>
+						</div>
+						<div id="shape">
 							<div class="val">
 								<span>Size</span> <value value="${
 									switch( state.shape ) {
@@ -213,15 +250,38 @@ class Editor extends h2d.Sprite {
 						<div class="line">
 							<checkbox checked="${state.randomDir}" onchange="api.s.randomDir = this.checked"/> <span>Random Dir</span>
 						</div>
+						<!-- TODO : Bursts edition -->
 					</div>
-					<div class="col buttons">
-						<button class="ic" value="Life" onclick="api.editCurve(\'life\')"/>
-						<button class="ic" value="Size" onclick="api.editCurve(\'size\')"/>
-						<button class="ic" value="Rotation" onclick="api.editCurve(\'rotation\')"/>
-						<button class="ic" value="Speed" onclick="api.editCurve(\'speed\')"/>
-						<button class="ic" value="Gravity" onclick="api.editCurve(\'gravity\')"/>
-						<button class="icol" value="Color" onclick="api.editColors()"/>
+					
+					<h1>Particle</h1>
+					<div class="sep"></div>
+					<div class="col">
+						<div class="buttons">
+							<button class="ic" value="Life" onclick="api.editCurve(\'life\')"/>
+							<button class="ic" value="Size" onclick="api.editCurve(\'size\')"/>
+							<button class="ic" value="Rotation" onclick="api.editCurve(\'rotation\')"/>
+							<button class="ic" value="Speed" onclick="api.editCurve(\'speed\')"/>
+							<button class="ic" value="Gravity" onclick="api.editCurve(\'gravity\')"/>
+							<button class="icol" value="Color" onclick="api.editColors()"/>
+							<button class="ic" value="Alpha" onclick="api.editCurve(\'alpha\')"/>
+							<button class="ic" value="Light" onclick="api.editCurve(\'light\')"/>
+						</div>
 					</div>
+					
+					<h1>Collide</h1>
+					<div class="sep"></div>
+					<div class="col">
+						<div class="line">
+							<checkbox checked="${state.collide}" onchange="api.s.collide = this.checked"/> <span>Collide</span>
+							<value value="${state.bounce}" onchange="api.s.bounce = this.value"/> <span>Bounce</span>
+						</div>
+						<div class="line">
+							<checkbox checked="${state.collideKill}" onchange="api.s.collideKill = this.checked"/> <span>Kill</span>
+						</div>
+					</div>
+					
+					<h1>Play</h1>
+					<div class="sep"></div>
 					<div style="layout:dock;width:200px">
 						<div class="col" style="dock:bottom">
 							<div class="line">
@@ -231,12 +291,13 @@ class Editor extends h2d.Sprite {
 								<checkbox checked="${props.pause}" onchange="api.props.pause = this.checked"/> <span>Pause</span>
 							</div>
 							<div class="line">
-								<button value="Start" onclick="api.reset()"/>
+								<button value="Restart" onclick="api.reset()"/>
 							</div>
 							<label id="stats"/>
 						</div>
 					</div>
 				</div>
+				<div class="curve_cont">
 				<div class="curve panel">
 					<div class="line">
 						<select onchange="api.setCurveMode(api.parseInt(this.value))">
@@ -247,6 +308,8 @@ class Editor extends h2d.Sprite {
 								str;
 							}}
 						</select>
+					</div>
+					<div class="line">
 						<div class="val v_min">
 							<span>Min</span> <value value="${curve.min}" increment="${curve.incr}" onchange="api.curve.min = this.value; api.updateCurve()"/>
 						</div>
@@ -260,12 +323,14 @@ class Editor extends h2d.Sprite {
 					<div id="curve">
 					</div>
 				</div>
+				</div>
 			</body>
 		',{
 			s : state,
 			parseInt : Std.parseInt,
 			parseFloat : Std.parseFloat,
 			blendModes : Type.allEnums(BlendMode),
+			sortModes : Type.allEnums(SortMode),
 			reset : emit.reset,
 			props : props,
 			curve : curve,
@@ -476,8 +541,8 @@ class Editor extends h2d.Sprite {
 			lastPartSeen = null;
 			
 		if( grad != null ) {
-			grad.x = width - 451;
-			grad.y = height - 380;
+			grad.x = width - 1000;
+			grad.y = height - 190;
 			grad.colorPicker.x = grad.boxWidth - 180;
 			grad.colorPicker.y = -321;
 		}
