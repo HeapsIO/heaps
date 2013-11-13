@@ -170,9 +170,11 @@ class Viewer {
 				askLoad();
 			else if( c == K.S && k.ctrlKey ) {
 				if( curFbx == null ) return;
-				var data = FbxTree.toString(curFbx.getRoot());
+				var data = FbxTree.toXml(curFbx.getRoot());
 				var f = new flash.net.FileReference();
-				f.save(data, props.curFbxFile.substr(0, -4) + "_tree.txt");
+				var path = props.curFbxFile.substr(0, -4) + "_tree.xml";
+				path = path.split("\\").pop().split("/").pop();
+				f.save(data, path);
 			} else if( c == K.R ) {
 				rightHand = !rightHand;
 				props.camVars.x *= -1;
