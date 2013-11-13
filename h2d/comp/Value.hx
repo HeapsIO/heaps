@@ -13,7 +13,10 @@ class Value extends Interactive {
 		text.onChange = function(v) {
 			var v = Std.parseFloat(v);
 			if( !Math.isNaN(v) ) {
+				var old = text;
+				text = null;
 				value = v;
+				text = old;
 				onChange(value);
 			}
 		};
@@ -45,7 +48,7 @@ class Value extends Interactive {
 	}
 	
 	function set_value(v:Float) {
-		text.value = ""+hxd.Math.fmt(v);
+		if( text != null ) text.value = ""+hxd.Math.fmt(v);
 		return value = v;
 	}
 	
