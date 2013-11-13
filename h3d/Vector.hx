@@ -37,6 +37,11 @@ class Vector {
 	public inline function cross( v : Vector ) {
 		return new Vector(y * v.z - z * v.y, z * v.x - x * v.z,  x * v.y - y * v.x, 1);
 	}
+	
+	public inline function reflect( n : Vector ) {
+		var k = 2 * this.dot3(n);
+		return new Vector(x - k * n.x, y - k * n.y, z - k * n.z, 1);
+	}
 
 	public inline function dot3( v : Vector ) {
 		return x * v.x + y * v.y + z * v.z;
