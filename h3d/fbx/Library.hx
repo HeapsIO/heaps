@@ -50,6 +50,11 @@ class Library {
 	var invConnect : Map<Int,Array<Int>>;
 	var leftHand : Bool;
 	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
+
+	/**
+		Allows to prevent some terminal unskinned joints to be removed, for instance if we want to track their position
+	**/
+	public var keepJoints : Map<String,Bool>;
 	
 	/**
 		Set how many bones per vertex should be created in skin data in makeObject(). Default is 3
@@ -71,6 +76,7 @@ class Library {
 		connect = new Map();
 		invConnect = new Map();
 		defaultModelMatrixes = new Map();
+		keepJoints = new Map();
 	}
 	
 	public function loadTextFile( data : String ) {
@@ -706,6 +712,10 @@ class Library {
 		return scene.numChildren == 1 ? scene.getChildAt(0) : scene;
 	}
 	
+	function keepJoint( j : h3d.anim.Skin.Joint ) {
+		return keepJoints.get(j.name);
+	}
+	
 	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,h3d.prim.FBXModel>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
 		var allJoints = [];
 		function collectJoints(j:h3d.anim.Skin.Joint) {
@@ -724,7 +734,7 @@ class Library {
 			var defMat = defaultModelMatrixes.get(jModel.getName());
 			if( subDef == null ) {
 				// if we have skinned subs, we need to keep in joint hierarchy
-				if( j.subs.length > 0 )
+				if( j.subs.length > 0 || keepJoint(j) )
 					continue;
 				// otherwise we're an ending bone, we can safely be removed
 				if( j.parent == null )
