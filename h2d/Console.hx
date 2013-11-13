@@ -85,10 +85,21 @@ class Console extends h2d.Sprite {
 				if( aliases.get(a) == cmdName )
 					str += "|" + a;
 			for( a in c.args ) {
-				var astr = a.name + ":" + a.t.getName().substr(1);
+				var astr = a.name;
+				switch( a.t ) {
+				case AInt, AFloat:
+					astr += ":"+a.t.getName().substr(1);
+				case AString:
+					// nothing
+				case AEnum(values):
+					astr += "=" + values.join("|");
+				case ABool:
+					astr += "=0|1";
+				}
 				str += " " + (a.opt?"["+astr+"]":astr);
 			}
-			str += " : " + c.help;
+			if( c.help != "" )
+				str += " : " + c.help;
 			log(str);
 		}
 	}
