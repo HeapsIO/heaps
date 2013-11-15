@@ -22,6 +22,7 @@ class Main implements h3d.parts.Collider {
 	}
 	
 	function init() {
+		hxd.Key.initialize();
 		hxd.System.setLoop(update);
 		s3d = new h3d.scene.Scene();
 		s2d = new h2d.Scene();
