@@ -39,6 +39,9 @@ class Parser {
 			c = new Slider(parent);
 		case "label", "span":
 			c = new Label(x.x.firstChild() == null ? "" : x.innerData, parent);
+		case "h1", "h2", "h3", "h4":
+			c = new Label(x.x.firstChild() == null ? "" : x.innerData, parent);
+			c.addClass(":" + x.name.toLowerCase());
 		case "checkbox":
 			c = new Checkbox(parent);
 		case "itemlist":
@@ -233,7 +236,7 @@ class Parser {
 		i.variables.set("api", api);
 		i.variables.set("this", c);
 		i.variables.set("$", function(rq) return new h2d.comp.JQuery(c,rq));
-		return function() try i.execute(e) catch( e : Dynamic ) throw "Error while running script " + script + " (" + e + ")";
+		return function() try i.execute(e) catch( e : String ) throw "Error while running script " + script + " (" + e + ")" catch( e : hscript.Expr.Error ) throw "Error while running script " + script + " (" + e + ")" ;
 		#else
 		return function() throw "Please compile with -lib hscript to get script access";
 		#end
