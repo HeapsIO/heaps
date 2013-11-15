@@ -83,7 +83,9 @@ class Sprite {
 			s.parent.removeChild(s);
 			s.allocated = old;
 		}
-		childs.insert(pos,s);
+		childs.insert(pos, s);
+		if( !allocated && s.allocated )
+			s.onDelete();
 		s.parent = this;
 		s.posChanged = true;
 		// ensure that proper alloc/delete is done if we change parent
@@ -92,8 +94,7 @@ class Sprite {
 				s.onAlloc();
 			else
 				s.onParentChanged();
-		} else if( s.allocated )
-			s.onDelete();
+		}
 	}
 	
 	// called when we're allocated already but moved in hierarchy
@@ -116,8 +117,8 @@ class Sprite {
 	
 	public function removeChild( s : Sprite ) {
 		if( childs.remove(s) ) {
-			s.parent = null;
 			if( s.allocated ) s.onDelete();
+			s.parent = null;
 		}
 	}
 	
