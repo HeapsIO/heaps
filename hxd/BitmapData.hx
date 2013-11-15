@@ -35,9 +35,19 @@ abstract BitmapData(InnerData) {
 		var dx = x1 - x0;
 		var dy = y1 - y0;
 		if( dx == 0 ) {
+			if( y1 < y0 ) {
+				var tmp = y0;
+				y0 = y1;
+				y1 = tmp;
+			}
 			for( y in y0...y1 + 1 )
 				setPixel(x0, y, color);
 		} else if( dy == 0 ) {
+			if( x1 < x0 ) {
+				var tmp = x0;
+				x0 = x1;
+				x1 = tmp;
+			}
 			for( x in x0...x1 + 1 )
 				setPixel(x, y0, color);
 		} else {
