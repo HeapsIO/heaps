@@ -674,11 +674,7 @@ class Parser {
 			var c = readClass(null);
 			spacesTokens = false;
 			if( c == null ) break;
-			// map html types to comp ones
-			switch( c.node ) {
-			case "div": c.node = "box";
-			case "span": c.node = "label";
-			};
+			updateClass(c);
 			classes.push(c);
 			if( !isToken(TComma) )
 				break;
@@ -686,6 +682,18 @@ class Parser {
 		if( classes.length == 0 )
 			unexpected(readToken());
 		return classes;
+	}
+	
+	function updateClass( c : CssClass ) {
+		// map html types to comp ones
+		switch( c.node ) {
+		case "div": c.node = "box";
+		case "span": c.node = "label";
+		case "h1", "h2", "h3", "h4":
+			c.pseudoClass = c.node;
+			c.node = "label";
+		}
+		if( c.parent != null ) updateClass(c.parent);
 	}
 	
 	function readClass( parent ) : CssClass {
