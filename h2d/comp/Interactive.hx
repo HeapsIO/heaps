@@ -33,6 +33,7 @@ class Interactive extends Component {
 		if( !ctx.measure ) {
 			input.width = width - (style.marginLeft + style.marginRight);
 			input.height = height - (style.marginTop + style.marginBottom);
+			input.visible = !hasClass(":disabled");
 		}
 	}
 	

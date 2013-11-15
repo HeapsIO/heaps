@@ -15,8 +15,8 @@ class JQuery {
 		select = getSet(query);
 	}
 	
-	public function toggleClass( cl : String ) {
-		for( s in select ) s.toggleClass(cl);
+	public function toggleClass( cl : String, ?flag : Bool ) {
+		for( s in select ) s.toggleClass(cl,flag);
 		return this;
 	}
 

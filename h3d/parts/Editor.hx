@@ -228,7 +228,7 @@ class Editor extends h2d.Sprite {
 							<checkbox checked="${state.loop}" onchange="api.s.loop = this.checked"/> <span>Loop</span>
 						</div>
 						<div class="line">
-							<select onchange="api.s.blendMode = api.blendModes[api.parseInt(this.value)]">
+							<select onchange="api.s.blendMode = api.blendModes[api.parseInt(this.value)]; $(\'.ic.alpha\').toggleClass(\':disabled\', api.s.blendMode.index == 2)">
 								<option value="0" checked="${state.blendMode == Add}">Additive</option>
 								<option value="1" checked="${state.blendMode == Alpha}">Alpha</option>
 								<option value="2" checked="${state.blendMode == SoftAdd}">Soft Add</option>
@@ -296,7 +296,7 @@ class Editor extends h2d.Sprite {
 							<button class="ic" value="Speed" onclick="api.editCurve(\'speed\')"/>
 							<button class="ic" value="Gravity" onclick="api.editCurve(\'gravity\')"/>
 							<button class="icol" value="Color" onclick="api.editColors()"/>
-							<button class="ic" value="Alpha" onclick="api.editCurve(\'alpha\')"/>
+							<button class="ic alpha" value="Alpha" disabled="${state.blendMode == SoftAdd}" onclick="api.editCurve(\'alpha\')"/>
 							<button class="ic" value="Light" onclick="api.editCurve(\'light\')"/>
 						</div>
 					</div>

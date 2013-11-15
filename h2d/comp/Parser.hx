@@ -209,6 +209,9 @@ class Parser {
 				var int = Std.instance(c, Interactive);
 				if( int != null )
 					int.onClick = makeScript(c, v);
+			case "disabled":
+				if( v != "false" )
+					c.addClass(":disabled");
 			case n:
 				throw "Unknown attrib " + n;
 			}

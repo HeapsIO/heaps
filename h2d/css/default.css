@@ -27,6 +27,10 @@ button:hover {
 	padding-bottom : 4px;
 }
 
+:disabled {
+	color : #888;
+}
+
 box {
 	layout : inline;
 	spacing : 5 5;
@@ -150,11 +154,9 @@ select {
 	icon-left : 3px;
 	icon-top : 5px;
 	icon-color : #999;
-	color : #999;
 }
 
 select:hover {
-	color : #FFF;
 	icon-color : #FFF;
 }
 
