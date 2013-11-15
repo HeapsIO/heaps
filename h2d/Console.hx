@@ -17,7 +17,6 @@ class Console extends h2d.Sprite {
 	var width : Int;
 	var height : Int;
 	var bg : h2d.Bitmap;
-	var input : h2d.Interactive;
 	var tf : h2d.Text;
 	var logTxt : h2d.HtmlText;
 	var cursor : h2d.Bitmap;
@@ -36,9 +35,6 @@ class Console extends h2d.Sprite {
 		logTxt.x = 2;
 		logTxt.visible = false;
 		bg = new h2d.Bitmap(h2d.Tile.fromColor(0x80000000), this);
-		input = new h2d.Interactive(0, 0, this);
-		input.onKeyDown = handleKey;
-		input.onWheel = onWheel;
 		bg.visible = false;
 		tf = new h2d.Text(font, bg);
 		tf.x = 2;
@@ -59,10 +55,30 @@ class Console extends h2d.Sprite {
 		aliases.set(name, command);
 	}
 	
-	function onWheel( e : hxd.Event ) {
-		logDY -= tf.font.lineHeight * e.wheelDelta * 3;
-		if( logDY < 0 ) logDY = 0;
-		if( logDY > logTxt.textHeight ) logDY = logTxt.textHeight;
+	override function onAlloc() {
+		super.onAlloc();
+		getScene().addEventListener(onEvent);
+	}
+	
+	override function onDelete() {
+		getScene().removeEventListener(onEvent);
+		super.onDelete();
+	}
+	
+	function onEvent( e : hxd.Event ) {
+		switch( e.kind ) {
+		case EWheel:
+			if( logTxt.visible ) {
+				logDY -= tf.font.lineHeight * e.wheelDelta * 3;
+				if( logDY < 0 ) logDY = 0;
+				if( logDY > logTxt.textHeight ) logDY = logTxt.textHeight;
+				e.propagate = false;
+			}
+		case EKeyDown:
+			handleKey(e);
+			if( bg.visible ) e.propagate = false;
+		default:
+		}
 	}
 	
 	function showHelp( ?command : String ) {
@@ -250,8 +266,6 @@ class Console extends h2d.Sprite {
 			y = scene.height - height;
 			width = scene.width;
 			bg.tile.scaleToSize(width, height);
-			if( scene.getFocus() == null )
-				input.focus();
 		}
 		var log = logTxt;
 		if( log.visible ) {

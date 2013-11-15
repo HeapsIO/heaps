@@ -22,6 +22,7 @@ class Scene extends Layers implements h3d.IDrawable {
 		
 	var pushList : Array<Interactive>;
 	var currentDrag : { f : hxd.Event -> Void, onCancel : Void -> Void, ref : Null<Int> };
+	var eventListeners : Array< hxd.Event -> Void >;
 	
 	public function new() {
 		super(null);
@@ -31,6 +32,7 @@ class Scene extends Layers implements h3d.IDrawable {
 		height = e.height;
 		interactive = new Array();
 		pushList = new Array();
+		eventListeners = new Array();
 		stage = hxd.Stage.getInstance();
 		posChanged = true;
 	}
@@ -75,12 +77,22 @@ class Scene extends Layers implements h3d.IDrawable {
 	function get_mouseY() {
 		return screenYToLocal(stage.mouseY);
 	}
+	
+	function dispatchListeners( event : hxd.Event ) {
+		event.propagate = true;
+		event.cancel = false;
+		for( l in eventListeners ) {
+			l(event);
+			if( !event.propagate ) break;
+		}
+	}
 
 	function emitEvent( event : hxd.Event ) {
 		var x = event.relX, y = event.relY;
 		var rx = x * matA + y * matB + absX;
 		var ry = x * matC + y * matD + absY;
 		var r = height / width;
+		var handled = false;
 		var checkOver = false, checkPush = false, cancelFocus = false;
 		switch( event.kind ) {
 		case EMove: checkOver = true;
@@ -89,6 +101,8 @@ class Scene extends Layers implements h3d.IDrawable {
 		case EKeyUp, EKeyDown, EWheel:
 			if( currentFocus != null )
 				currentFocus.handleEvent(event);
+			else
+				dispatchListeners(event);
 			return;
 		default:
 		}
@@ -179,6 +193,7 @@ class Scene extends Layers implements h3d.IDrawable {
 				continue;
 			}
 			
+			handled = true;
 			break;
 		}
 		if( cancelFocus && currentFocus != null ) {
@@ -192,11 +207,17 @@ class Scene extends Layers implements h3d.IDrawable {
 			event.kind = EMove;
 			currentOver = null;
 		}
+		if( !handled )
+			dispatchListeners(event);
+	}
+	
+	function hasEvents() {
+		return interactive.length > 0 || eventListeners.length > 0;
 	}
 	
 	public function checkEvents() {
 		if( pendingEvents == null ) {
-			if( interactive.length == 0 )
+			if( !hasEvents() )
 				return;
 			pendingEvents = new Array();
 		}
@@ -230,8 +251,16 @@ class Scene extends Layers implements h3d.IDrawable {
 				pushList = new Array();
 			}
 		}
-		if( interactive.length > 0 )
+		if( hasEvents() )
 			pendingEvents = new Array();
+	}
+	
+	public function addEventListener( f : hxd.Event -> Void ) {
+		eventListeners.push(f);
+	}
+
+	public function removeEventListener( f : hxd.Event -> Void ) {
+		return eventListeners.remove(f);
 	}
 	
 	public function startDrag( f : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
