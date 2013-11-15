@@ -31,6 +31,8 @@ class Label extends Component {
 			contentHeight = tf.textHeight;
 		}
 		super.resize(ctx);
+		if( !ctx.measure )
+			textAlign(tf);
 	}
 	
 }
