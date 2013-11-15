@@ -16,7 +16,11 @@ private typedef Curve = {
 	var max : Float;
 	var pow : Float;
 	var freq : Float;
-	var ampl : Float;
+	var prec : Float;
+	var scaleY : Float;
+	var points : Array<h2d.col.Point>;
+	var active : Bool;
+	var pointSelected : h2d.col.Point;
 }
 
 class Editor extends h2d.Sprite {
@@ -38,13 +42,37 @@ class Editor extends h2d.Sprite {
 	var curveBG : h2d.Tile;
 	var curveTexture : h2d.Tile;
 	var grad : h2d.comp.GradientEditor;
+	var cedit : h2d.Interactive;
 	
 	static var CURVES : Array<{ name : String, f : Curve -> Data.Value }> = [
 		{ name : "Const", f : function(c) return VConst(c.min) },
 		{ name : "Linear", f : function(c) return VLinear(c.min, c.max - c.min) },
 		{ name : "Pow", f : function(c) return VPow(c.min, c.max - c.min, c.pow) },
+		{ name : "Sin", f : function(c) return VSin(c.freq * Math.PI, (c.max - c.min) * 0.5, (c.min + c.max) * 0.5) },
+		{ name : "Cos", f : function(c) return VCos(c.freq * Math.PI, (c.max - c.min) * 0.5, (c.min + c.max) * 0.5) },
+		{ name : "Curve", f : function(c) return solvePoly(c) },
 		{ name : "Random", f : function(c) return VRandom(c.min, c.max - c.min) },
 	];
+
+	
+	static function solvePoly( c : Curve ) {
+
+		if( c.points == null )
+			c.points = [new h2d.col.Point(0, c.min/c.max), new h2d.col.Point(1, 1)];
+		
+		var xvals = [for( p in c.points ) p.x];
+		var yvals = [for( p in c.points ) p.y * c.max];
+		var pts = [];
+		for( i in 0...c.points.length ) {
+			pts.push(xvals[i]);
+			pts.push(yvals[i]);
+		}
+		var p = Std.int(c.prec);
+		var beta = h2d.col.Polynomial.regress(xvals, yvals, p <= 0 ? 0 : (p >= c.points.length ? c.points.length-1 : p));
+		while( Math.abs(beta[beta.length - 1]) < 1e-3 )
+			beta.pop();
+		return VPoly(beta,pts);
+	}
 	
 	public function new(emiter, ?parent) {
 		super(parent);
@@ -54,18 +82,7 @@ class Editor extends h2d.Sprite {
 			startTime : 0.,
 			pause : false,
 		};
-		curve = {
-			value : null,
-			name : null,
-			mode : -1,
-			incr : 0.01,
-			min : 0.,
-			max : 1.,
-			freq : 1.,
-			ampl : 1.,
-			pow : 1.,
-		};
-		initCurve(VLinear(0, 1));
+		curve = initCurve(VLinear(0, 1));
 		init();
 		buildUI();
 	}
@@ -79,7 +96,7 @@ class Editor extends h2d.Sprite {
 						font-size : 12px;
 					}
 					
-					:h1 {
+					h1 {
 						font-size : 10px;
 						color : #BBB;
 					}
@@ -158,8 +175,16 @@ class Editor extends h2d.Sprite {
 					
 					.curve {
 						dock : bottom;
+						layout : vertical;
 						padding : 5px;
 						height : 165px;
+					}
+					
+					.curve .title {
+						width : 180px;
+						text-align : right;
+						padding: 2px 10px;
+						background-color : #202020;
 					}
 					
 					#curve {
@@ -172,15 +197,23 @@ class Editor extends h2d.Sprite {
 						display : none;
 					}
 					
-					.m_const .v_min, .m_linear .v_min, .m_pow .v_min, .m_random .v_min {
+					.m_const .v_min, .m_linear .v_min, .m_pow .v_min, .m_random .v_min, .m_cos .v_min, .m_sin .v_min {
 						display : block;
 					}
 
-					.m_linear .v_max, .m_pow .v_max, .m_random .v_max {
+					.m_linear .v_max, .m_pow .v_max, .m_random .v_max, .m_cos .v_max, .m_sin .v_max, .m_curve .v_max {
 						display : block;
 					}
 					
 					.m_pow .v_pow {
+						display : block;
+					}
+					
+					.m_cos .v_freq, .m_sin .v_freq {
+						display : block;
+					}
+					
+					.m_curve .v_prec, .m_curve .v_clear {
 						display : block;
 					}
 					
@@ -297,7 +330,7 @@ class Editor extends h2d.Sprite {
 						</div>
 					</div>
 				</div>
-				<div class="curve_cont">
+				<div class="curve_cont" style="display:${if( curve.name == null ) "none" else "block" }" id="curvePanel">
 				<div class="curve panel">
 					<div class="line">
 						<select onchange="api.setCurveMode(api.parseInt(this.value))">
@@ -308,6 +341,7 @@ class Editor extends h2d.Sprite {
 								str;
 							}}
 						</select>
+						<span class="title">${curve.name == null ? "" : curve.name.charAt(0).toUpperCase() + curve.name.substr(1)}</span>
 					</div>
 					<div class="line">
 						<div class="val v_min">
@@ -318,6 +352,15 @@ class Editor extends h2d.Sprite {
 						</div>
 						<div class="val v_pow">
 							<span>Pow</span> <value value="${curve.pow}" increment="0.01" onchange="api.curve.pow = this.value; api.updateCurve()"/>
+						</div>
+						<div class="val v_freq">
+							<span>Freq</span> <value value="${curve.freq}" increment="0.01" onchange="api.curve.freq = this.value; api.updateCurve()"/>
+						</div>
+						<div class="val v_prec">
+							<span>Prec</span> <value value="${curve.prec}" increment="0.1" onchange="api.curve.prec = this.value; api.updateCurve()"/>
+						</div>
+						<div class="val v_clear">
+							<button value="Clear" onclick="api.clearCurve()"/>
 						</div>
 					</div>
 					<div id="curve">
@@ -340,13 +383,75 @@ class Editor extends h2d.Sprite {
 			setCurShape : setCurShape,
 			setShapeProp : setShapeProp,
 			editColors : editColors,
+			clearCurve : clearCurve,
 		});
 		addChildAt(ui,0);
 		stats = cast ui.getElementById("stats");
 		var c = ui.getElementById("curve");
 		c.addChild(new h2d.Bitmap(curveBG));
 		c.addChild(new h2d.Bitmap(curveTexture));
+		cedit = new h2d.Interactive(curveBG.width, curveBG.height, c);
+		cedit.onPush = onCurveEvent;
+		cedit.onMove = onCurveEvent;
+		cedit.onRelease = onCurveEvent;
+		cedit.onOut = onCurveEvent;
+		cedit.onKeyDown = onCurveEvent;
 		setCurveMode(curve.mode);
+	}
+	
+	function clearCurve() {
+		curve.points = [new h2d.col.Point(0, curve.min/curve.max), new h2d.col.Point(1, 1)];
+		curve.freq = 2;
+		buildUI();
+	}
+	
+	function onCurveEvent( e : hxd.Event ) {
+		if( !curve.value.match(VPoly(_)) )
+			return;
+		var px = e.relX / curveBG.width;
+		var py = ((1 - (e.relY / (0.5 * curveBG.height))) / curve.scaleY) / curve.max;
+		switch( e.kind ) {
+		case ERelease:
+			if( curve.active && curve.pointSelected == null ) {
+				curve.points.push(new h2d.col.Point(px,py));
+				updateCurve();
+			}
+			curve.active = false;
+		case EPush:
+			curve.active = true;
+			var dMax = 0.002;
+			var old = curve.pointSelected;
+			curve.pointSelected = null;
+			for( p in curve.points ) {
+				var d = hxd.Math.distanceSq(p.x - px, (p.y - py) * curve.max * curve.scaleY * curveBG.height / curveBG.width);
+				if( d < dMax ) {
+					dMax = d;
+					curve.pointSelected = p;
+				}
+			}
+			if( old != curve.pointSelected ) {
+				rebuildCurve();
+				if( curve.pointSelected != null ) cedit.focus();
+			}
+		case EMove:
+			if( curve.active && curve.pointSelected != null ) {
+				curve.pointSelected.x = px;
+				curve.pointSelected.y = py;
+				updateCurve();
+			}
+		case EOut:
+			if( curve.pointSelected == null ) curve.active = false;
+		case EKeyDown:
+			if( curve.pointSelected != null )
+				switch( e.keyCode ) {
+				case hxd.Key.DELETE:
+					curve.points.remove(curve.pointSelected);
+					curve.pointSelected = null;
+					updateCurve();
+				default:
+				}
+		default:
+		}
 	}
 	
 	function editColors() {
@@ -355,6 +460,8 @@ class Editor extends h2d.Sprite {
 			grad = null;
 			return;
 		}
+		ui.getElementById("curvePanel").addStyleString("display:none");
+		curve.name = null;
 		grad = new h2d.comp.GradientEditor(false, this);
 		grad.setKeys(state.colors == null ? [ { x : 0., value : 0xFFFFFF }, { x : 1., value : 0xFFFFFF } ] : [for( c in state.colors ) { x : c.time, value : c.color } ]);
 		grad.onChange = function(keys) {
@@ -370,6 +477,15 @@ class Editor extends h2d.Sprite {
 	}
 	
 	function editCurve( name : String ) {
+		if( curve.name == name ) {
+			curve.name = null;
+			ui.getElementById("curvePanel").addStyleString("display:none");
+			return;
+		}
+		if( grad != null ) {
+			grad.remove();
+			grad = null;
+		}
 		var old : Value = Reflect.field(state, name);
 		var v = old;
 		if( v == null )
@@ -377,7 +493,7 @@ class Editor extends h2d.Sprite {
 			default:
 				v = VLinear(0,1);
 			}
-		initCurve(v);
+		curve = initCurve(v);
 		curve.name = name;
 		switch( name ) {
 		case "emitRate":
@@ -406,9 +522,41 @@ class Editor extends h2d.Sprite {
 	function rebuildCurve() {
 		var bmp = new hxd.BitmapData(512, 512);
 		var width = curveTexture.width, height = curveTexture.height;
-		var scaleY = 1 / (curve.incr * 100);
+		var yMax;
+		
+		switch( curve.value ) {
+		case VConst(v): yMax = Math.abs(v);
+		case VRandom(min, len), VLinear(min, len), VPow(min,len,_): yMax = Math.max(Math.abs(min), Math.abs(min + len));
+		case VPoly(_):
+			yMax = 0;
+			for( p in curve.points ) {
+				var py = Math.abs(p.y * curve.max);
+				if( py > yMax )
+					yMax = py;
+			}
+		case VSin(_, a, o), VCos(_, a, o):
+			yMax = Math.max(Math.abs(a - o), Math.abs(a + o));
+		case VCustom(_):
+			throw "assert";
+		}
+		
+		
+		var sy = 1.;
+		var k = 0;
+		while( yMax > 100 * curve.incr ) {
+			var f = (k&1 == 0 ? 0.2 : 0.5); // x5 and x2 scale
+			sy *= f;
+			yMax *= f;
+			k++;
+		}
+		sy /= (100 * curve.incr);
+		curve.scaleY = sy;
+		
+		inline function posX(x:Float) {
+			return Std.int(x * (width - 1));
+		}
 		inline function posY(y:Float) {
-			return Std.int((1 - y * scaleY) * 0.5 * height);
+			return Std.int((1 - y * curve.scaleY) * 0.5 * height);
 		}
 		switch( curve.value ) {
 		case VRandom(start, len):
@@ -423,12 +571,40 @@ class Editor extends h2d.Sprite {
 				bmp.setPixel(x, posY(py), 0xFFFF0000);
 			}
 		}
+		
+		switch( curve.value ) {
+		case VPoly(_):
+			for( p in curve.points ) {
+				var px = posX(p.x), py = posY(p.y * curve.max);
+				var color = p == curve.pointSelected ? 0xFFFFFFFF : 0xFF808080;
+				bmp.line(px - 1, py - 1, px + 1, py - 1, color);
+				bmp.line(px - 1, py, px - 1, py + 1, color);
+				bmp.line(px + 1, py, px + 1, py + 1, color);
+				bmp.line(px, py + 1, px, py + 1, color);
+			}
+		default:
+		}
+		
 		curveTexture.getTexture().uploadBitmap(bmp);
 		bmp.dispose();
 	}
 	
 	function initCurve( v : Value ) {
-		var c = curve;
+		var c : Curve = {
+			value : null,
+			name : null,
+			mode : -1,
+			incr : 0.01,
+			min : 0.,
+			max : 1.,
+			freq : 1.,
+			pow : 1.,
+			prec : 3,
+			scaleY : 1.,
+			points : null,
+			active : false,
+			pointSelected : null,
+		};
 		c.value = v;
 		c.mode = v.getIndex();
 		switch( v ) {
@@ -444,9 +620,22 @@ class Editor extends h2d.Sprite {
 		case VRandom(a, b):
 			c.min = a;
 			c.max = b;
+		case VSin(f, a, off), VCos(f, a, off):
+			c.min = off - a;
+			c.max = off + a;
+			c.freq = f / Math.PI;
+		case VPoly(values,pts):
+			c.points = [];
+			for( i in 0...pts.length >> 1 )
+				c.points.push(new h2d.col.Point(pts[i << 1], pts[(i << 1) + 1]));
+			c.max = 1;
+			c.prec = values.length - 1;
+			c.active = false;
+			c.pointSelected = null;
 		case VCustom(_):
 			throw "assert";
 		}
+		return c;
 	}
 	
 	function setCurShape( mode : Int ) {
@@ -479,7 +668,8 @@ class Editor extends h2d.Sprite {
 		var cm = ui.getElementById("curve").getParent();
 		cm.removeClass("m_" + CURVES[curve.mode].name.toLowerCase());
 		curve.mode = mode;
-		cm.addClass("m_" + CURVES[curve.mode].name.toLowerCase());
+		var cn = CURVES[curve.mode].name.toLowerCase();
+		cm.addClass("m_" + cn);
 		updateCurve();
 	}
 	
@@ -541,7 +731,7 @@ class Editor extends h2d.Sprite {
 			lastPartSeen = null;
 			
 		if( grad != null ) {
-			grad.x = width - 1000;
+			grad.x = width - 680;
 			grad.y = height - 190;
 			grad.colorPicker.x = grad.boxWidth - 180;
 			grad.colorPicker.y = -321;

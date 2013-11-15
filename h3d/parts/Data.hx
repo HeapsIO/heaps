@@ -4,6 +4,9 @@ enum Value {
 	VConst( v : Float );
 	VLinear( start : Float, len : Float );
 	VPow( start : Float, len : Float, pow : Float );
+	VSin( freq : Float, ampl :  Float, offset : Float );
+	VCos( freq : Float, ampl :  Float, offset : Float );
+	VPoly( values : Array<Float>, points : Array<Float> );
 	VRandom( start : Float, len : Float );
 	VCustom( lifeToValue : Float -> Float -> Float ); // time -> random -> value
 }
@@ -143,6 +146,16 @@ class State {
 		case VRandom(s, l): s + l * rnd;
 		case VLinear(s, l): s + l * time;
 		case VPow(s, l, p): s + Math.pow(time, p) * l;
+		case VSin(f, a, o): Math.sin(time * f) * a + o;
+		case VCos(f, a, o): Math.cos(time * f) * a + o;
+		case VPoly(values,_):
+			var y = 0.0;
+			var j = values.length - 1;
+			while( j >= 0 ) {
+				y = values[j] + (time * y);
+				j--;
+			}
+			y;
 		case VCustom(f): f(time, rnd);
 		}
 	}

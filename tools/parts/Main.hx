@@ -1,6 +1,6 @@
 import h3d.parts.Data;
 
-class Main {
+class Main implements h3d.parts.Collider {
 	
 	var s3d : h3d.scene.Scene;
 	var s2d : h2d.Scene;
@@ -13,6 +13,12 @@ class Main {
 		engine = new h3d.Engine();
 		engine.onReady = init;
 		engine.init();
+	}
+	
+	public function collidePart( p : h3d.parts.Particle, n : h3d.Vector ) {
+		if( p.z > 0 ) return false;
+		n.set(0, 0, 1);
+		return true;
 	}
 	
 	function init() {
@@ -39,6 +45,7 @@ class Main {
 		box.material.texture = tex;
 		
 		emit = new h3d.parts.Emiter(s3d);
+		emit.collider = this;
 		edit = new h3d.parts.Editor(emit, s2d);
 	}
 	
