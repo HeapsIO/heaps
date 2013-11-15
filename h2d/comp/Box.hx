@@ -35,6 +35,8 @@ class Box extends Component {
 			var xPos = 0., yPos = 0., maxPos = 0.;
 			var prev = null;
 			for( c in components ) {
+				if( !c.visible )
+					continue;
 				if( ctx.measure ) {
 					ctx2.maxWidth = contentWidth;
 					ctx2.maxHeight = contentHeight - (yPos + lineHeight + style.verticalSpacing);
@@ -75,6 +77,8 @@ class Box extends Component {
 			var xPos = 0.;
 			var prev = null;
 			for( c in components ) {
+				if( !c.visible )
+					continue;
 				if( ctx.measure ) {
 					if( prev != null ) xPos += style.horizontalSpacing;
 					ctx2.maxWidth = contentWidth - xPos;
@@ -100,6 +104,8 @@ class Box extends Component {
 			var yPos = 0.;
 			var prev = null;
 			for( c in components ) {
+				if( !c.visible )
+					continue;
 				if( ctx.measure ) {
 					if( prev != null ) yPos += style.verticalSpacing;
 					ctx2.maxWidth = contentWidth;
