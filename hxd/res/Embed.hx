@@ -51,6 +51,14 @@ class Embed {
 		return macro $v{sys.io.File.getContent(file)};
 	}
 	
+	public static macro function getResource( file : String ) {
+		var path = Context.resolvePath(file);
+		var m = Context.getLocalClass().get().module;
+		Context.registerModuleDependency(m, path);
+		var str = haxe.Serializer.run(sys.io.File.getBytes(path));
+		return macro hxd.res.Any.fromBytes($v{file},haxe.Unserializer.run($v{str}));
+	}
+	
 	public macro static function embedFont( file : String, ?chars : String, ?skipErrors : Bool ) {
 		var ok = true;
 		var path = locateFont(file);

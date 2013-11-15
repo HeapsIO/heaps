@@ -2,12 +2,18 @@ package hxd.res;
 
 class BytesFileEntry extends FileEntry {
 	
+	var fullPath : String;
 	var bytes : haxe.io.Bytes;
 	var pos : Int;
 	
-	public function new(name, bytes) {
-		this.name = name;
+	public function new(path, bytes) {
+		this.fullPath = path;
+		this.name = path.split("/").pop();
 		this.bytes = bytes;
+	}
+	
+	override function get_path() {
+		return fullPath;
 	}
 	
 	override function getSign() : Int {
@@ -76,7 +82,7 @@ class BytesFileSystem implements FileSystem {
 	public function get( path : String ) {
 		var bytes = getBytes(path);
 		if( bytes == null ) throw "Resource not found '" + path + "'";
-		return new BytesFileEntry(path.split("/").pop(),bytes);
+		return new BytesFileEntry(path,bytes);
 	}
 	
 }

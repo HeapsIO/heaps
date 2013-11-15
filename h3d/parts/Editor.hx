@@ -883,10 +883,10 @@ class Editor extends h2d.Sprite {
 		if( cachedMode != state.blendMode && state.textureName == null ) {
 			cachedMode = state.blendMode;
 			var t = switch( state.blendMode ) {
-			case Add, SoftAdd: hxd.res.Embed.getFileBytes("h3d/parts/default.png");
-			case Alpha: hxd.res.Embed.getFileBytes("h3d/parts/defaultAlpha.png");
+			case Add, SoftAdd: hxd.res.Embed.getResource("h3d/parts/default.png");
+			case Alpha: hxd.res.Embed.getResource("h3d/parts/defaultAlpha.png");
 			};
-			setTexture(hxd.res.Any.fromBytes("",t).toTile());
+			setTexture(t.toTile());
 		}
 		var old = state.frames;
 		state.frames = null;
