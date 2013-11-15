@@ -7,9 +7,10 @@ private class PartShader extends h3d.impl.Shader {
 
 		var input : {
 			pos : Float3,
-			uv : Float2,
+			delta : Float2,
 			rotation : Float,
-			size : Float,
+			size : Float2,
+			uv : Float2,
 			color : Float4,
 		};
 		
@@ -23,7 +24,7 @@ private class PartShader extends h3d.impl.Shader {
 			var tpos = input.pos.xyzw;
 			tpos.xyz = input.pos.xyzw * mpos;
 			var tmp = tpos * mproj;
-			var rpos = input.uv - 0.5;
+			var rpos = input.delta - 0.5;
 			var cr = input.rotation.cos();
 			var sr = input.rotation.sin();
 			var rtmp = rpos.x * cr + rpos.y * sr;

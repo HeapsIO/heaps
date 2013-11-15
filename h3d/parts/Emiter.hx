@@ -7,7 +7,7 @@ class Emiter extends h3d.scene.Object {
 	public var count(default, null) : Int;
 	public var time(default,null) : Float;
 	public var state(default, null) : State;
-	public var pause : Bool;
+	public var speed : Float = 1.;
 	public var collider : Collider;
 
 	var rnd : Float;
@@ -45,7 +45,7 @@ class Emiter extends h3d.scene.Object {
 	
 	public function setState(s) {
 		this.state = s;
-		material.texture = s.texture;
+		material.texture = s.frames == null || s.frames.length == 0 ? null : s.frames[0].getTexture();
 		switch( s.blendMode ) {
 		case Add:
 			material.blend(SrcAlpha, One);
@@ -72,12 +72,12 @@ class Emiter extends h3d.scene.Object {
 	public function update(dt:Float) {
 		var s = state;
 		var old = time;
-		time += dt * eval(s.globalSpeed, time, rnd) / s.globalLife;
+		time += dt * eval(s.globalSpeed, time, rand) / s.globalLife;
 		var et = (time - old) * s.globalLife;
 		if( time >= 1 && s.loop )
 			time -= 1;
 		if( time < 1 )
-			emitCount += eval(s.emitRate, time, rand()) * et;
+			emitCount += eval(s.emitRate, time, rand) * et;
 		for( b in s.bursts )
 			if( b.time <= time && b.time > old )
 				emitCount += b.count;
@@ -144,7 +144,7 @@ class Emiter extends h3d.scene.Object {
 	function initPart(p:Particle) {
 		initPosDir(p);
 		p.time = 0;
-		p.lifeTimeFactor = 1 / eval(state.life, time, rand());
+		p.lifeTimeFactor = 1 / eval(state.life, time, rand);
 	}
 	
 	public function emit() {
@@ -194,27 +194,25 @@ class Emiter extends h3d.scene.Object {
 			kill(p);
 			return;
 		}
-		var randIndex = 0;
-		inline function rand() {
-			randIndex++;
-			return 0.;
-		};
-		
+		p.randIndex = 0;
+		var rand = p.getRand;
+	
 		// apply forces
 		if( state.force != null ) {
-			p.dx += eval(state.force.vx, time, rand()) * dt;
-			p.dy += eval(state.force.vy, time, rand()) * dt;
-			p.dz += eval(state.force.vz, time, rand()) * dt;
+			p.dx += eval(state.force.vx, time, rand) * dt;
+			p.dy += eval(state.force.vy, time, rand) * dt;
+			p.dz += eval(state.force.vz, time, rand) * dt;
 		}
-		p.dz -= eval(state.gravity, time, rand()) * dt;
+		p.dz -= eval(state.gravity, time, rand) * dt;
 		// calc speed and update position
-		var speed = eval(state.speed, p.time, rand());
+		var speed = eval(state.speed, p.time, rand);
 		var ds = speed * dt;
 		p.x += p.dx * ds;
 		p.y += p.dy * ds;
 		p.z += p.dz * ds;
-		p.size = eval(state.size, p.time, rand());
-		p.rotation = eval(state.rotation, p.time, rand());
+		p.size = eval(state.size, p.time, rand);
+		p.ratio = eval(state.ratio, p.time, rand);
+		p.rotation = eval(state.rotation, p.time, rand);
 		
 		// collide
 		if( state.collide && collider != null && collider.collidePart(p, tmp) ) {
@@ -232,7 +230,7 @@ class Emiter extends h3d.scene.Object {
 		
 		// calc color
 		var ck = colorMap;
-		var light = eval(state.light, p.time, rand());
+		var light = eval(state.light, p.time, rand);
 		if( ck != null ) {
 			if( ck.time >= p.time ) {
 				p.cr = ck.r;
@@ -265,12 +263,34 @@ class Emiter extends h3d.scene.Object {
 			p.cg = light;
 			p.cb = light;
 		}
-		p.ca = eval(state.alpha, p.time, rand());
+		p.ca = eval(state.alpha, p.time, rand);
+		
+		// frame
+		if( state.frame != null ) {
+			var f = eval(state.frame, p.time, rand) % 1;
+			if( f < 0 ) f += 1;
+			p.frame = Std.int(f * state.frames.length);
+		}
+	}
+	
+	public function splitFrames() {
+		var t = state.frames[0];
+		var nw = Std.int(t.width / t.height);
+		var nh = Std.int(t.height / t.width);
+		if( nw > 1 ) {
+			state.frames = [];
+			for( i in 0...nw )
+				state.frames.push(t.sub(i * t.height, 0, t.height, t.height));
+		} else if( nh > 1 ) {
+			state.frames = [];
+			for( i in 0...nh )
+				state.frames.push(t.sub(0, i * t.width, t.width, t.width));
+		}
 	}
 	
 	override function sync( ctx : h3d.scene.RenderContext ) {
 		super.sync(ctx);
-		if( !pause ) update(ctx.elapsedTime);
+		update(ctx.elapsedTime * speed);
 	}
 	
 	function sort( list : Particle ) {
@@ -281,7 +301,7 @@ class Emiter extends h3d.scene.Object {
 		return haxe.ds.ListSort.sort(list, function(p1, p2) return p1.w < p2.w ? -1 : 1);
 	}
 	
-	@:access(h3d.parts.Material)
+	@:access(h3d.parts.Material) @:access(h2d.Tile)
 	override function draw( ctx : h3d.scene.RenderContext ) {
 		if( head == null )
 			return;
@@ -304,15 +324,29 @@ class Emiter extends h3d.scene.Object {
 		var tmp = tmpBuf;
 		var hasColor = colorMap != null || !state.alpha.match(VConst(1)) || !state.light.match(VConst(1));
 		var surface = 0.;
+		var frames = state.frames;
+		if( frames == null || frames.length == 0 ) {
+			var t = new h2d.Tile(null, 0, 0, 1, 1);
+			t.u = 0; t.u2 = 1;
+			t.v = 0; t.v2 = 1;
+			frames = [t];
+		}
 		while( p != null ) {
+			var f = frames[p.frame];
+			var ratio = p.size * p.ratio * (f.height / f.width);
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;
 			tmp[pos++] = p.z;
-			// UV
+			// delta
 			tmp[pos++] = 0;
 			tmp[pos++] = 0;
 			tmp[pos++] = p.rotation;
 			tmp[pos++] = p.size;
+			tmp[pos++] = ratio;
+			// UV
+			tmp[pos++] = f.u;
+			tmp[pos++] = f.v;
+			// RBGA
 			if( hasColor ) {
 				tmp[pos++] = p.cr;
 				tmp[pos++] = p.cg;
@@ -327,6 +361,9 @@ class Emiter extends h3d.scene.Object {
 			tmp[pos++] = 1;
 			tmp[pos++] = p.rotation;
 			tmp[pos++] = p.size;
+			tmp[pos++] = ratio;
+			tmp[pos++] = f.u;
+			tmp[pos++] = f.v2;
 			if( hasColor ) {
 				tmp[pos++] = p.cr;
 				tmp[pos++] = p.cg;
@@ -341,6 +378,9 @@ class Emiter extends h3d.scene.Object {
 			tmp[pos++] = 0;
 			tmp[pos++] = p.rotation;
 			tmp[pos++] = p.size;
+			tmp[pos++] = ratio;
+			tmp[pos++] = f.u2;
+			tmp[pos++] = f.v;
 			if( hasColor ) {
 				tmp[pos++] = p.cr;
 				tmp[pos++] = p.cg;
@@ -355,6 +395,9 @@ class Emiter extends h3d.scene.Object {
 			tmp[pos++] = 1;
 			tmp[pos++] = p.rotation;
 			tmp[pos++] = p.size;
+			tmp[pos++] = ratio;
+			tmp[pos++] = f.u2;
+			tmp[pos++] = f.v2;
 			if( hasColor ) {
 				tmp[pos++] = p.cr;
 				tmp[pos++] = p.cg;
@@ -364,12 +407,12 @@ class Emiter extends h3d.scene.Object {
 			
 			p = p.next;
 		}
-		var stride = 7;
+		var stride = 10;
 		if( hasColor ) stride += 4;
 		var nverts = Std.int(pos / stride);
 		var buffer = ctx.engine.mem.alloc(nverts, stride, 4);
 		buffer.uploadVector(tmpBuf, 0, nverts);
-		var size = eval(state.globalSize, time, rand());
+		var size = eval(state.globalSize, time, rand);
 		
 		material.pshader.mpos = this.absPos;
 		material.pshader.mproj = ctx.camera.m;

@@ -7,8 +7,14 @@ enum Value {
 	VSin( freq : Float, ampl :  Float, offset : Float );
 	VCos( freq : Float, ampl :  Float, offset : Float );
 	VPoly( values : Array<Float>, points : Array<Float> );
-	VRandom( start : Float, len : Float );
-	VCustom( lifeToValue : Float -> Float -> Float ); // time -> random -> value
+	VRandom( start : Float, len : Float, converge : Converge );
+	VCustom( lifeToValue : Float -> (Void -> Float) -> Float ); // time -> random -> value
+}
+
+enum Converge {
+	No;
+	Start;
+	End;
 }
 
 enum Shape {
@@ -66,7 +72,7 @@ class State {
 	
 	// material
 	public var textureName : String;
-	public var texture : h3d.mat.Texture;
+	public var frames : Array<h2d.Tile>;
 	public var blendMode : BlendMode;
 	public var sortMode : SortMode;
 	
@@ -87,6 +93,7 @@ class State {
 	// particle globals
 	public var life : Value;
 	public var size : Value;
+	public var ratio : Value;
 	public var rotation : Value;
 	public var speed : Value;
 	public var gravity : Value;
@@ -102,13 +109,16 @@ class State {
 	public var collideKill : Bool;
 	public var bounce : Float;
 	
+	// animation
+	public var frame : Null<Value>;
+	
 	public function new() {
 	}
 	
 	public function setDefaults() {
 		// material
 		textureName = null;
-		texture = null;
+		frames = null;
 		blendMode = SoftAdd;
 		sortMode = Back;
 		// emit
@@ -126,6 +136,7 @@ class State {
 		// particles globals
 		life = VConst(1);
 		size = VConst(1);
+		ratio = VConst(1);
 		rotation = VConst(0);
 		speed = VConst(0.1);
 		gravity = VConst(0);
@@ -140,10 +151,10 @@ class State {
 		bounce = 0;
 	}
 	
-	public /*inline*/ function eval( v : Value, time : Float, rnd : Float ) : Float {
+	public /*inline*/ function eval( v : Value, time : Float, rand : Void -> Float ) : Float {
 		return switch( v ) {
 		case VConst(c): c;
-		case VRandom(s, l): s + l * rnd;
+		case VRandom(s, l, c): s + (switch( c ) { case No: l; case Start: l * time; case End: l * (1 - time); }) * rand();
 		case VLinear(s, l): s + l * time;
 		case VPow(s, l, p): s + Math.pow(time, p) * l;
 		case VSin(f, a, o): Math.sin(time * f) * a + o;
@@ -156,7 +167,7 @@ class State {
 				j--;
 			}
 			y;
-		case VCustom(f): f(time, rnd);
+		case VCustom(f): f(time, rand);
 		}
 	}
 	
