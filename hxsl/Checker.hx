@@ -25,7 +25,6 @@ class Checker {
 	
 	var vars : Map<String,TVar>;
 	var globals : Map<String,{ g : TGlobal, t : Type }>;
-	var functions : Map<String,TFunction>;
 	var curFun : TFunction;
 	var inLoop : Bool;
 
@@ -71,7 +70,6 @@ class Checker {
 
 	public function check( shader : Expr ) : ShaderData {
 		vars = new Map();
-		functions = new Map();
 		inLoop = false;
 		
 		var funs = [];
@@ -87,17 +85,20 @@ class Checker {
 				if( a.qualifiers.length != 0 ) error("No qualifier allowed for argument", pos);
 				{ name : a.name, kind : Local, type : a.type };
 			}];
-			var f : TFunction = {
+			var fv : TVar = {
 				name : f.name,
+				kind : Function,
+				type : TFun([{ args : [for( a in args ) { type : a.type, name : a.name }], ret : f.ret == null ? TVoid : f.ret }]),
+			};
+			var f : TFunction = {
+				ref : fv,
 				args : args,
 				ret : f.ret == null ? TVoid : f.ret,
 				expr : null,
 			};
-			if( functions.exists(f.name) )
+			if( vars.exists(fv.name) )
 				error("Duplicate function name", pos);
-			if( vars.exists(f.name) )
-				error("Name already used by variable", pos);
-			functions.set(f.name,f);
+			vars.set(fv.name,fv);
 			tfuns.push(f);
 		}
 		for( i in 0...tfuns.length )
@@ -161,7 +162,6 @@ class Checker {
 			default:
 			}
 		case TSwiz(e, _):
-			checkWrite(e);
 			checkWrite(e);
 			return;
 		default:
@@ -236,18 +236,12 @@ class Checker {
 				type = v.type;
 				TVar(v);
 			} else {
-				var f = functions.get(name);
-				if( f != null ) {
-					type = TFun([{ args : [for( a in f.args ) { name : a.name, type : a.type }], ret : f.ret }]);
-					TFunVar(f);
-				} else {
-					var g = globals.get(name);
-					if( g != null ) {
-						type = g.t;
-						TGlobal(g.g);
-					} else
-						error("Unknown identifier '" + name + "'", e.pos);
-				}
+				var g = globals.get(name);
+				if( g != null ) {
+					type = g.t;
+					TGlobal(g.g);
+				} else
+					error("Unknown identifier '" + name + "'", e.pos);
 			}
 		case EField(e1, f):
 			var e1 = typeExpr(e1, Value);

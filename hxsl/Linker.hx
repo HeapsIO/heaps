@@ -1,10 +1,34 @@
 package hxsl;
 using hxsl.Ast;
 
+private class AllocatedVar {
+	public var id : Int;
+	public var v : TVar;
+	public var path : String;
+	public var merged : Array<TVar>;
+	public function new() {
+	}
+}
+
+private class ShaderInfos {
+	public var priority : Int;
+	public var body : TExpr;
+	public var deps : Array<TFunction>;
+	public var read : Map<Int,AllocatedVar>;
+	public var write : Map<Int,AllocatedVar>;
+	public function new() {
+		deps = [];
+		read = new Map();
+		write = new Map();
+	}
+}
+
 class Linker {
 
-	var varMap : Map<String,{ vmerged : Array<TVar>, vnew : TVar }>;
-	var funMap : Map<String,{ fold : TFunction, fnew : TFunction }>;
+	var varMap : Map<String,AllocatedVar>;
+	var allVars : Array<AllocatedVar>;
+	var curShader : ShaderInfos;
+	var shaders : Array<ShaderInfos>;
 	
 	public function new() {
 	}
@@ -17,7 +41,7 @@ class Linker {
 		switch( v.kind ) {
 		case Global, Input, Var:
 			// shared vars
-		case Local, Param:
+		case Local, Param, Function:
 			throw "assert";
 		}
 		if( v.kind != v2.kind )
@@ -43,11 +67,11 @@ class Linker {
 		}
 	}
 	
-	function allocVar( v : TVar, ?path : String, ?parent : TVar, p : Position ) {
+	function allocVar( v : TVar, ?path : String, ?parent : TVar, p : Position ) : AllocatedVar {
 		if( v.kind == Local )
-			return v;
+			throw "assert";
 		if( v.parent != null && parent == null ) {
-			parent = allocVar(v.parent, null, null, p);
+			parent = allocVar(v.parent, null, null, p).v;
 			var p = parent;
 			path = p.name;
 			p = p.parent;
@@ -59,78 +83,90 @@ class Linker {
 		var key = (path == null ? v.name : path + "." + v.name);
 		var v2 = varMap.get(key);
 		if( v2 != null ) {
-			for( vm in v2.vmerged )
+			for( vm in v2.merged )
 				if( vm == v )
-					return v2.vnew;
-			if( v.kind == Param ) {
-				// allocate a new unique name in the shader
+					return v2;
+			if( v.kind == Param || v.kind == Function || (v.kind == Var && v.hasQualifier(Private)) ) {
+				// allocate a new unique name in the shader if already in use
 				var k = 2;
 				while( varMap.exists(key + k) )
 					k++;
 				v.name += k;
 				key += k;
 			} else {
-				mergeVar(key, v, v2.vnew, p);
-				v2.vmerged.push(v);
-				return v2.vnew;
+				mergeVar(key, v, v2.v, p);
+				v2.merged.push(v);
+				return v2;
 			}
 		}
-		var v2 = {
+		var v2 : TVar = {
 			name : v.name,
 			type : v.type,
 			kind : v.kind,
 			qualifiers : v.qualifiers,
 			parent : parent,
 		};
-		varMap.set(key, { vmerged : [v], vnew : v2 });
+		var a = new AllocatedVar();
+		a.v = v2;
+		a.merged = [v];
+		a.path = key;
+		a.id = allVars.length;
+		allVars.push(a);
+		varMap.set(key, a);
 		switch( v2.type ) {
 		case TStruct(vl):
-			v2.type = TStruct([for( v in vl ) allocVar(v, key, v2, p)]);
+			v2.type = TStruct([for( v in vl ) allocVar(v, key, v2, p).v]);
 		default:
 		}
-		return v2;
+		return a;
 	}
 	
+	/*
 	function allocFun( f : TFunction ) : TFunction {
-		var f2 = funMap.get(f.name);
+		var f2 = funMap.get(f.ref.name);
 		if( f2 != null ) {
 			if( f2.fold == f )
 				return f2.fnew;
 			// generate unique name
 			var k = 2;
-			while( funMap.exists(f.name + k) )
+			while( funMap.exists(f.ref.name + k) )
 				k++;
-			f.name = f.name + k;
+			f.ref.name = f.ref.name + k;
 		}
-		var f2 = {
-			args : [for( a in f.args) allocVar(a, null, null, f.expr.p)],
-			name : f.name,
+		var f2 : TFunction = {
+			ref : allocVar(f.ref, null, null, f.expr.p).v,
+			args : f.args, // no-op
 			ret : f.ret,
 			expr : mapExprVar(f.expr),
 		};
-		funMap.set(f2.name, { fold : f, fnew : f2 });
+		funMap.set(f2.ref.name, { fold : f, fnew : f2 });
 		return f2;
 	}
+	*/
 	
 	function mapExprVar( e : TExpr ) {
 		switch( e.e ) {
-		case TVar(v):
-			v = allocVar(v, null, null, e.p);
-			return { e : TVar(v), t : v.type, p : e.p };
-		case TFunVar(f):
-			f = allocFun(f);
-			return { e : TFunVar(f), t : e.t, p : e.p };
+		case TVar(v) if( v.kind != Local ):
+			var v = allocVar(v, null, null, e.p);
+			return { e : TVar(v.v), t : v.v.type, p : e.p };
 		default:
 			return e.map(mapExprVar);
 		}
 	}
 	
-	public function link( shaders : Array<ShaderData>, startFun : String, outVar : String ) {
+	public function link( shaders : Array<ShaderData>, startFun : String, outVar : String ) : ShaderData {
 		varMap = new Map();
-		funMap = new Map();
+		allVars = new Array();
 		// globalize vars
-		var shaders = [for( s in shaders ) { vars : [for( v in s.vars ) allocVar(v, null, null, null)], funs : [for( f in s.funs ) allocFun(f)] } ];
-		return shaders[1];
+		for( s in shaders ) {
+			for( v in s.vars )
+				allocVar(v, null, null, null);
+		}
+		var vars = [];
+		for( v in allVars )
+			if( v.v.parent == null )
+				vars.push(v.v);
+		return { vars : vars, funs : [] };
 	}
 	
 }

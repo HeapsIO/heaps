@@ -57,9 +57,9 @@ class Eval {
 		var funs = [];
 		for( f in s.funs ) {
 			var f2 : TFunction = {
+				ref : mapVar(f.ref),
 				args : [for( a in f.args ) mapVar(a)],
 				ret : f.ret,
-				name : f.name,
 				expr : null,
 			};
 			funs.push(f2);
@@ -183,8 +183,6 @@ class Eval {
 			default:
 				TIf(e, evalExpr(eif), eelse == null ? null : evalExpr(eelse));
 			}
-		case TFunVar(f):
-			TFunVar(funMap.get(f));
 		case TBreak:
 			TBreak;
 		case TContinue:

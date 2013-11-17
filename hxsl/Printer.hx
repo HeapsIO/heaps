@@ -66,12 +66,14 @@ class Printer {
 			add("@param ");
 		case Input:
 			add("@input ");
+		case Function:
+			add("@function ");
 		}
 		add("var " + v.name + " : " + v.type.toString());
 	}
 	
 	function addFun( f : TFunction ) {
-		add("function " + f.name + "(");
+		add("function " + f.ref.name + "(");
 		var first = true;
 		for( a in f.args ) {
 			if( first ) {
@@ -135,8 +137,6 @@ class Printer {
 				addExpr(e, tabs);
 			}
 			add(")");
-		case TFunVar(f):
-			add(f.name);
 		case TFor(v, it, loop):
 			add("for( " + v.name + " in ");
 			addExpr(it, tabs);

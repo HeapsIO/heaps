@@ -63,6 +63,7 @@ enum VarKind {
 	Param;
 	Var;
 	Local;
+	Function;
 }
 
 enum VarQualifier {
@@ -124,7 +125,7 @@ typedef TVar = {
 }
 
 typedef TFunction = {
-	var name : String;
+	var ref : TVar;
 	var args : Array<TVar>;
 	var ret : Type;
 	var expr : TExpr;
@@ -200,7 +201,6 @@ enum Component {
 enum TExprDef {
 	TConst( c : Const );
 	TVar( v : TVar );
-	TFunVar( f : TFunction );
 	TGlobal( g : TGlobal );
 	TParenthesis( e : TExpr );
 	TBlock( el : Array<TExpr> );
@@ -279,7 +279,7 @@ class Tools {
 		case TReturn(e): if( e != null ) f(e);
 		case TFor(_, it, loop): f(it); f(loop);
 		case TArray(e, index): f(e); f(index);
-		case TConst(_),TVar(_),TFunVar(_), TGlobal(_), TDiscard, TContinue, TBreak:
+		case TConst(_),TVar(_),TGlobal(_), TDiscard, TContinue, TBreak:
 		}
 	}
 
@@ -296,7 +296,7 @@ class Tools {
 		case TReturn(e): TReturn(if( e != null ) f(e) else null);
 		case TFor(v, it, loop): TFor(v, f(it), f(loop));
 		case TArray(e, index): TArray(f(e),f(index));
-		case TConst(_), TVar(_), TFunVar(_), TGlobal(_), TDiscard, TContinue, TBreak: e.e;
+		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak: e.e;
 		}
 		return { e : ed, t : e.t, p : e.p };
 	}
