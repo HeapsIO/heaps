@@ -40,6 +40,10 @@ class Error {
 		this.pos = pos;
 	}
 	
+	public function toString() {
+		return "Error(" + msg + ")@" + pos;
+	}
+	
 	public static function t( msg : String, pos : Position ) : Dynamic {
 		throw new Error(msg, pos);
 		return null;

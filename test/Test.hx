@@ -194,7 +194,7 @@ static var SRC = {
 	
 	@global var camera : {
 		var projDiag : Vec3;
-		var dir : Vec3;
+		@var var dir : Vec3;
 	};
 	var transformedNormal : Vec3;
 	var transformedPosition : Vec3;
@@ -332,6 +332,7 @@ class Test {
 	static function main() {
 		var shaders = [
 			new Proto().compile(),
+			new Outline().compile(),
 		];
 		var s = new hxsl.Linker().link(shaders, "vertex", "out.color");
 		trace("\n"+hxsl.Printer.shaderToString(s));

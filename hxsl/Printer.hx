@@ -86,10 +86,18 @@ class Printer {
 		addExpr(f.expr,"");
 	}
 	
+	function addVarName( v : TVar ) {
+		if( v.parent != null ) {
+			addVarName(v.parent);
+			add(".");
+		}
+		add(v.name);
+	}
+	
 	function addExpr( e : TExpr, tabs : String ) : Void {
 		switch( e.e ) {
 		case TVar(v):
-			add(v.name);
+			addVarName(v);
 		case TVarDecl(v, init):
 			addVar(v, false, tabs);
 			if( init != null ) {
