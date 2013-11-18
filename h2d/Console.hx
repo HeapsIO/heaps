@@ -55,6 +55,10 @@ class Console extends h2d.Sprite {
 		aliases.set(name, command);
 	}
 	
+	public function runCommand( commandLine : String ) {
+		handleCommand(commandLine);
+	}
+	
 	override function onAlloc() {
 		super.onAlloc();
 		getScene().addEventListener(onEvent);
