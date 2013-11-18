@@ -124,6 +124,8 @@ class NanoJpeg {
 		rstinterval = 0;
 		buf = 0;
 		bufbits = 0;
+		for( i in 0...3 )
+			comps[i].dcpred = 0;
 	}
 	
 	function cleanup() {
