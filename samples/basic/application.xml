@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+	<!-- NMML reference: https://gist.github.com/1763850 -->
+	
+	<!-- metadata, make sure 'package' is at least 3 segments (ie. com.mycompany.myproject) -->
+	<meta title="test.openfl" package="testopenfl" version="1.0.0" company="" />
+	
+	<!-- output -->
+	<app main="Test" file="testopenfl" path="bin" swf-version="11.6" />
+	
+	<window background="#000000" fps="60" />
+	<window width="800" height="480" unless="mobile" />
+	<window orientation="landscape" vsync="false" antialiasing="0" if="cpp" />
+	
+	<!-- classpath, haxe libs -->
+	<source path="." />
+	<haxelib name="openfl" />
+	<haxelib name="actuate" />
+	<haxelib name="h3d" />
+	
+	<!-- assets -->
+	<icon path="assets/openfl.svg" />
+	<assets path="assets/img" rename="img" />
+	
+	<!-- optimize output
+	<haxeflag name="-dce full" /> -->
+	<haxedef name="resourcesPath" value="../res" />
+	
+</project>

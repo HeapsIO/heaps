@@ -1,7 +1,7 @@
 package h3d.impl;
 import h3d.impl.Driver;
 
-#if flash
+#if (flash&&!cpp&&!js)
 
 @:allow(h3d.impl.Stage3dDriver)
 class VertexWrapper {
@@ -22,7 +22,7 @@ class VertexWrapper {
 		var f = b.free;
 		while( f != null ) {
 			if( f.count > 0 ) {
-				var mem : UInt = f.count * b.stride * 4;
+				var mem = f.count * b.stride * 4;
 				if( driver.empty.length < mem ) driver.empty.length = mem;
 				driver.uploadVertexBytes(b.vbuf, f.pos, f.count, haxe.io.Bytes.ofData(driver.empty), 0);
 			}

@@ -1,6 +1,6 @@
 package h3d.impl;
 
-#if flash
+#if (flash&&!cpp&&!js)
 typedef IndexBuffer = flash.display3D.IndexBuffer3D;
 typedef VertexBuffer = Stage3dDriver.VertexWrapper;
 typedef Texture = flash.display3D.textures.TextureBase;
