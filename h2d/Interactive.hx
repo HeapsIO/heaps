@@ -112,7 +112,7 @@ class Interactive extends Drawable {
 		return c;
 	}
 	
-	function globalToLocal( e : hxd.Event ) {
+	function eventToLocal( e : hxd.Event ) {
 		// convert global event to our local space
 		var x = e.relX, y = e.relY;
 		var rx = x * scene.matA + y * scene.matB + scene.absX;
@@ -141,7 +141,7 @@ class Interactive extends Drawable {
 	public function startDrag(callb,?onCancel) {
 		scene.startDrag(function(event) {
 			var x = event.relX, y = event.relY;
-			globalToLocal(event);
+			eventToLocal(event);
 			callb(event);
 			event.relX = x;
 			event.relY = y;
