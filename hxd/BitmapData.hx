@@ -1,4 +1,6 @@
 package hxd;
+import flash.utils.ByteArray;
+import mt.fx.Flash;
 
 private typedef InnerData = #if flash flash.display.BitmapData #elseif js js.html.ImageData #elseif cpp flash.display.BitmapData #else Int #end;
 
@@ -8,7 +10,7 @@ abstract BitmapData(InnerData) {
 	public var height(get, never) : Int;
 	
 	public inline function new(width:Int, height:Int) {
-		#if flash
+		#if ((flash)||(openfl))
 		this = new flash.display.BitmapData(width, height, true, 0);
 		#else
 		throw "TODO";
@@ -16,7 +18,7 @@ abstract BitmapData(InnerData) {
 	}
 	
 	public inline function clear( color : Int ) {
-		#if flash
+		#if ((flash)||(openfl))
 		this.fillRect(this.rect, color);
 		#else
 		throw "TODO";
@@ -24,7 +26,7 @@ abstract BitmapData(InnerData) {
 	}
 	
 	public inline function fill( rect : h2d.col.Bounds, color : Int ) {
-		#if flash
+		#if ((flash)||(openfl))
 		this.fillRect(new flash.geom.Rectangle(Std.int(rect.xMin), Std.int(rect.yMin), Math.ceil(rect.xMax - rect.xMin), Math.ceil(rect.yMax - rect.yMin)), color);
 		#else
 		throw "TODO";
@@ -56,13 +58,13 @@ abstract BitmapData(InnerData) {
 	}
 	
 	public inline function dispose() {
-		#if flash
+		#if ((flash)||(openfl))
 		this.dispose();
 		#end
 	}
 	
 	public inline function getPixel( x : Int, y : Int ) {
-		#if flash
+		#if ((flash)||(openfl))
 		return this.getPixel32(x, y);
 		#else
 		throw "TODO";
@@ -71,7 +73,7 @@ abstract BitmapData(InnerData) {
 	}
 
 	public inline function setPixel( x : Int, y : Int, c : Int ) {
-		#if flash
+		#if ((flash)||(openfl))
 		this.setPixel32(x, y, c);
 		#else
 		throw "TODO";
@@ -104,30 +106,35 @@ abstract BitmapData(InnerData) {
 	
 	static function nativeGetPixels( b : InnerData ) {
 		#if flash
-		return new Pixels(b.width, b.height, haxe.io.Bytes.ofData(b.getPixels(b.rect)), ARGB);
+			 return new Pixels(b.width, b.height, haxe.io.Bytes.ofData(b.getPixels(b.rect)), ARGB);
+		#elseif openfl
+			var bRect = b.rect;
+			var bPixels = b.getPixels(b.rect);
+			return new Pixels(b.width, b.height, bPixels, ARGB);
 		#else
-		throw "TODO";
-		return null;
+			throw "TODO";
+			return null;
 		#end
 	}
 	
 	static function nativeSetPixels( b : InnerData, pixels : Pixels ) {
 		#if flash
-		var bytes = pixels.bytes.getData();
-		bytes.position = 0;
-		switch( pixels.format ) {
-		case BGRA:
-			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
-		case ARGB:
-			bytes.endian = flash.utils.Endian.BIG_ENDIAN;
-		case RGBA:
-			pixels.convert(BGRA);
-			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
-		}
-		b.setPixels(b.rect, bytes);
+			var bytes = pixels.bytes.getData();
+			bytes.position = 0;
+			switch( pixels.format ) {
+			case BGRA:
+				bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
+			case ARGB:
+				bytes.endian = flash.utils.Endian.BIG_ENDIAN;
+			case RGBA:
+				pixels.convert(BGRA);
+				bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
+			}
+			b.setPixels(b.rect, bytes);
+		#elseif ((js) || (cpp))
+			b.setPixels(b.rect, ByteArray.fromBytes(pixels.bytes));
 		#else
-		throw "TODO";
-		return null;
+			throw "TODO";
 		#end
 	}
 }

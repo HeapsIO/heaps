@@ -1,4 +1,5 @@
 package hxd.res;
+import hxd.System;
 
 #if (air3 || sys)
 
@@ -141,7 +142,7 @@ private class LocalEntry extends FileEntry {
 	}
 	
 	override function load( ?onReady : Void -> Void ) : Void {
-		#if air3
+		#if ((air3)||(openfl))
 		if( onReady != null ) haxe.Timer.delay(onReady, 1);
 		#else
 		throw "TODO";
@@ -149,19 +150,24 @@ private class LocalEntry extends FileEntry {
 	}
 	
 	override function loadBitmap( onLoaded : hxd.BitmapData -> Void ) : Void {
-		#if flash
-		var loader = new flash.display.Loader();
-		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
-			throw Std.string(e) + " while loading " + relPath;
-		});
-		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			var content : flash.display.Bitmap = cast loader.content;
-			onLoaded(hxd.BitmapData.fromNative(content.bitmapData));
-			loader.unload();
-		});
-		loader.load(new flash.net.URLRequest(file.url));
+		#if((flash)||(openfl))
+			var loader = new flash.display.Loader();
+			loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
+				throw Std.string(e) + " while loading " + relPath;
+			});
+			loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
+				if ( System.isVerbose) trace('complete !');
+				var content : flash.display.Bitmap = cast loader.content;
+				onLoaded(hxd.BitmapData.fromNative(content.bitmapData));
+				loader.unload();
+			});
+			
+			//if ( System.isVerbose) trace('requesting loader '+file.url);
+			var url = #if air3 file.url #else file #end;
+			loader.load(new flash.net.URLRequest(url));
 		#else
-		throw "TODO";
+			if ( System.isVerbose) trace('not implemtented');
+			throw "TODO";
 		#end
 	}
 	
@@ -281,9 +287,13 @@ class LocalFileSystem implements FileSystem {
 			throw "File not found " + path;
 		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#else
+		if ( hxd.System.isVerbose) trace('opening');
 		var f = open(path);
+		if ( hxd.System.isVerbose) trace('opened');
 		if( f == null ||!sys.FileSystem.exists(f) )
 			throw "File not found " + path;
+			
+		if ( hxd.System.isVerbose) trace('found');
 		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#end
 	}
@@ -333,14 +343,17 @@ class LocalFileSystem implements FileSystem {
 	}
 	
 	public function exists(path:String) {
+		trace("no implementation");
 		return false;
 	}
 	
 	public function get(path:String) : FileEntry {
+		trace("no implementation");
 		return null;
 	}
 
 	public function getRoot() : FileEntry {
+		trace("no implementation");
 		return null;
 	}
 }

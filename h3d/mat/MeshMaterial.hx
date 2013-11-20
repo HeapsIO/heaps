@@ -198,7 +198,7 @@ private class MeshShader extends h3d.impl.Shader {
 	
 	function set_lightSystem(l) {
 		this.lightSystem = l;
-		lights = {
+		lights = l==null?null:{
 			ambient : l.ambient,
 			dirsDir : [for( l in l.dirs ) l.dir],
 			dirsColor : [for( l in l.dirs ) l.color],
@@ -221,6 +221,11 @@ private class MeshShader extends h3d.impl.Shader {
 			cst.push("const int numDirLights = " + lightSystem.dirs.length+";");
 			cst.push("const int numPointLights = " + lightSystem.points.length+";");
 		}
+		else {
+			cst.push("const int numDirLights = 0;");
+			cst.push("const int numPointLights = 0;");
+		}
+		
 		if( vertex ) {
 			if( mpos != null ) cst.push("#define hasPos");
 			if( hasSkin ) {
@@ -268,6 +273,7 @@ private class MeshShader extends h3d.impl.Shader {
 		uniform vec2 uvScale;
 		uniform vec2 uvDelta;
 		
+		#if hasLightSystem
 		// we can't use Array of structures in GLSL
 		struct LightSystem {
 			vec3 ambient;
@@ -278,9 +284,12 @@ private class MeshShader extends h3d.impl.Shader {
 			vec3 pointsAtt[numPointLights];
 		};
 		uniform LightSystem lights;
+		#end
 			
+		#if hasShadowMap
 		uniform mat4 shadowLightProj;
 		uniform mat4 shadowLightCenter;
+		#end
 
 		uniform vec4 fog;
 		
@@ -289,7 +298,10 @@ private class MeshShader extends h3d.impl.Shader {
 		varying lowp vec3 acolor;
 		varying mediump float talpha;
 		varying mediump float tblend;
+		
+		#if hasShadowMap
 		varying mediump vec4 tshadowPos;
+		#end
 		
 		uniform mat3 mposInv;
 
@@ -340,7 +352,9 @@ private class MeshShader extends h3d.impl.Shader {
 				#end
 			#elseif hasVertexColor
 				tcolor = color;
-			#end
+			#else
+				tcolor = vec3(1,1,1);
+			#end 
 			#if hasVertexColorAdd
 				acolor = colorAdd;
 			#end

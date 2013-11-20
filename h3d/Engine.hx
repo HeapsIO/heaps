@@ -1,5 +1,6 @@
 package h3d;
 import h3d.mat.Data;
+import hxd.System;
 
 class Engine {
 
@@ -54,10 +55,12 @@ class Engine {
 		realFps = stage.getFrameRate();
 		lastTime = haxe.Timer.stamp();
 		stage.addResizeEvent(onStageResize);
-		#if flash
+		#if ((flash)&&(!js)&&(!cpp))
 		driver = new h3d.impl.Stage3dDriver();
 		#elseif (js || cpp)
+		if( System.isVerbose) trace("creating gl driver !");
 		driver = new h3d.impl.GlDriver();
+		if( System.isVerbose) trace("created gl driver !");
 		#else
 		throw "No driver";
 		#end
@@ -191,20 +194,25 @@ class Engine {
 			mem.onContextLost();
 		else
 			mem = new h3d.impl.MemoryManager(driver, 65400);
+			
 		hardware = driver.isHardware();
 		set_debug(debug);
 		set_fullScreen(fullScreen);
 		resize(width, height);
+		
 		if( disposed )
 			onContextLost();
-		else
+		else {
 			onReady();
+		}
 	}
 	
 	public dynamic function onContextLost() {
+		if ( System.isVerbose) trace('onContextLost');
 	}
 
 	public dynamic function onReady() {
+		if ( System.isVerbose) trace('onReady');
 	}
 	
 	function onStageResize() {
@@ -224,9 +232,11 @@ class Engine {
 	}
 	
 	public dynamic function onResized() {
+		if ( System.isVerbose) trace('onResized');
 	}
 
-	public function resize(width, height) {
+	public function resize(width:Int, height:Int) {
+		if ( System.isVerbose) trace('engine resize $width,$height');
 		// minimum 32x32 size
 		if( width < 32 ) width = 32;
 		if( height < 32 ) height = 32;

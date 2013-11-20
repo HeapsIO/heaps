@@ -16,7 +16,8 @@ class System {
 	public static var lang(get,never) : String;
 	public static var isAndroid(get, never) : Bool;
 	
-	public static var screenDPI(get,never) : Float;
+	public static var screenDPI(get, never) : Float;
+	public static var isVerbose = #if verbose true #else false #end;
 
 	#if flash
 	
@@ -183,7 +184,8 @@ class System {
 			VIEW = new openfl.display.OpenGLView();
 			flash.Lib.current.addChild(VIEW);
 		}
-		VIEW.render = function(_) if( f != null ) f();
+		VIEW.render = function(_) if ( f != null ) f();
+		if( System.isVerbose) trace("setLoop");
 	}
 
 	public static function setCursor( c : Cursor ) {

@@ -23,7 +23,7 @@ class VertexWrapper {
 		while( f != null ) {
 			if( f.count > 0 ) {
 				var mem = f.count * b.stride * 4;
-				if( driver.empty.length < mem ) driver.empty.length = mem;
+				if( cast driver.empty.length < cast mem ) driver.empty.length = mem;
 				driver.uploadVertexBytes(b.vbuf, f.pos, f.count, haxe.io.Bytes.ofData(driver.empty), 0);
 			}
 			f = f.next;

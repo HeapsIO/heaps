@@ -310,39 +310,44 @@ class Stage {
 #if openfl
 
 	static function openFLBoot(callb) {
+		
+		trace("ofl boot !");
 		// init done with OpenFL ApplicationMain
-		if( flash.Lib.current.stage != null ) {
+		if ( flash.Lib.current.stage != null ) {
+			trace("stage created !");
 			callb();
 			return;
 		}
 		// init done by hand
 		
-		//var width = 750, height = 450, fps = 60, bgColor = 0x808080;
-		//flash.Lib.create(
-			//function() {
-				//flash.Lib.current.stage.align = flash.display.StageAlign.TOP_LEFT;
-				//flash.Lib.current.stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
-				//flash.Lib.current.loaderInfo = flash.display.LoaderInfo.create (null);
-				//callb();
-			//},
-			//width, height, fps, bgColor,
-			//(true ? flash.Lib.HARDWARE : 0) |
-			//(true ? flash.Lib.ALLOW_SHADERS : 0) |
-			//(true ? flash.Lib.REQUIRE_SHADERS : 0) |
-			//(false ? flash.Lib.DEPTH_BUFFER : 0) |
-			//(false ? flash.Lib.STENCIL_BUFFER : 0) |
-			//(true ? flash.Lib.RESIZABLE : 0) |
-			//(false ? flash.Lib.BORDERLESS : 0) |
-			//(false ? flash.Lib.VSYNC : 0) |
-			//(false ? flash.Lib.FULLSCREEN : 0) |
-			//(0 == 4 ? flash.Lib.HW_AA_HIRES : 0) |
-			//(0 == 2 ? flash.Lib.HW_AA : 0),
-			//"h3d", null
-			//#if mobile
-			//, null /* ScaledStage : TODO? */
-			//#end
-		//);
-		
+		#if native
+		trace("flb create !");
+		var width = 750, height = 450, fps = 60, bgColor = 0x808080;
+		flash.Lib.create(
+			function() {
+				flash.Lib.current.stage.align = flash.display.StageAlign.TOP_LEFT;
+				flash.Lib.current.stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
+				flash.Lib.current.loaderInfo = flash.display.LoaderInfo.create (null);
+				callb();
+			},
+			width, height, fps, bgColor,
+			(true ? flash.Lib.HARDWARE : 0) |
+			(true ? flash.Lib.ALLOW_SHADERS : 0) |
+			(true ? flash.Lib.REQUIRE_SHADERS : 0) |
+			(false ? flash.Lib.DEPTH_BUFFER : 0) |
+			(false ? flash.Lib.STENCIL_BUFFER : 0) |
+			(true ? flash.Lib.RESIZABLE : 0) |
+			(false ? flash.Lib.BORDERLESS : 0) |
+			(false ? flash.Lib.VSYNC : 0) |
+			(false ? flash.Lib.FULLSCREEN : 0) |
+			(0 == 4 ? flash.Lib.HW_AA_HIRES : 0) |
+			(0 == 2 ? flash.Lib.HW_AA : 0),
+			"h3d", null
+			#if mobile
+			, null /* ScaledStage : TODO? */
+			#end
+		);
+		#end
 	}
 
 #end

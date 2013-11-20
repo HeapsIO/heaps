@@ -5,6 +5,8 @@ import haxe.CallStack;
 import haxe.io.Bytes;
 import hxd.BitmapData;
 import hxd.Pixels;
+import hxd.res.Embed;
+import hxd.res.EmbedFileSystem;
 import hxd.res.LocalFileSystem;
 
 class Test {
@@ -40,24 +42,14 @@ class Test {
 		//trace(tex);
 		
 		function onLoaded( bmp : hxd.BitmapData) {
-			//var tex :Texture = //engine.mem.allocTexture(bmp.width, bmp.height);
-			//tex.uploadBitmap(bmp);
 			var tex :Texture = Texture.fromBitmap( bmp);
-			//var tex :Texture = Texture.fromColor( 0xFFFF0000);
-			if ( hxd.System.isVerbose) trace("getting tex");
-			
 			var mat = new h3d.mat.MeshMaterial(tex);
 			mat.culling = None;
-			if ( hxd.System.isVerbose) trace("mat ok");
 			
 			scene = new Scene();
 			
-			if ( hxd.System.isVerbose) trace("scene ok");
-			
 			obj1 = new Mesh(prim, mat, scene);
 			obj2 = new Mesh(prim, mat, scene);
-			
-			if ( hxd.System.isVerbose) trace("mesh ok");
 			
 			mat.lightSystem = null;
 			/*
@@ -69,29 +61,19 @@ class Test {
 				//points : [{ pos : new h3d.Vector(1.5,0,0), color : new h3d.Vector(3,0,0), att : new h3d.Vector(0,0,1) }],
 			};
 			*/
-			if ( hxd.System.isVerbose) trace("light system");
 			
-			if( hxd.System.isVerbose) trace("try update");
 			update();
-			
-			if( hxd.System.isVerbose) trace("setting loop");
 			hxd.System.setLoop(update);
-			if ( hxd.System.isVerbose) trace("apps started");
 		}
-		if ( hxd.System.isVerbose) trace("call load");
 		
+		#if sys
 		if ( lfs.exists("hxlogo.png")) {
-			if ( hxd.System.isVerbose) trace("exist load");
-			var e = lfs.get("hxlogo.png");
-			if ( hxd.System.isVerbose) trace("file entry got");
-			e.loadBitmap(onLoaded);
-			if ( hxd.System.isVerbose) trace("loadBitmap called");
+			var e = lfs.get("hxlogo.png").loadBitmap(onLoaded);
 		}
-		else 
-			if ( hxd.System.isVerbose) trace("impossible to find bitmap");
-			
-		if ( hxd.System.isVerbose) trace("called load");
-		
+		#else 
+			//erk
+			onLoaded(hxd.Res.hxlogo.toBitmap());
+		#end
 	}
 	
 	function update() {		
@@ -105,29 +87,23 @@ class Test {
 	static var lfs: LocalFileSystem;
 	static function main() {
 		
-		var bytes = Bytes.alloc(4);
-		bytes.set(0, 0xde);
-		bytes.set(0, 0xad);
-		bytes.set(0, 0xbe);
-		bytes.set(0, 0xef);
-		
-		var p = new Pixels(1, 1, bytes, hxd.PixelFormat.ARGB);
-		p.convert( RGBA );
-		
-		
 		#if flash
 		haxe.Log.setColor(0xFF0000);
 		#end
 		
-		lfs = new hxd.res.LocalFileSystem('res');
-		var it = lfs.getRoot().iterator();
-		var e:Dynamic = null;
-		do
-		{
-			e = it.next();
-			trace( 'detecting file ${e.name}');
-		}
-		while ( it.hasNext() );
+		#if flash
+			EmbedFileSystem.init();
+		#else
+			lfs = new hxd.res.LocalFileSystem('res');
+			var it = lfs.getRoot().iterator();//bugs
+			var e:Dynamic = null;
+			do
+			{
+				e = it.next();
+				trace( 'detecting file ${e.name}');
+			}
+			while ( it.hasNext() );
+		#end
 		new Test();
 		
 		

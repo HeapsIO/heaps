@@ -1,5 +1,7 @@
 package h3d.impl;
 import h3d.impl.Driver;
+import hxd.Pixels;
+import hxd.System;
 
 #if (js||cpp)
 
@@ -162,6 +164,16 @@ class GlDriver extends Driver {
 		gl.deleteBuffer(v.b);
 	}
 	
+	
+	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
+		gl.bindTexture(GL.TEXTURE_2D, t.t);
+		var pix = bmp.getPixels();
+		pix.convert(RGBA);
+		var pixels = new Uint8Array(pix.bytes.getData());
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels);
+		gl.bindTexture(GL.TEXTURE_2D, null);
+	}
+	
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
 		pixels.convert(RGBA);
@@ -261,6 +273,10 @@ class GlDriver extends Driver {
 			code = ~/#if ([A-Za-z0-9_]+)/g.replace(code, "#if defined($1)");
 			code = ~/#elseif ([A-Za-z0-9_]+)/g.replace(code, "#elif defined($1)");
 			code = code.split("#end").join("#endif");
+			
+			if ( System.isVerbose )
+				trace("Trying to compile shader:"+code);
+			
 			var s = gl.createShader(type);
 			gl.shaderSource(s, code);
 			gl.compileShader(s);
@@ -339,8 +355,11 @@ class GlDriver extends Driver {
 		var r_array = ~/\[([0-9]+)\]$/;
 		for( k in 0...nuni ) {
 			var inf = gl.getActiveUniform(p, k);
+			
+			if ( System.isVerbose) trace("retrieving uniform " + inf.name);
 			if( inf.name.substr(0, 6) == "webgl_" )
 				continue; // skip native uniforms
+				
 			var t = decodeTypeInt(inf.type);
 			switch( t ) {
 			case Tex2d, TexCube:
@@ -378,12 +397,15 @@ class GlDriver extends Driver {
 				}
 				break;
 			}
-			inst.uniforms.push( {
+			
+			var tu = {
 				name : name,
 				type : t,
 				loc : gl.getUniformLocation(p, inf.name),
 				index : texIndex,
-			});
+			};
+			inst.uniforms.push( tu);
+			if(System.isVerbose) trace('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
 		}
 		inst.program = p;
 		return inst;
@@ -391,24 +413,36 @@ class GlDriver extends Driver {
 
 	override function selectShader( shader : Shader ) : Bool {
 		var change = false;
-		if( shader.instance == null )
+		if ( shader.instance == null ) {
+			//if ( System.isVerbose ) trace("building shader");
 			shader.instance = buildShaderInstance(shader);
-		if( shader.instance != curShader ) {
+		}
+		if ( shader.instance != curShader ) {
+			//if ( System.isVerbose ) trace("binding shader");
 			curShader = shader.instance;
+			
+			if (curShader.program==null) throw "invalid shader";
 			gl.useProgram(curShader.program);
+			//if ( System.isVerbose ) trace("setting attribs");
 			for( i in curAttribs...curShader.attribs.length ) {
 				gl.enableVertexAttribArray(i);
 				curAttribs++;
 			}
 			while( curAttribs > curShader.attribs.length )
 				gl.disableVertexAttribArray(--curAttribs);
+				
+			//if ( System.isVerbose ) trace("attribs set");
 			change = true;
 		}
 			
 		
-		for( u in curShader.uniforms ) {
+		for ( u in curShader.uniforms ) {
+			if ( u == null ) throw "Missing uniform pointer";
+			if ( u.loc == null ) throw "Missing uniform location";
+			
 			var val : Dynamic = Reflect.field(shader, u.name);
-			if( val == null ) throw "Missing shader value " + u.name;
+			if ( val == null ) throw "Missing shader value " + u.name;
+			
 			setUniform(val, u, u.type);
 		}
 		shader.customSetup(this);
@@ -427,6 +461,11 @@ class GlDriver extends Driver {
 	}
 	
 	function setUniform( val : Dynamic, u : Shader.Uniform, t : Shader.ShaderType ) {
+		#if debug if (u == null) throw "no uniform set, check your shader"; #end
+		#if debug if (u.loc == null) throw "no uniform loc set, check your shader"; #end
+		#if debug if (val == null) throw "no val set, check your shader"; #end
+		#if debug if (gl == null) throw "no gl set, Arrrghh"; #end
+		
 		switch( t ) {
 		case Mat4:
 			var m : Matrix = val;
@@ -443,14 +482,22 @@ class GlDriver extends Driver {
 			gl.uniform2f(u.loc, v.x, v.y);
 		case Vec3:
 			var v : h3d.Vector = val;
+			if (v == null) throw "no val set, check your shader "+v;
 			gl.uniform3f(u.loc, v.x, v.y, v.z);
 		case Vec4:
 			var v : h3d.Vector = val;
+			if (v == null) throw "no val set, check your shader "+v; 
 			gl.uniform4f(u.loc, v.x, v.y, v.z, v.w);
 		case Struct(field, t):
 			var v = Reflect.field(val, field);
-			if( v == null ) throw "Missing shader field " + field;
+			
+			if ( t == null ) throw "Missing shader type " + t;
+			if ( u == null ) throw "Missing shader loc " + u;
+			if ( v == null ) throw "Missing shader field " + field+ " in " +val;
+			
+			trace('locating $field in $val of type $t');
 			setUniform(v, u, t);
+			
 		case Index(index, t):
 			var v = val[index];
 			if( v == null ) throw "Missing shader index " + index;
@@ -540,6 +587,19 @@ class GlDriver extends Driver {
 		GL.LESS,
 		GL.LEQUAL,
 	];
+
+	#if cpp
+	public inline function getError() {
+		switch(gl.getError()) {
+			case GL.NO_ERROR                      	:"NO_ERROR";
+			case GL.INVALID_ENUM                  	:"INVALID_ENUM";
+			case GL.INVALID_VALUE                 	:"INVALID_VALUE";
+			case GL.INVALID_OPERATION           	:"INVALID_OPERATION";
+			case GL.OUT_OF_MEMORY               	:"OUT_OF_MEMORY";
+			default 								:"UNKNOW_ERROR";
+		}
+	}
+	#end
 
 }
 

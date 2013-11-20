@@ -17,7 +17,10 @@ class FileTree {
 	var options : EmbedOptions;
 	var isFlash : Bool;
 	var isJS : Bool;
+	var isCPP : Bool;
 	var embedTypes : Array<String>;
+	
+	public static inline var isVerbose = #if verbose true #else false #end;
 	
 	public function new(dir) {
 		this.path = resolvePath(dir);
@@ -37,14 +40,19 @@ class FileTree {
 		pairedExt.set("cdb", ["img"]);
 		isFlash = Context.defined("flash");
 		isJS = Context.defined("js");
+		isCPP = Context.defined("cpp");
 	}
 	
 	public static function resolvePath( ?dir:String ) {
+		//if ( isVerbose ) trace("resolvePath dir:" + dir);
+		
 		var resolve = true;
 		if( dir == null ) {
 			dir = Context.definedValue("resourcesPath");
 			if( dir == null ) dir = "res" else resolve = false;
 		}
+		
+		//if ( isVerbose ) trace("after dir eval resolvePath dir:" + dir);
 		var pos = Context.currentPos();
 		if( resolve )
 			dir = try Context.resolvePath(dir) catch( e : Dynamic ) Context.error("Resource directory not found in classpath '" + dir + "' (use -D resourcesPath=DIR)", pos);
@@ -106,6 +114,8 @@ class FileTree {
 	
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	function embedFile( file : String, ext : String, relPath : String, fullPath : String ) {
+		//if ( isVerbose ) trace('embedFile: $file $ext $relPath $fullPath');
+		
 		var name = "R" + invalidChars.replace(relPath, "_");
 		
 		switch( ext.toLowerCase() ) {
@@ -164,7 +174,12 @@ class FileTree {
 		} else if( isJS ) {
 			Context.addResource(name, sys.io.File.getBytes(fullPath));
 			return true;
-		} else {
+		} else if ( isCPP ) {
+			if ( isVerbose ) trace('embedFile res : cpp embed');
+			Context.addResource(name, sys.io.File.getBytes(fullPath));
+			return true;
+		}else {
+			if ( isVerbose ) trace('embedFile res : doing nothing');
 			return false;
 		}
 		return true;
@@ -208,7 +223,7 @@ class FileTree {
 		return fields;
 	}
 	
-	function scanRec( relPath : String, fields : Array<Field>, dict : Map<String,String> ) {
+	function scanRec( relPath : String, fields : Array<Field>, dict : Map < String, String > ) {
 		var dir = this.path + "/" + relPath;
 		// make sure to rescan if one of the directories content has changed (file added or deleted)
 		Context.registerModuleDependency(currentModule, dir);
