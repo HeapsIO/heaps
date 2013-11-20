@@ -68,7 +68,7 @@ class Test {
 		
 		#if sys
 		if ( lfs.exists("hxlogo.png")) {
-			var e = lfs.get("hxlogo.png").loadBitmap(onLoaded);
+			lfs.get("hxlogo.png").loadBitmap(onLoaded);
 		}
 		#else 
 			//erk
