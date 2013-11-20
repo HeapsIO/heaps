@@ -1,0 +1,19 @@
+-main ApplicationMain 
+-lib openfl
+-lib actuate
+-lib h3d
+-cp .
+-D tools=1.1.0
+-D resourcesPath=../res
+-D openfl=1.1
+-D dump=pretty
+-D display
+-D verbose=true
+-D windows
+-D desktop
+--no-output
+-cp bin/windows/cpp/haxe
+-cpp bin/windows/cpp/obj
+--macro allowPackage("flash")
+--macro keep("Test")
+
