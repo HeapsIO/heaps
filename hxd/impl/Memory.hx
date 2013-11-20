@@ -22,6 +22,24 @@ class MemoryReader {
 		#end
 	}
 	
+	public inline function double( addr : Int ) : Float {
+		#if flash
+		return flash.Memory.getDouble(addr);
+		#else
+		throw "TODO";
+		return 0.;
+		#end
+	}
+
+	public inline function i32( addr : Int ) : Int {
+		#if flash
+		return flash.Memory.getI32(addr);
+		#else
+		throw "TODO";
+		return 0;
+		#end
+	}
+	
 	public inline function end() {
 		@:privateAccess Memory.end();
 	}

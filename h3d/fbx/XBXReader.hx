@@ -73,16 +73,26 @@ class XBXReader
 			case 4:
 				var l = readInt();
 				var a = [];
+				var tmp = hxd.impl.Tmp.getBytes(l * 4);
+				i.readFullBytes(tmp, 0, l * 4);
+				var r = hxd.impl.Memory.select(tmp);
 				a[l - 1] = 0;
 				for( idx in 0...l )
-					a[idx] = readInt();
+					a[idx] = r.i32(idx << 2);
+				r.end();
+				hxd.impl.Tmp.saveBytes(tmp);
 				PInts( a );
 			case 5:
 				var l = readInt();
 				var a = [];
+				var tmp = hxd.impl.Tmp.getBytes(l * 8);
+				i.readFullBytes(tmp, 0, l * 8);
+				var r = hxd.impl.Memory.select(tmp);
 				a[l - 1] = 0.;
 				for( idx in 0...l)
-					a[idx] = i.readDouble();
+					a[idx] = r.double(idx << 3);
+				r.end();
+				hxd.impl.Tmp.saveBytes(tmp);
 				PFloats( a );
 			default:
 				error( "unknown prop " + b);
