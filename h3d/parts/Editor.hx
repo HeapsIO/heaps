@@ -25,7 +25,7 @@ private typedef Curve = {
 
 class Editor extends h2d.Sprite {
 	
-	var emit : Emiter;
+	var emit : Emitter;
 	var state : State;
 	var curState : String;
 	var stateChanged : Null<Float>;
@@ -394,7 +394,7 @@ class Editor extends h2d.Sprite {
 							<span>Max</span> <value value="${state.maxParts}" increment="1" onchange="api.s.maxParts = this.value"/>
 						</div>
 						<div class="line">
-							<span>Emiter Type</span> <select onchange="api.setCurShape(api.parseInt(this.value))">
+							<span>Emitter Type</span> <select onchange="api.setCurShape(api.parseInt(this.value))">
 								<option value="0" checked="${state.shape.match(SDir(_))}">Direction</option>
 								<option value="1" checked="${state.shape.match(SSphere(_))}">Sphere</option>
 								<option value="2" checked="${state.shape.match(SSector(_))}">Sector</option>

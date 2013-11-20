@@ -21,7 +21,7 @@ enum Shape {
 	SDir( x : Float, y : Float, z : Float );
 	SSphere( radius : Float );
 	SSector( radius : Float, angle : Float  );
-	SCustom( initPartPosDir : Emiter -> Particle -> Void ); // Bool = on shell
+	SCustom( initPartPosDir : Emitter -> Particle -> Void ); // Bool = on shell
 }
 
 class ValueXYZ {

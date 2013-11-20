@@ -1,7 +1,7 @@
 package h3d.parts;
 import h3d.parts.Data;
 
-class Emiter extends h3d.scene.Object {
+class Emitter extends h3d.scene.Object {
 
 	public var material : h3d.parts.Material;
 	public var count(default, null) : Int;
