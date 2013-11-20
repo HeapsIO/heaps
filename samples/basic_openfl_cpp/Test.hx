@@ -20,47 +20,12 @@ class Test {
 		engine = new h3d.Engine();
 		engine.debug = true;
 		engine.backgroundColor = 0xFF202020;
-		engine.onReady = function() { 
-			//if ( engine.onReady != null)
-			//	engine.onReady();  
-			start();
-		};
-		
-		if( hxd.System.isVerbose) trace("calling engine init");
+		engine.onReady = start;
 		engine.init();
-		if( hxd.System.isVerbose) trace("calling engine inited");
 	}
-	
-	/*
-	function textureLoader( textureName : String , done:Bool->Void ) {
-	  var t = engine.mem.allocTexture(512, 512);
-	  var mat = new h3d.mat.MeshMaterial(t);
-	  loadTexture(textureName, mat , true , done);
-	  return mat;
-	}
- 
-	function loadTexture( textureName : String, mat : h3d.mat.MeshMaterial, handleAlpha = true ,done ) {
-		var t = mat.texture;
-		var loader = new flash.display.Loader();
-		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
-			mat.culling = None;
-			mat.blend(SrcAlpha, OneMinusSrcAlpha);
-			trace("textureLoaderFbx ->Failed to load " + textureName);
-			done(false);
-		});
-		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			var bmp = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;			
-			t.resize(bmp.width, bmp.height);
-			t.uploadBitmap(hxd.BitmapData.fromNative(bmp));
-			mat.culling = None;
-			done(true);
-		  });
-	}
-	*/
- 
 	
 	function start() {
-		trace("Start !");
+		trace("start !");
 		
 		var prim = new h3d.prim.Cube();
 		prim.translate( -0.5, -0.5, -0.5);
