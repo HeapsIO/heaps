@@ -140,13 +140,15 @@ class System {
 
 	public static function setCursor( c : Cursor ) {
 		var canvas = js.Browser.document.getElementById("webgl");
-		if( canvas != null )
+		if( canvas != null ) {
 			canvas.style.cursor = switch( c ) {
-			case Default: "auto";
+			case Default:
 			case Button: "pointer";
 			case Move: "move";
 			case TextInput: "text";
+			case Hide: "none";
 			};
+		}
 	}
 	
 	static function get_lang() {
