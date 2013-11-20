@@ -73,12 +73,11 @@ class Sprite {
 		}
 		pt.x = pt.x * 2 - 1;
 		pt.y = 1 - pt.y * 2;
-		var invDet = 1 / (matA * matD - matB * matC);
 		pt.x -= absX;
 		pt.y -= absY;
-		var det = matA * matD - matB * matC;
+		var invDet = 1 / (matA * matD - matB * matC);
 		var px = (pt.x * matD - pt.y * matC) * invDet;
-		var py = (pt.x * matB + pt.y * matD) * invDet;
+		var py = (-pt.x * matB + pt.y * matA) * invDet;
 		pt.x = px;
 		pt.y = py;
 		return pt;
