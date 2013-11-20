@@ -54,7 +54,33 @@ class Sprite {
 		if( scene != null ) {
 			pt.x *= scene.width;
 			pt.y *= scene.height;
+		} else {
+			pt.x *= hxd.System.width;
+			pt.y *= hxd.System.height;
 		}
+		return pt;
+	}
+
+	public function globalToLocal( pt : h2d.col.Point ) {
+		syncPos();
+		var scene = getScene();
+		if( scene != null ) {
+			pt.x /= scene.width;
+			pt.y /= scene.height;
+		} else {
+			pt.x /= hxd.System.width;
+			pt.y /= hxd.System.height;
+		}
+		pt.x = pt.x * 2 - 1;
+		pt.y = 1 - pt.y * 2;
+		var invDet = 1 / (matA * matD - matB * matC);
+		pt.x -= absX;
+		pt.y -= absY;
+		var det = matA * matD - matB * matC;
+		var px = (pt.x * matD - pt.y * matC) * invDet;
+		var py = (pt.x * matB + pt.y * matD) * invDet;
+		pt.x = px;
+		pt.y = py;
 		return pt;
 	}
 	
