@@ -103,6 +103,8 @@ class Stage3dDriver extends Driver {
 	
 	override function resize(width, height) {
 		ctx.configureBackBuffer(width, height, antiAlias);
+		this.width = width;
+		this.height = height;
 	}
 	
 	override function clear(r, g, b, a) {
@@ -360,15 +362,21 @@ class Stage3dDriver extends Driver {
 		if( x == 0 && y == 0 && width < 0 && height < 0 )
 			ctx.setScissorRectangle(null);
 		else {
-			var x = x < 0 ? 0 : x;
-			var y = y < 0 ? 0 : y;
-			// todo : support target texture
-			var tw = this.width;
-			var th = this.height;
-			if( x+width > tw ) width = tw - x;
-			if( y+height > th ) height = th - y;
-			if( width < 0 ) { x = 0; width = 0; };
-			if( height < 0 ) { y = 0; height = 0; };
+			if( x < 0 ) {
+				width += x;
+				x = 0;
+			}
+			if( y < 0 ) {
+				height += y;
+				y = 0;
+			}
+			var tw = inTarget == null ? this.width : 9999;
+			var th = inTarget == null ? this.height : 9999;
+			if( x + width > tw ) width = tw - x;
+			if( y + height > th ) height = th - y;
+			// for flash, width=0 means no scissor...
+			if( width <= 0 ) { x = tw; width = 1; };
+			if( height <= 0 ) { y = th; height = 1; };
 			ctx.setScissorRectangle(new flash.geom.Rectangle(x, y, width, height));
 		}
 	}
