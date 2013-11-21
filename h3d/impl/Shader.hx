@@ -7,6 +7,7 @@ import haxe.macro.Context;
 typedef Shader = hxsl.Shader;
 #elseif (js || cpp)
 
+typedef ShaderLocation = #if js js.html.webgl.UniformLocation #else openfl.gl.GLUniformLocation #end;
 enum ShaderType {
 	Float;
 	Vec2;
@@ -21,9 +22,15 @@ enum ShaderType {
 	Byte4;
 	Struct( field : String, t : ShaderType );
 	Index( index : Int, t : ShaderType );
+	Elements( field : String, size:Int, t : ShaderType);//
 }
 
-typedef Uniform = { name : String, loc : #if js js.html.webgl.UniformLocation #else openfl.gl.GLUniformLocation #end, type : ShaderType, index : Int }
+typedef Uniform = { 
+	name : String, 
+	loc : ShaderLocation, 
+	type : ShaderType, 
+	index : Int 
+}
 
 class ShaderInstance {
 

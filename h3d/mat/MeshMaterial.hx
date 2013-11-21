@@ -1,5 +1,6 @@
 package h3d.mat;
 
+
 typedef LightSystem = {
 	var ambient : h3d.Vector;
 	var dirs : Array<{ dir : h3d.Vector, color : h3d.Vector }>;
@@ -126,6 +127,8 @@ private class MeshShader extends h3d.impl.Shader {
 					tcolor = col * input.color;
 				else
 					tcolor = col;
+					
+				
 			} else if( hasVertexColor )
 				tcolor = input.color;
 			if( hasVertexColorAdd )
@@ -337,19 +340,30 @@ private class MeshShader extends h3d.impl.Shader {
 				#end
 				n = normalize(n);
 				vec3 col = lights.ambient;
-				for(int i = 0; i < numDirLights; i++ )
-					col += lights.dirsColor[i] * max(dot(n,-lights.dirsDir[i]),0.);
-				for(int i = 0; i < numPointLights; i++ ) {
-					vec3 d = tpos.xyz - lights.pointsPos[i];
-					float dist2 = dot(d,d);
-					float dist = sqrt(dist2);
-					col += lights.pointsColor[i] * (max(dot(n,d),0.) / dot(lights.pointsAtt[i],vec3(dist,dist2,dist2*dist)));
-				}
+				
+				for (int i = 0; i < numDirLights; i++ )
+					col;
+					//col += lights.dirsColor[i] * max(dot(n, -lights.dirsDir[i]), 0.);
+				//
+				//for(int i = 0; i < numPointLights; i++ ) {
+					//vec3 d = tpos.xyz - lights.pointsPos[i];
+					//float dist2 = dot(d,d);
+					//float dist = sqrt(dist2);
+					//col += lights.pointsColor[i] * (max(dot(n,d),0.) / dot(lights.pointsAtt[i],vec3(dist,dist2,dist2*dist)));
+				//}
+				
 				#if hasVertexColor
-					tcolor = col * color;
+					tcolor = col.rgb * color;
 				#else
-					tcolor = col;
+					tcolor = col.rgb;
 				#end
+				
+				//todo
+				//tcolor = lights.ambient;
+				//tcolor =  vec3(0.5, 0.5, 0.5);
+				//tcolor = lights.dirsColor[0];
+				//tcolor =  lights.pointsColor[0];
+				
 			#elseif hasVertexColor
 				tcolor = color;
 			#else

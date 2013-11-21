@@ -1,5 +1,7 @@
 package h3d.impl;
 import h3d.impl.Driver;
+import h3d.Vector;
+import hxd.FloatBuffer;
 import hxd.Pixels;
 import hxd.System;
 
@@ -254,6 +256,7 @@ class GlDriver extends Driver {
 		case Mat3: 9;
 		case Mat4: 16;
 		case Tex2d, TexCube, Struct(_), Index(_): throw "Unexpected " + t;
+		case Elements(_, nb,t ): return nb * typeSize(t); 
 		}
 	}
 	
@@ -274,8 +277,8 @@ class GlDriver extends Driver {
 			code = ~/#elseif ([A-Za-z0-9_]+)/g.replace(code, "#elif defined($1)");
 			code = code.split("#end").join("#endif");
 			
-			if ( System.isVerbose )
-				trace("Trying to compile shader:"+code);
+			//SHADER CODE
+			//if ( System.isVerbose )trace("Trying to compile shader:"+code);
 			
 			var s = gl.createShader(type);
 			gl.shaderSource(s, code);
@@ -349,6 +352,9 @@ class GlDriver extends Driver {
 		
 		// list uniforms needed by shader
 		var allCode = code + gl.getShaderSource(fs);
+		
+		
+		
 		var nuni = gl.getProgramParameter(p, GL.ACTIVE_UNIFORMS);
 		inst.uniforms = [];
 		var texIndex = -1;
@@ -356,44 +362,80 @@ class GlDriver extends Driver {
 		for( k in 0...nuni ) {
 			var inf = gl.getActiveUniform(p, k);
 			
-			if ( System.isVerbose) trace("retrieving uniform " + inf.name);
+			//if ( System.isVerbose) trace("retrieving uniform " + inf.name);
 			if( inf.name.substr(0, 6) == "webgl_" )
 				continue; // skip native uniforms
 				
+			if (System.isVerbose) trace('retrieved uniform $inf');
+			
+			var isArray = false;
 			var t = decodeTypeInt(inf.type);
 			switch( t ) {
-			case Tex2d, TexCube:
-				texIndex++;
-			case Vec3:
-				var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "");
-				if( r.match(allCode) )
-					switch( r.matched(1) ) {
-					case "byte4":
-						t = Byte3;
-					default:
+				case Tex2d, TexCube:
+					texIndex++;
+				case Vec3:
+					var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "g");
+					if( r.match(allCode) ){
+						switch( r.matched(1) ) {
+						case "byte4":
+							if(System.isVerbose) trace('_0 fetched $inf');
+							t = Byte3;
+						default:
+							if(System.isVerbose) trace('_0 type filtering bails ${inf.name}');
+						}
 					}
-			case Vec4:
-				var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "");
-				if( r.match(allCode) )
-					switch( r.matched(1) ) {
-					case "byte4":
-						t = Byte4;
-					default:
+					else 
+					{
+						if (System.isVerbose) trace('_0 bailed  $inf');
+						
+						var r = new EReg("[A-Z0-9_]+[ \t]+"+inf.name.split('.').pop() + "\\[[a-z](.+?)\\]", "gi");
+						if ( r.match(allCode)) {
+							if (System.isVerbose) trace('_0 found an array ! ' + r.matched(0) + " - " + r.matched(1) );
+							isArray = true;
+						}
 					}
-			default:
+				case Vec4:
+					var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "g");
+					if( r.match(allCode) ){
+						switch( r.matched(1) ) {
+						case "byte4":
+							if(System.isVerbose) trace('_1 fetched $inf');
+							t = Byte4;
+						default:
+							if(System.isVerbose) trace('_1 type filtering bails ${inf.name}');
+						}
+					}
+					else
+					{
+						if (System.isVerbose) trace('_1 bailed  $inf');
+						
+						var r = new EReg("[A-Z0-9_]+[ \t]+"+inf.name.split('.').pop() + "\\[[a-z](.+?)\\]", "gi");
+						if ( r.match(allCode)) {
+							//if (System.isVerbose) trace('_1 found an array ! ' + r.matched(0) + " - " + r.matched(1) );
+							isArray = true;
+						}
+					}
+				default:	
+					if(System.isVerbose) trace('can t subtype $t ${inf.type}');
 			}
 			var name = inf.name;
 			while( true ) {
 				if( r_array.match(name) ) {
 					name = r_array.matchedLeft();
 					t = Index(Std.parseInt(r_array.matched(1)), t);
+					//if (System.isVerbose) trace('0_ $name -> $t');
 					continue;
 				}
 				var c = name.lastIndexOf(".");
-				if( c > 0 ) {
+				if ( c > 0 ) {
+					//if (System.isVerbose) trace('1_ $name -> $t');
 					var field = name.substr(c + 1);
 					name = name.substr(0, c);
-					t = Struct(field, t);
+					
+					if( !isArray)
+						t = Struct(field, t);
+					else
+						t = Elements( field, inf.size, t );
 				}
 				break;
 			}
@@ -442,7 +484,7 @@ class GlDriver extends Driver {
 			
 			var val : Dynamic = Reflect.field(shader, u.name);
 			if ( val == null ) throw "Missing shader value " + u.name;
-			
+			//if ( System.isVerbose ) trace('retrieving uniform ${u.name} $val');
 			setUniform(val, u, u.type);
 		}
 		shader.customSetup(this);
@@ -489,14 +531,48 @@ class GlDriver extends Driver {
 			if (v == null) throw "no val set, check your shader "+v; 
 			gl.uniform4f(u.loc, v.x, v.y, v.z, v.w);
 		case Struct(field, t):
-			var v = Reflect.field(val, field);
+			var vs = Reflect.field(val, field);
 			
 			if ( t == null ) throw "Missing shader type " + t;
 			if ( u == null ) throw "Missing shader loc " + u;
-			if ( v == null ) throw "Missing shader field " + field+ " in " +val;
+			if ( vs == null ) throw "Missing shader field " + field+ " in " +val;
 			
-			trace('locating $field in $val of type $t');
-			setUniform(v, u, t);
+			//if ( System.isVerbose ) trace('locating $field in $val of type $t');
+			/*
+			if ( Std.is( vs , Array) ){
+				//for ( vi in 0...vs.length )
+				//		setUniform(vs[v], u, t);
+				//if( System.isVerbose ) trace("need to bind !");
+				var a : Array<h3d.Vector> = cast vs; // we should deep inspect this i think....
+				for ( vi in 0...a.length ) {
+					
+					gl.uniform4f( u.loc + 4 * vi, a[vi].x, a[vi].y, a[vi].z, a[vi].w);
+					
+				}
+					
+				//for ( v in a )
+				//	if( System.isVerbose ) trace('need to bind $v $field $t');
+					//if ( v.name == field ) {
+					//if( System.isVerbose ) trace('need to bind $v $field $t');
+					//break;
+				//	gl.uniform4fv( v.name,v.loc, 
+					//}
+			}
+			else 
+			*/
+			setUniform(vs, u, t);
+			
+		case Elements(field, nb, t): {
+			var arr : Array<Vector> = Reflect.field(val, field);
+			if (arr.length > nb) arr = arr.slice(0, nb);
+			switch(t) {
+				case Vec3: 
+					gl.uniform3fv( u.loc, packArray3(arr));
+				case Vec4: 
+					gl.uniform4fv( u.loc, packArray4(arr));
+				default: throw "not supported";
+			}
+		}
 			
 		case Index(index, t):
 			var v = val[index];
@@ -512,6 +588,31 @@ class GlDriver extends Driver {
 			throw "Unsupported uniform " + u.type;
 		}
 		
+	}
+	
+	function packArray4( vecs : Array<Vector> ):Float32Array{
+		var a = [];
+		a[vecs.length * 4-1] = 0.0;
+		for ( i in 0...vecs.length) {
+			var vec = vecs[i];
+			a[i * 4] = vec.x;
+			a[i * 4+1] = vec.y;
+			a[i * 4+2] = vec.z;
+			a[i * 4+3] = vec.w;
+		}
+		return new Float32Array(a);
+	}
+	
+	function packArray3( vecs : Array<Vector> ):Float32Array{
+		var a = [];
+		a[vecs.length * 3-1] = 0.0;
+		for ( i in 0...vecs.length) {
+			var vec = vecs[i];
+			a[i * 3] = vec.x;
+			a[i * 3+1] = vec.y;
+			a[i * 3+2] = vec.z;
+		}
+		return new Float32Array(a);
 	}
 	
 	override function selectBuffer( v : VertexBuffer ) {

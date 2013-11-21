@@ -52,15 +52,20 @@ class Test {
 			obj2 = new Mesh(prim, mat, scene);
 			
 			mat.lightSystem = null;
-			/*
+			
 			mat.lightSystem = {
-				ambient : new h3d.Vector(1, 1, 1),
-				dirs : [],
-				points : [],
-				//dirs : [{ dir : new h3d.Vector(-0.3,-0.5,-1), color : new h3d.Vector(1,1,1) }],
-				//points : [{ pos : new h3d.Vector(1.5,0,0), color : new h3d.Vector(3,0,0), att : new h3d.Vector(0,0,1) }],
+				ambient : new h3d.Vector(0.5, 0.5, 0.5),
+				//dirs : [],
+				//points : [],
+				
+				dirs : [ 
+					{ dir : new h3d.Vector( -0.3, -0.5, -1), color : new h3d.Vector(1, 0.5, 0.5) },
+					{ dir : new h3d.Vector( -0.3, -0.5, 1), color : new h3d.Vector(0.0, 0, 1.0) }
+				],
+				points : [{ pos : new h3d.Vector(1.5,0,0), color : new h3d.Vector(0,1,0), att : new h3d.Vector(0,0,1) }],
+				
 			};
-			*/
+			
 			
 			update();
 			hxd.System.setLoop(update);
@@ -76,7 +81,8 @@ class Test {
 		#end
 	}
 	
-	function update() {		
+	function update() {	
+		
 		var dist = 5;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
