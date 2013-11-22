@@ -209,7 +209,7 @@ class FileTree {
 	}
 	
 	function scanRec( relPath : String, fields : Array<Field>, dict : Map<String,String> ) {
-		var dir = this.path + "/" + relPath;
+		var dir = this.path + (relPath == "" ? "" : "/" + relPath);
 		// make sure to rescan if one of the directories content has changed (file added or deleted)
 		Context.registerModuleDependency(currentModule, dir);
 		var allFiles = sys.FileSystem.readDirectory(dir);
