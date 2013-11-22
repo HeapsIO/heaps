@@ -66,7 +66,7 @@ class Input extends Interactive {
 	}
 	
 	function set_cursorPos(v:Int) {
-		cursor.x = tf.calcTextWidth(value.substr(0, v)) + extLeft();
+		cursor.x = tf.x + tf.calcTextWidth(value.substr(0, v)) + extLeft();
 		return cursorPos = v;
 	}
 
