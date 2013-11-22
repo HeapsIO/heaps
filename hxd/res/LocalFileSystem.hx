@@ -214,8 +214,8 @@ private class LocalEntry extends FileEntry {
 
 class LocalFileSystem implements FileSystem {
 	
-	var baseDir : String;
 	var root : FileEntry;
+	public var baseDir(default,null) : String;
 	public var createXBX : Bool;
 	public var tmpDir : String;
 	
@@ -285,36 +285,6 @@ class LocalFileSystem implements FileSystem {
 		if( f == null ||!sys.FileSystem.exists(f) )
 			throw "File not found " + path;
 		return new LocalEntry(this, path.split("/").pop(), path, f);
-		#end
-	}
-	
-	public function saveContent( path : String, data : haxe.io.Bytes ) {
-		#if air3
-		var f = open(path);
-		var o = new flash.filesystem.FileStream();
-		o.open(f, flash.filesystem.FileMode.WRITE);
-		o.writeBytes(data.getData());
-		o.close();
-		#else
-		var f = open(path);
-		sys.io.File.saveBytes(f, data);
-		#end
-	}
-
-	public function saveContentAt( path : String, data : haxe.io.Bytes, dataPos : Int, dataSize : Int, filePos : Int ) {
-		#if air3
-		var f = open(path);
-		var o = new flash.filesystem.FileStream();
-		o.open(f, flash.filesystem.FileMode.UPDATE);
-		if( filePos != o.position ) o.position = filePos;
-		if( dataSize > 0 ) o.writeBytes(data.getData(),dataPos,dataSize);
-		o.close();
-		#else
-		var f = open(path);
-		var fc = sys.io.File.append(f);
-		fc.seek(filePos, SeekCur);
-		fc.writeFullBytes(data, dataPos, dataSize);
-		fc.close();
 		#end
 	}
 	
