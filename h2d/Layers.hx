@@ -13,7 +13,7 @@ class Layers extends Sprite {
 	}
 	
 	override function addChild(s) {
-		addChildAt(s, layers.length);
+		addChildAt(s, 0);
 	}
 	
 	public inline function add(s, layer) {
