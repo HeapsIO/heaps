@@ -55,12 +55,29 @@ class Point {
 	}
 
 	
-	public function normalize() {
+	public inline function normalize() {
 		var k = x * x + y * y + z * z;
 		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
 		x *= k;
 		y *= k;
 		z *= k;
+		return this;
+	}
+	
+	public inline function safeNormalize() {
+		var k = lengthSq();
+		if ( k < hxd.Math.EPSILON )
+		{
+			x = 0; y = 1; z = 0;//should implement max axis
+			return this;
+		}
+		else {
+			k = k.invSqrt();
+			x *= k;
+			y *= k;
+			z *= k;
+			return this;
+		}
 	}
 	
 	public inline function transform( m : Matrix ) {

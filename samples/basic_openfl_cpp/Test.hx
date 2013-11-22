@@ -53,10 +53,9 @@ class Test {
 			
 			mat.lightSystem = null;
 			
+			
 			mat.lightSystem = {
 				ambient : new h3d.Vector(0.5, 0.5, 0.5),
-				//dirs : [],
-				//points : [],
 				
 				dirs : [ 
 					{ dir : new h3d.Vector( -0.3, -0.5, -1), color : new h3d.Vector(1, 0.5, 0.5) },

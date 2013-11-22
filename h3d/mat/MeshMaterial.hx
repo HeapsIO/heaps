@@ -342,15 +342,14 @@ private class MeshShader extends h3d.impl.Shader {
 				vec3 col = lights.ambient;
 				
 				for (int i = 0; i < numDirLights; i++ )
-					col;
-					//col += lights.dirsColor[i] * max(dot(n, -lights.dirsDir[i]), 0.);
-				//
-				//for(int i = 0; i < numPointLights; i++ ) {
-					//vec3 d = tpos.xyz - lights.pointsPos[i];
-					//float dist2 = dot(d,d);
-					//float dist = sqrt(dist2);
-					//col += lights.pointsColor[i] * (max(dot(n,d),0.) / dot(lights.pointsAtt[i],vec3(dist,dist2,dist2*dist)));
-				//}
+					col += lights.dirsColor[i] * max(dot(n, -lights.dirsDir[i]), 0.);
+				
+				for(int i = 0; i < numPointLights; i++ ) {
+					vec3 d = tpos.xyz - lights.pointsPos[i];
+					float dist2 = dot(d,d);
+					float dist = sqrt(dist2);
+					col += lights.pointsColor[i] * (max(dot(n,d),0.) / dot(lights.pointsAtt[i],vec3(dist,dist2,dist2*dist)));
+				}
 				
 				#if hasVertexColor
 					tcolor = col.rgb * color;
@@ -358,17 +357,12 @@ private class MeshShader extends h3d.impl.Shader {
 					tcolor = col.rgb;
 				#end
 				
-				//todo
-				//tcolor = lights.ambient;
-				//tcolor =  vec3(0.5, 0.5, 0.5);
-				//tcolor = lights.dirsColor[0];
-				//tcolor =  lights.pointsColor[0];
-				
 			#elseif hasVertexColor
 				tcolor = color;
 			#else
 				tcolor = vec3(1,1,1);
 			#end 
+			
 			#if hasVertexColorAdd
 				acolor = colorAdd;
 			#end

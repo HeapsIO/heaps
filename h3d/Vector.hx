@@ -65,6 +65,23 @@ class Vector {
 		x *= k;
 		y *= k;
 		z *= k;
+		return this;
+	}
+	
+	public inline function safeNormalize() {
+		var k = lengthSq();
+		if ( k < hxd.Math.EPSILON )
+		{
+			x = 0; y = 1; z = 0; //should implement maxAxis
+			return this;
+		}
+		else {
+			k = k.invSqrt();
+			x *= k;
+			y *= k;
+			z *= k;
+			return this;
+		}
 	}
 
 	public function set(x,y,z,w=1.) {

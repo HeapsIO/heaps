@@ -1,5 +1,6 @@
 package h3d.prim;
 import h3d.col.Point;
+import hxd.System;
 
 class Polygon extends Primitive {
 
@@ -18,8 +19,10 @@ class Polygon extends Primitive {
 		dispose();
 		
 		var size = 3;
-		if( normals != null )
+		if( normals != null ){
 			size += 3;
+			if ( System.isVerbose) trace("polygon has normals");
+		}
 		if( uvs != null )
 			size += 2;
 		if( colors != null )
@@ -53,6 +56,8 @@ class Polygon extends Primitive {
 		
 		if( idx != null )
 			indexes = engine.mem.allocIndex(idx);
+			
+		if ( System.isVerbose) trace('allocating gpu polygon $size');
 	}
 
 
@@ -130,7 +135,9 @@ class Polygon extends Primitive {
 		}
 		// normalize all normals
 		for( n in normals )
-			n.normalize();
+			n.safeNormalize();
+			
+		if (System.isVerbose) trace("normals added");
 	}
 
 	public function addUVs() {

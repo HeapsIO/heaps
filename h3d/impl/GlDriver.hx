@@ -281,6 +281,9 @@ class GlDriver extends Driver {
 			//if ( System.isVerbose )trace("Trying to compile shader:"+code);
 			
 			var s = gl.createShader(type);
+					
+			
+			
 			gl.shaderSource(s, code);
 			gl.compileShader(s);
 			if( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
@@ -295,13 +298,21 @@ class GlDriver extends Driver {
 		var fs = compileShader(GL.FRAGMENT_SHADER);
 		
 		var p = gl.createProgram();
+		gl.bindAttribLocation(p, 0, "pos");
+		gl.bindAttribLocation(p, 1, "uv");
+		gl.bindAttribLocation(p, 2, "normal");
+		gl.bindAttribLocation(p, 3, "color");
+		
 		gl.attachShader(p, vs);
 		gl.attachShader(p, fs);
+		
 		gl.linkProgram(p);
+		
 		if( gl.getProgramParameter(p, GL.LINK_STATUS) != cast 1 ) {
 			var log = gl.getProgramInfoLog(p);
 			throw "Program linkage failure: "+log;
 		}
+		checkError();
 	
 		var inst = new Shader.ShaderInstance();
 			
@@ -311,7 +322,9 @@ class GlDriver extends Driver {
 		var amap = new Map();
 		for( k in 0...nattr ) {
 			var inf = gl.getActiveAttrib(p, k);
-			amap.set(inf.name, { index : k, inf : inf });
+			amap.set(inf.name, { index : gl.getAttribLocation(p,inf.name), inf : inf } );
+			if (System.isVerbose) trace('adding attributes $inf');
+			if (System.isVerbose) trace("attr loc" + gl.getAttribLocation(p,inf.name));
 		}
 		
 		
@@ -450,6 +463,7 @@ class GlDriver extends Driver {
 			if(System.isVerbose) trace('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
 		}
 		inst.program = p;
+		checkError();
 		return inst;
 	}
 
@@ -465,13 +479,19 @@ class GlDriver extends Driver {
 			
 			if (curShader.program==null) throw "invalid shader";
 			gl.useProgram(curShader.program);
-			//if ( System.isVerbose ) trace("setting attribs");
+			//if ( System.isVerbose ) trace('setting attribs ${curShader.attribs}');
+			
 			for( i in curAttribs...curShader.attribs.length ) {
 				gl.enableVertexAttribArray(i);
+				trace('enabling attrib ${curShader.attribs[i]}');
 				curAttribs++;
 			}
+			
 			while( curAttribs > curShader.attribs.length )
+			{
 				gl.disableVertexAttribArray(--curAttribs);
+				if ( System.isVerbose ) trace('disabling attrib ${curShader.attribs[curAttribs]}');
+			}
 				
 			//if ( System.isVerbose ) trace("attribs set");
 			change = true;
@@ -488,7 +508,7 @@ class GlDriver extends Driver {
 			setUniform(val, u, u.type);
 		}
 		shader.customSetup(this);
-		
+		checkError();
 		return change;
 	}
 	
@@ -500,6 +520,7 @@ class GlDriver extends Driver {
 		var w = TWRAP[Type.enumIndex(wrap)];
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, w);
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, w);
+		checkError();
 	}
 	
 	function setUniform( val : Dynamic, u : Shader.Uniform, t : Shader.ShaderType ) {
@@ -537,29 +558,6 @@ class GlDriver extends Driver {
 			if ( u == null ) throw "Missing shader loc " + u;
 			if ( vs == null ) throw "Missing shader field " + field+ " in " +val;
 			
-			//if ( System.isVerbose ) trace('locating $field in $val of type $t');
-			/*
-			if ( Std.is( vs , Array) ){
-				//for ( vi in 0...vs.length )
-				//		setUniform(vs[v], u, t);
-				//if( System.isVerbose ) trace("need to bind !");
-				var a : Array<h3d.Vector> = cast vs; // we should deep inspect this i think....
-				for ( vi in 0...a.length ) {
-					
-					gl.uniform4f( u.loc + 4 * vi, a[vi].x, a[vi].y, a[vi].z, a[vi].w);
-					
-				}
-					
-				//for ( v in a )
-				//	if( System.isVerbose ) trace('need to bind $v $field $t');
-					//if ( v.name == field ) {
-					//if( System.isVerbose ) trace('need to bind $v $field $t');
-					//break;
-				//	gl.uniform4fv( v.name,v.loc, 
-					//}
-			}
-			else 
-			*/
 			setUniform(vs, u, t);
 			
 		case Elements(field, nb, t): {
@@ -622,12 +620,14 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		for( a in curShader.attribs )
 			gl.vertexAttribPointer(a.index, a.size, a.etype, false, stride * 4, a.offset * 4);
+		checkError();
 	}
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
 		gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
+		checkError();
 	}
 	
 	override function present() {
@@ -689,7 +689,14 @@ class GlDriver extends Driver {
 		GL.LEQUAL,
 	];
 
-	#if cpp
+
+	public inline function checkError() {
+		#if debug
+		if(gl.getError() != GL.NO_ERROR)
+			throw getError();
+		#end
+	}
+	
 	public inline function getError() {
 		switch(gl.getError()) {
 			case GL.NO_ERROR                      	:"NO_ERROR";
@@ -700,7 +707,7 @@ class GlDriver extends Driver {
 			default 								:"UNKNOW_ERROR";
 		}
 	}
-	#end
+
 
 }
 
