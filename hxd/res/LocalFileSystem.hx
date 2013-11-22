@@ -293,6 +293,8 @@ class LocalFileSystem implements FileSystem {
 #else
 
 class LocalFileSystem implements FileSystem {
+
+	public var baseDir(default,null) : String;
 	
 	public function new( dir : String ) {
 		#if flash
