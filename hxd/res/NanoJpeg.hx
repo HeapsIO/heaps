@@ -5,16 +5,16 @@
 // This software is published under the terms of KeyJ's Research License,
 // version 0.2. Usage of this software is subject to the following conditions:
 // 0. There's no warranty whatsoever. The author(s) of this software can not
-//    be held liable for any damages that occur when using this software.
+//	be held liable for any damages that occur when using this software.
 // 1. This software may be used freely for both non-commercial and commercial
-//    purposes.
+//	purposes.
 // 2. This software may be redistributed freely as long as no fees are charged
-//    for the distribution and this license information is included.
+//	for the distribution and this license information is included.
 // 3. This software may be modified freely except for this license information,
-//    which must not be changed in any way.
+//	which must not be changed in any way.
 // 4. If anything other than configuration, indentation or comments have been
-//    altered in the code, the original author(s) must receive a copy of the
-//    modified code.
+//	altered in the code, the original author(s) must receive a copy of the
+//	modified code.
 /* Ported to Haxe by Nicolas Cannasse */
 package hxd.res;
 
@@ -36,17 +36,17 @@ private abstract FastBytes(haxe.io.Bytes) {
 }
 
 private class Component {
-    public var cid : Int;
-    public var ssx : Int;
+	public var cid : Int;
+	public var ssx : Int;
 	public var ssy : Int;
-    public var width : Int;
+	public var width : Int;
 	public var height : Int;
-    public var stride : Int;
-    public var qtsel : Int;
-    public var actabsel : Int;
+	public var stride : Int;
+	public var qtsel : Int;
+	public var actabsel : Int;
 	public var dctabsel : Int;
-    public var dcpred : Int;
-    public var pixels : haxe.io.Bytes;
+	public var dcpred : Int;
+	public var pixels : haxe.io.Bytes;
 	public function new() {
 	}
 }
@@ -361,12 +361,12 @@ class NanoJpeg {
 	inline function njRowIDCT( bp ) {
 		var x0, x1, x2, x3, x4, x5, x6, x7, x8;
 		if( ((x1 = block[bp+4] << 11)
-        | (x2 = block[bp+6])
-        | (x3 = block[bp+2])
-        | (x4 = block[bp+1])
-        | (x5 = block[bp+7])
-        | (x6 = block[bp+5])
-        | (x7 = block[bp+3])) == 0 ) {
+		| (x2 = block[bp+6])
+		| (x3 = block[bp+2])
+		| (x4 = block[bp+1])
+		| (x5 = block[bp+7])
+		| (x6 = block[bp+5])
+		| (x7 = block[bp+3])) == 0 ) {
 			block[bp+0] = block[bp+1] = block[bp+2] = block[bp+3] = block[bp+4] = block[bp+5] = block[bp+6] = block[bp+7] = block[bp+0] << 3;
 			return;
 		}
