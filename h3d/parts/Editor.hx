@@ -8,6 +8,7 @@ private typedef History = {
 
 private typedef Curve = {
 	var value : Value;
+	var shape : Bool;
 	var name : String;
 	var incr : Float;
 	var mode : Int;
@@ -48,6 +49,8 @@ class Editor extends h2d.Sprite {
 	var cedit : h2d.Interactive;
 	var undo : Array<History>;
 	var redo : Array<History>;
+	var currentFilePath : String;
+	public var autoLoop : Bool = true;
 	
 	static var CURVES : Array<{ name : String, f : Curve -> Data.Value }> = [
 		{ name : "Const", f : function(c) return VConst(c.min) },
@@ -87,57 +90,67 @@ class Editor extends h2d.Sprite {
 	}
 	
 	public dynamic function onTextureSelect() {
-		#if flash
-		var f = new flash.net.FileReference();
-		f.addEventListener(flash.events.Event.SELECT, function(_) {
-			f.load();
+		hxd.File.browse(function(sel) {
+			sel.load(function(bytes) {
+				var bmp = hxd.res.Any.fromBytes(sel.fileName, bytes).toBitmap();
+				var t = h2d.Tile.fromBitmap(bmp);
+				bmp.dispose();
+				state.textureName = sel.fileName;
+				curState = null; // force reload (if texture was changed)
+				setTexture(t);
+				buildUI();
+			});
+		},{
+			defaultPath : currentFilePath,
+			title : "Please select the texture",
+			relativePath : true,
+			fileTypes : [{ name : "Images", extensions : ["png","jpg","jpeg","gif"] }],
 		});
-		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			var bmp = hxd.res.Any.fromBytes(f.name, haxe.io.Bytes.ofData(f.data)).toBitmap();
-			var t = h2d.Tile.fromBitmap(bmp);
-			bmp.dispose();
-			setTexture(t);
-			state.textureName = f.name;
-			buildUI();
-		});
-		f.browse([new flash.net.FileFilter("Images", "*.png;*.jpg;*.jpeg;*.gif")]);
-		#end
+	}
+	
+	public dynamic function loadTexture( textureName : String ) : h2d.Tile {
+		var bytes = null;
+		try {
+			var path = currentFilePath.split("\\").join("/").split("/");
+			path.pop();
+			bytes = hxd.File.getBytes(path.join("/") + "/" + textureName);
+		} catch( e : Dynamic ) try {
+			bytes = hxd.File.getBytes(textureName);
+		} catch( e : Dynamic ) {
+		}
+		return bytes == null ? null : hxd.res.Any.fromBytes(textureName,bytes).toTile();
 	}
 	
 	public dynamic function onLoad() {
-		#if flash
-		var f = new flash.net.FileReference();
-		f.addEventListener(flash.events.Event.SELECT, function(_) {
-			f.load();
-		});
-		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			var s : State = haxe.Unserializer.run(f.data.readUTFBytes(f.data.length));
-			s.frames = [h2d.Tile.fromColor(0xFF800000)];
-			setState(s);
-			
-			if( s.textureName != null ) {
-				var n = new flash.net.URLLoader();
-				n.dataFormat = flash.net.URLLoaderDataFormat.BINARY;
-				n.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) { } );
-				n.addEventListener(flash.events.Event.COMPLETE, function(_) {
-					var bmp = hxd.res.Any.fromBytes(f.name, haxe.io.Bytes.ofData(f.data)).toBitmap();
-					var t = h2d.Tile.fromBitmap(bmp);
-					bmp.dispose();
-					setTexture(t);
-					buildUI();
+		hxd.File.browse(function(sel) {
+			currentFilePath = sel.fileName;
+			sel.load(function(data) {
+				var s = State.load(data, function(name) {
+					var t = loadTexture(name);
+					if( t == null ) {
+						t = h2d.Tile.fromColor(0xFF800000);
+						// try dynamic loading. Will most likely fail since the path is relative
+						hxd.File.load(name, function(bytes) {
+							setTexture(hxd.res.Any.fromBytes(name, bytes).toTile());
+						});
+					}
+					return t;
 				});
-				n.load(new flash.net.URLRequest(s.textureName));
-			}
+				setState(s);
+			});
+		},{
+			defaultPath : currentFilePath,
+			fileTypes : [{ name : "Particle Effect", extensions : ["p"] }],
 		});
-		f.browse([new flash.net.FileFilter("Particle Effect", "*.p")]);
-		#end
 	}
 	
-	public dynamic function onSave( save ) {
-		#if flash
-		var f = new flash.net.FileReference();
-		f.save(save, "default.p");
-		#end
+	public dynamic function onSave( saveData ) {
+		if( currentFilePath == null ) currentFilePath = "default.p";
+		hxd.File.saveAs(saveData, {
+			defaultPath : currentFilePath,
+			fileTypes : [{ name : "Particle Effect", extensions : ["p"] }],
+			saveFileName : function(path) currentFilePath = path,
+		});
 	}
 	
 	public function setState(s) {
@@ -196,7 +209,7 @@ class Editor extends h2d.Sprite {
 			case "Y".code if( hxd.Key.isDown(hxd.Key.CTRL) && redo.length > 0 ):
 				loadHistory(redo.pop());
 			case "S".code if( hxd.Key.isDown(hxd.Key.CTRL) ):
-				onSave(curState);
+				onSave(haxe.io.Bytes.ofString(curState));
 			default:
 			}
 		default:
@@ -395,26 +408,18 @@ class Editor extends h2d.Sprite {
 						</div>
 						<div class="line">
 							<span>Emitter Type</span> <select onchange="api.setCurShape(api.parseInt(this.value))">
-								<option value="0" checked="${state.shape.match(SDir(_))}">Direction</option>
+								<option value="0" checked="${state.shape.match(SLine(_))}">Line</option>
 								<option value="1" checked="${state.shape.match(SSphere(_))}">Sphere</option>
-								<option value="2" checked="${state.shape.match(SSector(_))}">Sector</option>
+								<option value="2" checked="${state.shape.match(SCone(_))}">Cone</option>
+								<option value="3" checked="${state.shape.match(SDisc(_))}">Disc</option>
 							</select>
 						</div>
 						<div id="shape">
 							<div class="val">
-								<span>Size</span> <value value="${
-									switch( state.shape ) {
-									case SSphere(r), SSector(r,_): r;
-									case SDir(x, y, z): Math.sqrt(x * x + y * y + z * z);
-									case SCustom(_): 0.;
-									}} " onchange="api.setShapeProp(\'size\', this.value)"/>
+								<button class="ic" value="Size" onclick="api.editCurve(\'size\',true)"/>
 							</div>
 							<div class="val">
-								<span>Angle</span> <value value="${
-									(switch( state.shape ) {
-									case SSector(_,a): a;
-									default: 0.;
-								}) * 180 / Math.PI} " onchange="api.setShapeProp(\'angle\', this.value)"/>
+								<button class="ic" value="Angle" onclick="api.editCurve(\'angle\',true)"/>
 							</div>
 						</div>
 						<div class="line">
@@ -550,14 +555,13 @@ class Editor extends h2d.Sprite {
 			updateCurve : updateCurve,
 			editCurve : editCurve,
 			setCurShape : setCurShape,
-			setShapeProp : setShapeProp,
 			editColors : editColors,
 			clearCurve : clearCurve,
 			toggleSplit : toggleSplit,
 			buildUI : buildUI,
 			selectTexture : function() onTextureSelect(),
 			load : function() onLoad(),
-			save : function() onSave(curState),
+			save : function() onSave(haxe.io.Bytes.ofString(curState)),
 		});
 		addChildAt(ui,0);
 		stats = cast ui.getElementById("stats");
@@ -575,8 +579,10 @@ class Editor extends h2d.Sprite {
 	
 	function toggleSplit() {
 		if( state.frames.length == 1 ) {
-			emit.splitFrames();
-			if( state.frames.length > 1 ) state.frame = VLinear(0,1);
+			state.frame = VLinear(0,1);
+			state.initFrames();
+			if( state.frames.length == 1 )
+				state.frame = null;
 		} else {
 			state.frames = [curTile];
 			state.frame = null;
@@ -661,8 +667,8 @@ class Editor extends h2d.Sprite {
 		};
 	}
 	
-	function editCurve( name : String ) {
-		if( curve.name == name ) {
+	function editCurve( name : String, isShape : Bool = false ) {
+		if( curve.name == name && curve.shape == isShape ) {
 			curve.name = null;
 			ui.getElementById("curvePanel").addStyleString("display:none");
 			return;
@@ -671,10 +677,11 @@ class Editor extends h2d.Sprite {
 			grad.remove();
 			grad = null;
 		}
-		var v : Value = Reflect.field(state, name);
+		var v : Value = isShape ? getShapeValue(name) : Reflect.field(state, name);
 		if( v == null ) v = VLinear(0,1);
 		curve = initCurve(v);
 		curve.name = name;
+		curve.shape = isShape;
 		switch( name ) {
 		case "emitRate":
 			curve.incr = 1;
@@ -774,6 +781,7 @@ class Editor extends h2d.Sprite {
 		var c : Curve = {
 			value : null,
 			name : null,
+			shape : false,
 			mode : -1,
 			incr : 0.01,
 			min : 0.,
@@ -821,30 +829,28 @@ class Editor extends h2d.Sprite {
 		return c;
 	}
 	
-	function setCurShape( mode : Int ) {
-		state.shape = switch( mode ) {
-		case 0: SDir(0, 0, 1);
-		case 1: SSphere(1);
-		case 2: SSector(1,Math.PI/4);
-		default: throw "Unknown shape #" + mode;
+	function getShapeValue( value : String ) {
+		return switch( [state.shape, value] ) {
+		case [(SLine(v) | SSphere(v) | SCone(v, _) | SDisc(v)), "size"]: v;
+		case [SCone(_, a), "angle"]: a;
+		default: VConst(0);
 		}
-		buildUI();
 	}
 	
-	function setShapeProp( prop : String, v : Float ) {
-		if( prop == "angle" )
-			v = v * Math.PI / 180;
-		switch( [state.shape, prop] ) {
-		case [SSphere(_), "size"]:
-			state.shape = SSphere(v);
-		case [SSector(_,a), "size"]:
-			state.shape = SSector(v,a);
-		case [SSector(s,_), "angle"]:
-			state.shape = SSector(s,v);
-		case [SDir(_, _, _), "size"]:
-			state.shape = SDir(0,0,v);
-		default:
+	function rebuildShape( mode : Int, getValue ) {
+		var size = getValue("size");
+		state.shape = switch( mode ) {
+		case 0: SLine(size);
+		case 1: SSphere(size);
+		case 2: SCone(size, getValue("angle"));
+		case 3: SDisc(size);
+		default: throw "Unknown shape #" + mode;
 		}
+	}
+	
+	function setCurShape( mode : Int ) {
+		rebuildShape(mode, getShapeValue);
+		buildUI();
 	}
 	
 	function setCurveMode( mode : Int ) {
@@ -862,15 +868,19 @@ class Editor extends h2d.Sprite {
 	
 	function updateCurve() {
 		curve.value = CURVES[curve.mode].f(curve);
-		if( curve.name != null )
-			Reflect.setField(state, curve.name, curve.value);
+		if( curve.name != null ) {
+			if( curve.shape )
+				rebuildShape(Type.enumIndex(state.shape),function(n) return n == curve.name ? curve.value : getShapeValue(n));
+			else
+				Reflect.setField(state, curve.name, curve.value);
+		}
 		rebuildCurve();
 	}
 
 	public function setTexture( t : h2d.Tile ) {
 		state.frames = [t];
 		curTile = t;
-		if( state.frame != null ) emit.splitFrames();
+		state.initFrames();
 	}
 	
 	override function sync( ctx : h3d.scene.RenderContext ) {
@@ -882,11 +892,7 @@ class Editor extends h2d.Sprite {
 		}
 		if( cachedMode != state.blendMode && state.textureName == null ) {
 			cachedMode = state.blendMode;
-			var t = switch( state.blendMode ) {
-			case Add, SoftAdd: hxd.res.Embed.getResource("h3d/parts/default.png");
-			case Alpha: hxd.res.Embed.getResource("h3d/parts/defaultAlpha.png");
-			};
-			setTexture(t.toTile());
+			setTexture(null);
 		}
 		var old = state.frames;
 		state.frames = null;
@@ -903,8 +909,8 @@ class Editor extends h2d.Sprite {
 		}
 		emit.speed = props.pause ? 0 : (props.slow ? 0.1 : 1);
 		var pcount = emit.count;
-		if( stats != null ) stats.text = hxd.Math.fmt(emit.time) + " s\n" + pcount + " p\n" + hxd.Math.fmt(ctx.engine.fps) + " fps" + ("\n"+getScene().getSpritesCount());
-		if( !state.loop && pcount == 0 && emit.time > 1 ) {
+		if( stats != null ) stats.text = hxd.Math.fmt(emit.time * state.globalLife) + " s\n" + pcount + " p\n" + hxd.Math.fmt(ctx.engine.fps) + " fps" + ("\n"+getScene().getSpritesCount());
+		if( autoLoop && !emit.isActive() ) {
 			if( lastPartSeen == null )
 				lastPartSeen = emit.time;
 			else if( emit.time - lastPartSeen > 0.5 ) {

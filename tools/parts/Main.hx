@@ -5,7 +5,7 @@ class Main implements h3d.parts.Collider {
 	var s3d : h3d.scene.Scene;
 	var s2d : h2d.Scene;
 	var engine : h3d.Engine;
-	var emit : h3d.parts.Emiter;
+	var emit : h3d.parts.Emitter;
 	var edit : h3d.parts.Editor;
 	
 	public function new() {
@@ -45,7 +45,7 @@ class Main implements h3d.parts.Collider {
 		var box = new h3d.scene.Mesh(cube, s3d);
 		box.material.texture = tex;
 		
-		emit = new h3d.parts.Emiter(s3d);
+		emit = new h3d.parts.Emitter(s3d);
 		emit.collider = this;
 		edit = new h3d.parts.Editor(emit, s2d);
 	}

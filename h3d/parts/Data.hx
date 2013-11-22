@@ -18,9 +18,10 @@ enum Converge {
 }
 
 enum Shape {
-	SDir( x : Float, y : Float, z : Float );
-	SSphere( radius : Float );
-	SSector( radius : Float, angle : Float  );
+	SLine( size : Value );
+	SSphere( radius : Value );
+	SCone( radius : Value, angle : Value  );
+	SDisc( radius : Value );
 	SCustom( initPartPosDir : Emitter -> Particle -> Void ); // Bool = on shell
 }
 
@@ -126,7 +127,7 @@ class State {
 		emitRate = VConst(100);
 		bursts = [];
 		maxParts = 1000;
-		shape = SSphere(1);
+		shape = SCone(VConst(1),VConst(Math.PI/4));
 		emitFromShell = false;
 		randomDir = false;
 		// system globals
@@ -169,6 +170,43 @@ class State {
 			y;
 		case VCustom(f): f(time, rand);
 		}
+	}
+
+	public static var defPartAlpha = hxd.res.Embed.getResource("h3d/parts/defaultAlpha.png");
+	public static var defPart = hxd.res.Embed.getResource("h3d/parts/default.png");
+	
+	public function initFrames() {
+		if( textureName == null ) {
+			var t = switch( blendMode ) {
+			case Alpha: defPartAlpha.toTile();
+			default: defPart.toTile();
+			}
+			frames = [t];
+		} else if( frame != null && frames.length == 1 ) {
+			var t = frames[0];
+			var nw = Std.int(t.width / t.height);
+			var nh = Std.int(t.height / t.width);
+			if( nw > 1 ) {
+				frames = [];
+				for( i in 0...nw )
+					frames.push(t.sub(i * t.height, 0, t.height, t.height));
+			} else if( nh > 1 ) {
+				frames = [];
+				for( i in 0...nh )
+					frames.push(t.sub(0, i * t.width, t.width, t.width));
+			}
+		}
+	}
+	
+	public static function load( b : haxe.io.Bytes, loadTexture : String -> h2d.Tile ) {
+		var state : State = haxe.Unserializer.run(b.toString());
+		if( state.textureName != null ) {
+			var t = loadTexture(state.textureName);
+			if( t == null ) throw "Could not load " + state.textureName;
+			state.frames = [t];
+		}
+		state.initFrames();
+		return state;
 	}
 	
 }

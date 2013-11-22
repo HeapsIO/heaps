@@ -102,33 +102,46 @@ class Emitter extends h3d.scene.Object {
 	
 	function initPosDir( p : Particle ) {
 		switch( state.shape ) {
-		case SDir(x, y, z):
+		case SLine(size):
+			p.dx = 0;
+			p.dy = 0;
+			p.dz = 1;
 			p.x = 0;
 			p.y = 0;
-			p.z = 0;
-			p.dx = x;
-			p.dy = y;
-			p.dz = z;
+			p.z = eval(size, time, rand);
+			if( !state.emitFromShell ) p.z *= rand();
 		case SSphere(r):
 			var theta = rand() * Math.PI * 2;
 			var phi = Math.acos(rand() * 2 - 1);
-			var r = state.emitFromShell ? r : rand() * r;
+			var r = eval(r, time, rand);
+			if( !state.emitFromShell ) r *= rand();
 			p.dx = Math.sin(phi) * Math.cos(theta);
 			p.dy = Math.sin(phi) * Math.sin(theta);
 			p.dz = Math.cos(phi);
 			p.x = p.dx * r;
 			p.y = p.dy * r;
 			p.z = p.dz * r;
-		case SSector(r,angle):
+		case SCone(r,angle):
 			var theta = rand() * Math.PI * 2;
-			var phi = angle;
-			var r = state.emitFromShell ? r : rand() * r;
+			var phi = eval(angle,time,rand) * rand();
+			var r = eval(r, time, rand);
+			if( !state.emitFromShell ) r *= rand();
 			p.dx = Math.sin(phi) * Math.cos(theta);
 			p.dy = Math.sin(phi) * Math.sin(theta);
 			p.dz = Math.cos(phi);
 			p.x = p.dx * r;
 			p.y = p.dy * r;
 			p.z = p.dz * r;
+		case SDisc(r):
+			var r = eval(r, time, rand);
+			if( !state.emitFromShell ) r *= rand();
+			var a = rand() * Math.PI * 2;
+			p.dx = Math.cos(a);
+			p.dy = Math.sin(a);
+			p.dz = 0;
+			p.x = p.dx * r;
+			p.y = p.dy * r;
+			p.z = 0;
 		case SCustom(f):
 			f(this,p);
 		}
@@ -273,24 +286,13 @@ class Emitter extends h3d.scene.Object {
 		}
 	}
 	
-	public function splitFrames() {
-		var t = state.frames[0];
-		var nw = Std.int(t.width / t.height);
-		var nh = Std.int(t.height / t.width);
-		if( nw > 1 ) {
-			state.frames = [];
-			for( i in 0...nw )
-				state.frames.push(t.sub(i * t.height, 0, t.height, t.height));
-		} else if( nh > 1 ) {
-			state.frames = [];
-			for( i in 0...nh )
-				state.frames.push(t.sub(0, i * t.width, t.width, t.width));
-		}
-	}
-	
 	override function sync( ctx : h3d.scene.RenderContext ) {
 		super.sync(ctx);
 		update(ctx.elapsedTime * speed);
+	}
+	
+	public function isActive() {
+		return count != 0 || time < 1 || state.loop;
 	}
 	
 	function sort( list : Particle ) {
@@ -333,6 +335,7 @@ class Emitter extends h3d.scene.Object {
 		}
 		while( p != null ) {
 			var f = frames[p.frame];
+			if( f == null ) f = frames[0];
 			var ratio = p.size * p.ratio * (f.height / f.width);
 			tmp[pos++] = p.x;
 			tmp[pos++] = p.y;

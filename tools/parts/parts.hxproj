@@ -7,7 +7,7 @@
     <movie path="parts.swf" />
     <movie fps="60" />
     <movie width="1024" />
-    <movie height="768" />
+    <movie height="800" />
     <movie version="11" />
     <movie minorVersion="6" />
     <movie platform="Flash Player" />
@@ -23,7 +23,7 @@
     <option flashStrict="True" />
     <option mainClass="Main" />
     <option enabledebug="False" />
-    <option additional="-lib hxsl&#xA;-D h3d&#xA;-lib hscript&#xA;-dce full" />
+    <option additional="-lib hxsl&#xA;-D h3d&#xA;#-lib air3&#xA;-lib hscript&#xA;-dce full" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -49,7 +49,7 @@
   <options>
     <option showHiddenPaths="False" />
     <option testMovie="Default" />
-    <option testMovieCommand="" />
+    <option testMovieCommand="parts.app" />
   </options>
   <!-- Plugin storage -->
   <storage />
