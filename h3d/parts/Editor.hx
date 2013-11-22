@@ -809,7 +809,7 @@ class Editor extends h2d.Sprite {
 			c.pow = pow;
 		case VRandom(a, b, conv):
 			c.min = a;
-			c.max = b;
+			c.max = a + b;
 			c.converge = conv;
 		case VSin(f, a, off), VCos(f, a, off):
 			c.min = off - a;
