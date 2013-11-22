@@ -57,6 +57,11 @@ class Library {
 	public var keepJoints : Map<String,Bool>;
 	
 	/**
+		Allows to skip some objects from being processed as if they were not part of the FBX
+	**/
+	public var skipObjects : Map<String,Bool>;
+	
+	/**
 		Set how many bones per vertex should be created in skin data in makeObject(). Default is 3
 	**/
 	public var bonesPerVertex = 3;
@@ -68,6 +73,8 @@ class Library {
 	
 	public function new() {
 		root = { name : "Root", props : [], childs : [] };
+		keepJoints = new Map();
+		skipObjects = new Map();
 		reset();
 	}
 	
@@ -76,7 +83,6 @@ class Library {
 		connect = new Map();
 		invConnect = new Map();
 		defaultModelMatrixes = new Map();
-		keepJoints = new Map();
 	}
 	
 	public function loadTextFile( data : String ) {
@@ -246,6 +252,8 @@ class Library {
 			var c = curves.get(model.getId());
 			if( c == null ) {
 				var name = model.getName();
+				if( skipObjects.get(name) )
+					continue;
 				// if it's an empty model with no sub nodes, let's ignore it (ex : Camera)
 				if( model.getType() == "Null" && getChilds(model, "Model").length == 0 )
 					continue;
@@ -595,6 +603,9 @@ class Library {
 		// create all models
 		for( model in root.getAll("Objects.Model") ) {
 			var o : h3d.scene.Object;
+			var name = model.getName();
+			if( skipObjects.get(name) )
+				continue;
 			switch( model.getType() ) {
 			case "Null", "Root", "Camera":
 				var hasJoint = false;
@@ -654,7 +665,7 @@ class Library {
 			case type:
 				throw "Unknown model type " + type+" for "+model.getName();
 			}
-			o.name = model.getName();
+			o.name = name;
 			var m = getDefaultMatrixes(model);
 			if( m.trans != null || m.rotate != null || m.scale != null || m.preRot != null )
 				o.defaultTransform = m.toMatrix(leftHand);
