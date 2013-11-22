@@ -89,6 +89,7 @@ class SmoothTransition extends Transition {
 			q2.set(m2._12, m2._13, m2._21, m2._23);
 			// shortest path
 			qout.lerp(q1, q2, a, true);
+			qout.normalize();
 			qout.saveToMatrix(m);
 			// interpolate scale
 			var sx = m1._11 * a + m2._11 * b;
