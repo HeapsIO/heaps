@@ -73,7 +73,9 @@ class System {
 			flash.system.System.exit(0);
 	}
 	
-	public static function setCursor( c : Cursor ) {
+	public static var setCursor = setNativeCursor;
+	
+	public static function setNativeCursor( c : Cursor ) {
 		flash.ui.Mouse.cursor = switch( c ) {
 		case Default: "auto";
 		case Button: "button";
@@ -138,7 +140,9 @@ class System {
 		LOOP = f;
 	}
 
-	public static function setCursor( c : Cursor ) {
+	public static var setCursor = setNativeCursor;
+	
+	public static function setNativeCursor( c : Cursor ) {
 		var canvas = js.Browser.document.getElementById("webgl");
 		if( canvas != null ) {
 			canvas.style.cursor = switch( c ) {
@@ -191,7 +195,9 @@ class System {
 		VIEW.render = function(_) if( f != null ) f();
 	}
 
-	public static function setCursor( c : Cursor ) {
+	public static var setCursor = setNativeCursor;
+	
+	public static function setNativeCursor( c : Cursor ) {
 		/* not supported by openFL
 		flash.ui.Mouse.cursor = switch( c ) {
 		case Default: "auto";
