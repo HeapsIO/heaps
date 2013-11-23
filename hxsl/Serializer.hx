@@ -18,6 +18,7 @@ class Serializer {
 		#if macro
 		var ser = new Serializer();
 		var s : ShaderData = {
+			name : s.name,
 			vars : s.vars,
 			funs : [for( f in s.funs ) {
 				ref : f.ref,

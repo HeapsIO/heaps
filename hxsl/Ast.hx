@@ -221,6 +221,7 @@ enum TExprDef {
 typedef TExpr = { e : TExprDef, t : Type, p : Position }
 
 typedef ShaderData = {
+	var name : String;
 	var vars : Array<TVar>;
 	var funs : Array<TFunction>;
 }

@@ -68,7 +68,7 @@ class Checker {
 		return Ast.Error.t(msg,pos);
 	}
 
-	public function check( shader : Expr ) : ShaderData {
+	public function check( name : String, shader : Expr ) : ShaderData {
 		vars = new Map();
 		inLoop = false;
 		
@@ -110,6 +110,7 @@ class Checker {
 		for( i in 0...tfuns.length )
 			typeFun(tfuns[i], funs[i].f.expr);
 		return {
+			name : name,
 			vars : Lambda.array(vars),
 			funs : tfuns,
 		};

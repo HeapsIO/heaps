@@ -11,7 +11,8 @@ class Macros {
 				case FVar(_, expr) if( expr != null ):
 					try {
 						var shader = new MacroParser().parseExpr(expr);
-						var shader = new Checker().check(shader);
+						var name = Std.string(Context.getLocalClass());
+						var shader = new Checker().check(name,shader);
 						var str = Serializer.run(shader);
 						f.kind = FVar(null, { expr : EConst(CString(str)), pos : expr.pos } );
 						f.meta.push({
