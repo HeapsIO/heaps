@@ -68,6 +68,7 @@ class Eval {
 		for( i in 0...funs.length )
 			funs[i].expr = evalExpr(s.funs[i].expr);
 		return {
+			name : s.name,
 			vars : [for( v in s.vars ) mapVar(v)],
 			funs : funs,
 		};
@@ -93,7 +94,20 @@ class Eval {
 		case TCall(e, args):
 			TCall(evalExpr(e), [for( a in args ) evalExpr(a)]);
 		case TBlock(el):
-			TBlock([for( e in el ) evalExpr(e)]);
+			var out = [];
+			var last = el.length - 1;
+			for( i in 0...el.length ) {
+				var e = evalExpr(el[i]);
+				switch( e.e ) {
+				case TConst(_), TVar(_) if( i < last ):
+				default:
+					out.push(e);
+				}
+			}
+			if( out.length == 1 )
+				out[0].e
+			else
+				TBlock(out);
 		case TBinop(op, e1, e2):
 			var e1 = evalExpr(e1);
 			var e2 = evalExpr(e2);
@@ -115,10 +129,20 @@ class Eval {
 					TBinop(op, e1, e2);
 				}
 			}
-			inline function bop(callb:Bool->Bool->Bool) {
+			inline function bop(callb:Bool->Bool->Bool,def) {
 				return switch( [e1.e, e2.e] ) {
 				case [TConst(CBool(a)), TConst(CBool(b))]:
 					TConst(CBool(callb(a, b)));
+				case [TConst(CBool(a)), _]:
+					if( a == def )
+						TConst(CBool(a));
+					else
+						e2.e;
+				case [_, TConst(CBool(a))]:
+					if( a == def )
+						TConst(CBool(a)); // ignore e1 side effects ?
+					else
+						e1.e;
 				default:
 					TBinop(op, e1, e2);
 				}
@@ -155,8 +179,8 @@ class Eval {
 			case OpShr: iop(function(a, b) return a >> b);
 			case OpUShr: iop(function(a, b) return a >>> b);
 			case OpShl: iop(function(a, b) return a << b);
-			case OpBoolAnd: bop(function(a, b) return a && b);
-			case OpBoolOr: bop(function(a, b) return a || b);
+			case OpBoolAnd: bop(function(a, b) return a && b, false);
+			case OpBoolOr: bop(function(a, b) return a || b, true);
 			case OpEq: compare(function(x) return x == 0);
 			case OpNotEq: compare(function(x) return x != 0);
 			case OpGt: compare(function(x) return x > 0);
