@@ -188,9 +188,7 @@ static var SRC = {
 	@param var power : Float;
 	@param var size : Float;
 	
-	var output : {
-		var color : Vec4;
-	};
+	var pixelColor : Vec4;
 	
 	@global var camera : {
 		var projDiag : Vec3;
@@ -205,7 +203,7 @@ static var SRC = {
 	
 	function fragment() {
 		var e = 1. - transformedNormal.normalize().dot(camera.dir.normalize());
-		output.color = color * e.pow(power);
+		pixelColor = color * e.pow(power);
 	}
 
 }}
@@ -332,9 +330,11 @@ class Test {
 	static function main() {
 		var shaders = [
 			new Proto().compile(),
-			new Outline().compile(),
+			new Texture().compile(),
+			new AnimatedUV().compile(),
+//			new Outline().compile(),
 		];
-		var s = new hxsl.Linker().link(shaders, "vertex", "out.color");
+		var s = new hxsl.Linker().link(shaders, ["output.position", "output.color"]);
 		trace("\n"+hxsl.Printer.shaderToString(s));
 	}
 		
