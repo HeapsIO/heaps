@@ -165,6 +165,13 @@ class Stage {
 		ev.keyCode = e.keyCode;
 		ev.charCode = getCharCode(e);
 		event(ev);
+		// prevent escaping fullscreen in air
+		if( e.keyCode == flash.ui.Keyboard.ESCAPE ) e.preventDefault();
+		// prevent back exiting app in mobile
+		if( e.keyCode == flash.ui.Keyboard.BACK ) {
+			e.preventDefault();
+			e.stopImmediatePropagation();
+		}
 	}
 	
 	function getCharCode( e : flash.events.KeyboardEvent ) {
