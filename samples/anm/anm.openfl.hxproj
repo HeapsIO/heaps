@@ -23,6 +23,7 @@
   <build>
     <option directives="tools=1.1.0&#xA;resourcesPath=../res&#xA;openfl=1.1&#xA;display&#xA;verbose=true&#xA;web" />
     <option flashStrict="False" />
+    <option noInlineOnDebug="False" />
     <option mainClass="ApplicationMain" />
     <option enabledebug="True" />
     <option additional="--no-output&#xA;-swf-version 11.6&#xA;#--remap nme:flash" />
@@ -32,6 +33,7 @@
     <library name="openfl" />
     <library name="actuate" />
     <library name="h3d" />
+    <library name="hxsl" />
     <library name="air3" />
   </haxelib>
   <!-- Class files to compile (other referenced classes will automatically be included) -->

@@ -6,7 +6,7 @@
 	<meta title="anm.openfl" package="anmopenfl" version="1.0.0" company="" />
 	
 	<!-- output -->
-	<app main="Anm" file="anmopenfl" path="bin" swf-version="11.6" />
+	<app main="Anm" file="anm.openfl" path="bin" swf-version="11.6" />
 	
 	<window background="#000000" fps="60" />
 	<window width="800" height="480" unless="mobile" />
@@ -18,12 +18,11 @@
 	<haxelib name="openfl" />
 	<haxelib name="actuate" />
 	<haxelib name="h3d" />
+	<haxelib name="hxsl" />
 	<haxelib name="air3" if="flash" />
 	<template if="flash" 	path="tpl/air/airApplication.xml" rename="airApplication.xml" />
 	
 	<!-- assets -->
-	<icon path="assets/openfl.svg" />
-	<assets path="assets/img" rename="img" />
 	<assets path="../res" rename="res" />
 	
 	<haxeflag name="-debug" if="debug" /> 
