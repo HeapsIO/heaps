@@ -1,4 +1,5 @@
-using h3d.fbx.Data;
+import flash.utils.ByteArray;
+import sys.io.FileInput;
 using h3d.fbx.Data;
 
 typedef K = flash.ui.Keyboard;
@@ -160,7 +161,7 @@ class Viewer {
 			});
 		flash.Lib.current.stage.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, function(k:flash.events.KeyboardEvent ) {
 			var reload = false;
-			var c = k.keyCode;
+			var c = cast k.keyCode; // fix int vs uint comp...
 				
 			if ( c == 49 )			props.view = 1;
 			else if ( c == 50 )		props.view = 2;
@@ -168,13 +169,17 @@ class Viewer {
 			else if ( c == 52 )		props.view = 4;
 			else if( c == K.F1 )
 				askLoad();
-			else if( c == K.S && k.ctrlKey ) {
+			else if ( c == K.S && k.ctrlKey ) {
+				#if air3
 				if( curFbx == null ) return;
 				var data = FbxTree.toXml(curFbx.getRoot());
 				var f = new flash.net.FileReference();
 				var path = props.curFbxFile.substr(0, -4) + "_tree.xml";
 				path = path.split("\\").pop().split("/").pop();
 				f.save(data, path);
+				#else
+					throw "Not supported on this platform";
+				#end
 			} else if( c == K.R ) {
 				rightHand = !rightHand;
 				props.camVars.x *= -1;
@@ -319,14 +324,58 @@ class Viewer {
 	}
 	
 	function askLoad() {
+		#if air3
 		var f = new flash.net.FileReference();
 		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			haxe.Log.clear();
+			#if flash||js
+				haxe.Log.clear();
+			#end
 			props.curFbxFile = f.name;
-			loadData(f.data.readUTFBytes(f.data.length));
+			var ba : ByteArray = f.data;
+			loadData(ba.readUTFBytes(ba.length));
 		});
 		f.addEventListener(flash.events.Event.SELECT, function(_) f.load());
 		f.browse([new flash.net.FileFilter("FBX File", "*.fbx")]);
+		#else
+			//test
+			#if sys
+				//var f = new Flash;
+				//f.addEventListener(flash.events.Event.COMPLETE, function(_) {
+				//	#if flash||js
+				//		haxe.Log.clear();
+				//	#end
+				//	props.curFbxFile = f.name;
+				//var ba : ByteArray = f.data;
+				//loadData(ba.readUTFBytes(ba.length));
+				//});
+				//f.addEventListener(flash.events.Event.SELECT, function(_) f.load());
+				//f.browse([new flash.net.FileFilter("FBX File", "*.fbx")]);
+				#if windows
+				var filename = "../../../../samples/res/Skeleton01_anim_attack.FBX";
+				#else 
+				throw "TODO";
+				#end
+				
+				props.curFbxFile = filename;
+				var file = sys.io.File.read(filename, true);
+				var len = fileLength( file );
+
+				var content = file.readAll(len);//chunk read is slower on windows
+				loadData(content.toString());
+			//throw "TODO";// waxe or something ?
+			#else
+				throw "not supported on this platform";
+			#end
+		#end
+	}
+	
+	function fileLength(f : sys.io.FileInput)
+	{
+		var cur = f.tell();
+		f.seek( 0,sys.io.FileSeek.SeekEnd );
+		var len = f.tell();
+		f.seek( cur, sys.io.FileSeek.SeekBegin );
+		return len;
 	}
 	
 	function loadData( data : String, newFbx = true ) {
@@ -526,6 +575,7 @@ class Viewer {
 	static var inst : Viewer;
 	
 	static function checkInvoke() {
+		#if air3
 		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.InvokeEvent.INVOKE, function(e:Dynamic) {
 			var e : flash.events.InvokeEvent = cast e;
 			if( e.arguments.length > 0 ) {
@@ -536,12 +586,19 @@ class Viewer {
 				}
 			}
 		});
+		#else
+			//TODO
+		#end
 	}
 	
 	static function main() {
 		inst = new Viewer();
+		#if air3
 		if( flash.system.Capabilities.playerType == "Desktop" )
 			checkInvoke();
+		#elseif !flash
+			checkInvoke();
+		#end
 	}
 
 }

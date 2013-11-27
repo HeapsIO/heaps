@@ -4,26 +4,27 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="fbxViewer.swf" />
+    <movie path="application.xml" />
     <movie fps="60" />
     <movie width="800" />
     <movie height="600" />
-    <movie version="11" />
-    <movie minorVersion="6" />
-    <movie platform="Flash Player" />
+    <movie version="3" />
+    <movie minorVersion="0" />
+    <movie platform="NME" />
     <movie background="#000000" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
-    <class path="..\.." />
+    <class path="." />
   </classpaths>
   <!-- Build options -->
   <build>
     <option directives="" />
     <option flashStrict="True" />
+    <option noInlineOnDebug="False" />
     <option mainClass="Viewer" />
     <option enabledebug="False" />
-    <option additional="-lib hxsl&#xA;-lib air3&#xA;-D h3d&#xA;-dce full" />
+    <option additional="" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -40,6 +41,7 @@
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
     <hidden path="anim.hxml" />
+    <hidden path="obj" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />
@@ -48,7 +50,8 @@
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
-    <option testMovie="Default" />
+    <option testMovie="Custom" />
+    <option testMovieCommand="" />
   </options>
   <!-- Plugin storage -->
   <storage />

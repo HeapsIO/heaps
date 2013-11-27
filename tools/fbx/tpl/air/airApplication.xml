@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?> 
+<application xmlns="http://ns.adobe.com/air/application/3.6">
+	
+	<id>::APP_TITLE::</id> 
+	<versionNumber>1.0</versionNumber> 
+	<filename>::APP_TITLE::</filename> 
+	
+	<name>::APP_PACKAGE::</name> 
+	<description></description> 
+	<copyright>::APP_COMPANY::</copyright> 
+	
+	
+	
+	<initialWindow> 
+		<title>::APP_TITLE::</title> 
+		<content>::APP_TITLE::.swf</content> 
+		<systemChrome>standard</systemChrome> 
+		<transparent>false</transparent> 
+		<visible>true</visible> 
+		<minimizable>true</minimizable> 
+		<maximizable>true</maximizable> 
+		<resizable>false</resizable> 
+		<renderMode>direct</renderMode>
+		<depthAndStencil>true</depthAndStencil>
+	</initialWindow> 
+	
+	<android> 
+		<manifestAdditions> 
+			<![CDATA[ 
+				<manifest> 
+					<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /> 
+					<uses-permission android:name="android.permission.INTERNET"/>
+					
+					<application android:hardwareAccelerated="true"/> 
+				</manifest> 
+			]]> 
+		</manifestAdditions> 
+</android>
+	
+	<!-- 
+	More options:
+	http://livedocs.adobe.com/flex/3/html/File_formats_1.html#1043413
+	-->
+</application>

@@ -20,13 +20,15 @@ class Anm {
 	var curFbx = new h3d.fbx.Library();
 	var curData : String;
 	
+	var obj1 : Mesh;
+	
 	static public var animMode : h3d.fbx.Library.AnimationMode = LinearAnim;
 	
 	function new() {
 		time = 0;
 		engine = new h3d.Engine();
 		engine.debug = true;
-		engine.backgroundColor = 0xFF202020;
+		engine.backgroundColor = 0xFF0000FF;
 		engine.onReady = start;
 		engine.init();
 	}
@@ -64,6 +66,7 @@ class Anm {
 			mat.culling = None;
 			
 			scene = new Scene();
+			obj1 = new Mesh(prim, mat, scene);
 			
 			mat.lightSystem = {
 				ambient : new h3d.Vector(0.5, 0.5, 0.5),
@@ -76,7 +79,6 @@ class Anm {
 				
 			};
 			
-			
 			update();
 			hxd.System.setLoop(update);
 			
@@ -85,19 +87,25 @@ class Anm {
 				var lfbx = lfs.get("Skeleton01_anim_attack.FBX");
 				function onFbxLoaded()
 				{
+					trace("animated file loaded");
 					var bytes = lfbx.getBytes();
 					curFbx = new h3d.fbx.Library();
 					curData = bytes.toString();
+					
+					trace("animated file prepared");
 					var fbx = h3d.fbx.Parser.parse(curData);
-					scene = new h3d.scene.Scene();
+					trace("animated file parsed");
 					scene.addChild(curFbx.makeObject(function(name, node) {
 						return mat;
 					}));
-					
+					trace("animated file to be skinned");
 					setSkin();
-					
+					trace("animated file ready");
 				}
 				lfbx.load(onFbxLoaded);
+			}
+			else {
+				trace("cant find animation file");
 			}
 		}
 		
@@ -120,6 +128,9 @@ class Anm {
 	}
 	
 	function update() {	
+		var dist = 5;
+		time += 0.01;
+		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);
 	}
 	
