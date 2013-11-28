@@ -1,0 +1,20 @@
+-main ApplicationMain 
+-lib air3
+-lib openfl
+-lib actuate
+-lib hxsl
+-cp ../..
+-D tools=1.1.0
+-D h3d
+-D resourcesPath=../res
+-D openfl=1.1
+-D display
+-D verbose=true
+-D web
+--no-output
+-swf-version 11.6
+-swf bin/flash/bin/fbxViewer.swf
+-swf-header 800:480:60:000000
+-cp bin/flash/haxe
+#--remap nme:flash
+

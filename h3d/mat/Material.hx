@@ -26,6 +26,11 @@ class Material {
 	}
 	
 	public function setup( ctx : h3d.scene.RenderContext ) {
+		#if debug
+		for ( r in Reflect.fields(this))
+			if ( Reflect.getProperty(this,r) == null )
+				throw "shader property $r should not be left null";
+		#end
 	}
 	
 	public function blend(src, dst) {

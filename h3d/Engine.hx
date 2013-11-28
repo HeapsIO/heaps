@@ -313,8 +313,10 @@ class Engine {
 	}
 
 	public function line( x1 : Float, y1 : Float, z1 : Float, x2 : Float, y2 : Float, z2 : Float, color = 0x80FF0000, depth = false ) {
-		if( curProjMatrix == null )
+		if ( curProjMatrix == null ) {
+			if ( System.isVerbose ) trace("line render failed, no proj mat");
 			return;
+		}
 		if( debugLine == null ) {
 			debugLine = new Drawable(new h3d.prim.Plan2D(), new h3d.impl.Shaders.LineShader());
 			debugLine.material.blend(SrcAlpha, OneMinusSrcAlpha);

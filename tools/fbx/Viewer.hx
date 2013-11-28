@@ -1,5 +1,4 @@
 import flash.utils.ByteArray;
-import sys.io.FileInput;
 using h3d.fbx.Data;
 
 typedef K = flash.ui.Keyboard;
@@ -141,6 +140,8 @@ class Viewer {
 			freeMove = false;
 			Cookie.write();
 			});
+			
+		#if (flash&&!openfl)
 		flash.Lib.current.stage.addEventListener(flash.events.MouseEvent.RIGHT_MOUSE_DOWN, function (e:flash.events.MouseEvent) {
 			rightClick = true;
 			pMouse = new flash.geom.Point(flash.Lib.current.mouseX, flash.Lib.current.mouseY);
@@ -149,6 +150,7 @@ class Viewer {
 			rightClick = false;
 			Cookie.write();
 			});
+		#end
 		flash.Lib.current.stage.addEventListener(flash.events.MouseEvent.MOUSE_WHEEL, function (e:flash.events.MouseEvent) {
 				var dz = (e.delta / Math.abs(e.delta)) * props.camVars.zoom / 8;
 				props.camVars.zoom = Math.min(4, Math.max(0.4, props.camVars.zoom + dz));
@@ -161,7 +163,7 @@ class Viewer {
 			});
 		flash.Lib.current.stage.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, function(k:flash.events.KeyboardEvent ) {
 			var reload = false;
-			var c = cast k.keyCode; // fix int vs uint comp...
+			var c = k.keyCode; // fix int vs uint comp...
 				
 			if ( c == 49 )			props.view = 1;
 			else if ( c == 50 )		props.view = 2;
@@ -327,7 +329,7 @@ class Viewer {
 		#if air3
 		var f = new flash.net.FileReference();
 		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			#if flash||js
+			#if ((flash)||(js))
 				haxe.Log.clear();
 			#end
 			props.curFbxFile = f.name;
@@ -353,7 +355,7 @@ class Viewer {
 				#if windows
 				var filename = "../../../../samples/res/Skeleton01_anim_attack.FBX";
 				#else 
-				throw "TODO";
+				throw "TODO dnd loading";
 				#end
 				
 				props.curFbxFile = filename;
@@ -369,6 +371,7 @@ class Viewer {
 		#end
 	}
 	
+	#if sys
 	function fileLength(f : sys.io.FileInput)
 	{
 		var cur = f.tell();
@@ -377,6 +380,7 @@ class Viewer {
 		f.seek( cur, sys.io.FileSeek.SeekBegin );
 		return len;
 	}
+	#end
 	
 	function loadData( data : String, newFbx = true ) {
 		curFbx = new h3d.fbx.Library();

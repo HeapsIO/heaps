@@ -18,6 +18,7 @@
 	<haxelib name="air3" if="flash" />
 	<haxelib name="openfl" />
 	<haxelib name="actuate" />
+	<haxelib name="h3d" />
 	
 	<haxelib name="hxsl" />
 	
@@ -31,7 +32,6 @@
 	-->
 	<haxedef name="resourcesPath" value="../res" />
 	<haxedef name="verbose" value="true" />
-	<haxedef name="h3d" />
 	
 	<haxedev name="swf-version" value="11.6" />
 	<haxedev name="flash10" />

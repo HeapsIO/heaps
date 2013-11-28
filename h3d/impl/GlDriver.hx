@@ -268,7 +268,12 @@ class GlDriver extends Driver {
 			var code = Reflect.field(cl, name);
 			if( code == null ) throw "Missing " + Type.getClassName(cl) + "." + name + " shader source";
 			var cst = shader.getConstants(vertex);
+			
+			if ( System.isVerbose) { trace("compiling cst: \n" + cst); }
+			if ( System.isVerbose) { trace("compiling code: \n" + code); }
+			
 			code = StringTools.trim(cst + code);
+			
 			#if cpp
 			code = "#define lowp\n#define mediump\n#define highp\n"+code;
 			#end
@@ -282,7 +287,6 @@ class GlDriver extends Driver {
 			
 			var s = gl.createShader(type);
 					
-			
 			
 			gl.shaderSource(s, code);
 			gl.compileShader(s);
@@ -468,29 +472,37 @@ class GlDriver extends Driver {
 	}
 
 	override function selectShader( shader : Shader ) : Bool {
+		if ( shader == null ) {
+			#if debug
+				throw "Shader not set ?";
+			#end
+			return false;
+		}
+		
 		var change = false;
 		if ( shader.instance == null ) {
 			//if ( System.isVerbose ) trace("building shader");
 			shader.instance = buildShaderInstance(shader);
 		}
 		if ( shader.instance != curShader ) {
-			//if ( System.isVerbose ) trace("binding shader");
+			var old = curShader;
+			//if ( System.isVerbose ) trace("binding shader "+Type.getClass(shader)+" nbAttribs:"+shader.instance.attribs.length);
 			curShader = shader.instance;
 			
 			if (curShader.program==null) throw "invalid shader";
 			gl.useProgram(curShader.program);
-			//if ( System.isVerbose ) trace('setting attribs ${curShader.attribs}');
+			
+			//kiss....
+			if ( old != null )
+				for ( i in 0...old.attribs.length)
+					gl.disableVertexAttribArray(i);
+			
+			curAttribs = 0; 
 			
 			for( i in curAttribs...curShader.attribs.length ) {
 				gl.enableVertexAttribArray(i);
-				trace('enabling attrib ${curShader.attribs[i]}');
+				//if ( System.isVerbose ) trace('enabling attrib ${curShader.attribs[i]}');
 				curAttribs++;
-			}
-			
-			while( curAttribs > curShader.attribs.length )
-			{
-				gl.disableVertexAttribArray(--curAttribs);
-				if ( System.isVerbose ) trace('disabling attrib ${curShader.attribs[curAttribs]}');
 			}
 				
 			//if ( System.isVerbose ) trace("attribs set");
@@ -503,7 +515,10 @@ class GlDriver extends Driver {
 			if ( u.loc == null ) throw "Missing uniform location";
 			
 			var val : Dynamic = Reflect.field(shader, u.name);
-			if ( val == null ) throw "Missing shader value " + u.name;
+			if ( val == null ) {
+				if ( Reflect.hasField( shader, u.name) ) throw 'Shader param ${u.name} is null';
+				else throw "Missing shader value " + u.name + " among "+ Reflect.fields(shader);
+			}
 			//if ( System.isVerbose ) trace('retrieving uniform ${u.name} $val');
 			setUniform(val, u, u.type);
 		}

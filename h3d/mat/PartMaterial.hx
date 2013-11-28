@@ -57,9 +57,8 @@ private class PartShader extends h3d.impl.Shader {
 
 #else
 
-	static var VERTEX = "TODO";
-	static var FRAGMENT = "TODO";
-	
+	static var VERTEX = "TODO PartShader";
+	static var FRAGMENT = "TODO PartShader";
 	
 	// TODO
 	public var killAlpha : Bool;

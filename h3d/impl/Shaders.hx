@@ -23,7 +23,7 @@ class PointShader extends h3d.impl.Shader {
 
 	static var VERTEX = "
 		attribute vec2 pos;
-		varying mediump tuv;
+		varying mediump vec2 tuv;
 		uniform mat4 mproj;
 		uniform vec4 delta;
 		uniform vec2 size;
@@ -31,12 +31,12 @@ class PointShader extends h3d.impl.Shader {
 		void main(void) {
 			vec4 p = mproj * delta;
 			p.xy += pos.xy * size * p.z;
-			gl_Position = p;
 			tuv = pos;
+			gl_Position = p;
 		}
 	";
 	static var FRAGMENT = "
-		varying mediump tuv;
+		varying mediump vec2 tuv;
 		uniform vec4 color /*byte4*/;
 		
 		void main(void) {
@@ -62,8 +62,6 @@ class LineShader extends h3d.impl.Shader {
 			var epos = end * mproj;
 			var delta = epos.xy  - spos.xy;
 			delta.xy *= 1 / sqrt(delta.x * delta.x + delta.y * delta.y);
-			
-			
 			var p = (epos - spos) * (input.pos.x + 1) * 0.5 + spos;
 			p.xy += delta.yx * input.pos.y * p.z / 400;
 			out = p;
@@ -75,14 +73,34 @@ class LineShader extends h3d.impl.Shader {
 	
 #elseif (js || cpp)
 
-	public var mproj : Matrix;
-	public var start : Vector;
-	public var end : Vector;
-	public var color : Int;
+	static var VERTEX = "
+		attribute vec2 pos;
+		
+		uniform mat4 mproj;
+		uniform vec4 start;
+		uniform vec4 end;
+		
+		void main(void) {
+			
+			vec4 spos = mproj * start;
+			vec4 epos = mproj * end;
+			vec2 delta = epos.xy  - spos.xy;
+			normalize(delta);
+			
+			vec4 p = (epos - spos) * (pos.x + 1) * 0.5 + spos;
+			p.xy += delta.yx * pos.y * p.z / 400;
+			gl_Position = p;
+		}
+	";
 	
-	static var VERTEX = "TODO";
-	static var FRAGMENT = "TODO";
+	static var FRAGMENT = "
+		uniform vec4 color /*byte4*/;
+		void main(void) {
+			gl_FragColor = color;
+		}
+	";
 	
 #end
-
 }
+
+
