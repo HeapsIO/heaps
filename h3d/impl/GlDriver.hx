@@ -11,13 +11,21 @@ import hxd.System;
 import js.html.Uint16Array;
 import js.html.Uint8Array;
 import js.html.Float32Array;
-private typedef GL = js.html.webgl.GL;
 #elseif cpp
 import openfl.gl.GL;
+#end
+
+using StringTools;
+
+#if js
+private typedef GL = js.html.webgl.GL;
+#elseif cpp
 private typedef Uint16Array = openfl.utils.Int16Array;
 private typedef Uint8Array = openfl.utils.UInt8Array;
 private typedef Float32Array = openfl.utils.Float32Array;
 #end
+
+
 
 @:access(h3d.impl.Shader)
 class GlDriver extends Driver {
@@ -265,6 +273,15 @@ class GlDriver extends Driver {
 		}
 	}
 	
+	function findVarComment(str,code)
+	{
+		var r = new EReg(str + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "g");
+		if ( r.match(code) ) {
+			return r.matched(1);
+		}
+		else return null;
+	}
+	
 	function buildShaderInstance( shader : Shader ) {
 		var cl = Type.getClass(shader);
 		function compileShader(type) {
@@ -365,8 +382,22 @@ class GlDriver extends Driver {
 			var atype = decodeType(r.matched(1));
 			var a = amap.get(aname);
 			var size = typeSize(atype);
-			if( a != null )
-				inst.attribs.push( { name : aname, type : atype, etype : GL.FLOAT, size : size, index : a.index, offset : offset } );
+			if ( a != null ) {
+				
+				var etype = GL.FLOAT;
+				var com = findVarComment(aname,ccode);
+				if ( com != null ) {
+					if ( System.isVerbose) trace("found comment on " + aname + " " + com);
+					if ( com.startsWith("byte") )
+						etype = GL.UNSIGNED_BYTE;
+				}
+				else 
+				{
+					if ( System.isVerbose) trace("didn't find comment on var " + aname);
+				}
+				
+				inst.attribs.push( { name : aname, type : atype, etype : etype, size : size, index : a.index, offset : offset } );
+			}
 			offset += size;
 			ccode = r.matchedRight();
 		}

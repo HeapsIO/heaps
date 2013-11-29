@@ -28,8 +28,8 @@ class PlanMultiShader extends h3d.impl.Shader {
 //attribute vec4 color/*byte4*/;
 //attribute vec4 color;
 	static var VERTEX = "
+		attribute vec4 color/*byte4*/;
 		attribute vec3 pos;
-		attribute vec4 color;
 		
 		uniform mat4 mproj;
 		uniform vec4 matColor /*byte4*/;
@@ -43,10 +43,15 @@ class PlanMultiShader extends h3d.impl.Shader {
 			//vertexColor = matColor;
 			//vertexColor = color;
 			
-			vertexColor.x = color.x * matColor.x;
-			vertexColor.y = color.y * matColor.y;
-			vertexColor.z = color.z * matColor.z;
-			vertexColor.w = color.w * matColor.w;
+			vertexColor.x = matColor.x;
+			vertexColor.y = matColor.y;
+			vertexColor.z = matColor.z;
+			vertexColor.w = matColor.w;
+			
+			vertexColor.x *= color.x/255;
+			vertexColor.y *= color.y/255;
+			vertexColor.z *= color.z/255;
+			vertexColor.w *= color.w/255;
 			
 		}
 	";
@@ -188,11 +193,12 @@ class Plan3DMulti extends h3d.prim.MeshPrimitive {
 		
 		//engine.mem.allocVector(pbuf, 3, 0);
 		addBuffer("pos", engine.mem.allocVector(pbuf, 3, 0));
-		#if flash
+		//#if flash
+		//var b = cbufB.getBytes();trace(b.toHex());
 		addBuffer("color", engine.mem.allocBytes(cbufB.getBytes(), 1, 0 ));
-		#end
+		//#end
 		//addBuffer("pos", engine.mem.allocVector(pbuf, 4, 0));
-		addBuffer("color", engine.mem.allocVector(cbufF, 4, 0 ));
+		//addBuffer("color", engine.mem.allocVector(cbufF, 4, 0 ));
 		
 		indexes = engine.mem.allocIndex(getIndex());
 	}
