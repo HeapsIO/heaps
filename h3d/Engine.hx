@@ -165,8 +165,11 @@ class Engine {
 	}
 	
 	public function renderMultiBuffers( buffers : Array<h3d.impl.Buffer.BufferOffset>, indexes : h3d.impl.Indexes, startTri = 0, drawTri = -1 ) {
+		//if ( System.isVerbose) trace("renderMultiBuffers");
+		
 		var maxTri = Std.int(indexes.count / 3);
-		if( maxTri <= 0 ) return;
+		if ( maxTri <= 0 ) return;
+		
 		driver.selectMultiBuffers(buffers);
 		if( indexes.isDisposed() )
 			return;
@@ -176,7 +179,7 @@ class Engine {
 			driver.draw(indexes.ibuf, startTri * 3, drawTri);
 			drawTriangles += drawTri;
 			drawCalls++;
-		}
+		}		
 	}
 
 	function set_debug(d) {

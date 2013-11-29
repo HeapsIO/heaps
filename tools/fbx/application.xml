@@ -24,6 +24,7 @@
 	
 	<template if="flash" 	path="tpl/air/airApplication.xml" rename="airApplication.xml" />
 	
+	<assets path="assets" rename="assets" />
 	<haxeflag name="-debug" if="debug" /> 
 	<!-- optimize output
 	

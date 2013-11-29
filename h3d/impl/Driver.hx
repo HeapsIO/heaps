@@ -59,15 +59,18 @@ class Driver {
 	}
 	
 	public function selectMultiBuffers( buffers : Array<Buffer.BufferOffset> ) {
+		throw "selectMultiBuffers is not implemented";
 	}
 	
 	public function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 	}
 	
 	public function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
+		throw "setRenderZone is not implemented";
 	}
 	
 	public function setRenderTarget( tex : Null<Texture>, useDepth : Bool, clearColor : Int ) {
+		throw "setRenderTarget is not implemented";
 	}
 	
 	public function present() {

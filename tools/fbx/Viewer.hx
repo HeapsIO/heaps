@@ -1,9 +1,11 @@
+import flash.Lib;
 import flash.utils.ByteArray;
+import h3d.col.Point;
 using h3d.fbx.Data;
 
 typedef K = flash.ui.Keyboard;
 typedef Props = {
-	curFbxFile:String,
+	curFbxFile:Null<String>,
 	camVars:Camvars,
 	view:Int,
 	smoothing:Bool,
@@ -88,7 +90,7 @@ class Viewer {
 		freeMove = false;
 		rightClick = false;
 		
-		props = { curFbxFile : "", camVars : { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 }, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true };
+		props = { curFbxFile : null, camVars : { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 }, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true };
 		Cookie.read();
 		
 		tf = new flash.text.TextField();
@@ -130,6 +132,15 @@ class Viewer {
 	}
 	
 	function onReady() {
+		
+		var t = new flash.geom.Point();
+		//trace("-1-test flash as :"+ flash.Lib.as(null, h3d.Vector));
+		//trace("0-test flash as :"+ flash.Lib.as(t, h3d.Vector));
+		//trace("1-test flash as :"+ flash.Lib.as(t, flash.geom.Matrix));
+		//trace("test flash as : " +k);
+		trace("ready!");
+		
+		
 		flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, function (_) onUpdate());
 		flash.Lib.current.stage.addEventListener(flash.events.MouseEvent.MOUSE_DOWN, function (e:flash.events.MouseEvent) {
 			if (props.view < 3)	props.view = 3;
@@ -245,21 +256,25 @@ class Viewer {
 			Cookie.write();
 		});
 		
+		trace("adding axis");
 		scene = new h3d.scene.Scene();
 		axis = new Axis();
 		scene.addPass(axis);
 		
-		if( props.curFbxFile != null )
+		trace("adding file");
+		if( props.curFbxFile != null && props.curFbxFile.length > 0 )
 			loadFile(props.curFbxFile, false);
 		else
 			askLoad();
 	}
 	
 	function loadFile( file : String, newFbx = true ) {
+		trace('loadFile $file');
 		props.curFbxFile = file;
 		var l = new flash.net.URLLoader();
 		l.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
-			if( newFbx ) haxe.Log.trace("Failed to load " + file,null);
+			if ( newFbx ) 
+				haxe.Log.trace("Failed to load " + file,null);
 		});
 		l.addEventListener(flash.events.Event.COMPLETE, function(_) {
 			loadData(l.data, newFbx);
@@ -268,6 +283,7 @@ class Viewer {
 	}
 	
 	function textureLoader( textureName : String, matData : h3d.fbx.Data.FbxNode ) {
+		trace('loading $textureName');
 		var t = engine.mem.allocTexture(1024, 1024);
 		var bmp = new flash.display.BitmapData(1024, 1024, true, 0xFFFF0000);
 		var mat = new h3d.mat.MeshMaterial(t);
@@ -339,6 +355,7 @@ class Viewer {
 		f.addEventListener(flash.events.Event.SELECT, function(_) f.load());
 		f.browse([new flash.net.FileFilter("FBX File", "*.fbx")]);
 		#else
+			trace("ask load");
 			//test
 			#if sys
 				//var f = new Flash;
@@ -353,7 +370,7 @@ class Viewer {
 				//f.addEventListener(flash.events.Event.SELECT, function(_) f.load());
 				//f.browse([new flash.net.FileFilter("FBX File", "*.fbx")]);
 				#if windows
-				var filename = "../../../../samples/res/Skeleton01_anim_attack.FBX";
+				var filename = "assets/Skeleton01_anim_attack.FBX";
 				#else 
 				throw "TODO dnd loading";
 				#end
@@ -361,9 +378,10 @@ class Viewer {
 				props.curFbxFile = filename;
 				var file = sys.io.File.read(filename, true);
 				var len = fileLength( file );
-
+				trace('read $len bytes');
 				var content = file.readAll(len);//chunk read is slower on windows
 				loadData(content.toString());
+				trace("loaded!");
 			//throw "TODO";// waxe or something ?
 			#else
 				throw "not supported on this platform";

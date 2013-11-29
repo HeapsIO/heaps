@@ -30,7 +30,7 @@ class GlDriver extends Driver {
 	var fixMult : Bool;
 	#end
 	
-	var curAttribs : Int;
+	//var curAttribs : Int;
 	var curShader : Shader.ShaderInstance;
 	var curMatBits : Int;
 	
@@ -49,7 +49,7 @@ class GlDriver extends Driver {
 		fixMult = sub.length == 1; // should be 4
 		#end
 
-		curAttribs = 0;
+	//	curAttribs = 0;
 		curMatBits = -1;
 		selectMaterial(0);
 	}
@@ -104,6 +104,11 @@ class GlDriver extends Driver {
 		gl.clearColor(r, g, b, a);
 		gl.clearDepth(1);
 		gl.clear(GL.COLOR_BUFFER_BIT|GL.DEPTH_BUFFER_BIT);
+	}
+
+	//TODO optimize me
+	override function getShaderInputNames() {
+		return curShader.attribs.map(function(t) return t.name );
 	}
 	
 	override function resize(width, height) {
@@ -269,8 +274,8 @@ class GlDriver extends Driver {
 			if( code == null ) throw "Missing " + Type.getClassName(cl) + "." + name + " shader source";
 			var cst = shader.getConstants(vertex);
 			
-			if ( System.isVerbose) { trace("compiling cst: \n" + cst); }
-			if ( System.isVerbose) { trace("compiling code: \n" + code); }
+			//if ( System.isVerbose) { trace("compiling cst: \n" + cst); }
+			//if ( System.isVerbose) { trace("compiling code: \n" + code); }
 			
 			code = StringTools.trim(cst + code);
 			
@@ -494,15 +499,16 @@ class GlDriver extends Driver {
 			
 			//kiss....
 			if ( old != null )
-				for ( i in 0...old.attribs.length)
-					gl.disableVertexAttribArray(i);
+				for ( a in old.attribs)
+					gl.disableVertexAttribArray(a.index);
 			
-			curAttribs = 0; 
+			//curAttribs = 0; 
 			
-			for( i in curAttribs...curShader.attribs.length ) {
-				gl.enableVertexAttribArray(i);
-				//if ( System.isVerbose ) trace('enabling attrib ${curShader.attribs[i]}');
-				curAttribs++;
+			for ( i in 0...curShader.attribs.length ) {
+				var a = curShader.attribs[i];
+				gl.enableVertexAttribArray(a.index);
+				if ( System.isVerbose ) trace('enabling attrib ${curShader.attribs[i]}');
+				//curAttribs++;
 			}
 				
 			//if ( System.isVerbose ) trace("attribs set");
@@ -628,14 +634,61 @@ class GlDriver extends Driver {
 		return new Float32Array(a);
 	}
 	
+	var curBuffer : VertexBuffer;
+	var curMultiBuffer : Array<Buffer.BufferOffset>;
+	
 	override function selectBuffer( v : VertexBuffer ) {
+		if ( curBuffer == v ) return;
+		curBuffer = v;
+		curMultiBuffer = null;
+		
 		var stride : Int = v.stride;
 		if( stride < curShader.stride )
 			throw "Buffer stride (" + stride + ") and shader stride (" + curShader.stride + ") mismatch";
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		for( a in curShader.attribs )
 			gl.vertexAttribPointer(a.index, a.size, a.etype, false, stride * 4, a.offset * 4);
+		
 		checkError();
+	}
+	
+	override function selectMultiBuffers( buffers : Array<Buffer.BufferOffset> ) {
+		
+		var changed = curMultiBuffer == null || curMultiBuffer.length != buffers.length;
+		if( !changed )
+			for( i in 0...curMultiBuffer.length )
+				if( buffers[i] != curMultiBuffer[i] ) {
+					changed = true;
+					break;
+				}
+				
+		if ( changed ) {
+			trace("gl selectMultiBuffers");
+			for ( i in 0...buffers.length ) {
+				var b = buffers[i];
+				var a = curShader.attribs[i];
+				
+				if ( b.offset != 0) throw "unhandled";
+				
+				trace( "ofs:"+b.offset );
+				trace( a );
+				trace("stride:"+curShader.stride);
+				
+				gl.bindBuffer(GL.ARRAY_BUFFER, b.b.b.vbuf.b);
+				//gl.vertexPointer( a.size, a.etype, 0, b.offset);
+				//gl.vertexAttribPointer(a.index, a.size, a.etype, false, 0, b.offset);
+				//gl.vertexAttribPointer(a.index, a.size, a.etype, false, stride * 4, a.offset * 4);
+				var stride = curShader.stride;
+				gl.vertexAttribPointer(a.index, a.size, a.etype, false, 0, b.offset * 4);
+				checkError();
+			}
+			
+				
+			curBuffer = null;
+			curMultiBuffer = buffers;
+		}
+		
+		//throw "STOP";
 	}
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {

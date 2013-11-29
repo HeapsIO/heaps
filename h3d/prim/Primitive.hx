@@ -22,6 +22,9 @@ class Primitive {
 		return null;
 	}
 	
+	/**
+	 * alloc should be overriden and actual hardware buffers should be filled here
+	 */ 
 	public function alloc( engine : h3d.Engine ) {
 		throw "not implemented";
 	}

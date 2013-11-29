@@ -77,4 +77,9 @@ class BufferOffset {
 			b = null;
 		}
 	}
+	
+	public function toString()
+	{
+		return 'b:$b ofs:$offset';
+	}
 }

@@ -323,6 +323,7 @@ class MemoryManager {
 		return newTexture(Rgba, size, size, true, false, levels, allocPos);
 	}
 
+	//TODO remove pos
 	public function allocIndex( indices : hxd.IndexBuffer, pos = 0, count = -1 ) {
 		if( count < 0 ) count = indices.length;
 		var ibuf = driver.allocIndexes(count);

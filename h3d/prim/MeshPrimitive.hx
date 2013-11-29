@@ -1,19 +1,21 @@
 package h3d.prim;
+import hxd.System;
 
 class MeshPrimitive extends Primitive {
 		
 	var bufferCache : Map<String,h3d.impl.Buffer.BufferOffset>;
 	
-	function allocBuffer( engine : h3d.Engine, name : String ) {
-		return null;
+	public function new () {
+		bufferCache = new Map();
 	}
 	
 	function addBuffer( name : String, buf, offset = 0 ) {
-		if( bufferCache == null )
-			bufferCache = new Map();
 		var old = bufferCache.get(name);
-		if( old != null ) old.dispose();
-		bufferCache.set(name, new h3d.impl.Buffer.BufferOffset(buf, offset));
+		if ( old != null ) old.dispose();
+		
+		var bo = new h3d.impl.Buffer.BufferOffset(buf, offset);
+		bufferCache.set(name, bo);
+		return bo;
 	}
 
 	override public function dispose() {
@@ -26,16 +28,14 @@ class MeshPrimitive extends Primitive {
 
 	@:access(h3d.Engine.driver)
 	function getBuffers( engine : h3d.Engine ) {
-		if( bufferCache == null )
-			bufferCache = new Map();
+		if( bufferCache == null ) bufferCache = new Map();
 		var buffers = [];
+		
+		if ( engine.driver == null) throw "no engine";
+		
 		for( name in engine.driver.getShaderInputNames() ) {
 			var b = bufferCache.get(name);
-			if( b == null ) {
-				b = allocBuffer(engine, name);
-				if( b == null ) throw "Buffer " + name + " is not available";
-				bufferCache.set(name, b);
-			}
+			if( b == null )  throw "Buffer " + name + " is not available";
 			buffers.push(b);
 		}
 		return buffers;

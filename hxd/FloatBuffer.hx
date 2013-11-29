@@ -41,6 +41,17 @@ abstract FloatBuffer(InnerData) {
 		#end
 	}
 	
+	/**
+	 * creates a back copy
+	 */
+	@:from
+	public static inline function fromArray( arr: Array<Float> ) :FloatBuffer{
+		var f = new FloatBuffer(arr.length);
+		for ( v in 0...arr.length )
+			f[v] = arr[v];
+		return f;
+	}
+	
 	public inline function grow( v : Int ) {
 		#if flash
 		if( v > this.length ) this.length = v;

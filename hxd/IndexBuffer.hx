@@ -33,6 +33,14 @@ abstract IndexBuffer(InnerData) {
 		#end
 	}
 	
+	 @:from
+	public static inline function fromArray( arr: Array<Int> ) : IndexBuffer{
+		var f = new IndexBuffer(arr.length);
+		for ( v in 0...arr.length )
+			f[v] = arr[v];
+		return f;
+	}
+	
 	public inline function push( v : Int ) {
 		#if flash
 		this[this.length] = v;

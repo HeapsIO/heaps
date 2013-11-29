@@ -1,6 +1,6 @@
 package h3d.prim;
 using h3d.fbx.Data;
-import h3d.impl.Buffer.BufferOffset;
+import h3d.impl.Buffer;
 import h3d.col.Point;
 
 class FBXModel extends MeshPrimitive {
@@ -13,6 +13,7 @@ class FBXModel extends MeshPrimitive {
 	var groupIndexes : Array<h3d.impl.Indexes>;
 
 	public function new(g) {
+		super();
 		this.geom = g;
 		curMaterial = -1;
 	}
