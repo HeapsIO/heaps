@@ -128,8 +128,9 @@ class Linker {
 				return v2;
 			}
 		}
+		var vid = allVars.length;
 		var v2 : TVar = {
-			id : v.id,
+			id : vid,
 			name : v.name,
 			type : v.type,
 			kind : v.kind,
@@ -140,7 +141,7 @@ class Linker {
 		a.v = v2;
 		a.merged = [v];
 		a.path = key;
-		a.id = allVars.length;
+		a.id = vid;
 		a.parent = parent == null ? null : allocVar(parent, p);
 		allVars.push(a);
 		varMap.set(key, a);
@@ -344,6 +345,22 @@ class Linker {
 			for( v in s.write )
 				addVar(v);
 		}
+		// cleanup unused structure vars
+		function cleanVar( v : TVar ) {
+			switch( v.type ) {
+			case TStruct(vl) if( v.kind != Input ):
+				var vout = [];
+				for( v in vl )
+					if( varMap.exists(v.id) ) {
+						cleanVar(v);
+						vout.push(v);
+					}
+				v.type = TStruct(vout);
+			default:
+			}
+		}
+		for( v in outVars )
+			cleanVar(v);
 		// build resulting shader functions
 		function build(name, a:Array<ShaderInfos> ) : TFunction {
 			var v : TVar = {
