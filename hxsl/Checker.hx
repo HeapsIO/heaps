@@ -469,6 +469,13 @@ class Checker {
 				tv.kind = Var;
 			else
 				tv.kind = parent.kind;
+		} else if( parent != null && tv.kind != parent.kind ) {
+			switch( [parent.kind, tv.kind] ) {
+			case [Global, Var]:
+				// allow declaring Vars inside globals (pseudo globals built by shader)
+			default:
+				error("Variable " + parent.kind + " cannot be changed to " + tv.kind, pos);
+			}
 		}
 		if( v.qualifiers.length > 0 ) {
 			tv.qualifiers = v.qualifiers;
@@ -476,6 +483,11 @@ class Checker {
 				switch( q ) {
 				case Private: if( tv.kind != Var ) error("@private only allowed on varying", pos);
 				case Const(_):
+					var p = parent;
+					while( p != null ) {
+						if( !p.isStruct() ) error("@const only allowed in structure", pos);
+						p = p.parent;
+					}
 					if( tv.kind != Global && tv.kind != Param ) error("@const only allowed on parameter or global", pos);
 				case PerObject: if( tv.kind != Global ) error("@perObject only allowed on global", pos);
 				case Nullable: if( tv.kind != Param ) error("@nullable only allowed on parameter or global", pos);
