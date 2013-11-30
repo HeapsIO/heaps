@@ -67,9 +67,10 @@ enum VarKind {
 }
 
 enum VarQualifier {
-	Const;
+	Const( ?max : Int );
 	Private;
 	Nullable;
+	PerObject;
 	Name( n : String );
 }
 
@@ -117,6 +118,7 @@ enum ExprDef {
 }
 
 typedef TVar = {
+	var id : Int;
 	var name : String;
 	var type : Type;
 	var kind : VarKind;
@@ -228,6 +230,55 @@ typedef ShaderData = {
 
 class Tools {
 	
+	static var UID = 0;
+	
+	public static function allocVarId() {
+		return ++UID;
+	}
+	
+	public static function getName( v : TVar ) {
+		if( v.qualifiers == null )
+			return v.name;
+		for( q in v.qualifiers )
+			switch( q ) {
+			case Name(n): return n;
+			default:
+			}
+		return v.name;
+	}
+	
+	public static function getConstBits( v : TVar ) {
+		switch( v.type ) {
+		case TBool:
+			return 1;
+		case TInt:
+			for( q in v.qualifiers )
+				switch( q ) {
+				case Const(n):
+					if( n != null ) {
+						var bits = 0;
+						while( n >= 1 << bits )
+							bits++;
+						return bits;
+					}
+					return 8;
+				default:
+				}
+		default:
+		}
+		return 0;
+	}
+	
+	public static function isConst( v : TVar ) {
+		if( v.qualifiers != null )
+			for( q in v.qualifiers )
+				switch( q ) {
+				case Const(_): return true;
+				default:
+				}
+		return false;
+	}
+
 	public static function isStruct( v : TVar ) {
 		return switch( v.type ) { case TStruct(_): true; default: false; }
 	}

@@ -49,9 +49,10 @@ class Printer {
 		if( v.qualifiers != null ) {
 			for( q in v.qualifiers )
 				add("@" + (switch( q ) {
-				case Const: "const";
+				case Const(max): "const" + (max == null ? "" : "("+max+")");
 				case Private: "private";
 				case Nullable: "nullable";
+				case PerObject: "perObject";
 				case Name(n): "name('" + n + "')";
 				}) + " ");
 		}

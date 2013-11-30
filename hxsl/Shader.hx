@@ -4,39 +4,38 @@ using hxsl.Ast;
 @:autoBuild(hxsl.Macros.buildShader())
 class Shader {
 	
-	var shader : Ast.ShaderData;
+	var shader : SharedShader;
+	var instance : SharedShader.ShaderInstance;
+	var constBits : Int;
+	var constModified : Bool;
 	
 	public function new() {
 		var cl : Dynamic = std.Type.getClass(this);
 		shader = cl.SHADER;
+		constModified = true;
 		if( shader == null ) {
-			shader = haxe.Unserializer.run(cl.SRC);
+			shader = new SharedShader(cl.SRC);
 			cl.SHADER = shader;
 		}
 	}
 	
-	function initConst( v : Ast.TVar, e : hxsl.Eval ) {
-		switch( v.type ) {
-		case TStruct(vl):
-			for( v in vl )
-				initConst(v, e);
-		default:
-			if( v.hasQualifier(Const) ) {
-				var value = switch( v.type ) {
-				case TBool: CBool(false);
-				case TInt: CInt(0);
-				default: throw "Unsupported const " + v.type.toString();
-				};
-				e.setConstant(v, value);
+	public function updateConstants( globals : Globals ) {
+		for( c in shader.consts )
+			if( c.globalId > 0 ) {
+				var v : Dynamic = globals.fastGet(c.globalId);
+				switch( c.v.type ) {
+				case TInt:
+					var v : Int = v;
+					if( v >>> c.bits != 0 ) throw "Constant " + c.v.name + " is outside range (" + v + " > " + ((1 << c.bits) - 1) + ")";
+					constBits |= v << c.pos;
+				case TBool:
+					var v : Bool = v;
+					if( v ) constBits |= 1 << c.pos;
+				default:
+					throw "assert";
+				}
 			}
-		}
-	}
-	
-	public function compile() {
-		var e = new hxsl.Eval();
-		for( v in shader.vars )
-			initConst(v, e);
-		return e.eval(shader);
+		instance = shader.getInstance(constBits);
 	}
 	
 	public function setup( globals : Globals ) {

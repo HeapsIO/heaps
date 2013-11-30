@@ -16,6 +16,9 @@ class MacroParser {
 		case []:
 		case [ { expr : EConst(CString(n)), pos : pos } ] if( m.name == "var" || m.name == "global" || m.name == "input" ):
 			v.qualifiers.push(Name(n));
+		case [ { expr : EConst(CInt(n)), pos : pos } ] if( m.name == "const" ):
+			v.qualifiers.push(Const(Std.parseInt(n)));
+			return;
 		default:
 			error("Invalid meta parameter", m.pos);
 		}
@@ -29,11 +32,13 @@ class MacroParser {
 		case "input":
 			if( v.kind == null ) v.kind = Input else error("Duplicate type qualifier", m.pos);
 		case "const":
-			v.qualifiers.push(Const);
+			v.qualifiers.push(Const());
 		case "private":
 			v.qualifiers.push(Private);
 		case "nullable":
 			v.qualifiers.push(Nullable);
+		case "perObject":
+			v.qualifiers.push(PerObject);
 		default:
 			error("Unsupported qualifier " + m.name, m.pos);
 		}
@@ -69,7 +74,7 @@ class MacroParser {
 			}
 			var size : Ast.SizeDecl = switch( size ) {
 			case TPExpr({ expr : EConst(CInt(v)) }): SConst(Std.parseInt(v));
-			case TPType(TPath( { pack : [], name : name, sub : null, params : [] } )): SVar( { type : null, name : name, kind : null } );
+			case TPType(TPath( { pack : [], name : name, sub : null, params : [] } )): SVar( { id : 0, type : null, name : name, kind : null } );
 			default: null;
 			}
 			if( t != null && size != null )
@@ -88,7 +93,7 @@ class MacroParser {
 					};
 					for( m in f.meta )
 						applyMeta(m,v);
-					{ name : v.name, type : v.type, kind : v.kind, qualifiers : v.qualifiers };
+					{ id : 0, name : v.name, type : v.type, kind : v.kind, qualifiers : v.qualifiers };
 				default:
 					error("Only variables are allowed in structures", f.pos);
 				}

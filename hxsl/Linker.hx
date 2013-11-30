@@ -50,6 +50,7 @@ class Linker {
 	var allFuns : Map<Int,TFunction>;
 	var curShader : ShaderInfos;
 	var shaders : Array<ShaderInfos>;
+	var varIdMap : Map<Int,Int>;
 	
 	public function new() {
 	}
@@ -123,10 +124,12 @@ class Linker {
 			} else {
 				mergeVar(key, v, v2.v, p);
 				v2.merged.push(v);
+				varIdMap.set(v.id, v2.id);
 				return v2;
 			}
 		}
 		var v2 : TVar = {
+			id : v.id,
 			name : v.name,
 			type : v.type,
 			kind : v.kind,
@@ -247,6 +250,7 @@ class Linker {
 	
 	public function link( shadersData : Array<ShaderData>, outVars : Array<String> ) : ShaderData {
 		varMap = new Map();
+		varIdMap = new Map();
 		allVars = new Array();
 		allFuns = new Map();
 		shaders = [];
@@ -343,6 +347,7 @@ class Linker {
 		// build resulting shader functions
 		function build(name, a:Array<ShaderInfos> ) : TFunction {
 			var v : TVar = {
+				id : Tools.allocVarId(),
 				name : name,
 				type : TFun([ { ret : TVoid, args : [] } ]),
 				kind : Function,

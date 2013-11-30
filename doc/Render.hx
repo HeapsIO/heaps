@@ -1,3 +1,27 @@
+// shader setup:
+	
+if( globals.constModified || shader.constModified ) {
+	shader.syncGlobalConsts(globals);
+	// will get/build an instance based on globals + const bits
+	// the instance is the eval'd version of the shader and has an unique ID
+}
+instances.push(shader.instance);
+
+// get/build a linked shader based on the unique instance identifiers and outputs
+// make sure that it's unique (use md5(toString) to prevent dups)
+var linked = getLinkedVersion(instances, ["output.pos", "output.color"]);
+
+shaders.sort(sortByLinkedId)
+for( s in linked ) {
+	if( s != prevId ) {
+		selectShader(s);
+		uploadParams(s.buildGlobals(globals));
+	}
+	// handle params and per-object globals (modelView, modelViewInv)
+	uploadParams(s.buildParams(globals));
+	render();g
+}
+
 // CHECK HOW RENDER PASS ARE DONE
 
 var passes : Map< String, Array<ObjectPass> > = collecObjectPasses();

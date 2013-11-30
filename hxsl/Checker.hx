@@ -83,7 +83,7 @@ class Checker {
 				if( a.kind == null ) a.kind = Local;
 				if( a.kind != Local ) error("Argument should be local", pos);
 				if( a.qualifiers.length != 0 ) error("No qualifier allowed for argument", pos);
-				{ name : a.name, kind : Local, type : a.type };
+				{ id : 0, name : a.name, kind : Local, type : a.type };
 			}];
 			if( args.length != 0 )
 				switch( f.name ) {
@@ -92,6 +92,7 @@ class Checker {
 				default:
 				}
 			var fv : TVar = {
+				id : 0,
 				name : f.name,
 				kind : Function,
 				type : TFun([{ args : [for( a in args ) { type : a.type, name : a.name }], ret : f.ret == null ? TVoid : f.ret }]),
@@ -380,6 +381,7 @@ class Checker {
 			switch( loop.t ) {
 			case TArray(t, _):
 				var v : TVar = {
+					id : 0,
 					name : v,
 					type : t,
 					kind : Local,
@@ -435,7 +437,14 @@ class Checker {
 			funs.push({ f : f, p : e.pos });
 		case EVars(vl):
 			for( v in vl ) {
-				if( v.kind == null ) v.kind = Var;
+				if( v.kind == null ) {
+					v.kind = Var;
+					for( q in v.qualifiers )
+						switch( q ) {
+						case Const(_): v.kind = Param;
+						default:
+						}
+				}
 				if( v.expr != null ) error("Cannot initialize variable declaration", v.expr.pos);
 				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
@@ -446,14 +455,35 @@ class Checker {
 		}
 	}
 	
-	function makeVar( v : VarDecl, pos : Position ) {
+	function makeVar( v : VarDecl, pos : Position, ?parent : TVar ) {
 		var tv : TVar = {
+			id : 0,
 			name : v.name,
 			kind : v.kind,
 			type : v.type,
 		};
-		if( v.qualifiers.length > 0 )
+		if( parent != null )
+			tv.parent = parent;
+		if( tv.kind == null ) {
+			if( parent == null )
+				tv.kind = Var;
+			else
+				tv.kind = parent.kind;
+		}
+		if( v.qualifiers.length > 0 ) {
 			tv.qualifiers = v.qualifiers;
+			for( q in v.qualifiers )
+				switch( q ) {
+				case Private: if( tv.kind != Var ) error("@private only allowed on varying", pos);
+				case Const(_):
+					if( tv.kind != Global && tv.kind != Param ) error("@const only allowed on parameter or global", pos);
+				case PerObject: if( tv.kind != Global ) error("@perObject only allowed on global", pos);
+				case Nullable: if( tv.kind != Param ) error("@nullable only allowed on parameter or global", pos);
+				case Name(_):
+					if( parent != null ) error("Cannot have an explicit name for a structure variable", pos);
+					if( tv.kind != Global ) error("Explicit name is only allowed for global var", pos);
+				}
+		}
 		if( tv.type != null )
 			tv.type = makeVarType(tv.type, tv, pos);
 		return tv;
@@ -462,20 +492,14 @@ class Checker {
 	function makeVarType( t : Type, parent : TVar, pos : Position ) {
 		switch( t ) {
 		case TStruct(vl):
-			var vl = vl.copy();
-			for( v in vl ) {
-				v.parent = parent;
-				if( v.kind == null ) v.kind = parent.kind;
-				v.type = makeVarType(v.type, v, pos);
-			}
-			return TStruct(vl);
+			return TStruct([for( v in vl ) makeVar({ type : v.type, qualifiers : v.qualifiers, name : v.name, kind : v.kind, expr : null },pos,parent)]);
 		case TArray(t, size):
 			var s = switch( size ) {
 			case SConst(_): size;
 			case SVar(v):
 				var v2 = vars.get(v.name);
 				if( v2 == null ) error("Array size variable not found", pos);
-				if( !v2.hasQualifier(Const) ) error("Array size variable should be a constant", pos);
+				if( !v2.isConst() ) error("Array size variable should be a constant", pos);
 				SVar(v2);
 			}
 			return TArray(makeVarType(t,parent,pos), s);

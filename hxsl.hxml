@@ -5,3 +5,5 @@
 -swf-version 11.6
 -main Test
 -dce full
+-lib h3d
+-cp .

@@ -30,6 +30,7 @@ class Eval {
 		if( v2 != null )
 			return v2;
 		v2 = {
+			id : v.id == 0 ? Tools.allocVarId() : v.id,
 			name : v.name,
 			type : v.type,
 			kind : v.kind,

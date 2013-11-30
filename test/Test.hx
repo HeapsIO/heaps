@@ -16,8 +16,8 @@ class Proto extends hxsl.Shader {
 
 	@global var global : {
 		var time : Float;
-		var modelView : Mat4;
-		var modelViewInverse : Mat4;
+		@perObject var modelView : Mat4;
+		@perObject var modelViewInverse : Mat4;
 		// ... other available globals in BasePass
 	};
 	
@@ -58,10 +58,15 @@ class Proto extends hxsl.Shader {
 	}
 
 	};
+	
+	public function new() {
+		super();
+		color.set(1, 1, 1);
+	}
 
 }
 
-// ----------------------------------------------------------------------------------------------------------------
+// -------------------buildGlobals()---------------------------------------------------------------------------------------------
 
 class VertexColor extends hxsl.Shader {
 static var SRC = {
@@ -131,13 +136,13 @@ static var SRC = {
 class LightSystem extends hxsl.Shader {
 static var SRC = {
 
-	@global("light.ndirs") @const var NDirLights : Int;
-	@global("light.npoints") @const var NPointLights : Int;
+	@global("light.ndirs") @const(16) var NDirLights : Int;
+	@global("light.npoints") @const(64) var NPointLights : Int;
 	
 	@global var light : {
 		@const var perPixel : Bool;
-		@const var ndirs : Int;
-		@const var npoints : Int;
+		@const(16) var ndirs : Int;
+		@const(64) var npoints : Int;
 		var ambient : Vec3;
 		var dirs : Array<{ dir : Vec3, color : Vec3 }, NDirLights>;
 		var points : Array<{ pos : Vec3, color : Vec3, att : Vec3 }, NPointLights>;
@@ -233,7 +238,14 @@ static var SRC = {
 		transformedNormal = skinMatrixes[input.indexes.x].mat3() * (n * input.weights.x) + skinMatrixes[input.indexes.y].mat3() * (n * input.weights.y) + skinMatrixes[input.indexes.z].mat3() * (n * input.weights.z);
 	}
 
-}}
+}
+
+	public function new() {
+		super();
+		MaxBones = 34;
+	}
+
+}
 
 // ----------------------------------------------------------------------------------------------------------------
 
@@ -327,14 +339,23 @@ static var SRC = {
 
 class Test {
 	
+	@:access(hxsl)
 	static function main() {
 		var shaders = [
-			new Proto().compile(),
-			new Texture().compile(),
-			new AnimatedUV().compile(),
-//			new Outline().compile(),
+			new Proto(),
+			{ var t = new Texture(); t.killAlpha = true; t; },
+			new AnimatedUV(),
+		//	new Outline(),
 		];
-		var s = new hxsl.Linker().link(shaders, ["output.position", "output.color"]);
+		
+		
+		
+		var globals = new hxsl.Globals();
+		
+		var instances = [for( s in shaders ) { s.updateConstants(globals); s.instance.shader; }];
+		
+		
+		var s = new hxsl.Linker().link(instances, ["output.position", "output.color"]);
 		trace("\n"+hxsl.Printer.shaderToString(s));
 	}
 		
