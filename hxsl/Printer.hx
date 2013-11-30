@@ -162,13 +162,14 @@ class Printer {
 				add("\n" + tabs);
 			add("}");
 		case TUnop(op, e):
-			(switch( op ) {
+			add(switch( op ) {
 			case OpNot:"!";
 			case OpNeg:"-";
 			case OpNegBits:"~";
 			case OpIncrement:"++";
 			case OpDecrement:"--";
-			}) + addExpr(e, tabs);
+			});
+			addExpr(e, tabs);
 		case TBinop(op, e1, e2):
 			addExpr(e1, tabs);
 			add(" "+opStr(op)+" ");
