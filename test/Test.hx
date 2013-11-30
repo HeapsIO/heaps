@@ -347,15 +347,10 @@ class Test {
 			new AnimatedUV(),
 		//	new Outline(),
 		];
-		
-		
-		
 		var globals = new hxsl.Globals();
-		
-		var instances = [for( s in shaders ) { s.updateConstants(globals); s.instance.shader; }];
-		
-		
-		var s = new hxsl.Linker().link(instances, ["output.position", "output.color"]);
+		var instances = [for( s in shaders ) { s.updateConstants(globals); s.instance; }];
+		var cache = hxsl.Cache.get();
+		var s = cache.link(instances, cache.allocOutputVars(["output.position", "output.color"]));
 		trace("\n"+hxsl.Printer.shaderToString(s));
 	}
 		
