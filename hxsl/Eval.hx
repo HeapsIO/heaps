@@ -193,8 +193,18 @@ class Eval {
 			}
 		case TUnop(op, e):
 			var e = evalExpr(e);
-			// todo : calc
-			TUnop(op, e);
+			switch( e.e ) {
+			case TConst(c):
+				switch( [op, c] ) {
+				case [OpNot, CBool(b)]: TConst(CBool(!b));
+				case [OpNeg, CInt(i)]: TConst(CInt( -i));
+				case [OpNeg, CFloat(f)]: TConst(CFloat( -f));
+				default:
+					TUnop(op, e);
+				}
+			default:
+				TUnop(op, e);
+			}
 		case TParenthesis(e):
 			var e = evalExpr(e);
 			switch( e.e ) {
