@@ -7,7 +7,7 @@
     <movie path="hxsl.swf" />
     <movie fps="60" />
     <movie width="800" />
-    <movie height="600" />
+    <movie height="800" />
     <movie version="11" />
     <movie minorVersion="6" />
     <movie platform="Flash Player" />
