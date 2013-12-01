@@ -150,10 +150,7 @@ static var SRC = {
 	
 	var transformedPosition : Vec3;
 	var transformedNormal : Vec3; // will be tagged as read in either vertex or fragment depending on conditional
-	
-	@private var color : Vec3; // will be tagged as written in vertex and read in fragment if !perPixel, or unused either
-	
-	var pixelColor : Vec4; // will be tagged as read+written in fragment
+	var pixelColor : Vec4;
 
 	function calcLight() : Vec3 {
 		var col = light.ambient;
@@ -170,14 +167,12 @@ static var SRC = {
 	}
 	
 	function vertex() {
-		if( !light.perPixel ) color = calcLight();
+		if( !light.perPixel ) pixelColor.rgb *= calcLight();
 	}
 	
 	function fragment() {
 		if( light.perPixel )
 			pixelColor.rgb *= calcLight();
-		else
-			pixelColor.rgb *= color;
 	}
 
 }
@@ -343,11 +338,13 @@ class Test {
 	static function main() {
 		var shaders = [
 			new Proto(),
+			new LightSystem(),
 			{ var t = new Texture(); t.killAlpha = true; t; },
 			new AnimatedUV(),
-		//	new Outline(),
+			//new AnimatedUV(),
 		];
 		var globals = new hxsl.Globals();
+		//globals.set("light.perPixel", true);
 		var instances = [for( s in shaders ) { s.updateConstants(globals); s.instance; }];
 		var cache = hxsl.Cache.get();
 		var s = cache.link(instances, cache.allocOutputVars(["output.position", "output.color"]));

@@ -110,6 +110,7 @@ class Linker {
 				default:
 				}
 		var v2 = varMap.get(key);
+		var vname = v.name;
 		if( v2 != null ) {
 			for( vm in v2.merged )
 				if( vm == v )
@@ -117,9 +118,15 @@ class Linker {
 			if( v.kind == Param || v.kind == Function || (v.kind == Var && v.hasQualifier(Private)) ) {
 				// allocate a new unique name in the shader if already in use
 				var k = 2;
-				while( varMap.exists(key + k) )
+				while( true ) {
+					var a = varMap.get(key + k);
+					if( a == null ) break;
+					for( vm in a.merged )
+						if( vm == v )
+							return a;
 					k++;
-				v.name += k;
+				}
+				vname += k;
 				key += k;
 			} else {
 				mergeVar(key, v, v2.v, p);
@@ -131,7 +138,7 @@ class Linker {
 		var vid = allVars.length;
 		var v2 : TVar = {
 			id : vid,
-			name : v.name,
+			name : vname,
 			type : v.type,
 			kind : v.kind,
 			qualifiers : v.qualifiers,
@@ -217,16 +224,22 @@ class Linker {
 		return s2.priority - s1.priority;
 	}
 	
-	function buildDependency( parent : ShaderInfos, v : AllocatedVar ) {
+	function buildDependency( parent : ShaderInfos, v : AllocatedVar, isWritten : Bool ) {
+		var found = !isWritten;
 		for( s in shaders ) {
-			if( !s.write.exists(v.id) || parent == s )
+			if( parent == s ) {
+				found = true;
 				continue;
-			//trace(parent.name + " => " + s.name + " (" + v.path + ")");
+			} else if( !found )
+				continue;
+			if( !s.write.exists(v.id) )
+				continue;
+//			trace(parent.name + " => " + s.name + " (" + v.path + ")");
 			parent.deps.set(s, true);
 			if( s.deps == null ) {
 				s.deps = new Map();
 				for( r in s.read )
-					buildDependency(s, r);
+					buildDependency(s, r, s.write.exists(r.id));
 			}
 			if( !s.read.exists(v.id) )
 				return;
@@ -259,13 +272,19 @@ class Linker {
 		// globalize vars
 		for( s in shadersData ) {
 			for( v in s.vars ) {
+				// check name before rename
 				var kind = switch( v.name ) {
 				case "vertex": Vertex;
 				case "fragment": Fragment;
 				case "__init__": Init;
-				default: Function;
+				default: null;
 				}
-				allocVar(v, null).kind = kind;
+				var v = allocVar(v, null);
+				if( kind != null ) v.kind = kind;
+			}
+			for( f in s.funs ) {
+				var v = allocVar(f.ref, f.expr.p);
+				if( v.kind == Var ) v.kind = Function;
 			}
 		}
 		
@@ -294,7 +313,7 @@ class Linker {
 						expr : mapExprVar(f.expr),
 					});
 				case Var:
-					throw "assert";
+					throw "assert "+v.v.name;
 				}
 			}
 			priority++;
@@ -308,7 +327,7 @@ class Linker {
 			var v = varMap.get(outVar);
 			if( v == null )
 				throw "Variable not found " + outVar;
-			buildDependency(s, v);
+			buildDependency(s, v, false);
 		}
 		
 		// collect needed dependencies
