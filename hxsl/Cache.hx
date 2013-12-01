@@ -55,7 +55,9 @@ class Cache {
 		}
 		if( c.linked != null )
 			return c.linked;
-		c.linked = new hxsl.Linker().link([for( s in instances ) s.shader], this.outVars[outVars]);
+		var s = new hxsl.Linker().link([for( s in instances ) s.shader], this.outVars[outVars]);
+		s = new Flatten().flatten(s);
+		c.linked = s;
 		return c.linked;
 	}
 	

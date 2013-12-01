@@ -124,9 +124,10 @@ static var SRC = {
 	var calculatedUV : Vec2;
 	@global("global.time") var globalTime : Float;
 	@param var animationUV : Vec2;
+	@param var timeOffset : Float;
 	
 	function vertex() {
-		calculatedUV += animationUV * globalTime;
+		calculatedUV += animationUV * (globalTime + timeOffset);
 	}
 }
 }

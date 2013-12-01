@@ -232,6 +232,8 @@ class Tools {
 	
 	static var UID = 0;
 	
+	public static var SWIZ = Component.createAll();
+	
 	public static function allocVarId() {
 		return ++UID;
 	}
