@@ -190,9 +190,9 @@ class Plan3DMulti extends h3d.prim.MeshPrimitive {
 		addBuffer("pos", engine.mem.allocVector(pbuf, 3, 0));
 		#if flash
 		addBuffer("color", engine.mem.allocBytes(cbufB.getBytes(), 1, 0 ));
-		#end
-		//addBuffer("pos", engine.mem.allocVector(pbuf, 4, 0));
+		#else 
 		addBuffer("color", engine.mem.allocVector(cbufF, 4, 0 ));
+		#end
 		
 		indexes = engine.mem.allocIndex(getIndex());
 	}
