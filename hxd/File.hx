@@ -116,7 +116,7 @@ class File {
 	
 	public static function getBytes( path : String ) : haxe.io.Bytes {
 		#if air3
-		var file = new flash.filesystem.File(path);
+		var file = try new flash.filesystem.File(path) catch( e : Dynamic ) new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + path);
 		if( !file.exists ) throw "File not found " + path;
 		var fs = new flash.filesystem.FileStream();
 		fs.open(file, flash.filesystem.FileMode.READ);
