@@ -24,9 +24,7 @@ class PlanMultiShader extends h3d.impl.Shader {
 	
 #elseif (js || cpp)
 
-//
-//attribute vec4 color/*byte4*/;
-//attribute vec4 color;
+
 	static var VERTEX = "
 		attribute vec3 pos;
 		attribute vec4 color;
@@ -38,10 +36,6 @@ class PlanMultiShader extends h3d.impl.Shader {
 		
 		void main(void) {
 			gl_Position = mproj * vec4(pos.xyz, 1);
-			//gl_Position.w = 0;
-			//gl_Position = vec4(pos.xyz,1) * mproj;
-			//vertexColor = matColor;
-			//vertexColor = color;
 			
 			vertexColor.x = color.x * matColor.x;
 			vertexColor.y = color.y * matColor.y;
@@ -188,6 +182,7 @@ class Plan3DMulti extends h3d.prim.MeshPrimitive {
 		
 		//engine.mem.allocVector(pbuf, 3, 0);
 		addBuffer("pos", engine.mem.allocVector(pbuf, 3, 0));
+		
 		#if flash
 		addBuffer("color", engine.mem.allocBytes(cbufB.getBytes(), 1, 0 ));
 		#else 

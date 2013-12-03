@@ -14,33 +14,17 @@ import hxd.res.Embed;
 import hxd.res.EmbedFileSystem;
 import hxd.res.LocalFileSystem;
 import hxd.System;
+import openfl.Assets;
 
-class PointMaterial extends Material{
-	var pshader : PointShader;
+class Axis implements h3d.IDrawable {
 
-	public var delta(get,set) : h3d.Vector;
-	public var color(get,set) : Int;
-	public var size(get,set) : h3d.Vector;
-	
 	public function new() {
-		pshader = new PointShader();
-		super(pshader);
-		depthTest = h3d.mat.Data.Compare.Always;
 	}
 	
-	override function setup( ctx : h3d.scene.RenderContext ) {
-		super.setup(ctx);
-		pshader.mproj = ctx.camera.m;
+	public function render( engine : h3d.Engine ) {
+		engine.line(0,0,0,0,2,0, 0xFFFF0000);
 	}
 	
-	public inline function get_delta() return pshader.delta;
-	public inline function set_delta(v) return pshader.delta = v;
-
-	public inline function get_color() return pshader.color;
-	public inline function set_color(v) return pshader.color = v;
-	
-	public inline function get_size() return pshader.size;
-	public inline function set_size(v) return pshader.size=v;
 }
 
 class LineMaterial extends Material{
@@ -76,56 +60,43 @@ class Test {
 	var engine : h3d.Engine;
 	var time : Float;
 	var scene : Scene;
-	var obj1 : Mesh;
-	var obj2 : Mesh;
 	
 	function new() {
 		time = 0;
 		engine = new h3d.Engine();
 		engine.debug = true;
-		engine.backgroundColor = 0xFF202020;
+		engine.backgroundColor = 0xFF20FF20;
 		engine.onReady = start;
 		engine.init();
 	}
 	
 	
-	function start() {
-		trace("start !");
-		
-		var prim = new h3d.prim.Cube();
-		prim.translate( -0.5, -0.5, -0.5);
-		prim.addUVs();
-		prim.addNormals();
-		
-		if ( System.debugLevel>=2) trace("prim ok");
-		
-		scene = new Scene();
-		
+	function addLine(start,end,?col=0xFFffffff, ?size) {
 		var mat = new LineMaterial();
 		var line = new h3d.scene.CustomObject(new h3d.prim.Plan2D(), mat, scene);
 		line.material.blend(SrcAlpha, OneMinusSrcAlpha);
 		line.material.depthWrite = false;
 		line.material.culling = None;
 		
-		mat.start = new Vector(0,0,0);
-		mat.end = new Vector(1, 1, 1);
-		mat.color = 0xFF00FFFF;
-		
-		var mat = new PointMaterial();
-		var point = new h3d.scene.CustomObject(new h3d.prim.Plan2D(), mat, scene);
-		
-		mat.delta = new Vector(0, 0, 0);
-		mat.color = 0xFFFFFF00;
-		mat.size = new Vector(1, 1, 0);
+		mat.start = start;
+		mat.end = end;
+		mat.color = 0xFFFF00FF;
+	}	
+	
+	var loadedMat :  h3d.mat.MeshMaterial;
+	function start() {
+		trace("start !");
+		trace("prim ok");
+		scene = new Scene();
+		addLine( new Vector(0, 0, 0), new Vector(1, 1, 1) );
 		
 		function onLoaded( bmp : hxd.BitmapData) {
 			var tex :Texture = Texture.fromBitmap( bmp);
-			var mat = new h3d.mat.MeshMaterial(tex);
+			loadedMat = new h3d.mat.MeshMaterial(tex);
+			var mat = loadedMat;
 			mat.culling = None;
-			
-			obj1 = new Mesh(prim, mat, scene);
-			obj2 = new Mesh(prim, mat, scene);
-			
+			mat.lightSystem = null;
+			/*
 			mat.lightSystem = {
 				ambient : new h3d.Vector(0.5, 0.5, 0.5),
 				
@@ -136,7 +107,10 @@ class Test {
 				points : [{ pos : new h3d.Vector(1.5,0,0), color : new h3d.Vector(0,1,0), att : new h3d.Vector(0,0,1) }],
 				
 			};
+			*/
+			mat.blend(SrcAlpha, OneMinusSrcAlpha);
 			
+			trace("bitmap Loaded");
 			update();
 			hxd.System.setLoop(update);
 		}
@@ -149,19 +123,80 @@ class Test {
 			//erk
 			onLoaded(hxd.Res.hxlogo.toBitmap());
 		#end
+		
+		var axis = new Axis();
+		scene.addPass(axis);
+		
+		loadFbx();
+	}
+	
+	/*
+	function fileLength(f : sys.io.FileInput)
+	{
+		var cur = f.tell();
+		f.seek( 0,sys.io.FileSeek.SeekEnd );
+		var len = f.tell();
+		f.seek( cur, sys.io.FileSeek.SeekBegin );
+		return len;
+	}
+	*/
+	
+	function loadFbx()
+	{
+		//var file = sys.io.File.read("assets/Cheveux.FBX", true);
+		//var len = fileLength( file );
+		//var file = Assets.getText("assets/Skeleton01_anim_attack.FBX");
+		var file = Assets.getText("assets/Cheveux.FBX");
+		loadData(file);
+	}
+	
+	var curFbx : h3d.fbx.Library=null;
+	var curData : String = "";
+	
+	function loadData( data : String, newFbx = true ) {
+		curFbx = new h3d.fbx.Library();
+		curData = data;
+		var fbx = h3d.fbx.Parser.parse(data);
+		curFbx.load(fbx);
+		var frame = 0;
+		scene.addChild(curFbx.makeObject( function(str, mat) {
+			var tex = Texture.fromBitmap( BitmapData.fromNative(Assets.getBitmapData("assets/checker.png",false)) );
+			var mat = new h3d.mat.MeshMaterial(tex);
+			mat.culling = None;
+			mat.lightSystem = null;
+			/*
+			mat.lightSystem = {
+				ambient : new h3d.Vector(0.5, 0.5, 0.5),
+				dirs : [ 
+					{ dir : new h3d.Vector( -0.3, -0.5, -1), color : new h3d.Vector(1, 0.5, 0.5) },
+					{ dir : new h3d.Vector( -0.3, -0.5, 1), color : new h3d.Vector(0.0, 0, 1.0) }
+				],
+				points : [{ pos : new h3d.Vector(1.5,0,0), color : new h3d.Vector(0,1,0), att : new h3d.Vector(0,0,1) }],
+			};*/
+			mat.blend(SrcAlpha, OneMinusSrcAlpha);
+			return mat;
+		}));
+		
+		
+		setSkin();
+	}
+	
+	static public var animMode : h3d.fbx.Library.AnimationMode = LinearAnim;
+	function setSkin() {
+		
+		var anim = curFbx.loadAnimation(animMode);
+		if( anim != null ) {
+			anim = scene.playAnimation(anim);
+		}
+		
+		
 	}
 	
 	function update() {	
-		
-		var dist = 5;
+		var dist = 10;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
-		obj2.setRotateAxis( -0.5, 2, Math.cos(time), time + Math.PI / 2);
-		
-		
 		engine.render(scene);
-		//scene.
-		//engine.line(0,0,0, 1,1,1, 0xFFFFFFFF);
 	}
 	
 	
