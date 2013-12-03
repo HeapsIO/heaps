@@ -1,6 +1,7 @@
 package h3d.fbx;
 using h3d.fbx.Data;
 import h3d.col.Point;
+import hxd.System;
 
 enum AnimationMode {
 	FrameAnim;
@@ -621,6 +622,7 @@ class Library {
 				var prim = hgeom.get(g.getId());
 				if( prim == null ) {
 					prim = new h3d.prim.FBXModel(new Geometry(this, g));
+					if ( System.debugLevel >= 2 ) trace('creating mesh ${prim.id}');
 					hgeom.set(g.getId(), prim);
 				}
 				// load materials
@@ -635,8 +637,10 @@ class Library {
 						continue;
 					}
 					var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
-					if( vcolor )
+					if ( vcolor ) {
+						if( System.debugLevel>=2) trace('detected vertex color');
 						mat.hasVertexColor = true;
+					}
 					tmats.push(mat);
 					lastAdded = tmats.length;
 				}
@@ -655,6 +659,7 @@ class Library {
 				throw "Unknown model type " + type+" for "+model.getName();
 			}
 			o.name = model.getName();
+			if ( System.debugLevel >= 2 ) trace('loaded mesh ${o.name}');
 			var m = getDefaultMatrixes(model);
 			if( m.trans != null || m.rotate != null || m.scale != null || m.preRot != null )
 				o.defaultTransform = m.toMatrix(leftHand);
@@ -692,6 +697,9 @@ class Library {
 					throw o.obj.name + ":" + o.model.getType() + " should be a skin";
 				var skin : h3d.scene.Skin = cast o.obj;
 				var skinData = createSkin(hskins, hgeom, rootJoints, bonesPerVertex);
+				
+				if ( System.debugLevel >= 2) trace("generating skin");
+				
 				// if we have a skinned object, remove it (only keep the skin) and set the material
 				for( osub in objects ) {
 					if( !osub.obj.isMesh() ) continue;
@@ -716,7 +724,8 @@ class Library {
 		return keepJoints.get(j.name);
 	}
 	
-	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,h3d.prim.FBXModel>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
+	function createSkin( hskins : Map < Int, h3d.anim.Skin > , hgeom : Map < Int, h3d.prim.FBXModel > , rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
+		if ( System.debugLevel >= 2) trace("createSkin");
 		var allJoints = [];
 		function collectJoints(j:h3d.anim.Skin.Joint) {
 			// collect subs first (allow easy removal of terminal unskinned joints)

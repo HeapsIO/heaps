@@ -44,4 +44,5 @@ class Mesh extends Object {
 		primitive.dispose();
 		super.dispose();
 	}
+	
 }

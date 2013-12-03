@@ -90,7 +90,7 @@ class Viewer {
 		freeMove = false;
 		rightClick = false;
 		
-		props = { curFbxFile : null, camVars : { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 }, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true };
+		props = { curFbxFile : "", camVars : { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 }, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true };
 		Cookie.read();
 		
 		tf = new flash.text.TextField();
@@ -262,7 +262,7 @@ class Viewer {
 		scene.addPass(axis);
 		
 		trace("adding file");
-		if( props.curFbxFile != null && props.curFbxFile.length > 0 )
+		if( props.curFbxFile != "" && props.curFbxFile.length > 0 )
 			loadFile(props.curFbxFile, false);
 		else
 			askLoad();
@@ -468,7 +468,7 @@ class Viewer {
 			m.material.texture.filter = props.smoothing ? Linear : Nearest;
 	}
 	
-	function setSkin() {
+	function setSkin() {/*
 		var anim = curFbx.loadAnimation(animMode);
 		if( anim != null ) {
 			anim = scene.playAnimation(anim);
@@ -476,7 +476,7 @@ class Viewer {
 				anim.loop = false;
 				anim.onAnimEnd = function() anim.setFrame(0);
 			}
-		}
+		}*/
 	}
 	
 	function onUpdate() {

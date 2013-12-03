@@ -21,7 +21,7 @@ class Polygon extends Primitive {
 		var size = 3;
 		if( normals != null ){
 			size += 3;
-			if ( System.isVerbose) trace("polygon has normals");
+			if ( System.debugLevel>=2) trace("polygon has normals");
 		}
 		if( uvs != null )
 			size += 2;
@@ -57,7 +57,7 @@ class Polygon extends Primitive {
 		if( idx != null )
 			indexes = engine.mem.allocIndex(idx);
 			
-		if ( System.isVerbose) trace('allocating gpu polygon $size');
+		if ( System.debugLevel>=2) trace('allocating gpu polygon $size');
 	}
 
 
@@ -137,7 +137,7 @@ class Polygon extends Primitive {
 		for( n in normals )
 			n.safeNormalize();
 			
-		if (System.isVerbose) trace("normals added");
+		if (System.debugLevel>=2) trace("normals added");
 	}
 
 	public function addUVs() {

@@ -1,4 +1,6 @@
 package h3d.mat;
+import hxd.Save;
+import hxd.System;
 
 
 typedef LightSystem = {
@@ -266,7 +268,10 @@ private class MeshShader extends h3d.impl.Shader {
 		#if hasBlend
 		attribute float blending;
 		#end
+		
 		#if hasSkin
+		attribute vec3 indexes;
+		attribute vec3 weights;
 		uniform mat4 skinMatrixes[maxSkinMatrixes];
 		#end
 
@@ -310,11 +315,31 @@ private class MeshShader extends h3d.impl.Shader {
 
 		void main(void) {
 			vec4 tpos = vec4(pos, 1.0);
+			
 			#if hasSkin
-//				tpos.xyz = tpos * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)] + tpos * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)] + tpos * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)];
+				int sknx = indexes.x * (255 * 3);
+				int skny = indexes.y * (255 * 3);
+				int sknz = indexes.z * (255 * 3);
+				
+				//int sknx = 0;
+				//int skny = 1;
+				//int sknz = 2;
+				
+				float wx = weights.x;
+				float wy = weights.y;
+				float wz = weights.z;
+				
+				//float wx = 1.0;
+				//float wy = 0.0;
+				//float wz = 0.0;
+				
+				//tpos.xyz = tpos * wx * skinMatrixes[sknx] + tpos * wy * skinMatrixes[skny] + tpos * wz * skinMatrixes[sknz];
+				tpos.xyz = skinMatrixes[sknx] * wx * tpos  +  skinMatrixes[skny] * wy * tpos +  skinMatrixes[sknz] * wz * tpos;
+				
 			#elseif hasPos
 				tpos = mpos * tpos;
 			#end
+			
 			vec4 ppos = mproj * tpos;
 			#if hasZBias
 				ppos.z += zBias;
@@ -333,7 +358,9 @@ private class MeshShader extends h3d.impl.Shader {
 				#if hasPos
 					n = mat3(mpos) * n;
 				#elseif hasSkin
-					//n = n * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)] + n * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)] + n * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)];
+					n = 	n * wx * skinMatrixes[sknx] 
+						+ 	n * wy * skinMatrixes[skny] 
+						+ 	n * wz * skinMatrixes[sknz];
 					#if hasPos
 						n = mposInv * n;
 					#end
@@ -532,6 +559,7 @@ class MeshMaterial extends Material {
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		mshader.mpos = useMatrixPos ? ctx.localPos : null;
+		if ( System.debugLevel >= 2) trace("shader mpos:"+mshader.mpos);
 		mshader.mproj = ctx.camera.m;
 		mshader.tex = texture;
 		#if flash
@@ -636,6 +664,7 @@ class MeshMaterial extends Material {
 	}
 	
 	inline function set_skinMatrixes( v : Array<h3d.Matrix> ) {
+		if ( System.debugLevel >= 2) trace('set_skinMatrixes ${v[0]}');
 		if( v != null && v.length > 35 )
 			throw "Maximum 35 bones are allowed for skinning (has "+v.length+")";
 		return mshader.skinMatrixes = v;

@@ -1,6 +1,8 @@
 package h3d.impl;
+
 import h3d.impl.Driver;
 import h3d.Vector;
+
 import hxd.FloatBuffer;
 import hxd.Pixels;
 import hxd.System;
@@ -311,6 +313,8 @@ class GlDriver extends Driver {
 		gl.bindAttribLocation(p, 1, "uv");
 		gl.bindAttribLocation(p, 2, "normal");
 		gl.bindAttribLocation(p, 3, "color");
+		gl.bindAttribLocation(p, 4, "weights");
+		gl.bindAttribLocation(p, 5, "indexes");
 		
 		gl.attachShader(p, vs);
 		gl.attachShader(p, fs);
@@ -332,8 +336,8 @@ class GlDriver extends Driver {
 		for( k in 0...nattr ) {
 			var inf = gl.getActiveAttrib(p, k);
 			amap.set(inf.name, { index : gl.getAttribLocation(p,inf.name), inf : inf } );
-			if (System.isVerbose) trace('adding attributes $inf');
-			if (System.isVerbose) trace("attr loc" + gl.getAttribLocation(p,inf.name));
+			if (System.debugLevel>=2) trace('adding attributes $inf');
+			if (System.debugLevel>=2) trace("attr loc" + gl.getAttribLocation(p,inf.name));
 		}
 		
 		
@@ -388,7 +392,7 @@ class GlDriver extends Driver {
 			if( inf.name.substr(0, 6) == "webgl_" )
 				continue; // skip native uniforms
 				
-			if (System.isVerbose) trace('retrieved uniform $inf');
+			if (System.debugLevel>=2) trace('retrieved uniform $inf');
 			
 			var isArray = false;
 			var t = decodeTypeInt(inf.type);
@@ -400,19 +404,19 @@ class GlDriver extends Driver {
 					if( r.match(allCode) ){
 						switch( r.matched(1) ) {
 						case "byte4":
-							if(System.isVerbose) trace('_0 fetched $inf');
+							if(System.debugLevel>=2) trace('_0 fetched $inf');
 							t = Byte3;
 						default:
-							if(System.isVerbose) trace('_0 type filtering bails ${inf.name}');
+							if(System.debugLevel>=2) trace('_0 type filtering bails ${inf.name}');
 						}
 					}
 					else 
 					{
-						if (System.isVerbose) trace('_0 bailed  $inf');
+						//if (System.debugLevel>=2) trace('_0 bailed  $inf');
 						
 						var r = new EReg("[A-Z0-9_]+[ \t]+"+inf.name.split('.').pop() + "\\[[a-z](.+?)\\]", "gi");
 						if ( r.match(allCode)) {
-							if (System.isVerbose) trace('_0 found an array ! ' + r.matched(0) + " - " + r.matched(1) );
+							if (System.debugLevel>=2) trace('_0 found an array ! ' + r.matched(0) + " - " + r.matched(1) );
 							isArray = true;
 						}
 					}
@@ -421,15 +425,15 @@ class GlDriver extends Driver {
 					if( r.match(allCode) ){
 						switch( r.matched(1) ) {
 						case "byte4":
-							if(System.isVerbose) trace('_1 fetched $inf');
+							if(System.debugLevel>=2) trace('_1 fetched $inf');
 							t = Byte4;
 						default:
-							if(System.isVerbose) trace('_1 type filtering bails ${inf.name}');
+							if(System.debugLevel>=2) trace('_1 type filtering bails ${inf.name}');
 						}
 					}
 					else
 					{
-						if (System.isVerbose) trace('_1 bailed  $inf');
+						//if (System.debugLevel>=2) trace('_1 bailed  $inf');
 						
 						var r = new EReg("[A-Z0-9_]+[ \t]+"+inf.name.split('.').pop() + "\\[[a-z](.+?)\\]", "gi");
 						if ( r.match(allCode)) {
@@ -438,7 +442,7 @@ class GlDriver extends Driver {
 						}
 					}
 				default:	
-					if(System.isVerbose) trace('can t subtype $t ${inf.type}');
+					if(System.debugLevel>=2) trace('can t subtype $t ${inf.type}');
 			}
 			var name = inf.name;
 			while( true ) {
@@ -469,7 +473,7 @@ class GlDriver extends Driver {
 				index : texIndex,
 			};
 			inst.uniforms.push( tu);
-			if(System.isVerbose) trace('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
+			if(System.debugLevel>=2) trace('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
 		}
 		inst.program = p;
 		checkError();
@@ -486,12 +490,12 @@ class GlDriver extends Driver {
 		
 		var change = false;
 		if ( shader.instance == null ) {
-			//if ( System.isVerbose ) trace("building shader");
+			if ( System.debugLevel>=2 ) trace("building shader" + Type.typeof(shader));
 			shader.instance = buildShaderInstance(shader);
 		}
 		if ( shader.instance != curShader ) {
 			var old = curShader;
-			//if ( System.isVerbose ) trace("binding shader "+Type.getClass(shader)+" nbAttribs:"+shader.instance.attribs.length);
+			//if ( System.debugLevel>=2 ) trace("binding shader "+Type.getClass(shader)+" nbAttribs:"+shader.instance.attribs.length);
 			curShader = shader.instance;
 			
 			if (curShader.program==null) throw "invalid shader";
@@ -502,20 +506,18 @@ class GlDriver extends Driver {
 				for ( a in old.attribs)
 					gl.disableVertexAttribArray(a.index);
 			
-			//curAttribs = 0; 
-			
 			for ( i in 0...curShader.attribs.length ) {
 				var a = curShader.attribs[i];
 				gl.enableVertexAttribArray(a.index);
-				if ( System.isVerbose ) trace('enabling attrib ${curShader.attribs[i]}');
-				//curAttribs++;
+				//if ( System.debugLevel>=2 ) trace('enabling attrib ${curShader.attribs[i]}');
 			}
 				
-			//if ( System.isVerbose ) trace("attribs set");
+			//if ( System.debugLevel>=2 ) trace("attribs set");
 			change = true;
 		}
 			
 		
+		//if ( System.debugLevel>=2 ) trace("setting uniforms");
 		for ( u in curShader.uniforms ) {
 			if ( u == null ) throw "Missing uniform pointer";
 			if ( u.loc == null ) throw "Missing uniform location";
@@ -525,7 +527,7 @@ class GlDriver extends Driver {
 				if ( Reflect.hasField( shader, u.name) ) throw 'Shader param ${u.name} is null';
 				else throw "Missing shader value " + u.name + " among "+ Reflect.fields(shader);
 			}
-			//if ( System.isVerbose ) trace('retrieving uniform ${u.name} $val');
+			//if ( System.debugLevel>=2 ) trace('retrieving uniform ${u.name} $val');
 			setUniform(val, u, u.type);
 		}
 		shader.customSetup(this);
@@ -550,10 +552,21 @@ class GlDriver extends Driver {
 		#if debug if (val == null) throw "no val set, check your shader"; #end
 		#if debug if (gl == null) throw "no gl set, Arrrghh"; #end
 		
+		//if ( System.debugLevel >= 2 ) trace("setting uniform "+u.name);
+		
 		switch( t ) {
 		case Mat4:
-			var m : Matrix = val;
-			gl.uniformMatrix4fv(u.loc, false, new Float32Array(m.getFloats()));
+			if ( Std.is( val , Array)) {
+				gl.uniformMatrix4fv(u.loc, false, packMatrix44(val));
+				if ( System.debugLevel >= 2 ) trace("uniform matrix array set");
+			}
+			else {
+				var m : h3d.Matrix = val;
+				var fl = m.getFloats();
+				var arr = new Float32Array(fl);
+				gl.uniformMatrix4fv(u.loc, false, arr);
+				//if ( System.debugLevel >= 2 ) trace("uniform matrix set");
+			}
 		case Tex2d:
 			var t : h3d.mat.Texture = val;
 			setupTexture(t, t.mipMap, t.filter, t.wrap);
@@ -589,6 +602,10 @@ class GlDriver extends Driver {
 					gl.uniform3fv( u.loc, packArray3(arr));
 				case Vec4: 
 					gl.uniform4fv( u.loc, packArray4(arr));
+					
+				case Mat4: 
+					throw "HERE";
+					
 				default: throw "not supported";
 			}
 		}
@@ -609,6 +626,36 @@ class GlDriver extends Driver {
 		
 	}
 	
+	//TODO cache this
+	function packMatrix44( vecs : Array<h3d.Matrix> ):Float32Array{
+		var a = [ ];
+		a[16 * vecs.length - 1 ] = 0.;
+		
+		var k = 0;
+		var mat : Matrix = null;
+		for ( i in 0...vecs.length) {
+			mat = vecs[i];
+			k = i << 4;
+			a[i * k+1] 	= mat._12;
+			a[i * k+2] 	= mat._13;
+			a[i * k+3] 	= mat._14;
+			a[i * k+4] 	= mat._21;
+			a[i * k+5] 	= mat._22;
+			a[i * k+6] 	= mat._23;
+			a[i * k+7] 	= mat._24;
+			a[i * k+8] 	= mat._31;
+			a[i * k+9] 	= mat._32;
+			a[i * k+10] = mat._33;
+			a[i * k+11] = mat._34;
+			a[i * k+12] = mat._41;
+			a[i * k+13] = mat._42;
+			a[i * k+14] = mat._43;
+			a[i * k+15] = mat._44;
+		}
+		return new Float32Array(a);
+	}
+	
+	//TODO cache this
 	function packArray4( vecs : Array<Vector> ):Float32Array{
 		var a = [];
 		a[vecs.length * 4-1] = 0.0;
@@ -622,6 +669,7 @@ class GlDriver extends Driver {
 		return new Float32Array(a);
 	}
 	
+	//TODO cache this
 	function packArray3( vecs : Array<Vector> ):Float32Array{
 		var a = [];
 		a[vecs.length * 3-1] = 0.0;
@@ -663,21 +711,15 @@ class GlDriver extends Driver {
 				}
 				
 		if ( changed ) {
-			trace("gl selectMultiBuffers");
+			
+			
 			for ( i in 0...buffers.length ) {
 				var b = buffers[i];
 				var a = curShader.attribs[i];
-				
-				if ( b.offset != 0) throw "unhandled";
-				
-				trace( "ofs:"+b.offset );
-				trace( a );
-				trace("stride:"+curShader.stride);
+
+				if ( System.debugLevel >= 2) trace('selectMultiBuffers bound $a ${a.name} ${b.offset }');
 				
 				gl.bindBuffer(GL.ARRAY_BUFFER, b.b.b.vbuf.b);
-				//gl.vertexPointer( a.size, a.etype, 0, b.offset);
-				//gl.vertexAttribPointer(a.index, a.size, a.etype, false, 0, b.offset);
-				//gl.vertexAttribPointer(a.index, a.size, a.etype, false, stride * 4, a.offset * 4);
 				var stride = curShader.stride;
 				gl.vertexAttribPointer(a.index, a.size, a.etype, false, 0, b.offset * 4);
 				checkError();
@@ -687,8 +729,6 @@ class GlDriver extends Driver {
 			curBuffer = null;
 			curMultiBuffer = buffers;
 		}
-		
-		//throw "STOP";
 	}
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {

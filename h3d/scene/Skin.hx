@@ -1,4 +1,6 @@
 package h3d.scene;
+import h3d.Matrix;
+import hxd.System;
 
 class Joint extends Object {
 	public var skin : Skin;
@@ -54,14 +56,30 @@ class Skin extends Mesh {
 	var jointsUpdated : Bool;
 	var jointsAbsPosInv : h3d.Matrix;
 	var paletteChanged : Bool;
+	
+	//TODO REMOVE
+	#if idPalette
+	var idPalette : Array<h3d.Matrix>;
+	#end
 
 	public var showJoints : Bool;
 	public var syncIfHidden : Bool = true;
 	
 	public function new(s, ?mat, ?parent) {
+		if ( System.debugLevel >= 2) trace("Skin.new();");
+		
 		super(null, mat, parent);
 		if( s != null )
 			setSkinData(s);
+			
+		//TODO REMOVE
+		#if idPalette
+		idPalette = [for ( i in 0...33) Matrix.I()];
+		#end
+		
+		#if debug 
+		showJoints = true;
+		#end
 	}
 	
 	override function clone( ?o : Object ) {
@@ -113,6 +131,7 @@ class Skin extends Mesh {
 	}
 	
 	public function setSkinData( s ) {
+		if ( System.debugLevel >= 2) trace("Skin.setSkinData();");
 		skinData = s;
 		jointsUpdated = true;
 		primitive = s.primitive;
@@ -162,15 +181,29 @@ class Skin extends Mesh {
 	}
 	
 	override function draw( ctx : RenderContext ) {
+		if ( System.debugLevel >= 2) trace("Skin.draw();");
+		
 		if( splitPalette == null ) {
 			if( paletteChanged ) {
 				paletteChanged = false;
 				material.skinMatrixes = currentPalette;
+				
+				//TODO REMOVE
+				#if idPalette
+				material.skinMatrixes = idPalette;
+				#end
+				
 			}
 			super.draw(ctx);
 		} else {
 			for( i in 0...splitPalette.length ) {
 				material.skinMatrixes = splitPalette[i];
+				
+				//TODO REMOVE
+				#if idPalette
+				material.skinMatrixes = idPalette;
+				#end
+				
 				primitive.selectMaterial(i);
 				super.draw(ctx);
 			}

@@ -156,7 +156,7 @@ private class LocalEntry extends FileEntry {
 				throw Std.string(e) + " while loading " + relPath;
 			});
 			loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
-				if ( System.isVerbose) trace('complete !');
+				if ( System.debugLevel==1) trace('complete !');
 				var content : flash.display.Bitmap = cast loader.content;
 				onLoaded(hxd.BitmapData.fromNative(content.bitmapData));
 				loader.unload();
@@ -287,13 +287,13 @@ class LocalFileSystem implements FileSystem {
 			throw "File not found " + path;
 		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#else
-		if ( hxd.System.isVerbose) trace('opening');
+		if ( hxd.System.debugLevel>=1) trace('opening');
 		var f = open(path);
-		if ( hxd.System.isVerbose) trace('opened');
+		if ( hxd.System.debugLevel>=1) trace('opened');
 		if( f == null ||!sys.FileSystem.exists(f) )
 			throw "File not found " + path;
 			
-		if ( hxd.System.isVerbose) trace('found');
+		if ( hxd.System.debugLevel>=1) trace('found');
 		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#end
 	}

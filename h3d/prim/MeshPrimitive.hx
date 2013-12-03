@@ -1,4 +1,5 @@
 package h3d.prim;
+
 import hxd.System;
 
 class MeshPrimitive extends Primitive {
@@ -6,10 +7,15 @@ class MeshPrimitive extends Primitive {
 	var bufferCache : Map<String,h3d.impl.Buffer.BufferOffset>;
 	
 	public function new () {
-		bufferCache = new Map();
+		
+	}
+	
+	function allocBuffer( engine : h3d.Engine, name : String ) {
+		return null;
 	}
 	
 	function addBuffer( name : String, buf, offset = 0 ) {
+		if( bufferCache == null ) bufferCache = new Map();
 		var old = bufferCache.get(name);
 		if ( old != null ) old.dispose();
 		
@@ -35,7 +41,11 @@ class MeshPrimitive extends Primitive {
 		
 		for( name in engine.driver.getShaderInputNames() ) {
 			var b = bufferCache.get(name);
-			if( b == null )  throw "Buffer " + name + " is not available";
+			if ( b == null ){
+				b = allocBuffer(engine, name);
+				if( b == null ) throw "Buffer " + name + " is not available";
+				bufferCache.set(name, b);
+			}
 			buffers.push(b);
 		}
 		return buffers;

@@ -58,9 +58,9 @@ class Engine {
 		#if ((flash)&&(!js)&&(!cpp))
 		driver = new h3d.impl.Stage3dDriver();
 		#elseif (js || cpp)
-		if( System.isVerbose) trace("creating gl driver !");
+		if( System.debugLevel>=1) trace("creating gl driver !");
 		driver = new h3d.impl.GlDriver();
-		if( System.isVerbose) trace("created gl driver !");
+		if( System.debugLevel>=1) trace("created gl driver !");
 		#else
 		throw "No driver";
 		#end
@@ -211,11 +211,11 @@ class Engine {
 	}
 	
 	public dynamic function onContextLost() {
-		if ( System.isVerbose) trace('onContextLost');
+		if ( System.debugLevel>=1) trace('onContextLost');
 	}
 
 	public dynamic function onReady() {
-		if ( System.isVerbose) trace('onReady');
+		if ( System.debugLevel>=1) trace('onReady');
 	}
 	
 	function onStageResize() {
@@ -235,11 +235,11 @@ class Engine {
 	}
 	
 	public dynamic function onResized() {
-		if ( System.isVerbose) trace('onResized');
+		if ( System.debugLevel>=1) trace('onResized');
 	}
 
 	public function resize(width:Int, height:Int) {
-		if ( System.isVerbose) trace('engine resize $width,$height');
+		if ( System.debugLevel>=1) trace('engine resize $width,$height');
 		// minimum 32x32 size
 		if( width < 32 ) width = 32;
 		if( height < 32 ) height = 32;
@@ -317,8 +317,8 @@ class Engine {
 
 	public function line( x1 : Float, y1 : Float, z1 : Float, x2 : Float, y2 : Float, z2 : Float, color = 0x80FF0000, depth = false ) {
 		if ( curProjMatrix == null ) {
-			if ( System.isVerbose ) trace("line render failed, no proj mat");
-			return;
+			if ( System.debugLevel==2 ) trace("line render failed, no proj mat");
+			throw "FATAL ERROR";
 		}
 		if( debugLine == null ) {
 			debugLine = new Drawable(new h3d.prim.Plan2D(), new h3d.impl.Shaders.LineShader());

@@ -1,4 +1,5 @@
 import flash.Lib;
+import flash.ui.Keyboard;
 import h3d.impl.Shaders.LineShader;
 import h3d.impl.Shaders.PointShader;
 import h3d.mat.Material;
@@ -14,6 +15,7 @@ import hxd.res.Embed;
 import hxd.res.EmbedFileSystem;
 import hxd.res.LocalFileSystem;
 import hxd.System;
+import mt.flash.Key;
 import openfl.Assets;
 
 class Axis implements h3d.IDrawable {
@@ -68,6 +70,7 @@ class Test {
 		engine.backgroundColor = 0xFF20FF20;
 		engine.onReady = start;
 		engine.init();
+		Key.init();
 	}
 	
 	
@@ -164,15 +167,6 @@ class Test {
 			var mat = new h3d.mat.MeshMaterial(tex);
 			mat.culling = None;
 			mat.lightSystem = null;
-			/*
-			mat.lightSystem = {
-				ambient : new h3d.Vector(0.5, 0.5, 0.5),
-				dirs : [ 
-					{ dir : new h3d.Vector( -0.3, -0.5, -1), color : new h3d.Vector(1, 0.5, 0.5) },
-					{ dir : new h3d.Vector( -0.3, -0.5, 1), color : new h3d.Vector(0.0, 0, 1.0) }
-				],
-				points : [{ pos : new h3d.Vector(1.5,0,0), color : new h3d.Vector(0,1,0), att : new h3d.Vector(0,0,1) }],
-			};*/
 			mat.blend(SrcAlpha, OneMinusSrcAlpha);
 			return mat;
 		}));
@@ -197,6 +191,14 @@ class Test {
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);
+		
+		if ( Key.isDown(Keyboard.ENTER) ) {
+			for ( c in scene.childs ) {
+				if( Std.is(c,Mesh)){
+					trace( c + " is a mesh" );
+				}
+			}
+		}
 	}
 	
 	

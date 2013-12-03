@@ -4,6 +4,7 @@ class Object {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 	
+	public
 	var childs : Array<Object>;
 	public var parent(default, null) : Object;
 	public var numChildren(get, never) : Int;

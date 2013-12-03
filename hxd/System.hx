@@ -17,7 +17,8 @@ class System {
 	public static var isAndroid(get, never) : Bool;
 	
 	public static var screenDPI(get, never) : Float;
-	public static var isVerbose = #if verbose true #else false #end;
+	
+	public static var debugLevel = 2;
 
 	#if flash
 	
@@ -185,7 +186,7 @@ class System {
 			flash.Lib.current.addChild(VIEW);
 		}
 		VIEW.render = function(_) if ( f != null ) f();
-		if( System.isVerbose) trace("setLoop");
+		if( System.debugLevel>=1) trace("setLoop");
 	}
 
 	public static function setCursor( c : Cursor ) {

@@ -2,6 +2,7 @@ package h3d.prim;
 using h3d.fbx.Data;
 import h3d.impl.Buffer;
 import h3d.col.Point;
+import hxd.System;
 
 class FBXModel extends MeshPrimitive {
 
@@ -11,8 +12,10 @@ class FBXModel extends MeshPrimitive {
 	var bounds : h3d.col.Bounds;
 	var curMaterial : Int;
 	var groupIndexes : Array<h3d.impl.Indexes>;
-
+	public var id = 0;
+	static var uid = 0;
 	public function new(g) {
+		if ( System.debugLevel >= 2 ) trace("FBXModel.new() "+(id=(uid++)));
 		super();
 		this.geom = g;
 		curMaterial = -1;
@@ -80,6 +83,8 @@ class FBXModel extends MeshPrimitive {
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
 		
+		if ( System.debugLevel >= 2 ) trace('FBXModel(#$id).alloc()');
+		
 		var verts = geom.getVertices();
 		var norms = geom.getNormals();
 		var tuvs = geom.getUVs()[0];
@@ -91,7 +96,12 @@ class FBXModel extends MeshPrimitive {
 		
 		var idx = new hxd.IndexBuffer();
 		var midx = new Array<hxd.IndexBuffer>();
-		var pbuf = new hxd.FloatBuffer(), nbuf = (norms == null ? null : new hxd.FloatBuffer()), sbuf = (skin == null ? null : new hxd.BytesBuffer()), tbuf = (tuvs == null ? null : new hxd.FloatBuffer());
+		
+		var pbuf = new hxd.FloatBuffer(), 
+			nbuf = (norms == null ? null : new hxd.FloatBuffer()), 
+			sbuf = (skin == null ? null : new hxd.BytesBuffer()), 
+			tbuf = (tuvs == null ? null : new hxd.FloatBuffer());
+			
 		var cbuf = (colors == null ? null : new hxd.FloatBuffer());
 		
 		// skin split
@@ -100,6 +110,9 @@ class FBXModel extends MeshPrimitive {
 			if( multiMaterial ) throw "Multimaterial not supported with skin split";
 			sidx = [for( _ in skin.splitJoints ) new hxd.IndexBuffer()];
 		}
+		
+		if ( sbuf != null ) 
+			if ( System.debugLevel >= 2 ) trace('FBXModel(#$id).alloc() has skin infos');
 		
 		// triangulize indexes : format is  A,B,...,-X : negative values mark the end of the polygon
 		var count = 0, pos = 0, matPos = 0;
@@ -187,13 +200,23 @@ class FBXModel extends MeshPrimitive {
 		addBuffer("pos", engine.mem.allocVector(pbuf, 3, 0));
 		if( nbuf != null ) addBuffer("normal", engine.mem.allocVector(nbuf, 3, 0));
 		if( tbuf != null ) addBuffer("uv", engine.mem.allocVector(tbuf, 2, 0));
-		if( sbuf != null ) {
+		if ( sbuf != null ) {
+			
+			if ( System.debugLevel>=2 ) trace(' FBXModel(#$id).alloc() allocating weights and indexes');
+			
 			var nverts = Std.int(sbuf.length / ((skin.bonesPerVertex + 1) * 4));
 			var skinBuf = engine.mem.alloc(nverts, skin.bonesPerVertex + 1, 0);
 			skinBuf.uploadBytes(sbuf.getBytes(), 0, nverts);
 			addBuffer("weights", skinBuf, 0);
+			
+			//GNE
 			addBuffer("indexes", skinBuf, skin.bonesPerVertex);
+			//addBuffer("indexes", skinBuf,0);
 		}
+		else {
+			if ( System.debugLevel>=2 ) trace( ' FBXModel(#$id).alloc() no sbuf thus no index and weights!');
+		}
+			
 		if( cbuf != null ) addBuffer("color", engine.mem.allocVector(cbuf, 3, 0));
 		
 		indexes = engine.mem.allocIndex(idx);
@@ -206,6 +229,22 @@ class FBXModel extends MeshPrimitive {
 			groupIndexes = [];
 			for( i in sidx )
 				groupIndexes.push(i == null ? null : engine.mem.allocIndex(i));
+		}
+		
+		if ( System.debugLevel >= 2 ) {
+			var i = 0;
+			for ( v in pbuf)
+			{
+				trace("vtx:" + i + " val:" + v);
+				i++;
+			}
+			var i = 0;
+			for ( v in idx)
+			{
+				trace("idx:" + i + " val:" + v);
+				i++;
+			}
+			trace("fbx loaded. bounds:"+getBounds());
 		}
 	}
 	
