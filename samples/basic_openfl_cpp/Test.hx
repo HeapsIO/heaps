@@ -2,6 +2,7 @@ import flash.Lib;
 import h3d.impl.Shaders.LineShader;
 import h3d.impl.Shaders.PointShader;
 import h3d.mat.Material;
+import h3d.mat.MeshMaterial;
 import h3d.mat.Texture;
 import h3d.scene.Scene;
 import h3d.scene.Mesh;
@@ -15,6 +16,71 @@ import hxd.res.EmbedFileSystem;
 import hxd.res.LocalFileSystem;
 import hxd.System;
 
+@:keep
+class TexturedShader extends MeshMaterial.MeshShader{
+	
+	#if flash 
+	static var SRC = {
+		
+		var input : {
+			pos : Float3,
+			uv : Float2,
+		};
+	}
+		
+		var tuv : Float2;
+		
+		function vertex( mpos : Matrix, mproj : Matrix ) {
+			var tpos = input.pos.xyzw;
+			 if( mpos != null )
+				tpos *= mpos;
+			var ppos = tpos * mproj;
+			out = ppos;
+			tuv =  input.uv;
+		}
+		
+		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
+		{
+			var c = tex.get(tuv.xy);
+			out = c;
+		}
+	}
+	#else
+	static var VERTEX = "
+		attribute vec3 pos;
+		attribute vec2 uv;
+		
+		uniform mat4 mpos;
+		uniform mat4 mproj;
+		
+		varying vec2 tuv;
+		
+		void main(void) {
+			vec4 tpos = vec4(pos, 1.0);
+			
+			#if hasPos
+				tpos = mpos * tpos;
+			#end
+			
+			vec4 ppos = mproj * tpos;
+			gl_Position = ppos;
+			
+			vec2 t = uv;
+			tuv = t;
+		}";
+		
+	static var FRAGMENT = "
+		uniform sampler2D tex;
+		varying lowp vec2 tuv;
+		void main(void) {
+			lowp vec4 c = texture2D(tex, tuv);
+			gl_FragColor = c;
+		}
+	";
+	#end
+}
+
+@:keep
 class PointMaterial extends Material{
 	var pshader : PointShader;
 
@@ -43,6 +109,7 @@ class PointMaterial extends Material{
 	public inline function set_size(v) return pshader.size=v;
 }
 
+@:keep
 class LineMaterial extends Material{
 	var lshader : LineShader;
 
@@ -121,6 +188,7 @@ class Test {
 		function onLoaded( bmp : hxd.BitmapData) {
 			var tex :Texture = Texture.fromBitmap( bmp);
 			var mat = new h3d.mat.MeshMaterial(tex);
+			mat.shader = new TexturedShader();
 			mat.culling = None;
 			
 			obj1 = new Mesh(prim, mat, scene);

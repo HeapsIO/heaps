@@ -34,8 +34,8 @@
 	-->
 	<haxedef name="resourcesPath" value="../res" />
 	<haxedef name="verbose" value="true" />
-	<!--
+	
 	<haxedef name="dump" value="pretty"  />
-	-->
+	
 	<haxedef name="idPalette"  />
 </project>

@@ -11,6 +11,7 @@
 -D windows
 -D desktop
 --no-output
+-dce no
 -cp bin/windows/cpp/haxe
 -cpp bin/windows/cpp/obj
 --macro allowPackage("flash")

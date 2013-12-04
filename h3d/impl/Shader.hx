@@ -3,6 +3,7 @@ package h3d.impl;
 
 #if macro
 import haxe.macro.Context;
+import haxe.macro.Type.Ref;
 #end
 
 #if flash
@@ -79,6 +80,22 @@ class ShaderMacros {
 		var fields = Context.getBuildFields();
 		var hasVertex = false, hasFragment = false;
 		var r_uni = ~/uniform[ \t]+((lowp|mediump|highp)[ \t]+)?([A-Za-z0-9_]+)[ \t]+([A-Za-z0-9_]+)[ \t]*(\/\*([A-Za-z0-9_]+)\*\/)?/;
+		
+		var cl = Std.string(Context.getLocalClass());
+		var allFields = Lambda.map( fields, function(t) return t.name).join(' ');
+		
+		function classHasField( c : haxe.macro.Type.Ref< haxe.macro.Type.ClassType> , name)
+		{
+			if ( c == null ) return false;
+			var o = c.get();
+			
+			return
+			if ( o.fields!=null && Lambda.exists( o.fields.get() , function(o) return o.name == name ))
+				true;
+			else if ( o.superClass == null ) false;
+			else classHasField( o.superClass.t , name);
+		}
+		
 		function addUniforms( code : String ) {
 			while( r_uni.match(code) ) {
 				var name = r_uni.matched(4);
@@ -99,16 +116,23 @@ class ShaderMacros {
 				}
 				if( code.charCodeAt(0) == '['.code )
 					t = macro : Array<$t>;
+					
+				var allFields = Lambda.map( fields, function(t) return t.name).join(' ');
+				if ( classHasField( Context.getLocalClass(), name ) ) {
+					continue;
+				}
 				fields.push( {
-					name : name,
-					kind : FVar(t),
-					pos : pos,
-					access : [APublic],
-				});
+						name : name,
+						kind : FVar(t),
+						pos : pos,
+						access : [APublic],
+						meta:[{name:":keep",params:[],pos:pos}]
+					});
 			}
 		}
 		for( f in fields )
 			switch( [f.name, f.kind] ) {
+				
 			case ["VERTEX", FVar(_,{ expr : EConst(CString(code)) }) ]:
 				hasVertex = true;
 				addUniforms(code);

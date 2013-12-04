@@ -3,6 +3,7 @@ import flash.ui.Keyboard;
 import h3d.impl.Shaders.LineShader;
 import h3d.impl.Shaders.PointShader;
 import h3d.mat.Material;
+import h3d.mat.MeshMaterial;
 import h3d.mat.Texture;
 import h3d.scene.Scene;
 import h3d.scene.Mesh;
@@ -17,6 +18,69 @@ import hxd.res.LocalFileSystem;
 import hxd.System;
 import mt.flash.Key;
 import openfl.Assets;
+
+
+class TexturedShader extends MeshShader {
+	
+	#if flash 
+	static var SRC = {
+		
+		var input : {
+			pos : Float3,
+			uv : Float2,
+		};
+	}
+		
+		var tuv : Float2;
+		
+		function vertex( mpos : Matrix, mproj : Matrix ) {
+			var tpos = input.pos.xyzw;
+			 if( mpos != null )
+				tpos *= mpos;
+			var ppos = tpos * mproj;
+			out = ppos;
+			tuv =  input.uv;
+		}
+		
+		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
+		{
+			var c = tex.get(tuv.xy);
+			out = c;
+		}
+	}
+	#else
+	static var VERTEX = "
+		attribute vec3 pos;
+		attribute vec2 uv;
+		
+		uniform mat4 mpos;
+		uniform mat4 mproj;
+		
+		varying vec2 tuv;
+		
+		void main(void) {
+			vec4 tpos = vec4(pos, 1.0);
+			
+			#if hasPos
+				tpos = mpos * tpos;
+			#end
+			
+			vec4 ppos = mproj * tpos;
+			gl_Position = ppos;
+			
+			vec2 t = uv;
+			tuv = t;
+		}";
+		
+	static var FRAGMENT = "
+		varying lowp vec2 tuv;
+		void main(void) {
+			lowp vec4 c = texture2D(tex, tuv);
+			gl_FragColor = c;
+		}
+	";
+	#end
+}
 
 class Axis implements h3d.IDrawable {
 
@@ -165,6 +229,7 @@ class Test {
 		scene.addChild(curFbx.makeObject( function(str, mat) {
 			var tex = Texture.fromBitmap( BitmapData.fromNative(Assets.getBitmapData("assets/checker.png",false)) );
 			var mat = new h3d.mat.MeshMaterial(tex);
+			//mat.shader = new MyMeshMaterialShader();
 			mat.culling = None;
 			mat.lightSystem = null;
 			mat.blend(SrcAlpha, OneMinusSrcAlpha);

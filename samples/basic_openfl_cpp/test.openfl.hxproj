@@ -11,7 +11,7 @@
     <movie version="3" />
     <movie minorVersion="0" />
     <movie platform="NME" />
-    <movie background="000000" />
+    <movie background="#000000" />
     <movie preferredSDK=";3;" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
@@ -26,7 +26,7 @@
     <option noInlineOnDebug="False" />
     <option mainClass="ApplicationMain" />
     <option enabledebug="True" />
-    <option additional="--no-output&#xA;--macro allowPackage(&quot;flash&quot;)&#xA;--macro keep(&quot;Test&quot;)" />
+    <option additional="--no-output&#xA;-dce no&#xA;--macro allowPackage(&quot;flash&quot;)&#xA;--macro keep(&quot;Test&quot;)" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

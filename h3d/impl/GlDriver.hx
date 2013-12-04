@@ -391,13 +391,13 @@ class GlDriver extends Driver {
 				var etype = GL.FLOAT;
 				var com = findVarComment(aname,ccode);
 				if ( com != null ) {
-					if ( System.isVerbose) trace("found comment on " + aname + " " + com);
+					if ( System.debugLevel>=2) trace("found comment on " + aname + " " + com);
 					if ( com.startsWith("byte") )
 						etype = GL.UNSIGNED_BYTE;
 				}
 				else 
 				{
-					if ( System.isVerbose) trace("didn't find comment on var " + aname);
+					if ( System.debugLevel>=2) trace("didn't find comment on var " + aname);
 				}
 				
 				inst.attribs.push( { name : aname, type : atype, etype : etype, size : size, index : a.index, offset : offset } );
@@ -553,10 +553,13 @@ class GlDriver extends Driver {
 			if ( u == null ) throw "Missing uniform pointer";
 			if ( u.loc == null ) throw "Missing uniform location";
 			
-			var val : Dynamic = Reflect.field(shader, u.name);
+			var val : Dynamic = Reflect.getProperty(shader, u.name);
 			if ( val == null ) {
-				if ( Reflect.hasField( shader, u.name) ) throw 'Shader param ${u.name} is null';
-				else throw "Missing shader value " + u.name + " among "+ Reflect.fields(shader);
+				var fields = Reflect.fields(shader);
+				if ( Reflect.hasField( shader, u.name) ) 
+					throw 'Shader param ${u.name} is null';
+				else 
+					throw "Missing shader value " + u.name + " among "+ Reflect.fields(shader);
 			}
 			//if ( System.debugLevel>=2 ) trace('retrieving uniform ${u.name} $val');
 			setUniform(val, u, u.type);
@@ -752,7 +755,8 @@ class GlDriver extends Driver {
 				
 				gl.bindBuffer(GL.ARRAY_BUFFER, b.b.b.vbuf.b);
 				var stride = curShader.stride;
-				gl.vertexAttribPointer(a.index, a.size, a.etype, false, 0, b.offset * 4);
+				gl.vertexAttribPointer(
+				a.index, a.size, a.etype, false, 0, b.offset * 4);
 				checkError();
 			}
 			
