@@ -554,9 +554,14 @@ class GlDriver extends Driver {
 			if ( u.loc == null ) throw "Missing uniform location";
 			
 			var val : Dynamic = Reflect.getProperty(shader, u.name);
+			
+			if ( val == null && Std.is(shader,Test.TexturedShader) ) {
+				var sh = cast shader;
+				throw sh.mproj;
+			}
+			
 			if ( val == null ) {
-				var fields = Reflect.fields(shader);
-				if ( Reflect.hasField( shader, u.name) ) 
+				if ( Lambda.has(Type.getInstanceFields( Type.getClass(shader) ),u.name) ) 
 					throw 'Shader param ${u.name} is null';
 				else 
 					throw "Missing shader value " + u.name + " among "+ Reflect.fields(shader);
