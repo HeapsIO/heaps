@@ -19,68 +19,33 @@ import hxd.System;
 import mt.flash.Key;
 import openfl.Assets;
 
-
-class TexturedShader extends MeshShader {
+#if !flash 
+class DebugShader extends MeshShader {
 	
-	#if flash 
-	static var SRC = {
-		
-		var input : {
-			pos : Float3,
-			uv : Float2,
-		};
-	}
-		
-		var tuv : Float2;
-		
-		function vertex( mpos : Matrix, mproj : Matrix ) {
-			var tpos = input.pos.xyzw;
-			 if( mpos != null )
-				tpos *= mpos;
-			var ppos = tpos * mproj;
-			out = ppos;
-			tuv =  input.uv;
-		}
-		
-		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
-		{
-			var c = tex.get(tuv.xy);
-			out = c;
-		}
-	}
-	#else
 	static var VERTEX = "
 		attribute vec3 pos;
-		attribute vec2 uv;
+		//attribute vec2 uv;
 		
 		uniform mat4 mpos;
 		uniform mat4 mproj;
 		
-		varying vec2 tuv;
+		//varying vec2 tuv;
 		
 		void main(void) {
-			vec4 tpos = vec4(pos, 1.0);
-			
-			#if hasPos
-				tpos = mpos * tpos;
-			#end
-			
-			vec4 ppos = mproj * tpos;
-			gl_Position = ppos;
-			
-			vec2 t = uv;
-			tuv = t;
+		gl_Position = (mpos * vec4(pos.xyz, 1)) * mproj;
 		}";
 		
 	static var FRAGMENT = "
-		varying lowp vec2 tuv;
+		uniform sampler2D tex;
+		//varying vec2 tuv;
 		void main(void) {
-			lowp vec4 c = texture2D(tex, tuv);
-			gl_FragColor = c;
+			//lowp vec4 c = texture2D(tex, tuv);
+			//gl_FragColor = c;
+			gl_FragColor = vec4(1, 0, 1, 1);
 		}
 	";
-	#end
 }
+#end
 
 class Axis implements h3d.IDrawable {
 
@@ -108,7 +73,7 @@ class LineMaterial extends Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		lshader.mproj = ctx.camera.m;
+		lshader.mproj = ctx.engine.getShaderProjection();
 	}
 	
 	public inline function get_start() return lshader.start;
@@ -150,19 +115,18 @@ class Test {
 		mat.color = 0xFFFF00FF;
 	}	
 	
-	var loadedMat :  h3d.mat.MeshMaterial;
 	function start() {
 		trace("start !");
 		trace("prim ok");
 		scene = new Scene();
-		addLine( new Vector(0, 0, 0), new Vector(1, 1, 1) );
+		//addLine( new Vector(0, 0, 0), new Vector(1, 1, 1) );
 		
 		function onLoaded( bmp : hxd.BitmapData) {
 			var tex :Texture = Texture.fromBitmap( bmp);
-			loadedMat = new h3d.mat.MeshMaterial(tex);
-			var mat = loadedMat;
+			var mat = new h3d.mat.MeshMaterial(tex);
 			mat.culling = None;
 			mat.lightSystem = null;
+			mat.depthTest = h3d.mat.Data.Compare.Always;
 			/*
 			mat.lightSystem = {
 				ambient : new h3d.Vector(0.5, 0.5, 0.5),
@@ -192,27 +156,14 @@ class Test {
 		#end
 		
 		var axis = new Axis();
-		scene.addPass(axis);
+		//scene.addPass(axis);
 		
 		loadFbx();
 	}
 	
-	/*
-	function fileLength(f : sys.io.FileInput)
-	{
-		var cur = f.tell();
-		f.seek( 0,sys.io.FileSeek.SeekEnd );
-		var len = f.tell();
-		f.seek( cur, sys.io.FileSeek.SeekBegin );
-		return len;
-	}
-	*/
-	
 	function loadFbx()
 	{
-		//var file = sys.io.File.read("assets/Cheveux.FBX", true);
-		//var len = fileLength( file );
-		//var file = Assets.getText("assets/Skeleton01_anim_attack.FBX");
+		
 		var file = Assets.getText("assets/Cheveux.FBX");
 		loadData(file);
 	}
@@ -228,8 +179,7 @@ class Test {
 		var frame = 0;
 		scene.addChild(curFbx.makeObject( function(str, mat) {
 			var tex = Texture.fromBitmap( BitmapData.fromNative(Assets.getBitmapData("assets/checker.png",false)) );
-			var mat = new h3d.mat.MeshMaterial(tex);
-			//mat.shader = new MyMeshMaterialShader();
+			var mat = new h3d.mat.MeshMaterial(tex#if !flash,new DebugShader()#end);
 			mat.culling = None;
 			mat.lightSystem = null;
 			mat.blend(SrcAlpha, OneMinusSrcAlpha);
@@ -242,17 +192,16 @@ class Test {
 	
 	static public var animMode : h3d.fbx.Library.AnimationMode = LinearAnim;
 	function setSkin() {
-		
+		/*
 		var anim = curFbx.loadAnimation(animMode);
 		if( anim != null ) {
 			anim = scene.playAnimation(anim);
 		}
-		
-		
+		*/
 	}
 	
 	function update() {	
-		var dist = 10;
+		var dist = 5;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);

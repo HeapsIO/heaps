@@ -316,7 +316,6 @@ class MeshShader extends h3d.impl.Shader {
 		uniform mat3 mposInv;
 
 		void main(void) {
-			/*
 			vec4 tpos = vec4(pos, 1.0);
 			
 			#if hasSkin
@@ -406,16 +405,6 @@ class MeshShader extends h3d.impl.Shader {
 			#if hasShadowMap
 				tshadowPos = shadowLightCenter * shadowLightProj * tpos;
 			#end
-			*/
-			
-			vec4 tpos = vec4(pos, 1.0);
-			#if hasPos
-				tpos = mpos * tpos;
-			#end
-			vec4 ppos = mproj * tpos;
-			gl_Position = ppos;
-			vec2 t = uv;
-			tuv = t;
 		}
 
 	";
@@ -455,7 +444,6 @@ class MeshShader extends h3d.impl.Shader {
 		#end
 
 		void main(void) {
-			/*
 			lowp vec4 c = texture2D(tex, tuv);
 			#if hasFog
 				c.a *= talpha;
@@ -493,8 +481,6 @@ class MeshShader extends h3d.impl.Shader {
 				c.rgb += texture2D(glowTexture,tuv).rgb * glowAmount;
 			#end
 			gl_FragColor = c;
-			*/
-			gl_FragColor = vec4(1,0,1,1);
 		}
 
 	";
@@ -576,7 +562,7 @@ class MeshMaterial extends Material {
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		mshader.mpos = useMatrixPos ? ctx.localPos : null;
 		if ( System.debugLevel >= 2) trace("shader mpos:"+mshader.mpos);
-		mshader.mproj = ctx.camera.m;
+		mshader.mproj = ctx.engine.getShaderProjection();
 		mshader.tex = texture;
 		#if flash
 		if( mshader.isOutline ) {

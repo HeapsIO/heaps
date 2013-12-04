@@ -35,7 +35,7 @@ class PlanMultiShader extends h3d.impl.Shader {
 		varying vec4 vertexColor;
 		
 		void main(void) {
-			gl_Position = mproj * vec4(pos.xyz, 1);
+			gl_Position = vec4(pos.xyz, 1) * mproj;
 			
 			vertexColor.x = color.x * matColor.x;
 			vertexColor.y = color.y * matColor.y;
@@ -67,7 +67,7 @@ class PlanMultiMaterial extends h3d.mat.Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		sh.mproj = ctx.camera.m;
+		sh.mproj = ctx.engine.getShaderProjection();
 	}
 	
 	public inline function get_matColor() return sh.matColor;

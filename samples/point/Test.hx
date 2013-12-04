@@ -30,7 +30,7 @@ class PointMaterial extends Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		pshader.mproj = ctx.camera.m;
+		pshader.mproj = ctx.engine.getShaderProjection();
 	}
 	
 	public inline function get_delta() return pshader.delta;

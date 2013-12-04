@@ -59,10 +59,10 @@ class TexturedShader extends MeshMaterial.MeshShader{
 			vec4 tpos = vec4(pos, 1.0);
 			
 			#if hasPos
-				tpos = mpos * tpos;
+				tpos *= mpos;
 			#end
 			
-			vec4 ppos = mproj * tpos;
+			vec4 ppos = tpos * mproj;
 			gl_Position = ppos;
 			
 			vec2 t = uv;
@@ -96,7 +96,7 @@ class PointMaterial extends Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		pshader.mproj = ctx.camera.m;
+		pshader.mproj = ctx.engine.getShaderProjection();
 	}
 	
 	public inline function get_delta() return pshader.delta;
@@ -125,7 +125,7 @@ class LineMaterial extends Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		lshader.mproj = ctx.camera.m;
+		lshader.mproj = ctx.engine.getShaderProjection();
 	}
 	
 	public inline function get_start() return lshader.start;

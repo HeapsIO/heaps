@@ -231,21 +231,44 @@ class FBXModel extends MeshPrimitive {
 				groupIndexes.push(i == null ? null : engine.mem.allocIndex(i));
 		}
 		
+		#if ((!flash) && (false))
 		if ( System.debugLevel >= 2 ) {
 			var i = 0;
+			
+			var saveFile = File.write( "FbxData.hx", false );
+			
+			saveFile.writeString("class FbxData{\n");
+				saveFile.writeString("public static var floatBuffer : Array<Float> = { var fb = [\r\n");
+				for ( i in 0...pbuf.length) {
+					var v = pbuf[i];
+					saveFile.writeString(v + ( (i==pbuf.length-1) ? "" : ",") + "\r\n" );
+				}
+				saveFile.writeString(" ]; fb; };\n");
+				
+				saveFile.writeString("public static var indexBuffer : Array<Int> = { var ib = [\r\n");
+				for ( i in 0...idx.length) {
+					var v = idx[i];
+					saveFile.writeString(v + ( (i==pbuf.length-1) ? "" : ",") + "\r\n" );
+				}
+				saveFile.writeString(" ]; ib; };\n");
+			saveFile.writeString("}\r\n");
+			
 			for ( v in pbuf)
 			{
 				trace("vtx:" + i + " val:" + v);
 				i++;
 			}
+			
 			var i = 0;
 			for ( v in idx)
 			{
 				trace("idx:" + i + " val:" + v);
 				i++;
 			}
-			trace("fbx loaded. bounds:"+getBounds());
+			trace("fbx loaded. bounds:" + getBounds());
+			saveFile.close();
 		}
+		#end
 	}
 	
 }

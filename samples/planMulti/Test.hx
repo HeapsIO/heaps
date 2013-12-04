@@ -3,19 +3,99 @@ import h3d.impl.Shaders.LineShader;
 import h3d.impl.Shaders.PointShader;
 import h3d.mat.Material;
 import h3d.mat.Texture;
+import h3d.scene.CustomObject;
 import h3d.scene.Scene;
 import h3d.scene.Mesh;
 import h3d.Vector;
 import haxe.CallStack;
 import haxe.io.Bytes;
 import hxd.BitmapData;
+import hxd.IndexBuffer;
 import hxd.Pixels;
 import hxd.res.Embed;
 import hxd.res.EmbedFileSystem;
 import hxd.res.LocalFileSystem;
 import hxd.System;
 
+import FbxData;
 import Plan3DMulti;
+
+class CustomPrimitive extends h3d.prim.MeshPrimitive {
+	
+	public function new() {
+		super();
+	}
+	
+	override function getBounds() {
+		var b = new h3d.col.Bounds();
+		b.xMin = 0;
+		b.xMax = 1;
+		b.yMin = 0;
+		b.yMax = 1;
+		b.zMin = b.zMax = 0;
+		return b;
+	}
+	
+	override function alloc( engine : h3d.Engine ) {
+		
+		var pbuf = hxd.FloatBuffer.fromArray( FbxData.floatBuffer );
+		var ibuf = IndexBuffer.fromArray( FbxData.indexBuffer );
+		
+		addBuffer("pos", engine.mem.allocVector(pbuf, 3, 0));
+		indexes = engine.mem.allocIndex(ibuf);
+	}
+}
+
+class SimpleShader extends h3d.impl.Shader {
+#if flash
+	static var SRC = {
+		var input : {
+			pos : Float3,
+		};
+
+		function vertex( mproj : Matrix ) {
+			out = input.pos.xyzw * mproj;
+		}
+		
+		function fragment() {
+			out = color( 1,0,1,1);
+		}
+	};
+	
+#elseif (js || cpp)
+	static var VERTEX = "
+		attribute vec3 pos;
+		uniform mat4 mproj;
+		
+		void main(void) {
+			gl_Position = vec4(pos.xyz, 1)*mproj;
+		}
+	";
+	
+	static var FRAGMENT = "
+		varying vec4 vertexColor;
+		void main(void) {
+			gl_FragColor = vec4(1,0,1,1);
+		}
+	";
+#end
+}
+
+class SimpleMaterial extends h3d.mat.Material{
+	var sh : SimpleShader;
+	
+	public function new() {
+		super(sh=new SimpleShader());
+		depthTest = h3d.mat.Data.Compare.Always;
+		culling = None;
+		blend(SrcAlpha, OneMinusSrcAlpha);
+	}
+	
+	override function setup( ctx : h3d.scene.RenderContext ) {
+		super.setup(ctx);
+		sh.mproj = ctx.engine.getShaderProjection();
+	}
+}
 
 class Test {
 	
@@ -37,6 +117,8 @@ class Test {
 		var mat = new Plan3DMulti.PlanMultiMaterial();
 		var line = new h3d.scene.CustomObject(new Plan3DMulti(), mat, scene);
 		
+		var fbx = new CustomObject(new CustomPrimitive(), new SimpleMaterial() ,scene );
+		
 		line.material.blend(SrcAlpha, OneMinusSrcAlpha);
 		line.material.depthWrite = false;
 		line.material.culling = None;
@@ -52,7 +134,7 @@ class Test {
 	}
 	
 	function update() {	
-		var dist = 5;
+		var dist = 500;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);

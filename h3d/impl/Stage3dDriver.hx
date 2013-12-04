@@ -442,5 +442,8 @@ class Stage3dDriver extends Driver {
 		flash.display3D.Context3DMipFilter.MIPLINEAR,
 	];
 	
+	public override function selectShaderProjection(proj, _) {
+		return proj;
+	}
 }
 #end

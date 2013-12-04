@@ -30,7 +30,7 @@ class LineMaterial extends Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		lshader.mproj = ctx.camera.m;
+		lshader.mproj = ctx.engine.getShaderProjection();
 	}
 	
 	public inline function get_start() return lshader.start;

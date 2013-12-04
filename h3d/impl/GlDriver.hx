@@ -410,8 +410,6 @@ class GlDriver extends Driver {
 		// list uniforms needed by shader
 		var allCode = code + gl.getShaderSource(fs);
 		
-		
-		
 		var nuni = gl.getProgramParameter(p, GL.ACTIVE_UNIFORMS);
 		inst.uniforms = [];
 		var texIndex = -1;
@@ -554,14 +552,8 @@ class GlDriver extends Driver {
 			if ( u.loc == null ) throw "Missing uniform location";
 			
 			var val : Dynamic = Reflect.getProperty(shader, u.name);
-			
-			if ( val == null && Std.is(shader,Test.TexturedShader) ) {
-				var sh = cast shader;
-				throw sh.mproj;
-			}
-			
 			if ( val == null ) {
-				if ( Lambda.has(Type.getInstanceFields( Type.getClass(shader) ),u.name) ) 
+				if ( Reflect.hasField( shader, u.name) ) 
 					throw 'Shader param ${u.name} is null';
 				else 
 					throw "Missing shader value " + u.name + " among "+ Reflect.fields(shader);
@@ -740,7 +732,8 @@ class GlDriver extends Driver {
 	}
 	
 	override function selectMultiBuffers( buffers : Array<Buffer.BufferOffset> ) {
-		
+		var changed = true;
+		/*
 		var changed = curMultiBuffer == null || curMultiBuffer.length != buffers.length;
 		if( !changed )
 			for( i in 0...curMultiBuffer.length )
@@ -748,10 +741,9 @@ class GlDriver extends Driver {
 					changed = true;
 					break;
 				}
+		*/
 				
 		if ( changed ) {
-			
-			
 			for ( i in 0...buffers.length ) {
 				var b = buffers[i];
 				var a = curShader.attribs[i];
@@ -760,11 +752,9 @@ class GlDriver extends Driver {
 				
 				gl.bindBuffer(GL.ARRAY_BUFFER, b.b.b.vbuf.b);
 				var stride = curShader.stride;
-				gl.vertexAttribPointer(
-				a.index, a.size, a.etype, false, 0, b.offset * 4);
+				gl.vertexAttribPointer( a.index, a.size, a.etype, false, 0, b.offset * 4);
 				checkError();
 			}
-			
 				
 			curBuffer = null;
 			curMultiBuffer = buffers;
@@ -856,6 +846,9 @@ class GlDriver extends Driver {
 		}
 	}
 
+	public override function selectShaderProjection(_, transp) {
+		return transp;
+	}
 
 }
 
