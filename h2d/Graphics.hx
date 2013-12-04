@@ -121,6 +121,11 @@ class Graphics extends Drawable {
 		clear();
 	}
 	
+	override function onDelete() {
+		super.onDelete();
+		clear();
+	}
+	
 	public function clear() {
 		content.reset();
 		pts = [];
