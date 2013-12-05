@@ -29,7 +29,7 @@ class PointShader extends h3d.impl.Shader {
 		uniform vec2 size;
 		
 		void main(void) {
-			vec4 p = mproj * delta;
+			vec4 p = delta * mproj;
 			p.xy += pos.xy * size * p.z;
 			tuv = pos;
 			gl_Position = p;
@@ -82,8 +82,8 @@ class LineShader extends h3d.impl.Shader {
 		
 		void main(void) {
 			
-			vec4 spos = mproj * start;
-			vec4 epos = mproj * end;
+			vec4 spos = start*mproj;
+			vec4 epos = end*mproj;
 			vec2 delta = epos.xy  - spos.xy;
 			normalize(delta);
 			
