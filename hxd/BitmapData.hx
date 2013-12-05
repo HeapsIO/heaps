@@ -61,7 +61,7 @@ abstract BitmapData(InnerData) {
 		#end
 	}
 	
-	public inline function getPixel( x : Int, y : Int ) {
+	public inline function getPixel( x : Int, y : Int ) : Int {
 		#if flash
 		return this.getPixel32(x, y);
 		#else
