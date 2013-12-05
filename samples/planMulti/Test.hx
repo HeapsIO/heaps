@@ -16,9 +16,10 @@ import hxd.res.Embed;
 import hxd.res.EmbedFileSystem;
 import hxd.res.LocalFileSystem;
 import hxd.System;
-
 import FbxData;
 import Plan3DMulti;
+
+typedef Fbx = FbxData_1;
 
 class CustomPrimitive extends h3d.prim.MeshPrimitive {
 	
@@ -37,8 +38,8 @@ class CustomPrimitive extends h3d.prim.MeshPrimitive {
 	}
 	
 	override function alloc( engine : h3d.Engine ) {
-		var pbuf = hxd.FloatBuffer.fromArray( FbxData.floatBuffer );
-		var ibuf = IndexBuffer.fromArray( FbxData.indexBuffer );
+		var pbuf = hxd.FloatBuffer.fromArray( Fbx.floatBuffer );
+		var ibuf = IndexBuffer.fromArray( Fbx.indexBuffer );
 		
 		addBuffer("pos", engine.mem.allocVector(pbuf, 3, 0));
 		indexes = engine.mem.allocIndex(ibuf);
@@ -113,11 +114,12 @@ class Test {
 		engine.init();
 	}
 	
+	var fbx : CustomObject;
 	function addPlan3dMulti(center, col) {
 		
 		var mat = new Plan3DMulti.PlanMultiMaterial();
 		var line = new h3d.scene.CustomObject(new Plan3DMulti(), mat, scene);
-		var fbx = new CustomObject(new CustomPrimitive(), new SimpleMaterial() ,scene );
+		fbx = new CustomObject(new CustomPrimitive(), new SimpleMaterial() ,scene );
 		
 		line.material.blend(SrcAlpha, OneMinusSrcAlpha);
 		line.material.depthWrite = false;
@@ -126,6 +128,7 @@ class Test {
 		mat.matColor = col;
 		
 		fbx.scale( 0.01);
+		
 	}	
 	
 	function start() {
@@ -136,9 +139,10 @@ class Test {
 	}
 	
 	function update() {	
-		var dist = 5;
+		var dist = 0.001;
 		time += 0.01;
-		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
+		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 1);
+		fbx.setRotate(Math.PI*0.25,0,0);
 		engine.render(scene);
 	}
 	
