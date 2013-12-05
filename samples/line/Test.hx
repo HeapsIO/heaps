@@ -30,7 +30,7 @@ class LineMaterial extends Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		lshader.mproj = ctx.engine.getShaderProjection();
+		lshader.mproj = ctx.engine.curProjMatrix;
 	}
 	
 	public inline function get_start() return lshader.start;
@@ -53,13 +53,13 @@ class Test {
 		time = 0;
 		engine = new h3d.Engine();
 		engine.debug = true;
-		engine.backgroundColor = 0xFF202020;
+		engine.backgroundColor = 0xFFcdbeef;
 		engine.onReady = start;
 		engine.init();
 	}
 	
 	
-	function addLine(start,end,?col=0xFFffffff, ?size) {
+	function addLine(start,end,?col=0xFFffffff) {
 		var mat = new LineMaterial();
 		var line = new h3d.scene.CustomObject(new h3d.prim.Plan2D(), mat, scene);
 		line.material.blend(SrcAlpha, OneMinusSrcAlpha);
@@ -68,45 +68,18 @@ class Test {
 		
 		mat.start = start;
 		mat.end = end;
-		mat.color = 0xFF00FFFF;
+		mat.color = col;
 	}	
 	
 	function start() {
-		trace("start !");
-		
-		if ( hxd.System.isVerbose) trace("prim ok");
-		
 		scene = new Scene();
 		
-		addLine( new Vector(0, 0, 0), new Vector(1, 1, 1) );
+		addLine( new Vector(0, 0, 0), new Vector(1, 0, 0), 0xFFff0000 );
+		addLine( new Vector(0, 0, 0), new Vector(0, 1, 0), 0xFF00ff00 );
+		addLine( new Vector(0, 0, 0), new Vector(0, 0, 1), 0xFF0000ff );
 		
-		function onLoaded( bmp : hxd.BitmapData) {
-			var tex :Texture = Texture.fromBitmap( bmp);
-			var mat = new h3d.mat.MeshMaterial(tex);
-			mat.culling = None;
-			mat.lightSystem = {
-				ambient : new h3d.Vector(0.5, 0.5, 0.5),
-				
-				dirs : [ 
-					{ dir : new h3d.Vector( -0.3, -0.5, -1), color : new h3d.Vector(1, 0.5, 0.5) },
-					{ dir : new h3d.Vector( -0.3, -0.5, 1), color : new h3d.Vector(0.0, 0, 1.0) }
-				],
-				points : [{ pos : new h3d.Vector(1.5,0,0), color : new h3d.Vector(0,1,0), att : new h3d.Vector(0,0,1) }],
-				
-			};
-			
-			update();
-			hxd.System.setLoop(update);
-		}
-		
-		#if sys
-		if ( lfs.exists("hxlogo.png")) {
-			lfs.get("hxlogo.png").loadBitmap(onLoaded);
-		}
-		#else 
-			//erk
-			onLoaded(hxd.Res.hxlogo.toBitmap());
-		#end
+		update();
+		hxd.System.setLoop(update);
 	}
 	
 	function update() {	
@@ -124,19 +97,6 @@ class Test {
 		haxe.Log.setColor(0xFF0000);
 		#end
 		
-		#if flash
-			EmbedFileSystem.init();
-		#else
-			lfs = new hxd.res.LocalFileSystem('res');
-			var it = lfs.getRoot().iterator();//bugs
-			var e:Dynamic = null;
-			do
-			{
-				e = it.next();
-				trace( 'detecting file ${e.name}');
-			}
-			while ( it.hasNext() );
-		#end
 		new Test();
 		
 		
