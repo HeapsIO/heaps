@@ -19,33 +19,36 @@ import hxd.System;
 import mt.flash.Key;
 import openfl.Assets;
 
-#if !flash 
+/*
 class DebugShader extends MeshShader {
 	
 	static var VERTEX = "
 		attribute vec3 pos;
-		//attribute vec2 uv;
+		attribute vec2 uv;
 		
 		uniform mat4 mpos;
 		uniform mat4 mproj;
 		
-		//varying vec2 tuv;
+		varying vec2 tuv;
+		varying float z;
 		
 		void main(void) {
-		gl_Position = (mpos * vec4(pos.xyz, 1)) * mproj;
+			gl_Position = vec4(pos.xyz, 1) * mpos * mproj;
+			z = gl_Position.z;
+			tuv = uv;	
 		}";
 		
 	static var FRAGMENT = "
+		varying vec2 tuv;
+		varying float z;
 		uniform sampler2D tex;
-		//varying vec2 tuv;
+		
 		void main(void) {
-			//lowp vec4 c = texture2D(tex, tuv);
-			//gl_FragColor = c;
-			gl_FragColor = vec4(1, 0, 1, 1);
+			gl_FragColor = texture2D(tex, tuv);
 		}
 	";
 }
-#end
+*/
 
 class Axis implements h3d.IDrawable {
 
@@ -73,7 +76,7 @@ class LineMaterial extends Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		lshader.mproj = ctx.engine.getShaderProjection();
+		lshader.mproj = ctx.engine.curProjMatrix;
 	}
 	
 	public inline function get_start() return lshader.start;
@@ -161,10 +164,10 @@ class Test {
 		loadFbx();
 	}
 	
-	function loadFbx()
-	{
-		
-		var file = Assets.getText("assets/Cheveux.FBX");
+	function loadFbx(){
+		//var file = Assets.getText("assets/sphere.FBX");
+		//var file = Assets.getText("assets/Cheveux.FBX");
+		var file = Assets.getText("assets/Skeleton01_anim_attack.FBX");
 		loadData(file);
 	}
 	
@@ -177,20 +180,24 @@ class Test {
 		var fbx = h3d.fbx.Parser.parse(data);
 		curFbx.load(fbx);
 		var frame = 0;
-		scene.addChild(curFbx.makeObject( function(str, mat) {
+		var o : h3d.scene.Object = null;
+		scene.addChild(o=curFbx.makeObject( function(str, mat) {
 			var tex = Texture.fromBitmap( BitmapData.fromNative(Assets.getBitmapData("assets/checker.png",false)) );
-			var mat = new h3d.mat.MeshMaterial(tex#if !flash,new DebugShader()#end);
-			mat.culling = None;
+			var mat = new h3d.mat.MeshMaterial(tex);
+			//mat.shader = new DebugShader();
 			mat.lightSystem = null;
+			
+			mat.culling = None;
 			mat.blend(SrcAlpha, OneMinusSrcAlpha);
+			
 			return mat;
 		}));
-		
+		o.rotate(Math.PI/2, 0, 0);
 		
 		setSkin();
 	}
 	
-	static public var animMode : h3d.fbx.Library.AnimationMode = LinearAnim;
+	static public var animMode : h3d.fbx.Library.AnimationMode = h3d.fbx.Library.AnimationMode.FrameAnim;
 	function setSkin() {
 		/*
 		var anim = curFbx.loadAnimation(animMode);
@@ -201,18 +208,10 @@ class Test {
 	}
 	
 	function update() {	
-		var dist = 5;
+		var dist = 1000;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);
-		
-		if ( Key.isDown(Keyboard.ENTER) ) {
-			for ( c in scene.childs ) {
-				if( Std.is(c,Mesh)){
-					trace( c + " is a mesh" );
-				}
-			}
-		}
 	}
 	
 	

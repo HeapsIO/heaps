@@ -17,16 +17,16 @@
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
     <class path="." />
-    <class path="bin\flash\haxe" />
+    <class path="bin\windows\cpp\haxe" />
   </classpaths>
   <!-- Build options -->
   <build>
-    <option directives="tools=1.1.0&#xA;resourcesPath=../res&#xA;openfl=1.1&#xA;display&#xA;verbose=true&#xA;web" />
+    <option directives="idPalette&#xA;tools=1.1.0&#xA;resourcesPath=../res&#xA;openfl=1.1&#xA;display&#xA;verbose=true&#xA;windows&#xA;desktop" />
     <option flashStrict="False" />
     <option noInlineOnDebug="False" />
     <option mainClass="ApplicationMain" />
     <option enabledebug="True" />
-    <option additional="--no-output&#xA;-swf-version 11.6&#xA;#--remap nme:flash" />
+    <option additional="--no-output&#xA;--macro allowPackage(&quot;flash&quot;)&#xA;--macro keep(&quot;Test&quot;)" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

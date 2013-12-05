@@ -1,5 +1,6 @@
 package h3d.mat;
 import h3d.mat.MeshMaterial.MeshShader;
+import h3d.Matrix;
 import hxd.Save;
 import hxd.System;
 
@@ -339,10 +340,10 @@ class MeshShader extends h3d.impl.Shader {
 				tpos.xyz = skinMatrixes[sknx] * wx * tpos  +  skinMatrixes[skny] * wy * tpos +  skinMatrixes[sknz] * wz * tpos;
 				
 			#elseif hasPos
-				tpos = mpos * tpos;
+				tpos *= mpos;
 			#end
 			
-			vec4 ppos = mproj * tpos;
+			vec4 ppos = tpos * mproj;
 			#if hasZBias
 				ppos.z += zBias;
 			#end
@@ -527,6 +528,8 @@ class MeshMaterial extends Material {
 	
 	
 	public var shadowMap(null, set) : ShadowMap;
+	public static var uid = 0;
+	public var  id : Int = -1;
 	
 	public function new(texture,?sh) {
 		mshader = (sh==null) ? new MeshShader() : sh;
@@ -534,6 +537,7 @@ class MeshMaterial extends Material {
 		this.texture = texture;
 		useMatrixPos = true;
 		killAlphaThreshold = 0.001;
+		id = uid++;
 	}
 	
 	override function clone( ?m : Material ) {
@@ -561,9 +565,9 @@ class MeshMaterial extends Material {
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		mshader.mpos = useMatrixPos ? ctx.localPos : null;
-		if ( System.debugLevel >= 2) trace("shader mpos:"+mshader.mpos);
-		mshader.mproj = ctx.engine.getShaderProjection();
+		mshader.mproj = ctx.engine.curProjMatrix;
 		mshader.tex = texture;
+		
 		#if flash
 		if( mshader.isOutline ) {
 			mshader.outlineProj = new h3d.Vector(ctx.camera.mproj._11, ctx.camera.mproj._22);
@@ -651,6 +655,7 @@ class MeshMaterial extends Material {
 	}
 	
 	inline function set_hasSkin(v) {
+		//if ( System.debugLevel >= 2) trace('hasSkin $v' + v);
 		return mshader.hasSkin = v;
 	}
 

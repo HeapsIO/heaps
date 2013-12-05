@@ -93,7 +93,7 @@ class SimpleMaterial extends h3d.mat.Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		sh.mproj = ctx.engine.getShaderProjection();
+		sh.mproj = ctx.engine.curProjMatrix;
 	}
 }
 
@@ -134,7 +134,7 @@ class Test {
 	}
 	
 	function update() {	
-		var dist = 500;
+		var dist = 5;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);

@@ -124,8 +124,10 @@ class Driver {
 	public function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 	}
 	
+	/*
 	public function selectShaderProjection(proj, transp) :Matrix{
 		throw "not implemented";
 		return null;
 	}
+	*/
 }

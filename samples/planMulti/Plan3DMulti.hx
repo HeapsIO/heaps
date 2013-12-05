@@ -67,7 +67,7 @@ class PlanMultiMaterial extends h3d.mat.Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		sh.mproj = ctx.engine.getShaderProjection();
+		sh.mproj = ctx.engine.curProjMatrix;
 	}
 	
 	public inline function get_matColor() return sh.matColor;

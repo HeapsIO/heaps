@@ -27,8 +27,6 @@ private typedef Uint8Array = openfl.utils.UInt8Array;
 private typedef Float32Array = openfl.utils.Float32Array;
 #end
 
-
-
 @:access(h3d.impl.Shader)
 class GlDriver extends Driver {
 
@@ -588,14 +586,14 @@ class GlDriver extends Driver {
 		switch( t ) {
 		case Mat4:
 			if ( Std.is( val , Array)) {
-				gl.uniformMatrix4fv(u.loc, false, packMatrix44(val));
-				if ( System.debugLevel >= 2 ) trace("uniform matrix array set");
+				gl.uniformMatrix4fv(u.loc, true, packMatrix44(val));
+				//if ( System.debugLevel >= 2 ) trace("uniform matrix array set");
 			}
 			else {
 				var m : h3d.Matrix = val;
 				var fl = m.getFloats();
 				var arr = new Float32Array(fl);
-				gl.uniformMatrix4fv(u.loc, false, arr);
+				gl.uniformMatrix4fv(u.loc, true, arr);
 				//if ( System.debugLevel >= 2 ) trace("uniform matrix set");
 			}
 		case Tex2d:
@@ -625,6 +623,7 @@ class GlDriver extends Driver {
 			
 			setUniform(vs, u, t);
 			
+		//todo optimize this...
 		case Elements(field, nb, t): {
 			var arr : Array<Vector> = Reflect.field(val, field);
 			if (arr.length > nb) arr = arr.slice(0, nb);
@@ -633,10 +632,6 @@ class GlDriver extends Driver {
 					gl.uniform3fv( u.loc, packArray3(arr));
 				case Vec4: 
 					gl.uniform4fv( u.loc, packArray4(arr));
-					
-				case Mat4: 
-					throw "HERE";
-					
 				default: throw "not supported";
 			}
 		}
@@ -732,8 +727,6 @@ class GlDriver extends Driver {
 	}
 	
 	override function selectMultiBuffers( buffers : Array<Buffer.BufferOffset> ) {
-		var changed = true;
-		/*
 		var changed = curMultiBuffer == null || curMultiBuffer.length != buffers.length;
 		if( !changed )
 			for( i in 0...curMultiBuffer.length )
@@ -741,15 +734,11 @@ class GlDriver extends Driver {
 					changed = true;
 					break;
 				}
-		*/
 				
 		if ( changed ) {
 			for ( i in 0...buffers.length ) {
 				var b = buffers[i];
 				var a = curShader.attribs[i];
-
-				if ( System.debugLevel >= 2) trace('selectMultiBuffers bound $a ${a.name} ${b.offset }');
-				
 				gl.bindBuffer(GL.ARRAY_BUFFER, b.b.b.vbuf.b);
 				var stride = curShader.stride;
 				gl.vertexAttribPointer( a.index, a.size, a.etype, false, 0, b.offset * 4);
@@ -846,9 +835,11 @@ class GlDriver extends Driver {
 		}
 	}
 
+	/*
 	public override function selectShaderProjection(_, transp) {
 		return transp;
 	}
+	*/
 
 }
 

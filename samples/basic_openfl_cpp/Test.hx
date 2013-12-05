@@ -96,7 +96,7 @@ class PointMaterial extends Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		pshader.mproj = ctx.engine.getShaderProjection();
+		pshader.mproj = ctx.engine.curProjMatrix;
 	}
 	
 	public inline function get_delta() return pshader.delta;
@@ -125,7 +125,7 @@ class LineMaterial extends Material{
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
-		lshader.mproj = ctx.engine.getShaderProjection();
+		lshader.mproj = ctx.engine.curProjMatrix;
 	}
 	
 	public inline function get_start() return lshader.start;
@@ -188,7 +188,6 @@ class Test {
 		function onLoaded( bmp : hxd.BitmapData) {
 			var tex :Texture = Texture.fromBitmap( bmp);
 			var mat = new h3d.mat.MeshMaterial(tex);
-			mat.shader = new TexturedShader();
 			mat.culling = None;
 			
 			obj1 = new Mesh(prim, mat, scene);

@@ -35,10 +35,7 @@ class Engine {
 	var debugLine : h3d.Drawable<h3d.impl.Shaders.LineShader>;
 	
 	@:allow(h3d)
-	@:isVar
-	var curProjMatrix(default,set) : h3d.Matrix;
-	
-	var curTransposeProjMatrix : h3d.Matrix;
+	var curProjMatrix : h3d.Matrix;
 
 	@:access(hxd.Stage)
 	public function new( hardware = true, aa = 0 ) {
@@ -46,25 +43,11 @@ class Engine {
 		this.antiAlias = aa;
 		this.autoResize = true;
 		
-		curTransposeProjMatrix = new Matrix();
-		
 		#if openfl
 		hxd.Stage.openFLBoot(start);
 		#else
 		start();
 		#end
-		
-	}
-	
-	inline function set_curProjMatrix(m) {
-		if ( m == null) {
-			curTransposeProjMatrix.identity();
-		}
-		else {
-			curTransposeProjMatrix.loadFrom(m);
-			curTransposeProjMatrix.transpose();
-		}
-		return curProjMatrix = m;
 	}
 	
 	function start() {
@@ -314,11 +297,12 @@ class Engine {
 		}
 		return true;
 	}
-	
+	/*
 	public inline function getShaderProjection()
 	{
 		return driver.selectShaderProjection(curProjMatrix, curTransposeProjMatrix);
 	}
+	*/
 	
 	// debug functions
 	public function point( x : Float, y : Float, z : Float, color = 0x80FF0000, size = 1.0, depth = false ) {
@@ -330,7 +314,7 @@ class Engine {
 			debugPoint.material.depthWrite = false;
 		}
 		debugPoint.material.depthTest = depth ? h3d.mat.Data.Compare.LessEqual : h3d.mat.Data.Compare.Always;
-		debugPoint.shader.mproj = getShaderProjection();
+		debugPoint.shader.mproj = curProjMatrix;
 		debugPoint.shader.delta = new h3d.Vector(x, y, z, 1);
 		var gscale = 1 / 200;
 		debugPoint.shader.size = new h3d.Vector(size * gscale, size * gscale * width / height);
@@ -350,7 +334,7 @@ class Engine {
 			debugLine.material.culling = None;
 		}
 		debugLine.material.depthTest = depth ? h3d.mat.Data.Compare.LessEqual : h3d.mat.Data.Compare.Always;
-		debugLine.shader.mproj = getShaderProjection();
+		debugLine.shader.mproj = curProjMatrix;
 		debugLine.shader.start = new h3d.Vector(x1, y1, z1);
 		debugLine.shader.end = new h3d.Vector(x2, y2, z2);
 		debugLine.shader.color = color;
