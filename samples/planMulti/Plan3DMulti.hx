@@ -12,8 +12,8 @@ class PlanMultiShader extends h3d.impl.Shader {
 		};
 
 		var vertexColor : Color;
-		function vertex( mproj : Matrix , matColor : Color) {
-			out = input.pos.xyzw * mproj;
+		function vertex( mpos:Matrix, mproj : Matrix , matColor : Color) {
+			out = input.pos.xyzw * mpos * mproj;
 			vertexColor = input.color * matColor;
 		}
 		
@@ -30,12 +30,13 @@ class PlanMultiShader extends h3d.impl.Shader {
 		attribute vec4 color;
 		
 		uniform mat4 mproj;
+		uniform mat4 mpos;
 		uniform vec4 matColor /*byte4*/;
 		
 		varying vec4 vertexColor;
 		
 		void main(void) {
-			gl_Position = vec4(pos.xyz, 1) * mproj;
+			gl_Position = vec4(pos.xyz, 1) * mpos * mproj;
 			
 			vertexColor.x = color.x * matColor.x;
 			vertexColor.y = color.y * matColor.y;
@@ -68,6 +69,7 @@ class PlanMultiMaterial extends h3d.mat.Material{
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
 		sh.mproj = ctx.engine.curProjMatrix;
+		sh.mpos = ctx.localPos;
 	}
 	
 	public inline function get_matColor() return sh.matColor;

@@ -37,7 +37,6 @@ class CustomPrimitive extends h3d.prim.MeshPrimitive {
 	}
 	
 	override function alloc( engine : h3d.Engine ) {
-		
 		var pbuf = hxd.FloatBuffer.fromArray( FbxData.floatBuffer );
 		var ibuf = IndexBuffer.fromArray( FbxData.indexBuffer );
 		
@@ -53,8 +52,8 @@ class SimpleShader extends h3d.impl.Shader {
 			pos : Float3,
 		};
 
-		function vertex( mproj : Matrix ) {
-			out = input.pos.xyzw * mproj;
+		function vertex( mpos:Matrix, mproj : Matrix ) {
+			out = input.pos.xyzw*mpos*mproj;
 		}
 		
 		function fragment() {
@@ -66,9 +65,10 @@ class SimpleShader extends h3d.impl.Shader {
 	static var VERTEX = "
 		attribute vec3 pos;
 		uniform mat4 mproj;
+		uniform mat4 mpos;
 		
 		void main(void) {
-			gl_Position = vec4(pos.xyz, 1)*mproj;
+			gl_Position = vec4(pos.xyz, 1)*mpos*mproj;
 		}
 	";
 	
@@ -94,6 +94,7 @@ class SimpleMaterial extends h3d.mat.Material{
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
 		sh.mproj = ctx.engine.curProjMatrix;
+		sh.mpos = ctx.localPos;
 	}
 }
 
@@ -116,7 +117,6 @@ class Test {
 		
 		var mat = new Plan3DMulti.PlanMultiMaterial();
 		var line = new h3d.scene.CustomObject(new Plan3DMulti(), mat, scene);
-		
 		var fbx = new CustomObject(new CustomPrimitive(), new SimpleMaterial() ,scene );
 		
 		line.material.blend(SrcAlpha, OneMinusSrcAlpha);
@@ -124,6 +124,8 @@ class Test {
 		line.material.culling = None;
 		
 		mat.matColor = col;
+		
+		fbx.scale( 0.01);
 	}	
 	
 	function start() {
