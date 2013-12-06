@@ -273,7 +273,7 @@ class MeshShader extends h3d.impl.Shader {
 		#end
 		
 		#if hasSkin
-		attribute vec3 indexes;
+		attribute vec4 indexes/*byte4*/;
 		attribute vec3 weights;
 		uniform mat4 skinMatrixes[maxSkinMatrixes];
 		#end
@@ -320,24 +320,15 @@ class MeshShader extends h3d.impl.Shader {
 			vec4 tpos = vec4(pos, 1.0);
 			
 			#if hasSkin
-				int sknx = indexes.x * (255 * 3);
-				int skny = indexes.y * (255 * 3);
-				int sknz = indexes.z * (255 * 3);
-				
-				//int sknx = 0;
-				//int skny = 1;
-				//int sknz = 2;
+				int sknx = indexes.x;
+				int skny = indexes.y;
+				int sknz = indexes.z;
 				
 				float wx = weights.x;
 				float wy = weights.y;
 				float wz = weights.z;
 				
-				//float wx = 1.0;
-				//float wy = 0.0;
-				//float wz = 0.0;
-				
-				//tpos.xyz = tpos * wx * skinMatrixes[sknx] + tpos * wy * skinMatrixes[skny] + tpos * wz * skinMatrixes[sknz];
-				tpos.xyz = skinMatrixes[sknx] * wx * tpos  +  skinMatrixes[skny] * wy * tpos +  skinMatrixes[sknz] * wz * tpos;
+				tpos = tpos * wx * skinMatrixes[sknx] + tpos * wy * skinMatrixes[skny] + tpos * wz * skinMatrixes[sknz];
 				
 			#elseif hasPos
 				tpos *= mpos;
@@ -361,9 +352,9 @@ class MeshShader extends h3d.impl.Shader {
 				#if hasPos
 					n = mat3(mpos) * n;
 				#elseif hasSkin
-					n = 	n * wx * skinMatrixes[sknx] 
-						+ 	n * wy * skinMatrixes[skny] 
-						+ 	n * wz * skinMatrixes[sknz];
+					n = 	skinMatrixes[sknx] * wx * n  
+						+ 	skinMatrixes[skny] * wy * n  
+						+ 	skinMatrixes[sknz] * wz * n;
 					#if hasPos
 						n = mposInv * n;
 					#end
@@ -654,8 +645,8 @@ class MeshMaterial extends Material {
 		return mshader.hasSkin;
 	}
 	
-	inline function set_hasSkin(v) {
-		//if ( System.debugLevel >= 2) trace('hasSkin $v' + v);
+	inline function set_hasSkin(v:Bool) {
+		if ( System.debugLevel >= 2) trace('mat#$id hasSkin $v');
 		return mshader.hasSkin = v;
 	}
 
@@ -680,9 +671,11 @@ class MeshMaterial extends Material {
 	}
 	
 	inline function set_skinMatrixes( v : Array<h3d.Matrix> ) {
-		if ( System.debugLevel >= 2) trace('set_skinMatrixes ${v[0]}');
+		//if ( System.debugLevel >= 2) trace('set_skinMatrixes ${v[0]}');
+		#if debug
 		if( v != null && v.length > 35 )
-			throw "Maximum 35 bones are allowed for skinning (has "+v.length+")";
+			throw "Maximum 35 bones are allowed for skinning (has " + v.length + ")";
+		#end
 		return mshader.skinMatrixes = v;
 	}
 	
@@ -691,8 +684,10 @@ class MeshMaterial extends Material {
 	}
 
 	inline function set_lightSystem(v:LightSystem) {
+		#if debug
 		if( v != null && hasSkin && v.dirs.length + v.points.length > 6 )
-			throw "Maximum 6 lights are allowed with skinning ("+(v.dirs.length+v.points.length)+" set)";
+			throw "Maximum 6 lights are allowed with skinning (" + (v.dirs.length + v.points.length) + " set)";
+		#end
 		return mshader.lightSystem = v;
 	}
 	

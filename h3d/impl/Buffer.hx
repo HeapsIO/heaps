@@ -66,10 +66,15 @@ class Buffer {
 
 class BufferOffset {
 	public var b : Buffer;
-	public var offset : Int;
-	public function new(b, offset) {
+	public var offset : Int;// in float units
+	public var shared : Bool; // hint channel setup for low level
+	public var stride : Null<Int>;// hint channel setup for low level in byte units
+	
+	public function new(b, offset,?shared=false,?stride) {
 		this.b = b;
 		this.offset = offset;
+		this.shared = shared;
+		this.stride = stride;
 	}
 	public function dispose() {
 		if( b != null ) {
@@ -80,6 +85,6 @@ class BufferOffset {
 	
 	public function toString()
 	{
-		return 'b:$b ofs:$offset';
+		return 'b:$b ofs:$offset shared:$shared stride:$stride';
 	}
 }

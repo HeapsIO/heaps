@@ -76,10 +76,6 @@ class Skin extends Mesh {
 		#if idPalette
 		idPalette = [for ( i in 0...33) Matrix.I()];
 		#end
-		
-		#if debug 
-		showJoints = true;
-		#end
 	}
 	
 	override function clone( ?o : Object ) {
@@ -181,8 +177,7 @@ class Skin extends Mesh {
 	}
 	
 	override function draw( ctx : RenderContext ) {
-		if ( System.debugLevel >= 2) trace("Skin.draw();");
-		
+		//if ( System.debugLevel >= 2) trace("Skin.draw();");
 		if( splitPalette == null ) {
 			if( paletteChanged ) {
 				paletteChanged = false;
@@ -191,6 +186,7 @@ class Skin extends Mesh {
 				//TODO REMOVE
 				#if idPalette
 				material.skinMatrixes = idPalette;
+				trace('gnurf');
 				#end
 				
 			}
@@ -202,6 +198,7 @@ class Skin extends Mesh {
 				//TODO REMOVE
 				#if idPalette
 				material.skinMatrixes = idPalette;
+				trace('gnurf');
 				#end
 				
 				primitive.selectMaterial(i);

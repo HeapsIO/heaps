@@ -15,6 +15,7 @@ class FBXModel extends MeshPrimitive {
 	public var id = 0;
 	static var uid = 0;
 	public function new(g) {
+		id = uid++;
 		if ( System.debugLevel >= 2 ) trace("FBXModel.new() "+(id=(uid++)));
 		super();
 		this.geom = g;
@@ -148,10 +149,18 @@ class FBXModel extends MeshPrimitive {
 					if( sbuf != null ) {
 						var p = vidx * skin.bonesPerVertex;
 						var idx = 0;
-						for( i in 0...skin.bonesPerVertex ) {
+						
+						for ( i in 0...skin.bonesPerVertex ) {
+							
+							//TODO
 							sbuf.writeFloat(skin.vertexWeights[p + i]);
-							idx = (skin.vertexJoints[p + i] << (8*i)) | idx;
+							//if( i == 0 )	sbuf.writeFloat(1.0);
+							//else 			sbuf.writeFloat(0.0);
+							//sbuf.writeFloat(1.0);
+							idx = idx | ( (skin.vertexJoints[p + i] << (8*i)) & 255 ) ;
 						}
+						//idx = 0xFFFFFF;
+						//idx = 0xFFff00FF;
 						sbuf.writeInt32(idx);
 					}
 					
@@ -207,10 +216,12 @@ class FBXModel extends MeshPrimitive {
 			var nverts = Std.int(sbuf.length / ((skin.bonesPerVertex + 1) * 4));
 			var skinBuf = engine.mem.alloc(nverts, skin.bonesPerVertex + 1, 0);
 			skinBuf.uploadBytes(sbuf.getBytes(), 0, nverts);
-			addBuffer("weights", skinBuf, 0);
+			var bw = addBuffer("weights", skinBuf, 0);
+			bw.shared = true; bw.stride = 16;
 			
 			//GNE
-			addBuffer("indexes", skinBuf, skin.bonesPerVertex);
+			var bi = addBuffer("indexes", skinBuf, skin.bonesPerVertex);
+			bi.shared = true; bi.stride = 16;
 			//addBuffer("indexes", skinBuf,0);
 		}
 		else {
@@ -231,13 +242,13 @@ class FBXModel extends MeshPrimitive {
 				groupIndexes.push(i == null ? null : engine.mem.allocIndex(i));
 		}
 		
-		#if ((!flash) && (false))
+		#if( !flash )
 		if ( System.debugLevel >= 2 ) {
 			var i = 0;
+			var meshName = '$id';
+			var saveFile = sys.io.File.write( 'FbxData_$meshName.hx', false );
 			
-			var saveFile = File.write( "FbxData.hx", false );
-			
-			saveFile.writeString("class FbxData{\n");
+			saveFile.writeString('class FbxData_$meshName{\n');
 				saveFile.writeString("public static var floatBuffer : Array<Float> = { var fb = [\r\n");
 				for ( i in 0...pbuf.length) {
 					var v = pbuf[i];
@@ -251,21 +262,20 @@ class FBXModel extends MeshPrimitive {
 					saveFile.writeString(v + ( (i==pbuf.length-1) ? "" : ",") + "\r\n" );
 				}
 				saveFile.writeString(" ]; ib; };\n");
+				
+				/*
+				if ( skinBuf != null ) {
+					
+					saveFile.writeString("public static var skinBuffer : Array<Float> = { var sb = [\r\n");
+					for ( i in 0...skinBuf.length) {
+						var v = skinBuf.getBytes().get(i);
+						saveFile.writeString(v + ( (i==skinBuf.length-1) ? "" : ",") + "\r\n" );
+					}
+					saveFile.writeString(" ]; sb; };\n");
+				}
+				*/
+				
 			saveFile.writeString("}\r\n");
-			
-			for ( v in pbuf)
-			{
-				trace("vtx:" + i + " val:" + v);
-				i++;
-			}
-			
-			var i = 0;
-			for ( v in idx)
-			{
-				trace("idx:" + i + " val:" + v);
-				i++;
-			}
-			trace("fbx loaded. bounds:" + getBounds());
 			saveFile.close();
 		}
 		#end

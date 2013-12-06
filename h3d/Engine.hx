@@ -312,6 +312,7 @@ class Engine {
 			debugPoint = new Drawable(new h3d.prim.Plan2D(), new h3d.impl.Shaders.PointShader());
 			debugPoint.material.blend(SrcAlpha, OneMinusSrcAlpha);
 			debugPoint.material.depthWrite = false;
+			debugLine.material.culling = None;
 		}
 		debugPoint.material.depthTest = depth ? h3d.mat.Data.Compare.LessEqual : h3d.mat.Data.Compare.Always;
 		debugPoint.shader.mproj = curProjMatrix;

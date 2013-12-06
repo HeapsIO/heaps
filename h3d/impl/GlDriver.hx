@@ -389,13 +389,13 @@ class GlDriver extends Driver {
 				var etype = GL.FLOAT;
 				var com = findVarComment(aname,ccode);
 				if ( com != null ) {
-					if ( System.debugLevel>=2) trace("found comment on " + aname + " " + com);
+					//if ( System.debugLevel>=2) trace("found comment on " + aname + " " + com);
 					if ( com.startsWith("byte") )
 						etype = GL.UNSIGNED_BYTE;
 				}
 				else 
 				{
-					if ( System.debugLevel>=2) trace("didn't find comment on var " + aname);
+					//if ( System.debugLevel>=2) trace("didn't find comment on var " + aname);
 				}
 				
 				inst.attribs.push( { name : aname, type : atype, etype : etype, size : size, index : a.index, offset : offset } );
@@ -594,6 +594,7 @@ class GlDriver extends Driver {
 				var fl = m.getFloats();
 				var arr = new Float32Array(fl);
 				gl.uniformMatrix4fv(u.loc, true, arr);
+				
 				//if ( System.debugLevel >= 2 ) trace("uniform matrix set");
 			}
 		case Tex2d:
@@ -662,21 +663,25 @@ class GlDriver extends Driver {
 		for ( i in 0...vecs.length) {
 			mat = vecs[i];
 			k = i << 4;
-			a[i * k+1] 	= mat._12;
-			a[i * k+2] 	= mat._13;
-			a[i * k+3] 	= mat._14;
-			a[i * k+4] 	= mat._21;
-			a[i * k+5] 	= mat._22;
-			a[i * k+6] 	= mat._23;
-			a[i * k+7] 	= mat._24;
-			a[i * k+8] 	= mat._31;
-			a[i * k+9] 	= mat._32;
-			a[i * k+10] = mat._33;
-			a[i * k+11] = mat._34;
-			a[i * k+12] = mat._41;
-			a[i * k+13] = mat._42;
-			a[i * k+14] = mat._43;
-			a[i * k+15] = mat._44;
+			a[k+0] 	= mat._11;
+			a[k+1] 	= mat._12;
+			a[k+2] 	= mat._13;
+			a[k+3] 	= mat._14;
+			
+			a[k+4] 	= mat._21;
+			a[k+5] 	= mat._22;
+			a[k+6] 	= mat._23;
+			a[k+7] 	= mat._24;
+			
+			a[k+8] 	= mat._31;
+			a[k+9] 	= mat._32;
+			a[k+10] = mat._33;
+			a[k+11] = mat._34;
+			
+			a[k+12] = mat._41;
+			a[k+13] = mat._42;
+			a[k+14] = mat._43;
+			a[k+15] = mat._44;
 		}
 		return new Float32Array(a);
 	}
@@ -741,7 +746,14 @@ class GlDriver extends Driver {
 				var a = curShader.attribs[i];
 				gl.bindBuffer(GL.ARRAY_BUFFER, b.b.b.vbuf.b);
 				var stride = curShader.stride;
-				gl.vertexAttribPointer( a.index, a.size, a.etype, false, 0, b.offset * 4);
+				
+				if( !b.shared )
+					gl.vertexAttribPointer( a.index, a.size, a.etype, false, 0, 0);
+				else {
+					//trace('$a');
+					//trace('$b');
+					gl.vertexAttribPointer( a.index, a.size, a.etype, false, b.stride, b.offset*4);
+				}
 				checkError();
 			}
 				

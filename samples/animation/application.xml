@@ -38,6 +38,7 @@
 	<!--
 	<haxedef name="dump" value="pretty"  />
 	-->
-	
+	<!--
 	<haxedef name="idPalette"  />
+	-->
 </project>

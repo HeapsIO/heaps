@@ -31,6 +31,7 @@ class CustomObject extends Object {
 			ctx.addPass(draw);
 			return;
 		}
+		super.draw( ctx );
 		material.setup(ctx);
 		ctx.engine.selectMaterial(material);
 		primitive.render(ctx.engine);

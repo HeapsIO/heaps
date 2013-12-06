@@ -14,12 +14,12 @@ class MeshPrimitive extends Primitive {
 		return null;
 	}
 	
-	function addBuffer( name : String, buf, offset = 0 ) {
+	function addBuffer( name : String, buf, offset = 0,shared=false,stride=null ) {
 		if( bufferCache == null ) bufferCache = new Map();
 		var old = bufferCache.get(name);
 		if ( old != null ) old.dispose();
 		
-		var bo = new h3d.impl.Buffer.BufferOffset(buf, offset);
+		var bo = new h3d.impl.Buffer.BufferOffset(buf, offset,shared,stride);
 		bufferCache.set(name, bo);
 		return bo;
 	}

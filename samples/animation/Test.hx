@@ -99,7 +99,7 @@ class Test {
 		time = 0;
 		engine = new h3d.Engine();
 		engine.debug = true;
-		engine.backgroundColor = 0xFF20FF20;
+		engine.backgroundColor = 0xFF203020;
 		engine.onReady = start;
 		engine.init();
 		Key.init();
@@ -122,46 +122,14 @@ class Test {
 		trace("start !");
 		trace("prim ok");
 		scene = new Scene();
-		//addLine( new Vector(0, 0, 0), new Vector(1, 1, 1) );
-		
-		function onLoaded( bmp : hxd.BitmapData) {
-			var tex :Texture = Texture.fromBitmap( bmp);
-			var mat = new h3d.mat.MeshMaterial(tex);
-			mat.culling = None;
-			mat.lightSystem = null;
-			mat.depthTest = h3d.mat.Data.Compare.Always;
-			/*
-			mat.lightSystem = {
-				ambient : new h3d.Vector(0.5, 0.5, 0.5),
-				
-				dirs : [ 
-					{ dir : new h3d.Vector( -0.3, -0.5, -1), color : new h3d.Vector(1, 0.5, 0.5) },
-					{ dir : new h3d.Vector( -0.3, -0.5, 1), color : new h3d.Vector(0.0, 0, 1.0) }
-				],
-				points : [{ pos : new h3d.Vector(1.5,0,0), color : new h3d.Vector(0,1,0), att : new h3d.Vector(0,0,1) }],
-				
-			};
-			*/
-			mat.blend(SrcAlpha, OneMinusSrcAlpha);
-			
-			trace("bitmap Loaded");
-			update();
-			hxd.System.setLoop(update);
-		}
-		
-		#if sys
-		if ( lfs.exists("hxlogo.png")) {
-			lfs.get("hxlogo.png").loadBitmap(onLoaded);
-		}
-		#else 
-			//erk
-			onLoaded(hxd.Res.hxlogo.toBitmap());
-		#end
 		
 		var axis = new Axis();
-		//scene.addPass(axis);
+		scene.addPass(axis);
 		
 		loadFbx();
+		
+		update();
+		hxd.System.setLoop(update);
 	}
 	
 	function loadFbx(){
@@ -186,29 +154,35 @@ class Test {
 			var mat = new h3d.mat.MeshMaterial(tex);
 			//mat.shader = new DebugShader();
 			mat.lightSystem = null;
-			
-			mat.culling = None;
+			//mat.culling = None;
+			mat.culling = Back;
 			mat.blend(SrcAlpha, OneMinusSrcAlpha);
-			
+			mat.depthTest = h3d.mat.Data.Compare.Always;
+			mat.depthWrite = true; 
 			return mat;
 		}));
-		o.rotate(Math.PI/2, 0, 0);
+		//o.rotate(Math.PI/2, 0, 0);
 		
 		setSkin();
 	}
 	
 	static public var animMode : h3d.fbx.Library.AnimationMode = h3d.fbx.Library.AnimationMode.FrameAnim;
 	function setSkin() {
-		/*
+		
 		var anim = curFbx.loadAnimation(animMode);
-		if( anim != null ) {
+		if ( anim != null )
+		{
 			anim = scene.playAnimation(anim);
+			/*
+			anim.setFrame(0);
+			anim.update(0);
+			anim.pause=true;
+			*/
 		}
-		*/
 	}
 	
 	function update() {	
-		var dist = 1000;
+		var dist = 50;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);

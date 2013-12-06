@@ -183,6 +183,7 @@ class Object {
 	}
 	
 	function draw( ctx : RenderContext ) {
+		ctx.localPos = absPos;
 	}
 	
 	
@@ -349,6 +350,9 @@ class Object {
 		posChanged = true;
 	}
 	
+	/**
+	 TODO DE : rename to more canonical setRotation
+	 */
 	public function setRotate( rx : Float, ry : Float, rz : Float ) {
 		qRot.initRotate(rx, ry, rz);
 		posChanged = true;
