@@ -341,6 +341,7 @@ class Engine {
 		debugLine.shader.start = new h3d.Vector(x1, y1, z1);
 		debugLine.shader.end = new h3d.Vector(x2, y2, z2);
 		debugLine.shader.color = color;
+		
 		debugLine.render(h3d.Engine.getCurrent());
 	}
 

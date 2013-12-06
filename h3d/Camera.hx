@@ -35,7 +35,7 @@ class Camera {
 	var minv : Matrix;
 	var needInv : Bool;
 
-	public function new( fovX = 60., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
+	public function new( fovX = 60., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 1000., rightHanded = false ) {
 		this.fovX = fovX;
 		this.zoom = zoom;
 		this.screenRatio = screenRatio;

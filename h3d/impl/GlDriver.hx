@@ -138,14 +138,18 @@ class GlDriver extends Driver {
 		curMatBits = mbits;
 	}
 	
+	var clearOnce = false;
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
 		gl.clearColor(r, g, b, a);
+		
 		gl.depthMask(true);
-		gl.clearDepth(1.0);
+		if( clearOnce )
+			gl.clearDepth(1.0);
 		
 		//always clear depth & stencyl
 		gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT | GL.STENCIL_BUFFER_BIT);
-		if( hxd.System.debugLevel>=3) trace("clearing");
+		if ( hxd.System.debugLevel >= 3) trace("clearing");
+		clearOnce = true;
 	}
 
 	//TODO optimize me

@@ -25,7 +25,8 @@ class LineMaterial extends Material{
 	public function new() {
 		lshader = new LineShader();
 		super(lshader);
-		depthTest = h3d.mat.Data.Compare.Always;
+		depthTest = h3d.mat.Data.Compare.Less;
+		depthWrite = false;
 	}
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {

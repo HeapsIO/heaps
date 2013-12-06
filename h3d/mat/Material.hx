@@ -23,6 +23,8 @@ class Material {
 		this.blendSrc = Blend.One;
 		this.blendDst = Blend.Zero;
 		this.colorMask = 15;
+		
+		depth( depthWrite, depthTest);
 	}
 	
 	public function setup( ctx : h3d.scene.RenderContext ) {

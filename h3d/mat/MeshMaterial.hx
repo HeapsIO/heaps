@@ -310,6 +310,7 @@ class MeshShader extends h3d.impl.Shader {
 		varying mediump float talpha;
 		varying mediump float tblend;
 		
+		
 		#if hasShadowMap
 		varying mediump vec4 tshadowPos;
 		#end
@@ -328,7 +329,7 @@ class MeshShader extends h3d.impl.Shader {
 				float wy = weights.y;
 				float wz = weights.z;
 				
-				tpos = tpos * wx * skinMatrixes[sknx] + tpos * wy * skinMatrixes[skny] + tpos * wz * skinMatrixes[sknz];
+				tpos.xyz = tpos * wx * skinMatrixes[sknx] + tpos * wy * skinMatrixes[skny] + tpos * wz * skinMatrixes[sknz];
 				
 			#elseif hasPos
 				tpos *= mpos;
@@ -397,12 +398,12 @@ class MeshShader extends h3d.impl.Shader {
 			#if hasShadowMap
 				tshadowPos = shadowLightCenter * shadowLightProj * tpos;
 			#end
+			
 		}
 
 	";
 	
 	static var FRAGMENT = "
-	
 		varying lowp vec2 tuv;
 		varying lowp vec3 tcolor;
 		varying lowp vec3 acolor;

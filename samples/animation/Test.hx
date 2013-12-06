@@ -19,36 +19,6 @@ import hxd.System;
 import mt.flash.Key;
 import openfl.Assets;
 
-/*
-class DebugShader extends MeshShader {
-	
-	static var VERTEX = "
-		attribute vec3 pos;
-		attribute vec2 uv;
-		
-		uniform mat4 mpos;
-		uniform mat4 mproj;
-		
-		varying vec2 tuv;
-		varying float z;
-		
-		void main(void) {
-			gl_Position = vec4(pos.xyz, 1) * mpos * mproj;
-			z = gl_Position.z;
-			tuv = uv;	
-		}";
-		
-	static var FRAGMENT = "
-		varying vec2 tuv;
-		varying float z;
-		uniform sampler2D tex;
-		
-		void main(void) {
-			gl_FragColor = texture2D(tex, tuv);
-		}
-	";
-}
-*/
 
 class Axis implements h3d.IDrawable {
 
@@ -78,6 +48,8 @@ class LineMaterial extends Material{
 	override function setup( ctx : h3d.scene.RenderContext ) {
 		super.setup(ctx);
 		lshader.mproj = ctx.engine.curProjMatrix;
+		depthTest = h3d.mat.Data.Compare.Always;
+		depthWrite = false;
 	}
 	
 	public inline function get_start() return lshader.start;
@@ -125,7 +97,7 @@ class Test {
 		scene = new Scene();
 		
 		var axis = new Axis();
-		//scene.addPass(axis);
+		scene.addPass(axis);
 		
 		loadFbx();
 		
@@ -154,9 +126,10 @@ class Test {
 			var tex = Texture.fromBitmap( BitmapData.fromNative(Assets.getBitmapData("assets/checker.png",false)) );
 			var mat = new h3d.mat.MeshMaterial(tex);
 			mat.lightSystem = null;
-			mat.culling = Back;
+			mat.culling = Front;
 			mat.blend(SrcAlpha, OneMinusSrcAlpha);
 			mat.depthTest = h3d.mat.Data.Compare.Less;
+			//mat.depthTest = h3d.mat.Data.Compare.Always;
 			mat.depthWrite = true; 
 			return mat;
 		}));
@@ -173,7 +146,7 @@ class Test {
 	}
 	
 	function update() {	
-		var dist = 50;
+		var dist = 100;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);
