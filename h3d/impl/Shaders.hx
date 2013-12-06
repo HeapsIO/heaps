@@ -1,5 +1,6 @@
 package h3d.impl;
 
+//avoid to enable depthWrite with me
 class PointShader extends h3d.impl.Shader {
 
 #if flash
@@ -49,6 +50,7 @@ class PointShader extends h3d.impl.Shader {
 	
 }
 
+//avoid to enable depthWrite with me
 class LineShader extends h3d.impl.Shader {
 
 #if flash

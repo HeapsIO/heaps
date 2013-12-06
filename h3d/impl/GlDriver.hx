@@ -94,10 +94,23 @@ class GlDriver extends Driver {
 			var write = (mbits >> 2) & 1 == 1;
 			if( curMatBits < 0 || diff & 4 != 0 ) gl.depthMask(write);
 			var cmp = (mbits >> 3) & 7;
-			if( cmp == 0 )
+			if ( cmp == 0 ) {
+				if ( System.debugLevel >= 2)
+					trace("no depth test");
+					
 				gl.disable(GL.DEPTH_TEST);
+			}
 			else {
-				if( curMatBits < 0 || (curMatBits >> 3) & 7 == 0 ) gl.enable(GL.DEPTH_TEST);
+				if ( curMatBits < 0 || (curMatBits >> 3) & 7 == 0 ) {
+					if ( System.debugLevel >= 2)
+						trace("enabling " + COMPARE[cmp]);
+					
+					gl.enable(GL.DEPTH_TEST);
+				}
+				
+				if ( System.debugLevel >= 2)
+					trace("using " + COMPARE[cmp]);
+					
 				gl.depthFunc(COMPARE[cmp]);
 			}
 		}
@@ -111,7 +124,9 @@ class GlDriver extends Driver {
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
 		gl.clearColor(r, g, b, a);
 		gl.clearDepth(1);
-		gl.clear(GL.COLOR_BUFFER_BIT|GL.DEPTH_BUFFER_BIT);
+		
+		//always clear depth & stencyl
+		gl.clear(GL.COLOR_BUFFER_BIT|GL.DEPTH_BUFFER_BIT|GL.STENCIL_BUFFER_BIT);
 	}
 
 	//TODO optimize me
@@ -179,21 +194,36 @@ class GlDriver extends Driver {
 		gl.deleteBuffer(v.b);
 	}
 	
+	inline function makeMips()
+	{
+		gl.hint(gl.GENERATE_MIPMAP_HINT, gl.DONT_CARE);
+		gl.generateMipmap(GL.TEXTURE_2D);
+		checkError();
+	}
 	
+	//TODO miplevel and side
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
+		gl.enable(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
 		var pix = bmp.getPixels();
 		pix.convert(RGBA);
 		var pixels = new Uint8Array(pix.bytes.getData());
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels);
+		
+		if ( mipLevel > 0 ) makeMips();
+			
 		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
 	
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
+		gl.enable(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
 		pixels.convert(RGBA);
 		var pixels = new Uint8Array(pixels.bytes.getData());
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels);
+		
+		if ( mipLevel > 0 ) makeMips();
+		
 		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
 	

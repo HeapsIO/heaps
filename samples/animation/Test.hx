@@ -72,6 +72,7 @@ class LineMaterial extends Material{
 		lshader = new LineShader();
 		super(lshader);
 		depthTest = h3d.mat.Data.Compare.Always;
+		depthWrite = false;
 	}
 	
 	override function setup( ctx : h3d.scene.RenderContext ) {
@@ -123,8 +124,8 @@ class Test {
 		trace("prim ok");
 		scene = new Scene();
 		
-		var axis = new Axis();
-		scene.addPass(axis);
+		//var axis = new Axis();
+		//scene.addPass(axis);
 		
 		loadFbx();
 		
@@ -157,7 +158,7 @@ class Test {
 			//mat.culling = None;
 			mat.culling = Back;
 			mat.blend(SrcAlpha, OneMinusSrcAlpha);
-			mat.depthTest = h3d.mat.Data.Compare.Always;
+			mat.depthTest = h3d.mat.Data.Compare.Less;
 			mat.depthWrite = true; 
 			return mat;
 		}));
