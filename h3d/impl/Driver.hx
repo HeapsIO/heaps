@@ -51,14 +51,14 @@ class Driver {
 		return false;
 	}
 	
-	public function selectBuffer( buffer : VertexBuffer ) {
-	}
-	
 	public function getShaderInputNames() : Array<String> {
 		return null;
 	}
 	
-	public function selectMultiBuffers( buffers : Array<Buffer.BufferOffset> ) {
+	public function selectBuffer( buffer : VertexBuffer ) {
+	}
+	
+	public function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
 	}
 	
 	public function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {

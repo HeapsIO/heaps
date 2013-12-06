@@ -41,7 +41,7 @@ class Stage3dDriver extends Driver {
 	var curMatBits : Int;
 	var curShader : hxsl.Shader.ShaderInstance;
 	var curBuffer : VertexBuffer;
-	var curMultiBuffer : Array<h3d.impl.Buffer.BufferOffset>;
+	var curMultiBuffer : Array<Int>;
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
 	var curSamplerBits : Array<Int>;
@@ -67,7 +67,7 @@ class Stage3dDriver extends Driver {
 		curMatBits = -1;
 		curShader = null;
 		curBuffer = null;
-		curMultiBuffer = null;
+		curMultiBuffer = [];
 		for( i in 0...curAttributes )
 			ctx.setVertexBufferAt(i, null);
 		curAttributes = 0;
@@ -265,7 +265,7 @@ class Stage3dDriver extends Driver {
 			}
 			// force remapping of vertex buffer
 			curBuffer = null;
-			curMultiBuffer = null;
+			curMultiBuffer[0] = -1;
 			curShader = s;
 		}
 		if( s.varsChanged ) {
@@ -300,7 +300,7 @@ class Stage3dDriver extends Driver {
 		if( v == curBuffer )
 			return;
 		curBuffer = v;
-		curMultiBuffer = null;
+		curMultiBuffer[0] = -1;
 		if( v.stride < curShader.stride )
 			throw "Buffer stride (" + v.stride + ") and shader stride (" + curShader.stride + ") mismatch";
 		if( !v.written )
@@ -322,35 +322,40 @@ class Stage3dDriver extends Driver {
 		return curShader.bufferNames;
 	}
 	
-	override function selectMultiBuffers( buffers : Array<Buffer.BufferOffset> ) {
+	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
 		// select the multiple buffers elements
-		var changed = curMultiBuffer == null || curMultiBuffer.length != buffers.length;
-		if( !changed )
-			for( i in 0...curMultiBuffer.length )
-				if( buffers[i] != curMultiBuffer[i] ) {
+		var changed = false;
+		if( !changed ) {
+			var b = buffers;
+			for( i in 0...curAttributes ) {
+				if( b == null || b.id != curMultiBuffer[i] ) {
 					changed = true;
 					break;
 				}
+				b = b.next;
+			}
+		}
 		if( changed ) {
 			var pos = 0, offset = 0;
 			var bits = curShader.bufferFormat;
+			var b = buffers;
 			while( offset < curShader.stride ) {
 				var size = bits & 7;
-				var b = buffers[pos];
 				if( b.b.next != null )
 					throw "Buffer is split";
 				if( !b.b.b.vbuf.written )
 					b.b.b.vbuf.finalize(this);
 				ctx.setVertexBufferAt(pos, b.b.b.vbuf.vbuf, b.offset, FORMAT[size]);
+				curMultiBuffer[pos] = b.id;
 				offset += size == 0 ? 1 : size;
 				bits >>= 3;
 				pos++;
+				b = b.next;
 			}
 			for( i in pos...curAttributes )
 				ctx.setVertexBufferAt(i, null);
 			curAttributes = pos;
 			curBuffer = null;
-			curMultiBuffer = buffers;
 		}
 	}
 	

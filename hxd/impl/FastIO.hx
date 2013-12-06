@@ -68,7 +68,6 @@ class FastIntIO extends FastIO<Int> {
 			flush((write < read ? write : (write - read)) * 4);
 			if( !hasNext() )
 				break;
-			var k = 0;
 			for( id in this ) {
 				var x = id & ((1 << bits) - 1);
 				var y = id >>> bits;
@@ -78,7 +77,6 @@ class FastIntIO extends FastIO<Int> {
 				add2d(x - 1, y, bits);
 				add2d(x, y + 1, bits);
 				add2d(x, y - 1, bits);
-				k += 4;
 			}
 		}
 	}

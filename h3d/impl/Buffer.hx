@@ -65,9 +65,19 @@ class Buffer {
 }
 
 class BufferOffset {
+	public var id : Int;
 	public var b : Buffer;
 	public var offset : Int;
+	
+	/*
+		This is used to return a list of BufferOffset without allocating an array
+	*/
+	public var next : BufferOffset;
+	
+	static var UID = 0;
+	
 	public function new(b, offset) {
+		this.id = UID++;
 		this.b = b;
 		this.offset = offset;
 	}
@@ -76,5 +86,6 @@ class BufferOffset {
 			b.dispose();
 			b = null;
 		}
+		next = null;
 	}
 }

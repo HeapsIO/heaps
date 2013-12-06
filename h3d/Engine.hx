@@ -109,6 +109,18 @@ class Engine {
 	public inline function renderQuadBuffer( b : h3d.impl.Buffer, start = 0, max = -1 ) {
 		return renderBuffer(b, mem.quadIndexes, 2, start, max);
 	}
+	
+	public function enableDriver( ?b : Bool ) {
+		if( b == null )
+			b = Std.is(driver, h3d.impl.NullDriver);
+		if( b ) {
+			var d = Std.instance(driver, h3d.impl.NullDriver);
+			if( d != null )
+				driver = d.driver;
+		} else if( !Std.is(driver,h3d.impl.NullDriver) ) {
+			driver = new h3d.impl.NullDriver(driver);
+		}
+	}
 
 	// we use preallocated indexes so all the triangles are stored inside our buffers
 	function renderBuffer( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
@@ -161,7 +173,7 @@ class Engine {
 		}
 	}
 	
-	public function renderMultiBuffers( buffers : Array<h3d.impl.Buffer.BufferOffset>, indexes : h3d.impl.Indexes, startTri = 0, drawTri = -1 ) {
+	public function renderMultiBuffers( buffers : h3d.impl.Buffer.BufferOffset, indexes : h3d.impl.Indexes, startTri = 0, drawTri = -1 ) {
 		var maxTri = Std.int(indexes.count / 3);
 		if( maxTri <= 0 ) return;
 		driver.selectMultiBuffers(buffers);
