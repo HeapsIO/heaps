@@ -124,7 +124,7 @@ class Test {
 		trace("prim ok");
 		scene = new Scene();
 		
-		//var axis = new Axis();
+		var axis = new Axis();
 		//scene.addPass(axis);
 		
 		loadFbx();
@@ -153,16 +153,13 @@ class Test {
 		scene.addChild(o=curFbx.makeObject( function(str, mat) {
 			var tex = Texture.fromBitmap( BitmapData.fromNative(Assets.getBitmapData("assets/checker.png",false)) );
 			var mat = new h3d.mat.MeshMaterial(tex);
-			//mat.shader = new DebugShader();
 			mat.lightSystem = null;
-			//mat.culling = None;
 			mat.culling = Back;
 			mat.blend(SrcAlpha, OneMinusSrcAlpha);
 			mat.depthTest = h3d.mat.Data.Compare.Less;
 			mat.depthWrite = true; 
 			return mat;
 		}));
-		//o.rotate(Math.PI/2, 0, 0);
 		
 		setSkin();
 	}
@@ -172,14 +169,7 @@ class Test {
 		
 		var anim = curFbx.loadAnimation(animMode);
 		if ( anim != null )
-		{
 			anim = scene.playAnimation(anim);
-			/*
-			anim.setFrame(0);
-			anim.update(0);
-			anim.pause=true;
-			*/
-		}
 	}
 	
 	function update() {	

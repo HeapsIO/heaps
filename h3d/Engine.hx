@@ -311,9 +311,10 @@ class Engine {
 		if( debugPoint == null ) {
 			debugPoint = new Drawable(new h3d.prim.Plan2D(), new h3d.impl.Shaders.PointShader());
 			debugPoint.material.blend(SrcAlpha, OneMinusSrcAlpha);
-			debugPoint.material.depthWrite = false;
-			debugLine.material.culling = None;
 		}
+		
+		debugPoint.material.depthWrite = false;
+		debugLine.material.culling = None;
 		debugPoint.material.depthTest = depth ? h3d.mat.Data.Compare.LessEqual : h3d.mat.Data.Compare.Always;
 		debugPoint.shader.mproj = curProjMatrix;
 		debugPoint.shader.delta = new h3d.Vector(x, y, z, 1);
@@ -331,10 +332,11 @@ class Engine {
 		if( debugLine == null ) {
 			debugLine = new Drawable(new h3d.prim.Plan2D(), new h3d.impl.Shaders.LineShader());
 			debugLine.material.blend(SrcAlpha, OneMinusSrcAlpha);
-			debugLine.material.depthWrite = false;
-			debugLine.material.culling = None;
 		}
+		
 		debugLine.material.depthTest = depth ? h3d.mat.Data.Compare.LessEqual : h3d.mat.Data.Compare.Always;
+		debugLine.material.culling = None;
+		debugLine.material.depthWrite = false;
 		debugLine.shader.mproj = curProjMatrix;
 		debugLine.shader.start = new h3d.Vector(x1, y1, z1);
 		debugLine.shader.end = new h3d.Vector(x2, y2, z2);

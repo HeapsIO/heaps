@@ -449,7 +449,7 @@ class GlDriver extends Driver {
 			if( inf.name.substr(0, 6) == "webgl_" )
 				continue; // skip native uniforms
 				
-			if (System.debugLevel>=2) trace('retrieved uniform $inf');
+			//if (System.debugLevel>=2) trace('retrieved uniform $inf');
 			
 			var isArray = false;
 			var t = decodeTypeInt(inf.type);
@@ -530,7 +530,7 @@ class GlDriver extends Driver {
 				index : texIndex,
 			};
 			inst.uniforms.push( tu);
-			if(System.debugLevel>=2) trace('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
+			//if(System.debugLevel>=2) trace('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
 		}
 		inst.program = p;
 		checkError();
