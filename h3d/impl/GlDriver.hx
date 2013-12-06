@@ -75,10 +75,12 @@ class GlDriver extends Driver {
 			if( mbits & 3 == 0 )
 				gl.disable(GL.CULL_FACE);
 			else {
-				if( curMatBits & 3 == 0 ) gl.enable(GL.CULL_FACE);
+				if ( curMatBits & 3 == 0 )
+					gl.enable(GL.CULL_FACE);
 				gl.cullFace(FACES[mbits&3]);
 			}
 		}
+		
 		if( diff & (0xFF << 6) != 0 ) {
 			var src = (mbits >> 6) & 15;
 			var dst = (mbits >> 10) & 15;
@@ -92,41 +94,58 @@ class GlDriver extends Driver {
 	
 		if( diff & (15 << 2) != 0 ) {
 			var write = (mbits >> 2) & 1 == 1;
-			if( curMatBits < 0 || diff & 4 != 0 ) gl.depthMask(write);
+			if ( curMatBits < 0 || diff & 4 != 0 ) {
+				if ( System.debugLevel >= 3) trace("write :"+write);
+				
+				gl.depthMask(write);
+			}
+				
+			gl.enable(GL.DEPTH_TEST);
+			
 			var cmp = (mbits >> 3) & 7;
 			if ( cmp == 0 ) {
-				if ( System.debugLevel >= 2)
-					trace("no depth test");
-					
+				if ( System.debugLevel >= 3) trace("no depth test");
+				
 				gl.disable(GL.DEPTH_TEST);
 			}
 			else {
+				
 				if ( curMatBits < 0 || (curMatBits >> 3) & 7 == 0 ) {
-					if ( System.debugLevel >= 2)
-						trace("enabling " + COMPARE[cmp]);
+					if ( System.debugLevel >= 3) trace("enabling depth test");
 					
 					gl.enable(GL.DEPTH_TEST);
 				}
 				
-				if ( System.debugLevel >= 2)
-					trace("using " + COMPARE[cmp]);
+				if ( System.debugLevel >= 3) trace("using " + glCompareToString(COMPARE[cmp]));
 					
 				gl.depthFunc(COMPARE[cmp]);
 			}
 		}
+		else {
+			if ( System.debugLevel >= 2)
+					trace("no depth setup ");
+		}
+		
+		checkError();
 			
-		if( diff & (15 << 14) != 0 )
+		if ( diff & (15 << 14) != 0 ) {
+			if ( System.debugLevel >= 2) trace("using color mask");
+					
 			gl.colorMask((mbits >> 14) & 1 != 0, (mbits >> 14) & 2 != 0, (mbits >> 14) & 4 != 0, (mbits >> 14) & 8 != 0);
+			checkError();
+		}
 			
 		curMatBits = mbits;
 	}
 	
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
 		gl.clearColor(r, g, b, a);
-		gl.clearDepth(1);
+		gl.depthMask(true);
+		gl.clearDepth(1.0);
 		
 		//always clear depth & stencyl
-		gl.clear(GL.COLOR_BUFFER_BIT|GL.DEPTH_BUFFER_BIT|GL.STENCIL_BUFFER_BIT);
+		gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT | GL.STENCIL_BUFFER_BIT);
+		if( hxd.System.debugLevel>=3) trace("clearing");
 	}
 
 	//TODO optimize me
@@ -213,6 +232,7 @@ class GlDriver extends Driver {
 		if ( mipLevel > 0 ) makeMips();
 			
 		gl.bindTexture(GL.TEXTURE_2D, null);
+		checkError();
 	}
 	
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
@@ -225,6 +245,7 @@ class GlDriver extends Driver {
 		if ( mipLevel > 0 ) makeMips();
 		
 		gl.bindTexture(GL.TEXTURE_2D, null);
+		checkError();
 	}
 	
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
@@ -234,6 +255,7 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
+		checkError();
 	}
 
 	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
@@ -243,6 +265,7 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
+		checkError();
 	}
 
 	override function uploadIndexesBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
@@ -857,6 +880,20 @@ class GlDriver extends Driver {
 		GL.LESS,
 		GL.LEQUAL,
 	];
+	
+	function glCompareToString(c){
+		return switch(c) {
+			case GL.ALWAYS    :      "ALWAYS";
+			case GL.NEVER     :      "NEVER";  
+			case GL.EQUAL     :      "EQUAL";   
+			case GL.NOTEQUAL  :      "NOTEQUAL";
+			case GL.GREATER   :      "GREATER";
+			case GL.GEQUAL    :      "GEQUAL";  
+			case GL.LESS      :      "LESS";    
+			case GL.LEQUAL    :      "LEQUAL";
+			default :			 	"Unknown";
+		}
+	}
 
 
 	public inline function checkError() {
