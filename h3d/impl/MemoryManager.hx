@@ -75,7 +75,7 @@ class BigBuffer {
 		vbuf = null;
 	}
 	
-	function isDisposed() {
+	inline function isDisposed() {
 		return vbuf == null;
 	}
 
