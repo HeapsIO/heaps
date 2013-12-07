@@ -509,9 +509,37 @@ class Checker {
 			var s = switch( size ) {
 			case SConst(_): size;
 			case SVar(v):
-				var v2 = vars.get(v.name);
-				if( v2 == null ) error("Array size variable not found", pos);
-				if( !v2.isConst() ) error("Array size variable should be a constant", pos);
+				var path = v.name.split(".");
+				var v2 = null;
+				for( n in path ) {
+					if( v2 == null ) {
+						v2 = vars.get(n);
+						// special handling when we reference our own variable which is being currently declared
+						if( v2 == null && parent != null ) {
+							var p = parent;
+							while( p.parent != null )
+								p = p.parent;
+							if( p.name == n )
+								v2 = p;
+						}
+					} else {
+						v2 = switch( v2.type ) {
+						case TStruct(vl):
+							var f = null;
+							for( v in vl )
+								if( v.name == n ) {
+									f = v;
+									break;
+								}
+							f;
+						default:
+							null;
+						}
+					}
+					if( v2 == null ) break;
+				}
+				if( v2 == null ) error("Array size variable '" + v.name + "'not found", pos);
+				if( !v2.isConst() ) error("Array size variable '" + v.name + "'should be a constant", pos);
 				SVar(v2);
 			}
 			return TArray(makeVarType(t,parent,pos), s);

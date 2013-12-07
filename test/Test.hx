@@ -137,16 +137,13 @@ static var SRC = {
 class LightSystem extends hxsl.Shader {
 static var SRC = {
 
-	@global("light.ndirs") @const(16) var NDirLights : Int;
-	@global("light.npoints") @const(64) var NPointLights : Int;
-	
 	@global var light : {
 		@const var perPixel : Bool;
-		@const(16) var ndirs : Int;
-		@const(64) var npoints : Int;
+		@const(16) var NDirs : Int;
+		@const(64) var NPoints : Int;
 		var ambient : Vec3;
-		var dirs : Array<{ dir : Vec3, color : Vec3 }, NDirLights>;
-		var points : Array<{ pos : Vec3, color : Vec3, att : Vec3 }, NPointLights>;
+		var dirs : Array<{ dir : Vec3, color : Vec3 }, light.NDirs>;
+		var points : Array<{ pos : Vec3, color : Vec3, att : Vec3 }, light.NPoints>;
 	};
 	
 	var transformedPosition : Vec3;

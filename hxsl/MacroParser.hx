@@ -74,7 +74,10 @@ class MacroParser {
 			}
 			var size : Ast.SizeDecl = switch( size ) {
 			case TPExpr({ expr : EConst(CInt(v)) }): SConst(Std.parseInt(v));
-			case TPType(TPath( { pack : [], name : name, sub : null, params : [] } )): SVar( { id : 0, type : null, name : name, kind : null } );
+			case TPType(TPath( { pack : pack, name : name, sub : null, params : [] } )):
+				var pack = pack.copy();
+				pack.push(name);
+				SVar( { id : 0, type : null, name : pack.join("."), kind : null } );
 			default: null;
 			}
 			if( t != null && size != null )
