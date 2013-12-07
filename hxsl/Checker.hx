@@ -376,9 +376,9 @@ class Checker {
 				error("This function should return " + curFun.ret.toString(), e.pos);
 			var e = e == null ? null : typeWith(e, curFun.ret);
 			TReturn(e);
-		case EFor(v, loop, block):
-			var loop = typeExpr(loop, Value);
-			switch( loop.t ) {
+		case EFor(v, it, block):
+			var it = typeExpr(it, Value);
+			switch( it.t ) {
 			case TArray(t, _):
 				var v : TVar = {
 					id : 0,
@@ -390,9 +390,9 @@ class Checker {
 				vars.set(v.name, v);
 				var block = typeExpr(block, NoValue);
 				if( old == null ) vars.remove(v.name) else vars.set(v.name, old);
-				TFor(v, loop, block);
+				TFor(v, it, block);
 			default:
-				error("Cannot iterate on " + loop.t.toString(), loop.p);
+				error("Cannot iterate on " + it.t.toString(), it.p);
 			}
 		case EContinue:
 			if( !inLoop ) error("Continue outside loop", e.pos);
@@ -417,6 +417,14 @@ class Checker {
 			default:
 				error("Cannot index " + e1.t.toString() + " : should be an array", e.pos);
 			}
+		case EArrayDecl(el):
+			if( el.length == 0 ) error("Empty array not supported", e.pos);
+			var el = [for( e in el ) typeExpr(e, Value)];
+			var t = el[0].t;
+			for( i in 1...el.length )
+				unifyExpr(el[i], t);
+			type = TArray(t, SConst(el.length));
+			TArrayDecl(el);
 		}
 		return { e : ed, t : type, p : e.pos };
 	}
@@ -513,6 +521,13 @@ class Checker {
 			}
 			return parent.type;
 		case TArray(t, size):
+			switch( t ) {
+			case TArray(_):
+				error("Multidimentional arrays are not allowed", pos);
+			case TStruct(_):
+				error("Array of structures are not allowed", pos);
+			default:
+			}
 			var s = switch( size ) {
 			case SConst(_): size;
 			case SVar(v):
@@ -810,8 +825,12 @@ class Checker {
 			unifyExpr(e1, TBool);
 			unifyExpr(e2, TBool);
 			TBool;
+		case OpInterval:
+			unifyExpr(e1, TInt);
+			unifyExpr(e2, TInt);
+			TArray(TInt, SConst(0));
 		default:
-			error("TODO", pos);
+			error("Unsupported operator " + op, pos);
 		}
 	}
 }

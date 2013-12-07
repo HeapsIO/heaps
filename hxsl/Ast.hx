@@ -115,6 +115,7 @@ enum ExprDef {
 	EBreak;
 	EContinue;
 	EArray( e : Expr, eindex : Expr );
+	EArrayDecl( el : Array<Expr> );
 }
 
 typedef TVar = {
@@ -218,6 +219,7 @@ enum TExprDef {
 	TContinue;
 	TBreak;
 	TArray( e : TExpr, index : TExpr );
+	TArrayDecl( el : Array<TExpr> );
 }
 
 typedef TExpr = { e : TExprDef, t : Type, p : Position }
@@ -333,6 +335,7 @@ class Tools {
 		case TReturn(e): if( e != null ) f(e);
 		case TFor(_, it, loop): f(it); f(loop);
 		case TArray(e, index): f(e); f(index);
+		case TArrayDecl(el): for( e in el ) f(e);
 		case TConst(_),TVar(_),TGlobal(_), TDiscard, TContinue, TBreak:
 		}
 	}
@@ -349,7 +352,8 @@ class Tools {
 		case TIf(econd, eif, eelse): TIf(f(econd),f(eif),if( eelse != null ) f(eelse) else null);
 		case TReturn(e): TReturn(if( e != null ) f(e) else null);
 		case TFor(v, it, loop): TFor(v, f(it), f(loop));
-		case TArray(e, index): TArray(f(e),f(index));
+		case TArray(e, index): TArray(f(e), f(index));
+		case TArrayDecl(el): TArrayDecl([for( e in el ) f(e)]);
 		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak: e.e;
 		}
 		return { e : ed, t : e.t, p : e.p };

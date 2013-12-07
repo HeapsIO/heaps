@@ -192,6 +192,8 @@ class MacroParser {
 			EContinue;
 		case EArray(e1, e2):
 			EArray(parseExpr(e1), parseExpr(e2));
+		case EArrayDecl(el):
+			EArrayDecl([for( e in el ) parseExpr(e)]);
 		default:
 			null;
 		};

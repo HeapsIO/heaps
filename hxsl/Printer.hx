@@ -191,6 +191,14 @@ class Printer {
 			case CFloat(f): f;
 			case CString(s): '"' + s + '"';
 			});
+		case TArrayDecl(el):
+			add("[");
+			var first = true;
+			for( e in el ) {
+				if( first ) first = false else add(", ");
+				addExpr(e,tabs);
+			}
+			add("]");
 		}
 	}
 	
