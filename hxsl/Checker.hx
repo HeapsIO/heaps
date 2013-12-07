@@ -505,11 +505,13 @@ class Checker {
 		switch( t ) {
 		case TStruct(vl):
 			// mutate to allow TArray to access previously declared vars
+			var vl = vl.copy();
+			parent.type = TStruct(vl);
 			for( i in 0...vl.length ) {
 				var v = vl[i];
 				vl[i] = makeVar( { type : v.type, qualifiers : v.qualifiers, name : v.name, kind : v.kind, expr : null }, pos, parent);
 			}
-			return t;
+			return parent.type;
 		case TArray(t, size):
 			var s = switch( size ) {
 			case SConst(_): size;
