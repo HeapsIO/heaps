@@ -8,12 +8,9 @@ using hxsl.Ast;
 **/
 class Eval {
 	
-	public var inlineFunctions : Bool;
-	public var unrollLoops : Bool;
-	
-	var constants : Map<TVar,Const>;
+	var constants : Map<TVar,TExprDef>;
 	var varMap : Map<TVar,TVar>;
-	var funMap : Map<TFunction,TFunction>;
+	var funMap : Map<TVar,TFunction>;
 	
 	public function new() {
 		varMap = new Map();
@@ -22,7 +19,7 @@ class Eval {
 	}
 	
 	public function setConstant( v : TVar, c : Const ) {
-		constants.set(v, c);
+		constants.set(v, TConst(c));
 	}
 	
 	function mapVar( v : TVar ) {
@@ -45,10 +42,15 @@ class Eval {
 			var c = constants.get(vs);
 			if( c != null )
 				switch( c ) {
-				case CInt(v):
+				case TConst(CInt(v)):
 					v2.type = TArray(t, SConst(v));
 				default:
+					Error.t("Integer value expected for array size constant " + vs.name, null);
 				}
+			else {
+				var vs2 = mapVar(vs);
+				v2.type = TArray(t, SVar(vs2));
+			}
 		default:
 		}
 		return v2;
@@ -61,18 +63,80 @@ class Eval {
 				ref : mapVar(f.ref),
 				args : [for( a in f.args ) mapVar(a)],
 				ret : f.ret,
-				expr : null,
+				expr : f.expr,
 			};
-			funs.push(f2);
-			funMap.set(f, f2);
+			switch( f.ref.name ) {
+			case "vertex", "fragment", "__init__":
+				funs.push(f2);
+			default:
+			}
+			funMap.set(f2.ref, f2);
 		}
 		for( i in 0...funs.length )
-			funs[i].expr = evalExpr(s.funs[i].expr);
+			funs[i].expr = evalExpr(funs[i].expr);
 		return {
 			name : s.name,
 			vars : [for( v in s.vars ) mapVar(v)],
 			funs : funs,
 		};
+	}
+	
+	var markReturn : Bool;
+	
+	function hasReturn( e : TExpr ) {
+		markReturn = false;
+		hasReturnLoop(e);
+		return markReturn;
+	}
+	
+	function hasReturnLoop( e : TExpr ) {
+		switch( e.e ) {
+		case TReturn(_):
+			markReturn = true;
+		default:
+			if( !markReturn ) e.iter(hasReturnLoop);
+		}
+	}
+	
+	function handleReturn( e : TExpr, final : Bool = false ) : TExpr {
+		switch( e.e ) {
+		case TReturn(v):
+			if( !final )
+				Error.t("Cannot inline not final return", e.p);
+			if( v == null )
+				return { e : TBlock([]), t : TVoid, p : e.p };
+			return handleReturn(v, true);
+		case TBlock(el):
+			var i = 0, last = el.length;
+			var out = [];
+			while( i < last ) {
+				var e = el[i++];
+				if( i == last )
+					out.push(handleReturn(e, final));
+				else switch( e.e ) {
+				case TIf(econd, eif, null) if( final && hasReturn(eif) ):
+					out.push(handleReturn( { e : TIf(econd, eif, { e : TBlock(el.slice(i)), t : e.t, p : e.p } ), t : e.t, p : e.p } ));
+					break;
+				default:
+					out.push(handleReturn(e));
+				}
+			}
+			var t = if( final ) out[out.length - 1].t else e.t;
+			return { e : TBlock(out), t : t, p : e.p };
+		case TParenthesis(v):
+			var v = handleReturn(v, final);
+			return { e : TParenthesis(v), t : v.t, p : e.p };
+		case TIf(cond, eif, eelse) if( eelse != null && final ):
+			var cond = handleReturn(cond);
+			var eif = handleReturn(eif, final);
+			return { e : TIf(cond, eif, handleReturn(eelse, final)), t : eif.t, p : e.p };
+		default:
+			return e.map(handleReturnDef);
+		}
+	}
+	
+	function handleReturnDef(e) {
+		return handleReturn(e);
 	}
 	
 	function evalExpr( e : TExpr ) : TExpr {
@@ -81,19 +145,65 @@ class Eval {
 		case TVar(v):
 			var c = constants.get(v);
 			if( c != null )
-				TConst(c);
+				c;
 			else
 				TVar(mapVar(v));
 		case TVarDecl(v, init):
 			TVarDecl(mapVar(v), init == null ? null : evalExpr(init));
 		case TArray(e1, e2):
-			TArray(evalExpr(e1), evalExpr(e2));
+			var e1 = evalExpr(e1);
+			switch( [e1.e, e2.e] ) {
+			case [TArrayDecl(el),TConst(CInt(i))] if( i >= 0 && i < el.length ):
+				el[i].e;
+			default:
+				TArray(evalExpr(e1), evalExpr(e2));
+			}
 		case TSwiz(e, r):
 			TSwiz(evalExpr(e), r.copy());
 		case TReturn(e):
 			TReturn(e == null ? null : evalExpr(e));
-		case TCall(e, args):
-			TCall(evalExpr(e), [for( a in args ) evalExpr(a)]);
+		case TCall(c, args):
+			var c = evalExpr(c);
+			var args = [for( a in args ) evalExpr(a)];
+			switch( c.e ) {
+			case TGlobal(_):
+				TCall(c, args);
+			case TVar(v) if( funMap.exists(v) ):
+				var f = funMap.get(v);
+				var outExprs = [], undo = [];
+				for( i in 0...f.args.length ) {
+					var v = f.args[i];
+					var e = args[i];
+					switch( e.e ) {
+					case TConst(_), TVar({ kind : (Input|Param|Global) }):
+						var old = constants.get(v);
+						undo.push(function() old == null ? constants.remove(v) : constants.set(v, old));
+						constants.set(v, e.e);
+					default:
+						var old = varMap.get(v);
+						if( old == null )
+							undo.push(function() varMap.remove(v));
+						else {
+							varMap.remove(v);
+							undo.push(function() varMap.set(v, old));
+						}
+						var v = mapVar(v);
+						outExprs.push( { e : TVarDecl(v, e), t : TVoid, p : e.p } );
+					}
+				}
+				var e = handleReturn(evalExpr(f.expr), true);
+				for( u in undo ) u();
+				switch( e.e ) {
+				case TBlock(el):
+					for( e in el )
+						outExprs.push(e);
+				default:
+					outExprs.push(e);
+				}
+				TBlock(outExprs);
+			default:
+				Error.t("Cannot eval non-static call expresssion '" + new Printer().exprString(c)+"'", c.p);
+			}
 		case TBlock(el):
 			var out = [];
 			var last = el.length - 1;
@@ -188,8 +298,8 @@ class Eval {
 			case OpGte: compare(function(x) return x >= 0);
 			case OpLt: compare(function(x) return x < 0);
 			case OpLte: compare(function(x) return x <= 0);
-			case OpArrow, OpInterval: throw "assert";
-			case OpAssign, OpAssignOp(_): TBinop(op, e1, e2);
+			case OpInterval, OpAssign, OpAssignOp(_): TBinop(op, e1, e2);
+			case OpArrow: throw "assert";
 			}
 		case TUnop(op, e):
 			var e = evalExpr(e);
@@ -225,7 +335,27 @@ class Eval {
 		case TDiscard:
 			TDiscard;
 		case TFor(v, it, loop):
-			TFor(mapVar(v), evalExpr(it), evalExpr(loop));
+			var v2 = mapVar(v);
+			var it = evalExpr(it);
+			var e = switch( it.e ) {
+			case TBinop(OpInterval, { e : TConst(CInt(start)) }, { e : TConst(CInt(len)) } ):
+				var out = [];
+				var old = varMap;
+				for( i in start...len ) {
+					varMap = [for( c in old.keys() ) c => old.get(c)];
+					constants.set(v, TConst(CInt(i)));
+					out.push(evalExpr(loop));
+				}
+				varMap = old;
+				constants.remove(v);
+				TBlock(out);
+			default:
+				TFor(v2, it, evalExpr(loop));
+			}
+			varMap.remove(v);
+			e;
+		case TArrayDecl(el):
+			TArrayDecl([for( e in el ) evalExpr(e)]);
 		};
 		return { e : d, t : e.t, p : e.p }
 	}
