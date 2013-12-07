@@ -50,7 +50,7 @@ class Flatten {
 		inline function mkInt(v:Int) {
 			return { e : TConst(CInt(v)), t : TInt, p : e.p };
 		}
-		return switch( e.e ) {
+		e = switch( e.e ) {
 		case TVar(v):
 			var a = varMap.get(v);
 			inline function access( index : Int ) : TExpr {
@@ -88,7 +88,29 @@ class Flatten {
 			}
 		default:
 			e.map(mapExpr);
+		};
+		return optimize(e);
+	}
+	
+	function optimize( e : TExpr ) {
+		switch( e.e ) {
+		case TCall( { e : TGlobal(Mat3x4) }, [ { e : TCall( { e : TGlobal(Mat4) }, args) } ]):
+			var rem = 0;
+			var size = 0;
+			while( size < 4 ) {
+				var t = args[args.length - 1 - rem].t;
+				size += varSize(t,VFloat);
+				rem++;
+			}
+			if( size == 4 ) {
+				for( i in 0...rem )
+					args.pop();
+				var emat = switch( e.e ) { case TCall(e, _): e; default: throw "assert"; };
+				return { e : TCall(emat, args), t : e.t, p : e.p };
+			}
+		default:
 		}
+		return e;
 	}
 	
 	function pack( name : String, kind : VarKind, vars : Array<TVar>, t : VecType ) {
