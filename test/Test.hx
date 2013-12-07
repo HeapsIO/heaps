@@ -142,8 +142,11 @@ static var SRC = {
 		@const(16) var NDirs : Int;
 		@const(64) var NPoints : Int;
 		var ambient : Vec3;
-		var dirs : Array<{ dir : Vec3, color : Vec3 }, light.NDirs>;
-		var points : Array<{ pos : Vec3, color : Vec3, att : Vec3 }, light.NPoints>;
+		var dirDir : Array<Vec3, light.NDirs>;
+		var dirColor : Array<Vec3, light.NDirs>;
+		var pointPos : Array<Vec3, light.NPoints>;
+		var pointColor : Array<Vec3, light.NPoints>;
+		var pointAtt : Array<Vec3, light.NPoints>;
 	};
 	
 	var transformedPosition : Vec3;
@@ -153,13 +156,13 @@ static var SRC = {
 	function calcLight() : Vec3 {
 		var col = light.ambient;
 		var tn = transformedNormal.normalize();
-		for( d in light.dirs )
-			col += d.color * tn.dot(-d.dir).max(0.);
-		for( p in light.points ) {
-			var d = transformedPosition - p.pos;
+		for( i in 0...light.NDirs )
+			col += light.dirColor[i] * tn.dot(-light.dirDir[i]).max(0.);
+		for( i in 0...light.NPoints ) {
+			var d = transformedPosition - light.pointPos[i];
 			var dist2 = d.dot(d);
 			var dist = dist2.sqrt();
-			col += p.color * (tn.dot(d).max(0.) / p.att.dot(vec3(dist,dist2,dist2 * dist)));
+			col += light.pointColor[i] * (tn.dot(d).max(0.) / light.pointAtt[i].dot(vec3(dist,dist2,dist2 * dist)));
 		}
 		return col;
 	}
@@ -342,7 +345,8 @@ class Test {
 			//new AnimatedUV(),
 		];
 		var globals = new hxsl.Globals();
-		//globals.set("light.perPixel", true);
+		globals.set("light.NDirs", 1);
+		globals.set("light.NPoints", 3);
 		var instances = [for( s in shaders ) { s.updateConstants(globals); s.instance; }];
 		var cache = hxsl.Cache.get();
 		var s = cache.link(instances, cache.allocOutputVars(["output.position", "output.color"]));
