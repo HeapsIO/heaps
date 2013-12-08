@@ -4,8 +4,10 @@ using hxsl.Ast;
 class Printer {
 	
 	var buffer : StringBuf;
+	var varId : Bool;
 
-	public function new() {
+	public function new(varId = false) {
+		this.varId = varId;
 	}
 	
 	inline function add(v:Dynamic) {
@@ -15,7 +17,7 @@ class Printer {
 	public function shaderString( s : ShaderData ) {
 		buffer = new StringBuf();
 		for( v in s.vars ) {
-			addVar(v, true);
+			addVar(v, Var);
 			add(";\n");
 		}
 		if( s.vars.length > 0 )
@@ -29,7 +31,7 @@ class Printer {
 	
 	public function varString( v : TVar ) {
 		buffer = new StringBuf();
-		addVar(v);
+		addVar(v, null);
 		return buffer.toString();
 	}
 
@@ -45,7 +47,7 @@ class Printer {
 		return buffer.toString();
 	}
 
-	function addVar( v : TVar, isDecl = false, tabs = "" ) {
+	function addVar( v : TVar, defKind : VarKind, tabs = "" ) {
 		if( v.qualifiers != null ) {
 			for( q in v.qualifiers )
 				add("@" + (switch( q ) {
@@ -56,21 +58,34 @@ class Printer {
 				case Name(n): "name('" + n + "')";
 				}) + " ");
 		}
-		switch( v.kind ) {
-		case Local:
-			if( isDecl ) add("@local ");
-		case Global:
-			add("@global ");
-		case Var:
-			if( !isDecl ) add("@var ");
-		case Param:
-			add("@param ");
-		case Input:
-			add("@input ");
-		case Function:
-			add("@function ");
+		if( v.kind != defKind )
+			switch( v.kind ) {
+			case Local:
+				add("@local ");
+			case Global:
+				add("@global ");
+			case Var:
+				add("@var ");
+			case Param:
+				add("@param ");
+			case Input:
+				add("@input ");
+			case Function:
+				add("@function ");
+			}
+		add("var " + v.name + (varId?"@" + v.id:"") + " : ");
+		switch( v.type ) {
+		case TStruct(vl):
+			add("{");
+			var first = true;
+			for( v in vl ) {
+				if( first ) first = false else add(", ");
+				addVar(v,v.kind);
+			}
+			add("}");
+		default:
+			add(v.type.toString());
 		}
-		add("var " + v.name + " : " + v.type.toString());
 	}
 	
 	function addFun( f : TFunction ) {
@@ -82,7 +97,7 @@ class Printer {
 				first = false;
 			} else
 				add(", ");
-			addVar(a);
+			addVar(a, Local);
 		}
 		if( f.args.length > 0 ) add(" ");
 		add(") : "+f.ret.toString()+" ");
@@ -95,6 +110,8 @@ class Printer {
 			add(".");
 		}
 		add(v.name);
+		if( varId )
+			add("@" + v.id);
 	}
 	
 	function addExpr( e : TExpr, tabs : String ) : Void {
@@ -102,7 +119,7 @@ class Printer {
 		case TVar(v):
 			addVarName(v);
 		case TVarDecl(v, init):
-			addVar(v, false, tabs);
+			addVar(v, Local, tabs);
 			if( init != null ) {
 				add(" = ");
 				addExpr(init, tabs);
@@ -230,12 +247,12 @@ class Printer {
 		}
 	}
 
-	public static function toString( e : TExpr ) {
-		return new Printer().exprString(e);
+	public static function toString( e : TExpr, varId = false ) {
+		return new Printer(varId).exprString(e);
 	}
 
-	public static function shaderToString( s : ShaderData ) {
-		return new Printer().shaderString(s);
+	public static function shaderToString( s : ShaderData, varId = false ) {
+		return new Printer(varId).shaderString(s);
 	}
 	
 }
