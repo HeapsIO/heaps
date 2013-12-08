@@ -1,6 +1,6 @@
 -cp test
 -swf hxsl.swf
--swf-header 800:800:60:FFFFFF
+-swf-header 800:1000:60:FFFFFF
 --flash-strict
 -swf-version 11.6
 -main Test
