@@ -38,6 +38,7 @@ class Flatten {
 			name : s.name,
 			vars : outVars,
 			funs : [for( f in s.funs ) {
+				kind : f.kind,
 				ret : f.ret,
 				args : f.args,
 				ref : f.ref,

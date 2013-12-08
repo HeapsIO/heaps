@@ -60,16 +60,14 @@ class Eval {
 		var funs = [];
 		for( f in s.funs ) {
 			var f2 : TFunction = {
+				kind : f.kind,
 				ref : mapVar(f.ref),
 				args : [for( a in f.args ) mapVar(a)],
 				ret : f.ret,
 				expr : f.expr,
 			};
-			switch( f.ref.name ) {
-			case "vertex", "fragment", "__init__":
+			if( f.kind != Helper )
 				funs.push(f2);
-			default:
-			}
 			funMap.set(f2.ref, f2);
 		}
 		for( i in 0...funs.length )

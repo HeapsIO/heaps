@@ -21,6 +21,7 @@ class Serializer {
 			name : s.name,
 			vars : s.vars,
 			funs : [for( f in s.funs ) {
+				kind : f.kind,
 				ref : f.ref,
 				args : f.args,
 				ret : f.ret,

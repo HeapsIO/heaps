@@ -128,10 +128,18 @@ typedef TVar = {
 }
 
 typedef TFunction = {
+	var kind : FunctionKind;
 	var ref : TVar;
 	var args : Array<TVar>;
 	var ret : Type;
 	var expr : TExpr;
+}
+
+enum FunctionKind {
+	Vertex;
+	Fragment;
+	Init;
+	Helper;
 }
 
 enum TGlobal {

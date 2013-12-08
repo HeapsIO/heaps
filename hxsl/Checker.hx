@@ -85,12 +85,14 @@ class Checker {
 				if( a.qualifiers.length != 0 ) error("No qualifier allowed for argument", pos);
 				{ id : 0, name : a.name, kind : Local, type : a.type };
 			}];
-			if( args.length != 0 )
-				switch( f.name ) {
-				case "vertex", "fragment", "__init__":
-					error("Root function should have no argument", pos);
-				default:
-				}
+			var kind = switch( f.name ) {
+			case "vertex":  Vertex;
+			case "fragment": Fragment;
+			case "__init__": Init;
+			default: Helper;
+			}
+			if( args.length != 0 && kind != Helper )
+				error(kind+" function should have no argument", pos);
 			var fv : TVar = {
 				id : 0,
 				name : f.name,
@@ -98,6 +100,7 @@ class Checker {
 				type : TFun([{ args : [for( a in args ) { type : a.type, name : a.name }], ret : f.ret == null ? TVoid : f.ret }]),
 			};
 			var f : TFunction = {
+				kind : kind,
 				ref : fv,
 				args : args,
 				ret : f.ret == null ? TVoid : f.ret,

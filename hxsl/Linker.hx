@@ -1,23 +1,14 @@
 package hxsl;
 using hxsl.Ast;
 
-private enum VarKind {
-	Var;
-	Function;
-	Vertex;
-	Fragment;
-	Init;
-}
-
 private class AllocatedVar {
 	public var id : Int;
 	public var v : TVar;
 	public var path : String;
 	public var merged : Array<TVar>;
-	public var kind : VarKind;
+	public var kind : Null<FunctionKind>;
 	public var parent : AllocatedVar;
 	public function new() {
-		kind = Var;
 	}
 }
 
@@ -47,7 +38,6 @@ class Linker {
 
 	var varMap : Map<String,AllocatedVar>;
 	var allVars : Array<AllocatedVar>;
-	var allFuns : Map<Int,TFunction>;
 	var curShader : ShaderInfos;
 	var shaders : Array<ShaderInfos>;
 	var varIdMap : Map<Int,Int>;
@@ -266,25 +256,15 @@ class Linker {
 		varMap = new Map();
 		varIdMap = new Map();
 		allVars = new Array();
-		allFuns = new Map();
 		shaders = [];
 		
 		// globalize vars
 		for( s in shadersData ) {
-			for( v in s.vars ) {
-				// check name before rename
-				var kind = switch( v.name ) {
-				case "vertex": Vertex;
-				case "fragment": Fragment;
-				case "__init__": Init;
-				default: null;
-				}
-				var v = allocVar(v, null);
-				if( kind != null ) v.kind = kind;
-			}
+			for( v in s.vars )
+				allocVar(v, null);
 			for( f in s.funs ) {
 				var v = allocVar(f.ref, f.expr.p);
-				if( v.kind == Var ) v.kind = Function;
+				v.kind = f.kind;
 			}
 		}
 		
@@ -293,6 +273,7 @@ class Linker {
 		for( s in shadersData ) {
 			for( f in s.funs ) {
 				var v = allocVar(f.ref, f.expr.p);
+				if( v.kind == null ) throw "assert";
 				switch( v.kind ) {
 				case Vertex, Fragment:
 					addShader(s.name+"."+(v.kind == Vertex ? "vertex" : "fragment"),v.kind == Vertex,f.expr, priority);
@@ -305,15 +286,8 @@ class Linker {
 					default:
 						addShader(s.name+".__init__",true,f.expr, -1);
 					}
-				case Function:
-					allFuns.set(v.id, {
-						ref : v.v,
-						args : f.args,
-						ret : f.ret,
-						expr : mapExprVar(f.expr),
-					});
-				case Var:
-					throw "assert "+v.v.name;
+				case Helper:
+					throw "Unexpected helper function in linker "+v.v.name;
 				}
 			}
 			priority++;
@@ -381,7 +355,7 @@ class Linker {
 		for( v in outVars )
 			cleanVar(v);
 		// build resulting shader functions
-		function build(name, a:Array<ShaderInfos> ) : TFunction {
+		function build(kind, name, a:Array<ShaderInfos> ) : TFunction {
 			var v : TVar = {
 				id : Tools.allocVarId(),
 				name : name,
@@ -398,6 +372,7 @@ class Linker {
 					exprs.push(s.body);
 				}
 			return {
+				kind : kind,
 				ref : v,
 				ret : TVoid,
 				args : [],
@@ -405,8 +380,8 @@ class Linker {
 			};
 		}
 		var funs = [
-			build("vertex", v),
-			build("fragment", f),
+			build(Vertex, "vertex", v),
+			build(Fragment, "fragment", f),
 		];
 		return { name : "out", vars : outVars, funs : funs };
 	}
