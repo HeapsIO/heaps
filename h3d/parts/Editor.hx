@@ -382,15 +382,15 @@ class Editor extends h2d.Sprite {
 						</div>
 						<div class="line">
 							<select onchange="api.s.blendMode = api.blendModes[api.parseInt(this.value)]; $(\'.ic.alpha\').toggleClass(\':disabled\', api.s.blendMode.index == 2)">
-								<option value="0" checked="${state.blendMode == Add}">Additive</option>
-								<option value="1" checked="${state.blendMode == Alpha}">Alpha</option>
-								<option value="2" checked="${state.blendMode == SoftAdd}">Soft Add</option>
+								<option value="0" selected="${state.blendMode == Add}">Additive</option>
+								<option value="1" selected="${state.blendMode == Alpha}">Alpha</option>
+								<option value="2" selected="${state.blendMode == SoftAdd}">Soft Add</option>
 							</select>
 							<select onchange="api.s.sortMode = api.sortModes[api.parseInt(this.value)]">
-								<option value="0" checked="${state.sortMode == Front}">Front</option>
-								<option value="1" checked="${state.sortMode == Back}">Back</option>
-								<option value="2" checked="${state.sortMode == Sort}">Sort</option>
-								<option value="2" checked="${state.sortMode == InvSort}">InvSort</option>
+								<option value="0" selected="${state.sortMode == Front}">Front</option>
+								<option value="1" selected="${state.sortMode == Back}">Back</option>
+								<option value="2" selected="${state.sortMode == Sort}">Sort</option>
+								<option value="2" selected="${state.sortMode == InvSort}">InvSort</option>
 							</select>
 						</div>
 						<div class="line">
@@ -408,10 +408,10 @@ class Editor extends h2d.Sprite {
 						</div>
 						<div class="line">
 							<span>Emitter Type</span> <select onchange="api.setCurShape(api.parseInt(this.value))">
-								<option value="0" checked="${state.shape.match(SLine(_))}">Line</option>
-								<option value="1" checked="${state.shape.match(SSphere(_))}">Sphere</option>
-								<option value="2" checked="${state.shape.match(SCone(_))}">Cone</option>
-								<option value="3" checked="${state.shape.match(SDisc(_))}">Disc</option>
+								<option value="0" selected="${state.shape.match(SLine(_))}">Line</option>
+								<option value="1" selected="${state.shape.match(SSphere(_))}">Sphere</option>
+								<option value="2" selected="${state.shape.match(SCone(_))}">Cone</option>
+								<option value="3" selected="${state.shape.match(SDisc(_))}">Disc</option>
 							</select>
 						</div>
 						<div id="shape">
@@ -502,7 +502,7 @@ class Editor extends h2d.Sprite {
 							${{
 								var str = "";
 								for( i in 0...CURVES.length )
-									str += '<option value="$i" checked="${i == curve.mode}">${CURVES[i].name}</option>';
+									str += '<option value="$i" selected="${i == curve.mode}">${CURVES[i].name}</option>';
 								str;
 							}}
 						</select>
@@ -530,9 +530,9 @@ class Editor extends h2d.Sprite {
 						<div class="val v_rnd">
 							<button value="S" onclick="var tmp = api.curve.max; api.curve.max = api.curve.min; api.curve.min = tmp; api.buildUI()"/>
 							<select onchange="api.curve.converge = api.converge[api.parseInt(this.value)]; api.updateCurve()">
-								<option value="0" checked="${curve.converge == No}">No</option>
-								<option value="1" checked="${curve.converge == Start}">Start</option>
-								<option value="2" checked="${curve.converge == End}">End</option>
+								<option value="0" selected="${curve.converge == No}">No</option>
+								<option value="1" selected="${curve.converge == Start}">Start</option>
+								<option value="2" selected="${curve.converge == End}">End</option>
 							</select>
 						</div>
 					</div>

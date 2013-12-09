@@ -63,7 +63,7 @@ class Parser {
 			var label = x.innerData;
 			var value = x.has.value ? x.att.value : null;
 			select.addOption(label, value);
-			if( x.has.checked && x.att.checked != "false" )
+			if( x.has.selected && x.att.selected != "false" )
 				select.selectedIndex = select.getOptions().length - 1;
 			return null;
 		case "value":
