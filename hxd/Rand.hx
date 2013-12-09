@@ -47,6 +47,10 @@ class Rand {
 		return (uint() % 10007) / 10007.0;
 	}
 
+	public inline function srand() {
+		return (int() % 10007) / 10007.0;
+	}
+	
 	// this is two Marsaglia Multiple-with-Carry (MWC) generators combined
 	inline function int() : Int {
 		seed = 36969 * (seed & 0xFFFF) + (seed >> 16);
