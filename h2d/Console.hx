@@ -25,6 +25,9 @@ class Console extends h2d.Sprite {
 	var commands : Map < String, { help : String, args : Array<{ name : String, t : ConsoleArg, ?opt : Bool }>, callb : Dynamic } > ;
 	var aliases : Map<String,String>;
 	var logDY : Float = 0;
+	var logs : Array<String>;
+	var logIndex:Int;
+	var curCmd:String;
 	
 	public var shortKeyChar : Int = "/".code;
 	
@@ -34,6 +37,8 @@ class Console extends h2d.Sprite {
 		logTxt = new h2d.HtmlText(font, this);
 		logTxt.x = 2;
 		logTxt.visible = false;
+		logs = [];
+		logIndex = -1;
 		bg = new h2d.Bitmap(h2d.Tile.fromColor(0x80000000), this);
 		bg.visible = false;
 		tf = new h2d.Text(font, bg);
@@ -134,8 +139,10 @@ class Console extends h2d.Sprite {
 	}
 	
 	function handleKey( e : hxd.Event ) {
-		if( e.charCode == shortKeyChar && !bg.visible )
+		if( e.charCode == shortKeyChar && !bg.visible ) {
 			bg.visible = true;
+			logIndex = -1;
+		}
 		if( !bg.visible )
 			return;
 		switch( e.keyCode ) {
@@ -168,9 +175,29 @@ class Console extends h2d.Sprite {
 		case Key.ESCAPE:
 			hide();
 			return;
+		case Key.UP:
+			if(logs.length == 0 || logIndex == 0) return;
+			if(logIndex == -1) {
+				curCmd = tf.text;
+				logIndex = logs.length - 1;
+			}
+			else logIndex--;
+			tf.text = logs[logIndex];
+			cursorPos = tf.text.length;
+		case Key.DOWN:
+			if(tf.text == curCmd) return;
+			if(logIndex == logs.length - 1) {
+				tf.text = curCmd;
+				cursorPos = tf.text.length;
+				logIndex = -1;
+				return;
+			}
+			logIndex++;
+			tf.text = logs[logIndex];
+			cursorPos = tf.text.length;
 		}
 		if( e.charCode != 0 ) {
-			tf.text = tf.text.substr(0, cursorPos) + String.fromCharCode(e.charCode) + tf.text.substr(cursorPos);
+			tf.text = curCmd = tf.text.substr(0, cursorPos) + String.fromCharCode(e.charCode) + tf.text.substr(cursorPos);
 			cursorPos++;
 		}
 	}
@@ -187,6 +214,9 @@ class Console extends h2d.Sprite {
 			hide();
 			return;
 		}
+		logs.push(command);
+		logIndex = -1;
+		
 		var args = ~/[ \t]+/g.split(command);
 		var cmdName = args[0];
 		if( aliases.exists(cmdName) ) cmdName = aliases.get(cmdName);
