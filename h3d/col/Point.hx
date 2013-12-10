@@ -13,6 +13,34 @@ class Point {
 		this.z = z;
 	}
 	
+	public function inFrustum( mvp : Matrix ) {
+		// left
+		if( !new Plane(mvp._14 + mvp._11, mvp._24 + mvp._21 , mvp._34 + mvp._31, -(mvp._44 + mvp._41)).side(this))
+			return false;
+		
+		// right
+		if( !new Plane(mvp._14 - mvp._11, mvp._24 - mvp._21 , mvp._34 - mvp._31, mvp._41 - mvp._44).side(this) )
+			return false;
+
+		// bottom
+		if( !new Plane(mvp._14 + mvp._12, mvp._24 + mvp._22 , mvp._34 + mvp._32, -(mvp._44 + mvp._42)).side(this) )
+			return false;
+
+		// top
+		if( !new Plane(mvp._14 - mvp._12, mvp._24 - mvp._22 , mvp._34 - mvp._32, mvp._42 - mvp._44).side(this) )
+			return false;
+
+		// near
+		if( !new Plane(mvp._13, mvp._23, mvp._33, -mvp._43).side(this) )
+			return false;
+
+		// far
+		if( !new Plane(mvp._14 - mvp._13, mvp._24 - mvp._23, mvp._34 - mvp._33, mvp._43 - mvp._44).side(this) )
+			return false;
+			
+		return true;
+	}
+	
 	public inline function set(x, y, z) {
 		this.x = x;
 		this.y = y;
