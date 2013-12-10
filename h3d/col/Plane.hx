@@ -1,8 +1,10 @@
 package h3d.col;
+import hxd.Math;
 
 @:allow(h3d.col)
 class Plane {
 	
+	// Place equation :  nx.X + ny.Y + nz.Z - d = 0
 	var nx : Float;
 	var ny : Float;
 	var nz : Float;
@@ -30,7 +32,7 @@ class Plane {
 		Normalize the plan, so we can use distance().
 	**/
 	public inline function normalize() {
-		var len = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz);
+		var len = Math.invSqrt(nx * nx + ny * ny + nz * nz);
 		nx *= len;
 		ny *= len;
 		nz *= len;
@@ -48,16 +50,20 @@ class Plane {
 		return nx * p.x + ny * p.y + nz * p.z - d;
 	}
 	
+	public inline function side( p : Point ) {
+		return distance(p) >= 0;
+	}
+	
 	public inline function project( p : Point ) : Point {
 		var d = distance(p);
-		return new Point(p.x + d * nx, p.y + d * ny, p.z + d * nz);
+		return new Point(p.x - d * nx, p.y - d * ny, p.z - d * nz);
 	}
 
 	public inline function projectTo( p : Point, out : Point ) {
 		var d = distance(p);
-		out.x = p.x + d * nx;
-		out.y = p.y + d * ny;
-		out.z = p.z + d * nz;
+		out.x = p.x - d * nx;
+		out.y = p.y - d * ny;
+		out.z = p.z - d * nz;
 	}
 	
 	public static inline function fromPoints( p0 : Point, p1 : Point, p2 : Point ) {
