@@ -97,6 +97,9 @@ class Object {
 		return invPos;
 	}
 
+	/**
+		Return the bounds of this object, in absolute position.
+	**/
 	public function getBounds( ?b : h3d.col.Bounds ) {
 		if( b == null ) {
 			b = new h3d.col.Bounds();
