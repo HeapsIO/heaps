@@ -15,7 +15,8 @@ import hxd.res.Embed;
 import hxd.res.EmbedFileSystem;
 import hxd.res.LocalFileSystem;
 import hxd.System;
-
+import openfl.Assets;
+/*
 @:keep
 class TexturedShader extends MeshMaterial.MeshShader{
 	
@@ -26,8 +27,6 @@ class TexturedShader extends MeshMaterial.MeshShader{
 			pos : Float3,
 			uv : Float2,
 		};
-	}
-		
 		var tuv : Float2;
 		
 		function vertex( mpos : Matrix, mproj : Matrix ) {
@@ -40,7 +39,6 @@ class TexturedShader extends MeshMaterial.MeshShader{
 		}
 		
 		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
-		{
 			var c = tex.get(tuv.xy);
 			out = c;
 		}
@@ -78,7 +76,7 @@ class TexturedShader extends MeshMaterial.MeshShader{
 		}
 	";
 	#end
-}
+}*/
 
 @:keep
 class PointMaterial extends Material{
@@ -168,6 +166,7 @@ class Test {
 		
 		scene = new Scene();
 		
+		
 		var mat = new LineMaterial();
 		var line = new h3d.scene.CustomObject(new h3d.prim.Plan2D(), mat, scene);
 		line.material.blend(SrcAlpha, OneMinusSrcAlpha);
@@ -178,12 +177,15 @@ class Test {
 		mat.end = new Vector(1, 1, 1);
 		mat.color = 0xFF00FFFF;
 		
+		
+		/*
 		var mat = new PointMaterial();
 		var point = new h3d.scene.CustomObject(new h3d.prim.Plan2D(), mat, scene);
 		
 		mat.delta = new Vector(0, 0, 0);
 		mat.color = 0xFFFFFF00;
 		mat.size = new Vector(1, 1, 0);
+		*/
 		
 		function onLoaded( bmp : hxd.BitmapData) {
 			var tex :Texture = Texture.fromBitmap( bmp);
@@ -209,9 +211,15 @@ class Test {
 		}
 		
 		#if sys
-		if ( lfs.exists("hxlogo.png")) {
-			lfs.get("hxlogo.png").loadBitmap(onLoaded);
-		}
+			#if android 
+				var bmd = Assets.getBitmapData("res/hxlogo.png");
+				onLoaded(BitmapData.fromNative( bmd ));
+			#else
+			if ( lfs.exists("hxlogo.png")) {
+				lfs.get("hxlogo.png").loadBitmap(onLoaded);
+			}
+			#end
+			
 		#else 
 			//erk
 			onLoaded(hxd.Res.hxlogo.toBitmap());
@@ -225,10 +233,7 @@ class Test {
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		obj2.setRotateAxis( -0.5, 2, Math.cos(time), time + Math.PI / 2);
 		
-		
 		engine.render(scene);
-		//scene.
-		//engine.line(0,0,0, 1,1,1, 0xFFFFFFFF);
 	}
 	
 	
@@ -239,18 +244,20 @@ class Test {
 		haxe.Log.setColor(0xFF0000);
 		#end
 		
-		#if flash
-			EmbedFileSystem.init();
-		#else
-			lfs = new hxd.res.LocalFileSystem('res');
-			var it = lfs.getRoot().iterator();//bugs
-			var e:Dynamic = null;
-			do
-			{
-				e = it.next();
-				trace( 'detecting file ${e.name}');
-			}
-			while ( it.hasNext() );
+		#if !android
+			#if flash
+				EmbedFileSystem.init();
+			#else
+				lfs = new hxd.res.LocalFileSystem('res');
+				var it = lfs.getRoot().iterator();//bugs
+				var e:Dynamic = null;
+				do
+				{
+					e = it.next();
+					trace( 'detecting file ${e.name}');
+				}
+				while ( it.hasNext() );
+			#end
 		#end
 		new Test();
 		

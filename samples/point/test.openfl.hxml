@@ -9,11 +9,13 @@
 -D openfl=1.1
 -D display
 -D verbose=true
--D web
+-D android
+-D mobile
 --no-output
--swf-version 11.6
--swf bin/flash/bin/testopenfl.swf
--swf-header 800:480:60:000000
--cp bin/flash/haxe
-#--remap nme:flash
+-cp bin/android/haxe
+-cpp bin/android/obj
+--macro allowPackage("flash")
+--macro keep("Test")
+-D android
+-D android-9
 

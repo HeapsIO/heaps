@@ -11,17 +11,17 @@
     <movie version="3" />
     <movie minorVersion="0" />
     <movie platform="NME" />
-    <movie background="#000000" />
+    <movie background="000000" />
     <movie preferredSDK=";3;" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
     <class path="." />
-    <class path="bin\windows\cpp\haxe" />
+    <class path="bin\android\haxe" />
   </classpaths>
   <!-- Build options -->
   <build>
-    <option directives="tools=1.1.0&#xA;resourcesPath=../res&#xA;openfl=1.1&#xA;display&#xA;verbose=true&#xA;windows&#xA;desktop" />
+    <option directives="tools=1.1.0&#xA;resourcesPath=assets/res&#xA;openfl=1.1&#xA;display&#xA;verbose=true&#xA;android&#xA;mobile&#xA;android&#xA;android-9" />
     <option flashStrict="False" />
     <option noInlineOnDebug="False" />
     <option mainClass="ApplicationMain" />

@@ -4,16 +4,18 @@
 -lib h3d
 -cp .
 -D tools=1.1.0
--D resourcesPath=../res
+-D resourcesPath=assets/res
 -D openfl=1.1
 -D display
 -D verbose=true
--D windows
--D desktop
+-D android
+-D mobile
 --no-output
 -dce no
--cp bin/windows/cpp/haxe
--cpp bin/windows/cpp/obj
+-cp bin/android/haxe
+-cpp bin/android/obj
 --macro allowPackage("flash")
 --macro keep("Test")
+-D android
+-D android-9
 

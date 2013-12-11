@@ -1,7 +1,10 @@
 package h3d.impl;
 
 import h3d.impl.Driver;
+import h3d.Matrix;
 import h3d.Vector;
+import haxe.ds.IntMap.IntMap;
+import hxd.BytesBuffer;
 
 import hxd.FloatBuffer;
 import hxd.Pixels;
@@ -15,6 +18,7 @@ import js.html.Uint8Array;
 import js.html.Float32Array;
 #elseif cpp
 import openfl.gl.GL;
+import openfl.gl.GLActiveInfo;
 #end
 
 using StringTools;
@@ -95,7 +99,7 @@ class GlDriver extends Driver {
 		if( diff & (15 << 2) != 0 ) {
 			var write = (mbits >> 2) & 1 == 1;
 			if ( curMatBits < 0 || diff & 4 != 0 ) {
-				if ( System.debugLevel >= 3) trace("write :"+write);
+				System.trace3("depthMask write :"+write);
 				
 				gl.depthMask(write);
 			}
@@ -104,19 +108,18 @@ class GlDriver extends Driver {
 			
 			var cmp = (mbits >> 3) & 7;
 			if ( cmp == 0 ) {
-				if ( System.debugLevel >= 3) trace("no depth test");
+				//if ( System.debugLevel >= 3) trace("no depth test");
 				
 				gl.disable(GL.DEPTH_TEST);
 			}
 			else {
 				
 				if ( curMatBits < 0 || (curMatBits >> 3) & 7 == 0 ) {
-					if ( System.debugLevel >= 3) trace("enabling depth test");
-					
+					//if ( System.debugLevel >= 3) trace("enabling depth test");
 					gl.enable(GL.DEPTH_TEST);
 				}
 				
-				if ( System.debugLevel >= 3) trace("using " + glCompareToString(COMPARE[cmp]));
+				//if ( System.debugLevel >= 3) trace("using " + glCompareToString(COMPARE[cmp]));
 					
 				gl.depthFunc(COMPARE[cmp]);
 			}
@@ -148,7 +151,7 @@ class GlDriver extends Driver {
 		
 		//always clear depth & stencyl
 		gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT | GL.STENCIL_BUFFER_BIT);
-		if ( hxd.System.debugLevel >= 3) trace("clearing");
+		//hxd.System.trace3 trace("clearing");
 		clearOnce = true;
 	}
 
@@ -165,6 +168,8 @@ class GlDriver extends Driver {
 		// resize window
 		#end
 		gl.viewport(0, 0, width, height);
+		
+		System.trace2("resizing");
 	}
 	
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
@@ -330,22 +335,18 @@ class GlDriver extends Driver {
 		}
 	}
 	
-	function findVarComment(str,code)
-	{
-		var r = new EReg(str + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "g");
-		if ( r.match(code) ) {
-			return r.matched(1);
-		}
-		else return null;
-	}
+	
 	
 	function buildShaderInstance( shader : Shader ) {
 		var cl = Type.getClass(shader);
+		var fullCode = "";
 		function compileShader(type) {
 			var vertex = type == GL.VERTEX_SHADER;
 			var name = vertex ? "VERTEX" : "FRAGMENT";
 			var code = Reflect.field(cl, name);
-			if( code == null ) throw "Missing " + Type.getClassName(cl) + "." + name + " shader source";
+			if ( code == null ) throw "Missing " + Type.getClassName(cl) + "." + name + " shader source";
+			
+			fullCode += code;
 			var cst = shader.getConstants(vertex);
 			
 			//if ( System.isVerbose) { trace("compiling cst: \n" + cst); }
@@ -353,30 +354,44 @@ class GlDriver extends Driver {
 			
 			code = StringTools.trim(cst + code);
 			
-			#if cpp
-			code = "#define lowp\n#define mediump\n#define highp\n"+code;
+			#if ((cpp))
+				#if !mobile
+				code = "#define lowp\n#define mediump\n#define highp\n" + code;
+				#else 
+				code = "precision highp float; \n" + code;	
+				#end 
 			#end
+			
+			
 			// replace haxe-like #if/#else/#end by GLSL ones
 			code = ~/#if ([A-Za-z0-9_]+)/g.replace(code, "#if defined($1)");
 			code = ~/#elseif ([A-Za-z0-9_]+)/g.replace(code, "#elif defined($1)");
 			code = code.split("#end").join("#endif");
 			
 			//SHADER CODE
-			//if ( System.isVerbose )trace("Trying to compile shader:"+code);
+			//System.trace2('Trying to compile shader $name $code');
 			
 			var s = gl.createShader(type);
-					
-			
 			gl.shaderSource(s, code);
+			if ( System.debugLevel >= 2) {
+				trace("source shaderInfoLog:" + getShaderInfoLog(s,code));
+			}
+				
 			gl.compileShader(s);
 			if( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
-				var log = gl.getShaderInfoLog(s);
-				var line = code.split("\n")[Std.parseInt(log.substr(9)) - 1];
-				if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
-				throw "An error occurred compiling the shaders: " + log + line;
+				throw "An error occurred compiling the "+Type.getClass(shader)+" : " + getShaderInfoLog(s,code);
 			}
+			else {
+				
+				//always print him becausit can hint gles errors
+				if ( System.debugLevel >= 2) {
+					trace("compile shaderInfoLog:" + getShaderInfoLog(s,code));
+				}
+			}
+			
 			return s;
 		}
+		
 		var vs = compileShader(GL.VERTEX_SHADER);
 		var fs = compileShader(GL.FRAGMENT_SHADER);
 		
@@ -389,14 +404,28 @@ class GlDriver extends Driver {
 		gl.bindAttribLocation(p, 5, "indexes");
 		
 		gl.attachShader(p, vs);
+		checkError();
+		
+		System.trace2("attach vs programInfoLog:" + getProgramInfoLog(p, fullCode));
+		
 		gl.attachShader(p, fs);
+		checkError();
+		
+		System.trace2("attach fs programInfoLog:" + getProgramInfoLog(p,fullCode));
 		
 		gl.linkProgram(p);
+		checkError();
+		
+		System.trace2("link programInfoLog:" + getProgramInfoLog(p,fullCode));
 		
 		if( gl.getProgramParameter(p, GL.LINK_STATUS) != cast 1 ) {
 			var log = gl.getProgramInfoLog(p);
 			throw "Program linkage failure: "+log;
 		}
+		else {
+			System.trace2("linked programInfoLog:" + getProgramInfoLog(p, fullCode));
+		}
+		
 		checkError();
 	
 		var inst = new Shader.ShaderInstance();
@@ -467,103 +496,143 @@ class GlDriver extends Driver {
 		
 		var nuni = gl.getProgramParameter(p, GL.ACTIVE_UNIFORMS);
 		inst.uniforms = [];
-		var texIndex = -1;
-		var r_array = ~/\[([0-9]+)\]$/;
+		
+		
+		
+		parseUniInfo = { texIndex: -1, inf:null };
 		for( k in 0...nuni ) {
-			var inf = gl.getActiveUniform(p, k);
+			parseUniInfo.inf = gl.getActiveUniform(p, k);
 			
 			//if ( System.isVerbose) trace("retrieving uniform " + inf.name);
-			if( inf.name.substr(0, 6) == "webgl_" )
+			if( parseUniInfo.inf.name.substr(0, 6) == "webgl_" )
 				continue; // skip native uniforms
 				
-			//if (System.debugLevel>=2) trace('retrieved uniform $inf');
-			
-			var isArray = false;
-			var t = decodeTypeInt(inf.type);
-			switch( t ) {
-				case Tex2d, TexCube:
-					texIndex++;
-				case Vec3:
-					var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "g");
-					if( r.match(allCode) ){
-						switch( r.matched(1) ) {
-						case "byte4":
-							if(System.debugLevel>=2) trace('_0 fetched $inf');
-							t = Byte3;
-						default:
-							if(System.debugLevel>=2) trace('_0 type filtering bails ${inf.name}');
-						}
-					}
-					else 
-					{
-						//if (System.debugLevel>=2) trace('_0 bailed  $inf');
-						
-						var r = new EReg("[A-Z0-9_]+[ \t]+"+inf.name.split('.').pop() + "\\[[a-z](.+?)\\]", "gi");
-						if ( r.match(allCode)) {
-							if (System.debugLevel>=2) trace('_0 found an array ! ' + r.matched(0) + " - " + r.matched(1) );
-							isArray = true;
-						}
-					}
-				case Vec4:
-					var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "g");
-					if( r.match(allCode) ){
-						switch( r.matched(1) ) {
-						case "byte4":
-							if(System.debugLevel>=2) trace('_1 fetched $inf');
-							t = Byte4;
-						default:
-							if(System.debugLevel>=2) trace('_1 type filtering bails ${inf.name}');
-						}
-					}
-					else
-					{
-						//if (System.debugLevel>=2) trace('_1 bailed  $inf');
-						
-						var r = new EReg("[A-Z0-9_]+[ \t]+"+inf.name.split('.').pop() + "\\[[a-z](.+?)\\]", "gi");
-						if ( r.match(allCode)) {
-							//if (System.isVerbose) trace('_1 found an array ! ' + r.matched(0) + " - " + r.matched(1) );
-							isArray = true;
-						}
-					}
-				default:	
-					if(System.debugLevel>=2) trace('can t subtype $t ${inf.type}');
-			}
-			var name = inf.name;
-			while( true ) {
-				if( r_array.match(name) ) {
-					name = r_array.matchedLeft();
-					t = Index(Std.parseInt(r_array.matched(1)), t);
-					//if (System.isVerbose) trace('0_ $name -> $t');
-					continue;
-				}
-				var c = name.lastIndexOf(".");
-				if ( c > 0 ) {
-					//if (System.isVerbose) trace('1_ $name -> $t');
-					var field = name.substr(c + 1);
-					name = name.substr(0, c);
-					
-					if( !isArray)
-						t = Struct(field, t);
-					else
-						t = Elements( field, inf.size, t );
-				}
-				break;
-			}
-			
-			var tu = {
-				name : name,
-				type : t,
-				loc : gl.getUniformLocation(p, inf.name),
-				index : texIndex,
-			};
-			inst.uniforms.push( tu);
-			//if(System.debugLevel>=2) trace('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
+			if( parseUniInfo.inf.name.substr(0, 3) == "gl_" )
+				continue;
+				
+			var tu = parseUniform( parseUniInfo.inf, allCode,p );
+			inst.uniforms.push( tu );
+			System.trace2('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
 		}
+		
 		inst.program = p;
 		checkError();
 		return inst;
 	}
+	
+	var parseUniInfo : {
+			var texIndex : Int;
+			var inf: GLActiveInfo;
+	};
+	
+	function findVarComment(str,code){
+		var r = new EReg(str + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "g");
+		return 
+		if ( r.match(code) )
+			r.matched(1);
+		else 
+			return null;
+	}
+	
+	function hasArrayAccess(str,code){
+		var r = new EReg("[A-Z0-9_]+[ \t]+" + str + "\\[[a-z](.+?)\\]", "gi");
+		return 
+		if ( r.match(code) )
+			true;
+		else false;
+	}
 
+	
+	function parseUniform(inf,allCode,p)
+	{
+		var inf : GLActiveInfo = parseUniInfo.inf;
+		
+		System.trace2('retrieved uniform $inf');
+		
+		var isSubscriptArray = false;
+		var t = decodeTypeInt(inf.type);
+		var scanSubscript = true;
+		var r_array = ~/\[([0-9]+)\]$/g;
+		
+		switch( t ) {
+			case Tex2d, TexCube: parseUniInfo.texIndex++;
+			case Vec3:
+				var c = findVarComment( inf.name,allCode );
+				if( c != null && c.startsWith( "byte" )){
+					t = Byte3;
+				}
+				else 
+				{
+					if ( hasArrayAccess(inf.name.split('.').pop(), allCode ) ) {
+						isSubscriptArray = true;
+					}
+				}
+			case Vec4:
+				var c = findVarComment( inf.name,allCode );
+				if( c != null && c.startsWith( "byte" )){
+					t = Byte4;
+				}
+				else 
+				{
+					if ( hasArrayAccess(inf.name.split('.').pop(), allCode ) ) {
+						isSubscriptArray = true;
+					}
+				}
+			case Mat4:
+				var li = inf.name.lastIndexOf("[");
+				if ( li >= 0 )
+					inf.name = inf.name.substr( 0,li );
+					
+				if(  hasArrayAccess(inf.name,allCode ) ) {
+					scanSubscript = false;
+					t = Elements( inf.name, null, t );
+					System.trace2('subtyped ${inf.name} $t ${inf.type} as array');
+				}
+				else System.trace2('can t subtype ${inf.name} $t ${inf.type}');
+				
+			default:	
+				System.trace2('can t subtype $t ${inf.type}');
+		}
+		
+		//todo refactor all...but it will wait hxsl3
+
+		var name = inf.name;
+		while ( scanSubscript ) {
+			if ( r_array.match(name) ) { //
+				System.trace2('0_ pre $name ');
+				name = r_array.matchedLeft();
+				t = Index(Std.parseInt(r_array.matched(1)), t);
+				System.trace2('0_ sub $name -> $t');
+				continue;
+			}
+			
+			var c = name.lastIndexOf(".");
+			if ( c <= 0) c = name.lastIndexOf("[");
+			
+			if ( c > 0 ) {
+				System.trace2('1_ $name -> $t');
+				name = name.substr(0, c);
+				var field = name.substr(c + 1);
+				
+				if ( !isSubscriptArray){ //struct subscript{
+					t = Struct(field, t);
+				}
+				else //array subscript{
+					t = Elements( field, inf.size, t );
+			}
+			break;
+		}
+		
+		var tu = {
+			name : name,
+			type : t,
+			loc : gl.getUniformLocation(p, inf.name),
+			index : parseUniInfo.texIndex,
+		};
+		
+		return tu;
+	}
+	
 	override function selectShader( shader : Shader ) : Bool {
 		if ( shader == null ) {
 			#if debug
@@ -613,7 +682,7 @@ class GlDriver extends Driver {
 				else 
 					throw "Missing shader value " + u.name + " among "+ Reflect.fields(shader);
 			}
-			//if ( System.debugLevel>=2 ) trace('retrieving uniform ${u.name} $val');
+			System.trace3('retrieving uniform ($u) $val ');
 			setUniform(val, u, u.type);
 		}
 		shader.customSetup(this);
@@ -632,46 +701,120 @@ class GlDriver extends Driver {
 		checkError();
 	}
 	
+	//var tempMatrixArray : Float32Array;
+	
+	inline function blitMatrices(a:Array<Matrix>, transpose) {
+		var t = createF32( a.length * 16 );
+		var p = 0;
+		for ( m in a ){
+			blitMatrix( m, transpose, p,t  );
+			p += 16;
+		}
+		return t;
+	}
+	
+	inline function blitMatrix(a:Matrix, transpose, ofs = 0, t :Float32Array=null) {
+		if (t == null) t = createF32( 16 );
+		
+		if ( !transpose) {
+			t[ofs+0] 	= a._11; 
+			t[ofs+1] 	= a._12; 
+			t[ofs+2] 	= a._13; 
+			t[ofs+3] 	= a._14;
+			     
+			t[ofs+4] 	= a._21; 
+			t[ofs+5] 	= a._22; 
+			t[ofs+6] 	= a._23; 
+			t[ofs+7] 	= a._24;
+			    
+			t[ofs+8] 	= a._31; 
+			t[ofs+9]	= a._32; 
+			t[ofs+10] = a._33; 
+			t[ofs+11] = a._34;
+			 
+			t[ofs+12] = a._41; 
+			t[ofs+13] = a._42; 
+			t[ofs+14] = a._43; 
+			t[ofs+15] = a._44;
+		}
+		else {
+			t[ofs+0] 	= a._11; 
+			t[ofs+1] 	= a._21; 
+			t[ofs+2] 	= a._31; 
+			t[ofs+3] 	= a._41;
+			     
+			t[ofs+4] 	= a._12; 
+			t[ofs+5] 	= a._22; 
+			t[ofs+6] 	= a._32; 
+			t[ofs+7] 	= a._42;
+			    
+			t[ofs+8] 	= a._13; 
+			t[ofs+9] 	= a._23; 
+			t[ofs+10] = a._33; 
+			t[ofs+11] = a._43;
+			      
+			t[ofs+12] = a._14; 
+			t[ofs+13] = a._24; 
+			t[ofs+14] = a._34; 
+			t[ofs+15] = a._44;
+		}
+		return t;
+	}
+	
+	public static var f32Pool : IntMap<Float32Array> =  new haxe.ds.IntMap();
+	
+	function createF32(sz:Int) {
+		if ( !f32Pool.exists(sz) ) {
+			f32Pool.set(sz, new Float32Array([for( i in 0...sz) 0.0]));
+		}
+		
+		var p = f32Pool.get( sz );
+		
+		for ( i in 0...p.length ) p[i] = 0.0;
+		
+		f32Pool.set( sz, null);
+		return p;
+	}
+	
+	function deleteF32(a:Float32Array) {
+		f32Pool.set(a.length, a);
+	}
+	
 	function setUniform( val : Dynamic, u : Shader.Uniform, t : Shader.ShaderType ) {
+		
+		var buff = null;
 		#if debug if (u == null) throw "no uniform set, check your shader"; #end
 		#if debug if (u.loc == null) throw "no uniform loc set, check your shader"; #end
 		#if debug if (val == null) throw "no val set, check your shader"; #end
 		#if debug if (gl == null) throw "no gl set, Arrrghh"; #end
 		
+		checkError();
 		//if ( System.debugLevel >= 2 ) trace("setting uniform "+u.name);
 		
 		switch( t ) {
 		case Mat4:
-			if ( Std.is( val , Array)) {
-				gl.uniformMatrix4fv(u.loc, true, packMatrix44(val));
-				//if ( System.debugLevel >= 2 ) trace("uniform matrix array set");
-			}
-			else {
-				var m : h3d.Matrix = val;
-				var fl = m.getFloats();
-				var arr = new Float32Array(fl);
-				gl.uniformMatrix4fv(u.loc, true, arr);
-				
-				//if ( System.debugLevel >= 2 ) trace("uniform matrix set");
-			}
+			
+			#if debug
+			if ( Std.is( val , Array)) throw "error";
+			#end
+			
+			var m : h3d.Matrix = val;
+			gl.uniformMatrix4fv(u.loc, false, buff = blitMatrix(m, true) );
+			deleteF32(buff);
+			
+			System.trace3("one matrix batch " + m + " of val " + val);
+			
 		case Tex2d:
 			var t : h3d.mat.Texture = val;
 			setupTexture(t, t.mipMap, t.filter, t.wrap);
 			gl.activeTexture(GL.TEXTURE0 + u.index);
 			gl.uniform1i(u.loc, u.index);
-		case Float:
-			gl.uniform1f(u.loc, val);
-		case Vec2:
-			var v : h3d.Vector = val;
-			gl.uniform2f(u.loc, v.x, v.y);
-		case Vec3:
-			var v : h3d.Vector = val;
-			if (v == null) throw "no val set, check your shader "+v;
-			gl.uniform3f(u.loc, v.x, v.y, v.z);
-		case Vec4:
-			var v : h3d.Vector = val;
-			if (v == null) throw "no val set, check your shader "+v; 
-			gl.uniform4f(u.loc, v.x, v.y, v.z, v.w);
+			
+		case Float: 							gl.uniform1f(u.loc, val);
+		case Vec2:	var v : h3d.Vector = val;	gl.uniform2f(u.loc, v.x, v.y);
+		case Vec3:	var v : h3d.Vector = val;	gl.uniform3f(u.loc, v.x, v.y, v.z);
+		case Vec4:	var v : h3d.Vector = val;	gl.uniform4f(u.loc, v.x, v.y, v.z, v.w);
+		
 		case Struct(field, t):
 			var vs = Reflect.field(val, field);
 			
@@ -681,17 +824,30 @@ class GlDriver extends Driver {
 			
 			setUniform(vs, u, t);
 			
-		//todo optimize this...
 		case Elements(field, nb, t): {
-			var arr : Array<Vector> = Reflect.field(val, field);
-			if (arr.length > nb) arr = arr.slice(0, nb);
+			
 			switch(t) {
 				case Vec3: 
-					gl.uniform3fv( u.loc, packArray3(arr));
+					var arr : Array<Vector> = Reflect.field(val, field);
+					if (arr.length > nb) arr = arr.slice(0, nb);
+					gl.uniform3fv( u.loc, buff = packArray3(arr));
+					
 				case Vec4: 
-					gl.uniform4fv( u.loc, packArray4(arr));
+					var arr : Array<Vector> = Reflect.field(val, field);
+					if (arr.length > nb) arr = arr.slice(0, nb);
+					gl.uniform4fv( u.loc, buff = packArray4(arr));
+					
+				case Mat4: 
+					var ms : Array<h3d.Matrix> = val;
+					if ( nb != null && ms.length != nb) 
+						System.trace3('Array uniform type mismatch $nb requested, ${ms.length} found');
+						
+					gl.uniformMatrix4fv(u.loc, false, buff = blitMatrices(ms,true) );
+					System.trace2("sending matrix batch " + ms.length+" "+ms+" of val "+val);
+					
 				default: throw "not supported";
 			}
+			deleteF32(buff);
 		}
 			
 		case Index(index, t):
@@ -707,46 +863,12 @@ class GlDriver extends Driver {
 		default:
 			throw "Unsupported uniform " + u.type;
 		}
+		checkError();
 		
 	}
-	
-	//TODO cache this
-	function packMatrix44( vecs : Array<h3d.Matrix> ):Float32Array{
-		var a = [ ];
-		a[16 * vecs.length - 1 ] = 0.;
-		
-		var k = 0;
-		var mat : Matrix = null;
-		for ( i in 0...vecs.length) {
-			mat = vecs[i];
-			k = i << 4;
-			a[k+0] 	= mat._11;
-			a[k+1] 	= mat._12;
-			a[k+2] 	= mat._13;
-			a[k+3] 	= mat._14;
-			
-			a[k+4] 	= mat._21;
-			a[k+5] 	= mat._22;
-			a[k+6] 	= mat._23;
-			a[k+7] 	= mat._24;
-			
-			a[k+8] 	= mat._31;
-			a[k+9] 	= mat._32;
-			a[k+10] = mat._33;
-			a[k+11] = mat._34;
-			
-			a[k+12] = mat._41;
-			a[k+13] = mat._42;
-			a[k+14] = mat._43;
-			a[k+15] = mat._44;
-		}
-		return new Float32Array(a);
-	}
-	
 	//TODO cache this
 	function packArray4( vecs : Array<Vector> ):Float32Array{
-		var a = [];
-		a[vecs.length * 4-1] = 0.0;
+		var a = createF32(vecs.length*4);
 		for ( i in 0...vecs.length) {
 			var vec = vecs[i];
 			a[i * 4] = vec.x;
@@ -754,20 +876,19 @@ class GlDriver extends Driver {
 			a[i * 4+2] = vec.z;
 			a[i * 4+3] = vec.w;
 		}
-		return new Float32Array(a);
+		return a;
 	}
 	
 	//TODO cache this
 	function packArray3( vecs : Array<Vector> ):Float32Array{
-		var a = [];
-		a[vecs.length * 3-1] = 0.0;
+		var a = createF32(vecs.length*4);
 		for ( i in 0...vecs.length) {
 			var vec = vecs[i];
 			a[i * 3] = vec.x;
 			a[i * 3+1] = vec.y;
 			a[i * 3+2] = vec.z;
 		}
-		return new Float32Array(a);
+		return a;
 	}
 	
 	var curBuffer : VertexBuffer;
@@ -781,7 +902,10 @@ class GlDriver extends Driver {
 		var stride : Int = v.stride;
 		if( stride < curShader.stride )
 			throw "Buffer stride (" + stride + ") and shader stride (" + curShader.stride + ") mismatch";
+			
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
+		checkError();
+		
 		for( a in curShader.attribs )
 			gl.vertexAttribPointer(a.index, a.size, a.etype, false, stride * 4, a.offset * 4);
 		
@@ -821,7 +945,9 @@ class GlDriver extends Driver {
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
+		checkError();
 		gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
+		checkError();
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		checkError();
 	}
@@ -902,27 +1028,49 @@ class GlDriver extends Driver {
 
 	public inline function checkError() {
 		#if debug
-		if(gl.getError() != GL.NO_ERROR)
-			throw getError();
+		if (gl.getError() != GL.NO_ERROR)
+		{
+			var s = getError();
+			if ( s != null) {
+				trace("GL_ERROR " + s);
+				throw s;
+			}
+		}
 		#end
 	}
 	
 	public inline function getError() {
+		return 
 		switch(gl.getError()) {
-			case GL.NO_ERROR                      	:"NO_ERROR";
+			case GL.NO_ERROR                      	: null;
 			case GL.INVALID_ENUM                  	:"INVALID_ENUM";
 			case GL.INVALID_VALUE                 	:"INVALID_VALUE";
 			case GL.INVALID_OPERATION           	:"INVALID_OPERATION";
 			case GL.OUT_OF_MEMORY               	:"OUT_OF_MEMORY";
-			default 								:"UNKNOW_ERROR";
+			default 								:null;
 		}
 	}
-
-	/*
-	public override function selectShaderProjection(_, transp) {
-		return transp;
+	
+	public inline function getShaderInfoLog(s,code) {
+		var log = gl.getShaderInfoLog(s);
+		var line = code.split("\n")[Std.parseInt(log.substr(9)) - 1];
+		if ( line == null ) 
+			line = "-" 
+		else 
+			line = "(" + StringTools.trim(line) + ").";
+		return log + line;
 	}
-	*/
+	
+	public inline function getProgramInfoLog(p,code) {
+		var log = gl.getProgramInfoLog(p);
+		var hnt = log.substr(26);
+		var line = code.split("\n")[Std.parseInt(hnt)];
+		if ( line == null ) 
+			line = "-" 
+		else 
+			line = "(" + StringTools.trim(line) + ").";
+		return log + line;
+	}
 
 }
 

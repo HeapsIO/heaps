@@ -562,4 +562,27 @@ class Matrix {
 		}
 	}
 	
+	//makes an ortho matrix the fixed pipeline way
+	public function makeOrtho( width=1.0,height=1.0,znear=0,zfar = 1.0) {		
+		_11 = 2.0/width;
+		_12 = 0;
+		_13 = 0;
+		_14 = 0;
+
+		_21 = 0;
+		_22 = -2.0/height;
+		_23 = 0;
+		_24 = 0;
+
+		_31 = 0;
+		_32 = 0;
+		_33 = 2.0/(zfar-znear);
+		_34 = 0;
+
+		_41 = -1;
+		_42 = 1;
+		_43 = (znear+zfar)/(znear-zfar);
+		_44 = 1;
+	}
+	
 }

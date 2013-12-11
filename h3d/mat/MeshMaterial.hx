@@ -230,8 +230,8 @@ class MeshShader extends h3d.impl.Shader {
 			cst.push("const int numPointLights = " + lightSystem.points.length+";");
 		}
 		else {
-			cst.push("const int numDirLights = 0;");
-			cst.push("const int numPointLights = 0;");
+			//cst.push("const int numDirLights = 0;");
+			//cst.push("const int numPointLights = 0;");
 		}
 		
 		if( vertex ) {
@@ -255,6 +255,7 @@ class MeshShader extends h3d.impl.Shader {
 		return cst.join("\n");
 	}
 
+	//warning int vars does not work on gles
 	static var VERTEX = "
 	
 		attribute vec3 pos;
@@ -273,9 +274,10 @@ class MeshShader extends h3d.impl.Shader {
 		#end
 		
 		#if hasSkin
+		uniform mat4 skinMatrixes[maxSkinMatrixes];
+		
 		attribute vec4 indexes/*byte4*/;
 		attribute vec3 weights;
-		uniform mat4 skinMatrixes[maxSkinMatrixes];
 		#end
 
 		uniform mat4 mpos;
@@ -318,18 +320,23 @@ class MeshShader extends h3d.impl.Shader {
 		uniform mat3 mposInv;
 
 		void main(void) {
-			vec4 tpos = vec4(pos, 1.0);
+			vec4 tpos = vec4(pos.xyz, 1.0);
 			
 			#if hasSkin
-				int sknx = indexes.x;
-				int skny = indexes.y;
-				int sknz = indexes.z;
+			
+				int ix = int(indexes.x); int iy = int(indexes.y); int iz = int(indexes.z);
 				
 				float wx = weights.x;
 				float wy = weights.y;
 				float wz = weights.z;
 				
-				tpos.xyz = tpos * wx * skinMatrixes[sknx] + tpos * wy * skinMatrixes[skny] + tpos * wz * skinMatrixes[sknz];
+				mat4 id = mat4(
+				1, 0, 0, 0, 
+				0, 1, 0, 0,
+				0, 0, 1, 0,
+				0, 0, 0, 1);
+				tpos.xyz = (tpos * wx * skinMatrixes[ix] + tpos * wy * skinMatrixes[iy] + tpos * wz * skinMatrixes[iz]).xyz;
+				//tpos.xyz = (tpos * wx * id + tpos * wy * id + tpos * wz * id).xyz;
 				
 			#elseif hasPos
 				tpos *= mpos;
@@ -353,9 +360,11 @@ class MeshShader extends h3d.impl.Shader {
 				#if hasPos
 					n = mat3(mpos) * n;
 				#elseif hasSkin
-					n = 	skinMatrixes[sknx] * wx * n  
-						+ 	skinMatrixes[skny] * wy * n  
-						+ 	skinMatrixes[sknz] * wz * n;
+				
+					n = 	n*wx*skinMatrixes[ix]  
+						+ 	n*wy*skinMatrixes[iy]  
+						+ 	n*wz*skinMatrixes[iz];
+						
 					#if hasPos
 						n = mposInv * n;
 					#end
@@ -382,7 +391,7 @@ class MeshShader extends h3d.impl.Shader {
 			#elseif hasVertexColor
 				tcolor = color;
 			#else
-				tcolor = vec3(1,1,1);
+				tcolor = vec3(1.,1.,1.);
 			#end 
 			
 			#if hasVertexColorAdd
@@ -390,7 +399,7 @@ class MeshShader extends h3d.impl.Shader {
 			#end
 			#if hasFog
 				vec3 dist = tpos.xyz - fog.xyz;
-				talpha = (fog.w * dist.dot(dist).rsqrt()).min(1);
+				talpha = (fog.w * dist.dot(dist).rsqrt()).min(1.);
 			#end
 			#if hasBlend
 				tblend = blending;
@@ -448,7 +457,7 @@ class MeshShader extends h3d.impl.Shader {
 				if( c.a - killAlphaThreshold ) discard;
 			#end
 			#if hasBlend
-				c.rgb = c.rgb * (1 - tblend) + tblend * texture2D(blendTexture, tuv).rgb;
+				c.rgb = c.rgb * (1. - tblend) + tblend * texture2D(blendTexture, tuv).rgb;
 			#end
 			#if hasColorAdd
 				c += colorAdd;
@@ -467,8 +476,8 @@ class MeshShader extends h3d.impl.Shader {
 			#end
 			#if hasShadowMap
 				// ESM filtering
-				mediump float shadow = exp( shadowColor.w * (tshadowPos.z - shadowTexture.get(tshadowPos.xy).dot([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)]))).sat();
-				c.rgb *= (1 - shadow) * shadowColor.rgb + shadow.xxx;
+				mediump float shadow = exp( shadowColor.w * (tshadowPos.z - shadowTexture.get(tshadowPos.xy).dot([1., 1. / 255., 1. / (255. * 255.), 1. / (255. * 255. * 255.)]))).sat();
+				c.rgb *= (1. - shadow) * shadowColor.rgb + shadow.xxx;
 			#end
 			#if hasGlow
 				c.rgb += texture2D(glowTexture,tuv).rgb * glowAmount;
@@ -688,7 +697,12 @@ class MeshMaterial extends Material {
 		#if debug
 		if( v != null && hasSkin && v.dirs.length + v.points.length > 6 )
 			throw "Maximum 6 lights are allowed with skinning (" + (v.dirs.length + v.points.length) + " set)";
+			
+		if ( v != null && (v.dirs.length == 0 || v.points.length == 0) ) {
+			throw "unsupported partial light system";
+		}
 		#end
+		
 		return mshader.lightSystem = v;
 	}
 	

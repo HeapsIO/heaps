@@ -65,6 +65,7 @@ class Test {
 		mat.size = new Vector( k /  Lib.current.stage.stageWidth, k / Lib.current.stage.stageHeight, 0);
 	}
 	
+	var fr = 0;
 	function start() {
 		
 		scene = new Scene();
@@ -82,6 +83,10 @@ class Test {
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		
 		engine.render(scene);
+		if ( fr++ % 100 == 0 )
+		{
+			trace("plouf");
+		}
 	}
 	
 	static function main() {

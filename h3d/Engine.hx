@@ -43,10 +43,14 @@ class Engine {
 		this.antiAlias = aa;
 		this.autoResize = true;
 		
+		if ( System.debugLevel >= 2) trace("booting");
+		
 		#if openfl
-		hxd.Stage.openFLBoot(start);
+			if( System.debugLevel>=2) trace("ofl boot");
+			hxd.Stage.openFLBoot(start);
 		#else
-		start();
+			if( System.debugLevel>=2) trace("flash boot");
+			start();
 		#end
 	}
 	
@@ -111,6 +115,7 @@ class Engine {
 	}
 	
 	public inline function renderQuadBuffer( b : h3d.impl.Buffer, start = 0, max = -1 ) {
+		//System.trace3("drawing quad buff");
 		return renderBuffer(b, mem.quadIndexes, 2, start, max);
 	}
 
@@ -190,6 +195,7 @@ class Engine {
 	}
 
 	function onCreate( disposed ) {
+		if ( System.debugLevel>=1) trace('onCreate');
 		if( autoResize ) {
 			width = hxd.System.width;
 			height = hxd.System.height;

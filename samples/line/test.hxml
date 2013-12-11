@@ -1,4 +1,5 @@
 -lib h3d
+-lib hxsl
 -cp .
 -swf bin/test.swf
 -swf-header 800:600:30:FFFFFF

@@ -10,6 +10,7 @@ import h3d.scene.Mesh;
 import h3d.Vector;
 import haxe.CallStack;
 import haxe.io.Bytes;
+import haxe.Log;
 import hxd.BitmapData;
 import hxd.Pixels;
 import hxd.res.Embed;
@@ -76,6 +77,8 @@ class Test {
 		engine.onReady = start;
 		engine.init();
 		Key.init();
+		
+		trace("new()");
 	}
 	
 	
@@ -89,6 +92,7 @@ class Test {
 		mat.start = start;
 		mat.end = end;
 		mat.color = 0xFFFF00FF;
+		trace("addLine()");
 	}	
 	
 	function start() {
@@ -123,13 +127,14 @@ class Test {
 		var frame = 0;
 		var o : h3d.scene.Object = null;
 		scene.addChild(o=curFbx.makeObject( function(str, mat) {
-			var tex = Texture.fromBitmap( BitmapData.fromNative(Assets.getBitmapData("assets/checker.png",false)) );
+			var tex = Texture.fromBitmap( BitmapData.fromNative(Assets.getBitmapData("assets/checker.png", false)) );
+			if ( tex == null ) throw "no texture :-(";
+			
 			var mat = new h3d.mat.MeshMaterial(tex);
 			mat.lightSystem = null;
 			mat.culling = Front;
 			mat.blend(SrcAlpha, OneMinusSrcAlpha);
 			mat.depthTest = h3d.mat.Data.Compare.Less;
-			//mat.depthTest = h3d.mat.Data.Compare.Always;
 			mat.depthWrite = true; 
 			return mat;
 		}));
@@ -145,34 +150,25 @@ class Test {
 			anim = scene.playAnimation(anim);
 	}
 	
+	var fr = 0;
 	function update() {	
-		var dist = 100;
+		var dist = 33;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);
+	
+		//#if android if( (fr++) % 100 == 0 ) trace("ploc"); #end
 	}
 	
-	
-	static var lfs: LocalFileSystem;
 	static function main() {
+		var p = haxe.Log.trace;
 		
+		trace("STARTUP");
 		#if flash
 		haxe.Log.setColor(0xFF0000);
 		#end
 		
-		#if flash
-			EmbedFileSystem.init();
-		#else
-			lfs = new hxd.res.LocalFileSystem('res');
-			var it = lfs.getRoot().iterator();//bugs
-			var e:Dynamic = null;
-			do
-			{
-				e = it.next();
-				trace( 'detecting file ${e.name}');
-			}
-			while ( it.hasNext() );
-		#end
+		trace("Booting App");
 		new Test();
 		
 		

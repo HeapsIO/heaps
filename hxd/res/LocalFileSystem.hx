@@ -229,19 +229,37 @@ class LocalFileSystem implements FileSystem {
 		baseDir = dir;
 		#if air3
 		var froot = new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + baseDir);
-		if( !froot.exists ) throw "Could not find dir " + dir;
+		if ( !froot.exists ) {
+			if ( System.debugLevel >= 2) {
+				trace("path:" + flash.filesystem.File.applicationDirectory.nativePath);
+			}
+			throw "air:Could not find dir " + dir;
+		}
 		baseDir = froot.nativePath;
 		baseDir = baseDir.split("\\").join("/");
 		if( !StringTools.endsWith(baseDir, "/") ) baseDir += "/";
 		root = new LocalEntry(this, "root", null, froot);
 		#else
-		var exePath = Sys.executablePath().split("\\").join("/").split("/");
-		exePath.pop();
-		var froot = sys.FileSystem.fullPath(exePath.join("/") + "/" + baseDir);
-		if( !sys.FileSystem.isDirectory(froot) ) throw "Could not find dir " + dir;
-		baseDir = froot.split("\\").join("/");
-		if( !StringTools.endsWith(baseDir, "/") ) baseDir += "/";
-		root = new LocalEntry(this, "root", null, baseDir);
+			var exePath = Sys.executablePath().split("\\").join("/").split("/");
+			exePath.pop();
+			var froot = sys.FileSystem.fullPath(exePath.join("/") + "/" + baseDir);
+			if ( !sys.FileSystem.isDirectory(froot) ) {
+				if ( System.debugLevel >= 2) {
+					trace("path:" + exePath);
+					trace("ls:" + sys.FileSystem.readDirectory("."));
+					
+					var cwd = Sys.getCwd();
+					trace("cwd:" + cwd);
+					trace("path of checker :" + openfl.Assets.getPath("res/checker.png"));
+					
+					trace("asd:"+flash.filesystem.File.applicationStorageDirectory);
+					trace("ad:"+flash.filesystem.File.applicationDirectory );
+				}
+				throw "sys:Could not find dir " + dir;
+			}
+			baseDir = froot.split("\\").join("/");
+			if( !StringTools.endsWith(baseDir, "/") ) baseDir += "/";
+			root = new LocalEntry(this, "root", null, baseDir);
 		#end
 		tmpDir = baseDir + ".tmp/";
 	}

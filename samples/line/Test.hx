@@ -83,6 +83,7 @@ class Test {
 		hxd.System.setLoop(update);
 	}
 	
+	var fr = 0;
 	function update() {	
 		var dist = 5;
 		time += 0.01;

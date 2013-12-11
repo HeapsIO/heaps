@@ -242,42 +242,30 @@ class FBXModel extends MeshPrimitive {
 				groupIndexes.push(i == null ? null : engine.mem.allocIndex(i));
 		}
 		
-		#if( !flash )
-		if ( System.debugLevel >= 2 ) {
-			var i = 0;
-			var meshName = '$id';
-			var saveFile = sys.io.File.write( 'FbxData_$meshName.hx', false );
-			
-			saveFile.writeString('class FbxData_$meshName{\n');
-				saveFile.writeString("public static var floatBuffer : Array<Float> = { var fb = [\r\n");
-				for ( i in 0...pbuf.length) {
-					var v = pbuf[i];
-					saveFile.writeString(v + ( (i==pbuf.length-1) ? "" : ",") + "\r\n" );
-				}
-				saveFile.writeString(" ]; fb; };\n");
+		#if false 
+			if ( System.debugLevel >= 2 ) {
+				var i = 0;
+				var meshName = '$id';
+				var saveFile = sys.io.File.write( 'FbxData_$meshName.hx', false );
 				
-				saveFile.writeString("public static var indexBuffer : Array<Int> = { var ib = [\r\n");
-				for ( i in 0...idx.length) {
-					var v = idx[i];
-					saveFile.writeString(v + ( (i==pbuf.length-1) ? "" : ",") + "\r\n" );
-				}
-				saveFile.writeString(" ]; ib; };\n");
-				
-				/*
-				if ( skinBuf != null ) {
-					
-					saveFile.writeString("public static var skinBuffer : Array<Float> = { var sb = [\r\n");
-					for ( i in 0...skinBuf.length) {
-						var v = skinBuf.getBytes().get(i);
-						saveFile.writeString(v + ( (i==skinBuf.length-1) ? "" : ",") + "\r\n" );
+				saveFile.writeString('class FbxData_$meshName{\n');
+					saveFile.writeString("public static var floatBuffer : Array<Float> = { var fb = [\r\n");
+					for ( i in 0...pbuf.length) {
+						var v = pbuf[i];
+						saveFile.writeString(v + ( (i==pbuf.length-1) ? "" : ",") + "\r\n" );
 					}
-					saveFile.writeString(" ]; sb; };\n");
-				}
-				*/
-				
-			saveFile.writeString("}\r\n");
-			saveFile.close();
-		}
+					saveFile.writeString(" ]; fb; };\n");
+					
+					saveFile.writeString("public static var indexBuffer : Array<Int> = { var ib = [\r\n");
+					for ( i in 0...idx.length) {
+						var v = idx[i];
+						saveFile.writeString(v + ( (i==pbuf.length-1) ? "" : ",") + "\r\n" );
+					}
+					saveFile.writeString(" ]; ib; };\n");
+					
+				saveFile.writeString("}\r\n");
+				saveFile.close();
+			}
 		#end
 	}
 	

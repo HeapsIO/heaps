@@ -138,12 +138,14 @@ class Test {
 		hxd.System.setLoop(update);
 	}
 	
+	var fr = 0;
 	function update() {	
 		var dist = 0.001;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 1);
 		fbx.setRotate(Math.PI*0.25,0,0);
 		engine.render(scene);
+		if ( fr++ % 100 == 0) trace("plouf");
 	}
 	
 	

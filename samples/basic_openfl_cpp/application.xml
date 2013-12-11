@@ -3,7 +3,7 @@
 	<!-- NMML reference: https://gist.github.com/1763850 -->
 	
 	<!-- metadata, make sure 'package' is at least 3 segments (ie. com.mycompany.myproject) -->
-	<meta title="test.openfl" package="testopenfl" version="1.0.0" company="" />
+	<meta title="test.openfl.basic" package="com.mt.test" version="1.0.0" company="" />
 	
 	<!-- output -->
 	<app main="Test" file="testopenfl" path="bin" swf-version="11.6" />
@@ -18,6 +18,7 @@
 	<haxelib name="openfl" />
 	<haxelib name="actuate" />
 	<haxelib name="h3d" />
+	<haxelib name="hxsl" if="flash" />
 	
 	<!-- assets -->
 	<icon path="assets/openfl.svg" />
@@ -31,7 +32,7 @@
 	<haxeflag name="-dce" value="no" />
 	-->
 	<haxeflag name="-dce" value="no" />
-	<haxedef name="resourcesPath" value="../res" />
+	<haxedef name="resourcesPath" value="assets/res" />
 	<haxedef name="verbose" value="true" />
 	<!--<haxedef name="dump" value="pretty"  />-->
 	

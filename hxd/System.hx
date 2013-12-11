@@ -257,4 +257,12 @@ class System {
 
 	#end
 	
+	public inline static function trace2(msg) {
+		if ( debugLevel >= 2) trace(msg);
+	}
+	
+	public inline static function trace3(msg,?pos) {
+		if ( debugLevel >= 3) trace(msg);
+	}
+	
 }

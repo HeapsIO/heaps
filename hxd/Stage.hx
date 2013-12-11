@@ -15,12 +15,17 @@ class Stage {
 	public var mouseY(get, null) : Float;
 	
 	function new() {
+		
+		if ( System.debugLevel >= 2) trace("Stage:new()");
+		
 		eventTargets = new List();
 		resizeEvents = new List();
+		
 		#if (flash || openfl)
 		stage = flash.Lib.current.stage;
 		stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
 		stage.addEventListener(flash.events.Event.RESIZE, onResize);
+		
 		if( hxd.System.isTouch ) {
 			flash.ui.Multitouch.inputMode = flash.ui.MultitouchInputMode.TOUCH_POINT;
 			stage.addEventListener(flash.events.TouchEvent.TOUCH_BEGIN, onTouchDown);

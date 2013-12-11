@@ -4,7 +4,7 @@ package h3d.impl;
 class PointShader extends h3d.impl.Shader {
 
 #if flash
-	static var SRC = {
+	 static var SRC = {
 		var input : {
 			pos : Float2,
 		};
@@ -41,7 +41,7 @@ class PointShader extends h3d.impl.Shader {
 		uniform vec4 color /*byte4*/;
 		
 		void main(void) {
-			if( 1 - dot(tuv, tuv) < 0 ) discard;
+			if( 1.0 - dot(tuv, tuv) < 0.0 ) discard;
 			gl_FragColor = color;
 		}
 	";
@@ -56,20 +56,22 @@ class LineShader extends h3d.impl.Shader {
 #if flash
 	static var SRC = {
 		var input : {
-			pos : Float2,
+				pos : Float2,
 		};
 
 		function vertex( mproj : Matrix, start : Float4, end : Float4 ) {
-			var spos = start * mproj;
-			var epos = end * mproj;
-			var delta = epos.xy  - spos.xy;
-			delta.xy *= 1 / sqrt(delta.x * delta.x + delta.y * delta.y);
-			var p = (epos - spos) * (input.pos.x + 1) * 0.5 + spos;
-			p.xy += delta.yx * input.pos.y * p.z / 400;
-			out = p;
+				var spos = start * mproj;
+				var epos = end * mproj;
+				var delta = epos.xy  - spos.xy;
+				delta.xy *= 1 / sqrt(delta.x * delta.x + delta.y * delta.y);
+				
+				
+				var p = (epos - spos) * (input.pos.x + 1) * 0.5 + spos;
+				p.xy += delta.yx * input.pos.y * p.z / 400;
+				out = p;
 		}
 		function fragment( color : Color ) {
-			out = color;
+				out = color;
 		}
 	}
 	
@@ -89,8 +91,8 @@ class LineShader extends h3d.impl.Shader {
 			vec2 delta = epos.xy  - spos.xy;
 			normalize(delta);
 			
-			vec4 p = (epos - spos) * (pos.x + 1) * 0.5 + spos;
-			p.xy += delta.yx * pos.y * p.z / 400;
+			vec4 p = (epos - spos) * (pos.x + 1.0) * 0.5 + spos;
+			p.xy += delta.yx * pos.y * p.z / 400.0;
 			gl_Position = p;
 		}
 	";

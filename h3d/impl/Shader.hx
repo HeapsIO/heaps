@@ -25,7 +25,7 @@ enum ShaderType {
 	Byte4;
 	Struct( field : String, t : ShaderType );
 	Index( index : Int, t : ShaderType );
-	Elements( field : String, size:Int, t : ShaderType);//
+	Elements( field : String, size:Null<Int>, t : ShaderType);//null means size in indefinite and will be context relative
 }
 
 typedef Uniform = { 
@@ -82,7 +82,7 @@ class ShaderMacros {
 		var r_uni = ~/uniform[ \t]+((lowp|mediump|highp)[ \t]+)?([A-Za-z0-9_]+)[ \t]+([A-Za-z0-9_]+)[ \t]*(\/\*([A-Za-z0-9_]+)\*\/)?/;
 		
 		var cl = Std.string(Context.getLocalClass());
-		var allFields = Lambda.map( fields, function(t) return t.name).join(' ');
+		//var allFields = Lambda.map( fields, function(t) return t.name).join(' ');
 		
 		function classHasField( c : haxe.macro.Type.Ref< haxe.macro.Type.ClassType> , name)
 		{
@@ -114,13 +114,19 @@ class ShaderMacros {
 						continue;
 					throw "Unsupported type " + type;
 				}
-				if( code.charCodeAt(0) == '['.code )
+				
+				//trace("evaluated "+name+" "+code);
+				
+				if ( code.charCodeAt(0) == '['.code ) {
+					//trace("arraying "+name);
 					t = macro : Array<$t>;
+				}
 					
-				var allFields = Lambda.map( fields, function(t) return t.name).join(' ');
+				//var allFields = Lambda.map( fields, function(t) return t.name).join(' ');
 				if ( classHasField( Context.getLocalClass(), name ) ) {
 					continue;
 				}
+				
 				fields.push( {
 						name : name,
 						kind : FVar(t),
@@ -132,16 +138,15 @@ class ShaderMacros {
 		}
 		for( f in fields )
 			switch( [f.name, f.kind] ) {
-				
-			case ["VERTEX", FVar(_,{ expr : EConst(CString(code)) }) ]:
-				hasVertex = true;
-				addUniforms(code);
-				f.meta.push( { name : ":keep", params : [], pos : pos } );
-			case ["FRAGMENT", FVar(_,{ expr : EConst(CString(code)) })]:
-				hasFragment = true;
-				addUniforms(code);
-				f.meta.push( { name : ":keep", params : [], pos : pos } );
-			default:
+				case ["VERTEX", FVar(_,{ expr : EConst(CString(code)) }) ]:
+					hasVertex = true;
+					addUniforms(code);
+					f.meta.push( { name : ":keep", params : [], pos : pos } );
+				case ["FRAGMENT", FVar(_,{ expr : EConst(CString(code)) })]:
+					hasFragment = true;
+					addUniforms(code);
+					f.meta.push( { name : ":keep", params : [], pos : pos } );
+				default:
 			}
 		if( !hasVertex )
 			haxe.macro.Context.error("Missing VERTEX shader", pos);

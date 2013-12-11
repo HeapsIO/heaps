@@ -186,7 +186,6 @@ class Skin extends Mesh {
 				//TODO REMOVE
 				#if idPalette
 				material.skinMatrixes = idPalette;
-				trace('gnurf');
 				#end
 				
 			}
