@@ -13,7 +13,14 @@ class Polygon extends Primitive {
 		this.points = points;
 		this.idx = idx;
 	}
-
+	
+	override function getBounds() {
+		var b = new h3d.col.Bounds();
+		for( p in points )
+			b.addPoint(p);
+		return b;
+	}
+	
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
 		
