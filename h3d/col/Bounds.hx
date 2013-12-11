@@ -239,19 +239,19 @@ class Bounds {
 	}
 	
 	public inline function getMin() {
-		return new Vector(xMin, yMin, zMin);
+		return new Point(xMin, yMin, zMin);
 	}
 	
 	public inline function getCenter() {
-		return new Vector((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, (zMin + zMax) * 0.5);
+		return new Point((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, (zMin + zMax) * 0.5);
 	}
 
 	public inline function getSize() {
-		return new Vector(xMax - xMin, yMax - yMin, zMax - zMin);
+		return new Point(xMax - xMin, yMax - yMin, zMax - zMin);
 	}
 	
 	public inline function getMax() {
-		return new Vector(xMax, yMax, zMax);
+		return new Point(xMax, yMax, zMax);
 	}
 	
 	public inline function empty() {
