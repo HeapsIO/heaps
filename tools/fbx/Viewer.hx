@@ -124,6 +124,9 @@ class Viewer {
 		flash.Lib.current.addChild(tf_help);
 		
 		engine = new h3d.Engine();
+		#if debug
+		engine.debug = true;
+		#end
 		engine.backgroundColor = 0xFF808080;
 		engine.onReady = onReady;
 		engine.init();
@@ -331,6 +334,7 @@ class Viewer {
 	
 	function loadData( data : String, newFbx = true ) {
 		curFbx = new h3d.fbx.Library();
+		curFbx.unskinnedJointsAsObjects = true;
 		curData = data;
 		var fbx = h3d.fbx.Parser.parse(data);
 		curFbx.load(fbx);

@@ -71,6 +71,11 @@ class Library {
 	**/
 	public var maxBonesPerSkin = 34;
 	
+	/**
+		Consider unskinned joints to be simple objects
+	**/
+	public var unskinnedJointsAsObjects : Bool;
+	
 	public function new() {
 		root = { name : "Root", props : [], childs : [] };
 		keepJoints = new Map();
@@ -582,6 +587,18 @@ class Library {
 	function sortDistinctFloats( a : Float, b : Float ) {
 		return if( a > b ) 1 else -1;
 	}
+	
+	function isNullJoint( model : FbxNode ) {
+		if( getParent(model, "Deformer", true) != null )
+			return false;
+		var parent = getParent(model, "Model", true);
+		if( parent == null )
+			return true;
+		var t = parent.getType();
+		if( t == "LimbNode" || t == "Root" )
+			return false;
+		return true;
+	}
 
 	public function makeObject( ?textureLoader : String -> FbxNode -> h3d.mat.MeshMaterial ) : h3d.scene.Object {
 		var scene = new h3d.scene.Object();
@@ -606,11 +623,15 @@ class Library {
 			var name = model.getName();
 			if( skipObjects.get(name) )
 				continue;
-			switch( model.getType() ) {
+			var mtype = model.getType();
+			if( unskinnedJointsAsObjects && mtype == "LimbNode" && isNullJoint(model) )
+				mtype = "Null";
+			switch( mtype ) {
 			case "Null", "Root", "Camera":
 				var hasJoint = false;
 				for( c in getChilds(model, "Model") )
 					if( c.getType() == "LimbNode" ) {
+						if( unskinnedJointsAsObjects && isNullJoint(c) ) continue;
 						hasJoint = true;
 						break;
 					}
@@ -739,7 +760,8 @@ class Library {
 			collectJoints(j);
 		var skin = null;
 		var geomTrans = null;
-		for( j in allJoints.copy() ) {
+		var iterJoints = allJoints.copy();
+		for( j in iterJoints ) {
 			var jModel = ids.get(j.index);
 			var subDef = getParent(jModel, "Deformer", true);
 			var defMat = defaultModelMatrixes.get(jModel.getName());
@@ -787,7 +809,7 @@ class Library {
 			}
 		}
 		if( skin == null )
-			throw "No joint is skinned";
+			throw "No joint is skinned ("+[for( j in iterJoints ) j.name].join(",")+")";
 		allJoints.reverse();
 		for( i in 0...allJoints.length )
 			allJoints[i].index = i;
