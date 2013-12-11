@@ -57,6 +57,7 @@ class Stage3dDriver extends Driver {
 		empty = new flash.utils.ByteArray();
 		s3d = flash.Lib.current.stage.stage3Ds[0];
 		curTextures = [];
+		curMultiBuffer = [];
 	}
 	
 	override function getDriverName(details:Bool) {
@@ -67,7 +68,7 @@ class Stage3dDriver extends Driver {
 		curMatBits = -1;
 		curShader = null;
 		curBuffer = null;
-		curMultiBuffer = [];
+		curMultiBuffer[0] = -1;
 		for( i in 0...curAttributes )
 			ctx.setVertexBufferAt(i, null);
 		curAttributes = 0;
@@ -325,15 +326,15 @@ class Stage3dDriver extends Driver {
 	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
 		// select the multiple buffers elements
 		var changed = false;
-		if( !changed ) {
-			var b = buffers;
-			for( i in 0...curAttributes ) {
-				if( b == null || b.id != curMultiBuffer[i] ) {
-					changed = true;
-					break;
-				}
-				b = b.next;
+		var b = buffers;
+		var i = 0;
+		while( b != null || i < curAttributes ) {
+			if( b == null || b.id != curMultiBuffer[i] ) {
+				changed = true;
+				break;
 			}
+			b = b.next;
+			i++;
 		}
 		if( changed ) {
 			var pos = 0, offset = 0;
