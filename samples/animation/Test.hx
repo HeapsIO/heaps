@@ -92,12 +92,9 @@ class Test {
 		mat.start = start;
 		mat.end = end;
 		mat.color = 0xFFFF00FF;
-		trace("addLine()");
 	}	
 	
 	function start() {
-		trace("start !");
-		trace("prim ok");
 		scene = new Scene();
 		
 		var axis = new Axis();
@@ -139,7 +136,7 @@ class Test {
 		}));
 		
 		setSkin();
-		o.setRotate(0,2*Math.PI/3,0);
+		//o.setRotate(0,2*Math.PI/3,0);
 	}
 	
 	static public var animMode : h3d.fbx.Library.AnimationMode = h3d.fbx.Library.AnimationMode.FrameAnim;
@@ -152,9 +149,9 @@ class Test {
 	
 	var fr = 0;
 	function update() {	
-		var dist = 33;
+		var dist = 100;
 		time += 0.01;
-		//scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
+		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);
 	
 		//#if android if( (fr++) % 100 == 0 ) trace("ploc"); #end
