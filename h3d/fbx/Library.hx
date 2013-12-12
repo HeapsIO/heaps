@@ -264,7 +264,7 @@ class Library {
 					continue;
 				var def = defaultModelMatrixes.get(name);
 				if( def == null )
-					throw "Default Matrixes not found for " + name + " in " + animName;
+					throw "Object "+name+" used in anim "+animName+" was not found in library";
 				// if it's a move animation on a terminal unskinned joint, let's skip it
 				if( def.wasRemoved != null ) {
 					if( cn.getName() != "Visibility" )
