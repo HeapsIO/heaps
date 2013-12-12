@@ -32,7 +32,7 @@
 	<haxeflag name="-dce" value="no" />
 	-->
 	<haxeflag name="-dce" value="no" />
-	<haxedef name="resourcesPath" value="assets/res" />
+	<haxedef name="resourcesPath" value="../res" />
 	<haxedef name="verbose" value="true" />
 	<!--<haxedef name="dump" value="pretty"  />-->
 	

@@ -141,18 +141,16 @@ class GlDriver extends Driver {
 		curMatBits = mbits;
 	}
 	
-	var clearOnce = false;
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
 		gl.clearColor(r, g, b, a);
-		
 		gl.depthMask(true);
-		if( clearOnce )
-			gl.clearDepth(1.0);
+		gl.clearDepth(1.0);
+		gl.depthRange(0, 1);
+		gl.frontFace( GL.CW);
 		
 		//always clear depth & stencyl
 		gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT | GL.STENCIL_BUFFER_BIT);
 		//hxd.System.trace3 trace("clearing");
-		clearOnce = true;
 	}
 
 	//TODO optimize me
@@ -607,13 +605,15 @@ class GlDriver extends Driver {
 			}
 			
 			var c = name.lastIndexOf(".");
-			if ( c <= 0) c = name.lastIndexOf("[");
+			if ( c < 0) {
+				c = name.lastIndexOf("[");
+			}
 			
 			if ( c > 0 ) {
 				System.trace2('1_ $name -> $t');
-				name = name.substr(0, c);
 				var field = name.substr(c + 1);
-				
+				name = name.substr(0, c);
+				System.trace2('1_ $name -> field $field $t');
 				if ( !isSubscriptArray){ //struct subscript{
 					t = Struct(field, t);
 				}
@@ -839,11 +839,10 @@ class GlDriver extends Driver {
 					
 				case Mat4: 
 					var ms : Array<h3d.Matrix> = val;
-					if ( nb != null && ms.length != nb) 
-						System.trace3('Array uniform type mismatch $nb requested, ${ms.length} found');
+					if ( nb != null && ms.length != nb)  System.trace3('Array uniform type mismatch $nb requested, ${ms.length} found');
 						
 					gl.uniformMatrix4fv(u.loc, false, buff = blitMatrices(ms,true) );
-					System.trace2("sending matrix batch " + ms.length+" "+ms+" of val "+val);
+					System.trace3("sending matrix batch " + ms.length + " " + ms + " of val " + val);
 					
 				default: throw "not supported";
 			}

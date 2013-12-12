@@ -110,8 +110,7 @@ class Test {
 	}
 	
 	function loadFbx(){
-		//var file = Assets.getText("assets/sphere.FBX");
-		//var file = Assets.getText("assets/Cheveux.FBX");
+
 		var file = Assets.getText("assets/Skeleton01_anim_attack.FBX");
 		loadData(file);
 	}
@@ -132,7 +131,7 @@ class Test {
 			
 			var mat = new h3d.mat.MeshMaterial(tex);
 			mat.lightSystem = null;
-			mat.culling = Front;
+			mat.culling = Back;
 			mat.blend(SrcAlpha, OneMinusSrcAlpha);
 			mat.depthTest = h3d.mat.Data.Compare.Less;
 			mat.depthWrite = true; 
@@ -140,6 +139,7 @@ class Test {
 		}));
 		
 		setSkin();
+		o.setRotate(0,2*Math.PI/3,0);
 	}
 	
 	static public var animMode : h3d.fbx.Library.AnimationMode = h3d.fbx.Library.AnimationMode.FrameAnim;
@@ -154,7 +154,7 @@ class Test {
 	function update() {	
 		var dist = 33;
 		time += 0.01;
-		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
+		//scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);
 	
 		//#if android if( (fr++) % 100 == 0 ) trace("ploc"); #end

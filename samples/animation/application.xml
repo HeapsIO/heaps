@@ -37,8 +37,9 @@
 	
 	<android  minimum-sdk-version="16" if="android" />
 	
-	
+	<!--
 	<haxedef name="dump" value="pretty"  />
+	-->
 	
 	<!--
 	<haxedef name="idPalette"  />

@@ -171,7 +171,7 @@ class Test {
 		var line = new h3d.scene.CustomObject(new h3d.prim.Plan2D(), mat, scene);
 		line.material.blend(SrcAlpha, OneMinusSrcAlpha);
 		line.material.depthWrite = false;
-		line.material.culling = None;
+		line.material.culling = Front;
 		
 		mat.start = new Vector(0,0,0);
 		mat.end = new Vector(1, 1, 1);
@@ -189,13 +189,20 @@ class Test {
 		
 		function onLoaded( bmp : hxd.BitmapData) {
 			var tex :Texture = Texture.fromBitmap( bmp);
-			var mat = new h3d.mat.MeshMaterial(tex);
-			mat.culling = None;
+			var mat0 = new h3d.mat.MeshMaterial(tex);
+			mat0.culling = Back;
+			mat0.depthWrite = true;
+			mat0.depthTest = h3d.mat.Data.Compare.Less;
 			
-			obj1 = new Mesh(prim, mat, scene);
-			obj2 = new Mesh(prim, mat, scene);
+			var mat1 = new h3d.mat.MeshMaterial(tex);
+			mat1.culling = Back;
+			mat1.depthWrite = true;
+			mat1.depthTest = h3d.mat.Data.Compare.Less;
 			
-			mat.lightSystem = {
+			obj1 = new Mesh(prim, mat0, scene);
+			obj2 = new Mesh(prim, mat1, scene);
+			
+			mat1.lightSystem = mat0.lightSystem = {
 				ambient : new h3d.Vector(0.5, 0.5, 0.5),
 				
 				dirs : [ 
@@ -228,10 +235,11 @@ class Test {
 	
 	function update() {	
 		
-		var dist = 5;
+		var dist = 10;
 		time += 0.01;
-		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
+		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 10);
 		obj2.setRotateAxis( -0.5, 2, Math.cos(time), time + Math.PI / 2);
+		obj1.setPos( 1.0, 0, 0);
 		
 		engine.render(scene);
 	}
