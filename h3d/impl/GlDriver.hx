@@ -520,7 +520,7 @@ class GlDriver extends Driver {
 	
 	var parseUniInfo : {
 			var texIndex : Int;
-			var inf: GLActiveInfo;
+			var inf: openfl.gl.GLActiveInfo;
 	};
 	
 	function findVarComment(str,code){
