@@ -330,6 +330,14 @@ class MeshShader extends h3d.impl.Shader {
 				float wy = weights.y;
 				float wz = weights.z;
 				
+				/*
+				mat4 id = mat4(
+				1,0,0,0,
+				0,1,0,0,
+				0,0,1,0,
+				0,0,0,1
+				);
+				*/
 				tpos.xyz = (tpos * wx * skinMatrixes[ix] + tpos * wy * skinMatrixes[iy] + tpos * wz * skinMatrixes[iz]).xyz;
 				//tpos.xyz = (tpos * wx * id + tpos * wy * id + tpos * wz * id).xyz;
 				

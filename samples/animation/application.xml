@@ -40,11 +40,9 @@
 	<!--
 	<haxedef name="dump" value="pretty"  />
 	-->
-	
 	<!--
 	<haxedef name="idPalette"  />
 	-->
-	
 		
 	<!-- <section if="android">-->
 		<template if="android" path="tpl/android/AndroidManifest.xml" 				rename="AndroidManifest.xml" />

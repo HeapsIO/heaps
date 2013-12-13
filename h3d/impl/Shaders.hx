@@ -78,7 +78,7 @@ class LineShader extends h3d.impl.Shader {
 #elseif (js || cpp)
 
 	static var VERTEX = "
-		attribute vec2 pos;
+		attribute vec2 pos; 
 		
 		uniform mat4 mproj;
 		uniform vec4 start;

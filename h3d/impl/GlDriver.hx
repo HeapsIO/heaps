@@ -64,6 +64,8 @@ class GlDriver extends Driver {
 	//	curAttribs = 0;
 		curMatBits = -1;
 		selectMaterial(0);
+
+		System.trace3('gldriver newed');
 	}
 	
 	override function reset() {
@@ -139,6 +141,7 @@ class GlDriver extends Driver {
 		}
 			
 		curMatBits = mbits;
+		System.trace3('gldriver select material');
 	}
 	
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
@@ -148,9 +151,9 @@ class GlDriver extends Driver {
 		gl.depthRange(0, 1);
 		gl.frontFace( GL.CW);
 		
-		//always clear depth & stencyl
+		//always clear depth & stencyl to enable opts
 		gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT | GL.STENCIL_BUFFER_BIT);
-		//hxd.System.trace3 trace("clearing");
+		hxd.System.trace3("clearing");
 	}
 
 	//TODO optimize me
@@ -227,9 +230,7 @@ class GlDriver extends Driver {
 		checkError();
 	}
 	
-	//TODO miplevel and side
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-		gl.enable(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
 		var pix = bmp.getPixels();
 		pix.convert(RGBA);
@@ -347,24 +348,31 @@ class GlDriver extends Driver {
 			fullCode += code;
 			var cst = shader.getConstants(vertex);
 			
-			//if ( System.isVerbose) { trace("compiling cst: \n" + cst); }
-			//if ( System.isVerbose) { trace("compiling code: \n" + code); }
+			System.trace3("compiling cst: \n" + cst);
+			//System.trace3("compiling code: \n" + code);
 			
 			code = StringTools.trim(cst + code);
+
 			
-			#if ((cpp))
-				#if !mobile
-				code = "#define lowp\n#define mediump\n#define highp\n" + code;
-				#else 
-				code = "precision highp float; \n" + code;	
-				#end 
-			#end
-			
-			
+
+			var gles = [ "precision highp float; "];
+			var notgles = [ "#define lowp  ", "#define mediump  " , "#define highp  " ];
+
+			code = gles.map( function(s) return "#if GL_ES \n\t"+s+" \n #end \n").join('') + code;
+			code = notgles.map( function(s) return "#if !defined(GL_ES) \n\t"+s+" \n #end \n").join('') + code;
+
 			// replace haxe-like #if/#else/#end by GLSL ones
-			code = ~/#if ([A-Za-z0-9_]+)/g.replace(code, "#if defined($1)");
-			code = ~/#elseif ([A-Za-z0-9_]+)/g.replace(code, "#elif defined($1)");
+			code = ~/#if ([A-Za-z0-9_]+)/g.replace(code, "#if defined ( $1 ) \n");
+			code = ~/#elseif ([A-Za-z0-9_]+)/g.replace(code, "#elif defined ( $1 ) \n");
 			code = code.split("#end").join("#endif");
+
+			//on apple software version should come first
+			#if !mobile
+			code = "#version 120 \n" + code;
+			#end
+
+			System.trace3("compiling code: \n" + code);
+			
 			
 			//SHADER CODE
 			//System.trace2('Trying to compile shader $name $code');
@@ -394,6 +402,8 @@ class GlDriver extends Driver {
 		var fs = compileShader(GL.FRAGMENT_SHADER);
 		
 		var p = gl.createProgram();
+
+		//before doign that we should parse code to check those attrs existence
 		gl.bindAttribLocation(p, 0, "pos");
 		gl.bindAttribLocation(p, 1, "uv");
 		gl.bindAttribLocation(p, 2, "normal");
@@ -487,7 +497,7 @@ class GlDriver extends Driver {
 			offset += size;
 			ccode = r.matchedRight();
 		}
-		inst.stride = offset;
+		inst.stride = offset;//this stride is mostly not useful as it can be broken down into several stream
 		
 		// list uniforms needed by shader
 		var allCode = code + gl.getShaderSource(fs);
@@ -701,8 +711,6 @@ class GlDriver extends Driver {
 		checkError();
 	}
 	
-	//var tempMatrixArray : Float32Array;
-	
 	inline function blitMatrices(a:Array<Matrix>, transpose) {
 		var t = createF32( a.length * 16 );
 		var p = 0;
@@ -763,7 +771,7 @@ class GlDriver extends Driver {
 	
 	public static var f32Pool : IntMap<Float32Array> =  new haxe.ds.IntMap();
 	
-	function createF32(sz:Int) {
+	function createF32(sz:Int) : Float32Array {
 		if ( !f32Pool.exists(sz) ) {
 			f32Pool.set(sz, new Float32Array([for( i in 0...sz) 0.0]));
 		}
@@ -782,7 +790,7 @@ class GlDriver extends Driver {
 	
 	function setUniform( val : Dynamic, u : Shader.Uniform, t : Shader.ShaderType ) {
 		
-		var buff = null;
+		var buff : Float32Array = null;
 		#if debug if (u == null) throw "no uniform set, check your shader"; #end
 		#if debug if (u.loc == null) throw "no uniform loc set, check your shader"; #end
 		#if debug if (val == null) throw "no val set, check your shader"; #end
@@ -899,12 +907,13 @@ class GlDriver extends Driver {
 		curMultiBuffer = null;
 		
 		var stride : Int = v.stride;
-		if( stride < curShader.stride )
-			throw "Buffer stride (" + stride + ") and shader stride (" + curShader.stride + ") mismatch";
+		//if( stride < curShader.stride )
+		//	throw "Buffer stride (" + stride + ") and shader stride (" + curShader.stride + ") mismatch";
 			
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		checkError();
 		
+		//this one is sharde most of the time, let's define it fully
 		for( a in curShader.attribs )
 			gl.vertexAttribPointer(a.index, a.size, a.etype, false, stride * 4, a.offset * 4);
 		
@@ -925,15 +934,14 @@ class GlDriver extends Driver {
 				var b = buffers[i];
 				var a = curShader.attribs[i];
 				gl.bindBuffer(GL.ARRAY_BUFFER, b.b.b.vbuf.b);
-				var stride = curShader.stride;
-				
+
+				//this is a single stream, let's bind it without stride
 				if( !b.shared )
 					gl.vertexAttribPointer( a.index, a.size, a.etype, false, 0, 0);
-				else {
-					//trace('$a');
-					//trace('$b');
+				//this is a composite one
+				else 
 					gl.vertexAttribPointer( a.index, a.size, a.etype, false, b.stride, b.offset*4);
-				}
+				
 				checkError();
 			}
 				
