@@ -502,7 +502,7 @@ class GlDriver extends Driver {
 					//if ( System.debugLevel>=2) trace("didn't find comment on var " + aname);
 				}
 				
-				inst.attribs.push( { name : aname, type : atype, etype : etype, size : size, index : a.index, offset : offset } );
+				inst.attribs.push( new Shader.Attribute( aname,  atype, etype, offset , a.index , size ));
 			}
 			offset += size;
 			ccode = r.matchedRight();
@@ -514,7 +514,6 @@ class GlDriver extends Driver {
 		
 		var nuni = gl.getProgramParameter(p, GL.ACTIVE_UNIFORMS);
 		inst.uniforms = [];
-		
 		
 		parseUniInfo = new UniformContext(-1,null);
 		//parseUniInfo = { texIndex: -1, inf:null };
@@ -641,14 +640,13 @@ class GlDriver extends Driver {
 			break;
 		}
 		
-		var tu = {
-			name : name,
-			type : t,
-			loc : gl.getUniformLocation(p, inf.name),
-			index : parseUniInfo.texIndex,
-		};
 		
-		return tu;
+		return new Shader.Uniform(
+			name,
+			gl.getUniformLocation(p, inf.name),
+			t,
+			parseUniInfo.texIndex
+		);
 	}
 	
 	override function selectShader( shader : Shader ) : Bool {
