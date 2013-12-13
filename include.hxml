@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension>
+	<window depth-buffer="true" if="android" />
+	<window depth-buffer="true" if="ios" />
+</extension>

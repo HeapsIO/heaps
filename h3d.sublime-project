@@ -1,0 +1,17 @@
+{
+	"folders":
+	[
+		{
+			"follow_symlinks": true,
+			"path": "/usr/local/haxe/3.00/lib/hxsl/git"
+		},
+		{
+			"follow_symlinks": true,
+			"path": "/usr/local/haxe/3.00/lib/h3d/git"
+		},
+		{
+			"follow_symlinks": true,
+			"path": "/Users/mt/Projects/NME"
+		}
+	]
+}

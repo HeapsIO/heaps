@@ -16,67 +16,7 @@ import hxd.res.EmbedFileSystem;
 import hxd.res.LocalFileSystem;
 import hxd.System;
 import openfl.Assets;
-/*
-@:keep
-class TexturedShader extends MeshMaterial.MeshShader{
-	
-	#if flash 
-	static var SRC = {
-		
-		var input : {
-			pos : Float3,
-			uv : Float2,
-		};
-		var tuv : Float2;
-		
-		function vertex( mpos : Matrix, mproj : Matrix ) {
-			var tpos = input.pos.xyzw;
-			 if( mpos != null )
-				tpos *= mpos;
-			var ppos = tpos * mproj;
-			out = ppos;
-			tuv =  input.uv;
-		}
-		
-		function fragment( tex : Texture, colorAdd : Float4, colorMul : Float4, colorMatrix : M44 ) {
-			var c = tex.get(tuv.xy);
-			out = c;
-		}
-	}
-	#else
-	static var VERTEX = "
-		attribute vec3 pos;
-		attribute vec2 uv;
-		
-		uniform mat4 mpos;
-		uniform mat4 mproj;
-		
-		varying vec2 tuv;
-		
-		void main(void) {
-			vec4 tpos = vec4(pos, 1.0);
-			
-			#if hasPos
-				tpos *= mpos;
-			#end
-			
-			vec4 ppos = tpos * mproj;
-			gl_Position = ppos;
-			
-			vec2 t = uv;
-			tuv = t;
-		}";
-		
-	static var FRAGMENT = "
-		uniform sampler2D tex;
-		varying lowp vec2 tuv;
-		void main(void) {
-			lowp vec4 c = texture2D(tex, tuv);
-			gl_FragColor = c;
-		}
-	";
-	#end
-}*/
+
 
 @:keep
 class PointMaterial extends Material{
@@ -188,6 +128,7 @@ class Test {
 		*/
 		
 		function onLoaded( bmp : hxd.BitmapData) {
+			System.trace3("onLoaded");
 			var tex :Texture = Texture.fromBitmap( bmp);
 			var mat0 = new h3d.mat.MeshMaterial(tex);
 			mat0.culling = Back;
@@ -217,24 +158,14 @@ class Test {
 			hxd.System.setLoop(update);
 		}
 		
-		#if sys
-			#if android 
-				var bmd = Assets.getBitmapData("res/hxlogo.png");
-				onLoaded(BitmapData.fromNative( bmd ));
-			#else
-			if ( lfs.exists("hxlogo.png")) {
-				lfs.get("hxlogo.png").loadBitmap(onLoaded);
-			}
-			#end
-			
-		#else 
-			//erk
-			onLoaded(hxd.Res.hxlogo.toBitmap());
-		#end
+
+		var bmd = Assets.getBitmapData("res/hxlogo.png");
+		onLoaded(BitmapData.fromNative( bmd ));
+
 	}
 	
 	function update() {	
-		
+		//System.trace3("update");
 		var dist = 10;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 10);
@@ -252,7 +183,7 @@ class Test {
 		haxe.Log.setColor(0xFF0000);
 		#end
 		
-		#if !android
+		#if !openfl
 			#if flash
 				EmbedFileSystem.init();
 			#else
