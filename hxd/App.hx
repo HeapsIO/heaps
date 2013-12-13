@@ -6,27 +6,36 @@ class App {
 	var s3d : h3d.scene.Scene;
 	var s2d : h2d.Scene;
 	
-	public function new() {
-		engine = new h3d.Engine();
-		engine.onReady = setup;
-		engine.init();
+	public function new(?engine) {
+		if( engine != null ) {
+			this.engine = engine;
+			haxe.Timer.delay(setup, 0);
+		} else {
+			this.engine = engine = new h3d.Engine();
+			engine.onReady = setup;
+			engine.init();
+		}
+	}
+	
+	function onResize() {
 	}
 	
 	function setup() {
+		engine.onResized = onResize;
 		s3d = new h3d.scene.Scene();
 		s2d = new h2d.Scene();
 		s3d.addPass(s2d);
 		init();
 		hxd.Timer.skip();
-		loop();
-		hxd.System.setLoop(loop);
+		mainLoop();
+		hxd.System.setLoop(mainLoop);
 		hxd.Key.initialize();
 	}
 	
 	function init() {
 	}
 	
-	function loop() {
+	function mainLoop() {
 		hxd.Timer.update();
 		s2d.checkEvents();
 		update(hxd.Timer.tmod);
