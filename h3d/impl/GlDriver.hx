@@ -31,6 +31,16 @@ private typedef Uint8Array = openfl.utils.UInt8Array;
 private typedef Float32Array = openfl.utils.Float32Array;
 #end
 
+@:publicFields
+class UniformContext { 
+	var texIndex : Int; 
+	var inf: openfl.gl.GLActiveInfo;
+	public function new(t,i) {
+		texIndex = t;
+		inf = i;
+	}
+}
+
 @:access(h3d.impl.Shader)
 class GlDriver extends Driver {
 
@@ -506,8 +516,8 @@ class GlDriver extends Driver {
 		inst.uniforms = [];
 		
 		
-		
-		parseUniInfo = { texIndex: -1, inf:null };
+		parseUniInfo = new UniformContext(-1,null);
+		//parseUniInfo = { texIndex: -1, inf:null };
 		for( k in 0...nuni ) {
 			parseUniInfo.inf = gl.getActiveUniform(p, k);
 			
@@ -518,7 +528,7 @@ class GlDriver extends Driver {
 			if( parseUniInfo.inf.name.substr(0, 3) == "gl_" )
 				continue;
 				
-			var tu = parseUniform( parseUniInfo.inf, allCode,p );
+			var tu = parseUniform(  allCode,p );
 			inst.uniforms.push( tu );
 			System.trace2('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
 		}
@@ -528,10 +538,8 @@ class GlDriver extends Driver {
 		return inst;
 	}
 	
-	var parseUniInfo : {
-			var texIndex : Int;
-			var inf: openfl.gl.GLActiveInfo;
-	};
+	//var parseUniInfo : { var texIndex : Int; var inf: openfl.gl.GLActiveInfo;};
+	var parseUniInfo : UniformContext;
 	
 	function findVarComment(str,code){
 		var r = new EReg(str + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "g");
@@ -551,7 +559,7 @@ class GlDriver extends Driver {
 	}
 
 	
-	function parseUniform(inf,allCode,p)
+	function parseUniform(allCode,p)
 	{
 		var inf : GLActiveInfo = parseUniInfo.inf;
 		
