@@ -88,20 +88,19 @@ class Sound extends Resource {
 	function onMp3Sample(e:flash.events.SampleDataEvent) {
 		var out = e.data;
 		out.position = 0;
-		var size = BUFFER_SIZE;
+
 		var MAGIC_DELAY = 2257;
 		var position = bytesPosition;
-		while( size > 0 ) {
+		while( true ) {
+			var size = BUFFER_SIZE - (out.position >> 3);
+			if( size == 0 ) break;
 			if( position + size >= mp3SampleCount ) {
 				var read = mp3SampleCount - position;
 				mp3Data.extract(out, read, position + MAGIC_DELAY);
 				position = 0;
-				size -= read;
-				//onEnd();
 			} else {
 				mp3Data.extract(out, size, position + MAGIC_DELAY);
 				position += size;
-				size = 0;
 			}
 		}
 		bytesPosition = position;
