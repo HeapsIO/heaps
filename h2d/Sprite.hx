@@ -320,6 +320,13 @@ class Sprite {
 	public inline function getChildAt( n ) {
 		return childs[n];
 	}
+
+	public function getChildIndex( s ) {
+		for( i in 0...childs.length )
+			if( childs[i] == s )
+				return i;
+		return -1;
+	}
 	
 	inline function get_numChildren() {
 		return childs.length;
