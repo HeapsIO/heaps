@@ -64,7 +64,7 @@ private class DrawableShader extends h3d.impl.Shader {
 			var col = tex.get(sinusDeform != null ? [tuv.x + sin(tuv.y * sinusDeform.y + sinusDeform.x) * sinusDeform.z, tuv.y] : tuv, filter = ! !filter, wrap = tileWrap);
 			if( hasColorKey ) {
 				var cdiff = col.rgb - colorKey.rgb;
-				kill(cdiff.dot(cdiff) - 0.001);
+				kill(cdiff.dot(cdiff) - 0.00001);
 			}
 			if( killAlpha ) kill(col.a - 0.001);
 			if( hasVertexAlpha ) col.a *= talpha;
