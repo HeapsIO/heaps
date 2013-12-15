@@ -66,6 +66,10 @@ class Any extends Resource {
 	public function toBitmapFont() {
 		return loader.loadBitmapFont(entry.path);
 	}
+	
+	public function toTiledMap() {
+		return loader.loadTiledMap(entry.path);
+	}
 
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator([for( f in entry ) new Any(loader,f)]);
