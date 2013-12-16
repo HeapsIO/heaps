@@ -84,7 +84,7 @@ class Vector {
 		}
 	}
 
-	public function set(x,y,z,w=1.) {
+	public inline function set(x,y,z,w=1.) {
 		this.x = x;
 		this.y = y;
 		this.z = z;

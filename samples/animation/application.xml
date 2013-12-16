@@ -8,9 +8,9 @@
 	<!-- output -->
 	<app main="Test" file="testopenfl" path="bin" swf-version="11.6" />
 	
-	<window background="#000000" fps="60" />
+	<window background="#000000" fps="120" />
 	<window width="800" height="480" unless="mobile" />
-	<window orientation="portrait" vsync="true" antialiasing="0" if="cpp" />
+	<window orientation="portrait" vsync="false" antialiasing="0" if="cpp" />
 	
 	<!-- classpath, haxe libs -->
 	<source path="." />
@@ -26,7 +26,9 @@
 	
 	<assets path="../res" rename="res" />
 	
+	<!--
 	<haxeflag name="-debug" if="debug" /> 
+	-->
 	<!-- optimize output
 	
 	<haxeflag name="-dce full" /> 

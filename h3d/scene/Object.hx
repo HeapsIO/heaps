@@ -1,4 +1,5 @@
 package h3d.scene;
+import hxd.Profiler;
 
 class Object {
 
@@ -193,6 +194,8 @@ class Object {
 	}
 	
 	function calcAbsPos() {
+		Profiler.begin("Object:calcAbsPos");
+		
 		qRot.saveToMatrix(absPos);
 		// prepend scale
 		absPos._11 *= scaleX;
@@ -219,18 +222,28 @@ class Object {
 		}
 		if( invPos != null )
 			invPos._44 = 0; // mark as invalid
+			
+		Profiler.end("Object:calcAbsPos");
 	}
 	
 	function sync( ctx : RenderContext ) {
-		if( currentAnimation != null ) {
+		if ( currentAnimation != null ) {
+			
+			Profiler.begin("Object:sync.animation");
+			
 			var old = parent;
 			var dt = ctx.elapsedTime;
 			while( dt > 0 && currentAnimation != null )
 				dt = currentAnimation.update(dt);
 			if( currentAnimation != null )
 				currentAnimation.sync();
+				
+			Profiler.end("Object:sync.animation");
+			
 			if( parent == null && old != null ) return; // if we were removed by an animation event
 		}
+		
+		
 		var changed = posChanged;
 		if( changed ) {
 			posChanged = false;
@@ -278,7 +291,9 @@ class Object {
 				c.posChanged = true;
 			posChanged = false;
 		}
+		Profiler.begin("draw " + name);
 		draw(ctx);
+		Profiler.end("draw " + name);
 		for( c in childs )
 			c.drawRec(ctx);
 	}

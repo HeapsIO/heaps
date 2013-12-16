@@ -4,7 +4,6 @@
 -lib h3d
 -lib hxsl
 -cp .
--D idPalette
 -D tools=1.1.0
 -D resourcesPath=../res
 -D openfl=1.1

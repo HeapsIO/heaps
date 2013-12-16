@@ -5,6 +5,7 @@ import h3d.Matrix;
 import h3d.Vector;
 import haxe.ds.IntMap.IntMap;
 import hxd.BytesBuffer;
+import hxd.Profiler;
 
 import hxd.FloatBuffer;
 import hxd.Pixels;
@@ -41,6 +42,7 @@ class UniformContext {
 	}
 }
 
+
 @:access(h3d.impl.Shader)
 class GlDriver extends Driver {
 
@@ -55,6 +57,11 @@ class GlDriver extends Driver {
 	//var curAttribs : Int;
 	var curShader : Shader.ShaderInstance;
 	var curMatBits : Int;
+	
+
+	var depthMask : Bool;
+	var depthTest : Bool;
+	var depthFunc : Int;
 	
 	public function new() {
 		#if js
@@ -71,6 +78,10 @@ class GlDriver extends Driver {
 		fixMult = sub.length == 1; // should be 4
 		#end
 
+		depthMask = false;
+		depthTest = false;
+		depthFunc = Type.enumIndex(h3d.mat.Data.Compare.Always);
+		
 	//	curAttribs = 0;
 		curMatBits = -1;
 		selectMaterial(0);
@@ -78,12 +89,14 @@ class GlDriver extends Driver {
 		System.trace3('gldriver newed');
 	}
 	
+	
 	override function reset() {
 		curShader = null;
 		gl.useProgram(null);
 	}
 	
 	override function selectMaterial( mbits : Int ) {
+		Profiler.begin("gldriver.select_material");
 		var diff = curMatBits ^ mbits;
 		if( diff == 0 )
 			return;
@@ -111,29 +124,38 @@ class GlDriver extends Driver {
 		if( diff & (15 << 2) != 0 ) {
 			var write = (mbits >> 2) & 1 == 1;
 			if ( curMatBits < 0 || diff & 4 != 0 ) {
-				System.trace3("depthMask write :"+write);
-				
-				gl.depthMask(write);
+				if( depthMask != write)
+					gl.depthMask(depthMask=write);
 			}
 				
-			gl.enable(GL.DEPTH_TEST);
+			if( !depthTest ){
+				gl.enable(GL.DEPTH_TEST);
+				depthTest = true;
+			}
 			
 			var cmp = (mbits >> 3) & 7;
 			if ( cmp == 0 ) {
 				//if ( System.debugLevel >= 3) trace("no depth test");
 				
-				gl.disable(GL.DEPTH_TEST);
+				if( depthTest ){
+					gl.disable(GL.DEPTH_TEST);
+					depthTest = false;
+				}
 			}
 			else {
 				
 				if ( curMatBits < 0 || (curMatBits >> 3) & 7 == 0 ) {
 					//if ( System.debugLevel >= 3) trace("enabling depth test");
-					gl.enable(GL.DEPTH_TEST);
+					if( !depthTest ){
+						gl.enable(GL.DEPTH_TEST);
+						depthTest = true;
+					}
 				}
 				
 				//if ( System.debugLevel >= 3) trace("using " + glCompareToString(COMPARE[cmp]));
 					
-				gl.depthFunc(COMPARE[cmp]);
+				if( cmp != depthFunc)
+					gl.depthFunc(COMPARE[depthFunc=cmp]);
 			}
 		}
 		else {
@@ -151,12 +173,14 @@ class GlDriver extends Driver {
 		}
 			
 		curMatBits = mbits;
-		System.trace3('gldriver select material');
+		//System.trace3('gldriver select material');
+		Profiler.end("gldriver.select_material");
 	}
 	
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
+		
 		gl.clearColor(r, g, b, a);
-		gl.depthMask(true);
+		gl.depthMask(depthMask = true);
 		gl.clearDepth(1.0);
 		gl.depthRange(0, 1);
 		gl.frontFace( GL.CW);
@@ -164,6 +188,12 @@ class GlDriver extends Driver {
 		//always clear depth & stencyl to enable opts
 		gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT | GL.STENCIL_BUFFER_BIT);
 		hxd.System.trace3("clearing");
+		
+		depthTest = true;
+		gl.enable(GL.DEPTH_TEST);
+		
+		depthFunc = Type.enumIndex( h3d.mat.Data.Compare.Less);
+		gl.depthFunc(COMPARE[depthFunc]);
 	}
 
 	//TODO optimize me
@@ -203,7 +233,7 @@ class GlDriver extends Driver {
 		gl.bufferData(GL.ARRAY_BUFFER, tmp, GL.STATIC_DRAW);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		#end
-		return { b : b, stride : stride };
+		return new VertexBuffer(b, stride );
 	}
 	
 	override function allocIndexes( count : Int ) : IndexBuffer {
@@ -966,7 +996,10 @@ class GlDriver extends Driver {
 	}
 	
 	override function present() {
-		gl.finish();
+		//useless ofl will do it at swap time
+		#if !openfl
+			gl.finish();
+		#end
 	}
 
 	override function isDisposed() {

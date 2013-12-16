@@ -10,7 +10,7 @@ class Profiler{
 	public static var enable : Bool = true;
 	
 	static var inst : Profiler;
-	static var min_limit = 0.0001;
+	public static var minLimit = 0.0001;
 	static var h : StringMap< { start:Null<Float>, total:Float, hit : Int}> = new haxe.ds.StringMap();
 	
 	public static inline 
@@ -88,15 +88,22 @@ class Profiler{
 	function dump( ?trunkValues = true ) : String
 	{
 		var s = "";
-		var trunk = function(v:Float) return trunkValues ? (Std.int( v * 10000.0 ) * 0.0001) : v;
+		
+		var k = 10000.0;
+		
+		#if windows
+		k *= 10.0;
+		#end
+		
+		var trunk = function(v:Float) return trunkValues ? (Std.int( v * k ) / k) : v;
 		for(k in h.keys())
 		{
 			var sp = spent(k);
 			var ht = hit(k);
 			
-			if (sp <= min_limit ) continue;
+			if (sp <= minLimit ) continue;
 			
-			s+=("tag: "+k+" spent: " + trunk(sp))+" hit:"+ht+" avg time: "+ trunk(sp/ht) +"<br/>";
+			s+=("tag: "+k+" spent: " + trunk(sp))+" hit:"+ht+" avg time: "+ trunk(sp/ht) +"<br/>\n";
 		}
 		return s;
 	}
