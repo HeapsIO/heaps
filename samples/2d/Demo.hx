@@ -1,3 +1,6 @@
+import h2d.Tile;
+import hxd.BitmapData;
+import openfl.Assets;
 class Demo {
 	
 	var engine : h3d.Engine;
@@ -14,19 +17,23 @@ class Demo {
 	function init() {
 		scene = new h2d.Scene();
 
+		#if !openfl 
 		var tile = hxd.Res.hxlogo.toTile();
+		#else 
+		var tile = Tile.fromBitmap( BitmapData.fromNative( Assets.getBitmapData( "assets/hxlogo.png")));
+		#end
 		spr = new h2d.Sprite(scene);
 		spr.x = engine.width >> 1;
 		spr.y = engine.height >> 1;
 		
 		for( i in 0...16 ) {
 			var bmp = new h2d.Bitmap(tile, spr);
-			bmp.x = Math.cos(i * Math.PI / 8) * 100 - (tile.width>>1);
-			bmp.y = Math.sin(i * Math.PI / 8) * 100 - (tile.height>>1);
+			bmp.x = Math.cos(i * Math.PI / 8) * 100 - (tile.width>>1) + 10*i;
+			bmp.y = Math.sin(i * Math.PI / 8) * 100 - (tile.height>>1) + 10*i;
 			bmp.alpha = 0.5;
 		}
 
-		var font = hxd.Res.CustomFont.build(32,{ antiAliasing : true });
+		#if !openfl
 		var tf = new h2d.Text(font, scene);
 		tf.textColor = 0xFFFFFF;
 		tf.dropShadow = { dx : 0.5, dy : 0.5, color : 0xFF0000, alpha : 0.8 };
@@ -42,7 +49,7 @@ class Demo {
 		tf.text = "Héllò h2d !";
 		tf.x = 20;
 		tf.scale(7);
-		
+		#end
 
 		hxd.System.setLoop(update);
 	}
@@ -53,7 +60,9 @@ class Demo {
 	}
 	
 	static function main() {
+		#if !openfl
 		hxd.Res.loader = new hxd.res.Loader(hxd.res.EmbedFileSystem.create());
+		#end
 		new Demo();
 	}
 	

@@ -21,11 +21,9 @@
 	
 	<!-- assets -->
 	<icon path="assets/openfl.svg" />
-	<assets path="assets/img" rename="img" />
+	<assets path="assets" rename="assets" />
 	
 	<!-- optimize output
 	<haxeflag name="-dce full" /> -->
-	<assets path="../res" rename="res" />
-	<haxedef name="resourcesPath" value="../res" />
 	<haxeflag name="-dce" value="no" />
 </project>

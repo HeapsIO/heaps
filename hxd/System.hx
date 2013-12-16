@@ -18,7 +18,7 @@ class System {
 	
 	public static var screenDPI(get, never) : Float;
 	
-	public static var debugLevel = 0;
+	public static var debugLevel = 3;
 
 	#if flash
 	

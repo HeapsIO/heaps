@@ -136,8 +136,8 @@ private class DrawableShader extends h3d.impl.Shader {
 		varying lowp float talpha;
 		#end
 		#if hasVertexColor
-		attribute float4 vcolor;
-		varying lowp float4 tcolor;
+		attribute vec4 vcolor;
+		varying lowp vec4 tcolor;
 		#end
 
 		uniform vec3 size;
@@ -205,7 +205,7 @@ private class DrawableShader extends h3d.impl.Shader {
 				if( dot(dc,dc) < 0.001 ) discard;
 			#end
 			#if hasAlpha
-				col.w *= alpha;
+				col.a *= alpha;
 			#end
 			#if hasVertexAlpha
 				col.a *= talpha;

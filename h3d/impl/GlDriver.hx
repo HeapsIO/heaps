@@ -100,6 +100,7 @@ class GlDriver extends Driver {
 		var diff = curMatBits ^ mbits;
 		if( diff == 0 )
 			return;
+			
 		if( diff & 3 != 0 ) {
 			if( mbits & 3 == 0 )
 				gl.disable(GL.CULL_FACE);
@@ -113,11 +114,16 @@ class GlDriver extends Driver {
 		if( diff & (0xFF << 6) != 0 ) {
 			var src = (mbits >> 6) & 15;
 			var dst = (mbits >> 10) & 15;
-			if( src == 0 && dst == 1 )
+			if( src == 0 && dst == 1 ){
 				gl.disable(GL.BLEND);
+				System.trace3('disabling blend');
+			}
 			else {
-				if( curMatBits < 0 || (curMatBits >> 6) & 0xFF == 0x10 ) gl.enable(GL.BLEND);
+				if ( curMatBits < 0 || (curMatBits >> 6) & 0xFF == 0x10 ) 
+					gl.enable(GL.BLEND);
+					
 				gl.blendFunc(BLEND[src], BLEND[dst]);
+				System.trace3('blend func ${BLEND[src]} ${BLEND[dst]}');
 			}
 		}
 	
@@ -135,7 +141,7 @@ class GlDriver extends Driver {
 			
 			var cmp = (mbits >> 3) & 7;
 			if ( cmp == 0 ) {
-				//if ( System.debugLevel >= 3) trace("no depth test");
+				System.trace3("no depth test");
 				
 				if( depthTest ){
 					gl.disable(GL.DEPTH_TEST);
@@ -145,40 +151,43 @@ class GlDriver extends Driver {
 			else {
 				
 				if ( curMatBits < 0 || (curMatBits >> 3) & 7 == 0 ) {
-					//if ( System.debugLevel >= 3) trace("enabling depth test");
+					System.trace3("enabling depth test");
 					if( !depthTest ){
 						gl.enable(GL.DEPTH_TEST);
 						depthTest = true;
 					}
 				}
 				
-				//if ( System.debugLevel >= 3) trace("using " + glCompareToString(COMPARE[cmp]));
+				System.trace3("using " + glCompareToString(COMPARE[cmp]));
 					
 				if( cmp != depthFunc)
 					gl.depthFunc(COMPARE[depthFunc=cmp]);
 			}
 		}
 		else {
-			if ( System.debugLevel >= 2)
-					trace("no depth setup ");
+			if( depthTest ){
+				gl.disable(GL.DEPTH_TEST);
+				depthTest = false;
+			}
 		}
 		
 		checkError();
 			
 		if ( diff & (15 << 14) != 0 ) {
-			if ( System.debugLevel >= 2) trace("using color mask");
+			System.trace2("using color mask");
 					
 			gl.colorMask((mbits >> 14) & 1 != 0, (mbits >> 14) & 2 != 0, (mbits >> 14) & 4 != 0, (mbits >> 14) & 8 != 0);
 			checkError();
 		}
 			
 		curMatBits = mbits;
-		//System.trace3('gldriver select material');
+		System.trace3('gldriver select material');
 		Profiler.end("gldriver.select_material");
 	}
 	
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
 		
+		curMatBits = 0;
 		gl.clearColor(r, g, b, a);
 		gl.depthMask(depthMask = true);
 		gl.clearDepth(1.0);
@@ -728,7 +737,8 @@ class GlDriver extends Driver {
 				else 
 					throw "Missing shader value " + u.name + " among "+ Reflect.fields(shader);
 			}
-			System.trace3('retrieving uniform ($u) $val ');
+			//System.trace3('retrieving uniform ($u) $val ');
+			//System.trace3('retrieving uniform ($u) $val ');
 			setUniform(val, u, u.type);
 		}
 		shader.customSetup(this);

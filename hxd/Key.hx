@@ -51,12 +51,14 @@ class Key {
 		return keyPressed[code] > 0;
 	}
 
+	//doesn't seem to work
 	public static function isPressed( code : Int ) {
 		return keyPressed[code] == h3d.Engine.getCurrent().frameCount+1;
 	}
 
+	//works
 	public static function isReleased( code : Int ) {
-		return keyPressed[code] == -(h3d.Engine.getCurrent().frameCount+1);
+		return keyPressed[code] == -(h3d.Engine.getCurrent().frameCount);
 	}
 
 	public static function initialize() {

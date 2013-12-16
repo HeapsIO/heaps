@@ -1,5 +1,6 @@
 import flash.Lib;
 import flash.ui.Keyboard;
+import h2d.Bitmap;
 import h3d.impl.Shaders.LineShader;
 import h3d.impl.Shaders.PointShader;
 import h3d.mat.Material;
@@ -17,7 +18,7 @@ import hxd.res.Embed;
 import hxd.res.EmbedFileSystem;
 import hxd.res.LocalFileSystem;
 import hxd.System;
-import mt.flash.Key;
+import hxd.Key;
 import openfl.Assets;
 
 
@@ -75,9 +76,9 @@ class Test {
 		engine.debug = true;
 		engine.backgroundColor = 0xFF203020;
 		engine.onReady = start;
-		engine.init();
-		Key.init();
 		
+		engine.init();
+		Key.initialize();
 		trace("new()");
 	}
 	
@@ -92,6 +93,8 @@ class Test {
 		mat.start = start;
 		mat.end = end;
 		mat.color = 0xFFFF00FF;
+		var v3 = new Vector();
+		v3.set(1, 1, 1);
 	}	
 	
 	function start() {
@@ -122,8 +125,9 @@ class Test {
 		curFbx.load(fbx);
 		var frame = 0;
 		var o : h3d.scene.Object = null;
+		var bmpData =   BitmapData.fromNative(Assets.getBitmapData("assets/checker.png", false));
 		scene.addChild(o=curFbx.makeObject( function(str, mat) {
-			var tex = Texture.fromBitmap( BitmapData.fromNative(Assets.getBitmapData("assets/checker.png", false)) );
+			var tex = Texture.fromBitmap( bmpData );
 			if ( tex == null ) throw "no texture :-(";
 			
 			var mat = new h3d.mat.MeshMaterial(tex);
@@ -137,6 +141,14 @@ class Test {
 		
 		setSkin();
 		//o.setRotate(0,2*Math.PI/3,0);
+		
+		spr = new h2d.Sprite();
+		spr.x = 10;
+		spr.y = 10;
+		
+		var bmp = new Bitmap( h2d.Tile.fromBitmap(bmpData ) ,spr);
+		//bmp.
+		
 	}
 	
 	static public var animMode : h3d.fbx.Library.AnimationMode = h3d.fbx.Library.AnimationMode.FrameAnim;
@@ -148,13 +160,20 @@ class Test {
 	}
 	
 	var fr = 0;
+	var spr : h2d.Sprite;
+	var bmp : h2d.Bitmap;
+	
 	function update() {	
 		var dist = 100;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);
+		
+		if ( Key.isReleased(Key.SPACE ) ) {
+			trace("truc");
+			//var bmp : Bitmap = scene.captureBitmap();
+		}
 	
-		//#if android if( (fr++) % 100 == 0 ) trace("ploc"); #end
 	}
 	
 	static function main() {
