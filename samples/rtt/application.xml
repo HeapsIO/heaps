@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+	<!-- NMML reference: https://gist.github.com/1763850 -->
+	
+	<!-- metadata, make sure 'package' is at least 3 segments (ie. com.mycompany.myproject) -->
+	<meta title="test.openfl.animation" package="com.mt.testopenfl" version="1.0.0" company="motionTwin" />
+	
+	<!-- output -->
+	<app main="Test" file="testopenfl" path="bin" swf-version="11.6" />
+	
+	<window background="#000000" fps="60" />
+	<window width="800" height="480" unless="mobile" />
+	<window orientation="portrait" vsync="true" antialiasing="0" if="cpp" />
+	
+	<!-- classpath, haxe libs -->
+	<source path="." />
+	
+	<haxelib name="openfl" />
+	<haxelib name="actuate" />
+	<haxelib name="h3d" />
+	<haxelib name="hxsl" />
+	
+	<!-- assets -->
+	<assets path="assets" rename="assets" />
+	<icon path="assets/openfl.svg" />
+	
+	<assets path="../res" rename="res" />
+	
+	<haxeflag name="-debug" if="debug" /> 
+	<!-- optimize output
+	
+	<haxeflag name="-dce full" /> 
+	<haxeflag name="-dce" value="no" />
+	-->
+	<haxedef name="resourcesPath" value="../res" />
+	<haxedef name="verbose" value="true" />
+	
+	<android  minimum-sdk-version="16" if="android" />
+	
+	<!--
+	<haxedef name="dump" value="pretty"  />
+	-->
+	<!--
+	<haxedef name="idPalette"  />
+	-->
+		
+	<!-- <section if="android">-->
+		<template if="android" path="tpl/android/AndroidManifest.xml" 				rename="AndroidManifest.xml" />
+	<!--</section>-->
+</project>
