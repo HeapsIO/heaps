@@ -5,8 +5,7 @@ import hxd.System;
 
 class Engine {
 
-	var driver : h3d.impl.Driver;
-	
+	public var driver(get,null) : h3d.impl.Driver;
 	public var mem(default,null) : h3d.impl.MemoryManager;
 
 	public var hardware(default, null) : Bool;
@@ -54,6 +53,8 @@ class Engine {
 			start();
 		#end
 	}
+	
+	public inline function get_driver() return driver;
 	
 	function start() {
 		fullScreen = !hxd.System.isWindowed;
@@ -105,26 +106,38 @@ class Engine {
 	}
 
 	function selectBuffer( buf : h3d.impl.MemoryManager.BigBuffer ) {
-		if( buf.isDisposed() )
-			return false;
+		if( buf.isDisposed() ) return false;
 		driver.selectBuffer(buf.vbuf);
 		return true;
 	}
 
 	public inline function renderTriBuffer( b : h3d.impl.Buffer, start = 0, max = -1 ) {
-		return renderBuffer(b, mem.indexes, 3, start, max);
+		System.trace3("rendering tri buff");
+		var v =  renderBuffer(b, mem.indexes, 3, start, max);
+		System.trace3("tri buff rendered");
+		return v;
 	}
 	
 	public inline function renderQuadBuffer( b : h3d.impl.Buffer, start = 0, max = -1 ) {
-		//System.trace3("drawing quad buff");
-		return renderBuffer(b, mem.quadIndexes, 2, start, max);
+		System.trace3("rendering quad buff");
+		var v = renderBuffer(b, mem.quadIndexes, 2, start, max);
+		System.trace3("quad buff rendered");
+		return v;
 	}
 
-	// we use preallocated indexes so all the triangles are stored inside our buffers
-	function renderBuffer( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
-		if( indexes.isDisposed() )
-			return;
+	/** we use preallocated indexes so all the triangles are stored inside our buffers
+	 * returns true if something was actually rendered
+	 * */
+	function renderBuffer( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) : Bool {
+		System.trace3("entering renderBuffer");
+		if ( indexes.isDisposed() ) {
+			System.trace3("no indexes");
+			return false;
+		}
+		
+		System.trace3("renderBuffer:doing sub render");
 		do {
+			System.trace3("0");
 			var ntri = Std.int(b.nvert / vertPerTri);
 			var pos = Std.int(b.pos / vertPerTri);
 			if( startTri > 0 ) {
@@ -137,22 +150,29 @@ class Engine {
 				ntri -= startTri;
 				startTri = 0;
 			}
+			System.trace3("1");
 			if( drawTri >= 0 ) {
-				if( drawTri == 0 ) return;
+				if( drawTri == 0 ) return false;
 				drawTri -= ntri;
 				if( drawTri < 0 ) {
 					ntri += drawTri;
 					drawTri = 0;
 				}
 			}
-			if( ntri > 0 && selectBuffer(b.b) ) {
+			System.trace3("2");
+			if ( ntri > 0 && selectBuffer(b.b) ) {
+				System.trace3("3");
 				// *3 because it's the position in indexes which are always by 3
 				driver.draw(indexes.ibuf, pos * 3, ntri);
+				System.trace3("4");
 				drawTriangles += ntri;
 				drawCalls++;
 			}
+			//else no tri or not selectable buff
 			b = b.next;
-		} while( b != null );
+		} while ( b != null );
+		//System.trace3("exiting renderBuffer");
+		return true;
 	}
 	
 	// we use custom indexes, so the number of triangles is the number of indexes/3

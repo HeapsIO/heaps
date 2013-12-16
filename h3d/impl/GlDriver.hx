@@ -174,7 +174,7 @@ class GlDriver extends Driver {
 		checkError();
 			
 		if ( diff & (15 << 14) != 0 ) {
-			System.trace2("using color mask");
+			System.trace3("using color mask");
 					
 			gl.colorMask((mbits >> 14) & 1 != 0, (mbits >> 14) & 2 != 0, (mbits >> 14) & 4 != 0, (mbits >> 14) & 8 != 0);
 			checkError();
@@ -210,6 +210,9 @@ class GlDriver extends Driver {
 		return curShader.attribs.map(function(t) return t.name );
 	}
 	
+	var vpWidth = 0;
+	var vpHeight = 0;
+	
 	override function resize(width, height) {
 		#if js
 		canvas.width = width;
@@ -218,7 +221,7 @@ class GlDriver extends Driver {
 		// resize window
 		#end
 		gl.viewport(0, 0, width, height);
-		
+		vpWidth = width; vpHeight = height;
 		System.trace2("resizing");
 	}
 	
@@ -260,6 +263,27 @@ class GlDriver extends Driver {
 		return b;
 	}
 
+	public override function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
+		if( x == 0 && y == 0 && width < 0 && height < 0 )
+			//ctx.setScissorRectangle(null);
+			gl.disable( GL.SCISSOR_TEST );
+		else {
+			var x = x < 0 ? 0 : x;
+			var y = y < 0 ? 0 : y;
+			//copied back from stage 3d impl
+			// todo : support target texture
+			var tw = vpWidth;
+			var th = vpHeight;
+			if( x+width > tw ) width = tw - x;
+			if( y+height > th ) height = th - y;
+			if( width < 0 ) { x = 0; width = 0; };
+			if ( height < 0 ) { y = 0; height = 0; };
+			
+			gl.enable( GL.SCISSOR_TEST );
+			gl.scissor(x, y, width, height);
+		}
+	}
+	
 	override function disposeTexture( t : Texture ) {
 		gl.deleteTexture(t);
 	}
@@ -698,15 +722,16 @@ class GlDriver extends Driver {
 		
 		var change = false;
 		if ( shader.instance == null ) {
-			if ( System.debugLevel>=2 ) trace("building shader" + Type.typeof(shader));
+			System.trace2("building shader" + Type.typeof(shader));
 			shader.instance = buildShaderInstance(shader);
 		}
 		if ( shader.instance != curShader ) {
 			var old = curShader;
-			//if ( System.debugLevel>=2 ) trace("binding shader "+Type.getClass(shader)+" nbAttribs:"+shader.instance.attribs.length);
+			System.trace3("binding shader "+Type.getClass(shader)+" nbAttribs:"+shader.instance.attribs.length);
 			curShader = shader.instance;
 			
-			if (curShader.program==null) throw "invalid shader";
+			if (curShader.program == null) throw "invalid shader";
+			System.trace3("using program");
 			gl.useProgram(curShader.program);
 			
 			//kiss....
@@ -717,10 +742,9 @@ class GlDriver extends Driver {
 			for ( i in 0...curShader.attribs.length ) {
 				var a = curShader.attribs[i];
 				gl.enableVertexAttribArray(a.index);
-				//if ( System.debugLevel>=2 ) trace('enabling attrib ${curShader.attribs[i]}');
 			}
 				
-			//if ( System.debugLevel>=2 ) trace("attribs set");
+			System.trace3("attribs set program");
 			change = true;
 		}
 			
@@ -738,11 +762,15 @@ class GlDriver extends Driver {
 					throw "Missing shader value " + u.name + " among "+ Reflect.fields(shader);
 			}
 			//System.trace3('retrieving uniform ($u) $val ');
-			//System.trace3('retrieving uniform ($u) $val ');
+			System.trace3('retrieving uniform ${u.name} ');
 			setUniform(val, u, u.type);
 		}
+		
+		System.trace3('shader custom setup ');
 		shader.customSetup(this);
 		checkError();
+		System.trace3('shader is now setup ');
+		
 		return change;
 	}
 	
@@ -843,7 +871,9 @@ class GlDriver extends Driver {
 		#if debug if (gl == null) throw "no gl set, Arrrghh"; #end
 		
 		checkError();
-		//if ( System.debugLevel >= 2 ) trace("setting uniform "+u.name);
+		
+		//System.trace2("setting uniform "+u.name);
+		//System.trace3("setting uniform " + u.name+ " of type "+t +" and value "+val );
 		
 		switch( t ) {
 		case Mat4:
@@ -852,19 +882,23 @@ class GlDriver extends Driver {
 			if ( Std.is( val , Array)) throw "error";
 			#end
 			
+			System.trace3("setUniform : mono matrix batch" );
+			
 			var m : h3d.Matrix = val;
 			gl.uniformMatrix4fv(u.loc, false, buff = blitMatrix(m, true) );
 			deleteF32(buff);
 			
-			System.trace3("one matrix batch " + m + " of val " + val);
+			//System.trace3("one matrix batch " + m + " of val " + val);
 			
 		case Tex2d:
+			System.trace3("active texture" );
+			
 			var t : h3d.mat.Texture = val;
 			setupTexture(t, t.mipMap, t.filter, t.wrap);
 			gl.activeTexture(GL.TEXTURE0 + u.index);
 			gl.uniform1i(u.loc, u.index);
 			
-		case Float: 							gl.uniform1f(u.loc, val);
+		case Float: 							var f : Float = val;  gl.uniform1f(u.loc, f);
 		case Vec2:	var v : h3d.Vector = val;	gl.uniform2f(u.loc, v.x, v.y);
 		case Vec3:	var v : h3d.Vector = val;	gl.uniform3f(u.loc, v.x, v.y, v.z);
 		case Vec4:	var v : h3d.Vector = val;	gl.uniform4f(u.loc, v.x, v.y, v.z, v.w);
@@ -896,7 +930,7 @@ class GlDriver extends Driver {
 					if ( nb != null && ms.length != nb)  System.trace3('Array uniform type mismatch $nb requested, ${ms.length} found');
 						
 					gl.uniformMatrix4fv(u.loc, false, buff = blitMatrices(ms,true) );
-					System.trace3("sending matrix batch " + ms.length + " " + ms + " of val " + val);
+					//System.trace3("sending matrix batch " + ms.length + " " + ms + " of val " + val);
 					
 				default: throw "not supported";
 			}
@@ -916,6 +950,8 @@ class GlDriver extends Driver {
 		default:
 			throw "Unsupported uniform " + u.type;
 		}
+		
+		System.trace3("uniform " + u.name+ " is now set" );
 		checkError();
 		
 	}
@@ -949,6 +985,8 @@ class GlDriver extends Driver {
 	
 	override function selectBuffer( v : VertexBuffer ) {
 		if ( curBuffer == v ) return;
+		
+		System.trace3("selected Buffer");
 		curBuffer = v;
 		curMultiBuffer = null;
 		
@@ -968,6 +1006,9 @@ class GlDriver extends Driver {
 	
 	override function selectMultiBuffers( buffers : Array<Buffer.BufferOffset> ) {
 		var changed = curMultiBuffer == null || curMultiBuffer.length != buffers.length;
+		
+		System.trace3("selectMultiBuffers");
+		
 		if( !changed )
 			for( i in 0...curMultiBuffer.length )
 				if( buffers[i] != curMultiBuffer[i] ) {
@@ -997,12 +1038,21 @@ class GlDriver extends Driver {
 	}
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
+		System.trace3('binding index');
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
 		checkError();
+		System.trace3('index bound');
+		
+		System.trace3('drawing tris');
+		System.trace3('$ntriangles $startIndex');
 		gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
 		checkError();
+		System.trace3('tri drawn');
+		
+		System.trace3('reseting bind');
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		checkError();
+		System.trace3('bind reset');
 	}
 	
 	override function present() {

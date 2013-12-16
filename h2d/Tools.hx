@@ -52,7 +52,7 @@ class Tools {
 	static var CORE : CoreObjects = null;
 	
 	@:allow(h2d)
-	static function getCoreObjects() {
+	static function getCoreObjects() : CoreObjects {
 		var c = CORE;
 		if( c == null ) {
 			c = new CoreObjects();

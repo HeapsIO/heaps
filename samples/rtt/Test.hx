@@ -69,7 +69,8 @@ class Test {
 	var engine : h3d.Engine;
 	var time : Float;
 	var scene : Scene;
-	
+	var scene2 : h2d.Scene;
+	 
 	function new() {
 		time = 0;
 		engine = new h3d.Engine();
@@ -100,9 +101,6 @@ class Test {
 	function start() {
 		scene = new Scene();
 		
-		var axis = new Axis();
-		scene.addPass(axis);
-		
 		loadFbx();
 		
 		update();
@@ -125,9 +123,11 @@ class Test {
 		curFbx.load(fbx);
 		var frame = 0;
 		var o : h3d.scene.Object = null;
-		var bmpData =   BitmapData.fromNative(Assets.getBitmapData("assets/checker.png", false));
+		var bmpData = BitmapData.fromNative(Assets.getBitmapData("assets/checker.png", false));
+		
+		
 		scene.addChild(o=curFbx.makeObject( function(str, mat) {
-			var tex = Texture.fromBitmap( bmpData );
+			var tex = Texture.fromBitmap( BitmapData.fromNative(Assets.getBitmapData("assets/checker.png", false)) );
 			if ( tex == null ) throw "no texture :-(";
 			
 			var mat = new h3d.mat.MeshMaterial(tex);
@@ -139,40 +139,63 @@ class Test {
 			return mat;
 		}));
 		
+		
 		setSkin();
 		//o.setRotate(0,2*Math.PI/3,0);
-		
-		spr = new h2d.Sprite();
+		scene2 = new h2d.Scene();
+		spr = new h2d.Sprite(scene2);
 		spr.x = 10;
 		spr.y = 10;
 		
-		var bmp = new Bitmap( h2d.Tile.fromBitmap(bmpData ) ,spr);
+		bmp = new Bitmap( h2d.Tile.fromBitmap(bmpData ) ,spr);
 		//bmp.
+		bmp.x = 100;
+		bmp.y = 100;
+		bmp.scaleY = bmp.scaleX = 0.125;
 		
+		bmp = new Bitmap( h2d.Tile.fromBitmap(bmpData ) ,spr);
+		//bmp.
+		bmp.x = 200;
+		bmp.y = 100;
+		bmp.scaleY = bmp.scaleX = 0.125;
+		
+		scene.addPass( scene2 );
 	}
 	
 	static public var animMode : h3d.fbx.Library.AnimationMode = h3d.fbx.Library.AnimationMode.FrameAnim;
 	function setSkin() {
-		
 		var anim = curFbx.loadAnimation(animMode);
-		if ( anim != null )
-			anim = scene.playAnimation(anim);
+		if ( anim != null )	anim = scene.playAnimation(anim);
 	}
 	
 	var fr = 0;
 	var spr : h2d.Sprite;
 	var bmp : h2d.Bitmap;
+	var shotList : List<Bitmap>;
 	
+	static var cx = 0;
 	function update() {	
+		if ( shotList == null) shotList = new List();
 		var dist = 100;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
+		
 		engine.render(scene);
+		//engine.render(scene2);
 		
 		if ( Key.isReleased(Key.SPACE ) ) {
 			trace("truc");
-			//var bmp : Bitmap = scene.captureBitmap();
+			var tempBmp : Bitmap = scene2.captureBitmap();
+			
+			shotList.push( tempBmp );
+			
+			spr.addChild(tempBmp);
+			tempBmp.scaleX = tempBmp.scaleY = 0.125;
+			tempBmp.x = cx;
+			tempBmp.y = 300;
+			cx += 100;
 		}
+		
 	
 	}
 	

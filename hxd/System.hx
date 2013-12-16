@@ -1,4 +1,5 @@
 package hxd;
+import haxe.PosInfos;
 
 enum Cursor {
 	Default;
@@ -18,7 +19,13 @@ class System {
 	
 	public static var screenDPI(get, never) : Float;
 	
-	public static var debugLevel = 3;
+	/**
+	 * 0- no trace
+	 * 1- user space traces
+	 * 2- engine space traces
+	 * 3- engine dev space traces
+	 */
+	public static var debugLevel = 2;
 
 	#if flash
 	
@@ -261,7 +268,7 @@ class System {
 		if ( debugLevel >= 2) trace(msg);
 	}
 	
-	public inline static function trace3(msg,?pos) {
+	public inline static function trace3(msg) {
 		if ( debugLevel >= 3) trace(msg);
 	}
 	

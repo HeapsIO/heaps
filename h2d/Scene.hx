@@ -1,6 +1,9 @@
 package h2d;
 import hxd.Math;
 
+/**
+ * In order to inject this ina  3d context, use h3d.scene.ddPass and alikes
+ */
 class Scene extends Layers implements h3d.IDrawable {
 
 	public var width(default,null) : Int;

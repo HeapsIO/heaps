@@ -1,4 +1,5 @@
 package h2d;
+import hxd.System;
 
 private class DrawableShader extends h3d.impl.Shader {
 	#if flash
@@ -197,6 +198,7 @@ private class DrawableShader extends h3d.impl.Shader {
 
 		void main(void) {
 			lowp vec4 col = texture2D(tex, tuv);
+			
 			#if killAlpha
 				if( c.a - 0.001 ) discard;
 			#end
@@ -222,6 +224,7 @@ private class DrawableShader extends h3d.impl.Shader {
 			#if hasColorAdd
 				col += colorAdd;
 			#end
+			
 			gl_FragColor = col;
 		}
 			
@@ -378,9 +381,12 @@ class Drawable extends Sprite {
 		return shader.colorKey = v;
 	}
 	
-	function drawTile( engine, tile ) {
+	function drawTile( engine : h3d.Engine, tile : h2d.Tile) {
+		//System.trace3("draw tile");
 		setupShader(engine, tile, HAS_SIZE | HAS_UV_POS | HAS_UV_SCALE);
-		engine.renderQuadBuffer(Tools.getCoreObjects().planBuffer);
+		//System.trace3("sending quad buff to render");
+		engine.renderQuadBuffer( Tools.getCoreObjects().planBuffer );
+		//System.trace3("drawTile done");
 	}
 	
 	function setupShader( engine : h3d.Engine, tile : h2d.Tile, options : Int ) {

@@ -46,14 +46,6 @@
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
     <hidden path="obj" />
-    <hidden path="..\..\..\..\actuate\1,6,4" />
-    <hidden path="..\..\..\..\format\3,0,4" />
-    <hidden path="..\..\h2d" />
-    <hidden path="..\..\..\..\hxsl\git" />
-    <hidden path="..\..\..\..\openfl\git" />
-    <hidden path="..\..\tools" />
-    <hidden path="..\..\h3d\parts" />
-    <hidden path="..\..\..\..\actuate\1,7,0" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />

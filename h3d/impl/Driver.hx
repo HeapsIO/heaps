@@ -65,6 +65,7 @@ class Driver {
 	}
 	
 	public function selectBuffer( buffer : VertexBuffer ) {
+		throw "selectBuffer is not implemented";
 	}
 	
 	public function getShaderInputNames() : Array<String> {
@@ -76,6 +77,7 @@ class Driver {
 	}
 	
 	public function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
+		throw "draw is not implemented";
 	}
 	
 	public function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
