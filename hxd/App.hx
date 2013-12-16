@@ -39,6 +39,8 @@ class App {
 		hxd.Timer.update();
 		s2d.checkEvents();
 		update(hxd.Timer.tmod);
+		s2d.setElapsedTime(Timer.tmod/60);
+		s3d.setElapsedTime(Timer.tmod/60);
 		engine.render(s3d);
 	}
 	
