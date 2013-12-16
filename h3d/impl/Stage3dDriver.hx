@@ -378,8 +378,7 @@ class Stage3dDriver extends Driver {
 			ctx.setRenderToBackBuffer();
 			inTarget = null;
 		} else {
-			if( inTarget != null )
-				throw "Calling setTarget() while already set";
+			if( inTarget != null ) throw "Calling setTarget() while already set";
 			ctx.setRenderToTexture(tex, useDepth);
 			inTarget = tex;
 			reset();

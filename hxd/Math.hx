@@ -205,4 +205,23 @@ class Math {
 	}
 	
 	
+	/**
+	 * takes an int , masks it and devide so that it safely maps 0...255 to 0...1.0
+	 * @paramv an int between 0 and 255 will be masked
+	 * @return a float between( 0 and 1)
+	 */
+	public static inline function b2f( v:Int ) :Float {
+		return (v&0xFF) * 0.0039215686274509803921568627451;
+	}
+	
+	/**
+	 * takes an float , clamps it and divide so that it safely maps 0...1 to 0...255.0
+	 * @param	f a float
+	 * @return an int [0...255]
+	 */
+	public static inline function f2b( v:Float ) : Int {
+		var f = clamp(v, 0.0, 1.0);
+		return Std.int(f * 255.0);
+	}
+	
 }

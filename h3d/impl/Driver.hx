@@ -84,6 +84,12 @@ class Driver {
 		throw "setRenderZone is not implemented";
 	}
 	
+	/**
+	 * Sets a texture as render target for current draw commands
+	 * @param	tex a write enabled texture
+	 * @param	useDepth shall we bind a depth(z) buffer to the render target
+	 * @param	clearColor is a ARGB color to clear the target
+	 */
 	public function setRenderTarget( tex : Null<Texture>, useDepth : Bool, clearColor : Int ) {
 		throw "setRenderTarget is not implemented";
 	}

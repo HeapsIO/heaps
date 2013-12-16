@@ -5,6 +5,7 @@ import h3d.Matrix;
 import h3d.Vector;
 import haxe.ds.IntMap.IntMap;
 import hxd.BytesBuffer;
+import hxd.Math;
 import hxd.Profiler;
 
 import hxd.FloatBuffer;
@@ -31,6 +32,19 @@ private typedef Uint16Array = openfl.utils.Int16Array;
 private typedef Uint8Array = openfl.utils.UInt8Array;
 private typedef Float32Array = openfl.utils.Float32Array;
 #end
+
+#if js
+typedef NativeFBO = js.html.webgl.Framebuffer;//todo test
+#elseif cpp
+typedef NativeFBO = openfl.gl.GLFramebuffer;//todo test
+#end
+
+class FBO {
+	var surface : NativeFBO;
+	public function new( fbo:NativeFBO) {
+		surface = fbo;
+	}
+}
 
 @:publicFields
 class UniformContext { 
@@ -281,6 +295,52 @@ class GlDriver extends Driver {
 			
 			gl.enable( GL.SCISSOR_TEST );
 			gl.scissor(x, y, width, height);
+		}
+	}
+	
+	var inTarget : Texture;
+	var fboList : List<FBO>;
+	
+	public function checkFBO(fbo:FBO)
+	{
+		/*
+		var st = gl.checkFramebufferStatus​();
+		if ( st == GL.FRAMEBUFFER_COMPLETE​) return;
+		
+		throw 
+		switch(st) {
+			case GL.FRAMEBUFFER_INCOMPLETE_ATTACHMENT​:				"FRAMEBUFFER_INCOMPLETE_ATTACHMENT​";
+			case GL.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:		"FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
+			case GL.FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER​:         	"FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER​";
+			case GL.FRAMEBUFFER_INCOMPLETE_READ_BUFFER​:          	"FRAMEBUFFER_INCOMPLETE_READ_BUFFER​";
+			case GL.FRAMEBUFFER_UNSUPPORTED:                     	"FRAMEBUFFER_UNSUPPORTED";
+			case GL.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:          	"FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
+			case GL.FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:        	"FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";
+		}
+		*/
+	}
+	
+	public override function setRenderTarget( tex : Null<Texture>, useDepth : Bool, clearColor : Int ) {
+		if ( tex == null ) {
+			gl.bindFramebuffer( GL.FRAMEBUFFER, null ); 
+			inTarget = null;
+		}
+		else {
+			if ( inTarget != null ) throw "Calling setTarget() while already set";
+			//generate a framebuffer is none available
+			//bind color texture from tex if possible 
+			//or create one
+			//attach some depth if needed
+			//retrieve content after swapbuffer?
+			//set input target
+			var fbo = null; //TODO
+			inTarget = tex;
+			checkFBO(fbo);
+			reset();
+			clear(	Math.b2f(clearColor>> 16),
+					Math.b2f(clearColor>> 8),
+					Math.b2f(clearColor),
+					Math.b2f(clearColor>>24));
 		}
 	}
 	
