@@ -54,11 +54,16 @@ class FrameAnimation extends Animation {
 	
 	@:access(h3d.scene.Skin)
 	override function sync( decompose = false ) {
+		
+
 		if( decompose ) throw "Decompose not supported on Frame Animation";
 		var frame = Std.int(frame);
 		if( frame < 0 ) frame = 0 else if( frame >= frameCount ) frame = frameCount - 1;
 		if( frame == syncFrame )
 			return;
+			
+		//hxd.Profiler.begin("Object::Frameanimation::sync");
+		
 		syncFrame = frame;
 		for( o in getFrames() ) {
 			if( o.alphas != null ) {
@@ -75,6 +80,8 @@ class FrameAnimation extends Animation {
 			} else
 				o.targetObject.defaultTransform = o.frames[frame];
 		}
+		
+		//hxd.Profiler.begin("Object::Frameanimation::sync");
 	}
 	
 }

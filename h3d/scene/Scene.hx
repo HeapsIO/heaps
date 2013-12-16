@@ -1,4 +1,5 @@
 package h3d.scene;
+import hxd.Profiler;
 
 class Scene extends Object implements h3d.IDrawable {
 
@@ -39,6 +40,7 @@ class Scene extends Object implements h3d.IDrawable {
 	}
 
 	public function render( engine : h3d.Engine ) {
+		Profiler.begin("Scene::render");
 		camera.screenRatio = engine.width / engine.height;
 		camera.update();
 		var oldProj = engine.curProjMatrix;
@@ -48,15 +50,31 @@ class Scene extends Object implements h3d.IDrawable {
 		ctx.time += ctx.elapsedTime;
 		ctx.frame++;
 		ctx.currentPass = 0;
+		
+		Profiler.begin("Scene::extra");
 		for( p in prePasses )
 			p.render(engine);
+		Profiler.end("Scene::pre");
+		
+		Profiler.begin("Scene::sync");
 		sync(ctx);
+		Profiler.end("Scene::sync");
+		
+		Profiler.begin("Scene::drawRec");
 		drawRec(ctx);
+		Profiler.end("Scene::drawRec");
+		Profiler.begin("Scene::finalize");
 		ctx.finalize();
-		for( p in extraPasses ) p.render(engine);
+		Profiler.end("Scene::finalize");
+		
+		Profiler.begin("Scene::extra");
+		for ( p in extraPasses ) p.render(engine);
+		Profiler.end("Scene::extra");
+		
 		engine.curProjMatrix = oldProj;
 		ctx.camera = null;
 		ctx.engine = null;
+		Profiler.end("Scene::render");
 	}
 	
 }

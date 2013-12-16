@@ -21,7 +21,7 @@
   </classpaths>
   <!-- Build options -->
   <build>
-    <option directives="idPalette&#xA;tools=1.1.0&#xA;resourcesPath=../res&#xA;openfl=1.1&#xA;display&#xA;verbose=true&#xA;windows&#xA;desktop" />
+    <option directives="tools=1.1.0&#xA;resourcesPath=../res&#xA;openfl=1.1&#xA;display&#xA;verbose=true&#xA;windows&#xA;desktop" />
     <option flashStrict="False" />
     <option noInlineOnDebug="False" />
     <option mainClass="ApplicationMain" />

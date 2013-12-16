@@ -1,5 +1,6 @@
 package h3d;
 import h3d.mat.Data;
+import hxd.Profiler;
 import hxd.System;
 
 class Engine {
@@ -164,7 +165,9 @@ class Engine {
 		if( drawTri < 0 ) drawTri = maxTri - startTri;
 		if( drawTri > 0 && selectBuffer(b.b) ) {
 			// *3 because it's the position in indexes which are always by 3
+			Profiler.begin("Engine.renderIndexed");
 			driver.draw(indexes.ibuf, startTri * 3, drawTri);
+			Profiler.end("Engine.renderIndexed");
 			drawTriangles += drawTri;
 			drawCalls++;
 		}
@@ -258,6 +261,8 @@ class Engine {
 	public function begin() {
 		if( driver.isDisposed() )
 			return false;
+			
+		Profiler.begin("Engine:begin");
 		driver.clear( ((backgroundColor>>16)&0xFF)/255 , ((backgroundColor>>8)&0xFF)/255, (backgroundColor&0xFF)/255, ((backgroundColor>>>24)&0xFF)/255);
 		// init
 		frameCount++;
@@ -266,6 +271,7 @@ class Engine {
 		drawCalls = 0;
 		curProjMatrix = null;
 		driver.reset();
+		Profiler.end("Engine:begin");
 		return true;
 	}
 
@@ -274,9 +280,11 @@ class Engine {
 	}
 
 	public function end() {
+		Profiler.begin("Engine:end");
 		driver.present();
 		reset();
 		curProjMatrix = null;
+		Profiler.end("Engine:end");
 	}
 
 	public function setTarget( tex : h3d.mat.Texture, useDepth = false, clearColor = 0 ) {

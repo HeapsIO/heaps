@@ -1,4 +1,5 @@
 package h3d;
+import hxd.Profiler;
 
 // use left-handed coordinate system, more suitable for 2D games X=0,Y=0 at screen top-left and Z towards user
 
@@ -93,10 +94,12 @@ class Camera {
 	}
 	
 	public function update() {
+		Profiler.begin("Camera.update");
 		makeCameraMatrix(mcam);
 		makeFrustumMatrix(mproj);
 		m.multiply(mcam, mproj);
 		needInv = true;
+		Profiler.end("Camera.update");
 	}
 	
 	public function lostUp() {

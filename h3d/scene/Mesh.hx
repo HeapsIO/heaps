@@ -1,4 +1,5 @@
 package h3d.scene;
+import hxd.Profiler;
 
 class Mesh extends Object {
 
@@ -30,14 +31,28 @@ class Mesh extends Object {
 	
 	@:access(h3d.mat.MeshMaterial.setup)
 	override function draw( ctx : RenderContext ) {
-		if( material.renderPass > ctx.currentPass ) {
+		if ( material.renderPass > ctx.currentPass ) {
+			
 			ctx.addPass(draw);
 			return;
 		}
-		ctx.localPos = absPos;
-		material.setup(ctx);
-		ctx.engine.selectMaterial(material);
-		primitive.render(ctx.engine);
+		Profiler.begin("mesh.draw");
+		
+			ctx.localPos = absPos;
+		
+			Profiler.begin("mesh.draw.setup");
+			material.setup(ctx);
+			Profiler.end("mesh.draw.setup");
+			
+			Profiler.begin("mesh.draw.selMat");
+			ctx.engine.selectMaterial(material);
+			Profiler.end("mesh.draw.selMat");
+		
+			Profiler.begin("mesh.draw.prim.render");
+			primitive.render(ctx.engine);
+			Profiler.end("mesh.draw.prim.render");
+			
+		Profiler.end("mesh.draw");
 	}
 	
 	override function dispose() {

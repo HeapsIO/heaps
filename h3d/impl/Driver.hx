@@ -7,11 +7,23 @@ typedef VertexBuffer = Stage3dDriver.VertexWrapper;
 typedef Texture = flash.display3D.textures.TextureBase;
 #elseif js
 typedef IndexBuffer = js.html.webgl.Buffer;
-typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int };
+@:publicFields
+class GLVB {
+	var b : js.html.webgl.Buffer;
+	var stride : Int;
+	public function new(b = null, s = 0) { this.b = b; this.stride = s; };
+}
+typedef VertexBuffer = GLVB;
 typedef Texture = js.html.webgl.Texture;
 #elseif cpp
 typedef IndexBuffer = openfl.gl.GLBuffer;
-typedef VertexBuffer = { b : openfl.gl.GLBuffer, stride : Int };
+@:publicFields
+class GLVB {
+	var b : openfl.gl.GLBuffer;
+	var stride : Int;
+	public function new(b = null, s = 0) { this.b = b; this.stride = s; };
+}
+typedef VertexBuffer = GLVB;
 typedef Texture = openfl.gl.GLTexture;
 #else
 typedef IndexBuffer = Int;

@@ -1,5 +1,6 @@
 package h3d.scene;
 import h3d.Matrix;
+import hxd.Profiler;
 import hxd.System;
 
 class Joint extends Object {
@@ -178,26 +179,27 @@ class Skin extends Mesh {
 	
 	override function draw( ctx : RenderContext ) {
 		//if ( System.debugLevel >= 2) trace("Skin.draw();");
+		Profiler.begin("skin draw");
 		if( splitPalette == null ) {
 			if( paletteChanged ) {
 				paletteChanged = false;
+				
 				material.skinMatrixes = currentPalette;
 				
 				//TODO REMOVE
 				#if idPalette
 				material.skinMatrixes = idPalette;
 				#end
-				
 			}
 			super.draw(ctx);
 		} else {
-			for( i in 0...splitPalette.length ) {
+			for ( i in 0...splitPalette.length ) {
+				
 				material.skinMatrixes = splitPalette[i];
 				
 				//TODO REMOVE
 				#if idPalette
 				material.skinMatrixes = idPalette;
-				trace('gnurf');
 				#end
 				
 				primitive.selectMaterial(i);
@@ -206,6 +208,7 @@ class Skin extends Mesh {
 		}
 		if( showJoints )
 			ctx.addPass(drawJoints);
+		Profiler.end("skin draw");
 	}
 	
 	function drawJoints( ctx : RenderContext ) {

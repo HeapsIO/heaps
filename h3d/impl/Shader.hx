@@ -28,17 +28,45 @@ enum ShaderType {
 	Elements( field : String, size:Null<Int>, t : ShaderType);//null means size in indefinite and will be context relative
 }
 
-typedef Uniform = { 
-	name : String, 
-	loc : ShaderLocation, 
-	type : ShaderType, 
-	index : Int 
+@:publicFields
+class Uniform { 
+	var name : String;
+	var loc : ShaderLocation;
+	var type : ShaderType;
+	var index : Int;
+	
+	inline function new(n:String,l:ShaderLocation,t:ShaderType,i) {
+		name = n;
+		loc = l;
+		type = t;
+		index = i;
+	}
+}
+
+@:publicFields
+class Attribute {
+	var etype : Int;
+	var offset : Int; 
+	var index : Int;
+	var size : Int;
+	
+	var name : String;
+	var type : ShaderType;
+	
+	function new(n:String,t:ShaderType,e,o,i,s) {
+		name = n;
+		type = t;
+		etype = e;
+		offset = o;
+		index = i;
+		size = s;
+	}
 }
 
 class ShaderInstance {
 
 	public var program : #if js js.html.webgl.Program #else openfl.gl.GLProgram #end;
-	public var attribs : Array<{ name : String, type : ShaderType, etype : Int, offset : Int, index : Int, size : Int }>;
+	public var attribs : Array<Attribute>;
 	public var uniforms : Array<Uniform>;
 	public var stride : Int;
 	public function new() {

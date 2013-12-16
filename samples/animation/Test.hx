@@ -12,12 +12,13 @@ import haxe.CallStack;
 import haxe.io.Bytes;
 import haxe.Log;
 import hxd.BitmapData;
+import hxd.Key;
 import hxd.Pixels;
+import hxd.Profiler;
 import hxd.res.Embed;
 import hxd.res.EmbedFileSystem;
 import hxd.res.LocalFileSystem;
 import hxd.System;
-import mt.flash.Key;
 import openfl.Assets;
 
 
@@ -75,9 +76,10 @@ class Test {
 		engine.debug = true;
 		engine.backgroundColor = 0xFF203020;
 		engine.onReady = start;
-		engine.init();
-		Key.init();
 		
+		engine.init();
+		hxd.Key.initialize();
+		Profiler.minLimit = -1.0;
 		trace("new()");
 	}
 	
@@ -117,6 +119,7 @@ class Test {
 	
 	function loadData( data : String, newFbx = true ) {
 		curFbx = new h3d.fbx.Library();
+		
 		curData = data;
 		var fbx = h3d.fbx.Parser.parse(data);
 		curFbx.load(fbx);
@@ -142,19 +145,33 @@ class Test {
 	static public var animMode : h3d.fbx.Library.AnimationMode = h3d.fbx.Library.AnimationMode.FrameAnim;
 	function setSkin() {
 		
+		hxd.Profiler.begin("loadAnimation");
 		var anim = curFbx.loadAnimation(animMode);
+		hxd.Profiler.end("loadAnimation");
+		
 		if ( anim != null )
 			anim = scene.playAnimation(anim);
 	}
 	
 	var fr = 0;
 	function update() {	
+		hxd.Profiler.end("Test::render");
+		hxd.Profiler.begin("Test::update");
 		var dist = 100;
 		time += 0.01;
 		scene.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 		engine.render(scene);
+		hxd.Profiler.end("Test::update");
+		hxd.Profiler.begin("Test::render");
 	
 		//#if android if( (fr++) % 100 == 0 ) trace("ploc"); #end
+		if ( Key.isDown( Key.ENTER) ) {
+			var s = hxd.Profiler.dump(); 
+			if ( s != ""){
+				trace( s );
+				hxd.Profiler.clean();
+			}
+		}
 	}
 	
 	static function main() {
