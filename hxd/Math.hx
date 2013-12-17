@@ -136,12 +136,9 @@ class Math {
 	}
 	
 	public inline static function bitCount(v:Int) {
-		var k = 0;
-		while( v != 0 ) {
-			k += v & 1;
-			v >>>= 1;
-		}
-		return k;
+		v = v - ((v >> 1) & 0x55555555);
+		v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+		return (((v + (v >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
 	}
 	
 	public static inline function distanceSq( dx : Float, dy : Float, dz = 0. ) {

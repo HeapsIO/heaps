@@ -1,6 +1,7 @@
 package h3d.impl;
 
 import h3d.impl.Driver;
+import h3d.impl.GlDriver.FBO;
 import h3d.Matrix;
 import h3d.Vector;
 import haxe.ds.IntMap.IntMap;
@@ -35,14 +36,23 @@ private typedef Float32Array = openfl.utils.Float32Array;
 
 #if js
 typedef NativeFBO = js.html.webgl.Framebuffer;//todo test
+typedef NativeRBO = js.html.webgl.RenderBuffer;//todo test
 #elseif cpp
 typedef NativeFBO = openfl.gl.GLFramebuffer;//todo test
+typedef NativeRBO = openfl.gl.GLRenderbuffer;//todo test
 #end
 
+@:publicFields
 class FBO {
-	var surface : NativeFBO;
-	public function new( fbo:NativeFBO) {
-		surface = fbo;
+	var fbo : NativeFBO;
+	var color : Texture;
+	var rbo : NativeRBO;
+	
+	var width : Int=0;
+	var height : Int=0;
+	
+	public function new() {
+	
 	}
 }
 
@@ -101,6 +111,8 @@ class GlDriver extends Driver {
 		selectMaterial(0);
 
 		System.trace3('gldriver newed');
+		
+		fboList = new List();
 	}
 	
 	
@@ -298,44 +310,72 @@ class GlDriver extends Driver {
 		}
 	}
 	
-	var inTarget : Texture;
+	var inTarget : h3d.mat.Texture;
 	var fboList : List<FBO>;
 	
-	public function checkFBO(fbo:FBO)
-	{
-		/*
-		var st = gl.checkFramebufferStatus​();
-		if ( st == GL.FRAMEBUFFER_COMPLETE​) return;
+	public function checkFBO(fbo:FBO) {
 		
-		throw 
-		switch(st) {
-			case GL.FRAMEBUFFER_INCOMPLETE_ATTACHMENT​:				"FRAMEBUFFER_INCOMPLETE_ATTACHMENT​";
-			case GL.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:		"FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
-			case GL.FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER​:         	"FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER​";
-			case GL.FRAMEBUFFER_INCOMPLETE_READ_BUFFER​:          	"FRAMEBUFFER_INCOMPLETE_READ_BUFFER​";
-			case GL.FRAMEBUFFER_UNSUPPORTED:                     	"FRAMEBUFFER_UNSUPPORTED";
-			case GL.FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:          	"FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";
-			case GL.FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:        	"FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";
+		#if debug
+		var st = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
+		if (st ==  GL.FRAMEBUFFER_COMPLETE )
+			return;
+		
+		throw switch(st) {
+			default: 											"UNKNOWN ERROR";
+			case GL.FRAMEBUFFER_INCOMPLETE_ATTACHMENT:			"FRAMEBUFFER_INCOMPLETE_ATTACHMENT​";
+			case GL.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:	"FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
+			case GL.FRAMEBUFFER_INCOMPLETE_DIMENSIONS:   		"FRAMEBUFFER_INCOMPLETE_DIMENSIONS";
+			
+			case GL.FRAMEBUFFER_UNSUPPORTED:                    "FRAMEBUFFER_UNSUPPORTED";
 		}
-		*/
+		#end
+		
 	}
 	
-	public override function setRenderTarget( tex : Null<Texture>, useDepth : Bool, clearColor : Int ) {
+	public override function setRenderTarget( tex : Null<h3d.mat.Texture>, useDepth : Bool, clearColor : Int ) {
 		if ( tex == null ) {
+			gl.bindRenderbuffer( GL.RENDERBUFFER, null);
 			gl.bindFramebuffer( GL.FRAMEBUFFER, null ); 
 			inTarget = null;
 		}
 		else {
+			var fbo : FBO = null;
+			for ( f in fboList) {
+				if ( f.color == tex.t ) {
+					fbo = f;
+					break;
+				}
+			}
+			if ( fbo == null) {
+				fbo = new FBO();
+				fboList.push(fbo);
+			}
+			
 			if ( inTarget != null ) throw "Calling setTarget() while already set";
-			//generate a framebuffer is none available
-			//bind color texture from tex if possible 
-			//or create one
-			//attach some depth if needed
-			//retrieve content after swapbuffer?
-			//set input target
-			var fbo = null; //TODO
 			inTarget = tex;
+			
+			if ( fbo.fbo == null ) fbo.fbo = gl.createFramebuffer();
+			gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.fbo);
+						
+			var bw = Math.bitCount(tex.width );
+			var bh = Math.bitCount(tex.height );
+			
+			if ( bh > 1 || bw > 1) throw "invalid texture size, must be a power of two texture";
+			
+			fbo.width = tex.width;
+			fbo.height = tex.height;
+			fbo.color = tex.t;
+			//bind color
+			gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo.color, 0);
+			
+			//bind depth
+			if ( useDepth ) {
+				if( fbo.rbo ==null) fbo.rbo = gl.createRenderbuffer();
+				gl.bindRenderbuffer( gl.RENDERBUFFER, fbo.rbo);
+				gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, fbo.rbo);
+			}
 			checkFBO(fbo);
+			
 			reset();
 			clear(	Math.b2f(clearColor>> 16),
 					Math.b2f(clearColor>> 8),

@@ -373,7 +373,8 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
-	override function setRenderTarget( tex : Null<Texture>, useDepth : Bool, clearColor : Int ) {
+	override function setRenderTarget( inTex : Null<h3d.mat.Texture>, useDepth : Bool, clearColor : Int ) {
+		var tex = inTex.t;
 		if( tex == null ) {
 			ctx.setRenderToBackBuffer();
 			inTarget = null;
