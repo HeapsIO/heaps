@@ -113,6 +113,9 @@ class State {
 	// animation
 	public var frame : Null<Value>;
 	
+	// extra
+	public var delay : Float;
+	
 	public function new() {
 	}
 	
@@ -150,6 +153,8 @@ class State {
 		collide = false;
 		collideKill = false;
 		bounce = 0;
+		// extra
+		delay = 0.;
 	}
 	
 	public /*inline*/ function eval( v : Value, time : Float, rand : Void -> Float ) : Float {
