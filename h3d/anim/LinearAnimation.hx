@@ -117,12 +117,13 @@ class LinearAnimation extends Animation {
 				var qy = f1.qy * k1 + f2.qy * q2;
 				var qz = f1.qz * k1 + f2.qz * q2;
 				var qw = f1.qw * k1 + f2.qw * q2;
+
 				// make sure the resulting quaternion is normalized
-				var ql = 1 / Math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw);
+				var ql = 1.0 / Math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw);
 				qx *= ql;
 				qy *= ql;
 				qz *= ql;
-				qw *= ql;
+				qw *= ql;				
 				
 				if( decompose ) {
 					m._12 = qx;

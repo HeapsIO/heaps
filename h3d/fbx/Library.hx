@@ -636,7 +636,7 @@ class Library {
 						tmats.push(null);
 						continue;
 					}
-					var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
+					var mat = textureLoader(tex.get("RelativeFilename").props[0].toString(),mat);
 					if ( vcolor ) {
 						if( System.debugLevel>=2) trace('detected vertex color');
 						mat.hasVertexColor = true;
