@@ -834,15 +834,24 @@ class GlDriver extends Driver {
 			System.trace3("using program");
 			gl.useProgram(curShader.program);
 			
-			//kiss....
+			
+			var oa = 0;
+			if ( old != null )
+				for ( a in old.attribs) 
+					oa |= 1<<a.index;
+					
+			var na = 0;
+				for ( a in curShader.attribs) 
+					na |= 1<<a.index;
+				
 			if ( old != null )
 				for ( a in old.attribs)
-					gl.disableVertexAttribArray(a.index);
+					if( na&(1<<a.index) == 0)
+						gl.disableVertexAttribArray(a.index);
 			
-			for ( i in 0...curShader.attribs.length ) {
-				var a = curShader.attribs[i];
-				gl.enableVertexAttribArray(a.index);
-			}
+			for ( a in curShader.attribs)
+				if( oa&(1<<a.index) == 0)
+					gl.enableVertexAttribArray(a.index);
 				
 			System.trace3("attribs set program");
 			change = true;
@@ -994,11 +1003,12 @@ class GlDriver extends Driver {
 			System.trace3("active texture" );
 			
 			var t : h3d.mat.Texture = val;
-			setupTexture(t, t.mipMap, t.filter, t.wrap);
+			setupTexture(t, t.mipMap, t.filter,
+			t.wrap);
 			gl.activeTexture(GL.TEXTURE0 + u.index);
 			gl.uniform1i(u.loc, u.index);
 			
-		case Float: 							var f : Float = val;  gl.uniform1f(u.loc, f);
+		case Float: var f : Float = val;  		gl.uniform1f(u.loc, f);
 		case Vec2:	var v : h3d.Vector = val;	gl.uniform2f(u.loc, v.x, v.y);
 		case Vec3:	var v : h3d.Vector = val;	gl.uniform3f(u.loc, v.x, v.y, v.z);
 		case Vec4:	var v : h3d.Vector = val;	gl.uniform4f(u.loc, v.x, v.y, v.z, v.w);
