@@ -3,6 +3,8 @@ import h3d.col.Point;
 
 class Quads extends Primitive {
 
+var mem :  hxd.FloatBuffer;
+
 	var pts : Array<Point>;
 	var uvs : Array<UV>;
 	var normals : Array<Point>;
@@ -42,6 +44,7 @@ class Quads extends Primitive {
 	override function alloc( engine : Engine ) {
 		dispose();
 		var v = new hxd.FloatBuffer();
+mem = v;
 		for( i in 0...pts.length ) {
 			var pt = pts[i];
 			v.push(pt.x);
@@ -68,6 +71,9 @@ class Quads extends Primitive {
 	public function getPoints() {
 		return pts;
 	}
+public function getMem() {
+	return mem;
+}
 	
 	override function render(engine) {
 		if( buffer == null || buffer.isDisposed() ) alloc(engine);

@@ -36,7 +36,7 @@ private typedef Float32Array = openfl.utils.Float32Array;
 
 #if js
 typedef NativeFBO = js.html.webgl.Framebuffer;//todo test
-typedef NativeRBO = js.html.webgl.RenderBuffer;//todo test
+typedef NativeRBO = js.html.webgl.Renderbuffer;//todo test
 #elseif cpp
 typedef NativeFBO = openfl.gl.GLFramebuffer;//todo test
 typedef NativeRBO = openfl.gl.GLRenderbuffer;//todo test

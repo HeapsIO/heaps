@@ -33,7 +33,7 @@ class Object {
 	
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
-	var qRot : h3d.Quat;
+public var qRot : h3d.Quat;
 	var posChanged : Bool;
 	var lastFrame : Int;
 	
@@ -133,6 +133,8 @@ class Object {
 		o.scaleY = scaleY;
 		o.scaleZ = scaleZ;
 		o.name = name;
+//MICHEL
+o.qRot = qRot;
 		if( defaultTransform != null )
 			o.defaultTransform = defaultTransform.clone();
 		for( c in childs ) {

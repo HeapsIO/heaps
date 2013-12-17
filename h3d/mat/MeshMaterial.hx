@@ -90,6 +90,9 @@ class MeshShader extends h3d.impl.Shader {
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
 			var tnorm : Float3 = [0, 0, 0];
+
+		
+			
 			
 			if( lightSystem != null || isOutline ) {
 				var n = input.normal;
