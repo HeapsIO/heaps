@@ -176,10 +176,18 @@ class System {
 	}
 	
 	static function get_width() {
+		var canvas: js.html.CanvasElement = cast js.Browser.document.getElementById("webgl");
+		if ( canvas != null ) {
+            return canvas.clientWidth;
+        }
 		return js.Browser.document.width;
 	}
 	
 	static function get_height() {
+		var canvas: js.html.CanvasElement = cast js.Browser.document.getElementById("webgl");
+		if ( canvas != null ) {
+            return canvas.clientHeight;
+        }
 		return js.Browser.document.height;
 	}
 	
