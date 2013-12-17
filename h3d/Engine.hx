@@ -308,7 +308,7 @@ class Engine {
 	}
 
 	public function setTarget( tex : h3d.mat.Texture, useDepth = false, clearColor = 0 ) {
-		driver.setRenderTarget(tex == null ? null : tex.t, useDepth, clearColor);
+		driver.setRenderTarget(tex == null ? null : tex, useDepth, clearColor);
 	}
 
 	public function setRenderZone( x = 0, y = 0, width = -1, height = -1 ) {
