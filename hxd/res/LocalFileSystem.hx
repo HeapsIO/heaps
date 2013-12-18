@@ -9,6 +9,7 @@ private class LocalEntry extends FileEntry {
 	
 	var fs : LocalFileSystem;
 	var relPath : String;
+	
 	#if air3
 	var file : flash.filesystem.File;
 	var fread : flash.filesystem.FileStream;
@@ -356,6 +357,10 @@ class LocalFileSystem implements FileSystem {
 		#if flash
 		if( flash.system.Capabilities.playerType == "Desktop" )
 			throw "Please compile with -lib air3";
+		#end
+		
+		#if openfl 
+			#error "implement me david"
 		#end
 		throw "Local file system is not supported for this platform";
 	}
