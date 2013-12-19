@@ -89,7 +89,11 @@ class GlDriver extends Driver {
 	
 	public function new() {
 		#if js
-		canvas = cast js.Browser.document.getElementById("webgl");
+			#if !openfl
+			canvas = cast js.Browser.document.getElementById("webgl");
+			#else
+			canvas = cast js.Browser.document.getElementById("Root_MovieClip");
+			#end 
 		if( canvas == null ) throw "Canvas #webgl not found";
 		gl = canvas.getContextWebGL();
 		if( gl == null ) throw "Could not acquire GL context";
@@ -1289,6 +1293,64 @@ class GlDriver extends Driver {
 		return log + line;
 	}
 
+	public function resetGlContext() {
+		var numAttribs = gl.getParameter(GL.MAX_VERTEX_ATTRIBS);
+		var tmp = gl.createBuffer();
+		gl.bindBuffer(GL.ARRAY_BUFFER, tmp);
+		for (ii in 0...numAttribs) {
+			gl.disableVertexAttribArray(ii);
+			gl.vertexAttribPointer(ii, 4, GL.FLOAT, false, 0, 0);
+			gl.vertexAttrib1f(ii, 0);
+		}
+		gl.deleteBuffer(tmp);
+
+		var numTextureUnits = gl.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+		for (ii in 0...numTextureUnits) {
+			gl.activeTexture(GL.TEXTURE0 + ii);
+			gl.bindTexture(GL.TEXTURE_CUBE_MAP, null);
+			gl.bindTexture(GL.TEXTURE_2D, null);
+		}
+
+		gl.activeTexture(GL.TEXTURE0);
+		gl.useProgram(null);
+		gl.bindBuffer(GL.ARRAY_BUFFER, null);
+		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
+		gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
+		gl.disable(GL.BLEND);
+		gl.disable(GL.CULL_FACE);
+		gl.disable(GL.DEPTH_TEST);
+		gl.disable(GL.DITHER);
+		gl.disable(GL.SCISSOR_TEST);
+		gl.blendColor(0, 0, 0, 0);
+		gl.blendEquation(GL.FUNC_ADD);
+		gl.blendFunc(GL.ONE, GL.ZERO);
+		gl.clearColor(0, 0, 0, 0);
+		gl.clearDepth(1);
+		gl.clearStencil(-1);
+		gl.colorMask(true, true, true, true);
+		gl.cullFace(GL.BACK);
+		gl.depthFunc(GL.LESS);
+		gl.depthMask(true);
+		gl.depthRange(0, 1);
+		gl.frontFace(GL.CCW);
+		gl.hint(GL.GENERATE_MIPMAP_HINT, GL.DONT_CARE);
+		gl.lineWidth(1);
+		
+		gl.pixelStorei(GL.PACK_ALIGNMENT, 4);
+		gl.pixelStorei(GL.UNPACK_ALIGNMENT, 4);
+		gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, 0);
+		gl.pixelStorei(GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
+		
+		gl.polygonOffset(0, 0);
+		gl.sampleCoverage(1, false);
+		gl.scissor(0, 0, vpWidth, vpHeight);
+		gl.stencilFunc(GL.ALWAYS, 0, 0xFFFFFFFF);
+		gl.stencilMask(0xFFFFFFFF);
+		gl.stencilOp(GL.KEEP, GL.KEEP, GL.KEEP);
+		gl.viewport(0, 0, vpWidth, vpHeight);
+		gl.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT | GL.STENCIL_BUFFER_BIT);
+	}
 }
 
 #end
