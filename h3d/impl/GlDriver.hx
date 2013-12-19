@@ -1,45 +1,46 @@
 package h3d.impl;
 
 import h3d.impl.Driver;
-import h3d.impl.GlDriver.FBO;
+
 import h3d.Matrix;
 import h3d.Vector;
 import haxe.ds.IntMap;
 import hxd.BytesBuffer;
 import hxd.Math;
 import hxd.Profiler;
-import openfl.Assets;
-import openfl.gl.GLActiveInfo;
 
 import hxd.FloatBuffer;
 import hxd.Pixels;
 import hxd.System;
-using StringTools;
 
+using StringTools;
 
 #if (js||cpp)
 	#if js
 	import js.html.Uint16Array;
 	import js.html.Uint8Array;
 	import js.html.Float32Array;
+	typedef _GLActiveInfo = js.html.webgl.ActiveInfo;
+	
 	#elseif cpp
 	import openfl.gl.GL;
-	
-	//to allow writing
+	typedef _GLActiveInfo = openfl.gl.GLActiveInfo;
+	#end
+
+	//to allow writin
 	@:publicFields
 	class GLActiveInfo {
 		var size : Int;
 		var type : Int;
 		var name : String;
 		
-		function new(g:openfl.gl.GLActiveInfo) {
+		function new(g:_GLActiveInfo) {
 			size = g.size;
 			type = g.type;
 			name = g.name;
 		}
 	}
-	#end
-
+	
 	#if js
 	private typedef GL = js.html.webgl.GL;
 	#elseif cpp
@@ -697,16 +698,11 @@ class GlDriver extends Driver {
 		inst.uniforms = [];
 		
 		parseUniInfo = new UniformContext(-1,null);
-		//parseUniInfo = { texIndex: -1, inf:null };
 		for( k in 0...nuni ) {
 			parseUniInfo.inf = new GLActiveInfo( gl.getActiveUniform(p, k) );
 			
-			//if ( System.isVerbose) trace("retrieving uniform " + inf.name);
-			if( parseUniInfo.inf.name.substr(0, 6) == "webgl_" )
-				continue; // skip native uniforms
-				
-			if( parseUniInfo.inf.name.substr(0, 3) == "gl_" )
-				continue;
+			if( parseUniInfo.inf.name.substr(0, 6) == "webgl_" ) 	continue; // skip native uniforms
+			if( parseUniInfo.inf.name.substr(0, 3) == "gl_" )		continue;
 				
 			var tu = parseUniform(  allCode,p );
 			inst.uniforms.push( tu );
