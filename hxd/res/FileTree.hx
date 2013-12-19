@@ -176,7 +176,7 @@ class FileTree {
 			Context.addResource(name, sys.io.File.getBytes(fullPath));
 			return true;
 		} else if ( isCPP ) {
-			Context.addResource(name, rb);
+			Context.addResource(name, sys.io.File.getBytes(fullPath));
 			return true;
 		}else {
 			if ( isVerbose ) trace('embedFile res : doing nothing');
