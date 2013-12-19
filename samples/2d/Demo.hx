@@ -1,6 +1,7 @@
 import h2d.Tile;
+import haxe.Resource;
 import hxd.BitmapData;
-import openfl.Assets;
+
 class Demo {
 	
 	var engine : h3d.Engine;
@@ -17,8 +18,9 @@ class Demo {
 	function init() {
 		scene = new h2d.Scene();
 
+		
 		var tile = hxd.Res.hxlogo.toTile();
-
+		
 		spr = new h2d.Sprite(scene);
 		spr.x = engine.width >> 1;
 		spr.y = engine.height >> 1;
@@ -30,6 +32,8 @@ class Demo {
 			bmp.alpha = 0.5;
 		}
 
+		//can work but not with embed font for now
+		#if !openfl
 		var font = hxd.Res.CustomFont.build(32,{ antiAliasing : true });
 		var tf = new h2d.Text(font, scene);
 		tf.textColor = 0xFFFFFF;
@@ -46,7 +50,8 @@ class Demo {
 		tf.text = "Héllò h2d !";
 		tf.x = 20;
 		tf.scale(7);
-
+		#end
+		
 		hxd.System.setLoop(update);
 	}
 	
@@ -56,9 +61,7 @@ class Demo {
 	}
 	
 	static function main() {
-		
 		hxd.Res.loader = new hxd.res.Loader(hxd.res.EmbedFileSystem.create());
-		
 		new Demo();
 	}
 	

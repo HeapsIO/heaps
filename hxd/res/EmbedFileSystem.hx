@@ -153,8 +153,7 @@ private class EmbedEntry extends FileEntry {
 
 	override function iterator() {
 		return new hxd.impl.ArrayIterator(fs.subFiles(relPath));
-	}
-	
+	}	
 }
 
 #end

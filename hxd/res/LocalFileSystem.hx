@@ -218,6 +218,9 @@ private class LocalEntry extends FileEntry {
 	
 }
 
+/**
+ * Tries to reach the local file sysytem
+ */
 class LocalFileSystem implements FileSystem {
 	
 	var baseDir : String;

@@ -1,0 +1,7 @@
+
+
+opengl
+	-reenable the js target
+	-implement render to textures
+	-check 2d
+	-implement ios

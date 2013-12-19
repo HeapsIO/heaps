@@ -20,7 +20,7 @@ class FileTree {
 	var isCPP : Bool;
 	var embedTypes : Array<String>;
 	
-	public static inline var isVerbose = #if verbose true #else false #end;
+	public static inline var isVerbose = false;
 	
 	public function new(dir) {
 		this.path = resolvePath(dir);
@@ -44,7 +44,7 @@ class FileTree {
 	}
 	
 	public static function resolvePath( ?dir:String ) {
-		//if ( isVerbose ) trace("resolvePath dir:" + dir);
+		if ( isVerbose ) trace("resolvePath dir:" + dir);
 		
 		var resolve = true;
 		if( dir == null ) {
@@ -52,7 +52,7 @@ class FileTree {
 			if( dir == null ) dir = "res" else resolve = false;
 		}
 		
-		//if ( isVerbose ) trace("after dir eval resolvePath dir:" + dir);
+		if ( isVerbose ) trace("after dir eval resolvePath dir:" + dir);
 		var pos = Context.currentPos();
 		if( resolve )
 			dir = try Context.resolvePath(dir) catch( e : Dynamic ) Context.error("Resource directory not found in classpath '" + dir + "' (use -D resourcesPath=DIR)", pos);
@@ -171,12 +171,12 @@ class FileTree {
 				kind : TDClass({ pack : ["flash","utils"], name : "ByteArray", params : [] }),
 			});
 			embedTypes.push("hxd._res." + name);
-		} else if( isJS ) {
+		} else if ( isJS ) {
+			if ( isVerbose ) trace('embedFile res : js embed');
 			Context.addResource(name, sys.io.File.getBytes(fullPath));
 			return true;
 		} else if ( isCPP ) {
-			if ( isVerbose ) trace('embedFile res : cpp embed');
-			Context.addResource(name, sys.io.File.getBytes(fullPath));
+			Context.addResource(name, rb);
 			return true;
 		}else {
 			if ( isVerbose ) trace('embedFile res : doing nothing');
@@ -288,9 +288,16 @@ class FileTree {
 						ret : field.t,
 						expr : { expr : EMeta({ name : ":privateAccess", params : [], pos : pos }, { expr : EReturn(field.e), pos : pos }), pos : pos },
 					}),
+					
+					#if !flash
+					meta : [ { name:":keep", pos:pos, params:[] } ],
+					#else
 					meta : [ { name:":extern", pos:pos, params:[] } ],
-					access : [AStatic, AInline, APrivate],
+					#end
+
+					access : [AStatic, AInline, APublic],
 				});
+				
 			}
 		}
 	}
@@ -351,7 +358,9 @@ class FileTree {
 	}
 	
 	public static function build( ?dir : String ) {
-		return new FileTree(dir).scan();
+		var s = new FileTree(dir).scan();
+		//if(isVerbose) trace(s);
+		return s;
 	}
 	
 }

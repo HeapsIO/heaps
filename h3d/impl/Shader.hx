@@ -142,18 +142,9 @@ class ShaderMacros {
 						continue;
 					throw "Unsupported type " + type;
 				}
-				
-				//trace("evaluated "+name+" "+code);
-				
-				if ( code.charCodeAt(0) == '['.code ) {
-					//trace("arraying "+name);
-					t = macro : Array<$t>;
-				}
-					
-				//var allFields = Lambda.map( fields, function(t) return t.name).join(' ');
-				if ( classHasField( Context.getLocalClass(), name ) ) {
-					continue;
-				}
+								
+				if ( code.charCodeAt(0) == '['.code ) t = macro : Array<$t>;
+				if ( classHasField( Context.getLocalClass(), name ) )  continue;
 				
 				fields.push( {
 						name : name,
@@ -169,17 +160,16 @@ class ShaderMacros {
 				case ["VERTEX", FVar(_,{ expr : EConst(CString(code)) }) ]:
 					hasVertex = true;
 					addUniforms(code);
-					f.meta.push( { name : ":keep", params : [], pos : pos } );
 				case ["FRAGMENT", FVar(_,{ expr : EConst(CString(code)) })]:
 					hasFragment = true;
 					addUniforms(code);
-					f.meta.push( { name : ":keep", params : [], pos : pos } );
 				default:
 			}
 		if( !hasVertex )
 			haxe.macro.Context.error("Missing VERTEX shader", pos);
 		if( !hasFragment )
 			haxe.macro.Context.error("Missing FRAGMENT shader", pos);
+			
 		return fields;
 	}
 	

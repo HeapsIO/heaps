@@ -22,8 +22,12 @@
 	<!-- assets -->
 	<icon path="assets/openfl.svg" />
 	<assets path="assets" rename="assets" />
-	<haxedef name="resourcesPath" value="../res"></haxedef>
-	<haxedef name="verbose" value="true"></haxedef>
+	<haxedef name="resourcesPath" value="../res" />
+	<!--<haxedef name="verbose" />-->
+	
+	<!--
+	<haxedef name="dump" value="pretty" />
+	-->
 	
 	<!-- optimize output
 	<haxeflag name="-dce full" /> -->

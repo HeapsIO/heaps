@@ -583,11 +583,11 @@ class MeshMaterial extends Material {
 		#end
 	}
 	
-	inline function get_mshader() : MeshShader {
+	function get_mshader() : MeshShader {
 		return cast shader;
 	}
 	
-	inline function set_mshader(v:MeshShader) : MeshShader {
+	function set_mshader(v:MeshShader) : MeshShader {
 		shader = (cast v);
 		return v;
 	}
@@ -609,84 +609,84 @@ class MeshMaterial extends Material {
 		#end
 	}
 	
-	inline function get_uvScale() {
+	function get_uvScale() {
 		return mshader.uvScale;
 	}
 
-	inline function set_uvScale(v) {
+	function set_uvScale(v) {
 		return mshader.uvScale = v;
 	}
 
-	inline function get_uvDelta() {
+	function get_uvDelta() {
 		return mshader.uvDelta;
 	}
 
-	inline function set_uvDelta(v) {
+	function set_uvDelta(v) {
 		return mshader.uvDelta = v;
 	}
 
-	inline function get_killAlpha() {
+	function get_killAlpha() {
 		return mshader.killAlpha;
 	}
 
-	inline function set_killAlpha(v) {
+	function set_killAlpha(v) {
 		return mshader.killAlpha = v;
 	}
 
-	inline function get_colorAdd() {
+	function get_colorAdd() {
 		return mshader.colorAdd;
 	}
 
-	inline function set_colorAdd(v) {
+	function set_colorAdd(v) {
 		return mshader.colorAdd = v;
 	}
 
-	inline function get_colorMul() {
+	function get_colorMul() {
 		return mshader.colorMul;
 	}
 
-	inline function set_colorMul(v) {
+	function set_colorMul(v) {
 		return mshader.colorMul = v;
 	}
 
-	inline function get_colorMatrix() {
+	function get_colorMatrix() {
 		return mshader.colorMatrix;
 	}
 
-	inline function set_colorMatrix(v) {
+	function set_colorMatrix(v) {
 		return mshader.colorMatrix = v;
 	}
 	
-	inline function get_hasSkin() {
+	function get_hasSkin() {
 		return mshader.hasSkin;
 	}
 	
-	inline function set_hasSkin(v:Bool) {
+	function set_hasSkin(v:Bool) {
 		if ( System.debugLevel >= 2) trace('mat#$id hasSkin $v');
 		return mshader.hasSkin = v;
 	}
 
-	inline function get_hasVertexColor() {
+	function get_hasVertexColor() {
 		return mshader.hasVertexColor;
 	}
 	
-	inline function set_hasVertexColor(v) {
+	function set_hasVertexColor(v) {
 		return mshader.hasVertexColor = v;
 	}
 	
-	inline function get_hasVertexColorAdd() {
+	function get_hasVertexColorAdd() {
 		return mshader.hasVertexColorAdd;
 	}
 	
-	inline function set_hasVertexColorAdd(v) {
+	function set_hasVertexColorAdd(v) {
 		return mshader.hasVertexColorAdd = v;
 	}
 	
-	inline function get_skinMatrixes() {
+	function get_skinMatrixes() {
 		return mshader.skinMatrixes;
 	}
 	
-	inline function set_skinMatrixes( v : Array<h3d.Matrix> ) {
+	function set_skinMatrixes( v : Array<h3d.Matrix> ) {
 		//if ( System.debugLevel >= 2) trace('set_skinMatrixes ${v[0]}');
 		#if debug
 		if( v != null && v.length > 35 )
@@ -695,11 +695,11 @@ class MeshMaterial extends Material {
 		return mshader.skinMatrixes = v;
 	}
 	
-	inline function get_lightSystem() : LightSystem {
+	function get_lightSystem() : LightSystem {
 		return mshader.lightSystem;
 	}
 
-	inline function set_lightSystem(v:LightSystem) {
+	function set_lightSystem(v:LightSystem) {
 		#if debug
 		if( v != null && hasSkin && v.dirs.length + v.points.length > 6 )
 			throw "Maximum 6 lights are allowed with skinning (" + (v.dirs.length + v.points.length) + " set)";
@@ -712,68 +712,68 @@ class MeshMaterial extends Material {
 		return mshader.lightSystem = v;
 	}
 	
-	inline function get_alphaMap() {
+	function get_alphaMap() {
 		return mshader.alphaMap;
 	}
 	
-	inline function set_alphaMap(m) {
+	function set_alphaMap(m) {
 		mshader.hasAlphaMap = m != null;
 		return mshader.alphaMap = m;
 	}
 	
-	inline function get_zBias() {
+	function get_zBias() {
 		return mshader.hasZBias ? mshader.zBias : null;
 	}
 
-	inline function set_zBias(v : Null<Float>) {
+	function set_zBias(v : Null<Float>) {
 		mshader.hasZBias = v != null;
 		mshader.zBias = v;
 		return v;
 	}
 	
-	inline function get_glowTexture() {
+	function get_glowTexture() {
 		return mshader.glowTexture;
 	}
 
-	inline function set_glowTexture(t) {
+	function set_glowTexture(t) {
 		mshader.hasGlow = t != null;
 		return mshader.glowTexture = t;
 	}
 	
-	inline function get_glowAmount() {
+	function get_glowAmount() {
 		return mshader.glowAmount;
 	}
 
-	inline function set_glowAmount(v) {
+	function set_glowAmount(v) {
 		return mshader.glowAmount = v;
 	}
 
-	inline function get_fog() {
+	function get_fog() {
 		return mshader.fog;
 	}
 
-	inline function set_fog(v) {
+	function set_fog(v) {
 		return mshader.fog = v;
 	}
 	
-	inline function get_blendTexture() {
+	function get_blendTexture() {
 		return mshader.blendTexture;
 	}
 	
-	inline function set_blendTexture(v) {
+	function set_blendTexture(v) {
 		mshader.hasBlend = v != null;
 		return mshader.blendTexture = v;
 	}
 	
-	inline function get_killAlphaThreshold() {
+	function get_killAlphaThreshold() {
 		return mshader.killAlphaThreshold;
 	}
 	
-	inline function set_killAlphaThreshold(v) {
+	function set_killAlphaThreshold(v) {
 		return mshader.killAlphaThreshold = v;
 	}
 	
-	inline function set_shadowMap(v:ShadowMap) {
+	function set_shadowMap(v:ShadowMap) {
 		if( v != null ) {
 			mshader.hasShadowMap = true;
 			mshader.shadowColor = v.color;
