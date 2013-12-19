@@ -1,8 +1,15 @@
 package hxd;
 import flash.utils.ByteArray;
-import mt.fx.Flash;
+import haxe.io.Bytes;
 
-private typedef InnerData = #if flash flash.display.BitmapData #elseif js js.html.ImageData #elseif cpp flash.display.BitmapData #else Int #end;
+private typedef InnerData = 
+#if (flash||openfl)
+	flash.display.BitmapData 
+#elseif js
+	js.html.ImageData 
+#else 
+	Int 
+#end;
 
 abstract BitmapData(InnerData) {
 
@@ -64,8 +71,8 @@ abstract BitmapData(InnerData) {
 	}
 	
 	public inline function getPixel( x : Int, y : Int ) {
-		#if ((flash)||(openfl))
-		return this.getPixel32(x, y);
+		#if ( flash || openfl )
+		return toNative().getPixel32(x, y);
 		#else
 		throw "TODO";
 		return 0;
@@ -109,7 +116,11 @@ abstract BitmapData(InnerData) {
 			 return new Pixels(b.width, b.height, haxe.io.Bytes.ofData(b.getPixels(b.rect)), ARGB);
 		#elseif openfl
 			var bRect = b.rect;
-			var bPixels = b.getPixels(b.rect);
+			//#if js
+			//var bPixels : Bytes = Bytes.ofData( b.getPixels(b.rect).byteView );
+			//#else
+			var bPixels : Bytes = hxd.ByteConversions.byteArrayToBytes(b.getPixels(b.rect));
+			//#end
 			return new Pixels(b.width, b.height, bPixels, ARGB);
 		#else
 			throw "TODO";

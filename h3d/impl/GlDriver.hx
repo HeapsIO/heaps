@@ -355,7 +355,7 @@ class GlDriver extends Driver {
 			inTarget = tex;
 			
 			if ( fbo.fbo == null ) fbo.fbo = gl.createFramebuffer();
-			gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.fbo);
+			gl.bindFramebuffer(GL.FRAMEBUFFER, fbo.fbo);
 						
 			var bw = Math.bitCount(tex.width );
 			var bh = Math.bitCount(tex.height );
@@ -366,13 +366,13 @@ class GlDriver extends Driver {
 			fbo.height = tex.height;
 			fbo.color = tex.t;
 			//bind color
-			gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo.color, 0);
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, fbo.color, 0);
 			
 			//bind depth
 			if ( useDepth ) {
 				if( fbo.rbo ==null) fbo.rbo = gl.createRenderbuffer();
-				gl.bindRenderbuffer( gl.RENDERBUFFER, fbo.rbo);
-				gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, fbo.rbo);
+				gl.bindRenderbuffer( GL.RENDERBUFFER, fbo.rbo);
+				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, fbo.rbo);
 			}
 			checkFBO(fbo);
 			
@@ -398,7 +398,7 @@ class GlDriver extends Driver {
 	
 	inline function makeMips()
 	{
-		gl.hint(gl.GENERATE_MIPMAP_HINT, gl.DONT_CARE);
+		gl.hint(GL.GENERATE_MIPMAP_HINT, GL.DONT_CARE);
 		gl.generateMipmap(GL.TEXTURE_2D);
 		checkError();
 	}
@@ -723,7 +723,7 @@ class GlDriver extends Driver {
 	
 	function parseUniform(allCode,p)
 	{
-		var inf : GLActiveInfo = parseUniInfo.inf;
+		var inf : openfl.gl.GLActiveInfo = parseUniInfo.inf;
 		
 		System.trace2('retrieved uniform $inf');
 		
@@ -758,15 +758,16 @@ class GlDriver extends Driver {
 				}
 			case Mat4:
 				var li = inf.name.lastIndexOf("[");
+				var name = inf.name;
 				if ( li >= 0 )
-					inf.name = inf.name.substr( 0,li );
+					name = name.substr( 0,li );
 					
-				if(  hasArrayAccess(inf.name,allCode ) ) {
+				if(  hasArrayAccess(name,allCode ) ) {
 					scanSubscript = false;
-					t = Elements( inf.name, null, t );
-					System.trace2('subtyped ${inf.name} $t ${inf.type} as array');
+					t = Elements( name, null, t );
+					System.trace2('subtyped ${name} $t ${inf.type} as array');
 				}
-				else System.trace2('can t subtype ${inf.name} $t ${inf.type}');
+				else System.trace2('can t subtype ${name} $t ${inf.type}');
 				
 			default:	
 				System.trace2('can t subtype $t ${inf.type}');
