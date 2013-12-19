@@ -4,43 +4,57 @@ import h3d.impl.Driver;
 import h3d.impl.GlDriver.FBO;
 import h3d.Matrix;
 import h3d.Vector;
-import haxe.ds.IntMap.IntMap;
+import haxe.ds.IntMap;
 import hxd.BytesBuffer;
 import hxd.Math;
 import hxd.Profiler;
+import openfl.Assets;
+import openfl.gl.GLActiveInfo;
 
 import hxd.FloatBuffer;
 import hxd.Pixels;
 import hxd.System;
-
-#if (js||cpp)
-
-#if js
-import js.html.Uint16Array;
-import js.html.Uint8Array;
-import js.html.Float32Array;
-#elseif cpp
-import openfl.gl.GL;
-import openfl.gl.GLActiveInfo;
-#end
-
 using StringTools;
 
-#if js
-private typedef GL = js.html.webgl.GL;
-#elseif cpp
-private typedef Uint16Array = openfl.utils.Int16Array;
-private typedef Uint8Array = openfl.utils.UInt8Array;
-private typedef Float32Array = openfl.utils.Float32Array;
-#end
 
-#if js
-typedef NativeFBO = js.html.webgl.Framebuffer;//todo test
-typedef NativeRBO = js.html.webgl.Renderbuffer;//todo test
-#elseif cpp
-typedef NativeFBO = openfl.gl.GLFramebuffer;//todo test
-typedef NativeRBO = openfl.gl.GLRenderbuffer;//todo test
-#end
+#if (js||cpp)
+	#if js
+	import js.html.Uint16Array;
+	import js.html.Uint8Array;
+	import js.html.Float32Array;
+	#elseif cpp
+	import openfl.gl.GL;
+	
+	//to allow writing
+	@:publicFields
+	class GLActiveInfo {
+		var size : Int;
+		var type : Int;
+		var name : String;
+		
+		function new(g:openfl.gl.GLActiveInfo) {
+			size = g.size;
+			type = g.type;
+			name = g.name;
+		}
+	}
+	#end
+
+	#if js
+	private typedef GL = js.html.webgl.GL;
+	#elseif cpp
+	private typedef Uint16Array = openfl.utils.Int16Array;
+	private typedef Uint8Array = openfl.utils.UInt8Array;
+	private typedef Float32Array = openfl.utils.Float32Array;
+	#end
+
+	#if js
+	typedef NativeFBO = js.html.webgl.Framebuffer;//todo test
+	typedef NativeRBO = js.html.webgl.Renderbuffer;//todo test
+	#elseif cpp
+	typedef NativeFBO = openfl.gl.GLFramebuffer;//todo test
+	typedef NativeRBO = openfl.gl.GLRenderbuffer;//todo test
+	#end
 
 @:publicFields
 class FBO {
@@ -59,7 +73,7 @@ class FBO {
 @:publicFields
 class UniformContext { 
 	var texIndex : Int; 
-	var inf: openfl.gl.GLActiveInfo;
+	var inf: GLActiveInfo;
 	public function new(t,i) {
 		texIndex = t;
 		inf = i;
@@ -685,7 +699,7 @@ class GlDriver extends Driver {
 		parseUniInfo = new UniformContext(-1,null);
 		//parseUniInfo = { texIndex: -1, inf:null };
 		for( k in 0...nuni ) {
-			parseUniInfo.inf = gl.getActiveUniform(p, k);
+			parseUniInfo.inf = new GLActiveInfo( gl.getActiveUniform(p, k) );
 			
 			//if ( System.isVerbose) trace("retrieving uniform " + inf.name);
 			if( parseUniInfo.inf.name.substr(0, 6) == "webgl_" )
@@ -727,7 +741,7 @@ class GlDriver extends Driver {
 	
 	function parseUniform(allCode,p)
 	{
-		var inf : openfl.gl.GLActiveInfo = parseUniInfo.inf;
+		var inf : GLActiveInfo = parseUniInfo.inf;
 		
 		System.trace2('retrieved uniform $inf');
 		
@@ -762,16 +776,15 @@ class GlDriver extends Driver {
 				}
 			case Mat4:
 				var li = inf.name.lastIndexOf("[");
-				var name = inf.name;
 				if ( li >= 0 )
-					name = name.substr( 0,li );
+					inf.name = inf.name.substr( 0,li );
 					
-				if(  hasArrayAccess(name,allCode ) ) {
+				if(  hasArrayAccess(inf.name,allCode ) ) {
 					scanSubscript = false;
-					t = Elements( name, null, t );
-					System.trace2('subtyped ${name} $t ${inf.type} as array');
+					t = Elements( inf.name, null, t );
+					System.trace2('subtyped ${inf.name} $t ${inf.type} as array');
 				}
-				else System.trace2('can t subtype ${name} $t ${inf.type}');
+				else System.trace2('can t subtype ${inf.name} $t ${inf.type}');
 				
 			default:	
 				System.trace2('can t subtype $t ${inf.type}');

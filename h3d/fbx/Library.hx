@@ -712,8 +712,10 @@ class Library {
 					defaultModelMatrixes.get(osub.obj.name).wasRemoved = o.model.getId();
 				}
 				// set the skin data
-				if( skinData.boundJoints.length > maxBonesPerSkin )
-					skinData.split(maxBonesPerSkin, Std.instance(skinData.primitive,h3d.prim.FBXModel).geom.getIndexes().vidx);
+				if ( skinData.boundJoints.length > maxBonesPerSkin ) {
+					if ( System.debugLevel >= 1 ) throw "too many joints by skin";
+					skinData.split(maxBonesPerSkin, Std.instance(skinData.primitive, h3d.prim.FBXModel).geom.getIndexes().vidx);
+				}
 				skin.setSkinData(skinData);
 			}
 		}

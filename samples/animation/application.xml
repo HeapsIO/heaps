@@ -8,7 +8,7 @@
 	<!-- output -->
 	<app main="Test" file="testopenfl" path="bin" swf-version="11.6" />
 	
-	<window background="#000000" fps="120" />
+	<window background="#000000" fps="30" />
 	<window width="800" height="480" unless="mobile" />
 	<window orientation="portrait" vsync="false" antialiasing="0" if="cpp" />
 	

@@ -139,7 +139,6 @@ class Test {
 		}));
 		
 		setSkin();
-		//o.setRotate(0,2*Math.PI/3,0);
 	}
 	
 	static public var animMode : h3d.fbx.Library.AnimationMode = h3d.fbx.Library.AnimationMode.FrameAnim;

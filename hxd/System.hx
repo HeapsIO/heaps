@@ -25,7 +25,7 @@ class System {
 	 * 2- engine space traces
 	 * 3- engine dev space traces
 	 */
-	public static var debugLevel = 0;
+	public static var debugLevel = 1;
 
 	#if flash
 	
