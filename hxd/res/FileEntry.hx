@@ -21,7 +21,11 @@ class FileEntry {
 	public function close() {}
 	
 	public function load( ?onReady : Void -> Void ) : Void {}
+	
+	//TODO, add error handling
 	public function loadBitmap( onLoaded : hxd.BitmapData -> Void ) : Void {}
+	
+	//TODO add loadTexture ( loadBitmap and unpack )
 
 	public function exists( name : String ) : Bool return false;
 	public function get( name : String ) : FileEntry return null;
