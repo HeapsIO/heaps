@@ -363,7 +363,7 @@ class LocalFileSystem implements FileSystem {
 		#end
 		
 		#if openfl 
-			#error "implement me david"
+			//#error "implement me david"
 		#end
 		throw "Local file system is not supported for this platform";
 	}
