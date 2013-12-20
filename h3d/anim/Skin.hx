@@ -16,14 +16,24 @@ class Joint {
 		subs = [];
 	}
 	
+	public function toString() {
+		return '$index $name $bindIndex $splitIndex '+((parent!=null)?Std.string(parent.index):"");
+	}
+	
 }
 
 private class Influence {
+	
 	public var j : Joint;
 	public var w : Float;
+	
 	public function new(j, w) {
 		this.j = j;
 		this.w = w;
+	}
+	
+	public function toString() {
+		return '$j $w';
 	}
 }
 
@@ -43,6 +53,7 @@ class Skin {
 	public var splitJoints(default, null) : Array<Array<Joint>>;
 	public var triangleGroups : haxe.ds.Vector<Int>;
 	
+	//per vertex influences
 	var envelop : Array<Array<Influence>>;
 	
 	public function new( vertexCount, bonesPerVertex ) {
@@ -80,21 +91,30 @@ class Skin {
 	public function initWeights() {
 		boundJoints = [];
 		var pos = 0;
-		for( i in 0...vertexCount ) {
+		for ( i in 0...vertexCount ) {
 			var il = envelop[i];
-			if( il == null ) il = [];
+			if ( il == null ) il = [];
 			il.sort(sortInfluences);
-			if( il.length > bonesPerVertex )
+			if( il.length > bonesPerVertex ){
 				il = il.slice(0, bonesPerVertex);
+				#if debug 
+					throw 'ERROR: vtx:$i has more than $bonesPerVertex affluent bones !';
+				#end
+			}
+			if ( il.length == 0) {
+				#if debug 
+					throw 'ERROR: vtx:$i is not linked to bones !';
+				#end
+			}
 			var tw = 0.;
-			for( i in il )
-				tw += i.w;
-			tw = 1 / tw;
+			for( i in il ) tw += i.w;
+			if( tw <= 0.001 ) throw 'ERROR: vtx:$i total weight is 0 ';
+			tw = 1.0 / tw;
 			for( i in 0...bonesPerVertex ) {
 				var i = il[i];
 				if( i == null ) {
 					vertexJoints[pos] = 0;
-					vertexWeights[pos] = 0;
+					vertexWeights[pos] = 0.;
 				} else {
 					if( i.j.bindIndex == -1 ) {
 						i.j.bindIndex = boundJoints.length;
@@ -105,6 +125,8 @@ class Skin {
 				}
 				pos++;
 			}
+			
+			
 		}
 		envelop = null;
 	}

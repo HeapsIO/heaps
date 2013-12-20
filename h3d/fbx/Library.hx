@@ -127,7 +127,7 @@ class Library {
 					connect.set(parent, c);
 				}
 				c.push(child);
-				trace("adding child " + child);
+				//trace("adding child " + child);
 
 				if( parent == 0 )
 					continue;
@@ -138,7 +138,7 @@ class Library {
 					invConnect.set(child, c);
 				}
 				c.push(parent);
-				trace("adding parent " + parent);
+				//trace("adding parent " + parent);
 			}
 		case "Objects":
 			for( c in n.childs )
@@ -160,12 +160,11 @@ class Library {
 	}
 
 	public function getParent( node : FbxNode, nodeName : String, ?opt : Bool ) {
-		trace("getParent " + node);
 		var p = getParents(node, nodeName);
 		if( p.length > 1 )
 			throw node.getName() + " has " + p.length + " " + nodeName + " parents";
 		if( p.length == 0 && !opt )
-			throw "Missing " + node.getName() + " " + nodeName + " parent";
+			throw "Missing " + node.getName() + " " + nodeName + " parent";//no parent, maybe a bone with no parent ? 
 		return p[0];
 	}
 
@@ -195,7 +194,8 @@ class Library {
 	}
 
 	public function getParents( node : FbxNode, ?nodeName : String ) {
-		var c = invConnect.get(node.getId());
+		var id = node.getId();
+		var c = invConnect.get(id);
 		var pl = [];
 		if( c != null )
 			for( id in c ) {
@@ -206,9 +206,6 @@ class Library {
 				}
 				pl.push(n);
 			}
-			
-		else 
-			trace("invConnect has no node " + node.getId() );
 			
 		return pl;
 	}
@@ -682,7 +679,7 @@ class Library {
 		}
 		// rebuild joints hierarchy
 		for( j in joints ) {
-			var p = getParent(j.model, "Model");
+			var p = getParent(j.model, "Model");//if crash here, then you MUST ensure there is a dummy between scene top and you
 			var jparent = hjoints.get(p.getId());
 			if( jparent != null ) {
 				jparent.subs.push(j.joint);
@@ -794,8 +791,10 @@ class Library {
 				var vertex = subDef.get("Indexes").getInts();
 				for( i in 0...vertex.length ) {
 					var w = weights[i];
-					if( w < 0.01 )
+					if ( w < 0.01 ) {
+						System.trace3("weight too low, discarding");
 						continue;
+					}
 					skin.addInfluence(vertex[i], j, w);
 				}
 			}

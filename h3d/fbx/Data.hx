@@ -26,6 +26,10 @@ class FbxNode {
 		props = p;
 		childs = c;
 	}
+	
+	public inline function toString() {
+		return '$name \n $props \n $childs';
+	}
 }
 
 class FbxTools {
