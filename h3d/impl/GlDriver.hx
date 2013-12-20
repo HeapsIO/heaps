@@ -1108,17 +1108,15 @@ class GlDriver extends Driver {
 	var curMultiBuffer : Array<Buffer.BufferOffset>;
 	
 	override function selectBuffer( v : VertexBuffer ) {
-		if ( curBuffer == v ) return;
-		
 		System.trace3("selected Buffer");
+		var ob = curBuffer;
+		
 		curBuffer = v;
 		curMultiBuffer = null;
 		
 		var stride : Int = v.stride;
-		//if( stride < curShader.stride )
-		//	throw "Buffer stride (" + stride + ") and shader stride (" + curShader.stride + ") mismatch";
-			
-		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
+		if( ob != v )
+			gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		checkError();
 		
 		//this one is sharde most of the time, let's define it fully
