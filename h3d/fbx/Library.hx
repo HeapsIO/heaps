@@ -68,7 +68,8 @@ class Library {
 	public var maxBonesPerSkin = 34;
 	
 	public function new() {
-		root = { name : "Root", props : [], childs : [] };
+		//root = { name : "Root", props : [], childs : [] };
+		root = new FbxNode("Root", [], [] );
 		reset();
 	}
 	
@@ -116,6 +117,7 @@ class Library {
 			for( c in n.childs ) {
 				if( c.name != "C" )
 					continue;
+					
 				var child = c.props[1].toInt();
 				var parent = c.props[2].toInt();
 				
@@ -125,6 +127,7 @@ class Library {
 					connect.set(parent, c);
 				}
 				c.push(child);
+				trace("adding child " + child);
 
 				if( parent == 0 )
 					continue;
@@ -135,6 +138,7 @@ class Library {
 					invConnect.set(child, c);
 				}
 				c.push(parent);
+				trace("adding parent " + parent);
 			}
 		case "Objects":
 			for( c in n.childs )
@@ -156,6 +160,7 @@ class Library {
 	}
 
 	public function getParent( node : FbxNode, nodeName : String, ?opt : Bool ) {
+		trace("getParent " + node);
 		var p = getParents(node, nodeName);
 		if( p.length > 1 )
 			throw node.getName() + " has " + p.length + " " + nodeName + " parents";
@@ -180,7 +185,10 @@ class Library {
 			for( id in c ) {
 				var n = ids.get(id);
 				if( n == null ) throw id + " not found";
-				if( nodeName != null && n.name != nodeName ) continue;
+				if ( nodeName != null && n.name != nodeName ) {
+					
+					continue;
+				}
 				subs.push(n);
 			}
 		return subs;
@@ -193,9 +201,15 @@ class Library {
 			for( id in c ) {
 				var n = ids.get(id);
 				if( n == null ) throw id + " not found";
-				if( nodeName != null && n.name != nodeName ) continue;
+				if ( nodeName != null && n.name != nodeName ) {
+					continue;
+				}
 				pl.push(n);
 			}
+			
+		else 
+			trace("invConnect has no node " + node.getId() );
+			
 		return pl;
 	}
 	

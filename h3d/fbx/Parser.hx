@@ -29,11 +29,11 @@ class Parser {
 		this.pos = 0;
 		this.line = 1;
 		token = null;
-		return {
-			name : "Root",
-			props : [PInt(0),PString("Root"),PString("Root")],
-			childs : parseNodes(),
-		};
+		return new FbxNode(
+			"Root",
+			[PInt(0),PString("Root"),PString("Root")],
+			parseNodes()
+		);
 	}
 
 	function parseNodes() {
@@ -121,7 +121,7 @@ class Parser {
 			}
 		}
 		if( childs == null ) childs = [];
-		return { name : name, props : props, childs : childs };
+		return new FbxNode( name, props, childs );
 	}
 
 	function except( except : Token ) {

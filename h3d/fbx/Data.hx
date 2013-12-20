@@ -9,10 +9,23 @@ enum FbxProp {
 	PFloats( v : Array<Float> );
 }
 
-typedef FbxNode = {
+@:publicFields
+class FbxNode {
 	var name : String;
 	var props : Array<FbxProp>;
 	var childs : Array<FbxNode>;
+	
+	/**
+	 * 
+	 * @param	n
+	 * @param	p
+	 * @param	c
+	 */
+	public function new(n,p,c) {
+		name = n;
+		props = p;
+		childs = c;
+	}
 }
 
 class FbxTools {
