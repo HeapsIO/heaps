@@ -46,7 +46,7 @@ class Splitter {
 			case Var, Output:
 				// alloc a new var if read or multiple writes
 				if( inf.read > 0 || inf.write > 1 ) {
-					var nv = {
+					var nv : TVar = {
 						id : Tools.allocVarId(),
 						name : v.name,
 						kind : v.kind,
@@ -75,7 +75,7 @@ class Splitter {
 				// create a var that will pass the input from vertex to fragment
 				throw "TODO";
 			case Var if( inf.write > 0 ):
-				var nv = {
+				var nv : TVar = {
 					id : Tools.allocVarId(),
 					name : v.name,
 					kind : Local,
