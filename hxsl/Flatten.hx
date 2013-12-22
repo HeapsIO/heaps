@@ -21,6 +21,7 @@ class Flatten {
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
 	var varMap : Map<TVar,Alloc>;
+	var varNames : Map<String,TVar>;
 	
 	public function new() {
 	}
@@ -30,6 +31,7 @@ class Flatten {
 		params = [];
 		outVars = [];
 		varMap = new Map();
+		varNames = new Map();
 		for( v in s.vars )
 			gatherVar(v);
 		pack("globals", Global, globals, VFloat);
@@ -54,7 +56,10 @@ class Flatten {
 			if( a == null )
 				e
 			else
-				access(a,v.type, e.p);
+				access(a, v.type, e.p);
+		case TVarDecl(v, _):
+			uniqueVar(v);
+			e.map(mapExpr);
 		default:
 			e.map(mapExpr);
 		};
@@ -137,7 +142,9 @@ class Flatten {
 		};
 		for( v in vars ) {
 			switch( v.type ) {
-			case TSampler2D, TSamplerCube: continue;
+			case TSampler2D, TSamplerCube:
+				outVars.push(v);
+				continue;
 			default:
 			}
 			var size = varSize(v.type, t);
@@ -191,17 +198,26 @@ class Flatten {
 		}
 	}
 	
+	function uniqueVar( v : TVar ) {
+		var v2 = varNames.get(v.name);
+		if( v2 == v ) return;
+		if( v2 == null ) {
+			varNames.set(v.name, v);
+			return;
+		}
+		var k = 2;
+		while( varNames.exists(v.name + k) ) k++;
+		v.name += k;
+		varNames.set(v.name, v);
+	}
+	
 	function gatherVar( v : TVar ) {
 		switch( v.type ) {
 		case TStruct(vl):
-			var keep = v.kind == Input || v.name == "output";
-			if( keep ) {
-				outVars.push(v);
-				return;
-			}
 			for( v in vl )
 				gatherVar(v);
 		default:
+			uniqueVar(v);
 			switch( v.kind ) {
 			case Global:
 				if( v.hasQualifier(PerObject) )

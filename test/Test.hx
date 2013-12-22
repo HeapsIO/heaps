@@ -350,7 +350,48 @@ class Test {
 		var instances = [for( s in shaders ) { s.updateConstants(globals); s.instance; }];
 		var cache = hxsl.Cache.get();
 		var s = cache.link(instances, cache.allocOutputVars(["output.position", "output.color"]));
-		trace("\n"+hxsl.Printer.shaderToString(s));
+		//trace("\n" + hxsl.Printer.shaderToString(s));
+		#if js
+		haxe.Log.trace("START");
+		try {
+		
+		var glSrc = hxsl.GlslOut.toGlsl(s);
+		
+		var canvas = js.Browser.document.createCanvasElement();
+		var gl = canvas.getContextWebGL();
+		var GL = js.html.webgl.GL;
+		
+		function compile(kind, code) {
+			trace(code);
+			var s = gl.createShader(kind);
+			gl.shaderSource(s, code);
+			gl.compileShader(s);
+			if( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
+				var log = gl.getShaderInfoLog(s);
+				var line = code.split("\n")[Std.parseInt(log.substr(9)) - 1];
+				if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
+				throw log + line;
+			}
+			return s;
+		}
+			
+		var vs = compile(GL.VERTEX_SHADER, glSrc.vertex);
+		var fs = compile(GL.FRAGMENT_SHADER, glSrc.fragment);
+		
+		var p = gl.createProgram();
+		gl.attachShader(p, vs);
+		gl.attachShader(p, fs);
+		gl.linkProgram(p);
+		if( gl.getProgramParameter(p, GL.LINK_STATUS) != cast 1 ) {
+			var log = gl.getProgramInfoLog(p);
+			throw "Program linkage failure: "+log;
+		}
+		
+		} catch( e : Dynamic ) {
+			trace(e);
+		}
+
+		#end
 	}
 		
 }

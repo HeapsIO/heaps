@@ -4,13 +4,13 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="hxsl.swf" />
+    <movie path="hxsl.js" />
     <movie fps="60" />
     <movie width="800" />
     <movie height="1000" />
-    <movie version="11" />
-    <movie minorVersion="6" />
-    <movie platform="Flash Player" />
+    <movie version="1" />
+    <movie minorVersion="0" />
+    <movie platform="JavaScript" />
     <movie background="#FFFFFF" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
@@ -33,13 +33,13 @@
   <compileTargets>
     <!-- example: <compile path="..." /> -->
   </compileTargets>
-  <!-- Assets to embed into the output SWF -->
-  <library>
-    <!-- example: <asset path="..." id="..." update="..." glyphs="..." mode="..." place="..." sharepoint="..." /> -->
-  </library>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
     <hidden path="obj" />
+    <hidden path="hxsl.js.map" />
+    <hidden path="hxsl.swf" />
+    <hidden path="hxsl.js" />
+    <hidden path="hxsl.hxml" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />
@@ -48,8 +48,8 @@
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
-    <option testMovie="Default" />
-    <option testMovieCommand="" />
+    <option testMovie="OpenDocument" />
+    <option testMovieCommand="hxsl.html" />
   </options>
   <!-- Plugin storage -->
   <storage />

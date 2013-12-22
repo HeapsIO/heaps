@@ -219,7 +219,7 @@ class Printer {
 		}
 	}
 	
-	function opStr( op : Ast.Binop ) {
+	public static function opStr( op : Ast.Binop ) {
 		return switch(op) {
 		case OpAdd:"+";
 		case OpSub:"-";

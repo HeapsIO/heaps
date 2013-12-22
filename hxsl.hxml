@@ -1,8 +1,5 @@
 -cp test
--swf hxsl.swf
--swf-header 800:1000:60:FFFFFF
---flash-strict
--swf-version 11.6
+-js hxsl.js
 -main Test
 -dce full
 -lib h3d
