@@ -72,6 +72,8 @@ class Printer {
 				add("@input ");
 			case Function:
 				add("@function ");
+			case Output:
+				add("@output ");
 			}
 		add("var " + v.name + (varId?"@" + v.id:"") + " : ");
 		switch( v.type ) {

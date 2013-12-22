@@ -168,7 +168,7 @@ class Checker {
 		switch( e.e ) {
 		case TVar(v):
 			switch( v.kind ) {
-			case Var, Local:
+			case Local, Var, Output:
 				return;
 			default:
 			}
@@ -449,10 +449,11 @@ class Checker {
 		case EVars(vl):
 			for( v in vl ) {
 				if( v.kind == null ) {
-					v.kind = Var;
+					if( v.name == "output" ) v.kind = Output else v.kind = Local;
 					for( q in v.qualifiers )
 						switch( q ) {
 						case Const(_): v.kind = Param;
+						case Private: v.kind = Var;
 						default:
 						}
 				}
@@ -477,7 +478,7 @@ class Checker {
 			tv.parent = parent;
 		if( tv.kind == null ) {
 			if( parent == null )
-				tv.kind = Var;
+				tv.kind = Local;
 			else
 				tv.kind = parent.kind;
 		} else if( parent != null && tv.kind != parent.kind ) {

@@ -63,6 +63,7 @@ enum VarKind {
 	Param;
 	Var;
 	Local;
+	Output;
 	Function;
 }
 

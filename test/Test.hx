@@ -350,18 +350,19 @@ class Test {
 		var instances = [for( s in shaders ) { s.updateConstants(globals); s.instance; }];
 		var cache = hxsl.Cache.get();
 		var s = cache.link(instances, cache.allocOutputVars(["output.position", "output.color"]));
-		//trace("\n" + hxsl.Printer.shaderToString(s));
+		//trace("VERTEX=\n" + hxsl.Printer.shaderToString(s.vertex));
+		//trace("FRAGMENT=\n" + hxsl.Printer.shaderToString(s.fragment));
+		
 		#if js
 		haxe.Log.trace("START");
 		try {
-		
-		var glSrc = hxsl.GlslOut.toGlsl(s);
 		
 		var canvas = js.Browser.document.createCanvasElement();
 		var gl = canvas.getContextWebGL();
 		var GL = js.html.webgl.GL;
 		
-		function compile(kind, code) {
+		function compile(kind, shader) {
+			var code = hxsl.GlslOut.toGlsl(shader);
 			trace(code);
 			var s = gl.createShader(kind);
 			gl.shaderSource(s, code);
@@ -375,8 +376,8 @@ class Test {
 			return s;
 		}
 			
-		var vs = compile(GL.VERTEX_SHADER, glSrc.vertex);
-		var fs = compile(GL.FRAGMENT_SHADER, glSrc.fragment);
+		var vs = compile(GL.VERTEX_SHADER, s.vertex);
+		var fs = compile(GL.FRAGMENT_SHADER, s.fragment);
 		
 		var p = gl.createProgram();
 		gl.attachShader(p, vs);
@@ -386,6 +387,8 @@ class Test {
 			var log = gl.getProgramInfoLog(p);
 			throw "Program linkage failure: "+log;
 		}
+		
+		trace("LINK SUCCESS");
 		
 		} catch( e : Dynamic ) {
 			trace(e);

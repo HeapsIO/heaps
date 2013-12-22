@@ -21,21 +21,24 @@ class Flatten {
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
 	var varMap : Map<TVar,Alloc>;
-	var varNames : Map<String,TVar>;
 	
 	public function new() {
 	}
 	
-	public function flatten( s : ShaderData ) : ShaderData {
+	public function flatten( s : ShaderData, kind : FunctionKind ) : ShaderData {
 		globals = [];
 		params = [];
 		outVars = [];
 		varMap = new Map();
-		varNames = new Map();
 		for( v in s.vars )
 			gatherVar(v);
-		pack("globals", Global, globals, VFloat);
-		pack("params", Param, params, VFloat);
+		var prefix = switch( kind ) {
+		case Vertex: "vertex";
+		case Fragment: "fragment";
+		default: throw "assert";
+		}
+		pack(prefix+"Globals", Global, globals, VFloat);
+		pack(prefix+"Params", Param, params, VFloat);
 		return {
 			name : s.name,
 			vars : outVars,
@@ -57,9 +60,6 @@ class Flatten {
 				e
 			else
 				access(a, v.type, e.p);
-		case TVarDecl(v, _):
-			uniqueVar(v);
-			e.map(mapExpr);
 		default:
 			e.map(mapExpr);
 		};
@@ -198,26 +198,12 @@ class Flatten {
 		}
 	}
 	
-	function uniqueVar( v : TVar ) {
-		var v2 = varNames.get(v.name);
-		if( v2 == v ) return;
-		if( v2 == null ) {
-			varNames.set(v.name, v);
-			return;
-		}
-		var k = 2;
-		while( varNames.exists(v.name + k) ) k++;
-		v.name += k;
-		varNames.set(v.name, v);
-	}
-	
 	function gatherVar( v : TVar ) {
 		switch( v.type ) {
 		case TStruct(vl):
 			for( v in vl )
 				gatherVar(v);
 		default:
-			uniqueVar(v);
 			switch( v.kind ) {
 			case Global:
 				if( v.hasQualifier(PerObject) )

@@ -41,6 +41,7 @@ class Linker {
 	var curShader : ShaderInfos;
 	var shaders : Array<ShaderInfos>;
 	var varIdMap : Map<Int,Int>;
+	var locals : Map<Int,Bool>;
 	
 	public function new() {
 	}
@@ -51,9 +52,9 @@ class Linker {
 	
 	function mergeVar( path : String, v : TVar, v2 : TVar, p : Position ) {
 		switch( v.kind ) {
-		case Global, Input, Var:
+		case Global, Input, Var, Local, Output:
 			// shared vars
-		case Local, Param, Function:
+		case Param, Function:
 			throw "assert";
 		}
 		if( v.kind != v2.kind )
@@ -80,8 +81,6 @@ class Linker {
 	}
 	
 	function allocVar( v : TVar, p : Position, ?path : String, ?parent : TVar ) : AllocatedVar {
-		if( v.kind == Local )
-			throw "assert";
 		if( v.parent != null && parent == null ) {
 			parent = allocVar(v.parent, p).v;
 			var p = parent;
@@ -175,7 +174,7 @@ class Linker {
 	
 	function mapExprVar( e : TExpr ) {
 		switch( e.e ) {
-		case TVar(v) if( v.kind != Local ):
+		case TVar(v) if( !locals.exists(v.id) ):
 			var v = allocVar(v, e.p);
 			if( curShader != null ) {
 				//trace(curShader.name + " read " + v.path);
@@ -184,7 +183,7 @@ class Linker {
 			return { e : TVar(v.v), t : v.v.type, p : e.p };
 		case TBinop(op, e1, e2):
 			switch( [op,e1.e] ) {
-			case [OpAssign | OpAssignOp(_), (TVar(v) | TSwiz({ e : TVar(v) },_))] if( v.kind != Local ):
+			case [OpAssign | OpAssignOp(_), (TVar(v) | TSwiz({ e : TVar(v) },_))] if( !locals.exists(v.id) ):
 				var v = allocVar(v, e1.p);
 				if( curShader != null ) {
 					//trace(curShader.name + " write " + v.path);
@@ -197,6 +196,8 @@ class Linker {
 				}
 			default:
 			}
+		case TVarDecl(v, _):
+			locals.set(v.id, true);
 		default:
 		}
 		return e.map(mapExprVar);
@@ -257,6 +258,7 @@ class Linker {
 		varIdMap = new Map();
 		allVars = new Array();
 		shaders = [];
+		locals = new Map();
 		
 		// globalize vars
 		for( s in shadersData ) {
@@ -376,7 +378,7 @@ class Linker {
 				ref : v,
 				ret : TVoid,
 				args : [],
-				expr : { e : TBlock(exprs), t : TVoid, p : exprs[0].p },
+				expr : { e : TBlock(exprs), t : TVoid, p : exprs.length == 0 ? null : exprs[0].p },
 			};
 		}
 		var funs = [

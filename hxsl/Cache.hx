@@ -2,7 +2,7 @@ package hxsl;
 using hxsl.Ast;
 
 class SearchMap {
-	public var linked : ShaderData;
+	public var linked : { vertex : ShaderData, fragment : ShaderData };
 	public var next : Map<Int,SearchMap>;
 	public function new() {
 	}
@@ -55,8 +55,12 @@ class Cache {
 		}
 		if( c.linked != null )
 			return c.linked;
+			
 		var s = new hxsl.Linker().link([for( s in instances ) s.shader], this.outVars[outVars]);
-		s = new Flatten().flatten(s);
+		
+		var s = new hxsl.Splitter().split(s);
+		s.vertex = new Flatten().flatten(s.vertex, Vertex);
+		s.fragment = new Flatten().flatten(s.fragment, Fragment);
 		c.linked = s;
 		return c.linked;
 	}

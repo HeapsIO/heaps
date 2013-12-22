@@ -7,6 +7,7 @@ class GlslOut {
 	var prec : String;
 	var keywords : Map<String,Bool>;
 	var exprValues : Array<String>;
+	var locals : Array<TVar>;
 	var globalNames : Map<TGlobal,String>;
 	
 	public function new() {
@@ -17,13 +18,6 @@ class GlslOut {
 			n = n.charAt(0).toLowerCase() + n.substr(1);
 			globalNames.set(g, n);
 		}
-	}
-	
-	public function run( s : ShaderData ) : { vertex : String, fragment : String } {
-		return {
-			vertex : make(s, "vertex"),
-			fragment : make(s,"fragment"),
-		};
 	}
 	
 	inline function add( v : Dynamic ) {
@@ -177,7 +171,9 @@ class GlslOut {
 				add(")");
 			default:
 				addValue(e1, tabs);
+				add(" ");
 				add(Printer.opStr(op));
+				add(" ");
 				addValue(e2, tabs);
 			}
 		case TUnop(op, e1):
@@ -190,10 +186,13 @@ class GlslOut {
 			});
 			addValue(e1, tabs);
 		case TVarDecl(v, init):
-			addVar(v);
+			locals.push(v);
 			if( init != null ) {
+				ident(v.name);
 				add(" = ");
 				addValue(init, tabs);
+			} else {
+				add("/*var*/");
 			}
 		case TCall(e, args):
 			addValue(e, tabs);
@@ -254,45 +253,60 @@ class GlslOut {
 		}
 	}
 	
-	function make( s : ShaderData, func : String ) {
+	public function run( s : ShaderData ) {
+		locals = [];
 		prec = "mediump ";
 		buf = new StringBuf();
 		exprValues = [];
 		add("struct mat3x4 { "+prec+"vec4 a; "+prec+"vec4 b; "+prec+"vec4 c; };\n");
 		add(prec+"vec3 m3x4mult( mat3x4 m, "+prec+"vec3 v ) { "+prec+"vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }\n");
+
+		if( s.funs.length != 1 ) throw "assert";
+		var f = s.funs[0];
+		
 		for( v in s.vars ) {
 			switch( v.kind ) {
 			case Param, Global:
 				add("uniform ");
 			case Input:
-				if( func == "fragment" ) continue;
 				add("attribute ");
 			case Var:
 				add("varying ");
 			case Function: continue;
-			case Local: throw "assert";
+			case Output:
+				switch( f.kind ) {
+				case Vertex:
+					v.name = "gl_Position";
+				case Fragment:
+					v.name = "gl_FragColor";
+				default:
+					throw "assert";
+				}
+				continue;
+			case Local:
 			}
 			addVar(v);
 			add(";\n");
 		}
 		add("\n");
-		var found = false;
-		for( f in s.funs ) {
-			if( f.ref.name == func ) {
-				var tmp = buf;
-				buf = new StringBuf();
-				found = true;
-				add("void main(void) ");
-				addExpr(f.expr, "");
-				exprValues.push(buf.toString());
-				buf = tmp;
-			}
+		
+		var tmp = buf;
+		buf = new StringBuf();
+		add("void main(void) ");
+		addExpr(f.expr, "");
+		exprValues.push(buf.toString());
+		buf = tmp;
+		
+		for( v in locals ) {
+			addVar(v);
+			add(";\n");
 		}
+		add("\n");
+
 		for( e in exprValues ) {
 			add(e);
 			add("\n\n");
 		}
-		if( !found ) throw func + " not found in shader";
 		var content = buf.toString();
 		buf = null;
 		return content;
