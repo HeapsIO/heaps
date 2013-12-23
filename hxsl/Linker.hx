@@ -8,6 +8,7 @@ private class AllocatedVar {
 	public var merged : Array<TVar>;
 	public var kind : Null<FunctionKind>;
 	public var parent : AllocatedVar;
+	public var instanceIndex : Int;
 	public function new() {
 	}
 }
@@ -36,12 +37,13 @@ private class ShaderInfos {
 
 class Linker {
 
+	public var allVars : Array<AllocatedVar>;
 	var varMap : Map<String,AllocatedVar>;
-	var allVars : Array<AllocatedVar>;
 	var curShader : ShaderInfos;
 	var shaders : Array<ShaderInfos>;
 	var varIdMap : Map<Int,Int>;
 	var locals : Map<Int,Bool>;
+	var curInstance : Int;
 	
 	public function new() {
 	}
@@ -139,6 +141,7 @@ class Linker {
 		a.path = key;
 		a.id = vid;
 		a.parent = parent == null ? null : allocVar(parent, p);
+		a.instanceIndex = curInstance;
 		allVars.push(a);
 		varMap.set(key, a);
 		switch( v2.type ) {
@@ -148,29 +151,6 @@ class Linker {
 		}
 		return a;
 	}
-	
-	/*
-	function allocFun( f : TFunction ) : TFunction {
-		var f2 = funMap.get(f.ref.name);
-		if( f2 != null ) {
-			if( f2.fold == f )
-				return f2.fnew;
-			// generate unique name
-			var k = 2;
-			while( funMap.exists(f.ref.name + k) )
-				k++;
-			f.ref.name = f.ref.name + k;
-		}
-		var f2 : TFunction = {
-			ref : allocVar(f.ref, null, null, f.expr.p).v,
-			args : f.args, // no-op
-			ret : f.ret,
-			expr : mapExprVar(f.expr),
-		};
-		funMap.set(f2.ref.name, { fold : f, fnew : f2 });
-		return f2;
-	}
-	*/
 	
 	function mapExprVar( e : TExpr ) {
 		switch( e.e ) {
@@ -261,6 +241,7 @@ class Linker {
 		locals = new Map();
 		
 		// globalize vars
+		curInstance = 0;
 		for( s in shadersData ) {
 			for( v in s.vars )
 				allocVar(v, null);
@@ -268,6 +249,7 @@ class Linker {
 				var v = allocVar(f.ref, f.expr.p);
 				v.kind = f.kind;
 			}
+			curInstance++;
 		}
 		
 		// create shader segments

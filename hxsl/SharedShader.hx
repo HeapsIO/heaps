@@ -4,9 +4,11 @@ using hxsl.Ast;
 class ShaderInstance {
 	public var id : Int;
 	public var shader : ShaderData;
+	public var params : Map<Int,Int>;
 	public function new(shader) {
 		id = Tools.allocVarId();
 		this.shader = shader;
+		params = new Map();
 	}
 }
 
@@ -37,6 +39,7 @@ class SharedShader {
 	public var globals : Array<ShaderGlobal>;
 	public var consts : Array<ShaderConst>;
 	var instanceCache : Map<Int,ShaderInstance>;
+	var paramsCount : Int;
 	
 	public function new(src:String) {
 		instanceCache = new Map();
@@ -45,24 +48,58 @@ class SharedShader {
 		globals = [];
 		for( v in data.vars )
 			browseVar(v);
-		if( consts.length == 0 )
-			instanceCache.set(0, new ShaderInstance(data));
+		if( consts.length == 0 ) {
+			var i = new ShaderInstance(data);
+			paramsCount = 0;
+			for( v in data.vars )
+				addSelfParam(i, v);
+			instanceCache.set(0, i);
+		}
 	}
 	
 	public function getInstance( constBits : Int ) {
 		var i = instanceCache.get(constBits);
 		if( i != null )
 			return i;
-		var e = new hxsl.Eval();
+		var eval = new hxsl.Eval();
 		for( c in consts )
-			e.setConstant(c.v, switch( c.v.type ) {
+			eval.setConstant(c.v, switch( c.v.type ) {
 			case TBool: CBool((constBits >>> c.pos) & 1 != 0);
 			case TInt: CInt((constBits >>> c.pos) & ((1 << c.bits) - 1));
 			default: throw "assert";
 			});
-		i = new ShaderInstance(e.eval(data));
+		i = new ShaderInstance(eval.eval(data));
+		paramsCount = 0;
+		for( v in data.vars )
+			addParam(eval, i, v);
 		instanceCache.set(constBits, i);
 		return i;
+	}
+
+	function addSelfParam( i : ShaderInstance, v : TVar ) {
+		switch( v.type ) {
+		case TStruct(vl):
+			for( v in vl )
+				addSelfParam(i, v);
+		default:
+			if( v.kind == Param ) {
+				i.params.set( v.id,  paramsCount );
+				paramsCount++;
+			}
+		}
+	}
+
+	function addParam( eval : Eval, i : ShaderInstance, v : TVar ) {
+		switch( v.type ) {
+		case TStruct(vl):
+			for( v in vl )
+				addParam(eval, i, v);
+		default:
+			if( v.kind == Param ) {
+				i.params.set( eval.varMap.get(v).id,  paramsCount );
+				paramsCount++;
+			}
+		}
 	}
 	
 	function browseVar( v : TVar, ?path : String ) {

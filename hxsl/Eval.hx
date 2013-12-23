@@ -8,8 +8,8 @@ using hxsl.Ast;
 **/
 class Eval {
 	
+	public var varMap : Map<TVar,TVar>;
 	var constants : Map<TVar,TExprDef>;
-	var varMap : Map<TVar,TVar>;
 	var funMap : Map<TVar,TFunction>;
 	
 	public function new() {

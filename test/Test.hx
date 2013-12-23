@@ -376,8 +376,8 @@ class Test {
 			return s;
 		}
 			
-		var vs = compile(GL.VERTEX_SHADER, s.vertex);
-		var fs = compile(GL.FRAGMENT_SHADER, s.fragment);
+		var vs = compile(GL.VERTEX_SHADER, s.vertex.data);
+		var fs = compile(GL.FRAGMENT_SHADER, s.fragment.data);
 		
 		var p = gl.createProgram();
 		gl.attachShader(p, vs);

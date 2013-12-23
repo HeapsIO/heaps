@@ -21,6 +21,7 @@ class Flatten {
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
 	var varMap : Map<TVar,Alloc>;
+	public var allocData : Map< TVar, Array<Alloc> >;
 	
 	public function new() {
 	}
@@ -30,6 +31,7 @@ class Flatten {
 		params = [];
 		outVars = [];
 		varMap = new Map();
+		allocData = new Map();
 		for( v in s.vars )
 			gatherVar(v);
 		var prefix = switch( kind ) {
@@ -38,7 +40,9 @@ class Flatten {
 		default: throw "assert";
 		}
 		pack(prefix+"Globals", Global, globals, VFloat);
-		pack(prefix+"Params", Param, params, VFloat);
+		pack(prefix + "Params", Param, params, VFloat);
+		packTextures(prefix + "GTextures", Global, globals, TSampler2D);
+		packTextures(prefix + "PTextures", Param, params, TSampler2D);
 		return {
 			name : s.name,
 			vars : outVars,
@@ -90,6 +94,8 @@ class Flatten {
 		case TArray(t, SConst(len)):
 			var stride = Std.int(a.size / len);
 			return { e : TArrayDecl([for( i in 0...len ) access(new Alloc(a.g, a.t, a.pos + stride * i, stride), t, pos)]), t : t, p : pos };
+		case TSampler2D, TSamplerCube:
+			return read(a.pos);
 		default:
 			var size = varSize(t, a.t);
 			if( size <= 4 ) {
@@ -132,6 +138,29 @@ class Flatten {
 		return e;
 	}
 	
+	function packTextures( name : String, kind : VarKind, vars : Array<TVar>, t : Type ) {
+		var alloc = new Array<Alloc>();
+		var g : TVar = {
+			id : Tools.allocVarId(),
+			name : name,
+			type : t,
+			kind : kind,
+		};
+		for( v in vars ) {
+			if( v.type != t ) continue;
+			var a = new Alloc(g, null, alloc.length, 1);
+			a.v = v;
+			varMap.set(v, a);
+			alloc.push(a);
+		}
+		g.type = TArray(t, SConst(alloc.length));
+		if( alloc.length > 0 ) {
+			outVars.push(g);
+			allocData.set(g, alloc);
+		}
+		return g;
+	}
+	
 	function pack( name : String, kind : VarKind, vars : Array<TVar>, t : VecType ) {
 		var alloc = new Array<Alloc>(), apos = 0;
 		var g : TVar = {
@@ -143,7 +172,6 @@ class Flatten {
 		for( v in vars ) {
 			switch( v.type ) {
 			case TSampler2D, TSamplerCube:
-				outVars.push(v);
 				continue;
 			default:
 			}
@@ -177,8 +205,10 @@ class Flatten {
 			}
 		}
 		g.type = TArray(TVec(4, t), SConst(apos >> 2));
-		if( vars.length > 0 )
+		if( vars.length > 0 ) {
 			outVars.push(g);
+			allocData.set(g, alloc);
+		}
 		return g;
 	}
 	

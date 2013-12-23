@@ -152,6 +152,8 @@ class Splitter {
 	}
 	
 	function uniqueName( v : TVar ) {
+		if( v.kind == Global )
+			return;
 		v.parent = null;
 		var n = varNames.get(v.name);
 		if( n != null && n != v ) {
