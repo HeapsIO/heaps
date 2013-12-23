@@ -140,13 +140,19 @@ private class DrawableShader extends h3d.impl.Shader {
 		varying lowp vec4 tcolor;
 		#end
 
+        #if hasSize
 		uniform vec3 size;
+		#end
 		uniform vec3 matA;
 		uniform vec3 matB;
 		uniform lowp float zValue;
 		
+        #if hasUVPos
 		uniform vec2 uvPos;
+		#end
+        #if hasUVScale
 		uniform vec2 uvScale;
+		#end
 		
 		varying lowp vec2 tuv;
 
