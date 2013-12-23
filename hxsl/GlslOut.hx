@@ -4,7 +4,6 @@ import hxsl.Ast;
 class GlslOut {
 
 	var buf : StringBuf;
-	var prec : String;
 	var keywords : Map<String,Bool>;
 	var exprValues : Array<String>;
 	var locals : Array<TVar>;
@@ -37,13 +36,12 @@ class GlslOut {
 		case TBool:
 			add("bool");
 		case TFloat:
-			add(prec);
 			add("float");
 		case TString:
 			add("string");
 		case TVec(size, k):
 			switch( k ) {
-			case VFloat: add(prec);
+			case VFloat:
 			case VInt: add("i");
 			case VBool: add("b");
 			}
@@ -255,11 +253,11 @@ class GlslOut {
 	
 	public function run( s : ShaderData ) {
 		locals = [];
-		prec = "mediump ";
 		buf = new StringBuf();
 		exprValues = [];
-		add("struct mat3x4 { "+prec+"vec4 a; "+prec+"vec4 b; "+prec+"vec4 c; };\n");
-		add(prec+"vec3 m3x4mult( mat3x4 m, "+prec+"vec3 v ) { "+prec+"vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }\n");
+		add("precision mediump float;\n");
+		add("struct mat3x4 { vec4 a; vec4 b; vec4 c; };\n");
+		add("vec3 m3x4mult( mat3x4 m, vec3 v ) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }\n");
 
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
