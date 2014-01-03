@@ -69,6 +69,8 @@ class Tile {
 		if( tex != null ) {
 			u = (x + EPSILON_PIXEL) / tex.width;
 			v = (y + EPSILON_PIXEL) / tex.height;
+			u2 = (width + x - EPSILON_PIXEL) / tex.width;
+			v2 = (height + y - EPSILON_PIXEL) / tex.height;
 		}
 	}
 	
