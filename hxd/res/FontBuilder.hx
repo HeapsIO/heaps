@@ -131,7 +131,96 @@ class FontBuilder {
 		return font;
 	}
 	
-	#else
+	#elseif js
+
+	function getTextHeight(text: String): Int {
+        return this.font.size;
+    }
+
+    function build() {
+        var canvas: js.html.CanvasElement = js.Browser.document.createCanvasElement();
+        var context = canvas.getContext2d();
+        context.font = "${this.font.name} ${this.font.size}px";
+        context.textAlign = 'left';
+        context.textBaseline = 'top'; // important!
+
+		font.lineHeight = 0;
+		var surf = 0;
+		var sizes = [];
+		for( i in 0...options.chars.length ) {
+			var textChar = options.chars.charAt(i);
+			var w = Math.ceil(context.measureText(textChar).width) + 1;
+			if( w == 1 ) continue;
+			var h = this.getTextHeight(textChar) + 1;
+			surf += (w + 1) * (h + 1);
+			if( h > font.lineHeight )
+				font.lineHeight = h;
+			sizes[i] = { w:w, h:h };
+		}
+		var side = Math.ceil( Math.sqrt(surf) );
+		var width = 1;
+		while( side > width )
+			width <<= 1;
+		var height = width;
+		while( width * height >> 1 > surf )
+			height >>= 1;
+		var all, bmp, ctx;
+		do {
+            bmp = js.Browser.document.createCanvasElement();
+            bmp.width = width;
+            bmp.height = height;
+            ctx = bmp.getContext2d();
+            ctx.font = "${this.font.name} ${this.font.size}px";
+            ctx.fillStyle = 'red';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top'; // important!
+			font.glyphs = new Map();
+			all = [];
+			var x = 0, y = 0, lineH = 0;
+			for( i in 0...options.chars.length ) {
+				var size = sizes[i];
+				if( size == null ) continue;
+				var w = size.w;
+				var h = size.h;
+				if( x + w > width ) {
+					x = 0;
+					y += lineH + 1;
+				}
+				// no space, resize
+				if( y + h > height ) {
+					bmp = null;
+					height <<= 1;
+					break;
+				}
+                ctx.fillStyle = 'black';
+                ctx.globalAlpha = 0.0;
+				ctx.fillRect(x, y, w, h);
+                ctx.globalAlpha = 1.0;
+                ctx.fillStyle = 'white';
+                ctx.fillText(options.chars.charAt(i), x, y);
+				var t = new h2d.Tile(null, x, y, w - 1, h - 1);
+				all.push(t);
+				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,w-1));
+				// next element
+				if( h > lineH ) lineH = h;
+				x += w + 1;
+			}
+		} while ( bmp == null );
+        var rbmp = hxd.BitmapData.fromNative( ctx.getImageData(0, 0, width, height) );
+		
+		if( innerTex == null ) {
+			innerTex = h3d.mat.Texture.fromBitmap( rbmp );
+			font.tile = h2d.Tile.fromTexture(innerTex);
+			for( t in all )
+				t.setTexture(innerTex);
+			innerTex.onContextLost = build;
+		} else {
+            innerTex.uploadBitmap(rbmp);
+        }
+		return font;
+	}
+
+    #else
 	
 	function build() {
 		throw "Font building not supported on this platform";
