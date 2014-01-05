@@ -7,11 +7,11 @@ class Anim extends Drawable {
 	public var speed : Float;
 	public var loop : Bool = true;
 	
-	public function new( ?parent ) {
+	public function new( ?frames, ?speed, ?parent ) {
 		super(parent);
-		this.frames = [];
+		this.frames = frames == null ? [] : frames;
 		this.currentFrame = 0;
-		this.speed = 1.;
+		this.speed = speed == null ? 15 : speed;
 	}
 	
 	public function play( frames ) {

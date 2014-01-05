@@ -259,6 +259,10 @@ class Editor extends h2d.Sprite {
 						background-color : #555;
 					}
 					
+					span.label {
+						width : 97px;
+					}
+					
 					.buttons {
 						layout : inline;
 					}
@@ -377,8 +381,11 @@ class Editor extends h2d.Sprite {
 					<div class="sep"></div>
 					<div class="col">
 						<div class="line">
-							<span>Life</span> <value value="${state.globalLife}" onchange="api.s.globalLife = this.value"/>
+							<span class="label">Life</span> <value value="${state.globalLife}" onchange="api.s.globalLife = this.value"/>
 							<checkbox checked="${state.loop}" onchange="api.s.loop = this.checked"/> <span>Loop</span>
+						</div>
+						<div class="line">
+							<span class="label">Start Delay</span> <value value="${state.delay}" onchange="api.s.delay = this.value"/>
 						</div>
 						<div class="line">
 							<select onchange="api.s.blendMode = api.blendModes[api.parseInt(this.value)]; $(\'.ic.alpha\').toggleClass(\':disabled\', api.s.blendMode.index == 2)">
@@ -407,7 +414,7 @@ class Editor extends h2d.Sprite {
 							<span>Max</span> <value value="${state.maxParts}" increment="1" onchange="api.s.maxParts = this.value"/>
 						</div>
 						<div class="line">
-							<span>Emitter Type</span> <select onchange="api.setCurShape(api.parseInt(this.value))">
+							<span class="label">Emitter Type</span> <select onchange="api.setCurShape(api.parseInt(this.value))">
 								<option value="0" selected="${state.shape.match(SLine(_))}">Line</option>
 								<option value="1" selected="${state.shape.match(SSphere(_))}">Sphere</option>
 								<option value="2" selected="${state.shape.match(SCone(_))}">Cone</option>

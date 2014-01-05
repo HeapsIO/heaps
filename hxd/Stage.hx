@@ -56,6 +56,24 @@ class Stage {
             js.Browser.window.addEventListener("resize", onResize);
         }
 		#end
+		#if flash
+		if( untyped hxd.System.isAir() )
+			setupOnCloseEvent();
+		#end
+	}
+	
+	#if flash
+	function setupOnCloseEvent() {
+		var nw : flash.events.EventDispatcher = Reflect.field(stage, "nativeWindow");
+		nw.addEventListener("closing", function(e:flash.events.Event) {
+			if( !onClose() )
+				e.preventDefault();
+		});
+	}
+	#end
+	
+	public dynamic function onClose() {
+		return true;
 	}
 	
 	public function event( e : hxd.Event ) {
