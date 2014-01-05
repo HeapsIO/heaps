@@ -9,7 +9,9 @@ class Comps {
 		engine.init();
 		// make sure that arial.ttf is inside the current class path (remove "true" to get errors)
 		// emebedding the font will greatly improve visibility on flash (might be required on some targets)
+        #if flash
 		hxd.res.Embed.embedFont("arial.ttf", true);
+        #end
 	}
 	
 	function init() {
