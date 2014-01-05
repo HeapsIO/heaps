@@ -264,11 +264,15 @@ class Stage {
 	}
 
 	function onMouseDown(e:js.html.MouseEvent) {
-		event(new Event(EPush, mouseX, mouseY));
+        var e = new Event(EPush, mouseX, mouseY);
+        e.button = 0;
+		event(e);
 	}
 
 	function onMouseUp(e:js.html.MouseEvent) {
-		event(new Event(ERelease, mouseX, mouseY));
+        var e = new Event(ERelease, mouseX, mouseY);
+        e.button = 0;
+		event(e);
 	}
 	
 	function onMouseMove(e:js.html.MouseEvent) {
