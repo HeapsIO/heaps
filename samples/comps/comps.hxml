@@ -6,3 +6,9 @@
 -main Comps
 -dce full
 -lib hscript
+--next
+-lib h3d
+-js comps.js
+-main Comps
+#-dce full
+-lib hscript
