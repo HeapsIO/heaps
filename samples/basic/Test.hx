@@ -53,7 +53,7 @@ class Test {
 		#if flash
 		haxe.Log.setColor(0xFF0000);
 		#end
-		hxd.res.EmbedFileSystem.init();
+		hxd.Res.initEmbed();
 		new Test();
 	}
 	
