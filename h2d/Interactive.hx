@@ -66,7 +66,7 @@ class Interactive extends Drawable {
 				return;
 			}
 		}
-		e.propagate = propagateEvents;
+		if( propagateEvents ) e.propagate = true;
 		if( !blockEvents ) e.cancel = true;
 		switch( e.kind ) {
 		case EMove:
