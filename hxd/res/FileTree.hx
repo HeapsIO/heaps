@@ -10,7 +10,6 @@ class FileTree {
 	var currentModule : String;
 	var pos : Position;
 	var loaderType : ComplexType;
-	var ignoredDir : Map<String,Bool>;
 	var ignoredExt : Map<String,Bool>;
 	var pairedExt : Map<String,Array<String>>;
 	var ignoredPairedExt : Map<String,Array<String>>;
@@ -23,10 +22,6 @@ class FileTree {
 		this.path = resolvePath(dir);
 		currentModule = Std.string(Context.getLocalClass());
 		pos = Context.currentPos();
-		ignoredDir = new Map();
-		ignoredDir.set(".svn", true);
-		ignoredDir.set(".git", true);
-		ignoredDir.set(".tmp", true);
 		ignoredExt = new Map();
 		ignoredExt.set("gal", true); // graphics gale source
 		ignoredExt.set("lch", true); // labchirp source
@@ -73,9 +68,7 @@ class FileTree {
 		for( f in sys.FileSystem.readDirectory(dir) ) {
 			var path = dir + "/" + f;
 			if( sys.FileSystem.isDirectory(path) ) {
-				if( ignoredDir.exists(f.toLowerCase()) )
-					continue;
-				if( f.charCodeAt(0) == "_".code )
+				if( f.charCodeAt(0) == ".".code || f.charCodeAt(0) == "_".code )
 					continue;
 				var sub = embedDir(f, relPath + "/" + f, path);
 				if( sub != null )
@@ -219,9 +212,7 @@ class FileTree {
 			var field = null;
 			var ext = null;
 			if( sys.FileSystem.isDirectory(path) ) {
-				if( ignoredDir.exists(f.toLowerCase()) )
-					continue;
-				if( f.charCodeAt(0) == "_".code )
+				if( f.charCodeAt(0) == ".".code || f.charCodeAt(0) == "_".code )
 					continue;
 				field = handleDir(f, relPath.length == 0 ? f : relPath+"/"+f, path);
 			} else {
