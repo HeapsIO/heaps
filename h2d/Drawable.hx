@@ -413,8 +413,6 @@ class Drawable extends Sprite {
 			mat.blend(DstColor, OneMinusSrcAlpha);
 		case Erase:
 			mat.blend(Zero, OneMinusSrcAlpha);
-		case Hide:
-			mat.blend(Zero, One);
 		}
 
 		if( options & HAS_SIZE != 0 ) {
