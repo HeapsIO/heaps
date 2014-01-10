@@ -32,6 +32,10 @@ class Camera {
 	public var pos : Vector;
 	public var up : Vector;
 	public var target : Vector;
+	
+	public var viewX : Float = 0.;
+	public var viewY : Float = 0.;
+	
 	var minv : Matrix;
 	var needInv : Bool;
 
@@ -189,6 +193,16 @@ class Camera {
 			m._43 = -(zNear * zFar) / (zFar - zNear);
 			
 		}
+
+		m._11 += viewX * m._14;
+		m._21 += viewX * m._24;
+		m._31 += viewX * m._34;
+		m._41 += viewX * m._44;
+
+		m._12 += viewY * m._14;
+		m._22 += viewY * m._24;
+		m._32 += viewY * m._34;
+		m._42 += viewY * m._44;
 		
 		// our z is negative in that case
 		if( rightHanded ) {
