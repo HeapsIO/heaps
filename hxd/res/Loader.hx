@@ -4,14 +4,14 @@ class Loader {
 	
 	public var fs(default,null) : FileSystem;
 	var modelCache : Map<String,Model>;
-	var textureCache : Map<String,Texture>;
+	var imageCache : Map<String,Image>;
 	var soundCache : Map<String,Sound>;
 	var fontCache : Map<String,BitmapFont>;
 	
 	public function new(fs) {
 		this.fs = fs;
 		modelCache = new Map();
-		textureCache = new Map();
+		imageCache = new Map();
 		soundCache = new Map();
 		fontCache = new Map();
 	}
@@ -33,11 +33,11 @@ class Loader {
 		return m;
 	}
 	
-	function loadTexture( path : String ) : Texture {
-		var t = textureCache.get(path);
+	function loadImage( path : String ) : Image {
+		var t = imageCache.get(path);
 		if( t == null ) {
-			t = new Texture(fs.get(path));
-			textureCache.set(path, t);
+			t = new Image(fs.get(path));
+			imageCache.set(path, t);
 		}
 		return t;
 	}

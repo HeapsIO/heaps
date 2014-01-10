@@ -309,7 +309,7 @@ class FileTree {
 		var epath = { expr : EConst(CString(relPath)), pos : pos };
 		switch( ext.toLowerCase() ) {
 		case "jpg", "png":
-			return { e : macro loader.loadTexture($epath), t : macro : hxd.res.Texture };
+			return { e : macro loader.loadImage($epath), t : macro : hxd.res.Image };
 		case "fbx", "xbx":
 			return { e : macro loader.loadModel($epath), t : macro : hxd.res.Model };
 		case "ttf":

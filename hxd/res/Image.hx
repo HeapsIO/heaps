@@ -1,6 +1,6 @@
 package hxd.res;
 
-class Texture extends Resource {
+class Image extends Resource {
 	
 	var needResize : Bool;
 	var tex : h3d.mat.Texture;
