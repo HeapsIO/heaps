@@ -78,18 +78,18 @@ class Skin extends Mesh {
 		var tmp = primitive.getBounds().clone();
 		var b0 = skinData.allJoints[0];
 		// not sure if that's the good joint
-		if( b0 != null && b0.defMat != null && b0.parent == null ) {
+		if( b0 != null && b0.parent == null ) {
 			var mtmp = absPos.clone();
 			var r = currentRelPose[b0.index];
 			if( r != null )
 				mtmp.multiply3x4(r, mtmp);
 			else
 				mtmp.multiply3x4(b0.defMat, mtmp);
-			mtmp.multiply3x4(b0.transPos, mtmp);
+			if( b0.transPos != null )
+				mtmp.multiply3x4(b0.transPos, mtmp);
 			tmp.transform3x4(mtmp);
-		} else {
+		} else
 			tmp.transform3x4(absPos);
-		}
 		b.add(tmp);
 		return b;
 	}
