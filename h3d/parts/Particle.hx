@@ -14,6 +14,10 @@ class Particle {
 	public var dy : Float;
 	public var dz : Float;
 
+	public var fx : Float;
+	public var fy : Float;
+	public var fz : Float;
+
 	public var cr : Float;
 	public var cg : Float;
 	public var cb : Float;

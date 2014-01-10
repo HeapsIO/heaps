@@ -51,6 +51,7 @@ class Editor extends h2d.Sprite {
 	var redo : Array<History>;
 	public var currentFilePath : String;
 	public var autoLoop : Bool = true;
+	public var moveEmitter(default,set) : Bool = false;
 	
 	static var CURVES : Array<{ name : String, f : Curve -> Data.Value }> = [
 		{ name : "Const", f : function(c) return VConst(c.min) },
@@ -107,6 +108,12 @@ class Editor extends h2d.Sprite {
 		curState = null; // force reload (if texture was changed)
 		setTexture(t);
 		buildUI();
+	}
+	
+	function set_moveEmitter(v) {
+		this.moveEmitter = v;
+		buildUI();
+		return v;
 	}
 	
 	public dynamic function loadTexture( textureName : String ) : h2d.Tile {
@@ -186,6 +193,15 @@ class Editor extends h2d.Sprite {
 	override function onDelete() {
 		super.onDelete();
 		getScene().addEventListener(onEvent);
+	}
+	
+	var time : Float = 0.;
+	public dynamic function onMoveEmitter(dt:Float) {
+		time += dt * 0.03 * 60;
+		var r = 1;
+		emit.x = Math.cos(time) * r;
+		emit.y = Math.sin(time * 0.5) * r;
+		emit.z = (Math.cos(time * 1.3) * Math.sin(time * 1.5) + 1) * r;
 	}
 	
 	function onEvent( e : hxd.Event ) {
@@ -437,15 +453,24 @@ class Editor extends h2d.Sprite {
 							</div>
 						</div>
 						<div class="line">
-							<checkbox checked="${state.emitLocal}" onchange="api.s.emitLocal = this.checked"/> <span>Emit Local</span>
+							<div class="box">
+								<checkbox checked="${state.emitTrail}" onchange="api.s.emitTrail = this.checked"/> <span>Trail</span>
+							</div>
+							<div class="box">
+								<checkbox checked="${state.randomDir}" onchange="api.s.randomDir = this.checked"/> <span>Rand. Dir</span>
+							</div>
 						</div>
 						<div class="line">
-							<checkbox checked="${state.emitFromShell}" onchange="api.s.emitFromShell = this.checked"/> <span>Emit from Shell</span>
+							<div class="box">
+								<checkbox checked="${state.emitLocal}" onchange="api.s.emitLocal = this.checked"/> <span>Local</span>
+							</div>
+							<div class="box">
+								<checkbox checked="${state.emitFromShell}" onchange="api.s.emitFromShell = this.checked"/> <span>From Shell</span>
+							</div>
 						</div>
 						<div class="line">
-							<checkbox checked="${state.randomDir}" onchange="api.s.randomDir = this.checked"/> <span>Random Dir</span>
+							<checkbox checked="${this.moveEmitter}" onchange="api.setMove(this.checked)"/> <span>Move Emitter</span>
 						</div>
-						<!-- TODO : Bursts edition -->
 					</div>
 					
 					<h1>Particle</h1>
@@ -579,6 +604,7 @@ class Editor extends h2d.Sprite {
 			selectTexture : function() onTextureSelect(),
 			load : function() onLoad(),
 			save : function() onSave(haxe.io.Bytes.ofString(curState)),
+			setMove : function(b) moveEmitter = b,
 		});
 		addChildAt(ui,0);
 		stats = cast ui.getElementById("stats");
@@ -925,8 +951,14 @@ class Editor extends h2d.Sprite {
 			redo = [];
 		}
 		emit.speed = props.pause ? 0 : (props.slow ? 0.1 : 1);
+		if( moveEmitter ) onMoveEmitter(ctx.elapsedTime);
 		var pcount = emit.count;
-		if( stats != null ) stats.text = hxd.Math.fmt(emit.time * state.globalLife) + " s\n" + pcount + " p\n" + hxd.Math.fmt(ctx.engine.fps) + " fps" + ("\n"+getScene().getSpritesCount());
+		if( stats != null )
+			stats.text = [
+				hxd.Math.fmt(emit.time * state.globalLife) + " s",
+				pcount + " parts",
+				hxd.Math.fmt(ctx.engine.fps) + " fps",
+			].join("\n");
 		if( autoLoop && !emit.isActive() ) {
 			if( lastPartSeen == null )
 				lastPartSeen = emit.time;

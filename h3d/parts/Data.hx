@@ -85,6 +85,7 @@ class State {
 	public var shape : Shape;
 	public var emitFromShell : Bool;
 	public var emitLocal : Bool;
+	public var emitTrail : Bool;
 	public var randomDir : Bool;
 
 	// system globals
