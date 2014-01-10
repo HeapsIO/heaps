@@ -82,6 +82,10 @@ class Engine {
 	public function driverName(details=false) {
 		return driver.getDriverName(details);
 	}
+	
+	public function setCapture( bmp : hxd.BitmapData, callb : Void -> Void ) {
+		driver.setCapture(bmp,callb);
+	}
 
 	public function selectShader( shader : h3d.impl.Shader ) {
 		if( driver.selectShader(shader) )

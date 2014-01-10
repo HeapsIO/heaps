@@ -50,6 +50,7 @@ class Stage3dDriver extends Driver {
 	var width : Int;
 	var height : Int;
 	var enableDraw : Bool;
+	var capture : { bmp : hxd.BitmapData, callb : Void -> Void };
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -114,6 +115,10 @@ class Stage3dDriver extends Driver {
 		ctx.clear(r, g, b, a);
 	}
 	
+	override function setCapture( bmp : hxd.BitmapData, onCapture : Void -> Void ) {
+		capture = { bmp : bmp, callb : onCapture };
+	}
+	
 	override function dispose() {
 		s3d.removeEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
 		if( ctx != null ) ctx.dispose();
@@ -125,6 +130,14 @@ class Stage3dDriver extends Driver {
 	}
 	
 	override function present() {
+		if( capture != null ) {
+			ctx.drawToBitmapData(capture.bmp.toNative());
+			ctx.present();
+			var callb = capture.callb;
+			capture = null;
+			callb();
+			return;
+		}
 		ctx.present();
 	}
 	

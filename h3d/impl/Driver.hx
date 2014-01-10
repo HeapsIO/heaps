@@ -30,6 +30,9 @@ class Driver {
 	public function clear( r : Float, g : Float, b : Float, a : Float ) {
 	}
 	
+	public function setCapture( bmp : hxd.BitmapData, callb : Void -> Void ) {
+	}
+	
 	public function reset() {
 	}
 	
