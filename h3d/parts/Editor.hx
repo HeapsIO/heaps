@@ -49,7 +49,7 @@ class Editor extends h2d.Sprite {
 	var cedit : h2d.Interactive;
 	var undo : Array<History>;
 	var redo : Array<History>;
-	var currentFilePath : String;
+	public var currentFilePath : String;
 	public var autoLoop : Bool = true;
 	
 	static var CURVES : Array<{ name : String, f : Curve -> Data.Value }> = [
@@ -92,13 +92,7 @@ class Editor extends h2d.Sprite {
 	public dynamic function onTextureSelect() {
 		hxd.File.browse(function(sel) {
 			sel.load(function(bytes) {
-				var bmp = hxd.res.Any.fromBytes(sel.fileName, bytes).toBitmap();
-				var t = h2d.Tile.fromBitmap(bmp);
-				bmp.dispose();
-				state.textureName = sel.fileName;
-				curState = null; // force reload (if texture was changed)
-				setTexture(t);
-				buildUI();
+				changeTexture(sel.fileName, hxd.res.Any.fromBytes(sel.fileName, bytes).toTile());
 			});
 		},{
 			defaultPath : currentFilePath,
@@ -106,6 +100,13 @@ class Editor extends h2d.Sprite {
 			relativePath : true,
 			fileTypes : [{ name : "Images", extensions : ["png","jpg","jpeg","gif"] }],
 		});
+	}
+	
+	public function changeTexture( name : String, t : h2d.Tile ) {
+		state.textureName = name;
+		curState = null; // force reload (if texture was changed)
+		setTexture(t);
+		buildUI();
 	}
 	
 	public dynamic function loadTexture( textureName : String ) : h2d.Tile {
@@ -145,6 +146,12 @@ class Editor extends h2d.Sprite {
 	}
 	
 	public dynamic function onSave( saveData ) {
+		if( currentFilePath != null )
+			try {
+				hxd.File.saveBytes(currentFilePath, saveData);
+				return;
+			} catch( e : Dynamic ) {
+			}
 		if( currentFilePath == null ) currentFilePath = "default.p";
 		hxd.File.saveAs(saveData, {
 			defaultPath : currentFilePath,
@@ -428,6 +435,9 @@ class Editor extends h2d.Sprite {
 							<div class="val">
 								<button class="ic" value="Angle" onclick="api.editCurve(\'angle\',true)"/>
 							</div>
+						</div>
+						<div class="line">
+							<checkbox checked="${state.emitLocal}" onchange="api.s.emitLocal = this.checked"/> <span>Emit Local</span>
 						</div>
 						<div class="line">
 							<checkbox checked="${state.emitFromShell}" onchange="api.s.emitFromShell = this.checked"/> <span>Emit from Shell</span>
@@ -884,7 +894,7 @@ class Editor extends h2d.Sprite {
 		rebuildCurve();
 	}
 
-	public function setTexture( t : h2d.Tile ) {
+	function setTexture( t : h2d.Tile ) {
 		state.frames = [t];
 		curTile = t;
 		state.initFrames();

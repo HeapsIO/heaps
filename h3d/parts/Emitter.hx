@@ -156,6 +156,18 @@ class Emitter extends h3d.scene.Object {
 	
 	function initPart(p:Particle) {
 		initPosDir(p);
+		if( !state.emitLocal ) {
+			var pos = new h3d.Vector(p.x, p.y, p.z);
+			pos.transform3x4(absPos);
+			p.x = pos.x;
+			p.y = pos.y;
+			p.z = pos.z;
+			var v = new h3d.Vector(p.dx, p.dy, p.dz);
+			v.transform3x3(absPos);
+			p.dx = v.x;
+			p.dy = v.y;
+			p.dz = v.z;
+		}
 		p.time = 0;
 		p.lifeTimeFactor = 1 / eval(state.life, time, rand);
 	}
@@ -417,7 +429,7 @@ class Emitter extends h3d.scene.Object {
 		buffer.uploadVector(tmpBuf, 0, nverts);
 		var size = eval(state.globalSize, time, rand);
 		
-		material.pshader.mpos = this.absPos;
+		material.pshader.mpos = state.emitLocal ? this.absPos : h3d.Matrix.I();
 		material.pshader.mproj = ctx.camera.m;
 		material.pshader.partSize = new h3d.Vector(size, size * ctx.engine.width / ctx.engine.height);
 		material.pshader.hasColor = hasColor;
