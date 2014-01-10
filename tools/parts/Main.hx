@@ -1,19 +1,9 @@
 import h3d.parts.Data;
 
-class Main implements h3d.parts.Collider {
+class Main extends hxd.App implements h3d.parts.Collider {
 	
-	var s3d : h3d.scene.Scene;
-	var s2d : h2d.Scene;
-	var engine : h3d.Engine;
 	var emit : h3d.parts.Emitter;
 	var edit : h3d.parts.Editor;
-	
-	public function new() {
-		hxd.res.Embed.embedFont("Arial.ttf");
-		engine = new h3d.Engine();
-		engine.onReady = init;
-		engine.init();
-	}
 	
 	public function collidePart( p : h3d.parts.Particle, n : h3d.Vector ) {
 		if( p.z > 0 ) return false;
@@ -21,13 +11,8 @@ class Main implements h3d.parts.Collider {
 		return true;
 	}
 	
-	function init() {
-		hxd.Key.initialize();
-		hxd.System.setLoop(update);
-		s3d = new h3d.scene.Scene();
-		s2d = new h2d.Scene();
-		s3d.addPass(s2d);
-		
+	override function init() {
+		hxd.res.Embed.embedFont("Arial.ttf",true);
 		var bmp = new hxd.BitmapData(2, 2);
 		bmp.setPixel(0, 0, 0xFF202020);
 		bmp.setPixel(1, 1, 0xFF202020);
@@ -48,12 +33,6 @@ class Main implements h3d.parts.Collider {
 		emit = new h3d.parts.Emitter(s3d);
 		emit.collider = this;
 		edit = new h3d.parts.Editor(emit, s2d);
-	}
-	
-	function update() {
-		s3d.setElapsedTime(1 / engine.fps);
-		engine.render(s3d);
-		s2d.checkEvents();
 	}
 	
 	static function main() {
