@@ -161,7 +161,7 @@ class GlslOut {
 			add("}");
 		case TBinop(op, e1, e2):
 			switch( [op, e1.t, e2.t] ) {
-			case [OpMult, TMat3x4, TVec(3,VFloat)]:
+			case [OpMult, TVec(3,VFloat), TMat3x4]:
 				add("m3x4mult(");
 				addValue(e1, tabs);
 				add(",");
@@ -257,7 +257,7 @@ class GlslOut {
 		exprValues = [];
 		add("precision mediump float;\n");
 		add("struct mat3x4 { vec4 a; vec4 b; vec4 c; };\n");
-		add("vec3 m3x4mult( mat3x4 m, vec3 v ) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }\n");
+		add("vec3 m3x4mult( vec3 v, mat3x4 m) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }\n");
 
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];

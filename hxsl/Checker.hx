@@ -788,7 +788,7 @@ class Checker {
 			switch( [op, e1.t, e2.t] ) {
 			case [OpMult,TVec(4,VFloat), TMat4], [OpMult,TMat4, TVec(4,VFloat)]:
 				vec4;
-			case [OpMult,TMat3x4, TVec(3,VFloat)]:
+			case [OpMult,TVec(3,VFloat), TMat3x4]:
 				vec3;
 			case [OpMult,TMat3, TVec(3,VFloat)], [OpMult, TVec(3,VFloat), TMat3]:
 				vec3;
