@@ -205,7 +205,7 @@ class Flatten {
 			}
 		}
 		g.type = TArray(TVec(4, t), SConst(apos >> 2));
-		if( vars.length > 0 ) {
+		if( apos > 0 ) {
 			outVars.push(g);
 			allocData.set(g, alloc);
 		}
