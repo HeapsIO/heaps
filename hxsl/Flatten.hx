@@ -39,10 +39,9 @@ class Flatten {
 		case Fragment: "fragment";
 		default: throw "assert";
 		}
-		pack(prefix+"Globals", Global, globals, VFloat);
+		pack(prefix + "Globals", Global, globals, VFloat);
 		pack(prefix + "Params", Param, params, VFloat);
-		packTextures(prefix + "GTextures", Global, globals, TSampler2D);
-		packTextures(prefix + "PTextures", Param, params, TSampler2D);
+		packTextures(prefix + "Textures", globals.concat(params), TSampler2D);
 		return {
 			name : s.name,
 			vars : outVars,
@@ -138,13 +137,13 @@ class Flatten {
 		return e;
 	}
 	
-	function packTextures( name : String, kind : VarKind, vars : Array<TVar>, t : Type ) {
+	function packTextures( name : String, vars : Array<TVar>, t : Type ) {
 		var alloc = new Array<Alloc>();
 		var g : TVar = {
 			id : Tools.allocVarId(),
 			name : name,
 			type : t,
-			kind : kind,
+			kind : Param,
 		};
 		for( v in vars ) {
 			if( v.type != t ) continue;

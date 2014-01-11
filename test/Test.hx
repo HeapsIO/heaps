@@ -42,9 +42,9 @@ class Proto extends hxsl.Shader {
 	
 	// each __init__ expr is out of order dependency-based
 	function __init__() {
-		transformedPosition = global.modelView.mat3x4() * input.position;
-		projectedPosition = camera.viewProj * vec4(transformedPosition, 1);
-		transformedNormal = global.modelViewInverse.mat3() * input.normal;
+		transformedPosition = input.position * global.modelView.mat3x4();
+		projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
+		transformedNormal = input.normal * global.modelViewInverse.mat3();
 		camera.dir = (camera.position - transformedPosition).normalize();
 		pixelColor = color;
 	}
@@ -229,9 +229,9 @@ static var SRC = {
 	
 	function vertex() {
 		var p = input.pos, n = input.normal;
-		// TODO : accessing skimMatrixes should multiply by 255*3 in AGAL (byte converted to [0-1] float + stride for 3 vec4 per element)
-		transformedPosition = skinMatrixes[input.indexes.x] * (p * input.weights.x) + skinMatrixes[input.indexes.y] * (p * input.weights.y) + skinMatrixes[input.indexes.z] * (p * input.weights.z);
-		transformedNormal = skinMatrixes[input.indexes.x].mat3() * (n * input.weights.x) + skinMatrixes[input.indexes.y].mat3() * (n * input.weights.y) + skinMatrixes[input.indexes.z].mat3() * (n * input.weights.z);
+		// TODO : accessing skinMatrixes should multiply by 255*3 in AGAL (byte converted to [0-1] float + stride for 3 vec4 per element)
+		transformedPosition = p * input.weights.x * skinMatrixes[input.indexes.x] + p * input.weights.y * skinMatrixes[input.indexes.y] + p * input.weights.z * skinMatrixes[input.indexes.z];
+		transformedNormal = n * input.weights.x * skinMatrixes[input.indexes.x].mat3() + n * input.weights.y * skinMatrixes[input.indexes.y].mat3() + n * input.weights.z * skinMatrixes[input.indexes.z].mat3();
 	}
 
 }
@@ -267,7 +267,7 @@ static var SRC = {
 	@private var tshadowPos : Vec3;
 	
 	function vertex() {
-		tshadowPos = shadow.lightProj.mat3x4() * (shadow.lightCenter.mat3x4() * transformedPosition);
+		tshadowPos = transformedPosition * shadow.lightCenter.mat3x4() * shadow.lightProj.mat3x4();
 	}
 	
 	function fragment() {

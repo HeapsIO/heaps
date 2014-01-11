@@ -36,8 +36,7 @@ class CompleteShader {
 	public var paramsSize : Int;
 	public var globals : Array<AllocGlobal>;
 	public var globalsSize : Int;
-	public var paramTextures : Array<AllocParam>;
-	public var globalTextures : Array<AllocGlobal>;
+	public var textures : Array<AllocParam>;
 	public function new() {
 		id = UID++;
 	}
@@ -50,7 +49,7 @@ class ShaderBuffers {
 	public function new( c : CompleteShader ) {
 		globals = new haxe.ds.Vector(c.globalsSize);
 		params = new haxe.ds.Vector(c.paramsSize);
-		tex = new haxe.ds.Vector(c.globalTextures.length + c.paramTextures.length);
+		tex = new haxe.ds.Vector(c.textures.length);
 	}
 }
 
@@ -160,7 +159,7 @@ class Cache {
 				}
 				switch( g.type ) {
 				case TArray(TSampler2D, _):
-					c.paramTextures = out;
+					c.textures = out;
 				case TArray(TVec(4, VFloat),SConst(size)):
 					c.params = out;
 					c.paramsSize = size;
@@ -169,8 +168,6 @@ class Cache {
 			case Global:
 				var out = [for( a in alloc ) if( a.v != null ) new AllocGlobal(a.pos, getPath(a.v), a.v.type)];
 				switch( g.type ) {
-				case TArray(TSampler2D, _):
-					c.globalTextures = out;
 				case TArray(TVec(4, VFloat),SConst(size)):
 					c.globals = out;
 					c.globalsSize = size;
@@ -188,8 +185,8 @@ class Cache {
 			c.params = [];
 			c.paramsSize = 0;
 		}
-		if( c.globalTextures == null ) c.globalTextures = [];
-		if( c.paramTextures == null ) c.paramTextures = [];
+		if( c.textures == null )
+			c.textures = [];
 		c.data = data;
 		return c;
 	}

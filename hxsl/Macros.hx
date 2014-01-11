@@ -190,7 +190,7 @@ class Macros {
 				args : [ { name : "index", type : macro : Int } ],
 				expr : {
 					expr : EBlock([
-						{ expr : ESwitch(macro index, [for( p in params ) { values : [macro $v{ index++ } ], expr : macro return $i{ p } } ], null), pos : pos },
+						{ expr : ESwitch(macro index, [for( p in params ) { values : [macro $v{ index++ } ], expr : macro return $i{ p } } ], macro {}), pos : pos },
 						macro return null,
 					]),
 					pos : pos,
