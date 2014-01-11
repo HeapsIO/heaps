@@ -10,32 +10,43 @@ class MultiMaterial extends Mesh {
 	}
 	
 	override function clone( ?o : Object ) {
+		throw "TODO";
+		return null;
+		/*
 		var m = o == null ? new MultiMaterial(null,materials) : cast o;
 		m.materials = [for( m in materials ) m.clone()];
 		super.clone(m);
 		m.material = m.materials[0];
 		return m;
+		*/
 	}
 	
+	/*
 	@:access(h3d.mat.MeshMaterial.setup)
 	function drawMaterial( ctx : RenderContext, mid : Int ) {
 		var m = materials[mid];
 		if( m == null )
 			return;
-		if( m.renderPass > ctx.currentPass ) {
-			ctx.addPass(drawMaterial.bind(_,mid));
-			return;
-		}
 		ctx.localPos = this.absPos;
-		m.setup(ctx);
 		ctx.engine.selectMaterial(m);
-		primitive.selectMaterial(mid);
+	}
+	*/
+	
+	override function draw( ctx : RenderContext ) {
+		primitive.selectMaterial(ctx.drawPass.index);
 		primitive.render(ctx.engine);
 	}
 	
-	override function draw( ctx : RenderContext ) {
-		for( mid in 0...materials.length )
-			drawMaterial(ctx,mid);
+	@:access(h3d.pass.Pass)
+	override function emit( ctx : RenderContext ) {
+		for( mid in 0...materials.length ) {
+			var m = materials[mid];
+			var p = m.mainPass;
+			while( p != null ) {
+				ctx.emitPass(p, this).index = mid;
+				p = p.nextPass;
+			}
+		}
 	}
 	
 }

@@ -667,8 +667,10 @@ class Library {
 						continue;
 					}
 					var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
-					if( vcolor )
-						mat.hasVertexColor = true;
+					if( vcolor ) {
+						throw "TODO";
+						//mat.hasVertexColor = true;
+					}
 					tmats.push(mat);
 					lastAdded = tmats.length;
 				}

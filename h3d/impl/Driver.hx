@@ -18,6 +18,12 @@ typedef VertexBuffer = Int;
 typedef Texture = Int;
 #end
 
+@:enum abstract BufferKind(Int) {
+	public var Globals = 0;
+	public var Params = 1;
+	public var Textures = 2;
+}
+
 class Driver {
 	
 	public function isDisposed() {
@@ -43,14 +49,15 @@ class Driver {
 	public function resize( width : Int, height : Int ) {
 	}
 	
-	public function selectMaterial( mbits : Int ) {
+	public function selectShader( vertex : hxsl.Cache.CompleteShader, fragment : hxsl.Cache.CompleteShader ) {
 	}
 	
-	/** return value tells if we have shader shader **/
-	public function selectShader( shader : Shader ) : Bool {
-		return false;
+	public function selectMaterial( pass : h3d.pass.Pass ) {
 	}
 	
+	public function uploadShaderBuffers( vertex : hxsl.Cache.ShaderBuffers, fragment : hxsl.Cache.ShaderBuffers, which : BufferKind ) {
+	}
+
 	public function getShaderInputNames() : Array<String> {
 		return null;
 	}

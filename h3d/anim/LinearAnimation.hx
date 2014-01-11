@@ -93,12 +93,8 @@ class LinearAnimation extends Animation {
 		for( o in getFrames() ) {
 			if( o.alphas != null ) {
 				var mat = o.targetObject.toMesh().material;
-				if( mat.colorMul == null ) {
-					mat.colorMul = new Vector(1, 1, 1, 1);
-					if( mat.blendDst == Zero )
-						mat.blend(SrcAlpha, OneMinusSrcAlpha);
-				}
-				mat.colorMul.w = o.alphas[frame1] * k1 + o.alphas[frame2] * k2;
+				if( mat.blendMode == Normal ) mat.blendMode = Alpha;
+				mat.color.w = o.alphas[frame1] * k1 + o.alphas[frame2] * k2;
 				continue;
 			}
 			var f1 = o.frames[frame1], f2 = o.frames[frame2];

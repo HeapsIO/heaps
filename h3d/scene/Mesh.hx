@@ -23,23 +23,20 @@ class Mesh extends Object {
 	override function clone( ?o : Object ) {
 		var m = o == null ? new Mesh(null,material) : cast o;
 		m.primitive = primitive;
-		m.material = material.clone();
+		//m.material = material.clone();
+		throw "TODO : clone";
 		super.clone(m);
 		return m;
 	}
 	
-	@:access(h3d.mat.MeshMaterial.setup)
 	override function draw( ctx : RenderContext ) {
-		if( material.renderPass > ctx.currentPass ) {
-			ctx.addPass(draw);
-			return;
-		}
-		ctx.localPos = absPos;
-		material.setup(ctx);
-		ctx.engine.selectMaterial(material);
 		primitive.render(ctx.engine);
 	}
 	
+	override function emit( ctx : RenderContext ) {
+		ctx.emit(material, this);
+	}
+
 	override function dispose() {
 		primitive.dispose();
 		super.dispose();

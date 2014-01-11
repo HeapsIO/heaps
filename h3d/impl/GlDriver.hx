@@ -1,5 +1,6 @@
 package h3d.impl;
 import h3d.impl.Driver;
+import h3d.pass.Pass;
 
 #if (js||cpp)
 
@@ -8,12 +9,36 @@ import js.html.Uint16Array;
 import js.html.Uint8Array;
 import js.html.Float32Array;
 private typedef GL = js.html.webgl.GL;
+private typedef Uniform = js.html.webgl.UniformLocation;
 #elseif cpp
 import openfl.gl.GL;
 private typedef Uint16Array = openfl.utils.Int16Array;
 private typedef Uint8Array = openfl.utils.UInt8Array;
 private typedef Float32Array = openfl.utils.Float32Array;
 #end
+
+private class CompiledShader {
+	public var s : js.html.webgl.Shader;
+	public var vertex : Bool;
+	public var globals : Uniform;
+	public var params : Uniform;
+	public var textures : Array<Uniform>;
+	public function new(s,vertex) {
+		this.s = s;
+		this.vertex = vertex;
+	}
+}
+
+private class CompiledProgram {
+	public var p : js.html.webgl.Program;
+	public var vertex : CompiledShader;
+	public var fragment : CompiledShader;
+	public var stride : Int;
+	public var attribNames : Array<String>;
+	public var attribs : Array<{ index : Int, type : Int, size : Int, offset : Int }>;
+	public function new() {
+	}
+}
 
 @:access(h3d.impl.Shader)
 class GlDriver extends Driver {
@@ -27,8 +52,10 @@ class GlDriver extends Driver {
 	#end
 	
 	var curAttribs : Int;
-	var curShader : Shader.ShaderInstance;
+	var curProgram : CompiledProgram;
 	var curMatBits : Int;
+	var programs : Map<Int, CompiledProgram>;
+	var shaders : Map<Int, js.html.webgl.Shader>;
 	
 	public function new() {
 		#if js
@@ -44,56 +71,179 @@ class GlDriver extends Driver {
 		var sub = new Float32Array(tmp.buffer, 0, 4);
 		fixMult = sub.length == 1; // should be 4
 		#end
-
+		shaders = new Map();
+		programs = new Map();
 		curAttribs = 0;
 		curMatBits = -1;
-		selectMaterial(0);
+		selectMaterialBits(0);
 	}
 	
 	override function reset() {
-		curShader = null;
 		gl.useProgram(null);
+		curProgram = null;
 	}
 	
-	override function selectMaterial( mbits : Int ) {
-		var diff = curMatBits ^ mbits;
+	function compileShader( shader : hxsl.Cache.CompleteShader, vertex : Bool ) {
+		var s = shaders.get(shader.id);
+		if( s != null )
+			return new CompiledShader(s,vertex);
+		var type = vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
+		var s = gl.createShader(type);
+		var code = hxsl.GlslOut.toGlsl(shader.data);
+		gl.shaderSource(s, code);
+		gl.compileShader(s);
+		if( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
+			var log = gl.getShaderInfoLog(s);
+			var line = code.split("\n")[Std.parseInt(log.substr(9)) - 1];
+			if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
+			throw "An error occurred compiling the shaders: " + log + line;
+		}
+		shaders.set(shader.id, s);
+		return new CompiledShader(s,vertex);
+	}
+	
+	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.Cache.CompleteShader ) {
+		var prefix = s.vertex ? "vertex" : "fragment";
+		s.globals = gl.getUniformLocation(p.p, prefix + "Globals");
+		s.params = gl.getUniformLocation(p.p, prefix + "Params");
+		s.textures = [for( i in 0...shader.textures.length ) gl.getUniformLocation(p.p, prefix + "Textures[" + i + "]")];
+	}
+	
+	override function selectShader( vertex : hxsl.Cache.CompleteShader, fragment : hxsl.Cache.CompleteShader ) {
+		var pid = vertex.id ^ (fragment.id << 16);
+		var p = programs.get(pid);
+		if( p == null ) {
+			p = new CompiledProgram();
+			p.vertex = compileShader(vertex, true);
+			p.fragment = compileShader(fragment, false);
+			p.p = gl.createProgram();
+			gl.attachShader(p.p, p.vertex.s);
+			gl.attachShader(p.p, p.fragment.s);
+			gl.linkProgram(p.p);
+			if( gl.getProgramParameter(p.p, GL.LINK_STATUS) != cast 1 ) {
+				var log = gl.getProgramInfoLog(p.p);
+				throw "Program linkage failure: "+log;
+			}
+			initShader(p, p.vertex, vertex);
+			initShader(p, p.fragment, fragment);
+			p.attribNames = [];
+			p.attribs = [];
+			p.stride = 0;
+			for( v in vertex.data.vars )
+				switch( v.kind ) {
+				case Input:
+					var size = switch( v.type ) {
+					case TVec(n, _): n;
+					case TFloat: 1;
+					default: throw "assert " + v.type;
+					}
+					p.attribs.push( { offset : p.stride, index : gl.getAttribLocation(p.p, v.name), size:size, type:GL.FLOAT } );
+					p.attribNames.push(v.name);
+					p.stride += size;
+				default:
+				}
+			programs.set(pid, p);
+		}
+		if( curProgram == p ) return;
+		gl.useProgram(p.p);
+		for( i in curAttribs...p.attribs.length ) {
+			gl.enableVertexAttribArray(i);
+			curAttribs++;
+		}
+		while( curAttribs > p.attribs.length )
+			gl.disableVertexAttribArray(--curAttribs);
+		curProgram = p;
+	}
+	
+	override function uploadShaderBuffers( vertex : hxsl.Cache.ShaderBuffers, fragment : hxsl.Cache.ShaderBuffers, which : BufferKind ) {
+		uploadBuffer(curProgram.vertex, vertex, which);
+		uploadBuffer(curProgram.fragment, fragment, which);
+	}
+	
+	function uploadBuffer( s : CompiledShader, buf : hxsl.Cache.ShaderBuffers, which : BufferKind ) {
+		switch( which ) {
+		case Globals:
+			if( s.globals != null ) gl.uniform4fv(s.globals, new Float32Array(buf.globals.toData()));
+		case Params:
+			if( s.params != null ) gl.uniform4fv(s.params, new Float32Array(buf.params.toData()));
+		case Textures:
+			for( i in 0...s.textures.length ) {
+				var t = buf.tex[i];
+				
+				gl.bindTexture(GL.TEXTURE_2D, t.t);
+				var flags = TFILTERS[Type.enumIndex(t.mipMap)][Type.enumIndex(t.filter)];
+				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
+				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
+				var w = TWRAP[Type.enumIndex(t.wrap)];
+				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, w);
+				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, w);
+				
+				gl.activeTexture(GL.TEXTURE0 + i);
+				gl.uniform1i(s.textures[i], i);
+			}
+		}
+	}
+	
+	override function selectMaterial( pass : Pass ) {
+		selectMaterialBits(@:privateAccess pass.bits);
+		// TODO : Blend Op value sync
+	}
+	
+	function selectMaterialBits( bits : Int ) {
+		var diff = bits ^ curMatBits;
 		if( diff == 0 )
 			return;
-		if( diff & 3 != 0 ) {
-			if( mbits & 3 == 0 )
+		trace(diff);
+		if( diff & Pass.culling_mask != 0 ) {
+			var cull = Pass.getCulling(bits);
+			if( cull == 0 )
 				gl.disable(GL.CULL_FACE);
 			else {
-				if( curMatBits & 3 == 0 ) gl.enable(GL.CULL_FACE);
-				gl.cullFace(FACES[mbits&3]);
+				if( Pass.getCulling(curMatBits) == 0 ) gl.enable(GL.CULL_FACE);
+				gl.cullFace(FACES[cull]);
 			}
 		}
-		if( diff & (0xFF << 6) != 0 ) {
-			var src = (mbits >> 6) & 15;
-			var dst = (mbits >> 10) & 15;
-			if( src == 0 && dst == 1 )
-				gl.disable(GL.BLEND);
-			else {
-				if( curMatBits < 0 || (curMatBits >> 6) & 0xFF == 0x10 ) gl.enable(GL.BLEND);
-				gl.blendFunc(BLEND[src], BLEND[dst]);
+		if( diff & (Pass.blendSrc_mask | Pass.blendDst_mask | Pass.blendAlphaSrc_mask | Pass.blendAlphaDst_mask) != 0 ) {
+			var csrc = Pass.getBlendSrc(bits);
+			var cdst = Pass.getBlendDst(bits);
+			var asrc = Pass.getBlendAlphaSrc(bits);
+			var adst = Pass.getBlendAlphaDst(bits);
+			if( csrc == asrc && cdst == adst ) {
+				if( csrc == 0 && cdst == 1 )
+					gl.disable(GL.BLEND);
+				else {
+					if( curMatBits < 0 || (Pass.getBlendSrc(curMatBits) == 0 && Pass.getBlendDst(curMatBits) == 1) ) gl.enable(GL.BLEND);
+					gl.blendFunc(BLEND[csrc], BLEND[cdst]);
+				}
+			} else {
+				if( curMatBits < 0 || (Pass.getBlendSrc(curMatBits) == 0 && Pass.getBlendDst(curMatBits) == 1) ) gl.enable(GL.BLEND);
+				gl.blendFuncSeparate(BLEND[csrc], BLEND[cdst], BLEND[asrc], BLEND[adst]);
 			}
 		}
-	
-		if( diff & (15 << 2) != 0 ) {
-			var write = (mbits >> 2) & 1 == 1;
-			if( curMatBits < 0 || diff & 4 != 0 ) gl.depthMask(write);
-			var cmp = (mbits >> 3) & 7;
+		if( diff & (Pass.blendOp_mask | Pass.blendAlphaOp_mask) != 0 ) {
+			var cop = Pass.getBlendOp(bits);
+			var aop = Pass.getBlendAlphaOp(bits);
+			if( cop == aop )
+				gl.blendEquation(OP[cop]);
+			else
+				gl.blendEquationSeparate(OP[cop], OP[aop]);
+		}
+		if( diff & Pass.depthWrite_mask != 0 )
+			gl.depthMask(Pass.getDepthWrite(bits) != 0);
+		if( diff & Pass.depthTest_mask != 0 ) {
+			var cmp = Pass.getDepthTest(bits);
 			if( cmp == 0 )
 				gl.disable(GL.DEPTH_TEST);
 			else {
-				if( curMatBits < 0 || (curMatBits >> 3) & 7 == 0 ) gl.enable(GL.DEPTH_TEST);
+				if( curMatBits < 0 || Pass.getDepthTest(curMatBits) == 0 ) gl.enable(GL.DEPTH_TEST);
 				gl.depthFunc(COMPARE[cmp]);
 			}
 		}
-			
-		if( diff & (15 << 14) != 0 )
-			gl.colorMask((mbits >> 14) & 1 != 0, (mbits >> 14) & 2 != 0, (mbits >> 14) & 4 != 0, (mbits >> 14) & 8 != 0);
-			
-		curMatBits = mbits;
+		if( diff & Pass.colorMask_mask != 0 ) {
+			var m = Pass.getColorMask(bits);
+			gl.colorMask(m & 1 != 0, m & 2 != 0, m & 4 != 0, m & 8 != 0);
+		}
+		curMatBits = bits;
 	}
 	
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
@@ -204,218 +354,6 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 	
-	function decodeType( t : String ) : Shader.ShaderType {
-		return switch( t ) {
-		case "float": Float;
-		case "vec2": Vec2;
-		case "vec3": Vec3;
-		case "vec4": Vec4;
-		case "mat4": Mat4;
-		default: throw "Unknown type " + t;
-		}
-	}
-	
-	function decodeTypeInt( t : Int ) : Shader.ShaderType {
-		return switch( t ) {
-		case GL.SAMPLER_2D:	Tex2d;
-		case GL.SAMPLER_CUBE: TexCube;
-		case GL.FLOAT: Float;
-		case GL.FLOAT_VEC2: Vec2;
-		case GL.FLOAT_VEC3: Vec3;
-		case GL.FLOAT_VEC4: Vec4;
-		case GL.FLOAT_MAT2: Mat2;
-		case GL.FLOAT_MAT3: Mat3;
-		case GL.FLOAT_MAT4: Mat4;
-		default:
-			gl.pixelStorei(t, 0); // get DEBUG value
-			throw "Unknown type " + t;
-		}
-	}
-	
-	function typeSize( t : Shader.ShaderType ) {
-		return switch( t ) {
-		case Float, Byte4, Byte3: 1;
-		case Vec2: 2;
-		case Vec3: 3;
-		case Vec4: 4;
-		case Mat2: 4;
-		case Mat3: 9;
-		case Mat4: 16;
-		case Tex2d, TexCube, Struct(_), Index(_): throw "Unexpected " + t;
-		}
-	}
-	
-	function buildShaderInstance( shader : Shader ) {
-		var cl = Type.getClass(shader);
-		function compileShader(type) {
-			var vertex = type == GL.VERTEX_SHADER;
-			var name = vertex ? "VERTEX" : "FRAGMENT";
-			var code = Reflect.field(cl, name);
-			if( code == null ) throw "Missing " + Type.getClassName(cl) + "." + name + " shader source";
-			var cst = shader.getConstants(vertex);
-			code = StringTools.trim(cst + code);
-			#if cpp
-			code = "#define lowp\n#define mediump\n#define highp\n"+code;
-			#end
-			// replace haxe-like #if/#else/#end by GLSL ones
-			code = ~/#if ([A-Za-z0-9_]+)/g.replace(code, "#if defined($1)");
-			code = ~/#elseif ([A-Za-z0-9_]+)/g.replace(code, "#elif defined($1)");
-			code = code.split("#end").join("#endif");
-			var s = gl.createShader(type);
-			gl.shaderSource(s, code);
-			gl.compileShader(s);
-			if( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
-				var log = gl.getShaderInfoLog(s);
-				var line = code.split("\n")[Std.parseInt(log.substr(9)) - 1];
-				if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
-				throw "An error occurred compiling the shaders: " + log + line;
-			}
-			return s;
-		}
-		var vs = compileShader(GL.VERTEX_SHADER);
-		var fs = compileShader(GL.FRAGMENT_SHADER);
-		
-		var p = gl.createProgram();
-		gl.attachShader(p, vs);
-		gl.attachShader(p, fs);
-		gl.linkProgram(p);
-		if( gl.getProgramParameter(p, GL.LINK_STATUS) != cast 1 ) {
-			var log = gl.getProgramInfoLog(p);
-			throw "Program linkage failure: "+log;
-		}
-	
-		var inst = new Shader.ShaderInstance();
-			
-		var nattr = gl.getProgramParameter(p, GL.ACTIVE_ATTRIBUTES);
-		inst.attribs = [];
-		
-		var amap = new Map();
-		for( k in 0...nattr ) {
-			var inf = gl.getActiveAttrib(p, k);
-			amap.set(inf.name, { index : k, inf : inf });
-		}
-		
-		
-		var code = gl.getShaderSource(vs);
-
-		// remove (and save) all #define's
-		var rdef = ~/#define ([A-Za-z0-9_]+)/;
-		var defs = new Map();
-		while( rdef.match(code) ) {
-			defs.set(rdef.matched(1), true);
-			code = rdef.matchedLeft() + rdef.matchedRight();
-		}
-		
-		// remove parts of the codes that are undefined
-		var rif = ~/#if defined\(([A-Za-z0-9_]+)\)([^#]+)#endif/;
-		while( rif.match(code) ) {
-			if( defs.get(rif.matched(1)) )
-				code = rif.matchedLeft() + rif.matched(2) + rif.matchedRight();
-			else
-				code = rif.matchedLeft() + rif.matchedRight();
-		}
-		
-		// extract attributes from code (so we know the offset and stride)
-		var r = ~/attribute[ \t\r\n]+([A-Za-z0-9_]+)[ \t\r\n]+([A-Za-z0-9_]+)/;
-		var offset = 0;
-		var ccode = code;
-		while( r.match(ccode) ) {
-			var aname = r.matched(2);
-			var atype = decodeType(r.matched(1));
-			var a = amap.get(aname);
-			var size = typeSize(atype);
-			if( a != null )
-				inst.attribs.push( { name : aname, type : atype, etype : GL.FLOAT, size : size, index : a.index, offset : offset } );
-			offset += size;
-			ccode = r.matchedRight();
-		}
-		inst.stride = offset;
-		
-		// list uniforms needed by shader
-		var allCode = code + gl.getShaderSource(fs);
-		var nuni = gl.getProgramParameter(p, GL.ACTIVE_UNIFORMS);
-		inst.uniforms = [];
-		var texIndex = -1;
-		var r_array = ~/\[([0-9]+)\]$/;
-		for( k in 0...nuni ) {
-			var inf = gl.getActiveUniform(p, k);
-			if( inf.name.substr(0, 6) == "webgl_" )
-				continue; // skip native uniforms
-			var t = decodeTypeInt(inf.type);
-			switch( t ) {
-			case Tex2d, TexCube:
-				texIndex++;
-			case Vec3:
-				var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "");
-				if( r.match(allCode) )
-					switch( r.matched(1) ) {
-					case "byte4":
-						t = Byte3;
-					default:
-					}
-			case Vec4:
-				var r = new EReg(inf.name + "[ \\t]*\\/\\*([A-Za-z0-9_]+)\\*\\/", "");
-				if( r.match(allCode) )
-					switch( r.matched(1) ) {
-					case "byte4":
-						t = Byte4;
-					default:
-					}
-			default:
-			}
-			var name = inf.name;
-			while( true ) {
-				if( r_array.match(name) ) {
-					name = r_array.matchedLeft();
-					t = Index(Std.parseInt(r_array.matched(1)), t);
-					continue;
-				}
-				var c = name.lastIndexOf(".");
-				if( c > 0 ) {
-					var field = name.substr(c + 1);
-					name = name.substr(0, c);
-					t = Struct(field, t);
-				}
-				break;
-			}
-			inst.uniforms.push( {
-				name : name,
-				type : t,
-				loc : gl.getUniformLocation(p, inf.name),
-				index : texIndex,
-			});
-		}
-		inst.program = p;
-		return inst;
-	}
-
-	override function selectShader( shader : Shader ) : Bool {
-		var change = false;
-		if( shader.instance == null )
-			shader.instance = buildShaderInstance(shader);
-		if( shader.instance != curShader ) {
-			curShader = shader.instance;
-			gl.useProgram(curShader.program);
-			for( i in curAttribs...curShader.attribs.length ) {
-				gl.enableVertexAttribArray(i);
-				curAttribs++;
-			}
-			while( curAttribs > curShader.attribs.length )
-				gl.disableVertexAttribArray(--curAttribs);
-			change = true;
-		}
-			
-		
-		for( u in curShader.uniforms ) {
-			var val : Dynamic = Reflect.field(shader, u.name);
-			if( val == null ) throw "Missing shader value " + u.name;
-			setUniform(val, u, u.type);
-		}
-		shader.customSetup(this);
-		
-		return change;
-	}
-	
 	public function setupTexture( t : h3d.mat.Texture, mipMap : h3d.mat.Data.MipMap, filter : h3d.mat.Data.Filter, wrap : h3d.mat.Data.Wrap ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
 		var flags = TFILTERS[Type.enumIndex(mipMap)][Type.enumIndex(filter)];
@@ -425,55 +363,14 @@ class GlDriver extends Driver {
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, w);
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, w);
 	}
-	
-	function setUniform( val : Dynamic, u : Shader.Uniform, t : Shader.ShaderType ) {
-		switch( t ) {
-		case Mat4:
-			var m : Matrix = val;
-			gl.uniformMatrix4fv(u.loc, false, new Float32Array(m.getFloats()));
-		case Tex2d:
-			var t : h3d.mat.Texture = val;
-			setupTexture(t, t.mipMap, t.filter, t.wrap);
-			gl.activeTexture(GL.TEXTURE0 + u.index);
-			gl.uniform1i(u.loc, u.index);
-		case Float:
-			gl.uniform1f(u.loc, val);
-		case Vec2:
-			var v : h3d.Vector = val;
-			gl.uniform2f(u.loc, v.x, v.y);
-		case Vec3:
-			var v : h3d.Vector = val;
-			gl.uniform3f(u.loc, v.x, v.y, v.z);
-		case Vec4:
-			var v : h3d.Vector = val;
-			gl.uniform4f(u.loc, v.x, v.y, v.z, v.w);
-		case Struct(field, t):
-			var v = Reflect.field(val, field);
-			if( v == null ) throw "Missing shader field " + field;
-			setUniform(v, u, t);
-		case Index(index, t):
-			var v = val[index];
-			if( v == null ) throw "Missing shader index " + index;
-			setUniform(v, u, t);
-		case Byte4:
-			var v : Int = val;
-			gl.uniform4f(u.loc, ((v >> 16) & 0xFF) / 255, ((v >> 8) & 0xFF) / 255, (v & 0xFF) / 255, (v >>> 24) / 255);
-		case Byte3:
-			var v : Int = val;
-			gl.uniform3f(u.loc, ((v >> 16) & 0xFF) / 255, ((v >> 8) & 0xFF) / 255, (v & 0xFF) / 255);
-		default:
-			throw "Unsupported uniform " + u.type;
-		}
 		
-	}
-	
 	override function selectBuffer( v : VertexBuffer ) {
 		var stride : Int = v.stride;
-		if( stride < curShader.stride )
-			throw "Buffer stride (" + stride + ") and shader stride (" + curShader.stride + ") mismatch";
+		if( stride < curProgram.stride )
+			throw "Buffer stride (" + stride + ") and shader stride (" + curProgram.stride + ") mismatch";
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
-		for( a in curShader.attribs )
-			gl.vertexAttribPointer(a.index, a.size, a.etype, false, stride * 4, a.offset * 4);
+		for( a in curProgram.attribs )
+			gl.vertexAttribPointer(a.index, a.size, a.type, false, stride * 4, a.offset * 4);
 	}
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
@@ -539,6 +436,12 @@ class GlDriver extends Driver {
 		GL.GEQUAL,
 		GL.LESS,
 		GL.LEQUAL,
+	];
+	
+	static var OP = [
+		GL.FUNC_ADD,
+		GL.FUNC_SUBTRACT,
+		GL.FUNC_REVERSE_SUBTRACT
 	];
 
 }

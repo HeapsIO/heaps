@@ -186,8 +186,7 @@ class Object {
 	
 	function draw( ctx : RenderContext ) {
 	}
-	
-	
+		
 	function set_follow(v) {
 		posChanged = true;
 		return follow = v;
@@ -268,7 +267,10 @@ class Object {
 		}
 	}
 	
-	function drawRec( ctx : RenderContext ) {
+	function emit( ctx : RenderContext ) {
+	}
+	
+	function emitRec( ctx : RenderContext ) {
 		if( !visible ) return;
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
 		if( posChanged ) {
@@ -279,9 +281,9 @@ class Object {
 				c.posChanged = true;
 			posChanged = false;
 		}
-		draw(ctx);
+		emit(ctx);
 		for( c in childs )
-			c.drawRec(ctx);
+			c.emitRec(ctx);
 	}
 	
 	inline function set_x(v) {

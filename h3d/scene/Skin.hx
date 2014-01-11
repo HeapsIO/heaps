@@ -116,7 +116,7 @@ class Skin extends Mesh {
 		skinData = s;
 		jointsUpdated = true;
 		primitive = s.primitive;
-		material.hasSkin = true;
+		//material.hasSkin = true;
 		currentRelPose = [];
 		currentAbsPose = [];
 		currentPalette = [];
@@ -165,21 +165,23 @@ class Skin extends Mesh {
 		if( splitPalette == null ) {
 			if( paletteChanged ) {
 				paletteChanged = false;
-				material.skinMatrixes = currentPalette;
+				//material.skinMatrixes = currentPalette;
 			}
 			super.draw(ctx);
 		} else {
 			for( i in 0...splitPalette.length ) {
-				material.skinMatrixes = splitPalette[i];
+				//material.skinMatrixes = splitPalette[i];
 				primitive.selectMaterial(i);
 				super.draw(ctx);
 			}
 		}
 		if( showJoints )
-			ctx.addPass(drawJoints);
+			throw "TODO";
+			//ctx.addPass(drawJoints);
 	}
 	
 	function drawJoints( ctx : RenderContext ) {
+		/*
 		for( j in skinData.allJoints ) {
 			var m = currentAbsPose[j.index];
 			var mp = j.parent == null ? absPos : currentAbsPose[j.parent.index];
@@ -191,6 +193,7 @@ class Skin extends Mesh {
 			
 			ctx.engine.point(m._41, m._42, m._43, j.bindIndex < 0 ? 0xFF0000FF : 0xFFFF0000);
 		}
+		*/
 	}
 	
 	
