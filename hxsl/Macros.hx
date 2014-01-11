@@ -83,7 +83,7 @@ class Macros {
 	
 	static function buildFields( shader : ShaderData, pos : Position ) {
 		var fields = new Array<Field>();
-		var globals = [], consts = [];
+		var globals = [], consts = [], params = [];
 		for( v in shader.vars ) {
 			var cpos = consts.length;
 			getConsts(v, pos, consts);
@@ -93,9 +93,14 @@ class Macros {
 				var f : Field = {
 					name : v.name,
 					pos : pos,
-					kind : FProp("get","set", t, makeDef(v.type,pos)),
+					kind : FProp("get","set", t),
 					access : [APublic],
-					meta : [{ name : ":isVar", pos : pos }],
+				};
+				var name = v.name + "__";
+				var f2 : Field = {
+					name : name,
+					pos : pos,
+					kind : FVar(t,makeDef(v.type,pos)),
 				};
 				var fget : Field = {
 					name : "get_" + v.name,
@@ -104,11 +109,11 @@ class Macros {
 						ret : t,
 						args : [],
 						expr : if( consts.length == cpos || (consts.length == cpos+1 && consts[cpos].v == v) )
-							macro return $i{ v.name };
+							macro return $i{ name };
 						else
 							macro {
 								constModified = true;
-								return $i{ v.name };
+								return $i{ name };
 							},
 					}),
 					access : [AInline],
@@ -120,16 +125,18 @@ class Macros {
 						ret : t,
 						args : [ { name : "_v", type : t } ],
 						expr : if( consts.length == cpos )
-							macro return $i{ v.name } = _v;
+							macro return $i{ name } = _v;
 						else
 							macro {
 								constModified = true;
-								return $i{ v.name } = _v;
+								return $i{ name } = _v;
 							}
 					}),
 					access : [AInline],
 				};
 				fields.push(f);
+				fields.push(f2);
+				params.push(name);
 				fields.push(fget);
 				fields.push(fset);
 			case Global:
@@ -141,7 +148,7 @@ class Macros {
 		var exprs = [];
 		function getPath(v:TVar) {
 			if( v.parent == null )
-				return { expr : haxe.macro.Expr.ExprDef.EConst(CIdent(v.name)), pos : pos };
+				return { expr : haxe.macro.Expr.ExprDef.EConst(CIdent(v.name+"__")), pos : pos };
 			return { expr : haxe.macro.Expr.ExprDef.EField(getPath(v.parent), v.name), pos : pos };
 		}
 		for( c in consts ) {
@@ -170,6 +177,23 @@ class Macros {
 					constBits = 0;
 					{$a{ exprs }};
 					super.updateConstants(globals);
+				},
+			}),
+			access : [AOverride],
+		});
+		var index = 0;
+		fields.push( {
+			name : "getParamValue",
+			pos : pos,
+			kind : FFun( {
+				ret : macro : Dynamic,
+				args : [ { name : "index", type : macro : Int } ],
+				expr : {
+					expr : EBlock([
+						{ expr : ESwitch(macro index, [for( p in params ) { values : [macro $v{ index++ } ], expr : macro return $i{ p } } ], null), pos : pos },
+						macro return null,
+					]),
+					pos : pos,
 				},
 			}),
 			access : [AOverride],
@@ -204,6 +228,45 @@ class Macros {
 				default:
 				}
 			}
+		return fields;
+	}
+	
+	public static function buildGlobals() {
+		var fields = Context.getBuildFields();
+		var globals = [];
+		var sets = [];
+		for( f in fields ) {
+			for( m in f.meta ) {
+				if( m.name == "global" )
+					switch( [f.kind, m.params[0].expr] ) {
+					case [FVar(t, set), EConst(CString(name))]:
+						f.kind = FVar(macro : hxsl.Globals.GlobalSlot<$t>);
+						globals.push(macro $i{ f.name } = new hxsl.Globals.GlobalSlot($v { name } ));
+						if( set != null )
+							sets.push(macro $i{ f.name }.set(globals, $set));
+					default:
+					}
+			}
+		}
+		var p = Context.currentPos();
+		fields.push({
+			name : "initGlobals",
+			kind : FFun({
+				ret : null,
+				expr : { expr : EBlock(globals), pos : p },
+				args : [],
+			}),
+			pos : p,
+		});
+		fields.push({
+			name : "setGlobals",
+			kind : FFun({
+				ret : null,
+				expr : { expr : EBlock(sets), pos : p },
+				args : [],
+			}),
+			pos : p,
+		});
 		return fields;
 	}
 	

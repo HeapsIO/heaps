@@ -1,5 +1,14 @@
 package hxsl;
 
+abstract GlobalSlot<T>(Int) {
+	public inline function new(name:String) {
+		this = Globals.allocID(name);
+	}
+	public inline function set( globals : Globals, v : T ) {
+		globals.fastSet(this, v);
+	}
+}
+
 class Globals {
 
 	var map : Map<Int,Dynamic>;

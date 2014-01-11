@@ -19,6 +19,11 @@ class Shader {
 		}
 	}
 	
+	public function getParamValue( index : Int ) : Dynamic {
+		throw "assert"; // will be subclassed in sub shaders
+		return null;
+	}
+	
 	public function updateConstants( globals : Globals ) {
 		for( c in shader.consts )
 			if( c.globalId > 0 ) {
@@ -36,9 +41,6 @@ class Shader {
 				}
 			}
 		instance = shader.getInstance(constBits);
-	}
-	
-	public function setup( globals : Globals ) {
 	}
 	
 }

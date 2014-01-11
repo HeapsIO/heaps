@@ -5,11 +5,13 @@ class AllocParam {
 	public var pos : Int;
 	public var instance : Int;
 	public var index : Int;
+	public var type : Type;
 	public var perObjectGlobal : AllocGlobal;
-	public function new(pos, instance, index) {
+	public function new(pos, instance, index, type) {
 		this.pos = pos;
 		this.instance = instance;
 		this.index = index;
+		this.type = type;
 	}
 }
 
@@ -17,22 +19,38 @@ class AllocGlobal {
 	public var pos : Int;
 	public var gid : Int;
 	public var path : String;
-	public function new(pos, path) {
+	public var type : Type;
+	public function new(pos, path, type) {
 		this.pos = pos;
 		this.path = path;
 		this.gid = Globals.allocID(path);
+		this.type = type;
 	}
 }
 
 class CompleteShader {
+	static var UID = 0;
+	public var id : Int;
 	public var data : ShaderData;
 	public var params : Array<AllocParam>;
 	public var paramsSize : Int;
 	public var globals : Array<AllocGlobal>;
 	public var globalsSize : Int;
-	public var paramsTexture : Array<AllocParam>;
-	public var globalsTexture : Array<AllocGlobal>;
+	public var paramTextures : Array<AllocParam>;
+	public var globalTextures : Array<AllocGlobal>;
 	public function new() {
+		id = UID++;
+	}
+}
+
+class ShaderBuffers {
+	public var globals : haxe.ds.Vector<Float>;
+	public var params : haxe.ds.Vector<Float>;
+	public var tex : haxe.ds.Vector<Types.Texture>;
+	public function new( c : CompleteShader ) {
+		globals = new haxe.ds.Vector(c.globalsSize);
+		params = new haxe.ds.Vector(c.paramsSize);
+		tex = new haxe.ds.Vector(c.globalTextures.length + c.paramTextures.length);
 	}
 }
 
@@ -133,26 +151,26 @@ class Cache {
 					if( a.v == null ) continue; // padding
 					var p = params.get(a.v.id);
 					if( p == null ) {
-						var ap = new AllocParam(a.pos, -1, -1);
-						ap.perObjectGlobal = new AllocGlobal( -1, getPath(a.v));
+						var ap = new AllocParam(a.pos, -1, -1, a.v.type);
+						ap.perObjectGlobal = new AllocGlobal( -1, getPath(a.v), a.v.type);
 						out.push(ap);
 						continue;
 					}
-					out.push(new AllocParam(a.pos, p.instance, p.index));
+					out.push(new AllocParam(a.pos, p.instance, p.index, a.v.type));
 				}
 				switch( g.type ) {
 				case TArray(TSampler2D, _):
-					c.paramsTexture = out;
+					c.paramTextures = out;
 				case TArray(TVec(4, VFloat),SConst(size)):
 					c.params = out;
 					c.paramsSize = size;
 				default: throw "assert";
 				}
 			case Global:
-				var out = [for( a in alloc ) if( a.v != null ) new AllocGlobal(a.pos, getPath(a.v))];
+				var out = [for( a in alloc ) if( a.v != null ) new AllocGlobal(a.pos, getPath(a.v), a.v.type)];
 				switch( g.type ) {
 				case TArray(TSampler2D, _):
-					c.globalsTexture = out;
+					c.globalTextures = out;
 				case TArray(TVec(4, VFloat),SConst(size)):
 					c.globals = out;
 					c.globalsSize = size;
@@ -162,7 +180,16 @@ class Cache {
 			default: throw "assert";
 			}
 		}
-		trace(c);
+		if( c.globals == null ) {
+			c.globals = [];
+			c.globalsSize = 0;
+		}
+		if( c.params == null ) {
+			c.params = [];
+			c.paramsSize = 0;
+		}
+		if( c.globalTextures == null ) c.globalTextures = [];
+		if( c.paramTextures == null ) c.paramTextures = [];
 		c.data = data;
 		return c;
 	}
