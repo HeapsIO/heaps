@@ -11,7 +11,7 @@ class Material {
 		this.passes = passes;
 	}
 	
-	public function addPass( p : Pass ) {
+	public function addPass<T:Pass>( p : T ) : T {
 		var prev = null, cur = passes;
 		while( cur != null ) {
 			prev = cur;
@@ -22,6 +22,7 @@ class Material {
 		else
 			prev.nextPass = p;
 		p.nextPass = null;
+		return p;
 	}
 	
 	public function removePass( p : Pass ) {

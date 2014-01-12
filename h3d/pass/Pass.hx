@@ -55,8 +55,9 @@ class Pass {
 		this.colorMask = (r?1:0) | (g?2:0) | (b?4:0) | (a?8:0);
 	}
 	
-	public function addShader(s) {
+	public function addShader<T:hxsl.Shader>(s:T) : T {
 		shaders.push(s);
+		return s;
 	}
 	
 	public function removeShader(s) {
