@@ -41,14 +41,6 @@ class NullDriver extends Driver {
 		driver.resize(width, height);
 	}
 
-	override function selectMaterial( mbits : Int ) {
-		driver.selectMaterial(mbits);
-	}
-	
-	override function selectShader( shader : Shader ) : Bool {
-		return driver.selectShader(shader);
-	}
-	
 	override function getShaderInputNames() : Array<String> {
 		return driver.getShaderInputNames();
 	}

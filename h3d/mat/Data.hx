@@ -51,10 +51,15 @@ enum Filter {
 enum Wrap {
 	Clamp;
 	Repeat;
+	//Mirrored;
 }
 
 enum TextureFormat {
 	Rgba;
-	Atf;
-	AtfCompressed( alpha : Bool );
+}
+
+enum Operation {
+	Add;
+	Sub;
+	ReverseSub;
 }

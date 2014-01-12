@@ -23,8 +23,8 @@ private class CoreObjects  {
 		tmpUVScale = new h3d.Vector();
 		tmpMatrix = new h3d.Matrix();
 		tmpMaterial = new h3d.mat.Material(null);
-		tmpMaterial.culling = None;
-		tmpMaterial.depth(false, Always);
+		//tmpMaterial.culling = None;
+		//tmpMaterial.depth(false, Always);
 		
 		var vector = new hxd.FloatBuffer();
 		for( pt in [[0, 0], [1, 0], [0, 1], [1, 1]] ) {

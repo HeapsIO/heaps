@@ -23,15 +23,9 @@ class Engine {
 	public var fps(get, never) : Float;
 	public var frameCount : Int = 0;
 	
-	public var forcedMatBits : Int = 0;
-	public var forcedMatMask : Int = 0xFFFFFF;
-	
 	var realFps : Float;
 	var lastTime : Float;
 	var antiAlias : Int;
-	
-	var debugPoint : h3d.Drawable<h3d.impl.Shaders.PointShader>;
-	var debugLine : h3d.Drawable<h3d.impl.Shaders.LineShader>;
 	
 	@:allow(h3d)
 	var curProjMatrix : h3d.Matrix;
@@ -85,18 +79,6 @@ class Engine {
 	
 	public function setCapture( bmp : hxd.BitmapData, callb : Void -> Void ) {
 		driver.setCapture(bmp,callb);
-	}
-
-	public function selectShader( shader : h3d.impl.Shader ) {
-		if( driver.selectShader(shader) )
-			shaderSwitches++;
-	}
-
-	@:access(h3d.mat.Material.bits)
-	public function selectMaterial( m : h3d.mat.Material ) {
-		var mbits = (m.bits & forcedMatMask) | forcedMatBits;
-		driver.selectMaterial(mbits);
-		selectShader(m.shader);
 	}
 
 	function selectBuffer( buf : h3d.impl.MemoryManager.BigBuffer ) {
@@ -298,45 +280,6 @@ class Engine {
 			realFps = realFps * (1 - f) + curFps * f; // smooth a bit the fps
 		}
 		return true;
-	}
-	
-	// debug functions
-	public function point( x : Float, y : Float, z : Float, color = 0x80FF0000, size = 1.0, depth = false ) {
-		if( curProjMatrix == null )
-			return;
-		if( debugPoint == null ) {
-			debugPoint = new Drawable(new h3d.prim.Plan2D(), new h3d.impl.Shaders.PointShader());
-			debugPoint.material.blend(SrcAlpha, OneMinusSrcAlpha);
-			debugPoint.material.depthWrite = false;
-		}
-		debugPoint.material.depthTest = depth ? h3d.mat.Data.Compare.LessEqual : h3d.mat.Data.Compare.Always;
-		debugPoint.shader.mproj = curProjMatrix;
-		debugPoint.shader.delta = new h3d.Vector(x, y, z, 1);
-		var gscale = 1 / 200;
-		debugPoint.shader.size = new h3d.Vector(size * gscale, size * gscale * width / height);
-		debugPoint.shader.color = color;
-		debugPoint.render(h3d.Engine.getCurrent());
-	}
-
-	public function line( x1 : Float, y1 : Float, z1 : Float, x2 : Float, y2 : Float, z2 : Float, color = 0x80FF0000, depth = false ) {
-		if( curProjMatrix == null )
-			return;
-		if( debugLine == null ) {
-			debugLine = new Drawable(new h3d.prim.Plan2D(), new h3d.impl.Shaders.LineShader());
-			debugLine.material.blend(SrcAlpha, OneMinusSrcAlpha);
-			debugLine.material.depthWrite = false;
-			debugLine.material.culling = None;
-		}
-		debugLine.material.depthTest = depth ? h3d.mat.Data.Compare.LessEqual : h3d.mat.Data.Compare.Always;
-		debugLine.shader.mproj = curProjMatrix;
-		debugLine.shader.start = new h3d.Vector(x1, y1, z1);
-		debugLine.shader.end = new h3d.Vector(x2, y2, z2);
-		debugLine.shader.color = color;
-		debugLine.render(h3d.Engine.getCurrent());
-	}
-
-	public function lineP( a : { x : Float, y : Float, z : Float }, b : { x : Float, y : Float, z : Float }, color = 0x80FF0000, depth = false ) {
-		line(a.x, a.y, a.z, b.x, b.y, b.z, color, depth);
 	}
 
 	public function dispose() {

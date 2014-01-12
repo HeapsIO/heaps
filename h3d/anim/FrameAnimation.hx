@@ -63,12 +63,8 @@ class FrameAnimation extends Animation {
 		for( o in getFrames() ) {
 			if( o.alphas != null ) {
 				var mat = o.targetObject.toMesh().material;
-				if( mat.colorMul == null ) {
-					mat.colorMul = new Vector(1, 1, 1, 1);
-					if( mat.blendDst == Zero )
-						mat.blend(SrcAlpha, OneMinusSrcAlpha);
-				}
-				mat.colorMul.w = o.alphas[frame];
+				if( mat.blendMode == Normal ) mat.blendMode = Alpha;
+				mat.color.w = o.alphas[frame];
 			} else if( o.targetSkin != null ) {
 				o.targetSkin.currentRelPose[o.targetJoint] = o.frames[frame];
 				o.targetSkin.jointsUpdated = true;

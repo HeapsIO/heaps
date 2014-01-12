@@ -29,13 +29,14 @@ class Test {
 		
 		scene = new Scene();
 		obj1 = new Mesh(prim, mat, scene);
-		obj2 = new Mesh(prim, mat, scene);
+		obj2 = new Mesh(prim, new h3d.mat.MeshMaterial(), scene);
+		obj2.material.color.set(1, 0.7, 0.5);
 		
-		mat.lightSystem = {
+		/*mat.lightSystem = {
 			ambient : new h3d.Vector(0, 0, 0),
 			dirs : [{ dir : new h3d.Vector(-0.3,-0.5,-1), color : new h3d.Vector(1,1,1) }],
 			points : [{ pos : new h3d.Vector(1.5,0,0), color : new h3d.Vector(3,0,0), att : new h3d.Vector(0,0,1) }],
-		};
+		};*/
 		
 		update();
 		hxd.System.setLoop(update);

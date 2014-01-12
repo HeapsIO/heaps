@@ -4,14 +4,16 @@ class Scene extends Object implements h3d.IDrawable {
 
 	public var camera : h3d.Camera;
 	var prePasses : Array<h3d.IDrawable>;
-	var extraPasses : Array<h3d.IDrawable>;
+	var postPasses : Array<h3d.IDrawable>;
+	var passes : Map<String,h3d.pass.Base>;
 	var ctx : RenderContext;
 	
 	public function new() {
 		super(null);
 		camera = new h3d.Camera();
 		ctx = new RenderContext();
-		extraPasses = [];
+		passes = new Map();
+		postPasses = [];
 		prePasses = [];
 	}
 	
@@ -26,18 +28,43 @@ class Scene extends Object implements h3d.IDrawable {
 		if( before )
 			prePasses.push(p);
 		else
-			extraPasses.push(p);
+			postPasses.push(p);
 	}
 	
 	public function removePass(p) {
-		extraPasses.remove(p);
+		postPasses.remove(p);
 		prePasses.remove(p);
 	}
 	
 	public function setElapsedTime( elapsedTime ) {
 		ctx.elapsedTime = elapsedTime;
 	}
+	
+	function createDefaultPass( name : String ) : h3d.pass.Base {
+		switch( name ) {
+		case "default", "alpha", "additive":
+			return new h3d.pass.Base();
+		default:
+			throw "Don't know how to create pass '" + name + "', use s3d.setRenderPass()";
+			return null;
+		}
+	}
+	
+	public function getRenderPass( name : String ) {
+		var p = passes.get(name);
+		if( p == null ) {
+			p = createDefaultPass(name);
+			setRenderPass(name, p);
+		}
+		return p;
+	}
+	
+	public function setRenderPass( name : String, p : h3d.pass.Base ) {
+		passes.set(name, p);
+	}
 
+	@:access(h3d.pass.Pass)
+	@:access(h3d.scene.RenderContext)
 	public function render( engine : h3d.Engine ) {
 		camera.screenRatio = engine.width / engine.height;
 		camera.update();
@@ -47,13 +74,31 @@ class Scene extends Object implements h3d.IDrawable {
 		ctx.engine = engine;
 		ctx.time += ctx.elapsedTime;
 		ctx.frame++;
-		ctx.currentPass = 0;
 		for( p in prePasses )
 			p.render(engine);
 		sync(ctx);
-		drawRec(ctx);
-		ctx.finalize();
-		for( p in extraPasses )
+		emitRec(ctx);
+		// sort by pass id
+		haxe.ds.ListSort.sortSingleLinked(ctx.passes, function(p1, p2) {
+			return p1.pass.passId - p2.pass.passId;
+		});
+		// dispatch to the actual pass implementation
+		var curPass = ctx.passes;
+		while( curPass != null ) {
+			var passId = curPass.pass.passId;
+			var p = curPass, prev = null;
+			while( p != null && p.pass.passId == passId ) {
+				prev = p;
+				p = p.next;
+			}
+			prev.next = null;
+			var render = getRenderPass(curPass.pass.name);
+			render.draw(ctx, curPass);
+			prev.next = p;
+			curPass = p;
+		}
+		ctx.done();
+		for( p in postPasses )
 			p.render(engine);
 		engine.curProjMatrix = oldProj;
 		ctx.camera = null;

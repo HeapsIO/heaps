@@ -1,34 +1,61 @@
 package h3d.scene;
+import h3d.pass.Object in ObjectPass;
 
 class RenderContext {
+
 	public var engine : h3d.Engine;
 	public var camera : h3d.Camera;
 	public var time : Float;
 	public var elapsedTime : Float;
-	public var currentPass : Int;
 	public var frame : Int;
-	public var localPos : h3d.Matrix;
-	var passes : Array<RenderContext -> Void>;
+	
+	public var drawPass : ObjectPass;
+	
+	var pool : ObjectPass;
+	var passes : ObjectPass;
 	
 	public function new() {
 		time = 0.;
 		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
 	}
 	
-	public function addPass(p) {
-		if( passes == null ) passes = [];
-		passes.push(p);
+	@:access(h3d.pass.Pass)
+	public inline function emit( mat : h3d.mat.Material, obj ) {
+		var p = mat.mainPass;
+		while( p != null ) {
+			emitPass(p, obj);
+			p = p.nextPass;
+		}
 	}
 	
-	public function finalize() {
-		var old = passes;
-		while( old != null ) {
-			passes = null;
-			currentPass++;
-			for( p in old )
-				p(this);
-			old = passes;
+	public function emitPass( pass : h3d.pass.Pass, obj : h3d.scene.Object ) {
+		var o = pool;
+		if( o == null )
+			o = new ObjectPass();
+		else
+			pool = o.next;
+		o.pass = pass;
+		o.obj = obj;
+		o.next = passes;
+		passes = o;
+		return o;
+	}
+	
+	public function done() {
+		drawPass = null;
+		// move passes to pool, and erase data
+		var p = passes, prev = null;
+		while( p != null ) {
+			p.obj = null;
+			p.pass = null;
+			prev = p;
+			p = p.next;
 		}
+		if( prev != null ) {
+			prev.next = pool;
+			pool = prev;
+		}
+		passes = null;
 	}
 	
 }
