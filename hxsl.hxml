@@ -1,0 +1,6 @@
+-cp test
+-js hxsl.js
+-main Test
+-dce full
+-lib h3d
+-cp .
