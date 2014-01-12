@@ -1,0 +1,174 @@
+* {
+	font-family : "Arial";
+	font-size : 14px;
+	color : white;
+	offset : 0 0;
+	border : none;
+	background-color : transparent;
+	text-align : left;
+}
+
+div.modal {
+	layout : dock;
+	dock : full;
+	background-color : rgba(0,0,0,0.8);
+}
+
+button, select {
+	background-color : gradient(#434343, #4B4B4B, #383838, #3A3A3A);
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	padding : 5px;
+}
+
+button:hover {
+	background-color : gradient(#282828,#2A2A2A,#333333,#3B3B3B);
+	border : 1px solid gradient(#606060,#606060,#707070,#606060);
+	margin-top : 1px;
+	padding-bottom : 4px;
+}
+
+:disabled {
+	color : #888;
+}
+
+box {
+	layout : inline;
+	spacing : 5 5;
+}
+
+:inline {
+	layout : inline;
+}
+
+:horizontal {
+	layout : horizontal;
+}
+
+:vertical {
+	layout : vertical;
+}
+
+:absolute {
+	layout : absolute;
+}
+
+:dock {
+	layout : dock;
+}
+
+box.panel {
+	background-color : gradient(#303030,#353535,#202020,#252525);
+}
+
+slider {
+	width : 100px;
+	height : 3px;
+	margin : 7px 5px;
+	background-color : #252525;
+	border : 1px solid gradient(#434343, #4B4B4B, #383838, #3A3A3A);
+}
+
+slider button, slider button:hover {
+	margin-top : -4px;
+	padding : 5px 2px;
+}
+
+checkbox {
+	width : 9px;
+	height : 9px;
+	color : #fff;
+	margin-top : 3px;
+	tick-spacing : 2px;
+	tick-color : gradient(#C0C0C0,#B0B0B0,#888888,#707070);
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	background-color : gradient(#303030,#252525,#252525,#252525);
+}
+
+itemlist {
+	padding : 5px;
+	vertical-spacing : 3px;
+	cursor-color : #333;
+	selection-color : #000;
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	background-color : gradient(#303030,#252525,#252525,#252525);
+	overflow : hidden;
+}
+
+input {
+	width : 80px;
+	height : 16px;
+	padding : 3px;
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	background-color : gradient(#303030,#252525,#252525,#252525);
+	overflow : hidden;
+}
+
+input:focus {
+	border : 1px solid white;
+	cursor-color : white;
+}
+
+color {
+	width : 16px;
+	height : 16px;
+	padding : 1px;
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+}
+
+color:hover {
+	border : 1px solid gradient(#C0C0C0,#B0B0B0,#888888,#707070);
+}
+
+colorpicker {
+	width : 200px;
+	height : 320px;
+	layout : absolute;
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	background-color : gradient(#303030,#252525,#252525,#252525);
+}
+
+gradienteditor {
+	width : 450px;
+	height : 200px;
+	layout : absolute;
+	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
+	background-color : gradient(#303030,#252525,#252525,#252525);
+}
+
+:close {
+	icon : url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAB3RJTUUH3QsICzInlD+yVAAAABd0RVh0U29mdHdhcmUAR0xEUE5HIHZlciAzLjRxhaThAAAACHRwTkdHTEQzAAAAAEqAKR8AAAAEZ0FNQQAAsY8L/GEFAAAABmJLR0QA/wD/AP+gvaeTAAAAOklEQVR4nGP4z/CfJMQw2DVAAJoiVEEMG9D0YBiBzUlwRdgsxOGH/9hVU0sDaU4izdPkBCuNY5oWGgC4sxwBPtUQzAAAAABJRU5ErkJggg=');
+	icon-color : #999;
+}
+
+button:close {
+	width : 10px;
+	height : 10px;
+	padding : 2px;
+	icon-left : -1px;
+	icon-top : -1px;
+}
+
+select {
+	padding-left : 20px;
+	icon : url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAIAAAC0tAIdAAAAB3RJTUUH3QsGCg4t5gQ/sQAAABd0RVh0U29mdHdhcmUAR0xEUE5HIHZlciAzLjRxhaThAAAACHRwTkdHTEQzAAAAAEqAKR8AAAAEZ0FNQQAAsY8L/GEFAAAABmJLR0QA/wD/AP+gvaeTAAAAQElEQVR4nGP4z/CfeMSARRQOCKtGA/hUYwXYVeMBmKr34gZ4fUlamFBfNch9JPmSBNU4NeBxN7oGgr5EaKAwTABmAPc478+46wAAAABJRU5ErkJggg=');
+	icon-left : 3px;
+	icon-top : 5px;
+	icon-color : #999;
+}
+
+select:hover {
+	icon-color : #FFF;
+}
+
+itemlist.popup {
+	position : absolute;
+}
+
+value input {
+	width : 40px;
+	text-align : center;
+}
+
+value input:focus {
+	text-align : left;
+}

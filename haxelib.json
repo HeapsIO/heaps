@@ -1,0 +1,10 @@
+{
+	"name" : "h3d",
+	"url" : "https://github.com/ncannasse/h3d",
+	"license" : "BSD",
+    "description" : "Lightweight Stage3D engine",
+    "version" : "0.0.1",
+	"releasenote" : "",
+	"contributors" : ["ncannasse"],
+    "dependencies" : { "hxsl" : "" }
+}
