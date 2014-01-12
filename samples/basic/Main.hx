@@ -1,6 +1,6 @@
 import h3d.scene.*;
 
-class Test {
+class Main {
 	
 	var engine : h3d.Engine;
 	var time : Float;
@@ -60,7 +60,7 @@ class Test {
 		haxe.Log.setColor(0xFF0000);
 		#end
 		hxd.Res.initEmbed();
-		new Test();
+		new Main();
 	}
 	
 }

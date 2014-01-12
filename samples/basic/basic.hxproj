@@ -4,7 +4,7 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="engine.js" />
+    <movie path="main.js" />
     <movie fps="60" />
     <movie width="800" />
     <movie height="600" />
@@ -15,15 +15,15 @@
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
-    <class path="samples\basic" />
+    <!-- example: <class path="..." /> -->
   </classpaths>
   <!-- Build options -->
   <build>
     <option directives="" />
-    <option flashStrict="True" />
-    <option mainClass="Test" />
+    <option flashStrict="False" />
+    <option mainClass="Main" />
     <option enabledebug="False" />
-    <option additional="-lib format&#xA;-lib hxsl3&#xA;-D h3d&#xA;-D resourcesPath=samples/res&#xA;-D source-map-content&#xA;-dce full" />
+    <option additional="-lib heaps&#xA;-D resourcesPath=../res&#xA;-D source-map-content&#xA;-dce full" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

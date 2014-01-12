@@ -1,9 +1,0 @@
--cp samples/basic
--js engine.js
--main Test
--lib format
--lib hxsl3
--D h3d
--D resourcesPath=samples/res
--D source-map-content
--dce full
