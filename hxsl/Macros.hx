@@ -100,7 +100,8 @@ class Macros {
 				var f2 : Field = {
 					name : name,
 					pos : pos,
-					kind : FVar(t,makeDef(v.type,pos)),
+					kind : FVar(t, makeDef(v.type, pos)),
+					meta : [{ name : ":noCompletion", pos : pos }],
 				};
 				var fget : Field = {
 					name : "get_" + v.name,
@@ -117,6 +118,7 @@ class Macros {
 							},
 					}),
 					access : [AInline],
+					meta : [{ name : ":noCompletion", pos : pos }],
 				};
 				var fset : Field = {
 					name : "set_" + v.name,
@@ -133,6 +135,7 @@ class Macros {
 							}
 					}),
 					access : [AInline],
+					meta : [{ name : ":noCompletion", pos : pos }],
 				};
 				fields.push(f);
 				fields.push(f2);
