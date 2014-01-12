@@ -189,7 +189,7 @@ class Checker {
 	}
 
 	function typeExpr( e : Expr, with : WithType ) : TExpr {
-		var type = null;
+		var type;
 		var ed = switch( e.expr ) {
 		case EConst(c):
 			type = switch( c ) {
@@ -335,6 +335,7 @@ class Checker {
 				tv.type = init.t;
 			}
 			vars.set(tv.name, tv);
+			type = TVoid;
 			TVarDecl(tv, init);
 		case EUnop(op,e1):
 			var e1 = typeExpr(e1, Value);
