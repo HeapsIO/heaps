@@ -97,12 +97,22 @@ class Base {
 			fillRec(v, p.type, buf.params, p.pos);
 		}
 		var tid = 0;
-		for( p in s.textures )
-			buf.tex[tid++] = getParamValue(p, shaders);
+		for( p in s.textures ) {
+			var t = getParamValue(p, shaders);
+			if( t == null ) t = h3d.mat.Texture.fromColor(0xFFFF00FF);
+			buf.tex[tid++] = t;
+		}
 		return buf;
 	}
 	
 	@:access(hxsl.Shader)
+	public function compileShader( p : Pass ) {
+		var shaders = p.getShadersRec();
+		var instances = [for( s in shaders ) { s.updateConstants(globals); s.instance; }];
+		var shader = shaderCache.link(instances, output);
+		return shader;
+	}
+	
 	@:access(h3d.scene.Object)
 	@:access(h3d.Engine.driver)
 	public function draw( ctx : h3d.scene.RenderContext, passes : Object ) {
@@ -110,11 +120,11 @@ class Base {
 		setGlobals();
 		var p = passes;
 		while( p != null ) {
-			var pp = p.pass.parentPass;
-			var shaders = pp == null ? p.pass.shaders : pp.shaders.concat(p.pass.shaders);
-			var instances = [for( s in shaders ) { s.updateConstants(globals); s.instance; }];
-			var shader = shaderCache.link(instances, output);
+			var shaders = p.pass.getShadersRec();
+			var shader = compileShader(p.pass);
+			// TODO : sort passes by shader/textures
 			globalModelView.set(globals, p.obj.absPos);
+			// TODO : reuse buffers between calls
 			var vbuf = allocBuffer(shader.vertex, shaders);
 			var fbuf = allocBuffer(shader.fragment, shaders);
 			ctx.engine.driver.selectShader(shader.vertex, shader.fragment);

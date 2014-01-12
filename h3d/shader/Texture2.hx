@@ -1,10 +1,13 @@
 package h3d.shader;
 
-class Texture extends hxsl.Shader {
+/**
+	This is similar to [Texture] shader but uses a second UV set.
+**/
+class Texture2 extends hxsl.Shader {
 
 	static var SRC = {
 		@input var input : {
-			var uv : Vec2;
+			var uv2 : Vec2;
 		};
 		
 		@const var additive : Bool;
@@ -12,15 +15,15 @@ class Texture extends hxsl.Shader {
 		@param var killAlphaThreshold : Float;
 		
 		@param var texture : Sampler2D;
-		var calculatedUV : Vec2;
+		var calculatedUV2 : Vec2;
 		var pixelColor : Vec4;
 		
 		function vertex() {
-			calculatedUV = input.uv;
+			calculatedUV2 = input.uv2;
 		}
 		
 		function fragment() {
-			var c = texture.get(calculatedUV);
+			var c = texture.get(calculatedUV2);
 			if( killAlpha && c.a - killAlphaThreshold < 0 ) discard;
 			if( additive )
 				pixelColor += c;

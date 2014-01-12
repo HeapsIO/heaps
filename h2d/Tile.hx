@@ -148,14 +148,8 @@ class Tile {
 	}
 	
 
-	static var COLOR_CACHE = new Map<Int,h3d.mat.Texture>();
 	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?allocPos : h3d.impl.AllocPos ) {
-		var t = COLOR_CACHE.get(color);
-		if( t == null || t.isDisposed() ) {
-			t = h3d.mat.Texture.fromColor(color, allocPos);
-			COLOR_CACHE.set(color, t);
-		}
-		var t = new Tile(t, 0, 0, 1, 1);
+		var t = new Tile(h3d.mat.Texture.fromColor(color), 0, 0, 1, 1);
 		// scale to size
 		t.width = width;
 		t.height = height;
@@ -209,42 +203,6 @@ class Tile {
 		if( pix2 != pixels ) pix2.dispose();
 		return new Tile(t, 0, 0, pixels.width, pixels.height);
 	}
-	
-	#if flash
-	public static function fromSprites( sprites : Array<flash.display.Sprite>, ?allocPos : h3d.impl.AllocPos ) {
-		var tmp = [];
-		var width = 0;
-		var height = 0;
-		for( s in sprites ) {
-			var g = s.getBounds(s);
-			var dx = Math.floor(g.left);
-			var dy = Math.floor(g.top);
-			var w = Math.ceil(g.right) - dx;
-			var h = Math.ceil(g.bottom) - dy;
-			tmp.push( { s : s, x : width, dx : dx, dy : dy, w : w, h : h } );
-			width += w;
-			if( height < h ) height = h;
-		}
-		var rw = 1, rh = 1;
-		while( rw < width )
-			rw <<= 1;
-		while( rh < height )
-			rh <<= 1;
-		var bmp = new flash.display.BitmapData(rw, rh, true, 0);
-		var m = new flash.geom.Matrix();
-		for( t in tmp ) {
-			m.tx = t.x-t.dx;
-			m.ty = -t.dy;
-			bmp.draw(t.s, m);
-		}
-		var main = fromBitmap(hxd.BitmapData.fromNative(bmp), allocPos);
-		bmp.dispose();
-		var tiles = [];
-		for( t in tmp )
-			tiles.push(main.sub(t.x, 0, t.w, t.h, t.dx, t.dy));
-		return tiles;
-	}
-	#end
 	
 	static function isEmpty( b : hxd.BitmapData, px, py, width, height, bg : Int ) {
 		var empty = true;
