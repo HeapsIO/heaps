@@ -73,7 +73,29 @@ class Splitter {
 			switch( v.kind ) {
 			case Input:
 				// create a var that will pass the input from vertex to fragment
-				throw "TODO";
+				var nv : TVar = {
+					id : Tools.allocVarId(),
+					name : v.name,
+					kind : Var,
+					type : v.type,
+				};
+				uniqueName(nv);
+				var i = vvars.get(v.id);
+				if( i == null ) {
+					i = {
+						local : false,
+						v : v,
+						read : 0,
+						write : 0,
+					};
+					vvars.set(v.id, i);
+				}
+				i.read++;
+				vvars.set(nv.id, { local : false, v : nv, read : 0, write : 1 } );
+				fvars.set(nv.id, { local : false, v : nv, read : 1, write : 0 });
+				addExpr(vfun, { e : TBinop(OpAssign, { e : TVar(nv), t : v.type, p : vfun.expr.p }, { e : TVar(v), t : v.type, p : vfun.expr.p }), t : v.type, p : vfun.expr.p } );
+				varMap.set(v, nv);
+				inf.local = true;
 			case Var if( inf.write > 0 ):
 				var nv : TVar = {
 					id : Tools.allocVarId(),
