@@ -147,7 +147,7 @@ class File {
 		#end
 	}
 
-	public function saveBytesAt( path : String, data : haxe.io.Bytes, dataPos : Int, dataSize : Int, filePos : Int ) {
+	public static function saveBytesAt( path : String, data : haxe.io.Bytes, dataPos : Int, dataSize : Int, filePos : Int ) {
 		#if air3
 		var f = new flash.filesystem.File(path);
 		var o = new flash.filesystem.FileStream();

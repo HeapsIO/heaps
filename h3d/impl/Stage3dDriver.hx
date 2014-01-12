@@ -49,6 +49,8 @@ class Stage3dDriver extends Driver {
 	var antiAlias : Int;
 	var width : Int;
 	var height : Int;
+	var enableDraw : Bool;
+	var capture : { bmp : hxd.BitmapData, callb : Void -> Void };
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -65,6 +67,7 @@ class Stage3dDriver extends Driver {
 	}
 	
 	override function reset() {
+		enableDraw = true;
 		curMatBits = -1;
 		curShader = null;
 		curBuffer = null;
@@ -112,6 +115,10 @@ class Stage3dDriver extends Driver {
 		ctx.clear(r, g, b, a);
 	}
 	
+	override function setCapture( bmp : hxd.BitmapData, onCapture : Void -> Void ) {
+		capture = { bmp : bmp, callb : onCapture };
+	}
+	
 	override function dispose() {
 		s3d.removeEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
 		if( ctx != null ) ctx.dispose();
@@ -123,6 +130,14 @@ class Stage3dDriver extends Driver {
 	}
 	
 	override function present() {
+		if( capture != null ) {
+			ctx.drawToBitmapData(capture.bmp.toNative());
+			ctx.present();
+			var callb = capture.callb;
+			capture = null;
+			callb();
+			return;
+		}
 		ctx.present();
 	}
 	
@@ -361,13 +376,14 @@ class Stage3dDriver extends Driver {
 	}
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
-		ctx.drawTriangles(ibuf, startIndex, ntriangles);
+		if( enableDraw ) ctx.drawTriangles(ibuf, startIndex, ntriangles);
 	}
 
 	override function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
-		if( x == 0 && y == 0 && width < 0 && height < 0 )
+		if( x == 0 && y == 0 && width < 0 && height < 0 ) {
+			enableDraw = true;
 			ctx.setScissorRectangle(null);
-		else {
+		} else {
 			if( x < 0 ) {
 				width += x;
 				x = 0;
@@ -380,10 +396,9 @@ class Stage3dDriver extends Driver {
 			var th = inTarget == null ? this.height : 9999;
 			if( x + width > tw ) width = tw - x;
 			if( y + height > th ) height = th - y;
-			// for flash, width=0 means no scissor...
-			if( width <= 0 ) { x = tw; width = 1; };
-			if( height <= 0 ) { y = th; height = 1; };
-			ctx.setScissorRectangle(new flash.geom.Rectangle(x, y, width, height));
+			enableDraw = width > 0 && height > 0;
+			if( enableDraw )
+				ctx.setScissorRectangle(new flash.geom.Rectangle(x, y, width, height));
 		}
 	}
 

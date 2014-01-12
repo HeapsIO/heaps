@@ -767,6 +767,8 @@ class Library {
 			var jModel = ids.get(j.index);
 			var subDef = getParent(jModel, "Deformer", true);
 			var defMat = defaultModelMatrixes.get(jModel.getName());
+			j.defMat = defMat.toMatrix(leftHand);
+			
 			if( subDef == null ) {
 				// if we have skinned subs, we need to keep in joint hierarchy
 				if( j.subs.length > 0 || keepJoint(j) )
@@ -795,7 +797,6 @@ class Library {
 				hskins.set(def.getId(), skin);
 			}
 			j.transPos = h3d.Matrix.L(subDef.get("Transform").getFloats());
-			j.defMat = defMat.toMatrix(leftHand);
 			if( leftHand ) DefaultMatrixes.rightHandToLeft(j.transPos);
 			
 			var weights = subDef.getAll("Weights");

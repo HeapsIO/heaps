@@ -553,7 +553,7 @@ class Parser {
 			url = url.substr(22);
 			if( StringTools.endsWith(url, "=") ) url = url.substr(0, -1);
 			var bytes = haxe.crypto.Base64.decode(url);
-			return hxd.res.Any.fromBytes("icon",bytes).getTexture().getPixels();
+			return hxd.res.Any.fromBytes("icon",bytes).toImage().getPixels();
 		default:
 			return null;
 		}

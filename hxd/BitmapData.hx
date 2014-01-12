@@ -4,6 +4,12 @@ private typedef InnerData = #if flash flash.display.BitmapData #elseif js js.htm
 
 abstract BitmapData(InnerData) {
 
+	#if flash
+	static var tmpRect = new flash.geom.Rectangle();
+	static var tmpPoint = new flash.geom.Point();
+	static var tmpMatrix = new flash.geom.Matrix();
+	#end
+	
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
 	
@@ -23,9 +29,63 @@ abstract BitmapData(InnerData) {
 		#end
 	}
 	
-	public inline function fill( rect : h2d.col.Bounds, color : Int ) {
+	public function fill( x : Int, y : Int, width : Int, height : Int, color : Int ) {
 		#if flash
-		this.fillRect(new flash.geom.Rectangle(Std.int(rect.xMin), Std.int(rect.yMin), Math.ceil(rect.xMax - rect.xMin), Math.ceil(rect.yMax - rect.yMin)), color);
+		var r = tmpRect;
+		r.x = x;
+		r.y = y;
+		r.width = width;
+		r.height = height;
+		this.fillRect(r, color);
+		#else
+		throw "TODO";
+		#end
+	}
+	
+	public function draw( x : Int, y : Int, src : BitmapData, srcX : Int, srcY : Int, width : Int, height : Int, ?blendMode : h2d.BlendMode ) {
+		#if flash
+		if( blendMode == null ) blendMode = Normal;
+		var r = tmpRect;
+		r.x = srcX;
+		r.y = srcY;
+		r.width = width;
+		r.height = height;
+		switch( blendMode ) {
+		case None:
+			var p = tmpPoint;
+			p.x = x;
+			p.y = y;
+			this.copyPixels(src.toNative(), r, p);
+		case Normal:
+			var p = tmpPoint;
+			p.x = x;
+			p.y = y;
+			trace(r, p);
+			this.copyPixels(src.toNative(), r, p, null, null, false);
+		case Add:
+			var m = tmpMatrix;
+			m.tx = x - srcX;
+			m.ty = y - srcY;
+			r.x = x;
+			r.y = y;
+			this.draw(src.toNative(), m, null, flash.display.BlendMode.ADD, r, false);
+		case Erase:
+			var m = tmpMatrix;
+			m.tx = x - srcX;
+			m.ty = y - srcY;
+			r.x = x;
+			r.y = y;
+			this.draw(src.toNative(), m, null, flash.display.BlendMode.ERASE, r, false);
+		case Multiply:
+			var m = tmpMatrix;
+			m.tx = x - srcX;
+			m.ty = y - srcY;
+			r.x = x;
+			r.y = y;
+			this.draw(src.toNative(), m, null, flash.display.BlendMode.MULTIPLY, r, false);
+		case SoftAdd:
+			throw "BlendMode not supported";
+		}
 		#else
 		throw "TODO";
 		#end

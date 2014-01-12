@@ -159,5 +159,10 @@ class Texture {
 		COLOR_CACHE.set(color, t);
 		return t;
 	}
+	
+	public static function alloc( width : Int, height : Int, isTarget = false, ?allocPos : h3d.impl.AllocPos ) {
+		var engine = h3d.Engine.getCurrent();
+		return isTarget ? engine.mem.allocTargetTexture(width, height, allocPos) : engine.mem.allocTexture(width, height, null, allocPos);
+	}
 
 }

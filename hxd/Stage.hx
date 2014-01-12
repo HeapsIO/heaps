@@ -45,6 +45,24 @@ class Stage {
 		js.Browser.window.addEventListener("keyup", onKeyUp);
 		js.Browser.window.addEventListener("resize", onResize);
 		#end
+		#if flash
+		if( untyped hxd.System.isAir() )
+			setupOnCloseEvent();
+		#end
+	}
+	
+	#if flash
+	function setupOnCloseEvent() {
+		var nw : flash.events.EventDispatcher = Reflect.field(stage, "nativeWindow");
+		nw.addEventListener("closing", function(e:flash.events.Event) {
+			if( !onClose() )
+				e.preventDefault();
+		});
+	}
+	#end
+	
+	public dynamic function onClose() {
+		return true;
 	}
 	
 	public function event( e : hxd.Event ) {
@@ -165,6 +183,7 @@ class Stage {
 		ev.keyCode = e.keyCode;
 		ev.charCode = getCharCode(e);
 		event(ev);
+		#if flash
 		// prevent escaping fullscreen in air
 		if( e.keyCode == flash.ui.Keyboard.ESCAPE ) e.preventDefault();
 		// prevent back exiting app in mobile
@@ -172,6 +191,7 @@ class Stage {
 			e.preventDefault();
 			e.stopImmediatePropagation();
 		}
+		#end
 	}
 	
 	function getCharCode( e : flash.events.KeyboardEvent ) {

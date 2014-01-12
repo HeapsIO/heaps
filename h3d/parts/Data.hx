@@ -84,6 +84,8 @@ class State {
 	public var maxParts : Int;
 	public var shape : Shape;
 	public var emitFromShell : Bool;
+	public var emitLocal : Bool;
+	public var emitTrail : Bool;
 	public var randomDir : Bool;
 
 	// system globals
@@ -132,6 +134,7 @@ class State {
 		maxParts = 1000;
 		shape = SCone(VConst(1),VConst(Math.PI/4));
 		emitFromShell = false;
+		emitLocal = false;
 		randomDir = false;
 		// system globals
 		globalLife = 1;
@@ -157,7 +160,7 @@ class State {
 		delay = 0.;
 	}
 	
-	public /*inline*/ function eval( v : Value, time : Float, rand : Void -> Float ) : Float {
+	public inline function eval( v : Value, time : Float, rand : Void -> Float ) : Float {
 		return switch( v ) {
 		case VConst(c): c;
 		case VRandom(s, l, c): s + (switch( c ) { case No: l; case Start: l * time; case End: l * (1 - time); }) * rand();

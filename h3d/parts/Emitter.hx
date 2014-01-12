@@ -156,6 +156,19 @@ class Emitter extends h3d.scene.Object {
 	
 	function initPart(p:Particle) {
 		initPosDir(p);
+		if( !state.emitLocal ) {
+			var pos = new h3d.Vector(p.x, p.y, p.z);
+			pos.transform3x4(absPos);
+			p.x = pos.x;
+			p.y = pos.y;
+			p.z = pos.z;
+			var v = new h3d.Vector(p.dx, p.dy, p.dz);
+			v.transform3x3(absPos);
+			p.dx = v.x;
+			p.dy = v.y;
+			p.dz = v.z;
+		}
+		p.fx = p.fy = p.fz = 0;
 		p.time = 0;
 		p.lifeTimeFactor = 1 / eval(state.life, time, rand);
 	}
@@ -212,17 +225,17 @@ class Emitter extends h3d.scene.Object {
 	
 		// apply forces
 		if( state.force != null ) {
-			p.dx += eval(state.force.vx, time, rand) * dt;
-			p.dy += eval(state.force.vy, time, rand) * dt;
-			p.dz += eval(state.force.vz, time, rand) * dt;
+			p.fx += eval(state.force.vx, time, rand) * dt;
+			p.fy += eval(state.force.vy, time, rand) * dt;
+			p.fz += eval(state.force.vz, time, rand) * dt;
 		}
-		p.dz -= eval(state.gravity, time, rand) * dt;
+		p.fz -= eval(state.gravity, time, rand) * dt;
 		// calc speed and update position
 		var speed = eval(state.speed, p.time, rand);
 		var ds = speed * dt;
-		p.x += p.dx * ds;
-		p.y += p.dy * ds;
-		p.z += p.dz * ds;
+		p.x += p.dx * ds + p.fx * dt;
+		p.y += p.dy * ds + p.fy * dt;
+		p.z += p.dz * ds + p.fz * dt;
 		p.size = eval(state.size, p.time, rand);
 		p.ratio = eval(state.ratio, p.time, rand);
 		p.rotation = eval(state.rotation, p.time, rand);
@@ -333,82 +346,185 @@ class Emitter extends h3d.scene.Object {
 			t.v = 0; t.v2 = 1;
 			frames = [t];
 		}
-		while( p != null ) {
-			var f = frames[p.frame];
-			if( f == null ) f = frames[0];
-			var ratio = p.size * p.ratio * (f.height / f.width);
-			tmp[pos++] = p.x;
-			tmp[pos++] = p.y;
-			tmp[pos++] = p.z;
-			// delta
-			tmp[pos++] = 0;
-			tmp[pos++] = 0;
-			tmp[pos++] = p.rotation;
-			tmp[pos++] = p.size;
-			tmp[pos++] = ratio;
-			// UV
-			tmp[pos++] = f.u;
-			tmp[pos++] = f.v;
-			// RBGA
-			if( hasColor ) {
-				tmp[pos++] = p.cr;
-				tmp[pos++] = p.cg;
-				tmp[pos++] = p.cb;
-				tmp[pos++] = p.ca;
-			}
-			
-			tmp[pos++] = p.x;
-			tmp[pos++] = p.y;
-			tmp[pos++] = p.z;
-			tmp[pos++] = 0;
-			tmp[pos++] = 1;
-			tmp[pos++] = p.rotation;
-			tmp[pos++] = p.size;
-			tmp[pos++] = ratio;
-			tmp[pos++] = f.u;
-			tmp[pos++] = f.v2;
-			if( hasColor ) {
-				tmp[pos++] = p.cr;
-				tmp[pos++] = p.cg;
-				tmp[pos++] = p.cb;
-				tmp[pos++] = p.ca;
-			}
+		if( state.emitTrail ) {
+			var prev = p;
+			var prevX1 = p.x, prevY1 = p.y, prevZ1 = p.z;
+			var prevX2 = p.x, prevY2 = p.y, prevZ2 = p.z;
+			if( p != null ) p = p.next;
+			while( p != null ) {
+				var f = frames[p.frame];
+				if( f == null ) f = frames[0];
+				var ratio = p.size * p.ratio * (f.height / f.width);
+				
+				tmp[pos++] = prevX1;
+				tmp[pos++] = prevY1;
+				tmp[pos++] = prevZ1;
+				// delta
+				tmp[pos++] = 0;
+				tmp[pos++] = 0;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = p.size;
+				tmp[pos++] = ratio;
+				// UV
+				tmp[pos++] = f.u;
+				tmp[pos++] = f.v;
+				// RBGA
+				if( hasColor ) {
+					tmp[pos++] = p.cr;
+					tmp[pos++] = p.cg;
+					tmp[pos++] = p.cb;
+					tmp[pos++] = p.ca;
+				}
+				
+				tmp[pos++] = prevX2;
+				tmp[pos++] = prevY2;
+				tmp[pos++] = prevZ2;
+				tmp[pos++] = 0;
+				tmp[pos++] = 0;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = p.size;
+				tmp[pos++] = ratio;
+				tmp[pos++] = f.u;
+				tmp[pos++] = f.v2;
+				if( hasColor ) {
+					tmp[pos++] = p.cr;
+					tmp[pos++] = p.cg;
+					tmp[pos++] = p.cb;
+					tmp[pos++] = p.ca;
+				}
 
-			tmp[pos++] = p.x;
-			tmp[pos++] = p.y;
-			tmp[pos++] = p.z;
-			tmp[pos++] = 1;
-			tmp[pos++] = 0;
-			tmp[pos++] = p.rotation;
-			tmp[pos++] = p.size;
-			tmp[pos++] = ratio;
-			tmp[pos++] = f.u2;
-			tmp[pos++] = f.v;
-			if( hasColor ) {
-				tmp[pos++] = p.cr;
-				tmp[pos++] = p.cg;
-				tmp[pos++] = p.cb;
-				tmp[pos++] = p.ca;
-			}
+				var dx = p.x - prev.x;
+				var dy = p.y - prev.y;
+				var dz = p.z - prev.z;
+				var d = hxd.Math.invSqrt(dx * dx + dy * dy + dz * dz);
+				dx *= d;
+				dy *= d;
+				dz *= d;
+				var dir = new h3d.Vector(Math.sin(p.rotation), 0, Math.cos(p.rotation)).cross(new h3d.Vector(dx, dy, dz));
+				
+				prevX1 = p.x + dir.x * p.size;
+				prevY1 = p.y + dir.y * p.size;
+				prevZ1 = p.z + dir.z * p.size;
+				
+				prevX2 = p.x - dir.x * p.size;
+				prevY2 = p.y - dir.y * p.size;
+				prevZ2 = p.z - dir.z * p.size;
 
-			tmp[pos++] = p.x;
-			tmp[pos++] = p.y;
-			tmp[pos++] = p.z;
-			tmp[pos++] = 1;
-			tmp[pos++] = 1;
-			tmp[pos++] = p.rotation;
-			tmp[pos++] = p.size;
-			tmp[pos++] = ratio;
-			tmp[pos++] = f.u2;
-			tmp[pos++] = f.v2;
-			if( hasColor ) {
-				tmp[pos++] = p.cr;
-				tmp[pos++] = p.cg;
-				tmp[pos++] = p.cb;
-				tmp[pos++] = p.ca;
+				tmp[pos++] = prevX1;
+				tmp[pos++] = prevY1;
+				tmp[pos++] = prevZ1;
+				tmp[pos++] = 0;
+				tmp[pos++] = 0;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = p.size;
+				tmp[pos++] = ratio;
+				tmp[pos++] = f.u2;
+				tmp[pos++] = f.v;
+				if( hasColor ) {
+					tmp[pos++] = p.cr;
+					tmp[pos++] = p.cg;
+					tmp[pos++] = p.cb;
+					tmp[pos++] = p.ca;
+				}
+
+				tmp[pos++] = prevX2;
+				tmp[pos++] = prevY2;
+				tmp[pos++] = prevZ2;
+				tmp[pos++] = 0;
+				tmp[pos++] = 0;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = p.size;
+				tmp[pos++] = ratio;
+				tmp[pos++] = f.u2;
+				tmp[pos++] = f.v2;
+				if( hasColor ) {
+					tmp[pos++] = p.cr;
+					tmp[pos++] = p.cg;
+					tmp[pos++] = p.cb;
+					tmp[pos++] = p.ca;
+				}
+				
+				prev = p;
+				p = p.next;
 			}
-			
-			p = p.next;
+		} else {
+			while( p != null ) {
+				var f = frames[p.frame];
+				if( f == null ) f = frames[0];
+				var ratio = p.size * p.ratio * (f.height / f.width);
+				tmp[pos++] = p.x;
+				tmp[pos++] = p.y;
+				tmp[pos++] = p.z;
+				// delta
+				tmp[pos++] = -0.5;
+				tmp[pos++] = -0.5;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = p.size;
+				tmp[pos++] = ratio;
+				// UV
+				tmp[pos++] = f.u;
+				tmp[pos++] = f.v;
+				// RBGA
+				if( hasColor ) {
+					tmp[pos++] = p.cr;
+					tmp[pos++] = p.cg;
+					tmp[pos++] = p.cb;
+					tmp[pos++] = p.ca;
+				}
+				
+				tmp[pos++] = p.x;
+				tmp[pos++] = p.y;
+				tmp[pos++] = p.z;
+				tmp[pos++] = -0.5;
+				tmp[pos++] = 0.5;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = p.size;
+				tmp[pos++] = ratio;
+				tmp[pos++] = f.u;
+				tmp[pos++] = f.v2;
+				if( hasColor ) {
+					tmp[pos++] = p.cr;
+					tmp[pos++] = p.cg;
+					tmp[pos++] = p.cb;
+					tmp[pos++] = p.ca;
+				}
+
+				tmp[pos++] = p.x;
+				tmp[pos++] = p.y;
+				tmp[pos++] = p.z;
+				tmp[pos++] = 0.5;
+				tmp[pos++] = -0.5;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = p.size;
+				tmp[pos++] = ratio;
+				tmp[pos++] = f.u2;
+				tmp[pos++] = f.v;
+				if( hasColor ) {
+					tmp[pos++] = p.cr;
+					tmp[pos++] = p.cg;
+					tmp[pos++] = p.cb;
+					tmp[pos++] = p.ca;
+				}
+
+				tmp[pos++] = p.x;
+				tmp[pos++] = p.y;
+				tmp[pos++] = p.z;
+				tmp[pos++] = 0.5;
+				tmp[pos++] = 0.5;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = p.size;
+				tmp[pos++] = ratio;
+				tmp[pos++] = f.u2;
+				tmp[pos++] = f.v2;
+				if( hasColor ) {
+					tmp[pos++] = p.cr;
+					tmp[pos++] = p.cg;
+					tmp[pos++] = p.cb;
+					tmp[pos++] = p.ca;
+				}
+				
+				p = p.next;
+			}
 		}
 		var stride = 10;
 		if( hasColor ) stride += 4;
@@ -417,7 +533,7 @@ class Emitter extends h3d.scene.Object {
 		buffer.uploadVector(tmpBuf, 0, nverts);
 		var size = eval(state.globalSize, time, rand);
 		
-		material.pshader.mpos = this.absPos;
+		material.pshader.mpos = state.emitLocal ? this.absPos : h3d.Matrix.I();
 		material.pshader.mproj = ctx.camera.m;
 		material.pshader.partSize = new h3d.Vector(size, size * ctx.engine.width / ctx.engine.height);
 		material.pshader.hasColor = hasColor;

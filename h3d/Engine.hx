@@ -77,8 +77,8 @@ class Engine {
 		return driver.getDriverName(details);
 	}
 	
-	public function selectShader(vertex, fragment) {
-		driver.selectShader(vertex, fragment);
+	public function setCapture( bmp : hxd.BitmapData, callb : Void -> Void ) {
+		driver.setCapture(bmp,callb);
 	}
 
 	function selectBuffer( buf : h3d.impl.MemoryManager.BigBuffer ) {
