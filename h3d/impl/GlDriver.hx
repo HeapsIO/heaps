@@ -169,6 +169,8 @@ class GlDriver extends Driver {
 		case Textures:
 			for( i in 0...s.textures.length ) {
 				var t = buf.tex[i];
+				gl.activeTexture(GL.TEXTURE0 + i);
+				gl.uniform1i(s.textures[i], i);
 				
 				gl.bindTexture(GL.TEXTURE_2D, t.t);
 				var flags = TFILTERS[Type.enumIndex(t.mipMap)][Type.enumIndex(t.filter)];
@@ -177,9 +179,6 @@ class GlDriver extends Driver {
 				var w = TWRAP[Type.enumIndex(t.wrap)];
 				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, w);
 				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, w);
-				
-				gl.activeTexture(GL.TEXTURE0 + i);
-				gl.uniform1i(s.textures[i], i);
 			}
 		}
 	}
@@ -193,7 +192,6 @@ class GlDriver extends Driver {
 		var diff = bits ^ curMatBits;
 		if( diff == 0 )
 			return;
-		trace(diff);
 		if( diff & Pass.culling_mask != 0 ) {
 			var cull = Pass.getCulling(bits);
 			if( cull == 0 )

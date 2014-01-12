@@ -27,11 +27,16 @@ class Test {
 		var tex = hxd.Res.hxlogo.toTexture();
 		var mat = new h3d.mat.MeshMaterial(tex);
 		
+		var t2 = new h3d.shader.Texture(h3d.mat.Texture.fromColor(0x80808080));
+		mat.mainPass.addShader(t2);
+		
 		scene = new Scene();
 		obj1 = new Mesh(prim, mat, scene);
 		obj2 = new Mesh(prim, new h3d.mat.MeshMaterial(), scene);
 		obj2.material.color.set(1, 0.7, 0.5);
-		
+
+			trace(mat.mainPass.getDebugShaderCode(scene));
+
 		/*mat.lightSystem = {
 			ambient : new h3d.Vector(0, 0, 0),
 			dirs : [{ dir : new h3d.Vector(-0.3,-0.5,-1), color : new h3d.Vector(1,1,1) }],

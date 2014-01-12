@@ -54,6 +54,25 @@ class Pass {
 	public function setColorMask(r, g, b, a) {
 		this.colorMask = (r?1:0) | (g?2:0) | (b?4:0) | (a?8:0);
 	}
+	
+	public function addShader(s) {
+		shaders.push(s);
+	}
+	
+	public function removeShader(s) {
+		return shaders.remove(s);
+	}
+	
+	function getShadersRec() {
+		if( parentPass == null )
+			return shaders;
+		return parentPass.getShadersRec().concat(shaders);
+	}
 
+	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {
+		var shader = scene.getRenderPass(name).compileShader(this);
+		var toString = toHxsl ? function(d) return hxsl.Printer.shaderToString(d,true) : hxsl.GlslOut.toGlsl;
+		return "VERTEX=\n" + toString(shader.vertex.data) + "\n\nFRAGMENT=\n" + toString(shader.fragment.data);
+	}
 
 }

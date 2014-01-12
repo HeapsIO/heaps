@@ -6,3 +6,4 @@
 -D h3d
 -D resourcesPath=samples/res
 -D source-map-content
+-dce full

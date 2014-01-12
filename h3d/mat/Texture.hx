@@ -139,10 +139,14 @@ class Texture {
 	}
 	
 	static var tmpPixels : hxd.Pixels = null;
+	static var COLOR_CACHE = new Map<Int,h3d.mat.Texture>();
 	/**
 		Creates a 1x1 texture using the ARGB color passed as parameter.
 	**/
 	public static function fromColor( color : Int, ?allocPos : h3d.impl.AllocPos ) {
+		var t = COLOR_CACHE.get(color);
+		if( t != null && !t.isDisposed() )
+			return t;
 		var mem = h3d.Engine.getCurrent().mem;
 		var t = mem.allocTexture(1, 1, false, allocPos);
 		if( tmpPixels == null ) tmpPixels = new hxd.Pixels(1, 1, haxe.io.Bytes.alloc(4), BGRA);
@@ -152,6 +156,7 @@ class Texture {
 		tmpPixels.bytes.set(2, (color>>16) & 0xFF);
 		tmpPixels.bytes.set(3, color>>>24);
 		t.uploadPixels(tmpPixels);
+		COLOR_CACHE.set(color, t);
 		return t;
 	}
 	
