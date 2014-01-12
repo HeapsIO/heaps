@@ -1,4 +1,6 @@
 Heaps
 =====
 
-The GPU Game Framework
+High Performance Game Framework
+
+http://heaps.io
