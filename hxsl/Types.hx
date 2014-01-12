@@ -1,6 +1,6 @@
 package hxsl;
 
-#if h3d
+#if true
 
 typedef Vec = h3d.Vector;
 typedef IVec = Array<Int>;

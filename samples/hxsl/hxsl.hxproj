@@ -23,7 +23,7 @@
     <option flashStrict="True" />
     <option mainClass="Test" />
     <option enabledebug="False" />
-    <option additional="-dce full&#xA;-lib h3d&#xA;-cp ." />
+    <option additional="-dce full&#xA;-lib heaps" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
