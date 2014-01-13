@@ -57,6 +57,8 @@ class Macros {
 			{ expr : EObjectDecl([for( v in vl ) { field : v.name, expr : makeDef(v.type, pos) } ]), pos : pos };
 		case TArray(_):
 			macro new Array();
+		case TMat3, TMat3x4, TMat4:
+			macro new hxsl.Types.Matrix();
 		default:
 			null;
 		}
