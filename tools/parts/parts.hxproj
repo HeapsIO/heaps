@@ -21,6 +21,7 @@
   <build>
     <option directives="" />
     <option flashStrict="True" />
+    <option noInlineOnDebug="False" />
     <option mainClass="Main" />
     <option enabledebug="False" />
     <option additional="-lib hxsl&#xA;-D h3d&#xA;#-lib air3&#xA;-lib hscript&#xA;-dce full" />

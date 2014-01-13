@@ -87,6 +87,8 @@ class Emitter extends h3d.scene.Object {
 				count++;
 			}
 			emitCount -= 1;
+			if( state.emitTrail )
+				break;
 		}
 		var p = head;
 		while( p != null ) {
