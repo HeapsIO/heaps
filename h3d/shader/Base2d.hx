@@ -20,7 +20,7 @@ class Base2d extends hxsl.Shader {
 		
 		var spritePosition : Vec4;
 		var pixelColor : Vec4;
-		var calculateUV : Vec2;
+		@var var calculateUV : Vec2;
 
 		function __init__() {
 			spritePosition = vec4(input.position, zValue, 1);
@@ -34,7 +34,7 @@ class Base2d extends hxsl.Shader {
 		}
 		
 		function fragment() {
-			output.color = vec4(1,1,1,1);
+			output.color = pixelColor;
 		}
 		
 	};

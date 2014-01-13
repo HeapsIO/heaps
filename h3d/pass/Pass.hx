@@ -63,7 +63,11 @@ class Pass {
 	public function removeShader(s) {
 		return shaders.remove(s);
 	}
-	
+
+	public inline function getShaders() {
+		return new hxd.impl.ArrayIterator<hxsl.Shader>(shaders);
+	}
+
 	function getShadersRec() {
 		if( parentPass == null )
 			return shaders;

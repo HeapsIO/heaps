@@ -37,7 +37,6 @@ class Main extends hxd.App {
 	
 	override function update(dt:Float) {
 		spr.rotation += 0.01 * dt;
-		hxd.System.setLoop(function() { } );
 	}
 	
 	static function main() {
