@@ -295,8 +295,9 @@ class Linker {
 					switch( f.expr.e ) {
 					case TBlock(el):
 						var index = 0;
+						var priority = -el.length;
 						for( e in el )
-							addShader(s.name+".__init__"+(index++),true,e, -1);
+							addShader(s.name+".__init__"+(index++),true,e, priority++);
 					default:
 						addShader(s.name+".__init__",true,f.expr, -1);
 					}
