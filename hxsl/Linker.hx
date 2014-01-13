@@ -159,6 +159,8 @@ class Linker {
 			if( curShader != null ) {
 				//trace(curShader.name + " read " + v.path);
 				curShader.read.set(v.id, v);
+				// if we read a varying, force into fragment
+				if( v.v.kind == Var ) curShader.vertex = false;
 			}
 			return { e : TVar(v.v), t : v.v.type, p : e.p };
 		case TBinop(op, e1, e2):
@@ -307,7 +309,7 @@ class Linker {
 		shaders.sort(sortByPriorityDesc);
 		
 		// build dependency tree
-		var s = new ShaderInfos("", true);
+		var s = new ShaderInfos("<entry>", true);
 		s.deps = new Map();
 		for( outVar in outVars ) {
 			var v = varMap.get(outVar);
@@ -320,7 +322,7 @@ class Linker {
 		var v = [], f = [];
 		collect(s, v, true);
 		collect(s, f, false);
-		if( v.pop().name != "" ) throw "assert";
+		if( v.pop() != s ) throw "assert";
 		
 		// check that all dependencies are matched
 		for( s in shaders )
