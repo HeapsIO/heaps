@@ -32,7 +32,7 @@ class Tile {
 	
 	public function getTexture() {
 		if( innerTex == null || innerTex.isDisposed() )
-			return Tools.getCoreObjects().getEmptyTexture();
+			return h3d.mat.Texture.fromColor(0xFFFF00FF);
 		return innerTex;
 	}
 	

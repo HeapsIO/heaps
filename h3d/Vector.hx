@@ -130,21 +130,45 @@ class Vector {
 		z = pz;
 		w = pw;
 	}
-
-	public inline function loadColor( c : Int, scale : Float = 1.0 ) {
-		var s = scale / 255;
-		x = ((c >> 16) & 0xFF) * s;
-		y = ((c >> 8) & 0xFF) * s;
-		z = (c & 0xFF) * s;
-		w = (c >>> 24) * s;
-	}
 	
+	public inline function clone() {
+		return new Vector(x,y,z,w);
+	}
+
 	public inline function toPoint() {
 		return new h3d.col.Point(x, y, z);
 	}
+
+	public function toString() {
+		return '{${x.fmt()},${y.fmt()},${z.fmt()},${w.fmt()}}';
+	}
+
+	/// ----- COLOR FUNCTIONS
+
+	public var r(get, set) : Float;
+	public var g(get, set) : Float;
+	public var b(get, set) : Float;
+	public var a(get, set) : Float;
+
+	inline function get_r() return x;
+	inline function get_g() return y;
+	inline function get_b() return z;
+	inline function get_a() return w;
+	inline function set_r(v) return x = v;
+	inline function set_g(v) return y = v;
+	inline function set_b(v) return z = v;
+	inline function set_a(v) return w = v;
 	
+	public inline function setColor( c : Int, scale : Float = 1.0 ) {
+		var s = scale / 255;
+		r = ((c >> 16) & 0xFF) * s;
+		g = ((c >> 8) & 0xFF) * s;
+		b = (c & 0xFF) * s;
+		a = (c >>> 24) * s;
+	}
+		
 	public inline function toColor() {
-		return (Std.int(w.clamp() * 255 + 0.499) << 24) | (Std.int(x.clamp() * 255 + 0.499) << 16) | (Std.int(y.clamp() * 255 + 0.499) << 8) | Std.int(z.clamp() * 255 + 0.499);
+		return (Std.int(a.clamp() * 255 + 0.499) << 24) | (Std.int(r.clamp() * 255 + 0.499) << 16) | (Std.int(g.clamp() * 255 + 0.499) << 8) | Std.int(b.clamp() * 255 + 0.499);
 	}
 	
 	public static inline function fromColor( c : Int, scale : Float = 1.0 ) {
@@ -152,12 +176,4 @@ class Vector {
 		return new Vector(((c>>16)&0xFF)*s,((c>>8)&0xFF)*s,(c&0xFF)*s,(c >>> 24)*s);
 	}
 	
-	public inline function clone() {
-		return new Vector(x,y,z,w);
-	}
-
-	public function toString() {
-		return '{${x.fmt()},${y.fmt()},${z.fmt()},${w.fmt()}}';
-	}
-
 }

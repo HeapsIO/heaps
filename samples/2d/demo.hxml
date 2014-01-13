@@ -1,7 +1,6 @@
--swf demo.swf
--swf-header 800:600:60:FFFFFF
---flash-strict
--swf-version 11.6
--main Demo
--lib h3d
+-js main.js
+-main Main
+-lib heaps
+-dce full
 -D resourcesPath=../res
+-D source-map-content

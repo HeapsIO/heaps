@@ -37,6 +37,8 @@
   <hiddenPaths>
     <hidden path="engine.hxml" />
     <hidden path="obj" />
+    <hidden path="main.js" />
+    <hidden path="main.js.map" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />

@@ -395,9 +395,10 @@ class Scene extends Layers implements h3d.IDrawable {
 		ctx.engine = engine;
 		ctx.frame++;
 		ctx.time += ctx.elapsedTime;
-		ctx.currentPass = 0;
 		sync(ctx);
+		ctx.begin();
 		drawRec(ctx);
+		ctx.end();
 	}
 	
 	override function sync( ctx : RenderContext ) {
@@ -408,7 +409,6 @@ class Scene extends Layers implements h3d.IDrawable {
 			height = ctx.engine.height;
 			posChanged = true;
 		}
-		Tools.checkCoreObjects();
 		super.sync(ctx);
 	}
 	

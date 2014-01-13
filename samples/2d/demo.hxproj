@@ -4,13 +4,13 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="demo.swf" />
+    <movie path="main.js" />
     <movie fps="60" />
     <movie width="800" />
     <movie height="600" />
-    <movie version="11" />
-    <movie minorVersion="6" />
-    <movie platform="Flash Player" />
+    <movie version="1" />
+    <movie minorVersion="0" />
+    <movie platform="JavaScript" />
     <movie background="#FFFFFF" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
@@ -20,10 +20,10 @@
   <!-- Build options -->
   <build>
     <option directives="" />
-    <option flashStrict="True" />
-    <option mainClass="Demo" />
+    <option flashStrict="False" />
+    <option mainClass="Main" />
     <option enabledebug="False" />
-    <option additional="-lib h3d&#xA;-D resourcesPath=../res" />
+    <option additional="-lib heaps&#xA;-dce full&#xA;-D resourcesPath=../res&#xA;-D source-map-content" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -33,13 +33,9 @@
   <compileTargets>
     <!-- example: <compile path="..." /> -->
   </compileTargets>
-  <!-- Assets to embed into the output SWF -->
-  <library>
-    <!-- example: <asset path="..." id="..." update="..." glyphs="..." mode="..." place="..." sharepoint="..." /> -->
-  </library>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
-    <!-- example: <hidden path="..." /> -->
+    <hidden path="obj" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />
@@ -48,7 +44,8 @@
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
-    <option testMovie="Default" />
+    <option testMovie="OpenDocument" />
+    <option testMovieCommand="index.html" />
   </options>
   <!-- Plugin storage -->
   <storage />

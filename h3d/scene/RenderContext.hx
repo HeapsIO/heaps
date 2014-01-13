@@ -15,6 +15,7 @@ class RenderContext {
 	var passes : ObjectPass;
 	
 	public function new() {
+		frame = 0;
 		time = 0.;
 		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
 	}

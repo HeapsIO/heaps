@@ -1,60 +1,9 @@
 package hxsl;
 using hxsl.Ast;
-
-class AllocParam {
-	public var pos : Int;
-	public var instance : Int;
-	public var index : Int;
-	public var type : Type;
-	public var perObjectGlobal : AllocGlobal;
-	public function new(pos, instance, index, type) {
-		this.pos = pos;
-		this.instance = instance;
-		this.index = index;
-		this.type = type;
-	}
-}
-
-class AllocGlobal {
-	public var pos : Int;
-	public var gid : Int;
-	public var path : String;
-	public var type : Type;
-	public function new(pos, path, type) {
-		this.pos = pos;
-		this.path = path;
-		this.gid = Globals.allocID(path);
-		this.type = type;
-	}
-}
-
-class CompleteShader {
-	static var UID = 0;
-	public var id : Int;
-	public var data : ShaderData;
-	public var params : Array<AllocParam>;
-	public var paramsSize : Int;
-	public var globals : Array<AllocGlobal>;
-	public var globalsSize : Int;
-	public var textures : Array<AllocParam>;
-	public function new() {
-		id = UID++;
-	}
-}
-
-class ShaderBuffers {
-	public var globals : haxe.ds.Vector<Float>;
-	public var params : haxe.ds.Vector<Float>;
-	public var tex : haxe.ds.Vector<Types.Texture>;
-	public function new( c : CompleteShader ) {
-		globals = new haxe.ds.Vector(c.globalsSize);
-		params = new haxe.ds.Vector(c.paramsSize);
-		tex = new haxe.ds.Vector(c.textures.length);
-	}
-}
+import hxsl.RuntimeShader;
 
 class SearchMap {
-	public var linked : { vertex : CompleteShader, fragment : CompleteShader };
+	public var linked : RuntimeShader;
 	public var next : Map<Int,SearchMap>;
 	public function new() {
 	}
@@ -124,11 +73,12 @@ class Cache {
 			}
 		
 		var s = new hxsl.Splitter().split(s);
-		c.linked = {
-			vertex : flattenShader(s.vertex, Vertex, paramVars),
-			fragment : flattenShader(s.fragment, Fragment, paramVars),
-		};
-		return c.linked;
+		var r = new RuntimeShader();
+		r.vertex = flattenShader(s.vertex, Vertex, paramVars);
+		r.vertex.vertex = true;
+		r.fragment = flattenShader(s.fragment, Fragment, paramVars);
+		c.linked = r;
+		return r;
 	}
 	
 	function getPath( v : TVar ) {
@@ -139,7 +89,7 @@ class Cache {
 	
 	function flattenShader( s : ShaderData, kind : FunctionKind, params : Map < Int, { instance:Int, index:Int } > ) {
 		var flat = new Flatten();
-		var c = new CompleteShader();
+		var c = new RuntimeShaderData();
 		var data = flat.flatten(s, kind);
 		for( g in flat.allocData.keys() ) {
 			var alloc = flat.allocData.get(g);

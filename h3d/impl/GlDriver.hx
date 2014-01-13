@@ -55,7 +55,6 @@ class GlDriver extends Driver {
 	var curProgram : CompiledProgram;
 	var curMatBits : Int;
 	var programs : Map<Int, CompiledProgram>;
-	var shaders : Map<Int, js.html.webgl.Shader>;
 	
 	public function new() {
 		#if js
@@ -71,7 +70,6 @@ class GlDriver extends Driver {
 		var sub = new Float32Array(tmp.buffer, 0, 4);
 		fixMult = sub.length == 1; // should be 4
 		#end
-		shaders = new Map();
 		programs = new Map();
 		curAttribs = 0;
 		curMatBits = -1;
@@ -83,11 +81,8 @@ class GlDriver extends Driver {
 		curProgram = null;
 	}
 	
-	function compileShader( shader : hxsl.Cache.CompleteShader, vertex : Bool ) {
-		var s = shaders.get(shader.id);
-		if( s != null )
-			return new CompiledShader(s,vertex);
-		var type = vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
+	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
 		var code = hxsl.GlslOut.toGlsl(shader.data);
 		gl.shaderSource(s, code);
@@ -98,24 +93,22 @@ class GlDriver extends Driver {
 			if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
 			throw "An error occurred compiling the shaders: " + log + line;
 		}
-		shaders.set(shader.id, s);
-		return new CompiledShader(s,vertex);
+		return new CompiledShader(s,shader.vertex);
 	}
 	
-	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.Cache.CompleteShader ) {
+	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var prefix = s.vertex ? "vertex" : "fragment";
 		s.globals = gl.getUniformLocation(p.p, prefix + "Globals");
 		s.params = gl.getUniformLocation(p.p, prefix + "Params");
 		s.textures = [for( i in 0...shader.textures.length ) gl.getUniformLocation(p.p, prefix + "Textures[" + i + "]")];
 	}
 	
-	override function selectShader( vertex : hxsl.Cache.CompleteShader, fragment : hxsl.Cache.CompleteShader ) {
-		var pid = vertex.id ^ (fragment.id << 16);
-		var p = programs.get(pid);
+	override function selectShader( shader : hxsl.RuntimeShader ) {
+		var p = programs.get(shader.id);
 		if( p == null ) {
 			p = new CompiledProgram();
-			p.vertex = compileShader(vertex, true);
-			p.fragment = compileShader(fragment, false);
+			p.vertex = compileShader(shader.vertex);
+			p.fragment = compileShader(shader.fragment);
 			p.p = gl.createProgram();
 			gl.attachShader(p.p, p.vertex.s);
 			gl.attachShader(p.p, p.fragment.s);
@@ -124,12 +117,12 @@ class GlDriver extends Driver {
 				var log = gl.getProgramInfoLog(p.p);
 				throw "Program linkage failure: "+log;
 			}
-			initShader(p, p.vertex, vertex);
-			initShader(p, p.fragment, fragment);
+			initShader(p, p.vertex, shader.vertex);
+			initShader(p, p.fragment, shader.fragment);
 			p.attribNames = [];
 			p.attribs = [];
 			p.stride = 0;
-			for( v in vertex.data.vars )
+			for( v in shader.vertex.data.vars )
 				switch( v.kind ) {
 				case Input:
 					var size = switch( v.type ) {
@@ -142,7 +135,7 @@ class GlDriver extends Driver {
 					p.stride += size;
 				default:
 				}
-			programs.set(pid, p);
+			programs.set(shader.id, p);
 		}
 		if( curProgram == p ) return;
 		gl.useProgram(p.p);
@@ -155,12 +148,12 @@ class GlDriver extends Driver {
 		curProgram = p;
 	}
 	
-	override function uploadShaderBuffers( vertex : hxsl.Cache.ShaderBuffers, fragment : hxsl.Cache.ShaderBuffers, which : BufferKind ) {
-		uploadBuffer(curProgram.vertex, vertex, which);
-		uploadBuffer(curProgram.fragment, fragment, which);
+	override function uploadShaderBuffers( buf : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
+		uploadBuffer(curProgram.vertex, buf.vertex, which);
+		uploadBuffer(curProgram.fragment, buf.fragment, which);
 	}
 	
-	function uploadBuffer( s : CompiledShader, buf : hxsl.Cache.ShaderBuffers, which : BufferKind ) {
+	function uploadBuffer( s : CompiledShader, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Globals:
 			if( s.globals != null ) gl.uniform4fv(s.globals, new Float32Array(buf.globals.toData()));
@@ -272,6 +265,7 @@ class GlDriver extends Driver {
 		var b = gl.createBuffer();
 		#if js
 		gl.bindBuffer(GL.ARRAY_BUFFER, b);
+		if( count * stride == 0 ) throw "assert";
 		gl.bufferData(GL.ARRAY_BUFFER, count * stride * 4, GL.STATIC_DRAW);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		#else

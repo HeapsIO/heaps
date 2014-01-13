@@ -1,23 +1,12 @@
-class Demo {
+class Main extends hxd.App {
 	
-	var engine : h3d.Engine;
-	var scene : h2d.Scene;
 	var spr : h2d.Sprite;
 	
-	function new() {
-		engine = new h3d.Engine();
-		engine.onReady = init;
-		engine.backgroundColor = 0xFF000000;
-		engine.init();
-	}
-	
-	function init() {
-		scene = new h2d.Scene();
-
+	override function init() {
 		var tile = hxd.Res.hxlogo.toTile();
-		spr = new h2d.Sprite(scene);
-		spr.x = engine.width >> 1;
-		spr.y = engine.height >> 1;
+		spr = new h2d.Sprite(s2d);
+		spr.x = s2d.width >> 1;
+		spr.y = s2d.height >> 1;
 		
 		for( i in 0...16 ) {
 			var bmp = new h2d.Bitmap(tile, spr);
@@ -26,6 +15,7 @@ class Demo {
 			bmp.alpha = 0.5;
 		}
 
+		/*
 		var font = hxd.Res.CustomFont.build(32,{ antiAliasing : true });
 		var tf = new h2d.Text(font, scene);
 		tf.textColor = 0xFFFFFF;
@@ -42,19 +32,17 @@ class Demo {
 		tf.text = "Héllò h2d !";
 		tf.x = 20;
 		tf.scale(7);
-		
-
-		hxd.System.setLoop(update);
+		*/
 	}
 	
-	function update() {
-		spr.rotation += 0.01;
-		engine.render(scene);
+	override function update(dt:Float) {
+		spr.rotation += 0.01 * dt;
+		hxd.System.setLoop(function() { } );
 	}
 	
 	static function main() {
-		hxd.Res.loader = new hxd.res.Loader(hxd.res.EmbedFileSystem.create());
-		new Demo();
+		hxd.Res.initEmbed();
+		new Main();
 	}
 	
 }

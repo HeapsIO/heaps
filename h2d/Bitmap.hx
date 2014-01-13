@@ -10,7 +10,7 @@ class Bitmap extends Drawable {
 	}
 	
 	override function draw( ctx : RenderContext ) {
-		drawTile(ctx.engine,tile);
+		emitTile(ctx,tile);
 	}
 			
 	public static function create( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
