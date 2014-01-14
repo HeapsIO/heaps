@@ -230,12 +230,12 @@ class Bounds {
 		var mx = (xMax + xMin) * 0.5;
 		var my = (yMax + yMin) * 0.5;
 		var mz = (zMax + zMin) * 0.5;
-		xMin = mx - dx * v;
-		yMin = my - dy * v;
-		zMin = mz - dz * v;
-		xMax = mx + dx * v;
-		yMax = my + dy * v;
-		zMax = mz + dz * v;
+		xMin = mx - dx;
+		yMin = my - dy;
+		zMin = mz - dz;
+		xMax = mx + dx;
+		yMax = my + dy;
+		zMax = mz + dz;
 	}
 	
 	public inline function getMin() {
