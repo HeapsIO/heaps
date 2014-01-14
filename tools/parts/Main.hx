@@ -33,6 +33,10 @@ class Main extends hxd.App implements h3d.parts.Collider {
 		emit = new h3d.parts.Emitter(s3d);
 		emit.collider = this;
 		edit = new h3d.parts.Editor(emit, s2d);
+		
+		s3d.camera.pos.z -= 0.5;
+		s3d.camera.target.z += 0.5;
+		s3d.camera.viewX = -0.1;
 	}
 	
 	static function main() {
