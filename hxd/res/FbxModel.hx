@@ -1,6 +1,6 @@
 package hxd.res;
 
-class Model extends Resource {
+class FbxModel extends Resource {
 	
 	public static var isLeftHanded = true;
 	
