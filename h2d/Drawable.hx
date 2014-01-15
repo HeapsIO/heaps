@@ -49,7 +49,7 @@ class Drawable extends Sprite {
 	function emitTile( ctx : RenderContext, tile : Tile ) {
 		if( tile == null )
 			tile = new Tile(null, 0, 0, 5, 5);
-		ctx.beginDraw(tile.getTexture(), 8, blendMode, shaders);
+		ctx.beginDrawBatch(tile.getTexture(), 8, blendMode, shaders);
 
 		var ax = absX + tile.dx * matA + tile.dy * matC;
 		var ay = absY + tile.dx * matB + tile.dy * matD;

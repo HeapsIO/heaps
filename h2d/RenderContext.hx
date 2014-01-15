@@ -40,11 +40,9 @@ class RenderContext {
 		stride = 0;
 		if( compiledShader == null )
 			initShaders([baseShader]);
-		@:privateAccess {
-			engine.driver.selectShader(compiledShader);
-			engine.driver.selectMaterial(pass);
-			engine.driver.uploadShaderBuffers(buffers, Globals);
-		}
+		engine.selectShader(compiledShader);
+		engine.selectMaterial(pass);
+		engine.uploadShaderBuffers(buffers, Globals);
 	}
 	
 	function initShaders( shaders ) {
@@ -59,8 +57,19 @@ class RenderContext {
 		texture = null;
 	}
 	
-	public function flush() {
+	public function flush(force=false) {
 		if( bufPos == 0 ) return;
+		beforeDraw();
+		var nverts = Std.int(bufPos / stride);
+		var tmp = engine.mem.alloc(nverts, stride, 4);
+		tmp.uploadVector(buffer, 0, nverts);
+		engine.renderQuadBuffer(tmp);
+		tmp.dispose();
+		bufPos = 0;
+		texture = null;
+	}
+	
+	public function beforeDraw() {
 		baseShader.texture = texture;
 		switch( blendMode ) {
 		case Normal:
@@ -77,21 +86,21 @@ class RenderContext {
 			pass.blend(Zero, OneMinusSrcAlpha);
 		}
 		manager.fillParams(buffers, compiledShader, currentShaders);
-		@:privateAccess {
-			engine.driver.selectMaterial(pass);
-			engine.driver.uploadShaderBuffers(buffers, Params);
-			engine.driver.uploadShaderBuffers(buffers, Textures);
-		}
-		var nverts = Std.int(bufPos / stride);
-		var tmp = engine.mem.alloc(nverts, stride, 4);
-		tmp.uploadVector(buffer, 0, nverts);
-		engine.renderQuadBuffer(tmp);
-		tmp.dispose();
-		bufPos = 0;
-		texture = null;
+		engine.selectMaterial(pass);
+		engine.uploadShaderBuffers(buffers, Params);
+		engine.uploadShaderBuffers(buffers, Textures);
 	}
 	
-	public function beginDraw( texture : h3d.mat.Texture, stride : Int, blendMode : BlendMode, shaders : Array<hxsl.Shader> ) {
+	@:access(h2d.Drawable)
+	public function beginDrawObject( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
+		beginDrawBatch(texture, 0, obj.blendMode, obj.shaders, true);
+		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a);
+		baseShader.absoluteMatrixA.set(obj.matA, obj.matC, obj.absX);
+		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
+		beforeDraw();
+	}
+	
+	public function beginDrawBatch( texture : h3d.mat.Texture, stride : Int, blendMode : BlendMode, shaders : Array<hxsl.Shader>, isRelative : Bool = false ) {
 		if( texture != this.texture || stride != this.stride || blendMode != this.blendMode )
 			flush();
 		var shaderChanged = false, paramsChanged = false;
@@ -110,11 +119,15 @@ class RenderContext {
 				}
 			}
 		}
+		if( baseShader.isRelative != isRelative )
+			shaderChanged = true;
 		if( shaderChanged ) {
 			flush();
 			var ns = shaders.copy();
 			ns.unshift(baseShader);
+			baseShader.isRelative = isRelative;
 			initShaders(ns);
+			engine.selectShader(compiledShader);
 		} else if( paramsChanged ) {
 			flush();
 			// copy so the next flush will fetch their params

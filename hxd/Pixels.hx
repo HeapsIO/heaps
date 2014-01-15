@@ -12,7 +12,55 @@ class Pixels {
 		this.bytes = bytes;
 		this.format = format;
 	}
-		
+	
+	public function setPixel( x : Int, y : Int, color : Int ) {
+		switch( format ) {
+		case BGRA:
+			var addr = (x + y * width) << 2;
+			bytes.set(addr++, color & 0xFF);
+			bytes.set(addr++, (color>>8) & 0xFF);
+			bytes.set(addr++, (color>>16) & 0xFF);
+			bytes.set(addr++, color >>> 24);
+		case ARGB:
+			var addr = (x + y * width) << 2;
+			bytes.set(addr++, color >>> 24);
+			bytes.set(addr++, (color>>16) & 0xFF);
+			bytes.set(addr++, (color>>8) & 0xFF);
+			bytes.set(addr++, color & 0xFF);
+		case RGBA:
+			var addr = (x + y * width) << 2;
+			bytes.set(addr++, (color>>16) & 0xFF);
+			bytes.set(addr++, (color>>8) & 0xFF);
+			bytes.set(addr++, color & 0xFF);
+			bytes.set(addr++, color >>> 24);
+		}
+	}
+
+	public function getPixel( x : Int, y : Int ) {
+		var r, g, b, a;
+		switch( format ) {
+		case BGRA:
+			var addr = (x + y * width) << 2;
+			b = bytes.get(addr++);
+			g = bytes.get(addr++);
+			r = bytes.get(addr++);
+			a = bytes.get(addr++);
+		case ARGB:
+			var addr = (x + y * width) << 2;
+			a = bytes.get(addr++);
+			r = bytes.get(addr++);
+			g = bytes.get(addr++);
+			b = bytes.get(addr++);
+		case RGBA:
+			var addr = (x + y * width) << 2;
+			r = bytes.get(addr++);
+			g = bytes.get(addr++);
+			b = bytes.get(addr++);
+			a = bytes.get(addr++);
+		}
+		return (a << 24) | (r << 16) | (g << 8) | b;
+	}
+
 	public function makeSquare( ?copy : Bool ) {
 		var w = width, h = height;
 		var tw = w == 0 ? 0 : 1, th = h == 0 ? 0 : 1;
@@ -78,7 +126,7 @@ class Pixels {
 				mem.wb(p, mem.b(p + 1));
 				mem.wb(p + 1, mem.b(p + 2));
 				mem.wb(p + 2, mem.b(p + 3));
-				mem.wb(p+3, a);				
+				mem.wb(p+3, a);
 			}
 			mem.end();
 		}
@@ -95,14 +143,15 @@ class Pixels {
 			bytes = null;
 		}
 	}
-	
+
 	public static function bytesPerPixel( format : PixelFormat ) {
 		return switch( format ) {
 		case ARGB, BGRA, RGBA: 4;
 		}
 	}
 	
-	public static function alloc( width, height, format ) {
+	public static function alloc( width, height, ?format : PixelFormat ) {
+		if( format == null ) format = RGBA;
 		return new Pixels(width, height, hxd.impl.Tmp.getBytes(width * height * bytesPerPixel(format)), format);
 	}
 	

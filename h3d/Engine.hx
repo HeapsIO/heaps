@@ -16,7 +16,7 @@ class Engine {
 	public var drawCalls(default, null) : Int;
 	public var shaderSwitches(default, null) : Int;
 
-	public var backgroundColor : Int;
+	public var backgroundColor : Int = 0xFF000000;
 	public var autoResize : Bool;
 	public var fullScreen(default, set) : Bool;
 	
@@ -81,6 +81,19 @@ class Engine {
 		driver.setCapture(bmp,callb);
 	}
 
+	public function selectShader( shader : hxsl.RuntimeShader ) {
+		driver.selectShader(shader);
+		shaderSwitches++;
+	}
+	
+	public function selectMaterial( pass : h3d.pass.Pass ) {
+		driver.selectMaterial(pass);
+	}
+	
+	public function uploadShaderBuffers(buffers, which) {
+		driver.uploadShaderBuffers(buffers, which);
+	}
+	
 	function selectBuffer( buf : h3d.impl.MemoryManager.BigBuffer ) {
 		if( buf.isDisposed() )
 			return false;
@@ -182,8 +195,9 @@ class Engine {
 
 	function onCreate( disposed ) {
 		if( autoResize ) {
-			width = hxd.System.width;
-			height = hxd.System.height;
+			var stage = hxd.Stage.getInstance();
+			width = stage.width;
+			height = stage.height;
 		}
 		if( disposed )
 			mem.onContextLost();
@@ -207,7 +221,8 @@ class Engine {
 	
 	function onStageResize() {
 		if( autoResize && !driver.isDisposed() ) {
-			var w = hxd.System.width, h = hxd.System.height;
+			var stage = hxd.Stage.getInstance();
+			var w = stage.width, h = stage.height;
 			if( w != width || h != height )
 				resize(w, h);
 			onResized();

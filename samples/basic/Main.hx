@@ -20,7 +20,7 @@ class Main extends hxd.App {
 		obj2 = new Mesh(prim, new h3d.mat.MeshMaterial(), s3d);
 		obj2.material.color.set(1, 0.7, 0.5);
 	
-		mat.mainPass.addShader(new h3d.shader.VertexColor());
+		mat.mainPass.addShader(new h3d.shader.VertexColor()).additive = true; // this will use normals
 		
 		/*mat.lightSystem = {
 			ambient : new h3d.Vector(0, 0, 0),

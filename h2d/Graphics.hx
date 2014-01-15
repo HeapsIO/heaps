@@ -116,7 +116,6 @@ class Graphics extends Drawable {
 	public function new(?parent) {
 		super(parent);
 		content = new GraphicsContent();
-		shader.hasVertexColor = true;
 		tile = h2d.Tile.fromColor(0xFFFFFFFF);
 		clear();
 	}
@@ -295,7 +294,7 @@ class Graphics extends Drawable {
 	
 	override function draw(ctx:RenderContext) {
 		flush();
-		setupShader(ctx.engine, tile, 0);
+		ctx.beginDrawObject(this, tile.getTexture());
 		content.render(ctx.engine);
 	}
 

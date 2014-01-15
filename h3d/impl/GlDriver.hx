@@ -58,9 +58,9 @@ class GlDriver extends Driver {
 	
 	public function new() {
 		#if js
-		canvas = cast js.Browser.document.getElementById("webgl");
+		canvas = @:privateAccess hxd.Stage.getCanvas();
 		if( canvas == null ) throw "Canvas #webgl not found";
-		gl = canvas.getContextWebGL();
+		gl = canvas.getContextWebGL({alpha:false});
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);

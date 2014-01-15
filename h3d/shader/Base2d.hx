@@ -19,18 +19,30 @@ class Base2d extends hxsl.Shader {
 		@param var texture : Sampler2D;
 		
 		var spritePosition : Vec4;
+		var absolutePosition : Vec4;
 		var pixelColor : Vec4;
 		@var var calculateUV : Vec2;
+		
+		@const var isRelative : Bool;
+		@param var color : Vec4;
+		@param var absoluteMatrixA : Vec3;
+		@param var absoluteMatrixB : Vec3;
 
 		function __init__() {
 			spritePosition = vec4(input.position, zValue, 1);
+			if( isRelative ) {
+				absolutePosition.x = vec3(spritePosition.xy,1).dot(absoluteMatrixA);
+				absolutePosition.y = vec3(spritePosition.xy,1).dot(absoluteMatrixB);
+				absolutePosition.zw = spritePosition.zw;
+			} else
+				absolutePosition = spritePosition;
 			calculateUV = input.uv;
-			pixelColor = input.color;
+			pixelColor = isRelative ? color : input.color;
 			pixelColor *= texture.get(calculateUV);
 		}
 		
 		function vertex() {
-			output.position = spritePosition;
+			output.position = absolutePosition;
 		}
 		
 		function fragment() {

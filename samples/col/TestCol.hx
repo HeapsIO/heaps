@@ -6,7 +6,6 @@ class TestCol extends hxd.App {
 	var rrect : h2d.Graphics;
 	
 	override function init() {
-		
 		var size = RW - RH;
 		var k = 10;
 		rrect = new h2d.Graphics(s2d);
@@ -33,7 +32,7 @@ class TestCol extends hxd.App {
 	
 	function mapCol( dist : h2d.col.Point -> Float, scale = 1. ) {
 		var pt = new h2d.col.Point();
-		var bmp = new hxd.BitmapData(s2d.width, s2d.height);
+		var bmp = hxd.Pixels.alloc(s2d.width, s2d.height);
 		for( x in 0...bmp.width )
 			for( y in 0...bmp.height ) {
 				pt.x = x + 0.5;
@@ -49,7 +48,7 @@ class TestCol extends hxd.App {
 					bmp.setPixel(x, y, 0xFF000000 | c);
 				}
 			}
-		var view = new h2d.Bitmap(h2d.Tile.fromBitmap(bmp));
+		var view = new h2d.Bitmap(h2d.Tile.fromPixels(bmp));
 		view.alpha = 0.5;
 		s2d.addChildAt(view, 0);
 		bmp.dispose();
@@ -60,7 +59,10 @@ class TestCol extends hxd.App {
 		var py = s2d.mouseY;
 		var r = new h2d.col.RoundRect(rrect.x, rrect.y, RW, RH, rrect.rotation);
 		
-		
+		#if js
+		new js.JQuery("#log").html(px+","+py+","+s2d.width+","+s2d.height);
+		#end
+
 		rrect.color.set(0, 0, 1);
 		
 		if( r.inside(new h2d.col.Point(px, py)) )

@@ -33,12 +33,11 @@ class MeshPrimitive extends Primitive {
 		bufferCache = null;
 	}
 
-	@:access(h3d.Engine.driver)
 	function getBuffers( engine : h3d.Engine ) {
 		if( bufferCache == null )
 			bufferCache = new Map();
 		var buffers = null, prev = null;
-		for( name in engine.driver.getShaderInputNames() ) {
+		for( name in @:privateAccess engine.driver.getShaderInputNames() ) {
 			var id = hash(name);
 			var b = bufferCache.get(id);
 			if( b == null ) {

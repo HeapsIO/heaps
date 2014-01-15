@@ -35,7 +35,6 @@ class Base {
 	}
 	
 	@:access(h3d.scene.Object)
-	@:access(h3d.Engine.driver)
 	public function draw( ctx : h3d.scene.RenderContext, passes : Object ) {
 		this.ctx = ctx;
 		setGlobals();
@@ -47,11 +46,11 @@ class Base {
 			globalModelView.set(globals, p.obj.absPos);
 			// TODO : reuse buffers between calls
 			var buf = allocBuffer(shader, shaders);
-			ctx.engine.driver.selectShader(shader);
-			ctx.engine.driver.selectMaterial(p.pass);
-			ctx.engine.driver.uploadShaderBuffers(buf, Globals);
-			ctx.engine.driver.uploadShaderBuffers(buf, Params);
-			ctx.engine.driver.uploadShaderBuffers(buf, Textures);
+			ctx.engine.selectShader(shader);
+			ctx.engine.selectMaterial(p.pass);
+			ctx.engine.uploadShaderBuffers(buf, Globals);
+			ctx.engine.uploadShaderBuffers(buf, Params);
+			ctx.engine.uploadShaderBuffers(buf, Textures);
 			p.obj.draw(ctx);
 			p = p.next;
 		}

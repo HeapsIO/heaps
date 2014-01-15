@@ -7,12 +7,23 @@ class Stage {
 	var fsDelayed : Bool;
 	#end
 	var resizeEvents : List < Void -> Void > ;
-	var eventTargets : List<Event -> Void>;
+	var eventTargets : List < Event -> Void > ;
 	
-	public var width(get, null) : Float;
-	public var height(get, null) : Float;
-	public var mouseX(get, null) : Float;
-	public var mouseY(get, null) : Float;
+	#if js
+	@:allow(hxd)
+	static function getCanvas() {
+		var canvas : js.html.CanvasElement = cast js.Browser.document.getElementById("webgl");
+		if( canvas == null ) throw "Missing canvas#webgl";
+		return canvas;
+	}
+	var canvas : js.html.CanvasElement;
+	var canvasPos : js.html.ClientRect;
+	#end
+	
+	public var width(get, null) : Int;
+	public var height(get, null) : Int;
+	public var mouseX(get, null) : Int;
+	public var mouseY(get, null) : Int;
 	
 	function new() {
 		eventTargets = new List();
@@ -37,13 +48,25 @@ class Stage {
 			stage.addEventListener(flash.events.MouseEvent.RIGHT_MOUSE_UP, onRMouseUp);
 		}
 		#elseif js
+		canvas = getCanvas();
+		canvasPos = canvas.getBoundingClientRect();
 		js.Browser.window.addEventListener("mousedown", onMouseDown);
 		js.Browser.window.addEventListener("mousemove", onMouseMove);
 		js.Browser.window.addEventListener("mouseup", onMouseUp);
 		js.Browser.window.addEventListener("mousewheel", onMouseWheel);
 		js.Browser.window.addEventListener("keydown", onKeyDown);
 		js.Browser.window.addEventListener("keyup", onKeyUp);
-		js.Browser.window.addEventListener("resize", onResize);
+		var curW = Math.round(canvasPos.width), curH = Math.round(canvasPos.height);
+		var t0 = new haxe.Timer(100);
+		t0.run = function() {
+			canvasPos = canvas.getBoundingClientRect();
+			var cw = Math.round(canvasPos.width), ch = Math.round(canvasPos.height);
+			if( curW != cw || curH != ch ) {
+				curW = cw;
+				curH = ch;
+				onResize(null);
+			}
+		};
 		#end
 		#if flash
 		if( untyped hxd.System.isAir() )
@@ -253,23 +276,23 @@ class Stage {
 	
 #elseif js
 
-	var curMouseX : Float;
-	var curMouseY : Float;
+	var curMouseX : Float = 0.;
+	var curMouseY : Float = 0.;
 
 	function get_width() {
-		return js.Browser.document.width;
+		return Math.round(canvasPos.width);
 	}
 
 	function get_height() {
-		return js.Browser.document.height;
+		return Math.round(canvasPos.height);
 	}
 
 	function get_mouseX() {
-		return curMouseX;
+		return Math.round(curMouseX - canvasPos.left);
 	}
 
 	function get_mouseY() {
-		return curMouseY;
+		return Math.round(curMouseY - canvasPos.top);
 	}
 
 	function onMouseDown(e:js.html.MouseEvent) {
