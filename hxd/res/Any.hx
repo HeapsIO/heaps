@@ -27,12 +27,12 @@ class Any extends Resource {
 		this.loader = loader;
 	}
 	
-	public function toModel() {
-		return loader.loadModel(entry.path);
+	public function toFbx() {
+		return loader.loadFbxModel(entry.path).toFbx();
 	}
 	
-	public function toFbx() {
-		return loader.loadModel(entry.path).toFbx();
+	public function toAwd() {
+		return loader.loadAwdModel(entry.path);
 	}
 
 	public function toTexture() {

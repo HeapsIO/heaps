@@ -39,7 +39,7 @@ private class CFlag extends h2d.css.Fill {
 	public function new (parent, x:Float, y:Float, ang = 0., color = 0xff000000, border = 0xFFaaaaaa) {
 		super(parent);
 		var fill = this;
-		fill.rotation = ang;
+		fill.rotation = -ang;
 		fill.x = x;
 		fill.y = y;
 		//bg

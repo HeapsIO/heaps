@@ -4,27 +4,26 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="parts.swf" />
+    <movie path="col.swf" />
     <movie fps="60" />
-    <movie width="1200" />
-    <movie height="900" />
-    <movie version="11" />
-    <movie minorVersion="6" />
+    <movie width="800" />
+    <movie height="600" />
+    <movie version="9" />
+    <movie minorVersion="0" />
     <movie platform="Flash Player" />
-    <movie background="#000000" />
+    <movie background="#FFFFFF" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
-    <class path="..\.." />
+    <!-- example: <class path="..." /> -->
   </classpaths>
   <!-- Build options -->
   <build>
     <option directives="" />
-    <option flashStrict="True" />
-    <option noInlineOnDebug="False" />
-    <option mainClass="Main" />
+    <option flashStrict="False" />
+    <option mainClass="TestCol" />
     <option enabledebug="False" />
-    <option additional="-lib hxsl&#xA;-D h3d&#xA;-lib air3&#xA;-lib hscript&#xA;-dce full" />
+    <option additional="-lib h3d" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -49,8 +48,8 @@
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
-    <option testMovie="Custom" />
-    <option testMovieCommand="parts.app" />
+    <option testMovie="Default" />
+    <option testMovieCommand="" />
   </options>
   <!-- Plugin storage -->
   <storage />

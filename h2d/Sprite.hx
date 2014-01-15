@@ -214,7 +214,7 @@ class Sprite {
 				matD = scaleY;
 			} else {
 				cr = Math.cos(rotation);
-				sr = Math.sin(rotation);
+				sr = -Math.sin(rotation);
 				matA = scaleX * cr;
 				matB = scaleX * -sr;
 				matC = scaleY * sr;
@@ -232,7 +232,7 @@ class Sprite {
 				matD = scaleY * parent.matD;
 			} else {
 				var cr = Math.cos(rotation);
-				var sr = Math.sin(rotation);
+				var sr = -Math.sin(rotation);
 				var tmpA = scaleX * cr;
 				var tmpB = scaleX * -sr;
 				var tmpC = scaleY * sr;
@@ -264,33 +264,28 @@ class Sprite {
 	}
 
 	inline function set_x(v) {
-		x = v;
 		posChanged = true;
-		return v;
+		return x = v;
 	}
 
 	inline function set_y(v) {
-		y = v;
 		posChanged = true;
-		return v;
+		return y = v;
 	}
 	
 	inline function set_scaleX(v) {
-		scaleX = v;
 		posChanged = true;
-		return v;
+		return scaleX = v;
 	}
 	
 	inline function set_scaleY(v) {
-		scaleY = v;
 		posChanged = true;
-		return v;
+		return scaleY = v;
 	}
 	
 	inline function set_rotation(v) {
-		rotation = v;
 		posChanged = true;
-		return v;
+		return rotation = v;
 	}
 	
 	public function move( dx : Float, dy : Float ) {

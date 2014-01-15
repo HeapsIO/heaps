@@ -169,8 +169,23 @@ class Stage3dDriver extends Driver {
 		case AtfCompressed(alpha):
 			alpha ? flash.display3D.Context3DTextureFormat.COMPRESSED_ALPHA : flash.display3D.Context3DTextureFormat.COMPRESSED;
 		}
+		var rect = false;
+		if( t.isTarget && !t.isCubic && t.mipLevels == 0 ) {
+			var tw = 1, th = 1;
+			while( tw < t.width ) tw <<= 1;
+			while( th < t.height) th <<= 1;
+			if( tw != t.width || th != t.height )
+				rect = true;
+		}
 		return if( t.isCubic )
 			ctx.createCubeTexture(t.width, fmt, t.isTarget, t.mipLevels);
+		else if( rect ) {
+			#if !flash11_8
+			throw "Support for rectangle texture requires Flash 11.8+ compilation";
+			#else
+			ctx.createRectangleTexture(t.width, t.height, fmt, t.isTarget);
+			#end
+		}
 		else
 			ctx.createTexture(t.width, t.height, fmt, t.isTarget, t.mipLevels);
 	}
