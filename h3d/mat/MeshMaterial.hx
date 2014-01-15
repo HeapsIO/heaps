@@ -13,6 +13,12 @@ typedef ShadowMap = {
 	var texture : Texture;
 }
 
+typedef DecalInfos = {
+	var depthTexture : Texture;
+	var uvScaleRatio : h3d.Vector;
+	var screenToLocal : h3d.Matrix;
+}
+
 private class MeshShader extends h3d.impl.Shader {
 	
 #if flash
@@ -81,6 +87,14 @@ private class MeshShader extends h3d.impl.Shader {
 		var worldNormal : Float3;
 		var worldView : Float3;
 
+		// the decal volume should have its pivot at the center of the box
+		// uvScaleRatio is the size of the box primitive
+		var isDecal : Bool;
+		var depthTexture : Texture;
+		var uvScaleRatio : Float2;
+		var screenToLocal : Matrix;
+		var outProjPos : Float4; // varying
+
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
 			var tnorm : Float3 = [0, 0, 0];
@@ -110,6 +124,7 @@ private class MeshShader extends h3d.impl.Shader {
 			var t = input.uv;
 			if( uvScale != null ) t *= uvScale;
 			if( uvDelta != null ) t += uvDelta;
+			if( isDecal ) outProjPos = ppos;
 			tuv = t;
 			if( lightSystem != null ) {
 				// calculate normal
@@ -149,6 +164,16 @@ private class MeshShader extends h3d.impl.Shader {
 				var c = outlineColor;
 				var e = 1 - worldNormal.normalize().dot(worldView.normalize());
 				out = c * e.pow(outlinePower);
+			} else if( isDecal ) {
+				var screenPos = outProjPos.xy / outProjPos.w;
+				var tuv = screenPos * [0.5,-0.5] + [0.5,0.5];
+				var ruv : Float4 = [0,0,0,0];
+				ruv.xy = screenPos;
+				ruv.z = depthTexture.get(tuv).rgb.dot([1,1/255,1/(255*255)]);
+				ruv.w = 1;
+				var wpos = ruv * screenToLocal;
+				var coord = wpos.xyz / wpos.w;
+				out = tex.get(coord.xy * uvScaleRatio + 0.5);
 			} else {
 				var c = tex.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0);
 				if( fog != null ) c.a *= talpha;
@@ -477,6 +502,8 @@ class MeshMaterial extends Material {
 	
 	public var shadowMap(null, set) : ShadowMap;
 	
+	public var volumeDecal(default, set) : DecalInfos;
+	
 	public function new(texture) {
 		mshader = new MeshShader();
 		super(mshader);
@@ -700,6 +727,17 @@ class MeshMaterial extends Material {
 		} else
 			mshader.hasShadowMap = false;
 		return v;
+	}
+	
+	inline function set_volumeDecal( d : DecalInfos ) {
+		if( d != null ) {
+			mshader.isDecal = true;
+			mshader.depthTexture = d.depthTexture;
+			mshader.uvScaleRatio = d.uvScaleRatio;
+			mshader.screenToLocal = d.screenToLocal;
+		} else
+			mshader.isDecal = false;
+		return volumeDecal = d;
 	}
 	
 	#if flash
