@@ -1,8 +1,4 @@
--lib h3d
--swf comps.swf
--swf-header 800:600:60:FFFFFF
---flash-strict
--swf-version 11.6
+-js main.js
 -main Comps
+-lib heaps
 -dce full
--lib hscript

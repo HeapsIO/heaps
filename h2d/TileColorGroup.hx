@@ -149,7 +149,6 @@ class TileColorGroup extends Drawable {
 		super(parent);
 		tile = t;
 		rangeMin = rangeMax = -1;
-		shader.hasVertexColor = true;
 		curColor = new h3d.Vector(1, 1, 1, 1);
 		content = new TileLayerContent();
 	}

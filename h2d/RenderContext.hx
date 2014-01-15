@@ -17,8 +17,8 @@ class RenderContext {
 	var buffers : h3d.shader.Buffers;
 	var pass : h3d.pass.Pass;
 	var currentShaders : Array<hxsl.Shader>;
+	var currentObj : Drawable;
 	var stride : Int;
-	var blendMode : BlendMode;
 	
 	public function new() {
 		frame = 0;
@@ -36,6 +36,7 @@ class RenderContext {
 	
 	public function begin() {
 		texture = null;
+		currentObj = null;
 		bufPos = 0;
 		stride = 0;
 		if( compiledShader == null )
@@ -55,6 +56,7 @@ class RenderContext {
 	public function end() {
 		flush();
 		texture = null;
+		currentObj = null;
 	}
 	
 	public function flush(force=false) {
@@ -71,7 +73,7 @@ class RenderContext {
 	
 	public function beforeDraw() {
 		baseShader.texture = texture;
-		switch( blendMode ) {
+		switch( currentObj.blendMode ) {
 		case Normal:
 			pass.blend(SrcAlpha, OneMinusSrcAlpha);
 		case None:
@@ -93,22 +95,29 @@ class RenderContext {
 	
 	@:access(h2d.Drawable)
 	public function beginDrawObject( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
-		beginDrawBatch(texture, 0, obj.blendMode, obj.shaders, true);
+		beginDraw(obj, texture, true);
 		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a);
 		baseShader.absoluteMatrixA.set(obj.matA, obj.matC, obj.absX);
 		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
 		beforeDraw();
 	}
 	
-	public function beginDrawBatch( texture : h3d.mat.Texture, stride : Int, blendMode : BlendMode, shaders : Array<hxsl.Shader>, isRelative : Bool = false ) {
-		if( texture != this.texture || stride != this.stride || blendMode != this.blendMode )
+	@:access(h2d.Drawable)
+	public function beginDrawBatch( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
+		beginDraw(obj, texture, false);
+	}
+	
+	@:access(h2d.Drawable)
+	function beginDraw(	obj : h2d.Drawable, texture : h3d.mat.Texture, isRelative : Bool ) {
+		var stride = 8;
+		if( currentObj != null && (texture != this.texture || stride != this.stride || obj.blendMode != currentObj.blendMode || obj.filter != currentObj.filter) )
 			flush();
 		var shaderChanged = false, paramsChanged = false;
-		if( shaders.length + 1 != currentShaders.length )
+		if( obj.shaders.length + 1 != currentShaders.length )
 			shaderChanged = true;
 		else {
-			for( i in 0...shaders.length ) {
-				var s = shaders[i];
+			for( i in 0...obj.shaders.length ) {
+				var s = obj.shaders[i];
 				var t = currentShaders[i + 1];
 				if( s == t ) continue;
 				paramsChanged = true;
@@ -123,7 +132,7 @@ class RenderContext {
 			shaderChanged = true;
 		if( shaderChanged ) {
 			flush();
-			var ns = shaders.copy();
+			var ns = obj.shaders.copy();
 			ns.unshift(baseShader);
 			baseShader.isRelative = isRelative;
 			initShaders(ns);
@@ -131,13 +140,13 @@ class RenderContext {
 		} else if( paramsChanged ) {
 			flush();
 			// copy so the next flush will fetch their params
-			for( i in 0...shaders.length )
-				currentShaders[i+1] = shaders[i];
+			for( i in 0...obj.shaders.length )
+				currentShaders[i+1] = obj.shaders[i];
 		}
 			
 		this.texture = texture;
 		this.stride = stride;
-		this.blendMode = blendMode;
+		this.currentObj = obj;
 	}
 
 }

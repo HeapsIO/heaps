@@ -5,6 +5,8 @@ class Drawable extends Sprite {
 	public var color : h3d.Vector;
 	public var alpha(get, set) : Float;
 	public var blendMode : BlendMode;
+	public var filter : Bool;
+	
 	var shaders : Array<hxsl.Shader>;
 	
 	function new(parent) {
@@ -49,7 +51,7 @@ class Drawable extends Sprite {
 	function emitTile( ctx : RenderContext, tile : Tile ) {
 		if( tile == null )
 			tile = new Tile(null, 0, 0, 5, 5);
-		ctx.beginDrawBatch(tile.getTexture(), 8, blendMode, shaders);
+		ctx.beginDrawBatch(this, tile.getTexture());
 
 		var ax = absX + tile.dx * matA + tile.dy * matC;
 		var ay = absY + tile.dx * matB + tile.dy * matD;
