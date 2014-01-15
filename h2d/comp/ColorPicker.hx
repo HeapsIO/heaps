@@ -54,7 +54,7 @@ private class Arrow extends h2d.css.Fill {
 		addPoint(-5, 4, color);
 		addPoint(0, 0, color);
 		addPoint(0, 0, color);
-		rotation = ang;
+		rotation = -ang;
 		this.x = x;
 		this.y = y;
 	}
