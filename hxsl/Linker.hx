@@ -22,8 +22,9 @@ private class ShaderInfos {
 	public var read : Map<Int,AllocatedVar>;
 	public var write : Map<Int,AllocatedVar>;
 	public var processed : Map<Int, Bool>;
-	public var vertex : Bool;
+	public var vertex : Null<Bool>;
 	public var onStack : Bool;
+	public var hasDiscard : Bool;
 	public var marked : Null<Bool>;
 	public function new(n, v) {
 		this.name = n;
@@ -178,6 +179,11 @@ class Linker {
 				}
 			default:
 			}
+		case TDiscard:
+			if( curShader != null ) {
+				curShader.vertex = false;
+				curShader.hasDiscard = true;
+			}
 		case TVarDecl(v, _):
 			locals.set(v.id, true);
 		default:
@@ -185,12 +191,14 @@ class Linker {
 		return e.map(mapExprVar);
 	}
 	
-	function addShader( name : String, vertex : Bool, e : TExpr, p : Int ) {
-		curShader = new ShaderInfos(name, vertex);
-		curShader.priority = p;
-		curShader.body = mapExprVar(e);
-		shaders.push(curShader);
+	function addShader( name : String, vertex : Null<Bool>, e : TExpr, p : Int ) {
+		var s = new ShaderInfos(name, vertex);
+		curShader = s;
+		s.priority = p;
+		s.body = mapExprVar(e);
+		shaders.push(s);
 		curShader = null;
+		return s;
 	}
 	
 	function sortByPriorityDesc( s1 : ShaderInfos, s2 : ShaderInfos ) {
@@ -207,18 +215,30 @@ class Linker {
 				continue;
 			if( !s.write.exists(v.id) )
 				continue;
-//			trace(parent.name + " => " + s.name + " (" + v.path + ")");
+			//trace(parent.name + " => " + s.name + " (" + v.path + ")");
 			parent.deps.set(s, true);
-			if( s.deps == null ) {
-				s.deps = new Map();
-				for( r in s.read )
-					buildDependency(s, r, s.write.exists(r.id));
-			}
+			initDependencies(s);
 			if( !s.read.exists(v.id) )
 				return;
 		}
 		if( v.v.kind == Var )
 			error("Variable " + v.path + " required by " + parent.name + " is missing initializer", null);
+	}
+	
+	function initDependencies( s : ShaderInfos ) {
+		if( s.deps != null )
+			return;
+		s.deps = new Map();
+		for( r in s.read )
+			buildDependency(s, r, s.write.exists(r.id));
+		// propagate fragment flag
+		if( s.vertex == null )
+			for( d in s.deps.keys() )
+				if( d.vertex == false ) {
+					//trace(s.name + " marked as fragment because of " + d.name);
+					s.vertex = false;
+					break;
+				}
 	}
 	
 	function collect( cur : ShaderInfos, out : Array<ShaderInfos>, vertex : Bool ) {
@@ -230,6 +250,8 @@ class Linker {
 		cur.onStack = true;
 		for( d in cur.deps.keys() )
 			collect(d, out, vertex);
+		if( cur.vertex == null )
+			cur.vertex = vertex;
 		if( cur.vertex == vertex )
 			out.push(cur);
 		cur.onStack = false;
@@ -290,16 +312,17 @@ class Linker {
 				if( v.kind == null ) throw "assert";
 				switch( v.kind ) {
 				case Vertex, Fragment:
-					addShader(s.name+"."+(v.kind == Vertex ? "vertex" : "fragment"),v.kind == Vertex,f.expr, priority);
+					addShader(s.name + "." + (v.kind == Vertex ? "vertex" : "fragment"), v.kind == Vertex, f.expr, priority);
+					
 				case Init:
 					switch( f.expr.e ) {
 					case TBlock(el):
 						var index = 0;
 						var priority = -el.length;
 						for( e in el )
-							addShader(s.name+".__init__"+(index++),true,e, priority++);
+							addShader(s.name+".__init__"+(index++),null,e, priority++);
 					default:
-						addShader(s.name+".__init__",true,f.expr, -1);
+						addShader(s.name+".__init__",null,f.expr, -1);
 					}
 				case Helper:
 					throw "Unexpected helper function in linker "+v.v.name;
@@ -310,20 +333,28 @@ class Linker {
 		shaders.sort(sortByPriorityDesc);
 		
 		// build dependency tree
-		var s = new ShaderInfos("<entry>", true);
-		s.deps = new Map();
+		var entry = new ShaderInfos("<entry>", false);
+		entry.deps = new Map();
 		for( outVar in outVars ) {
 			var v = varMap.get(outVar);
 			if( v == null )
 				throw "Variable not found " + outVar;
-			buildDependency(s, v, false);
+			buildDependency(entry, v, false);
 		}
+		
+		// force shaders containing discard to be included
+		for( s in shaders )
+			if( s.hasDiscard ) {
+				initDependencies(s);
+				entry.deps.set(s, true);
+			}
+				
 		
 		// collect needed dependencies
 		var v = [], f = [];
-		collect(s, v, true);
-		collect(s, f, false);
-		if( v.pop() != s ) throw "assert";
+		collect(entry, v, true);
+		collect(entry, f, false);
+		if( f.pop() != entry ) throw "assert";
 		
 		// check that all dependencies are matched
 		for( s in shaders )
