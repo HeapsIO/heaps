@@ -6,6 +6,7 @@ class Drawable extends Sprite {
 	public var alpha(get, set) : Float;
 	public var blendMode : BlendMode;
 	public var filter : Bool;
+	public var colorKey(default, set) : Int = 0;
 	
 	var shaders : Array<hxsl.Shader>;
 	
@@ -14,6 +15,22 @@ class Drawable extends Sprite {
 		blendMode = Normal;
 		color = new h3d.Vector(1, 1, 1, 1);
 		shaders = [];
+	}
+	
+	function set_colorKey(v) {
+		if( shaders != null ) {
+			var s = getShader(h3d.shader.ColorKey);
+			if( s == null ) {
+				if( v != 0 )
+					s = addShader(new h3d.shader.ColorKey(0xFF000000 | v));
+			} else {
+				if( v == null )
+					removeShader(s);
+				else
+					s.colorKey.setColor(0xFF000000 | v);
+			}
+		}
+		return colorKey = v;
 	}
 	
 	inline function get_alpha() {
@@ -33,6 +50,13 @@ class Drawable extends Sprite {
 		}
 		var toString = toHxsl ? function(d) return hxsl.Printer.shaderToString(d,true) : hxsl.GlslOut.toGlsl;
 		return "VERTEX=\n" + toString(shader.vertex.data) + "\n\nFRAGMENT=\n" + toString(shader.fragment.data);
+	}
+	
+	public function getShader< T:hxsl.Shader >( stype : Class<T> ) : T {
+		for( s in shaders )
+			if( Std.is(s, stype) )
+				return cast s;
+		return null;
 	}
 	
 	public inline function getShaders() {
