@@ -37,13 +37,24 @@ class Stage {
 			stage.addEventListener(flash.events.MouseEvent.RIGHT_MOUSE_UP, onRMouseUp);
 		}
 		#elseif js
-		js.Browser.window.addEventListener("mousedown", onMouseDown);
-		js.Browser.window.addEventListener("mousemove", onMouseMove);
-		js.Browser.window.addEventListener("mouseup", onMouseUp);
-		js.Browser.window.addEventListener("mousewheel", onMouseWheel);
-		js.Browser.window.addEventListener("keydown", onKeyDown);
-		js.Browser.window.addEventListener("keyup", onKeyUp);
-		js.Browser.window.addEventListener("resize", onResize);
+		var canvas: js.html.CanvasElement = cast js.Browser.document.getElementById("webgl");
+		if ( canvas != null ) {
+            canvas.addEventListener("mousedown", onMouseDown);
+            canvas.addEventListener("mousemove", onMouseMove);
+            canvas.addEventListener("mouseup", onMouseUp);
+            canvas.addEventListener("mousewheel", onMouseWheel);
+            canvas.addEventListener("keydown", onKeyDown);
+            canvas.addEventListener("keyup", onKeyUp);
+            canvas.addEventListener("resize", onResize);
+        } else {
+            js.Browser.window.addEventListener("mousedown", onMouseDown);
+            js.Browser.window.addEventListener("mousemove", onMouseMove);
+            js.Browser.window.addEventListener("mouseup", onMouseUp);
+            js.Browser.window.addEventListener("mousewheel", onMouseWheel);
+            js.Browser.window.addEventListener("keydown", onKeyDown);
+            js.Browser.window.addEventListener("keyup", onKeyUp);
+            js.Browser.window.addEventListener("resize", onResize);
+        }
 		#end
 		#if flash
 		if( untyped hxd.System.isAir() )
@@ -257,11 +268,11 @@ class Stage {
 	var curMouseY : Float;
 
 	function get_width() {
-		return js.Browser.document.width;
+        return hxd.System.width;
 	}
 
 	function get_height() {
-		return js.Browser.document.height;
+        return hxd.System.height;
 	}
 
 	function get_mouseX() {
@@ -273,16 +284,20 @@ class Stage {
 	}
 
 	function onMouseDown(e:js.html.MouseEvent) {
-		event(new Event(EPush, mouseX, mouseY));
+        var e = new Event(EPush, mouseX, mouseY);
+        e.button = 0;
+		event(e);
 	}
 
 	function onMouseUp(e:js.html.MouseEvent) {
-		event(new Event(ERelease, mouseX, mouseY));
+        var e = new Event(ERelease, mouseX, mouseY);
+        e.button = 0;
+		event(e);
 	}
 	
 	function onMouseMove(e:js.html.MouseEvent) {
-		curMouseX = e.clientX;
-		curMouseY = e.clientY;
+		curMouseX = e.clientX - untyped e.target.offsetLeft;
+		curMouseY = e.clientY - untyped e.target.offsetTop;
 		event(new Event(EMove, mouseX, mouseY));
 	}
 	
