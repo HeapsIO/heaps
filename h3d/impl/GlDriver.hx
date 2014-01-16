@@ -303,7 +303,13 @@ class GlDriver extends Driver {
 	override function disposeVertex( v : VertexBuffer ) {
 		gl.deleteBuffer(v.b);
 	}
-	
+
+	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
+		gl.bindTexture(GL.TEXTURE_2D, t.t);
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, bmp.toNative());
+		gl.bindTexture(GL.TEXTURE_2D, null);
+	}
+
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
 		pixels.convert(RGBA);
