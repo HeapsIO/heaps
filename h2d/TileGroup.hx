@@ -136,7 +136,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 
 }
 
-class TileColorGroup extends Drawable {
+class TileGroup extends Drawable {
 
 	var content : TileLayerContent;
 	var curColor : h3d.Vector;
@@ -185,10 +185,16 @@ class TileColorGroup extends Drawable {
 	}
 
 	override function draw(ctx:RenderContext) {
-		setupShader(ctx.engine, tile, 0);
+		drawWith(ctx,this);
+	}
+	
+	@:allow(h2d)
+	function drawWith( ctx:RenderContext, obj : Drawable ) {
+		ctx.beginDrawObject(obj, tile.getTexture());
 		var min = rangeMin < 0 ? 0 : rangeMin * 2;
 		var max = content.triCount();
 		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;
 		content.doRender(ctx.engine, min, max - min);
 	}
+
 }
