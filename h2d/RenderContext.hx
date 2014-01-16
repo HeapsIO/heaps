@@ -73,6 +73,7 @@ class RenderContext {
 	
 	public function beforeDraw() {
 		baseShader.texture = texture;
+		texture.filter = currentObj.filter ? Linear : Nearest;
 		switch( currentObj.blendMode ) {
 		case Normal:
 			pass.blend(SrcAlpha, OneMinusSrcAlpha);
