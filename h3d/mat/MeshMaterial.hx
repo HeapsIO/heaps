@@ -172,8 +172,9 @@ private class MeshShader extends h3d.impl.Shader {
 				ruv.z = depthTexture.get(tuv).rgb.dot([1,1/255,1/(255*255)]);
 				ruv.w = 1;
 				var wpos = ruv * screenToLocal;
-				var coord = wpos.xyz / wpos.w;
-				out = tex.get(coord.xy * uvScaleRatio + 0.5);
+				var coord = uvScaleRatio * (wpos.xy / wpos.w) + 0.5;
+				kill( min(min(coord.x, coord.y), min(1 - coord.x, 1 - coord.y)) );
+				out = tex.get(coord.xy);
 			} else {
 				var c = tex.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0);
 				if( fog != null ) c.a *= talpha;
