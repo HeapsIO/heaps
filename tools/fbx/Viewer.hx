@@ -80,6 +80,7 @@ class Viewer {
 	var pMouse : flash.geom.Point;
 	var axis : Axis;
 	var box : h3d.scene.Object;
+	var alib : h3d.fbx.Library;
 	
 	function new() {
 		time = 0;
@@ -171,6 +172,8 @@ class Viewer {
 			else if ( c == 52 )		props.view = 4;
 			else if( c == K.F1 )
 				askLoad();
+			else if( c == K.F2 )
+				askLoad(true);
 			else if( c == K.S && k.ctrlKey ) {
 				if( curFbx == null ) return;
 				var data = FbxTree.toXml(curFbx.getRoot());
@@ -321,12 +324,22 @@ class Viewer {
 		}
 	}
 	
-	function askLoad() {
+	function askLoad( ?anim ) {
 		var f = new flash.net.FileReference();
 		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
 			haxe.Log.clear();
-			props.curFbxFile = f.name;
-			loadData(f.data.readUTFBytes(f.data.length));
+			var content = f.data.readUTFBytes(f.data.length);
+			if( anim ) {
+				alib = new h3d.fbx.Library();
+				var fbx = h3d.fbx.Parser.parse(content);
+				alib.load(fbx);
+				if( !rightHand )
+					alib.leftHandConvert();
+				setSkin();
+			} else {
+				props.curFbxFile = f.name;
+				loadData(content);
+			}
 		});
 		f.addEventListener(flash.events.Event.SELECT, function(_) f.load());
 		f.browse([new flash.net.FileFilter("FBX File", "*.fbx")]);
@@ -402,7 +415,7 @@ class Viewer {
 	}
 	
 	function setSkin() {
-		var anim = curFbx.loadAnimation(animMode);
+		var anim = curFbx.loadAnimation(animMode, null, null, alib);
 		if( anim != null ) {
 			anim = scene.playAnimation(anim);
 			if( !props.loop ) {
@@ -499,6 +512,7 @@ class Viewer {
 		
 		tf_keys.text = [
 			"[F1] Load model",
+			"[F2] Load animation",
 			"[A] Animation = " + animMode,
 			"[L] Loop = "+props.loop,
 			"[Y] Axis = "+props.showAxis,

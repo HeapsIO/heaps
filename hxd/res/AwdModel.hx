@@ -1,9 +1,9 @@
 package hxd.res;
 
 class AwdModel extends Resource {
-	
+
 	public function load() {
-		return false;
+		return new hxd.res.fmt.AwdReader().read(entry.getBytes());		
 	}
 	
 }
