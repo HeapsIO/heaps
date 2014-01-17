@@ -94,6 +94,11 @@ private class MeshShader extends h3d.impl.Shader {
 		var uvScaleRatio : Float2;
 		var screenToLocal : Matrix;
 		var outProjPos : Float4; // varying
+		
+		
+		var writeDistance : Bool;
+		var projCenter : Float3;
+		var distance : Float3;
 
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
@@ -107,6 +112,7 @@ private class MeshShader extends h3d.impl.Shader {
 					n *= mpos.m33;
 				tnorm = n.normalize();
 			}
+			
 			if( hasSkin )
 				tpos.xyz = tpos * input.weights.x * skinMatrixes[input.indexes.x * (255 * 3)] + tpos * input.weights.y * skinMatrixes[input.indexes.y * (255 * 3)] + tpos * input.weights.z * skinMatrixes[input.indexes.z * (255 * 3)];
 			else if( mpos != null )
@@ -120,6 +126,13 @@ private class MeshShader extends h3d.impl.Shader {
 			
 			var ppos = tpos * mproj;
 			if( hasZBias ) ppos.z += zBias;
+			
+			if( writeDistance ) {
+				var tmp = projCenter - (ppos.xyz / ppos.w);
+				tmp.y *= -1;
+				distance = tmp;
+			}
+			
 			out = ppos;
 			var t = input.uv;
 			if( uvScale != null ) t *= uvScale;
@@ -194,6 +207,7 @@ private class MeshShader extends h3d.impl.Shader {
 					c.rgb *= (1 - shadow) * shadowColor.rgb + shadow.xxx;
 				}
 				if( hasGlow ) c.rgb += glowTexture.get(tuv.xy).rgb * glowAmount;
+				if( writeDistance ) c.rgb *= distance + [0.5,0.5,0];
 				out = c;
 			}
 		}
