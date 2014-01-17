@@ -21,6 +21,7 @@ class LinearObject extends AnimatedObject {
 	public var hasScale : Bool;
 	public var frames : haxe.ds.Vector<LinearFrame>;
 	public var alphas : haxe.ds.Vector<Float>;
+	public var uvs : haxe.ds.Vector<Float>;
 	public var matrix : h3d.Matrix;
 	override function clone() : AnimatedObject {
 		var o = new LinearObject(objectName);
@@ -28,6 +29,7 @@ class LinearObject extends AnimatedObject {
 		o.hasScale = hasScale;
 		o.frames = frames;
 		o.alphas = alphas;
+		o.uvs = uvs;
 		return o;
 	}
 }
@@ -52,6 +54,12 @@ class LinearAnimation extends Animation {
 	public function addAlphaCurve( objName, alphas ) {
 		var f = new LinearObject(objName);
 		f.alphas = alphas;
+		objects.push(f);
+	}
+
+	public function addUVCurve( objName, uvs ) {
+		var f = new LinearObject(objName);
+		f.uvs = uvs;
 		objects.push(f);
 	}
 	
@@ -99,6 +107,17 @@ class LinearAnimation extends Animation {
 						mat.blend(SrcAlpha, OneMinusSrcAlpha);
 				}
 				mat.colorMul.w = o.alphas[frame1] * k1 + o.alphas[frame2] * k2;
+				continue;
+			}
+			if( o.uvs != null ) {
+				var mat = o.targetObject.toMesh().material;
+				if( mat.uvDelta == null ) {
+					mat.uvDelta = new Vector();
+					mat.texture.wrap = Repeat;
+				}
+				mat.uvDelta.x = o.uvs[frame1 << 1] * k1 + o.uvs[frame2 << 1] * k2;
+				mat.uvDelta.y = o.uvs[(frame1 << 1) | 1] * k1 + o.uvs[(frame2 << 1) | 1] * k2;
+				trace(frame1, mat.uvDelta);
 				continue;
 			}
 			var f1 = o.frames[frame1], f2 = o.frames[frame2];
