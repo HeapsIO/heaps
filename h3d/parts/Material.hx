@@ -62,7 +62,6 @@ class Material extends h3d.mat.Material {
 		blend(SrcAlpha, One);
 		culling = None;
 		depthWrite = false;
-		renderPass = 1;
 	}
 	
 	override function clone( ?m : h3d.mat.Material ) {
