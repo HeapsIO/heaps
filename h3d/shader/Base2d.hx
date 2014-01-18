@@ -38,7 +38,7 @@ class Base2d extends hxsl.Shader {
 			} else
 				absolutePosition = spritePosition;
 			calculateUV = input.uv;
-			pixelColor = isRelative ? color : input.color;
+			pixelColor = isRelative ? color * input.color : input.color;
 			textureColor = texture.get(calculateUV);
 			pixelColor *= textureColor;
 		}

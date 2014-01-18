@@ -1,6 +1,4 @@
--swf draw.swf
--swf-header 800:600:60:FFFFFF
---flash-strict
--swf-version 11
+-js main.js
 -main Draw
--lib h3d
+-lib heaps
+-dce full
