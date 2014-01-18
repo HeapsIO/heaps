@@ -1,4 +1,4 @@
-package h3d.pass;
+package h3d.mat;
 import h3d.mat.Data;
 
 @:allow(h3d.mat.Material)
@@ -62,6 +62,13 @@ class Pass {
 	
 	public function removeShader(s) {
 		return shaders.remove(s);
+	}
+	
+	public function getShader < T:hxsl.Shader > (t:Class<T>) : T {
+		for( s in shaders )
+			if( Std.is(s, t) )
+				return cast s;
+		return null;
 	}
 
 	public inline function getShaders() {

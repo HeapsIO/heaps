@@ -12,7 +12,7 @@ class MeshMaterial extends Material {
 	public function new(?texture) {
 		mshader = new h3d.shader.BaseMesh();
 		blendMode = Normal;
-		super(new h3d.pass.Pass("default",[mshader]));
+		super(new h3d.mat.Pass("default",[mshader]));
 		this.texture = texture;
 	}
 	

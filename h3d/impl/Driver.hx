@@ -49,7 +49,7 @@ class Driver {
 	public function selectShader( shader : hxsl.RuntimeShader ) {
 	}
 	
-	public function selectMaterial( pass : h3d.pass.Pass ) {
+	public function selectMaterial( pass : h3d.mat.Pass ) {
 	}
 	
 	public function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {

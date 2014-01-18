@@ -63,7 +63,7 @@ class Scene extends Object implements h3d.IDrawable {
 		passes.set(name, p);
 	}
 
-	@:access(h3d.pass.Pass)
+	@:access(h3d.mat.Pass)
 	@:access(h3d.scene.RenderContext)
 	public function render( engine : h3d.Engine ) {
 		camera.screenRatio = engine.width / engine.height;

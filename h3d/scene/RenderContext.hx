@@ -20,7 +20,7 @@ class RenderContext {
 		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
 	}
 	
-	@:access(h3d.pass.Pass)
+	@:access(h3d.mat.Pass)
 	public inline function emit( mat : h3d.mat.Material, obj ) {
 		var p = mat.mainPass;
 		while( p != null ) {
@@ -29,7 +29,7 @@ class RenderContext {
 		}
 	}
 	
-	public function emitPass( pass : h3d.pass.Pass, obj : h3d.scene.Object ) {
+	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) {
 		var o = pool;
 		if( o == null )
 			o = new ObjectPass();

@@ -1,7 +1,7 @@
 package h3d.pass;
 
 @:build(hxsl.Macros.buildGlobals())
-@:access(h3d.pass.Pass)
+@:access(h3d.mat.Pass)
 class Base {
 
 	var ctx : h3d.scene.RenderContext;
@@ -23,7 +23,7 @@ class Base {
 		initGlobals();
 	}
 	
-	public function compileShader( p : Pass ) {
+	public function compileShader( p : h3d.mat.Pass ) {
 		return manager.compileShaders(p.getShadersRec());
 	}
 	

@@ -86,7 +86,7 @@ class Engine {
 		shaderSwitches++;
 	}
 	
-	public function selectMaterial( pass : h3d.pass.Pass ) {
+	public function selectMaterial( pass : h3d.mat.Pass ) {
 		driver.selectMaterial(pass);
 	}
 	

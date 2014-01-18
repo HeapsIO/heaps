@@ -15,7 +15,7 @@ class RenderContext {
 	var manager : h3d.shader.Manager;
 	var compiledShader : hxsl.RuntimeShader;
 	var buffers : h3d.shader.Buffers;
-	var pass : h3d.pass.Pass;
+	var pass : h3d.mat.Pass;
 	var currentShaders : Array<hxsl.Shader>;
 	var currentObj : Drawable;
 	var stride : Int;
@@ -27,7 +27,7 @@ class RenderContext {
 		buffer = new hxd.FloatBuffer();
 		bufPos = 0;
 		manager = new h3d.shader.Manager(["output.position", "output.color"]);
-		pass = new h3d.pass.Pass("",[]);
+		pass = new h3d.mat.Pass("",[]);
 		pass.depth(true, Always);
 		pass.culling = None;
 		baseShader = new h3d.shader.Base2d();

@@ -107,13 +107,13 @@ class LinearAnimation extends Animation {
 			}
 			if( o.uvs != null ) {
 				var mat = o.targetObject.toMesh().material;
-				if( mat.uvDelta == null ) {
-					mat.uvDelta = new Vector();
+				var s = mat.mainPass.getShader(h3d.shader.UVScroll);
+				if( s == null ) {
+					s = mat.mainPass.addShader(new h3d.shader.UVScroll());
 					mat.texture.wrap = Repeat;
 				}
-				mat.uvDelta.x = o.uvs[frame1 << 1] * k1 + o.uvs[frame2 << 1] * k2;
-				mat.uvDelta.y = o.uvs[(frame1 << 1) | 1] * k1 + o.uvs[(frame2 << 1) | 1] * k2;
-				trace(frame1, mat.uvDelta);
+				s.uvDelta.x = o.uvs[frame1 << 1] * k1 + o.uvs[frame2 << 1] * k2;
+				s.uvDelta.y = o.uvs[(frame1 << 1) | 1] * k1 + o.uvs[(frame2 << 1) | 1] * k2;
 				continue;
 			}
 			var f1 = o.frames[frame1], f2 = o.frames[frame2];

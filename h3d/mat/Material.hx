@@ -1,6 +1,6 @@
 package h3d.mat;
 import h3d.mat.Data;
-import h3d.pass.Pass;
+import h3d.mat.Pass;
 
 class Material {
 	
