@@ -47,7 +47,7 @@ class BytesFileEntry extends FileEntry {
 		haxe.Timer.delay(onReady, 1);
 	}
 	
-	override function loadBitmap( onLoaded : hxd.BitmapData -> Void ) : Void {
+	override function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void {
 		throw "TODO";
 	}
 

@@ -305,8 +305,9 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
+		var img = bmp.toNative();
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, bmp.toNative());
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, img.getImageData(0,0,bmp.width,bmp.height));
 		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
 

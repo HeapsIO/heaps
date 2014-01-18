@@ -205,7 +205,7 @@ class FontBuilder {
 		} while ( !done );
 		
 		
-		var rbmp = hxd.BitmapData.fromNative( ctx.getImageData(0, 0, width, height) );
+		var rbmp = hxd.BitmapData.fromNative(ctx);
 		
 		if( innerTex == null ) {
 			innerTex = h3d.mat.Texture.fromBitmap( rbmp );

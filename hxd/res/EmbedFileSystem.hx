@@ -106,7 +106,7 @@ private class EmbedEntry extends FileEntry {
 		#end
 	}
 	
-	override function loadBitmap( onLoaded : hxd.BitmapData -> Void ) : Void {
+	override function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void {
 		#if flash
 		var loader = new flash.display.Loader();
 		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
@@ -115,11 +115,19 @@ private class EmbedEntry extends FileEntry {
 		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
 			close();
 			var content : flash.display.Bitmap = cast loader.content;
-			onLoaded(hxd.BitmapData.fromNative(content.bitmapData));
+			onLoaded(new LoadedBitmap(content.bitmapData));
 			loader.unload();
 		});
 		open();
 		loader.loadBytes(bytes);
+		#elseif js
+		var image = new js.html.Image();
+		image.onload = function(_) {
+			close();
+			onLoaded(new LoadedBitmap(image));
+		};
+		open();
+		image.src = "data:image/" + extension + ";base64," + haxe.crypto.Base64.encode(bytes, true);
 		#else
 		throw "TODO";
 		#end

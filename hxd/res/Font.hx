@@ -8,6 +8,9 @@ class Font extends Resource {
 		if( fontClass == null ) throw "Embeded font not found " + entry.path;
 		var font = Type.createInstance(fontClass, []);
 		return FontBuilder.getFont(font.fontName, size, options);
+		#elseif js
+		// TODO : get the font name
+		return FontBuilder.getFont("Verdana", size, options);
 		#else
 		throw "Not implemented for this platform";
 		return null;

@@ -114,9 +114,9 @@ class Image extends Resource {
 				entry.load(load);
 		} else {
 			// use native decoding
-			entry.loadBitmap(function(bmp) {
+			entry.loadBitmap(function(loaded) {
 				checkResize();
-
+				var bmp = loaded.toBitmap();
 				if( isSquare )
 					tex.uploadBitmap(bmp);
 				else {

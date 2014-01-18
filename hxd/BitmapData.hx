@@ -1,6 +1,6 @@
 package hxd;
 
-private typedef InnerData = #if flash flash.display.BitmapData #elseif js js.html.ImageData #elseif cpp flash.display.BitmapData #else Int #end;
+private typedef InnerData = #if flash flash.display.BitmapData #elseif js js.html.CanvasRenderingContext2D #elseif cpp flash.display.BitmapData #else Int #end;
 
 abstract BitmapData(InnerData) {
 
@@ -17,7 +17,10 @@ abstract BitmapData(InnerData) {
 		#if flash
 		this = new flash.display.BitmapData(width, height, true, 0);
 		#else
-		throw "TODO";
+		var canvas = js.Browser.document.createCanvasElement();
+		canvas.width = width;
+		canvas.height = height;
+		this = canvas.getContext2d();
 		#end
 	}
 	
@@ -25,7 +28,8 @@ abstract BitmapData(InnerData) {
 		#if flash
 		this.fillRect(this.rect, color);
 		#else
-		throw "TODO";
+		this.setFillColor(color);
+		this.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		#end
 	}
 	
@@ -138,12 +142,20 @@ abstract BitmapData(InnerData) {
 		#end
 	}
 	
-	inline function get_width() {
+	inline function get_width() : Int {
+		#if js
+		return this.canvas.width;
+		#else
 		return this.width;
+		#end
 	}
 
 	inline function get_height() {
+		#if js
+		return this.canvas.height;
+		#else
 		return this.height;
+		#end
 	}
 	
 	public inline function getPixels() : Pixels {
@@ -165,6 +177,14 @@ abstract BitmapData(InnerData) {
 	static function nativeGetPixels( b : InnerData ) {
 		#if flash
 		return new Pixels(b.width, b.height, haxe.io.Bytes.ofData(b.getPixels(b.rect)), ARGB);
+		#elseif js
+		var pixels = [];
+		var w = b.canvas.width;
+		var h = b.canvas.height;
+		var data = b.getImageData(0, 0, w, h).data;
+		for( i in 0...w * h * 4 )
+			pixels.push(data[i]);
+		return new Pixels(b.canvas.width, b.canvas.height, haxe.io.Bytes.ofData(pixels), ARGB);
 		#else
 		throw "TODO";
 		return null;
