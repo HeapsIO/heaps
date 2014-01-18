@@ -56,6 +56,11 @@ class Stage {
 		js.Browser.window.addEventListener("mousewheel", onMouseWheel);
 		js.Browser.window.addEventListener("keydown", onKeyDown);
 		js.Browser.window.addEventListener("keyup", onKeyUp);
+		canvas.addEventListener("mousedown", function(e) {
+			onMouseDown(e);
+			e.stopPropagation();
+			e.preventDefault();
+		});
 		var curW = Math.round(canvasPos.width), curH = Math.round(canvasPos.height);
 		var t0 = new haxe.Timer(100);
 		t0.run = function() {
