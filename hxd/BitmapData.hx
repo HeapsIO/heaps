@@ -184,7 +184,7 @@ abstract BitmapData(InnerData) {
 		var data = b.getImageData(0, 0, w, h).data;
 		for( i in 0...w * h * 4 )
 			pixels.push(data[i]);
-		return new Pixels(b.canvas.width, b.canvas.height, haxe.io.Bytes.ofData(pixels), ARGB);
+		return new Pixels(b.canvas.width, b.canvas.height, haxe.io.Bytes.ofData(pixels), RGBA);
 		#else
 		throw "TODO";
 		return null;
