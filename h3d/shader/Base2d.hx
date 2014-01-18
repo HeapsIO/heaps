@@ -22,7 +22,7 @@ class Base2d extends hxsl.Shader {
 		var absolutePosition : Vec4;
 		var pixelColor : Vec4;
 		var textureColor : Vec4;
-		@var var calculateUV : Vec2;
+		@var var calculatedUV : Vec2;
 		
 		@const var isRelative : Bool;
 		@param var color : Vec4;
@@ -37,9 +37,9 @@ class Base2d extends hxsl.Shader {
 				absolutePosition.zw = spritePosition.zw;
 			} else
 				absolutePosition = spritePosition;
-			calculateUV = input.uv;
+			calculatedUV = input.uv;
 			pixelColor = isRelative ? color * input.color : input.color;
-			textureColor = texture.get(calculateUV);
+			textureColor = texture.get(calculatedUV);
 			pixelColor *= textureColor;
 		}
 		

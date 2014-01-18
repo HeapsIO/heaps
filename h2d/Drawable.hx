@@ -2,7 +2,7 @@ package h2d;
 
 class Drawable extends Sprite {
 	
-	public var color : h3d.Vector;
+	public var color(default,null) : h3d.Vector;
 	public var alpha(get, set) : Float;
 	public var blendMode : BlendMode;
 	public var filter : Bool;
