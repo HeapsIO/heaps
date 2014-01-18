@@ -121,13 +121,23 @@ private class EmbedEntry extends FileEntry {
 		open();
 		loader.loadBytes(bytes);
 		#elseif js
+		// directly get the base64 encoded data from resources
+		var rawData = null;
+		for( res in @:privateAccess haxe.Resource.content )
+			if( res.name == data ) {
+				rawData = res.data;
+				break;
+			}
+		if( rawData == null ) throw "Missing resource " + data;
 		var image = new js.html.Image();
 		image.onload = function(_) {
-			close();
 			onLoaded(new LoadedBitmap(image));
 		};
-		open();
-		image.src = "data:image/" + extension + ";base64," + haxe.crypto.Base64.encode(bytes, true);
+		var extra = "";
+		var bytes = (rawData.length * 6) >> 3;
+		for( i in 0...(3-(bytes*4)%3)%3 )
+			extra += "=";
+		image.src = "data:image/" + extension + ";base64," + rawData + extra;
 		#else
 		throw "TODO";
 		#end
