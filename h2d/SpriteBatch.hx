@@ -6,7 +6,10 @@ class BatchElement {
 	public var y : Float;
 	public var scale : Float;
 	public var rotation : Float;
-	public var alpha : Float;
+	public var r : Float;
+	public var g : Float;
+	public var b : Float;
+	public var a : Float;
 	public var t : Tile;
 	public var batch(default, null) : SpriteBatch;
 	
@@ -14,7 +17,7 @@ class BatchElement {
 	var next : BatchElement;
 	
 	function new(t) {
-		x = 0; y = 0; alpha = 1;
+		x = 0; y = 0; r = 1; g = 1; b = 1; a = 1;
 		rotation = 0; scale = 1;
 		this.t = t;
 	}
@@ -41,7 +44,6 @@ class SpriteBatch extends Drawable {
 	public function new(t,?parent) {
 		super(parent);
 		tile = t;
-		shader.hasVertexAlpha = true;
 	}
 	
 	public function add(e:BatchElement) {
@@ -86,7 +88,6 @@ class SpriteBatch extends Drawable {
 		}
 	}
 	
-	
 	override function draw( ctx : RenderContext ) {
 		if( first == null )
 			return;
@@ -104,25 +105,37 @@ class SpriteBatch extends Drawable {
 				tmp[pos++] = (py * ca - px * sa) * e.scale + e.y;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v;
-				tmp[pos++] = e.alpha;
+				tmp[pos++] = e.r;
+				tmp[pos++] = e.g;
+				tmp[pos++] = e.b;
+				tmp[pos++] = e.a;
 				var px = t.dx + hx, py = t.dy;
 				tmp[pos++] = (px * ca + py * sa) * e.scale + e.x;
 				tmp[pos++] = (py * ca - px * sa) * e.scale + e.y;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v;
-				tmp[pos++] = e.alpha;
+				tmp[pos++] = e.r;
+				tmp[pos++] = e.g;
+				tmp[pos++] = e.b;
+				tmp[pos++] = e.a;
 				var px = t.dx, py = t.dy + hy;
 				tmp[pos++] = (px * ca + py * sa) * e.scale + e.x;
 				tmp[pos++] = (py * ca - px * sa) * e.scale + e.y;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v2;
-				tmp[pos++] = e.alpha;
+				tmp[pos++] = e.r;
+				tmp[pos++] = e.g;
+				tmp[pos++] = e.b;
+				tmp[pos++] = e.a;
 				var px = t.dx + hx, py = t.dy + hy;
 				tmp[pos++] = (px * ca + py * sa) * e.scale + e.x;
 				tmp[pos++] = (py * ca - px * sa) * e.scale + e.y;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v2;
-				tmp[pos++] = e.alpha;
+				tmp[pos++] = e.r;
+				tmp[pos++] = e.g;
+				tmp[pos++] = e.b;
+				tmp[pos++] = e.a;
 			} else {
 				var sx = e.x + t.dx;
 				var sy = e.y + t.dy;
@@ -130,22 +143,34 @@ class SpriteBatch extends Drawable {
 				tmp[pos++] = sy;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v;
-				tmp[pos++] = e.alpha;
+				tmp[pos++] = e.r;
+				tmp[pos++] = e.g;
+				tmp[pos++] = e.b;
+				tmp[pos++] = e.a;
 				tmp[pos++] = sx + t.width + 0.1;
 				tmp[pos++] = sy;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v;
-				tmp[pos++] = e.alpha;
+				tmp[pos++] = e.r;
+				tmp[pos++] = e.g;
+				tmp[pos++] = e.b;
+				tmp[pos++] = e.a;
 				tmp[pos++] = sx;
 				tmp[pos++] = sy + t.height + 0.1;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v2;
-				tmp[pos++] = e.alpha;
+				tmp[pos++] = e.r;
+				tmp[pos++] = e.g;
+				tmp[pos++] = e.b;
+				tmp[pos++] = e.a;
 				tmp[pos++] = sx + t.width + 0.1;
 				tmp[pos++] = sy + t.height + 0.1;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v2;
-				tmp[pos++] = e.alpha;
+				tmp[pos++] = e.r;
+				tmp[pos++] = e.g;
+				tmp[pos++] = e.b;
+				tmp[pos++] = e.a;
 			}
 			e = e.next;
 		}
@@ -153,7 +178,7 @@ class SpriteBatch extends Drawable {
 		var nverts = Std.int(pos / stride);
 		var buffer = ctx.engine.mem.alloc(nverts, stride, 4);
 		buffer.uploadVector(tmpBuf, 0, nverts);
-		setupShader(ctx.engine, tile, 0);
+		ctx.beginDrawObject(this, tile.getTexture());
 		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();
 	}

@@ -13,6 +13,10 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		if( buffer != null ) buffer.dispose();
 		buffer = null;
 	}
+	
+	public function isEmpty() {
+		return triCount() == 0;
+	}
 
 	override public function triCount() {
 		if( buffer == null )
@@ -24,6 +28,10 @@ private class TileLayerContent extends h3d.prim.Primitive {
 			b = b.next;
 		}
 		return v >> 1;
+	}
+
+	public inline function addColor( x : Int, y : Int, color : h3d.Vector, t : Tile ) {
+		add(x, y, color.r, color.g, color.b, color.a, t);
 	}
 
 	public function add( x : Int, y : Int, r : Float, g : Float, b : Float, a : Float, t : Tile ) {

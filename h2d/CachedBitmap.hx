@@ -62,7 +62,7 @@ class CachedBitmap extends Drawable {
 	}
 
 	override function drawRec( ctx : RenderContext ) {
-		drawTile(ctx.engine, tile);
+		emitTile(ctx, tile);
 	}
 	
 	override function sync( ctx : RenderContext ) {
