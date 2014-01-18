@@ -7,6 +7,20 @@ enum AnimationMode {
 	LinearAnim;
 }
 
+private class AnimCurve {
+	public var def : DefaultMatrixes;
+	public var object : String;
+	public var t : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
+	public var r : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
+	public var s : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
+	public var a : { t : Array<Float>, v : Array<Float> };
+	public var uv : Array<{ t : Float, u : Float, v : Float }>;
+	public function new(def, object) {
+		this.def = def;
+		this.object = object;
+	}
+}
+
 class DefaultMatrixes {
 	public var trans : Null<Point>;
 	public var scale : Null<Point>;
@@ -50,6 +64,7 @@ class Library {
 	var invConnect : Map<Int,Array<Int>>;
 	var leftHand : Bool;
 	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
+	var uvAnims : Map<String, Array<{ t : Float, u : Float, v : Float }>>;
 
 	/**
 		Allows to prevent some terminal unskinned joints to be removed, for instance if we want to track their position
@@ -99,6 +114,16 @@ class Library {
 		this.root = root;
 		for( c in root.childs )
 			init(c);
+	}
+	
+	public function loadXtra( data : String ) {
+		var xml = Xml.parse(data).firstElement();
+		if( uvAnims == null ) uvAnims = new Map();
+		for( e in new haxe.xml.Fast(xml).elements ) {
+			var obj = e.att.name;
+			var frames = [for( f in e.elements ) { var f = f.innerData.split(" ");  { t : Std.parseFloat(f[0]) * 9622116.25, u : Std.parseFloat(f[1]), v : Std.parseFloat(f[2]) }} ];
+			uvAnims.set(obj, frames);
+		}
 	}
 	
 	function convertPoints( a : Array<Float> ) {
@@ -222,6 +247,38 @@ class Library {
 		}
 	}
 
+	function getObjectCurve( curves : Map < Int, AnimCurve > , model : FbxNode, curveName : String, animName : String ) : AnimCurve {
+		var c = curves.get(model.getId());
+		if( c != null )
+			return c;
+		var name = model.getName();
+		if( skipObjects.get(name) )
+			return null;
+		// if it's an empty model with no sub nodes, let's ignore it (ex : Camera)
+		if( model.getType() == "Null" && getChilds(model, "Model").length == 0 )
+			return null;
+		var def = defaultModelMatrixes.get(name);
+		if( def == null )
+			throw "Object "+name+" used in anim "+animName+" was not found in library";
+		// if it's a move animation on a terminal unskinned joint, let's skip it
+		if( def.wasRemoved != null ) {
+			if( curveName != "Visibility" && curveName != "UV" )
+				return null;
+			// apply it on the skin instead
+			model = ids.get(def.wasRemoved);
+			name = model.getName();
+			c = curves.get(def.wasRemoved);
+			def = defaultModelMatrixes.get(name);
+			// todo : change behavior not to remove the mesh but the skin instead!
+			if( def == null ) throw "assert";
+		}
+		if( c == null ) {
+			c = new AnimCurve(def, name);
+			curves.set(model.getId(), c);
+		}
+		return c;
+	}
+	
 	public function loadAnimation( mode : AnimationMode, ?animName : String, ?root : FbxNode, ?lib : Library ) : h3d.anim.Animation {
 		if( lib != null ) {
 			lib.defaultModelMatrixes = defaultModelMatrixes;
@@ -254,34 +311,8 @@ class Library {
 		var allTimes = new Map();
 		for( cn in getChilds(animNode, "AnimationCurveNode") ) {
 			var model = getParent(cn, "Model");
-			var c = curves.get(model.getId());
-			if( c == null ) {
-				var name = model.getName();
-				if( skipObjects.get(name) )
-					continue;
-				// if it's an empty model with no sub nodes, let's ignore it (ex : Camera)
-				if( model.getType() == "Null" && getChilds(model, "Model").length == 0 )
-					continue;
-				var def = defaultModelMatrixes.get(name);
-				if( def == null )
-					throw "Object "+name+" used in anim "+animName+" was not found in library";
-				// if it's a move animation on a terminal unskinned joint, let's skip it
-				if( def.wasRemoved != null ) {
-					if( cn.getName() != "Visibility" )
-						continue;
-					// apply it on the skin instead
-					model = ids.get(def.wasRemoved);
-					name = model.getName();
-					c = curves.get(def.wasRemoved);
-					def = defaultModelMatrixes.get(name);
-					// todo : change behavior not to remove the mesh but the skin instead!
-					if( def == null ) throw "assert";
-				}
-				if( c == null ) {
-					c = { def : def, t : null, r : null, s : null, a : null, name : name };
-					curves.set(model.getId(), c);
-				}
-			}
+			var c = getObjectCurve(curves, model, cn.getName(), animName);
+			if( c == null ) continue;
 			var data = getChilds(cn, "AnimationCurve");
 			var cname = cn.getName();
 			// collect all the timestamps
@@ -359,11 +390,25 @@ class Library {
 			default: throw "assert";
 			}
 		}
+
+		// process UVs
+		if( uvAnims != null ) {
+			var modelByName = new Map();
+			for( obj in this.root.getAll("Objects.Model") )
+				modelByName.set(obj.getName(), obj);
+			for( obj in uvAnims.keys() ) {
+				var frames = uvAnims.get(obj);
+				var model = modelByName.get(obj);
+				if( model == null ) throw "Missing model '" + obj + "' requires by UV animation";
+				var c = getObjectCurve(curves, model, "UV", animName);
+				if( c == null ) continue;
+				c.uv = frames;
+				for( f in frames )
+					allTimes.set(Std.int(f.t / 200000), f.t);
+			}
+		}
 		
-		var times = [];
-		for( a in allTimes )
-			times.push(a);
-		var allTimes = times;
+		var allTimes = [for( a in allTimes ) a];
 		allTimes.sort(sortDistinctFloats);
 		var maxTime = allTimes[allTimes.length - 1];
 		var minDT = maxTime;
@@ -384,8 +429,9 @@ class Library {
 			for( c in curves ) {
 				var frames = c.t == null && c.r == null && c.s == null ? null : new haxe.ds.Vector(numFrames);
 				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
+				var uvs = c.uv == null ? null : new haxe.ds.Vector(numFrames * 2);
 				// skip empty curves
-				if( frames == null && alpha == null )
+				if( frames == null && alpha == null && uvs == null )
 					continue;
 				var ctx = c.t == null ? null : c.t.x;
 				var cty = c.t == null ? null : c.t.y;
@@ -401,8 +447,9 @@ class Library {
 				var cst = c.s == null ? [ -1.] : c.s.t;
 				var cav = c.a == null ? null : c.a.v;
 				var cat = c.a == null ? null : c.a.t;
+				var cuv = c.uv;
 				var def = c.def;
-				var tp = 0, rp = 0, sp = 0, ap = 0;
+				var tp = 0, rp = 0, sp = 0, ap = 0, uvp = 0;
 				var curMat = null;
 				for( f in 0...numFrames ) {
 					var changed = curMat == null;
@@ -454,12 +501,20 @@ class Library {
 							ap++;
 						alpha[f] = cav[ap - 1];
 					}
+					if( uvs != null ) {
+						if( allTimes[f] == cuv[uvp].t )
+							uvp++;
+						uvs[f<<1] = cuv[uvp - 1].u;
+						uvs[(f<<1)|1] = cuv[uvp - 1].v;
+					}
 				}
 				
 				if( frames != null )
-					anim.addCurve(c.name, frames);
+					anim.addCurve(c.object, frames);
 				if( alpha != null )
-					anim.addAlphaCurve(c.name, alpha);
+					anim.addAlphaCurve(c.object, alpha);
+				if( uvs != null )
+					anim.addUVCurve(c.object, uvs);
 			}
 			return anim;
 			
@@ -471,6 +526,7 @@ class Library {
 			for( c in curves ) {
 				var frames = c.t == null && c.r == null && c.s == null ? null : new haxe.ds.Vector(numFrames);
 				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
+				var uvs = c.uv == null ? null : new haxe.ds.Vector(numFrames * 2);
 				// skip empty curves
 				if( frames == null && alpha == null )
 					continue;
@@ -488,8 +544,9 @@ class Library {
 				var cst = c.s == null ? [ -1.] : c.s.t;
 				var cav = c.a == null ? null : c.a.v;
 				var cat = c.a == null ? null : c.a.t;
+				var cuv = c.uv;
 				var def = c.def;
-				var tp = 0, rp = 0, sp = 0, ap = 0;
+				var tp = 0, rp = 0, sp = 0, ap = 0, uvp = 0;
 				var curFrame = null;
 				for( f in 0...numFrames ) {
 					var changed = curFrame == null;
@@ -572,12 +629,20 @@ class Library {
 							ap++;
 						alpha[f] = cav[ap - 1];
 					}
+					if( uvs != null ) {
+						if( uvp < cuv.length && allTimes[f] == cuv[uvp].t )
+							uvp++;
+						uvs[f<<1] = cuv[uvp - 1].u;
+						uvs[(f<<1)|1] = cuv[uvp - 1].v;
+					}
 				}
 				
 				if( frames != null )
-					anim.addCurve(c.name, frames, c.r != null || def.rotate != null, c.s != null || def.scale != null);
+					anim.addCurve(c.object, frames, c.r != null || def.rotate != null, c.s != null || def.scale != null);
 				if( alpha != null )
-					anim.addAlphaCurve(c.name, alpha);
+					anim.addAlphaCurve(c.object, alpha);
+				if( uvs != null )
+					anim.addUVCurve(c.object, uvs);
 			}
 			return anim;
 			

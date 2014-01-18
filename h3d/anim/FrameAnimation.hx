@@ -4,11 +4,13 @@ import h3d.anim.Animation;
 class FrameObject extends AnimatedObject {
 	public var frames : haxe.ds.Vector<h3d.Matrix>;
 	public var alphas : haxe.ds.Vector<Float>;
+	public var uvs : haxe.ds.Vector<Float>;
 	
 	override function clone() : AnimatedObject {
 		var o = new FrameObject(objectName);
 		o.frames = frames;
 		o.alphas = alphas;
+		o.uvs = uvs;
 		return o;
 	}
 }
@@ -31,6 +33,12 @@ class FrameAnimation extends Animation {
 	public function addAlphaCurve( objName, alphas ) {
 		var f = new FrameObject(objName);
 		f.alphas = alphas;
+		objects.push(f);
+	}
+
+	public function addUVCurve( objName, uvs ) {
+		var f = new FrameObject(objName);
+		f.uvs = uvs;
 		objects.push(f);
 	}
 	

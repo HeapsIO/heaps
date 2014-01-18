@@ -30,6 +30,7 @@ class FileTree {
 		pairedExt.set("fnt", ["png"]);
 		pairedExt.set("fbx", ["png"]);
 		pairedExt.set("cdb", ["img"]);
+		pairedExt.set("xtra", ["fbx"]);
 		isFlash = Context.defined("flash");
 		isJS = Context.defined("js");
 	}
@@ -310,7 +311,7 @@ class FileTree {
 		switch( ext.toLowerCase() ) {
 		case "jpg", "png":
 			return { e : macro loader.loadImage($epath), t : macro : hxd.res.Image };
-		case "fbx", "xbx":
+		case "fbx", "xbx", "xtra":
 			return { e : macro loader.loadFbxModel($epath), t : macro : hxd.res.FbxModel };
 		case "awd":
 			return { e : macro loader.loadAwdModel($epath), t : macro : hxd.res.AwdModel };
