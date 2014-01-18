@@ -677,13 +677,14 @@ class Library {
 				while( tmats.length > lastAdded )
 					tmats.pop();
 				if( tmats.length == 0 )
-					tmats.push(new h3d.mat.MeshMaterial(h2d.Tile.fromColor(0xFFFF00FF).getTexture()));
+					tmats.push(new h3d.mat.MeshMaterial(h3d.mat.Texture.fromColor(0xFFFF00FF)));
 				// create object
 				if( tmats.length == 1 )
 					o = new h3d.scene.Mesh(prim, tmats[0], scene);
 				else {
 					prim.multiMaterial = true;
-					o = new h3d.scene.MultiMaterial(prim, tmats, scene);
+					throw "TODO";
+					//o = new h3d.scene.MultiMaterial(prim, tmats, scene);
 				}
 			case type:
 				throw "Unknown model type " + type+" for "+model.getName();

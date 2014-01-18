@@ -4,5 +4,6 @@ package h3d.mat;
 abstract BlendMode(Int) {
 	public var Normal = 0;
 	public var Alpha = 1;
-	public var Additive = 2;
+	public var Add = 2;
+	public var SoftAdd = 3;
 }

@@ -1,5 +1,5 @@
 package h3d.parts;
-
+/*
 private class PartShader extends h3d.impl.Shader {
 
 #if flash
@@ -49,30 +49,15 @@ private class PartShader extends h3d.impl.Shader {
 #end
 
 }
+*/
 
-class Material extends h3d.mat.Material {
+class Material extends h3d.mat.MeshMaterial {
 	
-	var pshader : PartShader;
-	public var texture(default,set) : h3d.mat.Texture;
-
 	public function new(?texture) {
-		pshader = new PartShader();
-		super(pshader);
-		this.texture = texture;
-		blend(SrcAlpha, One);
-		culling = None;
-		depthWrite = false;
-		renderPass = 1;
-	}
-	
-	override function clone( ?m : h3d.mat.Material ) {
-		var m = m == null ? new Material(texture) : cast m;
-		super.clone(m);
-		return m;
-	}
-
-	inline function set_texture(t) {
-		return pshader.tex = t;
+		super(texture);
+		blendMode = Alpha;
+		mainPass.culling = None;
+		mainPass.depthWrite = false;
 	}
 	
 }

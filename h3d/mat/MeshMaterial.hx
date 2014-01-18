@@ -33,8 +33,11 @@ class MeshMaterial extends Material {
 			case Alpha:
 				mainPass.blend(SrcAlpha, OneMinusSrcAlpha);
 				mainPass.setPassName("alpha");
-			case Additive:
+			case Add:
 				mainPass.blend(SrcAlpha, One);
+				mainPass.setPassName("additive");
+			case SoftAdd:
+				mainPass.blend(OneMinusDstColor, One);
 				mainPass.setPassName("additive");
 			}
 		}

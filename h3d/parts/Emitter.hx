@@ -48,11 +48,11 @@ class Emitter extends h3d.scene.Object {
 		material.texture = s.frames == null || s.frames.length == 0 ? null : s.frames[0].getTexture();
 		switch( s.blendMode ) {
 		case Add:
-			material.blend(SrcAlpha, One);
+			material.blendMode = Add;
 		case SoftAdd:
-			material.blend(OneMinusDstColor, One);
+			material.blendMode = SoftAdd;
 		case Alpha:
-			material.blend(SrcAlpha, OneMinusSrcAlpha);
+			material.blendMode = Alpha;
 		}
 		colorMap = null;
 		if( s.colors != null ) {
@@ -83,7 +83,7 @@ class Emitter extends h3d.scene.Object {
 				emitCount += b.count;
 		while( emitCount > 0 ) {
 			if( count < s.maxParts ) {
-				emit();
+				emitPart();
 				count++;
 			}
 			emitCount -= 1;
@@ -175,7 +175,7 @@ class Emitter extends h3d.scene.Object {
 		p.lifeTimeFactor = 1 / eval(state.life, time, rand);
 	}
 	
-	public function emit() {
+	public function emitPart() {
 		var p;
 		if( pool == null )
 			p = new Particle();
@@ -535,6 +535,7 @@ class Emitter extends h3d.scene.Object {
 		buffer.uploadVector(tmpBuf, 0, nverts);
 		var size = eval(state.globalSize, time, rand);
 		
+		/*
 		material.pshader.mpos = state.emitLocal ? this.absPos : h3d.Matrix.I();
 		material.pshader.mproj = ctx.camera.m;
 		material.pshader.partSize = new h3d.Vector(size, size * ctx.engine.width / ctx.engine.height);
@@ -543,6 +544,8 @@ class Emitter extends h3d.scene.Object {
 		ctx.engine.selectMaterial(material);
 		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();
+		*/
+		throw "TODO";
 	}
 	
 }
