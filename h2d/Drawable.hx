@@ -6,7 +6,7 @@ class Drawable extends Sprite {
 	public var alpha(get, set) : Float;
 	public var blendMode : BlendMode;
 	public var filter : Bool;
-	public var colorKey(default, set) : Int = 0;
+	public var colorKey(default, set) : Null<Int>;
 	
 	var shaders : Array<hxsl.Shader>;
 	
@@ -21,7 +21,7 @@ class Drawable extends Sprite {
 		if( shaders != null ) {
 			var s = getShader(h3d.shader.ColorKey);
 			if( s == null ) {
-				if( v != 0 )
+				if( v != null )
 					s = addShader(new h3d.shader.ColorKey(0xFF000000 | v));
 			} else {
 				if( v == null )
