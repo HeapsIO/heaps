@@ -13,9 +13,9 @@ class ColorAdd extends hxsl.Shader {
 		
 	};
 	
-	public function new( ?color : Int ) {
+	public function new( color : Int = 0 ) {
 		super();
-		if( color != null ) this.color.setColor(color);
+		this.color.setColor(color);
 	}
 
 }
