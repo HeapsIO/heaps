@@ -60,7 +60,7 @@ class Linker {
 		case Param, Function:
 			throw "assert";
 		}
-		if( v.kind != v2.kind )
+		if( v.kind != v2.kind && v.kind != Local && v2.kind != Local )
 			error("'" + path + "' kind does not match : " + v.kind + " should be " + v2.kind,p);
 		switch( [v.type, v2.type] ) {
 		case [TStruct(fl1), TStruct(fl2)]:
