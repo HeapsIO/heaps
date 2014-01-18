@@ -387,7 +387,18 @@ class GlDriver extends Driver {
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
+		#if js
+		var ready = false;
+		// wait until all assets have properly load
+		js.Browser.window.addEventListener("load", function(_) {
+			if( !ready ) {
+				ready = true;
+				onCreate(false);
+			}
+		});
+		#else
 		haxe.Timer.delay(onCreate.bind(false), 1);
+		#end
 	}
 	
 	static var TFILTERS = [

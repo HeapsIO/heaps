@@ -9,8 +9,8 @@ class Font extends Resource {
 		var font = Type.createInstance(fontClass, []);
 		return FontBuilder.getFont(font.fontName, size, options);
 		#elseif js
-		// TODO : get the font name
-		return FontBuilder.getFont("Verdana", size, options);
+		var name = "R_" + ~/[^A-Za-z0-9_]/g.replace(entry.path, "_");
+		return FontBuilder.getFont(name, size, options);
 		#else
 		throw "Not implemented for this platform";
 		return null;

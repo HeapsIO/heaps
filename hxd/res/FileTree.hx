@@ -156,8 +156,14 @@ class FileTree {
 			});
 			embedTypes.push("hxd._res." + name);
 		} else if( isJS ) {
+			switch( ext.toLowerCase() ) {
+			case "ttf":
+				Embed.doEmbedFont(name, fullPath, options.fontsChars);
+				embedTypes.push("hxd._res." + name);
+				return true;
+			default:
+			}
 			Context.addResource(name, sys.io.File.getBytes(fullPath));
-			return true;
 		} else {
 			return false;
 		}

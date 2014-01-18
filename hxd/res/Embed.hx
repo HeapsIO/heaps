@@ -36,6 +36,31 @@ class Embed {
 				isExtern : false,
 				fields : [],
 			});
+		} else if( Context.defined("js") ) {
+			// TODO : we might want to extract the chars from the TTF font
+			var pos = Context.currentPos();
+			var content = haxe.crypto.Base64.encode(sys.io.File.getBytes(Context.resolvePath(file)));
+			haxe.macro.Context.defineType({
+				pack : ["hxd", "_res"],
+				name : name,
+				meta : [
+					{ name : ":keep", pos : pos },
+				],
+				pos : pos,
+				kind : TDClass({ pack : ["hxd","res"], name : "Embed", params : [] }),
+				fields : [
+					{
+						pos : pos,
+						name : "__init__",
+						access : [AStatic],
+						kind : FFun( {
+							ret : macro : Void,
+							args : [],
+							expr : macro untyped hx__registerFont($v{name},$v{content}),
+						}),
+					}
+				],
+			});
 		} else
 			throw "Font embedding not available for this platform";
 		var m = Context.getLocalClass().get().module;
@@ -70,5 +95,29 @@ class Embed {
 		doEmbedFont(safeName, path, chars);
 		return macro new hxd._res.$safeName().fontName;
 	}
+	
+	#if js
+	static function __init__() untyped {
+		__js__("var hx__registerFont");
+		untyped hx__registerFont = function(name, data) {
+			var s = js.Browser.document.createStyleElement();
+			s.type = "text/css";
+			s.innerHTML = "@font-face{ font-family: " + name + "; src: url('data:font/ttf;base64," + data + "') format('truetype'); }";
+			js.Browser.document.getElementsByTagName('head')[0].appendChild(s);
+			// create a div in the page to force font loading
+			var div = js.Browser.document.createDivElement();
+			div.style.fontFamily = name;
+			div.style.opacity = 0;
+			div.style.width = "1px";
+			div.style.height = "1px";
+			div.style.position = "fixed";
+			div.style.bottom = "0px";
+			div.style.right = "0px";
+			div.innerHTML = ".";
+			div.className = "hx__loadFont";
+			js.Browser.document.body.appendChild(div);
+		};
+	}
+	#end
 
 }
