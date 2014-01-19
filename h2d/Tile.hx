@@ -3,7 +3,7 @@ package h2d;
 @:allow(h2d)
 class Tile {
 	
-	static inline var EPSILON_PIXEL = 0.001;
+	static inline var EPSILON_PIXEL = 0;
 	
 	var innerTex : h3d.mat.Texture;
 	
