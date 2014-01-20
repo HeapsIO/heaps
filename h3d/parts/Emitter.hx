@@ -399,6 +399,9 @@ class Emitter extends h3d.scene.Object {
 				var dy = p.y - prev.y;
 				var dz = p.z - prev.z;
 				var d = hxd.Math.invSqrt(dx * dx + dy * dy + dz * dz);
+				// this prevent big rotations from occuring while we have a very small offset
+				// the value is a bit arbitrary
+				if( d > 10 ) d = 10;
 				dx *= d;
 				dy *= d;
 				dz *= d;
