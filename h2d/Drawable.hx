@@ -417,8 +417,9 @@ class Drawable extends Sprite {
 
 		if( options & HAS_SIZE != 0 ) {
 			var tmp = core.tmpSize;
-			tmp.x = tile.width;
-			tmp.y = tile.height;
+			// adds 1/10 pixel size to prevent precision loss after scaling
+			tmp.x = tile.width + 0.1;
+			tmp.y = tile.height + 0.1;
 			tmp.z = 1;
 			shader.size = tmp;
 		}
