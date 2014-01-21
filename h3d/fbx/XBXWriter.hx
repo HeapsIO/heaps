@@ -20,18 +20,19 @@ class XBXWriter
 	}
 
 	function writeString( s : String ) {
-		if( s.length < 0x80 )
-			o.writeByte(s.length);
+		var len = haxe.io.Bytes.ofString(s).length;
+		if( len < 0x80 )
+			o.writeByte(len);
 		else {
-			o.writeByte(0x80 | (s.length & 0x7F));
-			o.writeUInt24(s.length >> 7);
+			o.writeByte(0x80 | (len & 0x7F));
+			o.writeUInt24(len >> 7);
 		}
 		o.writeString(s);
 	}
 
 	public function writeNode( n : FbxNode)
 	{
-		writeString( n.name);
+		writeString( n.name );
 		o.writeByte( n.props.length );
 		for ( p in n.props)
 			writeProperty( p );
