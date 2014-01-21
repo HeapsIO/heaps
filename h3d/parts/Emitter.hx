@@ -35,6 +35,19 @@ class Emitter extends h3d.scene.Object {
 		setState(state);
 	}
 	
+	/**
+		Offset all existing particles by the given values.
+	**/
+	public function offsetParticles( dx : Float, dy : Float, dz = 0. ) {
+		var p = head;
+		while( p != null ) {
+			p.x += dx;
+			p.y += dy;
+			p.z += dz;
+			p = p.next;
+		}
+	}
+	
 	public function reset() {
 		while( head != null )
 			kill(head);
@@ -540,7 +553,13 @@ class Emitter extends h3d.scene.Object {
 		
 		material.pshader.mpos = state.emitLocal ? this.absPos : h3d.Matrix.I();
 		material.pshader.mproj = ctx.camera.m;
-		material.pshader.partSize = new h3d.Vector(size, size * ctx.engine.width / ctx.engine.height);
+		if( state.is3D ) {
+			material.pshader.is3D = true;
+			material.pshader.partSize = new h3d.Vector(size, size);
+		} else {
+			material.pshader.is3D = false;
+			material.pshader.partSize = new h3d.Vector(size, size * ctx.engine.width / ctx.engine.height);
+		}
 		material.pshader.hasColor = hasColor;
 		
 		ctx.engine.selectMaterial(material);

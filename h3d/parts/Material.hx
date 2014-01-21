@@ -19,19 +19,27 @@ private class PartShader extends h3d.impl.Shader {
 		var partSize : Float2;
 		
 		var hasColor : Bool;
+		var is3D : Bool;
 
 		function vertex( mpos : M34, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
 			tpos.xyz = input.pos.xyzw * mpos;
-			var tmp = tpos * mproj;
 			var rpos = input.delta;
 			var cr = input.rotation.cos();
 			var sr = input.rotation.sin();
 			var rtmp = rpos.x * cr + rpos.y * sr;
 			rpos.y = rpos.y * cr - rpos.x * sr;
 			rpos.x = rtmp;
-			tmp.xy += rpos * input.size * partSize;
-			out = tmp;
+			if( is3D ) {
+				rpos.xy *= input.size * partSize;
+				tpos.x += rpos.x;
+				tpos.z += rpos.y;
+				out = tpos * mproj;
+			} else {
+				var tmp = tpos * mproj;
+				tmp.xy += rpos * input.size * partSize;
+				out = tmp;
+			}
 			tuv = input.uv;
 			if( hasColor ) tcolor = input.color;
 		}

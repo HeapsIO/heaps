@@ -76,6 +76,7 @@ class State {
 	public var frames : Array<h2d.Tile>;
 	public var blendMode : BlendMode;
 	public var sortMode : SortMode;
+	public var is3D : Bool;
 	
 	// emit
 	public var loop	: Bool;
@@ -127,6 +128,7 @@ class State {
 		frames = null;
 		blendMode = SoftAdd;
 		sortMode = Back;
+		is3D = false;
 		// emit
 		loop = true;
 		emitRate = VConst(100);

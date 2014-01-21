@@ -409,6 +409,7 @@ class Editor extends h2d.Sprite {
 						</div>
 						<div class="line">
 							<span class="label">Start Delay</span> <value value="${state.delay}" onchange="api.s.delay = this.value"/>
+							<checkbox checked="${state.is3D}" onchange="api.s.is3D = this.checked"/> <span>3D</span>
 						</div>
 						<div class="line">
 							<select onchange="api.s.blendMode = api.blendModes[api.parseInt(this.value)]; $(\'.ic.alpha\').toggleClass(\':disabled\', api.s.blendMode.index == 2)">
