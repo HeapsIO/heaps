@@ -300,8 +300,10 @@ class Library {
 				break;
 			}
 		if( animNode == null ) {
-			if( animName == null ) return null;
-			throw "Animation not found " + animName;
+			if( animName != null )
+				throw "Animation not found " + animName;
+			if( uvAnims == null )
+				return null;
 		}
 
 		var curves = new Map();
@@ -309,7 +311,8 @@ class Library {
 		var P1 = new Point(1, 1, 1);
 		var F = Math.PI / 180;
 		var allTimes = new Map();
-		for( cn in getChilds(animNode, "AnimationCurveNode") ) {
+		
+		if( animNode != null ) for( cn in getChilds(animNode, "AnimationCurveNode") ) {
 			var model = getParent(cn, "Model");
 			var c = getObjectCurve(curves, model, cn.getName(), animName);
 			if( c == null ) continue;
@@ -528,7 +531,7 @@ class Library {
 				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
 				var uvs = c.uv == null ? null : new haxe.ds.Vector(numFrames * 2);
 				// skip empty curves
-				if( frames == null && alpha == null )
+				if( frames == null && alpha == null && uvs == null )
 					continue;
 				var ctx = c.t == null ? null : c.t.x;
 				var cty = c.t == null ? null : c.t.y;

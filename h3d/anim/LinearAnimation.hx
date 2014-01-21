@@ -117,7 +117,6 @@ class LinearAnimation extends Animation {
 				}
 				mat.uvDelta.x = o.uvs[frame1 << 1] * k1 + o.uvs[frame2 << 1] * k2;
 				mat.uvDelta.y = o.uvs[(frame1 << 1) | 1] * k1 + o.uvs[(frame2 << 1) | 1] * k2;
-				trace(frame1, mat.uvDelta);
 				continue;
 			}
 			var f1 = o.frames[frame1], f2 = o.frames[frame2];
