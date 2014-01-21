@@ -98,7 +98,6 @@ class Editor extends h2d.Sprite {
 		},{
 			defaultPath : currentFilePath,
 			title : "Please select the texture",
-			relativePath : true,
 			fileTypes : [{ name : "Images", extensions : ["png","jpg","jpeg","gif"] }],
 		});
 	}
