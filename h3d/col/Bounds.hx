@@ -15,31 +15,18 @@ class Bounds {
 	}
 	
 	public function inFrustum( mvp : Matrix ) {
-
-		// left
-		if( testPlane(new Plane(mvp._14 + mvp._11, mvp._24 + mvp._21 , mvp._34 + mvp._31, -(mvp._44 + mvp._41))) < 0 )
+		if( testPlane(Plane.frustumLeft(mvp)) < 0 )
 			return false;
-		
-		// right
-		if( testPlane(new Plane(mvp._14 - mvp._11, mvp._24 - mvp._21 , mvp._34 - mvp._31, mvp._41 - mvp._44)) < 0 )
+		if( testPlane(Plane.frustumRight(mvp)) < 0 )
 			return false;
-
-		// bottom
-		if( testPlane(new Plane(mvp._14 + mvp._12, mvp._24 + mvp._22 , mvp._34 + mvp._32, -(mvp._44 + mvp._42))) < 0 )
+		if( testPlane(Plane.frustumBottom(mvp)) < 0 )
 			return false;
-
-		// top
-		if( testPlane(new Plane(mvp._14 - mvp._12, mvp._24 - mvp._22 , mvp._34 - mvp._32, mvp._42 - mvp._44)) < 0 )
+		if( testPlane(Plane.frustumTop(mvp)) < 0 )
 			return false;
-
-		// near
-		if( testPlane(new Plane(mvp._13, mvp._23, mvp._33, -mvp._43)) < 0 )
+		if( testPlane(Plane.frustumNear(mvp)) < 0 )
 			return false;
-
-		// far
-		if( testPlane(new Plane(mvp._14 - mvp._13, mvp._24 - mvp._23, mvp._34 - mvp._33, mvp._43 - mvp._44)) < 0 )
+		if( testPlane(Plane.frustumFar(mvp)) < 0 )
 			return false;
-			
 		return true;
 	}
 	
