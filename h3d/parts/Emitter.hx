@@ -96,10 +96,8 @@ class Emitter extends h3d.scene.Object {
 			if( b.time <= time && b.time > old )
 				emitCount += b.count;
 		while( emitCount > 0 ) {
-			if( count < s.maxParts ) {
+			if( count < s.maxParts )
 				emitParticle();
-				count++;
-			}
 			emitCount -= 1;
 			if( state.emitTrail )
 				break;
@@ -203,6 +201,7 @@ class Emitter extends h3d.scene.Object {
 			pool = p.next;
 		}
 		initPart(p);
+		count++;
 		switch( state.sortMode ) {
 		case Front, Sort, InvSort:
 			if( head == null ) {
