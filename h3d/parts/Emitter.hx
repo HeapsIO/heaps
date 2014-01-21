@@ -85,6 +85,7 @@ class Emitter extends h3d.scene.Object {
 	public function update(dt:Float) {
 		var s = state;
 		var old = time;
+		if( posChanged ) syncPos();
 		time += dt * eval(s.globalSpeed, time, rand) / s.globalLife;
 		var et = (time - old) * s.globalLife;
 		if( time >= 1 && s.loop )
@@ -96,7 +97,7 @@ class Emitter extends h3d.scene.Object {
 				emitCount += b.count;
 		while( emitCount > 0 ) {
 			if( count < s.maxParts ) {
-				emit();
+				emitParticle();
 				count++;
 			}
 			emitCount -= 1;
@@ -189,6 +190,11 @@ class Emitter extends h3d.scene.Object {
 	}
 	
 	public function emit() {
+		if( posChanged ) syncPos();
+		return emitParticle();
+	}
+	
+	function emitParticle() {
 		var p;
 		if( pool == null )
 			p = new Particle();
@@ -218,6 +224,7 @@ class Emitter extends h3d.scene.Object {
 				tail = p;
 			}
 		}
+		return p;
 	}
 	
 	function kill(p:Particle) {
@@ -382,7 +389,7 @@ class Emitter extends h3d.scene.Object {
 				tmp[pos++] = ratio;
 				// UV
 				tmp[pos++] = f.u;
-				tmp[pos++] = f.v;
+				tmp[pos++] = f.v2;
 				// RBGA
 				if( hasColor ) {
 					tmp[pos++] = p.cr;
@@ -400,7 +407,7 @@ class Emitter extends h3d.scene.Object {
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
 				tmp[pos++] = f.u;
-				tmp[pos++] = f.v2;
+				tmp[pos++] = f.v;
 				if( hasColor ) {
 					tmp[pos++] = p.cr;
 					tmp[pos++] = p.cg;
@@ -437,7 +444,7 @@ class Emitter extends h3d.scene.Object {
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
 				tmp[pos++] = f.u2;
-				tmp[pos++] = f.v;
+				tmp[pos++] = f.v2;
 				if( hasColor ) {
 					tmp[pos++] = p.cr;
 					tmp[pos++] = p.cg;
@@ -454,7 +461,7 @@ class Emitter extends h3d.scene.Object {
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
 				tmp[pos++] = f.u2;
-				tmp[pos++] = f.v2;
+				tmp[pos++] = f.v;
 				if( hasColor ) {
 					tmp[pos++] = p.cr;
 					tmp[pos++] = p.cg;
@@ -481,7 +488,7 @@ class Emitter extends h3d.scene.Object {
 				tmp[pos++] = ratio;
 				// UV
 				tmp[pos++] = f.u;
-				tmp[pos++] = f.v;
+				tmp[pos++] = f.v2;
 				// RBGA
 				if( hasColor ) {
 					tmp[pos++] = p.cr;
@@ -499,7 +506,7 @@ class Emitter extends h3d.scene.Object {
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
 				tmp[pos++] = f.u;
-				tmp[pos++] = f.v2;
+				tmp[pos++] = f.v;
 				if( hasColor ) {
 					tmp[pos++] = p.cr;
 					tmp[pos++] = p.cg;
@@ -516,7 +523,7 @@ class Emitter extends h3d.scene.Object {
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
 				tmp[pos++] = f.u2;
-				tmp[pos++] = f.v;
+				tmp[pos++] = f.v2;
 				if( hasColor ) {
 					tmp[pos++] = p.cr;
 					tmp[pos++] = p.cg;
@@ -533,7 +540,7 @@ class Emitter extends h3d.scene.Object {
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
 				tmp[pos++] = f.u2;
-				tmp[pos++] = f.v2;
+				tmp[pos++] = f.v;
 				if( hasColor ) {
 					tmp[pos++] = p.cr;
 					tmp[pos++] = p.cg;
