@@ -790,8 +790,8 @@ class Editor extends h2d.Sprite {
 		}
 		for( x in 0...width ) {
 			var px = x / (width - 1);
-			var py0 = state.eval(curve.value, px, function() return 0.);
-			var py1 = state.eval(curve.value, px, function() return 1.);
+			var py0 = state.eval(curve.value, px, function() return 0., null);
+			var py1 = state.eval(curve.value, px, function() return 1., null);
 			var iy0 = posY(py0);
 			if( py0 != py1 ) {
 				var iy1 = posY(py1);

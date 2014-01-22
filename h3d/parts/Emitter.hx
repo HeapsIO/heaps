@@ -20,6 +20,7 @@ class Emitter extends h3d.scene.Object {
 	
 	var tmp : h3d.Vector;
 	var tmpBuf : hxd.FloatBuffer;
+	var curPart : Particle;
 	
 	public function new(?state,?parent) {
 		super(parent);
@@ -79,13 +80,14 @@ class Emitter extends h3d.scene.Object {
 	}
 	
 	inline function eval(v,time,rnd) {
-		return state.eval(v,time,rnd);
+		return state.eval(v,time,rnd, curPart);
 	}
 	
 	public function update(dt:Float) {
 		var s = state;
 		var old = time;
 		if( posChanged ) syncPos();
+		curPart = null;
 		time += dt * eval(s.globalSpeed, time, rand) / s.globalLife;
 		var et = (time - old) * s.globalLife;
 		if( time >= 1 && s.loop )
@@ -105,9 +107,11 @@ class Emitter extends h3d.scene.Object {
 		var p = head;
 		while( p != null ) {
 			var n = p.next;
+			curPart = p;
 			updateParticle(p, et);
 			p = n;
 		}
+		curPart = null;
 	}
 	
 	inline function rand() {
@@ -318,6 +322,9 @@ class Emitter extends h3d.scene.Object {
 			if( f < 0 ) f += 1;
 			p.frame = Std.int(f * state.frames.length);
 		}
+		
+		if( state.update != null )
+			state.update(p);
 	}
 	
 	override function sync( ctx : h3d.scene.RenderContext ) {
@@ -567,6 +574,7 @@ class Emitter extends h3d.scene.Object {
 			material.pshader.partSize = new h3d.Vector(size, size * ctx.engine.width / ctx.engine.height);
 		}
 		material.pshader.hasColor = hasColor;
+		material.pshader.isAlphaMap = state.isAlphaMap;
 		
 		ctx.engine.selectMaterial(material);
 		ctx.engine.renderQuadBuffer(buffer);

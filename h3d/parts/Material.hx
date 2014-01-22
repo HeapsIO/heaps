@@ -20,6 +20,8 @@ private class PartShader extends h3d.impl.Shader {
 		
 		var hasColor : Bool;
 		var is3D : Bool;
+		
+		var isAlphaMap : Bool;
 
 		function vertex( mpos : M34, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
@@ -47,6 +49,10 @@ private class PartShader extends h3d.impl.Shader {
 		function fragment( tex : Texture ) {
 			var c = tex.get(tuv.xy);
 			if( hasColor ) c *= tcolor;
+			if( isAlphaMap ) {
+				c.a *= c.rgb.dot([1 / 3, 1 / 3, 1 / 3]);
+				c.rgb = [1, 1, 1];
+			}
 			out = c;
 		}
 	
