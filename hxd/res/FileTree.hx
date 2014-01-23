@@ -169,7 +169,7 @@ class FileTree {
 		var dict = new Map();
 		for( f in fields ) {
 			if( Lambda.has(f.access,AStatic) ) {
-				dict.set(f.name, "class declaration");
+				dict.set(f.name, { field : null, fget : null, path : "class declaration" });
 				if( f.name == "loader" )
 					loaderType = switch( f.kind ) {
 					case FVar(t, _), FProp(_, _, t, _): t;
@@ -179,7 +179,7 @@ class FileTree {
 		}
 		if( loaderType == null ) {
 			loaderType = macro : hxd.res.Loader;
-			dict.set("loader", "reserved identifier");
+			dict.set("loader", { field : null, fget : null, path : "reserved identifier" });
 			fields.push({
 				name : "loader",
 				access : [APublic, AStatic],
@@ -202,7 +202,7 @@ class FileTree {
 		return fields;
 	}
 	
-	function scanRec( relPath : String, fields : Array<Field>, dict : Map<String,String> ) {
+	function scanRec( relPath : String, fields : Array<Field>, dict : Map<String,{path:String,field:Field,fget:Field}> ) {
 		var dir = this.path + (relPath == "" ? "" : "/" + relPath);
 		// make sure to rescan if one of the directories content has changed (file added or deleted)
 		Context.registerModuleDependency(currentModule, dir);
@@ -243,20 +243,21 @@ class FileTree {
 			if( field != null ) {
 				var other = dict.get(f);
 				if( other != null ) {
-					var pe = pairedExt.get(other.split(".").pop().toLowerCase());
+					var pe = pairedExt.get(other.path.split(".").pop().toLowerCase());
 					if( pe != null && Lambda.has(pe,ext.toLowerCase()) )
 						continue;
-					Context.warning("Resource " + relPath + "/" + f + " is used by both " + relPath + "/" + fileName + " and " + other, pos);
-					continue;
+					if( other.field == null ) {
+						Context.warning("Resource " + relPath + "/" + f + " is used by both " + relPath + "/" + fileName + " and " + other, pos);
+						continue;
+					}
+					f += "_" + ext.split(".").join("_");
+					var exts = other.path.split("/").pop().split(".");
+					exts.shift();
+					var otherExt = exts.join("_");
+					other.field.name += "_" + otherExt;
+					other.fget.name += "_" + otherExt;
 				}
-				dict.set(f, relPath + "/" + fileName);
-				fields.push({
-					name : f,
-					pos : pos,
-					kind : FProp("get","never",field.t),
-					access : [AStatic, APublic],
-				});
-				fields.push({
+				var fget : Field = {
 					name : "get_" + f,
 					pos : pos,
 					kind : FFun({
@@ -267,7 +268,16 @@ class FileTree {
 					}),
 					meta : [ { name:":extern", pos:pos, params:[] } ],
 					access : [AStatic, AInline, APrivate],
-				});
+				};
+				var field : Field = {
+					name : f,
+					pos : pos,
+					kind : FProp("get","never",field.t),
+					access : [AStatic, APublic],
+				};
+				fields.push(field);
+				fields.push(fget);
+				dict.set(f, { path : relPath + "/" + fileName, field : field, fget : fget });
 			}
 		}
 	}
@@ -275,7 +285,7 @@ class FileTree {
 	function handleDir( dir : String, relPath : String, fullPath : String ) : FileEntry {
 		var ofields = [];
 		var dict = new Map();
-		dict.set("loader", "reserved identifier");
+		dict.set("loader", { path : "reserved identifier", field : null, fget : null });
 		scanRec(relPath, ofields, dict);
 		if( ofields.length == 0 )
 			return null;
