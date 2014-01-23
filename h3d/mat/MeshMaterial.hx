@@ -187,7 +187,12 @@ private class MeshShader extends h3d.impl.Shader {
 				var wpos = ruv * screenToLocal;
 				var coord = uvScaleRatio * (wpos.xy / wpos.w) + 0.5;
 				kill( min(min(coord.x, coord.y), min(1 - coord.x, 1 - coord.y)) );
-				out = tex.get(coord.xy);
+				var c = tex.get(coord.xy);
+				if( killAlpha ) kill(c.a - killAlphaThreshold);
+				if( colorAdd != null ) c += colorAdd;
+				if( colorMul != null ) c = c * colorMul;
+				if( colorMatrix != null ) c = c * colorMatrix;
+				out = c;
 			} else {
 				var c = tex.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0);
 				if( fog != null ) c.a *= talpha;
