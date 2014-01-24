@@ -278,12 +278,12 @@ class LocalFileSystem implements FileSystem {
 		#if air3
 		var f = open(path);
 		if( f == null || !f.exists )
-			throw "File not found " + path;
+			throw new NotFound(path);
 		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#else
 		var f = open(path);
 		if( f == null ||!sys.FileSystem.exists(f) )
-			throw "File not found " + path;
+			throw new NotFound(path);
 		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#end
 	}

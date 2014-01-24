@@ -229,11 +229,11 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		#if flash
 		var f = open(path);
 		if( f == null && !isDirectory(path) )
-			throw "File not found " + path;
+			throw new NotFound(path);
 		return new EmbedEntry(this, path.split("/").pop(), path, f);
 		#else
 		if( !exists(path) )
-			throw "File not found " + path;
+			throw new NotFound(path);
 		var id = resolve(path);
 		return new EmbedEntry(this, path.split("/").pop(), path, id);
 		#end
