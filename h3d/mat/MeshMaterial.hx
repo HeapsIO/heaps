@@ -100,6 +100,11 @@ private class MeshShader extends h3d.impl.Shader {
 		var writeDistance : Bool;
 		var projCenter : Float3;
 		var distance : Float3;
+		
+		
+		var colorMap : Texture;
+		var colorMapMatrix : Matrix;
+		var hasColorMap : Bool;
 
 		function vertex( mpos : Matrix, mproj : Matrix ) {
 			var tpos = input.pos.xyzw;
@@ -195,7 +200,9 @@ private class MeshShader extends h3d.impl.Shader {
 				if( colorMatrix != null ) c = c * colorMatrix;
 				out = c;
 			} else {
-				var c = tex.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0);
+				var c = tex.get(tuv.xy, type = isDXT1 ? 1 : isDXT5 ? 2 : 0);
+				if( hasColorMap )
+					c.rgb *= (colorMap.get(tuv.xy) * colorMapMatrix).rgb;
 				if( fog != null ) c.a *= talpha;
 				if( hasAlphaMap ) c.a *= alphaMap.get(alphaMapScroll != null ? tuv + alphaMapScroll : tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).b;
 				if( killAlpha ) kill(c.a - killAlphaThreshold);
@@ -798,6 +805,12 @@ class MeshMaterial extends Material {
 	
 	inline function set_outlinePower(v) {
 		return mshader.outlinePower = v;
+	}
+	
+	public function setColorMap( texture, ?matrix ) {
+		mshader.hasColorMap = texture != null;
+		mshader.colorMap = texture;
+		mshader.colorMapMatrix = matrix;
 	}
 	
 	#end
