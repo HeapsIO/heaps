@@ -213,8 +213,11 @@ class Scene extends Layers implements h3d.IDrawable {
 			event.kind = EMove;
 			currentOver = null;
 		}
-		if( !handled )
+		if( !handled ) {
+			if( event.kind == EPush )
+				pushList.push(null);
 			dispatchListeners(event);
+		}
 	}
 	
 	function hasEvents() {
@@ -252,7 +255,10 @@ class Scene extends Layers implements h3d.IDrawable {
 			if( e.kind == ERelease && pushList.length > 0 ) {
 				for( i in pushList ) {
 					// relX/relY is not correct here
-					i.handleEvent(e);
+					if( i == null )
+						dispatchListeners(e);
+					else
+						i.handleEvent(e);
 				}
 				pushList = new Array();
 			}
