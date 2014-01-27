@@ -52,6 +52,7 @@ private class MeshShader extends h3d.impl.Shader {
 		var hasZBias : Bool;
 		
 		var alphaMap : Texture;
+		var alphaMapScroll : Float2;
 		var hasAlphaMap : Bool;
 		
 		var lightSystem : Param < {
@@ -196,7 +197,7 @@ private class MeshShader extends h3d.impl.Shader {
 			} else {
 				var c = tex.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0);
 				if( fog != null ) c.a *= talpha;
-				if( hasAlphaMap ) c.a *= alphaMap.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).b;
+				if( hasAlphaMap ) c.a *= alphaMap.get(alphaMapScroll != null ? tuv + alphaMapScroll : tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).b;
 				if( killAlpha ) kill(c.a - killAlphaThreshold);
 				if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).rgb;
 				if( colorAdd != null ) c += colorAdd;
