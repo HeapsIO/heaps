@@ -12,7 +12,8 @@ class Texture {
 	#if debug
 	var allocPos : h3d.impl.AllocPos;
 	#end
-	public var id(default,null) : Int;
+	public var id(default, null) : Int;
+	public var name(default, null) : String;
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var isCubic(default, null) : Bool;
@@ -44,6 +45,14 @@ class Texture {
 		this.filter = Linear;
 		this.wrap = Clamp;
 		bits &= 0x7FFF;
+	}
+	
+	function toString() {
+		return name+" "+width+"x"+height;
+	}
+	
+	public function setName(n) {
+		name = n;
 	}
 
 	function set_mipMap(m:MipMap) {
