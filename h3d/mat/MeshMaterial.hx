@@ -96,6 +96,8 @@ private class MeshShader extends h3d.impl.Shader {
 		var screenToLocal : Matrix;
 		var outProjPos : Float4; // varying
 		
+		var smoothEdges : Bool;
+		var smoothFactor : Float;
 		
 		var writeDistance : Bool;
 		var projCenter : Float3;
@@ -143,7 +145,7 @@ private class MeshShader extends h3d.impl.Shader {
 			var t = input.uv;
 			if( uvScale != null ) t *= uvScale;
 			if( uvDelta != null ) t += uvDelta;
-			if( isDecal ) outProjPos = ppos;
+			if( isDecal || smoothEdges ) outProjPos = ppos;
 			tuv = t;
 			if( lightSystem != null ) {
 				// calculate normal
@@ -205,6 +207,11 @@ private class MeshShader extends h3d.impl.Shader {
 					c.rgb *= (colorMap.get(tuv.xy) * colorMapMatrix).rgb;
 				if( fog != null ) c.a *= talpha;
 				if( hasAlphaMap ) c.a *= alphaMap.get(alphaMapScroll != null ? tuv + alphaMapScroll : tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).b;
+				if( smoothEdges ) {
+					var screenPos = outProjPos.xyz / outProjPos.w;
+					var tuv = screenPos.xy * [0.5,-0.5] + [0.5,0.5];
+					c.a *= ((depthTexture.get(tuv).rgb.dot([1, 1 / 255, 1 / (255*255)]) - screenPos.z) * smoothFactor).sat();
+				}
 				if( killAlpha ) kill(c.a - killAlphaThreshold);
 				if( hasBlend ) c.rgb = c.rgb * (1 - tblend) + tblend * blendTexture.get(tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).rgb;
 				if( colorAdd != null ) c += colorAdd;
@@ -811,6 +818,12 @@ class MeshMaterial extends Material {
 		mshader.hasColorMap = texture != null;
 		mshader.colorMap = texture;
 		mshader.colorMapMatrix = matrix;
+	}
+	
+	public function enableSmoothEdges( factor : Float, depthTexture ) {
+		mshader.smoothEdges = true;
+		mshader.smoothFactor = factor;
+		mshader.depthTexture = depthTexture;
 	}
 	
 	#end
