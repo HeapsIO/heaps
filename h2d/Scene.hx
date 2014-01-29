@@ -372,7 +372,7 @@ class Scene extends Layers implements h3d.IDrawable {
 		// perform final rotation around center
 		if( rotation != 0 ) {
 			var cr = Math.cos(rotation);
-			var sr = -Math.sin(rotation);
+			var sr = Math.sin(rotation);
 			var tmpA = matA * cr + matB * sr;
 			var tmpB = matA * -sr + matB * cr;
 			var tmpC = matC * cr + matD * sr;
