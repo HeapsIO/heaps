@@ -153,9 +153,9 @@ class Quat {
 	
 	public function toEuler() {
 		return new Vector(
-			hxd.Math.atan2(2 * (y * w + x * z), 1 - 2 * (y * y + z * z)),
-			(2 * (x * y + z * w)).asin(),
-			hxd.Math.atan2(2 * (x * w - y * z), 1 - 2 * (x * x + z * z))
+			hxd.Math.atan2(2 * (x * w + y * z), 1 - 2 * (x * x + z * z)),
+			hxd.Math.atan2(2 * (y * w - x * z), 1 - 2 * (y * y - z * z)),
+			(2 * (x * y + z * w)).asin()
 		);
 	}
 	
