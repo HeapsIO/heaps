@@ -1,6 +1,6 @@
 * {
 	font-family : "Arial";
-	font-size : 14px;
+	font-size : 12px;
 	color : white;
 	offset : 0 0;
 	border : none;
@@ -17,7 +17,7 @@ div.modal {
 button, select {
 	background-color : gradient(#434343, #4B4B4B, #383838, #3A3A3A);
 	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
-	padding : 5px;
+	padding : 2px 5px;
 }
 
 button:hover {
@@ -96,8 +96,8 @@ itemlist {
 
 input {
 	width : 80px;
-	height : 16px;
-	padding : 3px;
+	height : 14px;
+	padding : 2px 3px;
 	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
 	background-color : gradient(#303030,#252525,#252525,#252525);
 	overflow : hidden;
@@ -110,7 +110,7 @@ input:focus {
 
 color {
 	width : 16px;
-	height : 16px;
+	height : 14px;
 	padding : 1px;
 	border : 1px solid gradient(#A0A0A0,#909090,#707070,#606060);
 }
@@ -152,7 +152,7 @@ select {
 	padding-left : 20px;
 	icon : url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAIAAAC0tAIdAAAAB3RJTUUH3QsGCg4t5gQ/sQAAABd0RVh0U29mdHdhcmUAR0xEUE5HIHZlciAzLjRxhaThAAAACHRwTkdHTEQzAAAAAEqAKR8AAAAEZ0FNQQAAsY8L/GEFAAAABmJLR0QA/wD/AP+gvaeTAAAAQElEQVR4nGP4z/CfeMSARRQOCKtGA/hUYwXYVeMBmKr34gZ4fUlamFBfNch9JPmSBNU4NeBxN7oGgr5EaKAwTABmAPc478+46wAAAABJRU5ErkJggg=');
 	icon-left : 3px;
-	icon-top : 5px;
+	icon-top : 3px;
 	icon-color : #999;
 }
 
