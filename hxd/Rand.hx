@@ -47,8 +47,8 @@ class Rand {
 		return (uint() % 10007) / 10007.0;
 	}
 
-	public inline function srand() {
-		return (int() % 10007) / 10007.0;
+	public inline function srand(scale=1.0) {
+		return ((int() % 10007) / 10007.0) * scale;
 	}
 	
 	// this is two Marsaglia Multiple-with-Carry (MWC) generators combined
