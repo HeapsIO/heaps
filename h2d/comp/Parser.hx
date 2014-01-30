@@ -259,7 +259,11 @@ class Parser {
 		}
 		var x = Xml.parse(html);
 		var body = lookupBody(x);
-		if( body == null ) body = x;
+		if( body == null ) {
+			body = Xml.createElement("body");
+			for( e in x )
+				body.addChild(e);
+		}
 		return new Parser(api).build(new haxe.xml.Fast(body),null);
 	}
 	
