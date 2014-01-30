@@ -1,0 +1,6 @@
+-lib h3d
+-swf perlin.swf
+-swf-header 815:600:60:FFFFFF
+-swf-version 11.8
+-main PerlinView
+-lib hscript
