@@ -241,7 +241,8 @@ class FileTree {
 				f = noExt;
 			}
 			if( field != null ) {
-				var other = dict.get(f);
+				var fname = invalidChars.replace(f, "_");
+				var other = dict.get(fname);
 				if( other != null ) {
 					var pe = pairedExt.get(other.path.split(".").pop().toLowerCase());
 					if( pe != null && Lambda.has(pe,ext.toLowerCase()) )
@@ -250,7 +251,7 @@ class FileTree {
 						Context.warning("Resource " + relPath + "/" + f + " is used by both " + relPath + "/" + fileName + " and " + other, pos);
 						continue;
 					}
-					f += "_" + ext.split(".").join("_");
+					fname += "_" + ext.split(".").join("_");
 					var exts = other.path.split("/").pop().split(".");
 					exts.shift();
 					var otherExt = exts.join("_");
@@ -258,7 +259,7 @@ class FileTree {
 					other.fget.name += "_" + otherExt;
 				}
 				var fget : Field = {
-					name : "get_" + f,
+					name : "get_" + fname,
 					pos : pos,
 					kind : FFun({
 						args : [],
@@ -270,7 +271,7 @@ class FileTree {
 					access : [AStatic, AInline, APrivate],
 				};
 				var field : Field = {
-					name : f,
+					name : fname,
 					pos : pos,
 					kind : FProp("get","never",field.t),
 					access : [AStatic, APublic],
