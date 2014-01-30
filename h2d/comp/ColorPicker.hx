@@ -501,7 +501,7 @@ private class ColorGauge extends h2d.Sprite{
 
 /////////////////////////////////////////////////////////////////
 
-@:allow(h2d.comp._ColorPicker)
+@:allow(h2d.comp)
 class ColorPicker extends h2d.comp.Component {
 	
 	public static var borderColor = 0xFFaaaaaa;
