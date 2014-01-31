@@ -39,23 +39,34 @@ class Quat {
 		return new Quat(x, y, z, w);
 	}
 	
-	public inline function initDirection( dir : Vector, ?up : Vector ) {
-		if( up == null ) {
-			// assume [0,0,1] UP version
-			x = -dir.y;
-			y = dir.x;
-			z = 0;
-			w = dir.z + dir.length();
-			normalize();
-		} else {
-			// LeftHanded (RH might use dir.cross(up) ?)
-			var tmp = up.cross(dir);
-			x = tmp.x;
-			y = tmp.y;
-			z = tmp.z;
-			w = dir.length() + dir.dot3(up);
-			normalize();
-		}
+	public function initMoveTo( from : Vector, to : Vector ) {
+		//		H = Normalize(From + To)
+		//		Q = (From ^ H, From . H)
+		//
+		// We have an issue when From.To moves towards -1, a small tilt on From ^ To will result in big tilt.
+		// Since it's not just a precision error (it starts already with From.To = -0.8) it would
+		// require to handle the different quadrants (I guess). [initDirection] will have to be modified
+		// as well
+		var hx = from.x + to.x;
+		var hy = from.y + to.y;
+		var hz = from.z + to.z;
+		var h = Math.invSqrt(hx * hx + hy * hy + hz * hz);
+		x = from.y * hz - from.z * hy;
+		y = from.z * hx - from.x * hz;
+		z = from.x * hy - from.y * hx;
+		w = from.x * hx + from.y * hy + from.z * hz;
+	}
+	
+	public inline function initDirection( dir : Vector ) {
+		// optimized version of initMoveTo([1,0,0],dir)
+		var hx = dir.x + 1;
+		var hy = dir.y;
+		var hz = dir.z;
+		var h = Math.invSqrt(hx * hx + hy * hy + hz * hz);
+		x = 0;
+		y = -hz*h;
+		z = hy*h;
+		w = hx*h;
 	}
 	
 	public function initRotateAxis( x : Float, y : Float, z : Float, a : Float ) {
@@ -128,10 +139,6 @@ class Quat {
 		y = cosX * sinY * cosZ + sinX * cosY * sinZ;
 		z = cosX * cosY * sinZ - sinX * sinY * cosZ;
 		w = cosX * cosYZ + sinX * sinYZ;
-	}
-	
-	public inline function add( q : Quat ) {
-		multiply(this, q);
 	}
 	
 	public function multiply( q1 : Quat, q2 : Quat ) {
