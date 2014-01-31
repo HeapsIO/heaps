@@ -44,9 +44,6 @@ class Quat {
 		//		Q = (From ^ H, From . H)
 		//
 		// We have an issue when From.To moves towards -1, a small tilt on From ^ To will result in big tilt.
-		// Since it's not just a precision error (it starts already with From.To = -0.8) it would
-		// require to handle the different quadrants (I guess). [initDirection] will have to be modified
-		// as well
 		var hx = from.x + to.x;
 		var hy = from.y + to.y;
 		var hz = from.z + to.z;
@@ -57,16 +54,46 @@ class Quat {
 		w = from.x * hx + from.y * hy + from.z * hz;
 	}
 	
-	public inline function initDirection( dir : Vector ) {
-		// optimized version of initMoveTo([1,0,0],dir)
-		var hx = dir.x + 1;
-		var hy = dir.y;
-		var hz = dir.z;
-		var h = Math.invSqrt(hx * hx + hy * hy + hz * hz);
-		x = 0;
-		y = -hz*h;
-		z = hy*h;
-		w = hx*h;
+	public function initDirection( dir : Vector ) {
+		// inlined version of initRotationMatrix(Matrix.lookAtX(dir))
+		var ax = dir.clone().getNormalized();
+		var ay = new Vector(-ax.y, ax.x, 0).getNormalized();
+		if( ay.lengthSq() < Math.EPSILON ) {
+			ay.x = ax.y;
+			ay.y = ax.z;
+			ay.z = ax.x;
+		}
+		var az = ax.cross(ay);
+		var tr = ax.x + ay.y + az.z;
+		if( tr > 0 ) {
+			var s = (tr + 1.0).sqrt() * 2;
+			var is = 1 / s;
+			x = (ay.z - az.y) * is;
+			y = (az.x - ax.z) * is;
+			z = (ax.y - ay.x) * is;
+			w = 0.25 * s;
+		} else if( ax.x > ay.y && ax.x > az.z ) {
+			var s = (1.0 + ax.x - ay.y - az.z).sqrt() * 2;
+			var is = 1 / s;
+			x = 0.25 * s;
+			y = (ay.x + ax.y) * is;
+			z = (az.x + ax.z) * is;
+			w = (ay.z - az.y) * is;
+		} else if( ay.y > az.z ) {
+			var s = (1.0 + ay.y - ax.x - az.z).sqrt() * 2;
+			var is = 1 / s;
+			x = (ay.x + ax.y) * is;
+			y = 0.25 * s;
+			z = (az.y + ay.z) * is;
+			w = (az.x - ax.z) * is;
+		} else {
+			var s = (1.0 + az.z - ax.x - ay.y).sqrt() * 2;
+			var is = 1 / s;
+			x = (az.x + ax.z) * is;
+			y = (az.y + ay.z) * is;
+			z = 0.25 * s;
+			w = (ax.y - ay.x) * is;
+		}
 	}
 	
 	public function initRotateAxis( x : Float, y : Float, z : Float, a : Float ) {
