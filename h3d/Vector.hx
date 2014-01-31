@@ -34,6 +34,7 @@ class Vector {
 		return new Vector(x + v.x, y + v.y, z + v.z, w + v.w);
 	}
 
+	// note : cross product is left-handed
 	public inline function cross( v : Vector ) {
 		return new Vector(y * v.z - z * v.y, z * v.x - x * v.z,  x * v.y - y * v.x, 1);
 	}
@@ -65,6 +66,12 @@ class Vector {
 		x *= k;
 		y *= k;
 		z *= k;
+	}
+	
+	public inline function getNormalized() {
+		var k = lengthSq();
+		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
+		return new Vector(x * k, y * k, z * k);
 	}
 
 	public function set(x,y,z,w=1.) {
