@@ -52,6 +52,7 @@ class Quat {
 		y = from.z * hx - from.x * hz;
 		z = from.x * hy - from.y * hx;
 		w = from.x * hx + from.y * hy + from.z * hz;
+		normalize();
 	}
 	
 	public function initDirection( dir : Vector ) {
