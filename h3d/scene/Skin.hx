@@ -44,7 +44,7 @@ class Joint extends Object {
 	}
 }
 
-class Skin extends Mesh {
+class Skin extends MultiMaterial {
 	
 	var skinData : h3d.anim.Skin;
 	var currentRelPose : Array<h3d.Matrix>;
@@ -65,7 +65,7 @@ class Skin extends Mesh {
 	}
 	
 	override function clone( ?o : Object ) {
-		var s = o == null ? new Skin(null,material) : cast o;
+		var s = o == null ? new Skin(null,materials.copy()) : cast o;
 		super.clone(s);
 		s.setSkinData(skinData);
 		s.currentRelPose = currentRelPose.copy(); // copy current pose
@@ -116,7 +116,9 @@ class Skin extends Mesh {
 		skinData = s;
 		jointsUpdated = true;
 		primitive = s.primitive;
-		material.hasSkin = true;
+		for( m in materials )
+			if( m != null )
+				m.hasSkin = true;
 		currentRelPose = [];
 		currentAbsPose = [];
 		currentPalette = [];
@@ -162,7 +164,9 @@ class Skin extends Mesh {
 		if( splitPalette == null ) {
 			if( paletteChanged ) {
 				paletteChanged = false;
-				material.skinMatrixes = currentPalette;
+				for( m in materials )
+					if( m != null )
+						m.skinMatrixes = currentPalette;
 			}
 			super.draw(ctx);
 		} else {

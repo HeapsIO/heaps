@@ -279,6 +279,100 @@ class Library {
 		return c;
 	}
 	
+	
+	public function mergeModels( modelNames : Array<String> ) {
+		if( modelNames.length == 0 )
+			return;
+		var models = root.getAll("Objects.Model");
+		function getModel(name) {
+			for( m in models )
+				if( m.getName() == name )
+					return m;
+			throw "Model not found " + name;
+			return null;
+		}
+		var m = getModel(modelNames[0]);
+		var geom = new Geometry(this, getChild(m, "Geometry"));
+		var def = getChild(geom.getRoot(), "Deformer", true);
+		var subDefs = getChilds(def, "Deformer");
+		for( i in 1...modelNames.length ) {
+			var name = modelNames[i];
+			var m2 = getModel(name);
+			var geom2 = new Geometry(this, getChild(m2, "Geometry"));
+			var vcount = Std.int(geom.getVertices().length / 3);
+
+			skipObjects.set(name, true);
+
+			// merge materials
+			var mindex = [];
+			var materials = getChilds(m, "Material");
+			for( mat in getChilds(m2, "Material") ) {
+				var idx = materials.indexOf(mat);
+				if( idx < 0 ) {
+					idx = materials.length;
+					materials.push(mat);
+					addLink(m, mat);
+				}
+				mindex.push(idx);
+			}
+			
+			// merge geometry
+			geom.merge(geom2, mindex);
+			
+			// merge skinning
+			var def2 = getChild(geom2.getRoot(), "Deformer", true);
+			if( def2 != null ) {
+				if( def == null ) throw m.getName() + " does not have a deformer but " + name + " has one";
+				for( subDef in getChilds(def2, "Deformer") ) {
+					var subModel = getChild(subDef, "Model");
+					var prevDef = null;
+					for( s in subDefs )
+						if( getChild(s, "Model") == subModel ) {
+							prevDef = s;
+							break;
+						}
+
+					if( prevDef != null )
+						removeLink(subDef, subModel);
+					
+					var idx = subDef.get("Indexes", true);
+					if( idx == null ) continue;
+
+					
+					if( prevDef == null ) {
+						addLink(def2, subDef);
+						subDefs.push(subDef);
+						var idx = idx.getInts();
+						for( i in 0...idx.length )
+							idx[i] += vcount;
+					} else {
+						var pidx = prevDef.get("Indexes").getInts();
+						for( i in idx.getInts() )
+							pidx.push(i + vcount);
+						var weights = prevDef.get("Weights").getFloats();
+						for( w in subDef.get("Weights").getFloats() )
+							weights.push(w);
+					}
+				}
+			}
+		}
+	}
+
+	function addLink( parent : FbxNode, child : FbxNode ) {
+		var pid = parent.getId();
+		var nid = child.getId();
+		connect.get(pid).push(nid);
+		invConnect.get(nid).push(pid);
+	}
+	
+	function removeLink( parent : FbxNode, child : FbxNode ) {
+		var pid = parent.getId();
+		var nid = child.getId();
+		connect.get(pid).remove(nid);
+		invConnect.get(nid).remove(pid);
+	}
+	
+	
 	public function loadAnimation( mode : AnimationMode, ?animName : String, ?root : FbxNode, ?lib : Library ) : h3d.anim.Animation {
 		if( lib != null ) {
 			lib.defaultModelMatrixes = defaultModelMatrixes;
@@ -777,6 +871,8 @@ class Library {
 			for( sub in getChilds(o.model, "Model") ) {
 				var sobj = hobjects.get(sub.getId());
 				if( sobj == null ) {
+					if( skipObjects.get(sub.getName()) )
+						continue;
 					if( sub.getType() == "LimbNode" ) {
 						var j = hjoints.get(sub.getId());
 						if( j == null ) throw "Missing sub joint " + sub.getName();
@@ -798,7 +894,9 @@ class Library {
 					var m = osub.obj.toMesh();
 					if( m.primitive != skinData.primitive || m == skin )
 						continue;
-					skin.material = m.material;
+					var mt = Std.instance(m, h3d.scene.MultiMaterial);
+					skin.materials = mt == null ? [m.material] : mt.materials;
+					skin.material = skin.materials[0];
 					m.remove();
 					// ignore key frames for this object
 					defaultModelMatrixes.get(osub.obj.name).wasRemoved = o.model.getId();

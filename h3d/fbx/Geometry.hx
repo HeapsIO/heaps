@@ -11,6 +11,10 @@ class Geometry {
 		this.root = root;
 	}
 	
+	public function getRoot() {
+		return root;
+	}
+	
 	public function getVertices() {
 		return root.get("Vertices").getFloats();
 	}
@@ -22,6 +26,78 @@ class Geometry {
 	public function getMaterials() {
 		var mats = root.get("LayerElementMaterial",true);
 		return mats == null ? null : mats.get("Materials").getInts();
+	}
+	
+	public function merge( g : Geometry, materials : Array<Int> ) {
+		var vl = getVertices();
+		var vcount = Std.int(vl.length / 3);
+		if( g.getGeomTranslate() != null || this.getGeomTranslate() != null )
+			throw "TODO";
+			
+		// merge vertices
+		for( v in g.getVertices() )
+			vl.push(v);
+			
+		var poly = getPolygons();
+		var mats = getMaterials();
+		
+		// expand materials
+		if( mats.length == 1 && root.get("LayerElementMaterial.MappingInformationType").props[0].toString() == "AllSame" ) {
+			var polyCount = 0;
+			for( p in poly )
+				if( p < 0 ) polyCount++;
+			var m0 = mats[0];
+			for( i in 1...polyCount )
+				mats.push(m0);
+		}
+
+		// merge polygons
+		var polyCount = 0;
+		for( p in g.getPolygons() ) {
+			var p = p;
+			if( p < 0 ) {
+				polyCount++;
+				p -= vcount;
+			} else {
+				p += vcount;
+			}
+			poly.push(p);
+		}
+		
+		// merge normals
+		var normals = getNormals();
+		for( n in g.getNormals() )
+			normals.push(n);
+			
+		// merget uvs
+		var uv = getUVs();
+		var uv2 = g.getUVs();
+		if( uv.length != uv2.length )
+			throw "Different UV layer (" + uv2.length + " should be " + uv.length + ")";
+		for( i in 0...uv.length ) {
+			var uv = uv[i];
+			var uv2 = uv2[i];
+			var count = uv.values.length >> 1;
+			for( v in uv2.values )
+				uv.values.push(v);
+			for( i in uv2.index )
+				uv.index.push(i + count);
+		}
+		
+		// merge materials
+		var m2 = g.getMaterials();
+		if( m2 == null ) {
+			var mid = materials[0];
+			for( i in 0...polyCount )
+				mats.push(mid);
+		} else if( polyCount > 1 && m2.length == 1 ) {
+			var m = m2[0];
+			for( i in 0...polyCount )
+				mats.push(materials[m]);
+		} else {
+			for( m in m2 )
+				mats.push(materials[m]);
+		}
 	}
 
 	/**

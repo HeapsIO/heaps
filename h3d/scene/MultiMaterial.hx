@@ -4,9 +4,9 @@ class MultiMaterial extends Mesh {
 
 	public var materials : Array<h3d.mat.MeshMaterial>;
 	
-	public function new( prim, mats, ?parent ) {
-		super(prim, mats[0], parent);
-		this.materials = mats;
+	public function new( prim, ?mats, ?parent ) {
+		super(prim, mats == null ? null : mats[0], parent);
+		this.materials = mats == null ? [material] : mats;
 	}
 	
 	override function clone( ?o : Object ) {
@@ -34,6 +34,10 @@ class MultiMaterial extends Mesh {
 	}
 	
 	override function draw( ctx : RenderContext ) {
+		if( materials.length == 1 ) {
+			super.draw(ctx);
+			return;
+		}
 		for( mid in 0...materials.length )
 			drawMaterial(ctx,mid);
 	}
