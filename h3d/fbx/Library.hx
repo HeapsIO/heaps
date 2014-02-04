@@ -907,6 +907,18 @@ class Library {
 				skin.setSkinData(skinData);
 			}
 		}
+		// make child models follow the bone
+		// /!\ this follow will not be cloned
+		for( j in joints ) {
+			var jobj = null;
+			for( o in getChilds(j.model, "Model") ) {
+				var obj = hobjects.get(o.getId());
+				if( obj != null ) {
+					if( jobj == null ) jobj = scene.getObjectByName(j.joint.name);
+					obj.follow = jobj;
+				}
+			}
+		}
 		return scene.numChildren == 1 ? scene.getChildAt(0) : scene;
 	}
 	

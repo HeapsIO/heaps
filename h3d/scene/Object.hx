@@ -134,6 +134,7 @@ class Object {
 		o.scaleY = scaleY;
 		o.scaleZ = scaleZ;
 		o.name = name;
+		o.follow = follow;
 		if( defaultTransform != null )
 			o.defaultTransform = defaultTransform.clone();
 		for( c in childs ) {
