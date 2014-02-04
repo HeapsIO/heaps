@@ -204,7 +204,7 @@ private class MeshShader extends h3d.impl.Shader {
 			} else {
 				var c = tex.get(tuv.xy, type = isDXT1 ? 1 : isDXT5 ? 2 : 0);
 				if( hasColorMap )
-					c.rgb *= (colorMap.get(tuv.xy) * colorMapMatrix).rgb;
+					c.rgb += (colorMap.get(tuv.xy) * colorMapMatrix).rgb;
 				if( fog != null ) c.a *= talpha;
 				if( hasAlphaMap ) c.a *= alphaMap.get(alphaMapScroll != null ? tuv + alphaMapScroll : tuv.xy,type=isDXT1 ? 1 : isDXT5 ? 2 : 0).b;
 				if( smoothEdges ) {
