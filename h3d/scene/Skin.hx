@@ -4,12 +4,13 @@ class Joint extends Object {
 	public var skin : Skin;
 	public var index : Int;
 	
-	public function new(skin, index) {
+	public function new(skin, j : h3d.anim.Skin.Joint ) {
 		super(null);
+		name = j.name;
 		this.skin = skin;
 		// fake parent
 		this.parent = skin;
-		this.index = index;
+		this.index = j.index;
 	}
 	
 	@:access(h3d.scene.Skin)
@@ -101,7 +102,7 @@ class Skin extends MultiMaterial {
 		if( skinData != null ) {
 			var j = skinData.namedJoints.get(name);
 			if( j != null )
-				return new Joint(this, j.index);
+				return new Joint(this, j);
 		}
 		return null;
 	}
