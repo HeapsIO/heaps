@@ -64,7 +64,7 @@ private class MeshShader extends h3d.impl.Shader {
 		var fog : Float4;
 		
 		var glowTexture : Texture;
-		var glowAmount : Float;
+		var glowAmount : Float3;
 		var hasGlow : Bool;
 		
 		var blendTexture : Texture;
@@ -505,7 +505,8 @@ class MeshMaterial extends Material {
 	
 	public var texture : Texture;
 	public var glowTexture(get,set) : Texture;
-	public var glowAmount(get,set) : Float;
+	public var glowAmount(get, set) : Float;
+	public var glowColor(get, set) : h3d.Vector;
 
 	public var useMatrixPos : Bool;
 	public var uvScale(get,set) : Null<h3d.Vector>;
@@ -716,14 +717,27 @@ class MeshMaterial extends Material {
 
 	inline function set_glowTexture(t) {
 		mshader.hasGlow = t != null;
+		if( t != null && mshader.glowAmount == null ) mshader.glowAmount = new h3d.Vector(1, 1, 1);
 		return mshader.glowTexture = t;
 	}
 	
 	inline function get_glowAmount() {
-		return mshader.glowAmount;
+		if( mshader.glowAmount == null ) mshader.glowAmount = new h3d.Vector(1, 1, 1);
+		return mshader.glowAmount.x;
 	}
 
 	inline function set_glowAmount(v) {
+		if( mshader.glowAmount == null ) mshader.glowAmount = new h3d.Vector(1, 1, 1);
+		mshader.glowAmount.set(v, v, v);
+		return v;
+	}
+	
+	inline function get_glowColor() {
+		if( mshader.glowAmount == null ) mshader.glowAmount = new h3d.Vector(1, 1, 1);
+		return mshader.glowAmount;
+	}
+
+	inline function set_glowColor(v) {
 		return mshader.glowAmount = v;
 	}
 
