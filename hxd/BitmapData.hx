@@ -60,8 +60,7 @@ abstract BitmapData(InnerData) {
 			var p = tmpPoint;
 			p.x = x;
 			p.y = y;
-			trace(r, p);
-			this.copyPixels(src.toNative(), r, p, null, null, false);
+			this.copyPixels(src.toNative(), r, p, src.toNative(), null, true);
 		case Add:
 			var m = tmpMatrix;
 			m.tx = x - srcX;
@@ -118,6 +117,17 @@ abstract BitmapData(InnerData) {
 	public inline function dispose() {
 		#if flash
 		this.dispose();
+		#end
+	}
+	
+	public function sub( x, y, w, h ) : BitmapData {
+		#if flash
+		var b = new flash.display.BitmapData(w, h);
+		b.copyPixels(this, new flash.geom.Rectangle(x, y, w, h), new flash.geom.Point(0, 0));
+		return fromNative(b);
+		#else
+		throw "TODO";
+		return null;
 		#end
 	}
 	
