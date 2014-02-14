@@ -69,6 +69,10 @@ enum SortMode {
 	InvSort;
 }
 
+interface Randomized {
+	public function rand() : Float;
+}
+
 class State {
 	
 	// material
@@ -178,10 +182,10 @@ class State {
 		}
 	}
 	
-	public inline function eval( v : Value, time : Float, rand : Void -> Float, p ) : Float {
+	public static inline function eval( v : Value, time : Float, r : Randomized, p : Particle ) : Float {
 		return switch( v ) {
 		case VConst(c): c;
-		case VRandom(s, l, c): s + (switch( c ) { case No: l; case Start: l * time; case End: l * (1 - time); }) * rand();
+		case VRandom(s, l, c): s + (switch( c ) { case No: l; case Start: l * time; case End: l * (1 - time); }) * r.rand();
 		case VLinear(s, l): s + l * time;
 		case VPow(s, l, p): s + Math.pow(time, p) * l;
 		case VSin(f, a, o): Math.sin(time * f) * a + o;

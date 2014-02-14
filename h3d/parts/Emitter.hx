@@ -1,7 +1,7 @@
 package h3d.parts;
 import h3d.parts.Data;
 
-class Emitter extends h3d.scene.Object {
+class Emitter extends h3d.scene.Object implements Randomized {
 
 	public var material : h3d.parts.Material;
 	public var count(default, null) : Int;
@@ -79,8 +79,8 @@ class Emitter extends h3d.scene.Object {
 		}
 	}
 	
-	inline function eval(v,time,rnd) {
-		return state.eval(v,time,rnd, curPart);
+	inline function eval(v) {
+		return Data.State.eval(v,time, this, curPart);
 	}
 	
 	public function update(dt:Float) {
@@ -88,12 +88,12 @@ class Emitter extends h3d.scene.Object {
 		var old = time;
 		if( posChanged ) syncPos();
 		curPart = null;
-		time += dt * eval(s.globalSpeed, time, rand) / s.globalLife;
+		time += dt * eval(s.globalSpeed) / s.globalLife;
 		var et = (time - old) * s.globalLife;
 		if( time >= 1 && s.loop )
 			time -= 1;
 		if( time < 1 )
-			emitCount += eval(s.emitRate, time, rand) * et;
+			emitCount += eval(s.emitRate) * et;
 		for( b in s.bursts )
 			if( b.time <= time && b.time > old )
 				emitCount += b.count;
@@ -114,7 +114,7 @@ class Emitter extends h3d.scene.Object {
 		curPart = null;
 	}
 	
-	inline function rand() {
+	public inline function rand() {
 		return Math.random();
 	}
 	
@@ -126,12 +126,12 @@ class Emitter extends h3d.scene.Object {
 			p.dz = 1;
 			p.x = 0;
 			p.y = 0;
-			p.z = eval(size, time, rand);
+			p.z = eval(size);
 			if( !state.emitFromShell ) p.z *= rand();
 		case SSphere(r):
 			var theta = rand() * Math.PI * 2;
 			var phi = Math.acos(rand() * 2 - 1);
-			var r = eval(r, time, rand);
+			var r = eval(r);
 			if( !state.emitFromShell ) r *= rand();
 			p.dx = Math.sin(phi) * Math.cos(theta);
 			p.dy = Math.sin(phi) * Math.sin(theta);
@@ -141,8 +141,8 @@ class Emitter extends h3d.scene.Object {
 			p.z = p.dz * r;
 		case SCone(r,angle):
 			var theta = rand() * Math.PI * 2;
-			var phi = eval(angle,time,rand) * rand();
-			var r = eval(r, time, rand);
+			var phi = eval(angle) * rand();
+			var r = eval(r);
 			if( !state.emitFromShell ) r *= rand();
 			p.dx = Math.sin(phi) * Math.cos(theta);
 			p.dy = Math.sin(phi) * Math.sin(theta);
@@ -151,7 +151,7 @@ class Emitter extends h3d.scene.Object {
 			p.y = p.dy * r;
 			p.z = p.dz * r;
 		case SDisc(r):
-			var r = eval(r, time, rand);
+			var r = eval(r);
 			if( !state.emitFromShell ) r *= rand();
 			var a = rand() * Math.PI * 2;
 			p.dx = Math.cos(a);
@@ -188,7 +188,7 @@ class Emitter extends h3d.scene.Object {
 		}
 		p.fx = p.fy = p.fz = 0;
 		p.time = 0;
-		p.lifeTimeFactor = 1 / eval(state.life, time, rand);
+		p.lifeTimeFactor = 1 / eval(state.life);
 	}
 	
 	public function emit() {
@@ -246,24 +246,23 @@ class Emitter extends h3d.scene.Object {
 			return;
 		}
 		p.randIndex = 0;
-		var rand = p.getRand;
 	
 		// apply forces
 		if( state.force != null ) {
-			p.fx += eval(state.force.vx, time, rand) * dt;
-			p.fy += eval(state.force.vy, time, rand) * dt;
-			p.fz += eval(state.force.vz, time, rand) * dt;
+			p.fx += p.eval(state.force.vx, time) * dt;
+			p.fy += p.eval(state.force.vy, time) * dt;
+			p.fz += p.eval(state.force.vz, time) * dt;
 		}
-		p.fz -= eval(state.gravity, time, rand) * dt;
+		p.fz -= p.eval(state.gravity, time) * dt;
 		// calc speed and update position
-		var speed = eval(state.speed, p.time, rand);
+		var speed = p.eval(state.speed, p.time);
 		var ds = speed * dt;
 		p.x += p.dx * ds + p.fx * dt;
 		p.y += p.dy * ds + p.fy * dt;
 		p.z += p.dz * ds + p.fz * dt;
-		p.size = eval(state.size, p.time, rand);
-		p.ratio = eval(state.ratio, p.time, rand);
-		p.rotation = eval(state.rotation, p.time, rand);
+		p.size = p.eval(state.size, p.time);
+		p.ratio = p.eval(state.ratio, p.time);
+		p.rotation = p.eval(state.rotation, p.time);
 		
 		// collide
 		if( state.collide && collider != null && collider.collidePart(p, tmp) ) {
@@ -281,7 +280,7 @@ class Emitter extends h3d.scene.Object {
 		
 		// calc color
 		var ck = colorMap;
-		var light = eval(state.light, p.time, rand);
+		var light = p.eval(state.light, p.time);
 		if( ck != null ) {
 			if( ck.time >= p.time ) {
 				p.cr = ck.r;
@@ -314,11 +313,11 @@ class Emitter extends h3d.scene.Object {
 			p.cg = light;
 			p.cb = light;
 		}
-		p.ca = eval(state.alpha, p.time, rand);
+		p.ca = p.eval(state.alpha, p.time);
 		
 		// frame
 		if( state.frame != null ) {
-			var f = eval(state.frame, p.time, rand) % 1;
+			var f = p.eval(state.frame, p.time) % 1;
 			if( f < 0 ) f += 1;
 			p.frame = Std.int(f * state.frames.length);
 		}
@@ -562,7 +561,7 @@ class Emitter extends h3d.scene.Object {
 		var nverts = Std.int(pos / stride);
 		var buffer = ctx.engine.mem.alloc(nverts, stride, 4);
 		buffer.uploadVector(tmpBuf, 0, nverts);
-		var size = eval(state.globalSize, time, rand);
+		var size = eval(state.globalSize);
 		
 		material.pshader.mpos = state.emitLocal ? this.absPos : h3d.Matrix.I();
 		material.pshader.mproj = ctx.camera.m;

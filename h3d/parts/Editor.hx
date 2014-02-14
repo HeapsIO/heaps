@@ -24,7 +24,7 @@ private typedef Curve = {
 	var pointSelected : h2d.col.Point;
 }
 
-class Editor extends h2d.Sprite {
+class Editor extends h2d.Sprite implements Randomized {
 	
 	var emit : Emitter;
 	var state : State;
@@ -49,6 +49,7 @@ class Editor extends h2d.Sprite {
 	var cedit : h2d.Interactive;
 	var undo : Array<History>;
 	var redo : Array<History>;
+	var randomValue : Float;
 	public var currentFilePath : String;
 	public var autoLoop : Bool = true;
 	public var moveEmitter(default,set) : Bool = false;
@@ -735,6 +736,10 @@ class Editor extends h2d.Sprite {
 		buildUI();
 	}
 	
+	public function rand() {
+		return randomValue;
+	}
+	
 	function init() {
 		var bg = new hxd.BitmapData(300, 110);
 		bg.clear(0xFF202020);
@@ -790,8 +795,10 @@ class Editor extends h2d.Sprite {
 		}
 		for( x in 0...width ) {
 			var px = x / (width - 1);
-			var py0 = state.eval(curve.value, px, function() return 0., null);
-			var py1 = state.eval(curve.value, px, function() return 1., null);
+			randomValue = 0;
+			var py0 = State.eval(curve.value, px, this, null);
+			randomValue = 1;
+			var py1 = State.eval(curve.value, px, this, null);
 			var iy0 = posY(py0);
 			if( py0 != py1 ) {
 				var iy1 = posY(py1);
