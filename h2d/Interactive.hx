@@ -44,6 +44,8 @@ class Interactive extends Drawable {
 				scene.currentOver = null;
 				hxd.System.setCursor(Default);
 			}
+			if( scene.currentFocus == this )
+				scene.currentFocus = null;
 		}
 		super.onDelete();
 	}
