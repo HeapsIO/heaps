@@ -58,8 +58,9 @@ class TestCol extends hxd.App {
 	override function update(dt:Float) {
 		var px = s2d.mouseX;
 		var py = s2d.mouseY;
-		var r = new h2d.col.RoundRect(rrect.x, rrect.y, RW, RH, rrect.rotation);
+		var r = new h2d.col.RoundRect(rrect.x, rrect.y, RW * 2, RH * 2, rrect.rotation);
 		
+		rrect.rotation += 0.01;
 		
 		rrect.color.set(0, 0, 1);
 		
