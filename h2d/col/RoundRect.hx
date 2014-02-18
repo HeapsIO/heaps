@@ -55,5 +55,22 @@ class RoundRect {
 	public inline function distance( p : Point ) {
 		return Math.sqrt(distanceCenterSq(p)) - ray;
 	}
+	
+	public inline function getNormalAt( p : Point ) {
+		var px = p.x - x;
+		var py = p.y - y;
+		var t = px * dx + py * dy;
+		if( t < 0 ) {
+			// done
+		} else if( t > lenSq ) {
+			px = p.x - (x + dx);
+			py = p.y - (y + dy);
+		} else {
+			var tl2 = t * invLenSq;
+			px = -(x + tl2 * dx - p.x);
+			py = -(y + tl2 * dy - p.y);
+		}
+		return new Point(px, py);
+	}
 
 }

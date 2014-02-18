@@ -4,6 +4,7 @@ class TestCol extends hxd.App {
 	static var RH = 30;
 	
 	var rrect : h2d.Graphics;
+	var line : h2d.Graphics;
 	
 	override function init() {
 		
@@ -26,6 +27,11 @@ class TestCol extends hxd.App {
 		rrect.y = s2d.height >> 1;
 		rrect.rotation = Math.PI / 3;
 		rrect.color = new h3d.Vector();
+		
+		line = new h2d.Graphics(s2d);
+		line.beginFill(0xFFFFFFFF);
+		line.drawRect(0, -0.5, 100, 1);
+		line.endFill();
 		
 		//var r = new h2d.col.RoundRect(rrect.x, rrect.y, RW, RH, rrect.rotation);
 		//mapCol( function(pt) return r.distance(pt) );
@@ -59,12 +65,17 @@ class TestCol extends hxd.App {
 		var px = s2d.mouseX;
 		var py = s2d.mouseY;
 		var r = new h2d.col.RoundRect(rrect.x, rrect.y, RW * 2, RH * 2, rrect.rotation);
+		var pt = new h2d.col.Point(px, py);
 		
-		rrect.rotation += 0.01;
-		
+		rrect.rotation += 0.002;
 		rrect.color.set(0, 0, 1);
 		
-		if( r.inside(new h2d.col.Point(px, py)) )
+		line.x = px;
+		line.y = py;
+		var n = r.getNormalAt(pt);
+		line.rotation = Math.atan2(n.y, n.x);
+		
+		if( r.inside(pt) )
 			rrect.color.set(0, 1, 0);
 	}
 	
