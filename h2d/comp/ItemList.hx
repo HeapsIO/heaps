@@ -16,6 +16,13 @@ class ItemList extends Box {
 		return selected = v;
 	}
 	
+	function onWheel( e : hxd.Event ) {
+		scrollY -= e.wheelDelta * (components.length == 0 ? 0 : (components[0].height + style.verticalSpacing));
+		if( scrollY > 0 ) scrollY = 0;
+		e.propagate = false;
+		needRebuild = true;
+	}
+	
 	override function resizeRec( ctx : Context ) {
 		super.resizeRec(ctx);
 		if( !ctx.measure ) {
@@ -62,6 +69,7 @@ class ItemList extends Box {
 						}
 					}
 				}
+				int.onWheel = onWheel;
 				if( Lambda.indexOf(childs,int) != 1 + i ) {
 					childs.remove(int);
 					childs.insert(1 + i, int); // insert over bg
