@@ -24,7 +24,7 @@ button:hover {
 	background-color : gradient(#282828,#2A2A2A,#333333,#3B3B3B);
 	border : 1px solid gradient(#606060,#606060,#707070,#606060);
 	margin-top : 1px;
-	padding-bottom : 4px;
+	padding-bottom : 1px;
 }
 
 :disabled {
