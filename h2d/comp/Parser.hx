@@ -15,12 +15,18 @@ private class CustomInterp extends hscript.Interp {
 
 class Parser {
 	
-	var api : {};
 	var comps : Map<String, haxe.xml.Fast -> Component -> Component>;
+	var interp : hscript.Interp;
+	var root : Component;
 	
-	public function new(?api) {
-		this.api = api;
+	public function new(?api:{}) {
 		comps = new Map();
+		interp = new CustomInterp();
+		interp.variables.set("$", function(rq) return new h2d.comp.JQuery(root, rq));
+		interp.variables.set("api", api);
+		if( api != null )
+			for( f in Reflect.fields(api) )
+				interp.variables.set(f, Reflect.field(api, f));
 	}
 	
 	public function build( x : haxe.xml.Fast, ?parent : Component ) {
@@ -30,6 +36,9 @@ class Parser {
 			c = new Box(Absolute, parent);
 		case "style":
 			parent.addCss(x.innerData);
+			return null;
+		case "script":
+			makeScript(null, x.innerData)();
 			return null;
 		case "div", "box":
 			c = new Box(parent);
@@ -75,6 +84,7 @@ class Parser {
 			else
 				throw "Unknown node " + n;
 		}
+		if( root == null ) root = c;
 		for( n in x.x.attributes() ) {
 			var v = x.x.get(n);
 			switch( n.toLowerCase() ) {
@@ -209,6 +219,10 @@ class Parser {
 				var int = Std.instance(c, Interactive);
 				if( int != null )
 					int.onClick = makeScript(c, v);
+			case "onrclick":
+				var int = Std.instance(c, Interactive);
+				if( int != null )
+					int.onRightClick = makeScript(c, v);
 			case "disabled":
 				if( v != "false" )
 					c.addClass(":disabled");
@@ -235,17 +249,16 @@ class Parser {
 		} catch( e : hscript.Expr.Error ) {
 			throw "Invalid Script line " + p.line + " (" + e+ ")";
 		}
-		var i = new CustomInterp();
-		i.variables.set("api", api);
-		i.variables.set("this", c);
-		i.variables.set("$", function(rq) return new h2d.comp.JQuery(c,rq));
-		return function() try i.execute(e) catch( e : String ) throw "Error while running script " + script + " (" + e + ")" catch( e : hscript.Expr.Error ) throw "Error while running script " + script + " (" + e + ")" ;
+		return function() {
+			interp.variables.set("this", c);
+			try interp.execute(e) catch( e : String ) throw "Error while running script " + script + " (" + e + ")" catch( e : hscript.Expr.Error ) throw "Error while running script " + script + " (" + e + ")" ;
+		};
 		#else
 		return function() throw "Please compile with -lib hscript to get script access";
 		#end
 	}
 	
-	public static function fromHtml( html : String, ?api : {} ) : Component {
+	public static function fromHtml( html : String, ?api ) : Component {
 		function lookupBody(x:Xml) {
 			if( x.nodeType == Xml.Element && x.nodeName.toLowerCase() == "body" )
 				return x;
