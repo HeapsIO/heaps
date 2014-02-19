@@ -140,6 +140,15 @@ private class LocalEntry extends FileEntry {
 		#end
 	}
 	
+	override function get_isDirectory() {
+		#if air3
+		return file.isDirectory;
+		#else
+		throw "TODO";
+		return false;
+		#end
+	}
+	
 	override function load( ?onReady : Void -> Void ) : Void {
 		#if air3
 		if( onReady != null ) haxe.Timer.delay(onReady, 1);
