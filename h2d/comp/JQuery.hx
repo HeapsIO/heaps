@@ -17,6 +17,10 @@ class JQuery {
 		select = getSet(query);
 	}
 	
+	public function getComponents() {
+		return select;
+	}
+	
 	public function toggleClass( cl : String, ?flag : Bool ) {
 		for( s in select ) s.toggleClass(cl,flag);
 		return this;
