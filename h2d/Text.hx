@@ -100,7 +100,7 @@ class Text extends Drawable {
 			} else
 				prevChar = cc;
 		}
-		return { width : x > xMax ? x : xMax, height : x > 0 ? y + font.lineHeight : y };
+		return { width : x > xMax ? x : xMax, height : x > 0 ? y + font.lineHeight : y > 0 ? y : font.lineHeight };
 	}
 	
 	function get_textHeight() {
