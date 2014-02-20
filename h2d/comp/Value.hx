@@ -3,6 +3,8 @@ package h2d.comp;
 class Value extends Interactive {
 
 	var text : Input;
+	public var minValue : Float = -1e10;
+	public var maxValue : Float = 1e10;
 	public var value(default, set) : Float;
 	public var increment : Float;
 	
@@ -30,7 +32,10 @@ class Value extends Interactive {
 					text.input.stopDrag();
 				else {
 					var dx = Math.round(e.relX - e1.relX);
-					value = startVal + dx * increment;
+					var v = startVal + dx * increment;
+					if( v < minValue ) v = minValue;
+					if( v > maxValue ) v = maxValue;
+					value = v;
 					onChange(value);
 				}
 			});

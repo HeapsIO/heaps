@@ -184,12 +184,18 @@ class Parser {
 				case "slider":
 					var c : Slider = cast c;
 					c.minValue = Std.parseFloat(v);
+				case "value":
+					var c : Value = cast c;
+					c.minValue = Std.parseFloat(v);
 				default:
 				}
 			case "max":
 				switch( c.name ) {
 				case "slider":
 					var c : Slider = cast c;
+					c.maxValue = Std.parseFloat(v);
+				case "value":
+					var c : Value = cast c;
 					c.maxValue = Std.parseFloat(v);
 				default:
 				}
