@@ -24,7 +24,7 @@ class Select extends Interactive {
 	}
 	
 	public function popup() {
-		if( list != null )
+		if( list != null || options.length == 0 )
 			return;
 		var p : Component = this;
 		while( p.parentComponent != null )
