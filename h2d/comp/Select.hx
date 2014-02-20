@@ -30,6 +30,7 @@ class Select extends Interactive {
 		while( p.parentComponent != null )
 			p = p.parentComponent;
 		list = new ItemList();
+		list.onItemOver = function(i) onItemOver(i < 0 ? null : options[i].value);
 		p.addChild(list);
 		list.addClass("popup");
 		list.evalStyle();
@@ -119,6 +120,9 @@ class Select extends Interactive {
 		needRebuild = true;
 		if( selectedIndex == options.length - 1 )
 			selectedIndex = selectedIndex; // update value
+	}
+	
+	public dynamic function onItemOver( value : String ) {
 	}
 
 	override function resize( ctx : Context ) {

@@ -48,8 +48,10 @@ class ItemList extends Box {
 					if( cursor != null ) cursor.remove();
 					cursor = new h2d.Bitmap(h2d.Tile.fromColor(style.selectionColor, Std.int(int.width), Std.int(int.height)), int);
 					int.onOver = function(_) {
+						onItemOver(i);
 					};
 					int.onOut = function(_) {
+						onItemOver(-1);
 					}
 					int.onPush = function(_) {
 					}
@@ -57,10 +59,12 @@ class ItemList extends Box {
 					int.onOver = function(_) {
 						if( cursor != null ) cursor.remove();
 						cursor = new h2d.Bitmap(h2d.Tile.fromColor(style.cursorColor, Std.int(int.width), Std.int(int.height)), int);
+						onItemOver(i);
 					};
 					int.onOut = function(_) {
 						if( cursor != null ) cursor.remove();
 						cursor = null;
+						onItemOver(-1);
 					}
 					int.onPush = function(_) {
 						if( this.selected != i ) {
@@ -77,6 +81,9 @@ class ItemList extends Box {
 				}
 			}
 		}
+	}
+
+	public dynamic function onItemOver( current : Int ) {
 	}
 	
 	public dynamic function onChange( selected : Int ) {
