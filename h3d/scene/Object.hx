@@ -209,8 +209,6 @@ class Object {
 		absPos._41 = x;
 		absPos._42 = y;
 		absPos._43 = z;
-		if( defaultTransform != null )
-			absPos.multiply3x4(absPos, defaultTransform);
 		if( follow != null ) {
 			follow.syncPos();
 			absPos.multiply3x4(absPos, follow.absPos);
@@ -219,6 +217,9 @@ class Object {
 			if( parent != null )
 				absPos.multiply3x4(absPos, parent.absPos);
 		}
+		// animation is applied before every other transform
+		if( defaultTransform != null )
+			absPos.multiply3x4(defaultTransform, absPos);
 		if( invPos != null )
 			invPos._44 = 0; // mark as invalid
 	}
