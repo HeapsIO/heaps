@@ -42,6 +42,8 @@ private class EmbedEntry extends FileEntry {
 	
 	override function getBytes() : haxe.io.Bytes {
 		#if flash
+		if( data == null )
+			return null;
 		if( bytes == null )
 			open();
 		return haxe.io.Bytes.ofData(bytes);
@@ -130,15 +132,15 @@ private class EmbedEntry extends FileEntry {
 	}
 	
 	override function get_path() {
-		return relPath == null ? "<root>" : relPath;
+		return relPath == "." ? "<root>" : relPath;
 	}
 	
 	override function exists( name : String ) {
-		return fs.exists(relPath == null ? name : relPath + "/" + name);
+		return fs.exists(relPath == "." ? name : relPath + "/" + name);
 	}
 	
 	override function get( name : String ) {
-		return fs.get(relPath == null ? name : relPath + "/" + name);
+		return fs.get(relPath == "." ? name : relPath + "/" + name);
 	}
 	
 	override function get_size() {
@@ -170,7 +172,7 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	}
 	
 	public function getRoot() : FileEntry {
-		return new EmbedEntry(this,"root",null,null);
+		return new EmbedEntry(this,"root",".",null);
 	}
 
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
@@ -194,19 +196,23 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	}
 	
 	#end
+	
+	function splitPath( path : String ) {
+		return path == "." ? [] : path.split("/");
+	}
 
 	function subFiles( path : String ) : Array<FileEntry> {
 		var r = root;
-		for( p in path.split("/") )
+		for( p in splitPath(path) )
 			r = Reflect.field(r, p);
 		if( r == null )
 			throw path + " is not a directory";
-		return [for( name in Reflect.fields(r) ) get(path + "/" + name)];
+		return [for( name in Reflect.fields(r) ) get(path == "." ? name : path + "/" + name)];
 	}
 	
 	function isDirectory( path : String ) {
 		var r = root;
-		for( p in path.split("/") )
+		for( p in splitPath(path) )
 			r = Reflect.field(r, p);
 		return r != null;
 	}
@@ -214,10 +220,10 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	public function exists( path : String ) {
 		#if flash
 		var f = open(path);
-		return f != null;
+		return f != null || isDirectory(path);
 		#else
 		var r = root;
-		for( p in path.split("/") ) {
+		for( p in splitPath(path) ) {
 			r = Reflect.field(r, p);
 			if( r == null ) return false;
 		}
@@ -226,17 +232,10 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	}
 	
 	public function get( path : String ) {
-		#if flash
-		var f = open(path);
-		if( f == null && !isDirectory(path) )
-			throw new NotFound(path);
-		return new EmbedEntry(this, path.split("/").pop(), path, f);
-		#else
 		if( !exists(path) )
 			throw new NotFound(path);
-		var id = resolve(path);
+		var id = #if flash open(path) #else resolve(path) #end;
 		return new EmbedEntry(this, path.split("/").pop(), path, id);
-		#end
 	}
 	
 	#end
