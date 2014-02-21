@@ -65,23 +65,25 @@ class Select extends Interactive {
 	function set_selectedIndex(i) {
 		var o = options[i];
 		value = o == null ? "" : (o.value == null ? o.label : o.value);
+		if( i != selectedIndex ) needRebuild = true;
 		return selectedIndex = i;
 	}
 	
 	public function setValue(v) {
-		selectedIndex = -1;
+		var k = -1;
 		for( i in 0...options.length )
 			if( options[i].value == v ) {
-				selectedIndex = i;
+				k = i;
 				break;
 			}
-		if( selectedIndex < 0 ) {
+		if( k < 0 ) {
 			for( i in 0...options.length )
 				if( options[i].label == v ) {
-					selectedIndex = i;
+					k = i;
 					break;
 				}
 		}
+		selectedIndex = k;
 		return value;
 	}
 	
