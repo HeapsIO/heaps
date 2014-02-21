@@ -13,4 +13,9 @@ class Resource {
 		return entry.name;
 	}
 	
+	function toString() {
+		return entry.path;
+	}
+
+	
 }

@@ -43,10 +43,10 @@ class Any extends Resource {
 		return loader.loadImage(entry.path).toTile();
 	}
 	
-	public function toString() {
+	public function toText() {
 		return entry.getBytes().toString();
 	}
-
+	
 	public function toImage() {
 		return loader.loadImage(entry.path);
 	}
