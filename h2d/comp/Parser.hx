@@ -8,6 +8,8 @@ private class CustomInterp extends hscript.Interp {
 			if( Reflect.field(o, rf) == null ) throw "JQuery don't have " + f + " implemented";
 			f = rf;
 		}
+		if( Reflect.field(o, f) == null )
+			throw o + " does not have method " + f;
 		return super.fcall(o, f, args);
 	}
 }
