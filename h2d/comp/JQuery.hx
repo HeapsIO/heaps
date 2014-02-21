@@ -142,7 +142,7 @@ class JQuery {
 			case "itemlist":
 				cast(c, h2d.comp.ItemList).selected = v;
 			case "select":
-				cast(c, h2d.comp.Select).value = v;
+				cast(c, h2d.comp.Select).setValue(v);
 			default:
 				null;
 			}
