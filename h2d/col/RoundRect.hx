@@ -2,8 +2,8 @@ package h2d.col;
 
 class RoundRect {
 
-	var x : Float;
-	var y : Float;
+	public var x : Float;
+	public var y : Float;
 	var ray : Float;
 	var dx : Float;
 	var dy : Float;
@@ -26,7 +26,7 @@ class RoundRect {
 		this.dy = dy * 2;
 		this.ray = h * 0.5;
 		lenSq = this.dx * this.dx + this.dy * this.dy;
-		invLenSq = 1 / lenSq;
+		invLenSq = lenSq < hxd.Math.EPSILON ? 0 : 1 / lenSq;
 	}
 
 	// distance segment
