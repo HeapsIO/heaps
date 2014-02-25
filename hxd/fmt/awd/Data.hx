@@ -1,4 +1,4 @@
-package hxd.res.fmt;
+package hxd.fmt.awd;
 
 class Block {
 	public var id : Int;

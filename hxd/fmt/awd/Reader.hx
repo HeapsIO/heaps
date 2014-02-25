@@ -1,7 +1,7 @@
-package hxd.res.fmt;
-import hxd.res.fmt.AwdData;
+package hxd.fmt.awd;
+import hxd.fmt.awd.Data;
 
-class AwdReader {
+class Reader {
 	
 	static inline var TTRIANGLE_GEOM = 1;
 	static inline var TINSTANCE = 23;
