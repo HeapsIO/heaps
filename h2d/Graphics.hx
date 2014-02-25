@@ -58,6 +58,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	}
 	
 	override function alloc( engine : h3d.Engine ) {
+		if (index.length <= 0) return ;
 		buffer = engine.mem.allocVector(tmp, 8, 0);
 		indexes = engine.mem.allocIndex(index);
 		for( b in buffers ) {
@@ -67,6 +68,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	}
 	
 	override function render( engine : h3d.Engine ) {
+		if (index.length <= 0) return ;
 		if( buffer == null || buffer.isDisposed() ) alloc(engine);
 		for( b in buffers )
 			engine.renderIndexed(b.vbuf, b.ibuf);
