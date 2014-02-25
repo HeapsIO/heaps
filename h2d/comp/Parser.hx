@@ -17,18 +17,22 @@ private class CustomInterp extends hscript.Interp {
 
 class Parser {
 	
-	var comps : Map<String, haxe.xml.Fast -> Component -> Component>;
+	var comps : Map < String, haxe.xml.Fast -> Component -> Component > ;
+	#if hscript
 	var interp : hscript.Interp;
+	#end
 	var root : Component;
 	
 	public function new(?api:{}) {
 		comps = new Map();
+		#if hscript
 		interp = new CustomInterp();
 		interp.variables.set("$", function(rq) return new h2d.comp.JQuery(root, rq));
 		interp.variables.set("api", api);
 		if( api != null )
 			for( f in Reflect.fields(api) )
 				interp.variables.set(f, Reflect.field(api, f));
+		#end
 	}
 	
 	public function build( x : haxe.xml.Fast, ?parent : Component ) {
