@@ -266,7 +266,7 @@ class Graphics extends Drawable {
 		if( nsegments == 0 )
 			nsegments = Math.ceil(ray * 3.14 * 2 / 4);
 		if( nsegments < 3 ) nsegments = 3;
-		var angle = Math.PI * 2 / (nsegments + 1);
+		var angle = Math.PI * 2 / nsegments;
 		for( i in 0...nsegments ) {
 			var a = i * angle;
 			addPoint(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
