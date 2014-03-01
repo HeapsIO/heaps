@@ -20,7 +20,7 @@ class Draw {
 		g.drawRect(20, 20, 80, 80);
 		g.beginFill(0x00FF00, 0.5);
 		g.lineStyle(1, 0xFF00FF);
-		g.drawCircle(100, 100, 30);
+		g.drawCircle(100, 100, 30, 5);
 		g.endFill();
 		
 		hxd.System.setLoop(update);
