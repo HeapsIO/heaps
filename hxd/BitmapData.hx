@@ -28,8 +28,7 @@ abstract BitmapData(InnerData) {
 		#if flash
 		this.fillRect(this.rect, color);
 		#else
-		this.setFillColor(color);
-		this.clearRect(0, 0, this.canvas.width, this.canvas.height);
+		fill(0, 0, width, height, color);
 		#end
 	}
 	
@@ -42,7 +41,8 @@ abstract BitmapData(InnerData) {
 		r.height = height;
 		this.fillRect(r, color);
 		#else
-		throw "TODO";
+		this.setFillColor(((color>>16)&0xFF)/255,((color>>8)&0xFF)/255,(color&0xFF)/255,(color>>>24)/255);
+		this.fillRect(x, y, width, height);
 		#end
 	}
 	

@@ -227,7 +227,6 @@ class Component extends Sprite {
 				iconBmp.y = extTop() - style.paddingTop + style.iconTop;
 				iconBmp.tile = Context.makeTileIcon(style.icon);
 				iconBmp.colorKey = 0xFFFF00FF;
-				if( iconBmp.color == null ) iconBmp.color = new h3d.Vector(1, 1, 1, 1);
 				iconBmp.color.setColor(style.iconColor != null ? style.iconColor : 0xFFFFFFFF);
 			} else if( iconBmp != null ) {
 				iconBmp.remove();

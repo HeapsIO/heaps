@@ -55,7 +55,7 @@ class Anim extends Drawable {
 	
 	override function draw( ctx : RenderContext ) {
 		var t = getFrame();
-		if( t != null ) emitTile(ctx,t);
+		emitTile(ctx,t);
 	}
 	
 }
