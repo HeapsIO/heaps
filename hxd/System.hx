@@ -176,11 +176,11 @@ class System {
 	}
 	
 	static function get_width() {
-		return js.Browser.document.body.clientWidth;
+		return Math.round(js.Browser.document.body.clientWidth * js.Browser.window.devicePixelRatio);
 	}
 	
 	static function get_height() {
-		return js.Browser.document.body.clientHeight;
+		return Math.round(js.Browser.document.body.clientHeight  * js.Browser.window.devicePixelRatio);
 	}
 	
 	#elseif openfl

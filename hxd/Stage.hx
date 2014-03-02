@@ -61,11 +61,11 @@ class Stage {
 			e.stopPropagation();
 			e.preventDefault();
 		});
-		var curW = Math.round(canvasPos.width), curH = Math.round(canvasPos.height);
+		var curW = this.width, curH = this.height;
 		var t0 = new haxe.Timer(100);
 		t0.run = function() {
 			canvasPos = canvas.getBoundingClientRect();
-			var cw = Math.round(canvasPos.width), ch = Math.round(canvasPos.height);
+			var cw = this.width, ch = this.height;
 			if( curW != cw || curH != ch ) {
 				curW = cw;
 				curH = ch;
@@ -285,11 +285,11 @@ class Stage {
 	var curMouseY : Float = 0.;
 
 	function get_width() {
-		return Math.round(canvasPos.width);
+		return Math.round(canvasPos.width * js.Browser.window.devicePixelRatio);
 	}
 
 	function get_height() {
-		return Math.round(canvasPos.height);
+		return Math.round(canvasPos.height * js.Browser.window.devicePixelRatio);
 	}
 
 	function get_mouseX() {
