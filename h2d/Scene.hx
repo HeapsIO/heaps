@@ -358,6 +358,16 @@ class Scene extends Layers implements h3d.IDrawable {
 		var h = -2 / height;
 		absX = absX * w - 1;
 		absY = absY * h + 1;
+		
+		// half pixel align !
+		var engine = h3d.Engine.getCurrent();
+		absX += 1 / engine.width;
+		#if flash
+		absY -= 1 / engine.height;
+		#else
+		absY += 1 / engine.height;
+		#end
+		
 		matA *= w;
 		matB *= h;
 		matC *= w;

@@ -3,7 +3,9 @@ package h2d;
 @:allow(h2d)
 class Tile {
 	
-	static inline var EPSILON_PIXEL = 0.001;
+	static inline var EPSILON_POS = 0;
+	static inline var EPSILON_SIZE_U = 0;
+	static inline var EPSILON_SIZE_V = 0.0001;
 	
 	var innerTex : h3d.mat.Texture;
 	
@@ -43,10 +45,10 @@ class Tile {
 	function setTexture(tex) {
 		this.innerTex = tex;
 		if( tex != null ) {
-			this.u = (x + EPSILON_PIXEL) / tex.width;
-			this.v = (y + EPSILON_PIXEL) / tex.height;
-			this.u2 = (x + width - EPSILON_PIXEL) / tex.width;
-			this.v2 = (y + height - EPSILON_PIXEL) / tex.height;
+			this.u = (x + EPSILON_POS) / tex.width;
+			this.v = (y + EPSILON_POS) / tex.height;
+			this.u2 = (x + width - EPSILON_SIZE_U) / tex.width;
+			this.v2 = (y + height - EPSILON_SIZE_V) / tex.height;
 		}
 	}
 	
@@ -67,10 +69,10 @@ class Tile {
 		this.y = y;
 		var tex = innerTex;
 		if( tex != null ) {
-			u = (x + EPSILON_PIXEL) / tex.width;
-			v = (y + EPSILON_PIXEL) / tex.height;
-			u2 = (width + x - EPSILON_PIXEL) / tex.width;
-			v2 = (height + y - EPSILON_PIXEL) / tex.height;
+			u = (x + EPSILON_POS) / tex.width;
+			v = (y + EPSILON_POS) / tex.height;
+			u2 = (width + x - EPSILON_SIZE_U) / tex.width;
+			v2 = (height + y - EPSILON_SIZE_V) / tex.height;
 		}
 	}
 	
@@ -79,8 +81,8 @@ class Tile {
 		this.height = h;
 		var tex = innerTex;
 		if( tex != null ) {
-			u2 = (w + x - EPSILON_PIXEL) / tex.width;
-			v2 = (h + y - EPSILON_PIXEL) / tex.height;
+			u2 = (w + x - EPSILON_SIZE_U) / tex.width;
+			v2 = (h + y - EPSILON_SIZE_V) / tex.height;
 		}
 	}
 	
