@@ -122,8 +122,9 @@ class Text extends Drawable {
 	
 	function set_textColor(c) {
 		this.textColor = c;
-		glyphs.color = h3d.Vector.fromColor(c);
-		glyphs.color.w = alpha;
+		var a = alpha;
+		color.setColor(c);
+		color.w = a;
 		return c;
 	}
 
