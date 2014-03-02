@@ -137,6 +137,10 @@ class Vector {
 		z = pz;
 		w = pw;
 	}
+	
+	public inline function setColor( c : Int ) {
+		loadColor(c);
+	}
 
 	public inline function loadColor( c : Int, scale : Float = 1.0 ) {
 		var s = scale / 255;
