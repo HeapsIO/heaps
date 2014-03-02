@@ -25,7 +25,6 @@ class TestCol extends hxd.App {
 		rrect.x = s2d.width >> 1;
 		rrect.y = s2d.height >> 1;
 		rrect.rotation = Math.PI / 3;
-		rrect.color = new h3d.Vector();
 		
 		line = new h2d.Graphics(s2d);
 		line.beginFill(0xFFFFFFFF);

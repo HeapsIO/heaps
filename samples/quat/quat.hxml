@@ -1,7 +1,4 @@
--cp .
--swf quat.swf
--swf-header 800:600:60:FFFFFF
--swf-version 11.8
+-js main.js
 -main QuatDemo
--lib h3d
+-lib heaps
 -dce full

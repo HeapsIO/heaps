@@ -2,9 +2,12 @@ package h3d.scene;
 
 class Graphics extends Mesh {
 
+	var curX : Float = 0.;
+	var curY : Float = 0.;
+	var curZ : Float = 0.;
+	
 	public function new(?parent) {
 		super(null, null, parent);
-		material.texture = h3d.mat.Texture.fromColor(0xFFFFFFFF);
 	}
 	
 	public function clear() {
@@ -27,6 +30,9 @@ class Graphics extends Mesh {
 	}
 	
 	public function moveTo( x : Float, y : Float, z : Float ) {
+		curX = 0;
+		curY = 0;
+		curZ = 0;
 	}
 	
 	public function lineTo( x : Float, y : Float, z : Float ) {

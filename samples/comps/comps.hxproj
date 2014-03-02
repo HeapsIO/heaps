@@ -23,7 +23,7 @@
     <option flashStrict="False" />
     <option mainClass="Comps" />
     <option enabledebug="False" />
-    <option additional="-lib heaps&#xA;-dce full" />
+    <option additional="-lib heaps&#xA;-lib hscript&#xA;-dce full" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

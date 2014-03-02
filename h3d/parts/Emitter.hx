@@ -191,7 +191,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		p.lifeTimeFactor = 1 / eval(state.life);
 	}
 	
-	public function emit() {
+	public function emitPart() {
 		if( posChanged ) syncPos();
 		return emitParticle();
 	}
