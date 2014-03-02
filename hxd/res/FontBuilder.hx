@@ -147,7 +147,7 @@ class FontBuilder {
 			var textChar = options.chars.charAt(i);
 			var w = Math.ceil(ctx.measureText(textChar).width) + 1;
 			if( w == 1 ) continue;
-			var h = this.font.size + 2;
+			var h = this.font.size + 5;
 			surf += (w + 1) * (h + 1);
 			if( h > font.lineHeight )
 				font.lineHeight = h;
