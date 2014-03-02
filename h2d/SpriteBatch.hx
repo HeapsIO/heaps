@@ -11,6 +11,7 @@ class BatchElement {
 	public var b : Float;
 	public var a : Float;
 	public var t : Tile;
+	public var alpha(get,set) : Float;
 	public var batch(default, null) : SpriteBatch;
 	
 	var prev : BatchElement;
@@ -20,6 +21,14 @@ class BatchElement {
 		x = 0; y = 0; r = 1; g = 1; b = 1; a = 1;
 		rotation = 0; scale = 1;
 		this.t = t;
+	}
+	
+	inline function get_alpha() {
+		return a;
+	}
+	
+	inline function set_alpha(v) {
+		return a = v;
 	}
 	
 	function update(et:Float) {
