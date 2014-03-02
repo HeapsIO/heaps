@@ -128,6 +128,7 @@ class Camera {
 	function makeCameraMatrix( m : Matrix ) {
 		// in leftHanded the z axis is positive else it's negative
 		// this way we make sure that our [ax,ay,-az] matrix follow the same handness as our world
+		// We build a transposed version of Matrix.lookAt
 		var az = rightHanded ? pos.sub(target) : target.sub(pos);
 		az.normalize();
 		var ax = up.cross(az);

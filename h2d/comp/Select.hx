@@ -24,12 +24,13 @@ class Select extends Interactive {
 	}
 	
 	public function popup() {
-		if( list != null )
+		if( list != null || options.length == 0 )
 			return;
 		var p : Component = this;
 		while( p.parentComponent != null )
 			p = p.parentComponent;
 		list = new ItemList();
+		list.onItemOver = function(i) onItemOver(i < 0 ? null : options[i].value);
 		p.addChild(list);
 		list.addClass("popup");
 		list.evalStyle();
@@ -64,23 +65,25 @@ class Select extends Interactive {
 	function set_selectedIndex(i) {
 		var o = options[i];
 		value = o == null ? "" : (o.value == null ? o.label : o.value);
+		if( i != selectedIndex ) needRebuild = true;
 		return selectedIndex = i;
 	}
 	
 	public function setValue(v) {
-		selectedIndex = -1;
+		var k = -1;
 		for( i in 0...options.length )
 			if( options[i].value == v ) {
-				selectedIndex = i;
+				k = i;
 				break;
 			}
-		if( selectedIndex < 0 ) {
+		if( k < 0 ) {
 			for( i in 0...options.length )
 				if( options[i].label == v ) {
-					selectedIndex = i;
+					k = i;
 					break;
 				}
 		}
+		selectedIndex = k;
 		return value;
 	}
 	
@@ -119,6 +122,9 @@ class Select extends Interactive {
 		needRebuild = true;
 		if( selectedIndex == options.length - 1 )
 			selectedIndex = selectedIndex; // update value
+	}
+	
+	public dynamic function onItemOver( value : String ) {
 	}
 
 	override function resize( ctx : Context ) {

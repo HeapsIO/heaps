@@ -24,7 +24,7 @@ private typedef Curve = {
 	var pointSelected : h2d.col.Point;
 }
 
-class Editor extends h2d.Sprite {
+class Editor extends h2d.Sprite implements Randomized {
 	
 	var emit : Emitter;
 	var state : State;
@@ -49,6 +49,7 @@ class Editor extends h2d.Sprite {
 	var cedit : h2d.Interactive;
 	var undo : Array<History>;
 	var redo : Array<History>;
+	var randomValue : Float;
 	public var currentFilePath : String;
 	public var autoLoop : Bool = true;
 	public var moveEmitter(default,set) : Bool = false;
@@ -98,7 +99,6 @@ class Editor extends h2d.Sprite {
 		},{
 			defaultPath : currentFilePath,
 			title : "Please select the texture",
-			relativePath : true,
 			fileTypes : [{ name : "Images", extensions : ["png","jpg","jpeg","gif"] }],
 		});
 	}
@@ -409,6 +409,7 @@ class Editor extends h2d.Sprite {
 						</div>
 						<div class="line">
 							<span class="label">Start Delay</span> <value value="${state.delay}" onchange="api.s.delay = this.value"/>
+							<checkbox checked="${state.is3D}" onchange="api.s.is3D = this.checked"/> <span>3D</span>
 						</div>
 						<div class="line">
 							<select onchange="api.s.blendMode = api.blendModes[api.parseInt(this.value)]; $(\'.ic.alpha\').toggleClass(\':disabled\', api.s.blendMode.index == 2)">
@@ -735,6 +736,10 @@ class Editor extends h2d.Sprite {
 		buildUI();
 	}
 	
+	public function rand() {
+		return randomValue;
+	}
+	
 	function init() {
 		var bg = new hxd.BitmapData(300, 110);
 		bg.clear(0xFF202020);
@@ -790,8 +795,10 @@ class Editor extends h2d.Sprite {
 		}
 		for( x in 0...width ) {
 			var px = x / (width - 1);
-			var py0 = state.eval(curve.value, px, function() return 0.);
-			var py1 = state.eval(curve.value, px, function() return 1.);
+			randomValue = 0;
+			var py0 = State.eval(curve.value, px, this, null);
+			randomValue = 1;
+			var py1 = State.eval(curve.value, px, this, null);
 			var iy0 = posY(py0);
 			if( py0 != py1 ) {
 				var iy1 = posY(py1);

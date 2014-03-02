@@ -213,8 +213,11 @@ class Scene extends Layers implements h3d.IDrawable {
 			event.kind = EMove;
 			currentOver = null;
 		}
-		if( !handled )
+		if( !handled ) {
+			if( event.kind == EPush )
+				pushList.push(null);
 			dispatchListeners(event);
+		}
 	}
 	
 	function hasEvents() {
@@ -252,7 +255,10 @@ class Scene extends Layers implements h3d.IDrawable {
 			if( e.kind == ERelease && pushList.length > 0 ) {
 				for( i in pushList ) {
 					// relX/relY is not correct here
-					i.handleEvent(e);
+					if( i == null )
+						dispatchListeners(e);
+					else
+						i.handleEvent(e);
 				}
 				pushList = new Array();
 			}
@@ -376,7 +382,7 @@ class Scene extends Layers implements h3d.IDrawable {
 		// perform final rotation around center
 		if( rotation != 0 ) {
 			var cr = Math.cos(rotation);
-			var sr = -Math.sin(rotation);
+			var sr = Math.sin(rotation);
 			var tmpA = matA * cr + matB * sr;
 			var tmpB = matA * -sr + matB * cr;
 			var tmpC = matC * cr + matD * sr;

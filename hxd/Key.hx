@@ -44,6 +44,9 @@ class Key {
 	public static inline var NUMPAD_DOT = 110;
 	public static inline var NUMPAD_DIV = 111;
 	
+	public static inline var MOUSE_LEFT = 0;
+	public static inline var MOUSE_RIGHT = 1;
+	
 	static var initDone = false;
 	static var keyPressed : Array<Int> = [];
 	
@@ -64,7 +67,7 @@ class Key {
 			dispose();
 		initDone = true;
 		keyPressed = [];
-		Stage.getInstance().addEventTarget(onKeyEvent);
+		Stage.getInstance().addEventTarget(onEvent);
 		#if flash
 		flash.Lib.current.stage.addEventListener(flash.events.Event.DEACTIVATE, onDeactivate);
 		#end
@@ -72,7 +75,7 @@ class Key {
 	
 	public static function dispose() {
 		if( initDone ) {
-			Stage.getInstance().removeEventTarget(onKeyEvent);
+			Stage.getInstance().removeEventTarget(onEvent);
 			#if flash
 			flash.Lib.current.stage.removeEventListener(flash.events.Event.DEACTIVATE, onDeactivate);
 			#end
@@ -87,12 +90,16 @@ class Key {
 	}
 	#end
 	
-	static function onKeyEvent( e : Event ) {
+	static function onEvent( e : Event ) {
 		switch( e.kind ) {
 		case EKeyDown:
 			keyPressed[e.keyCode] = h3d.Engine.getCurrent().frameCount+1;
 		case EKeyUp:
 			keyPressed[e.keyCode] = -(h3d.Engine.getCurrent().frameCount+1);
+		case EPush:
+			keyPressed[e.button] = h3d.Engine.getCurrent().frameCount+1;
+		case ERelease:
+			keyPressed[e.button] = -(h3d.Engine.getCurrent().frameCount+1);
 		default:
 		}
 	}

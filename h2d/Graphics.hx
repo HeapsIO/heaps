@@ -58,6 +58,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	}
 	
 	override function alloc( engine : h3d.Engine ) {
+		if (index.length <= 0) return ;
 		buffer = engine.mem.allocVector(tmp, 8, 0);
 		indexes = engine.mem.allocIndex(index);
 		for( b in buffers ) {
@@ -67,6 +68,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	}
 	
 	override function render( engine : h3d.Engine ) {
+		if (index.length <= 0) return ;
 		if( buffer == null || buffer.isDisposed() ) alloc(engine);
 		for( b in buffers )
 			engine.renderIndexed(b.vbuf, b.ibuf);
@@ -263,7 +265,7 @@ class Graphics extends Drawable {
 		if( nsegments == 0 )
 			nsegments = Math.ceil(ray * 3.14 * 2 / 4);
 		if( nsegments < 3 ) nsegments = 3;
-		var angle = Math.PI * 2 / (nsegments + 1);
+		var angle = Math.PI * 2 / nsegments;
 		for( i in 0...nsegments ) {
 			var a = i * angle;
 			addPoint(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);

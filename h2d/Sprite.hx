@@ -214,10 +214,10 @@ class Sprite {
 				matD = scaleY;
 			} else {
 				cr = Math.cos(rotation);
-				sr = -Math.sin(rotation);
+				sr = Math.sin(rotation);
 				matA = scaleX * cr;
-				matB = scaleX * -sr;
-				matC = scaleY * sr;
+				matB = scaleX * sr;
+				matC = scaleY * -sr;
 				matD = scaleY * cr;
 			}
 			absX = x;
@@ -232,10 +232,10 @@ class Sprite {
 				matD = scaleY * parent.matD;
 			} else {
 				var cr = Math.cos(rotation);
-				var sr = -Math.sin(rotation);
+				var sr = Math.sin(rotation);
 				var tmpA = scaleX * cr;
-				var tmpB = scaleX * -sr;
-				var tmpC = scaleY * sr;
+				var tmpB = scaleX * sr;
+				var tmpC = scaleY * -sr;
 				var tmpD = scaleY * cr;
 				matA = tmpA * parent.matA + tmpB * parent.matC;
 				matB = tmpA * parent.matB + tmpB * parent.matD;

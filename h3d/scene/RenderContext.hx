@@ -21,10 +21,10 @@ class RenderContext {
 	}
 	
 	@:access(h3d.mat.Pass)
-	public inline function emit( mat : h3d.mat.Material, obj ) {
+	public inline function emit( mat : h3d.mat.Material, obj, index = 0 ) {
 		var p = mat.mainPass;
 		while( p != null ) {
-			emitPass(p, obj);
+			emitPass(p, obj).index = index;
 			p = p.nextPass;
 		}
 	}

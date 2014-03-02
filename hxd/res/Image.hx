@@ -156,8 +156,8 @@ class Image extends Resource {
 				tex.height = th;
 			}
 		}
-		
 		loadTexture();
+		tex.setName(entry.path);
 		tex.onContextLost = function() {
 			needResize = false;
 			loadTexture();

@@ -21,6 +21,12 @@ class Layers extends Sprite {
 	}
 	
 	override function addChildAt( s : Sprite, layer : Int ) {
+		if( s.parent == this ) {
+			var old = s.allocated;
+			s.allocated = false;
+			removeChild(s);
+			s.allocated = old;
+		}
 		// new layer
 		while( layer >= layerCount )
 			layers[layerCount++] = childs.length;

@@ -39,22 +39,61 @@ class Quat {
 		return new Quat(x, y, z, w);
 	}
 	
-	public inline function initDirection( dir : Vector, ?up : Vector ) {
-		if( up == null ) {
-			// assume [0,0,1] UP version
-			x = -dir.y;
-			y = dir.x;
-			z = 0;
-			w = dir.z + dir.length();
-			normalize();
+	public function initMoveTo( from : Vector, to : Vector ) {
+		//		H = Normalize(From + To)
+		//		Q = (From ^ H, From . H)
+		//
+		// We have an issue when From.To moves towards -1, a small tilt on From ^ To will result in big tilt.
+		var hx = from.x + to.x;
+		var hy = from.y + to.y;
+		var hz = from.z + to.z;
+		var h = Math.invSqrt(hx * hx + hy * hy + hz * hz);
+		x = from.y * hz - from.z * hy;
+		y = from.z * hx - from.x * hz;
+		z = from.x * hy - from.y * hx;
+		w = from.x * hx + from.y * hy + from.z * hz;
+		normalize();
+	}
+	
+	public function initDirection( dir : Vector ) {
+		// inlined version of initRotationMatrix(Matrix.lookAtX(dir))
+		var ax = dir.clone().getNormalized();
+		var ay = new Vector(-ax.y, ax.x, 0).getNormalized();
+		if( ay.lengthSq() < Math.EPSILON ) {
+			ay.x = ax.y;
+			ay.y = ax.z;
+			ay.z = ax.x;
+		}
+		var az = ax.cross(ay);
+		var tr = ax.x + ay.y + az.z;
+		if( tr > 0 ) {
+			var s = (tr + 1.0).sqrt() * 2;
+			var is = 1 / s;
+			x = (ay.z - az.y) * is;
+			y = (az.x - ax.z) * is;
+			z = (ax.y - ay.x) * is;
+			w = 0.25 * s;
+		} else if( ax.x > ay.y && ax.x > az.z ) {
+			var s = (1.0 + ax.x - ay.y - az.z).sqrt() * 2;
+			var is = 1 / s;
+			x = 0.25 * s;
+			y = (ay.x + ax.y) * is;
+			z = (az.x + ax.z) * is;
+			w = (ay.z - az.y) * is;
+		} else if( ay.y > az.z ) {
+			var s = (1.0 + ay.y - ax.x - az.z).sqrt() * 2;
+			var is = 1 / s;
+			x = (ay.x + ax.y) * is;
+			y = 0.25 * s;
+			z = (az.y + ay.z) * is;
+			w = (az.x - ax.z) * is;
 		} else {
-			// LeftHanded (RH might use dir.cross(up) ?)
-			var tmp = up.cross(dir);
-			x = tmp.x;
-			y = tmp.y;
-			z = tmp.z;
-			w = dir.length() + dir.dot3(up);
-			normalize();
+			var s = (1.0 + az.z - ax.x - ay.y).sqrt() * 2;
+			var is = 1 / s;
+			x = (az.x + ax.z) * is;
+			y = (az.y + ay.z) * is;
+			z = 0.25 * s;
+			w = (ax.y - ay.x) * is;
 		}
 	}
 	
@@ -130,10 +169,6 @@ class Quat {
 		w = cosX * cosYZ + sinX * sinYZ;
 	}
 	
-	public inline function add( q : Quat ) {
-		multiply(this, q);
-	}
-	
 	public function multiply( q1 : Quat, q2 : Quat ) {
 		var x2 = q1.x * q2.w + q1.w * q2.x + q1.y * q2.z - q1.z * q2.y;
 		var y2 = q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x;
@@ -153,9 +188,9 @@ class Quat {
 	
 	public function toEuler() {
 		return new Vector(
-			hxd.Math.atan2(2 * (y * w + x * z), 1 - 2 * (y * y + z * z)),
-			(2 * (x * y + z * w)).asin(),
-			hxd.Math.atan2(2 * (x * w - y * z), 1 - 2 * (x * x + z * z))
+			hxd.Math.atan2(2 * (x * w + y * z), 1 - 2 * (x * x + z * z)),
+			hxd.Math.atan2(2 * (y * w - x * z), 1 - 2 * (y * y - z * z)),
+			(2 * (x * y + z * w)).asin()
 		);
 	}
 	

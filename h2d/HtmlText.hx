@@ -2,7 +2,7 @@ package h2d;
 
 class HtmlText extends Text {
 	
-	override function initGlyphs( text : String, rebuild = true ) {
+	override function initGlyphs( text : String, rebuild = true, ?lines : Array<Int> ) {
 		if( rebuild ) glyphs.reset();
 		glyphs.setDefaultColor(textColor);
 		var x = 0, y = 0, xMax = 0;

@@ -501,7 +501,7 @@ private class ColorGauge extends h2d.Sprite{
 
 /////////////////////////////////////////////////////////////////
 
-@:allow(h2d.comp._ColorPicker)
+@:allow(h2d.comp)
 class ColorPicker extends h2d.comp.Component {
 	
 	public static var borderColor = 0xFFaaaaaa;
@@ -524,13 +524,18 @@ class ColorPicker extends h2d.comp.Component {
 	}
 	
 	inline function get_color() {
-		return finalColor.color;
+		return (finalColor.color&0xFFFFFF) | Std.int(finalColor.alpha*255) << 24;
 	}
 	
 	function set_color(v) {
 		finalColor.color = v;
+		finalColor.alpha = (v >>> 24) / 255;
 		palette.setColorFrom(v);
 		chart.setColorFrom(v);
+		gaugeRed.color = chart.color;
+		gaugeGreen.color = chart.color;
+		gaugeBlue.color = chart.color;
+		gaugeAlpha.setCursor(finalColor.alpha * gaugeAlpha.width);
 		return v;
 	}
 	
@@ -575,7 +580,7 @@ class ColorPicker extends h2d.comp.Component {
 		if(change.equals(SNone)) {
 			if(finalColor.color != chart.color) {
 				finalColor.updateColor(chart.color);
-				onChange(finalColor.color);
+				onChange(color);
 			}
 			return;
 		}
@@ -584,7 +589,7 @@ class ColorPicker extends h2d.comp.Component {
 			case SColor:	palette.setColorFrom(finalColor.color);
 							chart.setColorFrom(finalColor.color);
 							// require another change event since we have finalColor == chartColor
-							onChange(finalColor.color);
+							onChange(color);
 			case SPalette:	chart.refColor = palette.color;
 			case SRed:		chart.setColorFrom(gaugeRed.color);
 							palette.color = chart.refColor;
@@ -593,6 +598,7 @@ class ColorPicker extends h2d.comp.Component {
 			case SBlue:		chart.setColorFrom(gaugeBlue.color);
 							palette.color = chart.refColor;
 			case SAlpha:	finalColor.alpha = gaugeAlpha.ratio;
+							onChange(color);
 			default:
 		}
 		

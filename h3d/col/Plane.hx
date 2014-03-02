@@ -89,4 +89,28 @@ class Plane {
 		return new Plane( 0, 0, 1, v );
 	}
 	
+	public static inline function frustumLeft( mvp : Matrix ) {
+		return new Plane(mvp._14 + mvp._11, mvp._24 + mvp._21 , mvp._34 + mvp._31, -(mvp._44 + mvp._41));
+	}
+
+	public static inline function frustumRight( mvp : Matrix ) {
+		return new Plane(mvp._14 - mvp._11, mvp._24 - mvp._21 , mvp._34 - mvp._31, mvp._41 - mvp._44);
+	}
+	
+	public static inline function frustumBottom( mvp : Matrix ) {
+		return new Plane(mvp._14 + mvp._12, mvp._24 + mvp._22 , mvp._34 + mvp._32, -(mvp._44 + mvp._42));
+	}
+
+	public static inline function frustumTop( mvp : Matrix ) {
+		return new Plane(mvp._14 - mvp._12, mvp._24 - mvp._22 , mvp._34 - mvp._32, mvp._42 - mvp._44);
+	}
+	
+	public static inline function frustumNear( mvp : Matrix ) {
+		return new Plane(mvp._13, mvp._23, mvp._33, -mvp._43);
+	}
+
+	public static inline function frustumFar( mvp : Matrix ) {
+		return new Plane(mvp._14 - mvp._13, mvp._24 - mvp._23, mvp._34 - mvp._33, mvp._43 - mvp._44);
+	}
+	
 }

@@ -174,8 +174,14 @@ class Matrix {
 		multiply(this, tmp);
 	}
 	
-	public inline function add( m : Matrix ) {
-		multiply(this, m);
+	public inline function pos( ?v : Vector ) {
+		if( v == null )
+			return new Vector( _41, _42 , _43 , _44 );
+		v.x = _41;
+		v.y = _42;
+		v.z = _43;
+		v.w = _44;
+		return v;
 	}
 	
 	public function prependTranslate( x = 0., y = 0., z = 0. ) {
@@ -471,6 +477,8 @@ class Matrix {
 		_43 += brightness;
 	}
 	
+	// STATICS
+	
 	public static function I() {
 		var m = new Matrix();
 		m.identity();
@@ -501,64 +509,37 @@ class Matrix {
 		return m;
 	}
 
-	//retrieves pos vector from matrix
-	public inline function pos( ? v: Vector)
-	{
-		if( v == null )
-			return new Vector( _41, _42 , _43 , _44  );
-		else
-		{
-			v.x = _41;
-			v.y = _42;
-			v.z = _43;
-			v.w = _44;
-			return v;
+	/**
+		Build a rotation Matrix so the X axis will look at the given direction, and the Z axis will be the Up vector ([0,0,1] by default)
+	**/
+	public static function lookAtX( dir : Vector, ?up : Vector, ?m : Matrix ) {
+		if( up == null ) up = new Vector(0, 0, 1);
+		if( m == null ) m = new Matrix();
+		var ax = dir.getNormalized();
+		var ay = up.cross(ax).getNormalized();
+		if( ay.lengthSq() < Math.EPSILON ) {
+			ay.x = ax.y;
+			ay.y = ax.z;
+			ay.z = ax.x;
 		}
+		var az = ax.cross(ay);
+		m._11 = ax.x;
+		m._12 = ax.y;
+		m._13 = ax.z;
+		m._14 = 0;
+		m._21 = ay.x;
+		m._22 = ay.y;
+		m._23 = ay.z;
+		m._24 = 0;
+		m._31 = az.x;
+		m._32 = az.y;
+		m._33 = az.z;
+		m._34 = 0;
+		m._41 = 0;
+		m._42 = 0;
+		m._43 = 0;
+		m._44 = 1;
+		return m;
 	}
-	
-	//retrieves at vector from matrix
-	public inline function at( ?v:Vector)
-	{
-		if( v == null )
-			return new Vector( _31, _32 , _33 , _34  );
-		else
-		{
-			v.x = _31;
-			v.y = _32;
-			v.z = _33;
-			v.w = _34;
-			return v;
-		}
-	}
-	
-	//retrieves up vector from matrix
-	public inline function up(?v:Vector)
-	{
-		if( v == null )
-			return new Vector( _21, _22 , _23 , _24  );
-		else
-		{
-			v.x = _21;
-			v.y = _22;
-			v.z = _23;
-			v.w = _24;
-			return v;
-		}
-	}
-	
-	//retrieves right vector from matrix
-	public inline function right(?v:Vector)
-	{
-		if( v == null )
-			return new Vector( _11, _12 , _13 , _14  );
-		else
-		{
-			v.x = _11;
-			v.y = _12;
-			v.z = _13;
-			v.w = _14;
-			return v;
-		}
-	}
-	
+
 }

@@ -3,6 +3,8 @@ package h2d.comp;
 class Box extends Component {
 	
 	var input : h2d.Interactive;
+	var scrollX : Float = 0.;
+	var scrollY : Float = 0.;
 	
 	public function new(?layout,?parent) {
 		super("box", parent);
@@ -61,8 +63,8 @@ class Box extends Component {
 					} else {
 						if( c.height > lineHeight ) lineHeight = c.height;
 					}
-					ctx2.xPos = xPos;
-					ctx2.yPos = yPos;
+					ctx2.xPos = xPos + scrollX;
+					ctx2.yPos = yPos + scrollY;
 					c.resizeRec(ctx2);
 					xPos += c.width + style.horizontalSpacing;
 				}
@@ -88,8 +90,8 @@ class Box extends Component {
 					xPos += c.width;
 					if( c.height > lineHeight ) lineHeight = c.height;
 				} else {
-					ctx2.xPos = xPos;
-					ctx2.yPos = 0;
+					ctx2.xPos = xPos + scrollX;
+					ctx2.yPos = scrollY;
 					c.resizeRec(ctx2);
 					xPos += c.width + style.horizontalSpacing;
 				}
@@ -115,8 +117,8 @@ class Box extends Component {
 					yPos += c.height;
 					if( c.width > colWidth ) colWidth = c.width;
 				} else {
-					ctx2.xPos = 0;
-					ctx2.yPos = yPos;
+					ctx2.xPos = scrollX;
+					ctx2.yPos = yPos + scrollY;
 					c.resizeRec(ctx2);
 					yPos += c.height + style.verticalSpacing;
 				}
@@ -162,8 +164,8 @@ class Box extends Component {
 					ctx2.maxHeight = h;
 					var d = c.style.dock;
 					if( d == null ) d = Full;
-					ctx2.xPos = xPos;
-					ctx2.yPos = yPos;
+					ctx2.xPos = xPos + scrollX;
+					ctx2.yPos = yPos + scrollY;
 					switch( d ) {
 					case Left, Top:
 					case Right:

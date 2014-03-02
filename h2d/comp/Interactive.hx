@@ -4,14 +4,22 @@ class Interactive extends Component {
 	
 	var input : h2d.Interactive;
 	var active : Bool;
+	var activeRight : Bool;
 	
 	function new(kind,?parent) {
 		super(kind,parent);
 		input = new h2d.Interactive(0, 0, bg);
+		input.enableRightButton = true;
 		active = false;
-		input.onPush = function(_) {
-			active = true;
-			onMouseDown();
+		activeRight = false;
+		input.onPush = function(e) {
+			switch( e.button ) {
+			case 0:
+				active = true;
+				onMouseDown();
+			case 1:
+				activeRight = true;
+			}
 		};
 		input.onOver = function(_) {
 			addClass(":hover");
@@ -19,12 +27,24 @@ class Interactive extends Component {
 		};
 		input.onOut = function(_) {
 			active = false;
+			activeRight = false;
 			removeClass(":hover");
 			onMouseOut();
 		};
-		input.onRelease = function(_) {
-			if( active ) onClick();
-			onMouseUp();
+		input.onRelease = function(e) {
+			switch( e.button ) {
+			case 0:
+				if( active ) {
+					active = false;
+					onClick();
+				}
+				onMouseUp();
+			case 1:
+				if( activeRight ) {
+					activeRight = false;
+					onRightClick();
+				}
+			}
 		};
 	}
 	
@@ -52,5 +72,7 @@ class Interactive extends Component {
 	public dynamic function onClick() {
 	}
 	
+	public dynamic function onRightClick() {
+	}
 	
 }

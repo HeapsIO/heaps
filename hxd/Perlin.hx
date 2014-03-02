@@ -118,6 +118,10 @@ class Perlin {
 	}
 
 	public function gradient( seed : Int, x : Float, y : Float ) {
+		return inlineGradient(seed, x, y);
+	}
+	
+	public inline function inlineGradient( seed : Int, x : Float, y : Float ) {
 		var ix = Std.int(x), xs = scurve(x - ix);
 		var iy = Std.int(y), ys = scurve(y - iy);
 		var ga = gradientAt(x, y, ix, iy, seed);
@@ -131,7 +135,7 @@ class Perlin {
 		var v = 0.;
 		var k = 1.;
 		for( i in 0...octaves ) {
-			v += gradient(seed + i, x, y) * k;
+			v += inlineGradient(seed + i, x, y) * k;
 			k *= persist;
 			x *= lacunarity;
 			y *= lacunarity;
@@ -146,7 +150,7 @@ class Perlin {
 		var weight = 1.;
 		var tot = 0.;
 		for( i in 0...octaves ) {
-			var g = gradient(seed + i, x * s, y * s) * p;
+			var g = inlineGradient(seed + i, x * s, y * s) * p;
 			g = offset - hxd.Math.abs(g);
 			g *= g;
 			g *= weight;
@@ -169,6 +173,16 @@ class Perlin {
 		var ip = Std.int(p);
 		var rp = p - ip;
 		return THRESHOLD[ip] * (1 - rp) + THRESHOLD[ip + 1] * rp;
+	}
+	
+	public function maxValue( octaves : Int, persist : Float ) {
+		var tot = 0.;
+		var n = 1.;
+		for( i in 0...octaves ) {
+			tot += n;
+			n *= persist;
+		}
+		return tot;
 	}
 	
 	// calculated by taking random samples

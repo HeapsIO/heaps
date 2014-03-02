@@ -101,8 +101,8 @@ class SpriteBatch extends Drawable {
 				var ca = Math.cos(e.rotation), sa = Math.sin(e.rotation);
 				var hx = t.width, hy = t.height;
 				var px = t.dx, py = t.dy;
-				tmp[pos++] = (px * ca + py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca - px * sa) * e.scale + e.y;
+				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
+				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v;
 				tmp[pos++] = e.r;
@@ -110,8 +110,8 @@ class SpriteBatch extends Drawable {
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
 				var px = t.dx + hx, py = t.dy;
-				tmp[pos++] = (px * ca + py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca - px * sa) * e.scale + e.y;
+				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
+				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v;
 				tmp[pos++] = e.r;
@@ -119,8 +119,8 @@ class SpriteBatch extends Drawable {
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
 				var px = t.dx, py = t.dy + hy;
-				tmp[pos++] = (px * ca + py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca - px * sa) * e.scale + e.y;
+				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
+				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v2;
 				tmp[pos++] = e.r;
@@ -128,8 +128,8 @@ class SpriteBatch extends Drawable {
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
 				var px = t.dx + hx, py = t.dy + hy;
-				tmp[pos++] = (px * ca + py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca - px * sa) * e.scale + e.y;
+				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
+				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v2;
 				tmp[pos++] = e.r;

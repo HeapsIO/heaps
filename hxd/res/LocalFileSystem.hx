@@ -140,6 +140,15 @@ private class LocalEntry extends FileEntry {
 		#end
 	}
 	
+	override function get_isDirectory() {
+		#if air3
+		return file.isDirectory;
+		#else
+		throw "TODO";
+		return false;
+		#end
+	}
+	
 	override function load( ?onReady : Void -> Void ) : Void {
 		#if air3
 		if( onReady != null ) haxe.Timer.delay(onReady, 1);
@@ -278,12 +287,12 @@ class LocalFileSystem implements FileSystem {
 		#if air3
 		var f = open(path);
 		if( f == null || !f.exists )
-			throw "File not found " + path;
+			throw new NotFound(path);
 		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#else
 		var f = open(path);
 		if( f == null ||!sys.FileSystem.exists(f) )
-			throw "File not found " + path;
+			throw new NotFound(path);
 		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#end
 	}

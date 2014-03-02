@@ -16,6 +16,13 @@ class ItemList extends Box {
 		return selected = v;
 	}
 	
+	function onWheel( e : hxd.Event ) {
+		scrollY -= e.wheelDelta * (components.length == 0 ? 0 : (components[0].height + style.verticalSpacing));
+		if( scrollY > 0 ) scrollY = 0;
+		e.propagate = false;
+		needRebuild = true;
+	}
+	
 	override function resizeRec( ctx : Context ) {
 		super.resizeRec(ctx);
 		if( !ctx.measure ) {
@@ -41,8 +48,10 @@ class ItemList extends Box {
 					if( cursor != null ) cursor.remove();
 					cursor = new h2d.Bitmap(h2d.Tile.fromColor(style.selectionColor, Std.int(int.width), Std.int(int.height)), int);
 					int.onOver = function(_) {
+						onItemOver(i);
 					};
 					int.onOut = function(_) {
+						onItemOver(-1);
 					}
 					int.onPush = function(_) {
 					}
@@ -50,10 +59,12 @@ class ItemList extends Box {
 					int.onOver = function(_) {
 						if( cursor != null ) cursor.remove();
 						cursor = new h2d.Bitmap(h2d.Tile.fromColor(style.cursorColor, Std.int(int.width), Std.int(int.height)), int);
+						onItemOver(i);
 					};
 					int.onOut = function(_) {
 						if( cursor != null ) cursor.remove();
 						cursor = null;
+						onItemOver(-1);
 					}
 					int.onPush = function(_) {
 						if( this.selected != i ) {
@@ -62,6 +73,7 @@ class ItemList extends Box {
 						}
 					}
 				}
+				int.onWheel = onWheel;
 				if( Lambda.indexOf(childs,int) != 1 + i ) {
 					childs.remove(int);
 					childs.insert(1 + i, int); // insert over bg
@@ -69,6 +81,9 @@ class ItemList extends Box {
 				}
 			}
 		}
+	}
+
+	public dynamic function onItemOver( current : Int ) {
 	}
 	
 	public dynamic function onChange( selected : Int ) {
