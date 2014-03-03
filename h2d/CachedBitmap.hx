@@ -102,6 +102,7 @@ class CachedBitmap extends Drawable {
 				c.sync(ctx);
 			}
 
+			throw "Should not draw in sync!";
 			ctx.engine.setTarget(tex);
 			ctx.engine.setRenderZone(0, 0, realWidth, realHeight);
 			for( c in childs )
