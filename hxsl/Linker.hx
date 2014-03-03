@@ -127,7 +127,7 @@ class Linker {
 				return v2;
 			}
 		}
-		var vid = allVars.length;
+		var vid = allVars.length + 1;
 		var v2 : TVar = {
 			id : vid,
 			name : vname,
