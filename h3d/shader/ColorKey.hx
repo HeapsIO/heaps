@@ -7,7 +7,8 @@ class ColorKey extends hxsl.Shader {
 		var textureColor : Vec4;
 		
 		function fragment() {
-			if( (textureColor - colorKey).length() == 0 ) discard;
+			var cdiff = textureColor - colorKey;
+			if( cdiff.dot(cdiff) < 0.00001 ) discard;
 		}
 	}
 	
