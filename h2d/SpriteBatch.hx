@@ -183,7 +183,7 @@ class SpriteBatch extends Drawable {
 			}
 			e = e.next;
 		}
-		var stride = 5;
+		var stride = 8;
 		var nverts = Std.int(pos / stride);
 		var buffer = ctx.engine.mem.alloc(nverts, stride, 4);
 		buffer.uploadVector(tmpBuf, 0, nverts);
