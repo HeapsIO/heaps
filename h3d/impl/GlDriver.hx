@@ -245,6 +245,11 @@ class GlDriver extends Driver {
 	
 	override function resize(width, height) {
 		#if js
+		// prevent infinite grow if pixelRatio != 1
+		if( canvas.style.width == "" ) {
+			canvas.style.width = Std.int(width / js.Browser.window.devicePixelRatio)+"px";
+			canvas.style.height = Std.int(height / js.Browser.window.devicePixelRatio)+"px";
+		}
 		canvas.width = width;
 		canvas.height = height;
 		#elseif cpp
