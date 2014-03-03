@@ -173,6 +173,9 @@ class Tile {
 	}
 
 	public static function autoCut( bmp : hxd.BitmapData, width : Int, ?height : Int, ?allocPos : h3d.impl.AllocPos ) {
+		#if js
+		bmp.lock();
+		#end
 		if( height == null ) height = width;
 		var colorBG = bmp.getPixel(bmp.width - 1, bmp.height - 1);
 		var tl = new Array();
@@ -192,6 +195,9 @@ class Tile {
 				a.push(new Tile(tex,x*width+sz.dx, y*height+sz.dy, sz.w, sz.h, sz.dx, sz.dy));
 			}
 		}
+		#if js
+		bmp.unlock();
+		#end
 		var main = new Tile(tex, 0, 0, bmp.width, bmp.height);
 		main.upload(bmp);
 		return { main : main, tiles : tl };

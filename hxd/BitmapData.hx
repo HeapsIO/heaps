@@ -135,18 +135,50 @@ abstract BitmapData(InnerData) {
 		#end
 	}
 	
+	/**
+		Inform that we will perform several pixel operations on the BitmapData.
+	**/
+	public inline function lock() {
+		#if flash
+		this.lock();
+		#elseif js
+		canvasLock(this, true);
+		#end
+	}
+
+	/**
+		Inform that we have finished performing pixel operations on the BitmapData.
+	**/
+	public inline function unlock() {
+		#if flash
+		this.unlock();
+		#elseif js
+		canvasLock(this, false);
+		#end
+	}
+
+	/**
+		Access the pixel color value at the given position. Note : this function can be very slow if done many times and the BitmapData has not been locked.
+	**/
 	public inline function getPixel( x : Int, y : Int ) : Int {
 		#if flash
 		return this.getPixel32(x, y);
+		#elseif js
+		return canvasGetPixel(this, x, y);
 		#else
 		throw "TODO";
 		return 0;
 		#end
 	}
 
+	/**
+		Modify the pixel color value at the given position. Note : this function can be very slow if done many times and the BitmapData has not been locked.
+	**/
 	public inline function setPixel( x : Int, y : Int, c : Int ) {
 		#if flash
 		this.setPixel32(x, y, c);
+		#elseif js
+		canvasSetPixel(this, x, y, c);
 		#else
 		throw "TODO";
 		#end
@@ -215,9 +247,65 @@ abstract BitmapData(InnerData) {
 			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
 		}
 		b.setPixels(b.rect, bytes);
+		#elseif js
+		
+		var img = b.createImageData(pixels.width, pixels.height);
+		pixels.convert(RGBA);
+		for( i in 0...pixels.width*pixels.height*4 ) img.data[i] = pixels.bytes.get(i);
+		b.putImageData(img, 0, 0);
+		
 		#else
 		throw "TODO";
 		return null;
 		#end
 	}
+	
+	#if js
+	
+	static function canvasLock( b : InnerData, lock : Bool ) untyped {
+		if( lock ) {
+			if( b.lockImage == null )
+				b.lockImage = b.getImageData(0, 0, b.canvas.width, b.canvas.height);
+		} else {
+			if( b.lockImage != null ) {
+				b.putImageData(b.lockImage, 0, 0);
+				b.lockImage = null;
+			}
+		}
+	}
+	
+	static function canvasGetPixel( b : InnerData, x : Int, y : Int ) {
+		var i : js.html.ImageData = untyped b.lockImage;
+		var a;
+		if( i != null )
+			a = (x + y * i.width) << 2;
+		else {
+			a = 0;
+			i = b.getImageData(x, y, 1, 1);
+		}
+		return (i.data[a] << 16) | (i.data[a|1] << 8) | i.data[a|2] | (i.data[a|3] << 24);
+	}
+	
+	static function canvasSetPixel( b : InnerData, x : Int, y : Int, c : Int ) {
+		var i : js.html.ImageData = untyped b.lockImage;
+		if( i != null ) {
+			var a = (x + y * i.width) << 2;
+			i.data[a] = (c >> 16) & 0xFF;
+			i.data[a|1] = (c >> 8) & 0xFF;
+			i.data[a|2] = c & 0xFF;
+			i.data[a|3] = (c >>> 24) & 0xFF;
+			return;
+		}
+		var i = untyped b.pixel;
+		if( i == null ) {
+			i = b.createImageData(1, 1);
+			untyped b.pixel = i;
+		}
+		i.data[0] = (c >> 16) & 0xFF;
+		i.data[1] = (c >> 8) & 0xFF;
+		i.data[2] = c & 0xFF;
+		i.data[3] = (c >>> 24) & 0xFF;
+		b.putImageData(i, x, y);
+	}
+	#end
 }
