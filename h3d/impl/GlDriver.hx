@@ -81,6 +81,10 @@ class GlDriver extends Driver {
 		curProgram = null;
 	}
 	
+	override function getShaderInputNames() {
+		return curProgram.attribNames;
+	}
+	
 	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
@@ -375,6 +379,14 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		for( a in curProgram.attribs )
 			gl.vertexAttribPointer(a.index, a.size, a.type, false, stride * 4, a.offset * 4);
+	}
+	
+	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
+		for( a in curProgram.attribs ) {
+			gl.bindBuffer(GL.ARRAY_BUFFER, buffers.b.b.vbuf.b);
+			gl.vertexAttribPointer(a.index, a.size, a.type, false, buffers.b.b.stride * 4, buffers.offset * 4);
+			buffers = buffers.next;
+		}
 	}
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {

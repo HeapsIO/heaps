@@ -30,8 +30,9 @@ class MultiMaterial extends Mesh {
 	}
 
 	override function draw( ctx : RenderContext ) {
-		primitive.selectMaterial(ctx.drawPass.index);
-		primitive.render(ctx.engine);
+		if( materials.length > 1 )
+			primitive.selectMaterial(ctx.drawPass.index);
+		super.draw(ctx);
 	}
 	
 }

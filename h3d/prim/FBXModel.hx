@@ -183,7 +183,7 @@ class FBXModel extends MeshPrimitive {
 			pos++;
 		}
 		
-		addBuffer("pos", engine.mem.allocVector(pbuf, 3, 0));
+		addBuffer("position", engine.mem.allocVector(pbuf, 3, 0));
 		if( nbuf != null ) addBuffer("normal", engine.mem.allocVector(nbuf, 3, 0));
 		if( tbuf != null ) addBuffer("uv", engine.mem.allocVector(tbuf, 2, 0));
 		if( sbuf != null ) {

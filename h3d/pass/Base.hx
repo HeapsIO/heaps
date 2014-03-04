@@ -51,9 +51,11 @@ class Base {
 			ctx.engine.uploadShaderBuffers(buf, Globals);
 			ctx.engine.uploadShaderBuffers(buf, Params);
 			ctx.engine.uploadShaderBuffers(buf, Textures);
+			ctx.drawPass = p;
 			p.obj.draw(ctx);
 			p = p.next;
 		}
+		ctx.drawPass = null;
 		this.ctx = null;
 	}
 	
