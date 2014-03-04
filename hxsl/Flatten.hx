@@ -62,43 +62,66 @@ class Flatten {
 			if( a == null )
 				e
 			else
-				access(a, v.type, e.p);
+				access(a, v.type, e.p, readIndex.bind(a));
+		case TArray( { e : TVar(v), p : vp }, eindex) if( !eindex.e.match(TConst(CInt(_))) ):
+			var a = varMap.get(v);
+			if( a == null )
+				e
+			else {
+				switch( v.type ) {
+				case TArray(t, _):
+					var stride = varSize(t, a.t) >> 2;
+					if( stride == 0 ) stride = 1;
+					var toInt = { e : TCall( { e : TGlobal(ToInt), t : TFun([]), p : vp }, [eindex]), t : TInt, p : vp };
+					access(a, t, vp, readOffset.bind(a,stride,{ e : TBinop(OpMult,toInt,mkInt(stride,vp)), t : TInt, p : vp }));
+				default:
+					throw "assert";
+				}
+			}
 		default:
 			e.map(mapExpr);
 		};
 		return optimize(e);
 	}
+
+	inline function mkInt(v:Int,pos) {
+		return { e : TConst(CInt(v)), t : TInt, p : pos };
+	}
 	
-	function access( a : Alloc, t : Type, pos : Position ) : TExpr {
-		inline function mkInt(v:Int) {
-			return { e : TConst(CInt(v)), t : TInt, p : pos };
-		}
-		inline function read( index : Int ) : TExpr {
-			return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos },mkInt((a.pos>>2)+index)), t : TVec(4,a.t), p : pos }
-		}
+	function readIndex( a : Alloc, index : Int, pos ) : TExpr {
+		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos },mkInt((a.pos>>2)+index,pos)), t : TVec(4,a.t), p : pos }
+	}
+	
+	function readOffset( a : Alloc, stride : Int, delta : TExpr, index : Int, pos ) : TExpr {
+		var offset : TExpr = { e : TBinop(OpAdd, delta, mkInt((a.pos >> 2) + index, pos)), t : TInt, p : pos };
+		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos }, offset), t : TVec(4,a.t), p:pos };
+	}
+
+	function access( a : Alloc, t : Type, pos : Position, read : Int -> Position -> TExpr ) : TExpr {
 		switch( t ) {
 		case TMat4:
 			return { e : TCall( { e : TGlobal(Mat4), t : TFun([]), p : pos }, [
-				read(0),
-				read(1),
-				read(2),
-				read(3),
+				read(0,pos),
+				read(1,pos),
+				read(2,pos),
+				read(3,pos),
 			]), t : TMat4, p : pos }
 		case TMat3x4:
 			return { e : TCall( { e : TGlobal(Mat3x4), t : TFun([]), p : pos }, [
-				read(0),
-				read(1),
-				read(2),
+				read(0,pos),
+				read(1,pos),
+				read(2,pos),
 			]), t : TMat3x4, p : pos }
 		case TArray(t, SConst(len)):
 			var stride = Std.int(a.size / len);
-			return { e : TArrayDecl([for( i in 0...len ) access(new Alloc(a.g, a.t, a.pos + stride * i, stride), t, pos)]), t : t, p : pos };
+			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, readIndex.bind(a)); }];
+			return { e : TArrayDecl(earr), t : t, p : pos };
 		case TSampler2D, TSamplerCube:
-			return read(a.pos);
+			return read(a.pos,pos);
 		default:
 			var size = varSize(t, a.t);
 			if( size <= 4 ) {
-				var k = read(0);
+				var k = read(0,pos);
 				if( size == 4 ) {
 					if( a.pos & 3 != 0 ) throw "assert";
 					return k;

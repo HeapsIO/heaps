@@ -33,6 +33,7 @@ class Texture extends hxsl.Shader {
 	public function new(?tex) {
 		super();
 		this.texture = tex;
+		killAlphaThreshold = 0.5;
 	}
 	
 }

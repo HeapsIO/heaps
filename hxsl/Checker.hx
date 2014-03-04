@@ -33,6 +33,7 @@ class Checker {
 		inline function g(gl:TGlobal, vars) {
 		}
 		var genType = [TFloat, vec2, vec3, vec4];
+		var baseType = [TFloat, TBool, TInt];
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var genFloat2 = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
 		var genWithFloat = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : TFloat } ], ret : t } ];
@@ -58,6 +59,12 @@ class Checker {
 				[ { args : [ { name : "tex", type : TSampler2D }, { name : "b", type : vec2 } ], ret : vec4 } ];
 			case TextureCube:
 				[ { args : [ { name : "tex", type : TSamplerCube }, { name : "b", type : vec3 } ], ret : vec4 } ];
+			case ToInt:
+				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TInt } ];
+			case ToFloat:
+				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TFloat } ];
+			case ToBool:
+				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TBool } ];
 			}
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );
@@ -406,7 +413,7 @@ class Checker {
 			TBreak;
 		case EArray(e1, e2):
 			var e1 = typeExpr(e1, Value);
-			var e2 = typeWith(e2, TInt);
+			var e2 = typeWith(e2, TFloat);
 			switch( e1.t ) {
 			case TArray(t, size):
 				switch( [size, e2.e] ) {

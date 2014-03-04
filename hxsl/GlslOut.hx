@@ -17,6 +17,9 @@ class GlslOut {
 			n = n.charAt(0).toLowerCase() + n.substr(1);
 			globalNames.set(g, n);
 		}
+		globalNames.set(ToInt, "int");
+		globalNames.set(ToFloat, "float");
+		globalNames.set(ToBool, "bool");
 	}
 	
 	inline function add( v : Dynamic ) {

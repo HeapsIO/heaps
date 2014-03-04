@@ -186,6 +186,9 @@ enum TGlobal {
 	TextureCube;
 	// ...other texture* operations
 	// constructors
+	ToInt;
+	ToFloat;
+	ToBool;
 	Vec2;
 	Vec3;
 	Vec4;

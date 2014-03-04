@@ -48,11 +48,28 @@ class Manager {
 			out[pos++] = m._34;
 			out[pos++] = m._44;
 			return 16;
+		case TMat3x4:
+			var m : h3d.Matrix = v;
+			out[pos++] = m._11;
+			out[pos++] = m._21;
+			out[pos++] = m._31;
+			out[pos++] = m._41;
+			out[pos++] = m._12;
+			out[pos++] = m._22;
+			out[pos++] = m._32;
+			out[pos++] = m._42;
+			out[pos++] = m._13;
+			out[pos++] = m._23;
+			out[pos++] = m._33;
+			out[pos++] = m._43;
+			return 12;
 		case TArray(t, SConst(len)):
 			var v : Array<Dynamic> = v;
 			var stride = 0;
 			for( i in 0...len ) {
-				stride = fillRec(v[i], t, out, pos);
+				var n = v[i];
+				if( n == null ) break;
+				stride = fillRec(n, t, out, pos);
 				// align
 				stride += (4 - (stride & 3)) & 3;
 				pos += stride;

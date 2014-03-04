@@ -55,6 +55,7 @@ class Skin extends MultiMaterial {
 	var jointsUpdated : Bool;
 	var jointsAbsPosInv : h3d.Matrix;
 	var paletteChanged : Bool;
+	var skinShader : h3d.shader.Skin;
 
 	public var showJoints : Bool;
 	public var syncIfHidden : Bool = true;
@@ -117,9 +118,10 @@ class Skin extends MultiMaterial {
 		skinData = s;
 		jointsUpdated = true;
 		primitive = s.primitive;
-//		for( m in materials )
-//			if( m != null )
-//				m.hasSkin = true;
+		skinShader = new h3d.shader.Skin();
+		for( m in materials )
+			if( m != null )
+				m.mainPass.addShader(skinShader);
 		currentRelPose = [];
 		currentAbsPose = [];
 		currentPalette = [];
