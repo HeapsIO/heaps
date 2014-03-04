@@ -35,6 +35,7 @@ class Eval {
 		if( v.parent != null ) v2.parent = mapVar(v.parent);
 		if( v.qualifiers != null ) v2.qualifiers = v.qualifiers.copy();
 		varMap.set(v, v2);
+		varMap.set(v2, v2); // make it safe to have multiple eval
 		switch( v2.type ) {
 		case TStruct(vl):
 			v2.type = TStruct([for( v in vl ) mapVar(v)]);
@@ -150,11 +151,12 @@ class Eval {
 			TVarDecl(mapVar(v), init == null ? null : evalExpr(init));
 		case TArray(e1, e2):
 			var e1 = evalExpr(e1);
+			var e2 = evalExpr(e2);
 			switch( [e1.e, e2.e] ) {
 			case [TArrayDecl(el),TConst(CInt(i))] if( i >= 0 && i < el.length ):
 				el[i].e;
 			default:
-				TArray(evalExpr(e1), evalExpr(e2));
+				TArray(e1, e2);
 			}
 		case TSwiz(e, r):
 			TSwiz(evalExpr(e), r.copy());
