@@ -7,10 +7,10 @@ class Main extends hxd.App {
 		var obj = prim.makeObject(loadTexture);
 		obj.scale(0.05);
 		s3d.addChild(obj);
-		s3d.camera.pos.z -= 2;
+		s3d.camera.pos.set( -2, -3, 2);
 		s3d.camera.target.z += 0.5;
 		
-//		obj.playAnimation(prim.loadAnimation(LinearAnim));
+		obj.playAnimation(prim.loadAnimation(LinearAnim));
 	}
 	
 	function loadTexture( name : String, _ ) {
@@ -18,7 +18,7 @@ class Main extends hxd.App {
 		var m = new h3d.mat.MeshMaterial(hxd.Res.load(name).toTexture());
 		m.mainPass.culling = None;
 		m.texture.filter = Nearest;
-		m.mainPass.addShader(new h3d.shader.AlphaKill());
+		m.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
 		return m;
 	}
 	

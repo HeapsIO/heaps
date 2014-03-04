@@ -10,6 +10,7 @@ enum Type {
 	TMat3;
 	TMat4;
 	TMat3x4;
+	TBytes( size : Int );
 	TSampler2D;
 	TSamplerCube;
 	TStruct( vl : Array<TVar> );

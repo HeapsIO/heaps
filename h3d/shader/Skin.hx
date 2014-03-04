@@ -8,7 +8,7 @@ class Skin extends hxsl.Shader {
 			var position : Vec3;
 			var normal : Vec3;
 			var weights : Vec3;
-			var indexes : Vec3;
+			var indexes : Bytes4;
 		};
 		
 		var transformedPosition : Vec3;

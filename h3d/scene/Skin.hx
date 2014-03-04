@@ -167,21 +167,17 @@ class Skin extends MultiMaterial {
 		if( splitPalette == null ) {
 			if( paletteChanged ) {
 				paletteChanged = false;
-//				for( m in materials )
-//					if( m != null )
-//						m.skinMatrixes = currentPalette;
+				skinShader.bonesMatrixes = currentPalette;
 			}
 			super.draw(ctx);
 		} else {
-			for( i in 0...splitPalette.length ) {
-				//material.skinMatrixes = splitPalette[i];
-				primitive.selectMaterial(i);
-				super.draw(ctx);
-			}
+			var i = ctx.drawPass.index;
+			skinShader.bonesMatrixes = splitPalette[i];
+			primitive.selectMaterial(i);
+			super.draw(ctx);
 		}
 		if( showJoints )
-			throw "TODO";
-			//ctx.addPass(drawJoints);
+			throw "TODO"; //ctx.addPass(drawJoints);
 	}
 	
 	function drawJoints( ctx : RenderContext ) {

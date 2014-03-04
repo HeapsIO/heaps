@@ -27,7 +27,7 @@ class Macros {
 			macro : hxsl.Types.Matrix;
 		case TString:
 			macro : String;
-		case TInt:
+		case TInt, TBytes(_):
 			macro : Int;
 		case TFloat:
 			macro : Float;

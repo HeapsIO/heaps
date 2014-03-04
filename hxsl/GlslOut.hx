@@ -36,6 +36,9 @@ class GlslOut {
 			add("void");
 		case TInt:
 			add("int");
+		case TBytes(n):
+			add("vec");
+			add(n);
 		case TBool:
 			add("bool");
 		case TFloat:

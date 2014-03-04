@@ -129,12 +129,14 @@ class GlDriver extends Driver {
 			for( v in shader.vertex.data.vars )
 				switch( v.kind ) {
 				case Input:
+					var t = GL.FLOAT;
 					var size = switch( v.type ) {
 					case TVec(n, _): n;
+					case TBytes(n): t = GL.BYTE; n;
 					case TFloat: 1;
 					default: throw "assert " + v.type;
 					}
-					p.attribs.push( { offset : p.stride, index : gl.getAttribLocation(p.p, v.name), size:size, type:GL.FLOAT } );
+					p.attribs.push( { offset : p.stride, index : gl.getAttribLocation(p.p, v.name), size:size, type:t } );
 					p.attribNames.push(v.name);
 					p.stride += size;
 				default:

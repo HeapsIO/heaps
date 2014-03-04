@@ -413,7 +413,11 @@ class Checker {
 			TBreak;
 		case EArray(e1, e2):
 			var e1 = typeExpr(e1, Value);
-			var e2 = typeWith(e2, TFloat);
+			var e2 = typeExpr(e2, With(TInt));
+			switch( e2.t ) {
+			case TInt, TFloat:
+			default: unify(e2.t, TInt, e2.p);
+			}
 			switch( e1.t ) {
 			case TArray(t, size):
 				switch( [size, e2.e] ) {
@@ -632,6 +636,7 @@ class Checker {
 		case TInt: stype = VInt; 1;
 		case TBool: stype = VBool; 1;
 		case TVec(size, t): stype = t; size;
+		case TBytes(size): stype = VInt; size;
 		default: 0;
 		}
 		if( ncomps > 0 && f.length <= 4 ) {

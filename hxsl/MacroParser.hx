@@ -66,6 +66,9 @@ class MacroParser {
 			case "String": return TString;
 			case "Sampler2D": return TSampler2D;
 			case "SamplerCube": return TSamplerCube;
+			case "Bytes2": return TBytes(2);
+			case "Bytes3": return TBytes(3);
+			case "Bytes4": return TBytes(4);
 			}
 		case TPath( { pack : [], name : "Array", sub : null, params : [t, size] } ):
 			var t = switch( t ) {
