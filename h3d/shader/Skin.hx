@@ -19,9 +19,9 @@ class Skin extends hxsl.Shader {
 
 		function vertex() {
 			transformedPosition =
-				input.position * input.weights.x * bonesMatrixes[input.indexes.x] +
-				input.position * input.weights.y * bonesMatrixes[input.indexes.y] +
-				input.position * input.weights.z * bonesMatrixes[input.indexes.z];
+				(input.position * bonesMatrixes[input.indexes.x]) * input.weights.x +
+				(input.position * bonesMatrixes[input.indexes.y]) * input.weights.y +
+				(input.position * bonesMatrixes[input.indexes.z]) * input.weights.z;
 		}
 		
 	}
