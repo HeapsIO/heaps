@@ -13,6 +13,7 @@ class RenderContext {
 	
 	var pool : ObjectPass;
 	var passes : ObjectPass;
+	var lights : Light;
 	
 	public function new() {
 		frame = 0;
@@ -42,6 +43,12 @@ class RenderContext {
 		return o;
 	}
 	
+	@:access(h3d.scene.Light)
+	public function emitLight( l : Light ) {
+		l.nextLight = lights;
+		lights = l;
+	}
+	
 	public function done() {
 		drawPass = null;
 		// move passes to pool, and erase data
@@ -57,6 +64,7 @@ class RenderContext {
 			pool = prev;
 		}
 		passes = null;
+		lights = null;
 	}
 	
 }

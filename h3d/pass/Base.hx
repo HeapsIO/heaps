@@ -34,19 +34,28 @@ class Base {
 		return buf;
 	}
 	
-	@:access(h3d.scene.Object)
+	@:access(h3d.scene)
 	public function draw( ctx : h3d.scene.RenderContext, passes : Object ) {
 		this.ctx = ctx;
 		setGlobals();
 		var p = passes;
 		while( p != null ) {
+			// TODO : use linked list for shaders (no allocation)
 			var shaders = p.pass.getShadersRec();
-			var shader = compileShader(p.pass);
+			if( p.pass.enableLights ) {
+				if( p.pass.parentPass == null ) shaders = shaders.copy();
+				var l = ctx.lights;
+				while( l != null ) {
+					shaders.push(l.shader);
+					l = l.nextLight;
+				}
+			}
+			var shader = manager.compileShaders(shaders);
 			// TODO : sort passes by shader/textures
 			globalModelView.set(globals, p.obj.absPos);
+			ctx.engine.selectShader(shader);
 			// TODO : reuse buffers between calls
 			var buf = allocBuffer(shader, shaders);
-			ctx.engine.selectShader(shader);
 			ctx.engine.selectMaterial(p.pass);
 			ctx.engine.uploadShaderBuffers(buf, Globals);
 			ctx.engine.uploadShaderBuffers(buf, Params);

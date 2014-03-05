@@ -12,6 +12,8 @@ class Pass {
 	var shaders : Array<hxsl.Shader>;
 	var nextPass : Pass;
 	
+	public var enableLights : Bool;
+	
 	@:bits public var culling : Face;
 	@:bits public var depthWrite : Bool;
 	@:bits public var depthTest : Compare;
