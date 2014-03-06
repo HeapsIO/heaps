@@ -17,10 +17,17 @@ class Base {
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix = ctx.camera.getInverseViewProj();
 	@global("global.time") var globalTime : Float = ctx.time;
 	@global("global.modelView") var globalModelView : h3d.Matrix;
+	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
+	@global("global.ambientLight") var ambientLight : h3d.Vector;
 	
 	public function new() {
 		manager = new h3d.shader.Manager(["output.position", "output.color"]);
 		initGlobals();
+		setAmbientLight(new h3d.Vector(1, 1, 1));
+	}
+	
+	public function setAmbientLight( v : h3d.Vector ) {
+		ambientLight.set(globals, v);
 	}
 	
 	public function compileShader( p : h3d.mat.Pass ) {
@@ -53,6 +60,7 @@ class Base {
 			var shader = manager.compileShaders(shaders);
 			// TODO : sort passes by shader/textures
 			globalModelView.set(globals, p.obj.absPos);
+			globalModelViewInverse.set(globals, p.obj.getInvPos());
 			ctx.engine.selectShader(shader);
 			// TODO : reuse buffers between calls
 			var buf = allocBuffer(shader, shaders);

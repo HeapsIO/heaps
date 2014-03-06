@@ -11,7 +11,7 @@ class GlslOut {
 	
 	public function new() {
 		keywords = [ "input" => true, "output" => true, "discard" => true ];
-		for( i in 2...4 )
+		for( i in 2...5 )
 			keywords.set("dvec" + i, true);
 		globalNames = new Map();
 		for( g in hxsl.Ast.TGlobal.createAll() ) {

@@ -93,8 +93,8 @@ class Checker {
 				{ id : Tools.allocVarId(), name : a.name, kind : Local, type : a.type };
 			}];
 			var kind = switch( f.name ) {
-			case "vertex":  Vertex;
-			case "fragment": Fragment;
+			case "vertex", "__init__vertex":  Vertex;
+			case "fragment", "__init__fragment": Fragment;
 			case "__init__": Init;
 			default: Helper;
 			}
@@ -252,7 +252,7 @@ class Checker {
 			var v = vars.get(name);
 			if( v != null ) {
 				switch( name ) {
-				case "vertex", "fragment", "__init__":
+				case "vertex", "fragment", "__init__", "__init__vertex", "__init__fragment":
 					error("Function cannot be accessed", e.pos);
 				default:
 				}

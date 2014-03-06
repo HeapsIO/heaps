@@ -1,12 +1,14 @@
 package hxsl;
 
 class AllocParam {
+	public var name : String;
 	public var pos : Int;
 	public var instance : Int;
 	public var index : Int;
 	public var type : Ast.Type;
 	public var perObjectGlobal : AllocGlobal;
-	public function new(pos, instance, index, type) {
+	public function new(name, pos, instance, index, type) {
+		this.name = name;
 		this.pos = pos;
 		this.instance = instance;
 		this.index = index;

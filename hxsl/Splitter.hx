@@ -6,6 +6,7 @@ private typedef VarProps = {
 	var read : Int;
 	var write : Int;
 	var local : Bool;
+	var requireInit : Bool;
 }
 
 class Splitter {
@@ -54,6 +55,7 @@ class Splitter {
 					};
 					vars = vvars;
 					var ninf = get(nv);
+					ninf.write = 1;
 					v.kind = Local;
 					var p = vfun.expr.p;
 					addExpr(vfun, { e : TBinop(OpAssign, { e : TVar(nv), t : nv.type, p : p }, { e : TVar(v), t : v.type, p : p } ), t : nv.type, p : p });
@@ -61,7 +63,7 @@ class Splitter {
 						var old = fvars.get(v.id);
 						varMap.set(v, nv);
 						fvars.remove(v.id);
-						fvars.set(nv.id, { v : nv, read : old.read, write : old.write, local : false });
+						fvars.set(nv.id, { v : nv, read : old.read, write : old.write, local : false, requireInit : false });
 					}
 				}
 			default:
@@ -87,12 +89,13 @@ class Splitter {
 						v : v,
 						read : 0,
 						write : 0,
+						requireInit : false,
 					};
 					vvars.set(v.id, i);
 				}
 				i.read++;
-				vvars.set(nv.id, { local : false, v : nv, read : 0, write : 1 } );
-				fvars.set(nv.id, { local : false, v : nv, read : 1, write : 0 });
+				vvars.set(nv.id, { local : false, v : nv, read : 0, write : 1, requireInit : false });
+				fvars.set(nv.id, { local : false, v : nv, read : 1, write : 0, requireInit : false });
 				addExpr(vfun, { e : TBinop(OpAssign, { e : TVar(nv), t : v.type, p : vfun.expr.p }, { e : TVar(v), t : v.type, p : vfun.expr.p }), t : v.type, p : vfun.expr.p } );
 				varMap.set(v, nv);
 				inf.local = true;
@@ -109,6 +112,13 @@ class Splitter {
 			default:
 			}
 		}
+
+		// final check
+		for( v in vvars )
+			checkVar(v, true, vvars);
+		for( v in fvars )
+			checkVar(v, false, vvars);
+		
 		// support for double mapping v -> v1 -> v2
 		for( v in varMap.keys() ) {
 			var v2 = varMap.get(varMap.get(v));
@@ -153,6 +163,19 @@ class Splitter {
 		}
 	}
 	
+	function checkVar( v : VarProps, vertex : Bool, vvars : Map<Int,VarProps> ) {
+		switch( v.v.kind ) {
+		case Local if( v.requireInit ):
+			throw "Variable " + v.v.name + " is written without being initialized";
+		case Var:
+			if( !vertex ) {
+				var i = vvars.get(v.v.id);
+				if( i == null || i.write == 0 ) throw "Varying " + v.v.name + " is not written by vertex shader";
+			}
+		default:
+		}
+	}
+	
 	function mapVars( e : TExpr ) {
 		return switch( e.e ) {
 		case TVar(v):
@@ -166,7 +189,7 @@ class Splitter {
 	function get( v : TVar ) {
 		var i = vars.get(v.id);
 		if( i == null ) {
-			i = { v : v, read : 0, write : 0, local : false };
+			i = { v : v, read : 0, write : 0, local : false, requireInit : false };
 			vars.set(v.id, i);
 			uniqueName(v);
 		}
@@ -192,6 +215,7 @@ class Splitter {
 		switch( e.e ) {
 		case TVar(v):
 			var inf = get(v);
+			if( inf.write == 0 ) inf.requireInit = true;
 			inf.read++;
 		case TBinop(OpAssign, { e : (TVar(v) | TSwiz( { e : TVar(v) }, _)) }, e):
 			var inf = get(v);
@@ -199,13 +223,17 @@ class Splitter {
 			checkExpr(e);
 		case TBinop(OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _)) }, e):
 			var inf = get(v);
+			if( inf.write == 0 ) inf.requireInit = true;
 			inf.read++;
 			inf.write++;
 			checkExpr(e);
 		case TVarDecl(v, init):
 			var inf = get(v);
 			inf.local = true;
-			if( init != null ) checkExpr(init);
+			if( init != null ) {
+				checkExpr(init);
+				inf.write++;
+			}
 		default:
 			e.iter(checkExpr);
 		}

@@ -49,6 +49,10 @@ class Linker {
 	public function new() {
 	}
 	
+	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
+		//haxe.Log.trace(msg, pos);
+	}
+	
 	function error( msg : String, p : Position ) : Dynamic {
 		return Error.t(msg, p);
 	}
@@ -158,7 +162,7 @@ class Linker {
 		case TVar(v) if( !locals.exists(v.id) ):
 			var v = allocVar(v, e.p);
 			if( curShader != null ) {
-				//trace(curShader.name + " read " + v.path);
+				debug(curShader.name + " read " + v.path);
 				curShader.read.set(v.id, v);
 				// if we read a varying, force into fragment
 				if( v.v.kind == Var ) curShader.vertex = false;
@@ -169,7 +173,7 @@ class Linker {
 			case [OpAssign | OpAssignOp(_), (TVar(v) | TSwiz({ e : TVar(v) },_))] if( !locals.exists(v.id) ):
 				var v = allocVar(v, e1.p);
 				if( curShader != null ) {
-					//trace(curShader.name + " write " + v.path);
+					debug(curShader.name + " write " + v.path);
 					curShader.write.set(v.id, v);
 				}
 				// TSwiz might only assign part of the components, let's then consider that we read the other
@@ -215,7 +219,7 @@ class Linker {
 				continue;
 			if( !s.write.exists(v.id) )
 				continue;
-			//trace(parent.name + " => " + s.name + " (" + v.path + ")");
+			debug(parent.name + " => " + s.name + " (" + v.path + ")");
 			parent.deps.set(s, true);
 			initDependencies(s);
 			if( !s.read.exists(v.id) )
@@ -235,7 +239,7 @@ class Linker {
 		if( s.vertex == null )
 			for( d in s.deps.keys() )
 				if( d.vertex == false ) {
-					//trace(s.name + " marked as fragment because of " + d.name);
+					debug(s.name + " marked as fragment because of " + d.name);
 					s.vertex = false;
 					break;
 				}

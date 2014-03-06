@@ -87,15 +87,23 @@ class Manager {
 	}
 	
 	inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : Array<hxsl.Shader> ) : Dynamic {
-		if( p.perObjectGlobal != null )
-			return globals.fastGet(p.perObjectGlobal.gid);
-		return shaders[p.instance].getParamValue(p.index);
+		if( p.perObjectGlobal != null ) {
+			var v = globals.fastGet(p.perObjectGlobal.gid);
+			if( v == null ) throw "Missing global value " + p.perObjectGlobal.path;
+			return v;
+		}
+		var v = shaders[p.instance].getParamValue(p.index);
+		if( v == null ) throw "Missing param value " + shaders[p.instance] + "." + p.name;
+		return v;
 	}
 	
 	public function fillGlobals( buf : Buffers, s : hxsl.RuntimeShader ) {
 		inline function fill(buf:Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
-			for( g in s.globals )
-				fillRec(globals.fastGet(g.gid), g.type, buf.globals, g.pos);
+			for( g in s.globals ) {
+				var v = globals.fastGet(g.gid);
+				if( v == null ) throw "Missing global value " + g.path;
+				fillRec(v, g.type, buf.globals, g.pos);
+			}
 		}
 		fill(buf.vertex, s.vertex);
 		fill(buf.fragment, s.fragment);

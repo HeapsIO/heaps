@@ -100,12 +100,12 @@ class Cache {
 					if( a.v == null ) continue; // padding
 					var p = params.get(a.v.id);
 					if( p == null ) {
-						var ap = new AllocParam(a.pos, -1, -1, a.v.type);
+						var ap = new AllocParam(a.v.name, a.pos, -1, -1, a.v.type);
 						ap.perObjectGlobal = new AllocGlobal( -1, getPath(a.v), a.v.type);
 						out.push(ap);
 						continue;
 					}
-					out.push(new AllocParam(a.pos, p.instance, p.index, a.v.type));
+					out.push(new AllocParam(a.v.name, a.pos, p.instance, p.index, a.v.type));
 				}
 				switch( g.type ) {
 				case TArray(TSampler2D, _):

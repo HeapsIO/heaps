@@ -4,18 +4,35 @@ class PointLight extends hxsl.Shader {
 
 	static var SRC = {
 		
-		var pixelColor : Vec4;
+		var lightColor : Vec3;
+		var lightPixelColor : Vec3;
 		var transformedPosition : Vec3;
 		var transformedNormal : Vec3;
 		@param var color : Vec3;
 		@param var params : Vec3;
 		@param var lightPosition : Vec3;
 		
+		/*
+		function calcLight() : Vec3 {
+			var dvec = transformedPosition - lightPosition;
+			var dist2 = dvec.dot(dvec);
+			var dist = dist2.sqrt();
+			return color * (transformedNormal.dot(dvec).max(0.) / vec3(dist, dist2, dist * dist2).dot(params));
+		}
+		*/
+		
+		function vertex() {
+			var dvec = transformedPosition - lightPosition;
+			var dist2 = dvec.dot(dvec);
+			var dist = dist2.sqrt();
+			lightColor.rgb += color * (transformedNormal.dot(dvec).max(0.) / vec3(dist, dist2, dist * dist2).dot(params));
+		}
+		
 		function fragment() {
 			var dvec = transformedPosition - lightPosition;
 			var dist2 = dvec.dot(dvec);
 			var dist = dist2.sqrt();
-			pixelColor.rgb += color * (transformedNormal.dot(dvec).max(0.) / vec3(dist,dist2,dist*dist2).dot(params));
+			lightPixelColor.rgb += color * (transformedNormal.dot(dvec).max(0.) / vec3(dist, dist2, dist * dist2).dot(params));
 		}
 		
 	};
