@@ -90,7 +90,7 @@ class Checker {
 				if( a.kind == null ) a.kind = Local;
 				if( a.kind != Local ) error("Argument should be local", pos);
 				if( a.qualifiers.length != 0 ) error("No qualifier allowed for argument", pos);
-				{ id : 0, name : a.name, kind : Local, type : a.type };
+				{ id : Tools.allocVarId(), name : a.name, kind : Local, type : a.type };
 			}];
 			var kind = switch( f.name ) {
 			case "vertex":  Vertex;
@@ -101,7 +101,7 @@ class Checker {
 			if( args.length != 0 && kind != Helper )
 				error(kind+" function should have no argument", pos);
 			var fv : TVar = {
-				id : 0,
+				id : Tools.allocVarId(),
 				name : f.name,
 				kind : Function,
 				type : TFun([{ args : [for( a in args ) { type : a.type, name : a.name }], ret : f.ret == null ? TVoid : f.ret }]),
@@ -392,7 +392,7 @@ class Checker {
 			switch( it.t ) {
 			case TArray(t, _):
 				var v : TVar = {
-					id : 0,
+					id : Tools.allocVarId(),
 					name : v,
 					type : t,
 					kind : Local,
@@ -481,7 +481,7 @@ class Checker {
 	
 	function makeVar( v : VarDecl, pos : Position, ?parent : TVar ) {
 		var tv : TVar = {
-			id : 0,
+			id : Tools.allocVarId(),
 			name : v.name,
 			kind : v.kind,
 			type : v.type,
