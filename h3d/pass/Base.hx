@@ -7,6 +7,8 @@ class Base {
 	var ctx : h3d.scene.RenderContext;
 	var manager : h3d.shader.Manager;
 	var globals(get, never) : hxsl.Globals;
+	public var lightSystem : LightSystem;
+	
 	inline function get_globals() return manager.globals;
 
 	@global("camera.view") var cameraView : h3d.Matrix = ctx.camera.mcam;
@@ -18,16 +20,11 @@ class Base {
 	@global("global.time") var globalTime : Float = ctx.time;
 	@global("global.modelView") var globalModelView : h3d.Matrix;
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
-	@global("global.ambientLight") var ambientLight : h3d.Vector;
 	
 	public function new() {
 		manager = new h3d.shader.Manager(["output.position", "output.color"]);
 		initGlobals();
-		setAmbientLight(new h3d.Vector(1, 1, 1));
-	}
-	
-	public function setAmbientLight( v : h3d.Vector ) {
-		ambientLight.set(globals, v);
+		lightSystem = new LightSystem(globals);
 	}
 	
 	public function compileShader( p : h3d.mat.Pass ) {
@@ -46,21 +43,20 @@ class Base {
 		this.ctx = ctx;
 		setGlobals();
 		var p = passes;
+		var lightInit = false;
 		while( p != null ) {
 			// TODO : use linked list for shaders (no allocation)
 			var shaders = p.pass.getShadersRec();
 			if( p.pass.enableLights ) {
 				if( p.pass.parentPass == null ) shaders = shaders.copy();
-				var l = ctx.lights;
-				while( l != null ) {
-					shaders.push(l.shader);
-					l = l.nextLight;
-				}
+				if( !lightInit )
+					lightSystem.initLights(ctx.lights);
+				shaders = lightSystem.computeLight(p.obj, shaders);
 			}
 			var shader = manager.compileShaders(shaders);
 			// TODO : sort passes by shader/textures
-			globalModelView.set(globals, p.obj.absPos);
-			globalModelViewInverse.set(globals, p.obj.getInvPos());
+			globalModelView = p.obj.absPos;
+			globalModelViewInverse = p.obj.getInvPos();
 			ctx.engine.selectShader(shader);
 			// TODO : reuse buffers between calls
 			var buf = allocBuffer(shader, shaders);

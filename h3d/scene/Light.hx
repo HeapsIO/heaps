@@ -3,10 +3,11 @@ package h3d.scene;
 class Light extends Object {
 
 	var shader : hxsl.Shader;
-	var nextLight : Light;
+	var objectDistance : Float; // used internaly
+	@:noCompletion public var next : Light;
 	
 	public var color(get, set) : h3d.Vector;
-	public var priority : Int;
+	public var priority : Int = 0;
 
 	function new(shader,?parent) {
 		super(parent);

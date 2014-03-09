@@ -241,14 +241,42 @@ class Macros {
 		var globals = [];
 		var sets = [];
 		for( f in fields ) {
+			if( f.meta == null ) continue;
 			for( m in f.meta ) {
 				if( m.name == "global" )
 					switch( [f.kind, m.params[0].expr] ) {
 					case [FVar(t, set), EConst(CString(name))]:
-						f.kind = FVar(macro : hxsl.Globals.GlobalSlot<$t>);
-						globals.push(macro $i{ f.name } = new hxsl.Globals.GlobalSlot($v { name } ));
+						var id = f.name + "_id";
+						fields.push({
+							name : id,
+							kind : FVar(macro : hxsl.Globals.GlobalSlot<$t>),
+							pos : f.pos,
+							meta : [{ name : ":noCompletion", pos : f.pos }],
+						});
+						f.kind = FProp("get", "set", t);
+						fields.push({
+							name : "get_" + f.name,
+							kind : FFun({
+								args : [],
+								ret : t,
+								expr : macro return $i{id}.get(globals),
+							}),
+							pos : f.pos,
+							access : [AInline],
+						});
+						fields.push({
+							name : "set_" + f.name,
+							kind : FFun({
+								args : [{ name : "v", type : t }],
+								ret : t,
+								expr : macro { $i{ id }.set(globals, v); return v; },
+							}),
+							pos : f.pos,
+							access : [AInline],
+						});
+						globals.push(macro $i{id} = new hxsl.Globals.GlobalSlot($v{ name }));
 						if( set != null )
-							sets.push(macro $i{ f.name }.set(globals, $set));
+							sets.push(macro $i{f.name} = $set);
 					default:
 					}
 			}

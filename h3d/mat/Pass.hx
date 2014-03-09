@@ -84,7 +84,7 @@ class Pass {
 	}
 
 	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {
-		var shader = scene.getRenderPass(name).compileShader(this);
+		var shader = scene.getPass(name).compileShader(this);
 		var toString = toHxsl ? function(d) return hxsl.Printer.shaderToString(d,true) : hxsl.GlslOut.toGlsl;
 		return "VERTEX=\n" + toString(shader.vertex.data) + "\n\nFRAGMENT=\n" + toString(shader.fragment.data);
 	}

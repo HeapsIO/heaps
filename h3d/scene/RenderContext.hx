@@ -43,9 +43,8 @@ class RenderContext {
 		return o;
 	}
 	
-	@:access(h3d.scene.Light)
 	public function emitLight( l : Light ) {
-		l.nextLight = lights;
+		l.next = lights;
 		lights = l;
 	}
 	

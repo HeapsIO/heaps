@@ -18,8 +18,6 @@ class BaseMesh extends hxsl.Shader {
 			var time : Float;
 			@perObject var modelView : Mat4;
 			@perObject var modelViewInverse : Mat4;
-			var ambientLight : Vec3;
-			@const var perPixelLighting : Bool;
 		};
 		
 		@input var input : {
@@ -36,8 +34,6 @@ class BaseMesh extends hxsl.Shader {
 		var transformedNormal : Vec3;
 		var projectedPosition : Vec4;
 		var pixelColor : Vec4;
-		var lightPixelColor : Vec3;
-		var lightColor : Vec3;
 		
 		@param var color : Vec4;
 		
@@ -47,21 +43,14 @@ class BaseMesh extends hxsl.Shader {
 			projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
 			transformedNormal = (input.normal * global.modelViewInverse.mat3()).normalize();
 			camera.dir = (camera.position - transformedPosition).normalize();
-			lightColor = global.ambientLight;
 			pixelColor = color;
 		}
-		
-		function __init__fragment() {
-			lightPixelColor = global.ambientLight;
-		}
-		
+
 		function vertex() {
-			if( !global.perPixelLighting ) pixelColor.rgb *= lightColor;
 			output.position = projectedPosition;
 		}
 		
 		function fragment() {
-			if( global.perPixelLighting ) pixelColor.rgb *= lightPixelColor;
 			output.color = pixelColor;
 		}
 

@@ -3,6 +3,7 @@ package h3d.scene;
 class Scene extends Object implements h3d.IDrawable {
 
 	public var camera : h3d.Camera;
+	public var mainPass(get, never) : h3d.pass.Base;
 	var prePasses : Array<h3d.IDrawable>;
 	var postPasses : Array<h3d.IDrawable>;
 	var passes : Map<String,h3d.pass.Base>;
@@ -50,16 +51,20 @@ class Scene extends Object implements h3d.IDrawable {
 		}
 	}
 	
-	public function getRenderPass( name : String ) {
+	function get_mainPass() {
+		return getPass("default");
+	}
+	
+	public function getPass( name : String ) {
 		var p = passes.get(name);
 		if( p == null ) {
 			p = createDefaultPass(name);
-			setRenderPass(name, p);
+			setPass(name, p);
 		}
 		return p;
 	}
 	
-	public function setRenderPass( name : String, p : h3d.pass.Base ) {
+	public function setPass( name : String, p : h3d.pass.Base ) {
 		passes.set(name, p);
 	}
 
@@ -92,7 +97,7 @@ class Scene extends Object implements h3d.IDrawable {
 				p = p.next;
 			}
 			prev.next = null;
-			var render = getRenderPass(curPass.pass.name);
+			var render = getPass(curPass.pass.name);
 			render.draw(ctx, curPass);
 			prev.next = p;
 			curPass = p;

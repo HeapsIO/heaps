@@ -7,6 +7,9 @@ abstract GlobalSlot<T>(Int) {
 	public inline function set( globals : Globals, v : T ) {
 		globals.fastSet(this, v);
 	}
+	public inline function get( globals : Globals ) : T {
+		return globals.fastGet(this);
+	}
 }
 
 class Globals {
