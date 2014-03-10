@@ -45,6 +45,8 @@ class Scene extends Object implements h3d.IDrawable {
 		switch( name ) {
 		case "default", "alpha", "additive":
 			return new h3d.pass.Base();
+		case "distance":
+			return new h3d.pass.Distance();
 		default:
 			throw "Don't know how to create pass '" + name + "', use s3d.setRenderPass()";
 			return null;
@@ -84,11 +86,12 @@ class Scene extends Object implements h3d.IDrawable {
 		sync(ctx);
 		emitRec(ctx);
 		// sort by pass id
-		haxe.ds.ListSort.sortSingleLinked(ctx.passes, function(p1, p2) {
+		ctx.passes = haxe.ds.ListSort.sortSingleLinked(ctx.passes, function(p1, p2) {
 			return p1.pass.passId - p2.pass.passId;
 		});
 		// dispatch to the actual pass implementation
 		var curPass = ctx.passes;
+		var passes = [];
 		while( curPass != null ) {
 			var passId = curPass.pass.passId;
 			var p = curPass, prev = null;
@@ -98,10 +101,15 @@ class Scene extends Object implements h3d.IDrawable {
 			}
 			prev.next = null;
 			var render = getPass(curPass.pass.name);
-			render.draw(ctx, curPass);
-			prev.next = p;
+			passes.push( { render : render, pass : curPass, prev : prev, next : p } );
 			curPass = p;
 		}
+		@:privateAccess passes.sort(function(p1, p2) return p2.render.priority - p1.render.priority);
+		for( p in passes )
+			p.render.draw(ctx, p.pass);
+		// restore linked list to reuse
+		for( p in passes )
+			p.prev.next = p.next;
 		ctx.done();
 		for( p in postPasses )
 			p.render(engine);

@@ -271,8 +271,15 @@ class Engine {
 		reset();
 		curProjMatrix = null;
 	}
+	
+	var currentTarget : Bool;
+	
+	public function hasTarget() {
+		return currentTarget;
+	}
 
 	public function setTarget( tex : h3d.mat.Texture, useDepth = false, clearColor = 0 ) {
+		currentTarget = tex != null;
 		driver.setRenderTarget(tex == null ? null : tex.t, useDepth, clearColor);
 	}
 

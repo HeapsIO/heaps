@@ -55,6 +55,7 @@ class GlDriver extends Driver {
 	var curProgram : CompiledProgram;
 	var curMatBits : Int;
 	var programs : Map<Int, CompiledProgram>;
+	var hasTarget : Bool;
 	
 	public function new() {
 		#if js
@@ -79,6 +80,7 @@ class GlDriver extends Driver {
 	override function reset() {
 		gl.useProgram(null);
 		curProgram = null;
+		hasTarget = false;
 	}
 	
 	override function getShaderInputNames() {
@@ -171,7 +173,7 @@ class GlDriver extends Driver {
 				gl.activeTexture(GL.TEXTURE0 + i);
 				gl.uniform1i(s.textures[i], i);
 				
-				gl.bindTexture(GL.TEXTURE_2D, t.t);
+				gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 				var flags = TFILTERS[Type.enumIndex(t.mipMap)][Type.enumIndex(t.filter)];
 				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
 				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
@@ -188,6 +190,12 @@ class GlDriver extends Driver {
 	}
 	
 	function selectMaterialBits( bits : Int ) {
+		if( hasTarget ) {
+			// switch culling font/back
+			var c = Pass.getCulling(bits);
+			if( c == 1 ) c = 2 else if( c == 2 ) c = 1;
+			bits = (bits & ~Pass.culling_mask) | (c << Pass.culling_offset);
+		}
 		var diff = bits ^ curMatBits;
 		if( diff == 0 )
 			return;
@@ -266,8 +274,16 @@ class GlDriver extends Driver {
 	
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var tt = gl.createTexture();
-		gl.bindTexture(GL.TEXTURE_2D, tt);
-		gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
+		var tt : Texture = { t : tt, width : t.width, height : t.height };
+		gl.bindTexture(GL.TEXTURE_2D, tt.t);
+		gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, tt.width, tt.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
+		if( t.isTarget ) {
+			var fb = gl.createFramebuffer();
+			gl.bindFramebuffer(GL.FRAMEBUFFER, fb);
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, tt.t, 0);
+			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+			tt.fb = fb;
+		}
 		gl.bindTexture(GL.TEXTURE_2D, null);
 		return tt;
 	}
@@ -304,7 +320,9 @@ class GlDriver extends Driver {
 	}
 
 	override function disposeTexture( t : Texture ) {
-		gl.deleteTexture(t);
+		gl.deleteTexture(t.t);
+		if( t.rb != null ) gl.deleteRenderbuffer(t.rb);
+		if( t.fb != null ) gl.deleteFramebuffer(t.fb);
 	}
 
 	override function disposeIndexes( i : IndexBuffer ) {
@@ -317,13 +335,13 @@ class GlDriver extends Driver {
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
 		var img = bmp.toNative();
-		gl.bindTexture(GL.TEXTURE_2D, t.t);
+		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, img.getImageData(0,0,bmp.width,bmp.height));
 		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
-		gl.bindTexture(GL.TEXTURE_2D, t.t);
+		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 		pixels.convert(RGBA);
 		var pixels = new Uint8Array(pixels.bytes.getData());
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels);
@@ -365,7 +383,7 @@ class GlDriver extends Driver {
 	}
 	
 	public function setupTexture( t : h3d.mat.Texture, mipMap : h3d.mat.Data.MipMap, filter : h3d.mat.Data.Filter, wrap : h3d.mat.Data.Wrap ) {
-		gl.bindTexture(GL.TEXTURE_2D, t.t);
+		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 		var flags = TFILTERS[Type.enumIndex(mipMap)][Type.enumIndex(filter)];
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
@@ -402,7 +420,27 @@ class GlDriver extends Driver {
 	}
 
 	override function isDisposed() {
-		return false;
+		return gl.isContextLost();
+	}
+	
+	override function setRenderTarget( tex : h3d.impl.Texture, useDepth : Bool, clearColor : Int ) {
+		if( tex == null ) {
+			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+			gl.viewport(0, 0, canvas.width, canvas.height);
+			hasTarget = false;
+			return;
+		}
+		hasTarget = true;
+		gl.bindFramebuffer(GL.FRAMEBUFFER, tex.fb);
+		gl.viewport(0, 0, tex.width, tex.height);
+		if( useDepth && tex.rb == null ) {
+			tex.rb = gl.createRenderbuffer();
+			gl.bindRenderbuffer(GL.RENDERBUFFER, tex.rb);
+			gl.renderbufferStorage(GL.RENDERBUFFER, GL.DEPTH_COMPONENT16, tex.width, tex.height);
+			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, tex.rb);
+			gl.bindRenderbuffer(GL.RENDERBUFFER, null);
+		}
+		clear(((clearColor >> 16) & 0xFF) / 255, ((clearColor >> 8) & 0xFF) / 255, (clearColor & 0xFF) / 255, (clearColor >>> 24) / 255);
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {

@@ -136,7 +136,7 @@ class Linker {
 			id : vid,
 			name : vname,
 			type : v.type,
-			kind : v.kind,
+			kind : v.kind == Output ? Local : v.kind,
 			qualifiers : v.qualifiers,
 			parent : parent,
 		};
@@ -343,6 +343,7 @@ class Linker {
 			var v = varMap.get(outVar);
 			if( v == null )
 				throw "Variable not found " + outVar;
+			v.v.kind = Output;
 			buildDependency(entry, v, false);
 		}
 		

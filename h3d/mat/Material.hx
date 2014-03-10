@@ -6,6 +6,9 @@ class Material {
 	
 	var passes : Pass;
 	public var mainPass(get, never) : Pass;
+	public var shadows(get, set) : Bool;
+	public var castShadows(default, set) : Bool;
+	public var receiveShadows(default, set) : Bool;
 	
 	public function new(passes) {
 		this.passes = passes;
@@ -46,13 +49,20 @@ class Material {
 		return passes;
 	}
 	
-	public function getPass< T:(Pass, { function new(?parent:Pass) : Void; }) >( name : String, c : Class<T> ) : T {
+	public function getPass( name : String ) : Pass {
 		var p = passes;
 		while( p != null ) {
 			if( p.name == name )
-				return cast p;
+				return p;
 			p = p.nextPass;
 		}
+		return null;
+	}
+
+	public function allocPass< T:(Pass, { function new(?parent:Pass) : Void; }) >( name : String, ?c : Class<T> ) : T {
+		var p = getPass(name);
+		if( p != null ) return cast p;
+		if( c == null ) return null;
 		var p = Type.createInstance(c, [passes]);
 		addPass(p);
 		return p;
@@ -60,6 +70,47 @@ class Material {
 	
 	public function clone() {
 		throw "TODO";
+	}
+
+	inline function get_shadows() {
+		return castShadows && receiveShadows;
+	}
+	
+	inline function set_shadows(v) {
+		castShadows = v;
+		receiveShadows = v;
+		return v;
+	}
+	
+	function set_castShadows(v) {
+		if( v ) {
+			var p = getPass("distance");
+			if( p == null ) {
+				p = new Pass("distance", [], mainPass);
+				addPass(p);
+			}
+		} else {
+			var p = getPass("distance");
+			if( p != null ) removePass(p);
+		}
+		return v;
+	}
+
+	function set_receiveShadows(v) {
+		var shadows = h3d.pass.Params.shadowShader;
+		if( v ) {
+			for( p in mainPass.shaders )
+				if( p == shadows )
+					return v;
+			mainPass.shaders.push(shadows);
+		} else {
+			for( p in mainPass.shaders )
+				if( p == shadows ) {
+					mainPass.shaders.remove(p);
+					break;
+				}
+		}
+		return v;
 	}
 
 }

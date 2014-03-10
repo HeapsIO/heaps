@@ -16,6 +16,7 @@ class BaseMesh extends hxsl.Shader {
 
 		@global var global : {
 			var time : Float;
+			var flipY : Float;
 			@perObject var modelView : Mat4;
 			@perObject var modelViewInverse : Mat4;
 		};
@@ -28,6 +29,7 @@ class BaseMesh extends hxsl.Shader {
 		var output : {
 			var position : Vec4;
 			var color : Vec4;
+			var distance : Vec4;
 		};
 		
 		var transformedPosition : Vec3;
@@ -48,10 +50,15 @@ class BaseMesh extends hxsl.Shader {
 
 		function vertex() {
 			output.position = projectedPosition;
+			output.position.y *= global.flipY;
 		}
 		
 		function fragment() {
 			output.color = pixelColor;
+			
+			var dist = projectedPosition.z / projectedPosition.w;
+			var dcolor = (dist * vec4(1,255,255.*255.,255.*255.*255.)).fract();
+			output.distance = dcolor - dcolor.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.);
 		}
 
 	};

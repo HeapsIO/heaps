@@ -7,6 +7,7 @@ class Base {
 	var ctx : h3d.scene.RenderContext;
 	var manager : h3d.shader.Manager;
 	var globals(get, never) : hxsl.Globals;
+	var priority : Int = 0;
 	public var lightSystem : LightSystem;
 	
 	inline function get_globals() return manager.globals;
@@ -20,11 +21,16 @@ class Base {
 	@global("global.time") var globalTime : Float = ctx.time;
 	@global("global.modelView") var globalModelView : h3d.Matrix;
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
+	@global("global.flipY") var globalFlipY : Float = @:privateAccess ctx.engine.hasTarget() ? -1 : 1;
 	
 	public function new() {
-		manager = new h3d.shader.Manager(["output.position", "output.color"]);
+		manager = new h3d.shader.Manager(getOutputs());
 		initGlobals();
 		lightSystem = new LightSystem(globals);
+	}
+	
+	function getOutputs() {
+		return ["output.position", "output.color"];
 	}
 	
 	public function compileShader( p : h3d.mat.Pass ) {
@@ -47,7 +53,7 @@ class Base {
 		while( p != null ) {
 			// TODO : use linked list for shaders (no allocation)
 			var shaders = p.pass.getShadersRec();
-			if( p.pass.enableLights ) {
+			if( p.pass.enableLights && lightSystem != null ) {
 				if( p.pass.parentPass == null ) shaders = shaders.copy();
 				if( !lightInit )
 					lightSystem.initLights(ctx.lights);
