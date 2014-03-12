@@ -13,6 +13,7 @@ class Stage {
 	public var height(get, null) : Float;
 	public var mouseX(get, null) : Float;
 	public var mouseY(get, null) : Float;
+	public var mouseLock(get, set) : Bool;
 	
 	function new() {
 		eventTargets = new List();
@@ -134,6 +135,14 @@ class Stage {
 
 	inline function get_height() {
 		return stage.stageHeight;
+	}
+	
+	inline function get_mouseLock() {
+		return stage.mouseLock;
+	}
+
+	inline function set_mouseLock(v) {
+		return stage.mouseLock = v;
 	}
 	
 	function onResize(_) {
