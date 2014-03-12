@@ -11,6 +11,10 @@ class Seg {
 	public var invLenSq : Float;
 	
 	public inline function new( p1 : Point, p2 : Point ) {
+		setPoints(p1, p2);
+	}
+	
+	public inline function setPoints( p1 : Point, p2 : Point ) {
 		x = p1.x;
 		y = p1.y;
 		dx = p2.x - x;
