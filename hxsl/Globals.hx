@@ -36,9 +36,13 @@ class Globals {
 		return map.get(id);
 	}
 
-	static var ALL = [];
-	static var MAP = new Map();
+	static var ALL;
+	static var MAP;
 	public static function allocID( path : String ) {
+		if( MAP == null ) {
+			MAP = new Map();
+			ALL = [];
+		}
 		var id = MAP.get(path);
 		if( id == null ) {
 			id = ALL.length;

@@ -84,13 +84,13 @@ class Material {
 	
 	function set_castShadows(v) {
 		if( v ) {
-			var p = getPass("distance");
+			var p = getPass("shadow");
 			if( p == null ) {
-				p = new Pass("distance", [], mainPass);
+				p = new Pass("shadow", [], mainPass);
 				addPass(p);
 			}
 		} else {
-			var p = getPass("distance");
+			var p = getPass("shadow");
 			if( p != null ) removePass(p);
 		}
 		return v;

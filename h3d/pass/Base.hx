@@ -47,6 +47,8 @@ class Base {
 	@:access(h3d.scene)
 	public function draw( ctx : h3d.scene.RenderContext, passes : Object ) {
 		this.ctx = ctx;
+		for( k in ctx.sharedGlobals.keys() )
+			globals.fastSet(k, ctx.sharedGlobals.get(k));
 		setGlobals();
 		var p = passes;
 		var lightInit = false;

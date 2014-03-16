@@ -200,6 +200,11 @@ class GlslOut {
 			} else {
 				add("/*var*/");
 			}
+		case TCall( { e : TGlobal(Saturate) }, [e]):
+			add("clamp");
+			add("(");
+			addValue(e, tabs);
+			add(", 0., 1.)");
 		case TCall(e, args):
 			addValue(e, tabs);
 			add("(");

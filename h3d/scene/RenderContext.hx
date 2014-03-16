@@ -11,6 +11,8 @@ class RenderContext {
 	
 	public var drawPass : ObjectPass;
 	
+	public var sharedGlobals : Map<Int,Dynamic>;
+	
 	var pool : ObjectPass;
 	var passes : ObjectPass;
 	var lights : Light;
@@ -28,6 +30,16 @@ class RenderContext {
 			emitPass(p, obj).index = index;
 			p = p.nextPass;
 		}
+	}
+	
+	public function start() {
+		sharedGlobals = new Map();
+		lights = null;
+		drawPass = null;
+		passes = null;
+		lights = null;
+		time += elapsedTime;
+		frame++;
 	}
 	
 	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) {

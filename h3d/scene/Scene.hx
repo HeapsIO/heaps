@@ -47,6 +47,8 @@ class Scene extends Object implements h3d.IDrawable {
 			return new h3d.pass.Base();
 		case "distance":
 			return new h3d.pass.Distance();
+		case "shadow":
+			return new h3d.pass.ShadowMap(1024);
 		default:
 			throw "Don't know how to create pass '" + name + "', use s3d.setRenderPass()";
 			return null;
@@ -79,8 +81,7 @@ class Scene extends Object implements h3d.IDrawable {
 		engine.curProjMatrix = camera.m;
 		ctx.camera = camera;
 		ctx.engine = engine;
-		ctx.time += ctx.elapsedTime;
-		ctx.frame++;
+		ctx.start();
 		for( p in prePasses )
 			p.render(engine);
 		sync(ctx);
