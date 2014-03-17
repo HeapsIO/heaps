@@ -73,6 +73,8 @@ class Cache {
 			}
 		
 		var s = new hxsl.Splitter().split(s);
+		var s = new hxsl.Dce().dce(s.vertex, s.fragment);
+		
 		var r = new RuntimeShader();
 		r.vertex = flattenShader(s.vertex, Vertex, paramVars);
 		r.vertex.vertex = true;
