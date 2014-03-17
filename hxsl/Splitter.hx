@@ -1,12 +1,17 @@
 package hxsl;
 using hxsl.Ast;
 
-private typedef VarProps = {
-	var v : TVar;
-	var read : Int;
-	var write : Int;
-	var local : Bool;
-	var requireInit : Bool;
+private class VarProps {
+	public var v : TVar;
+	public var read : Int;
+	public var write : Int;
+	public var local : Bool;
+	public var requireInit : Bool;
+	public function new(v) {
+		this.v = v;
+		read = 0;
+		write = 0;
+	}
 }
 
 class Splitter {
@@ -55,15 +60,19 @@ class Splitter {
 					};
 					vars = vvars;
 					var ninf = get(nv);
-					ninf.write = 1;
 					v.kind = Local;
 					var p = vfun.expr.p;
-					addExpr(vfun, { e : TBinop(OpAssign, { e : TVar(nv), t : nv.type, p : p }, { e : TVar(v), t : v.type, p : p } ), t : nv.type, p : p });
+					var e = { e : TBinop(OpAssign, { e : TVar(nv), t : nv.type, p : p }, { e : TVar(v), t : v.type, p : p } ), t : nv.type, p : p };
+					addExpr(vfun, e);
+					checkExpr(e);
 					if( nv.kind == Var ) {
 						var old = fvars.get(v.id);
 						varMap.set(v, nv);
 						fvars.remove(v.id);
-						fvars.set(nv.id, { v : nv, read : old.read, write : old.write, local : false, requireInit : false });
+						var np = new VarProps(nv);
+						np.read = old.read;
+						np.write = old.write;
+						fvars.set(nv.id, np);
 					}
 				}
 			default:
@@ -84,19 +93,17 @@ class Splitter {
 				uniqueName(nv);
 				var i = vvars.get(v.id);
 				if( i == null ) {
-					i = {
-						local : false,
-						v : v,
-						read : 0,
-						write : 0,
-						requireInit : false,
-					};
+					i = new VarProps(v);
 					vvars.set(v.id, i);
 				}
 				i.read++;
-				vvars.set(nv.id, { local : false, v : nv, read : 0, write : 1, requireInit : false });
-				fvars.set(nv.id, { local : false, v : nv, read : 1, write : 0, requireInit : false });
-				addExpr(vfun, { e : TBinop(OpAssign, { e : TVar(nv), t : v.type, p : vfun.expr.p }, { e : TVar(v), t : v.type, p : vfun.expr.p }), t : v.type, p : vfun.expr.p } );
+				var vp = new VarProps(nv);
+				vp.write = 1;
+				vvars.set(nv.id, vp);
+				var fp = new VarProps(nv);
+				fp.read = 1;
+				fvars.set(nv.id, fp);
+				addExpr(vfun, { e : TBinop(OpAssign, { e : TVar(nv), t : v.type, p : vfun.expr.p }, { e : TVar(v), t : v.type, p : vfun.expr.p } ), t : v.type, p : vfun.expr.p } );
 				varMap.set(v, nv);
 				inf.local = true;
 			case Var if( inf.write > 0 ):
@@ -189,7 +196,7 @@ class Splitter {
 	function get( v : TVar ) {
 		var i = vars.get(v.id);
 		if( i == null ) {
-			i = { v : v, read : 0, write : 0, local : false, requireInit : false };
+			i = new VarProps(v);
 			vars.set(v.id, i);
 			uniqueName(v);
 		}
