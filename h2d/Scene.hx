@@ -252,13 +252,20 @@ class Scene extends Layers implements h3d.IDrawable {
 					continue;
 			}
 			emitEvent(e);
+			/*
+				We want to make sure that after we have pushed, we send a release even if the mouse
+				has been outside of the Interactive (release outside). We will reset the mouse button
+				to prevent click to be generated
+			*/
 			if( e.kind == ERelease && pushList.length > 0 ) {
 				for( i in pushList ) {
 					// relX/relY is not correct here
 					if( i == null )
 						dispatchListeners(e);
-					else
+					else {
+						@:privateAccess i.isMouseDown = -1;
 						i.handleEvent(e);
+					}
 				}
 				pushList = new Array();
 			}
