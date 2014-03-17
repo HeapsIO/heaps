@@ -65,6 +65,38 @@ class Checker {
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TFloat } ];
 			case ToBool:
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TBool } ];
+			case Clamp:
+				var r = [];
+				for( t in genType ) {
+					r.push( { args : [ { name : "value", type : t }, { name : "min", type : t }, { name : "max", type : t } ], ret : t } );
+					if( t != TFloat )
+						r.push( { args : [ { name : "value", type : t }, { name : "min", type : TFloat }, { name : "max", type : TFloat } ], ret : t } );
+				}
+				r;
+			case Mix:
+				var r = [];
+				for( t in genType ) {
+					r.push( { args : [ { name : "x", type : t }, { name : "y", type : t }, { name : "a", type : t } ], ret : t } );
+					if( t != TFloat )
+						r.push( { args : [ { name : "x", type : t }, { name : "y", type : t }, { name : "a", type : TFloat } ], ret : t } );
+				}
+				r;
+			case Step:
+				var r = [];
+				for( t in genType ) {
+					r.push( { args : [ { name : "edge", type : t }, { name : "x", type : t } ], ret : t } );
+					if( t != TFloat )
+						r.push( { args : [ { name : "edge", type : TFloat }, { name : "x", type : t } ], ret : t } );
+				}
+				r;
+			case SmoothStep:
+				var r = [];
+				for( t in genType ) {
+					r.push( { args : [ { name : "edge0", type : t }, { name : "edge1", type : t }, { name : "x", type : t } ], ret : t } );
+					if( t != TFloat )
+						r.push( { args : [ { name : "edge0", type : TFloat }, { name : "edge1", type : TFloat }, { name : "x", type : t } ], ret : t } );
+				}
+				r;
 			}
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );

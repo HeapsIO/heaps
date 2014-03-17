@@ -168,10 +168,10 @@ enum TGlobal {
 	Mod;
 	Min;
 	Max;
-	//Clamp;
-	//Mix;
-	//Step;
-	//SmoothStep;
+	Clamp;
+	Mix;
+	Step;
+	SmoothStep;
 	Length;
 	Distance;
 	Dot;
