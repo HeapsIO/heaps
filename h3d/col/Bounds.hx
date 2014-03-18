@@ -280,5 +280,16 @@ class Bounds {
 		b.setMax(max);
 		return b;
 	}
+
+	public static inline function fromValues( x : Float, y : Float, z : Float, dx : Float, dy : Float, dz : Float ) {
+		var b = new Bounds();
+		b.xMin = x;
+		b.yMin = y;
+		b.zMin = z;
+		b.xMax = x + dx;
+		b.yMax = y + dy;
+		b.zMax = z + dz;
+		return b;
+	}
 	
 }
