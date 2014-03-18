@@ -18,7 +18,13 @@ class Event {
 	public var kind : EventKind;
 	public var relX : Float;
 	public var relY : Float;
+	/**
+		Will propagate the event to other interactives that are below the current one.
+	**/
 	public var propagate : Bool;
+	/**
+		Will cancel the default behavior for this event as if it had happen outside of the interactive zone.
+	**/
 	public var cancel : Bool;
 	public var button : Int;
 	public var touchId : Int;

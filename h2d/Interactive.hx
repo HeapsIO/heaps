@@ -6,7 +6,13 @@ class Interactive extends Drawable {
 	public var height : Float;
 	public var cursor(default,set) : hxd.System.Cursor;
 	public var isEllipse : Bool;
-	public var blockEvents : Bool = true;
+	/**
+		Set the default `cancel` mode (see `hxd.Event`), default to false.
+	**/
+	public var cancelEvents : Bool = false;
+	/**
+		Set the default `propagate` mode (see `hxd.Event`), default to false.
+	**/
 	public var propagateEvents : Bool = false;
 	public var backgroundColor : Null<Int>;
 	public var enableRightButton : Bool;
@@ -79,7 +85,7 @@ class Interactive extends Drawable {
 			}
 		}
 		if( propagateEvents ) e.propagate = true;
-		if( !blockEvents ) e.cancel = true;
+		if( cancelEvents ) e.cancel = true;
 		switch( e.kind ) {
 		case EMove:
 			onMove(e);
