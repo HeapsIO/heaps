@@ -181,14 +181,14 @@ class Stage {
 	}
 	
 	function onKeyUp(e:flash.events.KeyboardEvent) {
-		var ev = new Event(EKeyUp);
+		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		ev.charCode = getCharCode(e);
 		event(ev);
 	}
 
 	function onKeyDown(e:flash.events.KeyboardEvent) {
-		var ev = new Event(EKeyDown);
+		var ev = new Event(EKeyDown, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		ev.charCode = getCharCode(e);
 		event(ev);
@@ -302,14 +302,14 @@ class Stage {
 	}
 	
 	function onKeyUp(e:js.html.KeyboardEvent) {
-		var ev = new Event(EKeyUp);
+		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		ev.charCode = e.charCode;
 		event(ev);
 	}
 
 	function onKeyDown(e:js.html.KeyboardEvent) {
-		var ev = new Event(EKeyDown);
+		var ev = new Event(EKeyDown, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		ev.charCode = e.charCode;
 		event(ev);
