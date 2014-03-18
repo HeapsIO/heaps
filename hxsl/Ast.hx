@@ -250,7 +250,13 @@ class Tools {
 	public static var SWIZ = Component.createAll();
 	
 	public static function allocVarId() {
+		// in order to prevent compile time ids to conflict with runtime allocated ones
+		// let's use negative numbers for compile time ones
+		#if macro
+		return --UID;
+		#else
 		return ++UID;
+		#end
 	}
 	
 	public static function getName( v : TVar ) {
