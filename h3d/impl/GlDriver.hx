@@ -190,12 +190,14 @@ class GlDriver extends Driver {
 	}
 	
 	function selectMaterialBits( bits : Int ) {
+		/*
 		if( hasTarget ) {
 			// switch culling font/back
 			var c = Pass.getCulling(bits);
 			if( c == 1 ) c = 2 else if( c == 2 ) c = 1;
 			bits = (bits & ~Pass.culling_mask) | (c << Pass.culling_offset);
 		}
+		*/
 		var diff = bits ^ curMatBits;
 		if( diff == 0 )
 			return;

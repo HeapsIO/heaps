@@ -36,6 +36,7 @@ class BaseMesh extends hxsl.Shader {
 		var transformedNormal : Vec3;
 		var projectedPosition : Vec4;
 		var pixelColor : Vec4;
+		var depth : Float;
 		
 		@param var color : Vec4;
 		
@@ -46,6 +47,7 @@ class BaseMesh extends hxsl.Shader {
 			transformedNormal = (input.normal * global.modelViewInverse.mat3()).normalize();
 			camera.dir = (camera.position - transformedPosition).normalize();
 			pixelColor = color;
+			depth = projectedPosition.z / projectedPosition.w;
 		}
 
 		function vertex() {
@@ -55,9 +57,7 @@ class BaseMesh extends hxsl.Shader {
 		
 		function fragment() {
 			output.color = pixelColor;
-			
-			var dist = projectedPosition.z / projectedPosition.w;
-			var dcolor = (dist * vec4(1,255,255.*255.,255.*255.*255.)).fract();
+			var dcolor = (depth * vec4(1,255,255.*255.,255.*255.*255.)).fract();
 			output.distance = dcolor - dcolor.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.);
 		}
 
