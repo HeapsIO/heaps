@@ -139,21 +139,18 @@ class Image extends Resource {
 		}
 		getSize();
 		var w = inf.width, h = inf.height;
-		var tw = 1, th = 1;
-		while( tw < w ) tw <<= 1;
-		while( th < h ) th <<= 1;
 
 		if( inf.isPNG && entry.isAvailable ) {
 			// direct upload
 			needResize = false;
-			tex = h3d.Engine.getCurrent().mem.allocTexture(tw, th, false);
+			tex = new h3d.mat.Texture(w, h);
 		} else {
 			// create a temp 1x1 texture while we're loading
 			tex = h3d.mat.Texture.fromColor(0xFF0000FF);
 			needResize = true;
 			@:privateAccess {
-				tex.width = tw;
-				tex.height = th;
+				tex.width = w;
+				tex.height = h;
 			}
 		}
 		loadTexture();

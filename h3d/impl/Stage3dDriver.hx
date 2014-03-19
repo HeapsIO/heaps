@@ -162,36 +162,40 @@ class Stage3dDriver extends Driver {
 		return ctx.createIndexBuffer(count);
 	}
 	
+	function getMipLevels( t : h3d.mat.Texture ) {
+		if( !t.flags.has(MipMapped) )
+			return 0;
+		var levels = 0;
+		while( t.width > (1 << levels) || t.height > (1 << levels) )
+			levels++;
+		return levels;
+	}
+	
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
-		var fmt = switch( t.format ) {
-		case Rgba, Atf:
-			flash.display3D.Context3DTextureFormat.BGRA;
-		case AtfCompressed(alpha):
-			alpha ? flash.display3D.Context3DTextureFormat.COMPRESSED_ALPHA : flash.display3D.Context3DTextureFormat.COMPRESSED;
-		}
+		var fmt = flash.display3D.Context3DTextureFormat.BGRA;
 		var rect = false;
-		if( t.isTarget && !t.isCubic && t.mipLevels == 0 ) {
+		if( t.flags.has(Target) && !t.flags.has(Cubic) && !t.flags.has(MipMapped) ) {
 			var tw = 1, th = 1;
 			while( tw < t.width ) tw <<= 1;
 			while( th < t.height) th <<= 1;
 			if( tw != t.width || th != t.height )
 				rect = true;
 		}
-		return if( t.isCubic )
-			ctx.createCubeTexture(t.width, fmt, t.isTarget, t.mipLevels);
+		return if( t.flags.has(Cubic) )
+			ctx.createCubeTexture(t.width, fmt, t.flags.has(Target), getMipLevels(t));
 		else if( rect ) {
 			#if !flash11_8
 			throw "Support for rectangle texture requires Flash 11.8+ compilation";
 			#else
-			ctx.createRectangleTexture(t.width, t.height, fmt, t.isTarget);
+			ctx.createRectangleTexture(t.width, t.height, fmt, t.flags.has(Target));
 			#end
 		}
 		else
-			ctx.createTexture(t.width, t.height, fmt, t.isTarget, t.mipLevels);
+			ctx.createTexture(t.width, t.height, fmt, t.flags.has(Target), getMipLevels(t));
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-		if( t.isCubic ) {
+		if( t.flags.has(Cubic) ) {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
 			t.uploadFromBitmapData(bmp.toNative(), side, mipLevel);
 		}
@@ -204,25 +208,13 @@ class Stage3dDriver extends Driver {
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		pixels.convert(BGRA);
 		var data = pixels.bytes.getData();
-		switch( t.format ) {
-		case Atf, AtfCompressed(_):
-			if( t.isCubic ) {
-				var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
-				t.uploadCompressedTextureFromByteArray(data, 0);
-			}
-			else {
-				var t = flash.Lib.as(t.t,  flash.display3D.textures.Texture);
-				t.uploadCompressedTextureFromByteArray(data, 0);
-			}
-		default:
-			if( t.isCubic ) {
-				var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
-				t.uploadFromByteArray(data, 0, side, mipLevel);
-			}
-			else {
-				var t = flash.Lib.as(t.t,  flash.display3D.textures.Texture);
-				t.uploadFromByteArray(data, 0, mipLevel);
-			}
+		if( t.flags.has(Cubic) ) {
+			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
+			t.uploadFromByteArray(data, 0, side, mipLevel);
+		}
+		else {
+			var t = flash.Lib.as(t.t,  flash.display3D.textures.Texture);
+			t.uploadFromByteArray(data, 0, mipLevel);
 		}
 	}
 	

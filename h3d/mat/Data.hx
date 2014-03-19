@@ -51,10 +51,21 @@ enum Filter {
 enum Wrap {
 	Clamp;
 	Repeat;
+	//Mirrored;
 }
 
-enum TextureFormat {
-	Rgba;
-	Atf;
-	AtfCompressed( alpha : Bool );
+enum Operation {
+	Add;
+	Sub;
+	ReverseSub;
+}
+
+enum TextureFlags {
+	Target;
+	Cubic;
+	/**
+		Used to prevent culling inversion
+	**/
+	NoFlipY;
+	MipMapped;
 }

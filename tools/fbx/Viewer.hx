@@ -267,7 +267,7 @@ class Viewer {
 	}
 	
 	function textureLoader( textureName : String, matData : h3d.fbx.Data.FbxNode ) {
-		var t = engine.mem.allocTexture(1024, 1024);
+		var t = new h3d.mat.Texture(1024, 1024);
 		var bmp = new flash.display.BitmapData(1024, 1024, true, 0xFFFF0000);
 		var mat = new h3d.mat.MeshMaterial(t);
 		t.uploadBitmap(hxd.BitmapData.fromNative(bmp));

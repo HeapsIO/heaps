@@ -1,5 +1,4 @@
 package h3d.mat;
-
 import h3d.mat.Data;
 
 @:allow(h3d)
@@ -16,10 +15,7 @@ class Texture {
 	public var name(default, null) : String;
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
-	public var isCubic(default, null) : Bool;
-	public var isTarget(default, null) : Bool;
-	public var mipLevels(default, null) : Int;
-	public var format(default, null) : TextureFormat;
+	public var flags(default, null) : haxe.EnumFlags<TextureFlags>;
 	
 	var bits : Int;
 	public var mipMap(default,set) : MipMap;
@@ -32,19 +28,28 @@ class Texture {
 	**/
 	public var onContextLost : Void -> Void;
 	
-	function new(m, fmt, w, h, c, ta, mm) {
+	public function new(w, h, ?flags : Array<TextureFlags>, ?allocPos : h3d.impl.AllocPos ) {
+		this.mem = h3d.Engine.getCurrent().mem;
 		this.id = ++UID;
-		this.format = fmt;
-		this.mem = m;
-		this.isTarget = ta;
+		this.flags = new haxe.EnumFlags();
+		if( flags != null )
+			for( f in flags )
+				this.flags.set(f);
 		this.width = w;
 		this.height = h;
-		this.isCubic = c;
-		this.mipLevels = mm;
-		this.mipMap = mm > 0 ? Nearest : None;
+		this.mipMap = this.flags.has(MipMapped) ? Nearest : None;
 		this.filter = Linear;
 		this.wrap = Clamp;
 		bits &= 0x7FFF;
+		#if debug
+		this.allocPos = allocPos;
+		#end
+		alloc();
+	}
+	
+	function alloc() {
+		if( t == null )
+			mem.allocTexture(this);
 	}
 	
 	function toString() {
@@ -82,7 +87,10 @@ class Texture {
 	}
 	
 	public function resize(width, height) {
-		mem.resizeTexture(this, width, height);
+		dispose();
+		this.width = width;
+		this.height = height;
+		alloc();
 	}
 
 	/*
@@ -134,26 +142,27 @@ class Texture {
 	}
 	
 	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
-		var mem = h3d.Engine.getCurrent().mem;
-		var t = mem.allocTexture(bmp.width, bmp.height, false, allocPos);
+		var t = new Texture(bmp.width, bmp.height, allocPos);
 		t.uploadBitmap(bmp);
 		return t;
 	}
 	
 	public static function fromPixels( pixels : hxd.Pixels, ?allocPos : h3d.impl.AllocPos ) {
-		var mem = h3d.Engine.getCurrent().mem;
-		var t = mem.allocTexture(pixels.width, pixels.height, false, allocPos);
+		var t = new Texture(pixels.width, pixels.height, allocPos);
 		t.uploadPixels(pixels);
 		return t;
 	}
 	
 	static var tmpPixels : hxd.Pixels = null;
+	static var COLOR_CACHE = new Map<Int,h3d.mat.Texture>();
 	/**
 		Creates a 1x1 texture using the ARGB color passed as parameter.
 	**/
 	public static function fromColor( color : Int, ?allocPos : h3d.impl.AllocPos ) {
-		var mem = h3d.Engine.getCurrent().mem;
-		var t = mem.allocTexture(1, 1, false, allocPos);
+		var t = COLOR_CACHE.get(color);
+		if( t != null && !t.isDisposed() )
+			return t;
+		var t = new Texture(1, 1, null, allocPos);
 		if( tmpPixels == null ) tmpPixels = new hxd.Pixels(1, 1, haxe.io.Bytes.alloc(4), BGRA);
 		tmpPixels.format = BGRA;
 		tmpPixels.bytes.set(0, color & 0xFF);
@@ -161,12 +170,8 @@ class Texture {
 		tmpPixels.bytes.set(2, (color>>16) & 0xFF);
 		tmpPixels.bytes.set(3, color>>>24);
 		t.uploadPixels(tmpPixels);
+		COLOR_CACHE.set(color, t);
 		return t;
-	}
-	
-	public static function alloc( width : Int, height : Int, isTarget = false, ?allocPos : h3d.impl.AllocPos ) {
-		var engine = h3d.Engine.getCurrent();
-		return isTarget ? engine.mem.allocTargetTexture(width, height, allocPos) : engine.mem.allocTexture(width, height, null, allocPos);
 	}
 
 }

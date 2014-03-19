@@ -231,21 +231,6 @@ class MemoryManager {
 		#end
 	}
 	
-	function newTexture(fmt, w, h, cubic, target, mm, allocPos) {
-		var t = new h3d.mat.Texture(this, fmt, w, h, cubic, target, mm);
-		#if debug
-		t.allocPos = allocPos;
-		#end
-		initTexture(t);
-		return t;
-	}
-	
-	function initTexture( t : h3d.mat.Texture ) {
-		t.t = driver.allocTexture(t);
-		tdict.set(t, t.t);
-		textures.push(t.t);
-	}
-
 	@:allow(h3d.impl.Indexes.dispose)
 	function deleteIndexes( i : Indexes ) {
 		idict.remove(i);
@@ -262,67 +247,14 @@ class MemoryManager {
 		t.t = null;
 	}
 
-	@:allow(h3d.mat.Texture.resize)
-	function resizeTexture( t : h3d.mat.Texture, width, height ) {
-		t.dispose();
-		t.width = width;
-		t.height = height;
-		initTexture(t);
+	@:allow(h3d.mat.Texture.alloc)
+	function allocTexture( t : h3d.mat.Texture ) {
+		freeTextures();
+		t.t = driver.allocTexture(t);
+		tdict.set(t, t.t);
+		textures.push(t.t);
 	}
 	
-	public function readAtfHeader( data : haxe.io.Bytes ) {
-		var cubic = (data.get(6) & 0x80) != 0;
-		var alpha = false, compress = false;
-		switch( data.get(6) & 0x7F ) {
-		case 0:
-		case 1: alpha = true;
-		case 2: compress = true;
-		case 3, 4: alpha = true; compress = true;
-		case f: throw "Invalid ATF format " + f;
-		}
-		var width = 1 << data.get(7);
-		var height = 1 << data.get(8);
-		var mips = data.get(9) - 1;
-		return {
-			width : width,
-			height : height,
-			cubic : cubic,
-			alpha : alpha,
-			compress : compress,
-			mips : mips,
-		};
-	}
-
-	public function allocCustomTexture( fmt : h3d.mat.Data.TextureFormat, width : Int, height : Int, mipLevels : Int = 0, cubic : Bool = false, target : Bool = false, ?allocPos : AllocPos ) {
-		freeTextures();
-		return newTexture(fmt, width, height, cubic, target, mipLevels, allocPos);
-	}
-	
-	public function allocTexture( width : Int, height : Int, ?mipMap = false, ?allocPos : AllocPos ) {
-		freeTextures();
-		var levels = 0;
-		if( mipMap ) {
-			while( width > (1 << levels) && height > (1 << levels) )
-				levels++;
-		}
-		return newTexture(Rgba, width, height, false, false, levels, allocPos);
-	}
-	
-	public function allocTargetTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
-		freeTextures();
-		return newTexture(Rgba, width, height, false, true, 0, allocPos);
-	}
-
-	public function allocCubeTexture( size : Int, ?mipMap = false, ?allocPos : AllocPos ) {
-		freeTextures();
-		var levels = 0;
-		if( mipMap ) {
-			while( size > (1 << levels) )
-				levels++;
-		}
-		return newTexture(Rgba, size, size, true, false, levels, allocPos);
-	}
-
 	public function allocIndex( indices : hxd.IndexBuffer, pos = 0, count = -1 ) {
 		if( count < 0 ) count = indices.length;
 		var ibuf = driver.allocIndexes(count);
@@ -523,7 +455,7 @@ class MemoryManager {
 				t.dispose();
 			else {
 				textures.remove(t.t);
-				initTexture(t);
+				//initTexture(t);
 				t.onContextLost();
 			}
 		}
