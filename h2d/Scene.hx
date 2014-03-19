@@ -99,14 +99,23 @@ class Scene extends Layers implements h3d.IDrawable {
 		case EPush: cancelFocus = true; checkPush = true;
 		case ERelease: checkPush = true;
 		case EKeyUp, EKeyDown, EWheel:
-			if( currentFocus != null ) {
+			if( currentFocus != null )
 				currentFocus.handleEvent(event);
-				if( !event.propagate )
-					return;
+			else {
+				if( currentOver != null ) {
+					event.propagate = true;
+					currentOver.handleEvent(event);
+					if( !event.propagate ) return;
+				}
+				dispatchListeners(event);
 			}
+			return;
 		default:
 		}
 		for( i in interactive ) {
+			
+
+			// TODO : we are not sure that the positions are correctly updated !
 			
 			// this is a bit tricky since we are not in the not-euclide viewport space
 			// (r = ratio correction)

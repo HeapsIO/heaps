@@ -4,13 +4,13 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="engine.js" />
+    <movie path="engine.swf" />
     <movie fps="60" />
     <movie width="800" />
     <movie height="600" />
-    <movie version="1" />
-    <movie minorVersion="0" />
-    <movie platform="JavaScript" />
+    <movie version="11" />
+    <movie minorVersion="6" />
+    <movie platform="Flash Player" />
     <movie background="#FFFFFF" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
@@ -23,7 +23,7 @@
     <option flashStrict="True" />
     <option mainClass="Test" />
     <option enabledebug="False" />
-    <option additional="--macro include('h3d')&#xA;--macro include('h2d')&#xA;--macro include('hxd',true,['hxd.res.FileTree'])&#xA;-lib format&#xA;-D resourcesPath=samples/res&#xA;&#xA;--next&#xA;&#xA;-swf engine.swf&#xA;-swf-header 800:600:60:000000&#xA;-swf-version 11.6&#xA;-lib hxsl&#xA;-D h3d&#xA;-D resourcesPath=samples/res&#xA;-cp samples/basic&#xA;-main Test&#xA;--macro include('h3d')&#xA;--macro include('h2d')&#xA;--macro include('hxd',true,['hxd.res.FileTree'])&#xA;&#xA;--next&#xA;-cpp bin&#xA;-lib format&#xA;-lib openfl-native&#xA;-debug&#xA;--macro allowPackage('flash')&#xA;-D h3d&#xA;-D openfl&#xA;-D resourcesPath=samples/res&#xA;-cp samples/basic&#xA;-main Test&#xA;--macro include('h3d')&#xA;--macro include('h2d')&#xA;--macro include('hxd',true,['hxd.res.FileTree'])" />
+    <option additional="-lib hxsl&#xA;-D h3d&#xA;-D resourcesPath=samples/res&#xA;--macro include('h3d')&#xA;--macro include('h2d')&#xA;--macro include('hxd',true,['hxd.res.FileTree'])" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -33,6 +33,10 @@
   <compileTargets>
     <!-- example: <compile path="..." /> -->
   </compileTargets>
+  <!-- Assets to embed into the output SWF -->
+  <library>
+    <!-- example: <asset path="..." id="..." update="..." glyphs="..." mode="..." place="..." sharepoint="..." /> -->
+  </library>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
     <hidden path="engine.hxml" />
@@ -45,7 +49,7 @@
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
-    <option testMovie="OpenDocument" />
+    <option testMovie="Default" />
     <option testMovieCommand="index.html" />
   </options>
   <!-- Plugin storage -->

@@ -1,34 +1,12 @@
 -cp samples/basic
--js engine.js
--main Test
---macro include('h3d')
---macro include('h2d')
---macro include('hxd',true,['hxd.res.FileTree'])
--lib format
--D resourcesPath=samples/res
---next
 -swf engine.swf
--swf-header 800:600:60:000000
+-swf-header 800:600:60:FFFFFF
+--flash-strict
 -swf-version 11.6
+-main Test
 -lib hxsl
 -D h3d
 -D resourcesPath=samples/res
--cp samples/basic
--main Test
---macro include('h3d')
---macro include('h2d')
---macro include('hxd',true,['hxd.res.FileTree'])
---next
--cpp bin
--lib format
--lib openfl-native
--debug
---macro allowPackage('flash')
--D h3d
--D openfl
--D resourcesPath=samples/res
--cp samples/basic
--main Test
 --macro include('h3d')
 --macro include('h2d')
 --macro include('hxd',true,['hxd.res.FileTree'])
