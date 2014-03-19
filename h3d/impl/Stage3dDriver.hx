@@ -179,6 +179,7 @@ class Stage3dDriver extends Driver {
 	
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var fmt = flash.display3D.Context3DTextureFormat.BGRA;
+		t.lastFrame = frame;
 		if( t.flags.has(TargetDepth) )
 			throw "Unsupported texture flag";
 		try {

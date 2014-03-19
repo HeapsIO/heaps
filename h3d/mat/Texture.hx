@@ -32,7 +32,6 @@ class Texture {
 	public function new(w, h, ?flags : Array<TextureFlags>, ?allocPos : h3d.impl.AllocPos ) {
 		var engine = h3d.Engine.getCurrent();
 		this.mem = engine.mem;
-		this.lastFrame = engine.frameCount;
 		this.id = ++UID;
 		this.flags = new haxe.EnumFlags();
 		if( flags != null )
