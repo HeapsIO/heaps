@@ -99,23 +99,14 @@ class Scene extends Layers implements h3d.IDrawable {
 		case EPush: cancelFocus = true; checkPush = true;
 		case ERelease: checkPush = true;
 		case EKeyUp, EKeyDown, EWheel:
-			if( currentFocus != null )
+			if( currentFocus != null ) {
 				currentFocus.handleEvent(event);
-			else {
-				if( currentOver != null ) {
-					event.propagate = true;
-					currentOver.handleEvent(event);
-					if( !event.propagate ) return;
-				}
-				dispatchListeners(event);
+				if( !event.propagate )
+					return;
 			}
-			return;
 		default:
 		}
 		for( i in interactive ) {
-			
-
-			// TODO : we are not sure that the positions are correctly updated !
 			
 			// this is a bit tricky since we are not in the not-euclide viewport space
 			// (r = ratio correction)
@@ -252,13 +243,20 @@ class Scene extends Layers implements h3d.IDrawable {
 					continue;
 			}
 			emitEvent(e);
+			/*
+				We want to make sure that after we have pushed, we send a release even if the mouse
+				has been outside of the Interactive (release outside). We will reset the mouse button
+				to prevent click to be generated
+			*/
 			if( e.kind == ERelease && pushList.length > 0 ) {
 				for( i in pushList ) {
 					// relX/relY is not correct here
 					if( i == null )
 						dispatchListeners(e);
-					else
+					else {
+						@:privateAccess i.isMouseDown = -1;
 						i.handleEvent(e);
+					}
 				}
 				pushList = new Array();
 			}
@@ -431,10 +429,7 @@ class Scene extends Layers implements h3d.IDrawable {
 	public function captureBitmap( ?target : Tile ) {
 		var engine = h3d.Engine.getCurrent();
 		if( target == null ) {
-			var tw = 1, th = 1;
-			while( tw < width ) tw <<= 1;
-			while( th < height ) th <<= 1;
-			var tex = engine.mem.allocTargetTexture(tw, th);
+			var tex = new h3d.mat.Texture(width, height, [Target]);
 			target = new Tile(tex,0, 0, width, height);
 		}
 		engine.begin();

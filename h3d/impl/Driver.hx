@@ -27,6 +27,9 @@ class Driver {
 	public function dispose() {
 	}
 	
+	public function begin( frame : Int ) {
+	}
+	
 	public function clear( r : Float, g : Float, b : Float, a : Float ) {
 	}
 	
@@ -71,7 +74,7 @@ class Driver {
 	public function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
 	}
 	
-	public function setRenderTarget( tex : Null<Texture>, useDepth : Bool, clearColor : Int ) {
+	public function setRenderTarget( tex : Null<h3d.mat.Texture>, clearColor : Int ) {
 	}
 	
 	public function present() {

@@ -112,7 +112,8 @@ class DynamicText {
 
 	public static function build( file : String, ?withDict : Bool ) {
 		var path = FileTree.resolvePath();
-		var x = Xml.parse(sys.io.File.getContent("res/" + file));
+		var x = Xml.parse(sys.io.File.getContent(path + "/" + file));
+		Context.registerModuleDependency(Context.getLocalModule(), path + "/" + file);
 		var fields = Context.getBuildFields();
 		var pos = Context.currentPos();
 		var tdict = new Map();

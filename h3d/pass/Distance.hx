@@ -15,11 +15,11 @@ class Distance extends Base {
 	}
 	
 	override function draw(ctx : h3d.scene.RenderContext, passes) {
-		if( texture == null || texture.isDisposed() || texture.width != ctx.engine.width || texture.height != ctx.engine.height ) {
+		if( texture == null || texture.width != ctx.engine.width || texture.height != ctx.engine.height ) {
 			if( texture != null ) texture.dispose();
-			texture = h3d.mat.Texture.alloc(ctx.engine.width, ctx.engine.height, true);
+			texture = new h3d.mat.Texture(ctx.engine.width, ctx.engine.height, [Target, TargetDepth, TargetNoFlipY]);
 		}
-		ctx.engine.setTarget(texture, true);
+		ctx.engine.setTarget(texture);
 		super.draw(ctx, passes);
 		ctx.engine.setTarget(null);
 	}

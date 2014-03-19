@@ -2,7 +2,6 @@ package hxd.res;
 
 class Image extends Resource {
 	
-	var needResize : Bool;
 	var tex : h3d.mat.Texture;
 	var inf : { width : Int, height : Int, isPNG : Bool };
 	
@@ -11,16 +10,6 @@ class Image extends Resource {
 		return inf.isPNG;
 	}
 
-	function checkResize() {
-		if( !needResize ) return;
-		var tw = tex.width, th = tex.height;
-		@:privateAccess {
-			tex.width = 1;
-			tex.height = 1;
-		}
-		tex.resize(tw,th);
-	}
-	
 	public function getSize() : { width : Int, height : Int } {
 		if( inf != null )
 			return inf;
@@ -95,18 +84,14 @@ class Image extends Resource {
 	}
 	
 	function loadTexture() {
-		var tw = tex.width, th = tex.height;
-		var w =	inf.width, h = inf.height;
-		var isSquare = w == tw && h == th;
 		if( inf.isPNG ) {
 			function load() {
-				checkResize();
-
 				// immediately loading the PNG is faster than going through loadBitmap
+				tex.alloc();
 				var pixels = getPixels();
-				pixels.makeSquare();
 				tex.uploadPixels(pixels);
 				pixels.dispose();
+				tex.realloc = loadTexture;
 			}
 			if( entry.isAvailable )
 				load();
@@ -114,55 +99,23 @@ class Image extends Resource {
 				entry.load(load);
 		} else {
 			// use native decoding
-			entry.loadBitmap(function(loaded) {
-				checkResize();
-				var bmp = loaded.toBitmap();
-				if( isSquare )
-					tex.uploadBitmap(bmp);
-				else {
-					var pixels = bmp.getPixels();
-					pixels.makeSquare();
-					tex.uploadPixels(pixels);
-					pixels.dispose();
-				}
+			entry.loadBitmap(function(bmp) {
+				var bmp = bmp.toBitmap();
+				tex.alloc();
+				tex.uploadBitmap(bmp);
 				bmp.dispose();
+				tex.realloc = loadTexture;
 			});
 		}
 	}
 	
 	public function toTexture() : h3d.mat.Texture {
-		if( tex != null && !tex.isDisposed() )
+		if( tex != null )
 			return tex;
-		if( tex != null ) {
-			tex.dispose();
-			tex = null;
-		}
 		getSize();
-		var w = inf.width, h = inf.height;
-		var tw = 1, th = 1;
-		while( tw < w ) tw <<= 1;
-		while( th < h ) th <<= 1;
-
-		if( inf.isPNG && entry.isAvailable ) {
-			// direct upload
-			needResize = false;
-			tex = h3d.Engine.getCurrent().mem.allocTexture(tw, th, false);
-		} else {
-			// create a temp 1x1 texture while we're loading
-			tex = h3d.mat.Texture.fromColor(0xFF0000FF);
-			needResize = true;
-			@:privateAccess {
-				tex.width = tw;
-				tex.height = th;
-			}
-		}
-		loadTexture();
+		tex = new h3d.mat.Texture(inf.width, inf.height, [NoAlloc]);
 		tex.setName(entry.path);
-		tex.onContextLost = function() {
-			needResize = false;
-			loadTexture();
-			return true;
-		};
+		loadTexture();
 		return tex;
 	}
 	

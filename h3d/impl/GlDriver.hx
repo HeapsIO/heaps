@@ -55,7 +55,8 @@ class GlDriver extends Driver {
 	var curProgram : CompiledProgram;
 	var curMatBits : Int;
 	var programs : Map<Int, CompiledProgram>;
-	var hasTarget : Bool;
+	var hasTargetFlip : Bool;
+	var frame : Int;
 	
 	public function new() {
 		#if js
@@ -77,10 +78,15 @@ class GlDriver extends Driver {
 		selectMaterialBits(0);
 	}
 	
+	override function begin(frame) {
+		this.frame = frame;
+		reset();
+	}
+	
 	override function reset() {
 		gl.useProgram(null);
 		curProgram = null;
-		hasTarget = false;
+		hasTargetFlip = false;
 	}
 	
 	override function getShaderInputNames() {
@@ -190,14 +196,12 @@ class GlDriver extends Driver {
 	}
 	
 	function selectMaterialBits( bits : Int ) {
-		/*
-		if( hasTarget ) {
+		if( hasTargetFlip ) {
 			// switch culling font/back
 			var c = Pass.getCulling(bits);
 			if( c == 1 ) c = 2 else if( c == 2 ) c = 1;
 			bits = (bits & ~Pass.culling_mask) | (c << Pass.culling_offset);
 		}
-		*/
 		var diff = bits ^ curMatBits;
 		if( diff == 0 )
 			return;
@@ -277,14 +281,22 @@ class GlDriver extends Driver {
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var tt = gl.createTexture();
 		var tt : Texture = { t : tt, width : t.width, height : t.height };
+		t.lastFrame = frame;
 		gl.bindTexture(GL.TEXTURE_2D, tt.t);
 		gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, tt.width, tt.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
-		if( t.isTarget ) {
+		if( t.flags.has(Target) ) {
 			var fb = gl.createFramebuffer();
 			gl.bindFramebuffer(GL.FRAMEBUFFER, fb);
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, tt.t, 0);
-			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 			tt.fb = fb;
+			if( t.flags.has(TargetDepth) ) {
+				tt.rb = gl.createRenderbuffer();
+				gl.bindRenderbuffer(GL.RENDERBUFFER, tt.rb);
+				gl.renderbufferStorage(GL.RENDERBUFFER, GL.DEPTH_COMPONENT16, tt.width, tt.height);
+				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, tt.rb);
+				gl.bindRenderbuffer(GL.RENDERBUFFER, null);
+			}
+			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 		}
 		gl.bindTexture(GL.TEXTURE_2D, null);
 		return tt;
@@ -425,23 +437,19 @@ class GlDriver extends Driver {
 		return gl.isContextLost();
 	}
 	
-	override function setRenderTarget( tex : h3d.impl.Texture, useDepth : Bool, clearColor : Int ) {
+	override function setRenderTarget( tex : h3d.mat.Texture, clearColor : Int ) {
 		if( tex == null ) {
 			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 			gl.viewport(0, 0, canvas.width, canvas.height);
-			hasTarget = false;
+			hasTargetFlip = false;
 			return;
 		}
-		hasTarget = true;
-		gl.bindFramebuffer(GL.FRAMEBUFFER, tex.fb);
+		if( tex.t == null )
+			tex.alloc();
+		tex.lastFrame = frame;
+		hasTargetFlip = !tex.flags.has(TargetNoFlipY);
+		gl.bindFramebuffer(GL.FRAMEBUFFER, tex.t.fb);
 		gl.viewport(0, 0, tex.width, tex.height);
-		if( useDepth && tex.rb == null ) {
-			tex.rb = gl.createRenderbuffer();
-			gl.bindRenderbuffer(GL.RENDERBUFFER, tex.rb);
-			gl.renderbufferStorage(GL.RENDERBUFFER, GL.DEPTH_COMPONENT16, tex.width, tex.height);
-			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, tex.rb);
-			gl.bindRenderbuffer(GL.RENDERBUFFER, null);
-		}
 		clear(((clearColor >> 16) & 0xFF) / 255, ((clearColor >> 8) & 0xFF) / 255, (clearColor & 0xFF) / 255, (clearColor >>> 24) / 255);
 	}
 

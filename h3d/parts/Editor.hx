@@ -751,7 +751,7 @@ class Editor extends h2d.Sprite implements Randomized {
 		}
 		curveBG = h2d.Tile.fromBitmap(bg);
 		bg.dispose();
-		curveTexture = 	h2d.Tile.fromTexture(h3d.Engine.getCurrent().mem.allocTexture(512, 512)).sub(0, 0, curveBG.width, curveBG.height);
+		curveTexture = h2d.Tile.fromTexture(new h3d.mat.Texture(512, 512)).sub(0, 0, curveBG.width, curveBG.height);
 	}
 	
 	function rebuildCurve() {

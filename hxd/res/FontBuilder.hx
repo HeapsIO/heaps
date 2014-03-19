@@ -92,7 +92,7 @@ class FontBuilder {
 				tf.text = options.chars.charAt(i);
 				bmp.fillRect(new flash.geom.Rectangle(x, y, w, h), 0);
 				bmp.draw(tf, m);
-				var t = new h2d.Tile(null, x, y, w - 1, h - 1);
+				var t = new h2d.Tile(innerTex, x, y, w - 1, h - 1);
 				all.push(t);
 				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,w-1));
 				// next element
@@ -124,7 +124,7 @@ class FontBuilder {
 			font.tile = h2d.Tile.fromTexture(innerTex);
 			for( t in all )
 				t.setTexture(innerTex);
-			innerTex.onContextLost = build;
+			innerTex.realloc = build;
 		} else
 			innerTex.uploadPixels(pixels);
 		pixels.dispose();
@@ -195,7 +195,7 @@ class FontBuilder {
 				ctx.globalAlpha = 1.0;
 				ctx.fillStyle = 'white';
 				ctx.fillText(options.chars.charAt(i), x, y);
-				var t = new h2d.Tile(null, x, y, w - 1, h - 1);
+				var t = new h2d.Tile(innerTex, x, y, w - 1, h - 1);
 				all.push(t);
 				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,w-1));
 				// next element
@@ -210,7 +210,7 @@ class FontBuilder {
 			font.tile = h2d.Tile.fromTexture(innerTex);
 			for( t in all )
 				t.setTexture(innerTex);
-			innerTex.onContextLost = build;
+			innerTex.realloc = build;
 		} else {
 			innerTex.uploadBitmap(rbmp);
 		}
@@ -230,7 +230,7 @@ class FontBuilder {
 	public static function getFont( name : String, size : Int, ?options : FontBuildOptions ) {
 		var key = name + "#" + size;
 		var f = FONTS.get(key);
-		if( f != null && f.tile.innerTex != null && !f.tile.innerTex.isDisposed() )
+		if( f != null && f.tile.innerTex != null )
 			return f;
 		f = new FontBuilder(name, size, options).build();
 		FONTS.set(key, f);

@@ -24,6 +24,7 @@ class Stage {
 	public var height(get, null) : Int;
 	public var mouseX(get, null) : Int;
 	public var mouseY(get, null) : Int;
+	public var mouseLock(get, set) : Bool;
 	
 	function new() {
 		eventTargets = new List();
@@ -164,6 +165,14 @@ class Stage {
 		return stage.stageHeight;
 	}
 	
+	inline function get_mouseLock() {
+		return stage.mouseLock;
+	}
+
+	inline function set_mouseLock(v) {
+		return stage.mouseLock = v;
+	}
+	
 	function onResize(_) {
 		for( e in resizeEvents )
 			e();
@@ -200,14 +209,14 @@ class Stage {
 	}
 	
 	function onKeyUp(e:flash.events.KeyboardEvent) {
-		var ev = new Event(EKeyUp);
+		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		ev.charCode = getCharCode(e);
 		event(ev);
 	}
 
 	function onKeyDown(e:flash.events.KeyboardEvent) {
-		var ev = new Event(EKeyDown);
+		var ev = new Event(EKeyDown, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		ev.charCode = getCharCode(e);
 		event(ev);
@@ -299,6 +308,15 @@ class Stage {
 	function get_mouseY() {
 		return Math.round(curMouseY - canvasPos.top);
 	}
+	
+	function get_mouseLock() {
+		return false;
+	}
+	
+	function set_mouseLock(b) {
+		throw "Mouse lock not supported";
+		return false;
+	}
 
 	function onMouseDown(e:js.html.MouseEvent) {
 		event(new Event(EPush, mouseX, mouseY));
@@ -321,14 +339,14 @@ class Stage {
 	}
 	
 	function onKeyUp(e:js.html.KeyboardEvent) {
-		var ev = new Event(EKeyUp);
+		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		ev.charCode = e.charCode;
 		event(ev);
 	}
 
 	function onKeyDown(e:js.html.KeyboardEvent) {
-		var ev = new Event(EKeyDown);
+		var ev = new Event(EKeyDown, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		ev.charCode = e.charCode;
 		event(ev);

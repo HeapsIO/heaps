@@ -32,9 +32,7 @@ class Tile {
 		if( tex != null ) setTexture(tex);
 	}
 	
-	public function getTexture() {
-		if( innerTex == null || innerTex.isDisposed() )
-			return h3d.mat.Texture.fromColor(0xFFFF00FF);
+	public inline function getTexture() {
 		return innerTex;
 	}
 	
@@ -153,7 +151,7 @@ class Tile {
 	
 
 	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?allocPos : h3d.impl.AllocPos ) {
-		var t = new Tile(h3d.mat.Texture.fromColor(color), 0, 0, 1, 1);
+		var t = new Tile(h3d.mat.Texture.fromColor(color,allocPos),0,0,1,1);
 		// scale to size
 		t.width = width;
 		t.height = height;
@@ -166,7 +164,7 @@ class Tile {
 			w <<= 1;
 		while( h < bmp.height )
 			h <<= 1;
-		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h, false, allocPos);
+		var tex = new h3d.mat.Texture(w, h, allocPos);
 		var t = new Tile(tex, 0, 0, bmp.width, bmp.height);
 		t.upload(bmp);
 		return t;
@@ -184,7 +182,7 @@ class Tile {
 			w <<= 1;
 		while( h < bmp.height )
 			h <<= 1;
-		var tex = h3d.Engine.getCurrent().mem.allocTexture(w, h, false, allocPos);
+		var tex = new h3d.mat.Texture(w, h, allocPos);
 		for( y in 0...Std.int(bmp.height / height) ) {
 			var a = [];
 			tl[y] = a;

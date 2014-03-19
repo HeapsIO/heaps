@@ -53,14 +53,14 @@ class ShadowMap extends Base {
 	}
 	
 	override function draw( ctx : h3d.scene.RenderContext, passes) {
-		if( texture == null || texture.isDisposed() || texture.width != size ) {
+		if( texture == null || texture.width != size ) {
 			if( texture != null ) texture.dispose();
-			texture = h3d.mat.Texture.alloc(size, size, true);
+			texture = new h3d.mat.Texture(size, size, [Target, TargetDepth, TargetNoFlipY]);
 		}
 		var ct = ctx.camera.target;
 		lightCamera.target.set(ct.x, ct.y, ct.z);
 		lightCamera.pos.set(ct.x - lightDirection.x, ct.y - lightDirection.y, ct.z - lightDirection.z);
-		ctx.engine.setTarget(texture, true, 0xFFFFFFFF);
+		ctx.engine.setTarget(texture, 0xFFFFFFFF);
 		super.draw(ctx, passes);
 		ctx.engine.setTarget(null);
 		ctx.sharedGlobals.set(shadowMapId, texture);

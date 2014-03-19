@@ -1,4 +1,4 @@
-@:enum abstract Mode {
+@:enum abstract Mode(Int) {
 	var Perlin = 0;
 	var Ridged = 1;
 }

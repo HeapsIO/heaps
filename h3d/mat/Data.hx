@@ -54,12 +54,47 @@ enum Wrap {
 	//Mirrored;
 }
 
-enum TextureFormat {
-	Rgba;
-}
-
 enum Operation {
 	Add;
 	Sub;
 	ReverseSub;
+}
+
+enum TextureFlags {
+	/**
+		Allocate a texture that will be used as render target.
+	**/
+	Target;
+	/**
+		Add depth buffer on target texture
+	**/
+	TargetDepth;
+	/**
+		Use depth depth buffer when rendering to target texture
+	**/
+	TargetUseDefaultDepth;
+	/**
+		Allocate a cubic texture. Might be restricted to power of two textures only.
+	**/
+	Cubic;
+	/**
+		Used to prevent culling inversion on target textures in GL.
+	**/
+	TargetNoFlipY;
+	/**
+		Activates Mip Mapping for this texture. Might not be available for target textures.
+	**/
+	MipMapped;
+	/**
+		This is a not power of two texture. Automatically set when having width or height being not power of two.
+	**/
+	IsRectangle;
+	/**
+		Don't initialy allocate the texture memory.
+	**/
+	NoAlloc;
+	/**
+		Inform that we will often perform upload operations on this texture
+	**/
+	Dynamic;
 }

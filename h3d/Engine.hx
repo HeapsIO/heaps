@@ -102,25 +102,13 @@ class Engine {
 	}
 
 	public inline function renderTriBuffer( b : h3d.impl.Buffer, start = 0, max = -1 ) {
-		return renderBuffer(b, mem.indexes, 3, start, max);
+		return renderBuffer(b, mem.triIndexes, 3, start, max);
 	}
 	
 	public inline function renderQuadBuffer( b : h3d.impl.Buffer, start = 0, max = -1 ) {
 		return renderBuffer(b, mem.quadIndexes, 2, start, max);
 	}
 	
-	public function enableDriver( ?b : Bool ) {
-		if( b == null )
-			b = Std.is(driver, h3d.impl.NullDriver);
-		if( b ) {
-			var d = Std.instance(driver, h3d.impl.NullDriver);
-			if( d != null )
-				driver = d.driver;
-		} else if( !Std.is(driver,h3d.impl.NullDriver) ) {
-			driver = new h3d.impl.NullDriver(driver);
-		}
-	}
-
 	// we use preallocated indexes so all the triangles are stored inside our buffers
 	function renderBuffer( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
 		if( indexes.isDisposed() )
@@ -258,7 +246,8 @@ class Engine {
 		shaderSwitches = 0;
 		drawCalls = 0;
 		curProjMatrix = null;
-		driver.reset();
+		currentTarget = null;
+		driver.begin(frameCount);
 		return true;
 	}
 
@@ -272,15 +261,15 @@ class Engine {
 		curProjMatrix = null;
 	}
 	
-	var currentTarget : Bool;
+	var currentTarget : h3d.mat.Texture;
 	
-	public function hasTarget() {
+	public function getTarget() {
 		return currentTarget;
 	}
 
-	public function setTarget( tex : h3d.mat.Texture, useDepth = false, clearColor = 0 ) {
-		currentTarget = tex != null;
-		driver.setRenderTarget(tex == null ? null : tex.t, useDepth, clearColor);
+	public function setTarget( tex : h3d.mat.Texture, clearColor = 0 ) {
+		currentTarget = tex;
+		driver.setRenderTarget(tex, clearColor);
 	}
 
 	public function setRenderZone( x = 0, y = 0, width = -1, height = -1 ) {

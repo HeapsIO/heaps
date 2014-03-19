@@ -12,7 +12,7 @@ class Slider extends Component {
 	public function new(?parent) {
 		super("slider", parent);
 		cursor = new Button("", this);
-		cursor.input.blockEvents = false;
+		cursor.input.cancelEvents = true;
 		cursor.onMouseDown = function() {
 			
 		};

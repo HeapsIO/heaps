@@ -228,7 +228,7 @@ class Checker {
 	}
 
 	function typeExpr( e : Expr, with : WithType ) : TExpr {
-		var type;
+		var type = null;
 		var ed = switch( e.expr ) {
 		case EConst(c):
 			type = switch( c ) {
@@ -473,6 +473,7 @@ class Checker {
 			type = TArray(t, SConst(el.length));
 			TArrayDecl(el);
 		}
+		if( type == null ) throw "assert";
 		return { e : ed, t : type, p : e.pos };
 	}
 	

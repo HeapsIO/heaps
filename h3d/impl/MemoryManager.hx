@@ -89,23 +89,21 @@ class MemoryManager {
 	@:allow(h3d)
 	var driver : Driver;
 	var buffers : Array<BigBuffer>;
-	var idict : Map<Indexes,Bool>;
+	var indexes : Array<Indexes>;
+	var textures : Array<h3d.mat.Texture>;
 	
-	var tdict : WeakMap<h3d.mat.Texture,Driver.Texture>;
-	var textures : Array<Driver.Texture>;
-	
-	public var indexes(default,null) : Indexes;
+	public var triIndexes(default,null) : Indexes;
 	public var quadIndexes(default,null) : Indexes;
-	public var usedMemory(default,null) : Int;
-	public var bufferCount(default,null) : Int;
+	public var usedMemory(default, null) : Int = 0;
+	public var texMemory(default, null) : Int = 0;
+	public var bufferCount(default,null) : Int = 0;
 	public var allocSize(default,null) : Int;
 
 	public function new(driver,allocSize) {
 		this.driver = driver;
 		this.allocSize = allocSize;
 
-		idict = new Map();
-		tdict = new WeakMap();
+		indexes = new Array();
 		textures = new Array();
 		buffers = new Array();
 		
@@ -115,7 +113,7 @@ class MemoryManager {
 	function initIndexes() {
 		var indices = new hxd.IndexBuffer();
 		for( i in 0...allocSize ) indices.push(i);
-		indexes = allocIndex(indices);
+		triIndexes = allocIndex(indices);
 
 		var indices = new hxd.IndexBuffer();
 		var p = 0;
@@ -175,18 +173,12 @@ class MemoryManager {
 				b = b.next;
 			}
 		}
-		freeTextures();
-		var tcount = 0, tmem = 0;
-		for( t in tdict.keys() ) {
-			tcount++;
-			tmem += t.width * t.height * 4;
-		}
 		return {
 			bufferCount : count,
 			freeMemory : free,
 			totalMemory : total,
-			textureCount : tcount,
-			textureMemory : tmem,
+			textureCount : textures.length,
+			textureMemory : texMemory,
 		};
 	}
 
@@ -215,7 +207,7 @@ class MemoryManager {
 				buf = buf.next;
 			}
 		}
-		for( t in tdict.keys() ) {
+		for( t in textures ) {
 			var key = "$"+t.allocPos.fileName + ":" + t.allocPos.lineNumber;
 			var inf = h.get(key);
 			if( inf == null ) {
@@ -224,111 +216,68 @@ class MemoryManager {
 				all.push(inf);
 			}
 			inf.count++;
-			inf.size += t.width * t.height * 4;
+			inf.size += t.width * t.height * bpp(t);
 		}
 		all.sort(function(a, b) return a.size == b.size ? a.line - b.line : b.size - a.size);
 		return all;
 		#end
 	}
 	
-	function newTexture(fmt, w, h, cubic, target, mm, allocPos) {
-		var t = new h3d.mat.Texture(this, fmt, w, h, cubic, target, mm);
-		#if debug
-		t.allocPos = allocPos;
-		#end
-		initTexture(t);
-		return t;
-	}
-	
-	function initTexture( t : h3d.mat.Texture ) {
-		t.t = driver.allocTexture(t);
-		tdict.set(t, t.t);
-		textures.push(t.t);
-	}
-
 	@:allow(h3d.impl.Indexes.dispose)
 	function deleteIndexes( i : Indexes ) {
-		idict.remove(i);
+		indexes.remove(i);
 		driver.disposeIndexes(i.ibuf);
 		i.ibuf = null;
 		usedMemory -= i.count * 2;
 	}
 	
+	function bpp( t : h3d.mat.Texture ) {
+		return 4;
+	}
+	
+	public function cleanTextures( force = true ) {
+		textures.sort(sortByLRU);
+		for( t in textures ) {
+			if( t.realloc == null ) continue;
+			if( force || t.lastFrame < h3d.Engine.getCurrent().frameCount - 3600 ) {
+				t.dispose();
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	function sortByLRU( t1 : h3d.mat.Texture, t2 : h3d.mat.Texture ) {
+		return t1.lastFrame - t2.lastFrame;
+	}
+	
 	@:allow(h3d.mat.Texture.dispose)
 	function deleteTexture( t : h3d.mat.Texture ) {
-		textures.remove(t.t);
-		tdict.remove(t);
+		textures.remove(t);
 		driver.disposeTexture(t.t);
 		t.t = null;
+		texMemory -= t.width * t.height * bpp(t);
 	}
 
-	@:allow(h3d.mat.Texture.resize)
-	function resizeTexture( t : h3d.mat.Texture, width, height ) {
-		t.dispose();
-		t.width = width;
-		t.height = height;
-		initTexture(t);
+	@:allow(h3d.mat.Texture.alloc)
+	function allocTexture( t : h3d.mat.Texture ) {
+		var free = cleanTextures(false);
+		t.t = driver.allocTexture(t);
+		if( t.t == null ) {
+			if( !cleanTextures(true) ) throw "Maximum texture memory reached";
+			allocTexture(t);
+			return;
+		}
+		textures.push(t);
+		texMemory += t.width * t.height * bpp(t);
 	}
 	
-	public function readAtfHeader( data : haxe.io.Bytes ) {
-		var cubic = (data.get(6) & 0x80) != 0;
-		var alpha = false, compress = false;
-		switch( data.get(6) & 0x7F ) {
-		case 0:
-		case 1: alpha = true;
-		case 2: compress = true;
-		case 3, 4: alpha = true; compress = true;
-		case f: throw "Invalid ATF format " + f;
-		}
-		var width = 1 << data.get(7);
-		var height = 1 << data.get(8);
-		var mips = data.get(9) - 1;
-		return {
-			width : width,
-			height : height,
-			cubic : cubic,
-			alpha : alpha,
-			compress : compress,
-			mips : mips,
-		};
-	}
-
-	public function allocCustomTexture( fmt : h3d.mat.Data.TextureFormat, width : Int, height : Int, mipLevels : Int = 0, cubic : Bool = false, target : Bool = false, ?allocPos : AllocPos ) {
-		freeTextures();
-		return newTexture(fmt, width, height, cubic, target, mipLevels, allocPos);
-	}
-	
-	public function allocTexture( width : Int, height : Int, ?mipMap = false, ?allocPos : AllocPos ) {
-		freeTextures();
-		var levels = 0;
-		if( mipMap ) {
-			while( width > (1 << levels) && height > (1 << levels) )
-				levels++;
-		}
-		return newTexture(Rgba, width, height, false, false, levels, allocPos);
-	}
-	
-	public function allocTargetTexture( width : Int, height : Int, ?allocPos : AllocPos ) {
-		freeTextures();
-		return newTexture(Rgba, width, height, false, true, 0, allocPos);
-	}
-
-	public function allocCubeTexture( size : Int, ?mipMap = false, ?allocPos : AllocPos ) {
-		freeTextures();
-		var levels = 0;
-		if( mipMap ) {
-			while( size > (1 << levels) )
-				levels++;
-		}
-		return newTexture(Rgba, size, size, true, false, levels, allocPos);
-	}
-
 	public function allocIndex( indices : hxd.IndexBuffer, pos = 0, count = -1 ) {
 		if( count < 0 ) count = indices.length;
 		var ibuf = driver.allocIndexes(count);
 		var idx = new Indexes(this, ibuf, count);
 		idx.upload(indices, 0, count);
-		idict.set(idx, true);
+		indexes.push(idx);
 		usedMemory += idx.count * 2;
 		return idx;
 	}
@@ -345,26 +294,6 @@ class MemoryManager {
 		var b = alloc(nvert, stride, align, allocPos);
 		b.uploadVector(v, 0, nvert);
 		return b;
-	}
-	
-	/**
-		This will automatically free all textures which are no longer referenced / have been GC'ed.
-		This is called before each texture allocation as well.
-		Returns the number of textures freed that way.
-	 **/
-	public function freeTextures() {
-		var tall = new Map();
-		for( t in textures )
-			tall.set(t, true);
-		for( t in tdict )
-			tall.remove(t);
-		var count = 0;
-		for( t in tall.keys() ) {
-			driver.disposeTexture(t);
-			textures.remove(t);
-			count++;
-		}
-		return count;
 	}
 
 	/**
@@ -513,54 +442,32 @@ class MemoryManager {
 	}
 
 	public function onContextLost() {
-		indexes.dispose();
-		quadIndexes.dispose();
-		var tkeys = Lambda.array({ iterator : tdict.keys });
-		for( t in tkeys ) {
-			if( !tdict.exists(t) )
-				continue;
-			if( t.onContextLost == null )
-				t.dispose();
-			else {
-				textures.remove(t.t);
-				initTexture(t);
-				t.onContextLost();
-			}
-		}
-		for( b in buffers ) {
-			var b = b;
-			while( b != null ) {
-				b.dispose();
-				b = b.next;
-			}
-		}
-		for( i in idict.keys() )
-			i.dispose();
-		buffers = [];
-		bufferCount = 0;
-		usedMemory = 0;
+		dispose();
 		initIndexes();
 	}
 
 	public function dispose() {
-		indexes.dispose();
-		indexes = null;
+		triIndexes.dispose();
 		quadIndexes.dispose();
+		triIndexes = null;
 		quadIndexes = null;
-		for( t in tdict.keys() )
+		for( t in textures.copy() )
 			t.dispose();
-		for( b in buffers ) {
+		for( b in buffers.copy() ) {
 			var b = b;
 			while( b != null ) {
 				b.dispose();
 				b = b.next;
 			}
 		}
-		for( i in idict.keys() )
+		for( i in indexes.copy() )
 			i.dispose();
 		buffers = [];
+		indexes = [];
+		textures = [];
 		bufferCount = 0;
 		usedMemory = 0;
+		texMemory = 0;
 	}
 
 }
