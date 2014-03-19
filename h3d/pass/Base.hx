@@ -21,7 +21,10 @@ class Base {
 	@global("global.time") var globalTime : Float = ctx.time;
 	@global("global.modelView") var globalModelView : h3d.Matrix;
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
-	@global("global.flipY") var globalFlipY : Float = @:privateAccess ctx.engine.hasTarget() ? -1 : 1;
+	@global("global.flipY") var globalFlipY : Float = {
+		var t = ctx.engine.getTarget();
+		t != null && !t.flags.has(TargetNoFlipY) ? -1 : 1;
+	}
 	
 	public function new() {
 		manager = new h3d.shader.Manager(getOutputs());
