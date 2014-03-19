@@ -11,6 +11,7 @@ private class CoreObjects  {
 	public var tmpMatrix : h3d.Matrix;
 	public var tmpMaterial : h3d.mat.Material;
 	public var planBuffer : h3d.impl.Buffer;
+	public var nullTile : Tile;
 	
 	var emptyTexture : h3d.mat.Texture;
 	
@@ -35,14 +36,7 @@ private class CoreObjects  {
 		}
 		
 		planBuffer = h3d.Engine.getCurrent().mem.allocVector(vector, 4, 4);
-	}
-	
-	public function getEmptyTexture() {
-		if( emptyTexture == null || emptyTexture.isDisposed() ) {
-			if( emptyTexture != null ) emptyTexture.dispose();
-			emptyTexture = h3d.mat.Texture.fromColor(0xFFFF00FF);
-		}
-		return emptyTexture;
+		nullTile = new Tile(null, 0, 0, 5, 5);
 	}
 	
 }

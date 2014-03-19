@@ -45,12 +45,13 @@ class Stage3dDriver extends Driver {
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
 	var curSamplerBits : Array<Int>;
-	var inTarget : Texture;
+	var inTarget : h3d.mat.Texture;
 	var antiAlias : Int;
 	var width : Int;
 	var height : Int;
 	var enableDraw : Bool;
 	var capture : { bmp : hxd.BitmapData, callb : Void -> Void };
+	var frame : Int;
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -66,6 +67,11 @@ class Stage3dDriver extends Driver {
 		return ctx == null ? "None" : (details ? ctx.driverInfo : ctx.driverInfo.split(" ")[0]);
 	}
 	
+	override function begin( frame : Int ) {
+		reset();
+		this.frame = frame;
+	}
+
 	override function reset() {
 		enableDraw = true;
 		curMatBits = -1;
@@ -173,33 +179,38 @@ class Stage3dDriver extends Driver {
 	
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var fmt = flash.display3D.Context3DTextureFormat.BGRA;
-		var rect = false;
-		if( t.flags.has(Target) && !t.flags.has(Cubic) && !t.flags.has(MipMapped) ) {
-			var tw = 1, th = 1;
-			while( tw < t.width ) tw <<= 1;
-			while( th < t.height) th <<= 1;
-			if( tw != t.width || th != t.height )
-				rect = true;
+		if( t.flags.has(TargetDepth) )
+			throw "Unsupported texture flag";
+		try {
+			if( t.flags.has(IsRectangle) ) {
+				if( t.flags.has(Cubic) || t.flags.has(MipMapped) || t.flags.has(Target) )
+					throw "Not power of two texture is not supported with these flags";
+				#if !flash11_8
+				throw "Support for rectangle texture requires Flash 11.8+ compilation";
+				#else
+				return ctx.createRectangleTexture(t.width, t.height, fmt, t.flags.has(Target));
+				#end
+			}
+			if( t.flags.has(Cubic) )
+				return ctx.createCubeTexture(t.width, fmt, t.flags.has(Target), getMipLevels(t));
+			return ctx.createTexture(t.width, t.height, fmt, t.flags.has(Target), getMipLevels(t));
+		} catch( e : flash.errors.Error ) {
+			if( e.errorID == 3691 )
+				return null;
+			throw e;
 		}
-		return if( t.flags.has(Cubic) )
-			ctx.createCubeTexture(t.width, fmt, t.flags.has(Target), getMipLevels(t));
-		else if( rect ) {
-			#if !flash11_8
-			throw "Support for rectangle texture requires Flash 11.8+ compilation";
-			#else
-			ctx.createRectangleTexture(t.width, t.height, fmt, t.flags.has(Target));
-			#end
-		}
-		else
-			ctx.createTexture(t.width, t.height, fmt, t.flags.has(Target), getMipLevels(t));
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
 		if( t.flags.has(Cubic) ) {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
 			t.uploadFromBitmapData(bmp.toNative(), side, mipLevel);
-		}
-		else {
+		} else if( t.flags.has(IsRectangle) ) {
+			#if flash11_8
+			var t = flash.Lib.as(t.t, flash.display3D.textures.RectangleTexture);
+			t.uploadFromBitmapData(bmp.toNative());
+			#end
+		} else {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.Texture);
 			t.uploadFromBitmapData(bmp.toNative(), mipLevel);
 		}
@@ -211,8 +222,12 @@ class Stage3dDriver extends Driver {
 		if( t.flags.has(Cubic) ) {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
 			t.uploadFromByteArray(data, 0, side, mipLevel);
-		}
-		else {
+		} else if( t.flags.has(IsRectangle) ) {
+			#if flash11_8
+			var t = flash.Lib.as(t.t, flash.display3D.textures.RectangleTexture);
+			t.uploadFromByteArray(data, 0);
+			#end
+		} else {
 			var t = flash.Lib.as(t.t,  flash.display3D.textures.Texture);
 			t.uploadFromByteArray(data, 0, mipLevel);
 		}
@@ -298,12 +313,17 @@ class Stage3dDriver extends Driver {
 			for( i in 0...s.textures.length ) {
 				var t = s.textures[i];
 				if( t == null || t.isDisposed() )
-					t = h2d.Tile.fromColor(0xFFFF00FF).getTexture();
+					t = h3d.mat.Texture.fromColor(0xFFFF00FF);
+				if( t != null && t.t == null && t.realloc != null ) {
+					t.alloc();
+					t.realloc();
+				}
 				var cur = curTextures[i];
 				if( t != cur ) {
 					ctx.setTextureAt(i, t.t);
 					curTextures[i] = t;
 				}
+				t.lastFrame = frame;
 				// if we have set one of the texture flag manually or if the shader does not configure the texture flags
 				if( !t.hasDefaultFlags() || !s.texHasConfig[s.textureMap[i]] ) {
 					if( cur == null || t.bits != curSamplerBits[i] ) {
@@ -409,15 +429,18 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
-	override function setRenderTarget( tex : Null<Texture>, useDepth : Bool, clearColor : Int ) {
-		if( tex == null ) {
+	override function setRenderTarget( t : Null<h3d.mat.Texture>, clearColor : Int ) {
+		if( t == null ) {
 			ctx.setRenderToBackBuffer();
 			inTarget = null;
 		} else {
+			if( t.t == null )
+				t.alloc();
 			if( inTarget != null )
 				throw "Calling setTarget() while already set";
-			ctx.setRenderToTexture(tex, useDepth);
-			inTarget = tex;
+			ctx.setRenderToTexture(t.t, t.flags.has(TargetUseDefaultDepth));
+			inTarget = t;
+			t.lastFrame = frame;
 			reset();
 			ctx.clear( ((clearColor>>16)&0xFF)/255 , ((clearColor>>8)&0xFF)/255, (clearColor&0xFF)/255, ((clearColor>>>24)&0xFF)/255);
 		}

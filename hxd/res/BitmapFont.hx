@@ -12,13 +12,9 @@ class BitmapFont extends Resource {
 	
 	@:access(h2d.Font)
 	public function toFont() : h2d.Font {
-		if( font != null && !font.tile.isDisposed() )
+		if( font != null )
 			return font;
 		var tile = loader.load(entry.path.substr(0, -3) + "png").toTile();
-		if( font != null ) {
-			font.tile = tile;
-			return font;
-		}
 		var name = entry.path, size = 0, lineHeight = 0, glyphs = new Map();
 		switch( entry.getSign() ) {
 		case 0x6D783F3C: // <?xm : XML file

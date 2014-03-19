@@ -398,7 +398,7 @@ class Drawable extends Sprite {
 		var mat = core.tmpMaterial;
 
 		if( tile == null )
-			tile = new Tile(core.getEmptyTexture(), 0, 0, 5, 5);
+			tile = core.nullTile;
 
 		switch( blendMode ) {
 		case Normal:

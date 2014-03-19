@@ -31,8 +31,6 @@ class Tile {
 	}
 	
 	public function getTexture() {
-		if( innerTex == null || innerTex.isDisposed() )
-			return Tools.getCoreObjects().getEmptyTexture();
 		return innerTex;
 	}
 	
@@ -150,14 +148,8 @@ class Tile {
 	}
 	
 
-	static var COLOR_CACHE = new Map<Int,h3d.mat.Texture>();
 	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?allocPos : h3d.impl.AllocPos ) {
-		var t = COLOR_CACHE.get(color);
-		if( t == null || t.isDisposed() ) {
-			t = h3d.mat.Texture.fromColor(color, allocPos);
-			COLOR_CACHE.set(color, t);
-		}
-		var t = new Tile(t, 0, 0, 1, 1);
+		var t = new Tile(h3d.mat.Texture.fromColor(color,allocPos),0,0,1,1);
 		// scale to size
 		t.width = width;
 		t.height = height;
