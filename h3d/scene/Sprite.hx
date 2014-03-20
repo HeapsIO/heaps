@@ -38,7 +38,11 @@ class Sprite extends Object {
 			return;
 		}
 		var p = new h3d.Vector(absPos._41, absPos._42, absPos._43);
-		p.project(ctx.camera.m);
+		p.transform(ctx.camera.m);
+		if( p.z < 0 ) return;
+		p.x /= p.w;
+		p.y /= p.w;
+		p.z /= p.w;
 		element.shader.zValue = depthTest ? p.z : 0;
 		if( !dummy.allocated )
 			dummy.onAlloc();
