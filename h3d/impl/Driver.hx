@@ -18,7 +18,16 @@ typedef VertexBuffer = Int;
 typedef Texture = Int;
 #end
 
+enum Feature {
+	StandardDerivatives;
+	FloatTextures;
+}
+
 class Driver {
+	
+	public function hasFeature( f : Feature ) {
+		return false;
+	}
 	
 	public function isDisposed() {
 		return true;

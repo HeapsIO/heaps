@@ -97,6 +97,8 @@ class Checker {
 						r.push( { args : [ { name : "edge0", type : TFloat }, { name : "edge1", type : TFloat }, { name : "x", type : t } ], ret : t } );
 				}
 				r;
+			case DFdx, DFdy, Fwidth:
+				genFloat;
 			}
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );

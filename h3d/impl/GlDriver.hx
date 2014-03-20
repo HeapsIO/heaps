@@ -471,6 +471,15 @@ class GlDriver extends Driver {
 		#end
 	}
 	
+	override function hasFeature( f : Feature ) : Bool {
+		return switch( f ) {
+		case StandardDerivatives:
+			gl.getExtension('OES_standard_derivatives') != null;
+		case FloatTextures:
+			gl.getExtension('OES_texture_float') != null;
+		}
+	}
+	
 	static var TFILTERS = [
 		[[GL.NEAREST,GL.NEAREST],[GL.LINEAR,GL.LINEAR]],
 		[[GL.NEAREST,GL.NEAREST_MIPMAP_NEAREST],[GL.LINEAR,GL.LINEAR_MIPMAP_NEAREST]],

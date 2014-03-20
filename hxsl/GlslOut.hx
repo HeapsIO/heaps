@@ -2,11 +2,14 @@ package hxsl;
 import hxsl.Ast;
 
 class GlslOut {
+	
+	static var MAT34 = "struct mat3x4 { vec4 a; vec4 b; vec4 c; };";
 
 	var buf : StringBuf;
 	var keywords : Map<String,Bool>;
 	var exprValues : Array<String>;
 	var locals : Array<TVar>;
+	var decls : Array<String>;
 	var globalNames : Map<TGlobal,String>;
 	
 	public function new() {
@@ -30,6 +33,12 @@ class GlslOut {
 	
 	function ident( i : String ) {
 		add(keywords.exists(i) ? "_" + i : i);
+	}
+	
+	function decl( s : String ) {
+		for( d in decls )
+			if( d == s ) return;
+		decls.push(s);
 	}
 	
 	function addType( t : Type ) {
@@ -60,6 +69,7 @@ class GlslOut {
 		case TMat4:
 			add("mat4");
 		case TMat3x4:
+			decl(MAT34);
 			add("mat3x4");
 		case TSampler2D:
 			add("sampler2D");
@@ -152,6 +162,14 @@ class GlslOut {
 		case TVar(v):
 			ident(v.name);
 		case TGlobal(g):
+			switch( g ) {
+			case Mat3x4:
+				decl(MAT34);
+				decl("vec3 m3x4mult( vec3 v, mat3x4 m) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }");
+			case DFdx, DFdy, Fwidth:
+				decl("#extension GL_OES_standard_derivatives:enable");
+			default:
+			}
 			add(globalNames.get(g));
 		case TParenthesis(e):
 			add("(");
@@ -266,11 +284,10 @@ class GlslOut {
 	
 	public function run( s : ShaderData ) {
 		locals = [];
+		decls = [];
 		buf = new StringBuf();
 		exprValues = [];
-		add("precision mediump float;\n");
-		add("struct mat3x4 { vec4 a; vec4 b; vec4 c; };\n");
-		add("vec3 m3x4mult( vec3 v, mat3x4 m) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }\n");
+		decls.push("precision mediump float;");
 
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
@@ -318,9 +335,9 @@ class GlslOut {
 			add(e);
 			add("\n\n");
 		}
-		var content = buf.toString();
+		decls.push(buf.toString());
 		buf = null;
-		return content;
+		return decls.join("\n");
 	}
 	
 	public static function toGlsl( s : ShaderData ) {

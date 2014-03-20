@@ -254,6 +254,10 @@ class Engine {
 	function reset() {
 		driver.reset();
 	}
+	
+	public function hasFeature(f) {
+		return driver.hasFeature(f);
+	}
 
 	public function end() {
 		driver.present();
