@@ -184,7 +184,7 @@ class Stage3dDriver extends Driver {
 			throw "Unsupported texture flag";
 		try {
 			if( t.flags.has(IsRectangle) ) {
-				if( t.flags.has(Cubic) || t.flags.has(MipMapped) || t.flags.has(Target) )
+				if( t.flags.has(Cubic) || t.flags.has(MipMapped) )
 					throw "Not power of two texture is not supported with these flags";
 				#if !flash11_8
 				throw "Support for rectangle texture requires Flash 11.8+ compilation";
