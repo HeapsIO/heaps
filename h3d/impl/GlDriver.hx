@@ -176,6 +176,14 @@ class GlDriver extends Driver {
 		case Textures:
 			for( i in 0...s.textures.length ) {
 				var t = buf.tex[i];
+				if( t == null || t.isDisposed() )
+					t = h3d.mat.Texture.fromColor(0xFFFF00FF);
+				if( t != null && t.t == null && t.realloc != null ) {
+					t.alloc();
+					t.realloc();
+				}
+				t.lastFrame = frame;
+				
 				gl.activeTexture(GL.TEXTURE0 + i);
 				gl.uniform1i(s.textures[i], i);
 				
@@ -283,6 +291,9 @@ class GlDriver extends Driver {
 		var tt : Texture = { t : tt, width : t.width, height : t.height };
 		t.lastFrame = frame;
 		gl.bindTexture(GL.TEXTURE_2D, tt.t);
+		var mipMap = t.flags.has(MipMapped) ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR;
+		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, mipMap);
+		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, mipMap);
 		gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, tt.width, tt.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
 		if( t.flags.has(Target) ) {
 			var fb = gl.createFramebuffer();
@@ -350,7 +361,8 @@ class GlDriver extends Driver {
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
 		var img = bmp.toNative();
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, img.getImageData(0,0,bmp.width,bmp.height));
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, img.getImageData(0, 0, bmp.width, bmp.height));
+		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
 
@@ -359,6 +371,7 @@ class GlDriver extends Driver {
 		pixels.convert(RGBA);
 		var pixels = new Uint8Array(pixels.bytes.getData());
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels);
+		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
 	
@@ -396,16 +409,6 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 	
-	public function setupTexture( t : h3d.mat.Texture, mipMap : h3d.mat.Data.MipMap, filter : h3d.mat.Data.Filter, wrap : h3d.mat.Data.Wrap ) {
-		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-		var flags = TFILTERS[Type.enumIndex(mipMap)][Type.enumIndex(filter)];
-		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
-		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
-		var w = TWRAP[Type.enumIndex(wrap)];
-		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, w);
-		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, w);
-	}
-		
 	override function selectBuffer( v : VertexBuffer ) {
 		var stride : Int = v.stride;
 		if( stride < curProgram.stride )
