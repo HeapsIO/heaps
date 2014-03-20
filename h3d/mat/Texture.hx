@@ -112,10 +112,13 @@ class Texture {
 
 		this.width = width;
 		this.height = height;
-		alloc();
+		
+		if( !flags.has(NoAlloc) )
+			alloc();
 	}
 
 	public function clear( color : Int ) {
+		alloc();
 		var p = hxd.Pixels.alloc(width, height, BGRA);
 		var k = 0;
 		var b = color & 0xFF, g = (color >> 8) & 0xFF, r = (color >> 16) & 0xFF, a = color >>> 24;
@@ -130,10 +133,12 @@ class Texture {
 	}
 	
 	public function uploadBitmap( bmp : hxd.BitmapData, mipLevel = 0, side = 0 ) {
+		alloc();
 		mem.driver.uploadTextureBitmap(this, bmp, mipLevel, side);
 	}
 
 	public function uploadPixels( pixels : hxd.Pixels, mipLevel = 0, side = 0 ) {
+		alloc();
 		mem.driver.uploadTexturePixels(this, pixels, mipLevel, side);
 	}
 
