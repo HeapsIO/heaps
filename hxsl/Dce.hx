@@ -1,8 +1,14 @@
 package hxsl;
 using hxsl.Ast;
 
+private class Exit {
+	public function new() {
+	}
+}
+
 private class VarDeps {
 	public var v : TVar;
+	public var keep : Bool;
 	public var used : Bool;
 	public var deps : Map<Int,VarDeps>;
 	public function new(v) {
@@ -36,7 +42,7 @@ class Dce {
 		while( changed ) {
 			changed = false;
 			for( v in used ) {
-				if( !v.used || v.v.kind == Output || v.v.kind == Input ) continue;
+				if( !v.used || v.v.kind == Output || v.v.kind == Input || v.keep ) continue;
 				var used = false;
 				for( d in v.deps )
 					if( d.used ) {
@@ -72,8 +78,30 @@ class Dce {
 	
 	function link( v : TVar, writeTo : Array<VarDeps> ) {
 		var vd = get(v);
-		for( w in writeTo )
+		for( w in writeTo ) {
+			if( w == null ) {
+				vd.keep = true;
+				continue;
+			}
 			vd.deps.set(w.v.id, w);
+		}
+	}
+	
+	function hasDiscardRec( e : TExpr ) {
+		switch( e.e ) {
+		case TDiscard: throw new Exit();
+		default:
+			e.iter(hasDiscardRec);
+		}
+	}
+	
+	function hasDiscard( e : TExpr ) {
+		try {
+			hasDiscardRec(e);
+			return false;
+		} catch( e : Exit ) {
+			return true;
+		}
 	}
 	
 	function check( e : TExpr, writeTo : Array<VarDeps> ) {
@@ -88,6 +116,12 @@ class Dce {
 			writeTo.push(get(v));
 			check(init, writeTo);
 			writeTo.pop();
+		case TIf(e, eif, eelse) if( hasDiscard(eif) || (eelse != null && hasDiscard(eelse)) ):
+			writeTo.push(null);
+			check(e, writeTo);
+			writeTo.pop();
+			check(eif, writeTo);
+			if( eelse != null ) check(eelse, writeTo);
 		default:
 			e.iter(check.bind(_, writeTo));
 		}
