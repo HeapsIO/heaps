@@ -205,6 +205,8 @@ enum TGlobal {
 	// extra (not in GLSL ES)
 	Mat3x4;
 	Saturate;
+	Pack;
+	Unpack;
 	// extensions
 	DFdx;
 	DFdy;

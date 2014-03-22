@@ -19,7 +19,7 @@ class Shadow extends hxsl.Shader {
 		}
 		
 		function fragment() {
-			var depth = shadow.map.get(shadowPos.xy).dot(vec4(1., 1. / 255., 1. / (255. * 255.), 1. / (255. * 255. * 255.)));
+			var depth = unpack(shadow.map.get(shadowPos.xy));
 			var shade = exp( shadow.power * (depth - shadowPos.z + shadow.bias) ).clamp(0.,1.);
 			pixelColor.rgb *= (1. - shade) * shadow.color.rgb + shade;
 		}

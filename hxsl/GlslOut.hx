@@ -168,6 +168,10 @@ class GlslOut {
 				decl("vec3 m3x4mult( vec3 v, mat3x4 m) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }");
 			case DFdx, DFdy, Fwidth:
 				decl("#extension GL_OES_standard_derivatives:enable");
+			case Pack:
+				decl("vec4 pack( float v ) { vec4 color = fract(v * vec4(1, 255, 255.*255., 255.*255.*255.)); return color - color.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.); }");
+			case Unpack:
+				decl("float unpack( vec4 color ) { return dot(color,vec4(1., 1. / 255., 1. / (255. * 255.), 1. / (255. * 255. * 255.))); }");
 			default:
 			}
 			add(globalNames.get(g));

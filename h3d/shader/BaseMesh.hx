@@ -57,8 +57,7 @@ class BaseMesh extends hxsl.Shader {
 		
 		function fragment() {
 			output.color = pixelColor;
-			var dcolor = (depth * vec4(1,255,255.*255.,255.*255.*255.)).fract();
-			output.distance = dcolor - dcolor.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.);
+			output.distance = pack(depth);
 		}
 
 	};

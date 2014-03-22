@@ -99,6 +99,10 @@ class Checker {
 				r;
 			case DFdx, DFdy, Fwidth:
 				genFloat;
+			case Pack:
+				[ { args : [ { name : "value", type : TFloat } ], ret : TVec(4, VFloat) } ];
+			case Unpack:
+				[ { args : [ { name : "value", type : TVec(4, VFloat) } ], ret : TFloat } ];
 			}
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );
@@ -672,7 +676,7 @@ class Checker {
 		case TBool: stype = VBool; 1;
 		case TVec(size, t): stype = t; size;
 		case TBytes(size): stype = VInt; size;
-		default: 0;
+		default: stype = null; 0;
 		}
 		if( ncomps > 0 && f.length <= 4 ) {
 			var str = "xrsygtzbpwaq";
