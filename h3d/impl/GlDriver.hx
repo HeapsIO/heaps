@@ -288,13 +288,21 @@ class GlDriver extends Driver {
 	
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var tt = gl.createTexture();
-		var tt : Texture = { t : tt, width : t.width, height : t.height };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, fmt : GL.UNSIGNED_BYTE };
+		if( t.flags.has(FmtFloat) )
+			tt.fmt = GL.FLOAT;
+		else if( t.flags.has(Fmt5_5_5_1) )
+			tt.fmt = GL.UNSIGNED_SHORT_5_5_5_1;
+		else if( t.flags.has(Fmt5_6_5) )
+			tt.fmt = GL.UNSIGNED_SHORT_5_6_5;
+		else if( t.flags.has(Fmt4_4_4_4) )
+			tt.fmt = GL.UNSIGNED_SHORT_4_4_4_4;
 		t.lastFrame = frame;
 		gl.bindTexture(GL.TEXTURE_2D, tt.t);
 		var mipMap = t.flags.has(MipMapped) ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR;
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, mipMap);
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, mipMap);
-		gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, tt.width, tt.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, null);
+		gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, tt.width, tt.height, 0, GL.RGBA, tt.fmt, null);
 		if( t.flags.has(Target) ) {
 			var fb = gl.createFramebuffer();
 			gl.bindFramebuffer(GL.FRAMEBUFFER, fb);
@@ -476,7 +484,7 @@ class GlDriver extends Driver {
 		case StandardDerivatives:
 			gl.getExtension('OES_standard_derivatives') != null;
 		case FloatTextures:
-			gl.getExtension('OES_texture_float') != null;
+			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null;
 		}
 	}
 	
