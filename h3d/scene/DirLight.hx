@@ -16,10 +16,6 @@ class DirLight extends Light {
 		return dshader.color;
 	}
 
-	override function set_color(v) {
-		return dshader.color = v;
-	}
-
 	override function emit(ctx) {
 		dshader.direction.set(-direction.x, -direction.y, -direction.z);
 		dshader.direction.normalize();

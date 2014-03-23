@@ -14,10 +14,6 @@ class PointLight extends Light {
 		return pshader.color;
 	}
 
-	override function set_color(c) {
-		return pshader.color = c;
-	}
-
 	inline function get_params() {
 		return pshader.params;
 	}
