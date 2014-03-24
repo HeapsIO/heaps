@@ -27,7 +27,7 @@ class RenderContext {
 		buffer = new hxd.FloatBuffer();
 		bufPos = 0;
 		manager = new h3d.shader.Manager(["output.position", "output.color"]);
-		pass = new h3d.mat.Pass("",[]);
+		pass = new h3d.mat.Pass("",null);
 		pass.depth(true, Always);
 		pass.culling = None;
 		baseShader = new h3d.shader.Base2d();

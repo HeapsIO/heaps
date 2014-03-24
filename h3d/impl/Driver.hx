@@ -59,6 +59,7 @@ class Driver {
 	}
 	
 	public function selectShader( shader : hxsl.RuntimeShader ) {
+		return false;
 	}
 	
 	public function selectMaterial( pass : h3d.mat.Pass ) {

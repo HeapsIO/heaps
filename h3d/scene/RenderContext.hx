@@ -67,12 +67,16 @@ class RenderContext {
 		while( p != null ) {
 			p.obj = null;
 			p.pass = null;
+			p.shader = null;
+			p.index = 0;
+			for( i in 0...p.shaders.length )
+				p.shaders[i] = null;
 			prev = p;
 			p = p.next;
 		}
 		if( prev != null ) {
 			prev.next = pool;
-			pool = prev;
+			pool = passes;
 		}
 		passes = null;
 		lights = null;

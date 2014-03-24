@@ -127,7 +127,11 @@ class Manager {
 	}
 	
 	public function compileShaders( shaders : Array<hxsl.Shader> ) {
-		var instances = [for( s in shaders ) { s.updateConstants(globals); @:privateAccess s.instance; }];
+		var instances = [for( s in shaders ) if( s != null ) { s.updateConstants(globals); @:privateAccess s.instance; }];
+		return shaderCache.link(instances, output);
+	}
+
+	public inline function compileInstances( instances : Array<hxsl.SharedShader.ShaderInstance> ) {
 		return shaderCache.link(instances, output);
 	}
 

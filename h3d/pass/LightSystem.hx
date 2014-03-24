@@ -9,12 +9,14 @@ class LightSystem {
 	var lights : h3d.scene.Light;
 	var ambientShader : h3d.shader.AmbientLight;
 	var lightCount : Int;
+	var cachedShaderList : Array<hxsl.ShaderList>;
 	@global("global.ambientLight") public var ambientLight : h3d.Vector;
 	@global("global.perPixelLighting") public var perPixelLighting : Bool;
 
 	public function new(globals) {
 		this.globals = globals;
 		initGlobals();
+		cachedShaderList = [];
 		ambientLight = new h3d.Vector(1, 1, 1);
 		ambientShader = new h3d.shader.AmbientLight();
 	}
@@ -40,7 +42,7 @@ class LightSystem {
 	}
 	
 	@:access(h3d.scene.Object.absPos)
-	public function computeLight( obj : h3d.scene.Object, shaders : Array<hxsl.Shader> ) : Array<hxsl.Shader> {
+	public function computeLight( obj : h3d.scene.Object, shaders : hxsl.ShaderList ) : hxsl.ShaderList {
 		if( lightCount > maxLightsPerObject ) {
 			var l = lights;
 			while( l != null ) {
@@ -49,12 +51,23 @@ class LightSystem {
 			}
 			lights = haxe.ds.ListSort.sortSingleLinked(lights, sortLight);
 		}
-		shaders.push(ambientShader);
+		var k = 0;
+		inline function add( s : hxsl.Shader ) {
+			var sl = cachedShaderList[k++];
+			if( sl == null ) {
+				sl = new hxsl.ShaderList(null);
+				cachedShaderList[k - 1] = sl;
+			}
+			sl.s = s;
+			sl.next = shaders;
+			shaders = sl;
+		}
+		add(ambientShader);
 		var l = lights;
 		var i = 0;
 		while( l != null ) {
 			if( i++ == maxLightsPerObject ) break;
-			shaders.push(l.shader);
+			add(l.shader);
 			l = l.next;
 		}
 		return shaders;

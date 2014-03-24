@@ -20,8 +20,9 @@ class Distance extends Base {
 			texture = new h3d.mat.Texture(ctx.engine.width, ctx.engine.height, [Target, TargetDepth, TargetNoFlipY]);
 		}
 		ctx.engine.setTarget(texture);
-		super.draw(ctx, passes);
+		passes = super.draw(ctx, passes);
 		ctx.engine.setTarget(null);
+		return passes;
 	}
 	
 }

@@ -83,34 +83,24 @@ class Material {
 	}
 	
 	function set_castShadows(v) {
-		if( v ) {
-			var p = getPass("shadow");
-			if( p == null ) {
-				p = new Pass("shadow", [], mainPass);
-				addPass(p);
-			}
-		} else {
-			var p = getPass("shadow");
-			if( p != null ) removePass(p);
-		}
-		return v;
+		if( castShadows == v )
+			return v;
+		if( v )
+			addPass(new Pass("shadow", null, mainPass));
+		else
+			removePass(getPass("shadow"));
+		return castShadows = v;
 	}
 
 	function set_receiveShadows(v) {
+		if( v == receiveShadows )
+			return v;
 		var shadows = h3d.pass.Params.shadowShader;
-		if( v ) {
-			for( p in mainPass.shaders )
-				if( p == shadows )
-					return v;
-			mainPass.shaders.push(shadows);
-		} else {
-			for( p in mainPass.shaders )
-				if( p == shadows ) {
-					mainPass.shaders.remove(p);
-					break;
-				}
-		}
-		return v;
+		if( v )
+			mainPass.addShader(shadows);
+		else
+			mainPass.removeShader(shadows);
+		return receiveShadows = v;
 	}
 
 }

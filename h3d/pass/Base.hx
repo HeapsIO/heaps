@@ -37,7 +37,9 @@ class Base {
 	}
 	
 	public function compileShader( p : h3d.mat.Pass ) {
-		return manager.compileShaders(p.getShadersRec());
+		var out = [for( s in p.getShadersRec() ) s];
+		out.reverse();
+		return manager.compileShaders(out);
 	}
 	
 	function allocBuffer( s : hxsl.RuntimeShader, shaders : Array<hxsl.Shader> ) {
@@ -48,29 +50,62 @@ class Base {
 	}
 	
 	@:access(h3d.scene)
+	function setupShaders( passes : Object ) {
+		var p = passes;
+		var lightInit = false;
+		var instances = [];
+		while( p != null ) {
+			var shaders = p.pass.getShadersRec();
+			if( p.pass.enableLights && lightSystem != null ) {
+				if( !lightInit )
+					lightSystem.initLights(ctx.lights);
+				shaders = lightSystem.computeLight(p.obj, shaders);
+			}
+			var count = 0;
+			for( s in shaders )
+				p.shaders[count++] = s;
+			// TODO : allow reversed shader compilation !
+			// reverse
+			for( n in 0...count >> 1 ) {
+				var n2 = count - 1 - n;
+				var tmp = p.shaders[n];
+				p.shaders[n] = p.shaders[n2];
+				p.shaders[n2] = tmp;
+			}
+			for( i in 0...count ) {
+				var s = p.shaders[i];
+ 				s.updateConstants(globals);
+				instances[i] = @:privateAccess s.instance;
+			}
+			instances[count] = null; // mark end
+			p.shader = manager.compileInstances(instances);
+			p = p.next;
+		}
+	}
+	
+	static inline function sortByShader( o1 : Object, o2 : Object ) {
+		var d = o1.shader.id - o2.shader.id;
+		if( d != 0 ) return d;
+		// TODO : sort by textures
+		return 0;
+	}
+	
+	@:access(h3d.scene)
 	public function draw( ctx : h3d.scene.RenderContext, passes : Object ) {
 		this.ctx = ctx;
 		for( k in ctx.sharedGlobals.keys() )
 			globals.fastSet(k, ctx.sharedGlobals.get(k));
 		setGlobals();
+		setupShaders(passes);
+		passes = haxe.ds.ListSort.sortSingleLinked(passes, sortByShader);
 		var p = passes;
-		var lightInit = false;
 		while( p != null ) {
-			// TODO : use linked list for shaders (no allocation)
-			var shaders = p.pass.getShadersRec();
-			if( p.pass.enableLights && lightSystem != null ) {
-				if( p.pass.parentPass == null ) shaders = shaders.copy();
-				if( !lightInit )
-					lightSystem.initLights(ctx.lights);
-				shaders = lightSystem.computeLight(p.obj, shaders);
-			}
-			var shader = manager.compileShaders(shaders);
-			// TODO : sort passes by shader/textures
 			globalModelView = p.obj.absPos;
+			//if( p.shader.hasGlobal(globalModelViewInverseId) )
 			globalModelViewInverse = p.obj.getInvPos();
-			ctx.engine.selectShader(shader);
+			ctx.engine.selectShader(p.shader);
 			// TODO : reuse buffers between calls
-			var buf = allocBuffer(shader, shaders);
+			var buf = allocBuffer(p.shader, p.shaders);
 			ctx.engine.selectMaterial(p.pass);
 			ctx.engine.uploadShaderBuffers(buf, Globals);
 			ctx.engine.uploadShaderBuffers(buf, Params);
@@ -81,6 +116,7 @@ class Base {
 		}
 		ctx.drawPass = null;
 		this.ctx = null;
+		return passes;
 	}
 	
 }

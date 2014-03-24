@@ -151,7 +151,7 @@ class GlDriver extends Driver {
 				}
 			programs.set(shader.id, p);
 		}
-		if( curProgram == p ) return;
+		if( curProgram == p ) return false;
 		gl.useProgram(p.p);
 		for( i in curAttribs...p.attribs.length ) {
 			gl.enableVertexAttribArray(i);
@@ -160,6 +160,7 @@ class GlDriver extends Driver {
 		while( curAttribs > p.attribs.length )
 			gl.disableVertexAttribArray(--curAttribs);
 		curProgram = p;
+		return true;
 	}
 	
 	override function uploadShaderBuffers( buf : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {

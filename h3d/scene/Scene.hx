@@ -102,15 +102,26 @@ class Scene extends Object implements h3d.IDrawable {
 			}
 			prev.next = null;
 			var render = getPass(curPass.pass.name);
-			passes.push( { render : render, pass : curPass, prev : prev, next : p } );
+			passes.push( { render : render, pass : curPass } );
 			curPass = p;
 		}
 		@:privateAccess passes.sort(function(p1, p2) return p2.render.priority - p1.render.priority);
 		for( p in passes )
-			p.render.draw(ctx, p.pass);
-		// restore linked list to reuse
-		for( p in passes )
-			p.prev.next = p.next;
+			p.pass = p.render.draw(ctx, p.pass);
+		
+		// relink pass objects to reuse
+		var count = 0;
+		var prev : h3d.pass.Object = null;
+		for( p in passes ) {
+			var p = p.pass;
+			if( prev != null )
+				prev.next = p;
+			while( p != null ) {
+				prev = p;
+				p = p.next;
+			}
+		}
+		ctx.passes = passes[0].pass;
 		ctx.done();
 		for( p in postPasses )
 			p.render(engine);

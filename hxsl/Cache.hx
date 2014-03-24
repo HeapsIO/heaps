@@ -46,6 +46,7 @@ class Cache {
 			linkCache.set(outVars, c);
 		}
 		for( i in instances ) {
+			if( i == null ) break;
 			if( c.next == null ) c.next = new Map();
 			var cs = c.next.get(i.id);
 			if( cs == null ) {
@@ -56,9 +57,14 @@ class Cache {
 		}
 		if( c.linked != null )
 			return c.linked;
-			
+		
 		var linker = new hxsl.Linker();
-		var s = linker.link([for( s in instances ) s.shader], this.outVars[outVars]);
+		var shaders = [];
+		for( i in instances ) {
+			if( i == null ) break;
+			shaders.push(i.shader);
+		}
+		var s = linker.link(shaders, this.outVars[outVars]);
 		
 		// params tracking
 		var paramVars = new Map();

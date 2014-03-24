@@ -61,13 +61,14 @@ class ShadowMap extends Base {
 		lightCamera.target.set(ct.x, ct.y, ct.z);
 		lightCamera.pos.set(ct.x - lightDirection.x, ct.y - lightDirection.y, ct.z - lightDirection.z);
 		ctx.engine.setTarget(texture, 0xFFFFFFFF);
-		super.draw(ctx, passes);
+		passes = super.draw(ctx, passes);
 		ctx.engine.setTarget(null);
 		ctx.sharedGlobals.set(shadowMapId, texture);
 		ctx.sharedGlobals.set(shadowProjId, lightCamera.m);
 		ctx.sharedGlobals.set(shadowColorId, color);
 		ctx.sharedGlobals.set(shadowPowerId, power);
 		ctx.sharedGlobals.set(shadowBiasId, bias);
+		return passes;
 	}
 
 	

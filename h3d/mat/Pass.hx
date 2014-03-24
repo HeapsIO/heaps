@@ -9,7 +9,8 @@ class Pass {
 	var passId : Int;
 	var bits : Int = 0;
 	var parentPass : Pass;
-	var shaders : Array<hxsl.Shader>;
+	var parentShaders : hxsl.ShaderList;
+	var shaders : hxsl.ShaderList;
 	var nextPass : Pass;
 	
 	public var enableLights : Bool;
@@ -58,29 +59,55 @@ class Pass {
 	}
 	
 	public function addShader<T:hxsl.Shader>(s:T) : T {
-		shaders.push(s);
+		shaders = new hxsl.ShaderList(s, shaders);
 		return s;
 	}
 	
 	public function removeShader(s) {
-		return shaders.remove(s);
+		var sl = shaders, prev = null;
+		while( sl != null ) {
+			if( sl.s == s ) {
+				if( prev == null )
+					shaders = sl.next;
+				else
+					prev.next = sl.next;
+				return true;
+			}
+			prev = sl;
+			sl = sl.next;
+		}
+		return false;
 	}
 	
-	public function getShader < T:hxsl.Shader > (t:Class<T>) : T {
-		for( s in shaders )
-			if( Std.is(s, t) )
-				return cast s;
+	public function getShader< T:hxsl.Shader >(t:Class<T>) : T {
+		var s = shaders;
+		while( s != null ) {
+			if( Std.is(s.s, t) )
+				return cast s.s;
+			s = s.next;
+		}
 		return null;
 	}
 
 	public inline function getShaders() {
-		return new hxd.impl.ArrayIterator<hxsl.Shader>(shaders);
+		return shaders.iterator();
 	}
 
 	function getShadersRec() {
-		if( parentPass == null )
+		if( parentPass == null || parentShaders == parentPass.shaders )
 			return shaders;
-		return parentPass.getShadersRec().concat(shaders);
+		// relink to our parent shader list
+		var s = shaders, prev = null;
+		while( s != null && s != parentShaders ) {
+			prev = s;
+			s = s.next;
+		}
+		parentShaders = parentPass.shaders;
+		if( prev == null )
+			shaders = parentShaders;
+		else
+			prev.next = parentShaders;
+		return shaders;
 	}
 
 	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {

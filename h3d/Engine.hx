@@ -82,8 +82,8 @@ class Engine {
 	}
 
 	public function selectShader( shader : hxsl.RuntimeShader ) {
-		driver.selectShader(shader);
-		shaderSwitches++;
+		if( driver.selectShader(shader) )
+			shaderSwitches++;
 	}
 	
 	public function selectMaterial( pass : h3d.mat.Pass ) {

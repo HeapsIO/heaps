@@ -12,7 +12,7 @@ class MeshMaterial extends Material {
 	public function new(?texture) {
 		mshader = new h3d.shader.BaseMesh();
 		blendMode = Normal;
-		super(new h3d.mat.Pass("default",[mshader]));
+		super(new h3d.mat.Pass("default",new hxsl.ShaderList(mshader)));
 		this.texture = texture;
 	}
 	
@@ -51,13 +51,13 @@ class MeshMaterial extends Material {
 	function set_texture(t) {
 		if( t == null ) {
 			if( textureShader != null ) {
-				mainPass.shaders.remove(textureShader);
+				mainPass.removeShader(textureShader);
 				textureShader = null;
 			}
 		} else {
 			if( textureShader == null ) {
 				textureShader = new h3d.shader.Texture();
-				mainPass.shaders.push(textureShader);
+				mainPass.addShader(textureShader);
 			}
 			textureShader.texture = t;
 		}
