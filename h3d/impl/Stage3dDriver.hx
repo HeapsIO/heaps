@@ -401,9 +401,24 @@ class Stage3dDriver extends Driver {
 			curBuffer = null;
 		}
 	}
+
+	function debugDraw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
+		try {
+			ctx.drawTriangles(ibuf, startIndex, ntriangles);
+		} catch( e : flash.errors.Error ) {
+			// this error should not happen, but sometime does in debug mode (?)
+			if( e.errorID != 3605 )
+				throw e;
+		}
+	}
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
-		if( enableDraw ) ctx.drawTriangles(ibuf, startIndex, ntriangles);
+		if( enableDraw ) {
+			if( ctx.enableErrorChecking )
+				debugDraw(ibuf, startIndex, ntriangles);
+			else
+				ctx.drawTriangles(ibuf, startIndex, ntriangles);
+		}
 	}
 
 	override function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {

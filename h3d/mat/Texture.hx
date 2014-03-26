@@ -143,8 +143,12 @@ class Texture {
 	}
 
 	public function dispose() {
-		if( t != null )
+		if( t != null ) {
 			mem.deleteTexture(this);
+			#if debug
+			this.allocPos.customParams = ["#DISPOSED"];
+			#end
+		}
 	}
 	
 	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
