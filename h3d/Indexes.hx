@@ -8,10 +8,10 @@ class Indexes {
 	var ibuf : h3d.impl.Driver.IndexBuffer;
 	public var count(default,null) : Int;
 	
-	function new(mem, ibuf, count) {
-		this.mem = mem;
-		this.ibuf = ibuf;
+	public function new(count) {
+		this.mem = h3d.Engine.getCurrent().mem;
 		this.count = count;
+		mem.allocIndexes(this);
 	}
 	
 	public function isDisposed() {
@@ -25,6 +25,12 @@ class Indexes {
 	public function dispose() {
 		if( ibuf != null )
 			mem.deleteIndexes(this);
+	}
+	
+	public static function alloc( i : hxd.IndexBuffer ) {
+		var idx = new Indexes( i.length );
+		idx.upload(i, 0, i.length);
+		return idx;
 	}
 
 }

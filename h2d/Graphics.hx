@@ -60,10 +60,10 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	override function alloc( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
 		buffer = h3d.Buffer.ofFloats(tmp, 8);
-		indexes = engine.mem.allocIndex(index);
+		indexes = h3d.Indexes.alloc(index);
 		for( b in buffers ) {
 			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = h3d.Buffer.ofFloats(b.buf, 8);
-			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = engine.mem.allocIndex(b.idx);
+			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = h3d.Indexes.alloc(b.idx);
 		}
 	}
 	

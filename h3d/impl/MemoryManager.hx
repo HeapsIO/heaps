@@ -21,6 +21,9 @@ class MemoryManager {
 
 	public function new(driver) {
 		this.driver = driver;
+	}
+	
+	public function init() {
 		indexes = new Array();
 		textures = new Array();
 		buffers = new Array();
@@ -30,7 +33,7 @@ class MemoryManager {
 	function initIndexes() {
 		var indices = new hxd.IndexBuffer();
 		for( i in 0...SIZE ) indices.push(i);
-		triIndexes = allocIndex(indices);
+		triIndexes = h3d.Indexes.alloc(indices);
 
 		var indices = new hxd.IndexBuffer();
 		var p = 0;
@@ -44,7 +47,7 @@ class MemoryManager {
 			indices.push(k + 3);
 		}
 		indices.push(SIZE);
-		quadIndexes = allocIndex(indices);
+		quadIndexes = h3d.Indexes.alloc(indices);
 	}
 
 	/**
@@ -176,7 +179,7 @@ class MemoryManager {
 
 	// ------------------------------------- INDEXES ------------------------------------------
 	
-	@:allow(h3d.Indexes.dispose)
+	@:allow(h3d.Indexes)
 	function deleteIndexes( i : Indexes ) {
 		indexes.remove(i);
 		driver.disposeIndexes(i.ibuf);
@@ -184,14 +187,11 @@ class MemoryManager {
 		usedMemory -= i.count * 2;
 	}
 	
-	public function allocIndex( indices : hxd.IndexBuffer, pos = 0, count = -1 ) {
-		if( count < 0 ) count = indices.length;
-		var ibuf = driver.allocIndexes(count);
-		var idx = new Indexes(this, ibuf, count);
-		idx.upload(indices, 0, count);
-		indexes.push(idx);
-		usedMemory += idx.count * 2;
-		return idx;
+	@:allow(h3d.Indexes)
+	function allocIndexes( i : Indexes ) {
+		i.ibuf = driver.allocIndexes(i.count);
+		indexes.push(i);
+		usedMemory += i.count * 2;
 	}
 
 	

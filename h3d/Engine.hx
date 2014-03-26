@@ -193,8 +193,10 @@ class Engine {
 		}
 		if( disposed )
 			mem.onContextLost();
-		else
+		else {
 			mem = new h3d.impl.MemoryManager(driver);
+			mem.init();
+		}
 		hardware = driver.isHardware();
 		set_debug(debug);
 		set_fullScreen(fullScreen);

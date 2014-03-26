@@ -195,16 +195,16 @@ class FBXModel extends MeshPrimitive {
 		}
 		if( cbuf != null ) addBuffer("color", h3d.Buffer.ofFloats(cbuf, 3));
 		
-		indexes = engine.mem.allocIndex(idx);
+		indexes = h3d.Indexes.alloc(idx);
 		if( mats != null ) {
 			groupIndexes = [];
 			for( i in midx )
-				groupIndexes.push(i == null ? null : engine.mem.allocIndex(i));
+				groupIndexes.push(i == null ? null : h3d.Indexes.alloc(i));
 		}
 		if( sidx != null ) {
 			groupIndexes = [];
 			for( i in sidx )
-				groupIndexes.push(i == null ? null : engine.mem.allocIndex(i));
+				groupIndexes.push(i == null ? null : h3d.Indexes.alloc(i));
 		}
 	}
 	

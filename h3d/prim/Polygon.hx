@@ -59,7 +59,7 @@ class Polygon extends Primitive {
 		buffer = h3d.Buffer.ofFloats(buf, size, idx == null ? [Triangles] : null);
 		
 		if( idx != null )
-			indexes = engine.mem.allocIndex(idx);
+			indexes = h3d.Indexes.alloc(idx);
 	}
 
 
