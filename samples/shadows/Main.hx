@@ -39,6 +39,8 @@ class Main extends hxd.App {
 		
 		shadow = cast(s3d.getPass("shadow"), h3d.pass.ShadowMap);
 		shadow.lightDirection = dir.direction;
+		shadow.size = 512;
+		shadow.blur.quality = 4;
 	}
 	
 	override function update( dt : Float ) {

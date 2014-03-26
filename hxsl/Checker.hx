@@ -424,8 +424,10 @@ class Checker {
 			if( (e == null) != (curFun.ret == TVoid) )
 				error("This function should return " + curFun.ret.toString(), e.pos);
 			var e = e == null ? null : typeWith(e, curFun.ret);
+			type = TVoid;
 			TReturn(e);
 		case EFor(v, it, block):
+			type = TVoid;
 			var it = typeExpr(it, Value);
 			switch( it.t ) {
 			case TArray(t, _):
@@ -445,9 +447,11 @@ class Checker {
 			}
 		case EContinue:
 			if( !inLoop ) error("Continue outside loop", e.pos);
+			type = TVoid;
 			TContinue;
 		case EBreak:
 			if( !inLoop ) error("Break outside loop", e.pos);
+			type = TVoid;
 			TBreak;
 		case EArray(e1, e2):
 			var e1 = typeExpr(e1, Value);

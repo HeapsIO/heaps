@@ -138,6 +138,13 @@ class Eval {
 		return handleReturn(e);
 	}
 	
+	function evalCall( g : TGlobal, args : Array<TExpr> ) {
+		return switch( [g,args] ) {
+		case [ToFloat, [ { e : TConst(CInt(i)) } ]]: TConst(CFloat(i));
+		default: null;
+		}
+	}
+	
 	function evalExpr( e : TExpr ) : TExpr {
 		var d : TExprDef = switch( e.e ) {
 		case TGlobal(_), TConst(_): e.e;
@@ -166,8 +173,9 @@ class Eval {
 			var c = evalExpr(c);
 			var args = [for( a in args ) evalExpr(a)];
 			switch( c.e ) {
-			case TGlobal(_):
-				TCall(c, args);
+			case TGlobal(g):
+				var v = evalCall(g, args);
+				if( v != null ) v else TCall(c, args);
 			case TVar(v) if( funMap.exists(v) ):
 				var f = funMap.get(v);
 				var outExprs = [], undo = [];
@@ -340,13 +348,10 @@ class Eval {
 			var e = switch( it.e ) {
 			case TBinop(OpInterval, { e : TConst(CInt(start)) }, { e : TConst(CInt(len)) } ):
 				var out = [];
-				var old = varMap;
 				for( i in start...len ) {
-					varMap = [for( c in old.keys() ) c => old.get(c)];
 					constants.set(v, TConst(CInt(i)));
 					out.push(evalExpr(loop));
 				}
-				varMap = old;
 				constants.remove(v);
 				TBlock(out);
 			default:

@@ -3,6 +3,7 @@ package h3d.pass;
 class ShadowMap extends Base {
 
 	var texture : h3d.mat.Texture;
+	var blurTexture : h3d.mat.Texture;
 	var lightCamera : h3d.Camera;
 	var shadowMapId : Int;
 	var shadowProjId : Int;
@@ -14,6 +15,7 @@ class ShadowMap extends Base {
 	public var color : h3d.Vector;
 	public var power = 10.0;
 	public var bias = 0.01;
+	public var blur : Blur;
 
 	public function new(size) {
 		super();
@@ -29,6 +31,7 @@ class ShadowMap extends Base {
 		shadowPowerId = hxsl.Globals.allocID("shadow.power");
 		shadowBiasId = hxsl.Globals.allocID("shadow.bias");
 		color = new h3d.Vector();
+		blur = new Blur(2, 3);
 	}
 	
 	public dynamic function getSceneBounds( bounds : h3d.col.Bounds ) {
@@ -54,15 +57,24 @@ class ShadowMap extends Base {
 	
 	override function draw( ctx : h3d.scene.RenderContext, passes) {
 		if( texture == null || texture.width != size ) {
-			if( texture != null ) texture.dispose();
+			if( texture != null ) {
+				texture.dispose();
+				blurTexture.dispose();
+				blurTexture = null;
+			}
 			texture = new h3d.mat.Texture(size, size, [Target, TargetDepth, TargetNoFlipY]);
 		}
+		if( blur.quality > 0 && blurTexture == null )
+			blurTexture = new h3d.mat.Texture(size, size, [Target, TargetNoFlipY]);
 		var ct = ctx.camera.target;
 		lightCamera.target.set(ct.x, ct.y, ct.z);
 		lightCamera.pos.set(ct.x - lightDirection.x, ct.y - lightDirection.y, ct.z - lightDirection.z);
 		ctx.engine.setTarget(texture, 0xFFFFFFFF);
 		passes = super.draw(ctx, passes);
 		ctx.engine.setTarget(null);
+		
+		blur.apply(texture, blurTexture, true);
+		
 		ctx.sharedGlobals.set(shadowMapId, texture);
 		ctx.sharedGlobals.set(shadowProjId, lightCamera.m);
 		ctx.sharedGlobals.set(shadowColorId, color);

@@ -153,8 +153,10 @@ class Flatten {
 				var emat = switch( e.e ) { case TCall(e, _): e; default: throw "assert"; };
 				return { e : TCall(emat, args), t : e.t, p : e.p };
 			}
-		case TArray( { e : TArrayDecl(el) }, { e : TConst(CInt(i)) } ) if( i >= 0 && i < el.length ):
-			return el[i];
+		case TArray( { e : TArrayDecl(el) }, { e : TConst(CInt(i)) } ):
+			if( i >= 0 && i < el.length )
+				return el[i];
+			Error.t("Reading outside array bounds", e.p);
 		default:
 		}
 		return e;
