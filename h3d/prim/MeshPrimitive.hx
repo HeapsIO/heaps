@@ -2,7 +2,7 @@ package h3d.prim;
 
 class MeshPrimitive extends Primitive {
 		
-	var bufferCache : Map<Int,h3d.impl.Buffer.BufferOffset>;
+	var bufferCache : Map<Int,h3d.Buffer.BufferOffset>;
 	
 	function allocBuffer( engine : h3d.Engine, name : String ) {
 		return null;
@@ -22,7 +22,7 @@ class MeshPrimitive extends Primitive {
 		var id = hash(name);
 		var old = bufferCache.get(id);
 		if( old != null ) old.dispose();
-		bufferCache.set(id, new h3d.impl.Buffer.BufferOffset(buf, offset));
+		bufferCache.set(id, new h3d.Buffer.BufferOffset(buf, offset));
 	}
 
 	override public function dispose() {

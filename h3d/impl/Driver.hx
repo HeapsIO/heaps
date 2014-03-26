@@ -105,7 +105,7 @@ class Driver {
 		return null;
 	}
 
-	public function allocVertex( count : Int, stride : Int ) : VertexBuffer {
+	public function allocVertex( m : ManagedBuffer ) : VertexBuffer {
 		return null;
 	}
 	

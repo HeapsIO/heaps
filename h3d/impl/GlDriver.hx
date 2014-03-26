@@ -322,12 +322,12 @@ class GlDriver extends Driver {
 		return tt;
 	}
 	
-	override function allocVertex( count : Int, stride : Int ) : VertexBuffer {
+	override function allocVertex( m : ManagedBuffer ) : VertexBuffer {
 		var b = gl.createBuffer();
 		#if js
 		gl.bindBuffer(GL.ARRAY_BUFFER, b);
-		if( count * stride == 0 ) throw "assert";
-		gl.bufferData(GL.ARRAY_BUFFER, count * stride * 4, GL.STATIC_DRAW);
+		if( m.size * m.stride == 0 ) throw "assert";
+		gl.bufferData(GL.ARRAY_BUFFER, m.size * m.stride * 4, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		#else
 		var tmp = new Uint8Array(count * stride * 4);
@@ -335,7 +335,7 @@ class GlDriver extends Driver {
 		gl.bufferData(GL.ARRAY_BUFFER, tmp, GL.STATIC_DRAW);
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		#end
-		return { b : b, stride : stride };
+		return { b : b, stride : m.stride };
 	}
 	
 	override function allocIndexes( count : Int ) : IndexBuffer {
@@ -429,8 +429,8 @@ class GlDriver extends Driver {
 	
 	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
 		for( a in curProgram.attribs ) {
-			gl.bindBuffer(GL.ARRAY_BUFFER, buffers.b.b.vbuf.b);
-			gl.vertexAttribPointer(a.index, a.size, a.type, false, buffers.b.b.stride * 4, buffers.offset * 4);
+			gl.bindBuffer(GL.ARRAY_BUFFER, @:privateAccess buffers.buffer.buffer.vbuf.b);
+			gl.vertexAttribPointer(a.index, a.size, a.type, false, buffers.buffer.buffer.stride * 4, buffers.offset * 4);
 			buffers = buffers.next;
 		}
 	}

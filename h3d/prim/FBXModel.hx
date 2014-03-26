@@ -1,6 +1,6 @@
 package h3d.prim;
 using h3d.fbx.Data;
-import h3d.impl.Buffer.BufferOffset;
+import h3d.Buffer.BufferOffset;
 import h3d.col.Point;
 
 class FBXModel extends MeshPrimitive {
@@ -10,7 +10,7 @@ class FBXModel extends MeshPrimitive {
 	public var multiMaterial : Bool;
 	var bounds : h3d.col.Bounds;
 	var curMaterial : Int;
-	var groupIndexes : Array<h3d.impl.Indexes>;
+	var groupIndexes : Array<Indexes>;
 
 	public function new(g) {
 		this.geom = g;
@@ -183,28 +183,28 @@ class FBXModel extends MeshPrimitive {
 			pos++;
 		}
 		
-		addBuffer("position", engine.mem.allocVector(pbuf, 3, 0));
-		if( nbuf != null ) addBuffer("normal", engine.mem.allocVector(nbuf, 3, 0));
-		if( tbuf != null ) addBuffer("uv", engine.mem.allocVector(tbuf, 2, 0));
+		addBuffer("position", h3d.Buffer.ofFloats(pbuf, 3));
+		if( nbuf != null ) addBuffer("normal", h3d.Buffer.ofFloats(nbuf, 3));
+		if( tbuf != null ) addBuffer("uv", h3d.Buffer.ofFloats(tbuf, 2));
 		if( sbuf != null ) {
 			var nverts = Std.int(sbuf.length / ((skin.bonesPerVertex + 1) * 4));
-			var skinBuf = engine.mem.alloc(nverts, skin.bonesPerVertex + 1, 0);
+			var skinBuf = new h3d.Buffer(nverts, skin.bonesPerVertex + 1);
 			skinBuf.uploadBytes(sbuf.getBytes(), 0, nverts);
 			addBuffer("weights", skinBuf, 0);
 			addBuffer("indexes", skinBuf, skin.bonesPerVertex);
 		}
-		if( cbuf != null ) addBuffer("color", engine.mem.allocVector(cbuf, 3, 0));
+		if( cbuf != null ) addBuffer("color", h3d.Buffer.ofFloats(cbuf, 3));
 		
-		indexes = engine.mem.allocIndex(idx);
+		indexes = h3d.Indexes.alloc(idx);
 		if( mats != null ) {
 			groupIndexes = [];
 			for( i in midx )
-				groupIndexes.push(i == null ? null : engine.mem.allocIndex(i));
+				groupIndexes.push(i == null ? null : h3d.Indexes.alloc(i));
 		}
 		if( sidx != null ) {
 			groupIndexes = [];
 			for( i in sidx )
-				groupIndexes.push(i == null ? null : engine.mem.allocIndex(i));
+				groupIndexes.push(i == null ? null : h3d.Indexes.alloc(i));
 		}
 	}
 	

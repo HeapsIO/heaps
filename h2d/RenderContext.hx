@@ -63,7 +63,7 @@ class RenderContext {
 		if( bufPos == 0 ) return;
 		beforeDraw();
 		var nverts = Std.int(bufPos / stride);
-		var tmp = engine.mem.alloc(nverts, stride, 4);
+		var tmp = new h3d.Buffer(nverts, stride, [Quads, Dynamic]);
 		tmp.uploadVector(buffer, 0, nverts);
 		engine.renderQuadBuffer(tmp);
 		tmp.dispose();

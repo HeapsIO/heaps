@@ -19,15 +19,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 	}
 
 	override public function triCount() {
-		if( buffer == null )
-			return tmp.length >> 4;
-		var v = 0;
-		var b = buffer;
-		while( b != null ) {
-			v += b.nvert;
-			b = b.next;
-		}
-		return v >> 1;
+		return if( buffer == null ) tmp.length >> 4 else buffer.totalVertices() >> 1;
 	}
 
 	public inline function addColor( x : Int, y : Int, color : h3d.Vector, t : Tile ) {
@@ -78,7 +70,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push(0);
 		insertColor(color);
 	}
-
+	
 	inline function insertColor( c : Int ) {
 		tmp.push(((c >> 16) & 0xFF) / 255.);
 		tmp.push(((c >> 8) & 0xFF) / 255.);
@@ -134,7 +126,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) reset();
-		buffer = engine.mem.allocVector(tmp, 8, 4);
+		buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads]);
 	}
 
 	public function doRender(engine, min, len) {

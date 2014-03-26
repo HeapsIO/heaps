@@ -25,7 +25,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	var tmp : hxd.FloatBuffer;
 	var index : hxd.IndexBuffer;
 	
-	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.impl.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.impl.Indexes }>;
+	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes }>;
 	
 	public function new() {
 		buffers = [];
@@ -59,11 +59,11 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	
 	override function alloc( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
-		buffer = engine.mem.allocVector(tmp, 8, 0);
-		indexes = engine.mem.allocIndex(index);
+		buffer = h3d.Buffer.ofFloats(tmp, 8);
+		indexes = h3d.Indexes.alloc(index);
 		for( b in buffers ) {
-			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = engine.mem.allocVector(b.buf, 8, 0);
-			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = engine.mem.allocIndex(b.idx);
+			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = h3d.Buffer.ofFloats(b.buf, 8);
+			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = h3d.Indexes.alloc(b.idx);
 		}
 	}
 	

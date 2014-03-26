@@ -302,11 +302,11 @@ class Stage {
 	}
 
 	function get_mouseX() {
-		return Math.round(curMouseX - canvasPos.left);
+		return Math.round((curMouseX - canvasPos.left) * js.Browser.window.devicePixelRatio);
 	}
 
 	function get_mouseY() {
-		return Math.round(curMouseY - canvasPos.top);
+		return Math.round((curMouseY - canvasPos.top) * js.Browser.window.devicePixelRatio);
 	}
 	
 	function get_mouseLock() {

@@ -56,10 +56,10 @@ class Polygon extends Primitive {
 				buf.push(c.z);
 			}
 		}
-		buffer = engine.mem.allocVector(buf, size, idx == null ? 3 : 0);
+		buffer = h3d.Buffer.ofFloats(buf, size, idx == null ? [Triangles] : null);
 		
 		if( idx != null )
-			indexes = engine.mem.allocIndex(idx);
+			indexes = h3d.Indexes.alloc(idx);
 	}
 
 

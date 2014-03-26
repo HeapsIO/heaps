@@ -94,28 +94,28 @@ class Engine {
 		driver.uploadShaderBuffers(buffers, which);
 	}
 	
-	function selectBuffer( buf : h3d.impl.MemoryManager.BigBuffer ) {
+	function selectBuffer( buf : h3d.impl.ManagedBuffer ) {
 		if( buf.isDisposed() )
 			return false;
-		driver.selectBuffer(buf.vbuf);
+		driver.selectBuffer(@:privateAccess buf.vbuf);
 		return true;
 	}
 
-	public inline function renderTriBuffer( b : h3d.impl.Buffer, start = 0, max = -1 ) {
+	public inline function renderTriBuffer( b : Buffer, start = 0, max = -1 ) {
 		return renderBuffer(b, mem.triIndexes, 3, start, max);
 	}
 	
-	public inline function renderQuadBuffer( b : h3d.impl.Buffer, start = 0, max = -1 ) {
+	public inline function renderQuadBuffer( b : Buffer, start = 0, max = -1 ) {
 		return renderBuffer(b, mem.quadIndexes, 2, start, max);
 	}
 	
 	// we use preallocated indexes so all the triangles are stored inside our buffers
-	function renderBuffer( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
+	function renderBuffer( b : Buffer, indexes : Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
 		if( indexes.isDisposed() )
 			return;
 		do {
-			var ntri = Std.int(b.nvert / vertPerTri);
-			var pos = Std.int(b.pos / vertPerTri);
+			var ntri = Std.int(b.vertices / vertPerTri);
+			var pos = Std.int(b.position / vertPerTri);
 			if( startTri > 0 ) {
 				if( startTri >= ntri ) {
 					startTri -= ntri;
@@ -134,7 +134,7 @@ class Engine {
 					drawTri = 0;
 				}
 			}
-			if( ntri > 0 && selectBuffer(b.b) ) {
+			if( ntri > 0 && selectBuffer(b.buffer) ) {
 				// *3 because it's the position in indexes which are always by 3
 				driver.draw(indexes.ibuf, pos * 3, ntri);
 				drawTriangles += ntri;
@@ -145,14 +145,14 @@ class Engine {
 	}
 	
 	// we use custom indexes, so the number of triangles is the number of indexes/3
-	public function renderIndexed( b : h3d.impl.Buffer, indexes : h3d.impl.Indexes, startTri = 0, drawTri = -1 ) {
+	public function renderIndexed( b : Buffer, indexes : Indexes, startTri = 0, drawTri = -1 ) {
 		if( b.next != null )
 			throw "Buffer is split";
 		if( indexes.isDisposed() )
 			return;
 		var maxTri = Std.int(indexes.count / 3);
 		if( drawTri < 0 ) drawTri = maxTri - startTri;
-		if( drawTri > 0 && selectBuffer(b.b) ) {
+		if( drawTri > 0 && selectBuffer(b.buffer) ) {
 			// *3 because it's the position in indexes which are always by 3
 			driver.draw(indexes.ibuf, startTri * 3, drawTri);
 			drawTriangles += drawTri;
@@ -160,7 +160,7 @@ class Engine {
 		}
 	}
 	
-	public function renderMultiBuffers( buffers : h3d.impl.Buffer.BufferOffset, indexes : h3d.impl.Indexes, startTri = 0, drawTri = -1 ) {
+	public function renderMultiBuffers( buffers : Buffer.BufferOffset, indexes : Indexes, startTri = 0, drawTri = -1 ) {
 		var maxTri = Std.int(indexes.count / 3);
 		if( maxTri <= 0 ) return;
 		driver.selectMultiBuffers(buffers);
@@ -189,8 +189,10 @@ class Engine {
 		}
 		if( disposed )
 			mem.onContextLost();
-		else
-			mem = new h3d.impl.MemoryManager(driver, 65400);
+		else {
+			mem = new h3d.impl.MemoryManager(driver);
+			mem.init();
+		}
 		hardware = driver.isHardware();
 		set_debug(debug);
 		set_fullScreen(fullScreen);

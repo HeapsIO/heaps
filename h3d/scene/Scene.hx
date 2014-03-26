@@ -121,7 +121,7 @@ class Scene extends Object implements h3d.IDrawable {
 				p = p.next;
 			}
 		}
-		ctx.passes = passes[0].pass;
+		if( passes.length > 0 ) ctx.passes = passes[0].pass;
 		ctx.done();
 		for( p in postPasses )
 			p.render(engine);

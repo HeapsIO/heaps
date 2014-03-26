@@ -62,7 +62,7 @@ class Quads extends Primitive {
 		var size = 3;
 		if( normals != null ) size += 3;
 		if( uvs != null ) size += 2;
-		buffer = engine.mem.allocVector(v,size, 4);
+		buffer = h3d.Buffer.ofFloats(v, size, [Quads]);
 	}
 	
 	public function getPoints() {
