@@ -20,7 +20,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		var v = 0;
 		var b = buffer;
 		while( b != null ) {
-			v += b.nvert;
+			v += b.vertices;
 			b = b.next;
 		}
 		return v >> 1;
@@ -126,7 +126,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) reset();
-		buffer = engine.mem.allocVector(tmp, 8, 4);
+		buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads]);
 	}
 
 	public function doRender(engine, min, len) {

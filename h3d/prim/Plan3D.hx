@@ -73,7 +73,7 @@ class Plan3D extends Primitive {
 		v.push( 0);
 		v.push( 1);
 		
-		buffer = engine.mem.allocVector(v, 8, 4);
+		buffer = h3d.Buffer.ofFloats(v, 8, [Quads]);
 	}
 	
 	override function render(engine:h3d.Engine) {

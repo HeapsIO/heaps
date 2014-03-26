@@ -1,11 +1,11 @@
-package h3d.impl;
+package h3d;
 
 @:allow(h3d.impl.MemoryManager)
 @:allow(h3d.Engine)
 class Indexes {
 
-	var mem : MemoryManager;
-	var ibuf : Driver.IndexBuffer;
+	var mem : h3d.impl.MemoryManager;
+	var ibuf : h3d.impl.Driver.IndexBuffer;
 	public var count(default,null) : Int;
 	
 	function new(mem, ibuf, count) {

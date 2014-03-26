@@ -142,9 +142,7 @@ class Particles extends Object {
 		if( hasFrame ) stride++;
 		if( hasRotation ) stride++;
 		if( hasSize ) stride++;
-		var nverts = Std.int(pos / stride);
-		var buffer = ctx.engine.mem.alloc(nverts, stride, 4);
-		buffer.uploadVector(tmpBuf, 0, nverts);
+		var buffer = h3d.Buffer.ofFloats(tmpBuf, stride, [Quads, Dynamic]);
 		var size = partSize;
 		ctx.localPos = this.absPos;
 		material.setup(ctx);

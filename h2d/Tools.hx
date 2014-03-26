@@ -10,7 +10,7 @@ private class CoreObjects  {
 	public var tmpColor : h3d.Vector;
 	public var tmpMatrix : h3d.Matrix;
 	public var tmpMaterial : h3d.mat.Material;
-	public var planBuffer : h3d.impl.Buffer;
+	public var planBuffer : h3d.Buffer;
 	public var nullTile : Tile;
 	
 	var emptyTexture : h3d.mat.Texture;
@@ -35,7 +35,8 @@ private class CoreObjects  {
 			vector.push(pt[1]);
 		}
 		
-		planBuffer = h3d.Engine.getCurrent().mem.allocVector(vector, 4, 4);
+		planBuffer = new h3d.Buffer(4, 4, [Quads]);
+		planBuffer.uploadVector(vector, 0, 4);
 		nullTile = new Tile(null, 0, 0, 5, 5);
 	}
 	
@@ -61,7 +62,7 @@ class Tools {
 		var c = CORE;
 		if( c == null ) return;
 		// if we have lost our context
-		if( c.planBuffer.b.isDisposed() )
+		if( c.planBuffer.isDisposed() )
 			CORE = null;
 	}
 	

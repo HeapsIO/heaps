@@ -64,7 +64,7 @@ class Image extends Object {
 		tmp.push(tile.v2);
 		
 		cast(material.shader,ImageShader).tex = tile.getTexture();
-		var b = ctx.engine.mem.allocVector(tmp, 4, 4);
+		var b = h3d.Buffer.ofFloats(tmp,4,[Quads,Dynamic]);
 		ctx.engine.selectMaterial(material);
 		ctx.engine.renderQuadBuffer(b);
 		b.dispose();

@@ -6,25 +6,24 @@ import h3d.impl.Driver;
 @:allow(h3d.impl.Stage3dDriver)
 class VertexWrapper {
 	var vbuf : flash.display3D.VertexBuffer3D;
-	var stride : Int;
 	var written : Bool;
-	var b : MemoryManager.BigBuffer;
+	var b : ManagedBuffer;
 	
-	function new(vbuf, stride) {
+	function new(vbuf, b) {
 		this.vbuf = vbuf;
-		this.stride = stride;
+		this.b = b;
 	}
-	
+		
 	function finalize( driver : Stage3dDriver ) {
 		if( written ) return;
 		written = true;
 		// fill all the free positions that were unwritten with zeroes (necessary for flash)
-		var f = b.free;
+		var f = @:privateAccess b.freeList;
 		while( f != null ) {
 			if( f.count > 0 ) {
 				var mem : UInt = f.count * b.stride * 4;
 				if( driver.empty.length < mem ) driver.empty.length = mem;
-				driver.uploadVertexBytes(b.vbuf, f.pos, f.count, haxe.io.Bytes.ofData(driver.empty), 0);
+				driver.uploadVertexBytes(@:privateAccess b.vbuf, f.pos, f.count, haxe.io.Bytes.ofData(driver.empty), 0);
 			}
 			f = f.next;
 		}
@@ -151,17 +150,17 @@ class Stage3dDriver extends Driver {
 		t.dispose();
 	}
 	
-	override function allocVertex( count : Int, stride : Int ) : VertexBuffer {
+	override function allocVertex( buf : ManagedBuffer ) : VertexBuffer {
 		var v;
 		try {
-			v = ctx.createVertexBuffer(count, stride);
+			v = ctx.createVertexBuffer(buf.size, buf.stride);
 		} catch( e : flash.errors.Error ) {
 			// too many resources / out of memory
 			if( e.errorID == 3691 )
 				return null;
 			throw e;
 		}
-		return new VertexWrapper(v, stride);
+		return new VertexWrapper(v, buf);
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
@@ -249,7 +248,7 @@ class Stage3dDriver extends Driver {
 	
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
 		var data = buf.getNative();
-		v.vbuf.uploadFromVector( bufPos == 0 ? data : data.slice(bufPos, vertexCount * v.stride + bufPos), startVertex, vertexCount );
+		v.vbuf.uploadFromVector( bufPos == 0 ? data : data.slice(bufPos, vertexCount * v.b.stride + bufPos), startVertex, vertexCount );
 	}
 
 	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, bytes : haxe.io.Bytes, bufPos : Int ) {
@@ -345,8 +344,8 @@ class Stage3dDriver extends Driver {
 			return;
 		curBuffer = v;
 		curMultiBuffer[0] = -1;
-		if( v.stride < curShader.stride )
-			throw "Buffer stride (" + v.stride + ") and shader stride (" + curShader.stride + ") mismatch";
+		if( v.b.stride < curShader.stride )
+			throw "Buffer stride (" + v.b.stride + ") and shader stride (" + curShader.stride + ") mismatch";
 		if( !v.written )
 			v.finalize(this);
 		var pos = 0, offset = 0;
@@ -385,11 +384,11 @@ class Stage3dDriver extends Driver {
 			var b = buffers;
 			while( offset < curShader.stride ) {
 				var size = bits & 7;
-				if( b.b.next != null )
+				if( b.buffer.next != null )
 					throw "Buffer is split";
-				if( !b.b.b.vbuf.written )
-					b.b.b.vbuf.finalize(this);
-				ctx.setVertexBufferAt(pos, b.b.b.vbuf.vbuf, b.offset, FORMAT[size]);
+				var vbuf = @:privateAccess b.buffer.buffer.vbuf;
+				if( !vbuf.written ) vbuf.finalize(this);
+				ctx.setVertexBufferAt(pos, vbuf.vbuf, b.offset, FORMAT[size]);
 				curMultiBuffer[pos] = b.id;
 				offset += size == 0 ? 1 : size;
 				bits >>= 3;

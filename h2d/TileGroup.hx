@@ -42,20 +42,12 @@ private class TileLayerContent extends h3d.prim.Primitive {
 	}
 	
 	override public function triCount() {
-		if( buffer == null )
-			return tmp.length >> 3;
-		var v = 0;
-		var b = buffer;
-		while( b != null ) {
-			v += b.nvert;
-			b = b.next;
-		}
-		return v >> 1;
+		return if( buffer == null ) tmp.length >> 3 else buffer.totalVertices() >> 1;
 	}
 	
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) reset();
-		buffer = engine.mem.allocVector(tmp, 4, 4);
+		buffer = h3d.Buffer.ofFloats(tmp, 4, [Quads]);
 	}
 
 	public function doRender(engine, min, len) {

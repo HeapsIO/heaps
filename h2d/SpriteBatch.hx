@@ -149,10 +149,7 @@ class SpriteBatch extends Drawable {
 			}
 			e = e.next;
 		}
-		var stride = 5;
-		var nverts = Std.int(pos / stride);
-		var buffer = ctx.engine.mem.alloc(nverts, stride, 4);
-		buffer.uploadVector(tmpBuf, 0, nverts);
+		var buffer = h3d.Buffer.ofFloats(tmpBuf, 5, [Dynamic, Quads]);
 		setupShader(ctx.engine, tile, 0);
 		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();
