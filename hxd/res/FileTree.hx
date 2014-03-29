@@ -120,11 +120,11 @@ class FileTree {
 			var tmp = options.tmpDir + name + ".xbx";
 			if( getTime(tmp) < getTime(fullPath) ) {
 				Sys.println("Converting " + relPath);
-				var fbx = h3d.fbx.Parser.parse(sys.io.File.getContent(fullPath));
+				var fbx = hxd.fmt.fbx.Parser.parse(sys.io.File.getContent(fullPath));
 				if( options.xbxFilter != null )
 					fbx = options.xbxFilter(relPath,fbx);
 				var out = sys.io.File.write(tmp);
-				new h3d.fbx.XBXWriter(out).write(fbx);
+				new hxd.fmt.fbx.XBXWriter(out).write(fbx);
 				out.close();
 			}
 			Context.registerModuleDependency(currentModule, fullPath);
