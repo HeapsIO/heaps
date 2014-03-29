@@ -1,11 +1,11 @@
 package h3d.prim;
-using h3d.fbx.Data;
+using hxd.fmt.fbx.Data;
 import h3d.Buffer.BufferOffset;
 import h3d.col.Point;
 
 class FBXModel extends MeshPrimitive {
 
-	public var geom(default, null) : h3d.fbx.Geometry;
+	public var geom(default, null) : hxd.fmt.fbx.Geometry;
 	public var skin : h3d.anim.Skin;
 	public var multiMaterial : Bool;
 	var bounds : h3d.col.Bounds;

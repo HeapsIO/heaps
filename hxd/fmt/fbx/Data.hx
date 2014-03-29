@@ -1,4 +1,4 @@
-package h3d.fbx;
+package hxd.fmt.fbx;
 
 enum FbxProp {
 	PInt( v : Int );

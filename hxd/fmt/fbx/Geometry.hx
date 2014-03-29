@@ -1,5 +1,5 @@
-package h3d.fbx;
-using h3d.fbx.Data;
+package hxd.fmt.fbx;
+using hxd.fmt.fbx.Data;
 
 class Geometry {
 
@@ -165,7 +165,7 @@ class Geometry {
 		return uvs;
 	}
 	
-	@:access(h3d.fbx.Library.leftHand)
+	@:access(hxd.fmt.fbx.Library.leftHand)
 	public function getGeomTranslate() {
 		for( p in lib.getParent(root, "Model").getAll("Properties70.P") )
 			if( p.props[0].toString() == "GeometricTranslation" )

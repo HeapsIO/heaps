@@ -1,5 +1,5 @@
-package h3d.fbx;
-import h3d.fbx.Data;
+package hxd.fmt.fbx;
+import hxd.fmt.fbx.Data;
 
 class XBXReader
 {

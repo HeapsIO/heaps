@@ -1,5 +1,5 @@
-package h3d.fbx;
-using h3d.fbx.Data;
+package hxd.fmt.fbx;
+using hxd.fmt.fbx.Data;
 
 private enum Token {
 	TIdent( s : String );
