@@ -56,6 +56,16 @@ class ManagedBuffer {
 		return b;
 	}
 	
+	public function getFreeVertices() {
+		var m = 0;
+		var l = freeList;
+		while( l != null ) {
+			m += l.count;
+			l = l.next;
+		}
+		return m;
+	}
+	
 	function allocPosition( nvert : Int, align : Int ) {
 		var free = freeList;
 		while( free != null ) {
