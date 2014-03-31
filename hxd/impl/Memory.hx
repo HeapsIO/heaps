@@ -31,6 +31,31 @@ class MemoryReader {
 		#end
 	}
 
+	public inline function float( addr : Int ) : Float {
+		#if flash
+		return flash.Memory.getFloat(addr);
+		#else
+		throw "TODO";
+		return 0.;
+		#end
+	}
+
+	public inline function wfloat( addr : Int, v : Float ) : Void {
+		#if flash
+		flash.Memory.setFloat(addr, v);
+		#else
+		throw "TODO";
+		#end
+	}
+
+	public inline function wdouble( addr : Int, v : Float ) : Void {
+		#if flash
+		flash.Memory.setDouble(addr, v);
+		#else
+		throw "TODO";
+		#end
+	}
+	
 	public inline function i32( addr : Int ) : Int {
 		#if flash
 		return flash.Memory.getI32(addr);
