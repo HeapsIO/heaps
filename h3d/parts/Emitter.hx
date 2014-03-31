@@ -558,7 +558,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		}
 		var stride = 10;
 		if( hasColor ) stride += 4;
-		var buffer = h3d.Buffer.ofFloats(tmpBuf, stride, [Quads, Dynamic]);
+		var buffer = h3d.Buffer.ofFloats(tmp, stride, [Quads, Dynamic], Std.int(pos/stride));
 		var size = eval(state.globalSize);
 		
 		material.pshader.mpos = state.emitLocal ? this.absPos : h3d.Matrix.I();

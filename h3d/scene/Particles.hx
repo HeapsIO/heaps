@@ -142,7 +142,7 @@ class Particles extends Object {
 		if( hasFrame ) stride++;
 		if( hasRotation ) stride++;
 		if( hasSize ) stride++;
-		var buffer = h3d.Buffer.ofFloats(tmpBuf, stride, [Quads, Dynamic]);
+		var buffer = h3d.Buffer.ofFloats(tmpBuf, stride, [Quads, Dynamic], Std.int(pos/stride));
 		var size = partSize;
 		ctx.localPos = this.absPos;
 		material.setup(ctx);

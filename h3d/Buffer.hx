@@ -92,8 +92,8 @@ class Buffer {
 		}
 	}
 	
-	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags ) {
-		var nvert = Std.int(v.length / stride);
+	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags, ?vertices ) {
+		var nvert = vertices == null ? Std.int(v.length / stride) : vertices;
 		var b = new Buffer(nvert, stride, flags);
 		b.uploadVector(v, 0, nvert);
 		return b;
