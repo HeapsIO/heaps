@@ -1,8 +1,10 @@
 package h3d.prim;
 
+private typedef Cache = #if flash haxe.ds.UnsafeStringMap<h3d.Buffer.BufferOffset> #else Map<Int,h3d.Buffer.BufferOffset> #end
+
 class MeshPrimitive extends Primitive {
 		
-	var bufferCache : Map<Int,h3d.Buffer.BufferOffset>;
+	var bufferCache : Cache;
 	
 	function allocBuffer( engine : h3d.Engine, name : String ) {
 		return null;
@@ -18,8 +20,8 @@ class MeshPrimitive extends Primitive {
 	
 	function addBuffer( name : String, buf, offset = 0 ) {
 		if( bufferCache == null )
-			bufferCache = new Map();
-		var id = hash(name);
+			bufferCache = new Cache();
+		var id = #if flash name #else hash(name) #end;
 		var old = bufferCache.get(id);
 		if( old != null ) old.dispose();
 		bufferCache.set(id, new h3d.Buffer.BufferOffset(buf, offset));
@@ -36,10 +38,10 @@ class MeshPrimitive extends Primitive {
 	@:access(h3d.Engine.driver)
 	function getBuffers( engine : h3d.Engine ) {
 		if( bufferCache == null )
-			bufferCache = new Map();
+			bufferCache = new Cache();
 		var buffers = null, prev = null;
 		for( name in engine.driver.getShaderInputNames() ) {
-			var id = hash(name);
+			var id = #if flash name #else hash(name) #end;
 			var b = bufferCache.get(id);
 			if( b == null ) {
 				b = allocBuffer(engine, name);
