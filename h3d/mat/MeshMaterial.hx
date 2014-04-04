@@ -149,14 +149,19 @@ private class MeshShader extends h3d.impl.Shader {
 			tuv = t;
 			if( lightSystem != null ) {
 				// calculate normal
+				var n = tnorm.normalize();
 				var col = lightSystem.ambient;
 				for( d in lightSystem.dirs )
-					col += d.color * tnorm.dot(-d.dir).max(0);
+					col += d.color * n.dot(-d.dir).max(0);
 				for( p in lightSystem.points ) {
-					var d = tpos.xyz - p.pos;
-					var dist2 = d.dot(d);
-					var dist = dist2.sqt();
-					col += p.color * (tnorm.dot(d).max(0) / (p.att.x * dist + p.att.y * dist2 + p.att.z * dist2 * dist));
+					var d = p.pos - tpos.xyz;
+					var dlen = d.dot(d);
+					var qlen = dlen.sqt();
+					var dist : Float3;
+					dist.x = qlen;
+					dist.y = dlen;
+					dist.z = dlen * qlen;
+					col += p.color * (n.dot(d).max(0) / p.att.dot(dist));
 				}
 				if( hasVertexColor )
 					tcolor = col * input.color;
