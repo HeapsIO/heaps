@@ -21,6 +21,16 @@ private class AnimCurve {
 	}
 }
 
+private typedef TmpObject = {
+	var model : FbxNode;
+	var parent : TmpObject;
+	var isJoint : Bool;
+	var isMesh : Bool;
+	var childs : Array<TmpObject>;
+	@:optional var obj : h3d.scene.Object;
+	@:optional var joint : h3d.anim.Skin.Joint;
+}
+
 class DefaultMatrixes {
 	public var trans : Null<Point>;
 	public var scale : Null<Point>;
@@ -761,16 +771,22 @@ class Library {
 			return false;
 		return true;
 	}
+	
+	function getModelPath( model : FbxNode ) {
+		var parent = getParent(model, "Model", true);
+		var name = model.getName();
+		if( parent == null )
+			return name;
+		return getModelPath(parent) + "." + name;
+	}
 
 	public function makeObject( ?textureLoader : String -> FbxNode -> h3d.mat.MeshMaterial ) : h3d.scene.Object {
 		var scene = new h3d.scene.Object();
-		var hobjects = new Map();
 		var hgeom = new Map();
-		var objects = new Array();
-		var hjoints = new Map();
-		var joints = new Array();
 		var hskins = new Map();
-		
+		var objects = new Array<TmpObject>();
+		var hobjects = new Map<Int, TmpObject>();
+
 		if( textureLoader == null ) {
 			var tmpTex = null;
 			textureLoader = function(_,_) {
@@ -779,46 +795,73 @@ class Library {
 				return new h3d.mat.MeshMaterial(tmpTex);
 			}
 		}
-		// create all models
+		
+		// init objects
+		var oroot : TmpObject = { model : null, isJoint : false, isMesh : false, childs : [], parent : null, obj : scene };
+		hobjects.set(0, oroot);
 		for( model in root.getAll("Objects.Model") ) {
-			var o : h3d.scene.Object;
-			var name = model.getName();
-			if( skipObjects.get(name) )
+			if( skipObjects.get(model.getName()) )
 				continue;
 			var mtype = model.getType();
-			if( unskinnedJointsAsObjects && mtype == "LimbNode" && isNullJoint(model) )
-				mtype = "Null";
-			switch( mtype ) {
-			case "Null", "Root", "Camera":
+			var isJoint = mtype == "LimbNode" && (!unskinnedJointsAsObjects || !isNullJoint(model));
+			var o : TmpObject = { model : model, isJoint : isJoint, isMesh : mtype == "Mesh", parent : null, childs : [], obj : null };
+			hobjects.set(model.getId(), o);
+			objects.push(o);
+		}
+		
+		// build hierarchy
+		for( o in objects ) {
+			var p = getParent(o.model, "Model", true);
+			var pid = if( p == null ) 0 else p.getId();
+			var op = hobjects.get(pid);
+			if( op == null ) op = oroot; // if parent has been removed
+			op.childs.push(o);
+			o.parent = op;
+		}
+		
+		// propagates joint flags
+		var changed = true;
+		while( changed ) {
+			changed = false;
+			for( o in objects ) {
+				if( o.isJoint || o.isMesh ) continue;
+				if( o.parent.isJoint ) {
+					o.isJoint = true;
+					changed = true;
+					continue;
+				}
 				var hasJoint = false;
-				for( c in getChilds(model, "Model") )
-					if( c.getType() == "LimbNode" ) {
-						if( unskinnedJointsAsObjects && isNullJoint(c) ) continue;
+				for( c in o.childs )
+					if( c.isJoint ) {
 						hasJoint = true;
 						break;
 					}
 				if( hasJoint )
-					o = new h3d.scene.Skin(null, null, scene);
-				else
-					o = new h3d.scene.Object(scene);
-			case "LimbNode":
-				var j = new h3d.anim.Skin.Joint();
-				getDefaultMatrixes(model); // store for later usage in animation
-				j.index = model.getId();
-				j.name = model.getName();
-				hjoints.set(j.index, j);
-				joints.push({ model : model, joint : j });
-				continue;
-			case "Mesh":
+					for( c in o.parent.childs )
+						if( c.isJoint ) {
+							o.isJoint = true;
+							changed = true;
+							break;
+						}
+			}
+		}
+				
+		
+		// create all models
+		for( o in objects ) {
+			var name = o.model.getName();
+			if( o.isMesh ) {
+				if( o.isJoint )
+					throw "Model " + getModelPath(o.model) + " was tagged as joint but is mesh";
 				// load geometry
-				var g = getChild(model, "Geometry");
+				var g = getChild(o.model, "Geometry");
 				var prim = hgeom.get(g.getId());
 				if( prim == null ) {
 					prim = new h3d.prim.FBXModel(new Geometry(this, g));
 					hgeom.set(g.getId(), prim);
 				}
 				// load materials
-				var mats = getChilds(model, "Material");
+				var mats = getChilds(o.model, "Material");
 				var tmats = [];
 				var vcolor = prim.geom.getColors() != null;
 				var lastAdded = 0;
@@ -840,85 +883,85 @@ class Library {
 					tmats.push(new h3d.mat.MeshMaterial(h2d.Tile.fromColor(0xFFFF00FF).getTexture()));
 				// create object
 				if( tmats.length == 1 )
-					o = new h3d.scene.Mesh(prim, tmats[0], scene);
+					o.obj = new h3d.scene.Mesh(prim, tmats[0], scene);
 				else {
 					prim.multiMaterial = true;
-					o = new h3d.scene.MultiMaterial(prim, tmats, scene);
+					o.obj = new h3d.scene.MultiMaterial(prim, tmats, scene);
 				}
-			case type:
-				throw "Unknown model type " + type+" for "+model.getName();
-			}
-			o.name = name;
-			var m = getDefaultMatrixes(model);
-			if( m.trans != null || m.rotate != null || m.scale != null || m.preRot != null )
-				o.defaultTransform = m.toMatrix(leftHand);
-			hobjects.set(model.getId(), o);
-			objects.push( { model : model, obj : o } );
-		}
-		// rebuild joints hierarchy
-		for( j in joints ) {
-			var p = getParent(j.model, "Model");
-			var jparent = hjoints.get(p.getId());
-			if( jparent != null ) {
-				jparent.subs.push(j.joint);
-				j.joint.parent = jparent;
-			} else if( p.getType() != "Root" && p.getType() != "Null" )
-				throw "Parent joint not found " + p.getName();
-		}
-		// rebuild model hierarchy and additional inits
-		for( o in objects ) {
-			var rootJoints = [];
-			for( sub in getChilds(o.model, "Model") ) {
-				var sobj = hobjects.get(sub.getId());
-				if( sobj == null ) {
-					if( skipObjects.get(sub.getName()) )
-						continue;
-					if( sub.getType() == "LimbNode" ) {
-						var j = hjoints.get(sub.getId());
-						if( j == null ) throw "Missing sub joint " + sub.getName();
-						rootJoints.push(j);
-						continue;
+			} else if( o.isJoint ) {
+				var j = new h3d.anim.Skin.Joint();
+				getDefaultMatrixes(o.model); // store for later usage in animation
+				j.index = o.model.getId();
+				j.name = o.model.getName();
+				o.joint = j;
+				continue;
+			} else {
+				var hasJoint = false;
+				for( c in o.childs )
+					if( c.isJoint ) {
+						hasJoint = true;
+						break;
 					}
-					throw "Missing sub " + sub.getName();
-				}
-				o.obj.addChild(sobj);
+				if( hasJoint )
+					o.obj = new h3d.scene.Skin(null);
+				else
+					o.obj = new h3d.scene.Object();
 			}
-			if( rootJoints.length != 0 ) {
-				if( !Std.is(o.obj,h3d.scene.Skin) )
-					throw o.obj.name + ":" + o.model.getType() + " should be a skin";
-				var skin : h3d.scene.Skin = cast o.obj;
-				var skinData = createSkin(hskins, hgeom, rootJoints, bonesPerVertex);
-				// if we have a skinned object, remove it (only keep the skin) and set the material
-				for( osub in objects ) {
-					if( !osub.obj.isMesh() ) continue;
-					var m = osub.obj.toMesh();
-					if( m.primitive != skinData.primitive || m == skin )
-						continue;
-					var mt = Std.instance(m, h3d.scene.MultiMaterial);
-					skin.materials = mt == null ? [m.material] : mt.materials;
-					skin.material = skin.materials[0];
-					m.remove();
-					// ignore key frames for this object
-					defaultModelMatrixes.get(osub.obj.name).wasRemoved = o.model.getId();
+			o.obj.name = name;
+			var m = getDefaultMatrixes(o.model);
+			if( m.trans != null || m.rotate != null || m.scale != null || m.preRot != null )
+				o.obj.defaultTransform = m.toMatrix(leftHand);
+		}
+		// rebuild scene hierarchy
+		for( o in objects ) {
+			if( o.isJoint ) {
+				if( o.parent.isJoint ) {
+					o.joint.parent = o.parent.joint;
+					o.parent.joint.subs.push(o.joint);
 				}
-				// set the skin data
-				if( skinData.boundJoints.length > maxBonesPerSkin )
-					skinData.split(maxBonesPerSkin, Std.instance(skinData.primitive,h3d.prim.FBXModel).geom.getIndexes().vidx);
-				skin.setSkinData(skinData);
+			} else {
+				// put it into the first non-joint parent
+				var p = o.parent;
+				while( p.obj == null )
+					p = p.parent;
+				p.obj.addChild(o.obj);
 			}
 		}
-		// make child models follow the bone
-		// /!\ this follow will not be cloned
-		for( j in joints ) {
-			var jobj = null;
-			for( o in getChilds(j.model, "Model") ) {
-				var obj = hobjects.get(o.getId());
-				if( obj != null ) {
-					if( jobj == null ) jobj = scene.getObjectByName(j.joint.name);
-					obj.follow = jobj;
-				}
+		// build skins
+		for( o in objects ) {
+			if( o.isJoint ) continue;
+			
+			
+			// /!\ currently, childs of joints will work but will not cloned
+			if( o.parent.isJoint )
+				o.obj.follow = scene.getObjectByName(o.parent.joint.name);
+				
+			var skin = Std.instance(o.obj, h3d.scene.Skin);
+			if( skin == null ) continue;
+			var rootJoints = [];
+			for( j in o.childs )
+				if( j.isJoint )
+					rootJoints.push(j.joint);
+			var skinData = createSkin(hskins, hgeom, rootJoints, bonesPerVertex);
+			// remove the corresponding Geometry-Model and copy its material
+			for( o2 in objects ) {
+				if( o2.obj == null || o2 == o || !o2.obj.isMesh() ) continue;
+				var m = o2.obj.toMesh();
+				if( m.primitive != skinData.primitive ) continue;
+
+				var mt = Std.instance(m, h3d.scene.MultiMaterial);
+				skin.materials = mt == null ? [m.material] : mt.materials;
+				skin.material = skin.materials[0];
+				m.remove();
+				// ignore key frames for this object
+				defaultModelMatrixes.get(m.name).wasRemoved = o.model.getId();
 			}
+			// set skin after materials
+			if( skinData.boundJoints.length > maxBonesPerSkin )
+				skinData.split(maxBonesPerSkin, Std.instance(skinData.primitive,h3d.prim.FBXModel).geom.getIndexes().vidx);
+			skin.setSkinData(skinData);
 		}
+
 		return scene.numChildren == 1 ? scene.getChildAt(0) : scene;
 	}
 	
