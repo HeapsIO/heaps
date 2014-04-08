@@ -74,8 +74,8 @@ class Skin extends MultiMaterial {
 	}
 	
 	
-	override function getBounds( ?b : h3d.col.Bounds ) {
-		b = super.getBounds(b);
+	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
+		b = super.getBounds(b, rec);
 		var tmp = primitive.getBounds().clone();
 		var b0 = skinData.allJoints[0];
 		// not sure if that's the good joint

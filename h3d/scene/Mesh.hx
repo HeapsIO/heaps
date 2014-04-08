@@ -12,8 +12,8 @@ class Mesh extends Object {
 		this.material = mat;
 	}
 	
-	override function getBounds( ?b : h3d.col.Bounds ) {
-		b = super.getBounds(b);
+	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
+		b = super.getBounds(b, rec);
 		var tmp = primitive.getBounds().clone();
 		tmp.transform3x4(absPos);
 		b.add(tmp);

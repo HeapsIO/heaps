@@ -12,10 +12,12 @@ class CustomObject extends Object {
 		this.material = mat;
 	}
 	
-	override function getBounds( ?b : h3d.col.Bounds ) {
-		if( b == null ) b = new h3d.col.Bounds();
-		b.add(primitive.getBounds());
-		return super.getBounds(b);
+	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
+		b = super.getBounds(b, rec);
+		var tmp = primitive.getBounds().clone();
+		tmp.transform3x4(absPos);
+		b.add(tmp);
+		return b;
 	}
 	
 	override function clone( ?o : Object ) {

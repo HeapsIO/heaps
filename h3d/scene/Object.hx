@@ -100,18 +100,19 @@ class Object {
 	/**
 		Return the bounds of this object, in absolute position.
 	**/
-	public function getBounds( ?b : h3d.col.Bounds ) {
-		if( b == null ) {
-			b = new h3d.col.Bounds();
+	public function getBounds( ?b : h3d.col.Bounds, rec = false ) {
+		if( !rec )
 			syncPos();
-		} else if( posChanged ) {
+		if( b == null )
+			b = new h3d.col.Bounds();
+		if( posChanged ) {
 			for( c in childs )
 				c.posChanged = true;
 			posChanged = false;
 			calcAbsPos();
 		}
 		for( c in childs )
-			c.getBounds(b);
+			c.getBounds(b, true);
 		return b;
 	}
 	
