@@ -93,7 +93,7 @@ class Console extends h2d.Sprite {
 	function showHelp( ?command : String ) {
 		var all;
 		if( command == null ) {
-			all = Lambda.array( { iterator : commands.keys } );
+			all = Lambda.array( { iterator : function() return commands.keys() } );
 			all.sort(Reflect.compare);
 			all.remove("help");
 			all.push("help");
