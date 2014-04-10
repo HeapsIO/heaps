@@ -101,6 +101,8 @@ class Library {
 	**/
 	public var unskinnedJointsAsObjects : Bool;
 	
+	public var allowVertexColor : Bool = true;
+	
 	public function new() {
 		root = { name : "Root", props : [], childs : [] };
 		keepJoints = new Map();
@@ -872,7 +874,7 @@ class Library {
 						continue;
 					}
 					var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
-					if( vcolor )
+					if( vcolor && allowVertexColor )
 						mat.hasVertexColor = true;
 					tmats.push(mat);
 					lastAdded = tmats.length;
