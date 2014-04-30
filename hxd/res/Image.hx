@@ -1,16 +1,16 @@
 package hxd.res;
 
 class Image extends Resource {
-	
+
 	/**
 		Specify if we will automatically convert non-power-of-two textures to power-of-two.
 	**/
 	public static var ALLOW_NPOT = #if flash11_8 true #else false #end;
 	public static var DEFAULT_FILTER : h3d.mat.Data.Filter = Linear;
-	
+
 	var tex : h3d.mat.Texture;
 	var inf : { width : Int, height : Int, isPNG : Bool };
-	
+
 	public function isPNG() {
 		getSize();
 		return inf.isPNG;
@@ -64,7 +64,7 @@ class Image extends Resource {
 		inf = { width : width, height : height, isPNG : isPNG };
 		return inf;
 	}
-	
+
 	public function getPixels() {
 		getSize();
 		if( inf.isPNG ) {
@@ -79,7 +79,7 @@ class Image extends Resource {
 			return new Pixels(p.width,p.height,p.pixels, BGRA);
 		}
 	}
-	
+
 	public function toBitmap() : hxd.BitmapData {
 		getSize();
 		var bmp = new hxd.BitmapData(inf.width, inf.height);
@@ -88,7 +88,7 @@ class Image extends Resource {
 		pixels.dispose();
 		return bmp;
 	}
-	
+
 	function loadTexture() {
 		if( inf.isPNG ) {
 			function load() {
@@ -121,7 +121,7 @@ class Image extends Resource {
 			});
 		}
 	}
-	
+
 	public function toTexture() : h3d.mat.Texture {
 		if( tex != null )
 			return tex;
@@ -135,15 +135,15 @@ class Image extends Resource {
 			height = th;
 		}
 		tex = new h3d.mat.Texture(width, height, [NoAlloc]);
-		tex.filter = DEFAULT_FILTER;
+		if( DEFAULT_FILTER != Linear ) tex.filter = DEFAULT_FILTER;
 		tex.setName(entry.path);
 		loadTexture();
 		return tex;
 	}
-	
+
 	public function toTile() : h2d.Tile {
 		var size = getSize();
 		return h2d.Tile.fromTexture(toTexture()).sub(0, 0, size.width, size.height);
 	}
-	
+
 }
