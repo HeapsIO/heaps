@@ -37,7 +37,7 @@ class DefaultMatrixes {
 	public var rotate : Null<Point>;
 	public var preRot : Null<Point>;
 	public var wasRemoved : Null<Int>;
-	
+
 	public function new() {
 	}
 
@@ -52,7 +52,7 @@ class DefaultMatrixes {
 		m._31 *= -1;
 		m._41 *= -1;
 	}
-	
+
 	public function toMatrix(leftHand) {
 		var m = new h3d.Matrix();
 		m.identity();
@@ -63,7 +63,7 @@ class DefaultMatrixes {
 		if( leftHand ) rightHandToLeft(m);
 		return m;
 	}
-	
+
 }
 
 class Library {
@@ -80,52 +80,52 @@ class Library {
 		Allows to prevent some terminal unskinned joints to be removed, for instance if we want to track their position
 	**/
 	public var keepJoints : Map<String,Bool>;
-	
+
 	/**
 		Allows to skip some objects from being processed as if they were not part of the FBX
 	**/
 	public var skipObjects : Map<String,Bool>;
-	
+
 	/**
 		Set how many bones per vertex should be created in skin data in makeObject(). Default is 3
 	**/
 	public var bonesPerVertex = 3;
-	
+
 	/**
 		If there are too many bones, the model will be split in separate render passes.
 	**/
 	public var maxBonesPerSkin = 34;
-	
+
 	/**
 		Consider unskinned joints to be simple objects
 	**/
 	public var unskinnedJointsAsObjects : Bool;
-	
+
 	public function new() {
 		root = { name : "Root", props : [], childs : [] };
 		keepJoints = new Map();
 		skipObjects = new Map();
 		reset();
 	}
-	
+
 	function reset() {
 		ids = new Map();
 		connect = new Map();
 		invConnect = new Map();
 		defaultModelMatrixes = new Map();
 	}
-	
+
 	public function loadTextFile( data : String ) {
 		load(Parser.parse(data));
 	}
-	
+
 	public function load( root : FbxNode ) {
 		reset();
 		this.root = root;
 		for( c in root.childs )
 			init(c);
 	}
-	
+
 	public function loadXtra( data : String ) {
 		var xml = Xml.parse(data).firstElement();
 		if( uvAnims == null ) uvAnims = new Map();
@@ -135,7 +135,7 @@ class Library {
 			uvAnims.set(obj, frames);
 		}
 	}
-	
+
 	function convertPoints( a : Array<Float> ) {
 		var p = 0;
 		for( i in 0...Std.int(a.length / 3) ) {
@@ -143,7 +143,7 @@ class Library {
 			p += 3;
 		}
 	}
-	
+
 	public function leftHandConvert() {
 		if( leftHand ) return;
 		leftHand = true;
@@ -154,7 +154,7 @@ class Library {
 				convertPoints(v.getFloats());
 		}
 	}
-	
+
 	function init( n : FbxNode ) {
 		switch( n.name ) {
 		case "Connections":
@@ -163,7 +163,7 @@ class Library {
 					continue;
 				var child = c.props[1].toInt();
 				var parent = c.props[2].toInt();
-				
+
 				var c = connect.get(parent);
 				if( c == null ) {
 					c = [];
@@ -173,7 +173,7 @@ class Library {
 
 				if( parent == 0 )
 					continue;
-								
+
 				var c = invConnect.get(child);
 				if( c == null ) {
 					c = [];
@@ -187,7 +187,7 @@ class Library {
 		default:
 		}
 	}
-	
+
 	public function getGeometry( name : String = "" ) {
 		var geom = null;
 		for( g in root.getAll("Objects.Geometry") )
@@ -217,7 +217,7 @@ class Library {
 			throw "Missing " + node.getName() + " " + nodeName + " child";
 		return c[0];
 	}
-	
+
 	public function getChilds( node : FbxNode, ?nodeName : String ) {
 		var c = connect.get(node.getId());
 		var subs = [];
@@ -243,11 +243,11 @@ class Library {
 			}
 		return pl;
 	}
-	
+
 	public function getRoot() {
 		return root;
 	}
-	
+
 	public function ignoreMissingObject( name : String ) {
 		var def = defaultModelMatrixes.get(name);
 		if( def == null ) {
@@ -288,8 +288,8 @@ class Library {
 		}
 		return c;
 	}
-	
-	
+
+
 	public function mergeModels( modelNames : Array<String> ) {
 		if( modelNames.length == 0 )
 			return;
@@ -325,10 +325,10 @@ class Library {
 				}
 				mindex.push(idx);
 			}
-			
+
 			// merge geometry
 			geom.merge(geom2, mindex);
-			
+
 			// merge skinning
 			var def2 = getChild(geom2.getRoot(), "Deformer", true);
 			if( def2 != null ) {
@@ -344,13 +344,13 @@ class Library {
 
 					if( prevDef != null )
 						removeLink(subDef, subModel);
-					
+
 					var idx = subDef.get("Indexes", true);
 					if( idx == null ) continue;
 
-					
 					if( prevDef == null ) {
-						addLink(def2, subDef);
+						addLink(def, subDef);
+						removeLink(def2, subDef);
 						subDefs.push(subDef);
 						var idx = idx.getInts();
 						for( i in 0...idx.length )
@@ -374,15 +374,15 @@ class Library {
 		connect.get(pid).push(nid);
 		invConnect.get(nid).push(pid);
 	}
-	
+
 	function removeLink( parent : FbxNode, child : FbxNode ) {
 		var pid = parent.getId();
 		var nid = child.getId();
 		connect.get(pid).remove(nid);
 		invConnect.get(nid).remove(pid);
 	}
-	
-	
+
+
 	public function loadAnimation( mode : AnimationMode, ?animName : String, ?root : FbxNode, ?lib : Library ) : h3d.anim.Animation {
 		if( lib != null ) {
 			lib.defaultModelMatrixes = defaultModelMatrixes;
@@ -415,7 +415,7 @@ class Library {
 		var P1 = new Point(1, 1, 1);
 		var F = Math.PI / 180;
 		var allTimes = new Map();
-		
+
 		if( animNode != null ) for( cn in getChilds(animNode, "AnimationCurveNode") ) {
 			var model = getParent(cn, "Model");
 			var c = getObjectCurve(curves, model, cn.getName(), animName);
@@ -514,7 +514,7 @@ class Library {
 					allTimes.set(Std.int(f.t / 200000), f.t);
 			}
 		}
-		
+
 		var allTimes = [for( a in allTimes ) a];
 		allTimes.sort(sortDistinctFloats);
 		var maxTime = allTimes[allTimes.length - 1];
@@ -528,11 +528,11 @@ class Library {
 		}
 		var numFrames = maxTime == 0 ? 1 : 1 + Std.int((maxTime - allTimes[0]) / minDT);
 		var sampling = 15.0 / (minDT / 3079077200); // this is the DT value we get from Max when using 15 FPS export
-		
+
 		switch( mode ) {
 		case FrameAnim:
 			var anim = new h3d.anim.FrameAnimation(animName, numFrames, sampling);
-		
+
 			for( c in curves ) {
 				var frames = c.t == null && c.r == null && c.s == null ? null : new haxe.ds.Vector(numFrames);
 				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
@@ -586,7 +586,7 @@ class Library {
 								m.rotate(def.rotate.x, def.rotate.y, def.rotate.z);
 						} else
 							m.rotate(crx[rp-1] * F, cry[rp-1] * F, crz[rp-1] * F);
-							
+
 						if( def.preRot != null )
 							m.rotate(def.preRot.x, def.preRot.y, def.preRot.z);
 
@@ -598,7 +598,7 @@ class Library {
 
 						if( leftHand )
 							DefaultMatrixes.rightHandToLeft(m);
-							
+
 						curMat = m;
 					}
 					if( frames != null )
@@ -615,7 +615,7 @@ class Library {
 						uvs[(f<<1)|1] = cuv[uvp - 1].v;
 					}
 				}
-				
+
 				if( frames != null )
 					anim.addCurve(c.object, frames);
 				if( alpha != null )
@@ -624,9 +624,9 @@ class Library {
 					anim.addUVCurve(c.object, uvs);
 			}
 			return anim;
-			
+
 		case LinearAnim:
-			
+
 			var anim = new h3d.anim.LinearAnimation(animName, numFrames, sampling);
 			var q = new h3d.Quat(), q2 = new h3d.Quat();
 
@@ -694,12 +694,12 @@ class Library {
 								q.identity();
 						} else
 							q.initRotate(crx[rp-1] * F, cry[rp-1] * F, crz[rp-1] * F);
-							
+
 						if( def.preRot != null ) {
 							q2.initRotate(def.preRot.x, def.preRot.y, def.preRot.z);
 							q.multiply(q,q2);
 						}
-						
+
 						f.qx = q.x;
 						f.qy = q.y;
 						f.qz = q.z;
@@ -726,7 +726,7 @@ class Library {
 							f.qy *= -1;
 							f.qz *= -1;
 						}
-						
+
 						curFrame = f;
 					}
 					if( frames != null )
@@ -743,7 +743,7 @@ class Library {
 						uvs[(f<<1)|1] = cuv[uvp - 1].v;
 					}
 				}
-				
+
 				if( frames != null )
 					anim.addCurve(c.object, frames, c.r != null || def.rotate != null, c.s != null || def.scale != null);
 				if( alpha != null )
@@ -752,14 +752,14 @@ class Library {
 					anim.addUVCurve(c.object, uvs);
 			}
 			return anim;
-			
+
 		}
 	}
-	
+
 	function sortDistinctFloats( a : Float, b : Float ) {
 		return if( a > b ) 1 else -1;
 	}
-	
+
 	function isNullJoint( model : FbxNode ) {
 		if( getParent(model, "Deformer", true) != null )
 			return false;
@@ -771,7 +771,7 @@ class Library {
 			return false;
 		return true;
 	}
-	
+
 	function getModelPath( model : FbxNode ) {
 		var parent = getParent(model, "Model", true);
 		var name = model.getName();
@@ -795,7 +795,7 @@ class Library {
 				return new h3d.mat.MeshMaterial(tmpTex);
 			}
 		}
-		
+
 		// init objects
 		var oroot : TmpObject = { model : null, isJoint : false, isMesh : false, childs : [], parent : null, obj : scene };
 		hobjects.set(0, oroot);
@@ -808,7 +808,7 @@ class Library {
 			hobjects.set(model.getId(), o);
 			objects.push(o);
 		}
-		
+
 		// build hierarchy
 		for( o in objects ) {
 			var p = getParent(o.model, "Model", true);
@@ -818,7 +818,7 @@ class Library {
 			op.childs.push(o);
 			o.parent = op;
 		}
-		
+
 		// propagates joint flags
 		var changed = true;
 		while( changed ) {
@@ -845,8 +845,8 @@ class Library {
 						}
 			}
 		}
-				
-		
+
+
 		// create all models
 		for( o in objects ) {
 			var name = o.model.getName();
@@ -930,12 +930,12 @@ class Library {
 		// build skins
 		for( o in objects ) {
 			if( o.isJoint ) continue;
-			
-			
+
+
 			// /!\ currently, childs of joints will work but will not cloned
 			if( o.parent.isJoint )
 				o.obj.follow = scene.getObjectByName(o.parent.joint.name);
-				
+
 			var skin = Std.instance(o.obj, h3d.scene.Skin);
 			if( skin == null ) continue;
 			var rootJoints = [];
@@ -964,11 +964,11 @@ class Library {
 
 		return scene.numChildren == 1 ? scene.getChildAt(0) : scene;
 	}
-	
+
 	function keepJoint( j : h3d.anim.Skin.Joint ) {
 		return keepJoints.get(j.name);
 	}
-	
+
 	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,h3d.prim.FBXModel>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
 		var allJoints = [];
 		function collectJoints(j:h3d.anim.Skin.Joint) {
@@ -987,7 +987,7 @@ class Library {
 			var subDef = getParent(jModel, "Deformer", true);
 			var defMat = defaultModelMatrixes.get(jModel.getName());
 			j.defMat = defMat.toMatrix(leftHand);
-			
+
 			if( subDef == null ) {
 				// if we have skinned subs, we need to keep in joint hierarchy
 				if( j.subs.length > 0 || keepJoint(j) )
@@ -1017,7 +1017,7 @@ class Library {
 			}
 			j.transPos = h3d.Matrix.L(subDef.get("Transform").getFloats());
 			if( leftHand ) DefaultMatrixes.rightHandToLeft(j.transPos);
-			
+
 			var weights = subDef.getAll("Weights");
 			if( weights.length > 0 ) {
 				var weights = weights[0].getFloats();
@@ -1039,7 +1039,7 @@ class Library {
 		skin.initWeights();
 		return skin;
 	}
-	
+
 	function getDefaultMatrixes( model : FbxNode ) {
 		var d = new DefaultMatrixes();
 		var F = Math.PI / 180;
@@ -1060,5 +1060,5 @@ class Library {
 		defaultModelMatrixes.set(model.getName(), d);
 		return d;
 	}
-	
+
 }
