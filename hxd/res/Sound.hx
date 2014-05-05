@@ -130,7 +130,7 @@ class Sound extends Resource {
 			bytesPosition = 0;
 			snd.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, onWavSample);
 			
-		case 255: // MP3
+		case 255, 'I'.code: // MP3 (or ID3)
 			
 			snd.loadCompressedDataFromByteArray(bytes.getData(), bytes.length);
 			if( loop ) {
