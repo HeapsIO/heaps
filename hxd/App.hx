@@ -2,9 +2,9 @@ package hxd;
 
 class App {
 	
-	var engine : h3d.Engine;
-	var s3d : h3d.scene.Scene;
-	var s2d : h2d.Scene;
+	public var engine : h3d.Engine;
+	public var s3d : h3d.scene.Scene;
+	public var s2d : h2d.Scene;
 	
 	public function new(?engine) {
 		if( engine != null ) {
