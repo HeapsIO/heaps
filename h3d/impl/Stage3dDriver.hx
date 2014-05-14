@@ -8,12 +8,12 @@ class VertexWrapper {
 	var vbuf : flash.display3D.VertexBuffer3D;
 	var written : Bool;
 	var b : ManagedBuffer;
-	
+
 	function new(vbuf, b) {
 		this.vbuf = vbuf;
 		this.b = b;
 	}
-		
+
 	function finalize( driver : Stage3dDriver ) {
 		if( written ) return;
 		written = true;
@@ -32,11 +32,13 @@ class VertexWrapper {
 }
 
 class Stage3dDriver extends Driver {
-	
+
+	public static var PROFILE = flash.display3D.Context3DProfile.BASELINE;
+
 	var s3d : flash.display.Stage3D;
 	var ctx : flash.display3D.Context3D;
 	var onCreateCallback : Bool -> Void;
-	
+
 	var curMatBits : Int;
 	var curShader : hxsl.Shader.ShaderInstance;
 	var curBuffer : VertexBuffer;
@@ -54,18 +56,18 @@ class Stage3dDriver extends Driver {
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
-	
+
 	public function new() {
 		empty = new flash.utils.ByteArray();
 		s3d = flash.Lib.current.stage.stage3Ds[0];
 		curTextures = [];
 		curMultiBuffer = [];
 	}
-	
+
 	override function getDriverName(details:Bool) {
 		return ctx == null ? "None" : (details ? ctx.driverInfo : ctx.driverInfo.split(" ")[0]);
 	}
-	
+
 	override function begin( frame : Int ) {
 		reset();
 		this.frame = frame;
@@ -85,13 +87,13 @@ class Stage3dDriver extends Driver {
 		curTextures = [];
 		curSamplerBits = [];
 	}
-	
+
 	override function init( onCreate, forceSoftware = false ) {
 		this.onCreateCallback = onCreate;
 		s3d.addEventListener(flash.events.Event.CONTEXT3D_CREATE, this.onCreate);
-		s3d.requestContext3D( forceSoftware ? "software" : "auto" );
+		s3d.requestContext3D( forceSoftware ? "software" : "auto", PROFILE );
 	}
-	
+
 	function onCreate(_) {
 		var old = ctx;
 		if( old != null ) {
@@ -105,35 +107,35 @@ class Stage3dDriver extends Driver {
 			onCreateCallback(false);
 		}
 	}
-	
+
 	override function isHardware() {
 		return ctx != null && ctx.driverInfo.toLowerCase().indexOf("software") == -1;
 	}
-	
+
 	override function resize(width, height) {
 		ctx.configureBackBuffer(width, height, antiAlias);
 		this.width = width;
 		this.height = height;
 	}
-	
+
 	override function clear(r, g, b, a) {
 		ctx.clear(r, g, b, a);
 	}
-	
+
 	override function setCapture( bmp : hxd.BitmapData, onCapture : Void -> Void ) {
 		capture = { bmp : bmp, callb : onCapture };
 	}
-	
+
 	override function dispose() {
 		s3d.removeEventListener(flash.events.Event.CONTEXT3D_CREATE, onCreate);
 		if( ctx != null ) ctx.dispose();
 		ctx = null;
 	}
-	
+
 	override function isDisposed() {
 		return ctx == null || ctx.driverInfo == "Disposed";
 	}
-	
+
 	override function present() {
 		if( capture != null ) {
 			ctx.drawToBitmapData(capture.bmp.toNative());
@@ -145,11 +147,11 @@ class Stage3dDriver extends Driver {
 		}
 		ctx.present();
 	}
-	
+
 	override function disposeTexture( t : Texture ) {
 		t.dispose();
 	}
-	
+
 	override function allocVertex( buf : ManagedBuffer ) : VertexBuffer {
 		var v;
 		try {
@@ -166,7 +168,7 @@ class Stage3dDriver extends Driver {
 	override function allocIndexes( count : Int ) : IndexBuffer {
 		return ctx.createIndexBuffer(count);
 	}
-	
+
 	function getMipLevels( t : h3d.mat.Texture ) {
 		if( !t.flags.has(MipMapped) )
 			return 0;
@@ -175,7 +177,7 @@ class Stage3dDriver extends Driver {
 			levels++;
 		return levels;
 	}
-	
+
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var fmt = flash.display3D.Context3DTextureFormat.BGRA;
 		t.lastFrame = frame;
@@ -232,20 +234,20 @@ class Stage3dDriver extends Driver {
 			t.uploadFromByteArray(data, 0, mipLevel);
 		}
 	}
-	
+
 	override function disposeVertex( v : VertexBuffer ) {
 		v.vbuf.dispose();
 		v.b = null;
 	}
-	
+
 	override function disposeIndexes( i : IndexBuffer ) {
 		i.dispose();
 	}
-	
+
 	override function setDebug( d : Bool ) {
 		if( ctx != null ) ctx.enableErrorChecking = d && isHardware();
 	}
-	
+
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
 		var data = buf.getNative();
 		v.vbuf.uploadFromVector( bufPos == 0 ? data : data.slice(bufPos, vertexCount * v.b.stride + bufPos), startVertex, vertexCount );
@@ -263,7 +265,7 @@ class Stage3dDriver extends Driver {
 	override function uploadIndexesBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		i.uploadFromByteArray(buf.getData(), bufPos, startIndice, indiceCount );
 	}
-	
+
 	override function selectMaterial( mbits : Int ) {
 		var diff = curMatBits ^ mbits;
 		if( diff != 0 ) {
@@ -338,7 +340,7 @@ class Stage3dDriver extends Driver {
 		}
 		return shaderChanged;
 	}
-	
+
 	override function selectBuffer( v : VertexBuffer ) {
 		if( v == curBuffer )
 			return;
@@ -360,11 +362,11 @@ class Stage3dDriver extends Driver {
 			ctx.setVertexBufferAt(i, null);
 		curAttributes = pos;
 	}
-	
+
 	override function getShaderInputNames() {
 		return curShader.bufferNames;
 	}
-	
+
 	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
 		// select the multiple buffers elements
 		var changed = false;
@@ -411,7 +413,7 @@ class Stage3dDriver extends Driver {
 				throw e;
 		}
 	}
-	
+
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 		if( enableDraw ) {
 			if( ctx.enableErrorChecking )
@@ -460,7 +462,7 @@ class Stage3dDriver extends Driver {
 			ctx.clear( ((clearColor>>16)&0xFF)/255 , ((clearColor>>8)&0xFF)/255, (clearColor&0xFF)/255, ((clearColor>>>24)&0xFF)/255);
 		}
 	}
-	
+
 	static var BLEND = [
 		flash.display3D.Context3DBlendFactor.ONE,
 		flash.display3D.Context3DBlendFactor.ZERO,
@@ -499,22 +501,22 @@ class Stage3dDriver extends Driver {
 		flash.display3D.Context3DVertexBufferFormat.FLOAT_3,
 		flash.display3D.Context3DVertexBufferFormat.FLOAT_4,
 	];
-	
+
 	static var WRAP = [
 		flash.display3D.Context3DWrapMode.CLAMP,
 		flash.display3D.Context3DWrapMode.REPEAT,
 	];
-	
+
 	static var FILTER = [
 		flash.display3D.Context3DTextureFilter.NEAREST,
 		flash.display3D.Context3DTextureFilter.LINEAR,
 	];
-	
+
 	static var MIP = [
 		flash.display3D.Context3DMipFilter.MIPNONE,
 		flash.display3D.Context3DMipFilter.MIPNEAREST,
 		flash.display3D.Context3DMipFilter.MIPLINEAR,
 	];
-	
+
 }
 #end
