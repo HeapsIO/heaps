@@ -5,7 +5,7 @@ package hxd.res;
 @:allow(hxd.res.LocalFileSystem)
 @:access(hxd.res.LocalFileSystem)
 private class LocalEntry extends FileEntry {
-	
+
 	var fs : LocalFileSystem;
 	var relPath : String;
 	#if air3
@@ -24,9 +24,9 @@ private class LocalEntry extends FileEntry {
 		if( fs.createXBX && extension == "fbx" )
 			convertToXBX();
 	}
-	
+
 	static var INVALID_CHARS = ~/[^A-Za-z0-9_]/g;
-	
+
 	function convertToXBX() {
 		function getXBX() {
 			var fbx = null;
@@ -85,7 +85,7 @@ private class LocalEntry extends FileEntry {
 		return sys.io.File.getBytes(file);
 		#end
 	}
-	
+
 	override function open() {
 		#if air3
 		if( fread != null )
@@ -101,7 +101,7 @@ private class LocalEntry extends FileEntry {
 			fread = sys.io.File.read(file);
 		#end
 	}
-	
+
 	override function skip(nbytes:Int) {
 		#if air3
 		fread.position += nbytes;
@@ -109,7 +109,7 @@ private class LocalEntry extends FileEntry {
 		fread.seek(nbytes, SeekCur);
 		#end
 	}
-	
+
 	override function readByte() {
 		#if air3
 		return fread.readUnsignedByte();
@@ -117,7 +117,7 @@ private class LocalEntry extends FileEntry {
 		return fread.readByte();
 		#end
 	}
-	
+
 	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
 		#if air3
 		fread.readBytes(out.getData(), pos, size);
@@ -139,7 +139,7 @@ private class LocalEntry extends FileEntry {
 		}
 		#end
 	}
-	
+
 	override function get_isDirectory() {
 		#if air3
 		return file.isDirectory;
@@ -148,7 +148,7 @@ private class LocalEntry extends FileEntry {
 		return false;
 		#end
 	}
-	
+
 	override function load( ?onReady : Void -> Void ) : Void {
 		#if air3
 		if( onReady != null ) haxe.Timer.delay(onReady, 1);
@@ -156,7 +156,7 @@ private class LocalEntry extends FileEntry {
 		throw "TODO";
 		#end
 	}
-	
+
 	override function loadBitmap( onLoaded : hxd.BitmapData -> Void ) : Void {
 		#if flash
 		var loader = new flash.display.Loader();
@@ -173,19 +173,19 @@ private class LocalEntry extends FileEntry {
 		throw "TODO";
 		#end
 	}
-	
+
 	override function get_path() {
 		return relPath == null ? "<root>" : relPath;
 	}
-	
+
 	override function exists( name : String ) {
 		return fs.exists(relPath == null ? name : relPath + "/" + name);
 	}
-	
+
 	override function get( name : String ) {
 		return fs.get(relPath == null ? name : relPath + "/" + name);
 	}
-	
+
 	override function get_size() {
 		#if air3
 		return Std.int(file.size);
@@ -218,16 +218,56 @@ private class LocalEntry extends FileEntry {
 		return new hxd.impl.ArrayIterator(arr);
 		#end
 	}
-	
+
+	#if air3
+
+	var watchCallback : Void -> Void;
+	var watchTime : Float;
+	static var WATCH_LIST : Array<LocalEntry> = null;
+
+	static function checkFiles(_) {
+		for( w in WATCH_LIST ) {
+			var t = try w.file.modificationDate.getTime() catch( e : Dynamic ) -1;
+			if( t != w.watchTime ) {
+				// check we can read (might be deleted/renamed/currently writing)
+				try { w.close(); w.open(); w.close(); } catch( e : Dynamic ) continue;
+				w.watchTime = t;
+				w.watchCallback();
+			}
+		}
+	}
+
+	override function watch( onChanged : Null < Void -> Void > ) {
+		if( onChanged == null ) {
+			if( watchCallback != null ) {
+				WATCH_LIST.remove(this);
+				watchCallback = null;
+			}
+			return;
+		}
+		if( watchCallback == null ) {
+			if( WATCH_LIST == null ) {
+				WATCH_LIST = [];
+				flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, checkFiles);
+			}
+			WATCH_LIST.push(this);
+		}
+		watchTime = file.modificationDate.getTime();
+		watchCallback = onChanged;
+		return;
+	}
+
+	#end
+
 }
 
 class LocalFileSystem implements FileSystem {
-	
+
 	var root : FileEntry;
 	public var baseDir(default,null) : String;
 	public var createXBX : Bool;
 	public var tmpDir : String;
-	
+
 	public function new( dir : String ) {
 		baseDir = dir;
 		#if air3
@@ -248,11 +288,11 @@ class LocalFileSystem implements FileSystem {
 		#end
 		tmpDir = baseDir + ".tmp/";
 	}
-	
+
 	public dynamic function xbxFilter( entry : FileEntry, fbx : h3d.fbx.Data.FbxNode ) : h3d.fbx.Data.FbxNode {
 		return fbx;
 	}
-	
+
 	public function getRoot() : FileEntry {
 		return root;
 	}
@@ -272,7 +312,7 @@ class LocalFileSystem implements FileSystem {
 		return f;
 		#end
 	}
-	
+
 	public function exists( path : String ) {
 		#if air3
 		var f = open(path);
@@ -282,7 +322,7 @@ class LocalFileSystem implements FileSystem {
 		return f != null && sys.FileSystem.exists(f);
 		#end
 	}
-	
+
 	public function get( path : String ) {
 		#if air3
 		var f = open(path);
@@ -296,7 +336,7 @@ class LocalFileSystem implements FileSystem {
 		return new LocalEntry(this, path.split("/").pop(), path, f);
 		#end
 	}
-	
+
 }
 
 #else
@@ -304,7 +344,7 @@ class LocalFileSystem implements FileSystem {
 class LocalFileSystem implements FileSystem {
 
 	public var baseDir(default,null) : String;
-	
+
 	public function new( dir : String ) {
 		#if flash
 		if( flash.system.Capabilities.playerType == "Desktop" )
@@ -312,11 +352,11 @@ class LocalFileSystem implements FileSystem {
 		#end
 		throw "Local file system is not supported for this platform";
 	}
-	
+
 	public function exists(path:String) {
 		return false;
 	}
-	
+
 	public function get(path:String) : FileEntry {
 		return null;
 	}

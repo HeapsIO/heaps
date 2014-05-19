@@ -89,6 +89,16 @@ class Image extends Resource {
 		return bmp;
 	}
 
+	function watchCallb() {
+		var w = inf.width, h = inf.height;
+		inf = null;
+		var s = getSize();
+		if( w != s.width || h != s.height )
+			tex.resize(w, h);
+		tex.realloc = null;
+		loadTexture();
+	}
+
 	function loadTexture() {
 		if( inf.isPNG ) {
 			function load() {
@@ -100,6 +110,7 @@ class Image extends Resource {
 				tex.uploadPixels(pixels);
 				pixels.dispose();
 				tex.realloc = loadTexture;
+				watch(watchCallb);
 			}
 			if( entry.isAvailable )
 				load();
@@ -118,6 +129,7 @@ class Image extends Resource {
 					tex.uploadBitmap(bmp);
 				bmp.dispose();
 				tex.realloc = loadTexture;
+				watch(watchCallb);
 			});
 		}
 	}
