@@ -24,9 +24,9 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	var tmp : hxd.FloatBuffer;
 	var index : hxd.IndexBuffer;
-	
+
 	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes }>;
-	
+
 	public function new() {
 		buffers = [];
 	}
@@ -45,7 +45,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		tmp.push(b);
 		tmp.push(a);
 	}
-	
+
 	public function next() {
 		var nvect = tmp.length >> 3;
 		if( nvect < 1 << 15 )
@@ -56,7 +56,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		super.dispose();
 		return true;
 	}
-	
+
 	override function alloc( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
 		buffer = h3d.Buffer.ofFloats(tmp, 8);
@@ -66,7 +66,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = h3d.Indexes.alloc(b.idx);
 		}
 	}
-	
+
 	override function render( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
 		if( buffer == null || buffer.isDisposed() ) alloc(engine);
@@ -74,7 +74,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 			engine.renderIndexed(b.vbuf, b.ibuf);
 		super.render(engine);
 	}
-	
+
 	override function dispose() {
 		for( b in buffers ) {
 			if( b.vbuf != null ) b.vbuf.dispose();
@@ -84,15 +84,15 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		}
 		super.dispose();
 	}
-	
-	
+
+
 	public function reset() {
 		dispose();
 		tmp = new hxd.FloatBuffer();
 		index = new hxd.IndexBuffer();
 		buffers = [];
 	}
-	
+
 }
 
 class Graphics extends Drawable {
@@ -112,9 +112,14 @@ class Graphics extends Drawable {
 	var lineB : Float;
 	var lineA : Float;
 	var doFill : Bool;
-	
+
+	var xMin : Float;
+	var yMin : Float;
+	var xMax : Float;
+	var yMax : Float;
+
 	public var tile : h2d.Tile;
-	
+
 	public function new(?parent) {
 		super(parent);
 		content = new GraphicsContent();
@@ -122,12 +127,12 @@ class Graphics extends Drawable {
 		tile = h2d.Tile.fromColor(0xFFFFFFFF);
 		clear();
 	}
-	
+
 	override function onDelete() {
 		super.onDelete();
 		clear();
 	}
-	
+
 	public function clear() {
 		content.reset();
 		pts = [];
@@ -135,6 +140,15 @@ class Graphics extends Drawable {
 		linePts = [];
 		pindex = 0;
 		lineSize = 0;
+		xMin = Math.POSITIVE_INFINITY;
+		yMin = Math.POSITIVE_INFINITY;
+		yMax = Math.NEGATIVE_INFINITY;
+		xMax = Math.NEGATIVE_INFINITY;
+	}
+
+	override function getBoundsRec( relativeTo, out ) {
+		super.getBoundsRec(relativeTo, out);
+		if( tile != null ) addBounds(relativeTo, out, xMin, yMin, xMax - xMin, yMax - yMin);
 	}
 
 	function isConvex( points : Array<GraphicsPoint> ) {
@@ -147,7 +161,7 @@ class Graphics extends Drawable {
 		}
 		return true;
 	}
-	
+
 	function flushLine() {
 		if( linePts.length == 0 )
 			return;
@@ -163,15 +177,15 @@ class Graphics extends Drawable {
 			var nx2 = p.y - next.y;
 			var ny2 = next.x - p.x;
 			var ns2 = Math.invSqrt(nx2 * nx2 + ny2 * ny2);
-			
+
 			var nx = (nx1 * ns1 + nx2 * ns2) * lineSize * 0.5;
 			var ny = (ny1 * ns1 + ny2 * ns2) * lineSize * 0.5;
-			
+
 			content.add(p.x + nx, p.y + ny, 0, 0, p.r, p.g, p.b, p.a);
 			content.add(p.x - nx, p.y - ny, 0, 0, p.r, p.g, p.b, p.a);
-			
+
 			var pnext = i == last ? start : pindex + 2;
-			
+
 			content.addIndex(pindex);
 			content.addIndex(pindex + 1);
 			content.addIndex(pnext);
@@ -179,9 +193,9 @@ class Graphics extends Drawable {
 			content.addIndex(pindex + 1);
 			content.addIndex(pnext);
 			content.addIndex(pnext + 1);
-			
+
 			pindex += 2;
-			
+
 			prev = p;
 			p = next;
 		}
@@ -189,7 +203,7 @@ class Graphics extends Drawable {
 		if( content.next() )
 			pindex = 0;
 	}
-	
+
 	function flushFill() {
 		if( pts.length > 0 ) {
 			prev.push(pts);
@@ -197,7 +211,7 @@ class Graphics extends Drawable {
 		}
 		if( prev.length == 0 )
 			return;
-			
+
 		if( prev.length == 1 && isConvex(prev[0]) ) {
 			var p0 = prev[0][0].id;
 			for( i in 1...prev[0].length - 1 ) {
@@ -209,31 +223,31 @@ class Graphics extends Drawable {
 			var ctx = new hxd.poly2tri.SweepContext();
 			for( p in prev )
 				ctx.addPolyline(p);
-				
+
 			var p = new hxd.poly2tri.Sweep(ctx);
 			p.triangulate();
-			
+
 			for( t in ctx.triangles )
 				for( p in t.points )
 					content.addIndex(p.id);
 		}
-				
+
 		prev = [];
 		if( content.next() )
 			pindex = 0;
 	}
-	
+
 	function flush() {
 		flushFill();
 		flushLine();
 	}
-	
+
 	public function beginFill( color : Int = 0, alpha = 1.  ) {
 		flush();
 		setColor(color,alpha);
 		doFill = true;
 	}
-	
+
 	public function lineStyle( size : Float = 0, color = 0, alpha = 1. ) {
 		flush();
 		this.lineSize = size;
@@ -242,26 +256,26 @@ class Graphics extends Drawable {
 		lineG = ((color >> 8) & 0xFF) / 255.;
 		lineB = (color & 0xFF) / 255.;
 	}
-	
+
 	public function endFill() {
 		flush();
 		doFill = false;
 	}
-	
+
 	public inline function setColor( color : Int, alpha : Float = 1. ) {
 		curA = alpha;
 		curR = ((color >> 16) & 0xFF) / 255.;
 		curG = ((color >> 8) & 0xFF) / 255.;
 		curB = (color & 0xFF) / 255.;
 	}
-	
+
 	public function drawRect( x : Float, y : Float, w : Float, h : Float ) {
 		addPoint(x, y);
 		addPoint(x + w, y);
 		addPoint(x + w, y + h);
 		addPoint(x, y + h);
 	}
-	
+
 	public function drawCircle( cx : Float, cy : Float, ray : Float, nsegments = 0 ) {
 		if( nsegments == 0 )
 			nsegments = Math.ceil(ray * 3.14 * 2 / 4);
@@ -272,19 +286,23 @@ class Graphics extends Drawable {
 			addPoint(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
 		}
 	}
-	
+
 	public function addHole() {
 		if( pts.length > 0 ) {
 			prev.push(pts);
 			pts = [];
 		}
 	}
-	
+
 	public inline function addPoint( x : Float, y : Float ) {
 		addPointFull(x, y, curR, curG, curB, curA);
 	}
 
 	public function addPointFull( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, u : Float = 0., v : Float = 0. ) {
+		if( x < xMin ) xMin = x;
+		if( y < yMin ) yMin = y;
+		if( x > xMax ) xMax = x;
+		if( y < yMax ) yMax = y;
 		if( doFill ) {
 			var p = new GraphicsPoint(x, y);
 			p.id = pindex++;
@@ -294,7 +312,7 @@ class Graphics extends Drawable {
 		if( lineSize > 0 )
 			linePts.push(new LinePoint(x, y, lineR, lineG, lineB, lineA));
 	}
-	
+
 	override function draw(ctx:RenderContext) {
 		flush();
 		setupShader(ctx.engine, tile, 0);

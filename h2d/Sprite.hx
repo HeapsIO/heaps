@@ -4,10 +4,11 @@ import hxd.Math;
 @:allow(h2d.Tools)
 class Sprite {
 
+	static var tmpMatrix = new h3d.Matrix();
 	var childs : Array<Sprite>;
 	public var parent(default, null) : Sprite;
 	public var numChildren(get, never) : Int;
-	
+
 	public var x(default,set) : Float;
 	public var y(default, set) : Float;
 	public var scaleX(default,set) : Float;
@@ -21,11 +22,11 @@ class Sprite {
 	var matD : Float;
 	var absX : Float;
 	var absY : Float;
-	
+
 	var posChanged : Bool;
 	var allocated : Bool;
 	var lastFrame : Int;
-	
+
 	public function new( ?parent : Sprite ) {
 		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
 		x = 0; y = 0; scaleX = 1; scaleY = 1; rotation = 0;
@@ -35,14 +36,120 @@ class Sprite {
 		if( parent != null )
 			parent.addChild(this);
 	}
-	
+
+	public function getBounds( ?relativeTo : Sprite, ?out : h2d.col.Bounds ) : h2d.col.Bounds {
+		if( out == null ) out = new h2d.col.Bounds();
+		if( relativeTo == null ) {
+			relativeTo = getScene();
+			if( relativeTo == null ) relativeTo = this;
+		}
+		syncPos();
+		getBoundsRec(relativeTo, out);
+		if( out.isEmpty() ) {
+			addBounds(relativeTo, out, 0, 0, 1, 1);
+			out.xMax = out.xMin;
+			out.yMax = out.yMin;
+		}
+		return out;
+	}
+
+	function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds ) {
+		var n = childs.length;
+		if( n == 0 ) {
+			out.empty();
+			return;
+		}
+		if( posChanged ) {
+			calcAbsPos();
+			for( c in childs )
+				c.posChanged = true;
+			posChanged = false;
+		}
+		if( n == 1 ) {
+			childs[0].getBounds(relativeTo, out);
+			return;
+		}
+		var xmin = hxd.Math.POSITIVE_INFINITY, ymin = hxd.Math.POSITIVE_INFINITY;
+		var xmax = hxd.Math.NEGATIVE_INFINITY, ymax = hxd.Math.NEGATIVE_INFINITY;
+		for( c in childs ) {
+			c.getBoundsRec(relativeTo, out);
+			if( out.xMin < xmin ) xmin = out.xMin;
+			if( out.yMin < ymin ) ymin = out.yMin;
+			if( out.xMax > xmax ) xmax = out.xMax;
+			if( out.yMax > ymax ) ymax = out.yMax;
+		}
+		out.xMin = xmin;
+		out.yMin = ymin;
+		out.xMax = xmax;
+		out.yMax = ymax;
+	}
+
+	function addBounds( relativeTo : Sprite, out : h2d.col.Bounds, dx : Float, dy : Float, width : Float, height : Float ) {
+
+		if( width <= 0 || height <= 0 ) return;
+
+		if( relativeTo == this ) {
+			if( out.xMin > dx ) out.xMin = dx;
+			if( out.yMin > dy ) out.yMin = dy;
+			if( out.xMax < dx + width ) out.xMax = dx + width;
+			if( out.yMax < dy + height ) out.yMax = dy + height;
+			return;
+		}
+
+		var det = 1 / (relativeTo.matA * relativeTo.matD + relativeTo.matB * relativeTo.matC);
+		var rA = relativeTo.matD * det;
+		var rB = -relativeTo.matC * det;
+		var rC = -relativeTo.matB * det;
+		var rD = relativeTo.matA * det;
+		var rX = absX - relativeTo.absX;
+		var rY = absY - relativeTo.absY;
+
+		var x, y, rx, ry;
+
+		x = dx * matA + dy * matC + rX;
+		y = dx * matB + dy * matD + rY;
+		rx = x * rA + y * rC;
+		ry = x * rB + y * rD;
+		if( out.xMin > rx ) out.xMin = rx;
+		if( out.yMin > ry ) out.yMin = ry;
+		if( out.xMax < rx ) out.xMax = rx;
+		if( out.yMax < ry ) out.yMax = ry;
+
+		x = (dx + width) * matA + dy * matC + rX;
+		y = (dx + width) * matB + dy * matD + rY;
+		rx = x * rA + y * rC;
+		ry = x * rB + y * rD;
+		if( out.xMin > rx ) out.xMin = rx;
+		if( out.yMin > ry ) out.yMin = ry;
+		if( out.xMax < rx ) out.xMax = rx;
+		if( out.yMax < ry ) out.yMax = ry;
+
+		x = dx * matA + (dy + height) * matC + rX;
+		y = dx * matB + (dy + height) * matD + rY;
+		rx = x * rA + y * rC;
+		ry = x * rB + y * rD;
+		if( out.xMin > rx ) out.xMin = rx;
+		if( out.yMin > ry ) out.yMin = ry;
+		if( out.xMax < rx ) out.xMax = rx;
+		if( out.yMax < ry ) out.yMax = ry;
+
+		x = (dx + width) * matA + (dy + height) * matC + rX;
+		y = (dx + width) * matB + (dy + height) * matD + rY;
+		rx = x * rA + y * rC;
+		ry = x * rB + y * rD;
+		if( out.xMin > rx ) out.xMin = rx;
+		if( out.yMin > ry ) out.yMin = ry;
+		if( out.xMax < rx ) out.xMax = rx;
+		if( out.yMax < ry ) out.yMax = ry;
+	}
+
 	public function getSpritesCount() {
 		var k = 0;
 		for( c in childs )
 			k += c.getSpritesCount() + 1;
 		return k;
 	}
-	
+
 	public function localToGlobal( ?pt : h2d.col.Point ) {
 		syncPos();
 		if( pt == null ) pt = new h2d.col.Point();
@@ -82,17 +189,17 @@ class Sprite {
 		pt.y = py;
 		return pt;
 	}
-	
+
 	function getScene() {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
 		return Std.instance(p, Scene);
 	}
-	
+
 	public function addChild( s : Sprite ) {
 		addChildAt(s, childs.length);
 	}
-	
+
 	public function addChildAt( s : Sprite, pos : Int ) {
 		if( pos < 0 ) pos = 0;
 		if( pos > childs.length ) pos = childs.length;
@@ -121,40 +228,40 @@ class Sprite {
 				s.onParentChanged();
 		}
 	}
-	
+
 	// called when we're allocated already but moved in hierarchy
 	function onParentChanged() {
 	}
-	
+
 	// kept for internal init
 	function onAlloc() {
 		allocated = true;
 		for( c in childs )
 			c.onAlloc();
 	}
-		
+
 	// kept for internal cleanup
 	function onDelete() {
 		allocated = false;
 		for( c in childs )
 			c.onDelete();
 	}
-	
+
 	public function removeChild( s : Sprite ) {
 		if( childs.remove(s) ) {
 			if( s.allocated ) s.onDelete();
 			s.parent = null;
 		}
 	}
-	
+
 	// shortcut for parent.removeChild
 	public inline function remove() {
 		if( this != null && parent != null ) parent.removeChild(this);
 	}
-	
+
 	function draw( ctx : RenderContext ) {
 	}
-	
+
 	function sync( ctx : RenderContext ) {
 		/*
 		if( currentAnimation != null ) {
@@ -172,7 +279,7 @@ class Sprite {
 			calcAbsPos();
 			posChanged = false;
 		}
-		
+
 		lastFrame = ctx.frame;
 		var p = 0, len = childs.length;
 		while( p < len ) {
@@ -192,7 +299,7 @@ class Sprite {
 				p++;
 		}
 	}
-	
+
 	function syncPos() {
 		if( parent != null ) parent.syncPos();
 		if( posChanged ) {
@@ -202,7 +309,7 @@ class Sprite {
 			posChanged = false;
 		}
 	}
-	
+
 	function calcAbsPos() {
 		if( parent == null ) {
 			var cr, sr;
@@ -272,22 +379,22 @@ class Sprite {
 		posChanged = true;
 		return y = v;
 	}
-	
+
 	inline function set_scaleX(v) {
 		posChanged = true;
 		return scaleX = v;
 	}
-	
+
 	inline function set_scaleY(v) {
 		posChanged = true;
 		return scaleY = v;
 	}
-	
+
 	inline function set_rotation(v) {
 		posChanged = true;
 		return rotation = v;
 	}
-	
+
 	public function move( dx : Float, dy : Float ) {
 		x += dx * Math.cos(rotation);
 		y += dy * Math.sin(rotation);
@@ -297,16 +404,16 @@ class Sprite {
 		this.x = x;
 		this.y = y;
 	}
-	
+
 	public inline function rotate( v : Float ) {
 		rotation += v;
 	}
-	
+
 	public inline function scale( v : Float ) {
 		scaleX *= v;
 		scaleY *= v;
 	}
-	
+
 	public inline function setScale( v : Float ) {
 		scaleX = v;
 		scaleY = v;
@@ -322,7 +429,7 @@ class Sprite {
 				return i;
 		return -1;
 	}
-	
+
 	inline function get_numChildren() {
 		return childs.length;
 	}

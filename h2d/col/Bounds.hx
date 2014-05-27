@@ -91,6 +91,10 @@ class Bounds {
 		return new Point(xMax, yMax);
 	}
 
+	public inline function isEmpty() {
+		return xMax <= xMin || yMax <= yMin;
+	}
+
 	public inline function empty() {
 		xMin = 1e20;
 		yMin = 1e20;

@@ -22,6 +22,12 @@ class Anim extends Drawable {
 	public dynamic function onAnimEnd() {
 	}
 
+	override function getBoundsRec( relativeTo, out ) {
+		super.getBoundsRec(relativeTo, out);
+		var tile = getFrame();
+		if( tile != null ) addBounds(relativeTo, out, tile.dx, tile.dy, tile.width, tile.height);
+	}
+
 	override function sync( ctx : RenderContext ) {
 		currentFrame += speed * ctx.elapsedTime;
 		if( currentFrame < frames.length )

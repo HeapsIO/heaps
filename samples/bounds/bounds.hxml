@@ -1,0 +1,6 @@
+-swf bounds.swf
+-swf-header 800:600:60:FFFFFF
+--flash-strict
+-swf-version 11
+-main Bounds
+-lib h3d
