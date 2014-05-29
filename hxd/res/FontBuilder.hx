@@ -133,7 +133,7 @@ class FontBuilder {
 	
 	#elseif js
 	
-	function build() {
+	function build() : h2d.Font {
 		var bmp = js.Browser.document.createCanvasElement();
 		var ctx = bmp.getContext2d();
 		ctx.font = '${this.font.size}px ${this.font.name}';

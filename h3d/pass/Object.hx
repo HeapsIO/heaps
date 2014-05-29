@@ -9,6 +9,5 @@ class Object {
 	public var next : Object;
 	public function new() {
 		shaders = [];
-		trace("alloc");
 	}
 }
