@@ -11,27 +11,27 @@
     <movie version="3" />
     <movie minorVersion="0" />
     <movie platform="NME" />
-    <movie background="00FFFF" />
+    <movie background="000000" />
     <movie preferredSDK=";3;" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
-    <class path="src" />
-    <class path="bin\flash\haxe" />
+    <class path="." />
+    <class path="bin\windows\cpp\haxe" />
   </classpaths>
   <!-- Build options -->
   <build>
-    <option directives="tools=1.4.0&#xA;resourcesPath=assets&#xA;display&#xA;web" />
+    <option directives="tools=1.4.0&#xA;lime_native&#xA;no-compilation&#xA;resourcesPath=../res&#xA;display&#xA;verbose=true&#xA;windows&#xA;desktop" />
     <option flashStrict="False" />
     <option noInlineOnDebug="False" />
     <option mainClass="ApplicationMain" />
     <option enabledebug="True" />
-    <option additional="--no-output&#xA;-dce no&#xA;-swf-version 11.6&#xA;#--remap nme:flash" />
+    <option additional="--no-output&#xA;--macro allowPackage('flash')&#xA;--macro keep(&quot;Test&quot;)" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
     <library name="openfl" />
-    <library name="format" />
+    <library name="actuate" />
     <library name="h3d" />
     <library name="hxsl" />
   </haxelib>
@@ -46,8 +46,14 @@
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
     <hidden path="obj" />
+    <hidden path="..\..\..\..\actuate\1,6,4" />
     <hidden path="..\..\..\..\format\3,0,4" />
+    <hidden path="..\..\h2d" />
+    <hidden path="assets" />
+    <hidden path="..\..\..\..\hxsl\git" />
     <hidden path="..\..\..\..\openfl\git" />
+    <hidden path="..\..\tools" />
+    <hidden path="..\..\h3d\parts" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />

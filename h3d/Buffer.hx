@@ -24,6 +24,8 @@ enum BufferFlag {
 }
 
 class Buffer {
+	public static var GUID = 0;
+	public var id = 0;
 
 	public var buffer(default,null) : h3d.impl.ManagedBuffer;
 	public var position(default,null) : Int;
@@ -41,6 +43,7 @@ class Buffer {
 			this.flags.set(Managed);
 		if( !this.flags.has(NoAlloc) )
 			h3d.Engine.getCurrent().mem.allocBuffer(this, stride);
+		id = GUID++;
 	}
 
 	public function isDisposed() {
@@ -105,18 +108,29 @@ class BufferOffset {
 	public var id : Int;
 	public var buffer : Buffer;
 	public var offset : Int;
+
+	/**
+	 * hint channel setup for low level
+	 */
+	public var shared : Bool; 
 	
-	/*
-		This is used to return a list of BufferOffset without allocating an array
+	/** hint channel setup for low level in byte units
+	 */
+	public var stride : Null<Int>;
+	
+	/**
+	* This is used to return a list of BufferOffset without allocating an array
 	*/
 	public var next : BufferOffset;
 	
 	static var UID = 0;
 	
-	public function new(buffer, offset) {
+	public function new(buffer, offset,?shared=false,?stride) {
 		this.id = UID++;
 		this.buffer = buffer;
 		this.offset = offset;
+		this.shared = shared;
+		this.stride = stride;
 	}
 	public function dispose() {
 		if( buffer != null ) {
@@ -124,5 +138,9 @@ class BufferOffset {
 			buffer = null;
 		}
 		next = null;
+	}
+
+	public function toString(){
+		return 'b:$buffer ofs:$offset shared:$shared stride:$stride';
 	}
 }

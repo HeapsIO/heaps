@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with TexturePacker http://www.codeandweb.com/texturepacker-->
+<TextureAtlas imagePath="exportPixart.png">
+    <SubTexture name="bag_close" x="1960" y="156" width="26" height="22" frameX="-2" frameY="-2" frameWidth="32" frameHeight="24"/>
+    <SubTexture name="buffalo_idle0" x="1946" y="87" width="20" height="12" frameX="-3" frameY="-4" frameWidth="26" frameHeight="16"/>
+    <SubTexture name="buffalo_run0" x="1938" y="203" width="23" height="13" frameX="0" frameY="-8" frameWidth="23" frameHeight="21"/>
+    <SubTexture name="buffalo_run1" x="1936" y="238" width="21" height="13" frameX="0" frameY="-8" frameWidth="23" frameHeight="21"/>
+    <SubTexture name="buffalo_run2" x="1976" y="227" width="21" height="13" frameX="0" frameY="-8" frameWidth="23" frameHeight="21"/>
+    <SubTexture name="buffalo_run3" x="1979" y="212" width="21" height="13" frameX="0" frameY="-8" frameWidth="23" frameHeight="21"/>
+    <SubTexture name="buffalo_run4" x="1985" y="197" width="23" height="13" frameX="0" frameY="-8" frameWidth="23" frameHeight="21"/>
+    <SubTexture name="chest_close" x="1960" y="180" width="23" height="21" frameX="-5" frameY="-4" frameWidth="33" frameHeight="25"/>
+    <SubTexture name="chest_open" x="2000" y="53" width="29" height="25" frameX="0" frameY="0" frameWidth="33" frameHeight="25"/>
+    <SubTexture name="forest_center" x="1926" y="269" width="10" height="11" frameX="-26" frameY="-20" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="forest_north" x="1940" y="253" width="10" height="27" frameX="-27" frameY="0" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="forest_northeast" x="1912" y="162" width="28" height="21" frameX="-29" frameY="-9" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="forest_northwest" x="1912" y="139" width="28" height="21" frameX="-6" frameY="-9" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="forest_south" x="1940" y="253" width="10" height="27" frameX="-27" frameY="-26" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="forest_southeast" x="1912" y="139" width="28" height="21" frameX="-29" frameY="-22" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="forest_southwest" x="1994" y="154" width="28" height="21" frameX="-6" frameY="-22" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="freeway_end" x="1942" y="173" width="16" height="16"/>
+    <SubTexture name="ground_zero" x="2" y="2" width="684" height="182"/>
+    <SubTexture name="map_e" x="1912" y="205" width="22" height="20" frameX="-1" frameY="-3" frameWidth="24" frameHeight="24"/>
+    <SubTexture name="map_n" x="2028" y="87" width="18" height="24" frameX="-4" frameY="0" frameWidth="24" frameHeight="24"/>
+    <SubTexture name="map_ne" x="1988" y="177" width="24" height="18" frameX="0" frameY="-4" frameWidth="24" frameHeight="24"/>
+    <SubTexture name="map_nw" x="1912" y="185" width="24" height="18" frameX="0" frameY="-4" frameWidth="24" frameHeight="24"/>
+    <SubTexture name="map_player_grave" x="1946" y="64" width="20" height="21" frameX="-3" frameY="-5" frameWidth="26" frameHeight="27"/>
+    <SubTexture name="map_s" x="1946" y="38" width="20" height="24" frameX="-1" frameY="0" frameWidth="24" frameHeight="24"/>
+    <SubTexture name="map_se" x="1912" y="227" width="22" height="18" frameX="-1" frameY="-2" frameWidth="24" frameHeight="24"/>
+    <SubTexture name="map_sw" x="1936" y="218" width="22" height="18" frameX="-1" frameY="-2" frameWidth="24" frameHeight="24"/>
+    <SubTexture name="map_w" x="2024" y="219" width="22" height="22" frameX="-1" frameY="-1" frameWidth="24" frameHeight="24"/>
+    <SubTexture name="mediumcastle" x="1916" y="2" width="50" height="34" frameX="-4" frameY="-10" frameWidth="58" frameHeight="50"/>
+    <SubTexture name="muraille" x="1222" y="254" width="234" height="45"/>
+    <SubTexture name="pawn0" x="2024" y="175" width="22" height="42" frameX="-1" frameY="-2" frameWidth="24" frameHeight="44"/>
+    <SubTexture name="pawn_player0" x="2024" y="131" width="22" height="42" frameX="-2" frameY="-2" frameWidth="24" frameHeight="44"/>
+    <SubTexture name="player_flag0" x="1963" y="203" width="16" height="6" frameX="-4" frameY="-5" frameWidth="20" frameHeight="16"/>
+    <SubTexture name="player_flag1" x="1938" y="191" width="16" height="10" frameX="-4" frameY="-2" frameWidth="20" frameHeight="16"/>
+    <SubTexture name="player_flag2" x="1960" y="223" width="14" height="10" frameX="-6" frameY="-2" frameWidth="20" frameHeight="16"/>
+    <SubTexture name="player_flag3" x="1960" y="235" width="14" height="8" frameX="-6" frameY="-5" frameWidth="20" frameHeight="16"/>
+    <SubTexture name="player_flag4" x="1963" y="211" width="14" height="10" frameX="-6" frameY="-4" frameWidth="20" frameHeight="16"/>
+    <SubTexture name="road0" x="1976" y="242" width="12" height="29" frameX="-26" frameY="0" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="road1" x="1916" y="90" width="28" height="23" frameX="-28" frameY="-8" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="road2" x="1964" y="133" width="28" height="21" frameX="-6" frameY="-9" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="road3" x="1999" y="230" width="12" height="29" frameX="-24" frameY="-24" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="road4" x="1994" y="131" width="28" height="21" frameX="-27" frameY="-23" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="road5" x="1968" y="34" width="30" height="23" frameX="-5" frameY="-19" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="sign_left" x="1942" y="155" width="16" height="16"/>
+    <SubTexture name="sign_right" x="1946" y="137" width="16" height="16"/>
+    <SubTexture name="small_bag" x="2031" y="53" width="14" height="16" frameX="-1" frameY="0" frameWidth="16" frameHeight="16"/>
+    <SubTexture name="small_drink" x="1959" y="245" width="12" height="16" frameX="-1" frameY="0" frameWidth="16" frameHeight="16"/>
+    <SubTexture name="small_feed" x="1946" y="119" width="16" height="16"/>
+    <SubTexture name="small_health" x="1926" y="253" width="12" height="14" frameX="-2" frameY="-1" frameWidth="16" frameHeight="16"/>
+    <SubTexture name="small_life" x="2031" y="71" width="14" height="14" frameX="-1" frameY="-1" frameWidth="16" frameHeight="16"/>
+    <SubTexture name="small_pa" x="1946" y="101" width="16" height="16"/>
+    <SubTexture name="smallfarm" x="2010" y="2" width="34" height="22" frameX="-7" frameY="-22" frameWidth="50" frameHeight="50"/>
+    <SubTexture name="tavern" x="1968" y="2" width="40" height="30" frameX="-4" frameY="-14" frameWidth="50" frameHeight="50"/>
+    <SubTexture name="texture_parchemin" x="2" y="312" width="512" height="512"/>
+    <SubTexture name="tooltip_bottom" x="1458" y="254" width="148" height="27"/>
+    <SubTexture name="tooltip_core" x="1608" y="254" width="148" height="4"/>
+    <SubTexture name="wagon_idle0" x="1916" y="64" width="28" height="24"/>
+    <SubTexture name="wagon_run0" x="1998" y="80" width="28" height="24"/>
+    <SubTexture name="wagon_run1" x="1916" y="115" width="28" height="22" frameX="0" frameY="-2" frameWidth="28" frameHeight="24"/>
+    <SubTexture name="wagon_run2" x="1968" y="59" width="28" height="24"/>
+    <SubTexture name="wagon_run3" x="1916" y="38" width="28" height="24"/>
+    <SubTexture name="water_north" x="1912" y="247" width="12" height="31" frameX="-25" frameY="0" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="water_northeast" x="1998" y="106" width="28" height="23" frameX="-28" frameY="-7" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="water_northwest" x="1968" y="85" width="28" height="23" frameX="-6" frameY="-8" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="water_south" x="2010" y="197" width="12" height="31" frameX="-23" frameY="-22" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="water_southeast" x="2010" y="26" width="30" height="25" frameX="-26" frameY="-21" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="water_southwest" x="1964" y="110" width="28" height="21" frameX="-6" frameY="-21" frameWidth="62" frameHeight="53"/>
+    <SubTexture name="way_end" x="2028" y="113" width="16" height="16"/>
+    <SubTexture name="zombie_redeye_anim0" x="612" y="254" width="608" height="124" frameX="-37" frameY="-58" frameWidth="684" frameHeight="182"/>
+    <SubTexture name="zombie_redeye_anim1" x="2" y="186" width="608" height="124" frameX="-37" frameY="-58" frameWidth="684" frameHeight="182"/>
+    <SubTexture name="zombie_redeye_anim2" x="1302" y="128" width="608" height="124" frameX="-37" frameY="-58" frameWidth="684" frameHeight="182"/>
+    <SubTexture name="zombie_redeye_anim3" x="688" y="128" width="612" height="124" frameX="-37" frameY="-58" frameWidth="684" frameHeight="182"/>
+    <SubTexture name="zombie_redeye_anim4" x="1302" y="2" width="612" height="124" frameX="-37" frameY="-58" frameWidth="684" frameHeight="182"/>
+    <SubTexture name="zombie_redeye_anim5" x="688" y="2" width="612" height="124" frameX="-37" frameY="-58" frameWidth="684" frameHeight="182"/>
+</TextureAtlas>

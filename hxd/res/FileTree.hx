@@ -10,18 +10,24 @@ class FileTree {
 	var currentModule : String;
 	var pos : Position;
 	var loaderType : ComplexType;
+	var ignoredDir : Map<String,Bool>;
 	var ignoredExt : Map<String,Bool>;
 	var pairedExt : Map<String,Array<String>>;
 	var ignoredPairedExt : Map<String,Array<String>>;
 	var options : EmbedOptions;
 	var isFlash : Bool;
 	var isJS : Bool;
+	var isCPP : Bool;
 	var embedTypes : Array<String>;
 	
 	public function new(dir) {
 		this.path = resolvePath(dir);
 		currentModule = Std.string(Context.getLocalClass());
 		pos = Context.currentPos();
+		ignoredDir = new Map();
+		ignoredDir.set(".svn", true);
+		ignoredDir.set(".git", true);
+		ignoredDir.set(".tmp", true);
 		ignoredExt = new Map();
 		ignoredExt.set("gal", true); // graphics gale source
 		ignoredExt.set("lch", true); // labchirp source
@@ -33,6 +39,7 @@ class FileTree {
 		pairedExt.set("xtra", ["fbx"]);
 		isFlash = Context.defined("flash");
 		isJS = Context.defined("js");
+		isCPP = Context.defined("cpp");
 	}
 	
 	public static function resolvePath( ?dir:String ) {
@@ -69,6 +76,9 @@ class FileTree {
 		for( f in sys.FileSystem.readDirectory(dir) ) {
 			var path = dir + "/" + f;
 			if( sys.FileSystem.isDirectory(path) ) {
+				if( ignoredDir.exists(f.toLowerCase()) )
+					continue;
+
 				if( f.charCodeAt(0) == ".".code || f.charCodeAt(0) == "_".code )
 					continue;
 				var sub = embedDir(f, relPath + "/" + f, path);
@@ -158,7 +168,10 @@ class FileTree {
 		} else if( isJS ) {
 			Context.addResource(name, sys.io.File.getBytes(fullPath));
 			return true;
-		} else {
+		} else if ( isCPP ) {
+			Context.addResource(name, sys.io.File.getBytes(fullPath));
+			return true;
+		}else {
 			return false;
 		}
 		return true;
@@ -213,6 +226,8 @@ class FileTree {
 			var field = null;
 			var ext = null;
 			if( sys.FileSystem.isDirectory(path) ) {
+				if( ignoredDir.exists(f.toLowerCase()) )
+					continue;
 				if( f.charCodeAt(0) == ".".code || f.charCodeAt(0) == "_".code )
 					continue;
 				field = handleDir(f, relPath.length == 0 ? f : relPath+"/"+f, path);
@@ -267,7 +282,13 @@ class FileTree {
 						ret : field.t,
 						expr : { expr : EMeta({ name : ":privateAccess", params : [], pos : pos }, { expr : EReturn(field.e), pos : pos }), pos : pos },
 					}),
+					
+					#if !flash
+					meta : [ { name:":keep", pos:pos, params:[] } ],
+					#else
 					meta : [ { name:":extern", pos:pos, params:[] } ],
+					#end
+
 					access : [AStatic, AInline, APrivate],
 				};
 				var field : Field = {

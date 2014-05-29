@@ -20,9 +20,11 @@ class Demo
 		engine.backgroundColor = 0xFFCCCCCC;
 		engine.init();
 		
+		
 		#if flash
 		flash.Lib.current.addChild(new openfl.display.FPS());
 		#end
+		
 	}
 	
 	function onResize(_)

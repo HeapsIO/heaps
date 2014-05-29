@@ -4,34 +4,30 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="application.xml" />
-    <movie fps="60" />
+    <movie path="bin\test.swf" />
+    <movie fps="30" />
     <movie width="800" />
-    <movie height="480" />
-    <movie version="3" />
-    <movie minorVersion="0" />
-    <movie platform="NME" />
-    <movie background="00FFFF" />
-    <movie preferredSDK=";3;" />
+    <movie height="600" />
+    <movie version="11" />
+    <movie minorVersion="6" />
+    <movie platform="Flash Player" />
+    <movie background="#FFFFFF" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
-    <class path="src" />
-    <class path="bin\flash\haxe" />
+    <class path="." />
   </classpaths>
   <!-- Build options -->
   <build>
-    <option directives="tools=1.4.0&#xA;resourcesPath=assets&#xA;display&#xA;web" />
+    <option directives="" />
     <option flashStrict="False" />
     <option noInlineOnDebug="False" />
-    <option mainClass="ApplicationMain" />
+    <option mainClass="Demo" />
     <option enabledebug="True" />
-    <option additional="--no-output&#xA;-dce no&#xA;-swf-version 11.6&#xA;#--remap nme:flash" />
+    <option additional="-D resourcesPath=../res" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
-    <library name="openfl" />
-    <library name="format" />
     <library name="h3d" />
     <library name="hxsl" />
   </haxelib>
@@ -46,8 +42,6 @@
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
     <hidden path="obj" />
-    <hidden path="..\..\..\..\format\3,0,4" />
-    <hidden path="..\..\..\..\openfl\git" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />
@@ -56,7 +50,7 @@
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
-    <option testMovie="Custom" />
+    <option testMovie="Default" />
     <option testMovieCommand="" />
   </options>
   <!-- Plugin storage -->

@@ -30,7 +30,7 @@ class Tile {
 		if( tex != null ) setTexture(tex);
 	}
 	
-	public function getTexture() {
+	public function getTexture() : h3d.mat.Texture {
 		return innerTex;
 	}
 	

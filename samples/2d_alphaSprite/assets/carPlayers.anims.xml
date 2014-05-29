@@ -1,0 +1,9 @@
+<animations> 
+	<a group="cheval_idle"> 0-15(2) </a>
+	<a group="cheval_fixe"> 0(2) </a>
+	<a group="cheval_anim"> 0-4(2) </a>
+	<a group="player_flag"> 0-4(2) </a>
+	<a group="caravan_anim"> 0-3(2) </a>
+	<a group="wagon_anim"> 0-3(2) </a>
+	<a group="foe_idle"> 0-5(2) </a>
+</animations>

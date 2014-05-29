@@ -1,7 +1,6 @@
 package h2d;
 
 private class DrawableShader extends h3d.impl.Shader {
-	public var ref = 1;
 	#if flash
 	static var SRC = {
 		var input : {
@@ -60,8 +59,6 @@ private class DrawableShader extends h3d.impl.Shader {
 		var multUV : Float4;
 		var hasColorKey : Bool;
 		var colorKey : Int;
-		
-		var isAlphaPremul:Bool;
 
 		function fragment( tex : Texture ) {
 			var col = tex.get(sinusDeform != null ? [tuv.x + sin(tuv.y * sinusDeform.y + sinusDeform.x) * sinusDeform.z, tuv.y] : tuv, filter = ! !filter, wrap = tileWrap);
@@ -69,20 +66,15 @@ private class DrawableShader extends h3d.impl.Shader {
 				var cdiff = col.rgb - colorKey.rgb;
 				kill(cdiff.dot(cdiff) - 0.00001);
 			}
-
 			if( killAlpha ) kill(col.a - 0.001);
-
-			if ( isAlphaPremul ) col.rgb /= col.a;
-
-			if( hasVertexAlpha ) 	col.a *= talpha;
-			if( hasVertexColor ) 	col *= tcolor;
-			if( hasAlphaMap ) 		col.a *= alphaMap.get(tuv * alphaUV.zw + alphaUV.xy).r;
-			if( hasMultMap ) 		col *= multMap.get(tuv * multUV.zw + multUV.xy) * multMapFactor;
-			if( hasAlpha ) 			col.a *= alpha;
+			if( hasVertexAlpha ) col.a *= talpha;
+			if( hasVertexColor ) col *= tcolor;
+			if( hasAlphaMap ) col.a *= alphaMap.get(tuv * alphaUV.zw + alphaUV.xy).r;
+			if( hasMultMap ) col *= multMap.get(tuv * multUV.zw + multUV.xy) * multMapFactor;
+			if( hasAlpha ) col.a *= alpha;
 			if( colorMatrix != null ) col *= colorMatrix;
-			if( colorMul != null ) 	col *= colorMul;
-			if( colorAdd != null ) 	col += colorAdd;
-			if( isAlphaPremul ) col.rgb *= col.a;
+			if( colorMul != null ) col *= colorMul;
+			if( colorAdd != null ) col += colorAdd;
 			out = col;
 		}
 
@@ -91,11 +83,12 @@ private class DrawableShader extends h3d.impl.Shader {
 	
 	#elseif (js || cpp)
 	
+	
 	public var hasColorKey : Bool;
 	
 	// not supported
-	public var skew : Float;
 	public var sinusDeform : h3d.Vector;
+		
 	// --
 	
 	public var filter : Bool;
@@ -107,11 +100,6 @@ private class DrawableShader extends h3d.impl.Shader {
 	public var hasAlphaMap : Bool;
 	public var hasMultMap : Bool;
 	public var isAlphaPremul : Bool;
-
-	//done by driver when binding uniform
-	//override function customSetup(driver:h3d.impl.GlDriver) {
-	//	driver.setupTexture(tex, None, filter ? Linear : Nearest, tileWrap ? Repeat : Clamp);
-	//}
 	
 	/**
 	 * This is the constant set, they are set / compiled for first draw and will enabled on all render thereafter
@@ -317,14 +305,13 @@ class Drawable extends Sprite {
 	
 	public var writeAlpha : Bool;
 	
-	/**
-	 * Passing in a similar shader will vastly improve performances
-	 */
-	function new(parent, ?sh:DrawableShader) {
+	function new(parent) {
 		super(parent);
 		shader = new DrawableShader();
+		
+		writeAlpha = true;
+		blendMode = Normal;
 		shader.alpha = 1;
-		shader.multMapFactor = 1.0;
 		shader.zValue = 0;
 		writeAlpha = true;
 		blendMode = Normal;
@@ -451,35 +438,19 @@ class Drawable extends Sprite {
 		if( tile == null )
 			tile = core.nullTile;
 
-		var tex : h3d.mat.Texture = tile.getTexture();
-		
-		tex.filter = (filter)? Linear:Nearest;
-		
 		switch( blendMode ) {
 		case Normal:
-			if ( tex.alpha_premultiplied )	
-			mat.blend(One, OneMinusSrcAlpha);
-			else
-			mat.blend(SrcAlpha, OneMinusSrcAlpha); 
+			mat.blend(SrcAlpha, OneMinusSrcAlpha);
 		case None:
 			mat.blend(One, Zero);
 		case Add:
-			if ( tex.alpha_premultiplied ) 	mat.blend(One, One);
-			else							mat.blend(SrcAlpha, One);
+			mat.blend(SrcAlpha, One);
 		case SoftAdd:
-			#if debug if ( tex.alpha_premultiplied ) throw "Unsupported please improve"; #end
 			mat.blend(OneMinusDstColor, One);
 		case Multiply:
-			//using Premultiply alppha, it cannot be implemented faithfully because alpha will meddle
 			mat.blend(DstColor, OneMinusSrcAlpha);
 		case Erase:
-			#if debug if ( tex.alpha_premultiplied ) throw "Unsupported please improve"; #end
 			mat.blend(Zero, OneMinusSrcAlpha);
-		case Hide:
-			#if debug if ( tex.alpha_premultiplied ) throw "Unsupported please improve"; #end
-			mat.blend(Zero, One);
-		case Screen:
-			mat.blend(One, OneMinusSrcColor);
 		}
 
 		if( options & HAS_SIZE != 0 ) {
@@ -517,40 +488,16 @@ class Drawable extends Sprite {
 		var tmp = core.tmpMatA;
 		tmp.x = matA;
 		tmp.y = matC;
-		
-		if ( options & BASE_TILE_DONT_CARE!=0 ) tmp.z = absX;
-		else tmp.z = absX + tile.dx * matA + tile.dy * matC;
-		
+		tmp.z = absX + tile.dx * matA + tile.dy * matC;
 		shader.matA = tmp;
 		var tmp = core.tmpMatB;
 		tmp.x = matB;
 		tmp.y = matD;
-		
-		if ( options & BASE_TILE_DONT_CARE!=0 )	tmp.z = absY
-		else 									tmp.z = absY + tile.dx * matB + tile.dy * matD;
-		
+		tmp.z = absY + tile.dx * matB + tile.dy * matD;
 		shader.matB = tmp;
 		shader.tex = tile.getTexture();
-		
-		shader.isAlphaPremul = tex.alpha_premultiplied 
-		&& (shader.hasAlphaMap || shader.hasAlpha || shader.hasMultMap 
-		|| shader.hasVertexAlpha || shader.hasVertexColor 
-		|| shader.colorMatrix != null || shader.colorAdd != null
-		|| shader.colorMul != null );
-		
 		mat.shader = shader;
 		engine.selectMaterial(mat);
-	}
-
-	override function dispose() {
-		super.dispose();
-		if ( shader != null) {
-			shader.ref--;
-			#if cpp
-			if ( shader.ref == 0 ) shader.delete();
-			#end
-			shader = null;
-		}
 	}
 	
 }

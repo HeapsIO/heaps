@@ -1,2 +1,0 @@
- -Ddesktop="1" -Dformat="1" -Dh3d="1" -Dhaxe3="1" -Dhaxe_ver="3.103" -Dhxcpp="1" -Dhxcpp_api_level="311" -Dhxsl="1" -Dlime_native="1" -Dno-compilation="1" -Dno_compilation="1" -Dno_console="1" -Dopenfl="1" -Dopenfl-native="1" -Dopenfl_native="1" -DresourcesPath="assets" -Dtools="1.4.0" -Dwindows="1"
-D:\Workspace\motionTools\haxe3\lib\hxcpp\git\

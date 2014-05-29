@@ -20,6 +20,16 @@ class System {
 
 	public static var screenDPI(get,never) : Float;
 
+	public static function ensureViewBelow() {
+		#if !flash
+		if( VIEW == null ) {
+			VIEW = new openfl.display.OpenGLView();
+			VIEW.name = "glView";
+			flash.Lib.current.addChildAt(VIEW,0);	
+		}
+		#end
+	}
+
 	#if flash
 
 	static function get_isWindowed() {
@@ -203,10 +213,7 @@ class System {
 	static var VIEW = null;
 
 	public static function setLoop( f : Void -> Void ) {
-		if( VIEW == null ) {
-			VIEW = new openfl.display.OpenGLView();
-			flash.Lib.current.addChild(VIEW);
-		}
+		ensureViewBelow();
 		VIEW.render = function(_) if( f != null ) f();
 	}
 
