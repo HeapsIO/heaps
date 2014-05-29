@@ -3,6 +3,10 @@ package h2d;
 private class TileLayerContent extends h3d.prim.Primitive {
 
 	var tmp : hxd.FloatBuffer;
+	public var xMin : Float;
+	public var yMin : Float;
+	public var xMax : Float;
+	public var yMax : Float;
 
 	public function new() {
 		reset();
@@ -12,6 +16,10 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp = new hxd.FloatBuffer();
 		if( buffer != null ) buffer.dispose();
 		buffer = null;
+		xMin = hxd.Math.POSITIVE_INFINITY;
+		yMin = hxd.Math.POSITIVE_INFINITY;
+		xMax = hxd.Math.NEGATIVE_INFINITY;
+		yMax = hxd.Math.NEGATIVE_INFINITY;
 	}
 	
 	public function isEmpty() {
@@ -69,6 +77,10 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push(0);
 		tmp.push(0);
 		insertColor(color);
+		if( x < xMin ) xMin = x;
+		if( y < yMin ) yMin = y;
+		if( x > xMax ) xMax = x;
+		if( y > yMax ) yMax = y;
 	}
 	
 	inline function insertColor( c : Int ) {
@@ -151,6 +163,11 @@ class TileGroup extends Drawable {
 		rangeMin = rangeMax = -1;
 		curColor = new h3d.Vector(1, 1, 1, 1);
 		content = new TileLayerContent();
+	}
+
+	override function getBoundsRec( relativeTo, out ) {
+		super.getBoundsRec(relativeTo, out);
+		addBounds(relativeTo, out, content.xMin, content.yMin, content.xMax - content.xMin, content.yMax - content.yMin);
 	}
 
 	public function reset() {

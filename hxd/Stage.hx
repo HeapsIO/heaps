@@ -83,6 +83,7 @@ class Stage {
 	#if flash
 	function setupOnCloseEvent() {
 		var nw : flash.events.EventDispatcher = Reflect.field(stage, "nativeWindow");
+		if( nw == null ) return;
 		nw.addEventListener("closing", function(e:flash.events.Event) {
 			if( !onClose() )
 				e.preventDefault();

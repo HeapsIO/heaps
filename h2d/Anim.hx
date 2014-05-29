@@ -30,6 +30,12 @@ class Anim extends Drawable {
 		return curFrame;
 	}
 	
+	override function getBoundsRec( relativeTo, out ) {
+		super.getBoundsRec(relativeTo, out);
+		var tile = getFrame();
+		if( tile != null ) addBounds(relativeTo, out, tile.dx, tile.dy, tile.width, tile.height);
+	}
+
 	override function sync( ctx : RenderContext ) {
 		var prev = curFrame;
 		curFrame += speed * ctx.elapsedTime;
@@ -48,14 +54,14 @@ class Anim extends Drawable {
 	
 	public dynamic function onAnimEnd() {
 	}
-	
+
 	public function getFrame() {
 		return frames[Std.int(curFrame)];
 	}
-	
+
 	override function draw( ctx : RenderContext ) {
 		var t = getFrame();
 		emitTile(ctx,t);
 	}
-	
+
 }

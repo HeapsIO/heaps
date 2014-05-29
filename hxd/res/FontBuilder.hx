@@ -17,17 +17,17 @@ class FontBuilder {
 	var font : h2d.Font;
 	var options : FontBuildOptions;
 	var innerTex : h3d.mat.Texture;
-	
+
 	function new(name, size, opt) {
 		this.font = new h2d.Font(name, size);
 		this.options = opt == null ? { } : opt;
 		if( options.antiAliasing == null ) options.antiAliasing = true;
 		if( options.chars == null ) options.chars = hxd.Charset.DEFAULT_CHARS;
 	}
-	
+
 	#if flash
 
-	function build() {
+	function build() : h2d.Font {
 		font.lineHeight = 0;
 		var tf = new flash.text.TextField();
 		var fmt = tf.defaultTextFormat;
@@ -100,10 +100,10 @@ class FontBuilder {
 				x += w + 1;
 			}
 		} while( bmp == null );
-		
+
 		var pixels = hxd.BitmapData.fromNative(bmp).getPixels();
 		bmp.dispose();
-		
+
 		// let's remove alpha premult (all pixels should be white with alpha)
 		pixels.convert(BGRA);
 		var r = hxd.impl.Memory.select(pixels.bytes);
@@ -118,7 +118,7 @@ class FontBuilder {
 			}
 		}
 		r.end();
-		
+
 		if( innerTex == null ) {
 			innerTex = h3d.mat.Texture.fromPixels(pixels);
 			font.tile = h2d.Tile.fromTexture(innerTex);
@@ -219,14 +219,14 @@ class FontBuilder {
 
 	
 	#else
-	
+
 	function build() {
 		throw "Font building not supported on this platform";
 		return null;
 	}
-	
+
 	#end
-	
+
 	public static function getFont( name : String, size : Int, ?options : FontBuildOptions ) {
 		var key = name + "#" + size;
 		var f = FONTS.get(key);
@@ -236,7 +236,7 @@ class FontBuilder {
 		FONTS.set(key, f);
 		return f;
 	}
-	
+
 	public static function dispose() {
 		for( f in FONTS )
 			f.dispose();

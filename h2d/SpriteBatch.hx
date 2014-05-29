@@ -13,10 +13,10 @@ class BatchElement {
 	public var t : Tile;
 	public var alpha(get,set) : Float;
 	public var batch(default, null) : SpriteBatch;
-	
+
 	var prev : BatchElement;
 	var next : BatchElement;
-	
+
 	function new(t) {
 		x = 0; y = 0; r = 1; g = 1; b = 1; a = 1;
 		rotation = 0; scale = 1;
@@ -34,11 +34,11 @@ class BatchElement {
 	function update(et:Float) {
 		return true;
 	}
-	
+
 	public inline function remove() {
 		batch.delete(this);
 	}
-	
+
 }
 
 class SpriteBatch extends Drawable {
@@ -49,12 +49,12 @@ class SpriteBatch extends Drawable {
 	var first : BatchElement;
 	var last : BatchElement;
 	var tmpBuf : hxd.FloatBuffer;
-		
+
 	public function new(t,?parent) {
 		super(parent);
 		tile = t;
 	}
-	
+
 	public function add(e:BatchElement) {
 		e.batch = this;
 		if( first == null )
@@ -66,11 +66,11 @@ class SpriteBatch extends Drawable {
 		}
 		return e;
 	}
-	
+
 	public function alloc(t) {
 		return add(new BatchElement(t));
 	}
-	
+
 	@:allow(h2d.BatchElement)
 	function delete(e : BatchElement) {
 		if( e.prev == null ) {
@@ -84,7 +84,7 @@ class SpriteBatch extends Drawable {
 		} else
 			e.next.prev = e.prev;
 	}
-	
+
 	override function sync(ctx) {
 		super.sync(ctx);
 		if( hasUpdate ) {
@@ -96,7 +96,42 @@ class SpriteBatch extends Drawable {
 			}
 		}
 	}
-	
+
+	override function getBoundsRec( relativeTo, out ) {
+		super.getBoundsRec(relativeTo, out);
+		var e = first;
+		while( e != null ) {
+			var t = e.t;
+			if( hasRotationScale ) {
+				var ca = Math.cos(e.rotation), sa = Math.sin(e.rotation);
+				var hx = t.width, hy = t.height;
+				var px = t.dx, py = t.dy;
+				var x, y;
+
+				x = (px * ca - py * sa) * e.scale + e.x;
+				y = (py * ca + px * sa) * e.scale + e.y;
+				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
+
+				var px = t.dx + hx, py = t.dy;
+				x = (px * ca - py * sa) * e.scale + e.x;
+				y = (py * ca + px * sa) * e.scale + e.y;
+				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
+
+				var px = t.dx, py = t.dy + hy;
+				x = (px * ca - py * sa) * e.scale + e.x;
+				y = (py * ca + px * sa) * e.scale + e.y;
+				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
+
+				var px = t.dx + hx, py = t.dy + hy;
+				x = (px * ca - py * sa) * e.scale + e.x;
+				y = (py * ca + px * sa) * e.scale + e.y;
+				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
+			} else
+				addBounds(relativeTo, out, e.x + tile.dx, e.y + tile.dy, tile.width, tile.height);
+			e = e.next;
+		}
+	}
+
 	override function draw( ctx : RenderContext ) {
 		if( first == null )
 			return;
@@ -188,9 +223,9 @@ class SpriteBatch extends Drawable {
 		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();
 	}
-	
+
 	public inline function isEmpty() {
 		return first == null;
 	}
-	
+
 }

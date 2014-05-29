@@ -2,7 +2,7 @@ package hxd;
 
 class App {
 	
-	var engine : h3d.Engine;
+	public var engine : h3d.Engine;
 	public var s3d : h3d.scene.Scene;
 	public var s2d : h2d.Scene;
 	
