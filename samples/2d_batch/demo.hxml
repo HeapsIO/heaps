@@ -1,0 +1,19 @@
+-main ApplicationMain 
+-lib openfl
+-lib format
+-lib h3d
+-cp src
+-D tools=1.3.0
+-D lime_native
+-D no-compilation
+-D resourcesPath=assets
+-D display
+-D windows
+-D desktop
+--no-output
+--macro allowPackage('flash')
+-dce no
+-cp bin/windows/cpp/haxe
+-cpp bin/windows/cpp/obj
+--macro keep("Demo")
+

@@ -1,0 +1,3066 @@
+<xml>
+<set name="HXCPP_API_LEVEL" value="311" />
+<files id="haxe">
+<compilerflag value="-Iinclude"/>
+  <file name="src/sys/io/FileSeek.cpp">
+   <depend name="include/sys/io/FileSeek.h"/>
+  </file>
+  <file name="src/sys/io/FileOutput.cpp">
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/Error.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+   <depend name="include/sys/io/FileOutput.h"/>
+   <depend name="include/sys/io/FileSeek.h"/>
+  </file>
+  <file name="src/sys/io/FileInput.cpp">
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/Eof.h"/>
+   <depend name="include/haxe/io/Error.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/sys/io/FileInput.h"/>
+   <depend name="include/sys/io/FileSeek.h"/>
+  </file>
+  <file name="src/sys/io/File.cpp">
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+   <depend name="include/sys/io/File.h"/>
+   <depend name="include/sys/io/FileInput.h"/>
+   <depend name="include/sys/io/FileOutput.h"/>
+  </file>
+  <file name="src/sys/FileSystem.cpp">
+   <depend name="include/Date.h"/>
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Path.h"/>
+   <depend name="include/sys/FileSystem.h"/>
+   <depend name="include/sys/_FileSystem/FileKind.h"/>
+  </file>
+  <file name="src/sys/_FileSystem/FileKind.cpp">
+   <depend name="include/sys/_FileSystem/FileKind.h"/>
+  </file>
+  <file name="src/openfl/utils/WeakRef.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/openfl/utils/WeakRef.h"/>
+  </file>
+  <file name="src/openfl/utils/UInt8Array.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/openfl/utils/ArrayBufferView.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+   <depend name="include/openfl/utils/UInt8Array.h"/>
+  </file>
+  <file name="src/openfl/utils/Int16Array.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/openfl/utils/ArrayBufferView.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+   <depend name="include/openfl/utils/Int16Array.h"/>
+  </file>
+  <file name="src/openfl/utils/Float32Array.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/geom/Matrix3D.h"/>
+   <depend name="include/openfl/utils/ArrayBufferView.h"/>
+   <depend name="include/openfl/utils/Float32Array.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/openfl/utils/ArrayBufferView.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/ArrayBufferView.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/openfl/gl/GLTexture.cpp">
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLTexture.h"/>
+  </file>
+  <file name="src/openfl/gl/GLShader.cpp">
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLShader.h"/>
+  </file>
+  <file name="src/openfl/gl/GLRenderbuffer.cpp">
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLRenderbuffer.h"/>
+  </file>
+  <file name="src/openfl/gl/GLProgram.cpp">
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLProgram.h"/>
+   <depend name="include/openfl/gl/GLShader.h"/>
+  </file>
+  <file name="src/openfl/gl/GLFramebuffer.cpp">
+   <depend name="include/openfl/gl/GLFramebuffer.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+  </file>
+  <file name="src/openfl/gl/GLBuffer.cpp">
+   <depend name="include/openfl/gl/GLBuffer.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+  </file>
+  <file name="src/openfl/gl/GLObject.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/openfl/gl/GL.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+  </file>
+  <file name="src/openfl/gl/_GL/Float32Data_Impl_.cpp">
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/gl/_GL/Float32Data_Impl_.h"/>
+   <depend name="include/openfl/utils/ArrayBufferView.h"/>
+   <depend name="include/openfl/utils/Float32Array.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/openfl/events/SystemEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/openfl/events/SystemEvent.h"/>
+  </file>
+  <file name="src/openfl/events/JoystickEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/openfl/events/JoystickEvent.h"/>
+  </file>
+  <file name="src/openfl/display/Tilesheet.cpp">
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/Graphics.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/geom/Point.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+   <depend name="include/openfl/display/Tilesheet.h"/>
+  </file>
+  <file name="src/openfl/display/OpenGLView.cpp">
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/openfl/display/DirectRenderer.h"/>
+   <depend name="include/openfl/display/OpenGLView.h"/>
+  </file>
+  <file name="src/openfl/display/ManagedStage.cpp">
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/openfl/display/ManagedStage.h"/>
+  </file>
+  <file name="src/openfl/display/DirectRenderer.cpp">
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+   <depend name="include/openfl/display/DirectRenderer.h"/>
+  </file>
+  <file name="src/openfl/AssetType.cpp">
+   <depend name="include/openfl/AssetType.h"/>
+  </file>
+  <file name="src/openfl/AssetData.cpp">
+   <depend name="include/openfl/AssetData.h"/>
+   <depend name="include/openfl/AssetType.h"/>
+  </file>
+  <file name="src/openfl/Assets.cpp">
+   <depend name="include/DefaultAssetLibrary.h"/>
+   <depend name="include/IMap.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/media/Sound.h"/>
+   <depend name="include/flash/text/Font.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/Unserializer.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/AssetCache.h"/>
+   <depend name="include/openfl/AssetLibrary.h"/>
+   <depend name="include/openfl/AssetType.h"/>
+   <depend name="include/openfl/Assets.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/openfl/AssetCache.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/openfl/AssetCache.h"/>
+  </file>
+  <file name="src/hxd/text/Utf8Tools.cpp">
+   <depend name="include/hxd/text/Utf8Tools.h"/>
+  </file>
+  <file name="src/hxd/res/TiledMap.cpp">
+   <depend name="include/List.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/StringTools.h"/>
+   <depend name="include/Xml.h"/>
+   <depend name="include/format/tools/Inflate.h"/>
+   <depend name="include/haxe/crypto/BaseCode.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesInput.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/haxe/xml/Fast.h"/>
+   <depend name="include/haxe/xml/_Fast/AttribAccess.h"/>
+   <depend name="include/haxe/xml/_Fast/HasAttribAccess.h"/>
+   <depend name="include/haxe/xml/_Fast/NodeAccess.h"/>
+   <depend name="include/haxe/xml/_Fast/NodeListAccess.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+   <depend name="include/hxd/res/TiledMap.h"/>
+  </file>
+  <file name="src/hxd/res/Texture.cpp">
+   <depend name="include/List.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/format/png/Reader.h"/>
+   <depend name="include/format/png/Tools.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesInput.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/hxd/PixelFormat.h"/>
+   <depend name="include/hxd/Pixels.h"/>
+   <depend name="include/hxd/System.h"/>
+   <depend name="include/hxd/_BitmapData/BitmapData_Impl_.h"/>
+   <depend name="include/hxd/impl/Tmp.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/FileInput.h"/>
+   <depend name="include/hxd/res/Filter.h"/>
+   <depend name="include/hxd/res/NanoJpeg.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+   <depend name="include/hxd/res/Texture.h"/>
+  </file>
+  <file name="src/hxd/res/Sound.cpp">
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+   <depend name="include/hxd/res/Sound.h"/>
+  </file>
+  <file name="src/hxd/res/NanoJpeg.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/StringTools.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/impl/Tmp.h"/>
+   <depend name="include/hxd/res/Filter.h"/>
+   <depend name="include/hxd/res/NanoJpeg.h"/>
+   <depend name="include/hxd/res/_NanoJpeg/Component.h"/>
+  </file>
+  <file name="src/hxd/res/_NanoJpeg/Component.cpp">
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/res/_NanoJpeg/Component.h"/>
+  </file>
+  <file name="src/hxd/res/_NanoJpeg/FastBytes_Impl_.cpp">
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/res/_NanoJpeg/FastBytes_Impl_.h"/>
+  </file>
+  <file name="src/hxd/res/Filter.cpp">
+   <depend name="include/hxd/res/Filter.h"/>
+  </file>
+  <file name="src/hxd/res/Model.cpp">
+   <depend name="include/h3d/fbx/FbxNode.h"/>
+   <depend name="include/h3d/fbx/Library.h"/>
+   <depend name="include/h3d/fbx/Parser.h"/>
+   <depend name="include/h3d/fbx/XBXReader.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesInput.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/Model.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+  </file>
+  <file name="src/hxd/res/Loader.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/res/Any.h"/>
+   <depend name="include/hxd/res/BitmapFont.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/FileSystem.h"/>
+   <depend name="include/hxd/res/Font.h"/>
+   <depend name="include/hxd/res/Loader.h"/>
+   <depend name="include/hxd/res/Model.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+   <depend name="include/hxd/res/Sound.h"/>
+   <depend name="include/hxd/res/Texture.h"/>
+   <depend name="include/hxd/res/TiledMap.h"/>
+  </file>
+  <file name="src/hxd/res/FontBuilder.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Lambda.h"/>
+   <depend name="include/List.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/BlendMode.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/geom/ColorTransform.h"/>
+   <depend name="include/flash/geom/Matrix.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+   <depend name="include/flash/text/AntiAliasType.h"/>
+   <depend name="include/flash/text/Font.h"/>
+   <depend name="include/flash/text/GridFitType.h"/>
+   <depend name="include/flash/text/TextField.h"/>
+   <depend name="include/flash/text/TextFormat.h"/>
+   <depend name="include/h2d/Font.h"/>
+   <depend name="include/h2d/FontChar.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/haxe/Utf8.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/Charset.h"/>
+   <depend name="include/hxd/PixelFormat.h"/>
+   <depend name="include/hxd/Pixels.h"/>
+   <depend name="include/hxd/_BitmapData/BitmapData_Impl_.h"/>
+   <depend name="include/hxd/res/FontBuilder.h"/>
+   <depend name="include/hxd/text/Utf8Tools.h"/>
+  </file>
+  <file name="src/hxd/res/Font.cpp">
+   <depend name="include/h2d/Font.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/Font.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+  </file>
+  <file name="src/hxd/res/FileInput.cpp">
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/FileInput.h"/>
+  </file>
+  <file name="src/hxd/res/EmbedFileSystem.cpp">
+   <depend name="include/EReg.h"/>
+   <depend name="include/Reflect.h"/>
+   <depend name="include/hxd/res/EmbedFileSystem.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/FileSystem.h"/>
+   <depend name="include/hxd/res/_EmbedFileSystem/EmbedEntry.h"/>
+  </file>
+  <file name="src/hxd/res/_EmbedFileSystem/EmbedEntry.cpp">
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/haxe/Resource.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/impl/ArrayIterator.h"/>
+   <depend name="include/hxd/res/EmbedFileSystem.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/FileSystem.h"/>
+   <depend name="include/hxd/res/_EmbedFileSystem/EmbedEntry.h"/>
+  </file>
+  <file name="src/hxd/res/BytesFileEntry.cpp">
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/impl/ArrayIterator.h"/>
+   <depend name="include/hxd/res/BytesFileEntry.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+  </file>
+  <file name="src/hxd/res/FileEntry.cpp">
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/impl/ArrayIterator.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+  </file>
+  <file name="src/hxd/res/BitmapFont.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/StringTools.h"/>
+   <depend name="include/Xml.h"/>
+   <depend name="include/h2d/Font.h"/>
+   <depend name="include/h2d/FontChar.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/xml/Fast.h"/>
+   <depend name="include/haxe/xml/_Fast/AttribAccess.h"/>
+   <depend name="include/hxd/res/Any.h"/>
+   <depend name="include/hxd/res/BitmapFont.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/Loader.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+  </file>
+  <file name="src/hxd/res/Any.cpp">
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h3d/fbx/Library.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/impl/ArrayIterator.h"/>
+   <depend name="include/hxd/res/Any.h"/>
+   <depend name="include/hxd/res/BitmapFont.h"/>
+   <depend name="include/hxd/res/BytesFileSystem.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/FileSystem.h"/>
+   <depend name="include/hxd/res/Font.h"/>
+   <depend name="include/hxd/res/Loader.h"/>
+   <depend name="include/hxd/res/Model.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+   <depend name="include/hxd/res/Sound.h"/>
+   <depend name="include/hxd/res/Texture.h"/>
+   <depend name="include/hxd/res/TiledMap.h"/>
+   <depend name="include/hxd/res/_Any/SingleFileSystem.h"/>
+  </file>
+  <file name="src/hxd/res/Resource.cpp">
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+  </file>
+  <file name="src/hxd/res/_Any/SingleFileSystem.cpp">
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/res/BytesFileSystem.h"/>
+   <depend name="include/hxd/res/FileSystem.h"/>
+   <depend name="include/hxd/res/_Any/SingleFileSystem.h"/>
+  </file>
+  <file name="src/hxd/res/BytesFileSystem.cpp">
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/res/BytesFileEntry.h"/>
+   <depend name="include/hxd/res/BytesFileSystem.h"/>
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/FileSystem.h"/>
+  </file>
+  <file name="src/hxd/res/FileSystem.cpp">
+   <depend name="include/hxd/res/FileEntry.h"/>
+   <depend name="include/hxd/res/FileSystem.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/Utils.cpp">
+   <depend name="include/hxd/poly2tri/Constants.h"/>
+   <depend name="include/hxd/poly2tri/Point.h"/>
+   <depend name="include/hxd/poly2tri/Utils.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/Triangle.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/hxd/poly2tri/Constants.h"/>
+   <depend name="include/hxd/poly2tri/Edge.h"/>
+   <depend name="include/hxd/poly2tri/Point.h"/>
+   <depend name="include/hxd/poly2tri/Triangle.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/SweepContext.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/poly2tri/AdvancingFront.h"/>
+   <depend name="include/hxd/poly2tri/Basin.h"/>
+   <depend name="include/hxd/poly2tri/Constants.h"/>
+   <depend name="include/hxd/poly2tri/Edge.h"/>
+   <depend name="include/hxd/poly2tri/EdgeEvent.h"/>
+   <depend name="include/hxd/poly2tri/Node.h"/>
+   <depend name="include/hxd/poly2tri/Point.h"/>
+   <depend name="include/hxd/poly2tri/SweepContext.h"/>
+   <depend name="include/hxd/poly2tri/Triangle.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/Sweep.cpp">
+   <depend name="include/hxd/poly2tri/AdvancingFront.h"/>
+   <depend name="include/hxd/poly2tri/Basin.h"/>
+   <depend name="include/hxd/poly2tri/Constants.h"/>
+   <depend name="include/hxd/poly2tri/Edge.h"/>
+   <depend name="include/hxd/poly2tri/EdgeEvent.h"/>
+   <depend name="include/hxd/poly2tri/Node.h"/>
+   <depend name="include/hxd/poly2tri/Point.h"/>
+   <depend name="include/hxd/poly2tri/Sweep.h"/>
+   <depend name="include/hxd/poly2tri/SweepContext.h"/>
+   <depend name="include/hxd/poly2tri/Triangle.h"/>
+   <depend name="include/hxd/poly2tri/Utils.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/Point.cpp">
+   <depend name="include/hxd/poly2tri/Edge.h"/>
+   <depend name="include/hxd/poly2tri/Point.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/Orientation.cpp">
+   <depend name="include/hxd/poly2tri/Constants.h"/>
+   <depend name="include/hxd/poly2tri/Orientation.h"/>
+   <depend name="include/hxd/poly2tri/Point.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/Node.cpp">
+   <depend name="include/hxd/poly2tri/Node.h"/>
+   <depend name="include/hxd/poly2tri/Point.h"/>
+   <depend name="include/hxd/poly2tri/Triangle.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/EdgeEvent.cpp">
+   <depend name="include/hxd/poly2tri/Edge.h"/>
+   <depend name="include/hxd/poly2tri/EdgeEvent.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/Edge.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/hxd/poly2tri/Edge.h"/>
+   <depend name="include/hxd/poly2tri/Point.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/Constants.cpp">
+   <depend name="include/hxd/poly2tri/Constants.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/Basin.cpp">
+   <depend name="include/hxd/poly2tri/Basin.h"/>
+   <depend name="include/hxd/poly2tri/Node.h"/>
+  </file>
+  <file name="src/hxd/poly2tri/AdvancingFront.cpp">
+   <depend name="include/hxd/poly2tri/AdvancingFront.h"/>
+   <depend name="include/hxd/poly2tri/Node.h"/>
+   <depend name="include/hxd/poly2tri/Point.h"/>
+  </file>
+  <file name="src/hxd/impl/Tmp.cpp">
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/impl/Tmp.h"/>
+  </file>
+  <file name="src/hxd/impl/Memory.cpp">
+   <depend name="include/flash/Memory.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/ByteConversions.h"/>
+   <depend name="include/hxd/impl/Memory.h"/>
+   <depend name="include/hxd/impl/MemoryReader.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/hxd/impl/MemoryReader.cpp">
+   <depend name="include/flash/Memory.h"/>
+   <depend name="include/hxd/impl/Memory.h"/>
+   <depend name="include/hxd/impl/MemoryReader.h"/>
+  </file>
+  <file name="src/hxd/impl/ArrayIterator.cpp">
+   <depend name="include/hxd/impl/ArrayIterator.h"/>
+  </file>
+  <file name="src/hxd/System.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/StringTools.h"/>
+   <depend name="include/Sys.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+   <depend name="include/flash/system/Capabilities.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/hxd/Cursor.h"/>
+   <depend name="include/hxd/System.h"/>
+   <depend name="include/openfl/display/DirectRenderer.h"/>
+   <depend name="include/openfl/display/OpenGLView.h"/>
+   <depend name="include/sys/io/File.h"/>
+  </file>
+  <file name="src/hxd/Cursor.cpp">
+   <depend name="include/hxd/Cursor.h"/>
+  </file>
+  <file name="src/hxd/Stage.cpp">
+   <depend name="include/List.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/display/StageScaleMode.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/KeyboardEvent.h"/>
+   <depend name="include/flash/events/MouseEvent.h"/>
+   <depend name="include/flash/events/TouchEvent.h"/>
+   <depend name="include/flash/ui/Multitouch.h"/>
+   <depend name="include/flash/ui/MultitouchInputMode.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/hxd/Event.h"/>
+   <depend name="include/hxd/EventKind.h"/>
+   <depend name="include/hxd/Stage.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/hxd/Save.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/Save.h"/>
+  </file>
+  <file name="src/hxd/Res.cpp">
+   <depend name="include/hxd/Res.h"/>
+   <depend name="include/hxd/res/Any.h"/>
+   <depend name="include/hxd/res/Font.h"/>
+   <depend name="include/hxd/res/Loader.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+   <depend name="include/hxd/res/Texture.h"/>
+  </file>
+  <file name="src/hxd/Profiler.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/Profiler.h"/>
+  </file>
+  <file name="src/hxd/Pixels.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/Memory.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/Assert.h"/>
+   <depend name="include/hxd/Flags.h"/>
+   <depend name="include/hxd/PixelFormat.h"/>
+   <depend name="include/hxd/Pixels.h"/>
+   <depend name="include/hxd/System.h"/>
+   <depend name="include/hxd/impl/Memory.h"/>
+   <depend name="include/hxd/impl/MemoryReader.h"/>
+   <depend name="include/hxd/impl/Tmp.h"/>
+  </file>
+  <file name="src/hxd/Flags.cpp">
+   <depend name="include/hxd/Flags.h"/>
+  </file>
+  <file name="src/hxd/PixelFormat.cpp">
+   <depend name="include/hxd/PixelFormat.h"/>
+  </file>
+  <file name="src/hxd/Math.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/hxd/Math.h"/>
+  </file>
+  <file name="src/hxd/_IndexBuffer/IndexBuffer_Impl_.cpp">
+   <depend name="include/hxd/_IndexBuffer/IndexBuffer_Impl_.h"/>
+   <depend name="include/hxd/_IndexBuffer/InnerIterator.h"/>
+  </file>
+  <file name="src/hxd/_IndexBuffer/InnerIterator.cpp">
+   <depend name="include/hxd/_IndexBuffer/InnerIterator.h"/>
+  </file>
+  <file name="src/hxd/_FloatBuffer/FloatBuffer_Impl_.cpp">
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/hxd/_FloatBuffer/FloatBuffer_Impl_.h"/>
+   <depend name="include/hxd/_FloatBuffer/InnerIterator.h"/>
+  </file>
+  <file name="src/hxd/_FloatBuffer/InnerIterator.cpp">
+   <depend name="include/hxd/_FloatBuffer/InnerIterator.h"/>
+  </file>
+  <file name="src/hxd/Event.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/hxd/Event.h"/>
+   <depend name="include/hxd/EventKind.h"/>
+  </file>
+  <file name="src/hxd/EventKind.cpp">
+   <depend name="include/hxd/EventKind.h"/>
+  </file>
+  <file name="src/hxd/Charset.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/hxd/Charset.h"/>
+  </file>
+  <file name="src/hxd/_BytesBuffer/BytesBuffer_Impl_.cpp">
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesBuffer.h"/>
+   <depend name="include/haxe/io/BytesOutput.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+   <depend name="include/hxd/_BytesBuffer/BytesBuffer_Impl_.h"/>
+  </file>
+  <file name="src/hxd/ByteConversions.cpp">
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/ByteConversions.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/hxd/_BitmapData/BitmapData_Impl_.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/ByteConversions.h"/>
+   <depend name="include/hxd/Flags.h"/>
+   <depend name="include/hxd/PixelFormat.h"/>
+   <depend name="include/hxd/Pixels.h"/>
+   <depend name="include/hxd/_BitmapData/BitmapData_Impl_.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/hxd/Assert.cpp">
+   <depend name="include/Lambda.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/haxe/CallStack.h"/>
+   <depend name="include/haxe/StackItem.h"/>
+   <depend name="include/hxd/Assert.h"/>
+  </file>
+  <file name="src/hxd/ArrayTools.cpp">
+   <depend name="include/hxd/ArrayTools.h"/>
+  </file>
+  <file name="src/haxe/zip/Uncompress.cpp">
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesBuffer.h"/>
+   <depend name="include/haxe/io/Error.h"/>
+   <depend name="include/haxe/zip/FlushMode.h"/>
+   <depend name="include/haxe/zip/Uncompress.h"/>
+  </file>
+  <file name="src/haxe/zip/FlushMode.cpp">
+   <depend name="include/haxe/zip/FlushMode.h"/>
+  </file>
+  <file name="src/haxe/zip/Compress.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/zip/Compress.h"/>
+   <depend name="include/haxe/zip/FlushMode.h"/>
+  </file>
+  <file name="src/haxe/xml/Fast.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/StringBuf.h"/>
+   <depend name="include/StringTools.h"/>
+   <depend name="include/Xml.h"/>
+   <depend name="include/XmlType.h"/>
+   <depend name="include/haxe/xml/Fast.h"/>
+   <depend name="include/haxe/xml/_Fast/AttribAccess.h"/>
+   <depend name="include/haxe/xml/_Fast/HasAttribAccess.h"/>
+   <depend name="include/haxe/xml/_Fast/HasNodeAccess.h"/>
+   <depend name="include/haxe/xml/_Fast/NodeAccess.h"/>
+   <depend name="include/haxe/xml/_Fast/NodeListAccess.h"/>
+  </file>
+  <file name="src/haxe/xml/_Fast/NodeListAccess.cpp">
+   <depend name="include/List.h"/>
+   <depend name="include/Xml.h"/>
+   <depend name="include/haxe/xml/Fast.h"/>
+   <depend name="include/haxe/xml/_Fast/NodeListAccess.h"/>
+  </file>
+  <file name="src/haxe/xml/_Fast/HasNodeAccess.cpp">
+   <depend name="include/Xml.h"/>
+   <depend name="include/haxe/xml/_Fast/HasNodeAccess.h"/>
+  </file>
+  <file name="src/haxe/xml/_Fast/HasAttribAccess.cpp">
+   <depend name="include/Xml.h"/>
+   <depend name="include/XmlType.h"/>
+   <depend name="include/haxe/xml/_Fast/HasAttribAccess.h"/>
+  </file>
+  <file name="src/haxe/xml/_Fast/AttribAccess.cpp">
+   <depend name="include/Xml.h"/>
+   <depend name="include/XmlType.h"/>
+   <depend name="include/haxe/xml/_Fast/AttribAccess.h"/>
+  </file>
+  <file name="src/haxe/xml/_Fast/NodeAccess.cpp">
+   <depend name="include/Xml.h"/>
+   <depend name="include/XmlType.h"/>
+   <depend name="include/haxe/xml/Fast.h"/>
+   <depend name="include/haxe/xml/_Fast/NodeAccess.h"/>
+  </file>
+  <file name="src/haxe/io/Path.cpp">
+   <depend name="include/EReg.h"/>
+   <depend name="include/haxe/io/Path.h"/>
+  </file>
+  <file name="src/haxe/io/Error.cpp">
+   <depend name="include/haxe/io/Error.h"/>
+  </file>
+  <file name="src/haxe/io/Eof.cpp">
+   <depend name="include/haxe/io/Eof.h"/>
+  </file>
+  <file name="src/haxe/io/BytesOutput.cpp">
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesBuffer.h"/>
+   <depend name="include/haxe/io/BytesOutput.h"/>
+   <depend name="include/haxe/io/Error.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+  </file>
+  <file name="src/haxe/io/BytesInput.cpp">
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesInput.h"/>
+   <depend name="include/haxe/io/Eof.h"/>
+   <depend name="include/haxe/io/Error.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+  </file>
+  <file name="src/haxe/io/BytesBuffer.cpp">
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesBuffer.h"/>
+   <depend name="include/haxe/io/BytesOutput.h"/>
+   <depend name="include/haxe/io/Error.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+  </file>
+  <file name="src/haxe/ds/WeakMap.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/haxe/ds/WeakMap.h"/>
+  </file>
+  <file name="src/haxe/ds/_Vector/Vector_Impl_.cpp">
+   <depend name="include/haxe/ds/_Vector/Vector_Impl_.h"/>
+  </file>
+  <file name="src/haxe/ds/StringMap.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/StringBuf.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+  </file>
+  <file name="src/haxe/ds/ObjectMap.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/StringBuf.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/ds/ObjectMap.h"/>
+  </file>
+  <file name="src/haxe/ds/_HashMap/HashMap_Impl_.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/ds/_HashMap/HashMap_Impl_.h"/>
+  </file>
+  <file name="src/haxe/ds/EnumValueMap.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Reflect.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/haxe/ds/BalancedTree.h"/>
+   <depend name="include/haxe/ds/EnumValueMap.h"/>
+  </file>
+  <file name="src/haxe/ds/TreeNode.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/haxe/ds/TreeNode.h"/>
+  </file>
+  <file name="src/haxe/ds/BalancedTree.cpp">
+   <depend name="include/Reflect.h"/>
+   <depend name="include/haxe/ds/BalancedTree.h"/>
+   <depend name="include/haxe/ds/TreeNode.h"/>
+  </file>
+  <file name="src/haxe/crypto/Crc32.cpp">
+   <depend name="include/haxe/crypto/Crc32.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+  </file>
+  <file name="src/haxe/crypto/BaseCode.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/haxe/crypto/BaseCode.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+  </file>
+  <file name="src/haxe/Utf8.cpp">
+   <depend name="include/haxe/Utf8.h"/>
+  </file>
+  <file name="src/haxe/Unserializer.cpp">
+   <depend name="include/Date.h"/>
+   <depend name="include/IMap.h"/>
+   <depend name="include/List.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/StringTools.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/haxe/Unserializer.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/ds/ObjectMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+  </file>
+  <file name="src/haxe/Timer.cpp">
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/Timer.h"/>
+  </file>
+  <file name="src/haxe/Resource.cpp">
+   <depend name="include/haxe/Resource.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+  </file>
+  <file name="src/haxe/_EnumFlags/EnumFlags_Impl_.cpp">
+   <depend name="include/haxe/_EnumFlags/EnumFlags_Impl_.h"/>
+  </file>
+  <file name="src/haxe/CallStack.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/StringBuf.h"/>
+   <depend name="include/haxe/CallStack.h"/>
+   <depend name="include/haxe/StackItem.h"/>
+  </file>
+  <file name="src/haxe/StackItem.cpp">
+   <depend name="include/haxe/StackItem.h"/>
+  </file>
+  <file name="src/h3d/scene/Skin.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/anim/Joint.h"/>
+   <depend name="include/h3d/anim/Skin.h"/>
+   <depend name="include/h3d/col/Bounds.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/mat/MeshMaterial.h"/>
+   <depend name="include/h3d/mat/MeshShader.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/h3d/scene/Joint.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+   <depend name="include/h3d/scene/Skin.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/Profiler.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/h3d/scene/Joint.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/scene/Joint.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/h3d/scene/Skin.h"/>
+  </file>
+  <file name="src/h3d/scene/RenderContext.cpp">
+   <depend name="include/h3d/Camera.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+   <depend name="include/hxd/Stage.h"/>
+  </file>
+  <file name="src/h3d/scene/MultiMaterial.cpp">
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/mat/MeshMaterial.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/MultiMaterial.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+  </file>
+  <file name="src/h3d/scene/Mesh.cpp">
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/col/Bounds.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/mat/MeshMaterial.h"/>
+   <depend name="include/h3d/mat/MeshShader.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+  </file>
+  <file name="src/h3d/scene/Object.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Quat.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/anim/Animation.h"/>
+   <depend name="include/h3d/col/Bounds.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/Profiler.h"/>
+   <depend name="include/hxd/impl/ArrayIterator.h"/>
+  </file>
+  <file name="src/h3d/prim/Plan2D.cpp">
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/prim/Plan2D.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+  </file>
+  <file name="src/h3d/prim/FBXModel.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/anim/Joint.h"/>
+   <depend name="include/h3d/anim/Skin.h"/>
+   <depend name="include/h3d/col/Bounds.h"/>
+   <depend name="include/h3d/col/Point.h"/>
+   <depend name="include/h3d/fbx/Geometry.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/BufferOffset.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/prim/FBXBuffers.h"/>
+   <depend name="include/h3d/prim/FBXModel.h"/>
+   <depend name="include/h3d/prim/MeshPrimitive.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesBuffer.h"/>
+   <depend name="include/haxe/io/BytesOutput.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+   <depend name="include/hxd/Assert.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/h3d/prim/MeshPrimitive.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/BufferOffset.h"/>
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/prim/MeshPrimitive.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+  </file>
+  <file name="src/h3d/prim/FBXBuffers.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/h3d/col/Point.h"/>
+   <depend name="include/h3d/prim/FBXBuffers.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/io/BytesOutput.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+  </file>
+  <file name="src/h3d/mat/Texture.cpp">
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/mat/Filter.h"/>
+   <depend name="include/h3d/mat/MipMap.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/h3d/mat/TextureFormat.h"/>
+   <depend name="include/h3d/mat/Wrap.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/Flags.h"/>
+   <depend name="include/hxd/PixelFormat.h"/>
+   <depend name="include/hxd/Pixels.h"/>
+   <depend name="include/hxd/System.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLTexture.h"/>
+  </file>
+  <file name="src/h3d/mat/MeshMaterial.cpp">
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/mat/MeshMaterial.h"/>
+   <depend name="include/h3d/mat/MeshShader.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+  </file>
+  <file name="src/h3d/mat/MeshShader.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/MeshShader.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+  </file>
+  <file name="src/h3d/mat/Material.cpp">
+   <depend name="include/Reflect.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Blend.h"/>
+   <depend name="include/h3d/mat/Compare.h"/>
+   <depend name="include/h3d/mat/Face.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+  </file>
+  <file name="src/h3d/mat/TextureFormat.cpp">
+   <depend name="include/h3d/mat/TextureFormat.h"/>
+  </file>
+  <file name="src/h3d/mat/Wrap.cpp">
+   <depend name="include/h3d/mat/Wrap.h"/>
+  </file>
+  <file name="src/h3d/mat/Filter.cpp">
+   <depend name="include/h3d/mat/Filter.h"/>
+  </file>
+  <file name="src/h3d/mat/MipMap.cpp">
+   <depend name="include/h3d/mat/MipMap.h"/>
+  </file>
+  <file name="src/h3d/mat/Compare.cpp">
+   <depend name="include/h3d/mat/Compare.h"/>
+  </file>
+  <file name="src/h3d/mat/Blend.cpp">
+   <depend name="include/h3d/mat/Blend.h"/>
+  </file>
+  <file name="src/h3d/mat/Face.cpp">
+   <depend name="include/h3d/mat/Face.h"/>
+  </file>
+  <file name="src/h3d/impl/ColorShader.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/ColorShader.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+  </file>
+  <file name="src/h3d/impl/LineShader.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/LineShader.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+  </file>
+  <file name="src/h3d/impl/PointShader.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/PointShader.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+  </file>
+  <file name="src/h3d/impl/ShaderInstance.cpp">
+   <depend name="include/h3d/impl/Attribute.h"/>
+   <depend name="include/h3d/impl/ShaderInstance.h"/>
+   <depend name="include/h3d/impl/Uniform.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLProgram.h"/>
+  </file>
+  <file name="src/h3d/impl/Attribute.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/impl/Attribute.h"/>
+   <depend name="include/h3d/impl/ShaderType.h"/>
+  </file>
+  <file name="src/h3d/impl/Uniform.cpp">
+   <depend name="include/h3d/impl/ShaderType.h"/>
+   <depend name="include/h3d/impl/Uniform.h"/>
+  </file>
+  <file name="src/h3d/impl/ShaderType.cpp">
+   <depend name="include/h3d/impl/ShaderType.h"/>
+  </file>
+  <file name="src/h3d/impl/MemoryManager.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Lambda.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/impl/BigBuffer.h"/>
+   <depend name="include/h3d/impl/BigBufferFlag.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/FreeCell.h"/>
+   <depend name="include/h3d/impl/GLVB.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/h3d/mat/TextureFormat.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/ds/ObjectMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/System.h"/>
+   <depend name="include/openfl/gl/GLBuffer.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLTexture.h"/>
+  </file>
+  <file name="src/h3d/impl/BigBuffer.cpp">
+   <depend name="include/h3d/impl/BigBuffer.h"/>
+   <depend name="include/h3d/impl/BigBufferFlag.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/FreeCell.h"/>
+   <depend name="include/h3d/impl/GLVB.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+  </file>
+  <file name="src/h3d/impl/BigBufferFlag.cpp">
+   <depend name="include/h3d/impl/BigBufferFlag.h"/>
+  </file>
+  <file name="src/h3d/impl/FreeCell.cpp">
+   <depend name="include/h3d/impl/FreeCell.h"/>
+  </file>
+  <file name="src/h3d/impl/Indexes.cpp">
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/openfl/gl/GLBuffer.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+  </file>
+  <file name="src/h3d/impl/GlDriver.cpp">
+   <depend name="include/EReg.h"/>
+   <depend name="include/IMap.h"/>
+   <depend name="include/List.h"/>
+   <depend name="include/Reflect.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/StringTools.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/ValueType.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/Attribute.h"/>
+   <depend name="include/h3d/impl/BigBuffer.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/BufferOffset.h"/>
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/FBO.h"/>
+   <depend name="include/h3d/impl/GLActiveInfo.h"/>
+   <depend name="include/h3d/impl/GLVB.h"/>
+   <depend name="include/h3d/impl/GlDriver.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/impl/ShaderInstance.h"/>
+   <depend name="include/h3d/impl/ShaderType.h"/>
+   <depend name="include/h3d/impl/Uniform.h"/>
+   <depend name="include/h3d/impl/UniformContext.h"/>
+   <depend name="include/h3d/mat/Filter.h"/>
+   <depend name="include/h3d/mat/MipMap.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/h3d/mat/Wrap.h"/>
+   <depend name="include/haxe/CallStack.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/StackItem.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/Assert.h"/>
+   <depend name="include/hxd/PixelFormat.h"/>
+   <depend name="include/hxd/Pixels.h"/>
+   <depend name="include/hxd/System.h"/>
+   <depend name="include/hxd/_BitmapData/BitmapData_Impl_.h"/>
+   <depend name="include/openfl/gl/GL.h"/>
+   <depend name="include/openfl/gl/GLBuffer.h"/>
+   <depend name="include/openfl/gl/GLFramebuffer.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLProgram.h"/>
+   <depend name="include/openfl/gl/GLRenderbuffer.h"/>
+   <depend name="include/openfl/gl/GLShader.h"/>
+   <depend name="include/openfl/gl/GLTexture.h"/>
+   <depend name="include/openfl/utils/ArrayBufferView.h"/>
+   <depend name="include/openfl/utils/Float32Array.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+   <depend name="include/openfl/utils/Int16Array.h"/>
+   <depend name="include/openfl/utils/UInt8Array.h"/>
+  </file>
+  <file name="src/openfl/gl/GL.cpp">
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/geom/Matrix3D.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/gl/GL.h"/>
+   <depend name="include/openfl/gl/GLBuffer.h"/>
+   <depend name="include/openfl/gl/GLFramebuffer.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLProgram.h"/>
+   <depend name="include/openfl/gl/GLRenderbuffer.h"/>
+   <depend name="include/openfl/gl/GLShader.h"/>
+   <depend name="include/openfl/gl/GLTexture.h"/>
+   <depend name="include/openfl/utils/ArrayBufferView.h"/>
+   <depend name="include/openfl/utils/Float32Array.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/haxe/Log.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/haxe/Log.h"/>
+  </file>
+  <file name="src/haxe/ds/IntMap.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/StringBuf.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+  </file>
+  <file name="src/h3d/impl/UniformContext.cpp">
+   <depend name="include/h3d/impl/GLActiveInfo.h"/>
+   <depend name="include/h3d/impl/UniformContext.h"/>
+  </file>
+  <file name="src/h3d/impl/FBO.cpp">
+   <depend name="include/h3d/impl/FBO.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/openfl/gl/GLFramebuffer.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLRenderbuffer.h"/>
+  </file>
+  <file name="src/h3d/impl/GLActiveInfo.cpp">
+   <depend name="include/h3d/impl/GLActiveInfo.h"/>
+  </file>
+  <file name="src/h3d/impl/Driver.cpp">
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/h3d/impl/BufferOffset.h"/>
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/GLVB.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/Pixels.h"/>
+   <depend name="include/openfl/gl/GLBuffer.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+   <depend name="include/openfl/gl/GLTexture.h"/>
+  </file>
+  <file name="src/h3d/impl/GLVB.cpp">
+   <depend name="include/h3d/impl/GLVB.h"/>
+   <depend name="include/openfl/gl/GLBuffer.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+  </file>
+  <file name="src/h3d/impl/BufferOffset.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/BufferOffset.h"/>
+  </file>
+  <file name="src/h3d/impl/Buffer.cpp">
+   <depend name="include/h3d/impl/BigBuffer.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/GLVB.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/hxd/Assert.h"/>
+  </file>
+  <file name="src/h3d/fbx/XBXReader.cpp">
+   <depend name="include/flash/Memory.h"/>
+   <depend name="include/h3d/fbx/FbxNode.h"/>
+   <depend name="include/h3d/fbx/FbxProp.h"/>
+   <depend name="include/h3d/fbx/XBXReader.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/hxd/impl/Memory.h"/>
+   <depend name="include/hxd/impl/MemoryReader.h"/>
+   <depend name="include/hxd/impl/Tmp.h"/>
+  </file>
+  <file name="src/h3d/fbx/Parser.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/h3d/fbx/FbxNode.h"/>
+   <depend name="include/h3d/fbx/FbxProp.h"/>
+   <depend name="include/h3d/fbx/Parser.h"/>
+   <depend name="include/h3d/fbx/_Parser/Token.h"/>
+  </file>
+  <file name="src/h3d/fbx/_Parser/Token.cpp">
+   <depend name="include/h3d/fbx/_Parser/Token.h"/>
+  </file>
+  <file name="src/h3d/fbx/Library.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Quat.h"/>
+   <depend name="include/h3d/anim/AnimatedObject.h"/>
+   <depend name="include/h3d/anim/Animation.h"/>
+   <depend name="include/h3d/anim/FrameAnimation.h"/>
+   <depend name="include/h3d/anim/Joint.h"/>
+   <depend name="include/h3d/anim/LinearAnimation.h"/>
+   <depend name="include/h3d/anim/LinearFrame.h"/>
+   <depend name="include/h3d/anim/MorphFrameAnimation.h"/>
+   <depend name="include/h3d/anim/MorphObject.h"/>
+   <depend name="include/h3d/anim/MorphShape.h"/>
+   <depend name="include/h3d/anim/Skin.h"/>
+   <depend name="include/h3d/anim/_Skin/Influence.h"/>
+   <depend name="include/h3d/col/Point.h"/>
+   <depend name="include/h3d/fbx/AnimationMode.h"/>
+   <depend name="include/h3d/fbx/DefaultMatrixes.h"/>
+   <depend name="include/h3d/fbx/FBxTools.h"/>
+   <depend name="include/h3d/fbx/FbxNode.h"/>
+   <depend name="include/h3d/fbx/FbxProp.h"/>
+   <depend name="include/h3d/fbx/Geometry.h"/>
+   <depend name="include/h3d/fbx/Library.h"/>
+   <depend name="include/h3d/fbx/Parser.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/mat/MeshMaterial.h"/>
+   <depend name="include/h3d/mat/MeshShader.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/h3d/prim/FBXModel.h"/>
+   <depend name="include/h3d/prim/MeshPrimitive.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/MultiMaterial.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/h3d/scene/Skin.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/h3d/fbx/TimeMode.cpp">
+   <depend name="include/h3d/fbx/TimeMode.h"/>
+  </file>
+  <file name="src/h3d/fbx/DefaultMatrixes.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/col/Point.h"/>
+   <depend name="include/h3d/fbx/DefaultMatrixes.h"/>
+  </file>
+  <file name="src/h3d/fbx/AnimationMode.cpp">
+   <depend name="include/h3d/fbx/AnimationMode.h"/>
+  </file>
+  <file name="src/h3d/fbx/Geometry.cpp">
+   <depend name="include/h3d/col/Point.h"/>
+   <depend name="include/h3d/fbx/FBxTools.h"/>
+   <depend name="include/h3d/fbx/FbxNode.h"/>
+   <depend name="include/h3d/fbx/FbxProp.h"/>
+   <depend name="include/h3d/fbx/Geometry.h"/>
+   <depend name="include/h3d/fbx/Library.h"/>
+  </file>
+  <file name="src/h3d/fbx/FBxTools.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/fbx/FBxTools.h"/>
+   <depend name="include/h3d/fbx/FbxProp.h"/>
+  </file>
+  <file name="src/h3d/fbx/FbxNode.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/h3d/fbx/FbxNode.h"/>
+   <depend name="include/h3d/fbx/FbxProp.h"/>
+  </file>
+  <file name="src/h3d/fbx/FbxProp.cpp">
+   <depend name="include/h3d/fbx/FbxProp.h"/>
+  </file>
+  <file name="src/h3d/col/Point.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/col/Point.h"/>
+   <depend name="include/hxd/Math.h"/>
+  </file>
+  <file name="src/h3d/col/Plane.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/col/Plane.h"/>
+   <depend name="include/h3d/col/Point.h"/>
+  </file>
+  <file name="src/h3d/col/Bounds.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/col/Bounds.h"/>
+   <depend name="include/h3d/col/Plane.h"/>
+   <depend name="include/h3d/col/Point.h"/>
+  </file>
+  <file name="src/h3d/anim/Skin.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/anim/Joint.h"/>
+   <depend name="include/h3d/anim/Skin.h"/>
+   <depend name="include/h3d/anim/_Skin/Influence.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+  </file>
+  <file name="src/h3d/anim/_Skin/Influence.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/anim/Joint.h"/>
+   <depend name="include/h3d/anim/_Skin/Influence.h"/>
+  </file>
+  <file name="src/h3d/anim/Joint.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/anim/Joint.h"/>
+  </file>
+  <file name="src/h3d/anim/MorphFrameAnimation.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/anim/AnimatedObject.h"/>
+   <depend name="include/h3d/anim/Animation.h"/>
+   <depend name="include/h3d/anim/MorphFrameAnimation.h"/>
+   <depend name="include/h3d/anim/MorphObject.h"/>
+   <depend name="include/h3d/anim/MorphShape.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/BufferOffset.h"/>
+   <depend name="include/h3d/prim/FBXBuffers.h"/>
+   <depend name="include/h3d/prim/FBXModel.h"/>
+   <depend name="include/h3d/prim/MeshPrimitive.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/h3d/anim/MorphObject.cpp">
+   <depend name="include/h3d/anim/AnimatedObject.h"/>
+   <depend name="include/h3d/anim/MorphObject.h"/>
+   <depend name="include/h3d/prim/FBXModel.h"/>
+   <depend name="include/h3d/prim/MeshPrimitive.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+  </file>
+  <file name="src/h3d/anim/MorphShape.cpp">
+   <depend name="include/h3d/anim/MorphShape.h"/>
+  </file>
+  <file name="src/h3d/anim/LinearAnimation.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/anim/AnimatedObject.h"/>
+   <depend name="include/h3d/anim/Animation.h"/>
+   <depend name="include/h3d/anim/LinearAnimation.h"/>
+   <depend name="include/h3d/anim/LinearFrame.h"/>
+   <depend name="include/h3d/anim/LinearObject.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Blend.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/mat/MeshMaterial.h"/>
+   <depend name="include/h3d/mat/MeshShader.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/h3d/scene/Skin.h"/>
+  </file>
+  <file name="src/h3d/anim/LinearObject.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/anim/AnimatedObject.h"/>
+   <depend name="include/h3d/anim/LinearFrame.h"/>
+   <depend name="include/h3d/anim/LinearObject.h"/>
+  </file>
+  <file name="src/h3d/anim/LinearFrame.cpp">
+   <depend name="include/h3d/anim/LinearFrame.h"/>
+  </file>
+  <file name="src/h3d/anim/FrameAnimation.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/anim/AnimatedObject.h"/>
+   <depend name="include/h3d/anim/Animation.h"/>
+   <depend name="include/h3d/anim/FrameAnimation.h"/>
+   <depend name="include/h3d/anim/FrameObject.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Blend.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/mat/MeshMaterial.h"/>
+   <depend name="include/h3d/mat/MeshShader.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/h3d/scene/Skin.h"/>
+  </file>
+  <file name="src/h3d/anim/FrameObject.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/anim/AnimatedObject.h"/>
+   <depend name="include/h3d/anim/FrameObject.h"/>
+  </file>
+  <file name="src/h3d/anim/Animation.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/anim/AnimatedObject.h"/>
+   <depend name="include/h3d/anim/Animation.h"/>
+   <depend name="include/h3d/anim/Joint.h"/>
+   <depend name="include/h3d/anim/Skin.h"/>
+   <depend name="include/h3d/anim/_Animation/AnimWait.h"/>
+   <depend name="include/h3d/scene/Joint.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/h3d/scene/Skin.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/h3d/anim/_Animation/AnimWait.cpp">
+   <depend name="include/h3d/anim/_Animation/AnimWait.h"/>
+  </file>
+  <file name="src/h3d/anim/AnimatedObject.cpp">
+   <depend name="include/h3d/anim/AnimatedObject.h"/>
+   <depend name="include/h3d/scene/Mesh.h"/>
+   <depend name="include/h3d/scene/Object.h"/>
+   <depend name="include/h3d/scene/Skin.h"/>
+  </file>
+  <file name="src/h3d/Vector.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/col/Point.h"/>
+   <depend name="include/hxd/Math.h"/>
+  </file>
+  <file name="src/h3d/Quat.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Quat.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/hxd/Math.h"/>
+  </file>
+  <file name="src/h3d/Matrix.cpp">
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/hxd/Math.h"/>
+  </file>
+  <file name="src/h3d/Engine.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/Drawable.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/IDrawable.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/BigBuffer.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/BufferOffset.h"/>
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/GLVB.h"/>
+   <depend name="include/h3d/impl/GlDriver.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/impl/LineShader.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/impl/PointShader.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Blend.h"/>
+   <depend name="include/h3d/mat/Compare.h"/>
+   <depend name="include/h3d/mat/Face.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/h3d/prim/Plan2D.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/Profiler.h"/>
+   <depend name="include/hxd/Stage.h"/>
+   <depend name="include/hxd/System.h"/>
+   <depend name="include/openfl/gl/GLBuffer.h"/>
+   <depend name="include/openfl/gl/GLObject.h"/>
+  </file>
+  <file name="src/h3d/Drawable.cpp">
+   <depend name="include/h3d/Drawable.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/IDrawable.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+  </file>
+  <file name="src/h3d/Camera.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/h3d/Camera.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/col/Bounds.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/Profiler.h"/>
+  </file>
+  <file name="src/h2d/col/Point.cpp">
+   <depend name="include/h2d/col/Point.h"/>
+   <depend name="include/hxd/Math.h"/>
+  </file>
+  <file name="src/h2d/col/Circle.cpp">
+   <depend name="include/h2d/col/Circle.h"/>
+   <depend name="include/h2d/col/Point.h"/>
+   <depend name="include/hxd/Math.h"/>
+  </file>
+  <file name="src/h2d/col/Bounds.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h2d/Matrix.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/h2d/col/Point.h"/>
+  </file>
+  <file name="src/h2d/Tools.cpp">
+   <depend name="include/h2d/Tools.h"/>
+   <depend name="include/h2d/_Tools/CoreObjects.h"/>
+   <depend name="include/h3d/impl/BigBuffer.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+  </file>
+  <file name="src/h2d/_Tools/CoreObjects.cpp">
+   <depend name="include/h2d/Matrix.h"/>
+   <depend name="include/h2d/_Tools/CoreObjects.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Compare.h"/>
+   <depend name="include/h3d/mat/Face.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/h2d/TileGroup.cpp">
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Matrix.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/TileGroup.h"/>
+   <depend name="include/h2d/_TileGroup/TileLayerContent.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/h2d/col/Point.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+  </file>
+  <file name="src/h2d/_TileGroup/TileLayerContent.cpp">
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/_TileGroup/TileLayerContent.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+  </file>
+  <file name="src/h2d/Tile.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/BlendMode.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/geom/ColorTransform.h"/>
+   <depend name="include/flash/geom/Matrix.h"/>
+   <depend name="include/flash/geom/Point.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/Tools.h"/>
+   <depend name="include/h2d/_Tools/CoreObjects.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/Pixels.h"/>
+   <depend name="include/hxd/Profiler.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/h2d/Text.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/h2d/Align.h"/>
+   <depend name="include/h2d/BlendMode.h"/>
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Font.h"/>
+   <depend name="include/h2d/FontChar.h"/>
+   <depend name="include/h2d/Matrix.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/Text.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/TileGroup.h"/>
+   <depend name="include/h2d/_TileGroup/TileLayerContent.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/h2d/col/Point.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+   <depend name="include/haxe/Utf8.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/hxd/Charset.h"/>
+  </file>
+  <file name="src/h2d/Align.cpp">
+   <depend name="include/h2d/Align.h"/>
+  </file>
+  <file name="src/h2d/SpriteBatch.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h2d/BatchElement.h"/>
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Matrix.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/SpriteBatch.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/hxd/Assert.h"/>
+  </file>
+  <file name="src/h2d/BatchElement.cpp">
+   <depend name="include/h2d/BatchElement.h"/>
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/SpriteBatch.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h3d/Vector.h"/>
+  </file>
+  <file name="src/h2d/Scene.cpp">
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/h2d/Bitmap.h"/>
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Interactive.h"/>
+   <depend name="include/h2d/Layers.h"/>
+   <depend name="include/h2d/Scene.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/Tools.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/IDrawable.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+   <depend name="include/hxd/Event.h"/>
+   <depend name="include/hxd/EventKind.h"/>
+   <depend name="include/hxd/Stage.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/h3d/IDrawable.cpp">
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/IDrawable.h"/>
+  </file>
+  <file name="src/h2d/Matrix.cpp">
+   <depend name="include/h2d/Matrix.h"/>
+   <depend name="include/h2d/col/Point.h"/>
+  </file>
+  <file name="src/h2d/Layers.cpp">
+   <depend name="include/h2d/Layers.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+  </file>
+  <file name="src/h2d/Interactive.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Interactive.h"/>
+   <depend name="include/h2d/Layers.h"/>
+   <depend name="include/h2d/Scene.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/IDrawable.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+   <depend name="include/hxd/Cursor.h"/>
+   <depend name="include/hxd/Event.h"/>
+   <depend name="include/hxd/EventKind.h"/>
+   <depend name="include/hxd/Stage.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/h2d/Graphics.cpp">
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Graphics.h"/>
+   <depend name="include/h2d/Matrix.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/_Graphics/GraphicsContent.h"/>
+   <depend name="include/h2d/_Graphics/LinePoint.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/h2d/col/Point.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+   <depend name="include/hxd/poly2tri/Point.h"/>
+   <depend name="include/hxd/poly2tri/Sweep.h"/>
+   <depend name="include/hxd/poly2tri/SweepContext.h"/>
+   <depend name="include/hxd/poly2tri/Triangle.h"/>
+  </file>
+  <file name="src/h2d/_Graphics/GraphicsContent.cpp">
+   <depend name="include/h2d/_Graphics/GraphicsContent.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+  </file>
+  <file name="src/h3d/prim/Primitive.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/col/Bounds.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/prim/Primitive.h"/>
+  </file>
+  <file name="src/h2d/_Graphics/LinePoint.cpp">
+   <depend name="include/h2d/_Graphics/LinePoint.h"/>
+  </file>
+  <file name="src/h2d/Font.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/h2d/Font.h"/>
+   <depend name="include/h2d/FontChar.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/hxd/Charset.h"/>
+  </file>
+  <file name="src/h2d/FontChar.cpp">
+   <depend name="include/h2d/FontChar.h"/>
+   <depend name="include/h2d/Kerning.h"/>
+   <depend name="include/h2d/Tile.h"/>
+  </file>
+  <file name="src/h2d/Kerning.cpp">
+   <depend name="include/h2d/Kerning.h"/>
+  </file>
+  <file name="src/h2d/DrawableShader.cpp">
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+  </file>
+  <file name="src/h3d/impl/Shader.cpp">
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/GlDriver.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/impl/ShaderInstance.h"/>
+   <depend name="include/hxd/System.h"/>
+  </file>
+  <file name="src/h2d/BlendMode.cpp">
+   <depend name="include/h2d/BlendMode.h"/>
+  </file>
+  <file name="src/h2d/Bitmap.cpp">
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/h2d/Bitmap.h"/>
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Matrix.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/h2d/col/Point.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+   <depend name="include/hxd/Pixels.h"/>
+  </file>
+  <file name="src/h2d/Anim.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/h2d/Anim.h"/>
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Matrix.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/h2d/col/Point.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+  </file>
+  <file name="src/h2d/Drawable.cpp">
+   <depend name="include/h2d/BlendMode.h"/>
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/Tools.h"/>
+   <depend name="include/h2d/_Tools/CoreObjects.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/Matrix.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/Buffer.h"/>
+   <depend name="include/h3d/impl/Indexes.h"/>
+   <depend name="include/h3d/impl/MemoryManager.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/mat/Blend.h"/>
+   <depend name="include/h3d/mat/Filter.h"/>
+   <depend name="include/h3d/mat/Material.h"/>
+   <depend name="include/h3d/mat/Texture.h"/>
+  </file>
+  <file name="src/h2d/Sprite.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/h2d/Bitmap.h"/>
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Layers.h"/>
+   <depend name="include/h2d/Matrix.h"/>
+   <depend name="include/h2d/Scene.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/Tools.h"/>
+   <depend name="include/h2d/_Tools/CoreObjects.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/h2d/col/Point.h"/>
+   <depend name="include/h3d/IDrawable.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/h3d/scene/RenderContext.h"/>
+   <depend name="include/hxd/Stage.h"/>
+   <depend name="include/hxd/System.h"/>
+   <depend name="include/hxd/impl/ArrayIterator.h"/>
+  </file>
+  <file name="src/format/tools/Inflate.cpp">
+   <depend name="include/format/tools/Inflate.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/zip/Uncompress.h"/>
+  </file>
+  <file name="src/format/tools/Deflate.cpp">
+   <depend name="include/format/tools/Deflate.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/zip/Compress.h"/>
+  </file>
+  <file name="src/format/png/Tools.cpp">
+   <depend name="include/List.h"/>
+   <depend name="include/format/png/Chunk.h"/>
+   <depend name="include/format/png/Color.h"/>
+   <depend name="include/format/png/Tools.h"/>
+   <depend name="include/format/tools/Deflate.h"/>
+   <depend name="include/format/tools/Inflate.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesBuffer.h"/>
+  </file>
+  <file name="src/format/png/Reader.cpp">
+   <depend name="include/List.h"/>
+   <depend name="include/format/png/Chunk.h"/>
+   <depend name="include/format/png/Color.h"/>
+   <depend name="include/format/png/Reader.h"/>
+   <depend name="include/haxe/crypto/Crc32.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesInput.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+  </file>
+  <file name="src/format/png/Chunk.cpp">
+   <depend name="include/format/png/Chunk.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+  </file>
+  <file name="src/format/png/Color.cpp">
+   <depend name="include/format/png/Color.h"/>
+  </file>
+  <file name="src/flash/utils/Endian.cpp">
+   <depend name="include/flash/utils/Endian.h"/>
+  </file>
+  <file name="src/flash/utils/CompressionAlgorithm.cpp">
+   <depend name="include/flash/utils/CompressionAlgorithm.h"/>
+  </file>
+  <file name="src/flash/utils/ByteArray.cpp">
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/errors/EOFError.h"/>
+   <depend name="include/flash/errors/Error.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/CompressionAlgorithm.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/zip/Compress.h"/>
+   <depend name="include/haxe/zip/Uncompress.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/utils/IDataInput.cpp">
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/openfl/utils/IMemoryRange.cpp">
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/utils/IDataOutput.cpp">
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+  </file>
+  <file name="src/flash/ui/MultitouchInputMode.cpp">
+   <depend name="include/flash/ui/MultitouchInputMode.h"/>
+  </file>
+  <file name="src/flash/ui/Multitouch.cpp">
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/ui/Multitouch.h"/>
+   <depend name="include/flash/ui/MultitouchInputMode.h"/>
+  </file>
+  <file name="src/flash/ui/Keyboard.cpp">
+   <depend name="include/flash/ui/Keyboard.h"/>
+  </file>
+  <file name="src/flash/text/TextLineMetrics.cpp">
+   <depend name="include/flash/text/TextLineMetrics.h"/>
+  </file>
+  <file name="src/flash/text/TextFormat.cpp">
+   <depend name="include/flash/text/TextFormat.h"/>
+  </file>
+  <file name="src/flash/text/TextFieldType.cpp">
+   <depend name="include/flash/text/TextFieldType.h"/>
+  </file>
+  <file name="src/flash/text/TextFieldAutoSize.cpp">
+   <depend name="include/flash/text/TextFieldAutoSize.h"/>
+  </file>
+  <file name="src/flash/text/TextField.cpp">
+   <depend name="include/StringTools.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/text/AntiAliasType.h"/>
+   <depend name="include/flash/text/GridFitType.h"/>
+   <depend name="include/flash/text/TextField.h"/>
+   <depend name="include/flash/text/TextFieldAutoSize.h"/>
+   <depend name="include/flash/text/TextFieldType.h"/>
+   <depend name="include/flash/text/TextFormat.h"/>
+   <depend name="include/flash/text/TextLineMetrics.h"/>
+  </file>
+  <file name="src/flash/text/GridFitType.cpp">
+   <depend name="include/flash/text/GridFitType.h"/>
+  </file>
+  <file name="src/flash/text/FontType.cpp">
+   <depend name="include/flash/text/FontType.h"/>
+  </file>
+  <file name="src/flash/text/FontStyle.cpp">
+   <depend name="include/flash/text/FontStyle.h"/>
+  </file>
+  <file name="src/flash/text/Font.cpp">
+   <depend name="include/Reflect.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/text/Font.h"/>
+   <depend name="include/flash/text/FontStyle.h"/>
+   <depend name="include/flash/text/FontType.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/Resource.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/text/AntiAliasType.cpp">
+   <depend name="include/flash/text/AntiAliasType.h"/>
+  </file>
+  <file name="src/flash/system/SecurityDomain.cpp">
+   <depend name="include/flash/system/SecurityDomain.h"/>
+  </file>
+  <file name="src/flash/system/ScreenMode.cpp">
+   <depend name="include/flash/system/PixelFormat.h"/>
+   <depend name="include/flash/system/ScreenMode.h"/>
+  </file>
+  <file name="src/flash/system/PixelFormat.cpp">
+   <depend name="include/flash/system/PixelFormat.h"/>
+  </file>
+  <file name="src/flash/system/LoaderContext.cpp">
+   <depend name="include/flash/system/ApplicationDomain.h"/>
+   <depend name="include/flash/system/LoaderContext.h"/>
+   <depend name="include/flash/system/SecurityDomain.h"/>
+  </file>
+  <file name="src/flash/system/Capabilities.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/system/Capabilities.h"/>
+   <depend name="include/flash/system/PixelFormat.h"/>
+   <depend name="include/flash/system/ScreenMode.h"/>
+  </file>
+  <file name="src/flash/system/ApplicationDomain.cpp">
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/system/ApplicationDomain.h"/>
+  </file>
+  <file name="src/flash/net/URLVariables.cpp">
+   <depend name="include/Reflect.h"/>
+   <depend name="include/StringTools.h"/>
+   <depend name="include/flash/net/URLVariables.h"/>
+  </file>
+  <file name="src/flash/net/URLRequestMethod.cpp">
+   <depend name="include/flash/net/URLRequestMethod.h"/>
+  </file>
+  <file name="src/flash/net/URLRequestHeader.cpp">
+   <depend name="include/flash/net/URLRequestHeader.h"/>
+  </file>
+  <file name="src/flash/net/URLRequest.cpp">
+   <depend name="include/Reflect.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/net/URLRequest.h"/>
+   <depend name="include/flash/net/URLRequestHeader.h"/>
+   <depend name="include/flash/net/URLVariables.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/net/URLLoaderDataFormat.cpp">
+   <depend name="include/flash/net/URLLoaderDataFormat.h"/>
+  </file>
+  <file name="src/flash/media/SoundTransform.cpp">
+   <depend name="include/flash/media/SoundTransform.h"/>
+  </file>
+  <file name="src/flash/media/SoundLoaderContext.cpp">
+   <depend name="include/flash/media/SoundLoaderContext.h"/>
+  </file>
+  <file name="src/flash/media/AudioThreadState.cpp">
+   <depend name="include/Lambda.h"/>
+   <depend name="include/cpp/vm/Mutex.h"/>
+   <depend name="include/cpp/vm/Thread.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/media/AudioThreadState.h"/>
+   <depend name="include/flash/media/SoundChannel.h"/>
+  </file>
+  <file name="src/flash/media/SoundChannel.cpp">
+   <depend name="include/Sys.h"/>
+   <depend name="include/cpp/vm/Thread.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/SampleDataEvent.h"/>
+   <depend name="include/flash/media/AudioThreadState.h"/>
+   <depend name="include/flash/media/InternalAudioType.h"/>
+   <depend name="include/flash/media/Sound.h"/>
+   <depend name="include/flash/media/SoundChannel.h"/>
+   <depend name="include/flash/media/SoundTransform.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/media/InternalAudioType.cpp">
+   <depend name="include/flash/media/InternalAudioType.h"/>
+  </file>
+  <file name="src/flash/media/Sound.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/errors/Error.h"/>
+   <depend name="include/flash/events/ErrorEvent.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/IOErrorEvent.h"/>
+   <depend name="include/flash/events/SampleDataEvent.h"/>
+   <depend name="include/flash/events/TextEvent.h"/>
+   <depend name="include/flash/media/ID3Info.h"/>
+   <depend name="include/flash/media/InternalAudioType.h"/>
+   <depend name="include/flash/media/Sound.h"/>
+   <depend name="include/flash/media/SoundChannel.h"/>
+   <depend name="include/flash/media/SoundLoaderContext.h"/>
+   <depend name="include/flash/media/SoundTransform.h"/>
+   <depend name="include/flash/net/URLRequest.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/media/ID3Info.cpp">
+   <depend name="include/flash/media/ID3Info.h"/>
+  </file>
+  <file name="src/flash/geom/Vector3D.cpp">
+   <depend name="include/flash/geom/Vector3D.h"/>
+  </file>
+  <file name="src/flash/geom/Transform.cpp">
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/geom/ColorTransform.h"/>
+   <depend name="include/flash/geom/Matrix.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+   <depend name="include/flash/geom/Transform.h"/>
+  </file>
+  <file name="src/flash/geom/Rectangle.cpp">
+   <depend name="include/flash/geom/Matrix.h"/>
+   <depend name="include/flash/geom/Point.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+  </file>
+  <file name="src/flash/geom/Point.cpp">
+   <depend name="include/flash/geom/Point.h"/>
+  </file>
+  <file name="src/flash/geom/Matrix3D.cpp">
+   <depend name="include/flash/_Vector/Vector_Impl_.h"/>
+   <depend name="include/flash/geom/Matrix3D.h"/>
+   <depend name="include/flash/geom/Vector3D.h"/>
+  </file>
+  <file name="src/flash/geom/Matrix.cpp">
+   <depend name="include/flash/geom/Matrix.h"/>
+   <depend name="include/flash/geom/Point.h"/>
+   <depend name="include/flash/geom/Vector3D.h"/>
+  </file>
+  <file name="src/flash/geom/ColorTransform.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/geom/ColorTransform.h"/>
+  </file>
+  <file name="src/flash/filters/BitmapFilter.cpp">
+   <depend name="include/flash/filters/BitmapFilter.h"/>
+  </file>
+  <file name="src/flash/events/UncaughtErrorEvents.cpp">
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/UncaughtErrorEvents.h"/>
+  </file>
+  <file name="src/flash/events/UncaughtErrorEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/ErrorEvent.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/TextEvent.h"/>
+   <depend name="include/flash/events/UncaughtErrorEvent.h"/>
+  </file>
+  <file name="src/flash/events/SampleDataEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/SampleDataEvent.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/events/ProgressEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/ProgressEvent.h"/>
+  </file>
+  <file name="src/flash/events/KeyboardEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/KeyboardEvent.h"/>
+  </file>
+  <file name="src/flash/events/IOErrorEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/ErrorEvent.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/IOErrorEvent.h"/>
+   <depend name="include/flash/events/TextEvent.h"/>
+  </file>
+  <file name="src/flash/events/HTTPStatusEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/HTTPStatusEvent.h"/>
+   <depend name="include/flash/net/URLRequestHeader.h"/>
+  </file>
+  <file name="src/flash/events/FocusEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/FocusEvent.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+  </file>
+  <file name="src/flash/events/EventPhase.cpp">
+   <depend name="include/flash/events/EventPhase.h"/>
+  </file>
+  <file name="src/flash/events/Listener.cpp">
+   <depend name="include/Reflect.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/Listener.h"/>
+   <depend name="include/openfl/utils/WeakRef.h"/>
+  </file>
+  <file name="src/flash/events/ErrorEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/ErrorEvent.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/TextEvent.h"/>
+  </file>
+  <file name="src/flash/events/TextEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/TextEvent.h"/>
+  </file>
+  <file name="src/flash/errors/RangeError.cpp">
+   <depend name="include/flash/errors/Error.h"/>
+   <depend name="include/flash/errors/RangeError.h"/>
+  </file>
+  <file name="src/flash/errors/EOFError.cpp">
+   <depend name="include/flash/errors/EOFError.h"/>
+   <depend name="include/flash/errors/Error.h"/>
+  </file>
+  <file name="src/flash/errors/ArgumentError.cpp">
+   <depend name="include/flash/errors/ArgumentError.h"/>
+   <depend name="include/flash/errors/Error.h"/>
+  </file>
+  <file name="src/flash/errors/Error.cpp">
+   <depend name="include/flash/errors/Error.h"/>
+  </file>
+  <file name="src/flash/display/TriangleCulling.cpp">
+   <depend name="include/flash/display/TriangleCulling.h"/>
+  </file>
+  <file name="src/flash/display/StageScaleMode.cpp">
+   <depend name="include/flash/display/StageScaleMode.h"/>
+  </file>
+  <file name="src/flash/display/StageQuality.cpp">
+   <depend name="include/flash/display/StageQuality.h"/>
+  </file>
+  <file name="src/flash/display/StageDisplayState.cpp">
+   <depend name="include/flash/display/StageDisplayState.h"/>
+  </file>
+  <file name="src/flash/display/StageAlign.cpp">
+   <depend name="include/flash/display/StageAlign.h"/>
+  </file>
+  <file name="src/flash/display/TouchInfo.cpp">
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/TouchInfo.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+  </file>
+  <file name="src/flash/display/Stage.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Reflect.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/display/StageAlign.h"/>
+   <depend name="include/flash/display/StageDisplayState.h"/>
+   <depend name="include/flash/display/StageQuality.h"/>
+   <depend name="include/flash/display/StageScaleMode.h"/>
+   <depend name="include/flash/display/TouchInfo.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/FocusEvent.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/KeyboardEvent.h"/>
+   <depend name="include/flash/events/MouseEvent.h"/>
+   <depend name="include/flash/events/TouchEvent.h"/>
+   <depend name="include/flash/geom/Point.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+   <depend name="include/flash/media/SoundChannel.h"/>
+   <depend name="include/flash/net/URLLoader.h"/>
+   <depend name="include/flash/system/ScreenMode.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/openfl/events/JoystickEvent.h"/>
+   <depend name="include/openfl/events/SystemEvent.h"/>
+  </file>
+  <file name="src/flash/events/TouchEvent.cpp">
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/MouseEvent.h"/>
+   <depend name="include/flash/events/TouchEvent.h"/>
+   <depend name="include/flash/geom/Point.h"/>
+  </file>
+  <file name="src/flash/events/MouseEvent.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/MouseEvent.h"/>
+   <depend name="include/flash/geom/Point.h"/>
+  </file>
+  <file name="src/flash/events/Event.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventPhase.h"/>
+  </file>
+  <file name="src/flash/display/SpreadMethod.cpp">
+   <depend name="include/flash/display/SpreadMethod.h"/>
+  </file>
+  <file name="src/flash/display/Shape.cpp">
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/Shape.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+  </file>
+  <file name="src/flash/display/PixelSnapping.cpp">
+   <depend name="include/flash/display/PixelSnapping.h"/>
+  </file>
+  <file name="src/flash/display/MovieClip.cpp">
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/FrameLabel.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+  </file>
+  <file name="src/flash/display/LoaderInfo.cpp">
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/Loader.h"/>
+   <depend name="include/flash/display/LoaderInfo.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/UncaughtErrorEvents.h"/>
+   <depend name="include/flash/net/URLLoader.h"/>
+   <depend name="include/flash/net/URLLoaderDataFormat.h"/>
+   <depend name="include/flash/net/URLRequest.h"/>
+   <depend name="include/flash/system/ApplicationDomain.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/net/URLLoader.cpp">
+   <depend name="include/List.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/events/ErrorEvent.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/HTTPStatusEvent.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/IOErrorEvent.h"/>
+   <depend name="include/flash/events/ProgressEvent.h"/>
+   <depend name="include/flash/events/TextEvent.h"/>
+   <depend name="include/flash/net/URLLoader.h"/>
+   <depend name="include/flash/net/URLLoaderDataFormat.h"/>
+   <depend name="include/flash/net/URLRequest.h"/>
+   <depend name="include/flash/net/URLRequestHeader.h"/>
+   <depend name="include/flash/net/URLVariables.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/display/Loader.cpp">
+   <depend name="include/flash/display/Bitmap.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/Loader.h"/>
+   <depend name="include/flash/display/LoaderInfo.h"/>
+   <depend name="include/flash/display/PixelSnapping.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/net/URLLoader.h"/>
+   <depend name="include/flash/net/URLRequest.h"/>
+   <depend name="include/flash/system/LoaderContext.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/display/Sprite.cpp">
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+  </file>
+  <file name="src/flash/display/LineScaleMode.cpp">
+   <depend name="include/flash/display/LineScaleMode.h"/>
+  </file>
+  <file name="src/flash/display/JointStyle.cpp">
+   <depend name="include/flash/display/JointStyle.h"/>
+  </file>
+  <file name="src/flash/display/InterpolationMethod.cpp">
+   <depend name="include/flash/display/InterpolationMethod.h"/>
+  </file>
+  <file name="src/flash/display/IGraphicsData.cpp">
+   <depend name="include/flash/display/IGraphicsData.h"/>
+  </file>
+  <file name="src/flash/display/GraphicsPathWinding.cpp">
+   <depend name="include/flash/display/GraphicsPathWinding.h"/>
+  </file>
+  <file name="src/flash/display/Graphics.cpp">
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/CapsStyle.h"/>
+   <depend name="include/flash/display/GradientType.h"/>
+   <depend name="include/flash/display/Graphics.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/IGraphicsData.h"/>
+   <depend name="include/flash/display/InterpolationMethod.h"/>
+   <depend name="include/flash/display/JointStyle.h"/>
+   <depend name="include/flash/display/LineScaleMode.h"/>
+   <depend name="include/flash/display/SpreadMethod.h"/>
+   <depend name="include/flash/display/TriangleCulling.h"/>
+   <depend name="include/flash/geom/Matrix.h"/>
+   <depend name="include/openfl/display/Tilesheet.h"/>
+  </file>
+  <file name="src/flash/display/GradientType.cpp">
+   <depend name="include/flash/display/GradientType.h"/>
+  </file>
+  <file name="src/flash/display/FrameLabel.cpp">
+   <depend name="include/flash/display/FrameLabel.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+  </file>
+  <file name="src/flash/display/DisplayObjectContainer.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/errors/ArgumentError.h"/>
+   <depend name="include/flash/errors/Error.h"/>
+   <depend name="include/flash/errors/RangeError.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/geom/Point.h"/>
+  </file>
+  <file name="src/flash/display/InteractiveObject.cpp">
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+  </file>
+  <file name="src/flash/display/CapsStyle.cpp">
+   <depend name="include/flash/display/CapsStyle.h"/>
+  </file>
+  <file name="src/flash/display/BlendMode.cpp">
+   <depend name="include/flash/display/BlendMode.h"/>
+  </file>
+  <file name="src/flash/display/OptimizedPerlin.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/OptimizedPerlin.h"/>
+  </file>
+  <file name="src/flash/display/BitmapData.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/Memory.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/BlendMode.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/OptimizedPerlin.h"/>
+   <depend name="include/flash/filters/BitmapFilter.h"/>
+   <depend name="include/flash/geom/ColorTransform.h"/>
+   <depend name="include/flash/geom/Matrix.h"/>
+   <depend name="include/flash/geom/Point.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/display/Bitmap.cpp">
+   <depend name="include/flash/display/Bitmap.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/Graphics.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/PixelSnapping.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/geom/Matrix.h"/>
+  </file>
+  <file name="src/flash/display/DisplayObject.cpp">
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/BlendMode.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/Graphics.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/LoaderInfo.h"/>
+   <depend name="include/flash/display/PixelSnapping.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/EventPhase.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/geom/ColorTransform.h"/>
+   <depend name="include/flash/geom/Matrix.h"/>
+   <depend name="include/flash/geom/Point.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+   <depend name="include/flash/geom/Transform.h"/>
+   <depend name="include/flash/net/URLLoader.h"/>
+  </file>
+  <file name="src/flash/display/IBitmapDrawable.cpp">
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/geom/ColorTransform.h"/>
+   <depend name="include/flash/geom/Matrix.h"/>
+   <depend name="include/flash/geom/Rectangle.h"/>
+  </file>
+  <file name="src/flash/events/EventDispatcher.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/events/ErrorEvent.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/EventPhase.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/IOErrorEvent.h"/>
+   <depend name="include/flash/events/Listener.h"/>
+   <depend name="include/flash/events/TextEvent.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/openfl/utils/WeakRef.h"/>
+  </file>
+  <file name="src/flash/events/IEventDispatcher.cpp">
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+  </file>
+  <file name="src/flash/_Vector/Vector_Impl_.cpp">
+   <depend name="include/flash/_Vector/Vector_Impl_.h"/>
+  </file>
+  <file name="src/flash/Memory.cpp">
+   <depend name="include/flash/Memory.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/flash/Lib.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/Sys.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/LoaderInfo.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/ErrorEvent.h"/>
+   <depend name="include/flash/events/Event.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/events/TextEvent.h"/>
+   <depend name="include/flash/events/UncaughtErrorEvent.h"/>
+   <depend name="include/flash/events/UncaughtErrorEvents.h"/>
+   <depend name="include/flash/net/URLLoader.h"/>
+   <depend name="include/flash/net/URLRequest.h"/>
+   <depend name="include/haxe/CallStack.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/StackItem.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+   <depend name="include/openfl/display/ManagedStage.h"/>
+   <depend name="include/sys/io/Process.h"/>
+  </file>
+  <file name="src/sys/io/_Process/Stdout.cpp">
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/Eof.h"/>
+   <depend name="include/haxe/io/Error.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/sys/io/_Process/Stdout.h"/>
+  </file>
+  <file name="src/haxe/io/Input.cpp">
+   <depend name="include/StringBuf.h"/>
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/BytesBuffer.h"/>
+   <depend name="include/haxe/io/Eof.h"/>
+   <depend name="include/haxe/io/Error.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+  </file>
+  <file name="src/haxe/io/Bytes.cpp">
+   <depend name="include/StringBuf.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/Error.h"/>
+  </file>
+  <file name="src/sys/io/_Process/Stdin.cpp">
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/Eof.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+   <depend name="include/sys/io/_Process/Stdin.h"/>
+  </file>
+  <file name="src/haxe/io/Output.cpp">
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/haxe/io/Eof.h"/>
+   <depend name="include/haxe/io/Error.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+  </file>
+  <file name="src/sys/io/Process.cpp">
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+   <depend name="include/sys/io/Process.h"/>
+   <depend name="include/sys/io/_Process/Stdin.h"/>
+   <depend name="include/sys/io/_Process/Stdout.h"/>
+  </file>
+  <file name="src/cpp/vm/Thread.cpp">
+   <depend name="include/cpp/vm/Thread.h"/>
+  </file>
+  <file name="src/cpp/vm/Mutex.cpp">
+   <depend name="include/cpp/vm/Mutex.h"/>
+  </file>
+  <file name="src/cpp/rtti/FieldNumericIntegerLookup.cpp">
+   <depend name="include/cpp/rtti/FieldNumericIntegerLookup.h"/>
+  </file>
+  <file name="src/cpp/NativeArray.cpp">
+   <depend name="include/cpp/NativeArray.h"/>
+  </file>
+  <file name="src/Xml.cpp">
+   <depend name="include/Reflect.h"/>
+   <depend name="include/StringBuf.h"/>
+   <depend name="include/StringTools.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/Xml.h"/>
+   <depend name="include/XmlType.h"/>
+   <depend name="include/cpp/Lib.h"/>
+  </file>
+  <file name="src/XmlType.cpp">
+   <depend name="include/XmlType.h"/>
+  </file>
+  <file name="src/_UInt/UInt_Impl_.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/_UInt/UInt_Impl_.h"/>
+  </file>
+  <file name="src/Type.cpp">
+   <depend name="include/Reflect.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/ValueType.h"/>
+  </file>
+  <file name="src/ValueType.cpp">
+   <depend name="include/ValueType.h"/>
+  </file>
+  <file name="src/Sys.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/Sys.h"/>
+   <depend name="include/cpp/Lib.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/haxe/io/Input.h"/>
+   <depend name="include/haxe/io/Output.h"/>
+   <depend name="include/sys/io/FileInput.h"/>
+   <depend name="include/sys/io/FileOutput.h"/>
+  </file>
+  <file name="src/StringTools.cpp">
+   <depend name="include/StringTools.h"/>
+  </file>
+  <file name="src/StringBuf.cpp">
+   <depend name="include/Std.h"/>
+   <depend name="include/StringBuf.h"/>
+  </file>
+  <file name="src/Std.cpp">
+   <depend name="include/Std.h"/>
+  </file>
+  <file name="src/Reflect.cpp">
+   <depend name="include/Reflect.h"/>
+  </file>
+  <file name="src/IMap.cpp">
+   <depend name="include/IMap.h"/>
+  </file>
+  <file name="src/List.cpp">
+   <depend name="include/List.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/StringBuf.h"/>
+  </file>
+  <file name="src/Lambda.cpp">
+   <depend name="include/Lambda.h"/>
+   <depend name="include/List.h"/>
+  </file>
+  <file name="src/IntIterator.cpp">
+   <depend name="include/IntIterator.h"/>
+  </file>
+  <file name="src/EReg.cpp">
+   <depend name="include/EReg.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/StringBuf.h"/>
+   <depend name="include/cpp/Lib.h"/>
+  </file>
+  <file name="src/cpp/Lib.cpp">
+   <depend name="include/cpp/Lib.h"/>
+  </file>
+  <file name="src/DefaultAssetLibrary.cpp">
+   <depend name="include/DefaultAssetLibrary.h"/>
+   <depend name="include/IMap.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/media/Sound.h"/>
+   <depend name="include/flash/media/SoundLoaderContext.h"/>
+   <depend name="include/flash/net/URLRequest.h"/>
+   <depend name="include/flash/text/Font.h"/>
+   <depend name="include/flash/text/FontStyle.h"/>
+   <depend name="include/flash/text/FontType.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/Unserializer.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/AssetData.h"/>
+   <depend name="include/openfl/AssetLibrary.h"/>
+   <depend name="include/openfl/AssetType.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/_Map/Map_Impl_.cpp">
+   <depend name="include/IMap.h"/>
+   <depend name="include/_Map/Map_Impl_.h"/>
+   <depend name="include/haxe/ds/BalancedTree.h"/>
+   <depend name="include/haxe/ds/EnumValueMap.h"/>
+   <depend name="include/haxe/ds/IntMap.h"/>
+   <depend name="include/haxe/ds/ObjectMap.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+  </file>
+  <file name="src/openfl/AssetLibrary.cpp">
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/media/Sound.h"/>
+   <depend name="include/flash/text/Font.h"/>
+   <depend name="include/flash/utils/ByteArray.h"/>
+   <depend name="include/flash/utils/IDataInput.h"/>
+   <depend name="include/flash/utils/IDataOutput.h"/>
+   <depend name="include/haxe/io/Bytes.h"/>
+   <depend name="include/openfl/AssetLibrary.h"/>
+   <depend name="include/openfl/AssetType.h"/>
+   <depend name="include/openfl/utils/IMemoryRange.h"/>
+  </file>
+  <file name="src/Date.cpp">
+   <depend name="include/Date.h"/>
+   <depend name="include/Std.h"/>
+  </file>
+  <file name="src/DocumentClass.cpp">
+   <depend name="include/Demo.h"/>
+   <depend name="include/DocumentClass.h"/>
+  </file>
+  <file name="src/Demo.cpp">
+   <depend name="include/Demo.h"/>
+   <depend name="include/IMap.h"/>
+   <depend name="include/List.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/Graphics.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Shape.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/h2d/Anim.h"/>
+   <depend name="include/h2d/BatchElement.h"/>
+   <depend name="include/h2d/Bitmap.h"/>
+   <depend name="include/h2d/Drawable.h"/>
+   <depend name="include/h2d/DrawableShader.h"/>
+   <depend name="include/h2d/Font.h"/>
+   <depend name="include/h2d/Graphics.h"/>
+   <depend name="include/h2d/Layers.h"/>
+   <depend name="include/h2d/Scene.h"/>
+   <depend name="include/h2d/Sprite.h"/>
+   <depend name="include/h2d/SpriteBatch.h"/>
+   <depend name="include/h2d/Text.h"/>
+   <depend name="include/h2d/Tile.h"/>
+   <depend name="include/h2d/col/Bounds.h"/>
+   <depend name="include/h3d/Engine.h"/>
+   <depend name="include/h3d/IDrawable.h"/>
+   <depend name="include/h3d/Vector.h"/>
+   <depend name="include/h3d/impl/Driver.h"/>
+   <depend name="include/h3d/impl/GlDriver.h"/>
+   <depend name="include/h3d/impl/Shader.h"/>
+   <depend name="include/haxe/Log.h"/>
+   <depend name="include/haxe/Timer.h"/>
+   <depend name="include/haxe/Unserializer.h"/>
+   <depend name="include/haxe/ds/StringMap.h"/>
+   <depend name="include/hxd/Charset.h"/>
+   <depend name="include/hxd/Profiler.h"/>
+   <depend name="include/hxd/Res.h"/>
+   <depend name="include/hxd/System.h"/>
+   <depend name="include/hxd/res/EmbedFileSystem.h"/>
+   <depend name="include/hxd/res/FileSystem.h"/>
+   <depend name="include/hxd/res/FontBuilder.h"/>
+   <depend name="include/hxd/res/Loader.h"/>
+   <depend name="include/hxd/res/Resource.h"/>
+   <depend name="include/hxd/res/Texture.h"/>
+  </file>
+  <file name="src/ApplicationMain.cpp">
+   <depend name="include/ApplicationMain.h"/>
+   <depend name="include/Demo.h"/>
+   <depend name="include/DocumentClass.h"/>
+   <depend name="include/Reflect.h"/>
+   <depend name="include/Std.h"/>
+   <depend name="include/Sys.h"/>
+   <depend name="include/Type.h"/>
+   <depend name="include/flash/Lib.h"/>
+   <depend name="include/flash/display/BitmapData.h"/>
+   <depend name="include/flash/display/DisplayObject.h"/>
+   <depend name="include/flash/display/DisplayObjectContainer.h"/>
+   <depend name="include/flash/display/IBitmapDrawable.h"/>
+   <depend name="include/flash/display/InteractiveObject.h"/>
+   <depend name="include/flash/display/Loader.h"/>
+   <depend name="include/flash/display/LoaderInfo.h"/>
+   <depend name="include/flash/display/MovieClip.h"/>
+   <depend name="include/flash/display/Sprite.h"/>
+   <depend name="include/flash/display/Stage.h"/>
+   <depend name="include/flash/display/StageAlign.h"/>
+   <depend name="include/flash/display/StageScaleMode.h"/>
+   <depend name="include/flash/events/EventDispatcher.h"/>
+   <depend name="include/flash/events/IEventDispatcher.h"/>
+   <depend name="include/flash/net/URLLoader.h"/>
+   <depend name="include/haxe/io/Path.h"/>
+  </file>
+  <file name="src/__boot__.cpp">
+  </file>
+  <file name="src/__files__.cpp">
+  </file>
+  <file name="src/__resources__.cpp">
+  </file>
+</files>
+<files id="__lib__">
+<compilerflag value="-Iinclude"/>
+  <file name="src/__lib__.cpp">
+   <depend name="include/ApplicationMain.h"/>
+  </file>
+</files>
+<files id="__main__">
+<compilerflag value="-Iinclude"/>
+  <file name="src/__main__.cpp">
+   <depend name="include/ApplicationMain.h"/>
+  </file>
+</files>
+<set name="HAXE_OUTPUT" value="ApplicationMain" />
+<include name="${HXCPP}/build-tool/BuildCommon.xml"/>
+</xml>
