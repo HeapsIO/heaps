@@ -84,6 +84,9 @@ class System {
 		case TextInput: "ibeam";
 		case Hide: "auto";
 		case Custom(frames, speed, offsetX, offsetY):
+			#if openfl
+			throw "not supported on openFL for now";
+			#else 
 			var customCursor = new flash.ui.MouseCursorData();
 			var v = new flash.Vector();
 			for( f in frames ) v.push(f.toNative());
@@ -92,6 +95,7 @@ class System {
 			customCursor.hotSpot = new flash.geom.Point(offsetX, offsetY);
 			flash.ui.Mouse.registerCursor("custom", customCursor);
 			"custom";
+			#end
 		}
 		if( c == Hide ) flash.ui.Mouse.hide() else flash.ui.Mouse.show();
 	}
