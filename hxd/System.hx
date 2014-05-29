@@ -87,14 +87,14 @@ class System {
 			#if openfl
 			throw "not supported on openFL for now";
 			#else 
-			var customCursor = new flash.ui.MouseCursorData();
-			var v = new flash.Vector();
-			for( f in frames ) v.push(f.toNative());
-			customCursor.data = v;
-			customCursor.frameRate = speed;
-			customCursor.hotSpot = new flash.geom.Point(offsetX, offsetY);
-			flash.ui.Mouse.registerCursor("custom", customCursor);
-			"custom";
+				var customCursor = new flash.ui.MouseCursorData();
+				var v = new flash.Vector();
+				for( f in frames ) v.push(f.toNative());
+				customCursor.data = v;
+				customCursor.frameRate = speed;
+				customCursor.hotSpot = new flash.geom.Point(offsetX, offsetY);
+				flash.ui.Mouse.registerCursor("custom", customCursor);
+				"custom";
 			#end
 		}
 		if( c == Hide ) flash.ui.Mouse.hide() else flash.ui.Mouse.show();
