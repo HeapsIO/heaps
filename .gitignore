@@ -18,3 +18,7 @@ bin
 *.bak
 /h3d/impl/*.bak
 /h3d/impl/*.bak
+/h2d/*.bak
+/h2d/*.bak
+/h2d/*.bak
+/h2d/*.bak
