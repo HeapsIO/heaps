@@ -14,3 +14,7 @@ bin
 bin
 /h3d/scene/*.bak
 /h3d/*.bak
+*.bak
+*.bak
+/h3d/impl/*.bak
+/h3d/impl/*.bak
