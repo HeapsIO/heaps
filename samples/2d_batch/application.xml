@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+	<!-- NMML reference: https://gist.github.com/1763850 -->
+	
+	<!-- metadata, make sure 'package' is at least 3 segments (ie. com.mycompany.myproject) -->
+	<meta title="h2d_2d_bounds" package="h2d.samples.h2d_2d_bounds" version="1.0.0" company=""  />
+	
+	<!-- output -->
+	<app main="Demo" file="StressTest" path="bin" swf-version="11.6" />
+	
+	<window background="#FFFF" fps="60" />
+	<window width="800" height="480" unless="mobile" />
+	<window orientation="landscape" vsync="false" antialiasing="0" if="cpp" />
+	
+	<!-- classpath, haxe libs -->
+	<source path="src" />
+	<haxelib name="openfl" />
+	<haxelib name="format" />
+	<haxelib name="h3d" />
+	<haxelib name="hxsl" if="flash"/>
+	
+	<!-- assets -->
+	<icon path="assets/openfl.svg" />
+	<assets path="assets" rename="assets" />
+	<haxedef name="resourcesPath" value="assets" />
+	
+	<!--<haxedef name="verbose" />-->
+	
+	<!--
+	<haxedef name="dump" value="pretty" />
+	-->
+	
+	<!-- optimize output
+	<haxeflag name="-dce full" /> -->
+	<haxeflag name="-dce" value="no" />
+</project>

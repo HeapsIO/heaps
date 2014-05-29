@@ -509,9 +509,12 @@ class MeshMaterial extends Material {
 	var mshader : MeshShader;
 	
 	public var texture : Texture;
-	public var glowTexture(get,set) : Texture;
+	
+	#if  flash
+	public var glowTexture(get, set) : Texture;
 	public var glowAmount(get, set) : Float;
 	public var glowColor(get, set) : h3d.Vector;
+	#end
 
 	public var useMatrixPos : Bool;
 	public var uvScale(get,set) : Null<h3d.Vector>;
@@ -540,10 +543,11 @@ class MeshMaterial extends Material {
 	
 	public var killAlphaThreshold(get, set) : Float;
 	
-	
 	public var shadowMap(null, set) : ShadowMap;
 	
+	#if !openfl
 	public var volumeDecal(default, set) : DecalInfos;
+	#end
 	
 	public function new(texture) {
 		mshader = new MeshShader();
@@ -720,6 +724,7 @@ class MeshMaterial extends Material {
 		return mshader.glowTexture;
 	}
 
+	#if flash
 	inline function set_glowTexture(t) {
 		mshader.hasGlow = t != null;
 		if( t != null && mshader.glowAmount == null ) mshader.glowAmount = new h3d.Vector(1, 1, 1);
@@ -745,6 +750,7 @@ class MeshMaterial extends Material {
 	inline function set_glowColor(v) {
 		return mshader.glowAmount = v;
 	}
+	#end
 
 	inline function get_fog() {
 		return mshader.fog;
@@ -783,6 +789,7 @@ class MeshMaterial extends Material {
 		return v;
 	}
 	
+	#if !openfl
 	inline function set_volumeDecal( d : DecalInfos ) {
 		if( d != null ) {
 			mshader.isDecal = true;
@@ -793,6 +800,7 @@ class MeshMaterial extends Material {
 			mshader.isDecal = false;
 		return volumeDecal = d;
 	}
+	#end
 	
 	#if flash
 

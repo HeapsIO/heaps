@@ -56,7 +56,14 @@ class Math {
 		return std.Math.round(f);
 	}
 	
-	public static inline function clamp( f : Float, min = 0., max = 1. ) {
+	public static inline function sel( f : Float, then, els ) {
+		return f >= 0 ? then : els;
+	}
+	
+	/**
+	 * remove the partial argument which was a potential perf sync for max
+	 */
+	public static inline function clamp( f : Float, min, max ) {
 		return f < min ? min : f > max ? max : f;
 	}
 
@@ -134,14 +141,12 @@ class Math {
 	public inline static function lerp(a:Float, b:Float, k:Float) {
 		return a + k * (b - a);
 	}
-	
+
+		
 	public inline static function bitCount(v:Int) {
-		var k = 0;
-		while( v != 0 ) {
-			k += v & 1;
-			v >>>= 1;
-		}
-		return k;
+		v = v - ((v >> 1) & 0x55555555);
+		v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+		return (((v + (v >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
 	}
 	
 	public static inline function distanceSq( dx : Float, dy : Float, dz = 0. ) {
@@ -205,4 +210,36 @@ class Math {
 	}
 	
 	
+	/**
+	 * takes an int , masks it and devide so that it safely maps 0...255 to 0...1.0
+	 * @paramv an int between 0 and 255 will be masked
+	 * @return a float between( 0 and 1)
+	 */
+	public static inline function b2f( v:Int ) :Float {
+		return (v&0xFF) * 0.0039215686274509803921568627451;
+	}
+	
+	/**
+	 * takes a float , clamps it and multipy so that it safely maps 0...1 to 0...255.0
+	 * @param	f a float
+	 * @return an int [0...255]
+	 */
+	public static inline function f2b( v:Float ) : Int {
+		var f = clamp(v, 0.0, 1.0);
+		return Std.int(f * 255.0);
+	}
+	
+	/**
+	 * returns the modulo but always positive
+	 * @param	i
+	 * @param	m
+	 */
+	public static inline function posMod( i :Int,m:Int ){
+		var mod = i % m;
+		return (mod >= 0) ? mod : mod + m;
+	}
+
+	public static inline function getColorVector(v:Int) : h3d.Vector{
+		return new h3d.Vector(b2f(v >> 16),b2f(v >> 8),b2f(v),b2f(v >> 24));
+	}
 }

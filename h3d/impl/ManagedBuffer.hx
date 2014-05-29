@@ -13,6 +13,9 @@ private class FreeCell {
 }
 
 @:allow(h3d.impl.MemoryManager)
+#if (cpp || js)
+	@:allow(h3d.impl.GlDriver)
+#end
 class ManagedBuffer {
 
 	var mem : MemoryManager;

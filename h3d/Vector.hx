@@ -66,6 +66,7 @@ class Vector {
 		x *= k;
 		y *= k;
 		z *= k;
+		return this;
 	}
 	
 	public inline function getNormalized() {
@@ -74,11 +75,18 @@ class Vector {
 		return new Vector(x * k, y * k, z * k);
 	}
 
-	public function set(x,y,z,w=1.) {
+	public inline function set(x,y,z,w=1.) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
 		this.w = w;
+	}
+	
+	public inline function copy(v) {
+		this.x = v.x;
+		this.y = v.y;
+		this.z = v.z;
+		this.w = v.w;
 	}
 
 	public inline function scale3( f : Float ) {
@@ -154,8 +162,11 @@ class Vector {
 		return new h3d.col.Point(x, y, z);
 	}
 	
+	/**
+	* Transformed the clamp call to evict the potential null float
+	*/
 	public inline function toColor() {
-		return (Std.int(w.clamp() * 255 + 0.499) << 24) | (Std.int(x.clamp() * 255 + 0.499) << 16) | (Std.int(y.clamp() * 255 + 0.499) << 8) | Std.int(z.clamp() * 255 + 0.499);
+		return (Std.int(w.clamp(0,1) * 255 + 0.499) << 24) | (Std.int(x.clamp(0,1) * 255 + 0.499) << 16) | (Std.int(y.clamp(0,1) * 255 + 0.499) << 8) | Std.int(z.clamp(0,1) * 255 + 0.499);
 	}
 	
 	public static inline function fromColor( c : Int, scale : Float = 1.0 ) {

@@ -23,24 +23,24 @@ class PointShader extends h3d.impl.Shader {
 
 	static var VERTEX = "
 		attribute vec2 pos;
-		varying mediump tuv;
+		varying mediump vec2 tuv;
 		uniform mat4 mproj;
 		uniform vec4 delta;
 		uniform vec2 size;
 		
 		void main(void) {
-			vec4 p = mproj * delta;
+			vec4 p = delta * mproj;
 			p.xy += pos.xy * size * p.z;
-			gl_Position = p;
 			tuv = pos;
+			gl_Position = p;
 		}
 	";
 	static var FRAGMENT = "
-		varying mediump tuv;
+		varying mediump vec2 tuv;
 		uniform vec4 color /*byte4*/;
 		
 		void main(void) {
-			if( 1 - dot(tuv, tuv) < 0 ) discard;
+			if( 1.0 - dot(tuv, tuv) < 0.0 ) discard;
 			gl_FragColor = color;
 		}
 	";
@@ -54,35 +54,93 @@ class LineShader extends h3d.impl.Shader {
 #if flash
 	static var SRC = {
 		var input : {
-			pos : Float2,
+				pos : Float2,
 		};
 
 		function vertex( mproj : Matrix, start : Float4, end : Float4 ) {
-			var spos = start * mproj;
-			var epos = end * mproj;
-			var delta = epos.xy  - spos.xy;
-			delta.xy *= 1 / sqrt(delta.x * delta.x + delta.y * delta.y);
-			
-			
-			var p = (epos - spos) * (input.pos.x + 1) * 0.5 + spos;
-			p.xy += delta.yx * input.pos.y * p.z / 400;
-			out = p;
+				var spos = start * mproj;
+				var epos = end * mproj;
+				var delta = epos.xy  - spos.xy;
+				delta.xy *= 1 / sqrt(delta.x * delta.x + delta.y * delta.y);
+				
+				
+				var p = (epos - spos) * (input.pos.x + 1) * 0.5 + spos;
+				p.xy += delta.yx * input.pos.y * p.z / 400;
+				out = p;
 		}
 		function fragment( color : Color ) {
-			out = color;
+				out = color;
 		}
 	}
 	
 #elseif (js || cpp)
 
-	public var mproj : Matrix;
-	public var start : Vector;
-	public var end : Vector;
-	public var color : Int;
+	static var VERTEX = "
+		attribute vec2 pos; 
+		
+		uniform mat4 mproj;
+		uniform vec4 start;
+		uniform vec4 end;
+		
+		void main(void) {
+			
+			vec4 spos = start*mproj;
+			vec4 epos = end*mproj;
+			vec2 delta = epos.xy  - spos.xy;
+			normalize(delta);
+			
+			vec4 p = (epos - spos) * (pos.x + 1.0) * 0.5 + spos;
+			p.xy += delta.yx * pos.y * p.z / 400.0;
+			gl_Position = p;
+		}
+	";
 	
-	static var VERTEX = "TODO";
-	static var FRAGMENT = "TODO";
+	static var FRAGMENT = "
+		uniform vec4 color /*byte4*/;
+		void main(void) {
+			gl_FragColor = color;
+		}
+	";
 	
 #end
-
 }
+
+class ColorShader extends h3d.impl.Shader{
+#if flash
+	static var SRC = {
+		var input : {
+			pos : Float3,
+		};
+
+		function vertex( mpos:Matrix, mproj : Matrix ) {
+			out = input.pos.xyzw*mpos*mproj;
+		}
+		
+		function fragment(col:Color) {
+			out = col;
+		}
+	};
+	
+#elseif (js || cpp)
+	static var VERTEX = "
+		attribute vec3 pos;
+		uniform mat4 mproj;
+		uniform mat4 mpos;
+		uniform vec4 col;
+		
+		void main(void) {
+			vertexColor = col;
+			gl_Position = vec4(pos.xyz,1)*mpos*mproj;
+		}
+	";
+	
+	static var FRAGMENT = "
+		varying vec4 vertexColor;
+		void main(void) {
+			gl_FragColor = vertexColor;
+		}
+	";
+#end
+}
+
+

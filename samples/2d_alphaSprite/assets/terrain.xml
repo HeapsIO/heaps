@@ -1,0 +1,21 @@
+<TextureAtlas imagePath="terrain.png">
+	<SubTexture name="drylowland0.png" x="124" y="107" width="62" height="53"/>
+	<SubTexture name="highmountain0.png" x="0" y="0" width="62" height="71"/>
+	<SubTexture name="highmountain1.png" x="0" y="71" width="62" height="71"/>
+	<SubTexture name="highmountain2.png" x="0" y="142" width="62" height="71"/>
+	<SubTexture name="highmountain3.png" x="62" y="0" width="62" height="71"/>
+	<SubTexture name="highmountain4.png" x="62" y="71" width="62" height="71"/>
+	<SubTexture name="lowland0.png" x="124" y="54" width="62" height="53"/>
+	<SubTexture name="lowland1.png" x="62" y="142" width="62" height="53"/>
+	<SubTexture name="lowland2.png" x="124" y="160" width="62" height="53"/>
+	<SubTexture name="mountain0.png" x="186" y="118" width="61" height="59"/>
+	<SubTexture name="mountain1.png" x="186" y="59" width="61" height="59"/>
+	<SubTexture name="mountain2.png" x="186" y="0" width="61" height="59"/>
+	<SubTexture name="swamp0.png" x="124" y="0" width="62" height="54"/>
+	<SubTexture name="tree0.png" x="56" y="213" width="28" height="27"/>
+	<SubTexture name="tree1.png" x="0" y="213" width="28" height="27"/>
+	<SubTexture name="tree2.png" x="28" y="213" width="28" height="27"/>
+	<SubTexture name="tree3.png" x="140" y="213" width="28" height="27"/>
+	<SubTexture name="tree4.png" x="84" y="213" width="28" height="27"/>
+	<SubTexture name="tree5.png" x="112" y="213" width="28" height="27"/>
+</TextureAtlas>

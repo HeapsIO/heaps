@@ -97,4 +97,10 @@ enum TextureFlags {
 		Inform that we will often perform upload operations on this texture
 	**/
 	Dynamic;
+	
+	/**
+	 * 
+	 */
+	AlphaPremultiplied;
 }
+

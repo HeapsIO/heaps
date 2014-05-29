@@ -83,18 +83,12 @@ private class DrawableShader extends h3d.impl.Shader {
 	
 	#elseif (js || cpp)
 	
+	
 	public var hasColorKey : Bool;
 	
 	// not supported
-	public var skew : Float;
 	public var sinusDeform : h3d.Vector;
-	public var hasAlphaMap : Bool;
-	public var hasMultMap : Bool;
-	public var multMap : h3d.mat.Texture;
-	public var multUV : h3d.Vector;
-	public var multMapFactor : Float;
-	public var alphaMap : h3d.mat.Texture;
-	public var alphaUV : h3d.Vector;
+		
 	// --
 	
 	public var filter : Bool;
@@ -103,11 +97,14 @@ private class DrawableShader extends h3d.impl.Shader {
 	public var hasAlpha : Bool;
 	public var hasVertexAlpha : Bool;
 	public var hasVertexColor : Bool;
+	public var hasAlphaMap : Bool;
+	public var hasMultMap : Bool;
+	public var isAlphaPremul : Bool;
 	
-	override function customSetup(driver:h3d.impl.GlDriver) {
-		driver.setupTexture(tex, None, filter ? Linear : Nearest, tileWrap ? Repeat : Clamp);
-	}
-	
+	/**
+	 * This is the constant set, they are set / compiled for first draw and will enabled on all render thereafter
+	 * 
+	 */
 	override function getConstants( vertex : Bool ) {
 		var cst = [];
 		if( vertex ) {
@@ -124,6 +121,9 @@ private class DrawableShader extends h3d.impl.Shader {
 		}
 		if( hasVertexAlpha ) cst.push("#define hasVertexAlpha");
 		if( hasVertexColor ) cst.push("#define hasVertexColor");
+		if( hasAlphaMap ) cst.push("#define hasAlphaMap");
+		if( hasMultMap ) cst.push("#define hasMultMap");
+		if( isAlphaPremul ) cst.push("#define isAlphaPremul");
 		return cst.join("\n");
 	}
 	
@@ -145,7 +145,7 @@ private class DrawableShader extends h3d.impl.Shader {
 		#end
 		uniform vec3 matA;
 		uniform vec3 matB;
-		uniform lowp float zValue;
+		uniform float zValue;
 		
         #if hasUVPos
 		uniform vec2 uvPos;
@@ -154,10 +154,10 @@ private class DrawableShader extends h3d.impl.Shader {
 		uniform vec2 uvScale;
 		#end
 		
-		varying lowp vec2 tuv;
+		varying vec2 tuv;
 
 		void main(void) {
-			vec3 spos = vec3(pos.xy, 1.0);
+			vec3 spos = vec3(pos.x,pos.y, 1.0);
 			#if hasSize
 				spos = spos * size;
 			#end
@@ -167,7 +167,7 @@ private class DrawableShader extends h3d.impl.Shader {
 			tmp.z = zValue;
 			tmp.w = 1.;
 			gl_Position = tmp;
-			vec2 t = uv;
+			lowp vec2 t = uv;
 			#if hasUVScale
 				t *= uvScale;
 			#end
@@ -187,43 +187,72 @@ private class DrawableShader extends h3d.impl.Shader {
 	
 	static var FRAGMENT = "
 	
-		varying lowp vec2 tuv;
+		varying vec2 tuv;
 		uniform sampler2D tex;
 		
 		#if hasVertexAlpha
-		varying lowp float talpha;
-		#end
-		#if hasVertexColor
-		varying lowp vec4 tcolor;
+		varying float talpha;
 		#end
 		
-		uniform lowp float alpha;
-		uniform lowp vec3 colorKey/*byte4*/;
+		#if hasVertexColor
+		varying vec4 tcolor;
+		#end
+		
+		#if hasAlphaMap
+			uniform vec4 alphaUV;
+			uniform sampler2D alphaMap;
+		#end
+		
+		#if hasMultMap
+			uniform float multMapFactor;
+			uniform vec4 multUV;
+			uniform sampler2D multMap;
+		#end
+		
+		uniform float alpha;
+		uniform vec3 colorKey/*byte4*/;
 	
-		uniform lowp vec4 colorAdd;
-		uniform lowp vec4 colorMul;
-		uniform mediump mat4 colorMatrix;
+		uniform vec4 colorAdd;
+		uniform vec4 colorMul;
+		uniform mat4 colorMatrix;
 
 		void main(void) {
-			lowp vec4 col = texture2D(tex, tuv);
+			vec4 col = texture2D(tex, tuv).rgba;
+			
 			#if killAlpha
-				if( c.a - 0.001 ) discard;
+				if( col.a - 0.001 <= 0.0 ) discard;
 			#end
+			
 			#if hasColorKey
-				lowp vec3 dc = col.rgb - colorKey;
-				if( dot(dc,dc) < 0.001 ) discard;
+				vec3 dc = col.rgb - colorKey;
+				if( dot(dc, dc) < 0.001 ) discard;
 			#end
-			#if hasAlpha
-				col.w *= alpha;
-			#end
+			
+			#if isAlphaPremul
+				col.rgb /= col.a;
+			#end 
+			
 			#if hasVertexAlpha
 				col.a *= talpha;
-			#end
+			#end 
+			
 			#if hasVertexColor
 				col *= tcolor;
 			#end
+			
+			#if hasAlphaMap
+				col.a *= texture2D( alphaMap, tuv * alphaUV.zw + alphaUV.xy).r;
+			#end
+			
+			#if hasMultMap
+				col *= multMapFactor * texture2D(multMap,tuv * multUV.zw + multUV.xy);
+			#end
+			
+			#if hasAlpha
+				col.a *= alpha;
+			#end
 			#if hasColorMatrix
-				col = colorMatrix * col;
+				col *= colorMatrix;
 			#end
 			#if hasColorMul
 				col *= colorMul;
@@ -231,6 +260,11 @@ private class DrawableShader extends h3d.impl.Shader {
 			#if hasColorAdd
 				col += colorAdd;
 			#end
+			
+			#if isAlphaPremul
+				col.rgb *= col.a;
+			#end 
+			
 			gl_FragColor = col;
 		}
 			
@@ -241,14 +275,17 @@ private class DrawableShader extends h3d.impl.Shader {
 
 class Drawable extends Sprite {
 	
-	static inline var HAS_SIZE = 1;
-	static inline var HAS_UV_SCALE = 2;
-	static inline var HAS_UV_POS = 4;
+	public static inline var HAS_SIZE = 1;
+	public static inline var HAS_UV_SCALE = 2;
+	public static inline var HAS_UV_POS = 4;
+	public static inline var BASE_TILE_DONT_CARE = 8;
 
-	var shader : DrawableShader;
+	public var shader(default,null) : DrawableShader;
 	
 	public var alpha(get, set) : Float;
+	#if !openfl
 	public var skew(get, set) : Null<Float>;
+	#end
 	
 	public var filter(get, set) : Bool;
 	public var color(get, set) : h3d.Vector;
@@ -273,10 +310,12 @@ class Drawable extends Sprite {
 	function new(parent) {
 		super(parent);
 		shader = new DrawableShader();
+		
+		writeAlpha = true;
+		blendMode = Normal;
 		shader.alpha = 1;
 		shader.zValue = 0;
 		writeAlpha = true;
-		blendMode = Normal;
 	}
 	
 	inline function get_alpha() {
@@ -294,6 +333,7 @@ class Drawable extends Sprite {
 		return b;
 	}
 	
+	#if !openfl
 	inline function get_skew() : Null<Float> {
 		return shader.skew;
 	}
@@ -301,6 +341,7 @@ class Drawable extends Sprite {
 	inline function set_skew(v : Null<Float> ) {
 		return shader.skew = skew;
 	}
+	#end
 
 	inline function get_multiplyFactor() {
 		return shader.multMapFactor;
@@ -400,19 +441,34 @@ class Drawable extends Sprite {
 		if( tile == null )
 			tile = core.nullTile;
 
+		var tex : h3d.mat.Texture = tile.getTexture();
+		
+		tex.filter = (filter)? Linear:Nearest;
+		
+		var isTexPremul = tex.flags.has(AlphaPremultiplied);
+		
 		switch( blendMode ) {
 		case Normal:
-			mat.blend(SrcAlpha, OneMinusSrcAlpha);
+			if ( isTexPremul )	
+				mat.blend(One, OneMinusSrcAlpha);
+			else
+				mat.blend(SrcAlpha, OneMinusSrcAlpha); 
 		case None:
 			mat.blend(One, Zero);
 		case Add:
-			mat.blend(SrcAlpha, One);
+			if ( isTexPremul ) 	mat.blend(One, One);
+			else							mat.blend(SrcAlpha, One);
 		case SoftAdd:
+			#if debug if ( isTexPremul ) throw "Unsupported please improve"; #end
 			mat.blend(OneMinusDstColor, One);
 		case Multiply:
+			//using Premultiply alppha, it cannot be implemented faithfully because alpha will meddle
 			mat.blend(DstColor, OneMinusSrcAlpha);
 		case Erase:
+			#if debug if ( isTexPremul ) throw "Unsupported please improve"; #end
 			mat.blend(Zero, OneMinusSrcAlpha);
+		
+		
 		}
 
 		if( options & HAS_SIZE != 0 ) {
@@ -450,14 +506,27 @@ class Drawable extends Sprite {
 		var tmp = core.tmpMatA;
 		tmp.x = matA;
 		tmp.y = matC;
-		tmp.z = absX + tile.dx * matA + tile.dy * matC;
+		
+		if ( options & BASE_TILE_DONT_CARE!=0 ) tmp.z = absX;
+		else tmp.z = absX + tile.dx * matA + tile.dy * matC;
+		
 		shader.matA = tmp;
 		var tmp = core.tmpMatB;
 		tmp.x = matB;
 		tmp.y = matD;
-		tmp.z = absY + tile.dx * matB + tile.dy * matD;
+		
+		if ( options & BASE_TILE_DONT_CARE!=0 )	tmp.z = absY
+		else 									tmp.z = absY + tile.dx * matB + tile.dy * matD;
+		
 		shader.matB = tmp;
 		shader.tex = tile.getTexture();
+		/*
+		shader.isAlphaPremul = isTexPremul 
+		&& (shader.hasAlphaMap || shader.hasAlpha || shader.hasMultMap 
+		|| shader.hasVertexAlpha || shader.hasVertexColor 
+		|| shader.colorMatrix != null || shader.colorAdd != null
+		|| shader.colorMul != null );*/
+		
 		mat.shader = shader;
 		engine.selectMaterial(mat);
 	}

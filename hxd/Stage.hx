@@ -13,7 +13,10 @@ class Stage {
 	public var height(get, null) : Float;
 	public var mouseX(get, null) : Float;
 	public var mouseY(get, null) : Float;
+	
+	#if !openfl
 	public var mouseLock(get, set) : Bool;
+	#end
 	
 	function new() {
 		eventTargets = new List();
@@ -138,6 +141,7 @@ class Stage {
 		return stage.stageHeight;
 	}
 	
+	#if !openfl
 	inline function get_mouseLock() {
 		return stage.mouseLock;
 	}
@@ -145,6 +149,7 @@ class Stage {
 	inline function set_mouseLock(v) {
 		return stage.mouseLock = v;
 	}
+	#end
 	
 	function onResize(_) {
 		for( e in resizeEvents )
@@ -349,6 +354,9 @@ class Stage {
 			callb();
 			return;
 		}
+
+		//does not work on native we use .xml for this
+		#if js
 		// init done by hand
 		var width = 750, height = 450, fps = 60, bgColor = 0x808080;
 		flash.Lib.create(
@@ -375,6 +383,7 @@ class Stage {
 			, null /* ScaledStage : TODO? */
 			#end
 		);
+		#end
 	}
 
 #end

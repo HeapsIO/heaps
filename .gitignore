@@ -10,3 +10,15 @@
 /engine.js.map
 /samples/2d/demo.js
 /bin
+bin
+bin
+/h3d/scene/*.bak
+/h3d/*.bak
+*.bak
+*.bak
+/h3d/impl/*.bak
+/h3d/impl/*.bak
+/h2d/*.bak
+/h2d/*.bak
+/h2d/*.bak
+/h2d/*.bak
