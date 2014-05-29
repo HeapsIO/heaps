@@ -149,10 +149,10 @@ class GlDriver extends Driver {
 	}
 	
 	override function selectMaterial( mbits : Int ) {
-		trace("glDriver:selectMaterial");
+		//trace("glDriver:selectMaterial");
 		var diff = curMatBits ^ mbits;
 		if ( diff == 0 ) {
-			trace("glDriver:selectMaterial:already ok");
+			//trace("glDriver:selectMaterial:already ok");
 			return;
 		}
 			
@@ -233,7 +233,7 @@ class GlDriver extends Driver {
 		
 		
 		curMatBits = mbits;
-		trace("glDriver:selectMaterial:done");
+		//trace("glDriver:selectMaterial:done");
 	}
 	
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
@@ -301,7 +301,7 @@ class GlDriver extends Driver {
 		var stride = m.stride;
 		var isDynamic = m.flags.has(Buffer.BufferFlag.Dynamic);
 
-		trace("allocating vertex nbFloat:" +count);
+		//trace("allocating vertex nbFloat:" +count);
 		
 		var b = gl.createBuffer();
 		#if js
@@ -319,7 +319,7 @@ class GlDriver extends Driver {
 	}
 	
 	override function allocIndexes( count : Int ) : IndexBuffer {
-		trace("allocating index");
+		//trace("allocating index");
 		var b = gl.createBuffer();
 		#if js
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
@@ -511,7 +511,7 @@ class GlDriver extends Driver {
 	}
 	
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-		trace("GlDriver:uploadTextureBitmap");
+		//trace("GlDriver:uploadTextureBitmap");
 		gl.bindTexture(GL.TEXTURE_2D, t.t);
 		var pix = bmp.getPixels();
 		var oldFormat = pix.format;
@@ -535,7 +535,7 @@ class GlDriver extends Driver {
 	}
 	
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
-		trace("GlDriver:uploadTexturePixels");
+		//trace("GlDriver:uploadTexturePixels");
 		gl.bindTexture(GL.TEXTURE_2D, t.t); checkError();
 		pixels.convert(RGBA);
 		
@@ -557,10 +557,8 @@ class GlDriver extends Driver {
 	}
 	
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
-		trace("GlDriver:uploadVertexBuffer");
-		for ( i in 0...16) {
-			trace("vert-" + i + " " + buf[i]);
-		}
+		//trace("GlDriver:uploadVertexBuffer");
+		//for ( i in 0...16) { trace("vert-" + i + " " + buf[i]); }
 		var stride : Int = v.stride;
 		var buf = new Float32Array(buf.getNative());
 		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride #if cpp * (fixMult?4:1) #end);
@@ -572,7 +570,7 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
-		trace("GlDriver:uploadVertexBytes");
+		//trace("GlDriver:uploadVertexBytes");
 		var stride : Int = v.stride;
 		var buf = getUints(buf);
 		var sub = getUints(buf.buffer, bufPos, vertexCount * stride * 4);
@@ -584,7 +582,7 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadIndexesBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
-		trace("GlDriver:uploadIndexesBuffer");
+		//trace("GlDriver:uploadIndexesBuffer");
 		var buf = new Uint16Array(buf.getNative());
 		var sub = new Uint16Array(buf.getByteBuffer(), bufPos, indiceCount #if cpp * (fixMult?2:1) #end);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
@@ -674,7 +672,7 @@ class GlDriver extends Driver {
 			#end
 			
 			//SHADER CODE
-			trace('Trying to compile shader $name $code');
+			//trace('Trying to compile shader $name $code');
 			
 			var s = gl.createShader(type);
 			if ( s == null ) trace("shader creation failed!");
@@ -689,7 +687,7 @@ class GlDriver extends Driver {
 			if ( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) 
 				throw "An error occurred compiling the "+Type.getClass(shader)+" : " + getShaderInfoLog(s,code);
 			
-			trace("shader creation success !");
+			//trace("shader creation success !");
 			return s;
 		}
 		
@@ -790,7 +788,7 @@ class GlDriver extends Driver {
 				
 			var tu = parseUniform(  allCode,p );
 			inst.uniforms.push( tu );
-			trace('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
+			//trace('adding uniform ${tu.name} ${tu.type} ${tu.loc} ${tu.index}');
 		}
 		
 		inst.program = p;
@@ -799,11 +797,11 @@ class GlDriver extends Driver {
 		gl.deleteShader( vs );
 		gl.deleteShader( fs );
 		
-		trace('deleting temp shader objects');
+		//trace('deleting temp shader objects');
 		
 		checkError();
 		
-		trace("shader creation successful!");
+		//trace("shader creation successful!");
 		return inst;
 	}
 	
@@ -924,7 +922,7 @@ class GlDriver extends Driver {
 		}
 		if ( shader.instance != curShader ) {
 			var old = curShader;
-			trace("binding shader "+Type.getClass(shader)+" nbAttribs:"+shader.instance.attribs.length);
+			//trace("binding shader "+Type.getClass(shader)+" nbAttribs:"+shader.instance.attribs.length);
 			curShader = shader.instance;
 			
 			if (curShader.program == null) throw "invalid shader";
@@ -983,7 +981,7 @@ class GlDriver extends Driver {
 	 * @return true if context was reused ( maybe you can make good use of the info )
 	 */
 	public function setupTexture( t : h3d.mat.Texture, stage : Int, mipMap : h3d.mat.Data.MipMap, filter : h3d.mat.Data.Filter, wrap : h3d.mat.Data.Wrap ) : Bool {
-		trace("setuping texture");
+		//trace("setuping texture");
 		if( curTex[stage] != t ){
 			gl.bindTexture(GL.TEXTURE_2D, t.t);
 			var flags = TFILTERS[Type.enumIndex(mipMap)][Type.enumIndex(filter)];
@@ -1001,7 +999,7 @@ class GlDriver extends Driver {
 	}
 	
 	inline function blitMatrices(a:Array<Matrix>, transpose) {
-		trace("blitting matrices");
+		//trace("blitting matrices");
 		var t = createF32( a.length * 16 );
 		var p = 0;
 		for ( m in a ){
@@ -1090,7 +1088,7 @@ class GlDriver extends Driver {
 		
 		checkError();
 		
-		trace("setting uniform " + u.name+ " of type "+t +" and value "+val );
+		//trace("setting uniform " + u.name+ " of type "+t +" and value "+val );
 		
 		switch( t ) {
 		case Mat4:
@@ -1264,14 +1262,14 @@ class GlDriver extends Driver {
 	}
 	
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
-		trace("glDriver:draw");
+		//trace("glDriver:draw");
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
 		gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 	
 	override function present() {
-		trace("glDriver:present");
+		//trace("glDriver:present");
 		//useless ofl will do it at swap time
 		#if !openfl
 			gl.finish();
@@ -1402,7 +1400,7 @@ class GlDriver extends Driver {
 	}
 
 	override function restoreOpenfl() {
-		trace("restoring openfl");
+		//trace("restoring openfl");
 
 		gl.depthRange(0, 1);
 		gl.clearDepth(-1);

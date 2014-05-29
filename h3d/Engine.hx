@@ -61,9 +61,9 @@ class Engine {
 		#if ((flash)&&(!js)&&(!cpp))
 		driver = new h3d.impl.Stage3dDriver();
 		#elseif (js || cpp)
-		trace("creating gl driver !");
+		//trace("creating gl driver !");
 		driver = new h3d.impl.GlDriver();
-		trace("created gl driver !");
+		//trace("created gl driver !");
 		#else
 		throw "No driver";
 		#end
@@ -116,7 +116,7 @@ class Engine {
 		if( buf.isDisposed() ){
 			return false;
 		}
-		trace("Engine:selectBuffer");
+		//trace("Engine:selectBuffer");
 		driver.selectBuffer(@:privateAccess buf.vbuf);
 		return true;
 	}
@@ -133,10 +133,10 @@ class Engine {
 	 * returns true if something was actually rendered
 	 * */
 	function renderBuffer( b : Buffer, indexes : Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
-		trace("renderBuffer");
+		//trace("renderBuffer");
 		
 		if ( indexes.isDisposed() ) {
-			trace("renderBuffer:disposed");
+			//trace("renderBuffer:disposed");
 			return false;
 		}
 		
@@ -155,7 +155,7 @@ class Engine {
 			}
 			if( drawTri >= 0 ) {
 				if ( drawTri == 0 ) {
-					trace("renderBuffer:finished");
+					//trace("renderBuffer:finished");
 					return true;
 				}
 				drawTri -= ntri;
@@ -173,13 +173,13 @@ class Engine {
 			b = b.next;
 		} while ( b != null );
 		
-		trace("renderBuffer:done");
+		//trace("renderBuffer:done");
 		return true;
 	}
 	
 	// we use custom indexes, so the number of triangles is the number of indexes/3
 	public function renderIndexed( b : Buffer, indexes : Indexes, startTri = 0, drawTri = -1 ) {
-		trace("Engine:renderIndexed");
+		//trace("Engine:renderIndexed");
 		if( b.next != null )
 			throw "Buffer is split";
 		if( indexes.isDisposed() )
@@ -195,7 +195,7 @@ class Engine {
 	}
 	
 	public function renderMultiBuffers( buffers : Buffer.BufferOffset, indexes : Indexes, startTri = 0, drawTri = -1 ) {
-		trace("Engine:renderMultiBuffers");
+		//trace("Engine:renderMultiBuffers");
 		var maxTri = Std.int(indexes.count / 3);
 		if( maxTri <= 0 ) return;
 		driver.selectMultiBuffers(buffers);
@@ -327,9 +327,9 @@ class Engine {
 	}
 
 	public function render( obj : { function render( engine : Engine ) : Void; } ) {
-		trace("rendering");
+		//trace("rendering");
 		if ( !begin() ) {
-			trace("rendering:canceled");
+			//trace("rendering:canceled");
 			return false;
 		}
 		obj.render(this);
@@ -345,7 +345,7 @@ class Engine {
 			realFps = realFps * (1 - f) + curFps * f; // smooth a bit the fps
 		}
 		
-		trace("rendered");
+		//trace("rendered");
 		return true;
 	}
 	

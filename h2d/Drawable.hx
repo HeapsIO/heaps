@@ -265,8 +265,7 @@ private class DrawableShader extends h3d.impl.Shader {
 				col.rgb *= col.a;
 			#end 
 			
-			//gl_FragColor = col;
-			gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+			gl_FragColor = col;
 		}
 			
 	";

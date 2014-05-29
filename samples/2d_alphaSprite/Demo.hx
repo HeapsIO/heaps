@@ -11,34 +11,33 @@ class Demo {
 	function new() {
 		engine = new h3d.Engine();
 		engine.onReady = init;
-		engine.backgroundColor = 0xFF00FF00;
+		engine.backgroundColor = 0xFF000000;
 		engine.init();
 	}
 	
 	function init() {
-		trace("initing");
+		//trace("initing");
 		scene = new h2d.Scene();
 		
 		var s = new h2d.Sprite(scene);
 		var tileHaxe = hxd.Res.haxe.toTile();
-		trace(tileHaxe.width);
 		tileHaxe = tileHaxe.center( Std.int(tileHaxe.width / 2), Std.int(tileHaxe.height / 2) );
-		for (i in 0...1) {
+		for (i in 0...20) {
 			var e = new Bitmap(tileHaxe, scene);
 			e.x = i * 40 + 40;
 			e.y = 40;
-			//e.alpha = 0.5 + Std.random(5) / 10;
+			e.alpha = 0.5 + Std.random(5) / 10;
 			s.addChild(e);
 		}
 		
-		trace("inited");
+		//trace("inited");
 		hxd.System.setLoop(update);
 	}
 	
 	function update() {
-		trace("updateing");
+		//trace("updateing");
 		engine.render(scene);
-		trace("updated");
+		//trace("updated");
 	}
 	
 	static function main() {
