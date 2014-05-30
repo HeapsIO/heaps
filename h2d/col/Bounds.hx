@@ -40,6 +40,13 @@ class Bounds {
 		if( p.y > yMax ) yMax = p.y;
 	}
 
+	public inline function set(x, y, width, height) {
+		this.x = x;
+		this.y = y;
+		this.xMax = x + width;
+		this.yMax = y + height;
+	}
+
 	public inline function setMin( p : Point ) {
 		xMin = p.x;
 		yMin = p.y;
