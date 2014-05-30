@@ -229,8 +229,14 @@ private class LocalEntry extends FileEntry {
 		for( w in WATCH_LIST ) {
 			var t = try w.file.modificationDate.getTime() catch( e : Dynamic ) -1;
 			if( t != w.watchTime ) {
-				// check we can read (might be deleted/renamed/currently writing)
-				try { w.close(); w.open(); w.close(); } catch( e : Dynamic ) continue;
+				// check we can write (might be deleted/renamed/currently writing)
+				try {
+					var f = new flash.filesystem.FileStream();
+					f.open(w.file, flash.filesystem.FileMode.READ);
+					f.close();
+					f.open(w.file, flash.filesystem.FileMode.APPEND);
+					f.close();
+				} catch( e : Dynamic ) continue;
 				w.watchTime = t;
 				w.watchCallback();
 			}
