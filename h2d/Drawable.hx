@@ -17,7 +17,7 @@ class Drawable extends Sprite {
 		shaders = [];
 	}
 	
-	function set_colorKey(v) {
+	function set_colorKey(v:Null<Int>) {
 		if( shaders != null ) {
 			var s = getShader(h3d.shader.ColorKey);
 			if( s == null ) {

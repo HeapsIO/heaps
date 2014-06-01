@@ -10,7 +10,7 @@ abstract LoadedBitmap(LoadedBitmapData) {
 	
 	public function toBitmap() : hxd.BitmapData {
 		#if flash
-		return this;
+		return hxd.BitmapData.fromNative(this);
 		#elseif js
 		var canvas = js.Browser.document.createCanvasElement();
 		canvas.width = this.width;

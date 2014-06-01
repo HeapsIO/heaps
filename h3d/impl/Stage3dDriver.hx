@@ -1,5 +1,6 @@
 package h3d.impl;
 import h3d.impl.Driver;
+import h3d.mat.Pass;
 
 #if flash
 
@@ -40,7 +41,7 @@ class Stage3dDriver extends Driver {
 	var onCreateCallback : Bool -> Void;
 
 	var curMatBits : Int;
-	var curShader : hxsl.Shader.ShaderInstance;
+	var curShader : hxsl.RuntimeShader;
 	var curBuffer : VertexBuffer;
 	var curMultiBuffer : Array<Int>;
 	var curAttributes : Int;
@@ -99,7 +100,6 @@ class Stage3dDriver extends Driver {
 		if( old != null ) {
 			if( old.driverInfo != "Disposed" ) throw "Duplicate onCreate()";
 			old.dispose();
-			hxsl.Shader.ShaderGlobals.disposeAll();
 			ctx = s3d.context3D;
 			onCreateCallback(true);
 		} else {
@@ -266,22 +266,50 @@ class Stage3dDriver extends Driver {
 		i.uploadFromByteArray(buf.getData(), bufPos, startIndice, indiceCount );
 	}
 
-	override function selectMaterial( mbits : Int ) {
-		var diff = curMatBits ^ mbits;
-		if( diff != 0 ) {
-			if( curMatBits < 0 || diff&3 != 0 )
-				ctx.setCulling(FACE[mbits&3]);
-			if( curMatBits < 0 || diff & (0xFF << 6) != 0 )
-				ctx.setBlendFactors(BLEND[(mbits>>6)&15], BLEND[(mbits>>10)&15]);
-			if( curMatBits < 0 || diff & (15 << 2) != 0 )
-				ctx.setDepthTest((mbits >> 2) & 1 == 1, COMPARE[(mbits>>3)&7]);
-			if( curMatBits < 0 || diff & (15 << 14) != 0 )
-				ctx.setColorMask((mbits >> 14) & 1 != 0, (mbits >> 14) & 2 != 0, (mbits >> 14) & 4 != 0, (mbits >> 14) & 8 != 0);
-			curMatBits = mbits;
+	override function selectMaterial( pass : Pass ) {
+		selectMaterialBits(@:privateAccess pass.bits);
+	}
+	
+	function selectMaterialBits( bits : Int ) {
+		var diff = bits ^ curMatBits;
+		if( diff == 0 )
+			return;
+		if( diff & Pass.culling_mask != 0 )
+			ctx.setCulling(FACE[Pass.getCulling(bits)]);
+		if( diff & (Pass.blendSrc_mask | Pass.blendDst_mask | Pass.blendAlphaSrc_mask | Pass.blendAlphaDst_mask) != 0 ) {
+			var csrc = Pass.getBlendSrc(bits);
+			var cdst = Pass.getBlendDst(bits);
+			var asrc = Pass.getBlendAlphaSrc(bits);
+			var adst = Pass.getBlendAlphaDst(bits);
+			if( csrc == asrc && cdst == adst ) {
+				if( (csrc | cdst) > BLEND.length ) throw "Blend operation not supported on flash";
+				ctx.setBlendFactors(BLEND[csrc], BLEND[cdst]);
+			} else {
+				throw "Alpha blend functions not supported on flash";
+			}
 		}
+		if( diff & (Pass.blendOp_mask | Pass.blendAlphaOp_mask) != 0 ) {
+			var cop = Pass.getBlendOp(bits);
+			var aop = Pass.getBlendAlphaOp(bits);
+			if( cop != 0 || aop != 0 )
+				throw "Custom blend operation not supported on flash";
+		}
+		if( diff & (Pass.depthWrite_mask | Pass.depthTest_mask) != 0 ) {
+			var write = Pass.getDepthWrite(bits) != 0;
+			var cmp = Pass.getDepthTest(bits);
+			ctx.setDepthTest(write, COMPARE[cmp]);
+		}
+		if( diff & Pass.colorMask_mask != 0 ) {
+			var m = Pass.getColorMask(bits);
+			ctx.setColorMask(m & 1 != 0, m & 2 != 0, m & 4 != 0, m & 8 != 0);
+		}
+		curMatBits = bits;
 	}
 
-	override function selectShader( shader : Shader ) {
+	override function selectShader( shader : hxsl.RuntimeShader ) {
+		throw "TODO";
+		return true;
+		/*
 		var shaderChanged = false;
 		var s = shader.getInstance();
 		if( s.program == null ) {
@@ -339,12 +367,15 @@ class Stage3dDriver extends Driver {
 			}
 		}
 		return shaderChanged;
+		*/
 	}
 
 	override function selectBuffer( v : VertexBuffer ) {
 		if( v == curBuffer )
 			return;
 		curBuffer = v;
+		throw "TODO";
+		/*
 		curMultiBuffer[0] = -1;
 		if( v.b.stride < curShader.stride )
 			throw "Buffer stride (" + v.b.stride + ") and shader stride (" + curShader.stride + ") mismatch";
@@ -361,13 +392,17 @@ class Stage3dDriver extends Driver {
 		for( i in pos...curAttributes )
 			ctx.setVertexBufferAt(i, null);
 		curAttributes = pos;
+		*/
 	}
 
 	override function getShaderInputNames() {
-		return curShader.bufferNames;
+		throw "TODO";
+		return [];
 	}
 
 	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
+		throw "TODO";
+		/*
 		// select the multiple buffers elements
 		var changed = false;
 		var b = buffers;
@@ -402,6 +437,7 @@ class Stage3dDriver extends Driver {
 			curAttributes = pos;
 			curBuffer = null;
 		}
+		*/
 	}
 
 	function debugDraw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {

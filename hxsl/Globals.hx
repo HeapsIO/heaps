@@ -4,11 +4,14 @@ abstract GlobalSlot<T>(Int) {
 	public inline function new(name:String) {
 		this = Globals.allocID(name);
 	}
+	public inline function toInt() {
+		return this;
+	}
 	public inline function set( globals : Globals, v : T ) {
-		globals.fastSet(this, v);
+		globals.fastSet(toInt(), v);
 	}
 	public inline function get( globals : Globals ) : T {
-		return globals.fastGet(this);
+		return globals.fastGet(toInt());
 	}
 }
 

@@ -151,11 +151,11 @@ class Stage {
 #if (flash || openfl)
 
 	inline function get_mouseX() {
-		return stage.mouseX;
+		return Std.int(stage.mouseX);
 	}
 
 	inline function get_mouseY() {
-		return stage.mouseY;
+		return Std.int(stage.mouseY);
 	}
 
 	inline function get_width() {
