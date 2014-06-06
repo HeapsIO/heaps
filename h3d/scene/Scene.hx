@@ -22,6 +22,9 @@ class Scene extends Object implements h3d.IDrawable {
 		return s;
 	}
 	
+	/**
+	 allow to customize render passes (for example, branch sub scene or 2d context)
+	 */
 	public function addPass(p,before=false) {
 		if( before )
 			prePasses.push(p);

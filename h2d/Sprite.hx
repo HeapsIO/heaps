@@ -15,6 +15,7 @@ class Sprite {
 	public var scaleY(default,set) : Float;
 	public var rotation(default, set) : Float;
 	public var visible : Bool;
+	public var name : String;
 
 	var matA : Float;
 	var matB : Float;
@@ -438,4 +439,9 @@ class Sprite {
 		return new hxd.impl.ArrayIterator(childs);
 	}
 
+	function toString() {
+		var c = Type.getClassName(Type.getClass(this));
+		return name == null ? c : name + "(" + c + ")";
+	}
+	
 }

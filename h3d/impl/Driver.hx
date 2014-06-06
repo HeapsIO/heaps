@@ -1,8 +1,34 @@
 package h3d.impl;
 
-typedef IndexBuffer = flash.display3D.IndexBuffer3D;
-typedef VertexBuffer = Stage3dDriver.VertexWrapper;
-typedef Texture = flash.display3D.textures.TextureBase;
+#if (flash&&!cpp&&!js)
+	typedef IndexBuffer = flash.display3D.IndexBuffer3D;
+	typedef VertexBuffer = Stage3dDriver.VertexWrapper;
+	typedef Texture = flash.display3D.textures.TextureBase;
+#elseif js
+	typedef IndexBuffer = js.html.webgl.Buffer;
+	@:publicFields
+	class GLVB {
+		var b : js.html.webgl.Buffer;
+		var stride : Int;
+		public function new(b = null, s = 0) { this.b = b; this.stride = s; };
+	}
+	typedef VertexBuffer = GLVB;
+	typedef Texture = js.html.webgl.Texture;
+#elseif cpp
+	typedef IndexBuffer = openfl.gl.GLBuffer;
+	@:publicFields
+	class GLVB {
+		var b : openfl.gl.GLBuffer;
+		var stride : Int;
+		public function new(b = null, s = 0) { this.b = b; this.stride = s; };
+	}
+	typedef VertexBuffer = GLVB;
+	typedef Texture = openfl.gl.GLTexture;
+#else
+	typedef IndexBuffer = Int;
+	typedef VertexBuffer = Int;
+	typedef Texture = Int;
+#end
 
 class Driver {
 	
@@ -43,6 +69,10 @@ class Driver {
 		return false;
 	}
 	
+	public function deleteShader(shader : Shader) {
+		
+	}
+
 	public function getShaderInputNames() : Array<String> {
 		return null;
 	}

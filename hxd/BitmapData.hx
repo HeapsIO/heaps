@@ -1,6 +1,13 @@
 package hxd;
 
-private typedef InnerData = #if flash flash.display.BitmapData #elseif js js.html.ImageData #elseif cpp flash.display.BitmapData #else Int #end;
+private typedef InnerData = 
+#if (flash||openfl)
+	flash.display.BitmapData 
+#elseif js
+	js.html.ImageData 
+#else 
+	Int 
+#end;
 
 abstract BitmapData(InnerData) {
 
@@ -14,7 +21,7 @@ abstract BitmapData(InnerData) {
 	public var height(get, never) : Int;
 	
 	public inline function new(width:Int, height:Int) {
-		#if flash
+		#if (flash||openfl)
 		this = new flash.display.BitmapData(width, height, true, 0);
 		#else
 		throw "TODO";
@@ -22,7 +29,7 @@ abstract BitmapData(InnerData) {
 	}
 	
 	public inline function clear( color : Int ) {
-		#if flash
+		#if (flash||openfl)
 		this.fillRect(this.rect, color);
 		#else
 		throw "TODO";
@@ -115,7 +122,7 @@ abstract BitmapData(InnerData) {
 	}
 	
 	public inline function dispose() {
-		#if flash
+		#if (flash||openfl)
 		this.dispose();
 		#end
 	}
@@ -132,7 +139,7 @@ abstract BitmapData(InnerData) {
 	}
 	
 	public inline function getPixel( x : Int, y : Int ) : Int {
-		#if flash
+		#if ( flash || openfl )
 		return this.getPixel32(x, y);
 		#else
 		throw "TODO";
@@ -141,7 +148,7 @@ abstract BitmapData(InnerData) {
 	}
 
 	public inline function setPixel( x : Int, y : Int, c : Int ) {
-		#if flash
+		#if (flash||openfl)
 		this.setPixel32(x, y, c);
 		#else
 		throw "TODO";
@@ -175,6 +182,12 @@ abstract BitmapData(InnerData) {
 	static function nativeGetPixels( b : InnerData ) {
 		#if flash
 		return new Pixels(b.width, b.height, haxe.io.Bytes.ofData(b.getPixels(b.rect)), ARGB);
+		#elseif openfl
+		var bRect = b.rect;
+		var bPixels : haxe.io.Bytes = hxd.ByteConversions.byteArrayToBytes(b.getPixels(b.rect));
+		var p = new Pixels(b.width, b.height, bPixels, ARGB);
+		p.flags.set(AlphaPremultiplied);
+		return p;
 		#else
 		throw "TODO";
 		return null;
@@ -195,6 +208,8 @@ abstract BitmapData(InnerData) {
 			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
 		}
 		b.setPixels(b.rect, bytes);
+		#elseif (js || cpp)
+			b.setPixels(b.rect, flash.utils.ByteArray.fromBytes(pixels.bytes));
 		#else
 		throw "TODO";
 		return null;

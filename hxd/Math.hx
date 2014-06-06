@@ -134,14 +134,11 @@ class Math {
 	public inline static function lerp(a:Float, b:Float, k:Float) {
 		return a + k * (b - a);
 	}
-	
+		
 	public inline static function bitCount(v:Int) {
-		var k = 0;
-		while( v != 0 ) {
-			k += v & 1;
-			v >>>= 1;
-		}
-		return k;
+		v = v - ((v >> 1) & 0x55555555);
+		v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+		return (((v + (v >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
 	}
 	
 	public static inline function distanceSq( dx : Float, dy : Float, dz = 0. ) {
@@ -205,4 +202,30 @@ class Math {
 	}
 	
 	
+	/**
+	 * takes an int , masks it and devide so that it safely maps 0...255 to 0...1.0
+	 * @paramv an int between 0 and 255 will be masked
+	 * @return a float between( 0 and 1)
+	 */
+	public static inline function b2f( v:Int ) :Float {
+		return (v&0xFF) * 0.0039215686274509803921568627451;
+	}
+	
+	/**
+	 * takes a float , clamps it and multipy so that it safely maps 0...1 to 0...255.0
+	 * @param	f a float
+	 * @return an int [0...255]
+	 */
+	public static inline function f2b( v:Float ) : Int {
+		return Std.int(clamp(v) * 255.0);
+	}
+	
+	/**
+	 * returns the modulo but always positive
+	 */
+	public static inline function umod( value : Int, modulo : Int ) {
+		var r = value % modulo;
+		return r >= 0 ? r : r + modulo;
+	}
+
 }

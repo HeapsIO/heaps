@@ -16,6 +16,7 @@ class FileTree {
 	var options : EmbedOptions;
 	var isFlash : Bool;
 	var isJS : Bool;
+	var isCPP : Bool;
 	var embedTypes : Array<String>;
 	
 	public function new(dir) {
@@ -33,6 +34,7 @@ class FileTree {
 		pairedExt.set("xtra", ["fbx"]);
 		isFlash = Context.defined("flash");
 		isJS = Context.defined("js");
+		isCPP = Context.defined("cpp");
 	}
 	
 	public static function resolvePath( ?dir:String ) {
@@ -155,7 +157,7 @@ class FileTree {
 				kind : TDClass({ pack : ["flash","utils"], name : "ByteArray", params : [] }),
 			});
 			embedTypes.push("hxd._res." + name);
-		} else if( isJS ) {
+		} else if( isJS || isCPP ) {
 			Context.addResource(name, sys.io.File.getBytes(fullPath));
 			return true;
 		} else {
@@ -267,7 +269,11 @@ class FileTree {
 						ret : field.t,
 						expr : { expr : EMeta({ name : ":privateAccess", params : [], pos : pos }, { expr : EReturn(field.e), pos : pos }), pos : pos },
 					}),
+					#if openfl
+					meta : [ { name:":keep", pos:pos, params:[] } ],
+					#else
 					meta : [ { name:":extern", pos:pos, params:[] } ],
+					#end
 					access : [AStatic, AInline, APrivate],
 				};
 				var field : Field = {

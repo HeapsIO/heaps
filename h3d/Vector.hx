@@ -1,6 +1,9 @@
 package h3d;
 using hxd.Math;
 
+/**
+	A 4 floats vector. Everytime a Vector is returned, it means a copy is created.
+**/
 class Vector {
 
 	public var x : Float;
@@ -74,11 +77,18 @@ class Vector {
 		return new Vector(x * k, y * k, z * k);
 	}
 
-	public function set(x,y,z,w=1.) {
+	public inline function set(x,y,z,w=1.) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
 		this.w = w;
+	}
+	
+	public inline function load(v : Vector) {
+		this.x = v.x;
+		this.y = v.y;
+		this.z = v.z;
+		this.w = v.w;
 	}
 
 	public inline function scale3( f : Float ) {

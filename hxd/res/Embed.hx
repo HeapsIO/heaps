@@ -18,7 +18,7 @@ class Embed {
 	}
 	
 	public static function doEmbedFont( name : String, file : String, chars : String ) {
-		if( Context.defined("flash") ) {
+		if( Context.defined("flash") || Context.defined("openfl") ) {
 			if( chars == null ) // convert char list to char range
 				chars = Charset.DEFAULT_CHARS.split("-").join("\\-");
 			var pos = Context.currentPos();

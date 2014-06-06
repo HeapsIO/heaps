@@ -3,7 +3,7 @@ import h3d.mat.Data;
 
 class Engine {
 
-	var driver : h3d.impl.Driver;
+	public var driver(default,null) : h3d.impl.Driver;
 	
 	public var mem(default,null) : h3d.impl.MemoryManager;
 
@@ -41,10 +41,11 @@ class Engine {
 		this.hardware = hardware;
 		this.antiAlias = aa;
 		this.autoResize = true;
-		#if openfl
-		hxd.Stage.openFLBoot(start);
+		
+		#if (!flash && openfl)
+			hxd.Stage.openFLBoot(start);
 		#else
-		start();
+			start();
 		#end
 	}
 	
@@ -54,10 +55,10 @@ class Engine {
 		realFps = stage.getFrameRate();
 		lastTime = haxe.Timer.stamp();
 		stage.addResizeEvent(onStageResize);
-		#if flash
-		driver = new h3d.impl.Stage3dDriver();
-		#elseif (js || cpp)
+		#if (js || cpp)
 		driver = new h3d.impl.GlDriver();
+		#elseif flash
+		driver = new h3d.impl.Stage3dDriver();
 		#else
 		throw "No driver";
 		#end
@@ -67,11 +68,18 @@ class Engine {
 	
 	static var CURRENT : Engine = null;
 	
-	public static function getCurrent() {
+	static inline function check() {
+		#if debug
+		if ( CURRENT == null ) throw "no current context, please do this operation after engine init/creation";
+		#end
+	}
+	
+	public static inline function getCurrent() {
+		check();
 		return CURRENT;
 	}
 	
-	public function setCurrent() {
+	public inline function setCurrent() {
 		CURRENT = this;
 	}
 
@@ -265,11 +273,19 @@ class Engine {
 		curProjMatrix = null;
 	}
 
-	public function setTarget( tex : h3d.mat.Texture, clearColor = 0 ) {
+	/**
+	 * Setus a render target to do off screen rendering, might be costly on low end devices
+     * setTarget to null when you're finished rendering to it.
+	 */
+	public function setTarget( tex : h3d.mat.Texture,  clearColor = 0 ) {
 		driver.setRenderTarget(tex, clearColor);
 	}
 
-	public function setRenderZone( x = 0, y = 0, width = -1, height = -1 ) {
+	/**
+	 * Sets up a scissored zone to eliminate pixels outside the given range.
+	 * Call with no parameters to reset to full viewport.
+	 */
+	public function setRenderZone( x = 0, y = 0, ?width = -1, ?height = -1 ) : Void {
 		driver.setRenderZone(x, y, width, height);
 	}
 
@@ -298,6 +314,7 @@ class Engine {
 			debugPoint = new Drawable(new h3d.prim.Plan2D(), new h3d.impl.Shaders.PointShader());
 			debugPoint.material.blend(SrcAlpha, OneMinusSrcAlpha);
 			debugPoint.material.depthWrite = false;
+			debugPoint.material.culling = None;
 		}
 		debugPoint.material.depthTest = depth ? h3d.mat.Data.Compare.LessEqual : h3d.mat.Data.Compare.Always;
 		debugPoint.shader.mproj = curProjMatrix;
