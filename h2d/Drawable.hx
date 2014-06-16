@@ -6,6 +6,7 @@ private class DrawableShader extends h3d.impl.Shader {
 		var input : {
 			pos : Float2,
 			uv : Float2,
+			vanim : Float,
 			valpha : Float,
 			vcolor : Float4,
 		};
@@ -20,6 +21,9 @@ private class DrawableShader extends h3d.impl.Shader {
 		var skew : Float;
 		var zValue : Float;
 
+		var hasAnim : Bool;
+		var anims : Float3<64>;
+		
 		function vertex( size : Float3, matA : Float3, matB : Float3 ) {
 			var tmp : Float4;
 			var spos = input.pos.xyw;
@@ -32,6 +36,10 @@ private class DrawableShader extends h3d.impl.Shader {
 			var t = input.uv;
 			if( uvScale != null ) t *= uvScale;
 			if( uvPos != null ) t += uvPos;
+			if( hasAnim ) {
+				var a = anims[input.vanim];
+				t.x = ((t.x - a.x) + a.z) % a.y + a.x;
+			}
 			tuv = t;
 			if( hasVertexColor ) tcolor = input.vcolor;
 			if( hasVertexAlpha ) talpha = input.valpha;
@@ -59,7 +67,7 @@ private class DrawableShader extends h3d.impl.Shader {
 		var multUV : Float4;
 		var hasColorKey : Bool;
 		var colorKey : Int;
-
+		
 		function fragment( tex : Texture ) {
 			var col = tex.get(sinusDeform != null ? [tuv.x + sin(tuv.y * sinusDeform.y + sinusDeform.x) * sinusDeform.z, tuv.y] : tuv, filter = ! !filter, wrap = tileWrap);
 			if( hasColorKey ) {
