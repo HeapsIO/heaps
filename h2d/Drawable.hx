@@ -23,7 +23,7 @@ private class DrawableShader extends h3d.impl.Shader {
 
 		var hasAnim : Bool;
 		var anims : Float3<64>;
-		
+
 		function vertex( size : Float3, matA : Float3, matB : Float3 ) {
 			var tmp : Float4;
 			var spos = input.pos.xyw;
@@ -44,10 +44,10 @@ private class DrawableShader extends h3d.impl.Shader {
 			if( hasVertexColor ) tcolor = input.vcolor;
 			if( hasVertexAlpha ) talpha = input.valpha;
 		}
-		
+
 		var hasAlpha : Bool;
 		var killAlpha : Bool;
-		
+
 		var alpha : Float;
 		var colorAdd : Float4;
 		var colorMul : Float4;
@@ -57,7 +57,7 @@ private class DrawableShader extends h3d.impl.Shader {
 		var alphaMap : Texture;
 		var alphaUV : Float4;
 		var filter : Bool;
-		
+
 		var sinusDeform : Float3;
 		var tileWrap : Bool;
 
@@ -67,7 +67,7 @@ private class DrawableShader extends h3d.impl.Shader {
 		var multUV : Float4;
 		var hasColorKey : Bool;
 		var colorKey : Int;
-		
+
 		function fragment( tex : Texture ) {
 			var col = tex.get(sinusDeform != null ? [tuv.x + sin(tuv.y * sinusDeform.y + sinusDeform.x) * sinusDeform.z, tuv.y] : tuv, filter = ! !filter, wrap = tileWrap);
 			if( hasColorKey ) {
@@ -88,17 +88,17 @@ private class DrawableShader extends h3d.impl.Shader {
 
 
 	}
-	
+
 	#elseif (js || cpp)
-	
-	
+
+
 	public var hasColorKey : Bool;
-	
+
 	// not supported
 	public var sinusDeform : h3d.Vector;
-		
+
 	// --
-	
+
 	public var filter : Bool;
 	public var tileWrap : Bool;
 	public var killAlpha : Bool;
@@ -108,10 +108,10 @@ private class DrawableShader extends h3d.impl.Shader {
 	public var hasAlphaMap : Bool;
 	public var hasMultMap : Bool;
 	public var isAlphaPremul : Bool;
-	
+
 	/**
 	 * This is the constant set, they are set / compiled for first draw and will enabled on all render thereafter
-	 * 
+	 *
 	 */
 	override function getConstants( vertex : Bool ) {
 		var cst = [];
@@ -134,9 +134,9 @@ private class DrawableShader extends h3d.impl.Shader {
 		if( isAlphaPremul ) cst.push("#define isAlphaPremul");
 		return cst.join("\n");
 	}
-	
+
 	static var VERTEX = "
-	
+
 		attribute vec2 pos;
 		attribute vec2 uv;
 		#if hasVertexAlpha
@@ -154,14 +154,14 @@ private class DrawableShader extends h3d.impl.Shader {
 		uniform vec3 matA;
 		uniform vec3 matB;
 		uniform float zValue;
-		
+
         #if hasUVPos
 		uniform vec2 uvPos;
 		#end
         #if hasUVScale
 		uniform vec2 uvScale;
 		#end
-		
+
 		varying vec2 tuv;
 
 		void main(void) {
@@ -192,70 +192,70 @@ private class DrawableShader extends h3d.impl.Shader {
 		}
 
 	";
-	
+
 	static var FRAGMENT = "
-	
+
 		varying vec2 tuv;
 		uniform sampler2D tex;
-		
+
 		#if hasVertexAlpha
 		varying float talpha;
 		#end
-		
+
 		#if hasVertexColor
 		varying vec4 tcolor;
 		#end
-		
+
 		#if hasAlphaMap
 			uniform vec4 alphaUV;
 			uniform sampler2D alphaMap;
 		#end
-		
+
 		#if hasMultMap
 			uniform float multMapFactor;
 			uniform vec4 multUV;
 			uniform sampler2D multMap;
 		#end
-		
+
 		uniform float alpha;
 		uniform vec3 colorKey/*byte4*/;
-	
+
 		uniform vec4 colorAdd;
 		uniform vec4 colorMul;
 		uniform mat4 colorMatrix;
 
 		void main(void) {
 			vec4 col = texture2D(tex, tuv).rgba;
-			
+
 			#if killAlpha
 				if( col.a - 0.001 <= 0.0 ) discard;
 			#end
-			
+
 			#if hasColorKey
 				vec3 dc = col.rgb - colorKey;
 				if( dot(dc, dc) < 0.00001 ) discard;
 			#end
-			
+
 			#if isAlphaPremul
 				col.rgb /= col.a;
-			#end 
-			
+			#end
+
 			#if hasVertexAlpha
 				col.a *= talpha;
-			#end 
-			
+			#end
+
 			#if hasVertexColor
 				col *= tcolor;
 			#end
-			
+
 			#if hasAlphaMap
 				col.a *= texture2D( alphaMap, tuv * alphaUV.zw + alphaUV.xy).r;
 			#end
-			
+
 			#if hasMultMap
 				col *= multMapFactor * texture2D(multMap,tuv * multUV.zw + multUV.xy);
 			#end
-			
+
 			#if hasAlpha
 				col.a *= alpha;
 			#end
@@ -268,39 +268,39 @@ private class DrawableShader extends h3d.impl.Shader {
 			#if hasColorAdd
 				col += colorAdd;
 			#end
-			
+
 			#if isAlphaPremul
 				col.rgb *= col.a;
-			#end 
-			
+			#end
+
 			gl_FragColor = col;
 		}
-			
+
 	";
-	
+
 	#end
 }
 
 class Drawable extends Sprite {
-	
+
 	static inline var HAS_SIZE = 1;
 	static inline var HAS_UV_SCALE = 2;
 	static inline var HAS_UV_POS = 4;
 
 	var shader : DrawableShader;
-	
+
 	public var alpha(get, set) : Float;
 	#if !openfl
 	public var skew(get, set) : Null<Float>;
 	#end
-	
+
 	public var filter(get, set) : Bool;
 	public var color(get, set) : h3d.Vector;
 	public var colorAdd(get, set) : h3d.Vector;
 	public var colorMatrix(get, set) : h3d.Matrix;
-	
+
 	public var blendMode(default, set) : BlendMode;
-	
+
 	public var alphaMap(default, set) : h2d.Tile;
 
 	public var sinusDeform(get, set) : h3d.Vector;
@@ -309,11 +309,11 @@ class Drawable extends Sprite {
 
 	public var multiplyMap(default, set) : h2d.Tile;
 	public var multiplyFactor(get, set) : Float;
-	
+
 	public var colorKey(get, set) : Int;
-	
+
 	public var writeAlpha : Bool;
-	
+
 	function new(parent) {
 		super(parent);
 		shader = new DrawableShader();
@@ -323,27 +323,27 @@ class Drawable extends Sprite {
 		shader.zValue = 0;
 		writeAlpha = true;
 	}
-	
+
 	inline function get_alpha() {
 		return shader.alpha;
 	}
-	
+
 	function set_alpha( v : Null<Float> ) {
 		shader.alpha = v;
 		shader.hasAlpha = v < 1;
 		return v;
 	}
-	
+
 	function set_blendMode(b) {
 		blendMode = b;
 		return b;
 	}
-	
+
 	#if !openfl
 	inline function get_skew() : Null<Float> {
 		return shader.skew;
 	}
-	
+
 	inline function set_skew(v : Null<Float> ) {
 		return shader.skew = skew;
 	}
@@ -356,19 +356,19 @@ class Drawable extends Sprite {
 	inline function set_multiplyFactor(v) {
 		return shader.multMapFactor = v;
 	}
-	
+
 	function set_multiplyMap(t:h2d.Tile) {
 		multiplyMap = t;
 		shader.hasMultMap = t != null;
 		return t;
 	}
-	
+
 	function set_alphaMap(t:h2d.Tile) {
 		alphaMap = t;
 		shader.hasAlphaMap = t != null;
 		return t;
 	}
-	
+
 	inline function get_sinusDeform() {
 		return shader.sinusDeform;
 	}
@@ -376,11 +376,11 @@ class Drawable extends Sprite {
 	inline function set_sinusDeform(v) {
 		return shader.sinusDeform = v;
 	}
-	
+
 	inline function get_colorMatrix() {
 		return shader.colorMatrix;
 	}
-	
+
 	inline function set_colorMatrix(m) {
 		return shader.colorMatrix = m;
 	}
@@ -392,11 +392,11 @@ class Drawable extends Sprite {
 	inline function get_colorAdd() {
 		return shader.colorAdd;
 	}
-	
+
 	inline function get_color() {
 		return shader.colorMul;
 	}
-	
+
 	inline function set_color(m) {
 		return shader.colorMul = m;
 	}
@@ -404,7 +404,7 @@ class Drawable extends Sprite {
 	inline function get_filter() {
 		return shader.filter;
 	}
-	
+
 	inline function set_filter(v) {
 		return shader.filter = v;
 	}
@@ -412,7 +412,7 @@ class Drawable extends Sprite {
 	inline function get_tileWrap() {
 		return shader.tileWrap;
 	}
-	
+
 	inline function set_tileWrap(v) {
 		return shader.tileWrap = v;
 	}
@@ -420,7 +420,7 @@ class Drawable extends Sprite {
 	inline function get_killAlpha() {
 		return shader.killAlpha;
 	}
-	
+
 	inline function set_killAlpha(v) {
 		return shader.killAlpha = v;
 	}
@@ -428,17 +428,18 @@ class Drawable extends Sprite {
 	inline function get_colorKey() {
 		return shader.colorKey;
 	}
-	
+
 	inline function set_colorKey(v) {
 		shader.hasColorKey = true;
 		return shader.colorKey = v;
 	}
-	
+
 	function drawTile( engine, tile ) {
 		setupShader(engine, tile, HAS_SIZE | HAS_UV_POS | HAS_UV_SCALE);
 		engine.renderQuadBuffer(Tools.getCoreObjects().planBuffer);
 	}
-	
+
+	@:debug
 	function setupShader( engine : h3d.Engine, tile : h2d.Tile, options : Int ) {
 		var core = Tools.getCoreObjects();
 		var shader = shader;
@@ -448,10 +449,12 @@ class Drawable extends Sprite {
 			tile = core.nullTile;
 
 		var tex : h3d.mat.Texture = tile.getTexture();
-		tex.filter = filter ? Linear : Nearest;
-		
-		var isTexPremul = tex.flags.has(AlphaPremultiplied);
-		
+		var isTexPremul = false;
+		if( tex != null ) {
+			tex.filter = filter ? Linear : Nearest;
+			isTexPremul = tex.flags.has(AlphaPremultiplied);
+		}
+
 		switch( blendMode ) {
 		case Normal:
 			mat.blend(isTexPremul ? One : SrcAlpha, OneMinusSrcAlpha);
@@ -485,7 +488,7 @@ class Drawable extends Sprite {
 			core.tmpUVScale.y = tile.v2 - tile.v;
 			shader.uvScale = core.tmpUVScale;
 		}
-		
+
 		if( shader.hasAlphaMap ) {
 			shader.alphaMap = alphaMap.getTexture();
 			shader.alphaUV = new h3d.Vector(alphaMap.u, alphaMap.v, (alphaMap.u2 - alphaMap.u) / tile.u2, (alphaMap.v2 - alphaMap.v) / tile.v2);
@@ -495,10 +498,10 @@ class Drawable extends Sprite {
 			shader.multMap = multiplyMap.getTexture();
 			shader.multUV = new h3d.Vector(multiplyMap.u, multiplyMap.v, (multiplyMap.u2 - multiplyMap.u) / tile.u2, (multiplyMap.v2 - multiplyMap.v) / tile.v2);
 		}
-		
+
 		var cm = writeAlpha ? 15 : 7;
 		if( mat.colorMask != cm ) mat.colorMask = cm;
-		
+
 		var tmp = core.tmpMatA;
 		tmp.x = matA;
 		tmp.y = matC;
@@ -511,13 +514,13 @@ class Drawable extends Sprite {
 		shader.matB = tmp;
 		shader.tex = tile.getTexture();
 		/*
-		shader.isAlphaPremul = isTexPremul 
-		&& (shader.hasAlphaMap || shader.hasAlpha || shader.hasMultMap 
-		|| shader.hasVertexAlpha || shader.hasVertexColor 
+		shader.isAlphaPremul = isTexPremul
+		&& (shader.hasAlphaMap || shader.hasAlpha || shader.hasMultMap
+		|| shader.hasVertexAlpha || shader.hasVertexColor
 		|| shader.colorMatrix != null || shader.colorAdd != null
 		|| shader.colorMul != null );*/
 		mat.shader = shader;
 		engine.selectMaterial(mat);
 	}
-	
+
 }
