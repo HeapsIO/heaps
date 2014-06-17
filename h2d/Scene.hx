@@ -75,11 +75,8 @@ class Scene extends Layers implements h3d.IDrawable {
 	}
 
 	function onEvent( e : hxd.Event ) {
-		if( pendingEvents != null ) {
-			e.relX = screenXToLocal(e.relX);
-			e.relY = screenYToLocal(e.relY);
+		if( pendingEvents != null )
 			pendingEvents.push(e);
-		}
 	}
 
 	function screenXToLocal(mx:Float) {
@@ -245,41 +242,44 @@ class Scene extends Layers implements h3d.IDrawable {
 		if( old.length == 0 )
 			return;
 		pendingEvents = null;
-		var ox = 0., oy = 0.;
 		for( e in old ) {
-			var hasPos = switch( e.kind ) {
-			case EKeyUp, EKeyDown: false;
-			default: true;
-			}
-
-			if( hasPos ) {
-				ox = e.relX;
-				oy = e.relY;
-			}
+			var ox = e.relX, oy = e.relY;
+			e.relX = screenXToLocal(ox);
+			e.relY = screenYToLocal(oy);
 
 			if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
 				currentDrag.f(e);
-				if( e.cancel )
+				if( e.cancel ) {
+					e.relX = ox;
+					e.relY = oy;
 					continue;
+				}
 			}
+
 			emitEvent(e);
+
 			/*
 				We want to make sure that after we have pushed, we send a release even if the mouse
 				has been outside of the Interactive (release outside). We will reset the mouse button
 				to prevent click to be generated
 			*/
 			if( e.kind == ERelease && pushList.length > 0 ) {
+				e.relX = screenXToLocal(ox);
+				e.relY = screenYToLocal(oy);
 				for( i in pushList ) {
-					// relX/relY is not correct here
 					if( i == null )
 						dispatchListeners(e);
 					else {
 						@:privateAccess i.isMouseDown = -1;
+						// relX/relY not good here
 						i.handleEvent(e);
 					}
 				}
 				pushList = new Array();
 			}
+
+			e.relX = ox;
+			e.relY = oy;
 		}
 		if( hasEvents() )
 			pendingEvents = new Array();
