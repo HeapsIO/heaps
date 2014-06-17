@@ -439,7 +439,6 @@ class Drawable extends Sprite {
 		engine.renderQuadBuffer(Tools.getCoreObjects().planBuffer);
 	}
 
-	@:debug
 	function setupShader( engine : h3d.Engine, tile : h2d.Tile, options : Int ) {
 		var core = Tools.getCoreObjects();
 		var shader = shader;
