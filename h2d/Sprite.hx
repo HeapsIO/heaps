@@ -4,7 +4,6 @@ import hxd.Math;
 @:allow(h2d.Tools)
 class Sprite {
 
-	static var tmpMatrix = new h3d.Matrix();
 	var childs : Array<Sprite>;
 	public var parent(default, null) : Sprite;
 	public var numChildren(get, never) : Int;
@@ -443,5 +442,5 @@ class Sprite {
 		var c = Type.getClassName(Type.getClass(this));
 		return name == null ? c : name + "(" + c + ")";
 	}
-	
+
 }
