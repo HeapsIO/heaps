@@ -2,8 +2,7 @@ package h2d.comp;
 import h2d.css.Defs;
 
 class Component extends Sprite {
-	
-	public var name(default, null) : String;
+
 	public var id(default, set) : String;
 	var parentComponent : Component;
 	var classes : Array<String>;
@@ -19,7 +18,7 @@ class Component extends Sprite {
 	var customStyle : h2d.css.Style;
 	var styleSheet : h2d.css.Engine;
 	var needRebuild(default,set) : Bool;
-	
+
 	public function new(name,?parent) {
 		super(parent);
 		this.name = name;
@@ -38,7 +37,7 @@ class Component extends Sprite {
 		bg = new h2d.css.Fill(this);
 		needRebuild = true;
 	}
-	
+
 	function getComponentsRec(s : Sprite, ret : Array<Component>) {
 		var c = Std.instance(s, Component);
 		if( c == null ) {
@@ -47,7 +46,7 @@ class Component extends Sprite {
 		} else
 			ret.push(c);
 	}
-	
+
 	public function getParent() {
 		if( allocated )
 			return parentComponent;
@@ -59,7 +58,7 @@ class Component extends Sprite {
 		}
 		return null;
 	}
-	
+
 	public function getElementById(id:String) {
 		if( this.id == id )
 			return this;
@@ -70,14 +69,14 @@ class Component extends Sprite {
 		}
 		return null;
 	}
-	
+
 	function set_needRebuild(v) {
 		needRebuild = v;
 		if( v && parentComponent != null && !parentComponent.needRebuild )
 			parentComponent.needRebuild = true;
 		return v;
 	}
-	
+
 	override function onDelete() {
 		if( parentComponent != null ) {
 			parentComponent.components.remove(this);
@@ -85,7 +84,7 @@ class Component extends Sprite {
 		}
 		super.onDelete();
 	}
-		
+
 	override function onAlloc() {
 		// lookup our parent component
 		var old = parentComponent;
@@ -108,19 +107,19 @@ class Component extends Sprite {
 		parentComponent = null;
 		super.onAlloc();
 	}
-	
+
 	public function addCss(cssString) {
 		if( styleSheet == null ) evalStyle();
 		styleSheet.addRules(cssString);
 		needRebuild = true;
 	}
-	
+
 	public function setStyle(?s) {
 		customStyle = s;
 		needRebuild = true;
 		return this;
 	}
-	
+
 	public function getStyle( willWrite ) {
 		if( customStyle == null )
 			customStyle = new h2d.css.Style();
@@ -144,15 +143,15 @@ class Component extends Sprite {
 		needRebuild = true;
 		return this;
 	}
-	
+
 	public function getClasses() : Iterable<String> {
 		return classes;
 	}
-	
+
 	public function hasClass( name : String ) {
 		return Lambda.has(classes, name);
 	}
-	
+
 	public function addClass( name : String ) {
 		if( !Lambda.has(classes, name) ) {
 			classes.push(name);
@@ -160,7 +159,7 @@ class Component extends Sprite {
 		}
 		return this;
 	}
-	
+
 	public function toggleClass( name : String, ?flag : Null<Bool> ) {
 		if( flag != null ) {
 			if( flag )
@@ -174,23 +173,23 @@ class Component extends Sprite {
 		}
 		return this;
 	}
-	
+
 	public function removeClass( name : String ) {
 		if( classes.remove(name) )
 			needRebuild = true;
 		return this;
 	}
-	
+
 	function set_id(id) {
 		this.id = id;
 		needRebuild = true;
 		return id;
 	}
-	
+
 	function getFont() {
 		return Context.getFont(style.fontName, Std.int(style.fontSize));
 	}
-	
+
 	function evalStyle() {
 		if( parentComponent == null ) {
 			if( styleSheet == null )
@@ -204,7 +203,7 @@ class Component extends Sprite {
 		}
 		styleSheet.applyClasses(this);
 	}
-	
+
 	inline function extLeft() {
 		return style.paddingLeft + style.marginLeft + style.borderSize;
 	}
@@ -212,7 +211,7 @@ class Component extends Sprite {
 	inline function extTop() {
 		return style.paddingTop + style.marginTop + style.borderSize;
 	}
-	
+
 	inline function extRight() {
 		return style.paddingRight + style.marginRight + style.borderSize;
 	}
@@ -220,7 +219,7 @@ class Component extends Sprite {
 	inline function extBottom() {
 		return style.paddingBottom + style.marginBottom + style.borderSize;
 	}
-	
+
 	function resize( c : Context ) {
 		if( c.measure ) {
 			if( style.width != null ) contentWidth = style.width;
@@ -257,7 +256,7 @@ class Component extends Sprite {
 			}
 		}
 	}
-	
+
 	function resizeRec( ctx : Context ) {
 		resize(ctx);
 		if( ctx.measure ) {
@@ -279,7 +278,7 @@ class Component extends Sprite {
 			ctx.yPos = oldy;
 		}
 	}
-	
+
 	override function drawRec( ctx : h2d.RenderContext ) {
 		if( style.overflowHidden ) {
 			var px = (absX + 1) / matA + 1e-10;
@@ -290,7 +289,7 @@ class Component extends Sprite {
 		if( style.overflowHidden )
 			ctx.engine.setRenderZone();
 	}
-	
+
 	function evalStyleRec() {
 		needRebuild = false;
 		evalStyle();
@@ -299,7 +298,7 @@ class Component extends Sprite {
 		for( c in components )
 			c.evalStyleRec();
 	}
-	
+
 	function textAlign( tf : h2d.Text ) {
 		if( style.width == null ) {
 			tf.x = 0;
@@ -314,11 +313,11 @@ class Component extends Sprite {
 			tf.x = Std.int((style.width - tf.textWidth) * 0.5);
 		}
 	}
-	
+
 	public function refresh() {
 		needRebuild = true;
 	}
-	
+
 	override function sync( ctx : RenderContext ) {
 		if( needRebuild ) {
 			evalStyleRec();
@@ -329,5 +328,5 @@ class Component extends Sprite {
 		}
 		super.sync(ctx);
 	}
-	
+
 }
