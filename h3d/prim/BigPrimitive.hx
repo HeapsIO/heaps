@@ -18,6 +18,27 @@ class BigPrimitive extends Primitive {
 		if( stride < 3 ) throw "Minimum stride = 3";
 	}
 
+	public function begin(count) {
+		if( currentVerticesCount() + count >= 65535 )
+			flush();
+		if( tmpBuf == null ) {
+			tmpBuf = new hxd.FloatBuffer();
+			tmpIdx = new hxd.IndexBuffer();
+		}
+	}
+
+	public function currentVerticesCount() {
+		return tmpBuf == null ? 0 : Std.int(tmpBuf.length / stride);
+	}
+
+	public inline function addVerticeValue(v) {
+		tmpBuf.push(v);
+	}
+
+	public inline function addIndex(i) {
+		tmpIdx.push(i);
+	}
+
 	override function triCount() {
 		var count = 0;
 		for( i in allIndexes )
@@ -60,13 +81,16 @@ class BigPrimitive extends Primitive {
 	}
 
 	public function add( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1 ) {
+		return addSub(buf, idx, 0, 0, Std.int(buf.length / (stride < 0 ? this.stride : stride)), Std.int(idx.length / 3), dx, dy, dz, rotation, scale, stride);
+	}
+
+	public function addSub( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, startVert, startTri, nvert, triCount, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1, deltaU = 0., deltaV = 0. ) {
 		if( tmpBuf == null ) {
 			tmpBuf = new hxd.FloatBuffer();
 			tmpIdx = new hxd.IndexBuffer();
 		}
 		if( stride < 0 ) stride = this.stride;
 		var start = Std.int(tmpBuf.length / this.stride);
-		var nvert = Std.int(buf.length / stride);
 		if( start + nvert >= 65535 ) {
 			if( nvert >= 65535 ) throw "Too many vertices in buffer";
 			flush();
@@ -77,7 +101,7 @@ class BigPrimitive extends Primitive {
 		var sr = Math.sin(rotation);
 		if( stride < this.stride ) throw "only stride >= " + this.stride+" allowed";
 		for( i in 0...nvert ) {
-			var p = i * stride;
+			var p = (i + startVert) * stride;
 			var x = buf[p++];
 			var y = buf[p++];
 			var z = buf[p++];
@@ -92,21 +116,21 @@ class BigPrimitive extends Primitive {
 			case 4:
 				tmpBuf.push(buf[p++]);
 			case 5:
-				tmpBuf.push(buf[p++]);
-				tmpBuf.push(buf[p++]);
+				tmpBuf.push(buf[p++] + deltaU);
+				tmpBuf.push(buf[p++] + deltaV);
 			case 6:
-				tmpBuf.push(buf[p++]);
-				tmpBuf.push(buf[p++]);
+				tmpBuf.push(buf[p++] + deltaU);
+				tmpBuf.push(buf[p++] + deltaV);
 				tmpBuf.push(buf[p++]);
 			case 7:
-				tmpBuf.push(buf[p++]);
-				tmpBuf.push(buf[p++]);
+				tmpBuf.push(buf[p++] + deltaU);
+				tmpBuf.push(buf[p++] + deltaV);
 				tmpBuf.push(buf[p++]);
 				tmpBuf.push(buf[p++]);
 			default:
 				// UV
-				tmpBuf.push(buf[p++]);
-				tmpBuf.push(buf[p++]);
+				tmpBuf.push(buf[p++] + deltaU);
+				tmpBuf.push(buf[p++] + deltaV);
 				var nx = buf[p++];
 				var ny = buf[p++];
 				var nz = buf[p++];
@@ -119,8 +143,9 @@ class BigPrimitive extends Primitive {
 					tmpBuf.push(buf[p++]);
 			}
 		}
-		for( i in idx )
-			tmpIdx.push(i + start);
+		start -= startVert;
+		for( i in 0...triCount * 3 )
+			tmpIdx.push(idx[i+startTri*3] + start);
 	}
 
 }
