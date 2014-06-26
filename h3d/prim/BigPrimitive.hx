@@ -96,6 +96,7 @@ class BigPrimitive extends Primitive {
 			flush();
 			tmpBuf = new hxd.FloatBuffer();
 			tmpIdx = new hxd.IndexBuffer();
+			start = 0;
 		}
 		var cr = Math.cos(rotation);
 		var sr = Math.sin(rotation);
