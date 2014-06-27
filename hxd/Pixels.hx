@@ -12,7 +12,7 @@ class Pixels {
 	public var height : Int;
 	public var offset : Int;
 	public var flags: haxe.EnumFlags<Flags>;
-	
+
 	public function new(width : Int, height : Int, bytes : haxe.io.Bytes, format : hxd.PixelFormat, offset = 0) {
 		this.width = width;
 		this.height = height;
@@ -20,7 +20,7 @@ class Pixels {
 		this.format = format;
 		this.offset = offset;
 	}
-		
+
 	public function makeSquare( ?copy : Bool ) {
 		var w = width, h = height;
 		var tw = w == 0 ? 0 : 1, th = h == 0 ? 0 : 1;
@@ -86,69 +86,79 @@ class Pixels {
 				mem.wb(p+2, b);
 			}
 			mem.end();
-			
+
 		case [ARGB, RGBA]: {
 			var mem = hxd.impl.Memory.select(bytes);
 			for ( i in 0...width * height ) {
 				var p = (i << 2) + offset;
 				var a = (mem.b(p));
-				
+
 				mem.wb(p, mem.b(p + 1));
 				mem.wb(p + 1, mem.b(p + 2));
 				mem.wb(p + 2, mem.b(p + 3));
-				mem.wb(p + 3, a);				
+				mem.wb(p + 3, a);
 			}
 			mem.end();
 		}
-		
+
 		default:
 			throw "Cannot convert from " + format + " to " + target;
 		}
 		format = target;
 	}
-	
+
 	public function getPixel(x, y) : Int {
-		var p = 4 * (y * width + x) + offset;
+		var p = ((x + y * width) << 2) + offset;
 		switch(format) {
 		case BGRA:
-			var u = 0;
-			u |= bytes.get( p	);
-			u |= bytes.get( p+1 )<<8;
-			u |= bytes.get( p+2 )<<16;
-			u |= bytes.get( p+3 )<<24;
-			return u;
+			return bytes.get(p) | (bytes.get( p+1 )<<8) | (bytes.get( p+2 )<<16) | (bytes.get( p+3 )<<24);
 		case RGBA:
-			var u = 0;
-			u |= bytes.get( p	)<<16;
-			u |= bytes.get( p+1 )<<8;
-			u |= bytes.get( p+2 );
-			u |= bytes.get( p+3 )<<24;
-			return u;
+			return (bytes.get(p)<<16) | (bytes.get( p+1 )<<8) | bytes.get( p+2 ) | (bytes.get( p+3 )<<24);
 		case ARGB:
-			var u = 0;
-			u |= bytes.get( p	)<<24;
-			u |= bytes.get( p+1 )<<16;
-			u |= bytes.get( p+2 )<<8;
-			u |= bytes.get( p+3 );
-			return u;
-		}		
+			return (bytes.get(p)<<24) | (bytes.get( p+1 )<<16) | (bytes.get( p+2 )<<8) | bytes.get( p+3 );
+		}
 	}
-	
+
+	public function setPixel(x, y, color) : Void {
+		var p = ((x + y * width) << 2) + offset;
+		var a = color >>> 24;
+		var r = (color >> 16) & 0xFF;
+		var g = (color >> 8) & 0xFF;
+		var b = color & 0xFF;
+		switch(format) {
+		case BGRA:
+			bytes.set(p++, b);
+			bytes.set(p++, g);
+			bytes.set(p++, r);
+			bytes.set(p++, a);
+		case RGBA:
+			bytes.set(p++, r);
+			bytes.set(p++, g);
+			bytes.set(p++, b);
+			bytes.set(p++, a);
+		case ARGB:
+			bytes.set(p++, a);
+			bytes.set(p++, r);
+			bytes.set(p++, g);
+			bytes.set(p++, b);
+		}
+	}
+
 	public function dispose() {
 		if( bytes != null ) {
 			if( !flags.has(ReadOnly) ) hxd.impl.Tmp.saveBytes(bytes);
 			bytes = null;
 		}
 	}
-	
+
 	public static function bytesPerPixel( format : PixelFormat ) {
 		return switch( format ) {
 		case ARGB, BGRA, RGBA: 4;
 		}
 	}
-	
+
 	public static function alloc( width, height, format ) {
 		return new Pixels(width, height, hxd.impl.Tmp.getBytes(width * height * bytesPerPixel(format)), format);
 	}
-	
+
 }
