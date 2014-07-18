@@ -256,6 +256,12 @@ private class LocalEntry extends FileEntry {
 				WATCH_LIST = [];
 				flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, checkFiles);
 			}
+			var path = path;
+			for( w in WATCH_LIST )
+				if( w.path == path ) {
+					w.watchCallback = null;
+					WATCH_LIST.remove(w);
+				}
 			WATCH_LIST.push(this);
 		}
 		watchTime = file.modificationDate.getTime();
