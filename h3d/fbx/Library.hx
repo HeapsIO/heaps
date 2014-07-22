@@ -419,7 +419,9 @@ class Library {
 		var allTimes = new Map();
 
 		if( animNode != null ) for( cn in getChilds(animNode, "AnimationCurveNode") ) {
-			var model = getParent(cn, "Model");
+			var model = getParent(cn, "Model",true);
+			if(model==null) continue; //morph support
+			
 			var c = getObjectCurve(curves, model, cn.getName(), animName);
 			if( c == null ) continue;
 			var data = getChilds(cn, "AnimationCurve");
