@@ -19,6 +19,15 @@ class Fill extends h2d.TileGroup {
 		content.addPoint(x, y, color);
 	}
 
+    public inline function fillCircle( fill:FillStyle, x : Float, y : Float, radius : Float) {
+		switch( fill ) {
+		case Transparent:
+		case Color(c):
+        content.fillCircle(x, y, radius, c);
+		case Gradient(a,b,c,d):
+		}
+    }
+
 	public function fillRect(fill:FillStyle,x,y,w,h) {
 		switch( fill ) {
 		case Transparent:
@@ -36,6 +45,38 @@ class Fill extends h2d.TileGroup {
 		var b = Std.int( (c1&0xFF) * (1-v) + (c2&0xFF) * v );
 		return (a << 24) | (r << 16) | (g << 8) | b;
 	}
+
+    public inline function circle( fill:FillStyle, x : Float, y : Float, ray : Float, size: Float) {
+		switch( fill ) {
+		case Transparent:
+		case Color(c):
+            content.circle(x, y, ray, size, c);
+		case Gradient(a,b,c,d):
+		}
+    }
+
+    public inline function arc( fill:FillStyle, x : Float, y : Float, ray : Float, size: Float, start: Float, end: Float) {
+		switch( fill ) {
+		case Transparent:
+		case Color(c):
+            content.arc(x, y, ray, size, start, end, c);
+		case Gradient(a,b,c,d):
+		}
+    }
+
+    public function lineRoundRect(fill:FillStyle, x:Float, y:Float, w:Float, h:Float, size:Float, ellipse:Float) {
+		if( size <= 0 ) return;
+		switch( fill ) {
+		case Transparent:
+		case Color(c):
+			fillRectColor(x + ellipse, y, w - ellipse * 2, size, c);
+			fillRectColor(x + ellipse, y + h - size, w - ellipse * 2, size, c);
+			fillRectColor(x,y+size + ellipse,size,h-size*2 - ellipse * 2,c);
+			fillRectColor(x + w - size, y + size + ellipse, size, h - size * 2 - ellipse * 2, c);
+
+		case Gradient(a,b,c,d):
+        }
+    }
 
 	public function lineRect(fill:FillStyle, x:Float, y:Float, w:Float, h:Float, size:Float) {
 		if( size <= 0 ) return;

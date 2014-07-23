@@ -167,6 +167,12 @@ class Parser {
 				s.color = c;
 				return true;
 			}
+		case "border-radius":
+			var i = getVal(v);
+			if( i != null ) {
+				s.borderRadius = i;
+				return true;
+			}
 		case "border":
 			if( applyComposite(["border-width", "border-style", "border-color"], v, s) )
 				return true;

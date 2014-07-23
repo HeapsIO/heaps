@@ -238,8 +238,30 @@ class Component extends Sprite {
 			bg.reset();
 			bg.x = style.marginLeft - extLeft();
 			bg.y = style.marginTop - extTop();
-			bg.lineRect(style.borderColor, 0, 0, width - (style.marginLeft + style.marginRight), height - (style.marginTop + style.marginBottom), style.borderSize);
-			bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize, contentWidth + style.paddingLeft + style.paddingRight, contentHeight + style.paddingTop + style.paddingBottom);
+
+            if (style.borderRadius != null && style.borderRadius > 0) {
+                var radius = style.borderRadius;
+                var _w = contentWidth + style.paddingLeft + style.paddingRight;
+                var _h = contentHeight + style.paddingTop + style.paddingBottom;
+
+                bg.lineRoundRect(style.borderColor, 0, 0, width - (style.marginLeft + style.marginRight), height - (style.marginTop + style.marginBottom), style.borderSize, radius);
+                bg.arc(style.borderColor, style.borderSize + radius, style.borderSize + radius, style.borderSize + radius, style.borderSize, Math.PI, Math.PI + Math.PI / 2 );
+                bg.arc(style.borderColor, style.borderSize - radius + _w, style.borderSize + radius, style.borderSize + radius, style.borderSize, Math.PI + Math.PI / 2, Math.PI * 2 );
+                bg.arc(style.borderColor, style.borderSize - radius + _w, style.borderSize - radius + _h, style.borderSize + radius, style.borderSize, 0, Math.PI / 2 );
+                bg.arc(style.borderColor, style.borderSize + radius, style.borderSize - radius + _h, style.borderSize + radius, style.borderSize, Math.PI / 2, Math.PI );
+
+                bg.fillCircle(style.backgroundColor, style.borderSize + radius, style.borderSize + radius, radius);
+                bg.fillCircle(style.backgroundColor, style.borderSize - radius + _w, style.borderSize + radius, radius);
+                bg.fillCircle(style.backgroundColor, style.borderSize - radius + _w, style.borderSize - radius + _h, radius);
+                bg.fillCircle(style.backgroundColor, style.borderSize + radius, style.borderSize - radius + _h, radius);
+
+                bg.fillRect(style.backgroundColor, style.borderSize + radius, style.borderSize, _w - radius * 2, _h);
+                bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize + radius, _w, _h - radius * 2);
+            } else {
+                bg.lineRect(style.borderColor, 0, 0, width - (style.marginLeft + style.marginRight), height - (style.marginTop + style.marginBottom), style.borderSize);
+                bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize, contentWidth + style.paddingLeft + style.paddingRight, contentHeight + style.paddingTop + style.paddingBottom);
+            }
+
 			if( style.icon != null ) {
 				if( iconBmp == null )
 					iconBmp = new h2d.Bitmap(null);
