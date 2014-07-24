@@ -29,6 +29,7 @@ class Anim extends Drawable {
 	}
 
 	override function sync( ctx : RenderContext ) {
+		super.sync(ctx);
 		currentFrame += speed * ctx.elapsedTime;
 		if( currentFrame < frames.length )
 			return;
