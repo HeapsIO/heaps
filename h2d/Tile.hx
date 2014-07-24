@@ -2,23 +2,23 @@ package h2d;
 
 @:allow(h2d)
 class Tile {
-	
+
 	static inline var EPSILON_PIXEL = 0.001;
-	
+
 	var innerTex : h3d.mat.Texture;
-	
+
 	var u : Float;
 	var v : Float;
 	var u2 : Float;
 	var v2 : Float;
-	
+
 	public var dx : Int;
 	public var dy : Int;
 	public var x(default,null) : Int;
 	public var y(default,null) : Int;
 	public var width(default,null) : Int;
 	public var height(default,null) : Int;
-	
+
 	function new(tex, x, y, w, h, dx=0, dy=0) {
 		this.innerTex = tex;
 		this.x = x;
@@ -29,15 +29,15 @@ class Tile {
 		this.dy = dy;
 		if( tex != null ) setTexture(tex);
 	}
-	
+
 	public function getTexture() : h3d.mat.Texture {
 		return innerTex;
 	}
-	
+
 	public function isDisposed() {
 		return innerTex == null || innerTex.isDisposed();
 	}
-		
+
 	function setTexture(tex) {
 		this.innerTex = tex;
 		if( tex != null ) {
@@ -47,19 +47,19 @@ class Tile {
 			this.v2 = (y + height - EPSILON_PIXEL) / tex.height;
 		}
 	}
-	
+
 	public inline function switchTexture( t : Tile ) {
 		setTexture(t.innerTex);
 	}
-	
+
 	public function sub( x, y, w, h, dx = 0, dy = 0 ) {
 		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
-	
+
 	public function center(dx, dy) {
 		return sub(0, 0, width, height, -dx, -dy);
 	}
-	
+
 	public function setPos(x, y) {
 		this.x = x;
 		this.y = y;
@@ -71,7 +71,7 @@ class Tile {
 			v2 = (height + y - EPSILON_PIXEL) / tex.height;
 		}
 	}
-	
+
 	public function setSize(w, h) {
 		this.width = w;
 		this.height = h;
@@ -81,12 +81,12 @@ class Tile {
 			v2 = (h + y - EPSILON_PIXEL) / tex.height;
 		}
 	}
-	
+
 	public function scaleToSize( w, h ) {
 		this.width = w;
 		this.height = h;
 	}
-	
+
 	public function scrollDiscrete( dx : Float, dy : Float ) {
 		var tex = innerTex;
 		u += dx / tex.width;
@@ -96,12 +96,12 @@ class Tile {
 		x = Std.int(u * tex.width);
 		y = Std.int(v * tex.height);
 	}
-	
+
 	public function dispose() {
 		if( innerTex != null ) innerTex.dispose();
 		innerTex = null;
 	}
-	
+
 	public function clone() {
 		var t = new Tile(null, x, y, width, height, dx, dy);
 		t.innerTex = innerTex;
@@ -111,17 +111,21 @@ class Tile {
 		t.v2 = v2;
 		return t;
 	}
-	
+
 	/**
 		Split horizontaly or verticaly the number of given frames
 	**/
-	public function split( frames : Int, vertical = false ) {
+	public function split( frames : Int = 0, vertical = false ) {
 		var tl = [];
 		if( vertical ) {
+			if( frames == 0 )
+				frames = Std.int(height / width);
 			var stride = Std.int(height / frames);
 			for( i in 0...frames )
 				tl.push(sub(0, i * stride, width, stride));
 		} else {
+			if( frames == 0 )
+				frames = Std.int(width / height);
 			var stride = Std.int(width / frames);
 			for( i in 0...frames )
 				tl.push(sub(i * stride, 0, stride, height));
@@ -135,7 +139,7 @@ class Tile {
 	public function grid( size : Int, dx = 0, dy = 0 ) {
 		return [for( y in 0...Std.int(height / size) ) for( x in 0...Std.int(width / size) ) sub(x * size, y * size, size, size, dx, dy)];
 	}
-	
+
 	public function toString() {
 		return "Tile(" + x + "," + y + "," + width + "x" + height + (dx != 0 || dy != 0 ? "," + dx + ":" + dy:"") + ")";
 	}
@@ -155,7 +159,7 @@ class Tile {
 		#end
 			innerTex.uploadBitmap(bmp);
 	}
-	
+
 
 	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?allocPos : h3d.impl.AllocPos ) {
 		var t = new Tile(h3d.mat.Texture.fromColor(color,allocPos),0,0,1,1);
@@ -164,7 +168,7 @@ class Tile {
 		t.height = height;
 		return t;
 	}
-	
+
 	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
 		var w = 1, h = 1;
 		while( w < bmp.width )
@@ -201,18 +205,18 @@ class Tile {
 		main.upload(bmp);
 		return { main : main, tiles : tl };
 	}
-	
+
 	public static function fromTexture( t : h3d.mat.Texture ) {
 		return new Tile(t, 0, 0, t.width, t.height);
 	}
-	
+
 	public static function fromPixels( pixels : hxd.Pixels, ?allocPos : h3d.impl.AllocPos ) {
 		var pix2 = pixels.makeSquare(true);
 		var t = h3d.mat.Texture.fromPixels(pix2);
 		if( pix2 != pixels ) pix2.dispose();
 		return new Tile(t, 0, 0, pixels.width, pixels.height);
 	}
-	
+
 	#if flash
 	public static function fromSprites( sprites : Array<flash.display.Sprite>, ?allocPos : h3d.impl.AllocPos ) {
 		var tmp = [];
@@ -248,7 +252,7 @@ class Tile {
 		return tiles;
 	}
 	#end
-	
+
 	static function isEmpty( b : hxd.BitmapData, px, py, width, height, bg : Int ) {
 		var empty = true;
 		var xmin = width, ymin = height, xmax = 0, ymax = 0;
@@ -267,5 +271,5 @@ class Tile {
 			}
 		return empty ? null : { dx : xmin, dy : ymin, w : xmax - xmin + 1, h : ymax - ymin + 1 };
 	}
-	
+
 }
