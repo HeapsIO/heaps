@@ -23,6 +23,7 @@ class Label extends Component {
 
 	override function resize( ctx : Context ) {
 		if( ctx.measure ) {
+            tf.maxWidth = ctx.maxWidth;
 			tf.font = getFont();
 			tf.textColor = style.color;
 			tf.text = text;
