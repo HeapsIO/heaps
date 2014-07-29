@@ -523,9 +523,15 @@ class Parser {
 				if( v > 255 ) v = 255;
 				return v;
 			}
+			inline function check(k:Float) {
+				var v = Std.int(k);
+				if( v < 0 ) v = 0;
+				if( v > 255 ) v = 255;
+				return v;
+			}
 			if( r != null && g != null && b != null && a != null ) {
 				var a = conv(a); if( a == 0 ) a = 1; // prevent setting alpha to FF afterwards
-				(a << 24) | (conv(r) << 16) | (conv(g) << 8) | conv(b);
+				(a << 24) | (check(r) << 16) | (check(g) << 8) | check(b);
 			}
 			else
 				null;
