@@ -123,6 +123,9 @@ class Sound extends Resource {
 	public function playAt( startPosition : Float ) {
 		#if flash
 		if( snd != null ) {
+			// can't mix two wavs
+			if( wavHeader != null && channel != null )
+				return;
 			bytesPosition = 0;
 			channel = snd.play(startPosition,loop?0x7FFFFFFF:0);
 			volume = volume;
