@@ -30,18 +30,23 @@ class Anim extends Drawable {
 
 	override function sync( ctx : RenderContext ) {
 		super.sync(ctx);
+		var prev = currentFrame;
 		currentFrame += speed * ctx.elapsedTime;
 		if( currentFrame < frames.length )
 			return;
-		if( loop )
+		if( loop ) {
 			currentFrame %= frames.length;
-		else if( currentFrame >= frames.length )
-			currentFrame = frames.length - 0.00001;
-		onAnimEnd();
+			onAnimEnd();
+		} else if( currentFrame >= frames.length ) {
+			currentFrame = frames.length;
+			if( currentFrame != prev ) onAnimEnd();
+		}
 	}
 
 	public function getFrame() {
-		return frames[Std.int(currentFrame)];
+		var i = Std.int(currentFrame);
+		if( i == frames.length ) i--;
+		return frames[i];
 	}
 
 	override function draw( ctx : RenderContext ) {
