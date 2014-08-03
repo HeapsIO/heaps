@@ -41,9 +41,27 @@ class Sprite {
 		if( out == null ) out = new h2d.col.Bounds();
 		if( relativeTo == null ) {
 			relativeTo = getScene();
-			if( relativeTo == null ) relativeTo = this;
-		} else
-			relativeTo.syncPos();
+		} else {
+			var s1 = getScene();
+			var s2 = relativeTo.getScene();
+			if( s1 != s2 ) {
+				// if we are getting the bounds relative to a scene
+				// were are not into, it's the same as taking absolute position
+				if( s1 == null && s2 == relativeTo )
+					relativeTo = null;
+				else if( s2 == null )
+					throw "Cannot getBounds() with a relative element not in the scene";
+				else
+					throw "Cannot getBounds() with a relative element in a different scene";
+			}
+			if( relativeTo != null )
+				relativeTo.syncPos();
+		}
+		if( relativeTo == null ) {
+			relativeTo = this;
+			while( relativeTo.parent != null )
+				relativeTo = relativeTo.parent;
+		}
 		syncPos();
 		getBoundsRec(relativeTo, out);
 		if( out.isEmpty() ) {
