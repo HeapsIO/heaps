@@ -3,6 +3,7 @@ class Bounds extends hxd.App {
 	var boxes : Array<h2d.Bitmap>;
 	var g : h2d.Graphics;
 	var colors = [0xFF0000 , 0x00FF00 , 0x0000FF, 0xFF00FF];
+	var time = 0.;
 
 	override function init() {
 		boxes = [];
@@ -24,6 +25,8 @@ class Bounds extends hxd.App {
 			b.scale(1.2 - i * 0.1);
 			boxes.push(b);
 		}
+		for( b in boxes )
+			new h2d.Graphics(b);
 		var tf = new h2d.Text(hxd.res.FontBuilder.getFont("Verdana", 16), boxes[0]);
 		tf.text = "Some quite long rotating text";
 		tf.x = -5;
@@ -32,12 +35,22 @@ class Bounds extends hxd.App {
 	}
 
 	override function update(dt:Float) {
+		time += dt;
 		g.clear();
 		for( i in 0...boxes.length ) {
 			var b = boxes[i];
-			b.rotate( (i + 1) * dt * 0.01 );
+			b.rotate( (i + 1) * dt * 0.001 );
+			b.setScale(1 + Math.sin(time * 0.1 / (i + 2)) * 0.2);
 			var b = b.getBounds();
 			g.beginFill((colors[i]>>2)&0x3F3F3F);
+			g.drawRect(b.x, b.y, b.width, b.height);
+		}
+		for( i in 1...2 ) {
+			var prev = boxes[i - 1];
+			var b = boxes[i].getBounds(prev);
+			var g = Std.instance(prev.getChildAt(2), h2d.Graphics);
+			g.clear();
+			g.beginFill(0xFFFFFF, 0.5);
 			g.drawRect(b.x, b.y, b.width, b.height);
 		}
 	}

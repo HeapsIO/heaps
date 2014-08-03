@@ -42,7 +42,8 @@ class Sprite {
 		if( relativeTo == null ) {
 			relativeTo = getScene();
 			if( relativeTo == null ) relativeTo = this;
-		}
+		} else
+			relativeTo.syncPos();
 		syncPos();
 		getBoundsRec(relativeTo, out);
 		if( out.isEmpty() ) {
@@ -96,10 +97,10 @@ class Sprite {
 			return;
 		}
 
-		var det = 1 / (relativeTo.matA * relativeTo.matD + relativeTo.matB * relativeTo.matC);
+		var det = 1 / (relativeTo.matA * relativeTo.matD - relativeTo.matB * relativeTo.matC);
 		var rA = relativeTo.matD * det;
-		var rB = -relativeTo.matC * det;
-		var rC = -relativeTo.matB * det;
+		var rB = -relativeTo.matB * det;
+		var rC = -relativeTo.matC * det;
 		var rD = relativeTo.matA * det;
 		var rX = absX - relativeTo.absX;
 		var rY = absY - relativeTo.absY;
