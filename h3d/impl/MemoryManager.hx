@@ -12,7 +12,7 @@ class MemoryManager {
 	var buffers : Array<ManagedBuffer>;
 	var indexes : Array<Indexes>;
 	var textures : Array<h3d.mat.Texture>;
-	
+
 	public var triIndexes(default,null) : Indexes;
 	public var quadIndexes(default,null) : Indexes;
 	public var usedMemory(default, null) : Int = 0;
@@ -22,14 +22,14 @@ class MemoryManager {
 	public function new(driver) {
 		this.driver = driver;
 	}
-	
+
 	public function init() {
 		indexes = new Array();
 		textures = new Array();
 		buffers = new Array();
 		initIndexes();
 	}
-	
+
 	function initIndexes() {
 		var indices = new hxd.IndexBuffer();
 		for( i in 0...SIZE ) indices.push(i);
@@ -58,7 +58,7 @@ class MemoryManager {
 	}
 
 	// ------------------------------------- BUFFERS ------------------------------------------
-	
+
 	/**
 		Clean empty (unused) buffers
 	**/
@@ -78,7 +78,7 @@ class MemoryManager {
 			}
 		}
 	}
-	
+
 	@:allow(h3d.impl.ManagedBuffer)
 	function allocManaged( m : ManagedBuffer ) {
 		if( m.vbuf != null ) return;
@@ -106,7 +106,7 @@ class MemoryManager {
 		usedMemory -= m.size * m.stride * 4;
 		bufferCount--;
 	}
-	
+
 	@:allow(h3d.Buffer)
 	@:access(h3d.Buffer)
 	function allocBuffer( b : Buffer, stride : Int ) {
@@ -119,20 +119,24 @@ class MemoryManager {
 			b.vertices = max;
 			// make sure to alloc in order
 			allocBuffer(b, stride);
+
+			var n = b;
+			while( n.next != null ) n = n.next;
+
 			var flags = [];
 			for( f in ALL_FLAGS )
 				if( b.flags.has(f) )
 					flags.push(f);
-			b.next = new Buffer(rem, stride, flags);
+			n.next = new Buffer(rem, stride, flags);
 			return;
 		}
-		
+
 		if( !b.flags.has(Managed) ) {
 			var m = new ManagedBuffer(stride, b.vertices);
-			m.allocBuffer(b);
+			if( !m.allocBuffer(b) ) throw "assert";
 			return;
 		}
-		
+
 		// look into one of the managed buffers
 		var m = buffers[stride], prev = null;
 		while( m != null ) {
@@ -166,19 +170,19 @@ class MemoryManager {
 			}
 			b.vertices = total;
 		}
-		
+
 		// alloc a new managed buffer
 		m = new ManagedBuffer(stride, SIZE, [Managed]);
 		if( prev == null )
 			buffers[stride] = m;
 		else
 			prev.next = m;
-	
+
 		if( !m.allocBuffer(b) ) throw "assert";
 	}
 
 	// ------------------------------------- INDEXES ------------------------------------------
-	
+
 	@:allow(h3d.Indexes)
 	function deleteIndexes( i : Indexes ) {
 		indexes.remove(i);
@@ -186,7 +190,7 @@ class MemoryManager {
 		i.ibuf = null;
 		usedMemory -= i.count * 2;
 	}
-	
+
 	@:allow(h3d.Indexes)
 	function allocIndexes( i : Indexes ) {
 		i.ibuf = driver.allocIndexes(i.count);
@@ -194,13 +198,13 @@ class MemoryManager {
 		usedMemory += i.count * 2;
 	}
 
-	
+
 	// ------------------------------------- TEXTURES ------------------------------------------
-	
+
 	function bpp( t : h3d.mat.Texture ) {
 		return 4;
 	}
-	
+
 	public function cleanTextures( force = true ) {
 		textures.sort(sortByLRU);
 		for( t in textures ) {
@@ -212,11 +216,11 @@ class MemoryManager {
 		}
 		return false;
 	}
-	
+
 	function sortByLRU( t1 : h3d.mat.Texture, t2 : h3d.mat.Texture ) {
 		return t1.lastFrame - t2.lastFrame;
 	}
-	
+
 	@:allow(h3d.mat.Texture.dispose)
 	function deleteTexture( t : h3d.mat.Texture ) {
 		textures.remove(t);
@@ -237,9 +241,9 @@ class MemoryManager {
 		textures.push(t);
 		texMemory += t.width * t.height * bpp(t);
 	}
-	
+
 	// ------------------------------------- DISPOSE ------------------------------------------
-	
+
 	public function onContextLost() {
 		dispose();
 		initIndexes();
@@ -268,7 +272,7 @@ class MemoryManager {
 		usedMemory = 0;
 		texMemory = 0;
 	}
-	
+
 	// ------------------------------------- STATS ------------------------------------------
 
 	function freeMemorySize() {
@@ -286,7 +290,7 @@ class MemoryManager {
 		}
 		return size;
 	}
-	
+
 	public function stats() {
 		var total = 0, free = 0, count = 0;
 		for( b in buffers ) {
