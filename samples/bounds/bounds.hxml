@@ -1,6 +1,8 @@
 -swf bounds.swf
 -swf-header 800:600:60:FFFFFF
 --flash-strict
--swf-version 11
+-swf-version 11.6
 -main Bounds
--lib h3d
+-cp ../..
+-D h3d
+-lib hxsl
