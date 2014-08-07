@@ -126,6 +126,10 @@ abstract BitmapData(InnerData) {
 		this.dispose();
 		#end
 	}
+
+	public function clone() {
+		return sub(0,0,width,height);
+	}
 	
 	public function sub( x, y, w, h ) : BitmapData {
 		#if flash
