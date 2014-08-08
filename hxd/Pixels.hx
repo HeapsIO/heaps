@@ -151,6 +151,18 @@ class Pixels {
 		}
 	}
 
+	public function clone() {
+		var p = new Pixels(width, height, null, format);
+		p.flags = flags;
+		p.flags.unset(ReadOnly);
+		if( bytes != null ) {
+			var size = width * height * bytesPerPixel(format);
+			p.bytes = hxd.impl.Tmp.getBytes(size);
+			p.bytes.blit(0, bytes, offset, size);
+		}
+		return p;
+	}
+
 	public static function bytesPerPixel( format : PixelFormat ) {
 		return switch( format ) {
 		case ARGB, BGRA, RGBA: 4;
