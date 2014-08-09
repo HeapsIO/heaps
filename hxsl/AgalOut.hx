@@ -5,7 +5,7 @@ import hxsl.RuntimeShader;
 import format.agal.Data;
 
 class AgalOut {
-	
+
 	static var COMPS = [X, Y, Z, W];
 
 	var code : Array<Opcode>;
@@ -22,7 +22,7 @@ class AgalOut {
 	public dynamic function error( msg : String, p : Position ) {
 		throw msg;
 	}
-	
+
 	public function compile( s : RuntimeShaderData, version ) : Data {
 		vertex = s.vertex;
 		nullReg = { t : RTemp, index : -1, swiz : null, access : null };
@@ -30,7 +30,7 @@ class AgalOut {
 		opcodes = [];
 		tmpCount = 0;
 		varMap = new Map();
-		
+
 		var varying = [];
 		var paramCount = 0, varCount = 0, inputCount = 0, outCount = 0, texCount = 0;
 		for( v in s.data.vars ) {
@@ -62,10 +62,10 @@ class AgalOut {
 		}
 		if( paramCount != s.globalsSize + s.paramsSize )
 			throw "assert";
-		
+
 		if( s.data.funs.length != 1 ) throw "assert";
 		expr(s.data.funs[0].expr);
-		
+
 		// force write of all varying components
 		for( v in varying ) {
 			if( v.swiz == null ) continue;
@@ -87,15 +87,15 @@ class AgalOut {
 			code : opcodes,
 		};
 	}
-	
+
 	inline function mov(dst, src) {
 		op(OMov(dst, src));
 	}
-	
+
 	inline function op(o) {
 		opcodes.push(o);
 	}
-	
+
 	inline function swiz( r : Reg, sw : Array<C> ) : Reg {
 		if( r.access != null ) throw "assert";
 		var sw = sw;
@@ -108,7 +108,17 @@ class AgalOut {
 			access : null
 		};
 	}
-	
+
+	inline function offset( r : Reg, k : Int ) : Reg {
+		if( r.swiz != null || r.access != null ) throw "assert";
+		return {
+			t : r.t,
+			index : r.index + k,
+			swiz : null,
+			access : null,
+		};
+	}
+
 	function expr( e : TExpr ) : Reg {
 		switch( e.e ) {
 		case TVarDecl(v, init):
@@ -130,11 +140,34 @@ class AgalOut {
 				return r;
 			case OpAssignOp(op):
 				var r1 = expr(e1);
-				mov(r1, expr( { e : TBinop(op, e1, e2), t : e.t, p : e.p } ));
+				mov(r1, expr( { e : TBinop(op, e1, e2), t : e1.t, p : e.p } ));
 				return r1;
+			case OpAdd:
+				var r = allocReg(e.t);
+				op(OAdd(r, expr(e1), expr(e2)));
+				return r;
+			case OpSub:
+				var r = allocReg(e.t);
+				op(OSub(r, expr(e1), expr(e2)));
+				return r;
 			case OpMult:
 				var r = allocReg(e.t);
-				op(OMul(r, expr(e1), expr(e2)));
+				var r1 = expr(e1);
+				var r2 = expr(e2);
+				switch( [e1.t, e2.t] ) {
+				case [TFloat | TVec(_), TFloat | TVec(_)]:
+					op(OMul(r, r1, r2));
+				case [TVec(3, VFloat), TMat3x4]:
+					op(OM34(r, r1, r2));
+				case [TVec(4, VFloat), TMat4]:
+					op(OM44(r, r1, r2));
+				default:
+					throw "assert " + [e1.t, e2.t];
+				}
+				return r;
+			case OpDiv:
+				var r = allocReg(e.t);
+				op(ODiv(r, expr(e1), expr(e2)));
 				return r;
 			default:
 				throw "TODO " + bop;
@@ -197,6 +230,32 @@ class AgalOut {
 						throw "assert " + a.t;
 					}
 					return r;
+				case [Mat3x4, _]:
+					var regs = [for( a in args ) expr(a)];
+					var r0 = regs[0];
+					var align = true;
+					for( i in 0...regs.length ) {
+						var r = regs[i];
+						if( r.t == r0.t && r.index == r0.index + i && r.swiz == null && r.access == null ) continue;
+						align = false;
+						break;
+					}
+					if( align )
+						return r0;
+					throw "TODO";
+				case [Mat4, _]:
+					var regs = [for( a in args ) expr(a)];
+					var r0 = regs[0];
+					var align = true;
+					for( i in 0...regs.length ) {
+						var r = regs[i];
+						if( r.t == r0.t && r.index == r0.index + i && r.swiz == null && r.access == null ) continue;
+						align = false;
+						break;
+					}
+					if( align )
+						return r0;
+					throw "TODO";
 				default:
 					throw "TODO " + g + ":" + args.length;
 				}
@@ -230,7 +289,7 @@ class AgalOut {
 			throw "TODO " + e.e;
 		}
 	}
-	
+
 	function regSize( t : Type ) {
 		return switch( t ) {
 		case TInt, TFloat, TVec(_), TBytes(_): 1;
@@ -241,7 +300,7 @@ class AgalOut {
 		case TVoid, TString, TBool, TSampler2D, TSamplerCube, TFun(_), TArray(_): throw "assert "+t;
 		}
 	}
-	
+
 	function defSwiz( t : Type ) {
 		return switch( t ) {
 		case TInt, TFloat: [X];
@@ -250,7 +309,7 @@ class AgalOut {
 		default: null;
 		}
 	}
-	
+
 	function reg( v : TVar ) : Reg {
 		var r = varMap.get(v.id);
 		if( r != null ) return r;
@@ -259,13 +318,13 @@ class AgalOut {
 		varMap.set(v.id, r);
 		return r;
 	}
-	
+
 	function allocReg( ?t : Type ) : Reg {
 		var r = { t : RTemp, index : tmpCount, swiz : t == null ? null : defSwiz(t), access : null };
 		tmpCount += t == null ? 1 : regSize(t);
 		return r;
 	}
-	
+
 	public static function toAgal( shader, version ) {
 		var a = new AgalOut();
 		return a.compile(shader, version);

@@ -288,7 +288,7 @@ class Stage3dDriver extends Driver {
 	override function selectMaterial( pass : Pass ) {
 		selectMaterialBits(@:privateAccess pass.bits);
 	}
-	
+
 	function selectMaterialBits( bits : Int ) {
 		var diff = bits ^ curMatBits;
 		if( diff == 0 )
@@ -333,7 +333,7 @@ class Stage3dDriver extends Driver {
 		new format.agal.Writer(o).write(agal);
 		return o.getBytes();
 	}
-	
+
 	override function selectShader( shader : hxsl.RuntimeShader ) {
 		var shaderChanged = false;
 		var p = programs.get(shader.id);
@@ -344,7 +344,7 @@ class Stage3dDriver extends Driver {
 			var fdata = compileShader(shader.fragment).getData();
 			vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 			fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
-			
+
 			var pos = 0;
 			for( v in shader.vertex.data.vars )
 				if( v.kind == Input ) {
@@ -384,7 +384,7 @@ class Stage3dDriver extends Driver {
 		}
 		return shaderChanged;
 	}
-	
+
 	override function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Textures:
@@ -414,8 +414,8 @@ class Stage3dDriver extends Driver {
 				}
 			}
 		case Params:
-			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, curShader.s.vertex.globalsSize, buffers.vertex.params.toData());
-			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, curShader.s.fragment.globalsSize, buffers.fragment.params.toData());
+			if( curShader.s.vertex.paramsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, curShader.s.vertex.globalsSize, buffers.vertex.params.toData());
+			if( curShader.s.fragment.paramsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, curShader.s.fragment.globalsSize, buffers.fragment.params.toData());
 		case Globals:
 			if( curShader.s.vertex.globalsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, 0, buffers.vertex.globals.toData());
 			if( curShader.s.fragment.globalsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, 0, buffers.fragment.globals.toData());

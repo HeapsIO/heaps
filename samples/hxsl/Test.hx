@@ -1,6 +1,6 @@
 
 class Test {
-	
+
 	@:access(hxsl)
 	static function main() {
 		var shaders = [
@@ -14,18 +14,18 @@ class Test {
 		var s = cache.link(instances, cache.allocOutputVars(["output.position", "output.color"]));
 		trace("VERTEX=\n" + hxsl.Printer.shaderToString(s.vertex.data,true));
 		trace("FRAGMENT=\n" + hxsl.Printer.shaderToString(s.fragment.data,true));
-		
+
 		#if js
 		haxe.Log.trace("START");
 		try {
-		
+
 		var canvas = js.Browser.document.createCanvasElement();
 		var gl = canvas.getContextWebGL();
 		var GL = js.html.webgl.GL;
-		
+		var glout = new hxsl.GlslOut();
+
 		function compile(kind, shader) {
-			var code = hxsl.GlslOut.toGlsl(shader);
-			trace(code);
+			var code = glout.run(shader);
 			var s = gl.createShader(kind);
 			gl.shaderSource(s, code);
 			gl.compileShader(s);
@@ -37,10 +37,10 @@ class Test {
 			}
 			return s;
 		}
-			
+
 		var vs = compile(GL.VERTEX_SHADER, s.vertex.data);
 		var fs = compile(GL.FRAGMENT_SHADER, s.fragment.data);
-		
+
 		var p = gl.createProgram();
 		gl.attachShader(p, vs);
 		gl.attachShader(p, fs);
@@ -49,14 +49,14 @@ class Test {
 			var log = gl.getProgramInfoLog(p);
 			throw "Program linkage failure: "+log;
 		}
-		
+
 		trace("LINK SUCCESS");
-		
+
 		} catch( e : Dynamic ) {
 			trace(e);
 		}
 
 		#end
 	}
-		
+
 }
