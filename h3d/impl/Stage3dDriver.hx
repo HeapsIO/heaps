@@ -32,9 +32,17 @@ class VertexWrapper {
 
 }
 
-private class CompiledProgram {
+private class CompiledShader {
 	public var p : flash.display3D.Program3D;
-	public function new() {
+	public var s : hxsl.RuntimeShader;
+	public var stride : Int;
+	public var bufferFormat : Int;
+	public var inputNames : Array<String>;
+	public function new(s) {
+		this.s = s;
+		stride = 0;
+		bufferFormat = 0;
+		inputNames = [];
 	}
 }
 
@@ -47,7 +55,7 @@ class Stage3dDriver extends Driver {
 	var onCreateCallback : Bool -> Void;
 
 	var curMatBits : Int;
-	var curShader : hxsl.RuntimeShader;
+	var curShader : CompiledShader;
 	var curBuffer : VertexBuffer;
 	var curMultiBuffer : Array<Int>;
 	var curAttributes : Int;
@@ -60,7 +68,7 @@ class Stage3dDriver extends Driver {
 	var enableDraw : Bool;
 	var capture : { bmp : hxd.BitmapData, callb : Void -> Void };
 	var frame : Int;
-	var programs : Map<Int, CompiledProgram>;
+	var programs : Map<Int, CompiledShader>;
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -318,6 +326,7 @@ class Stage3dDriver extends Driver {
 	}
 
 	function compileShader( s : hxsl.RuntimeShader.RuntimeShaderData ) : haxe.io.Bytes {
+		//trace(hxsl.Printer.shaderToString(s.data));
 		var agal = hxsl.AgalOut.toAgal(s, 1);
 		//trace(format.agal.Tools.toString(agal));
 		var o = new haxe.io.BytesOutput();
@@ -329,30 +338,42 @@ class Stage3dDriver extends Driver {
 		var shaderChanged = false;
 		var p = programs.get(shader.id);
 		if( p == null ) {
-			p = new CompiledProgram();
+			p = new CompiledShader(shader);
 			p.p = ctx.createProgram();
 			var vdata = compileShader(shader.vertex).getData();
 			var fdata = compileShader(shader.fragment).getData();
 			vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 			fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
+			
+			var pos = 0;
+			for( v in shader.vertex.data.vars )
+				if( v.kind == Input ) {
+					p.stride += hxsl.Ast.Tools.size(v.type);
+					var fmt = switch( v.type ) {
+					case TBytes(4): flash.display3D.Context3DVertexBufferFormat.BYTES_4;
+					case TFloat: flash.display3D.Context3DVertexBufferFormat.FLOAT_1;
+					case TVec(2, VFloat): flash.display3D.Context3DVertexBufferFormat.FLOAT_2;
+					case TVec(3, VFloat): flash.display3D.Context3DVertexBufferFormat.FLOAT_3;
+					case TVec(4, VFloat): flash.display3D.Context3DVertexBufferFormat.FLOAT_4;
+					default: throw "unsupported input " + v.type;
+					}
+					var idx = FORMAT.indexOf(fmt);
+					if( idx < 0 ) throw "assert " + fmt;
+					p.bufferFormat |= idx << (pos * 3);
+					p.inputNames.push(v.name);
+					pos++;
+				}
+
 			p.p.upload(vdata, fdata);
 			programs.set(shader.id, p);
 			curShader = null;
 		}
-		if( shader != curShader ) {
+		if( p != curShader ) {
 			ctx.setProgram(p.p);
 			shaderChanged = true;
-			curShader = shader;
-		}
-		throw "TODO";
-		return true;
-		/*
-		if( s != curShader ) {
-			ctx.setProgram(s.program);
-			shaderChanged = true;
-			s.varsChanged = true;
+			curShader = p;
 			// unbind extra textures
-			var tcount : Int = s.textures.length;
+			var tcount : Int = shader.fragment.textures.length + shader.vertex.textures.length;
 			while( curTextures.length > tcount ) {
 				curTextures.pop();
 				ctx.setTextureAt(curTextures.length, null);
@@ -360,14 +381,15 @@ class Stage3dDriver extends Driver {
 			// force remapping of vertex buffer
 			curBuffer = null;
 			curMultiBuffer[0] = -1;
-			curShader = s;
 		}
-		if( s.varsChanged ) {
-			s.varsChanged = false;
-			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, 0, s.vertexVars.toData());
-			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, 0, s.fragmentVars.toData());
-			for( i in 0...s.textures.length ) {
-				var t = s.textures[i];
+		return shaderChanged;
+	}
+	
+	override function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
+		switch( which ) {
+		case Textures:
+			for( i in 0...curShader.s.fragment.textures.length ) {
+				var t = buffers.fragment.tex[i];
 				if( t == null || t.isDisposed() )
 					t = h3d.mat.Texture.fromColor(0xFFFF00FF);
 				if( t != null && t.t == null && t.realloc != null ) {
@@ -381,7 +403,7 @@ class Stage3dDriver extends Driver {
 				}
 				t.lastFrame = frame;
 				// if we have set one of the texture flag manually or if the shader does not configure the texture flags
-				if( !t.hasDefaultFlags() || !s.texHasConfig[s.textureMap[i]] ) {
+				if( true /*!t.hasDefaultFlags() || !s.texHasConfig[s.textureMap[i]]*/ ) {
 					if( cur == null || t.bits != curSamplerBits[i] ) {
 						ctx.setSamplerStateAt(i, WRAP[t.wrap.getIndex()], FILTER[t.filter.getIndex()], MIP[t.mipMap.getIndex()]);
 						curSamplerBits[i] = t.bits;
@@ -391,16 +413,19 @@ class Stage3dDriver extends Driver {
 					curSamplerBits[i] = -1;
 				}
 			}
+		case Params:
+			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, curShader.s.vertex.globalsSize, buffers.vertex.params.toData());
+			ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, curShader.s.fragment.globalsSize, buffers.fragment.params.toData());
+		case Globals:
+			if( curShader.s.vertex.globalsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, 0, buffers.vertex.globals.toData());
+			if( curShader.s.fragment.globalsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, 0, buffers.fragment.globals.toData());
 		}
-		*/
 	}
 
 	override function selectBuffer( v : VertexBuffer ) {
 		if( v == curBuffer )
 			return;
 		curBuffer = v;
-		throw "TODO";
-		/*
 		curMultiBuffer[0] = -1;
 		if( v.b.stride < curShader.stride )
 			throw "Buffer stride (" + v.b.stride + ") and shader stride (" + curShader.stride + ") mismatch";
@@ -417,17 +442,13 @@ class Stage3dDriver extends Driver {
 		for( i in pos...curAttributes )
 			ctx.setVertexBufferAt(i, null);
 		curAttributes = pos;
-		*/
 	}
 
 	override function getShaderInputNames() {
-		throw "TODO";
-		return [];
+		return curShader.inputNames;
 	}
 
 	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
-		throw "TODO";
-		/*
 		// select the multiple buffers elements
 		var changed = false;
 		var b = buffers;
@@ -462,7 +483,6 @@ class Stage3dDriver extends Driver {
 			curAttributes = pos;
 			curBuffer = null;
 		}
-		*/
 	}
 
 	function debugDraw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {

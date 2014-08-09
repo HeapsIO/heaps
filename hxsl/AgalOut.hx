@@ -97,7 +97,10 @@ class AgalOut {
 	}
 	
 	inline function swiz( r : Reg, sw : Array<C> ) : Reg {
-		if( r.access != null || r.swiz != null ) throw "assert";
+		if( r.access != null ) throw "assert";
+		var sw = sw;
+		if( r.swiz != null )
+			sw = [for( c in sw ) r.swiz[c.getIndex()]];
 		return {
 			t : r.t,
 			index : r.index,
@@ -159,12 +162,40 @@ class AgalOut {
 						}
 					}
 					return r;
+				case [Vec3, _]:
+					var r = allocReg(TVec(3,VFloat));
+					var pos = 0;
+					for( a in args ) {
+						var e = expr(a);
+						switch( a.t ) {
+						case TFloat:
+							mov(swiz(r, [COMPS[pos++]]), e);
+						case TVec(2, VFloat):
+							mov(swiz(r, [COMPS[pos++], COMPS[pos++]]), e);
+						case TVec(3, VFloat):
+							mov(r, e);
+						default:
+							throw "assert " + e.t;
+						}
+					}
+					return r;
 				case [Texture2D, [t,uv]]:
 					var t = expr(t);
 					var uv = expr(uv);
 					var r = allocReg();
 					if( t.t != RTexture ) throw "assert";
 					op(OTex(r, uv, { index : t.index, flags : [TIgnoreSampler] }));
+					return r;
+				case [Dot, [a, b]]:
+					var r = allocReg(TFloat);
+					switch( a.t ) {
+					case TVec(3, _):
+						op(ODp3(r, expr(a), expr(b)));
+					case TVec(4, _):
+						op(ODp4(r, expr(a), expr(b)));
+					default:
+						throw "assert " + a.t;
+					}
 					return r;
 				default:
 					throw "TODO " + g + ":" + args.length;
@@ -177,11 +208,18 @@ class AgalOut {
 			case TConst(CInt(v)):
 				var r = expr(e);
 				var stride = switch( e.t ) {
-				case TArray(TSampler2D | TSamplerCube, _): 1;
-				case TArray(t, _): regSize(t);
+				case TArray(TSampler2D | TSamplerCube, _): 4;
+				case TArray(t, _): Tools.size(t);
 				default: throw "assert " + e.t;
 				};
-				return { t : r.t, index : r.index + v * stride, swiz : null, access : null };
+				var index = v * stride;
+				var swiz = null;
+				if( stride < 4 ) {
+					swiz = [];
+					for( i in 0...stride )
+						swiz.push(COMPS[(i + index) & 3]);
+				} else if( index & 3 != 0 ) throw "assert"; // not register-aligned !
+				return { t : r.t, index : r.index + (index>>2), swiz : swiz, access : null };
 			default:
 				throw "TODO " + index.e;
 			}
@@ -198,7 +236,7 @@ class AgalOut {
 		case TInt, TFloat, TVec(_), TBytes(_): 1;
 		case TMat3, TMat3x4: 3;
 		case TMat4: 4;
-		case TArray(t, SConst(size)): regSize(t) * size;
+		case TArray(t, SConst(size)): (Tools.size(t) * size + 3) >> 2;
 		case TStruct(vl): throw "TODO";
 		case TVoid, TString, TBool, TSampler2D, TSamplerCube, TFun(_), TArray(_): throw "assert "+t;
 		}
