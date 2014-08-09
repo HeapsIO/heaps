@@ -50,14 +50,14 @@ class GlDriver extends Driver {
 	static var gl = GL;
 	var fixMult : Bool;
 	#end
-	
+
 	var curAttribs : Int;
 	var curProgram : CompiledProgram;
 	var curMatBits : Int;
 	var programs : Map<Int, CompiledProgram>;
 	var hasTargetFlip : Bool;
 	var frame : Int;
-	
+
 	public function new() {
 		#if js
 		canvas = @:privateAccess hxd.Stage.getCanvas();
@@ -77,26 +77,26 @@ class GlDriver extends Driver {
 		curMatBits = -1;
 		selectMaterialBits(0);
 	}
-	
+
 	override function begin(frame) {
 		this.frame = frame;
 		reset();
 	}
-	
+
 	override function reset() {
 		gl.useProgram(null);
 		curProgram = null;
 		hasTargetFlip = false;
 	}
-	
+
 	override function getShaderInputNames() {
 		return curProgram.attribNames;
 	}
-	
-	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+
+	function compileShader( glout : hxsl.GlslOut, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
-		var code = hxsl.GlslOut.toGlsl(shader.data);
+		var code = glout.run(shader.data);
 		gl.shaderSource(s, code);
 		gl.compileShader(s);
 		if( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
@@ -107,20 +107,21 @@ class GlDriver extends Driver {
 		}
 		return new CompiledShader(s,shader.vertex);
 	}
-	
+
 	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var prefix = s.vertex ? "vertex" : "fragment";
 		s.globals = gl.getUniformLocation(p.p, prefix + "Globals");
 		s.params = gl.getUniformLocation(p.p, prefix + "Params");
 		s.textures = [for( i in 0...shader.textures.length ) gl.getUniformLocation(p.p, prefix + "Textures[" + i + "]")];
 	}
-	
+
 	override function selectShader( shader : hxsl.RuntimeShader ) {
 		var p = programs.get(shader.id);
 		if( p == null ) {
 			p = new CompiledProgram();
-			p.vertex = compileShader(shader.vertex);
-			p.fragment = compileShader(shader.fragment);
+			var glout = new hxsl.GlslOut();
+			p.vertex = compileShader(glout,shader.vertex);
+			p.fragment = compileShader(glout,shader.fragment);
 			p.p = gl.createProgram();
 			gl.attachShader(p.p, p.vertex.s);
 			gl.attachShader(p.p, p.fragment.s);
@@ -144,7 +145,7 @@ class GlDriver extends Driver {
 					case TFloat: 1;
 					default: throw "assert " + v.type;
 					}
-					p.attribs.push( { offset : p.stride, index : gl.getAttribLocation(p.p, v.name), size:size, type:t } );
+					p.attribs.push( { offset : p.stride, index : gl.getAttribLocation(p.p, glout.varNames.get(v.id)), size:size, type:t } );
 					p.attribNames.push(v.name);
 					p.stride += size;
 				default:
@@ -162,12 +163,12 @@ class GlDriver extends Driver {
 		curProgram = p;
 		return true;
 	}
-	
+
 	override function uploadShaderBuffers( buf : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 		uploadBuffer(curProgram.vertex, buf.vertex, which);
 		uploadBuffer(curProgram.fragment, buf.fragment, which);
 	}
-	
+
 	function uploadBuffer( s : CompiledShader, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Globals:
@@ -184,10 +185,10 @@ class GlDriver extends Driver {
 					t.realloc();
 				}
 				t.lastFrame = frame;
-				
+
 				gl.activeTexture(GL.TEXTURE0 + i);
 				gl.uniform1i(s.textures[i], i);
-				
+
 				gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 				var flags = TFILTERS[Type.enumIndex(t.mipMap)][Type.enumIndex(t.filter)];
 				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
@@ -198,12 +199,12 @@ class GlDriver extends Driver {
 			}
 		}
 	}
-	
+
 	override function selectMaterial( pass : Pass ) {
 		selectMaterialBits(@:privateAccess pass.bits);
 		// TODO : Blend Op value sync
 	}
-	
+
 	function selectMaterialBits( bits : Int ) {
 		if( hasTargetFlip ) {
 			// switch culling font/back
@@ -265,13 +266,13 @@ class GlDriver extends Driver {
 		}
 		curMatBits = bits;
 	}
-	
+
 	override function clear( r : Float, g : Float, b : Float, a : Float ) {
 		gl.clearColor(r, g, b, a);
 		gl.clearDepth(1);
 		gl.clear(GL.COLOR_BUFFER_BIT|GL.DEPTH_BUFFER_BIT);
 	}
-	
+
 	override function resize(width, height) {
 		#if js
 		// prevent infinite grow if pixelRatio != 1
@@ -286,7 +287,7 @@ class GlDriver extends Driver {
 		#end
 		gl.viewport(0, 0, width, height);
 	}
-	
+
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var tt = gl.createTexture();
 		var tt : Texture = { t : tt, width : t.width, height : t.height, fmt : GL.UNSIGNED_BYTE };
@@ -321,7 +322,7 @@ class GlDriver extends Driver {
 		gl.bindTexture(GL.TEXTURE_2D, null);
 		return tt;
 	}
-	
+
 	override function allocVertex( m : ManagedBuffer ) : VertexBuffer {
 		var b = gl.createBuffer();
 		#if js
@@ -337,7 +338,7 @@ class GlDriver extends Driver {
 		#end
 		return { b : b, stride : m.stride };
 	}
-	
+
 	override function allocIndexes( count : Int ) : IndexBuffer {
 		var b = gl.createBuffer();
 		#if js
@@ -362,7 +363,7 @@ class GlDriver extends Driver {
 	override function disposeIndexes( i : IndexBuffer ) {
 		gl.deleteBuffer(i);
 	}
-	
+
 	override function disposeVertex( v : VertexBuffer ) {
 		gl.deleteBuffer(v.b);
 	}
@@ -383,7 +384,7 @@ class GlDriver extends Driver {
 		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
-	
+
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
 		var stride : Int = v.stride;
 		var buf = new Float32Array(buf.getNative());
@@ -417,7 +418,7 @@ class GlDriver extends Driver {
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
-	
+
 	override function selectBuffer( v : VertexBuffer ) {
 		var stride : Int = v.stride;
 		if( stride < curProgram.stride )
@@ -426,7 +427,7 @@ class GlDriver extends Driver {
 		for( a in curProgram.attribs )
 			gl.vertexAttribPointer(a.index, a.size, a.type, false, stride * 4, a.offset * 4);
 	}
-	
+
 	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
 		for( a in curProgram.attribs ) {
 			gl.bindBuffer(GL.ARRAY_BUFFER, @:privateAccess buffers.buffer.buffer.vbuf.b);
@@ -434,13 +435,13 @@ class GlDriver extends Driver {
 			buffers = buffers.next;
 		}
 	}
-	
+
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
 		gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
-	
+
 	override function present() {
 		gl.finish();
 	}
@@ -448,7 +449,7 @@ class GlDriver extends Driver {
 	override function isDisposed() {
 		return gl.isContextLost();
 	}
-	
+
 	override function setRenderTarget( tex : h3d.mat.Texture, clearColor : Int ) {
 		if( tex == null ) {
 			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
@@ -479,7 +480,7 @@ class GlDriver extends Driver {
 		haxe.Timer.delay(onCreate.bind(false), 1);
 		#end
 	}
-	
+
 	override function hasFeature( f : Feature ) : Bool {
 		return switch( f ) {
 		case StandardDerivatives:
@@ -488,25 +489,25 @@ class GlDriver extends Driver {
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null;
 		}
 	}
-	
+
 	static var TFILTERS = [
 		[[GL.NEAREST,GL.NEAREST],[GL.LINEAR,GL.LINEAR]],
 		[[GL.NEAREST,GL.NEAREST_MIPMAP_NEAREST],[GL.LINEAR,GL.LINEAR_MIPMAP_NEAREST]],
 		[[GL.NEAREST,GL.NEAREST_MIPMAP_LINEAR],[GL.LINEAR,GL.LINEAR_MIPMAP_LINEAR]],
 	];
-	
+
 	static var TWRAP = [
 		GL.CLAMP_TO_EDGE,
 		GL.REPEAT,
 	];
-	
+
 	static var FACES = [
 		0,
 		GL.FRONT, // front/back reversed wrt stage3d
 		GL.BACK,
 		GL.FRONT_AND_BACK,
 	];
-	
+
 	static var BLEND = [
 		GL.ONE,
 		GL.ZERO,
@@ -524,7 +525,7 @@ class GlDriver extends Driver {
 		GL.ONE_MINUS_CONSTANT_ALPHA,
 		GL.SRC_ALPHA_SATURATE,
 	];
-	
+
 	static var COMPARE = [
 		GL.ALWAYS,
 		GL.NEVER,
@@ -535,7 +536,7 @@ class GlDriver extends Driver {
 		GL.LESS,
 		GL.LEQUAL,
 	];
-	
+
 	static var OP = [
 		GL.FUNC_ADD,
 		GL.FUNC_SUBTRACT,

@@ -2,18 +2,18 @@ package hxsl;
 using hxsl.Ast;
 
 class Printer {
-	
+
 	var buffer : StringBuf;
 	var varId : Bool;
 
 	public function new(varId = false) {
 		this.varId = varId;
 	}
-	
+
 	inline function add(v:Dynamic) {
 		buffer.add(v);
 	}
-	
+
 	public function shaderString( s : ShaderData ) {
 		buffer = new StringBuf();
 		for( v in s.vars ) {
@@ -28,7 +28,7 @@ class Printer {
 		}
 		return buffer.toString();
 	}
-	
+
 	public function varString( v : TVar ) {
 		buffer = new StringBuf();
 		addVar(v, null);
@@ -47,7 +47,7 @@ class Printer {
 		return buffer.toString();
 	}
 
-	function addVar( v : TVar, defKind : VarKind, tabs = "" ) {
+	function addVar( v : TVar, defKind : VarKind, tabs = "", ?parent ) {
 		if( v.qualifiers != null ) {
 			for( q in v.qualifiers )
 				add("@" + (switch( q ) {
@@ -75,21 +75,26 @@ class Printer {
 			case Output:
 				add("@output ");
 			}
-		add("var " + v.name + (varId?"@" + v.id:"") + " : ");
+		add("var ");
+		if( v.parent == parent )
+			add(v.name + (varId?"@" + v.id:""));
+		else
+			addVarName(v);
+		add(" : ");
 		switch( v.type ) {
 		case TStruct(vl):
 			add("{");
 			var first = true;
 			for( v in vl ) {
 				if( first ) first = false else add(", ");
-				addVar(v,v.kind);
+				addVar(v,v.kind,tabs,v);
 			}
 			add("}");
 		default:
 			add(v.type.toString());
 		}
 	}
-	
+
 	function addFun( f : TFunction ) {
 		add("function " + f.ref.name + "(");
 		var first = true;
@@ -105,7 +110,7 @@ class Printer {
 		add(") : "+f.ret.toString()+" ");
 		addExpr(f.expr,"");
 	}
-	
+
 	function addVarName( v : TVar ) {
 		if( v.parent != null ) {
 			addVarName(v.parent);
@@ -115,7 +120,7 @@ class Printer {
 		if( varId )
 			add("@" + v.id);
 	}
-	
+
 	function addExpr( e : TExpr, tabs : String ) : Void {
 		switch( e.e ) {
 		case TVar(v):
@@ -220,7 +225,7 @@ class Printer {
 			add("]");
 		}
 	}
-	
+
 	public static function opStr( op : Ast.Binop ) {
 		return switch(op) {
 		case OpAdd:"+";
@@ -256,5 +261,5 @@ class Printer {
 	public static function shaderToString( s : ShaderData, varId = false ) {
 		return new Printer(varId).shaderString(s);
 	}
-	
+
 }

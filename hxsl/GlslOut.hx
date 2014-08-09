@@ -2,45 +2,55 @@ package hxsl;
 import hxsl.Ast;
 
 class GlslOut {
-	
-	static var MAT34 = "struct mat3x4 { vec4 a; vec4 b; vec4 c; };";
 
-	var buf : StringBuf;
-	var keywords : Map<String,Bool>;
-	var exprValues : Array<String>;
-	var locals : Array<TVar>;
-	var decls : Array<String>;
-	var globalNames : Map<TGlobal,String>;
-	
-	public function new() {
-		keywords = [ "input" => true, "output" => true, "discard" => true ];
-		for( i in 2...5 )
-			keywords.set("dvec" + i, true);
-		globalNames = new Map();
+	static var KWD_LIST = [
+		"input", "output", "discard",
+		"dvec2", "dvec3", "dvec4",
+	];
+	static var KWDS = [for( k in KWD_LIST ) k => true];
+	static var GLOBALS = {
+		var m = new Map();
 		for( g in hxsl.Ast.TGlobal.createAll() ) {
 			var n = "" + g;
 			n = n.charAt(0).toLowerCase() + n.substr(1);
-			globalNames.set(g, n);
+			m.set(g, n);
 		}
-		globalNames.set(ToInt, "int");
-		globalNames.set(ToFloat, "float");
-		globalNames.set(ToBool, "bool");
+		m.set(ToInt, "int");
+		m.set(ToFloat, "float");
+		m.set(ToBool, "bool");
+		for( g in m )
+			KWDS.set(g, true);
+		m;
+	};
+	static var MAT34 = "struct mat3x4 { vec4 a; vec4 b; vec4 c; };";
+
+	var buf : StringBuf;
+	var exprValues : Array<String>;
+	var locals : Array<TVar>;
+	var decls : Array<String>;
+	var isVertex : Bool;
+	var allNames : Map<String, Int>;
+	public var varNames : Map<Int,String>;
+
+	public function new() {
+		varNames = new Map();
+		allNames = new Map();
 	}
-	
+
 	inline function add( v : Dynamic ) {
 		buf.add(v);
 	}
-	
-	function ident( i : String ) {
-		add(keywords.exists(i) ? "_" + i : i);
+
+	inline function ident( v : TVar ) {
+		add(varName(v));
 	}
-	
+
 	function decl( s : String ) {
 		for( d in decls )
 			if( d == s ) return;
 		decls.push(s);
 	}
-	
+
 	function addType( t : Type ) {
 		switch( t ) {
 		case TVoid:
@@ -89,14 +99,14 @@ class GlslOut {
 			add("[");
 			switch( size ) {
 			case SVar(v):
-				ident(v.name);
+				ident(v);
 			case SConst(v):
 				add(v);
 			}
 			add("]");
 		}
 	}
-	
+
 	function addVar( v : TVar ) {
 		switch( v.type ) {
 		case TArray(t, size):
@@ -106,17 +116,17 @@ class GlslOut {
 			v.type = old;
 			add("[");
 			switch( size ) {
-			case SVar(v): ident(v.name);
+			case SVar(v): ident(v);
 			case SConst(n): add(n);
 			}
 			add("]");
 		default:
 			addType(v.type);
 			add(" ");
-			ident(v.name);
+			ident(v);
 		}
 	}
-	
+
 	function addValue( e : TExpr, tabs : String ) {
 		switch( e.e ) {
 		case TBlock(el):
@@ -144,7 +154,7 @@ class GlslOut {
 			addExpr(e, tabs);
 		}
 	}
-	
+
 	function addExpr( e : TExpr, tabs : String ) {
 		switch( e.e ) {
 		case TConst(c):
@@ -160,7 +170,7 @@ class GlslOut {
 			case CBool(b): add(b);
 			}
 		case TVar(v):
-			ident(v.name);
+			ident(v);
 		case TGlobal(g):
 			switch( g ) {
 			case Mat3x4:
@@ -174,7 +184,7 @@ class GlslOut {
 				decl("float unpack( vec4 color ) { return dot(color,vec4(1., 1. / 255., 1. / (255. * 255.), 1. / (255. * 255. * 255.))); }");
 			default:
 			}
-			add(globalNames.get(g));
+			add(GLOBALS.get(g));
 		case TParenthesis(e):
 			add("(");
 			addValue(e,tabs);
@@ -216,7 +226,7 @@ class GlslOut {
 		case TVarDecl(v, init):
 			locals.push(v);
 			if( init != null ) {
-				ident(v.name);
+				ident(v);
 				add(" = ");
 				addValue(init, tabs);
 			} else {
@@ -285,7 +295,28 @@ class GlslOut {
 			add("]");
 		}
 	}
-	
+
+	function varName( v : TVar ) {
+		if( v.kind == Output )
+			return isVertex ? "gl_Position" : "gl_FragColor";
+		var n = varNames.get(v.id);
+		if( n != null )
+			return n;
+		n = v.name;
+		if( KWDS.exists(n) )
+			n = "_" + n;
+		if( allNames.exists(n) ) {
+			var k = 2;
+			n += "_";
+			while( allNames.exists(n + k) )
+				k++;
+			n += k;
+		}
+		varNames.set(v.id, n);
+		allNames.set(n, v.id);
+		return n;
+	}
+
 	public function run( s : ShaderData ) {
 		locals = [];
 		decls = [];
@@ -295,7 +326,8 @@ class GlslOut {
 
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
-		
+		isVertex = f.kind == Vertex;
+
 		for( v in s.vars ) {
 			switch( v.kind ) {
 			case Param, Global:
@@ -304,31 +336,21 @@ class GlslOut {
 				add("attribute ");
 			case Var:
 				add("varying ");
-			case Function: continue;
-			case Output:
-				switch( f.kind ) {
-				case Vertex:
-					v.name = "gl_Position";
-				case Fragment:
-					v.name = "gl_FragColor";
-				default:
-					throw "assert";
-				}
-				continue;
+			case Function, Output: continue;
 			case Local:
 			}
 			addVar(v);
 			add(";\n");
 		}
 		add("\n");
-		
+
 		var tmp = buf;
 		buf = new StringBuf();
 		add("void main(void) ");
 		addExpr(f.expr, "");
 		exprValues.push(buf.toString());
 		buf = tmp;
-		
+
 		for( v in locals ) {
 			addVar(v);
 			add(";\n");
@@ -343,9 +365,9 @@ class GlslOut {
 		buf = null;
 		return decls.join("\n");
 	}
-	
+
 	public static function toGlsl( s : ShaderData ) {
 		return new GlslOut().run(s);
 	}
-	
+
 }
