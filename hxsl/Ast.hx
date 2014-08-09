@@ -383,6 +383,25 @@ class Tools {
 		}
 		return { e : ed, t : e.t, p : e.p };
 	}
+	
+	public static function size( t : Type ) {
+		return switch( t ) {
+		case TVoid: 0;
+		case TFloat, TInt: 1;
+		case TVec(n, _): n;
+		case TStruct(vl):
+			var s = 0;
+			for( v in vl ) s += size(v.type);
+			return s;
+		case TMat3: 9;
+		case TMat4: 16;
+		case TMat3x4: 12;
+		case TBytes(s): s;
+		case TBool, TString, TSampler2D, TSamplerCube, TFun(_): 0;
+		case TArray(t, SConst(v)): size(t) * v;
+		case TArray(_, SVar(_)): 0;
+		}
+	}
 
 }
 

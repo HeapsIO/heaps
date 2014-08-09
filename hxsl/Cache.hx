@@ -67,7 +67,7 @@ class Cache {
 			shaders.push(i.shader);
 		}
 		var s = linker.link(shaders, this.outVars[outVars]);
-		
+
 		// params tracking
 		var paramVars = new Map();
 		for( v in linker.allVars )

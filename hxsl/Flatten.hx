@@ -100,8 +100,9 @@ class Flatten {
 			else {
 				switch( v.type ) {
 				case TArray(t, _):
-					var stride = varSize(t, a.t) >> 2;
-					if( stride == 0 ) stride = 1;
+					var stride = varSize(t, a.t);
+					if( stride == 0 || stride & 3 != 0 ) throw "assert " + t;
+					stride >>= 2;
 					var toInt = { e : TCall( { e : TGlobal(ToInt), t : TFun([]), p : vp }, [eindex]), t : TInt, p : vp };
 					access(a, t, vp, readOffset.bind(a,stride,{ e : TBinop(OpMult,toInt,mkInt(stride,vp)), t : TInt, p : vp }));
 				default:
@@ -298,10 +299,7 @@ class Flatten {
 		case TMat4 if( t == VFloat ): 16;
 		case TMat3x4 if( t == VFloat ): 12;
 		case TMat3 if( t == VFloat ): 9;
-		case TArray(at, SConst(n)):
-			var s = varSize(at, t);
-			s += (4 - (s & 3)) & 3;
-			s * n;
+		case TArray(at, SConst(n)): varSize(at, t) * n;
 		default:
 			throw v.toString() + " size unknown for type " + t;
 		}

@@ -68,16 +68,14 @@ class Manager {
 			return 12;
 		case TArray(t, SConst(len)):
 			var v : Array<Dynamic> = v;
-			var stride = 0;
+			var size = 0;
 			for( i in 0...len ) {
 				var n = v[i];
 				if( n == null ) break;
-				stride = fillRec(n, t, out, pos);
-				// align
-				stride += (4 - (stride & 3)) & 3;
-				pos += stride;
+				size = fillRec(n, t, out, pos);
+				pos += size;
 			}
-			return len * stride;
+			return len * size;
 		case TStruct(vl):
 			var tot = 0;
 			for( vv in vl )
