@@ -15,14 +15,14 @@ class Cache {
 	var outVarsMap : Map<String, Int>;
 	var outVars : Array<Array<String>>;
 	public var constsToGlobal : Bool;
-	
+
 	function new() {
 		constsToGlobal = false;
 		linkCache = new Map();
 		outVarsMap = new Map();
 		outVars = [];
 	}
-	
+
 	public function allocOutputVars( vars : Array<String> ) {
 		var key = vars.join(",");
 		var id = outVarsMap.get(key);
@@ -40,7 +40,7 @@ class Cache {
 		outVarsMap.set(key, id);
 		return id;
 	}
-	
+
 	public function link( instances : Array<SharedShader.ShaderInstance>, outVars : Int ) {
 		var c = linkCache.get(outVars);
 		if( c == null ) {
@@ -59,7 +59,7 @@ class Cache {
 		}
 		if( c.linked != null )
 			return c.linked;
-		
+
 		var linker = new hxsl.Linker();
 		var shaders = [];
 		for( i in instances ) {
@@ -79,10 +79,10 @@ class Cache {
 				var i = instances[v.instanceIndex];
 				paramVars.set(v.id, { instance : v.instanceIndex, index : i.params.get(v.merged[0].id) } );
 			}
-		
+
 		var s = new hxsl.Splitter().split(s);
 		var s = new hxsl.Dce().dce(s.vertex, s.fragment);
-		
+
 		var r = new RuntimeShader();
 		r.vertex = flattenShader(s.vertex, Vertex, paramVars);
 		r.vertex.vertex = true;
@@ -90,14 +90,14 @@ class Cache {
 		c.linked = r;
 		return r;
 	}
-	
+
 	function getPath( v : TVar ) {
 		if( v.parent == null )
 			return v.name;
 		return getPath(v.parent) + "." + v.name;
 	}
-	
-	function flattenShader( s : ShaderData, kind : FunctionKind, params : Map < Int, { instance:Int, index:Int } > ) {
+
+	function flattenShader( s : ShaderData, kind : FunctionKind, params : Map<Int,{ instance:Int, index:Int }> ) {
 		var flat = new Flatten();
 		var c = new RuntimeShaderData();
 		var data = flat.flatten(s, kind, constsToGlobal);
@@ -151,7 +151,7 @@ class Cache {
 		c.data = data;
 		return c;
 	}
-	
+
 	static var INST : Cache;
 	public static function get() : Cache {
 		var c = INST;
@@ -159,9 +159,9 @@ class Cache {
 			INST = c = new Cache();
 		return c;
 	}
-	
+
 	public static function clear() {
 		INST = null;
 	}
-	
+
 }

@@ -19,10 +19,10 @@ class Splitter {
 	var vars : Map<Int,VarProps>;
 	var varNames : Map<String,TVar>;
 	var varMap : Map<TVar,TVar>;
-	
+
 	public function new() {
 	}
-	
+
 	public function split( s : ShaderData ) : { vertex : ShaderData, fragment : ShaderData } {
 		var vfun = null, vvars = new Map();
 		var ffun = null, fvars = new Map();
@@ -125,7 +125,7 @@ class Splitter {
 			checkVar(v, true, vvars);
 		for( v in fvars )
 			checkVar(v, false, vvars);
-		
+
 		// support for double mapping v -> v1 -> v2
 		for( v in varMap.keys() ) {
 			var v2 = varMap.get(varMap.get(v));
@@ -151,7 +151,7 @@ class Splitter {
 		var vvars = [for( v in vvars ) if( !v.local ) v.v];
 		// make sure we sort the inputs the same way they were sent in
 		vvars.sort(function(v1, v2) return v1.id - v2.id);
-		
+
 		return {
 			vertex : {
 				name : "vertex",
@@ -165,7 +165,7 @@ class Splitter {
 			},
 		};
 	}
-	
+
 	function addExpr( f : TFunction, e : TExpr ) {
 		switch( f.expr.e ) {
 		case TBlock(el):
@@ -174,7 +174,7 @@ class Splitter {
 			f.expr = { e : TBlock([f.expr, e]), t : TVoid, p : f.expr.p };
 		}
 	}
-	
+
 	function checkVar( v : VarProps, vertex : Bool, vvars : Map<Int,VarProps> ) {
 		switch( v.v.kind ) {
 		case Local if( v.requireInit ):
@@ -187,7 +187,7 @@ class Splitter {
 		default:
 		}
 	}
-	
+
 	function mapVars( e : TExpr ) {
 		return switch( e.e ) {
 		case TVar(v):
@@ -197,7 +197,7 @@ class Splitter {
 			e.map(mapVars);
 		}
 	}
-	
+
 	function get( v : TVar ) {
 		var i = vars.get(v.id);
 		if( i == null ) {
@@ -207,7 +207,7 @@ class Splitter {
 		}
 		return i;
 	}
-	
+
 	function uniqueName( v : TVar ) {
 		if( v.kind == Global || v.kind == Output || v.kind == Input )
 			return;
@@ -222,7 +222,7 @@ class Splitter {
 		}
 		varNames.set(v.name, v);
 	}
-	
+
 	function checkExpr( e : TExpr ) {
 		switch( e.e ) {
 		case TVar(v):
@@ -250,5 +250,5 @@ class Splitter {
 			e.iter(checkExpr);
 		}
 	}
-	
+
 }
