@@ -32,6 +32,12 @@ class VertexWrapper {
 
 }
 
+private class CompiledProgram {
+	public var p : flash.display3D.Program3D;
+	public function new() {
+	}
+}
+
 class Stage3dDriver extends Driver {
 
 	public static var PROFILE = flash.display3D.Context3DProfile.BASELINE;
@@ -54,6 +60,7 @@ class Stage3dDriver extends Driver {
 	var enableDraw : Bool;
 	var capture : { bmp : hxd.BitmapData, callb : Void -> Void };
 	var frame : Int;
+	var programs : Map<Int, CompiledProgram>;
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -61,6 +68,7 @@ class Stage3dDriver extends Driver {
 	public function new() {
 		empty = new flash.utils.ByteArray();
 		s3d = flash.Lib.current.stage.stage3Ds[0];
+		programs = new Map();
 		curTextures = [];
 		curMultiBuffer = [];
 	}
@@ -97,6 +105,9 @@ class Stage3dDriver extends Driver {
 
 	function onCreate(_) {
 		var old = ctx;
+		for( p in programs )
+			p.p.dispose();
+		programs = new Map();
 		if( old != null ) {
 			if( old.driverInfo != "Disposed" ) throw "Duplicate onCreate()";
 			old.dispose();
@@ -306,21 +317,36 @@ class Stage3dDriver extends Driver {
 		curMatBits = bits;
 	}
 
+	function compileShader( s : hxsl.RuntimeShader.RuntimeShaderData ) : haxe.io.Bytes {
+		var agal = hxsl.AgalOut.toAgal(s, 1);
+		//trace(format.agal.Tools.toString(agal));
+		var o = new haxe.io.BytesOutput();
+		new format.agal.Writer(o).write(agal);
+		return o.getBytes();
+	}
+	
 	override function selectShader( shader : hxsl.RuntimeShader ) {
+		var shaderChanged = false;
+		var p = programs.get(shader.id);
+		if( p == null ) {
+			p = new CompiledProgram();
+			p.p = ctx.createProgram();
+			var vdata = compileShader(shader.vertex).getData();
+			var fdata = compileShader(shader.fragment).getData();
+			vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
+			fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
+			p.p.upload(vdata, fdata);
+			programs.set(shader.id, p);
+			curShader = null;
+		}
+		if( shader != curShader ) {
+			ctx.setProgram(p.p);
+			shaderChanged = true;
+			curShader = shader;
+		}
 		throw "TODO";
 		return true;
 		/*
-		var shaderChanged = false;
-		var s = shader.getInstance();
-		if( s.program == null ) {
-			s.program = ctx.createProgram();
-			var vdata = s.vertexBytes.getData();
-			var fdata = s.fragmentBytes.getData();
-			vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
-			fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
-			s.program.upload(vdata, fdata);
-			curShader = null; // in case we had the same shader and it was disposed
-		}
 		if( s != curShader ) {
 			ctx.setProgram(s.program);
 			shaderChanged = true;
@@ -366,7 +392,6 @@ class Stage3dDriver extends Driver {
 				}
 			}
 		}
-		return shaderChanged;
 		*/
 	}
 
