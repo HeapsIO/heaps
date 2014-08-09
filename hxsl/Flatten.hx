@@ -21,15 +21,41 @@ class Flatten {
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
 	var varMap : Map<TVar,Alloc>;
+	var econsts : TExpr;
+	public var consts : Array<Float>;
 	public var allocData : Map< TVar, Array<Alloc> >;
 	
 	public function new() {
 	}
 	
-	public function flatten( s : ShaderData, kind : FunctionKind ) : ShaderData {
+	public function flatten( s : ShaderData, kind : FunctionKind, constsToGlobal : Bool ) : ShaderData {
 		globals = [];
 		params = [];
 		outVars = [];
+		if( constsToGlobal ) {
+			consts = [];
+			var p = s.funs[0].expr.p;
+			var gc : TVar = {
+				id : Tools.allocVarId(),
+				name : "__consts__",
+				kind : Global,
+				type : null,
+			};
+			econsts = {
+				e : TVar(gc),
+				t : null,
+				p : p,
+			};
+			s = {
+				name : s.name,
+				vars : s.vars.copy(),
+				funs : [for( f in s.funs ) mapFun(f, mapConsts)],
+			};
+			if( consts.length > 0 ) {
+				gc.type = econsts.t = TArray(TFloat, SConst(consts.length));
+				s.vars.push(gc);
+			}
+		}
 		varMap = new Map();
 		allocData = new Map();
 		for( v in s.vars )
@@ -45,13 +71,17 @@ class Flatten {
 		return {
 			name : s.name,
 			vars : outVars,
-			funs : [for( f in s.funs ) {
-				kind : f.kind,
-				ret : f.ret,
-				args : f.args,
-				ref : f.ref,
-				expr : mapExpr(f.expr),
-			}],
+			funs : [for( f in s.funs ) mapFun(f, mapExpr)],
+		};
+	}
+	
+	function mapFun( f : TFunction, mapExpr : TExpr -> TExpr ) : TFunction {
+		return {
+			kind : f.kind,
+			ret : f.ret,
+			args : f.args,
+			ref : f.ref,
+			expr : mapExpr(f.expr),
 		};
 	}
 	
@@ -82,6 +112,31 @@ class Flatten {
 			e.map(mapExpr);
 		};
 		return optimize(e);
+	}
+	
+	function mapConsts( e : TExpr ) : TExpr {
+		switch( e.e ) {
+		case TArray(ea, eindex = { e : TConst(CInt(_)) } ):
+			return { e : TArray(mapConsts(ea), eindex), t : e.t, p : e.p };
+		case TConst(c):
+			switch( c ) {
+			case CFloat(v):
+				return allocConst(v, e.p);
+			default:
+				return e;
+			}
+		default:
+			return e.map(mapConsts);
+		}
+	}
+	
+	function allocConst( v : Float, p ) : TExpr {
+		var index = consts.indexOf(v);
+		if( index < 0 ) {
+			index = consts.length;
+			consts.push(v);
+		}
+		return { e : TArray(econsts, { e : TConst(CInt(index)), t : TInt, p : p } ), t : TFloat, p : p };
 	}
 
 	inline function mkInt(v:Int,pos) {

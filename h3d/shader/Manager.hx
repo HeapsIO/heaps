@@ -8,6 +8,9 @@ class Manager {
 
 	public function new(output) {
 		shaderCache = hxsl.Cache.get();
+		#if flash
+		shaderCache.constsToGlobal = true;
+		#end
 		globals = new hxsl.Globals();
 		this.output = shaderCache.allocOutputVars(output);
 	}
@@ -101,7 +104,13 @@ class Manager {
 		inline function fill(buf:Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			for( g in s.globals ) {
 				var v = globals.fastGet(g.gid);
-				if( v == null ) throw "Missing global value " + g.path;
+				if( v == null ) {
+					if( g.path == "__consts__" ) {
+						fillRec(s.consts, g.type, buf.globals, g.pos);
+						continue;
+					}
+					throw "Missing global value " + g.path;
+				}
 				fillRec(v, g.type, buf.globals, g.pos);
 			}
 		}

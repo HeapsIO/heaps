@@ -14,8 +14,10 @@ class Cache {
 	var linkCache : Map<Int,SearchMap>;
 	var outVarsMap : Map<String, Int>;
 	var outVars : Array<Array<String>>;
+	public var constsToGlobal : Bool;
 	
 	function new() {
+		constsToGlobal = false;
 		linkCache = new Map();
 		outVarsMap = new Map();
 		outVars = [];
@@ -98,7 +100,8 @@ class Cache {
 	function flattenShader( s : ShaderData, kind : FunctionKind, params : Map < Int, { instance:Int, index:Int } > ) {
 		var flat = new Flatten();
 		var c = new RuntimeShaderData();
-		var data = flat.flatten(s, kind);
+		var data = flat.flatten(s, kind, constsToGlobal);
+		c.consts = flat.consts;
 		for( g in flat.allocData.keys() ) {
 			var alloc = flat.allocData.get(g);
 			switch( g.kind ) {

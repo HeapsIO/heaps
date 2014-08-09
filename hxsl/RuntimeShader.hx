@@ -37,6 +37,7 @@ class RuntimeShaderData {
 	public var globals : Array<AllocGlobal>;
 	public var globalsSize : Int;
 	public var textures : Array<AllocParam>;
+	public var consts : Array<Float>;
 	public function new() {
 	}
 }
