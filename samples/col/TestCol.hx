@@ -2,10 +2,10 @@ class TestCol extends hxd.App {
 
 	static var RW = 100;
 	static var RH = 30;
-	
+
 	var rrect : h2d.Graphics;
 	var line : h2d.Graphics;
-	
+
 	override function init() {
 		var size = RW - RH;
 		var k = 10;
@@ -21,23 +21,23 @@ class TestCol extends hxd.App {
 			rrect.addPoint(-size + RH * Math.cos(a), RH * Math.sin(a));
 		}
 		rrect.endFill();
-		
+
 		rrect.x = s2d.width >> 1;
 		rrect.y = s2d.height >> 1;
 		rrect.rotation = Math.PI / 3;
-		
+
 		line = new h2d.Graphics(s2d);
 		line.beginFill(0xFFFFFFFF);
 		line.drawRect(0, -0.5, 100, 1);
 		line.endFill();
-		
+
 		//var r = new h2d.col.RoundRect(rrect.x, rrect.y, RW, RH, rrect.rotation);
 		//mapCol( function(pt) return r.distance(pt) );
 	}
-	
+
 	function mapCol( dist : h2d.col.Point -> Float, scale = 1. ) {
 		var pt = new h2d.col.Point();
-		var bmp = hxd.Pixels.alloc(s2d.width, s2d.height);
+		var bmp = hxd.Pixels.alloc(s2d.width, s2d.height, BGRA);
 		for( x in 0...bmp.width )
 			for( y in 0...bmp.height ) {
 				pt.x = x + 0.5;
@@ -58,7 +58,7 @@ class TestCol extends hxd.App {
 		s2d.addChildAt(view, 0);
 		bmp.dispose();
 	}
-	
+
 	override function update(dt:Float) {
 		var px = s2d.mouseX;
 		var py = s2d.mouseY;
@@ -68,22 +68,22 @@ class TestCol extends hxd.App {
 
 		var r = new h2d.col.RoundRect(rrect.x, rrect.y, RW * 2, RH * 2, rrect.rotation);
 		var pt = new h2d.col.Point(px, py);
-		
+
 		rrect.rotation += 0.002;
 		rrect.color.set(0, 0, 1);
-		
+
 		line.x = px;
 		line.y = py;
 		var n = r.getNormalAt(pt);
 		line.rotation = Math.atan2(n.y, n.x);
-		
+
 		if( r.inside(pt) )
 			rrect.color.set(0, 1, 0);
 	}
-	
+
 	static function main() {
 		new TestCol();
 	}
-	
+
 }
 
