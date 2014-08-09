@@ -113,4 +113,10 @@ enum TextureFlags {
 		16-bit RGBA format (1 bit of alpha)
 	**/
 	Fmt5_5_5_1;
+	/**
+		Assumes that the color value of the texture is premultiplied by the alpha component.
+	**/
+	AlphaPremultiplied;
 }
+
+

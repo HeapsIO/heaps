@@ -3,9 +3,11 @@ class Bounds extends hxd.App {
 	var boxes : Array<h2d.Bitmap>;
 	var g : h2d.Graphics;
 	var colors = [0xFF0000 , 0x00FF00 , 0x0000FF, 0xFF00FF];
+	var time = 0.;
 
 	override function init() {
 		boxes = [];
+		
 		g = new h2d.Graphics(s2d);
 		for( i in 0...colors.length ) {
 			var size = Std.int(200 / (i + 4));
@@ -13,8 +15,8 @@ class Bounds extends hxd.App {
 			var b = new h2d.Bitmap(h2d.Tile.fromColor(c | 0x80000000, size, size).sub(0, 0, size, size, -Std.random(size), -Std.random(size)), i == 0 ? s2d : boxes[i - 1]);
 			b.addChild(new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFFFF, 8, 8).sub(0, 0, 8, 8, -4, -4)));
 			if( i == 0 ) {
-				b.x = s2d.width >> 1;
-				b.y = s2d.height >> 1;
+				b.x = s2d.width * 0.5;
+				b.y = s2d.height * 0.5;
 			} else {
 				b.x = Std.random(50) - 25;
 				b.y = Std.random(50) - 25;
@@ -24,20 +26,53 @@ class Bounds extends hxd.App {
 			b.scale(1.2 - i * 0.1);
 			boxes.push(b);
 		}
+		for( b in boxes )
+			new h2d.Graphics(b);
 		var tf = new h2d.Text(hxd.res.FontBuilder.getFont("Verdana", 16), boxes[0]);
 		tf.text = "Some quite long rotating text";
 		tf.x = -5;
 		tf.y = 15;
 		tf.filter = true;
+		
+		
+		
+		var g = new h2d.Bitmap( h2d.Tile.fromColor(0xFFFF0000,32, 32), s2d);
+		g.x += 32;
+		g.y += 32;
+		trace(g.getBounds(g.parent).width);
+		g.scaleX = 2.0;
+		trace(g.getBounds(g.parent).width);
+		
+		
+		var g =  new h2d.Graphics(s2d );
+		g.drawRect(0, 0, 32, 32);
+		g.x += 32;
+		g.y += 32;
+		trace(g.getBounds(g.parent).width);
+		g.scaleX = 2.0;
+		trace(g.getBounds(g.parent).width);
+		
+		g.scaleY = 3.0;
+		trace(g.getBounds(g.parent).height);
 	}
 
 	override function update(dt:Float) {
+		time += dt;
 		g.clear();
 		for( i in 0...boxes.length ) {
 			var b = boxes[i];
-			b.rotate( (i + 1) * dt * 0.01 );
+			b.rotate( (i + 1) * dt * 0.001 );
+			b.setScale(1 + Math.sin(time * 0.1 / (i + 2)) * 0.2);
 			var b = b.getBounds();
 			g.beginFill((colors[i]>>2)&0x3F3F3F);
+			g.drawRect(b.x, b.y, b.width, b.height);
+		}
+		for( i in 1...2 ) {
+			var prev = boxes[i - 1];
+			var b = boxes[i].getBounds(prev);
+			var g = Std.instance(prev.getChildAt(2), h2d.Graphics);
+			g.clear();
+			g.beginFill(0xFFFFFF, 0.5);
 			g.drawRect(b.x, b.y, b.width, b.height);
 		}
 	}

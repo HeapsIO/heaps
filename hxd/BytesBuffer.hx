@@ -15,6 +15,24 @@ abstract BytesBuffer(InnerData) {
 		#end
 	}
 	
+	public static inline function fromU8Array(arr:Array<Int>) {
+		var v = new BytesBuffer();
+		for ( i in 0...arr.length)
+			v.writeByte( arr[i] );
+		return v;
+	}
+	
+	public static inline function fromIntArray(arr:Array<Int>) {
+		var v = new BytesBuffer();
+		for ( i in 0...arr.length)
+			v.writeInt32(arr[i]);
+		return v;
+	}
+	
+	public inline function writeByte( v : Int ) {
+		this.writeByte(v&255);
+	}
+	
 	public inline function writeFloat( v : Float ) {
 		this.writeFloat(v);
 	}

@@ -1,5 +1,20 @@
 package h2d;
 
+private class ElementsIterator {
+	var e : BatchElement;
+	public inline function new(e) {
+		this.e = e;
+	}
+	public inline function hasNext() {
+		return e != null;
+	}
+	public inline function next() {
+		var n = e;
+		e = @:privateAccess e.next;
+		return n;
+	}
+}
+
 @:allow(h2d.SpriteBatch)
 class BatchElement {
 	public var x : Float;
@@ -226,6 +241,10 @@ class SpriteBatch extends Drawable {
 
 	public inline function isEmpty() {
 		return first == null;
+	}
+	
+	public inline function getElements() {
+		return new ElementsIterator(first);
 	}
 
 }

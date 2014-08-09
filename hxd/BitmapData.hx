@@ -1,6 +1,13 @@
 package hxd;
 
-private typedef InnerData = #if flash flash.display.BitmapData #elseif js js.html.CanvasRenderingContext2D #elseif cpp flash.display.BitmapData #else Int #end;
+private typedef InnerData =
+#if (flash||openfl)
+	flash.display.BitmapData
+#elseif js
+	js.html.ImageData
+#else
+	Int
+#end;
 
 abstract BitmapData(InnerData) {
 
@@ -9,12 +16,12 @@ abstract BitmapData(InnerData) {
 	static var tmpPoint = new flash.geom.Point();
 	static var tmpMatrix = new flash.geom.Matrix();
 	#end
-	
+
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
-	
+
 	public inline function new(width:Int, height:Int) {
-		#if flash
+		#if (flash||openfl)
 		this = new flash.display.BitmapData(width, height, true, 0);
 		#else
 		var canvas = js.Browser.document.createCanvasElement();
@@ -23,15 +30,15 @@ abstract BitmapData(InnerData) {
 		this = canvas.getContext2d();
 		#end
 	}
-	
+
 	public inline function clear( color : Int ) {
-		#if flash
+		#if (flash||openfl)
 		this.fillRect(this.rect, color);
 		#else
 		fill(0, 0, width, height, color);
 		#end
 	}
-	
+
 	public function fill( x : Int, y : Int, width : Int, height : Int, color : Int ) {
 		#if flash
 		var r = tmpRect;
@@ -45,7 +52,7 @@ abstract BitmapData(InnerData) {
 		this.fillRect(x, y, width, height);
 		#end
 	}
-	
+
 	public function draw( x : Int, y : Int, src : BitmapData, srcX : Int, srcY : Int, width : Int, height : Int, ?blendMode : h2d.BlendMode ) {
 		#if flash
 		if( blendMode == null ) blendMode = Normal;
@@ -117,13 +124,17 @@ abstract BitmapData(InnerData) {
 			throw "TODO";
 		}
 	}
-	
+
 	public inline function dispose() {
-		#if flash
+		#if (flash||openfl)
 		this.dispose();
 		#end
 	}
-	
+
+	public function clone() {
+		return sub(0,0,width,height);
+	}
+
 	public function sub( x, y, w, h ) : BitmapData {
 		#if flash
 		var b = new flash.display.BitmapData(w, h);
@@ -134,7 +145,7 @@ abstract BitmapData(InnerData) {
 		return null;
 		#end
 	}
-	
+
 	/**
 		Inform that we will perform several pixel operations on the BitmapData.
 	**/
@@ -161,7 +172,7 @@ abstract BitmapData(InnerData) {
 		Access the pixel color value at the given position. Note : this function can be very slow if done many times and the BitmapData has not been locked.
 	**/
 	public inline function getPixel( x : Int, y : Int ) : Int {
-		#if flash
+		#if ( flash || openfl )
 		return this.getPixel32(x, y);
 		#elseif js
 		return canvasGetPixel(this, x, y);
@@ -175,7 +186,7 @@ abstract BitmapData(InnerData) {
 		Modify the pixel color value at the given position. Note : this function can be very slow if done many times and the BitmapData has not been locked.
 	**/
 	public inline function setPixel( x : Int, y : Int, c : Int ) {
-		#if flash
+		#if (flash||openfl)
 		this.setPixel32(x, y, c);
 		#elseif js
 		canvasSetPixel(this, x, y, c);
@@ -183,7 +194,7 @@ abstract BitmapData(InnerData) {
 		throw "TODO";
 		#end
 	}
-	
+
 	inline function get_width() : Int {
 		#if js
 		return this.canvas.width;
@@ -199,7 +210,7 @@ abstract BitmapData(InnerData) {
 		return this.height;
 		#end
 	}
-	
+
 	public inline function getPixels() : Pixels {
 		return nativeGetPixels(this);
 	}
@@ -207,18 +218,20 @@ abstract BitmapData(InnerData) {
 	public inline function setPixels( pixels : Pixels ) {
 		nativeSetPixels(this, pixels);
 	}
-	
+
 	public inline function toNative() : InnerData {
 		return this;
 	}
-	
+
 	public static inline function fromNative( bmp : InnerData ) : BitmapData {
 		return cast bmp;
 	}
-	
+
 	static function nativeGetPixels( b : InnerData ) {
 		#if flash
-		return new Pixels(b.width, b.height, haxe.io.Bytes.ofData(b.getPixels(b.rect)), ARGB);
+		var p = new Pixels(b.width, b.height, haxe.io.Bytes.ofData(b.getPixels(b.rect)), ARGB);
+		p.flags.set(AlphaPremultiplied);
+		return p;
 		#elseif js
 		var pixels = [];
 		var w = b.canvas.width;
@@ -227,12 +240,18 @@ abstract BitmapData(InnerData) {
 		for( i in 0...w * h * 4 )
 			pixels.push(data[i]);
 		return new Pixels(b.canvas.width, b.canvas.height, haxe.io.Bytes.ofData(pixels), RGBA);
+		#elseif openfl
+		var bRect = b.rect;
+		var bPixels : haxe.io.Bytes = hxd.ByteConversions.byteArrayToBytes(b.getPixels(b.rect));
+		var p = new Pixels(b.width, b.height, bPixels, ARGB);
+		p.flags.set(AlphaPremultiplied);
+		return p;
 		#else
 		throw "TODO";
 		return null;
 		#end
 	}
-	
+
 	static function nativeSetPixels( b : InnerData, pixels : Pixels ) {
 		#if flash
 		var bytes = pixels.bytes.getData();
@@ -248,20 +267,20 @@ abstract BitmapData(InnerData) {
 		}
 		b.setPixels(b.rect, bytes);
 		#elseif js
-		
 		var img = b.createImageData(pixels.width, pixels.height);
 		pixels.convert(RGBA);
 		for( i in 0...pixels.width*pixels.height*4 ) img.data[i] = pixels.bytes.get(i);
 		b.putImageData(img, 0, 0);
-		
+		#elseif cpp
+		b.setPixels(b.rect, flash.utils.ByteArray.fromBytes(pixels.bytes));
 		#else
 		throw "TODO";
 		return null;
 		#end
 	}
-	
+
 	#if js
-	
+
 	static function canvasLock( b : InnerData, lock : Bool ) untyped {
 		if( lock ) {
 			if( b.lockImage == null )
@@ -273,7 +292,7 @@ abstract BitmapData(InnerData) {
 			}
 		}
 	}
-	
+
 	static function canvasGetPixel( b : InnerData, x : Int, y : Int ) {
 		var i : js.html.ImageData = untyped b.lockImage;
 		var a;
@@ -285,7 +304,7 @@ abstract BitmapData(InnerData) {
 		}
 		return (i.data[a] << 16) | (i.data[a|1] << 8) | i.data[a|2] | (i.data[a|3] << 24);
 	}
-	
+
 	static function canvasSetPixel( b : InnerData, x : Int, y : Int, c : Int ) {
 		var i : js.html.ImageData = untyped b.lockImage;
 		if( i != null ) {

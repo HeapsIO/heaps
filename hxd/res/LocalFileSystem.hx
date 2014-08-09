@@ -23,6 +23,8 @@ private class LocalEntry extends FileEntry {
 		this.file = file;
 		if( fs.createXBX && extension == "fbx" )
 			convertToXBX();
+		if( fs.createMP3 && extension == "wav" )
+			convertToMP3();
 	}
 
 	static var INVALID_CHARS = ~/[^A-Za-z0-9_]/g;
@@ -53,6 +55,32 @@ private class LocalEntry extends FileEntry {
 			var fbx = getXBX();
 			sys.io.File.saveBytes(target, fbx);
 		}
+		#end
+	}
+
+	function convertToMP3() {
+		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".mp3";
+		#if air3
+		var target = new flash.filesystem.File(target);
+		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
+			var p = new flash.desktop.NativeProcess();
+			var i = new flash.desktop.NativeProcessStartupInfo();
+			i.arguments = flash.Vector.ofArray(["-h",file.nativePath,target.nativePath]);
+			var f = new flash.filesystem.File("d:/projects/shiroTools/tools/lame.exe");
+			i.executable = f;
+			i.workingDirectory = f.parent;
+			p.addEventListener("exit", function(e:Dynamic) {
+				var code : Int = Reflect.field(e, "exitCode");
+				if( code == 0 )
+					file = target;
+			});
+			p.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e) {
+				trace(e);
+			});
+			p.start(i);
+			trace("Started");
+		} else
+			file = target;
 		#end
 	}
 
@@ -229,8 +257,14 @@ private class LocalEntry extends FileEntry {
 		for( w in WATCH_LIST ) {
 			var t = try w.file.modificationDate.getTime() catch( e : Dynamic ) -1;
 			if( t != w.watchTime ) {
-				// check we can read (might be deleted/renamed/currently writing)
-				try { w.close(); w.open(); w.close(); } catch( e : Dynamic ) continue;
+				// check we can write (might be deleted/renamed/currently writing)
+				try {
+					var f = new flash.filesystem.FileStream();
+					f.open(w.file, flash.filesystem.FileMode.READ);
+					f.close();
+					f.open(w.file, flash.filesystem.FileMode.APPEND);
+					f.close();
+				} catch( e : Dynamic ) continue;
 				w.watchTime = t;
 				w.watchCallback();
 			}
@@ -250,6 +284,12 @@ private class LocalEntry extends FileEntry {
 				WATCH_LIST = [];
 				flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, checkFiles);
 			}
+			var path = path;
+			for( w in WATCH_LIST )
+				if( w.path == path ) {
+					w.watchCallback = null;
+					WATCH_LIST.remove(w);
+				}
 			WATCH_LIST.push(this);
 		}
 		watchTime = file.modificationDate.getTime();
@@ -266,6 +306,7 @@ class LocalFileSystem implements FileSystem {
 	var root : FileEntry;
 	public var baseDir(default,null) : String;
 	public var createXBX : Bool;
+	public var createMP3 : Bool;
 	public var tmpDir : String;
 
 	public function new( dir : String ) {

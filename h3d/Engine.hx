@@ -3,8 +3,8 @@ import h3d.mat.Data;
 
 class Engine {
 
-	var driver : h3d.impl.Driver;
-	
+	public var driver(default,null) : h3d.impl.Driver;
+
 	public var mem(default,null) : h3d.impl.MemoryManager;
 
 	public var hardware(default, null) : Bool;
@@ -19,14 +19,14 @@ class Engine {
 	public var backgroundColor : Int = 0xFF000000;
 	public var autoResize : Bool;
 	public var fullScreen(default, set) : Bool;
-	
+
 	public var fps(get, never) : Float;
 	public var frameCount : Int = 0;
-	
+
 	var realFps : Float;
 	var lastTime : Float;
 	var antiAlias : Int;
-	
+
 	@:allow(h3d)
 	var curProjMatrix : h3d.Matrix;
 
@@ -35,37 +35,45 @@ class Engine {
 		this.hardware = hardware;
 		this.antiAlias = aa;
 		this.autoResize = true;
-		#if openfl
-		hxd.Stage.openFLBoot(start);
+
+		#if (!flash && openfl)
+			hxd.Stage.openFLBoot(start);
 		#else
-		start();
+			start();
 		#end
 	}
-	
+
 	function start() {
 		fullScreen = !hxd.System.isWindowed;
 		var stage = hxd.Stage.getInstance();
 		realFps = stage.getFrameRate();
 		lastTime = haxe.Timer.stamp();
 		stage.addResizeEvent(onStageResize);
-		#if flash
-		driver = new h3d.impl.Stage3dDriver();
-		#elseif (js || cpp)
+		#if (js || cpp)
 		driver = new h3d.impl.GlDriver();
+		#elseif flash
+		driver = new h3d.impl.Stage3dDriver();
 		#else
 		throw "No driver";
 		#end
 		if( CURRENT == null )
 			CURRENT = this;
 	}
-	
+
 	static var CURRENT : Engine = null;
-	
-	public static function getCurrent() {
+
+	static inline function check() {
+		#if debug
+		if ( CURRENT == null ) throw "no current context, please do this operation after engine init/creation";
+		#end
+	}
+
+	public static inline function getCurrent() {
+		check();
 		return CURRENT;
 	}
-	
-	public function setCurrent() {
+
+	public inline function setCurrent() {
 		CURRENT = this;
 	}
 
@@ -76,7 +84,7 @@ class Engine {
 	public function driverName(details=false) {
 		return driver.getDriverName(details);
 	}
-	
+
 	public function setCapture( bmp : hxd.BitmapData, callb : Void -> Void ) {
 		driver.setCapture(bmp,callb);
 	}
@@ -85,15 +93,15 @@ class Engine {
 		if( driver.selectShader(shader) )
 			shaderSwitches++;
 	}
-	
+
 	public function selectMaterial( pass : h3d.mat.Pass ) {
 		driver.selectMaterial(pass);
 	}
-	
+
 	public function uploadShaderBuffers(buffers, which) {
 		driver.uploadShaderBuffers(buffers, which);
 	}
-	
+
 	function selectBuffer( buf : h3d.impl.ManagedBuffer ) {
 		if( buf.isDisposed() )
 			return false;
@@ -104,11 +112,11 @@ class Engine {
 	public inline function renderTriBuffer( b : Buffer, start = 0, max = -1 ) {
 		return renderBuffer(b, mem.triIndexes, 3, start, max);
 	}
-	
+
 	public inline function renderQuadBuffer( b : Buffer, start = 0, max = -1 ) {
 		return renderBuffer(b, mem.quadIndexes, 2, start, max);
 	}
-	
+
 	// we use preallocated indexes so all the triangles are stored inside our buffers
 	function renderBuffer( b : Buffer, indexes : Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
 		if( indexes.isDisposed() )
@@ -143,7 +151,7 @@ class Engine {
 			b = b.next;
 		} while( b != null );
 	}
-	
+
 	// we use custom indexes, so the number of triangles is the number of indexes/3
 	public function renderIndexed( b : Buffer, indexes : Indexes, startTri = 0, drawTri = -1 ) {
 		if( b.next != null )
@@ -159,7 +167,7 @@ class Engine {
 			drawCalls++;
 		}
 	}
-	
+
 	public function renderMultiBuffers( buffers : Buffer.BufferOffset, indexes : Indexes, startTri = 0, drawTri = -1 ) {
 		var maxTri = Std.int(indexes.count / 3);
 		if( maxTri <= 0 ) return;
@@ -202,13 +210,13 @@ class Engine {
 		else
 			onReady();
 	}
-	
+
 	public dynamic function onContextLost() {
 	}
 
 	public dynamic function onReady() {
 	}
-	
+
 	function onStageResize() {
 		if( autoResize && !driver.isDisposed() ) {
 			var stage = hxd.Stage.getInstance();
@@ -218,14 +226,14 @@ class Engine {
 			onResized();
 		}
 	}
-	
+
 	function set_fullScreen(v) {
 		fullScreen = v;
 		if( mem != null && hxd.System.isWindowed )
 			hxd.Stage.getInstance().setFullScreen(v);
 		return v;
 	}
-	
+
 	public dynamic function onResized() {
 	}
 
@@ -256,7 +264,7 @@ class Engine {
 	function reset() {
 		driver.reset();
 	}
-	
+
 	public function hasFeature(f) {
 		return driver.hasFeature(f);
 	}
@@ -266,19 +274,27 @@ class Engine {
 		reset();
 		curProjMatrix = null;
 	}
-	
+
 	var currentTarget : h3d.mat.Texture;
-	
+
 	public function getTarget() {
 		return currentTarget;
 	}
 
-	public function setTarget( tex : h3d.mat.Texture, clearColor = 0 ) {
+	/**
+	 * Setus a render target to do off screen rendering, might be costly on low end devices
+     * setTarget to null when you're finished rendering to it.
+	 */
+	public function setTarget( tex : h3d.mat.Texture,  clearColor = 0 ) {
 		currentTarget = tex;
 		driver.setRenderTarget(tex, clearColor);
 	}
 
-	public function setRenderZone( x = 0, y = 0, width = -1, height = -1 ) {
+	/**
+	 * Sets up a scissored zone to eliminate pixels outside the given range.
+	 * Call with no parameters to reset to full viewport.
+	 */
+	public function setRenderZone( x = 0, y = 0, ?width = -1, ?height = -1 ) : Void {
 		driver.setRenderZone(x, y, width, height);
 	}
 
@@ -286,7 +302,7 @@ class Engine {
 		if( !begin() ) return false;
 		obj.render(this);
 		end();
-				
+
 		var delta = haxe.Timer.stamp() - lastTime;
 		lastTime += delta;
 		if( delta > 0 ) {
@@ -303,9 +319,9 @@ class Engine {
 		driver.dispose();
 		hxd.Stage.getInstance().removeResizeEvent(onStageResize);
 	}
-	
+
 	function get_fps() {
 		return Math.ceil(realFps * 100) / 100;
 	}
-	
+
 }

@@ -24,6 +24,8 @@ enum BufferFlag {
 }
 
 class Buffer {
+	public static var GUID = 0;
+	public var id : Int;
 
 	public var buffer(default,null) : h3d.impl.ManagedBuffer;
 	public var position(default,null) : Int;
@@ -32,6 +34,7 @@ class Buffer {
 	public var flags(default, null) : haxe.EnumFlags<BufferFlag>;
 	
 	public function new(vertices, stride, ?flags : Array<BufferFlag>) {
+		id = GUID++;
 		this.vertices = vertices;
 		this.flags = new haxe.EnumFlags();
 		if( flags != null )

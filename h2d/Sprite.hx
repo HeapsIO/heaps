@@ -14,6 +14,7 @@ class Sprite {
 	public var scaleY(default,set) : Float;
 	public var rotation(default, set) : Float;
 	public var visible : Bool;
+	public var name : String;
 
 	var matA : Float;
 	var matB : Float;
@@ -40,7 +41,22 @@ class Sprite {
 		if( out == null ) out = new h2d.col.Bounds();
 		if( relativeTo == null ) {
 			relativeTo = getScene();
-			if( relativeTo == null ) relativeTo = this;
+			if( relativeTo == null )
+				relativeTo = new Sprite();
+		} else {
+			var s1 = getScene();
+			var s2 = relativeTo.getScene();
+			if( s1 != s2 ) {
+				// if we are getting the bounds relative to a scene
+				// were are not into, it's the same as taking absolute position
+				if( s1 == null && s2 == relativeTo )
+					relativeTo = new Sprite();
+				else if( s2 == null )
+					throw "Cannot getBounds() with a relative element not in the scene";
+				else
+					throw "Cannot getBounds() with a relative element in a different scene";
+			}
+			relativeTo.syncPos();
 		}
 		syncPos();
 		getBoundsRec(relativeTo, out);
@@ -95,10 +111,10 @@ class Sprite {
 			return;
 		}
 
-		var det = 1 / (relativeTo.matA * relativeTo.matD + relativeTo.matB * relativeTo.matC);
+		var det = 1 / (relativeTo.matA * relativeTo.matD - relativeTo.matB * relativeTo.matC);
 		var rA = relativeTo.matD * det;
-		var rB = -relativeTo.matC * det;
-		var rC = -relativeTo.matB * det;
+		var rB = -relativeTo.matB * det;
+		var rC = -relativeTo.matC * det;
 		var rD = relativeTo.matA * det;
 		var rX = absX - relativeTo.absX;
 		var rY = absY - relativeTo.absY;
@@ -435,6 +451,11 @@ class Sprite {
 
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator(childs);
+	}
+
+	function toString() {
+		var c = Type.getClassName(Type.getClass(this));
+		return name == null ? c : name + "(" + c + ")";
 	}
 
 }

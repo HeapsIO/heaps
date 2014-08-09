@@ -75,7 +75,7 @@ class File {
 			throw "Not supported";
 		#end
 	}
-	
+
 	public static function saveAs( dataContent : haxe.io.Bytes, ?options : BrowseOptions ) {
 		if( options == null ) options = { };
 		#if flash
@@ -113,7 +113,7 @@ class File {
 			throw "Not supported";
 		#end
 	}
-	
+
 	public static function getBytes( path : String ) : haxe.io.Bytes {
 		#if air3
 		var file = try new flash.filesystem.File(path) catch( e : Dynamic ) new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + path);
@@ -132,9 +132,10 @@ class File {
 		#end
 	}
 
-	
+
 	public static function saveBytes( path : String, data : haxe.io.Bytes ) {
 		#if air3
+		if( path == null ) throw "NULL path";
 		var f = new flash.filesystem.File(path);
 		var o = new flash.filesystem.FileStream();
 		o.open(f, flash.filesystem.FileMode.WRITE);
@@ -149,6 +150,7 @@ class File {
 
 	public static function saveBytesAt( path : String, data : haxe.io.Bytes, dataPos : Int, dataSize : Int, filePos : Int ) {
 		#if air3
+		if( path == null ) throw "NULL path";
 		var f = new flash.filesystem.File(path);
 		var o = new flash.filesystem.FileStream();
 		o.open(f, flash.filesystem.FileMode.UPDATE);
@@ -159,7 +161,7 @@ class File {
 		throw "Not supported"; // requires "update" mode
 		#end
 	}
-	
+
 	public static function load( path : String, onLoad : haxe.io.Bytes -> Void, ?onError : String -> Void ) {
 		if( onError == null ) onError = function(_) { };
 		#if flash
@@ -179,5 +181,5 @@ class File {
 		throw "Not supported";
 		#end
 	}
-	
+
 }

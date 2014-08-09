@@ -5,7 +5,7 @@ import haxe.macro.Expr;
 private typedef FileEntry = { e : Expr, t : ComplexType };
 
 class FileTree {
-	
+
 	var path : String;
 	var currentModule : String;
 	var pos : Position;
@@ -16,8 +16,9 @@ class FileTree {
 	var options : EmbedOptions;
 	var isFlash : Bool;
 	var isJS : Bool;
+	var isCPP : Bool;
 	var embedTypes : Array<String>;
-	
+
 	public function new(dir) {
 		this.path = resolvePath(dir);
 		currentModule = Std.string(Context.getLocalClass());
@@ -33,8 +34,9 @@ class FileTree {
 		pairedExt.set("xtra", ["fbx"]);
 		isFlash = Context.defined("flash");
 		isJS = Context.defined("js");
+		isCPP = Context.defined("cpp");
 	}
-	
+
 	public static function resolvePath( ?dir:String ) {
 		var resolve = true;
 		if( dir == null ) {
@@ -49,7 +51,7 @@ class FileTree {
 			Context.error("Resource directory does not exists '" + path + "'", pos);
 		return path;
 	}
-	
+
 	public function embed(options:EmbedOptions) {
 		if( options == null ) options = { };
 		var needTmp = options.compressSounds;
@@ -60,7 +62,7 @@ class FileTree {
 		embedTypes = [];
 		return { tree : embedRec(""), types : embedTypes };
 	}
-	
+
 	function embedRec( relPath : String ) {
 		var dir = this.path + relPath;
 		var data = { };
@@ -86,22 +88,22 @@ class FileTree {
 		}
 		return data;
 	}
-	
+
 	function embedDir( dir : String, relPath : String, fullPath : String ) {
 		var f = embedRec(relPath);
 		if( Reflect.fields(f).length == 0 )
 			return null;
 		return f;
 	}
-	
+
 	function getTime( file : String ) {
 		return try sys.FileSystem.stat(file).mtime.getTime() catch( e : Dynamic ) -1.;
 	}
-	
+
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	function embedFile( file : String, ext : String, relPath : String, fullPath : String ) {
 		var name = "R" + invalidChars.replace(relPath, "_");
-		
+
 		switch( ext.toLowerCase() ) {
 		case "wav" if( options.compressSounds ):
 			var tmp = options.tmpDir + name + ".mp3";
@@ -131,7 +133,7 @@ class FileTree {
 			fullPath = tmp;
 		default:
 		}
-		
+
 		if( isFlash ) {
 			switch( ext.toLowerCase() ) {
 			case "ttf":
@@ -155,9 +157,9 @@ class FileTree {
 				kind : TDClass({ pack : ["flash","utils"], name : "ByteArray", params : [] }),
 			});
 			embedTypes.push("hxd._res." + name);
-		} else if( isJS ) {
+		} else if( isJS || isCPP ) {
 			switch( ext.toLowerCase() ) {
-			case "ttf":
+			case "ttf" if( isJS ):
 				Embed.doEmbedFont(name, fullPath, options.fontsChars);
 				embedTypes.push("hxd._res." + name);
 				return true;
@@ -169,7 +171,7 @@ class FileTree {
 		}
 		return true;
 	}
-	
+
 	public function scan() {
 		var fields = Context.getBuildFields();
 		var dict = new Map();
@@ -207,7 +209,7 @@ class FileTree {
 		scanRec("", fields, dict);
 		return fields;
 	}
-	
+
 	function scanRec( relPath : String, fields : Array<Field>, dict : Map<String,{path:String,field:Field,fget:Field}> ) {
 		var dir = this.path + (relPath == "" ? "" : "/" + relPath);
 		// make sure to rescan if one of the directories content has changed (file added or deleted)
@@ -248,6 +250,8 @@ class FileTree {
 			}
 			if( field != null ) {
 				var fname = invalidChars.replace(f, "_");
+				if( fname.charCodeAt(0) >= "0".code && fname.charCodeAt(0) <= "9".code )
+					fname = "_" + fname;
 				var other = dict.get(fname);
 				if( other != null ) {
 					var pe = pairedExt.get(other.path.split(".").pop().toLowerCase());
@@ -273,7 +277,11 @@ class FileTree {
 						ret : field.t,
 						expr : { expr : EMeta({ name : ":privateAccess", params : [], pos : pos }, { expr : EReturn(field.e), pos : pos }), pos : pos },
 					}),
+					#if openfl
+					meta : [ { name:":keep", pos:pos, params:[] } ],
+					#else
 					meta : [ { name:":extern", pos:pos, params:[] } ],
+					#end
 					access : [AStatic, AInline, APrivate],
 				};
 				var field : Field = {
@@ -288,7 +296,7 @@ class FileTree {
 			}
 		}
 	}
-	
+
 	function handleDir( dir : String, relPath : String, fullPath : String ) : FileEntry {
 		var ofields = [];
 		var dict = new Map();
@@ -322,7 +330,7 @@ class FileTree {
 			e : { expr : ENew(tpath, [macro loader]), pos : pos },
 		};
 	}
-	
+
 	function handleFile( file : String, ext : String, relPath : String, fullPath : String ) : FileEntry {
 		var epath = { expr : EConst(CString(relPath)), pos : pos };
 		switch( ext.toLowerCase() ) {
@@ -345,9 +353,9 @@ class FileTree {
 		}
 		return null;
 	}
-	
+
 	public static function build( ?dir : String ) {
 		return new FileTree(dir).scan();
 	}
-	
+
 }

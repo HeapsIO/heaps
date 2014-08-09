@@ -13,14 +13,15 @@ class Text extends Drawable {
 	public var textColor(default, set) : Int;
 	public var maxWidth(default, set) : Null<Float>;
 	public var dropShadow : { x : Float, y : Float, color : Int, alpha : Float };
-	
+
 	public var textWidth(get, null) : Int;
 	public var textHeight(get, null) : Int;
 	public var textAlign(default, set) : Align;
-	public var letterSpacing(default,set) : Int;
-	
+	public var letterSpacing(default, set) : Int;
+	public var lineSpacing(default,set) : Int;
+
 	var glyphs : TileGroup;
-	
+
 	public function new( font : Font, ?parent ) {
 		super(parent);
 		this.font = font;
@@ -29,7 +30,7 @@ class Text extends Drawable {
 		text = "";
 		textColor = 0xFFFFFF;
 	}
-	
+
 	function set_font(font) {
 		this.font = font;
 		if( glyphs != null ) glyphs.remove();
@@ -38,7 +39,7 @@ class Text extends Drawable {
 		rebuild();
 		return font;
 	}
-	
+
 	function set_textAlign(a) {
 		textAlign = a;
 		rebuild();
@@ -50,7 +51,13 @@ class Text extends Drawable {
 		rebuild();
 		return s;
 	}
-	
+
+	function set_lineSpacing(s) {
+		lineSpacing = s;
+		rebuild();
+		return s;
+	}
+
 	override function onAlloc() {
 		super.onAlloc();
 		rebuild();
@@ -75,7 +82,7 @@ class Text extends Drawable {
 		}
 		glyphs.drawWith(ctx,this);
 	}
-	
+
 	function set_text(t) {
 		var t = t == null ? "null" : t;
 		if( t == this.text ) return t;
@@ -83,11 +90,11 @@ class Text extends Drawable {
 		rebuild();
 		return t;
 	}
-	
+
 	function rebuild() {
 		if( allocated && text != null && font != null ) initGlyphs(text);
 	}
-	
+
 	public function calcTextWidth( text : String ) {
 		return initGlyphs(text,false).width;
 	}
@@ -107,6 +114,7 @@ class Text extends Drawable {
 			x = lines.shift();
 		default:
 		}
+		var dl = font.lineHeight + lineSpacing;
 		var calcLines = !rebuild && lines != null;
 		for( i in 0...text.length ) {
 			var cc = text.charCodeAt(i);
@@ -146,29 +154,29 @@ class Text extends Drawable {
 					}
 				else
 					x = 0;
-				y += font.lineHeight;
+				y += dl;
 				prevChar = -1;
 			} else
 				prevChar = cc;
 		}
 		if( calcLines ) lines.push(x);
-		return { width : x > xMax ? x : xMax, height : x > 0 ? y + font.lineHeight : y > 0 ? y : font.lineHeight };
+		return { width : x > xMax ? x : xMax, height : x > 0 ? y + dl : y > 0 ? y : dl };
 	}
-	
+
 	function get_textHeight() {
 		return initGlyphs(text,false).height;
 	}
-	
+
 	function get_textWidth() {
 		return initGlyphs(text,false).width;
 	}
-	
+
 	function set_maxWidth(w) {
 		maxWidth = w;
 		rebuild();
 		return w;
 	}
-	
+
 	function set_textColor(c) {
 		this.textColor = c;
 		var a = alpha;
