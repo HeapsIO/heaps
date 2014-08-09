@@ -33,7 +33,7 @@ class ShadowMap extends Base {
 		color = new h3d.Vector();
 		blur = new Blur(2, 3);
 	}
-	
+
 	public dynamic function getSceneBounds( bounds : h3d.col.Bounds ) {
 		bounds.xMin = -10;
 		bounds.yMin = -10;
@@ -42,11 +42,11 @@ class ShadowMap extends Base {
 		bounds.yMax = 10;
 		bounds.zMax = 10;
 	}
-	
+
 	override function getOutputs() {
 		return ["output.position", "output.distance"];
 	}
-	
+
 	override function setGlobals() {
 		super.setGlobals();
 		lightCamera.orthoBounds.empty();
@@ -54,7 +54,7 @@ class ShadowMap extends Base {
 		lightCamera.update();
 		cameraViewProj = lightCamera.m;
 	}
-	
+
 	override function draw( ctx : h3d.scene.RenderContext, passes) {
 		if( texture == null || texture.width != size ) {
 			if( texture != null ) {
@@ -72,9 +72,9 @@ class ShadowMap extends Base {
 		ctx.engine.setTarget(texture, 0xFFFFFFFF);
 		passes = super.draw(ctx, passes);
 		ctx.engine.setTarget(null);
-		
+
 		blur.apply(texture, blurTexture, true);
-		
+
 		ctx.sharedGlobals.set(shadowMapId, texture);
 		ctx.sharedGlobals.set(shadowProjId, lightCamera.m);
 		ctx.sharedGlobals.set(shadowColorId, color);
@@ -83,5 +83,5 @@ class ShadowMap extends Base {
 		return passes;
 	}
 
-	
+
 }

@@ -2,18 +2,18 @@ package hxd.fmt.fbx;
 using hxd.fmt.fbx.Data;
 
 class Filter {
-	
+
 	var ignoreList : Array<Array<String>>;
 	var removedObjects : Map<Int,Bool>;
-	
+
 	public function new() {
 		ignoreList = [];
 	}
-	
+
 	public function ignore( path : String ) {
 		ignoreList.push(path.split("."));
 	}
-	
+
 	public function filter( f : FbxNode ) : FbxNode {
 		removedObjects = new Map();
 		var f2 = filterRec(f, ignoreList, 0);
@@ -33,7 +33,7 @@ class Filter {
 		}
 		return f2;
 	}
-	
+
 	function filterRec( f : FbxNode, match : Array<Array<String>>, index : Int ) {
 		var sub = [];
 		for( m in match )

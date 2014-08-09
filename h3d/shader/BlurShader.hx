@@ -11,13 +11,13 @@ class BlurShader extends hxsl.Shader {
 			position : Vec4,
 			color : Vec4,
 		};
-		
+
 		@param var texture : Sampler2D;
 		@param @const var Quality : Int;
 		@param @const var isDepth : Bool;
 		@param var values : Array<Float,Quality>;
 		@param var pixel : Vec2;
-		
+
 		function vertex() {
 			output.position = vec4(input.position, 0, 1);
 		}
@@ -35,5 +35,5 @@ class BlurShader extends hxsl.Shader {
 			}
 		}
 	}
-	
+
 }

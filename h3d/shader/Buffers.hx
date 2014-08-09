@@ -21,7 +21,7 @@ class ShaderBuffers {
 }
 
 class Buffers {
-	
+
 	public var vertex : ShaderBuffers;
 	public var fragment : ShaderBuffers;
 

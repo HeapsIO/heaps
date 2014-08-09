@@ -3,7 +3,7 @@ package h3d.scene;
 class Joint extends Object {
 	public var skin : Skin;
 	public var index : Int;
-	
+
 	public function new(skin, j : h3d.anim.Skin.Joint ) {
 		super(null);
 		name = j.name;
@@ -12,7 +12,7 @@ class Joint extends Object {
 		this.parent = skin;
 		this.index = j.index;
 	}
-	
+
 	@:access(h3d.scene.Skin)
 	override function syncPos() {
 		// check if one of our parents has changed
@@ -46,7 +46,7 @@ class Joint extends Object {
 }
 
 class Skin extends MultiMaterial {
-	
+
 	var skinData : h3d.anim.Skin;
 	var currentRelPose : Array<h3d.Matrix>;
 	var currentAbsPose : Array<h3d.Matrix>;
@@ -65,7 +65,7 @@ class Skin extends MultiMaterial {
 		if( s != null )
 			setSkinData(s);
 	}
-	
+
 	override function clone( ?o : Object ) {
 		var s = o == null ? new Skin(null,materials.copy()) : cast o;
 		super.clone(s);
@@ -73,8 +73,8 @@ class Skin extends MultiMaterial {
 		s.currentRelPose = currentRelPose.copy(); // copy current pose
 		return s;
 	}
-	
-	
+
+
 	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
 		b = super.getBounds(b, rec);
 		var tmp = primitive.getBounds().clone();
@@ -107,13 +107,13 @@ class Skin extends MultiMaterial {
 		}
 		return null;
 	}
-	
+
 	override function calcAbsPos() {
 		super.calcAbsPos();
 		// if we update our absolute position, rebuild the matrixes
 		jointsUpdated = true;
 	}
-	
+
 	public function setSkinData( s ) {
 		skinData = s;
 		jointsUpdated = true;
@@ -162,7 +162,7 @@ class Skin extends MultiMaterial {
 		} else
 			super.sync(ctx);
 	}
-	
+
 	override function draw( ctx : RenderContext ) {
 		if( splitPalette == null ) {
 			if( paletteChanged ) {
@@ -179,21 +179,21 @@ class Skin extends MultiMaterial {
 		if( showJoints )
 			throw "TODO"; //ctx.addPass(drawJoints);
 	}
-	
+
 	function drawJoints( ctx : RenderContext ) {
 		/*
 		for( j in skinData.allJoints ) {
 			var m = currentAbsPose[j.index];
 			var mp = j.parent == null ? absPos : currentAbsPose[j.parent.index];
 			ctx.engine.line(mp._41, mp._42, mp._43, m._41, m._42, m._43, j.parent == null ? 0xFF0000FF : 0xFFFFFF00);
-			
+
 			var dz = new h3d.Vector(0, 0.01, 0);
 			dz.transform(m);
 			ctx.engine.line(m._41, m._42, m._43, dz.x, dz.y, dz.z, 0xFF00FF00);
-			
+
 			ctx.engine.point(m._41, m._42, m._43, j.bindIndex < 0 ? 0xFF0000FF : 0xFFFF0000);
 		}
 		*/
 	}
-	
+
 }

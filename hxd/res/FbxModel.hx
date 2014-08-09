@@ -1,9 +1,9 @@
 package hxd.res;
 
 class FbxModel extends Resource {
-	
+
 	public static var isLeftHanded = true;
-	
+
 	public function toFbx( ?loader : Loader ) : hxd.fmt.fbx.Library {
 		var lib = new hxd.fmt.fbx.Library();
 		switch( entry.getSign() & 0xFF ) {
@@ -24,5 +24,5 @@ class FbxModel extends Resource {
 		if( isLeftHanded ) lib.leftHandConvert();
 		return lib;
 	}
-	
+
 }

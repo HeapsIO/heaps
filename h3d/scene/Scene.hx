@@ -8,7 +8,7 @@ class Scene extends Object implements h3d.IDrawable {
 	var postPasses : Array<h3d.IDrawable>;
 	var passes : Map<String,h3d.pass.Base>;
 	var ctx : RenderContext;
-	
+
 	public function new() {
 		super(null);
 		camera = new h3d.Camera();
@@ -17,14 +17,14 @@ class Scene extends Object implements h3d.IDrawable {
 		postPasses = [];
 		prePasses = [];
 	}
-	
+
 	override function clone( ?o : Object ) {
 		var s = o == null ? new Scene() : cast o;
 		s.camera = camera.clone();
 		super.clone(s);
 		return s;
 	}
-	
+
 	/**
 	 allow to customize render passes (for example, branch sub scene or 2d context)
 	 */
@@ -34,16 +34,16 @@ class Scene extends Object implements h3d.IDrawable {
 		else
 			postPasses.push(p);
 	}
-	
+
 	public function removePass(p) {
 		postPasses.remove(p);
 		prePasses.remove(p);
 	}
-	
+
 	public function setElapsedTime( elapsedTime ) {
 		ctx.elapsedTime = elapsedTime;
 	}
-	
+
 	function createDefaultPass( name : String ) : h3d.pass.Base {
 		switch( name ) {
 		case "default", "alpha", "additive":
@@ -57,11 +57,11 @@ class Scene extends Object implements h3d.IDrawable {
 			return null;
 		}
 	}
-	
+
 	function get_mainPass() {
 		return getPass("default");
 	}
-	
+
 	public function getPass( name : String ) {
 		var p = passes.get(name);
 		if( p == null ) {
@@ -70,7 +70,7 @@ class Scene extends Object implements h3d.IDrawable {
 		}
 		return p;
 	}
-	
+
 	public function setPass( name : String, p : h3d.pass.Base ) {
 		passes.set(name, p);
 	}
@@ -111,7 +111,7 @@ class Scene extends Object implements h3d.IDrawable {
 		@:privateAccess passes.sort(function(p1, p2) return p2.render.priority - p1.render.priority);
 		for( p in passes )
 			p.pass = p.render.draw(ctx, p.pass);
-		
+
 		// relink pass objects to reuse
 		var count = 0;
 		var prev : h3d.pass.Object = null;
@@ -132,5 +132,5 @@ class Scene extends Object implements h3d.IDrawable {
 		ctx.camera = null;
 		ctx.engine = null;
 	}
-	
+
 }

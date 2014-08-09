@@ -1,22 +1,22 @@
 package h2d;
 
 class Drawable extends Sprite {
-	
+
 	public var color(default,null) : h3d.Vector;
 	public var alpha(get, set) : Float;
 	public var blendMode : BlendMode;
 	public var filter : Bool;
 	public var colorKey(default, set) : Null<Int>;
-	
+
 	var shaders : Array<hxsl.Shader>;
-	
+
 	function new(parent) {
 		super(parent);
 		blendMode = Normal;
 		color = new h3d.Vector(1, 1, 1, 1);
 		shaders = [];
 	}
-	
+
 	function set_colorKey(v:Null<Int>) {
 		if( shaders != null ) {
 			var s = getShader(h3d.shader.ColorKey);
@@ -32,7 +32,7 @@ class Drawable extends Sprite {
 		}
 		return colorKey = v;
 	}
-	
+
 	inline function get_alpha() {
 		return color.a;
 	}
@@ -40,7 +40,7 @@ class Drawable extends Sprite {
 	inline function set_alpha(v) {
 		return color.a = v;
 	}
-	
+
 	public function getDebugShaderCode( toHxsl = true ) {
 		var shader = @:privateAccess {
 			var ctx = getScene().ctx;
@@ -51,27 +51,27 @@ class Drawable extends Sprite {
 		var toString = toHxsl ? function(d) return hxsl.Printer.shaderToString(d,true) : hxsl.GlslOut.toGlsl;
 		return "VERTEX=\n" + toString(shader.vertex.data) + "\n\nFRAGMENT=\n" + toString(shader.fragment.data);
 	}
-	
+
 	public function getShader< T:hxsl.Shader >( stype : Class<T> ) : T {
 		for( s in shaders )
 			if( Std.is(s, stype) )
 				return cast s;
 		return null;
 	}
-	
+
 	public inline function getShaders() {
 		return new hxd.impl.ArrayIterator<hxsl.Shader>(shaders);
 	}
-	
+
 	public function addShader<T:hxsl.Shader>( s : T ) : T {
 		this.shaders.push(s);
 		return s;
 	}
-	
+
 	public function removeShader( s : hxsl.Shader ) {
 		return this.shaders.remove(s);
 	}
-	
+
 	function emitTile( ctx : RenderContext, tile : Tile ) {
 		if( tile == null )
 			tile = new Tile(null, 0, 0, 5, 5);
@@ -82,9 +82,9 @@ class Drawable extends Sprite {
 		var buf = ctx.buffer;
 		var pos = ctx.bufPos;
 		buf.grow(pos + 4 * 8);
-		
+
 		inline function emit(v:Float) buf[pos++] = v;
-		
+
 		emit(ax);
 		emit(ay);
 		emit(tile.u);
@@ -93,15 +93,15 @@ class Drawable extends Sprite {
 		emit(color.g);
 		emit(color.b);
 		emit(color.a);
-		
-		
+
+
 		var tw = tile.width;
 		var th = tile.height;
 		var dx1 = tw * matA;
 		var dy1 = tw * matB;
 		var dx2 = th * matC;
 		var dy2 = th * matD;
-		
+
 		emit(ax + dx1);
 		emit(ay + dy1);
 		emit(tile.u2);
@@ -110,7 +110,7 @@ class Drawable extends Sprite {
 		emit(color.g);
 		emit(color.b);
 		emit(color.a);
-		
+
 		emit(ax + dx2);
 		emit(ay + dy2);
 		emit(tile.u);
@@ -131,5 +131,5 @@ class Drawable extends Sprite {
 
 		ctx.bufPos = pos;
 	}
-	
+
 }

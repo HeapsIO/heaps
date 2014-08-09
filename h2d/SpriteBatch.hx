@@ -37,15 +37,15 @@ class BatchElement {
 		rotation = 0; scale = 1;
 		this.t = t;
 	}
-	
+
 	inline function get_alpha() {
 		return a;
 	}
-	
+
 	inline function set_alpha(v) {
 		return a = v;
 	}
-	
+
 	function update(et:Float) {
 		return true;
 	}
@@ -242,7 +242,7 @@ class SpriteBatch extends Drawable {
 	public inline function isEmpty() {
 		return first == null;
 	}
-	
+
 	public inline function getElements() {
 		return new ElementsIterator(first);
 	}

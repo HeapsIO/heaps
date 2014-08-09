@@ -2,29 +2,29 @@ package h2d.col;
 import hxd.Math;
 
 class Point {
-	
+
 	public var x : Float;
 	public var y : Float;
-	
+
 	public inline function new(x = 0., y = 0.) {
 		this.x = x;
 		this.y = y;
 	}
-	
+
 	public inline function distanceSq( p : Point ) {
 		var dx = x - p.x;
 		var dy = y - p.y;
 		return dx * dx + dy * dy;
 	}
-	
+
 	public inline function distance( p : Point ) {
 		return Math.sqrt(distanceSq(p));
 	}
-	
+
 	public function toString() {
 		return "{" + Math.fmt(x) + "," + Math.fmt(y) + "}";
 	}
-		
+
 	public inline function sub( p : Point ) {
 		return new Point(x - p.x, y - p.y);
 	}
@@ -61,5 +61,5 @@ class Point {
 		x *= f;
 		y *= f;
 	}
-	
+
 }

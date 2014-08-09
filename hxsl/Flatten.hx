@@ -16,7 +16,7 @@ private class Alloc {
 }
 
 class Flatten {
-	
+
 	var globals : Array<TVar>;
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
@@ -24,10 +24,10 @@ class Flatten {
 	var econsts : TExpr;
 	public var consts : Array<Float>;
 	public var allocData : Map< TVar, Array<Alloc> >;
-	
+
 	public function new() {
 	}
-	
+
 	public function flatten( s : ShaderData, kind : FunctionKind, constsToGlobal : Bool ) : ShaderData {
 		globals = [];
 		params = [];
@@ -74,7 +74,7 @@ class Flatten {
 			funs : [for( f in s.funs ) mapFun(f, mapExpr)],
 		};
 	}
-	
+
 	function mapFun( f : TFunction, mapExpr : TExpr -> TExpr ) : TFunction {
 		return {
 			kind : f.kind,
@@ -84,7 +84,7 @@ class Flatten {
 			expr : mapExpr(f.expr),
 		};
 	}
-	
+
 	function mapExpr( e : TExpr ) : TExpr {
 		e = switch( e.e ) {
 		case TVar(v):
@@ -114,7 +114,7 @@ class Flatten {
 		};
 		return optimize(e);
 	}
-	
+
 	function mapConsts( e : TExpr ) : TExpr {
 		switch( e.e ) {
 		case TArray(ea, eindex = { e : TConst(CInt(_)) } ):
@@ -130,7 +130,7 @@ class Flatten {
 			return e.map(mapConsts);
 		}
 	}
-	
+
 	function allocConst( v : Float, p ) : TExpr {
 		var index = consts.indexOf(v);
 		if( index < 0 ) {
@@ -143,11 +143,11 @@ class Flatten {
 	inline function mkInt(v:Int,pos) {
 		return { e : TConst(CInt(v)), t : TInt, p : pos };
 	}
-	
+
 	function readIndex( a : Alloc, index : Int, pos ) : TExpr {
 		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos },mkInt((a.pos>>2)+index,pos)), t : TVec(4,a.t), p : pos }
 	}
-	
+
 	function readOffset( a : Alloc, stride : Int, delta : TExpr, index : Int, pos ) : TExpr {
 		var offset : TExpr = { e : TBinop(OpAdd, delta, mkInt((a.pos >> 2) + index, pos)), t : TInt, p : pos };
 		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos }, offset), t : TVec(4,a.t), p:pos };
@@ -192,7 +192,7 @@ class Flatten {
 		}
 	}
 
-	
+
 	function optimize( e : TExpr ) {
 		switch( e.e ) {
 		case TCall( { e : TGlobal(Mat3x4) }, [ { e : TCall( { e : TGlobal(Mat4) }, args) } ]):
@@ -217,7 +217,7 @@ class Flatten {
 		}
 		return e;
 	}
-	
+
 	function packTextures( name : String, vars : Array<TVar>, t : Type ) {
 		var alloc = new Array<Alloc>();
 		var g : TVar = {
@@ -240,7 +240,7 @@ class Flatten {
 		}
 		return g;
 	}
-	
+
 	function pack( name : String, kind : VarKind, vars : Array<TVar>, t : VecType ) {
 		var alloc = new Array<Alloc>(), apos = 0;
 		var g : TVar = {
@@ -291,7 +291,7 @@ class Flatten {
 		}
 		return g;
 	}
-	
+
 	function varSize( v : Type, t : VecType ) {
 		return switch( v ) {
 		case TFloat if( t == VFloat ): 1;
@@ -304,7 +304,7 @@ class Flatten {
 			throw v.toString() + " size unknown for type " + t;
 		}
 	}
-	
+
 	function gatherVar( v : TVar ) {
 		switch( v.type ) {
 		case TStruct(vl):
@@ -324,5 +324,5 @@ class Flatten {
 			}
 		}
 	}
-	
+
 }

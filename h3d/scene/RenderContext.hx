@@ -8,21 +8,21 @@ class RenderContext {
 	public var time : Float;
 	public var elapsedTime : Float;
 	public var frame : Int;
-	
+
 	public var drawPass : ObjectPass;
-	
+
 	public var sharedGlobals : Map<Int,Dynamic>;
-	
+
 	var pool : ObjectPass;
 	var passes : ObjectPass;
 	var lights : Light;
-	
+
 	public function new() {
 		frame = 0;
 		time = 0.;
 		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
 	}
-	
+
 	@:access(h3d.mat.Pass)
 	public inline function emit( mat : h3d.mat.Material, obj, index = 0 ) {
 		var p = mat.mainPass;
@@ -31,7 +31,7 @@ class RenderContext {
 			p = p.nextPass;
 		}
 	}
-	
+
 	public function start() {
 		sharedGlobals = new Map();
 		lights = null;
@@ -41,7 +41,7 @@ class RenderContext {
 		time += elapsedTime;
 		frame++;
 	}
-	
+
 	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) {
 		var o = pool;
 		if( o == null )
@@ -54,12 +54,12 @@ class RenderContext {
 		passes = o;
 		return o;
 	}
-	
+
 	public function emitLight( l : Light ) {
 		l.next = lights;
 		lights = l;
 	}
-	
+
 	public function done() {
 		drawPass = null;
 		// move passes to pool, and erase data
@@ -81,5 +81,5 @@ class RenderContext {
 		passes = null;
 		lights = null;
 	}
-	
+
 }

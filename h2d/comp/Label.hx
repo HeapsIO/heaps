@@ -1,11 +1,11 @@
 package h2d.comp;
 
 class Label extends Component {
-	
+
 	var tf : h2d.Text;
-	
+
 	public var text(default, set) : String;
-	
+
 	public function new(text, ?parent) {
 		super("label",parent);
 		tf = new h2d.Text(null, this);
@@ -15,12 +15,12 @@ class Label extends Component {
 	function get_text() {
 		return tf.text;
 	}
-	
+
 	function set_text(t) {
 		needRebuild = true;
 		return text = t;
 	}
-	
+
 	override function resize( ctx : Context ) {
 		if( ctx.measure ) {
 			tf.font = getFont();
@@ -34,5 +34,5 @@ class Label extends Component {
 		if( !ctx.measure )
 			textAlign(tf);
 	}
-	
+
 }

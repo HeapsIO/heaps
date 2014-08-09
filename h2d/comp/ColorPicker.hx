@@ -30,7 +30,7 @@ private enum CompStyle {
 private class Style {
 	public function new () {
 	}
-	
+
 	public static function get(kind:CompStyle) {
 		var style = new h2d.css.Style();
 		switch(kind) {
@@ -62,13 +62,13 @@ private class Arrow extends h2d.css.Fill {
 
 private class Cross extends h2d.css.Fill {
 	var size:Float;
-	
+
 	public function new (parent, size:Float, color = 0xff000000) {
 		super(parent);
 		this.size = size;
 		lineRect(FillStyle.Color(color), 0, 0, size, size, 1);
 	}
-	
+
 	public function setColor(color:Int) {
 		reset();
 		lineRect(FillStyle.Color(color), 0, 0, size, size, 1);
@@ -82,12 +82,12 @@ private class Color extends h2d.Sprite {
 	public var color(default, set):Int = 0xFFFFFFFF;
 	public var preview(default, set):Int = 0xFFFFFFFF;
 	public var alpha(default, set):Float = 1.;
-	
+
 	var canvas:h2d.css.Fill;
 	var label : h2d.comp.Label;
 	var input : h2d.comp.Input;
-	
-	
+
+
 	public function new (picker,ix, iy, iw, ih, parent) {
 		super(parent);
 		this.picker = picker;
@@ -97,7 +97,7 @@ private class Color extends h2d.Sprite {
 		height = ih;
 		init();
 	}
-	
+
 	function set_color(v:Int) {
 		if(v != color) {
 			color = v;
@@ -105,7 +105,7 @@ private class Color extends h2d.Sprite {
 		}
 		return color;
 	}
-	
+
 	function set_preview(v:Int) {
 		if(v != preview) {
 			preview = v;
@@ -113,18 +113,18 @@ private class Color extends h2d.Sprite {
 		}
 		return color;
 	}
-	
+
 	function set_alpha(v:Float) {
 		alpha = v;
 		drawAll();
 		return color;
 	}
-	
+
 	public function updateColor(v:Int) {
 		color = v;
 		input.value = StringTools.hex(preview, 6).substr(2);
 	}
-	
+
 	function init() {
 		label = new h2d.comp.Label("#", this);
 		label.setStyle(Style.get(ColorLabel));
@@ -144,12 +144,12 @@ private class Color extends h2d.Sprite {
 				picker.change = SColor;
 			}
 		};
-		
+
 		canvas = new h2d.css.Fill(this);
 		canvas.y = 2 + height * 0.5;
 		drawAll();
 	}
-	
+
 	public function drawAll() {
 		canvas.reset();
 		canvas.fillRectColor(0, 0, width, height * 0.5, preview);
@@ -164,12 +164,12 @@ private class Palette extends h2d.Sprite {
 	public var width :Float;
 	public var height :Float;
 	public var color(default, set):Int;
-	
+
 	var picker : ColorPicker;
 	var canvas:h2d.css.Fill;
 	var interact:h2d.Interactive;
 	var cursor:h2d.Sprite;
-	
+
 	public function new (picker, ix, iy, iw, ih, parent) {
 		super(parent);
 		this.picker = picker;
@@ -179,7 +179,7 @@ private class Palette extends h2d.Sprite {
 		height = ih;
 		init();
 	}
-	
+
 	function init() {
 		canvas = new h2d.css.Fill(this);
 		cursor = new h2d.Sprite(this);
@@ -202,7 +202,7 @@ private class Palette extends h2d.Sprite {
 		color = getColor(0);
 		drawAll();
 	}
-	
+
 	function set_color(v:Int) {
 		color = v;
 		if(!picker.change.equals(SPalette))
@@ -210,12 +210,12 @@ private class Palette extends h2d.Sprite {
 		drawAll();
 		return color;
 	}
-	
+
 	function updateCursor() {
 		var hsl = ColorPicker.INTtoHSL(color);
 		cursor.y = Math.round(Math.max(0, Math.min(height, (1 - hsl[0]) * height)));
 	}
-	
+
 	public function drawAll() {
 		var s = 1;
 		var l = 0.5;
@@ -228,19 +228,19 @@ private class Palette extends h2d.Sprite {
 		}
 		canvas.lineRect(FillStyle.Color(ColorPicker.borderColor), 0, 0, width, height, 1);
 	}
-	
+
 	public function setCursor(dy:Float) {
 		cursor.y = Math.round(Math.max(0, Math.min(height, dy)));
 		color = getColor(cursor.y);
 	}
-	
+
 	public function getColor(py:Float) {
 		var h = 1 - (py / height);
 		var s = 1;
 		var l = 0.5;
 		return(ColorPicker.HSLtoINT(h, s, l));
 	}
-	
+
 	public function setColorFrom(newColor:Int) {
 		var rgb = ColorPicker.INTtoRGB(newColor);
 		var hsl = ColorPicker.RGBtoHLS(rgb[0], rgb[1], rgb[2]);
@@ -255,7 +255,7 @@ private class Chart extends h2d.Sprite{
 	public var height :Int;
 	public var refColor(default, set):Int = 0xffffffff;
 	public var color:Int = 0xffffffff;
-	
+
 	var picker : ColorPicker;
 	var ray :Float;
 	var canvas:h2d.css.Fill;
@@ -263,7 +263,7 @@ private class Chart extends h2d.Sprite{
 	var cursor:h2d.Sprite;
 	var lastPos:h3d.Vector;
 	var cross:Cross ;
-	
+
 	public function new (picker,ix, iy, iw, ih, ray, parent) {
 		super(parent);
 		this.picker = picker;
@@ -274,7 +274,7 @@ private class Chart extends h2d.Sprite{
 		this.ray = ray;
 		init();
 	}
-	
+
 	function init() {
 		canvas = new h2d.css.Fill(this);
 		cursor = new h2d.Sprite(this);
@@ -296,7 +296,7 @@ private class Chart extends h2d.Sprite{
 		drawAll();
 		setCursor(0, 0);
 	}
-	
+
 	public function setCursor(dx:Float, dy:Float) {
 		cursor.x = Math.max(ray + 1, Math.min(width - ray - 1, dx));
 		cursor.y = Math.max(ray + 1, Math.min(height - ray - 1, dy));
@@ -304,7 +304,7 @@ private class Chart extends h2d.Sprite{
 		color = getColor(lastPos.x, lastPos.y);
 		cross.setColor(ColorPicker.complementaryColor(color));
 	}
-	
+
 	function set_refColor(v:Int) {
 		refColor = v;
 		color = getColor(lastPos.x, lastPos.y);
@@ -312,13 +312,13 @@ private class Chart extends h2d.Sprite{
 		drawAll();
 		return refColor;
 	}
-	
+
 	function normalizePos(dx:Float, dy:Float) {
 		var px = 1 - Math.min(width, Math.max(0, dx)) / width;
 		var py = 1 - Math.min(height, Math.max(0, dy)) / height;
 		return new h3d.Vector(px, py);
 	}
-	
+
 	public function drawAll() {
 		canvas.reset();
 		var rgb = [(refColor >> 16) & 0xFF, (refColor >> 8) & 0xFF,  refColor & 0xFF];
@@ -341,7 +341,7 @@ private class Chart extends h2d.Sprite{
 		}
 		canvas.lineRect(FillStyle.Color(ColorPicker.borderColor), 0, 0, width, height, 1);
 	}
-	
+
 	function getColor(dw:Float, dh:Float) {
 		var rgb = [(refColor >> 16) & 0xFF, (refColor >> 8) & 0xFF,  refColor & 0xFF];
 		var r = Math.round(rgb[0] * dh);
@@ -353,14 +353,14 @@ private class Chart extends h2d.Sprite{
 		b = Math.round(b + (max - b) * dw);
 		return ColorPicker.RGBtoINT(r, g, b);
 	}
-	
+
 	public function setColorFrom(newColor:Int) {
 		var rgb = ColorPicker.INTtoRGB(newColor);
 		var hsl = ColorPicker.RGBtoHLS(rgb[0], rgb[1], rgb[2]);
 		hsl[1] = 1; hsl[2] = 0.5;
 		rgb = ColorPicker.HSLtoRGB(hsl[0], hsl[1], hsl[2]);
 		refColor = ColorPicker.RGBtoINT(rgb[0], rgb[1], rgb[2]);
-		
+
 		var rgb = ColorPicker.INTtoRGB(newColor);
 		var min = Math.min(rgb[0], Math.min(rgb[1], rgb[2]));
 		var max = Math.max(rgb[0], Math.max(rgb[1], rgb[2]));
@@ -375,7 +375,7 @@ private class ColorGauge extends h2d.Sprite{
 	public var height :Int;
 	public var color(default, set):Int = 0xffffffff;
 	public var ratio(get, null):Float;
-	
+
 	var picker : ColorPicker;
 	var canvas:h2d.css.Fill;
 	var interact:h2d.Interactive;
@@ -394,7 +394,7 @@ private class ColorGauge extends h2d.Sprite{
 		bindTo = rgba;
 		init();
 	}
-	
+
 	function init() {
 		label = new h2d.comp.Label(bindTo.getName(), this);
 		label.setStyle(Style.get(GaugeLabel));
@@ -407,7 +407,7 @@ private class ColorGauge extends h2d.Sprite{
 		input.onChange = function(e) {
 			setCursor(cursor.x);
 		};
-		
+
 		canvas = new h2d.css.Fill(this);
 		cursor = new h2d.Sprite(this);
 		cursor.x = width;
@@ -429,7 +429,7 @@ private class ColorGauge extends h2d.Sprite{
 		}
 		drawAll();
 	}
-	
+
 	function set_color(v:Int) {
 		color = v;
 		if(!bindTo.equals(RGBA.A))
@@ -437,7 +437,7 @@ private class ColorGauge extends h2d.Sprite{
 		drawAll();
 		return color;
 	}
-	
+
 	function setState() {
 		picker.change = switch(bindTo) {
 			case RGBA.R: SRed;
@@ -446,11 +446,11 @@ private class ColorGauge extends h2d.Sprite{
 			case RGBA.A: SAlpha;
 		}
 	}
-	
+
 	public function get_ratio() {
 		return cursor.x / width;
 	}
-	
+
 	public function updateCursor() {
 		var a = color >>> 24;
 		var r = (color >> 16) & 0xFF;
@@ -464,7 +464,7 @@ private class ColorGauge extends h2d.Sprite{
 		});
 		input.value = Std.string(Std.int(255 * ratio));
 	}
-	
+
 	public function setCursor(dx:Float) {
 		cursor.x = Math.round(Math.max(0, Math.min(width, dx)));
 		var r = (color >> 16) & 0xFF;
@@ -478,7 +478,7 @@ private class ColorGauge extends h2d.Sprite{
 		}
 		input.value = Std.string(Math.round(255 * ratio));
 	}
-	
+
 	public function drawAll() {
 		var r = (color >> 16) & 0xFF;
 		var g =	(color >> 8) & 0xFF;
@@ -503,9 +503,9 @@ private class ColorGauge extends h2d.Sprite{
 
 @:allow(h2d.comp)
 class ColorPicker extends h2d.comp.Component {
-	
+
 	public static var borderColor = 0xFFaaaaaa;
-	
+
 	var finalColor : Color;
 	var palette : Palette;
 	var chart : Chart;
@@ -515,18 +515,18 @@ class ColorPicker extends h2d.comp.Component {
 	var gaugeAlpha : ColorGauge;
 	var timer : haxe.Timer;
 	var change : ChangeState;
-	
+
 	public var color(get, set) : Int;
-	
+
 	public function new(?parent) {
 		super("colorpicker", parent);
 		init();
 	}
-	
+
 	inline function get_color() {
 		return (finalColor.color&0xFFFFFF) | Std.int(finalColor.alpha*255) << 24;
 	}
-	
+
 	function set_color(v) {
 		finalColor.color = v;
 		finalColor.alpha = (v >>> 24) / 255;
@@ -538,7 +538,7 @@ class ColorPicker extends h2d.comp.Component {
 		gaugeAlpha.setCursor(finalColor.alpha * gaugeAlpha.width);
 		return v;
 	}
-	
+
 	override function onAlloc() {
 		super.onAlloc();
 		if( timer == null ) {
@@ -546,7 +546,7 @@ class ColorPicker extends h2d.comp.Component {
 			timer.run = doUpdate;
 		}
 	}
-	
+
 	override function onDelete() {
 		super.onDelete();
 		if( timer != null ) {
@@ -554,7 +554,7 @@ class ColorPicker extends h2d.comp.Component {
 			timer = null;
 		}
 	}
-	
+
 	function init() {
 		finalColor = new Color(this, 15, 8, 175, 45, this);
 		palette = new Palette(this, 16, 65, 20, 140, this);
@@ -584,7 +584,7 @@ class ColorPicker extends h2d.comp.Component {
 			}
 			return;
 		}
-			
+
 		switch(change) {
 			case SColor:	palette.setColorFrom(finalColor.color);
 							chart.setColorFrom(finalColor.color);
@@ -601,32 +601,32 @@ class ColorPicker extends h2d.comp.Component {
 							onChange(color);
 			default:
 		}
-		
+
 		gaugeRed.color = chart.color;
 		gaugeGreen.color = chart.color;
 		gaugeBlue.color = chart.color;
 	}
-	
+
 	public dynamic function onClose() {
 	}
-	
+
 	public dynamic function onChange( value : Int ) {
 	}
-	
+
 //////////////////
 	public static function INTtoRGB(color:Int) {
 		return [(color >> 16) & 0xFF, (color >> 8) & 0xFF,  color & 0xFF];
 	}
-	
+
 	public static function INTtoHSL(color:Int) {
 		var rgb = INTtoRGB(color);
 		return RGBtoHLS(rgb[0], rgb[1], rgb[2]);
 	}
-	
+
 	public static function RGBtoINT(r:Int, g:Int, b:Int, a:Int = 255) {
 		return (a << 24) | (r << 16) | (g << 8) | b;
 	}
-	
+
 	public static function RGBtoHLS(r:Float, g:Float, b:Float) {
 		r /= 255;
 		g /= 255;
@@ -649,12 +649,12 @@ class ColorPicker extends h2d.comp.Component {
 		}
 		return [h, s, l];
 	}
-	
+
 	public static function HSLtoINT(h:Float, s:Float, l:Float) {
 		var rgb = HSLtoRGB(h, s, l);
 		return RGBtoINT(rgb[0], rgb[1], rgb[2]);
 	}
-	
+
 	public static function HSLtoRGB(h:Float, s:Float, l:Float) {
 		var r, g, b;
 		if(s == 0)
@@ -676,7 +676,7 @@ class ColorPicker extends h2d.comp.Component {
 		}
 		return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 	}
-	
+
 	public static function complementaryColor (color:Int) {
 		var rgb = INTtoRGB(color);
 		var r = rgb[0] ^ 0xFF;

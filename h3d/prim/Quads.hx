@@ -6,13 +6,13 @@ class Quads extends Primitive {
 	var pts : Array<Point>;
 	var uvs : Array<UV>;
 	var normals : Array<Point>;
-	
+
 	public function new( pts, ?uvs, ?normals ) {
 		this.pts = pts;
 		this.uvs = uvs;
 		this.normals = normals;
 	}
-	
+
 	public function scale( x : Float, y : Float, z : Float ) {
 		for( p in pts ) {
 			p.x *= x;
@@ -20,7 +20,7 @@ class Quads extends Primitive {
 			p.z *= z;
 		}
 	}
-	
+
 	public function addTCoords() {
 		uvs = [];
 		var a = new UV(0, 1);
@@ -34,11 +34,11 @@ class Quads extends Primitive {
 			uvs.push(d);
 		}
 	}
-	
+
 	public function addNormals() {
 		throw "Not implemented";
 	}
-	
+
 	override function alloc( engine : Engine ) {
 		dispose();
 		var v = new hxd.FloatBuffer();
@@ -64,14 +64,14 @@ class Quads extends Primitive {
 		if( uvs != null ) size += 2;
 		buffer = h3d.Buffer.ofFloats(v, size, [Quads]);
 	}
-	
+
 	public function getPoints() {
 		return pts;
 	}
-	
+
 	override function render(engine) {
 		if( buffer == null || buffer.isDisposed() ) alloc(engine);
 		engine.renderQuadBuffer(buffer);
 	}
-	
+
 }

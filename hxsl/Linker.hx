@@ -45,18 +45,18 @@ class Linker {
 	var varIdMap : Map<Int,Int>;
 	var locals : Map<Int,Bool>;
 	var curInstance : Int;
-	
+
 	public function new() {
 	}
-	
+
 	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
 		//haxe.Log.trace(msg, pos);
 	}
-	
+
 	function error( msg : String, p : Position ) : Dynamic {
 		return Error.t(msg, p);
 	}
-	
+
 	function mergeVar( path : String, v : TVar, v2 : TVar, p : Position ) {
 		switch( v.kind ) {
 		case Global, Input, Var, Local, Output:
@@ -86,7 +86,7 @@ class Linker {
 				error("'" + path + "' type does not match : " + v.type.toString() + " should be " + v2.type.toString(),p);
 		}
 	}
-	
+
 	function allocVar( v : TVar, p : Position, ?path : String, ?parent : TVar ) : AllocatedVar {
 		if( v.parent != null && parent == null ) {
 			parent = allocVar(v.parent, p).v;
@@ -156,7 +156,7 @@ class Linker {
 		}
 		return a;
 	}
-	
+
 	function mapExprVar( e : TExpr ) {
 		switch( e.e ) {
 		case TVar(v) if( !locals.exists(v.id) ):
@@ -194,7 +194,7 @@ class Linker {
 		}
 		return e.map(mapExprVar);
 	}
-	
+
 	function addShader( name : String, vertex : Null<Bool>, e : TExpr, p : Int ) {
 		var s = new ShaderInfos(name, vertex);
 		curShader = s;
@@ -204,11 +204,11 @@ class Linker {
 		curShader = null;
 		return s;
 	}
-	
+
 	function sortByPriorityDesc( s1 : ShaderInfos, s2 : ShaderInfos ) {
 		return s2.priority - s1.priority;
 	}
-	
+
 	function buildDependency( parent : ShaderInfos, v : AllocatedVar, isWritten : Bool ) {
 		var found = !isWritten;
 		for( s in shaders ) {
@@ -228,7 +228,7 @@ class Linker {
 		if( v.v.kind == Var )
 			error("Variable " + v.path + " required by " + parent.name + " is missing initializer", null);
 	}
-	
+
 	function initDependencies( s : ShaderInfos ) {
 		if( s.deps != null )
 			return;
@@ -244,7 +244,7 @@ class Linker {
 					break;
 				}
 	}
-	
+
 	function collect( cur : ShaderInfos, out : Array<ShaderInfos>, vertex : Bool ) {
 		if( cur.onStack )
 			error("Loop in shader dependencies ("+cur.name+")", null);
@@ -260,7 +260,7 @@ class Linker {
 			out.push(cur);
 		cur.onStack = false;
 	}
-	
+
 	function uniqueLocals( expr : TExpr, locals : Map < String, Bool > ) {
 		switch( expr.e ) {
 		case TVarDecl(v, _):
@@ -279,14 +279,14 @@ class Linker {
 			expr.iter(uniqueLocals.bind(_, locals));
 		}
 	}
-	
+
 	public function link( shadersData : Array<ShaderData>, outVars : Array<String> ) : ShaderData {
 		varMap = new Map();
 		varIdMap = new Map();
 		allVars = new Array();
 		shaders = [];
 		locals = new Map();
-		
+
 		var dupShaders = new Map();
 		shadersData = [for( s in shadersData ) {
 			var s = s, sreal = s;
@@ -295,7 +295,7 @@ class Linker {
 			dupShaders.set(s, sreal);
 			s;
 		}];
-		
+
 		// globalize vars
 		curInstance = 0;
 		for( s in shadersData ) {
@@ -307,7 +307,7 @@ class Linker {
 			}
 			curInstance++;
 		}
-		
+
 		// create shader segments
 		var priority = 0;
 		for( s in shadersData ) {
@@ -317,7 +317,7 @@ class Linker {
 				switch( v.kind ) {
 				case Vertex, Fragment:
 					addShader(s.name + "." + (v.kind == Vertex ? "vertex" : "fragment"), v.kind == Vertex, f.expr, priority);
-					
+
 				case Init:
 					switch( f.expr.e ) {
 					case TBlock(el):
@@ -335,7 +335,7 @@ class Linker {
 			priority++;
 		}
 		shaders.sort(sortByPriorityDesc);
-		
+
 		// build dependency tree
 		var entry = new ShaderInfos("<entry>", false);
 		entry.deps = new Map();
@@ -346,21 +346,21 @@ class Linker {
 			v.v.kind = Output;
 			buildDependency(entry, v, false);
 		}
-		
+
 		// force shaders containing discard to be included
 		for( s in shaders )
 			if( s.hasDiscard ) {
 				initDependencies(s);
 				entry.deps.set(s, true);
 			}
-				
-		
+
+
 		// collect needed dependencies
 		var v = [], f = [];
 		collect(entry, v, true);
 		collect(entry, f, false);
 		if( f.pop() != entry ) throw "assert";
-		
+
 		// check that all dependencies are matched
 		for( s in shaders )
 			s.marked = null;
@@ -370,7 +370,7 @@ class Linker {
 					error(d.name + " needed by " + s.name + " is unreachable", null);
 			s.marked = true;
 		}
-		
+
 		// build resulting vars
 		var outVars = [];
 		var varMap = new Map();
@@ -436,7 +436,7 @@ class Linker {
 			build(Vertex, "vertex", v),
 			build(Fragment, "fragment", f),
 		];
-		
+
 		// make sure the first merged var is the original for duplicate shaders
 		for( s in dupShaders.keys() ) {
 			var sreal = dupShaders.get(s);
@@ -444,8 +444,8 @@ class Linker {
 			for( i in 0...s.vars.length )
 				allocVar(s.vars[i],null).merged.unshift(sreal.vars[i]);
 		}
-		
+
 		return { name : "out", vars : outVars, funs : funs };
 	}
-	
+
 }

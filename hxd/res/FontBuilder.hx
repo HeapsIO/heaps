@@ -130,9 +130,9 @@ class FontBuilder {
 		pixels.dispose();
 		return font;
 	}
-	
+
 	#elseif js
-	
+
 	function build() : h2d.Font {
 		var bmp = js.Browser.document.createCanvasElement();
 		var ctx = bmp.getContext2d();
@@ -160,7 +160,7 @@ class FontBuilder {
 		var height = width;
 		while( width * height >> 1 > surf )
 			height >>= 1;
-		
+
 		var all, done;
 		do {
 			done = true;
@@ -203,7 +203,7 @@ class FontBuilder {
 				x += w + 1;
 			}
 		} while ( !done );
-		
+
 		var rbmp = hxd.BitmapData.fromNative(ctx);
 		if( innerTex == null ) {
 			innerTex = h3d.mat.Texture.fromBitmap( rbmp );
@@ -217,7 +217,7 @@ class FontBuilder {
 		return font;
 	}
 
-	
+
 	#else
 
 	function build() {

@@ -32,19 +32,19 @@ enum SizeDecl {
 typedef FunType = { args : Array<{ name : String, type : Type }>, ret : Type };
 
 class Error {
-	
+
 	public var msg : String;
 	public var pos : Position;
-	
+
 	public function new( msg, pos ) {
 		this.msg = msg;
 		this.pos = pos;
 	}
-	
+
 	public function toString() {
 		return "Error(" + msg + ")@" + pos;
 	}
-	
+
 	public static function t( msg : String, pos : Position ) : Dynamic {
 		throw new Error(msg, pos);
 		return null;
@@ -250,11 +250,11 @@ typedef ShaderData = {
 }
 
 class Tools {
-	
+
 	static var UID = 0;
-	
+
 	public static var SWIZ = Component.createAll();
-	
+
 	public static function allocVarId() {
 		// in order to prevent compile time ids to conflict with runtime allocated ones
 		// let's use negative numbers for compile time ones
@@ -264,7 +264,7 @@ class Tools {
 		return ++UID;
 		#end
 	}
-	
+
 	public static function getName( v : TVar ) {
 		if( v.qualifiers == null )
 			return v.name;
@@ -275,7 +275,7 @@ class Tools {
 			}
 		return v.name;
 	}
-	
+
 	public static function getConstBits( v : TVar ) {
 		switch( v.type ) {
 		case TBool:
@@ -297,7 +297,7 @@ class Tools {
 		}
 		return 0;
 	}
-	
+
 	public static function isConst( v : TVar ) {
 		if( v.qualifiers != null )
 			for( q in v.qualifiers )
@@ -346,7 +346,7 @@ class Tools {
 		case VInt: TInt;
 		};
 	}
-	
+
 	public static function iter( e : TExpr, f : TExpr -> Void ) {
 		switch( e.e ) {
 		case TParenthesis(e): f(e);
@@ -383,7 +383,7 @@ class Tools {
 		}
 		return { e : ed, t : e.t, p : e.p };
 	}
-	
+
 	public static function size( t : Type ) {
 		return switch( t ) {
 		case TVoid: 0;

@@ -32,9 +32,9 @@ private class RBNode<T:RBNode<T>> {
 }
 
 @:generic private class RBTree<T:RBNode<T>> {
-	
+
 	public var root : T;
-	
+
 	public function new() {
 		this.root = null;
     }
@@ -320,17 +320,17 @@ private class RBNode<T:RBNode<T>> {
 }
 
 class Cell {
-	
+
 	public var id : Int;
 	public var point : Point;
 	public var halfedges : Array<Halfedge>;
-	
+
 	public function new(id, point) {
 		this.id = id;
 		this.point = point;
 		this.halfedges = [];
     }
-	
+
 	public function getCircle() {
 		// still not the best enclosing circle
 		// would require implementing http://www.personal.kent.edu/~rmuhamma/Compgeometry/MyCG/CG-Applets/Center/centercli.htm for complete solution
@@ -371,7 +371,7 @@ class Cell {
 		halfedges.sort(sortByAngle);
 		return halfedges.length;
 	}
-	
+
 	static function sortByAngle(a:Halfedge, b:Halfedge) {
 		return b.angle > a.angle ? 1 : (b.angle < a.angle ? -1 : 0);
 	}
@@ -455,7 +455,7 @@ class Cell {
 			}
 		return 1;
 	}
-	
+
 }
 
 class Edge {
@@ -467,7 +467,7 @@ class Edge {
 	public var rCell : Null<Cell>;
 	public var va : Null<Point>;
 	public var vb : Null<Point>;
-	
+
 	public function new(lPoint, rPoint) {
 		this.lPoint = lPoint;
 		this.rPoint = rPoint;
@@ -477,11 +477,11 @@ class Edge {
 
 
 class Halfedge {
-	
+
 	public var point : Point;
 	public var edge : Edge;
 	public var angle : Float;
-	
+
 	public function new(edge, lPoint:Point, rPoint:Point) {
 		this.point = lPoint;
 		this.edge = edge;
@@ -504,7 +504,7 @@ class Halfedge {
 				: Math.atan2(va.x-vb.x, vb.y-va.y);
 		}
 	}
-	
+
 	public inline function getStartpoint() {
 		return this.edge.lPoint == this.point ? this.edge.va : this.edge.vb;
     }
@@ -512,7 +512,7 @@ class Halfedge {
 	public inline function getEndpoint() {
 		return this.edge.lPoint == this.point ? this.edge.vb : this.edge.va;
     }
-	
+
 	public inline function getTarget() {
 		return this.edge.lCell != null && this.edge.lCell.point != point ? this.edge.lCell : this.edge.rCell;
 	}
@@ -547,7 +547,7 @@ private class CircleEvent extends RBNode<CircleEvent> {
 }
 
 class Voronoi {
-	
+
 	var epsilon : Float;
 	var beachline : RBTree<Beachsection>;
 	var vertices : Array<Point>;
@@ -646,7 +646,7 @@ class Voronoi {
 	function setEdgeEndpoint(edge, lPoint, rPoint, vertex) {
 		this.setEdgeStartpoint(edge, rPoint, lPoint, vertex);
     }
-	
+
 
 	// rhill 2011-06-02: A lot of Beachsection instanciations
 	// occur during the computation of the Voronoi diagram,
@@ -1406,7 +1406,7 @@ class Voronoi {
 		var r = b.y - a.y;
 		return r < 0 ? -1 : (r > 0 ? 1 : (b.x > a.x ? 1 : b.x < a.x ? -1 : 0));
 	}
-	
+
 	// rhill 2011-05-19:
 	//   Voronoi points are kept client-side now, to allow
 	//   user to freely modify content. At compute time,
@@ -1463,7 +1463,7 @@ class Voronoi {
 			// all done, quit
 			else
 				break;
-				
+
 		}
 
 		// wrapping-up:
@@ -1475,7 +1475,7 @@ class Voronoi {
 
 		//   add missing edges in order to close opened cells
 		this.closeCells(bbox);
-		
+
 		var eid = 0;
 		for( e in edges ) {
 			e.id = eid++;

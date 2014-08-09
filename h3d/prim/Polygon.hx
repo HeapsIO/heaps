@@ -8,22 +8,22 @@ class Polygon extends Primitive {
 	public var uvs : Array<UV>;
 	public var idx : hxd.IndexBuffer;
 	public var colors : Array<Point>;
-		
+
 	public function new( points, ?idx ) {
 		this.points = points;
 		this.idx = idx;
 	}
-	
+
 	override function getBounds() {
 		var b = new h3d.col.Bounds();
 		for( p in points )
 			b.addPoint(p);
 		return b;
 	}
-	
+
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
-		
+
 		var size = 3;
 		if( normals != null )
 			size += 3;
@@ -31,7 +31,7 @@ class Polygon extends Primitive {
 			size += 2;
 		if( colors != null )
 			size += 3;
-			
+
 		var buf = new hxd.FloatBuffer();
 		for( k in 0...points.length ) {
 			var p = points[k];
@@ -57,7 +57,7 @@ class Polygon extends Primitive {
 			}
 		}
 		buffer = h3d.Buffer.ofFloats(buf, size, idx == null ? [Triangles] : null);
-		
+
 		if( idx != null )
 			indexes = h3d.Indexes.alloc(idx);
 	}
@@ -107,7 +107,7 @@ class Polygon extends Primitive {
 			p.z *= s;
 		}
 	}
-	
+
 	public function addNormals() {
 		// make per-point normal
 		normals = new Array();
@@ -143,7 +143,7 @@ class Polygon extends Primitive {
 	public function addUVs() {
 		throw "Not implemented for this polygon";
 	}
-	
+
 	public function uvScale( su : Float, sv : Float ) {
 		if( uvs == null )
 			throw "Missing UVs";
@@ -155,7 +155,7 @@ class Polygon extends Primitive {
 			t.v *= sv;
 		}
 	}
-	
+
 	public override function triCount() {
 		var n = super.triCount();
 		if( n != 0 )

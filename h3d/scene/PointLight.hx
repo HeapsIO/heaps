@@ -4,12 +4,12 @@ class PointLight extends Light {
 
 	var pshader : h3d.shader.PointLight;
 	public var params(get, set) : h3d.Vector;
-	
+
 	public function new(?parent) {
 		pshader = new h3d.shader.PointLight();
 		super(pshader, parent);
 	}
-	
+
 	override function get_color() {
 		return pshader.color;
 	}
@@ -21,10 +21,10 @@ class PointLight extends Light {
 	inline function set_params(p) {
 		return pshader.params = p;
 	}
-	
+
 	override function emit(ctx) {
 		pshader.lightPosition.set(absPos._41, absPos._42, absPos._43);
 		super.emit(ctx);
 	}
-	
+
 }

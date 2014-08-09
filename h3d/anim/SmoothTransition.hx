@@ -12,17 +12,17 @@ class SmoothedObject extends Animation.AnimatedObject {
 }
 
 class SmoothTransition extends Transition {
-	
+
 	static var MZERO = h3d.Matrix.L([
 		1, 0, 0, 0,
 		0, 1, 1, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1,
 	]);
-	
+
 	public var blendFactor : Float;
 	var tspeed : Float;
-	
+
 	public function new(current, target, speed) {
 		super("smooth", current, target);
 		blendFactor = 0.;
@@ -32,7 +32,7 @@ class SmoothTransition extends Transition {
 		this.isInstance = true;
 		initObjects();
 	}
-	
+
 	function initObjects() {
 		var allObjects = new Map();
 		var mzero = MZERO;
@@ -59,13 +59,13 @@ class SmoothTransition extends Transition {
 			so.isAnim2 = true;
 		}
 	}
-	
+
 	override function bind( base ) {
 		super.bind(base);
 		this.objects = [];
 		initObjects();
 	}
-	
+
 	@:access(h3d.scene.Skin)
 	override function sync( decompose = false ) {
 		if( decompose ) throw "assert";
@@ -112,7 +112,7 @@ class SmoothTransition extends Transition {
 			if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] = m else o.targetObject.defaultTransform = m;
 		}
 	}
-	
+
 	override function update( dt : Float ) : Float {
 		var rt = super.update(dt);
 		var st = dt - rt;
@@ -123,5 +123,5 @@ class SmoothTransition extends Transition {
 		}
 		return rt;
 	}
-	
+
 }

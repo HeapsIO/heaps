@@ -20,9 +20,9 @@ private class InnerIterator {
 }
 
 abstract IndexBuffer(InnerData) {
-	
+
 	public var length(get, never) : Int;
-	
+
 	public inline function new(length = 0) {
 		#if js
 		this = untyped __new__(Array, length);
@@ -32,7 +32,7 @@ abstract IndexBuffer(InnerData) {
 		this = new InnerData(length);
 		#end
 	}
-	
+
 	public inline function push( v : Int ) {
 		#if flash
 		this[this.length] = v;
@@ -48,7 +48,7 @@ abstract IndexBuffer(InnerData) {
 	@:arrayAccess inline function arrayWrite(key:Int, value : Int) : Int {
 		return this[key] = value;
 	}
-	
+
 	public inline function getNative() : InnerData {
 		return this;
 	}
@@ -60,5 +60,5 @@ abstract IndexBuffer(InnerData) {
 	inline function get_length() : Int {
 		return this.length;
 	}
-	
+
 }

@@ -9,5 +9,5 @@ class UVScroll extends hxsl.Shader {
 			calculatedUV += uvDelta;
 		}
 	};
-	
+
 }

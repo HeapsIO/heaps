@@ -21,7 +21,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		xMax = hxd.Math.NEGATIVE_INFINITY;
 		yMax = hxd.Math.NEGATIVE_INFINITY;
 	}
-	
+
 	public function isEmpty() {
 		return triCount() == 0;
 	}
@@ -70,7 +70,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push(b);
 		tmp.push(a);
 	}
-	
+
 	public function addPoint( x : Float, y : Float, color : Int ) {
 		tmp.push(x);
 		tmp.push(y);
@@ -82,7 +82,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		if( x > xMax ) xMax = x;
 		if( y > yMax ) yMax = y;
 	}
-	
+
 	inline function insertColor( c : Int ) {
 		tmp.push(((c >> 16) & 0xFF) / 255.);
 		tmp.push(((c >> 8) & 0xFF) / 255.);
@@ -204,7 +204,7 @@ class TileGroup extends Drawable {
 	override function draw(ctx:RenderContext) {
 		drawWith(ctx,this);
 	}
-	
+
 	@:allow(h2d)
 	function drawWith( ctx:RenderContext, obj : Drawable ) {
 		ctx.beginDrawObject(obj, tile.getTexture());

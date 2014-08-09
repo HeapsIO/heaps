@@ -4,11 +4,11 @@ using hxsl.Ast;
 class Clone {
 
 	public var varMap : Map<Int,TVar>;
-	
+
 	public function new() {
 		varMap = new Map();
 	}
-	
+
 	public function tvar( v : TVar ) : TVar {
 		var v2 = varMap.get(v.id);
 		if( v2 != null ) return v2;
@@ -24,7 +24,7 @@ class Clone {
 		v2.type = ttype(v.type);
 		return v2;
 	}
-	
+
 	public function tfun( f : TFunction ) : TFunction {
 		return {
 			ret : ttype(f.ret),
@@ -34,7 +34,7 @@ class Clone {
 			expr : texpr(f.expr),
 		};
 	}
-	
+
 	public function ttype( t : Type ) {
 		switch( t ) {
 		case TStruct(vl):
@@ -47,7 +47,7 @@ class Clone {
 			return t;
 		}
 	}
-	
+
 	public function texpr( e : TExpr ) : TExpr {
 		var e2 : TExpr = e.map(texpr);
 		e2.t = ttype(e.t);
@@ -63,7 +63,7 @@ class Clone {
 		}
 		return e2;
 	}
-	
+
 	public function shader( s : ShaderData ) : ShaderData {
 		return {
 			name : s.name,
@@ -71,9 +71,9 @@ class Clone {
 			funs : [for( f in s.funs ) tfun(f)],
 		};
 	}
-	
+
 	public static function shaderData( s : ShaderData ) {
 		return new Clone().shader(s);
 	}
-	
+
 }

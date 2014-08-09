@@ -1,10 +1,10 @@
 package h3d.prim;
 
 class Plan3D extends Primitive {
-	
+
 	public var width(default,set) : Float;
 	public var height(default,set) : Float;
-	
+
 	public function new(width = 1.0, height = 1.0) {
 		this.width = width;
 		this.height = height;
@@ -15,13 +15,13 @@ class Plan3D extends Primitive {
 		dispose();
 		return w;
 	}
-	
+
 	function set_height(h) {
 		height = h;
 		dispose();
 		return h;
 	}
-	
+
 	override function getBounds() {
 		var b = new h3d.col.Bounds();
 		b.xMin = 0;
@@ -44,17 +44,17 @@ class Plan3D extends Primitive {
 		v.push( 0);
 		v.push( 0);
 		v.push( 1);
-		
+
 		v.push( -hw);
 		v.push( hh);
 		v.push( 0);
 		v.push( 0);
 		v.push( 0);
-		
+
 		v.push( 0);
 		v.push( 0);
 		v.push( 1);
-		
+
 		v.push( hw);
 		v.push( -hh);
 		v.push( 1);
@@ -63,22 +63,22 @@ class Plan3D extends Primitive {
 		v.push( 0);
 		v.push( 0);
 		v.push( 1);
-		
+
 		v.push( hw);
 		v.push( hh);
 		v.push( 1);
 		v.push( 0);
-		
+
 		v.push( 0);
 		v.push( 0);
 		v.push( 1);
-		
+
 		buffer = h3d.Buffer.ofFloats(v, 8, [Quads]);
 	}
-	
+
 	override function render(engine:h3d.Engine) {
 		if( buffer == null ) alloc(engine);
 		engine.renderQuadBuffer(buffer);
 	}
-	
+
 }

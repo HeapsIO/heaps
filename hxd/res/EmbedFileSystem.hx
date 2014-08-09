@@ -5,7 +5,7 @@ package hxd.res;
 @:allow(hxd.res.EmbedFileSystem)
 @:access(hxd.res.EmbedFileSystem)
 private class EmbedEntry extends FileEntry {
-	
+
 	var fs : EmbedFileSystem;
 	var relPath : String;
 	#if flash
@@ -39,7 +39,7 @@ private class EmbedEntry extends FileEntry {
 		return bytes.get(0) | (bytes.get(1) << 8) | (bytes.get(2) << 16) | (bytes.get(3) << 24);
 		#end
 	}
-	
+
 	override function getBytes() : haxe.io.Bytes {
 		#if flash
 		if( data == null )
@@ -53,7 +53,7 @@ private class EmbedEntry extends FileEntry {
 		return bytes;
 		#end
 	}
-	
+
 	override function open() {
 		#if flash
 		if( bytes == null )
@@ -67,7 +67,7 @@ private class EmbedEntry extends FileEntry {
 		readPos = 0;
 		#end
 	}
-	
+
 	override function skip( nbytes : Int ) {
 		#if flash
 		bytes.position += nbytes;
@@ -75,7 +75,7 @@ private class EmbedEntry extends FileEntry {
 		readPos += nbytes;
 		#end
 	}
-	
+
 	override function readByte() : Int {
 		#if flash
 		return bytes.readUnsignedByte();
@@ -83,7 +83,7 @@ private class EmbedEntry extends FileEntry {
 		return bytes.get(readPos++);
 		#end
 	}
-	
+
 	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
 		#if flash
 		bytes.readBytes(out.getData(), pos, size);
@@ -101,13 +101,13 @@ private class EmbedEntry extends FileEntry {
 		readPos = 0;
 		#end
 	}
-	
+
 	override function load( ?onReady : Void -> Void ) : Void {
 		#if (flash || js)
 		if( onReady != null ) haxe.Timer.delay(onReady, 1);
 		#end
 	}
-	
+
 	override function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void {
 		#if flash
 		var loader = new flash.display.Loader();
@@ -144,23 +144,23 @@ private class EmbedEntry extends FileEntry {
 		throw "TODO";
 		#end
 	}
-	
+
 	override function get_isDirectory() {
 		return fs.isDirectory(relPath);
 	}
-	
+
 	override function get_path() {
 		return relPath == "." ? "<root>" : relPath;
 	}
-	
+
 	override function exists( name : String ) {
 		return fs.exists(relPath == "." ? name : relPath + "/" + name);
 	}
-	
+
 	override function get( name : String ) {
 		return fs.get(relPath == "." ? name : relPath + "/" + name);
 	}
-	
+
 	override function get_size() {
 		#if flash
 		open();
@@ -174,21 +174,21 @@ private class EmbedEntry extends FileEntry {
 	override function iterator() {
 		return new hxd.impl.ArrayIterator(fs.subFiles(relPath));
 	}
-	
+
 }
 
 #end
 
 class EmbedFileSystem #if !macro implements FileSystem #end {
-	
+
 	#if !macro
-	
+
 	var root : Dynamic;
-	
+
 	function new(root) {
 		this.root = root;
 	}
-	
+
 	public function getRoot() : FileEntry {
 		return new EmbedEntry(this,"root",".",null);
 	}
@@ -201,7 +201,7 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		return "R_" + invalidChars.replace(path, "_");
 		#end
 	}
-	
+
 	#if flash
 	function open( path : String ) : Class<flash.utils.ByteArray> {
 		var name = resolve(path);
@@ -212,9 +212,9 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		}
 		return cl;
 	}
-	
+
 	#end
-	
+
 	function splitPath( path : String ) {
 		return path == "." ? [] : path.split("/");
 	}
@@ -227,7 +227,7 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 			throw path + " is not a directory";
 		return [for( name in Reflect.fields(r) ) get(path == "." ? name : path + "/" + name)];
 	}
-	
+
 	function isDirectory( path : String ) {
 		var r = root;
 		for( p in splitPath(path) )
@@ -248,16 +248,16 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		return true;
 		#end
 	}
-	
+
 	public function get( path : String ) {
 		if( !exists(path) )
 			throw new NotFound(path);
 		var id = #if flash open(path) #else resolve(path) #end;
 		return new EmbedEntry(this, path.split("/").pop(), path, id);
 	}
-	
+
 	#end
-	
+
 	public static macro function create( ?basePath : String, ?options : EmbedOptions ) {
 		var f = new FileTree(basePath);
 		var data = f.embed(options);
@@ -268,5 +268,5 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		};
 		return macro { $types; @:privateFields new hxd.res.EmbedFileSystem(haxe.Unserializer.run($v { sdata } )); };
 	}
-	
+
 }

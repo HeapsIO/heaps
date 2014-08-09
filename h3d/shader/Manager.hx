@@ -14,7 +14,7 @@ class Manager {
 		globals = new hxsl.Globals();
 		this.output = shaderCache.allocOutputVars(output);
 	}
-	
+
 	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : haxe.ds.Vector<Float>, pos : Int ) {
 		switch( type ) {
 		case TFloat:
@@ -86,7 +86,7 @@ class Manager {
 		}
 		return 0;
 	}
-	
+
 	inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : Array<hxsl.Shader> ) : Dynamic {
 		if( p.perObjectGlobal != null ) {
 			var v = globals.fastGet(p.perObjectGlobal.gid);
@@ -97,7 +97,7 @@ class Manager {
 		if( v == null ) throw "Missing param value " + shaders[p.instance] + "." + p.name;
 		return v;
 	}
-	
+
 	public function fillGlobals( buf : Buffers, s : hxsl.RuntimeShader ) {
 		inline function fill(buf:Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			for( g in s.globals ) {
@@ -115,7 +115,7 @@ class Manager {
 		fill(buf.vertex, s.vertex);
 		fill(buf.fragment, s.fragment);
 	}
-	
+
 	public function fillParams( buf : Buffers, s : hxsl.RuntimeShader, shaders : Array<hxsl.Shader> ) {
 		inline function fill(buf:Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			for( p in s.params ) {
@@ -132,7 +132,7 @@ class Manager {
 		fill(buf.vertex, s.vertex);
 		fill(buf.fragment, s.fragment);
 	}
-	
+
 	public function compileShaders( shaders : Array<hxsl.Shader> ) {
 		var instances = [for( s in shaders ) if( s != null ) { s.updateConstants(globals); @:privateAccess s.instance; }];
 		return shaderCache.link(instances, output);

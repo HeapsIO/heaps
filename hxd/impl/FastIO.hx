@@ -2,35 +2,35 @@ package hxd.impl;
 
 @:generic
 class FastIO<T> {
-	
+
 	var read : Int;
 	var write : Int;
 	var max : Int;
 	var table : #if flash flash.Vector<T> #else Array<T> #end;
-	
+
 	public inline function new() {
 		reset();
 		table = #if flash new flash.Vector() #else [] #end;
 	}
-	
+
 	public inline function reset() {
 		read = 0;
 		write = 0;
 		max = 0;
 	}
-	
+
 	public inline function hasNext() {
 		return read < max;
 	}
-	
+
 	public inline function next() : T {
 		return table[read++];
 	}
-	
+
 	public inline function add( v : T ) {
 		table[write++] = v;
 	}
-	
+
 	public inline function flush( count = 1000 ) {
 		if( read == write ) {
 			read = write = max = 0;
@@ -51,7 +51,7 @@ class FastIntIO extends FastIO<Int> {
 	public inline function add2di( x, y, d, bits ) {
 		add(x | ((y | (d << bits)) << bits));
 	}
-	
+
 	public inline function loop(callb) {
 		while( true ) {
 			flush((write < read ? write : (write - read)) * 4);
@@ -61,7 +61,7 @@ class FastIntIO extends FastIO<Int> {
 				callb(id);
 		}
 	}
-	
+
 	public inline function rec2d( x, y, bits, callb ) {
 		add2d(x, y, bits);
 		while( true ) {
@@ -80,7 +80,7 @@ class FastIntIO extends FastIO<Int> {
 			}
 		}
 	}
-	
+
 	public inline function rec2di( x, y, d, bits, callb ) {
 		add2di(x, y, d, bits);
 		while( true ) {

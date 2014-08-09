@@ -6,11 +6,11 @@ class MacroParser {
 
 	public function new() {
 	}
-	
+
 	function error( msg : String, pos : Position ) : Dynamic {
 		return Ast.Error.t(msg,pos);
 	}
-	
+
 	function applyMeta( m : MetadataEntry, v : Ast.VarDecl ) {
 		switch( m.params ) {
 		case []:
@@ -43,7 +43,7 @@ class MacroParser {
 			error("Unsupported qualifier " + m.name, m.pos);
 		}
 	}
-	
+
 	public function parseType( t : ComplexType, pos : Position ) : Ast.Type {
 		switch( t ) {
 		case TPath( { pack : [], name : name, sub : null, params : [] } ):
@@ -109,7 +109,7 @@ class MacroParser {
 		error("Unsupported type " + t.toString(), pos);
 		return null;
 	}
-	
+
 	public function parseExpr( e : Expr ) : Ast.Expr {
 		var ed : Ast.ExprDef = switch( e.expr ) {
 		case EBlock(el):

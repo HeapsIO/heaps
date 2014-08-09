@@ -1,14 +1,14 @@
 package h3d.anim;
 
 class SimpleBlend extends Transition {
-	
+
 	public var objectsMap : Map<String,Bool>;
-	
+
 	public function new( anim1 : Animation, anim2 : Animation, objects : Map < String, Bool > ) {
 		super("blend", anim1, anim2);
 		this.objectsMap = objects;
 	}
-	
+
 	override function clone(?a : Animation) : Animation {
 		var a : SimpleBlend = cast a;
 		if( a == null )
@@ -17,7 +17,7 @@ class SimpleBlend extends Transition {
 		a.objectsMap = objectsMap;
 		return a;
 	}
-	
+
 	override function createInstance( base ) {
 		var a = new SimpleBlend(anim1, anim2, objectsMap);
 		a.anim1 = anim1.createInstance(base);
@@ -31,5 +31,5 @@ class SimpleBlend extends Transition {
 		a.isInstance = true;
 		return a;
 	}
-	
+
 }

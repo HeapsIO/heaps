@@ -22,7 +22,7 @@ private class InnerIterator {
 abstract FloatBuffer(InnerData) {
 
 	public var length(get, never) : Int;
-		
+
 	public inline function new(length = 0) {
 		#if js
 		this = untyped __new__(Array, length);
@@ -32,7 +32,7 @@ abstract FloatBuffer(InnerData) {
 		this = new InnerData(length);
 		#end
 	}
-	
+
 	public inline function push( v : Float ) {
 		#if flash
 		this[this.length] = v;
@@ -40,7 +40,7 @@ abstract FloatBuffer(InnerData) {
 		this.push(v);
 		#end
 	}
-	
+
 	public inline function grow( v : Int ) {
 		#if flash
 		if( v > this.length ) this.length = v;
@@ -57,8 +57,8 @@ abstract FloatBuffer(InnerData) {
 		if( this.length > v ) this.splice(v, this.length - v);
 		#end
 	}
-	
-	
+
+
 	@:arrayAccess inline function arrayRead(key:Int) : Float {
 		return this[key];
 	}
@@ -66,17 +66,17 @@ abstract FloatBuffer(InnerData) {
 	@:arrayAccess inline function arrayWrite(key:Int, value : Float) : Float {
 		return this[key] = value;
 	}
-	
+
 	public inline function getNative() : InnerData {
 		return this;
 	}
-	
+
 	public inline function iterator() {
 		return new InnerIterator(this);
 	}
-	
+
 	inline function get_length() : Int {
 		return this.length;
 	}
-	
+
 }

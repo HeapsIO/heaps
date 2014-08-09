@@ -23,7 +23,7 @@ class BitsBuilder {
 			switch( f.kind ) {
 			case FVar(vt = TPath( { pack : pack, name : name }), init):
 				f.kind = FProp("default", "set", vt, init);
-			
+
 				var path = pack.copy();
 				path.push(name);
 				var t = try Context.getType(path.join(".")) catch( e : Dynamic ) continue;
@@ -99,5 +99,5 @@ class BitsBuilder {
 			Context.error(offset + " bits were used while maximum was 32", pos);
 		return fields;
 	}
-	
+
 }

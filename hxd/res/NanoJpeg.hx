@@ -53,14 +53,14 @@ private class Component {
 
 @:noDebug
 class NanoJpeg {
-	
+
 	static inline var BLOCKSIZE = 64;
-	
+
 	var bytes : haxe.io.Bytes;
 	var pos : Int;
 	var size : Int;
 	var length : Int;
-	
+
 	var width : Int;
 	var height : Int;
 	var ncomp : Int;
@@ -72,7 +72,7 @@ class NanoJpeg {
 	var vlctab : haxe.ds.Vector<haxe.io.Bytes>;
 	var block : haxe.ds.Vector<Int>;
 	var njZZ : haxe.ds.Vector<Int>;
-	
+
 	var mbsizex : Int;
 	var mbsizey : Int;
 	var mbwidth : Int;
@@ -80,10 +80,10 @@ class NanoJpeg {
 	var rstinterval : Int;
 	var buf : Int;
 	var bufbits : Int;
-	
+
 	var pixels : haxe.io.Bytes;
 	var filter : Filter;
-	
+
 	function new() {
 		comps = haxe.ds.Vector.fromArrayCopy([
 			new Component(),
@@ -101,15 +101,15 @@ class NanoJpeg {
 		njZZ = haxe.ds.Vector.fromArrayCopy([0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63 ]);
 		vlctab = haxe.ds.Vector.fromArrayCopy([null, null, null, null]);
 	}
-	
+
 	inline function alloc( nbytes : Int ) {
 		return hxd.impl.Tmp.getBytes(nbytes);
 	}
-	
+
 	inline function free( bytes : haxe.io.Bytes ) {
 		hxd.impl.Tmp.saveBytes(bytes);
 	}
-	
+
 	function njInit( bytes, pos, size, filter ) {
 		this.bytes = bytes;
 		this.pos = pos;
@@ -127,7 +127,7 @@ class NanoJpeg {
 		for( i in 0...3 )
 			comps[i].dcpred = 0;
 	}
-	
+
 	function cleanup() {
 		bytes = null;
 		for( c in comps )
@@ -141,28 +141,28 @@ class NanoJpeg {
 				vlctab[i] = null;
 			}
 	}
-	
+
 	inline function njSkip(count) {
 		pos += count;
 		size -= count;
 		length -= count;
 		syntax( size < 0 );
 	}
-	
+
 	inline function syntax( flag ) {
 		#if debug
 		if( flag ) throw "Invalid JPEG file";
 		#end
 	}
-	
+
 	inline function get(p) {
 		return bytes.get(pos + p);
 	}
-	
+
 	inline function njDecode16(p) {
 		return (get(p) << 8) | get(p + 1);
 	}
-	
+
 	inline function njByteAlign() {
 		bufbits &= 0xF8;
 	}
@@ -210,7 +210,7 @@ class NanoJpeg {
 		bufbits -= bits;
 		return r;
 	}
-	
+
 	inline function njDecodeLength() {
 		syntax( size < 2 );
 		length = njDecode16(0);
@@ -222,7 +222,7 @@ class NanoJpeg {
 		njDecodeLength();
 		njSkip(length);
 	}
-	
+
 	function njDecodeSOF() {
 		njDecodeLength();
 		syntax( length < 9 );
@@ -237,7 +237,7 @@ class NanoJpeg {
 			notSupported();
 		}
 		syntax( length < ncomp * 3 );
-		
+
 		var ssxmax = 0, ssymax = 0;
 		for( i in 0...ncomp ) {
 			var c = comps[i];
@@ -274,7 +274,7 @@ class NanoJpeg {
 		}
 		njSkip(length);
 	}
-	
+
 	function njDecodeDQT() {
 		njDecodeLength();
 		while( length >= 65 ) {
@@ -335,7 +335,7 @@ class NanoJpeg {
 
 
 	var vlcCode : Int;
-	
+
 	inline function njGetVLC( vlc : haxe.io.Bytes ) {
 		var value = njShowBits(16);
 		var bits = vlc.get(value<<1);
@@ -401,7 +401,7 @@ class NanoJpeg {
 		block[bp+6] = (x3 - x2) >> 8;
 		block[bp+7] = (x7 - x1) >> 8;
 	}
-	
+
 	inline function njColIDCT( bp, out : FastBytes, po, stride ) {
 		var x0, x1, x2, x3, x4, x5, x6, x7, x8;
 		if ( ((x1 = block[bp+8*4] << 8)
@@ -450,7 +450,7 @@ class NanoJpeg {
 		out[po] = njClip(((x3 - x2) >> 14) + 128);  po += stride;
 		out[po] = njClip(((x7 - x1) >> 14) + 128);
 	}
-	
+
 	static var K = 0;
 	function njDecodeBlock( c : Component, po ) {
 		var out = new FastBytes(c.pixels);
@@ -474,7 +474,7 @@ class NanoJpeg {
 		for( coef in 0...8 )
 			njColIDCT(coef, out, coef + po, c.stride);
 	}
-	
+
 	function notSupported() {
 		throw "This JPG file is not supported";
 	}
@@ -494,7 +494,7 @@ class NanoJpeg {
 		}
 		if( get(0) != 0 || (get(1) != 63) || get(2) != 0 ) notSupported();
 		njSkip(length);
-		
+
 		var mbx = 0, mby = 0;
 		var rstcount = rstinterval, nextrst = 0;
 		while( true ) {
@@ -520,7 +520,7 @@ class NanoJpeg {
 		}
 	}
 
-	
+
 	static inline var CF4A = -9;
 	static inline var CF4B = 111;
 	static inline var CF4C = 29;
@@ -534,7 +534,7 @@ class NanoJpeg {
 	static inline var CF2A = 139;
 	static inline var CF2B = -11;
 	static inline function CF(x) return njClip(((x) + 64) >> 7);
-	
+
 	inline static function njClip(x) {
 		return x < 0 ? 0 : x > 0xFF ? 0xFF : x;
 	}
@@ -567,7 +567,7 @@ class NanoJpeg {
 		c.pixels = cout;
 	}
 
-	
+
 	function njUpsampleV( c : Component ) {
 		var w = c.width, s1 = c.stride, s2 = s1 + s1;
 		var out = alloc((c.width * c.height) << 1);
@@ -595,7 +595,7 @@ class NanoJpeg {
 		free(c.pixels);
 		c.pixels = out;
 	}
-	
+
 	function njUpsample( c : Component ) {
 		var xshift = 0, yshift = 0;
 		while( c.width < width ) { c.width <<= 1; ++xshift; }
@@ -695,7 +695,7 @@ class NanoJpeg {
 		}
 		return pixels;
 	}
-	
+
 	function njDecode() {
 		if( size < 2 || get(0) != 0xFF || get(1) != 0xD8 ) throw "This file is not a JPEG";
 		njSkip(2);
@@ -728,12 +728,12 @@ class NanoJpeg {
 		cleanup();
 		return { pixels : pixels, width : width, height : height };
 	}
-	
+
 	static var inst : NanoJpeg = null;
 	public static function decode( bytes : haxe.io.Bytes, ?filter, position : Int = 0, size : Int = -1 ) {
 		if( inst == null ) inst = new NanoJpeg();
 		inst.njInit(bytes, position, size, filter);
 		return inst.njDecode();
 	}
-	
+
 }

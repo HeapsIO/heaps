@@ -2,9 +2,9 @@ package h3d.prim;
 import h3d.col.Point;
 
 class Cylinder extends Quads {
-	
+
 	var segs : Int;
-	
+
 	public function new( segs : Int, ray = 1.0, height = 1.0 ) {
 		var pts = new Array();
 		var ds = Math.PI * 2 / segs;
@@ -21,7 +21,7 @@ class Cylinder extends Quads {
 		}
 		super(pts);
 	}
-	
+
 	override public function addTCoords() {
 		uvs = new Array();
 		for( s in 0...segs ) {
@@ -33,16 +33,16 @@ class Cylinder extends Quads {
 			uvs.push(new UV(u2, 0));
 		}
 	}
-	
+
 	override public function addNormals() {
 		normals = new Array();
 		var ds = Math.PI * 2 / segs;
 		for( s in 0...segs ) {
 			//var ac = (s + 0.5) * ds;
-			
+
 			var ac0 = (s - 0.5) * ds;
 			var ac1 = (s+ 0.5) * ds;
-			
+
 			//var n = new Point(Math.cos(ac), Math.sin(ac), 0);
 			var n0 = new Point(Math.cos(ac0), Math.sin(ac0), 0);
 			var n1 = new Point(Math.cos(ac1), Math.sin(ac1), 0);
@@ -52,7 +52,7 @@ class Cylinder extends Quads {
 			normals.push(n);
 			normals.push(n);
 			*/
-			
+
 			normals.push(n0);
 			normals.push(n1);
 			normals.push(n0);

@@ -2,10 +2,10 @@ package hxsl;
 using hxsl.Ast;
 
 class Serializer {
-	
+
 	function new() {
 	}
-	
+
 	#if macro
 	function mapExpr( e : TExpr ) {
 		var e = e.map(mapExpr);
@@ -13,7 +13,7 @@ class Serializer {
 		return e;
 	}
 	#end
-	
+
 	public static function run( s : ShaderData ) {
 		#if macro
 		var ser = new Serializer();
@@ -35,5 +35,5 @@ class Serializer {
 		ser.serialize(s);
 		return ser.toString();
 	}
-	
+
 }

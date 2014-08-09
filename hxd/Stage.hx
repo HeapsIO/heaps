@@ -1,14 +1,14 @@
 package hxd;
 
 class Stage {
-	
+
 	#if (flash || openfl)
 	var stage : flash.display.Stage;
 	var fsDelayed : Bool;
 	#end
 	var resizeEvents : List < Void -> Void > ;
 	var eventTargets : List < Event -> Void > ;
-	
+
 	#if js
 	@:allow(hxd)
 	static function getCanvas() {
@@ -19,13 +19,13 @@ class Stage {
 	var canvas : js.html.CanvasElement;
 	var canvasPos : js.html.ClientRect;
 	#end
-	
+
 	public var width(get, null) : Int;
 	public var height(get, null) : Int;
 	public var mouseX(get, null) : Int;
 	public var mouseY(get, null) : Int;
 	public var mouseLock(get, set) : Bool;
-	
+
 	function new() {
 		eventTargets = new List();
 		resizeEvents = new List();
@@ -79,7 +79,7 @@ class Stage {
 			setupOnCloseEvent();
 		#end
 	}
-	
+
 	#if flash
 	function setupOnCloseEvent() {
 		var nw : flash.events.EventDispatcher = Reflect.field(stage, "nativeWindow");
@@ -90,16 +90,16 @@ class Stage {
 		});
 	}
 	#end
-	
+
 	public dynamic function onClose() {
 		return true;
 	}
-	
+
 	public function event( e : hxd.Event ) {
 		for( et in eventTargets )
 			et(e);
 	}
-	
+
 	public function addEventTarget(et) {
 		eventTargets.add(et);
 	}
@@ -107,7 +107,7 @@ class Stage {
 	public function removeEventTarget(et) {
 		eventTargets.remove(et);
 	}
-	
+
 	public function addResizeEvent( f : Void -> Void ) {
 		resizeEvents.push(f);
 	}
@@ -115,7 +115,7 @@ class Stage {
 	public function removeResizeEvent( f : Void -> Void ) {
 		resizeEvents.remove(f);
 	}
-	
+
 	public function getFrameRate() : Float {
 		#if (flash || openfl)
 		return stage.frameRate;
@@ -141,13 +141,13 @@ class Stage {
 		#else
 		#end
 	}
-	
+
 	static var inst = null;
 	public static function getInstance() {
 		if( inst == null ) inst = new Stage();
 		return inst;
 	}
-	
+
 #if (flash || openfl)
 
 	inline function get_mouseX() {
@@ -165,7 +165,7 @@ class Stage {
 	inline function get_height() {
 		return stage.stageHeight;
 	}
-	
+
 	inline function get_mouseLock() {
 		#if openfl
 		return false;
@@ -181,7 +181,7 @@ class Stage {
 		return stage.mouseLock = v;
 		#end
 	}
-	
+
 	function onResize(_) {
 		for( e in resizeEvents )
 			e();
@@ -190,13 +190,13 @@ class Stage {
 	function onMouseDown(e:Dynamic) {
 		event(new Event(EPush, mouseX, mouseY));
 	}
-	
+
 	function onRMouseDown(e:Dynamic) {
 		var e = new Event(EPush, mouseX, mouseY);
 		e.button = 1;
 		event(e);
 	}
-	
+
 	function onMouseUp(e:Dynamic) {
 		event(new Event(ERelease, mouseX, mouseY));
 	}
@@ -206,17 +206,17 @@ class Stage {
 		e.button = 1;
 		event(e);
 	}
-	
+
 	function onMouseMove(e:Dynamic) {
 		event(new Event(EMove, mouseX, mouseY));
 	}
-	
+
 	function onMouseWheel(e:flash.events.MouseEvent) {
 		var ev = new Event(EWheel, mouseX, mouseY);
 		ev.wheelDelta = -e.delta / 3.0;
 		event(ev);
 	}
-	
+
 	function onKeyUp(e:flash.events.KeyboardEvent) {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
@@ -239,7 +239,7 @@ class Stage {
 		}
 		#end
 	}
-	
+
 	function getCharCode( e : flash.events.KeyboardEvent ) {
 		#if openfl
 		return e.charCode;
@@ -278,7 +278,7 @@ class Stage {
 		}
 		#end
 	}
-	
+
 	function onTouchDown(e:flash.events.TouchEvent) {
 		var ev = new Event(EPush, e.localX, e.localY);
 		ev.touchId = e.touchPointID;
@@ -290,13 +290,13 @@ class Stage {
 		ev.touchId = e.touchPointID;
 		event(ev);
 	}
-	
+
 	function onTouchMove(e:flash.events.TouchEvent) {
 		var ev = new Event(EMove, e.localX, e.localY);
 		ev.touchId = e.touchPointID;
 		event(ev);
 	}
-	
+
 #elseif js
 
 	var curMouseX : Float = 0.;
@@ -317,11 +317,11 @@ class Stage {
 	function get_mouseY() {
 		return Math.round((curMouseY - canvasPos.top) * js.Browser.window.devicePixelRatio);
 	}
-	
+
 	function get_mouseLock() {
 		return false;
 	}
-	
+
 	function set_mouseLock(b) {
 		throw "Mouse lock not supported";
 		return false;
@@ -334,19 +334,19 @@ class Stage {
 	function onMouseUp(e:js.html.MouseEvent) {
 		event(new Event(ERelease, mouseX, mouseY));
 	}
-	
+
 	function onMouseMove(e:js.html.MouseEvent) {
 		curMouseX = e.clientX;
 		curMouseY = e.clientY;
 		event(new Event(EMove, mouseX, mouseY));
 	}
-	
+
 	function onMouseWheel(e:js.html.MouseEvent) {
 		var ev = new Event(EWheel, mouseX, mouseY);
 		ev.wheelDelta = untyped -e.wheelDelta / 30.0;
 		event(ev);
 	}
-	
+
 	function onKeyUp(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
@@ -360,7 +360,7 @@ class Stage {
 		ev.charCode = e.charCode;
 		event(ev);
 	}
-	
+
 	function onResize(e) {
 		for( r in resizeEvents )
 			r();
@@ -375,7 +375,7 @@ class Stage {
 	function get_mouseY() {
 		return 0;
 	}
-	
+
 	function get_width() {
 		return 0;
 	}

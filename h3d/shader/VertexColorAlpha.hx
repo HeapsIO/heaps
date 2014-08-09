@@ -6,7 +6,7 @@ class VertexColorAlpha extends hxsl.Shader {
 		@input var input : {
 			var color : Vec4;
 		};
-		
+
 		var pixelColor : Vec4;
 		@const var additive : Bool;
 
@@ -16,7 +16,7 @@ class VertexColorAlpha extends hxsl.Shader {
 			else
 				pixelColor *= input.color;
 		}
-		
+
 	};
 
 }

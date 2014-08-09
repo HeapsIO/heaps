@@ -1,7 +1,7 @@
 package h3d.pass;
 
 class Distance extends Base {
-	
+
 	var texture : h3d.mat.Texture;
 
 	public function new() {
@@ -13,7 +13,7 @@ class Distance extends Base {
 	override function getOutputs() {
 		return ["output.position", "output.distance"];
 	}
-	
+
 	override function draw(ctx : h3d.scene.RenderContext, passes) {
 		if( texture == null || texture.width != ctx.engine.width || texture.height != ctx.engine.height ) {
 			if( texture != null ) texture.dispose();
@@ -24,5 +24,5 @@ class Distance extends Base {
 		ctx.engine.setTarget(null);
 		return passes;
 	}
-	
+
 }

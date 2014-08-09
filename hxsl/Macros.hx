@@ -40,7 +40,7 @@ class Macros {
 			throw "assert";
 		}
 	}
-	
+
 	static function makeDef( t : Type, pos : Position ) : haxe.macro.Expr {
 		return switch( t ) {
 		case TFloat, TInt: macro 0;
@@ -63,7 +63,7 @@ class Macros {
 			null;
 		}
 	}
-	
+
 	static function getConsts( v : TVar, p : Position, consts : Array<{ pos : Int, bits : Int, v : TVar }> ) {
 		switch( v.type ) {
 		case TStruct(vl):
@@ -82,7 +82,7 @@ class Macros {
 			}
 		}
 	}
-	
+
 	static function buildFields( shader : ShaderData, pos : Position ) {
 		var fields = new Array<Field>();
 		var globals = [], consts = [], params = [];
@@ -205,7 +205,7 @@ class Macros {
 		});
 		return fields;
 	}
-	
+
 	public static function buildShader() {
 		var fields = Context.getBuildFields();
 		for( f in fields )
@@ -235,7 +235,7 @@ class Macros {
 			}
 		return fields;
 	}
-	
+
 	public static function buildGlobals() {
 		var fields = Context.getBuildFields();
 		var globals = [];
@@ -302,5 +302,5 @@ class Macros {
 		});
 		return fields;
 	}
-	
+
 }

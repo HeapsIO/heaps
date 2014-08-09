@@ -4,31 +4,31 @@ abstract Polygon(Array<Point>) {
 
 	public var length(get, never): Int;
 	public var points(get, never) : Array<Point>;
-	
+
 	public inline function new(?pts) {
 		this = pts == null ? [] : pts;
 	}
-	
+
 	public inline function add(x, y) {
 		this.push(new Point(x, y));
 	}
-	
+
 	public inline function addPoint(p) {
 		this.push(p);
 	}
-	
+
 	inline function get_points() : Array<Point> {
 		return this;
 	}
-	
+
 	inline function get_length() {
 		return this.length;
 	}
-	
+
 	public inline function reverse() {
 		this.reverse();
 	}
-	
+
 	public function getArea() {
 		var highI = this.length - 1;
 		if (highI < 2) return 0.;
@@ -57,15 +57,15 @@ abstract Polygon(Array<Point>) {
 	public inline function simplify(?fillType) {
 		return Clipper.simplifyPolygon(this, fillType);
 	}
-	
+
 	public inline function getOrientation() : Bool {
 		return getArea() >= 0;
 	}
-	
+
 	public inline function removeAt(i:Int) {
 		this.splice(i, 1);
 	}
-		
+
 	@:arrayAccess function arrayGet(i:Int) : Point {
 		return this[i];
 	}
@@ -77,10 +77,10 @@ abstract Polygon(Array<Point>) {
 	@:to public function toArray() : Array<Point> {
 		return this;
 	}
-	
+
 	@:from public static function fromArray( pts : Array<Point> ) {
 		return new Polygon(pts);
 	}
-	
+
 }
 

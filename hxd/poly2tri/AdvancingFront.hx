@@ -38,7 +38,7 @@ class AdvancingFront
 				}
 			}
 		}
-		
+
 		return null;
 	}
 

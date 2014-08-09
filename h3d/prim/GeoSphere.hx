@@ -27,11 +27,11 @@ class GeoSphere extends Polygon {
 				pa.normalize();
 				pb.normalize();
 				pc.normalize();
-				
+
 				nidx.push(np);
 				nidx.push(np + 1);
 				nidx.push(np + 2);
-				
+
 				nidx.push(idx[i]);
 				nidx.push(np);
 				nidx.push(np + 2);
@@ -39,11 +39,11 @@ class GeoSphere extends Polygon {
 				nidx.push(np);
 				nidx.push(idx[i + 1]);
 				nidx.push(np + 1);
-				
+
 				nidx.push(np + 1);
 				nidx.push(idx[i + 2]);
 				nidx.push(np + 2);
-				
+
 				p[np++] = pa;
 				p[np++] = pb;
 				p[np++] = pc;

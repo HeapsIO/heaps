@@ -11,22 +11,22 @@ class Kerning {
 }
 
 class FontChar {
-	
+
 	public var t : h2d.Tile;
 	public var width : Int;
 	var kerning : Null<Kerning>;
-	
+
 	public function new(t,w) {
 		this.t = t;
 		this.width = w;
 	}
-	
+
 	public function addKerning( prevChar : Int, offset : Int ) {
 		var k = new Kerning(prevChar, offset);
 		k.next = kerning;
 		kerning = k;
 	}
-	
+
 	public function getKerningOffset( prevChar : Int ) {
 		var k = kerning;
 		while( k != null ) {
@@ -40,7 +40,7 @@ class FontChar {
 }
 
 class Font {
-	
+
 	public var name(default, null) : String;
 	public var size(default, null) : Int;
 	public var lineHeight(default, null) : Int;
@@ -48,7 +48,7 @@ class Font {
 	public var charset : hxd.Charset;
 	var glyphs : Map<Int,FontChar>;
 	var defaultChar : FontChar;
-	
+
 	function new(name,size) {
 		this.name = name;
 		this.size = size;
@@ -56,7 +56,7 @@ class Font {
 		defaultChar = new FontChar(new Tile(null, 0, 0, 0, 0),0);
 		charset = hxd.Charset.getDefault();
 	}
-	
+
 	public inline function getChar( code : Int ) {
 		var c = glyphs.get(code);
 		if( c == null ) {
@@ -65,7 +65,7 @@ class Font {
 		}
 		return c;
 	}
-	
+
 	/**
 		This is meant to create smoother fonts by creating them with double size while still keeping the original glyph size.
 	**/
@@ -78,13 +78,13 @@ class Font {
 		lineHeight = Std.int(lineHeight * ratio);
 		this.size = size;
 	}
-	
+
 	public function hasChar( code : Int ) {
 		return glyphs.get(code) != null;
 	}
-	
+
 	public function dispose() {
 		tile.dispose();
 	}
-	
+
 }

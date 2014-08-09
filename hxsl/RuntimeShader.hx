@@ -43,12 +43,12 @@ class RuntimeShaderData {
 }
 
 class RuntimeShader {
-	
+
 	static var UID = 0;
 	public var id : Int;
 	public var vertex : RuntimeShaderData;
 	public var fragment : RuntimeShaderData;
-	
+
 	public function new() {
 		id = UID++;
 	}

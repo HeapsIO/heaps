@@ -4,7 +4,7 @@ class Block {
 	public var id : Int;
 	public var attributes : Null<Map<String,Dynamic>>;
 	public var name : Null<String>;
-	
+
 	public function new(id) {
 		this.id = id;
 	}
@@ -12,7 +12,7 @@ class Block {
 	public inline function to<T:Block>( k : Class<T> ) : T {
 		return Std.instance(this, k);
 	}
-	
+
 	function toString() {
 		return Type.getClass(this) + "#" + id + (name == null ? "" : "(" + name + ")");
 	}

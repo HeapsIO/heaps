@@ -3,12 +3,12 @@ using hxsl.Ast;
 
 @:autoBuild(hxsl.Macros.buildShader())
 class Shader {
-	
+
 	var shader : SharedShader;
 	var instance : SharedShader.ShaderInstance;
 	var constBits : Int;
 	var constModified : Bool;
-	
+
 	public function new() {
 		var cl : Dynamic = std.Type.getClass(this);
 		shader = cl.SHADER;
@@ -18,12 +18,12 @@ class Shader {
 			cl.SHADER = shader;
 		}
 	}
-	
+
 	public function getParamValue( index : Int ) : Dynamic {
 		throw "assert"; // will be subclassed in sub shaders
 		return null;
 	}
-	
+
 	public function updateConstants( globals : Globals ) {
 		for( c in shader.consts )
 			if( c.globalId > 0 ) {
@@ -42,5 +42,5 @@ class Shader {
 			}
 		instance = shader.getInstance(constBits);
 	}
-	
+
 }

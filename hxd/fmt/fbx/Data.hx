@@ -52,7 +52,7 @@ class FbxTools {
 		}
 		return cur;
 	}
-	
+
 	public static function getInts( n : FbxNode ) {
 		if( n.props.length != 1 )
 			throw n.name + " has " + n.props + " props";
@@ -79,14 +79,14 @@ class FbxTools {
 			throw n.name + " has " + n.props + " props";
 		}
 	}
-	
+
 	public static function hasProp( n : FbxNode, p : FbxProp ) {
 		for( p2 in n.props )
 			if( Type.enumEq(p, p2) )
 				return true;
 		return false;
 	}
-	
+
 	public static function toInt( n : FbxProp ) {
 		if( n == null ) throw "null prop";
 		return switch( n ) {
@@ -112,7 +112,7 @@ class FbxTools {
 		default: throw "Invalid prop " + n;
 		}
 	}
-	
+
 	public static function getId( n : FbxNode ) {
 		if( n.props.length != 3 )
 			throw n.name + " is not an object";
@@ -140,5 +140,5 @@ class FbxTools {
 		default: throw n.name + " is not an object";
 		}
 	}
-	
+
 }

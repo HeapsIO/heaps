@@ -5,7 +5,7 @@ class MeshMaterial extends Material {
 	var mshader : h3d.shader.BaseMesh;
 	var textureShader : h3d.shader.Texture;
 	public var texture(get,set) : h3d.mat.Texture;
-	
+
 	public var color(get, set) : Vector;
 	public var blendMode(default, set) : BlendMode;
 
@@ -15,7 +15,7 @@ class MeshMaterial extends Material {
 		super(new h3d.mat.Pass("default",new hxsl.ShaderList(mshader)));
 		this.texture = texture;
 	}
-	
+
 	inline function get_color() {
 		return mshader.color;
 	}
@@ -23,7 +23,7 @@ class MeshMaterial extends Material {
 	inline function set_color(v) {
 		return mshader.color = v;
 	}
-	
+
 	function set_blendMode(v:BlendMode) {
 		if( mainPass != null ) {
 			switch( v ) {
@@ -47,7 +47,7 @@ class MeshMaterial extends Material {
 	function get_texture() {
 		return textureShader == null ? null : textureShader.texture;
 	}
-	
+
 	function set_texture(t) {
 		if( t == null ) {
 			if( textureShader != null ) {

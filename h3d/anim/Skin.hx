@@ -10,12 +10,12 @@ class Joint {
 	public var transPos : h3d.Matrix; // inverse pose matrix
 	public var parent : Joint;
 	public var subs : Array<Joint>;
-	
+
 	public function new() {
 		bindIndex = -1;
 		subs = [];
 	}
-	
+
 }
 
 private class Influence {
@@ -28,7 +28,7 @@ private class Influence {
 }
 
 class Skin {
-	
+
 	public var vertexCount(default, null) : Int;
 	public var bonesPerVertex(default,null) : Int;
 	public var vertexJoints : haxe.ds.Vector<Int>;
@@ -38,13 +38,13 @@ class Skin {
 	public var allJoints(default,null) : Array<Joint>;
 	public var boundJoints(default,null) : Array<Joint>;
 	public var primitive : h3d.prim.Primitive;
-	
+
 	// spliting
 	public var splitJoints(default, null) : Array<Array<Joint>>;
 	public var triangleGroups : haxe.ds.Vector<Int>;
-	
+
 	var envelop : Array<Array<Influence>>;
-	
+
 	public function new( vertexCount, bonesPerVertex ) {
 		this.vertexCount = vertexCount;
 		this.bonesPerVertex = bonesPerVertex;
@@ -52,7 +52,7 @@ class Skin {
 		vertexWeights = new haxe.ds.Vector(vertexCount * bonesPerVertex);
 		envelop = [];
 	}
-	
+
 	public function setJoints( joints : Array<Joint>, roots : Array<Joint> ) {
 		rootJoints = roots;
 		allJoints = joints;
@@ -61,7 +61,7 @@ class Skin {
 			if( j.name != null )
 				namedJoints.set(j.name, j);
 	}
-	
+
 	public inline function addInfluence( vid : Int, j : Joint, w : Float ) {
 		var il = envelop[vid];
 		if( il == null )
@@ -72,11 +72,11 @@ class Skin {
 	function sortInfluences( i1 : Influence, i2 : Influence ) {
 		return i2.w > i1.w ? 1 : -1;
 	}
-	
+
 	public inline function isSplit() {
 		return splitJoints != null;
 	}
-	
+
 	public function initWeights() {
 		boundJoints = [];
 		var pos = 0;
@@ -108,7 +108,7 @@ class Skin {
 		}
 		envelop = null;
 	}
-	
+
 	public function split( maxBones : Int, index : Array<Int> ) {
 		if( isSplit() )
 			return true;
@@ -117,7 +117,7 @@ class Skin {
 
 		splitJoints = [];
 		triangleGroups = new haxe.ds.Vector(Std.int(index.length / 3));
-		
+
 		// collect joints groups used by triangles
 		var curGroup = new Array<Joint>(), curJoints = [];
 		var ipos = 0, tpos = 0;
@@ -149,7 +149,7 @@ class Skin {
 				if( ipos == index.length ) break;
 			}
 		}
-		
+
 		// assign split indexes to joints
 		var groups = [for( i in 0...splitJoints.length ) { id : i, reserved : [], joints : splitJoints[i] }];
 		var joints = [for( j in boundJoints ) { j : j, groups : [], index : -1 } ];
@@ -189,13 +189,13 @@ class Skin {
 			}
 			splitJoints.push(jl);
 		}
-		
+
 		// rebind
 		for( i in 0...vertexJoints.length )
 			vertexJoints[i] = boundJoints[vertexJoints[i]].splitIndex;
 
 		return true;
 	}
-	
-	
+
+
 }

@@ -7,7 +7,7 @@ class Select extends Interactive {
 	var list : ItemList;
 	public var value(default, null) : String;
 	public var selectedIndex(default,set) : Int;
-	
+
 	public function new(?parent) {
 		super("select", parent);
 		tf = new h2d.Text(null, this);
@@ -18,11 +18,11 @@ class Select extends Interactive {
 	override function onClick() {
 		popup();
 	}
-	
+
 	public function getOptions() {
 		return options.copy();
 	}
-	
+
 	public function popup() {
 		if( list != null || options.length == 0 )
 			return;
@@ -52,13 +52,13 @@ class Select extends Interactive {
 			}
 		},close);
 	}
-	
+
 	public function close() {
 		list.remove();
 		list = null;
 		getScene().stopDrag();
 	}
-	
+
 	public dynamic function onChange( value : String ) {
 	}
 
@@ -68,7 +68,7 @@ class Select extends Interactive {
 		if( i != selectedIndex ) needRebuild = true;
 		return selectedIndex = i;
 	}
-	
+
 	public function setValue(v) {
 		var k = -1;
 		for( i in 0...options.length )
@@ -86,8 +86,8 @@ class Select extends Interactive {
 		selectedIndex = k;
 		return value;
 	}
-	
-	
+
+
 	function updateListPos() {
 		var scene = getScene();
 		var s = new h2d.css.Style();
@@ -110,20 +110,20 @@ class Select extends Interactive {
 		if( list.customStyle == null || s.offsetX != list.customStyle.offsetX || s.offsetY != list.customStyle.offsetY || s.width != list.customStyle.width )
 			list.setStyle(s);
 	}
-	
+
 	public function clear() {
 		options = [];
 		needRebuild = true;
 		selectedIndex = 0;
 	}
-	
+
 	public function addOption(label, ?value) {
 		options.push( { label : label, value : value } );
 		needRebuild = true;
 		if( selectedIndex == options.length - 1 )
 			selectedIndex = selectedIndex; // update value
 	}
-	
+
 	public dynamic function onItemOver( value : String ) {
 	}
 
@@ -140,5 +140,5 @@ class Select extends Interactive {
 		if( !ctx.measure && list != null )
 			updateListPos();
 	}
-	
+
 }

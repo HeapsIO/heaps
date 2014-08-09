@@ -42,7 +42,7 @@ class Node
 			ax * bx + ay * by
 		);
 	}
-	
+
 	public function getBasinAngle():Float
 	{
 		return Math.atan2(

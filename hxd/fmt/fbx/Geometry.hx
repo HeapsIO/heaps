@@ -5,20 +5,20 @@ class Geometry {
 
 	var lib : Library;
 	var root : FbxNode;
-	
+
 	public function new(l, root) {
 		this.lib = l;
 		this.root = root;
 	}
-	
+
 	public function getRoot() {
 		return root;
 	}
-	
+
 	public function getVertices() {
 		return root.get("Vertices").getFloats();
 	}
-	
+
 	public function getPolygons() {
 		return root.get("PolygonVertexIndex").getInts();
 	}
@@ -27,20 +27,20 @@ class Geometry {
 		var mats = root.get("LayerElementMaterial",true);
 		return mats == null ? null : mats.get("Materials").getInts();
 	}
-	
+
 	public function merge( g : Geometry, materials : Array<Int> ) {
 		var vl = getVertices();
 		var vcount = Std.int(vl.length / 3);
 		if( g.getGeomTranslate() != null || this.getGeomTranslate() != null )
 			throw "TODO";
-			
+
 		// merge vertices
 		for( v in g.getVertices() )
 			vl.push(v);
-			
+
 		var poly = getPolygons();
 		var mats = getMaterials();
-		
+
 		// expand materials
 		if( mats.length == 1 && root.get("LayerElementMaterial.MappingInformationType").props[0].toString() == "AllSame" ) {
 			var polyCount = 0;
@@ -63,12 +63,12 @@ class Geometry {
 			}
 			poly.push(p);
 		}
-		
+
 		// merge normals
 		var normals = getNormals();
 		for( n in g.getNormals() )
 			normals.push(n);
-			
+
 		// merget uvs
 		var uv = getUVs();
 		var uv2 = g.getUVs();
@@ -83,7 +83,7 @@ class Geometry {
 			for( i in uv2.index )
 				uv.index.push(i + count);
 		}
-		
+
 		// merge materials
 		var m2 = g.getMaterials();
 		if( m2 == null ) {
@@ -145,12 +145,12 @@ class Geometry {
 		}
 		return nrm;
 	}
-	
+
 	public function getColors() {
 		var color = root.get("LayerElementColor",true);
 		return color == null ? null : { values : color.get("Colors").getFloats(), index : color.get("ColorIndex").getInts() };
 	}
-	
+
 	public function getUVs() {
 		var uvs = [];
 		for( v in root.getAll("LayerElementUV") ) {
@@ -164,7 +164,7 @@ class Geometry {
 		}
 		return uvs;
 	}
-	
+
 	@:access(hxd.fmt.fbx.Library.leftHand)
 	public function getGeomTranslate() {
 		for( p in lib.getParent(root, "Model").getAll("Properties70.P") )

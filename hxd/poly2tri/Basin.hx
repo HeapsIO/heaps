@@ -7,7 +7,7 @@ class Basin
 	public var right_node:Node;
 	public var width:Float;
 	public var left_highest:Bool;
-	
+
 	public function new()
 	{
 		width = 0;

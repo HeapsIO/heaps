@@ -21,10 +21,10 @@ private class VarDeps {
 class Dce {
 
 	var used : Map<Int,VarDeps>;
-	
+
 	public function new() {
 	}
-	
+
 	public function dce( vertex : ShaderData, fragment : ShaderData ) {
 		// collect vars dependencies
 		used = new Map();
@@ -36,7 +36,7 @@ class Dce {
 			check(f.expr, []);
 		for( f in fragment.funs )
 			check(f.expr, []);
-			
+
 		// mark vars as unused
 		var changed = true;
 		while( changed ) {
@@ -66,7 +66,7 @@ class Dce {
 			vertex : vertex,
 		}
 	}
-	
+
 	function get( v : TVar ) {
 		var vd = used.get(v.id);
 		if( vd == null ) {
@@ -75,7 +75,7 @@ class Dce {
 		}
 		return vd;
 	}
-	
+
 	function link( v : TVar, writeTo : Array<VarDeps> ) {
 		var vd = get(v);
 		for( w in writeTo ) {
@@ -86,7 +86,7 @@ class Dce {
 			vd.deps.set(w.v.id, w);
 		}
 	}
-	
+
 	function hasDiscardRec( e : TExpr ) {
 		switch( e.e ) {
 		case TDiscard: throw new Exit();
@@ -94,7 +94,7 @@ class Dce {
 			e.iter(hasDiscardRec);
 		}
 	}
-	
+
 	function hasDiscard( e : TExpr ) {
 		try {
 			hasDiscardRec(e);
@@ -103,7 +103,7 @@ class Dce {
 			return true;
 		}
 	}
-	
+
 	function check( e : TExpr, writeTo : Array<VarDeps> ) {
 		switch( e.e ) {
 		case TVar(v):
@@ -126,7 +126,7 @@ class Dce {
 			e.iter(check.bind(_, writeTo));
 		}
 	}
-	
+
 	function mapExpr( e : TExpr ) : TExpr {
 		switch( e.e ) {
 		case TBlock(el):
@@ -148,5 +148,5 @@ class Dce {
 			return e.map(mapExpr);
 		}
 	}
-	
+
 }

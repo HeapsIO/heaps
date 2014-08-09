@@ -48,7 +48,7 @@ private class PolyNode {
 		polygon = new Polygon([]);
 		childs = [];
 	}
-	
+
 	private function isHoleNode() {
 		var result = true;
 		var node = parent;
@@ -60,13 +60,13 @@ private class PolyNode {
 	}
 
 	public var childCount(get, never) : Int;
-	
+
 	inline function get_childCount() {
 		return childs.length;
 	}
 
 	public var contour(get, never) : Polygon;
-	
+
 	inline function get_contour() {
 		return polygon;
 	}
@@ -123,12 +123,12 @@ private class PolyTree extends PolyNode {
 		for(pn in polynode.childs)
 			addRec(pn, polygons);
 	}
-	
+
 	public function clear() {
 		allPolys = [];
 		childs = [];
 	}
-	
+
 	public function getFirst() {
 		if( childs.length > 0)
 			return childs[0];
@@ -136,11 +136,11 @@ private class PolyTree extends PolyNode {
     }
 
 	public var total(get, never) : Int;
-	
+
 	inline function get_total() {
 		return allPolys.length;
     }
-	
+
 }
 
 @:generic
@@ -167,7 +167,7 @@ private class Direction {
 	public static inline var RightToLeft = 0;
 	public static inline var LeftToRight = 1;
 }
-	
+
 private class TEdge {
 	public var xbot : Int;
 	public var ybot : Int;
@@ -296,7 +296,7 @@ private class PolyOffsetBuilder
 	{
 		//precondition: solution != pts
 		normals = [];
-		
+
 		if (delta == 0) {solution = pts; return; }
 		m_p = pts;
 		m_delta = delta;
@@ -334,7 +334,7 @@ private class PolyOffsetBuilder
 
 			//build normals
 			normals = [];
-			
+
 			for( j in 0...len-1 )
 				normals.push(Clipper.GetUnitNormal(pts[m_i][j], pts[m_i][j+1]));
 			if (isPolygon || forceClose)
@@ -499,7 +499,7 @@ private class PolyOffsetBuilder
 	inline function Round(v:Float) {
 		return Math.round(v);
 	}
-	
+
 	function DoMiter()
 	{
 		if ((normals[m_k].x * normals[m_j].y - normals[m_j].x * normals[m_k].y) * m_delta >= 0)
@@ -567,11 +567,11 @@ private class ClipperBase
 	inline static function PointsEqual(pt1:Point, pt2:Point) {
 		return pt1.x == pt2.x && pt1.y == pt2.y;
 	}
-	
+
 	inline function abs(i:Int):Int {
 		return i < 0 ? -i : i;
 	}
-	
+
 	//------------------------------------------------------------------------------
 
 	function PointIsVertex(pt:Point, pp:OutPt) {
@@ -605,7 +605,7 @@ private class ClipperBase
 		}
 		return false;
 	}
-	
+
 	//------------------------------------------------------------------------------
 
 	function PointInPolygon(pt:Point, pp:OutPt)
@@ -671,7 +671,7 @@ private class ClipperBase
 		else*/ return
 			(pt1.y - pt2.y) * (pt3.x - pt4.x) - (pt1.x - pt2.x) * (pt3.y - pt4.y) == 0;
 	}
-	
+
 	//------------------------------------------------------------------------------
 
 	function new()
@@ -778,7 +778,7 @@ private class ClipperBase
 			i--;
 		}
 		InitEdge(edges[0], edges[1], edges[len-1], p[0], polyType);
-		
+
 		//reset xcurr & ycurr and find 'eHighest' (given the y axis coordinates
 		//increase downward so the 'highest' edge will have the smallest ytop)
 		var e = edges[0];
@@ -801,8 +801,8 @@ private class ClipperBase
 		e = AddBoundsToLML(e);
 		}
 		while( e != eHighest );
-		
-		
+
+
 		return true;
 	}
 	//------------------------------------------------------------------------------
@@ -1009,7 +1009,7 @@ private class ClipperBase
 
 @:allow(hxd.clipper)
 class Clipper extends ClipperBase {
-	
+
 	var m_PolyOuts : Array<OutRec>;
 	var m_ClipType : ClipType;
 	var m_Scanbeam : Scanbeam;
@@ -1044,9 +1044,9 @@ class Clipper extends ClipperBase {
 	inline function xor(a, b) {
 		return if( a ) !b else b;
 	}
-	
+
 	//------------------------------------------------------------------------------
-	
+
 	public override function clear()
 	{
 		if (m_edges.length == 0) return; //avoids problems with ClipperBase destructor
@@ -1079,11 +1079,11 @@ class Clipper extends ClipperBase {
 			lm = lm.next;
 		}
 	}
-	
+
 	//------------------------------------------------------------------------------
 
 	public var reverseSolution(get, set) : Bool;
-	
+
 	function get_reverseSolution() {
 		return m_ReverseOutput;
 	}
@@ -1844,8 +1844,8 @@ class Clipper extends ClipperBase {
 			return pt1.y > pt2.y;
 		}
 	}
-	
-	
+
+
 	private function GetOverlapSegment(pt1a:Point, pt1b:Point, pt2a:Point,pt2b:Point,pt1:Ref<Point>,pt2:Ref<Point>) : Bool {
 		//precondition: segments are colinear.
 		if (abs(pt1a.x - pt1b.x) > abs(pt1a.y - pt1b.y))
@@ -1879,7 +1879,7 @@ class Clipper extends ClipperBase {
 			return pt1.val.y > pt2.val.y;
 		}
 	}
-	
+
 	//------------------------------------------------------------------------------
 
 	private function FindSegment(pp : OutPt,  pt1 : Ref<Point>, pt2 : Ref<Point>) {
@@ -3062,7 +3062,7 @@ class Clipper extends ClipperBase {
 		}
 
 		if (!GetOverlapSegment(pt1.val, pt2.val, pt3.val, pt4.val, pt1, pt2)) return null;
-		
+
 		// unref
 		var pt1 = pt1.val;
 		var pt2 = pt2.val;

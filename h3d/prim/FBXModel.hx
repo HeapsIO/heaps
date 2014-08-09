@@ -16,11 +16,11 @@ class FBXModel extends MeshPrimitive {
 		this.geom = g;
 		curMaterial = -1;
 	}
-	
+
 	public function getVerticesCount() {
 		return Std.int(geom.getVertices().length / 3);
 	}
-	
+
 	override function getBounds() {
 		if( bounds != null )
 			return bounds;
@@ -47,7 +47,7 @@ class FBXModel extends MeshPrimitive {
 		}
 		return bounds;
 	}
-	
+
 	override function render( engine : h3d.Engine ) {
 		if( curMaterial < 0 ) {
 			super.render(engine);
@@ -61,11 +61,11 @@ class FBXModel extends MeshPrimitive {
 		indexes = idx;
 		curMaterial = -1;
 	}
-	
+
 	override function selectMaterial( material : Int ) {
 		curMaterial = material;
 	}
-	
+
 	override function dispose() {
 		super.dispose();
 		if( groupIndexes != null ) {
@@ -75,31 +75,31 @@ class FBXModel extends MeshPrimitive {
 			groupIndexes = null;
 		}
 	}
-	
+
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
-		
+
 		var verts = geom.getVertices();
 		var norms = geom.getNormals();
 		var tuvs = geom.getUVs()[0];
 		var colors = geom.getColors();
 		var mats = multiMaterial ? geom.getMaterials() : null;
-		
+
 		var gt = geom.getGeomTranslate();
 		if( gt == null ) gt = new Point();
-		
+
 		var idx = new hxd.IndexBuffer();
 		var midx = new Array<hxd.IndexBuffer>();
 		var pbuf = new hxd.FloatBuffer(), nbuf = (norms == null ? null : new hxd.FloatBuffer()), sbuf = (skin == null ? null : new hxd.BytesBuffer()), tbuf = (tuvs == null ? null : new hxd.FloatBuffer());
 		var cbuf = (colors == null ? null : new hxd.FloatBuffer());
-		
+
 		// skin split
 		var sidx = null, stri = 0;
 		if( skin != null && skin.isSplit() ) {
 			if( multiMaterial ) throw "Multimaterial not supported with skin split";
 			sidx = [for( _ in skin.splitJoints ) new hxd.IndexBuffer()];
 		}
-		
+
 		// triangulize indexes : format is  A,B,...,-X : negative values mark the end of the polygon
 		var count = 0, pos = 0, matPos = 0;
 		var index = geom.getPolygons();
@@ -111,7 +111,7 @@ class FBXModel extends MeshPrimitive {
 				for( n in 0...count ) {
 					var k = n + start;
 					var vidx = index[k];
-					
+
 					var x = verts[vidx * 3] + gt.x;
 					var y = verts[vidx * 3 + 1] + gt.y;
 					var z = verts[vidx * 3 + 2] + gt.z;
@@ -130,7 +130,7 @@ class FBXModel extends MeshPrimitive {
 						tbuf.push(tuvs.values[iuv*2]);
 						tbuf.push(1 - tuvs.values[iuv * 2 + 1]);
 					}
-					
+
 					if( sbuf != null ) {
 						var p = vidx * skin.bonesPerVertex;
 						var idx = 0;
@@ -140,7 +140,7 @@ class FBXModel extends MeshPrimitive {
 						}
 						sbuf.writeInt32(idx);
 					}
-					
+
 					if( cbuf != null ) {
 						var icol = colors.index[k];
 						cbuf.push(colors.values[icol * 4]);
@@ -182,7 +182,7 @@ class FBXModel extends MeshPrimitive {
 			}
 			pos++;
 		}
-		
+
 		addBuffer("position", h3d.Buffer.ofFloats(pbuf, 3));
 		if( nbuf != null ) addBuffer("normal", h3d.Buffer.ofFloats(nbuf, 3));
 		if( tbuf != null ) addBuffer("uv", h3d.Buffer.ofFloats(tbuf, 2));
@@ -194,7 +194,7 @@ class FBXModel extends MeshPrimitive {
 			addBuffer("indexes", skinBuf, skin.bonesPerVertex);
 		}
 		if( cbuf != null ) addBuffer("color", h3d.Buffer.ofFloats(cbuf, 3));
-		
+
 		indexes = h3d.Indexes.alloc(idx);
 		if( mats != null ) {
 			groupIndexes = [];
@@ -207,5 +207,5 @@ class FBXModel extends MeshPrimitive {
 				groupIndexes.push(i == null ? null : h3d.Indexes.alloc(i));
 		}
 	}
-	
+
 }

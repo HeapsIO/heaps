@@ -16,7 +16,7 @@ class Embed {
 		}
 		return null;
 	}
-	
+
 	public static function doEmbedFont( name : String, file : String, chars : String ) {
 		if( Context.defined("flash") || Context.defined("openfl") ) {
 			if( chars == null ) // convert char list to char range
@@ -66,16 +66,16 @@ class Embed {
 		var m = Context.getLocalClass().get().module;
 		Context.registerModuleDependency(m, file);
 	}
-	
+
 	#end
-	
+
 	public static macro function getFileContent( file : String ) {
 		var file = Context.resolvePath(file);
 		var m = Context.getLocalClass().get().module;
 		Context.registerModuleDependency(m, file);
 		return macro $v{sys.io.File.getContent(file)};
 	}
-	
+
 	public static macro function getResource( file : String ) {
 		var path = Context.resolvePath(file);
 		var m = Context.getLocalClass().get().module;
@@ -83,7 +83,7 @@ class Embed {
 		var str = haxe.Serializer.run(sys.io.File.getBytes(path));
 		return macro hxd.res.Any.fromBytes($v{file},haxe.Unserializer.run($v{str}));
 	}
-	
+
 	public macro static function embedFont( file : String, ?chars : String, ?skipErrors : Bool ) {
 		var ok = true;
 		var path = locateFont(file);
@@ -95,7 +95,7 @@ class Embed {
 		doEmbedFont(safeName, path, chars);
 		return macro new hxd._res.$safeName().fontName;
 	}
-	
+
 	#if js
 	static function __init__() untyped {
 		__js__("var hx__registerFont");

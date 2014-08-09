@@ -34,13 +34,13 @@ class ShaderConst {
 }
 
 class SharedShader {
-	
+
 	public var data : ShaderData;
 	public var globals : Array<ShaderGlobal>;
 	public var consts : Array<ShaderConst>;
 	var instanceCache : Map<Int,ShaderInstance>;
 	var paramsCount : Int;
-	
+
 	public function new(src:String) {
 		instanceCache = new Map();
 		data = haxe.Unserializer.run(src);
@@ -56,7 +56,7 @@ class SharedShader {
 			instanceCache.set(0, i);
 		}
 	}
-	
+
 	public function getInstance( constBits : Int ) {
 		var i = instanceCache.get(constBits);
 		if( i != null )
@@ -101,7 +101,7 @@ class SharedShader {
 			}
 		}
 	}
-	
+
 	function browseVar( v : TVar, ?path : String ) {
 		v.id = Tools.allocVarId();
 		if( path == null )

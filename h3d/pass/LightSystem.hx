@@ -20,7 +20,7 @@ class LightSystem {
 		ambientLight = new h3d.Vector(1, 1, 1);
 		ambientShader = new h3d.shader.AmbientLight();
 	}
-	
+
 	public function initLights( lights : h3d.scene.Light ) {
 		this.lights = lights;
 		lightCount = 0;
@@ -34,13 +34,13 @@ class LightSystem {
 			lights = haxe.ds.ListSort.sortSingleLinked(lights, sortLight);
 		setGlobals();
 	}
-	
+
 	function sortLight( l1 : h3d.scene.Light, l2 : h3d.scene.Light ) {
 		var p = l1.priority - l2.priority;
 		if( p != 0 ) return -p;
 		return l1.objectDistance < l2.objectDistance ? -1 : 1;
 	}
-	
+
 	@:access(h3d.scene.Object.absPos)
 	public function computeLight( obj : h3d.scene.Object, shaders : hxsl.ShaderList ) : hxsl.ShaderList {
 		if( lightCount > maxLightsPerObject ) {
@@ -72,5 +72,5 @@ class LightSystem {
 		}
 		return shaders;
 	}
-	
+
 }

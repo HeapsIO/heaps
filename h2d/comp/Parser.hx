@@ -16,13 +16,13 @@ private class CustomInterp extends hscript.Interp {
 #end
 
 class Parser {
-	
+
 	var comps : Map < String, haxe.xml.Fast -> Component -> Component > ;
 	#if hscript
 	var interp : hscript.Interp;
 	#end
 	var root : Component;
-	
+
 	public function new(?api:{}) {
 		comps = new Map();
 		#if hscript
@@ -34,7 +34,7 @@ class Parser {
 				interp.variables.set(f, Reflect.field(api, f));
 		#end
 	}
-	
+
 	public function build( x : haxe.xml.Fast, ?parent : Component ) {
 		var c : Component;
 		switch( x.name.toLowerCase() ) {
@@ -246,11 +246,11 @@ class Parser {
 			build(e, c);
 		return c;
 	}
-	
+
 	public function register(name, make) {
 		this.comps.set(name, make);
 	}
-	
+
 	function makeScript( c : Component, script : String ) {
 		#if hscript
 		var p = new hscript.Parser();
@@ -269,7 +269,7 @@ class Parser {
 		return function() throw "Please compile with -lib hscript to get script access";
 		#end
 	}
-	
+
 	public static function fromHtml( html : String, ?api ) : Component {
 		function lookupBody(x:Xml) {
 			if( x.nodeType == Xml.Element && x.nodeName.toLowerCase() == "body" )
@@ -291,5 +291,5 @@ class Parser {
 		}
 		return new Parser(api).build(new haxe.xml.Fast(body),null);
 	}
-	
+
 }

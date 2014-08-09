@@ -86,7 +86,7 @@ class System {
 		case Custom(frames, speed, offsetX, offsetY):
 			#if openfl
 				throw "not supported on openFL for now";
-			#else 
+			#else
 				var customCursor = new flash.ui.MouseCursorData();
 				var v = new flash.Vector();
 				for( f in frames ) v.push(f.toNative());

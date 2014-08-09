@@ -9,7 +9,7 @@ class Base {
 	var globals(get, never) : hxsl.Globals;
 	var priority : Int = 0;
 	public var lightSystem : LightSystem;
-	
+
 	inline function get_globals() return manager.globals;
 
 	@global("camera.view") var cameraView : h3d.Matrix = ctx.camera.mcam;
@@ -25,30 +25,30 @@ class Base {
 		var t = ctx.engine.getTarget();
 		t != null && !t.flags.has(TargetNoFlipY) ? -1 : 1;
 	}
-	
+
 	public function new() {
 		manager = new h3d.shader.Manager(getOutputs());
 		initGlobals();
 		lightSystem = new LightSystem(globals);
 	}
-	
+
 	function getOutputs() {
 		return ["output.position", "output.color"];
 	}
-	
+
 	public function compileShader( p : h3d.mat.Pass ) {
 		var out = [for( s in p.getShadersRec() ) s];
 		out.reverse();
 		return manager.compileShaders(out);
 	}
-	
+
 	function allocBuffer( s : hxsl.RuntimeShader, shaders : Array<hxsl.Shader> ) {
 		var buf = new h3d.shader.Buffers(s);
 		manager.fillGlobals(buf, s);
 		manager.fillParams(buf, s, shaders);
 		return buf;
 	}
-	
+
 	@:access(h3d.scene)
 	function setupShaders( passes : Object ) {
 		var p = passes;
@@ -82,14 +82,14 @@ class Base {
 			p = p.next;
 		}
 	}
-	
+
 	static inline function sortByShader( o1 : Object, o2 : Object ) {
 		var d = o1.shader.id - o2.shader.id;
 		if( d != 0 ) return d;
 		// TODO : sort by textures
 		return 0;
 	}
-	
+
 	@:access(h3d.scene)
 	public function draw( ctx : h3d.scene.RenderContext, passes : Object ) {
 		this.ctx = ctx;
@@ -118,5 +118,5 @@ class Base {
 		this.ctx = null;
 		return passes;
 	}
-	
+
 }

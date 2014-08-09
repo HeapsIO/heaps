@@ -1,10 +1,10 @@
 package h3d.anim;
 
 class Transition extends Animation {
-	
+
 	public var anim1 : Animation;
 	public var anim2 : Animation;
-	
+
 	public function new( transitionName : String, anim1 : Animation, anim2 : Animation ) {
 		var r1 = 1, r2 = 1;
 		while( true ) {
@@ -16,13 +16,13 @@ class Transition extends Animation {
 		this.anim1 = anim1;
 		this.anim2 = anim2;
 	}
-	
+
 	override function setFrame( f : Float ) {
 		super.setFrame(f);
 		anim1.setFrame(frame % anim1.frameCount);
 		anim2.setFrame(frame % anim2.frameCount);
 	}
-	
+
 	override function clone(?a : Animation) : Animation {
 		var a : Transition = cast a;
 		if( a == null )
@@ -32,19 +32,19 @@ class Transition extends Animation {
 		a.anim2 = anim2.clone();
 		return a;
 	}
-	
+
 	override function sync( decompose : Bool = false ) {
 		if( decompose )
 			throw "Decompose not supported on transition";
 		anim1.sync();
 		anim2.sync();
 	}
-	
+
 	override function bind(base) {
 		anim1.bind(base);
 		anim2.bind(base);
 	}
-	
+
 	override function update(dt:Float) {
 		var rt = super.update(dt);
 		var st = dt - rt;
@@ -56,5 +56,5 @@ class Transition extends Animation {
 			tmp = anim2.update(tmp);
 		return rt;
 	}
-	
+
 }

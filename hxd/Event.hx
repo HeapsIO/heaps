@@ -31,15 +31,15 @@ class Event {
 	public var keyCode : Int;
 	public var charCode : Int;
 	public var wheelDelta : Float;
-	
+
 	public function new(k,x=0.,y=0.) {
 		kind = k;
 		this.relX = x;
 		this.relY = y;
 	}
-	
+
 	public function toString() {
 		return kind + "[" + Std.int(relX) + "," + Std.int(relY) + "]";
 	}
-	
+
 }

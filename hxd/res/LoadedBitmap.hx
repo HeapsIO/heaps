@@ -7,7 +7,7 @@ abstract LoadedBitmap(LoadedBitmapData) {
 	public inline function new(data) {
 		this = data;
 	}
-	
+
 	public function toBitmap() : hxd.BitmapData {
 		#if flash
 		return hxd.BitmapData.fromNative(this);
@@ -23,7 +23,7 @@ abstract LoadedBitmap(LoadedBitmapData) {
 		return null;
 		#end
 	}
-	
+
 	public inline function toNative() : LoadedBitmapData {
 		return this;
 	}

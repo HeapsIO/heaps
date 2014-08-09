@@ -3,17 +3,17 @@ import hxd.Math;
 
 @:allow(h3d.col)
 class Ray {
-	
+
 	var px : Float;
 	var py : Float;
 	var pz : Float;
 	var lx : Float;
 	var ly : Float;
 	var lz : Float;
-	
+
 	inline function new() {
 	}
-	
+
 	public function normalize() {
 		var l = lx * lx + ly * ly + lz * lz;
 		if( l < Math.EPSILON ) l = 0 else l = Math.invSqrt(l);
@@ -21,7 +21,7 @@ class Ray {
 		ly *= l;
 		lz *= l;
 	}
-	
+
 	public inline function getPos() {
 		return new Point(px, py, pz);
 	}
@@ -29,11 +29,11 @@ class Ray {
 	public inline function getDir() {
 		return new Point(lx, ly, lz);
 	}
-	
+
 	public function toString() {
 		return "{" + getPos() + "," + getDir() + "}";
 	}
-	
+
 	public inline function intersect( p : Plane ) : Null<Point> {
 		var d = lx * p.nx + ly * p.ny + lz * p.nz;
 		var nd = p.d - (px * p.nx + py * p.ny + pz * p.nz);
@@ -45,7 +45,7 @@ class Ray {
 			return new Point(px + lx * k, py + ly * k, pz + lz * k);
 		}
 	}
-	
+
 	public inline function collideFrustum( mvp : Matrix ) {
 		// transform the two ray points into the normalized frustum box
 		var a = new h3d.Vector(px, py, pz);
@@ -56,7 +56,7 @@ class Ray {
 		var lx = b.x - a.x;
 		var ly = b.y - a.y;
 		var lz = b.z - a.z;
-		
+
 		var dx = 1 / lx;
 		var dy = 1 / ly;
 		var dz = 1 / lz;
@@ -94,7 +94,7 @@ class Ray {
 			return true;
 		}
 	}
-	
+
 	public static inline function fromPoints( p1 : Point, p2 : Point ) {
 		var r = new Ray();
 		r.px = p1.x;
@@ -116,5 +116,5 @@ class Ray {
 		r.lz = dz;
 		return r;
 	}
-	
+
 }

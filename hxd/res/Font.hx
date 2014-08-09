@@ -1,7 +1,7 @@
 package hxd.res;
 
 class Font extends Resource {
-	
+
 	public function build( size : Int, ?options ) : h2d.Font {
 		#if flash
 		var fontClass : Class<flash.text.Font> = cast Type.resolveClass("_R_" + ~/[^A-Za-z0-9_]/g.replace(entry.path, "_"));
@@ -16,5 +16,5 @@ class Font extends Resource {
 		return null;
 		#end
 	}
-	
+
 }

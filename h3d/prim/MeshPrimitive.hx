@@ -3,13 +3,13 @@ package h3d.prim;
 private typedef Cache = #if flash haxe.ds.UnsafeStringMap<h3d.Buffer.BufferOffset> #else Map<Int,h3d.Buffer.BufferOffset> #end
 
 class MeshPrimitive extends Primitive {
-		
+
 	var bufferCache : Cache;
-	
+
 	function allocBuffer( engine : h3d.Engine, name : String ) {
 		return null;
 	}
-	
+
 	// TODO : in HxSL 3, we might instead allocate unique ID per name
 	static inline function hash( name : String ) {
 		var id = 0;
@@ -17,7 +17,7 @@ class MeshPrimitive extends Primitive {
 			id = id * 223 + name.charCodeAt(i);
 		return id & 0x0FFFFFFF;
 	}
-	
+
 	function addBuffer( name : String, buf, offset = 0 ) {
 		if( bufferCache == null )
 			bufferCache = new Cache();
@@ -57,12 +57,12 @@ class MeshPrimitive extends Primitive {
 		}
 		return buffers;
 	}
-	
+
 	override function render( engine : h3d.Engine ) {
 		// the actual alloc() cache will be implemented by subclasses
 		if( indexes == null || indexes.isDisposed() )
 			alloc(engine);
 		engine.renderMultiBuffers(getBuffers(engine), indexes);
 	}
-	
+
 }

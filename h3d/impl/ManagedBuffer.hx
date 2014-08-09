@@ -19,11 +19,11 @@ class ManagedBuffer {
 	public var stride(default,null) : Int;
 	public var size(default,null) : Int;
 	public var flags(default, null) : haxe.EnumFlags<Buffer.BufferFlag>;
-	
+
 	var vbuf : Driver.VertexBuffer;
 	var freeList : FreeCell;
 	var next : ManagedBuffer;
-	
+
 	public function new( stride, size, ?flags : Array<Buffer.BufferFlag> ) {
 		this.flags = new haxe.EnumFlags();
 		if( flags != null )
@@ -43,7 +43,7 @@ class ManagedBuffer {
 	public function uploadVertexBytes( start : Int, vertices : Int, data : haxe.io.Bytes, dataPos = 0 ) {
 		mem.driver.uploadVertexBytes(vbuf, start, vertices, data, dataPos);
 	}
-	
+
 	public function alloc(vertices,align) {
 		var p = allocPosition(vertices, align);
 		if( p < 0 )
@@ -55,7 +55,7 @@ class ManagedBuffer {
 		};
 		return b;
 	}
-	
+
 	public function getFreeVertices() {
 		var m = 0;
 		var l = freeList;
@@ -65,7 +65,7 @@ class ManagedBuffer {
 		}
 		return m;
 	}
-	
+
 	function allocPosition( nvert : Int, align : Int ) {
 		var free = freeList;
 		while( free != null ) {
@@ -90,7 +90,7 @@ class ManagedBuffer {
 		free.count -= nvert;
 		return pos;
 	}
-	
+
 	function allocBuffer( b : Buffer ) {
 		var align = b.flags.has(Quads) ? 4 : (b.flags.has(Triangles) ? 3 : 1);
 		var p = allocPosition(b.vertices, align);
@@ -101,7 +101,7 @@ class ManagedBuffer {
 		};
 		return true;
 	}
-	
+
 	@:allow(h3d.Buffer.dispose)
 	function freeBuffer( b : Buffer ) {
 		var prev : FreeCell = null;
@@ -141,7 +141,7 @@ class ManagedBuffer {
 	public function dispose() {
 		mem.freeManaged(this);
 	}
-	
+
 	public inline function isDisposed() {
 		return vbuf == null;
 	}

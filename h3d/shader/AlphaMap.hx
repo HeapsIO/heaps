@@ -12,7 +12,7 @@ class AlphaMap extends hxsl.Shader {
 			pixelColor.a *= texture.get(calculatedUV * uvScale + uvDelta).b;
 		}
 	}
-	
+
 	public function new(texture) {
 		super();
 		uvScale.set(1, 1);

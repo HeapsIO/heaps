@@ -1,7 +1,7 @@
 package h2d;
 
 class RenderContext {
-	
+
 	public var engine : h3d.Engine;
 	public var time : Float;
 	public var elapsedTime : Float;
@@ -9,7 +9,7 @@ class RenderContext {
 
 	public var buffer : hxd.FloatBuffer;
 	public var bufPos : Int;
-	
+
 	var texture : h3d.mat.Texture;
 	var baseShader : h3d.shader.Base2d;
 	var manager : h3d.shader.Manager;
@@ -19,7 +19,7 @@ class RenderContext {
 	var currentShaders : Array<hxsl.Shader>;
 	var currentObj : Drawable;
 	var stride : Int;
-	
+
 	public function new() {
 		frame = 0;
 		time = 0.;
@@ -33,7 +33,7 @@ class RenderContext {
 		baseShader = new h3d.shader.Base2d();
 		baseShader.zValue = 0.;
 	}
-	
+
 	public function begin() {
 		texture = null;
 		currentObj = null;
@@ -45,20 +45,20 @@ class RenderContext {
 		engine.selectMaterial(pass);
 		engine.uploadShaderBuffers(buffers, Globals);
 	}
-	
+
 	function initShaders( shaders ) {
 		currentShaders = shaders;
 		compiledShader = manager.compileShaders(shaders);
 		buffers = new h3d.shader.Buffers(compiledShader);
 		manager.fillGlobals(buffers, compiledShader);
 	}
-	
+
 	public function end() {
 		flush();
 		texture = null;
 		currentObj = null;
 	}
-	
+
 	public function flush(force=false) {
 		if( bufPos == 0 ) return;
 		beforeDraw();
@@ -70,7 +70,7 @@ class RenderContext {
 		bufPos = 0;
 		texture = null;
 	}
-	
+
 	public function beforeDraw() {
 		baseShader.texture = texture;
 		texture.filter = currentObj.filter ? Linear : Nearest;
@@ -93,7 +93,7 @@ class RenderContext {
 		engine.uploadShaderBuffers(buffers, Params);
 		engine.uploadShaderBuffers(buffers, Textures);
 	}
-	
+
 	@:access(h2d.Drawable)
 	public function beginDrawObject( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
 		beginDraw(obj, texture, true);
@@ -102,12 +102,12 @@ class RenderContext {
 		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
 		beforeDraw();
 	}
-	
+
 	@:access(h2d.Drawable)
 	public function beginDrawBatch( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
 		beginDraw(obj, texture, false);
 	}
-	
+
 	@:access(h2d.Drawable)
 	function beginDraw(	obj : h2d.Drawable, texture : h3d.mat.Texture, isRelative : Bool ) {
 		var stride = 8;
@@ -144,7 +144,7 @@ class RenderContext {
 			for( i in 0...obj.shaders.length )
 				currentShaders[i+1] = obj.shaders[i];
 		}
-			
+
 		this.texture = texture;
 		this.stride = stride;
 		this.currentObj = obj;

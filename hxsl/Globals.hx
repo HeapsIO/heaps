@@ -18,11 +18,11 @@ abstract GlobalSlot<T>(Int) {
 class Globals {
 
 	var map : Map<Int,Dynamic>;
-	
+
 	public function new() {
 		map = new Map<Int,Dynamic>();
 	}
-	
+
 	public function set( path : String, v : Dynamic ) {
 		map.set(allocID(path), v);
 	}
@@ -54,5 +54,5 @@ class Globals {
 		}
 		return id;
 	}
-	
+
 }

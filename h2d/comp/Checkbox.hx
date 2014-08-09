@@ -1,19 +1,19 @@
 package h2d.comp;
 
 class Checkbox extends Interactive {
-	
+
 	public var checked(default, set) : Bool;
-	
+
 	public function new(?parent) {
 		super("checkbox", parent);
 		checked = false;
 	}
-	
+
 	function set_checked(b) {
 		toggleClass(":checked", b);
 		return checked = b;
 	}
-	
+
 	override function resize( ctx : Context ) {
 		super.resize(ctx);
 		if( !ctx.measure ) {
@@ -25,13 +25,13 @@ class Checkbox extends Interactive {
 			}
 		}
 	}
-	
+
 	override function onClick() {
 		checked = !checked;
 		onChange(checked);
 	}
-	
+
 	public dynamic function onChange( checked : Bool ) {
 	}
-	
+
 }

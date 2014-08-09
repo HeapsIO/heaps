@@ -18,7 +18,7 @@ private enum CompStyle {
 private class Style {
 	public function new () {
 	}
-	
+
 	public static function get(kind:CompStyle) {
 		var style = new h2d.css.Style();
 		switch(kind) {
@@ -35,7 +35,7 @@ private class Style {
 }
 
 private class CFlag extends h2d.css.Fill {
-	
+
 	public function new (parent, x:Float, y:Float, ang = 0., color = 0xff000000, border = 0xFFaaaaaa) {
 		super(parent);
 		var fill = this;
@@ -43,26 +43,26 @@ private class CFlag extends h2d.css.Fill {
 		fill.x = x;
 		fill.y = y;
 		//bg
-		
+
 		// bgarrow
 		fill.addPoint(-5, -4, border);
 		fill.addPoint(5, -4, border);
 		fill.addPoint(0, 0, border);
 		fill.addPoint(0, 0, border);
-		
+
 		// bgsquare
 		var dy = -5;
 		fill.addPoint(-5, -9 + dy, border);
 		fill.addPoint(5, -9 + dy, border);
 		fill.addPoint(-5, 1 + dy, border);
 		fill.addPoint(5, 1 + dy, border);
-		
+
 		// arrow
 		fill.addPoint(-4, -5, color);
 		fill.addPoint(4, -5, color);
 		fill.addPoint(0, 0, color);
 		fill.addPoint(0, 0, color);
-		
+
 		// square
 		fill.addPoint(-4, -8+dy, color);
 		fill.addPoint(4, -8+dy, color);
@@ -82,7 +82,7 @@ private class Cursor extends h2d.Sprite {
 	var ang:Float;
 	var interact:h2d.Interactive;
 	var flag:CFlag;
-	
+
 	public function new(gradient,ix, iy, kind, value, ang, parent) {
 		super(parent);
 		this.gradient = gradient;
@@ -93,7 +93,7 @@ private class Cursor extends h2d.Sprite {
 		this.kind = kind;
 		init();
 	}
-	
+
 	function set_value(v) {
 		value = v;
 		if(flag != null) {
@@ -106,11 +106,11 @@ private class Cursor extends h2d.Sprite {
 		}
 		return value;
 	}
-	
+
 	function get_coeff() {
 		return x / gradient.boxWidth;
 	}
-	
+
 	function init() {
 		cursor = new h2d.Sprite(this);
 		switch(kind) {
@@ -122,11 +122,11 @@ private class Cursor extends h2d.Sprite {
 		interact.x = -5;
 		if(kind.equals(KAlpha))
 			interact.y = -14;
-			
+
 		interact.onPush = function(e) drag();
 		interact.onRelease = function(e) stopDrag();
 	}
-	
+
 	public function drag() {
 		interact.startDrag(function(e) {
 			if( e.kind == EMove ){
@@ -137,39 +137,39 @@ private class Cursor extends h2d.Sprite {
 			}
 			gradient.dragTarget = this ;
 		});
-			
+
 		gradient.updateTarget = this;
 		this.parent.addChild(this);
 	}
-	
+
 	public function stopDrag() {
 		interact.stopDrag();
 		if( !visible ) remove();
 		gradient.dragTarget = null ;
 		gradient.dragOut = false;
 	}
-	
+
 	public function select() {
 		bgcolor = 0xFFFF00FF;
 		flag.remove();
 		flag = new CFlag(cursor, 0, 0, ang, color, bgcolor);
-		
+
 		if(gradient.colorPicker.visible)
 			gradient.colorPicker.color = color;
 	}
-	
+
 	public function unselect() {
 		bgcolor = 0xFFAAAAAA;
 		flag.remove();
 		flag = new CFlag(cursor, 0, 0, ang, color, bgcolor);
 	}
-	
+
 	public function setCursor(px:Float) {
 		x = Math.max(0, Math.min(gradient.boxWidth, px));
 	}
 }
 
-	
+
 private class AlphaSelector extends h2d.Sprite {
 	public var target(default, set):Cursor;
 	var gradient : GradientEditor;
@@ -178,7 +178,7 @@ private class AlphaSelector extends h2d.Sprite {
 	var alphaInput:h2d.comp.Input;
 	var locLabel:h2d.comp.Label;
 	var locInput:h2d.comp.Input;
-	
+
 	public function new (gradient,ix, iy, parent) {
 		super(parent);
 		this.gradient = gradient;
@@ -186,16 +186,16 @@ private class AlphaSelector extends h2d.Sprite {
 		y = iy;
 		init();
 	}
-	
+
 	function init() {
 		title = new h2d.comp.Label("Alpha", this);
 		title.addStyle(Style.get(CLabel));
-		
+
 		slider = new h2d.comp.Slider(this);
 		slider.x = 55; slider.y = 4;
 		slider.onChange = function(v) { updateSlider(v); };
 		slider.value = 1;
-		
+
 		alphaInput = new h2d.comp.Input(this);
 		alphaInput.addStyle(Style.get(CInputSmall));
 		alphaInput.x = 170;
@@ -208,7 +208,7 @@ private class AlphaSelector extends h2d.Sprite {
 				slider.value = v;
 			}
 		};
-		
+
 		locLabel = new h2d.comp.Label("Location             %", this);
 		locLabel.setStyle(Style.get(CLabel));
 		locLabel.x = 255;
@@ -224,13 +224,13 @@ private class AlphaSelector extends h2d.Sprite {
 			}
 		};
 	}
-	
+
 	public function update() {
 		if(target == null)
 			return;
 		locInput.value = Std.string(Math.floor(target.coeff * 100 * 100) / 100);
 	}
-	
+
 	function set_target(cursor:Cursor) {
 		target = cursor;
 		var v = target.value / 255;
@@ -239,7 +239,7 @@ private class AlphaSelector extends h2d.Sprite {
 		updateSlider(v);
 		return target;
 	}
-	
+
 	function updateSlider(v:Float) {
 		var alpha = Math.round(255 * v);
 		alphaInput.value = Std.string(alpha);
@@ -259,7 +259,7 @@ private class ColorSelector extends h2d.Sprite {
 	var canvas:h2d.css.Fill;
 	var color:Int = 0xFFFFFFFF;
 	var interact : h2d.Interactive;
-	
+
 	public function new(gradient,ix, iy, parent) {
 		super(parent);
 		this.gradient = gradient;
@@ -267,13 +267,13 @@ private class ColorSelector extends h2d.Sprite {
 		y = iy;
 		init();
 	}
-	
+
 	public function update() {
 		if(target == null)
 			return;
 		locInput.value = Std.string(Math.floor(target.coeff * 100 * 100) / 100);
 	}
-	
+
 	function set_target(cursor:Cursor) {
 		target = cursor;
 		locInput.value = Std.string(Math.floor(target.coeff * 100 * 100) / 100);
@@ -282,11 +282,11 @@ private class ColorSelector extends h2d.Sprite {
 		redraw();
 		return target;
 	}
-	
+
 	function init() {
 		title = new h2d.comp.Label("Color                         #", this);
 		title.setStyle(Style.get(CLabel));
-		
+
 		canvas = new Fill(this);
 		canvas.x = 45;
 		canvas.y = -8;
@@ -296,7 +296,7 @@ private class ColorSelector extends h2d.Sprite {
 		interact.onPush = function(e) {
 			if(target == null)
 				return;
-			
+
 			if(!gradient.colorPicker.visible) {
 				gradient.colorPicker.visible = true;
 				gradient.colorPicker.color = color;
@@ -311,7 +311,7 @@ private class ColorSelector extends h2d.Sprite {
 				gradient.colorPicker.visible = false;
 			}
 		};
-		
+
 		colorInput = new h2d.comp.Input(this);
 		colorInput.setStyle(Style.get(CInput));
 		colorInput.x = 175;
@@ -328,11 +328,11 @@ private class ColorSelector extends h2d.Sprite {
 				redraw();
 			}
 		};
-		
+
 		locLabel = new h2d.comp.Label("Location             %", this);
 		locLabel.setStyle(Style.get(CLabel));
 		locLabel.x = 265;
-		
+
 		locInput = new h2d.comp.Input(this);
 		locInput.setStyle(Style.get(CInput));
 		locInput.x = 330;
@@ -345,57 +345,57 @@ private class ColorSelector extends h2d.Sprite {
 				target.setCursor( v * gradient.boxWidth / 100 );
 			}
 		};
-		
+
 		redraw();
 	}
-	
+
 	function redraw() {
 		canvas.reset();
 		canvas.fillRectColor(0, 0, 110, 25, color);
 		canvas.lineRect(FillStyle.Color(gradient.borderColor), 0, 0, 110, 25, 1);
 	}
 }
-		
-		
+
+
 //////////////////////////////////////////////////////////
 
 class GradientEditor extends h2d.comp.Component {
-	
+
 	public var borderColor = 0xFF888888;
 	public var dragTarget:Cursor;
 	public var dragOut:Bool;
 	public var updateTarget:Cursor;
 	public var boxWidth = 430;
 	var boxHeight = 100;
-	
+
 	var keys:Array<Key>;
 	var colorsKeys:Array<Cursor>;
 	var alphaKeys:Array<Cursor>;
-	
+
 	var box:h2d.Sprite;
 	var gradient:Fill;
 	var hudAlpha: AlphaSelector;
 	var hudColor: ColorSelector;
-	
+
 	public var colorPicker:ColorPicker;
-	
+
 	var interactUp:h2d.Interactive;
 	var interactDown:h2d.Interactive;
-		
+
 
 	var withAlpha : Bool;
 	var holdCursor:Cursor;
-	
+
 	public function new(?withAlpha = true, ?parent) {
 		super("gradienteditor", parent);
 		this.withAlpha = withAlpha;
 		init();
 	}
-	
+
 	function init() {
 		colorsKeys = [];
 		alphaKeys = [];
-		
+
 		interactUp = new h2d.Interactive(boxWidth, 16, this);
 		interactUp.x = 10;
 		interactUp.y = 30 - 16;
@@ -404,28 +404,28 @@ class GradientEditor extends h2d.comp.Component {
 		interactDown.x = 10;
 		interactDown.y = 30 + boxHeight;
 		interactDown.onPush =  function(e) createColorKey(e.relX, boxHeight);
-		
+
 		box = new h2d.Sprite(this);
 		box.x = 10;
 		box.y = 30;
 		drawChecker();
-		
+
 		hudColor = new ColorSelector(this, 20, box.y + boxHeight + 30, this);
 		hudAlpha = new AlphaSelector(this, 20, box.y + boxHeight + 30, this);
 		hudAlpha.visible = false;
 		hudAlpha.y = 0;
-		
+
 		colorPicker = new ColorPicker(this);
 		colorPicker.y = 220;
 		colorPicker.visible = false;
 		colorPicker.onClose = function() colorPicker.visible = false;
-		
+
 		setKeys([ { x : 0, value:0xFFFFFFFF }, { x: 1, value:0xFFFFFFFF } ],null);
 	}
-	
+
 	public dynamic function onChange( keys : Array<Key> ) {
 	}
-	
+
 	public function setKeys(keys:Array<Key>,?kalpha:Array<Key>) {
 		while( colorsKeys.length > 0 )
 			colorsKeys.shift().remove();
@@ -444,7 +444,7 @@ class GradientEditor extends h2d.comp.Component {
 		updateKeys();
 		updateTarget = colorsKeys[0];
 	}
-	
+
 	override function sync(ctx) {
 		if(dragTarget != null) {
 			if(dragOut) {
@@ -469,23 +469,23 @@ class GradientEditor extends h2d.comp.Component {
 					case KAlpha: alphaKeys.push(dragTarget);
 				}
 			}
-			
+
 			hudAlpha.update();
 			hudColor.update();
 		}
 		else holdCursor = null;
-		
+
 		if(updateTarget != null) {
 			changeHud(updateTarget);
 			updateFlags(updateTarget);
 			updateTarget = null;
 		}
-		
+
 		updateKeys();
-		
+
 		super.sync(ctx);
 	}
-	
+
 	function createAlphaKey(px:Float, py:Float) {
 		if( !withAlpha )
 			return;
@@ -494,14 +494,14 @@ class GradientEditor extends h2d.comp.Component {
 		updateTarget = cursor;
 		cursor.drag();
 	}
-	
+
 	function createColorKey(px:Float, py:Float) {
 		var cursor = new Cursor(this, px, py, KColor, getColorAt(px / boxWidth), Math.PI, box);
 		colorsKeys.push(cursor);
 		updateTarget = cursor;
 		cursor.drag();
 	}
-	
+
 	function updateKeys() {
 		var keys = [];
 		for (i in 0...colorsKeys.length) {
@@ -510,14 +510,14 @@ class GradientEditor extends h2d.comp.Component {
 			var rgb = INTtoRGB(k.value);
 			keys.push( { x:k.coeff, value:RGBtoINT(rgb[0], rgb[1], rgb[2], alpha) } );
 		}
-		
+
 		for (i in 0...alphaKeys.length) {
 			var k = alphaKeys[i];
 			var alpha = k.value;
 			var rgb = INTtoRGB(getColorAt(k.coeff));
 			keys.push( { x:k.coeff, value:RGBtoINT(rgb[0], rgb[1], rgb[2], alpha) } );
 		}
-		
+
 		keys.sort(function(a, b) return Reflect.compare(a.x, b.x) );
 		if(keys[0].x != 0)
 			keys.insert(0, { x:0, value:keys[0].value } );
@@ -529,13 +529,13 @@ class GradientEditor extends h2d.comp.Component {
 			onChange(keys);
 		}
 	}
-	
+
 	function getARGBAt(x:Float) {
 		var alpha = getAlphaAt(x);
 		var rgb = INTtoRGB(getColorAt(x));
 		return RGBtoINT(rgb[0], rgb[1], rgb[2], alpha);
 	}
-	
+
 	function getAlphaAt(x:Float) {
 		if( !withAlpha )
 			return 255;
@@ -560,7 +560,7 @@ class GradientEditor extends h2d.comp.Component {
 		var d = (x - prev.coeff) / (next.coeff - prev.coeff);
 		return Math.round(prev.value + (next.value - prev.value) * d);
 	}
-	
+
 	function getColorAt(x:Float) {
 		colorsKeys.sort(function(a, b) return Reflect.compare(a.coeff, b.coeff) );
 		var prev = null;
@@ -580,7 +580,7 @@ class GradientEditor extends h2d.comp.Component {
 		}
 		if(next == null)
 			return prev.value;
-			
+
 		var d = (x - prev.coeff) / (next.coeff - prev.coeff);
 		var pRGB = INTtoRGB(prev.value);
 		var nRGB = INTtoRGB(next.value);
@@ -589,7 +589,7 @@ class GradientEditor extends h2d.comp.Component {
 			rgb.push(Math.round(pRGB[i] + (nRGB[i] - pRGB[i]) * d));
 		return RGBtoINT(rgb[0], rgb[1], rgb[2]);
 	}
-	
+
 	function drawGradient() {
 		box.removeChild(gradient);
 		gradient = new Fill(box);
@@ -600,7 +600,7 @@ class GradientEditor extends h2d.comp.Component {
 		}
 		gradient.lineRect(FillStyle.Color(borderColor), 0, 0, boxWidth, boxHeight, 2);
 	}
-	
+
 	function drawChecker() {
 		var checker = new Fill(box);
 		var nb = 90;
@@ -614,7 +614,7 @@ class GradientEditor extends h2d.comp.Component {
 			}
 		}
 	}
-	
+
 	function changeHud(cursor:Cursor) {
 		switch(cursor.kind) {
 			case KAlpha: 	hudAlpha.target = cursor;
@@ -627,7 +627,7 @@ class GradientEditor extends h2d.comp.Component {
 							hudAlpha.y =  0;
 		}
 	}
-	
+
 	function updateFlags(cursor:Cursor) {
 		for (c in alphaKeys) {
 			if (c == cursor)
@@ -640,12 +640,12 @@ class GradientEditor extends h2d.comp.Component {
 			else c.unselect();
 		}
 	}
-	
-	
+
+
 	inline public static function INTtoRGB(color:Int) {
 		return [(color >> 16) & 0xFF, (color >> 8) & 0xFF,  color & 0xFF, color >>> 24];
 	}
-	
+
 	inline public static function RGBtoINT(r:Int, g:Int, b:Int, a:Int = 255) {
 		return (a << 24) | (r << 16) | (g << 8) | b;
 	}

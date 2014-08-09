@@ -7,21 +7,21 @@ using hxsl.Ast;
 	evaluate and reduce the expression, unroll loops, etc.
 **/
 class Eval {
-	
+
 	public var varMap : Map<TVar,TVar>;
 	var constants : Map<TVar,TExprDef>;
 	var funMap : Map<TVar,TFunction>;
-	
+
 	public function new() {
 		varMap = new Map();
 		funMap = new Map();
 		constants = new Map();
 	}
-	
+
 	public function setConstant( v : TVar, c : Const ) {
 		constants.set(v, TConst(c));
 	}
-	
+
 	function mapVar( v : TVar ) {
 		var v2 = varMap.get(v);
 		if( v2 != null )
@@ -56,7 +56,7 @@ class Eval {
 		}
 		return v2;
 	}
-	
+
 	public function eval( s : ShaderData ) : ShaderData {
 		var funs = [];
 		for( f in s.funs ) {
@@ -79,15 +79,15 @@ class Eval {
 			funs : funs,
 		};
 	}
-	
+
 	var markReturn : Bool;
-	
+
 	function hasReturn( e : TExpr ) {
 		markReturn = false;
 		hasReturnLoop(e);
 		return markReturn;
 	}
-	
+
 	function hasReturnLoop( e : TExpr ) {
 		switch( e.e ) {
 		case TReturn(_):
@@ -96,7 +96,7 @@ class Eval {
 			if( !markReturn ) e.iter(hasReturnLoop);
 		}
 	}
-	
+
 	function handleReturn( e : TExpr, final : Bool = false ) : TExpr {
 		switch( e.e ) {
 		case TReturn(v):
@@ -133,18 +133,18 @@ class Eval {
 			return e.map(handleReturnDef);
 		}
 	}
-	
+
 	function handleReturnDef(e) {
 		return handleReturn(e);
 	}
-	
+
 	function evalCall( g : TGlobal, args : Array<TExpr> ) {
 		return switch( [g,args] ) {
 		case [ToFloat, [ { e : TConst(CInt(i)) } ]]: TConst(CFloat(i));
 		default: null;
 		}
 	}
-	
+
 	function evalExpr( e : TExpr ) : TExpr {
 		var d : TExprDef = switch( e.e ) {
 		case TGlobal(_), TConst(_): e.e;
@@ -364,5 +364,5 @@ class Eval {
 		};
 		return { e : d, t : e.t, p : e.p }
 	}
-	
+
 }

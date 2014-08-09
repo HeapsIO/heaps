@@ -1,16 +1,16 @@
 package h2d;
 
 class ScaleGrid extends h2d.TileGroup {
-	
+
 
 	public var borderWidth : Int;
 	public var borderHeight : Int;
-	
+
 	public var width(default,set) : Int;
 	public var height(default,set) : Int;
-	
+
 	public var tileBorders(default,set) : Bool;
-	
+
 	public function new( tile, borderW, borderH, ?parent ) {
 		super(tile,parent);
 		borderWidth = borderW;
@@ -24,7 +24,7 @@ class ScaleGrid extends h2d.TileGroup {
 		reset();
 		return b;
 	}
-	
+
 	function set_width(w) {
 		this.width = w;
 		reset();
@@ -36,11 +36,11 @@ class ScaleGrid extends h2d.TileGroup {
 		reset();
 		return h;
 	}
-	
+
 	override function draw( ctx : RenderContext ) {
 		if( content.isEmpty() ) {
 			var bw = borderWidth, bh = borderHeight;
-			
+
 			// 4 corners
 			content.addColor(0, 0, curColor, tile.sub(0, 0, bw, bh));
 			content.addColor(width - bw, 0, curColor, tile.sub(tile.width - bw, 0, bw, bh));
@@ -49,12 +49,12 @@ class ScaleGrid extends h2d.TileGroup {
 
 			var sizeX = tile.width - bw * 2;
 			var sizeY = tile.height - bh * 2;
-			
+
 			if( !tileBorders ) {
-				
+
 				var w = width - bw * 2;
 				var h = height - bh * 2;
-				
+
 				var t = tile.sub(bw, 0, sizeX, bh);
 				t.scaleToSize(w, bh);
 				content.addColor(bw, 0, curColor, t);
@@ -70,9 +70,9 @@ class ScaleGrid extends h2d.TileGroup {
 				var t = tile.sub(tile.width - bw, bh, bw, sizeY);
 				t.scaleToSize(bw, h);
 				content.addColor(w + bw, bh, curColor, t);
-				
+
 			} else {
-				
+
 				var rw = Std.int((width - bw * 2) / sizeX);
 				for( x in 0...rw ) {
 					content.addColor(bw + x * sizeX, 0, curColor, tile.sub(bw, 0, sizeX, bh));
@@ -95,12 +95,12 @@ class ScaleGrid extends h2d.TileGroup {
 					content.addColor(width - bw, bh + rh * sizeY, curColor, tile.sub(tile.width - bw, bh, bw, dy));
 				}
 			}
-			
+
 			var t = tile.sub(bw, bh, sizeX, sizeY);
 			t.scaleToSize(width - bw * 2,height - bh * 2);
 			content.addColor(bw, bh, curColor, t);
 		}
 		super.draw(ctx);
 	}
-	
+
 }

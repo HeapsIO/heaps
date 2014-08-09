@@ -3,7 +3,7 @@ package hxd.impl;
 class Tmp {
 
 	static var bytes = new Array<haxe.io.Bytes>();
-	
+
 	public static function getBytes( size : Int ) {
 		for( i in 0...bytes.length ) {
 			var b = bytes[i];
@@ -17,7 +17,7 @@ class Tmp {
 			sz = (sz * 3) >> 1;
 		return haxe.io.Bytes.alloc(sz);
 	}
-	
+
 	public static function saveBytes( b : haxe.io.Bytes ) {
 		for( i in 0...bytes.length ) {
 			if( bytes[i].length <= b.length ) {
@@ -29,5 +29,5 @@ class Tmp {
 		}
 		bytes.push(b);
 	}
-	
+
 }

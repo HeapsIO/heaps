@@ -3,17 +3,17 @@ import h3d.mat.Data;
 import h3d.mat.Pass;
 
 class Material {
-	
+
 	var passes : Pass;
 	public var mainPass(get, never) : Pass;
 	public var shadows(get, set) : Bool;
 	public var castShadows(default, set) : Bool;
 	public var receiveShadows(default, set) : Bool;
-	
+
 	public function new(passes) {
 		this.passes = passes;
 	}
-	
+
 	public function addPass<T:Pass>( p : T ) : T {
 		var prev = null, cur = passes;
 		while( cur != null ) {
@@ -27,7 +27,7 @@ class Material {
 		p.nextPass = null;
 		return p;
 	}
-	
+
 	public function removePass( p : Pass ) {
 		var prev : Pass = null, cur = passes;
 		while( cur != null ) {
@@ -44,11 +44,11 @@ class Material {
 		}
 		return false;
 	}
-	
+
 	inline function get_mainPass() {
 		return passes;
 	}
-	
+
 	public function getPass( name : String ) : Pass {
 		var p = passes;
 		while( p != null ) {
@@ -67,7 +67,7 @@ class Material {
 		addPass(p);
 		return p;
 	}
-	
+
 	public function clone() {
 		throw "TODO";
 	}
@@ -75,13 +75,13 @@ class Material {
 	inline function get_shadows() {
 		return castShadows && receiveShadows;
 	}
-	
+
 	inline function set_shadows(v) {
 		castShadows = v;
 		receiveShadows = v;
 		return v;
 	}
-	
+
 	function set_castShadows(v) {
 		if( castShadows == v )
 			return v;

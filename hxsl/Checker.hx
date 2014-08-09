@@ -18,11 +18,11 @@ private enum WithType {
 	Type Checker : will take an untyped Expr and turn it into a typed TExpr, resolving identifiers and ensuring type safety.
 **/
 class Checker {
-	
+
 	static var vec2 = TVec(2, VFloat);
 	static var vec3 = TVec(3, VFloat);
 	static var vec4 = TVec(4, VFloat);
-	
+
 	var vars : Map<String,TVar>;
 	var globals : Map<String,{ g : TGlobal, t : Type }>;
 	var curFun : TFunction;
@@ -108,7 +108,7 @@ class Checker {
 				globals.set(g.toString(), { t : TFun(def), g : g } );
 		}
 	}
-	
+
 	function error( msg : String, pos : Position ) : Dynamic {
 		return Ast.Error.t(msg,pos);
 	}
@@ -116,7 +116,7 @@ class Checker {
 	public function check( name : String, shader : Expr ) : ShaderData {
 		vars = new Map();
 		inLoop = false;
-		
+
 		var funs = [];
 		checkExpr(shader, funs);
 		var tfuns = [];
@@ -164,7 +164,7 @@ class Checker {
 			funs : tfuns,
 		};
 	}
-	
+
 	function saveVars() {
 		var old = new Map();
 		for( v in vars.keys() )
@@ -180,7 +180,7 @@ class Checker {
 		f.expr = typeExpr(e,NoValue);
 		vars = old;
 	}
-	
+
 	function tryUnify( t1 : Type, t2 : Type ) {
 		if( t1 == t2 )
 			return true;
@@ -191,12 +191,12 @@ class Checker {
 		}
 		return false;
 	}
-	
+
 	function unify( t1 : Type, t2 : Type, p : Position ) {
 		if( !tryUnify(t1,t2) )
 			error(t1.toString() + " should be " + t2.toString(), p);
 	}
-	
+
 	function unifyExpr( e : TExpr, t : Type ) {
 		if( !tryUnify(e.t, t) ) {
 			switch( e.e ) {
@@ -208,7 +208,7 @@ class Checker {
 			}
 		}
 	}
-	
+
 	function checkWrite( e : TExpr ) {
 		switch( e.e ) {
 		case TVar(v):
@@ -224,7 +224,7 @@ class Checker {
 		}
 		error("This expression cannot be assigned", e.p);
 	}
-	
+
 	function typeWith( e : Expr, ?t : Type ) {
 		if( t == null )
 			return typeExpr(e, Value);
@@ -486,14 +486,14 @@ class Checker {
 		if( type == null ) throw "assert";
 		return { e : ed, t : type, p : e.pos };
 	}
-	
+
 	function propagate( with : WithType ) {
 		return switch( with ) {
 		case InBlock: NoValue;
 		default: with;
 		}
 	}
-	
+
 	function checkExpr( e : Expr, funs : Array<{ f : FunDecl, p : Position }> ) {
 		switch( e.expr ) {
 		case EBlock(el):
@@ -521,7 +521,7 @@ class Checker {
 			error("This expression is not allowed at shader declaration level", e.pos);
 		}
 	}
-	
+
 	function makeVar( v : VarDecl, pos : Position, ?parent : TVar ) {
 		var tv : TVar = {
 			id : Tools.allocVarId(),
@@ -567,7 +567,7 @@ class Checker {
 			tv.type = makeVarType(tv.type, tv, pos);
 		return tv;
 	}
-	
+
 	function makeVarType( t : Type, parent : TVar, pos : Position ) {
 		switch( t ) {
 		case TStruct(vl):
@@ -628,7 +628,7 @@ class Checker {
 			return t;
 		}
 	}
-	
+
 	function fieldAccess( e : TExpr, f : String, with : WithType, pos : Position ) : FieldAccess {
 		var ef = switch( e.t ) {
 		case TStruct(vl):
@@ -771,7 +771,7 @@ class Checker {
 			throw "Custom Global not supported " + g;
 		return { e : TCall(e, args), t : type, p : pos };
 	}
-	
+
 	function unifyCallParams( efun : TExpr, args : Array<Expr>, variants : Array<FunType>, pos : Position ) {
 		var minArgs = 1000, maxArgs = -1000, sel = [];
 		for( v in variants ) {
@@ -833,10 +833,10 @@ class Checker {
 				}
 			throw "assert";
 		}
-		
+
 	}
 
-	
+
 	function typeBinop(op, e1:TExpr, e2:TExpr, pos : Position) {
 		return switch( op ) {
 		case OpAssign, OpAssignOp(_): throw "assert";
