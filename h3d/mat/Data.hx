@@ -88,7 +88,7 @@ enum TextureFlags {
 	/**
 		This is a not power of two texture. Automatically set when having width or height being not power of two.
 	**/
-	IsRectangle;
+	IsNPOT;
 	/**
 		Don't initialy allocate the texture memory.
 	**/

@@ -203,7 +203,7 @@ class Stage3dDriver extends Driver {
 		if( t.flags.has(TargetDepth) )
 			throw "Unsupported texture flag";
 		try {
-			if( t.flags.has(IsRectangle) ) {
+			if( t.flags.has(IsNPOT) ) {
 				if( t.flags.has(Cubic) || t.flags.has(MipMapped) )
 					throw "Not power of two texture is not supported with these flags";
 				#if !flash11_8
@@ -226,7 +226,7 @@ class Stage3dDriver extends Driver {
 		if( t.flags.has(Cubic) ) {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
 			t.uploadFromBitmapData(bmp.toNative(), side, mipLevel);
-		} else if( t.flags.has(IsRectangle) ) {
+		} else if( t.flags.has(IsNPOT) ) {
 			#if flash11_8
 			var t = flash.Lib.as(t.t, flash.display3D.textures.RectangleTexture);
 			t.uploadFromBitmapData(bmp.toNative());
@@ -243,7 +243,7 @@ class Stage3dDriver extends Driver {
 		if( t.flags.has(Cubic) ) {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
 			t.uploadFromByteArray(data, 0, side, mipLevel);
-		} else if( t.flags.has(IsRectangle) ) {
+		} else if( t.flags.has(IsNPOT) ) {
 			#if flash11_8
 			var t = flash.Lib.as(t.t, flash.display3D.textures.RectangleTexture);
 			t.uploadFromByteArray(data, 0);
