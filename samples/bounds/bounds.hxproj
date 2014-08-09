@@ -9,7 +9,7 @@
     <movie width="800" />
     <movie height="600" />
     <movie version="11" />
-    <movie minorVersion="0" />
+    <movie minorVersion="6" />
     <movie platform="Flash Player" />
     <movie background="#FFFFFF" />
   </output>
@@ -24,7 +24,7 @@
     <option noInlineOnDebug="False" />
     <option mainClass="Bounds" />
     <option enabledebug="False" />
-    <option additional="-lib h3d" />
+    <option additional="-lib heaps" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
