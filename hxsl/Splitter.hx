@@ -147,10 +147,15 @@ class Splitter {
 			finits.push(ffun.expr);
 			ffun.expr = { e : TBlock(finits), t : TVoid, p : ffun.expr.p };
 		}
+
+		var vvars = [for( v in vvars ) if( !v.local ) v.v];
+		// make sure we sort the inputs the same way they were sent in
+		vvars.sort(function(v1, v2) return v1.id - v2.id);
+		
 		return {
 			vertex : {
 				name : "vertex",
-				vars : [for( v in vvars ) if( !v.local ) v.v],
+				vars : vvars,
 				funs : [vfun],
 			},
 			fragment : {
@@ -204,7 +209,7 @@ class Splitter {
 	}
 	
 	function uniqueName( v : TVar ) {
-		if( v.kind == Global )
+		if( v.kind == Global || v.kind == Output || v.kind == Input )
 			return;
 		v.parent = null;
 		var n = varNames.get(v.name);
