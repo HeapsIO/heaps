@@ -4,7 +4,7 @@ private typedef InnerData =
 #if (flash||openfl)
 	flash.display.BitmapData
 #elseif js
-	js.html.ImageData
+	js.html.CanvasRenderingContext2D
 #else
 	Int
 #end;
@@ -275,7 +275,6 @@ abstract BitmapData(InnerData) {
 		b.setPixels(b.rect, flash.utils.ByteArray.fromBytes(pixels.bytes));
 		#else
 		throw "TODO";
-		return null;
 		#end
 	}
 
