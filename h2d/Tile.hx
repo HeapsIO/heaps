@@ -3,9 +3,15 @@ package h2d;
 @:allow(h2d)
 class Tile {
 
+	#if flash
+	static inline var EPSILON_POS = 0.;
+	static inline var EPSILON_SIZE_U = 0.;
+	static inline var EPSILON_SIZE_V = 0.;
+	#else
 	static inline var EPSILON_POS = 0;
 	static inline var EPSILON_SIZE_U = 0;
 	static inline var EPSILON_SIZE_V = 0.0001;
+	#end
 
 	var innerTex : h3d.mat.Texture;
 
