@@ -24,6 +24,9 @@ class Anim extends Drawable {
 		currentFrame = atFrame;
 	}
 
+	public dynamic function onAnimEnd() {
+	}
+
 	function set_currentFrame( frame : Float ) {
 		curFrame = frames.length == 0 ? 0 : frame % frames.length;
 		if( curFrame < 0 ) curFrame += frames.length;
@@ -38,21 +41,21 @@ class Anim extends Drawable {
 
 	override function sync( ctx : RenderContext ) {
 		super.sync(ctx);
-		var prev = currentFrame;
-		currentFrame += speed * ctx.elapsedTime;
-		if( currentFrame < frames.length )
+		var prev = curFrame;
+		curFrame += speed * ctx.elapsedTime;
+		if( curFrame < frames.length )
 			return;
 		if( loop ) {
-			currentFrame %= frames.length;
+			curFrame %= frames.length;
 			onAnimEnd();
-		} else if( currentFrame >= frames.length ) {
-			currentFrame = frames.length;
-			if( currentFrame != prev ) onAnimEnd();
+		} else if( curFrame >= frames.length ) {
+			curFrame = frames.length;
+			if( curFrame != prev ) onAnimEnd();
 		}
 	}
 
 	public function getFrame() {
-		var i = Std.int(currentFrame);
+		var i = Std.int(curFrame);
 		if( i == frames.length ) i--;
 		return frames[i];
 	}
