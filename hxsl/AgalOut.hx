@@ -285,6 +285,21 @@ class AgalOut {
 		case TSwiz(e, regs):
 			var r = expr(e);
 			return swiz(r, [for( r in regs ) COMPS[r.getIndex()]]);
+		case TIf( cond, { e : TDiscard }, null ):
+			switch( cond.e ) {
+			case TBinop(bop = OpLt | OpGt, e1, e2) if( e1.t == TFloat ):
+				if( bop == OpGt ) {
+					var tmp = e1;
+					e1 = e2;
+					e2 = e1;
+				}
+				var r = allocReg(TFloat);
+				op(OSub(r, expr(e1), expr(e2)));
+				op(OKil(r));
+				return nullReg;
+			default:
+				throw "Discard cond not supported " + e.e;
+			}
 		default:
 			throw "TODO " + e.e;
 		}
