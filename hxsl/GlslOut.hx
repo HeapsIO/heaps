@@ -175,7 +175,6 @@ class GlslOut {
 			switch( g ) {
 			case Mat3x4:
 				decl(MAT34);
-				decl("vec3 m3x4mult( vec3 v, mat3x4 m) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }");
 			case DFdx, DFdy, Fwidth:
 				decl("#extension GL_OES_standard_derivatives:enable");
 			case Pack:
@@ -202,6 +201,8 @@ class GlslOut {
 		case TBinop(op, e1, e2):
 			switch( [op, e1.t, e2.t] ) {
 			case [OpMult, TVec(3,VFloat), TMat3x4]:
+				decl(MAT34);
+				decl("vec3 m3x4mult( vec3 v, mat3x4 m) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }");
 				add("m3x4mult(");
 				addValue(e1, tabs);
 				add(",");
