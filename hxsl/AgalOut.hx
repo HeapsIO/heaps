@@ -9,7 +9,7 @@ class AgalOut {
 	static var COMPS = [X, Y, Z, W];
 
 	var code : Array<Opcode>;
-	var vertex : Bool;
+	var current : RuntimeShaderData;
 	var version : Int;
 	var opcodes : Array<Opcode>;
 	var varMap : Map<Int, Reg>;
@@ -24,7 +24,7 @@ class AgalOut {
 	}
 
 	public function compile( s : RuntimeShaderData, version ) : Data {
-		vertex = s.vertex;
+		current = s;
 		nullReg = { t : RTemp, index : -1, swiz : null, access : null };
 		this.version = version;
 		opcodes = [];
@@ -82,7 +82,7 @@ class AgalOut {
 				}
 		}
 		return {
-			fragmentShader : !vertex,
+			fragmentShader : !current.vertex,
 			version : version,
 			code : opcodes,
 		};
@@ -121,6 +121,21 @@ class AgalOut {
 			swiz : null,
 			access : null,
 		};
+	}
+
+	function allocConst( v : Float ) : Reg {
+		for( i in 0...current.consts.length )
+			if( current.consts[i] == v ) {
+				var g = null;
+				for( v in current.globals )
+					if( v.path == "__consts__" ) {
+						g = v;
+						break;
+					}
+				var p = g.pos + i;
+				return { t : RConst, index : p >> 2, swiz : [COMPS[p & 3]], access : null };
+			}
+		throw "TODO";
 	}
 
 	function expr( e : TExpr ) : Reg {
@@ -166,6 +181,15 @@ class AgalOut {
 				case [TVec(3, VFloat), TMat3]:
 					op(OM33(r, r1, r2));
 				case [TVec(3, VFloat), TMat3x4]:
+					if( r1.t == RTemp ) {
+						var r = allocReg();
+						op(OMov(swiz(r, [X, Y, Z]), r1));
+						op(OMov(swiz(r, [W]), allocConst(1)));
+						r1 = r;
+					} else {
+						r1 = Reflect.copy(r1);
+						r1.swiz = null;
+					}
 					op(OM34(r, r1, r2));
 				case [TVec(4, VFloat), TMat4]:
 					op(OM44(r, r1, r2));
