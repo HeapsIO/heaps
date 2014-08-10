@@ -63,15 +63,44 @@ class AgalOut {
 		if( paramCount != s.globalsSize + s.paramsSize )
 			throw "assert";
 
+		// optimize varying
+		varying.sort(function(r1, r2) return ((r2.swiz == null ? 4 : r2.swiz.length) - (r1.swiz == null ? 4 : r1.swiz.length)) * 1000 + (r1.index - r2.index));
+		var valloc : Array<Array<C>> = [];
+		for( r in varying ) {
+			var size = r.swiz == null ? 4 : r.swiz.length;
+			var found = -1;
+			for( i in 0...valloc.length ) {
+				var v = valloc[i];
+				if( v.length < size ) continue;
+				found = i;
+				break;
+			}
+			if( found < 0 ) {
+				found = valloc.length;
+				valloc.push([X, Y, Z, W]);
+			}
+			r.index = found;
+			var v = valloc[found];
+			if( size == 4 )
+				valloc[found] = [];
+			else if( size == 1 )
+				r.swiz[0] = v.pop();
+			else {
+				for( i in 0...size )
+					r.swiz[i] = v.shift();
+			}
+		}
+
 		if( s.data.funs.length != 1 ) throw "assert";
 		expr(s.data.funs[0].expr);
 
-		// force write of all varying components
-		for( v in varying ) {
-			if( v.swiz == null ) continue;
+		// force write of missing varying components
+		for( vid in 0...valloc.length ) {
+			var v = valloc[vid];
+			if( v.length == 0 ) continue;
 			for( i in 0...opcodes.length )
 				switch( opcodes[i] ) {
-				case OMov(dst, val) if( dst == v ):
+				case OMov(dst = { t : RVar, index : idx }, val) if( idx == vid ):
 					var dst = Reflect.copy(dst);
 					var val = Reflect.copy(val);
 					val.swiz = null;
