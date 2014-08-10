@@ -126,6 +126,9 @@ class Flatten {
 			default:
 				return e;
 			}
+		case TCall( { e : TGlobal(Vec4) }, [ { e : TVar( { kind : Global | Param | Input | Var } ), t : TVec(3, VFloat) }, { e : TConst(CInt(1)) } ]):
+			// allow var expansion without relying on a constant
+			return e;
 		default:
 			return e.map(mapConsts);
 		}
