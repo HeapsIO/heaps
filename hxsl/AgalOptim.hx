@@ -3,14 +3,20 @@ import format.agal.Data;
 
 private class RegInfos {
 	public var index : Int;
+	public var swiz : Array<C>;
 	public var values : Array<Reg>;
 	public var prevRead : Array<Int>;
 	public var reads : Array<Int>;
 	public var writes : Array<Int>;
 	public var live : Array<Int>;
+	public var size : Int;
+	public var invertSwiz : Array<Int>;
+
 	public function new(i) {
 		index = i;
+		size = 1;
 		live = [];
+		invertSwiz = [];
 	}
 }
 
@@ -22,15 +28,19 @@ class AgalOptim {
 	var codePos : Int;
 	var regs : Array<RegInfos>;
 	var flag : Bool;
-	var tempCount = 0;
+	var maxRegs : Int;
+	var startReg : Int;
 	var sizeReq = 1;
-	var markRead = true;
 	var changed : Bool;
+	var data : Data;
+	var usedRegs : Array<Array<RegInfos>>;
+	var packRegisters : Bool;
 
 	public function new() {
 	}
 
 	public function optimize( d : Data ) : Data {
+		data = d;
 		code = d.code.copy();
 
 		while( true ) {
@@ -43,17 +53,135 @@ class AgalOptim {
 			break;
 		}
 
-		for( r in regs )
-			if( r != null )
-				r.index = -1;
-
-		code = [for( o in code ) if( o != OUnused ) map(o, remap)];
+		var old = code;
+		packRegisters = false;
+		if( !allocRegs() ) {
+			code = old;
+			packRegisters = true;
+			allocRegs();
+		}
 
 		return {
 			version : d.version,
 			fragmentShader : d.fragmentShader,
 			code : code,
 		};
+	}
+
+	function allocRegs() {
+		for( r in regs )
+			if( r != null )
+				r.index = -1;
+		startReg = 0;
+		maxRegs = 0;
+		var max = format.agal.Tools.getProps(RTemp, data.fragmentShader, data.version).count;
+		usedRegs = [for( i in 0...max ) []];
+		var ocode = [];
+		for( i in 0...code.length ) {
+			var o = code[i];
+			codePos = i;
+			if( o != OUnused )
+				ocode.push(map(o, remapReg));
+		}
+		code = ocode;
+		return usedRegs.length <= max;
+	}
+
+	function remapReg( r : Reg, write : Bool ) {
+		var inf = getReg(r);
+		if( inf == null )
+			return r;
+		if( write && inf.index < 0 )
+			assignReg(inf);
+		var swiz = [];
+		for( s in this.swiz(r) ) {
+			var s2 = inf.swiz[s.getIndex()];
+			if( s2 == null ) {
+				// reading from unassigned component can happen if we are padding a varying
+				for( i in 0...4 ) {
+					var s = inf.swiz[3 - i];
+					if( s != null ) {
+						s2 = s;
+						break;
+					}
+				}
+			}
+			swiz.push(s2);
+		}
+		return { t : RTemp, index : inf.index, swiz : swiz, access : null };
+	}
+
+	function assignReg( inf : RegInfos ) {
+		// make sure that we reserve all the components we will write
+		var mask = 0, ncomps = 0;
+		for( i in 0...4 )
+			if( inf.writes[i] >= codePos ) {
+				ncomps++;
+				mask |= 1 << i;
+			}
+		// allocate a new temp id by looking the other live variable components
+		var found : Null<Int> = null, reservedMask = 0, foundUsage = 10;
+		for( td in 0...regs.length ) {
+			var rid = (startReg + td) % regs.length;
+			var reg = usedRegs[rid];
+
+			// check current reserved components
+			var rmask = 0;
+			var available = 4;
+			for( i in 0...4 ) {
+				var t = reg[i];
+				if( t == null ) continue;
+				var b = t.live[codePos];
+				if( b & (1 << t.invertSwiz[i]) == 0 ) continue;
+				rmask |= 1 << i;
+				available--;
+			}
+
+			// not enough components available
+			if( available < ncomps )
+				continue;
+
+			// not first X components available
+			// this is necessary for write masks
+			if( ncomps > 1 && (rmask & ((1 << ncomps) - 1)) != 0 )
+				continue;
+
+			// if we have found a previous register that is better fit
+			if( packRegisters && found != null && foundUsage <= available - ncomps )
+				continue;
+
+			// check that we have continous space for matrixes
+			if( inf.size > 1 ) throw "TODO";
+
+			found = rid;
+			foundUsage = available - ncomps;
+			reservedMask = rmask;
+			// continue to look for best match
+			if( !packRegisters ) break;
+		}
+		if( found == null ) {
+			reservedMask = 0;
+			found = usedRegs.length;
+			usedRegs.push([]);
+		}
+		var reg = usedRegs[found];
+		inf.index = found;
+		// list free components
+		var all = [X, Y, Z, W];
+		var comps = [];
+		for( i in 0...4 )
+			if( reservedMask & (1 << i) == 0 )
+				comps.push(all[i]);
+		// create component map
+		inf.swiz = [];
+		for( i in 0...4 )
+			if( mask & (1 << i) != 0 ) {
+				// if one single component, allocate from the end to keep free first registers
+				var c = ncomps == 1 ? comps.pop() : comps.shift();
+				inf.swiz[i] = c;
+				inf.invertSwiz[c.getIndex()] = i;
+				reg[c.getIndex()] = inf;
+			}
 	}
 
 	function splice() {
@@ -154,16 +282,6 @@ class AgalOptim {
 		}
 	}
 
-	function remap( r : Reg, _ ) {
-		var inf = getReg(r);
-		if( inf == null ) return r;
-		if( inf.index < 0 ) {
-			inf.index = tempCount;
-			tempCount += sizeReq;
-		}
-		return { t : RTemp, index : inf.index, swiz : r.swiz, access : null };
-	}
-
 	function checkMov( r1 : Reg, r2 : Reg ) {
 
 		r2 = checkValue(r2, false);
@@ -244,8 +362,6 @@ class AgalOptim {
 	}
 
 	function read( r : Reg ) {
-		if( !markRead )
-			return;
 		var inf = getReg(r);
 		if( inf == null ) return;
 		var minPos = 10000000, mask = 0;
@@ -260,6 +376,8 @@ class AgalOptim {
 		}
 		for( p in minPos+1...codePos+1 )
 			inf.live[p] |= mask;
+		if( sizeReq > inf.size )
+			inf.size = sizeReq;
 	}
 
 	function getReg( r : Reg ) {
