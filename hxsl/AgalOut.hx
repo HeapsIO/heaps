@@ -88,8 +88,12 @@ class AgalOut {
 		};
 	}
 
-	inline function mov(dst, src) {
+	function mov(dst, src, t) {
+		var n = regSize(t);
 		op(OMov(dst, src));
+		if( n > 1 )
+			for( i in 1...n )
+				op(OMov(offset(dst, i), offset(src, i)));
 	}
 
 	inline function op(o) {
@@ -121,9 +125,11 @@ class AgalOut {
 
 	function expr( e : TExpr ) : Reg {
 		switch( e.e ) {
+		case TParenthesis(e):
+			return expr(e);
 		case TVarDecl(v, init):
 			if( init != null )
-				mov(reg(v), expr(init));
+				mov(reg(v), expr(init), v.type);
 			return nullReg;
 		case TBlock(el):
 			var r = nullReg;
@@ -133,23 +139,23 @@ class AgalOut {
 		case TVar(v):
 			return reg(v);
 		case TBinop(bop, e1, e2):
+			inline function std(bop) {
+				var r = allocReg(e.t);
+				op(bop(r, expr(e1), expr(e2)));
+				return r;
+			}
 			switch( bop ) {
+			case OpAdd: return std(OAdd);
+			case OpSub: return std(OSub);
+			case OpDiv: return std(ODiv);
 			case OpAssign:
 				var r = expr(e1);
-				mov(r, expr(e2));
+				mov(r, expr(e2), e1.t);
 				return r;
 			case OpAssignOp(op):
 				var r1 = expr(e1);
-				mov(r1, expr( { e : TBinop(op, e1, e2), t : e1.t, p : e.p } ));
+				mov(r1, expr( { e : TBinop(op, e1, e2), t : e1.t, p : e.p } ), e1.t);
 				return r1;
-			case OpAdd:
-				var r = allocReg(e.t);
-				op(OAdd(r, expr(e1), expr(e2)));
-				return r;
-			case OpSub:
-				var r = allocReg(e.t);
-				op(OSub(r, expr(e1), expr(e2)));
-				return r;
 			case OpMult:
 				var r = allocReg(e.t);
 				var r1 = expr(e1);
@@ -157,6 +163,8 @@ class AgalOut {
 				switch( [e1.t, e2.t] ) {
 				case [TFloat | TVec(_), TFloat | TVec(_)]:
 					op(OMul(r, r1, r2));
+				case [TVec(3, VFloat), TMat3]:
+					op(OM33(r, r1, r2));
 				case [TVec(3, VFloat), TMat3x4]:
 					op(OM34(r, r1, r2));
 				case [TVec(4, VFloat), TMat4]:
@@ -165,100 +173,13 @@ class AgalOut {
 					throw "assert " + [e1.t, e2.t];
 				}
 				return r;
-			case OpDiv:
-				var r = allocReg(e.t);
-				op(ODiv(r, expr(e1), expr(e2)));
-				return r;
 			default:
 				throw "TODO " + bop;
 			}
-		case TCall(e, args):
-			switch( e.e ) {
+		case TCall(c, args):
+			switch( c.e ) {
 			case TGlobal(g):
-				switch( [g, args] ) {
-				case [Vec4, _]:
-					var r = allocReg();
-					var pos = 0;
-					for( a in args ) {
-						var e = expr(a);
-						switch( a.t ) {
-						case TFloat:
-							mov(swiz(r, [COMPS[pos++]]), e);
-						case TVec(2, VFloat):
-							mov(swiz(r, [COMPS[pos++], COMPS[pos++]]), e);
-						case TVec(3, VFloat):
-							mov(swiz(r, [COMPS[pos++], COMPS[pos++], COMPS[pos++]]), e);
-						case TVec(4, VFloat):
-							mov(r, e);
-						default:
-							throw "assert " + e.t;
-						}
-					}
-					return r;
-				case [Vec3, _]:
-					var r = allocReg(TVec(3,VFloat));
-					var pos = 0;
-					for( a in args ) {
-						var e = expr(a);
-						switch( a.t ) {
-						case TFloat:
-							mov(swiz(r, [COMPS[pos++]]), e);
-						case TVec(2, VFloat):
-							mov(swiz(r, [COMPS[pos++], COMPS[pos++]]), e);
-						case TVec(3, VFloat):
-							mov(r, e);
-						default:
-							throw "assert " + e.t;
-						}
-					}
-					return r;
-				case [Texture2D, [t,uv]]:
-					var t = expr(t);
-					var uv = expr(uv);
-					var r = allocReg();
-					if( t.t != RTexture ) throw "assert";
-					op(OTex(r, uv, { index : t.index, flags : [TIgnoreSampler] }));
-					return r;
-				case [Dot, [a, b]]:
-					var r = allocReg(TFloat);
-					switch( a.t ) {
-					case TVec(3, _):
-						op(ODp3(r, expr(a), expr(b)));
-					case TVec(4, _):
-						op(ODp4(r, expr(a), expr(b)));
-					default:
-						throw "assert " + a.t;
-					}
-					return r;
-				case [Mat3x4, _]:
-					var regs = [for( a in args ) expr(a)];
-					var r0 = regs[0];
-					var align = true;
-					for( i in 0...regs.length ) {
-						var r = regs[i];
-						if( r.t == r0.t && r.index == r0.index + i && r.swiz == null && r.access == null ) continue;
-						align = false;
-						break;
-					}
-					if( align )
-						return r0;
-					throw "TODO";
-				case [Mat4, _]:
-					var regs = [for( a in args ) expr(a)];
-					var r0 = regs[0];
-					var align = true;
-					for( i in 0...regs.length ) {
-						var r = regs[i];
-						if( r.t == r0.t && r.index == r0.index + i && r.swiz == null && r.access == null ) continue;
-						align = false;
-						break;
-					}
-					if( align )
-						return r0;
-					throw "TODO";
-				default:
-					throw "TODO " + g + ":" + args.length;
-				}
+				return global(g, args, e.t);
 			default:
 				throw "TODO CALL " + e.e;
 			}
@@ -301,8 +222,139 @@ class AgalOut {
 				throw "Discard cond not supported " + e.e;
 			}
 		default:
-			throw "TODO " + e.e;
 		}
+		throw "TODO " + e.e;
+		return null;
+	}
+
+	function global( g : TGlobal, args : Array<TExpr>, ret : Type ) : Reg {
+		inline function binop(bop) {
+			if( args.length != 2 ) throw "assert";
+			var r = allocReg(ret);
+			op(bop(r, expr(args[0]), expr(args[1])));
+			return r;
+		}
+		inline function unop(uop) {
+			if( args.length != 1 ) throw "assert";
+			var r = allocReg(ret);
+			op(uop(r, expr(args[0])));
+			return r;
+		}
+
+		switch( [g, args] ) {
+		case [Max, _]:
+			return binop(OMax);
+		case [Min, _]:
+			return binop(OMin);
+		case [Sqrt, _]:
+			return unop(OSqt);
+		case [Vec4, _]:
+			var r = allocReg();
+			var pos = 0;
+			for( a in args ) {
+				var e = expr(a);
+				switch( a.t ) {
+				case TFloat:
+					mov(swiz(r, [COMPS[pos++]]), e, a.t);
+				case TVec(2, VFloat):
+					mov(swiz(r, [COMPS[pos++], COMPS[pos++]]), e, a.t);
+				case TVec(3, VFloat):
+					mov(swiz(r, [COMPS[pos++], COMPS[pos++], COMPS[pos++]]), e, a.t);
+				case TVec(4, VFloat):
+					mov(r, e, a.t);
+				default:
+					throw "assert " + e.t;
+				}
+			}
+			return r;
+		case [Vec3, _]:
+			var r = allocReg(TVec(3,VFloat));
+			var pos = 0;
+			for( a in args ) {
+				var e = expr(a);
+				switch( a.t ) {
+				case TFloat:
+					mov(swiz(r, [COMPS[pos++]]), e, a.t);
+				case TVec(2, VFloat):
+					mov(swiz(r, [COMPS[pos++], COMPS[pos++]]), e, a.t);
+				case TVec(3, VFloat):
+					mov(r, e, a.t);
+				default:
+					throw "assert " + e.t;
+				}
+			}
+			return r;
+		case [Texture2D, [t,uv]]:
+			var t = expr(t);
+			var uv = expr(uv);
+			var r = allocReg();
+			if( t.t != RTexture ) throw "assert";
+			op(OTex(r, uv, { index : t.index, flags : [TIgnoreSampler] }));
+			return r;
+		case [Dot, [a, b]]:
+			var r = allocReg(TFloat);
+			switch( a.t ) {
+			case TVec(3, _):
+				op(ODp3(r, expr(a), expr(b)));
+			case TVec(4, _):
+				op(ODp4(r, expr(a), expr(b)));
+			default:
+				throw "assert " + a.t;
+			}
+			return r;
+		case [Mat3, _]:
+			var regs = [for( a in args ) expr(a)];
+			var r0 = regs[0];
+			var align = true;
+			for( i in 0...regs.length ) {
+				var r = regs[i];
+				if( r.t == r0.t && r.index == r0.index + i && r.swiz == null && r.access == null ) continue;
+				align = false;
+				break;
+			}
+			if( align )
+				return r0;
+			throw "TODO";
+		case [Mat3x4, _]:
+			var regs = [for( a in args ) expr(a)];
+			var r0 = regs[0];
+			var align = true;
+			for( i in 0...regs.length ) {
+				var r = regs[i];
+				if( r.t == r0.t && r.index == r0.index + i && r.swiz == null && r.access == null ) continue;
+				align = false;
+				break;
+			}
+			if( align )
+				return r0;
+			throw "TODO";
+		case [Mat4, _]:
+			var regs = [for( a in args ) expr(a)];
+			var r0 = regs[0];
+			var align = true;
+			for( i in 0...regs.length ) {
+				var r = regs[i];
+				if( r.t == r0.t && r.index == r0.index + i && r.swiz == null && r.access == null ) continue;
+				align = false;
+				break;
+			}
+			if( align )
+				return r0;
+			throw "TODO";
+		case [Normalize, [e]]:
+			switch( e.t ) {
+			case TVec(3, VFloat):
+				var r = allocReg(e.t);
+				op(ONrm(r, expr(e)));
+				return r;
+			default:
+				throw "TODO "+e.t;
+			}
+		default:
+		}
+
+		throw "TODO " + g + ":" + args.length;
+		return null;
 	}
 
 	function regSize( t : Type ) {

@@ -328,7 +328,9 @@ class Stage3dDriver extends Driver {
 	function compileShader( s : hxsl.RuntimeShader.RuntimeShaderData ) : haxe.io.Bytes {
 		//trace(hxsl.Printer.shaderToString(s.data));
 		var agal = hxsl.AgalOut.toAgal(s, 1);
-		//trace(format.agal.Tools.toString(agal));
+		//var old = format.agal.Tools.toString(agal);
+		agal = new hxsl.AgalOptim().optimize(agal);
+		//var opt = format.agal.Tools.toString(agal);
 		var o = new haxe.io.BytesOutput();
 		new format.agal.Writer(o).write(agal);
 		return o.getBytes();
