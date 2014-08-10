@@ -119,9 +119,20 @@ class Flatten {
 		switch( e.e ) {
 		case TArray(ea, eindex = { e : TConst(CInt(_)) } ):
 			return { e : TArray(mapConsts(ea), eindex), t : e.t, p : e.p };
+		case TBinop(OpMult, _, { t : TMat3x4 } ):
+			allocConst(1, e.p); // pre-alloc
+		case TArray(ea, eindex):
+			switch( ea.t ) {
+			case TArray(t, _):
+				var stride = varSize(t, VFloat) >> 2;
+				allocConst(stride, e.p); // pre-alloc
+			default:
+			}
 		case TConst(c):
 			switch( c ) {
 			case CFloat(v):
+				return allocConst(v, e.p);
+			case CInt(v):
 				return allocConst(v, e.p);
 			default:
 				return e;
@@ -130,8 +141,8 @@ class Flatten {
 			// allow var expansion without relying on a constant
 			return e;
 		default:
-			return e.map(mapConsts);
 		}
+		return e.map(mapConsts);
 	}
 
 	function allocConst( v : Float, p ) : TExpr {
