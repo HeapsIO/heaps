@@ -94,6 +94,7 @@ class AgalOptim {
 		if( write && inf.index < 0 )
 			assignReg(inf);
 		var swiz = [];
+		var bits = 0;
 		for( s in this.swiz(r) ) {
 			var s2 = inf.swiz[s.getIndex()];
 			if( s2 == null ) {
@@ -106,8 +107,10 @@ class AgalOptim {
 					}
 				}
 			}
+			bits |= s2.getIndex() << (swiz.length * 2);
 			swiz.push(s2);
 		}
+		if( bits == 228 ) swiz = null; // [X,Y,Z,W]
 		return { t : RTemp, index : inf.index, swiz : swiz, access : null };
 	}
 
@@ -492,7 +495,13 @@ class AgalOptim {
 		}
 	}
 
-	inline function offset( r : Reg, n : Int ) {
+	inline function rswiz( r : Reg, s : Array<C> ) : Reg {
+		if( r.access != null ) throw "assert";
+		var swiz = swiz(r);
+		return { t : r.t, index : r.index, swiz : [for( s in s ) swiz[s.getIndex()]], access : null };
+	}
+
+	inline function offset( r : Reg, n : Int ) : Reg {
 		if( r.access != null ) throw "assert";
 		return { t : r.t, index : r.index + n, swiz : r.swiz == null ? null : r.swiz.copy(), access : null };
 	}
