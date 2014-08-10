@@ -4,3 +4,7 @@
 -swf-version 11.6
 -main Bounds
 -lib heaps
+--next
+-js main.js
+-main Bounds
+-lib heaps

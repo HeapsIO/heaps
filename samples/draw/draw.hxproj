@@ -21,9 +21,10 @@
   <build>
     <option directives="" />
     <option flashStrict="False" />
+    <option noInlineOnDebug="False" />
     <option mainClass="Draw" />
     <option enabledebug="False" />
-    <option additional="-lib heaps&#xA;-dce full" />
+    <option additional="-lib heaps&#xA;-dce full&#xA;&#xA;--next&#xA;-swf draw.swf&#xA;-swf-version 11.8&#xA;-swf-header 2000:2000:60&#xA;-lib heaps&#xA;-main Draw&#xA;-dce full" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -45,7 +46,7 @@
   <postBuildCommand alwaysRun="False" />
   <!-- Other project options -->
   <options>
-    <option showHiddenPaths="False" />
+    <option showHiddenPaths="True" />
     <option testMovie="OpenDocument" />
     <option testMovieCommand="index.html" />
   </options>

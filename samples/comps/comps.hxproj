@@ -21,9 +21,10 @@
   <build>
     <option directives="" />
     <option flashStrict="False" />
+    <option noInlineOnDebug="False" />
     <option mainClass="Comps" />
     <option enabledebug="False" />
-    <option additional="-lib heaps&#xA;-lib hscript&#xA;-dce full" />
+    <option additional="-lib heaps&#xA;-lib hscript&#xA;-dce full&#xA;&#xA;--next&#xA;-lib heaps&#xA;-lib hscript&#xA;-swf comps.swf&#xA;-swf-version 11.8&#xA;-swf-header 1024:768:60&#xA;-main Comps&#xA;-dce full" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -45,7 +46,7 @@
   <options>
     <option showHiddenPaths="False" />
     <option testMovie="OpenDocument" />
-    <option testMovieCommand="index.html" />
+    <option testMovieCommand="comps.swf" />
   </options>
   <!-- Plugin storage -->
   <storage />

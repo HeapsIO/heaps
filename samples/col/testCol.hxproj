@@ -21,9 +21,10 @@
   <build>
     <option directives="" />
     <option flashStrict="False" />
+    <option noInlineOnDebug="False" />
     <option mainClass="TestCol" />
     <option enabledebug="False" />
-    <option additional="-lib heaps" />
+    <option additional="-lib heaps&#xA;--next&#xA;-swf main.swf&#xA;-swf-version 11.8&#xA;-main TestCol&#xA;-lib heaps" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

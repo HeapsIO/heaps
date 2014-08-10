@@ -24,7 +24,7 @@
     <option noInlineOnDebug="False" />
     <option mainClass="Bounds" />
     <option enabledebug="False" />
-    <option additional="-lib heaps" />
+    <option additional="-lib heaps&#xA;--next&#xA;-js main.js&#xA;-main Bounds&#xA;-lib heaps" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

@@ -21,9 +21,10 @@
   <build>
     <option directives="" />
     <option flashStrict="False" />
+    <option noInlineOnDebug="False" />
     <option mainClass="Main" />
     <option enabledebug="False" />
-    <option additional="-lib heaps&#xA;-dce full" />
+    <option additional="-lib heaps&#xA;-dce full&#xA;&#xA;--next&#xA;-swf lights.swf&#xA;-swf-version 11.8&#xA;-swf-header 1280:1024:60&#xA;-dce full&#xA;-main Main&#xA;-lib heaps" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -48,7 +49,7 @@
   <options>
     <option showHiddenPaths="True" />
     <option testMovie="OpenDocument" />
-    <option testMovieCommand="index.html" />
+    <option testMovieCommand="lights.swf" />
   </options>
   <!-- Plugin storage -->
   <storage />
