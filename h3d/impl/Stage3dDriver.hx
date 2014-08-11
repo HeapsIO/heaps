@@ -350,19 +350,20 @@ class Stage3dDriver extends Driver {
 			var pos = 0;
 			for( v in shader.vertex.data.vars )
 				if( v.kind == Input ) {
-					p.stride += hxsl.Ast.Tools.size(v.type);
+					var size;
 					var fmt = switch( v.type ) {
-					case TBytes(4): flash.display3D.Context3DVertexBufferFormat.BYTES_4;
-					case TFloat: flash.display3D.Context3DVertexBufferFormat.FLOAT_1;
-					case TVec(2, VFloat): flash.display3D.Context3DVertexBufferFormat.FLOAT_2;
-					case TVec(3, VFloat): flash.display3D.Context3DVertexBufferFormat.FLOAT_3;
-					case TVec(4, VFloat): flash.display3D.Context3DVertexBufferFormat.FLOAT_4;
+					case TBytes(4): size = 1; flash.display3D.Context3DVertexBufferFormat.BYTES_4;
+					case TFloat: size = 1; flash.display3D.Context3DVertexBufferFormat.FLOAT_1;
+					case TVec(2, VFloat): size = 2; flash.display3D.Context3DVertexBufferFormat.FLOAT_2;
+					case TVec(3, VFloat): size = 3; flash.display3D.Context3DVertexBufferFormat.FLOAT_3;
+					case TVec(4, VFloat): size = 4; flash.display3D.Context3DVertexBufferFormat.FLOAT_4;
 					default: throw "unsupported input " + v.type;
 					}
 					var idx = FORMAT.indexOf(fmt);
 					if( idx < 0 ) throw "assert " + fmt;
 					p.bufferFormat |= idx << (pos * 3);
 					p.inputNames.push(v.name);
+					p.stride += size;
 					pos++;
 				}
 
