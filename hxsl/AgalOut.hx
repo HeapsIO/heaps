@@ -143,16 +143,16 @@ class AgalOut {
 	}
 
 	inline function offset( r : Reg, k : Int ) : Reg {
-		if( r.swiz != null || r.access != null ) throw "assert";
+		if( r.access != null ) throw "assert";
 		return {
 			t : r.t,
 			index : r.index + k,
-			swiz : null,
+			swiz : r.swiz == null ? null : r.swiz.copy(),
 			access : null,
 		};
 	}
 
-	function allocConst( v : Float ) : Reg {
+	function getConst( v : Float ) : Reg {
 		for( i in 0...current.consts.length )
 			if( current.consts[i] == v ) {
 				var g = null;
@@ -164,11 +164,20 @@ class AgalOut {
 				var p = g.pos + i;
 				return { t : RConst, index : p >> 2, swiz : [COMPS[p & 3]], access : null };
 			}
-		throw "TODO";
+		throw "Missing required const "+v;
 	}
 
 	function expr( e : TExpr ) : Reg {
 		switch( e.e ) {
+		case TConst(c):
+			switch( c ) {
+			case CInt(v):
+				return getConst(v);
+			case CFloat(f):
+				return getConst(f);
+			default:
+				throw "assert " + c;
+			}
 		case TParenthesis(e):
 			return expr(e);
 		case TVarDecl(v, init):
@@ -205,23 +214,31 @@ class AgalOut {
 				var r1 = expr(e1);
 				var r2 = expr(e2);
 				switch( [e1.t, e2.t] ) {
-				case [TFloat | TVec(_), TFloat | TVec(_)]:
+				case [TFloat | TInt | TVec(_), TFloat | TInt | TVec(_)]:
 					op(OMul(r, r1, r2));
 				case [TVec(3, VFloat), TMat3]:
-					op(OM33(r, r1, r2));
+					var r2 = swiz(r2,[X,Y,Z]);
+					op(ODp3(swiz(r,[X]), r1, r2));
+					op(ODp3(swiz(r,[Y]), r1, offset(r2,1)));
+					op(ODp3(swiz(r,[Z]), r1, offset(r2,2)));
 				case [TVec(3, VFloat), TMat3x4]:
 					if( r1.t == RTemp ) {
 						var r = allocReg();
 						op(OMov(swiz(r, [X, Y, Z]), r1));
-						op(OMov(swiz(r, [W]), allocConst(1)));
+						op(OMov(swiz(r, [W]), getConst(1)));
 						r1 = r;
 					} else {
 						r1 = Reflect.copy(r1);
 						r1.swiz = null;
 					}
-					op(OM34(r, r1, r2));
+					op(ODp4(swiz(r,[X]), r1, r2));
+					op(ODp4(swiz(r,[Y]), r1, offset(r2,1)));
+					op(ODp4(swiz(r,[Z]), r1, offset(r2,2)));
 				case [TVec(4, VFloat), TMat4]:
-					op(OM44(r, r1, r2));
+					op(ODp4(swiz(r,[X]), r1, r2));
+					op(ODp4(swiz(r,[Y]), r1, offset(r2,1)));
+					op(ODp4(swiz(r,[Z]), r1, offset(r2,2)));
+					op(ODp4(swiz(r,[W]), r1, offset(r2,3)));
 				default:
 					throw "assert " + [e1.t, e2.t];
 				}
@@ -236,11 +253,11 @@ class AgalOut {
 			default:
 				throw "TODO CALL " + e.e;
 			}
-		case TArray(e, index):
+		case TArray(ea, index):
 			switch( index.e ) {
 			case TConst(CInt(v)):
-				var r = expr(e);
-				var stride = switch( e.t ) {
+				var r = expr(ea);
+				var stride = switch( ea.t ) {
 				case TArray(TSampler2D | TSamplerCube, _): 4;
 				case TArray(t, _): Tools.size(t);
 				default: throw "assert " + e.t;
@@ -254,7 +271,21 @@ class AgalOut {
 				} else if( index & 3 != 0 ) throw "assert"; // not register-aligned !
 				return { t : r.t, index : r.index + (index>>2), swiz : swiz, access : null };
 			default:
-				throw "TODO " + index.e;
+				var r = expr(ea);
+				var delta = 0;
+				// remove ToInt and extract delta when the form is [int(offset) * stride + delta] as produced by Flatten
+				switch( index.e ) {
+				case TBinop(OpAdd, { e : TBinop(OpMult,{ e : TCall({ e : TGlobal(ToInt) },[epos]) },stride) } , { e : TConst(CInt(d)) } ):
+					delta = d;
+					index = { e : TBinop(OpMult, epos, stride), t : TFloat, p : index.p };
+				default:
+				}
+				var i = expr(index);
+				if( r.swiz != null || r.access != null ) throw "assert";
+				if( i.swiz == null || i.swiz.length != 1 || i.access != null ) throw "assert";
+				var out = allocReg();
+				op(OMov(out, { t : i.t, index : i.index, swiz : null, access : { t : r.t, offset : r.index + delta, comp : i.swiz[0] } } ));
+				return out;
 			}
 		case TSwiz(e, regs):
 			var r = expr(e);
@@ -356,44 +387,11 @@ class AgalOut {
 			}
 			return r;
 		case [Mat3, _]:
-			var regs = [for( a in args ) expr(a)];
-			var r0 = regs[0];
-			var align = true;
-			for( i in 0...regs.length ) {
-				var r = regs[i];
-				if( r.t == r0.t && r.index == r0.index + i && r.swiz == null && r.access == null ) continue;
-				align = false;
-				break;
-			}
-			if( align )
-				return r0;
-			throw "TODO";
+			return copyToMatrix(args, 3, 3);
 		case [Mat3x4, _]:
-			var regs = [for( a in args ) expr(a)];
-			var r0 = regs[0];
-			var align = true;
-			for( i in 0...regs.length ) {
-				var r = regs[i];
-				if( r.t == r0.t && r.index == r0.index + i && r.swiz == null && r.access == null ) continue;
-				align = false;
-				break;
-			}
-			if( align )
-				return r0;
-			throw "TODO";
+			return copyToMatrix(args, 3, 4);
 		case [Mat4, _]:
-			var regs = [for( a in args ) expr(a)];
-			var r0 = regs[0];
-			var align = true;
-			for( i in 0...regs.length ) {
-				var r = regs[i];
-				if( r.t == r0.t && r.index == r0.index + i && r.swiz == null && r.access == null ) continue;
-				align = false;
-				break;
-			}
-			if( align )
-				return r0;
-			throw "TODO";
+			return copyToMatrix(args, 4, 4);
 		case [Normalize, [e]]:
 			switch( e.t ) {
 			case TVec(3, VFloat):
@@ -408,6 +406,53 @@ class AgalOut {
 
 		throw "TODO " + g + ":" + args.length;
 		return null;
+	}
+
+	function copyToMatrix( args : Array<TExpr>, w : Int, h : Int ) {
+		var regs = [for( a in args ) expr(a)];
+		var out = [for( i in 0...w ) allocReg()];
+		var comps = [for( o in out ) for( i in 0...h ) swiz(o, [COMPS[i]])];
+		var defSwiz = [X, Y, Z, W];
+		// copy all regs to output components
+		for( i in 0...args.length ) {
+			var regs = [regs[i]];
+			switch( args[i].t ) {
+			case TFloat, TVec(_):
+			case TMat3, TMat3x4:
+				if( args.length != 1 ) throw "assert";
+				regs.push(offset(regs[0], 1));
+				regs.push(offset(regs[0], 2));
+				if( h < 4 ) defSwiz = [X, Y, Z];
+			case TMat4:
+				if( args.length != 1 ) throw "assert";
+				regs.push(offset(regs[0], 1));
+				regs.push(offset(regs[0], 2));
+				if( w == 4 ) regs.push(offset(regs[0], 3));
+				// we allow to reduce the size of the output matrix
+				if( h < 4 ) defSwiz = [X, Y, Z];
+			default:
+				throw "assert " + args[i].t;
+			}
+			for( i in 0...regs.length ) {
+				regs[i] = Reflect.copy(regs[i]);
+				if( regs[i].swiz == null ) regs[i].swiz = defSwiz.copy();
+				if( regs[i].access != null ) throw "assert";
+			}
+			while( regs.length > 0 ) {
+				var w = comps[0].index;
+				var r = regs[0];
+				var sw = [], sr = [];
+				while( regs[0].swiz.length > 0 && comps[0].index == w ) {
+					sw.push(comps.shift().swiz[0]);
+					sr.push(regs[0].swiz.shift());
+				}
+				if( regs[0].swiz.length == 0 ) regs.shift();
+				var m = OMov( { t : RTemp, index : w, swiz : sw, access : null }, { t : r.t, index : r.index, swiz : sr, access : null } );
+				op(m);
+			}
+		}
+		if( comps.length != 0 ) throw "assert";
+		return out[0];
 	}
 
 	function regSize( t : Type ) {

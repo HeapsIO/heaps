@@ -6,15 +6,14 @@ private class RegInfos {
 	public var swiz : Array<C>;
 	public var values : Array<Reg>;
 	public var prevRead : Array<Int>;
+	public var prevWrite : Array<Int>;
 	public var reads : Array<Int>;
 	public var writes : Array<Int>;
 	public var live : Array<Int>;
-	public var size : Int;
 	public var invertSwiz : Array<Int>;
 
 	public function new(i) {
 		index = i;
-		size = 1;
 		live = [];
 		invertSwiz = [];
 	}
@@ -30,7 +29,6 @@ class AgalOptim {
 	var flag : Bool;
 	var maxRegs : Int;
 	var startReg : Int;
-	var sizeReq = 1;
 	var changed : Bool;
 	var data : Data;
 	var usedRegs : Array<Array<RegInfos>>;
@@ -50,6 +48,8 @@ class AgalOptim {
 			if( changed ) continue;
 			optiMov();
 			if( changed ) continue;
+			optiDup();
+			if( changed ) continue;
 			break;
 		}
 
@@ -60,6 +60,8 @@ class AgalOptim {
 			packRegisters = true;
 			allocRegs();
 		}
+
+		optiMat();
 
 		return {
 			version : d.version,
@@ -89,13 +91,18 @@ class AgalOptim {
 
 	function remapReg( r : Reg, write : Bool ) {
 		var inf = getReg(r);
-		if( inf == null )
+		if( inf == null ) {
+			if( swizBits(r) == 228 )
+				r.swiz = null;
 			return r;
+		}
 		if( write && inf.index < 0 )
 			assignReg(inf);
-		var swiz = [];
-		var bits = 0;
-		for( s in this.swiz(r) ) {
+		var swiz = swiz(r);
+		if( r.access != null )
+			swiz = [r.access.comp];
+		var sout = [];
+		for( s in swiz ) {
 			var s2 = inf.swiz[s.getIndex()];
 			if( s2 == null ) {
 				// reading from unassigned component can happen if we are padding a varying
@@ -107,11 +114,16 @@ class AgalOptim {
 					}
 				}
 			}
-			bits |= s2.getIndex() << (swiz.length * 2);
-			swiz.push(s2);
+			sout.push(s2);
 		}
-		if( bits == 228 ) swiz = null; // [X,Y,Z,W]
-		return { t : RTemp, index : inf.index, swiz : swiz, access : null };
+		var access = null;
+		if( r.access != null ) {
+			access = { comp : sout[0], t : r.access.t, offset : r.access.offset };
+			sout = null;
+		}
+		var r = { t : RTemp, index : inf.index, swiz : sout, access : access };
+		if( swizBits(r) == 228 ) r.swiz = null;
+		return r;
 	}
 
 	function assignReg( inf : RegInfos ) {
@@ -152,9 +164,6 @@ class AgalOptim {
 			// if we have found a previous register that is better fit
 			if( packRegisters && found != null && foundUsage <= available - ncomps )
 				continue;
-
-			// check that we have continous space for matrixes
-			if( inf.size > 1 ) throw "TODO";
 
 			found = rid;
 			foundUsage = available - ncomps;
@@ -213,6 +222,20 @@ class AgalOptim {
 		for( i in 0...code.length ) {
 			codePos = i;
 			switch( code[i] ) {
+
+			case OMov(r1, r2) if( r2.access != null ):
+				var i2 = getReg(r2);
+				if( i2 == null || i2.values == null ) continue;
+				// optimize
+				// 		mov a, b
+				//		mov c, X[a]
+				//  into
+				//		mov c, X[b]
+				var v = i2.values[r2.access.comp.getIndex()];
+				if( v == null || (v.index == r2.index && v.t == r2.t) ) continue;
+				code[i] = OMov(r1, { t : v.t, index : v.index, swiz : r2.swiz, access : { offset : r2.access.offset, t : r2.access.t, comp : v.swiz[0] }} );
+				changed = true;
+
 			case OMov(r1, r2):
 				var i1 = getReg(r1);
 				var i2 = getReg(r2);
@@ -292,14 +315,19 @@ class AgalOptim {
 		var inf = getReg(r1);
 		if( inf == null )
 			return OMov(r1, r2);
+		if( r2.access != null ) {
+			inf.values = null;
+			write(r1);
+			return OMov(r1, r2);
+		}
 		var swiz = swiz(r1);
 		var swiz2 = this.swiz(r2);
 		if( inf.values == null ) inf.values = [];
 		for( i in 0...swiz.length ) {
 			var s = swiz[i];
 			inf.values[s.getIndex()] = { t : r2.t, index : r2.index, swiz : [swiz2[i]], access : null };
-			inf.writes[s.getIndex()] = codePos;
 		}
+		write(r1);
 		return OMov(r1, r2);
 	}
 
@@ -326,20 +354,15 @@ class AgalOptim {
 		var inf = getReg(r);
 		if( inf == null ) return r;
 		if( write ) {
-			if( r.swiz == null ) {
+			if( r.swiz == null )
 				inf.values = null;
-				for( i in 0...4 )
-					inf.writes[i] = codePos;
-			} else {
-				for( s in r.swiz ) {
-					if( inf.values != null )
-						inf.values[s.getIndex()] = { t : RTemp, index : r.index, swiz : [s], access : null };
-					inf.writes[s.getIndex()] = codePos;
-				}
-			}
+			else if( inf.values != null )
+				for( s in r.swiz )
+					inf.values[s.getIndex()] = { t : RTemp, index : r.index, swiz : [s], access : null };
+			this.write(r);
 			return r;
 		}
-		if( inf.values == null || sizeReq > 1 ) {
+		if( inf.values == null ) {
 			read(r);
 			return r;
 		}
@@ -364,6 +387,17 @@ class AgalOptim {
 		return reg;
 	}
 
+	function write( r : Reg ) {
+		var inf = getReg(r);
+		if( inf == null ) return;
+		for( s in swiz(r) ) {
+			var b = s.getIndex();
+			var r = inf.writes[b];
+			if( r < codePos ) inf.prevWrite[b] = r;
+			inf.writes[b] = codePos;
+		}
+	}
+
 	function read( r : Reg ) {
 		var inf = getReg(r);
 		if( inf == null ) return;
@@ -379,8 +413,6 @@ class AgalOptim {
 		}
 		for( p in minPos+1...codePos+1 )
 			inf.live[p] |= mask;
-		if( sizeReq > inf.size )
-			inf.size = sizeReq;
 	}
 
 	function getReg( r : Reg ) {
@@ -392,9 +424,120 @@ class AgalOptim {
 			inf.prevRead = [ -1, -1, -1, -1];
 			inf.reads = [-1, -1, -1, -1];
 			inf.writes = [ -1, -1, -1, -1];
+			inf.prevWrite = [ -1, -1, -1, -1];
 			regs[r.index] = inf;
 		}
 		return inf;
+	}
+
+	function swizBits( r : Reg ) {
+		if( r.swiz == null ) return 228;
+		var b = 0;
+		for( i in 0...r.swiz.length )
+			b |= r.swiz[i].getIndex() << (i * 2);
+		return b;
+	}
+
+	inline function same( a : Reg, b : Reg ) {
+		return dist(a, b) == 0;
+	}
+
+	inline function dist( a : Reg, b : Reg ) {
+		return a.t == b.t && a.access == null && b.access == null ? b.index - a.index : 1000;
+	}
+
+	function noSwiz( r : Reg ) {
+		return { t : r.t, swiz : null, access : null, index : r.index };
+	}
+
+	function optiDup() {
+		// optimize duplication of code
+		for( r1 in regs ) {
+			if( r1 == null ) continue;
+			for( i in 0...4 ) {
+				var p1 = r1.writes[i];
+				var op1 = code[p1];
+				if( op1 == null ) continue;
+				switch( op1 ) {
+				case OMov(_): continue;
+				default:
+				}
+				for( r2 in regs ) {
+					if( r1 == r2 || r2 == null ) continue;
+					for( j in 0...4 ) {
+						var p2 = r2.writes[i];
+						if( p2 < p1 ) continue;
+
+						var op2 = code[p2];
+						if( op1.getIndex() != op2.getIndex() ) continue;
+
+						var args1 : Array<Reg> = cast op1.getParameters();
+						var args2 : Array<Reg> = cast op2.getParameters();
+						var ok = true;
+						for( i in 1...args1.length )
+							if( !same(args1[i], args2[i]) || swizBits(args1[i]) != swizBits(args2[i]) ) {
+								ok = false;
+								break;
+							}
+						if( ok ) {
+							code[p2] = OMov(args2[0], args1[0]);
+							changed = true;
+							return;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	function optiMat() {
+		var XYZ = 36;
+		var XYZW = 228;
+		// group contiguous dp into matrix macros
+		// should be purely cosmetic
+		for( i in 0...code.length - 2 ) {
+			switch( code[i] ) {
+			// disable for Temps, since we can't swiz on [b.XYZ], and since we are not sure W is written (and it's rejected by AGAL!)
+			case ODp3(dst, a, b) if( swizBits(dst) == 0 && swizBits(b) & 63 == XYZ && b.t != RTemp ):
+				var sa = swizBits(a) & 63;
+				switch( [code[i + 1], code[i + 2]] ) {
+				case [ODp3(d2, a2, b2), ODp3(d3, a3, b3)]:
+					if( same(dst, d2) && same(dst, d3) && same(a, a2) && same(a, a3) && swizBits(a2)&63 == sa && swizBits(a3)&63 == sa && dist(b, b2) == 1 && dist(b, b3) == 2 && swizBits(d2) == 1 && swizBits(d3) == 2 && swizBits(b2)&63 == XYZ && swizBits(b3)&63 == XYZ ) {
+						var dst = Reflect.copy(dst);
+						dst.swiz = [X, Y, Z];
+						code[i] = OM33(dst, a, noSwiz(b));
+						code[i + 1] = OUnused;
+						code[i + 2] = OUnused;
+					}
+				default:
+				}
+			case ODp4(dst, a, b) if( swizBits(dst) == 0 && swizBits(b) == XYZW ):
+				var sa = swizBits(a);
+				switch( [code[i + 1], code[i + 2]] ) {
+				case [ODp4(d2, a2, b2), ODp4(d3, a3, b3)]:
+					if( same(dst, d2) && same(dst, d3) && same(a, a2) && same(a, a3) && swizBits(a2) == sa && swizBits(a3) == sa && dist(b, b2) == 1 && dist(b, b3) == 2 && swizBits(d2) == 1 && swizBits(d3) == 2 && swizBits(b2) == XYZW && swizBits(b3) == XYZW ) {
+						var m44 = false;
+						if( i + 3 < code.length )
+							switch( code[i + 3] ) {
+							case ODp4(d4, a4, b4):
+								if( same(dst, d4) && same(a, a4) && swizBits(a4) == sa && dist(b, b4) == 3 && swizBits(d4) == 3 && swizBits(b4) == XYZW )
+									m44 = true;
+							default:
+							}
+						var dst = Reflect.copy(dst);
+						dst.swiz = m44 ? null : [X,Y,Z];
+						code[i] = (m44?OM44:OM34)(dst, sa == XYZW ? noSwiz(a) : a, noSwiz(b));
+						code[i + 1] = OUnused;
+						code[i + 2] = OUnused;
+						if( m44 ) code[i + 3] = OUnused;
+					}
+				default:
+				}
+			default:
+			}
+		}
+		while( code.remove(OUnused) )
+			continue;
 	}
 
 	function iter( op : Opcode, reg : Reg -> Bool -> Void ) {
@@ -404,7 +547,10 @@ class AgalOptim {
 		case OKil(r):
 			reg(r, false);
 		case OMov(d, v):
-			reg(v, false);
+			if( v.access != null )
+				reg( { t : v.t, index : v.index, access : null, swiz : [v.access.comp] }, false );
+			else
+				reg(v, false);
 			reg(d, true);
 		case OTex(d, v, _), ORcp(d, v), OFrc(d,v),OSqt(d,v), ORsq(d,v), OLog(d,v),OExp(d,v), ONrm(d,v), OSin(d,v), OCos(d,v), OAbs(d,v), ONeg(d,v), OSat(d,v):
 			reg(v,false);
@@ -464,24 +610,9 @@ class AgalOptim {
 		case OAbs(d, v): unop(d, v, OAbs);
 		case ONeg(d, v): unop(d, v, ONeg);
 		case OSat(d, v): unop(d, v, OSat);
-		case OM33(d, a, b):
-			a = r(a, false);
-			sizeReq = 3;
-			b = r(b, false);
-			sizeReq = 1;
-			OM33(r(d, true), a, b);
-		case OM44(d, a, b):
-			a = r(a, false);
-			sizeReq = 4;
-			b = r(b, false);
-			sizeReq = 1;
-			OM44(r(d, true), a, b);
-		case OM34(d, a, b):
-			a = r(a, false);
-			sizeReq = 3;
-			b = r(b, false);
-			sizeReq = 1;
-			OM34(r(d, true), a, b);
+		case OM33(d, a, b): binop(d, a, b, OM33);
+		case OM34(d, a, b): binop(d, a, b, OM34);
+		case OM44(d, a, b): binop(d, a, b, OM44);
 		case OKil(v):
 			OKil(r(v, false));
 		case OTex(d, v, t):
