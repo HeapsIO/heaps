@@ -107,6 +107,10 @@ class Checker {
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );
 		}
+		globals.set("int", globals.get("toInt"));
+		globals.set("float", globals.get("toFloat"));
+		globals.remove("toInt");
+		globals.remove("toFloat");
 	}
 
 	function error( msg : String, pos : Position ) : Dynamic {

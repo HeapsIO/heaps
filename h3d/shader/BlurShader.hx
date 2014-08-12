@@ -25,12 +25,12 @@ class BlurShader extends hxsl.Shader {
 			if( isDepth ) {
 				var val = 0.;
 				for( i in -Quality+1...Quality )
-					val += unpack(texture.get(input.uv + pixel * i.toFloat())) * values[i < 0 ? -i : i];
+					val += unpack(texture.get(input.uv + pixel * float(i))) * values[i < 0 ? -i : i];
 				output.color = pack(val.min(0.9999999));
 			} else {
 				var color = vec4(0, 0, 0, 0);
 				for( i in -Quality+1...Quality )
-					color += texture.get(input.uv + pixel * i.toFloat()) * values[i < 0 ? -i : i];
+					color += texture.get(input.uv + pixel * float(i)) * values[i < 0 ? -i : i];
 				output.color = color;
 			}
 		}
