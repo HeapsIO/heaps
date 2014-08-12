@@ -13,7 +13,7 @@ class Blur {
 	public var sigma(default, set) : Float;
 
 	var values : Array<Float>;
-	var shader : h3d.shader.BlurShader;
+	var shader : h3d.shader.Blur;
 	var pass : h3d.mat.Pass;
 	var manager : h3d.shader.Manager;
 	var plan : h3d.prim.Plan2D;
@@ -22,7 +22,7 @@ class Blur {
 		this.quality = quality;
 		this.sigma = sigma;
 		manager = new h3d.shader.Manager(["output.position", "output.color"]);
-		shader = new h3d.shader.BlurShader();
+		shader = new h3d.shader.Blur();
 		pass = new h3d.mat.Pass("blur", new hxsl.ShaderList(shader));
 		pass.culling = None;
 		pass.depth(false, Always);
@@ -94,6 +94,8 @@ class Blur {
 		engine.setTarget(src);
 		shader.texture = tmp;
 		shader.pixel.set(0, 1 / tmp.height);
+		engine.selectMaterial(pass);
+		engine.selectShader(rts);
 		manager.fillParams(buf, rts, shaders);
 		engine.uploadShaderBuffers(buf, Params);
 		engine.uploadShaderBuffers(buf, Textures);

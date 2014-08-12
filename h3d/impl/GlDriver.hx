@@ -487,6 +487,8 @@ class GlDriver extends Driver {
 			gl.getExtension('OES_standard_derivatives') != null;
 		case FloatTextures:
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null;
+		case TargetDepthBuffer:
+			true;
 		}
 	}
 

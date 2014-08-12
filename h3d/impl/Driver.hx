@@ -21,6 +21,7 @@ typedef Texture = Int;
 enum Feature {
 	StandardDerivatives;
 	FloatTextures;
+	TargetDepthBuffer;
 }
 
 class Driver {

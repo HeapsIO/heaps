@@ -1,6 +1,6 @@
 package h3d.shader;
 
-class BlurShader extends hxsl.Shader {
+class Blur extends hxsl.Shader {
 
 	static var SRC = {
 		@input var input : {

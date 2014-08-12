@@ -10,6 +10,8 @@ class ShadowMap extends Base {
 	var shadowColorId : Int;
 	var shadowPowerId : Int;
 	var shadowBiasId : Int;
+	var hasTargetDepth : Bool;
+	var clear : Clear;
 	public var size : Int;
 	public var lightDirection : h3d.Vector;
 	public var color : h3d.Vector;
@@ -30,6 +32,9 @@ class ShadowMap extends Base {
 		shadowColorId = hxsl.Globals.allocID("shadow.color");
 		shadowPowerId = hxsl.Globals.allocID("shadow.power");
 		shadowBiasId = hxsl.Globals.allocID("shadow.bias");
+		hasTargetDepth = h3d.Engine.getCurrent().driver.hasFeature(TargetDepthBuffer);
+		if( !hasTargetDepth )
+			clear = new Clear();
 		color = new h3d.Vector();
 		blur = new Blur(2, 3);
 	}
@@ -62,7 +67,7 @@ class ShadowMap extends Base {
 				blurTexture.dispose();
 				blurTexture = null;
 			}
-			texture = new h3d.mat.Texture(size, size, [Target, TargetDepth, TargetNoFlipY]);
+			texture = new h3d.mat.Texture(size, size, [Target, hasTargetDepth ? TargetDepth : TargetUseDefaultDepth, TargetNoFlipY]);
 		}
 		if( blur.quality > 0 && blurTexture == null )
 			blurTexture = new h3d.mat.Texture(size, size, [Target, TargetNoFlipY]);
@@ -74,6 +79,9 @@ class ShadowMap extends Base {
 		ctx.engine.setTarget(null);
 
 		blur.apply(texture, blurTexture, true);
+
+		if( !hasTargetDepth )
+			clear.apply(1);
 
 		ctx.sharedGlobals.set(shadowMapId, texture);
 		ctx.sharedGlobals.set(shadowProjId, lightCamera.m);

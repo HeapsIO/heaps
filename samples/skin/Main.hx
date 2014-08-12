@@ -1,7 +1,7 @@
 import h3d.scene.*;
 
 class Main extends hxd.App {
-	
+
 	override function init() {
 		var prim = hxd.Res.Model.toFbx();
 		var obj = prim.makeObject(loadTexture);
@@ -9,7 +9,7 @@ class Main extends hxd.App {
 		s3d.addChild(obj);
 		s3d.camera.pos.set( -2, -3, 2);
 		s3d.camera.target.z += 0.5;
-		
+
 		obj.playAnimation(prim.loadAnimation(LinearAnim));
 
 		// add lights
@@ -28,7 +28,7 @@ class Main extends hxd.App {
 		shadow.lightDirection = dir.direction;
 		shadow.power = 50;
 	}
-	
+
 	function loadTexture( name : String, _ ) {
 		name = name.split("\\").pop();
 		var m = new h3d.mat.MeshMaterial(hxd.Res.load(name).toTexture());
@@ -37,10 +37,10 @@ class Main extends hxd.App {
 		m.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
 		return m;
 	}
-	
+
 	static function main() {
 		hxd.Res.initEmbed();
 		new Main();
 	}
-	
+
 }

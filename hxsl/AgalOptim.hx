@@ -21,7 +21,7 @@ private class RegInfos {
 
 class AgalOptim {
 
-	static var ALL = [X, Y, Z, W];
+	static var COMPS = [X, Y, Z, W];
 
 	var code : Array<Opcode>;
 	var codePos : Int;
@@ -43,7 +43,7 @@ class AgalOptim {
 
 		while( true ) {
 			changed = false;
-			buildLive();
+			buildLive(true);
 			splice();
 			if( changed ) continue;
 			optiMov();
@@ -52,6 +52,10 @@ class AgalOptim {
 			if( changed ) continue;
 			break;
 		}
+
+		unoptim();
+		if( changed )
+			buildLive(false);
 
 		var old = code;
 		packRegisters = false;
@@ -208,6 +212,29 @@ class AgalOptim {
 		}
 	}
 
+	function unoptim() {
+		// expand invalid AGAL opcodes with additional MOV
+		var out = [];
+		for( i in 0...code.length ) {
+			var op = code[i];
+			var args : Array<Reg> = cast op.getParameters();
+			if( args.length > 2 )
+				switch( [args[1].t, args[2].t] ) {
+				case [RConst, RConst]:
+					var r = { t : RTemp, index : regs.length, swiz : [for( i in 0...swiz(args[1]).length ) COMPS[i]], access : null };
+					regs.push(null);
+					out.push(OMov(r, args[1]));
+					out.push(Opcode.createByIndex(op.getIndex(), [args[0], r, args[2]]));
+					changed = true;
+					continue;
+				default:
+				}
+			out.push(op);
+		}
+		code = out;
+	}
+
+
 	function optiMov() {
 		// additional remove of operations of this kind :
 		//    mul t0.x, a, b
@@ -295,12 +322,12 @@ class AgalOptim {
 		}
 	}
 
-	function buildLive() {
+	function buildLive(check) {
 		regs = [];
 		for( i in 0...code.length ) {
 			codePos = i;
 			code[i] = switch( code[i] ) {
-			case OMov(r1, r2):
+			case OMov(r1, r2) if( check ):
 				checkMov(r1, r2);
 			case op:
 				map(op, checkValue);
@@ -333,7 +360,7 @@ class AgalOptim {
 
 	inline function swiz( r : Reg ) {
 		var s = r.swiz;
-		if( s == null ) s = ALL;
+		if( s == null ) s = COMPS;
 		return s;
 	}
 

@@ -167,6 +167,30 @@ class AgalOut {
 		throw "Missing required const "+v;
 	}
 
+	function getConsts( va : Array<Float> ) : Reg {
+		var pad = (va.length - 1) & 3;
+		for( i in 0...current.consts.length - (va.length - 1) ) {
+			if( (i >> 2) != (i + pad) >> 2 ) continue;
+			var found = true;
+			for( j in 0...va.length )
+				if( current.consts[i + j] != va[j] ) {
+					found = false;
+					break;
+				}
+			if( found ) {
+				var g = null;
+				for( v in current.globals )
+					if( v.path == "__consts__" ) {
+						g = v;
+						break;
+					}
+				var p = g.pos + i;
+				return { t : RConst, index : p >> 2, swiz : defSwiz(TVec(va.length,VFloat)), access : null };
+			}
+		}
+		throw "Missing required consts "+va;
+	}
+
 	function expr( e : TExpr ) : Reg {
 		switch( e.e ) {
 		case TConst(c):
@@ -349,6 +373,8 @@ class AgalOut {
 			return binop(OMin);
 		case [Sqrt, _]:
 			return unop(OSqt);
+		case [Clamp, [a, min, max]]:
+			throw "TODO";
 		case [Vec4, _]:
 			var r = allocReg();
 			var pos = 0;
@@ -418,6 +444,16 @@ class AgalOut {
 			default:
 				throw "TODO "+e.t;
 			}
+		case [Pack, [e]]:
+			var c = getConsts([1, 255, 255 * 255, 255 * 255 * 255]);
+			var r = allocReg();
+			op(OMul(r, expr(e), c));
+			return r;
+		case [Unpack, [e]]:
+			var c = getConsts([1, 1/255, 1/(255 * 255), 1/(255 * 255 * 255)]);
+			var r = allocReg(TFloat);
+			op(ODp4(r, expr(e), c));
+			return r;
 		default:
 		}
 

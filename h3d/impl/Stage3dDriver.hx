@@ -48,7 +48,7 @@ private class CompiledShader {
 
 class Stage3dDriver extends Driver {
 
-	public static var PROFILE = flash.display3D.Context3DProfile.BASELINE;
+	public static var PROFILE = #if flash14 cast "standard" #else flash.display3D.Context3DProfile.BASELINE #end;
 
 	var s3d : flash.display.Stage3D;
 	var ctx : flash.display3D.Context3D;
@@ -69,6 +69,7 @@ class Stage3dDriver extends Driver {
 	var capture : { bmp : hxd.BitmapData, callb : Void -> Void };
 	var frame : Int;
 	var programs : Map<Int, CompiledShader>;
+	var isStandardMode : Bool;
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -109,6 +110,7 @@ class Stage3dDriver extends Driver {
 		this.onCreateCallback = onCreate;
 		s3d.addEventListener(flash.events.Event.CONTEXT3D_CREATE, this.onCreate);
 		s3d.requestContext3D( forceSoftware ? "software" : "auto", PROFILE );
+		isStandardMode = Std.string(PROFILE) == "standard";
 	}
 
 	function onCreate(_) {
@@ -129,6 +131,13 @@ class Stage3dDriver extends Driver {
 
 	override function isHardware() {
 		return ctx != null && ctx.driverInfo.toLowerCase().indexOf("software") == -1;
+	}
+
+	override function hasFeature( f : Feature ) : Bool {
+		return switch( f ) {
+		case StandardDerivatives, FloatTextures: isStandardMode;
+		case TargetDepthBuffer: false;
+		}
 	}
 
 	override function resize(width, height) {
@@ -327,7 +336,7 @@ class Stage3dDriver extends Driver {
 
 	function compileShader( s : hxsl.RuntimeShader.RuntimeShaderData ) : haxe.io.Bytes {
 		//trace(hxsl.Printer.shaderToString(s.data));
-		var agal = hxsl.AgalOut.toAgal(s, 1);
+		var agal = hxsl.AgalOut.toAgal(s, isStandardMode ? 2 : 1);
 		//var old = format.agal.Tools.toString(agal);
 		agal = new hxsl.AgalOptim().optimize(agal);
 		//var opt = format.agal.Tools.toString(agal);
