@@ -373,8 +373,18 @@ class AgalOut {
 			return binop(OMin);
 		case [Sqrt, _]:
 			return unop(OSqt);
+		case [Exp, _]:
+			return unop(OExp);
+		case [Sin, _]:
+			return unop(OSin);
+		case [Cos, _]:
+			return unop(OCos);
 		case [Clamp, [a, min, max]]:
-			throw "TODO";
+			var r = allocReg(ret);
+			op(OMax(r, expr(a), expr(min)));
+			var r2 = allocReg(ret);
+			op(OMin(r2, r, expr(max)));
+			return r2;
 		case [Vec4, _]:
 			var r = allocReg();
 			var pos = 0;
@@ -447,7 +457,8 @@ class AgalOut {
 		case [Pack, [e]]:
 			var c = getConsts([1, 255, 255 * 255, 255 * 255 * 255]);
 			var r = allocReg();
-			op(OMul(r, expr(e), c));
+			op(OMul(r, swiz(expr(e), [X, X, X, X]), c));
+			op(OFrc(r, r));
 			return r;
 		case [Unpack, [e]]:
 			var c = getConsts([1, 1/255, 1/(255 * 255), 1/(255 * 255 * 255)]);

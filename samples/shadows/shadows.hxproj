@@ -21,9 +21,10 @@
   <build>
     <option directives="" />
     <option flashStrict="False" />
+    <option noInlineOnDebug="False" />
     <option mainClass="Main" />
     <option enabledebug="False" />
-    <option additional="-lib heaps&#xA;-dce full" />
+    <option additional="-lib heaps&#xA;-dce full&#xA;&#xA;--next&#xA;-swf shadows.swf&#xA;-lib heaps&#xA;-dce full&#xA;-swf-version 11.8&#xA;-swf-header 1024:768:60&#xA;-main Main" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -48,7 +49,7 @@
   <options>
     <option showHiddenPaths="False" />
     <option testMovie="OpenDocument" />
-    <option testMovieCommand="index.html" />
+    <option testMovieCommand="shadows.swf" />
   </options>
   <!-- Plugin storage -->
   <storage />
