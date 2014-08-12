@@ -52,7 +52,10 @@ class BaseMesh extends hxsl.Shader {
 
 		function vertex() {
 			output.position = projectedPosition;
+			#if !flash
+			// this is done to flip the rendering on render targets in openGL
 			output.position.y *= global.flipY;
+			#end
 		}
 
 		function fragment() {
