@@ -190,7 +190,22 @@ class AgalOut {
 				r = expr(e);
 			return r;
 		case TVar(v):
-			return reg(v);
+			var r = reg(v);
+			switch( v.type ) {
+			case TBytes(n):
+				// multiply by 255 on read
+				var ro = allocReg();
+				var c = getConst(255);
+				var sw = [];
+				for( i in 0...n ) {
+					sw.push(COMPS[i]);
+					if( i > 0 ) c.swiz.push(c.swiz[0]);
+				}
+				op(OMul(swiz(ro, sw), swiz(r, sw), c));
+				return ro;
+			default:
+			}
+			return r;
 		case TBinop(bop, e1, e2):
 			inline function std(bop) {
 				var r = allocReg(e.t);
@@ -326,6 +341,8 @@ class AgalOut {
 		}
 
 		switch( [g, args] ) {
+		case [ToFloat, [a]]:
+			return expr(a);
 		case [Max, _]:
 			return binop(OMax);
 		case [Min, _]:

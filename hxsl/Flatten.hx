@@ -51,6 +51,12 @@ class Flatten {
 				vars : s.vars.copy(),
 				funs : [for( f in s.funs ) mapFun(f, mapConsts)],
 			};
+			for( v in s.vars )
+				switch( v.type ) {
+				case TBytes(_):
+					allocConst(255, p);
+				default:
+				}
 			if( consts.length > 0 ) {
 				gc.type = econsts.t = TArray(TFloat, SConst(consts.length));
 				s.vars.push(gc);
@@ -103,6 +109,7 @@ class Flatten {
 					var stride = varSize(t, a.t);
 					if( stride == 0 || stride & 3 != 0 ) throw "assert " + t;
 					stride >>= 2;
+					eindex = mapExpr(eindex);
 					var toInt = { e : TCall( { e : TGlobal(ToInt), t : TFun([]), p : vp }, [eindex]), t : TInt, p : vp };
 					access(a, t, vp, readOffset.bind(a,stride,{ e : TBinop(OpMult,toInt,mkInt(stride,vp)), t : TInt, p : vp }));
 				default:
