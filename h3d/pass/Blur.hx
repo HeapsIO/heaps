@@ -1,6 +1,6 @@
 package h3d.pass;
 
-class Blur {
+class Blur extends ScreenFx<h3d.shader.Blur> {
 
 	/**
 		Gives the blur quality : 0 for disable, 1 for 3x3, 2 for 5x5, etc.
@@ -13,20 +13,11 @@ class Blur {
 	public var sigma(default, set) : Float;
 
 	var values : Array<Float>;
-	var shader : h3d.shader.Blur;
-	var pass : h3d.mat.Pass;
-	var manager : h3d.shader.Manager;
-	var plan : h3d.prim.Plan2D;
 
 	public function new(quality = 1, sigma = 1.) {
+		super(new h3d.shader.Blur());
 		this.quality = quality;
 		this.sigma = sigma;
-		manager = new h3d.shader.Manager(["output.position", "output.color"]);
-		shader = new h3d.shader.Blur();
-		pass = new h3d.mat.Pass("blur", new hxsl.ShaderList(shader));
-		pass.culling = None;
-		pass.depth(false, Always);
-		plan = new h3d.prim.Plan2D();
 	}
 
 	function set_quality(q) {
@@ -67,7 +58,6 @@ class Blur {
 				values[i] /= tot;
 		}
 
-		var engine = h3d.Engine.getCurrent();
 
 		shader.Quality = quality + 1;
 		shader.texture = src;
@@ -75,31 +65,14 @@ class Blur {
 		shader.isDepth = isDepth;
 		shader.pixel.set(1 / src.width, 0);
 
-		var shaders : Array<hxsl.Shader> = [shader];
-		var rts = manager.compileShaders(shaders);
-
-
-		engine.setTarget(tmp,0xFFFF0000);
-		engine.selectMaterial(pass);
-		engine.selectShader(rts);
-		var buf = new h3d.shader.Buffers(rts);
-		manager.fillGlobals(buf, rts);
-		manager.fillParams(buf, rts, shaders);
-		engine.uploadShaderBuffers(buf, Globals);
-		engine.uploadShaderBuffers(buf, Params);
-		engine.uploadShaderBuffers(buf, Textures);
-		plan.render(engine);
+		engine.setTarget(tmp, 0xFFFF0000);
+		render();
 		engine.setTarget(null);
 
-		engine.setTarget(src);
 		shader.texture = tmp;
 		shader.pixel.set(0, 1 / tmp.height);
-		engine.selectMaterial(pass);
-		engine.selectShader(rts);
-		manager.fillParams(buf, rts, shaders);
-		engine.uploadShaderBuffers(buf, Params);
-		engine.uploadShaderBuffers(buf, Textures);
-		plan.render(engine);
+		engine.setTarget(src);
+		render();
 		engine.setTarget(null);
 
 		if( alloc )
