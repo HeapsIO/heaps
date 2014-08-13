@@ -148,6 +148,7 @@ class Flatten {
 			switch( g ) {
 			case Pack:
 				allocConsts([1, 255, 255 * 255, 255 * 255 * 255], e.p);
+				allocConsts([1/255, 1/255, 1/255, 0], e.p);
 			case Unpack:
 				allocConsts([1, 1/255, 1/(255 * 255), 1/(255 * 255 * 255)], e.p);
 			default:

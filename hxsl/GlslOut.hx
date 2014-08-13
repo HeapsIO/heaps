@@ -248,15 +248,41 @@ class GlslOut {
 			}
 			add(")");
 		case TSwiz(e, regs):
-			addValue(e, tabs);
-			add(".");
-			for( r in regs )
-				add(switch(r) {
-				case X: "x";
-				case Y: "y";
-				case Z: "z";
-				case W: "w";
-				});
+			switch( e.t ) {
+			case TFloat:
+				for( r in regs ) if( r != X ) throw "assert";
+				switch( regs.length ) {
+				case 1:
+					addValue(e, tabs);
+				case 2:
+					decl("vec2 _vec2( float v ) { return vec2(v,v); }");
+					add("_vec2(");
+					addValue(e, tabs);
+					add(")");
+				case 3:
+					decl("vec3 _vec3( float v ) { return vec3(v,v,v); }");
+					add("_vec3(");
+					addValue(e, tabs);
+					add(")");
+				case 4:
+					decl("vec3 _vec4( float v ) { return vec4(v,v,v,v); }");
+					add("_vec4(");
+					addValue(e, tabs);
+					add(")");
+				default:
+					throw "assert";
+				}
+			default:
+				addValue(e, tabs);
+				add(".");
+				for( r in regs )
+					add(switch(r) {
+					case X: "x";
+					case Y: "y";
+					case Z: "z";
+					case W: "w";
+					});
+			}
 		case TIf(econd, eif, eelse):
 			add("if( ");
 			addValue(econd, tabs);

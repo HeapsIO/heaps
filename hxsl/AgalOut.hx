@@ -373,6 +373,8 @@ class AgalOut {
 			return binop(OMin);
 		case [Sqrt, _]:
 			return unop(OSqt);
+		case [Abs, _]:
+			return unop(OAbs);
 		case [Exp, _]:
 			return unop(OExp);
 		case [Sin, _]:
@@ -459,6 +461,9 @@ class AgalOut {
 			var r = allocReg();
 			op(OMul(r, swiz(expr(e), [X, X, X, X]), c));
 			op(OFrc(r, r));
+			var r2 = allocReg();
+			op(OMul(r2, swiz(r, [Y, Z, W, W]), getConsts([1/255,1/255,1/255,0])));
+			op(OSub(r, r, r2));
 			return r;
 		case [Unpack, [e]]:
 			var c = getConsts([1, 1/255, 1/(255 * 255), 1/(255 * 255 * 255)]);
