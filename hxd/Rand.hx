@@ -21,11 +21,12 @@ class Rand {
 		return inlineHash(n, seed);
 	}
 
-	public static inline function inlineHash(n,seed) {
+	public static inline function inlineHash(n:Int, seed:Int) : Int {
+		var n : haxe.Int32 = n;
 		n *= 0xcc9e2d51;
 		n = (n << 15) | (n >>> 17);
 		n *= 0x1b873593;
-		var h = seed;
+		var h : haxe.Int32 = seed;
 		h ^= n;
 		h = (h << 13) | (h >>> 19);
 		h = h*5 + 0xe6546b64;
