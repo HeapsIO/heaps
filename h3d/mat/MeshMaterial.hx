@@ -24,6 +24,15 @@ class MeshMaterial extends Material {
 		return mshader.color = v;
 	}
 
+	override function clone( ?m : Material ) : Material {
+		var m = m == null ? new MeshMaterial() : cast m;
+		super.clone(m);
+		m.texture = texture;
+		m.color = color;
+		m.blendMode = blendMode;
+		return m;
+	}
+
 	function set_blendMode(v:BlendMode) {
 		if( mainPass != null ) {
 			switch( v ) {

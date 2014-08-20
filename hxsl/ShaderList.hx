@@ -7,6 +7,9 @@ class ShaderList {
 		this.s = s;
 		this.next = n;
 	}
+	public function clone() {
+		return new ShaderList(s.clone(), next == null ? null : next.clone());
+	}
 	public inline function iterator() {
 		return new ShaderIterator(this);
 	}

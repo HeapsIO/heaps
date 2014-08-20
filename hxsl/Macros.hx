@@ -203,6 +203,29 @@ class Macros {
 			}),
 			access : [AOverride],
 		});
+		if( params.length > 0 ) {
+			var cexpr = [];
+			var type = Context.getLocalClass().toString().split(".").pop();
+			var ctype : ComplexType = TPath({ name : type, pack : [] });
+			cexpr.push(macro var s : $ctype = Type.createEmptyInstance($i { type } ));
+			cexpr.push(macro {
+				s.shader = shader;
+			});
+			for( p in params ) {
+				cexpr.push(macro s.$p = $i{p});
+			}
+			cexpr.push(macro return s);
+			fields.push({
+				name : "clone",
+				pos : pos,
+				kind : FFun({
+					ret : macro : hxsl.Shader,
+					args : [],
+					expr : { expr : EBlock(cexpr), pos : pos },
+				}),
+				access : [AOverride],
+			});
+		}
 		return fields;
 	}
 

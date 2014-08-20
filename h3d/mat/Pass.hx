@@ -110,6 +110,13 @@ class Pass {
 		return shaders;
 	}
 
+	public function clone() {
+		var p = new Pass(name, shaders.clone());
+		p.bits = bits;
+		p.enableLights = enableLights;
+		return p;
+	}
+
 	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {
 		var shader = scene.getPass(name).compileShader(this);
 		var toString = toHxsl ? hxsl.Printer.shaderToString.bind(_, true) : hxsl.GlslOut.toGlsl;

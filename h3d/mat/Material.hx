@@ -69,8 +69,19 @@ class Material {
 		return p;
 	}
 
-	public function clone() {
-		throw "TODO";
+	public function clone( ?m : Material ) : Material {
+		if( m == null ) m = new Material();
+		#if debug
+		if( Type.getClass(m) != Type.getClass(this) ) throw this + " is missing clone()";
+		#end
+		var p = passes;
+		while( p != null ) {
+			m.addPass(p.clone());
+			p = p.nextPass;
+		}
+		m.castShadows = castShadows;
+		m.receiveShadows = receiveShadows;
+		return m;
 	}
 
 	inline function get_shadows() {

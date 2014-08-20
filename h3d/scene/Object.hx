@@ -128,6 +128,9 @@ class Object {
 
 	public function clone( ?o : Object ) : Object {
 		if( o == null ) o = new Object();
+		#if debug
+		if( Type.getClass(o) != Type.getClass(this) ) throw this + " is missing clone()";
+		#end
 		o.x = x;
 		o.y = y;
 		o.z = z;

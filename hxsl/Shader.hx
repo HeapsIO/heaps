@@ -43,4 +43,8 @@ class Shader {
 		instance = shader.getInstance(constBits);
 	}
 
+	public function clone() : Shader {
+		return this;
+	}
+
 }

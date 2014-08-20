@@ -23,8 +23,7 @@ class Mesh extends Object {
 	override function clone( ?o : Object ) : Object {
 		var m = o == null ? new Mesh(null,material) : cast o;
 		m.primitive = primitive;
-		//m.material = material.clone();
-		throw "TODO : clone";
+		m.material = cast material.clone();
 		super.clone(m);
 		return m;
 	}
