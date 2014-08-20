@@ -123,13 +123,17 @@ class Tile {
 	/**
 		Split horizontaly or verticaly the number of given frames
 	**/
-	public function split( frames : Int, vertical = false ) {
+	public function split( frames : Int = 0, vertical = false ) {
 		var tl = [];
 		if( vertical ) {
+			if( frames == 0 )
+				frames = Std.int(height / width);
 			var stride = Std.int(height / frames);
 			for( i in 0...frames )
 				tl.push(sub(0, i * stride, width, stride));
 		} else {
+			if( frames == 0 )
+				frames = Std.int(width / height);
 			var stride = Std.int(width / frames);
 			for( i in 0...frames )
 				tl.push(sub(i * stride, 0, stride, height));
