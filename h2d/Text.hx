@@ -12,7 +12,7 @@ class Text extends Drawable {
 	public var text(default, set) : String;
 	public var textColor(default, set) : Int;
 	public var maxWidth(default, set) : Null<Float>;
-	public var dropShadow : { x : Float, y : Float, color : Int, alpha : Float };
+	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
 
 	public var textWidth(get, null) : Int;
 	public var textHeight(get, null) : Int;
@@ -66,8 +66,8 @@ class Text extends Drawable {
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
 			var oldX = absX, oldY = absY;
-			absX += dropShadow.x * matA + dropShadow.y * matC;
-			absY += dropShadow.x * matB + dropShadow.y * matD;
+			absX += dropShadow.dx * matA + dropShadow.dy * matC;
+			absY += dropShadow.dx * matB + dropShadow.dy * matD;
 			var oldR = color.r;
 			var oldG = color.g;
 			var oldB = color.b;
