@@ -423,6 +423,21 @@ class AgalOut {
 				}
 			}
 			return r;
+		case [Vec2, _]:
+			var r = allocReg(TVec(2,VFloat));
+			var pos = 0;
+			for( a in args ) {
+				var e = expr(a);
+				switch( a.t ) {
+				case TFloat:
+					mov(swiz(r, [COMPS[pos++]]), e, a.t);
+				case TVec(2, VFloat):
+					mov(r, e, a.t);
+				default:
+					throw "assert " + e.t;
+				}
+			}
+			return r;
 		case [Texture2D, [t,uv]]:
 			var t = expr(t);
 			var uv = expr(uv);
