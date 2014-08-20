@@ -876,10 +876,8 @@ class Library {
 						continue;
 					}
 					var mat = textureLoader(tex.get("FileName").props[0].toString(),mat);
-					if( vcolor && allowVertexColor ) {
-						throw "TODO";
-						//mat.hasVertexColor = true;
-					}
+					if( vcolor && allowVertexColor )
+						mat.mainPass.addShader(new h3d.shader.VertexColor());
 					tmats.push(mat);
 					lastAdded = tmats.length;
 				}
