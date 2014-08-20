@@ -244,7 +244,7 @@ class Flatten {
 			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, readIndex.bind(a)); }];
 			return { e : TArrayDecl(earr), t : t, p : pos };
 		case TSampler2D, TSamplerCube:
-			return read(a.pos,pos);
+			return read(0,pos);
 		default:
 			var size = varSize(t, a.t);
 			if( size <= 4 ) {
@@ -299,7 +299,7 @@ class Flatten {
 		};
 		for( v in vars ) {
 			if( v.type != t ) continue;
-			var a = new Alloc(g, null, alloc.length, 1);
+			var a = new Alloc(g, null, alloc.length << 2, 1);
 			a.v = v;
 			varMap.set(v, a);
 			alloc.push(a);
