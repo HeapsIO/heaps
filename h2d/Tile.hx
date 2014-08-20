@@ -68,6 +68,16 @@ class Tile {
 		return sub(0, 0, width, height, -dx, -dy);
 	}
 
+	public function flipX() {
+		var tmp = u; u = u2; u2 = tmp;
+		dx = -dx - width;
+	}
+
+	public function flipY() {
+		var tmp = v; v = v2; v2 = tmp;
+		dy = -dy - height;
+	}
+
 	public function setPos(x, y) {
 		this.x = x;
 		this.y = y;
