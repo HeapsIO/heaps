@@ -6,6 +6,7 @@ class Drawable extends Sprite {
 	public var alpha(get, set) : Float;
 	public var blendMode : BlendMode;
 	public var filter : Bool;
+	public var tileWrap : Bool;
 	public var colorKey(default, set) : Null<Int>;
 
 	var shaders : Array<hxsl.Shader>;
