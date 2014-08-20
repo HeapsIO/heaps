@@ -8,6 +8,7 @@ class Drawable extends Sprite {
 	public var filter : Bool;
 	public var tileWrap : Bool;
 	public var colorKey(default, set) : Null<Int>;
+	public var colorMatrix(get, set) : Null<h3d.Matrix>;
 
 	var shaders : Array<hxsl.Shader>;
 
@@ -19,19 +20,38 @@ class Drawable extends Sprite {
 	}
 
 	function set_colorKey(v:Null<Int>) {
-		if( shaders != null ) {
-			var s = getShader(h3d.shader.ColorKey);
-			if( s == null ) {
-				if( v != null )
-					s = addShader(new h3d.shader.ColorKey(0xFF000000 | v));
-			} else {
-				if( v == null )
-					removeShader(s);
-				else
-					s.colorKey.setColor(0xFF000000 | v);
-			}
+		var s = getShader(h3d.shader.ColorKey);
+		if( s == null ) {
+			if( v != null )
+				s = addShader(new h3d.shader.ColorKey(0xFF000000 | v));
+		} else {
+			if( v == null )
+				removeShader(s);
+			else
+				s.colorKey.setColor(0xFF000000 | v);
 		}
 		return colorKey = v;
+	}
+
+	function get_colorMatrix() {
+		var s = getShader(h3d.shader.ColorMatrix);
+		return s == null ? null : s.matrix;
+	}
+
+	function set_colorMatrix(m:h3d.Matrix) {
+		var s = getShader(h3d.shader.ColorMatrix);
+		if( s == null ) {
+			if( m != null ) {
+				s = addShader(new h3d.shader.ColorMatrix());
+				s.matrix.loadFrom(m);
+			}
+		} else {
+			if( m == null )
+				removeShader(s);
+			else
+				s.matrix.loadFrom(m);
+		}
+		return m;
 	}
 
 	inline function get_alpha() {
