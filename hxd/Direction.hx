@@ -28,11 +28,9 @@ package hxd;
 		return name;
 	}
 
-	public static function from(x, y) {
-		if( x < 0 ) x = -1;
-		if( x > 0 ) x = 1;
-		if( y < 0 ) y = -1;
-		if( y > 0 ) y = 1;
-		return (x + 1) | ((y + 1) << 2);
+	public static function from(x:Float, y:Float) : Direction {
+		var ix = if( x < 0 ) -1 else if( x > 0 ) 1 else 0;
+		var iy = if( y < 0 ) -1 else if( y > 0 ) 1 else 0;
+		return cast ((ix + 1) | ((iy + 1) << 2));
 	}
 }
