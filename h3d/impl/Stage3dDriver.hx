@@ -38,11 +38,13 @@ private class CompiledShader {
 	public var stride : Int;
 	public var bufferFormat : Int;
 	public var inputNames : Array<String>;
+	public var usedTextures : Array<Bool>;
 	public function new(s) {
 		this.s = s;
 		stride = 0;
 		bufferFormat = 0;
 		inputNames = [];
+		usedTextures = [];
 	}
 }
 
@@ -334,12 +336,17 @@ class Stage3dDriver extends Driver {
 		curMatBits = bits;
 	}
 
-	function compileShader( s : hxsl.RuntimeShader.RuntimeShaderData ) : haxe.io.Bytes {
+	function compileShader( s : hxsl.RuntimeShader.RuntimeShaderData, usedTextures : Array<Bool> ) : haxe.io.Bytes {
 		//trace(hxsl.Printer.shaderToString(s.data));
 		var agal = hxsl.AgalOut.toAgal(s, isStandardMode ? 2 : 1);
 		//var old = format.agal.Tools.toString(agal);
 		agal = new hxsl.AgalOptim().optimize(agal);
 		//var opt = format.agal.Tools.toString(agal);
+		for( op in agal.code )
+			switch( op ) {
+			case OTex(_, _, t): usedTextures[t.index] = true;
+			default:
+			}
 		var o = new haxe.io.BytesOutput();
 		new format.agal.Writer(o).write(agal);
 		return o.getBytes();
@@ -351,8 +358,8 @@ class Stage3dDriver extends Driver {
 		if( p == null ) {
 			p = new CompiledShader(shader);
 			p.p = ctx.createProgram();
-			var vdata = compileShader(shader.vertex).getData();
-			var fdata = compileShader(shader.fragment).getData();
+			var vdata = compileShader(shader.vertex,[]).getData();
+			var fdata = compileShader(shader.fragment, p.usedTextures).getData();
 			vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 			fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 
@@ -408,12 +415,20 @@ class Stage3dDriver extends Driver {
 					t.alloc();
 					t.realloc();
 				}
+				t.lastFrame = frame;
+				if( !curShader.usedTextures[i] ) {
+					if( curTextures[i] != null ) {
+						ctx.setTextureAt(i, null);
+						curTextures[i] = null;
+						curSamplerBits[i] = -1;
+					}
+					continue;
+				}
 				var cur = curTextures[i];
 				if( t != cur ) {
 					ctx.setTextureAt(i, t.t);
 					curTextures[i] = t;
 				}
-				t.lastFrame = frame;
 				// if we have set one of the texture flag manually or if the shader does not configure the texture flags
 				if( true /*!t.hasDefaultFlags() || !s.texHasConfig[s.textureMap[i]]*/ ) {
 					if( cur == null || t.bits != curSamplerBits[i] ) {
