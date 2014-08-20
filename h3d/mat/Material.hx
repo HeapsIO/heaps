@@ -10,8 +10,9 @@ class Material {
 	public var castShadows(default, set) : Bool;
 	public var receiveShadows(default, set) : Bool;
 
-	public function new(passes) {
-		this.passes = passes;
+	public function new(?shader:hxsl.Shader) {
+		if( shader != null )
+			addPass(new Pass("default",null)).addShader(shader);
 	}
 
 	public function addPass<T:Pass>( p : T ) : T {
