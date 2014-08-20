@@ -32,10 +32,10 @@ private class LocalEntry extends FileEntry {
 	function convertToXBX() {
 		function getXBX() {
 			var fbx = null;
-			try fbx = h3d.fbx.Parser.parse(getBytes().toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
+			try fbx = hxd.fmt.fbx.Parser.parse(getBytes().toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
 			fbx = fs.xbxFilter(this, fbx);
 			var out = new haxe.io.BytesOutput();
-			new h3d.fbx.XBXWriter(out).write(fbx);
+			new hxd.fmt.fbx.XBXWriter(out).write(fbx);
 			return out.getBytes();
 		}
 		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".xbx";
@@ -185,7 +185,7 @@ private class LocalEntry extends FileEntry {
 		#end
 	}
 
-	override function loadBitmap( onLoaded : hxd.BitmapData -> Void ) : Void {
+	override function loadBitmap( onLoaded : hxd.res.LoadedBitmap -> Void ) : Void {
 		#if flash
 		var loader = new flash.display.Loader();
 		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
@@ -193,7 +193,7 @@ private class LocalEntry extends FileEntry {
 		});
 		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
 			var content : flash.display.Bitmap = cast loader.content;
-			onLoaded(hxd.BitmapData.fromNative(content.bitmapData));
+			onLoaded(new hxd.res.LoadedBitmap(content.bitmapData));
 			loader.unload();
 		});
 		loader.load(new flash.net.URLRequest(file.url));
@@ -330,7 +330,7 @@ class LocalFileSystem implements FileSystem {
 		tmpDir = baseDir + ".tmp/";
 	}
 
-	public dynamic function xbxFilter( entry : FileEntry, fbx : h3d.fbx.Data.FbxNode ) : h3d.fbx.Data.FbxNode {
+	public dynamic function xbxFilter( entry : FileEntry, fbx : hxd.fmt.fbx.Data.FbxNode ) : hxd.fmt.fbx.Data.FbxNode {
 		return fbx;
 	}
 
