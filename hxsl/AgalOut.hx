@@ -15,6 +15,7 @@ class AgalOut {
 	var varMap : Map<Int, Reg>;
 	var tmpCount : Int;
 	var nullReg : Reg;
+	var unused : Map<Int, Reg>;
 
 	public function new() {
 	}
@@ -30,6 +31,7 @@ class AgalOut {
 		opcodes = [];
 		tmpCount = 0;
 		varMap = new Map();
+		unused = new Map();
 
 		var varying = [];
 		var paramCount = 0, varCount = 0, inputCount = 0, outCount = 0, texCount = 0;
@@ -59,6 +61,7 @@ class AgalOut {
 				continue;
 			}
 			varMap.set(v.id, r);
+			unused.set(v.id, r);
 		}
 		if( paramCount != s.globalsSize + s.paramsSize )
 			throw "assert";
@@ -110,6 +113,17 @@ class AgalOut {
 				default:
 				}
 		}
+
+		// force write of unused inputs
+		for( r in unused )
+			switch( r.t ) {
+			case RAttr:
+				var t = allocReg();
+				t.swiz = r.swiz == null ? null : [for( i in 0...r.swiz.length ) COMPS[i]];
+				op(OMov(t, r));
+			default:
+			}
+
 		return {
 			fragmentShader : !current.vertex,
 			version : version,
@@ -381,6 +395,8 @@ class AgalOut {
 			return unop(OSin);
 		case [Cos, _]:
 			return unop(OCos);
+		case [Fract, _]:
+			return unop(OFrc);
 		case [Clamp, [a, min, max]]:
 			var r = allocReg(ret);
 			op(OMax(r, expr(a), expr(min)));
@@ -561,7 +577,10 @@ class AgalOut {
 
 	function reg( v : TVar ) : Reg {
 		var r = varMap.get(v.id);
-		if( r != null ) return r;
+		if( r != null ) {
+			unused.remove(v.id);
+			return r;
+		}
 		if( v.kind != Local ) throw "assert " + v;
 		r = allocReg(v.type);
 		varMap.set(v.id, r);

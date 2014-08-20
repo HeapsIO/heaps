@@ -41,6 +41,9 @@ class AgalOptim {
 		data = d;
 		code = d.code.copy();
 
+		var inputs = [];
+		for( op in code ) iter(op, function(r,_) if( r.t == RAttr ) inputs[r.index] = true);
+
 		while( true ) {
 			changed = false;
 			buildLive(true);
@@ -52,6 +55,14 @@ class AgalOptim {
 			if( changed ) continue;
 			break;
 		}
+
+		// added unread inputs
+		for( op in code ) iter(op, function(r, _) if( r.t == RAttr ) inputs[r.index] = false);
+		for( i in 0...inputs.length )
+			if( inputs[i] ) {
+				changed = true;
+				code.push(OMov(allocTemp(4), { t : RAttr, index : i, swiz : null, access : null } ));
+			}
 
 		unoptim();
 		if( changed )
@@ -212,6 +223,12 @@ class AgalOptim {
 		}
 	}
 
+	function allocTemp( size : Int ) : Reg {
+		var r = { t : RTemp, index : regs.length, swiz : size == 4 ? null : [for( i in 0...size ) COMPS[i]], access : null };
+		regs.push(null);
+		return r;
+	}
+
 	function unoptim() {
 		// expand invalid AGAL opcodes with additional MOV
 		var out = [];
@@ -221,8 +238,7 @@ class AgalOptim {
 			if( args.length > 2 )
 				switch( [args[1].t, args[2].t] ) {
 				case [RConst, RConst]:
-					var r = { t : RTemp, index : regs.length, swiz : [for( i in 0...swiz(args[1]).length ) COMPS[i]], access : null };
-					regs.push(null);
+					var r = allocTemp(swiz(args[1]).length);
 					out.push(OMov(r, args[1]));
 					out.push(Opcode.createByIndex(op.getIndex(), [args[0], r, args[2]]));
 					changed = true;
