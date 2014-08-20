@@ -78,7 +78,8 @@ class AgalOut {
 				found = i;
 				break;
 			}
-			if( found < 0 ) {
+			// DISABLE varying optimization (cause AGAL bug...)
+			if( true || found < 0 ) {
 				found = valloc.length;
 				valloc.push([X, Y, Z, W]);
 			}

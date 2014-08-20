@@ -64,6 +64,10 @@ class AgalOptim {
 				code.push(OMov(allocTemp(4), { t : RAttr, index : i, swiz : null, access : null } ));
 			}
 
+		// single writes for out/varying
+		uniqueWrite(RVar);
+		uniqueWrite(ROut);
+
 		unoptim();
 		if( changed )
 			buildLive(false);
@@ -83,6 +87,19 @@ class AgalOptim {
 			fragmentShader : d.fragmentShader,
 			code : code,
 		};
+	}
+
+	function uniqueWrite( t ) {
+		var writes = [];
+		for( op in code ) iter(op, function(r, w) if( r.t == t ) writes[r.index] += w ? 1 : (data.fragmentShader ? 0 : 2));
+		for( i in 0...writes.length ) {
+			if( writes[i] > 1 ) {
+				var ri = allocTemp(4);
+				for( op in code ) iter(op, function(r, _) if( r.t == t && r.index == i ) { r.t = RTemp; r.index = ri.index; } );
+				code.push(OMov( { t : t, index : i, access : null, swiz : null }, ri));
+				changed = true;
+			}
+		}
 	}
 
 	function allocRegs() {
