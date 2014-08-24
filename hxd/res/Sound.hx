@@ -118,19 +118,7 @@ class Sound extends Resource {
 		bytesPosition = position;
 	}
 
-	#end
-
-	public function playAt( startPosition : Float ) {
-		#if flash
-		if( snd != null ) {
-			// can't mix two wavs
-			if( wavHeader != null && channel != null )
-				return;
-			bytesPosition = 0;
-			channel = snd.play(startPosition,loop?0x7FFFFFFF:0);
-			volume = volume;
-			return;
-		}
+	function initSound() {
 		snd = new flash.media.Sound();
 		var bytes = entry.getBytes();
 		switch( bytes.get(0) ) {
@@ -142,7 +130,6 @@ class Sound extends Resource {
 
 			wavHeader = s.header;
 			playingBytes = s.data;
-			bytesPosition = 0;
 			snd.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, onWavSample);
 
 		case 255, 'I'.code: // MP3 (or ID3)
@@ -172,10 +159,25 @@ class Sound extends Resource {
 		default:
 			throw "Unsupported sound format " + entry.path;
 		}
-		channel = snd.play(startPosition, loop?0x7FFFFFFF:0);
-		volume = volume;
 		hxd.impl.Tmp.saveBytes(bytes);
-		#else
+	}
+
+	#end
+
+	public function playAt( startPosition : Float ) {
+		#if flash
+		if( snd == null ) initSound();
+
+		// can't mix two wavs
+		if( wavHeader != null && channel != null )
+			return;
+		bytesPosition = 0;
+		channel = snd.play(startPosition, loop?0x7FFFFFFF:0);
+		if( !loop ) {
+			var chan = channel;
+			channel.addEventListener(flash.events.Event.SOUND_COMPLETE, function(e) { chan.stop(); if( chan == channel ) channel = null; } );
+		}
+		volume = volume;
 		#end
 	}
 
