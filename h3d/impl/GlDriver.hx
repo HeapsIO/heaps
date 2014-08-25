@@ -23,9 +23,11 @@ private class CompiledShader {
 	public var globals : Uniform;
 	public var params : Uniform;
 	public var textures : Array<Uniform>;
-	public function new(s,vertex) {
+	public var shader : hxsl.RuntimeShader.RuntimeShaderData;
+	public function new(s,vertex,shader) {
 		this.s = s;
 		this.vertex = vertex;
+		this.shader = shader;
 	}
 }
 
@@ -105,7 +107,7 @@ class GlDriver extends Driver {
 			if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
 			throw "An error occurred compiling the shaders: " + log + line;
 		}
-		return new CompiledShader(s,shader.vertex);
+		return new CompiledShader(s, shader.vertex, shader);
 	}
 
 	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
@@ -172,9 +174,9 @@ class GlDriver extends Driver {
 	function uploadBuffer( s : CompiledShader, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Globals:
-			if( s.globals != null ) gl.uniform4fv(s.globals, new Float32Array(buf.globals.toData()));
+			if( s.globals != null ) gl.uniform4fv(s.globals, new Float32Array(buf.globals.toData()).subarray(0, s.shader.globalsSize * 4));
 		case Params:
-			if( s.params != null ) gl.uniform4fv(s.params, new Float32Array(buf.params.toData()));
+			if( s.params != null ) gl.uniform4fv(s.params, new Float32Array(buf.params.toData()).subarray(0, s.shader.paramsSize * 4));
 		case Textures:
 			for( i in 0...s.textures.length ) {
 				var t = buf.tex[i];

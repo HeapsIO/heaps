@@ -441,11 +441,11 @@ class Stage3dDriver extends Driver {
 				}
 			}
 		case Params:
-			if( curShader.s.vertex.paramsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, curShader.s.vertex.globalsSize, buffers.vertex.params.toData());
-			if( curShader.s.fragment.paramsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, curShader.s.fragment.globalsSize, buffers.fragment.params.toData());
+			if( curShader.s.vertex.paramsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, curShader.s.vertex.globalsSize, buffers.vertex.params.toData(), curShader.s.vertex.paramsSize);
+			if( curShader.s.fragment.paramsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, curShader.s.fragment.globalsSize, buffers.fragment.params.toData(), curShader.s.fragment.paramsSize);
 		case Globals:
-			if( curShader.s.vertex.globalsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, 0, buffers.vertex.globals.toData());
-			if( curShader.s.fragment.globalsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, 0, buffers.fragment.globals.toData());
+			if( curShader.s.vertex.globalsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, 0, buffers.vertex.globals.toData(), curShader.s.vertex.globalsSize);
+			if( curShader.s.fragment.globalsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, 0, buffers.fragment.globals.toData(), curShader.s.fragment.globalsSize);
 		}
 	}
 
