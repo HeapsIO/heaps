@@ -59,7 +59,7 @@ class RenderContext {
 		currentObj = null;
 	}
 
-	public function flush(force=false) {
+	public function flush() {
 		if( bufPos == 0 ) return;
 		beforeDraw();
 		var nverts = Std.int(bufPos / stride);
