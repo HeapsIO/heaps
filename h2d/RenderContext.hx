@@ -46,7 +46,10 @@ class RenderContext {
 	function initShaders( shaders ) {
 		currentShaders = shaders;
 		compiledShader = manager.compileShaders(shaders);
-		buffers = new h3d.shader.Buffers(compiledShader);
+		if( buffers == null )
+			buffers = new h3d.shader.Buffers(compiledShader);
+		else
+			buffers.grow(compiledShader);
 		manager.fillGlobals(buffers, compiledShader);
 		engine.selectShader(compiledShader);
 		engine.uploadShaderBuffers(buffers, Globals);

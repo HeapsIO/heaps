@@ -18,6 +18,15 @@ class ShaderBuffers {
 		tex = new haxe.ds.Vector(s.textures.length);
 	}
 
+	public function grow( s : hxsl.RuntimeShader.RuntimeShaderData ) {
+		var ng = s.globalsSize << 2;
+		var np = s.paramsSize << 2;
+		var nt = s.textures.length;
+		if( globals.length < ng ) globals = new haxe.ds.Vector(ng);
+		if( params.length < np ) params = new haxe.ds.Vector(np);
+		if( tex.length < nt ) tex = new haxe.ds.Vector(nt);
+	}
+
 }
 
 class Buffers {
@@ -28,6 +37,11 @@ class Buffers {
 	public function new( s : hxsl.RuntimeShader ) {
 		vertex = new ShaderBuffers(s.vertex);
 		fragment = new ShaderBuffers(s.fragment);
+	}
+
+	public inline function grow( s : hxsl.RuntimeShader ) {
+		vertex.grow(s.vertex);
+		fragment.grow(s.fragment);
 	}
 }
 

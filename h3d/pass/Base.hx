@@ -8,6 +8,7 @@ class Base {
 	var manager : h3d.shader.Manager;
 	var globals(get, never) : hxsl.Globals;
 	var priority : Int = 0;
+	var cachedBuffer : h3d.shader.Buffers;
 	public var lightSystem : LightSystem;
 
 	inline function get_globals() return manager.globals;
@@ -42,8 +43,12 @@ class Base {
 		return manager.compileShaders(out);
 	}
 
-	function allocBuffer( s : hxsl.RuntimeShader, shaders : Array<hxsl.Shader> ) {
-		var buf = new h3d.shader.Buffers(s);
+	function initBuffer( s : hxsl.RuntimeShader, shaders : Array<hxsl.Shader> ) {
+		if( cachedBuffer == null )
+			cachedBuffer = new h3d.shader.Buffers(s);
+		else
+			cachedBuffer.grow(s);
+		var buf = cachedBuffer;
 		manager.fillGlobals(buf, s);
 		manager.fillParams(buf, s, shaders);
 		return buf;
@@ -104,8 +109,7 @@ class Base {
 			//if( p.shader.hasGlobal(globalModelViewInverseId) )
 			globalModelViewInverse = p.obj.getInvPos();
 			ctx.engine.selectShader(p.shader);
-			// TODO : reuse buffers between calls
-			var buf = allocBuffer(p.shader, p.shaders);
+			var buf = initBuffer(p.shader, p.shaders);
 			ctx.engine.selectMaterial(p.pass);
 			ctx.engine.uploadShaderBuffers(buf, Globals);
 			ctx.engine.uploadShaderBuffers(buf, Params);
