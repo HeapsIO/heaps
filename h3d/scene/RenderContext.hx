@@ -68,9 +68,8 @@ class RenderContext {
 			p.obj = null;
 			p.pass = null;
 			p.shader = null;
+			p.shaders = null;
 			p.index = 0;
-			for( i in 0...p.shaders.length )
-				p.shaders[i] = null;
 			prev = p;
 			p = p.next;
 		}

@@ -41,14 +41,14 @@ class Cache {
 		return id;
 	}
 
-	public function link( instances : Array<SharedShader.ShaderInstance>, outVars : Int ) {
+	public function link( shaders : hxsl.ShaderList, outVars : Int ) {
 		var c = linkCache.get(outVars);
 		if( c == null ) {
 			c = new SearchMap();
 			linkCache.set(outVars, c);
 		}
-		for( i in instances ) {
-			if( i == null ) break;
+		for( s in shaders ) {
+			var i = @:privateAccess s.instance;
 			if( c.next == null ) c.next = new Map();
 			var cs = c.next.get(i.id);
 			if( cs == null ) {
@@ -61,12 +61,14 @@ class Cache {
 			return c.linked;
 
 		var linker = new hxsl.Linker();
-		var shaders = [];
-		for( i in instances ) {
-			if( i == null ) break;
-			shaders.push(i.shader);
+		var shaderDatas = [];
+		var instances = [];
+		for( s in shaders ) {
+			var i = @:privateAccess s.instance;
+			instances.push(i);
+			shaderDatas.push(i.shader);
 		}
-		var s = linker.link(shaders, this.outVars[outVars]);
+		var s = linker.link(shaderDatas, this.outVars[outVars]);
 
 		// params tracking
 		var paramVars = new Map();

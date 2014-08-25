@@ -87,14 +87,17 @@ class Manager {
 		return 0;
 	}
 
-	inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : Array<hxsl.Shader> ) : Dynamic {
+	inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList ) : Dynamic {
 		if( p.perObjectGlobal != null ) {
 			var v = globals.fastGet(p.perObjectGlobal.gid);
 			if( v == null ) throw "Missing global value " + p.perObjectGlobal.path;
 			return v;
 		}
-		var v = shaders[p.instance].getParamValue(p.index);
-		if( v == null ) throw "Missing param value " + shaders[p.instance] + "." + p.name;
+		var si = shaders;
+		var n = p.instance;
+		while( n-- > 0 ) si = si.next;
+		var v = si.s.getParamValue(p.index);
+		if( v == null ) throw "Missing param value " + si.s + "." + p.name;
 		return v;
 	}
 
@@ -116,7 +119,7 @@ class Manager {
 		fill(buf.fragment, s.fragment);
 	}
 
-	public function fillParams( buf : Buffers, s : hxsl.RuntimeShader, shaders : Array<hxsl.Shader> ) {
+	public function fillParams( buf : Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
 		inline function fill(buf:Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			for( p in s.params ) {
 				var v = getParamValue(p, shaders);
@@ -133,13 +136,9 @@ class Manager {
 		fill(buf.fragment, s.fragment);
 	}
 
-	public function compileShaders( shaders : Array<hxsl.Shader> ) {
-		var instances = [for( s in shaders ) if( s != null ) { s.updateConstants(globals); @:privateAccess s.instance; }];
-		return shaderCache.link(instances, output);
-	}
-
-	public inline function compileInstances( instances : Array<hxsl.SharedShader.ShaderInstance> ) {
-		return shaderCache.link(instances, output);
+	public function compileShaders( shaders : hxsl.ShaderList ) {
+		for( s in shaders ) s.updateConstants(globals);
+		return shaderCache.link(shaders, output);
 	}
 
 }

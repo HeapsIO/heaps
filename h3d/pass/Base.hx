@@ -38,12 +38,10 @@ class Base {
 	}
 
 	public function compileShader( p : h3d.mat.Pass ) {
-		var out = [for( s in p.getShadersRec() ) s];
-		out.reverse();
-		return manager.compileShaders(out);
+		return manager.compileShaders(p.getShadersRec());
 	}
 
-	function initBuffer( s : hxsl.RuntimeShader, shaders : Array<hxsl.Shader> ) {
+	function initBuffer( s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
 		if( cachedBuffer == null )
 			cachedBuffer = new h3d.shader.Buffers(s);
 		else
@@ -58,7 +56,6 @@ class Base {
 	function setupShaders( passes : Object ) {
 		var p = passes;
 		var lightInit = false;
-		var instances = [];
 		while( p != null ) {
 			var shaders = p.pass.getShadersRec();
 			if( p.pass.enableLights && lightSystem != null ) {
@@ -66,24 +63,7 @@ class Base {
 					lightSystem.initLights(ctx.lights);
 				shaders = lightSystem.computeLight(p.obj, shaders);
 			}
-			var count = 0;
-			for( s in shaders )
-				p.shaders[count++] = s;
-			// TODO : allow reversed shader compilation !
-			// reverse
-			for( n in 0...count >> 1 ) {
-				var n2 = count - 1 - n;
-				var tmp = p.shaders[n];
-				p.shaders[n] = p.shaders[n2];
-				p.shaders[n2] = tmp;
-			}
-			for( i in 0...count ) {
-				var s = p.shaders[i];
- 				s.updateConstants(globals);
-				instances[i] = @:privateAccess s.instance;
-			}
-			instances[count] = null; // mark end
-			p.shader = manager.compileInstances(instances);
+			p.shader = manager.compileShaders(shaders);
 			p = p.next;
 		}
 	}
@@ -104,6 +84,7 @@ class Base {
 		setupShaders(passes);
 		passes = haxe.ds.ListSort.sortSingleLinked(passes, sortByShader);
 		var p = passes;
+		var curShaderID = -1;
 		while( p != null ) {
 			globalModelView = p.obj.absPos;
 			//if( p.shader.hasGlobal(globalModelViewInverseId) )
@@ -111,7 +92,10 @@ class Base {
 			ctx.engine.selectShader(p.shader);
 			var buf = initBuffer(p.shader, p.shaders);
 			ctx.engine.selectMaterial(p.pass);
-			ctx.engine.uploadShaderBuffers(buf, Globals);
+			if( p.shader.id != curShaderID ) {
+				curShaderID = p.shader.id;
+				ctx.engine.uploadShaderBuffers(buf, Globals);
+			}
 			ctx.engine.uploadShaderBuffers(buf, Params);
 			ctx.engine.uploadShaderBuffers(buf, Textures);
 			ctx.drawPass = p;
