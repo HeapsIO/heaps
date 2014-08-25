@@ -165,7 +165,10 @@ class Linker {
 				debug(curShader.name + " read " + v.path);
 				curShader.read.set(v.id, v);
 				// if we read a varying, force into fragment
-				if( v.v.kind == Var ) curShader.vertex = false;
+				if( curShader.vertex == null && v.v.kind == Var ) {
+					debug("Force " + curShader.name+" into fragment (use varying)");
+					curShader.vertex = false;
+				}
 			}
 			return { e : TVar(v.v), t : v.v.type, p : e.p };
 		case TBinop(op, e1, e2):
@@ -254,10 +257,14 @@ class Linker {
 		cur.onStack = true;
 		for( d in cur.deps.keys() )
 			collect(d, out, vertex);
-		if( cur.vertex == null )
+		if( cur.vertex == null ) {
+			debug("MARK " + cur.name+" " + (vertex?"vertex":"fragment"));
 			cur.vertex = vertex;
-		if( cur.vertex == vertex )
+		}
+		if( cur.vertex == vertex ) {
+			debug("COLLECT " + cur.name + " " + (vertex?"vertex":"fragment"));
 			out.push(cur);
+		}
 		cur.onStack = false;
 	}
 
@@ -281,6 +288,7 @@ class Linker {
 	}
 
 	public function link( shadersData : Array<ShaderData>, outVars : Array<String> ) : ShaderData {
+		debug("---------------------- LINKING -----------------------");
 		varMap = new Map();
 		varIdMap = new Map();
 		allVars = new Array();
