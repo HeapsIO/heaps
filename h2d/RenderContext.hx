@@ -39,11 +39,8 @@ class RenderContext {
 		currentObj = null;
 		bufPos = 0;
 		stride = 0;
-		if( compiledShader == null )
-			initShaders([baseShader]);
-		engine.selectShader(compiledShader);
+		initShaders([baseShader]);
 		engine.selectMaterial(pass);
-		engine.uploadShaderBuffers(buffers, Globals);
 	}
 
 	function initShaders( shaders ) {
@@ -51,6 +48,8 @@ class RenderContext {
 		compiledShader = manager.compileShaders(shaders);
 		buffers = new h3d.shader.Buffers(compiledShader);
 		manager.fillGlobals(buffers, compiledShader);
+		engine.selectShader(compiledShader);
+		engine.uploadShaderBuffers(buffers, Globals);
 	}
 
 	public function end() {
@@ -138,7 +137,6 @@ class RenderContext {
 			ns.unshift(baseShader);
 			baseShader.isRelative = isRelative;
 			initShaders(ns);
-			engine.selectShader(compiledShader);
 		} else if( paramsChanged ) {
 			flush();
 			// copy so the next flush will fetch their params
