@@ -452,6 +452,8 @@ class Stage3dDriver extends Driver {
 	override function selectBuffer( v : VertexBuffer ) {
 		if( v == curBuffer )
 			return;
+		if( curShader == null )
+			throw "No shader selected";
 		curBuffer = v;
 		curMultiBuffer[0] = -1;
 		if( v.b.stride < curShader.stride )
