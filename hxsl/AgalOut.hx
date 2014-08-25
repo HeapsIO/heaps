@@ -256,7 +256,7 @@ class AgalOut {
 			case OpSub: return std(OSub);
 			case OpDiv: return std(ODiv);
 			case OpMod:
-				var tmp = allocReg(e.t);
+				var tmp = allocReg(e2.t);
 				op(OMov(tmp, expr(e2)));
 				var r = allocReg(e.t);
 				op(ODiv(r, expr(e1), tmp));
