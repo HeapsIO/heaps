@@ -107,11 +107,11 @@ class Flatten {
 				switch( v.type ) {
 				case TArray(t, _):
 					var stride = varSize(t, a.t);
-					if( stride == 0 || stride & 3 != 0 ) throw "assert " + t;
+					if( stride == 0 || stride & 3 != 0 ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
 					stride >>= 2;
 					eindex = mapExpr(eindex);
 					var toInt = { e : TCall( { e : TGlobal(ToInt), t : TFun([]), p : vp }, [eindex]), t : TInt, p : vp };
-					access(a, t, vp, readOffset.bind(a,stride,{ e : TBinop(OpMult,toInt,mkInt(stride,vp)), t : TInt, p : vp }));
+					access(a, t, vp, readOffset.bind(a,stride, stride == 1 ? toInt : { e : TBinop(OpMult,toInt,mkInt(stride,vp)), t : TInt, p : vp }));
 				default:
 					throw "assert";
 				}
@@ -220,7 +220,8 @@ class Flatten {
 	}
 
 	function readOffset( a : Alloc, stride : Int, delta : TExpr, index : Int, pos ) : TExpr {
-		var offset : TExpr = { e : TBinop(OpAdd, delta, mkInt((a.pos >> 2) + index, pos)), t : TInt, p : pos };
+		var index = (a.pos >> 2) + index;
+		var offset : TExpr = index == 0 ? delta : { e : TBinop(OpAdd, delta, mkInt(index, pos)), t : TInt, p : pos };
 		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos }, offset), t : TVec(4,a.t), p:pos };
 	}
 

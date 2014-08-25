@@ -255,6 +255,14 @@ class AgalOut {
 			case OpAdd: return std(OAdd);
 			case OpSub: return std(OSub);
 			case OpDiv: return std(ODiv);
+			case OpMod:
+				var tmp = allocReg(e.t);
+				op(OMov(tmp, expr(e2)));
+				var r = allocReg(e.t);
+				op(ODiv(r, expr(e1), tmp));
+				op(OFrc(r, r));
+				op(OMul(r, r, tmp));
+				return r;
 			case OpAssign:
 				var r = expr(e1);
 				mov(r, expr(e2), e1.t);
@@ -332,6 +340,10 @@ class AgalOut {
 				case TBinop(OpAdd, { e : TBinop(OpMult,{ e : TCall({ e : TGlobal(ToInt) },[epos]) },stride) } , { e : TConst(CInt(d)) } ):
 					delta = d;
 					index = { e : TBinop(OpMult, epos, stride), t : TFloat, p : index.p };
+				case TBinop(OpMult,{ e : TCall({ e : TGlobal(ToInt) },[epos]) },stride):
+					index = { e : TBinop(OpMult, epos, stride), t : TFloat, p : index.p };
+				case TCall({ e : TGlobal(ToInt) },[epos]):
+					index = epos;
 				default:
 				}
 				var i = expr(index);
@@ -398,6 +410,12 @@ class AgalOut {
 			return unop(OCos);
 		case [Fract, _]:
 			return unop(OFrc);
+		case [ToInt, [a]]:
+			var r = expr(a);
+			var tmp = allocReg(a.t);
+			op(OFrc(tmp, r));
+			op(OSub(r, r, tmp));
+			return r;
 		case [Clamp, [a, min, max]]:
 			var r = allocReg(ret);
 			op(OMax(r, expr(a), expr(min)));

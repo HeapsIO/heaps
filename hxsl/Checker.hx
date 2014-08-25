@@ -844,7 +844,7 @@ class Checker {
 	function typeBinop(op, e1:TExpr, e2:TExpr, pos : Position) {
 		return switch( op ) {
 		case OpAssign, OpAssignOp(_): throw "assert";
-		case OpMult, OpAdd, OpSub, OpDiv:
+		case OpMult, OpAdd, OpSub, OpDiv, OpMod:
 			switch( [op, e1.t, e2.t] ) {
 			case [OpMult,TVec(4,VFloat), TMat4], [OpMult,TMat4, TVec(4,VFloat)]:
 				vec4;
