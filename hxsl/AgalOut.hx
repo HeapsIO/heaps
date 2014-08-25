@@ -342,6 +342,9 @@ class AgalOut {
 					index = { e : TBinop(OpMult, epos, stride), t : TFloat, p : index.p };
 				case TBinop(OpMult,{ e : TCall({ e : TGlobal(ToInt) },[epos]) },stride):
 					index = { e : TBinop(OpMult, epos, stride), t : TFloat, p : index.p };
+				case TBinop(OpAdd, { e : TCall({ e : TGlobal(ToInt) },[epos]) }, { e : TConst(CInt(d)) } ):
+					delta = d;
+					index = epos;
 				case TCall({ e : TGlobal(ToInt) },[epos]):
 					index = epos;
 				default:
