@@ -22,6 +22,10 @@ class Skin extends hxsl.Shader {
 				(input.position * bonesMatrixes[input.indexes.x]) * input.weights.x +
 				(input.position * bonesMatrixes[input.indexes.y]) * input.weights.y +
 				(input.position * bonesMatrixes[input.indexes.z]) * input.weights.z;
+			transformedNormal =
+				(input.normal * mat3(bonesMatrixes[input.indexes.x])) * input.weights.x +
+				(input.normal * mat3(bonesMatrixes[input.indexes.y])) * input.weights.y +
+				(input.normal * mat3(bonesMatrixes[input.indexes.z])) * input.weights.z;
 		}
 
 	}

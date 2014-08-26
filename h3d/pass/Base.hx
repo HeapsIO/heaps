@@ -51,8 +51,10 @@ class Base {
 		while( p != null ) {
 			var shaders = p.pass.getShadersRec();
 			if( p.pass.enableLights && lightSystem != null ) {
-				if( !lightInit )
+				if( !lightInit ) {
 					lightSystem.initLights(ctx.lights);
+					lightInit = true;
+				}
 				shaders = lightSystem.computeLight(p.obj, shaders);
 			}
 			var count = 0;

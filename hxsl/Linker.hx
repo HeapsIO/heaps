@@ -222,6 +222,8 @@ class Linker {
 				continue;
 			if( !s.write.exists(v.id) )
 				continue;
+			if( parent.vertex && s.vertex == false )
+				continue;
 			debug(parent.name + " => " + s.name + " (" + v.path + ")");
 			parent.deps.set(s, true);
 			initDependencies(s);

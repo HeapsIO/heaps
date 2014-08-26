@@ -31,7 +31,7 @@ class LightSystem {
 			l = l.next;
 		}
 		if( lightCount <= maxLightsPerObject )
-			lights = haxe.ds.ListSort.sortSingleLinked(lights, sortLight);
+			this.lights = haxe.ds.ListSort.sortSingleLinked(lights, sortLight);
 		setGlobals();
 	}
 
