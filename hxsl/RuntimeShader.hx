@@ -48,9 +48,15 @@ class RuntimeShader {
 	public var id : Int;
 	public var vertex : RuntimeShaderData;
 	public var fragment : RuntimeShaderData;
+	public var globals : Map<Int,Bool>;
 
 	public function new() {
 		id = UID++;
 	}
+
+	public inline function hasGlobal( gid : Int ) {
+		return globals.exists(gid);
+	}
+
 
 }
