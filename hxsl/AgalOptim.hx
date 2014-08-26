@@ -37,6 +37,10 @@ class AgalOptim {
 	public function new() {
 	}
 
+	function opStr(op) {
+		return format.agal.Tools.opStr(op);
+	}
+
 	public function optimize( d : Data ) : Data {
 		data = d;
 		code = d.code.copy();
@@ -332,7 +336,6 @@ class AgalOptim {
 				if( !rewrite ) continue;
 
 				// perform rewrite
-
 				for( i in 0...sw1.length ) {
 					var k2 = sw2[i].getIndex();
 					var wt = i2.writes[k2];
@@ -349,9 +352,10 @@ class AgalOptim {
 				}
 				code[codePos] = OUnused;
 				changed = true;
-
 			default:
 			}
+			// we can't perform several changes since this will break live bits
+			if( changed ) return;
 		}
 	}
 
