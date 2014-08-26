@@ -44,7 +44,7 @@ class BaseMesh extends hxsl.Shader {
 		function __init__() {
 			transformedPosition = input.position * global.modelView.mat3x4();
 			projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
-			transformedNormal = (input.normal * global.modelViewInverse.mat3()).normalize();
+			transformedNormal = (input.normal * global.modelView.mat3()).normalize();
 			camera.dir = (camera.position - transformedPosition).normalize();
 			pixelColor = color;
 			depth = projectedPosition.z / projectedPosition.w;
