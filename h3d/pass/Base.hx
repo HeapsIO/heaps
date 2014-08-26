@@ -64,6 +64,7 @@ class Base {
 				shaders = lightSystem.computeLight(p.obj, shaders);
 			}
 			p.shader = manager.compileShaders(shaders);
+			p.shaders = shaders;
 			p = p.next;
 		}
 	}
