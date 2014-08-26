@@ -14,6 +14,11 @@ class Pass {
 	var nextPass : Pass;
 
 	public var enableLights : Bool;
+	/**
+		Inform the pass system that the parameters will be modified in object draw() command,
+		so they will be manually uploaded by calling RenderContext.uploadParams.
+	**/
+	public var dynamicParameters : Bool;
 
 	@:bits public var culling : Face;
 	@:bits public var depthWrite : Bool;
@@ -26,7 +31,7 @@ class Pass {
 	@:bits public var blendAlphaOp : Operation;
 	@:bits(4) public var colorMask : Int;
 
-	public function new(name, shaders, ?parent) {
+	public function new(name, ?shaders, ?parent) {
 		this.parentPass = parent;
 		this.shaders = shaders;
 		setPassName(name);

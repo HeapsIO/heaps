@@ -89,6 +89,11 @@ class Cache {
 		r.vertex = flattenShader(s.vertex, Vertex, paramVars);
 		r.vertex.vertex = true;
 		r.fragment = flattenShader(s.fragment, Fragment, paramVars);
+		r.globals = new Map();
+		for( v in r.vertex.globals )
+			r.globals.set(v.gid, true);
+		for( v in r.fragment.globals )
+			r.globals.set(v.gid, true);
 		c.linked = r;
 		return r;
 	}
