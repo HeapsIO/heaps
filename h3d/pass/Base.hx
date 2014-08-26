@@ -43,17 +43,6 @@ class Base {
 		return manager.compileShaders(out);
 	}
 
-	function initBuffer( s : hxsl.RuntimeShader, shaders : Array<hxsl.Shader> ) {
-		if( cachedBuffer == null )
-			cachedBuffer = new h3d.shader.Buffers(s);
-		else
-			cachedBuffer.grow(s);
-		var buf = cachedBuffer;
-		manager.fillGlobals(buf, s);
-		manager.fillParams(buf, s, shaders);
-		return buf;
-	}
-
 	@:access(h3d.scene)
 	function setupShaders( passes : Object ) {
 		var p = passes;
@@ -95,6 +84,12 @@ class Base {
 		return 0;
 	}
 
+	function uploadParams() {
+		manager.fillParams(cachedBuffer, ctx.drawPass.shader, ctx.drawPass.shaders);
+		ctx.engine.uploadShaderBuffers(cachedBuffer, Params);
+		ctx.engine.uploadShaderBuffers(cachedBuffer, Textures);
+	}
+
 	@:access(h3d.scene)
 	public function draw( ctx : h3d.scene.RenderContext, passes : Object ) {
 		this.ctx = ctx;
@@ -103,17 +98,29 @@ class Base {
 		setGlobals();
 		setupShaders(passes);
 		passes = haxe.ds.ListSort.sortSingleLinked(passes, sortByShader);
+		ctx.uploadParams = uploadParams;
 		var p = passes;
+		var buf = cachedBuffer, prevShader = null;
 		while( p != null ) {
 			globalModelView = p.obj.absPos;
-			//if( p.shader.hasGlobal(globalModelViewInverseId) )
-			globalModelViewInverse = p.obj.getInvPos();
-			ctx.engine.selectShader(p.shader);
-			var buf = initBuffer(p.shader, p.shaders);
-			ctx.engine.selectMaterial(p.pass);
-			ctx.engine.uploadShaderBuffers(buf, Globals);
-			ctx.engine.uploadShaderBuffers(buf, Params);
-			ctx.engine.uploadShaderBuffers(buf, Textures);
+			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
+				globalModelViewInverse = p.obj.getInvPos();
+			if( prevShader != p.shader ) {
+				prevShader = p.shader;
+				ctx.engine.selectShader(p.shader);
+				ctx.engine.selectMaterial(p.pass);
+				if( buf == null )
+					buf = cachedBuffer = new h3d.shader.Buffers(p.shader);
+				else
+					buf.grow(p.shader);
+				manager.fillGlobals(buf, p.shader);
+				ctx.engine.uploadShaderBuffers(buf, Globals);
+			}
+			if( !p.pass.dynamicParameters ) {
+				manager.fillParams(buf, p.shader, p.shaders);
+				ctx.engine.uploadShaderBuffers(buf, Params);
+				ctx.engine.uploadShaderBuffers(buf, Textures);
+			}
 			ctx.drawPass = p;
 			p.obj.draw(ctx);
 			p = p.next;

@@ -120,8 +120,10 @@ class Skin extends MultiMaterial {
 		primitive = s.primitive;
 		skinShader = new h3d.shader.Skin();
 		for( m in materials )
-			if( m != null )
+			if( m != null ) {
 				m.mainPass.addShader(skinShader);
+				if( skinData.splitJoints != null ) m.mainPass.dynamicParameters = true;
+			}
 		currentRelPose = [];
 		currentAbsPose = [];
 		currentPalette = [];
@@ -156,7 +158,7 @@ class Skin extends MultiMaterial {
 				if( bid >= 0 )
 					currentPalette[bid].multiply3x4(j.transPos, m);
 			}
-			paletteChanged = true;
+			skinShader.bonesMatrixes = currentPalette;
 			if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
 			jointsUpdated = false;
 		} else
@@ -165,16 +167,14 @@ class Skin extends MultiMaterial {
 
 	override function draw( ctx : RenderContext ) {
 		if( splitPalette == null ) {
-			if( paletteChanged ) {
-				paletteChanged = false;
-				skinShader.bonesMatrixes = currentPalette;
-			}
 			super.draw(ctx);
 		} else {
-			var i = ctx.drawPass.index;
-			skinShader.bonesMatrixes = splitPalette[i];
-			primitive.selectMaterial(i);
-			super.draw(ctx);
+			for( i in 0...splitPalette.length ) {
+				skinShader.bonesMatrixes = splitPalette[i];
+				primitive.selectMaterial(i);
+				ctx.uploadParams();
+				primitive.render(ctx.engine);
+			}
 		}
 		if( showJoints )
 			throw "TODO"; //ctx.addPass(drawJoints);

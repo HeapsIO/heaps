@@ -13,6 +13,8 @@ class RenderContext {
 
 	public var sharedGlobals : Map<Int,Dynamic>;
 
+	public var uploadParams : Void -> Void;
+
 	var pool : ObjectPass;
 	var passes : ObjectPass;
 	var lights : Light;
@@ -38,6 +40,7 @@ class RenderContext {
 		drawPass = null;
 		passes = null;
 		lights = null;
+		uploadParams = null;
 		time += elapsedTime;
 		frame++;
 	}
@@ -62,6 +65,7 @@ class RenderContext {
 
 	public function done() {
 		drawPass = null;
+		uploadParams = null;
 		// move passes to pool, and erase data
 		var p = passes, prev = null;
 		while( p != null ) {
