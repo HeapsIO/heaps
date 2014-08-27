@@ -68,6 +68,7 @@ class ShadowMap extends Base {
 				blurTexture = null;
 			}
 			texture = new h3d.mat.Texture(size, size, [Target, hasTargetDepth ? TargetDepth : TargetUseDefaultDepth, TargetNoFlipY]);
+			texture.setName("shadowMap");
 		}
 		if( blur.quality > 0 && blurTexture == null )
 			blurTexture = new h3d.mat.Texture(size, size, [Target, TargetNoFlipY]);
