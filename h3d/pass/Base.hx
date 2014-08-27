@@ -10,6 +10,7 @@ class Base {
 	var priority : Int = 0;
 	var cachedBuffer : h3d.shader.Buffers;
 	public var lightSystem : LightSystem;
+	public var name(default, null) : String;
 
 	inline function get_globals() return manager.globals;
 
@@ -27,7 +28,8 @@ class Base {
 		t != null && !t.flags.has(TargetNoFlipY) ? -1 : 1;
 	}
 
-	public function new() {
+	public function new(name) {
+		this.name = name;
 		manager = new h3d.shader.Manager(getOutputs());
 		initGlobals();
 		lightSystem = new LightSystem(globals);
@@ -92,6 +94,10 @@ class Base {
 		ctx.engine.uploadShaderBuffers(cachedBuffer, Textures);
 	}
 
+	inline function log( str : String ) {
+		ctx.engine.driver.log(str);
+	}
+
 	@:access(h3d.scene)
 	public function draw( ctx : h3d.scene.RenderContext, passes : Object ) {
 		this.ctx = ctx;
@@ -103,7 +109,9 @@ class Base {
 		ctx.uploadParams = uploadParams;
 		var p = passes;
 		var buf = cachedBuffer, prevShader = null;
+		log("Pass " + name+ " start");
 		while( p != null ) {
+			log("Render " + p.obj + "." + name);
 			globalModelView = p.obj.absPos;
 			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
 				globalModelViewInverse = p.obj.getInvPos();
@@ -127,6 +135,7 @@ class Base {
 			p.obj.draw(ctx);
 			p = p.next;
 		}
+		log("Pass " + name + " end");
 		ctx.drawPass = null;
 		this.ctx = null;
 		return passes;

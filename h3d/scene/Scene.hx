@@ -47,9 +47,9 @@ class Scene extends Object implements h3d.IDrawable {
 	function createDefaultPass( name : String ) : h3d.pass.Base {
 		switch( name ) {
 		case "default", "alpha", "additive":
-			return new h3d.pass.Base();
+			return new h3d.pass.Base(name);
 		case "distance":
-			return new h3d.pass.Distance();
+			return new h3d.pass.Distance(name);
 		case "shadow":
 			return new h3d.pass.ShadowMap(1024);
 		default:

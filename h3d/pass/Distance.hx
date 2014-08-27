@@ -4,8 +4,8 @@ class Distance extends Base {
 
 	var texture : h3d.mat.Texture;
 
-	public function new() {
-		super();
+	public function new(name) {
+		super(name);
 		priority = 10;
 		lightSystem = null;
 	}

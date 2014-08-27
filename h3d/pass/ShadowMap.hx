@@ -20,7 +20,7 @@ class ShadowMap extends Base {
 	public var blur : Blur;
 
 	public function new(size) {
-		super();
+		super("shadow");
 		this.size = size;
 		priority = 9;
 		lightSystem = null;
