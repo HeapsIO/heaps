@@ -73,11 +73,14 @@ class Flatten {
 		}
 		pack(prefix + "Globals", Global, globals, VFloat);
 		pack(prefix + "Params", Param, params, VFloat);
-		packTextures(prefix + "Textures", globals.concat(params), TSampler2D);
+		var textures = packTextures(prefix + "Textures", globals.concat(params), TSampler2D);
+		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
+		for( t in textures )
+			t.pos >>= 2;
 		return {
 			name : s.name,
 			vars : outVars,
-			funs : [for( f in s.funs ) mapFun(f, mapExpr)],
+			funs : funs,
 		};
 	}
 
@@ -300,6 +303,7 @@ class Flatten {
 		};
 		for( v in vars ) {
 			if( v.type != t ) continue;
+			// use << 2 for readAccess purposes, then we will fix it before returning
 			var a = new Alloc(g, null, alloc.length << 2, 1);
 			a.v = v;
 			varMap.set(v, a);
@@ -310,7 +314,7 @@ class Flatten {
 			outVars.push(g);
 			allocData.set(g, alloc);
 		}
-		return g;
+		return alloc;
 	}
 
 	function pack( name : String, kind : VarKind, vars : Array<TVar>, t : VecType ) {
