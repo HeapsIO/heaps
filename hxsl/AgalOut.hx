@@ -373,6 +373,14 @@ class AgalOut {
 			default:
 				throw "Discard cond not supported " + e.e;
 			}
+		case TUnop(uop, e):
+			switch( uop ) {
+			case OpNeg:
+				var r = expr(e);
+				op(ONeg(r, r));
+				return r;
+			default:
+			}
 		default:
 		}
 		throw "TODO " + e.e;
