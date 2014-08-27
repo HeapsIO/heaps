@@ -84,6 +84,10 @@ class Stage3dDriver extends Driver {
 		curMultiBuffer = [];
 	}
 
+	override function logImpl( str : String ) {
+		flash.Lib.trace(str);
+	}
+
 	override function getDriverName(details:Bool) {
 		return ctx == null ? "None" : (details ? ctx.driverInfo : ctx.driverInfo.split(" ")[0]);
 	}
@@ -131,12 +135,9 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
-	override function isHardware() {
-		return ctx != null && ctx.driverInfo.toLowerCase().indexOf("software") == -1;
-	}
-
 	override function hasFeature( f : Feature ) : Bool {
 		return switch( f ) {
+		case HardwareAccelerated: ctx != null && ctx.driverInfo.toLowerCase().indexOf("software") == -1;
 		case StandardDerivatives, FloatTextures: isStandardMode;
 		case TargetDepthBuffer: false;
 		}
@@ -182,7 +183,7 @@ class Stage3dDriver extends Driver {
 		t.dispose();
 	}
 
-	override function allocVertex( buf : ManagedBuffer ) : VertexBuffer {
+	override function allocVertexes( buf : ManagedBuffer ) : VertexBuffer {
 		var v;
 		try {
 			v = ctx.createVertexBuffer(buf.size, buf.stride);
@@ -265,7 +266,7 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
-	override function disposeVertex( v : VertexBuffer ) {
+	override function disposeVertexes( v : VertexBuffer ) {
 		v.vbuf.dispose();
 		v.b = null;
 	}
@@ -275,7 +276,7 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function setDebug( d : Bool ) {
-		if( ctx != null ) ctx.enableErrorChecking = d && isHardware();
+		if( ctx != null ) ctx.enableErrorChecking = d && hasFeature(HardwareAccelerated);
 	}
 
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
@@ -287,12 +288,12 @@ class Stage3dDriver extends Driver {
 		v.vbuf.uploadFromByteArray( bytes.getData(), bufPos, startVertex, vertexCount );
 	}
 
-	override function uploadIndexesBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
+	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		var data = buf.getNative();
 		i.uploadFromVector( bufPos == 0 ? data : data.slice(bufPos, indiceCount + bufPos), startIndice, indiceCount );
 	}
 
-	override function uploadIndexesBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+	override function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		i.uploadFromByteArray(buf.getData(), bufPos, startIndice, indiceCount );
 	}
 
@@ -336,7 +337,7 @@ class Stage3dDriver extends Driver {
 		curMatBits = bits;
 	}
 
-	function compileShader( s : hxsl.RuntimeShader.RuntimeShaderData, usedTextures : Array<Bool> ) : haxe.io.Bytes {
+	function compileShader( s : hxsl.RuntimeShader.RuntimeShaderData, usedTextures : Array<Bool> ) {
 		//trace(hxsl.Printer.shaderToString(s.data));
 		var agal = hxsl.AgalOut.toAgal(s, isStandardMode ? 2 : 1);
 		//var old = format.agal.Tools.toString(agal);
@@ -349,7 +350,13 @@ class Stage3dDriver extends Driver {
 			}
 		var o = new haxe.io.BytesOutput();
 		new format.agal.Writer(o).write(agal);
-		return o.getBytes();
+		return { agal : agal, bytes : o.getBytes() };
+	}
+
+	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
+		var vertex = compileShader(shader.vertex, []).agal;
+		var fragment = compileShader(shader.fragment, []).agal;
+		return format.agal.Tools.toString(vertex) + "\n" + format.agal.Tools.toString(fragment);
 	}
 
 	override function selectShader( shader : hxsl.RuntimeShader ) {
@@ -358,8 +365,8 @@ class Stage3dDriver extends Driver {
 		if( p == null ) {
 			p = new CompiledShader(shader);
 			p.p = ctx.createProgram();
-			var vdata = compileShader(shader.vertex,[]).getData();
-			var fdata = compileShader(shader.fragment, p.usedTextures).getData();
+			var vdata = compileShader(shader.vertex,[]).bytes.getData();
+			var fdata = compileShader(shader.fragment, p.usedTextures).bytes.getData();
 			vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 			fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 

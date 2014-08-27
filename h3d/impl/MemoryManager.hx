@@ -84,7 +84,7 @@ class MemoryManager {
 		if( m.vbuf != null ) return;
 
 		var mem = m.size * m.stride * 4;
-		while( usedMemory + mem > MAX_MEMORY || bufferCount >= MAX_BUFFERS || (m.vbuf = driver.allocVertex(m)) == null ) {
+		while( usedMemory + mem > MAX_MEMORY || bufferCount >= MAX_BUFFERS || (m.vbuf = driver.allocVertexes(m)) == null ) {
 			var size = usedMemory - freeMemorySize();
 			garbage();
 			cleanManagedBuffers();
@@ -101,7 +101,7 @@ class MemoryManager {
 	@:allow(h3d.impl.ManagedBuffer)
 	function freeManaged( m : ManagedBuffer ) {
 		if( m.vbuf == null ) return;
-		driver.disposeVertex(m.vbuf);
+		driver.disposeVertexes(m.vbuf);
 		m.vbuf = null;
 		usedMemory -= m.size * m.stride * 4;
 		bufferCount--;

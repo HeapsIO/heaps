@@ -19,12 +19,15 @@ typedef Texture = Int;
 #end
 
 enum Feature {
+	HardwareAccelerated;
 	StandardDerivatives;
 	FloatTextures;
 	TargetDepthBuffer;
 }
 
 class Driver {
+
+	public var logEnable : Bool;
 
 	public function hasFeature( f : Feature ) {
 		return false;
@@ -38,6 +41,19 @@ class Driver {
 	}
 
 	public function begin( frame : Int ) {
+	}
+
+	public inline function log( str : String ) {
+		#if debug
+		if( logEnable ) logImpl(str);
+		#end
+	}
+
+	public function getNativeShaderCode( shader : hxsl.RuntimeShader ) : String {
+		return null;
+	}
+
+	function logImpl( str : String ) {
 	}
 
 	public function clear( r : Float, g : Float, b : Float, a : Float ) {
@@ -91,10 +107,6 @@ class Driver {
 	public function present() {
 	}
 
-	public function isHardware() {
-		return true;
-	}
-
 	public function setDebug( b : Bool ) {
 	}
 
@@ -106,7 +118,7 @@ class Driver {
 		return null;
 	}
 
-	public function allocVertex( m : ManagedBuffer ) : VertexBuffer {
+	public function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
 		return null;
 	}
 
@@ -116,13 +128,13 @@ class Driver {
 	public function disposeIndexes( i : IndexBuffer ) {
 	}
 
-	public function disposeVertex( v : VertexBuffer ) {
+	public function disposeVertexes( v : VertexBuffer ) {
 	}
 
-	public function uploadIndexesBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
+	public function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 	}
 
-	public function uploadIndexesBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
+	public function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
 	}
 
 	public function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {

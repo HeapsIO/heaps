@@ -201,7 +201,7 @@ class Engine {
 			mem = new h3d.impl.MemoryManager(driver);
 			mem.init();
 		}
-		hardware = driver.isHardware();
+		hardware = driver.hasFeature(HardwareAccelerated);
 		set_debug(debug);
 		set_fullScreen(fullScreen);
 		resize(width, height);

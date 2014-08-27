@@ -19,7 +19,7 @@ class Indexes {
 	}
 
 	public function upload( indexes : hxd.IndexBuffer, pos : Int, count : Int, bufferPos = 0 ) {
-		mem.driver.uploadIndexesBuffer(this.ibuf, pos, count, indexes, bufferPos);
+		mem.driver.uploadIndexBuffer(this.ibuf, pos, count, indexes, bufferPos);
 	}
 
 	public function dispose() {
