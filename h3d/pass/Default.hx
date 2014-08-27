@@ -2,7 +2,7 @@ package h3d.pass;
 
 @:build(hxsl.Macros.buildGlobals())
 @:access(h3d.mat.Pass)
-class Base {
+class Default {
 
 	var ctx : h3d.scene.RenderContext;
 	var manager : h3d.shader.Manager;
@@ -10,7 +10,7 @@ class Base {
 	var priority : Int = 0;
 	var cachedBuffer : h3d.shader.Buffers;
 	public var lightSystem : LightSystem;
-	public var name(default, null) : String;
+	public var forceProcessing : Bool = false;
 
 	inline function get_globals() return manager.globals;
 
@@ -28,8 +28,7 @@ class Base {
 		t != null && !t.flags.has(TargetNoFlipY) ? -1 : 1;
 	}
 
-	public function new(name) {
-		this.name = name;
+	public function new() {
 		manager = new h3d.shader.Manager(getOutputs());
 		initGlobals();
 		lightSystem = new LightSystem(globals);
@@ -99,7 +98,7 @@ class Base {
 	}
 
 	@:access(h3d.scene)
-	public function draw( ctx : h3d.scene.RenderContext, passes : Object ) {
+	public function draw( name : String, ctx : h3d.scene.RenderContext, passes : Object ) {
 		this.ctx = ctx;
 		for( k in ctx.sharedGlobals.keys() )
 			globals.fastSet(k, ctx.sharedGlobals.get(k));
@@ -109,7 +108,7 @@ class Base {
 		ctx.uploadParams = uploadParams;
 		var p = passes;
 		var buf = cachedBuffer, prevShader = null;
-		log("Pass " + name+ " start");
+		log("Pass " + name + " start");
 		while( p != null ) {
 			log("Render " + p.obj + "." + name);
 			globalModelView = p.obj.absPos;
