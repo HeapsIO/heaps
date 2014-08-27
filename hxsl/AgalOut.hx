@@ -34,7 +34,7 @@ class AgalOut {
 		unused = new Map();
 
 		var varying = [];
-		var paramCount = 0, varCount = 0, inputCount = 0, outCount = 0, texCount = 0;
+		var paramCount = 0, inputCount = 0, outCount = 0, texCount = 0;
 		for( v in s.data.vars ) {
 			var r : Reg;
 			switch( v.kind ) {
@@ -48,9 +48,8 @@ class AgalOut {
 					paramCount += regSize(v.type);
 				}
 			case Var:
-				r = { t : RVar, index : varCount, swiz : defSwiz(v.type), access : null };
+				r = { t : RVar, index : v.id, swiz : defSwiz(v.type), access : null };
 				varying.push(r);
-				varCount += regSize(v.type);
 			case Output:
 				r = { t : ROut, index : outCount, swiz : defSwiz(v.type), access : null };
 				outCount += regSize(v.type);
@@ -67,7 +66,8 @@ class AgalOut {
 			throw "assert";
 
 		// optimize varying
-		varying.sort(function(r1, r2) return ((r2.swiz == null ? 4 : r2.swiz.length) - (r1.swiz == null ? 4 : r1.swiz.length)) * 1000 + (r1.index - r2.index));
+		// make sure the order is the same in both fragment and vertex shader
+		varying.sort(function(r1, r2) return ((r2.swiz == null ? 4 : r2.swiz.length) - (r1.swiz == null ? 4 : r1.swiz.length)) * 100000 + (r1.index - r2.index));
 		var valloc : Array<Array<C>> = [];
 		for( r in varying ) {
 			var size = r.swiz == null ? 4 : r.swiz.length;
@@ -78,8 +78,7 @@ class AgalOut {
 				found = i;
 				break;
 			}
-			// DISABLE varying optimization (cause AGAL bug...)
-			if( true || found < 0 ) {
+			if( found < 0 ) {
 				found = valloc.length;
 				valloc.push([X, Y, Z, W]);
 			}
