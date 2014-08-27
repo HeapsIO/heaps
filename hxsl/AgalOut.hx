@@ -400,6 +400,8 @@ class AgalOut {
 			return binop(OMax);
 		case [Min, _]:
 			return binop(OMin);
+		case [Pow, _]:
+			return binop(OPow);
 		case [Sqrt, _]:
 			return unop(OSqt);
 		case [Abs, _]:
