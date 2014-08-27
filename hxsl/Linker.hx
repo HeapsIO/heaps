@@ -87,10 +87,10 @@ class Linker {
 		}
 	}
 
-	function allocVar( v : TVar, p : Position, ?path : String, ?parent : TVar ) : AllocatedVar {
+	function allocVar( v : TVar, p : Position, ?path : String, ?parent : AllocatedVar ) : AllocatedVar {
 		if( v.parent != null && parent == null ) {
-			parent = allocVar(v.parent, p).v;
-			var p = parent;
+			parent = allocVar(v.parent, p);
+			var p = parent.v;
 			path = p.name;
 			p = p.parent;
 			while( p != null ) {
@@ -138,20 +138,20 @@ class Linker {
 			type : v.type,
 			kind : v.kind == Output ? Local : v.kind,
 			qualifiers : v.qualifiers,
-			parent : parent,
+			parent : parent == null ? null : parent.v,
 		};
 		var a = new AllocatedVar();
 		a.v = v2;
 		a.merged = [v];
 		a.path = key;
 		a.id = vid;
-		a.parent = parent == null ? null : allocVar(parent, p);
+		a.parent = parent;
 		a.instanceIndex = curInstance;
 		allVars.push(a);
 		varMap.set(key, a);
 		switch( v2.type ) {
 		case TStruct(vl):
-			v2.type = TStruct([for( v in vl ) allocVar(v, p, key, v2).v]);
+			v2.type = TStruct([for( v in vl ) allocVar(v, p, key, a).v]);
 		default:
 		}
 		return a;
