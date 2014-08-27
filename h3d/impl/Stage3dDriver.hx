@@ -82,7 +82,6 @@ class Stage3dDriver extends Driver {
 		programs = new Map();
 		curTextures = [];
 		curMultiBuffer = [];
-		logEnable = true;
 	}
 
 	override function logImpl( str : String ) {
