@@ -356,7 +356,37 @@ class Stage3dDriver extends Driver {
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
 		var vertex = compileShader(shader.vertex, []).agal;
 		var fragment = compileShader(shader.fragment, []).agal;
-		return format.agal.Tools.toString(vertex) + "\n" + format.agal.Tools.toString(fragment);
+		function fmt( agal, data : hxsl.RuntimeShader.RuntimeShaderData ) {
+			var str = format.agal.Tools.toString(agal);
+			return ~/c([0-9]+)(.[xyz]+)?/g.map(str, function(r) {
+				var cid = Std.parseInt(r.matched(1)) << 2;
+				var swiz = r.matched(2);
+				if( swiz != null ) {
+					var d = swiz.charCodeAt(1) - 'x'.code;
+					cid += d;
+					swiz = "." + [for( i in 1...swiz.length ) String.fromCharCode(swiz.charCodeAt(i) - d)].join("");
+				}
+				var name = "C" + cid;
+				for( g in data.globals ) {
+					if( g.path == "__consts__" && cid >= g.pos && cid < g.pos + (switch(g.type) { case TArray(TFloat, SConst(n)): n; default: 0; } ) && swiz == ".x" ) {
+						swiz = null;
+						name = "" + data.consts[cid - g.pos];
+						break;
+					}
+					if( g.pos == cid ) {
+						name = g.path;
+						break;
+					}
+				}
+				for( p in data.params )
+					if( p.pos + (data.globalsSize << 2) == cid ) {
+						name = p.name;
+						break;
+					}
+				return swiz == null ? name : name+swiz;
+			});
+		}
+		return fmt(vertex, shader.vertex) + "\n" + fmt(fragment, shader.fragment);
 	}
 
 	override function selectShader( shader : hxsl.RuntimeShader ) {

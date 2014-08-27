@@ -72,7 +72,63 @@ class LogDriver extends Driver {
 		currentShader = shader;
 		var ret = d.selectShader(shader);
 		if( !loggedShaders.get(shader.id) ) {
-			var str = hxsl.Printer.shaderToString(shader.vertex.data) + "\n" + hxsl.Printer.shaderToString(shader.fragment.data);
+			function fmt( shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+				var str = hxsl.Printer.shaderToString(shader.data);
+				str = ~/((fragment)|(vertex))Globals\[([0-9]+)\](.[xyz]+)?/g.map(str, function(r) {
+					var name = null;
+					var cid = Std.parseInt(r.matched(4)) << 2;
+					var swiz = r.matched(5);
+					if( swiz != null ) {
+						var d = swiz.charCodeAt(1) - 'x'.code;
+						cid += d;
+						swiz = "." + [for( i in 1...swiz.length ) String.fromCharCode(swiz.charCodeAt(i) - d)].join("");
+					}
+					for( g in shader.globals ) {
+						if( g.path == "__consts__" && cid >= g.pos && cid < g.pos + (switch(g.type) { case TArray(TFloat, SConst(n)): n; default: 0; } ) && swiz == ".x" ) {
+							swiz = null;
+							name = "" + shader.consts[cid - g.pos];
+							break;
+						}
+						if( g.pos == cid ) {
+							name = g.path;
+							break;
+						}
+					}
+					if( name == null )
+						return r.matched(0);
+					if( swiz != null ) name += swiz;
+					return name;
+				});
+				str = ~/((fragment)|(vertex))Params\[([0-9]+)\](.[xyz]+)?/g.map(str, function(r) {
+					var name = null;
+					var cid = Std.parseInt(r.matched(4)) << 2;
+					var swiz = r.matched(5);
+					if( swiz != null ) {
+						var d = swiz.charCodeAt(1) - 'x'.code;
+						cid += d;
+						swiz = "." + [for( i in 1...swiz.length ) String.fromCharCode(swiz.charCodeAt(i) - d)].join("");
+					}
+					for( p in shader.params )
+						if( p.pos == cid ) {
+							name = p.name;
+							break;
+						}
+					if( name == null )
+						return r.matched(0);
+					if( swiz != null ) name += swiz;
+					return name;
+				});
+				str = ~/((fragment)|(vertex))Textures\[([0-9]+)\]/g.map(str, function(r) {
+					var name = null;
+					var cid = Std.parseInt(r.matched(4));
+					for( p in shader.textures )
+						if( p.pos == cid )
+							return p.name;
+					return r.matched(0);
+				});
+				return str;
+			}
+			var str = fmt(shader.vertex) + "\n" + fmt(shader.fragment);
 			log('');
 			log('HXSL=');
 			log("\t" + str.split("\n").join("\n\t"));
@@ -127,7 +183,7 @@ class LogDriver extends Driver {
 				for( p in s.params ) {
 					var pos = p.pos;
 					#if flash
-					pos += s.globalsSize;
+					pos += s.globalsSize * 4;
 					#end
 					log('\t@$pos ' + p.name + '=' + [for( i in 0...sizeOf(p.type) ) hxd.Math.fmt(buf.params.toData()[p.pos + i])]);
 				}
