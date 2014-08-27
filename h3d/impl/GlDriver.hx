@@ -215,6 +215,7 @@ class GlDriver extends Driver {
 			bits = (bits & ~Pass.culling_mask) | (c << Pass.culling_offset);
 		}
 		var diff = bits ^ curMatBits;
+		if( curMatBits < 0 ) diff = -1;
 		if( diff == 0 )
 			return;
 		if( diff & Pass.culling_mask != 0 ) {

@@ -303,6 +303,7 @@ class Stage3dDriver extends Driver {
 
 	function selectMaterialBits( bits : Int ) {
 		var diff = bits ^ curMatBits;
+		if( curMatBits < 0 ) diff = -1;
 		if( diff == 0 )
 			return;
 		if( diff & Pass.culling_mask != 0 )
