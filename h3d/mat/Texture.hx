@@ -66,7 +66,14 @@ class Texture {
 	}
 
 	function toString() {
-		return name+" "+width+"x"+height;
+		var str = name;
+		if( name == null ) {
+			str = "Texture_" + id;
+			#if debug
+			if( allocPos != null ) str += "(" + allocPos.className+":" + allocPos.lineNumber + ")";
+			#end
+		}
+		return str+"("+width+"x"+height+")";
 	}
 
 	public function setName(n) {
