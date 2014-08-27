@@ -2,13 +2,13 @@ package h3d.pass;
 
 class ScreenFx<T:hxsl.Shader> {
 
-	var shader : T;
+	public var shader : T;
 	var pass : h3d.mat.Pass;
 	var manager : h3d.shader.Manager;
 	var plan : h3d.prim.Plan2D;
 	var engine : h3d.Engine;
 
-	function new(shader) {
+	public function new(shader) {
 		this.shader = shader;
 		manager = new h3d.shader.Manager(["output.position", "output.color"]);
 		pass = new h3d.mat.Pass(Std.string(this), new hxsl.ShaderList(shader));
@@ -18,7 +18,7 @@ class ScreenFx<T:hxsl.Shader> {
 		engine = h3d.Engine.getCurrent();
 	}
 
-	function render() {
+	public function render() {
 		var shaders : Array<hxsl.Shader> = [shader];
 		var rts = manager.compileShaders(shaders);
 		engine.selectMaterial(pass);
