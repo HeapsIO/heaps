@@ -102,10 +102,10 @@ class Engine {
 		driver.uploadShaderBuffers(buffers, which);
 	}
 
-	function selectBuffer( buf : h3d.impl.ManagedBuffer ) {
+	function selectBuffer( buf : Buffer ) {
 		if( buf.isDisposed() )
 			return false;
-		driver.selectBuffer(@:privateAccess buf.vbuf);
+		driver.selectBuffer(buf);
 		return true;
 	}
 
@@ -142,7 +142,7 @@ class Engine {
 					drawTri = 0;
 				}
 			}
-			if( ntri > 0 && selectBuffer(b.buffer) ) {
+			if( ntri > 0 && selectBuffer(b) ) {
 				// *3 because it's the position in indexes which are always by 3
 				driver.draw(indexes.ibuf, pos * 3, ntri);
 				drawTriangles += ntri;
@@ -160,7 +160,7 @@ class Engine {
 			return;
 		var maxTri = Std.int(indexes.count / 3);
 		if( drawTri < 0 ) drawTri = maxTri - startTri;
-		if( drawTri > 0 && selectBuffer(b.buffer) ) {
+		if( drawTri > 0 && selectBuffer(b) ) {
 			// *3 because it's the position in indexes which are always by 3
 			driver.draw(indexes.ibuf, startTri * 3, drawTri);
 			drawTriangles += drawTri;

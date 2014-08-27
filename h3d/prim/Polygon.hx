@@ -38,16 +38,16 @@ class Polygon extends Primitive {
 			buf.push(p.x);
 			buf.push(p.y);
 			buf.push(p.z);
-			if( uvs != null ) {
-				var t = uvs[k];
-				buf.push(t.u);
-				buf.push(t.v);
-			}
 			if( normals != null ) {
 				var n = normals[k];
 				buf.push(n.x);
 				buf.push(n.y);
 				buf.push(n.z);
+			}
+			if( uvs != null ) {
+				var t = uvs[k];
+				buf.push(t.u);
+				buf.push(t.v);
 			}
 			if( colors != null ) {
 				var c = colors[k];
@@ -56,7 +56,10 @@ class Polygon extends Primitive {
 				buf.push(c.z);
 			}
 		}
-		buffer = h3d.Buffer.ofFloats(buf, size, idx == null ? [Triangles] : null);
+		var flags = [];
+		if( idx == null ) flags.push(Triangles);
+		if( normals == null ) flags.push(RawFormat);
+		buffer = h3d.Buffer.ofFloats(buf, size, flags);
 
 		if( idx != null )
 			indexes = h3d.Indexes.alloc(idx);

@@ -27,7 +27,7 @@ class Plan2D extends Primitive {
 		v.push( 1);
 		v.push( 0);
 
-		buffer = h3d.Buffer.ofFloats(v, 4, [Quads]);
+		buffer = h3d.Buffer.ofFloats(v, 4, [Quads, RawFormat]);
 	}
 
 	override function render(engine:h3d.Engine) {

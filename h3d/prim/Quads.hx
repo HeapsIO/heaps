@@ -47,22 +47,24 @@ class Quads extends Primitive {
 			v.push(pt.x);
 			v.push(pt.y);
 			v.push(pt.z);
-			if( uvs != null ) {
-				var t = uvs[i];
-				v.push(t.u);
-				v.push(t.v);
-			}
 			if( normals != null ) {
 				var n = normals[i];
 				v.push(n.x);
 				v.push(n.y);
 				v.push(n.z);
 			}
+			if( uvs != null ) {
+				var t = uvs[i];
+				v.push(t.u);
+				v.push(t.v);
+			}
 		}
 		var size = 3;
 		if( normals != null ) size += 3;
 		if( uvs != null ) size += 2;
-		buffer = h3d.Buffer.ofFloats(v, size, [Quads]);
+		var flags = [Quads];
+		if( normals == null ) flags.push(RawFormat);
+		buffer = h3d.Buffer.ofFloats(v, size, flags);
 	}
 
 	public function getPoints() {

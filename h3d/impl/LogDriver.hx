@@ -205,7 +205,7 @@ class LogDriver extends Driver {
 		return d.getShaderInputNames();
 	}
 
-	override function selectBuffer( buffer : VertexBuffer ) {
+	override function selectBuffer( buffer : Buffer ) {
 		log('SelectBuffer');
 		d.selectBuffer(buffer);
 	}

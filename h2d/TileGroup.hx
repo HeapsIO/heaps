@@ -139,7 +139,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) reset();
-		buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads]);
+		buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
 	}
 
 	public function doRender(engine, min, len) {

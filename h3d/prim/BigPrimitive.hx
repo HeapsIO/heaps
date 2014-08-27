@@ -51,7 +51,9 @@ class BigPrimitive extends Primitive {
 	public function flush() {
 		if( tmpBuf != null ) {
 			if( tmpBuf.length > 0 && tmpIdx.length > 0 ) {
-				buffers.push(h3d.Buffer.ofFloats(tmpBuf, stride));
+				var b = h3d.Buffer.ofFloats(tmpBuf, stride);
+				if( stride < 8 ) b.flags.set(RawFormat);
+				buffers.push(b);
 				allIndexes.push(h3d.Indexes.alloc(tmpIdx));
 			}
 			tmpBuf = null;

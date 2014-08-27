@@ -18,6 +18,10 @@ enum BufferFlag {
 	**/
 	Managed;
 	/**
+		Directly map the buffer content to the shader inputs, without assuming [pos:vec3,normal:vec3,uv:vec2] default prefix.
+	**/
+	RawFormat;
+	/**
 		Used internaly
 	**/
 	NoAlloc;
@@ -26,6 +30,9 @@ enum BufferFlag {
 class Buffer {
 	public static var GUID = 0;
 	public var id : Int;
+	#if debug
+	var allocPos : h3d.impl.AllocPos;
+	#end
 
 	public var buffer(default,null) : h3d.impl.ManagedBuffer;
 	public var position(default,null) : Int;
@@ -33,10 +40,13 @@ class Buffer {
 	public var next(default,null) : Buffer;
 	public var flags(default, null) : haxe.EnumFlags<BufferFlag>;
 
-	public function new(vertices, stride, ?flags : Array<BufferFlag>) {
+	public function new(vertices, stride, ?flags : Array<BufferFlag>, ?allocPos : h3d.impl.AllocPos ) {
 		id = GUID++;
 		this.vertices = vertices;
 		this.flags = new haxe.EnumFlags();
+		#if debug
+		this.allocPos = allocPos;
+		#end
 		if( flags != null )
 			for( f in flags )
 				this.flags.set(f);
@@ -95,9 +105,9 @@ class Buffer {
 		}
 	}
 
-	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags, ?vertices ) {
+	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags, ?vertices, ?allocPos ) {
 		var nvert = vertices == null ? Std.int(v.length / stride) : vertices;
-		var b = new Buffer(nvert, stride, flags);
+		var b = new Buffer(nvert, stride, flags, allocPos);
 		b.uploadVector(v, 0, nvert);
 		return b;
 	}

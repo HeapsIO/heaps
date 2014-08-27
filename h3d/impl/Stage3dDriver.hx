@@ -58,7 +58,7 @@ class Stage3dDriver extends Driver {
 
 	var curMatBits : Int;
 	var curShader : CompiledShader;
-	var curBuffer : VertexBuffer;
+	var curBuffer : Buffer;
 	var curMultiBuffer : Array<Int>;
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
@@ -82,6 +82,7 @@ class Stage3dDriver extends Driver {
 		programs = new Map();
 		curTextures = [];
 		curMultiBuffer = [];
+		logEnable = true;
 	}
 
 	override function logImpl( str : String ) {
@@ -487,24 +488,54 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
-	override function selectBuffer( v : VertexBuffer ) {
+	@:access(h3d.impl.ManagedBuffer)
+	override function selectBuffer( v : Buffer ) {
 		if( v == curBuffer )
 			return;
+		if( curBuffer != null && v.buffer == curBuffer.buffer && v.buffer.flags.has(RawFormat) == curBuffer.flags.has(RawFormat) ) {
+			curBuffer = v;
+			return;
+		}
 		if( curShader == null )
 			throw "No shader selected";
 		curBuffer = v;
 		curMultiBuffer[0] = -1;
-		if( v.b.stride < curShader.stride )
-			throw "Buffer stride (" + v.b.stride + ") and shader stride (" + curShader.stride + ") mismatch";
-		if( !v.written )
-			v.finalize(this);
+
+		var m = v.buffer.vbuf;
+		if( m.b.stride < curShader.stride )
+			throw "Buffer stride (" + m.b.stride + ") and shader stride (" + curShader.stride + ") mismatch";
+		if( !m.written )
+			m.finalize(this);
 		var pos = 0, offset = 0;
 		var bits = curShader.bufferFormat;
-		while( offset < curShader.stride ) {
-			var size = bits & 7;
-			ctx.setVertexBufferAt(pos++, v.vbuf, offset, FORMAT[size]);
-			offset += size == 0 ? 1 : size;
-			bits >>= 3;
+		if( v.flags.has(RawFormat) ) {
+			while( offset < curShader.stride ) {
+				var size = bits & 7;
+				ctx.setVertexBufferAt(pos++, m.vbuf, offset, FORMAT[size]);
+				offset += size == 0 ? 1 : size;
+				bits >>= 3;
+			}
+		} else {
+			offset = 8; // custom data starts after [position, normal, uv]
+			for( s in curShader.inputNames ) {
+				switch( s ) {
+				case "position":
+					ctx.setVertexBufferAt(pos++, m.vbuf, 0, FORMAT[3]);
+				case "normal":
+					if( m.b.stride < 6 ) throw "Buffer is missing NORMAL data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					ctx.setVertexBufferAt(pos++, m.vbuf, 3, FORMAT[3]);
+				case "uv":
+					if( m.b.stride < 8 ) throw "Buffer is missing UV data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					ctx.setVertexBufferAt(pos++, m.vbuf, 6, FORMAT[2]);
+				default:
+					var size = bits & 7;
+					ctx.setVertexBufferAt(pos++, m.vbuf, offset, FORMAT[size]);
+					offset += size == 0 ? 1 : size;
+					if( offset > m.b.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					bits >>= 3;
+				}
+				bits >>= 3;
+			}
 		}
 		for( i in pos...curAttributes )
 			ctx.setVertexBufferAt(i, null);

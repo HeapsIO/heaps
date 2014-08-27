@@ -89,7 +89,7 @@ class Driver {
 		return null;
 	}
 
-	public function selectBuffer( buffer : VertexBuffer ) {
+	public function selectBuffer( buffer : Buffer ) {
 	}
 
 	public function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
