@@ -33,8 +33,10 @@ class AgalOptim {
 	var data : Data;
 	var usedRegs : Array<Array<RegInfos>>;
 	var packRegisters : Bool;
+	var debug : Bool;
 
-	public function new() {
+	public function new(debug = false) {
+		this.debug = debug;
 	}
 
 	function opStr(op) {
@@ -49,6 +51,7 @@ class AgalOptim {
 		for( op in code ) iter(op, function(r,_) if( r.t == RAttr ) inputs[r.index] = true);
 
 		while( true ) {
+			//if( debug ) trace("OPTIM\n"+[for( op in code ) opStr(op)].join("\n"));
 			changed = false;
 			buildLive(true);
 			splice();
@@ -306,9 +309,17 @@ class AgalOptim {
 				if( i1 == null || i2 == null ) continue;
 				var sw1 = swiz(r1);
 				var sw2 = swiz(r2);
+				var used = [];
 				var rewrite = true;
 				for( i in 0...sw1.length ) {
 					var k2 = sw2[i].getIndex();
+
+					// we don't support mov A.xy, B.xx atm
+					if( used[k2] ) {
+						rewrite = false;
+						break;
+					}
+					used[k2] = true;
 
 					// if we have written after now, we can't tell the real write pos
 					var wt = i2.writes[k2];
