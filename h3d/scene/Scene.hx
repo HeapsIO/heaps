@@ -47,13 +47,13 @@ class Scene extends Object implements h3d.IDrawable {
 	function createDefaultPass( name : String ) : h3d.pass.Base {
 		switch( name ) {
 		case "default", "alpha", "additive":
-			return new h3d.pass.Base(name);
+			return new h3d.pass.Default();
 		case "distance":
-			return new h3d.pass.Distance(name);
+			return new h3d.pass.Distance();
 		case "shadow":
 			return new h3d.pass.ShadowMap(1024);
 		default:
-			throw "Don't know how to create pass '" + name + "', use s3d.setRenderPass()";
+			throw "Don't know how to create pass '" + name + "', use s3d.setPass()";
 			return null;
 		}
 	}
@@ -93,7 +93,8 @@ class Scene extends Object implements h3d.IDrawable {
 		ctx.passes = haxe.ds.ListSort.sortSingleLinked(ctx.passes, function(p1, p2) {
 			return p1.pass.passId - p2.pass.passId;
 		});
-		// dispatch to the actual pass implementation
+
+		// group by pass implementation
 		var curPass = ctx.passes;
 		var passes = [];
 		while( curPass != null ) {
@@ -108,15 +109,30 @@ class Scene extends Object implements h3d.IDrawable {
 			passes.push( { render : render, pass : curPass } );
 			curPass = p;
 		}
-		@:privateAccess passes.sort(function(p1, p2) return p2.render.priority - p1.render.priority);
+
+		// sort by priority and assign
+		var allPasses = [for( name in this.passes.keys() ) { name : name, p : this.passes.get(name), content : null } ];
+		@:privateAccess allPasses.sort(function(p1, p2) return p2.p.priority - p1.p.priority);
 		for( p in passes )
-			p.pass = p.render.draw(ctx, p.pass);
+			for( i in 0...allPasses.length )
+				if( allPasses[i].p == p.render ) {
+					allPasses[i].content = p.pass;
+					break;
+				}
+
+		// render
+		for( p in allPasses )
+			if( p.content != null || p.p.forceProcessing ) {
+				p.p.setContext(ctx);
+				p.content = p.p.draw(p.name, p.content);
+			}
 
 		// relink pass objects to reuse
 		var count = 0;
 		var prev : h3d.pass.Object = null;
-		for( p in passes ) {
-			var p = p.pass;
+		for( p in allPasses ) {
+			if( p.content == null ) continue;
+			var p = p.content;
 			if( prev != null )
 				prev.next = p;
 			while( p != null ) {
@@ -124,7 +140,7 @@ class Scene extends Object implements h3d.IDrawable {
 				p = p.next;
 			}
 		}
-		if( passes.length > 0 ) ctx.passes = passes[0].pass;
+		if( allPasses.length > 0 ) ctx.passes = allPasses[0].content;
 		ctx.done();
 		for( p in postPasses )
 			p.render(engine);

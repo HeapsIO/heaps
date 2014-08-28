@@ -1,16 +1,13 @@
 package h3d.pass;
 
-class ShadowMap extends Base {
+class ShadowMap extends Default {
 
-	var texture : h3d.mat.Texture;
-	var blurTexture : h3d.mat.Texture;
 	var lightCamera : h3d.Camera;
 	var shadowMapId : Int;
 	var shadowProjId : Int;
 	var shadowColorId : Int;
 	var shadowPowerId : Int;
 	var shadowBiasId : Int;
-	var hasTargetDepth : Bool;
 	var clear : Clear;
 	public var size : Int;
 	public var lightDirection : h3d.Vector;
@@ -20,7 +17,7 @@ class ShadowMap extends Base {
 	public var blur : Blur;
 
 	public function new(size) {
-		super("shadow");
+		super();
 		this.size = size;
 		priority = 9;
 		lightSystem = null;
@@ -32,7 +29,6 @@ class ShadowMap extends Base {
 		shadowColorId = hxsl.Globals.allocID("shadow.color");
 		shadowPowerId = hxsl.Globals.allocID("shadow.power");
 		shadowBiasId = hxsl.Globals.allocID("shadow.bias");
-		hasTargetDepth = h3d.Engine.getCurrent().driver.hasFeature(TargetDepthBuffer);
 		if( !hasTargetDepth )
 			clear = new Clear();
 		color = new h3d.Vector();
@@ -60,26 +56,17 @@ class ShadowMap extends Base {
 		cameraViewProj = lightCamera.m;
 	}
 
-	override function draw( ctx : h3d.scene.RenderContext, passes) {
-		if( texture == null || texture.width != size ) {
-			if( texture != null ) {
-				texture.dispose();
-				blurTexture.dispose();
-				blurTexture = null;
-			}
-			texture = new h3d.mat.Texture(size, size, [Target, hasTargetDepth ? TargetDepth : TargetUseDefaultDepth, TargetNoFlipY]);
-			texture.setName("shadowMap");
-		}
-		if( blur.quality > 0 && blurTexture == null )
-			blurTexture = new h3d.mat.Texture(size, size, [Target, TargetNoFlipY]);
+	override function draw( name : String, passes ) {
+		var texture = getTargetTexture("shadowMap", size, size);
 		var ct = ctx.camera.target;
 		lightCamera.target.set(ct.x, ct.y, ct.z);
 		lightCamera.pos.set(ct.x - lightDirection.x, ct.y - lightDirection.y, ct.z - lightDirection.z);
 		ctx.engine.setTarget(texture, 0xFFFFFFFF);
-		passes = super.draw(ctx, passes);
+		passes = super.draw(name, passes);
 		ctx.engine.setTarget(null);
 
-		blur.apply(texture, blurTexture, true);
+		if( blur.quality > 0 )
+			blur.apply(texture, getTargetTexture("tmpBlur", size, size, false), true);
 
 		if( !hasTargetDepth )
 			clear.apply(1);

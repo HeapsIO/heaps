@@ -1,16 +1,16 @@
 package h3d.pass;
 
-class Distance extends Base {
+class Distance extends Default {
 
-	var texture : h3d.mat.Texture;
-	var hasTargetDepth : Bool;
 	var clear : Clear;
+	var distanceMapId : Int;
+	public var enableSky : Bool = false;
 
-	public function new(name) {
-		super(name);
+	public function new() {
+		super();
 		priority = 10;
 		lightSystem = null;
-		hasTargetDepth = h3d.Engine.getCurrent().driver.hasFeature(TargetDepthBuffer);
+		distanceMapId = hxsl.Globals.allocID("distanceMap");
 		if( !hasTargetDepth )
 			clear = new Clear();
 	}
@@ -19,16 +19,12 @@ class Distance extends Base {
 		return ["output.position", "output.distance"];
 	}
 
-	override function draw(ctx : h3d.scene.RenderContext, passes) {
-		if( texture == null || texture.width != ctx.engine.width || texture.height != ctx.engine.height ) {
-			if( texture != null ) texture.dispose();
-			texture = new h3d.mat.Texture(ctx.engine.width, ctx.engine.height, [Target, hasTargetDepth ? TargetDepth : TargetUseDefaultDepth, TargetNoFlipY]);
-			texture.setName("distanceMap");
-		}
-		ctx.engine.setTarget(texture);
-		passes = super.draw(ctx, passes);
+	override function draw( name : String, passes ) {
+		var texture = getTargetTexture("distanceMap", ctx.engine.width, ctx.engine.height);
+		ctx.engine.setTarget(texture, enableSky ? 0 : 0xFFFF0000);
+		passes = super.draw(name, passes);
 		ctx.engine.setTarget(null);
-
+		ctx.sharedGlobals.set(distanceMapId, texture);
 		if( !hasTargetDepth )
 			clear.apply(1);
 

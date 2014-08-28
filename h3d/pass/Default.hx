@@ -2,15 +2,18 @@ package h3d.pass;
 
 @:build(hxsl.Macros.buildGlobals())
 @:access(h3d.mat.Pass)
-class Default {
+class Default extends Base {
 
-	var ctx : h3d.scene.RenderContext;
 	var manager : h3d.shader.Manager;
 	var globals(get, never) : hxsl.Globals;
-	var priority : Int = 0;
 	var cachedBuffer : h3d.shader.Buffers;
+
+	var hasTargetDepth : Bool;
+	var textureCache : Array<h3d.mat.Texture>;
+	var textureCachePosition : Int = 0;
+	var textureCacheFrame : Int;
+
 	public var lightSystem : LightSystem;
-	public var forceProcessing : Bool = false;
 
 	inline function get_globals() return manager.globals;
 
@@ -29,19 +32,50 @@ class Default {
 	}
 
 	public function new() {
+		super();
 		manager = new h3d.shader.Manager(getOutputs());
 		initGlobals();
 		lightSystem = new LightSystem(globals);
+
+		hasTargetDepth = h3d.Engine.getCurrent().driver.hasFeature(TargetDepthBuffer);
+		textureCache = [];
 	}
 
 	function getOutputs() {
 		return ["output.position", "output.color"];
 	}
 
-	public function compileShader( p : h3d.mat.Pass ) {
+	override function compileShader( p : h3d.mat.Pass ) {
 		var out = [for( s in p.getShadersRec() ) s];
 		out.reverse();
 		return manager.compileShaders(out);
+	}
+
+	override function getLightSystem() {
+		return lightSystem;
+	}
+
+	function getTargetTexture( name : String, width : Int, height : Int, hasDepth=true ) {
+		if( textureCacheFrame != ctx.frame ) {
+			// dispose extra textures we didn't use
+			while( textureCache.length > textureCachePosition ) {
+				var t = textureCache.pop();
+				if( t != null ) t.dispose();
+			}
+			textureCacheFrame = ctx.frame;
+			textureCachePosition = 0;
+		}
+		var t = textureCache[textureCachePosition];
+		if( t == null || t.isDisposed() || t.width != width || t.height != height ) {
+			if( t != null ) t.dispose();
+			var flags : Array<h3d.mat.Data.TextureFlags> = [Target, TargetNoFlipY];
+			if( hasDepth ) flags.push(hasTargetDepth ? TargetDepth : TargetUseDefaultDepth);
+			t = new h3d.mat.Texture(width, height, flags);
+			textureCache[textureCachePosition] = t;
+		}
+		t.setName(name);
+		textureCachePosition++;
+		return t;
 	}
 
 	@:access(h3d.scene)
@@ -98,8 +132,7 @@ class Default {
 	}
 
 	@:access(h3d.scene)
-	public function draw( name : String, ctx : h3d.scene.RenderContext, passes : Object ) {
-		this.ctx = ctx;
+	override function draw( name : String, passes : Object ) {
 		for( k in ctx.sharedGlobals.keys() )
 			globals.fastSet(k, ctx.sharedGlobals.get(k));
 		setGlobals();
@@ -136,7 +169,6 @@ class Default {
 		}
 		log("Pass " + name + " end");
 		ctx.drawPass = null;
-		this.ctx = null;
 		return passes;
 	}
 
