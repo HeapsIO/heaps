@@ -412,19 +412,54 @@ class AgalOut {
 			return binop(OPow);
 		case [Sqrt, _]:
 			return unop(OSqt);
+		case [Inversesqrt, _]:
+			return unop(ORsq);
 		case [Abs, _]:
 			return unop(OAbs);
-		case [Exp, _]:
-			return unop(OExp);
 		case [Sin, _]:
 			return unop(OSin);
 		case [Cos, _]:
 			return unop(OCos);
+		case [Tan | Asin | Acos | Atan | Sign, _]:
+			throw "TODO" + g;
+		case [Log2, _]:
+			return unop(OLog);
+		case [Exp2, _]:
+			return unop(OExp);
+		case [Log, _]:
+			var r = unop(OLog);
+			op(OMul(r, r, getConst(0.6931471805599453))); // log(2)/log(e)
+			return r;
+		case [Exp, [e]]:
+			var r = expr(e);
+			op(OMul(r, r, getConst(1.4426950408889634))); // log(e)/log(2)
+			op(OExp(r, r));
+			return r;
+		case [Radians, [e]]:
+			var r = expr(e);
+			op(OMul(r, r, getConst(Math.PI / 180)));
+			return r;
+		case [Degrees, [e]]:
+			var r = expr(e);
+			op(OMul(r, r, getConst(180 / Math.PI)));
+			return r;
+
+		case [Mix, [a, b, t]]:
+			var rb = expr(b);
+			var r = expr(t);
+			op(OMul(rb, rb, r));
+			op(OSub(r, getConst(1), r));
+			var ra = expr(a);
+			op(OMul(ra, ra, r));
+			op(OAdd(ra, ra, rb));
+			return ra;
+
 		case [Fract, _]:
 			return unop(OFrc);
 		case [Saturate, _]:
 			return unop(OSat);
-		case [ToInt, [a]]:
+		case [Floor | ToInt, [a]]:
+			// might not be good for negative values...
 			var r = expr(a);
 			var tmp = allocReg(a.t);
 			op(OFrc(tmp, r));

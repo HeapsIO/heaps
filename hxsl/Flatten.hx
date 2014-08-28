@@ -153,7 +153,17 @@ class Flatten {
 				allocConsts([1, 255, 255 * 255, 255 * 255 * 255], e.p);
 				allocConsts([1/255, 1/255, 1/255, 0], e.p);
 			case Unpack:
-				allocConsts([1, 1/255, 1/(255 * 255), 1/(255 * 255 * 255)], e.p);
+				allocConsts([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)], e.p);
+			case Radians:
+				allocConst(Math.PI / 180, e.p);
+			case Degrees:
+				allocConst(180 / Math.PI, e.p);
+			case Log:
+				allocConst(0.6931471805599453, e.p);
+			case Exp:
+				allocConst(1.4426950408889634, e.p);
+			case Mix:
+				allocConst(1, e.p);
 			default:
 			}
 		case TCall( { e : TGlobal(Vec4) }, [ { e : TVar( { kind : Global | Param | Input | Var } ), t : TVec(3, VFloat) }, { e : TConst(CInt(1)) } ]):
