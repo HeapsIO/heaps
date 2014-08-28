@@ -117,6 +117,10 @@ enum TextureFlags {
 		Assumes that the color value of the texture is premultiplied by the alpha component.
 	**/
 	AlphaPremultiplied;
+	/**
+		Tells if the target texture has been cleared (reserved for internal engine usage).
+	**/
+	WasCleared;
 }
 
 

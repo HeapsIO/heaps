@@ -35,9 +35,9 @@ class LogDriver extends Driver {
 		d.begin(frame);
 	}
 
-	override function clear( r : Float, g : Float, b : Float, a : Float ) {
-		log('Clear [$r $g $b $a]');
-		d.clear(r, g, b, a);
+	override function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
+		log('Clear color=$color depth=$depth stencil=$stencil');
+		d.clear(color, depth, stencil);
 	}
 
 	override function setCapture( bmp : hxd.BitmapData, callb : Void -> Void ) {
@@ -225,9 +225,9 @@ class LogDriver extends Driver {
 		d.setRenderZone(x, y, width, height);
 	}
 
-	override function setRenderTarget( tex : Null<h3d.mat.Texture>, clearColor : Int ) {
-		log('SetRenderTarget $tex ${StringTools.hex(clearColor,8)}');
-		d.setRenderTarget(tex, clearColor);
+	override function setRenderTarget( tex : Null<h3d.mat.Texture> ) {
+		log('SetRenderTarget $tex');
+		d.setRenderTarget(tex);
 	}
 
 	override function present() {

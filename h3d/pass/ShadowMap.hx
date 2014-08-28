@@ -8,7 +8,6 @@ class ShadowMap extends Default {
 	var shadowColorId : Int;
 	var shadowPowerId : Int;
 	var shadowBiasId : Int;
-	var clear : Clear;
 	public var size : Int;
 	public var lightDirection : h3d.Vector;
 	public var color : h3d.Vector;
@@ -29,8 +28,6 @@ class ShadowMap extends Default {
 		shadowColorId = hxsl.Globals.allocID("shadow.color");
 		shadowPowerId = hxsl.Globals.allocID("shadow.power");
 		shadowBiasId = hxsl.Globals.allocID("shadow.bias");
-		if( !hasTargetDepth )
-			clear = new Clear();
 		color = new h3d.Vector();
 		blur = new Blur(2, 3);
 	}
@@ -61,15 +58,13 @@ class ShadowMap extends Default {
 		var ct = ctx.camera.target;
 		lightCamera.target.set(ct.x, ct.y, ct.z);
 		lightCamera.pos.set(ct.x - lightDirection.x, ct.y - lightDirection.y, ct.z - lightDirection.z);
-		ctx.engine.setTarget(texture, 0xFFFFFFFF);
+		ctx.engine.setTarget(texture);
+		ctx.engine.clear(0xFFFFFFFF, 1);
 		passes = super.draw(name, passes);
 		ctx.engine.setTarget(null);
 
 		if( blur.quality > 0 )
 			blur.apply(texture, getTargetTexture("tmpBlur", size, size, false), true);
-
-		if( !hasTargetDepth )
-			clear.apply(1);
 
 		ctx.sharedGlobals.set(shadowMapId, texture);
 		ctx.sharedGlobals.set(shadowProjId, lightCamera.m);

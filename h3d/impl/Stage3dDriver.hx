@@ -149,8 +149,12 @@ class Stage3dDriver extends Driver {
 		this.height = height;
 	}
 
-	override function clear(r, g, b, a) {
-		ctx.clear(r, g, b, a);
+	override function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
+		var mask = 0;
+		if( color != null ) mask |= flash.display3D.Context3DClearMask.COLOR;
+		if( depth != null ) mask |= flash.display3D.Context3DClearMask.DEPTH;
+		if( stencil != null ) mask |= flash.display3D.Context3DClearMask.STENCIL;
+		ctx.clear( color == null ? 0 : color.r, color == null ? 0 : color.g, color == null ? 0 : color.b, color == null ? 1 : color.a, depth == null ? 1 : depth, stencil == null ? 0 : stencil, mask);
 	}
 
 	override function setCapture( bmp : hxd.BitmapData, onCapture : Void -> Void ) {
@@ -212,6 +216,7 @@ class Stage3dDriver extends Driver {
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var fmt = flash.display3D.Context3DTextureFormat.BGRA;
 		t.lastFrame = frame;
+		t.flags.unset(WasCleared);
 		if( t.flags.has(TargetDepth) )
 			throw "Unsupported texture flag";
 		try {
@@ -624,7 +629,7 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
-	override function setRenderTarget( t : Null<h3d.mat.Texture>, clearColor : Int ) {
+	override function setRenderTarget( t : Null<h3d.mat.Texture>) {
 		if( t == null ) {
 			ctx.setRenderToBackBuffer();
 			inTarget = null;
@@ -636,8 +641,11 @@ class Stage3dDriver extends Driver {
 			ctx.setRenderToTexture(t.t, t.flags.has(TargetUseDefaultDepth));
 			inTarget = t;
 			t.lastFrame = frame;
+			if( !t.flags.has(WasCleared) ) {
+				t.flags.set(WasCleared);
+				ctx.clear(0, 0, 0, 1, 1, 0, flash.display3D.Context3DClearMask.COLOR);
+			}
 			reset();
-			ctx.clear( ((clearColor>>16)&0xFF)/255 , ((clearColor>>8)&0xFF)/255, (clearColor&0xFF)/255, ((clearColor>>>24)&0xFF)/255);
 		}
 	}
 

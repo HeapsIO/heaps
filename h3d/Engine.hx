@@ -16,7 +16,7 @@ class Engine {
 	public var drawCalls(default, null) : Int;
 	public var shaderSwitches(default, null) : Int;
 
-	public var backgroundColor : Int = 0xFF000000;
+	public var backgroundColor : Null<Int> = 0xFF000000;
 	public var autoResize : Bool;
 	public var fullScreen(default, set) : Bool;
 
@@ -26,6 +26,7 @@ class Engine {
 	var realFps : Float;
 	var lastTime : Float;
 	var antiAlias : Int;
+	var tmpVector = new h3d.Vector();
 
 	@:allow(h3d)
 	var curProjMatrix : h3d.Matrix;
@@ -249,7 +250,6 @@ class Engine {
 	public function begin() {
 		if( driver.isDisposed() )
 			return false;
-		driver.clear( ((backgroundColor>>16)&0xFF)/255 , ((backgroundColor>>8)&0xFF)/255, (backgroundColor&0xFF)/255, ((backgroundColor>>>24)&0xFF)/255);
 		// init
 		frameCount++;
 		drawTriangles = 0;
@@ -258,6 +258,7 @@ class Engine {
 		curProjMatrix = null;
 		currentTarget = null;
 		driver.begin(frameCount);
+		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
 		return true;
 	}
 
@@ -285,9 +286,15 @@ class Engine {
 	 * Setus a render target to do off screen rendering, might be costly on low end devices
      * setTarget to null when you're finished rendering to it.
 	 */
-	public function setTarget( tex : h3d.mat.Texture,  clearColor = 0 ) {
+	public function setTarget( tex : h3d.mat.Texture ) {
 		currentTarget = tex;
-		driver.setRenderTarget(tex, clearColor);
+		driver.setRenderTarget(tex);
+	}
+
+	public function clear( ?color : Int, ?depth : Float, ?stencil : Int ) {
+		if( color != null )
+			tmpVector.setColor(color);
+		driver.clear(color == null ? null : tmpVector, depth, stencil);
 	}
 
 	/**

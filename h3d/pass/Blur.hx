@@ -67,7 +67,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		shader.isDepth = isDepth;
 		shader.pixel.set(1 / src.width, 0);
 
-		engine.setTarget(tmp, 0xFFFF0000);
+		engine.setTarget(tmp);
 		render();
 		engine.setTarget(null);
 

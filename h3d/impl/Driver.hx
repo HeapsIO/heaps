@@ -56,7 +56,7 @@ class Driver {
 	function logImpl( str : String ) {
 	}
 
-	public function clear( r : Float, g : Float, b : Float, a : Float ) {
+	public function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
 	}
 
 	public function setCapture( bmp : hxd.BitmapData, callb : Void -> Void ) {
@@ -101,7 +101,7 @@ class Driver {
 	public function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
 	}
 
-	public function setRenderTarget( tex : Null<h3d.mat.Texture>, clearColor : Int ) {
+	public function setRenderTarget( tex : Null<h3d.mat.Texture> ) {
 	}
 
 	public function present() {

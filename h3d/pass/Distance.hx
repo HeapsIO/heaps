@@ -2,7 +2,6 @@ package h3d.pass;
 
 class Distance extends Default {
 
-	var clear : Clear;
 	var distanceMapId : Int;
 	public var enableSky : Bool = false;
 
@@ -11,8 +10,6 @@ class Distance extends Default {
 		priority = 10;
 		lightSystem = null;
 		distanceMapId = hxsl.Globals.allocID("distanceMap");
-		if( !hasTargetDepth )
-			clear = new Clear();
 	}
 
 	override function getOutputs() {
@@ -21,13 +18,11 @@ class Distance extends Default {
 
 	override function draw( name : String, passes ) {
 		var texture = getTargetTexture("distanceMap", ctx.engine.width, ctx.engine.height);
-		ctx.engine.setTarget(texture, enableSky ? 0 : 0xFFFF0000);
+		ctx.engine.setTarget(texture);
+		ctx.engine.clear(enableSky ? 0 : 0xFFFF0000, 1);
 		passes = super.draw(name, passes);
 		ctx.engine.setTarget(null);
 		ctx.sharedGlobals.set(distanceMapId, texture);
-		if( !hasTargetDepth )
-			clear.apply(1);
-
 		return passes;
 	}
 
