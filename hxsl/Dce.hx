@@ -104,7 +104,7 @@ class Dce {
 		}
 	}
 
-	function check( e : TExpr, writeTo : Array<VarDeps> ) {
+	function check( e : TExpr, writeTo : Array<VarDeps> ) : Void {
 		switch( e.e ) {
 		case TVar(v):
 			link(v, writeTo);

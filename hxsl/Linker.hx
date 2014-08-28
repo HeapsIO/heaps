@@ -270,7 +270,7 @@ class Linker {
 		cur.onStack = false;
 	}
 
-	function uniqueLocals( expr : TExpr, locals : Map < String, Bool > ) {
+	function uniqueLocals( expr : TExpr, locals : Map < String, Bool > ) : Void {
 		switch( expr.e ) {
 		case TVarDecl(v, _):
 			if( locals.exists(v.name) ) {
