@@ -37,9 +37,11 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		return p / Math.sqrt(2 * Math.PI * sq);
 	}
 
-	public function apply( src : h3d.mat.Texture, ?tmp : h3d.mat.Texture, isDepth = false ) {
+	public function apply( src : h3d.mat.Texture, ?tmp : h3d.mat.Texture, ?output : h3d.mat.Texture, isDepth = false ) {
 
 		if( quality == 0 ) return;
+
+		if( output == null ) output = src;
 
 		var alloc = tmp == null;
 		if( alloc )
@@ -71,7 +73,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 
 		shader.texture = tmp;
 		shader.pixel.set(0, 1 / tmp.height);
-		engine.setTarget(src);
+		engine.setTarget(output);
 		render();
 		engine.setTarget(null);
 
