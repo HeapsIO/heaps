@@ -422,6 +422,8 @@ class AgalOut {
 			return unop(OCos);
 		case [Fract, _]:
 			return unop(OFrc);
+		case [Saturate, _]:
+			return unop(OSat);
 		case [ToInt, [a]]:
 			var r = expr(a);
 			var tmp = allocReg(a.t);
