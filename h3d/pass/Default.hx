@@ -78,6 +78,10 @@ class Default extends Base {
 		return t;
 	}
 
+	function processShaders( p : Object, shaders : hxsl.ShaderList ) {
+		return shaders;
+	}
+
 	@:access(h3d.scene)
 	function setupShaders( passes : Object ) {
 		var p = passes;
@@ -92,6 +96,7 @@ class Default extends Base {
 				}
 				shaders = lightSystem.computeLight(p.obj, shaders);
 			}
+			shaders = processShaders(p, shaders);
 			var count = 0;
 			for( s in shaders )
 				p.shaders[count++] = s;
