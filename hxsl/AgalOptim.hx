@@ -258,8 +258,27 @@ class AgalOptim {
 		var out = [];
 		for( i in 0...code.length ) {
 			var op = code[i];
+			switch( op ) {
+			case OMov(_), OTex(_):
+				out.push(op);
+				continue;
+			default:
+			}
 			var args : Array<Reg> = cast op.getParameters();
-			if( args.length > 2 )
+			switch( args.length ) {
+			case 0, 1:
+				// nothing
+			case 2:
+				// unop with a const
+				if( args[1].t == RConst && args[1].access == null ) {
+					var r = allocTemp(swiz(args[1]).length);
+					out.push(OMov(r, args[1]));
+					out.push(Opcode.createByIndex(op.getIndex(), [args[0], r]));
+					changed = true;
+					continue;
+				}
+			default:
+				// binop with two consts
 				switch( [args[1].t, args[2].t] ) {
 				case [RConst, RConst]:
 					var r = allocTemp(swiz(args[1]).length);
@@ -269,6 +288,7 @@ class AgalOptim {
 					continue;
 				default:
 				}
+			}
 			out.push(op);
 		}
 		code = out;
