@@ -229,6 +229,20 @@ class Macros {
 		return fields;
 	}
 
+	static function loadShader( path : String ) {
+		var m = Context.follow(Context.getType(path));
+		switch( m ) {
+		case TInst(c, _):
+			var c = c.get();
+			for( m in c.meta.get() )
+				if( m.name == ":src" )
+					return new MacroParser().parseExpr(m.params[0]);
+		default:
+		}
+		throw path + " is not a shader";
+		return null;
+	}
+
 	public static function buildShader() {
 		var fields = Context.getBuildFields();
 		for( f in fields )
@@ -237,10 +251,13 @@ class Macros {
 				case FVar(_, expr) if( expr != null ):
 					var pos = expr.pos;
 					if( !Lambda.has(f.access, AStatic) ) f.access.push(AStatic);
+					Context.getLocalClass().get().meta.add(":src", [expr], pos);
 					try {
 						var shader = new MacroParser().parseExpr(expr);
 						var name = Std.string(Context.getLocalClass());
-						var shader = new Checker().check(name,shader);
+						var check = new Checker();
+						check.loadShader = loadShader;
+						var shader = check.check(name,shader);
 						var str = Serializer.run(shader);
 						f.kind = FVar(null, { expr : EConst(CString(str)), pos : pos } );
 						f.meta.push({

@@ -117,6 +117,11 @@ class Checker {
 		return Ast.Error.t(msg,pos);
 	}
 
+	public dynamic function loadShader( path : String ) : Expr {
+		throw "Not implemented";
+		return null;
+	}
+
 	public function check( name : String, shader : Expr ) : ShaderData {
 		vars = new Map();
 		inLoop = false;
@@ -498,12 +503,14 @@ class Checker {
 		}
 	}
 
-	function checkExpr( e : Expr, funs : Array<{ f : FunDecl, p : Position }> ) {
+	function checkExpr( e : Expr, funs : Array<{ f : FunDecl, p : Position }>, isIncluded = false ) {
 		switch( e.expr ) {
 		case EBlock(el):
 			for( e in el )
-				checkExpr(e,funs);
+				checkExpr(e,funs, isIncluded);
 		case EFunction(f):
+			if( isIncluded )
+				return;
 			funs.push({ f : f, p : e.pos });
 		case EVars(vl):
 			for( v in vl ) {
@@ -519,8 +526,26 @@ class Checker {
 				if( v.expr != null ) error("Cannot initialize variable declaration", v.expr.pos);
 				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
-				vars.set(v.name, makeVar(v, e.pos));
+				var v = makeVar(v, e.pos);
+				if( isIncluded && (v.kind == Param || v.kind == Var) )
+					continue;
+				vars.set(v.name, v);
 			}
+		case ECall( { expr : EIdent("include") }, [e]):
+			var path = [];
+			function loop( e : Expr ) {
+				switch( e.expr ) {
+				case EIdent(n): path.push(n);
+				case EField(e, f): loop(e); path.push(f);
+				default:
+					error("Should be a shader type path", e.pos);
+				}
+			}
+			loop(e);
+			var sexpr = null;
+			try sexpr = loadShader(path.join(".")) catch( err : Dynamic ) error(Std.string(err), e.pos);
+			if( sexpr != null )
+				checkExpr(sexpr, funs, true);
 		default:
 			error("This expression is not allowed at shader declaration level", e.pos);
 		}
