@@ -431,26 +431,27 @@ class AgalOut {
 			op(OMul(r, r, getConst(0.6931471805599453))); // log(2)/log(e)
 			return r;
 		case [Exp, [e]]:
-			var r = expr(e);
-			op(OMul(r, r, getConst(1.4426950408889634))); // log(e)/log(2)
+			var r = allocReg(e.t);
+			op(OMul(r, expr(e), getConst(1.4426950408889634))); // log(e)/log(2)
 			op(OExp(r, r));
 			return r;
 		case [Radians, [e]]:
-			var r = expr(e);
-			op(OMul(r, r, getConst(Math.PI / 180)));
+			var r = allocReg(e.t);
+			op(OMul(r, expr(e), getConst(Math.PI / 180)));
 			return r;
 		case [Degrees, [e]]:
-			var r = expr(e);
-			op(OMul(r, r, getConst(180 / Math.PI)));
+			var r = allocReg(e.t);
+			op(OMul(r, expr(e), getConst(180 / Math.PI)));
 			return r;
 
 		case [Mix, [a, b, t]]:
-			var rb = expr(b);
-			var r = expr(t);
-			op(OMul(rb, rb, r));
+			var ra = allocReg(a.t);
+			var rb = allocReg(b.t);
+			var r = allocReg(t.t);
+			op(OMov(r, expr(t)));
+			op(OMul(rb, expr(b), r));
 			op(OSub(r, getConst(1), r));
-			var ra = expr(a);
-			op(OMul(ra, ra, r));
+			op(OMul(ra, expr(a), r));
 			op(OAdd(ra, ra, rb));
 			return ra;
 
