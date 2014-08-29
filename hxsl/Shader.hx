@@ -25,6 +25,10 @@ class Shader {
 	}
 
 	public function updateConstants( globals : Globals ) {
+		throw "assert";
+	}
+
+	function updateConstantsFinal( globals : Globals ) {
 		for( c in shader.consts )
 			if( c.globalId > 0 ) {
 				var v : Dynamic = globals.fastGet(c.globalId);

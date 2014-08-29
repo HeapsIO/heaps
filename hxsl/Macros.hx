@@ -181,7 +181,7 @@ class Macros {
 				expr : macro {
 					constBits = 0;
 					{$a{ exprs }};
-					super.updateConstants(globals);
+					updateConstantsFinal(globals);
 				},
 			}),
 			access : [AOverride],
