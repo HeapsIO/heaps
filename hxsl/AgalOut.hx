@@ -250,6 +250,11 @@ class AgalOut {
 				op(bop(r, expr(e1), expr(e2)));
 				return r;
 			}
+			inline function compare(bop,e1,e2) {
+				var r = allocReg(e.t);
+				op(bop(r, expr(e1), expr(e2)));
+				return r;
+			}
 			switch( bop ) {
 			case OpAdd: return std(OAdd);
 			case OpSub: return std(OSub);
@@ -304,6 +309,18 @@ class AgalOut {
 					throw "assert " + [e1.t, e2.t];
 				}
 				return r;
+			case OpGt:
+				return compare(OSlt, e2, e1);
+			case OpLt:
+				return compare(OSlt, e1, e2);
+			case OpGte:
+				return compare(OSge, e1, e2);
+			case OpLte:
+				return compare(OSlt, e2, e1);
+			case OpEq:
+				return compare(OSeq, e1, e2);
+			case OpNotEq:
+				return compare(OSne, e1, e2);
 			default:
 				throw "TODO " + bop;
 			}

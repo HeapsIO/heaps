@@ -943,6 +943,9 @@ class Checker {
 			case TBool if( (op == OpEq || op == OpNotEq) && e2.t != TVoid ):
 				unifyExpr(e2, e1.t);
 				TBool;
+			case TVec(_) if( e2.t != TVoid ):
+				unifyExpr(e2, e1.t);
+				e1.t;
 			default:
 				switch( [e1.e, e2.e] ) {
 				case [TVar(v), TConst(CNull)], [TConst(CNull), TVar(v)]:
