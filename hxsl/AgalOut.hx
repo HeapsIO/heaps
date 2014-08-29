@@ -531,16 +531,27 @@ class AgalOut {
 			op(OTex(r, uv, { index : t.index, flags : [TIgnoreSampler] }));
 			return r;
 		case [Dot, [a, b]]:
-			var r = allocReg(TFloat);
 			switch( a.t ) {
+			case TFloat | TInt:
+				var r = allocReg(TFloat);
+				op(OMul(r, expr(a), expr(b)));
+				return r;
+			case TVec(2, _):
+				var r = allocReg(TFloat);
+				var tmp = allocReg(TVec(2,VFloat));
+				op(OMul(tmp, expr(a), expr(b)));
+				op(OAdd(r, swiz(tmp, [X]), swiz(tmp, [Y])));
+				return r;
 			case TVec(3, _):
+				var r = allocReg(TFloat);
 				op(ODp3(r, expr(a), expr(b)));
+				return r;
 			case TVec(4, _):
+				var r = allocReg(TFloat);
 				op(ODp4(r, expr(a), expr(b)));
+				return r;
 			default:
-				throw "assert " + a.t;
 			}
-			return r;
 		case [Mat3, _]:
 			return copyToMatrix(args, 3, 3);
 		case [Mat3x4, _]:
@@ -554,8 +565,30 @@ class AgalOut {
 				op(ONrm(r, expr(e)));
 				return r;
 			default:
-				throw "TODO "+e.t;
 			}
+		case [LReflect, [a, b]]:
+			var ra = expr(a);
+			var rb = expr(b);
+			var tmp = allocReg(TFloat);
+			switch( a.t ) {
+			case TFloat | TInt:
+				op(OMul(tmp, ra, rb));
+			case TVec(2, _):
+				var r = allocReg(TVec(2,VFloat));
+				op(OMul(r, ra, rb));
+				op(OAdd(tmp, swiz(r, [X]), swiz(r, [Y])));
+			case TVec(3, _):
+				op(ODp3(tmp, ra, rb));
+			case TVec(4, _):
+				op(ODp4(tmp, ra, rb));
+			default:
+			}
+			op(OAdd(tmp, tmp, tmp));
+			var o = allocReg(a.t);
+			var sw = defSwiz(a.t);
+			op(OMul(o, swiz(tmp, sw == null ? [X, X, X, X] : [for( _ in sw ) X]), rb));
+			op(OSub(o, ra, o));
+			return o;
 		case [Pack, [e]]:
 			var c = getConsts([1, 255, 255 * 255, 255 * 255 * 255]);
 			var r = allocReg();
