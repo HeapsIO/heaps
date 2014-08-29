@@ -376,8 +376,8 @@ class AgalOut {
 		case TUnop(uop, e):
 			switch( uop ) {
 			case OpNeg:
-				var r = expr(e);
-				op(ONeg(r, r));
+				var r = allocReg(e.t);
+				op(ONeg(r, expr(e)));
 				return r;
 			default:
 			}
