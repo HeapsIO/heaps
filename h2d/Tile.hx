@@ -64,8 +64,8 @@ class Tile {
 		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
 
-	public function center(dx, dy) {
-		return sub(0, 0, width, height, -dx, -dy);
+	public function center() {
+		return sub(0, 0, width, height, -(width>>1), -(height>>1));
 	}
 
 	public function flipX() {
