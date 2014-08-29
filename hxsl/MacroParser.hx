@@ -122,7 +122,14 @@ class MacroParser {
 					applyMeta(m, v);
 				e2.expr;
 			default:
-				error("Qualifier only supported before 'var'", e.pos);
+				switch( m.name ) {
+				case ":extends":
+					ECall({ expr : EIdent("extends"), pos : m.pos }, [e2]);
+				case ":import":
+					ECall({ expr : EIdent("import"), pos : m.pos }, [e2]);
+				default:
+					error("Qualifier only supported before 'var'", e.pos);
+				}
 			}
 		case EVars(vl):
 			EVars([for( v in vl ) {

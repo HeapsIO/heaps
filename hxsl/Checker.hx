@@ -43,6 +43,8 @@ class Checker {
 			case Radians, Degrees, Cos, Sin, Tan, Asin, Acos, Exp, Log, Exp2, Log2, Sqrt, Inversesqrt, Abs, Sign, Floor, Ceil, Fract: genFloat;
 			case Atan: genFloat.concat(genFloat2);
 			case Pow: genFloat2;
+			case LReflect:
+				genFloat2;
 			case Mod, Min, Max:
 				genFloat2.concat(genWithFloat);
 			case Saturate:
@@ -109,6 +111,8 @@ class Checker {
 		}
 		globals.set("int", globals.get("toInt"));
 		globals.set("float", globals.get("toFloat"));
+		globals.set("reflect", globals.get("lReflect"));
+		globals.remove("lReflect");
 		globals.remove("toInt");
 		globals.remove("toFloat");
 	}
@@ -127,7 +131,7 @@ class Checker {
 		inLoop = false;
 
 		var funs = [];
-		checkExpr(shader, funs);
+		checkExpr(shader, funs, false, false);
 		var tfuns = [];
 		for( f in funs ) {
 			var pos = f.p, f = f.f;
@@ -508,15 +512,18 @@ class Checker {
 		}
 	}
 
-	function checkExpr( e : Expr, funs : Array<{ f : FunDecl, p : Position }>, isIncluded = false ) {
+	function checkExpr( e : Expr, funs : Array<{ f : FunDecl, p : Position, inherit : Bool }>, isImport, isExtends ) {
 		switch( e.expr ) {
 		case EBlock(el):
 			for( e in el )
-				checkExpr(e,funs, isIncluded);
+				checkExpr(e,funs, isImport, isExtends);
 		case EFunction(f):
-			if( isIncluded )
+			if( isImport )
 				return;
-			funs.push({ f : f, p : e.pos });
+			for( f2 in funs )
+				if( f2.f.name == f.name && f2.inherit )
+					funs.remove(f2);
+			funs.push({ f : f, p : e.pos, inherit : isExtends });
 		case EVars(vl):
 			for( v in vl ) {
 				if( v.kind == null ) {
@@ -532,11 +539,11 @@ class Checker {
 				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
 				var v = makeVar(v, e.pos);
-				if( isIncluded && (v.kind == Param || v.kind == Var) )
+				if( isImport && (v.kind == Param || v.kind == Var) )
 					continue;
 				vars.set(v.name, v);
 			}
-		case ECall( { expr : EIdent("include") }, [e]):
+		case ECall( { expr : EIdent("import") }, [e]):
 			var path = [];
 			function loop( e : Expr ) {
 				switch( e.expr ) {
@@ -550,7 +557,23 @@ class Checker {
 			var sexpr = null;
 			try sexpr = loadShader(path.join(".")) catch( err : Dynamic ) error(Std.string(err), e.pos);
 			if( sexpr != null )
-				checkExpr(sexpr, funs, true);
+				checkExpr(sexpr, funs, true, isExtends);
+		case ECall( { expr : EIdent("extends") }, [e]):
+			var path = [];
+			function loop( e : Expr ) {
+				switch( e.expr ) {
+				case EIdent(n): path.push(n);
+				case EField(e, f): loop(e); path.push(f);
+				case EConst(CString(s)): path.push(s);
+				default:
+					error("Should be a shader type path", e.pos);
+				}
+			}
+			loop(e);
+			var sexpr = null;
+			try sexpr = loadShader(path.join(".")) catch( err : Dynamic ) error(Std.string(err), e.pos);
+			if( sexpr != null )
+				checkExpr(sexpr, funs, isImport, true);
 		default:
 			error("This expression is not allowed at shader declaration level", e.pos);
 		}

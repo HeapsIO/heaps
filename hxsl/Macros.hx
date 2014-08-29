@@ -254,7 +254,12 @@ class Macros {
 					Context.getLocalClass().get().meta.add(":src", [expr], pos);
 					try {
 						var shader = new MacroParser().parseExpr(expr);
-						var name = Std.string(Context.getLocalClass());
+						var c = Context.getLocalClass();
+						var sup = Std.string(c.get().superClass.t);
+						// add auto extends
+						if( sup != "hxsl.Shader" )
+							shader = { expr : EBlock([ { expr : ECall( { expr : EIdent("extends"), pos : pos }, [ { expr : EConst(CString(sup)), pos : pos } ]), pos : pos }, shader]), pos : pos };
+						var name = Std.string(c);
 						var check = new Checker();
 						check.loadShader = loadShader;
 						var shader = check.check(name,shader);

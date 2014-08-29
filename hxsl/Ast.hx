@@ -178,7 +178,7 @@ enum TGlobal {
 	Cross;
 	Normalize;
 	//Faceforward;
-	//Reflect;
+	LReflect;
 	//Refract;
 	//MatrixCompMult;
 	//Any;

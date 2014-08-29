@@ -1,16 +1,8 @@
 package h3d.shader;
 
-class Blur extends hxsl.Shader {
+class Blur extends ScreenShader {
 
 	static var SRC = {
-		@input var input : {
-			position : Vec2,
-			uv : Vec2,
-		};
-		var output : {
-			position : Vec4,
-			color : Vec4,
-		};
 
 		@param var texture : Sampler2D;
 		@param @const var Quality : Int;
@@ -18,9 +10,6 @@ class Blur extends hxsl.Shader {
 		@param var values : Array<Float,Quality>;
 		@param var pixel : Vec2;
 
-		function vertex() {
-			output.position = vec4(input.position, 0, 1);
-		}
 		function fragment() {
 			if( isDepth ) {
 				var val = 0.;
