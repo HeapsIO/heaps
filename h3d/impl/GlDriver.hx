@@ -54,7 +54,8 @@ class GlDriver extends Driver {
 	#end
 
 	var curAttribs : Int;
-	var curProgram : CompiledProgram;
+	var curShader : CompiledProgram;
+	var curBuffer : h3d.Buffer;
 	var curMatBits : Int;
 	var programs : Map<Int, CompiledProgram>;
 	var hasTargetFlip : Bool;
@@ -87,12 +88,13 @@ class GlDriver extends Driver {
 
 	override function reset() {
 		gl.useProgram(null);
-		curProgram = null;
+		curShader = null;
+		curBuffer = null;
 		hasTargetFlip = false;
 	}
 
 	override function getShaderInputNames() {
-		return curProgram.attribNames;
+		return curShader.attribNames;
 	}
 
 	function compileShader( glout : hxsl.GlslOut, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
@@ -154,7 +156,7 @@ class GlDriver extends Driver {
 				}
 			programs.set(shader.id, p);
 		}
-		if( curProgram == p ) return false;
+		if( curShader == p ) return false;
 		gl.useProgram(p.p);
 		for( i in curAttribs...p.attribs.length ) {
 			gl.enableVertexAttribArray(i);
@@ -162,13 +164,14 @@ class GlDriver extends Driver {
 		}
 		while( curAttribs > p.attribs.length )
 			gl.disableVertexAttribArray(--curAttribs);
-		curProgram = p;
+		curShader = p;
+		curBuffer = null;
 		return true;
 	}
 
 	override function uploadShaderBuffers( buf : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
-		uploadBuffer(curProgram.vertex, buf.vertex, which);
-		uploadBuffer(curProgram.fragment, buf.fragment, which);
+		uploadBuffer(curShader.vertex, buf.vertex, which);
+		uploadBuffer(curShader.fragment, buf.fragment, which);
 	}
 
 	function uploadBuffer( s : CompiledShader, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
@@ -181,7 +184,7 @@ class GlDriver extends Driver {
 			for( i in 0...s.textures.length ) {
 				var t = buf.tex[i];
 				if( t == null || t.isDisposed() )
-					t = h3d.mat.Texture.fromColor(0xFFFF00FF);
+					t = h3d.mat.Texture.fromColor(0xFF00FF);
 				if( t != null && t.t == null && t.realloc != null ) {
 					t.alloc();
 					t.realloc();
@@ -270,10 +273,21 @@ class GlDriver extends Driver {
 		curMatBits = bits;
 	}
 
-	override function clear( r : Float, g : Float, b : Float, a : Float ) {
-		gl.clearColor(r, g, b, a);
-		gl.clearDepth(1);
-		gl.clear(GL.COLOR_BUFFER_BIT|GL.DEPTH_BUFFER_BIT);
+	override function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
+		var bits = 0;
+		if( color != null ) {
+			gl.clearColor(color.r, color.g, color.b, color.a);
+			bits |= GL.COLOR_BUFFER_BIT;
+		}
+		if( depth != null ) {
+			gl.clearDepth(1);
+			bits |= GL.DEPTH_BUFFER_BIT;
+		}
+		if( stencil != null ) {
+			gl.clearStencil(stencil);
+			bits |= GL.STENCIL_BUFFER_BIT;
+		}
+		if( bits != 0 ) gl.clear(bits);
 	}
 
 	override function resize(width, height) {
@@ -326,7 +340,7 @@ class GlDriver extends Driver {
 		return tt;
 	}
 
-	override function allocVertex( m : ManagedBuffer ) : VertexBuffer {
+	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
 		var b = gl.createBuffer();
 		#if js
 		gl.bindBuffer(GL.ARRAY_BUFFER, b);
@@ -367,7 +381,7 @@ class GlDriver extends Driver {
 		gl.deleteBuffer(i);
 	}
 
-	override function disposeVertex( v : VertexBuffer ) {
+	override function disposeVertexes( v : VertexBuffer ) {
 		gl.deleteBuffer(v.b);
 	}
 
@@ -406,7 +420,7 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
 
-	override function uploadIndexesBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
+	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		var buf = new Uint16Array(buf.getNative());
 		var sub = new Uint16Array(buf.buffer, bufPos, indiceCount #if cpp * (fixMult?2:1) #end);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
@@ -414,7 +428,7 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 
-	override function uploadIndexesBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
+	override function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
 		var buf = new Uint8Array(buf.getData());
 		var sub = new Uint8Array(buf.buffer, bufPos, indiceCount * 2);
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
@@ -422,21 +436,57 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 
-	override function selectBuffer( v : VertexBuffer ) {
-		var stride : Int = v.stride;
-		if( stride < curProgram.stride )
-			throw "Buffer stride (" + stride + ") and shader stride (" + curProgram.stride + ") mismatch";
-		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
-		for( a in curProgram.attribs )
-			gl.vertexAttribPointer(a.index, a.size, a.type, false, stride * 4, a.offset * 4);
+	override function selectBuffer( v : h3d.Buffer ) {
+
+		if( v == curBuffer )
+			return;
+		if( curBuffer != null && v.buffer == curBuffer.buffer && v.buffer.flags.has(RawFormat) == curBuffer.flags.has(RawFormat) ) {
+			curBuffer = v;
+			return;
+		}
+
+		if( curShader == null )
+			throw "No shader selected";
+		curBuffer = v;
+
+		var m = @:privateAccess v.buffer.vbuf;
+		if( m.stride < curShader.stride )
+			throw "Buffer stride (" + m.stride + ") and shader stride (" + curShader.stride + ") mismatch";
+
+		gl.bindBuffer(GL.ARRAY_BUFFER, m.b);
+
+		if( v.flags.has(RawFormat) ) {
+			for( a in curShader.attribs )
+				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, a.offset * 4);
+		} else {
+			var offset = 8;
+			for( i in 0...curShader.attribs.length ) {
+				var a = curShader.attribs[i];
+				switch( curShader.attribNames[i] ) {
+				case "position":
+					gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, 0);
+				case "normal":
+					if( m.stride < 6 ) throw "Buffer is missing NORMAL data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, 3 * 4);
+				case "uv":
+					if( m.stride < 8 ) throw "Buffer is missing UV data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, 6 * 4);
+				case s:
+					gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, offset * 4);
+					offset += a.size;
+					if( offset > m.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+				}
+			}
+		}
 	}
 
 	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
-		for( a in curProgram.attribs ) {
+		for( a in curShader.attribs ) {
 			gl.bindBuffer(GL.ARRAY_BUFFER, @:privateAccess buffers.buffer.buffer.vbuf.b);
 			gl.vertexAttribPointer(a.index, a.size, a.type, false, buffers.buffer.buffer.stride * 4, buffers.offset * 4);
 			buffers = buffers.next;
 		}
+		curBuffer = null;
 	}
 
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
@@ -453,7 +503,7 @@ class GlDriver extends Driver {
 		return gl.isContextLost();
 	}
 
-	override function setRenderTarget( tex : h3d.mat.Texture, clearColor : Int ) {
+	override function setRenderTarget( tex : h3d.mat.Texture ) {
 		if( tex == null ) {
 			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 			gl.viewport(0, 0, canvas.width, canvas.height);
@@ -466,7 +516,6 @@ class GlDriver extends Driver {
 		hasTargetFlip = !tex.flags.has(TargetNoFlipY);
 		gl.bindFramebuffer(GL.FRAMEBUFFER, tex.t.fb);
 		gl.viewport(0, 0, tex.width, tex.height);
-		clear(((clearColor >> 16) & 0xFF) / 255, ((clearColor >> 8) & 0xFF) / 255, (clearColor & 0xFF) / 255, (clearColor >>> 24) / 255);
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
@@ -491,6 +540,8 @@ class GlDriver extends Driver {
 		case FloatTextures:
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null;
 		case TargetDepthBuffer:
+			true;
+		case HardwareAccelerated:
 			true;
 		}
 	}
