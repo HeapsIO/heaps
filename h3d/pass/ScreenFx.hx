@@ -5,7 +5,7 @@ class ScreenFx<T:hxsl.Shader> {
 	public var shader : T;
 	var pass : h3d.mat.Pass;
 	var manager : h3d.shader.Manager;
-	var plan : h3d.prim.Plan2D;
+	var plan : h3d.prim.Primitive;
 	var engine : h3d.Engine;
 
 	public function new(shader) {
@@ -30,6 +30,10 @@ class ScreenFx<T:hxsl.Shader> {
 		engine.uploadShaderBuffers(buf, Params);
 		engine.uploadShaderBuffers(buf, Textures);
 		plan.render(engine);
+	}
+
+	public function dispose() {
+		plan.dispose();
 	}
 
 }

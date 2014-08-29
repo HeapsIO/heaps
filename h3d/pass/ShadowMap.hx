@@ -8,7 +8,9 @@ class ShadowMap extends Default {
 	var shadowColorId : Int;
 	var shadowPowerId : Int;
 	var shadowBiasId : Int;
-	public var size : Int;
+	var border : Border;
+
+	public var size(default,set) : Int;
 	public var lightDirection : h3d.Vector;
 	public var color : h3d.Vector;
 	public var power = 10.0;
@@ -30,6 +32,12 @@ class ShadowMap extends Default {
 		shadowBiasId = hxsl.Globals.allocID("shadow.bias");
 		color = new h3d.Vector();
 		blur = new Blur(2, 3);
+	}
+
+	function set_size(s) {
+		if( border != null ) border.dispose();
+		border = new Border(s);
+		return size = s;
 	}
 
 	public dynamic function getSceneBounds( bounds : h3d.col.Bounds ) {
@@ -61,6 +69,7 @@ class ShadowMap extends Default {
 		ctx.engine.setTarget(texture);
 		ctx.engine.clear(0xFFFFFFFF, 1);
 		passes = super.draw(name, passes);
+		border.render();
 		ctx.engine.setTarget(null);
 
 		if( blur.quality > 0 )
