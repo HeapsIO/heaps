@@ -56,7 +56,7 @@ class Polygon extends Primitive {
 				buf.push(c.z);
 			}
 		}
-		var flags = [];
+		var flags : Array<h3d.Buffer.BufferFlag> = [];
 		if( idx == null ) flags.push(Triangles);
 		if( normals == null ) flags.push(RawFormat);
 		buffer = h3d.Buffer.ofFloats(buf, size, flags);

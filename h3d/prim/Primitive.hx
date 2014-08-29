@@ -23,9 +23,12 @@ class Primitive {
 
 	public function render( engine : h3d.Engine ) {
 		if( buffer == null || buffer.isDisposed() ) alloc(engine);
-		if( indexes == null )
-			engine.renderTriBuffer(buffer);
-		else
+		if( indexes == null ) {
+			if( buffer.flags.has(Quads) )
+				engine.renderQuadBuffer(buffer);
+			else
+				engine.renderTriBuffer(buffer);
+		} else
 			engine.renderIndexed(buffer,indexes);
 	}
 

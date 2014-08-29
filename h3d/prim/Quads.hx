@@ -62,7 +62,7 @@ class Quads extends Primitive {
 		var size = 3;
 		if( normals != null ) size += 3;
 		if( uvs != null ) size += 2;
-		var flags = [Quads];
+		var flags : Array<h3d.Buffer.BufferFlag> = [Quads];
 		if( normals == null ) flags.push(RawFormat);
 		buffer = h3d.Buffer.ofFloats(v, size, flags);
 	}
