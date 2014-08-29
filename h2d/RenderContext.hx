@@ -74,6 +74,7 @@ class RenderContext {
 	}
 
 	public function beforeDraw() {
+		if( texture == null ) texture = h3d.mat.Texture.fromColor(0xFFFF00FF);
 		baseShader.texture = texture;
 		texture.filter = currentObj.filter ? Linear : Nearest;
 		texture.wrap = currentObj.tileWrap ? Repeat : Clamp;
