@@ -70,6 +70,14 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push(g);
 		tmp.push(b);
 		tmp.push(a);
+
+		var x = x + t.dx, y = y + t.dy;
+		if( x < xMin ) xMin = x;
+		if( y < yMin ) yMin = y;
+		x += t.width;
+		y += t.height;
+		if( x > xMax ) xMax = x;
+		if( y > yMax ) yMax = y;
 	}
 
 	public function addPoint( x : Float, y : Float, color : Int ) {
@@ -112,6 +120,13 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push(1);
 		tmp.push(1);
 		insertColor(color);
+
+		if( x < xMin ) xMin = x;
+		if( y < yMin ) yMin = y;
+		x += w;
+		y += h;
+		if( x > xMax ) xMax = x;
+		if( y > yMax ) yMax = y;
 	}
 
 	public inline function rectGradient( x : Float, y : Float, w : Float, h : Float, ctl : Int, ctr : Int, cbl : Int, cbr : Int ) {
@@ -135,6 +150,13 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push(1);
 		tmp.push(0);
 		insertColor(cbr);
+
+		if( x < xMin ) xMin = x;
+		if( y < yMin ) yMin = y;
+		x += w;
+		y += h;
+		if( x > xMax ) xMax = x;
+		if( y > yMax ) yMax = y;
 	}
 
 	override public function alloc(engine:h3d.Engine) {
