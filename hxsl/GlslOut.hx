@@ -233,9 +233,13 @@ class GlslOut {
 			} else {
 				add("/*var*/");
 			}
+		case TCall( { e : TGlobal(Mat3) }, [e]) if( e.t == TMat3x4 ):
+			decl("mat3 _mat3( mat3x4 v ) { return mat3(v.a.xyz,v.b.xyz,v.c.xyz); }");
+			add("_mat3(");
+			addValue(e, tabs);
+			add(")");
 		case TCall( { e : TGlobal(Saturate) }, [e]):
-			add("clamp");
-			add("(");
+			add("clamp(");
 			addValue(e, tabs);
 			add(", 0., 1.)");
 		case TCall(e, args):
