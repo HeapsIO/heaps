@@ -208,13 +208,11 @@ class Checker {
 
 	function unifyExpr( e : TExpr, t : Type ) {
 		if( !tryUnify(e.t, t) ) {
-			switch( e.e ) {
-			case TConst(CInt(v)) if( t == TFloat ):
-				e.e = TConst(CFloat(v));
-				e.t = TFloat;
-			default:
-				error(e.t.toString() + " should be " + t.toString(), e.p);
+			if( e.t == TInt && t == TFloat ) {
+				toFloat(e);
+				return;
 			}
+			error(e.t.toString() + " should be " + t.toString(), e.p);
 		}
 	}
 
@@ -238,7 +236,7 @@ class Checker {
 		if( t == null )
 			return typeExpr(e, Value);
 		var e = typeExpr(e, With(t));
-		unify(e.t, t, e.p);
+		unifyExpr(e, t);
 		return e;
 	}
 
@@ -310,8 +308,15 @@ class Checker {
 				if( g != null ) {
 					type = g.t;
 					TGlobal(g.g);
-				} else
-					error("Unknown identifier '" + name + "'", e.pos);
+				} else {
+					switch( name ) {
+					case "PI":
+						type = TFloat;
+						TConst(CFloat(Math.PI));
+					default:
+						error("Unknown identifier '" + name + "'", e.pos);
+					}
+				}
 			}
 		case EField(e1, f):
 			var e1 = typeExpr(e1, Value);
@@ -865,6 +870,17 @@ class Checker {
 
 	}
 
+	function toFloat( e : TExpr ) {
+		if( e.t != TInt ) throw "assert";
+		switch( e.e ) {
+		case TConst(CInt(v)):
+			e.e = TConst(CFloat(v));
+			e.t = TFloat;
+		default:
+			e.e = TCall( { e : TGlobal(ToFloat), t : TFun([]), p : e.p }, [{ e : e.e, t : e.t, p : e.p }]);
+			e.t = TFloat;
+		}
+	}
 
 	function typeBinop(op, e1:TExpr, e2:TExpr, pos : Position) {
 		return switch( op ) {
@@ -879,9 +895,13 @@ class Checker {
 				vec3;
 			case [_, TInt, TInt]: TInt;
 			case [_, TFloat, TFloat]: TFloat;
+			case [_, TInt, TFloat]: toFloat(e1); TFloat;
+			case [_, TFloat, TInt]: toFloat(e2); TFloat;
 			case [_, TVec(a,VFloat), TVec(b,VFloat)] if( a == b ): TVec(a,VFloat);
 			case [_, TFloat, TVec(_,VFloat)]: e2.t;
 			case [_, TVec(_,VFloat), TFloat]: e1.t;
+			case [_, TInt, TVec(_, VFloat)]: toFloat(e1); e2.t;
+			case [_, TVec(_,VFloat), TInt]: toFloat(e2); e1.t;
 			default:
 				var opName = switch( op ) {
 				case OpMult: "multiply";
