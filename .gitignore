@@ -3,3 +3,4 @@
 *.js
 *.js.map
 /bin
+/samples/res/.tmp

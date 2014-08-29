@@ -1,6 +1,7 @@
 package hxd.res;
 import haxe.macro.Context;
 
+#if js @:keep #end
 class Embed {
 
 	#if macro
@@ -18,6 +19,10 @@ class Embed {
 	}
 
 	public static function doEmbedFont( name : String, file : String, chars : String ) {
+
+		var m = Context.getLocalClass().get().module;
+		Context.registerModuleDependency(m, file);
+
 		if( Context.defined("flash") || Context.defined("openfl") ) {
 			if( chars == null ) // convert char list to char range
 				chars = Charset.DEFAULT_CHARS.split("-").join("\\-");
@@ -36,6 +41,7 @@ class Embed {
 				isExtern : false,
 				fields : [],
 			});
+			return macro new hxd._res.$name().fontName;
 		} else if( Context.defined("js") ) {
 			// TODO : we might want to extract the chars from the TTF font
 			var pos = Context.currentPos();
@@ -61,10 +67,11 @@ class Embed {
 					}
 				],
 			});
+
+			return { expr : EConst(CString(name)), pos : pos };
+
 		} else
 			throw "Font embedding not available for this platform";
-		var m = Context.getLocalClass().get().module;
-		Context.registerModuleDependency(m, file);
 	}
 
 	#end
@@ -92,8 +99,7 @@ class Embed {
 			return macro null;
 		}
 		var safeName = "R_"+~/[^A-Za-z0-9_]+/g.replace(file, "_");
-		doEmbedFont(safeName, path, chars);
-		return macro new hxd._res.$safeName().fontName;
+		return doEmbedFont(safeName, path, chars);
 	}
 
 	#if js
