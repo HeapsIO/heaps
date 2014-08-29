@@ -16,7 +16,7 @@ class Main extends hxd.App {
 		var dir = new DirLight(new h3d.Vector( 2, 3, -5), s3d);
 		for( s in obj )
 			s.toMesh().material.mainPass.enableLights = true;
-		var ls = s3d.mainPass.lightSystem;
+		var ls = s3d.mainPass.getLightSystem();
 		ls.ambientLight.set(0.4, 0.4, 0.4);
 		ls.perPixelLighting = true;
 
