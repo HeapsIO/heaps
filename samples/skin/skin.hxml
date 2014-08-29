@@ -1,0 +1,11 @@
+-js main.js
+-main Main
+-lib heaps
+-dce full
+--next
+-swf skin.swf
+-swf-version 11.8
+-swf-header 1280:900:60
+-main Main
+-lib heaps
+-dce full

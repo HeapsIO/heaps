@@ -26,20 +26,20 @@ class Event {
 		Will cancel the default behavior for this event as if it had happen outside of the interactive zone.
 	**/
 	public var cancel : Bool;
-	public var button : Int;
+	public var button : Int = 0;
 	public var touchId : Int;
 	public var keyCode : Int;
 	public var charCode : Int;
 	public var wheelDelta : Float;
-	
+
 	public function new(k,x=0.,y=0.) {
 		kind = k;
 		this.relX = x;
 		this.relY = y;
 	}
-	
+
 	public function toString() {
 		return kind + "[" + Std.int(relX) + "," + Std.int(relY) + "]";
 	}
-	
+
 }

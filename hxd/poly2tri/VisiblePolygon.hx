@@ -57,7 +57,7 @@ class VisiblePolygon
 				tris.push( ids[ t.points[i].id ] );
 			}
 		}
-	
+
 		return { vertices: vertices, triangles:tris };
 	}
 
@@ -72,7 +72,7 @@ class VisiblePolygon
 	{
 		var t:Triangle;
 		var pl:Array<Point>;
-		
+
 		performTriangulationOnce();
 
 		for (t in sweepContext.triangles)

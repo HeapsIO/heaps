@@ -13,7 +13,7 @@ enum ConsoleArg {
 class Console extends h2d.Sprite {
 
 	public static var HIDE_LOG_TIMEOUT = 3.;
-	
+
 	var width : Int;
 	var height : Int;
 	var bg : h2d.Bitmap;
@@ -28,9 +28,9 @@ class Console extends h2d.Sprite {
 	var logs : Array<String>;
 	var logIndex:Int;
 	var curCmd:String;
-	
+
 	public var shortKeyChar : Int = "/".code;
-	
+
 	public function new(font:h2d.Font,parent) {
 		super(parent);
 		height = font.lineHeight + 2;
@@ -51,29 +51,29 @@ class Console extends h2d.Sprite {
 		addCommand("help", "Show help", [ { name : "command", t : AString, opt : true } ], showHelp);
 		addAlias("?", "help");
 	}
-	
+
 	public function addCommand( name, help, args, callb : Dynamic ) {
 		commands.set(name, { help : help, args:args, callb:callb } );
 	}
-	
+
 	public function addAlias( name, command ) {
 		aliases.set(name, command);
 	}
-	
+
 	public function runCommand( commandLine : String ) {
 		handleCommand(commandLine);
 	}
-	
+
 	override function onAlloc() {
 		super.onAlloc();
 		getScene().addEventListener(onEvent);
 	}
-	
+
 	override function onDelete() {
 		getScene().removeEventListener(onEvent);
 		super.onDelete();
 	}
-	
+
 	function onEvent( e : hxd.Event ) {
 		switch( e.kind ) {
 		case EWheel:
@@ -89,7 +89,7 @@ class Console extends h2d.Sprite {
 		default:
 		}
 	}
-	
+
 	function showHelp( ?command : String ) {
 		var all;
 		if( command == null ) {
@@ -128,16 +128,16 @@ class Console extends h2d.Sprite {
 			log(str);
 		}
 	}
-	
+
 	public function isActive() {
 		return bg.visible;
 	}
-	
+
 	function set_cursorPos(v:Int) {
 		cursor.x = tf.calcTextWidth(tf.text.substr(0, v));
 		return cursorPos = v;
 	}
-	
+
 	function handleKey( e : hxd.Event ) {
 		if( e.charCode == shortKeyChar && !bg.visible ) {
 			bg.visible = true;
@@ -201,12 +201,12 @@ class Console extends h2d.Sprite {
 			cursorPos++;
 		}
 	}
-	
+
 	function hide() {
 		bg.visible = false;
 		tf.text = "";
 	}
-	
+
 	function handleCommand( command : String ) {
 		command = StringTools.trim(command);
 		if( command.charCodeAt(0) == "/".code ) command = command.substr(1);
@@ -216,7 +216,7 @@ class Console extends h2d.Sprite {
 		}
 		logs.push(command);
 		logIndex = -1;
-		
+
 		var args = ~/[ \t]+/g.split(command);
 		var cmdName = args[0];
 		if( aliases.exists(cmdName) ) cmdName = aliases.get(cmdName);
@@ -282,17 +282,17 @@ class Console extends h2d.Sprite {
 			log('ERROR $e', errorColor);
 		}
 	}
-	
+
 	public function log( text : String, ?color ) {
 		if( color == null ) color = tf.textColor;
 		var oldH = logTxt.textHeight;
-		logTxt.htmlText += '<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>';
+		logTxt.text += '<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>';
 		if( logDY != 0 ) logDY += logTxt.textHeight - oldH;
 		logTxt.alpha = 1;
 		logTxt.visible = true;
 		lastLogTime = haxe.Timer.stamp();
 	}
-	
+
 	override function sync(ctx:h2d.RenderContext) {
 		var scene = getScene();
 		if( scene != null ) {
@@ -313,5 +313,5 @@ class Console extends h2d.Sprite {
 		}
 		super.sync(ctx);
 	}
-	
+
 }

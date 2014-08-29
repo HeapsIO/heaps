@@ -9,18 +9,18 @@ class Line {
 		this.p1 = p1;
 		this.p2 = p2;
 	}
-	
+
 	public inline function side( p : Point ) {
 		return (p2.x - p1.x) * (p.y - p1.y) - (p2.y - p1.y) * (p.x - p1.x);
 	}
-	
+
 	public inline function project( p : Point ) {
 		var dx = p2.x - p1.x;
 		var dy = p2.y - p1.y;
 		var k = ((p.x - p1.x) * dx + (p.y - p1.y) * dy) / (dx * dx + dy * dy);
 		return new Point(dx * k + p1.x, dy * k + p1.y);
 	}
-	
+
 	public inline function intersect( l : Line ) {
 		var d = (p1.x - p2.x) * (l.p1.y - l.p2.y) - (p1.y - p2.y) * (l.p1.x - l.p2.x);
 		if( hxd.Math.abs(d) < hxd.Math.EPSILON )
@@ -40,7 +40,7 @@ class Line {
 		pt.y = (a * (l.p1.y - l.p2.y) - (p1.y - p2.y) * b) / d;
 		return true;
 	}
-	
+
 	public inline function distanceSq( p : Point ) {
 		var dx = p2.x - p1.x;
 		var dy = p2.y - p1.y;
@@ -49,9 +49,9 @@ class Line {
 		var my = dy * k + p1.y - p.y;
 		return mx * mx + my * my;
 	}
-	
+
 	public inline function distance( p : Point ) {
 		return hxd.Math.sqrt(distanceSq(p));
 	}
-	
+
 }

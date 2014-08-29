@@ -119,6 +119,7 @@ class Image extends Resource {
 		} else {
 			// use native decoding
 			entry.loadBitmap(function(bmp) {
+				var bmp = bmp.toBitmap();
 				tex.alloc();
 				if( bmp.width != tex.width || bmp.height != tex.height ) {
 					var pixels = bmp.getPixels();

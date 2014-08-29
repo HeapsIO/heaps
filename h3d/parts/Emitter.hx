@@ -13,15 +13,15 @@ class Emitter extends h3d.scene.Object implements Randomized {
 	var rnd : Float;
 	var emitCount : Float;
 	var colorMap : ColorKey;
-		
+
 	var head : Particle;
 	var tail : Particle;
 	var pool : Particle;
-	
+
 	var tmp : h3d.Vector;
 	var tmpBuf : hxd.FloatBuffer;
 	var curPart : Particle;
-	
+
 	public function new(?state,?parent) {
 		super(parent);
 		material = new Material();
@@ -35,7 +35,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		}
 		setState(state);
 	}
-	
+
 	/**
 		Offset all existing particles by the given values.
 	**/
@@ -48,7 +48,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 			p = p.next;
 		}
 	}
-	
+
 	public function reset() {
 		while( head != null )
 			kill(head);
@@ -56,17 +56,17 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		emitCount = 0;
 		rnd = Math.random();
 	}
-	
+
 	public function setState(s) {
 		this.state = s;
 		material.texture = s.frames == null || s.frames.length == 0 ? null : s.frames[0].getTexture();
 		switch( s.blendMode ) {
 		case Add:
-			material.blend(SrcAlpha, One);
+			material.blendMode = Add;
 		case SoftAdd:
-			material.blend(OneMinusDstColor, One);
+			material.blendMode = SoftAdd;
 		case Alpha:
-			material.blend(SrcAlpha, OneMinusSrcAlpha);
+			material.blendMode = Alpha;
 		}
 		colorMap = null;
 		if( s.colors != null ) {
@@ -78,11 +78,11 @@ class Emitter extends h3d.scene.Object implements Randomized {
 			}
 		}
 	}
-	
+
 	inline function eval(v) {
 		return Data.State.eval(v,time, this, curPart);
 	}
-	
+
 	public function update(dt:Float) {
 		var s = state;
 		var old = time;
@@ -113,11 +113,11 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		}
 		curPart = null;
 	}
-	
+
 	public inline function rand() {
 		return Math.random();
 	}
-	
+
 	function initPosDir( p : Particle ) {
 		switch( state.shape ) {
 		case SLine(size):
@@ -171,7 +171,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 			p.dz = Math.cos(phi);
 		}
 	}
-	
+
 	function initPart(p:Particle) {
 		initPosDir(p);
 		if( !state.emitLocal ) {
@@ -190,12 +190,12 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		p.time = 0;
 		p.lifeTimeFactor = 1 / eval(state.life);
 	}
-	
-	public function emit() {
+
+	public function emitPart() {
 		if( posChanged ) syncPos();
 		return emitParticle();
 	}
-	
+
 	function emitParticle() {
 		var p;
 		if( pool == null )
@@ -229,7 +229,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		}
 		return p;
 	}
-	
+
 	function kill(p:Particle) {
 		if( p.prev == null ) head = p.next else p.prev.next = p.next;
 		if( p.next == null ) tail = p.prev else p.next.prev = p.prev;
@@ -238,7 +238,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		pool = p;
 		count--;
 	}
-	
+
 	function updateParticle( p : Particle, dt : Float ) {
 		p.time += dt * p.lifeTimeFactor;
 		if( p.time > 1 ) {
@@ -246,7 +246,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 			return;
 		}
 		p.randIndex = 0;
-	
+
 		// apply forces
 		if( state.force != null ) {
 			p.fx += p.eval(state.force.vx, time) * dt;
@@ -263,7 +263,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		p.size = p.eval(state.size, p.time);
 		p.ratio = p.eval(state.ratio, p.time);
 		p.rotation = p.eval(state.rotation, p.time);
-		
+
 		// collide
 		if( state.collide && collider != null && collider.collidePart(p, tmp) ) {
 			if( state.collideKill ) {
@@ -276,8 +276,8 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				p.dz = v.z * state.bounce;
 			}
 		}
-			
-		
+
+
 		// calc color
 		var ck = colorMap;
 		var light = p.eval(state.light, p.time);
@@ -314,27 +314,27 @@ class Emitter extends h3d.scene.Object implements Randomized {
 			p.cb = light;
 		}
 		p.ca = p.eval(state.alpha, p.time);
-		
+
 		// frame
 		if( state.frame != null ) {
 			var f = p.eval(state.frame, p.time) % 1;
 			if( f < 0 ) f += 1;
 			p.frame = Std.int(f * state.frames.length);
 		}
-		
+
 		if( state.update != null )
 			state.update(p);
 	}
-	
+
 	override function sync( ctx : h3d.scene.RenderContext ) {
 		super.sync(ctx);
 		update(ctx.elapsedTime * speed);
 	}
-	
+
 	public function isActive() {
 		return count != 0 || time < 1 || state.loop;
 	}
-	
+
 	function sort( list : Particle ) {
 		return haxe.ds.ListSort.sort(list, function(p1, p2) return p1.w < p2.w ? 1 : -1);
 	}
@@ -342,7 +342,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 	function sortInv( list : Particle ) {
 		return haxe.ds.ListSort.sort(list, function(p1, p2) return p1.w < p2.w ? -1 : 1);
 	}
-	
+
 	@:access(h3d.parts.Material) @:access(h2d.Tile)
 	override function draw( ctx : h3d.scene.RenderContext ) {
 		if( head == null )
@@ -382,7 +382,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				var f = frames[p.frame];
 				if( f == null ) f = frames[0];
 				var ratio = p.size * p.ratio * (f.height / f.width);
-				
+
 				tmp[pos++] = prevX1;
 				tmp[pos++] = prevY1;
 				tmp[pos++] = prevZ1;
@@ -402,7 +402,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 					tmp[pos++] = p.cb;
 					tmp[pos++] = p.ca;
 				}
-				
+
 				tmp[pos++] = prevX2;
 				tmp[pos++] = prevY2;
 				tmp[pos++] = prevZ2;
@@ -431,11 +431,11 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				dy *= d;
 				dz *= d;
 				var dir = new h3d.Vector(Math.sin(p.rotation), 0, Math.cos(p.rotation)).cross(new h3d.Vector(dx, dy, dz));
-				
+
 				prevX1 = p.x + dir.x * p.size;
 				prevY1 = p.y + dir.y * p.size;
 				prevZ1 = p.z + dir.z * p.size;
-				
+
 				prevX2 = p.x - dir.x * p.size;
 				prevY2 = p.y - dir.y * p.size;
 				prevZ2 = p.z - dir.z * p.size;
@@ -473,7 +473,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 					tmp[pos++] = p.cb;
 					tmp[pos++] = p.ca;
 				}
-				
+
 				prev = p;
 				p = p.next;
 			}
@@ -501,7 +501,7 @@ class Emitter extends h3d.scene.Object implements Randomized {
 					tmp[pos++] = p.cb;
 					tmp[pos++] = p.ca;
 				}
-				
+
 				tmp[pos++] = p.x;
 				tmp[pos++] = p.y;
 				tmp[pos++] = p.z;
@@ -552,15 +552,16 @@ class Emitter extends h3d.scene.Object implements Randomized {
 					tmp[pos++] = p.cb;
 					tmp[pos++] = p.ca;
 				}
-				
+
 				p = p.next;
 			}
 		}
 		var stride = 10;
 		if( hasColor ) stride += 4;
-		var buffer = h3d.Buffer.ofFloats(tmp, stride, [Quads, Dynamic], Std.int(pos/stride));
+		var buffer = h3d.Buffer.ofSubFloats(tmp, stride, Std.int(pos/stride), [Quads, Dynamic, RawFormat]);
 		var size = eval(state.globalSize);
-		
+
+		/*
 		material.pshader.mpos = state.emitLocal ? this.absPos : h3d.Matrix.I();
 		material.pshader.mproj = ctx.camera.m;
 		if( state.is3D ) {
@@ -572,10 +573,12 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		}
 		material.pshader.hasColor = hasColor;
 		material.pshader.isAlphaMap = state.isAlphaMap;
-		
+
 		ctx.engine.selectMaterial(material);
 		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();
+		*/
+		throw "TODO";
 	}
-	
+
 }

@@ -1,0 +1,7 @@
+-js main.js
+-main Main
+-lib heaps
+-D resourcesPath=../res
+-D source-map-content
+-dce full
+--macro include('h3d')

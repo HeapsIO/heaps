@@ -1,12 +1,12 @@
 package h2d.css;
 import h2d.css.Defs;
 
-class Fill extends h2d.TileColorGroup {
+class Fill extends h2d.TileGroup {
 
 	public function new(?parent) {
 		super(h2d.Tile.fromColor(0xFFFFFFFF), parent);
 	}
-	
+
 	public inline function fillRectColor(x, y, w, h, c) {
 		content.rectColor(x, y, w, h, c);
 	}
@@ -14,7 +14,7 @@ class Fill extends h2d.TileColorGroup {
 	public inline function fillRectGradient(x, y, w, h, ctl, ctr, cbl, cbr) {
 		content.rectGradient(x, y, w, h, ctl, ctr, cbl, cbr);
 	}
-	
+
 	public inline function addPoint(x, y, color) {
 		content.addPoint(x, y, color);
 	}

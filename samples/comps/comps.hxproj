@@ -4,13 +4,13 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="comps.swf" />
+    <movie path="main.js" />
     <movie fps="60" />
     <movie width="800" />
     <movie height="600" />
-    <movie version="11" />
-    <movie minorVersion="6" />
-    <movie platform="Flash Player" />
+    <movie version="1" />
+    <movie minorVersion="0" />
+    <movie platform="JavaScript" />
     <movie background="#FFFFFF" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
@@ -20,26 +20,23 @@
   <!-- Build options -->
   <build>
     <option directives="" />
-    <option flashStrict="True" />
+    <option flashStrict="False" />
+    <option noInlineOnDebug="False" />
     <option mainClass="Comps" />
     <option enabledebug="False" />
-    <option additional="-dce full&#xA;-lib hscript" />
+    <option additional="-lib heaps&#xA;-lib hscript&#xA;-dce full&#xA;&#xA;--next&#xA;-lib heaps&#xA;-lib hscript&#xA;-swf comps.swf&#xA;-swf-version 11.8&#xA;-swf-header 1024:768:60&#xA;-main Comps&#xA;-dce full" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
-    <library name="-lib h3d" />
+    <!-- example: <library name="..." /> -->
   </haxelib>
   <!-- Class files to compile (other referenced classes will automatically be included) -->
   <compileTargets>
     <!-- example: <compile path="..." /> -->
   </compileTargets>
-  <!-- Assets to embed into the output SWF -->
-  <library>
-    <!-- example: <asset path="..." id="..." update="..." glyphs="..." mode="..." place="..." sharepoint="..." /> -->
-  </library>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
-    <!-- example: <hidden path="..." /> -->
+    <hidden path="obj" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />
@@ -48,7 +45,8 @@
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
-    <option testMovie="Default" />
+    <option testMovie="OpenDocument" />
+    <option testMovieCommand="comps.swf" />
   </options>
   <!-- Plugin storage -->
   <storage />

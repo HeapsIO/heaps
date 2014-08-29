@@ -4,13 +4,13 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="draw.swf" />
+    <movie path="main.js" />
     <movie fps="60" />
     <movie width="800" />
     <movie height="600" />
-    <movie version="11" />
+    <movie version="1" />
     <movie minorVersion="0" />
-    <movie platform="Flash Player" />
+    <movie platform="JavaScript" />
     <movie background="#FFFFFF" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
@@ -20,10 +20,11 @@
   <!-- Build options -->
   <build>
     <option directives="" />
-    <option flashStrict="True" />
+    <option flashStrict="False" />
+    <option noInlineOnDebug="False" />
     <option mainClass="Draw" />
     <option enabledebug="False" />
-    <option additional="-lib h3d" />
+    <option additional="-lib heaps&#xA;-dce full&#xA;&#xA;--next&#xA;-swf draw.swf&#xA;-swf-version 11.8&#xA;-swf-header 2000:2000:60&#xA;-lib heaps&#xA;-main Draw&#xA;-dce full" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -33,14 +34,11 @@
   <compileTargets>
     <!-- example: <compile path="..." /> -->
   </compileTargets>
-  <!-- Assets to embed into the output SWF -->
-  <library>
-    <!-- example: <asset path="..." id="..." update="..." glyphs="..." mode="..." place="..." sharepoint="..." /> -->
-  </library>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
     <hidden path="draw.swf" />
     <hidden path="draw.hxml" />
+    <hidden path="obj" />
   </hiddenPaths>
   <!-- Executed before build -->
   <preBuildCommand />
@@ -48,8 +46,9 @@
   <postBuildCommand alwaysRun="False" />
   <!-- Other project options -->
   <options>
-    <option showHiddenPaths="False" />
-    <option testMovie="Default" />
+    <option showHiddenPaths="True" />
+    <option testMovie="OpenDocument" />
+    <option testMovieCommand="index.html" />
   </options>
   <!-- Plugin storage -->
   <storage />

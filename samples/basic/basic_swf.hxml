@@ -1,0 +1,9 @@
+-swf main.swf
+-swf-header 1280:800:60:FFFFFF
+--flash-strict
+-swf-version 14
+-main Main
+-lib heaps
+-D resourcesPath=../res
+-dce full
+--macro include('h3d')

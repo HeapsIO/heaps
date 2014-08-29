@@ -151,6 +151,7 @@ class Pixels {
 		}
 	}
 
+
 	public function clone() {
 		var p = new Pixels(width, height, null, format);
 		p.flags = flags;
@@ -169,7 +170,7 @@ class Pixels {
 		}
 	}
 
-	public static function alloc( width, height, format ) {
+	public static function alloc( width, height, format : PixelFormat ) {
 		return new Pixels(width, height, hxd.impl.Tmp.getBytes(width * height * bytesPerPixel(format)), format);
 	}
 

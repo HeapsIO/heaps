@@ -38,7 +38,7 @@ class Sweep
 		var t:Triangle = this.context.front.head.next.triangle;
 		var p:Point    = this.context.front.head.next.point;
 		while (!t.getConstrainedEdgeCW(p)) t = t.neighborCCW(p);
-		
+
 		// Collect interior triangles constrained by edges
 		this.context.meshClean(t);
 	}
@@ -57,7 +57,7 @@ class Sweep
 		// Only need to check +epsilon since point never have smaller
 		// x value than node due to how we fetch nodes from the front
 		if (point.x <= (node.point.x + Constants.EPSILON)) fill(node);
-		
+
 		fillAdvancingFront(new_node);
 		return new_node;
 	}
@@ -74,10 +74,10 @@ class Sweep
 		// TODO: integrate with flip process might give some better performance
 		//       but for now this avoid the issue with cases that needs both flips and fills
 		this.fillEdgeEvent(edge, node);
-		
+
 		this.edgeEventByPoints(edge.p, edge.q, node.triangle, edge.q);
 	}
-	
+
 	public function edgeEventByPoints(ep:Point, eq:Point, triangle:Triangle, point:Point)
 	{
 		if (triangle.isEdgeSide(ep, eq)) return;
@@ -144,7 +144,7 @@ class Sweep
 		//       for now constrained_edge values are copied during the legalize
 		triangle.markNeighborTriangle(node.prev.triangle);
 		triangle.markNeighborTriangle(node.triangle);
-			
+
 		this.context.addToMap(triangle);
 
 		// Update the advancing front
@@ -167,7 +167,7 @@ class Sweep
 	{
 		var node:Node;
 		var angle:Float;
-		
+
 		// Fill right holes
 		node = n.next;
 		while (node.next != null)
@@ -233,7 +233,7 @@ class Sweep
 
 					// We now got one valid Delaunay Edge shared by two triangles
 					// This gives us 4 new edges to check for Delaunay
-						
+
 					var not_legalized:Bool;
 
 					// Make sure that triangle to node mapping is done only one time for a specific triangle
@@ -395,7 +395,7 @@ class Sweep
 			this.fillRightBelowEdgeEvent(edge, node); // Retry this one
 		}
 	}
-	
+
 	public function fillRightConcaveEdgeEvent(edge:Edge, node:Node)
 	{
 		this.fill(node.next);
@@ -641,7 +641,7 @@ class Sweep
 			this.flipScanEdgeEvent(ep, eq, flip_triangle, ot, newP);
 		}
 	}
-	
+
 
 
 }

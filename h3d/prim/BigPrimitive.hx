@@ -51,7 +51,9 @@ class BigPrimitive extends Primitive {
 	public function flush() {
 		if( tmpBuf != null ) {
 			if( tmpBuf.length > 0 && tmpIdx.length > 0 ) {
-				buffers.push(h3d.Buffer.ofFloats(tmpBuf, stride));
+				var b = h3d.Buffer.ofFloats(tmpBuf, stride);
+				if( stride < 8 ) b.flags.set(RawFormat);
+				buffers.push(b);
 				allIndexes.push(h3d.Indexes.alloc(tmpIdx));
 			}
 			tmpBuf = null;
@@ -117,21 +119,10 @@ class BigPrimitive extends Primitive {
 			case 4:
 				tmpBuf.push(buf[p++]);
 			case 5:
+				// assume no normal
 				tmpBuf.push(buf[p++] + deltaU);
 				tmpBuf.push(buf[p++] + deltaV);
 			case 6:
-				tmpBuf.push(buf[p++] + deltaU);
-				tmpBuf.push(buf[p++] + deltaV);
-				tmpBuf.push(buf[p++]);
-			case 7:
-				tmpBuf.push(buf[p++] + deltaU);
-				tmpBuf.push(buf[p++] + deltaV);
-				tmpBuf.push(buf[p++]);
-				tmpBuf.push(buf[p++]);
-			default:
-				// UV
-				tmpBuf.push(buf[p++] + deltaU);
-				tmpBuf.push(buf[p++] + deltaV);
 				var nx = buf[p++];
 				var ny = buf[p++];
 				var nz = buf[p++];
@@ -140,6 +131,30 @@ class BigPrimitive extends Primitive {
 				tmpBuf.push(tnx);
 				tmpBuf.push(tny);
 				tmpBuf.push(nz);
+			case 7:
+				var nx = buf[p++];
+				var ny = buf[p++];
+				var nz = buf[p++];
+				var tnx = nx * cr - y * sr;
+				var tny = nx * sr + y * cr;
+				tmpBuf.push(tnx);
+				tmpBuf.push(tny);
+				tmpBuf.push(nz);
+				tmpBuf.push(buf[p++]);
+			default:
+				var nx = buf[p++];
+				var ny = buf[p++];
+				var nz = buf[p++];
+				var tnx = nx * cr - y * sr;
+				var tny = nx * sr + y * cr;
+				tmpBuf.push(tnx);
+				tmpBuf.push(tny);
+				tmpBuf.push(nz);
+
+				// UV
+				tmpBuf.push(buf[p++] + deltaU);
+				tmpBuf.push(buf[p++] + deltaV);
+
 				for( i in 8...this.stride )
 					tmpBuf.push(buf[p++]);
 			}

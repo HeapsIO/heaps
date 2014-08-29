@@ -18,6 +18,10 @@ enum BufferFlag {
 	**/
 	Managed;
 	/**
+		Directly map the buffer content to the shader inputs, without assuming [pos:vec3,normal:vec3,uv:vec2] default prefix.
+	**/
+	RawFormat;
+	/**
 		Used internaly
 	**/
 	NoAlloc;
@@ -26,17 +30,23 @@ enum BufferFlag {
 class Buffer {
 	public static var GUID = 0;
 	public var id : Int;
+	#if debug
+	var allocPos : h3d.impl.AllocPos;
+	#end
 
 	public var buffer(default,null) : h3d.impl.ManagedBuffer;
 	public var position(default,null) : Int;
 	public var vertices(default,null) : Int;
 	public var next(default,null) : Buffer;
 	public var flags(default, null) : haxe.EnumFlags<BufferFlag>;
-	
-	public function new(vertices, stride, ?flags : Array<BufferFlag>) {
+
+	public function new(vertices, stride, ?flags : Array<BufferFlag>, ?allocPos : h3d.impl.AllocPos ) {
 		id = GUID++;
 		this.vertices = vertices;
 		this.flags = new haxe.EnumFlags();
+		#if debug
+		this.allocPos = allocPos;
+		#end
 		if( flags != null )
 			for( f in flags )
 				this.flags.set(f);
@@ -49,7 +59,7 @@ class Buffer {
 	public function isDisposed() {
 		return buffer == null || buffer.isDisposed();
 	}
-	
+
 	public function dispose() {
 		if( buffer != null ) {
 			buffer.freeBuffer(this);
@@ -57,7 +67,7 @@ class Buffer {
 			if( next != null ) next.dispose();
 		}
 	}
-	
+
 	/**
 		Returns the total number of vertices including the potential next buffers if it is split.
 	**/
@@ -70,7 +80,7 @@ class Buffer {
 		}
 		return count;
 	}
-	
+
 	public function uploadVector( buf : hxd.FloatBuffer, bufPos : Int, vertices : Int ) {
 		var cur = this;
 		while( vertices > 0 ) {
@@ -82,7 +92,7 @@ class Buffer {
 			cur = cur.next;
 		}
 	}
-	
+
 	public function uploadBytes( data : haxe.io.Bytes, dataPos : Int, vertices : Int ) {
 		var cur = this;
 		while( vertices > 0 ) {
@@ -94,28 +104,34 @@ class Buffer {
 			cur = cur.next;
 		}
 	}
-	
-	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags, ?vertices ) {
-		var nvert = vertices == null ? Std.int(v.length / stride) : vertices;
-		var b = new Buffer(nvert, stride, flags);
+
+	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags, ?allocPos ) {
+		var nvert = Std.int(v.length / stride);
+		var b = new Buffer(nvert, stride, flags, allocPos);
 		b.uploadVector(v, 0, nvert);
 		return b;
 	}
-	
+
+	public static function ofSubFloats( v : hxd.FloatBuffer, stride : Int, vertices : Int, ?flags, ?allocPos ) {
+		var b = new Buffer(vertices, stride, flags, allocPos);
+		b.uploadVector(v, 0, vertices);
+		return b;
+	}
+
 }
 
 class BufferOffset {
 	public var id : Int;
 	public var buffer : Buffer;
 	public var offset : Int;
-	
+
 	/*
 		This is used to return a list of BufferOffset without allocating an array
 	*/
 	public var next : BufferOffset;
-	
+
 	static var UID = 0;
-	
+
 	public function new(buffer, offset) {
 		this.id = UID++;
 		this.buffer = buffer;

@@ -23,8 +23,8 @@
     <option flashStrict="True" />
     <option noInlineOnDebug="False" />
     <option mainClass="Bounds" />
-    <option enabledebug="True" />
-    <option additional="-cp ../..&#xA;-D h3d&#xA;-lib hxsl" />
+    <option enabledebug="False" />
+    <option additional="-lib heaps&#xA;--next&#xA;-js main.js&#xA;-main Bounds&#xA;-lib heaps" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

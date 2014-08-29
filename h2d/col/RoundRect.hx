@@ -9,7 +9,7 @@ class RoundRect {
 	var dy : Float;
 	var lenSq : Float;
 	var invLenSq : Float;
-	
+
 	public inline function new(x:Float,y:Float,w:Float,h:Float,rotation:Float) {
 		if( w < h ) {
 			var tmp = w;
@@ -47,7 +47,7 @@ class RoundRect {
 			pdx * pdx + pdy * pdy;
 		}
 	}
-	
+
 	public inline function inside( p : Point ) {
 		return distanceCenterSq(p) - ray * ray < 0;
 	}
@@ -55,7 +55,7 @@ class RoundRect {
 	public inline function distance( p : Point ) {
 		return Math.sqrt(distanceCenterSq(p)) - ray;
 	}
-	
+
 	public inline function getNormalAt( p : Point ) {
 		var px = p.x - x;
 		var py = p.y - y;

@@ -50,6 +50,7 @@ class QuatDemo extends hxd.App {
 		var ldir = new h3d.Vector( -1, -2, -5);
 		ldir.normalize();
 		
+		/*
 		cube.material.lightSystem = {
 			ambient : new h3d.Vector(0.5, 0.5, 0.5),
 			points : [],
@@ -58,6 +59,7 @@ class QuatDemo extends hxd.App {
 				color : new h3d.Vector(1, 1, 1),
 			}],
 		};
+		*/
 	}
 	
 	var time = 0.;

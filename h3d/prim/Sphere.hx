@@ -2,10 +2,10 @@ package h3d.prim;
 import h3d.col.Point;
 
 class Sphere extends Polygon {
-	
+
 	var segsH : Int;
 	var segsW : Int;
-	
+
 	public function new( segsW = 8, segsH = 6 ) {
 		this.segsH = segsH;
 		this.segsW = segsW;
@@ -41,13 +41,13 @@ class Sphere extends Polygon {
 	override function addNormals() {
 		normals = points;
 	}
-	
+
 	override function addUVs() {
 		uvs = [];
 		for( y in 0...segsH + 1 )
 			for( x in 0...segsW + 1 )
 				uvs.push(new UV(x / segsW, y / segsH));
 	}
-	
+
 }
 

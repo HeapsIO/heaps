@@ -1,5 +1,8 @@
--swf col.swf
--swf-header 800:600:60:FFFFFF
--swf-version 9
+-js main.js
 -main TestCol
--lib h3d
+-lib heaps
+--next
+-swf main.swf
+-swf-version 11.8
+-main TestCol
+-lib heaps

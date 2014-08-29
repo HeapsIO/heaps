@@ -1,5 +1,5 @@
 package h3d.parts;
-
+/*
 private class PartShader extends h3d.impl.Shader {
 
 #if flash
@@ -13,14 +13,14 @@ private class PartShader extends h3d.impl.Shader {
 			uv : Float2,
 			color : Float4,
 		};
-		
+
 		var tuv : Float2;
 		var tcolor : Float4;
 		var partSize : Float2;
-		
+
 		var hasColor : Bool;
 		var is3D : Bool;
-		
+
 		var isAlphaMap : Bool;
 
 		function vertex( mpos : M34, mproj : Matrix ) {
@@ -45,7 +45,7 @@ private class PartShader extends h3d.impl.Shader {
 			tuv = input.uv;
 			if( hasColor ) tcolor = input.color;
 		}
-		
+
 		function fragment( tex : Texture ) {
 			var c = tex.get(tuv.xy);
 			if( hasColor ) c *= tcolor;
@@ -55,7 +55,7 @@ private class PartShader extends h3d.impl.Shader {
 			}
 			out = c;
 		}
-	
+
 	}
 #else
 	static var VERTEX = "";
@@ -63,29 +63,15 @@ private class PartShader extends h3d.impl.Shader {
 #end
 
 }
+*/
 
-class Material extends h3d.mat.Material {
-	
-	var pshader : PartShader;
-	public var texture(default,set) : h3d.mat.Texture;
+class Material extends h3d.mat.MeshMaterial {
 
 	public function new(?texture) {
-		pshader = new PartShader();
-		super(pshader);
-		this.texture = texture;
-		blend(SrcAlpha, One);
-		culling = None;
-		depthWrite = false;
-	}
-	
-	override function clone( ?m : h3d.mat.Material ) {
-		var m = m == null ? new Material(texture) : cast m;
-		super.clone(m);
-		return m;
+		super(texture);
+		blendMode = Alpha;
+		mainPass.culling = None;
+		mainPass.depthWrite = false;
 	}
 
-	inline function set_texture(t) {
-		return pshader.tex = t;
-	}
-	
 }

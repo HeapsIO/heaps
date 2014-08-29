@@ -1,0 +1,11 @@
+-js main.js
+-main Main
+-lib heaps
+-dce full
+--next
+-swf shadows.swf
+-lib heaps
+-dce full
+-swf-version 11.8
+-swf-header 1024:768:60
+-main Main

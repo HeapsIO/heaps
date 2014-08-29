@@ -1,20 +1,20 @@
 package h2d.comp;
 
 class Slider extends Component {
-	
+
 	var cursor : Button;
 	var input : h2d.Interactive;
 	public var minValue : Float = 0.;
 	public var maxValue : Float = 1.;
 	public var value(default, set) : Float;
-	
+
 	@:access(h2d.comp.Button)
 	public function new(?parent) {
 		super("slider", parent);
 		cursor = new Button("", this);
 		cursor.input.cancelEvents = true;
 		cursor.onMouseDown = function() {
-			
+
 		};
 		input = new h2d.Interactive(0, 0, this);
 		input.onPush = function(e) {
@@ -29,11 +29,11 @@ class Slider extends Component {
 		}
 		value = 0.;
 	}
-	
+
 	function pixelToVal( e : hxd.Event ) {
 		return (Std.int(e.relX - (style.borderSize + cursor.width * 0.5) ) / (input.width - (style.borderSize * 2 + cursor.width))) * (maxValue - minValue) + minValue;
 	}
-	
+
 	function gotoValue( v : Float ) {
 		if( v < minValue ) v = minValue;
 		if( v > maxValue ) v = maxValue;
@@ -51,7 +51,7 @@ class Slider extends Component {
 			value = v;
 		onChange(value);
 	}
-	
+
 	function set_value(v:Float) {
 		if( v < minValue ) v = minValue;
 		if( v > maxValue ) v = maxValue;

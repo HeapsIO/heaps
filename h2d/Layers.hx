@@ -1,25 +1,25 @@
 package h2d;
 
 class Layers extends Sprite {
-	
+
 	// the per-layer insert position
 	var layers : Array<Int>;
 	var layerCount : Int;
-	
+
 	public function new(?parent) {
 		super(parent);
 		layers = [];
 		layerCount = 0;
 	}
-	
+
 	override function addChild(s) {
 		addChildAt(s, 0);
 	}
-	
+
 	public inline function add(s, layer) {
 		return addChildAt(s, layer);
 	}
-	
+
 	override function addChildAt( s : Sprite, layer : Int ) {
 		if( s.parent == this ) {
 			var old = s.allocated;
@@ -34,7 +34,7 @@ class Layers extends Sprite {
 		for( i in layer...layerCount )
 			layers[i]++;
 	}
-	
+
 	override function removeChild( s : Sprite ) {
 		for( i in 0...childs.length ) {
 			if( childs[i] == s ) {
@@ -50,7 +50,7 @@ class Layers extends Sprite {
 			}
 		}
 	}
-	
+
 	public function under( s : Sprite ) {
 		for( i in 0...childs.length )
 			if( childs[i] == s ) {
@@ -83,7 +83,7 @@ class Layers extends Sprite {
 				break;
 			}
 	}
-	
+
 	public function ysort( layer : Int ) {
 		if( layer >= layerCount ) return;
 		var start = layer == 0 ? 0 : layers[layer - 1];
@@ -109,5 +109,5 @@ class Layers extends Sprite {
 		}
 	}
 
-	
+
 }

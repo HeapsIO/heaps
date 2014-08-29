@@ -21,10 +21,8 @@ class FileEntry {
 	public function close() {}
 
 	public function load( ?onReady : Void -> Void ) : Void {}
-	public function loadBitmap( onLoaded : hxd.BitmapData -> Void ) : Void { }
-
+	public function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void {}
 	public function watch( onChanged : Null<Void -> Void> ) { }
-
 	public function exists( name : String ) : Bool return false;
 	public function get( name : String ) : FileEntry return null;
 

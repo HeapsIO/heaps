@@ -5,11 +5,11 @@ class Poly {
 
 	public var points : Array<Point>;
 	var segments : Array<Seg>;
-	
+
 	public function new( points ) {
 		this.points = points;
 	}
-		
+
 	public function isConvex() {
 		for( i in 0...points.length ) {
 			var p1 = points[i];
@@ -20,7 +20,7 @@ class Poly {
 		}
 		return true;
 	}
-	
+
 	public function calculateArea() {
 		var s = 0.;
 		for( i in 0...points.length ) {
@@ -41,14 +41,14 @@ class Poly {
 		}
 		return segments;
 	}
-	
+
 	public function hasPoint( p : Point ) {
 		for( s in getSegments() )
 			if( s.side(p) < 0 )
 				return false;
 		return true;
 	}
-	
+
 	public function project( p : Point ) : Point {
 		var dmin = 1e20, smin = null;
 		for( s in getSegments() ) {
@@ -60,7 +60,7 @@ class Poly {
 		}
 		return smin.project(p);
 	}
-	
+
 	public function distanceSq( p : Point ) {
 		var dmin = 1e20;
 		for( s in getSegments() ) {
@@ -69,9 +69,9 @@ class Poly {
 		}
 		return dmin;
 	}
-	
+
 	public inline function distance( p : Point ) {
 		return Math.sqrt(distanceSq(p));
 	}
-	
+
 }

@@ -1,8 +1,13 @@
--lib h3d
+-js main.js
+-main Comps
+-lib heaps
+-lib hscript
+-dce full
+--next
+-lib heaps
+-lib hscript
 -swf comps.swf
--swf-header 800:600:60:FFFFFF
---flash-strict
--swf-version 11.6
+-swf-version 11.8
+-swf-header 1024:768:60
 -main Comps
 -dce full
--lib hscript

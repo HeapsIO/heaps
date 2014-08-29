@@ -86,7 +86,7 @@ class System {
 		case Custom(frames, speed, offsetX, offsetY):
 			#if openfl
 				throw "not supported on openFL for now";
-			#else 
+			#else
 				var customCursor = new flash.ui.MouseCursorData();
 				var v = new flash.Vector();
 				for( f in frames ) v.push(f.toNative());
@@ -160,7 +160,7 @@ class System {
 		var canvas = js.Browser.document.getElementById("webgl");
 		if( canvas != null ) {
 			canvas.style.cursor = switch( c ) {
-			case Default:
+			case Default: "default";
 			case Button: "pointer";
 			case Move: "move";
 			case TextInput: "text";
@@ -191,11 +191,11 @@ class System {
 	}
 
 	static function get_width() {
-		return js.Browser.document.width;
+		return Math.round(js.Browser.document.body.clientWidth * js.Browser.window.devicePixelRatio);
 	}
 
 	static function get_height() {
-		return js.Browser.document.height;
+		return Math.round(js.Browser.document.body.clientHeight  * js.Browser.window.devicePixelRatio);
 	}
 
 	#elseif openfl

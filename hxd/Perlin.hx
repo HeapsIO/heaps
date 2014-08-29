@@ -8,7 +8,7 @@ class Perlin {
 	#else
 	var gradients : Array<Float>;
 	#end
-	
+
 	public function new() {
 		repeat = 0x7FFFFFFF;
 		#if flash
@@ -45,22 +45,22 @@ class Perlin {
 	inline function setDouble( index : Int, v : Float )  {
 		flash.Memory.setDouble(index, v);
 	}
-	
+
 	inline function double( index : Int ) : Float {
 		return flash.Memory.getDouble(index);
-		
+
 	}
 	#end
-	
+
 	inline function scurve( a : Float ) {
 		var a2 = a * a;
 		return a2 * a * (6.0 * a2 - 15.0 * a + 10.0);
 	}
-	
+
 	inline function linear( a : Float, b : Float, k : Float ) : Float {
 		return a + k * (b  - a);
 	}
-	
+
 	inline function gradient3DAt( x : Float, y : Float, z : Float, ix : Int, iy : Int, iz : Int, seed : Int ) {
 		var index = seed * 1013 + (ix % repeat) * 1619 + (iy % repeat) * 31337 + iz * 6971;
 		index = ((index ^ (index >>> 8)) & 0xFF);
@@ -91,36 +91,36 @@ class Perlin {
 		#end
 		return gx * (x - ix) + gy * (y - iy);
 	}
-	
+
 	public function adjustScale( size : Int, scale : Float ) {
 		repeat = Std.int(size * scale);
 		return repeat / size;
 	}
-	
+
 	public function gradient3D( seed : Int, x : Float, y : Float, z : Float ) {
 		var ix = Std.int(x), xs = scurve(x - ix);
 		var iy = Std.int(y), ys = scurve(y - iy);
 		var iz = Std.int(z), zs = scurve(z - iz);
-		
+
 		var ga = gradient3DAt(x, y, z, ix, iy, iz, seed);
 		var gb = gradient3DAt(x, y, z, ix + 1, iy, iz, seed);
 		var gc = gradient3DAt(x, y, z, ix, iy + 1, iz, seed);
 		var gd = gradient3DAt(x, y, z, ix + 1, iy + 1, iz, seed);
 		var v1 = linear(linear(ga, gb, xs), linear(gc, gd, xs), ys);
-		
+
 		var ga = gradient3DAt(x, y, z, ix, iy, iz + 1, seed);
 		var gb = gradient3DAt(x, y, z, ix + 1, iy, iz + 1, seed);
 		var gc = gradient3DAt(x, y, z, ix, iy + 1, iz + 1, seed);
 		var gd = gradient3DAt(x, y, z, ix + 1, iy + 1, iz + 1, seed);
 		var v2 = linear(linear(ga, gb, xs), linear(gc, gd, xs), ys);
-		
+
 		return linear(v1, v2, zs);
 	}
 
 	public function gradient( seed : Int, x : Float, y : Float ) {
 		return inlineGradient(seed, x, y);
 	}
-	
+
 	public inline function inlineGradient( seed : Int, x : Float, y : Float ) {
 		var ix = Std.int(x), xs = scurve(x - ix);
 		var iy = Std.int(y), ys = scurve(y - iy);
@@ -130,7 +130,7 @@ class Perlin {
 		var gd = gradientAt(x, y, ix + 1, iy + 1, seed);
 		return linear(linear(ga, gb, xs), linear(gc, gd, xs), ys);
 	}
-	
+
 	public function perlin( seed : Int, x : Float, y : Float, octaves : Int, persist : Float = 0.5, lacunarity = 2.0 ) {
 		var v = 0.;
 		var k = 1.;
@@ -142,7 +142,7 @@ class Perlin {
 		}
 		return v;
 	}
-	
+
 	public function ridged( seed : Int, x : Float, y : Float, octaves : Int, offset : Float = 0.5, gain : Float = 2.0, persist : Float = 0.5, lacunarity = 2.0 ) {
 		var v = 0.;
 		var p = 1.;
@@ -163,7 +163,7 @@ class Perlin {
 		}
 		return v / tot;
 	}
-	
+
 	/**
 		Converts a desired probability in the [0,1] range into the corresponding perlin value that we must test against for threshold.
 	**/
@@ -174,7 +174,7 @@ class Perlin {
 		var rp = p - ip;
 		return THRESHOLD[ip] * (1 - rp) + THRESHOLD[ip + 1] * rp;
 	}
-	
+
 	public function maxValue( octaves : Int, persist : Float ) {
 		var tot = 0.;
 		var n = 1.;
@@ -184,10 +184,10 @@ class Perlin {
 		}
 		return tot;
 	}
-	
+
 	// calculated by taking random samples
 	static var THRESHOLD = [1, 0.8592513390087628, 0.7688052643570193, 0.7087726039952893, 0.6647113603276184, 0.6259580701471196, 0.5920876252486609, 0.5638284687296424, 0.5369372345528312, 0.511056830054494, 0.4891529471303026, 0.4686450546837182, 0.4469326426188986, 0.42882977072465217, 0.4115690486935469, 0.3952190621773927, 0.3798495121020824, 0.3643113031451191, 0.35076791715497774, 0.3358660685112593, 0.32201072855694396, 0.30892806298001424, 0.29560958280721134, 0.2832470678288159, 0.2722624402634705, 0.2600091343032725, 0.24710140949920625, 0.2349447759632499, 0.22457445993513606, 0.2131403744385778, 0.20134549348263955, 0.19132099693471735, 0.18016204676639877, 0.16909697184035943, 0.15815708577407128, 0.14775905113977691, 0.13737312582001757, 0.12679718647885954, 0.11701991502195597, 0.10624599158763885, 0.09609048359894327, 0.08635324413900251, 0.0762801324162865, 0.06646726089820731, 0.0571162548765321, 0.04732040978140301, 0.03746852290171843, 0.02760801110707689, 0.01855811300246339, 0.008752118293491621, -0.00026550350742319883, -0.009223060038956728, -0.018789261222506563, -0.02813411229450641, -0.037449134344404396, -0.047633978239489054, -0.05667766384393364, -0.06659034350322503, -0.07645132312609348, -0.08656692974909674, -0.09627118700050882, -0.1064336189892197, -0.11629659915342927, -0.12724141562978428, -0.1365750929947163, -0.14749015429008164, -0.15794701447299161, -0.1690704979682489, -0.1797491149113014, -0.19011257230921322, -0.20267749998580525, -0.21336778447921598, -0.22415851131081582, -0.23631096442472443, -0.24807216374333516, -0.2591033223085105, -0.27269322302966537, -0.28403803141897216, -0.2963974007554812, -0.3083788633812219, -0.32389260486288124, -0.33610722830796497, -0.3494739103345917, -0.3645474951406685, -0.3788771169950788, -0.3946810512888161, -0.41116590125178826, -0.42801184970580164, -0.44724281354749623, -0.4675222546982302, -0.4879511602870796, -0.5116520577174579, -0.5363099352376801, -0.5631265791839567, -0.5916916949583626, -0.6247612900993957, -0.6641509690983356, -0.7069660117262387, -0.7690351018175968, -0.8566093984511503, -1, -1];
-	
+
 	// 256 randomized 3D gradients
 	static inline var NGRADS = 256;
 	static inline var GPREC = 65536;
@@ -449,5 +449,5 @@ class Perlin {
 		0.991353, 0.112814, 0.0670273,
 		0.0337884, -0.979891, -0.196654,
 	];
-	
+
 }

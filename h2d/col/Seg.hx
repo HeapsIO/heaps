@@ -9,11 +9,11 @@ class Seg {
 	public var dy : Float;
 	public var lenSq : Float;
 	public var invLenSq : Float;
-	
+
 	public inline function new( p1 : Point, p2 : Point ) {
 		setPoints(p1, p2);
 	}
-	
+
 	public inline function setPoints( p1 : Point, p2 : Point ) {
 		x = p1.x;
 		y = p1.y;
@@ -22,11 +22,11 @@ class Seg {
 		lenSq = dx * dx + dy * dy;
 		invLenSq = 1 / lenSq;
 	}
-	
+
 	public inline function side( p : Point ) {
 		return dx * (p.y - y) - dy * (p.x - x);
 	}
-	
+
 	public inline function distanceSq( p : Point ) {
 		var px = p.x - x;
 		var py = p.y - y;
@@ -48,7 +48,7 @@ class Seg {
 	public inline function distance( p : Point ) {
 		return Math.sqrt(distanceSq(p));
 	}
-	
+
 	public inline function project( p : Point ) : Point {
 		var px = p.x - x;
 		var py = p.y - y;

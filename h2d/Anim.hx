@@ -3,23 +3,34 @@ package h2d;
 class Anim extends Drawable {
 
 	public var frames : Array<Tile>;
-	public var currentFrame : Float;
+	public var currentFrame(get,set) : Float;
 	public var speed : Float;
 	public var loop : Bool = true;
+	var curFrame : Float;
 
 	public function new( ?frames, ?speed, ?parent ) {
 		super(parent);
 		this.frames = frames == null ? [] : frames;
-		this.currentFrame = 0;
+		this.curFrame = 0;
 		this.speed = speed == null ? 15 : speed;
 	}
 
-	public function play( frames ) {
-		this.frames = frames;
-		this.currentFrame = 0;
+	inline function get_currentFrame() {
+		return curFrame;
+	}
+
+	public function play( frames, atFrame = 0. ) {
+		this.frames = frames == null ? [] : frames;
+		currentFrame = atFrame;
 	}
 
 	public dynamic function onAnimEnd() {
+	}
+
+	function set_currentFrame( frame : Float ) {
+		curFrame = frames.length == 0 ? 0 : frame % frames.length;
+		if( curFrame < 0 ) curFrame += frames.length;
+		return curFrame;
 	}
 
 	override function getBoundsRec( relativeTo, out ) {
@@ -30,28 +41,28 @@ class Anim extends Drawable {
 
 	override function sync( ctx : RenderContext ) {
 		super.sync(ctx);
-		var prev = currentFrame;
-		currentFrame += speed * ctx.elapsedTime;
-		if( currentFrame < frames.length )
+		var prev = curFrame;
+		curFrame += speed * ctx.elapsedTime;
+		if( curFrame < frames.length )
 			return;
 		if( loop ) {
-			currentFrame %= frames.length;
+			curFrame %= frames.length;
 			onAnimEnd();
-		} else if( currentFrame >= frames.length ) {
-			currentFrame = frames.length;
-			if( currentFrame != prev ) onAnimEnd();
+		} else if( curFrame >= frames.length ) {
+			curFrame = frames.length;
+			if( curFrame != prev ) onAnimEnd();
 		}
 	}
 
 	public function getFrame() {
-		var i = Std.int(currentFrame);
+		var i = Std.int(curFrame);
 		if( i == frames.length ) i--;
 		return frames[i];
 	}
 
 	override function draw( ctx : RenderContext ) {
 		var t = getFrame();
-		if( t != null ) drawTile(ctx.engine,t);
+		emitTile(ctx,t);
 	}
 
 }

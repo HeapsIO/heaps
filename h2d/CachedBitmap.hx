@@ -5,10 +5,10 @@ class CachedBitmap extends Drawable {
 	public var width(default, set) : Int;
 	public var height(default, set) : Int;
 	public var freezed : Bool;
-	
+
 	var renderDone : Bool;
 	var tile : Tile;
-	
+
 	public function new( ?parent, width = -1, height = -1 ) {
 		super(parent);
 		this.width = width;
@@ -26,7 +26,7 @@ class CachedBitmap extends Drawable {
 		clean();
 		super.onDelete();
 	}
-	
+
 	function set_width(w) {
 		clean();
 		width = w;
@@ -38,7 +38,7 @@ class CachedBitmap extends Drawable {
 		height = h;
 		return h;
 	}
-	
+
 	public function getTile() {
 		if( tile == null ) {
 			var scene = getScene();
@@ -53,9 +53,9 @@ class CachedBitmap extends Drawable {
 	}
 
 	override function drawRec( ctx : RenderContext ) {
-		drawTile(ctx.engine, tile);
+		emitTile(ctx, tile);
 	}
-	
+
 	override function sync( ctx : RenderContext ) {
 		if( posChanged ) {
 			calcAbsPos();
@@ -69,7 +69,7 @@ class CachedBitmap extends Drawable {
 		var tile = getTile();
 		if( !freezed || !renderDone ) {
 			var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;
-			
+
 			// init matrix without rotation
 			matA = 1;
 			matB = 0;
@@ -77,7 +77,7 @@ class CachedBitmap extends Drawable {
 			matD = 1;
 			absX = 0;
 			absY = 0;
-			
+
 			// adds a pixels-to-viewport transform
 			var w = 2 / tile.width;
 			var h = -2 / tile.height;
@@ -94,11 +94,12 @@ class CachedBitmap extends Drawable {
 				c.sync(ctx);
 			}
 
+			throw "Should not draw in sync!";
 			ctx.engine.setTarget(tile.getTexture());
 			for( c in childs )
 				c.drawRec(ctx);
 			ctx.engine.setTarget(null);
-			
+
 			// restore
 			matA = oldA;
 			matB = oldB;
@@ -106,11 +107,11 @@ class CachedBitmap extends Drawable {
 			matD = oldD;
 			absX = oldX;
 			absY = oldY;
-			
+
 			renderDone = true;
 		}
 
 		super.sync(ctx);
 	}
-	
+
 }

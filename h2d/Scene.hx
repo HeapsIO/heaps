@@ -382,6 +382,16 @@ class Scene extends Layers implements h3d.IDrawable {
 		var h = -2 / height;
 		absX = absX * w - 1;
 		absY = absY * h + 1;
+
+		// half pixel align !
+		var engine = h3d.Engine.getCurrent();
+		absX += 1 / engine.width;
+		#if flash
+		absY -= 1 / engine.height;
+		#else
+		absY += 1 / engine.height;
+		#end
+
 		matA *= w;
 		matB *= h;
 		matC *= w;
@@ -419,9 +429,11 @@ class Scene extends Layers implements h3d.IDrawable {
 		ctx.engine = engine;
 		ctx.frame++;
 		ctx.time += ctx.elapsedTime;
-		ctx.currentPass = 0;
 		sync(ctx);
+		if( childs.length == 0 ) return;
+		ctx.begin();
 		drawRec(ctx);
+		ctx.end();
 	}
 
 	override function sync( ctx : RenderContext ) {
@@ -432,7 +444,6 @@ class Scene extends Layers implements h3d.IDrawable {
 			height = ctx.engine.height;
 			posChanged = true;
 		}
-		Tools.checkCoreObjects();
 		super.sync(ctx);
 	}
 

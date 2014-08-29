@@ -3,7 +3,15 @@ package h2d;
 @:allow(h2d)
 class Tile {
 
-	static inline var EPSILON_PIXEL = 0.001;
+	#if flash
+	static inline var EPSILON_POS = 0.;
+	static inline var EPSILON_SIZE_U = 0.;
+	static inline var EPSILON_SIZE_V = 0.;
+	#else
+	static inline var EPSILON_POS = 0;
+	static inline var EPSILON_SIZE_U = 0;
+	static inline var EPSILON_SIZE_V = 0.0001;
+	#end
 
 	var innerTex : h3d.mat.Texture;
 
@@ -30,7 +38,7 @@ class Tile {
 		if( tex != null ) setTexture(tex);
 	}
 
-	public function getTexture() : h3d.mat.Texture {
+	public inline function getTexture() {
 		return innerTex;
 	}
 
@@ -41,10 +49,10 @@ class Tile {
 	function setTexture(tex) {
 		this.innerTex = tex;
 		if( tex != null ) {
-			this.u = (x + EPSILON_PIXEL) / tex.width;
-			this.v = (y + EPSILON_PIXEL) / tex.height;
-			this.u2 = (x + width - EPSILON_PIXEL) / tex.width;
-			this.v2 = (y + height - EPSILON_PIXEL) / tex.height;
+			this.u = (x + EPSILON_POS) / tex.width;
+			this.v = (y + EPSILON_POS) / tex.height;
+			this.u2 = (x + width - EPSILON_SIZE_U) / tex.width;
+			this.v2 = (y + height - EPSILON_SIZE_V) / tex.height;
 		}
 	}
 
@@ -60,15 +68,25 @@ class Tile {
 		return sub(0, 0, width, height, -dx, -dy);
 	}
 
+	public function flipX() {
+		var tmp = u; u = u2; u2 = tmp;
+		dx = -dx - width;
+	}
+
+	public function flipY() {
+		var tmp = v; v = v2; v2 = tmp;
+		dy = -dy - height;
+	}
+
 	public function setPos(x, y) {
 		this.x = x;
 		this.y = y;
 		var tex = innerTex;
 		if( tex != null ) {
-			u = (x + EPSILON_PIXEL) / tex.width;
-			v = (y + EPSILON_PIXEL) / tex.height;
-			u2 = (width + x - EPSILON_PIXEL) / tex.width;
-			v2 = (height + y - EPSILON_PIXEL) / tex.height;
+			u = (x + EPSILON_POS) / tex.width;
+			v = (y + EPSILON_POS) / tex.height;
+			u2 = (width + x - EPSILON_SIZE_U) / tex.width;
+			v2 = (height + y - EPSILON_SIZE_V) / tex.height;
 		}
 	}
 
@@ -77,8 +95,8 @@ class Tile {
 		this.height = h;
 		var tex = innerTex;
 		if( tex != null ) {
-			u2 = (w + x - EPSILON_PIXEL) / tex.width;
-			v2 = (h + y - EPSILON_PIXEL) / tex.height;
+			u2 = (w + x - EPSILON_SIZE_U) / tex.width;
+			v2 = (h + y - EPSILON_SIZE_V) / tex.height;
 		}
 	}
 
@@ -95,16 +113,6 @@ class Tile {
 		v2 -= dy / tex.height;
 		x = Std.int(u * tex.width);
 		y = Std.int(v * tex.height);
-	}
-
-	public function flipX() {
-		var tmp = u; u = u2; u2 = tmp;
-		dx = -dx - width;
-	}
-
-	public function flipY() {
-		var tmp = v; v = v2; v2 = tmp;
-		dy = -dy - height;
 	}
 
 	public function dispose() {
@@ -192,6 +200,9 @@ class Tile {
 	}
 
 	public static function autoCut( bmp : hxd.BitmapData, width : Int, ?height : Int, ?allocPos : h3d.impl.AllocPos ) {
+		#if js
+		bmp.lock();
+		#end
 		if( height == null ) height = width;
 		var colorBG = bmp.getPixel(bmp.width - 1, bmp.height - 1);
 		var tl = new Array();
@@ -211,6 +222,9 @@ class Tile {
 				a.push(new Tile(tex,x*width+sz.dx, y*height+sz.dy, sz.w, sz.h, sz.dx, sz.dy));
 			}
 		}
+		#if js
+		bmp.unlock();
+		#end
 		var main = new Tile(tex, 0, 0, bmp.width, bmp.height);
 		main.upload(bmp);
 		return { main : main, tiles : tl };
@@ -226,42 +240,6 @@ class Tile {
 		if( pix2 != pixels ) pix2.dispose();
 		return new Tile(t, 0, 0, pixels.width, pixels.height);
 	}
-
-	#if flash
-	public static function fromSprites( sprites : Array<flash.display.Sprite>, ?allocPos : h3d.impl.AllocPos ) {
-		var tmp = [];
-		var width = 0;
-		var height = 0;
-		for( s in sprites ) {
-			var g = s.getBounds(s);
-			var dx = Math.floor(g.left);
-			var dy = Math.floor(g.top);
-			var w = Math.ceil(g.right) - dx;
-			var h = Math.ceil(g.bottom) - dy;
-			tmp.push( { s : s, x : width, dx : dx, dy : dy, w : w, h : h } );
-			width += w;
-			if( height < h ) height = h;
-		}
-		var rw = 1, rh = 1;
-		while( rw < width )
-			rw <<= 1;
-		while( rh < height )
-			rh <<= 1;
-		var bmp = new flash.display.BitmapData(rw, rh, true, 0);
-		var m = new flash.geom.Matrix();
-		for( t in tmp ) {
-			m.tx = t.x-t.dx;
-			m.ty = -t.dy;
-			bmp.draw(t.s, m);
-		}
-		var main = fromBitmap(hxd.BitmapData.fromNative(bmp), allocPos);
-		bmp.dispose();
-		var tiles = [];
-		for( t in tmp )
-			tiles.push(main.sub(t.x, 0, t.w, t.h, t.dx, t.dy));
-		return tiles;
-	}
-	#end
 
 	static function isEmpty( b : hxd.BitmapData, px, py, width, height, bg : Int ) {
 		var empty = true;

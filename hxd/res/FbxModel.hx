@@ -1,17 +1,17 @@
 package hxd.res;
 
 class FbxModel extends Resource {
-	
+
 	public static var isLeftHanded = true;
-	
-	public function toFbx( ?loader : Loader ) : h3d.fbx.Library {
-		var lib = new h3d.fbx.Library();
+
+	public function toFbx( ?loader : Loader ) : hxd.fmt.fbx.Library {
+		var lib = new hxd.fmt.fbx.Library();
 		switch( entry.getSign() & 0xFF ) {
 		case ';'.code: // FBX
-			lib.load(h3d.fbx.Parser.parse(entry.getBytes().toString()));
+			lib.load(hxd.fmt.fbx.Parser.parse(entry.getBytes().toString()));
 		case 'X'.code: // XBX
 			var f = new haxe.io.BytesInput(entry.getBytes());
-			var xbx = new h3d.fbx.XBXReader(f).read();
+			var xbx = new hxd.fmt.fbx.XBXReader(f).read();
 			lib.load(xbx);
 			f.close();
 		case '<'.code: // XTRA
@@ -24,5 +24,5 @@ class FbxModel extends Resource {
 		if( isLeftHanded ) lib.leftHandConvert();
 		return lib;
 	}
-	
+
 }

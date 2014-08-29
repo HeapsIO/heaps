@@ -4,7 +4,7 @@ private class Matrix {
 	public var data : haxe.ds.Vector<haxe.ds.Vector<Float>>;
 	public var m : Int;
 	public var n : Int;
-	
+
 	public function new(m, n) {
 		this.m = m;
 		this.n = n;
@@ -12,7 +12,7 @@ private class Matrix {
 		for( i in 0...m )
 			data[i] = new haxe.ds.Vector(n);
 	}
-	
+
 	public function clone() {
 		var m2 = new Matrix(m, n);
 		for( i in 0...m )
@@ -20,25 +20,25 @@ private class Matrix {
 				m2.data[i][j] = data[i][j];
 		return m2;
 	}
-	
+
 	function toString() {
 		return "[" + [for( k in data ) "\n" + Std.string(k)].join("") + "\n]";
 	}
 }
 
 private class QR {
-	
+
 	var qr : haxe.ds.Vector<haxe.ds.Vector<Float>>;
 	var rDiag : haxe.ds.Vector<Float>;
 	var m : Int;
 	var n : Int;
-	
+
 	public function new( mat : Matrix ) {
 		this.m = mat.m;
 		this.n = mat.n;
 		qr = mat.clone().data;
 		rDiag = new haxe.ds.Vector(n);
-		
+
 		for( k in 0...n ) {
 			var nrm = 0.;
 			for( i in k...m )
@@ -60,14 +60,14 @@ private class QR {
 			rDiag[k] = -nrm;
 		}
 	}
-	
+
 	function isFullRank() {
 		for( j in 0...n )
 			if( rDiag[j] == 0 )
 				return false;
 		return true;
 	}
-	
+
 	public function solve( b : Matrix ) {
 		if( b.m != m ) throw "Invalid matrix size";
 		if( !isFullRank() ) return null;
@@ -96,7 +96,7 @@ private class QR {
 			beta.push(X[i][0]);
 		return beta;
 	}
-	
+
 	function hypot( x : Float, y : Float ) {
 		if( x < 0 ) x = -x;
 		if( y < 0 ) y = -y;
@@ -109,7 +109,7 @@ private class QR {
 		t = t/x;
 		return x * Math.sqrt(1+t*t);
 	}
-	
+
 }
 
 class Polynomial {
@@ -129,11 +129,11 @@ class Polynomial {
 		for( i in 0...n )
 			for( j in 0...degree+1 )
 				x.data[i][j] = Math.pow(xVals[i], j);
-				
+
 		var y = new Matrix(yVals.length, n);
 		for( i in 0...yVals.length )
 			y.data[i][0] = yVals[i];
-		
+
 		var qr = new QR(x);
 		var beta = qr.solve(y);
 		if( beta == null ) {
@@ -142,5 +142,5 @@ class Polynomial {
 		}
 		return beta;
 	}
-	
+
 }

@@ -26,34 +26,34 @@ enum Shape {
 }
 
 class ValueXYZ {
-	
+
 	public var vx : Value;
 	public var vy : Value;
 	public var vz : Value;
-	
+
 	public function new(x, y, z) {
 		this.vx = x;
 		this.vy = y;
 		this.vz = z;
 	}
-	
+
 }
 
 class ColorKey {
-	
+
 	public var time : Float;
 	public var r : Float;
 	public var g : Float;
 	public var b : Float;
 	public var next : ColorKey;
-	
+
 	public function new(time, r, g, b) {
 		this.time = time;
 		this.r = r;
 		this.g = g;
 		this.b = b;
 	}
-	
+
 }
 
 enum BlendMode {
@@ -74,7 +74,7 @@ interface Randomized {
 }
 
 class State {
-	
+
 	// material
 	public var textureName : String;
 	public var frames : Array<h2d.Tile>;
@@ -82,7 +82,7 @@ class State {
 	public var sortMode : SortMode;
 	public var is3D : Bool;
 	public var isAlphaMap : Bool;
-	
+
 	// emit
 	public var loop	: Bool;
 	public var emitRate : Value;
@@ -98,7 +98,7 @@ class State {
 	public var globalLife : Float;
 	public var globalSpeed : Value;
 	public var globalSize : Value;
-	
+
 	// particle globals
 	public var life : Value;
 	public var size : Value;
@@ -106,28 +106,28 @@ class State {
 	public var rotation : Value;
 	public var speed : Value;
 	public var gravity : Value;
-	
+
 	// effects
 	public var force : Null<ValueXYZ>;
 	public var colors : Null<Array<{ time : Float, color : Int }>>;
 	public var light : Value;
 	public var alpha : Value;
-	
+
 	// collide
 	public var collide : Bool;
 	public var collideKill : Bool;
 	public var bounce : Float;
-	
+
 	// animation
 	public var frame : Null<Value>;
-	
+
 	// extra
 	public var delay : Float;
 	public var update : Particle -> Void;
-	
+
 	public function new() {
 	}
-	
+
 	public function setDefaults() {
 		// material
 		textureName = null;
@@ -168,7 +168,7 @@ class State {
 		// extra
 		delay = 0.;
 	}
-	
+
 	public function scale( val : Value, v : Float ) {
 		return switch( val ) {
 		case VConst(c): VConst(c * v);
@@ -181,7 +181,7 @@ class State {
 		case VCustom(f): VCustom(function(p) return f(p) * v);
 		}
 	}
-	
+
 	public static inline function eval( v : Value, time : Float, r : Randomized, p : Particle ) : Float {
 		return switch( v ) {
 		case VConst(c): c;
@@ -204,7 +204,7 @@ class State {
 
 	public static var defPartAlpha = hxd.res.Embed.getResource("h3d/parts/defaultAlpha.png");
 	public static var defPart = hxd.res.Embed.getResource("h3d/parts/default.png");
-	
+
 	public function initFrames() {
 		if( textureName == null ) {
 			var t = switch( blendMode ) {
@@ -227,7 +227,7 @@ class State {
 			}
 		}
 	}
-	
+
 	public static function load( b : haxe.io.Bytes, loadTexture : String -> h2d.Tile ) {
 		var state : State = haxe.Unserializer.run(b.toString());
 		if( state.textureName != null ) {
@@ -238,5 +238,5 @@ class State {
 		state.initFrames();
 		return state;
 	}
-	
+
 }

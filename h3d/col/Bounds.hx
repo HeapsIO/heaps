@@ -2,18 +2,18 @@ package h3d.col;
 import hxd.Math;
 
 class Bounds {
-	
+
 	public var xMin : Float;
 	public var xMax : Float;
 	public var yMin : Float;
 	public var yMax : Float;
 	public var zMin : Float;
 	public var zMax : Float;
-	
+
 	public inline function new() {
 		empty();
 	}
-	
+
 	public function inFrustum( mvp : Matrix ) {
 		if( testPlane(Plane.frustumLeft(mvp)) < 0 )
 			return false;
@@ -29,7 +29,7 @@ class Bounds {
 			return false;
 		return true;
 	}
-	
+
 	inline function testPlane( p : Plane ) {
 		var a = p.nx;
 		var b = p.ny;
@@ -41,7 +41,7 @@ class Bounds {
 		var rr = a * (xMax - xMin) + b * (yMax - yMin) + c * (zMax - zMin);
 		return dd + rr - p.d*2;
 	}
-	
+
 	/**
 	 * Check if the camera model-view-projection Matrix intersects with the Bounds. Returns -1 if outside, 0 if interests and 1 if fully inside.
 	 * @param	mvp : the model-view-projection matrix to test against
@@ -49,7 +49,7 @@ class Bounds {
 	 */
 	public function inFrustumDetails( mvp : Matrix, checkZ = true ) {
 		var ret = 1;
-		
+
 		// left
 		var p = new Plane(mvp._14 + mvp._11, mvp._24 + mvp._21 , mvp._34 + mvp._31, mvp._44 + mvp._41);
 		var m = p.nx * (p.nx > 0 ? xMax : xMin) + p.ny * (p.ny > 0 ? yMax : yMin) + p.nz * (p.nz > 0 ? zMax : zMin);
@@ -71,7 +71,7 @@ class Bounds {
 			return -1;
 		var n = p.nx * (p.nx > 0 ? xMin : xMax) + p.ny * (p.ny > 0 ? yMin : yMax) + p.nz * (p.nz > 0 ? zMin : zMax);
 		if( n + p.d < 0 ) ret = 0;
-		
+
 		// top
 		var p = new Plane(mvp._14 - mvp._12, mvp._24 - mvp._22 , mvp._34 - mvp._32, mvp._44 - mvp._42);
 		var m = p.nx * (p.nx > 0 ? xMax : xMin) + p.ny * (p.ny > 0 ? yMax : yMin) + p.nz * (p.nz > 0 ? zMax : zMin);
@@ -79,7 +79,7 @@ class Bounds {
 			return -1;
 		var n = p.nx * (p.nx > 0 ? xMin : xMax) + p.ny * (p.ny > 0 ? yMin : yMax) + p.nz * (p.nz > 0 ? zMin : zMax);
 		if( n + p.d < 0 ) ret = 0;
-				
+
 		if( checkZ ) {
 			// nea
 			var p = new Plane(mvp._13, mvp._23, mvp._33, mvp._43);
@@ -96,10 +96,10 @@ class Bounds {
 			var n = p.nx * (p.nx > 0 ? xMin : xMax) + p.ny * (p.ny > 0 ? yMin : yMax) + p.nz * (p.nz > 0 ? zMin : zMax);
 			if( n + p.d < 0 ) ret = 0;
 		}
-		
+
 		return ret;
 	}
-	
+
 	public function transform3x4( m : Matrix ) {
 		var xMin = xMin, yMin = yMin, zMin = zMin, xMax = xMax, yMax = yMax, zMax = zMax;
 		empty();
@@ -129,15 +129,15 @@ class Bounds {
 		v.transform(m);
 		addPoint(v);
 	}
-	
+
 	public inline function collide( b : Bounds ) {
 		return !(xMin > b.xMax || yMin > b.yMax || zMin > b.zMax || xMax < b.xMin || yMax < b.yMin || zMax < b.zMin);
 	}
-	
+
 	public inline function include( p : Point ) {
 		return p.x >= xMin && p.x < xMax && p.y >= yMin && p.y < yMax && p.z >= zMin && p.z < zMax;
 	}
-	
+
 	public inline function add( b : Bounds ) {
 		if( b.xMin < xMin ) xMin = b.xMin;
 		if( b.xMax > xMax ) xMax = b.xMax;
@@ -164,7 +164,7 @@ class Bounds {
 		if( z < zMin ) zMin = z;
 		if( z > zMax ) zMax = z;
 	}
-	
+
 	public function intersection( a : Bounds, b : Bounds ) {
 		var xMin = Math.max(a.xMin, b.xMin);
 		var yMin = Math.max(a.yMin, b.yMin);
@@ -179,7 +179,7 @@ class Bounds {
 		this.zMin = zMin;
 		this.zMax = zMax;
 	}
-	
+
 	public inline function offset( dx : Float, dy : Float, dz : Float ) {
 		xMin += dx;
 		xMax += dx;
@@ -188,7 +188,7 @@ class Bounds {
 		zMin += dz;
 		zMax += dz;
 	}
-	
+
 	public inline function setMin( p : Point ) {
 		xMin = p.x;
 		yMin = p.y;
@@ -200,7 +200,7 @@ class Bounds {
 		yMax = p.y;
 		zMax = p.z;
 	}
-	
+
 	public function load( b : Bounds ) {
 		xMin = b.xMin;
 		xMax = b.xMax;
@@ -209,7 +209,7 @@ class Bounds {
 		zMin = b.zMin;
 		zMax = b.zMax;
 	}
-	
+
 	public function scaleCenter( v : Float ) {
 		var dx = (xMax - xMin) * 0.5 * v;
 		var dy = (yMax - yMin) * 0.5 * v;
@@ -224,11 +224,11 @@ class Bounds {
 		yMax = my + dy;
 		zMax = mz + dz;
 	}
-	
+
 	public inline function getMin() {
 		return new Point(xMin, yMin, zMin);
 	}
-	
+
 	public inline function getCenter() {
 		return new Point((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, (zMin + zMax) * 0.5);
 	}
@@ -236,11 +236,11 @@ class Bounds {
 	public inline function getSize() {
 		return new Point(xMax - xMin, yMax - yMin, zMax - zMin);
 	}
-	
+
 	public inline function getMax() {
 		return new Point(xMax, yMax, zMax);
 	}
-	
+
 	public inline function empty() {
 		xMin = 1e20;
 		xMax = -1e20;
@@ -258,7 +258,7 @@ class Bounds {
 		zMin = -1e20;
 		zMax = 1e20;
 	}
-	
+
 	public inline function clone() {
 		var b = new Bounds();
 		b.xMin = xMin;
@@ -269,11 +269,11 @@ class Bounds {
 		b.zMax = zMax;
 		return b;
 	}
-	
+
 	public function toString() {
 		return "{" + getMin() + "," + getMax() + "}";
 	}
-	
+
 	public static inline function fromPoints( min : Point, max : Point ) {
 		var b = new Bounds();
 		b.setMin(min);
@@ -291,5 +291,5 @@ class Bounds {
 		b.zMax = z + dz;
 		return b;
 	}
-	
+
 }

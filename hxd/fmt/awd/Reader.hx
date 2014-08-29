@@ -2,19 +2,19 @@ package hxd.fmt.awd;
 import hxd.fmt.awd.Data;
 
 class Reader {
-	
+
 	static inline var TTRIANGLE_GEOM = 1;
 	static inline var TINSTANCE = 23;
 	static inline var TSKELETON = 101;
 	static inline var TSIMPLE_MATERIAL = 81;
 	static inline var TBITMAP_TEXURE = 82;
-	
+
 	var i : haxe.io.BytesInput;
 	var blocks : Map<Int,Block>;
 
 	public function new() {
 	}
-	
+
 	public function read( bytes ) {
 		blocks = new Map();
 		i = new haxe.io.BytesInput(bytes);
@@ -41,7 +41,7 @@ class Reader {
 			hxd.impl.Tmp.saveBytes(uBytes);
 		return blocks;
 	}
-	
+
 	function readHeader() {
 		if( i.readString(3) != "AWD" ) throw "assert";
 		var major = i.readByte();
@@ -51,7 +51,7 @@ class Reader {
 		var size = i.readInt32();
 		return { compress : compress, size : size };
 	}
-	
+
 	function readMatrix() {
 		var m = new h3d.Matrix();
 		m._11 = readFloat();
@@ -72,7 +72,7 @@ class Reader {
 		m._44 = readFloat();
 		return m;
 	}
-	
+
 	function readMatrix3x4() {
 		var m = new h3d.Matrix();
 		m._11 = readFloat();
@@ -93,32 +93,32 @@ class Reader {
 		m._44 = 1;
 		return m;
 	}
-	
+
 	inline function readBool() {
 		return i.readByte() != 0;
 	}
-	
+
 	function readString() {
 		return i.readString(i.readUInt16());
 	}
-	
+
 	function readName() {
 		var len = i.readUInt16();
 		return len == 0 ? null : i.readString(len);
 	}
-	
+
 	inline function readID() {
 		return i.readInt32();
 	}
-	
+
 	inline function readList<T>( decode : Void -> T ) : Array<T> {
 		return [for( i in 0...i.readInt32() ) decode()];
 	}
-	
+
 	inline function readFloat() {
 		return i.readFloat();
 	}
-	
+
 	function readAttrs() {
 		var count = i.readInt32();
 		if( count == 0 )
@@ -192,7 +192,7 @@ class Reader {
 		};
 		return a;
 	}
-	
+
 	function readSkelJoint( joints:Map<Int,Joint> ) {
 		var j = new Joint(i.readUInt16());
 		var pid = i.readUInt16();
@@ -207,7 +207,7 @@ class Reader {
 		j.attributes = readAttrs();
 		return j;
 	}
-	
+
 	inline function numAttribs( decode : Int -> Int -> Void ) {
 		var totalLen = i.readInt32();
 		if( totalLen == 0 ) return;
@@ -221,7 +221,7 @@ class Reader {
 			if( delta > 0 ) throw "Invalid delta " + delta + " for attribute #" + aid;
 		}
 	}
-	
+
 	function getBlock < T:Block > ( id : Int, c : Class<T> ) : T {
 		if( id == 0 )
 			return null;
@@ -231,12 +231,12 @@ class Reader {
 		if( v == null ) throw "Block " + b + " should be " + c;
 		return v;
 	}
-	
+
 	function readSubMesh() {
 		var s = new SubMesh();
 		var len = i.readInt32();
 		numAttribs(function(id, len) {
-			
+
 		});
 		var end = i.position + len;
 		while( i.position < end ) {
@@ -257,7 +257,7 @@ class Reader {
 		readAttrs();
 		return null;
 	}
-	
+
 	function readBlock() {
 		var id = readID();
 		var ns = i.readByte();
@@ -268,14 +268,14 @@ class Reader {
 		var skip = false;
 		var hasNumAttr = true;
 		var block : Block;
-	
+
 		inline function noAttribute() {
 			if( hasNumAttr ) {
 				if( i.readInt32() != 0 ) throw "unexpected numattr";
 				hasNumAttr = false;
 			}
 		}
-		
+
 		if( ns != 0 ) {
 			block = null;
 			skip = true;
@@ -365,10 +365,10 @@ class Reader {
 			noAttribute();
 			block.attributes = readAttrs();
 			blocks.set(block.id, block);
-			
+
 			var delta = i.position - (startPos + size);
 			if( delta != 0 ) throw "Invalid delta " + delta + " for type " + tid;
 		}
 	}
-	
+
 }

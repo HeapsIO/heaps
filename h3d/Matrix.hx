@@ -496,6 +496,54 @@ class Matrix {
 		_43 += brightness;
 	}
 
+	public function colorBits( bits : Int, blend : Float ) {
+		var t11 = 0., t12 = 0., t13 = 0.;
+		var t21 = 0., t22 = 0., t23 = 0.;
+		var t31 = 0., t32 = 0., t33 = 0.;
+		var c = bits;
+		if( c & 1 == 1 ) t11 = 1; c >>= 1;
+		if( c & 1 == 1 ) t12 = 1; c >>= 1;
+		if( c & 1 == 1 ) t13 = 1; c >>= 1;
+		if( c & 1 == 1 ) t21 = 1; c >>= 1;
+		if( c & 1 == 1 ) t22 = 1; c >>= 1;
+		if( c & 1 == 1 ) t23 = 1; c >>= 1;
+		if( c & 1 == 1 ) t31 = 1; c >>= 1;
+		if( c & 1 == 1 ) t32 = 1; c >>= 1;
+		if( c & 1 == 1 ) t33 = 1; c >>= 1;
+		var r = t11 + t21 + t31;
+		var g = t12 + t22 + t32;
+		var b = t13 + t23 + t33;
+		if( r > 1 ) { t11 /= r; t21 /= r; t31 /= r; }
+		if( g > 1 ) { t12 /= r; t22 /= r; t32 /= r; }
+		if( b > 1 ) { t13 /= r; t23 /= r; t33 /= r; }
+
+		// multiply our 3x3 by current matrix
+
+		var b11 = _11 * t11 + _12 * t21 + _13 * t31;
+		var b12 = _11 * t12 + _12 * t22 + _13 * t32;
+		var b13 = _11 * t13 + _12 * t23 + _13 * t33;
+
+		var b21 = _21 * t11 + _22 * t21 + _23 * t31;
+		var b22 = _21 * t12 + _22 * t22 + _23 * t32;
+		var b23 = _21 * t13 + _22 * t23 + _23 * t33;
+
+		var b31 = _31 * t11 + _32 * t21 + _33 * t31;
+		var b32 = _31 * t12 + _32 * t22 + _33 * t32;
+		var b33 = _31 * t13 + _32 * t23 + _33 * t33;
+
+		// blend it
+		var ik = blend, k = 1 - ik;
+		_11 = _11 * k + b11 * ik;
+		_12 = _12 * k + b12 * ik;
+		_13 = _13 * k + b13 * ik;
+		_21 = _21 * k + b21 * ik;
+		_22 = _22 * k + b22 * ik;
+		_23 = _23 * k + b23 * ik;
+		_31 = _31 * k + b31 * ik;
+		_32 = _32 * k + b32 * ik;
+		_33 = _33 * k + b33 * ik;
+	}
+
 	// STATICS
 
 	public static function I() {

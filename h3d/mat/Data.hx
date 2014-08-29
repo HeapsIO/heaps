@@ -88,7 +88,7 @@ enum TextureFlags {
 	/**
 		This is a not power of two texture. Automatically set when having width or height being not power of two.
 	**/
-	IsRectangle;
+	IsNPOT;
 	/**
 		Don't initialy allocate the texture memory.
 	**/
@@ -98,8 +98,29 @@ enum TextureFlags {
 	**/
 	Dynamic;
 	/**
+		The texture format will contain Float values
+	**/
+	FmtFloat;
+	/**
+		16-bit RGB format
+	**/
+	Fmt5_6_5;
+	/**
+		16-bit RGBA format
+	**/
+	Fmt4_4_4_4;
+	/**
+		16-bit RGBA format (1 bit of alpha)
+	**/
+	Fmt5_5_5_1;
+	/**
 		Assumes that the color value of the texture is premultiplied by the alpha component.
 	**/
 	AlphaPremultiplied;
+	/**
+		Tells if the target texture has been cleared (reserved for internal engine usage).
+	**/
+	WasCleared;
 }
+
 

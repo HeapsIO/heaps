@@ -1,15 +1,15 @@
 package hxd.res;
 
 class BitmapFont extends Resource {
-	
+
 	var loader : Loader;
 	var font : h2d.Font;
-	
+
 	public function new(loader, entry) {
 		super(entry);
 		this.loader = loader;
 	}
-	
+
 	@:access(h2d.Font)
 	public function toFont() : h2d.Font {
 		if( font != null )
@@ -39,12 +39,12 @@ class BitmapFont extends Resource {
 		}
 		if( glyphs.get(" ".code) == null )
 			glyphs.set(" ".code, new h2d.Font.FontChar(tile.sub(0, 0, 0, 0), size>>1));
-		
+
 		font = new h2d.Font(name, size);
 		font.glyphs = glyphs;
 		font.lineHeight = lineHeight;
 		font.tile = tile;
 		return font;
 	}
-	
+
 }

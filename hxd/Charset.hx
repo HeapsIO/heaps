@@ -6,19 +6,19 @@ class Charset {
 		Contains Hiragana, Katanaga, japanese punctuaction and full width space (0x3000) full width numbers (0-9) and some full width ascii punctuation (!:?%&()-). Does not include full width A-Za-z.
 	**/
 	public static var JP_KANA = "　あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわゐゑをんがぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽゃゅょアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲンガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポヴャぇっッュョァィゥェォ・ー「」、。『』“”！：？％＆（）－０１２３４５６７８９";
-	
+
 	/**
 		Contains the whole ASCII charset.
 	**/
 	public static var ASCII = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-	
+
 	/**
 		The Latin1 (ISO 8859-1) charset (only the extra chars, no the ASCII part)
 	**/
 	public static var LATIN1 = "¡¢£¤¥¦§¨©ª«¬-®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ";
-	
+
 	public static var DEFAULT_CHARS = ASCII + LATIN1;
-	
+
 	var map : Map<Int,Int>;
 
 	function new() {
@@ -74,7 +74,7 @@ class Charset {
 		m("‹".code, "<".code);
 		m("›".code, ">".code);
 	}
-	
+
 	public function resolveChar<T>( code : Int, glyphs : Map<Int,T> ) : Null<T> {
 		var c : Null<Int> = code;
 		while( c != null ) {
@@ -84,11 +84,11 @@ class Charset {
 		}
 		return null;
 	}
-	
+
 	public function isSpace(code) {
 		return code == ' '.code || code == 0x3000;
 	}
-	
+
 	public function isBreakChar(code) {
 		return switch( code ) {
 		case '!'.code, '?'.code, '.'.code, ','.code, ':'.code: true;
@@ -103,5 +103,5 @@ class Charset {
 		if( inst == null ) inst = new Charset();
 		return inst;
 	}
-	
+
 }

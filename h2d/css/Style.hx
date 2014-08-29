@@ -2,7 +2,7 @@ package h2d.css;
 import h2d.css.Defs;
 
 class Style {
-	
+
 	public var fontName : Null<String>;
 	public var fontSize : Null<Float>;
 	public var color : Null<Int>;
@@ -41,10 +41,10 @@ class Style {
 	public var iconTop : Null<Float>;
 	public var textAlign : Null<TextAlign>;
 	public var display : Null<Bool>;
-	
+
 	public function new() {
 	}
-	
+
 	public function apply( s : Style ) {
 		if( s.fontName != null ) fontName = s.fontName;
 		if( s.fontSize != null ) fontSize = s.fontSize;
@@ -91,7 +91,7 @@ class Style {
 		if( s.textAlign != null ) textAlign = s.textAlign;
 		if( s.display != null ) display = s.display;
 	}
-	
+
 	public function padding( v : Float ) {
 		this.paddingTop = v;
 		this.paddingLeft = v;
@@ -105,7 +105,7 @@ class Style {
 		this.marginRight = v;
 		this.marginBottom = v;
 	}
-	
+
 	public function toString() {
 		var fields = [];
 		for( f in Type.getInstanceFields(Style) ) {
@@ -118,5 +118,5 @@ class Style {
 		}
 		return "{" + fields.join(", ") + "}";
 	}
-		
+
 }

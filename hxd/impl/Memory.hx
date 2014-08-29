@@ -5,7 +5,7 @@ class MemoryReader {
 
 	public function new() {
 	}
-	
+
 	public inline function b( addr : Int ) {
 		#if flash
 		return flash.Memory.getByte(addr);
@@ -13,7 +13,7 @@ class MemoryReader {
 		return Memory.current.get(addr);
 		#end
 	}
-	
+
 	public inline function wb( addr : Int, v : Int ) {
 		#if flash
 		flash.Memory.setByte(addr, v);
@@ -21,7 +21,7 @@ class MemoryReader {
 		Memory.current.set(addr, v);
 		#end
 	}
-	
+
 	public inline function double( addr : Int ) : Float {
 		#if flash
 		return flash.Memory.getDouble(addr);
@@ -55,7 +55,7 @@ class MemoryReader {
 		throw "TODO";
 		#end
 	}
-	
+
 	public inline function i32( addr : Int ) : Int {
 		#if flash
 		return flash.Memory.getI32(addr);
@@ -64,7 +64,7 @@ class MemoryReader {
 		return 0;
 		#end
 	}
-	
+
 	public inline function end() {
 		@:privateAccess Memory.end();
 	}
@@ -76,7 +76,7 @@ class Memory {
 	static var stack = new Array<haxe.io.Bytes>();
 	static var current : haxe.io.Bytes = null;
 	static var inst = new MemoryReader();
-	
+
 	public static function select( b : haxe.io.Bytes ) {
 		#if flash
 		var data = b.getData();
@@ -87,7 +87,7 @@ class Memory {
 		current = b;
 		return inst;
 	}
-	
+
 	static function end() {
 		current = stack.pop();
 		#if flash

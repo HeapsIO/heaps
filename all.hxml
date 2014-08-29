@@ -1,0 +1,14 @@
+-lib heaps
+--macro include('h3d')
+--macro include('h2d')
+--macro include('hxsl',true,['hxsl.Macros'])
+--macro include('hxd',true,['hxd.res.FileTree','hxd.Res','hxd.impl.BitsBuilder'])
+--no-output
+--each
+
+-js heaps.js
+
+--next
+
+-swf heaps.swf
+-swf-version 15

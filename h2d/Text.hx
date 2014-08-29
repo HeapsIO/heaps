@@ -35,7 +35,7 @@ class Text extends Drawable {
 		this.font = font;
 		if( glyphs != null ) glyphs.remove();
 		glyphs = new TileGroup(font == null ? null : font.tile, this);
-		shader = glyphs.shader;
+		glyphs.visible = false;
 		rebuild();
 		return font;
 	}
@@ -64,20 +64,23 @@ class Text extends Drawable {
 	}
 
 	override function draw(ctx:RenderContext) {
-		glyphs.blendMode = blendMode;
 		if( dropShadow != null ) {
-			glyphs.x += dropShadow.dx;
-			glyphs.y += dropShadow.dy;
-			glyphs.calcAbsPos();
-			var old = glyphs.color;
-			glyphs.color = h3d.Vector.fromColor(dropShadow.color);
-			glyphs.color.w = dropShadow.alpha;
-			glyphs.draw(ctx);
-			glyphs.x -= dropShadow.dx;
-			glyphs.y -= dropShadow.dy;
-			glyphs.color = old;
+			var oldX = absX, oldY = absY;
+			absX += dropShadow.dx * matA + dropShadow.dy * matC;
+			absY += dropShadow.dx * matB + dropShadow.dy * matD;
+			var oldR = color.r;
+			var oldG = color.g;
+			var oldB = color.b;
+			var oldA = color.a;
+			color.setColor(dropShadow.color);
+			color.a = dropShadow.alpha;
+			glyphs.drawWith(ctx, this);
+			absX = oldX;
+			absY = oldY;
+			color.set(oldR, oldG, oldB, oldA);
+			calcAbsPos();
 		}
-		super.draw(ctx);
+		glyphs.drawWith(ctx,this);
 	}
 
 	function set_text(t) {
@@ -176,8 +179,9 @@ class Text extends Drawable {
 
 	function set_textColor(c) {
 		this.textColor = c;
-		glyphs.color = h3d.Vector.fromColor(c);
-		glyphs.color.w = alpha;
+		var a = alpha;
+		color.setColor(c);
+		color.w = a;
 		return c;
 	}
 

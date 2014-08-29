@@ -26,7 +26,7 @@ class Timer {
 	public inline static function fps() : Float {
 		return wantedFPS/tmod ;
 	}
-	
+
 	public static function skip() {
 		oldTime = haxe.Timer.stamp();
 	}

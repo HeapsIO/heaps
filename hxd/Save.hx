@@ -1,7 +1,7 @@
 package hxd;
 
 class Save {
-	
+
 	static var cur = new Map<String,String>();
 	#if flash
 	static var saveObj : flash.net.SharedObject;
@@ -28,7 +28,7 @@ class Save {
 		return defValue;
 		#end
 	}
-	
+
 	public static function save( val : Dynamic, ?name = "save", ?quick : Bool ) {
 		#if flash
 		var data = haxe.Serializer.run(val);

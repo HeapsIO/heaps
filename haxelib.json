@@ -1,10 +1,10 @@
 {
-	"name" : "h3d",
-	"url" : "https://github.com/ncannasse/h3d",
+	"name" : "heaps",
+	"url" : "http://heaps.io",
 	"license" : "BSD",
-    "description" : "Lightweight Stage3D engine",
+    "description" : "The GPU Game Framework",
     "version" : "0.0.1",
 	"releasenote" : "",
 	"contributors" : ["ncannasse"],
-    "dependencies" : { "hxsl" : "" }
+	"dependencies" : { "format" : "" }
 }

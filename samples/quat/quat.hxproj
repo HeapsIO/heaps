@@ -4,18 +4,18 @@
   <output>
     <movie outputType="Application" />
     <movie input="" />
-    <movie path="quat.swf" />
+    <movie path="main.js" />
     <movie fps="60" />
     <movie width="800" />
     <movie height="600" />
-    <movie version="11" />
-    <movie minorVersion="8" />
-    <movie platform="Flash Player" />
+    <movie version="1" />
+    <movie minorVersion="0" />
+    <movie platform="JavaScript" />
     <movie background="#FFFFFF" />
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
-    <class path="." />
+    <!-- example: <class path="..." /> -->
   </classpaths>
   <!-- Build options -->
   <build>
@@ -23,7 +23,7 @@
     <option flashStrict="False" />
     <option mainClass="QuatDemo" />
     <option enabledebug="False" />
-    <option additional="-lib h3d&#xA;-dce full" />
+    <option additional="-lib heaps&#xA;-dce full" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
@@ -33,10 +33,6 @@
   <compileTargets>
     <!-- example: <compile path="..." /> -->
   </compileTargets>
-  <!-- Assets to embed into the output SWF -->
-  <library>
-    <!-- example: <asset path="..." id="..." update="..." glyphs="..." mode="..." place="..." sharepoint="..." /> -->
-  </library>
   <!-- Paths to exclude from the Project Explorer tree -->
   <hiddenPaths>
     <hidden path="obj" />
@@ -48,8 +44,8 @@
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
-    <option testMovie="Default" />
-    <option testMovieCommand="" />
+    <option testMovie="OpenDocument" />
+    <option testMovieCommand="index.html" />
   </options>
   <!-- Plugin storage -->
   <storage />

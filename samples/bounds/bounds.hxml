@@ -3,6 +3,8 @@
 --flash-strict
 -swf-version 11.6
 -main Bounds
--cp ../..
--D h3d
--lib hxsl
+-lib heaps
+--next
+-js main.js
+-main Bounds
+-lib heaps

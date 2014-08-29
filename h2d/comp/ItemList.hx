@@ -1,28 +1,28 @@
 package h2d.comp;
 
 class ItemList extends Box {
-	
+
 	public var selected(default,set) = -1;
 	var inputs : Array<h2d.Interactive>;
-	
+
 	public function new(?parent) {
 		super(Vertical, parent);
 		this.name = "itemlist";
 		inputs = [];
 	}
-	
+
 	function set_selected(v:Int) {
 		needRebuild = true;
 		return selected = v;
 	}
-	
+
 	function onWheel( e : hxd.Event ) {
 		scrollY -= e.wheelDelta * (components.length == 0 ? 0 : (components[0].height + style.verticalSpacing));
 		if( scrollY > 0 ) scrollY = 0;
 		e.propagate = false;
 		needRebuild = true;
 	}
-	
+
 	override function resizeRec( ctx : Context ) {
 		super.resizeRec(ctx);
 		if( !ctx.measure ) {
@@ -85,8 +85,8 @@ class ItemList extends Box {
 
 	public dynamic function onItemOver( current : Int ) {
 	}
-	
+
 	public dynamic function onChange( selected : Int ) {
 	}
-	
+
 }

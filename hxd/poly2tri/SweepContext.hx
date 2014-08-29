@@ -64,7 +64,7 @@ class SweepContext
 
 			var nx = polyline[(n + 1) % polyline.length];
 			edge_list.push ( new Edge(polyline[n], nx) );
-									
+
 		}
 	}
 
@@ -94,7 +94,7 @@ class SweepContext
 
 		var dx = Constants.kAlpha * (xmax - xmin);
 		var dy = Constants.kAlpha * (ymax - ymin);
-		
+
 		#if fastPoly2tri
 		var dx = Math.ceil(dx);
 		var dy = Math.ceil(dy);
