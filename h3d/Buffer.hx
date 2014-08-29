@@ -105,10 +105,16 @@ class Buffer {
 		}
 	}
 
-	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags, ?vertices, ?allocPos ) {
-		var nvert = vertices == null ? Std.int(v.length / stride) : vertices;
+	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags, ?allocPos ) {
+		var nvert = Std.int(v.length / stride);
 		var b = new Buffer(nvert, stride, flags, allocPos);
 		b.uploadVector(v, 0, nvert);
+		return b;
+	}
+
+	public static function ofSubFloats( v : hxd.FloatBuffer, stride : Int, vertices : Int, ?flags, ?allocPos ) {
+		var b = new Buffer(vertices, stride, flags, allocPos);
+		b.uploadVector(v, 0, vertices);
 		return b;
 	}
 
