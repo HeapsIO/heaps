@@ -28,32 +28,12 @@ class Bounds extends hxd.App {
 		}
 		for( b in boxes )
 			new h2d.Graphics(b);
+
 		var tf = new h2d.Text(hxd.res.FontBuilder.getFont("Verdana", 16), boxes[0]);
 		tf.text = "Some quite long rotating text";
 		tf.x = -5;
 		tf.y = 15;
 		tf.filter = true;
-
-
-
-		var g = new h2d.Bitmap( h2d.Tile.fromColor(0xFF0000,32, 32), s2d);
-		g.x += 32;
-		g.y += 32;
-		trace(g.getBounds(g.parent).width);
-		g.scaleX = 2.0;
-		trace(g.getBounds(g.parent).width);
-
-
-		var g =  new h2d.Graphics(s2d );
-		g.drawRect(0, 0, 32, 32);
-		g.x += 32;
-		g.y += 32;
-		trace(g.getBounds(g.parent).width);
-		g.scaleX = 2.0;
-		trace(g.getBounds(g.parent).width);
-
-		g.scaleY = 3.0;
-		trace(g.getBounds(g.parent).height);
 	}
 
 	override function update(dt:Float) {
