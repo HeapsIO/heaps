@@ -125,7 +125,7 @@ class Manager {
 			var tid = 0;
 			for( p in s.textures ) {
 				var t = getParamValue(p, shaders);
-				if( t == null ) t = h3d.mat.Texture.fromColor(0xFFFF00FF);
+				if( t == null ) t = h3d.mat.Texture.fromColor(0xFF00FF);
 				buf.tex[tid++] = t;
 			}
 		}

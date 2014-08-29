@@ -1,22 +1,22 @@
 class QuatDemo extends hxd.App {
-	
+
 	var cube : h3d.scene.Mesh;
-	
+
 	var tx : Float = 0.;
 	var ty : Float = 0.;
 	var tz : Float = 0.;
-	
+
 	override function init() {
 		var p = new h3d.prim.Cube(1, 1, 1);
 		p.translate( -0.25, -0.5, -0.5);
 		p.addUVs();
 		p.addNormals();
-		
+
 		cube = new h3d.scene.Mesh(p, s3d);
-		cube.material.texture = h2d.Tile.fromColor(0xFF808080).getTexture();
-		
+		cube.material.texture = h2d.Tile.fromColor(0x808080).getTexture();
+
 		var axis = new h3d.scene.Object(s3d);
-		
+
 		var ax = new h3d.scene.Box(0xFFFF0000, true, axis);
 		ax.x = 0.5;
 		ax.scaleY = 0.001;
@@ -49,7 +49,7 @@ class QuatDemo extends hxd.App {
 
 		var ldir = new h3d.Vector( -1, -2, -5);
 		ldir.normalize();
-		
+
 		/*
 		cube.material.lightSystem = {
 			ambient : new h3d.Vector(0.5, 0.5, 0.5),
@@ -61,9 +61,9 @@ class QuatDemo extends hxd.App {
 		};
 		*/
 	}
-	
+
 	var time = 0.;
-	
+
 	override function update(dt:Float) {
 		time += dt * 0.01;
 		var q = new h3d.Quat();

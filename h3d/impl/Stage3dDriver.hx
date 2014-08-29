@@ -453,7 +453,7 @@ class Stage3dDriver extends Driver {
 			for( i in 0...curShader.s.fragment.textures.length ) {
 				var t = buffers.fragment.tex[i];
 				if( t == null || t.isDisposed() )
-					t = h3d.mat.Texture.fromColor(0xFFFF00FF);
+					t = h3d.mat.Texture.fromColor(0xFF00FF);
 				if( t != null && t.t == null && t.realloc != null ) {
 					t.alloc();
 					t.realloc();

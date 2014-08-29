@@ -136,7 +136,7 @@ class Editor extends h2d.Sprite implements Randomized {
 				var s = State.load(data, function(name) {
 					var t = loadTexture(name);
 					if( t == null ) {
-						t = h2d.Tile.fromColor(0xFF800000);
+						t = h2d.Tile.fromColor(0x800000);
 						// try dynamic loading. Will most likely fail since the path is relative
 						hxd.File.load(name, function(bytes) {
 							setTexture(hxd.res.Any.fromBytes(name, bytes).toTile());

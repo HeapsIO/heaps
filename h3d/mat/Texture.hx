@@ -124,11 +124,12 @@ class Texture {
 			alloc();
 	}
 
-	public function clear( color : Int ) {
+	public function clear( color : Int, alpha = 1. ) {
 		alloc();
 		var p = hxd.Pixels.alloc(width, height, BGRA);
 		var k = 0;
-		var b = color & 0xFF, g = (color >> 8) & 0xFF, r = (color >> 16) & 0xFF, a = color >>> 24;
+		var b = color & 0xFF, g = (color >> 8) & 0xFF, r = (color >> 16) & 0xFF, a = Std.int(alpha * 255);
+		if( a < 0 ) a = 0 else if( a > 255 ) a = 255;
 		for( i in 0...width * height ) {
 			p.bytes.set(k++,b);
 			p.bytes.set(k++,g);
@@ -172,16 +173,19 @@ class Texture {
 
 	static var COLOR_CACHE = new Map<Int,h3d.mat.Texture>();
 	/**
-		Creates a 1x1 texture using the ARGB color passed as parameter.
+		Creates a 1x1 texture using the RGB color passed as parameter.
 	**/
-	public static function fromColor( color : Int, ?allocPos : h3d.impl.AllocPos ) {
-		var t = COLOR_CACHE.get(color);
+	public static function fromColor( color : Int, alpha = 1., ?allocPos : h3d.impl.AllocPos ) {
+		var aval = Std.int(alpha * 255);
+		if( aval < 0 ) aval = 0 else if( aval > 255 ) aval = 255;
+		var key = (color&0xFFFFFF) | (aval << 24);
+		var t = COLOR_CACHE.get(key);
 		if( t != null )
 			return t;
 		var t = new Texture(1, 1, null, allocPos);
-		t.clear(color);
-		t.realloc = function() t.clear(color);
-		COLOR_CACHE.set(color, t);
+		t.clear(color, alpha);
+		t.realloc = function() t.clear(color, alpha);		
+		COLOR_CACHE.set(key, t);
 		return t;
 	}
 

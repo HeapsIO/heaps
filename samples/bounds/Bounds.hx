@@ -7,13 +7,13 @@ class Bounds extends hxd.App {
 
 	override function init() {
 		boxes = [];
-		
+
 		g = new h2d.Graphics(s2d);
 		for( i in 0...colors.length ) {
 			var size = Std.int(200 / (i + 4));
 			var c = colors[i];
-			var b = new h2d.Bitmap(h2d.Tile.fromColor(c | 0x80000000, size, size).sub(0, 0, size, size, -Std.random(size), -Std.random(size)), i == 0 ? s2d : boxes[i - 1]);
-			b.addChild(new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFFFF, 8, 8).sub(0, 0, 8, 8, -4, -4)));
+			var b = new h2d.Bitmap(h2d.Tile.fromColor(c, size, size, 0.5).sub(0, 0, size, size, -Std.random(size), -Std.random(size)), i == 0 ? s2d : boxes[i - 1]);
+			b.addChild(new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFF, 8, 8).sub(0, 0, 8, 8, -4, -4)));
 			if( i == 0 ) {
 				b.x = s2d.width * 0.5;
 				b.y = s2d.height * 0.5;
@@ -33,17 +33,17 @@ class Bounds extends hxd.App {
 		tf.x = -5;
 		tf.y = 15;
 		tf.filter = true;
-		
-		
-		
-		var g = new h2d.Bitmap( h2d.Tile.fromColor(0xFFFF0000,32, 32), s2d);
+
+
+
+		var g = new h2d.Bitmap( h2d.Tile.fromColor(0xFF0000,32, 32), s2d);
 		g.x += 32;
 		g.y += 32;
 		trace(g.getBounds(g.parent).width);
 		g.scaleX = 2.0;
 		trace(g.getBounds(g.parent).width);
-		
-		
+
+
 		var g =  new h2d.Graphics(s2d );
 		g.drawRect(0, 0, 32, 32);
 		g.x += 32;
@@ -51,7 +51,7 @@ class Bounds extends hxd.App {
 		trace(g.getBounds(g.parent).width);
 		g.scaleX = 2.0;
 		trace(g.getBounds(g.parent).width);
-		
+
 		g.scaleY = 3.0;
 		trace(g.getBounds(g.parent).height);
 	}

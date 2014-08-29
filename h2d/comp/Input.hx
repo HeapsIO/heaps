@@ -106,7 +106,7 @@ class Input extends Interactive {
 		super.resize(ctx);
 		if( !ctx.measure ) {
 			cursor.y = extTop() - 1;
-			cursor.tile = h2d.Tile.fromColor(style.cursorColor | 0xFF000000, 1, Std.int(height - extTop() - extBottom() + 2));
+			cursor.tile = h2d.Tile.fromColor(style.cursorColor, 1, Std.int(height - extTop() - extBottom() + 2));
 		}
 	}
 

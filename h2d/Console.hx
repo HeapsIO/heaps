@@ -39,13 +39,13 @@ class Console extends h2d.Sprite {
 		logTxt.visible = false;
 		logs = [];
 		logIndex = -1;
-		bg = new h2d.Bitmap(h2d.Tile.fromColor(0x80000000), this);
+		bg = new h2d.Bitmap(h2d.Tile.fromColor(0,1,1,0.5), this);
 		bg.visible = false;
 		tf = new h2d.Text(font, bg);
 		tf.x = 2;
 		tf.y = 1;
 		tf.textColor = 0xFFFFFFFF;
-		cursor = new h2d.Bitmap(h2d.Tile.fromColor(tf.textColor | 0xFF000000, 1, font.lineHeight), tf);
+		cursor = new h2d.Bitmap(h2d.Tile.fromColor(tf.textColor, 1, font.lineHeight), tf);
 		commands = new Map();
 		aliases = new Map();
 		addCommand("help", "Show help", [ { name : "command", t : AString, opt : true } ], showHelp);

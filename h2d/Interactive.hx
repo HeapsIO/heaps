@@ -33,7 +33,7 @@ class Interactive extends Drawable {
 	}
 
 	override function draw( ctx : RenderContext ) {
-		if( backgroundColor != null ) emitTile(ctx,h2d.Tile.fromColor(backgroundColor,Std.int(width),Std.int(height)));
+		if( backgroundColor != null ) emitTile(ctx, h2d.Tile.fromColor(backgroundColor, Std.int(width), Std.int(height), (backgroundColor>>>24)/255 ));
 	}
 
 	override function getBoundsRec( relativeTo, out ) {

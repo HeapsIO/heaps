@@ -123,7 +123,7 @@ class Graphics extends Drawable {
 	public function new(?parent) {
 		super(parent);
 		content = new GraphicsContent();
-		tile = h2d.Tile.fromColor(0xFFFFFFFF);
+		tile = h2d.Tile.fromColor(0xFFFFFF);
 		clear();
 	}
 

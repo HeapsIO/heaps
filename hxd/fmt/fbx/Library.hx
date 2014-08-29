@@ -795,7 +795,7 @@ class Library {
 			var tmpTex = null;
 			textureLoader = function(_,_) {
 				if( tmpTex == null )
-					tmpTex = h3d.mat.Texture.fromColor(0xFFFF00FF);
+					tmpTex = h3d.mat.Texture.fromColor(0xFF00FF);
 				return new h3d.mat.MeshMaterial(tmpTex);
 			}
 		}
@@ -884,7 +884,7 @@ class Library {
 				while( tmats.length > lastAdded )
 					tmats.pop();
 				if( tmats.length == 0 )
-					tmats.push(new h3d.mat.MeshMaterial(h3d.mat.Texture.fromColor(0xFFFF00FF)));
+					tmats.push(new h3d.mat.MeshMaterial(h3d.mat.Texture.fromColor(0xFF00FF)));
 				// create object
 				if( tmats.length == 1 )
 					o.obj = new h3d.scene.Mesh(prim, tmats[0], scene);
