@@ -20,6 +20,14 @@ class Shadow extends hxsl.Shader {
 
 		function fragment() {
 			var depth = unpack(shadow.map.get(shadowPos.xy));
+
+			#if false
+			// TODO : integrate surface-based bias
+			cosTheta = N.L
+			float bias = 0.005*tan(acos(cosTheta));
+			bias = clamp(bias, 0, 0.01)
+			#end
+
 			var shade = exp( shadow.power * (depth - shadowPos.z + shadow.bias) ).clamp(0.,1.);
 			pixelColor.rgb *= (1. - shade) * shadow.color.rgb + shade;
 		}
