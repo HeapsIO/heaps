@@ -39,6 +39,10 @@ enum Feature {
 		Is our driver hardware accelerated or CPU emulated.
 	*/
 	HardwareAccelerated;
+	/*
+		Is it required to perform a full clear each frame on render target textures.
+	*/
+	FullClearRequired;
 }
 
 class Driver {

@@ -72,11 +72,14 @@ class Stage3dDriver extends Driver {
 	var frame : Int;
 	var programs : Map<Int, CompiledShader>;
 	var isStandardMode : Bool;
+	var flashVersion : Float;
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
 
 	public function new() {
+		var v = flash.system.Capabilities.version.split(" ")[1].split(",");
+		flashVersion = Std.parseFloat(v[0] + "." + v[1]);
 		empty = new flash.utils.ByteArray();
 		s3d = flash.Lib.current.stage.stage3Ds[0];
 		programs = new Map();
@@ -113,10 +116,14 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function init( onCreate, forceSoftware = false ) {
+		isStandardMode = Std.string(PROFILE) == "standard";
+		if( isStandardMode && flashVersion < 14 ) {
+			isStandardMode = false;
+			PROFILE = flash.display3D.Context3DProfile.BASELINE;
+		}
 		this.onCreateCallback = onCreate;
 		s3d.addEventListener(flash.events.Event.CONTEXT3D_CREATE, this.onCreate);
 		s3d.requestContext3D( forceSoftware ? "software" : "auto", PROFILE );
-		isStandardMode = Std.string(PROFILE) == "standard";
 	}
 
 	function onCreate(_) {
@@ -141,6 +148,7 @@ class Stage3dDriver extends Driver {
 		case StandardDerivatives, FloatTextures: isStandardMode;
 		case PerTargetDepthBuffer: false;
 		case TargetUseDefaultDepthBuffer: true;
+		case FullClearRequired: flashVersion < 15;
 		}
 	}
 
@@ -642,7 +650,8 @@ class Stage3dDriver extends Driver {
 			ctx.setRenderToTexture(t.t, t.flags.has(TargetUseDefaultDepth));
 			inTarget = t;
 			t.lastFrame = frame;
-			if( !t.flags.has(WasCleared) ) {
+			// make sure we at least clear the color the first time
+			if( flashVersion >= 15 && !t.flags.has(WasCleared) ) {
 				t.flags.set(WasCleared);
 				ctx.clear(0, 0, 0, 1, 1, 0, flash.display3D.Context3DClearMask.COLOR);
 			}

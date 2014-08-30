@@ -67,7 +67,7 @@ class ShadowMap extends Default {
 		lightCamera.target.set(ct.x, ct.y, ct.z);
 		lightCamera.pos.set(ct.x - lightDirection.x, ct.y - lightDirection.y, ct.z - lightDirection.z);
 		ctx.engine.setTarget(texture);
-		ctx.engine.clear(0xFFFFFF, 1);
+		ctx.engine.clear(0xFFFFFF, 1, fullClearRequired ? 0 : null);
 		passes = super.draw(name, passes);
 		border.render();
 		ctx.engine.setTarget(null);

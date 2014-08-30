@@ -12,6 +12,7 @@ class Default extends Base {
 	var textureCachePosition : Int = 0;
 	var textureCacheFrame : Int;
 	var hasDefaultDepth : Bool;
+	var fullClearRequired : Bool;
 
 	public var lightSystem : LightSystem;
 
@@ -37,7 +38,9 @@ class Default extends Base {
 		initGlobals();
 		lightSystem = new LightSystem(globals);
 		textureCache = [];
-		hasDefaultDepth = h3d.Engine.getCurrent().driver.hasFeature(TargetUseDefaultDepthBuffer);
+		var engine = h3d.Engine.getCurrent();
+		hasDefaultDepth = engine.driver.hasFeature(TargetUseDefaultDepthBuffer);
+		fullClearRequired = engine.driver.hasFeature(FullClearRequired);
 	}
 
 	function getOutputs() {

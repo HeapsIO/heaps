@@ -68,12 +68,14 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		shader.pixel.set(1 / src.width, 0);
 
 		engine.setTarget(tmp);
+		if( fullClearRequired ) engine.clear(0, 1, 0);
 		render();
 		engine.setTarget(null);
 
 		shader.texture = tmp;
 		shader.pixel.set(0, 1 / tmp.height);
 		engine.setTarget(output);
+		if( fullClearRequired ) engine.clear(0, 1, 0);
 		render();
 		engine.setTarget(null);
 

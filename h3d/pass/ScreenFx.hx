@@ -7,6 +7,7 @@ class ScreenFx<T:hxsl.Shader> {
 	var manager : h3d.shader.Manager;
 	var plan : h3d.prim.Primitive;
 	var engine : h3d.Engine;
+	var fullClearRequired : Bool;
 
 	public function new(shader) {
 		this.shader = shader;
@@ -16,6 +17,7 @@ class ScreenFx<T:hxsl.Shader> {
 		pass.depth(false, Always);
 		plan = new h3d.prim.Plan2D();
 		engine = h3d.Engine.getCurrent();
+		fullClearRequired = engine.hasFeature(FullClearRequired);
 	}
 
 	public function render() {

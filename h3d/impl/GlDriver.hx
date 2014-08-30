@@ -547,6 +547,8 @@ class GlDriver extends Driver {
 			false;
 		case HardwareAccelerated:
 			true;
+		case FullClearRequired:
+			false;
 		}
 	}
 
