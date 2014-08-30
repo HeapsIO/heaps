@@ -280,7 +280,7 @@ class GlDriver extends Driver {
 			bits |= GL.COLOR_BUFFER_BIT;
 		}
 		if( depth != null ) {
-			gl.clearDepth(1);
+			gl.clearDepth(depth);
 			bits |= GL.DEPTH_BUFFER_BIT;
 		}
 		if( stencil != null ) {
