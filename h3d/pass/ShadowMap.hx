@@ -65,7 +65,11 @@ class ShadowMap extends Default {
 		var texture = getTargetTexture("shadowMap", size, size);
 		var ct = ctx.camera.target;
 		lightCamera.target.set(ct.x, ct.y, ct.z);
-		lightCamera.pos.set(ct.x - lightDirection.x, ct.y - lightDirection.y, ct.z - lightDirection.z);
+		lightCamera.pos.set( -lightDirection.x, -lightDirection.y, -lightDirection.z);
+		lightCamera.pos.normalize();
+		lightCamera.pos.x += ct.x;
+		lightCamera.pos.y += ct.y;
+		lightCamera.pos.z += ct.z;
 		ctx.engine.setTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1, fullClearRequired ? 0 : null);
 		passes = super.draw(name, passes);
