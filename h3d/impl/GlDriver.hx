@@ -306,6 +306,8 @@ class GlDriver extends Driver {
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
+		if( t.flags.has(TargetUseDefaultDepth) )
+			throw "TargetUseDefaultDepth not supported in GL";
 		var tt = gl.createTexture();
 		var tt : Texture = { t : tt, width : t.width, height : t.height, fmt : GL.UNSIGNED_BYTE };
 		if( t.flags.has(FmtFloat) )
@@ -539,8 +541,10 @@ class GlDriver extends Driver {
 			gl.getExtension('OES_standard_derivatives') != null;
 		case FloatTextures:
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null;
-		case TargetDepthBuffer:
+		case PerTargetDepthBuffer:
 			true;
+		case TargetUseDefaultDepthBuffer:
+			false;
 		case HardwareAccelerated:
 			true;
 		}

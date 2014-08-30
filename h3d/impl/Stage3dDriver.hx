@@ -139,7 +139,8 @@ class Stage3dDriver extends Driver {
 		return switch( f ) {
 		case HardwareAccelerated: ctx != null && ctx.driverInfo.toLowerCase().indexOf("software") == -1;
 		case StandardDerivatives, FloatTextures: isStandardMode;
-		case TargetDepthBuffer: false;
+		case PerTargetDepthBuffer: false;
+		case TargetUseDefaultDepthBuffer: true;
 		}
 	}
 
@@ -214,11 +215,11 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
+		if( t.flags.has(TargetDepth) )
+			throw "TargetDepth not supported in Stage3D";
 		var fmt = flash.display3D.Context3DTextureFormat.BGRA;
 		t.lastFrame = frame;
 		t.flags.unset(WasCleared);
-		if( t.flags.has(TargetDepth) )
-			throw "Unsupported texture flag";
 		try {
 			if( t.flags.has(IsNPOT) ) {
 				if( t.flags.has(Cubic) || t.flags.has(MipMapped) )

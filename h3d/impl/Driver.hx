@@ -19,10 +19,26 @@ typedef Texture = Int;
 #end
 
 enum Feature {
-	HardwareAccelerated;
+	/*
+		Do the shader support standard derivates functions (ddx ddy).
+	*/
 	StandardDerivatives;
+	/*
+		Can use allocate floating point textures.
+	*/
 	FloatTextures;
-	TargetDepthBuffer;
+	/*
+		Can we create a per-target-texture depth buffer.
+	*/
+	PerTargetDepthBuffer;
+	/*
+		Can we use the default depth buffer when rendering to a target texture.
+	*/
+	TargetUseDefaultDepthBuffer;
+	/*
+		Is our driver hardware accelerated or CPU emulated.
+	*/
+	HardwareAccelerated;
 }
 
 class Driver {
