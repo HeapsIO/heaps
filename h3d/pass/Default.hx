@@ -11,6 +11,7 @@ class Default extends Base {
 	var textureCache : Array<h3d.mat.Texture>;
 	var textureCachePosition : Int = 0;
 	var textureCacheFrame : Int;
+	var hasDefaultDepth : Bool;
 
 	public var lightSystem : LightSystem;
 
@@ -36,6 +37,7 @@ class Default extends Base {
 		initGlobals();
 		lightSystem = new LightSystem(globals);
 		textureCache = [];
+		hasDefaultDepth = h3d.Engine.getCurrent().driver.hasFeature(TargetUseDefaultDepthBuffer);
 	}
 
 	function getOutputs() {
@@ -66,7 +68,7 @@ class Default extends Base {
 		if( t == null || t.isDisposed() || t.width != width || t.height != height ) {
 			if( t != null ) t.dispose();
 			var flags : Array<h3d.mat.Data.TextureFlags> = [Target, TargetNoFlipY];
-			if( hasDepth ) flags.push(TargetUseDefaultDepth);
+			if( hasDepth ) flags.push(hasDefaultDepth ? TargetUseDefaultDepth : TargetDepth);
 			t = new h3d.mat.Texture(width, height, flags);
 			textureCache[textureCachePosition] = t;
 		}
