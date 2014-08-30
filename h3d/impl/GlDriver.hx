@@ -81,6 +81,10 @@ class GlDriver extends Driver {
 		selectMaterialBits(0);
 	}
 
+	override function logImpl( str : String ) {
+		untyped console.log(str);
+	}
+
 	override function begin(frame) {
 		this.frame = frame;
 		reset();
@@ -149,7 +153,9 @@ class GlDriver extends Driver {
 					case TFloat: 1;
 					default: throw "assert " + v.type;
 					}
-					p.attribs.push( { offset : p.stride, index : gl.getAttribLocation(p.p, glout.varNames.get(v.id)), size:size, type:t } );
+					var index = gl.getAttribLocation(p.p, glout.varNames.get(v.id));
+					if( index < 0 ) continue;
+					p.attribs.push( { offset : p.stride, index : index, size:size, type:t } );
 					p.attribNames.push(v.name);
 					p.stride += size;
 				default:
