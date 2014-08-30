@@ -269,7 +269,7 @@ class GlslOut {
 					addValue(e, tabs);
 					add(")");
 				case 4:
-					decl("vec3 _vec4( float v ) { return vec4(v,v,v,v); }");
+					decl("vec4 _vec4( float v ) { return vec4(v,v,v,v); }");
 					add("_vec4(");
 					addValue(e, tabs);
 					add(")");
