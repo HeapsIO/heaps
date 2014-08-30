@@ -5,15 +5,15 @@ class Main extends hxd.App {
 	override function init() {
 		var prim = hxd.Res.Model.toFbx();
 		var obj = prim.makeObject(loadTexture);
-		obj.scale(0.05);
+		obj.scale(0.1);
 		s3d.addChild(obj);
 		s3d.camera.pos.set( -2, -3, 2);
-		s3d.camera.target.z += 0.5;
+		s3d.camera.target.z += 1;
 
 		obj.playAnimation(prim.loadAnimation(LinearAnim));
 
 		// add lights
-		var dir = new DirLight(new h3d.Vector( 2, 3, -5), s3d);
+		var dir = new DirLight(new h3d.Vector( -1, 3, -10), s3d);
 		for( s in obj )
 			s.toMesh().material.mainPass.enableLights = true;
 		var ls = s3d.mainPass.getLightSystem();
