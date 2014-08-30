@@ -19,7 +19,7 @@ class Distance extends Default {
 	override function draw( name : String, passes ) {
 		var texture = getTargetTexture("distanceMap", ctx.engine.width, ctx.engine.height);
 		ctx.engine.setTarget(texture);
-		ctx.engine.clear(enableSky ? 0 : 0xFFFF0000, 1);
+		ctx.engine.clear(enableSky ? 0 : 0xFF0000, 1);
 		passes = super.draw(name, passes);
 		ctx.engine.setTarget(null);
 		ctx.sharedGlobals.set(distanceMapId, texture);

@@ -742,7 +742,7 @@ class Editor extends h2d.Sprite implements Randomized {
 
 	function init() {
 		var bg = new hxd.BitmapData(300, 110);
-		bg.clear(0xFF202020);
+		bg.clear(0x202020);
 		for( h in [0, bg.height >> 1, bg.height - 1] )
 			bg.line(0, h, bg.width - 1, h, 0xFF101010);
 		for( h in [bg.height * 0.25, bg.height * 0.75] ) {
