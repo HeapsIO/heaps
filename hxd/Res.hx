@@ -16,7 +16,7 @@ class Res {
 	}
 
 	public static macro function initLocal() {
-		var dir = haxe.macro.Compiler.getDefine("resourcesPath");
+		var dir = haxe.macro.Context.definedValue("resourcesPath");
 		if( dir == null ) dir = "res";
 		return macro hxd.Res.loader = new hxd.res.Loader(new hxd.res.LocalFileSystem($v{dir}));
 	}
