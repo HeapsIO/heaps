@@ -43,8 +43,21 @@ class App {
 		s2d.checkEvents();
 		update(hxd.Timer.tmod);
 		s2d.setElapsedTime(Timer.tmod/60);
-		s3d.setElapsedTime(Timer.tmod/60);
-		engine.render(s3d);
+		s3d.setElapsedTime(Timer.tmod / 60);
+		#if debug
+		if( hxd.Key.isDown(hxd.Key.CTRL) && hxd.Key.isPressed(hxd.Key.F12) ) {
+			var driver = engine.driver;
+			var old = driver.logEnable;
+			var log = new h3d.impl.LogDriver(driver);
+			log.logLines = [];
+			@:privateAccess engine.driver = log;
+			engine.render(s3d);
+			driver.logEnable = old;
+			@:privateAccess engine.driver = driver;
+			hxd.File.saveBytes("log.txt", haxe.io.Bytes.ofString(log.logLines.join("\n")));
+		} else
+		#end
+			engine.render(s3d);
 	}
 
 	function update( dt : Float ) {
