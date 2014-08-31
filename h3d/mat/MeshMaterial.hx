@@ -37,15 +37,19 @@ class MeshMaterial extends Material {
 		if( mainPass != null ) {
 			switch( v ) {
 			case Normal:
+				mainPass.depthWrite = true;
 				mainPass.blend(One, Zero);
 				mainPass.setPassName("default");
 			case Alpha:
+				mainPass.depthWrite = true;
 				mainPass.blend(SrcAlpha, OneMinusSrcAlpha);
 				mainPass.setPassName("alpha");
 			case Add:
+				mainPass.depthWrite = false;
 				mainPass.blend(SrcAlpha, One);
 				mainPass.setPassName("additive");
 			case SoftAdd:
+				mainPass.depthWrite = false;
 				mainPass.blend(OneMinusDstColor, One);
 				mainPass.setPassName("additive");
 			}
