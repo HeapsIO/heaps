@@ -22,40 +22,49 @@ typedef BrowseSelect = {
 
 class File {
 
+	#if air3
+	static function browseAir( onSelect : BrowseSelect -> Void, options : BrowseOptions, filters ) {
+		var f = flash.filesystem.File.applicationDirectory;
+		if( options.defaultPath != null )
+			try f = f.resolvePath(options.defaultPath) catch( e : Dynamic ) {}
+		var basePath = f.clone();
+		f.addEventListener(flash.events.Event.SELECT, function(_) {
+			var path = f.nativePath;
+			if( options.relativePath ) {
+				if( !basePath.isDirectory ) basePath = basePath.parent;
+				var relPath = basePath.getRelativePath(f, true);
+				if( relPath != null )
+					path = relPath;
+			}
+			var sel : BrowseSelect = {
+				fileName : path,
+				load : function(onReady) {
+					haxe.Timer.delay(function() {
+						var fs = new flash.filesystem.FileStream();
+						fs.open(f, flash.filesystem.FileMode.READ);
+						var bytes = haxe.io.Bytes.alloc(fs.bytesAvailable);
+						fs.readBytes(bytes.getData());
+						fs.close();
+						onReady(bytes);
+					},1);
+				},
+			};
+			onSelect(sel);
+		});
+		f.browseForOpen(options.title == null ? "" : options.title, filters);
+	}
+	#end
+
 	public static function browse( onSelect : BrowseSelect -> Void, ?options : BrowseOptions ) {
 		if( options == null ) options = {};
 		#if flash
 			var filters = options.fileTypes == null ? null : [for( o in options.fileTypes ) new flash.net.FileFilter(o.name,[for( e in o.extensions ) "*."+e].join(";"))];
 			#if air3
-			var f = flash.filesystem.File.applicationDirectory;
-			if( options.defaultPath != null )
-				try f = f.resolvePath(options.defaultPath) catch( e : Dynamic ) {}
-			var basePath = f.clone();
-			f.addEventListener(flash.events.Event.SELECT, function(_) {
-				var path = f.nativePath;
-				if( options.relativePath ) {
-					if( !basePath.isDirectory ) basePath = basePath.parent;
-					var relPath = basePath.getRelativePath(f, true);
-					if( relPath != null )
-						path = relPath;
-				}
-				var sel : BrowseSelect = {
-					fileName : path,
-					load : function(onReady) {
-						haxe.Timer.delay(function() {
-							var fs = new flash.filesystem.FileStream();
-							fs.open(f, flash.filesystem.FileMode.READ);
-							var bytes = haxe.io.Bytes.alloc(fs.bytesAvailable);
-							fs.readBytes(bytes.getData());
-							fs.close();
-							onReady(bytes);
-						},1);
-					},
-				};
-				onSelect(sel);
-			});
-			f.browseForOpen(options.title == null ? "" : options.title, filters);
-			#else
+			if( flash.system.Capabilities.playerType == "Desktop" ) {
+				browseAir(onSelect, options,filters);
+				return;
+			}
+			#end
 			var f = new flash.net.FileReference();
 			f.addEventListener(flash.events.Event.SELECT, function(_) {
 				var sel : BrowseSelect = {
@@ -70,7 +79,6 @@ class File {
 				onSelect(sel);
 			});
 			f.browse(filters);
-			#end
 		#else
 			throw "Not supported";
 		#end
