@@ -22,7 +22,27 @@ class Key {
 	public static inline var DELETE		= 46;
 
 	public static inline var NUMBER_0	= 48;
+	public static inline var NUMBER_1	= 49;
+	public static inline var NUMBER_2	= 50;
+	public static inline var NUMBER_3	= 51;
+	public static inline var NUMBER_4	= 52;
+	public static inline var NUMBER_5	= 53;
+	public static inline var NUMBER_6	= 54;
+	public static inline var NUMBER_7	= 55;
+	public static inline var NUMBER_8	= 56;
+	public static inline var NUMBER_9	= 57;
+
 	public static inline var NUMPAD_0	= 96;
+	public static inline var NUMPAD_1	= 97;
+	public static inline var NUMPAD_2	= 98;
+	public static inline var NUMPAD_3	= 99;
+	public static inline var NUMPAD_4	= 100;
+	public static inline var NUMPAD_5	= 101;
+	public static inline var NUMPAD_6	= 102;
+	public static inline var NUMPAD_7	= 103;
+	public static inline var NUMPAD_8	= 104;
+	public static inline var NUMPAD_9	= 105;
+
 	public static inline var A			= 65;
 	public static inline var F1			= 112;
 	public static inline var F2			= 113;
