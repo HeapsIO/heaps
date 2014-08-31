@@ -21,7 +21,10 @@ class App {
 	}
 
 	function setup() {
-		engine.onResized = onResize;
+		engine.onResized = function() {
+			s2d.checkResize();
+			onResize();
+		};
 		s3d = new h3d.scene.Scene();
 		s2d = new h2d.Scene();
 		s3d.addPass(s2d);

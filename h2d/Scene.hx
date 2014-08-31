@@ -64,6 +64,16 @@ class Scene extends Layers implements h3d.IDrawable {
 		posChanged = true;
 	}
 
+	public function checkResize() {
+		if( fixedSize ) return;
+		var engine = h3d.Engine.getCurrent();
+		if( width != engine.width || height != engine.height ) {
+			width = engine.width;
+			height = engine.height;
+			posChanged = true;
+		}
+	}
+
 	override function onAlloc() {
 		stage.addEventTarget(onEvent);
 		super.onAlloc();
