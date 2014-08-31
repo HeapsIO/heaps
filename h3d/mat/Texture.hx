@@ -175,7 +175,7 @@ class Texture {
 	/**
 		Creates a 1x1 texture using the RGB color passed as parameter.
 	**/
-	public static function fromColor( color : Int, alpha = 1., ?allocPos : h3d.impl.AllocPos ) {
+	public static function fromColor( color : Int, ?alpha = 1., ?allocPos : h3d.impl.AllocPos ) {
 		var aval = Std.int(alpha * 255);
 		if( aval < 0 ) aval = 0 else if( aval > 255 ) aval = 255;
 		var key = (color&0xFFFFFF) | (aval << 24);
@@ -184,7 +184,7 @@ class Texture {
 			return t;
 		var t = new Texture(1, 1, null, allocPos);
 		t.clear(color, alpha);
-		t.realloc = function() t.clear(color, alpha);		
+		t.realloc = function() t.clear(color, alpha);
 		COLOR_CACHE.set(key, t);
 		return t;
 	}
