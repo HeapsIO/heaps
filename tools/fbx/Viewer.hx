@@ -1,97 +1,64 @@
-using h3d.fbx.Data;
-using h3d.fbx.Data;
+using hxd.fmt.fbx.Data;
 
-typedef K = flash.ui.Keyboard;
+typedef K = hxd.Key;
+
 typedef Props = {
 	curFbxFile:String,
-	camVars:Camvars,
-	view:Int,
+	camPos:Campos,
 	smoothing:Bool,
 	showAxis:Bool,
 	showBones:Bool,
 	showBox:Bool,
 	slowDown:Bool,
 	loop:Bool,
-};
-typedef Camvars = {
+	lights:Bool,
+}
+
+typedef Campos = {
 	x:Float,
 	y:Float,
+	z:Float,
 	tx:Float,
 	ty:Float,
 	tz:Float,
-	dist:Float,
-	angCoef:Float,
-	zoom:Float
-};
-	
-class Cookie
-{
-	static var version = 0.1;
-	static var _so = flash.net.SharedObject.getLocal("fbxViewerData" + version);
-	static public function Cookie() {
-	}
-	
-	static public function read() {
-		try {
-			Viewer.props = haxe.Unserializer.run(_so.data.params);
-		} catch( e : Dynamic ) {
-		}
-	}
-
-	static public function write() {
-		_so.data.params = haxe.Serializer.run(Viewer.props);
-		_so.flush();
-	}
 }
 
-class Axis implements h3d.IDrawable {
+class Viewer extends hxd.App {
 
-	public function new() {
-	}
-	
-	public function render( engine : h3d.Engine ) {
-		engine.line(Viewer.props.camVars.tx, Viewer.props.camVars.ty, Viewer.props.camVars.tz, Viewer.props.camVars.tx + 50, Viewer.props.camVars.ty + 0, Viewer.props.camVars.tz + 0, 0xFFFF0000);
-		engine.line(Viewer.props.camVars.tx, Viewer.props.camVars.ty, Viewer.props.camVars.tz, Viewer.props.camVars.tx + 0, Viewer.props.camVars.ty + 50, Viewer.props.camVars.tz + 0, 0xFF00FF00);
-		engine.line(Viewer.props.camVars.tx, Viewer.props.camVars.ty, Viewer.props.camVars.tz, Viewer.props.camVars.tx + 0, Viewer.props.camVars.ty + 0, Viewer.props.camVars.tz + 50, 0xFF0000FF);
-	}
-	
-}
-
-class Viewer {
-
-	var engine : h3d.Engine;
-	var scene : h3d.scene.Scene;
-
-	var time : Float;
+	var obj : h3d.scene.Object;
 	var anim : h3d.anim.Animation;
 	var tf : flash.text.TextField;
 	var tf_keys : flash.text.TextField;
 	var tf_help : flash.text.TextField;
-	
-	var curFbx : h3d.fbx.Library;
+
+	var curFbx : hxd.fmt.fbx.Library;
 	static public var curData : String;
 	static public var props : Props;
-	static public var animMode : h3d.fbx.Library.AnimationMode = LinearAnim;
+	static public var animMode : hxd.fmt.fbx.Library.AnimationMode = LinearAnim;
 
 	var rightHand : Bool;
 	var playAnim : Bool;
 	var rightClick : Bool;
 	var freeMove : Bool;
-	var pMouse : flash.geom.Point;
-	var axis : Axis;
+	var pMouse : h2d.col.Point;
+	var axis : h3d.scene.Graphics;
 	var box : h3d.scene.Object;
-	var alib : h3d.fbx.Library;
-	
+	var alib : hxd.fmt.fbx.Library;
+
 	function new() {
-		time = 0;
+		super();
+
+		pMouse = new h2d.col.Point();
+		obj = new h3d.scene.Object();
+
 		rightHand = false;
 		playAnim = true;
 		freeMove = false;
 		rightClick = false;
-		
-		props = { curFbxFile : "", camVars : { x:0, y:0, tx:0, ty:0, tz:0, dist:0, angCoef:Math.PI / 7, zoom:1 }, view:0, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true };
-		Cookie.read();
-		
+
+		props = { curFbxFile : "", camPos : { x:10, y:0, z:0, tx:0, ty:0, tz:0 }, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true, lights : true }
+		props = hxd.Save.load(props);
+
 		tf = new flash.text.TextField();
 		var fmt = tf.defaultTextFormat;
 		fmt.align = flash.text.TextFormatAlign.RIGHT;
@@ -103,7 +70,7 @@ class Viewer {
 		tf.filters = [new flash.filters.GlowFilter(0, 1, 2, 2, 20)];
 		tf.selectable = false;
 		flash.Lib.current.addChild(tf);
-		
+
 		tf_keys = new flash.text.TextField();
 		tf_keys.x = 5;
 		tf_keys.width = 500;
@@ -113,7 +80,7 @@ class Viewer {
 		tf_keys.visible = false;
 		tf_keys.selectable = false;
 		flash.Lib.current.addChild(tf_keys);
-		
+
 		tf_help = new flash.text.TextField();
 		tf_help.x = 5;
 		tf_help.y = flash.Lib.current.stage.stageHeight - 25;
@@ -123,352 +90,73 @@ class Viewer {
 		tf_help.filters = [new flash.filters.GlowFilter(0, 1, 2, 2, 20)];
 		tf_help.selectable = false;
 		flash.Lib.current.addChild(tf_help);
-		
-		engine = new h3d.Engine();
-		#if debug
-		engine.debug = true;
-		#end
-		engine.backgroundColor = 0xFF808080;
-		engine.onReady = onReady;
-		engine.init();
+
 	}
-	
-	function onReady() {
-		flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, function (_) onUpdate());
-		flash.Lib.current.stage.addEventListener(flash.events.MouseEvent.MOUSE_DOWN, function (e:flash.events.MouseEvent) {
-			if (props.view < 3)	props.view = 3;
-			freeMove = true;
-			pMouse = new flash.geom.Point(flash.Lib.current.mouseX, flash.Lib.current.mouseY);
-			});
-		flash.Lib.current.stage.addEventListener(flash.events.MouseEvent.MOUSE_UP, function (e:flash.events.MouseEvent) {
-			freeMove = false;
-			Cookie.write();
-			});
-		flash.Lib.current.stage.addEventListener(flash.events.MouseEvent.RIGHT_MOUSE_DOWN, function (e:flash.events.MouseEvent) {
-			rightClick = true;
-			pMouse = new flash.geom.Point(flash.Lib.current.mouseX, flash.Lib.current.mouseY);
-			});
-		flash.Lib.current.stage.addEventListener(flash.events.MouseEvent.RIGHT_MOUSE_UP, function (e:flash.events.MouseEvent) {
-			rightClick = false;
-			Cookie.write();
-			});
-		flash.Lib.current.stage.addEventListener(flash.events.MouseEvent.MOUSE_WHEEL, function (e:flash.events.MouseEvent) {
-				var dz = (e.delta / Math.abs(e.delta)) * props.camVars.zoom / 8;
-				props.camVars.zoom = Math.min(4, Math.max(0.4, props.camVars.zoom + dz));
-				Cookie.write();
-			});
-		flash.Lib.current.stage.addEventListener(flash.events.Event.RESIZE, function (e:flash.events.Event) {
-				tf.x = flash.Lib.current.stage.stageWidth - (tf.width + 5);
-				tf_help.y = flash.Lib.current.stage.stageHeight - 25;
-				tf_keys.y = flash.Lib.current.stage.stageHeight - tf_keys.textHeight - 35;
-			});
-		flash.Lib.current.stage.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, function(k:flash.events.KeyboardEvent ) {
-			var reload = false;
-			var c = k.keyCode;
-				
-			if ( c == 49 )			props.view = 1;
-			else if ( c == 50 )		props.view = 2;
-			else if ( c == 51 )		props.view = 3;
-			else if ( c == 52 )		props.view = 4;
-			else if( c == K.F1 )
-				askLoad();
-			else if( c == K.F2 )
-				askLoad(true);
-			else if( c == K.S && k.ctrlKey ) {
-				if( curFbx == null ) return;
-				var data = FbxTree.toXml(curFbx.getRoot());
-				var f = new flash.net.FileReference();
-				var path = props.curFbxFile.substr(0, -4) + "_tree.xml";
-				path = path.split("\\").pop().split("/").pop();
-				f.save(data, path);
-			} else if( c == K.R ) {
-				rightHand = !rightHand;
-				props.camVars.x *= -1;
-				props.camVars.tx *= -1;
-				reload = true;
-			} else if( c == K.K ) {
-				props.showBones = !props.showBones;
-				showBonesRec(scene, props.showBones);
-			} else if ( c == K.Y ) {
-				props.showAxis = !props.showAxis;
-				if (props.showAxis)
-					scene.addPass(axis);
-				else scene.removePass(axis);
-			} else if ( c == K.N ) {
-				props.smoothing = !props.smoothing;
-				setSmoothing();
-			} else if ( c == K.B ) {
-				props.showBox = !props.showBox;
-				if (props.showBox && box != null)
-					scene.addChild(box);
-				else scene.removeChild(box);
-			}
-			else if ( c == K.F ) {
-				var b = scene.getChildAt(0).getBounds();
-				var dx = b.xMax - b.xMin;
-				var dy = b.yMax - b.yMin;
-				var dz = b.zMax - b.zMin;
-				var tdist = Math.max(dx * 4, dy * 4);
-				props.camVars = { x: tdist, y:0, tx:0, ty:0, tz:0, dist:tdist, angCoef:Math.PI / 7, zoom:1 };
-				var dist = props.camVars.dist;
-				var ang = Math.PI / 4;
-				props.camVars.x = dist * Math.cos(ang);
-				props.camVars.y = dist * Math.sin(ang);
-				scene.camera.pos.set(props.camVars.tx + props.camVars.x * Math.cos(Math.PI / 2 * props.camVars.angCoef), props.camVars.ty + props.camVars.y * Math.cos(Math.PI / 2 * props.camVars.angCoef), props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
-				scene.camera.zoom = 1.0;
-				box.x = b.xMin + dx * 0.5;
-				box.y = b.yMin + dy * 0.5;
-				box.z = b.zMin + dz * 0.5;
-				scene.getChildAt(0).x = 0;
-				scene.getChildAt(0).y = 0;
-				scene.getChildAt(0).z = 0;
-			}
-			else if ( c == K.H ) {
-				tf_keys.visible = !tf_keys.visible;
-			} else if( c == K.SPACE ) {
-				if( scene.currentAnimation != null )
-					scene.currentAnimation.pause = !scene.currentAnimation.pause;
-			} else if( c == K.S ) {
-				props.slowDown = !props.slowDown;
-			} else if( c == K.A ) {
-				var cst = h3d.fbx.Library.AnimationMode.createAll();
-				animMode = cst[(Lambda.indexOf(cst, animMode) + 1) % cst.length];
-				reload = true;
-			} else if( c == K.L ) {
-				props.loop = !props.loop;
-				reload = true;
-			}
-			
-			if( reload && curData != null )
-				loadData(curData);
-			Cookie.write();
-		});
-		
-		scene = new h3d.scene.Scene();
-		axis = new Axis();
-		scene.addPass(axis);
-		
+
+	function save() {
+		hxd.Save.save(props);
+	}
+
+	override function init() {
+		engine.debug = true;
+		engine.backgroundColor = 0xFF808080;
+		s2d.addEventListener(onEvent);
+
+		// TODO
+		axis = new h3d.scene.Graphics();
+
+		new h3d.scene.DirLight(new h3d.Vector(3, 4, -10), s3d);
+
+
 		if( props.curFbxFile != null )
 			loadFile(props.curFbxFile, false);
 		else
 			askLoad();
 	}
-	
-	function loadFile( file : String, newFbx = true ) {
-		props.curFbxFile = file;
-		var l = new flash.net.URLLoader();
-		l.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
-			if( newFbx ) haxe.Log.trace("Failed to load " + file,null);
-		});
-		l.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			loadData(l.data, newFbx);
-		});
-		l.load(new flash.net.URLRequest(file));
-	}
-	
-	function textureLoader( textureName : String, matData : h3d.fbx.Data.FbxNode ) {
-		var t = new h3d.mat.Texture(1024, 1024);
-		var bmp = new flash.display.BitmapData(1024, 1024, true, 0xFFFF0000);
-		var mat = new h3d.mat.MeshMaterial(t);
-		t.uploadBitmap(hxd.BitmapData.fromNative(bmp));
-		bmp.dispose();
-		loadTexture(textureName, mat);
-		mat.killAlpha = true;
-		mat.culling = Both;
-		mat.blend(SrcAlpha, OneMinusSrcAlpha);
-		for( p in matData.getAll("Properties70.P") )
-			if( p.props[0].toString() == "TransparencyFactor" && p.props[4].toFloat() < 0.999 ) {
-				mat.blend(SrcAlpha, One);
-				mat.renderPass = 1;
-				mat.depthWrite = false;
-				break;
-			}
-		return mat;
-	}
-	
-	function loadTexture( textureName : String, mat : h3d.mat.MeshMaterial, handleAlpha = true ) {
-		var t = mat.texture;
-		if( textureName.split(".").pop().toLowerCase() == "png" && handleAlpha ) {
-			var loader = new flash.net.URLLoader();
-			loader.dataFormat = flash.net.URLLoaderDataFormat.BINARY;
-			loader.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
-				mat.culling = None;
-			});
-			loader.addEventListener(flash.events.Event.COMPLETE, function(_) {
-				var bytes = haxe.io.Bytes.ofData(loader.data);
-				var png = new format.png.Reader(new haxe.io.BytesInput(bytes)).read();
-				var size = format.png.Tools.getHeader(png);
-				var pixels = try format.png.Tools.extract32(png) catch( e : Dynamic ) null;
-				// some unsupported formats such as 8 bits PNG
-				if( pixels == null ) {
-					loadTexture(textureName, mat, false);
-					return;
-				}
-				t.resize(size.width, size.height);
-				t.uploadPixels(new hxd.Pixels(size.width,size.height,pixels,BGRA));
-				mat.culling = None;
-			});
-			loader.load(new flash.net.URLRequest(textureName));
-		} else {
-			var loader = new flash.display.Loader();
-			loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
-				mat.culling = None;
-			});
-			loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
-				var bmp = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;
-				t.resize(bmp.width, bmp.height);
-				t.uploadBitmap(hxd.BitmapData.fromNative(bmp));
-				mat.culling = None;
-			});
-			loader.load(new flash.net.URLRequest(textureName));
-		}
-	}
-	
-	function askLoad( ?anim ) {
-		var f = new flash.net.FileReference();
-		f.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			haxe.Log.clear();
-			var content = f.data.readUTFBytes(f.data.length);
-			if( anim ) {
-				alib = new h3d.fbx.Library();
-				var fbx = h3d.fbx.Parser.parse(content);
-				alib.load(fbx);
-				if( !rightHand )
-					alib.leftHandConvert();
-				setSkin();
-			} else {
-				props.curFbxFile = f.name;
-				loadData(content);
-			}
-		});
-		f.addEventListener(flash.events.Event.SELECT, function(_) f.load());
-		f.browse([new flash.net.FileFilter("FBX File", "*.fbx")]);
-	}
-	
-	function loadData( data : String, newFbx = true ) {
-		curFbx = new h3d.fbx.Library();
-		curFbx.unskinnedJointsAsObjects = true;
-		curData = data;
-		var fbx = h3d.fbx.Parser.parse(data);
-		curFbx.load(fbx);
-		if( !rightHand )
-			curFbx.leftHandConvert();
-		var frame = scene == null ? 0 : (scene.currentAnimation == null ? 0 : scene.currentAnimation.frame);
-		scene = new h3d.scene.Scene();
-		scene.addChild(curFbx.makeObject(textureLoader));
-	
-		//
-		var b = scene.getBounds();
-		
 
-		var dx = b.xMax - b.xMin;
-		var dy = b.yMax - b.yMin;
-		
-		box = new h3d.scene.Box(0xFFFF9910);
-		//init camera
-		if (!newFbx) {
-			scene.camera.pos.set(props.camVars.x * Math.cos(Math.PI/2 * props.camVars.angCoef), props.camVars.y * Math.cos(Math.PI/2 * props.camVars.angCoef), props.camVars.dist * Math.sin(Math.PI/2 * props.camVars.angCoef));
-		}
-		else {
-			var tdist = Math.max(dx * 4, dy * 4);
-			props.camVars = { x: tdist, y:0, tx:0, ty:0, tz:0, dist:tdist, angCoef:Math.PI / 7, zoom:1 };
-		}
-		
-		scene.camera.zFar *= props.camVars.dist * 0.1;
-		scene.camera.zNear *= props.camVars.dist * 0.1;
-		scene.camera.zoom = props.camVars.zoom;
-		//
-		if (props.showBox)
-			scene.addChild(box);
-		if (props.showAxis)
-			scene.addPass(axis);
-		showBonesRec(scene, props.showBones);
-		setSmoothing();
-		setSkin();
-		
-		Cookie.write();
+	override function onResize() {
+		tf.x = s2d.width - (tf.width + 5);
+		tf_help.y = s2d.height - 25;
+		tf_keys.y = s2d.height - tf_keys.textHeight - 35;
 	}
-	
-	function getMeshes(obj : h3d.scene.Object) {
-		var m = [];
-		function loop( o : h3d.scene.Object ) {
-			if ( o.isMesh() ) m.push(o.toMesh());
-			for( i in 0...o.numChildren )
-				loop(o.getChildAt(i));
-		}
-		loop(obj);
-		return m;
-	}
-	
-	function showBonesRec( o : h3d.scene.Object, show = true ) {
-		var s = flash.Lib.as(o, h3d.scene.Skin);
-		if( s != null )
-			s.showJoints = show;
-		for( i in 0...o.numChildren )
-			showBonesRec(o.getChildAt(i), show);
-	}
-	
-	function setSmoothing() {
-		var meshes = getMeshes(scene.getChildAt(0));
-		for( m in meshes )
-			m.material.texture.filter = props.smoothing ? Linear : Nearest;
-	}
-	
-	function setSkin() {
-		var anim = curFbx.loadAnimation(animMode, null, null, alib);
-		if( anim != null ) {
-			anim = scene.playAnimation(anim);
-			if( !props.loop ) {
-				anim.loop = false;
-				anim.onAnimEnd = function() anim.setFrame(0);
-			}
-		}
-	}
-	
-	function onUpdate() {
-		if( !engine.begin() )
-			return;
-			
-		var dist = props.camVars.dist;
-		var camera = scene.camera;
-		var ang = Math.atan2(camera.pos.y - props.camVars.ty, camera.pos.x - props.camVars.tx);
-		
-		//FREE MOUSE MOVE
-		if (freeMove) {
-			var dx = (flash.Lib.current.mouseX - pMouse.x) * 0.01;
-			var dy = (flash.Lib.current.mouseY - pMouse.y) * 0.01;
-			props.camVars.angCoef = Math.max( -0.99, Math.min(0.99, props.camVars.angCoef + dy * 0.5));
-			props.camVars.x = dist * Math.cos(ang + dx);
-			props.camVars.y = dist * Math.sin(ang + dx);
-			camera.pos.set(props.camVars.tx + props.camVars.x * Math.cos(Math.PI / 2 * props.camVars.angCoef), props.camVars.ty + props.camVars.y * Math.cos(Math.PI / 2 * props.camVars.angCoef), props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
-			camera.up.set(0, 0, 1);
-			camera.target.set(props.camVars.tx, props.camVars.ty, props.camVars.tz);
-			pMouse = new flash.geom.Point(flash.Lib.current.mouseX, flash.Lib.current.mouseY);
-		}
-		else if (rightClick) {
-			var dx = (pMouse.x - flash.Lib.current.mouseX);
-			var dy = (pMouse.y - flash.Lib.current.mouseY);
-			
-			//horizontal mouse move
-			props.camVars.tx += Math.cos(ang + Math.PI / 2) * dx * 0.5;
-			props.camVars.ty += Math.sin(ang + Math.PI / 2) * dx * 0.5;
-			//vertical mouse move
-			props.camVars.tx -= Math.cos(ang) * Math.abs(props.camVars.angCoef) * dy * 0.5;
-			props.camVars.ty -= Math.sin(ang) * Math.abs(props.camVars.angCoef) * dy * 0.5;
-			props.camVars.tz += (1 - Math.abs(props.camVars.angCoef)) * dy;
-			
-			camera.pos.set(props.camVars.tx + Math.cos(ang) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.ty + Math.sin(ang) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
-			camera.up.set(0, 0, 1);
-			camera.target.set(props.camVars.tx, props.camVars.ty, props.camVars.tz);
-			pMouse = new flash.geom.Point(flash.Lib.current.mouseX, flash.Lib.current.mouseY);
-		}
-		//VIEWS
-		else {
-			switch( props.view ) {
+
+	function onEvent( e : hxd.Event ) {
+		switch( e.kind ) {
+		case EPush:
+			pMouse.set(e.relX, e.relY);
+			switch( e.button ) {
 			case 0:
-				camera.pos.set(0, 0, dist);
-				camera.up.set(0, 1, 0);
-				camera.target.set(0, 0, 0);
+				freeMove = true;
+			case 1:
+				rightClick = true;
+			}
+		case ERelease:
+			switch( e.button ) {
+			case 0:
+				freeMove = false;
+			case 1:
+				rightClick = false;
+			}
+			save();
+		case EWheel:
+			if( e.wheelDelta > 0 ) zoom(1.2) else zoom(1 / 1.2);
+		case EKeyDown:
+			onKey(e);
+		default:
+		}
+	}
+
+	function zoom( z : Float ) {
+		var d = s3d.camera.target.sub(s3d.camera.pos);
+		d.scale3(z);
+		s3d.camera.pos = s3d.camera.target.sub(d);
+		save();
+	}
+
+	function onKey( e : hxd.Event ) {
+		var reload = false;
+		var cam = s3d.camera;
+/*
 			case 1:
 				camera.pos.set(0, dist, 0);
 				camera.up.set(0, 0, 1);
@@ -485,16 +173,310 @@ class Viewer {
 				camera.pos.set(props.camVars.tx + Math.cos(ang + 0.02) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.ty + Math.sin(ang + 0.02) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
 				camera.up.set(0, 0, 1);
 				camera.target.set(props.camVars.tx, props.camVars.ty, props.camVars.tz);
-			default:
-				props.view < 0? props.view = 4 : props.view = 0;
+*/
+
+		switch( e.keyCode ) {
+		case K.NUMBER_1:
+			var b = obj.getBounds();
+			var pz = b.zMax * 2 - b.zMin ;
+			cam.pos.set(pz*0.001, pz*0.001, pz);
+			cam.target.set(0, 0, 0);
+		case K.NUMBER_2:
+			//props.view = 2;
+		case K.NUMBER_3:
+			//props.view = 3;
+		case K.NUMBER_4:
+			//props.view = 4;
+		case K.F1:
+			askLoad();
+		case K.F2:
+			askLoad(true);
+		case "S".code if( K.isDown(K.CTRL) ):
+			if( curFbx == null ) return;
+			var data = FbxTree.toXml(curFbx.getRoot());
+			var path = props.curFbxFile.substr(0, -4) + "_tree.xml";
+			hxd.File.saveAs(haxe.io.Bytes.ofString(data), { defaultPath : path } );
+		case "R".code:
+			rightHand = !rightHand;
+			cam.pos.x *= -1;
+			cam.target.x *= -1;
+			reload = true;
+		case "K".code:
+			props.showBones = !props.showBones;
+			setMaterial();
+		case "Y".code:
+			props.showAxis = !props.showAxis;
+			if( props.showAxis )
+				s3d.addChild(axis);
+			else
+				s3d.removeChild(axis);
+		case "N".code:
+			props.smoothing = !props.smoothing;
+			setMaterial();
+		case "B".code:
+			props.showBox = !props.showBox;
+			if( props.showBox && box != null )
+				s3d.addChild(box);
+			else
+				s3d.removeChild(box);
+		case "F".code:
+			resetCamera();
+		case "H".code:
+			tf_keys.visible = !tf_keys.visible;
+		case K.SPACE:
+			if( obj.currentAnimation != null )
+				obj.currentAnimation.pause = !obj.currentAnimation.pause;
+		case "S".code:
+			props.slowDown = !props.slowDown;
+		case "A".code:
+			var cst = hxd.fmt.fbx.Library.AnimationMode.createAll();
+			animMode = cst[(Lambda.indexOf(cst, animMode) + 1) % cst.length];
+			reload = true;
+		case "L".code:
+			props.loop = !props.loop;
+			reload = true;
+		case "I".code:
+			props.lights = !props.lights;
+			setMaterial();
+		default:
+
+		}
+
+		if( reload && curData != null )
+			loadData(curData);
+
+		save();
+	}
+
+	function loadFile( file : String, newFbx = true ) {
+		props.curFbxFile = file;
+		var l = new flash.net.URLLoader();
+		l.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
+			if( newFbx ) haxe.Log.trace("Failed to load " + file,null);
+		});
+		l.addEventListener(flash.events.Event.COMPLETE, function(_) {
+			loadData(l.data, newFbx);
+			if( newFbx ) {
+				resetCamera();
+				save();
+			}
+		});
+		l.load(new flash.net.URLRequest(file));
+	}
+
+	function textureLoader( textureName : String, matData : FbxNode ) {
+		var t = new h3d.mat.Texture(1, 1);
+		t.clear(0xFF0000);
+		var mat = new h3d.mat.MeshMaterial(t);
+		loadTexture(textureName, mat);
+		mat.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
+		mat.mainPass.culling = Both;
+		mat.mainPass.blend(SrcAlpha, OneMinusSrcAlpha);
+		for( p in matData.getAll("Properties70.P") )
+			if( p.props[0].toString() == "TransparencyFactor" && p.props[4].toFloat() < 0.999 ) {
+				mat.blendMode = Add;
+				break;
+			}
+		return mat;
+	}
+
+	function loadTexture( textureName : String, mat : h3d.mat.MeshMaterial, handleAlpha = true ) {
+		var t = mat.texture;
+		if( textureName.split(".").pop().toLowerCase() == "png" && handleAlpha ) {
+			var loader = new flash.net.URLLoader();
+			loader.dataFormat = flash.net.URLLoaderDataFormat.BINARY;
+			loader.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
+				mat.mainPass.culling = None;
+			});
+			loader.addEventListener(flash.events.Event.COMPLETE, function(_) {
+				var bytes = haxe.io.Bytes.ofData(loader.data);
+				var png = new format.png.Reader(new haxe.io.BytesInput(bytes)).read();
+				var size = format.png.Tools.getHeader(png);
+				var pixels = try format.png.Tools.extract32(png) catch( e : Dynamic ) null;
+				// some unsupported formats such as 8 bits PNG
+				if( pixels == null ) {
+					loadTexture(textureName, mat, false);
+					return;
+				}
+				t.resize(size.width, size.height);
+				t.uploadPixels(new hxd.Pixels(size.width,size.height,pixels,BGRA));
+				mat.mainPass.culling = None;
+			});
+			loader.load(new flash.net.URLRequest(textureName));
+		} else {
+			var loader = new flash.display.Loader();
+			loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
+				mat.mainPass.culling = None;
+			});
+			loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
+				var bmp = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;
+				t.resize(bmp.width, bmp.height);
+				t.uploadBitmap(hxd.BitmapData.fromNative(bmp));
+				mat.mainPass.culling = None;
+			});
+			loader.load(new flash.net.URLRequest(textureName));
+		}
+	}
+
+	function askLoad( ?anim ) {
+		hxd.File.browse(function(sel) {
+			sel.load(function(bytes) {
+				haxe.Log.clear();
+				var content = bytes.toString();
+				if( anim ) {
+					alib = new hxd.fmt.fbx.Library();
+					var fbx = hxd.fmt.fbx.Parser.parse(content);
+					alib.load(fbx);
+					if( !rightHand )
+						alib.leftHandConvert();
+					setAnim();
+				} else {
+					props.curFbxFile = sel.fileName;
+					loadData(content);
+					resetCamera();
+					save();
+				}
+			});
+		},{ fileTypes : [{ name : "FBX File", extensions : ["fbx"] }] });
+	}
+
+	function loadData( data : String, newFbx = true ) {
+		curFbx = new hxd.fmt.fbx.Library();
+		curFbx.unskinnedJointsAsObjects = true;
+		curData = data;
+		var fbx = hxd.fmt.fbx.Parser.parse(data);
+		curFbx.load(fbx);
+		if( !rightHand )
+			curFbx.leftHandConvert();
+
+		var frame = obj.currentAnimation == null ? 0 : obj.currentAnimation.frame;
+		obj.remove();
+		obj = curFbx.makeObject(textureLoader);
+		s3d.addChild(obj);
+
+		//
+		var b = obj.getBounds();
+
+
+		var dx = b.xMax - b.xMin;
+		var dy = b.yMax - b.yMin;
+
+		box = new h3d.scene.Box(0xFFFF9910);
+
+		setMaterial();
+		setAnim();
+
+		save();
+	}
+
+	function resetCamera() {
+
+		var b = obj.getBounds();
+		var dx = Math.max(Math.abs(b.xMax),Math.abs(b.xMin));
+		var dy = Math.max(Math.abs(b.yMax),Math.abs(b.yMin));
+		var dz = Math.max(Math.abs(b.zMax),Math.abs(b.zMin));
+		var dist = Math.max(Math.max(dx * 4, dy * 4),dz * 3);
+		var ang = Math.PI / 4;
+		var zang = Math.PI / 4;
+		s3d.camera.pos.set(Math.sin(zang) * Math.cos(ang) * dist, Math.sin(zang) * Math.sin(ang) * dist, Math.cos(ang) * dist);
+		s3d.camera.target.set(0, 0, 0);
+
+		var c = b.getCenter();
+		box.x = c.x;
+		box.y = c.y;
+		box.z = c.z;
+	}
+
+	function setMaterial( ?o : h3d.scene.Object ) {
+		if( o == null )
+			o = obj;
+		if( o.isMesh() ) {
+			var m = o.toMesh();
+			m.material.texture.filter = props.smoothing ? Linear : Nearest;
+			m.material.mainPass.enableLights = props.lights;
+			var s = Std.instance(o, h3d.scene.Skin);
+			if( s != null )
+				s.showJoints = props.showBones;
+		}
+		for( s in o )
+			setMaterial(s);
+	}
+
+	function setAnim() {
+		var anim = curFbx.loadAnimation(animMode, null, null, alib);
+		if( anim != null ) {
+			anim = s3d.playAnimation(anim);
+			if( !props.loop ) {
+				anim.loop = false;
+				anim.onAnimEnd = function() anim.setFrame(0);
 			}
 		}
-		
-		camera.zoom += (props.camVars.zoom - camera.zoom) * 0.5;
-		camera.rightHanded = rightHand;
-		
+	}
+
+	override function update( dt : Float ) {
+		var cam = s3d.camera;
+
+		//FREE MOUSE MOVE
+		if (freeMove) {
+			var dx = (s2d.mouseX - pMouse.x) * 0.01;
+			var dy = (s2d.mouseY - pMouse.y) * 0.01;
+			var d = cam.pos.sub(cam.target);
+			var dist = d.length();
+			var r = Math.acos(d.z / dist);
+			var k = Math.atan2(d.y, d.x);
+			r -= dy * cam.up.z;
+			k += dx * cam.up.z;
+			if( r < 0 ) {
+				k += Math.PI;
+				r = -r;
+				cam.up.z *= -1;
+			} else if( r > Math.PI ) {
+				r -= Math.PI * 2;
+				cam.up.z *= -1;
+			}
+			cam.pos.set(Math.sin(r) * Math.cos(k) * dist, Math.sin(r) * Math.sin(k) * dist, Math.cos(r) * dist);
+			pMouse.set(s2d.mouseX, s2d.mouseY);
+		}
+		else if (rightClick) {
+
+			var dx = (pMouse.x - s2d.mouseX);
+			var dy = (pMouse.y - s2d.mouseY);
+
+			var d = cam.pos.sub(cam.target);
+			var dist = d.length();
+
+			dx *= 0.01 / dist;
+			dy *= 0.01 / dist;
+
+			d.normalize();
+			var left = d.cross(cam.up);
+			var up = left.cross(d);
+
+			left.scale3(dx);
+			up.scale3(dy);
+
+			cam.pos = cam.pos.add(left).add(up);
+			cam.target = cam.target.add(left).add(up);
+
+			pMouse.set(s2d.mouseX, s2d.mouseY);
+		}
+
+		if( K.isDown(K.PGDOWN) )
+			zoom(Math.pow(1.03,dt));
+		else if( K.isDown(K.PGUP) )
+			zoom(Math.pow(0.97,dt));
+
+		var dist = cam.target.sub(cam.pos).length();
+		cam.zFar = dist * 5;
+		cam.zNear = dist * 0.1;
+		cam.rightHanded = rightHand;
+
+		axis.x = cam.target.x;
+		axis.y = cam.target.y;
+		axis.z = cam.target.z;
+
 		if( box != null ) {
-			var b = scene.getBounds();
+			var b = obj.getBounds();
 			var dx = b.xMax - b.xMin;
 			var dy = b.yMax - b.yMin;
 			var dz = b.zMax - b.zMin;
@@ -505,11 +487,9 @@ class Viewer {
 			box.y = b.yMin + dy * 0.5;
 			box.z = b.zMin + dz * 0.5;
 		}
-		
-		time++;
-		
+
 		var fmt = hxd.Math.fmt;
-		
+
 		tf_keys.text = [
 			"[F1] Load model",
 			"[F2] Load animation",
@@ -522,6 +502,7 @@ class Viewer {
 			"[R] Right-Hand Camera = "+rightHand,
 			"[N] Tex Smoothing = "+props.smoothing,
 			"[F] Default camera",
+			"[I] Lights = "+props.lights,
 			"[1~4] Views",
 			"",
 			"[Space] Pause Animation",
@@ -529,33 +510,33 @@ class Viewer {
 			"[RMB + Move] translation",
 			"[Wheel] Zoom"
 		].join("\n");
-		tf_keys.y = flash.Lib.current.stage.stageHeight - tf_keys.textHeight - 35;
-		
-		
-		scene.setElapsedTime((props.slowDown ? 0.1 : 1) / Math.max(engine.fps,60));
-		engine.render(scene);
+		tf_keys.y = s2d.height - tf_keys.textHeight - 35;
+
 		tf.text = [
-			(camera.rightHanded ? "R " : "") + fmt(engine.fps),
+			(cam.rightHanded ? "R " : "") + fmt(hxd.Timer.fps()),
 			props.curFbxFile.split("/").pop().split("\\").pop(),
-			(engine.drawTriangles - (props.showBox ? 26 : 0) - (props.showAxis ? 6 : 0)) + " tri",
+			(engine.drawTriangles - (props.showBox ? 26 : 0) - (props.showAxis ? 0 : 0)) + " tri",
 		].join("\n");
+
+		if( props.slowDown ) hxd.Timer.tmod *= 0.1;
 	}
-	
+
 	static var inst : Viewer;
-	
+
 	static function checkInvoke() {
 		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.InvokeEvent.INVOKE, function(e:Dynamic) {
 			var e : flash.events.InvokeEvent = cast e;
 			if( e.arguments.length > 0 ) {
 				props.curFbxFile = e.arguments[0];
-				if( inst.scene != null ) {
+				// init done ?
+				if( inst.axis != null ) {
 					inst.loadFile(props.curFbxFile);
 					flash.desktop.NativeApplication.nativeApplication.openedWindows[0].activate();
 				}
 			}
 		});
 	}
-	
+
 	static function main() {
 		inst = new Viewer();
 		if( flash.system.Capabilities.playerType == "Desktop" )

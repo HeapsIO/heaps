@@ -1,4 +1,4 @@
-using h3d.fbx.Data;
+using hxd.fmt.fbx.Data;
 
 class FbxTree {
 
@@ -17,27 +17,27 @@ class FbxTree {
 
 	public static function toXml( root : FbxNode ) {
 		var buf = new StringBuf();
-		
+
 		var parents = new Map();
 		var childs = new Map();
 
 		var rootObjects = [];
 		var objects = new Map();
-		
+
 		objects.set(0, root);
 		rootObjects.push(root);
-		
+
 		for( o in root.get("Objects").childs ) {
 			objects.set(o.props[0].toInt(), o);
 			rootObjects.push(o);
 		}
-		
+
 		for( c in root.getAll("Connections.C") ) {
 			var cid = c.props[1].toInt();
 			var pid = c.props[2].toInt();
-			
+
 			rootObjects.remove(objects.get(cid));
-			
+
 			var pl = parents.get(cid);
 			if( pl == null ) {
 				pl = [];
@@ -52,7 +52,7 @@ class FbxTree {
 			}
 			cl.push(cid);
 		}
-		
+
 		function highestDepth( id : Int, stack : Map<Int,Bool> ) {
 			if( stack.get(id) )
 				return 0;
@@ -68,7 +68,7 @@ class FbxTree {
 			}
 			return 1 + max;
 		}
-		
+
 		var marked = new Map();
 		function genRec( o : FbxNode, tabs : String ) {
 			var id = o.props[0].toInt();
@@ -102,33 +102,33 @@ class FbxTree {
 		for( r in rootObjects )
 			genRec(r, "");
 		buf.add("</FBX>\n");
-			
+
 		return buf.toString();
 	}
-	
+
 	public static function toString( root : FbxNode ) {
 		var buf = new StringBuf();
-		
+
 		var parents = new Map();
 		var childs = new Map();
 
 		var rootObjects = [];
 		var objects = new Map();
-		
+
 		objects.set(0, root);
 		rootObjects.push(root);
-		
+
 		for( o in root.get("Objects").childs ) {
 			objects.set(o.props[0].toInt(), o);
 			rootObjects.push(o);
 		}
-		
+
 		for( c in root.getAll("Connections.C") ) {
 			var cid = c.props[1].toInt();
 			var pid = c.props[2].toInt();
-			
+
 			rootObjects.remove(objects.get(cid));
-			
+
 			var pl = parents.get(cid);
 			if( pl == null ) {
 				pl = [];
@@ -143,7 +143,7 @@ class FbxTree {
 			}
 			cl.push(cid);
 		}
-		
+
 		function highestDepth( id : Int, stack : Map<Int,Bool> ) {
 			if( stack.get(id) )
 				return 0;
@@ -159,7 +159,7 @@ class FbxTree {
 			}
 			return 1 + max;
 		}
-		
+
 		var marked = new Map();
 		function genRec( o : FbxNode, tabs : String ) {
 			var id = o.props[0].toInt();
@@ -182,8 +182,8 @@ class FbxTree {
 		}
 		for( r in rootObjects )
 			genRec(r, "");
-		
+
 		return buf.toString();
 	}
-	
+
 }
