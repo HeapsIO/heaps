@@ -6,6 +6,7 @@ class LogDriver extends Driver {
 	var d : Driver;
 	var loggedShaders = new Map<Int,Bool>();
 	var currentShader : hxsl.RuntimeShader;
+	public var logLines : Array<String> = null;
 
 	public function new( driver : Driver ) {
 		this.d = driver;
@@ -14,7 +15,10 @@ class LogDriver extends Driver {
 	}
 
 	override function logImpl( str : String ) {
-		d.logImpl(str);
+		if( logLines == null )
+			d.logImpl(str);
+		else
+			logLines.push(str);
 	}
 
 	override function hasFeature( f : Feature ) {
