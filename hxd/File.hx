@@ -22,6 +22,12 @@ typedef BrowseSelect = {
 
 class File {
 
+	#if flash
+	static function isAir() {
+		return flash.system.Capabilities.playerType == "Desktop";
+	}
+	#end
+
 	#if air3
 	static function browseAir( onSelect : BrowseSelect -> Void, options : BrowseOptions, filters ) {
 		var f = flash.filesystem.File.applicationDirectory;
@@ -60,7 +66,7 @@ class File {
 		#if flash
 			var filters = options.fileTypes == null ? null : [for( o in options.fileTypes ) new flash.net.FileFilter(o.name,[for( e in o.extensions ) "*."+e].join(";"))];
 			#if air3
-			if( flash.system.Capabilities.playerType == "Desktop" ) {
+			if( isAir() ) {
 				browseAir(onSelect, options,filters);
 				return;
 			}
@@ -84,39 +90,47 @@ class File {
 		#end
 	}
 
+	#if air3
+	static function saveAsAir( dataContent : haxe.io.Bytes, options : BrowseOptions ) {
+		var f = flash.filesystem.File.applicationDirectory;
+		if( options.defaultPath != null )
+			try f = f.resolvePath(options.defaultPath) catch( e : Dynamic ) {}
+		var basePath = f.clone();
+		f.addEventListener(flash.events.Event.SELECT, function(_) {
+			// save data
+			var o = new flash.filesystem.FileStream();
+			o.open(f, flash.filesystem.FileMode.WRITE);
+			o.writeBytes(dataContent.getData());
+			o.close();
+			if( options.saveFileName != null ) {
+				var path = f.nativePath;
+				if( options.relativePath ) {
+					if( !basePath.isDirectory ) basePath = basePath.parent;
+					var relPath = basePath.getRelativePath(f, true);
+					if( relPath != null )
+						path = relPath;
+				}
+				options.saveFileName(path);
+			}
+		});
+		f.browseForSave(options.title == null ? "" : options.title);
+	}
+	#end
+
 	public static function saveAs( dataContent : haxe.io.Bytes, ?options : BrowseOptions ) {
 		if( options == null ) options = { };
 		#if flash
 			#if air3
-			var f = flash.filesystem.File.applicationDirectory;
-			if( options.defaultPath != null )
-				try f = f.resolvePath(options.defaultPath) catch( e : Dynamic ) {}
-			var basePath = f.clone();
-			f.addEventListener(flash.events.Event.SELECT, function(_) {
-				// save data
-				var o = new flash.filesystem.FileStream();
-				o.open(f, flash.filesystem.FileMode.WRITE);
-				o.writeBytes(dataContent.getData());
-				o.close();
-				if( options.saveFileName != null ) {
-					var path = f.nativePath;
-					if( options.relativePath ) {
-						if( !basePath.isDirectory ) basePath = basePath.parent;
-						var relPath = basePath.getRelativePath(f, true);
-						if( relPath != null )
-							path = relPath;
-					}
-					options.saveFileName(path);
-				}
-			});
-			f.browseForSave(options.title == null ? "" : options.title);
-			#else
+			if( isAir() ) {
+				saveAsAir(dataContent, options);
+				return;
+			}
+			#end
 			var f = new flash.net.FileReference();
 			f.addEventListener(flash.events.Event.SELECT, function(_) {
 			});
 			var defaultFile = options.defaultPath;
 			f.save(dataContent.getData(), defaultFile);
-			#end
 		#else
 			throw "Not supported";
 		#end
@@ -140,15 +154,26 @@ class File {
 		#end
 	}
 
-
-	public static function saveBytes( path : String, data : haxe.io.Bytes ) {
-		#if air3
+	#if air3
+	static function saveBytesAir( path : String, data : haxe.io.Bytes ) {
 		if( path == null ) throw "NULL path";
 		var f = new flash.filesystem.File(path);
 		var o = new flash.filesystem.FileStream();
 		o.open(f, flash.filesystem.FileMode.WRITE);
 		o.writeBytes(data.getData());
 		o.close();
+	}
+	#end
+
+	public static function saveBytes( path : String, data : haxe.io.Bytes ) {
+		#if flash
+			#if air3
+			if( isAir() ) {
+				saveBytesAir(path, data);
+				return;
+			}
+			#end
+			saveAs(data, { defaultPath:path } );
 		#elseif sys
 		sys.io.File.saveBytes(path, data);
 		#else
