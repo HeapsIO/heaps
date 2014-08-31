@@ -17,7 +17,7 @@ class LightSystem {
 		this.globals = globals;
 		initGlobals();
 		cachedShaderList = [];
-		ambientLight = new h3d.Vector(1, 1, 1);
+		ambientLight = new h3d.Vector(0.5, 0.5, 0.5);
 		ambientShader = new h3d.shader.AmbientLight();
 	}
 
