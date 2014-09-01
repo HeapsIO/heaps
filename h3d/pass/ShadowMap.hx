@@ -36,7 +36,7 @@ class ShadowMap extends Default {
 
 	function set_size(s) {
 		if( border != null ) border.dispose();
-		border = new Border(s);
+		border = new Border(s, s);
 		return size = s;
 	}
 
@@ -64,12 +64,12 @@ class ShadowMap extends Default {
 	override function draw( name : String, passes ) {
 		var texture = getTargetTexture("shadowMap", size, size);
 		var ct = ctx.camera.target;
-		lightCamera.target.set(ct.x, ct.y, ct.z);
-		lightCamera.pos.set( -lightDirection.x, -lightDirection.y, -lightDirection.z);
-		lightCamera.pos.normalize();
-		lightCamera.pos.x += ct.x;
-		lightCamera.pos.y += ct.y;
-		lightCamera.pos.z += ct.z;
+		lightCamera.target.set(lightDirection.x, lightDirection.y, lightDirection.z);
+		lightCamera.target.normalize();
+		lightCamera.target.x += ct.x;
+		lightCamera.target.y += ct.y;
+		lightCamera.target.z += ct.z;
+		lightCamera.pos.load(ct);
 		ctx.engine.setTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1, fullClearRequired ? 0 : null);
 		passes = super.draw(name, passes);
