@@ -28,7 +28,9 @@ class Shadow extends hxsl.Shader {
 			bias = clamp(bias, 0, 0.01)
 			#end
 
-			var shade = exp( shadow.power * (depth - shadowPos.z + shadow.bias) ).clamp(0.,1.);
+			var zMax = shadowPos.z.saturate();
+			var delta = (depth + shadow.bias).min(zMax) - zMax;
+			var shade = exp( shadow.power * delta  ).clamp(0., 1.);
 			pixelColor.rgb *= (1. - shade) * shadow.color.rgb + shade;
 		}
 	};
