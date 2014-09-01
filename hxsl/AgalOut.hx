@@ -78,7 +78,9 @@ class AgalOut {
 				found = i;
 				break;
 			}
-			if( found < 0 ) {
+			// disable varying packing : some results show that if stored in XY or ZW the result will differ ! (AGAL bug ?)
+			// also maybe a bad idea since it doesn't allow texture pre-fetch
+			if( found < 0 || true ) {
 				found = valloc.length;
 				valloc.push([X, Y, Z, W]);
 			}
