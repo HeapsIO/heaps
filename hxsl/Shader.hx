@@ -4,6 +4,7 @@ using hxsl.Ast;
 @:autoBuild(hxsl.Macros.buildShader())
 class Shader {
 
+	public var priority : Int = 0;
 	var shader : SharedShader;
 	var instance : SharedShader.ShaderInstance;
 	var constBits : Int;

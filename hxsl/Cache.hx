@@ -41,14 +41,14 @@ class Cache {
 		return id;
 	}
 
-	public function link( instances : Array<SharedShader.ShaderInstance>, outVars : Int ) {
+	public function link( shaders : hxsl.ShaderList, outVars : Int ) {
 		var c = linkCache.get(outVars);
 		if( c == null ) {
 			c = new SearchMap();
 			linkCache.set(outVars, c);
 		}
-		for( i in instances ) {
-			if( i == null ) break;
+		for( s in shaders ) {
+			var i = @:privateAccess s.instance;
 			if( c.next == null ) c.next = new Map();
 			var cs = c.next.get(i.id);
 			if( cs == null ) {
@@ -60,13 +60,17 @@ class Cache {
 		if( c.linked != null )
 			return c.linked;
 
-		var linker = new hxsl.Linker();
-		var shaders = [];
-		for( i in instances ) {
-			if( i == null ) break;
-			shaders.push(i.shader);
+		var shaderDatas = [];
+		var index = 0;
+		for( s in shaders ) {
+			var i = @:privateAccess s.instance;
+			shaderDatas.push( { inst : i, p : s.priority, index : index++ } );
 		}
-		var s = linker.link(shaders, this.outVars[outVars]);
+		shaderDatas.reverse(); // default is reverse order
+		haxe.ds.ArraySort.sort(shaderDatas, function(s1, s2) return s2.p - s1.p);
+
+		var linker = new hxsl.Linker();
+		var s = linker.link([for( s in shaderDatas ) s.inst.shader], this.outVars[outVars]);
 
 		// params tracking
 		var paramVars = new Map();
@@ -76,8 +80,8 @@ class Cache {
 				case TStruct(_): continue;
 				default:
 				}
-				var i = instances[v.instanceIndex];
-				paramVars.set(v.id, { instance : v.instanceIndex, index : i.params.get(v.merged[0].id) } );
+				var inf = shaderDatas[v.instanceIndex];
+				paramVars.set(v.id, { instance : inf.index, index : inf.inst.params.get(v.merged[0].id) } );
 			}
 
 		var s = new hxsl.Splitter().split(s);

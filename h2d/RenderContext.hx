@@ -16,7 +16,8 @@ class RenderContext {
 	var compiledShader : hxsl.RuntimeShader;
 	var buffers : h3d.shader.Buffers;
 	var pass : h3d.mat.Pass;
-	var currentShaders : Array<hxsl.Shader>;
+	var currentShaders : hxsl.ShaderList;
+	var baseShaderList : hxsl.ShaderList;
 	var currentObj : Drawable;
 	var stride : Int;
 
@@ -31,7 +32,9 @@ class RenderContext {
 		pass.depth(true, Always);
 		pass.culling = None;
 		baseShader = new h3d.shader.Base2d();
+		baseShader.priority = 100;
 		baseShader.zValue = 0.;
+		baseShaderList = new hxsl.ShaderList(baseShader);
 	}
 
 	public function begin() {
@@ -39,7 +42,8 @@ class RenderContext {
 		currentObj = null;
 		bufPos = 0;
 		stride = 0;
-		initShaders([baseShader]);
+		baseShaderList.next = null;
+		initShaders(baseShaderList);
 		engine.selectMaterial(pass);
 	}
 
@@ -59,6 +63,7 @@ class RenderContext {
 		flush();
 		texture = null;
 		currentObj = null;
+		baseShaderList.next = null;
 	}
 
 	public function setTarget( t : h3d.mat.Texture ) {
@@ -124,34 +129,35 @@ class RenderContext {
 		if( currentObj != null && (texture != this.texture || stride != this.stride || obj.blendMode != currentObj.blendMode || obj.filter != currentObj.filter) )
 			flush();
 		var shaderChanged = false, paramsChanged = false;
-		if( obj.shaders.length + 1 != currentShaders.length )
-			shaderChanged = true;
-		else {
-			for( i in 0...obj.shaders.length ) {
-				var s = obj.shaders[i];
-				var t = currentShaders[i + 1];
-				if( s == t ) continue;
-				paramsChanged = true;
-				s.updateConstants(manager.globals);
-				@:privateAccess {
-					if( s.instance != t.instance )
-						shaderChanged = true;
-				}
+		var objShaders = obj.shaders;
+		var curShaders = currentShaders.next;
+		while( objShaders != null && curShaders != null ) {
+			var s = objShaders.s;
+			var t = curShaders.s;
+			objShaders = objShaders.next;
+			curShaders = curShaders.next;
+			if( s == t ) continue;
+			paramsChanged = true;
+			s.updateConstants(manager.globals);
+			@:privateAccess {
+				if( s.instance != t.instance )
+					shaderChanged = true;
 			}
 		}
-		if( baseShader.isRelative != isRelative )
+		if( objShaders != null || curShaders != null || baseShader.isRelative != isRelative )
 			shaderChanged = true;
 		if( shaderChanged ) {
 			flush();
-			var ns = obj.shaders.copy();
-			ns.unshift(baseShader);
+
 			baseShader.isRelative = isRelative;
-			initShaders(ns);
+			baseShader.updateConstants(manager.globals);
+			baseShaderList.next = obj.shaders;
+			initShaders(baseShaderList);
 		} else if( paramsChanged ) {
 			flush();
-			// copy so the next flush will fetch their params
-			for( i in 0...obj.shaders.length )
-				currentShaders[i+1] = obj.shaders[i];
+			if( currentShaders != baseShaderList ) throw "!";
+			// the next flush will fetch their params
+			currentShaders.next = obj.shaders;
 		}
 
 		this.texture = texture;

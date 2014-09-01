@@ -48,9 +48,7 @@ class Default extends Base {
 	}
 
 	override function compileShader( p : h3d.mat.Pass ) {
-		var out = [for( s in p.getShadersRec() ) s];
-		out.reverse();
-		return manager.compileShaders(out);
+		return manager.compileShaders(p.getShadersRec());
 	}
 
 	override function getLightSystem() {
@@ -88,9 +86,9 @@ class Default extends Base {
 	function setupShaders( passes : Object ) {
 		var p = passes;
 		var lightInit = false;
-		var instances = [];
 		while( p != null ) {
 			var shaders = p.pass.getShadersRec();
+			shaders = processShaders(p, shaders);
 			if( p.pass.enableLights && lightSystem != null ) {
 				if( !lightInit ) {
 					lightSystem.initLights(ctx.lights);
@@ -98,25 +96,8 @@ class Default extends Base {
 				}
 				shaders = lightSystem.computeLight(p.obj, shaders);
 			}
-			shaders = processShaders(p, shaders);
-			var count = 0;
-			for( s in shaders )
-				p.shaders[count++] = s;
-			// TODO : allow reversed shader compilation !
-			// reverse
-			for( n in 0...count >> 1 ) {
-				var n2 = count - 1 - n;
-				var tmp = p.shaders[n];
-				p.shaders[n] = p.shaders[n2];
-				p.shaders[n2] = tmp;
-			}
-			for( i in 0...count ) {
-				var s = p.shaders[i];
- 				s.updateConstants(globals);
-				instances[i] = @:privateAccess s.instance;
-			}
-			instances[count] = null; // mark end
-			p.shader = manager.compileInstances(instances);
+			p.shader = manager.compileShaders(shaders);
+			p.shaders = shaders;
 			p = p.next;
 		}
 	}

@@ -10,13 +10,12 @@ class Drawable extends Sprite {
 	public var colorKey(default, set) : Null<Int>;
 	public var colorMatrix(get, set) : Null<h3d.Matrix>;
 
-	var shaders : Array<hxsl.Shader>;
+	var shaders : hxsl.ShaderList;
 
 	function new(parent) {
 		super(parent);
 		blendMode = Normal;
 		color = new h3d.Vector(1, 1, 1, 1);
-		shaders = [];
 	}
 
 	function set_colorKey(v:Null<Int>) {
@@ -65,9 +64,7 @@ class Drawable extends Sprite {
 	public function getDebugShaderCode( toHxsl = true ) {
 		var shader = @:privateAccess {
 			var ctx = getScene().ctx;
-			var shaders : Array<hxsl.Shader> = [ctx.baseShader];
-			shaders = shaders.concat(this.shaders);
-			ctx.manager.compileShaders(shaders);
+			ctx.manager.compileShaders(new hxsl.ShaderList(ctx.baseShader,shaders));
 		}
 		var toString = toHxsl ? function(d) return hxsl.Printer.shaderToString(d,true) : hxsl.GlslOut.toGlsl;
 		return "VERTEX=\n" + toString(shader.vertex.data) + "\n\nFRAGMENT=\n" + toString(shader.fragment.data);
@@ -81,16 +78,29 @@ class Drawable extends Sprite {
 	}
 
 	public inline function getShaders() {
-		return new hxd.impl.ArrayIterator<hxsl.Shader>(shaders);
+		return shaders.iterator();
 	}
 
 	public function addShader<T:hxsl.Shader>( s : T ) : T {
-		this.shaders.push(s);
+		if( s == null ) throw "Can't add null shader";
+		shaders = new hxsl.ShaderList(s, shaders);
 		return s;
 	}
 
 	public function removeShader( s : hxsl.Shader ) {
-		return this.shaders.remove(s);
+		var prev = null, cur = shaders;
+		while( cur != null ) {
+			if( cur.s == s ) {
+				if( prev == null )
+					shaders = cur.next;
+				else
+					prev.next = cur.next;
+				return true;
+			}
+			prev = cur;
+			cur = cur.next;
+		}
+		return false;
 	}
 
 	function emitTile( ctx : RenderContext, tile : Tile ) {
