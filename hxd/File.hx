@@ -29,6 +29,11 @@ class File {
 	#end
 
 	#if air3
+
+	static function getRelPath( path : String ) {
+		return try new flash.filesystem.File(path) catch( e : Dynamic ) new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + path);
+	}
+
 	static function browseAir( onSelect : BrowseSelect -> Void, options : BrowseOptions, filters ) {
 		var f = flash.filesystem.File.applicationDirectory;
 		if( options.defaultPath != null )
@@ -138,7 +143,7 @@ class File {
 
 	public static function getBytes( path : String ) : haxe.io.Bytes {
 		#if air3
-		var file = try new flash.filesystem.File(path) catch( e : Dynamic ) new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + path);
+		var file = getRelPath(path);
 		if( !file.exists ) throw "File not found " + path;
 		var fs = new flash.filesystem.FileStream();
 		fs.open(file, flash.filesystem.FileMode.READ);
@@ -157,7 +162,7 @@ class File {
 	#if air3
 	static function saveBytesAir( path : String, data : haxe.io.Bytes ) {
 		if( path == null ) throw "NULL path";
-		var f = new flash.filesystem.File(path);
+		var f = getRelPath(path);
 		var o = new flash.filesystem.FileStream();
 		o.open(f, flash.filesystem.FileMode.WRITE);
 		o.writeBytes(data.getData());
