@@ -61,6 +61,12 @@ class RenderContext {
 		currentObj = null;
 	}
 
+	public function setTarget( t : h3d.mat.Texture ) {
+		flush();
+		engine.setTarget(t);
+		begin();
+	}
+
 	public function flush() {
 		if( bufPos == 0 ) return;
 		beforeDraw();
