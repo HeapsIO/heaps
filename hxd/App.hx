@@ -51,7 +51,11 @@ class App {
 			var log = new h3d.impl.LogDriver(driver);
 			log.logLines = [];
 			@:privateAccess engine.driver = log;
-			engine.render(s3d);
+			try {
+				engine.render(s3d);
+			} catch( e : Dynamic ) {
+				log.logLines.push(Std.string(e));
+			}
 			driver.logEnable = old;
 			@:privateAccess engine.driver = driver;
 			hxd.File.saveBytes("log.txt", haxe.io.Bytes.ofString(log.logLines.join("\n")));
