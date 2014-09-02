@@ -43,7 +43,11 @@ class Globals {
 	static var MAP;
 	public static function allocID( path : String ) {
 		if( MAP == null ) {
+			#if flash
+			MAP = new haxe.ds.UnsafeStringMap<Int>();
+			#else
 			MAP = new Map();
+			#end
 			ALL = [];
 		}
 		var id = MAP.get(path);
