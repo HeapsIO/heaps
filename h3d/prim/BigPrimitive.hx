@@ -126,8 +126,8 @@ class BigPrimitive extends Primitive {
 				var nx = buf[p++];
 				var ny = buf[p++];
 				var nz = buf[p++];
-				var tnx = nx * cr - y * sr;
-				var tny = nx * sr + y * cr;
+				var tnx = nx * cr - ny * sr;
+				var tny = nx * sr + ny * cr;
 				tmpBuf.push(tnx);
 				tmpBuf.push(tny);
 				tmpBuf.push(nz);
@@ -135,8 +135,8 @@ class BigPrimitive extends Primitive {
 				var nx = buf[p++];
 				var ny = buf[p++];
 				var nz = buf[p++];
-				var tnx = nx * cr - y * sr;
-				var tny = nx * sr + y * cr;
+				var tnx = nx * cr - ny * sr;
+				var tny = nx * sr + ny * cr;
 				tmpBuf.push(tnx);
 				tmpBuf.push(tny);
 				tmpBuf.push(nz);
@@ -145,8 +145,8 @@ class BigPrimitive extends Primitive {
 				var nx = buf[p++];
 				var ny = buf[p++];
 				var nz = buf[p++];
-				var tnx = nx * cr - y * sr;
-				var tny = nx * sr + y * cr;
+				var tnx = nx * cr - ny * sr;
+				var tny = nx * sr + ny * cr;
 				tmpBuf.push(tnx);
 				tmpBuf.push(tny);
 				tmpBuf.push(nz);
