@@ -11,6 +11,7 @@ class FBXModel extends MeshPrimitive {
 	var bounds : h3d.col.Bounds;
 	var curMaterial : Int;
 	var groupIndexes : Array<Indexes>;
+	var viewNormals : Bool;
 
 	public function new(g) {
 		this.geom = g;
@@ -76,6 +77,13 @@ class FBXModel extends MeshPrimitive {
 		}
 	}
 
+	override function buildNormalsDisplay() {
+		var m = new FBXModel(geom);
+		m.viewNormals = true;
+		if( geom.getNormals() == null ) throw "Missing normals";
+		return m;
+	}
+
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
 
@@ -92,6 +100,11 @@ class FBXModel extends MeshPrimitive {
 		var midx = new Array<hxd.IndexBuffer>();
 		var pbuf = new hxd.FloatBuffer(), nbuf = (norms == null ? null : new hxd.FloatBuffer()), sbuf = (skin == null ? null : new hxd.BytesBuffer()), tbuf = (tuvs == null ? null : new hxd.FloatBuffer());
 		var cbuf = (colors == null ? null : new hxd.FloatBuffer());
+
+		if( viewNormals ) {
+			tbuf = new hxd.FloatBuffer();
+			cbuf = null;
+		}
 
 		// skin split
 		var sidx = null, stri = 0;
@@ -120,25 +133,53 @@ class FBXModel extends MeshPrimitive {
 					pbuf.push(z);
 
 					if( nbuf != null ) {
-						nbuf.push(norms[k*3]);
-						nbuf.push(norms[k*3 + 1]);
-						nbuf.push(norms[k*3 + 2]);
+						var nx = norms[k * 3];
+						var ny = norms[k * 3 + 1];
+						var nz = norms[k * 3 + 2];
+						nbuf.push(nx);
+						nbuf.push(ny);
+						nbuf.push(nz);
+
+						if( viewNormals ) {
+							for( i in 0...3 ) {
+								pbuf.push(x);
+								pbuf.push(y);
+								pbuf.push(z);
+
+								nbuf.push(nx);
+								nbuf.push(ny);
+								nbuf.push(nz);
+							}
+						}
 					}
 
 					if( tbuf != null ) {
-						var iuv = tuvs.index[k];
-						tbuf.push(tuvs.values[iuv*2]);
-						tbuf.push(1 - tuvs.values[iuv * 2 + 1]);
+						if( viewNormals ) {
+							tbuf.push(0);
+							tbuf.push(0);
+							tbuf.push(1);
+							tbuf.push(0);
+							tbuf.push(0);
+							tbuf.push(1);
+							tbuf.push(1);
+							tbuf.push(1);
+						} else {
+							var iuv = tuvs.index[k];
+							tbuf.push(tuvs.values[iuv*2]);
+							tbuf.push(1 - tuvs.values[iuv * 2 + 1]);
+						}
 					}
 
 					if( sbuf != null ) {
 						var p = vidx * skin.bonesPerVertex;
-						var idx = 0;
-						for( i in 0...skin.bonesPerVertex ) {
-							sbuf.writeFloat(skin.vertexWeights[p + i]);
-							idx = (skin.vertexJoints[p + i] << (8*i)) | idx;
+						for( i in 0...(viewNormals ? 4 : 1) ) {
+							var idx = 0;
+							for( i in 0...skin.bonesPerVertex ) {
+								sbuf.writeFloat(skin.vertexWeights[p + i]);
+								idx = (skin.vertexJoints[p + i] << (8*i)) | idx;
+							}
+							sbuf.writeInt32(idx);
 						}
-						sbuf.writeInt32(idx);
 					}
 
 					if( cbuf != null ) {
@@ -148,11 +189,29 @@ class FBXModel extends MeshPrimitive {
 						cbuf.push(colors.values[icol * 4 + 2]);
 					}
 				}
-				// polygons are actually triangle fans
-				for( n in 0...count - 2 ) {
-					idx.push(start + n);
-					idx.push(start + count - 1);
-					idx.push(start + n + 1);
+
+
+				if( viewNormals ) {
+					for( n in 0...count - 2 ) {
+						inline function addQuad(k) {
+							idx.push(k * 4);
+							idx.push(k * 4 + 1);
+							idx.push(k * 4 + 2);
+							idx.push(k * 4 + 1);
+							idx.push(k * 4 + 3);
+							idx.push(k * 4 + 2);
+						}
+						addQuad(start + n);
+						addQuad(start + count - 1);
+						addQuad(start + n + 1);
+					}
+				} else {
+					// polygons are actually triangle fans
+					for( n in 0...count - 2 ) {
+						idx.push(start + n);
+						idx.push(start + count - 1);
+						idx.push(start + n + 1);
+					}
 				}
 				// by-skin-group index
 				if( skin != null && skin.isSplit() ) {

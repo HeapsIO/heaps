@@ -21,6 +21,11 @@ class Primitive {
 	public function selectMaterial( material : Int ) {
 	}
 
+	public function buildNormalsDisplay() : Primitive {
+		throw "not implemented";
+		return null;
+	}
+
 	public function render( engine : h3d.Engine ) {
 		if( buffer == null || buffer.isDisposed() ) alloc(engine);
 		if( indexes == null ) {

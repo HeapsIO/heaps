@@ -12,6 +12,7 @@ typedef Props = {
 	slowDown:Bool,
 	loop:Bool,
 	lights:Bool,
+	normals:Bool,
 }
 
 typedef Campos = {
@@ -56,7 +57,7 @@ class Viewer extends hxd.App {
 		freeMove = false;
 		rightClick = false;
 
-		props = { curFbxFile : "", camPos : { x:10, y:0, z:0, tx:0, ty:0, tz:0 }, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true, lights : true }
+		props = { curFbxFile : "", camPos : { x:10, y:0, z:0, tx:0, ty:0, tz:0 }, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true, lights : true, normals : false }
 		props = hxd.Save.load(props);
 
 		tf = new flash.text.TextField();
@@ -210,8 +211,11 @@ class Viewer extends hxd.App {
 				s3d.addChild(axis);
 			else
 				s3d.removeChild(axis);
-		case "N".code:
+		case "M".code:
 			props.smoothing = !props.smoothing;
+			setMaterial();
+		case "N".code:
+			props.normals = !props.normals;
 			setMaterial();
 		case "B".code:
 			props.showBox = !props.showBox;
@@ -387,16 +391,28 @@ class Viewer extends hxd.App {
 		box.z = c.z;
 	}
 
+	@:debug
 	function setMaterial( ?o : h3d.scene.Object ) {
 		if( o == null )
 			o = obj;
 		if( o.isMesh() ) {
 			var m = o.toMesh();
-			m.material.texture.filter = props.smoothing ? Linear : Nearest;
+			if( m.material.texture != null )
+				m.material.texture.filter = props.smoothing ? Linear : Nearest;
 			m.material.mainPass.enableLights = props.lights;
 			var s = Std.instance(o, h3d.scene.Skin);
 			if( s != null )
 				s.showJoints = props.showBones;
+			if( props.normals ) {
+				if( m.name != "__normals__" ) {
+					var n = new h3d.scene.Mesh(m.primitive.buildNormalsDisplay(), m);
+					n.material.color.set(0, 0, 1);
+					n.material.mainPass.culling = None;
+					n.material.mainPass.addShader(new h3d.shader.NormalDisplayShader());
+					n.name = "__normals__";
+				}
+			} else if( m.name == "__normals__" )
+				m.remove();
 		}
 		for( s in o )
 			setMaterial(s);
@@ -500,7 +516,8 @@ class Viewer extends hxd.App {
 			"[B] Bounds = "+props.showBox+(box == null ? "" : " ["+fmt(box.scaleX)+" x "+fmt(box.scaleY)+" x "+fmt(box.scaleZ)+"]"),
 			"[S] Slow Animation = "+props.slowDown,
 			"[R] Right-Hand Camera = "+rightHand,
-			"[N] Tex Smoothing = "+props.smoothing,
+			"[M] Tex Smoothing = " + props.smoothing,
+			"[N] Show normals = "+props.normals,
 			"[F] Default camera",
 			"[I] Lights = "+props.lights,
 			"[1~4] Views",
