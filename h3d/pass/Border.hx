@@ -58,6 +58,7 @@ class Border extends ScreenFx<BorderShader> {
 		var plan = new h3d.prim.RawPrimitive(engine, bbuf, 2);
 		plan.buffer.flags.unset(Triangles);
 		plan.buffer.flags.set(Quads);
+		this.plan.dispose();
 		this.plan = plan;
 		shader.color.set(1,1,1,1);
 	}

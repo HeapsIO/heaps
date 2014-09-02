@@ -25,6 +25,13 @@ class Scene extends Object implements h3d.IDrawable {
 		return s;
 	}
 
+	override function dispose() {
+		super.dispose();
+		for( p in passes )
+			p.dispose();
+		passes = new Map();
+	}
+
 	/**
 	 allow to customize render passes (for example, branch sub scene or 2d context)
 	 */

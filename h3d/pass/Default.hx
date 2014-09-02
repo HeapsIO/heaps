@@ -43,6 +43,14 @@ class Default extends Base {
 		fullClearRequired = engine.driver.hasFeature(FullClearRequired);
 	}
 
+	override function dispose() {
+		super.dispose();
+		for( t in textureCache )
+			t.dispose();
+		textureCache = [];
+		textureCacheFrame = -1;
+	}
+
 	function getOutputs() {
 		return ["output.position", "output.color"];
 	}

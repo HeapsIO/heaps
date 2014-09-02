@@ -18,6 +18,9 @@ class Base {
 		this.ctx = ctx;
 	}
 
+	public function dispose() {
+	}
+
 	public function draw( name : String, passes : Object ) {
 		return passes;
 	}

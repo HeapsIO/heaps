@@ -27,4 +27,8 @@ class SubPass extends Base {
 		return sub.getLightSystem();
 	}
 
+	override function dispose() {
+		sub.dispose();
+	}
+
 }
