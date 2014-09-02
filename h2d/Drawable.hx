@@ -9,6 +9,7 @@ class Drawable extends Sprite {
 	public var tileWrap : Bool;
 	public var colorKey(default, set) : Null<Int>;
 	public var colorMatrix(get, set) : Null<h3d.Matrix>;
+	public var colorAdd(get, set) : Null<h3d.Vector>;
 
 	var shaders : hxsl.ShaderList;
 
@@ -16,6 +17,28 @@ class Drawable extends Sprite {
 		super(parent);
 		blendMode = Normal;
 		color = new h3d.Vector(1, 1, 1, 1);
+	}
+
+
+	function get_colorAdd() {
+		var s = getShader(h3d.shader.ColorAdd);
+		return s == null ? null : s.color;
+	}
+
+	function set_colorAdd( c : h3d.Vector ) {
+		var s = getShader(h3d.shader.ColorAdd);
+		if( s == null ) {
+			if( c != null ) {
+				s = addShader(new h3d.shader.ColorAdd());
+				s.color = c;
+			}
+		} else {
+			if( c == null )
+				removeShader(s);
+			else
+				s.color = c;
+		}
+		return c;
 	}
 
 	function set_colorKey(v:Null<Int>) {
