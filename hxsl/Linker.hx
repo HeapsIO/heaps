@@ -161,7 +161,7 @@ class Linker {
 		switch( e.e ) {
 		case TVar(v) if( !locals.exists(v.id) ):
 			var v = allocVar(v, e.p);
-			if( curShader != null ) {
+			if( curShader != null && !curShader.write.exists(v.id) ) {
 				debug(curShader.name + " read " + v.path);
 				curShader.read.set(v.id, v);
 				// if we read a varying, force into fragment
@@ -172,18 +172,28 @@ class Linker {
 			}
 			return { e : TVar(v.v), t : v.v.type, p : e.p };
 		case TBinop(op, e1, e2):
-			switch( [op,e1.e] ) {
-			case [OpAssign | OpAssignOp(_), (TVar(v) | TSwiz({ e : TVar(v) },_))] if( !locals.exists(v.id) ):
+			switch( [op, e1.e] ) {
+			case [OpAssign, TVar(v)] if( !locals.exists(v.id) ):
+				var e2 = mapExprVar(e2);
 				var v = allocVar(v, e1.p);
 				if( curShader != null ) {
 					debug(curShader.name + " write " + v.path);
 					curShader.write.set(v.id, v);
 				}
-				// TSwiz might only assign part of the components, let's then consider that we read the other
-				if( op == OpAssign && (switch( e1.e ) { case TVar(_): true; default: false; }) ) {
-					var eout = { e : TVar(v.v), t : e1.t, p : e1.p };
-					return { e : TBinop(OpAssign, eout, mapExprVar(e2)), t : e.t, p : e.p };
+				// don't read the var
+				return { e : TBinop(op, { e : TVar(v.v), t : v.v.type, p : e.p }, e2), t : e.t, p : e.p };
+			case [OpAssign | OpAssignOp(_), (TVar(v) | TSwiz( { e : TVar(v) }, _))] if( !locals.exists(v.id) ):
+				// read the var
+				var e1 = mapExprVar(e1);
+				var e2 = mapExprVar(e2);
+
+				var v = allocVar(v, e1.p);
+				if( curShader != null ) {
+					// TODO : mark as partial write if SWIZ
+					debug(curShader.name + " write " + v.path);
+					curShader.write.set(v.id, v);
 				}
+				return { e : TBinop(op, e1, e2), t : e.t, p : e.p };
 			default:
 			}
 		case TDiscard:
