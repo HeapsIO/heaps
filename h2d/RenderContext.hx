@@ -42,6 +42,9 @@ class RenderContext {
 		currentObj = null;
 		bufPos = 0;
 		stride = 0;
+		// todo : we might prefer to auto-detect this by running a test and capturing its output
+		baseShader.pixelAlign = #if flash true #else false #end;
+		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
 		baseShaderList.next = null;
 		initShaders(baseShaderList);
 		engine.selectMaterial(pass);
@@ -69,6 +72,7 @@ class RenderContext {
 	public function setTarget( t : h3d.mat.Texture ) {
 		flush();
 		engine.setTarget(t);
+		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
 		begin();
 	}
 
