@@ -11,7 +11,7 @@ class SinusDeform extends hxsl.Shader {
 		var calculatedUV : Vec2;
 
 		function fragment() {
-			calculatedUV.x += sin(calculatedUV.x * frequency + time) * amplitude;
+			calculatedUV.x += sin(calculatedUV.y * frequency + time) * amplitude;
 		}
 
 	};
