@@ -12,9 +12,9 @@ class Camera {
 	public var screenRatio : Float;
 
 	/**
-		The horizontal FieldOfView, in degrees.
+		The vertical FieldOfView, in degrees.
 	**/
-	public var fovX : Float;
+	public var fovY : Float;
 	public var zNear : Float;
 	public var zFar : Float;
 
@@ -39,8 +39,8 @@ class Camera {
 	var minv : Matrix;
 	var needInv : Bool;
 
-	public function new( fovX = 60., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
-		this.fovX = fovX;
+	public function new( fovY = 60., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
+		this.fovY = fovY;
 		this.zoom = zoom;
 		this.screenRatio = screenRatio;
 		this.zNear = zNear;
@@ -55,15 +55,8 @@ class Camera {
 		update();
 	}
 
-	/**
-		Update the fovX value based on the requested fovY value (in degrees) and current screenRatio.
-	**/
-	public function setFovY( value : Float ) {
-		fovX = Math.atan( Math.tan(value * Math.PI / 180) / screenRatio ) * 180 / Math.PI;
-	}
-
 	public function clone() {
-		var c = new Camera(fovX, zoom, screenRatio, zNear, zFar, rightHanded);
+		var c = new Camera(fovY, zoom, screenRatio, zNear, zFar, rightHanded);
 		c.pos = pos.clone();
 		c.up = up.clone();
 		c.target = target.clone();
@@ -185,14 +178,15 @@ class Camera {
 			m._44 = 1;
 
 		} else {
-
-			var scale = zoom / Math.tan(fovX * Math.PI / 360.0);
+			var degToRad = (Math.PI / 180);
+			var halfFovX = Math.atan( Math.tan(fovY * 0.5 * degToRad) * screenRatio );
+			var fovX = halfFovX * 2 / degToRad;
+			var scale = zoom / Math.tan(halfFovX);
 			m._11 = scale;
 			m._22 = scale * screenRatio;
 			m._33 = zFar / (zFar - zNear);
 			m._34 = 1;
 			m._43 = -(zNear * zFar) / (zFar - zNear);
-
 		}
 
 		m._11 += viewX * m._14;
