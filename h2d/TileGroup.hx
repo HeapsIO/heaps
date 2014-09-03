@@ -35,9 +35,8 @@ private class TileLayerContent extends h3d.prim.Primitive {
 	}
 
 	public function add( x : Int, y : Int, r : Float, g : Float, b : Float, a : Float, t : Tile ) {
-		// +0.001 required for directx9 (only ?)
-		var sx = x + t.dx + 0.001;
-		var sy = y + t.dy + 0.001;
+		var sx = x + t.dx;
+		var sy = y + t.dy;
 		tmp.push(sx);
 		tmp.push(sy);
 		tmp.push(t.u);
