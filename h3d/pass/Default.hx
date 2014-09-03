@@ -25,6 +25,7 @@ class Default extends Base {
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix = ctx.camera.m;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix = ctx.camera.getInverseViewProj();
 	@global("global.time") var globalTime : Float = ctx.time;
+	@global("global.pixelSize") var pixelSize : h3d.Vector = new h3d.Vector(2 / ctx.engine.width, 2 / ctx.engine.height);
 	@global("global.modelView") var globalModelView : h3d.Matrix;
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
 	@global("global.flipY") var globalFlipY : Float = {

@@ -50,8 +50,8 @@
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />
-    <option testMovie="Default" />
-    <option testMovieCommand="" />
+    <option testMovie="OpenDocument" />
+    <option testMovieCommand="fbxViewer.app" />
   </options>
   <!-- Plugin storage -->
   <storage />

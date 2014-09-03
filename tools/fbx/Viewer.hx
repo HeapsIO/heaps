@@ -103,8 +103,16 @@ class Viewer extends hxd.App {
 		engine.backgroundColor = 0xFF808080;
 		s2d.addEventListener(onEvent);
 
-		// TODO
-		axis = new h3d.scene.Graphics();
+		var len = 10;
+		axis = new h3d.scene.Graphics(s3d);
+		axis.lineStyle(1.5, 0xFF0000);
+		axis.lineTo(len, 0, 0);
+		axis.lineStyle(1.5, 0x00FF000);
+		axis.moveTo(0, 0, 0);
+		axis.lineTo(0, len, 0);
+		axis.lineStyle(1.5, 0x0000FF);
+		axis.moveTo(0, 0, 0);
+		axis.lineTo(0, 0, len);
 
 		new h3d.scene.DirLight(new h3d.Vector(3, 4, -10), s3d);
 
@@ -408,7 +416,7 @@ class Viewer extends hxd.App {
 					var n = new h3d.scene.Mesh(m.primitive.buildNormalsDisplay(), m);
 					n.material.color.set(0, 0, 1);
 					n.material.mainPass.culling = None;
-					n.material.mainPass.addShader(new h3d.shader.NormalDisplayShader());
+					n.material.mainPass.addShader(new h3d.shader.LineShader()).lengthScale = 0.2;
 					n.name = "__normals__";
 				}
 			} else if( m.name == "__normals__" )

@@ -17,6 +17,7 @@ class BaseMesh extends hxsl.Shader {
 		@global var global : {
 			var time : Float;
 			var flipY : Float;
+			var pixelSize : Vec2;
 			@perObject var modelView : Mat4;
 			@perObject var modelViewInverse : Mat4;
 		};
