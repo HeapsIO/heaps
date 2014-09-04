@@ -33,7 +33,7 @@ class Math {
 			v = -v;
 		} else
 			neg = 1.0;
-		if( std.Math.isNaN(v) )
+		if( std.Math.isNaN(v) || !std.Math.isFinite(v) )
 			return v;
 		var digits = Std.int(4 - std.Math.log(v) / std.Math.log(10));
 		if( digits < 1 )
@@ -41,7 +41,7 @@ class Math {
 		else if( digits >= 10 )
 			return 0.;
 		var exp = pow(10,digits);
-		return floor(v * exp + .49999) * neg / exp;
+		return std.Math.ffloor(v * exp + .49999) * neg / exp;
 	}
 
 	public static inline function floor( f : Float ) {
