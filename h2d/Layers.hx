@@ -84,6 +84,18 @@ class Layers extends Sprite {
 			}
 	}
 
+	public function getLayer( layer : Int ) : Iterator<Sprite> {
+		var a;
+		if( layer >= layerCount )
+			a = [];
+		else {
+			var start = layer == 0 ? 0 : layers[layer - 1];
+			var max = layers[layer];
+			a = childs.slice(start, max);
+		}
+		return new hxd.impl.ArrayIterator(a);
+	}
+
 	public function ysort( layer : Int ) {
 		if( layer >= layerCount ) return;
 		var start = layer == 0 ? 0 : layers[layer - 1];
