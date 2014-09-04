@@ -15,6 +15,7 @@ class Manager {
 		this.output = shaderCache.allocOutputVars(output);
 	}
 
+	@:noDebug
 	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : haxe.ds.Vector<Float>, pos : Int ) {
 		switch( type ) {
 		case TFloat:
@@ -66,6 +67,36 @@ class Manager {
 			out[pos++] = m._33;
 			out[pos++] = m._43;
 			return 12;
+		case TArray(TVec(4,VFloat), SConst(len)):
+			var v : Array<h3d.Vector> = v;
+			for( i in 0...len ) {
+				var n = v[i];
+				if( n == null ) break;
+				out[pos++] = n.x;
+				out[pos++] = n.y;
+				out[pos++] = n.z;
+				out[pos++] = n.w;
+			}
+			return len * 4;
+		case TArray(TMat3x4, SConst(len)):
+			var v : Array<h3d.Matrix> = v;
+			for( i in 0...len ) {
+				var m = v[i];
+				if( m == null ) break;
+				out[pos++] = m._11;
+				out[pos++] = m._21;
+				out[pos++] = m._31;
+				out[pos++] = m._41;
+				out[pos++] = m._12;
+				out[pos++] = m._22;
+				out[pos++] = m._32;
+				out[pos++] = m._42;
+				out[pos++] = m._13;
+				out[pos++] = m._23;
+				out[pos++] = m._33;
+				out[pos++] = m._43;
+			}
+			return len * 12;
 		case TArray(t, SConst(len)):
 			var v : Array<Dynamic> = v;
 			var size = 0;
@@ -87,7 +118,7 @@ class Manager {
 		return 0;
 	}
 
-	function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList ) : Dynamic {
+	inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList ) : Dynamic {
 		if( p.perObjectGlobal != null ) {
 			var v = globals.fastGet(p.perObjectGlobal.gid);
 			if( v == null ) throw "Missing global value " + p.perObjectGlobal.path;
