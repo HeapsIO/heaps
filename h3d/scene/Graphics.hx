@@ -62,11 +62,14 @@ class Graphics extends Mesh {
 		var ny = y - curY;
 		var nz = z - curZ;
 
+		bprim.addBounds(curX, curY, curZ);
+		bprim.addBounds(x, y, z);
+
 		inline function push(v) {
 			bprim.addVerticeValue(v);
 		}
 
-		inline function add(u,v) {
+		inline function add(u, v) {
 			push(curX);
 			push(curY);
 			push(curZ);

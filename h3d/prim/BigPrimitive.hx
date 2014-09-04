@@ -10,10 +10,12 @@ class BigPrimitive extends Primitive {
 	var allIndexes : Array<Indexes>;
 	var tmpBuf : hxd.FloatBuffer;
 	var tmpIdx : hxd.IndexBuffer;
+	var bounds : h3d.col.Bounds;
 
 	public function new(stride) {
 		buffers = [];
 		allIndexes = [];
+		bounds = new h3d.col.Bounds();
 		this.stride = stride;
 		if( stride < 3 ) throw "Minimum stride = 3";
 	}
@@ -31,6 +33,17 @@ class BigPrimitive extends Primitive {
 		return tmpBuf == null ? 0 : Std.int(tmpBuf.length / stride);
 	}
 
+	public inline function addPoint(x, y, z) {
+		tmpBuf.push(x);
+		tmpBuf.push(y);
+		tmpBuf.push(z);
+		bounds.addPos(x, y, z);
+	}
+
+	public inline function addBounds(x, y, z) {
+		bounds.addPos(x, y, z);
+	}
+
 	public inline function addVerticeValue(v) {
 		tmpBuf.push(v);
 	}
@@ -38,6 +51,7 @@ class BigPrimitive extends Primitive {
 	public inline function addIndex(i) {
 		tmpIdx.push(i);
 	}
+
 
 	override function triCount() {
 		var count = 0;
@@ -67,11 +81,16 @@ class BigPrimitive extends Primitive {
 			engine.renderIndexed(buffers[i],allIndexes[i]);
 	}
 
+	override function getBounds() {
+		return bounds;
+	}
+
 	override function dispose() {
 		clear();
 	}
 
 	public function clear() {
+		bounds.empty();
 		for( b in buffers )
 			b.dispose();
 		for( i in allIndexes )
@@ -110,9 +129,15 @@ class BigPrimitive extends Primitive {
 			var z = buf[p++];
 			var tx = (x * cr - y * sr) * scale;
 			var ty = (x * sr + y * cr) * scale;
-			tmpBuf.push(dx + tx);
-			tmpBuf.push(dy + ty);
-			tmpBuf.push(dz + z * scale);
+
+			var vx = dx + tx;
+			var vy = dy + ty;
+			var vz = dz + z * scale;
+			tmpBuf.push(vx);
+			tmpBuf.push(vy);
+			tmpBuf.push(vz);
+			bounds.addPos(vx, vy, vz);
+
 			switch( this.stride ) {
 			case 3:
 				continue;
