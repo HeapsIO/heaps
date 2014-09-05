@@ -73,7 +73,8 @@ class Material {
 		#if debug
 		if( Type.getClass(m) != Type.getClass(this) ) throw this + " is missing clone()";
 		#end
-		// DO NOT clone passes (it's up to the superclass to recreate the shaders)
+		m.mainPass.loadProps(mainPass);
+		// DO NOT clone passes (it's up to the superclass to recreate the passes + shaders)
 		m.castShadows = castShadows;
 		m.receiveShadows = receiveShadows;
 		return m;

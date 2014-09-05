@@ -42,6 +42,24 @@ class Pass {
 		colorMask = 15;
 	}
 
+	public function loadProps( p : Pass ) {
+		name = p.name;
+		passId = p.passId;
+		bits = p.bits;
+		enableLights = p.enableLights;
+		dynamicParameters = p.dynamicParameters;
+		culling = p.culling;
+		depthWrite = p.depthWrite;
+		depthTest = p.depthTest;
+		blendSrc = p.blendSrc;
+		blendDst = p.blendDst;
+		blendOp = p.blendOp;
+		blendAlphaSrc = p.blendAlphaSrc;
+		blendAlphaDst = p.blendAlphaDst;
+		blendAlphaOp = p.blendAlphaOp;
+		colorMask = p.colorMask;
+	}
+
 	public function setPassName( name : String ) {
 		this.name = name;
 		passId = hxsl.Globals.allocID(name);
