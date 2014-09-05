@@ -94,7 +94,7 @@ class RenderContext {
 		texture.filter = currentObj.filter ? Linear : Nearest;
 		texture.wrap = currentObj.tileWrap ? Repeat : Clamp;
 		switch( currentObj.blendMode ) {
-		case Normal:
+		case Alpha:
 			pass.blend(SrcAlpha, OneMinusSrcAlpha);
 		case None:
 			pass.blend(One, Zero);

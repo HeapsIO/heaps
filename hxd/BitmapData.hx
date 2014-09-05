@@ -55,7 +55,7 @@ abstract BitmapData(InnerData) {
 
 	public function draw( x : Int, y : Int, src : BitmapData, srcX : Int, srcY : Int, width : Int, height : Int, ?blendMode : h2d.BlendMode ) {
 		#if flash
-		if( blendMode == null ) blendMode = Normal;
+		if( blendMode == null ) blendMode = Alpha;
 		var r = tmpRect;
 		r.x = srcX;
 		r.y = srcY;
@@ -67,7 +67,7 @@ abstract BitmapData(InnerData) {
 			p.x = x;
 			p.y = y;
 			this.copyPixels(src.toNative(), r, p);
-		case Normal:
+		case Alpha:
 			var p = tmpPoint;
 			p.x = x;
 			p.y = y;

@@ -15,7 +15,7 @@ class Drawable extends Sprite {
 
 	function new(parent) {
 		super(parent);
-		blendMode = Normal;
+		blendMode = Alpha;
 		color = new h3d.Vector(1, 1, 1, 1);
 	}
 

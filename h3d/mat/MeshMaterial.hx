@@ -11,7 +11,7 @@ class MeshMaterial extends Material {
 
 	public function new(?texture) {
 		mshader = new h3d.shader.BaseMesh();
-		blendMode = Normal;
+		blendMode = None;
 		super(mshader);
 		this.texture = texture;
 	}
@@ -36,7 +36,7 @@ class MeshMaterial extends Material {
 	function set_blendMode(v:BlendMode) {
 		if( mainPass != null ) {
 			switch( v ) {
-			case Normal:
+			case None:
 				mainPass.depthWrite = true;
 				mainPass.blend(One, Zero);
 				mainPass.setPassName("default");
@@ -51,6 +51,14 @@ class MeshMaterial extends Material {
 			case SoftAdd:
 				mainPass.depthWrite = false;
 				mainPass.blend(OneMinusDstColor, One);
+				mainPass.setPassName("additive");
+			case Multiply:
+				mainPass.depthWrite = false;
+				mainPass.blend(DstColor, OneMinusSrcAlpha);
+				mainPass.setPassName("additive");
+			case Erase:
+				mainPass.depthWrite = false;
+				mainPass.blend(Zero, OneMinusSrcAlpha);
 				mainPass.setPassName("additive");
 			}
 		}
