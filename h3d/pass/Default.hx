@@ -147,7 +147,6 @@ class Default extends Base {
 			if( prevShader != p.shader ) {
 				prevShader = p.shader;
 				ctx.engine.selectShader(p.shader);
-				ctx.engine.selectMaterial(p.pass);
 				if( buf == null )
 					buf = cachedBuffer = new h3d.shader.Buffers(p.shader);
 				else
@@ -161,6 +160,7 @@ class Default extends Base {
 				ctx.engine.uploadShaderBuffers(buf, Textures);
 			}
 			ctx.drawPass = p;
+			ctx.engine.selectMaterial(p.pass);
 			p.obj.draw(ctx);
 			p = p.next;
 		}
