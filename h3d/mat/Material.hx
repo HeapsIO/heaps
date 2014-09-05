@@ -60,11 +60,10 @@ class Material {
 		return null;
 	}
 
-	public function allocPass< T:(Pass, { function new(?parent:Pass) : Void; }) >( name : String, ?c : Class<T> ) : T {
+	public function allocPass( name : String, ?inheritMain = true ) : Pass {
 		var p = getPass(name);
-		if( p != null ) return cast p;
-		if( c == null ) return null;
-		var p = Type.createInstance(c, [passes]);
+		if( p != null ) return p;
+		var p = new Pass(name, null, inheritMain ? mainPass : null);
 		addPass(p);
 		return p;
 	}
