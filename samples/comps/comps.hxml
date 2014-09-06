@@ -3,6 +3,7 @@
 -lib heaps
 -lib hscript
 -dce full
+-D resourcesPath=../res
 --next
 -lib heaps
 -lib hscript
@@ -11,3 +12,4 @@
 -swf-header 1024:768:60
 -main Comps
 -dce full
+-D resourcesPath=../res

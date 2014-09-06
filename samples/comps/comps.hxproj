@@ -19,7 +19,7 @@
   </classpaths>
   <!-- Build options -->
   <build>
-    <option directives="" />
+    <option directives="resourcesPath=&quot;../res&quot;" />
     <option flashStrict="False" />
     <option noInlineOnDebug="False" />
     <option mainClass="Comps" />
