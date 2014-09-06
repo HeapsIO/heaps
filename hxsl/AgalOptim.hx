@@ -647,7 +647,7 @@ class AgalOptim {
 			else
 				reg(v, false);
 			reg(d, true);
-		case OTex(d, v, _), ORcp(d, v), OFrc(d,v),OSqt(d,v), ORsq(d,v), OLog(d,v),OExp(d,v), ONrm(d,v), OSin(d,v), OCos(d,v), OAbs(d,v), ONeg(d,v), OSat(d,v):
+		case OTex(d, v, _), ORcp(d, v), OFrc(d,v),OSqt(d,v), ORsq(d,v), OLog(d,v),OExp(d,v), ONrm(d,v), OSin(d,v), OCos(d,v), OAbs(d,v), ONeg(d,v), OSat(d,v), OSgn(d,v):
 			reg(v,false);
 			reg(d,true);
 		case OAdd(d, a, b), OSub(d, a, b), OMul(d, a, b), ODiv(d, a, b), OMin(d, a, b), OMax(d, a, b),
@@ -668,6 +668,13 @@ class AgalOptim {
 			reg(offset(b, 2), false);
 			reg(offset(b, 3), false);
 			reg(d, true);
+		case OIne(a, b), OIfe(a, b), OIfg(a, b), OIfl(a, b):
+			reg(a, false);
+			reg(b, false);
+		case ODdx(d, v), ODdy(d,v):
+			reg(v, false);
+			reg(d, true);
+		case OEls, OEif:
 		}
 	}
 
@@ -680,6 +687,11 @@ class AgalOptim {
 			a = r(a, false);
 			b = r(b, false);
 			return op(r(d, true), a, b);
+		}
+		inline function cond(a, b, op) {
+			a = r(a, false);
+			b = r(b, false);
+			return op(a, b);
 		}
 		return switch( op ) {
 		case OMov(d, v): unop(d, v, OMov);
@@ -706,8 +718,17 @@ class AgalOptim {
 		case ONeg(d, v): unop(d, v, ONeg);
 		case OSat(d, v): unop(d, v, OSat);
 		case OM33(d, a, b): binop(d, a, b, OM33);
-		case OM34(d, a, b): binop(d, a, b, OM34);
 		case OM44(d, a, b): binop(d, a, b, OM44);
+		case OM34(d, a, b): binop(d, a, b, OM34);
+		case ODdx(d, v): unop(d, v, ODdx);
+		case ODdy(d, v): unop(d, v, ODdy);
+		case OIfe(a, b): cond(a, b, OIfe);
+		case OIne(a, b): cond(a, b, OIne);
+		case OIfg(a, b): cond(a, b, OIfg);
+		case OIfl(a, b): cond(a, b, OIfl);
+		case OEls: OEls;
+		case OEif: OEif;
+		case OUnused: OUnused;
 		case OKil(v):
 			OKil(r(v, false));
 		case OTex(d, v, t):
@@ -715,7 +736,7 @@ class AgalOptim {
 			OTex(r(d, true), v, t);
 		case OSge(d, a, b): binop(d, a, b, OSge);
 		case OSlt(d, a, b): binop(d, a, b, OSlt);
-		case OUnused: OUnused;
+		case OSgn(d, v): unop(d, v, OSgn);
 		case OSeq(d, a, b): binop(d, a, b, OSeq);
 		case OSne(d, a, b): binop(d, a, b, OSne);
 		}
