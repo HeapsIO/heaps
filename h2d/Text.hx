@@ -27,6 +27,7 @@ class Text extends Drawable {
 		this.font = font;
 		textAlign = Left;
 		letterSpacing = 1;
+        lineSpacing = 0;
 		text = "";
 		textColor = 0xFFFFFF;
 	}
