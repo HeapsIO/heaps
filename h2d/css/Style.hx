@@ -7,6 +7,7 @@ class Style {
 	public var fontSize : Null<Float>;
 	public var color : Null<Int>;
 	public var backgroundColor : Null<FillStyle>;
+	public var borderRadius : Null<Float>;
 	public var borderSize : Null<Float>;
 	public var borderColor : Null<FillStyle>;
 	public var paddingTop : Null<Float>;
@@ -50,6 +51,7 @@ class Style {
 		if( s.fontSize != null ) fontSize = s.fontSize;
 		if( s.color != null ) color = s.color;
 		if( s.backgroundColor != null ) backgroundColor = s.backgroundColor;
+		if( s.borderRadius != null ) borderRadius = s.borderRadius;
 		if( s.borderSize != null ) borderSize = s.borderSize;
 		if( s.borderColor != null ) borderColor = s.borderColor;
 		if( s.paddingLeft != null ) paddingLeft = s.paddingLeft;
