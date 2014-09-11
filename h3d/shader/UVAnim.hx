@@ -17,7 +17,7 @@ class UVAnim extends hxsl.Shader {
 
 		function vertex() {
 			var frame = float(int((global.time - startTime) * speed));
-			if( loop ) frame %= totalFrames else frame = max(frame, totalFrames - 1);
+			if( loop ) frame %= totalFrames else frame = min(frame, totalFrames - 1);
 			var delta = vec2(1. / frameDivision, 1. / frameDivision) * vec2( frame % frameDivision, float(int(frame / frameDivision)) );
 			calculatedUV += delta;
 		}
