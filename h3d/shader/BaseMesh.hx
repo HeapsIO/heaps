@@ -50,6 +50,10 @@ class BaseMesh extends hxsl.Shader {
 			pixelColor = color;
 			depth = projectedPosition.z / projectedPosition.w;
 		}
+		
+		function __init__fragment() {
+			transformedNormal = transformedNormal.normalize();
+		}
 
 		function vertex() {
 			output.position = projectedPosition;
