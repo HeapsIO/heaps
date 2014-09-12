@@ -250,13 +250,17 @@ class Component extends Sprite {
 				bg.arc(style.borderColor, style.borderSize - radius + _w, style.borderSize - radius + _h, style.borderSize + radius, style.borderSize, 0, Math.PI / 2 );
 				bg.arc(style.borderColor, style.borderSize + radius, style.borderSize - radius + _h, style.borderSize + radius, style.borderSize, Math.PI / 2, Math.PI );
 
-				bg.fillCircle(style.backgroundColor, style.borderSize + radius, style.borderSize + radius, radius);
-				bg.fillCircle(style.backgroundColor, style.borderSize - radius + _w, style.borderSize + radius, radius);
-				bg.fillCircle(style.backgroundColor, style.borderSize - radius + _w, style.borderSize - radius + _h, radius);
-				bg.fillCircle(style.backgroundColor, style.borderSize + radius, style.borderSize - radius + _h, radius);
+				bg.fillArc(style.backgroundColor, style.borderSize + radius, style.borderSize + radius, radius, Math.PI, Math.PI + Math.PI / 2 );
+				bg.fillArc(style.backgroundColor, style.borderSize - radius + _w, style.borderSize + radius, radius, Math.PI + Math.PI / 2, Math.PI * 2 );
+				bg.fillArc(style.backgroundColor, style.borderSize - radius + _w, style.borderSize - radius + _h, radius, 0, Math.PI / 2 );
+				bg.fillArc(style.backgroundColor, style.borderSize + radius, style.borderSize - radius + _h, radius, Math.PI / 2, Math.PI );
 
-				bg.fillRect(style.backgroundColor, style.borderSize + radius, style.borderSize, _w - radius * 2, _h);
-				bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize + radius, _w, _h - radius * 2);
+				bg.fillRect(style.backgroundColor, style.borderSize + radius, style.borderSize, _w - radius * 2, radius);
+				bg.fillRect(style.backgroundColor, style.borderSize + radius, style.borderSize + _h - radius , _w - radius * 2, radius);
+				bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize + radius, radius, _h - radius * 2);
+				bg.fillRect(style.backgroundColor, style.borderSize + _w - radius, style.borderSize + radius, radius, _h - radius * 2);
+
+				bg.fillRect(style.backgroundColor, style.borderSize + radius, style.borderSize + radius, _w - radius * 2, _h - radius * 2);
 			} else {
 				bg.lineRect(style.borderColor, 0, 0, width - (style.marginLeft + style.marginRight), height - (style.marginTop + style.marginBottom), style.borderSize);
 				bg.fillRect(style.backgroundColor, style.borderSize, style.borderSize, contentWidth + style.paddingLeft + style.paddingRight, contentHeight + style.paddingTop + style.paddingBottom);

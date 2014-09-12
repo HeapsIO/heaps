@@ -28,6 +28,15 @@ class Fill extends h2d.TileGroup {
 		}
 	}
 
+	public inline function fillArc( fill:FillStyle, x : Float, y : Float, ray : Float, start: Float, end: Float) {
+		switch( fill ) {
+		case Transparent:
+		case Color(c):
+			content.fillArc(x, y, ray, c, start, end);
+		case Gradient(a,b,c,d):
+		}
+	}
+
 	public function fillRect(fill:FillStyle,x,y,w,h) {
 		switch( fill ) {
 		case Transparent:
