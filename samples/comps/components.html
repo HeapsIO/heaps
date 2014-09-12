@@ -43,6 +43,9 @@
 			height: 100px;
 			offset: 400 570;
 		}
+		.rounded1:hover {
+			background-color: rgba(124, 120, 223, 0.2);
+		}
 		
 	</style>
 	<div class="panel window">
@@ -59,7 +62,7 @@
 			<slider onchange="$('#lb2').text(api.fmt($(this).val()))" style="increment:0.1"/>
 			<label id="lb2"></label>
 			<div>
-				<checkbox onchange="$('#lbc').text($(this).val()?'ON':'OFF')"/>
+				<checkbox id="cbc" onchange="$('#lbc').text($(this).val()?'ON':'OFF')"/>
 				<label id="lbc">OFF</label>
 			</div>
 			
@@ -94,5 +97,5 @@
 		</div>
 	</div>
 	<button value="Standalone" x="700" y="570"/>
-	<div class="rounded1"  ></div>
+	<div class="rounded1" id="rounded1" onclick="$('#lbc').text($('#cbc').val()?'ON':'OFF')" ></div>
 </body>
