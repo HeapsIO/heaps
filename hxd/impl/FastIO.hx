@@ -102,4 +102,25 @@ class FastIntIO extends FastIO<Int> {
 		}
 	}
 
+	public inline function rec2dk( x, y, bits, callb ) {
+		var k = 0;
+		add2d(x, y, bits);
+		while( true ) {
+			flush((write < read ? write : (write - read)) * 4);
+			if( !hasNext() )
+				break;
+			for( id in this ) {
+				var x = id & ((1 << bits) - 1);
+				var y = id >>> bits;
+				if( !callb(x,y,k) )
+					continue;
+				add2d(x + 1, y, bits);
+				add2d(x - 1, y, bits);
+				add2d(x, y + 1, bits);
+				add2d(x, y - 1, bits);
+			}
+			k++;
+		}
+	}
+
 }
