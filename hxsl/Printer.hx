@@ -56,6 +56,8 @@ class Printer {
 				case Nullable: "nullable";
 				case PerObject: "perObject";
 				case Name(n): "name('" + n + "')";
+				case Shared: "shared";
+				case Precision(p): Std.string(p).toLowerCase() + "p";
 				}) + " ");
 		}
 		if( v.kind != defKind )

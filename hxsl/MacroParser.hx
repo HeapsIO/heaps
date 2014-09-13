@@ -39,6 +39,14 @@ class MacroParser {
 			v.qualifiers.push(Nullable);
 		case "perObject":
 			v.qualifiers.push(PerObject);
+		case "shared":
+			v.qualifiers.push(Shared);
+		case "lowp":
+			v.qualifiers.push(Precision(Low));
+		case "mediump":
+			v.qualifiers.push(Precision(Medium));
+		case "highp":
+			v.qualifiers.push(Precision(High));
 		default:
 			error("Unsupported qualifier " + m.name, m.pos);
 		}

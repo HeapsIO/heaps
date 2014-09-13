@@ -370,6 +370,17 @@ class GlslOut {
 			case Function, Output: continue;
 			case Local:
 			}
+			if( v.qualifiers != null )
+				for( q in v.qualifiers )
+					switch( q ) {
+					case Precision(p):
+						switch( p ) {
+						case Low: add("lowp ");
+						case Medium: add("mediump ");
+						case High: add("highp ");
+						}
+					default:
+					}
 			addVar(v);
 			add(";\n");
 		}

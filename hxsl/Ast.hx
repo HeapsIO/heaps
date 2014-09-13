@@ -74,6 +74,14 @@ enum VarQualifier {
 	Nullable;
 	PerObject;
 	Name( n : String );
+	Shared;
+	Precision( p : Prec );
+}
+
+enum Prec {
+	Low;
+	Medium;
+	High;
 }
 
 typedef VarDecl = {

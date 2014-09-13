@@ -111,7 +111,10 @@ class Linker {
 			for( vm in v2.merged )
 				if( vm == v )
 					return v2;
-			if( v.kind == Param || v.kind == Function || (v.kind == Var && v.hasQualifier(Private)) ) {
+			inline function isUnique( v : TVar ) {
+				return (v.kind == Param && !v.hasQualifier(Shared)) || v.kind == Function || (v.kind == Var && v.hasQualifier(Private));
+			}
+			if( isUnique(v) || isUnique(v2.v) || (v.kind == Param && v2.v.kind == Param) /* two shared : one takes priority */ ) {
 				// allocate a new unique name in the shader if already in use
 				var k = 2;
 				while( true ) {

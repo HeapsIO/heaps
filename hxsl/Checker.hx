@@ -616,6 +616,15 @@ class Checker {
 				case Name(_):
 					if( parent != null ) error("Cannot have an explicit name for a structure variable", pos);
 					if( tv.kind != Global ) error("Explicit name is only allowed for global var", pos);
+				case Shared:
+					if( parent != null ) error("Cannot share a structure field", pos);
+					if( tv.kind != Param ) error("Can only share a @param", pos);
+				case Precision(_):
+					switch( v.type ) {
+					case TVec(_, VFloat), TFloat:
+					default:
+						error("Precision qualifier not supported on " + v.type, pos);
+					}
 				}
 		}
 		if( tv.type != null )
