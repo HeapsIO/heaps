@@ -5,13 +5,15 @@ private typedef InnerData =
 	flash.display.BitmapData
 #elseif js
 	js.html.CanvasRenderingContext2D
+#elseif nme
+	nme.display.BitmapData
 #else
 	Int
 #end;
 
 abstract BitmapData(InnerData) {
 
-	#if flash
+	#if (flash || nme || openfl)
 	static var tmpRect = new flash.geom.Rectangle();
 	static var tmpPoint = new flash.geom.Point();
 	static var tmpMatrix = new flash.geom.Matrix();
@@ -21,7 +23,7 @@ abstract BitmapData(InnerData) {
 	public var height(get, never) : Int;
 
 	public inline function new(width:Int, height:Int) {
-		#if (flash||openfl)
+		#if (flash||openfl||nme)
 		this = new flash.display.BitmapData(width, height, true, 0);
 		#else
 		var canvas = js.Browser.document.createCanvasElement();
@@ -40,7 +42,7 @@ abstract BitmapData(InnerData) {
 	}
 
 	public function fill( x : Int, y : Int, width : Int, height : Int, color : Int ) {
-		#if flash
+		#if (flash || openfl || nme)
 		var r = tmpRect;
 		r.x = x;
 		r.y = y;

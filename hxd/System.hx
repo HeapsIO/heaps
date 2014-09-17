@@ -20,15 +20,23 @@ class System {
 
 	public static var screenDPI(get,never) : Float;
 
-	#if flash
+	#if (flash || nme || openfl)
 
 	static function get_isWindowed() {
+		#if cpp
+		return true;
+		#else
 		var p = flash.system.Capabilities.playerType;
 		return p == "ActiveX" || p == "PlugIn" || p == "StandAlone" || p == "Desktop";
+		#end
 	}
 
 	static function get_isTouch() {
+		#if cpp
+		return false;
+		#else
 		return flash.system.Capabilities.touchscreenType == flash.system.TouchscreenType.FINGER;
+		#end
 	}
 
 	static function get_width() {
@@ -42,7 +50,11 @@ class System {
 	}
 
 	static function get_isAndroid() {
+		#if cpp
+		return #if android true #else false #end;
+		#else
 		return flash.system.Capabilities.manufacturer.indexOf('Android') != -1;
+		#end
 	}
 
 	static function get_screenDPI() {
@@ -62,21 +74,28 @@ class System {
 		}
 	}
 
+	#if flash
 	static function isAir() {
 		return flash.system.Capabilities.playerType == "Desktop";
 	}
+	#end
 
 	public static function exit() {
+		#if flash
 		if( isAir() ) {
 			var d : Dynamic = flash.Lib.current.loaderInfo.applicationDomain.getDefinition("flash.desktop.NativeApplication");
 			Reflect.field(Reflect.field(d,"nativeApplication"),"exit")();
 		} else
+		#end
 			flash.system.System.exit(0);
 	}
 
 	public static var setCursor = setNativeCursor;
 
 	public static function setNativeCursor( c : Cursor ) {
+		#if cpp
+		// TODO
+		#else
 		flash.ui.Mouse.cursor = switch( c ) {
 		case Default: "auto";
 		case Button: "button";
@@ -84,7 +103,7 @@ class System {
 		case TextInput: "ibeam";
 		case Hide: "auto";
 		case Custom(frames, speed, offsetX, offsetY):
-			#if openfl
+			#if cpp
 				throw "not supported on openFL for now";
 			#else
 				var customCursor = new flash.ui.MouseCursorData();
@@ -97,6 +116,7 @@ class System {
 				"custom";
 			#end
 		}
+		#end
 		if( c == Hide ) flash.ui.Mouse.hide() else flash.ui.Mouse.show();
 	}
 
@@ -112,6 +132,7 @@ class System {
 		if( CACHED_NAME != null )
 			return CACHED_NAME;
 		var name;
+		#if flash
 		if( isAndroid && isAir() ) {
 			try {
 				var f : Dynamic = Type.createInstance(flash.Lib.current.loaderInfo.applicationDomain.getDefinition("flash.filesystem.File"), ["/system/build.prop"]);
@@ -123,6 +144,7 @@ class System {
 				name = "Android";
 			}
 		} else
+		#end
 			name = "PC";
 		CACHED_NAME = name;
 		return name;

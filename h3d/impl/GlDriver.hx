@@ -10,15 +10,20 @@ import js.html.Uint8Array;
 import js.html.Float32Array;
 private typedef GL = js.html.webgl.GL;
 private typedef Uniform = js.html.webgl.UniformLocation;
-#elseif cpp
-import openfl.gl.GL;
-private typedef Uint16Array = openfl.utils.Int16Array;
-private typedef Uint8Array = openfl.utils.UInt8Array;
-private typedef Float32Array = openfl.utils.Float32Array;
+private typedef Program = js.html.webgl.Program;
+private typedef GLShader = js.html.webgl.Shader;
+#elseif nme
+import nme.gl.GL;
+private typedef Uniform = Dynamic;
+private typedef Program = nme.gl.GLProgram;
+private typedef GLShader = nme.gl.GLShader;
+private typedef Uint16Array = nme.utils.Int16Array;
+private typedef Uint8Array = nme.utils.UInt8Array;
+private typedef Float32Array = nme.utils.Float32Array;
 #end
 
 private class CompiledShader {
-	public var s : js.html.webgl.Shader;
+	public var s : GLShader;
 	public var vertex : Bool;
 	public var globals : Uniform;
 	public var params : Uniform;
@@ -32,7 +37,7 @@ private class CompiledShader {
 }
 
 private class CompiledProgram {
-	public var p : js.html.webgl.Program;
+	public var p : Program;
 	public var vertex : CompiledShader;
 	public var fragment : CompiledShader;
 	public var stride : Int;
@@ -61,6 +66,9 @@ class GlDriver extends Driver {
 	var hasTargetFlip : Bool;
 	var frame : Int;
 
+	var bufferWidth : Int;
+	var bufferHeight : Int;
+
 	public function new() {
 		#if js
 		canvas = @:privateAccess hxd.Stage.getCanvas();
@@ -74,6 +82,7 @@ class GlDriver extends Driver {
 		var tmp = new Float32Array(8);
 		var sub = new Float32Array(tmp.buffer, 0, 4);
 		fixMult = sub.length == 1; // should be 4
+		trace(fixMult);
 		#end
 		programs = new Map();
 		curAttribs = 0;
@@ -183,9 +192,23 @@ class GlDriver extends Driver {
 	function uploadBuffer( s : CompiledShader, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Globals:
-			if( s.globals != null ) gl.uniform4fv(s.globals, new Float32Array(buf.globals.toData()).subarray(0, s.shader.globalsSize * 4));
+			if( s.globals != null ) {
+				#if js
+				var a = new Float32Array(buf.globals.toData()).subarray(0, s.shader.globalsSize * 4);
+				#else
+				var a = new Float32Array(buf.globals.toData(), 0, s.shader.globalsSize * 4);
+				#end
+				gl.uniform4fv(s.globals, a);
+			}
 		case Params:
-			if( s.params != null ) gl.uniform4fv(s.params, new Float32Array(buf.params.toData()).subarray(0, s.shader.paramsSize * 4));
+			if( s.params != null ) {
+				#if js
+				var a = new Float32Array(buf.params.toData()).subarray(0, s.shader.paramsSize * 4);
+				#else
+				var a = new Float32Array(buf.params.toData(), 0, s.shader.paramsSize * 4);
+				#end
+				gl.uniform4fv(s.params, a);
+			}
 		case Textures:
 			for( i in 0...s.textures.length ) {
 				var t = buf.tex[i];
@@ -308,6 +331,8 @@ class GlDriver extends Driver {
 		#elseif cpp
 		// resize window
 		#end
+		bufferWidth = width;
+		bufferHeight = height;
 		gl.viewport(0, 0, width, height);
 	}
 
@@ -350,32 +375,28 @@ class GlDriver extends Driver {
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
 		var b = gl.createBuffer();
-		#if js
 		gl.bindBuffer(GL.ARRAY_BUFFER, b);
 		if( m.size * m.stride == 0 ) throw "assert";
+		#if js
 		gl.bufferData(GL.ARRAY_BUFFER, m.size * m.stride * 4, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
-		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		#else
-		var tmp = new Uint8Array(count * stride * 4);
-		gl.bindBuffer(GL.ARRAY_BUFFER, b);
-		gl.bufferData(GL.ARRAY_BUFFER, tmp, GL.STATIC_DRAW);
-		gl.bindBuffer(GL.ARRAY_BUFFER, null);
+		var tmp = new Uint8Array(m.size * m.stride * 4);
+		gl.bufferData(GL.ARRAY_BUFFER, tmp, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#end
+		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		return { b : b, stride : m.stride };
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
 		var b = gl.createBuffer();
-		#if js
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
+		#if js
 		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, count * 2, GL.STATIC_DRAW);
-		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		#else
 		var tmp = new Uint16Array(count);
-		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
 		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, tmp, GL.STATIC_DRAW);
-		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		#end
+		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		return b;
 	}
 
@@ -394,11 +415,17 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
+		#if nme
+		var pixels = bmp.getPixels();
+		uploadTexturePixels(t, pixels, mipLevel, side);
+		pixels.dispose();
+		#else
 		var img = bmp.toNative();
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, img.getImageData(0, 0, bmp.width, bmp.height));
 		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
+		#end
 	}
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
@@ -508,13 +535,17 @@ class GlDriver extends Driver {
 	}
 
 	override function isDisposed() {
+		#if (nme || openfl)
+		return false;
+		#else
 		return gl.isContextLost();
+		#end
 	}
 
 	override function setRenderTarget( tex : h3d.mat.Texture ) {
 		if( tex == null ) {
 			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
-			gl.viewport(0, 0, canvas.width, canvas.height);
+			gl.viewport(0, 0, bufferWidth, bufferHeight);
 			hasTargetFlip = false;
 			return;
 		}

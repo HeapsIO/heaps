@@ -2,7 +2,7 @@ package hxd;
 
 class Stage {
 
-	#if (flash || openfl)
+	#if (flash || openfl || nme)
 	var stage : flash.display.Stage;
 	var fsDelayed : Bool;
 	#end
@@ -148,7 +148,7 @@ class Stage {
 		return inst;
 	}
 
-#if (flash || openfl)
+#if (flash || openfl || nme)
 
 	inline function get_mouseX() {
 		return Std.int(stage.mouseX);
@@ -167,7 +167,7 @@ class Stage {
 	}
 
 	inline function get_mouseLock() {
-		#if openfl
+		#if cpp
 		return false;
 		#else
 		return stage.mouseLock;
@@ -175,7 +175,7 @@ class Stage {
 	}
 
 	inline function set_mouseLock(v) {
-		#if openfl
+		#if cpp
 		return false;
 		#else
 		return stage.mouseLock = v;
