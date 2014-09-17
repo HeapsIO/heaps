@@ -106,6 +106,8 @@ class RenderContext {
 			pass.blend(DstColor, OneMinusSrcAlpha);
 		case Erase:
 			pass.blend(Zero, OneMinusSrcAlpha);
+		case Screen:
+			pass.blend(One, OneMinusSrcColor);
 		}
 		manager.fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);

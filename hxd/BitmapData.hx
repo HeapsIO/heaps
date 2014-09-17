@@ -93,6 +93,13 @@ abstract BitmapData(InnerData) {
 			r.x = x;
 			r.y = y;
 			this.draw(src.toNative(), m, null, flash.display.BlendMode.MULTIPLY, r, false);
+		case Screen:
+			var m = tmpMatrix;
+			m.tx = x - srcX;
+			m.ty = y - srcY;
+			r.x = x;
+			r.y = y;
+			this.draw(src.toNative(), m, null, flash.display.BlendMode.SCREEN, r, false);
 		case SoftAdd:
 			throw "BlendMode not supported";
 		}

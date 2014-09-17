@@ -60,6 +60,10 @@ class MeshMaterial extends Material {
 				mainPass.depthWrite = false;
 				mainPass.blend(Zero, OneMinusSrcAlpha);
 				mainPass.setPassName("additive");
+			case Screen:
+				mainPass.depthWrite = false;
+				mainPass.blend(One, OneMinusSrcColor);
+				mainPass.setPassName("additive");
 			}
 		}
 		return blendMode = v;
