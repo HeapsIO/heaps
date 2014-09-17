@@ -52,6 +52,20 @@ class Default extends Base {
 		textureCacheFrame = -1;
 	}
 
+
+	@:access(h3d.scene.Object)
+	function depthSort( passes : h3d.pass.Object ) {
+		var p = passes;
+		var cam = ctx.camera.m;
+		while( p != null ) {
+			var z = p.obj.absPos._41 * cam._13 + p.obj.absPos._42 * cam._23 + p.obj.absPos._43 * cam._33 + cam._43;
+			var w = p.obj.absPos._41 * cam._14 + p.obj.absPos._42 * cam._24 + p.obj.absPos._43 * cam._34 + cam._44;
+			p.depth = z / w;
+			p = p.next;
+		}
+		return haxe.ds.ListSort.sortSingleLinked(passes, function(p1, p2) return p1.depth > p2.depth ? -1 : 1);
+	}
+
 	function getOutputs() {
 		return ["output.position", "output.color"];
 	}
@@ -135,6 +149,8 @@ class Default extends Base {
 		setGlobals();
 		setupShaders(passes);
 		passes = haxe.ds.ListSort.sortSingleLinked(passes, sortByShader);
+		if( name == "alpha" )
+			passes = depthSort(passes);
 		ctx.uploadParams = uploadParams;
 		var p = passes;
 		var buf = cachedBuffer, prevShader = null;

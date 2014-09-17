@@ -9,6 +9,7 @@ class Object {
 	// cache
 	public var shaders : hxsl.ShaderList;
 	public var shader : hxsl.RuntimeShader;
+	public var depth : Float;
 
 	public function new() {
 	}
