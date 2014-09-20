@@ -50,7 +50,7 @@ abstract BitmapData(InnerData) {
 		r.height = height;
 		this.fillRect(r, color);
 		#else
-		this.setFillColor(((color>>16)&0xFF)/255,((color>>8)&0xFF)/255,(color&0xFF)/255,(color>>>24)/255);
+		this.fillStyle = 'rgba(${(color>>16)&0xFF}, ${(color>>8)&0xFF}, ${color&0xFF}, ${(color>>>24)/255})';
 		this.fillRect(x, y, width, height);
 		#end
 	}
