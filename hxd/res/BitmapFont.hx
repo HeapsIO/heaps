@@ -32,7 +32,11 @@ class BitmapFont extends Resource {
 				var fc = new h2d.Font.FontChar(t, Std.parseInt(c.att.width) - 1);
 				for( k in c.elements )
 					fc.addKerning(k.att.id.charCodeAt(0), Std.parseInt(k.att.advance));
-				glyphs.set(c.att.code.charCodeAt(0), fc);
+				var code = c.att.code;
+				if( StringTools.startsWith(code, "&#") )
+					glyphs.set(Std.parseInt(code.substr(2)), fc);
+				else
+					glyphs.set(c.att.code.charCodeAt(0), fc);
 			}
 		case sign:
 			throw "Unknown font signature " + StringTools.hex(sign, 8);
