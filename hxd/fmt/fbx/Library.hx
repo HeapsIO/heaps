@@ -765,7 +765,7 @@ class Library {
 	}
 
 	function isNullJoint( model : FbxNode ) {
-		if( getParent(model, "Deformer", true) != null )
+		if( getParents(model, "Deformer").length > 0 )
 			return false;
 		var parent = getParent(model, "Model", true);
 		if( parent == null )
@@ -798,6 +798,44 @@ class Library {
 					tmpTex = h3d.mat.Texture.fromColor(0xFF00FF);
 				return new h3d.mat.MeshMaterial(tmpTex);
 			}
+		}
+
+		// if we have multiple deformers on the same joint, let's merge the geometries
+		var toMerge = [], mergeGroups = new Map<Int,Array<FbxNode>>();
+		for( model in root.getAll("Objects.Model") ) {
+			if( skipObjects.get(model.getName()) )
+				continue;
+			var mtype = model.getType();
+			var isJoint = mtype == "LimbNode" && (!unskinnedJointsAsObjects || !isNullJoint(model));
+			if( !isJoint ) continue;
+			var deformers = getParents(model, "Deformer");
+			if( deformers.length <= 1 ) continue;
+			var group = [];
+			for( d in deformers ) {
+				var def = getParent(d, "Deformer");
+				if( def == null ) continue;
+				var geom = getParent(def, "Geometry");
+				if( geom == null ) continue;
+				var model2 = getParent(geom, "Model");
+				if( model2 == null ) continue;
+				var id = model2.getId();
+				var g = mergeGroups.get(id);
+				if( g != null ) {
+					for( g in g ) {
+						group.remove(g);
+						group.push(g);
+					}
+					toMerge.remove(g);
+				}
+				group.remove(model2);
+				group.push(model2);
+				mergeGroups.set(id, group);
+			}
+			toMerge.push(group);
+		}
+		for( group in toMerge ) {
+			group.sort(function(m1, m2) return Reflect.compare(m1.getName(), m2.getName()));
+			mergeModels([for( g in group ) g.getName()]);
 		}
 
 		// init objects
