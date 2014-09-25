@@ -55,6 +55,7 @@ class Pixels {
 		flags.unset(ReadOnly);
 	}
 
+	@:noDebug
 	public function convert( target : PixelFormat ) {
 		if( format == target )
 			return;

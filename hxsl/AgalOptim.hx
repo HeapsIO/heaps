@@ -19,6 +19,7 @@ private class RegInfos {
 	}
 }
 
+@:noDebug
 class AgalOptim {
 
 	static var COMPS = [X, Y, Z, W];
@@ -678,7 +679,7 @@ class AgalOptim {
 		}
 	}
 
-	function map( op : Opcode, r : Reg -> Bool -> Reg ) {
+	inline function map( op : Opcode, r : Reg -> Bool -> Reg ) {
 		inline function unop(d, v, op) {
 			v = r(v, false);
 			return op(r(d, true), v);

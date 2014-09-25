@@ -105,6 +105,7 @@ class BigPrimitive extends Primitive {
 		return addSub(buf, idx, 0, 0, Std.int(buf.length / (stride < 0 ? this.stride : stride)), Std.int(idx.length / 3), dx, dy, dz, rotation, scale, stride);
 	}
 
+	@:noDebug
 	public function addSub( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, startVert, startTri, nvert, triCount, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1, deltaU = 0., deltaV = 0. ) {
 		if( tmpBuf == null ) {
 			tmpBuf = new hxd.FloatBuffer();
