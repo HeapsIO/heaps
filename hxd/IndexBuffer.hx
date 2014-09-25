@@ -26,10 +26,10 @@ abstract IndexBuffer(InnerData) {
 	public inline function new(length = 0) {
 		#if js
 		this = untyped __new__(Array, length);
-		#elseif cpp
-		this = new InnerData();
-		#else
+		#elseif flash
 		this = new InnerData(length);
+		#else
+		this = new InnerData();
 		#end
 	}
 

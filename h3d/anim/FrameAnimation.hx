@@ -46,18 +46,20 @@ class FrameAnimation extends Animation {
 		return cast objects;
 	}
 
-	override function initInstance() {
-		super.initInstance();
-		for( a in getFrames() )
-			if( a.alphas != null && (a.targetObject == null || !a.targetObject.isMesh()) )
-				throw a.objectName + " should be a mesh";
-	}
-
 	override function clone(?a:Animation) {
 		if( a == null )
 			a = new FrameAnimation(name, frameCount, sampling);
 		super.clone(a);
 		return a;
+	}
+
+	#if !(dataOnly || macro)
+
+	override function initInstance() {
+		super.initInstance();
+		for( a in getFrames() )
+			if( a.alphas != null && (a.targetObject == null || !a.targetObject.isMesh()) )
+				throw a.objectName + " should be a mesh";
 	}
 
 	@:access(h3d.scene.Skin)
@@ -80,5 +82,6 @@ class FrameAnimation extends Animation {
 				o.targetObject.defaultTransform = o.frames[frame];
 		}
 	}
+	#end
 
 }

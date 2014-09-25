@@ -67,16 +67,6 @@ class LinearAnimation extends Animation {
 		return cast objects;
 	}
 
-	override function initInstance() {
-		super.initInstance();
-		for( a in getFrames() ) {
-			a.matrix = new h3d.Matrix();
-			a.matrix.identity();
-			if( a.alphas != null && (a.targetObject == null || !a.targetObject.isMesh()) )
-				throw a.objectName + " should be a mesh";
-		}
-	}
-
 	override function clone(?a:Animation) {
 		if( a == null )
 			a = new LinearAnimation(name, frameCount, sampling);
@@ -86,6 +76,18 @@ class LinearAnimation extends Animation {
 
 	override function endFrame() {
 		return loop ? frameCount : frameCount - 1;
+	}
+
+	#if !(dataOnly || macro)
+
+	override function initInstance() {
+		super.initInstance();
+		for( a in getFrames() ) {
+			a.matrix = new h3d.Matrix();
+			a.matrix.identity();
+			if( a.alphas != null && (a.targetObject == null || !a.targetObject.isMesh()) )
+				throw a.objectName + " should be a mesh";
+		}
 	}
 
 	@:access(h3d.scene.Skin)
@@ -199,5 +201,6 @@ class LinearAnimation extends Animation {
 				o.targetObject.defaultTransform = o.matrix;
 		}
 	}
+	#end
 
 }

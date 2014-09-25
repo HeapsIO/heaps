@@ -36,8 +36,10 @@ class Skin {
 	public var rootJoints(default,null) : Array<Joint>;
 	public var namedJoints(default,null) : Map<String,Joint>;
 	public var allJoints(default,null) : Array<Joint>;
-	public var boundJoints(default,null) : Array<Joint>;
+	public var boundJoints(default, null) : Array<Joint>;
+	#if !(dataOnly || macro)
 	public var primitive : h3d.prim.Primitive;
+	#end
 
 	// spliting
 	public var splitJoints(default, null) : Array<{ material : Int, joints : Array<Joint> }>;

@@ -3,9 +3,11 @@ package h3d.anim;
 class AnimatedObject {
 
 	public var objectName : String;
+	#if !(dataOnly || macro)
 	public var targetObject : h3d.scene.Object;
 	public var targetSkin : h3d.scene.Skin;
 	public var targetJoint : Int;
+	#end
 
 	public function new(name) {
 		this.objectName = name;
@@ -110,6 +112,7 @@ class Animation {
 		isInstance = true;
 	}
 
+	#if !(dataOnly || macro)
 	public function createInstance( base : h3d.scene.Object ) {
 		var currentSkin : h3d.scene.Skin = null;
 		var objects = [for( a in this.objects ) a.clone()];
@@ -148,6 +151,7 @@ class Animation {
 			}
 		}
 	}
+	#end
 
 	/**
 		Synchronize the target object matrix.

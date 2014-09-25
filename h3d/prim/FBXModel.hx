@@ -18,6 +18,11 @@ class FBXModel extends MeshPrimitive {
 		curMaterial = -1;
 	}
 
+	public function setSkin(skin) {
+		this.skin = skin;
+		skin.primitive = this;
+	}
+
 	public function getVerticesCount() {
 		return Std.int(geom.getVertices().length / 3);
 	}
