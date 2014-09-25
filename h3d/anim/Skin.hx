@@ -40,7 +40,7 @@ class Skin {
 	public var primitive : h3d.prim.Primitive;
 
 	// spliting
-	public var splitJoints(default, null) : Array<Array<Joint>>;
+	public var splitJoints(default, null) : Array<{ material : Int, joints : Array<Joint> }>;
 	public var triangleGroups : haxe.ds.Vector<Int>;
 
 	var envelop : Array<Array<Influence>>;
@@ -109,7 +109,7 @@ class Skin {
 		envelop = null;
 	}
 
-	public function split( maxBones : Int, index : Array<Int> ) {
+	public function split( maxBones : Int, index : Array<Int>, triangleMaterials : Null<Array<Int>> ) {
 		if( isSplit() )
 			return true;
 		if( boundJoints.length <= maxBones )
@@ -120,7 +120,7 @@ class Skin {
 
 		// collect joints groups used by triangles
 		var curGroup = new Array<Joint>(), curJoints = [];
-		var ipos = 0, tpos = 0;
+		var ipos = 0, tpos = 0, curMat = triangleMaterials == null ? 0 : triangleMaterials[0];
 		while( ipos <= index.length ) {
 			var tjoints = [], flush = false;
 			if( ipos < index.length ) {
@@ -137,21 +137,22 @@ class Skin {
 					}
 				}
 			}
-			if( curGroup.length + tjoints.length <= maxBones && ipos < index.length ) {
+			if( curGroup.length + tjoints.length <= maxBones && ipos < index.length && (triangleMaterials == null || triangleMaterials[tpos] == curMat) ) {
 				for( j in tjoints )
 					curGroup.push(j);
 				triangleGroups[tpos++] = splitJoints.length;
 				ipos += 3;
 			} else {
-				splitJoints.push(curGroup);
+				splitJoints.push({ material : curMat, joints : curGroup });
 				curGroup = [];
 				curJoints = [];
+				if( triangleMaterials != null ) curMat = triangleMaterials[tpos];
 				if( ipos == index.length ) break;
 			}
 		}
 
 		// assign split indexes to joints
-		var groups = [for( i in 0...splitJoints.length ) { id : i, reserved : [], joints : splitJoints[i] }];
+		var groups = [for( i in 0...splitJoints.length ) { id : i, reserved : [], joints : splitJoints[i].joints, mat : splitJoints[i].material }];
 		var joints = [for( j in boundJoints ) { j : j, groups : [], index : -1 } ];
 		for( g in groups )
 			for( j in g.joints )
@@ -187,7 +188,7 @@ class Skin {
 				if( j == null ) j = boundJoints[0];
 				jl.push(j);
 			}
-			splitJoints.push(jl);
+			splitJoints.push( { material : g.mat, joints : jl } );
 		}
 
 		// rebind

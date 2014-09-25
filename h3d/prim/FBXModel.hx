@@ -84,6 +84,24 @@ class FBXModel extends MeshPrimitive {
 		return m;
 	}
 
+	public function getMaterialByTriangle() {
+		var mids = geom.getMaterials();
+		var pos = 0;
+		var count = 0;
+		var mats = [];
+		for( p in geom.getPolygons() ) {
+			count++;
+			if( p >= 0 )
+				continue;
+			var m = mids[pos++];
+			for( i in 0...count - 2 )
+				mats.push(m);
+			count = 0;
+		}
+		return mats;
+	}
+
+
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
 
@@ -108,10 +126,8 @@ class FBXModel extends MeshPrimitive {
 
 		// skin split
 		var sidx = null, stri = 0;
-		if( skin != null && skin.isSplit() ) {
-			if( multiMaterial ) throw "Multimaterial not supported with skin split";
+		if( skin != null && skin.isSplit() )
 			sidx = [for( _ in skin.splitJoints ) new hxd.IndexBuffer()];
-		}
 
 		// triangulize indexes : format is  A,B,...,-X : negative values mark the end of the polygon
 		var count = 0, pos = 0, matPos = 0;
@@ -223,7 +239,7 @@ class FBXModel extends MeshPrimitive {
 					}
 				}
 				// by-material index
-				if( mats != null ) {
+				else if( mats != null ) {
 					var mid = mats[matPos++];
 					var idx = midx[mid];
 					if( idx == null ) {
@@ -255,14 +271,13 @@ class FBXModel extends MeshPrimitive {
 		if( cbuf != null ) addBuffer("color", h3d.Buffer.ofFloats(cbuf, 3));
 
 		indexes = h3d.Indexes.alloc(idx);
-		if( mats != null ) {
-			groupIndexes = [];
-			for( i in midx )
-				groupIndexes.push(i == null ? null : h3d.Indexes.alloc(i));
-		}
 		if( sidx != null ) {
 			groupIndexes = [];
 			for( i in sidx )
+				groupIndexes.push(i == null ? null : h3d.Indexes.alloc(i));
+		} else if( mats != null ) {
+			groupIndexes = [];
+			for( i in midx )
 				groupIndexes.push(i == null ? null : h3d.Indexes.alloc(i));
 		}
 	}

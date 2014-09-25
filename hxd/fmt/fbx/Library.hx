@@ -961,8 +961,10 @@ class Library {
 				defaultModelMatrixes.get(m.name).wasRemoved = o.model.getId();
 			}
 			// set skin after materials
-			if( skinData.boundJoints.length > maxBonesPerSkin )
-				skinData.split(maxBonesPerSkin, Std.instance(skinData.primitive,h3d.prim.FBXModel).geom.getIndexes().vidx);
+			if( skinData.boundJoints.length > maxBonesPerSkin ) {
+				var model = Std.instance(skinData.primitive, h3d.prim.FBXModel);
+				skinData.split(maxBonesPerSkin, model.geom.getIndexes().vidx, model.multiMaterial ? model.getMaterialByTriangle() : null);
+			}
 			skin.setSkinData(skinData);
 		}
 
