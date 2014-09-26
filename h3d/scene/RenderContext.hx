@@ -45,6 +45,14 @@ class RenderContext {
 		frame++;
 	}
 
+	public function getGlobal( name : String ) : Dynamic {
+		return sharedGlobals.get(hxsl.Globals.allocID(name));
+	}
+
+	public function setGlobal( name : String, value : Dynamic ) {
+		sharedGlobals.set(hxsl.Globals.allocID(name), value);
+	}
+
 	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) {
 		var o = pool;
 		if( o == null )
