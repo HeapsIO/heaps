@@ -25,7 +25,7 @@ class Eval {
 	function mapVar( v : TVar ) {
 		var v2 = varMap.get(v);
 		if( v2 != null )
-			return v2;
+			return v == v2 ? v2 : mapVar(v2);
 		v2 = {
 			id : Tools.allocVarId(),
 			name : v.name,
@@ -152,8 +152,10 @@ class Eval {
 			var c = constants.get(v);
 			if( c != null )
 				c;
-			else
-				TVar(mapVar(v));
+			else {
+				var v2 = mapVar(v);
+				TVar(v2);
+			}
 		case TVarDecl(v, init):
 			TVarDecl(mapVar(v), init == null ? null : evalExpr(init));
 		case TArray(e1, e2):
@@ -195,8 +197,8 @@ class Eval {
 							varMap.remove(v);
 							undo.push(function() varMap.set(v, old));
 						}
-						var v = mapVar(v);
-						outExprs.push( { e : TVarDecl(v, e), t : TVoid, p : e.p } );
+						var v2 = mapVar(v);
+						outExprs.push( { e : TVarDecl(v2, e), t : TVoid, p : e.p } );
 					}
 				}
 				var e = handleReturn(evalExpr(f.expr), true);
