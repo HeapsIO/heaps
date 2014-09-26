@@ -35,7 +35,7 @@ class Viewer extends hxd.App {
 	var curFbx : hxd.fmt.fbx.Library;
 	static public var curData : String;
 	static public var props : Props;
-	static public var animMode : hxd.fmt.fbx.Library.AnimationMode = LinearAnim;
+	static public var animMode : hxd.fmt.fbx.BaseLibrary.AnimationMode = LinearAnim;
 
 	var rightHand : Bool;
 	var playAnim : Bool;
@@ -241,7 +241,7 @@ class Viewer extends hxd.App {
 		case "S".code:
 			props.slowDown = !props.slowDown;
 		case "A".code:
-			var cst = hxd.fmt.fbx.Library.AnimationMode.createAll();
+			var cst = hxd.fmt.fbx.BaseLibrary.AnimationMode.createAll();
 			animMode = cst[(Lambda.indexOf(cst, animMode) + 1) % cst.length];
 			reload = true;
 		case "L".code:
@@ -349,7 +349,7 @@ class Viewer extends hxd.App {
 					save();
 				}
 			});
-		},{ fileTypes : [{ name : "FBX File", extensions : ["fbx"] }] });
+		},{ fileTypes : [{ name : "FBX File", extensions : ["fbx"] }], defaultPath : props.curFbxFile });
 	}
 
 	function loadData( data : String, newFbx = true ) {
@@ -399,15 +399,20 @@ class Viewer extends hxd.App {
 		box.z = c.z;
 	}
 
-	@:debug
 	function setMaterial( ?o : h3d.scene.Object ) {
 		if( o == null )
 			o = obj;
 		if( o.isMesh() ) {
 			var m = o.toMesh();
-			if( m.material.texture != null )
-				m.material.texture.filter = props.smoothing ? Linear : Nearest;
-			m.material.mainPass.enableLights = props.lights;
+			var materials = [m.material];
+			var multi = Std.instance(m, h3d.scene.MultiMaterial);
+			if( multi != null ) materials = multi.materials;
+			for( m in materials ) {
+				if( m == null ) continue;
+				if( m.texture != null )
+					m.texture.filter = props.smoothing ? Linear : Nearest;
+				m.mainPass.enableLights = props.lights;
+			}
 			var s = Std.instance(o, h3d.scene.Skin);
 			if( s != null )
 				s.showJoints = props.showBones;

@@ -34,10 +34,14 @@ class File {
 		return try new flash.filesystem.File(path) catch( e : Dynamic ) new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + path);
 	}
 
+	static var lastBrowseDir : Dynamic;
 	static function browseAir( onSelect : BrowseSelect -> Void, options : BrowseOptions, filters ) {
-		var f = flash.filesystem.File.applicationDirectory;
+		var f : flash.filesystem.File = lastBrowseDir;
+		if( f == null )
+			f = flash.filesystem.File.applicationDirectory;
 		if( options.defaultPath != null )
-			try f = f.resolvePath(options.defaultPath) catch( e : Dynamic ) {}
+			try f = flash.filesystem.File.applicationDirectory.resolvePath(options.defaultPath) catch( e : Dynamic ) {}
+		lastBrowseDir = f;
 		var basePath = f.clone();
 		f.addEventListener(flash.events.Event.SELECT, function(_) {
 			var path = f.nativePath;
