@@ -106,7 +106,7 @@ class BigPrimitive extends Primitive {
 	}
 
 	@:noDebug
-	public function addSub( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, startVert, startTri, nvert, triCount, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1, deltaU = 0., deltaV = 0. ) {
+	public function addSub( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, startVert, startTri, nvert, triCount, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1, deltaU = 0., deltaV = 0., color = 1. ) {
 		if( tmpBuf == null ) {
 			tmpBuf = new hxd.FloatBuffer();
 			tmpIdx = new hxd.IndexBuffer();
@@ -167,7 +167,7 @@ class BigPrimitive extends Primitive {
 				tmpBuf.push(tny);
 				tmpBuf.push(nz);
 				tmpBuf.push(buf[p++]);
-			default:
+			case 8, 9, 10:
 				var nx = buf[p++];
 				var ny = buf[p++];
 				var nz = buf[p++];
@@ -182,6 +182,28 @@ class BigPrimitive extends Primitive {
 				tmpBuf.push(buf[p++] + deltaV);
 
 				for( i in 8...this.stride )
+					tmpBuf.push(buf[p++]);
+
+			default:
+				var nx = buf[p++];
+				var ny = buf[p++];
+				var nz = buf[p++];
+				var tnx = nx * cr - ny * sr;
+				var tny = nx * sr + ny * cr;
+				tmpBuf.push(tnx);
+				tmpBuf.push(tny);
+				tmpBuf.push(nz);
+
+				// UV
+				tmpBuf.push(buf[p++] + deltaU);
+				tmpBuf.push(buf[p++] + deltaV);
+
+				// COLOR
+				tmpBuf.push(buf[p++] * color);
+				tmpBuf.push(buf[p++] * color);
+				tmpBuf.push(buf[p++] * color);
+
+				for( i in 11...this.stride )
 					tmpBuf.push(buf[p++]);
 			}
 		}
