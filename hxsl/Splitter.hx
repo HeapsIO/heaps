@@ -149,8 +149,10 @@ class Splitter {
 		}
 
 		var vvars = [for( v in vvars ) if( !v.local ) v.v];
+		var fvars = [for( v in fvars ) if( !v.local ) v.v];
 		// make sure we sort the inputs the same way they were sent in
 		vvars.sort(function(v1, v2) return v1.id - v2.id);
+		fvars.sort(function(v1, v2) return v1.id - v2.id);
 
 		return {
 			vertex : {
@@ -160,7 +162,7 @@ class Splitter {
 			},
 			fragment : {
 				name : "fragment",
-				vars : [for( v in fvars ) if( !v.local ) v.v],
+				vars : fvars,
 				funs : [ffun],
 			},
 		};

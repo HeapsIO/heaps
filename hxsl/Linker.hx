@@ -270,7 +270,9 @@ class Linker {
 			return;
 		cur.marked = vertex;
 		cur.onStack = true;
-		for( d in cur.deps.keys() )
+		var deps = [for( d in cur.deps.keys() ) d];
+		deps.sort(sortByPriorityDesc);
+		for( d in deps )
 			collect(d, out, vertex);
 		if( cur.vertex == null ) {
 			debug("MARK " + cur.name+" " + (vertex?"vertex":"fragment"));
