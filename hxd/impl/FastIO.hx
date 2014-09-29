@@ -40,6 +40,10 @@ class FastIO<T> {
 		}
 	}
 
+	public inline function flushMax( writesPerRead ) {
+		flush((write < read ? write : (write - read)) * writesPerRead);
+	}
+
 }
 
 class FastIntIO extends FastIO<Int> {
@@ -54,7 +58,7 @@ class FastIntIO extends FastIO<Int> {
 
 	public inline function loop(callb) {
 		while( true ) {
-			flush((write < read ? write : (write - read)) * 4);
+			flushMax(4);
 			if( !hasNext() )
 				break;
 			for( id in this )
@@ -65,7 +69,7 @@ class FastIntIO extends FastIO<Int> {
 	public inline function rec2d( x, y, bits, callb ) {
 		add2d(x, y, bits);
 		while( true ) {
-			flush((write < read ? write : (write - read)) * 4);
+			flushMax(4);
 			if( !hasNext() )
 				break;
 			for( id in this ) {
@@ -84,7 +88,7 @@ class FastIntIO extends FastIO<Int> {
 	public inline function rec2di( x, y, d, bits, callb ) {
 		add2di(x, y, d, bits);
 		while( true ) {
-			flush((write < read ? write : (write - read)) * 4);
+			flushMax(4);
 			if( !hasNext() )
 				break;
 			for( id in this ) {
@@ -106,7 +110,7 @@ class FastIntIO extends FastIO<Int> {
 		var k = 0;
 		add2d(x, y, bits);
 		while( true ) {
-			flush((write < read ? write : (write - read)) * 4);
+			flushMax(4);
 			if( !hasNext() )
 				break;
 			for( id in this ) {
