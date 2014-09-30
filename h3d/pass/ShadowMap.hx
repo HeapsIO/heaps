@@ -20,7 +20,6 @@ class ShadowMap extends Default {
 		super();
 		this.size = size;
 		priority = 9;
-		lightSystem = null;
 		lightDirection = new h3d.Vector(0, 0, -1);
 		lightCamera = new h3d.Camera();
 		lightCamera.orthoBounds = new h3d.col.Bounds();
@@ -58,7 +57,7 @@ class ShadowMap extends Default {
 	}
 
 	override function getOutputs() {
-		return ["output.position", "output.distance"];
+		return ["output.position", "output.depth"];
 	}
 
 	override function setGlobals() {

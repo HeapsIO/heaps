@@ -31,16 +31,13 @@ class Main extends hxd.App {
 		}
 		s3d.camera.zNear = 2;
 		s3d.camera.zFar = 15;
+		s3d.lightSystem.ambientLight.set(0.5, 0.5, 0.5);
 
-		var ls = s3d.mainPass.getLightSystem();
-		ls.ambientLight.set(0.5, 0.5, 0.5);
-		ls.perPixelLighting = true;
 		dir = new h3d.scene.DirLight(new h3d.Vector(-0.3, -0.2, -1), s3d);
 
-		shadow = cast(s3d.getPass("shadow"), h3d.pass.ShadowMap);
+		shadow = cast(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
 		shadow.lightDirection = dir.direction;
-		shadow.size = 512;
-		shadow.blur.quality = 4;
+		shadow.blur.count = 3;
 	}
 
 	override function update( dt : Float ) {

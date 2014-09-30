@@ -45,9 +45,7 @@ class Main extends hxd.App {
 		dir = new h3d.scene.DirLight(new h3d.Vector(0.2, 0.3, -1), s3d);
 		dir.color.set(0.1, 0.1, 0.1);
 
-		var ls = s3d.mainPass.getLightSystem();
-		ls.ambientLight.set(0, 0, 0);
-		ls.perPixelLighting = true;
+		s3d.lightSystem.ambientLight.set(0, 0, 0);
 
 		engine.render(s3d);
 	}

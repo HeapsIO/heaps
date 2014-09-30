@@ -12,7 +12,7 @@ class RenderContext {
 	public var drawPass : ObjectPass;
 
 	public var sharedGlobals : Map<Int,Dynamic>;
-
+	public var lightSystem : h3d.pass.LightSystem;
 	public var uploadParams : Void -> Void;
 
 	var pool : ObjectPass;

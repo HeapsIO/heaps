@@ -9,6 +9,10 @@ class Base {
 	public function new() {
 	}
 
+	public function getTexture( index = 0 ) : h3d.mat.Texture {
+		return null;
+	}
+
 	public function compileShader( p : h3d.mat.Pass ) : hxsl.RuntimeShader {
 		throw "Not implemented for this pass";
 		return null;
@@ -23,10 +27,6 @@ class Base {
 
 	public function draw( name : String, passes : Object ) {
 		return passes;
-	}
-
-	public function getLightSystem() : Null<LightSystem> {
-		return null;
 	}
 
 }

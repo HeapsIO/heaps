@@ -1,6 +1,5 @@
 package h3d.pass;
 
-@:build(hxsl.Macros.buildGlobals())
 @:access(h3d.scene.Light)
 class LightSystem {
 
@@ -11,18 +10,18 @@ class LightSystem {
 	var lightCount : Int;
 	var cachedShaderList : Array<hxsl.ShaderList>;
 	var cachedPos : Int;
-	@global("global.ambientLight") public var ambientLight : h3d.Vector;
-	@global("global.perPixelLighting") public var perPixelLighting : Bool;
+	public var shadowDirection : h3d.Vector;
+	public var ambientLight : h3d.Vector;
+	public var perPixelLighting : Bool = true;
 
-	public function new(globals) {
-		this.globals = globals;
-		initGlobals();
+	public function new() {
 		cachedShaderList = [];
+		shadowDirection = new h3d.Vector(0, 0, -1);
 		ambientLight = new h3d.Vector(0.5, 0.5, 0.5);
 		ambientShader = new h3d.shader.AmbientLight();
 	}
 
-	public function initLights( lights : h3d.scene.Light ) {
+	public function initLights( globals : hxsl.Globals, lights : h3d.scene.Light ) {
 		this.lights = lights;
 		lightCount = 0;
 		cachedPos = 0;
@@ -34,7 +33,8 @@ class LightSystem {
 		}
 		if( lightCount <= maxLightsPerObject )
 			this.lights = haxe.ds.ListSort.sortSingleLinked(lights, sortLight);
-		setGlobals();
+		globals.set("global.ambientLight", ambientLight);
+		globals.set("global.perPixelLighting", perPixelLighting);
 	}
 
 	function sortLight( l1 : h3d.scene.Light, l2 : h3d.scene.Light ) {

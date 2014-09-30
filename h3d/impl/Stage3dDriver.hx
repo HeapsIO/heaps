@@ -123,7 +123,7 @@ class Stage3dDriver extends Driver {
 		}
 		this.onCreateCallback = onCreate;
 		s3d.addEventListener(flash.events.Event.CONTEXT3D_CREATE, this.onCreate);
-		s3d.requestContext3D( forceSoftware ? "software" : "auto", PROFILE );
+		s3d.requestContext3D( cast (forceSoftware ? "software" : "auto"), PROFILE );
 	}
 
 	function onCreate(_) {
@@ -645,8 +645,6 @@ class Stage3dDriver extends Driver {
 		} else {
 			if( t.t == null )
 				t.alloc();
-			if( inTarget != null )
-				throw "Calling setTarget() while already set";
 			ctx.setRenderToTexture(t.t, t.flags.has(TargetUseDefaultDepth));
 			inTarget = t;
 			t.lastFrame = frame;

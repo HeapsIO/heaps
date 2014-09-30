@@ -1,0 +1,8 @@
+-js main.js
+-main TestCol
+-lib heaps
+--next
+-swf main.swf
+-swf-version 11.8
+-main TestCol
+-lib heaps

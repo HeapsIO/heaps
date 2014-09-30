@@ -16,15 +16,13 @@ class Main extends hxd.App {
 		var dir = new DirLight(new h3d.Vector( -1, 3, -10), s3d);
 		for( s in obj )
 			s.toMesh().material.mainPass.enableLights = true;
-		var ls = s3d.mainPass.getLightSystem();
-		ls.ambientLight.set(0.4, 0.4, 0.4);
-		ls.perPixelLighting = true;
+		s3d.lightSystem.ambientLight.set(0.4, 0.4, 0.4);
 
 		// add self shadowing
 		for( s in obj )
 			s.toMesh().material.shadows = true;
 
-		var shadow = cast(s3d.getPass("shadow"), h3d.pass.ShadowMap);
+		var shadow = cast(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
 		shadow.lightDirection = dir.direction;
 		shadow.power = 50;
 	}

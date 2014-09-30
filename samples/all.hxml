@@ -1,0 +1,60 @@
+--macro Sys.println('2d')
+--cwd 2d
+2d_swf.hxml
+--next
+2d_swf.hxml
+
+--next
+--macro Sys.println('basic')
+--cwd ../basic
+basic_swf.hxml
+--next
+basic_wgl.hxml
+
+--next
+--macro Sys.println('bounds')
+--cwd ../bounds
+bounds.hxml
+
+--next
+--macro Sys.println('col')
+--cwd ../col
+col.hxml
+
+--next
+--macro Sys.println('comps')
+--cwd ../comps
+comps.hxml
+
+--next
+--macro Sys.println('draw')
+--cwd ../draw
+draw.hxml
+
+--next
+--macro Sys.println('lights')
+--cwd ../lights
+lights.hxml
+
+--next
+--macro Sys.println('quat')
+--cwd ../quat
+quat.hxml
+
+--next
+--macro Sys.println('sao')
+--cwd ../sao
+sao.hxml
+
+--next
+--macro Sys.println('shadows')
+--cwd ../shadows
+shadows.hxml
+
+--next
+--macro Sys.println('skin')
+--cwd ../skin
+skin.hxml
+
+--next
+--macro Sys.println('done')

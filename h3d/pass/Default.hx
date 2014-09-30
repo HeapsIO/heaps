@@ -14,8 +14,6 @@ class Default extends Base {
 	var hasDefaultDepth : Bool;
 	var fullClearRequired : Bool;
 
-	public var lightSystem : LightSystem;
-
 	inline function get_globals() return manager.globals;
 
 	@global("camera.view") var cameraView : h3d.Matrix = ctx.camera.mcam;
@@ -37,11 +35,14 @@ class Default extends Base {
 		super();
 		manager = new h3d.shader.Manager(getOutputs());
 		initGlobals();
-		lightSystem = new LightSystem(globals);
 		textureCache = [];
 		var engine = h3d.Engine.getCurrent();
 		hasDefaultDepth = engine.driver.hasFeature(TargetUseDefaultDepthBuffer);
 		fullClearRequired = engine.driver.hasFeature(FullClearRequired);
+	}
+
+	override function getTexture( index = 0 ) : h3d.mat.Texture {
+		return textureCache[index];
 	}
 
 	override function dispose() {
@@ -72,10 +73,6 @@ class Default extends Base {
 
 	override function compileShader( p : h3d.mat.Pass ) {
 		return manager.compileShaders(p.getShadersRec());
-	}
-
-	override function getLightSystem() {
-		return lightSystem;
 	}
 
 	function getTargetTexture( name : String, width : Int, height : Int, hasDepth=true ) {
@@ -112,12 +109,12 @@ class Default extends Base {
 		while( p != null ) {
 			var shaders = p.pass.getShadersRec();
 			shaders = processShaders(p, shaders);
-			if( p.pass.enableLights && lightSystem != null ) {
+			if( p.pass.enableLights && ctx.lightSystem != null ) {
 				if( !lightInit ) {
-					lightSystem.initLights(ctx.lights);
+					ctx.lightSystem.initLights(globals, ctx.lights);
 					lightInit = true;
 				}
-				shaders = lightSystem.computeLight(p.obj, shaders);
+				shaders = ctx.lightSystem.computeLight(p.obj, shaders);
 			}
 			p.shader = manager.compileShaders(shaders);
 			p.shaders = shaders;

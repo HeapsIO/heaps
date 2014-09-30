@@ -3,17 +3,18 @@ package h3d.scene;
 class Scene extends Object implements h3d.IDrawable {
 
 	public var camera : h3d.Camera;
-	public var mainPass(get, never) : h3d.pass.Base;
+	public var lightSystem : h3d.pass.LightSystem;
+	public var renderer : Renderer;
 	var prePasses : Array<h3d.IDrawable>;
 	var postPasses : Array<h3d.IDrawable>;
-	var passes : Map<String,h3d.pass.Base>;
 	var ctx : RenderContext;
 
 	public function new() {
 		super(null);
 		camera = new h3d.Camera();
 		ctx = new RenderContext();
-		passes = new Map();
+		renderer = new Renderer();
+		lightSystem = new h3d.pass.LightSystem();
 		postPasses = [];
 		prePasses = [];
 	}
@@ -27,9 +28,8 @@ class Scene extends Object implements h3d.IDrawable {
 
 	override function dispose() {
 		super.dispose();
-		for( p in passes )
-			p.dispose();
-		passes = new Map();
+		renderer.dispose();
+		renderer = new Renderer();
 	}
 
 	/**
@@ -49,37 +49,6 @@ class Scene extends Object implements h3d.IDrawable {
 
 	public function setElapsedTime( elapsedTime ) {
 		ctx.elapsedTime = elapsedTime;
-	}
-
-	function createDefaultPass( name : String ) : h3d.pass.Base {
-		switch( name ) {
-		case "default", "alpha", "additive":
-			return new h3d.pass.Default();
-		case "distance":
-			return new h3d.pass.Distance();
-		case "shadow":
-			return new h3d.pass.ShadowMap(1024);
-		default:
-			throw "Don't know how to create pass '" + name + "', use s3d.setPass()";
-			return null;
-		}
-	}
-
-	function get_mainPass() {
-		return getPass("default");
-	}
-
-	public function getPass( name : String ) {
-		var p = passes.get(name);
-		if( p == null ) {
-			p = createDefaultPass(name);
-			setPass(name, p);
-		}
-		return p;
-	}
-
-	public function setPass( name : String, p : h3d.pass.Base ) {
-		passes.set(name, p);
 	}
 
 	@:access(h3d.mat.Pass)
@@ -112,34 +81,21 @@ class Scene extends Object implements h3d.IDrawable {
 				p = p.next;
 			}
 			prev.next = null;
-			var render = getPass(curPass.pass.name);
-			passes.push( { render : render, pass : curPass } );
+			passes.push( { name : curPass.pass.name, data : curPass, rendered : false } );
 			curPass = p;
 		}
 
-		// sort by priority and assign
-		var allPasses = [for( name in this.passes.keys() ) { name : name, p : this.passes.get(name), content : null } ];
-		@:privateAccess allPasses.sort(function(p1, p2) return p2.p.priority - p1.p.priority);
-		for( p in passes )
-			for( i in 0...allPasses.length )
-				if( allPasses[i].p == p.render ) {
-					allPasses[i].content = p.pass;
-					break;
-				}
-
-		// render
-		for( p in allPasses )
-			if( p.content != null || p.p.forceProcessing ) {
-				p.p.setContext(ctx);
-				p.content = p.p.draw(p.name, p.content);
-			}
+		// send to rendered
+		ctx.lightSystem = lightSystem;
+		renderer.process(ctx, passes);
 
 		// relink pass objects to reuse
 		var count = 0;
 		var prev : h3d.pass.Object = null;
-		for( p in allPasses ) {
-			if( p.content == null ) continue;
-			var p = p.content;
+		for( p in passes ) {
+			if( !p.rendered )
+				throw "Pass " + p.name+" has not been rendered : don't know how to handle.";
+			var p = p.data;
 			if( prev != null )
 				prev.next = p;
 			while( p != null ) {
@@ -147,7 +103,7 @@ class Scene extends Object implements h3d.IDrawable {
 				p = p.next;
 			}
 		}
-		if( allPasses.length > 0 ) ctx.passes = allPasses[0].content;
+		if( passes.length > 0 ) ctx.passes = passes[0].data;
 		ctx.done();
 		for( p in postPasses )
 			p.render(engine);

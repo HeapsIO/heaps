@@ -48,7 +48,7 @@ class Main extends hxd.App {
 		new h3d.scene.DirLight(new h3d.Vector(0.5, 0.5, -0.5), s3d);
 
 		// set the ambient light to 30%
-		s3d.getPass("default").getLightSystem().ambientLight.set(0.3, 0.3, 0.3);
+		s3d.lightSystem.ambientLight.set(0.3, 0.3, 0.3);
 
 		// activate lights on boss cubes
 		obj1.material.mainPass.enableLights = true;
