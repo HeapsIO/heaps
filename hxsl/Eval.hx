@@ -69,7 +69,7 @@ class Eval {
 			};
 			if( f.kind != Helper )
 				funs.push(f2);
-			funMap.set(f2.ref, f2);
+			funMap.set(f2.ref, f);
 		}
 		for( i in 0...funs.length )
 			funs[i].expr = evalExpr(funs[i].expr);
