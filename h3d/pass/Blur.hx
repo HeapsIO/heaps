@@ -12,6 +12,11 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 	**/
 	public var sigma(default, set) : Float;
 
+	/**
+		The number of blur passes we perform (default = 1)
+	**/
+	public var count : Int = 1;
+
 	var values : Array<Float>;
 
 	public function new(quality = 1, sigma = 1.) {
@@ -62,21 +67,22 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 
 
 		shader.Quality = quality + 1;
-		shader.texture = src;
 		shader.values = values;
 		shader.isDepth = isDepth;
-		shader.pixel.set(1 / src.width, 0);
 
-		engine.setTarget(tmp);
-		if( fullClearRequired ) engine.clear(0, 1, 0);
-		render();
-		engine.setTarget(null);
+		for( i in 0...count ) {
+			shader.texture = src;
+			shader.pixel.set(1 / src.width, 0);
+			engine.setTarget(tmp);
+			if( fullClearRequired ) engine.clear(0, 1, 0);
+			render();
 
-		shader.texture = tmp;
-		shader.pixel.set(0, 1 / tmp.height);
-		engine.setTarget(output);
-		if( fullClearRequired ) engine.clear(0, 1, 0);
-		render();
+			shader.texture = tmp;
+			shader.pixel.set(0, 1 / tmp.height);
+			engine.setTarget(output);
+			if( fullClearRequired ) engine.clear(0, 1, 0);
+			render();
+		}
 		engine.setTarget(null);
 
 		if( alloc )
