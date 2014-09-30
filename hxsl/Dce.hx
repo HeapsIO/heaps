@@ -28,8 +28,13 @@ class Dce {
 	public function dce( vertex : ShaderData, fragment : ShaderData ) {
 		// collect vars dependencies
 		used = new Map();
-		for( v in vertex.vars )
+
+		var inputs = [];
+		for( v in vertex.vars ) {
 			get(v);
+			if( v.kind == Input )
+				inputs.unshift(v);
+		}
 		for( v in fragment.vars )
 			get(v);
 		for( f in vertex.funs )
@@ -42,7 +47,7 @@ class Dce {
 		while( changed ) {
 			changed = false;
 			for( v in used ) {
-				if( !v.used || v.v.kind == Output || v.v.kind == Input || v.keep ) continue;
+				if( !v.used || v.v.kind == Output || (v.v.kind == Input && v.v != inputs[0]) || v.keep ) continue;
 				var used = false;
 				for( d in v.deps )
 					if( d.used ) {
@@ -54,6 +59,8 @@ class Dce {
 					changed = true;
 					vertex.vars.remove(v.v);
 					fragment.vars.remove(v.v);
+					// allow to remove the last declared unused input only
+					if( v.v == inputs[0] ) inputs.shift();
 				}
 			}
 		}
@@ -108,6 +115,9 @@ class Dce {
 		switch( e.e ) {
 		case TVar(v):
 			link(v, writeTo);
+		// todo : generalize self writing as not important to keep the variable
+		case TBinop(OpAssign, { e : TVar(v1) }, { e : TCall( { e : TGlobal(Normalize) }, [ { e : TVar(v2) } ]) } ) if( v1 == v2 ):
+			e.iter(check.bind(_, writeTo));
 		case TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _)) }, e):
 			writeTo.push(get(v));
 			check(e, writeTo);
