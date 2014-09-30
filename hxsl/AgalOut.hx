@@ -622,6 +622,16 @@ class AgalOut {
 			var r = allocReg(TFloat);
 			op(ODp4(r, expr(e), c));
 			return r;
+		case [PackNormal, [e]]:
+			var r = allocReg();
+			op(OAdd(r, expr(e), getConst(1)));
+			op(OMul(r, r, getConst(0.5)));
+			return r;
+		case [UnpackNormal, [e]]:
+			var r = allocReg(TVec(3,VFloat));
+			op(OSub(r, swiz(expr(e), [X, Y,Z]) , getConst(0.5) ));
+			op(ONrm(r, r));
+			return r;
 		default:
 		}
 

@@ -103,6 +103,10 @@ class Checker {
 				[ { args : [ { name : "value", type : TFloat } ], ret : TVec(4, VFloat) } ];
 			case Unpack:
 				[ { args : [ { name : "value", type : TVec(4, VFloat) } ], ret : TFloat } ];
+			case UnpackNormal:
+				[ { args : [ { name : "value", type : TVec(4, VFloat) } ], ret : TVec(3, VFloat) } ];
+			case PackNormal:
+				[ { args : [ { name : "value", type : TVec(3, VFloat) } ], ret : TVec(4, VFloat) } ];
 			}
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );

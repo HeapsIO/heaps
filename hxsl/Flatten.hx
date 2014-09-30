@@ -164,6 +164,11 @@ class Flatten {
 				allocConst(1.4426950408889634, e.p);
 			case Mix:
 				allocConst(1, e.p);
+			case UnpackNormal:
+				allocConst(0.5, e.p);
+			case PackNormal:
+				allocConst(1, e.p);
+				allocConst(0.5, e.p);
 			default:
 			}
 		case TCall( { e : TGlobal(Vec4) }, [ { e : TVar( { kind : Global | Param | Input | Var } ), t : TVec(3, VFloat) }, { e : TConst(CInt(1)) } ]):

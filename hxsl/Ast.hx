@@ -215,6 +215,8 @@ enum TGlobal {
 	Saturate;
 	Pack;
 	Unpack;
+	PackNormal;
+	UnpackNormal;
 	// extensions
 	DFdx;
 	DFdy;
