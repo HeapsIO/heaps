@@ -21,12 +21,12 @@ private class SAOShader extends h3d.shader.ScreenShader {
 
 		@param var invPixelSize : Vec2;
 
-		function getOffsetPositionVS( uv : Vec2, unitOffset : Vec2, radiusSS : Float ) : Vec3 {
+		function getOffsetPosition( uv : Vec2, unitOffset : Vec2, radiusSS : Float ) : Vec3 {
 			uv = uv + radiusSS * unitOffset * invPixelSize;
-			return getPositionVS(uv);
+			return getPosition(uv);
 		}
 
-		function sampleAO(uv : Vec2, positionVS : Vec3, normalVS : Vec3, sampleRadiusSS : Float, tapIndex : Int, rotationAngle : Float) : Float {
+		function sampleAO(uv : Vec2, position : Vec3, normal : Vec3, sampleRadiusSS : Float, tapIndex : Int, rotationAngle : Float) : Float {
 			var epsilon = 0.01;
 			var radius2 = sampleRadius * sampleRadius;
 
@@ -39,41 +39,40 @@ private class SAOShader extends h3d.shader.ScreenShader {
 
 			var unitOffset = vec2(cos(angle), sin(angle));
 
-			var Q = getOffsetPositionVS(uv, unitOffset, radiusSS);
-			var v = Q - positionVS;
+			var Q = getOffsetPosition(uv, unitOffset, radiusSS);
+			var v = Q - position;
 
 			var vv = dot(v, v);
 
-			var vn = dot(v, normalVS) - bias;
+			var vn = dot(v, normal) - bias;
 
 			// Smoother transition to zero (lowers contrast, smoothing out corners). [Recommended]
 			var f = max(radius2 - vv, 0.0) / radius2;
 			return f * f * f * max(vn / (epsilon + vv), 0.0);
 		}
 
-		function getPositionVS( uv : Vec2 ) : Vec3 {
+		function getPosition( uv : Vec2 ) : Vec3 {
 			var depth = unpack(depthTexture.get(uv));
 			var uv2 = (uv - 0.5) * vec2(2, -2);
 			var temp = vec4(uv2, depth, 1) * cameraInverseViewProj;
 			var originWS = temp.xyz / temp.w;
-			var originVS = originWS * cameraView;
-			return originVS;
+			return originWS;
 		}
 
 		function fragment() {
 
 			var vUV = input.uv;
 			var occlusion = 0.0;
-			var originVS = getPositionVS(vUV);
-			var normalVS = unpackNormal(normalTexture.get(vUV));
+			var origin = getPosition(vUV);
+			var normal = unpackNormal(normalTexture.get(vUV));
 
 			var sampleNoise = noiseTexture.get(vUV * noiseScale).x;
 			var randomPatternRotationAngle = 2.0 * PI * sampleNoise;
 
-			var radiusSS = sampleRadius / originVS.z;
+			var radiusSS = sampleRadius / (origin * cameraView).z;
 
 			for( i in 0...numSamples )
-				occlusion += sampleAO(vUV, originVS, normalVS, radiusSS, i, randomPatternRotationAngle);
+				occlusion += sampleAO(vUV, origin, normal, radiusSS, i, randomPatternRotationAngle);
 
 			occlusion = 1.0 - occlusion / (4.0 * float(numSamples));
 			occlusion = clamp(pow(occlusion, 1.0 + intensity), 0.0, 1.0);
@@ -85,11 +84,11 @@ private class SAOShader extends h3d.shader.ScreenShader {
 	public function new() {
 		super();
 		numSamples = 20;
-		sampleRadius = 300;
-		intensity = 5;
+		sampleRadius = 500;
+		intensity = 20;
 		numSpiralTurns = 7;
-		bias = 0.3;
-		noiseScale.set(5, 5);
+		bias = 0.5;
+		noiseScale.set(10, 10);
 		noiseTexture = getNoise(128);
 		noiseTexture.wrap = Repeat;
 	}

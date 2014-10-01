@@ -3,16 +3,26 @@ import hxd.Math;
 class CustomRenderer extends h3d.scene.Renderer {
 
 	var sao : h3d.pass.ScalableAO;
+	var saoBlur : h3d.pass.Blur;
 	var out : h3d.mat.Texture;
 
 	public function new() {
 		super();
 		sao = new h3d.pass.ScalableAO();
+		// TODO : use a special Blur that prevents bluring across depths
+		saoBlur = new h3d.pass.Blur(3,5);
+		saoBlur.count = 3;
 	}
 
 	override function process( ctx, passes ) {
 		super.process(ctx, passes);
+
+		var saoTarget = allocTarget("sao",0,false);
+		setTarget(saoTarget);
 		sao.apply(depth.getTexture(), normal.getTexture(), ctx.camera);
+		saoBlur.apply(saoTarget, allocTarget("saoBlurTmp", 0, false));
+
+		h3d.pass.Copy.run(saoTarget, null, Multiply);
 	}
 
 }
@@ -29,12 +39,12 @@ class Main extends hxd.App {
 
 	override function init() {
 
-		var floor = new h3d.prim.Cube(10, 10, 0.1);
-		floor.unindex();
+		var floor = new h3d.prim.Grid(10,10);
 		floor.addNormals();
 		floor.translate( -5, -5, 0);
 		var m = new h3d.scene.Mesh(floor, s3d);
 		initMaterial(m.material);
+		m.material.color.makeColor(0.35, 0.5, 0.5);
 
 		for( i in 0...100 ) {
 			var box : h3d.prim.Polygon = Std.random(2) == 0 ? new h3d.prim.Sphere(16,12) : new h3d.prim.Cube(Math.random(),Math.random(), 2);
@@ -45,12 +55,14 @@ class Main extends hxd.App {
 			p.y = Math.srand(3);
 			p.z = -Math.random() * 1.8;
 			initMaterial(p.material);
+			p.material.color.makeColor(Math.random() * 0.3, 0.5, 0.5);
 		}
 		s3d.camera.zNear = 0.5;
 		s3d.camera.zFar = 15;
 
 		s3d.lightSystem.ambientLight.set(0.5, 0.5, 0.5);
 		var dir = new h3d.scene.DirLight(new h3d.Vector( -0.3, -0.2, -1), s3d);
+		dir.color.set(0.5, 0.5, 0.5);
 
 		s3d.renderer = new CustomRenderer();
 	}
