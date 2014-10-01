@@ -184,6 +184,42 @@ class Vector {
 		a = (c >>> 24) * s;
 	}
 
+	public function makeColor( hue : Float, saturation : Float = 1., brightness : Float = 0.5 ) {
+		hue = Math.ufmod(hue, Math.PI * 2);
+		var c = (1 - Math.abs(2 * brightness - 1)) * saturation;
+		var x = c * (1 - Math.abs((hue * 3 / Math.PI) % 2. - 1));
+		var m = brightness - c / 2;
+		if( hue < Math.PI / 3 ) {
+			r = c;
+			g = x;
+			b = 0;
+		} else if( hue < Math.PI * 2 / 3 ) {
+			r = x;
+			g = c;
+			b = 0;
+		} else if( hue < Math.PI ) {
+			r = 0;
+			g = c;
+			b = x;
+		} else if( hue < Math.PI * 4 / 3 ) {
+			r = 0;
+			g = x;
+			b = c;
+		} else if( hue < Math.PI * 5 / 3 ) {
+			r = x;
+			g = 0;
+			b = c;
+		} else {
+			r = c;
+			g = 0;
+			b = x;
+		}
+		r += m;
+		g += m;
+		b += m;
+		a = 1;
+	}
+
 	public inline function toColor() {
 		return (Std.int(a.clamp() * 255 + 0.499) << 24) | (Std.int(r.clamp() * 255 + 0.499) << 16) | (Std.int(g.clamp() * 255 + 0.499) << 8) | Std.int(b.clamp() * 255 + 0.499);
 	}

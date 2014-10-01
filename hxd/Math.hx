@@ -228,4 +228,12 @@ class Math {
 		return r >= 0 ? r : r + modulo;
 	}
 
+	/**
+	 * returns the modulo but always positive
+	 */
+	public static inline function ufmod( value : Float, modulo : Float ) {
+		var r = value % modulo;
+		return r >= 0 ? r : r + modulo;
+	}
+
 }
