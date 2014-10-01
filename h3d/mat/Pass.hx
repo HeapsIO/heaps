@@ -72,6 +72,25 @@ class Pass {
 		this.blendAlphaDst = dst;
 	}
 
+	public function setBlendMode( b : BlendMode ) {
+		switch( b ) {
+		case None:
+			blend(One, Zero);
+		case Alpha:
+			blend(SrcAlpha, OneMinusSrcAlpha);
+		case Add:
+			blend(SrcAlpha, One);
+		case SoftAdd:
+			blend(OneMinusDstColor, One);
+		case Multiply:
+			blend(DstColor, Zero);
+		case Erase:
+			blend(Zero, OneMinusSrcAlpha);
+		case Screen:
+			blend(One, OneMinusSrcColor);
+		}
+	}
+
 	public function depth( write, test ) {
 		this.depthWrite = write;
 		this.depthTest = test;

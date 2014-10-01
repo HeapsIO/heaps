@@ -93,22 +93,7 @@ class RenderContext {
 		baseShader.texture = texture;
 		texture.filter = currentObj.filter ? Linear : Nearest;
 		texture.wrap = currentObj.tileWrap ? Repeat : Clamp;
-		switch( currentObj.blendMode ) {
-		case Alpha:
-			pass.blend(SrcAlpha, OneMinusSrcAlpha);
-		case None:
-			pass.blend(One, Zero);
-		case Add:
-			pass.blend(SrcAlpha, One);
-		case SoftAdd:
-			pass.blend(OneMinusDstColor, One);
-		case Multiply:
-			pass.blend(DstColor, OneMinusSrcAlpha);
-		case Erase:
-			pass.blend(Zero, OneMinusSrcAlpha);
-		case Screen:
-			pass.blend(One, OneMinusSrcColor);
-		}
+		pass.setBlendMode(currentObj.blendMode);
 		manager.fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);
 		engine.uploadShaderBuffers(buffers, Params);
