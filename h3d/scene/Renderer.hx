@@ -141,6 +141,8 @@ class Renderer {
 			passGroups.set(p.name, p);
 		}
 		render();
+		for( p in passes )
+			passGroups.set(p.name, null);
 		this.ctx = null;
 	}
 
