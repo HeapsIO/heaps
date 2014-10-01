@@ -10,31 +10,33 @@ class PassGroup {
 	}
 }
 
+private typedef SMap<T> = #if flash haxe.ds.UnsafeStringMap<T> #else Map<String,T> #end
+
 class Renderer {
 
 	var def : h3d.pass.Base;
 	var depth : h3d.pass.Base;
 	var normal : h3d.pass.Base;
 	var shadow : h3d.pass.Base;
-	var passes : Map<String, h3d.pass.Base>;
-	var passGroups : Map<String, PassGroup>;
+	var passes : SMap<h3d.pass.Base>;
+	var passGroups : SMap<PassGroup>;
 	var allPasses : Array<{ name : String, p : h3d.pass.Base }>;
 	var ctx : RenderContext;
 	var tcache : h3d.pass.TextureCache;
 
 	public function new() {
-		passes = new Map();
+		passes = new SMap();
 		allPasses = [];
 		tcache = new h3d.pass.TextureCache();
-		passGroups = new Map();
+		passGroups = new SMap();
 	}
 
 	public function dispose() {
 		for( p in allPasses )
 			p.p.dispose();
-		passes = new Map();
+		passes = new SMap();
 		allPasses = [];
-		passGroups = new Map();
+		passGroups = new SMap();
 		tcache.dispose();
 	}
 
