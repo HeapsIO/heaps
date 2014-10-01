@@ -17,7 +17,8 @@ class Copy extends ScreenFx<CopyShader> {
 		super(new CopyShader());
 	}
 
-	public function apply( from, to ) {
+	public function apply( from, to, ?blend : h3d.mat.BlendMode ) {
+		pass.setBlendMode(blend == null ? None : blend);
 		engine.setTarget(to);
 		shader.texture = from;
 		render();
@@ -26,9 +27,9 @@ class Copy extends ScreenFx<CopyShader> {
 	}
 
 	static var inst : Copy;
-	public static function run( from : h3d.mat.Texture, to : h3d.mat.Texture ) {
+	public static function run( from : h3d.mat.Texture, to : h3d.mat.Texture, ?blend ) {
 		if( inst == null ) inst = new Copy();
-		return inst.apply(from, to);
+		return inst.apply(from, to, blend);
 	}
 
 }
