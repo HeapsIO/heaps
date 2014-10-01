@@ -81,7 +81,7 @@ class Scene extends Object implements h3d.IDrawable {
 				p = p.next;
 			}
 			prev.next = null;
-			passes.push( { name : curPass.pass.name, data : curPass, rendered : false } );
+			passes.push(new Renderer.PassGroup(curPass.pass.name,curPass));
 			curPass = p;
 		}
 
@@ -95,7 +95,7 @@ class Scene extends Object implements h3d.IDrawable {
 		for( p in passes ) {
 			if( !p.rendered )
 				throw "Pass " + p.name+" has not been rendered : don't know how to handle.";
-			var p = p.data;
+			var p = p.passes;
 			if( prev != null )
 				prev.next = p;
 			while( p != null ) {
@@ -103,7 +103,7 @@ class Scene extends Object implements h3d.IDrawable {
 				p = p.next;
 			}
 		}
-		if( passes.length > 0 ) ctx.passes = passes[0].data;
+		if( passes.length > 0 ) ctx.passes = passes[0].passes;
 		ctx.done();
 		for( p in postPasses )
 			p.render(engine);

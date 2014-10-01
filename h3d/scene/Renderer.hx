@@ -1,5 +1,15 @@
 package h3d.scene;
 
+class PassGroup {
+	public var name : String;
+	public var passes : h3d.pass.Object;
+	public var rendered : Bool;
+	public function new(name, passes) {
+		this.name = name;
+		this.passes = passes;
+	}
+}
+
 class Renderer {
 
 	var def : h3d.pass.Base;
@@ -7,14 +17,25 @@ class Renderer {
 	var normal : h3d.pass.Base;
 	var shadow : h3d.pass.Base;
 	var passes : Map<String, h3d.pass.Base>;
+	var passGroups : Map<String, PassGroup>;
 	var allPasses : Array<{ name : String, p : h3d.pass.Base }>;
+	var ctx : RenderContext;
+	var tcache : h3d.pass.TextureCache;
 
 	public function new() {
 		passes = new Map();
 		allPasses = [];
+		tcache = new h3d.pass.TextureCache();
+		passGroups = new Map();
 	}
 
 	public function dispose() {
+		for( p in allPasses )
+			p.p.dispose();
+		passes = new Map();
+		allPasses = [];
+		passGroups = new Map();
+		tcache.dispose();
 	}
 
 	public function compileShader( pass : h3d.mat.Pass ) {
@@ -23,9 +44,6 @@ class Renderer {
 
 	function createDefaultPass( name : String ) : h3d.pass.Base {
 		switch( name ) {
-		case "default", "alpha", "additive":
-			if( def != null ) return def;
-			return def = new h3d.pass.Default();
 		case "depth":
 			if( depth != null ) return depth;
 			return depth = new h3d.pass.Depth();
@@ -36,8 +54,8 @@ class Renderer {
 			if( shadow != null ) return shadow;
 			return shadow = new h3d.pass.ShadowMap(1024);
 		default:
-			throw "Don't know how to create pass '" + name + "', use s3d.renderer.setPass()";
-			return null;
+			if( def != null ) return def;
+			return def = new h3d.pass.Default();
 		}
 	}
 
@@ -59,27 +77,71 @@ class Renderer {
 		allPasses.sort(function(p1, p2) return p2.p.priority - p1.p.priority);
 	}
 
-	public function process( ctx : RenderContext, passes : Array<{ name : String, data : h3d.pass.Object, rendered : Bool }> ) {
-		// alloc passes
-		for( p in passes )
-			getPass(p.name);
-		// render
+	@:access(h3d.scene.Object)
+	function depthSort( passes : h3d.pass.Object ) {
+		var p = passes;
+		var cam = ctx.camera.m;
+		while( p != null ) {
+			var z = p.obj.absPos._41 * cam._13 + p.obj.absPos._42 * cam._23 + p.obj.absPos._43 * cam._33 + cam._43;
+			var w = p.obj.absPos._41 * cam._14 + p.obj.absPos._42 * cam._24 + p.obj.absPos._43 * cam._34 + cam._44;
+			p.depth = z / w;
+			p = p.next;
+		}
+		return haxe.ds.ListSort.sortSingleLinked(passes, function(p1, p2) return p1.depth > p2.depth ? -1 : 1);
+	}
+
+	inline function allocTarget( name : String, size = 0, depth = true ) {
+		return tcache.allocTarget(name, ctx, ctx.engine.width >> size, ctx.engine.height >> size, depth);
+	}
+
+	inline function clear( ?color, ?depth, ?stencil ) {
+		ctx.engine.clear(color, depth, stencil);
+	}
+
+	inline function setTarget( tex ) {
+		ctx.engine.setTarget(tex);
+	}
+
+	function get( name : String ) {
+		var p = passGroups.get(name);
+		if( p == null ) return null;
+		p.rendered = true;
+		return p.passes;
+	}
+
+	function draw( name : String ) {
+		if( def == null ) def = new h3d.pass.Default();
+		def.draw(get(name));
+	}
+
+	function render() {
 		for( p in allPasses ) {
-			var pdata = null;
-			for( pd in passes )
-				if( pd.name == p.name ) {
-					pdata = pd;
-					break;
-				}
+			var pdata = passGroups.get(p.name);
+			if( pdata != null && pdata.rendered )
+				continue;
 			if( pdata != null || p.p.forceProcessing ) {
 				p.p.setContext(ctx);
-				var pret = p.p.draw(p.name, pdata == null ? null : pdata.data);
+				var passes = pdata == null ? null : pdata.passes;
+				if( p.name == "alpha" )
+					passes = depthSort(passes);
+				passes = p.p.draw(passes);
 				if( pdata != null ) {
-					pdata.data = pret;
+					pdata.passes = passes;
 					pdata.rendered = true;
 				}
 			}
 		}
+	}
+
+	public function process( ctx : RenderContext, passes : Array<PassGroup> ) {
+		this.ctx = ctx;
+		// alloc passes
+		for( p in passes ) {
+			getPass(p.name).setContext(ctx);
+			passGroups.set(p.name, p);
+		}
+		render();
+		this.ctx = null;
 	}
 
 }

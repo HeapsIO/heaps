@@ -68,8 +68,8 @@ class ShadowMap extends Default {
 		cameraViewProj = lightCamera.m;
 	}
 
-	override function draw( name : String, passes ) {
-		var texture = getTargetTexture("shadowMap", size, size);
+	override function draw( passes ) {
+		var texture = tcache.allocTarget("shadowMap", ctx, size, size);
 		var ct = ctx.camera.target;
 		lightCamera.target.set(lightDirection.x, lightDirection.y, lightDirection.z);
 		lightCamera.target.normalize();
@@ -78,13 +78,12 @@ class ShadowMap extends Default {
 		lightCamera.target.z += ct.z;
 		lightCamera.pos.load(ct);
 		ctx.engine.setTarget(texture);
-		ctx.engine.clear(0xFFFFFF, 1, fullClearRequired ? 0 : null);
-		passes = super.draw(name, passes);
+		ctx.engine.clear(0xFFFFFF, 1, tcache.fullClearRequired ? 0 : null);
+		passes = super.draw(passes);
 		if( border != null ) border.render();
-		ctx.engine.setTarget(null);
 
-		if( blur.quality > 0 )
-			blur.apply(texture, getTargetTexture("tmpBlur", size, size, false), true);
+		if( blur.quality > 0 && blur.count > 0 )
+			blur.apply(texture, tcache.allocTarget("tmpBlur", ctx, size, size, false), true);
 
 		ctx.sharedGlobals.set(shadowMapId, texture);
 		ctx.sharedGlobals.set(shadowProjId, lightCamera.m);

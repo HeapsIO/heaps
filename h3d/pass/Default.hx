@@ -7,12 +7,7 @@ class Default extends Base {
 	var manager : h3d.shader.Manager;
 	var globals(get, never) : hxsl.Globals;
 	var cachedBuffer : h3d.shader.Buffers;
-
-	var textureCache : Array<h3d.mat.Texture>;
-	var textureCachePosition : Int = 0;
-	var textureCacheFrame : Int;
-	var hasDefaultDepth : Bool;
-	var fullClearRequired : Bool;
+	var tcache : TextureCache;
 
 	inline function get_globals() return manager.globals;
 
@@ -34,37 +29,17 @@ class Default extends Base {
 	public function new() {
 		super();
 		manager = new h3d.shader.Manager(getOutputs());
+		tcache = new TextureCache();
 		initGlobals();
-		textureCache = [];
-		var engine = h3d.Engine.getCurrent();
-		hasDefaultDepth = engine.driver.hasFeature(TargetUseDefaultDepthBuffer);
-		fullClearRequired = engine.driver.hasFeature(FullClearRequired);
 	}
 
 	override function getTexture( index = 0 ) : h3d.mat.Texture {
-		return textureCache[index];
+		return tcache.get(index);
 	}
 
 	override function dispose() {
 		super.dispose();
-		for( t in textureCache )
-			t.dispose();
-		textureCache = [];
-		textureCacheFrame = -1;
-	}
-
-
-	@:access(h3d.scene.Object)
-	function depthSort( passes : h3d.pass.Object ) {
-		var p = passes;
-		var cam = ctx.camera.m;
-		while( p != null ) {
-			var z = p.obj.absPos._41 * cam._13 + p.obj.absPos._42 * cam._23 + p.obj.absPos._43 * cam._33 + cam._43;
-			var w = p.obj.absPos._41 * cam._14 + p.obj.absPos._42 * cam._24 + p.obj.absPos._43 * cam._34 + cam._44;
-			p.depth = z / w;
-			p = p.next;
-		}
-		return haxe.ds.ListSort.sortSingleLinked(passes, function(p1, p2) return p1.depth > p2.depth ? -1 : 1);
+		tcache.dispose();
 	}
 
 	function getOutputs() {
@@ -75,30 +50,12 @@ class Default extends Base {
 		return manager.compileShaders(p.getShadersRec());
 	}
 
-	function getTargetTexture( name : String, width : Int, height : Int, hasDepth=true ) {
-		if( textureCacheFrame != ctx.frame ) {
-			// dispose extra textures we didn't use
-			while( textureCache.length > textureCachePosition ) {
-				var t = textureCache.pop();
-				if( t != null ) t.dispose();
-			}
-			textureCacheFrame = ctx.frame;
-			textureCachePosition = 0;
-		}
-		var t = textureCache[textureCachePosition];
-		if( t == null || t.isDisposed() || t.width != width || t.height != height ) {
-			if( t != null ) t.dispose();
-			var flags : Array<h3d.mat.Data.TextureFlags> = [Target, TargetNoFlipY];
-			if( hasDepth ) flags.push(hasDefaultDepth ? TargetUseDefaultDepth : TargetDepth);
-			t = new h3d.mat.Texture(width, height, flags);
-			textureCache[textureCachePosition] = t;
-		}
-		t.setName(name);
-		textureCachePosition++;
-		return t;
-	}
-
 	function processShaders( p : Object, shaders : hxsl.ShaderList ) {
+		var p = ctx.extraShaders;
+		while( p != null ) {
+			shaders = new hxsl.ShaderList(p.s, shaders);
+			p = p.next;
+		}
 		return shaders;
 	}
 
@@ -140,20 +97,18 @@ class Default extends Base {
 	}
 
 	@:access(h3d.scene)
-	override function draw( name : String, passes : Object ) {
+	override function draw( passes : Object ) {
 		for( k in ctx.sharedGlobals.keys() )
 			globals.fastSet(k, ctx.sharedGlobals.get(k));
 		setGlobals();
 		setupShaders(passes);
 		passes = haxe.ds.ListSort.sortSingleLinked(passes, sortByShader);
-		if( name == "alpha" )
-			passes = depthSort(passes);
 		ctx.uploadParams = uploadParams;
 		var p = passes;
 		var buf = cachedBuffer, prevShader = null;
-		log("Pass " + name + " start");
+		log("Pass " + (passes == null ? "???" : passes.pass.name) + " start");
 		while( p != null ) {
-			log("Render " + p.obj + "." + name);
+			log("Render " + p.obj + "." + p.pass.name);
 			globalModelView = p.obj.absPos;
 			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
 				globalModelViewInverse = p.obj.getInvPos();
@@ -177,7 +132,7 @@ class Default extends Base {
 			p.obj.draw(ctx);
 			p = p.next;
 		}
-		log("Pass " + name + " end");
+		log("Pass " + (passes == null ? "???" : passes.pass.name) + " end");
 		ctx.drawPass = null;
 		return passes;
 	}

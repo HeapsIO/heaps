@@ -14,12 +14,11 @@ class Normal extends Default {
 		return ["output.position", "output.normal"];
 	}
 
-	override function draw( name : String, passes ) {
-		var texture = getTargetTexture("normalMal", ctx.engine.width, ctx.engine.height);
+	override function draw( passes ) {
+		var texture = tcache.allocTarget("normalMal", ctx, ctx.engine.width, ctx.engine.height);
 		ctx.engine.setTarget(texture);
 		ctx.engine.clear(0, 1);
-		passes = super.draw(name, passes);
-		ctx.engine.setTarget(null);
+		passes = super.draw(passes);
 		ctx.sharedGlobals.set(normalMapId, texture);
 		return passes;
 	}

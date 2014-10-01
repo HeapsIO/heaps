@@ -18,7 +18,6 @@ class Copy extends ScreenFx<CopyShader> {
 	}
 
 	public function apply( from, to ) {
-		this.pass.blend(DstColor, Zero);
 		engine.setTarget(to);
 		shader.texture = from;
 		render();

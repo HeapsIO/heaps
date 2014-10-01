@@ -14,6 +14,7 @@ class RenderContext {
 	public var sharedGlobals : Map<Int,Dynamic>;
 	public var lightSystem : h3d.pass.LightSystem;
 	public var uploadParams : Void -> Void;
+	public var extraShaders : hxsl.ShaderList;
 
 	var pool : ObjectPass;
 	var passes : ObjectPass;

@@ -25,7 +25,7 @@ class Base {
 	public function dispose() {
 	}
 
-	public function draw( name : String, passes : Object ) {
+	public function draw( passes : Object ) {
 		return passes;
 	}
 
