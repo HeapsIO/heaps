@@ -126,6 +126,8 @@ class Renderer {
 				var passes = pdata == null ? null : pdata.passes;
 				if( p.name == "alpha" )
 					passes = depthSort(passes);
+				if( p.name == "default" )
+					setTarget(null);
 				passes = p.p.draw(passes);
 				if( pdata != null ) {
 					pdata.passes = passes;
@@ -145,7 +147,6 @@ class Renderer {
 		render();
 		for( p in passes )
 			passGroups.set(p.name, null);
-		this.ctx = null;
 	}
 
 }
