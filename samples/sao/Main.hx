@@ -39,7 +39,7 @@ class Main extends hxd.App {
 
 	override function init() {
 
-		var floor = new h3d.prim.Grid(10,10);
+		var floor = new h3d.prim.Grid(40,40,0.25,0.25);
 		floor.addNormals();
 		floor.translate( -5, -5, 0);
 		var m = new h3d.scene.Mesh(floor, s3d);
@@ -47,13 +47,12 @@ class Main extends hxd.App {
 		m.material.color.makeColor(0.35, 0.5, 0.5);
 
 		for( i in 0...100 ) {
-			var box : h3d.prim.Polygon = Std.random(2) == 0 ? new h3d.prim.Sphere(16,12) : new h3d.prim.Cube(Math.random(),Math.random(), 2);
+			var box : h3d.prim.Polygon = new h3d.prim.Cube(Math.random(),Math.random(), 0.7 + Math.random() * 0.8);
 			box.unindex();
 			box.addNormals();
 			var p = new h3d.scene.Mesh(box, s3d);
 			p.x = Math.srand(3);
 			p.y = Math.srand(3);
-			p.z = -Math.random() * 1.8;
 			initMaterial(p.material);
 			p.material.color.makeColor(Math.random() * 0.3, 0.5, 0.5);
 		}
