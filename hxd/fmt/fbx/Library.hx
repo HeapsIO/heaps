@@ -1,16 +1,6 @@
 package hxd.fmt.fbx;
 using hxd.fmt.fbx.Data;
 
-private typedef TmpObject = {
-	var model : FbxNode;
-	var parent : TmpObject;
-	var isJoint : Bool;
-	var isMesh : Bool;
-	var childs : Array<TmpObject>;
-	@:optional var obj : h3d.scene.Object;
-	@:optional var joint : h3d.anim.Skin.Joint;
-}
-
 class Library extends BaseLibrary {
 
 
@@ -18,8 +8,6 @@ class Library extends BaseLibrary {
 		var scene = new h3d.scene.Object();
 		var hgeom = new Map();
 		var hskins = new Map();
-		var objects = new Array<TmpObject>();
-		var hobjects = new Map<Int, TmpObject>();
 
 		if( textureLoader == null ) {
 			var tmpTex = null;
@@ -32,56 +20,9 @@ class Library extends BaseLibrary {
 
 		autoMerge();
 
-		// init objects
-		var oroot : TmpObject = { model : null, isJoint : false, isMesh : false, childs : [], parent : null, obj : scene };
-		hobjects.set(0, oroot);
-		for( model in root.getAll("Objects.Model") ) {
-			if( skipObjects.get(model.getName()) )
-				continue;
-			var mtype = model.getType();
-			var isJoint = mtype == "LimbNode" && (!unskinnedJointsAsObjects || !isNullJoint(model));
-			var o : TmpObject = { model : model, isJoint : isJoint, isMesh : mtype == "Mesh", parent : null, childs : [], obj : null };
-			hobjects.set(model.getId(), o);
-			objects.push(o);
-		}
-
-		// build hierarchy
-		for( o in objects ) {
-			var p = getParent(o.model, "Model", true);
-			var pid = if( p == null ) 0 else p.getId();
-			var op = hobjects.get(pid);
-			if( op == null ) op = oroot; // if parent has been removed
-			op.childs.push(o);
-			o.parent = op;
-		}
-
-		// propagates joint flags
-		var changed = true;
-		while( changed ) {
-			changed = false;
-			for( o in objects ) {
-				if( o.isJoint || o.isMesh ) continue;
-				if( o.parent.isJoint ) {
-					o.isJoint = true;
-					changed = true;
-					continue;
-				}
-				var hasJoint = false;
-				for( c in o.childs )
-					if( c.isJoint ) {
-						hasJoint = true;
-						break;
-					}
-				if( hasJoint )
-					for( c in o.parent.childs )
-						if( c.isJoint ) {
-							o.isJoint = true;
-							changed = true;
-							break;
-						}
-			}
-		}
-
+		var hier = buildHierarchy();
+		var objects = hier.objects;
+		hier.root.obj = scene;
 
 		// create all models
 		for( o in objects ) {

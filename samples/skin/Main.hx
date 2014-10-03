@@ -37,7 +37,7 @@ class Main extends hxd.App {
 	}
 
 	static function main() {
-		hxd.Res.initEmbed();
+		hxd.Res.initEmbed({ createH3D : true });
 		new Main();
 	}
 

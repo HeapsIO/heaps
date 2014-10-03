@@ -7,6 +7,22 @@ enum AnimationMode {
 	LinearAnim;
 }
 
+class TmpObject {
+	public var index : Int;
+	public var model : FbxNode;
+	public var parent : TmpObject;
+	public var isJoint : Bool;
+	public var isMesh : Bool;
+	public var childs : Array<TmpObject>;
+	#if !(dataOnly || macro)
+	public var obj : h3d.scene.Object;
+	public var joint : h3d.anim.Skin.Joint;
+	#end
+	public function new() {
+		childs = [];
+	}
+}
+
 private class AnimCurve {
 	public var def : DefaultMatrixes;
 	public var object : String;
@@ -61,6 +77,7 @@ class BaseLibrary {
 	var root : FbxNode;
 	var ids : Map<Int,FbxNode>;
 	var connect : Map<Int,Array<Int>>;
+	var namedConnect : Map<Int,Map<String,Int>>;
 	var invConnect : Map<Int,Array<Int>>;
 	var leftHand : Bool;
 	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
@@ -103,6 +120,7 @@ class BaseLibrary {
 	function reset() {
 		ids = new Map();
 		connect = new Map();
+		namedConnect = new Map();
 		invConnect = new Map();
 		defaultModelMatrixes = new Map();
 	}
@@ -155,6 +173,7 @@ class BaseLibrary {
 					continue;
 				var child = c.props[1].toInt();
 				var parent = c.props[2].toInt();
+				var name = c.props[3];
 
 				var c = connect.get(parent);
 				if( c == null ) {
@@ -162,6 +181,15 @@ class BaseLibrary {
 					connect.set(parent, c);
 				}
 				c.push(child);
+
+				if( name != null ) {
+					var nc = namedConnect.get(parent);
+					if( nc == null ) {
+						nc = new Map();
+						namedConnect.set(parent, nc);
+					}
+					nc.set(name.toString(), child);
+				}
 
 				if( parent == 0 )
 					continue;
@@ -210,6 +238,16 @@ class BaseLibrary {
 		return c[0];
 	}
 
+	public function getSpecChild( node : FbxNode, name : String ) {
+		var nc = namedConnect.get(node.getId());
+		if( nc == null )
+			return null;
+		var id = nc.get(name);
+		if( id == null )
+			return null;
+		return ids.get(id);
+	}
+
 	public function getChilds( node : FbxNode, ?nodeName : String ) {
 		var c = connect.get(node.getId());
 		var subs = [];
@@ -247,6 +285,65 @@ class BaseLibrary {
 			def.wasRemoved = -1;
 			defaultModelMatrixes.set(name, def);
 		}
+	}
+
+	function buildHierarchy() {
+		// init objects
+		var oroot = new TmpObject();
+		var objects = new Array<TmpObject>();
+		var hobjects = new Map<Int, TmpObject>();
+
+		hobjects.set(0, oroot);
+		for( model in root.getAll("Objects.Model") ) {
+			if( skipObjects.get(model.getName()) )
+				continue;
+			var mtype = model.getType();
+			var isJoint = mtype == "LimbNode" && (!unskinnedJointsAsObjects || !isNullJoint(model));
+			var o = new TmpObject();
+			o.model = model;
+			o.isJoint = isJoint;
+			o.isMesh = mtype == "Mesh";
+			hobjects.set(model.getId(), o);
+			objects.push(o);
+		}
+
+		// build hierarchy
+		for( o in objects ) {
+			var p = getParent(o.model, "Model", true);
+			var pid = if( p == null ) 0 else p.getId();
+			var op = hobjects.get(pid);
+			if( op == null ) op = oroot; // if parent has been removed
+			op.childs.push(o);
+			o.parent = op;
+		}
+
+		// propagates joint flags
+		var changed = true;
+		while( changed ) {
+			changed = false;
+			for( o in objects ) {
+				if( o.isJoint || o.isMesh ) continue;
+				if( o.parent.isJoint ) {
+					o.isJoint = true;
+					changed = true;
+					continue;
+				}
+				var hasJoint = false;
+				for( c in o.childs )
+					if( c.isJoint ) {
+						hasJoint = true;
+						break;
+					}
+				if( hasJoint )
+					for( c in o.parent.childs )
+						if( c.isJoint ) {
+							o.isJoint = true;
+							changed = true;
+							break;
+						}
+			}
+		}
+		return { root : oroot, objects : objects };
 	}
 
 	function getObjectCurve( curves : Map < Int, AnimCurve > , model : FbxNode, curveName : String, animName : String ) : AnimCurve {
