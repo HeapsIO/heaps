@@ -11,8 +11,8 @@ class Res {
 	}
 	#end
 
-	public static macro function initEmbed() {
-		return macro hxd.Res.loader = new hxd.res.Loader(hxd.res.EmbedFileSystem.create());
+	public static macro function initEmbed(?options:haxe.macro.Expr.ExprOf<hxd.res.EmbedOptions>) {
+		return macro hxd.Res.loader = new hxd.res.Loader(hxd.res.EmbedFileSystem.create(null,$options));
 	}
 
 	public static macro function initLocal() {
