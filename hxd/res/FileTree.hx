@@ -125,9 +125,8 @@ class FileTree {
 				var fbx = new hxd.fmt.fbx.H3DOut();
 				fbx.loadTextFile(sys.io.File.getContent(fullPath));
 				var h3d = fbx.toH3D(fullPath.substr(0,fullPath.length-file.length));
-				throw "TODO";
 				var out = sys.io.File.write(tmp);
-				//new hxd.fmt.h3d.Writer(out).write(h3d);
+				new hxd.fmt.h3d.Writer(out).write(h3d);
 				out.close();
 			}
 			Context.registerModuleDependency(currentModule, fullPath);

@@ -28,17 +28,19 @@ class Position {
 class GeometryFormat {
 	public var name : String;
 	public var format : GeometryDataFormat;
-	public function new() {
+	public function new(name, format) {
+		this.name = name;
+		this.format = format;
 	}
 }
 
 class Geometry {
-	public var vertexPosition : DataPosition;
 	public var vertexCount : Int;
 	public var vertexStride : Int;
 	public var vertexFormat : Array<GeometryFormat>;
-	public var indexPosition : DataPosition;
+	public var vertexPosition : DataPosition;
 	public var indexCount : Int;
+	public var indexPosition : DataPosition;
 	public function new() {
 	}
 }
