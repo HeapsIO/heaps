@@ -4,3 +4,4 @@
 *.js.map
 /bin
 /samples/res/.tmp
+.tmp

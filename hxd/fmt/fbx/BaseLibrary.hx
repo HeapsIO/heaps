@@ -1,11 +1,7 @@
 package hxd.fmt.fbx;
 using hxd.fmt.fbx.Data;
 import h3d.col.Point;
-
-enum AnimationMode {
-	FrameAnim;
-	LinearAnim;
-}
+import h3d.anim.Mode;
 
 class TmpObject {
 	public var index : Int;
@@ -472,7 +468,7 @@ class BaseLibrary {
 	}
 
 
-	public function loadAnimation( mode : AnimationMode, ?animName : String, ?root : FbxNode, ?lib : BaseLibrary ) : h3d.anim.Animation {
+	public function loadAnimation( mode : Mode, ?animName : String, ?root : FbxNode, ?lib : BaseLibrary ) : h3d.anim.Animation {
 		if( lib != null ) {
 			lib.defaultModelMatrixes = defaultModelMatrixes;
 			return lib.loadAnimation(mode,animName);

@@ -3,8 +3,8 @@ import h3d.scene.*;
 class Main extends hxd.App {
 
 	override function init() {
-		var prim = hxd.Res.Model.toFbx();
-		var obj = prim.makeObject(loadTexture);
+		var prim = hxd.Res.Model.toH3d();
+		var obj = prim.makeObject();
 		obj.scale(0.1);
 		s3d.addChild(obj);
 		s3d.camera.pos.set( -2, -3, 2);
@@ -14,26 +14,22 @@ class Main extends hxd.App {
 
 		// add lights
 		var dir = new DirLight(new h3d.Vector( -1, 3, -10), s3d);
-		for( s in obj )
-			s.toMesh().material.mainPass.enableLights = true;
+		for( s in obj ) {
+			var m = s.toMesh().material;
+			m.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
+			m.mainPass.enableLights = true;
+			m.shadows = true;
+		}
 		s3d.lightSystem.ambientLight.set(0.4, 0.4, 0.4);
-
-		// add self shadowing
-		for( s in obj )
-			s.toMesh().material.shadows = true;
 
 		var shadow = cast(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
 		shadow.lightDirection = dir.direction;
 		shadow.power = 50;
 	}
 
-	function loadTexture( name : String, _ ) {
+	function loadTexture( name : String ) {
 		name = name.split("\\").pop();
-		var m = new h3d.mat.MeshMaterial(hxd.Res.load(name).toTexture());
-		m.mainPass.culling = None;
-		m.texture.filter = Nearest;
-		m.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
-		return m;
+		return hxd.Res.load(name).toTexture();
 	}
 
 	static function main() {

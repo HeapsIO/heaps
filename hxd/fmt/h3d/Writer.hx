@@ -58,7 +58,7 @@ class Writer {
 			writeName(m.diffuseTexture);
 			out.writeByte(m.blendMode.getIndex());
 			out.writeByte(m.culling.getIndex());
-			out.writeFloat(m.killAlpha == null ? 0 : m.killAlpha);
+			out.writeFloat(m.killAlpha == null ? 1 : m.killAlpha);
 		}
 		out.writeInt32(d.models.length);
 		for( m in d.models ) {

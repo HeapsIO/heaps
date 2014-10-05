@@ -18,11 +18,18 @@ class FbxModel extends Resource {
 			if( loader == null ) throw "Loader parameter required for XTRA";
 			lib = loader.load(entry.path.substr(0, -4) + "FBX").toFbx();
 			lib.loadXtra(entry.getBytes().toString());
+		case 'H'.code:
+			throw "FBX model was converted to H3D : use res.toH3d()";
 		default:
 			throw "Unsupported model format " + entry.path;
 		}
 		if( isLeftHanded ) lib.leftHandConvert();
 		return lib;
+	}
+
+	public function toH3d() : hxd.fmt.h3d.Library {
+		var h3d = new hxd.fmt.h3d.Reader(new FileInput(entry)).readHeader();
+		return new hxd.fmt.h3d.Library(entry, h3d);
 	}
 
 }
