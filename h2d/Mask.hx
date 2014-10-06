@@ -30,8 +30,10 @@ class Mask extends Sprite {
 		var x2 = ((width * matA + height * matC + absX) + 1) * 0.5 * ctx.engine.width;
 		var y2 = (1 - (width * matB + height * matD + absY)) * 0.5 * ctx.engine.height;
 
+		ctx.flush();
 		ctx.engine.setRenderZone(Std.int(x1+1e-10), Std.int(y1+1e-10), Std.int(x2-x1+1e-10), Std.int(y2-y1+1e-10));
 		super.drawRec(ctx);
+		ctx.flush();
 		ctx.engine.setRenderZone();
 	}
 
