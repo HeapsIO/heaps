@@ -28,6 +28,11 @@ class MeshMaterial extends Material {
 		var m = m == null ? new MeshMaterial() : cast m;
 		super.clone(m);
 		m.texture = texture;
+		if( textureShader != null ) {
+			m.textureShader.additive = textureShader.additive;
+			m.textureShader.killAlpha = textureShader.killAlpha;
+			m.textureShader.killAlphaThreshold = textureShader.killAlphaThreshold;
+		}
 		m.color = color;
 		m.blendMode = blendMode;
 		return m;
