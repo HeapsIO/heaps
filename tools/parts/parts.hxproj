@@ -15,7 +15,7 @@
   </output>
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
-    <class path="..\.." />
+    <!-- example: <class path="..." /> -->
   </classpaths>
   <!-- Build options -->
   <build>
@@ -24,7 +24,7 @@
     <option noInlineOnDebug="False" />
     <option mainClass="Main" />
     <option enabledebug="False" />
-    <option additional="-lib hxsl&#xA;-D h3d&#xA;-lib air3&#xA;-lib hscript&#xA;-dce full" />
+    <option additional="-lib heaps&#xA;-lib hscript&#xA;-dce full" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

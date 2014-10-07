@@ -255,10 +255,18 @@ class Macros {
 					try {
 						var shader = new MacroParser().parseExpr(expr);
 						var c = Context.getLocalClass();
-						var sup = Std.string(c.get().superClass.t);
+						var csup = c.get().superClass;
+						var sup = Std.string(csup.t);
+						var supFields = new Map();
 						// add auto extends
-						if( sup != "hxsl.Shader" )
+						if( sup != "hxsl.Shader" ) {
 							shader = { expr : EBlock([ { expr : ECall( { expr : EIdent("extends"), pos : pos }, [ { expr : EConst(CString(sup)), pos : pos } ]), pos : pos }, shader]), pos : pos };
+							for( f in csup.t.get().fields.get() )
+								supFields.set(f.name, true);
+							supFields.remove("updateConstants");
+							supFields.remove("getParamValue");
+							supFields.remove("clone");
+						}
 						var name = Std.string(c);
 						var check = new Checker();
 						check.loadShader = loadShader;
@@ -269,8 +277,9 @@ class Macros {
 							name : ":keep",
 							pos : pos,
 						});
-						for( f in buildFields(shader,pos) )
-							fields.push(f);
+						for( f in buildFields(shader, pos) )
+							if( !supFields.exists(f.name) )
+								fields.push(f);
 					} catch( e : Ast.Error ) {
 						fields.remove(f);
 						Context.error(e.msg, e.pos);

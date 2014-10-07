@@ -1,18 +1,19 @@
 package h3d.parts;
 import h3d.parts.Data;
 
-class Emitter extends h3d.scene.Object implements Randomized {
+class Emitter extends h3d.scene.Mesh implements Randomized {
 
-	public var material : h3d.parts.Material;
 	public var count(default, null) : Int;
 	public var time(default,null) : Float;
 	public var state(default, null) : State;
 	public var speed : Float = 1.;
 	public var collider : Collider;
 
+	var pshader : h3d.shader.ParticleShader;
 	var rnd : Float;
 	var emitCount : Float;
 	var colorMap : ColorKey;
+	var hasColor : Bool;
 
 	var head : Particle;
 	var tail : Particle;
@@ -23,8 +24,10 @@ class Emitter extends h3d.scene.Object implements Randomized {
 	var curPart : Particle;
 
 	public function new(?state,?parent) {
-		super(parent);
-		material = new Material();
+		super(null, null, parent);
+		pshader = new h3d.shader.ParticleShader();
+		material.mainPass.addShader(pshader);
+		material.mainPass.dynamicParameters = true;
 		time = 0;
 		emitCount = 0;
 		rnd = Math.random();
@@ -77,6 +80,17 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				colorMap = k;
 			}
 		}
+		hasColor = colorMap != null || !state.alpha.match(VConst(1)) || !state.light.match(VConst(1));
+		var c = material.mainPass.getShader(h3d.shader.VertexColorAlpha);
+		if( hasColor ) {
+			if( c == null )
+				material.mainPass.addShader(new h3d.shader.VertexColorAlpha());
+		} else {
+			if( c != null )
+				material.mainPass.removeShader(c);
+		}
+		pshader.isAbsolute = !state.emitLocal;
+		pshader.is3D = state.is3D;
 	}
 
 	inline function eval(v) {
@@ -364,7 +378,6 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		var pos = 0;
 		var p = head;
 		var tmp = tmpBuf;
-		var hasColor = colorMap != null || !state.alpha.match(VConst(1)) || !state.light.match(VConst(1));
 		var surface = 0.;
 		var frames = state.frames;
 		if( frames == null || frames.length == 0 ) {
@@ -383,15 +396,17 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				if( f == null ) f = frames[0];
 				var ratio = p.size * p.ratio * (f.height / f.width);
 
+				// pos
 				tmp[pos++] = prevX1;
 				tmp[pos++] = prevY1;
 				tmp[pos++] = prevZ1;
+				// normal
+				tmp[pos++] = p.size;
+				tmp[pos++] = ratio;
+				tmp[pos++] = p.rotation;
 				// delta
 				tmp[pos++] = 0;
 				tmp[pos++] = 0;
-				tmp[pos++] = p.rotation;
-				tmp[pos++] = p.size;
-				tmp[pos++] = ratio;
 				// UV
 				tmp[pos++] = f.u;
 				tmp[pos++] = f.v2;
@@ -406,11 +421,11 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				tmp[pos++] = prevX2;
 				tmp[pos++] = prevY2;
 				tmp[pos++] = prevZ2;
-				tmp[pos++] = 0;
-				tmp[pos++] = 0;
-				tmp[pos++] = p.rotation;
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = 0;
+				tmp[pos++] = 0;
 				tmp[pos++] = f.u;
 				tmp[pos++] = f.v;
 				if( hasColor ) {
@@ -443,11 +458,11 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				tmp[pos++] = prevX1;
 				tmp[pos++] = prevY1;
 				tmp[pos++] = prevZ1;
-				tmp[pos++] = 0;
-				tmp[pos++] = 0;
-				tmp[pos++] = p.rotation;
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = 0;
+				tmp[pos++] = 0;
 				tmp[pos++] = f.u2;
 				tmp[pos++] = f.v2;
 				if( hasColor ) {
@@ -460,11 +475,11 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				tmp[pos++] = prevX2;
 				tmp[pos++] = prevY2;
 				tmp[pos++] = prevZ2;
-				tmp[pos++] = 0;
-				tmp[pos++] = 0;
-				tmp[pos++] = p.rotation;
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = 0;
+				tmp[pos++] = 0;
 				tmp[pos++] = f.u2;
 				tmp[pos++] = f.v;
 				if( hasColor ) {
@@ -485,12 +500,12 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				tmp[pos++] = p.x;
 				tmp[pos++] = p.y;
 				tmp[pos++] = p.z;
+				tmp[pos++] = p.size;
+				tmp[pos++] = ratio;
+				tmp[pos++] = p.rotation;
 				// delta
 				tmp[pos++] = -0.5;
 				tmp[pos++] = -0.5;
-				tmp[pos++] = p.rotation;
-				tmp[pos++] = p.size;
-				tmp[pos++] = ratio;
 				// UV
 				tmp[pos++] = f.u;
 				tmp[pos++] = f.v2;
@@ -505,11 +520,11 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				tmp[pos++] = p.x;
 				tmp[pos++] = p.y;
 				tmp[pos++] = p.z;
-				tmp[pos++] = -0.5;
-				tmp[pos++] = 0.5;
-				tmp[pos++] = p.rotation;
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = -0.5;
+				tmp[pos++] = 0.5;
 				tmp[pos++] = f.u;
 				tmp[pos++] = f.v;
 				if( hasColor ) {
@@ -522,11 +537,11 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				tmp[pos++] = p.x;
 				tmp[pos++] = p.y;
 				tmp[pos++] = p.z;
-				tmp[pos++] = 0.5;
-				tmp[pos++] = -0.5;
-				tmp[pos++] = p.rotation;
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = 0.5;
+				tmp[pos++] = -0.5;
 				tmp[pos++] = f.u2;
 				tmp[pos++] = f.v2;
 				if( hasColor ) {
@@ -539,11 +554,11 @@ class Emitter extends h3d.scene.Object implements Randomized {
 				tmp[pos++] = p.x;
 				tmp[pos++] = p.y;
 				tmp[pos++] = p.z;
-				tmp[pos++] = 0.5;
-				tmp[pos++] = 0.5;
-				tmp[pos++] = p.rotation;
 				tmp[pos++] = p.size;
 				tmp[pos++] = ratio;
+				tmp[pos++] = p.rotation;
+				tmp[pos++] = 0.5;
+				tmp[pos++] = 0.5;
 				tmp[pos++] = f.u2;
 				tmp[pos++] = f.v;
 				if( hasColor ) {
@@ -560,25 +575,13 @@ class Emitter extends h3d.scene.Object implements Randomized {
 		if( hasColor ) stride += 4;
 		var buffer = h3d.Buffer.ofSubFloats(tmp, stride, Std.int(pos/stride), [Quads, Dynamic, RawFormat]);
 		var size = eval(state.globalSize);
-
-		/*
-		material.pshader.mpos = state.emitLocal ? this.absPos : h3d.Matrix.I();
-		material.pshader.mproj = ctx.camera.m;
-		if( state.is3D ) {
-			material.pshader.is3D = true;
-			material.pshader.partSize = new h3d.Vector(size, size);
-		} else {
-			material.pshader.is3D = false;
-			material.pshader.partSize = new h3d.Vector(size, size * ctx.engine.width / ctx.engine.height);
-		}
-		material.pshader.hasColor = hasColor;
-		material.pshader.isAlphaMap = state.isAlphaMap;
-
-		ctx.engine.selectMaterial(material);
+		if( state.is3D )
+			pshader.size.set(size, size);
+		else
+			pshader.size.set(size * ctx.engine.height / ctx.engine.width, size);
+		ctx.uploadParams();
 		ctx.engine.renderQuadBuffer(buffer);
 		buffer.dispose();
-		*/
-		throw "TODO";
 	}
 
 }
