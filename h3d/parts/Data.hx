@@ -169,7 +169,7 @@ class State {
 		delay = 0.;
 	}
 
-	public function scale( val : Value, v : Float ) {
+	@:noDebug public function scale( val : Value, v : Float ) {
 		return switch( val ) {
 		case VConst(c): VConst(c * v);
 		case VRandom(start, len, c): VRandom(start * v, len * v, c);

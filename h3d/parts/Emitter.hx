@@ -35,6 +35,7 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 		if( state == null ) {
 			state = new State();
 			state.setDefaults();
+			state.initFrames();
 		}
 		setState(state);
 	}
@@ -358,6 +359,7 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 	}
 
 	@:access(h3d.parts.Material) @:access(h2d.Tile)
+	@:noDebug
 	override function draw( ctx : h3d.scene.RenderContext ) {
 		if( head == null )
 			return;
