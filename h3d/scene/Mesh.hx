@@ -37,7 +37,7 @@ class Mesh extends Object {
 	}
 
 	override function dispose() {
-		primitive.dispose();
+		if( primitive != null ) primitive.dispose();
 		super.dispose();
 	}
 }
