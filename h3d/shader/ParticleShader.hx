@@ -29,9 +29,11 @@ class ParticleShader extends hxsl.Shader {
 		@const var is3D : Bool;
 		@const var isAbsolute : Bool;
 
+		function __init__() {
+			if( isAbsolute ) transformedPosition = input.position;
+		}
+
 		function vertex() {
-			if( isAbsolute )
-				transformedPosition = input.position;
 			var rpos = input.normal.xy;
 			var rot = input.normal.z;
 			var cr = rot.cos();
