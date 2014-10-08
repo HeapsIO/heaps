@@ -354,7 +354,7 @@ class BaseLibrary {
 			return null;
 		var def = defaultModelMatrixes.get(name);
 		if( def == null )
-			throw "Object "+name+" used in anim "+animName+" was not found in library";
+			return null;
 		// if it's a move animation on a terminal unskinned joint, let's skip it
 		if( def.wasRemoved != null ) {
 			if( curveName != "Visibility" && curveName != "UV" )
