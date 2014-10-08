@@ -63,7 +63,7 @@ class Scene extends Object implements h3d.IDrawable {
 		ctx.start();
 		for( p in prePasses )
 			p.render(engine);
-		sync(ctx);
+		syncRec(ctx);
 		emitRec(ctx);
 		// sort by pass id
 		ctx.passes = haxe.ds.ListSort.sortSingleLinked(ctx.passes, function(p1, p2) {

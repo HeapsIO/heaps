@@ -144,7 +144,6 @@ class Skin extends MultiMaterial {
 		if( !(visible || syncIfHidden) )
 			return;
 		if( jointsUpdated || posChanged ) {
-			super.sync(ctx);
 			for( j in skinData.allJoints ) {
 				var id = j.index;
 				var m = currentAbsPose[id];
@@ -161,8 +160,7 @@ class Skin extends MultiMaterial {
 			skinShader.bonesMatrixes = currentPalette;
 			if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
 			jointsUpdated = false;
-		} else
-			super.sync(ctx);
+		}
 	}
 
 	override function emit( ctx : RenderContext ) {

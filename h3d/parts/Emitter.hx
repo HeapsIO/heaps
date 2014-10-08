@@ -342,7 +342,6 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 	}
 
 	override function sync( ctx : h3d.scene.RenderContext ) {
-		super.sync(ctx);
 		update(ctx.elapsedTime * speed);
 	}
 

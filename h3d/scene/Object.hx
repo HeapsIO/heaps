@@ -228,6 +228,9 @@ class Object {
 	}
 
 	function sync( ctx : RenderContext ) {
+	}
+
+	function syncRec( ctx : RenderContext ) {
 		if( currentAnimation != null ) {
 			var old = parent;
 			var dt = ctx.elapsedTime;
@@ -238,11 +241,9 @@ class Object {
 			if( parent == null && old != null ) return; // if we were removed by an animation event
 		}
 		var changed = posChanged;
-		if( changed ) {
-			posChanged = false;
-			calcAbsPos();
-		}
-
+		if( changed ) calcAbsPos();
+		sync(ctx);
+		posChanged = false;
 		lastFrame = ctx.frame;
 		var p = 0, len = childs.length;
 		while( p < len ) {
@@ -251,7 +252,7 @@ class Object {
 				break;
 			if( c.lastFrame != ctx.frame ) {
 				if( changed ) c.posChanged = true;
-				c.sync(ctx);
+				c.syncRec(ctx);
 			}
 			// if the object was removed, let's restart again.
 			// our lastFrame ensure that no object will get synched twice
