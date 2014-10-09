@@ -7,6 +7,18 @@ class SimpleBlend extends Transition {
 	public function new( anim1 : Animation, anim2 : Animation, objects : Map < String, Bool > ) {
 		super("blend", anim1, anim2);
 		this.objectsMap = objects;
+		if( anim1.isInstance && anim2.isInstance )
+			setupInstance();
+	}
+
+	function setupInstance() {
+		for( o in anim1.objects.copy() )
+			if( objectsMap.get(o.objectName) )
+				anim1.objects.remove(o);
+		for( o in anim2.objects.copy() )
+			if( !objectsMap.get(o.objectName) )
+				anim2.objects.remove(o);
+		isInstance = true;
 	}
 
 	override function clone(?a : Animation) : Animation {
@@ -19,17 +31,7 @@ class SimpleBlend extends Transition {
 	}
 
 	override function createInstance( base ) {
-		var a = new SimpleBlend(anim1, anim2, objectsMap);
-		a.anim1 = anim1.createInstance(base);
-		a.anim2 = anim2.createInstance(base);
-		for( o in a.anim1.objects.copy() )
-			if( objectsMap.get(o.objectName) )
-				a.anim1.objects.remove(o);
-		for( o in a.anim2.objects.copy() )
-			if( !objectsMap.get(o.objectName) )
-				a.anim2.objects.remove(o);
-		a.isInstance = true;
-		return a;
+		return new SimpleBlend(anim1.createInstance(base), anim2.createInstance(base), objectsMap);
 	}
 
 }

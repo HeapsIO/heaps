@@ -232,4 +232,8 @@ class Animation {
 		return 0;
 	}
 
+	public function toString() {
+		return name;
+	}
+
 }
