@@ -91,6 +91,7 @@ class HtmlText extends Text {
 
 	override function set_textColor(c) {
 		this.textColor = c;
+		rebuild();
 		return c;
 	}
 
