@@ -24,7 +24,7 @@ class Timer {
 	}
 
 	public inline static function fps() : Float {
-		return wantedFPS/tmod ;
+		return wantedFPS/calc_tmod;
 	}
 
 	public static function skip() {
