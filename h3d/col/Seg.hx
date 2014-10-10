@@ -27,4 +27,8 @@ class Seg {
 		return Math.sqrt(distanceSq(p));
 	}
 
+	public function toString() {
+		return 'Seg{$p1,$p2}';
+	}
+
 }

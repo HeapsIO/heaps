@@ -31,7 +31,7 @@ class Ray {
 	}
 
 	public function toString() {
-		return "{" + getPos() + "," + getDir() + "}";
+		return "Ray{" + getPos() + "," + getDir() + "}";
 	}
 
 	public inline function intersect( p : Plane ) : Null<Point> {

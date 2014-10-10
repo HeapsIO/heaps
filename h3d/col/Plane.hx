@@ -40,7 +40,7 @@ class Plane {
 	}
 
 	public function toString() {
-		return "{" + getNormal()+","+ d + "}";
+		return "Plane{" + getNormal()+","+ hxd.Math.fmt(d) + "}";
 	}
 
 	/**

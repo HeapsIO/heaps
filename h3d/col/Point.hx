@@ -97,7 +97,7 @@ class Point {
 	}
 
 	public function toString() {
-		return '{${x.fmt()},${y.fmt()},${z.fmt()}}';
+		return 'Point{${x.fmt()},${y.fmt()},${z.fmt()}}';
 	}
 
 }

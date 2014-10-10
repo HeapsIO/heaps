@@ -271,7 +271,7 @@ class Bounds {
 	}
 
 	public function toString() {
-		return "{" + getMin() + "," + getMax() + "}";
+		return "Bounds{" + getMin() + "," + getMax() + "}";
 	}
 
 	public static inline function fromPoints( min : Point, max : Point ) {
