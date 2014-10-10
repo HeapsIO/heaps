@@ -15,7 +15,7 @@ class Object {
 	public var scaleX(default,set) : Float;
 	public var scaleY(default, set) : Float;
 	public var scaleZ(default,set) : Float;
-	public var visible : Bool = true;
+	public var visible(default,set) : Bool = true;
 
 	/**
 		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
@@ -28,6 +28,9 @@ class Object {
 	**/
 	public var defaultTransform(default, set) : h3d.Matrix;
 	public var currentAnimation(default, null) : h3d.anim.Animation;
+
+	// internal flag to inform that the object is not to be displayed
+	var culled : Bool;
 
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
@@ -48,6 +51,11 @@ class Object {
 
 	public function playAnimation( a : h3d.anim.Animation ) {
 		return currentAnimation = a.createInstance(this);
+	}
+
+	function set_visible(v) {
+		culled = !v;
+		return visible = v;
 	}
 
 	/**
@@ -278,7 +286,7 @@ class Object {
 	}
 
 	function emitRec( ctx : RenderContext ) {
-		if( !visible ) return;
+		if( culled ) return;
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
 		if( posChanged ) {
 			// only sync anim, don't update() (prevent any event from occuring during draw())
@@ -333,14 +341,6 @@ class Object {
 		defaultTransform = v;
 		posChanged = true;
 		return v;
-	}
-
-	/*
-		Move along the current rotation axis
-	*/
-	public function move( dx : Float, dy : Float, dz : Float ) {
-		throw "TODO";
-		posChanged = true;
 	}
 
 	public inline function setPos( x : Float, y : Float, z : Float ) {

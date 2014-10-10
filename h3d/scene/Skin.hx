@@ -58,7 +58,10 @@ class Skin extends MultiMaterial {
 	var skinShader : h3d.shader.Skin;
 
 	public var showJoints : Bool;
-	public var syncIfHidden : Bool = true;
+	/**
+		Always synchronize the joints position even if the object is invisible or culled.
+	**/
+	public var alwaysSync : Bool = false;
 
 	public function new(s, ?mat, ?parent) {
 		super(null, mat, parent);
@@ -141,7 +144,7 @@ class Skin extends MultiMaterial {
 	}
 
 	override function sync( ctx : RenderContext ) {
-		if( !(visible || syncIfHidden) )
+		if( culled && !alwaysSync )
 			return;
 		if( jointsUpdated || posChanged ) {
 			for( j in skinData.allJoints ) {
