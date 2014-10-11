@@ -25,6 +25,23 @@ class MultiMaterial extends Mesh {
 		}
 	}
 
+	override function getMaterialByName( name : String ) {
+		for( m in materials )
+			if( m.name == name )
+				return m;
+		return super.getMaterialByName(name);
+	}
+
+	override function getMaterials( ?a : Array<h3d.mat.Material> ) {
+		if( a == null ) a = [];
+		for( m in materials )
+			if( m != null )
+				a.push(m);
+		for( o in childs )
+			o.getMaterials(a);
+		return a;
+	}
+
 	override function draw( ctx : RenderContext ) {
 		if( materials.length > 1 )
 			primitive.selectMaterial(ctx.drawPass.index);

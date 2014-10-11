@@ -36,6 +36,18 @@ class Mesh extends Object {
 		ctx.emit(material, this);
 	}
 
+	override function getMaterialByName( name : String ) {
+		if( material != null && material.name == name )
+			return material;
+		return super.getMaterialByName(name);
+	}
+
+	override function getMaterials( ?a : Array<h3d.mat.Material> ) {
+		if( a == null ) a = [];
+		if( material != null ) a.push(material);
+		return super.getMaterials(a);
+	}
+
 	override function dispose() {
 		if( primitive != null ) primitive.dispose();
 		super.dispose();

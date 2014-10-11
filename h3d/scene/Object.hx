@@ -76,6 +76,21 @@ class Object {
 		return k;
 	}
 
+	public function getMaterialByName( name : String ) {
+		for( o in childs ) {
+			var m = o.getMaterialByName(name);
+			if( m != null ) return m;
+		}
+		return null;
+	}
+
+	public function getMaterials( ?a : Array<h3d.mat.Material> ) {
+		if( a == null ) a = [];
+		for( o in childs )
+			o.getMaterials(a);
+		return a;
+	}
+
 	/**
 		Transform a point from the local object coordinates to the global ones. The point is modified and returned.
 	**/
