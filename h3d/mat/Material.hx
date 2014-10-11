@@ -5,6 +5,7 @@ import h3d.mat.Pass;
 class Material {
 
 	var passes : Pass;
+	public var name : String;
 	public var mainPass(get, never) : Pass;
 	public var shadows(get, set) : Bool;
 	public var castShadows(default, set) : Bool;

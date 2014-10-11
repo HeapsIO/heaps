@@ -23,6 +23,13 @@ class Position {
 	public var sz : Float;
 	public function new() {
 	}
+	public function toMatrix() {
+		var m = new h3d.Matrix();
+		m.initScale(sx, sy, sx);
+		m.rotate(rx, ry, rz);
+		m.translate(x, y, z);
+		return m;
+	}
 }
 
 class GeometryFormat {
@@ -71,6 +78,7 @@ class Data {
 	public var geometries : Array<Geometry>;
 	public var materials : Array<Material>;
 	public var models : Array<Model>;
+	public var dataPosition : Int;
 	public var data : haxe.io.Bytes;
 
 	public function new() {

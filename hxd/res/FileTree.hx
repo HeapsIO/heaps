@@ -120,7 +120,7 @@ class FileTree {
 			Context.registerModuleDependency(currentModule, fullPath);
 		case "fbx" if( options.createH3D ):
 			var tmp = options.tmpDir + name + ".h3d";
-			if( getTime(tmp) < getTime(fullPath) ) {
+			if( getTime(tmp) < getTime(fullPath) || true ) {
 				Sys.println("Converting " + relPath);
 				var fbx = new hxd.fmt.fbx.H3DOut();
 				fbx.loadTextFile(sys.io.File.getContent(fullPath));

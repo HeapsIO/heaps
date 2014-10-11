@@ -79,7 +79,7 @@ class Writer {
 
 		out.writeString("H3D");
 		out.writeByte(d.version);
-		out.writeInt32(bytes.length);
+		out.writeInt32(bytes.length + 12);
 		out.write(bytes);
 		out.writeInt32(d.data.length);
 		out.write(d.data);

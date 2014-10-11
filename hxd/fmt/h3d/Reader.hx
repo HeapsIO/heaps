@@ -43,6 +43,8 @@ class Reader {
 		}
 		d.version = i.readByte();
 		d.geometries = [];
+		d.dataPosition = i.readInt32();
+
 		for( k in 0...i.readInt32() ) {
 			var g = new Geometry();
 			g.vertexCount = i.readInt32();
@@ -51,6 +53,7 @@ class Reader {
 			g.vertexPosition = i.readInt32();
 			g.indexCount = i.readInt32();
 			g.indexPosition = i.readInt32();
+			d.geometries.push(g);
 		}
 
 		d.materials = [];
@@ -62,6 +65,7 @@ class Reader {
 			m.culling = CULLING[i.readByte()];
 			m.killAlpha = i.readFloat();
 			if( m.killAlpha == 1 ) m.killAlpha = null;
+			d.materials.push(m);
 		}
 
 		d.models = [];
@@ -78,6 +82,7 @@ class Reader {
 				m.geometries.push(i.readInt32());
 			for( k in 0...count )
 				m.materials.push(i.readInt32());
+			d.models.push(m);
 		}
 		return d;
 	}
