@@ -186,11 +186,13 @@ class Quat {
 		return m;
 	}
 
-	public function toEuler() {
+	// Buggy, for instance with single Z rotation outside of [-pi/2,pi/2] range
+	public function __toEuler() {
+		var q = x * y + z * w;
 		return new Vector(
-			hxd.Math.atan2(2 * (x * w + y * z), 1 - 2 * (x * x + z * z)),
-			hxd.Math.atan2(2 * (y * w - x * z), 1 - 2 * (y * y - z * z)),
-			(2 * (x * y + z * w)).asin()
+			hxd.Math.atan2(2 * (x * w - y * z), 1 - 2 * (x * x + z * z)),
+			hxd.Math.atan2(2 * (y * w - x * z), 1 - 2 * (y * y + z * z)),
+			(2 * q).asin()
 		);
 	}
 

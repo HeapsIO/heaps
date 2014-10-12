@@ -385,10 +385,6 @@ class Object {
 		posChanged = true;
 	}
 
-	public function getRotation() {
-		return qRot.toEuler();
-	}
-
 	public function getRotationQuat() {
 		return qRot;
 	}
