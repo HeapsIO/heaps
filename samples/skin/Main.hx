@@ -15,7 +15,8 @@ class Main extends hxd.App {
 		// add lights
 		var dir = new DirLight(new h3d.Vector( -1, 3, -10), s3d);
 		for( m in obj.getMaterials() ) {
-			m.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
+			var t = m.mainPass.getShader(h3d.shader.Texture);
+			if( t != null ) t.killAlpha = true;
 			m.mainPass.enableLights = true;
 			m.shadows = true;
 		}

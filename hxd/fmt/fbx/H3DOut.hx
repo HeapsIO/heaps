@@ -174,10 +174,12 @@ class H3DOut extends BaseLibrary {
 			p.sx = m.scale == null ? 1 : m.scale.x;
 			p.sy = m.scale == null ? 1 : m.scale.y;
 			p.sz = m.scale == null ? 1 : m.scale.z;
-			// TODO : rotate in left hand and handle pre-rot
-			p.rx = 0;
-			p.ry = 0;
-			p.rz = 0;
+
+			var q = m.toQuaternion(true);
+			q.normalize();
+			p.qx = q.x;
+			p.qy = q.y;
+			p.qz = q.z;
 			model.position = p;
 			d.models.push(model);
 

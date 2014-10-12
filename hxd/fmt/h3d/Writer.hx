@@ -26,9 +26,9 @@ class Writer {
 		out.writeFloat(p.x);
 		out.writeFloat(p.y);
 		out.writeFloat(p.z);
-		out.writeFloat(p.rx);
-		out.writeFloat(p.ry);
-		out.writeFloat(p.rz);
+		out.writeFloat(p.qx);
+		out.writeFloat(p.qy);
+		out.writeFloat(p.qz);
 		out.writeFloat(p.sx);
 		out.writeFloat(p.sy);
 		out.writeFloat(p.sz);

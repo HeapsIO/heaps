@@ -22,9 +22,9 @@ class Reader {
 		p.x = i.readFloat();
 		p.y = i.readFloat();
 		p.z = i.readFloat();
-		p.rx = i.readFloat();
-		p.ry = i.readFloat();
-		p.rz = i.readFloat();
+		p.qx = i.readFloat();
+		p.qy = i.readFloat();
+		p.qz = i.readFloat();
 		p.sx = i.readFloat();
 		p.sy = i.readFloat();
 		p.sz = i.readFloat();
@@ -74,6 +74,7 @@ class Reader {
 			m.name = readName();
 			m.parent = i.readInt32();
 			m.position = readPosition();
+			d.models.push(m);
 			var count = i.readByte();
 			if( count == 0 ) continue;
 			m.geometries = [];
@@ -82,7 +83,6 @@ class Reader {
 				m.geometries.push(i.readInt32());
 			for( k in 0...count )
 				m.materials.push(i.readInt32());
-			d.models.push(m);
 		}
 		return d;
 	}
