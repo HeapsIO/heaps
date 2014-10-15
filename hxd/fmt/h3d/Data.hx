@@ -15,14 +15,36 @@ class Position {
 	public var x : Float;
 	public var y : Float;
 	public var z : Float;
-	public var rx : Float;
-	public var ry : Float;
-	public var rz : Float;
+	public var qx : Float;
+	public var qy : Float;
+	public var qz : Float;
 	public var sx : Float;
 	public var sy : Float;
 	public var sz : Float;
 	public function new() {
 	}
+
+	public function loadQuaternion( q : h3d.Quat ) {
+		var qw = 1 - (qx * qx + qy * qy + qz * qz);
+		q.x = qx;
+		q.y = qy;
+		q.z = qz;
+		q.w = qw < 0 ? -Math.sqrt( -qw) : Math.sqrt(qw);
+	}
+
+	public function toMatrix() {
+		var m = new h3d.Matrix();
+		var q = QTMP;
+		loadQuaternion(q);
+		q.saveToMatrix(m);
+		// prepend scale
+		m._11 *= sx; m._12 *= sx; m._13 *= sx;
+		m._21 *= sy; m._22 *= sy; m._23 *= sy;
+		m._31 *= sz; m._32 *= sz; m._33 *= sz;
+		m.translate(x, y, z);
+		return m;
+	}
+	static var QTMP = new h3d.Quat();
 }
 
 class GeometryFormat {
@@ -71,6 +93,7 @@ class Data {
 	public var geometries : Array<Geometry>;
 	public var materials : Array<Material>;
 	public var models : Array<Model>;
+	public var dataPosition : Int;
 	public var data : haxe.io.Bytes;
 
 	public function new() {

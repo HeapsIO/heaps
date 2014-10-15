@@ -22,9 +22,9 @@ class Reader {
 		p.x = i.readFloat();
 		p.y = i.readFloat();
 		p.z = i.readFloat();
-		p.rx = i.readFloat();
-		p.ry = i.readFloat();
-		p.rz = i.readFloat();
+		p.qx = i.readFloat();
+		p.qy = i.readFloat();
+		p.qz = i.readFloat();
 		p.sx = i.readFloat();
 		p.sy = i.readFloat();
 		p.sz = i.readFloat();
@@ -43,6 +43,8 @@ class Reader {
 		}
 		d.version = i.readByte();
 		d.geometries = [];
+		d.dataPosition = i.readInt32();
+
 		for( k in 0...i.readInt32() ) {
 			var g = new Geometry();
 			g.vertexCount = i.readInt32();
@@ -51,6 +53,7 @@ class Reader {
 			g.vertexPosition = i.readInt32();
 			g.indexCount = i.readInt32();
 			g.indexPosition = i.readInt32();
+			d.geometries.push(g);
 		}
 
 		d.materials = [];
@@ -62,6 +65,7 @@ class Reader {
 			m.culling = CULLING[i.readByte()];
 			m.killAlpha = i.readFloat();
 			if( m.killAlpha == 1 ) m.killAlpha = null;
+			d.materials.push(m);
 		}
 
 		d.models = [];
@@ -70,6 +74,7 @@ class Reader {
 			m.name = readName();
 			m.parent = i.readInt32();
 			m.position = readPosition();
+			d.models.push(m);
 			var count = i.readByte();
 			if( count == 0 ) continue;
 			m.geometries = [];

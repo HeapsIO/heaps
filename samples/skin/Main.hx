@@ -4,19 +4,19 @@ class Main extends hxd.App {
 
 	override function init() {
 		var prim = hxd.Res.Model.toH3d();
-		var obj = prim.makeObject();
+		var obj = prim.makeObject(loadTexture);
 		obj.scale(0.1);
 		s3d.addChild(obj);
 		s3d.camera.pos.set( -2, -3, 2);
 		s3d.camera.target.z += 1;
 
-		obj.playAnimation(prim.loadAnimation(LinearAnim));
+		//obj.playAnimation(prim.loadAnimation(LinearAnim));
 
 		// add lights
 		var dir = new DirLight(new h3d.Vector( -1, 3, -10), s3d);
-		for( s in obj ) {
-			var m = s.toMesh().material;
-			m.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
+		for( m in obj.getMaterials() ) {
+			var t = m.mainPass.getShader(h3d.shader.Texture);
+			if( t != null ) t.killAlpha = true;
 			m.mainPass.enableLights = true;
 			m.shadows = true;
 		}
@@ -28,7 +28,7 @@ class Main extends hxd.App {
 	}
 
 	function loadTexture( name : String ) {
-		name = name.split("\\").pop();
+		name = name.split("/").pop();
 		return hxd.Res.load(name).toTexture();
 	}
 

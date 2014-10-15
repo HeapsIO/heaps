@@ -24,7 +24,7 @@ class H3DOut extends BaseLibrary {
 		if( colors != null )
 			g.vertexFormat.push(new GeometryFormat("color", DVec3));
 
-		var stride = 3 + (normals == null ? 2 : 0) + uvs.length * 2 + (colors == null ? 0 : 3);
+		var stride = 3 + (normals == null ? 0 : 3) + uvs.length * 2 + (colors == null ? 0 : 3);
 		g.vertexStride = stride;
 		g.vertexCount = 0;
 
@@ -138,7 +138,7 @@ class H3DOut extends BaseLibrary {
 		}
 
 		var root = buildHierarchy().root;
-		if( root.childs.length == 1 ) {
+		if( root.childs.length == 1 && !root.isMesh ) {
 			root = root.childs[0];
 			root.parent = null;
 		}
@@ -174,10 +174,12 @@ class H3DOut extends BaseLibrary {
 			p.sx = m.scale == null ? 1 : m.scale.x;
 			p.sy = m.scale == null ? 1 : m.scale.y;
 			p.sz = m.scale == null ? 1 : m.scale.z;
-			// TODO : rotate in left hand and handle pre-rot
-			p.rx = 0;
-			p.ry = 0;
-			p.rz = 0;
+
+			var q = m.toQuaternion(true);
+			q.normalize();
+			p.qx = q.x;
+			p.qy = q.y;
+			p.qz = q.z;
 			model.position = p;
 			d.models.push(model);
 
@@ -261,7 +263,6 @@ class H3DOut extends BaseLibrary {
 				model.materials.push(mids[i]);
 			}
 		}
-
 		d.data = dataOut.getBytes();
 		return d;
 	}

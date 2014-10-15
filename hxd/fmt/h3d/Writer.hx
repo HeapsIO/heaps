@@ -26,9 +26,9 @@ class Writer {
 		out.writeFloat(p.x);
 		out.writeFloat(p.y);
 		out.writeFloat(p.z);
-		out.writeFloat(p.rx);
-		out.writeFloat(p.ry);
-		out.writeFloat(p.rz);
+		out.writeFloat(p.qx);
+		out.writeFloat(p.qy);
+		out.writeFloat(p.qz);
 		out.writeFloat(p.sx);
 		out.writeFloat(p.sy);
 		out.writeFloat(p.sz);
@@ -79,7 +79,7 @@ class Writer {
 
 		out.writeString("H3D");
 		out.writeByte(d.version);
-		out.writeInt32(bytes.length);
+		out.writeInt32(bytes.length + 12);
 		out.write(bytes);
 		out.writeInt32(d.data.length);
 		out.write(d.data);

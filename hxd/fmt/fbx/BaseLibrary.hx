@@ -66,6 +66,17 @@ class DefaultMatrixes {
 		return m;
 	}
 
+	public function toQuaternion(leftHand) {
+		var m = new h3d.Matrix();
+		m.identity();
+		if( rotate != null ) m.rotate(rotate.x, rotate.y, rotate.z);
+		if( preRot != null ) m.rotate(preRot.x, preRot.y, preRot.z);
+		if( leftHand ) rightHandToLeft(m);
+		var q = new h3d.Quat();
+		q.initRotateMatrix(m);
+		return q;
+	}
+
 }
 
 class BaseLibrary {

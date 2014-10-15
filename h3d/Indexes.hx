@@ -22,6 +22,10 @@ class Indexes {
 		mem.driver.uploadIndexBuffer(this.ibuf, pos, count, indexes, bufferPos);
 	}
 
+	public function uploadBytes( bytes : haxe.io.Bytes, dataPos : Int, indices : Int ) {
+		mem.driver.uploadIndexBytes(this.ibuf, 0, indices, bytes, dataPos);
+	}
+
 	public function dispose() {
 		if( ibuf != null )
 			mem.deleteIndexes(this);
