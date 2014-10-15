@@ -54,7 +54,7 @@ class HtmlText extends Text {
 				case "br":
 					if( x > xMax ) xMax = x;
 					x = 0;
-					y += font.lineHeight;
+					y += font.lineHeight + lineSpacing;
 				case "img":
 					var i = loadImage(e.get("src"));
 					if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
@@ -86,7 +86,7 @@ class HtmlText extends Text {
 		}
 		for( e in Xml.parse(text) )
 			loop(e);
-		return { width : x > xMax ? x : xMax, height : x > 0 ? y + font.lineHeight : y };
+		return { width : x > xMax ? x : xMax, height : x > 0 ? y + (font.lineHeight + lineSpacing) : y };
 	}
 
 	override function set_textColor(c) {
