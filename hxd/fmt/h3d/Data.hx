@@ -87,12 +87,40 @@ class Model {
 	}
 }
 
+enum AnimationFlag {
+	HasPosition;
+	HasRotation;
+	HasScale;
+	HasUV;
+	HasAlpha;
+}
+
+class AnimationObject {
+	public var name : String;
+	public var flags : haxe.EnumFlags<AnimationFlag>;
+	public function new() {
+	}
+}
+
+class Animation {
+	public var name : String;
+	public var frames : Int;
+	public var sampling : Float;
+	public var speed : Float;
+	public var loop : Bool;
+	public var objects : Array<AnimationObject>;
+	public var dataPosition : Int;
+	public function new() {
+	}
+}
+
 class Data {
 
 	public var version : Int;
 	public var geometries : Array<Geometry>;
 	public var materials : Array<Material>;
 	public var models : Array<Model>;
+	public var animations : Array<Animation>;
 	public var dataPosition : Int;
 	public var data : haxe.io.Bytes;
 

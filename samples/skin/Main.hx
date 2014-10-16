@@ -10,7 +10,7 @@ class Main extends hxd.App {
 		s3d.camera.pos.set( -2, -3, 2);
 		s3d.camera.target.z += 1;
 
-		//obj.playAnimation(prim.loadAnimation(LinearAnim));
+		obj.playAnimation(prim.loadAnimation());
 
 		// add lights
 		var dir = new DirLight(new h3d.Vector( -1, 3, -10), s3d);

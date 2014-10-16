@@ -84,6 +84,26 @@ class Reader {
 			for( k in 0...count )
 				m.materials.push(i.readInt32());
 		}
+
+		d.animations = [];
+		for( k in 0...i.readInt32() ) {
+			var a = new Animation();
+			a.name = readName();
+			a.frames = i.readInt32();
+			a.sampling = i.readFloat();
+			a.speed = i.readFloat();
+			a.loop = i.readByte() == 1;
+			a.dataPosition = i.readInt32();
+			a.objects = [];
+			for( k in 0...i.readInt32() ) {
+				var o = new AnimationObject();
+				o.name = readName();
+				o.flags = haxe.EnumFlags.ofInt(i.readByte());
+				a.objects.push(o);
+			}
+			d.animations.push(a);
+		}
+
 		return d;
 	}
 

@@ -73,6 +73,20 @@ class Writer {
 			for( m in m.materials )
 				out.writeInt32(m);
 		}
+		out.writeInt32(d.animations.length);
+		for( a in d.animations ) {
+			writeName(a.name);
+			out.writeInt32(a.frames);
+			out.writeFloat(a.sampling);
+			out.writeFloat(a.speed);
+			out.writeByte(a.loop?1:0);
+			out.writeInt32(a.dataPosition);
+			out.writeInt32(a.objects.length);
+			for( o in a.objects ) {
+				writeName(o.name);
+				out.writeByte(o.flags.toInt());
+			}
+		}
 
 		var bytes = header.getBytes();
 		out = old;

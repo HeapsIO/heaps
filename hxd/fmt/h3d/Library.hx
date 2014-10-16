@@ -5,11 +5,13 @@ class Library {
 	var entry : hxd.res.FileEntry;
 	var header : Data;
 	var cachedPrimitives : Array<h3d.prim.Primitive>;
+	var cachedAnimations : Map<String, h3d.anim.Animation>;
 
 	public function new(entry, header) {
 		this.entry = entry;
 		this.header = header;
 		cachedPrimitives = [];
+		cachedAnimations = new Map();
 	}
 
 	function makePrimitive( id : Int ) {
@@ -64,9 +66,104 @@ class Library {
 		return objs[0];
 	}
 
-	public function loadAnimation( mode : h3d.anim.Mode, ?name : String ) : h3d.anim.Animation {
-		throw "TODO";
-		return null;
+	public function loadAnimation( ?mode : h3d.anim.Mode, ?name : String ) : h3d.anim.Animation {
+
+		if( mode != null && mode != LinearAnim )
+			throw "Mode should be LinearAnim";
+
+		var a = cachedAnimations.get(name == null ? "" : name);
+		if( a != null )
+			return a;
+
+		var a = null;
+		if( name == null ) {
+			if( header.animations.length == 0 )
+				return null;
+			a = header.animations[0];
+		} else {
+			for( a2 in header.animations )
+				if( a2.name == name ) {
+					a = a2;
+					break;
+				}
+			if( a == null )
+				throw 'Animation $name not found !';
+		}
+		var l = new h3d.anim.LinearAnimation(a.name, a.frames, a.sampling);
+		l.speed = a.speed;
+		l.loop = a.loop;
+
+		entry.open();
+		entry.skip(header.dataPosition + a.dataPosition);
+
+		for( o in a.objects ) {
+			var pos = o.flags.has(HasPosition), rot = o.flags.has(HasRotation), scale = o.flags.has(HasScale);
+			if( pos || rot || scale ) {
+				var fl = new haxe.ds.Vector<h3d.anim.LinearAnimation.LinearFrame>(a.frames);
+				var size = ((pos ? 3 : 0) + (rot ? 3 : 0) + (scale?3:0)) * 4 * a.frames;
+				var data = hxd.impl.Tmp.getBytes(size);
+				entry.read(data, 0, size);
+				var p = 0;
+				for( i in 0...fl.length ) {
+					var f = new h3d.anim.LinearAnimation.LinearFrame();
+					if( pos ) {
+						f.tx = data.getFloat(p); p += 4;
+						f.ty = data.getFloat(p); p += 4;
+						f.tz = data.getFloat(p); p += 4;
+					} else {
+						f.tx = 0;
+						f.ty = 0;
+						f.tz = 0;
+					}
+					if( rot ) {
+						f.qx = data.getFloat(p); p += 4;
+						f.qy = data.getFloat(p); p += 4;
+						f.qz = data.getFloat(p); p += 4;
+						f.qw = 1 - Math.sqrt(f.qx * f.qx + f.qy * f.qy + f.qz * f.qz);
+					} else {
+						f.qx = 0;
+						f.qy = 0;
+						f.qz = 0;
+						f.qw = 1;
+					}
+					if( scale ) {
+						f.sx = data.getFloat(p); p += 4;
+						f.sy = data.getFloat(p); p += 4;
+						f.sz = data.getFloat(p); p += 4;
+					}
+					fl[i] = f;
+				}
+				l.addCurve(o.name, fl, rot, scale);
+				hxd.impl.Tmp.saveBytes(data);
+			}
+			if( o.flags.has(HasUV) ) {
+				var fl = new haxe.ds.Vector(a.frames*2);
+				var size = 2 * 4 * a.frames;
+				var data = hxd.impl.Tmp.getBytes(size);
+				entry.read(data, 0, size);
+				for( i in 0...fl.length )
+					fl[i] = data.getFloat(i * 4);
+				l.addUVCurve(o.name, fl);
+				hxd.impl.Tmp.saveBytes(data);
+			}
+			if( o.flags.has(HasAlpha) ) {
+				var fl = new haxe.ds.Vector(a.frames);
+				var size = 4 * a.frames;
+				var data = hxd.impl.Tmp.getBytes(size);
+				entry.read(data, 0, size);
+				for( i in 0...fl.length )
+					fl[i] = data.getFloat(i * 4);
+				l.addAlphaCurve(o.name, fl);
+				hxd.impl.Tmp.saveBytes(data);
+			}
+		}
+
+		entry.close();
+
+		cachedAnimations.set(a.name, l);
+		if( name == null ) cachedAnimations.set("", l);
+
+		return l;
 	}
 
 }

@@ -5,6 +5,10 @@ import hxd.fmt.h3d.Data;
 
 class H3DOut extends BaseLibrary {
 
+	var d : Data;
+	var dataOut : haxe.io.BytesOutput;
+	var filePath : String;
+
 	function buildGeom( geom : hxd.fmt.fbx.Geometry, dataOut : haxe.io.BytesOutput ) {
 		var g = new Geometry();
 
@@ -126,16 +130,7 @@ class H3DOut extends BaseLibrary {
 		return g;
 	}
 
-	public function toH3D( filePath : String ) : Data {
-
-		leftHandConvert();
-		autoMerge();
-
-		if( filePath != null ) {
-			filePath = filePath.split("\\").join("/").toLowerCase();
-			if( !StringTools.endsWith(filePath, "/") )
-				filePath += "/";
-		}
+	function addGeometry() {
 
 		var root = buildHierarchy().root;
 		if( root.childs.length == 1 && !root.isMesh ) {
@@ -151,14 +146,6 @@ class H3DOut extends BaseLibrary {
 				indexRec(c);
 		}
 		indexRec(root);
-
-		var d = new Data();
-		d.version = 1;
-		d.geometries = [];
-		d.materials = [];
-		d.models = [];
-
-		var dataOut = new haxe.io.BytesOutput();
 
 		var hgeom = new Map<Int,{ gids : Array<Int>, mindexes : Array<Int> }>();
 		var hmat = new Map<Int,Int>();
@@ -263,6 +250,90 @@ class H3DOut extends BaseLibrary {
 				model.materials.push(mids[i]);
 			}
 		}
+	}
+
+	function makeAnimation( anim : h3d.anim.Animation ) {
+		var a = new Animation();
+		a.name = anim.name;
+		a.loop = true;
+		a.speed = 1;
+		a.sampling = anim.sampling;
+		a.frames = anim.frameCount;
+		a.objects = [];
+		a.dataPosition = dataOut.length;
+		var objects : Array<h3d.anim.LinearAnimation.LinearObject> = cast @:privateAccess anim.objects;
+		for( obj in objects ) {
+			var o = new AnimationObject();
+			o.name = obj.objectName;
+			o.flags = new haxe.EnumFlags();
+			if( obj.frames != null ) {
+				o.flags.set(HasPosition);
+				if( obj.hasRotation )
+					o.flags.set(HasRotation);
+				if( obj.hasScale )
+					o.flags.set(HasScale);
+				for( f in obj.frames ) {
+					if( o.flags.has(HasPosition) ) {
+						dataOut.writeFloat(f.tx);
+						dataOut.writeFloat(f.ty);
+						dataOut.writeFloat(f.tz);
+					}
+					if( o.flags.has(HasRotation) ) {
+						var ql = Math.sqrt(f.qx * f.qx + f.qy * f.qy + f.qz * f.qz + f.qw * f.qw);
+						dataOut.writeFloat(f.qx / ql);
+						dataOut.writeFloat(f.qy / ql);
+						dataOut.writeFloat(f.qz / ql);
+					}
+					if( o.flags.has(HasScale) ) {
+						dataOut.writeFloat(f.sx);
+						dataOut.writeFloat(f.sy);
+						dataOut.writeFloat(f.sz);
+					}
+				}
+			}
+			if( obj.uvs != null ) {
+				o.flags.set(HasUV);
+				for( f in obj.uvs )
+					dataOut.writeFloat(f);
+			}
+			if( obj.alphas != null ) {
+				o.flags.set(HasAlpha);
+				for( f in obj.alphas )
+					dataOut.writeFloat(f);
+			}
+			a.objects.push(o);
+		}
+		return a;
+	}
+
+	public function toH3D( filePath : String, includeGeometry : Bool ) : Data {
+
+		leftHandConvert();
+		autoMerge();
+
+		if( filePath != null ) {
+			filePath = filePath.split("\\").join("/").toLowerCase();
+			if( !StringTools.endsWith(filePath, "/") )
+				filePath += "/";
+		}
+		this.filePath = filePath;
+
+		d = new Data();
+		d.version = 1;
+		d.geometries = [];
+		d.materials = [];
+		d.models = [];
+		d.animations = [];
+
+		dataOut = new haxe.io.BytesOutput();
+
+		if( includeGeometry )
+			addGeometry();
+
+		var anim = loadAnimation(LinearAnim);
+		if( anim != null )
+			d.animations.push(makeAnimation(anim));
+
 		d.data = dataOut.getBytes();
 		return d;
 	}

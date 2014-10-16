@@ -124,7 +124,7 @@ class FileTree {
 				Sys.println("Converting " + relPath);
 				var fbx = new hxd.fmt.fbx.H3DOut();
 				fbx.loadTextFile(sys.io.File.getContent(fullPath));
-				var h3d = fbx.toH3D(fullPath.substr(0,fullPath.length-file.length));
+				var h3d = fbx.toH3D(fullPath.substr(0,fullPath.length-file.length), !StringTools.startsWith(file,"Anim_") );
 				var out = sys.io.File.write(tmp);
 				new hxd.fmt.h3d.Writer(out).write(h3d);
 				out.close();
