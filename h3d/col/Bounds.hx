@@ -274,6 +274,13 @@ class Bounds {
 		return "Bounds{" + getMin() + "," + getMax() + "}";
 	}
 
+	public inline function toSphere() {
+		var dx = xMax - xMin;
+		var dy = yMax - yMin;
+		var dz = zMax - zMin;
+		return new Sphere((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, (zMin + zMax) * 0.5, Math.sqrt(dx*dx+dy*dy+dz*dz));
+	}
+
 	public static inline function fromPoints( min : Point, max : Point ) {
 		var b = new Bounds();
 		b.setMin(min);
