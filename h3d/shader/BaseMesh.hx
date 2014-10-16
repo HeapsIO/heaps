@@ -34,6 +34,7 @@ class BaseMesh extends hxsl.Shader {
 			var normal : Vec4;
 		};
 
+		var relativePosition : Vec3;
 		var transformedPosition : Vec3;
 		var transformedNormal : Vec3;
 		var projectedPosition : Vec4;
@@ -44,7 +45,8 @@ class BaseMesh extends hxsl.Shader {
 
 		// each __init__ expr is out of order dependency-based
 		function __init__() {
-			transformedPosition = input.position * global.modelView.mat3x4();
+			relativePosition = input.position;
+			transformedPosition = relativePosition * global.modelView.mat3x4();
 			projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
 			transformedNormal = (input.normal * global.modelView.mat3()).normalize();
 			camera.dir = (camera.position - transformedPosition).normalize();
