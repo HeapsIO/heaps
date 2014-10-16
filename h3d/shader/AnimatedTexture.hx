@@ -26,6 +26,8 @@ class AnimatedTexture extends hxsl.Shader {
 
 		@private var blendFactor : Float;
 
+		var textureColor : Vec4;
+
 		function vertex() {
 
 			var frame = (global.time - startTime) * speed;
@@ -40,9 +42,12 @@ class AnimatedTexture extends hxsl.Shader {
 			calculatedUV2 = input.uv + delta;
 		}
 
+		function __init__fragment() {
+			textureColor = mix( texture.get(calculatedUV) , texture.get(calculatedUV2), blendFactor);
+		}
+
 		function fragment() {
-			var c = mix( texture.get(calculatedUV) , texture.get(calculatedUV2), blendFactor);
-			pixelColor *= c;
+			pixelColor *= textureColor;
 		}
 
 	};
