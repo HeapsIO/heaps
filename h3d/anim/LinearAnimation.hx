@@ -90,6 +90,14 @@ class LinearAnimation extends Animation {
 		}
 	}
 
+	inline function uvLerp( v1 : Float, v2 : Float, k : Float ) {
+		if( v1 < v2 - 0.5 )
+			v1 += 1;
+		else if( v1 > v2 + 0.5 )
+			v1 -= 1;
+		return v1 * (1 - k) + v2 * k;
+	}
+
 	@:access(h3d.scene.Skin)
 	override function sync( decompose = false ) {
 		if( frame == syncFrame && !decompose )
@@ -114,8 +122,8 @@ class LinearAnimation extends Animation {
 					s = mat.mainPass.addShader(new h3d.shader.UVScroll());
 					mat.texture.wrap = Repeat;
 				}
-				s.uvDelta.x = o.uvs[frame1 << 1] * k1 + o.uvs[frame2 << 1] * k2;
-				s.uvDelta.y = o.uvs[(frame1 << 1) | 1] * k1 + o.uvs[(frame2 << 1) | 1] * k2;
+				s.uvDelta.x = uvLerp(o.uvs[frame1 << 1],o.uvs[frame2 << 1],k2);
+				s.uvDelta.y = uvLerp(o.uvs[(frame1 << 1) | 1],o.uvs[(frame2 << 1) | 1],k2);
 				continue;
 			}
 			var f1 = o.frames[frame1], f2 = o.frames[frame2];
