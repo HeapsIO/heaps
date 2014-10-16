@@ -119,7 +119,8 @@ class Library {
 						f.qx = data.getFloat(p); p += 4;
 						f.qy = data.getFloat(p); p += 4;
 						f.qz = data.getFloat(p); p += 4;
-						f.qw = 1 - Math.sqrt(f.qx * f.qx + f.qy * f.qy + f.qz * f.qz);
+						var qw = 1 - f.qx * f.qx + f.qy * f.qy + f.qz * f.qz;
+						f.qw = qw < 0 ? -Math.sqrt( -qw) : Math.sqrt(qw);
 					} else {
 						f.qx = 0;
 						f.qy = 0;
@@ -130,6 +131,10 @@ class Library {
 						f.sx = data.getFloat(p); p += 4;
 						f.sy = data.getFloat(p); p += 4;
 						f.sz = data.getFloat(p); p += 4;
+					} else {
+						f.sx = 1;
+						f.sy = 1;
+						f.sz = 1;
 					}
 					fl[i] = f;
 				}
