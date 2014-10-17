@@ -9,7 +9,11 @@ class H3DOut extends BaseLibrary {
 	var dataOut : haxe.io.BytesOutput;
 	var filePath : String;
 
-	function buildGeom( geom : hxd.fmt.fbx.Geometry, dataOut : haxe.io.BytesOutput ) {
+	function int32tof( v : Int ) : Float {
+		throw "TODO";
+	}
+
+	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput ) {
 		var g = new Geometry();
 
 		var verts = geom.getVertices();
@@ -84,6 +88,16 @@ class H3DOut extends BaseLibrary {
 					tmpBuf[p++] = colors.values[icol * 4 + 2];
 				}
 
+				if( skin != null ) {
+					var p = vidx * skin.bonesPerVertex;
+					var idx = 0;
+					for( i in 0...skin.bonesPerVertex ) {
+						tmpBuf[p++] = skin.vertexWeights[p + i];
+						idx = (skin.vertexJoints[p + i] << (8*i)) | idx;
+					}
+					tmpBuf[p++] = int32tof(idx);
+				}
+
 				// look if the vertex already exists
 				var found = null;
 				for( vid in 0...g.vertexCount ) {
@@ -139,20 +153,40 @@ class H3DOut extends BaseLibrary {
 		}
 
 		var objects = [];
+		var uid = 0;
 		function indexRec( t : TmpObject ) {
-			t.index = objects.length;
+			if( !t.isJoint ) t.index = uid++;
 			objects.push(t);
 			for( c in t.childs )
 				indexRec(c);
 		}
 		indexRec(root);
 
+		// create joints
+		for( o in objects ) {
+			if( !o.isJoint ) continue;
+			if( o.isMesh ) throw "assert";
+			var j = new h3d.anim.Skin.Joint();
+			getDefaultMatrixes(o.model); // store for later usage in animation
+			j.index = o.model.getId();
+			j.name = o.model.getName();
+			o.joint = j;
+			if( o.parent != null ) {
+				j.parent = o.parent.joint;
+				if( o.parent.isJoint ) o.parent.joint.subs.push(j);
+			}
+		}
+
 		var hgeom = new Map<Int,{ gids : Array<Int>, mindexes : Array<Int> }>();
 		var hmat = new Map<Int,Int>();
 		for( o in objects ) {
+
+			if( o.isJoint ) continue;
+
 			var model = new Model();
 			model.name = o.model.getName();
-			model.parent = o.parent == null ? 0 : o.parent.index;
+			model.parent = o.parent == null || o.parent.isJoint ? 0 : o.parent.index;
+			//model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
 			var m = getDefaultMatrixes(o.model);
 			var p = new Position();
 			p.x = m.trans == null ? 0 : -m.trans.x;
@@ -231,10 +265,22 @@ class H3DOut extends BaseLibrary {
 				}
 			}
 
+			var skin = null;
+			var rootJoints = [];
+			for( c in o.childs )
+				if( c.isJoint )
+					rootJoints.push(c.joint);
+
+			if( rootJoints.length > 0 ) {
+				throw "TODO";
+				skin = createSkin(hskins, hgeom);
+			}
+
 			var g = getChild(o.model, "Geometry");
 			var gdata = hgeom.get(g.getId());
 			if( gdata == null ) {
-				var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), dataOut);
+				var skin = null;
+				var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut);
 				var gid = d.geometries.length;
 				d.geometries.push(geom);
 				gdata = {
