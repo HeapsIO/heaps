@@ -14,10 +14,12 @@ class Reader {
 	}
 
 	function readName() {
-		return i.readString(i.readByte());
+		var b = i.readByte();
+		if( b == 0xFF ) return null;
+		return i.readString(b);
 	}
 
-	function readPosition() {
+	function readPosition(hasScale=true) {
 		var p = new Position();
 		p.x = i.readFloat();
 		p.y = i.readFloat();
@@ -25,9 +27,15 @@ class Reader {
 		p.qx = i.readFloat();
 		p.qy = i.readFloat();
 		p.qz = i.readFloat();
-		p.sx = i.readFloat();
-		p.sy = i.readFloat();
-		p.sz = i.readFloat();
+		if( hasScale ) {
+			p.sx = i.readFloat();
+			p.sy = i.readFloat();
+			p.sz = i.readFloat();
+		} else {
+			p.sx = 1;
+			p.sy = 1;
+			p.sz = 1;
+		}
 		return p;
 	}
 
@@ -73,6 +81,7 @@ class Reader {
 			var m = new Model();
 			m.name = readName();
 			m.parent = i.readInt32();
+			m.follow = readName();
 			m.position = readPosition();
 			d.models.push(m);
 			var count = i.readByte();
@@ -83,6 +92,23 @@ class Reader {
 				m.geometries.push(i.readInt32());
 			for( k in 0...count )
 				m.materials.push(i.readInt32());
+			var name = readName();
+			if( name != null ) {
+				var s = new Skin();
+				s.name = name;
+				s.joints = [];
+				for( k in 0...i.readUInt16() ) {
+					var j = new SkinJoint();
+					j.name = readName();
+					j.parent = i.readUInt16() - 1;
+					j.position = readPosition(false);
+					j.bind = i.readUInt16() - 1;
+					if( j.bind >= 0 )
+						j.transpos = readPosition(false);
+					s.joints.push(j);
+				}
+				m.skin = s;
+			}
 		}
 
 		d.animations = [];

@@ -8,9 +8,14 @@ class H3DOut extends BaseLibrary {
 	var d : Data;
 	var dataOut : haxe.io.BytesOutput;
 	var filePath : String;
+	var tmp = haxe.io.Bytes.alloc(4);
 
 	function int32tof( v : Int ) : Float {
-		throw "TODO";
+		tmp.set(0, v & 0xFF);
+		tmp.set(1, (v >> 8) & 0xFF);
+		tmp.set(2, (v >> 16) & 0xFF);
+		tmp.set(3, v >>> 24);
+		return tmp.getFloat(0);
 	}
 
 	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput ) {
@@ -33,6 +38,12 @@ class H3DOut extends BaseLibrary {
 			g.vertexFormat.push(new GeometryFormat("color", DVec3));
 
 		var stride = 3 + (normals == null ? 0 : 3) + uvs.length * 2 + (colors == null ? 0 : 3);
+		if( skin != null ) {
+			if( bonesPerVertex <= 0 || bonesPerVertex > 4 ) throw "assert";
+			g.vertexFormat.push(new GeometryFormat("weights", [DFloat, DVec2, DVec3, DVec4][bonesPerVertex]));
+			g.vertexFormat.push(new GeometryFormat("indexes", DBytes4));
+			stride += 1 + bonesPerVertex;
+		}
 		g.vertexStride = stride;
 		g.vertexCount = 0;
 
@@ -89,11 +100,11 @@ class H3DOut extends BaseLibrary {
 				}
 
 				if( skin != null ) {
-					var p = vidx * skin.bonesPerVertex;
+					var k = vidx * skin.bonesPerVertex;
 					var idx = 0;
 					for( i in 0...skin.bonesPerVertex ) {
-						tmpBuf[p++] = skin.vertexWeights[p + i];
-						idx = (skin.vertexJoints[p + i] << (8*i)) | idx;
+						tmpBuf[p++] = skin.vertexWeights[k + i];
+						idx = (skin.vertexJoints[k + i] << (8*i)) | idx;
 					}
 					tmpBuf[p++] = int32tof(idx);
 				}
@@ -152,19 +163,30 @@ class H3DOut extends BaseLibrary {
 			root.parent = null;
 		}
 
-		var objects = [];
+		var objects = [], joints = [], skins = [];
 		var uid = 0;
 		function indexRec( t : TmpObject ) {
-			if( !t.isJoint ) t.index = uid++;
-			objects.push(t);
+			if( t.isJoint ) {
+				joints.push(t);
+			} else {
+				var isSkin = false;
+				for( c in t.childs )
+					if( c.isJoint ) {
+						isSkin = true;
+						break;
+					}
+				if( isSkin ) {
+					skins.push(t);
+				} else
+					objects.push(t);
+			}
 			for( c in t.childs )
 				indexRec(c);
 		}
 		indexRec(root);
 
 		// create joints
-		for( o in objects ) {
-			if( !o.isJoint ) continue;
+		for( o in joints ) {
 			if( o.isMesh ) throw "assert";
 			var j = new h3d.anim.Skin.Joint();
 			getDefaultMatrixes(o.model); // store for later usage in animation
@@ -177,17 +199,66 @@ class H3DOut extends BaseLibrary {
 			}
 		}
 
+		// mark skin references
+		for( o in skins ) {
+			var subDef = null;
+			for( j in o.childs ) {
+				subDef = getParent(j.model, "Deformer", true);
+				if( subDef != null ) break;
+			}
+			var def = getParent(subDef, "Deformer");
+			var geoms = getParents(def, "Geometry");
+			if( geoms.length == 0 ) continue;
+			if( geoms.length > 1 ) throw "Single skin applied to multiple geometries not supported";
+			var models = getParents(geoms[0],"Model");
+			if( models.length == 0 ) continue;
+			if( models.length > 1 ) throw "Single skin applied to multiple models not supported";
+			var m = models[0];
+			for( o2 in objects )
+				if( o2.model == m ) {
+					o2.skin = o;
+					// copy parent
+					var p = o.parent;
+					if( p != o2 ) {
+						o2.parent.childs.remove(o2);
+						o2.parent = p;
+						p.childs.push(o2);
+					}
+					// remove skin from hierarchy
+					o.parent.childs.remove(o);
+					// move not joint to new parent
+					// (only first level, others will follow their respective joint)
+					for( c in o.childs )
+						if( !c.isJoint ) {
+							o.childs.remove(c);
+							o2.childs.push(c);
+							c.parent = o2;
+						}
+					break;
+				}
+		}
+
+		objects = [];
+		indexRec(root); // reorder after we have changed hierarchy
+
+		var hskins = new Map(), tmpGeom = new Map();
+		// prepare things for skinning
+		for( g in this.root.getAll("Objects.Geometry") )
+			tmpGeom.set(g.getId(), { setSkin : function(_) { }, getVerticesCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
+
 		var hgeom = new Map<Int,{ gids : Array<Int>, mindexes : Array<Int> }>();
 		var hmat = new Map<Int,Int>();
+		var index = 0;
 		for( o in objects ) {
 
-			if( o.isJoint ) continue;
+			o.index = index++;
 
 			var model = new Model();
+			var ref = o.skin == null ? o : o.skin;
 			model.name = o.model.getName();
 			model.parent = o.parent == null || o.parent.isJoint ? 0 : o.parent.index;
-			//model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
-			var m = getDefaultMatrixes(o.model);
+			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
+			var m = getDefaultMatrixes(ref.model);
 			var p = new Position();
 			p.x = m.trans == null ? 0 : -m.trans.x;
 			p.y = m.trans == null ? 0 : m.trans.y;
@@ -266,20 +337,18 @@ class H3DOut extends BaseLibrary {
 			}
 
 			var skin = null;
-			var rootJoints = [];
-			for( c in o.childs )
-				if( c.isJoint )
-					rootJoints.push(c.joint);
-
-			if( rootJoints.length > 0 ) {
-				throw "TODO";
-				skin = createSkin(hskins, hgeom);
+			if( o.skin != null ) {
+				var rootJoints = [];
+				for( c in o.skin.childs )
+					if( c.isJoint )
+						rootJoints.push(c.joint);
+				skin = createSkin(hskins, tmpGeom, rootJoints, bonesPerVertex);
+				model.skin = makeSkin(skin, o.skin);
 			}
 
 			var g = getChild(o.model, "Geometry");
 			var gdata = hgeom.get(g.getId());
 			if( gdata == null ) {
-				var skin = null;
 				var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut);
 				var gid = d.geometries.length;
 				d.geometries.push(geom);
@@ -296,6 +365,39 @@ class H3DOut extends BaseLibrary {
 				model.materials.push(mids[i]);
 			}
 		}
+	}
+
+	function makeSkin( skin : h3d.anim.Skin, obj : TmpObject ) {
+		var s = new Skin();
+		s.name = obj.model.getName();
+		s.joints = [];
+		for( jo in skin.allJoints ) {
+			var j = new SkinJoint();
+			j.name = jo.name;
+			j.parent = jo.parent == null ? -1 : jo.parent.index;
+			j.bind = jo.bindIndex;
+			j.position = makePosition(jo.defMat);
+			if( jo.transPos != null ) j.transpos = makePosition(jo.transPos);
+			s.joints.push(j);
+		}
+		return s;
+	}
+
+	function makePosition( m : h3d.Matrix ) {
+		var p = new Position();
+		var q = new h3d.Quat();
+		q.initRotateMatrix(m);
+		q.normalize();
+		p.sx = 1;
+		p.sy = 1;
+		p.sz = 1;
+		p.qx = q.x;
+		p.qy = q.y;
+		p.qz = q.z;
+		p.x = m._41;
+		p.y = m._42;
+		p.z = m._43;
+		return p;
 	}
 
 	function makeAnimation( anim : h3d.anim.Animation ) {

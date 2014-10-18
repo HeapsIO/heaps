@@ -99,7 +99,10 @@ class Skin extends MultiMaterial {
 		return b;
 	}
 
-	override function getObjectByName( name : String ) {
+	override function getObjectByName( name : String ) : h3d.scene.Object {
+		// we can reference the object by both its model name and skin name
+		if( skinData != null && skinData.name == name )
+			return this;
 		var o = super.getObjectByName(name);
 		if( o != null ) return o;
 		// create a fake object targeted at the bone, not persistant but matrixes are shared

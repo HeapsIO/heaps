@@ -12,8 +12,9 @@ class TmpObject {
 	public var childs : Array<TmpObject>;
 	#if !(dataOnly || macro)
 	public var obj : h3d.scene.Object;
-	public var joint : h3d.anim.Skin.Joint;
 	#end
+	public var joint : h3d.anim.Skin.Joint;
+	public var skin : TmpObject;
 	public function new() {
 		childs = [];
 	}
@@ -963,7 +964,7 @@ class BaseLibrary {
 				if( skin != null )
 					return skin;
 				var geom = hgeom.get(getParent(def, "Geometry").getId());
-				skin = new h3d.anim.Skin(geom.getVerticesCount(), bonesPerVertex);
+				skin = new h3d.anim.Skin(null, geom.getVerticesCount(), bonesPerVertex);
 				geom.setSkin(skin);
 				hskins.set(def.getId(), skin);
 			}

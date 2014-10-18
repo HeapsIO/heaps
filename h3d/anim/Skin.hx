@@ -29,6 +29,7 @@ private class Influence {
 
 class Skin {
 
+	public var name : String;
 	public var vertexCount(default, null) : Int;
 	public var bonesPerVertex(default,null) : Int;
 	public var vertexJoints : haxe.ds.Vector<Int>;
@@ -47,12 +48,15 @@ class Skin {
 
 	var envelop : Array<Array<Influence>>;
 
-	public function new( vertexCount, bonesPerVertex ) {
+	public function new( name, vertexCount, bonesPerVertex ) {
+		this.name = name;
 		this.vertexCount = vertexCount;
 		this.bonesPerVertex = bonesPerVertex;
-		vertexJoints = new haxe.ds.Vector(vertexCount * bonesPerVertex);
-		vertexWeights = new haxe.ds.Vector(vertexCount * bonesPerVertex);
-		envelop = [];
+		if( vertexCount > 0 ) {
+			vertexJoints = new haxe.ds.Vector(vertexCount * bonesPerVertex);
+			vertexWeights = new haxe.ds.Vector(vertexCount * bonesPerVertex);
+			envelop = [];
+		}
 	}
 
 	public function setJoints( joints : Array<Joint>, roots : Array<Joint> ) {

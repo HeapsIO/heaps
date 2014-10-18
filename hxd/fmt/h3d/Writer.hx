@@ -22,16 +22,18 @@ class Writer {
 		out.writeString(name);
  	}
 
-	function writePosition( p : Position ) {
+	function writePosition( p : Position, hasScale = true ) {
 		out.writeFloat(p.x);
 		out.writeFloat(p.y);
 		out.writeFloat(p.z);
 		out.writeFloat(p.qx);
 		out.writeFloat(p.qy);
 		out.writeFloat(p.qz);
-		out.writeFloat(p.sx);
-		out.writeFloat(p.sy);
-		out.writeFloat(p.sz);
+		if( hasScale ) {
+			out.writeFloat(p.sx);
+			out.writeFloat(p.sy);
+			out.writeFloat(p.sz);
+		}
 	}
 
 	public function write( d : Data ) {
@@ -52,6 +54,7 @@ class Writer {
 			out.writeInt32(g.indexCount);
 			out.writeInt32(g.indexPosition);
 		}
+
 		out.writeInt32(d.materials.length);
 		for( m in d.materials ) {
 			writeName(m.name);
@@ -60,10 +63,12 @@ class Writer {
 			out.writeByte(m.culling.getIndex());
 			out.writeFloat(m.killAlpha == null ? 1 : m.killAlpha);
 		}
+
 		out.writeInt32(d.models.length);
 		for( m in d.models ) {
 			writeName(m.name);
 			out.writeInt32(m.parent);
+			writeName(m.follow);
 			writePosition(m.position);
 			out.writeByte(m.geometries == null ? 0 : m.geometries.length);
 			if( m.geometries == null ) continue;
@@ -72,7 +77,22 @@ class Writer {
 				out.writeInt32(g);
 			for( m in m.materials )
 				out.writeInt32(m);
+			if( m.skin == null )
+				writeName(null);
+			else {
+				writeName(m.skin.name == null ? "" : m.skin.name);
+				out.writeUInt16(m.skin.joints.length);
+				for( j in m.skin.joints ) {
+					writeName(j.name);
+					out.writeUInt16(j.parent + 1);
+					writePosition(j.position, false);
+					out.writeUInt16(j.bind + 1);
+					if( j.bind >= 0 )
+						writePosition(j.transpos, false);
+				}
+			}
 		}
+
 		out.writeInt32(d.animations.length);
 		for( a in d.animations ) {
 			writeName(a.name);
