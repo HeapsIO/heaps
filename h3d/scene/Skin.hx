@@ -125,6 +125,15 @@ class Skin extends MultiMaterial {
 		jointsUpdated = true;
 		primitive = s.primitive;
 		skinShader = new h3d.shader.Skin();
+		var maxBones = 0;
+		if( skinData.splitJoints != null ) {
+			for( s in skinData.splitJoints )
+				if( s.joints.length > maxBones )
+					maxBones = s.joints.length;
+		} else
+			maxBones = skinData.boundJoints.length;
+		if( skinShader.MaxBones < maxBones )
+			skinShader.MaxBones = maxBones;
 		for( m in materials )
 			if( m != null ) {
 				m.mainPass.addShader(skinShader);
