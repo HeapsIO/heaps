@@ -363,6 +363,10 @@ class Stage3dDriver extends Driver {
 			case OTex(_, _, t): usedTextures[t.index] = true;
 			default:
 			}
+		var size = s.globalsSize+s.paramsSize;
+		var max = format.agal.Tools.getProps(RConst, !s.vertex, isStandardMode?2:1).count;
+		if( size > max )
+			throw (s.vertex?"Vertex ":"Fragment ") + " shader uses " + size+" constant registers while " + max + " is allowed";
 		var o = new haxe.io.BytesOutput();
 		new format.agal.Writer(o).write(agal);
 		return { agal : agal, bytes : o.getBytes() };
