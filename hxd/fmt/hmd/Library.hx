@@ -7,12 +7,14 @@ class Library {
 	var header : Data;
 	var cachedPrimitives : Array<h3d.prim.Primitive>;
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
+	var cachedSkin : Map<String, h3d.anim.Skin>;
 
 	public function new(entry, header) {
 		this.entry = entry;
 		this.header = header;
 		cachedPrimitives = [];
 		cachedAnimations = new Map();
+		cachedSkin = new Map();
 	}
 
 	function makePrimitive( id : Int ) {
@@ -41,8 +43,36 @@ class Library {
 		return mat;
 	}
 
+	@:access(h3d.anim.Skin)
 	function makeSkin( skin : Skin ) {
-		var s = new h3d.anim.Skin(skin.name, 0, 3);
+		var s = cachedSkin.get(skin.name);
+		if( s != null )
+			return s;
+		s = new h3d.anim.Skin(skin.name, 0, 3);
+		s.namedJoints = new Map();
+		s.allJoints = [];
+		s.boundJoints = [];
+		s.rootJoints = [];
+		for( joint in skin.joints ) {
+			var j = new h3d.anim.Skin.Joint();
+			j.name = joint.name;
+			j.index = s.allJoints.length;
+			j.defMat = joint.position.toMatrix();
+			if( joint.bind >= 0 ) {
+				j.bindIndex = joint.bind;
+				j.transPos = joint.transpos.toMatrix();
+				s.boundJoints[j.bindIndex] = j;
+			}
+			if( joint.parent >= 0 ) {
+				var p = s.allJoints[joint.parent];
+				p.subs.push(j);
+				j.parent = p;
+			} else
+				s.rootJoints.push(j);
+			s.allJoints.push(j);
+			s.namedJoints.set(j.name, j);
+		}
+		cachedSkin.set(skin.name, s);
 		return s;
 	}
 
@@ -58,9 +88,11 @@ class Library {
 				obj = new h3d.scene.Object();
 			} else {
 				var prim = m.geometries.length == 1 ? makePrimitive(m.geometries[0]) : new h3d.prim.MultiPrimitive([for( g in m.geometries ) makePrimitive(g)]);
-				if( m.skin != null )
-					obj = new h3d.scene.Skin(makeSkin(m.skin), [for( m in m.materials ) makeMaterial(m, loadTexture)]);
-				else if( m.materials.length == 1 )
+				if( m.skin != null ) {
+					var sk = new h3d.scene.Skin(makeSkin(m.skin), [for( m in m.materials ) makeMaterial(m, loadTexture)]);
+					sk.primitive = prim;
+					obj = sk;
+				} else if( m.materials.length == 1 )
 					obj = new h3d.scene.Mesh(prim, makeMaterial(m.materials[0],loadTexture));
 				else
 					obj = new h3d.scene.MultiMaterial(prim, [for( m in m.materials ) makeMaterial(m,loadTexture)]);
@@ -127,7 +159,7 @@ class Library {
 						f.qx = data.getFloat(p); p += 4;
 						f.qy = data.getFloat(p); p += 4;
 						f.qz = data.getFloat(p); p += 4;
-						var qw = 1 - f.qx * f.qx + f.qy * f.qy + f.qz * f.qz;
+						var qw = 1 - (f.qx * f.qx + f.qy * f.qy + f.qz * f.qz);
 						f.qw = qw < 0 ? -Math.sqrt( -qw) : Math.sqrt(qw);
 					} else {
 						f.qx = 0;

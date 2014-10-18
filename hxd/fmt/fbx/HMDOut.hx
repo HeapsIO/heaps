@@ -44,7 +44,7 @@ class HMDOut extends BaseLibrary {
 		var stride = 3 + (normals == null ? 0 : 3) + uvs.length * 2 + (colors == null ? 0 : 3);
 		if( skin != null ) {
 			if( bonesPerVertex <= 0 || bonesPerVertex > 4 ) throw "assert";
-			g.vertexFormat.push(new GeometryFormat("weights", [DFloat, DVec2, DVec3, DVec4][bonesPerVertex]));
+			g.vertexFormat.push(new GeometryFormat("weights", [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1]));
 			g.vertexFormat.push(new GeometryFormat("indexes", DBytes4));
 			stride += 1 + bonesPerVertex;
 		}
@@ -273,6 +273,12 @@ class HMDOut extends BaseLibrary {
 
 			var q = m.toQuaternion(true);
 			q.normalize();
+			if( q.w < 0 ) {
+				q.x *= -1;
+				q.y *= -1;
+				q.z *= -1;
+				q.w *= -1;
+			}
 			p.qx = q.x;
 			p.qy = q.y;
 			p.qz = q.z;
@@ -381,7 +387,8 @@ class HMDOut extends BaseLibrary {
 			j.parent = jo.parent == null ? -1 : jo.parent.index;
 			j.bind = jo.bindIndex;
 			j.position = makePosition(jo.defMat);
-			if( jo.transPos != null ) j.transpos = makePosition(jo.transPos);
+			if( jo.transPos != null )
+				j.transpos = makePosition(jo.transPos);
 			s.joints.push(j);
 		}
 		return s;
@@ -392,6 +399,12 @@ class HMDOut extends BaseLibrary {
 		var q = new h3d.Quat();
 		q.initRotateMatrix(m);
 		q.normalize();
+		if( q.w < 0 ) {
+			q.x *= -1;
+			q.y *= -1;
+			q.z *= -1;
+			q.w *= -1;
+		}
 		p.sx = 1;
 		p.sy = 1;
 		p.sz = 1;
@@ -432,6 +445,7 @@ class HMDOut extends BaseLibrary {
 					}
 					if( o.flags.has(HasRotation) ) {
 						var ql = Math.sqrt(f.qx * f.qx + f.qy * f.qy + f.qz * f.qz + f.qw * f.qw);
+						if( f.qw < 0 ) ql = -ql;
 						dataOut.writeFloat(f.qx / ql);
 						dataOut.writeFloat(f.qy / ql);
 						dataOut.writeFloat(f.qz / ql);
