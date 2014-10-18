@@ -92,17 +92,14 @@ class Reader {
 		for( k in 0...i.readInt32() ) {
 			var m = new Model();
 			m.name = readName();
-			m.parent = i.readInt32();
+			m.parent = i.readInt32() - 1;
 			m.follow = readName();
 			m.position = readPosition();
+			m.geometry = i.readInt32() - 1;
 			d.models.push(m);
-			var count = i.readByte();
-			if( count == 0 ) continue;
-			m.geometries = [];
+			if( m.geometry < 0 ) continue;
 			m.materials = [];
-			for( k in 0...count )
-				m.geometries.push(i.readInt32());
-			for( k in 0...count )
+			for( k in 0...i.readByte() )
 				m.materials.push(i.readInt32());
 			var name = readName();
 			if( name != null ) {

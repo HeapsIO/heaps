@@ -84,10 +84,10 @@ class Library {
 		var objs = [];
 		for( m in header.models ) {
 			var obj : h3d.scene.Object;
-			if( m.geometries == null ) {
+			if( m.geometry < 0 ) {
 				obj = new h3d.scene.Object();
 			} else {
-				var prim = m.geometries.length == 1 ? makePrimitive(m.geometries[0]) : new h3d.prim.MultiPrimitive([for( g in m.geometries ) makePrimitive(g)]);
+				var prim = makePrimitive(m.geometry);
 				if( m.skin != null ) {
 					var sk = new h3d.scene.Skin(makeSkin(m.skin), [for( m in m.materials ) makeMaterial(m, loadTexture)]);
 					sk.primitive = prim;
@@ -100,8 +100,8 @@ class Library {
 			obj.name = m.name;
 			obj.defaultTransform = m.position.toMatrix();
 			objs.push(obj);
-			if( objs.length > 1 )
-				objs[m.parent].addChild(obj);
+			var p = objs[m.parent];
+			if( p != null ) p.addChild(obj);
 		}
 		return objs[0];
 	}

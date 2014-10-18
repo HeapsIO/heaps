@@ -77,14 +77,12 @@ class Writer {
 		out.writeInt32(d.models.length);
 		for( m in d.models ) {
 			writeName(m.name);
-			out.writeInt32(m.parent);
+			out.writeInt32(m.parent + 1);
 			writeName(m.follow);
 			writePosition(m.position);
-			out.writeByte(m.geometries == null ? 0 : m.geometries.length);
-			if( m.geometries == null ) continue;
-			if( m.materials == null || m.materials.length != m.geometries.length ) throw "assert";
-			for( g in m.geometries )
-				out.writeInt32(g);
+			out.writeInt32(m.geometry + 1);
+			if( m.geometry < 0 ) continue;
+			out.writeByte(m.materials.length);
 			for( m in m.materials )
 				out.writeInt32(m);
 			if( m.skin == null )

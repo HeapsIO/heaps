@@ -100,7 +100,7 @@ class Model {
 	public var parent : Index<Model>;
 	public var follow : Null<String>;
 	public var position : Position;
-	public var geometries : Null<Array<Index<Geometry>>>;
+	public var geometry : Index<Geometry>;
 	public var materials : Null<Array<Index<Material>>>;
 	public var skin : Null<Skin>;
 	public function new() {

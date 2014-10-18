@@ -250,18 +250,18 @@ class HMDOut extends BaseLibrary {
 		}
 
 		objects = [];
-		if( root.childs.length == 1 && root.model == null ) {
+		if( root.childs.length <= 1 && root.model == null ) {
 			root = root.childs[0];
 			root.parent = null;
 		}
-		indexRec(root); // reorder after we have changed hierarchy
+		if( root != null ) indexRec(root); // reorder after we have changed hierarchy
 
 		var hskins = new Map(), tmpGeom = new Map();
 		// prepare things for skinning
 		for( g in this.root.getAll("Objects.Geometry") )
 			tmpGeom.set(g.getId(), { setSkin : function(_) { }, getVerticesCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
 
-		var hgeom = new Map<Int,{ gids : Array<Int>, mindexes : Array<Int> }>();
+		var hgeom = new Map<Int,{ gid : Int, mindexes : Array<Int> }>();
 		var hmat = new Map<Int,Int>();
 		var index = 0;
 		for( o in objects ) {
@@ -272,7 +272,7 @@ class HMDOut extends BaseLibrary {
 			var ref = o.skin == null ? o : o.skin;
 
 			model.name = o.model == null ? null : o.model.getName();
-			model.parent = o.parent == null || o.parent.isJoint ? 0 : o.parent.index;
+			model.parent = o.parent == null || o.parent.isJoint ? -1 : o.parent.index;
 			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
 			var m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
 			var p = new Position();
@@ -295,6 +295,7 @@ class HMDOut extends BaseLibrary {
 			p.qy = q.y;
 			p.qz = q.z;
 			model.position = p;
+			model.geometry = -1;
 			d.models.push(model);
 
 			if( !o.isMesh ) continue;
@@ -377,12 +378,12 @@ class HMDOut extends BaseLibrary {
 				var gid = d.geometries.length;
 				d.geometries.push(geom);
 				gdata = {
-					gids : [gid],
+					gid : gid,
 					mindexes : [0],
 				};
 				hgeom.set(g.getId(), gdata);
 			}
-			model.geometries = gdata.gids.copy();
+			model.geometry = gdata.gid;
 			model.materials = [];
 			for( i in gdata.mindexes ) {
 				if( mids[i] == null ) throw "assert"; // TODO : create a null material color
