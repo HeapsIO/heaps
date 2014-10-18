@@ -206,11 +206,20 @@ class HMDOut extends BaseLibrary {
 
 		// mark skin references
 		for( o in skins ) {
-			var subDef = null;
-			for( j in o.childs ) {
-				subDef = getParent(j.model, "Deformer", true);
-				if( subDef != null ) break;
+			function loopRec( o : TmpObject ) {
+				for( j in o.childs ) {
+					if( !j.isJoint ) continue;
+					var s = getParent(j.model, "Deformer", true);
+					if( s != null ) return s;
+					s = loopRec(j);
+					if( s != null ) return s;
+				}
+				return null;
 			}
+			var subDef = loopRec(o);
+			// skip skin with no skinned bone
+			if( subDef == null )
+				continue;
 			var def = getParent(subDef, "Deformer");
 			var geoms = getParents(def, "Geometry");
 			if( geoms.length == 0 ) continue;
@@ -227,10 +236,10 @@ class HMDOut extends BaseLibrary {
 					if( p != o2 ) {
 						o2.parent.childs.remove(o2);
 						o2.parent = p;
-						p.childs.push(o2);
+						if( p != null ) p.childs.push(o2) else root = o2;
 					}
 					// remove skin from hierarchy
-					o.parent.childs.remove(o);
+					if( p != null ) p.childs.remove(o);
 					// move not joint to new parent
 					// (only first level, others will follow their respective joint)
 					for( c in o.childs )
@@ -260,10 +269,11 @@ class HMDOut extends BaseLibrary {
 
 			var model = new Model();
 			var ref = o.skin == null ? o : o.skin;
-			model.name = o.model.getName();
+
+			model.name = o.model == null ? null : o.model.getName();
 			model.parent = o.parent == null || o.parent.isJoint ? 0 : o.parent.index;
 			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
-			var m = getDefaultMatrixes(ref.model);
+			var m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
 			var p = new Position();
 			p.x = m.trans == null ? 0 : -m.trans.x;
 			p.y = m.trans == null ? 0 : m.trans.y;
