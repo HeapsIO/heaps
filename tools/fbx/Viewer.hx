@@ -218,6 +218,7 @@ class Viewer extends hxd.App {
 			var path = props.curFile.substr(0, -4) + "_tree.xml";
 			hxd.File.saveAs(haxe.io.Bytes.ofString(data), { defaultPath : path } );
 		case "R".code:
+			if( props.convertHMD ) return;
 			rightHand = !rightHand;
 			cam.pos.x *= -1;
 			cam.target.x *= -1;
@@ -264,6 +265,7 @@ class Viewer extends hxd.App {
 			setMaterial();
 		case "C".code:
 			props.convertHMD = !props.convertHMD;
+			if( props.convertHMD ) rightHand = false;
 			reload = true;
 		default:
 
@@ -617,7 +619,7 @@ class Viewer extends hxd.App {
 		tf.text = [
 			(cam.rightHanded ? "R " : "") + fmt(hxd.Timer.fps()),
 			file,
-			(engine.drawTriangles - (props.showBox ? 26 : 0) - (props.showAxis ? 0 : 0)) + " tri",
+			(engine.drawTriangles - (props.showBox ? 26 : 0) - (props.showAxis ? 6 : 0)) + " tri " + (obj.getObjectsCount() + 1)+ " objs",
 		].join("\n");
 
 		if( props.slowDown ) hxd.Timer.tmod *= 0.1;
