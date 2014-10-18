@@ -3,7 +3,7 @@ using hxd.fmt.fbx.Data;
 typedef K = hxd.Key;
 
 typedef Props = {
-	curFbxFile:String,
+	curFile:String,
 	camPos:Campos,
 	smoothing:Bool,
 	showAxis:Bool,
@@ -57,7 +57,7 @@ class Viewer extends hxd.App {
 		freeMove = false;
 		rightClick = false;
 
-		props = { curFbxFile : "", camPos : { x:10, y:0, z:0, tx:0, ty:0, tz:0 }, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true, lights : true, normals : false }
+		props = { curFile : "", camPos : { x:10, y:0, z:0, tx:0, ty:0, tz:0 }, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true, lights : true, normals : false }
 		props = hxd.Save.load(props);
 
 		tf = new flash.text.TextField();
@@ -117,8 +117,8 @@ class Viewer extends hxd.App {
 		new h3d.scene.DirLight(new h3d.Vector(3, 4, -10), s3d);
 
 
-		if( props.curFbxFile != null )
-			loadFile(props.curFbxFile, false);
+		if( props.curFile != null )
+			loadFile(props.curFile, false);
 		else
 			askLoad();
 	}
@@ -203,7 +203,7 @@ class Viewer extends hxd.App {
 		case "S".code if( K.isDown(K.CTRL) ):
 			if( curFbx == null ) return;
 			var data = FbxTree.toXml(curFbx.getRoot());
-			var path = props.curFbxFile.substr(0, -4) + "_tree.xml";
+			var path = props.curFile.substr(0, -4) + "_tree.xml";
 			hxd.File.saveAs(haxe.io.Bytes.ofString(data), { defaultPath : path } );
 		case "R".code:
 			rightHand = !rightHand;
@@ -261,7 +261,7 @@ class Viewer extends hxd.App {
 	}
 
 	function loadFile( file : String, newFbx = true ) {
-		props.curFbxFile = file;
+		props.curFile = file;
 		var l = new flash.net.URLLoader();
 		l.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
 			if( newFbx ) haxe.Log.trace("Failed to load " + file,null);
@@ -343,13 +343,13 @@ class Viewer extends hxd.App {
 						alib.leftHandConvert();
 					setAnim();
 				} else {
-					props.curFbxFile = sel.fileName;
+					props.curFile = sel.fileName;
 					loadData(content);
 					resetCamera();
 					save();
 				}
 			});
-		},{ fileTypes : [{ name : "FBX File", extensions : ["fbx"] }], defaultPath : props.curFbxFile });
+		},{ fileTypes : [{ name : "FBX File", extensions : ["fbx"] }], defaultPath : props.curFile });
 	}
 
 	function loadData( data : String, newFbx = true ) {
@@ -544,7 +544,7 @@ class Viewer extends hxd.App {
 
 		tf.text = [
 			(cam.rightHanded ? "R " : "") + fmt(hxd.Timer.fps()),
-			props.curFbxFile.split("/").pop().split("\\").pop(),
+			props.curFile.split("/").pop().split("\\").pop(),
 			(engine.drawTriangles - (props.showBox ? 26 : 0) - (props.showAxis ? 0 : 0)) + " tri",
 		].join("\n");
 
@@ -557,12 +557,29 @@ class Viewer extends hxd.App {
 		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.InvokeEvent.INVOKE, function(e:Dynamic) {
 			var e : flash.events.InvokeEvent = cast e;
 			if( e.arguments.length > 0 ) {
-				props.curFbxFile = e.arguments[0];
+				props.curFile = e.arguments[0];
 				// init done ?
 				if( inst.axis != null ) {
-					inst.loadFile(props.curFbxFile);
+					inst.loadFile(props.curFile);
 					flash.desktop.NativeApplication.nativeApplication.openedWindows[0].activate();
 				}
+			}
+		});
+		var drag = new flash.display.Sprite();
+		drag.graphics.beginFill(0, 0);
+		drag.graphics.drawRect(0, 0, 4000, 4000);
+		flash.Lib.current.addChild(drag);
+		drag.addEventListener(flash.events.NativeDragEvent.NATIVE_DRAG_ENTER, function(e:Dynamic) {
+			var e : flash.events.NativeDragEvent = cast e;
+			if( e.clipboard.hasFormat(FILE_LIST_FORMAT) && e.clipboard.getData(FILE_LIST_FORMAT).length == 1 )
+				flash.desktop.NativeDragManager.acceptDragDrop(drag);
+		});
+		drag.addEventListener(flash.events.NativeDragEvent.NATIVE_DRAG_DROP, function(e:Dynamic) {
+			var e : flash.events.NativeDragEvent = cast e;
+			if( e.clipboard.hasFormat(FILE_LIST_FORMAT) ) {
+				var a : Array<flash.filesystem.File> = e.clipboard.getData(FILE_LIST_FORMAT);
+				props.curFile = a[0].nativePath;
+				inst.loadFile(props.curFile);
 			}
 		});
 	}
