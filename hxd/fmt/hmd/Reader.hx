@@ -1,5 +1,5 @@
-package hxd.fmt.h3d;
-import hxd.fmt.h3d.Data;
+package hxd.fmt.hmd;
+import hxd.fmt.hmd.Data;
 
 class Reader {
 
@@ -42,11 +42,11 @@ class Reader {
 	public function readHeader() : Data {
 		var d = new Data();
 		var h = i.readString(3);
-		if( h != "H3D" ) {
+		if( h != "HMD" ) {
 			if( h.charCodeAt(0) == ";".code )
-				throw "FBX was not converted to H3D";
+				throw "FBX was not converted to HMD";
 			if( h.charCodeAt(0) == 'X'.code )
-				throw "XBX was not converted to H3D";
+				throw "XBX was not converted to HMD";
 			throw "Invalid XBX header " + StringTools.urlEncode(h);
 		}
 		d.version = i.readByte();

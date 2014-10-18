@@ -19,7 +19,7 @@ class FbxModel extends Resource {
 			lib = loader.load(entry.path.substr(0, -4) + "FBX").toFbx();
 			lib.loadXtra(entry.getBytes().toString());
 		case 'H'.code:
-			throw "FBX model was converted to H3D : use res.toH3d()";
+			throw "FBX model was converted to HMD : use res.toHmd()";
 		default:
 			throw "Unsupported model format " + entry.path;
 		}
@@ -27,9 +27,9 @@ class FbxModel extends Resource {
 		return lib;
 	}
 
-	public function toH3d() : hxd.fmt.h3d.Library {
-		var h3d = new hxd.fmt.h3d.Reader(new FileInput(entry)).readHeader();
-		return new hxd.fmt.h3d.Library(entry, h3d);
+	public function toHmd() : hxd.fmt.hmd.Library {
+		var hmd = new hxd.fmt.hmd.Reader(new FileInput(entry)).readHeader();
+		return new hxd.fmt.hmd.Library(entry, hmd);
 	}
 
 }

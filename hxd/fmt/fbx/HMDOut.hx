@@ -1,9 +1,9 @@
 package hxd.fmt.fbx;
 using hxd.fmt.fbx.Data;
 import hxd.fmt.fbx.BaseLibrary;
-import hxd.fmt.h3d.Data;
+import hxd.fmt.hmd.Data;
 
-class H3DOut extends BaseLibrary {
+class HMDOut extends BaseLibrary {
 
 	var d : Data;
 	var dataOut : haxe.io.BytesOutput;
@@ -16,6 +16,10 @@ class H3DOut extends BaseLibrary {
 		tmp.set(2, (v >> 16) & 0xFF);
 		tmp.set(3, v >>> 24);
 		return tmp.getFloat(0);
+	}
+
+	override function keepJoint(_) : Null<Bool> {
+		return true;
 	}
 
 	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput ) {
@@ -454,7 +458,7 @@ class H3DOut extends BaseLibrary {
 		return a;
 	}
 
-	public function toH3D( filePath : String, includeGeometry : Bool ) : Data {
+	public function toHMD( filePath : String, includeGeometry : Bool ) : Data {
 
 		leftHandConvert();
 		autoMerge();

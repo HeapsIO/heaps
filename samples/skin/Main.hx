@@ -3,7 +3,7 @@ import h3d.scene.*;
 class Main extends hxd.App {
 
 	override function init() {
-		var prim = hxd.Res.Model.toH3d();
+		var prim = hxd.Res.Model.toHmd();
 		var obj = prim.makeObject(loadTexture);
 		obj.scale(0.1);
 		s3d.addChild(obj);
@@ -33,7 +33,7 @@ class Main extends hxd.App {
 	}
 
 	static function main() {
-		hxd.Res.initEmbed({ createH3D : true });
+		hxd.Res.initEmbed({ createHMD : true });
 		new Main();
 	}
 

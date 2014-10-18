@@ -1,4 +1,5 @@
-package hxd.fmt.h3d;
+package hxd.fmt.hmd;
+import hxd.fmt.hmd.Data;
 
 class Library {
 
@@ -17,7 +18,7 @@ class Library {
 	function makePrimitive( id : Int ) {
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
-		p = new h3d.prim.H3DModel(header.geometries[id], header.dataPosition, entry);
+		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, entry);
 		cachedPrimitives[id] = p;
 		return p;
 	}
@@ -40,6 +41,11 @@ class Library {
 		return mat;
 	}
 
+	function makeSkin( skin : Skin ) {
+		var s = new h3d.anim.Skin(skin.name, 0, 3);
+		return s;
+	}
+
 	public function makeObject( ?loadTexture : String -> h3d.mat.Texture ) : h3d.scene.Object {
 		if( loadTexture == null )
 			loadTexture = function(_) return h3d.mat.Texture.fromColor(0xFF00FF);
@@ -52,7 +58,9 @@ class Library {
 				obj = new h3d.scene.Object();
 			} else {
 				var prim = m.geometries.length == 1 ? makePrimitive(m.geometries[0]) : new h3d.prim.MultiPrimitive([for( g in m.geometries ) makePrimitive(g)]);
-				if( m.materials.length == 1 )
+				if( m.skin != null )
+					obj = new h3d.scene.Skin(makeSkin(m.skin), [for( m in m.materials ) makeMaterial(m, loadTexture)]);
+				else if( m.materials.length == 1 )
 					obj = new h3d.scene.Mesh(prim, makeMaterial(m.materials[0],loadTexture));
 				else
 					obj = new h3d.scene.MultiMaterial(prim, [for( m in m.materials ) makeMaterial(m,loadTexture)]);

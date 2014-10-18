@@ -1,8 +1,8 @@
 package h3d.prim;
 
-class H3DModel extends MeshPrimitive {
+class HMDModel extends MeshPrimitive {
 
-	var data : hxd.fmt.h3d.Data.Geometry;
+	var data : hxd.fmt.hmd.Data.Geometry;
 	var dataPosition : Int;
 	var entry : hxd.res.FileEntry;
 

@@ -129,7 +129,7 @@ class Animation {
 	@:access(h3d.scene.Skin.skinData)
 	public function bind( base : h3d.scene.Object ) {
 		var currentSkin : h3d.scene.Skin = null;
-		for( a in objects ) {
+		for( a in objects.copy() ) {
 			if( currentSkin != null ) {
 				// quick lookup for joints (prevent creating a temp object)
 				var j = currentSkin.skinData.namedJoints.get(a.objectName);
@@ -139,8 +139,10 @@ class Animation {
 				}
 			}
 			var obj = base.getObjectByName(a.objectName);
-			if( obj == null )
-				throw a.objectName + " was not found";
+			if( obj == null ) {
+				objects.remove(a);
+				continue;
+			}
 			var joint = Std.instance(obj, h3d.scene.Skin.Joint);
 			if( joint != null ) {
 				currentSkin = cast joint.parent;

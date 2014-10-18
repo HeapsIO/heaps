@@ -1,5 +1,5 @@
-package hxd.fmt.h3d;
-import hxd.fmt.h3d.Data;
+package hxd.fmt.hmd;
+import hxd.fmt.hmd.Data;
 
 class Writer {
 
@@ -111,7 +111,7 @@ class Writer {
 		var bytes = header.getBytes();
 		out = old;
 
-		out.writeString("H3D");
+		out.writeString("HMD");
 		out.writeByte(d.version);
 		out.writeInt32(bytes.length + 12);
 		out.write(bytes);

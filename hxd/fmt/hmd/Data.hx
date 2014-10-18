@@ -1,4 +1,4 @@
-package hxd.fmt.h3d;
+package hxd.fmt.hmd;
 
 enum GeometryDataFormat {
 	DFloat;

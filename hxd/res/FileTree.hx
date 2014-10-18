@@ -118,15 +118,15 @@ class FileTree {
 				fullPath = tmp;
 			}
 			Context.registerModuleDependency(currentModule, fullPath);
-		case "fbx" if( options.createH3D ):
+		case "fbx" if( options.createHMD ):
 			var tmp = options.tmpDir + name + ".h3d";
 			if( getTime(tmp) < getTime(fullPath) || true ) {
 				Sys.println("Converting " + relPath);
-				var fbx = new hxd.fmt.fbx.H3DOut();
+				var fbx = new hxd.fmt.fbx.HMDOut();
 				fbx.loadTextFile(sys.io.File.getContent(fullPath));
-				var h3d = fbx.toH3D(fullPath.substr(0,fullPath.length-file.length), !StringTools.startsWith(file,"Anim_") );
+				var h3d = fbx.toHMD(fullPath.substr(0,fullPath.length-file.length), !StringTools.startsWith(file,"Anim_") );
 				var out = sys.io.File.write(tmp);
-				new hxd.fmt.h3d.Writer(out).write(h3d);
+				new hxd.fmt.hmd.Writer(out).write(h3d);
 				out.close();
 			}
 			Context.registerModuleDependency(currentModule, fullPath);
