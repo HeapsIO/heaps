@@ -923,7 +923,7 @@ class BaseLibrary {
 		return keepJoints.get(j.name);
 	}
 
-	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,#if (dataOnly || macro) {function getVerticesCount():Int;function setSkin(s:h3d.anim.Skin):Void;} #else h3d.prim.FBXModel #end>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
+	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,{function getVerticesCount():Int;function setSkin(s:h3d.anim.Skin):Void;}>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
 		var allJoints = [];
 		function collectJoints(j:h3d.anim.Skin.Joint) {
 			// collect subs first (allow easy removal of terminal unskinned joints)

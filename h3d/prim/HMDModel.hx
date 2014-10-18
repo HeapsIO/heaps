@@ -12,6 +12,10 @@ class HMDModel extends MeshPrimitive {
 		this.entry = entry;
 	}
 
+	override function getBounds() {
+		return new h3d.col.Bounds();
+	}
+
 	override function alloc(engine:h3d.Engine) {
 		dispose();
 		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride);

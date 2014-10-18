@@ -31,6 +31,10 @@ class Any extends Resource {
 		return loader.loadFbxModel(entry.path).toFbx(loader);
 	}
 
+	public function toHmd() {
+		return loader.loadFbxModel(entry.path).toHmd();
+	}
+
 	public function toAwd() {
 		return loader.loadAwdModel(entry.path);
 	}

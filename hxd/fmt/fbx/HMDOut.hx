@@ -9,6 +9,7 @@ class HMDOut extends BaseLibrary {
 	var dataOut : haxe.io.BytesOutput;
 	var filePath : String;
 	var tmp = haxe.io.Bytes.alloc(4);
+	public var absoluteTexturePath : Bool;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -114,7 +115,7 @@ class HMDOut extends BaseLibrary {
 				}
 
 				// look if the vertex already exists
-				var found = null;
+				var found : Null<Int> = null;
 				for( vid in 0...g.vertexCount ) {
 					var same = true;
 					var p = vid * stride;
@@ -318,14 +319,16 @@ class HMDOut extends BaseLibrary {
 					var path = texture.get("FileName").props[0].toString();
 					if( path != "" ) {
 						path = path.split("\\").join("/");
-						if( filePath != null && StringTools.startsWith(path.toLowerCase(), filePath) )
-							path = path.substr(filePath.length);
-						else {
-							// relative resource path
-							var k = path.split("/res/");
-							if( k.length > 1 ) {
-								k.shift();
-								path = k.join("/res/");
+						if( !absoluteTexturePath ) {
+							if( filePath != null && StringTools.startsWith(path.toLowerCase(), filePath) )
+								path = path.substr(filePath.length);
+							else {
+								// relative resource path
+								var k = path.split("/res/");
+								if( k.length > 1 ) {
+									k.shift();
+									path = k.join("/res/");
+								}
 							}
 						}
 						mat.diffuseTexture = path;

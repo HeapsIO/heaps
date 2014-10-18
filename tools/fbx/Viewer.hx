@@ -13,6 +13,7 @@ typedef Props = {
 	loop:Bool,
 	lights:Bool,
 	normals:Bool,
+	convertHMD:Bool,
 }
 
 typedef Campos = {
@@ -33,7 +34,9 @@ class Viewer extends hxd.App {
 	var tf_help : flash.text.TextField;
 
 	var curFbx : hxd.fmt.fbx.Library;
+	var curHmd : hxd.fmt.hmd.Library;
 	static public var curData : String;
+	static public var curDataSize : Int;
 	static public var props : Props;
 	static public var animMode : h3d.anim.Mode = LinearAnim;
 
@@ -45,6 +48,7 @@ class Viewer extends hxd.App {
 	var axis : h3d.scene.Graphics;
 	var box : h3d.scene.Object;
 	var alib : hxd.fmt.fbx.Library;
+	var ahmd : hxd.fmt.hmd.Library;
 
 	function new() {
 		super();
@@ -57,7 +61,15 @@ class Viewer extends hxd.App {
 		freeMove = false;
 		rightClick = false;
 
-		props = { curFile : "", camPos : { x:10, y:0, z:0, tx:0, ty:0, tz:0 }, smoothing:true, showAxis:true, showBones:false, showBox:false, slowDown:false, loop:true, lights : true, normals : false }
+		props = {
+			curFile : "",
+			camPos : { x:10, y:0, z:0, tx:0, ty:0, tz:0 },
+			smoothing:true,
+			showAxis:true, showBones:false, showBox:false,
+			slowDown:false, loop:true,
+			lights : true, normals : false,
+			convertHMD : false,
+		};
 		props = hxd.Save.load(props);
 
 		tf = new flash.text.TextField();
@@ -250,6 +262,9 @@ class Viewer extends hxd.App {
 		case "I".code:
 			props.lights = !props.lights;
 			setMaterial();
+		case "C".code:
+			props.convertHMD = !props.convertHMD;
+			reload = true;
 		default:
 
 		}
@@ -267,7 +282,7 @@ class Viewer extends hxd.App {
 			if( newFbx ) haxe.Log.trace("Failed to load " + file,null);
 		});
 		l.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			loadData(l.data, newFbx);
+			loadData(l.data);
 			if( newFbx ) {
 				resetCamera();
 				save();
@@ -336,13 +351,19 @@ class Viewer extends hxd.App {
 				haxe.Log.clear();
 				var content = bytes.toString();
 				if( anim ) {
-					alib = new hxd.fmt.fbx.Library();
-					var fbx = hxd.fmt.fbx.Parser.parse(content);
-					alib.load(fbx);
-					if( !rightHand )
-						alib.leftHandConvert();
+					if( props.convertHMD ) {
+						ahmd = fbxToHmd(content).toHmd();
+					} else {
+						alib = new hxd.fmt.fbx.Library();
+						var fbx = hxd.fmt.fbx.Parser.parse(content);
+						alib.load(fbx);
+						if( !rightHand )
+							alib.leftHandConvert();
+					}
 					setAnim();
 				} else {
+					alib = null;
+					ahmd = null;
 					props.curFile = sel.fileName;
 					loadData(content);
 					resetCamera();
@@ -352,18 +373,59 @@ class Viewer extends hxd.App {
 		},{ fileTypes : [{ name : "FBX File", extensions : ["fbx"] }], defaultPath : props.curFile });
 	}
 
-	function loadData( data : String, newFbx = true ) {
-		curFbx = new hxd.fmt.fbx.Library();
-		curFbx.unskinnedJointsAsObjects = true;
-		curData = data;
-		var fbx = hxd.fmt.fbx.Parser.parse(data);
-		curFbx.load(fbx);
-		if( !rightHand )
-			curFbx.leftHandConvert();
+	function fbxToHmd( data : String ) {
+		var hmdOut = new hxd.fmt.fbx.HMDOut();
+		hmdOut.absoluteTexturePath = true;
+		hmdOut.loadTextFile(data);
+		var hmd = hmdOut.toHMD(null, true);
+		var out = new haxe.io.BytesOutput();
+		new hxd.fmt.hmd.Writer(out).write(hmd);
+		var bytes = out.getBytes();
+		return hxd.res.Any.fromBytes("model.hmd", bytes);
+	}
 
-		var frame = obj.currentAnimation == null ? 0 : obj.currentAnimation.frame;
+	function loadData( data : String ) {
+
+		curData = data;
+		curDataSize = data.length;
+
 		obj.remove();
-		obj = curFbx.makeObject(textureLoader);
+
+		curFbx = null;
+		curHmd = null;
+
+		if( props.convertHMD ) {
+
+			var res = fbxToHmd(data);
+			curDataSize = res.entry.getBytes().length;
+			curHmd = res.toHmd();
+
+			obj = curHmd.makeObject(function(name) {
+				var t = new h3d.mat.Texture(1, 1);
+				t.clear(0xFF00FF);
+				loadTexture(name, new h3d.mat.MeshMaterial(t));
+				return t;
+			});
+
+			for( m in obj.getMaterials() ) {
+				m.mainPass.culling = None;
+				m.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
+				if( m.mainPass.blendDst == Zero ) m.mainPass.blend(SrcAlpha, OneMinusSrcAlpha);
+			}
+
+		} else {
+
+			curFbx = new hxd.fmt.fbx.Library();
+			curFbx.unskinnedJointsAsObjects = true;
+			var fbx = hxd.fmt.fbx.Parser.parse(data);
+			curFbx.load(fbx);
+			if( !rightHand )
+				curFbx.leftHandConvert();
+
+			obj = curFbx.makeObject(textureLoader);
+
+		}
+
 		s3d.addChild(obj);
 
 		//
@@ -432,7 +494,11 @@ class Viewer extends hxd.App {
 	}
 
 	function setAnim() {
-		var anim = curFbx.loadAnimation(animMode, null, null, alib);
+		var anim;
+		if( curHmd != null )
+			anim = (ahmd == null ? curHmd : ahmd).loadAnimation();
+		else
+			anim = curFbx.loadAnimation(animMode, null, null, alib);
 		if( anim != null ) {
 			anim = s3d.playAnimation(anim);
 			if( !props.loop ) {
@@ -532,7 +598,8 @@ class Viewer extends hxd.App {
 			"[M] Tex Smoothing = " + props.smoothing,
 			"[N] Show normals = "+props.normals,
 			"[F] Default camera",
-			"[I] Lights = "+props.lights,
+			"[I] Lights = " + props.lights,
+			"[C] Use HMD model = "+props.convertHMD,
 			"[1~4] Views",
 			"",
 			"[Space] Pause Animation",
@@ -542,9 +609,14 @@ class Viewer extends hxd.App {
 		].join("\n");
 		tf_keys.y = s2d.height - tf_keys.textHeight - 35;
 
+		var file = props.curFile.split("/").pop().split("\\").pop();
+		if( props.convertHMD && StringTools.endsWith(file.toLowerCase(), ".fbx") )
+			file = file.substr(0, -3) + "hmd";
+
+		file += " (" + Math.ceil(curDataSize / 1024) + "KB)";
 		tf.text = [
 			(cam.rightHanded ? "R " : "") + fmt(hxd.Timer.fps()),
-			props.curFile.split("/").pop().split("\\").pop(),
+			file,
 			(engine.drawTriangles - (props.showBox ? 26 : 0) - (props.showAxis ? 0 : 0)) + " tri",
 		].join("\n");
 
