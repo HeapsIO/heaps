@@ -36,6 +36,15 @@ class Writer {
 		}
 	}
 
+	function writeBounds( b : h3d.col.Bounds ) {
+		out.writeFloat(b.xMin);
+		out.writeFloat(b.yMin);
+		out.writeFloat(b.zMin);
+		out.writeFloat(b.xMax);
+		out.writeFloat(b.yMax);
+		out.writeFloat(b.zMax);
+	}
+
 	public function write( d : Data ) {
 		var old = out;
 		var header = new haxe.io.BytesOutput();
@@ -53,6 +62,7 @@ class Writer {
 			out.writeInt32(g.vertexPosition);
 			out.writeInt32(g.indexCount);
 			out.writeInt32(g.indexPosition);
+			writeBounds(g.bounds);
 		}
 
 		out.writeInt32(d.materials.length);

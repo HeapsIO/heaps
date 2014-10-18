@@ -59,6 +59,7 @@ class HMDOut extends BaseLibrary {
 		var vbuf = new hxd.FloatBuffer();
 		var ibuf = new hxd.IndexBuffer();
 
+		g.bounds = new h3d.col.Bounds();
 		var tmpBuf = new haxe.ds.Vector(stride);
 		var vertexRemap = [];
 		var index = geom.getPolygons();
@@ -81,6 +82,7 @@ class HMDOut extends BaseLibrary {
 				tmpBuf[p++] = x;
 				tmpBuf[p++] = y;
 				tmpBuf[p++] = z;
+				g.bounds.addPos(x, y, z);
 
 				if( normals != null ) {
 					var nx = normals[k * 3];
@@ -163,11 +165,6 @@ class HMDOut extends BaseLibrary {
 	function addGeometry() {
 
 		var root = buildHierarchy().root;
-		if( root.childs.length == 1 && !root.isMesh ) {
-			root = root.childs[0];
-			root.parent = null;
-		}
-
 		var objects = [], joints = [], skins = [];
 		var uid = 0;
 		function indexRec( t : TmpObject ) {
@@ -253,6 +250,10 @@ class HMDOut extends BaseLibrary {
 		}
 
 		objects = [];
+		if( root.childs.length == 1 && root.model == null ) {
+			root = root.childs[0];
+			root.parent = null;
+		}
 		indexRec(root); // reorder after we have changed hierarchy
 
 		var hskins = new Map(), tmpGeom = new Map();

@@ -63,6 +63,7 @@ class Geometry {
 	public var vertexPosition : DataPosition;
 	public var indexCount : Int;
 	public var indexPosition : DataPosition;
+	public var bounds : h3d.col.Bounds;
 	public function new() {
 	}
 }

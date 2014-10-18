@@ -39,6 +39,17 @@ class Reader {
 		return p;
 	}
 
+	function readBounds() {
+		var b = new h3d.col.Bounds();
+		b.xMin = i.readFloat();
+		b.yMin = i.readFloat();
+		b.zMin = i.readFloat();
+		b.xMax = i.readFloat();
+		b.yMax = i.readFloat();
+		b.zMax = i.readFloat();
+		return b;
+	}
+
 	public function readHeader() : Data {
 		var d = new Data();
 		var h = i.readString(3);
@@ -61,6 +72,7 @@ class Reader {
 			g.vertexPosition = i.readInt32();
 			g.indexCount = i.readInt32();
 			g.indexPosition = i.readInt32();
+			g.bounds = readBounds();
 			d.geometries.push(g);
 		}
 

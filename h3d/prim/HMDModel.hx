@@ -13,7 +13,7 @@ class HMDModel extends MeshPrimitive {
 	}
 
 	override function getBounds() {
-		return new h3d.col.Bounds();
+		return data.bounds;
 	}
 
 	override function alloc(engine:h3d.Engine) {
