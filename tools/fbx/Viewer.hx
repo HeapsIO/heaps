@@ -311,12 +311,21 @@ class Viewer extends hxd.App {
 
 	function loadTexture( textureName : String, mat : h3d.mat.MeshMaterial, handleAlpha = true ) {
 		var t = mat.texture;
+		var texBasePath = textureName.split("\\").join("/").split("/");
+		var fileBasePath = props.curFile.split("\\").join("/").split("/");
+		var texFile = texBasePath.pop();
+		fileBasePath.pop();
+		function onError(_) {
+			if( texBasePath.join("/") != fileBasePath.join("/") ) {
+				fileBasePath.push(texFile);
+				loadTexture(fileBasePath.join("/"), mat, handleAlpha);
+			} else
+				mat.mainPass.culling = None;
+		}
 		if( textureName.split(".").pop().toLowerCase() == "png" && handleAlpha ) {
 			var loader = new flash.net.URLLoader();
 			loader.dataFormat = flash.net.URLLoaderDataFormat.BINARY;
-			loader.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
-				mat.mainPass.culling = None;
-			});
+			loader.addEventListener(flash.events.IOErrorEvent.IO_ERROR, onError);
 			loader.addEventListener(flash.events.Event.COMPLETE, function(_) {
 				var bytes = haxe.io.Bytes.ofData(loader.data);
 				var png = new format.png.Reader(new haxe.io.BytesInput(bytes)).read();
@@ -334,9 +343,7 @@ class Viewer extends hxd.App {
 			loader.load(new flash.net.URLRequest(textureName));
 		} else {
 			var loader = new flash.display.Loader();
-			loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
-				mat.mainPass.culling = None;
-			});
+			loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, onError);
 			loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
 				var bmp = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;
 				t.resize(bmp.width, bmp.height);
