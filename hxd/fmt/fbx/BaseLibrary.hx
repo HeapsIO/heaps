@@ -364,7 +364,7 @@ class BaseLibrary {
 		// if it's an empty model with no sub nodes, let's ignore it (ex : Camera)
 		if( model.getType() == "Null" && getChilds(model, "Model").length == 0 )
 			return null;
-		var def = defaultModelMatrixes.get(name);
+		var def = getDefaultMatrixes(model);
 		if( def == null )
 			return null;
 		// if it's a move animation on a terminal unskinned joint, let's skip it
@@ -375,7 +375,7 @@ class BaseLibrary {
 			model = ids.get(def.wasRemoved);
 			name = model.getName();
 			c = curves.get(def.wasRemoved);
-			def = defaultModelMatrixes.get(name);
+			def = getDefaultMatrixes(model);
 			// todo : change behavior not to remove the mesh but the skin instead!
 			if( def == null ) throw "assert";
 		}
@@ -615,6 +615,7 @@ class BaseLibrary {
 		}
 
 		var allTimes = [for( a in allTimes ) a];
+		
 		allTimes.sort(sortDistinctFloats);
 		var maxTime = allTimes[allTimes.length - 1];
 		var minDT = maxTime;
@@ -994,7 +995,11 @@ class BaseLibrary {
 	}
 
 	function getDefaultMatrixes( model : FbxNode ) {
-		var d = new DefaultMatrixes();
+		var name = model.getName();
+		var d = defaultModelMatrixes.get(name);
+		if( d != null )
+			return d;
+		d = new DefaultMatrixes();
 		var F = Math.PI / 180;
 		for( p in model.getAll("Properties70.P") )
 			switch( p.props[0].toString() ) {
@@ -1010,7 +1015,7 @@ class BaseLibrary {
 				d.scale = new Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
 			default:
 			}
-		defaultModelMatrixes.set(model.getName(), d);
+		defaultModelMatrixes.set(name, d);
 		return d;
 	}
 

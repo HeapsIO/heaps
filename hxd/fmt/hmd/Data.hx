@@ -98,7 +98,7 @@ class SkinSplit {
 class Skin {
 	public var name : String;
 	public var joints : Array<SkinJoint>;
-	public var split : Null<Array<SkinSplit>>;;
+	public var split : Null<Array<SkinSplit>>;
 	public function new() {
 	}
 }

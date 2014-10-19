@@ -119,8 +119,8 @@ class FileTree {
 			}
 			Context.registerModuleDependency(currentModule, fullPath);
 		case "fbx" if( options.createHMD ):
-			var tmp = options.tmpDir + name + ".h3d";
-			if( getTime(tmp) < getTime(fullPath) || true ) {
+			var tmp = options.tmpDir + name + ".hmd";
+			if( getTime(tmp) < getTime(fullPath) ) {
 				Sys.println("Converting " + relPath);
 				var fbx = new hxd.fmt.fbx.HMDOut();
 				fbx.loadTextFile(sys.io.File.getContent(fullPath));
