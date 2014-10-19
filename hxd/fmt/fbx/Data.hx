@@ -74,6 +74,9 @@ class FbxTools {
 			var fl = new Array<Float>();
 			for( x in i )
 				fl.push(x);
+			n.props[0] = PFloats(fl); // keep data synchronized
+			// this is necessary for merging geometries since we are pushing directly into the
+			// float buffer
 			return fl;
 		default:
 			throw n.name + " has " + n.props + " props";

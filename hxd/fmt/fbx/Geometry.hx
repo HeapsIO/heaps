@@ -86,7 +86,7 @@ class Geometry {
 		for( n in g.getNormals() )
 			normals.push(n);
 
-		// merget uvs
+		// merge uvs
 		var uv = getUVs();
 		var uv2 = g.getUVs();
 		if( uv.length != uv2.length )
@@ -99,6 +99,19 @@ class Geometry {
 				uv.values.push(v);
 			for( i in uv2.index )
 				uv.index.push(i + count);
+		}
+
+		// merge colors
+		var colors = getColors();
+		var colors2 = g.getColors();
+		if( (colors != null) != (colors2 != null) )
+			throw "Different Color layer in merged objects";
+		if( colors != null ) {
+			var count = colors.values.length >> 2;
+			for( v in colors2.values )
+				colors.values.push(v);
+			for( i in colors2.index )
+				colors.index.push(i + count);
 		}
 
 		// merge materials
