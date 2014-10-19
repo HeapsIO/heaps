@@ -21,13 +21,46 @@ private class LocalEntry extends FileEntry {
 		this.name = name;
 		this.relPath = relPath;
 		this.file = file;
-		if( fs.createXBX && extension == "fbx" )
+		if( fs.createHMD && extension == "fbx" )
+			convertToHMD();
+		else if( fs.createXBX && extension == "fbx" )
 			convertToXBX();
 		if( fs.createMP3 && extension == "wav" )
 			convertToMP3();
 	}
 
 	static var INVALID_CHARS = ~/[^A-Za-z0-9_]/g;
+
+	function convertToHMD() {
+		function getHMD() {
+			var fbx = null;
+			try fbx = hxd.fmt.fbx.Parser.parse(getBytes().toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
+			var hmdout = new hxd.fmt.fbx.HMDOut();
+			hmdout.load(fbx);
+			var hmd = hmdout.toHMD(null, !StringTools.startsWith(relPath, "Anim_"));
+			var out = new haxe.io.BytesOutput();
+			new hxd.fmt.hmd.Writer(out).write(hmd);
+			return out.getBytes();
+		}
+		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".hmd";
+		#if air3
+		var target = new flash.filesystem.File(target);
+		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
+			var hmd = getHMD();
+			var out = new flash.filesystem.FileStream();
+			out.open(target, flash.filesystem.FileMode.WRITE);
+			out.writeBytes(hmd.getData());
+			out.close();
+		}
+		file = target;
+		#else
+		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
+		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() ) {
+			var hmd = getHMD();
+			sys.io.File.saveBytes(target, hmd);
+		}
+		#end
+	}
 
 	function convertToXBX() {
 		function getXBX() {
@@ -306,6 +339,7 @@ class LocalFileSystem implements FileSystem {
 	var root : FileEntry;
 	public var baseDir(default,null) : String;
 	public var createXBX : Bool;
+	public var createHMD : Bool;
 	public var createMP3 : Bool;
 	public var tmpDir : String;
 
