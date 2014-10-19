@@ -60,7 +60,7 @@ class HMDOut extends BaseLibrary {
 		var vbuf = new hxd.FloatBuffer();
 		var ibufs = [];
 
-		if( skin.isSplit() )
+		if( skin != null && skin.isSplit() )
 			for( _ in skin.splitJoints ) ibufs.push(new hxd.IndexBuffer());
 
 		g.bounds = new h3d.col.Bounds();
