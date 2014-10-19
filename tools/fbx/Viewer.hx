@@ -361,7 +361,7 @@ class Viewer extends hxd.App {
 				var content = bytes.toString();
 				if( anim ) {
 					if( props.convertHMD ) {
-						ahmd = fbxToHmd(content).toHmd();
+						ahmd = fbxToHmd(content, false).toHmd();
 					} else {
 						alib = new hxd.fmt.fbx.Library();
 						var fbx = hxd.fmt.fbx.Parser.parse(content);
@@ -382,11 +382,11 @@ class Viewer extends hxd.App {
 		},{ fileTypes : [{ name : "FBX File", extensions : ["fbx"] }], defaultPath : props.curFile });
 	}
 
-	function fbxToHmd( data : String ) {
+	function fbxToHmd( data : String, includeGeometry ) {
 		var hmdOut = new hxd.fmt.fbx.HMDOut();
 		hmdOut.absoluteTexturePath = true;
 		hmdOut.loadTextFile(data);
-		var hmd = hmdOut.toHMD(null, true);
+		var hmd = hmdOut.toHMD(null, includeGeometry);
 		var out = new haxe.io.BytesOutput();
 		new hxd.fmt.hmd.Writer(out).write(hmd);
 		var bytes = out.getBytes();
@@ -405,7 +405,7 @@ class Viewer extends hxd.App {
 
 		if( props.convertHMD ) {
 
-			var res = fbxToHmd(data);
+			var res = fbxToHmd(data, true);
 			curDataSize = res.entry.getBytes().length;
 			curHmd = res.toHmd();
 
