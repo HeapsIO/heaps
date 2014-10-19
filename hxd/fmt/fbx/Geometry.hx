@@ -104,14 +104,25 @@ class Geometry {
 		// merge colors
 		var colors = getColors();
 		var colors2 = g.getColors();
-		if( (colors != null) != (colors2 != null) )
-			throw "Different Color layer in merged objects";
 		if( colors != null ) {
-			var count = colors.values.length >> 2;
-			for( v in colors2.values )
-				colors.values.push(v);
-			for( i in colors2.index )
-				colors.index.push(i + count);
+			if( colors2 != null ) {
+				var count = colors.values.length >> 2;
+				for( v in colors2.values )
+					colors.values.push(v);
+				for( i in colors2.index )
+					colors.index.push(i + count);
+			} else {
+				var count = colors.values.length >> 2;
+				var count2 = Std.int(g.getNormals().length / 3); // quick guess for vertex count
+				colors.values.push(1);
+				colors.values.push(1);
+				colors.values.push(1);
+				colors.values.push(1);
+				for( i in 0...count2 )
+					colors.index.push(count);
+			}
+		} else if( colors2 != null ) {
+			// ignore colors, would require to create a FBX Node
 		}
 
 		// merge materials

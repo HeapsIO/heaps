@@ -615,7 +615,11 @@ class BaseLibrary {
 		}
 
 		var allTimes = [for( a in allTimes ) a];
-		
+
+		// no animation curve was found
+		if( allTimes.length == 0 )
+			return null;
+
 		allTimes.sort(sortDistinctFloats);
 		var maxTime = allTimes[allTimes.length - 1];
 		var minDT = maxTime;

@@ -2,8 +2,46 @@ package hxd.fmt.hmd;
 
 class MakeAll {
 
+	static var INVALID_CHARS = ~/[^A-Za-z0-9_]/g;
+
+	static function loop( dir : String ) {
+		for( f in sys.FileSystem.readDirectory(dir) ) {
+			var path = dir + "/" + f;
+			if( sys.FileSystem.isDirectory(path) ) {
+				loop(path);
+				continue;
+			}
+			if( !StringTools.endsWith(f.toLowerCase(), ".fbx") )
+				continue;
+			var relPath = path.substr(4);
+			var target = "res/.tmp/R_" + INVALID_CHARS.replace(relPath, "_") + ".hmd";
+			var xtraPath = path.substr(0, -3) + "xtra";
+			if( !sys.FileSystem.exists(xtraPath) )
+				xtraPath = null;
+			if( sys.FileSystem.exists(target) && sys.FileSystem.stat(target).mtime.getTime() >= sys.FileSystem.stat(path).mtime.getTime() && (xtraPath == null || sys.FileSystem.stat(target).mtime.getTime() >= sys.FileSystem.stat(xtraPath).mtime.getTime()) )
+				continue;
+			Sys.println(relPath);
+			var fbx = null;
+			try fbx = hxd.fmt.fbx.Parser.parse(sys.io.File.getContent(path)) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
+			var hmdout = new hxd.fmt.fbx.HMDOut();
+			hmdout.load(fbx);
+			if( xtraPath != null )
+				hmdout.loadXtra(sys.io.File.getContent(xtraPath));
+			var hmd = hmdout.toHMD(null, !StringTools.startsWith(f, "Anim_"));
+			var out = new haxe.io.BytesOutput();
+			new hxd.fmt.hmd.Writer(out).write(hmd);
+			var bytes = out.getBytes();
+			sys.io.File.saveBytes(target, bytes);
+		}
+	}
+
 	static function main() {
-		hxd.Res.initEmbed({createHMD:true});
+		try sys.FileSystem.deleteFile("hxd.fmt.hmd.MakeAll.n") catch( e : Dynamic ) {}
+		if( !sys.FileSystem.exists("res") ) {
+			Sys.println("res directory not found");
+			Sys.exit(1);
+		}
+		loop("res");
 	}
 
 }

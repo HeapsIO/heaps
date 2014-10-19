@@ -90,11 +90,22 @@ class FbxTools {
 		return false;
 	}
 
+	static inline function idToInt( f : Float ) {
+		#if neko
+		f %= 4294967296.;
+		if( f >= 2147483648. )
+			f -= 4294967296.;
+		else if( f < -2147483648. )
+			f += 4294967296.;
+		#end
+		return Std.int(f);
+	}
+
 	public static function toInt( n : FbxProp ) {
 		if( n == null ) throw "null prop";
 		return switch( n ) {
 		case PInt(v): v;
-		case PFloat(f): return Std.int( f );
+		case PFloat(f): idToInt(f);
 		default: throw "Invalid prop " + n;
 		}
 	}
@@ -121,7 +132,7 @@ class FbxTools {
 			throw n.name + " is not an object";
 		return switch( n.props[0] ) {
 		case PInt(id): id;
-		case PFloat(id) : Std.int( id );
+		case PFloat(id) : idToInt(id);
 		default: throw n.name + " is not an object " + n.props;
 		}
 	}

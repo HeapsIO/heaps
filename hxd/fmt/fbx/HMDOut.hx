@@ -32,6 +32,18 @@ class HMDOut extends BaseLibrary {
 		var colors = geom.getColors();
 		var mats = geom.getMaterials();
 
+		// remove empty color data
+		if( colors != null ) {
+			var hasData = false;
+			for( v in colors.values )
+				if( v < 0.99 ) {
+					hasData = true;
+					break;
+				}
+			if( !hasData )
+				colors = null;
+		}
+
 		// build format
 		g.vertexFormat = [
 			new GeometryFormat("position", DVec3),
@@ -154,8 +166,14 @@ class HMDOut extends BaseLibrary {
 				}
 			}
 			// by-material index
-			else if( mats != null ) {
-				var mid = mats[matPos++];
+			else {
+				var mid;
+				if( mats == null )
+					mid = 0;
+				else {
+					mid = mats[matPos];
+					if( mats.length > 1 ) matPos++;
+				}
 				var idx = ibufs[mid];
 				if( idx == null ) {
 					idx = new hxd.IndexBuffer();
@@ -178,13 +196,23 @@ class HMDOut extends BaseLibrary {
 			dataOut.writeFloat(vbuf[i]);
 		g.indexPosition = dataOut.length;
 		g.indexCounts = [];
+
+		var matMap = [], matCount = 0;
 		for( idx in ibufs ) {
+			if( idx == null ) {
+				matCount++;
+				continue;
+			}
+			matMap.push(matCount++);
 			g.indexCounts.push(idx.length);
 			for( i in idx )
 				dataOut.writeUInt16(i);
 		}
 
-		return g;
+		if( skin != null && skin.isSplit() )
+			matMap = null;
+
+		return { g : g, materials : matMap };
 	}
 
 	function addGeometry() {
@@ -286,7 +314,7 @@ class HMDOut extends BaseLibrary {
 		for( g in this.root.getAll("Objects.Geometry") )
 			tmpGeom.set(g.getId(), { setSkin : function(_) { }, getVerticesCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
 
-		var hgeom = new Map<Int,Int>();
+		var hgeom = new Map();
 		var hmat = new Map<Int,Int>();
 		var index = 0;
 		for( o in objects ) {
@@ -403,15 +431,28 @@ class HMDOut extends BaseLibrary {
 				model.skin = makeSkin(skin, o.skin);
 			}
 
-			var gid = hgeom.get(g.getId());
-			if( gid == null ) {
+			var gdata = hgeom.get(g.getId());
+			if( gdata == null ) {
 				var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut);
-				gid = d.geometries.length;
-				d.geometries.push(geom);
-				hgeom.set(g.getId(), gid);
+				gdata = { gid : d.geometries.length, materials : geom.materials };
+				d.geometries.push(geom.g);
+				hgeom.set(g.getId(), gdata);
 			}
-			model.geometry = gid;
-			model.materials = mids;
+			model.geometry = gdata.gid;
+
+			if( mids.length == 0 ) {
+				var mat = new Material();
+				mat.blendMode = None;
+				mat.culling = Back;
+				mat.name = "default";
+				var mid = d.materials.length;
+				d.materials.push(mat);
+				mids = [mid];
+			}
+			if( gdata.materials == null )
+				model.materials = mids;
+			else
+				model.materials = [for( id in gdata.materials ) mids[id]];
 		}
 	}
 
