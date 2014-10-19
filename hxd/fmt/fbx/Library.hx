@@ -138,7 +138,7 @@ class Library extends BaseLibrary {
 			if( skinData.boundJoints.length > maxBonesPerSkin ) {
 				var model = Std.instance(skinData.primitive, h3d.prim.FBXModel);
 				var idx = model.geom.getIndexes();
-				skinData.split(maxBonesPerSkin, [for( i in idx.idx) idx.vidx[i]], model.multiMaterial ? model.getMaterialByTriangle() : null);
+				skinData.split(maxBonesPerSkin, [for( i in idx.idx) idx.vidx[i]], model.multiMaterial ? model.geom.getMaterialByTriangle() : null);
 			}
 			skin.setSkinData(skinData);
 		}

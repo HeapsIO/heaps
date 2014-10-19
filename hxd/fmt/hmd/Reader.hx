@@ -50,6 +50,36 @@ class Reader {
 		return b;
 	}
 
+	function readSkin() {
+		var name = readName();
+		if( name == null )
+			return null;
+		var s = new Skin();
+		s.name = name;
+		s.joints = [];
+		for( k in 0...i.readUInt16() ) {
+			var j = new SkinJoint();
+			j.name = readName();
+			j.parent = i.readUInt16() - 1;
+			j.position = readPosition(false);
+			j.bind = i.readUInt16() - 1;
+			if( j.bind >= 0 )
+				j.transpos = readPosition(false);
+			s.joints.push(j);
+		}
+		var count = i.readByte();
+		if( count > 0 ) {
+			s.split = [];
+			for( k in 0...count ) {
+				var ss = new SkinSplit();
+				ss.materialIndex = i.readByte();
+				ss.joints = [for( k in 0...i.readByte() ) i.readUInt16()];
+				s.split.push(ss);
+			}
+		}
+		return s;
+	}
+
 	public function readHeader() : Data {
 		var d = new Data();
 		var h = i.readString(3);
@@ -70,7 +100,7 @@ class Reader {
 			g.vertexStride = i.readByte();
 			g.vertexFormat = [for( k in 0...i.readByte() ) new GeometryFormat(readName(), FORMATS[i.readByte()])];
 			g.vertexPosition = i.readInt32();
-			g.indexCount = i.readInt32();
+			g.indexCounts = [for( k in 0...i.readByte() ) i.readInt32()];
 			g.indexPosition = i.readInt32();
 			g.bounds = readBounds();
 			d.geometries.push(g);
@@ -101,23 +131,7 @@ class Reader {
 			m.materials = [];
 			for( k in 0...i.readByte() )
 				m.materials.push(i.readInt32());
-			var name = readName();
-			if( name != null ) {
-				var s = new Skin();
-				s.name = name;
-				s.joints = [];
-				for( k in 0...i.readUInt16() ) {
-					var j = new SkinJoint();
-					j.name = readName();
-					j.parent = i.readUInt16() - 1;
-					j.position = readPosition(false);
-					j.bind = i.readUInt16() - 1;
-					if( j.bind >= 0 )
-						j.transpos = readPosition(false);
-					s.joints.push(j);
-				}
-				m.skin = s;
-			}
+			m.skin = readSkin();
 		}
 
 		d.animations = [];

@@ -89,24 +89,6 @@ class FBXModel extends MeshPrimitive {
 		return m;
 	}
 
-	public function getMaterialByTriangle() {
-		var mids = geom.getMaterials();
-		var pos = 0;
-		var count = 0;
-		var mats = [];
-		for( p in geom.getPolygons() ) {
-			count++;
-			if( p >= 0 )
-				continue;
-			var m = mids[pos++];
-			for( i in 0...count - 2 )
-				mats.push(m);
-			count = 0;
-		}
-		return mats;
-	}
-
-
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
 

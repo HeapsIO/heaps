@@ -61,7 +61,7 @@ class Geometry {
 	public var vertexStride : Int;
 	public var vertexFormat : Array<GeometryFormat>;
 	public var vertexPosition : DataPosition;
-	public var indexCount : Int;
+	public var indexCounts : Array<Int>;
 	public var indexPosition : DataPosition;
 	public var bounds : h3d.col.Bounds;
 	public function new() {
@@ -88,9 +88,17 @@ class SkinJoint {
 	}
 }
 
+class SkinSplit {
+	public var materialIndex : Int;
+	public var joints : Array<Index<SkinJoint>>;
+	public function new() {
+	}
+}
+
 class Skin {
 	public var name : String;
 	public var joints : Array<SkinJoint>;
+	public var split : Null<Array<SkinSplit>>;;
 	public function new() {
 	}
 }

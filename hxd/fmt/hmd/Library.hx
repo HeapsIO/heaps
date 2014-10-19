@@ -72,6 +72,11 @@ class Library {
 			s.allJoints.push(j);
 			s.namedJoints.set(j.name, j);
 		}
+		if( skin.split != null ) {
+			s.splitJoints = [];
+			for( ss in skin.split )
+				s.splitJoints.push( { material : ss.materialIndex, joints : [for( j in ss.joints ) s.allJoints[j]] } );
+		}
 		cachedSkin.set(skin.name, s);
 		return s;
 	}

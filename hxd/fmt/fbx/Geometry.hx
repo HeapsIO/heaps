@@ -28,6 +28,23 @@ class Geometry {
 		return mats == null ? null : mats.get("Materials").getInts();
 	}
 
+	public function getMaterialByTriangle() {
+		var mids = getMaterials();
+		var pos = 0;
+		var count = 0;
+		var mats = [];
+		for( p in getPolygons() ) {
+			count++;
+			if( p >= 0 )
+				continue;
+			var m = mids[pos++];
+			for( i in 0...count - 2 )
+				mats.push(m);
+			count = 0;
+		}
+		return mats;
+	}
+
 	public function merge( g : Geometry, materials : Array<Int> ) {
 		var vl = getVertices();
 		var vcount = Std.int(vl.length / 3);

@@ -45,6 +45,28 @@ class Writer {
 		out.writeFloat(b.zMax);
 	}
 
+	function writeSkin( s : Skin ) {
+		writeName(s.name == null ? "" : s.name);
+		out.writeUInt16(s.joints.length);
+		for( j in s.joints ) {
+			writeName(j.name);
+			out.writeUInt16(j.parent + 1);
+			writePosition(j.position, false);
+			out.writeUInt16(j.bind + 1);
+			if( j.bind >= 0 )
+				writePosition(j.transpos, false);
+		}
+		out.writeByte(s.split == null ? 0 : s.split.length);
+		if( s.split != null ) {
+			for( ss in s.split ) {
+				out.writeByte(ss.materialIndex);
+				out.writeByte(ss.joints.length);
+				for( i in ss.joints )
+					out.writeUInt16(i);
+			}
+		}
+	}
+
 	public function write( d : Data ) {
 		var old = out;
 		var header = new haxe.io.BytesOutput();
@@ -60,7 +82,9 @@ class Writer {
 				out.writeByte(f.format.getIndex());
 			}
 			out.writeInt32(g.vertexPosition);
-			out.writeInt32(g.indexCount);
+			out.writeByte(g.indexCounts.length);
+			for( i in g.indexCounts )
+				out.writeInt32(i);
 			out.writeInt32(g.indexPosition);
 			writeBounds(g.bounds);
 		}
@@ -87,18 +111,8 @@ class Writer {
 				out.writeInt32(m);
 			if( m.skin == null )
 				writeName(null);
-			else {
-				writeName(m.skin.name == null ? "" : m.skin.name);
-				out.writeUInt16(m.skin.joints.length);
-				for( j in m.skin.joints ) {
-					writeName(j.name);
-					out.writeUInt16(j.parent + 1);
-					writePosition(j.position, false);
-					out.writeUInt16(j.bind + 1);
-					if( j.bind >= 0 )
-						writePosition(j.transpos, false);
-				}
-			}
+			else
+				writeSkin(m.skin);
 		}
 
 		out.writeInt32(d.animations.length);

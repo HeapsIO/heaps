@@ -30,6 +30,7 @@ class HMDOut extends BaseLibrary {
 		var normals = geom.getNormals();
 		var uvs = geom.getUVs();
 		var colors = geom.getColors();
+		var mats = geom.getMaterials();
 
 		// build format
 		g.vertexFormat = [
@@ -57,13 +58,16 @@ class HMDOut extends BaseLibrary {
 		if( gt == null ) gt = new h3d.col.Point();
 
 		var vbuf = new hxd.FloatBuffer();
-		var ibuf = new hxd.IndexBuffer();
+		var ibufs = [];
+
+		if( skin.isSplit() )
+			for( _ in skin.splitJoints ) ibufs.push(new hxd.IndexBuffer());
 
 		g.bounds = new h3d.col.Bounds();
 		var tmpBuf = new haxe.ds.Vector(stride);
 		var vertexRemap = [];
 		var index = geom.getPolygons();
-		var count = 0;
+		var count = 0, matPos = 0, stri = 0;
 		for( pos in 0...index.length ) {
 			var i = index[pos];
 			count++;
@@ -140,10 +144,28 @@ class HMDOut extends BaseLibrary {
 				vertexRemap.push(found);
 			}
 
-			for( n in 0...count - 2 ) {
-				ibuf.push(vertexRemap[start + n]);
-				ibuf.push(vertexRemap[start + count - 1]);
-				ibuf.push(vertexRemap[start + n + 1]);
+			// by-skin-group index
+			if( skin != null && skin.isSplit() ) {
+				for( n in 0...count - 2 ) {
+					var idx = ibufs[skin.triangleGroups[stri++]];
+					idx.push(vertexRemap[start + n]);
+					idx.push(vertexRemap[start + count - 1]);
+					idx.push(vertexRemap[start + n + 1]);
+				}
+			}
+			// by-material index
+			else if( mats != null ) {
+				var mid = mats[matPos++];
+				var idx = ibufs[mid];
+				if( idx == null ) {
+					idx = new hxd.IndexBuffer();
+					ibufs[mid] = idx;
+				}
+				for( n in 0...count - 2 ) {
+					idx.push(vertexRemap[start + n]);
+					idx.push(vertexRemap[start + count - 1]);
+					idx.push(vertexRemap[start + n + 1]);
+				}
 			}
 
 			index[pos] = i; // restore
@@ -155,9 +177,12 @@ class HMDOut extends BaseLibrary {
 		for( i in 0...vbuf.length )
 			dataOut.writeFloat(vbuf[i]);
 		g.indexPosition = dataOut.length;
-		g.indexCount = ibuf.length;
-		for( i in 0...ibuf.length )
-			dataOut.writeUInt16(ibuf[i]);
+		g.indexCounts = [];
+		for( idx in ibufs ) {
+			g.indexCounts.push(idx.length);
+			for( i in idx )
+				dataOut.writeUInt16(i);
+		}
 
 		return g;
 	}
@@ -261,7 +286,7 @@ class HMDOut extends BaseLibrary {
 		for( g in this.root.getAll("Objects.Geometry") )
 			tmpGeom.set(g.getId(), { setSkin : function(_) { }, getVerticesCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
 
-		var hgeom = new Map<Int,{ gid : Int, mindexes : Array<Int> }>();
+		var hgeom = new Map<Int,Int>();
 		var hmat = new Map<Int,Int>();
 		var index = 0;
 		for( o in objects ) {
@@ -361,6 +386,8 @@ class HMDOut extends BaseLibrary {
 				}
 			}
 
+			var g = getChild(o.model, "Geometry");
+
 			var skin = null;
 			if( o.skin != null ) {
 				var rootJoints = [];
@@ -368,27 +395,23 @@ class HMDOut extends BaseLibrary {
 					if( c.isJoint )
 						rootJoints.push(c.joint);
 				skin = createSkin(hskins, tmpGeom, rootJoints, bonesPerVertex);
+				if( skin.boundJoints.length > maxBonesPerSkin ) {
+					var g = new hxd.fmt.fbx.Geometry(this, g);
+					var idx = g.getIndexes();
+					skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+				}
 				model.skin = makeSkin(skin, o.skin);
 			}
 
-			var g = getChild(o.model, "Geometry");
-			var gdata = hgeom.get(g.getId());
-			if( gdata == null ) {
+			var gid = hgeom.get(g.getId());
+			if( gid == null ) {
 				var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut);
-				var gid = d.geometries.length;
+				gid = d.geometries.length;
 				d.geometries.push(geom);
-				gdata = {
-					gid : gid,
-					mindexes : [0],
-				};
-				hgeom.set(g.getId(), gdata);
+				hgeom.set(g.getId(), gid);
 			}
-			model.geometry = gdata.gid;
-			model.materials = [];
-			for( i in gdata.mindexes ) {
-				if( mids[i] == null ) throw "assert"; // TODO : create a null material color
-				model.materials.push(mids[i]);
-			}
+			model.geometry = gid;
+			model.materials = mids;
 		}
 	}
 
@@ -405,6 +428,15 @@ class HMDOut extends BaseLibrary {
 			if( jo.transPos != null )
 				j.transpos = makePosition(jo.transPos);
 			s.joints.push(j);
+		}
+		if( skin.splitJoints != null ) {
+			s.split = [];
+			for( sp in skin.splitJoints ) {
+				var ss = new SkinSplit();
+				ss.materialIndex = sp.material;
+				ss.joints = [for( j in sp.joints ) j.index];
+				s.split.push(ss);
+			}
 		}
 		return s;
 	}
