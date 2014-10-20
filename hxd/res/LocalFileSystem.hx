@@ -46,7 +46,7 @@ private class LocalEntry extends FileEntry {
 			hmdout.load(fbx);
 			if( extension == "xtra" )
 				hmdout.loadXtra(getBytes().toString());
-			var hmd = hmdout.toHMD(null, !StringTools.startsWith(relPath, "Anim_"));
+			var hmd = hmdout.toHMD(null, !StringTools.startsWith(name, "Anim_"));
 			var out = new haxe.io.BytesOutput();
 			new hxd.fmt.hmd.Writer(out).write(hmd);
 			return out.getBytes();
