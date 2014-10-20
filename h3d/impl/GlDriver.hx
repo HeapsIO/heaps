@@ -91,7 +91,11 @@ class GlDriver extends Driver {
 	}
 
 	override function logImpl( str : String ) {
+		#if js
 		untyped console.log(str);
+		#else
+		Sys.println(str);
+		#end
 	}
 
 	override function begin(frame) {
