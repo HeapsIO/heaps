@@ -82,7 +82,6 @@ class GlDriver extends Driver {
 		var tmp = new Float32Array(8);
 		var sub = new Float32Array(tmp.buffer, 0, 4);
 		fixMult = sub.length == 1; // should be 4
-		trace(fixMult);
 		#end
 		programs = new Map();
 		curAttribs = 0;
@@ -283,8 +282,14 @@ class GlDriver extends Driver {
 		if( diff & (Pass.blendOp_mask | Pass.blendAlphaOp_mask) != 0 ) {
 			var cop = Pass.getBlendOp(bits);
 			var aop = Pass.getBlendAlphaOp(bits);
-			if( cop == aop )
+			if( cop == aop ) {
+				#if cpp
+				if( OP[cop] != GL.FUNC_ADD )
+					throw "blendEquation() disable atm (crash)";
+				#else
 				gl.blendEquation(OP[cop]);
+				#end
+			}
 			else
 				gl.blendEquationSeparate(OP[cop], OP[aop]);
 		}
