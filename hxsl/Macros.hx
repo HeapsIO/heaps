@@ -226,6 +226,15 @@ class Macros {
 				access : [AOverride],
 			});
 		}
+
+		fields.push( {
+			name : "_SHADER",
+			kind : FVar(macro : hxsl.SharedShader),
+			pos : pos,
+			access : [AStatic],
+			meta : [{ name : ":keep", pos : pos }],
+		});
+
 		return fields;
 	}
 

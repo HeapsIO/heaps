@@ -12,11 +12,11 @@ class Shader {
 
 	public function new() {
 		var cl : Dynamic = std.Type.getClass(this);
-		shader = cl.SHADER;
+		shader = cl._SHADER;
 		constModified = true;
 		if( shader == null ) {
 			shader = new SharedShader(cl.SRC);
-			cl.SHADER = shader;
+			cl._SHADER = shader;
 		}
 	}
 
