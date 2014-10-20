@@ -158,6 +158,10 @@ class LinearAnimation extends Animation {
 						m._11 = f1.sx * k1 + f2.sx * k2;
 						m._22 = f1.sy * k1 + f2.sy * k2;
 						m._33 = f1.sz * k1 + f2.sz * k2;
+					} else {
+						m._11 = 1;
+						m._22 = 1;
+						m._33 = 1;
 					}
 				} else {
 					// quaternion to matrix
@@ -195,10 +199,21 @@ class LinearAnimation extends Animation {
 					}
 				}
 
-			} else if( o.hasScale ) {
-				m._11 = f1.sx * k1 + f2.sx * k2;
-				m._22 = f1.sy * k1 + f2.sy * k2;
-				m._33 = f1.sz * k1 + f2.sz * k2;
+			} else {
+				m._12 = 0;
+				m._13 = 0;
+				m._21 = 0;
+				m._23 = decompose ? 1 : 0;
+
+				if( o.hasScale ) {
+					m._11 = f1.sx * k1 + f2.sx * k2;
+					m._22 = f1.sy * k1 + f2.sy * k2;
+					m._33 = f1.sz * k1 + f2.sz * k2;
+				} else {
+					m._11 = 1;
+					m._12 = 1;
+					m._13 = 1;
+				}
 			}
 
 
