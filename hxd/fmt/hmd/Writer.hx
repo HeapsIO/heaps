@@ -79,7 +79,7 @@ class Writer {
 			out.writeByte(g.vertexFormat.length);
 			for( f in g.vertexFormat ) {
 				writeName(f.name);
-				out.writeByte(f.format.getIndex());
+				out.writeByte(f.format.toInt());
 			}
 			out.writeInt32(g.vertexPosition);
 			out.writeByte(g.indexCounts.length);

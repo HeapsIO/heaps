@@ -55,13 +55,7 @@ class HMDModel extends MeshPrimitive {
 		var pos = 0;
 		for( f in data.vertexFormat ) {
 			addBuffer(f.name, buffer, pos);
-			var stride = switch( f.format ) {
-			case DVec4: 4;
-			case DVec3: 3;
-			case DVec2: 2;
-			case DFloat, DBytes4: 1;
-			}
-			pos += stride;
+			pos += f.format.getSize();
 		}
 	}
 

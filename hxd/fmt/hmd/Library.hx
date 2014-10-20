@@ -1,10 +1,30 @@
 package hxd.fmt.hmd;
 import hxd.fmt.hmd.Data;
 
+private class FormatMap {
+	public var size : Int;
+	public var offset : Int;
+	public var def : h3d.Vector;
+	public var next : FormatMap;
+	public function new(size, offset, def, next) {
+		this.size = size;
+		this.offset = offset;
+		this.def = def;
+		this.next = next;
+	}
+}
+
+class GeometryBuffer {
+	public var vertexes : haxe.ds.Vector<Float>;
+	public var indexes : haxe.ds.Vector<Int>;
+	public function new() {
+	}
+}
+
 class Library {
 
+	public var header : Data;
 	var entry : hxd.res.FileEntry;
-	var header : Data;
 	var cachedPrimitives : Array<h3d.prim.Primitive>;
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
@@ -15,6 +35,146 @@ class Library {
 		cachedPrimitives = [];
 		cachedAnimations = new Map();
 		cachedSkin = new Map();
+	}
+
+	@:noDebug
+	public function getBuffers( geom : Geometry, format : Array<GeometryFormat>, ?defaults : Array<h3d.Vector>, ?material : Int ) {
+
+		if( material == 0 && geom.indexCounts.length == 1 )
+			material = null;
+
+		var map = null, stride = 0;
+		for( i in 0...format.length ) {
+			var i = format.length - 1 - i;
+			var f = format[i];
+			var size  = f.format.getSize();
+			var offset = 0;
+			var found = false;
+			for( f2 in geom.vertexFormat ) {
+				if( f2.name == f.name ) {
+					if( f2.format.getSize() < size )
+						throw 'Requested ${f.name} data has only ${f2.format.getSize()} regs instead of $size';
+					found = true;
+					break;
+				}
+				offset += f2.format.getSize();
+			}
+			if( found ) {
+				map = new FormatMap(size, offset, null, map);
+			} else {
+				var def = defaults == null ? null : defaults[i];
+				if( def == null )
+					throw 'Missing required ${f.name}';
+				map = new FormatMap(size, 0, def, map);
+			}
+			stride += size;
+		}
+
+		var vsize = geom.vertexCount * geom.vertexStride * 4;
+		var vbuf = hxd.impl.Tmp.getBytes(vsize);
+		entry.open();
+		entry.skip(header.dataPosition + geom.vertexPosition);
+		entry.read(vbuf, 0, vsize);
+
+		entry.skip(geom.indexPosition - (geom.vertexPosition + vsize));
+
+		var isize;
+		if( material == null )
+			isize = geom.indexCount * 2;
+		else {
+			var ipos = 0;
+			for( i in 0...material )
+				ipos += geom.indexCounts[i];
+			entry.skip(ipos * 2);
+			isize = geom.indexCounts[material] * 2;
+		}
+		var ibuf = hxd.impl.Tmp.getBytes(isize);
+		entry.read(ibuf, 0, isize);
+
+		var buf = new GeometryBuffer();
+		if( material == null ) {
+			buf.vertexes = new haxe.ds.Vector(stride * geom.vertexCount);
+			buf.indexes = new haxe.ds.Vector(geom.indexCount);
+			var w = 0;
+			for( vid in 0...geom.vertexCount ) {
+				var m = map;
+				while( m != null ) {
+					if( m.def == null ) {
+						var r = vid * geom.vertexStride;
+						for( i in 0...m.size )
+							buf.vertexes[w++] = vbuf.getFloat((r + m.offset + i) << 2);
+					} else {
+						switch( m.size ) {
+						case 1:
+							buf.vertexes[w++] = m.def.x;
+						case 2:
+							buf.vertexes[w++] = m.def.x;
+							buf.vertexes[w++] = m.def.y;
+						case 3:
+							buf.vertexes[w++] = m.def.x;
+							buf.vertexes[w++] = m.def.y;
+							buf.vertexes[w++] = m.def.z;
+						default:
+							buf.vertexes[w++] = m.def.x;
+							buf.vertexes[w++] = m.def.y;
+							buf.vertexes[w++] = m.def.z;
+							buf.vertexes[w++] = m.def.w;
+						}
+					}
+					m = m.next;
+				}
+			}
+			var r = 0;
+			for( i in 0...buf.indexes.length )
+				buf.indexes[i] = ibuf.get(r++) | (ibuf.get(r++) << 8);
+		} else {
+			var icount = geom.indexCounts[material];
+			var vmap = new haxe.ds.Vector(geom.vertexCount);
+			var vertexes = new hxd.FloatBuffer();
+			buf.indexes = new haxe.ds.Vector(icount);
+			var r = 0, vcount = 0;
+			for( i in 0...buf.indexes.length ) {
+				var vid = ibuf.get(r++) | (ibuf.get(r++) << 8);
+				var rid = vmap[vid];
+				if( rid == 0 ) {
+					rid = ++vcount;
+					vmap[vid] = rid;
+					var m = map;
+					while( m != null ) {
+						if( m.def == null ) {
+							var r = vid * geom.vertexStride;
+							for( i in 0...m.size )
+								vertexes.push(vbuf.getFloat((r + m.offset + i) << 2));
+						} else {
+							switch( m.size ) {
+							case 1:
+								vertexes.push(m.def.x);
+							case 2:
+								vertexes.push(m.def.x);
+								vertexes.push(m.def.y);
+							case 3:
+								vertexes.push(m.def.x);
+								vertexes.push(m.def.y);
+								vertexes.push(m.def.z);
+							default:
+								vertexes.push(m.def.x);
+								vertexes.push(m.def.y);
+								vertexes.push(m.def.z);
+								vertexes.push(m.def.w);
+							}
+						}
+						m = m.next;
+					}
+				}
+				buf.indexes[i] = rid - 1;
+			}
+			buf.vertexes = haxe.ds.Vector.fromData(vertexes.getNative());
+		}
+
+		entry.close();
+		hxd.impl.Tmp.saveBytes(ibuf);
+		hxd.impl.Tmp.saveBytes(vbuf);
+		return buf;
 	}
 
 	function makePrimitive( id : Int ) {
@@ -94,9 +254,9 @@ class Library {
 			} else {
 				var prim = makePrimitive(m.geometry);
 				if( m.skin != null ) {
-					var sk = new h3d.scene.Skin(makeSkin(m.skin), [for( m in m.materials ) makeMaterial(m, loadTexture)]);
-					sk.primitive = prim;
-					obj = sk;
+					var skinData = makeSkin(m.skin);
+					skinData.primitive = prim;
+					obj = new h3d.scene.Skin(skinData, [for( m in m.materials ) makeMaterial(m, loadTexture)]);
 				} else if( m.materials.length == 1 )
 					obj = new h3d.scene.Mesh(prim, makeMaterial(m.materials[0],loadTexture));
 				else

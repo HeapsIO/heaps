@@ -1,11 +1,27 @@
 package hxd.fmt.hmd;
 
-enum GeometryDataFormat {
-	DFloat;
-	DVec2;
-	DVec3;
-	DVec4;
-	DBytes4;
+@:enum abstract GeometryDataFormat(Int) {
+
+	public var DFloat = 1;
+	public var DVec2 = 2;
+	public var DVec3 = 3;
+	public var DVec4 = 4;
+	public var DBytes4 = 9;
+
+	inline function new(v) {
+		this = v;
+	}
+
+	public inline function getSize() {
+		return this & 7;
+	}
+
+	public inline function toInt() {
+		return this;
+	}
+	public static inline function fromInt( v : Int ) : GeometryDataFormat {
+		return new GeometryDataFormat(v);
+	}
 }
 
 typedef DataPosition = Int;
@@ -61,10 +77,16 @@ class Geometry {
 	public var vertexStride : Int;
 	public var vertexFormat : Array<GeometryFormat>;
 	public var vertexPosition : DataPosition;
+	public var indexCount(get, never) : Int;
 	public var indexCounts : Array<Int>;
 	public var indexPosition : DataPosition;
 	public var bounds : h3d.col.Bounds;
 	public function new() {
+	}
+	function get_indexCount() {
+		var k = 0;
+		for( i in indexCounts ) k += i;
+		return k;
 	}
 }
 

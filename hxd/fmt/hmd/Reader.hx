@@ -3,7 +3,6 @@ import hxd.fmt.hmd.Data;
 
 class Reader {
 
-	static var FORMATS = Type.allEnums(GeometryDataFormat);
 	static var BLEND = Type.allEnums(h2d.BlendMode);
 	static var CULLING = Type.allEnums(h3d.mat.Data.Face);
 
@@ -98,7 +97,7 @@ class Reader {
 			var g = new Geometry();
 			g.vertexCount = i.readInt32();
 			g.vertexStride = i.readByte();
-			g.vertexFormat = [for( k in 0...i.readByte() ) new GeometryFormat(readName(), FORMATS[i.readByte()])];
+			g.vertexFormat = [for( k in 0...i.readByte() ) new GeometryFormat(readName(), GeometryDataFormat.fromInt(i.readByte()))];
 			g.vertexPosition = i.readInt32();
 			g.indexCounts = [for( k in 0...i.readByte() ) i.readInt32()];
 			g.indexPosition = i.readInt32();
