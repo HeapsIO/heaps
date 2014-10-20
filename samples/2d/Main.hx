@@ -31,6 +31,7 @@ class Main extends hxd.App {
 			bmp.blendMode = Add;
 		}
 
+		#if !cpp
 		// load a true type font, can be not very high quality
 		var font = hxd.Res.trueTypeFont.build(64);
 
@@ -49,6 +50,8 @@ class Main extends hxd.App {
 		// set the text position
 		tf.x = 20;
 		tf.y = s2d.height - 80;
+
+		#end
 
 		// load a bitmap font Resource
 		var font = hxd.Res.customFont.toFont();
@@ -72,7 +75,7 @@ class Main extends hxd.App {
 		spr.y = Std.int(s2d.height / 2);
 
 		// move our text up/down accordingly
-		tf.y = s2d.height - 80;
+		if( tf != null ) tf.y = s2d.height - 80;
 	}
 
 	override function update(dt:Float) {

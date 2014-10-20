@@ -86,7 +86,6 @@ class GlDriver extends Driver {
 		programs = new Map();
 		curAttribs = 0;
 		curMatBits = -1;
-		selectMaterialBits(0);
 	}
 
 	override function logImpl( str : String ) {
@@ -99,6 +98,10 @@ class GlDriver extends Driver {
 
 	override function begin(frame) {
 		this.frame = frame;
+		#if cpp
+		curAttribs = 0;
+		curMatBits = -1;
+		#end
 		reset();
 	}
 
@@ -175,6 +178,7 @@ class GlDriver extends Driver {
 			programs.set(shader.id, p);
 		}
 		if( curShader == p ) return false;
+
 		gl.useProgram(p.p);
 		for( i in curAttribs...p.attribs.length ) {
 			gl.enableVertexAttribArray(i);

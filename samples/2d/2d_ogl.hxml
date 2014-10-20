@@ -1,0 +1,8 @@
+-cpp bin
+-main Main
+-lib heaps
+-dce full
+-D resourcesPath=../res
+--macro include('h2d')
+-lib nme
+--remap flash:nme

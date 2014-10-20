@@ -11,9 +11,11 @@ class App {
 			this.engine = engine;
 			haxe.Timer.delay(setup, 0);
 		} else {
-			this.engine = engine = new h3d.Engine();
-			engine.onReady = setup;
-			engine.init();
+			hxd.System.start(function() {
+				this.engine = engine = new h3d.Engine();
+				engine.onReady = setup;
+				engine.init();
+			});
 		}
 	}
 

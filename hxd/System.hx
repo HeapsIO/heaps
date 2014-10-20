@@ -62,8 +62,19 @@ class System {
 	}
 
 	static var loop = null;
+	#if nme
+	static var VIEW = null;
+	#end
 
 	public static function setLoop( f : Void -> Void ) {
+		#if nme
+		if( VIEW == null ) {
+			VIEW = new nme.display.OpenGLView();
+			VIEW.name = "glView";
+			flash.Lib.current.addChildAt(VIEW,0);
+		}
+		VIEW.render = function(_) if( f != null ) f();
+		#else
 		if( loop != null )
 			flash.Lib.current.removeEventListener(flash.events.Event.ENTER_FRAME, loop);
 		if( f == null )
@@ -72,6 +83,35 @@ class System {
 			loop = function(_) f();
 			flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, loop);
 		}
+		#end
+	}
+
+	public static function start(callb) {
+		#if nme
+		nme.Lib.create(function() {
+            nme.Lib.current.stage.align = nme.display.StageAlign.TOP_LEFT;
+            nme.Lib.current.stage.scaleMode = nme.display.StageScaleMode.NO_SCALE;
+            nme.Lib.current.loaderInfo = nme.display.LoaderInfo.create(null);
+            callb();
+         },
+         640, 480,
+         120, // using 60 FPS with no vsync gives a fps ~= 50
+         0xFFFFFF,
+         (true ? nme.Lib.HARDWARE : 0) |
+         nme.Lib.ALLOW_SHADERS | nme.Lib.REQUIRE_SHADERS |
+         (true ? nme.Lib.DEPTH_BUFFER : 0) |
+         (false ? nme.Lib.STENCIL_BUFFER : 0) |
+         (true ? nme.Lib.RESIZABLE : 0) |
+         (false ? nme.Lib.BORDERLESS : 0) |
+         (true ? nme.Lib.VSYNC : 0) |
+         (false ? nme.Lib.FULLSCREEN : 0) |
+         (0 == 4 ? nme.Lib.HW_AA_HIRES : 0) |
+         (0 == 2 ? nme.Lib.HW_AA : 0),
+         "Heaps Application"
+		);
+		#else
+		callb();
+		#end
 	}
 
 	#if flash
@@ -176,6 +216,10 @@ class System {
 		LOOP = f;
 	}
 
+	public static function start( callb ) {
+		callb();
+	}
+
 	public static var setCursor = setNativeCursor;
 
 	public static function setNativeCursor( c : Cursor ) {
@@ -218,87 +262,6 @@ class System {
 
 	static function get_height() {
 		return Math.round(js.Browser.document.body.clientHeight  * js.Browser.window.devicePixelRatio);
-	}
-
-	#elseif openfl
-
-	static var VIEW = null;
-
-	public static function setLoop( f : Void -> Void ) {
-		if( VIEW == null ) {
-			VIEW = new openfl.display.OpenGLView();
-			VIEW.name = "glView";
-			flash.Lib.current.addChildAt(VIEW,0);
-		}
-		VIEW.render = function(_) if( f != null ) f();
-	}
-
-	public static var setCursor = setNativeCursor;
-
-	public static function setNativeCursor( c : Cursor ) {
-		/* not supported by openFL
-		flash.ui.Mouse.cursor = switch( c ) {
-		case Default: "auto";
-		case Button: "button";
-		case Move: "hand";
-		case TextInput: "ibeam";
-		}*/
-	}
-
-	static function get_lang() {
-		return flash.system.Capabilities.language.split("-")[0];
-	}
-
-	static function get_screenDPI() {
-		return flash.system.Capabilities.screenDPI;
-	}
-
-	static function get_isAndroid() {
-		#if android
-		return true;
-		#else
-		return false;
-		#end
-	}
-
-	static var CACHED_NAME = null;
-	public static function getDeviceName() {
-		if( CACHED_NAME != null )
-			return CACHED_NAME;
-		var name;
-		if( isAndroid ) {
-			try {
-				var content = sys.io.File.getContent("/system/build.prop");
-				name = StringTools.trim(content.split("ro.product.model=")[1].split("\n")[0]);
-			} catch( e : Dynamic ) {
-				name = "Android";
-			}
-		} else
-			name = "PC";
-		CACHED_NAME = name;
-		return name;
-	}
-
-	public static function exit() {
-		Sys.exit(0);
-	}
-
-	static function get_isWindowed() {
-		return true;
-	}
-
-	static function get_isTouch() {
-		return false;
-	}
-
-	static function get_width() {
-		var Cap = flash.system.Capabilities;
-		return isWindowed ? flash.Lib.current.stage.stageWidth : Std.int(Cap.screenResolutionX > Cap.screenResolutionY ? Cap.screenResolutionX : Cap.screenResolutionY);
-	}
-
-	static function get_height() {
-		var Cap = flash.system.Capabilities;
-		return isWindowed ? flash.Lib.current.stage.stageHeight : Std.int(Cap.screenResolutionX > Cap.screenResolutionY ? Cap.screenResolutionY : Cap.screenResolutionX);
 	}
 
 	#end

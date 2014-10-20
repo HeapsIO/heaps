@@ -29,7 +29,7 @@ class Stage {
 	function new() {
 		eventTargets = new List();
 		resizeEvents = new List();
-		#if (flash || openfl)
+		#if (flash || openfl || nme)
 		stage = flash.Lib.current.stage;
 		stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
 		stage.addEventListener(flash.events.Event.RESIZE, onResize);
@@ -241,7 +241,7 @@ class Stage {
 	}
 
 	function getCharCode( e : flash.events.KeyboardEvent ) {
-		#if openfl
+		#if cpp
 		return e.charCode;
 		#else
 		// disable some invalid charcodes
@@ -382,18 +382,6 @@ class Stage {
 
 	function get_height() {
 		return 0;
-	}
-
-#end
-
-#if openfl
-
-	static function openFLBoot(callb) {
-		// init done with OpenFL ApplicationMain
-		if( flash.Lib.current.stage != null ) {
-			callb();
-			return;
-		}
 	}
 
 #end

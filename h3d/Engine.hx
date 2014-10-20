@@ -36,15 +36,6 @@ class Engine {
 		this.hardware = hardware;
 		this.antiAlias = aa;
 		this.autoResize = true;
-
-		#if (!flash && openfl)
-			hxd.Stage.openFLBoot(start);
-		#else
-			start();
-		#end
-	}
-
-	function start() {
 		fullScreen = !hxd.System.isWindowed;
 		var stage = hxd.Stage.getInstance();
 		realFps = stage.getFrameRate();

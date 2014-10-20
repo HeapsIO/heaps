@@ -2,6 +2,5 @@
 *.swf
 *.js
 *.js.map
-/bin
-/samples/res/.tmp
+bin
 .tmp
