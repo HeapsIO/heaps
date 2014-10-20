@@ -124,8 +124,9 @@ class Pass {
 	public function getShader< T:hxsl.Shader >(t:Class<T>) : T {
 		var s = shaders;
 		while( s != null ) {
-			if( Std.is(s.s, t) )
-				return cast s.s;
+			var sh = Std.instance(s.s, t);
+			if( sh != null )
+				return sh;
 			s = s.next;
 		}
 		return null;

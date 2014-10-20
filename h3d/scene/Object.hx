@@ -198,13 +198,14 @@ class Object {
 	}
 
 	public inline function isMesh() {
-		return Std.is(this, Mesh);
+		return Std.instance(this, Mesh) != null;
 	}
 
 	public function toMesh() : Mesh {
-		if( isMesh() )
-			return cast this;
-		throw (name == null ? "Object" : name) + " is not a Mesh";
+		var m = Std.instance(this, Mesh);
+		if( m != null )
+			return m;
+		throw this + " is not a Mesh";
 	}
 
 	// shortcut for parent.removeChild

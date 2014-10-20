@@ -94,9 +94,11 @@ class Drawable extends Sprite {
 	}
 
 	public function getShader< T:hxsl.Shader >( stype : Class<T> ) : T {
-		if (shaders != null) for( s in shaders )
-			if( Std.is(s, stype) )
-				return cast s;
+		if (shaders != null) for( s in shaders ) {
+			var s = Std.instance(s, stype);
+			if( s != null )
+				return s;
+		}
 		return null;
 	}
 
