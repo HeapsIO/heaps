@@ -78,6 +78,7 @@ class Material {
 		// DO NOT clone passes (it's up to the superclass to recreate the passes + shaders)
 		m.castShadows = castShadows;
 		m.receiveShadows = receiveShadows;
+		m.name = name;
 		return m;
 	}
 
