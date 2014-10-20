@@ -618,7 +618,7 @@ class Viewer extends hxd.App {
 		].join("\n");
 		tf_keys.y = s2d.height - tf_keys.textHeight - 35;
 
-		var file = props.curFile.split("/").pop().split("\\").pop();
+		var file = props.curFile == null ? "<empty>" : props.curFile.split("/").pop().split("\\").pop();
 		if( props.convertHMD && StringTools.endsWith(file.toLowerCase(), ".fbx") )
 			file = file.substr(0, -3) + "hmd";
 
@@ -634,7 +634,8 @@ class Viewer extends hxd.App {
 
 	static var inst : Viewer;
 
-	static function checkInvoke() {
+	static function initAIR() {
+		#if air3
 		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.InvokeEvent.INVOKE, function(e:Dynamic) {
 			var e : flash.events.InvokeEvent = cast e;
 			if( e.arguments.length > 0 ) {
@@ -663,12 +664,13 @@ class Viewer extends hxd.App {
 				inst.loadFile(props.curFile);
 			}
 		});
+		#end
 	}
 
 	static function main() {
 		inst = new Viewer();
 		if( flash.system.Capabilities.playerType == "Desktop" )
-			checkInvoke();
+			initAIR();
 	}
 
 }
