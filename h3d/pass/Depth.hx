@@ -4,6 +4,7 @@ class Depth extends Default {
 
 	var depthMapId : Int;
 	public var enableSky : Bool = false;
+	public var reduceSize : Int = 0;
 
 	public function new() {
 		super();
@@ -16,7 +17,7 @@ class Depth extends Default {
 	}
 
 	override function draw( passes ) {
-		var texture = tcache.allocTarget("depthMap", ctx, ctx.engine.width, ctx.engine.height);
+		var texture = tcache.allocTarget("depthMap", ctx, ctx.engine.width >> reduceSize, ctx.engine.height >> reduceSize);
 		ctx.engine.setTarget(texture);
 		ctx.engine.clear(enableSky ? 0 : 0xFF0000, 1);
 		passes = super.draw(passes);
