@@ -213,6 +213,7 @@ class Matrix {
 		multiply(tmp, this);
 	}
 
+	@:noDebug
 	public function multiply3x4( a : Matrix, b : Matrix ) {
 		var m11 = a._11; var m12 = a._12; var m13 = a._13;
 		var m21 = a._21; var m22 = a._22; var m23 = a._23;

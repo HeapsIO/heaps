@@ -293,23 +293,27 @@ private class LocalEntry extends FileEntry {
 
 	var watchCallback : Void -> Void;
 	var watchTime : Float;
+	static var WATCH_INDEX = 0;
 	static var WATCH_LIST : Array<LocalEntry> = null;
 
 	static function checkFiles(_) {
-		for( w in WATCH_LIST ) {
-			var t = try w.file.modificationDate.getTime() catch( e : Dynamic ) -1;
-			if( t != w.watchTime ) {
-				// check we can write (might be deleted/renamed/currently writing)
-				try {
-					var f = new flash.filesystem.FileStream();
-					f.open(w.file, flash.filesystem.FileMode.READ);
-					f.close();
-					f.open(w.file, flash.filesystem.FileMode.APPEND);
-					f.close();
-				} catch( e : Dynamic ) continue;
-				w.watchTime = t;
-				w.watchCallback();
-			}
+		var w = WATCH_LIST[WATCH_INDEX++];
+		if( w == null ) {
+			WATCH_INDEX = 0;
+			return;
+		}
+		var t = try w.file.modificationDate.getTime() catch( e : Dynamic ) -1;
+		if( t != w.watchTime ) {
+			// check we can write (might be deleted/renamed/currently writing)
+			try {
+				var f = new flash.filesystem.FileStream();
+				f.open(w.file, flash.filesystem.FileMode.READ);
+				f.close();
+				f.open(w.file, flash.filesystem.FileMode.APPEND);
+				f.close();
+			} catch( e : Dynamic ) return;
+			w.watchTime = t;
+			w.watchCallback();
 		}
 	}
 

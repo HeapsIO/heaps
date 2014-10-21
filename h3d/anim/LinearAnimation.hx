@@ -99,6 +99,7 @@ class LinearAnimation extends Animation {
 	}
 
 	@:access(h3d.scene.Skin)
+	@:noDebug
 	override function sync( decompose = false ) {
 		if( frame == syncFrame && !decompose )
 			return;

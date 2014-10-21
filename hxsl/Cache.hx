@@ -41,6 +41,7 @@ class Cache {
 		return id;
 	}
 
+	@:noDebug
 	public function link( shaders : hxsl.ShaderList, outVars : Int ) {
 		var c = linkCache.get(outVars);
 		if( c == null ) {
@@ -57,9 +58,12 @@ class Cache {
 			}
 			c = cs;
 		}
-		if( c.linked != null )
-			return c.linked;
+		if( c.linked == null )
+			c.linked = compileRuntimeShader(shaders, outVars);
+		return c.linked;
+	}
 
+	function compileRuntimeShader( shaders : hxsl.ShaderList, outVars : Int ) {
 		var shaderDatas = [];
 		var index = 0;
 		for( s in shaders ) {
@@ -96,7 +100,6 @@ class Cache {
 			r.globals.set(v.gid, true);
 		for( v in r.fragment.globals )
 			r.globals.set(v.gid, true);
-		c.linked = r;
 		return r;
 	}
 
