@@ -74,7 +74,7 @@ class Worker<T:EnumValue> {
 		var cur = flash.system.Worker.current;
 		if( cur.isPrimordial ) {
 			var wait = true;
-			var bgWorker = flash.system.WorkerDomain.current.createWorker(flash.Lib.current.loaderInfo.bytes);
+			var bgWorker = flash.system.WorkerDomain.current.createWorker(flash.Lib.current.loaderInfo.bytes, true);
 			sendChan = cur.createMessageChannel(bgWorker);
 			recvChan = bgWorker.createMessageChannel(cur);
 			recvChan.addEventListener(flash.events.Event.CHANNEL_MESSAGE, function(_) {

@@ -19,11 +19,13 @@ class Channel {
 	var vol : Float;
 	var volumeTarget : Float;
 	var volumeSpeed : Float;
+	public var res(default, null) : Sound;
 	public var loop(default, set) : Bool;
 	public var next(default,set) : Channel;
 	public var volume(default, set) : Float;
 
-	public function new(id, v) {
+	public function new(res, id, v) {
+		this.res = res;
 		this.vol = volume = v;
 		this.id = id;
 		loop = true;
@@ -94,8 +96,8 @@ class MusicWorker extends Worker<MusicMessage> {
 		return new MusicWorker();
 	}
 
-	function makeChannel( volume : Float ) {
-		var c = new Channel(channelID++, volume);
+	function makeChannel( res, volume : Float ) {
+		var c = new Channel(res, channelID++, volume);
 		channels.push(c);
 		cmap.set(c.id, c);
 		return c;
@@ -104,7 +106,7 @@ class MusicWorker extends Worker<MusicMessage> {
 	override function handleMessage( msg : MusicMessage ) {
 		switch( msg ) {
 		case Play(path, volume):
-			var c = makeChannel(volume);
+			var c = makeChannel(null, volume);
 			var bytes = hxd.Res.loader.load(path).entry.getBytes();
 			c.snd = new flash.media.Sound();
 			c.snd.loadCompressedDataFromByteArray(bytes.getData(), bytes.length);
@@ -217,7 +219,7 @@ class MusicWorker extends Worker<MusicMessage> {
 
 	public static function play( music : Sound, volume = 1. ) {
 		inst.send(Play(music.entry.path, volume));
-		return inst.makeChannel(volume);
+		return inst.makeChannel(music, volume);
 	}
 
 	static var inst : MusicWorker;
