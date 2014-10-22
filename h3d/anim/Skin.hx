@@ -89,7 +89,7 @@ class Skin {
 		for( i in 0...vertexCount ) {
 			var il = envelop[i];
 			if( il == null ) il = [];
-			il.sort(sortInfluences);
+			haxe.ds.ArraySort.sort(il,sortInfluences);
 			if( il.length > bonesPerVertex )
 				il = il.slice(0, bonesPerVertex);
 			var tw = 0.;
@@ -163,7 +163,7 @@ class Skin {
 		for( g in groups )
 			for( j in g.joints )
 				joints[j.bindIndex].groups.push(g);
-		joints.sort(function(j1, j2) return j2.groups.length - j1.groups.length);
+		haxe.ds.ArraySort.sort(joints, function(j1, j2) return j2.groups.length - j1.groups.length);
 		for( j in joints ) {
 			for( i in 0...maxBones ) {
 				var ok = true;

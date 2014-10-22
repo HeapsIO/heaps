@@ -157,7 +157,7 @@ class Dump {
 				if( o.flags.has(HasRotation) )
 					stride += 3;
 				if( o.flags.has(HasScale) )
-					stride += 2;
+					stride += 3;
 				if( o.flags.has(SinglePosition) )
 					frames = 1;
 				if( stride > 0 )

@@ -236,19 +236,19 @@ class Quat {
 	}
 
 	public inline function conjugate() {
-		x *= -1;
-		y *= -1;
-		z *= -1;
+		x = -x;
+		y = -y;
+		z = -z;
 	}
 
 	/**
 		Negate the quaternion: this will not change the actual angle, use `conjugate` for that.
 	**/
 	public inline function negate() {
-		x *= -1;
-		y *= -1;
-		z *= -1;
-		w *= -1;
+		x = -x;
+		y = -y;
+		z = -z;
+		w = -w;
 	}
 
 	public inline function dot( q : Quat ) {
