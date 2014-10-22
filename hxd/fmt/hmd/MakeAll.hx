@@ -18,6 +18,8 @@ class MakeAll {
 			var xtraPath = path.substr(0, -3) + "xtra";
 			if( !sys.FileSystem.exists(xtraPath) )
 				xtraPath = null;
+			else
+				target = target.substr(0, -7) + "xtra.hmd";
 			if( sys.FileSystem.exists(target) && sys.FileSystem.stat(target).mtime.getTime() >= sys.FileSystem.stat(path).mtime.getTime() && (xtraPath == null || sys.FileSystem.stat(target).mtime.getTime() >= sys.FileSystem.stat(xtraPath).mtime.getTime()) )
 				continue;
 			Sys.println(relPath);
