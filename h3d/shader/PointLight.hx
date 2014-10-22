@@ -16,14 +16,14 @@ class PointLight extends hxsl.Shader {
 			var dvec = lightPosition - transformedPosition;
 			var dist2 = dvec.dot(dvec);
 			var dist = dist2.sqrt();
-			lightColor.rgb += color * (transformedNormal.dot(dvec).max(0.) / vec3(dist, dist2, dist * dist2).dot(params));
+			lightColor.rgb += color * (transformedNormal.dot(dvec).max(0.) / vec3(1, dist, dist2).dot(params));
 		}
 
 		function fragment() {
 			var dvec = lightPosition - transformedPosition;
 			var dist2 = dvec.dot(dvec);
 			var dist = dist2.sqrt();
-			lightPixelColor.rgb += color * (transformedNormal.dot(dvec).max(0.) / vec3(dist, dist2, dist * dist2).dot(params));
+			lightPixelColor.rgb += color * (transformedNormal.dot(dvec).max(0.) / vec3(1, dist, dist2).dot(params));
 		}
 
 	};
@@ -31,7 +31,7 @@ class PointLight extends hxsl.Shader {
 	public function new() {
 		super();
 		color.set(1, 1, 1);
-		params.set(0, 1, 0);
+		params.set(0, 0, 1);
 	}
 
 }
