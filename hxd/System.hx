@@ -88,13 +88,19 @@ class System {
 
 	public static function start(callb) {
 		#if nme
+		var windowSize = haxe.macro.Compiler.getDefine("window");
+		if( windowSize == null ) windowSize = "800x600";
+		var windowSize = windowSize.split("x");
+		var width = Std.parseInt(windowSize[0]), height = Std.parseInt(windowSize[1]);
+		if( width < 100 ) width = 100;
+		if( height < 100 ) height = 100;
 		nme.Lib.create(function() {
             nme.Lib.current.stage.align = nme.display.StageAlign.TOP_LEFT;
             nme.Lib.current.stage.scaleMode = nme.display.StageScaleMode.NO_SCALE;
             nme.Lib.current.loaderInfo = nme.display.LoaderInfo.create(null);
             callb();
          },
-         640, 480,
+         width, height,
          120, // using 60 FPS with no vsync gives a fps ~= 50
          0xFFFFFF,
          (true ? nme.Lib.HARDWARE : 0) |
