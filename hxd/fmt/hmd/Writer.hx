@@ -22,27 +22,31 @@ class Writer {
 		out.writeString(name);
  	}
 
+	inline function writeFloat( f : Float ) {
+		out.writeFloat( f == 0 ? 0 : f ); // prevent negative zero
+	}
+
 	function writePosition( p : Position, hasScale = true ) {
-		out.writeFloat(p.x);
-		out.writeFloat(p.y);
-		out.writeFloat(p.z);
-		out.writeFloat(p.qx);
-		out.writeFloat(p.qy);
-		out.writeFloat(p.qz);
+		writeFloat(p.x);
+		writeFloat(p.y);
+		writeFloat(p.z);
+		writeFloat(p.qx);
+		writeFloat(p.qy);
+		writeFloat(p.qz);
 		if( hasScale ) {
-			out.writeFloat(p.sx);
-			out.writeFloat(p.sy);
-			out.writeFloat(p.sz);
+			writeFloat(p.sx);
+			writeFloat(p.sy);
+			writeFloat(p.sz);
 		}
 	}
 
 	function writeBounds( b : h3d.col.Bounds ) {
-		out.writeFloat(b.xMin);
-		out.writeFloat(b.yMin);
-		out.writeFloat(b.zMin);
-		out.writeFloat(b.xMax);
-		out.writeFloat(b.yMax);
-		out.writeFloat(b.zMax);
+		writeFloat(b.xMin);
+		writeFloat(b.yMin);
+		writeFloat(b.zMin);
+		writeFloat(b.xMax);
+		writeFloat(b.yMax);
+		writeFloat(b.zMax);
 	}
 
 	function writeSkin( s : Skin ) {
@@ -95,7 +99,7 @@ class Writer {
 			writeName(m.diffuseTexture);
 			out.writeByte(m.blendMode.getIndex());
 			out.writeByte(m.culling.getIndex());
-			out.writeFloat(m.killAlpha == null ? 1 : m.killAlpha);
+			writeFloat(m.killAlpha == null ? 1 : m.killAlpha);
 		}
 
 		out.writeInt32(d.models.length);
@@ -119,8 +123,8 @@ class Writer {
 		for( a in d.animations ) {
 			writeName(a.name);
 			out.writeInt32(a.frames);
-			out.writeFloat(a.sampling);
-			out.writeFloat(a.speed);
+			writeFloat(a.sampling);
+			writeFloat(a.speed);
 			out.writeByte(a.loop?1:0);
 			out.writeInt32(a.dataPosition);
 			out.writeInt32(a.objects.length);

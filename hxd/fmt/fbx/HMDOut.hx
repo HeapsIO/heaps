@@ -193,7 +193,7 @@ class HMDOut extends BaseLibrary {
 		// write data
 		g.vertexPosition = dataOut.length;
 		for( i in 0...vbuf.length )
-			dataOut.writeFloat(vbuf[i]);
+			writeFloat(vbuf[i]);
 		g.indexPosition = dataOut.length;
 		g.indexCounts = [];
 
@@ -338,12 +338,7 @@ class HMDOut extends BaseLibrary {
 
 			var q = m.toQuaternion(true);
 			q.normalize();
-			if( q.w < 0 ) {
-				q.x *= -1;
-				q.y *= -1;
-				q.z *= -1;
-				q.w *= -1;
-			}
+			if( q.w < 0 ) q.negate();
 			p.qx = q.x;
 			p.qy = q.y;
 			p.qz = q.z;
@@ -487,22 +482,21 @@ class HMDOut extends BaseLibrary {
 		var q = new h3d.Quat();
 		q.initRotateMatrix(m);
 		q.normalize();
-		if( q.w < 0 ) {
-			q.x *= -1;
-			q.y *= -1;
-			q.z *= -1;
-			q.w *= -1;
-		}
+		if( q.w < 0 ) q.negate();
 		p.sx = 1;
 		p.sy = 1;
 		p.sz = 1;
-		p.qx = q.x;
-		p.qy = q.y;
-		p.qz = q.z;
-		p.x = m._41;
-		p.y = m._42;
-		p.z = m._43;
+		p.qx = round(q.x);
+		p.qy = round(q.y);
+		p.qz = round(q.z);
+		p.x = round(m._41);
+		p.y = round(m._42);
+		p.z = round(m._43);
 		return p;
+	}
+
+	inline function writeFloat( f : Float ) {
+		dataOut.writeFloat( f == 0 ? 0 : f ); // prevent negative zero
 	}
 
 	function makeAnimation( anim : h3d.anim.Animation ) {
@@ -515,6 +509,7 @@ class HMDOut extends BaseLibrary {
 		a.objects = [];
 		a.dataPosition = dataOut.length;
 		var objects : Array<h3d.anim.LinearAnimation.LinearObject> = cast @:privateAccess anim.objects;
+		objects.sort(function(o1, o2) return Reflect.compare(o1.objectName, o2.objectName));
 		for( obj in objects ) {
 			var o = new AnimationObject();
 			o.name = obj.objectName;
@@ -525,35 +520,37 @@ class HMDOut extends BaseLibrary {
 					o.flags.set(HasRotation);
 				if( obj.hasScale )
 					o.flags.set(HasScale);
+				if( obj.frames.length == 1 )
+					o.flags.set(SinglePosition);
 				for( f in obj.frames ) {
 					if( o.flags.has(HasPosition) ) {
-						dataOut.writeFloat(f.tx);
-						dataOut.writeFloat(f.ty);
-						dataOut.writeFloat(f.tz);
+						writeFloat(f.tx);
+						writeFloat(f.ty);
+						writeFloat(f.tz);
 					}
 					if( o.flags.has(HasRotation) ) {
 						var ql = Math.sqrt(f.qx * f.qx + f.qy * f.qy + f.qz * f.qz + f.qw * f.qw);
 						if( f.qw < 0 ) ql = -ql;
-						dataOut.writeFloat(f.qx / ql);
-						dataOut.writeFloat(f.qy / ql);
-						dataOut.writeFloat(f.qz / ql);
+						writeFloat(round(f.qx / ql));
+						writeFloat(round(f.qy / ql));
+						writeFloat(round(f.qz / ql));
 					}
 					if( o.flags.has(HasScale) ) {
-						dataOut.writeFloat(f.sx);
-						dataOut.writeFloat(f.sy);
-						dataOut.writeFloat(f.sz);
+						writeFloat(f.sx);
+						writeFloat(f.sy);
+						writeFloat(f.sz);
 					}
 				}
 			}
 			if( obj.uvs != null ) {
 				o.flags.set(HasUV);
 				for( f in obj.uvs )
-					dataOut.writeFloat(f);
+					writeFloat(f);
 			}
 			if( obj.alphas != null ) {
 				o.flags.set(HasAlpha);
 				for( f in obj.alphas )
-					dataOut.writeFloat(f);
+					writeFloat(f);
 			}
 			a.objects.push(o);
 		}
