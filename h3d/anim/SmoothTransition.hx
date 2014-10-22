@@ -5,6 +5,7 @@ class SmoothedObject extends Animation.AnimatedObject {
 	public var outMatrix : h3d.Matrix;
 	public var isAnim1 : Bool;
 	public var isAnim2 : Bool;
+	public var def : h3d.Matrix;
 	public function new(name) {
 		super(name);
 		outMatrix = h3d.Matrix.I();
@@ -52,11 +53,32 @@ class SmoothTransition extends Transition {
 				so.targetJoint = o.targetJoint;
 				so.targetSkin = o.targetSkin;
 				so.targetObject = o.targetObject;
-				so.tmpMatrix = mzero;
 				allObjects.set(o.objectName, so);
 				objects.push(so);
 			}
 			so.isAnim2 = true;
+		}
+		for( so in allObjects ) {
+			if( so.isAnim1 && so.isAnim2 )
+				continue;
+			if( so.targetSkin != null ) {
+				var j = @:privateAccess so.targetSkin.skinData.allJoints[so.targetJoint];
+				var q = new h3d.Quat();
+				q.initRotateMatrix(j.defMat);
+				q.normalize();
+				so.def = j.defMat.clone();
+				// todo : extract default scale from matrix
+				so.def._11 = 1;
+				so.def._22 = 1;
+				so.def._33 = 1;
+				so.def._12 = q.x;
+				so.def._13 = q.y;
+				so.def._21 = q.z;
+				so.def._23 = q.w;
+			} else
+				so.def = mzero;
+			if( !so.isAnim1 )
+				so.tmpMatrix = so.def;
 		}
 	}
 
@@ -78,11 +100,10 @@ class SmoothTransition extends Transition {
 		}
 		anim2.sync(true);
 		var a = 1 - blendFactor, b = blendFactor;
-		var mzero = MZERO;
 		var q1 = new h3d.Quat(), q2 = new h3d.Quat(), qout = new h3d.Quat();
 		for( o in objects ) {
 			var m1 = o.tmpMatrix;
-			var m2 = if( !o.isAnim2 ) mzero else if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] else o.targetObject.defaultTransform;
+			var m2 = if( !o.isAnim2 ) o.def else if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] else o.targetObject.defaultTransform;
 			var m = o.outMatrix;
 			// interpolate rotation
 			q1.set(m1._12, m1._13, m1._21, m1._23);

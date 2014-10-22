@@ -37,6 +37,15 @@ class Library {
 		cachedSkin = new Map();
 	}
 
+	public function getData() {
+		var b = haxe.io.Bytes.alloc(entry.size - header.dataPosition);
+		entry.open();
+		entry.skip(header.dataPosition);
+		entry.read(b, 0, b.length);
+		entry.close();
+		return b;
+	}
+
 	@:noDebug
 	public function getBuffers( geom : Geometry, format : Array<GeometryFormat>, ?defaults : Array<h3d.Vector>, ?material : Int ) {
 
@@ -294,6 +303,16 @@ class Library {
 			if( a == null )
 				throw 'Animation $name not found !';
 		}
+
+		var l = makeAnimation(a);
+		cachedAnimations.set(a.name, l);
+		if( name == null ) cachedAnimations.set("", l);
+		return l;
+	}
+
+
+	function makeAnimation( a : Animation ) {
+
 		var l = new h3d.anim.LinearAnimation(a.name, a.frames, a.sampling);
 		l.speed = a.speed;
 		l.loop = a.loop;
@@ -304,12 +323,15 @@ class Library {
 		for( o in a.objects ) {
 			var pos = o.flags.has(HasPosition), rot = o.flags.has(HasRotation), scale = o.flags.has(HasScale);
 			if( pos || rot || scale ) {
-				var fl = new haxe.ds.Vector<h3d.anim.LinearAnimation.LinearFrame>(a.frames);
-				var size = ((pos ? 3 : 0) + (rot ? 3 : 0) + (scale?3:0)) * 4 * a.frames;
+				var frameCount = a.frames;
+				if( o.flags.has(SinglePosition) )
+					frameCount = 1;
+				var fl = new haxe.ds.Vector<h3d.anim.LinearAnimation.LinearFrame>(frameCount);
+				var size = ((pos ? 3 : 0) + (rot ? 3 : 0) + (scale?3:0)) * 4 * frameCount;
 				var data = hxd.impl.Tmp.getBytes(size);
 				entry.read(data, 0, size);
 				var p = 0;
-				for( i in 0...fl.length ) {
+				for( i in 0...frameCount ) {
 					var f = new h3d.anim.LinearAnimation.LinearFrame();
 					if( pos ) {
 						f.tx = data.getFloat(p); p += 4;
@@ -370,8 +392,6 @@ class Library {
 
 		entry.close();
 
-		cachedAnimations.set(a.name, l);
-		if( name == null ) cachedAnimations.set("", l);
 
 		return l;
 	}

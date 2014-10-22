@@ -14,6 +14,13 @@ class LinearFrame {
 	public var sz : Float;
 	public function new() {
 	}
+	public function toMatrix() {
+		var m = new h3d.Matrix();
+		new h3d.Quat(qx, qy, qz, qw).saveToMatrix(m);
+		m.prependScale(sx, sy, sz);
+		m.translate(tx, ty, tz);
+		return m;
+	}
 }
 
 class LinearObject extends AnimatedObject {
@@ -37,6 +44,7 @@ class LinearObject extends AnimatedObject {
 class LinearAnimation extends Animation {
 
 	var syncFrame : Float;
+	var isSync : Bool;
 
 	public function new(name,frame,sampling) {
 		super(name,frame,sampling);
@@ -127,6 +135,17 @@ class LinearAnimation extends Animation {
 				s.uvDelta.y = uvLerp(o.uvs[(frame1 << 1) | 1],o.uvs[(frame2 << 1) | 1],k2);
 				continue;
 			}
+
+			var frame1 = frame1, frame2 = frame2;
+
+			// if we have a single frame
+			if( o.frames.length == 1 ) {
+				if( isSync && !decompose )
+					continue;
+				frame1 = frame2 = 0;
+				isSync = !decompose;
+			}
+
 			var f1 = o.frames[frame1], f2 = o.frames[frame2];
 
 			var m = o.matrix;
@@ -212,11 +231,10 @@ class LinearAnimation extends Animation {
 					m._33 = f1.sz * k1 + f2.sz * k2;
 				} else {
 					m._11 = 1;
-					m._12 = 1;
-					m._13 = 1;
+					m._22 = 1;
+					m._33 = 1;
 				}
 			}
-
 
 			if( o.targetSkin != null ) {
 				o.targetSkin.currentRelPose[o.targetJoint] = o.matrix;

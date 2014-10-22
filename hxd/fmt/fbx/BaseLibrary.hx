@@ -49,11 +49,11 @@ class DefaultMatrixes {
 		// in right hand we have [x,y,z] * M = [x',y',z']
 		// we need to ensure that left hand matrix convey the x axis flip,
 		// in order to have [-x,y,z] * M = [-x',y',z']
-		m._12 *= -1;
-		m._13 *= -1;
-		m._21 *= -1;
-		m._31 *= -1;
-		m._41 *= -1;
+		m._12 = -m._12;
+		m._13 = -m._13;
+		m._21 = -m._21;
+		m._31 = -m._31;
+		m._41 = -m._41;
 	}
 
 	public function toMatrix(leftHand) {
@@ -479,6 +479,29 @@ class BaseLibrary {
 		invConnect.get(nid).remove(pid);
 	}
 
+	function checkData( t : { x : Array<Float>, y :Array<Float>, z:Array<Float> } ) {
+		if( t == null )
+			return true;
+		if( t.x != null ) {
+			var v = t.x[0];
+			for( v2 in t.x )
+				if( v != v2 )
+					return false;
+		}
+		if( t.y != null ) {
+			var v = t.y[0];
+			for( v2 in t.y )
+				if( v != v2 )
+					return false;
+		}
+		if( t.z != null ) {
+			var v = t.z[0];
+			for( v2 in t.z )
+				if( v != v2 )
+					return false;
+		}
+		return true;
+	}
 
 	public function loadAnimation( mode : Mode, ?animName : String, ?root : FbxNode, ?lib : BaseLibrary ) : h3d.anim.Animation {
 		if( lib != null ) {
@@ -558,7 +581,7 @@ class BaseLibrary {
 			//if( data.y.length != times.length || data.z.length != times.length )
 			//	throw "Unsynchronized curve components on " + model.getName()+"."+cname+" (" + data.x.length + "/" + data.y.length + "/" + data.z.length + ")";
 			// optimize empty animations out
-			var E = 1e-10, M = 1.0;
+			var E = 1e-3, M = 1.0;
 			var def = switch( cname ) {
 			case "T": if( c.def.trans == null ) P0 else c.def.trans;
 			case "R": M = F; if( c.def.rotate == null ) P0 else c.def.rotate;
@@ -567,24 +590,29 @@ class BaseLibrary {
 				throw "Unknown curve " + model.getName()+"."+cname;
 			}
 			var hasValue = false;
-			for( v in data.x )
-				if( v*M < def.x-E || v*M > def.x+E ) {
+			for( i in 0...data.x.length ) {
+				var v = data.x[i];
+				if( Math.abs(v*M - def.x) > E )
 					hasValue = true;
-					break;
-				}
-			if( !hasValue ) {
-				for( v in data.y )
-					if( v*M < def.y-E || v*M > def.y+E ) {
-						hasValue = true;
-						break;
-					}
+				else
+					v = def.x / M;
+				data.x[i] = round(v);
 			}
-			if( !hasValue ) {
-				for( v in data.z )
-					if( v*M < def.z-E || v*M > def.z+E ) {
-						hasValue = true;
-						break;
-					}
+			for( i in 0...data.y.length ) {
+				var v = data.y[i];
+				if( Math.abs(v*M - def.y) > E )
+					hasValue = true;
+				else
+					v = def.y / M;
+				data.y[i] = round(v);
+			}
+			for( i in 0...data.z.length ) {
+				var v = data.z[i];
+				if( Math.abs(v*M - def.z) > E )
+					hasValue = true;
+				else
+					v = def.z / M;
+				data.z[i] = round(v);
 			}
 			// no meaningful value found
 			if( !hasValue )
@@ -735,7 +763,19 @@ class BaseLibrary {
 			var q = new h3d.Quat(), q2 = new h3d.Quat();
 
 			for( c in curves ) {
-				var frames = c.t == null && c.r == null && c.s == null ? null : new haxe.ds.Vector(numFrames);
+				var numFrames = numFrames;
+				var sameData = true;
+				if( c.t == null && c.r == null && c.s == null && c.a == null && c.uv == null )
+					numFrames = 1;
+				else {
+					if( sameData )
+						sameData = checkData(c.t);
+					if( sameData )
+						sameData = checkData(c.r);
+					if( sameData )
+						sameData = checkData(c.s);
+				}
+				var frames = new haxe.ds.Vector(sameData ? 1 : numFrames);
 				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
 				var uvs = c.uv == null ? null : new haxe.ds.Vector(numFrames * 2);
 				// skip empty curves
@@ -783,7 +823,7 @@ class BaseLibrary {
 							} else {
 								f.sx = 1;
 								f.sy = 1;
-								f.sx = 1;
+								f.sz = 1;
 							}
 						} else {
 							f.sx = csx[sp - 1];
@@ -826,14 +866,14 @@ class BaseLibrary {
 						}
 
 						if( leftHand ) {
-							f.tx *= -1;
-							f.qy *= -1;
-							f.qz *= -1;
+							f.tx = -f.tx;
+							f.qy = -f.qy;
+							f.qz = -f.qz;
 						}
 
 						curFrame = f;
 					}
-					if( frames != null )
+					if( frames != null && f < frames.length )
 						frames[f] = curFrame;
 					if( alpha != null ) {
 						if( allTimes[f] == cat[ap] )
@@ -847,7 +887,6 @@ class BaseLibrary {
 						uvs[(f<<1)|1] = cuv[uvp - 1].v;
 					}
 				}
-
 				if( frames != null )
 					anim.addCurve(c.object, frames, c.r != null || def.rotate != null, c.s != null || def.scale != null);
 				if( alpha != null )
@@ -998,6 +1037,10 @@ class BaseLibrary {
 		return skin;
 	}
 
+	function round(v:Float) {
+		return std.Math.fround(v * 131072) / 131072;
+	}
+
 	function getDefaultMatrixes( model : FbxNode ) {
 		var name = model.getName();
 		var d = defaultModelMatrixes.get(name);
@@ -1010,13 +1053,21 @@ class BaseLibrary {
 			case "GeometricTranslation":
 				// handle in Geometry directly
 			case "PreRotation":
-				d.preRot = new Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
+				d.preRot = new Point(round(p.props[4].toFloat() * F), round(p.props[5].toFloat() * F), round(p.props[6].toFloat() * F));
+				if( d.preRot.x == 0 && d.preRot.y == 0 && d.preRot.z == 0 )
+					d.preRot = null;
 			case "Lcl Rotation":
-				d.rotate = new Point(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
+				d.rotate = new Point(round(p.props[4].toFloat() * F), round(p.props[5].toFloat() * F), round(p.props[6].toFloat() * F));
+				if( d.rotate.x == 0 && d.rotate.y == 0 && d.rotate.z == 0 )
+					d.rotate = null;
 			case "Lcl Translation":
-				d.trans = new Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+				d.trans = new Point(round(p.props[4].toFloat()), round(p.props[5].toFloat()), round(p.props[6].toFloat()));
+				if( d.trans.x == 0 && d.trans.y == 0 && d.trans.z == 0 )
+					d.trans = null;
 			case "Lcl Scaling":
-				d.scale = new Point(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+				d.scale = new Point(round(p.props[4].toFloat()), round(p.props[5].toFloat()), round(p.props[6].toFloat()));
+				if( d.scale.x == 1 && d.scale.y == 1 && d.scale.z == 1 )
+					d.scale = null;
 			default:
 			}
 		defaultModelMatrixes.set(name, d);
