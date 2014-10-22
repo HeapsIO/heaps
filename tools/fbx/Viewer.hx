@@ -213,10 +213,18 @@ class Viewer extends hxd.App {
 		case K.F2:
 			askLoad(true);
 		case "S".code if( K.isDown(K.CTRL) ):
-			if( curFbx == null ) return;
-			var data = FbxTree.toXml(curFbx.getRoot());
-			var path = props.curFile.substr(0, -4) + "_tree.xml";
-			hxd.File.saveAs(haxe.io.Bytes.ofString(data), { defaultPath : path } );
+			if( curHmd != null ) {
+				var h = curHmd.header;
+				h.data = curHmd.getData();
+				var data = hxd.fmt.hmd.Dump.toString(h);
+				var path = props.curFile.substr(0, -4) + "_dump.txt";
+				hxd.File.saveAs(haxe.io.Bytes.ofString(data), { defaultPath : path } );
+			}
+			if( curFbx != null ) {
+				var data = FbxTree.toXml(curFbx.getRoot());
+				var path = props.curFile.substr(0, -4) + "_tree.xml";
+				hxd.File.saveAs(haxe.io.Bytes.ofString(data), { defaultPath : path } );
+			}
 		case "R".code:
 			if( props.convertHMD ) return;
 			rightHand = !rightHand;

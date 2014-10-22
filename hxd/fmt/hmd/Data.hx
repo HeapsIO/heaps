@@ -19,6 +19,17 @@ package hxd.fmt.hmd;
 	public inline function toInt() {
 		return this;
 	}
+
+	public function toString() {
+		return switch( new GeometryDataFormat(this) ) {
+		case DFloat: "DFloat";
+		case DVec2: "DVec2";
+		case DVec3: "DVec3";
+		case DVec4: "DVec4";
+		case DBytes4: "DBytes4";
+		}
+	}
+
 	public static inline function fromInt( v : Int ) : GeometryDataFormat {
 		return new GeometryDataFormat(v);
 	}
@@ -143,6 +154,7 @@ enum AnimationFlag {
 	HasScale;
 	HasUV;
 	HasAlpha;
+	SinglePosition;
 }
 
 class AnimationObject {
@@ -159,7 +171,7 @@ class Animation {
 	public var speed : Float;
 	public var loop : Bool;
 	public var objects : Array<AnimationObject>;
-	public var dataPosition : Int;
+	public var dataPosition : DataPosition;
 	public function new() {
 	}
 }
