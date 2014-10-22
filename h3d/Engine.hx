@@ -27,6 +27,7 @@ class Engine {
 	var lastTime : Float;
 	var antiAlias : Int;
 	var tmpVector = new h3d.Vector();
+	var currentTarget : h3d.mat.Texture;
 
 	@:allow(h3d)
 	var curProjMatrix : h3d.Matrix;
@@ -267,8 +268,6 @@ class Engine {
 		curProjMatrix = null;
 	}
 
-	var currentTarget : h3d.mat.Texture;
-
 	public function getTarget() {
 		return currentTarget;
 	}
@@ -278,8 +277,10 @@ class Engine {
      * setTarget to null when you're finished rendering to it.
 	 */
 	public function setTarget( tex : h3d.mat.Texture ) {
+		var prev = currentTarget;
 		currentTarget = tex;
 		driver.setRenderTarget(tex);
+		return prev;
 	}
 
 	public function clear( ?color : Int, ?depth : Float, ?stencil : Int ) {

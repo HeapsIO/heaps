@@ -71,9 +71,10 @@ class RenderContext {
 
 	public function setTarget( t : h3d.mat.Texture ) {
 		flush();
-		engine.setTarget(t);
+		var old = engine.setTarget(t);
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
 		begin();
+		return old;
 	}
 
 	public function flush() {
