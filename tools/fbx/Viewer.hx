@@ -38,7 +38,7 @@ class Viewer extends hxd.App {
 	static public var curData : String;
 	static public var curDataSize : Int;
 	static public var props : Props;
-	static public var animMode : h3d.anim.Mode = LinearAnim;
+	static public var animMode : Null<h3d.anim.Mode> = LinearAnim;
 
 	var rightHand : Bool;
 	var playAnim : Bool;
@@ -255,6 +255,7 @@ class Viewer extends hxd.App {
 			props.slowDown = !props.slowDown;
 		case "A".code:
 			var cst = h3d.anim.Mode.createAll();
+			cst.push(null);
 			animMode = cst[(Lambda.indexOf(cst, animMode) + 1) % cst.length];
 			reload = true;
 		case "L".code:
@@ -504,7 +505,9 @@ class Viewer extends hxd.App {
 
 	function setAnim() {
 		var anim;
-		if( curHmd != null )
+		if( animMode == null )
+			anim = null;
+		else if( curHmd != null )
 			anim = (ahmd == null ? curHmd : ahmd).loadAnimation();
 		else
 			anim = curFbx.loadAnimation(animMode, null, null, alib);
