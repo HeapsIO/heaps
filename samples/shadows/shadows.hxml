@@ -9,3 +9,10 @@
 -swf-version 11.8
 -swf-header 1024:768:60
 -main Main
+--next
+-cpp bin
+-dce full
+-main Main
+-lib heaps
+-lib nme
+--remap flash:nme

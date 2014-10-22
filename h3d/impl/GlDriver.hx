@@ -615,8 +615,13 @@ class GlDriver extends Driver {
 
 	static var FACES = [
 		0,
-		GL.FRONT, // front/back reversed wrt stage3d
+		#if js
+		GL.FRONT, // front/back reversed in WebGL
 		GL.BACK,
+		#else
+		GL.BACK,
+		GL.FRONT,
+		#end
 		GL.FRONT_AND_BACK,
 	];
 

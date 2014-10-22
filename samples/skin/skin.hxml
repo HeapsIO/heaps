@@ -9,3 +9,10 @@
 -main Main
 -lib heaps
 -dce full
+--next
+-cpp bin
+-main Main
+-lib heaps
+-lib nme
+--remap flash:nme
+-debug

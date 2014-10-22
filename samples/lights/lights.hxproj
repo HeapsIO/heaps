@@ -24,7 +24,7 @@
     <option noInlineOnDebug="False" />
     <option mainClass="Main" />
     <option enabledebug="False" />
-    <option additional="-lib heaps&#xA;-dce full&#xA;&#xA;--next&#xA;-swf lights.swf&#xA;-swf-version 11.8&#xA;-swf-header 1280:1024:60&#xA;-dce full&#xA;-main Main&#xA;-lib heaps" />
+    <option additional="-lib heaps&#xA;-dce full&#xA;&#xA;--next&#xA;-swf lights.swf&#xA;-swf-version 11.8&#xA;-swf-header 1280:1024:60&#xA;-dce full&#xA;-main Main&#xA;-lib heaps&#xA;&#xA;--next&#xA;-cpp bin&#xA;-dce full&#xA;-main Main&#xA;-lib heaps&#xA;-lib nme&#xA;--remap flash:nme" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
