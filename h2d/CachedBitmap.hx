@@ -52,17 +52,18 @@ class CachedBitmap extends Drawable {
 		return tile;
 	}
 
-	override function drawRec( ctx : RenderContext ) {
+	function syncPosRec( s : Sprite ) {
+		s.calcAbsPos();
+		s.posChanged = true;
+		for( c in s.childs )
+			syncPosRec(c);
+	}
+
+	override function draw( ctx : RenderContext ) {
 		emitTile(ctx, tile);
 	}
 
-	override function sync( ctx : RenderContext ) {
-		if( posChanged ) {
-			calcAbsPos();
-			for( c in childs )
-				c.posChanged = true;
-			posChanged = false;
-		}
+	override function drawRec( ctx : RenderContext ) {
 		var scene = getScene();
 		if( tile != null && ((width < 0 && scene.width != tile.width) || (height < 0 && scene.height != tile.height)) )
 			clean();
@@ -89,16 +90,14 @@ class CachedBitmap extends Drawable {
 			matD *= h;
 
 			// force full resync
-			for( c in childs ) {
-				c.posChanged = true;
-				c.sync(ctx);
-			}
+			for( c in childs )
+				syncPosRec(c);
 
-			throw "Should not draw in sync!";
-			ctx.engine.setTarget(tile.getTexture());
+			var prev = ctx.setTarget(tile.getTexture());
+			ctx.engine.clear(0);
 			for( c in childs )
 				c.drawRec(ctx);
-			ctx.engine.setTarget(null);
+			ctx.setTarget(prev);
 
 			// restore
 			matA = oldA;
@@ -111,7 +110,7 @@ class CachedBitmap extends Drawable {
 			renderDone = true;
 		}
 
-		super.sync(ctx);
+		draw(ctx);
 	}
 
 }
