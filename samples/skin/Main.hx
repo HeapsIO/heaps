@@ -12,13 +12,15 @@ class Main extends hxd.App {
 
 		obj.playAnimation(prim.loadAnimation(LinearAnim));
 
-		// add lights
+		// add lights and setup materials
 		var dir = new DirLight(new h3d.Vector( -1, 3, -10), s3d);
 		for( m in obj.getMaterials() ) {
 			var t = m.mainPass.getShader(h3d.shader.Texture);
 			if( t != null ) t.killAlpha = true;
 			m.mainPass.enableLights = true;
+			m.mainPass.culling = None;
 			m.shadows = true;
+			m.getPass("shadow").culling = None;
 		}
 		s3d.lightSystem.ambientLight.set(0.4, 0.4, 0.4);
 
