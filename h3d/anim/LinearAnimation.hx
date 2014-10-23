@@ -90,12 +90,19 @@ class LinearAnimation extends Animation {
 
 	override function initInstance() {
 		super.initInstance();
-		for( a in getFrames() ) {
+		var frames = getFrames();
+		for( a in frames ) {
 			a.matrix = new h3d.Matrix();
 			a.matrix.identity();
 			if( a.alphas != null && (a.targetObject == null || !a.targetObject.isMesh()) )
 				throw a.objectName + " should be a mesh";
 		}
+		// makes sure that all single frame anims are at the end so we can break early when isSync=true
+		frames.sort(sortByFrameCountDesc);
+	}
+
+	function sortByFrameCountDesc( o1 : LinearObject, o2 : LinearObject ) {
+		return (o2.frames == null ? 10 : o2.frames.length) - (o1.frames == null ? 10 : o1.frames.length);
 	}
 
 	inline function uvLerp( v1 : Float, v2 : Float, k : Float ) {
@@ -117,6 +124,7 @@ class LinearAnimation extends Animation {
 		var k1 = 1 - k2;
 		if( frame1 < 0 ) frame1 = frame2 = 0 else if( frame >= frameCount ) frame1 = frame2 = frameCount - 1;
 		syncFrame = frame;
+		if( decompose ) isSync = false;
 		for( o in getFrames() ) {
 			if( o.alphas != null ) {
 				var mat = o.targetObject.toMesh().material;
@@ -140,10 +148,9 @@ class LinearAnimation extends Animation {
 
 			// if we have a single frame
 			if( o.frames.length == 1 ) {
-				if( isSync && !decompose )
-					continue;
+				if( isSync )
+					break;
 				frame1 = frame2 = 0;
-				isSync = !decompose;
 			}
 
 			var f1 = o.frames[frame1], f2 = o.frames[frame2];
@@ -242,6 +249,7 @@ class LinearAnimation extends Animation {
 			} else
 				o.targetObject.defaultTransform = o.matrix;
 		}
+		if( !decompose ) isSync = true;
 	}
 	#end
 
