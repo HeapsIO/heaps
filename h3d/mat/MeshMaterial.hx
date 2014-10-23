@@ -3,7 +3,7 @@ package h3d.mat;
 class MeshMaterial extends Material {
 
 	var mshader : h3d.shader.BaseMesh;
-	var textureShader : h3d.shader.Texture;
+	public var textureShader(default, null) : h3d.shader.Texture;
 	public var texture(get,set) : h3d.mat.Texture;
 
 	public var color(get, set) : Vector;

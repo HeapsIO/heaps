@@ -2,6 +2,8 @@ package h3d.pass;
 
 class Params {
 
+	public static var defaultKillAlphaThreshold = 0.5;
+
 	@:isVar public static var shadowShader(get, set) : hxsl.Shader;
 
 	// delay initialization if needed only
