@@ -17,6 +17,12 @@ class Transition extends Animation {
 		this.anim2 = anim2;
 	}
 
+	override function unbind( objectName : String ) {
+		super.unbind(objectName);
+		anim1.unbind(objectName);
+		anim2.unbind(objectName);
+	}
+
 	override function setFrame( f : Float ) {
 		super.setFrame(f);
 		anim1.setFrame(frame % anim1.frameCount);

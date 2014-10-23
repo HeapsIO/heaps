@@ -67,6 +67,14 @@ class Animation {
 		return f;
 	}
 
+	public function unbind( objectName : String ) {
+		for( o in objects )
+			if( o.objectName == objectName ) {
+				objects.remove(o);
+				return;
+			}
+	}
+
 	/**
 		Register a callback function that will be called once when a frame is reached.
 	**/

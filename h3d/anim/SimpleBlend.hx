@@ -14,10 +14,10 @@ class SimpleBlend extends Transition {
 	function setupInstance() {
 		for( o in anim1.objects.copy() )
 			if( objectsMap.get(o.objectName) )
-				anim1.objects.remove(o);
+				anim1.unbind(o.objectName);
 		for( o in anim2.objects.copy() )
 			if( !objectsMap.get(o.objectName) )
-				anim2.objects.remove(o);
+				anim2.unbind(o.objectName);
 		isInstance = true;
 	}
 
