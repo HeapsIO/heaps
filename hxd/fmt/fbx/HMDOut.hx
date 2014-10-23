@@ -10,6 +10,7 @@ class HMDOut extends BaseLibrary {
 	var filePath : String;
 	var tmp = haxe.io.Bytes.alloc(4);
 	public var absoluteTexturePath : Bool;
+	public var optimizeSkin = true;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -19,7 +20,12 @@ class HMDOut extends BaseLibrary {
 		return tmp.getFloat(0);
 	}
 
-	override function keepJoint(_) : Null<Bool> {
+	override function keepJoint(j:h3d.anim.Skin.Joint) {
+		if( !optimizeSkin )
+			return true;
+		// remove these unskinned terminal bones if they are not named in a special manner
+		if( ~/^Bip00[0-9] /.match(j.name) || ~/^Bone[0-9][0-9][0-9]$/.match(j.name) )
+			return false;
 		return true;
 	}
 
@@ -558,6 +564,11 @@ class HMDOut extends BaseLibrary {
 	}
 
 	public function toHMD( filePath : String, includeGeometry : Bool ) : Data {
+
+		// if we have only animation data, make sure to export all joints positions
+		// because they might be applied to a different model at runtime
+		if( !includeGeometry )
+			optimizeSkin = false;
 
 		leftHandConvert();
 		autoMerge();

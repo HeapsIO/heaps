@@ -963,7 +963,7 @@ class BaseLibrary {
 		}
 	}
 
-	function keepJoint( j : h3d.anim.Skin.Joint ) {
+	function keepJoint( j : h3d.anim.Skin.Joint ) : Bool {
 		return keepJoints.get(j.name);
 	}
 
