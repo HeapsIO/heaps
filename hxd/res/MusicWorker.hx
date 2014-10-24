@@ -24,6 +24,7 @@ class Channel {
 	var playTime : Float;
 	var onFadeEnd : Void -> Void;
 	var fadeUID : Int = 0;
+
 	public var res(default, null) : Sound;
 	public var loop(default, set) : Bool;
 	public var next(default,set) : Channel;
@@ -114,6 +115,9 @@ class Channel {
 @:allow(hxd.res.Channel)
 class MusicWorker extends Worker<MusicMessage> {
 
+	public static var NATIVE_MUSIC = true;
+	static inline var INFINITE = 0x7FFFFFFF;
+
 	var channelID = 1;
 	var channels : Array<Channel> = [];
 	var cmap : Map<Int,Channel> = new Map();
@@ -121,6 +125,7 @@ class MusicWorker extends Worker<MusicMessage> {
 	var channel : flash.media.SoundChannel;
 	var tmpBuf : haxe.io.Bytes;
 	var out : haxe.ds.Vector<Float>;
+	var current : Channel;
 	static inline var BUFFER_SIZE = 4096;
 
 	public function new() {
@@ -147,6 +152,17 @@ class MusicWorker extends Worker<MusicMessage> {
 			c.snd = new flash.media.Sound();
 			c.snd.loadCompressedDataFromByteArray(bytes.getData(), bytes.length);
 
+			if( NATIVE_MUSIC ) {
+				if( channel != null ) channel.stop();
+				channel = c.snd.play(time, INFINITE);
+				if( channel != null ) {
+					current = c;
+					channel.addEventListener(flash.events.Event.SOUND_COMPLETE, function(_) send(EndLoop(c.id)));
+				} else
+					current = null;
+				return;
+			}
+
 			var mp = new format.mp3.Reader(new haxe.io.BytesInput(bytes)).read();
 			c.samples = mp.sampleCount;
 			var frame = mp.frames[0].data.toString();
@@ -170,6 +186,11 @@ class MusicWorker extends Worker<MusicMessage> {
 			if( c == null ) return;
 			channels.remove(c);
 			cmap.remove(c.id);
+			if( NATIVE_MUSIC && c == current && channel != null ) {
+				channel.stop();
+				channel = null;
+				current = null;
+			}
 		case Fade(id, uid, vol, time):
 			var c = cmap.get(id);
 			if( c == null ) return;
@@ -210,8 +231,18 @@ class MusicWorker extends Worker<MusicMessage> {
 		tmpBuf = haxe.io.Bytes.alloc(BUFFER_SIZE * 4 * 2);
 		out = new haxe.ds.Vector(BUFFER_SIZE * 2);
 		snd = new flash.media.Sound();
-		snd.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, onSample);
-		channel = snd.play(0, 0x7FFFFFFF);
+		if( !NATIVE_MUSIC ) {
+			snd.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, onSample);
+			channel = snd.play(0, INFINITE);
+		}
+		if( hxd.System.isAndroid )
+			initActivate();
+	}
+
+	function initActivate() {
+		var prevPos = 0.;
+		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.Event.ACTIVATE, function(_) channel = snd.play(prevPos, INFINITE));
+		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.Event.DEACTIVATE, function(_) if( channel != null ) { prevPos = NATIVE_MUSIC ? channel.position : 0; channel.stop(); channel = null; } );
 	}
 
 	function onSample( e:flash.events.SampleDataEvent ) {
