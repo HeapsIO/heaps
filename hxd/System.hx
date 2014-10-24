@@ -17,6 +17,7 @@ class System {
 	public static var isWindowed(get,never) : Bool;
 	public static var lang(get,never) : String;
 	public static var isAndroid(get, never) : Bool;
+	public static var isIOS(get, never) : Bool;
 
 	public static var screenDPI(get,never) : Float;
 
@@ -54,6 +55,14 @@ class System {
 		return #if android true #else false #end;
 		#else
 		return flash.system.Capabilities.manufacturer.indexOf('Android') != -1;
+		#end
+	}
+
+	static function get_isIOS() {
+		#if cpp
+		return #if ios true #else false #end;
+		#else
+		return flash.system.Capabilities.manufacturer.indexOf('iOS') != -1;
 		#end
 	}
 
@@ -191,6 +200,18 @@ class System {
 			}
 		} else
 		#end
+		if( isIOS ) {
+			name = switch( [width, height, screenDPI] ) {
+			case [960, 640, 326]: "iPhone4";
+			case [1136, 640, 326]: "iPhone5";
+			case [1334, 750, 326]: "iPhone6";
+			case [1920, 1080, 401]: "iPhone6+";
+			case [2048, 1536, 264]: "iPad"; // 3/4/Air
+			case [2048, 1536, 326]: "iPadMini2";
+			case [1024, 768, 163]: "iPadMini";
+			case [w, h, dpi]: "IOS Unknown " + w + "x" + h + "@" + dpi;
+			}
+		} else
 			name = "PC";
 		CACHED_NAME = name;
 		return name;
@@ -251,6 +272,10 @@ class System {
 	}
 
 	static function get_isAndroid() {
+		return false;
+	}
+
+	static function get_isIOS() {
 		return false;
 	}
 
