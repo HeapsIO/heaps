@@ -2,7 +2,7 @@ package hxd;
 
 class Worker<T:EnumValue> {
 
-	public static var ENABLE = true;
+	public static var ENABLE = flash.system.Worker.isSupported;
 	var sendChan : flash.system.MessageChannel;
 	var recvChan : flash.system.MessageChannel;
 	var enumValue : Enum<T>;
