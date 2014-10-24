@@ -278,6 +278,8 @@ class Engine {
 	 */
 	public function setTarget( tex : h3d.mat.Texture ) {
 		var prev = currentTarget;
+		if( prev == tex )
+			return prev;
 		currentTarget = tex;
 		driver.setRenderTarget(tex);
 		return prev;
