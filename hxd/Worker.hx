@@ -59,6 +59,9 @@ class Worker<T:EnumValue> {
 		throw "TODO";
 	}
 
+	function setupMain() {
+	}
+
 	function setupWorker() {
 	}
 
@@ -90,9 +93,10 @@ class Worker<T:EnumValue> {
 			});
 			bgWorker.setSharedProperty("send", sendChan);
 			bgWorker.setSharedProperty("recv", recvChan);
-			bgWorker.start();
 			isWorker = false;
 			queue = [];
+			setupMain();
+			bgWorker.start();
 			return false;
 		} else {
 			// inverse
@@ -103,8 +107,8 @@ class Worker<T:EnumValue> {
 				if( msg != null ) handleMessage(msg);
 			});
 			isWorker = true;
-			setupWorker();
 			sendChan.send(0);
+			setupWorker();
 			return true;
 		}
 	}

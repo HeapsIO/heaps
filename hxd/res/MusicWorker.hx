@@ -1,13 +1,15 @@
 package hxd.res;
 
 enum MusicMessage {
-	Play( path : String, volume : Float );
+	Play( path : String, volume : Float, time : Float );
 	SetVolume( id : Int, volume : Float );
-	Fade( id : Int, volume : Float, time : Float );
+	Fade( id : Int, uid : Int, volume : Float, time : Float );
 	Stop( id : Int );
 	Queue( id : Int, ?next : Int );
 	Loop( id : Int, b : Bool );
 	EndLoop( id : Int );
+	SetTime( id : Int, t : Float );
+	FadeEnd( id : Int, uid : Int );
 }
 
 class Channel {
@@ -19,22 +21,28 @@ class Channel {
 	var vol : Float;
 	var volumeTarget : Float;
 	var volumeSpeed : Float;
+	var playTime : Float;
+	var onFadeEnd : Void -> Void;
+	var fadeUID : Int = 0;
 	public var res(default, null) : Sound;
 	public var loop(default, set) : Bool;
 	public var next(default,set) : Channel;
 	public var volume(default, set) : Float;
+	public var currentTime(get, set) : Float;
 
-	public function new(res, id, v) {
+	function new(w, res, id, v, t:Float) {
 		this.res = res;
 		this.vol = volume = v;
 		this.id = id;
 		loop = true;
 		volumeSpeed = 0;
-		w = MusicWorker.inst;
-		if( @:privateAccess w.isWorker ) w = null;
+		playTime = haxe.Timer.stamp() - t;
+		this.w = w;
 	}
 
 	function set_next( c : Channel ) {
+		if( next == c )
+			return c;
 		if( w != null ) {
 			if( c != null && c.id <= id ) throw "Must queue a channel created after";
 			w.send(Queue(id, c == null ? null : c.id));
@@ -42,12 +50,35 @@ class Channel {
 		return next = c;
 	}
 
-	public function fadeTo( volume : Float, time : Float = 1. ) {
+	function get_currentTime() {
+		return haxe.Timer.stamp() - playTime;
+	}
+
+	function set_currentTime(v:Float) {
+		playTime = haxe.Timer.stamp() - v;
+		if( w != null ) {
+			throw "assert";
+			w.send(SetTime(id, v));
+			return v;
+		}
+		if( samples > 0 ) {
+			position = Std.int(v * 44100) % samples;
+			if( position < 0 ) position += samples;
+		}
+		return v;
+	}
+
+	public function fadeTo( volume : Float, time : Float = 1., ?onEnd : Void -> Void ) {
+		if( this.volume == volume ) {
+			if( onEnd != null ) haxe.Timer.delay(onEnd, 1+Math.ceil(time * 1000));
+			return;
+		}
 		var old = w;
 		w = null;
 		this.volume = volume;
 		w = old;
-		if( w != null ) w.send(Fade(id, volume, time));
+		onFadeEnd = onEnd;
+		if( w != null ) w.send(Fade(id, onEnd == null ? 0 : ++fadeUID, volume, time));
 	}
 
 	public function stop() {
@@ -60,11 +91,15 @@ class Channel {
 	}
 
 	function set_loop(b) {
+		if( loop == b )
+			return b;
 		if( w != null ) w.send(Loop(id, b));
 		return loop = b;
 	}
 
 	function set_volume(v) {
+		if( volume == v )
+			return v;
 		volume = v;
 		if( w != null ) w.send(SetVolume(id, v));
 		return v;
@@ -96,17 +131,18 @@ class MusicWorker extends Worker<MusicMessage> {
 		return new MusicWorker();
 	}
 
-	function makeChannel( res, volume : Float ) {
-		var c = new Channel(res, channelID++, volume);
+	function makeChannel( res, volume : Float, time : Float ) {
+		var c = new Channel(isWorker ? null : this, res, channelID++, volume, time);
 		channels.push(c);
 		cmap.set(c.id, c);
 		return c;
 	}
 
 	override function handleMessage( msg : MusicMessage ) {
+
 		switch( msg ) {
-		case Play(path, volume):
-			var c = makeChannel(null, volume);
+		case Play(path, volume, time):
+			var c = makeChannel(null, volume, time);
 			var bytes = hxd.Res.loader.load(path).entry.getBytes();
 			c.snd = new flash.media.Sound();
 			c.snd.loadCompressedDataFromByteArray(bytes.getData(), bytes.length);
@@ -122,6 +158,8 @@ class MusicWorker extends Worker<MusicMessage> {
 				var end = startEnd & ((1 << 12) - 1);
 				c.samples -= start + end + 1152; // first frame is empty
 			}
+			c.currentTime = time; // update position
+
 		case SetVolume(id, volume):
 			var c = cmap.get(id);
 			if( c == null ) return;
@@ -132,10 +170,11 @@ class MusicWorker extends Worker<MusicMessage> {
 			if( c == null ) return;
 			channels.remove(c);
 			cmap.remove(c.id);
-		case Fade(id, vol, time):
+		case Fade(id, uid, vol, time):
 			var c = cmap.get(id);
 			if( c == null ) return;
 			c.volumeTarget = vol;
+			c.fadeUID = uid;
 			c.volumeSpeed = (vol - c.vol) / (time * 88200);
 		case Queue(id, tid):
 			var c = cmap.get(id);
@@ -149,7 +188,22 @@ class MusicWorker extends Worker<MusicMessage> {
 		case EndLoop(id):
 			var c = cmap.get(id);
 			if( c != null ) c.onEnd();
+		case FadeEnd(id,uid):
+			var c = cmap.get(id);
+			if( c != null && c.fadeUID == uid ) c.onFadeEnd();
+		case SetTime(id, v):
+			var c = cmap.get(id);
+			if( c != null ) c.currentTime = v;
 		}
+	}
+
+	override function setupMain() {
+		// make sure that the sounds system is initialized
+		// https://bugbase.adobe.com/index.cfm?event=bug&id=3842828
+		var s = new flash.media.Sound();
+		s.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, function(_) { } );
+		var c = s.play(0, 0);
+		if( c != null ) c.stop();
 	}
 
 	override function setupWorker() {
@@ -191,6 +245,7 @@ class MusicWorker extends Worker<MusicMessage> {
 						if( (c.volumeSpeed > 0) == (c.vol > c.volumeTarget) ) {
 							c.vol = c.volumeTarget;
 							c.volumeSpeed = 0;
+							if( c.fadeUID > 0 ) send(FadeEnd(c.id, c.fadeUID));
 						}
 					}
 				}
@@ -211,15 +266,16 @@ class MusicWorker extends Worker<MusicMessage> {
 				}
 			}
 		}
+
 		var bytes = e.data;
 		bytes.position = 0;
 		for( i in 0...BUFFER_SIZE * 2 )
 			bytes.writeFloat(out[i]);
 	}
 
-	public static function play( music : Sound, volume = 1. ) {
-		inst.send(Play(music.entry.path, volume));
-		return inst.makeChannel(music, volume);
+	public static function play( music : Sound, volume = 1., time = 0. ) {
+		inst.send(Play(music.entry.path, volume, time));
+		return inst.makeChannel(music, volume, time);
 	}
 
 	static var inst : MusicWorker;
