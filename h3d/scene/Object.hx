@@ -239,7 +239,6 @@ class Object {
 		if( follow != null ) {
 			follow.syncPos();
 			absPos.multiply3x4(absPos, follow.absPos);
-			posChanged = true;
 		} else {
 			if( parent != null )
 				absPos.multiply3x4(absPos, parent.absPos);
@@ -267,7 +266,7 @@ class Object {
 		var changed = posChanged;
 		if( changed ) calcAbsPos();
 		sync(ctx);
-		posChanged = false;
+		posChanged = follow == null;
 		lastFrame = ctx.frame;
 		var p = 0, len = childs.length;
 		while( p < len ) {
