@@ -86,6 +86,7 @@ class HMDOut extends BaseLibrary {
 		var vertexRemap = [];
 		var index = geom.getPolygons();
 		var count = 0, matPos = 0, stri = 0;
+		var lookup = new Map();
 		for( pos in 0...index.length ) {
 			var i = index[pos];
 			count++;
@@ -137,10 +138,20 @@ class HMDOut extends BaseLibrary {
 					}
 					tmpBuf[p++] = int32tof(idx);
 				}
+				
+				var total = 0.;
+				for( i in 0...stride )
+					total += tmpBuf[i];
+				var itotal = Std.int((total * 100) % 0x0FFFFFFF);
 
 				// look if the vertex already exists
 				var found : Null<Int> = null;
-				for( vid in 0...g.vertexCount ) {
+				var vids = lookup.get(itotal);
+				if( vids == null ) {
+					vids = [];
+					lookup.set(itotal, vids);
+				}
+				for( vid in vids ) {
 					var same = true;
 					var p = vid * stride;
 					for( i in 0...stride )
@@ -158,6 +169,7 @@ class HMDOut extends BaseLibrary {
 					g.vertexCount++;
 					for( i in 0...stride )
 						vbuf.push(tmpBuf[i]);
+					vids.push(found);
 				}
 				vertexRemap.push(found);
 			}
