@@ -120,6 +120,10 @@ class Skin extends MultiMaterial {
 		jointsUpdated = true;
 	}
 
+	public function getSkinData() {
+		return skinData;
+	}
+
 	public function setSkinData( s ) {
 		skinData = s;
 		jointsUpdated = true;
@@ -163,12 +167,12 @@ class Skin extends MultiMaterial {
 				var id = j.index;
 				var m = currentAbsPose[id];
 				var r = currentRelPose[id];
-				if( r == null ) r = j.defMat;
+				var bid = j.bindIndex;
+				if( r == null ) r = j.defMat else if( j.retargetAnim ) { r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
 				if( j.parent == null )
 					m.multiply3x4(r, absPos);
 				else
 					m.multiply3x4(r, currentAbsPose[j.parent.index]);
-				var bid = j.bindIndex;
 				if( bid >= 0 )
 					currentPalette[bid].multiply3x4(j.transPos, m);
 			}
