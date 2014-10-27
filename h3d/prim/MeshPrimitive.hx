@@ -3,6 +3,8 @@ package h3d.prim;
 class MeshPrimitive extends Primitive {
 
 	var bufferCache : Map<Int,h3d.Buffer.BufferOffset>;
+	var prevNames : Array<String>;
+	var prevBuffers : h3d.Buffer.BufferOffset;
 
 	function allocBuffer( engine : h3d.Engine, name : String ) {
 		return null;
@@ -28,8 +30,11 @@ class MeshPrimitive extends Primitive {
 	function getBuffers( engine : h3d.Engine ) {
 		if( bufferCache == null )
 			bufferCache = new Map();
+		var names = @:privateAccess engine.driver.getShaderInputNames();
+		if( names == prevNames )
+			return prevBuffers;
 		var buffers = null, prev = null;
-		for( name in @:privateAccess engine.driver.getShaderInputNames() ) {
+		for( name in names ) {
 			var id = hxsl.Globals.allocID(name);
 			var b = bufferCache.get(id);
 			if( b == null ) {
@@ -45,7 +50,8 @@ class MeshPrimitive extends Primitive {
 				prev = b;
 			}
 		}
-		return buffers;
+		prevNames = names;
+		return prevBuffers = buffers;
 	}
 
 	override function render( engine : h3d.Engine ) {
