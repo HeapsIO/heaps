@@ -171,12 +171,12 @@ class AgalOut {
 	function getConst( v : Float ) : Reg {
 		for( i in 0...current.consts.length )
 			if( current.consts[i] == v ) {
-				var g = null;
-				for( v in current.globals )
-					if( v.path == "__consts__" ) {
-						g = v;
+				var g = current.globals;
+				while( g != null ) {
+					if( g.path == "__consts__" )
 						break;
-					}
+					g = g.next;
+				}
 				var p = g.pos + i;
 				return { t : RConst, index : p >> 2, swiz : [COMPS[p & 3]], access : null };
 			}
@@ -194,12 +194,12 @@ class AgalOut {
 					break;
 				}
 			if( found ) {
-				var g = null;
-				for( v in current.globals )
-					if( v.path == "__consts__" ) {
-						g = v;
+				var g = current.globals;
+				while( g != null ) {
+					if( g.path == "__consts__" )
 						break;
-					}
+					g = g.next;
+				}
 				var p = g.pos + i;
 				return { t : RConst, index : p >> 2, swiz : defSwiz(TVec(va.length,VFloat)), access : null };
 			}

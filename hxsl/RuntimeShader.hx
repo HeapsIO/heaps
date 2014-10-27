@@ -7,6 +7,7 @@ class AllocParam {
 	public var index : Int;
 	public var type : Ast.Type;
 	public var perObjectGlobal : AllocGlobal;
+	public var next : AllocParam;
 	public function new(name, pos, instance, index, type) {
 		this.name = name;
 		this.pos = pos;
@@ -21,6 +22,7 @@ class AllocGlobal {
 	public var gid : Int;
 	public var path : String;
 	public var type : Ast.Type;
+	public var next : AllocGlobal;
 	public function new(pos, path, type) {
 		this.pos = pos;
 		this.path = path;
@@ -32,11 +34,12 @@ class AllocGlobal {
 class RuntimeShaderData {
 	public var vertex : Bool;
 	public var data : Ast.ShaderData;
-	public var params : Array<AllocParam>;
+	public var params : AllocParam;
 	public var paramsSize : Int;
-	public var globals : Array<AllocGlobal>;
+	public var globals : AllocGlobal;
 	public var globalsSize : Int;
-	public var textures : Array<AllocParam>;
+	public var textures : AllocParam;
+	public var texturesCount : Int;
 	public var consts : Array<Float>;
 	public function new() {
 	}

@@ -98,10 +98,16 @@ class Cache {
 		r.vertex.vertex = true;
 		r.fragment = flattenShader(s.fragment, Fragment, paramVars);
 		r.globals = new Map();
-		for( v in r.vertex.globals )
-			r.globals.set(v.gid, true);
-		for( v in r.fragment.globals )
-			r.globals.set(v.gid, true);
+		var p = r.vertex.globals;
+		while( p != null ) {
+			r.globals.set(p.gid, true);
+			p = p.next;
+		}
+		p = r.fragment.globals;
+		while( p != null ) {
+			r.globals.set(p.gid, true);
+			p = p.next;
+		}
 
 		var sid = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
 		var r2 = byID.get(sid);
@@ -140,19 +146,24 @@ class Cache {
 					}
 					out.push(new AllocParam(a.v.name, a.pos, p.instance, p.index, a.v.type));
 				}
+				for( i in 0...out.length - 1 )
+					out[i].next = out[i + 1];
 				switch( g.type ) {
 				case TArray(TSampler2D, _):
-					c.textures = out;
-				case TArray(TVec(4, VFloat),SConst(size)):
-					c.params = out;
+					c.textures = out[0];
+					c.texturesCount = out.length;
+				case TArray(TVec(4, VFloat), SConst(size)):
+					c.params = out[0];
 					c.paramsSize = size;
 				default: throw "assert";
 				}
 			case Global:
 				var out = [for( a in alloc ) if( a.v != null ) new AllocGlobal(a.pos, getPath(a.v), a.v.type)];
+				for( i in 0...out.length - 1 )
+					out[i].next = out[i + 1];
 				switch( g.type ) {
 				case TArray(TVec(4, VFloat),SConst(size)):
-					c.globals = out;
+					c.globals = out[0];
 					c.globalsSize = size;
 				default:
 					throw "assert";
@@ -160,16 +171,12 @@ class Cache {
 			default: throw "assert";
 			}
 		}
-		if( c.globals == null ) {
-			c.globals = [];
+		if( c.globals == null )
 			c.globalsSize = 0;
-		}
-		if( c.params == null ) {
-			c.params = [];
+		if( c.params == null )
 			c.paramsSize = 0;
-		}
 		if( c.textures == null )
-			c.textures = [];
+			c.texturesCount = 0;
 		c.data = data;
 		return c;
 	}

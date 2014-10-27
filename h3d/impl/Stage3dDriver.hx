@@ -386,7 +386,8 @@ class Stage3dDriver extends Driver {
 					swiz = "." + [for( i in 1...swiz.length ) String.fromCharCode(swiz.charCodeAt(i) - d)].join("");
 				}
 				var name = "C" + cid;
-				for( g in data.globals ) {
+				var g = data.globals;
+				while( g != null ) {
 					if( g.path == "__consts__" && cid >= g.pos && cid < g.pos + (switch(g.type) { case TArray(TFloat, SConst(n)): n; default: 0; } ) && swiz == ".x" ) {
 						swiz = null;
 						name = "" + data.consts[cid - g.pos];
@@ -396,12 +397,16 @@ class Stage3dDriver extends Driver {
 						name = g.path;
 						break;
 					}
+					g = g.next;
 				}
-				for( p in data.params )
+				var p = data.params;
+				while( p != null ) {
 					if( p.pos + (data.globalsSize << 2) == cid ) {
 						name = p.name;
 						break;
 					}
+					p = p.next;
+				}
 				return swiz == null ? name : name+swiz;
 			});
 		}
@@ -448,7 +453,7 @@ class Stage3dDriver extends Driver {
 			shaderChanged = true;
 			curShader = p;
 			// unbind extra textures
-			var tcount : Int = shader.fragment.textures.length + shader.vertex.textures.length;
+			var tcount : Int = shader.fragment.texturesCount + shader.vertex.texturesCount;
 			while( curTextures.length > tcount ) {
 				curTextures.pop();
 				ctx.setTextureAt(curTextures.length, null);
@@ -463,7 +468,7 @@ class Stage3dDriver extends Driver {
 	override function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Textures:
-			for( i in 0...curShader.s.fragment.textures.length ) {
+			for( i in 0...curShader.s.fragment.texturesCount ) {
 				var t = buffers.fragment.tex[i];
 				if( t == null || t.isDisposed() )
 					t = h3d.mat.Texture.fromColor(0xFF00FF);

@@ -26,6 +26,7 @@ class ShaderConst {
 	public var pos : Int;
 	public var bits : Int;
 	public var globalId : Int;
+	public var next : ShaderConst;
 	public function new(v, pos, bits) {
 		this.v = v;
 		this.pos = pos;
@@ -37,18 +38,18 @@ class SharedShader {
 
 	public var data : ShaderData;
 	public var globals : Array<ShaderGlobal>;
-	public var consts : Array<ShaderConst>;
+	public var consts : ShaderConst;
 	var instanceCache : Map<Int,ShaderInstance>;
 	var paramsCount : Int;
 
 	public function new(src:String) {
 		instanceCache = new Map();
 		data = haxe.Unserializer.run(src);
-		consts = [];
+		consts = null;
 		globals = [];
 		for( v in data.vars )
 			browseVar(v);
-		if( consts.length == 0 ) {
+		if( consts == null ) {
 			var i = new ShaderInstance(data);
 			paramsCount = 0;
 			for( v in data.vars )
@@ -57,18 +58,23 @@ class SharedShader {
 		}
 	}
 
-	public function getInstance( constBits : Int ) {
+	public inline function getInstance( constBits : Int ) {
 		var i = instanceCache.get(constBits);
-		if( i != null )
-			return i;
+		return if( i == null ) makeInstance(constBits) else i;
+	}
+
+	function makeInstance( constBits : Int )  {
 		var eval = new hxsl.Eval();
-		for( c in consts )
+		var c = consts;
+		while( c != null ) {
 			eval.setConstant(c.v, switch( c.v.type ) {
 			case TBool: CBool((constBits >>> c.pos) & 1 != 0);
 			case TInt: CInt((constBits >>> c.pos) & ((1 << c.bits) - 1));
 			default: throw "assert";
 			});
-		i = new ShaderInstance(eval.eval(data));
+			c = c.next;
+		}
+		var i = new ShaderInstance(eval.eval(data));
 		paramsCount = 0;
 		for( v in data.vars )
 			addParam(eval, i, v);
@@ -122,11 +128,11 @@ class SharedShader {
 				return;
 			var bits = v.getConstBits();
 			if( bits > 0 ) {
-				var prev = consts[consts.length - 1];
-				var pos = prev == null ? 0 : prev.pos + prev.bits;
+				var pos = consts == null ? 0 : consts.pos + consts.bits;
 				var c = new ShaderConst(v, pos, bits);
 				c.globalId = globalId;
-				consts.push(c);
+				c.next = consts;
+				consts = c;
 			}
 		}
 	}

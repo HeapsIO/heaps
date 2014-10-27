@@ -30,21 +30,26 @@ class Shader {
 	}
 
 	function updateConstantsFinal( globals : Globals ) {
-		for( c in shader.consts )
-			if( c.globalId > 0 ) {
-				var v : Dynamic = globals.fastGet(c.globalId);
-				switch( c.v.type ) {
-				case TInt:
-					var v : Int = v;
-					if( v >>> c.bits != 0 ) throw "Constant " + c.v.name + " is outside range (" + v + " > " + ((1 << c.bits) - 1) + ")";
-					constBits |= v << c.pos;
-				case TBool:
-					var v : Bool = v;
-					if( v ) constBits |= 1 << c.pos;
-				default:
-					throw "assert";
-				}
+		var c = shader.consts;
+		while( c != null ) {
+			if( c.globalId == 0 ) {
+				c = c.next;
+				continue;
 			}
+			var v : Dynamic = globals.fastGet(c.globalId);
+			switch( c.v.type ) {
+			case TInt:
+				var v : Int = v;
+				if( v >>> c.bits != 0 ) throw "Constant " + c.v.name + " is outside range (" + v + " > " + ((1 << c.bits) - 1) + ")";
+				constBits |= v << c.pos;
+			case TBool:
+				var v : Bool = v;
+				if( v ) constBits |= 1 << c.pos;
+			default:
+				throw "assert";
+			}
+			c = c.next;
+		}
 		instance = shader.getInstance(constBits);
 	}
 

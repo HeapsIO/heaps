@@ -134,16 +134,19 @@ class Manager {
 
 	public function fillGlobals( buf : Buffers, s : hxsl.RuntimeShader ) {
 		inline function fill(buf:Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
-			for( g in s.globals ) {
+			var g = s.globals;
+			while( g != null ) {
 				var v = globals.fastGet(g.gid);
 				if( v == null ) {
 					if( g.path == "__consts__" ) {
 						fillRec(s.consts, g.type, buf.globals, g.pos);
+						g = g.next;
 						continue;
 					}
 					throw "Missing global value " + g.path;
 				}
 				fillRec(v, g.type, buf.globals, g.pos);
+				g = g.next;
 			}
 		}
 		fill(buf.vertex, s.vertex);
@@ -152,15 +155,19 @@ class Manager {
 
 	public function fillParams( buf : Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
 		inline function fill(buf:Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
-			for( p in s.params ) {
+			var p = s.params;
+			while( p != null ) {
 				var v = getParamValue(p, shaders);
 				fillRec(v, p.type, buf.params, p.pos);
+				p = p.next;
 			}
 			var tid = 0;
-			for( p in s.textures ) {
+			var p = s.textures;
+			while( p != null ) {
 				var t = getParamValue(p, shaders);
 				if( t == null ) t = h3d.mat.Texture.fromColor(0xFF00FF);
 				buf.tex[tid++] = t;
+				p = p.next;
 			}
 		}
 		fill(buf.vertex, s.vertex);
