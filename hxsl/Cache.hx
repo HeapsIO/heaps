@@ -14,6 +14,7 @@ class Cache {
 	var linkCache : Map<Int,SearchMap>;
 	var outVarsMap : Map<String, Int>;
 	var outVars : Array<Array<String>>;
+	var byID : Map<String, RuntimeShader>;
 	public var constsToGlobal : Bool;
 
 	function new() {
@@ -21,6 +22,7 @@ class Cache {
 		linkCache = new Map();
 		outVarsMap = new Map();
 		outVars = [];
+		byID = new Map();
 	}
 
 	public function allocOutputVars( vars : Array<String> ) {
@@ -100,6 +102,14 @@ class Cache {
 			r.globals.set(v.gid, true);
 		for( v in r.fragment.globals )
 			r.globals.set(v.gid, true);
+
+		var sid = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
+		var r2 = byID.get(sid);
+		if( r2 != null )
+			r.id = r2.id; // same id but different variable mapping
+		else
+			byID.set(sid, r);
+
 		return r;
 	}
 
