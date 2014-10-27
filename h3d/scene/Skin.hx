@@ -170,11 +170,11 @@ class Skin extends MultiMaterial {
 				var bid = j.bindIndex;
 				if( r == null ) r = j.defMat else if( j.retargetAnim ) { r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
 				if( j.parent == null )
-					m.multiply3x4(r, absPos);
+					m.multiply3x4inline(r, absPos);
 				else
-					m.multiply3x4(r, currentAbsPose[j.parent.index]);
+					m.multiply3x4inline(r, currentAbsPose[j.parent.index]);
 				if( bid >= 0 )
-					currentPalette[bid].multiply3x4(j.transPos, m);
+					currentPalette[bid].multiply3x4inline(j.transPos, m);
 			}
 			skinShader.bonesMatrixes = currentPalette;
 			if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid

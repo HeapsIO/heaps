@@ -241,11 +241,11 @@ class Object {
 			absPos.multiply3x4(absPos, follow.absPos);
 		} else {
 			if( parent != null )
-				absPos.multiply3x4(absPos, parent.absPos);
+				absPos.multiply3x4inline(absPos, parent.absPos);
 		}
 		// animation is applied before every other transform
 		if( defaultTransform != null )
-			absPos.multiply3x4(defaultTransform, absPos);
+			absPos.multiply3x4inline(defaultTransform, absPos);
 		if( invPos != null )
 			invPos._44 = 0; // mark as invalid
 	}

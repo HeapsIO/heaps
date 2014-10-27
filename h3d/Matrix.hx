@@ -215,6 +215,10 @@ class Matrix {
 
 	@:noDebug
 	public function multiply3x4( a : Matrix, b : Matrix ) {
+		multiply3x4inline(a, b);
+	}
+
+	public inline function multiply3x4inline( a : Matrix, b : Matrix ) {
 		var m11 = a._11; var m12 = a._12; var m13 = a._13;
 		var m21 = a._21; var m22 = a._22; var m23 = a._23;
 		var a31 = a._31; var a32 = a._32; var a33 = a._33;
