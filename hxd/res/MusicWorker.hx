@@ -115,7 +115,7 @@ class Channel {
 @:allow(hxd.res.Channel)
 class MusicWorker extends Worker<MusicMessage> {
 
-	public static var NATIVE_MUSIC = true;
+	public static var NATIVE_MUSIC = false;
 	static inline var INFINITE = 0x7FFFFFFF;
 
 	var channelID = 1;
