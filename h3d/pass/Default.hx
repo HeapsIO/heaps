@@ -79,13 +79,6 @@ class Default extends Base {
 		}
 	}
 
-	static inline function sortByShader( o1 : Object, o2 : Object ) {
-		var d = o1.shader.id - o2.shader.id;
-		if( d != 0 ) return d;
-		// TODO : sort by textures
-		return 0;
-	}
-
 	function uploadParams() {
 		manager.fillParams(cachedBuffer, ctx.drawPass.shader, ctx.drawPass.shaders);
 		ctx.engine.uploadShaderBuffers(cachedBuffer, Params);
@@ -102,7 +95,12 @@ class Default extends Base {
 			globals.fastSet(k, ctx.sharedGlobals.get(k));
 		setGlobals();
 		setupShaders(passes);
-		passes = haxe.ds.ListSort.sortSingleLinked(passes, sortByShader);
+		passes = haxe.ds.ListSort.sortSingleLinked(passes, function(o1:Object, o2:Object) {
+			var d = o1.shader.id - o2.shader.id;
+			if( d != 0 ) return d;
+			// TODO : sort by textures
+			return 0;
+		});
 		ctx.uploadParams = uploadParams;
 		var p = passes;
 		var buf = cachedBuffer, prevShader = null;
