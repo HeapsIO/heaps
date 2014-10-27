@@ -350,6 +350,9 @@ private class LocalEntry extends FileEntry {
 class LocalFileSystem implements FileSystem {
 
 	var root : FileEntry;
+	#if air3
+	var fileCache = new Map<String,{r:flash.filesystem.File}>();
+	#end
 	public var baseDir(default,null) : String;
 	public var createXBX : Bool;
 	public var createHMD : Bool;
@@ -387,11 +390,15 @@ class LocalFileSystem implements FileSystem {
 
 	function open( path : String ) {
 		#if air3
+		var r = fileCache.get(path);
+		if( r != null )
+			return r.r;
 		var f = new flash.filesystem.File(baseDir + path);
 		// ensure exact case / no relative path
 		f.canonicalize();
-		if( f.nativePath.split("\\").join("/") != baseDir + path )
-			return null;
+		if( !f.exists || f.nativePath.split("\\").join("/") != baseDir + path )
+			f = null;
+		fileCache.set(path, { r:f } );
 		return f;
 		#else
 		var f = sys.FileSystem.fullPath(baseDir + path).split("\\").join("/");
@@ -404,7 +411,7 @@ class LocalFileSystem implements FileSystem {
 	public function exists( path : String ) {
 		#if air3
 		var f = open(path);
-		return f != null && f.exists;
+		return f != null;
 		#else
 		var f = open(path);
 		return f != null && sys.FileSystem.exists(f);
