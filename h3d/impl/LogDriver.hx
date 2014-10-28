@@ -87,7 +87,8 @@ class LogDriver extends Driver {
 						cid += d;
 						swiz = "." + [for( i in 1...swiz.length ) String.fromCharCode(swiz.charCodeAt(i) - d)].join("");
 					}
-					for( g in shader.globals ) {
+					var g = shader.globals;
+					while( g != null ) {
 						if( g.path == "__consts__" && cid >= g.pos && cid < g.pos + (switch(g.type) { case TArray(TFloat, SConst(n)): n; default: 0; } ) && swiz == ".x" ) {
 							swiz = null;
 							name = "" + shader.consts[cid - g.pos];
@@ -97,6 +98,7 @@ class LogDriver extends Driver {
 							name = g.path;
 							break;
 						}
+						g = g.next;
 					}
 					if( name == null )
 						return r.matched(0);
@@ -112,11 +114,14 @@ class LogDriver extends Driver {
 						cid += d;
 						swiz = "." + [for( i in 1...swiz.length ) String.fromCharCode(swiz.charCodeAt(i) - d)].join("");
 					}
-					for( p in shader.params )
+					var p = shader.params;
+					while( p != null ) {
 						if( p.pos == cid ) {
 							name = p.name;
 							break;
 						}
+						p = p.next;
+					}
 					if( name == null )
 						return r.matched(0);
 					if( swiz != null ) name += swiz;
@@ -125,9 +130,12 @@ class LogDriver extends Driver {
 				str = ~/((fragment)|(vertex))Textures\[([0-9]+)\]/g.map(str, function(r) {
 					var name = null;
 					var cid = Std.parseInt(r.matched(4));
-					for( p in shader.textures )
-						if( p.pos == cid )
-							return p.name;
+					var t = shader.textures;
+					while( t != null ) {
+						if( t.pos == cid )
+							return t.name;
+						t = t.next;
+					}
 					return r.matched(0);
 				});
 				return str;
@@ -174,30 +182,38 @@ class LogDriver extends Driver {
 		case Globals:
 			inline function logVars( s : hxsl.RuntimeShader.RuntimeShaderData, buf : h3d.shader.Buffers.ShaderBuffers ) {
 				if( s.globalsSize == 0 ) return;
-				log('Upload ' + (s.vertex?"vertex":"fragment")+" globals");
-				for( g in s.globals )
+				log('Upload ' + (s.vertex?"vertex":"fragment") + " globals");
+				var g = s.globals;
+				while( g != null ) {
 					log('\t@${g.pos} ' + g.path + '=' + [for( i in 0...sizeOf(g.type) ) hxd.Math.fmt(buf.globals.toData()[g.pos + i])]);
+					g = g.next;
+				}
 			}
 			logVars(currentShader.vertex, buffers.vertex);
 			logVars(currentShader.fragment, buffers.fragment);
 		case Params:
 			inline function logVars( s : hxsl.RuntimeShader.RuntimeShaderData, buf : h3d.shader.Buffers.ShaderBuffers ) {
 				if( s.paramsSize == 0 ) return;
-				log('Upload ' + (s.vertex?"vertex":"fragment")+" params");
-				for( p in s.params ) {
+				log('Upload ' + (s.vertex?"vertex":"fragment") + " params");
+				var p = s.params;
+				while( p != null ) {
 					var pos = p.pos;
 					#if flash
 					pos += s.globalsSize * 4;
 					#end
 					log('\t@$pos ' + p.name + '=' + [for( i in 0...sizeOf(p.type) ) hxd.Math.fmt(buf.params.toData()[p.pos + i])]);
+					p = p.next;
 				}
 			}
 			logVars(currentShader.vertex, buffers.vertex);
 			logVars(currentShader.fragment, buffers.fragment);
 		case Textures:
 			inline function logVars( s : hxsl.RuntimeShader.RuntimeShaderData, buf : h3d.shader.Buffers.ShaderBuffers ) {
-				for( t in s.textures )
-					log('Set ${s.vertex ? "Vertex" : "Fragment"} Texture@${t.pos} '+t.name+"="+(buf.tex.length <= t.pos ? 'OUT OF BOUNDS' : ''+buf.tex[t.pos]));
+				var t = s.textures;
+				while( t != null ) {
+					log('Set ${s.vertex ? "Vertex" : "Fragment"} Texture@${t.pos} ' + t.name+"=" + (buf.tex.length <= t.pos ? 'OUT OF BOUNDS' : '' + buf.tex[t.pos]));
+					t = t.next;
+				}
 			}
 			logVars(currentShader.vertex, buffers.vertex);
 			logVars(currentShader.fragment, buffers.fragment);

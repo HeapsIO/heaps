@@ -25,6 +25,7 @@ class MeshPrimitive extends Primitive {
 			for( b in bufferCache )
 				b.dispose();
 		bufferCache = null;
+		prevNames = null;
 	}
 
 	function getBuffers( engine : h3d.Engine ) {
