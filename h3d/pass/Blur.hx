@@ -44,7 +44,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 
 	public function apply( src : h3d.mat.Texture, ?tmp : h3d.mat.Texture, ?output : h3d.mat.Texture, isDepth = false ) {
 
-		if( quality <= 0 || count <= 0 ) return;
+		if( quality <= 0 || count <= 0 || sigma <= 0 ) return;
 
 		if( output == null ) output = src;
 
