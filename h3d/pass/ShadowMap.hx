@@ -47,7 +47,8 @@ class ShadowMap extends Default {
 		if( border != null ) border.dispose();
 	}
 
-	public dynamic function getSceneBounds( bounds : h3d.col.Bounds ) {
+	public dynamic function calcShadowBounds( camera : h3d.Camera ) {
+		var bounds = camera.orthoBounds;
 		bounds.xMin = -10;
 		bounds.yMin = -10;
 		bounds.zMin = -10;
@@ -63,7 +64,7 @@ class ShadowMap extends Default {
 	override function setGlobals() {
 		super.setGlobals();
 		lightCamera.orthoBounds.empty();
-		getSceneBounds(lightCamera.orthoBounds);
+		calcShadowBounds(lightCamera);
 		lightCamera.update();
 		cameraViewProj = lightCamera.m;
 	}
@@ -77,6 +78,8 @@ class ShadowMap extends Default {
 		lightCamera.target.y += ct.y;
 		lightCamera.target.z += ct.z;
 		lightCamera.pos.load(ct);
+		lightCamera.update();
+
 		ctx.engine.setTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1, tcache.fullClearRequired ? 0 : null);
 		passes = super.draw(passes);
