@@ -1,9 +1,18 @@
 package h3d.scene;
 
+@:enum abstract ObjectFlags(Int) {
+	public var FPosChanged = 1;
+	public var FVisible = 2;
+	public var FCulled = 4;
+	public var FFollowPosition = 8;
+	public inline function toInt() return this;
+}
+
 class Object {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 
+	var flags : Int;
 	var childs : Array<Object>;
 	public var parent(default, null) : Object;
 	public var numChildren(get, never) : Int;
@@ -15,12 +24,13 @@ class Object {
 	public var scaleX(default,set) : Float;
 	public var scaleY(default, set) : Float;
 	public var scaleZ(default,set) : Float;
-	public var visible(default,set) : Bool = true;
+	public var visible(get,set) : Bool;
 
 	/**
 		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
 	**/
-	public var follow(default,set) : Object;
+	public var follow(default, set) : Object;
+	public var followPositionOnly(get, set) : Bool;
 
 	/**
 		This is an additional optional transformation that is performed before other local transformations.
@@ -30,32 +40,38 @@ class Object {
 	public var currentAnimation(default, null) : h3d.anim.Animation;
 
 	// internal flag to inform that the object is not to be displayed
-	var culled : Bool;
+	var culled(get,set) : Bool;
 
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
-	var posChanged : Bool;
+	var posChanged(get,set) : Bool;
 	var lastFrame : Int;
 
 	public function new( ?parent : Object ) {
+		flags = 0;
 		absPos = new h3d.Matrix();
 		absPos.identity();
 		x = 0; y = 0; z = 0; scaleX = 1; scaleY = 1; scaleZ = 1;
 		qRot = new h3d.Quat();
 		posChanged = false;
+		visible = true;
 		childs = [];
 		if( parent != null )
 			parent.addChild(this);
 	}
 
+	inline function get_visible() return (flags & FVisible.toInt()) != 0;
+	inline function get_posChanged() return (flags & FPosChanged.toInt()) != 0;
+	inline function get_culled() return (flags & FCulled.toInt()) != 0;
+	inline function get_followPositionOnly() return (flags & FFollowPosition.toInt()) != 0;
+	inline function set_posChanged(b) { if( b ) flags |= FPosChanged.toInt() else flags &= ~FPosChanged.toInt(); return b; }
+	inline function set_culled(b) { if( b ) flags |= FCulled.toInt() else flags &= ~FCulled.toInt(); return b; }
+	inline function set_visible(b) { culled = !b; if( b ) flags |= FVisible.toInt() else flags &= ~FVisible.toInt(); return b; }
+	inline function set_followPositionOnly(b) { if( b ) flags |= FFollowPosition.toInt() else flags &= ~FFollowPosition.toInt(); return b; }
+
 	public function playAnimation( a : h3d.anim.Animation ) {
 		return currentAnimation = a.createInstance(this);
-	}
-
-	function set_visible(v) {
-		culled = !v;
-		return visible = v;
 	}
 
 	/**
@@ -162,6 +178,8 @@ class Object {
 		o.scaleZ = scaleZ;
 		o.name = name;
 		o.follow = follow;
+		o.followPositionOnly = followPositionOnly;
+		o.visible = visible;
 		if( defaultTransform != null )
 			o.defaultTransform = defaultTransform.clone();
 		for( c in childs ) {
@@ -238,7 +256,12 @@ class Object {
 		absPos._43 = z;
 		if( follow != null ) {
 			follow.syncPos();
-			absPos.multiply3x4(absPos, follow.absPos);
+			if( followPositionOnly ) {
+				absPos.tx += follow.absPos.tx;
+				absPos.ty += follow.absPos.ty;
+				absPos.tz += follow.absPos.tz;
+			} else
+				absPos.multiply3x4(absPos, follow.absPos);
 		} else {
 			if( parent != null )
 				absPos.multiply3x4inline(absPos, parent.absPos);
