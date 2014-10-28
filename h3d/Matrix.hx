@@ -22,8 +22,19 @@ class Matrix {
 	public var _43 : Float;
 	public var _44 : Float;
 
+	public var tx(get, set) : Float;
+	public var ty(get, set) : Float;
+	public var tz(get, set) : Float;
+
 	public function new() {
 	}
+
+	inline function get_tx() return _41;
+	inline function get_ty() return _42;
+	inline function get_tz() return _43;
+	inline function set_tx(v) return _41 = v;
+	inline function set_ty(v) return _42 = v;
+	inline function set_tz(v) return _43 = v;
 
 	public function zero() {
 		_11 = 0.0; _12 = 0.0; _13 = 0.0; _14 = 0.0;
@@ -193,6 +204,14 @@ class Matrix {
 		_42 = vy;
 		_43 = vz;
 		_44 = vw;
+	}
+
+	public inline function getScale() {
+		var v = new Vector();
+		v.x = Math.sqrt(_11 * _11 + _12 * _12 + _13 * _13);
+		v.y = Math.sqrt(_21 * _21 + _22 * _22 + _23 * _23);
+		v.z = Math.sqrt(_31 * _31 + _32 * _32 + _33 * _33);
+		return v;
 	}
 
 	public function prependRotate( x, y, z ) {
