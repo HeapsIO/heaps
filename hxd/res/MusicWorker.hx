@@ -222,7 +222,12 @@ class MusicWorker extends Worker<MusicMessage> {
 		// make sure that the sounds system is initialized
 		// https://bugbase.adobe.com/index.cfm?event=bug&id=3842828
 		var s = new flash.media.Sound();
-		s.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, function(_) { } );
+		s.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, function(e:flash.events.SampleDataEvent) {
+			var bytes = e.data;
+			bytes.position = 0;
+			for( i in 0...BUFFER_SIZE * 2 )
+				bytes.writeFloat(0);
+		});
 		var c = s.play(0, 0);
 		if( c != null ) c.stop();
 	}
