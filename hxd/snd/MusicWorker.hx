@@ -1,21 +1,23 @@
-package hxd.res;
+package hxd.snd;
 
 enum MusicMessage {
 	Play( path : String, volume : Float, time : Float );
+	SetGlobalVolume( volume : Float );
 	SetVolume( id : Int, volume : Float );
 	Fade( id : Int, uid : Int, volume : Float, time : Float );
 	Stop( id : Int );
-	Queue( id : Int, ?next : Int );
+	Queue( id : Int, path : Null<String> );
 	Loop( id : Int, b : Bool );
 	EndLoop( id : Int );
 	SetTime( id : Int, t : Float );
 	FadeEnd( id : Int, uid : Int );
+	Active( b : Bool );
 }
 
 class Channel {
 	var w : MusicWorker;
 	var id : Int;
-	var snd : flash.media.Sound;
+	var snd : SoundData;
 	var samples : Int;
 	var position : Int;
 	var vol : Float;
@@ -24,10 +26,10 @@ class Channel {
 	var playTime : Float;
 	var onFadeEnd : Void -> Void;
 	var fadeUID : Int = 0;
+	var next : Channel;
 
-	public var res(default, null) : Sound;
+	public var res(default, null) : hxd.res.Sound;
 	public var loop(default, set) : Bool;
-	public var next(default,set) : Channel;
 	public var volume(default, set) : Float;
 	public var currentTime(get, set) : Float;
 
@@ -41,14 +43,9 @@ class Channel {
 		this.w = w;
 	}
 
-	function set_next( c : Channel ) {
-		if( next == c )
-			return c;
-		if( w != null ) {
-			if( c != null && c.id <= id ) throw "Must queue a channel created after";
-			w.send(Queue(id, c == null ? null : c.id));
-		}
-		return next = c;
+	public function queueNext( r : hxd.res.Sound ) {
+		if( w != null )
+			w.send(Queue(id, r == null ? null : r.entry.path));
 	}
 
 	function get_currentTime() {
@@ -111,21 +108,24 @@ class Channel {
 
 }
 
-@:access(hxd.res.Channel)
-@:allow(hxd.res.Channel)
+@:access(hxd.snd.Channel)
+@:allow(hxd.snd.Channel)
 class MusicWorker extends Worker<MusicMessage> {
 
 	public static var NATIVE_MUSIC = false;
-	static inline var INFINITE = 0x7FFFFFFF;
+	public static var volume(default, set) = 1.0;
 
 	var channelID = 1;
 	var channels : Array<Channel> = [];
 	var cmap : Map<Int,Channel> = new Map();
-	var snd : flash.media.Sound;
-	var channel : flash.media.SoundChannel;
+	var snd : SoundData;
+	var channel : SoundChannel;
 	var tmpBuf : haxe.io.Bytes;
 	var out : haxe.ds.Vector<Float>;
 	var current : Channel;
+	var prevPos : Float;
+	var globalVolume : Float = 1.;
+	var waitTimer : haxe.Timer;
 	static inline var BUFFER_SIZE = 4096;
 
 	public function new() {
@@ -149,17 +149,15 @@ class MusicWorker extends Worker<MusicMessage> {
 		case Play(path, volume, time):
 			var c = makeChannel(null, volume, time);
 			var bytes = hxd.Res.loader.load(path).entry.getBytes();
-			c.snd = new flash.media.Sound();
-			c.snd.loadCompressedDataFromByteArray(bytes.getData(), bytes.length);
+			c.snd = new SoundData();
+			c.snd.loadMP3(bytes);
 
 			if( NATIVE_MUSIC ) {
 				if( channel != null ) channel.stop();
-				channel = c.snd.play(time, INFINITE);
-				if( channel != null ) {
-					current = c;
-					channel.addEventListener(flash.events.Event.SOUND_COMPLETE, function(_) send(EndLoop(c.id)));
-				} else
-					current = null;
+				channel = c.snd.playNative(time, true);
+				channel.volume = globalVolume;
+				channel.onEnd = function() send(EndLoop(c.id));
+				current = c;
 				return;
 			}
 
@@ -186,7 +184,7 @@ class MusicWorker extends Worker<MusicMessage> {
 			if( c == null ) return;
 			channels.remove(c);
 			cmap.remove(c.id);
-			if( NATIVE_MUSIC && c == current && channel != null ) {
+			if( NATIVE_MUSIC && c == current ) {
 				channel.stop();
 				channel = null;
 				current = null;
@@ -197,11 +195,31 @@ class MusicWorker extends Worker<MusicMessage> {
 			c.volumeTarget = vol;
 			c.fadeUID = uid;
 			c.volumeSpeed = (vol - c.vol) / (time * 88200);
-		case Queue(id, tid):
+		case Queue(id, path):
 			var c = cmap.get(id);
 			if( c == null ) return;
-			var c2 = cmap.get(tid);
+
+			if( NATIVE_MUSIC ) {
+				if( current != c || channel == null ) return;
+				channel.onEnd = function() {
+					send(EndLoop(c.id));
+					if( path != null ) {
+						handleMessage(Play(path, c.volume, 0));
+						var c2 = channels[channels.length - 1];
+						send(Stop(c.id));
+						// rebind c2 as c
+						cmap.remove(c2.id);
+						c2.id = c.id;
+						cmap.set(c2.id, c2);
+					}
+				};
+				return;
+			}
+
+			handleMessage(Play(path, 0, 0));
+			var c2 = channels[channels.length - 1];
 			c.next = c2;
+
 		case Loop(id, b):
 			var c = cmap.get(id);
 			if( c == null ) return;
@@ -215,42 +233,53 @@ class MusicWorker extends Worker<MusicMessage> {
 		case SetTime(id, v):
 			var c = cmap.get(id);
 			if( c != null ) c.currentTime = v;
+		case Active(b):
+			if( b ) {
+				if( channel != null ) return;
+				channel = NATIVE_MUSIC ? (current == null ? null : current.snd.playNative(prevPos,true)) : snd.playStream(sampleData);
+				handleMessage(SetGlobalVolume(globalVolume));
+			} else {
+				if( channel == null ) return;
+				prevPos = NATIVE_MUSIC ? channel.position : 0;
+				channel.stop();
+				channel = null;
+			}
+		case SetGlobalVolume(v):
+			globalVolume = v;
+			if( channel != null ) channel.volume = v;
 		}
 	}
 
 	override function setupMain() {
 		// make sure that the sounds system is initialized
 		// https://bugbase.adobe.com/index.cfm?event=bug&id=3842828
-		var s = new flash.media.Sound();
-		s.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, function(e:flash.events.SampleDataEvent) {
-			var bytes = e.data;
-			bytes.position = 0;
-			for( i in 0...BUFFER_SIZE * 2 )
-				bytes.writeFloat(0);
-		});
-		var c = s.play(0, 0);
-		if( c != null ) c.stop();
+		var s = new SoundData();
+		s.playStream(function() return new haxe.ds.Vector<Float>(BUFFER_SIZE * 2)).stop();
+
+		if( hxd.System.isAndroid )
+			initActivate();
+		if( volume != 1 )
+			send(SetGlobalVolume(volume));
+	}
+
+	function initActivate() {
+		#if flash
+		// note : on some devices (Wiko) theses events are not fired inside workers, so catch them only in main thread
+		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.Event.ACTIVATE, function(_:Dynamic) send(Active(true)));
+		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.Event.DEACTIVATE, function(_:Dynamic) send(Active(false)));
+		#end
 	}
 
 	override function setupWorker() {
 		tmpBuf = haxe.io.Bytes.alloc(BUFFER_SIZE * 4 * 2);
 		out = new haxe.ds.Vector(BUFFER_SIZE * 2);
-		snd = new flash.media.Sound();
 		if( !NATIVE_MUSIC ) {
-			snd.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, onSample);
-			channel = snd.play(0, INFINITE);
+			snd = new SoundData();
+			channel = snd.playStream(sampleData);
 		}
-		if( hxd.System.isAndroid )
-			initActivate();
 	}
 
-	function initActivate() {
-		var prevPos = 0.;
-		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.Event.ACTIVATE, function(_) channel = snd.play(prevPos, INFINITE));
-		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.Event.DEACTIVATE, function(_) if( channel != null ) { prevPos = NATIVE_MUSIC ? channel.position : 0; channel.stop(); channel = null; } );
-	}
-
-	function onSample( e:flash.events.SampleDataEvent ) {
+	function sampleData() {
 		for( i in 0...BUFFER_SIZE*2 )
 			out[i] = 0;
 		for( c in channels ) {
@@ -260,22 +289,21 @@ class MusicWorker extends Worker<MusicMessage> {
 
 			var w = 0;
 			while( true ) {
-				var MAGIC_DELAY = 2257;
 				var size = BUFFER_SIZE - (w >> 1);
 				if( size == 0 ) break;
-				var tmpBytes = tmpBuf.getData();
-				tmpBytes.position = 0;
 				if( c.position + size >= c.samples ) {
 					size = c.samples - c.position;
-					c.snd.extract(tmpBytes, size, c.position + MAGIC_DELAY);
+					c.snd.extract(tmpBuf, 0, c.position, size);
 					c.position = 0;
 				} else {
-					c.snd.extract(tmpBytes, size, c.position + MAGIC_DELAY);
+					c.snd.extract(tmpBuf, 0, c.position, size);
 					c.position += size;
 				}
-				tmpBytes.position = 0;
+				#if flash
+				flash.Memory.select(tmpBuf.getData());
+				#end
 				for( i in 0...size * 2 ) {
-					out[w++] += tmpBytes.readFloat() * c.vol;
+					out[w++] += #if flash flash.Memory.getFloat #else tmpBuf.getFloat #end(i << 2) * c.vol;
 					if( c.volumeSpeed != 0 ) {
 						c.vol += c.volumeSpeed;
 						if( (c.volumeSpeed > 0) == (c.vol > c.volumeTarget) ) {
@@ -288,28 +316,29 @@ class MusicWorker extends Worker<MusicMessage> {
 				if( c.position == 0 ) {
 					send(EndLoop(c.id));
 					if( c.next != null ) {
-						c.next.vol = c.vol;
-						c.next.volumeSpeed = c.volumeSpeed;
-						c.next.volumeTarget = c.volumeTarget;
-						c.volume = 0;
-						c.volumeSpeed = 0;
-						break;
-					}
-					if( !c.loop ) {
+						c.snd = c.next.snd;
+						c.samples = c.next.samples;
+						handleMessage(Stop(c.next.id));
+						c.next = null;
+					} else if( !c.loop ) {
 						c.position = c.samples;
 						break;
 					}
 				}
 			}
 		}
-
-		var bytes = e.data;
-		bytes.position = 0;
-		for( i in 0...BUFFER_SIZE * 2 )
-			bytes.writeFloat(out[i]);
+		return out;
 	}
 
-	public static function play( music : Sound, volume = 1., time = 0. ) {
+	static function set_volume( v : Float ) {
+		if( volume == v )
+			return v;
+		if( inst != null )
+			inst.send(SetGlobalVolume(v));
+		return volume = v;
+	}
+
+	public static function play( music : hxd.res.Sound, volume = 1., time = 0. ) {
 		inst.send(Play(music.entry.path, volume, time));
 		return inst.makeChannel(music, volume, time);
 	}
