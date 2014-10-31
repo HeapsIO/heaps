@@ -68,6 +68,7 @@ class Worker<T:EnumValue> {
 	public function start() {
 		if( !ENABLE ) {
 			isWorker = false;
+			setupMain();
 			debugPeer = clone();
 			debugPeer.isWorker = true;
 			debugPeer.setupWorker();
