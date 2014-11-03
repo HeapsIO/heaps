@@ -102,8 +102,9 @@ class Animation {
 	}
 
 	public function setFrame( f : Float ) {
-		frame = f % frameCount;
-		if( frame < 0 ) frame += frameCount;
+		frame = f;
+		while( frame < 0 ) frame += frameCount;
+		while( frame > frameCount ) frame -= frameCount;
 	}
 
 	function clone( ?a : Animation ) : Animation {
