@@ -268,15 +268,15 @@ class Stage3dDriver extends Driver {
 		var data = pixels.bytes.getData();
 		if( t.flags.has(Cubic) ) {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
-			t.uploadFromByteArray(data, 0, side, mipLevel);
+			t.uploadFromByteArray(data, pixels.offset, side, mipLevel);
 		} else if( t.flags.has(IsNPOT) ) {
 			#if flash11_8
 			var t = flash.Lib.as(t.t, flash.display3D.textures.RectangleTexture);
-			t.uploadFromByteArray(data, 0);
+			t.uploadFromByteArray(data, pixels.offset);
 			#end
 		} else {
 			var t = flash.Lib.as(t.t,  flash.display3D.textures.Texture);
-			t.uploadFromByteArray(data, 0, mipLevel);
+			t.uploadFromByteArray(data, pixels.offset, mipLevel);
 		}
 	}
 
