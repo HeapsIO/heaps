@@ -110,6 +110,49 @@ abstract BitmapData(InnerData) {
 		#end
 	}
 
+	public function drawScaled( x : Int, y : Int, width : Int, height : Int, src : BitmapData, srcX : Int, srcY : Int, srcWidth : Int, srcHeight : Int, ?blendMode : h2d.BlendMode, smooth = true ) {
+		#if flash
+		if( blendMode == null ) blendMode = Alpha;
+
+		var b = switch( blendMode ) {
+		case None:
+			// todo : clear before ?
+			flash.display.BlendMode.NORMAL;
+		case Alpha:
+			flash.display.BlendMode.NORMAL;
+		case Add:
+			flash.display.BlendMode.ADD;
+		case Erase:
+			flash.display.BlendMode.ERASE;
+		case Multiply:
+			flash.display.BlendMode.MULTIPLY;
+		case Screen:
+			flash.display.BlendMode.SCREEN;
+		case SoftAdd:
+			throw "BlendMode not supported";
+		}
+
+		var m = tmpMatrix;
+		m.a = width / srcWidth;
+		m.d = height / srcHeight;
+		m.tx = x - srcX * m.a;
+		m.ty = y - srcY * m.d;
+
+		var r = tmpRect;
+		r.x = x;
+		r.y = y;
+		r.width = width;
+		r.height = height;
+
+		this.draw(src.toNative(), m, null, b, r, smooth);
+		m.a = 1;
+		m.d = 1;
+
+		#else
+		throw "TODO";
+		#end
+	}
+
 	public function line( x0 : Int, y0 : Int, x1 : Int, y1 : Int, color : Int ) {
 		var dx = x1 - x0;
 		var dy = y1 - y0;
