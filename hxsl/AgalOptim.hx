@@ -176,8 +176,8 @@ class AgalOptim {
 			}
 		// allocate a new temp id by looking the other live variable components
 		var found : Null<Int> = null, reservedMask = 0, foundUsage = 10;
-		for( td in 0...regs.length ) {
-			var rid = (startReg + td) % regs.length;
+		for( td in 0...usedRegs.length ) {
+			var rid = (startReg + td) % usedRegs.length;
 			var reg = usedRegs[rid];
 
 			// check current reserved components
@@ -209,7 +209,10 @@ class AgalOptim {
 			foundUsage = available - ncomps;
 			reservedMask = rmask;
 			// continue to look for best match
-			if( !packRegisters ) break;
+			if( !packRegisters ) {
+				startReg = rid;
+				break;
+			}
 		}
 		if( found == null ) {
 			reservedMask = 0;
