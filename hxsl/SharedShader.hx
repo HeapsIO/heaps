@@ -50,11 +50,19 @@ class SharedShader {
 		for( v in data.vars )
 			browseVar(v);
 		if( consts == null ) {
-			var i = new ShaderInstance(data);
-			paramsCount = 0;
-			for( v in data.vars )
-				addSelfParam(i, v);
-			instanceCache.set(0, i);
+			var hasFun = false;
+			for( f in data.funs )
+				switch( f.kind ) {
+				case Vertex, Fragment:
+				default: hasFun = true; break;
+				}
+			if( !hasFun ) {
+				var i = new ShaderInstance(data);
+				paramsCount = 0;
+				for( v in data.vars )
+					addSelfParam(i, v);
+				instanceCache.set(0, i);
+			}
 		}
 	}
 
