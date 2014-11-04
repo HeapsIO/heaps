@@ -4,6 +4,7 @@ class Light extends Object {
 
 	var shader : hxsl.Shader;
 	var objectDistance : Float; // used internaly
+	var cullingDistance : Float = 1e10;
 	@:noCompletion public var next : Light;
 
 	public var color(get, never) : h3d.Vector;
