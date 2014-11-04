@@ -784,7 +784,7 @@ class Checker {
 					unifyExpr(a, t);
 					tsize++; // if we manage to unify
 				}
-			if( tsize != n )
+			if( tsize != n && tsize > 1 )
 				error(g.toString() + " requires " + n + " "+t.toString()+" values but has " + tsize, pos);
 		}
 		switch( g ) {

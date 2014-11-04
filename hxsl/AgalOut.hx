@@ -247,85 +247,7 @@ class AgalOut {
 			}
 			return r;
 		case TBinop(bop, e1, e2):
-			inline function std(bop) {
-				var r = allocReg(e.t);
-				op(bop(r, expr(e1), expr(e2)));
-				return r;
-			}
-			inline function compare(bop,e1,e2) {
-				var r = allocReg(e.t);
-				op(bop(r, expr(e1), expr(e2)));
-				return r;
-			}
-			switch( bop ) {
-			case OpAdd: return std(OAdd);
-			case OpSub: return std(OSub);
-			case OpDiv: return std(ODiv);
-			case OpMod:
-				var tmp = allocReg(e2.t);
-				op(OMov(tmp, expr(e2)));
-				var r = allocReg(e.t);
-				op(ODiv(r, expr(e1), tmp));
-				op(OFrc(r, r));
-				op(OMul(r, r, tmp));
-				return r;
-			case OpAssign:
-				var r = expr(e1);
-				mov(r, expr(e2), e1.t);
-				return r;
-			case OpAssignOp(op):
-				var r1 = expr(e1);
-				mov(r1, expr( { e : TBinop(op, e1, e2), t : e1.t, p : e.p } ), e1.t);
-				return r1;
-			case OpMult:
-				var r = allocReg(e.t);
-				var r1 = expr(e1);
-				var r2 = expr(e2);
-				switch( [e1.t, e2.t] ) {
-				case [TFloat | TInt | TVec(_), TFloat | TInt | TVec(_)]:
-					op(OMul(r, r1, r2));
-				case [TVec(3, VFloat), TMat3]:
-					var r2 = swiz(r2,[X,Y,Z]);
-					op(ODp3(swiz(r,[X]), r1, r2));
-					op(ODp3(swiz(r,[Y]), r1, offset(r2,1)));
-					op(ODp3(swiz(r,[Z]), r1, offset(r2,2)));
-				case [TVec(3, VFloat), TMat3x4]:
-					if( r1.t == RTemp ) {
-						var r = allocReg();
-						op(OMov(swiz(r, [X, Y, Z]), r1));
-						op(OMov(swiz(r, [W]), getConst(1)));
-						r1 = r;
-					} else {
-						r1 = Reflect.copy(r1);
-						r1.swiz = null;
-					}
-					op(ODp4(swiz(r,[X]), r1, r2));
-					op(ODp4(swiz(r,[Y]), r1, offset(r2,1)));
-					op(ODp4(swiz(r,[Z]), r1, offset(r2,2)));
-				case [TVec(4, VFloat), TMat4]:
-					op(ODp4(swiz(r,[X]), r1, r2));
-					op(ODp4(swiz(r,[Y]), r1, offset(r2,1)));
-					op(ODp4(swiz(r,[Z]), r1, offset(r2,2)));
-					op(ODp4(swiz(r,[W]), r1, offset(r2,3)));
-				default:
-					throw "assert " + [e1.t, e2.t];
-				}
-				return r;
-			case OpGt:
-				return compare(OSlt, e2, e1);
-			case OpLt:
-				return compare(OSlt, e1, e2);
-			case OpGte:
-				return compare(OSge, e1, e2);
-			case OpLte:
-				return compare(OSlt, e2, e1);
-			case OpEq:
-				return compare(OSeq, e1, e2);
-			case OpNotEq:
-				return compare(OSne, e1, e2);
-			default:
-				throw "TODO " + bop;
-			}
+			return binop(bop, e.t, e1, e2);
 		case TCall(c, args):
 			switch( c.e ) {
 			case TGlobal(g):
@@ -403,6 +325,89 @@ class AgalOut {
 		default:
 		}
 		throw "TODO " + e.e;
+		return null;
+	}
+
+	function binop( bop, et : Type, e1 : TExpr, e2 : TExpr ) {
+		inline function std(bop) {
+			var r = allocReg(et);
+			op(bop(r, expr(e1), expr(e2)));
+			return r;
+		}
+		inline function compare(bop,e1,e2) {
+			var r = allocReg(et);
+			op(bop(r, expr(e1), expr(e2)));
+			return r;
+		}
+		switch( bop ) {
+		case OpAdd: return std(OAdd);
+		case OpSub: return std(OSub);
+		case OpDiv: return std(ODiv);
+		case OpMod:
+			var tmp = allocReg(e2.t);
+			op(OMov(tmp, expr(e2)));
+			var r = allocReg(et);
+			op(ODiv(r, expr(e1), tmp));
+			op(OFrc(r, r));
+			op(OMul(r, r, tmp));
+			return r;
+		case OpAssign:
+			var r = expr(e1);
+			mov(r, expr(e2), e1.t);
+			return r;
+		case OpAssignOp(op):
+			var r1 = expr(e1);
+			mov(r1, expr( { e : TBinop(op, e1, e2), t : e1.t, p : e1.p } ), e1.t);
+			return r1;
+		case OpMult:
+			var r = allocReg(et);
+			var r1 = expr(e1);
+			var r2 = expr(e2);
+			switch( [e1.t, e2.t] ) {
+			case [TFloat | TInt | TVec(_), TFloat | TInt | TVec(_)]:
+				op(OMul(r, r1, r2));
+			case [TVec(3, VFloat), TMat3]:
+				var r2 = swiz(r2,[X,Y,Z]);
+				op(ODp3(swiz(r,[X]), r1, r2));
+				op(ODp3(swiz(r,[Y]), r1, offset(r2,1)));
+				op(ODp3(swiz(r,[Z]), r1, offset(r2,2)));
+			case [TVec(3, VFloat), TMat3x4]:
+				if( r1.t == RTemp ) {
+					var r = allocReg();
+					op(OMov(swiz(r, [X, Y, Z]), r1));
+					op(OMov(swiz(r, [W]), getConst(1)));
+					r1 = r;
+				} else {
+					r1 = Reflect.copy(r1);
+					r1.swiz = null;
+				}
+				op(ODp4(swiz(r,[X]), r1, r2));
+				op(ODp4(swiz(r,[Y]), r1, offset(r2,1)));
+				op(ODp4(swiz(r,[Z]), r1, offset(r2,2)));
+			case [TVec(4, VFloat), TMat4]:
+				op(ODp4(swiz(r,[X]), r1, r2));
+				op(ODp4(swiz(r,[Y]), r1, offset(r2,1)));
+				op(ODp4(swiz(r,[Z]), r1, offset(r2,2)));
+				op(ODp4(swiz(r,[W]), r1, offset(r2,3)));
+			default:
+				throw "assert " + [e1.t, e2.t];
+			}
+			return r;
+		case OpGt:
+			return compare(OSlt, e2, e1);
+		case OpLt:
+			return compare(OSlt, e1, e2);
+		case OpGte:
+			return compare(OSge, e1, e2);
+		case OpLte:
+			return compare(OSlt, e2, e1);
+		case OpEq:
+			return compare(OSeq, e1, e2);
+		case OpNotEq:
+			return compare(OSne, e1, e2);
+		default:
+			throw "TODO " + bop;
+		}
 		return null;
 	}
 
@@ -498,7 +503,10 @@ class AgalOut {
 				var e = expr(a);
 				switch( a.t ) {
 				case TFloat:
-					mov(swiz(r, [COMPS[pos++]]), e, a.t);
+					if( args.length == 1 )
+						mov(r, swiz(e,[X,X,X,X]), a.t);
+					else
+						mov(swiz(r, [COMPS[pos++]]), e, a.t);
 				case TVec(2, VFloat):
 					mov(swiz(r, [COMPS[pos++], COMPS[pos++]]), e, a.t);
 				case TVec(3, VFloat):
@@ -517,7 +525,10 @@ class AgalOut {
 				var e = expr(a);
 				switch( a.t ) {
 				case TFloat:
-					mov(swiz(r, [COMPS[pos++]]), e, a.t);
+					if( args.length == 1 )
+						mov(r, swiz(e,[X,X,X]), a.t);
+					else
+						mov(swiz(r, [COMPS[pos++]]), e, a.t);
 				case TVec(2, VFloat):
 					mov(swiz(r, [COMPS[pos++], COMPS[pos++]]), e, a.t);
 				case TVec(3, VFloat):
@@ -534,7 +545,10 @@ class AgalOut {
 				var e = expr(a);
 				switch( a.t ) {
 				case TFloat:
-					mov(swiz(r, [COMPS[pos++]]), e, a.t);
+					if( args.length == 1 )
+						mov(r, swiz(e,[X,X]), a.t);
+					else
+						mov(swiz(r, [COMPS[pos++]]), e, a.t);
 				case TVec(2, VFloat):
 					mov(r, e, a.t);
 				default:
@@ -632,6 +646,8 @@ class AgalOut {
 			op(OSub(r, swiz(expr(e), [X, Y,Z]) , getConst(0.5) ));
 			op(ONrm(r, r));
 			return r;
+		case [Step, [a, b]]:
+			return this.binop(OpGt, ret, a, b);
 		default:
 		}
 
