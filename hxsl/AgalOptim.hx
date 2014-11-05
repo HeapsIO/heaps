@@ -112,8 +112,22 @@ class AgalOptim {
 
 	function allocRegs() {
 		for( r in regs )
-			if( r != null )
+			if( r != null ) {
 				r.index = -1;
+				// we extend the liveness of registers on their total lifetime
+				// TODO : we should instead split the register into several different ones
+				var allRegs = 0, first = -1, last = -1;
+				for( i in 0...r.live.length ) {
+					var v = r.live[i];
+					if( v > 0 ) {
+						allRegs |= v;
+						if( first < 0 ) first = i;
+						last = i;
+					}
+				}
+				for( i in first...last + 1 )
+					r.live[i] = allRegs;
+			}
 		startReg = 0;
 		maxRegs = 0;
 		var max = format.agal.Tools.getProps(RTemp, data.fragmentShader, data.version).count;
