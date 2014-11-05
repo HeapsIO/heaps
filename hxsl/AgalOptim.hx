@@ -49,7 +49,7 @@ class AgalOptim {
 		code = d.code.copy();
 
 		var inputs = [];
-		for( op in code ) iter(op, function(r,_) if( r.t == RAttr ) inputs[r.index] = true);
+		for( op in code ) iter(op, function(r, _) if( r.t == RAttr ) inputs[r.index] = true);
 
 		while( true ) {
 			//if( debug ) trace("OPTIM\n"+[for( op in code ) opStr(op)].join("\n"));
@@ -366,6 +366,28 @@ class AgalOptim {
 							break;
 						}
 					if( !rewrite ) break;
+				}
+
+				if( rewrite ) {
+					// if we have written at the same time one other component that we don't use,
+					// we can't remap the mov since this will write more components than we want
+					// e.g.
+					//	mov a.xyz, E
+					//  op b, E
+					//  mov a.w, b.x
+					//
+					//  we can't do "op a.wwww, E" since that will be E.w and not E.x
+					for( i in 0...sw1.length ) {
+						var k2 = sw2[i].getIndex();
+						var wt = i2.writes[k2];
+						for( i in 0...4 )
+							if( !used[i] && i2.writes[i] == wt ) {
+								rewrite = false;
+								break;
+							}
+						if( !rewrite )
+							break;
+					}
 				}
 
 				if( !rewrite ) continue;
