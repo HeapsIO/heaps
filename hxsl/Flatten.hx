@@ -73,7 +73,8 @@ class Flatten {
 		}
 		pack(prefix + "Globals", Global, globals, VFloat);
 		pack(prefix + "Params", Param, params, VFloat);
-		var textures = packTextures(prefix + "Textures", globals.concat(params), TSampler2D);
+		var allVars = globals.concat(params);
+		var textures = packTextures(prefix + "Textures", allVars, TSampler2D).concat(packTextures(prefix+"TexturesCube", allVars, TSamplerCube));
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
 		for( t in textures )
 			t.pos >>= 2;

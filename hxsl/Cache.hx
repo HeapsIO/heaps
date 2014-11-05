@@ -150,8 +150,11 @@ class Cache {
 					out[i].next = out[i + 1];
 				switch( g.type ) {
 				case TArray(TSampler2D, _):
-					c.textures = out[0];
-					c.texturesCount = out.length;
+					c.textures2D = out[0];
+					c.textures2DCount = out.length;
+				case TArray(TSamplerCube, _):
+					c.texturesCube = out[0];
+					c.texturesCubeCount = out.length;
 				case TArray(TVec(4, VFloat), SConst(size)):
 					c.params = out[0];
 					c.paramsSize = size;
@@ -175,8 +178,10 @@ class Cache {
 			c.globalsSize = 0;
 		if( c.params == null )
 			c.paramsSize = 0;
-		if( c.textures == null )
-			c.texturesCount = 0;
+		if( c.textures2D == null )
+			c.textures2DCount = 0;
+		if( c.texturesCube == null )
+			c.texturesCubeCount = 0;
 		c.data = data;
 		return c;
 	}

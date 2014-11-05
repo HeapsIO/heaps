@@ -130,7 +130,18 @@ class LogDriver extends Driver {
 				str = ~/((fragment)|(vertex))Textures\[([0-9]+)\]/g.map(str, function(r) {
 					var name = null;
 					var cid = Std.parseInt(r.matched(4));
-					var t = shader.textures;
+					var t = shader.textures2D;
+					while( t != null ) {
+						if( t.pos == cid )
+							return t.name;
+						t = t.next;
+					}
+					return r.matched(0);
+				});
+				str = ~/((fragment)|(vertex))TexturesCube\[([0-9]+)\]/g.map(str, function(r) {
+					var name = null;
+					var cid = Std.parseInt(r.matched(4));
+					var t = shader.texturesCube;
 					while( t != null ) {
 						if( t.pos == cid )
 							return t.name;
@@ -209,9 +220,14 @@ class LogDriver extends Driver {
 			logVars(currentShader.fragment, buffers.fragment);
 		case Textures:
 			inline function logVars( s : hxsl.RuntimeShader.RuntimeShaderData, buf : h3d.shader.Buffers.ShaderBuffers ) {
-				var t = s.textures;
+				var t = s.textures2D;
 				while( t != null ) {
 					log('Set ${s.vertex ? "Vertex" : "Fragment"} Texture@${t.pos} ' + t.name+"=" + (buf.tex.length <= t.pos ? 'OUT OF BOUNDS' : '' + buf.tex[t.pos]));
+					t = t.next;
+				}
+				t = s.texturesCube;
+				while( t != null ) {
+					log('Set ${s.vertex ? "Vertex" : "Fragment"} TextureCube@${t.pos} ' + t.name+"=" + (buf.tex.length <= t.pos ? 'OUT OF BOUNDS' : '' + buf.tex[t.pos + s.textures2DCount]));
 					t = t.next;
 				}
 			}

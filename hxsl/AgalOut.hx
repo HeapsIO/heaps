@@ -556,12 +556,15 @@ class AgalOut {
 				}
 			}
 			return r;
-		case [Texture2D, [t,uv]]:
+		case [Texture2D | TextureCube, [t,uv]]:
 			var t = expr(t);
 			var uv = expr(uv);
 			var r = allocReg();
 			if( t.t != RTexture ) throw "assert";
-			op(OTex(r, uv, { index : t.index, flags : [TIgnoreSampler] }));
+			var flags = [TIgnoreSampler];
+			if( g == TextureCube )
+				flags.push(TCube);
+			op(OTex(r, uv, { index : t.index, flags : flags }));
 			return r;
 		case [Dot, [a, b]]:
 			switch( a.t ) {

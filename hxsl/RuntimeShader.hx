@@ -38,8 +38,10 @@ class RuntimeShaderData {
 	public var paramsSize : Int;
 	public var globals : AllocGlobal;
 	public var globalsSize : Int;
-	public var textures : AllocParam;
-	public var texturesCount : Int;
+	public var textures2D : AllocParam;
+	public var textures2DCount : Int;
+	public var texturesCube : AllocParam;
+	public var texturesCubeCount : Int;
 	public var consts : Array<Float>;
 	public function new() {
 	}

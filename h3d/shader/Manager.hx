@@ -162,7 +162,14 @@ class Manager {
 				p = p.next;
 			}
 			var tid = 0;
-			var p = s.textures;
+			var p = s.textures2D;
+			while( p != null ) {
+				var t = getParamValue(p, shaders);
+				if( t == null ) t = h3d.mat.Texture.fromColor(0xFF00FF);
+				buf.tex[tid++] = t;
+				p = p.next;
+			}
+			var p = s.texturesCube;
 			while( p != null ) {
 				var t = getParamValue(p, shaders);
 				if( t == null ) t = h3d.mat.Texture.fromColor(0xFF00FF);
