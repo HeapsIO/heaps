@@ -15,7 +15,7 @@ class Shadow extends hxsl.Shader {
 		@private var shadowPos : Vec3;
 
 		function vertex() {
-			shadowPos = transformedPosition * shadow.proj * vec3(0.5, #if flash -0.5 #else 0.5 #end, 0.999) + vec3(0.5, 0.5, 0);
+			shadowPos = transformedPosition * shadow.proj * vec3(0.5, #if flash -0.5 #else 0.5 #end, 1) + vec3(0.5, 0.5, 0);
 		}
 
 		function fragment() {
@@ -30,8 +30,8 @@ class Shadow extends hxsl.Shader {
 
 			var zMax = shadowPos.z.saturate();
 			var delta = (depth + shadow.bias).min(zMax) - zMax;
-			var shade = exp( shadow.power * delta  ).clamp(0., 1.);
-			pixelColor.rgb *= (1. - shade) * shadow.color.rgb + shade;
+			var shade = exp( shadow.power * delta  ).saturate();
+			pixelColor.rgb *= (1 - shade) * shadow.color.rgb + shade;
 		}
 	};
 
