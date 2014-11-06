@@ -37,7 +37,7 @@ class SmoothTarget extends Animation {
 	function initObjects() {
 		objects = [];
 		for( o in target.objects ) {
-			var mat;
+			var mat = null;
 			var s = new SmoothObject(o.objectName);
 			s.targetObject = o.targetObject;
 			s.targetSkin = o.targetSkin;
@@ -45,7 +45,7 @@ class SmoothTarget extends Animation {
 			objects.push(s);
 			if( o.targetSkin != null )
 				mat = @:privateAccess o.targetSkin.currentRelPose[o.targetJoint];
-			else
+			else if( o.targetObject != null )
 				mat = o.targetObject.defaultTransform;
 			if( mat == null )
 				continue;
@@ -85,7 +85,10 @@ class SmoothTarget extends Animation {
 		var q1 = new h3d.Quat(), qout = new h3d.Quat();
 		target.sync(true);
 		for( o in objects ) {
-			var m = @:privateAccess if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] else o.targetObject.defaultTransform;
+			var m = @:privateAccess if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] else if( o.targetObject != null ) o.targetObject.defaultTransform else null;
+
+			if( m == null ) continue;
+
 			var mout = o.tmpMatrix;
 
 			if( mout == null ) {

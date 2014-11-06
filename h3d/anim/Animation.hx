@@ -48,6 +48,7 @@ class Animation {
 	var waits : AnimWait;
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
+	var isSync : Bool;
 
 	function new(name, frameCount, sampling) {
 		this.name = name;
@@ -70,7 +71,11 @@ class Animation {
 	public function unbind( objectName : String ) {
 		for( o in objects )
 			if( o.objectName == objectName ) {
-				objects.remove(o);
+				isSync = false;
+				#if !(dataOnly || macro)
+				o.targetObject = null;
+				o.targetSkin = null;
+				#end
 				return;
 			}
 	}
@@ -161,6 +166,7 @@ class Animation {
 				a.targetObject = obj;
 			}
 		}
+		isSync = false;
 	}
 	#end
 

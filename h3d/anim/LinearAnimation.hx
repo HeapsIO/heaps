@@ -44,7 +44,6 @@ class LinearObject extends AnimatedObject {
 class LinearAnimation extends Animation {
 
 	var syncFrame : Float;
-	var isSync : Bool;
 
 	public function new(name,frame,sampling) {
 		super(name,frame,sampling);
@@ -126,6 +125,9 @@ class LinearAnimation extends Animation {
 		syncFrame = frame;
 		if( decompose ) isSync = false;
 		for( o in getFrames() ) {
+
+			if( o.targetObject == null && o.targetSkin == null ) continue;
+
 			if( o.alphas != null ) {
 				var mat = o.targetObject.toMesh().material;
 				if( mat.blendMode == None ) mat.blendMode = Alpha;

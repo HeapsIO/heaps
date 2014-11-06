@@ -42,6 +42,7 @@ class Transition extends Animation {
 	override function sync( decompose : Bool = false ) {
 		if( decompose )
 			throw "Decompose not supported on transition";
+		anim1.isSync = anim2.isSync = false;
 		anim1.sync();
 		anim2.sync();
 	}
