@@ -135,7 +135,7 @@ class GlDriver extends Driver {
 		var prefix = s.vertex ? "vertex" : "fragment";
 		s.globals = gl.getUniformLocation(p.p, prefix + "Globals");
 		s.params = gl.getUniformLocation(p.p, prefix + "Params");
-		s.textures = [for( i in 0...shader.textures.length ) gl.getUniformLocation(p.p, prefix + "Textures[" + i + "]")];
+		s.textures = [for( i in 0...shader.textures2DCount ) gl.getUniformLocation(p.p, prefix + "Textures[" + i + "]")];
 	}
 
 	override function selectShader( shader : hxsl.RuntimeShader ) {
