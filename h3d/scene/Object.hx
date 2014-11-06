@@ -5,6 +5,7 @@ package h3d.scene;
 	public var FVisible = 2;
 	public var FCulled = 4;
 	public var FFollowPosition = 8;
+	public var FLightCameraCenter = 16;
 	public inline function toInt() return this;
 }
 
@@ -39,6 +40,12 @@ class Object {
 	public var defaultTransform(default, set) : h3d.Matrix;
 	public var currentAnimation(default, null) : h3d.anim.Animation;
 
+	/**
+		When selecting the lights to apply to this object, we will use the camera target as reference
+		instead of the object absolute position. This is useful for very large objects so they can get good lighting.
+	**/
+	public var lightCameraCenter(get, set) : Bool;
+
 	// internal flag to inform that the object is not to be displayed
 	var culled(get,set) : Bool;
 
@@ -65,10 +72,12 @@ class Object {
 	inline function get_posChanged() return (flags & FPosChanged.toInt()) != 0;
 	inline function get_culled() return (flags & FCulled.toInt()) != 0;
 	inline function get_followPositionOnly() return (flags & FFollowPosition.toInt()) != 0;
+	inline function get_lightCameraCenter() return (flags & FLightCameraCenter.toInt()) != 0;
 	inline function set_posChanged(b) { if( b ) flags |= FPosChanged.toInt() else flags &= ~FPosChanged.toInt(); return b; }
 	inline function set_culled(b) { if( b ) flags |= FCulled.toInt() else flags &= ~FCulled.toInt(); return b; }
 	inline function set_visible(b) { culled = !b; if( b ) flags |= FVisible.toInt() else flags &= ~FVisible.toInt(); return b; }
 	inline function set_followPositionOnly(b) { if( b ) flags |= FFollowPosition.toInt() else flags &= ~FFollowPosition.toInt(); return b; }
+	inline function set_lightCameraCenter(b) { if( b ) flags |= FLightCameraCenter.toInt() else flags &= ~FLightCameraCenter.toInt(); return b; }
 
 	public function playAnimation( a : h3d.anim.Animation ) {
 		return currentAnimation = a.createInstance(this);

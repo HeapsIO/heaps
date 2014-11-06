@@ -66,7 +66,10 @@ class LightSystem {
 		if( lightCount > maxLightsPerObject ) {
 			var l = ctx.lights;
 			while( l != null ) {
-				l.objectDistance = hxd.Math.distanceSq(l.absPos._41 - obj.absPos._41, l.absPos._42 - obj.absPos._42, l.absPos._43 - obj.absPos._43);
+				if( obj.lightCameraCenter )
+					l.objectDistance = hxd.Math.distanceSq(l.absPos._41 - ctx.camera.target.x, l.absPos._42 - ctx.camera.target.y, l.absPos._43 - ctx.camera.target.z);
+				else
+					l.objectDistance = hxd.Math.distanceSq(l.absPos._41 - obj.absPos._41, l.absPos._42 - obj.absPos._42, l.absPos._43 - obj.absPos._43);
 				l = l.next;
 			}
 			ctx.lights = haxe.ds.ListSort.sortSingleLinked(ctx.lights, sortLight);
