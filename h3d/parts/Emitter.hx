@@ -1,37 +1,23 @@
 package h3d.parts;
 import h3d.parts.Data;
 
-class Emitter extends h3d.scene.Mesh implements Randomized {
+class Emitter extends Particles implements Randomized {
 
-	public var count(default, null) : Int;
 	public var time(default,null) : Float;
 	public var state(default, null) : State;
 	public var speed : Float = 1.;
 	public var collider : Collider;
 
-	var pshader : h3d.shader.ParticleShader;
 	var rnd : Float;
 	var emitCount : Float;
 	var colorMap : ColorKey;
-	var hasColor : Bool;
-
-	var head : Particle;
-	var tail : Particle;
-	var pool : Particle;
-
-	var tmp : h3d.Vector;
-	var tmpBuf : hxd.FloatBuffer;
 	var curPart : Particle;
 
 	public function new(?state,?parent) {
-		super(null, null, parent);
-		pshader = new h3d.shader.ParticleShader();
-		material.mainPass.addShader(pshader);
-		material.mainPass.dynamicParameters = true;
+		super(null, parent);
 		time = 0;
 		emitCount = 0;
 		rnd = Math.random();
-		tmp = new h3d.Vector();
 		if( state == null ) {
 			state = new State();
 			state.setDefaults();
@@ -40,22 +26,8 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 		setState(state);
 	}
 
-	/**
-		Offset all existing particles by the given values.
-	**/
-	public function offsetParticles( dx : Float, dy : Float, dz = 0. ) {
-		var p = head;
-		while( p != null ) {
-			p.x += dx;
-			p.y += dy;
-			p.z += dz;
-			p = p.next;
-		}
-	}
-
-	public function reset() {
-		while( head != null )
-			kill(head);
+	override function reset() {
+		super.reset();
 		time = 0;
 		emitCount = 0;
 		rnd = Math.random();
@@ -64,6 +36,7 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 	public function setState(s) {
 		this.state = s;
 		material.texture = s.frames == null || s.frames.length == 0 ? null : s.frames[0].getTexture();
+		frames = s.frames;
 		switch( s.blendMode ) {
 		case Add:
 			material.blendMode = Add;
@@ -82,16 +55,10 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 			}
 		}
 		hasColor = colorMap != null || !state.alpha.match(VConst(1)) || !state.light.match(VConst(1));
-		var c = material.mainPass.getShader(h3d.shader.VertexColorAlpha);
-		if( hasColor ) {
-			if( c == null )
-				material.mainPass.addShader(new h3d.shader.VertexColorAlpha());
-		} else {
-			if( c != null )
-				material.mainPass.removeShader(c);
-		}
 		pshader.isAbsolute = !state.emitLocal;
 		pshader.is3D = state.is3D;
+		sortMode = state.sortMode;
+		emitTrail = state.emitTrail;
 	}
 
 	inline function eval(v) {
@@ -112,9 +79,10 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 		for( b in s.bursts )
 			if( b.time <= time && b.time > old )
 				emitCount += b.count;
+		if( emitCount > 0 && posChanged ) syncPos();
 		while( emitCount > 0 ) {
 			if( count < s.maxParts )
-				emitParticle();
+				initPart(emitParticle());
 			emitCount -= 1;
 			if( state.emitTrail )
 				break;
@@ -206,54 +174,6 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 		p.lifeTimeFactor = 1 / eval(state.life);
 	}
 
-	public function emitPart() {
-		if( posChanged ) syncPos();
-		return emitParticle();
-	}
-
-	function emitParticle() {
-		var p;
-		if( pool == null )
-			p = new Particle();
-		else {
-			p = pool;
-			pool = p.next;
-		}
-		initPart(p);
-		count++;
-		switch( state.sortMode ) {
-		case Front, Sort, InvSort:
-			if( head == null ) {
-				p.next = null;
-				head = tail = p;
-			} else {
-				head.prev = p;
-				p.next = head;
-				head = p;
-			}
-		case Back:
-			if( head == null ) {
-				p.next = null;
-				head = tail = p;
-			} else {
-				tail.next = p;
-				p.prev = tail;
-				p.next = null;
-				tail = p;
-			}
-		}
-		return p;
-	}
-
-	function kill(p:Particle) {
-		if( p.prev == null ) head = p.next else p.prev.next = p.next;
-		if( p.next == null ) tail = p.prev else p.next.prev = p.prev;
-		p.prev = null;
-		p.next = pool;
-		pool = p;
-		count--;
-	}
-
 	function updateParticle( p : Particle, dt : Float ) {
 		p.time += dt * p.lifeTimeFactor;
 		if( p.time > 1 ) {
@@ -298,9 +218,9 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 		var light = p.eval(state.light, p.time);
 		if( ck != null ) {
 			if( ck.time >= p.time ) {
-				p.cr = ck.r;
-				p.cg = ck.g;
-				p.cb = ck.b;
+				p.r = ck.r;
+				p.g = ck.g;
+				p.b = ck.b;
 			} else {
 				var prev = ck;
 				ck = ck.next;
@@ -309,26 +229,26 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 					ck = ck.next;
 				}
 				if( ck == null ) {
-					p.cr = prev.r;
-					p.cg = prev.g;
-					p.cb = prev.b;
+					p.r = prev.r;
+					p.g = prev.g;
+					p.b = prev.b;
 				} else {
 					var b = (p.time - prev.time) / (ck.time - prev.time);
 					var a = 1 - b;
-					p.cr = prev.r * a + ck.r * b;
-					p.cg = prev.g * a + ck.g * b;
-					p.cb = prev.b * a + ck.b * b;
+					p.r = prev.r * a + ck.r * b;
+					p.g = prev.g * a + ck.g * b;
+					p.b = prev.b * a + ck.b * b;
 				}
 			}
-			p.cr *= light;
-			p.cg *= light;
-			p.cb *= light;
+			p.r *= light;
+			p.g *= light;
+			p.b *= light;
 		} else {
-			p.cr = light;
-			p.cg = light;
-			p.cb = light;
+			p.r = light;
+			p.g = light;
+			p.b = light;
 		}
-		p.ca = p.eval(state.alpha, p.time);
+		p.a = p.eval(state.alpha, p.time);
 
 		// frame
 		if( state.frame != null ) {
@@ -349,240 +269,9 @@ class Emitter extends h3d.scene.Mesh implements Randomized {
 		return count != 0 || time < 1 || state.loop;
 	}
 
-	function sort( list : Particle ) {
-		return haxe.ds.ListSort.sort(list, function(p1, p2) return p1.w < p2.w ? 1 : -1);
-	}
-
-	function sortInv( list : Particle ) {
-		return haxe.ds.ListSort.sort(list, function(p1, p2) return p1.w < p2.w ? -1 : 1);
-	}
-
-	@:access(h3d.parts.Material) @:access(h2d.Tile)
-	@:noDebug
 	override function draw( ctx : h3d.scene.RenderContext ) {
-		if( head == null )
-			return;
-		switch( state.sortMode ) {
-		case Sort, InvSort:
-			var p = head;
-			var m = ctx.camera.m;
-			while( p != null ) {
-				p.w = (p.x * m._13 + p.y * m._23 + p.z * m._33 + m._43) / (p.x * m._14 + p.y * m._24 + p.z * m._34 + m._44);
-				p = p.next;
-			}
-			head = state.sortMode == Sort ? sort(head) : sortInv(head);
-			tail = head.prev;
-			head.prev = null;
-		default:
-		}
-		if( tmpBuf == null ) tmpBuf = new hxd.FloatBuffer();
-		var pos = 0;
-		var p = head;
-		var tmp = tmpBuf;
-		var surface = 0.;
-		var frames = state.frames;
-		if( frames == null || frames.length == 0 ) {
-			var t = new h2d.Tile(null, 0, 0, 1, 1);
-			t.u = 0; t.u2 = 1;
-			t.v = 0; t.v2 = 1;
-			frames = [t];
-		}
-		if( state.emitTrail ) {
-			var prev = p;
-			var prevX1 = p.x, prevY1 = p.y, prevZ1 = p.z;
-			var prevX2 = p.x, prevY2 = p.y, prevZ2 = p.z;
-			if( p != null ) p = p.next;
-			while( p != null ) {
-				var f = frames[p.frame];
-				if( f == null ) f = frames[0];
-				var ratio = p.size * p.ratio * (f.height / f.width);
-
-				// pos
-				tmp[pos++] = prevX1;
-				tmp[pos++] = prevY1;
-				tmp[pos++] = prevZ1;
-				// normal
-				tmp[pos++] = p.size;
-				tmp[pos++] = ratio;
-				tmp[pos++] = p.rotation;
-				// delta
-				tmp[pos++] = 0;
-				tmp[pos++] = 0;
-				// UV
-				tmp[pos++] = f.u;
-				tmp[pos++] = f.v2;
-				// RBGA
-				if( hasColor ) {
-					tmp[pos++] = p.cr;
-					tmp[pos++] = p.cg;
-					tmp[pos++] = p.cb;
-					tmp[pos++] = p.ca;
-				}
-
-				tmp[pos++] = prevX2;
-				tmp[pos++] = prevY2;
-				tmp[pos++] = prevZ2;
-				tmp[pos++] = p.size;
-				tmp[pos++] = ratio;
-				tmp[pos++] = p.rotation;
-				tmp[pos++] = 0;
-				tmp[pos++] = 0;
-				tmp[pos++] = f.u;
-				tmp[pos++] = f.v;
-				if( hasColor ) {
-					tmp[pos++] = p.cr;
-					tmp[pos++] = p.cg;
-					tmp[pos++] = p.cb;
-					tmp[pos++] = p.ca;
-				}
-
-				var dx = p.x - prev.x;
-				var dy = p.y - prev.y;
-				var dz = p.z - prev.z;
-				var d = hxd.Math.invSqrt(dx * dx + dy * dy + dz * dz);
-				// this prevent big rotations from occuring while we have a very small offset
-				// the value is a bit arbitrary
-				if( d > 10 ) d = 10;
-				dx *= d;
-				dy *= d;
-				dz *= d;
-				var dir = new h3d.Vector(Math.sin(p.rotation), 0, Math.cos(p.rotation)).cross(new h3d.Vector(dx, dy, dz));
-
-				prevX1 = p.x + dir.x * p.size;
-				prevY1 = p.y + dir.y * p.size;
-				prevZ1 = p.z + dir.z * p.size;
-
-				prevX2 = p.x - dir.x * p.size;
-				prevY2 = p.y - dir.y * p.size;
-				prevZ2 = p.z - dir.z * p.size;
-
-				tmp[pos++] = prevX1;
-				tmp[pos++] = prevY1;
-				tmp[pos++] = prevZ1;
-				tmp[pos++] = p.size;
-				tmp[pos++] = ratio;
-				tmp[pos++] = p.rotation;
-				tmp[pos++] = 0;
-				tmp[pos++] = 0;
-				tmp[pos++] = f.u2;
-				tmp[pos++] = f.v2;
-				if( hasColor ) {
-					tmp[pos++] = p.cr;
-					tmp[pos++] = p.cg;
-					tmp[pos++] = p.cb;
-					tmp[pos++] = p.ca;
-				}
-
-				tmp[pos++] = prevX2;
-				tmp[pos++] = prevY2;
-				tmp[pos++] = prevZ2;
-				tmp[pos++] = p.size;
-				tmp[pos++] = ratio;
-				tmp[pos++] = p.rotation;
-				tmp[pos++] = 0;
-				tmp[pos++] = 0;
-				tmp[pos++] = f.u2;
-				tmp[pos++] = f.v;
-				if( hasColor ) {
-					tmp[pos++] = p.cr;
-					tmp[pos++] = p.cg;
-					tmp[pos++] = p.cb;
-					tmp[pos++] = p.ca;
-				}
-
-				prev = p;
-				p = p.next;
-			}
-		} else {
-			while( p != null ) {
-				var f = frames[p.frame];
-				if( f == null ) f = frames[0];
-				var ratio = p.size * p.ratio * (f.height / f.width);
-				tmp[pos++] = p.x;
-				tmp[pos++] = p.y;
-				tmp[pos++] = p.z;
-				tmp[pos++] = p.size;
-				tmp[pos++] = ratio;
-				tmp[pos++] = p.rotation;
-				// delta
-				tmp[pos++] = -0.5;
-				tmp[pos++] = -0.5;
-				// UV
-				tmp[pos++] = f.u;
-				tmp[pos++] = f.v2;
-				// RBGA
-				if( hasColor ) {
-					tmp[pos++] = p.cr;
-					tmp[pos++] = p.cg;
-					tmp[pos++] = p.cb;
-					tmp[pos++] = p.ca;
-				}
-
-				tmp[pos++] = p.x;
-				tmp[pos++] = p.y;
-				tmp[pos++] = p.z;
-				tmp[pos++] = p.size;
-				tmp[pos++] = ratio;
-				tmp[pos++] = p.rotation;
-				tmp[pos++] = -0.5;
-				tmp[pos++] = 0.5;
-				tmp[pos++] = f.u;
-				tmp[pos++] = f.v;
-				if( hasColor ) {
-					tmp[pos++] = p.cr;
-					tmp[pos++] = p.cg;
-					tmp[pos++] = p.cb;
-					tmp[pos++] = p.ca;
-				}
-
-				tmp[pos++] = p.x;
-				tmp[pos++] = p.y;
-				tmp[pos++] = p.z;
-				tmp[pos++] = p.size;
-				tmp[pos++] = ratio;
-				tmp[pos++] = p.rotation;
-				tmp[pos++] = 0.5;
-				tmp[pos++] = -0.5;
-				tmp[pos++] = f.u2;
-				tmp[pos++] = f.v2;
-				if( hasColor ) {
-					tmp[pos++] = p.cr;
-					tmp[pos++] = p.cg;
-					tmp[pos++] = p.cb;
-					tmp[pos++] = p.ca;
-				}
-
-				tmp[pos++] = p.x;
-				tmp[pos++] = p.y;
-				tmp[pos++] = p.z;
-				tmp[pos++] = p.size;
-				tmp[pos++] = ratio;
-				tmp[pos++] = p.rotation;
-				tmp[pos++] = 0.5;
-				tmp[pos++] = 0.5;
-				tmp[pos++] = f.u2;
-				tmp[pos++] = f.v;
-				if( hasColor ) {
-					tmp[pos++] = p.cr;
-					tmp[pos++] = p.cg;
-					tmp[pos++] = p.cb;
-					tmp[pos++] = p.ca;
-				}
-
-				p = p.next;
-			}
-		}
-		var stride = 10;
-		if( hasColor ) stride += 4;
-		var buffer = h3d.Buffer.ofSubFloats(tmp, stride, Std.int(pos/stride), [Quads, Dynamic, RawFormat]);
-		var size = eval(state.globalSize);
-		if( state.is3D )
-			pshader.size.set(size, size);
-		else
-			pshader.size.set(size * ctx.engine.height / ctx.engine.width, size);
-		ctx.uploadParams();
-		ctx.engine.renderQuadBuffer(buffer);
-		buffer.dispose();
+		globalSize = eval(state.globalSize) * 0.1;
+		super.draw(ctx);
 	}
 
 }

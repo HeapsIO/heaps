@@ -6,6 +6,7 @@ class ParticleShader extends hxsl.Shader {
 
 		@global var camera : {
 			var viewProj : Mat4;
+			var position : Vec3;
 		};
 
 		@global var global : {
@@ -22,6 +23,7 @@ class ParticleShader extends hxsl.Shader {
 		var transformedPosition : Vec3;
 		var transformedNormal : Vec3;
 		var projectedPosition : Vec4;
+		@param var rotationAxis : Mat3;
 
 		// we store the corner coordinates and rotation in the input.normal
 
@@ -38,21 +40,25 @@ class ParticleShader extends hxsl.Shader {
 			var rot = input.normal.z;
 			var cr = rot.cos();
 			var sr = rot.sin();
-			var rtmp = rpos.x * cr + rpos.y * sr;
-			rpos.y = rpos.y * cr - rpos.x * sr;
-			rpos.x = rtmp;
+			var pos = input.size * rpos;
+			if( is3D ) pos *= size;
+			var rtmp = pos.x * cr + pos.y * sr;
+			pos.y = pos.y * cr - pos.x * sr;
+			pos.x = rtmp;
 			if( is3D ) {
-				rpos.xy *= input.size * size;
-				transformedPosition.x += rpos.x;
-				transformedPosition.z += rpos.y;
-				projectedPosition = vec4(transformedPosition,1) * camera.viewProj;
+				transformedPosition += vec3(pos,0) * rotationAxis;
 			} else {
 				projectedPosition = vec4(transformedPosition,1) * camera.viewProj;
-				projectedPosition.xy += rpos * input.size * size;
+				projectedPosition.xy += pos * size;
 			}
-			transformedNormal = vec3(0, 0, -1);
+			transformedNormal = (transformedPosition - camera.position).normalize();
 		}
 
+	}
+
+	public function new() {
+		super();
+		rotationAxis.initRotateAxis(new h3d.Vector(1, 0, 0), Math.PI / 2);
 	}
 
 }
