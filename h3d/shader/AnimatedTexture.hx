@@ -19,7 +19,7 @@ class AnimatedTexture extends hxsl.Shader {
 			var time : Float;
 		};
 		@param var speed : Float;
-		@param var frameDivision : Float;
+		@param var frameDivision : Vec2;
 		@param var totalFrames : Float;
 		@param var startTime : Float;
 		@const var loop : Bool;
@@ -36,9 +36,9 @@ class AnimatedTexture extends hxsl.Shader {
 			if( loop ) frame %= totalFrames else frame = min(frame, totalFrames - 1);
 			var nextFrame = if( loop ) (frame + 1) % totalFrames else min(frame + 1, totalFrames - 1);
 
-			var delta = vec2(1. / frameDivision, 1. / frameDivision) * vec2( frame % frameDivision, float(int(frame / frameDivision)) );
+			var delta = vec2( frame % frameDivision.x, float(int(frame / frameDivision.x)) ) / frameDivision;
 			calculatedUV = input.uv + delta;
-			var delta = vec2(1. / frameDivision, 1. / frameDivision) * vec2( nextFrame % frameDivision, float(int(nextFrame / frameDivision)) );
+			var delta = vec2( nextFrame % frameDivision.x, float(int(nextFrame / frameDivision.x)) ) / frameDivision;
 			calculatedUV2 = input.uv + delta;
 		}
 
@@ -53,11 +53,11 @@ class AnimatedTexture extends hxsl.Shader {
 	};
 
 
-	public function new( texture, frameDivision : Int, totalFrames = -1, ?speed = 1.) {
+	public function new( texture, frameDivisionX : Int, frameDivisionY : Int, totalFrames = -1, ?speed = 1.) {
 		super();
 		this.texture = texture;
-		if( totalFrames < 0 ) totalFrames = frameDivision;
-		this.frameDivision = frameDivision;
+		if( totalFrames < 0 ) totalFrames = frameDivisionX * frameDivisionY;
+		this.frameDivision.set(frameDivisionX,frameDivisionY);
 		this.totalFrames = totalFrames;
 		this.speed = speed;
 		this.loop = true;
