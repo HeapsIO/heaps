@@ -52,8 +52,8 @@ class SharedShader {
 		if( consts == null ) {
 			var hasFun = false;
 			for( f in data.funs )
-				switch( f.kind ) {
-				case Vertex, Fragment:
+				switch( f.ref.name ) {
+				case "vertex", "fragment", "__init__", "__init__vertex", "__init__fragment":
 				default: hasFun = true; break;
 				}
 			if( !hasFun ) {
