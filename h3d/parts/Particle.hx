@@ -2,6 +2,7 @@ package h3d.parts;
 
 class Particle implements Data.Randomized {
 
+	var parts : Particles;
 	public var x : Float;
 	public var y : Float;
 	public var z : Float;
@@ -48,6 +49,13 @@ class Particle implements Data.Randomized {
 
 	inline function get_alpha() return a;
 	inline function set_alpha(v) return a = v;
+
+	public function remove() {
+		if( parts != null ) {
+			@:privateAccess parts.kill(this);
+			parts = null;
+		}
+	}
 
 	public inline function eval( v : Data.Value, time : Float ) {
 		return Data.State.eval(v, time, this, this);

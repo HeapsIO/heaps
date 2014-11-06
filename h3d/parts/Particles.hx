@@ -15,6 +15,7 @@ private class ParticleIterator {
 	}
 }
 
+@:access(h3d.parts.Particle)
 class Particles extends h3d.scene.Mesh {
 
 	var pshader : h3d.shader.ParticleShader;
@@ -76,6 +77,7 @@ class Particles extends h3d.scene.Mesh {
 	public function alloc() {
 		var p = emitParticle();
 		if( posChanged ) syncPos();
+		p.parts = this;
 		p.x = absPos.tx;
 		p.y = absPos.ty;
 		p.z = absPos.tz;
@@ -134,11 +136,11 @@ class Particles extends h3d.scene.Mesh {
 	}
 
 	function sort( list : Particle ) {
-		return haxe.ds.ListSort.sort(list, function(p1, p2) return @:privateAccess (p1.w < p2.w ? 1 : -1));
+		return haxe.ds.ListSort.sort(list, function(p1, p2) return p1.w < p2.w ? 1 : -1);
 	}
 
 	function sortInv( list : Particle ) {
-		return haxe.ds.ListSort.sort(list, function(p1, p2) return @:privateAccess (p1.w < p2.w ? -1 : 1));
+		return haxe.ds.ListSort.sort(list, function(p1, p2) return p1.w < p2.w ? -1 : 1);
 	}
 
 	public inline function getParticles() {
@@ -146,7 +148,6 @@ class Particles extends h3d.scene.Mesh {
 	}
 
 	@:access(h2d.Tile)
-	@:access(h3d.parts.Particle)
 	@:noDebug
 	override function draw( ctx : h3d.scene.RenderContext ) {
 		if( head == null )
