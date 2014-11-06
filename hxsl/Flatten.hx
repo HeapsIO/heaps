@@ -259,6 +259,8 @@ class Flatten {
 				read(1,pos),
 				read(2,pos),
 			]), t : TMat3x4, p : pos }
+		case TMat3:
+			return { e : TCall( { e : TGlobal(Mat3), t : TFun([]), p : pos } , [access(a, TMat3x4, pos, read)] ), t : TMat3, p : pos };
 		case TArray(t, SConst(len)):
 			var stride = Std.int(a.size / len);
 			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, readIndex.bind(a)); }];
