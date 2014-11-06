@@ -281,18 +281,9 @@ abstract BitmapData(InnerData) {
 
 	public function toPNG() {
 		var pixels = getPixels();
-		var png;
-		switch( pixels.format ) {
-		case ARGB:
-			png = format.png.Tools.build32ARGB(pixels.width, pixels.height, pixels.bytes);
-		default:
-			pixels.convert(BGRA);
-			png = format.png.Tools.build32ARGB(pixels.width, pixels.height, pixels.bytes);
-		}
+		var png = pixels.toPNG();
 		pixels.dispose();
-		var o = new haxe.io.BytesOutput();
-		new format.png.Writer(o).write(png);
-		return o.getBytes();
+		return png;
 	}
 
 	static function nativeGetPixels( b : InnerData ) {

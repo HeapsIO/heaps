@@ -152,6 +152,19 @@ class Pixels {
 		}
 	}
 
+	public function toPNG() {
+		var png;
+		switch( format ) {
+		case ARGB:
+			png = std.format.png.Tools.build32ARGB(width, height, bytes);
+		default:
+			convert(BGRA);
+			png = std.format.png.Tools.build32BGRA(width, height, bytes);
+		}
+		var o = new haxe.io.BytesOutput();
+		new format.png.Writer(o).write(png);
+		return o.getBytes();
+	}
 
 	public function clone() {
 		var p = new Pixels(width, height, null, format);
