@@ -10,7 +10,7 @@ class Main extends hxd.App {
 		s3d.camera.pos.set( -2, -3, 2);
 		s3d.camera.target.z += 1;
 
-		obj.playAnimation(prim.loadAnimation(LinearAnim));
+		obj.playAnimation(prim.loadAnimation());
 
 		// add lights and setup materials
 		var dir = new DirLight(new h3d.Vector( -1, 3, -10), s3d);
@@ -27,11 +27,6 @@ class Main extends hxd.App {
 		var shadow = cast(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
 		shadow.lightDirection = dir.direction;
 		shadow.power = 50;
-	}
-
-	function loadMaterial( name : String, _ ) {
-		var name = name.split("\\").pop();
-		return new h3d.mat.MeshMaterial(loadTexture(name));
 	}
 
 	function loadTexture( name : String ) {
