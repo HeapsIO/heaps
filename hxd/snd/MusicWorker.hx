@@ -263,7 +263,7 @@ class MusicWorker extends Worker<MusicMessage> {
 	}
 
 	function initActivate() {
-		#if flash
+		#if air3
 		// note : on some devices (Wiko) theses events are not fired inside workers, so catch them only in main thread
 		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.Event.ACTIVATE, function(_:Dynamic) send(Active(true)));
 		flash.desktop.NativeApplication.nativeApplication.addEventListener(flash.events.Event.DEACTIVATE, function(_:Dynamic) send(Active(false)));
