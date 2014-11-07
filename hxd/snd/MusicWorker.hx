@@ -44,8 +44,10 @@ class Channel {
 	}
 
 	public function queueNext( r : hxd.res.Sound ) {
-		if( w != null )
+		if( w != null ) {
+			if( r != null ) w.channelID++;
 			w.send(Queue(id, r == null ? null : r.entry.path));
+		}
 	}
 
 	function get_currentTime() {
@@ -206,10 +208,14 @@ class MusicWorker extends Worker<MusicMessage> {
 
 			if( NATIVE_MUSIC ) {
 				if( current != c || channel == null ) return;
+				var alloc = channelID++;
 				channel.onEnd = function() {
 					send(EndLoop(c.id));
 					if( path != null ) {
+						var old = channelID;
+						channelID = alloc;
 						handleMessage(Play(path, c.volume, 0));
+						channelID = old;
 						var c2 = channels[channels.length - 1];
 						send(Stop(c.id));
 						// rebind c2 as c
