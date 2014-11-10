@@ -109,7 +109,7 @@ class FileTree {
 			var tmp = options.tmpDir + name + ".mp3";
 			if( getTime(tmp) < getTime(fullPath) ) {
 				Sys.println("Converting " + relPath);
-				if( Sys.command("lame", ["--silent","-h",fullPath,tmp]) != 0 )
+				if( Sys.command("lame", ["--resample","44100","--silent","-h",fullPath,tmp]) != 0 )
 					Context.warning("Failed to run lame on " + path, pos);
 				else {
 					fullPath = tmp;

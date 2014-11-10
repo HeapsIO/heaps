@@ -107,7 +107,7 @@ private class LocalEntry extends FileEntry {
 		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
 			var p = new flash.desktop.NativeProcess();
 			var i = new flash.desktop.NativeProcessStartupInfo();
-			i.arguments = flash.Vector.ofArray(["-h",file.nativePath,target.nativePath]);
+			i.arguments = flash.Vector.ofArray(["--resample", "44100", "-h",file.nativePath,target.nativePath]);
 			var f = new flash.filesystem.File("d:/projects/shiroTools/tools/lame.exe");
 			i.executable = f;
 			i.workingDirectory = f.parent;
@@ -120,7 +120,6 @@ private class LocalEntry extends FileEntry {
 				trace(e);
 			});
 			p.start(i);
-			trace("Started");
 		} else
 			file = target;
 		#end
