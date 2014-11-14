@@ -35,7 +35,7 @@ class Viewer extends hxd.App {
 
 	var curFbx : hxd.fmt.fbx.Library;
 	var curHmd : hxd.fmt.hmd.Library;
-	static public var curData : String;
+	static public var curData : haxe.io.Bytes;
 	static public var curDataSize : Int;
 	static public var props : Props;
 	static public var animMode : Null<h3d.anim.Mode> = LinearAnim;
@@ -289,11 +289,12 @@ class Viewer extends hxd.App {
 	function loadFile( file : String, newFbx = true ) {
 		props.curFile = file;
 		var l = new flash.net.URLLoader();
+		l.dataFormat = flash.net.URLLoaderDataFormat.BINARY;
 		l.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(_) {
 			if( newFbx ) haxe.Log.trace("Failed to load " + file,null);
 		});
 		l.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			loadData(l.data);
+			loadData(haxe.io.Bytes.ofData(l.data));
 			if( newFbx ) {
 				resetCamera();
 				save();
@@ -367,13 +368,12 @@ class Viewer extends hxd.App {
 		hxd.File.browse(function(sel) {
 			sel.load(function(bytes) {
 				haxe.Log.clear();
-				var content = bytes.toString();
 				if( anim ) {
-					if( props.convertHMD ) {
-						ahmd = fbxToHmd(content, false).toHmd();
+					if( props.convertHMD || bytes.get(0) == 'H'.code ) {
+						ahmd = fbxToHmd(bytes, false).toHmd();
 					} else {
 						alib = new hxd.fmt.fbx.Library();
-						var fbx = hxd.fmt.fbx.Parser.parse(content);
+						var fbx = hxd.fmt.fbx.Parser.parse(bytes.toString());
 						alib.load(fbx);
 						if( !rightHand )
 							alib.leftHandConvert();
@@ -383,18 +383,23 @@ class Viewer extends hxd.App {
 					alib = null;
 					ahmd = null;
 					props.curFile = sel.fileName;
-					loadData(content);
+					loadData(bytes);
 					resetCamera();
 					save();
 				}
 			});
-		},{ fileTypes : [{ name : "FBX File", extensions : ["fbx"] }], defaultPath : props.curFile });
+		},{ fileTypes : [{ name : "Model File", extensions : ["fbx","hmd"] }], defaultPath : props.curFile });
 	}
 
-	function fbxToHmd( data : String, includeGeometry ) {
+	function fbxToHmd( data : haxe.io.Bytes, includeGeometry ) {
+
+		// already hmd
+		if( data.get(0) == 'H'.code )
+			return hxd.res.Any.fromBytes("model.hmd", data);
+
 		var hmdOut = new hxd.fmt.fbx.HMDOut();
 		hmdOut.absoluteTexturePath = true;
-		hmdOut.loadTextFile(data);
+		hmdOut.loadTextFile(data.toString());
 		var hmd = hmdOut.toHMD(null, includeGeometry);
 		var out = new haxe.io.BytesOutput();
 		new hxd.fmt.hmd.Writer(out).write(hmd);
@@ -402,7 +407,7 @@ class Viewer extends hxd.App {
 		return hxd.res.Any.fromBytes("model.hmd", bytes);
 	}
 
-	function loadData( data : String ) {
+	function loadData( data : haxe.io.Bytes ) {
 
 		curData = data;
 		curDataSize = data.length;
@@ -412,7 +417,7 @@ class Viewer extends hxd.App {
 		curFbx = null;
 		curHmd = null;
 
-		if( props.convertHMD ) {
+		if( props.convertHMD || data.get(0) == 'H'.code ) {
 
 			var res = fbxToHmd(data, true);
 			curDataSize = res.entry.getBytes().length;
@@ -435,7 +440,7 @@ class Viewer extends hxd.App {
 
 			curFbx = new hxd.fmt.fbx.Library();
 			curFbx.unskinnedJointsAsObjects = true;
-			var fbx = hxd.fmt.fbx.Parser.parse(data);
+			var fbx = hxd.fmt.fbx.Parser.parse(data.toString());
 			curFbx.load(fbx);
 			if( !rightHand )
 				curFbx.leftHandConvert();
