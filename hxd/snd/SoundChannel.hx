@@ -20,10 +20,14 @@ class SoundChannel {
 		playing = true;
 	}
 
-	function init() {
+	function init( startTime : Float ) {
 		#if flash
+		startTime = (startTime * 1000) % @:privateAccess snd.snd.length;
+		channel = @:privateAccess snd.snd.play(startTime, startTime == 0 && loop ? 0x7FFFFFFF : 1);
 		if( !loop && channel != null ) {
 			channel.addEventListener(flash.events.Event.SOUND_COMPLETE, function(_) { playing = false; onEnd(); });
+		} else if( loop && startTime != 0 && channel != null ) {
+			channel.addEventListener(flash.events.Event.SOUND_COMPLETE, function(_) { stop(); init(0); playing = true; onEnd(); } );
 		} else {
 			var t = @:privateAccess (snd.snd.length - (channel == null ? 0 : channel.position));
 			endTimer = new haxe.Timer(Std.int(t));
@@ -38,7 +42,7 @@ class SoundChannel {
 	function get_position() {
 		#if flash
 		if( channel != null )
-			return channel.position / 1000;
+			return (channel.position / 1000) % @:privateAccess snd.snd.length;
 		#end
 		return 0.;
 	}

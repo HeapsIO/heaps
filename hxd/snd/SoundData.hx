@@ -34,12 +34,7 @@ class SoundData {
 
 	public function playNative( startTime : Float = 0., loop = false ) : SoundChannel {
 		var c = new SoundChannel(this, loop);
-		#if flash
-		c.channel = snd.play(startTime * 1000, loop ? 0x7FFFFFFF : 1);
-		c.init();
-		#else
-		throw "Not implemented";
-		#end
+		c.init(startTime);
 		return c;
 	}
 
