@@ -181,6 +181,10 @@ class BaseLibrary {
 					continue;
 				var child = c.props[1].toInt();
 				var parent = c.props[2].toInt();
+
+				// Maya exports invalid references
+				if( ids.get(child) == null || ids.get(parent) == null ) continue;
+
 				var name = c.props[3];
 
 				var c = connect.get(parent);
@@ -546,17 +550,17 @@ class BaseLibrary {
 			var cname = cn.getName();
 			// collect all the timestamps
 			var times = data[0].get("KeyTime").getFloats();
-			for( i in 0...times.length ) {
-				var t = times[i];
-				// fix rounding error
-				if( t % 100 != 0 ) {
-					t += 100 - (t % 100);
-					times[i] = t;
+				for( i in 0...times.length ) {
+					var t = times[i];
+					// fix rounding error
+					if( t % 100 != 0 ) {
+						t += 100 - (t % 100);
+						times[i] = t;
+					}
+					// this should give significant-enough key
+					var it = Std.int(t / 200000);
+					allTimes.set(it, t);
 				}
-				// this should give significant-enough key
-				var it = Std.int(t / 200000);
-				allTimes.set(it, t);
-			}
 			// handle special curves
 			if( data.length != 3 ) {
 				switch( cname ) {
@@ -660,6 +664,18 @@ class BaseLibrary {
 		}
 		var numFrames = maxTime == 0 ? 1 : 1 + Std.int((maxTime - allTimes[0]) / minDT);
 		var sampling = 15.0 / (minDT / 3079077200); // this is the DT value we get from Max when using 15 FPS export
+
+		// if we have some holes in our timeline, pad them
+		if( allTimes.length < numFrames ) {
+			var t = allTimes[0];
+			while( t < maxTime ) {
+				if( allTimes.indexOf(t) < 0 )
+					allTimes.push(t);
+				t += minDT;
+			}
+			allTimes.sort(Reflect.compare);
+			if( allTimes.length != numFrames ) throw "assert";
+		}
 
 		switch( mode ) {
 		case FrameAnim:
