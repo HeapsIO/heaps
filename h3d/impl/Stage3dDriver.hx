@@ -458,6 +458,9 @@ class Stage3dDriver extends Driver {
 				curTextures.pop();
 				ctx.setTextureAt(curTextures.length, null);
 			}
+			// force remapping for sampler bits
+			for( i in 0...curSamplerBits.length )
+				curSamplerBits[i] = -1;
 			// force remapping of vertex buffer
 			curBuffer = null;
 			curMultiBuffer[0] = -1;
