@@ -29,7 +29,7 @@ class MakeAll {
 			hmdout.load(fbx);
 			if( xtraPath != null )
 				hmdout.loadXtra(sys.io.File.getContent(xtraPath));
-			var hmd = hmdout.toHMD(null, !StringTools.startsWith(f, "Anim_"));
+			var hmd = hmdout.toHMD(null, !(StringTools.startsWith(f, "Anim_") || f.indexOf("_anim_") != -1));
 			var out = new haxe.io.BytesOutput();
 			new hxd.fmt.hmd.Writer(out).write(hmd);
 			var bytes = out.getBytes();
