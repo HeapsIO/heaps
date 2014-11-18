@@ -497,13 +497,20 @@ class HMDOut extends BaseLibrary {
 
 	function makePosition( m : h3d.Matrix ) {
 		var p = new Position();
+		var s = m.getScale();
+		var mold = m;
+		var m = m;
+		if( s.x < 0 || s.y < 0 || s.z < 0 ) {
+			m = m.clone();
+			m.prependScale(1 / s.x, 1 / s.y, 1 / s.z);
+		}
 		var q = new h3d.Quat();
 		q.initRotateMatrix(m);
 		q.normalize();
 		if( q.w < 0 ) q.negate();
-		p.sx = 1;
-		p.sy = 1;
-		p.sz = 1;
+		p.sx = round(s.x);
+		p.sy = round(s.y);
+		p.sz = round(s.z);
 		p.qx = round(q.x);
 		p.qy = round(q.y);
 		p.qz = round(q.z);

@@ -211,6 +211,11 @@ class Matrix {
 		v.x = Math.sqrt(_11 * _11 + _12 * _12 + _13 * _13);
 		v.y = Math.sqrt(_21 * _21 + _22 * _22 + _23 * _23);
 		v.z = Math.sqrt(_31 * _31 + _32 * _32 + _33 * _33);
+		if( getDeterminant() < 0 ) {
+			v.x *= -1;
+			v.y *= -1;
+			v.z *= -1;
+		}
 		return v;
 	}
 
@@ -320,6 +325,10 @@ class Matrix {
 
 	public inline function invert() {
 		inverse(this);
+	}
+
+	public inline function getDeterminant() {
+		return _11 * (_22*_33 - _23*_32) + _12 * (_23*_31 - _21*_33) + _13 * (_21*_32 - _22*_31);
 	}
 
 	public function inverse3x4( m : Matrix ) {

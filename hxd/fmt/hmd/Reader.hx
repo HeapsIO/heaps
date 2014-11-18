@@ -59,11 +59,14 @@ class Reader {
 		for( k in 0...i.readUInt16() ) {
 			var j = new SkinJoint();
 			j.name = readName();
-			j.parent = i.readUInt16() - 1;
-			j.position = readPosition(false);
+			var pid = i.readUInt16();
+			var hasScale = pid & 0x8000 != 0;
+			if( hasScale ) pid &= 0x7FFF;
+			j.parent = pid - 1;
+			j.position = readPosition(hasScale);
 			j.bind = i.readUInt16() - 1;
 			if( j.bind >= 0 )
-				j.transpos = readPosition(false);
+				j.transpos = readPosition(hasScale);
 			s.joints.push(j);
 		}
 		var count = i.readByte();

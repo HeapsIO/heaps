@@ -54,11 +54,12 @@ class Writer {
 		out.writeUInt16(s.joints.length);
 		for( j in s.joints ) {
 			writeName(j.name);
-			out.writeUInt16(j.parent + 1);
-			writePosition(j.position, false);
+			var rot = j.position.sx != 1 || j.position.sy != 1 || j.position.sz != 1 || (j.transpos != null && (j.transpos.sx != 1 || j.transpos.sy != 1 || j.transpos.sz != 1));
+			out.writeUInt16( (j.parent + 1) | (rot?0x8000:0) );
+			writePosition(j.position, rot);
 			out.writeUInt16(j.bind + 1);
 			if( j.bind >= 0 )
-				writePosition(j.transpos, false);
+				writePosition(j.transpos, rot);
 		}
 		out.writeByte(s.split == null ? 0 : s.split.length);
 		if( s.split != null ) {
