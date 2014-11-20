@@ -334,7 +334,7 @@ class Eval {
 		case TIf(econd, eif, eelse):
 			var e = evalExpr(econd);
 			switch( e.e ) {
-			case TConst(CBool(b)): return b ? evalExpr(eif) : eelse == null ? { e : TConst(CNull), t : TVoid, p : e.p } : evalExpr(eelse);
+			case TConst(CBool(b)): b ? evalExpr(eif).e : eelse == null ? TConst(CNull) : evalExpr(eelse).e;
 			default:
 				TIf(e, evalExpr(eif), eelse == null ? null : evalExpr(eelse));
 			}
