@@ -29,6 +29,12 @@ package hxd;
 	}
 
 	public static function from(x:Float, y:Float) : Direction {
+		if( x != 0 && y != 0 ) {
+			if( Math.abs(x) > Math.abs(y) )
+				y = 0;
+			else
+				x = 0;
+		}
 		var ix = if( x < 0 ) -1 else if( x > 0 ) 1 else 0;
 		var iy = if( y < 0 ) -1 else if( y > 0 ) 1 else 0;
 		return cast ((ix + 1) | ((iy + 1) << 2));
