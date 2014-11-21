@@ -57,6 +57,26 @@ class Bounds {
 		yMax = p.y;
 	}
 
+	public function intersection( b : Bounds ) {
+		var i = new Bounds();
+		i.xMin = Math.max(xMin, b.xMin);
+		i.yMin = Math.max(yMin, b.yMin);
+		i.xMax = Math.min(xMax, b.xMax);
+		i.yMax = Math.min(yMax, b.yMax);
+		if( i.xMax < i.xMin ) i.xMax = i.xMin;
+		if( i.yMax < i.yMin ) i.yMax = i.yMin;
+		return i;
+	}
+
+	public function union( b : Bounds ) {
+		var i = new Bounds();
+		i.xMin = Math.min(xMin, b.xMin);
+		i.yMin = Math.min(yMin, b.yMin);
+		i.xMax = Math.max(xMax, b.xMax);
+		i.yMax = Math.max(yMax, b.yMax);
+		return i;
+	}
+
 	public function load( b : Bounds ) {
 		xMin = b.xMin;
 		yMin = b.yMin;
