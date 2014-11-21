@@ -65,7 +65,15 @@ class FileInput extends haxe.io.Input {
 class Air3File {
 
 	static function getRelPath( path : String ) {
-		return try new flash.filesystem.File(path) catch( e : Dynamic ) new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + path);
+		try {
+			return new flash.filesystem.File(path);
+		}  catch( e : Dynamic ) {
+			var app = flash.filesystem.File.applicationDirectory;
+			var dir = app.nativePath;
+			if( dir == "" )
+				return app.resolvePath(path);
+			return new flash.filesystem.File(dir + "/" + path);
+		}
 	}
 
 	public static function read( path : String, binary = true ) {
