@@ -9,6 +9,7 @@ class ScreenFx<T:hxsl.Shader> {
 	var engine : h3d.Engine;
 	var fullClearRequired : Bool;
 	var shaders : hxsl.ShaderList;
+	var buffers : h3d.shader.Buffers;
 
 	public function new(shader) {
 		this.shader = shader;
@@ -26,12 +27,15 @@ class ScreenFx<T:hxsl.Shader> {
 		var rts = manager.compileShaders(shaders);
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);
-		var buf = new h3d.shader.Buffers(rts);
-		manager.fillGlobals(buf, rts);
-		manager.fillParams(buf, rts, shaders);
-		engine.uploadShaderBuffers(buf, Globals);
-		engine.uploadShaderBuffers(buf, Params);
-		engine.uploadShaderBuffers(buf, Textures);
+		if( buffers == null )
+			buffers = new h3d.shader.Buffers(rts);
+		else
+			buffers.grow(rts);
+		manager.fillGlobals(buffers, rts);
+		manager.fillParams(buffers, rts, shaders);
+		engine.uploadShaderBuffers(buffers, Globals);
+		engine.uploadShaderBuffers(buffers, Params);
+		engine.uploadShaderBuffers(buffers, Textures);
 		plan.render(engine);
 	}
 

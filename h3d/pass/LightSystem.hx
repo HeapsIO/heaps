@@ -9,15 +9,12 @@ class LightSystem {
 	var globals : hxsl.Globals;
 	var ambientShader : h3d.shader.AmbientLight;
 	var lightCount : Int;
-	var cachedShaderList : Array<hxsl.ShaderList>;
-	var cachedPos : Int;
 	var ctx : h3d.scene.RenderContext;
 	public var shadowDirection : h3d.Vector;
 	public var ambientLight : h3d.Vector;
 	public var perPixelLighting : Bool = true;
 
 	public function new() {
-		cachedShaderList = [];
 		shadowDirection = new h3d.Vector(0, 0, -1);
 		ambientLight = new h3d.Vector(0.5, 0.5, 0.5);
 		ambientShader = new h3d.shader.AmbientLight();
@@ -25,7 +22,6 @@ class LightSystem {
 
 	public function initLights( globals : hxsl.Globals, ctx : h3d.scene.RenderContext ) {
 		lightCount = 0;
-		cachedPos = 0;
 		this.ctx = ctx;
 		var l = ctx.lights, prev = null;
 		var frustum = new h3d.col.Frustum(ctx.camera.m);
@@ -75,14 +71,7 @@ class LightSystem {
 			ctx.lights = haxe.ds.ListSort.sortSingleLinked(ctx.lights, sortLight);
 		}
 		inline function add( s : hxsl.Shader ) {
-			var sl = cachedShaderList[cachedPos++];
-			if( sl == null ) {
-				sl = new hxsl.ShaderList(null);
-				cachedShaderList[cachedPos - 1] = sl;
-			}
-			sl.s = s;
-			sl.next = shaders;
-			shaders = sl;
+			shaders = ctx.allocShaderList(s, shaders);
 		}
 		add(ambientShader);
 		var l = ctx.lights;

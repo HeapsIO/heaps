@@ -17,6 +17,8 @@ class RenderContext {
 	public var extraShaders : hxsl.ShaderList;
 
 	var pool : ObjectPass;
+	var cachedShaderList : Array<hxsl.ShaderList>;
+	var cachedPos : Int;
 	var passes : ObjectPass;
 	var lights : Light;
 
@@ -24,6 +26,7 @@ class RenderContext {
 		frame = 0;
 		time = 0.;
 		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
+		cachedShaderList = [];
 	}
 
 	@:access(h3d.mat.Pass)
@@ -42,8 +45,14 @@ class RenderContext {
 		passes = null;
 		lights = null;
 		uploadParams = null;
+		cachedPos = 0;
 		time += elapsedTime;
 		frame++;
+	}
+
+	public inline function nextPass() {
+		cachedPos = 0;
+		drawPass = null;
 	}
 
 	public function getGlobal( name : String ) : Dynamic {
@@ -65,6 +74,17 @@ class RenderContext {
 		o.next = passes;
 		passes = o;
 		return o;
+	}
+
+	public function allocShaderList( s : hxsl.Shader, ?next : hxsl.ShaderList ) {
+		var sl = cachedShaderList[cachedPos++];
+		if( sl == null ) {
+			sl = new hxsl.ShaderList(null);
+			cachedShaderList[cachedPos - 1] = sl;
+		}
+		sl.s = s;
+		sl.next = next;
+		return sl;
 	}
 
 	public function emitLight( l : Light ) {
@@ -89,6 +109,10 @@ class RenderContext {
 		if( prev != null ) {
 			prev.next = pool;
 			pool = passes;
+		}
+		for( c in cachedShaderList ) {
+			c.s = null;
+			c.next = null;
 		}
 		passes = null;
 		lights = null;

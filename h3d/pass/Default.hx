@@ -53,7 +53,7 @@ class Default extends Base {
 	function processShaders( p : Object, shaders : hxsl.ShaderList ) {
 		var p = ctx.extraShaders;
 		while( p != null ) {
-			shaders = new hxsl.ShaderList(p.s, shaders);
+			shaders = ctx.allocShaderList(p.s, shaders);
 			p = p.next;
 		}
 		return shaders;
@@ -131,7 +131,7 @@ class Default extends Base {
 			p = p.next;
 		}
 		log("Pass " + (passes == null ? "???" : passes.pass.name) + " end");
-		ctx.drawPass = null;
+		ctx.nextPass();
 		return passes;
 	}
 
