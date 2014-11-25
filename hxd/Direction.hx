@@ -11,6 +11,10 @@ package hxd;
 	public var y(get, never) : Int;
 	public var name(get, never) : String;
 
+	inline function new(v) {
+		this = v;
+	}
+
 	inline function get_x() {
 		return (this & 3) - 1;
 	}
@@ -23,9 +27,18 @@ package hxd;
 		return VALUES[this];
 	}
 
+	public inline function inverse() {
+		return INVERT[this];
+	}
+
 	static var VALUES = ["none", "up", null, null, "left", null, "right", null, null, "down"];
+	static var INVERT = [ffrom(1, 1), Down, ffrom(1, -1), ffrom(0, 0), Right, ffrom(0, 0), Left, ffrom(0, 0), ffrom( -1, 1), Up, ffrom( -1, -1), ffrom(0, 0)];
 	inline function toString() {
 		return name;
+	}
+
+	public static inline function ffrom(dx:Int, dy:Int) {
+		return new Direction((dx + 1) | ((dy + 1) << 2));
 	}
 
 	public static function from(x:Float, y:Float) : Direction {
