@@ -9,6 +9,7 @@ package hxd;
 
 	public var x(get, never) : Int;
 	public var y(get, never) : Int;
+	public var angle(get, never) : Float;
 	public var name(get, never) : String;
 
 	inline function new(v) {
@@ -25,6 +26,10 @@ package hxd;
 
 	inline function get_name() {
 		return VALUES[this];
+	}
+
+	inline function get_angle() {
+		return Math.atan2(y, x);
 	}
 
 	public inline function inverse() {
