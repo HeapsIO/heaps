@@ -81,12 +81,14 @@ class Sprite {
 			posChanged = false;
 		}
 		if( n == 1 ) {
-			childs[0].getBounds(relativeTo, out);
+			var c = childs[0];
+			if( c.visible ) c.getBounds(relativeTo, out) else out.empty();
 			return;
 		}
 		var xmin = hxd.Math.POSITIVE_INFINITY, ymin = hxd.Math.POSITIVE_INFINITY;
 		var xmax = hxd.Math.NEGATIVE_INFINITY, ymax = hxd.Math.NEGATIVE_INFINITY;
 		for( c in childs ) {
+			if( !c.visible ) continue;
 			c.getBoundsRec(relativeTo, out);
 			if( out.xMin < xmin ) xmin = out.xMin;
 			if( out.yMin < ymin ) ymin = out.yMin;
