@@ -18,6 +18,7 @@ class GlslOut {
 		m.set(ToInt, "int");
 		m.set(ToFloat, "float");
 		m.set(ToBool, "bool");
+		m.set(Texture2D, "_texture2D");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -185,6 +186,9 @@ class GlslOut {
 				decl("vec4 packNormal( vec3 v ) { return vec4((v + vec3(1.)) * vec3(0.5),1.); }");
 			case UnpackNormal:
 				decl("vec3 unpackNormal( vec4 v ) { return normalize((v.xyz - vec3(0.5)) * vec3(2.)); }");
+			case Texture2D:
+				// convert S/T (bottom left) to U/V (top left)
+				decl("vec4 _texture2D( sampler2D t, vec2 v ) { return texture2D(t,vec2(v.x,1.-v.y)); }");
 			default:
 			}
 			add(GLOBALS.get(g));
@@ -392,8 +396,18 @@ class GlslOut {
 
 		var tmp = buf;
 		buf = new StringBuf();
-		add("void main(void) ");
-		addExpr(f.expr, "");
+		add("void main(void) {\n");
+		switch( f.expr.e ) {
+		case TBlock(el):
+			for( e in el ) {
+				add("\t");
+				addExpr(e, "\t");
+				add(";\n");
+			}
+		default:
+			addExpr(f.expr, "");
+		}
+		add("}");
 		exprValues.push(buf.toString());
 		buf = tmp;
 

@@ -63,7 +63,6 @@ class GlDriver extends Driver {
 	var curBuffer : h3d.Buffer;
 	var curMatBits : Int;
 	var programs : Map<Int, CompiledProgram>;
-	var hasTargetFlip : Bool;
 	var frame : Int;
 
 	var bufferWidth : Int;
@@ -86,6 +85,7 @@ class GlDriver extends Driver {
 		programs = new Map();
 		curAttribs = 0;
 		curMatBits = -1;
+		gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, 1);
 	}
 
 	override function logImpl( str : String ) {
@@ -109,7 +109,6 @@ class GlDriver extends Driver {
 		gl.useProgram(null);
 		curShader = null;
 		curBuffer = null;
-		hasTargetFlip = false;
 	}
 
 	override function getShaderInputNames() {
@@ -247,12 +246,6 @@ class GlDriver extends Driver {
 	}
 
 	function selectMaterialBits( bits : Int ) {
-		if( hasTargetFlip ) {
-			// switch culling font/back
-			var c = Pass.getCulling(bits);
-			if( c == 1 ) c = 2 else if( c == 2 ) c = 1;
-			bits = (bits & ~Pass.culling_mask) | (c << Pass.culling_offset);
-		}
 		var diff = bits ^ curMatBits;
 		if( curMatBits < 0 ) diff = -1;
 		if( diff == 0 )
@@ -555,17 +548,24 @@ class GlDriver extends Driver {
 		#end
 	}
 
+	override function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
+		if( x == 0 && y == 0 && width < 0 && height < 0 )
+			gl.disable(GL.SCISSOR_TEST);
+		else {
+			gl.enable(GL.SCISSOR_TEST);
+			gl.scissor(x, bufferHeight - (y + height), width, height);
+		}
+	}
+
 	override function setRenderTarget( tex : h3d.mat.Texture ) {
 		if( tex == null ) {
 			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 			gl.viewport(0, 0, bufferWidth, bufferHeight);
-			hasTargetFlip = false;
 			return;
 		}
 		if( tex.t == null )
 			tex.alloc();
 		tex.lastFrame = frame;
-		hasTargetFlip = !tex.flags.has(TargetNoFlipY);
 		gl.bindFramebuffer(GL.FRAMEBUFFER, tex.t.fb);
 		gl.viewport(0, 0, tex.width, tex.height);
 	}
@@ -615,13 +615,8 @@ class GlDriver extends Driver {
 
 	static var FACES = [
 		0,
-		#if js
-		GL.FRONT, // front/back reversed in WebGL
-		GL.BACK,
-		#else
-		GL.BACK,
 		GL.FRONT,
-		#end
+		GL.BACK,
 		GL.FRONT_AND_BACK,
 	];
 

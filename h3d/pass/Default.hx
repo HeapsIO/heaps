@@ -21,10 +21,6 @@ class Default extends Base {
 	@global("global.pixelSize") var pixelSize : h3d.Vector = new h3d.Vector(2 / ctx.engine.width, 2 / ctx.engine.height);
 	@global("global.modelView") var globalModelView : h3d.Matrix;
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
-	@global("global.flipY") var globalFlipY : Float = {
-		var t = ctx.engine.getTarget();
-		t != null && !t.flags.has(TargetNoFlipY) ? -1 : 1;
-	}
 
 	public function new() {
 		super();

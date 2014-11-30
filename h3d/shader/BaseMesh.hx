@@ -16,7 +16,6 @@ class BaseMesh extends hxsl.Shader {
 
 		@global var global : {
 			var time : Float;
-			var flipY : Float;
 			var pixelSize : Vec2;
 			@perObject var modelView : Mat4;
 			@perObject var modelViewInverse : Mat4;
@@ -60,10 +59,6 @@ class BaseMesh extends hxsl.Shader {
 
 		function vertex() {
 			output.position = projectedPosition;
-			#if !flash
-			// this is done to flip the rendering on render targets in openGL
-			output.position.y *= global.flipY;
-			#end
 		}
 
 		function fragment() {

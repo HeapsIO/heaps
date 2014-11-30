@@ -78,10 +78,6 @@ enum TextureFlags {
 	**/
 	Cubic;
 	/**
-		Used to prevent culling inversion on target textures in GL.
-	**/
-	TargetNoFlipY;
-	/**
 		Activates Mip Mapping for this texture. Might not be available for target textures.
 	**/
 	MipMapped;

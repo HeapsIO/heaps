@@ -36,7 +36,7 @@ class TextureCache {
 		var t = cache[position];
 		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.flags.has(hasDefaultDepth ? TargetUseDefaultDepth : TargetDepth) != hasDepth ) {
 			if( t != null ) t.dispose();
-			var flags : Array<h3d.mat.Data.TextureFlags> = [Target, TargetNoFlipY];
+			var flags : Array<h3d.mat.Data.TextureFlags> = [Target];
 			if( hasDepth ) flags.push(hasDefaultDepth ? TargetUseDefaultDepth : TargetDepth);
 			t = new h3d.mat.Texture(width, height, flags);
 			cache[position] = t;
