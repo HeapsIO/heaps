@@ -71,23 +71,13 @@ class CachedBitmap extends Drawable {
 		if( !freezed || !renderDone ) {
 			var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;
 
-			// init matrix without rotation
+			// init matrix without transformation
 			matA = 1;
 			matB = 0;
 			matC = 0;
 			matD = 1;
 			absX = 0;
 			absY = 0;
-
-			// adds a pixels-to-viewport transform
-			var w = 2 / tile.width;
-			var h = -2 / tile.height;
-			absX = absX * w - 1;
-			absY = absY * h + 1;
-			matA *= w;
-			matB *= h;
-			matC *= w;
-			matD *= h;
 
 			// force full resync
 			for( c in childs )
@@ -108,6 +98,7 @@ class CachedBitmap extends Drawable {
 			absY = oldY;
 
 			renderDone = true;
+			posChanged = true; // child pos are not up to date
 		}
 
 		draw(ctx);
