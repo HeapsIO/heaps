@@ -186,4 +186,10 @@ class Text extends Drawable {
 		return c;
 	}
 
+	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds ) {
+		glyphs.visible = true;
+		super.getBoundsRec(relativeTo, out);
+		glyphs.visible = false;
+	}
+
 }
