@@ -18,16 +18,15 @@ class Main extends hxd.App {
 
 
 		disp = hxd.Res.normalmap.toTile();
-
-		setFilters(4);
+		setFilters(6);
 
 		var help = new h2d.Text(hxd.Res.customFont.toFont(), s2d);
 		help.x = help.y = 5;
-		help.text = "1:Blur 2:Glow 3:DropShadow 4:Displacement +/-:Scale";
+		help.text = "1:Blur 2:Glow 3:DropShadow 4:Displacement 5:Glow(Knockout) 6:Mix +/-:Scale";
 	}
 
 	override function update(dt:Float) {
-		for( i in 1...5 )
+		for( i in 1...7 )
 			if( K.isPressed(K.NUMBER_0 + i) )
 				setFilters(i);
 		if( K.isPressed(K.NUMPAD_ADD) ) {
@@ -37,27 +36,35 @@ class Main extends hxd.App {
 		if( K.isPressed(K.NUMPAD_SUB) ) {
 			spr.scale(1 / 1.25);
 			bmp.scale(1.25);
+			if( spr.scaleX < 1 ) {
+				spr.setScale(1);
+				bmp.setScale(1);
+			}
 		}
 		bmp.x = -bmp.tile.width * 0.5 * bmp.scaleX;
 		bmp.y = -bmp.tile.height * 0.5 * bmp.scaleY;
-		disp.scrollDiscrete(0.01 * dt, 0.02 * dt);
+		disp.scrollDiscrete(0.02 * dt, 0.04 * dt);
 	}
 
 	function setFilters(i) {
-		var scale = 4;
 		switch( i ) {
 		case 1:
-			spr.filters = [new h2d.filter.Blur(2, 3, 100)];
+			spr.filters = [new h2d.filter.Blur(2, 1, 100)];
 		case 2:
-			spr.filters = [new h2d.filter.Glow(0xFF00FF, 100, 1)];
+			spr.filters = [new h2d.filter.Glow(0xFF00FF, 100, 2)];
 		case 3:
-			spr.filters = [new h2d.filter.DropShadow()];
+			spr.filters = [new h2d.filter.DropShadow(8,Math.PI/4,0,1,2,2)];
 		case 4:
-			scale = 1;
-			spr.filters = [new h2d.filter.Displacement(disp)];
+			spr.filters = [new h2d.filter.Displacement(disp,2.5,2.5)];
+		case 5:
+			var g = new h2d.filter.Glow(0xFF00FF, 100, 2);
+			g.knockout = true;
+			spr.filters = [g];
+		case 6:
+			var g = new h2d.filter.Glow(0xFFA500, 50, 2, 2);
+			g.knockout = true;
+			spr.filters = [g, new h2d.filter.Displacement(disp,3,3), new h2d.filter.Blur(3,2,0.8), new h2d.filter.DropShadow(8, Math.PI/4,0,1,3,3,0.5)];
 		}
-		spr.setScale(scale);
-		bmp.setScale(1 / scale);
 	}
 
 	static function main() {
