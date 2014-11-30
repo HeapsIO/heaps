@@ -665,8 +665,8 @@ class Stage3dDriver extends Driver {
 				t.flags.set(WasCleared);
 				ctx.clear(0, 0, 0, 1, 1, 0, flash.display3D.Context3DClearMask.COLOR);
 			}
-			reset();
 		}
+		reset();
 	}
 
 	static var BLEND = [
