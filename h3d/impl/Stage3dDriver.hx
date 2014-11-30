@@ -663,7 +663,7 @@ class Stage3dDriver extends Driver {
 			// make sure we at least clear the color the first time
 			if( flashVersion >= 15 && !t.flags.has(WasCleared) ) {
 				t.flags.set(WasCleared);
-				ctx.clear(0, 0, 0, 1, 1, 0, flash.display3D.Context3DClearMask.COLOR);
+				ctx.clear(0, 0, 0, 0, 1, 0, flash.display3D.Context3DClearMask.COLOR);
 			}
 		}
 		reset();
