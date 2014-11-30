@@ -1,14 +1,11 @@
 package h2d;
 
-class RenderContext {
-
-	public var engine : h3d.Engine;
-	public var time : Float;
-	public var elapsedTime : Float;
-	public var frame : Int;
+class RenderContext extends h3d.impl.RenderContext {
 
 	public var buffer : hxd.FloatBuffer;
 	public var bufPos : Int;
+
+	public var textures : h3d.pass.TextureCache;
 
 	public var tmpBounds = new h2d.col.Bounds();
 	var texture : h3d.mat.Texture;
@@ -25,10 +22,8 @@ class RenderContext {
 	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int }>;
 
 	public function new(s2d) {
+		super();
 		this.s2d = s2d;
-		frame = 0;
-		time = 0.;
-		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
 		buffer = new hxd.FloatBuffer();
 		bufPos = 0;
 		manager = new h3d.shader.Manager(["output.position", "output.color"]);
@@ -40,6 +35,7 @@ class RenderContext {
 		baseShader.zValue = 0.;
 		baseShaderList = new hxsl.ShaderList(baseShader);
 		targetsStack = [];
+		textures = new h3d.pass.TextureCache();
 	}
 
 	public function begin() {

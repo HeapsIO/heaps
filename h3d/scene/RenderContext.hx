@@ -1,14 +1,9 @@
 package h3d.scene;
 import h3d.pass.Object in ObjectPass;
 
-class RenderContext {
+class RenderContext extends h3d.impl.RenderContext {
 
-	public var engine : h3d.Engine;
 	public var camera : h3d.Camera;
-	public var time : Float;
-	public var elapsedTime : Float;
-	public var frame : Int;
-
 	public var drawPass : ObjectPass;
 
 	public var sharedGlobals : Map<Int,Dynamic>;
@@ -23,9 +18,7 @@ class RenderContext {
 	var lights : Light;
 
 	public function new() {
-		frame = 0;
-		time = 0.;
-		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
+		super();
 		cachedShaderList = [];
 	}
 

@@ -19,7 +19,7 @@ class TextureCache {
 		return cache[index];
 	}
 
-	public function allocTarget( name : String, ctx : h3d.scene.RenderContext, width : Int, height : Int, hasDepth=true ) {
+	public function allocTarget( name : String, ctx : h3d.impl.RenderContext, width : Int, height : Int, hasDepth=true ) {
 		if( frame != ctx.frame ) {
 			// dispose extra textures we didn't use
 			while( cache.length > position ) {
