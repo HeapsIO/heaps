@@ -39,31 +39,14 @@ class Sprite {
 
 	public function getBounds( ?relativeTo : Sprite, ?out : h2d.col.Bounds ) : h2d.col.Bounds {
 		if( out == null ) out = new h2d.col.Bounds();
-		if( relativeTo == null ) {
-			relativeTo = getScene();
-			if( relativeTo == null )
-				relativeTo = new Sprite();
-		} else {
-			var s1 = getScene();
-			var s2 = relativeTo.getScene();
-			if( s1 != s2 ) {
-				// if we are getting the bounds relative to a scene
-				// were are not into, it's the same as taking absolute position
-				if( s1 == null && s2 == relativeTo )
-					relativeTo = new Sprite();
-				else if( s2 == null )
-					throw "Cannot getBounds() with a relative element not in the scene";
-				else
-					throw "Cannot getBounds() with a relative element in a different scene";
-			}
+		if( relativeTo != null )
 			relativeTo.syncPos();
-		}
 		syncPos();
 		getBoundsRec(relativeTo, out);
 		if( out.isEmpty() ) {
-			addBounds(relativeTo, out, 0, 0, 1, 1);
-			out.xMax = out.xMin;
-			out.yMax = out.yMin;
+			addBounds(relativeTo, out, -1, -1, 2, 2);
+			out.xMax = out.xMin = (out.xMax + out.xMin) * 0.5;
+			out.yMax = out.yMin = (out.yMax + out.yMin) * 0.5;
 		}
 		return out;
 	}
@@ -105,6 +88,15 @@ class Sprite {
 
 		if( width <= 0 || height <= 0 ) return;
 
+		if( relativeTo == null  ) {
+			var x, y;
+			out.addPos(dx * matA + dy * matC + absX, dx * matB + dy * matD + absY);
+			out.addPos((dx + width) * matA + dy * matC + absX, (dx + width) * matB + dy * matD + absY);
+			out.addPos(dx * matA + (dy + height) * matC + absX, dx * matB + (dy + height) * matD + absY);
+			out.addPos((dx + width) * matA + (dy + height) * matC + absX, (dx + width) * matB + (dy + height) * matD + absY);
+			return;
+		}
+
 		if( relativeTo == this ) {
 			if( out.xMin > dx ) out.xMin = dx;
 			if( out.yMin > dy ) out.yMin = dy;
@@ -112,6 +104,7 @@ class Sprite {
 			if( out.yMax < dy + height ) out.yMax = dy + height;
 			return;
 		}
+
 
 		var det = 1 / (relativeTo.matA * relativeTo.matD - relativeTo.matB * relativeTo.matC);
 		var rA = relativeTo.matD * det;
@@ -121,43 +114,23 @@ class Sprite {
 		var rX = absX - relativeTo.absX;
 		var rY = absY - relativeTo.absY;
 
-		var x, y, rx, ry;
+		var x, y;
 
 		x = dx * matA + dy * matC + rX;
 		y = dx * matB + dy * matD + rY;
-		rx = x * rA + y * rC;
-		ry = x * rB + y * rD;
-		if( out.xMin > rx ) out.xMin = rx;
-		if( out.yMin > ry ) out.yMin = ry;
-		if( out.xMax < rx ) out.xMax = rx;
-		if( out.yMax < ry ) out.yMax = ry;
+		out.addPos(x * rA + y * rC, x * rB + y * rD);
 
 		x = (dx + width) * matA + dy * matC + rX;
 		y = (dx + width) * matB + dy * matD + rY;
-		rx = x * rA + y * rC;
-		ry = x * rB + y * rD;
-		if( out.xMin > rx ) out.xMin = rx;
-		if( out.yMin > ry ) out.yMin = ry;
-		if( out.xMax < rx ) out.xMax = rx;
-		if( out.yMax < ry ) out.yMax = ry;
+		out.addPos(x * rA + y * rC, x * rB + y * rD);
 
 		x = dx * matA + (dy + height) * matC + rX;
 		y = dx * matB + (dy + height) * matD + rY;
-		rx = x * rA + y * rC;
-		ry = x * rB + y * rD;
-		if( out.xMin > rx ) out.xMin = rx;
-		if( out.yMin > ry ) out.yMin = ry;
-		if( out.xMax < rx ) out.xMax = rx;
-		if( out.yMax < ry ) out.yMax = ry;
+		out.addPos(x * rA + y * rC, x * rB + y * rD);
 
 		x = (dx + width) * matA + (dy + height) * matC + rX;
 		y = (dx + width) * matB + (dy + height) * matD + rY;
-		rx = x * rA + y * rC;
-		ry = x * rB + y * rD;
-		if( out.xMin > rx ) out.xMin = rx;
-		if( out.yMin > ry ) out.yMin = ry;
-		if( out.xMax < rx ) out.xMax = rx;
-		if( out.yMax < ry ) out.yMax = ry;
+		out.addPos(x * rA + y * rC, x * rB + y * rD);
 	}
 
 	public function getSpritesCount() {
