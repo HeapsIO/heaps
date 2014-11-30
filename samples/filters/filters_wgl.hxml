@@ -1,0 +1,5 @@
+-js main.js
+-main Main
+-lib heaps
+-dce full
+-D resourcesPath=../res
