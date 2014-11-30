@@ -5,7 +5,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var buffer : hxd.FloatBuffer;
 	public var bufPos : Int;
 
-	public var textures : h3d.pass.TextureCache;
+	public var textures : h3d.impl.TextureCache;
 
 	public var tmpBounds = new h2d.col.Bounds();
 	var texture : h3d.mat.Texture;
@@ -35,7 +35,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.zValue = 0.;
 		baseShaderList = new hxsl.ShaderList(baseShader);
 		targetsStack = [];
-		textures = new h3d.pass.TextureCache();
+		textures = new h3d.impl.TextureCache();
 	}
 
 	public function begin() {
@@ -50,6 +50,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShaderList.next = null;
 		initShaders(baseShaderList);
 		engine.selectMaterial(pass);
+		textures.begin(this);
 	}
 
 	function initShaders( shaders ) {

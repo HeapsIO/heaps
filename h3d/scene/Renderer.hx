@@ -22,12 +22,12 @@ class Renderer {
 	var passGroups : SMap<PassGroup>;
 	var allPasses : Array<{ name : String, p : h3d.pass.Base }>;
 	var ctx : RenderContext;
-	var tcache : h3d.pass.TextureCache;
+	var tcache : h3d.impl.TextureCache;
 
 	public function new() {
 		passes = new SMap();
 		allPasses = [];
-		tcache = new h3d.pass.TextureCache();
+		tcache = new h3d.impl.TextureCache();
 		passGroups = new SMap();
 	}
 

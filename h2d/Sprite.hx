@@ -428,6 +428,7 @@ class Sprite {
 
 		var t = ctx.textures.allocTarget("filterTemp", ctx, width, height, false);
 		ctx.pushTarget(t, xMin, yMin);
+		ctx.engine.clear(0);
 
 		// reset transform and update childs
 		var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;
@@ -456,8 +457,6 @@ class Sprite {
 
 		emitTile(ctx, final);
 		ctx.flush();
-		t.dispose();
-		final.dispose();
 	}
 
 	function drawRec( ctx : RenderContext ) {

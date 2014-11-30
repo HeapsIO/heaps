@@ -7,7 +7,7 @@ class Default extends Base {
 	var manager : h3d.shader.Manager;
 	var globals(get, never) : hxsl.Globals;
 	var cachedBuffer : h3d.shader.Buffers;
-	var tcache : TextureCache;
+	var tcache : h3d.impl.TextureCache;
 
 	inline function get_globals() return manager.globals;
 
@@ -29,7 +29,7 @@ class Default extends Base {
 	public function new() {
 		super();
 		manager = new h3d.shader.Manager(getOutputs());
-		tcache = new TextureCache();
+		tcache = new h3d.impl.TextureCache();
 		initGlobals();
 	}
 

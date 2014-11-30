@@ -1,4 +1,4 @@
-package h3d.pass;
+package h3d.impl;
 
 class TextureCache {
 
@@ -19,7 +19,7 @@ class TextureCache {
 		return cache[index];
 	}
 
-	public function allocTarget( name : String, ctx : h3d.impl.RenderContext, width : Int, height : Int, hasDepth=true ) {
+	public function begin( ctx : h3d.impl.RenderContext ) {
 		if( frame != ctx.frame ) {
 			// dispose extra textures we didn't use
 			while( cache.length > position ) {
@@ -29,6 +29,10 @@ class TextureCache {
 			frame = ctx.frame;
 			position = 0;
 		}
+	}
+
+	public function allocTarget( name : String, ctx : h3d.impl.RenderContext, width : Int, height : Int, hasDepth=true ) {
+		begin(ctx);
 		var t = cache[position];
 		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.flags.has(hasDefaultDepth ? TargetUseDefaultDepth : TargetDepth) != hasDepth ) {
 			if( t != null ) t.dispose();
