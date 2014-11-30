@@ -20,8 +20,10 @@ class RenderContext {
 	var baseShaderList : hxsl.ShaderList;
 	var currentObj : Drawable;
 	var stride : Int;
+	var s2d : Scene;
 
-	public function new() {
+	public function new(s2d) {
+		this.s2d = s2d;
 		frame = 0;
 		time = 0.;
 		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
@@ -45,6 +47,7 @@ class RenderContext {
 		// todo : we might prefer to auto-detect this by running a test and capturing its output
 		baseShader.pixelAlign = #if flash true #else false #end;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
+		baseShader.viewport.set( -s2d.width * 0.5, -s2d.height * 0.5, 2 / s2d.width, -2 / s2d.height);
 		baseShaderList.next = null;
 		initShaders(baseShaderList);
 		engine.selectMaterial(pass);
@@ -69,10 +72,13 @@ class RenderContext {
 		baseShaderList.next = null;
 	}
 
-	public function setTarget( t : h3d.mat.Texture ) {
+	public function setTarget( t : h3d.mat.Texture, startX = 0, startY = 0, targetWidth = -1, targetHeight = -1 ) {
 		flush();
 		var old = engine.setTarget(t);
+		if( targetWidth < 0 ) targetWidth = t == null ? s2d.width : t.width;
+		if( targetHeight < 0 ) targetHeight = t == null ? s2d.height : t.height;
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
+		baseShader.viewport.set( -targetWidth * 0.5 - startX, -targetHeight * 0.5 - startY, 2 / targetWidth, -2 / targetHeight);
 		begin();
 		return old;
 	}

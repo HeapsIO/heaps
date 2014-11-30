@@ -29,7 +29,7 @@ class Scene extends Layers implements h3d.IDrawable {
 	public function new() {
 		super(null);
 		var e = h3d.Engine.getCurrent();
-		ctx = new RenderContext();
+		ctx = new RenderContext(this);
 		width = e.width;
 		height = e.height;
 		interactive = new Array();
@@ -376,45 +376,6 @@ class Scene extends Layers implements h3d.IDrawable {
 				interactive.splice(k, 1);
 				break;
 			}
-	}
-
-	override function calcAbsPos() {
-		// init matrix without rotation
-		matA = scaleX;
-		matB = 0;
-		matC = 0;
-		matD = scaleY;
-		absX = x;
-		absY = y;
-
-		// adds a pixels-to-viewport transform
-		var w = 2 / width;
-		var h = -2 / height;
-		absX = absX * w - 1;
-		absY = absY * h + 1;
-
-		matA *= w;
-		matB *= h;
-		matC *= w;
-		matD *= h;
-
-		// perform final rotation around center
-		if( rotation != 0 ) {
-			var cr = Math.cos(rotation);
-			var sr = Math.sin(rotation);
-			var tmpA = matA * cr + matB * sr;
-			var tmpB = matA * -sr + matB * cr;
-			var tmpC = matC * cr + matD * sr;
-			var tmpD = matC * -sr + matD * cr;
-			var tmpX = absX * cr + absY * sr;
-			var tmpY = absX * -sr + absY * cr;
-			matA = tmpA;
-			matB = tmpB;
-			matC = tmpC;
-			matD = tmpD;
-			absX = tmpX;
-			absY = tmpY;
-		}
 	}
 
 	public function dispose() {

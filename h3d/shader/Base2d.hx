@@ -31,6 +31,7 @@ class Base2d extends hxsl.Shader {
 
 		@const var pixelAlign : Bool;
 		@param var halfPixelInverse : Vec2;
+		@param var viewport : Vec4;
 
 		function __init__() {
 			spritePosition = vec4(input.position, zValue, 1);
@@ -47,6 +48,7 @@ class Base2d extends hxsl.Shader {
 		}
 
 		function vertex() {
+			absolutePosition.xy = (absolutePosition.xy + viewport.xy) * viewport.zw;
 			// http://msdn.microsoft.com/en-us/library/windows/desktop/bb219690(v=vs.85).aspx
 			if( pixelAlign ) absolutePosition.xy -= halfPixelInverse;
 			output.position = absolutePosition;
