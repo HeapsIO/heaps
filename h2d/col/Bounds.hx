@@ -40,6 +40,13 @@ class Bounds {
 		if( p.y > yMax ) yMax = p.y;
 	}
 
+	public inline function addPos( x : Float, y : Float ) {
+		if( x < xMin ) xMin = x;
+		if( x > xMax ) xMax = x;
+		if( y < yMin ) yMin = y;
+		if( y > yMax ) yMax = y;
+	}
+
 	public inline function set(x, y, width, height) {
 		this.x = x;
 		this.y = y;
