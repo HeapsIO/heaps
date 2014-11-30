@@ -292,12 +292,17 @@ abstract BitmapData(InnerData) {
 		p.flags.set(AlphaPremultiplied);
 		return p;
 		#elseif js
-		var pixels = [];
 		var w = b.canvas.width;
 		var h = b.canvas.height;
 		var data = b.getImageData(0, 0, w, h).data;
-		for( i in 0...w * h * 4 )
-			pixels.push(data[i]);
+			#if (haxe_ver < 3.2)
+			var pixels = [];
+			for( i in 0...w * h * 4 )
+				pixels.push(data[i]);
+			#else
+			// starting from Haxe 3.2, bytes are based on native array
+			var pixels = data;
+			#end
 		return new Pixels(b.canvas.width, b.canvas.height, haxe.io.Bytes.ofData(pixels), RGBA);
 		#elseif openfl
 		var bRect = b.rect;
