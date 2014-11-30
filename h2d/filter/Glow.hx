@@ -5,8 +5,8 @@ class Glow extends Blur {
 	public var color : Int;
 	public var alpha : Float;
 
-	public function new( color : Int = 0xFFFFFF, alpha = 1., quality = 1, sigma = 1., passes = 1 ) {
-		super(quality, sigma, passes);
+	public function new( color : Int = 0xFFFFFF, alpha = 1., quality = 1, passes = 1, sigma = 1. ) {
+		super(quality, passes, sigma);
 		this.color = color;
 		this.alpha = alpha;
 		pass.shader.hasFixedColor = true;

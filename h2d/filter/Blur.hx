@@ -19,9 +19,9 @@ class Blur extends Filter {
 
 	var pass : h3d.pass.Blur;
 
-	public function new( quality = 1, sigma = 1., passes = 1 ) {
+	public function new( quality = 1, passes = 1, sigma = 1. ) {
 		super();
-		pass = new h3d.pass.Blur(quality, sigma, passes);
+		pass = new h3d.pass.Blur(quality, passes, sigma);
 	}
 
 	inline function get_quality() return pass.quality;
