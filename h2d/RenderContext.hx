@@ -85,6 +85,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function popTarget() {
+		flush();
 		begin();
 		var tinf = targetsStack.pop();
 		if( tinf == null ) throw "Too many popTarget()";

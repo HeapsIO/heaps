@@ -83,11 +83,11 @@ class CachedBitmap extends Drawable {
 			for( c in childs )
 				syncPosRec(c);
 
-			var prev = ctx.setTarget(tile.getTexture());
+			ctx.pushTarget(tile.getTexture());
 			ctx.engine.clear(0);
 			for( c in childs )
 				c.drawRec(ctx);
-			ctx.setTarget(prev);
+			ctx.popTarget();
 
 			// restore
 			matA = oldA;
@@ -98,7 +98,6 @@ class CachedBitmap extends Drawable {
 			absY = oldY;
 
 			renderDone = true;
-			posChanged = true; // child pos are not up to date
 		}
 
 		draw(ctx);

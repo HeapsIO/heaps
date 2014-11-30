@@ -22,12 +22,12 @@ class Main extends hxd.App {
 
 		var help = new h2d.Text(hxd.Res.customFont.toFont(), s2d);
 		help.x = help.y = 5;
-		help.text = "1:Blur 2:Glow 3:DropShadow 4:Displacement 5:Glow(Knockout) 6:Mix +/-:Scale";
+		help.text = "0:Disable 1:Blur 2:Glow 3:DropShadow 4:Displacement 5:Glow(Knockout) 6:Mix +/-:Scale";
 	}
 
 	override function update(dt:Float) {
-		for( i in 1...7 )
-			if( K.isPressed(K.NUMBER_0 + i) )
+		for( i in 0...7 )
+			if( K.isPressed(K.NUMBER_0 + i) || K.isPressed(K.NUMPAD_0+i) )
 				setFilters(i);
 		if( K.isPressed(K.NUMPAD_ADD) ) {
 			spr.scale(1.25);
@@ -48,6 +48,8 @@ class Main extends hxd.App {
 
 	function setFilters(i) {
 		switch( i ) {
+		case 0:
+			spr.filters = [];
 		case 1:
 			spr.filters = [new h2d.filter.Blur(2, 1, 100)];
 		case 2:
