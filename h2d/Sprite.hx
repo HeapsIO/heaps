@@ -4,6 +4,8 @@ import hxd.Math;
 @:allow(h2d.Tools)
 class Sprite {
 
+	static var nullDrawable : h2d.Drawable;
+
 	var childs : Array<Sprite>;
 	public var parent(default, null) : Sprite;
 	public var numChildren(get, never) : Int;
@@ -15,6 +17,8 @@ class Sprite {
 	public var rotation(default, set) : Float;
 	public var visible : Bool;
 	public var name : String;
+
+	public var filters : Array<h2d.filter.Filter>;
 
 	var matA : Float;
 	var matB : Float;
@@ -33,6 +37,7 @@ class Sprite {
 		posChanged = false;
 		visible = true;
 		childs = [];
+		filters = [];
 		if( parent != null )
 			parent.addChild(this);
 	}
@@ -253,17 +258,6 @@ class Sprite {
 	}
 
 	function sync( ctx : RenderContext ) {
-		/*
-		if( currentAnimation != null ) {
-			var old = parent;
-			var dt = ctx.elapsedTime;
-			while( dt > 0 && currentAnimation != null )
-				dt = currentAnimation.update(dt);
-			if( currentAnimation != null )
-				currentAnimation.sync();
-			if( parent == null && old != null ) return; // if we were removed by an animation event
-		}
-		*/
 		var changed = posChanged;
 		if( changed ) {
 			calcAbsPos();
@@ -344,6 +338,128 @@ class Sprite {
 		}
 	}
 
+	function emitTile( ctx : RenderContext, tile : h2d.Tile ) {
+		if( nullDrawable == null )
+			nullDrawable = new h2d.Drawable(null);
+		ctx.beginDrawBatch(nullDrawable, tile.getTexture());
+
+		var ax = absX + tile.dx * matA + tile.dy * matC;
+		var ay = absY + tile.dx * matB + tile.dy * matD;
+		var buf = ctx.buffer;
+		var pos = ctx.bufPos;
+		buf.grow(pos + 4 * 8);
+
+		inline function emit(v:Float) buf[pos++] = v;
+
+		emit(ax);
+		emit(ay);
+		emit(tile.u);
+		emit(tile.v);
+		emit(1.);
+		emit(1.);
+		emit(1.);
+		emit(1.);
+
+
+		var tw = tile.width;
+		var th = tile.height;
+		var dx1 = tw * matA;
+		var dy1 = tw * matB;
+		var dx2 = th * matC;
+		var dy2 = th * matD;
+
+		emit(ax + dx1);
+		emit(ay + dy1);
+		emit(tile.u2);
+		emit(tile.v);
+		emit(1.);
+		emit(1.);
+		emit(1.);
+		emit(1.);
+
+		emit(ax + dx2);
+		emit(ay + dy2);
+		emit(tile.u);
+		emit(tile.v2);
+		emit(1.);
+		emit(1.);
+		emit(1.);
+		emit(1.);
+
+		emit(ax + dx1 + dx2);
+		emit(ay + dy1 + dy2);
+		emit(tile.u2);
+		emit(tile.v2);
+		emit(1.);
+		emit(1.);
+		emit(1.);
+		emit(1.);
+
+		ctx.bufPos = pos;
+	}
+
+	function drawFilters( ctx : RenderContext ) {
+		var bounds = ctx.tmpBounds;
+		var total = new h2d.col.Bounds();
+		var maxExtent = -1.;
+		for( f in filters ) {
+			f.sync(ctx, this);
+			if( f.autoBounds ) {
+				if( f.boundsExtend > maxExtent ) maxExtent = f.boundsExtend;
+			} else {
+				f.getBounds(this, bounds);
+				total.add(bounds);
+			}
+		}
+		if( maxExtent >= 0 ) {
+			getBounds(this, bounds);
+			bounds.xMin -= maxExtent;
+			bounds.yMin -= maxExtent;
+			bounds.xMax += maxExtent;
+			bounds.yMax += maxExtent;
+			total.add(bounds);
+		}
+
+		var xMin = Math.floor(total.xMin + 1e-10);
+		var yMin = Math.floor(total.yMin + 1e-10);
+		var width = Math.ceil(total.xMax - xMin - 1e-10);
+		var height = Math.ceil(total.yMax - yMin - 1e-10);
+		if( width <= 0 || height <= 0 ) return;
+
+		var t = new h3d.mat.Texture(width, height, [Target]);
+		ctx.pushTarget(t, xMin, yMin);
+
+		// reset transform and update childs
+		var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;
+		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
+		for( c in childs )
+			c.posChanged = true;
+		draw(ctx);
+		for( c in childs )
+			c.drawRec(ctx);
+		matA = oldA;
+		matB = oldB;
+		matC = oldC;
+		matD = oldD;
+		absX = oldX;
+		absY = oldY;
+		ctx.flush();
+
+		var final = h2d.Tile.fromTexture(t);
+		for( f in filters )
+			final = f.draw(ctx, final);
+
+		ctx.popTarget();
+
+		final.dx += xMin;
+		final.dy += yMin;
+
+		emitTile(ctx, final);
+		ctx.flush();
+		t.dispose();
+		final.dispose();
+	}
+
 	function drawRec( ctx : RenderContext ) {
 		if( !visible ) return;
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
@@ -355,9 +471,13 @@ class Sprite {
 				c.posChanged = true;
 			posChanged = false;
 		}
-		draw(ctx);
-		for( c in childs )
-			c.drawRec(ctx);
+		if( filters.length > 0 ) {
+			drawFilters(ctx);
+		} else {
+			draw(ctx);
+			for( c in childs )
+				c.drawRec(ctx);
+		}
 	}
 
 	inline function set_x(v) {

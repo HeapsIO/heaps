@@ -85,7 +85,7 @@ class ShadowMap extends Default {
 		passes = super.draw(passes);
 		if( border != null ) border.render();
 
-		if( blur.quality > 0 && blur.count > 0 )
+		if( blur.quality > 0 && blur.passes > 0 )
 			blur.apply(texture, tcache.allocTarget("tmpBlur", ctx, size, size, false), true);
 
 		ctx.sharedGlobals.set(shadowMapId, texture);

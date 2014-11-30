@@ -10,6 +10,7 @@ class RenderContext {
 	public var buffer : hxd.FloatBuffer;
 	public var bufPos : Int;
 
+	public var tmpBounds = new h2d.col.Bounds();
 	var texture : h3d.mat.Texture;
 	var baseShader : h3d.shader.Base2d;
 	var manager : h3d.shader.Manager;
@@ -21,6 +22,7 @@ class RenderContext {
 	var currentObj : Drawable;
 	var stride : Int;
 	var s2d : Scene;
+	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int }>;
 
 	public function new(s2d) {
 		this.s2d = s2d;
@@ -37,6 +39,7 @@ class RenderContext {
 		baseShader.priority = 100;
 		baseShader.zValue = 0.;
 		baseShaderList = new hxsl.ShaderList(baseShader);
+		targetsStack = [];
 	}
 
 	public function begin() {
@@ -70,17 +73,34 @@ class RenderContext {
 		texture = null;
 		currentObj = null;
 		baseShaderList.next = null;
+		if( targetsStack.length != 0 ) throw "Missing popTarget()";
 	}
 
-	public function setTarget( t : h3d.mat.Texture, startX = 0, startY = 0, targetWidth = -1, targetHeight = -1 ) {
+	public function pushTarget( t : h3d.mat.Texture, startX = 0, startY = 0 ) {
 		flush();
-		var old = engine.setTarget(t);
-		if( targetWidth < 0 ) targetWidth = t == null ? s2d.width : t.width;
-		if( targetHeight < 0 ) targetHeight = t == null ? s2d.height : t.height;
+		engine.setTarget(t);
+		var targetWidth = t == null ? s2d.width : t.width;
+		var targetHeight = t == null ? s2d.height : t.height;
 		begin();
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
 		baseShader.viewport.set( -targetWidth * 0.5 - startX, -targetHeight * 0.5 - startY, 2 / targetWidth, -2 / targetHeight);
-		return old;
+		targetsStack.push( { t : t, x : startX, y : startY } );
+	}
+
+	public function popTarget() {
+		begin();
+		var tinf = targetsStack.pop();
+		if( tinf == null ) throw "Too many popTarget()";
+		tinf = targetsStack[targetsStack.length - 1];
+		var t = tinf == null ? null : tinf.t;
+		var startX = tinf == null ? 0 : tinf.x;
+		var startY = tinf == null ? 0 : tinf.y;
+		var targetWidth = t == null ? s2d.width : t.width;
+		var targetHeight = t == null ? s2d.height : t.height;
+		engine.setTarget(t);
+		begin();
+		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
+		baseShader.viewport.set( -targetWidth * 0.5 - startX, -targetHeight * 0.5 - startY, 2 / targetWidth, -2 / targetHeight);
 	}
 
 	public function flush() {
