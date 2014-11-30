@@ -11,7 +11,7 @@ class CustomRenderer extends h3d.scene.Renderer {
 		sao = new h3d.pass.ScalableAO();
 		// TODO : use a special Blur that prevents bluring across depths
 		saoBlur = new h3d.pass.Blur(3,5);
-		saoBlur.count = 3;
+		saoBlur.passes = 3;
 	}
 
 	override function process( ctx, passes ) {
