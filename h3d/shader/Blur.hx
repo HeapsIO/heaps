@@ -10,6 +10,9 @@ class Blur extends ScreenShader {
 		@param var values : Array<Float,Quality>;
 		@param var pixel : Vec2;
 
+		@const var hasFixedColor : Bool;
+		@param var fixedColor : Vec4;
+
 		function fragment() {
 			if( isDepth ) {
 				var val = 0.;
@@ -21,6 +24,10 @@ class Blur extends ScreenShader {
 				for( i in -Quality+1...Quality )
 					color += texture.get(input.uv + pixel * float(i)) * values[i < 0 ? -i : i];
 				output.color = color;
+			}
+			if( hasFixedColor ) {
+				output.color.rgb = fixedColor.rgb;
+				output.color.a *= fixedColor.a;
 			}
 		}
 	}

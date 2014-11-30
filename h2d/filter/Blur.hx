@@ -36,7 +36,7 @@ class Blur extends Filter {
 	}
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
-		pass.apply(t.getTexture());
+		pass.apply(t.getTexture(), ctx.textures.allocTarget("blurTmp",ctx,t.width,t.height,false));
 		return t;
 	}
 

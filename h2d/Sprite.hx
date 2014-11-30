@@ -426,7 +426,7 @@ class Sprite {
 		var height = Math.ceil(total.yMax - yMin - 1e-10);
 		if( width <= 0 || height <= 0 ) return;
 
-		var t = new h3d.mat.Texture(width, height, [Target]);
+		var t = ctx.textures.allocTarget("filterTemp", ctx, width, height, false);
 		ctx.pushTarget(t, xMin, yMin);
 
 		// reset transform and update childs
