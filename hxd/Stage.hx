@@ -232,6 +232,13 @@ class Stage {
 		#if flash
 		// prevent escaping fullscreen in air
 		if( e.keyCode == flash.ui.Keyboard.ESCAPE ) e.preventDefault();
+		if( e.keyCode == "S".code && e.ctrlKey ) e.preventDefault();
+		// prevent ALT menu (sadly DONT WORK)
+		if( e.keyCode == 18 ) {
+			e.preventDefault();
+			e.stopImmediatePropagation();
+			e.stopPropagation();
+		}
 		// prevent back exiting app in mobile
 		if( e.keyCode == flash.ui.Keyboard.BACK ) {
 			e.preventDefault();
