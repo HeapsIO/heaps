@@ -29,9 +29,6 @@ class Engine {
 	var tmpVector = new h3d.Vector();
 	var currentTarget : h3d.mat.Texture;
 
-	@:allow(h3d)
-	var curProjMatrix : h3d.Matrix;
-
 	@:access(hxd.Stage)
 	public function new( hardware = true, aa = 0 ) {
 		this.hardware = hardware;
@@ -247,7 +244,6 @@ class Engine {
 		drawTriangles = 0;
 		shaderSwitches = 0;
 		drawCalls = 0;
-		curProjMatrix = null;
 		currentTarget = null;
 		driver.begin(frameCount);
 		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
@@ -265,7 +261,6 @@ class Engine {
 	public function end() {
 		driver.present();
 		reset();
-		curProjMatrix = null;
 	}
 
 	public function getTarget() {
