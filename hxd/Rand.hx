@@ -56,7 +56,7 @@ class Rand {
 	inline function int() : Int {
 		seed = 36969 * (seed & 0xFFFF) + (seed >> 16);
 		seed2 = 18000 * (seed2 & 0xFFFF) + (seed2 >> 16);
-		return (seed<<16) + seed2;
+		return ((seed<<16) + seed2) #if js | 0 #end;
 	}
 
 	inline function uint() {
