@@ -118,7 +118,6 @@ class Scene extends Layers implements h3d.IDrawable {
 		var x = event.relX, y = event.relY;
 		var rx = x * matA + y * matB + absX;
 		var ry = x * matC + y * matD + absY;
-		var r = height / width;
 		var handled = false;
 		var checkOver = false, checkPush = false, cancelFocus = false;
 		switch( event.kind ) {
@@ -135,29 +134,29 @@ class Scene extends Layers implements h3d.IDrawable {
 		}
 		for( i in interactive ) {
 
-			// this is a bit tricky since we are not in the not-euclide viewport space
-			// (r = ratio correction)
 			var dx = rx - i.absX;
 			var dy = ry - i.absY;
 
-			var w1 = i.width * i.matA * r;
+			var w1 = i.width * i.matA;
 			var h1 = i.width * i.matC;
-			var ky = h1 * dx - w1 * dy;
+			var ky = h1 * dx + w1 * dy;
+
 			// up line
 			if( ky < 0 )
 				continue;
 
-			var w2 = i.height * i.matB * r;
+			var w2 = i.height * i.matB;
 			var h2 = i.height * i.matD;
-			var kx = w2 * dy - h2 * dx;
+			var kx = w2 * dy + h2 * dx;
 
 			// left line
 			if( kx < 0 )
 				continue;
 
-			var max = h1 * w2 - w1 * h2;
+			var max = w1 * h2 - h1 * w2;
+
 			// bottom/right
-			if( ky >= max || kx * r >= max )
+			if( ky >= max || kx >= max )
 				continue;
 
 			// check visibility
@@ -172,7 +171,7 @@ class Scene extends Layers implements h3d.IDrawable {
 			}
 			if( !visible ) continue;
 
-			event.relX = (kx * r / max) * i.width;
+			event.relX = (kx / max) * i.width;
 			event.relY = (ky / max) * i.height;
 
 			i.handleEvent(event);
