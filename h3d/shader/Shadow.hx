@@ -15,7 +15,7 @@ class Shadow extends hxsl.Shader {
 		@private var shadowPos : Vec3;
 
 		function vertex() {
-			shadowPos = transformedPosition * shadow.proj * vec3(0.5, #if flash -0.5 #else 0.5 #end, 1) + vec3(0.5, 0.5, 0);
+			shadowPos = transformedPosition * shadow.proj * vec3(0.5, -0.5, 1) + vec3(0.5, 0.5, 0);
 		}
 
 		function fragment() {

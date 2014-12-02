@@ -57,7 +57,7 @@ class Main extends hxd.App {
 		case 3:
 			spr.filters = [new h2d.filter.DropShadow(8,Math.PI/4,0,1,2,2)];
 		case 4:
-			spr.filters = [new h2d.filter.Displacement(disp,2.5,2.5)];
+			spr.filters = [new h2d.filter.Displacement(disp,4,4)];
 		case 5:
 			var g = new h2d.filter.Glow(0xFFFFFF, 100, 2);
 			g.knockout = true;
