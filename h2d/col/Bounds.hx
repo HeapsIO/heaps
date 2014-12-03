@@ -96,10 +96,10 @@ class Bounds {
 		var dy = (yMax - yMin) * 0.5 * v;
 		var mx = (xMax + xMin) * 0.5;
 		var my = (yMax + yMin) * 0.5;
-		xMin = mx - dx * v;
-		yMin = my - dy * v;
-		xMax = mx + dx * v;
-		yMax = my + dy * v;
+		xMin = mx - dx;
+		yMin = my - dy;
+		xMax = mx + dx;
+		yMax = my + dy;
 	}
 
 	public inline function offset( dx : Float, dy : Float ) {
