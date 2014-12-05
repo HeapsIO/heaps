@@ -89,7 +89,7 @@ class Library {
 			var start = Std.int(outVertex.length / stride);
 			for( i in 0...Std.int(data.vertexes.length / stride) ) {
 				var p = i * stride;
-				vtmp.x = data.vertexes[p];
+				vtmp.x = data.vertexes[p++];
 				vtmp.y = data.vertexes[p++];
 				vtmp.z = data.vertexes[p++];
 				vtmp.transform3x4(pos);
