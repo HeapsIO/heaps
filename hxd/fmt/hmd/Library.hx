@@ -46,6 +46,65 @@ class Library {
 		return b;
 	}
 
+	public function getDefaultFormat( stride : Int ) {
+		var format = [
+			new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3),
+		];
+		var defs = [null];
+		if( stride > 3 ) {
+			format.push(new hxd.fmt.hmd.Data.GeometryFormat("normal", DVec3));
+			defs.push(null);
+		}
+		if( stride > 6 ) {
+			format.push(new hxd.fmt.hmd.Data.GeometryFormat("uv", DVec2));
+			defs.push(null);
+		}
+		if( stride > 8 ) {
+			format.push(new hxd.fmt.hmd.Data.GeometryFormat("color", DVec3));
+			defs.push(new h3d.Vector(1, 1, 1));
+		}
+		if( stride > 11 )
+			throw "Unsupported stride";
+		return { format : format, defs : defs };
+	}
+
+	public function load( format : Array<GeometryFormat>, ?defaults : Array<h3d.Vector>, modelIndex = -1 ) {
+		var vtmp = new h3d.Vector();
+		var models = modelIndex < 0 ? header.models : [header.models[modelIndex]];
+		var outVertex = new hxd.FloatBuffer();
+		var outIndex = new hxd.IndexBuffer();
+		var stride = 0;
+		var mid = -1;
+		for( f in format )
+			stride += f.format.getSize();
+		for( m in models ) {
+			var geom = header.geometries[m.geometry];
+			if( geom == null ) continue;
+			for( mat in m.materials ) {
+				if( mid < 0 ) mid = mat;
+				if( mid != mat ) throw "Models have several materials";
+			}
+			var pos = m.position.toMatrix();
+			var data = getBuffers(geom, format, defaults);
+			var start = Std.int(outVertex.length / stride);
+			for( i in 0...Std.int(data.vertexes.length / stride) ) {
+				var p = i * stride;
+				vtmp.x = data.vertexes[p];
+				vtmp.y = data.vertexes[p++];
+				vtmp.z = data.vertexes[p++];
+				vtmp.transform3x4(pos);
+				outVertex.push(vtmp.x);
+				outVertex.push(vtmp.y);
+				outVertex.push(vtmp.z);
+				for( j in 0...stride - 3 )
+					outVertex.push(data.vertexes[p++]);
+			}
+			for( idx in data.indexes )
+				outIndex.push(idx + start);
+		}
+		return { vertex : outVertex, index : outIndex };
+	}
+
 	@:noDebug
 	public function getBuffers( geom : Geometry, format : Array<GeometryFormat>, ?defaults : Array<h3d.Vector>, ?material : Int ) {
 
