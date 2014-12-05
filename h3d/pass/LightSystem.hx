@@ -7,7 +7,7 @@ class LightSystem {
 
 	public var maxLightsPerObject = 6;
 	var globals : hxsl.Globals;
-	var ambientShader : h3d.shader.AmbientLight;
+	var ambientShader : hxsl.Shader;
 	var lightCount : Int;
 	var ctx : h3d.scene.RenderContext;
 	public var shadowDirection : h3d.Vector;
