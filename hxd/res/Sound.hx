@@ -175,7 +175,7 @@ class Sound extends Resource {
 		channel = snd.play(startPosition, loop?0x7FFFFFFF:0);
 		if( !loop ) {
 			var chan = channel;
-			channel.addEventListener(flash.events.Event.SOUND_COMPLETE, function(e) { chan.stop(); if( chan == channel ) channel = null; } );
+			if( chan != null ) channel.addEventListener(flash.events.Event.SOUND_COMPLETE, function(e) { chan.stop(); if( chan == channel ) channel = null; } );
 		}
 		volume = volume;
 		#end
