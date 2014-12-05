@@ -15,4 +15,3 @@
 -lib heaps
 -lib nme
 --remap flash:nme
--debug
