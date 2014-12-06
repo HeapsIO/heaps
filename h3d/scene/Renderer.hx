@@ -38,6 +38,7 @@ class Renderer {
 		allPasses = [];
 		passGroups = new SMap();
 		tcache.dispose();
+		def = depth = normal = shadow = null;
 	}
 
 	public function compileShader( pass : h3d.mat.Pass ) {
