@@ -74,7 +74,10 @@ class Text extends Drawable {
 			var oldB = color.b;
 			var oldA = color.a;
 			color.setColor(dropShadow.color);
-			color.a = dropShadow.alpha;
+			color.r *= oldR;
+			color.g *= oldG;
+			color.b *= oldB;
+			color.a = dropShadow.alpha * oldA;
 			glyphs.drawWith(ctx, this);
 			absX = oldX;
 			absY = oldY;
