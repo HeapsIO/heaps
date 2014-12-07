@@ -32,7 +32,7 @@ class BatchElement {
 	var prev : BatchElement;
 	var next : BatchElement;
 
-	function new(t) {
+	public function new(t) {
 		x = 0; y = 0; r = 1; g = 1; b = 1; a = 1;
 		rotation = 0; scale = 1;
 		this.t = t;
