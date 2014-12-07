@@ -100,6 +100,51 @@ class Text extends Drawable {
 		return initGlyphs(text,false).width;
 	}
 
+	public function splitText( text : String ) {
+		if( maxWidth == null )
+			return text;
+		var lines = [], rest = text, restPos = 0;
+		var x = 0, xMax = 0, prevChar = -1;
+		for( i in 0...text.length ) {
+			var cc = text.charCodeAt(i);
+			var e = font.getChar(cc);
+			var newline = cc == '\n'.code;
+			var esize = e.width + e.getKerningOffset(prevChar);
+			if( font.charset.isBreakChar(cc) ) {
+				var size = x + esize + letterSpacing;
+				var k = i + 1, max = text.length;
+				var prevChar = prevChar;
+				while( size <= maxWidth && k < text.length ) {
+					var cc = text.charCodeAt(k++);
+					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
+					var e = font.getChar(cc);
+					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
+					prevChar = cc;
+				}
+				if( size > maxWidth ) {
+					newline = true;
+					lines.push(text.substr(restPos, i - restPos));
+					restPos = i;
+					if( font.charset.isSpace(cc) ) {
+						e = null;
+						restPos++;
+					}
+				}
+			}
+			if( e != null )
+				x += esize + letterSpacing;
+			if( newline ) {
+				if( x > xMax ) xMax = x;
+				x = 0;
+				prevChar = -1;
+			} else
+				prevChar = cc;
+		}
+		if( restPos < text.length )
+			lines.push(text.substr(restPos, text.length - restPos));
+		return lines.join("\n");
+	}
+
 	function initGlyphs( text : String, rebuild = true, lines : Array<Int> = null ) : { width : Int, height : Int } {
 		if( rebuild ) glyphs.reset();
 		var x = 0, y = 0, xMax = 0, prevChar = -1;
