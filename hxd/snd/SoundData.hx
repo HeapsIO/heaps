@@ -38,6 +38,14 @@ class SoundData {
 		return c;
 	}
 
+	public function loadURL( url : String ) {
+		#if flash
+		snd.load(new flash.net.URLRequest(url));
+		#else
+		throw "Not implemented";
+		#end
+	}
+
 	#if flash
 	function onFlashSample( e : flash.events.SampleDataEvent ) {
 		var buf = onStreamData();
