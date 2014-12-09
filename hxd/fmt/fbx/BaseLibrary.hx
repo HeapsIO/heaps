@@ -329,6 +329,57 @@ class BaseLibrary {
 			o.parent = op;
 		}
 
+		inline function getDepth( o : TmpObject ) {
+			var k = 0;
+			while( o != oroot ) {
+				o = o.parent;
+				k++;
+			}
+			return k;
+		}
+
+		// look for common skin ancestor
+		for( o in objects ) {
+			if( !o.isMesh ) continue;
+			var g = getChild(o.model, "Geometry");
+			var def = getChild(g, "Deformer", true);
+			if( def == null ) continue;
+			var bones = [for( d in getChilds(def, "Deformer") ) hobjects.get(getChild(d, "Model").getId())];
+			if( bones.length == 0 ) continue;
+
+
+			// first let's go the minimal depth for all bones
+			var minDepth = getDepth(bones[0]);
+			for( i in 1...bones.length ) {
+				var d = getDepth(bones[i]);
+				if( d < minDepth ) minDepth = d;
+			}
+			var out = [];
+			for( i in 0...bones.length ) {
+				var b = bones[i];
+				var n = getDepth(b) - minDepth;
+				for( i in 0...n ) {
+					b.isJoint = true;
+					b = b.parent;
+				}
+				out.remove(b);
+				out.push(b);
+			}
+			bones = out;
+
+			while( bones.length > 1 ) {
+				for( b in bones )
+					b.isJoint = true;
+				var parents = [];
+				for( b in bones ) {
+					if( b.parent == oroot || b.parent.isMesh ) continue;
+					parents.remove(b.parent);
+					parents.push(b.parent);
+				}
+				bones = parents;
+			}
+		}
+
 		// propagates joint flags
 		var changed = true;
 		while( changed ) {
