@@ -138,7 +138,7 @@ class HMDOut extends BaseLibrary {
 					}
 					tmpBuf[p++] = int32tof(idx);
 				}
-				
+
 				var total = 0.;
 				for( i in 0...stride )
 					total += tmpBuf[i];
@@ -479,8 +479,21 @@ class HMDOut extends BaseLibrary {
 			j.parent = jo.parent == null ? -1 : jo.parent.index;
 			j.bind = jo.bindIndex;
 			j.position = makePosition(jo.defMat);
-			if( jo.transPos != null )
+			if( jo.transPos != null ) {
 				j.transpos = makePosition(jo.transPos);
+				if( j.transpos.sx != 1 || j.transpos.sy != 1 || j.transpos.sz != 1 ) {
+					// FIX : the scale is not correctly taken into account, this formula will extract it and fix things
+					var tmp = jo.transPos.clone();
+					tmp.transpose();
+					var s = tmp.getScale();
+					tmp.prependScale(1 / s.x, 1 / s.y, 1 / s.z);
+					tmp.transpose();
+					j.transpos = makePosition(tmp);
+					j.transpos.sx = round(s.x);
+					j.transpos.sy = round(s.y);
+					j.transpos.sz = round(s.z);
+				}
+			}
 			s.joints.push(j);
 		}
 		if( skin.splitJoints != null ) {
@@ -498,12 +511,6 @@ class HMDOut extends BaseLibrary {
 	function makePosition( m : h3d.Matrix ) {
 		var p = new Position();
 		var s = m.getScale();
-		var mold = m;
-		var m = m;
-		if( s.x < 0 || s.y < 0 || s.z < 0 ) {
-			m = m.clone();
-			m.prependScale(1 / s.x, 1 / s.y, 1 / s.z);
-		}
 		var q = new h3d.Quat();
 		q.initRotateMatrix(m);
 		q.normalize();

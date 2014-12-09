@@ -288,7 +288,7 @@ class Library {
 			j.defMat = joint.position.toMatrix();
 			if( joint.bind >= 0 ) {
 				j.bindIndex = joint.bind;
-				j.transPos = joint.transpos.toMatrix();
+				j.transPos = joint.transpos.toMatrix(true);
 				s.boundJoints[j.bindIndex] = j;
 			}
 			if( joint.parent >= 0 ) {
