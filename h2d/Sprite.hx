@@ -341,6 +341,16 @@ class Sprite {
 	function emitTile( ctx : RenderContext, tile : h2d.Tile ) {
 		if( nullDrawable == null )
 			nullDrawable = new h2d.Drawable(null);
+		if( !ctx.hasBuffering() ) {
+			nullDrawable.absX = absX;
+			nullDrawable.absY = absY;
+			nullDrawable.matA = matA;
+			nullDrawable.matB = matB;
+			nullDrawable.matC = matC;
+			nullDrawable.matD = matD;
+			ctx.drawTile(nullDrawable, tile);
+			return;
+		}
 		ctx.beginDrawBatch(nullDrawable, tile.getTexture());
 
 		var ax = absX + tile.dx * matA + tile.dy * matC;

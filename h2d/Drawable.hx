@@ -131,6 +131,10 @@ class Drawable extends Sprite {
 	override function emitTile( ctx : RenderContext, tile : Tile ) {
 		if( tile == null )
 			tile = new Tile(null, 0, 0, 5, 5);
+		if( !ctx.hasBuffering() ) {
+			ctx.drawTile(this, tile);
+			return;
+		}
 		ctx.beginDrawBatch(this, tile.getTexture());
 
 		var ax = absX + tile.dx * matA + tile.dy * matC;

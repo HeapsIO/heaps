@@ -2,6 +2,8 @@ package h2d;
 
 class RenderContext extends h3d.impl.RenderContext {
 
+	static inline var BUFFERING = false;
+
 	public var buffer : hxd.FloatBuffer;
 	public var bufPos : Int;
 
@@ -13,6 +15,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var manager : h3d.shader.Manager;
 	var compiledShader : hxsl.RuntimeShader;
 	var buffers : h3d.shader.Buffers;
+	var fixedBuffer : h3d.Buffer;
 	var pass : h3d.mat.Pass;
 	var currentShaders : hxsl.ShaderList;
 	var baseShaderList : hxsl.ShaderList;
@@ -20,11 +23,13 @@ class RenderContext extends h3d.impl.RenderContext {
 	var stride : Int;
 	var s2d : Scene;
 	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int }>;
+	var hasUVPos : Bool;
 
 	public function new(s2d) {
 		super();
 		this.s2d = s2d;
-		buffer = new hxd.FloatBuffer();
+		if( BUFFERING )
+			buffer = new hxd.FloatBuffer();
 		bufPos = 0;
 		manager = new h3d.shader.Manager(["output.position", "output.color"]);
 		pass = new h3d.mat.Pass("",null);
@@ -36,6 +41,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShaderList = new hxsl.ShaderList(baseShader);
 		targetsStack = [];
 		textures = new h3d.impl.TextureCache();
+	}
+
+	public inline function hasBuffering() {
+		return BUFFERING;
 	}
 
 	public function begin() {
@@ -103,11 +112,15 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);
 	}
 
-	public function flush() {
+	public inline function flush() {
+		if( hasBuffering() ) _flush();
+	}
+
+	function _flush() {
 		if( bufPos == 0 ) return;
 		beforeDraw();
 		var nverts = Std.int(bufPos / stride);
-		var tmp = new h3d.Buffer(nverts, stride, [Quads, Dynamic, RawFormat]);
+		var tmp = new h3d.Buffer(nverts, stride, [Quads,Dynamic,RawFormat]);
 		tmp.uploadVector(buffer, 0, nverts);
 		engine.renderQuadBuffer(tmp);
 		tmp.dispose();
@@ -142,9 +155,27 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	@:access(h2d.Drawable)
-	function beginDraw(	obj : h2d.Drawable, texture : h3d.mat.Texture, isRelative : Bool ) {
+	public function drawTile( obj : h2d.Drawable, tile : h2d.Tile ) {
+		beginDraw(obj, tile.getTexture(), true, true);
+		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a);
+		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.width * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
+		baseShader.absoluteMatrixB.set(tile.height * obj.matB, tile.height * obj.matD, obj.absY + tile.dx * obj.matB + tile.dy * obj.matD);
+		baseShader.uvPos.set(tile.u, tile.v, tile.u2 - tile.u, tile.v2 - tile.v);
+		beforeDraw();
+		if( fixedBuffer == null || fixedBuffer.isDisposed() ) {
+			fixedBuffer = new h3d.Buffer(4, 8, [Quads, RawFormat]);
+			var k = new hxd.FloatBuffer();
+			for( v in [0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] )
+				k.push(v);
+			fixedBuffer.uploadVector(k, 0, 4);
+		}
+		engine.renderQuadBuffer(fixedBuffer);
+	}
+
+	@:access(h2d.Drawable)
+	function beginDraw(	obj : h2d.Drawable, texture : h3d.mat.Texture, isRelative : Bool, hasUVPos = false ) {
 		var stride = 8;
-		if( currentObj != null && (texture != this.texture || stride != this.stride || obj.blendMode != currentObj.blendMode || obj.filter != currentObj.filter) )
+		if( hasBuffering() && currentObj != null && (texture != this.texture || stride != this.stride || obj.blendMode != currentObj.blendMode || obj.filter != currentObj.filter) )
 			flush();
 		var shaderChanged = false, paramsChanged = false;
 		var objShaders = obj.shaders;
@@ -162,11 +193,11 @@ class RenderContext extends h3d.impl.RenderContext {
 					shaderChanged = true;
 			}
 		}
-		if( objShaders != null || curShaders != null || baseShader.isRelative != isRelative )
+		if( objShaders != null || curShaders != null || baseShader.isRelative != isRelative || baseShader.hasUVPos != hasUVPos )
 			shaderChanged = true;
 		if( shaderChanged ) {
 			flush();
-
+			baseShader.hasUVPos = hasUVPos;
 			baseShader.isRelative = isRelative;
 			baseShader.updateConstants(manager.globals);
 			baseShaderList.next = obj.shaders;
