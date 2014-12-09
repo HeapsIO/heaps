@@ -59,6 +59,7 @@ class Stage3dDriver extends Driver {
 	var curMatBits : Int;
 	var curShader : CompiledShader;
 	var curBuffer : Buffer;
+	var curManagedBuffer : ManagedBuffer;
 	var curMultiBuffer : Array<Int>;
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
@@ -517,13 +518,15 @@ class Stage3dDriver extends Driver {
 	override function selectBuffer( v : Buffer ) {
 		if( v == curBuffer )
 			return;
-		if( curBuffer != null && v.buffer == curBuffer.buffer && v.buffer.flags.has(RawFormat) == curBuffer.flags.has(RawFormat) ) {
+		if( curBuffer != null && v.buffer == curManagedBuffer && v.flags.has(RawFormat) == curBuffer.flags.has(RawFormat) ) {
 			curBuffer = v;
 			return;
 		}
 		if( curShader == null )
 			throw "No shader selected";
+
 		curBuffer = v;
+		curManagedBuffer = v.buffer; // store if curBuffer is disposed()
 		curMultiBuffer[0] = -1;
 
 		var m = v.buffer.vbuf;
