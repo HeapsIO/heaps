@@ -148,6 +148,8 @@ class GlDriver extends Driver {
 			gl.attachShader(p.p, p.vertex.s);
 			gl.attachShader(p.p, p.fragment.s);
 			gl.linkProgram(p.p);
+			gl.deleteShader(p.vertex.s);
+			gl.deleteShader(p.fragment.s);
 			if( gl.getProgramParameter(p.p, GL.LINK_STATUS) != cast 1 ) {
 				var log = gl.getProgramInfoLog(p.p);
 				throw "Program linkage failure: "+log;
