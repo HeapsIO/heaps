@@ -158,8 +158,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function drawTile( obj : h2d.Drawable, tile : h2d.Tile ) {
 		beginDraw(obj, tile.getTexture(), true, true);
 		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a);
-		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.width * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
-		baseShader.absoluteMatrixB.set(tile.height * obj.matB, tile.height * obj.matD, obj.absY + tile.dx * obj.matB + tile.dy * obj.matD);
+		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.height * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
+		baseShader.absoluteMatrixB.set(tile.width * obj.matB, tile.height * obj.matD, obj.absY + tile.dx * obj.matB + tile.dy * obj.matD);
 		baseShader.uvPos.set(tile.u, tile.v, tile.u2 - tile.u, tile.v2 - tile.v);
 		beforeDraw();
 		if( fixedBuffer == null || fixedBuffer.isDisposed() ) {
