@@ -3,6 +3,9 @@ package h2d;
 class HtmlText extends Text {
 
 	var images : Array<Bitmap> = [];
+	var xPos : Int;
+	var yPos : Int;
+	var xMax : Int;
 
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
@@ -36,57 +39,70 @@ class HtmlText extends Text {
 			images = [];
 		}
 		glyphs.setDefaultColor(textColor);
-		var x = 0, y = 0, xMax = 0;
-		function loop( e : Xml ) {
-			if( e.nodeType == Xml.Element ) {
-				var colorChanged = false;
-				switch( e.nodeName.toLowerCase() ) {
-				case "font":
-					for( a in e.attributes() ) {
-						var v = e.get(a);
-						switch( a.toLowerCase() ) {
-						case "color":
-							colorChanged = true;
-							glyphs.setDefaultColor(Std.parseInt("0x" + v.substr(1)));
-						default:
-						}
+		xPos = 0;
+		yPos = 0;
+		xMax = 0;
+		for( e in Xml.parse(text) )
+			addNode(e, rebuild);
+		return { width : xPos > xMax ? xPos : xMax, height : xPos > 0 ? yPos + (font.lineHeight + lineSpacing) : yPos };
+	}
+
+	function addNode( e : Xml, rebuild : Bool ) {
+		if( e.nodeType == Xml.Element ) {
+			var colorChanged = false;
+			switch( e.nodeName.toLowerCase() ) {
+			case "font":
+				for( a in e.attributes() ) {
+					var v = e.get(a);
+					switch( a.toLowerCase() ) {
+					case "color":
+						colorChanged = true;
+						glyphs.setDefaultColor(Std.parseInt("0x" + v.substr(1)));
+					default:
 					}
-				case "br":
-					if( x > xMax ) xMax = x;
-					x = 0;
-					y += font.lineHeight + lineSpacing;
-				case "img":
-					var i = loadImage(e.get("src"));
-					if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
-					if( rebuild ) {
-						var b = new Bitmap(i, this);
-						b.x = x;
-						b.y = y + font.baseLine - i.height;
-						images.push(b);
-					}
-					x += i.width + letterSpacing;
-				default:
 				}
-				for( child in e )
-					loop(child);
-				if( colorChanged )
-					glyphs.setDefaultColor(textColor);
-			} else {
-				var t = e.nodeValue;
-				var prevChar = -1;
-				for( i in 0...t.length ) {
-					var cc = t.charCodeAt(i);
-					var e = font.getChar(cc);
-					x += e.getKerningOffset(prevChar);
-					if( rebuild ) glyphs.add(x, y, e.t);
-					x += e.width + letterSpacing;
-					prevChar = cc;
+			case "br":
+				if( xPos > xMax ) xMax = xPos;
+				xPos = 0;
+				yPos += font.lineHeight + lineSpacing;
+			case "img":
+				var i = loadImage(e.get("src"));
+				if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
+				if( maxWidth != null && xPos + i.width > maxWidth && xPos > 0 ) {
+					xPos = 0;
+					yPos += font.lineHeight + lineSpacing;
 				}
+				if( rebuild ) {
+					var b = new Bitmap(i, this);
+					b.x = xPos;
+					b.y = yPos + font.baseLine - i.height;
+					images.push(b);
+				}
+				xPos += i.width + letterSpacing;
+			default:
+			}
+			for( child in e )
+				addNode(child, rebuild);
+			if( colorChanged )
+				glyphs.setDefaultColor(textColor);
+		} else {
+			var t = splitText(e.nodeValue.split("\n").join(" "), xPos);
+			var prevChar = -1;
+			for( i in 0...t.length ) {
+				var cc = t.charCodeAt(i);
+				if( cc == "\n".code ) {
+					xPos = 0;
+					yPos += font.lineHeight + lineSpacing;
+					prevChar = -1;
+					continue;
+				}
+				var e = font.getChar(cc);
+				xPos += e.getKerningOffset(prevChar);
+				if( rebuild ) glyphs.add(xPos, yPos, e.t);
+				xPos += e.width + letterSpacing;
+				prevChar = cc;
 			}
 		}
-		for( e in Xml.parse(text) )
-			loop(e);
-		return { width : x > xMax ? x : xMax, height : x > 0 ? y + (font.lineHeight + lineSpacing) : y };
 	}
 
 	override function set_textColor(c) {

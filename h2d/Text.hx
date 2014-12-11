@@ -100,11 +100,11 @@ class Text extends Drawable {
 		return initGlyphs(text,false).width;
 	}
 
-	public function splitText( text : String ) {
+	public function splitText( text : String, leftMargin = 0 ) {
 		if( maxWidth == null )
 			return text;
 		var lines = [], rest = text, restPos = 0;
-		var x = 0, xMax = 0, prevChar = -1;
+		var x = leftMargin, prevChar = -1;
 		for( i in 0...text.length ) {
 			var cc = text.charCodeAt(i);
 			var e = font.getChar(cc);
@@ -134,7 +134,6 @@ class Text extends Drawable {
 			if( e != null )
 				x += esize + letterSpacing;
 			if( newline ) {
-				if( x > xMax ) xMax = x;
 				x = 0;
 				prevChar = -1;
 			} else
