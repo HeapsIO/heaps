@@ -6,7 +6,7 @@ class Drawable extends Sprite {
 	public var alpha(get, set) : Float;
 	public var blendMode : BlendMode;
 	public var filter : Bool;
-	public var tileWrap : Bool;
+	public var tileWrap(default, set) : Bool;
 	public var colorKey(default, set) : Null<Int>;
 	public var colorMatrix(get, set) : Null<h3d.Matrix>;
 	public var colorAdd(get, set) : Null<h3d.Vector>;
@@ -19,6 +19,9 @@ class Drawable extends Sprite {
 		color = new h3d.Vector(1, 1, 1, 1);
 	}
 
+	function set_tileWrap(b) {
+		return tileWrap = b;
+	}
 
 	function get_colorAdd() {
 		var s = getShader(h3d.shader.ColorAdd);
