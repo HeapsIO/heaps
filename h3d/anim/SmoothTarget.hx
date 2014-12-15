@@ -69,7 +69,7 @@ class SmoothTarget extends Animation {
 		frame = target.frame;
 		if( blend > 1 ) {
 			blend = 1;
-			onAnimEnd();
+			if( onAnimEnd != null ) onAnimEnd();
 		}
 		return rt;
 	}
