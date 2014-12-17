@@ -56,6 +56,27 @@ class BatchElement {
 
 }
 
+class BasicElement extends BatchElement {
+
+	public var vx : Float = 0.;
+	public var vy : Float = 0.;
+	public var friction : Float = 1.;
+	public var gravity : Float = 0.;
+
+	override function update(dt:Float) {
+		vy += gravity * dt;
+		x += vx * dt;
+		y += vy * dt;
+		if( friction != 1 ) {
+			var p = Math.pow(friction, dt * 60);
+			vx *= p;
+			vy *= p;
+		}
+		return true;
+	}
+
+}
+
 class SpriteBatch extends Drawable {
 
 	public var tile : Tile;
