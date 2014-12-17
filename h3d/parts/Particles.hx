@@ -84,6 +84,7 @@ class Particles extends h3d.scene.Mesh {
 		p.rotation = 0;
 		p.ratio = 1;
 		p.size = 1;
+		p.r = p.g = p.b = p.a = 1;
 		return p;
 	}
 
