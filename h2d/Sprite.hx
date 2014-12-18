@@ -224,6 +224,15 @@ class Sprite {
 			c.onDelete();
 	}
 
+	function getMatrix( m : h2d.col.Matrix ) {
+		m.a = matA;
+		m.b = matB;
+		m.c = matC;
+		m.d = matD;
+		m.x = absX;
+		m.y = absY;
+	}
+
 	public function removeChild( s : Sprite ) {
 		if( childs.remove(s) ) {
 			if( s.allocated ) s.onDelete();
@@ -488,13 +497,19 @@ class Sprite {
 		ctx.flush();
 
 		var final = h2d.Tile.fromTexture(t);
-		for( f in filters )
+		final.dx = xMin;
+		final.dy = yMin;
+		for( f in filters ) {
 			final = f.draw(ctx, final);
+			if( final == null ) {
+				ctx.popTarget();
+				return;
+			}
+			final.dx = xMin;
+			final.dy = yMin;
+		}
 
 		ctx.popTarget();
-
-		final.dx += xMin;
-		final.dy += yMin;
 
 		emitTile(ctx, final);
 		ctx.flush();
