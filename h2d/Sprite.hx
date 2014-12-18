@@ -150,31 +150,13 @@ class Sprite {
 		if( pt == null ) pt = new h2d.col.Point();
 		var px = pt.x * matA + pt.y * matC + absX;
 		var py = pt.x * matB + pt.y * matD + absY;
-		pt.x = (px + 1) * 0.5;
-		pt.y = (1 - py) * 0.5;
-		var scene = getScene();
-		if( scene != null ) {
-			pt.x *= scene.width;
-			pt.y *= scene.height;
-		} else {
-			pt.x *= hxd.System.width;
-			pt.y *= hxd.System.height;
-		}
+		pt.x = px;
+		pt.y = py;
 		return pt;
 	}
 
 	public function globalToLocal( pt : h2d.col.Point ) {
 		syncPos();
-		var scene = getScene();
-		if( scene != null ) {
-			pt.x /= scene.width;
-			pt.y /= scene.height;
-		} else {
-			pt.x /= hxd.System.width;
-			pt.y /= hxd.System.height;
-		}
-		pt.x = pt.x * 2 - 1;
-		pt.y = 1 - pt.y * 2;
 		pt.x -= absX;
 		pt.y -= absY;
 		var invDet = 1 / (matA * matD - matB * matC);
@@ -408,6 +390,52 @@ class Sprite {
 		ctx.bufPos = pos;
 	}
 
+	/**
+		Will clip a local bounds with our global viewport
+	**/
+	function clipBounds( ctx : RenderContext, bounds : h2d.col.Bounds ) {
+		var view = ctx.tmpBounds;
+
+		// intersect our transformed local view with our viewport in global space
+		view.empty();
+		inline function add(x:Float, y:Float) {
+			view.addPos(x * matA + y * matC + absX, x * matB + y * matD + absY);
+		}
+		add(bounds.xMin, bounds.yMin);
+		add(bounds.xMax, bounds.yMin);
+		add(bounds.xMin, bounds.yMax);
+		add(bounds.xMax, bounds.yMax);
+
+		// clip with our scene
+		var scene = getScene();
+		if( view.xMin < 0 ) view.xMin = 0;
+		if( view.yMin < 0 ) view.yMin = 0;
+		if( view.xMax > scene.width ) view.xMax = scene.width;
+		if( view.yMax > scene.height ) view.yMax = scene.height;
+
+		// inverse our matrix
+		var invDet = 1 / (matA * matD - matB * matC);
+		inline function add(x:Float, y:Float) {
+			x -= absX;
+			y -= absY;
+			view.addPos((x * matD - y * matC) * invDet, ( -x * matB + y * matA) * invDet);
+		}
+
+		// intersect our resulting viewport with our calculated local space
+		var sxMin = view.xMin;
+		var syMin = view.yMin;
+		var sxMax = view.xMax;
+		var syMax = view.yMax;
+		view.empty();
+		add(sxMin, syMin);
+		add(sxMax, syMin);
+		add(sxMin, syMax);
+		add(sxMax, syMax);
+
+		// intersects
+		bounds.intersectWith(view);
+	}
+
 	function drawFilters( ctx : RenderContext ) {
 		var bounds = ctx.tmpBounds;
 		var total = new h2d.col.Bounds();
@@ -430,10 +458,13 @@ class Sprite {
 			total.add(bounds);
 		}
 
+		clipBounds(ctx, total);
+
 		var xMin = Math.floor(total.xMin + 1e-10);
 		var yMin = Math.floor(total.yMin + 1e-10);
 		var width = Math.ceil(total.xMax - xMin - 1e-10);
 		var height = Math.ceil(total.yMax - yMin - 1e-10);
+
 		if( width <= 0 || height <= 0 ) return;
 
 		var t = ctx.textures.allocTarget("filterTemp", ctx, width, height, false);
