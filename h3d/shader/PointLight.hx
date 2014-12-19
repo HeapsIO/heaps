@@ -7,6 +7,7 @@ class PointLight extends hxsl.Shader {
 		var lightColor : Vec3;
 		var lightPixelColor : Vec3;
 		var transformedPosition : Vec3;
+		var pixelTransformedPosition : Vec3;
 		var transformedNormal : Vec3;
 		@param var color : Vec3;
 		@param var params : Vec3; // [constant, linear, quadratic]
@@ -21,7 +22,7 @@ class PointLight extends hxsl.Shader {
 		}
 
 		function fragment() {
-			var dvec = lightPosition - transformedPosition;
+			var dvec = lightPosition - pixelTransformedPosition;
 			var dist2 = dvec.dot(dvec);
 			var dist = dist2.sqrt();
 			lightPixelColor.rgb += color * (transformedNormal.dot(dvec).max(0.) / vec3(dist, dist2, dist * dist2).dot(params));

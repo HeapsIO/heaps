@@ -35,6 +35,7 @@ class BaseMesh extends hxsl.Shader {
 
 		var relativePosition : Vec3;
 		var transformedPosition : Vec3;
+		var pixelTransformedPosition : Vec3;
 		var transformedNormal : Vec3;
 		var projectedPosition : Vec4;
 		var pixelColor : Vec4;
@@ -59,6 +60,7 @@ class BaseMesh extends hxsl.Shader {
 
 		function vertex() {
 			output.position = projectedPosition;
+			pixelTransformedPosition = transformedPosition;
 		}
 
 		function fragment() {

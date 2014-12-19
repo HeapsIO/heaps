@@ -12,13 +12,18 @@ class Shadow extends hxsl.Shader {
 		};
 		var pixelColor : Vec4;
 		var transformedPosition : Vec3;
+		var pixelTransformedPosition : Vec3;
 		@private var shadowPos : Vec3;
+		@const var perPixel : Bool;
 
 		function vertex() {
-			shadowPos = transformedPosition * shadow.proj * vec3(0.5, -0.5, 1) + vec3(0.5, 0.5, 0);
+			if( !perPixel ) shadowPos = transformedPosition * shadow.proj * vec3(0.5, -0.5, 1) + vec3(0.5, 0.5, 0);
 		}
 
 		function fragment() {
+
+			var shadowPos = if( perPixel ) pixelTransformedPosition * shadow.proj * vec3(0.5, -0.5, 1) + vec3(0.5, 0.5, 0) else shadowPos;
+
 			var depth = unpack(shadow.map.get(shadowPos.xy));
 
 			#if false
