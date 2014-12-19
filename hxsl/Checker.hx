@@ -936,6 +936,7 @@ class Checker {
 			case [_, TVec(_,VFloat), TFloat]: e1.t;
 			case [_, TInt, TVec(_, VFloat)]: toFloat(e1); e2.t;
 			case [_, TVec(_,VFloat), TInt]: toFloat(e2); e1.t;
+			case [OpMult, TMat4, TMat4]: TMat4;
 			default:
 				var opName = switch( op ) {
 				case OpMult: "multiply";
