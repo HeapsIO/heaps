@@ -18,6 +18,7 @@ class Joint {
 
 	public function new() {
 		bindIndex = -1;
+		splitIndex = -1;
 		subs = [];
 	}
 
