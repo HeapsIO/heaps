@@ -98,16 +98,8 @@ class Cache {
 		r.vertex.vertex = true;
 		r.fragment = flattenShader(s.fragment, Fragment, paramVars);
 		r.globals = new Map();
-		var p = r.vertex.globals;
-		while( p != null ) {
-			r.globals.set(p.gid, true);
-			p = p.next;
-		}
-		p = r.fragment.globals;
-		while( p != null ) {
-			r.globals.set(p.gid, true);
-			p = p.next;
-		}
+		initGlobals(r, r.vertex);
+		initGlobals(r, r.fragment);
 
 		var sid = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
 		var r2 = byID.get(sid);
@@ -117,6 +109,20 @@ class Cache {
 			byID.set(sid, r);
 
 		return r;
+	}
+
+	function initGlobals( r : RuntimeShader, s : RuntimeShaderData ) {
+		var p = s.globals;
+		while( p != null ) {
+			r.globals.set(p.gid, true);
+			p = p.next;
+		}
+		var p = s.params;
+		while( p != null ) {
+			if( p.perObjectGlobal != null )
+				r.globals.set(p.perObjectGlobal.gid, true);
+			p = p.next;
+		}
 	}
 
 	function getPath( v : TVar ) {
