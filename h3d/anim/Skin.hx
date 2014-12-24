@@ -24,6 +24,15 @@ class Joint {
 
 }
 
+private class Permut {
+	public var joints : Array<Joint>;
+	public var triangles : Array<Int>;
+	public var material : Int;
+	public var indexedJoints : Array<Joint>;
+	public function new() {
+	}
+}
+
 private class Influence {
 	public var j : Joint;
 	public var w : Float;
@@ -121,6 +130,55 @@ class Skin {
 		envelop = null;
 	}
 
+	function sortByBindIndex(j1:Joint, j2:Joint) {
+		return j1.bindIndex - j2.bindIndex;
+	}
+
+	function isSub( a : Array<Joint>, b : Array<Joint> ) {
+		var j = 0;
+		var max = b.length;
+		for( e in a ) {
+			while( e != b[j++] ) {
+				if( j >= max ) return false;
+				continue;
+			}
+		}
+		return true;
+	}
+
+	function merge( permuts : Array<Permut> ) {
+		for( p1 in permuts )
+			for( p2 in permuts )
+				if( p1 != p2 && p1.material == p2.material && isSub(p1.joints, p2.joints) ) {
+					for( t in p1.triangles )
+						p2.triangles.push(t);
+					permuts.remove(p1);
+					return true;
+				}
+		return false;
+	}
+
+	function jointsDiff( p1 : Permut, p2 : Permut ) {
+		var diff = 0;
+		var i = 0, j = 0;
+		var imax = p1.joints.length, jmax = p2.joints.length;
+		while( i < imax && j < jmax ) {
+			var j1 = p1.joints[i];
+			var j2 = p2.joints[j];
+			if( j1 == j2 ) {
+				i++;
+				j++;
+			} else {
+				diff++;
+				if( j1.bindIndex < j2.bindIndex )
+					i++;
+				else
+					j++;
+			}
+		}
+		return diff + (imax - i) + (jmax - j);
+	}
+
 	public function split( maxBones : Int, index : Array<Int>, triangleMaterials : Null<Array<Int>> ) {
 		if( isSplit() )
 			return true;
@@ -128,79 +186,148 @@ class Skin {
 			return false;
 
 		splitJoints = [];
-		triangleGroups = new haxe.ds.Vector(Std.int(index.length / 3));
+		triangleGroups = new haxe.ds.Vector(Std.int(index.length/3));
 
-		// collect joints groups used by triangles
-		var curGroup = new Array<Joint>(), curJoints = [];
-		var ipos = 0, tpos = 0, curMat = triangleMaterials == null ? 0 : triangleMaterials[0];
-		while( ipos <= index.length ) {
-			var tjoints = [], flush = false;
-			if( ipos < index.length ) {
-				for( k in 0...3 ) {
-					var vid = index[ipos + k];
-					for( b in 0...bonesPerVertex ) {
-						var bidx = vid * bonesPerVertex + b;
-						if( vertexWeights[bidx] == 0 ) continue;
-						var j = boundJoints[vertexJoints[bidx]];
-						if( curJoints[j.bindIndex] == null ) {
-							curJoints[j.bindIndex] = j;
-							tjoints.push(j);
-						}
+		var permuts = new Array<Permut>();
+
+		// build unique permutations
+
+		for( tri in 0...Std.int(index.length / 3) ) {
+			var iid = tri * 3;
+			var mid = triangleMaterials == null ? 0 : triangleMaterials[tri];
+			var jl = [];
+			// get all joints for this triangle
+			for( i in 0...3 ) {
+				var vid = index[iid + i];
+				for( b in 0...bonesPerVertex ) {
+					var bidx = vid * bonesPerVertex + b;
+					if( vertexWeights[bidx] == 0 ) continue;
+					var j = boundJoints[vertexJoints[bidx]];
+					if( j.splitIndex != iid ) {
+						j.splitIndex = iid;
+						jl.push(j);
 					}
 				}
 			}
-			if( curGroup.length + tjoints.length <= maxBones && ipos < index.length && (triangleMaterials == null || triangleMaterials[tpos] == curMat) ) {
-				for( j in tjoints )
-					curGroup.push(j);
-				triangleGroups[tpos++] = splitJoints.length;
-				ipos += 3;
-			} else {
-				splitJoints.push({ material : curMat, joints : curGroup });
-				curGroup = [];
-				curJoints = [];
-				if( triangleMaterials != null ) curMat = triangleMaterials[tpos];
-				if( ipos == index.length ) break;
-			}
+			jl.sort(sortByBindIndex);
+			// look for another permutation
+			for( p2 in permuts )
+				if( p2.material == mid && isSub(jl, p2.joints) ) {
+					p2.triangles.push(tri);
+					jl = null;
+					break;
+				}
+			if( jl == null ) continue;
+
+			for( p2 in permuts )
+				if( p2.material == mid && isSub(p2.joints, jl) ) {
+					p2.joints = jl;
+					p2.triangles.push(tri);
+					jl = null;
+					break;
+				}
+
+			if( jl == null ) continue;
+
+			var pr = new Permut();
+			pr.joints = jl;
+			pr.triangles = [tri];
+			pr.material = mid;
+			permuts.push(pr);
 		}
 
+
+		// merge permutations when they share almost the same bones
+
+		while( true ) {
+
+			while( merge(permuts) ) {
+			}
+
+			// heuristic : look for a good match to merge permutations
+			var minDif = 100000, minTot = 100000, minP1 : Permut = null, minP2 : Permut = null;
+			for( i in 0...permuts.length ) {
+				var p1 = permuts[i];
+				if( p1.joints.length == maxBones ) continue;
+				for( j in i + 1...permuts.length ) {
+					var p2 = permuts[j];
+					if( p2.joints.length == maxBones || p1.material != p2.material ) continue;
+					var count = jointsDiff(p1, p2);
+					var tot = count + ((p1.joints.length + p2.joints.length - count) >> 1);
+					if( tot > maxBones || tot > minTot || (tot == minTot && count > minDif) ) continue;
+					minDif = count;
+					minTot = tot;
+					minP1 = p1;
+					minP2 = p2;
+				}
+			}
+
+			if( minP1 == null ) break;
+
+			// merge p1 & p2
+			var p1 = minP1, p2 = minP2;
+			for( j in p1.joints ) {
+				p2.joints.remove(j);
+				p2.joints.push(j);
+			}
+			p2.joints.sort(sortByBindIndex);
+			for( t in p1.triangles )
+				p2.triangles.push(t);
+			permuts.remove(p1);
+
+		}
+
+		// store our vertex permutations
+		for( i in 0...permuts.length )
+			for( tri in permuts[i].triangles )
+				triangleGroups[tri] = i;
+
 		// assign split indexes to joints
-		var groups = [for( i in 0...splitJoints.length ) { id : i, reserved : [], joints : splitJoints[i].joints, mat : splitJoints[i].material }];
-		var joints = [for( j in boundJoints ) { j : j, groups : [], index : -1 } ];
-		for( g in groups )
-			for( j in g.joints )
-				joints[j.bindIndex].groups.push(g);
-		haxe.ds.ArraySort.sort(joints, function(j1, j2) return j2.groups.length - j1.groups.length);
-		for( j in joints ) {
-			for( i in 0...maxBones ) {
+		var jointsPermuts = [];
+		for( j in boundJoints ) {
+			var pl = [];
+			for( p in permuts )
+				if( p.joints.indexOf(j) >= 0 )
+					pl.push(p);
+			jointsPermuts.push( { j : j, pl : pl } );
+		}
+		jointsPermuts.sort(function(j1, j2) return j2.pl.length - j1.pl.length);
+
+		for( p in permuts )
+			p.indexedJoints = [];
+
+		for( j in jointsPermuts ) {
+			j.j.splitIndex = -1;
+			for( id in 0...maxBones ) {
 				var ok = true;
-				for( g in j.groups )
-					if( g.reserved[i] != null ) {
+				for( p in j.pl )
+					if( p.indexedJoints[id] != null ) {
 						ok = false;
 						break;
 					}
 				if( ok ) {
-					j.j.splitIndex = i;
-					for( g in j.groups )
-						g.reserved[i] = j.j;
+					j.j.splitIndex = id;
+					for( p in j.pl )
+						p.indexedJoints[id] = j.j;
 					break;
 				}
 			}
-			// not very good news if this happen.
-			// It means that we need a smarter way to assign the joint indexes
-			// Maybe by presorting triangles based on bone usage to have more coherent groups
-			if( j.j.splitIndex < 0 ) throw "Bone conflict while spliting groups";
+			// this means we have to track the number of free joints
+			// in our heuristic to prevent them from reaching such case
+			if( j.j.splitIndex < 0 )
+				throw "Failed to assign index while spliting skin";
 		}
 
 		// rebuild joints list (and fill holes)
 		splitJoints = [];
-		for( g in groups ) {
+		for( p in permuts ) {
 			var jl = [];
-			for( i in 0...g.reserved.length ) {
-				var j = g.reserved[i];
+			for( i in 0...p.indexedJoints.length ) {
+				var j = p.indexedJoints[i];
 				if( j == null ) j = boundJoints[0];
 				jl.push(j);
 			}
-			splitJoints.push( { material : g.mat, joints : jl } );
+			splitJoints.push( { material : p.material, joints : jl } );
 		}
 
 		// rebind
