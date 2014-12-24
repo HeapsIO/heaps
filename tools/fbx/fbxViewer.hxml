@@ -6,3 +6,4 @@
 -lib heaps
 -lib air3
 -dce full
+-D native_trace
