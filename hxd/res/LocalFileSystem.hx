@@ -108,7 +108,11 @@ private class LocalEntry extends FileEntry {
 			var p = new flash.desktop.NativeProcess();
 			var i = new flash.desktop.NativeProcessStartupInfo();
 			i.arguments = flash.Vector.ofArray(["--resample", "44100", "-h",file.nativePath,target.nativePath]);
-			var f = new flash.filesystem.File("d:/projects/shiroTools/tools/lame.exe");
+			var f = flash.filesystem.File.applicationDirectory.resolvePath("lame.exe");
+			if( !f.exists ) {
+				f = new flash.filesystem.File("d:/projects/shiroTools/tools/lame.exe");
+				if( !f.exists ) throw "lame.exe not found : cannot convert wav to mp3";
+			}
 			i.executable = f;
 			i.workingDirectory = f.parent;
 			p.addEventListener("exit", function(e:Dynamic) {
