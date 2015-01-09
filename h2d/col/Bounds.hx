@@ -49,8 +49,8 @@ class Bounds {
 	}
 
 	public inline function set(x, y, width, height) {
-		this.x = x;
-		this.y = y;
+		this.xMin = x;
+		this.yMin = y;
 		this.xMax = x + width;
 		this.yMax = y + height;
 	}
@@ -186,11 +186,13 @@ class Bounds {
 		return yMin;
 	}
 
-	inline function set_x(x) {
+	inline function set_x(x:Float) {
+		xMax += x - xMin;
 		return xMin = x;
 	}
 
-	inline function set_y(y) {
+	inline function set_y(y:Float) {
+		yMax += y - yMin;
 		return yMin = y;
 	}
 
