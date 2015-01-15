@@ -21,6 +21,9 @@ class Quads extends Primitive {
 		}
 	}
 
+	/**
+	* Warning : This will splice four basic uv value but can provoke aliasing problems.
+	*/
 	public function addTCoords() {
 		uvs = [];
 		var a = new UV(0, 1);
