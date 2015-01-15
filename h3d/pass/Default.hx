@@ -100,7 +100,13 @@ class Default extends Base {
 		ctx.uploadParams = uploadParams;
 		var p = passes;
 		var buf = cachedBuffer, prevShader = null;
-		log("Pass " + (passes == null ? "???" : passes.pass.name) + " start");
+		var drawTri = 0, drawCalls = 0, shaderSwitches = 0;
+		if( ctx.engine.driver.logEnable ) {
+			log("Pass " + (passes == null ? "???" : passes.pass.name) + " start");
+			drawTri = ctx.engine.drawTriangles;
+			drawCalls = ctx.engine.drawCalls;
+			shaderSwitches = ctx.engine.shaderSwitches;
+		}
 		while( p != null ) {
 			log("Render " + p.obj + "." + p.pass.name);
 			globalModelView = p.obj.absPos;
@@ -126,7 +132,10 @@ class Default extends Base {
 			p.obj.draw(ctx);
 			p = p.next;
 		}
-		log("Pass " + (passes == null ? "???" : passes.pass.name) + " end");
+		if( ctx.engine.driver.logEnable ) {
+			log("Pass " + (passes == null ? "???" : passes.pass.name) + " end");
+			log("\t" + (ctx.engine.drawTriangles - drawTri) + " tri " + (ctx.engine.drawCalls - drawCalls) + " calls " + (ctx.engine.shaderSwitches - shaderSwitches) + " shaders");
+		}
 		ctx.nextPass();
 		return passes;
 	}
