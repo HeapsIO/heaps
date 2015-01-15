@@ -266,7 +266,7 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 			expr : haxe.macro.Expr.ExprDef.EBlock([for( t in data.types ) haxe.macro.MacroStringTools.toFieldExpr(t.split("."))]),
 			pos : haxe.macro.Context.currentPos(),
 		};
-		return macro { $types; @:privateFields new hxd.res.EmbedFileSystem(haxe.Unserializer.run($v { sdata } )); };
+		return macro { $types; @:privateAccess new hxd.res.EmbedFileSystem(haxe.Unserializer.run($v { sdata } )); };
 	}
 
 }
