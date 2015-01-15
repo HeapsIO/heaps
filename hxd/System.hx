@@ -107,7 +107,14 @@ class System {
             nme.Lib.current.stage.align = nme.display.StageAlign.TOP_LEFT;
             nme.Lib.current.stage.scaleMode = nme.display.StageScaleMode.NO_SCALE;
             nme.Lib.current.loaderInfo = nme.display.LoaderInfo.create(null);
-            callb();
+			try {
+				callb();
+			} catch( e : Dynamic ) {
+				Sys.println(e);
+				#if debug
+				Sys.println(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
+				#end
+			}
          },
          width, height,
          120, // using 60 FPS with no vsync gives a fps ~= 50
