@@ -143,6 +143,7 @@ class Dce {
 				var e = mapExpr(e);
 				switch( e.e ) {
 				case TConst(_) if( count < el.length ):
+				case TBlock([]):
 				default:
 					out.push(e);
 				}
