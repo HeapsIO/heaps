@@ -12,12 +12,9 @@ abstract LoadedBitmap(LoadedBitmapData) {
 		#if flash
 		return hxd.BitmapData.fromNative(this);
 		#elseif js
-		var canvas = js.Browser.document.createCanvasElement();
-		canvas.width = this.width;
-		canvas.height = this.height;
-		var ctx = canvas.getContext2d();
-		ctx.drawImage(this, 0, 0);
-		return hxd.BitmapData.fromNative(ctx);
+		var bmp = new hxd.BitmapData(this.width, this.height);
+		@:privateAccess bmp.ctx.drawImage(this, 0, 0);
+		return bmp;
 		#else
 		throw "TODO";
 		return null;
