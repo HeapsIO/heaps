@@ -34,7 +34,7 @@ class BitmapFont extends Resource {
 					fc.addKerning(k.att.id.charCodeAt(0), Std.parseInt(k.att.advance));
 				var code = c.att.code;
 				if( StringTools.startsWith(code, "&#") )
-					glyphs.set(Std.parseInt(code.substr(2)), fc);
+					glyphs.set(Std.parseInt(code.substr(2,code.length-3)), fc);
 				else
 					glyphs.set(c.att.code.charCodeAt(0), fc);
 			}
