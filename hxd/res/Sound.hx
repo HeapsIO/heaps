@@ -104,7 +104,7 @@ class Sound extends Resource {
 		var MAGIC_DELAY = 2257;
 		var position = bytesPosition;
 		while( true ) {
-			var size = BUFFER_SIZE - (out.position >> 3);
+			var size = BUFFER_SIZE - ((out.position >> 3) : Int);
 			if( size == 0 ) break;
 			if( position + size >= mp3SampleCount ) {
 				var read = mp3SampleCount - position;
