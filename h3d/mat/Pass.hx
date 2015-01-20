@@ -85,7 +85,7 @@ class Pass {
 		case Multiply:
 			blend(DstColor, Zero);
 		case Erase:
-			blend(Zero, OneMinusSrcAlpha);
+			blend(Zero, OneMinusSrcColor);
 		case Screen:
 			blend(One, OneMinusSrcColor);
 		}

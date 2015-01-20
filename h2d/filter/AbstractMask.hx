@@ -58,6 +58,7 @@ class AbstractMask extends Filter {
 		maskMatrix.y /= tile.height;
 
 		maskMatrix.scale(tile.width / t.width, tile.height / t.height);
+		t.filter = filter ? Linear : Nearest;
 
 		return t;
 	}

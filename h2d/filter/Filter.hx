@@ -4,6 +4,7 @@ class Filter {
 
 	public var autoBounds = true;
 	public var boundsExtend : Float = 0.;
+	public var filter = false;
 
 	function new() {
 	}

@@ -8,6 +8,7 @@ class ColorMatrixShader extends h3d.shader.ScreenShader {
 		@param var matrix : Mat4;
 
 		@const var useMask : Bool;
+		@const var maskInvert : Bool;
 		@param var mask : Sampler2D;
 		@param var maskMatA : Vec3;
 		@param var maskMatB : Vec3;
@@ -19,7 +20,7 @@ class ColorMatrixShader extends h3d.shader.ScreenShader {
 				var color = texture.get(input.uv);
 				var uv = vec3(input.uv, 1);
 				var k = pow(mask.get( vec2(uv.dot(maskMatA), uv.dot(maskMatB)) ).dot(maskChannel), maskPower);
-				output.color = mix(color * matrix, color, k);
+				output.color = maskInvert ? mix(color, color * matrix, k) : mix(color * matrix, color, k);
 			} else
 				output.color = texture.get(input.uv) * matrix;
 		}
