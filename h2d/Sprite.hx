@@ -474,7 +474,7 @@ class Sprite {
 		var width = Math.ceil(total.xMax - xMin - 1e-10);
 		var height = Math.ceil(total.yMax - yMin - 1e-10);
 
-		if( width <= 0 || height <= 0 ) return;
+		if( width <= 0 || height <= 0 || total.xMax < total.xMin ) return;
 
 		var t = ctx.textures.allocTarget("filterTemp", ctx, width, height, false);
 		ctx.pushTarget(t, xMin, yMin);
