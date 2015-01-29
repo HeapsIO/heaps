@@ -32,6 +32,18 @@ class Circle {
 		return dx * dx + dy * dy < (ray + c.ray) * (ray + c.ray);
 	}
 
+	public inline function collideBounds( b : Bounds ) {
+		if( x < b.xMin - ray ) return false;
+		if( x > b.xMax + ray ) return false;
+		if( y < b.yMin - ray ) return false;
+		if( y > b.yMax + ray ) return false;
+		if( x < b.xMin && y < b.yMin && Math.distanceSq(x - b.xMin, y - b.yMin) > ray*ray ) return false;
+		if( x > b.xMax && y < b.yMin && Math.distanceSq(x - b.xMax, y - b.yMin) > ray*ray ) return false;
+		if( x < b.xMin && y > b.yMax && Math.distanceSq(x - b.xMin, y - b.yMax) > ray*ray ) return false;
+		if( x > b.xMax && y > b.yMax && Math.distanceSq(x - b.xMax, y - b.yMax) > ray*ray ) return false;
+		return true;
+	}
+
 	public function toString() {
 		return '{${Math.fmt(x)},${Math.fmt(y)},${Math.fmt(ray)}}';
 	}
