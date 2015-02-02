@@ -262,7 +262,8 @@ class Console extends h2d.Sprite {
 					return;
 				}
 			case AString:
-				vargs.push(v);
+				// if we take a single string, let's pass the whole args (allows spaces)
+				vargs.push(cmd.args.length == 1 ? StringTools.trim(command.substr(args[0].length)) : v);
 			case AEnum(values):
 				var found = false;
 				for( v2 in values )
