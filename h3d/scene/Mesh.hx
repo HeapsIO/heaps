@@ -36,7 +36,7 @@ class Mesh extends Object {
 		ctx.emit(material, this);
 	}
 
-	override function getMaterialByName( name : String ) {
+	override function getMaterialByName( name : String ) : h3d.mat.Material {
 		if( material != null && material.name == name )
 			return material;
 		return super.getMaterialByName(name);

@@ -101,7 +101,7 @@ class Object {
 		return k;
 	}
 
-	public function getMaterialByName( name : String ) {
+	public function getMaterialByName( name : String ) : h3d.mat.Material {
 		for( o in childs ) {
 			var m = o.getMaterialByName(name);
 			if( m != null ) return m;

@@ -25,7 +25,7 @@ class MultiMaterial extends Mesh {
 		}
 	}
 
-	override function getMaterialByName( name : String ) {
+	override function getMaterialByName( name : String ) : h3d.mat.Material {
 		for( m in materials )
 			if( m.name == name )
 				return m;
