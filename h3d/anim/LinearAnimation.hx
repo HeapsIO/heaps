@@ -136,9 +136,9 @@ class LinearAnimation extends Animation {
 			}
 			if( o.uvs != null ) {
 				var mat = o.targetObject.toMesh().material;
-				var s = mat.mainPass.getShader(h3d.shader.UVScroll);
+				var s = mat.mainPass.getShader(h3d.shader.UVDelta);
 				if( s == null ) {
-					s = mat.mainPass.addShader(new h3d.shader.UVScroll());
+					s = mat.mainPass.addShader(new h3d.shader.UVDelta());
 					mat.texture.wrap = Repeat;
 				}
 				s.uvDelta.x = uvLerp(o.uvs[frame1 << 1],o.uvs[frame2 << 1],k2);
