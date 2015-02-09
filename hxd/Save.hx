@@ -36,7 +36,7 @@ class Save {
 			return false;
 		cur.set(name, data);
 		getObj(name).setProperty("data", data);
-		if( !quick ) saveObj.flush();
+		if( !quick ) try saveObj.flush() catch( e : Dynamic ) throw "Can't write save (disk full ?)";
 		return true;
 		#else
 		return false;
