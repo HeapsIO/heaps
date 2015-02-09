@@ -105,6 +105,8 @@ class LinearAnimation extends Animation {
 	}
 
 	inline function uvLerp( v1 : Float, v2 : Float, k : Float ) {
+		v1 %= 1.;
+		v2 %= 1.;
 		if( v1 < v2 - 0.5 )
 			v1 += 1;
 		else if( v1 > v2 + 0.5 )
