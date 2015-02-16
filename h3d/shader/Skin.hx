@@ -18,6 +18,9 @@ class Skin extends hxsl.Shader {
 		@param var bonesMatrixes : Array<Mat3x4,MaxBones>;
 
 		function vertex() {
+			#if floatSkinIndexes
+			error("TODO : access bonesMatrixes as vertex array");
+			#else
 			transformedPosition =
 				(input.position * bonesMatrixes[input.indexes.x]) * input.weights.x +
 				(input.position * bonesMatrixes[input.indexes.y]) * input.weights.y +
@@ -26,6 +29,7 @@ class Skin extends hxsl.Shader {
 				(input.normal * mat3(bonesMatrixes[input.indexes.x])) * input.weights.x +
 				(input.normal * mat3(bonesMatrixes[input.indexes.y])) * input.weights.y +
 				(input.normal * mat3(bonesMatrixes[input.indexes.z])) * input.weights.z);
+			#end
 		}
 
 	}

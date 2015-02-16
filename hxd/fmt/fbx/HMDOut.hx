@@ -11,6 +11,11 @@ class HMDOut extends BaseLibrary {
 	var tmp = haxe.io.Bytes.alloc(4);
 	public var absoluteTexturePath : Bool;
 	public var optimizeSkin = true;
+	/*
+		Store the skin indexes as multiple premultiplied floats instead of as packed into a single 4 bytes ints.
+		This is necessary for GPUs that does not respect OpenGLES spec and does not allow non-constant indexing in vertex shader (Adreno 20X)
+	*/
+	public var floatSkinIndexes = #if floatSkinIndexes true #else false #end;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -65,8 +70,8 @@ class HMDOut extends BaseLibrary {
 		if( skin != null ) {
 			if( bonesPerVertex <= 0 || bonesPerVertex > 4 ) throw "assert";
 			g.vertexFormat.push(new GeometryFormat("weights", [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1]));
-			g.vertexFormat.push(new GeometryFormat("indexes", DBytes4));
-			stride += 1 + bonesPerVertex;
+			g.vertexFormat.push(new GeometryFormat("indexes", floatSkinIndexes ? [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1] : DBytes4));
+			stride += bonesPerVertex + (floatSkinIndexes ? bonesPerVertex : 1);
 		}
 		g.vertexStride = stride;
 		g.vertexCount = 0;
@@ -136,7 +141,11 @@ class HMDOut extends BaseLibrary {
 						tmpBuf[p++] = skin.vertexWeights[k + i];
 						idx = (skin.vertexJoints[k + i] << (8*i)) | idx;
 					}
-					tmpBuf[p++] = int32tof(idx);
+					if( floatSkinIndexes ) {
+						for( i in 0...skin.bonesPerVertex )
+							tmpBuf[p++] = skin.vertexJoints[k + i] * 3;
+					} else
+						tmpBuf[p++] = int32tof(idx);
 				}
 
 				var total = 0.;
