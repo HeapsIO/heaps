@@ -118,7 +118,6 @@ class Sound extends Resource {
 		bytesPosition = position;
 	}
 
-	@:debug
 	function initSound() {
 		if( snd == null )
 			watch(onReload);
