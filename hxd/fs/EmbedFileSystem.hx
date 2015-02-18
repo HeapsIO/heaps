@@ -1,9 +1,9 @@
-package hxd.res;
+package hxd.fs;
 
 #if !macro
 
-@:allow(hxd.res.EmbedFileSystem)
-@:access(hxd.res.EmbedFileSystem)
+@:allow(hxd.fs.EmbedFileSystem)
+@:access(hxd.fs.EmbedFileSystem)
 private class EmbedEntry extends FileEntry {
 
 	var fs : EmbedFileSystem;
@@ -258,15 +258,15 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 
 	#end
 
-	public static macro function create( ?basePath : String, ?options : EmbedOptions ) {
-		var f = new FileTree(basePath);
+	public static macro function create( ?basePath : String, ?options : hxd.res.EmbedOptions ) {
+		var f = new hxd.res.FileTree(basePath);
 		var data = f.embed(options);
 		var sdata = haxe.Serializer.run(data.tree);
 		var types = {
 			expr : haxe.macro.Expr.ExprDef.EBlock([for( t in data.types ) haxe.macro.MacroStringTools.toFieldExpr(t.split("."))]),
 			pos : haxe.macro.Context.currentPos(),
 		};
-		return macro { $types; @:privateAccess new hxd.res.EmbedFileSystem(haxe.Unserializer.run($v { sdata } )); };
+		return macro { $types; @:privateAccess new hxd.fs.EmbedFileSystem(haxe.Unserializer.run($v { sdata } )); };
 	}
 
 }

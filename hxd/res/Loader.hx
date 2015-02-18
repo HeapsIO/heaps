@@ -2,7 +2,7 @@ package hxd.res;
 
 class Loader {
 
-	public var fs(default,null) : FileSystem;
+	public var fs(default,null) : hxd.fs.FileSystem;
 	var cache : Map<String,Dynamic>;
 
 	public function new(fs) {

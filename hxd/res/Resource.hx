@@ -5,7 +5,7 @@ class Resource {
 	public static var LIVE_UPDATE = #if debug true #else false #end;
 
 	public var name(get, never) : String;
-	public var entry(default,null) : FileEntry;
+	public var entry(default,null) : hxd.fs.FileEntry;
 
 	public function new(entry) {
 		this.entry = entry;

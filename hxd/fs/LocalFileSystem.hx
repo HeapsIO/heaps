@@ -1,9 +1,9 @@
-package hxd.res;
+package hxd.fs;
 
 #if (air3 || sys)
 
-@:allow(hxd.res.LocalFileSystem)
-@:access(hxd.res.LocalFileSystem)
+@:allow(hxd.fs.LocalFileSystem)
+@:access(hxd.fs.LocalFileSystem)
 private class LocalEntry extends FileEntry {
 
 	var fs : LocalFileSystem;
@@ -230,7 +230,7 @@ private class LocalEntry extends FileEntry {
 		#end
 	}
 
-	override function loadBitmap( onLoaded : hxd.res.LoadedBitmap -> Void ) : Void {
+	override function loadBitmap( onLoaded : hxd.fs.LoadedBitmap -> Void ) : Void {
 		#if flash
 		var loader = new flash.display.Loader();
 		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
@@ -238,7 +238,7 @@ private class LocalEntry extends FileEntry {
 		});
 		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
 			var content : flash.display.Bitmap = cast loader.content;
-			onLoaded(new hxd.res.LoadedBitmap(content.bitmapData));
+			onLoaded(new hxd.fs.LoadedBitmap(content.bitmapData));
 			loader.unload();
 		});
 		loader.load(new flash.net.URLRequest(file.url));

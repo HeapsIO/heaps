@@ -1,4 +1,4 @@
-package hxd.res;
+package hxd.fs;
 
 interface FileSystem {
 	public function getRoot() : FileEntry;

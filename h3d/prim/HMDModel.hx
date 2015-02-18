@@ -6,7 +6,7 @@ class HMDModel extends MeshPrimitive {
 	var dataPosition : Int;
 	var indexCount : Int;
 	var indexesTriPos : Array<Int>;
-	var entry : hxd.res.FileEntry;
+	var entry : hxd.fs.FileEntry;
 	var curMaterial : Int;
 
 	public function new(data, dataPos, entry) {

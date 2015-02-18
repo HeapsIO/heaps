@@ -24,7 +24,7 @@ class GeometryBuffer {
 class Library {
 
 	public var header : Data;
-	var entry : hxd.res.FileEntry;
+	var entry : hxd.fs.FileEntry;
 	var cachedPrimitives : Array<h3d.prim.Primitive>;
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;

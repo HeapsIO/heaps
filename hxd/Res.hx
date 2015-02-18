@@ -12,13 +12,13 @@ class Res {
 	#end
 
 	public static macro function initEmbed(?options:haxe.macro.Expr.ExprOf<hxd.res.EmbedOptions>) {
-		return macro hxd.Res.loader = new hxd.res.Loader(hxd.res.EmbedFileSystem.create(null,$options));
+		return macro hxd.Res.loader = new hxd.res.Loader(hxd.fs.EmbedFileSystem.create(null,$options));
 	}
 
 	public static macro function initLocal() {
 		var dir = haxe.macro.Context.definedValue("resourcesPath");
 		if( dir == null ) dir = "res";
-		return macro hxd.Res.loader = new hxd.res.Loader(new hxd.res.LocalFileSystem($v{dir}));
+		return macro hxd.Res.loader = new hxd.res.Loader(new hxd.fs.LocalFileSystem($v{dir}));
 	}
 
 	public static macro function initPak() {

@@ -19,7 +19,7 @@ class Image extends Resource {
 	public function getSize() : { width : Int, height : Int } {
 		if( inf != null )
 			return inf;
-		var f = new FileInput(entry);
+		var f = new hxd.fs.FileInput(entry);
 		var width = 0, height = 0, isPNG = false;
 		switch( f.readUInt16() ) {
 		case 0xD8FF: // JPG

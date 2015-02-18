@@ -1,4 +1,4 @@
-package hxd.res;
+package hxd.fs;
 
 class NotFound {
 	public var path : String;

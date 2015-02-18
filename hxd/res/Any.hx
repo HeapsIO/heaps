@@ -1,6 +1,6 @@
 package hxd.res;
 
-private class SingleFileSystem extends BytesFileSystem {
+private class SingleFileSystem extends hxd.fs.BytesFileSystem {
 
 	var path : String;
 	var bytes : haxe.io.Bytes;

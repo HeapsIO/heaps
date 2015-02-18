@@ -1,4 +1,4 @@
-package hxd.res;
+package hxd.fs;
 
 typedef LoadedBitmapData = #if flash flash.display.BitmapData #elseif js js.html.Image #else Dynamic #end
 
