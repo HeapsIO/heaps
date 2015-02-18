@@ -118,7 +118,10 @@ class Sound extends Resource {
 		bytesPosition = position;
 	}
 
+	@:debug
 	function initSound() {
+		if( snd == null )
+			watch(onReload);
 		snd = new flash.media.Sound();
 		var bytes = entry.getBytes();
 		switch( bytes.get(0) ) {
@@ -127,6 +130,36 @@ class Sound extends Resource {
 
 			if( s.header.channels > 2 || (s.header.bitsPerSample != 8 && s.header.bitsPerSample != 16) )
 				throw "Unsupported " + s.header.bitsPerSample + "x" + s.header.channels;
+
+			if( s.header.samplingRate != 44100 ) {
+				// resample
+				var out = new haxe.io.BytesOutput();
+				var rpos = 0.;
+				var data = s.data;
+				var max = data.length >> (s.header.bitsPerSample >> 4);
+				var delta = s.header.samplingRate / 44100;
+				var scale = (1 << s.header.bitsPerSample) - 1;
+				while( rpos < max ) {
+					var ipos = Std.int(rpos);
+					var npos = ipos + 1;
+					if( npos >= max ) npos = max - 1;
+					var v1, v2;
+					if( s.header.bitsPerSample == 8 ) {
+						v1 = data.get(ipos) / 255;
+						v2 = data.get(npos) / 255;
+					} else {
+						v1 = (data.get(ipos<<1) | (data.get((ipos<<1) + 1)<<8)) / 65535;
+						v2 = (data.get(npos<<1) | (data.get((npos<<1) + 1)<<8)) / 65535;
+					}
+					var v = Std.int(hxd.Math.lerp(v1, v2, rpos - ipos) * scale);
+					if( s.header.bitsPerSample == 8 )
+						out.writeByte(v);
+					else
+						out.writeUInt16(v);
+					rpos += delta;
+				}
+				s.data = out.getBytes();
+			}
 
 			wavHeader = s.header;
 			playingBytes = s.data;
@@ -160,6 +193,11 @@ class Sound extends Resource {
 			throw "Unsupported sound format " + entry.path;
 		}
 		hxd.impl.Tmp.saveBytes(bytes);
+	}
+
+	function onReload() {
+		stop();
+		initSound();
 	}
 
 	#end
