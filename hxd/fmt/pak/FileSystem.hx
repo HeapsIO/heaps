@@ -1,5 +1,5 @@
 package hxd.fmt.pak;
-import hxd.res.FileEntry;
+import hxd.fs.FileEntry;
 #if air3
 import hxd.impl.Air3File;
 #else
@@ -106,7 +106,7 @@ private class PakEntry extends FileEntry {
 		});
 		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
 			var content : flash.display.Bitmap = cast loader.content;
-			onLoaded(new hxd.res.LoadedBitmap(content.bitmapData));
+			onLoaded(new hxd.fs.LoadedBitmap(content.bitmapData));
 			loader.unload();
 		});
 		var op = openedBytes != null;
@@ -120,7 +120,7 @@ private class PakEntry extends FileEntry {
 
 }
 
-class FileSystem implements hxd.res.FileSystem {
+class FileSystem implements hxd.fs.FileSystem {
 
 	var root : PakEntry;
 	var dict : Map<String,PakEntry>;
