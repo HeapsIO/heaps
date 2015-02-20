@@ -187,21 +187,24 @@ class BaseLibrary {
 
 				var name = c.props[3];
 
+				if( name != null ) {
+					var name = name.toString();
+					var nc = namedConnect.get(parent);
+					if( nc == null ) {
+						nc = new Map();
+						namedConnect.set(parent, nc);
+					}
+					nc.set(name, child);
+					// don't register as a parent, since the target can also be the child of something else
+					if( name == "LookAtProperty" ) continue;
+				}
+
 				var c = connect.get(parent);
 				if( c == null ) {
 					c = [];
 					connect.set(parent, c);
 				}
 				c.push(child);
-
-				if( name != null ) {
-					var nc = namedConnect.get(parent);
-					if( nc == null ) {
-						nc = new Map();
-						namedConnect.set(parent, nc);
-					}
-					nc.set(name.toString(), child);
-				}
 
 				if( parent == 0 )
 					continue;
@@ -598,6 +601,7 @@ class BaseLibrary {
 			var c = getObjectCurve(curves, model, cn.getName(), animName);
 			if( c == null ) continue;
 			var data = getChilds(cn, "AnimationCurve");
+			if( data.length == 0 ) continue;
 			var cname = cn.getName();
 			// collect all the timestamps
 			var times = data[0].get("KeyTime").getFloats();

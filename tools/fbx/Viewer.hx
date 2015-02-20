@@ -171,6 +171,7 @@ class Viewer extends hxd.App {
 		var d = s3d.camera.target.sub(s3d.camera.pos);
 		d.scale3(z);
 		s3d.camera.pos = s3d.camera.target.sub(d);
+		s3d.camera.follow = null;
 		save();
 	}
 
@@ -202,6 +203,7 @@ class Viewer extends hxd.App {
 			var pz = b.zMax * 2 - b.zMin ;
 			cam.pos.set(pz*0.001, pz*0.001, pz);
 			cam.target.set(0, 0, 0);
+			s3d.camera.follow = null;
 		case K.NUMBER_2:
 			//props.view = 2;
 		case K.NUMBER_3:
@@ -466,6 +468,13 @@ class Viewer extends hxd.App {
 		save();
 	}
 
+	function getCamerasRec( o : h3d.scene.Object, cam : Array<h3d.scene.Object> ) {
+		if( o.name != null && StringTools.startsWith(o.name, "Camera") && o.name.indexOf(".Target") < 0 )
+			cam.push(o);
+		for( s in o )
+			getCamerasRec(s, cam);
+	}
+
 	function resetCamera() {
 
 		var b = obj.getBounds();
@@ -482,6 +491,26 @@ class Viewer extends hxd.App {
 		box.x = c.x;
 		box.y = c.y;
 		box.z = c.z;
+
+		s3d.camera.fovY = 25;
+		s3d.camera.follow = null;
+
+		var cameras = [];
+		getCamerasRec(obj, cameras);
+		if( cameras.length == 1 && curHmd != null ) {
+			var c = cameras[0];
+			var t = obj.getObjectByName(c.name+".Target");
+			for( m in curHmd.header.models )
+				if( m.name == c.name && m.props != null ) {
+					for( p in m.props )
+						switch( p ) {
+						case CameraFOVY(v):
+							s3d.camera.fovY = v;
+						default:
+						}
+				}
+			s3d.camera.follow = { pos : c, target : t };
+		}
 	}
 
 	function setMaterial( ?o : h3d.scene.Object ) {
@@ -540,6 +569,10 @@ class Viewer extends hxd.App {
 		if (freeMove) {
 			var dx = (s2d.mouseX - pMouse.x) * 0.01;
 			var dy = (s2d.mouseY - pMouse.y) * 0.01;
+
+			if( dx != 0 || dy != 0 )
+				cam.follow = null;
+
 			var d = cam.pos.sub(cam.target);
 			var dist = d.length();
 			var r = Math.acos(d.z / dist);
@@ -561,6 +594,9 @@ class Viewer extends hxd.App {
 
 			var dx = (pMouse.x - s2d.mouseX);
 			var dy = (pMouse.y - s2d.mouseY);
+
+			if( dx != 0 || dy != 0 )
+				cam.follow = null;
 
 			var d = cam.pos.sub(cam.target);
 			var dist = d.length();

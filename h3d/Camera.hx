@@ -13,6 +13,9 @@ class Camera {
 
 	/**
 		The vertical FieldOfView, in degrees.
+		Usually cameras are using an horizontal FOV, but the value will change depending on the screen ratio.
+		For instance a 4:3 screen will have a lower horizontal FOV than a 16:9 one, however the vertical FOV remains constant.
+		Use setFovX to initialize fovY based on an horizontal FOV and an initial screen ratio.
 	**/
 	public var fovY : Float;
 	public var zNear : Float;
@@ -36,10 +39,12 @@ class Camera {
 	public var viewX : Float = 0.;
 	public var viewY : Float = 0.;
 
+	public var follow : { pos : h3d.scene.Object, target : h3d.scene.Object };
+
 	var minv : Matrix;
 	var needInv : Bool;
 
-	public function new( fovY = 60., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
+	public function new( fovY = 25., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
 		this.fovY = fovY;
 		this.zoom = zoom;
 		this.screenRatio = screenRatio;
@@ -53,6 +58,24 @@ class Camera {
 		mcam = new Matrix();
 		mproj = new Matrix();
 		update();
+	}
+
+	/**
+		Set the vertical fov based on a given horizontal fov (in degrees) for a specified screen ratio.
+	**/
+	public function setFovX( fovX : Float, withRatio : Float ) {
+		var degToRad = Math.PI / 180;
+		fovY = 2 * Math.atan( Math.tan(fovX * 0.5 * degToRad) / withRatio ) / degToRad;
+	}
+
+	/**
+		Calculate the current horizontal fov (in degrees).
+	**/
+	public function getFovX() {
+		var degToRad = Math.PI / 180;
+		var halfFovX = Math.atan( Math.tan(fovY * 0.5 * degToRad) * screenRatio );
+		var fovX = halfFovX * 2 / degToRad;
+		return fovX;
 	}
 
 	public function clone() {
@@ -90,6 +113,12 @@ class Camera {
 	}
 
 	public function update() {
+		if( follow != null ) {
+			pos.set(0, 0, 0);
+			target.set(0, 0, 0);
+			follow.pos.localToGlobal(pos);
+			follow.target.localToGlobal(target);
+		}
 		makeCameraMatrix(mcam);
 		makeFrustumMatrix(mproj);
 		m.multiply(mcam, mproj);
@@ -180,7 +209,6 @@ class Camera {
 		} else {
 			var degToRad = (Math.PI / 180);
 			var halfFovX = Math.atan( Math.tan(fovY * 0.5 * degToRad) * screenRatio );
-			var fovX = halfFovX * 2 / degToRad;
 			var scale = zoom / Math.tan(halfFovX);
 			m._11 = scale;
 			m._22 = scale * screenRatio;
