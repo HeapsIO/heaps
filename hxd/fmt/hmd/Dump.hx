@@ -18,12 +18,21 @@ class Dump {
 		return 'T={${fmt(p.x)},${fmt(p.y)},${fmt(p.z)}} R={${fmt(p.qx)},${fmt(p.qy)},${fmt(p.qz)}} S={${fmt(p.sx)},${fmt(p.sy)},${fmt(p.sz)}}';
 	}
 
+	function addProps( props : Properties ) {
+		if( props == null ) return;
+		for( p in props )
+			add(Type.enumConstructor(p) + " : " + [for( p in Type.enumParameters(p) ) Std.string(p)].join(", "));
+	}
+
 	public function dump( h : Data ) : String {
 		buf = new StringBuf();
 		prefix = "";
 		add('HMD v${h.version}');
-		add("\tHeader : " + hxd.Math.fmt(h.dataPosition/1024) + " KB");
-		add("\tData : " + hxd.Math.fmt(h.data.length/1024) + " KB");
+		prefix = "\t";
+		add("Header : " + hxd.Math.fmt(h.dataPosition/1024) + " KB");
+		add("Data : " + hxd.Math.fmt(h.data.length / 1024) + " KB");
+		addProps(h.props);
+		prefix = "";
 		add("");
 		for( k in 0...h.geometries.length ) {
 			var g = h.geometries[k];
@@ -34,6 +43,7 @@ class Dump {
 			add('Index Count : ${g.indexCount} ${g.indexCounts.length > 1 ? g.indexCounts.toString() : ''}');
 			add('Bounds : center=${g.bounds.getCenter()} size=${g.bounds.getSize()}');
 			add('Format :');
+			addProps(g.props);
 			for( f in g.vertexFormat )
 				add('\t${f.name} ${f.format.toString().substr(1)}');
 			prefix = "";
@@ -48,6 +58,7 @@ class Dump {
 			add('Cull : ${m.culling}');
 			if( m.diffuseTexture != null ) add('Texture : ${m.diffuseTexture}');
 			if( m.killAlpha != null ) add('KillAlpha : ${m.killAlpha}');
+			addProps(m.props);
 			prefix = "";
 		}
 		if( h.materials.length > 0 ) add('');
@@ -69,11 +80,13 @@ class Dump {
 					add('Material $i : @$m ${md == null ? "INVALID" : md.name == null ? "" : md.name}');
 				}
 			}
+			addProps(m.props);
 			if( m.skin != null ) {
 				var s = m.skin;
 				add('Skin :');
 				prefix += "\t";
 				if( s.name != null ) add('Name : ${s.name}');
+				addProps(s.props);
 				for( i in 0...s.joints.length ) {
 					var j = s.joints[i];
 					add('@$i JOINT');
@@ -86,6 +99,7 @@ class Dump {
 					add('Position : ${positionStr(j.position)}');
 					if( j.bind >= 0 ) add('Bind @${j.bind}');
 					if( j.transpos != null ) add('TransPos : ${positionStr(j.transpos)}');
+					addProps(j.props);
 					prefix = prefix.substr(1);
 				}
 				if( s.split != null )
@@ -107,6 +121,7 @@ class Dump {
 			add('Sampling : ${a.sampling}');
 			add('Speed : ${a.speed}');
 			add('Loop : ${a.loop}');
+			addProps(a.props);
 			add('Objects : ');
 			prefix += "\t";
 			for( o in a.objects ) {

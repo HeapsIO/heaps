@@ -4,9 +4,32 @@ import hxd.fmt.hmd.Data;
 class Writer {
 
 	var out : haxe.io.Output;
+	var version : Int;
 
 	public function new(out) {
 		this.out = out;
+	}
+
+	function writeProperty( p : Property ) {
+		out.writeByte(p.getIndex());
+		switch( p ) {
+		case CameraFOVY(v):
+			out.writeFloat(v);
+		}
+	}
+
+	function writeProps( props : Properties ) {
+		if( props == null ) {
+			if( version == 1 )
+				return;
+			out.writeByte(0);
+			return;
+		}
+		if( version == 1 )
+			throw "Properties not supported in HMDv1";
+		out.writeByte(props.length);
+		for( p in props )
+			writeProperty(p);
 	}
 
 	function writeName( name : String ) {
@@ -51,8 +74,10 @@ class Writer {
 
 	function writeSkin( s : Skin ) {
 		writeName(s.name == null ? "" : s.name);
+		writeProps(s.props);
 		out.writeUInt16(s.joints.length);
 		for( j in s.joints ) {
+			writeProps(j.props);
 			writeName(j.name);
 			var rot = j.position.sx != 1 || j.position.sy != 1 || j.position.sz != 1 || (j.transpos != null && (j.transpos.sx != 1 || j.transpos.sy != 1 || j.transpos.sz != 1));
 			out.writeUInt16( (j.parent + 1) | (rot?0x8000:0) );
@@ -76,9 +101,15 @@ class Writer {
 		var old = out;
 		var header = new haxe.io.BytesOutput();
 		out = header;
+		version = d.version;
+
+		if( version > Data.CURRENT_VERSION ) throw "Can't write HMD v" + version;
+
+		writeProps(d.props);
 
 		out.writeInt32(d.geometries.length);
 		for( g in d.geometries ) {
+			writeProps(g.props);
 			out.writeInt32(g.vertexCount);
 			out.writeByte(g.vertexStride);
 			out.writeByte(g.vertexFormat.length);
@@ -96,6 +127,7 @@ class Writer {
 
 		out.writeInt32(d.materials.length);
 		for( m in d.materials ) {
+			writeProps(m.props);
 			writeName(m.name);
 			writeName(m.diffuseTexture);
 			out.writeByte(m.blendMode.getIndex());
@@ -105,6 +137,7 @@ class Writer {
 
 		out.writeInt32(d.models.length);
 		for( m in d.models ) {
+			writeProps(m.props);
 			writeName(m.name);
 			out.writeInt32(m.parent + 1);
 			writeName(m.follow);
@@ -122,6 +155,7 @@ class Writer {
 
 		out.writeInt32(d.animations.length);
 		for( a in d.animations ) {
+			writeProps(a.props);
 			writeName(a.name);
 			out.writeInt32(a.frames);
 			writeFloat(a.sampling);

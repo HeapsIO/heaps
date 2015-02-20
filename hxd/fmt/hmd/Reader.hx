@@ -7,9 +7,28 @@ class Reader {
 	static var CULLING = Type.allEnums(h3d.mat.Data.Face);
 
 	var i : haxe.io.Input;
+	var version : Int;
 
 	public function new(i) {
 		this.i = i;
+	}
+
+	function readProperty() {
+		switch( i.readByte() ) {
+		case 0:
+			return CameraFOVY(i.readFloat());
+		case unk:
+			throw "Unknown property #" + unk;
+		}
+	}
+
+	function readProps() {
+		if( version == 1 )
+			return null;
+		var n = i.readByte();
+		if( n == 0 )
+			return null;
+		return [for( i in 0...n ) readProperty()];
 	}
 
 	function readName() {
@@ -54,10 +73,12 @@ class Reader {
 		if( name == null )
 			return null;
 		var s = new Skin();
+		s.props = readProps();
 		s.name = name;
 		s.joints = [];
 		for( k in 0...i.readUInt16() ) {
 			var j = new SkinJoint();
+			j.props = readProps();
 			j.name = readName();
 			var pid = i.readUInt16();
 			var hasScale = pid & 0x8000 != 0;
@@ -92,12 +113,16 @@ class Reader {
 				throw "XBX was not converted to HMD";
 			throw "Invalid XBX header " + StringTools.urlEncode(h);
 		}
-		d.version = i.readByte();
+		version = i.readByte();
+		if( version > Data.CURRENT_VERSION ) throw "Can't read HMD v" + version;
+		d.version = version;
 		d.geometries = [];
 		d.dataPosition = i.readInt32();
+		d.props = readProps();
 
 		for( k in 0...i.readInt32() ) {
 			var g = new Geometry();
+			g.props = readProps();
 			g.vertexCount = i.readInt32();
 			g.vertexStride = i.readByte();
 			g.vertexFormat = [for( k in 0...i.readByte() ) new GeometryFormat(readName(), GeometryDataFormat.fromInt(i.readByte()))];
@@ -111,6 +136,7 @@ class Reader {
 		d.materials = [];
 		for( k in 0...i.readInt32() ) {
 			var m = new Material();
+			m.props = readProps();
 			m.name = readName();
 			m.diffuseTexture = readName();
 			m.blendMode = BLEND[i.readByte()];
@@ -123,6 +149,7 @@ class Reader {
 		d.models = [];
 		for( k in 0...i.readInt32() ) {
 			var m = new Model();
+			m.props = readProps();
 			m.name = readName();
 			m.parent = i.readInt32() - 1;
 			m.follow = readName();
@@ -139,6 +166,7 @@ class Reader {
 		d.animations = [];
 		for( k in 0...i.readInt32() ) {
 			var a = new Animation();
+			a.props = readProps();
 			a.name = readName();
 			a.frames = i.readInt32();
 			a.sampling = i.readFloat();

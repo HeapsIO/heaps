@@ -38,6 +38,12 @@ package hxd.fmt.hmd;
 typedef DataPosition = Int;
 typedef Index<T> = Int;
 
+enum Property {
+	CameraFOVY( v : Float );
+}
+
+typedef Properties = Null<Array<Property>>;
+
 class Position {
 	public var x : Float;
 	public var y : Float;
@@ -88,6 +94,7 @@ class GeometryFormat {
 }
 
 class Geometry {
+	public var props : Properties;
 	public var vertexCount : Int;
 	public var vertexStride : Int;
 	public var vertexFormat : Array<GeometryFormat>;
@@ -107,6 +114,7 @@ class Geometry {
 
 class Material {
 	public var name : String;
+	public var props : Properties;
 	public var diffuseTexture : Null<String>;
 	public var blendMode : h3d.mat.BlendMode;
 	public var culling : h3d.mat.Data.Face;
@@ -117,6 +125,7 @@ class Material {
 
 class SkinJoint {
 	public var name : String;
+	public var props : Properties;
 	public var parent : Index<SkinJoint>;
 	public var position : Position;
 	public var bind : Int;
@@ -134,6 +143,7 @@ class SkinSplit {
 
 class Skin {
 	public var name : String;
+	public var props : Properties;
 	public var joints : Array<SkinJoint>;
 	public var split : Null<Array<SkinSplit>>;
 	public function new() {
@@ -142,6 +152,7 @@ class Skin {
 
 class Model {
 	public var name : String;
+	public var props : Properties;
 	public var parent : Index<Model>;
 	public var follow : Null<String>;
 	public var position : Position;
@@ -170,6 +181,7 @@ class AnimationObject {
 
 class Animation {
 	public var name : String;
+	public var props : Properties;
 	public var frames : Int;
 	public var sampling : Float;
 	public var speed : Float;
@@ -182,7 +194,10 @@ class Animation {
 
 class Data {
 
+	public static inline var CURRENT_VERSION = 2;
+
 	public var version : Int;
+	public var props : Properties;
 	public var geometries : Array<Geometry>;
 	public var materials : Array<Material>;
 	public var models : Array<Model>;
