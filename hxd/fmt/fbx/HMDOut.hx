@@ -242,7 +242,7 @@ class HMDOut extends BaseLibrary {
 		return { g : g, materials : matMap };
 	}
 
-	function addGeometry() {
+	function addModels(includeGeometry) {
 
 		var root = buildHierarchy().root;
 		var objects = [], joints = [], skins = [];
@@ -308,6 +308,7 @@ class HMDOut extends BaseLibrary {
 			for( o2 in objects )
 				if( o2.model == m ) {
 					o2.skin = o;
+					ignoreMissingObject(m.getName()); // make sure we don't store animation for the model (only skin object has one)
 					// copy parent
 					var p = o.parent;
 					if( p != o2 ) {
@@ -328,6 +329,10 @@ class HMDOut extends BaseLibrary {
 					break;
 				}
 		}
+
+		// we need to have ignored skins objects anims first
+		if( !includeGeometry )
+			return;
 
 		objects = [];
 		if( root.childs.length <= 1 && root.model == null ) {
@@ -468,7 +473,6 @@ class HMDOut extends BaseLibrary {
 					skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
 				}
 				model.skin = makeSkin(skin, o.skin);
-				ignoreMissingObject(o.model.getName()); // make sure we don't store animation for the model (only skin object has one)
 			}
 
 			var gdata = hgeom.get(g.getId());
@@ -642,8 +646,7 @@ class HMDOut extends BaseLibrary {
 
 		dataOut = new haxe.io.BytesOutput();
 
-		if( includeGeometry )
-			addGeometry();
+		addModels(includeGeometry);
 
 		var anim = loadAnimation(LinearAnim);
 		if( anim != null )

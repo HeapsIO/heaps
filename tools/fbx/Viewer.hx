@@ -9,11 +9,12 @@ typedef Props = {
 	showAxis:Bool,
 	showBones:Bool,
 	showBox:Bool,
-	slowDown:Bool,
+	speed:Float,
 	loop:Bool,
 	lights:Bool,
 	normals:Bool,
 	convertHMD:Bool,
+	queueAnims:Bool,
 }
 
 typedef Campos = {
@@ -66,11 +67,13 @@ class Viewer extends hxd.App {
 			camPos : { x:10, y:0, z:0, tx:0, ty:0, tz:0 },
 			smoothing:true,
 			showAxis:true, showBones:false, showBox:false,
-			slowDown:false, loop:true,
+			speed:1., loop:true,
 			lights : true, normals : false,
 			convertHMD : false,
+			queueAnims:false,
 		};
 		props = hxd.Save.load(props);
+		if( Math.isNaN(props.speed) ) props.speed = 1;
 
 		tf = new flash.text.TextField();
 		var fmt = tf.defaultTextFormat;
@@ -262,7 +265,12 @@ class Viewer extends hxd.App {
 			if( obj.currentAnimation != null )
 				obj.currentAnimation.pause = !obj.currentAnimation.pause;
 		case "S".code:
-			props.slowDown = !props.slowDown;
+			if( hxd.Key.isDown(hxd.Key.SHIFT) )
+				props.speed *= 0.5;
+			else if( hxd.Key.isDown(hxd.Key.CTRL) )
+				props.speed *= 2;
+			else
+				props.speed = props.speed == 1 ? 0.1 : 1;
 		case "A".code:
 			var cst = h3d.anim.Mode.createAll();
 			cst.push(null);
@@ -278,6 +286,8 @@ class Viewer extends hxd.App {
 			props.convertHMD = !props.convertHMD;
 			if( props.convertHMD ) rightHand = false;
 			reload = true;
+		case "Q".code:
+			props.queueAnims = !props.queueAnims;
 		default:
 
 		}
@@ -553,12 +563,21 @@ class Viewer extends hxd.App {
 			anim = (ahmd == null ? curHmd : ahmd).loadAnimation();
 		else
 			anim = curFbx.loadAnimation(animMode, null, null, alib);
-		if( anim != null ) {
-			anim = s3d.playAnimation(anim);
-			if( !props.loop ) {
-				anim.loop = false;
-				anim.onAnimEnd = function() anim.setFrame(0);
-			}
+		if( anim == null )
+			return;
+		var prev = s3d.currentAnimation;
+		anim = s3d.playAnimation(anim);
+		if( !props.loop ) {
+			anim.loop = false;
+			anim.onAnimEnd = function() anim.setFrame(0);
+		}
+		if( props.queueAnims && prev != null ) {
+			var sm = new h3d.anim.SmoothTarget(anim, (anim.frameCount * 0.3) / 60 );
+			sm.onAnimEnd = function() {
+				if( s3d.currentAnimation != sm ) return;
+				s3d.switchToAnimation(anim);
+			};
+			s3d.switchToAnimation(sm);
 		}
 	}
 
@@ -654,13 +673,14 @@ class Viewer extends hxd.App {
 			"[Y] Axis = "+props.showAxis,
 			"[K] Bones = "+props.showBones,
 			"[B] Bounds = "+props.showBox+(box == null ? "" : " ["+fmt(box.scaleX)+" x "+fmt(box.scaleY)+" x "+fmt(box.scaleZ)+"]"),
-			"[S] Slow Animation = "+props.slowDown,
+			"[S] Slow Animation = "+props.speed,
 			"[R] Right-Hand Camera = "+rightHand,
 			"[M] Tex Smoothing = " + props.smoothing,
 			"[N] Show normals = "+props.normals,
 			"[F] Default camera",
 			"[I] Lights = " + props.lights,
-			"[C] Use HMD model = "+props.convertHMD,
+			"[C] Use HMD model = " + props.convertHMD,
+			"[Q] Queue anims = "+props.queueAnims,
 			"[1~4] Views",
 			"",
 			"[Space] Pause Animation",
@@ -681,7 +701,7 @@ class Viewer extends hxd.App {
 			(engine.drawTriangles - (props.showBox ? 26 : 0) - (props.showAxis ? 6 : 0)) + " tri " + (obj.getObjectsCount() + 1)+ " objs",
 		].join("\n");
 
-		if( props.slowDown ) hxd.Timer.tmod *= 0.1;
+		hxd.Timer.tmod *= props.speed;
 	}
 
 	static var inst : Viewer;
