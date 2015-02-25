@@ -46,8 +46,7 @@ class Engine {
 		#else
 		throw "No driver";
 		#end
-		if( CURRENT == null )
-			CURRENT = this;
+		setCurrent();
 	}
 
 	static var CURRENT : Engine = null;

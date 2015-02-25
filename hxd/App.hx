@@ -9,6 +9,7 @@ class App {
 	public function new(?engine) {
 		if( engine != null ) {
 			this.engine = engine;
+			engine.onReady = setup;
 			haxe.Timer.delay(setup, 0);
 		} else {
 			hxd.System.start(function() {
