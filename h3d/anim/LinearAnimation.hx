@@ -94,7 +94,7 @@ class LinearAnimation extends Animation {
 			a.matrix = new h3d.Matrix();
 			a.matrix.identity();
 			if( a.alphas != null && (a.targetObject == null || !a.targetObject.isMesh()) )
-				throw a.objectName + " should be a mesh";
+				throw a.objectName + " should be a mesh (for alpha animation)";
 		}
 		// makes sure that all single frame anims are at the end so we can break early when isSync=true
 		frames.sort(sortByFrameCountDesc);
