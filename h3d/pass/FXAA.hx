@@ -36,7 +36,7 @@ private class FXAAShader extends h3d.shader.ScreenShader {
 			var lumB = dot(rgbB, lumA);
 			var color : Vec4;
 			var cmp = vec2(lumB, -lumB) > vec2(lumMin, -lumMax);
-			color.xyz = mix(rgbB, rgbA, cmp.x * cmp.y);
+			color.xyz = mix(rgbA, rgbB, cmp.x * cmp.y);
 			color.a = 1.;
 			output.color = color;
 		}
