@@ -77,7 +77,7 @@ class Linker {
 					}
 				// add a new field
 				if( ft == null )
-					fl2.push(f1);
+					fl2.push(allocVar(f1,p).v);
 				else
 					mergeVar(path + "." + ft.name, f1, ft, p);
 			}
@@ -128,8 +128,8 @@ class Linker {
 				vname += k;
 				key += k;
 			} else {
-				mergeVar(key, v, v2.v, p);
 				v2.merged.push(v);
+				mergeVar(key, v, v2.v, p);
 				varIdMap.set(v.id, v2.id);
 				return v2;
 			}

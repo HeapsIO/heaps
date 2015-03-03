@@ -26,6 +26,14 @@ class Eval {
 		var v2 = varMap.get(v);
 		if( v2 != null )
 			return v == v2 ? v2 : mapVar(v2);
+
+		if( v.parent != null ) {
+			mapVar(v.parent); // always map parent first
+			v2 = varMap.get(v);
+			if( v2 != null )
+				return v == v2 ? v2 : mapVar(v2);
+		}
+
 		v2 = {
 			id : Tools.allocVarId(),
 			name : v.name,
