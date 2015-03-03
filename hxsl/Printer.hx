@@ -264,4 +264,64 @@ class Printer {
 		return new Printer(varId).shaderString(s);
 	}
 
+	public static function check( s : ShaderData, ?from : Array<ShaderData> ) {
+		try {
+			var vars = new Map();
+			var regVars = [];
+			function regVar( v : TVar, reg ) {
+				if( reg ) {
+					if( vars.exists(v.id) ) throw "Duplicate var " + v.id;
+					vars.set(v.id, v);
+					regVars.push(v);
+				}
+				else
+					vars.remove(v.id);
+				switch( v.type ) {
+				case TStruct(vl):
+					for( v in vl )
+						regVar(v, reg);
+				default:
+				}
+			}
+			function checkExpr( e : TExpr ) {
+				switch( e.e ) {
+				case TVar(v):
+					if( !vars.exists(v.id) ) throw "Unbound var " + v.name+"@" + v.id;
+				case TVarDecl(v, init):
+					if( init != null ) checkExpr(init);
+					regVar(v, true);
+				case TBlock(el):
+					var old = regVars;
+					regVars = [];
+					for( e in el )
+						checkExpr(e);
+					for( v in regVars )
+						regVar(v, false);
+					regVars = old;
+				case TFor(v, it, loop):
+					checkExpr(it);
+					regVar(v, true);
+					checkExpr(loop);
+					regVar(v, false);
+				default:
+					Tools.iter(e, checkExpr);
+				}
+			}
+			for( v in s.vars )
+				regVar(v, true);
+			for( f in s.funs ) {
+				for( v in f.args )
+					regVar(v, true);
+				checkExpr(f.expr);
+				for( v in f.args )
+					regVar(v, false);
+			}
+		} catch( e : String ) {
+			var msg = e+"\n    in\n" + shaderToString(s, true);
+			if( from != null )
+				msg += "\n    from\n\n" + [for( s in from ) shaderToString(s, true)].join("\n\n");
+			throw msg;
+		}
+	}
+
 }

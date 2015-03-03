@@ -75,8 +75,16 @@ class Cache {
 		shaderDatas.reverse(); // default is reverse order
 		haxe.ds.ArraySort.sort(shaderDatas, function(s1, s2) return s2.p - s1.p);
 
+		#if debug
+		for( s in shaderDatas ) Printer.check(s.inst.shader);
+		#end
+
 		var linker = new hxsl.Linker();
 		var s = linker.link([for( s in shaderDatas ) s.inst.shader], this.outVars[outVars]);
+
+		#if debug
+		Printer.check(s,[for( s in shaderDatas ) s.inst.shader]);
+		#end
 
 		// params tracking
 		var paramVars = new Map();
@@ -90,8 +98,21 @@ class Cache {
 				paramVars.set(v.id, { instance : inf.index, index : inf.inst.params.get(v.merged[0].id) } );
 			}
 
+		var prev = s;
 		var s = new hxsl.Splitter().split(s);
+
+		#if debug
+		Printer.check(s.vertex,[prev]);
+		Printer.check(s.fragment,[prev]);
+		#end
+
+		var prev = s;
 		var s = new hxsl.Dce().dce(s.vertex, s.fragment);
+
+		#if debug
+		Printer.check(s.vertex,[prev.vertex]);
+		Printer.check(s.fragment,[prev.fragment]);
+		#end
 
 		var r = new RuntimeShader();
 		r.vertex = flattenShader(s.vertex, Vertex, paramVars);
@@ -100,6 +121,11 @@ class Cache {
 		r.globals = new Map();
 		initGlobals(r, r.vertex);
 		initGlobals(r, r.fragment);
+
+		#if debug
+		Printer.check(r.vertex.data,[s.vertex]);
+		Printer.check(r.fragment.data,[s.fragment]);
+		#end
 
 		var sid = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
 		var r2 = byID.get(sid);

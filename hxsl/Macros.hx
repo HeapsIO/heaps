@@ -279,7 +279,10 @@ class Macros {
 						var name = Std.string(c);
 						var check = new Checker();
 						check.loadShader = loadShader;
-						var shader = check.check(name,shader);
+						var shader = check.check(name, shader);
+						#if debug
+						Printer.check(shader);
+						#end
 						var str = Serializer.run(shader);
 						f.kind = FVar(null, { expr : EConst(CString(str)), pos : pos } );
 						f.meta.push({

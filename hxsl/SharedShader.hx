@@ -83,6 +83,9 @@ class SharedShader {
 			c = c.next;
 		}
 		var i = new ShaderInstance(eval.eval(data));
+		#if debug
+		Printer.check(i.shader, [data]);
+		#end
 		paramsCount = 0;
 		for( v in data.vars )
 			addParam(eval, i, v);
