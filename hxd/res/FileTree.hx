@@ -305,7 +305,7 @@ class FileTree {
 				};
 				fields.push(field);
 				fields.push(fget);
-				dict.set(f, { path : relPath + "/" + fileName, field : field, fget : fget });
+				dict.set(fname, { path : relPath + "/" + fileName, field : field, fget : fget });
 			}
 		}
 	}
