@@ -1,0 +1,311 @@
+<html>
+<body>
+
+<style>
+	body {
+		font-family : "Open Sans", Arial;
+	}
+</style>
+
+<h1>Introduction</h1>
+
+<p>
+	Heaps is a cross platform graphics engine designed for high performance games.
+</p>
+
+<p>
+	Heaps has been designed to leverage modern GPU that are now commonly available on both desktop and mobile devices.
+</p>
+
+<p>
+	Heaps currently supports HTML5 WebGL, Flash Stage3D, native Mobile (iOS and Android) and Desktop with OpenGL.
+</p>
+
+<p>
+	Heaps consists in several top level packages, which are:
+</p>
+
+<ul>
+	<li><code>h2d</code> used for 2D display on screen (for 2D games and user interface)</li>
+	<li><code>h3d</code> used for rendering 3D models</li>
+	<li><code>hxd</code> contains cross platform classes such as Bitmaps, and a complete resource loading and management framework</li>
+	<li><code>hxsl</code> is the Heaps Shader Language implementation</li>
+</ul>
+
+<h1>Getting Started</h1>
+
+<p>
+	In order to get started with Heaps, you need first to:
+</p>
+
+<ul>
+	<li>install Haxe 3.1+, available on <a href="http://haxe.org" target="_blank">http://haxe.org</a>
+	<li>install Heaps by running <code>haxelib install heaps</code>
+	<li>setup your IDE in order to build Haxe content, as documented on <a href="http://haxe.org/doc/ide">haxe website</a>
+</ul>
+
+<p>
+	You should then be ready to run your first example:
+</p>
+
+<pre>
+class Main extends hxd.App {
+	var bmp : h2d.Bitmap;
+	override function initialize() {
+		var tile = h2d.Tile.fromColor(0xFF0000, 100, 100);
+		bmp = new h2d.Bitmap(tile, s2d);
+		bmp.x = s2d.width * 0.5;
+		bmp.y = s2d.height * 0.5;
+	}
+	override function update(dt:Float) {
+		bmp.rotation += 0.1;
+	}
+	static function main() {
+		new Main();
+	}
+}
+</pre>
+
+<p>
+	In order to compile, make sure you have included the Heaps library or have added <code>-lib heaps</code> to your compilation parameters.
+</p>
+
+<ul>
+	<li>If you compile for Javascript, you will also have to create an <code>index.html</code> that includes your <code>.js</code> haxe output
+	<li>If you compile for Flash, make sure to specify the Flash version to be at least 11.8 (with <code>-swf-version 11.8</code>) which is required for Heaps
+</ul>
+
+<p>
+	You should now be able to compile and display the example. It will show you a rotating red square.
+</p>
+
+<p>
+	Several examples for both 2D and 3D are available in the heaps <a href="https://github.com/ncannasse/heaps/tree/master/samples">samples</a> directory.
+</p>
+
+<h1>----- Part 1 : H2D -----</h1>
+
+<h1>H2D Concepts</h1>
+
+<p>
+	Before entering into the details of h2d, let's introduce a few concepts that we will use in the documentation:
+</p>
+
+<dl>
+	<dt>In-Memory Bitmap
+	<dd>A Bitmap (represented by <code>hxd.Bitmap</code> type) is a picture stored in local memory which you can modify and access its individual pixels. In Heaps, before being displayed, a Bitmap need to be turned into a Texture
+	<dt>Texture
+	<dd>a Texture (represented by <code>h3d.mat.Texture</code> type) is a picture that is allocated into the GPU memory. You can no longer access its pixels or modify it in an efficient way. But it can be used to display 3D models or 2D pictures.
+	<dt>Tile
+	<dd>a Tile (represented by <code>h2d.Tile</code>) is a sub part of a Texture. For instance a 256x256 Texture might contain several graphics, such as different the frames of an animated sprite. A Tile will be a part of this texture, it has a (x,y) position and a (width,height) size in pixels. It can also have a pivot position (dx,dy).
+	<dt>Tile Pivot
+	<dd>by default a Tile pivot is to the upper left corner of the part of the texture it represents. The pivot can be moved by modifying the (dx,dy) values of the Tile. For instance by setting the pivot to <code>(-tile.width,-tile.height)</code>, it will now be at the bottom right of the Tile. Changing the pivot affects the way Bitmap Sprites are displayed and the way local transformations (such as rotations) are performed.
+	<dt>Sprite
+	<dd>a Sprite (represented by <code>h2d.Sprite</code>) is the base class of all of H2D displayable objects. A Sprite has a position (x,y), a scale (scaleX,scaleY), a rotation. It can contain other Sprites which will inherit its transformations, creating a <em>scene tree</em>
+	<dt>Scene
+	<dd>the Scene (represented by <code>h2d.Scene</code>) is a special Sprite which is at the root of the <em>scene tree</em>. In <code>hxd.App</code> is it accessible with the <code>s2d</code> variable. You will need to add your Sprites to the scene before they can be displayed. The Scene also handles events such as clicks, touch, and keyboard keys.
+	<dt>Bitmap sprite
+	<dd>a Bitmap sprite (represented by <code>h2d.Bitmap</code>) is a Sprite that allows you to display an unique Tile at the sprite position, such as in the previous example.
+</dl>
+
+<p>
+	Now that the basic concepts have been introduced, let's get back to our previous example, this time with comments:
+</p>
+
+<pre>
+class Main extends hxd.App {
+	var bmp : h2d.Bitmap;
+	override function initialize() {
+		// allocate a Texture with red color and creates a 100x100 Tile from it
+		var tile = h2d.Tile.fromColor(0xFF0000, 100, 100);
+		// create a Bitmap sprite, which will display the tile
+		// and will be added to our 2D scene (s2d)
+		bmp = new h2d.Bitmap(tile, s2d);
+		// modify the display position of the Bitmap sprite
+		bmp.x = s2d.width * 0.5;
+		bmp.y = s2d.height * 0.5;
+	}
+	// on each frame
+	override function update(dt:Float) {
+		// increment the display bitmap rotation by 0.1 radians
+		bmp.rotation += 0.1;
+	}
+	static function main() {
+		new Main();
+	}
+}
+</pre>
+
+<p>
+	We can easily make the Bitmap rotate around its center by changing the tile pivot, by adding the following lines:
+</p>
+
+<pre>
+	bmp.tile.dx = -50;
+	bmp.tile.dy = -50;
+</pre>
+
+<h1>Sprite Properties</h1>
+
+<p>
+	The following properties and methods can be accessed on any Sprite:
+</p>
+
+<ul>
+<li><code>x</code> and <code>y</code> : the position in pixels relative to the parent Sprite (or in the Scene)
+<li><code>rotation</code> : the rotation of the sprite in radians
+<li><code>scaleX</code> and <code>scaleY</code> : the horizontal and vertical scaling values for this Sprite (default to (1,1)). You can uniformaly increase the current scales by calling <code>sprite.scale(1.1)</code> or set them to give value by using <code>sprite.setScale(value)</code>.
+<li><code>visible</code> : when visible is set to <code>false</code>, a sprite is still updated (position is calculated and animation still plays) but the sprite and all its children are not displayed
+<li><code>parent</code> : the current parent Sprite, or <code>null</code> if it has not been added
+<li><code>remove()</code> : remove the sprite from its parent. This will prevent it from being updated and displayed
+<li><code>addChild(s)</code> : adds the specified sprite to the children list
+<li><code>for( s in sprite ) {...}</code> : iterates over all the current children
+</ul>
+
+<p>
+	Sprite have other properties and methods which can be discovered by visiting the <code>h2d.Sprite</code> API section.
+</p>
+
+<h1>H2D Drawable</h1>
+
+<p>
+	H2D classes that can display something on screen usually extends the <code>h2d.Drawable</code> class.
+</p>
+
+<p>
+	Each Drawable (including <code>h2d.Bitmap</code>) has then several properties that can be manipulated:
+</p>
+
+<ul>
+<li><code>alpha</code> : this will change the amount of transparency your drawable is displayed with. For instance a value of 0.5 will display a Tile with 50% opacity.
+<li><code>color</code> : color is the color multiplier of the drawable. You can access its individual channels with <code>(r,g,b,a)</code> components. It is initialy set to white (all components are set to 1.). Setting for instance the (r,g,b) components to 0.5 will make the tile appear more dark.
+<li><code>blendMode</code> : the blend mode tells how the drawable gets composited with the background color when its drawn on the screen. 
+The background color refers to the screen content at the time the sprite is being drawn. This can be another sprite content if it was drawn before at the same position.
+The following blend mode values are available :
+	<ul>
+		<li><code>Alpha</code> (default) : the drawable blends itself with the background using its alpha value. An opaque pixel will erase the background, a fully transparent one will be ignored.
+		<li><code>None</code> : this disable the blending with the background. Alpha channel is ignored and the color is written as-it. This offers the best display performances for large backgrounds that have nothing showing being them
+		<li><code>Add</code> : the drawable color will be added to the background, useful for creating explosions effects or particles for instance.
+		<li><code>SoftAdd</code> : similar to Add but will prevent over saturation
+		<li><code>Multiply</code> : the sprite color is multiplied by the background color
+		<li><code>Erase</code> : the sprite color is substracted to the background color
+	</ul>
+<li><code>filter</code> : when a sprite is scaled (upscaled or downscaled), by default Heaps will use the nearest pixel in the Tile to display it. This will create a nice pixelated effect for some games, but might not looks good on your game. You can try to set the <code>filter</code> value to true, which will enable bilinear filtering on the sprite, making it looks less sharp and more smooth/blurry.
+<li><code>shaders</code> : each Drawable can have <em>shaders</em> added to modify their display. Shaders will be introduced later in this manual. 
+</ul>
+
+<p>
+	Drawable have other properties which can be discovered by visiting the <code>h2d.Drawable</code> API section.
+</p>
+
+<h1>H2D Animation</h1>
+
+<p>
+	Creating an animated sprite in H2D is quite easy.
+</p>
+
+<p>
+	Instead of using h2d.Bitmap to display a single Tile, you can use h2d.Anim to display a list of tiles that will automatically be played:
+</p>
+
+<pre>
+	// creates three tiles with different color
+	var t1 = h2d.Tile.fromColor(0xFF0000, 30, 30);
+	var t2 = h2d.Tile.fromColor(0x00FF00, 30, 40);
+	var t3 = h2d.Tile.fromColor(0x0000FF, 30, 50);
+	// creates an animation for these tiles
+	var anim = new h2d.Anim([t1,t2,t3],s2d);
+</pre>
+
+<p>
+	The following properties and methods can be accessed on h2d.Anim:
+</p>
+
+<ul>
+<li><code>speed</code> : changes the playback speed of the animation, in frames per seconds.
+<li><code>loop</code> : tells if the animation will loop after it reaches the last frame.
+<li><code>onAnimEnd</code> : this dynamic method can be set to be informed when we have reached the end of the animation :
+	<pre>
+		anim.onAnimEnd = function() {
+			trace("END!");
+		}
+	</pre>
+</ul>
+
+<p>
+	Anim have other properties which can be discovered by visiting the <code>h2d.Anim</code> API section.
+</p>
+
+<h1>Displaying Text</h1>
+
+<h1>Optimizing many Bitmaps</h1>
+
+<h2>With TileGroup</h2>
+
+<h2>With SpriteBatch</h2>
+
+<h1>H2D Events and Interactives</h1>
+
+<h1>H2D Layers</h1>
+
+<h1>Filters</h1>
+
+<h1>Scene size and zoom</h1>
+
+<h1>Resource Management</h1>
+
+<h1>----- Part 2 : H3D -----</h1>
+
+<h1>Scene and Camera</h1>
+
+<h1>Loading FBX Models</h1>
+
+<h1>Using HMD Models</h1>
+
+<h1>Mesh Material</h1>
+
+<h1>Lights</h1>
+
+<h1>Shadows</h1>
+
+<h1>Multipass explained</h1>
+
+<h1>Custom Renderer</h1>
+
+<h1>----- Part 3 : Shaders -----</h1>
+
+<h1>HXSL Introduction</h1>
+
+<h1>Comparison with GLSL</h1>
+
+<h1>Writing your own Shaders</h1>
+
+<h1>Runtime Shader linking</h1>
+
+<h1>----- Part 4 : Sound -----</h1>
+
+<h1>----- Part 5 : Tools -----</h1>
+
+<h1>Model Viewer</h1>
+
+<h1>Particles Editor</h1>
+
+<h1>Castle DB</h1>
+
+<h1>----- Part 6 : Misc -----</h1>
+
+<h1>Gamepad support</h1>
+
+<h1>2D and 3D collision library</h1>
+
+<h1>Additional 3D effects</h1>
+
+<h2>Fog</h2>
+
+<h2>FXAA</h2>
+
+<h2>Scalable Ambient Occlusion</h2>
+
+
+</body>
+</html>
