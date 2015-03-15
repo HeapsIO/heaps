@@ -238,6 +238,54 @@ The following blend mode values are available :
 
 <h1>Displaying Text</h1>
 
+<h2>H2D Text</h2>
+    
+<p>
+    <code>h2d.Text</code> extends <code>h2d.Drawable</code> to display text with H2D. 
+</p>
+
+<p>
+    The properties of <code>h2d.Text</code> are:
+</p>
+
+<ul>
+    <li><code>font</code>: the Font used to display the text. See <code>h2d.Font</code> to use it.</li>
+    <li><code>text</code>: the text content of the text field.</li>
+    <li><code>textColor</code>: the color in hexadecimal format. This property change to the <code>color</code> property (see <code>h2d.Drawable</code>).</li>
+    <li><code>maxWidth</code>: width limit of the text field. Your text can't exceed this with limit. If the text exceed, a new line is added </li>
+    <li><code>dropShadow</code>: a solid drop shadow of your text. To disable it, use <code>null</code> value. <code>dropShadow</code> is a Typedef with this properties:
+        <ul>
+            <li><code>dx</code> and <code>dy</code>: define the distance in pixel between the text and his drop shadow. In example the values : <code>dx = 2.5;</code> and <code>dy = 5.0;</code> moves the shadow from the text to 2.5 pixel at the right and 5 pixel at the bottom.</li> 
+            <li><code>color</code>: the hexadecimal color of the shadow (like <code>color = 0x111133;</code>).</li> 
+            <li><code>alpha</code>: this will change the amount of transparency of your drop shadow. For instance a value of 0.25 will display a drop shadow with 25% opacity.</li> 
+        </ul>
+    </li>
+    <li><code>textWidth</code> and <code>textHeight</code>: get the size of the text field in pixel. You can't edit it, but you can use the <code>maxWidth</code> property to change the width.</li>
+    <li><code>letterSpacing</code>: Space size between characters.</li>
+    <li><code>lineSpacing</code>: Space size between lines.</li>
+</ul>
+
+<pre>
+    // load a bitmap font Resource
+    var font = hxd.Res.customFont.toFont();
+    // adds a red shadow
+    tf.dropShadow = { dx : 3, dy : 3, color : 0xFF0000, alpha : 0.8 };
+    // creates another text field with this font
+    var tf = new h2d.Text(font, s2d);
+    tf.text = "Hello h2d!";
+</pre>
+    
+<p>
+    The bitmap font ressource must have 
+</p>
+    
+<h2>H2D Font</h2>
+    
+<p>
+    To display text in H2D you must have a bitmap font ressource. It's easy to build this ressource width <a href="https://github.com/andryblack/fontbuilder/downloads">FontBuilder</a>.
+    It uses <code>h2d.Font</code> to have a set of characters in bitmap format.
+</p>
+
 <h1>Optimizing many Bitmaps</h1>
 
 <h2>With TileGroup</h2>
