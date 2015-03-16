@@ -242,27 +242,39 @@ The following blend mode values are available :</li>
 <h2>H2D Font</h2>
 
 <p>
-    To start with text manipulation, we must know the <code>h2d.Font</code> class.
+    Before start with text manipulation, we must know the <code>h2d.Font</code> class:
 </p>
 
+<ol>
+    <li><code>h2d.Font</code> is a manager who links each character with his <code>h2d.Tile</code>: it is used to display each letter of a text;</li>
+    <li>The ressource manager can easily instantiate an <code>h2d.Font</code>;</li>
+    <li>To instancied a <code>h2d.Font</code> we must have:
+        <ul>
+            <li>a bitmap and his font attached file (customFont.fnt) or</li>
+            <li>a True Type font (exept in C++).</li>
+        </ul>
+    </li>
+</ol>
+
 <p>
-    This class embed <code>h2d.Tile</code> who is builded from a font.
-    We can initialize <code>h2d.Font</code> from a bitmap and his font file attached (customFont.fnt).
-    With this <code>h2d.Font</code> each letters is an <code>h2d.Tile</code>.
+    Do not forget to add to your compilation parameters the location of your resource files <code>-D resourcesPath=yourPath</code>
 </p>
-   
 <p>
-    With the resource manager (<code>hxd.Res</code>), it is easy to embed your font in a <code>h2d.Font</code> object.
-    Do not forget to add to your compilation parameters the location of your resource files <code>-D resourcesPath=yourPath</code>and copy the two font files in your resources directory:
-    <ul>
-        <li>samples/res/customFont.png</li>
-        <li>samples/res/customFont.fnt</li>
-    </ul>
+    Copy the two font files in your resources directory:
+</p>
+<ul>
+    <li>samples/res/customFont.png</li>
+    <li>samples/res/customFont.fnt</li>
+</ul>
+
+<p>
+    You can use <code>h2d.Font</code> like this:
 </p>
 
 <pre>
     // compilation parameter: -D resourcesPath=res
-    // for the files: res/customFont.fnt and res/customFont.png
+    // location of the files: res/customFont.fnt and res/customFont.png
+    
     // load a bitmap font Resource:
     var font = hxd.Res.customFont.toFont();
 </pre>
@@ -271,6 +283,8 @@ The following blend mode values are available :</li>
     
 <p>
     <code>h2d.Text</code> extends <code>h2d.Drawable</code> to display text with H2D.
+</p>
+<p>
     <code>h2d.Text</code> is a text field whose you can easily change the textual content with its property <code>text</code>.
 </p>
 
@@ -297,7 +311,7 @@ The following blend mode values are available :</li>
 </ul>
 
 <p>
-    You should then be ready to run your first text:
+    You should then be ready to display your first text:
 </p>
 
 <pre>
