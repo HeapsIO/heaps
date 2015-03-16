@@ -39,9 +39,9 @@
 </p>
 
 <ul>
-    <li>install Haxe 3.1+, available on <a href="http://haxe.org" target="_blank">http://haxe.org</a></li>
-    <li>install Heaps by running <code>haxelib install heaps</code></li>
-    <li>setup your IDE in order to build Haxe content, as documented on <a href="http://haxe.org/doc/ide">haxe website</a></li>
+	<li>install Haxe 3.1+, available on <a href="http://haxe.org" target="_blank">http://haxe.org</a></li>
+	<li>install Heaps by running <code>haxelib install heaps</code></li>
+	<li>setup your IDE in order to build Haxe content, as documented on <a href="http://haxe.org/doc/ide">haxe website</a></li>
 </ul>
 
 <p>
@@ -71,8 +71,8 @@ class Main extends hxd.App {
 </p>
 
 <ul>
-    <li>If you compile for Javascript, you will also have to create an <code>index.html</code> that includes your <code>.js</code> haxe output</li>
-    <li>If you compile for Flash, make sure to specify the Flash version to be at least 11.8 (with <code>-swf-version 11.8</code>) which is required for Heaps</li>
+	<li>If you compile for Javascript, you will also have to create an <code>index.html</code> that includes your <code>.js</code> haxe output</li>
+	<li>If you compile for Flash, make sure to specify the Flash version to be at least 11.8 (with <code>-swf-version 11.8</code>) which is required for Heaps</li>
 </ul>
 
 <p>
@@ -92,20 +92,20 @@ class Main extends hxd.App {
 </p>
 
 <dl>
-    <dt>In-Memory Bitmap</dt>
-    <dd>A Bitmap (represented by <code>hxd.Bitmap</code> type) is a picture stored in local memory which you can modify and access its individual pixels. In Heaps, before being displayed, a Bitmap need to be turned into a Texture</dd>
-    <dt>Texture</dt>
-    <dd>a Texture (represented by <code>h3d.mat.Texture</code> type) is a picture that is allocated into the GPU memory. You can no longer access its pixels or modify it in an efficient way. But it can be used to display 3D models or 2D pictures.</dd>
-    <dt>Tile</dt>
-    <dd>a Tile (represented by <code>h2d.Tile</code>) is a sub part of a Texture. For instance a 256x256 Texture might contain several graphics, such as different the frames of an animated sprite. A Tile will be a part of this texture, it has a (x,y) position and a (width,height) size in pixels. It can also have a pivot position (dx,dy).</dd>
-    <dt>Tile Pivot</dt>
-    <dd>by default a Tile pivot is to the upper left corner of the part of the texture it represents. The pivot can be moved by modifying the (dx,dy) values of the Tile. For instance by setting the pivot to <code>(-tile.width,-tile.height)</code>, it will now be at the bottom right of the Tile. Changing the pivot affects the way Bitmap Sprites are displayed and the way local transformations (such as rotations) are performed.</dd>
-    <dt>Sprite</dt>
-    <dd>a Sprite (represented by <code>h2d.Sprite</code>) is the base class of all of H2D displayable objects. A Sprite has a position (x,y), a scale (scaleX,scaleY), a rotation. It can contain other Sprites which will inherit its transformations, creating a <em>scene tree</em></dd>
-    <dt>Scene</dt>
-    <dd>the Scene (represented by <code>h2d.Scene</code>) is a special Sprite which is at the root of the <em>scene tree</em>. In <code>hxd.App</code> is it accessible with the <code>s2d</code> variable. You will need to add your Sprites to the scene before they can be displayed. The Scene also handles events such as clicks, touch, and keyboard keys.</dd>
-    <dt>Bitmap sprite</dt>
-    <dd>a Bitmap sprite (represented by <code>h2d.Bitmap</code>) is a Sprite that allows you to display an unique Tile at the sprite position, such as in the previous example.</dd>
+	<dt>In-Memory Bitmap</dt>
+	<dd>A Bitmap (represented by <code>hxd.Bitmap</code> type) is a picture stored in local memory which you can modify and access its individual pixels. In Heaps, before being displayed, a Bitmap need to be turned into a Texture</dd>
+	<dt>Texture</dt>
+	<dd>a Texture (represented by <code>h3d.mat.Texture</code> type) is a picture that is allocated into the GPU memory. You can no longer access its pixels or modify it in an efficient way. But it can be used to display 3D models or 2D pictures.</dd>
+	<dt>Tile</dt>
+	<dd>a Tile (represented by <code>h2d.Tile</code>) is a sub part of a Texture. For instance a 256x256 Texture might contain several graphics, such as different the frames of an animated sprite. A Tile will be a part of this texture, it has a (x,y) position and a (width,height) size in pixels. It can also have a pivot position (dx,dy).</dd>
+	<dt>Tile Pivot</dt>
+	<dd>by default a Tile pivot is to the upper left corner of the part of the texture it represents. The pivot can be moved by modifying the (dx,dy) values of the Tile. For instance by setting the pivot to <code>(-tile.width,-tile.height)</code>, it will now be at the bottom right of the Tile. Changing the pivot affects the way Bitmap Sprites are displayed and the way local transformations (such as rotations) are performed.</dd>
+	<dt>Sprite</dt>
+	<dd>a Sprite (represented by <code>h2d.Sprite</code>) is the base class of all of H2D displayable objects. A Sprite has a position (x,y), a scale (scaleX,scaleY), a rotation. It can contain other Sprites which will inherit its transformations, creating a <em>scene tree</em></dd>
+	<dt>Scene</dt>
+	<dd>the Scene (represented by <code>h2d.Scene</code>) is a special Sprite which is at the root of the <em>scene tree</em>. In <code>hxd.App</code> is it accessible with the <code>s2d</code> variable. You will need to add your Sprites to the scene before they can be displayed. The Scene also handles events such as clicks, touch, and keyboard keys.</dd>
+	<dt>Bitmap sprite</dt>
+	<dd>a Bitmap sprite (represented by <code>h2d.Bitmap</code>) is a Sprite that allows you to display an unique Tile at the sprite position, such as in the previous example.</dd>
 </dl>
 
 <p>
@@ -152,14 +152,14 @@ class Main extends hxd.App {
 </p>
 
 <ul>
-    <li><code>x</code> and <code>y</code> : the position in pixels relative to the parent Sprite (or in the Scene)</li>
-    <li><code>rotation</code> : the rotation of the sprite in radians</li>
-    <li><code>scaleX</code> and <code>scaleY</code> : the horizontal and vertical scaling values for this Sprite (default to (1,1)). You can uniformaly increase the current scales by calling <code>sprite.scale(1.1)</code> or set them to give value by using <code>sprite.setScale(value)</code>.</li>
-    <li><code>visible</code> : when visible is set to <code>false</code>, a sprite is still updated (position is calculated and animation still plays) but the sprite and all its children are not displayed</li>
-    <li><code>parent</code> : the current parent Sprite, or <code>null</code> if it has not been added</li>
-    <li><code>remove()</code> : remove the sprite from its parent. This will prevent it from being updated and displayed</li>
-    <li><code>addChild(s)</code> : adds the specified sprite to the children list</li>
-    <li><code>for( s in sprite ) {...}</code> : iterates over all the current children</li>
+	<li><code>x</code> and <code>y</code> : the position in pixels relative to the parent Sprite (or in the Scene)</li>
+	<li><code>rotation</code> : the rotation of the sprite in radians</li>
+	<li><code>scaleX</code> and <code>scaleY</code> : the horizontal and vertical scaling values for this Sprite (default to (1,1)). You can uniformaly increase the current scales by calling <code>sprite.scale(1.1)</code> or set them to give value by using <code>sprite.setScale(value)</code>.</li>
+	<li><code>visible</code> : when visible is set to <code>false</code>, a sprite is still updated (position is calculated and animation still plays) but the sprite and all its children are not displayed</li>
+	<li><code>parent</code> : the current parent Sprite, or <code>null</code> if it has not been added</li>
+	<li><code>remove()</code> : remove the sprite from its parent. This will prevent it from being updated and displayed</li>
+	<li><code>addChild(s)</code> : adds the specified sprite to the children list</li>
+	<li><code>for( s in sprite ) {...}</code> : iterates over all the current children</li>
 </ul>
 
 <p>
@@ -177,21 +177,21 @@ class Main extends hxd.App {
 </p>
 
 <ul>
-    <li><code>alpha</code> : this will change the amount of transparency your drawable is displayed with. For instance a value of 0.5 will display a Tile with 50% opacity.</li>
-<li><code>color</code> : color is the color multiplier of the drawable. You can access its individual channels with <code>(r,g,b,a)</code> components. It is initialy set to white (all components are set to 1.). Setting for instance the (r,g,b) components to 0.5 will make the tile appear more dark.
-    <li><code>blendMode</code> : the blend mode tells how the drawable gets composited with the background color when its drawn on the screen.
-The background color refers to the screen content at the time the sprite is being drawn. This can be another sprite content if it was drawn before at the same position.
-The following blend mode values are available :</li>
-        <ul>
-            <li><code>Alpha</code> (default) : the drawable blends itself with the background using its alpha value. An opaque pixel will erase the background, a fully transparent one will be ignored.</li>
-            <li><code>None</code> : this disable the blending with the background. Alpha channel is ignored and the color is written as-it. This offers the best display performances for large backgrounds that have nothing showing being them</li>
-            <li><code>Add</code> : the drawable color will be added to the background, useful for creating explosions effects or particles for instance.</li>
-            <li><code>SoftAdd</code> : similar to Add but will prevent over saturation</li>
-            <li><code>Multiply</code> : the sprite color is multiplied by the background color</li>
-            <li><code>Erase</code> : the sprite color is substracted to the background color</li>
-        </ul>
-    <li><code>filter</code> : when a sprite is scaled (upscaled or downscaled), by default Heaps will use the nearest pixel in the Tile to display it. This will create a nice pixelated effect for some games, but might not looks good on your game. You can try to set the <code>filter</code> value to true, which will enable bilinear filtering on the sprite, making it looks less sharp and more smooth/blurry.</li>
-    <li><code>shaders</code> : each Drawable can have <em>shaders</em> added to modify their display. Shaders will be introduced later in this manual.</li>
+	<li><code>alpha</code> : this will change the amount of transparency your drawable is displayed with. For instance a value of 0.5 will display a Tile with 50% opacity.</li>
+	<li><code>color</code> : color is the color multiplier of the drawable. You can access its individual channels with <code>(r,g,b,a)</code> components. It is initialy set to white (all components are set to 1.). Setting for instance the (r,g,b) components to 0.5 will make the tile appear more dark.
+	<li><code>blendMode</code> : the blend mode tells how the drawable gets composited with the background color when its drawn on the screen.
+	The background color refers to the screen content at the time the sprite is being drawn. This can be another sprite content if it was drawn before at the same position.
+	The following blend mode values are available :</li>
+		<ul>
+			<li><code>Alpha</code> (default) : the drawable blends itself with the background using its alpha value. An opaque pixel will erase the background, a fully transparent one will be ignored.</li>
+			<li><code>None</code> : this disable the blending with the background. Alpha channel is ignored and the color is written as-it. This offers the best display performances for large backgrounds that have nothing showing being them</li>
+			<li><code>Add</code> : the drawable color will be added to the background, useful for creating explosions effects or particles for instance.</li>
+			<li><code>SoftAdd</code> : similar to Add but will prevent over saturation</li>
+			<li><code>Multiply</code> : the sprite color is multiplied by the background color</li>
+			<li><code>Erase</code> : the sprite color is substracted to the background color</li>
+		</ul>
+	<li><code>filter</code> : when a sprite is scaled (upscaled or downscaled), by default Heaps will use the nearest pixel in the Tile to display it. This will create a nice pixelated effect for some games, but might not looks good on your game. You can try to set the <code>filter</code> value to true, which will enable bilinear filtering on the sprite, making it looks less sharp and more smooth/blurry.</li>
+	<li><code>shaders</code> : each Drawable can have <em>shaders</em> added to modify their display. Shaders will be introduced later in this manual.</li>
 </ul>
 
 <p>
@@ -222,15 +222,15 @@ The following blend mode values are available :</li>
 </p>
 
 <ul>
-    <li><code>speed</code> : changes the playback speed of the animation, in frames per seconds.</li>
-    <li><code>loop</code> : tells if the animation will loop after it reaches the last frame.</li>
-    <li><code>onAnimEnd</code> : this dynamic method can be set to be informed when we have reached the end of the animation :
-        <pre>
-            anim.onAnimEnd = function() {
-                trace("END!");
-            }
-        </pre>
-    </li>
+	<li><code>speed</code> : changes the playback speed of the animation, in frames per seconds.</li>
+	<li><code>loop</code> : tells if the animation will loop after it reaches the last frame.</li>
+	<li><code>onAnimEnd</code> : this dynamic method can be set to be informed when we have reached the end of the animation :
+		<pre>
+			anim.onAnimEnd = function() {
+				trace("END!");
+			}
+		</pre>
+	</li>
 </ul>
 
 <p>
@@ -242,86 +242,86 @@ The following blend mode values are available :</li>
 <h2>H2D Font</h2>
 
 <p>
-    Before start with text manipulation, we must know the <code>h2d.Font</code> class:
+	Before start with text manipulation, we must know the <code>h2d.Font</code> class:
 </p>
 
 <ol>
-    <li><code>h2d.Font</code> is a manager who links each character with his <code>h2d.Tile</code>: it is used to display each letter of a text;</li>
-    <li>The ressource manager can easily instantiate an <code>h2d.Font</code>;</li>
-    <li>To instancied a <code>h2d.Font</code> we must have:
-        <ul>
-            <li>a bitmap and his font attached file (customFont.fnt) or</li>
-            <li>a True Type font (exept in C++).</li>
-        </ul>
-    </li>
+	<li><code>h2d.Font</code> is a manager who links each character with his <code>h2d.Tile</code>: it is used to display each letter of a text;</li>
+	<li>The ressource manager can easily instantiate an <code>h2d.Font</code>;</li>
+	<li>To instancied a <code>h2d.Font</code> we must have:
+		<ul>
+			<li>a bitmap and his font attached file (customFont.fnt) or</li>
+			<li>a True Type font (exept in C++).</li>
+		</ul>
+	</li>
 </ol>
 
 <p>
-    Do not forget to add to your compilation parameters the location of your resource files <code>-D resourcesPath=yourPath</code>
+	Do not forget to add to your compilation parameters the location of your resource files <code>-D resourcesPath=yourPath</code>
 </p>
 <p>
-    Copy the two font files in your resources directory:
+	Copy the two font files in your resources directory:
 </p>
 <ul>
-    <li>samples/res/customFont.png</li>
-    <li>samples/res/customFont.fnt</li>
+	<li>samples/res/customFont.png</li>
+	<li>samples/res/customFont.fnt</li>
 </ul>
 
 <p>
-    You can use <code>h2d.Font</code> like this:
+	You can use <code>h2d.Font</code> like this:
 </p>
 
 <pre>
-    // compilation parameter: -D resourcesPath=res
-    // location of the files: res/customFont.fnt and res/customFont.png
-    
-    // load a bitmap font Resource:
-    var font = hxd.Res.customFont.toFont();
+	// compilation parameter: -D resourcesPath=res
+	// location of the files: res/customFont.fnt and res/customFont.png
+
+	// load a bitmap font Resource:
+	var font = hxd.Res.customFont.toFont();
 </pre>
 
 <h2>H2D Text</h2>
-    
+
 <p>
-    <code>h2d.Text</code> extends <code>h2d.Drawable</code> to display text with H2D.
+	<code>h2d.Text</code> extends <code>h2d.Drawable</code> to display text with H2D.
 </p>
 <p>
-    <code>h2d.Text</code> is a text field whose you can easily change the textual content with its property <code>text</code>.
+	<code>h2d.Text</code> is a text field whose you can easily change the textual content with its property <code>text</code>.
 </p>
 
 <p>
-    To manipulate easily <code>h2d.Text</code> you can use the following properties:
+	To manipulate easily <code>h2d.Text</code> you can use the following properties:
 </p>
 
 <ul>
-    <li><code>text</code>: change the textual content of the text field.</li>
-    <li><code>textColor</code>: the color in hexadecimal format. This property also modify the <code>color</code> property (see <code>h2d.Drawable</code>).</li>
-    <li><code>maxWidth</code>: width limit of the text field. The text field is multi line: the textual content length exceeding the <code>maxWidth</code> is added with a new line. The wordwrap does not cut the words: if the length of a word exceed the <code>maxWidth</code>, it does not cut the word.</li>
-    <li><code>font</code>: the font used to display the text. See <code>h2d.Font</code> to use it.</li>
-    <li><code>letterSpacing</code>: integer in pixels representing the amount of space that is distributed between all characters. Default value is <code>letterSpacing = 0;</code></li>
-    <li><code>lineSpacing</code>: integer in pixels representing the amount of vertical space between lines. Default value is <code>lineSpacing = 0;</code>, it corresponds to the basic spacing between lines.</li>
-    <li><code>dropShadow</code>: a solid drop shadow of your text. To disable it, use the value <code>dropShadow = null;</code>.
-       To configure <code>dropShadow</code> you can use a Typedef with these properties:
-        <ul>
-            <li><code>dx</code> and <code>dy</code>: define the distance in pixel between the text and his drop shadow. For instance the values : <code>dx = 2.5;</code> and <code>dy = 5.0;</code> moves the shadow from the text to 2.5 pixel to the right and 5 pixel to the bottom.</li> 
-            <li><code>color</code>: the hexadecimal color of the shadow (like <code>color = 0x111133;</code>).</li> 
-            <li><code>alpha</code>: this will change the amount of transparency of your drop shadow. For instance a value of <code>alpha = 0.25;</code> will display a drop shadow with 25% opacity.</li> 
-        </ul>
-    </li>
-    <li><code>textWidth</code> and <code>textHeight</code>: get the size of the text field in pixel. You can't edit it. If you would change the width, use the <code>maxWidth</code> property.</li>
+	<li><code>text</code>: change the textual content of the text field.</li>
+	<li><code>textColor</code>: the color in hexadecimal format. This property also modify the <code>color</code> property (see <code>h2d.Drawable</code>).</li>
+	<li><code>maxWidth</code>: width limit of the text field. The text field is multi line: the textual content length exceeding the <code>maxWidth</code> is added with a new line. The wordwrap does not cut the words: if the length of a word exceed the <code>maxWidth</code>, it does not cut the word.</li>
+	<li><code>font</code>: the font used to display the text. See <code>h2d.Font</code> to use it.</li>
+	<li><code>letterSpacing</code>: integer in pixels representing the amount of space that is distributed between all characters. Default value is <code>letterSpacing = 0;</code></li>
+	<li><code>lineSpacing</code>: integer in pixels representing the amount of vertical space between lines. Default value is <code>lineSpacing = 0;</code>, it corresponds to the basic spacing between lines.</li>
+	<li><code>dropShadow</code>: a solid drop shadow of your text. To disable it, use the value <code>dropShadow = null;</code>.
+		To configure <code>dropShadow</code> you can use a Typedef with these properties:
+		<ul>
+			<li><code>dx</code> and <code>dy</code>: define the distance in pixel between the text and his drop shadow. For instance the values : <code>dx = 2.5;</code> and <code>dy = 5.0;</code> moves the shadow from the text to 2.5 pixel to the right and 5 pixel to the bottom.</li> 
+			<li><code>color</code>: the hexadecimal color of the shadow (like <code>color = 0x111133;</code>).</li> 
+			<li><code>alpha</code>: this will change the amount of transparency of your drop shadow. For instance a value of <code>alpha = 0.25;</code> will display a drop shadow with 25% opacity.</li> 
+		</ul>
+	</li>
+	<li><code>textWidth</code> and <code>textHeight</code>: get the size of the text field in pixel. You can't edit it. If you would change the width, use the <code>maxWidth</code> property.</li>
 </ul>
 
 <p>
-    You should then be ready to display your first text:
+	You should then be ready to display your first text:
 </p>
 
 <pre>
-    // load a bitmap font Resource
-    var font = hxd.Res.customFont.toFont();
-    // adds a red shadow
-    tf.dropShadow = { dx : 3, dy : 3, color : 0xFF0000, alpha : 0.8 };
-    // creates a text field with this font
-    var tf = new h2d.Text(font, s2d);
-    tf.text = "Hello h2d!";
+	// load a bitmap font Resource
+	var font = hxd.Res.customFont.toFont();
+	// adds a red shadow
+	tf.dropShadow = { dx : 3, dy : 3, color : 0xFF0000, alpha : 0.8 };
+	// creates a text field with this font
+	var tf = new h2d.Text(font, s2d);
+	tf.text = "Hello h2d!";
 </pre>
 
 <h1>Optimizing many Bitmaps</h1>
