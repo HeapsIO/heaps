@@ -692,7 +692,7 @@ class BaseLibrary {
 			for( obj in uvAnims.keys() ) {
 				var frames = uvAnims.get(obj);
 				var model = modelByName.get(obj);
-				if( model == null ) throw "Missing model '" + obj + "' requires by UV animation";
+				if( model == null ) throw "Missing model '" + obj + "' required by UV animation";
 				var c = getObjectCurve(curves, model, "UV", animName);
 				if( c == null ) continue;
 				c.uv = frames;
