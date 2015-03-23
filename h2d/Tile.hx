@@ -178,15 +178,8 @@ class Tile {
 	}
 
 	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
-		var w = 1, h = 1;
-		while( w < bmp.width )
-			w <<= 1;
-		while( h < bmp.height )
-			h <<= 1;
-		var tex = new h3d.mat.Texture(w, h, allocPos);
-		var t = new Tile(tex, 0, 0, bmp.width, bmp.height);
-		t.upload(bmp);
-		return t;
+		var tex = h3d.mat.Texture.fromBitmap(bmp, allocPos);
+		return new Tile(tex, 0, 0, bmp.width, bmp.height);
 	}
 
 	public static function autoCut( bmp : hxd.BitmapData, width : Int, ?height : Int, ?allocPos : h3d.impl.AllocPos ) {
