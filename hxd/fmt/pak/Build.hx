@@ -24,7 +24,8 @@ class Build {
 					return null;
 				dir = getTemp(dir,path,"hmd");
 			case "xtra":
-				dir = getTemp(dir,path,"hmd");
+				dir = getTemp(dir, path, "hmd");
+				f.name = f.name.substr(0, -5) + ".FBX";
 			case "wav":
 				dir = getTemp(dir,path,"mp3");
 			default:
