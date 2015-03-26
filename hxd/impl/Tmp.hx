@@ -5,12 +5,15 @@ class Tmp {
 	static var bytes = new Array<haxe.io.Bytes>();
 
 	public static function getBytes( size : Int ) {
+		var found = -1;
 		for( i in 0...bytes.length ) {
 			var b = bytes[i];
-			if( b.length >= size ) {
-				bytes.splice(i, 1);
-				return b;
-			}
+			if( b.length >= size ) found = i;
+		}
+		if( found >= 0 ) {
+			var b = bytes[found];
+			bytes.splice(found, 1);
+			return b;
 		}
 		var sz = 1024;
 		while( sz < size )
