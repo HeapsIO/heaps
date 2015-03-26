@@ -115,13 +115,13 @@ private class EmbedEntry extends FileEntry {
 			throw Std.string(e) + " while loading " + relPath;
 		});
 		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			close();
 			var content : flash.display.Bitmap = cast loader.content;
 			onLoaded(new LoadedBitmap(content.bitmapData));
 			loader.unload();
 		});
 		open();
 		loader.loadBytes(bytes);
+		close(); // flash will copy bytes content in loadBytes() !
 		#elseif js
 		// directly get the base64 encoded data from resources
 		var rawData = null;
