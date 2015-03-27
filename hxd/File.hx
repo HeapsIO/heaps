@@ -145,6 +145,17 @@ class File {
 		#end
 	}
 
+	public static function exists( path : String ) : Bool {
+		#if air3
+		return getRelPath(path).exists;
+		#elseif sys
+		return sys.FileSystem.exists(path);
+		#else
+		throw "Not supported";
+		return false;
+		#end
+	}
+
 	public static function getBytes( path : String ) : haxe.io.Bytes {
 		#if air3
 		var file = getRelPath(path);
