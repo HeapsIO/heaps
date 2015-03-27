@@ -53,6 +53,56 @@ class Build {
 		return f;
 	}
 
+	static function filter( root : File, old : File ) {
+		if( root.isDirectory != old.isDirectory )
+			throw "Conflict : new " + root.name+" is a directory while old " + old.name+" is not";
+		if( root.isDirectory ) {
+			var changed = false;
+			for( f in root.content.copy() ) {
+				var f2 = null;
+				for( ff in old.content )
+					if( ff.name == f.name ) {
+						f2 = ff;
+						break;
+					}
+				if( f2 == null )
+					changed = true;
+				else if( filter(f, f2) )
+					root.content.remove(f);
+				else
+					changed = true;
+			}
+			return !changed;
+		}
+		return root.checksum == old.checksum;
+	}
+
+	public static function rebuild( pak : Data, bytes : haxe.io.Bytes ) {
+		var size = 0;
+		function calcRec(f:File) {
+			if( f.isDirectory ) {
+				for( c in f.content )
+					calcRec(c);
+			} else
+				size += f.dataSize;
+		}
+		calcRec(pak.root);
+		var out = haxe.io.Bytes.alloc(size);
+		var pos = 0;
+		function writeRec(f:File) {
+			if( f.isDirectory ) {
+				for( c in f.content )
+					writeRec(c);
+			} else {
+				out.blit(pos, bytes, f.dataPosition, f.dataSize);
+				f.dataPosition = pos;
+				pos += f.dataSize;
+			}
+		}
+		writeRec(pak.root);
+		return out;
+	}
+
 	public static function make( dir = "res" ) {
 		var pak = new Data();
 		var out = { bytes : [], size : 0 };
@@ -64,14 +114,35 @@ class Build {
 			bytes.blit(pos, b, 0, b.length);
 			pos += b.length;
 		}
-		var f = sys.io.File.write(dir+".pak");
+		var out = "res";
+
+		#if pakDiff
+		var id = 0;
+		while( true ) {
+			var name = out + (id == 0 ? "" : "" + id) + ".pak";
+			if( !sys.FileSystem.exists(name) ) break;
+			var oldPak = new Reader(sys.io.File.read(name)).readHeader();
+			filter(pak.root, oldPak.root);
+			id++;
+		}
+		if( id > 0 ) {
+			out += id;
+			if( pak.root.content.length == 0 ) {
+				Sys.println("No changes in resources");
+				return;
+			}
+			bytes = rebuild(pak, bytes);
+		}
+		#end
+
+		var f = sys.io.File.write(out+".pak");
 		new Writer(f).write(pak,bytes);
 		f.close();
 	}
 
 	static function main() {
 		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.n") catch( e : Dynamic ) {};
-		make();
+		make(haxe.macro.Compiler.getDefine("resourcesPath"));
 	}
 
 }
