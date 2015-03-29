@@ -15,8 +15,8 @@ private class FormatMap {
 }
 
 class GeometryBuffer {
-	public var vertexes : haxe.ds.Vector<Float>;
-	public var indexes : haxe.ds.Vector<Int>;
+	public var vertexes : haxe.ds.Vector<hxd.impl.Float32>;
+	public var indexes : haxe.ds.Vector<hxd.impl.UInt16>;
 	public function new() {
 	}
 }

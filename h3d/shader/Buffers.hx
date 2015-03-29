@@ -8,8 +8,8 @@ package h3d.shader;
 
 class ShaderBuffers {
 
-	public var globals : haxe.ds.Vector<Float>;
-	public var params : haxe.ds.Vector<Float>;
+	public var globals : haxe.ds.Vector<hxd.impl.Float32>;
+	public var params : haxe.ds.Vector<hxd.impl.Float32>;
 	public var tex : haxe.ds.Vector<h3d.mat.Texture>;
 
 	public function new( s : hxsl.RuntimeShader.RuntimeShaderData ) {

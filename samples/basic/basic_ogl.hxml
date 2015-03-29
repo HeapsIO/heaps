@@ -3,6 +3,5 @@
 -lib heaps
 -D resourcesPath=../res
 -dce full
--lib nme
---remap flash:nme
+-lib hxsdl
 --macro include('h3d')

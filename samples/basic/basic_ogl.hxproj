@@ -24,7 +24,7 @@
     <option noInlineOnDebug="False" />
     <option mainClass="Main" />
     <option enabledebug="False" />
-    <option additional="-lib heaps&#xA;-D resourcesPath=../res&#xA;-dce full&#xA;-lib nme&#xA;--remap flash:nme&#xA;--macro include('h3d')" />
+    <option additional="-lib heaps&#xA;-D resourcesPath=../res&#xA;-dce full&#xA;-lib hxsdl&#xA;--macro include('h3d')" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>

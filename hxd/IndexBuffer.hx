@@ -1,6 +1,6 @@
 package hxd;
 
-private typedef InnerData = #if flash flash.Vector<UInt> #else Array<Int> #end
+private typedef InnerData = #if flash flash.Vector<UInt> #else Array<hxd.impl.UInt16> #end
 
 private class InnerIterator {
 	var b : InnerData;

@@ -67,7 +67,7 @@ class Stage {
 	}
 
 	#if flash
-	
+
 	function initGesture(b) {
 		if( hxd.System.isTouch ) {
 			if( b )  {
@@ -98,7 +98,7 @@ class Stage {
 			stage.addEventListener(flash.events.MouseEvent.RIGHT_MOUSE_UP, onRMouseUp);
 		}
 	}
-	
+
 	function setupOnCloseEvent() {
 		var nw : flash.events.EventDispatcher = Reflect.field(stage, "nativeWindow");
 		if( nw == null ) return;
@@ -391,6 +391,33 @@ class Stage {
 			r();
 	}
 
+#elseif hxsdl
+
+	function get_mouseX() {
+		return 0;
+	}
+
+	function get_mouseY() {
+		return 0;
+	}
+
+	function get_width() {
+		return @:privateAccess System.windowWidth;
+	}
+
+	function get_height() {
+		return @:privateAccess System.windowHeight;
+	}
+
+	function get_mouseLock() {
+		return false;
+	}
+
+	function set_mouseLock(b) {
+		if( b ) throw "Not implemented";
+		return b;
+	}
+
 #else
 
 	function get_mouseX() {
@@ -407,6 +434,15 @@ class Stage {
 
 	function get_height() {
 		return 0;
+	}
+
+	function get_mouseLock() {
+		return false;
+	}
+
+	function set_mouseLock(b) {
+		if( b ) throw "Not implemented";
+		return b;
 	}
 
 #end

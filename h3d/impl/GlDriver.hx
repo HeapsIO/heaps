@@ -20,6 +20,12 @@ private typedef GLShader = nme.gl.GLShader;
 private typedef Uint16Array = nme.utils.Int16Array;
 private typedef Uint8Array = nme.utils.UInt8Array;
 private typedef Float32Array = nme.utils.Float32Array;
+#elseif hxsdl
+import sdl.GL;
+private typedef Uniform = sdl.GL.Uniform;
+private typedef Program = sdl.GL.Program;
+private typedef GLShader = sdl.GL.Shader;
+private typedef Texture = h3d.impl.Driver.Texture;
 #end
 
 private class CompiledShader {
@@ -48,13 +54,15 @@ private class CompiledProgram {
 }
 
 @:access(h3d.impl.Shader)
+#if cpp
+@:build(h3d.impl.MacroHelper.replaceGL())
+#end
 class GlDriver extends Driver {
 
 	#if js
 	var canvas : js.html.CanvasElement;
 	public var gl : js.html.webgl.RenderingContext;
 	#elseif cpp
-	static var gl = GL;
 	var fixMult : Bool;
 	#end
 
@@ -76,7 +84,7 @@ class GlDriver extends Driver {
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
-		#elseif cpp
+		#elseif (nme || openfl)
 		// check for a bug in HxCPP handling of sub buffers
 		var tmp = new Float32Array(8);
 		var sub = new Float32Array(tmp.buffer, 0, 4);
@@ -85,7 +93,9 @@ class GlDriver extends Driver {
 		programs = new Map();
 		curAttribs = 0;
 		curMatBits = -1;
+		#if js
 		gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, 1);
+		#end
 	}
 
 	override function logImpl( str : String ) {
@@ -201,21 +211,21 @@ class GlDriver extends Driver {
 		switch( which ) {
 		case Globals:
 			if( s.globals != null ) {
-				#if js
-				var a = new Float32Array(buf.globals.toData()).subarray(0, s.shader.globalsSize * 4);
+				#if hxsdl
+				gl.uniform4fv(s.globals, buf.globals.toData(), 0, s.shader.globalsSize);
 				#else
-				var a = new Float32Array(buf.globals.toData(), 0, s.shader.globalsSize * 4);
-				#end
+				var a = new Float32Array(buf.globals.toData()).subarray(0, s.shader.globalsSize * 4);
 				gl.uniform4fv(s.globals, a);
+				#end
 			}
 		case Params:
 			if( s.params != null ) {
-				#if js
-				var a = new Float32Array(buf.params.toData()).subarray(0, s.shader.paramsSize * 4);
+				#if hxsdl
+				gl.uniform4fv(s.params, buf.params.toData(), 0, s.shader.paramsSize);
 				#else
-				var a = new Float32Array(buf.params.toData(), 0, s.shader.paramsSize * 4);
-				#end
+				var a = new Float32Array(buf.params.toData()).subarray(0, s.shader.paramsSize * 4);
 				gl.uniform4fv(s.params, a);
+				#end
 			}
 		case Textures:
 			for( i in 0...s.textures.length ) {
@@ -282,7 +292,7 @@ class GlDriver extends Driver {
 			var cop = Pass.getBlendOp(bits);
 			var aop = Pass.getBlendAlphaOp(bits);
 			if( cop == aop ) {
-				#if cpp
+				#if (nme || openfl)
 				if( OP[cop] != GL.FUNC_ADD )
 					throw "blendEquation() disable atm (crash)";
 				#else
@@ -387,6 +397,8 @@ class GlDriver extends Driver {
 		if( m.size * m.stride == 0 ) throw "assert";
 		#if js
 		gl.bufferData(GL.ARRAY_BUFFER, m.size * m.stride * 4, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
+		#elseif hxsdl
+		gl.bufferDataSize(GL.ARRAY_BUFFER, m.size * m.stride * 4, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#else
 		var tmp = new Uint8Array(m.size * m.stride * 4);
 		gl.bufferData(GL.ARRAY_BUFFER, tmp, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
@@ -400,6 +412,8 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
 		#if js
 		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, count * 2, GL.STATIC_DRAW);
+		#elseif hxsdl
+		gl.bufferDataSize(GL.ELEMENT_ARRAY_BUFFER, count * 2, GL.STATIC_DRAW);
 		#else
 		var tmp = new Uint16Array(count);
 		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, tmp, GL.STATIC_DRAW);
@@ -430,7 +444,11 @@ class GlDriver extends Driver {
 		#else
 		var img = bmp.toNative();
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
+		#if hxsdl
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, bmp.width, bmp.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, img.pixels.toData());
+		#else
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, img.getImageData(0, 0, bmp.width, bmp.height));
+		#end
 		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
 		#end
@@ -439,43 +457,63 @@ class GlDriver extends Driver {
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 		pixels.convert(RGBA);
+		#if hxsdl
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels.bytes.getData());
+		#else
 		var pixels = new Uint8Array(pixels.bytes.getData());
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels);
+		#end
 		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
 	}
 
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
 		var stride : Int = v.stride;
+		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
+		#if hxsdl
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, buf.getNative(), bufPos, vertexCount * stride * 4);
+		#else
 		var buf = new Float32Array(buf.getNative());
 		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride #if cpp * (fixMult?4:1) #end);
-		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
+		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
 
 	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		var stride : Int = v.stride;
+		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
+		#if hxsdl
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, buf.getData(), bufPos, vertexCount * stride * 4);
+		#else
 		var buf = new Uint8Array(buf.getData());
 		var sub = new Uint8Array(buf.buffer, bufPos, vertexCount * stride * 4);
-		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
+		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
 
 	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
+		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
+		#if hxsdl
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, buf.getNative(), bufPos, indiceCount * 2);
+		#else
 		var buf = new Uint16Array(buf.getNative());
 		var sub = new Uint16Array(buf.buffer, bufPos, indiceCount #if cpp * (fixMult?2:1) #end);
-		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
+		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 
 	override function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
+		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
+		#if hxsdl
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, buf.getData(), bufPos, indiceCount * 2);
+		#else
 		var buf = new Uint8Array(buf.getData());
 		var sub = new Uint8Array(buf.buffer, bufPos, indiceCount * 2);
-		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
+		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 
@@ -589,10 +627,15 @@ class GlDriver extends Driver {
 
 	override function hasFeature( f : Feature ) : Bool {
 		return switch( f ) {
+		#if hxsdl
+		case StandardDerivatives, FloatTextures:
+			true; // runtime extension detect required ?
+		#else
 		case StandardDerivatives:
 			gl.getExtension('OES_standard_derivatives') != null;
 		case FloatTextures:
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null;
+		#end
 		case PerTargetDepthBuffer:
 			true;
 		case TargetUseDefaultDepthBuffer:

@@ -6,7 +6,15 @@ typedef BitmapInnerData =
 #elseif js
 	js.html.CanvasRenderingContext2D;
 #else
-	Int;
+	BitmapInnerDataImpl;
+
+class BitmapInnerDataImpl {
+	public var pixels : haxe.ds.Vector<Int>;
+	public var width : Int;
+	public var height : Int;
+	public function new() {
+	}
+}
 #end
 
 class BitmapData {
@@ -23,6 +31,8 @@ class BitmapData {
 	var ctx : js.html.CanvasRenderingContext2D;
 	var lockImage : js.html.ImageData;
 	var pixel : js.html.ImageData;
+#else
+	var data : BitmapInnerData;
 #end
 
 	public var width(get, never) : Int;
@@ -40,7 +50,10 @@ class BitmapData {
 			canvas.height = height;
 			ctx = canvas.getContext2d();
 			#else
-			notImplemented();
+			data = new BitmapInnerData();
+			data.pixels = new haxe.ds.Vector(width * height);
+			data.width = width;
+			data.height = height;
 			#end
 		}
 	}
@@ -374,8 +387,7 @@ class BitmapData {
 		#elseif js
 		return ctx;
 		#else
-		notImplemented();
-		return 0;
+		return data;
 		#end
 	}
 

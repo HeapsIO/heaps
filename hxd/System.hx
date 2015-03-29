@@ -21,6 +21,8 @@ class System {
 
 	public static var screenDPI(get,never) : Float;
 
+	public static var setCursor = setNativeCursor;
+
 	#if (flash || nme || openfl)
 
 	static function get_isWindowed() {
@@ -152,8 +154,6 @@ class System {
 			flash.system.System.exit(0);
 	}
 
-	public static var setCursor = setNativeCursor;
-
 	public static function setNativeCursor( c : Cursor ) {
 		#if cpp
 		// TODO
@@ -254,8 +254,6 @@ class System {
 		callb();
 	}
 
-	public static var setCursor = setNativeCursor;
-
 	public static function setNativeCursor( c : Cursor ) {
 		var canvas = js.Browser.document.getElementById("webgl");
 		if( canvas != null ) {
@@ -301,6 +299,68 @@ class System {
 	static function get_height() {
 		return Math.round(js.Browser.document.body.clientHeight  * js.Browser.window.devicePixelRatio);
 	}
+
+	#elseif hxsdl
+
+	public static function setNativeCursor( c : Cursor ) {
+		trace("TODO " + c);
+	}
+
+	static function get_screenDPI() {
+		return 72; // not implemented in SDL ???
+	}
+
+	static function get_isIOS() {
+		return false;
+	}
+
+	static function get_isAndroid() {
+		return false;
+	}
+
+	static function get_isWindowed() {
+		return true;
+	}
+
+	static function get_isTouch() {
+		return false;
+	}
+
+	static function get_lang() {
+		return "en";
+	}
+
+	static function get_width() {
+		return sdl.Sdl.getScreenWidth();
+	}
+
+	static function get_height() {
+		return sdl.Sdl.getScreenHeight();
+	}
+
+	static var win : sdl.Window;
+	static var windowWidth = 800;
+	static var windowHeight = 600;
+	static var currentLoop = null;
+
+	public static function setLoop( f : Void -> Void ) {
+		currentLoop = f;
+	}
+
+	static function mainLoop() {
+		if( currentLoop != null ) currentLoop();
+		win.present();
+	}
+
+	public static function start( init : Void -> Void ) {
+		sdl.Sdl.init();
+		win = new sdl.Window("", windowWidth, windowHeight);
+		win.vsync = false;
+		init();
+		sdl.Sdl.loop(mainLoop);
+		sdl.Sdl.quit();
+	}
+
 
 	#end
 
