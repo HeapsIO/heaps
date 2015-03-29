@@ -5,7 +5,7 @@ class Image extends Resource {
 	/**
 		Specify if we will automatically convert non-power-of-two textures to power-of-two.
 	**/
-	public static var ALLOW_NPOT = #if flash11_8 true #else false #end;
+	public static var ALLOW_NPOT = #if (flash && !flash11_8) false #else true #end;
 	public static var DEFAULT_FILTER : h3d.mat.Data.Filter = Linear;
 
 	var tex : h3d.mat.Texture;
