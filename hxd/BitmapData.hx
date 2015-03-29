@@ -345,7 +345,7 @@ class BitmapData {
 				pixels.push(data[i]);
 			#else
 			// starting from Haxe 3.2, bytes are based on native array
-			var pixels = data;
+			var pixels = data.buffer;
 			#end
 		return new Pixels(w, h, haxe.io.Bytes.ofData(pixels), RGBA);
 		#else
