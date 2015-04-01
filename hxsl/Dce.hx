@@ -13,7 +13,7 @@ private class VarDeps {
 	public var deps : Map<Int,VarDeps>;
 	public function new(v) {
 		this.v = v;
-		used = true;
+		used = false;
 		deps = new Map();
 	}
 }
@@ -31,43 +31,43 @@ class Dce {
 
 		var inputs = [];
 		for( v in vertex.vars ) {
-			get(v);
+			var i = get(v);
 			if( v.kind == Input )
-				inputs.unshift(v);
+				inputs.push(i);
+			if( v.kind == Output )
+				i.keep = true;
 		}
-		for( v in fragment.vars )
-			get(v);
+		for( v in fragment.vars ) {
+			var i = get(v);
+			if( v.kind == Output )
+				i.keep = true;
+		}
 		for( f in vertex.funs )
 			check(f.expr, []);
 		for( f in fragment.funs )
 			check(f.expr, []);
 
-		// mark vars as unused
-		var changed = true;
-		while( changed ) {
-			changed = false;
-			for( v in used ) {
-				if( !v.used || v.v.kind == Output || (v.v.kind == Input && v.v != inputs[0]) || v.keep ) continue;
-				var used = false;
-				for( d in v.deps )
-					if( d != v && d.used ) {
-						used = true;
-						break;
-					}
-				if( !used ) {
-					v.used = false;
-					changed = true;
-					vertex.vars.remove(v.v);
-					fragment.vars.remove(v.v);
-					// allow to remove the last declared unused input only
-					if( v.v == inputs[0] ) inputs.shift();
-				}
-			}
+		for( v in used )
+			if( v.keep )
+				markRec(v);
+
+		while( inputs.length > 1 && !inputs[inputs.length - 1].used )
+			inputs.pop();
+		for( v in inputs )
+			markRec(v);
+
+		for( v in used ) {
+			if( v.used ) continue;
+			vertex.vars.remove(v.v);
+			fragment.vars.remove(v.v);
 		}
+
 		for( f in vertex.funs )
 			f.expr = mapExpr(f.expr);
 		for( f in fragment.funs )
 			f.expr = mapExpr(f.expr);
+
+
 		return {
 			fragment : fragment,
 			vertex : vertex,
@@ -83,14 +83,22 @@ class Dce {
 		return vd;
 	}
 
+	function markRec( v : VarDeps ) {
+		if( v.used ) return;
+		v.used = true;
+		for( d in v.deps )
+			markRec(d);
+	}
+
 	function link( v : TVar, writeTo : Array<VarDeps> ) {
 		var vd = get(v);
 		for( w in writeTo ) {
 			if( w == null ) {
+				// mark for discard()
 				vd.keep = true;
 				continue;
 			}
-			vd.deps.set(w.v.id, w);
+			w.deps.set(v.id, vd);
 		}
 	}
 
