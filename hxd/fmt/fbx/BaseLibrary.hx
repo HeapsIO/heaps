@@ -148,7 +148,7 @@ class BaseLibrary {
 		var xml = Xml.parse(data).firstElement();
 		if( uvAnims == null ) uvAnims = new Map();
 		for( e in new haxe.xml.Fast(xml).elements ) {
-			var obj = e.att.name;
+			var obj = StringTools.urlDecode(e.att.name);
 			var frames = [for( f in e.elements ) { var f = f.innerData.split(" ");  { t : Std.parseFloat(f[0]) * 9622116.25, u : Std.parseFloat(f[1]), v : Std.parseFloat(f[2]) }} ];
 			uvAnims.set(obj, frames);
 		}
