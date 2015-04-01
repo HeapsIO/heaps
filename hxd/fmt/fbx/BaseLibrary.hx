@@ -419,8 +419,8 @@ class BaseLibrary {
 		var name = model.getName();
 		if( skipObjects.get(name) )
 			return null;
-		// if it's an empty model with no sub nodes, let's ignore it (ex : Camera)
-		if( model.getType() == "Null" && getChilds(model, "Model").length == 0 )
+		// if it's an empty model with no sub nodes, let's ignore it (except Camera Target)
+		if( model.getType() == "Null" && getChilds(model, "Model").length == 0 && name.split(".").pop() != "Target" )
 			return null;
 		var def = getDefaultMatrixes(model);
 		if( def == null )
