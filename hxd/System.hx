@@ -1,5 +1,9 @@
 package hxd;
 
+#if hxsdl
+import hxd.Key in K;
+#end
+
 enum Cursor {
 	Default;
 	Button;
@@ -341,7 +345,10 @@ class System {
 	static var win : sdl.Window;
 	static var windowWidth = 800;
 	static var windowHeight = 600;
+	static var mouseX = 0;
+	static var mouseY = 0;
 	static var currentLoop = null;
+	static var CODEMAP = [for( i in 0...2048 ) i];
 
 	public static function setLoop( f : Void -> Void ) {
 		currentLoop = f;
@@ -352,12 +359,102 @@ class System {
 		win.present();
 	}
 
+	static function onEvent( e : sdl.Event ) {
+		var eh = null;
+		switch( e.type ) {
+		case WindowState:
+			switch( e.state ) {
+			case Resize:
+				windowWidth = win.width;
+				windowHeight = win.height;
+				@:privateAccess Stage.getInstance().onResize(null);
+			default:
+			}
+		case MouseDown:
+			mouseX = e.mouseX;
+			mouseY = e.mouseY;
+			eh = new Event(EPush, e.mouseX, e.mouseY);
+		case MouseUp:
+			mouseX = e.mouseX;
+			mouseY = e.mouseY;
+			eh = new Event(ERelease, e.mouseX, e.mouseY);
+		case MouseMove:
+			mouseX = e.mouseX;
+			mouseY = e.mouseY;
+			eh = new Event(EMove, e.mouseX, e.mouseY);
+		case KeyDown:
+			eh = new Event(EKeyDown);
+			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
+			eh.keyCode = CODEMAP[e.keyCode];
+			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
+				e.keyCode = eh.keyCode & 0xFF;
+				onEvent(e);
+			}
+		case KeyUp:
+			eh = new Event(EKeyUp);
+			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
+			eh.keyCode = CODEMAP[e.keyCode];
+			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
+				e.keyCode = eh.keyCode & 0xFF;
+				onEvent(e);
+			}
+		case MouseWheel:
+			eh = new Event(EWheel, mouseX, mouseY);
+			eh.wheelDelta = -e.wheelDelta;
+		default:
+		}
+		if( eh != null ) Stage.getInstance().event(eh);
+	}
+
 	public static function start( init : Void -> Void ) {
+		inline function addKey(sdl, keyCode) {
+			CODEMAP[sdl] = keyCode;
+		}
+		var keys = [
+			//K.BACKSPACE
+			//K.TAB
+			//K.ENTER
+			1225 => K.LSHIFT,
+			1229 => K.RSHIFT,
+			1224 => K.LCTRL,
+			1228 => K.RCTRL,
+			1226 => K.LALT,
+			1230 => K.RALT,
+			// K.ESCAPE
+			// K.SPACE
+			1075 => K.PGUP,
+			1078 => K.PGDOWN,
+			1077 => K.END,
+			1074 => K.HOME,
+			1080 => K.LEFT,
+			1082 => K.UP,
+			1079 => K.RIGHT,
+			1081 => K.DOWN,
+			1073 => K.INSERT,
+			127 => K.DELETE,
+			//K.NUMBER_0-9
+			1098 => K.NUMPAD_0,
+			//K.A-Z
+			//K.F1-F12
+			1085 => K.NUMPAD_MULT,
+			1087 => K.NUMPAD_ADD,
+			1088 => K.NUMPAD_ENTER,
+			1086 => K.NUMPAD_SUB,
+			1099 => K.NUMPAD_DIV,
+			1084 => K.NUMPAD_DIV,
+		];
+		for( i in 0...9 )
+			addKey(1089 + i, K.NUMPAD_1 + i);
+		for( i in 0...26 )
+			addKey(97 + i, K.A + i);
+		for( i in 0...12 )
+			addKey(1058 + i, K.F1 + i);
+		for( sdl in keys.keys() )
+			addKey(sdl, keys.get(sdl));
 		sdl.Sdl.init();
 		win = new sdl.Window("", windowWidth, windowHeight);
-		win.vsync = false;
 		init();
-		sdl.Sdl.loop(mainLoop);
+		sdl.Sdl.loop(mainLoop,onEvent);
 		sdl.Sdl.quit();
 	}
 

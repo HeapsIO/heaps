@@ -142,6 +142,11 @@ class Stage {
 		#end
 	}
 
+	function onResize(e:Dynamic) {
+		for( r in resizeEvents )
+			r();
+	}
+
 	public function setFullScreen( v : Bool ) {
 		#if flash
 		var isAir = flash.system.Capabilities.playerType == "Desktop";
@@ -156,7 +161,9 @@ class Stage {
 			}
 			stage.displayState = state;
 		}
-		#else
+		#elseif hxsdl
+		var win = @:privateAccess System.win;
+		win.fullScreen = v;
 		#end
 	}
 
@@ -198,11 +205,6 @@ class Stage {
 		#else
 		return stage.mouseLock = v;
 		#end
-	}
-
-	function onResize(_) {
-		for( e in resizeEvents )
-			e();
 	}
 
 	function onMouseDown(e:Dynamic) {
@@ -386,19 +388,14 @@ class Stage {
 		event(ev);
 	}
 
-	function onResize(e) {
-		for( r in resizeEvents )
-			r();
-	}
-
 #elseif hxsdl
 
 	function get_mouseX() {
-		return 0;
+		return @:privateAccess System.mouseX;
 	}
 
 	function get_mouseY() {
-		return 0;
+		return @:privateAccess System.mouseY;
 	}
 
 	function get_width() {

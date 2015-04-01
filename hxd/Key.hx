@@ -67,6 +67,18 @@ class Key {
 	public static inline var MOUSE_LEFT = 0;
 	public static inline var MOUSE_RIGHT = 1;
 
+	/** a bit that is set for left keys **/
+	public static inline var LOC_LEFT = 256;
+	/** a bit that is set for right keys **/
+	public static inline var LOC_RIGHT = 512;
+
+	public static inline var LSHIFT = SHIFT | LOC_LEFT;
+	public static inline var RSHIFT = SHIFT | LOC_RIGHT;
+	public static inline var LCTRL = CTRL | LOC_LEFT;
+	public static inline var RCTRL = CTRL | LOC_RIGHT;
+	public static inline var LALT = ALT | LOC_LEFT;
+	public static inline var RALT = ALT | LOC_RIGHT;
+
 	static var initDone = false;
 	static var keyPressed : Array<Int> = [];
 
