@@ -122,6 +122,7 @@ class NanoJpeg {
 		qtused = 0;
 		qtavail = 0;
 		rstinterval = 0;
+		length = 0;
 		buf = 0;
 		bufbits = 0;
 		for( i in 0...3 )
