@@ -29,8 +29,8 @@ class Main extends hxd.App {
 			p.material.shadows = true;
 			p.material.color.setColor(Std.random(0x1000000));
 		}
-		s3d.camera.zNear = 2;
-		s3d.camera.zFar = 15;
+		s3d.camera.zNear = 6;
+		s3d.camera.zFar = 30;
 		s3d.lightSystem.ambientLight.set(0.5, 0.5, 0.5);
 
 		dir = new h3d.scene.DirLight(new h3d.Vector(-0.3, -0.2, -1), s3d);
@@ -41,7 +41,7 @@ class Main extends hxd.App {
 	}
 
 	override function update( dt : Float ) {
-		s3d.camera.pos.set(6, 6, 3);
+		s3d.camera.pos.set(12, 12, 6);
 		time += dt * 0.01;
 		dir.direction.set(Math.cos(time), Math.sin(time) * 2, -1);
 	}

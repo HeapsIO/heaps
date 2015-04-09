@@ -7,7 +7,7 @@ class Main extends hxd.App {
 		var obj = prim.makeObject(loadTexture);
 		obj.scale(0.1);
 		s3d.addChild(obj);
-		s3d.camera.pos.set( -2, -3, 2);
+		s3d.camera.pos.set( -3, -5, 3);
 		s3d.camera.target.z += 1;
 
 		obj.playAnimation(prim.loadAnimation());
@@ -35,7 +35,7 @@ class Main extends hxd.App {
 	}
 
 	static function main() {
-		hxd.Res.initEmbed({ createHMD : true });
+		hxd.Res.initEmbed();
 		new Main();
 	}
 

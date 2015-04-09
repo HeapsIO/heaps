@@ -14,5 +14,4 @@
 -dce full
 -main Main
 -lib heaps
--lib nme
---remap flash:nme
+-lib hxsdl
