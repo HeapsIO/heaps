@@ -37,9 +37,7 @@ class GlslOut {
 	public function new() {
 		varNames = new Map();
 		allNames = new Map();
-		#if js
 		flipY = true;
-		#end
 	}
 
 	inline function add( v : Dynamic ) {

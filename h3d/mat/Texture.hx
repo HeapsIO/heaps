@@ -6,6 +6,20 @@ class Texture {
 
 	static var UID = 0;
 
+	/**
+		The preferred native format that the Driver will process faster.
+	**/
+	public static var nativeFormat(default,never) : hxd.PixelFormat =
+		#if flash
+			BGRA;
+		#else
+			RGBA; // OpenGL
+		#end
+	/**
+		Tells if the Driver requires y-flipping the texture pixels before uploading.
+	**/
+	public static inline var nativeFlip = #if hxsdl true #else false #end;
+
 	var t : h3d.impl.Driver.Texture;
 	var mem : h3d.impl.MemoryManager;
 	#if debug

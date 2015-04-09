@@ -355,6 +355,7 @@ class BitmapData {
 	}
 
 	public function setPixels( pixels : Pixels ) {
+		pixels.setFlip(false);
 		#if flash
 		var bytes = pixels.bytes.getData();
 		bytes.position = 0;

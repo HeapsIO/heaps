@@ -65,19 +65,27 @@ class Image extends Resource {
 		return inf;
 	}
 
-	public function getPixels() {
+	public function getPixels( ?fmt : PixelFormat, ?flipY : Bool ) {
 		getSize();
+		var pixels : hxd.Pixels;
 		if( inf.isPNG ) {
 			var png = new format.png.Reader(new haxe.io.BytesInput(entry.getBytes()));
 			png.checkCRC = false;
-			var pixels = Pixels.alloc(inf.width, inf.height, BGRA);
+			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
+			#if( format >= "3.1.3" )
+			format.png.Tools.extract32(png.read(), pixels.bytes, flipY);
+			if( flipY ) pixels.flags.set(FlipY);
+			#else
 			format.png.Tools.extract32(png.read(), pixels.bytes);
-			return pixels;
+			#end
 		} else {
 			var bytes = entry.getBytes();
 			var p = NanoJpeg.decode(bytes);
-			return new Pixels(p.width,p.height,p.pixels, BGRA);
+			pixels = new Pixels(p.width,p.height,p.pixels, BGRA);
 		}
+		if( fmt != null ) pixels.convert(fmt);
+		if( flipY != null ) pixels.setFlip(flipY);
+		return pixels;
 	}
 
 	public function toBitmap() : hxd.BitmapData {
@@ -104,7 +112,7 @@ class Image extends Resource {
 			function load() {
 				// immediately loading the PNG is faster than going through loadBitmap
 				tex.alloc();
-				var pixels = getPixels();
+				var pixels = getPixels(h3d.mat.Texture.nativeFormat, h3d.mat.Texture.nativeFlip);
 				if( pixels.width != tex.width || pixels.height != tex.height )
 					pixels.makeSquare();
 				tex.uploadPixels(pixels);

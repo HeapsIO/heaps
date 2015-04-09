@@ -3,6 +3,7 @@ package hxd;
 enum Flags {
 	ReadOnly;
 	AlphaPremultiplied;
+	FlipY;
 }
 
 class Pixels {
@@ -53,6 +54,24 @@ class Pixels {
 		bytes.blit(0, old, offset, width * height * 4);
 		offset = 0;
 		flags.unset(ReadOnly);
+	}
+
+	public function setFlip( b : Bool ) {
+		#if js if( b == null ) b = false; #end
+		if( flags.has(FlipY) == b ) return;
+		if( flags.has(ReadOnly) ) copyInner();
+		if( b ) flags.set(FlipY) else flags.unset(FlipY);
+		var stride = width * bytesPerPixel(format);
+		for( y in 0...height >> 1 ) {
+			var p1 = y * stride;
+			var p2 = (height - 1 - y) * stride;
+			for( x in 0...stride ) {
+				var a = bytes.get(p1);
+				var b = bytes.get(p2);
+				bytes.set(p1++, b);
+				bytes.set(p2++, a);
+			}
+		}
 	}
 
 	@:noDebug
@@ -109,6 +128,7 @@ class Pixels {
 	}
 
 	public function getPixel(x, y) : Int {
+		if( flags.has(FlipY) ) y = height - 1 - y;
 		var p = ((x + y * width) << 2) + offset;
 		switch(format) {
 		case BGRA:
@@ -121,6 +141,7 @@ class Pixels {
 	}
 
 	public function setPixel(x, y, color) : Void {
+		if( flags.has(FlipY) ) y = height - 1 - y;
 		var p = ((x + y * width) << 2) + offset;
 		var a = color >>> 24;
 		var r = (color >> 16) & 0xFF;

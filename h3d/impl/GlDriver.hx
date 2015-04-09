@@ -445,7 +445,10 @@ class GlDriver extends Driver {
 		var img = bmp.toNative();
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 		#if hxsdl
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, bmp.width, bmp.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, img.pixels.toData());
+		var pixels = bmp.getPixels();
+		pixels.setFlip(true);
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, bmp.width, bmp.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels.bytes.getData());
+		pixels.dispose();
 		#else
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, img.getImageData(0, 0, bmp.width, bmp.height));
 		#end
@@ -458,6 +461,7 @@ class GlDriver extends Driver {
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 		pixels.convert(RGBA);
 		#if hxsdl
+		pixels.setFlip(true);
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels.bytes.getData());
 		#else
 		var pixels = new Uint8Array(pixels.bytes.getData());
