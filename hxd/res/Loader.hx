@@ -27,15 +27,6 @@ class Loader {
 		return m;
 	}
 
-	function loadAwdModel( path : String ) : AwdModel {
-		var m : AwdModel = cache.get(path);
-		if( m == null ) {
-			m = new AwdModel(fs.get(path));
-			cache.set(path, m);
-		}
-		return m;
-	}
-
 	function loadImage( path : String ) : Image {
 		var i : Image = cache.get(path);
 		if( i == null ) {

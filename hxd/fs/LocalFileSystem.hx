@@ -23,8 +23,6 @@ private class LocalEntry extends FileEntry {
 		this.file = file;
 		if( fs.createHMD && (extension == "fbx" || extension == "xtra") )
 			convertToHMD();
-		else if( fs.createXBX && extension == "fbx" )
-			convertToXBX();
 		if( fs.createMP3 && extension == "wav" )
 			convertToMP3();
 	}
@@ -67,35 +65,6 @@ private class LocalEntry extends FileEntry {
 		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() ) {
 			var hmd = getHMD();
 			sys.io.File.saveBytes(target, hmd);
-		}
-		#end
-	}
-
-	function convertToXBX() {
-		function getXBX() {
-			var fbx = null;
-			try fbx = hxd.fmt.fbx.Parser.parse(getBytes().toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
-			fbx = fs.xbxFilter(this, fbx);
-			var out = new haxe.io.BytesOutput();
-			new hxd.fmt.fbx.XBXWriter(out).write(fbx);
-			return out.getBytes();
-		}
-		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".xbx";
-		#if air3
-		var target = new flash.filesystem.File(target);
-		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
-			var fbx = getXBX();
-			var out = new flash.filesystem.FileStream();
-			out.open(target, flash.filesystem.FileMode.WRITE);
-			out.writeBytes(fbx.getData());
-			out.close();
-		}
-		file = target;
-		#else
-		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
-		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() ) {
-			var fbx = getXBX();
-			sys.io.File.saveBytes(target, fbx);
 		}
 		#end
 	}
@@ -357,8 +326,7 @@ class LocalFileSystem implements FileSystem {
 	var fileCache = new Map<String,{r:flash.filesystem.File}>();
 	#end
 	public var baseDir(default,null) : String;
-	public var createXBX : Bool;
-	public var createHMD : Bool;
+	var createHMD : Bool = true;
 	public var createMP3 : Bool;
 	public var tmpDir : String;
 
@@ -381,10 +349,6 @@ class LocalFileSystem implements FileSystem {
 		root = new LocalEntry(this, "root", null, baseDir);
 		#end
 		tmpDir = baseDir + ".tmp/";
-	}
-
-	public dynamic function xbxFilter( entry : FileEntry, fbx : hxd.fmt.fbx.Data.FbxNode ) : hxd.fmt.fbx.Data.FbxNode {
-		return fbx;
 	}
 
 	public function getRoot() : FileEntry {

@@ -118,7 +118,7 @@ class FileTree {
 				fullPath = tmp;
 			}
 			Context.registerModuleDependency(currentModule, fullPath);
-		case "fbx" if( options.createHMD ):
+		case "fbx":
 			var tmp = options.tmpDir + name + ".hmd";
 			if( getTime(tmp) < getTime(fullPath) ) {
 				Sys.println("Converting " + relPath);
@@ -127,19 +127,6 @@ class FileTree {
 				var h3d = fbx.toHMD(fullPath.substr(0,fullPath.length-file.length), !StringTools.startsWith(file,"Anim_") );
 				var out = sys.io.File.write(tmp);
 				new hxd.fmt.hmd.Writer(out).write(h3d);
-				out.close();
-			}
-			Context.registerModuleDependency(currentModule, fullPath);
-			fullPath = tmp;
-		case "fbx" if( options.createXBX ):
-			var tmp = options.tmpDir + name + ".xbx";
-			if( getTime(tmp) < getTime(fullPath) ) {
-				Sys.println("Converting " + relPath);
-				var fbx = hxd.fmt.fbx.Parser.parse(sys.io.File.getContent(fullPath));
-				if( options.xbxFilter != null )
-					fbx = options.xbxFilter(relPath,fbx);
-				var out = sys.io.File.write(tmp);
-				new hxd.fmt.fbx.XBXWriter(out).write(fbx);
 				out.close();
 			}
 			Context.registerModuleDependency(currentModule, fullPath);
@@ -349,10 +336,8 @@ class FileTree {
 		switch( ext.toLowerCase() ) {
 		case "jpg", "png":
 			return { e : macro loader.loadImage($epath), t : macro : hxd.res.Image };
-		case "fbx", "xbx", "xtra":
+		case "fbx", "xtra":
 			return { e : macro loader.loadFbxModel($epath), t : macro : hxd.res.FbxModel };
-		case "awd":
-			return { e : macro loader.loadAwdModel($epath), t : macro : hxd.res.AwdModel };
 		case "ttf":
 			return { e : macro loader.loadFont($epath), t : macro : hxd.res.Font };
 		case "fnt":

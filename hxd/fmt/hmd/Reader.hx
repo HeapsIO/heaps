@@ -109,9 +109,7 @@ class Reader {
 		if( h != "HMD" ) {
 			if( h.charCodeAt(0) == ";".code )
 				throw "FBX was not converted to HMD";
-			if( h.charCodeAt(0) == 'X'.code )
-				throw "XBX was not converted to HMD";
-			throw "Invalid XBX header " + StringTools.urlEncode(h);
+			throw "Invalid HMD header " + StringTools.urlEncode(h);
 		}
 		version = i.readByte();
 		if( version > Data.CURRENT_VERSION ) throw "Can't read HMD v" + version;

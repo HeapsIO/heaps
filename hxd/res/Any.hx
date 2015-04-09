@@ -27,16 +27,8 @@ class Any extends Resource {
 		this.loader = loader;
 	}
 
-	public function toFbx() {
-		return loader.loadFbxModel(entry.path).toFbx(loader);
-	}
-
 	public function toHmd() {
 		return loader.loadFbxModel(entry.path).toHmd();
-	}
-
-	public function toAwd() {
-		return loader.loadAwdModel(entry.path);
 	}
 
 	public function toTexture() {
