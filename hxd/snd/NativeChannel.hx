@@ -7,12 +7,9 @@ private class ChannelMapper extends sdl.SoundChannel {
 		super(samples);
 		this.native = native;
 	}
-	override function onSample( buf : cpp.Pointer<cpp.UInt8>, len : Int ) {
-		var data : haxe.io.BytesData = null;
-		untyped __cpp__('
-			Array_obj<unsigned char> *o = new Array_obj<unsigned char>((char * ) buf.ptr, len);
-			data = Array<unsigned char>(o);
-		');
+	override function onSample( buf : cpp.Pointer<cpp.Float32>, len : Int ) {
+		var data : haxe.io.BytesData = [];
+		cpp.NativeArray.setUnmanagedData(data, buf.reinterpret(), len<<2);
 		@:privateAccess native.onSample(haxe.io.Float32Array.fromBytes(haxe.io.Bytes.ofData(data)));
 	}
 }
