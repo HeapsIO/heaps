@@ -36,10 +36,10 @@ class Viewer extends hxd.App {
 
 	var curFbx : hxd.fmt.fbx.Library;
 	var curHmd : hxd.fmt.hmd.Library;
+	static public var loadAnim = true;
 	static public var curData : haxe.io.Bytes;
 	static public var curDataSize : Int;
 	static public var props : Props;
-	static public var animMode : Null<h3d.anim.Mode> = LinearAnim;
 
 	var rightHand : Bool;
 	var playAnim : Bool;
@@ -272,9 +272,7 @@ class Viewer extends hxd.App {
 			else
 				props.speed = props.speed == 1 ? 0.1 : 1;
 		case "A".code:
-			var cst = h3d.anim.Mode.createAll();
-			cst.push(null);
-			animMode = cst[(Lambda.indexOf(cst, animMode) + 1) % cst.length];
+			loadAnim = !loadAnim;
 			reload = true;
 		case "L".code:
 			props.loop = !props.loop;
@@ -557,12 +555,12 @@ class Viewer extends hxd.App {
 
 	function setAnim() {
 		var anim;
-		if( animMode == null )
+		if( !loadAnim )
 			anim = null;
 		else if( curHmd != null )
 			anim = (ahmd == null ? curHmd : ahmd).loadAnimation();
 		else
-			anim = curFbx.loadAnimation(animMode, null, null, alib);
+			anim = curFbx.loadAnimation(null, null, alib);
 		if( anim == null )
 			return;
 		var prev = s3d.currentAnimation;
@@ -668,7 +666,7 @@ class Viewer extends hxd.App {
 		tf_keys.text = [
 			"[F1] Load model",
 			"[F2] Load animation",
-			"[A] Animation = " + animMode,
+			"[A] Animation = " + loadAnim,
 			"[L] Loop = "+props.loop,
 			"[Y] Axis = "+props.showAxis,
 			"[K] Bones = "+props.showBones,

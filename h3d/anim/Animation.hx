@@ -171,6 +171,13 @@ class Animation {
 	#end
 
 	/**
+		Returns the current value of animation property for the given object, or null if not found.
+	**/
+	public function getPropValue( objectName : String, propName : String ) : Null<Float> {
+		return null;
+	}
+
+	/**
 		Synchronize the target object matrix.
 		If decompose is true, then the rotation quaternion is stored in [m12,m13,m21,m23] instead of mixed with the scale.
 	**/

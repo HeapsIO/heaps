@@ -166,6 +166,11 @@ class Writer {
 			for( o in a.objects ) {
 				writeName(o.name);
 				out.writeByte(o.flags.toInt());
+				if( o.flags.has(HasProps) ) {
+					out.writeByte(o.props.length);
+					for( n in o.props )
+						writeName(n);
+				}
 			}
 		}
 

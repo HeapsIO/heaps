@@ -170,11 +170,14 @@ enum AnimationFlag {
 	HasUV;
 	HasAlpha;
 	SinglePosition;
+	HasProps;
+	Reserved;
 }
 
 class AnimationObject {
 	public var name : String;
 	public var flags : haxe.EnumFlags<AnimationFlag>;
+	public var props : Array<String>;
 	public function new() {
 	}
 }

@@ -29,7 +29,10 @@ class LinearObject extends AnimatedObject {
 	public var frames : haxe.ds.Vector<LinearFrame>;
 	public var alphas : haxe.ds.Vector<Float>;
 	public var uvs : haxe.ds.Vector<Float>;
+	public var propName:  String;
+	public var propValues : haxe.ds.Vector<Float>;
 	public var matrix : h3d.Matrix;
+	public var propCurrentValue : Float;
 	override function clone() : AnimatedObject {
 		var o = new LinearObject(objectName);
 		o.hasRotation = hasRotation;
@@ -37,6 +40,8 @@ class LinearObject extends AnimatedObject {
 		o.frames = frames;
 		o.alphas = alphas;
 		o.uvs = uvs;
+		o.propName = propName;
+		o.propValues = propValues;
 		return o;
 	}
 }
@@ -70,6 +75,20 @@ class LinearAnimation extends Animation {
 		objects.push(f);
 	}
 
+	public function addPropCurve( objName, propName, values ) {
+		var f = new LinearObject(objName);
+		f.propName = propName;
+		f.propValues = values;
+		objects.push(f);
+	}
+
+	override function getPropValue( objName, propName ) : Null<Float> {
+		for( o in getFrames() )
+			if( o.objectName == objName && o.propName == propName )
+				return o.propCurrentValue;
+		return null;
+	}
+
 	inline function getFrames() : Array<LinearObject> {
 		return cast objects;
 	}
@@ -91,10 +110,15 @@ class LinearAnimation extends Animation {
 		super.initInstance();
 		var frames = getFrames();
 		for( a in frames ) {
-			a.matrix = new h3d.Matrix();
-			a.matrix.identity();
+			if( a.propValues != null ) {
+				a.propCurrentValue = a.propValues[0];
+				continue;
+			}
 			if( a.alphas != null && (a.targetObject == null || !a.targetObject.isMesh()) )
 				throw a.objectName + " should be a mesh (for alpha animation)";
+			if( a.uvs != null || a.alphas != null ) continue;
+			a.matrix = new h3d.Matrix();
+			a.matrix.identity();
 		}
 		// makes sure that all single frame anims are at the end so we can break early when isSync=true
 		frames.sort(sortByFrameCountDesc);
@@ -145,6 +169,10 @@ class LinearAnimation extends Animation {
 				}
 				s.uvDelta.x = uvLerp(o.uvs[frame1 << 1],o.uvs[frame2 << 1],k2);
 				s.uvDelta.y = uvLerp(o.uvs[(frame1 << 1) | 1],o.uvs[(frame2 << 1) | 1],k2);
+				continue;
+			}
+			if( o.propValues != null ) {
+				o.propCurrentValue = o.propValues[frame1] * k1 + o.propValues[frame2] * k2;
 				continue;
 			}
 

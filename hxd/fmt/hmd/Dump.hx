@@ -130,6 +130,7 @@ class Dump {
 					if( o.flags.has(f) ) {
 						var n = f.getName();
 						if( StringTools.startsWith(n, "Has") ) n = n.substr(3);
+						if( f == HasProps ) n += o.props;
 						flags.push(n);
 					}
 				add('${o.name} : ${flags.join(",")}');
@@ -181,6 +182,10 @@ class Dump {
 					add('${o.name} UV : '+Std.string([for( i in 0...a.frames ) [for( j in 0...2 ) d.readFloat()]]));
 				if( o.flags.has(HasAlpha) )
 					add('${o.name} Alpha : '+Std.string([for( i in 0...a.frames ) d.readFloat()]));
+				if( o.flags.has(HasProps) ) {
+					for( p in o.props )
+						add('${o.name} $p : '+Std.string([for( i in 0...a.frames ) d.readFloat()]));
+				}
 			}
 			prefix = '';
 		}

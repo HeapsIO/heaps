@@ -339,10 +339,7 @@ class Library {
 		return objs[0];
 	}
 
-	public function loadAnimation( ?mode : h3d.anim.Mode, ?name : String ) : h3d.anim.Animation {
-
-		if( mode == null )
-			mode = LinearAnim;
+	public function loadAnimation( ?name : String ) : h3d.anim.Animation {
 
 		var a = cachedAnimations.get(name == null ? "" : name);
 		if( a != null )
@@ -363,12 +360,7 @@ class Library {
 				throw 'Animation $name not found !';
 		}
 
-		var l = switch( mode ) {
-		case FrameAnim:
-			makeFrameAnimation(a);
-		case LinearAnim:
-			makeAnimation(a);
-		}
+		var l = makeAnimation(a);
 		cachedAnimations.set(a.name, l);
 		if( name == null ) cachedAnimations.set("", l);
 		return l;
@@ -452,93 +444,21 @@ class Library {
 				l.addAlphaCurve(o.name, fl);
 				hxd.impl.Tmp.saveBytes(data);
 			}
-		}
-
-		entry.close();
-
-
-		return l;
-	}
-
-	function makeFrameAnimation( a : Animation ) {
-
-		var l = new h3d.anim.FrameAnimation(a.name, a.frames, a.sampling);
-		l.speed = a.speed;
-		l.loop = a.loop;
-
-		entry.open();
-		entry.skip(header.dataPosition + a.dataPosition);
-
-		var q = new h3d.Quat(), mrot = new h3d.Matrix();
-		for( o in a.objects ) {
-			var pos = o.flags.has(HasPosition), rot = o.flags.has(HasRotation), scale = o.flags.has(HasScale);
-			if( pos || rot || scale ) {
-				var frameCount = a.frames;
-				if( o.flags.has(SinglePosition) )
-					frameCount = 1;
-				var fl = new haxe.ds.Vector<h3d.Matrix>(frameCount);
-				var size = ((pos ? 3 : 0) + (rot ? 3 : 0) + (scale?3:0)) * 4 * frameCount;
-				var data = hxd.impl.Tmp.getBytes(size);
-				entry.read(data, 0, size);
-				var p = 0;
-				for( i in 0...frameCount ) {
-					var m = new h3d.Matrix();
-					var tx = 0., ty = 0., tz = 0.;
-					m.identity();
-					if( pos ) {
-						tx = data.getFloat(p); p += 4;
-						ty = data.getFloat(p); p += 4;
-						tz = data.getFloat(p); p += 4;
-					}
-					if( rot ) {
-						var qx = data.getFloat(p); p += 4;
-						var qy = data.getFloat(p); p += 4;
-						var qz = data.getFloat(p); p += 4;
-						var qw = 1 - (qx * qx + qy * qy + qz * qz);
-						qw = qw < 0 ? -Math.sqrt( -qw) : Math.sqrt(qw);
-						q.set(qx, qy, qz, qw);
-						q.saveToMatrix(scale ? mrot : m);
-					}
-					if( scale ) {
-						var sx = data.getFloat(p); p += 4;
-						var sy = data.getFloat(p); p += 4;
-						var sz = data.getFloat(p); p += 4;
-						m.initScale(sx, sy, sz);
-						if( rot ) m.multiply3x4(m, mrot);
-					}
-					m._41 = tx;
-					m._42 = ty;
-					m._43 = tz;
-					fl[i] = m;
+			if( o.flags.has(HasProps) ) {
+				for( p in o.props ) {
+					var fl = new haxe.ds.Vector(a.frames);
+					var size = 4 * a.frames;
+					var data = hxd.impl.Tmp.getBytes(size);
+					entry.read(data, 0, size);
+					for( i in 0...fl.length )
+						fl[i] = data.getFloat(i * 4);
+					l.addPropCurve(o.name, p, fl);
+					hxd.impl.Tmp.saveBytes(data);
 				}
-				l.addCurve(o.name, fl);
-				hxd.impl.Tmp.saveBytes(data);
-			}
-			if( o.flags.has(HasUV) ) {
-				var fl = new haxe.ds.Vector(a.frames*2);
-				var size = 2 * 4 * a.frames;
-				var data = hxd.impl.Tmp.getBytes(size);
-				entry.read(data, 0, size);
-				for( i in 0...fl.length )
-					fl[i] = data.getFloat(i * 4);
-				l.addUVCurve(o.name, fl);
-				hxd.impl.Tmp.saveBytes(data);
-			}
-			if( o.flags.has(HasAlpha) ) {
-				var fl = new haxe.ds.Vector(a.frames);
-				var size = 4 * a.frames;
-				var data = hxd.impl.Tmp.getBytes(size);
-				entry.read(data, 0, size);
-				for( i in 0...fl.length )
-					fl[i] = data.getFloat(i * 4);
-				l.addAlphaCurve(o.name, fl);
-				hxd.impl.Tmp.saveBytes(data);
 			}
 		}
 
 		entry.close();
-
-
 		return l;
 	}
 

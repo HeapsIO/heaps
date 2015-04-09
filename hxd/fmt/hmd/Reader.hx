@@ -179,6 +179,8 @@ class Reader {
 				o.name = readName();
 				o.flags = haxe.EnumFlags.ofInt(i.readByte());
 				a.objects.push(o);
+				if( o.flags.has(HasProps) )
+					o.props = [for( i in 0...i.readByte() ) readName()];
 			}
 			d.animations.push(a);
 		}

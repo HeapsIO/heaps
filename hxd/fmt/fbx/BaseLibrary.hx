@@ -1,7 +1,6 @@
 package hxd.fmt.fbx;
 using hxd.fmt.fbx.Data;
 import h3d.col.Point;
-import h3d.anim.Mode;
 
 class TmpObject {
 	public var index : Int;
@@ -27,6 +26,8 @@ private class AnimCurve {
 	public var r : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
 	public var s : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
 	public var a : { t : Array<Float>, v : Array<Float> };
+	public var fov : { t : Array<Float>, v : Array<Float> };
+	public var roll : { t : Array<Float>, v : Array<Float> };
 	public var uv : Array<{ t : Float, u : Float, v : Float }>;
 	public function new(def, object) {
 		this.def = def;
@@ -561,17 +562,30 @@ class BaseLibrary {
 		return true;
 	}
 
-	public function loadAnimation( mode : Mode, ?animName : String, ?root : FbxNode, ?lib : BaseLibrary ) : h3d.anim.Animation {
+	function roundValues( data : Array<Float>, def : Float, mult : Float = 1. ) {
+		var hasValue = false;
+		for( i in 0...data.length ) {
+			var v = data[i] * mult;
+			if( Math.abs(v - def) > 1e-3 )
+				hasValue = true;
+			else
+				v = def;
+			data[i] = round(v);
+		}
+		return hasValue;
+	}
+
+	public function loadAnimation( ?animName : String, ?root : FbxNode, ?lib : BaseLibrary ) : h3d.anim.Animation {
 		if( lib != null ) {
 			lib.defaultModelMatrixes = defaultModelMatrixes;
-			return lib.loadAnimation(mode,animName);
+			return lib.loadAnimation(animName);
 		}
 		if( root != null ) {
 			var l = new BaseLibrary();
 			l.load(root);
 			if( leftHand ) l.leftHandConvert();
 			l.defaultModelMatrixes = defaultModelMatrixes;
-			return l.loadAnimation(mode,animName);
+			return l.loadAnimation(animName);
 		}
 		var animNode = null;
 		for( a in this.root.getAll("Objects.AnimationStack") )
@@ -596,10 +610,22 @@ class BaseLibrary {
 
 		if( animNode != null ) for( cn in getChilds(animNode, "AnimationCurveNode") ) {
 			var model = getParent(cn, "Model",true);
-			if(model==null) continue; //morph support
+			if( model == null ) {
+				switch( cn.getName() ) {
+				case "Roll", "FieldOfView":
+					// the parent is not a Model but a NodeAttribute
+					var nattr = getParent(cn, "NodeAttribute", true);
+					model = nattr == null ? null : getParent(nattr, "Model", true);
+					if( model == null ) continue;
+				default:
+					continue; //morph support
+				}
+			}
 
 			var c = getObjectCurve(curves, model, cn.getName(), animName);
-			if( c == null ) continue;
+			if( c == null )
+				continue;
+
 			var data = getChilds(cn, "AnimationCurve");
 			if( data.length == 0 ) continue;
 			var cname = cn.getName();
@@ -618,10 +644,42 @@ class BaseLibrary {
 				}
 			// handle special curves
 			if( data.length != 3 ) {
+				var values = data[0].get("KeyValueFloat").getFloats();
 				switch( cname ) {
 				case "Visibility":
+					if( !roundValues(values, 1) )
+						continue;
 					c.a = {
-						v : data[0].get("KeyValueFloat").getFloats(),
+						v : values,
+						t : times,
+					};
+					continue;
+				case "Roll":
+					if( !roundValues(values, 0) )
+						continue;
+					c.roll = {
+						v : values,
+						t : times,
+					};
+					continue;
+				case "FieldOfView":
+					var ratio = 16/9, fov = 45.;
+					for( p in getChild(model, "NodeAttribute").getAll("Properties70.P") ) {
+						switch( p.props[0].toString() ) {
+						case "FilmAspectRatio": ratio = p.props[4].toFloat();
+						case "FieldOfView": fov = p.props[4].toFloat();
+						default:
+						}
+					}
+					inline function fovXtoY(v:Float) {
+						return 2 * Math.atan( Math.tan(v * 0.5 * Math.PI / 180) / ratio ) * 180 / Math.PI;
+					}
+					for( i in 0...values.length )
+						values[i] = fovXtoY(values[i]);
+					if( !roundValues(values, fovXtoY(fov)) )
+						continue;
+					c.fov = {
+						v : values,
 						t : times,
 					};
 					continue;
@@ -640,7 +698,7 @@ class BaseLibrary {
 			//if( data.y.length != times.length || data.z.length != times.length )
 			//	throw "Unsynchronized curve components on " + model.getName()+"."+cname+" (" + data.x.length + "/" + data.y.length + "/" + data.z.length + ")";
 			// optimize empty animations out
-			var E = 1e-3, M = 1.0;
+			var M = 1.0;
 			var def = switch( cname ) {
 			case "T": if( c.def.trans == null ) P0 else c.def.trans;
 			case "R": M = F; if( c.def.rotate == null ) P0 else c.def.rotate;
@@ -649,30 +707,12 @@ class BaseLibrary {
 				throw "Unknown curve " + model.getName()+"."+cname;
 			}
 			var hasValue = false;
-			for( i in 0...data.x.length ) {
-				var v = data.x[i];
-				if( Math.abs(v*M - def.x) > E )
-					hasValue = true;
-				else
-					v = def.x / M;
-				data.x[i] = round(v);
-			}
-			for( i in 0...data.y.length ) {
-				var v = data.y[i];
-				if( Math.abs(v*M - def.y) > E )
-					hasValue = true;
-				else
-					v = def.y / M;
-				data.y[i] = round(v);
-			}
-			for( i in 0...data.z.length ) {
-				var v = data.z[i];
-				if( Math.abs(v*M - def.z) > E )
-					hasValue = true;
-				else
-					v = def.z / M;
-				data.z[i] = round(v);
-			}
+			if( roundValues(data.x, def.x, M) )
+				hasValue = true;
+			if( roundValues(data.y, def.y, M) )
+				hasValue = true;
+			if( roundValues(data.z, def.z, M) )
+				hasValue = true;
 			// no meaningful value found
 			if( !hasValue )
 				continue;
@@ -732,242 +772,158 @@ class BaseLibrary {
 			if( allTimes.length != numFrames ) throw "assert";
 		}
 
-		switch( mode ) {
-		case FrameAnim:
-			var anim = new h3d.anim.FrameAnimation(animName, numFrames, sampling);
+		var anim = new h3d.anim.LinearAnimation(animName, numFrames, sampling);
+		var q = new h3d.Quat(), q2 = new h3d.Quat();
 
-			for( c in curves ) {
-				var frames = c.t == null && c.r == null && c.s == null ? null : new haxe.ds.Vector(numFrames);
-				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
-				var uvs = c.uv == null ? null : new haxe.ds.Vector(numFrames * 2);
-				// skip empty curves
-				if( frames == null && alpha == null && uvs == null )
-					continue;
-				var ctx = c.t == null ? null : c.t.x;
-				var cty = c.t == null ? null : c.t.y;
-				var ctz = c.t == null ? null : c.t.z;
-				var ctt = c.t == null ? [-1.] : c.t.t;
-				var crx = c.r == null ? null : c.r.x;
-				var cry = c.r == null ? null : c.r.y;
-				var crz = c.r == null ? null : c.r.z;
-				var crt = c.r == null ? [-1.] : c.r.t;
-				var csx = c.s == null ? null : c.s.x;
-				var csy = c.s == null ? null : c.s.y;
-				var csz = c.s == null ? null : c.s.z;
-				var cst = c.s == null ? [ -1.] : c.s.t;
-				var cav = c.a == null ? null : c.a.v;
-				var cat = c.a == null ? null : c.a.t;
-				var cuv = c.uv;
-				var def = c.def;
-				var tp = 0, rp = 0, sp = 0, ap = 0, uvp = 0;
-				var curMat = null;
-				for( f in 0...numFrames ) {
-					var changed = curMat == null;
-					if( allTimes[f] == ctt[tp] ) {
-						changed = true;
-						tp++;
-					}
-					if( allTimes[f] == crt[rp] ) {
-						changed = true;
-						rp++;
-					}
-					if( allTimes[f] == cst[sp] ) {
-						changed = true;
-						sp++;
-					}
-					if( changed ) {
-						var m = new h3d.Matrix();
-						m.identity();
-						if( c.s == null || sp == 0 ) {
-							if( def.scale != null )
-								m.scale(def.scale.x, def.scale.y, def.scale.z);
-						} else
-							m.scale(csx[sp-1], csy[sp-1], csz[sp-1]);
-
-						if( c.r == null || rp == 0 ) {
-							if( def.rotate != null )
-								m.rotate(def.rotate.x, def.rotate.y, def.rotate.z);
-						} else
-							m.rotate(crx[rp-1] * F, cry[rp-1] * F, crz[rp-1] * F);
-
-						if( def.preRot != null )
-							m.rotate(def.preRot.x, def.preRot.y, def.preRot.z);
-
-						if( c.t == null || tp == 0 ) {
-							if( def.trans != null )
-								m.translate(def.trans.x, def.trans.y, def.trans.z);
-						} else
-							m.translate(ctx[tp-1], cty[tp-1], ctz[tp-1]);
-
-						if( leftHand )
-							DefaultMatrixes.rightHandToLeft(m);
-
-						curMat = m;
-					}
-					if( frames != null )
-						frames[f] = curMat;
-					if( alpha != null ) {
-						if( allTimes[f] == cat[ap] )
-							ap++;
-						alpha[f] = cav[ap - 1];
-					}
-					if( uvs != null ) {
-						if( allTimes[f] == cuv[uvp].t )
-							uvp++;
-						uvs[f<<1] = cuv[uvp - 1].u;
-						uvs[(f<<1)|1] = cuv[uvp - 1].v;
-					}
-				}
-
-				if( frames != null )
-					anim.addCurve(c.object, frames);
-				if( alpha != null )
-					anim.addAlphaCurve(c.object, alpha);
-				if( uvs != null )
-					anim.addUVCurve(c.object, uvs);
+		for( c in curves ) {
+			var numFrames = numFrames;
+			var sameData = true;
+			if( c.t == null && c.r == null && c.s == null && c.a == null && c.uv == null && c.roll == null && c.fov == null )
+				numFrames = 1;
+			else {
+				if( sameData )
+					sameData = checkData(c.t);
+				if( sameData )
+					sameData = checkData(c.r);
+				if( sameData )
+					sameData = checkData(c.s);
 			}
-			return anim;
-
-		case LinearAnim:
-
-			var anim = new h3d.anim.LinearAnimation(animName, numFrames, sampling);
-			var q = new h3d.Quat(), q2 = new h3d.Quat();
-
-			for( c in curves ) {
-				var numFrames = numFrames;
-				var sameData = true;
-				if( c.t == null && c.r == null && c.s == null && c.a == null && c.uv == null )
-					numFrames = 1;
-				else {
-					if( sameData )
-						sameData = checkData(c.t);
-					if( sameData )
-						sameData = checkData(c.r);
-					if( sameData )
-						sameData = checkData(c.s);
+			var frames = new haxe.ds.Vector(sameData ? 1 : numFrames);
+			var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
+			var uvs = c.uv == null ? null : new haxe.ds.Vector(numFrames * 2);
+			var roll = c.roll == null ? null : new haxe.ds.Vector(numFrames);
+			var fov = c.fov == null ? null : new haxe.ds.Vector(numFrames);
+			// skip empty curves
+			if( frames == null && alpha == null && uvs == null && roll == null && fov == null )
+				continue;
+			var ctx = c.t == null ? null : c.t.x;
+			var cty = c.t == null ? null : c.t.y;
+			var ctz = c.t == null ? null : c.t.z;
+			var ctt = c.t == null ? [-1.] : c.t.t;
+			var crx = c.r == null ? null : c.r.x;
+			var cry = c.r == null ? null : c.r.y;
+			var crz = c.r == null ? null : c.r.z;
+			var crt = c.r == null ? [-1.] : c.r.t;
+			var csx = c.s == null ? null : c.s.x;
+			var csy = c.s == null ? null : c.s.y;
+			var csz = c.s == null ? null : c.s.z;
+			var cst = c.s == null ? [ -1.] : c.s.t;
+			var cav = c.a == null ? null : c.a.v;
+			var cat = c.a == null ? null : c.a.t;
+			var cuv = c.uv;
+			var def = c.def;
+			var tp = 0, rp = 0, sp = 0, ap = 0, uvp = 0, fovp = 0, rollp = 0;
+			var curFrame = null;
+			for( f in 0...numFrames ) {
+				var changed = curFrame == null;
+				if( allTimes[f] == ctt[tp] ) {
+					changed = true;
+					tp++;
 				}
-				var frames = new haxe.ds.Vector(sameData ? 1 : numFrames);
-				var alpha = c.a == null ? null : new haxe.ds.Vector(numFrames);
-				var uvs = c.uv == null ? null : new haxe.ds.Vector(numFrames * 2);
-				// skip empty curves
-				if( frames == null && alpha == null && uvs == null )
-					continue;
-				var ctx = c.t == null ? null : c.t.x;
-				var cty = c.t == null ? null : c.t.y;
-				var ctz = c.t == null ? null : c.t.z;
-				var ctt = c.t == null ? [-1.] : c.t.t;
-				var crx = c.r == null ? null : c.r.x;
-				var cry = c.r == null ? null : c.r.y;
-				var crz = c.r == null ? null : c.r.z;
-				var crt = c.r == null ? [-1.] : c.r.t;
-				var csx = c.s == null ? null : c.s.x;
-				var csy = c.s == null ? null : c.s.y;
-				var csz = c.s == null ? null : c.s.z;
-				var cst = c.s == null ? [ -1.] : c.s.t;
-				var cav = c.a == null ? null : c.a.v;
-				var cat = c.a == null ? null : c.a.t;
-				var cuv = c.uv;
-				var def = c.def;
-				var tp = 0, rp = 0, sp = 0, ap = 0, uvp = 0;
-				var curFrame = null;
-				for( f in 0...numFrames ) {
-					var changed = curFrame == null;
-					if( allTimes[f] == ctt[tp] ) {
-						changed = true;
-						tp++;
-					}
-					if( allTimes[f] == crt[rp] ) {
-						changed = true;
-						rp++;
-					}
-					if( allTimes[f] == cst[sp] ) {
-						changed = true;
-						sp++;
-					}
-					if( changed ) {
-						var f = new h3d.anim.LinearAnimation.LinearFrame();
-						if( c.s == null || sp == 0 ) {
-							if( def.scale != null ) {
-								f.sx = def.scale.x;
-								f.sy = def.scale.y;
-								f.sz = def.scale.z;
-							} else {
-								f.sx = 1;
-								f.sy = 1;
-								f.sz = 1;
-							}
+				if( allTimes[f] == crt[rp] ) {
+					changed = true;
+					rp++;
+				}
+				if( allTimes[f] == cst[sp] ) {
+					changed = true;
+					sp++;
+				}
+				if( changed ) {
+					var f = new h3d.anim.LinearAnimation.LinearFrame();
+					if( c.s == null || sp == 0 ) {
+						if( def.scale != null ) {
+							f.sx = def.scale.x;
+							f.sy = def.scale.y;
+							f.sz = def.scale.z;
 						} else {
-							f.sx = csx[sp - 1];
-							f.sy = csy[sp - 1];
-							f.sz = csz[sp - 1];
+							f.sx = 1;
+							f.sy = 1;
+							f.sz = 1;
 						}
+					} else {
+						f.sx = csx[sp - 1];
+						f.sy = csy[sp - 1];
+						f.sz = csz[sp - 1];
+					}
 
-						if( c.r == null || rp == 0 ) {
-							if( def.rotate != null ) {
-								q.initRotate(def.rotate.x, def.rotate.y, def.rotate.z);
-							} else
-								q.identity();
+					if( c.r == null || rp == 0 ) {
+						if( def.rotate != null ) {
+							q.initRotate(def.rotate.x, def.rotate.y, def.rotate.z);
 						} else
-							q.initRotate(crx[rp-1] * F, cry[rp-1] * F, crz[rp-1] * F);
+							q.identity();
+					} else
+						q.initRotate(crx[rp-1], cry[rp-1], crz[rp-1]);
 
-						if( def.preRot != null ) {
-							q2.initRotate(def.preRot.x, def.preRot.y, def.preRot.z);
-							q.multiply(q,q2);
-						}
+					if( def.preRot != null ) {
+						q2.initRotate(def.preRot.x, def.preRot.y, def.preRot.z);
+						q.multiply(q,q2);
+					}
 
-						f.qx = q.x;
-						f.qy = q.y;
-						f.qz = q.z;
-						f.qw = q.w;
+					f.qx = q.x;
+					f.qy = q.y;
+					f.qz = q.z;
+					f.qw = q.w;
 
-						if( c.t == null || tp == 0 ) {
-							if( def.trans != null ) {
-								f.tx = def.trans.x;
-								f.ty = def.trans.y;
-								f.tz = def.trans.z;
-							} else {
-								f.tx = 0;
-								f.ty = 0;
-								f.tz = 0;
-							}
+					if( c.t == null || tp == 0 ) {
+						if( def.trans != null ) {
+							f.tx = def.trans.x;
+							f.ty = def.trans.y;
+							f.tz = def.trans.z;
 						} else {
-							f.tx = ctx[tp - 1];
-							f.ty = cty[tp - 1];
-							f.tz = ctz[tp - 1];
+							f.tx = 0;
+							f.ty = 0;
+							f.tz = 0;
 						}
+					} else {
+						f.tx = ctx[tp - 1];
+						f.ty = cty[tp - 1];
+						f.tz = ctz[tp - 1];
+					}
 
-						if( leftHand ) {
-							f.tx = -f.tx;
-							f.qy = -f.qy;
-							f.qz = -f.qz;
-						}
+					if( leftHand ) {
+						f.tx = -f.tx;
+						f.qy = -f.qy;
+						f.qz = -f.qz;
+					}
 
-						curFrame = f;
-					}
-					if( frames != null && f < frames.length )
-						frames[f] = curFrame;
-					if( alpha != null ) {
-						if( allTimes[f] == cat[ap] )
-							ap++;
-						alpha[f] = cav[ap - 1];
-					}
-					if( uvs != null ) {
-						if( uvp < cuv.length && allTimes[f] == cuv[uvp].t )
-							uvp++;
-						uvs[f<<1] = cuv[uvp - 1].u;
-						uvs[(f<<1)|1] = cuv[uvp - 1].v;
-					}
+					curFrame = f;
 				}
-				if( frames != null )
-					anim.addCurve(c.object, frames, c.r != null || def.rotate != null, c.s != null || def.scale != null);
-				if( alpha != null )
-					anim.addAlphaCurve(c.object, alpha);
-				if( uvs != null )
-					anim.addUVCurve(c.object, uvs);
+				if( frames != null && f < frames.length )
+					frames[f] = curFrame;
+				if( alpha != null ) {
+					if( allTimes[f] == cat[ap] )
+						ap++;
+					alpha[f] = cav[ap - 1];
+				}
+				if( uvs != null ) {
+					if( uvp < cuv.length && allTimes[f] == cuv[uvp].t )
+						uvp++;
+					uvs[f<<1] = cuv[uvp - 1].u;
+					uvs[(f<<1)|1] = cuv[uvp - 1].v;
+				}
+				if( roll != null ) {
+					if( allTimes[f] == c.roll.t[rollp] )
+						rollp++;
+					roll[f] = c.roll.v[rollp - 1];
+				}
+				if( fov != null ) {
+					if( allTimes[f] == c.fov.t[fovp] )
+						fovp++;
+					fov[f] = c.fov.v[fovp - 1];
+				}
 			}
-			return anim;
-
+			if( frames != null )
+				anim.addCurve(c.object, frames, c.r != null || def.rotate != null, c.s != null || def.scale != null);
+			if( alpha != null )
+				anim.addAlphaCurve(c.object, alpha);
+			if( uvs != null )
+				anim.addUVCurve(c.object, uvs);
+			if( roll != null )
+				anim.addPropCurve(c.object, "Roll", roll);
+			if( fov != null )
+				anim.addPropCurve(c.object, "FOVY", fov);
 		}
+		return anim;
 	}
 
 	function sortDistinctFloats( a : Float, b : Float ) {

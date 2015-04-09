@@ -577,6 +577,7 @@ class HMDOut extends BaseLibrary {
 			var o = new AnimationObject();
 			o.name = obj.objectName;
 			o.flags = new haxe.EnumFlags();
+			o.props = [];
 			if( obj.frames != null ) {
 				o.flags.set(HasPosition);
 				if( obj.hasRotation )
@@ -615,6 +616,12 @@ class HMDOut extends BaseLibrary {
 				for( f in obj.alphas )
 					writeFloat(f);
 			}
+			if( obj.propValues != null ) {
+				o.flags.set(HasProps);
+				o.props.push(obj.propName);
+				for( f in obj.propValues )
+					writeFloat(f);
+			}
 			a.objects.push(o);
 		}
 		return a;
@@ -648,7 +655,7 @@ class HMDOut extends BaseLibrary {
 
 		addModels(includeGeometry);
 
-		var anim = loadAnimation(LinearAnim);
+		var anim = loadAnimation();
 		if( anim != null )
 			d.animations.push(makeAnimation(anim));
 
