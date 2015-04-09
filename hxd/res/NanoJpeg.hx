@@ -72,6 +72,7 @@ class NanoJpeg {
 	var vlctab : haxe.ds.Vector<haxe.io.Bytes>;
 	var block : haxe.ds.Vector<Int>;
 	var njZZ : haxe.ds.Vector<Int>;
+	var progressive : Bool;
 
 	var mbsizex : Int;
 	var mbsizey : Int;
@@ -99,7 +100,7 @@ class NanoJpeg {
 		counts = new haxe.ds.Vector(16);
 		block = new haxe.ds.Vector(BLOCKSIZE);
 		njZZ = haxe.ds.Vector.fromArrayCopy([0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63 ]);
-		vlctab = haxe.ds.Vector.fromArrayCopy([null, null, null, null]);
+		vlctab = haxe.ds.Vector.fromArrayCopy([null, null, null, null, null, null, null, null]);
 	}
 
 	inline function alloc( nbytes : Int ) {
@@ -136,7 +137,7 @@ class NanoJpeg {
 				free(c.pixels);
 				c.pixels = null;
 			}
-		for( i in 0...4 )
+		for( i in 0...8 )
 			if( vlctab[i] != null ) {
 				free(vlctab[i]);
 				vlctab[i] = null;
@@ -295,8 +296,7 @@ class NanoJpeg {
 		while( length >= 17 ) {
 			var i = get(0);
 			syntax( i & 0xEC != 0 );
-			if( i & 0x02 != 0 ) notSupported();
-			i = (i | (i >> 3)) & 3;  // combined DC/AC + tableid value
+			i = ((i >> 4) & 1) | ((i & 3) << 1);  // combined DC/AC + tableid value (put DC/AC in lower bit)
 			for( codelen in 0...16)
 				counts[codelen] = get(codelen+1);
 			njSkip(17);
@@ -452,7 +452,6 @@ class NanoJpeg {
 		out[po] = njClip(((x7 - x1) >> 14) + 128);
 	}
 
-	static var K = 0;
 	function njDecodeBlock( c : Component, po ) {
 		var out = new FastBytes(c.pixels);
 		var value, coef = 0;
@@ -488,18 +487,22 @@ class NanoJpeg {
 		for( i in 0...ncomp ) {
 			var c = comps[i];
 			syntax(get(0) != c.cid);
-			syntax(get(1) & 0xEE != 0);
-			c.dctabsel = get(1) >> 4;
-			c.actabsel = (get(1) & 1) | 2;
+			syntax(get(1) & 0xEC != 0);
+			c.dctabsel = (get(1) >> 4) << 1;
+			c.actabsel = ((get(1) & 3) << 1) | 1;
 			njSkip(2);
 		}
-		if( get(0) != 0 || (get(1) != 63) || get(2) != 0 ) notSupported();
+		var start = get(0);
+		var count = get(0);
+		if( (!progressive && start != 0) || (count != 63 - start) || get(2) != 0 ) notSupported();
 		njSkip(length);
+		
+		if( progressive ) throw "Unsupported progressive JPG";
 
 		var mbx = 0, mby = 0;
 		var rstcount = rstinterval, nextrst = 0;
 		while( true ) {
-			for( i in 0...ncomp) {
+			for( i in 0...ncomp ) {
 				var c = comps[i];
 				for( sby in 0...c.ssy )
 					for( sbx in 0...c.ssx )
@@ -704,7 +707,14 @@ class NanoJpeg {
 			syntax( size < 2 || get(0) != 0xFF );
 			njSkip(2);
 			switch( get(-1) ) {
-			case 0xC0: njDecodeSOF();
+			case 0xC0:
+				njDecodeSOF();
+			case 0xC2:
+				progressive = true;
+				for( i in 4...8 )
+					if( vlctab[i] == null )
+						vlctab[i] = alloc(1 << 17);
+				njDecodeSOF();
 			case 0xDB: njDecodeDQT();
 			case 0xC4: njDecodeDHT();
 			case 0xDD: njDecodeDRI();
@@ -712,7 +722,6 @@ class NanoJpeg {
 				njDecodeScan();
 				break; // DONE
 			case 0xFE: njSkipMarker(); // comment
-			case 0xC2: throw "Unsupported progressive JPG";
 			case 0xC3: throw "Unsupported lossless JPG";
 			default:
 				switch( get( -1) & 0xF0 ) {
