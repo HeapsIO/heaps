@@ -547,8 +547,8 @@ class Matrix {
 		var g = t12 + t22 + t32;
 		var b = t13 + t23 + t33;
 		if( r > 1 ) { t11 /= r; t21 /= r; t31 /= r; }
-		if( g > 1 ) { t12 /= r; t22 /= r; t32 /= r; }
-		if( b > 1 ) { t13 /= r; t23 /= r; t33 /= r; }
+		if( g > 1 ) { t12 /= g; t22 /= g; t32 /= g; }
+		if( b > 1 ) { t13 /= b; t23 /= b; t33 /= b; }
 
 		// multiply our 3x3 by current matrix
 
