@@ -324,14 +324,19 @@ class GlDriver extends Driver {
 	override function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
 		var bits = 0;
 		if( color != null ) {
+			gl.colorMask(true, true, true, true);
+			if( curMatBits >= 0 ) curMatBits |= Pass.colorMask_mask;
 			gl.clearColor(color.r, color.g, color.b, color.a);
 			bits |= GL.COLOR_BUFFER_BIT;
 		}
 		if( depth != null ) {
+			gl.depthMask(true);
+			if( curMatBits >= 0 ) curMatBits |= Pass.depthWrite_mask;
 			gl.clearDepth(depth);
 			bits |= GL.DEPTH_BUFFER_BIT;
 		}
 		if( stencil != null ) {
+			// reset stencyl mask when we allow to change it
 			gl.clearStencil(stencil);
 			bits |= GL.STENCIL_BUFFER_BIT;
 		}
