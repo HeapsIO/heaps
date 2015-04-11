@@ -452,6 +452,12 @@ class System {
 		for( sdl in keys.keys() )
 			addKey(sdl, keys.get(sdl));
 		sdl.Sdl.init();
+		var size = haxe.macro.Compiler.getDefine("windowSize");
+		if( size != null ) {
+			var p = size.split("x");
+			windowWidth = Std.parseInt(p[0]);
+			windowHeight = Std.parseInt(p[1]);
+		}
 		win = new sdl.Window("", windowWidth, windowHeight);
 		init();
 		sdl.Sdl.loop(mainLoop,onEvent);
