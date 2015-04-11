@@ -75,6 +75,7 @@ class GlDriver extends Driver {
 
 	var bufferWidth : Int;
 	var bufferHeight : Int;
+	var curTarget : h3d.mat.Texture;
 
 	public function new() {
 		#if js
@@ -385,7 +386,7 @@ class GlDriver extends Driver {
 				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, tt.rb);
 				gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 			}
-			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+			gl.bindFramebuffer(GL.FRAMEBUFFER, curTarget == null ? null : curTarget.t.fb);
 		}
 		gl.bindTexture(GL.TEXTURE_2D, null);
 		return tt;
@@ -602,6 +603,7 @@ class GlDriver extends Driver {
 	}
 
 	override function setRenderTarget( tex : h3d.mat.Texture ) {
+		curTarget = tex;
 		if( tex == null ) {
 			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 			gl.viewport(0, 0, bufferWidth, bufferHeight);
