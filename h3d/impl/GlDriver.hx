@@ -126,6 +126,11 @@ class GlDriver extends Driver {
 		return curShader.attribNames;
 	}
 
+	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
+		var glout = new hxsl.GlslOut();
+		return "// vertex:\n" + glout.run(shader.vertex.data) + "// fragment:\n" + glout.run(shader.fragment.data);
+	}
+
 	function compileShader( glout : hxsl.GlslOut, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
