@@ -4,7 +4,7 @@ class Bloom extends Blur {
 
 	var bloom : h3d.pass.ScreenFx<h3d.shader.Bloom>;
 
-	public function new( power = 2, amount = 1., quality = 2, passes = 1, sigma = 1 ) {
+	public function new( power = 2., amount = 1., quality = 2, passes = 1, sigma = 1 ) {
 		super(quality, passes, sigma);
 		bloom = new h3d.pass.ScreenFx(new h3d.shader.Bloom());
 		bloom.shader.power = power;
