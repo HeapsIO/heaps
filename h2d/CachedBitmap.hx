@@ -85,8 +85,11 @@ class CachedBitmap extends Drawable {
 
 			ctx.pushTarget(tile.getTexture());
 			ctx.engine.clear(0);
+			var old = ctx.globalAlpha;
+			ctx.globalAlpha = 1;
 			for( c in childs )
 				c.drawRec(ctx);
+			ctx.globalAlpha = old;
 			ctx.popTarget();
 
 			// restore

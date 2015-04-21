@@ -81,7 +81,7 @@ private class Color extends h2d.Sprite {
 	public var height :Float;
 	public var color(default, set):Int = 0xFFFFFFFF;
 	public var preview(default, set):Int = 0xFFFFFFFF;
-	public var alpha(default, set):Float = 1.;
+	public var alphaValue(default, set):Float = 1.;
 
 	var canvas:h2d.css.Fill;
 	var label : h2d.comp.Label;
@@ -114,8 +114,8 @@ private class Color extends h2d.Sprite {
 		return color;
 	}
 
-	function set_alpha(v:Float) {
-		alpha = v;
+	function set_alphaValue(v:Float) {
+		alphaValue = v;
 		drawAll();
 		return color;
 	}
@@ -155,7 +155,7 @@ private class Color extends h2d.Sprite {
 		canvas.fillRectColor(0, 0, width, height * 0.5, preview);
 		canvas.fillRectColor(0, 0, width * 0.5, height * 0.5, color);
 		canvas.fillRectColor(0, height * 0.5 - 4, width, 4, 0xFF000000);
-		canvas.fillRectColor(0, height * 0.5 - 4, width * alpha, 4, 0xFFFFFFFF);
+		canvas.fillRectColor(0, height * 0.5 - 4, width * alphaValue, 4, 0xFFFFFFFF);
 		canvas.lineRect(FillStyle.Color(ColorPicker.borderColor), 0, 0, width, height * 0.5, 1);
 	}
 }
@@ -524,18 +524,18 @@ class ColorPicker extends h2d.comp.Component {
 	}
 
 	inline function get_color() {
-		return (finalColor.color&0xFFFFFF) | Std.int(finalColor.alpha*255) << 24;
+		return (finalColor.color&0xFFFFFF) | Std.int(finalColor.alphaValue*255) << 24;
 	}
 
 	function set_color(v) {
 		finalColor.color = v;
-		finalColor.alpha = (v >>> 24) / 255;
+		finalColor.alphaValue = (v >>> 24) / 255;
 		palette.setColorFrom(v);
 		chart.setColorFrom(v);
 		gaugeRed.color = chart.color;
 		gaugeGreen.color = chart.color;
 		gaugeBlue.color = chart.color;
-		gaugeAlpha.setCursor(finalColor.alpha * gaugeAlpha.width);
+		gaugeAlpha.setCursor(finalColor.alphaValue * gaugeAlpha.width);
 		return v;
 	}
 
@@ -597,7 +597,7 @@ class ColorPicker extends h2d.comp.Component {
 							palette.color = chart.refColor;
 			case SBlue:		chart.setColorFrom(gaugeBlue.color);
 							palette.color = chart.refColor;
-			case SAlpha:	finalColor.alpha = gaugeAlpha.ratio;
+			case SAlpha:	finalColor.alphaValue = gaugeAlpha.ratio;
 							onChange(color);
 			default:
 		}

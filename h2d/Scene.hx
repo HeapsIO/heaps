@@ -390,6 +390,7 @@ class Scene extends Layers implements h3d.IDrawable {
 		ctx.engine = engine;
 		ctx.frame++;
 		ctx.time += ctx.elapsedTime;
+		ctx.globalAlpha = alpha;
 		sync(ctx);
 		if( childs.length == 0 ) return;
 		ctx.begin();

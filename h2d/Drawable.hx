@@ -3,7 +3,6 @@ package h2d;
 class Drawable extends Sprite {
 
 	public var color(default,null) : h3d.Vector;
-	public var alpha(get, set) : Float;
 	public var blendMode : BlendMode;
 	public var filter : Bool;
 	public var tileWrap(default, set) : Bool;
@@ -140,6 +139,7 @@ class Drawable extends Sprite {
 		}
 		ctx.beginDrawBatch(this, tile.getTexture());
 
+		var alpha = color.a * ctx.globalAlpha;
 		var ax = absX + tile.dx * matA + tile.dy * matC;
 		var ay = absY + tile.dx * matB + tile.dy * matD;
 		var buf = ctx.buffer;
@@ -155,7 +155,7 @@ class Drawable extends Sprite {
 		emit(color.r);
 		emit(color.g);
 		emit(color.b);
-		emit(color.a);
+		emit(alpha);
 
 
 		var tw = tile.width;
@@ -172,7 +172,7 @@ class Drawable extends Sprite {
 		emit(color.r);
 		emit(color.g);
 		emit(color.b);
-		emit(color.a);
+		emit(alpha);
 
 		emit(ax + dx2);
 		emit(ay + dy2);
@@ -181,7 +181,7 @@ class Drawable extends Sprite {
 		emit(color.r);
 		emit(color.g);
 		emit(color.b);
-		emit(color.a);
+		emit(alpha);
 
 		emit(ax + dx1 + dx2);
 		emit(ay + dy1 + dy2);
@@ -190,7 +190,7 @@ class Drawable extends Sprite {
 		emit(color.r);
 		emit(color.g);
 		emit(color.b);
-		emit(color.a);
+		emit(alpha);
 
 		ctx.bufPos = pos;
 	}

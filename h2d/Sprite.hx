@@ -17,6 +17,7 @@ class Sprite {
 	public var rotation(default, set) : Float;
 	public var visible : Bool;
 	public var name : String;
+	public var alpha : Float = 1.;
 
 	public var filters : Array<h2d.filter.Filter>;
 
@@ -359,7 +360,7 @@ class Sprite {
 		emit(1.);
 		emit(1.);
 		emit(1.);
-		emit(1.);
+		emit(ctx.globalAlpha);
 
 
 		var tw = tile.width;
@@ -376,7 +377,7 @@ class Sprite {
 		emit(1.);
 		emit(1.);
 		emit(1.);
-		emit(1.);
+		emit(ctx.globalAlpha);
 
 		emit(ax + dx2);
 		emit(ay + dy2);
@@ -385,7 +386,7 @@ class Sprite {
 		emit(1.);
 		emit(1.);
 		emit(1.);
-		emit(1.);
+		emit(ctx.globalAlpha);
 
 		emit(ax + dx1 + dx2);
 		emit(ay + dy1 + dy2);
@@ -394,7 +395,7 @@ class Sprite {
 		emit(1.);
 		emit(1.);
 		emit(1.);
-		emit(1.);
+		emit(ctx.globalAlpha);
 
 		ctx.bufPos = pos;
 	}
@@ -481,8 +482,10 @@ class Sprite {
 		ctx.engine.clear(0);
 
 		// reset transform and update childs
+		var oldAlpha = ctx.globalAlpha;
 		var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;
 		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
+		ctx.globalAlpha = 1;
 		for( c in childs )
 			c.posChanged = true;
 		draw(ctx);
@@ -511,7 +514,9 @@ class Sprite {
 
 		ctx.popTarget();
 
+		ctx.globalAlpha = oldAlpha * alpha;
 		emitTile(ctx, final);
+		ctx.globalAlpha = oldAlpha;
 		ctx.flush();
 	}
 
@@ -529,9 +534,12 @@ class Sprite {
 		if( filters.length > 0 ) {
 			drawFilters(ctx);
 		} else {
+			var old = ctx.globalAlpha;
+			ctx.globalAlpha *= alpha;
 			draw(ctx);
 			for( c in childs )
 				c.drawRec(ctx);
+			ctx.globalAlpha = old;
 		}
 	}
 

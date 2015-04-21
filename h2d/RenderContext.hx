@@ -4,6 +4,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	static inline var BUFFERING = false;
 
+	public var globalAlpha = 1.;
 	public var buffer : hxd.FloatBuffer;
 	public var bufPos : Int;
 
@@ -143,7 +144,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	@:access(h2d.Drawable)
 	public function beginDrawObject( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
 		beginDraw(obj, texture, true);
-		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a);
+		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
 		baseShader.absoluteMatrixA.set(obj.matA, obj.matC, obj.absX);
 		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
 		beforeDraw();
@@ -157,7 +158,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	@:access(h2d.Drawable)
 	public function drawTile( obj : h2d.Drawable, tile : h2d.Tile ) {
 		beginDraw(obj, tile.getTexture(), true, true);
-		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a);
+		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
 		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.height * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
 		baseShader.absoluteMatrixB.set(tile.width * obj.matB, tile.height * obj.matD, obj.absY + tile.dx * obj.matB + tile.dy * obj.matD);
 		baseShader.uvPos.set(tile.u, tile.v, tile.u2 - tile.u, tile.v2 - tile.v);

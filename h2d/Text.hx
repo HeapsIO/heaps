@@ -224,7 +224,7 @@ class Text extends Drawable {
 
 	function set_textColor(c) {
 		this.textColor = c;
-		var a = alpha;
+		var a = color.w;
 		color.setColor(c);
 		color.w = a;
 		return c;
