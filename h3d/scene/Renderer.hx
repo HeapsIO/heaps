@@ -81,7 +81,7 @@ class Renderer {
 	}
 
 	@:access(h3d.scene.Object)
-	function depthSort( passes : h3d.pass.Object ) {
+	function depthSort( passes : h3d.pass.Object, frontToBack = false ) {
 		var p = passes;
 		var cam = ctx.camera.m;
 		while( p != null ) {
@@ -90,7 +90,11 @@ class Renderer {
 			p.depth = z / w;
 			p = p.next;
 		}
-		return haxe.ds.ListSort.sortSingleLinked(passes, function(p1, p2) return p1.depth > p2.depth ? -1 : 1);
+		if( frontToBack ) {
+			return haxe.ds.ListSort.sortSingleLinked(passes, function(p1, p2) return p1.depth > p2.depth ? -1 : 1);
+		} else {
+			return haxe.ds.ListSort.sortSingleLinked(passes, function(p1, p2) return p1.depth > p2.depth ? 1 : -1);
+		}
 	}
 
 	inline function allocTarget( name : String, size = 0, depth = true ) {
@@ -127,8 +131,10 @@ class Renderer {
 				var passes = pdata == null ? null : pdata.passes;
 				if( p.name == "alpha" )
 					passes = depthSort(passes);
-				if( p.name == "default" )
+				if( p.name == "default" ) {
 					setTarget(null);
+					passes = depthSort(passes, true);
+				}
 				passes = p.p.draw(passes);
 				if( pdata != null ) {
 					pdata.passes = passes;

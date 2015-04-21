@@ -10,6 +10,7 @@ class Object {
 	public var shaders : hxsl.ShaderList;
 	public var shader : hxsl.RuntimeShader;
 	public var depth : Float;
+	public var texture : Int = 0;
 
 	public function new() {
 	}

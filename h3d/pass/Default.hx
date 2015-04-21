@@ -8,6 +8,11 @@ class Default extends Base {
 	var globals(get, never) : hxsl.Globals;
 	var cachedBuffer : h3d.shader.Buffers;
 	var tcache : h3d.impl.TextureCache;
+	var shaderCount : Int = 1;
+	var textureCount : Int = 1;
+	var shaderIdMap : Array<Int>;
+	var textureIdMap : Array<Int>;
+	var sortPasses = true;
 
 	inline function get_globals() return manager.globals;
 
@@ -26,6 +31,8 @@ class Default extends Base {
 		super();
 		manager = new h3d.shader.Manager(getOutputs());
 		tcache = new h3d.impl.TextureCache();
+		shaderIdMap = [];
+		textureIdMap = [];
 		initGlobals();
 	}
 
@@ -91,12 +98,21 @@ class Default extends Base {
 			globals.fastSet(k, ctx.sharedGlobals.get(k));
 		setGlobals();
 		setupShaders(passes);
-		passes = haxe.ds.ListSort.sortSingleLinked(passes, function(o1:Object, o2:Object) {
-			var d = o1.shader.id - o2.shader.id;
-			if( d != 0 ) return d;
-			// TODO : sort by textures
-			return 0;
-		});
+		var p = passes;
+		var shaderStart = shaderCount, textureStart = textureCount;
+		while( p != null ) {
+			if( !(shaderIdMap[p.shader.id] >= shaderStart) )
+				shaderIdMap[p.shader.id] = shaderCount++;
+			if( !(textureIdMap[p.texture] >= textureStart) )
+				textureIdMap[p.texture] = textureCount++;
+			p = p.next;
+		}
+		if( sortPasses )
+			passes = haxe.ds.ListSort.sortSingleLinked(passes, function(o1:Object, o2:Object) {
+				var d = shaderIdMap[o1.shader.id] - shaderIdMap[o2.shader.id];
+				if( d != 0 ) return d;
+				return textureIdMap[o1.texture] - textureIdMap[o2.texture];
+			});
 		ctx.uploadParams = uploadParams;
 		var p = passes;
 		var buf = cachedBuffer, prevShader = null;
