@@ -168,16 +168,6 @@ class BaseLibrary {
 		}
 	}
 
-	public function loadXtra( data : String ) {
-		var xml = Xml.parse(data).firstElement();
-		if( uvAnims == null ) uvAnims = new Map();
-		for( e in new haxe.xml.Fast(xml).elements ) {
-			var obj = StringTools.urlDecode(e.att.name);
-			var frames = [for( f in e.elements ) { var f = f.innerData.split(" ");  { t : Std.parseFloat(f[0]) * 9622116.25, u : Std.parseFloat(f[1]), v : Std.parseFloat(f[2]) }} ];
-			uvAnims.set(obj, frames);
-		}
-	}
-
 	function convertPoints( a : Array<Float> ) {
 		var p = 0;
 		for( i in 0...Std.int(a.length / 3) ) {

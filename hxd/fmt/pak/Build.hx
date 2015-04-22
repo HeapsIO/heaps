@@ -20,12 +20,7 @@ class Build {
 		} else {
 			switch( path.split("/").pop().split(".").pop().toLowerCase() ) {
 			case "fbx":
-				if( sys.FileSystem.exists(dir.substr(0,-3)+"xtra") )
-					return null;
 				dir = getTemp(dir,path,"hmd");
-			case "xtra":
-				dir = getTemp(dir, path, "hmd");
-				f.name = f.name.substr(0, -5) + ".FBX";
 			case "wav":
 				dir = getTemp(dir,path,"mp3");
 			default:

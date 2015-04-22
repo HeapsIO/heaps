@@ -15,20 +15,13 @@ class MakeAll {
 				continue;
 			var relPath = path.substr(4);
 			var target = "res/.tmp/R_" + INVALID_CHARS.replace(relPath, "_") + ".hmd";
-			var xtraPath = path.substr(0, -3) + "xtra";
-			if( !sys.FileSystem.exists(xtraPath) )
-				xtraPath = null;
-			else
-				target = target.substr(0, -7) + "xtra.hmd";
-			if( sys.FileSystem.exists(target) && sys.FileSystem.stat(target).mtime.getTime() >= sys.FileSystem.stat(path).mtime.getTime() && (xtraPath == null || sys.FileSystem.stat(target).mtime.getTime() >= sys.FileSystem.stat(xtraPath).mtime.getTime()) )
+			if( sys.FileSystem.exists(target) && sys.FileSystem.stat(target).mtime.getTime() >= sys.FileSystem.stat(path).mtime.getTime() )
 				continue;
 			Sys.println(relPath);
 			var fbx = null;
 			try fbx = hxd.fmt.fbx.Parser.parse(sys.io.File.getContent(path)) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
 			var hmdout = new hxd.fmt.fbx.HMDOut();
 			hmdout.load(fbx);
-			if( xtraPath != null )
-				hmdout.loadXtra(sys.io.File.getContent(xtraPath));
 			var hmd = hmdout.toHMD(null, !(StringTools.startsWith(f, "Anim_") || f.indexOf("_anim_") != -1));
 			var out = new haxe.io.BytesOutput();
 			new hxd.fmt.hmd.Writer(out).write(hmd);

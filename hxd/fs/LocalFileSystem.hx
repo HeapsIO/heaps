@@ -21,7 +21,7 @@ private class LocalEntry extends FileEntry {
 		this.name = name;
 		this.relPath = relPath;
 		this.file = file;
-		if( fs.createHMD && (extension == "fbx" || extension == "xtra") )
+		if( fs.createHMD && extension == "fbx" )
 			convertToHMD();
 		if( fs.createMP3 && extension == "wav" )
 			convertToMP3();
@@ -32,18 +32,10 @@ private class LocalEntry extends FileEntry {
 	function convertToHMD() {
 		function getHMD() {
 			var fbx = null;
-			var content;
-			if( extension == "xtra" ) {
-				fs.createHMD = false;
-				content = fs.get(relPath.substr(0, relPath.length - 4) + "FBX").getBytes();
-				fs.createHMD = true;
-			} else
-				content = getBytes();
+			var content = getBytes();
 			try fbx = hxd.fmt.fbx.Parser.parse(content.toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
 			var hmdout = new hxd.fmt.fbx.HMDOut();
 			hmdout.load(fbx);
-			if( extension == "xtra" )
-				hmdout.loadXtra(getBytes().toString());
 			var hmd = hmdout.toHMD(null, !StringTools.startsWith(name, "Anim_"));
 			var out = new haxe.io.BytesOutput();
 			new hxd.fmt.hmd.Writer(out).write(hmd);
