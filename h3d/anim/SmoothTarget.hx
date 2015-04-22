@@ -65,7 +65,7 @@ class SmoothTarget extends Animation {
 	override function update(dt:Float) {
 		var rt = target.update(dt);
 		var st = dt - rt;
-		blend += st / duration;
+		blend += st * speed / duration;
 		frame = target.frame;
 		if( blend > 1 ) {
 			blend = 1;
