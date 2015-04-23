@@ -91,10 +91,18 @@ class Renderer {
 			p = p.next;
 		}
 		if( frontToBack ) {
-			return haxe.ds.ListSort.sortSingleLinked(passes, function(p1, p2) return p1.depth > p2.depth ? -1 : 1);
-		} else {
 			return haxe.ds.ListSort.sortSingleLinked(passes, function(p1, p2) return p1.depth > p2.depth ? 1 : -1);
+		} else {
+			return haxe.ds.ListSort.sortSingleLinked(passes, function(p1, p2) return p1.depth > p2.depth ? -1 : 1);
 		}
+	}
+
+	inline function front2back(passes) {
+		return depthSort(passes, true);
+	}
+
+	inline function back2front(passes) {
+		return depthSort(passes, false);
 	}
 
 	inline function allocTarget( name : String, size = 0, depth = true ) {
