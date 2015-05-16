@@ -7,7 +7,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var globalAlpha = 1.;
 	public var buffer : hxd.FloatBuffer;
 	public var bufPos : Int;
-
 	public var textures : h3d.impl.TextureCache;
 
 	public var tmpBounds = new h2d.col.Bounds();
@@ -25,6 +24,11 @@ class RenderContext extends h3d.impl.RenderContext {
 	var s2d : Scene;
 	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int }>;
 	var hasUVPos : Bool;
+
+	var curX : Int;
+	var curY : Int;
+	var curWidth : Int;
+	var curHeight : Int;
 
 	public function new(s2d) {
 		super();
@@ -53,6 +57,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		currentObj = null;
 		bufPos = 0;
 		stride = 0;
+		curX = 0;
+		curY = 0;
+		curWidth = s2d.width;
+		curHeight = s2d.height;
 		// todo : we might prefer to auto-detect this by running a test and capturing its output
 		baseShader.pixelAlign = #if flash true #else false #end;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
@@ -92,6 +100,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
 		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);
 		targetsStack.push( { t : t, x : startX, y : startY, w : width, h : height } );
+		curX = startX;
+		curY = startY;
+		curWidth = width;
+		curHeight = height;
 	}
 
 	public function popTarget( restore = true ) {
@@ -111,6 +123,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		initShaders(baseShaderList);
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
 		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);
+		curX = startX;
+		curY = startY;
+		curWidth = width;
+		curHeight = height;
 	}
 
 	public inline function flush() {
@@ -157,6 +173,35 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	@:access(h2d.Drawable)
 	public function drawTile( obj : h2d.Drawable, tile : h2d.Tile ) {
+
+		// check if our tile is outside of the viewport
+		var tx = tile.dx + tile.width * 0.5;
+		var ty = tile.dy + tile.height * 0.5;
+		if( obj.matB == 0 && obj.matC == 0 ) {
+			var tr = (tile.width > tile.height ? tile.width : tile.height) * 1.5 * hxd.Math.max(hxd.Math.abs(obj.matA),hxd.Math.abs(obj.matD));
+			var cx = obj.absX + tx * obj.matA - curX;
+			var cy = obj.absY + ty * obj.matD - curY;
+			if( cx < -tr || cy < -tr || cx - tr > curWidth || cy - tr > curHeight ) return;
+		} else {
+			var tr = 0.;
+			inline function calc(x:Float, y:Float) {
+				var px = x * obj.matA + y * obj.matB;
+				var py = x * obj.matC + y * obj.matD;
+				var r = px * px + py * py;
+				if( r > tr ) tr = r;
+			}
+			var hw = tile.width * 0.5;
+			var hh = tile.height * 0.5;
+			calc(-hw, -hh);
+			calc(hw, -hh);
+			calc(-hw, hh);
+			calc(hw, hh);
+			tr = hxd.Math.sqrt(tr);
+			var cx = obj.absX + tx * obj.matA + ty * obj.matB - curX;
+			var cy = obj.absY + tx * obj.matC + ty * obj.matD - curY;
+			if( cx < -tr || cy < -tr || cx - tr > curWidth || cy - tr > curHeight ) return;
+		}
+
 		beginDraw(obj, tile.getTexture(), true, true);
 		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
 		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.height * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
