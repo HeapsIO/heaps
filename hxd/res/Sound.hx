@@ -2,6 +2,58 @@ package hxd.res;
 
 class Sound extends Resource {
 
+	var data : hxd.snd.Data;
+	public var lastPlay(default, null) = 0.;
+
+	public function getData() : hxd.snd.Data {
+		if( data != null )
+			return data;
+		var bytes = entry.getBytes();
+		switch( bytes.get(0) ) {
+		case 'R'.code: // RIFF (wav)
+			var s = new format.wav.Reader(new haxe.io.BytesInput(bytes)).read();
+			data = new hxd.snd.WavData(s);
+		default:
+		}
+		if( data == null )
+			throw "Unsupported sound format " + entry.path;
+		return data;
+	}
+
+	public function dispose() {
+		data = null;
+	}
+
+#if newSoundAPI
+
+	public function play( loop = false ) {
+		if( defaultWorker == null ) {
+			// don't use a native worker since we haven't setup it in our main()
+			var old = hxd.Worker.ENABLE;
+			hxd.Worker.ENABLE = false;
+			defaultWorker = new hxd.snd.Worker();
+			defaultWorker.start();
+			hxd.Worker.ENABLE = old;
+		}
+		lastPlay = haxe.Timer.stamp();
+		return defaultWorker.play(this, loop);
+	}
+
+	static var defaultWorker : hxd.snd.Worker = null;
+
+	public static function startWorker() {
+		if( defaultWorker != null )
+			return true;
+		defaultWorker = new hxd.snd.Worker();
+		return defaultWorker.start();
+	}
+
+#else
+
+	public static function startWorker() {
+		return false;
+	}
+
 	public static var BUFFER_SIZE = 4096;
 
 	public static dynamic function getGlobalVolume( s : Sound ) {
@@ -235,5 +287,6 @@ class Sound extends Resource {
 		#end
 		return v;
 	}
+#end
 
 }

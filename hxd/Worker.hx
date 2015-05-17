@@ -2,17 +2,23 @@ package hxd;
 
 class Worker<T:EnumValue> {
 
+	#if flash
 	public static var ENABLE = flash.system.Worker.isSupported;
 	var sendChan : flash.system.MessageChannel;
 	var recvChan : flash.system.MessageChannel;
+	var curMessage : { code : Int, count : Int, args : Array<Dynamic> };
+	var queue : Array<Dynamic>;
+	#else
+	public static var ENABLE = false;
+	#end
 	var enumValue : Enum<T>;
 	var isWorker : Bool;
-	var queue : Array<Dynamic>;
-	var curMessage : { code : Int, count : Int, args : Array<Dynamic> };
 	var debugPeer : Worker<T>;
+	var useWorker : Bool;
 
 	public function new( e : Enum<T> ) {
 		this.enumValue = e;
+		this.useWorker = ENABLE;
 	}
 
 	function clone() : Worker<T> {
@@ -21,25 +27,34 @@ class Worker<T:EnumValue> {
 	}
 
 	public function send( msg : T ) {
-		if( !ENABLE ) {
+		if( !useWorker ) {
+			#if debug
+			// emulate delay
 			haxe.Timer.delay(debugPeer.handleMessage.bind(msg), 1);
+			#else
+			debugPeer.handleMessage(msg);
+			#end
 			return;
+		}
+		#if flash
+		inline function sendRaw( v : Dynamic ) {
+			if( queue != null )
+				queue.push(v);
+			else
+				sendChan.send(v);
 		}
 		var args = Type.enumParameters(msg);
 		sendRaw( { code : Type.enumIndex(msg), count : args.length } );
 		// send args as separate messages or else bytearrays will get copied
 		for( a in args )
 			sendRaw(a);
-	}
-
-	function sendRaw( v : Dynamic ) {
-		if( queue != null )
-			queue.push(v);
-		else
-			sendChan.send(v);
+		#else
+		throw "TODO";
+		#end
 	}
 
 	function readMessage() : T {
+		#if flash
 		if( curMessage == null ) {
 			curMessage = recvChan.receive();
 			curMessage.args = [];
@@ -53,6 +68,9 @@ class Worker<T:EnumValue> {
 		var m = Type.createEnumIndex(enumValue, curMessage.code, curMessage.args);
 		curMessage = null;
 		return m;
+		#else
+		throw "TODO";
+		#end
 	}
 
 	function handleMessage( msg : T ) {
@@ -66,7 +84,7 @@ class Worker<T:EnumValue> {
 	}
 
 	public function start() {
-		if( !ENABLE ) {
+		if( !useWorker ) {
 			isWorker = false;
 			setupMain();
 			debugPeer = clone();
@@ -75,6 +93,7 @@ class Worker<T:EnumValue> {
 			debugPeer.debugPeer = this;
 			return false;
 		}
+		#if flash
 		var cur = flash.system.Worker.current;
 		if( cur.isPrimordial ) {
 			var wait = true;
@@ -112,6 +131,9 @@ class Worker<T:EnumValue> {
 			setupWorker();
 			return true;
 		}
+		#else
+		throw "Native worker not supported for this platform";
+		#end
 	}
 
 }
