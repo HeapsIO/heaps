@@ -18,7 +18,7 @@ class Context {
 
 	// ------------- STATIC API ---------------------------------------
 
-	public static function getFont( name : String, size : Int ) {
+	public dynamic static function getFont( name : String, size : Int ) {
 		return hxd.res.FontBuilder.getFont(name, size);
 	}
 
