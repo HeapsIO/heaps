@@ -22,6 +22,16 @@ class NativeChannel {
 	var channel : flash.media.SoundChannel;
 	#elseif js
 	static var ctx : js.html.audio.AudioContext;
+	static function getContext() {
+		if( ctx == null ) {
+			try {
+				ctx = new js.html.audio.AudioContext();
+			} catch( e : Dynamic ) {
+				throw "Web Audio API not available for this browser";
+			}
+		}
+		return ctx;
+	}
 	var sproc : js.html.audio.ScriptProcessorNode;
 	var tmpBuffer : haxe.io.Float32Array;
 	#elseif hxsdl
@@ -36,8 +46,7 @@ class NativeChannel {
 		snd.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, onFlashSample);
 		channel = snd.play(0, 0x7FFFFFFF);
 		#elseif js
-		if( ctx == null )
-			ctx = new js.html.audio.AudioContext();
+		var ctx = getContext();
 		sproc = ctx.createScriptProcessor(bufferSamples, 2, 2);
 		tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
 		sproc.connect(ctx.destination);

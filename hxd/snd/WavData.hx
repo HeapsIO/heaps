@@ -5,8 +5,8 @@ class WavData extends hxd.snd.Data {
 
 	var rawData : haxe.io.Bytes;
 
-	public function new(d) {
-		init(d);
+	public function new(bytes) {
+		init(new format.wav.Reader(new haxe.io.BytesInput(bytes)).read());
 	}
 
 	function init(d:format.wav.Data.WAVE) {

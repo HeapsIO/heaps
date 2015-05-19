@@ -16,7 +16,6 @@ class NoiseChannel extends hxd.snd.NativeChannel {
 
 class Sound extends hxd.App {
 
-	var chan : hxd.snd.SoundChannel;
 	var time = 0.;
 	static var music : hxd.snd.Worker;
 
@@ -24,8 +23,10 @@ class Sound extends hxd.App {
 		//var c = new NoiseChannel();
 		//haxe.Timer.delay(c.stop, 1000);
 
-//		var c = hxd.Res.music_loop.play(true);
-//		c.onEnd = function() trace("LOOP");
+		#if !cpp
+		var c = hxd.Res.music_loop.play(true);
+		c.onEnd = function() trace("LOOP");
+		#end
 	}
 
 	override function update(dt:Float) {

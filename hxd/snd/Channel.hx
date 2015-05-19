@@ -2,6 +2,7 @@ package hxd.snd;
 
 class Channel {
 	var w : Worker;
+	var channel : Worker.NativeChannelData;
 	var id : Int;
 	var snd : Data;
 	var position : Int;
@@ -18,8 +19,9 @@ class Channel {
 	public var volume(default, set) : Float;
 	public var currentTime(get, set) : Float;
 
-	function new(w, res, id, loop, v, t:Float) {
+	function new(w, chan, res, id, loop, v, t:Float) {
 		this.res = res;
+		this.channel = chan;
 		this.vol = volume = v;
 		this.id = id;
 		this.loop = loop;
@@ -68,7 +70,7 @@ class Channel {
 	public function stop() {
 		if( w != null ) {
 			w.send(Stop(id));
-			w.channels.remove(this);
+			if( channel != null ) channel.channels.remove(this);
 			w.cmap.remove(id);
 			w = null;
 		}

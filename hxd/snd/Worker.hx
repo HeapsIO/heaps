@@ -16,12 +16,25 @@ private enum Message {
 
 private class WorkerChannel extends NativeChannel {
 	var w : Worker;
-	public function new(w) {
+	var c : NativeChannelData;
+	public function new(w,c) {
 		this.w = w;
+		this.c = c;
 		super(w.bufferSamples);
 	}
 	override function onSample(out:haxe.io.Float32Array) {
-		@:privateAccess w.sampleData(out);
+		@:privateAccess w.sampleData(out, c);
+	}
+}
+
+class NativeChannelData {
+	public var next = 0.;
+	public var tmpBuf : haxe.io.Bytes;
+	public var channel : NativeChannel;
+	public var channels : Array<Channel>;
+	public function new(w:Worker) {
+		channels = [];
+		tmpBuf = haxe.io.Bytes.alloc(w.bufferSamples * 4 * 2);
 	}
 }
 
@@ -37,15 +50,12 @@ class Worker extends hxd.Worker<Message> {
 
 	var channelID = 1;
 	var cmap : Map<Int,Channel> = new Map();
-	var snd : SoundData;
-	var channels : Array<Channel>;
-	var tmpBuf : haxe.io.Bytes;
-	var channel : NativeChannel;
+	var channels : Array<NativeChannelData>;
 
-	public function new( bufferSamples = 4096 ) {
+	public function new( nativeChannels = 4, bufferSamples = 4096 ) {
 		super(Message);
 		this.bufferSamples = bufferSamples;
-		this.channels = [];
+		this.channels = [for( i in 0...nativeChannels ) new NativeChannelData(this)];
 	}
 
 	override function clone() {
@@ -53,23 +63,54 @@ class Worker extends hxd.Worker<Message> {
 	}
 
 	function allocChannel( res, loop : Bool, volume : Float, time : Float ) {
-		var c = new Channel(isWorker ? null : this, res, channelID++, loop, volume, time);
-		channels.push(c);
+		var chan = isWorker ? selectChannel() : null;
+		var c = new Channel(isWorker ? null : this, chan, res, channelID++, loop, volume, time);
+		if( chan != null ) chan.channels.push(c);
 		cmap.set(c.id, c);
 		return c;
+	}
+
+	function cleanChannels() {
+		for( c in channels )
+			if( c.channels.length == 0 && c.channel != null ) {
+				c.channel.stop();
+				c.channel = null;
+			}
+	}
+
+	function selectChannel() {
+		cleanChannels();
+		var free = -1, best : NativeChannelData = null;
+		// select best one to play
+		for( i in 0...channels.length ) {
+			var c = channels[i];
+			if( c.channel == null ) {
+				if( free < 0 ) free = i;
+				continue;
+			}
+			if( best == null || best.next > c.next ) best = c;
+		}
+		if( free >= 0 ) {
+			best = channels[free];
+			best.next = 0;
+		}
+		return best;
 	}
 
 	override function handleMessage( msg : Message ) {
 		switch( msg ) {
 		case Play(path, loop, volume, time):
-			var c = allocChannel(null, loop, volume, time);
-			if( c == null )
-				return;
-
-			c.res = hxd.Res.loader.load(path).toSound();
-			c.snd = c.res.getData();
-			c.currentTime = time;
-
+			var res = hxd.Res.loader.load(path).toSound();
+			var snd = res.getData();
+			snd.load(function() {
+				var c = allocChannel(null, loop, volume, time);
+				if( c == null )
+					return;
+				c.res = res;
+				c.snd = snd;
+				c.currentTime = time;
+				if( c.channel.channel == null ) c.channel.channel = new WorkerChannel(this, c.channel);
+			});
 		case SetVolume(id, volume):
 			var c = cmap.get(id);
 			if( c == null ) return;
@@ -78,7 +119,7 @@ class Worker extends hxd.Worker<Message> {
 		case Stop(id):
 			var c = cmap.get(id);
 			if( c == null ) return;
-			channels.remove(c);
+			c.channel.channels.remove(c);
 			cmap.remove(c.id);
 		case Fade(id, uid, vol, time):
 			var c = cmap.get(id);
@@ -108,12 +149,15 @@ class Worker extends hxd.Worker<Message> {
 			if( c != null ) c.currentTime = v;
 		case Active(b):
 			if( b ) {
-				if( channel != null ) return;
-				channel = new WorkerChannel(this);
+				for( c in channels )
+					if( c != null && c.channel == null && c.channels.length > 0 )
+						c.channel = new WorkerChannel(this, c);
 			} else {
-				if( channel == null ) return;
-				channel.stop();
-				channel = null;
+				for( c in channels )
+					if( c.channel != null ) {
+						c.channel.stop();
+						c.channel = null;
+					}
 			}
 		case SetGlobalVolume(v):
 			volume = v;
@@ -124,8 +168,10 @@ class Worker extends hxd.Worker<Message> {
 		#if flash
 		// make sure that the sounds system is initialized
 		// https://bugbase.adobe.com/index.cfm?event=bug&id=3842828
-		var s = new SoundData();
-		s.playStream(function() return new haxe.ds.Vector<Float>(bufferSamples * 2)).stop();
+		var s = new flash.media.Sound();
+		s.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, function(e:flash.events.SampleDataEvent) { for( i in 0...bufferSamples * 2) e.data.writeFloat(0); } );
+		var chan = s.play();
+		if( chan != null ) chan.stop();
 		#end
 		if( hxd.System.isAndroid )
 			initActivate();
@@ -140,22 +186,21 @@ class Worker extends hxd.Worker<Message> {
 	}
 
 	override function setupWorker() {
-		tmpBuf = haxe.io.Bytes.alloc(bufferSamples * 4 * 2);
 		#if hxsdl
 		// we might create our worker before initializing SDL, let's make sure it's done.
 		sdl.Sdl.init();
 		#end
-		channel = new WorkerChannel(this);
 	}
 
-	function sampleData( out : haxe.io.Float32Array ) {
+	function sampleData( out : haxe.io.Float32Array, chan : NativeChannelData ) {
+		chan.next = haxe.Timer.stamp() + bufferSamples / 44100;
+		var cid = 0;
+		var cmax = chan.channels.length;
 		for( i in 0...bufferSamples*2 )
 			out[i] = 0;
-		var cid = 0;
-		var cmax = channels.length;
 
 		while( cid < cmax ) {
-			var c = channels[cid++];
+			var c = chan.channels[cid++];
 
 			var w = 0;
 			var snd = c.snd;
@@ -166,20 +211,21 @@ class Worker extends hxd.Worker<Message> {
 				var play = vol > 0 || c.volumeSpeed > 0;
 				if( c.position + size >= snd.samples ) {
 					size = snd.samples - c.position;
-					if( play ) snd.decode(tmpBuf, 0, c.position, size);
+					if( play ) snd.decode(chan.tmpBuf, 0, c.position, size);
 					c.position = 0;
 				} else {
-					if( play ) snd.decode(tmpBuf, 0, c.position, size);
+					if( play ) snd.decode(chan.tmpBuf, 0, c.position, size);
 					c.position += size;
 				}
 				if( !play ) {
 					w += size * 2;
 				} else {
 					#if flash
-					flash.Memory.select(tmpBuf.getData());
+					flash.Memory.select(chan.tmpBuf.getData());
 					#end
 					for( i in 0...size * 2 ) {
-						out[w++] += #if flash flash.Memory.getFloat #else tmpBuf.getFloat #end(i << 2) * vol;
+						var v = #if flash flash.Memory.getFloat #else chan.tmpBuf.getFloat #end(i << 2) * vol;
+						out[w++] += v;
 						if( c.volumeSpeed != 0 ) {
 							c.vol += c.volumeSpeed;
 							if( (c.volumeSpeed > 0) == (c.vol > c.volumeTarget) ) {
@@ -193,7 +239,7 @@ class Worker extends hxd.Worker<Message> {
 				}
 				if( c.position == 0 ) {
 					if( !c.loop ) {
-						channels.remove(c);
+						chan.channels.remove(c);
 						cmap.remove(c.id);
 						cid--;
 						cmax--;
