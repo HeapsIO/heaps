@@ -124,6 +124,7 @@ class FileSystem implements hxd.fs.FileSystem {
 
 	var root : PakEntry;
 	var dict : Map<String,PakEntry>;
+	var files : Array<FileInput>;
 
 	public function new( pakFile : String ) {
 		dict = new Map();
@@ -131,6 +132,7 @@ class FileSystem implements hxd.fs.FileSystem {
 		f.name = "<root>";
 		f.isDirectory = true;
 		f.content = [];
+		files = [];
 		root = new PakEntry(null, f, null);
 		loadPak(pakFile);
 	}
@@ -143,6 +145,13 @@ class FileSystem implements hxd.fs.FileSystem {
 				addRec(root, f.name, f, s, pak.headerSize);
 		} else
 			addRec(root, pak.root.name, pak.root, s, pak.headerSize);
+		files.push(s);
+	}
+
+	public function close() {
+		for( f in files )
+			f.close();
+		files = [];
 	}
 
 	function addRec( parent : PakEntry, path : String, f : Data.File, pak : FileInput, delta : Int ) {
