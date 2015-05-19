@@ -112,7 +112,7 @@ class Channel {
 
 @:access(hxd.snd.Channel)
 @:allow(hxd.snd.Channel)
-class MusicWorker extends Worker<MusicMessage> {
+class MusicWorker extends hxd.Worker<MusicMessage> {
 
 	public static var NATIVE_MUSIC = false;
 	public static var volume(default, set) = 1.0;
