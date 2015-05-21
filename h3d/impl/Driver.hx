@@ -146,7 +146,7 @@ class Driver {
 		return null;
 	}
 
-	public function disposeTexture( t : Texture ) {
+	public function disposeTexture( t : h3d.mat.Texture ) {
 	}
 
 	public function disposeIndexes( i : IndexBuffer ) {

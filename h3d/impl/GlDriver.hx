@@ -433,10 +433,13 @@ class GlDriver extends Driver {
 		return b;
 	}
 
-	override function disposeTexture( t : Texture ) {
-		gl.deleteTexture(t.t);
-		if( t.rb != null ) gl.deleteRenderbuffer(t.rb);
-		if( t.fb != null ) gl.deleteFramebuffer(t.fb);
+	override function disposeTexture( t : h3d.mat.Texture ) {
+		var tt = t.t;
+		if( tt == null ) return;
+		t.t = null;
+		gl.deleteTexture(tt.t);
+		if( tt.rb != null ) gl.deleteRenderbuffer(tt.rb);
+		if( tt.fb != null ) gl.deleteFramebuffer(tt.fb);
 	}
 
 	override function disposeIndexes( i : IndexBuffer ) {

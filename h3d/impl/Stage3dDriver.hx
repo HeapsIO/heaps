@@ -193,8 +193,11 @@ class Stage3dDriver extends Driver {
 		ctx.present();
 	}
 
-	override function disposeTexture( t : Texture ) {
-		t.dispose();
+	override function disposeTexture( t : h3d.mat.Texture ) {
+		if( t.t != null ) {
+			t.t.dispose();
+			t.t = null;
+		}
 	}
 
 	override function allocVertexes( buf : ManagedBuffer ) : VertexBuffer {
