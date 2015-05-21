@@ -3,6 +3,7 @@ package hxd.res;
 class Sound extends Resource {
 
 	var data : hxd.snd.Data;
+	var channel : hxd.snd.Channel;
 	public var lastPlay(default, null) = 0.;
 
 	public function getData() : hxd.snd.Data {
@@ -22,10 +23,25 @@ class Sound extends Resource {
 	}
 
 	public function dispose() {
+		stop();
 		data = null;
 	}
 
-	public function play( loop = false ) {
+	public function stop() {
+		if( channel != null ) {
+			channel.stop();
+			channel = null;
+		}
+	}
+
+	public function play( loop = false, volume = 1. ) {
+		lastPlay = haxe.Timer.stamp();
+		return channel = getWorker().play(this, loop, volume);
+	}
+
+	static var defaultWorker : hxd.snd.Worker = null;
+
+	public static function getWorker() {
 		if( defaultWorker == null ) {
 			// don't use a native worker since we haven't setup it in our main()
 			var old = hxd.Worker.ENABLE;
@@ -34,11 +50,8 @@ class Sound extends Resource {
 			defaultWorker.start();
 			hxd.Worker.ENABLE = old;
 		}
-		lastPlay = haxe.Timer.stamp();
-		return defaultWorker.play(this, loop);
+		return defaultWorker;
 	}
-
-	static var defaultWorker : hxd.snd.Worker = null;
 
 	public static function startWorker() {
 		if( defaultWorker != null )
