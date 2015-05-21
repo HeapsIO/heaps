@@ -10,7 +10,7 @@ enum Operation {
 	Resize( width : Int, height : Int );
 	SelectShader( id : Int, ?data : Serialized<hxsl.RuntimeShader> );
 	Material( bits : Int );
-	UploadShaderBuffers( globals : Bool, vertex : Array<Float>, fragment : Array<Float> );
+	UploadShaderBuffers( globals : Bool, vertex : Array<hxd.impl.Float32>, fragment : Array<hxd.impl.Float32> );
 	UploadShaderTextures( vertex : Array<Int>, fragment : Array<Int> );
 
 	AllocTexture( id : Int, name : String, width : Int, height : Int, flags : haxe.EnumFlags<h3d.mat.Data.TextureFlags> );

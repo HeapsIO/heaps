@@ -7,9 +7,11 @@ class ScnDriver extends Driver {
 	var d : Driver;
 	var ops : Array<Operation>;
 	var savedShaders : Map<Int, Bool>;
+	#if !hxsdl
 	var UID = 0;
 	var indexMap : Map<IndexBuffer, Int>;
 	var vertexMap : Map<VertexBuffer, Int>;
+	#end
 	var vertexStride : Array<Int>;
 
 	public function new( driver : Driver ) {
@@ -17,8 +19,10 @@ class ScnDriver extends Driver {
 		ops = [];
 		logEnable = true;
 		savedShaders = new Map();
+		#if !hxsdl
 		indexMap = new Map();
 		vertexMap = new Map();
+		#end
 		vertexStride = [];
 	}
 
@@ -162,16 +166,24 @@ class ScnDriver extends Driver {
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
 		var ibuf = d.allocIndexes(count);
+		#if hxsdl
+		var id : Int = cast ibuf;
+		#else
 		var id = ++UID;
 		indexMap.set(ibuf, id);
+		#end
 		ops.push(AllocIndexes(id, count));
 		return ibuf;
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
 		var vbuf = d.allocVertexes(m);
+		#if hxsdl
+		var id : Int = cast vbuf;
+		#else
 		var id = ++UID;
 		vertexMap.set(vbuf, id);
+		#end
 		ops.push(AllocVertexes(id, m.size, m.stride, m.flags));
 		vertexStride[id] = m.stride;
 		return vbuf;
@@ -182,16 +194,36 @@ class ScnDriver extends Driver {
 		ops.push(DisposeTexture(t.id));
 	}
 
+	inline function indexID(i:IndexBuffer) : Int {
+		#if hxsdl
+		return (cast i : Int);
+		#else
+		return indexMap.get(i);
+		#end
+	}
+
+	inline function vertexID(v:VertexBuffer) : Int {
+		#if hxsdl
+		return (cast v : Int);
+		#else
+		return vertexMap.get(v);
+		#end
+	}
+
 	override function disposeIndexes( i : IndexBuffer ) {
 		d.disposeIndexes(i);
-		ops.push(DisposeIndexes(indexMap.get(i)));
+		ops.push(DisposeIndexes(indexID(i)));
+		#if !hxsdl
 		indexMap.remove(i);
+		#end
 	}
 
 	override function disposeVertexes( v : VertexBuffer ) {
 		d.disposeVertexes(v);
-		ops.push(DisposeVertexes(vertexMap.get(v)));
+		ops.push(DisposeVertexes(vertexID(v)));
+		#if !hxsdl
 		vertexMap.remove(v);
+		#end
 	}
 
 	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
@@ -199,27 +231,27 @@ class ScnDriver extends Driver {
 		var bytes = haxe.io.Bytes.alloc(indiceCount * 2);
 		for( i in 0...indiceCount )
 			bytes.setUInt16(i << 1, buf[bufPos + i]);
-		ops.push(UploadIndexes(indexMap.get(i), startIndice, indiceCount, bytes));
+		ops.push(UploadIndexes(indexID(i), startIndice, indiceCount, bytes));
 	}
 
 	override function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
 		d.uploadIndexBytes(i, startIndice, indiceCount, buf, bufPos);
-		ops.push(UploadIndexes(indexMap.get(i), startIndice, indiceCount, buf.sub(bufPos, indiceCount * 2)));
+		ops.push(UploadIndexes(indexID(i), startIndice, indiceCount, buf.sub(bufPos, indiceCount * 2)));
 	}
 
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
 		d.uploadVertexBuffer(v, startVertex, vertexCount, buf, bufPos);
-		var stride = vertexStride[vertexMap.get(v)];
+		var stride = vertexStride[vertexID(v)];
 		var bytes = haxe.io.Bytes.alloc(stride * vertexCount * 4);
 		for( i in 0...vertexCount * stride )
 			bytes.setFloat(i << 2, buf[i + bufPos]);
-		ops.push(UploadVertexes(vertexMap.get(v), startVertex, vertexCount, bytes));
+		ops.push(UploadVertexes(vertexID(v), startVertex, vertexCount, bytes));
 	}
 
 	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		d.uploadVertexBytes(v, startVertex, vertexCount, buf, bufPos);
-		var stride = vertexStride[vertexMap.get(v)];
-		ops.push(UploadVertexes(vertexMap.get(v), startVertex, vertexCount, buf.sub(bufPos, stride * vertexCount * 4)));
+		var stride = vertexStride[vertexID(v)];
+		ops.push(UploadVertexes(vertexID(v), startVertex, vertexCount, buf.sub(bufPos, stride * vertexCount * 4)));
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
