@@ -102,9 +102,13 @@ class Worker extends hxd.Worker<Message> {
 		switch( msg ) {
 		case Play(path, loop, volume, time):
 			var res = hxd.Res.loader.load(path).toSound();
+			var cid = channelID++;
 			var snd = res.getData();
 			snd.load(function() {
+				var old = channelID;
+				channelID = cid;
 				var c = allocChannel(null, loop, volume, time);
+				channelID = old;
 				if( c == null )
 					return;
 				c.res = res;
