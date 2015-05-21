@@ -16,7 +16,7 @@ class Mp3Data extends Data {
 		// http://gabriel.mp3-tech.org/mp3infotag.html
 		var frame = mp.frames[0].data;
 		var lame = -1;
-		for( i in 32 + 120...frame.length - 24 )
+		for( i in 0...frame.length - 24 )
 			if( frame.get(i) == "L".code && frame.get(i + 1) == "A".code && frame.get(i + 2) == "M".code && frame.get(i + 3) == "E".code ) {
 				lame = i;
 				break;
