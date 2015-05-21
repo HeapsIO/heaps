@@ -57,6 +57,11 @@ class Engine {
 		#end
 	}
 
+	public function setDriver(d) {
+		driver = d;
+		if( mem != null ) mem.driver = d;
+	}
+
 	public static inline function getCurrent() {
 		check();
 		return CURRENT;
