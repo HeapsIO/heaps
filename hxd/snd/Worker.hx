@@ -299,6 +299,7 @@ class Worker extends hxd.Worker<Message> {
 							cmax--;
 						handleMessage(Stop(c.next.id));
 						c.next = null;
+						cmax--;
 					}
 				}
 			}
