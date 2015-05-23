@@ -44,8 +44,10 @@ class Texture {
 	public var realloc : Void -> Void;
 
 	public function new(w, h, ?flags : Array<TextureFlags>, ?allocPos : h3d.impl.AllocPos ) {
+		#if !noEngine
 		var engine = h3d.Engine.getCurrent();
 		this.mem = engine.mem;
+		#end
 		this.id = ++UID;
 		this.flags = new haxe.EnumFlags();
 		if( flags != null )
@@ -71,7 +73,7 @@ class Texture {
 		#if debug
 		this.allocPos = allocPos;
 		#end
-		alloc();
+		if( !this.flags.has(NoAlloc) ) alloc();
 	}
 
 	public function alloc() {

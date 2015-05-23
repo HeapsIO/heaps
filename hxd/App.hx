@@ -70,6 +70,7 @@ class App {
 					engine.mem.onContextLost();
 					engine.onContextLost();
 					engine.resize(engine.width, engine.height);
+					engine.render(s3d); // first render to perform allocations
 				}
 			} else if( scnDriver != null ) {
 				engine.setDriver(scnDriver.getDriver());

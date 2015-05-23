@@ -15,7 +15,7 @@ enum Operation {
 
 	AllocTexture( id : Int, name : String, width : Int, height : Int, flags : haxe.EnumFlags<h3d.mat.Data.TextureFlags> );
 	AllocIndexes( id : Int, count : Int );
-	AllocVertexes( id : Int, stride : Int, count : Int, flags : haxe.EnumFlags<h3d.Buffer.BufferFlag> );
+	AllocVertexes( id : Int, size : Int, stride : Int, flags : haxe.EnumFlags<h3d.Buffer.BufferFlag> );
 	DisposeTexture( id : Int );
 	DisposeIndexes( id : Int );
 	DisposeVertexes( id : Int );
@@ -24,6 +24,11 @@ enum Operation {
 	UploadIndexes( id : Int, start : Int, count : Int, data : haxe.io.Bytes );
 	UploadVertexes( id : Int, start : Int, count : Int, data : haxe.io.Bytes );
 
+	SelectBuffer( id : Int, raw : Bool );
+	SelectMultiBuffer( bufs : Array<{ vbuf:Int, offset : Int }> );
+	Draw( indexes : Int, start : Int, ntri : Int );
+
+	RenderZone( x : Int, y : Int, width : Int, height : Int );
 	RenderTarget( tid : Int );
 	Present;
 }

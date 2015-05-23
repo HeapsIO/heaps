@@ -6,19 +6,43 @@ class ScnDriver extends Driver {
 
 	var d : Driver;
 	var ops : Array<Operation>;
-	var savedShaders : Map<Int, Bool>;
+	var savedShaders : Map<Int, hxsl.RuntimeShader>;
+	var textureMap : Map<Int, h3d.mat.Texture>;
+	var vertexBuffers : Array<h3d.impl.ManagedBuffer>;
+	var indexBuffers : Array<IndexBuffer>;
 	#if !hxsdl
 	var UID = 0;
 	var indexMap : Map<IndexBuffer, Int>;
 	var vertexMap : Map<VertexBuffer, Int>;
 	#end
 	var vertexStride : Array<Int>;
+	var tmpShader : hxsl.RuntimeShader;
+	var tmpPass : h3d.mat.Pass;
+	var tmpBuf : h3d.shader.Buffers;
+	var tmpVBuf : h3d.Buffer;
+	var frame = 0;
 
 	public function new( driver : Driver ) {
 		this.d = driver;
 		ops = [];
+		tmpPass = new h3d.mat.Pass("");
+		tmpShader = new hxsl.RuntimeShader();
+		var s = tmpShader;
+		s.vertex = new hxsl.RuntimeShader.RuntimeShaderData();
+		s.fragment = new hxsl.RuntimeShader.RuntimeShaderData();
+		s.vertex.globalsSize = 0;
+		s.vertex.paramsSize = 0;
+		s.fragment.globalsSize = 0;
+		s.fragment.paramsSize = 0;
+		s.vertex.textures2DCount = s.vertex.texturesCubeCount = 0;
+		s.fragment.textures2DCount = s.fragment.texturesCubeCount = 0;
+		tmpBuf = new h3d.shader.Buffers(s);
+		tmpVBuf = new h3d.Buffer(0, 0, [NoAlloc]);
 		logEnable = true;
 		savedShaders = new Map();
+		textureMap = new Map();
+		vertexBuffers = [];
+		indexBuffers = [];
 		#if !hxsdl
 		indexMap = new Map();
 		vertexMap = new Map();
@@ -39,7 +63,6 @@ class ScnDriver extends Driver {
 	}
 
 	override function logImpl( str : String ) {
-		//d.logImpl(str);
 		ops.push(Log(str));
 	}
 
@@ -91,15 +114,15 @@ class ScnDriver extends Driver {
 
 
 	override function selectShader( shader : hxsl.RuntimeShader ) {
-		var hasData = savedShaders.get(shader.id);
-		if( hasData )
+		var s = savedShaders.get(shader.id);
+		if( s != null )
 			ops.push(SelectShader(shader.id, null));
 		else {
 			var s = new haxe.Serializer();
 			s.useCache = true;
 			s.serialize(shader);
 			ops.push(SelectShader(shader.id, haxe.io.Bytes.ofString(s.toString())));
-			savedShaders.set(shader.id, true);
+			savedShaders.set(shader.id, shader);
 		}
 		return d.selectShader(shader);
 	}
@@ -130,18 +153,28 @@ class ScnDriver extends Driver {
 	}
 
 	override function selectBuffer( buffer : Buffer ) {
+		ops.push(SelectBuffer(@:privateAccess vertexID(buffer.buffer.vbuf), buffer.flags.has(RawFormat)));
 		d.selectBuffer(buffer);
 	}
 
 	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
+		var bufs = [];
+		var b = buffers;
+		while( b != null ) {
+			bufs.push( { vbuf : @:privateAccess vertexID(buffers.buffer.buffer.vbuf), offset : b.offset } );
+			b = b.next;
+		}
+		ops.push(SelectMultiBuffer(bufs));
 		d.selectMultiBuffers(buffers);
 	}
 
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
+		ops.push(Draw(indexID(ibuf), startIndex, ntriangles));
 		d.draw(ibuf, startIndex, ntriangles);
 	}
 
 	override function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
+		ops.push(RenderZone(x, y, width, height));
 		d.setRenderZone(x, y, width, height);
 	}
 
@@ -268,6 +301,153 @@ class ScnDriver extends Driver {
 		if( pixels.bytes.length != pixels.width * pixels.height * 4 )
 			pixels.bytes = pixels.bytes.sub(0, pixels.width * pixels.height * 4);
 		ops.push(UploadTexture(t.id, pixels, mipLevel, side));
+	}
+
+	var defTex : h3d.mat.Texture;
+	function defaultTexture() {
+		if( defTex == null || defTex.isDisposed() ) {
+			defTex = new h3d.mat.Texture(1, 1, [NoAlloc]);
+			defTex.t = d.allocTexture(defTex);
+			var pix = new hxd.Pixels(1, 1, haxe.io.Bytes.alloc(4), hxd.PixelFormat.ARGB);
+			pix.setPixel(0, 0, 0xFFFFFF00);
+			d.uploadTexturePixels(defTex, pix, 0, 0);
+		}
+		return defTex;
+	}
+
+	@:access(h3d.impl.ManagedBuffer)
+	public function replay( op : Operation ) {
+		switch( op ) {
+		case Log(str):
+			d.log(str);
+		case Begin:
+			d.begin(++frame);
+		case Clear(color, depth, stencil):
+			d.clear(color,depth,stencil);
+		case Reset:
+			d.reset();
+		case Resize(w, h):
+			d.resize(w,h);
+		case SelectShader(id, data):
+			if( data != null ) {
+				var s : hxsl.RuntimeShader = haxe.Unserializer.run(data.toString());
+				savedShaders.set(id, s);
+			}
+			d.selectShader(savedShaders.get(id));
+		case Material(bits):
+			@:privateAccess tmpPass.bits = bits;
+			d.selectMaterial(tmpPass);
+		case UploadShaderBuffers(globals, vertex, fragment):
+			var b = tmpBuf;
+			if( globals ) {
+				tmpShader.vertex.globalsSize = vertex.length>>2;
+				tmpShader.fragment.globalsSize = fragment.length >> 2;
+				b.grow(tmpShader);
+				for( i in 0...vertex.length )
+					b.vertex.globals[i] = vertex[i];
+				for( i in 0...fragment.length )
+					b.fragment.globals[i] = fragment[i];
+			} else {
+				tmpShader.vertex.paramsSize = vertex.length>>2;
+				tmpShader.fragment.paramsSize = fragment.length>>2;
+				b.grow(tmpShader);
+				for( i in 0...vertex.length )
+					b.vertex.params[i] = vertex[i];
+				for( i in 0...fragment.length )
+					b.fragment.params[i] = fragment[i];
+			}
+			d.uploadShaderBuffers(b, globals ? Globals : Params);
+		case UploadShaderTextures(vertex, fragment):
+			var b = tmpBuf;
+			tmpShader.vertex.textures2DCount = vertex.length;
+			tmpShader.fragment.textures2DCount = fragment.length;
+			b.grow(tmpShader);
+			for( i in 0...vertex.length ) {
+				var t = textureMap.get(vertex[i]);
+				b.vertex.tex[i] = t == null ? defaultTexture() : t;
+			}
+			for( i in 0...fragment.length ) {
+				var t = textureMap.get(fragment[i]);
+				b.fragment.tex[i] = t == null ? defaultTexture() : t;
+			}
+			d.uploadShaderBuffers(b, Textures);
+		case AllocTexture(id, name, width, height, flags):
+			var fl : Array<h3d.mat.Data.TextureFlags> = [NoAlloc];
+			var flbits = flags.toInt();
+			var flcount = 0;
+			while( flbits != 0 ) {
+				if( flbits & 1 != 0 )
+					fl.push(h3d.mat.Data.TextureFlags.createByIndex(flcount));
+				flbits >>>= 1;
+				flcount++;
+			}
+			var t = new h3d.mat.Texture(width, height, fl);
+			t.name = name;
+			t.t = d.allocTexture(t);
+			t.flags.unset(WasCleared);
+			textureMap.set(id, t);
+		case AllocIndexes(id, count):
+			var i = d.allocIndexes(count);
+			indexBuffers[id] = i;
+		case AllocVertexes(id, size, stride, flags):
+			var m = new ManagedBuffer(stride, size, [NoAlloc]);
+			m.flags = flags;
+			m.vbuf = d.allocVertexes(m);
+			vertexBuffers[id] = m;
+		case DisposeTexture(id):
+			var t = textureMap.get(id);
+			if( t != null ) {
+				textureMap.remove(id);
+				d.disposeTexture(t);
+			}
+		case DisposeIndexes(id):
+			var i = indexBuffers[id];
+			if( i != null ) {
+				indexBuffers[id] = null;
+				d.disposeIndexes(i);
+			}
+		case DisposeVertexes(id):
+			var v = vertexBuffers[id];
+			if( v != null ) {
+				vertexBuffers[id] = null;
+				d.disposeVertexes(v.vbuf);
+			}
+		case UploadTexture(id, pixels, mipMap, side):
+			d.uploadTexturePixels(textureMap.get(id), pixels, mipMap, side);
+		case UploadIndexes(id, start, count, data):
+			d.uploadIndexBytes(indexBuffers[id], start, count, data, 0);
+		case UploadVertexes(id, start, count, data):
+			d.uploadVertexBytes(vertexBuffers[id].vbuf, start, count, data, 0);
+		case SelectBuffer(id, raw):
+			var m = vertexBuffers[id];
+			var buf = new h3d.Buffer(0, 0, [NoAlloc]);
+			@:privateAccess buf.buffer = m;
+			if( raw ) buf.flags.set(RawFormat);
+			d.selectBuffer(buf);
+		case SelectMultiBuffer(bufs):
+			var head = null;
+			var cur : h3d.Buffer.BufferOffset = null;
+			for( b in bufs ) {
+				var buf = new h3d.Buffer(0, 0, [NoAlloc]);
+				@:privateAccess buf.buffer = vertexBuffers[b.vbuf];
+				var b = new h3d.Buffer.BufferOffset(buf, b.offset);
+				if( head == null )
+					head = b;
+				else
+					cur.next = b;
+				cur = b;
+			}
+			d.selectMultiBuffers(head);
+		case Draw(indexes, start, ntri):
+			d.draw(indexBuffers[indexes], start, ntri);
+		case RenderZone(x, y, w, h):
+			d.setRenderZone(x, y, w, h);
+		case RenderTarget(tid):
+			var t = textureMap.get(tid);
+			d.setRenderTarget(t);
+		case Present:
+			d.present();
+		}
 	}
 
 }

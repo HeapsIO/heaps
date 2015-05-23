@@ -29,11 +29,13 @@ class ManagedBuffer {
 		if( flags != null )
 			for( f in flags )
 				this.flags.set(f);
-		this.mem = h3d.Engine.getCurrent().mem;
 		this.size = size;
 		this.stride = stride;
 		this.freeList = new FreeCell(0, size, null);
+		#if !noEngine
+		this.mem = h3d.Engine.getCurrent().mem;
 		mem.allocManaged(this);
+		#end
 	}
 
 	public function uploadVertexBuffer( start : Int, vertices : Int, buf : hxd.FloatBuffer, bufPos = 0 ) {

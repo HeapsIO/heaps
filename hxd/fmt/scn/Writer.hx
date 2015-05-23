@@ -11,6 +11,7 @@ class Writer {
 
 	public function write( d : Data ) {
 		out.addByte(d.version);
+		out.addInt32(d.ops.length);
 		for( op in d.ops ) {
 			out.addByte(op.getIndex());
 			switch( op ) {
@@ -35,7 +36,11 @@ class Writer {
 				out.addInt32(h);
 			case SelectShader(id, data):
 				out.addInt32(id);
-				if( data != null ) out.addBytes(data, 0, data.length);
+				if( data != null ) {
+					out.addInt32(data.length);
+					out.addBytes(data, 0, data.length);
+				} else
+					out.addInt32(0);
 			case Material(bits):
 				out.addInt32(bits);
 			case UploadShaderTextures(vertex, fragment):
@@ -67,10 +72,10 @@ class Writer {
 			case AllocIndexes(id, count):
 				out.addInt32(id);
 				out.addInt32(count);
-			case AllocVertexes(id, stride, count, flags):
+			case AllocVertexes(id, size, stride, flags):
 				out.addInt32(id);
+				out.addInt32(size);
 				out.addInt32(stride);
-				out.addInt32(count);
 				out.addInt32(flags.toInt());
 			case UploadTexture(id, pixels, mipMap, side):
 				out.addInt32(id);
@@ -79,6 +84,8 @@ class Writer {
 				out.addInt32(pixels.format.getIndex());
 				out.addInt32(pixels.flags.toInt());
 				out.add(pixels.bytes);
+				out.addInt32(mipMap);
+				out.addByte(side);
 			case UploadVertexes(id, start, count, data):
 				out.addInt32(id);
 				out.addInt32(start);
@@ -93,6 +100,24 @@ class Writer {
 				out.add(data);
 			case RenderTarget(id), DisposeIndexes(id), DisposeTexture(id), DisposeVertexes(id):
 				out.addInt32(id);
+			case SelectBuffer(id, raw):
+				out.addInt32(id);
+				out.addByte(raw?1:0);
+			case SelectMultiBuffer(bufs):
+				out.addByte(bufs.length);
+				for( b in bufs ) {
+					out.addInt32(b.vbuf);
+					out.addByte(b.offset);
+				}
+			case RenderZone(x, y, w, h):
+				out.addInt32(x);
+				out.addInt32(y);
+				out.addInt32(w);
+				out.addInt32(h);
+			case Draw(id, start, count):
+				out.addInt32(id);
+				out.addInt32(start);
+				out.addInt32(count);
 			}
 		}
 		return out.getBytes();
