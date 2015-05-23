@@ -20,6 +20,7 @@ class ScnDriver extends Driver {
 	var tmpPass : h3d.mat.Pass;
 	var tmpBuf : h3d.shader.Buffers;
 	var tmpVBuf : h3d.Buffer;
+	var tmpBytes : haxe.io.Bytes;
 	var frame = 0;
 
 	public function new( driver : Driver ) {
@@ -36,6 +37,7 @@ class ScnDriver extends Driver {
 		s.fragment.paramsSize = 0;
 		s.vertex.textures2DCount = s.vertex.texturesCubeCount = 0;
 		s.fragment.textures2DCount = s.fragment.texturesCubeCount = 0;
+		tmpBytes = haxe.io.Bytes.alloc(655536);
 		tmpBuf = new h3d.shader.Buffers(s);
 		tmpVBuf = new h3d.Buffer(0, 0, [NoAlloc]);
 		logEnable = true;
@@ -417,7 +419,23 @@ class ScnDriver extends Driver {
 		case UploadIndexes(id, start, count, data):
 			d.uploadIndexBytes(indexBuffers[id], start, count, data, 0);
 		case UploadVertexes(id, start, count, data):
-			d.uploadVertexBytes(vertexBuffers[id].vbuf, start, count, data, 0);
+			var m = vertexBuffers[id];
+			d.uploadVertexBytes(m.vbuf, start, count, data, 0);
+			#if flash
+			@:privateAccess if( !m.vbuf.written ) {
+				m.vbuf.written = true;
+				if( start > 0 ) {
+					var size = start * m.stride * 4 * m.stride;
+					if( tmpBytes.length < size ) tmpBytes = haxe.io.Bytes.alloc(size);
+					d.uploadVertexBytes(m.vbuf, 0, start, tmpBytes, 0);
+				}
+				if( start + count < m.size ) {
+					var size = (m.size - (start + count)) * 4 * m.stride;
+					if( tmpBytes.length < size ) tmpBytes = haxe.io.Bytes.alloc(size);
+					d.uploadVertexBytes(m.vbuf, start+count, m.size - (start+count), tmpBytes, 0);
+				}
+			}
+			#end
 		case SelectBuffer(id, raw):
 			var m = vertexBuffers[id];
 			var buf = new h3d.Buffer(0, 0, [NoAlloc]);
