@@ -78,6 +78,13 @@ class Default extends Base {
 			}
 			p.shader = manager.compileShaders(shaders);
 			p.shaders = shaders;
+			var t = p.shader.fragment.textures2D;
+			if( t == null )
+				p.texture = 0;
+			else {
+				var t : h3d.mat.Texture = manager.getParamValue(t, shaders);
+				p.texture = t == null ? 0 : t.id;
+			}
 			p = p.next;
 		}
 	}
