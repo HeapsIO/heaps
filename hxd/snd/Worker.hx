@@ -32,7 +32,7 @@ class NativeChannelData {
 	public var tmpBuf : haxe.io.Bytes;
 	public var channel : NativeChannel;
 	public var channels : Array<Channel>;
-	public var busy : Bool;
+	public var busy : Int;
 	public function new(w:Worker) {
 		channels = [];
 		tmpBuf = haxe.io.Bytes.alloc(w.bufferSamples * 4 * 2);
@@ -73,7 +73,7 @@ class Worker extends hxd.Worker<Message> {
 
 	function cleanChannels() {
 		for( c in channels )
-			if( c.channels.length == 0 && c.channel != null && !c.busy ) {
+			if( c.channels.length == 0 && c.channel != null && c.busy <= -2 ) {
 				c.channel.stop();
 				c.channel = null;
 			}
@@ -197,13 +197,16 @@ class Worker extends hxd.Worker<Message> {
 		#end
 	}
 
-	function sampleData( out : haxe.io.Float32Array, chan : NativeChannelData ) {
+	@:noDebug function sampleData( out : haxe.io.Float32Array, chan : NativeChannelData ) {
 		chan.next = haxe.Timer.stamp() + bufferSamples / 44100;
 		var cid = 0;
 		var cmax = chan.channels.length;
 		for( i in 0...bufferSamples*2 )
 			out[i] = 0;
-		chan.busy = cmax != 0;
+		if( cmax == 0 ) {
+			if( chan.busy > 0 ) chan.busy = 0 else chan.busy--;
+		} else
+			chan.busy = cmax;
 		while( cid < cmax ) {
 			var c = chan.channels[cid++];
 
