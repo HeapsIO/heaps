@@ -26,7 +26,7 @@ class Build {
 			default:
 			}
 			var data = sys.io.File.getBytes(dir);
-			f.dataPosition = out.size;
+			f.dataPosition = #if pakDiff out.bytes.length #else out.size #end;
 			f.dataSize = data.length;
 			f.checksum = haxe.crypto.Adler32.make(data);
 			out.bytes.push(data);
@@ -72,7 +72,7 @@ class Build {
 		return root.checksum == old.checksum;
 	}
 
-	public static function rebuild( pak : Data, bytes : haxe.io.Bytes ) {
+	public static function rebuild( pak : Data, bytes : Array<haxe.io.Bytes> ) {
 		var size = 0;
 		function calcRec(f:File) {
 			if( f.isDirectory ) {
@@ -82,14 +82,14 @@ class Build {
 				size += f.dataSize;
 		}
 		calcRec(pak.root);
-		var out = haxe.io.Bytes.alloc(size);
+		var out = [];
 		var pos = 0;
 		function writeRec(f:File) {
 			if( f.isDirectory ) {
 				for( c in f.content )
 					writeRec(c);
 			} else {
-				out.blit(pos, bytes, f.dataPosition, f.dataSize);
+				out.push(bytes[f.dataPosition]);
 				f.dataPosition = pos;
 				pos += f.dataSize;
 			}
@@ -100,15 +100,9 @@ class Build {
 
 	public static function make( dir = "res" ) {
 		var pak = new Data();
-		var out = { bytes : [], size : 0 };
+		var outBytes = { bytes : [], size : 0 };
 		pak.version = 0;
-		pak.root = buildRec(dir,"",out);
-		var bytes = haxe.io.Bytes.alloc(out.size);
-		var pos = 0;
-		for( b in out.bytes ) {
-			bytes.blit(pos, b, 0, b.length);
-			pos += b.length;
-		}
+		pak.root = buildRec(dir,"",outBytes);
 		var out = "res";
 
 		#if pakDiff
@@ -126,12 +120,12 @@ class Build {
 				Sys.println("No changes in resources");
 				return;
 			}
-			bytes = rebuild(pak, bytes);
+			outBytes.bytes = rebuild(pak, outBytes.bytes);
 		}
 		#end
 
-		var f = sys.io.File.write(out+".pak");
-		new Writer(f).write(pak,bytes);
+		var f = sys.io.File.write(out + ".pak");
+		new Writer(f).write(pak, null, outBytes.bytes);
 		f.close();
 	}
 

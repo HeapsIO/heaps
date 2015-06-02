@@ -26,8 +26,14 @@ class Writer {
 		}
 	}
 
-	public function write( pak : Data, content : haxe.io.Bytes ) {
-		pak.dataSize = content.length;
+	public function write( pak : Data, content : haxe.io.Bytes, ?arrayContent : Array<haxe.io.Bytes> ) {
+
+		if( arrayContent != null ) {
+			pak.dataSize = 0;
+			for( b in arrayContent )
+				pak.dataSize += b.length;
+		} else
+			pak.dataSize = content.length;
 
 		var header = new haxe.io.BytesOutput();
 		new Writer(header).writeFile(pak.root);
@@ -40,7 +46,11 @@ class Writer {
 		o.writeInt32(pak.dataSize);
 		o.write(header);
 		o.writeString("DATA");
-		o.write(content);
+		if( arrayContent != null ) {
+			for( b in arrayContent )
+				o.write(b);
+		} else
+			o.write(content);
 	}
 
 }
