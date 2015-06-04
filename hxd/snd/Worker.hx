@@ -12,6 +12,7 @@ private enum Message {
 	SetTime( id : Int, t : Float );
 	FadeEnd( id : Int, uid : Int );
 	Active( b : Bool );
+	StopAll;
 }
 
 private class WorkerChannel extends NativeChannel {
@@ -69,6 +70,19 @@ class Worker extends hxd.Worker<Message> {
 		if( chan != null ) chan.channels.push(c);
 		cmap.set(c.id, c);
 		return c;
+	}
+
+	public function stopAll() {
+		if( !isWorker ) {
+			send(StopAll);
+			return;
+		}
+		for( c in channels ) {
+			if( c.channel == null ) continue;
+			c.channel.stop();
+			c.channel = null;
+			c.channels = [];
+		}
 	}
 
 	function cleanChannels() {
@@ -166,6 +180,8 @@ class Worker extends hxd.Worker<Message> {
 			}
 		case SetGlobalVolume(v):
 			volume = v;
+		case StopAll:
+			stopAll();
 		}
 	}
 
