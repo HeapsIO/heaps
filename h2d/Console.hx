@@ -134,6 +134,7 @@ class Console extends h2d.Sprite {
 	}
 
 	function set_cursorPos(v:Int) {
+		if( v > tf.text.length ) v = tf.text.length;
 		cursor.x = tf.calcTextWidth(tf.text.substr(0, v));
 		return cursorPos = v;
 	}
@@ -205,6 +206,7 @@ class Console extends h2d.Sprite {
 	function hide() {
 		bg.visible = false;
 		tf.text = "";
+		cursorPos = 0;
 	}
 
 	function handleCommand( command : String ) {
