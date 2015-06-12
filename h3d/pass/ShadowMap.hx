@@ -34,7 +34,7 @@ class ShadowMap extends Default {
 	}
 
 	function set_size(s) {
-		if( border != null ) {
+		if( border != null && size != s ) {
 			border.dispose();
 			border = new Border(s, s);
 		}
