@@ -139,7 +139,8 @@ class GlDriver extends Driver {
 		gl.compileShader(s);
 		if( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
 			var log = gl.getShaderInfoLog(s);
-			var line = code.split("\n")[Std.parseInt(log.substr(9)) - 1];
+			var lid = Std.parseInt(log.substr(9));
+			var line = lid == null ? null : code.split("\n")[lid - 1];
 			if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
 			throw "An error occurred compiling the shaders: " + log + line;
 		}
