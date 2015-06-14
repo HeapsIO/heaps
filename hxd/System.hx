@@ -353,6 +353,7 @@ class System {
 	static var mouseY = 0;
 	static var currentLoop = null;
 	static var CODEMAP = [for( i in 0...2048 ) i];
+	static var CHARMAP = [for( i in 0...2048 ) 0];
 
 	public static function setLoop( f : Void -> Void ) {
 		currentLoop = f;
@@ -390,6 +391,7 @@ class System {
 			eh = new Event(EKeyDown);
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
+			eh.charCode = CHARMAP[e.keyCode];
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
 				onEvent(e);
@@ -398,6 +400,7 @@ class System {
 			eh = new Event(EKeyUp);
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
+			eh.charCode = CHARMAP[e.keyCode];
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
 				onEvent(e);
@@ -411,8 +414,9 @@ class System {
 	}
 
 	public static function start( init : Void -> Void ) {
-		inline function addKey(sdl, keyCode) {
+		inline function addKey(sdl, keyCode, charCode=0) {
 			CODEMAP[sdl] = keyCode;
+			if( charCode != 0 ) CHARMAP[sdl] = charCode;
 		}
 		var keys = [
 			//K.BACKSPACE
@@ -444,13 +448,33 @@ class System {
 			1087 => K.NUMPAD_ADD,
 			1088 => K.NUMPAD_ENTER,
 			1086 => K.NUMPAD_SUB,
-			1099 => K.NUMPAD_DIV,
+			1099 => K.NUMPAD_DOT,
 			1084 => K.NUMPAD_DIV,
 		];
+
+		/*
+			SDL 2.0 does not allow to get the charCode from a key event.
+			let's for now do a simple mapping, even if not very efficient
+		*/
+		CHARMAP[1098] = "0".code;
+		CHARMAP[1085] = "*".code;
+		CHARMAP[1087] = "+".code;
+		CHARMAP[1088] = 13;
+		CHARMAP[1086] = "-".code;
+		CHARMAP[1084] = "/".code;
+		CHARMAP[1099] = ".".code;
+		CHARMAP[K.BACKSPACE] = 8;
+		CHARMAP[K.TAB] = 9;
+		CHARMAP[K.ENTER] = 13;
+		CHARMAP[K.SPACE] = 32;
+
+		for( i in 0...10 )
+			CHARMAP[K.NUMBER_0 + i] = "0".code + i;
+
 		for( i in 0...9 )
-			addKey(1089 + i, K.NUMPAD_1 + i);
+			addKey(1089 + i, K.NUMPAD_1 + i, "1".code + i);
 		for( i in 0...26 )
-			addKey(97 + i, K.A + i);
+			addKey(97 + i, K.A + i, "a".code + i);
 		for( i in 0...12 )
 			addKey(1058 + i, K.F1 + i);
 		for( sdl in keys.keys() )
