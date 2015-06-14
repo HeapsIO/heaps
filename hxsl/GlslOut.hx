@@ -219,6 +219,12 @@ class GlslOut {
 				add(",");
 				addValue(e2, tabs);
 				add(")");
+			case [OpMod, _, _]:
+				add("mod(");
+				addValue(e1, tabs);
+				add(",");
+				addValue(e2, tabs);
+				add(")");
 			default:
 				addValue(e1, tabs);
 				add(" ");
