@@ -293,7 +293,7 @@ class BitmapData {
 		}
 		return (i.data[a] << 16) | (i.data[a|1] << 8) | i.data[a|2] | (i.data[a|3] << 24);
 		#else
-		return data.pixels[x + y * data.width];
+		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.pixels[x + y * data.width] else 0;
 		#end
 	}
 
@@ -324,7 +324,7 @@ class BitmapData {
 		i.data[3] = (c >>> 24) & 0xFF;
 		ctx.putImageData(i, x, y);
 		#else
-		data.pixels[x + y * data.width] = c;
+		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.pixels[x + y * data.width] = c;
 		#end
 	}
 
