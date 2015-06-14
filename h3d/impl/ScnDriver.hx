@@ -317,6 +317,10 @@ class ScnDriver extends Driver {
 		return defTex;
 	}
 
+	public function getTexture( id : Int ) {
+		return textureMap.get(id);
+	}
+
 	@:access(h3d.impl.ManagedBuffer)
 	public function replay( op : Operation ) {
 		switch( op ) {
@@ -333,6 +337,7 @@ class ScnDriver extends Driver {
 		case SelectShader(id, data):
 			if( data != null ) {
 				var s : hxsl.RuntimeShader = haxe.Unserializer.run(data.toString());
+				@:privateAccess (s.id = hxsl.RuntimeShader.UID++); // make sure id is unique
 				savedShaders.set(id, s);
 			}
 			d.selectShader(savedShaders.get(id));
