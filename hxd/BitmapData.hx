@@ -370,7 +370,7 @@ class BitmapData {
 		var out = hxd.impl.Tmp.getBytes(data.width * data.height * 4);
 		for( i in 0...data.width*data.height )
 			out.setInt32(i << 2, data.pixels[i]);
-		return new Pixels(data.width, data.height, out, ARGB);
+		return new Pixels(data.width, data.height, out, BGRA);
 		#end
 	}
 
@@ -400,7 +400,7 @@ class BitmapData {
 		pixels.convert(BGRA);
 		bmp.setPixels(bmp.rect, flash.utils.ByteArray.fromBytes(pixels.bytes));
 		#else
-		pixels.convert(ARGB);
+		pixels.convert(BGRA);
 		var src = pixels.bytes;
 		for( i in 0...width * height )
 			data.pixels[i] = src.getInt32(i<<2);
