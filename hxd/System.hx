@@ -342,6 +342,10 @@ class System {
 		return sdl.Sdl.getScreenHeight();
 	}
 
+	public static function exit() {
+		Sys.exit(0);
+	}
+
 	static var win : sdl.Window;
 	static var windowWidth = 800;
 	static var windowHeight = 600;
