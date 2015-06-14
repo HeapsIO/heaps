@@ -82,7 +82,23 @@ class BitmapData {
 		ctx.fillStyle = 'rgba(${(color>>16)&0xFF}, ${(color>>8)&0xFF}, ${color&0xFF}, ${(color>>>24)/255})';
 		ctx.fillRect(x, y, width, height);
 		#else
-		notImplemented();
+		if( x < 0 ) {
+			width += x;
+			x = 0;
+		}
+		if( y < 0 ) {
+			height += y;
+			y = 0;
+		}
+		if( x + width > data.width )
+			width = data.width - x;
+		if( y + height > data.height )
+			height = data.height - y;
+		for( dy in 0...height ) {
+			var p = x + (y + dy) * data.width;
+			for( dx in 0...width )
+				data.pixels[p++] = color;
+		}
 		#end
 	}
 
@@ -211,6 +227,11 @@ class BitmapData {
 	public inline function dispose() {
 		#if (flash||openfl||nme)
 		bmp.dispose();
+		#elseif js
+		ctx = null;
+		pixel = null;
+		#else
+		data = null;
 		#end
 	}
 
@@ -272,8 +293,7 @@ class BitmapData {
 		}
 		return (i.data[a] << 16) | (i.data[a|1] << 8) | i.data[a|2] | (i.data[a|3] << 24);
 		#else
-		notImplemented();
-		return 0;
+		return data.pixels[x + y * data.width];
 		#end
 	}
 
@@ -304,7 +324,7 @@ class BitmapData {
 		i.data[3] = (c >>> 24) & 0xFF;
 		ctx.putImageData(i, x, y);
 		#else
-		notImplemented();
+		data.pixels[x + y * data.width] = c;
 		#end
 	}
 
@@ -314,8 +334,7 @@ class BitmapData {
 		#elseif js
 		return ctx.canvas.width;
 		#else
-		notImplemented();
-		return 0;
+		return data.width;
 		#end
 	}
 
@@ -325,8 +344,7 @@ class BitmapData {
 		#elseif js
 		return ctx.canvas.height;
 		#else
-		notImplemented();
-		return 0;
+		return data.height;
 		#end
 	}
 
@@ -349,12 +367,16 @@ class BitmapData {
 			#end
 		return new Pixels(w, h, haxe.io.Bytes.ofData(pixels), RGBA);
 		#else
-		notImplemented();
-		return null;
+		var out = hxd.impl.Tmp.getBytes(data.width * data.height * 4);
+		for( i in 0...data.width*data.height )
+			out.setInt32(i << 2, data.pixels[i]);
+		return new Pixels(data.width, data.height, out, ARGB);
 		#end
 	}
 
 	public function setPixels( pixels : Pixels ) {
+		if( pixels.width != width || pixels.height != height )
+			throw "Invalid pixels size";
 		pixels.setFlip(false);
 		#if flash
 		var bytes = pixels.bytes.getData();
@@ -378,7 +400,10 @@ class BitmapData {
 		pixels.convert(BGRA);
 		bmp.setPixels(bmp.rect, flash.utils.ByteArray.fromBytes(pixels.bytes));
 		#else
-		notImplemented();
+		pixels.convert(ARGB);
+		var src = pixels.bytes;
+		for( i in 0...width * height )
+			data.pixels[i] = src.getInt32(i<<2);
 		#end
 	}
 
@@ -399,7 +424,7 @@ class BitmapData {
 		#elseif js
 		b.ctx = data;
 		#else
-		notImplemented();
+		b.data = data;
 		#end
 		return b;
 	}
