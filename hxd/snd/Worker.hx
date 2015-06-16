@@ -273,6 +273,8 @@ class Worker extends hxd.Worker<Message> {
 					if( c.next != null ) {
 						c.res = c.next.res;
 						c.snd = c.next.snd;
+						if( c.next.channel == chan )
+							cmax--;
 						handleMessage(Stop(c.next.id));
 						c.next = null;
 					}
