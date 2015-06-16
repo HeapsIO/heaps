@@ -238,7 +238,7 @@ class GlDriver extends Driver {
 			for( i in 0...s.textures.length ) {
 				var t = buf.tex[i];
 				if( t == null || t.isDisposed() )
-					t = h3d.mat.Texture.fromColor(0xFF00FF);
+					t = h3d.mat.Texture.fromColor(loadingTextureColor,(loadingTextureColor>>>24)/255);
 				if( t != null && t.t == null && t.realloc != null ) {
 					t.alloc();
 					t.realloc();
