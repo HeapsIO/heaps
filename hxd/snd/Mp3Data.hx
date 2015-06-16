@@ -8,6 +8,7 @@ class Mp3Data extends Data {
 	var buffer : haxe.io.Bytes;
 	var onEnd : Void -> Void;
 	#end
+	var startPos : Int;
 
 	public function new( bytes : haxe.io.Bytes ) {
 		var mp = new format.mp3.Reader(new haxe.io.BytesInput(bytes)).read();
@@ -25,7 +26,8 @@ class Mp3Data extends Data {
 			var startEnd = (frame.get(lame + 21) << 16) | (frame.get(lame + 22) << 8) | frame.get(lame + 23);
 			var start = startEnd >> 12;
 			var end = startEnd & ((1 << 12) - 1);
-			samples -= start + end + 1152; // first frame is empty
+			startPos = start + 1152;
+			samples -= end + startPos;
 		}
 		#if flash
 		snd = new flash.media.Sound();
@@ -65,7 +67,7 @@ class Mp3Data extends Data {
 		#if flash
 		var b = out.getData();
 		b.position = outPos;
-		snd.extract(b, sampleCount, sampleStart + 2257 /* MAGIC_DELAY, silence added at mp3 start */ );
+		snd.extract(b, sampleCount, sampleStart + startPos);
 		#elseif js
 		if( buffer == null ) {
 			// not yet available : fill with blanks
