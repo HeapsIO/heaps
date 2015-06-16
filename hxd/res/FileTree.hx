@@ -341,7 +341,7 @@ class FileTree {
 			return { e : macro loader.loadFont($epath), t : macro : hxd.res.Font };
 		case "fnt":
 			return { e : macro loader.loadBitmapFont($epath), t : macro : hxd.res.BitmapFont };
-		case "wav", "mp3":
+		case "wav", "mp3", "ogg":
 			return { e : macro loader.loadSound($epath), t : macro : hxd.res.Sound };
 		case "tmx":
 			return { e : macro loader.loadTiledMap($epath), t : macro : hxd.res.TiledMap };

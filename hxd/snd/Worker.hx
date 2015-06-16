@@ -262,7 +262,7 @@ class Worker extends hxd.Worker<Message> {
 					}
 				}
 				if( c.position == 0 ) {
-					if( !c.loop ) {
+					if( !c.loop && c.next == null ) {
 						chan.channels.remove(c);
 						cmap.remove(c.id);
 						cid--;

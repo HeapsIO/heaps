@@ -15,6 +15,12 @@ class Sound extends Resource {
 			data = new hxd.snd.WavData(bytes);
 		case 255, 'I'.code: // MP3 (or ID3)
 			data = new hxd.snd.Mp3Data(bytes);
+		case 'O'.code: // Ogg (vorbis)
+			#if stb_ogg_sound
+			data = new hxd.snd.OggData(bytes);
+			#else
+			throw "OGG format requires -lib stb_ogg_sound (for " + entry.path+")";
+			#end
 		default:
 		}
 		if( data == null )
