@@ -175,31 +175,33 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function drawTile( obj : h2d.Drawable, tile : h2d.Tile ) {
 
 		// check if our tile is outside of the viewport
-		var tx = tile.dx + tile.width * 0.5;
-		var ty = tile.dy + tile.height * 0.5;
 		if( obj.matB == 0 && obj.matC == 0 ) {
+			var tx = tile.dx + tile.width * 0.5;
+			var ty = tile.dy + tile.height * 0.5;
 			var tr = (tile.width > tile.height ? tile.width : tile.height) * 1.5 * hxd.Math.max(hxd.Math.abs(obj.matA),hxd.Math.abs(obj.matD));
 			var cx = obj.absX + tx * obj.matA - curX;
 			var cy = obj.absY + ty * obj.matD - curY;
 			if( cx < -tr || cy < -tr || cx - tr > curWidth || cy - tr > curHeight ) return;
 		} else {
-			var tr = 0.;
-			inline function calc(x:Float, y:Float) {
-				var px = x * obj.matA + y * obj.matB;
-				var py = x * obj.matC + y * obj.matD;
-				var r = px * px + py * py;
-				if( r > tr ) tr = r;
+			var xMin = 1e20, yMin = 1e20, xMax = -1e20, yMax = -1e20;
+			inline function calc(x:Int, y:Int) {
+				var px = (x + tile.dx) * obj.matA + (y + tile.dy) * obj.matC;
+				var py = (x + tile.dx) * obj.matB + (y + tile.dy) * obj.matD;
+				if( px < xMin ) xMin = px;
+				if( px > xMax ) xMax = px;
+				if( py < yMin ) yMin = py;
+				if( py > yMax ) yMax = py;
 			}
 			var hw = tile.width * 0.5;
 			var hh = tile.height * 0.5;
-			calc(-hw, -hh);
-			calc(hw, -hh);
-			calc(-hw, hh);
-			calc(hw, hh);
-			tr = hxd.Math.sqrt(tr);
-			var cx = obj.absX + tx * obj.matA + ty * obj.matB - curX;
-			var cy = obj.absY + tx * obj.matC + ty * obj.matD - curY;
-			if( cx < -tr || cy < -tr || cx - tr > curWidth || cy - tr > curHeight ) return;
+			calc(0, 0);
+			calc(tile.width, 0);
+			calc(0, tile.height);
+			calc(tile.width, tile.height);
+			var cx = obj.absX - curX;
+			var cy = obj.absY - curY;
+			if( cx + xMax < 0 || cy + yMax < 0 || cx + xMin > curWidth || cy + yMin > curHeight )
+				return;
 		}
 
 		beginDraw(obj, tile.getTexture(), true, true);
