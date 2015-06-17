@@ -1,13 +1,10 @@
 -js main.js
 -main Sound
 -lib heaps
+-lib stb_ogg_sound
 --next
 -swf main.swf
 -swf-version 11.8
 -main Sound
 -lib heaps
---next
--cpp bin
--main Sound
--lib heaps
--lib hxsdl
+-lib stb_ogg_sound

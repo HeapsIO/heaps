@@ -55,6 +55,8 @@ class FileTree {
 		if( options == null ) options = { };
 		var needTmp = options.compressSounds;
 		if( options.tmpDir == null ) options.tmpDir = path + "/.tmp/";
+		// if the OGG library is detected, compress as OGG by default, unless compressAsMp3 is set
+		if( options.compressAsMp3 == null ) options.compressAsMp3 = options.compressSounds && !Context.defined("stb_ogg_sound");
 		if( needTmp && !sys.FileSystem.exists(options.tmpDir) )
 			sys.FileSystem.createDirectory(options.tmpDir);
 		this.options = options;
@@ -105,16 +107,32 @@ class FileTree {
 
 		switch( ext.toLowerCase() ) {
 		case "wav" if( options.compressSounds ):
-			var tmp = options.tmpDir + name + ".mp3";
-			if( getTime(tmp) < getTime(fullPath) ) {
-				Sys.println("Converting " + relPath);
-				if( Sys.command("lame", ["--resample","44100","--silent","-h",fullPath,tmp]) != 0 )
-					Context.warning("Failed to run lame on " + path, pos);
-				else {
+			if( options.compressAsMp3 || !Context.defined("stb_ogg_sound") ) {
+				var tmp = options.tmpDir + name + ".mp3";
+				if( getTime(tmp) < getTime(fullPath) ) {
+					Sys.println("Converting " + relPath);
+					try {
+						hxd.snd.Convert.toMP3(fullPath, tmp);
+						fullPath = tmp;
+					} catch( e : Dynamic ) {
+						Context.warning(e, pos);
+					}
+				} else {
 					fullPath = tmp;
 				}
 			} else {
-				fullPath = tmp;
+				var tmp = options.tmpDir + name + ".ogg";
+				if( getTime(tmp) < getTime(fullPath) ) {
+					Sys.println("Converting " + relPath);
+					try {
+						hxd.snd.Convert.toOGG(fullPath, tmp);
+						fullPath = tmp;
+					} catch( e : Dynamic ) {
+						Context.warning(e, pos);
+					}
+				} else {
+					fullPath = tmp;
+				}
 			}
 			Context.registerModuleDependency(currentModule, fullPath);
 		case "fbx":

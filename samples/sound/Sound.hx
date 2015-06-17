@@ -22,11 +22,15 @@ class Sound extends hxd.App {
 	override function init() {
 		//var c = new NoiseChannel();
 		//haxe.Timer.delay(c.stop, 1000);
-
-		#if !cpp
+/*
+		#if (cpp || stb_ogg_sound || true)
+		var c = hxd.Res.music_loop_ogg.play(true);
+		#else
 		var c = hxd.Res.music_loop.play(true);
-		c.onEnd = function() trace("LOOP");
 		#end
+		c.onEnd = function() trace("LOOP");*/
+
+		hxd.Res.haunted_intro_ogg.play().queueNext(hxd.Res.haunted_loop_ogg);
 	}
 
 	override function update(dt:Float) {
@@ -40,9 +44,9 @@ class Sound extends hxd.App {
 	}
 
 	static function main() {
-		hxd.Res.initEmbed();
-		if( hxd.res.Sound.startWorker() )
-			return;
+		hxd.Res.initEmbed({compressSounds:true});
+//		if( hxd.res.Sound.startWorker() )
+//			return;
 		new Sound();
 	}
 

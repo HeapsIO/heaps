@@ -11,6 +11,7 @@ private class LocalEntry extends FileEntry {
 	#if air3
 	var file : flash.filesystem.File;
 	var fread : flash.filesystem.FileStream;
+	var checkExists : Bool;
 	#else
 	var file : String;
 	var fread : sys.io.FileInput;
@@ -25,6 +26,8 @@ private class LocalEntry extends FileEntry {
 			convertToHMD();
 		if( fs.createMP3 && extension == "wav" )
 			convertToMP3();
+		if( fs.createOGG && extension == "wav" )
+			convertToOGG();
 	}
 
 	static var INVALID_CHARS = ~/[^A-Za-z0-9_]/g;
@@ -50,8 +53,8 @@ private class LocalEntry extends FileEntry {
 			out.open(target, flash.filesystem.FileMode.WRITE);
 			out.writeBytes(hmd.getData());
 			out.close();
+			checkExists = true;
 		}
-		file = target;
 		#else
 		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
 		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() ) {
@@ -59,6 +62,7 @@ private class LocalEntry extends FileEntry {
 			sys.io.File.saveBytes(target, hmd);
 		}
 		#end
+		file = target;
 	}
 
 	function convertToMP3() {
@@ -66,28 +70,31 @@ private class LocalEntry extends FileEntry {
 		#if air3
 		var target = new flash.filesystem.File(target);
 		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
-			var p = new flash.desktop.NativeProcess();
-			var i = new flash.desktop.NativeProcessStartupInfo();
-			i.arguments = flash.Vector.ofArray(["--resample", "44100", "-h",file.nativePath,target.nativePath]);
-			var f = flash.filesystem.File.applicationDirectory.resolvePath("lame.exe");
-			if( !f.exists ) {
-				f = new flash.filesystem.File("d:/projects/shiroTools/tools/lame.exe");
-				if( !f.exists ) throw "lame.exe not found : cannot convert wav to mp3";
-			}
-			i.executable = f;
-			i.workingDirectory = f.parent;
-			p.addEventListener("exit", function(e:Dynamic) {
-				var code : Int = Reflect.field(e, "exitCode");
-				if( code == 0 )
-					file = target;
-			});
-			p.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e) {
-				trace(e);
-			});
-			p.start(i);
-		} else
-			file = target;
+			hxd.snd.Convert.toMP3(file.nativePath, target.nativePath);
+			checkExists = true;
+		}
+		#else
+		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
+		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() )
+			hxd.snd.Convert.toMP3(file, target);
 		#end
+		file = target;
+	}
+
+	function convertToOGG() {
+		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".ogg";
+		#if air3
+		var target = new flash.filesystem.File(target);
+		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
+			hxd.snd.Convert.toOGG(file.nativePath, target.nativePath);
+			checkExists = true;
+		}
+		#else
+		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
+		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() )
+			hxd.snd.Convert.toOGG(file, target);
+		#end
+		file = target;
 	}
 
 	override function getSign() : Int {
@@ -109,6 +116,8 @@ private class LocalEntry extends FileEntry {
 
 	override function getBytes() : haxe.io.Bytes {
 		#if air3
+		if( checkExists && !file.exists )
+			return haxe.io.Bytes.alloc(0);
 		var fs = new flash.filesystem.FileStream();
 		fs.open(file, flash.filesystem.FileMode.READ);
 		var bytes = haxe.io.Bytes.alloc(fs.bytesAvailable);
@@ -320,6 +329,7 @@ class LocalFileSystem implements FileSystem {
 	public var baseDir(default,null) : String;
 	var createHMD : Bool = true;
 	public var createMP3 : Bool;
+	public var createOGG : Bool;
 	public var tmpDir : String;
 
 	public function new( dir : String ) {

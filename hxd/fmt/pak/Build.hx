@@ -22,7 +22,7 @@ class Build {
 			case "fbx":
 				dir = getTemp(dir,path,"hmd");
 			case "wav":
-				dir = getTemp(dir,path,"mp3");
+				dir = getTemp(dir,path,#if stb_ogg_sound "ogg" #else "mp3" #end);
 			default:
 			}
 			var data = sys.io.File.getBytes(dir);
@@ -40,10 +40,12 @@ class Build {
 		var name = "R_" + invalidChars.replace(path, "_");
 		var f = dir.substr(0, dir.length - path.length)+".tmp/"+name+"."+ext;
 		if( !sys.FileSystem.exists(f) ) {
-			if( ext == "mp3" )
-				Sys.command("lame",["--resample","44100","--silent","-h",dir,f]);
-			else
+			switch( ext ) {
+			case "mp3":
+				hxd.snd.Convert.toMP3(dir, f);
+			default:
 				throw 'Missing \'$f\' required by \'$dir\'';
+			}
 		}
 		return f;
 	}
