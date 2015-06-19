@@ -10,7 +10,7 @@ class Writer {
 		this.out = out;
 	}
 
-	function writeProperty( p : Property ) {
+	function writeProperty( p : Property<Dynamic> ) {
 		out.writeByte(p.getIndex());
 		switch( p ) {
 		case CameraFOVY(v):

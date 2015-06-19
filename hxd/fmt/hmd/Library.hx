@@ -309,6 +309,17 @@ class Library {
 		return s;
 	}
 
+	public function getModelProperty<T>( objName : String, p : Property<T> ) : T {
+		for( m in header.models )
+			if( m.name == objName ) {
+				for( pr in m.props )
+					if( pr.getIndex() == p.getIndex() )
+						return pr.getParameters()[0];
+				throw '${objName} has no property ${p.getName()}';
+			}
+		throw 'Model ${objName} not found';
+	}
+
 	public function makeObject( ?loadTexture : String -> h3d.mat.Texture ) : h3d.scene.Object {
 		if( loadTexture == null )
 			loadTexture = function(_) return h3d.mat.Texture.fromColor(0xFF00FF);

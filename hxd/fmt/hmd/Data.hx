@@ -38,11 +38,11 @@ package hxd.fmt.hmd;
 typedef DataPosition = Int;
 typedef Index<T> = Int;
 
-enum Property {
-	CameraFOVY( v : Float );
+enum Property<T> {
+	CameraFOVY( v : Float ) : Property<Float>;
 }
 
-typedef Properties = Null<Array<Property>>;
+typedef Properties = Null<Array<Property<Dynamic>>>;
 
 class Position {
 	public var x : Float;
