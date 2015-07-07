@@ -51,18 +51,23 @@ class Position {
 	public var qx : Float;
 	public var qy : Float;
 	public var qz : Float;
+	public var qw(get, never) : Float;
 	public var sx : Float;
 	public var sy : Float;
 	public var sz : Float;
 	public function new() {
 	}
 
-	public function loadQuaternion( q : h3d.Quat ) {
-		var qw = 1 - (qx * qx + qy * qy + qz * qz);
+	public inline function loadQuaternion( q : h3d.Quat ) {
 		q.x = qx;
 		q.y = qy;
 		q.z = qz;
-		q.w = qw < 0 ? -Math.sqrt( -qw) : Math.sqrt(qw);
+		q.w = qw;
+	}
+
+	function get_qw() {
+		var qw = 1 - (qx * qx + qy * qy + qz * qz);
+		return qw < 0 ? -Math.sqrt( -qw) : Math.sqrt(qw);
 	}
 
 	public function toMatrix(postScale=false) {
