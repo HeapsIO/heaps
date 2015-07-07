@@ -245,18 +245,21 @@ class HMDOut extends BaseLibrary {
 	function addModels(includeGeometry) {
 
 		var root = buildHierarchy().root;
-		var objects = [], joints = [], skins = [];
+		var objects = [], joints = [], skins = [], foundSkin : Array<TmpObject> = null;
 		var uid = 0;
 		function indexRec( t : TmpObject ) {
 			if( t.isJoint ) {
 				joints.push(t);
 			} else {
 				var isSkin = false;
-				for( c in t.childs )
-					if( c.isJoint ) {
-						isSkin = true;
-						break;
-					}
+				if( foundSkin == null ) {
+					for( c in t.childs )
+						if( c.isJoint ) {
+							isSkin = true;
+							break;
+						}
+				} else
+					isSkin = Lambda.indexOf(foundSkin, t) >= 0;
 				if( isSkin ) {
 					skins.push(t);
 				} else
@@ -282,6 +285,7 @@ class HMDOut extends BaseLibrary {
 		}
 
 		// mark skin references
+		foundSkin = [];
 		for( o in skins ) {
 			function loopRec( o : TmpObject ) {
 				for( j in o.childs ) {
@@ -307,6 +311,7 @@ class HMDOut extends BaseLibrary {
 			var m = models[0];
 			for( o2 in objects )
 				if( o2.model == m ) {
+					foundSkin.push(o);
 					o2.skin = o;
 					ignoreMissingObject(m.getName()); // make sure we don't store animation for the model (only skin object has one)
 					// copy parent
