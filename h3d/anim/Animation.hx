@@ -19,17 +19,6 @@ class AnimatedObject {
 
 }
 
-private class AnimWait {
-	public var frame : Float;
-	public var callb : Void -> Void;
-	public var next : AnimWait;
-	public function new(f, c, n) {
-		frame = f;
-		callb = c;
-		next = n;
-	}
-}
-
 class Animation {
 
 	static inline var EPSILON = 0.000001;
@@ -41,20 +30,23 @@ class Animation {
 
 	public var speed : Float;
 	public var onAnimEnd : Void -> Void;
+	public var onEvent : String -> Void;
 
 	public var pause : Bool;
 	public var loop : Bool;
 
-	var waits : AnimWait;
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
 	var isSync : Bool;
+	var events : Array<String>;
+	var lastEvent : Int;
 
 	function new(name, frameCount, sampling) {
 		this.name = name;
 		this.frameCount = frameCount;
 		this.sampling = sampling;
 		objects = [];
+		lastEvent = -1;
 		frame = 0.;
 		speed = 1.;
 		loop = true;
@@ -83,31 +75,15 @@ class Animation {
 	/**
 		Register a callback function that will be called once when a frame is reached.
 	**/
-	public function waitForFrame( f : Float, callb : Void -> Void ) {
-		// add sorted
-		var prev = null;
-		var cur = waits;
-		while( cur != null ) {
-			if( cur.frame > f )
-				break;
-			prev = cur;
-			cur = cur.next;
-		}
-		if( prev == null )
-			waits = new AnimWait(f, callb, waits);
-		else
-			prev.next = new AnimWait(f, callb, prev.next);
-	}
-
-	/**
-		Remove all frame listeners
-	**/
-	public function clearWaits() {
-		waits = null;
+	public function setEvents( el : Iterable<{ frame : Int, data : String }> ) {
+		events = [for( i in 0...frameCount ) null];
+		for( e in el )
+			events[e.frame] = e.data;
 	}
 
 	public function setFrame( f : Float ) {
 		frame = f;
+		lastEvent = -1;
 		while( frame < 0 ) frame += frameCount;
 		while( frame > frameCount ) frame -= frameCount;
 	}
@@ -119,6 +95,7 @@ class Animation {
 		a.speed = speed;
 		a.loop = loop;
 		a.pause = pause;
+		a.events = events;
 		return a;
 	}
 
@@ -201,27 +178,20 @@ class Animation {
 		if( !isPlaying() )
 			return 0;
 
-		// check waits
-		var w = waits;
-		var prev = null;
-		while( w != null ) {
-			var wt = (w.frame - frame) / (speed * sampling);
-			// don't run if we're already on the frame (allow to set waitForFrame on the same frame we are)
-			if( wt <= 0 ) {
-				prev = w;
-				w = w.next;
-				continue;
+		// check events
+		if( events != null && onEvent != null ) {
+			var f0 = Std.int(frame);
+			var f1 = Std.int(frame + dt * speed * sampling);
+			for( f in f0...f1 + 1 ) {
+				if( f == lastEvent ) continue;
+				lastEvent = f;
+				if( events[f] != null ) {
+					dt -= (f - frame) / (speed * sampling);
+					frame = f;
+					onEvent(events[f]);
+					return dt;
+				}
 			}
-			if( wt > dt )
-				break;
-			frame = w.frame;
-			dt -= wt;
-			if( prev == null )
-				waits = w.next;
-			else
-				prev.next = w.next;
-			w.callb();
-			return dt;
 		}
 
 		// check on anim end

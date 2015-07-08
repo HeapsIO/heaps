@@ -160,7 +160,7 @@ class Writer {
 			out.writeInt32(a.frames);
 			writeFloat(a.sampling);
 			writeFloat(a.speed);
-			out.writeByte(a.loop?1:0);
+			out.writeByte( (a.loop?1:0) | (a.events != null?2:0) );
 			out.writeInt32(a.dataPosition);
 			out.writeInt32(a.objects.length);
 			for( o in a.objects ) {
@@ -170,6 +170,13 @@ class Writer {
 					out.writeByte(o.props.length);
 					for( n in o.props )
 						writeName(n);
+				}
+			}
+			if( a.events != null ) {
+				out.writeInt32(a.events.length);
+				for( e in a.events ) {
+					out.writeInt32(e.frame);
+					writeName(e.data);
 				}
 			}
 		}

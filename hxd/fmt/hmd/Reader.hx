@@ -169,7 +169,8 @@ class Reader {
 			a.frames = i.readInt32();
 			a.sampling = i.readFloat();
 			a.speed = i.readFloat();
-			a.loop = i.readByte() == 1;
+			var flags = i.readByte();
+			a.loop = flags & 1 != 0;
 			a.dataPosition = i.readInt32();
 			a.objects = [];
 			for( k in 0...i.readInt32() ) {
@@ -179,6 +180,15 @@ class Reader {
 				a.objects.push(o);
 				if( o.flags.has(HasProps) )
 					o.props = [for( i in 0...i.readByte() ) readName()];
+			}
+			if( flags & 2 != 0 ) {
+				a.events = [];
+				for( k in 0...i.readInt32() ) {
+					var e = new AnimationEvent();
+					e.frame = i.readInt32();
+					e.data = readName();
+					a.events.push(e);
+				}
 			}
 			d.animations.push(a);
 		}

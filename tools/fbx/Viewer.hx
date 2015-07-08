@@ -508,15 +508,7 @@ class Viewer extends hxd.App {
 		if( cameras.length == 1 && curHmd != null ) {
 			var c = cameras[0];
 			var t = obj.getObjectByName(c.name+".Target");
-			for( m in curHmd.header.models )
-				if( m.name == c.name && m.props != null ) {
-					for( p in m.props )
-						switch( p ) {
-						case CameraFOVY(v):
-							s3d.camera.fovY = v;
-						default:
-						}
-				}
+			s3d.camera.fovY = curHmd.getModelProperty(t.name, CameraFOVY(0), 25);
 			s3d.camera.follow = { pos : c, target : t };
 		}
 	}
@@ -565,6 +557,33 @@ class Viewer extends hxd.App {
 			return;
 		var prev = s3d.currentAnimation;
 		anim = s3d.playAnimation(anim);
+		anim.onEvent = function(e:String) {
+			var param = null;
+			var name = e;
+			if( StringTools.endsWith(e, ")") ) {
+				var f = e.split("(");
+				name = f[0];
+				param = f[1].substr(0, -1);
+				if( param == "" ) param = null;
+			}
+			switch( name ) {
+			case "camera":
+				if( param == null )
+					s3d.camera.follow = null;
+				else {
+					var o = s3d.getObjectByName(param);
+					var t = s3d.getObjectByName(param + ".Target");
+					if( o == null || t == null )
+						trace("Camera not found " + param);
+					else {
+						s3d.camera.follow = { pos : o, target : t };
+						s3d.camera.fovY = curHmd.getModelProperty(param, CameraFOVY(0), 25);
+					}
+				}
+			default:
+				trace("EVENT @"+anim.frame+" : "+e);
+			}
+		};
 		if( !props.loop ) {
 			anim.loop = false;
 			anim.onAnimEnd = function() anim.setFrame(0);

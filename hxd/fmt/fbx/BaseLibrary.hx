@@ -91,6 +91,7 @@ class BaseLibrary {
 	var leftHand : Bool;
 	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
 	var uvAnims : Map<String, Array<{ t : Float, u : Float, v : Float }>>;
+	var animationEvents : Array<{ frame : Int, data : String }>;
 
 	/**
 		Allows to prevent some terminal unskinned joints to be removed, for instance if we want to track their position
@@ -160,6 +161,9 @@ class BaseLibrary {
 							var frames = [for( f in new haxe.xml.Fast(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { t : Std.parseFloat(f[0]) * 9622116.25, u : Std.parseFloat(f[1]), v : Std.parseFloat(f[2]) }} ];
 							if( uvAnims == null ) uvAnims = new Map();
 							uvAnims.set(m.getName(), frames);
+						case "Events":
+							var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid Events data in " + m.getName();
+							animationEvents = [for( f in new haxe.xml.Fast(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { frame : Std.parseInt(f.shift()), data : StringTools.trim(f.join(" ")) }} ];
 						default:
 						}
 					}

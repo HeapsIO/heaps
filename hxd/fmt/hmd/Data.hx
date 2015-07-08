@@ -187,6 +187,13 @@ class AnimationObject {
 	}
 }
 
+class AnimationEvent {
+	public var frame : Int;
+	public var data : String;
+	public function new() {
+	}
+}
+
 class Animation {
 	public var name : String;
 	public var props : Properties;
@@ -195,6 +202,7 @@ class Animation {
 	public var speed : Float;
 	public var loop : Bool;
 	public var objects : Array<AnimationObject>;
+	public var events : Null<Array<AnimationEvent>>;
 	public var dataPosition : DataPosition;
 	public function new() {
 	}

@@ -309,13 +309,13 @@ class Library {
 		return s;
 	}
 
-	public function getModelProperty<T>( objName : String, p : Property<T> ) : T {
+	public function getModelProperty<T>( objName : String, p : Property<T>, ?def : Null<T> ) : Null<T> {
 		for( m in header.models )
 			if( m.name == objName ) {
 				for( pr in m.props )
 					if( pr.getIndex() == p.getIndex() )
 						return pr.getParameters()[0];
-				throw '${objName} has no property ${p.getName()}';
+				return def;
 			}
 		throw 'Model ${objName} not found';
 	}
@@ -383,6 +383,7 @@ class Library {
 		var l = new h3d.anim.LinearAnimation(a.name, a.frames, a.sampling);
 		l.speed = a.speed;
 		l.loop = a.loop;
+		if( a.events != null ) l.setEvents(a.events);
 
 		entry.open();
 		entry.skip(header.dataPosition + a.dataPosition);

@@ -1,8 +1,50 @@
+
+fn setProp m p v = (
+	local buf = substituteString (substituteString (getUserPropBuffer m) "\r\n" "\n") "\r" "\n"
+	local props = filterString buf "\n"
+	local found = false
+	for pid in 1 to props.count do (		
+		local pname = substituteString ((filterString (props[pid]) "=")[1]) " " ""
+		if pname == p then (
+			found = true
+			if v == undefined then props[pid] = "" else props[pid] = p+"="+v
+		)
+	)
+	if (not found) and v != undefined then append props (p+"="+v)	
+	buf = ""
+	for i in 1 to props.count do (
+		if props[i] == "" then continue
+		buf = buf + props[i]+"\r\n"
+	)
+	setUserPropBuffer m buf
+)
+
+fn unsetProp m p = (
+	setProp m p undefined
+)
+
 macroScript XtraExport Category:"Shiro" tooltip:"Add Extra Infos" buttontext:"XTRA"
 (
 
 	local somethingDone = false
+
+	local tcount = FrameTagManager.GetTagCount()
+	
+	if tcount > 0 then (
+		for m in Geometry do unsetProp m "Events"
+		local evData = "<el>"
+		for i = 1 to tcount do (
+			local tid = FrameTagManager.GetTagID i
+			local ttime = FrameTagManager.GetTimeByID tid
+			local tname = FrameTagManager.GetNameByID tid
+			evData = evData + "<e>"+(ttime as string)+" "+tname+"</e>";
+		)
+		setProp Geometry[1] "Events" (evData + "</el>")
+		somethingDone = true
+	)
+	
 	for m in Geometry do (
+		unsetProp m "UV"
 		if m.material == undefined then continue
 		local diffuse = m.material.diffuseMap
 		if diffuse == undefined then continue
@@ -34,17 +76,11 @@ macroScript XtraExport Category:"Shiro" tooltip:"Add Extra Infos" buttontext:"XT
 				)
 			)
 		)
-
-		if hasUVAnim then (
-			setUserProp m "UV" (uvData+"</uv>");
-		) else if getUserProp m "UV" != undefined then (
-			local buf = getUserPropBuffer m
-			setUserProp m "UV" "";
-			buf = substituteString buf "UV = \r\n" ""
-			setUserPropBuffer m buf
-		)
+		if hasUVAnim then setProp m "UV" (uvData+"</uv>")
 	)
 	if not somethingDone then (
-		messageBox "No UV animation has been found"
+		messageBox "No XTRA info has been found"
 	)
 )
+
+
