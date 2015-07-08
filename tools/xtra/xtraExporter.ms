@@ -1,30 +1,30 @@
 
-fn setProp m p v = (
-	local buf = substituteString (substituteString (getUserPropBuffer m) "\r\n" "\n") "\r" "\n"
-	local props = filterString buf "\n"
-	local found = false
-	for pid in 1 to props.count do (		
-		local pname = substituteString ((filterString (props[pid]) "=")[1]) " " ""
-		if pname == p then (
-			found = true
-			if v == undefined then props[pid] = "" else props[pid] = p+"="+v
-		)
-	)
-	if (not found) and v != undefined then append props (p+"="+v)	
-	buf = ""
-	for i in 1 to props.count do (
-		if props[i] == "" then continue
-		buf = buf + props[i]+"\r\n"
-	)
-	setUserPropBuffer m buf
-)
-
-fn unsetProp m p = (
-	setProp m p undefined
-)
-
 macroScript XtraExport Category:"Shiro" tooltip:"Add Extra Infos" buttontext:"XTRA"
 (
+
+	fn setProp m p v = (
+		local buf = substituteString (substituteString (getUserPropBuffer m) "\r\n" "\n") "\r" "\n"
+		local props = filterString buf "\n"
+		local found = false
+		for pid in 1 to props.count do (		
+			local pname = substituteString ((filterString (props[pid]) "=")[1]) " " ""
+			if pname == p then (
+				found = true
+				if v == undefined then props[pid] = "" else props[pid] = p+"="+v
+			)
+		)
+		if (not found) and v != undefined then append props (p+"="+v)	
+		buf = ""
+		for i in 1 to props.count do (
+			if props[i] == "" then continue
+			buf = buf + props[i]+"\r\n"
+		)
+		setUserPropBuffer m buf
+	)
+
+	fn unsetProp m p = (
+		setProp m p undefined
+	)
 
 	local somethingDone = false
 
@@ -46,7 +46,8 @@ macroScript XtraExport Category:"Shiro" tooltip:"Add Extra Infos" buttontext:"XT
 	for m in Geometry do (
 		unsetProp m "UV"
 		if m.material == undefined then continue
-		local diffuse = m.material.diffuseMap
+		local diffuse = undefined
+		try diffuse = m.material.diffuseMap catch ()
 		if diffuse == undefined then continue
 		local coords = diffuse.coords
 		local hasUVAnim = false
@@ -61,7 +62,7 @@ macroScript XtraExport Category:"Shiro" tooltip:"Add Extra Infos" buttontext:"XT
 		local timeVal = animationRange.start.ticks
 		local uvData = undefined
 		for frame = animationRange.start to animationRange.end do (
-			at time frame (			
+			at time frame (
 				if curU != coords.U_offset or curV != coords.V_offset then (
 					if not hasUVAnim then (
 						somethingDone = true
