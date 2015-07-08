@@ -508,7 +508,7 @@ class Viewer extends hxd.App {
 		if( cameras.length == 1 && curHmd != null ) {
 			var c = cameras[0];
 			var t = obj.getObjectByName(c.name+".Target");
-			s3d.camera.fovY = curHmd.getModelProperty(t.name, CameraFOVY(0), 25);
+			s3d.camera.fovY = curHmd.getModelProperty(c.name, CameraFOVY(0), 25);
 			s3d.camera.follow = { pos : c, target : t };
 		}
 	}

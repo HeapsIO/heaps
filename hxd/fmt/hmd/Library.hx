@@ -312,9 +312,10 @@ class Library {
 	public function getModelProperty<T>( objName : String, p : Property<T>, ?def : Null<T> ) : Null<T> {
 		for( m in header.models )
 			if( m.name == objName ) {
-				for( pr in m.props )
-					if( pr.getIndex() == p.getIndex() )
-						return pr.getParameters()[0];
+				if( m.props != null )
+					for( pr in m.props )
+						if( pr.getIndex() == p.getIndex() )
+							return pr.getParameters()[0];
 				return def;
 			}
 		throw 'Model ${objName} not found';
