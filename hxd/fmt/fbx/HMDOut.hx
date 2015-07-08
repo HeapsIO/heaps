@@ -576,7 +576,8 @@ class HMDOut extends BaseLibrary {
 		a.frames = anim.frameCount;
 		a.objects = [];
 		a.dataPosition = dataOut.length;
-		a.events = [for( a in animationEvents ) { var e = new AnimationEvent(); e.frame = a.frame; e.data = a.data; e; } ];
+		if( animationEvents != null )
+			a.events = [for( a in animationEvents ) { var e = new AnimationEvent(); e.frame = a.frame; e.data = a.data; e; } ];
 		var objects : Array<h3d.anim.LinearAnimation.LinearObject> = cast @:privateAccess anim.objects;
 		objects.sort(function(o1, o2) return Reflect.compare(o1.objectName, o2.objectName));
 		for( obj in objects ) {
