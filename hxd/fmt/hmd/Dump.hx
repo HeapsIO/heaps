@@ -135,6 +135,16 @@ class Dump {
 					}
 				add('${o.name} : ${flags.join(",")}');
 			}
+			prefix = prefix.substr(1);
+
+			if( a.events != null ) {
+				add('Events : ');
+				prefix += "\t";
+				for( e in a.events )
+					add('${e.frame} : ${e.data}');
+				prefix = prefix.substr(1);
+			}
+
 			prefix = "";
 		}
 
