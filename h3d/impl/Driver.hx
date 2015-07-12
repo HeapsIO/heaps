@@ -47,6 +47,10 @@ enum Feature {
 		Is it required to perform a full clear each frame on render target textures.
 	*/
 	FullClearRequired;
+	/*
+		Allows to render on several render targets with a single draw.
+	*/
+	MultipleRenderTargets;
 }
 
 class Driver {

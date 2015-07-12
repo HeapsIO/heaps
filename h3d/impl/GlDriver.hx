@@ -648,13 +648,15 @@ class GlDriver extends Driver {
 	override function hasFeature( f : Feature ) : Bool {
 		return switch( f ) {
 		#if hxsdl
-		case StandardDerivatives, FloatTextures:
+		case StandardDerivatives, FloatTextures, MultipleRenderTargets:
 			true; // runtime extension detect required ?
 		#else
 		case StandardDerivatives:
 			gl.getExtension('OES_standard_derivatives') != null;
 		case FloatTextures:
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null;
+		case MultipleRenderTargets:
+			gl.getExtension('WEBGL_draw_buffers') != null;
 		#end
 		case PerTargetDepthBuffer:
 			true;

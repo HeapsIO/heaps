@@ -150,6 +150,7 @@ class Stage3dDriver extends Driver {
 		case PerTargetDepthBuffer: false;
 		case TargetUseDefaultDepthBuffer: true;
 		case FullClearRequired: flashVersion < 15;
+		case MultipleRenderTargets: (PROFILE == cast "standard") || (PROFILE == cast "standardExtended");
 		}
 	}
 
