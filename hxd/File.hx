@@ -235,4 +235,14 @@ class File {
 		#end
 	}
 
+	public static function createDirectory( path : String ) {
+		#if air3
+		getRelPath(path).createDirectory();
+		#elseif sys
+		sys.FileSystem.createDirectory(path);
+		#else
+		throw "Not supported";
+		#end
+	}
+
 }
