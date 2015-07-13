@@ -16,7 +16,9 @@ class Input extends Interactive {
 		input.cursor = TextInput;
 		cursor = new h2d.Bitmap(null, bg);
 		cursor.visible = false;
+		var ctrlDown = false;
 		input.onFocus = function(_) {
+			ctrlDown = false;
 			addClass(":focus");
 			cursor.visible = true;
 			onFocus();
@@ -54,6 +56,22 @@ class Input extends Interactive {
 				case Key.ENTER:
 					input.blur();
 					return;
+				case Key.CTRL:
+					ctrlDown = true;
+				}
+				if( ctrlDown ) {
+					switch( e.keyCode ) {
+					case "V".code:
+						var clip = hxd.System.getClipboard();
+						if( clip != "" ) {
+							clip = clip.split("\t").join(" ").split("\r\n").join(" ").split("\r").join(" ").split("\n").join(" ");
+							value = value.substr(0, cursorPos) + clip + value.substr(cursorPos);
+							cursorPos += clip.length;
+							onChange(value);
+						}
+					default:
+					}
+					return;
 				}
 				if( e.charCode != 0 ) {
 					value = value.substr(0, cursorPos) + String.fromCharCode(e.charCode) + value.substr(cursorPos);
@@ -61,6 +79,9 @@ class Input extends Interactive {
 					onChange(value);
 				}
 			}
+		};
+		input.onKeyUp = function(e:hxd.Event) {
+			if( e.keyCode == Key.CTRL ) ctrlDown = false;
 		};
 		this.value = "";
 	}

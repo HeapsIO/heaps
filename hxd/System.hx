@@ -148,6 +148,15 @@ class System {
 	}
 	#end
 
+	public static function getClipboard() : String {
+		#if flash
+		trace(flash.desktop.Clipboard.generalClipboard.getData(flash.desktop.ClipboardFormats.TEXT_FORMAT));
+		return flash.desktop.Clipboard.generalClipboard.getData(flash.desktop.ClipboardFormats.TEXT_FORMAT);
+		#else
+		return "";
+		#end
+	}
+
 	public static function exit() {
 		#if flash
 		if( isAir() ) {
