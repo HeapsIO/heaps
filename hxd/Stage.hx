@@ -2,6 +2,12 @@ package hxd;
 
 class Stage {
 
+	/**
+		Touch is enabled by default and will be activated if the screen has touch capacities (see hxd.System.isTouch).
+		But for Flash/AIR Desktop, you might prefer to disable it in order to keep mouse/keys events.
+	**/
+	public static var ENABLE_TOUCH = true;
+
 	#if (flash || openfl || nme)
 	var stage : flash.display.Stage;
 	var fsDelayed : Bool;
@@ -69,7 +75,7 @@ class Stage {
 	#if flash
 
 	function initGesture(b) {
-		if( hxd.System.isTouch ) {
+		if( hxd.System.isTouch && ENABLE_TOUCH ) {
 			if( b )  {
 				flash.ui.Multitouch.inputMode = flash.ui.MultitouchInputMode.GESTURE;
 				stage.removeEventListener(flash.events.TouchEvent.TOUCH_BEGIN, onTouchDown);
