@@ -150,7 +150,6 @@ class System {
 
 	public static function getClipboard() : String {
 		#if flash
-		trace(flash.desktop.Clipboard.generalClipboard.getData(flash.desktop.ClipboardFormats.TEXT_FORMAT));
 		return flash.desktop.Clipboard.generalClipboard.getData(flash.desktop.ClipboardFormats.TEXT_FORMAT);
 		#else
 		return "";
@@ -267,6 +266,10 @@ class System {
 		callb();
 	}
 
+	public static function getClipboard() : String {
+		return "";
+	}
+
 	public static function setNativeCursor( c : Cursor ) {
 		var canvas = js.Browser.document.getElementById("webgl");
 		if( canvas != null ) {
@@ -353,6 +356,10 @@ class System {
 
 	public static function exit() {
 		Sys.exit(0);
+	}
+
+	public static function getClipboard() : String {
+		return "";
 	}
 
 	static var win : sdl.Window;
