@@ -3,8 +3,17 @@ package hxd.snd;
 
 class Convert {
 
-	static function command(name, args) {
+	#if flash
+	static var processing = new Map();
+	#end
+
+	static function command(name, args, dstFile) {
 		#if (flash && air3)
+
+		if( processing.exists(dstFile) )
+			return;
+		processing.set(dstFile, true);
+
 		var p = new flash.desktop.NativeProcess();
 		var i = new flash.desktop.NativeProcessStartupInfo();
 		i.arguments = flash.Vector.ofArray(args);
@@ -17,8 +26,12 @@ class Convert {
 		i.executable = f;
 		i.workingDirectory = f.parent;
 		p.addEventListener("exit", function(e:Dynamic) {
+			processing.remove(dstFile);
 			var r : Int = Reflect.field(e, "exitCode");
-			if( r != 0 ) throw "Failed to run " + name+" " + args.join(" ") + " (Error " + r + ")";
+			if( r != 0 ) {
+				var path = try f.nativePath catch( e : Dynamic ) name;
+				throw "Failed to run " + path +" " + args.join(" ") + " (Error " + r + ")";
+			}
 		});
 		p.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e) {
 		});
@@ -33,11 +46,11 @@ class Convert {
 	}
 
 	public static function toMP3( srcFile : String, dstFile : String ) {
-		command("lame", ["--resample", "44100", "--silent", "-h", srcFile, dstFile]);
+		command("lame", ["--resample", "44100", "--silent", "-h", srcFile, dstFile],dstFile);
 	}
 
 	public static function toOGG( srcFile : String, dstFile : String ) {
-		command("oggenc2", ["--resample", "44100", "-Q", srcFile, "-o", dstFile]);
+		command("oggenc2", ["--resample", "44100", "-Q", srcFile, "-o", dstFile],dstFile);
 	}
 
 }
