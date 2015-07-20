@@ -114,7 +114,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		drawPass = null;
 		uploadParams = null;
 		// move passes to pool, and erase data
-		var p = firstAlloc, prev = null;
+		var p = firstAlloc;
 		while( p != null ) {
 			p.obj = null;
 			p.pass = null;
@@ -122,11 +122,9 @@ class RenderContext extends h3d.impl.RenderContext {
 			p.shaders = null;
 			p.next = null;
 			p.index = 0;
-			prev = p;
 			p = p.nextAlloc;
 		}
 		pool = firstAlloc;
-
 		for( c in cachedShaderList ) {
 			c.s = null;
 			c.next = null;

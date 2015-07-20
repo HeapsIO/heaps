@@ -87,21 +87,20 @@ class Scene extends Object implements h3d.IDrawable {
 		ctx.lightSystem = lightSystem;
 		renderer.process(ctx, passes);
 
-		// relink pass objects to reuse
-		var count = 0;
-		var prev : h3d.pass.Object = null;
+		// check that passes have been rendered
+		#if debug
 		for( p in passes ) {
-			if( !p.rendered )
-				throw "Pass " + p.name+" has not been rendered : don't know how to handle.";
-			var p = p.passes;
-			if( prev != null )
-				prev.next = p;
-			while( p != null ) {
-				prev = p;
-				p = p.next;
+			if( !p.rendered ) {
+				trace("Pass " + p.name+" has not been rendered : don't know how to handle.");
+				var o = p.passes;
+				while( o != null ) {
+					trace(" used by " + o.obj.name == null ? "" + o.obj : o.obj.name);
+					o = o.next;
+				}
 			}
 		}
-		if( passes.length > 0 ) ctx.passes = passes[0].passes;
+		#end
+
 		ctx.done();
 		for( p in postPasses )
 			p.render(engine);
