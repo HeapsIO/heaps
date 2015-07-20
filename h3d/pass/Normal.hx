@@ -19,7 +19,7 @@ class Normal extends Default {
 		ctx.engine.setTarget(texture);
 		ctx.engine.clear(0, 1);
 		passes = super.draw(passes);
-		ctx.sharedGlobals.set(normalMapId, texture);
+		ctx.setGlobalID(normalMapId, texture);
 		return passes;
 	}
 

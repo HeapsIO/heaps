@@ -85,6 +85,7 @@ class Stage3dDriver extends Driver {
 		s3d = flash.Lib.current.stage.stage3Ds[0];
 		programs = new Map();
 		curTextures = [];
+		curSamplerBits = [];
 		curMultiBuffer = [];
 	}
 
@@ -110,10 +111,12 @@ class Stage3dDriver extends Driver {
 		for( i in 0...curAttributes )
 			ctx.setVertexBufferAt(i, null);
 		curAttributes = 0;
-		for( i in 0...curTextures.length )
+		for( i in 0...curTextures.length ) {
 			ctx.setTextureAt(i, null);
-		curTextures = [];
-		curSamplerBits = [];
+			curTextures[i] = null;
+		}
+		for( i in 0...curSamplerBits.length )
+			curSamplerBits[i] = -1;
 	}
 
 	override function init( onCreate, forceSoftware = false ) {

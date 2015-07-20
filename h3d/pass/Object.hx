@@ -5,6 +5,7 @@ class Object {
 	public var obj : h3d.scene.Object;
 	public var index : Int;
 	public var next : Object;
+	public var nextAlloc : Object;
 
 	// cache
 	public var shaders : hxsl.ShaderList;

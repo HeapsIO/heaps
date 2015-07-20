@@ -88,11 +88,11 @@ class ShadowMap extends Default {
 		if( blur.quality > 0 && blur.passes > 0 )
 			blur.apply(texture, tcache.allocTarget("tmpBlur", ctx, size, size, false), true);
 
-		ctx.sharedGlobals.set(shadowMapId, texture);
-		ctx.sharedGlobals.set(shadowProjId, lightCamera.m);
-		ctx.sharedGlobals.set(shadowColorId, color);
-		ctx.sharedGlobals.set(shadowPowerId, power);
-		ctx.sharedGlobals.set(shadowBiasId, bias);
+		ctx.setGlobalID(shadowMapId, texture);
+		ctx.setGlobalID(shadowProjId, lightCamera.m);
+		ctx.setGlobalID(shadowColorId, color);
+		ctx.setGlobalID(shadowPowerId, power);
+		ctx.setGlobalID(shadowBiasId, bias);
 		return passes;
 	}
 

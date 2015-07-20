@@ -21,7 +21,7 @@ class Depth extends Default {
 		ctx.engine.setTarget(texture);
 		ctx.engine.clear(enableSky ? 0 : 0xFF0000, 1);
 		passes = super.draw(passes);
-		ctx.sharedGlobals.set(depthMapId, texture);
+		ctx.setGlobalID(depthMapId, texture);
 		return passes;
 	}
 

@@ -101,8 +101,8 @@ class Default extends Base {
 
 	@:access(h3d.scene)
 	override function draw( passes : Object ) {
-		for( k in ctx.sharedGlobals.keys() )
-			globals.fastSet(k, ctx.sharedGlobals.get(k));
+		for( g in ctx.sharedGlobals )
+			globals.fastSet(g.gid, g.value);
 		setGlobals();
 		setupShaders(passes);
 		var p = passes;
