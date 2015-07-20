@@ -37,6 +37,16 @@ class Channel {
 		}
 	}
 
+	public function syncWith( src : Channel ) {
+		if( w != null ) {
+			playTime = src.playTime;
+			w.send(Sync(id, src.id));
+		}
+		else {
+			position = src.position;
+		}
+	}
+
 	function get_currentTime() {
 		return haxe.Timer.stamp() - playTime;
 	}

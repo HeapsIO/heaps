@@ -13,6 +13,7 @@ private enum Message {
 	FadeEnd( id : Int, uid : Int );
 	Active( b : Bool );
 	StopAll;
+	Sync( dst : Int, src : Int );
 }
 
 private class WorkerChannel extends NativeChannel {
@@ -182,7 +183,21 @@ class Worker extends hxd.Worker<Message> {
 			volume = v;
 		case StopAll:
 			stopAll();
+		case Sync(dst, src):
+			var cdst = cmap.get(dst);
+			var csrc = cmap.get(src);
+			if( cdst == null || csrc == null ) return;
+			moveChannel(cdst, csrc.channel);
+			cdst.syncWith(csrc);
 		}
+	}
+
+	function moveChannel( c : Channel, to : NativeChannelData ) {
+		if( c.channel == null || to == null || c.channel == to )
+			return;
+		c.channel.channels.remove(c);
+		to.channels.push(c);
+		c.channel = to;
 	}
 
 	override function setupMain() {
