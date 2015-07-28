@@ -218,7 +218,14 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
-		return ctx.createIndexBuffer(count);
+		try {
+			return ctx.createIndexBuffer(count);
+		} catch( e : flash.errors.Error ) {
+			// too many resources / out of memory
+			if( e.errorID == 3691 )
+				return null;
+			throw e;
+		}
 	}
 
 	function getMipLevels( t : h3d.mat.Texture ) {
