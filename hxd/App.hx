@@ -25,6 +25,7 @@ class App {
 
 	function setup() {
 		engine.onResized = function() {
+			if( s2d == null ) return; // if disposed
 			s2d.checkResize();
 			onResize();
 		};
