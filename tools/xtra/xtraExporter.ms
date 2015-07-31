@@ -39,7 +39,12 @@ macroScript XtraExport Category:"Shiro" tooltip:"Add Extra Infos" buttontext:"XT
 			local tname = FrameTagManager.GetNameByID tid
 			evData = evData + "<e>"+(ttime as string)+" "+tname+"</e>";
 		)
-		setProp Geometry[1] "Events" (evData + "</el>")
+		local eventsSet = false
+		for m in Geometry do (
+			if m.material == undefined or eventsSet then continue
+			setProp m "Events" (evData + "</el>")
+			eventsSet = true
+		)
 		somethingDone = true
 	)
 	
@@ -62,7 +67,7 @@ macroScript XtraExport Category:"Shiro" tooltip:"Add Extra Infos" buttontext:"XT
 		local timeVal = animationRange.start.ticks
 		local uvData = undefined
 		for frame = animationRange.start to animationRange.end do (
-			at time frame (
+			at time frame (			
 				if curU != coords.U_offset or curV != coords.V_offset then (
 					if not hasUVAnim then (
 						somethingDone = true
