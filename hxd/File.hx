@@ -156,6 +156,19 @@ class File {
 		#end
 	}
 
+	public static function delete( path : String ) {
+		#if air3
+		try {
+			getRelPath(path).deleteFile();
+		} catch( e : Dynamic ) {
+		}
+		#elseif sys
+		try sys.FileSystem.deleteFile(path) catch( e : Dynamic ) { };
+		#else
+		throw "Not supported";
+		#end
+	}
+
 	public static function getBytes( path : String ) : haxe.io.Bytes {
 		#if air3
 		var file = getRelPath(path);
