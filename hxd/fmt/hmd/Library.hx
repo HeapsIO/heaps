@@ -318,7 +318,9 @@ class Library {
 							return pr.getParameters()[0];
 				return def;
 			}
-		throw 'Model ${objName} not found';
+		if( def == null )
+			throw 'Model ${objName} not found';
+		return def;
 	}
 
 	public function makeObject( ?loadTexture : String -> h3d.mat.Texture ) : h3d.scene.Object {
