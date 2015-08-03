@@ -793,7 +793,16 @@ class BaseLibrary {
 		var anim = new h3d.anim.LinearAnimation(animName, numFrames, sampling);
 		var q = new h3d.Quat(), q2 = new h3d.Quat();
 
-		for( c in curves ) {
+		var sortedCurves = [for( c in curves ) c];
+		function curveName(c) {
+			return c.roll != null ? "roll" : c.fov != null ? "fov" : c.uv != null ? "uv" : "position";
+		}
+		sortedCurves.sort(function(c1, c2) {
+			var r = Reflect.compare(c1.object, c2.object);
+			if( r != 0 ) return r;
+			return Reflect.compare(curveName(c1), curveName(c2));
+		});
+		for( c in sortedCurves ) {
 			var numFrames = numFrames;
 			var sameData = true;
 			if( c.t == null && c.r == null && c.s == null && c.a == null && c.uv == null && c.roll == null && c.fov == null )
