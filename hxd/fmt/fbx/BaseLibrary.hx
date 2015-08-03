@@ -437,9 +437,6 @@ class BaseLibrary {
 		var name = model.getName();
 		if( skipObjects.get(name) )
 			return null;
-		// if it's an empty model with no sub nodes, let's ignore it (except Camera Target)
-		if( model.getType() == "Null" && getChilds(model, "Model").length == 0 && name.split(".").pop() != "Target" )
-			return null;
 		var def = getDefaultMatrixes(model);
 		if( def == null )
 			return null;
@@ -627,7 +624,7 @@ class BaseLibrary {
 		var allTimes = new Map();
 
 		if( animNode != null ) for( cn in getChilds(animNode, "AnimationCurveNode") ) {
-			var model = getParent(cn, "Model",true);
+			var model = getParent(cn, "Model", true);
 			if( model == null ) {
 				switch( cn.getName() ) {
 				case "Roll", "FieldOfView":
