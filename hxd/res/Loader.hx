@@ -2,6 +2,12 @@ package hxd.res;
 
 class Loader {
 
+	/**
+		Set when initializing hxd.Res, or manually.
+		Allows code to resolve resources without compiling hxd.Res
+	*/
+	public static var currentInstance : Loader;
+
 	public var fs(default,null) : hxd.fs.FileSystem;
 	var cache : Map<String,Dynamic>;
 
@@ -65,6 +71,11 @@ class Loader {
 
 	function loadTiledMap( path : String ) {
 		return new TiledMap(fs.get(path));
+	}
+
+	public function dispose() {
+		cache = new Map();
+		fs.dispose();
 	}
 
 }

@@ -101,4 +101,9 @@ class MultiFileSystem implements FileSystem {
 		return false;
 	}
 
+	public function dispose() {
+		for( f in fs )
+			f.dispose();
+	}
+
 }

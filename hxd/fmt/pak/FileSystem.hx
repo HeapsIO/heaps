@@ -148,7 +148,7 @@ class FileSystem implements hxd.fs.FileSystem {
 		files.push(s);
 	}
 
-	public function close() {
+	public function dispose() {
 		for( f in files )
 			f.close();
 		files = [];

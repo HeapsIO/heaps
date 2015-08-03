@@ -405,6 +405,10 @@ class LocalFileSystem implements FileSystem {
 		#end
 	}
 
+	public function dispose() {
+		fileCache = new Map();
+	}
+
 }
 
 #else
@@ -432,6 +436,10 @@ class LocalFileSystem implements FileSystem {
 	public function getRoot() : FileEntry {
 		return null;
 	}
+
+	public function dispose() {
+	}
+
 }
 
 #end

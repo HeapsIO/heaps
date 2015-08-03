@@ -85,4 +85,7 @@ class BytesFileSystem implements FileSystem {
 		return new BytesFileEntry(path,bytes);
 	}
 
+	public function dispose() {
+	}
+
 }

@@ -269,4 +269,7 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		return macro { $types; @:privateAccess new hxd.fs.EmbedFileSystem(haxe.Unserializer.run($v { sdata } )); };
 	}
 
+	public function dispose() {
+	}
+
 }
