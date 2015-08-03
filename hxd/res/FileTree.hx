@@ -208,8 +208,21 @@ class FileTree {
 			fields.push({
 				name : "loader",
 				access : [APublic, AStatic],
-				kind : FVar(loaderType),
+				kind : FProp("default","set",loaderType),
 				pos : pos,
+			});
+			fields.push( {
+				name : "set_loader",
+				access : [AStatic],
+				kind : FFun( {
+					args : [ { name : "l", type : loaderType } ],
+					ret : loaderType,
+					expr : macro {
+						hxd.res.Loader.currentInstance = l;
+						return loader = l;
+					}
+				}),
+				pos : pos
 			});
 		}
 		ignoredPairedExt = new Map();

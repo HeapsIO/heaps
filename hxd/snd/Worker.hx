@@ -14,6 +14,7 @@ private enum Message {
 	Active( b : Bool );
 	StopAll;
 	Sync( dst : Int, src : Int );
+	Dispose;
 }
 
 private class WorkerChannel extends NativeChannel {
@@ -116,7 +117,7 @@ class Worker extends hxd.Worker<Message> {
 	override function handleMessage( msg : Message ) {
 		switch( msg ) {
 		case Play(path, loop, volume, time):
-			var res = hxd.Res.loader.load(path).toSound();
+			var res = hxd.res.Loader.currentInstance.load(path).toSound();
 			var cid = channelID++;
 			var snd = res.getData();
 			snd.load(function() {
@@ -189,6 +190,9 @@ class Worker extends hxd.Worker<Message> {
 			if( cdst == null || csrc == null ) return;
 			moveChannel(cdst, csrc.channel);
 			cdst.syncWith(csrc);
+		case Dispose:
+			stopAll();
+			hxd.res.Loader.currentInstance.dispose();
 		}
 	}
 
@@ -308,6 +312,10 @@ class Worker extends hxd.Worker<Message> {
 	public function play( snd : hxd.res.Sound, loop = true, volume = 1., time = 0. ) {
 		send(Play(snd.entry.path, loop, volume, time));
 		return allocChannel(snd, loop, volume, time);
+	}
+
+	public function dispose() {
+		send(Dispose);
 	}
 
 	public static function init() {
