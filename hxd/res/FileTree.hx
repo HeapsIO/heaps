@@ -250,9 +250,9 @@ class FileTree {
 			var fileName = f;
 			var field = null;
 			var ext = null;
-			if( f.charCodeAt(0) == ".".code || f.charCodeAt(0) == "_".code )
-				continue;
 			if( sys.FileSystem.isDirectory(path) ) {
+				if( f.charCodeAt(0) == ".".code || f.charCodeAt(0) == "_".code )
+					continue;
 				field = handleDir(f, relPath.length == 0 ? f : relPath+"/"+f, path);
 			} else {
 				var extParts = f.split(".");
