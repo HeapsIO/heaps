@@ -122,8 +122,8 @@ class Build {
 				Sys.println("No changes in resources");
 				return;
 			}
-			outBytes.bytes = rebuild(pak, outBytes.bytes);
 		}
+		outBytes.bytes = rebuild(pak, outBytes.bytes);
 		#end
 
 		var f = sys.io.File.write(out + ".pak");
