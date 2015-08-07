@@ -357,14 +357,7 @@ class BitmapData {
 		var w = width;
 		var h = height;
 		var data = ctx.getImageData(0, 0, w, h).data;
-			#if (haxe_ver < 3.2)
-			var pixels = [];
-			for( i in 0...w * h * 4 )
-				pixels.push(data[i]);
-			#else
-			// starting from Haxe 3.2, bytes are based on native array
-			var pixels = data.buffer;
-			#end
+		var pixels = data.buffer;
 		return new Pixels(w, h, haxe.io.Bytes.ofData(pixels), RGBA);
 		#else
 		var out = hxd.impl.Tmp.getBytes(data.width * data.height * 4);
