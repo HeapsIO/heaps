@@ -65,7 +65,19 @@ class Mp3Data extends Data {
 		#if flash
 		var b = out.getData();
 		b.position = outPos;
-		snd.extract(b, sampleCount, sampleStart + 2257 /* MAGIC_DELAY, silence added at mp3 start */ );
+		while( sampleCount > 0 ) {
+			var r = Std.int(snd.extract(b, sampleCount, sampleStart + 2257 /* MAGIC_DELAY, silence added at mp3 start */ ));
+			if( r == 0 ) {
+				while( sampleCount > 0 ) {
+					b.writeFloat(0);
+					b.writeFloat(0);
+					sampleCount--;
+				}
+				return;
+			}
+			sampleCount -= r;
+			sampleStart += r;
+		}
 		#elseif js
 		if( buffer == null ) {
 			// not yet available : fill with blanks
