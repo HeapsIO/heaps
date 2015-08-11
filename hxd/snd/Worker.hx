@@ -56,7 +56,7 @@ class Worker extends hxd.Worker<Message> {
 	var cmap : Map<Int,Channel> = new Map();
 	var channels : Array<NativeChannelData>;
 
-	public function new( nativeChannels = 4, bufferSamples = 4096 ) {
+	public function new( nativeChannels = 8, bufferSamples = 4096 ) {
 		super(Message);
 		this.bufferSamples = bufferSamples;
 		this.channels = [for( i in 0...nativeChannels ) new NativeChannelData(this)];
