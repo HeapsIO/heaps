@@ -41,7 +41,7 @@ macroScript XtraExport Category:"Shiro" tooltip:"Add Extra Infos" buttontext:"XT
 		)
 		local eventsSet = false
 		for m in Geometry do (
-			if m.material == undefined or eventsSet then continue
+			if m.material == undefined or m.ishidden or eventsSet then continue
 			setProp m "Events" (evData + "</el>")
 			eventsSet = true
 		)
