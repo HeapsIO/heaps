@@ -14,6 +14,8 @@ class FileEntry {
 
 	public function getBytes() : haxe.io.Bytes return null;
 
+	public function getTmpBytes() return getBytes();
+
 	public function open() { }
 	public function skip( nbytes : Int ) { }
 	public function readByte() : Int return 0;

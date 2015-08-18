@@ -48,6 +48,13 @@ private class PakEntry extends FileEntry {
 		return pak.read(file.dataSize);
 	}
 
+	override function getTmpBytes() {
+		pak.seek(file.dataPosition, SeekBegin);
+		var tmp = hxd.impl.Tmp.getBytes(file.dataSize);
+		pak.readFullBytes(tmp, 0, file.dataSize);
+		return tmp;
+	}
+
 	override function open() {
 		if( openedBytes == null ) {
 			openedBytes = hxd.impl.Tmp.getBytes(file.dataSize);
