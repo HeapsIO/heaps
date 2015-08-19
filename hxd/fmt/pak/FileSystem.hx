@@ -107,19 +107,24 @@ private class PakEntry extends FileEntry {
 
 	override function loadBitmap( onLoaded ) {
 		#if flash
+		if( openedBytes != null ) throw "Must close() before loadBitmap";
+		open();
+		var old = openedBytes;
 		var loader = new flash.display.Loader();
 		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
 			throw Std.string(e) + " while loading " + path;
 		});
 		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
+			if( openedBytes == null ) {
+				openedBytes = old;
+				close();
+			}
 			var content : flash.display.Bitmap = cast loader.content;
 			onLoaded(new hxd.fs.LoadedBitmap(content.bitmapData));
 			loader.unload();
 		});
-		var op = openedBytes != null;
-		if( !op ) open();
 		loader.loadBytes(openedBytes.getData());
-		if( !op ) close();
+		openedBytes = null;
 		#else
 		super.loadBitmap(onLoaded);
 		#end
