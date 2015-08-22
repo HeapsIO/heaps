@@ -15,6 +15,7 @@ class Base2d extends hxsl.Shader {
 			var color : Vec4;
 		};
 
+		@global var time : Float;
 		@param var zValue : Float;
 		@param var texture : Sampler2D;
 
