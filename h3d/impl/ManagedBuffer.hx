@@ -23,6 +23,9 @@ class ManagedBuffer {
 	var vbuf : Driver.VertexBuffer;
 	var freeList : FreeCell;
 	var next : ManagedBuffer;
+	#if debug
+	var allocHead : Buffer;
+	#end
 
 	public function new( stride, size, ?flags : Array<Buffer.BufferFlag> ) {
 		this.flags = new haxe.EnumFlags();
@@ -55,6 +58,10 @@ class ManagedBuffer {
 			b.position = p;
 			b.buffer = this;
 		};
+		#if debug
+		@:privateAccess b.allocNext = allocHead;
+		allocHead = b;
+		#end
 		return b;
 	}
 
@@ -101,6 +108,10 @@ class ManagedBuffer {
 			b.position = p;
 			b.buffer = this;
 		};
+		#if debug
+		@:privateAccess b.allocNext = allocHead;
+		allocHead = b;
+		#end
 		return true;
 	}
 
@@ -136,6 +147,22 @@ class ManagedBuffer {
 		}
 		if( nvert != 0 )
 			throw "assert";
+		#if debug
+		@:privateAccess {
+			var cur = allocHead, prev : Buffer = null;
+			while( cur != null ) {
+				if( cur == b ) {
+					if( prev == null )
+						allocHead = b.allocNext;
+					else
+						prev.allocNext = b.allocNext;
+					break;
+				}
+				prev = cur;
+				cur = cur.allocNext;
+			}
+		}
+		#end
 		if( freeList.count == size && !flags.has(Managed) )
 			dispose();
 	}

@@ -63,7 +63,7 @@ class MemoryManager {
 		Clean empty (unused) buffers
 	**/
 	public function cleanManagedBuffers() {
-		for( i in 0...buffers.length ) {
+		for( i in 1...buffers.length ) {
 			var b = buffers[i], prev : ManagedBuffer = null;
 			while( b != null ) {
 				if( b.freeList.count == b.size ) {
@@ -105,6 +105,19 @@ class MemoryManager {
 		m.vbuf = null;
 		usedMemory -= m.size * m.stride * 4;
 		bufferCount--;
+		#if debug
+		if( !m.flags.has(Managed) ) {
+			var c = buffers[0], prev : ManagedBuffer = null;
+			while( c != null ) {
+				if( c == m ) {
+					if( prev == null ) buffers[0] = m.next else prev.next = m.next;
+					break;
+				}
+				prev = c;
+				c = c.next;
+			}
+		}
+		#end
 	}
 
 	@:allow(h3d.Buffer)
@@ -133,6 +146,10 @@ class MemoryManager {
 
 		if( !b.flags.has(Managed) ) {
 			var m = new ManagedBuffer(stride, b.vertices);
+			#if debug
+			m.next = buffers[0];
+			buffers[0] = m;
+			#end
 			if( !m.allocBuffer(b) ) throw "assert";
 			return;
 		}
@@ -315,13 +332,24 @@ class MemoryManager {
 		};
 	}
 
+	@:access(h3d.Buffer)
 	public function allocStats() : Array<{ file : String, line : Int, count : Int, tex : Bool, size : Int }> {
 		#if !debug
 		return [];
 		#else
 		var h = new Map();
 		var all = [];
-		/*
+		for( t in textures ) {
+			var key = "$"+t.allocPos.fileName + ":" + t.allocPos.lineNumber;
+			var inf = h.get(key);
+			if( inf == null ) {
+				inf = { file : t.allocPos.fileName, line : t.allocPos.lineNumber, count : 0, size : 0, tex : true };
+				h.set(key, inf);
+				all.push(inf);
+			}
+			inf.count++;
+			inf.size += t.width * t.height * bpp(t);
+		}
 		for( buf in buffers ) {
 			var buf = buf;
 			while( buf != null ) {
@@ -335,23 +363,11 @@ class MemoryManager {
 						all.push(inf);
 					}
 					inf.count++;
-					inf.size += b.nvert * b.b.stride * 4;
+					inf.size += b.vertices * b.buffer.stride * 4;
 					b = b.allocNext;
 				}
 				buf = buf.next;
 			}
-		}
-		*/
-		for( t in textures ) {
-			var key = "$"+t.allocPos.fileName + ":" + t.allocPos.lineNumber;
-			var inf = h.get(key);
-			if( inf == null ) {
-				inf = { file : t.allocPos.fileName, line : t.allocPos.lineNumber, count : 0, size : 0, tex : true };
-				h.set(key, inf);
-				all.push(inf);
-			}
-			inf.count++;
-			inf.size += t.width * t.height * bpp(t);
 		}
 		all.sort(function(a, b) return a.size == b.size ? a.line - b.line : b.size - a.size);
 		return all;
