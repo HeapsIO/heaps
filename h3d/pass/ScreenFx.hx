@@ -18,7 +18,7 @@ class ScreenFx<T:hxsl.Shader> {
 		pass = new h3d.mat.Pass(Std.string(this), new hxsl.ShaderList(shader));
 		pass.culling = None;
 		pass.depth(false, Always);
-		plan = new h3d.prim.Plan2D();
+		plan = h3d.prim.Plan2D.get();
 		engine = h3d.Engine.getCurrent();
 		fullClearRequired = engine.hasFeature(FullClearRequired);
 	}
@@ -40,7 +40,6 @@ class ScreenFx<T:hxsl.Shader> {
 	}
 
 	public function dispose() {
-		plan.dispose();
 	}
 
 }

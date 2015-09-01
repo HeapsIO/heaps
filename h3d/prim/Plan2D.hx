@@ -2,7 +2,7 @@ package h3d.prim;
 
 class Plan2D extends Primitive {
 
-	public function new() {
+	function new() {
 	}
 
 	override function alloc( engine : h3d.Engine ) {
@@ -31,8 +31,14 @@ class Plan2D extends Primitive {
 	}
 
 	override function render(engine:h3d.Engine) {
-		if( buffer == null ) alloc(engine);
+		if( buffer == null || buffer.isDisposed() ) alloc(engine);
 		engine.renderQuadBuffer(buffer);
+	}
+
+	static var inst = null;
+	public static function get() {
+		if( inst == null ) inst = new Plan2D();
+		return inst;
 	}
 
 }

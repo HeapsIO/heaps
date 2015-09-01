@@ -55,9 +55,7 @@ class Border extends ScreenFx<BorderShader> {
 		add(width-size, height);
 		add(width, height);
 
-		var plan = new h3d.prim.RawPrimitive({ vbuf : bbuf, stride : 2, quads : true }, true);
-		this.plan.dispose();
-		this.plan = plan;
+		this.plan = new h3d.prim.RawPrimitive({ vbuf : bbuf, stride : 2, quads : true }, true);
 		shader.color.set(1,1,1,1);
 	}
 
