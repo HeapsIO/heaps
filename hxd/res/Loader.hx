@@ -16,6 +16,10 @@ class Loader {
 		cache = new Map<String,Dynamic>();
 	}
 
+	public function cleanCache() {
+		cache = new Map();
+	}
+
 	public function exists( path : String ) : Bool {
 		return fs.exists(path);
 	}
@@ -74,7 +78,7 @@ class Loader {
 	}
 
 	public function dispose() {
-		cache = new Map();
+		cleanCache();
 		fs.dispose();
 	}
 

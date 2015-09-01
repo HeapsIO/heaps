@@ -15,6 +15,7 @@ private enum Message {
 	StopAll;
 	Sync( dst : Int, src : Int );
 	Dispose;
+	Clean;
 }
 
 private class WorkerChannel extends NativeChannel {
@@ -193,6 +194,8 @@ class Worker extends hxd.Worker<Message> {
 		case Dispose:
 			stopAll();
 			hxd.res.Loader.currentInstance.dispose();
+		case Clean:
+			hxd.res.Loader.currentInstance.cleanCache();
 		}
 	}
 

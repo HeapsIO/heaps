@@ -73,7 +73,14 @@ class Image extends Resource {
 			png.checkCRC = false;
 			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
 			#if( format >= "3.1.3" )
-			format.png.Tools.extract32(png.read(), pixels.bytes, flipY);
+			var pdata = png.read();
+			try {
+				format.png.Tools.extract32(pdata, pixels.bytes, flipY);
+			} catch( e : Dynamic ) {
+				// most likely, out of memory
+				hxd.impl.Tmp.freeMemory();
+				format.png.Tools.extract32(pdata, pixels.bytes, flipY);
+			}
 			if( flipY ) pixels.flags.set(FlipY);
 			#else
 			format.png.Tools.extract32(png.read(), pixels.bytes);

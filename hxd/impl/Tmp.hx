@@ -4,6 +4,9 @@ class Tmp {
 
 	static var bytes = new Array<haxe.io.Bytes>();
 
+	public static dynamic function outOfMemory() {
+	}
+
 	public static function getBytes( size : Int ) {
 		var found = -1;
 		for( i in 0...bytes.length ) {
@@ -18,7 +21,22 @@ class Tmp {
 		var sz = 1024;
 		while( sz < size )
 			sz = (sz * 3) >> 1;
-		return haxe.io.Bytes.alloc(sz);
+		return allocBytes(sz);
+	}
+
+	public static function freeMemory() {
+		bytes = [];
+		outOfMemory();
+	}
+
+	public static function allocBytes( size : Int ) {
+		try {
+			return haxe.io.Bytes.alloc(size);
+		} catch( e : Dynamic ) {
+			// out of memory
+			freeMemory();
+			return haxe.io.Bytes.alloc(size);
+		}
 	}
 
 	public static function saveBytes( b : haxe.io.Bytes ) {
