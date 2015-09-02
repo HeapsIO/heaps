@@ -51,7 +51,10 @@ class BatchElement {
 	}
 
 	public inline function remove() {
-		batch.delete(this);
+		if( batch != null ) {
+			batch.delete(this);
+			batch = null;
+		}
 	}
 
 }
