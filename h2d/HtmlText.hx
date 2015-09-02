@@ -42,7 +42,8 @@ class HtmlText extends Text {
 		xPos = 0;
 		yPos = 0;
 		xMax = 0;
-		for( e in Xml.parse(text) )
+		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
+		for( e in doc )
 			addNode(e, rebuild);
 		return { width : xPos > xMax ? xPos : xMax, height : xPos > 0 ? yPos + (font.lineHeight + lineSpacing) : yPos };
 	}
