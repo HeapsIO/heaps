@@ -74,6 +74,7 @@ class Stage3dDriver extends Driver {
 	var programs : Map<Int, CompiledShader>;
 	var isStandardMode : Bool;
 	var flashVersion : Float;
+	var tdisposed : Texture;
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -142,6 +143,10 @@ class Stage3dDriver extends Driver {
 			onCreateCallback(true);
 		} else {
 			ctx = s3d.context3D;
+			if( tdisposed == null ) {
+				tdisposed = ctx.createTexture(1, 1, flash.display3D.Context3DTextureFormat.BGRA, false);
+				tdisposed.dispose();
+			}
 			onCreateCallback(false);
 		}
 	}
@@ -259,6 +264,8 @@ class Stage3dDriver extends Driver {
 		} catch( e : flash.errors.Error ) {
 			if( e.errorID == 3691 )
 				return null;
+			if( e.errorID == 3694 )
+				return tdisposed; // our context was disposed, let's return a disposed texture
 			throw e;
 		}
 	}
