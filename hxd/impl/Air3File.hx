@@ -13,11 +13,12 @@ class FileInput extends haxe.io.Input {
 
 	var fs : flash.filesystem.FileStream;
 	var avail : Int;
+	var maxSize : Int;
 
 	public function new(file) {
 		fs = new flash.filesystem.FileStream();
 		fs.open(file, flash.filesystem.FileMode.READ);
-		avail = fs.bytesAvailable;
+		maxSize = avail = fs.bytesAvailable;
 	}
 
 	override function close() {
@@ -30,19 +31,18 @@ class FileInput extends haxe.io.Input {
 	public function seek( p : Int, pos : FileSeek ) {
 		switch( pos ) {
 		case SeekBegin:
-			var end = Std.int(fs.position) + avail;
-			if( p > end ) p = end;
+			if( p < 0 ) p = 0;
+			if( p > maxSize ) p = maxSize;
 			fs.position = p;
-			avail = fs.bytesAvailable;
+			avail = maxSize;
 		case SeekCur:
-			if( p > avail ) p = avail;
+			if( p < 0 && p < -fs.position ) p = -Std.int(fs.position) else if( p > avail ) p = avail;
 			fs.position += p;
 			avail -= p;
 		case SeekEnd:
-			var end = Std.int(fs.position) + avail;
-			if( p > end ) p = end;
-			fs.position = end - p;
-			avail = fs.bytesAvailable;
+			if( p > maxSize ) p = maxSize;
+			fs.position = maxSize - p;
+			avail = p;
 		}
 	}
 
@@ -55,8 +55,8 @@ class FileInput extends haxe.io.Input {
 	}
 
 	override function readByte() {
-		var b;
-		try b = fs.readUnsignedByte() catch( e : Dynamic ) throw new haxe.io.Eof();
+		if( avail <= 0 ) throw new haxe.io.Eof();
+		var b = fs.readUnsignedByte();
 		avail--;
 		return b;
 	}
