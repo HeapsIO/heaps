@@ -56,6 +56,7 @@ class Skin extends MultiMaterial {
 	var jointsAbsPosInv : h3d.Matrix;
 	var paletteChanged : Bool;
 	var skinShader : h3d.shader.Skin;
+	var jointsGraphics : Graphics;
 
 	public var showJoints : Bool;
 	/**
@@ -192,6 +193,30 @@ class Skin extends MultiMaterial {
 					ctx.emit(m, this, i);
 			}
 		}
+		if( showJoints ) {
+			if( jointsGraphics == null ) {
+				jointsGraphics = new Graphics();
+				jointsGraphics.material.mainPass.depth(false, Always);
+				jointsGraphics.material.mainPass.setPassName("add");
+			}
+			var topParent : Object = this;
+			while( topParent.parent != null )
+				topParent = topParent.parent;
+			if( jointsGraphics.parent != topParent ) topParent.addChild(jointsGraphics);
+
+			var g = jointsGraphics;
+			g.clear();
+			for( j in skinData.allJoints ) {
+				var m = currentAbsPose[j.index];
+				var mp = j.parent == null ? absPos : currentAbsPose[j.parent.index];
+				g.lineStyle(1, j.parent == null ? 0xFF0000FF : 0xFFFFFF00);
+				g.moveTo(mp._41, mp._42, mp._43);
+				g.lineTo(m._41, m._42, m._43);
+			}
+		} else if( jointsGraphics != null ) {
+			jointsGraphics.remove();
+			jointsGraphics = null;
+		}
 	}
 
 	override function draw( ctx : RenderContext ) {
@@ -204,24 +229,7 @@ class Skin extends MultiMaterial {
 			ctx.uploadParams();
 			primitive.render(ctx.engine);
 		}
-		if( showJoints )
-			throw "TODO"; //ctx.addPass(drawJoints);
 	}
 
-	function drawJoints( ctx : RenderContext ) {
-		/*
-		for( j in skinData.allJoints ) {
-			var m = currentAbsPose[j.index];
-			var mp = j.parent == null ? absPos : currentAbsPose[j.parent.index];
-			ctx.engine.line(mp._41, mp._42, mp._43, m._41, m._42, m._43, j.parent == null ? 0xFF0000FF : 0xFFFFFF00);
-
-			var dz = new h3d.Vector(0, 0.01, 0);
-			dz.transform(m);
-			ctx.engine.line(m._41, m._42, m._43, dz.x, dz.y, dz.z, 0xFF00FF00);
-
-			ctx.engine.point(m._41, m._42, m._43, j.bindIndex < 0 ? 0xFF0000FF : 0xFFFF0000);
-		}
-		*/
-	}
 
 }
