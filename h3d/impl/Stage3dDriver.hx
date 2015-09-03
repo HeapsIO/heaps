@@ -271,6 +271,7 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
+		if( t.t == tdisposed ) return;
 		if( t.flags.has(Cubic) ) {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
 			t.uploadFromBitmapData(bmp.toNative(), side, mipLevel);
@@ -286,6 +287,7 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
+		if( t.t == tdisposed ) return;
 		pixels.convert(BGRA);
 		var data = pixels.bytes.getData();
 		if( t.flags.has(Cubic) ) {
