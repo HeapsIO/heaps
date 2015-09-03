@@ -560,6 +560,8 @@ class Parser {
 	function getImage( v : Value ) {
 		switch( v ) {
 		case VCall("url", [VString(url)]):
+			if( StringTools.startsWith(url, "res://") )
+				return hxd.res.Loader.currentInstance.load(url.substr(6)).toImage().getPixels();
 			if( !StringTools.startsWith(url, "data:image/png;base64,") )
 				return null;
 			url = url.substr(22);
