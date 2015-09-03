@@ -134,13 +134,6 @@ class Image extends Resource {
 		} else {
 			// use native decoding
 			entry.loadBitmap(function(bmp) {
-
-				// if the 3D context has been disposed while we're loading the texture, let's retry later
-				if( h3d.Engine.getCurrent().driver.isDisposed() ) {
-					haxe.Timer.delay(loadTexture, 500);
-					return;
-				}
-
 				var bmp = bmp.toBitmap();
 				tex.alloc();
 				if( bmp.width != tex.width || bmp.height != tex.height ) {
