@@ -1,5 +1,11 @@
 package hxd.res;
 
+enum ImageFormat {
+	Jpg;
+	Png;
+	Gif;
+}
+
 class Image extends Resource {
 
 	/**
@@ -9,20 +15,21 @@ class Image extends Resource {
 	public static var DEFAULT_FILTER : h3d.mat.Data.Filter = Linear;
 
 	var tex : h3d.mat.Texture;
-	var inf : { width : Int, height : Int, isPNG : Bool };
+	var inf : { width : Int, height : Int, format : ImageFormat };
 
-	public function isPNG() {
+	public function getFormat() {
 		getSize();
-		return inf.isPNG;
+		return inf.format;
 	}
 
 	public function getSize() : { width : Int, height : Int } {
 		if( inf != null )
 			return inf;
 		var f = new hxd.fs.FileInput(entry);
-		var width = 0, height = 0, isPNG = false;
+		var width = 0, height = 0, format;
 		switch( f.readUInt16() ) {
 		case 0xD8FF: // JPG
+			format = Jpg;
 			f.bigEndian = true;
 			while( true ) {
 				switch( f.readUInt16() ) {
@@ -37,7 +44,7 @@ class Image extends Resource {
 				}
 			}
 		case 0x5089: // PNG
-			isPNG = true;
+			format = Png;
 			var TMP = hxd.impl.Tmp.getBytes(256);
 			f.bigEndian = true;
 			f.readBytes(TMP, 0, 6);
@@ -57,19 +64,28 @@ class Image extends Resource {
 				var crc = f.readInt32();
 			}
 			hxd.impl.Tmp.saveBytes(TMP);
+
+		case 0x4947: // GIF
+			format = Gif;
+			f.readInt32(); // skip
+			width = f.readUInt16();
+			height = f.readUInt16();
+
 		default:
 			throw "Unsupported texture format " + entry.path;
 		}
 		f.close();
-		inf = { width : width, height : height, isPNG : isPNG };
+		inf = { width : width, height : height, format : format };
 		return inf;
 	}
 
 	public function getPixels( ?fmt : PixelFormat, ?flipY : Bool ) {
 		getSize();
 		var pixels : hxd.Pixels;
-		if( inf.isPNG ) {
-			var png = new format.png.Reader(new haxe.io.BytesInput(entry.getBytes()));
+		switch( inf.format ) {
+		case Png:
+			var bytes = entry.getTmpBytes();
+			var png = new format.png.Reader(new haxe.io.BytesInput(bytes));
 			png.checkCRC = false;
 			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
 			#if( format >= "3.1.3" )
@@ -85,9 +101,16 @@ class Image extends Resource {
 			#else
 			format.png.Tools.extract32(png.read(), pixels.bytes);
 			#end
-		} else {
-			var bytes = entry.getBytes();
+			hxd.impl.Tmp.saveBytes(bytes);
+		case Gif:
+			var bytes = entry.getTmpBytes();
+			var gif = new format.gif.Reader(new haxe.io.BytesInput(bytes)).read();
+			pixels = new Pixels(inf.width, inf.height, format.gif.Tools.extractFullBGRA(gif, 0), BGRA);
+			hxd.impl.Tmp.saveBytes(bytes);
+		case Jpg:
+			var bytes = entry.getTmpBytes();
 			var p = NanoJpeg.decode(bytes);
+			hxd.impl.Tmp.saveBytes(bytes);
 			pixels = new Pixels(p.width,p.height,p.pixels, BGRA);
 		}
 		if( fmt != null ) pixels.convert(fmt);
@@ -115,7 +138,8 @@ class Image extends Resource {
 	}
 
 	function loadTexture() {
-		if( inf.isPNG ) {
+		switch( getFormat() ) {
+		case Png, Gif:
 			function load() {
 				// immediately loading the PNG is faster than going through loadBitmap
 				tex.alloc();
@@ -131,7 +155,7 @@ class Image extends Resource {
 				load();
 			else
 				entry.load(load);
-		} else {
+		case Jpg:
 			// use native decoding
 			entry.loadBitmap(function(bmp) {
 				var bmp = bmp.toBitmap();

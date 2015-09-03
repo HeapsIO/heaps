@@ -29,7 +29,7 @@ class FileTree {
 		ignoredExt.set("fla", true); // Adobe flash
 		pairedExt = new Map();
 		pairedExt.set("fnt", ["png"]);
-		pairedExt.set("fbx", ["png"]);
+		pairedExt.set("fbx", ["png","jpg","jpeg","gif"]);
 		pairedExt.set("cdb", ["img"]);
 		isFlash = Context.defined("flash");
 		isJS = Context.defined("js");
@@ -364,7 +364,7 @@ class FileTree {
 	function handleFile( file : String, ext : String, relPath : String, fullPath : String ) : FileEntry {
 		var epath = { expr : EConst(CString(relPath)), pos : pos };
 		switch( ext.toLowerCase() ) {
-		case "jpg", "png":
+		case "jpg", "png", "jpeg", "gif":
 			return { e : macro loader.loadImage($epath), t : macro : hxd.res.Image };
 		case "fbx":
 			return { e : macro loader.loadFbxModel($epath), t : macro : hxd.res.FbxModel };
