@@ -137,7 +137,7 @@ class Stage3dDriver extends Driver {
 			p.p.dispose();
 		programs = new Map();
 		if( old != null ) {
-			if( old.driverInfo != "Disposed" ) throw "Duplicate onCreate()";
+			//if( old.driverInfo != "Disposed" ) throw "Duplicate onCreate()";
 			old.dispose();
 			ctx = s3d.context3D;
 			onCreateCallback(true);
@@ -163,9 +163,13 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function resize(width, height) {
-		ctx.configureBackBuffer(width, height, antiAlias);
-		this.width = width;
-		this.height = height;
+		try {
+			ctx.configureBackBuffer(width, height, antiAlias);
+			this.width = width;
+			this.height = height;
+		} catch( e : flash.errors.Error ) {
+			throw new flash.errors.Error("" + e+" (" + width + "x" + height + ")");
+		}
 	}
 
 	override function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
