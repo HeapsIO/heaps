@@ -74,7 +74,7 @@ class Pad {
 			inst.addEventListener(flash.events.GameInputEvent.DEVICE_ADDED, function(e:flash.events.GameInputEvent) {
 				var p = new Pad();
 				p.d = e.device;
-				trace(p.d.name, p.d.id);
+				//trace(p.d.name, p.d.id);
 				for( i in 0...flash.ui.GameInput.numDevices )
 					if( p.d == flash.ui.GameInput.getDeviceAt(i) )
 						p.index = i;
