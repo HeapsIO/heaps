@@ -78,7 +78,6 @@ class Skin extends MultiMaterial {
 		return s;
 	}
 
-
 	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
 		b = super.getBounds(b, rec);
 		var tmp = primitive.getBounds().clone();
@@ -195,14 +194,14 @@ class Skin extends MultiMaterial {
 		}
 		if( showJoints ) {
 			if( jointsGraphics == null ) {
-				jointsGraphics = new Graphics();
+				jointsGraphics = new Graphics(this);
 				jointsGraphics.material.mainPass.depth(false, Always);
 				jointsGraphics.material.mainPass.setPassName("add");
 			}
 			var topParent : Object = this;
 			while( topParent.parent != null )
 				topParent = topParent.parent;
-			if( jointsGraphics.parent != topParent ) topParent.addChild(jointsGraphics);
+			jointsGraphics.follow = topParent;
 
 			var g = jointsGraphics;
 			g.clear();
