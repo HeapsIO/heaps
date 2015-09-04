@@ -159,11 +159,15 @@ class Polygon extends Primitive {
 		}
 	}
 
-	public override function triCount() {
+	override function triCount() {
 		var n = super.triCount();
 		if( n != 0 )
 			return n;
 		return Std.int((idx == null ? points.length : idx.length) / 3);
 	}
 
+	override function vertexCount() {
+		return points.length;
+	}
+	
 }

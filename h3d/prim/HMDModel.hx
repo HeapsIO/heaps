@@ -15,6 +15,14 @@ class HMDModel extends MeshPrimitive {
 		this.entry = entry;
 	}
 
+	override function triCount() {
+		return Std.int(data.indexCount / 3);
+	}
+
+	override function vertexCount() {
+		return data.vertexCount;
+	}
+
 	override function getBounds() {
 		return data.bounds;
 	}

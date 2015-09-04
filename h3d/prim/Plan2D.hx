@@ -4,6 +4,14 @@ class Plan2D extends Primitive {
 
 	function new() {
 	}
+	
+	override function triCount() {
+		return 2;
+	}
+	
+	override function vertexCount() {
+		return 4;
+	}
 
 	override function alloc( engine : h3d.Engine ) {
 		var v = new hxd.FloatBuffer();

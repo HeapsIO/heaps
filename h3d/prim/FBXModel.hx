@@ -12,10 +12,17 @@ class FBXModel extends MeshPrimitive {
 	var curMaterial : Int;
 	var groupIndexes : Array<Indexes>;
 	var viewNormals : Bool;
+	var tcount = -1;
 
 	public function new(g) {
 		this.geom = g;
 		curMaterial = -1;
+	}
+
+	override public function triCount() {
+		if( buffer != null ) return super.triCount();
+		if( tcount < 0 ) tcount = Std.int(geom.getIndexes().idx.length / 3);
+		return tcount;
 	}
 
 	public function setSkin(skin) {
@@ -23,8 +30,8 @@ class FBXModel extends MeshPrimitive {
 		skin.primitive = this;
 	}
 
-	public function getVerticesCount() {
-		return Std.int(geom.getVertices().length / 3);
+	override function vertexCount() {
+		return triCount() * 3; // vertices are always duplicated
 	}
 
 	override function getBounds() {

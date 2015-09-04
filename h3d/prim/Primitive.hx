@@ -9,6 +9,10 @@ class Primitive {
 		return if( indexes != null ) Std.int(indexes.count / 3) else if( buffer == null ) 0 else Std.int(buffer.totalVertices() / 3);
 	}
 
+	public function vertexCount() {
+		return 0;
+	}
+
 	public function getBounds() : h3d.col.Bounds {
 		throw "not implemented";
 		return null;

@@ -12,6 +12,14 @@ class Quads extends Primitive {
 		this.uvs = uvs;
 		this.normals = normals;
 	}
+	
+	override function triCount() {
+		return pts.length * 2;
+	}
+	
+	override function vertexCount() {
+		return pts.length;
+	}
 
 	public function scale( x : Float, y : Float, z : Float ) {
 		for( p in pts ) {

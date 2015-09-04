@@ -62,6 +62,15 @@ class BigPrimitive extends Primitive {
 		return Std.int(count/3);
 	}
 
+	override function vertexCount() {
+		var count = 0;
+		for( b in buffers )
+			count += b.vertices;
+		if( tmpBuf != null )
+			count += Std.int(tmpBuf.length / stride);
+		return count;
+	}
+
 	public function flush() {
 		if( tmpBuf != null ) {
 			if( tmpBuf.length > 0 && tmpIdx.length > 0 ) {

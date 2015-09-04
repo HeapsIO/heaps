@@ -2,6 +2,8 @@ package h3d.prim;
 
 class RawPrimitive extends Primitive {
 
+	var vcount : Int;
+	var tcount : Int;
 	public var onContextLost : Void -> { vbuf : hxd.FloatBuffer, stride : Int, ?ibuf : hxd.IndexBuffer, ?quads : Bool };
 
 	public function new( inf : { vbuf : hxd.FloatBuffer, stride : Int, ?ibuf : hxd.IndexBuffer, ?quads : Bool }, persist = false ) {
@@ -17,8 +19,22 @@ class RawPrimitive extends Primitive {
 		if( inf.ibuf == null ) flags.push(inf.quads ? Quads : Triangles);
 		if( inf.stride < 8 ) flags.push(RawFormat);
 		buffer = h3d.Buffer.ofFloats(inf.vbuf, inf.stride, flags);
+		vcount = buffer.vertices;
+		tcount = inf.ibuf != null ? Std.int(inf.ibuf.length / 3) : inf.quads ? vcount >> 1 : Std.int(vcount/3);
 		if( inf.ibuf != null )
 			indexes = h3d.Indexes.alloc(inf.ibuf);
+		else if( indexes != null ) {
+			indexes.dispose();
+			indexes = null;
+		}
+	}
+
+	override function triCount() {
+		return tcount;
+	}
+
+	override function verterCount() {
+		return vcount;
 	}
 
 }
