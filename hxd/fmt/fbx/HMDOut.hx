@@ -349,7 +349,7 @@ class HMDOut extends BaseLibrary {
 		var hskins = new Map(), tmpGeom = new Map();
 		// prepare things for skinning
 		for( g in this.root.getAll("Objects.Geometry") )
-			tmpGeom.set(g.getId(), { setSkin : function(_) { }, getVerticesCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
+			tmpGeom.set(g.getId(), { setSkin : function(_) { }, vertexCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
 
 		var hgeom = new Map();
 		var hmat = new Map<Int,Int>();

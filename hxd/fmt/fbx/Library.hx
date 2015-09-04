@@ -105,7 +105,7 @@ class Library extends BaseLibrary {
 			}
 		}
 		// build skins
-		var hgeom = [for( k in hgeom.keys() ) k => (hgeom.get(k) : {function getVerticesCount():Int;function setSkin(s:h3d.anim.Skin):Void;})];
+		var hgeom = [for( k in hgeom.keys() ) k => (hgeom.get(k) : {function vertexCount():Int;function setSkin(s:h3d.anim.Skin):Void;})];
 		for( o in objects ) {
 			if( o.isJoint ) continue;
 
