@@ -224,7 +224,6 @@ class TreeView
 	}
 
 	public static function init(scene2d) {
-		Res.loader = new hxd.res.Loader(new hxd.fs.LocalFileSystem("res"));
 		s2d = scene2d;
 
 		if(cont == null) {

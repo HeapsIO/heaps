@@ -819,6 +819,7 @@ class Viewer extends hxd.App {
 	}
 
 	static function main() {
+		hxd.Res.initEmbed();
 		inst = new Viewer();
 		if( flash.system.Capabilities.playerType == "Desktop" )
 			initAIR();
