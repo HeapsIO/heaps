@@ -33,7 +33,7 @@ class RawPrimitive extends Primitive {
 		return tcount;
 	}
 
-	override function verterCount() {
+	override function vertexCount() {
 		return vcount;
 	}
 
