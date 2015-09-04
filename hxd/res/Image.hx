@@ -84,7 +84,7 @@ class Image extends Resource {
 		var pixels : hxd.Pixels;
 		switch( inf.format ) {
 		case Png:
-			var bytes = entry.getTmpBytes();
+			var bytes = entry.getBytes(); // using getTmpBytes cause bug in E2
 			var png = new format.png.Reader(new haxe.io.BytesInput(bytes));
 			png.checkCRC = false;
 			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
@@ -101,16 +101,13 @@ class Image extends Resource {
 			#else
 			format.png.Tools.extract32(png.read(), pixels.bytes);
 			#end
-			hxd.impl.Tmp.saveBytes(bytes);
 		case Gif:
-			var bytes = entry.getTmpBytes();
+			var bytes = entry.getBytes();
 			var gif = new format.gif.Reader(new haxe.io.BytesInput(bytes)).read();
 			pixels = new Pixels(inf.width, inf.height, format.gif.Tools.extractFullBGRA(gif, 0), BGRA);
-			hxd.impl.Tmp.saveBytes(bytes);
 		case Jpg:
-			var bytes = entry.getTmpBytes();
+			var bytes = entry.getBytes();
 			var p = NanoJpeg.decode(bytes);
-			hxd.impl.Tmp.saveBytes(bytes);
 			pixels = new Pixels(p.width,p.height,p.pixels, BGRA);
 		}
 		if( fmt != null ) pixels.convert(fmt);
