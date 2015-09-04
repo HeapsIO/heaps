@@ -1,4 +1,5 @@
 using hxd.fmt.fbx.Data;
+import hxd.Res;
 
 typedef K = hxd.Key;
 
@@ -15,6 +16,8 @@ typedef Props = {
 	normals:Bool,
 	convertHMD:Bool,
 	queueAnims:Bool,
+	treeview:Bool,
+	checker:Bool,
 }
 
 typedef Campos = {
@@ -41,6 +44,7 @@ class Viewer extends hxd.App {
 	static public var curDataSize : Int;
 	static public var props : Props;
 
+	var light : h3d.scene.DirLight;
 	var rightHand : Bool;
 	var playAnim : Bool;
 	var rightClick : Bool;
@@ -50,6 +54,10 @@ class Viewer extends hxd.App {
 	var box : h3d.scene.Object;
 	var alib : hxd.fmt.fbx.Library;
 	var ahmd : hxd.fmt.hmd.Library;
+
+	var tree : TreeView;
+	var checker : h3d.scene.Mesh;
+	var infos : { tri : Int, objs : Int, verts : Int};
 
 	function new() {
 		super();
@@ -71,9 +79,11 @@ class Viewer extends hxd.App {
 			lights : true, normals : false,
 			convertHMD : false,
 			queueAnims:false,
+			treeview:true,
+			checker:false,
 		};
 		props = hxd.Save.load(props);
-		if( Math.isNaN(props.speed) ) props.speed = 1;
+		props.speed = 1;
 
 		tf = new flash.text.TextField();
 		var fmt = tf.defaultTextFormat;
@@ -106,7 +116,6 @@ class Viewer extends hxd.App {
 		tf_help.filters = [new flash.filters.GlowFilter(0, 1, 2, 2, 20)];
 		tf_help.selectable = false;
 		flash.Lib.current.addChild(tf_help);
-
 	}
 
 	function save() {
@@ -129,13 +138,20 @@ class Viewer extends hxd.App {
 		axis.moveTo(0, 0, 0);
 		axis.lineTo(0, 0, len);
 
-		new h3d.scene.DirLight(new h3d.Vector(3, 4, -10), s3d);
-
+		light = new h3d.scene.DirLight(new h3d.Vector(-4, -3, -10), s3d);
+		var shadows = Std.instance(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
+		shadows.lightDirection = light.direction;
+		shadows.power = 10;
 
 		if( props.curFile != null )
 			loadFile(props.curFile, false);
 		else
 			askLoad();
+
+		if( props.showAxis )
+			s3d.addChild(axis);
+		else
+			s3d.removeChild(axis);
 	}
 
 	override function onResize() {
@@ -149,16 +165,16 @@ class Viewer extends hxd.App {
 		case EPush:
 			pMouse.set(e.relX, e.relY);
 			switch( e.button ) {
-			case 0:
-				freeMove = true;
 			case 1:
+				freeMove = true;
+			case 0:
 				rightClick = true;
 			}
 		case ERelease:
 			switch( e.button ) {
-			case 0:
-				freeMove = false;
 			case 1:
+				freeMove = false;
+			case 0:
 				rightClick = false;
 			}
 			save();
@@ -181,38 +197,23 @@ class Viewer extends hxd.App {
 	function onKey( e : hxd.Event ) {
 		var reload = false;
 		var cam = s3d.camera;
-/*
-			case 1:
-				camera.pos.set(0, dist, 0);
-				camera.up.set(0, 0, 1);
-				camera.target.set(0, 0, 0);
-			case 2:
-				camera.pos.set(rightHand ? -dist : dist, 0, 0);
-				camera.up.set(0, 0, 1);
-				camera.target.set(0, 0, 0);
-			case 3:
-				camera.pos.set(props.camVars.tx + Math.cos(ang) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.ty + Math.sin(ang) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
-				camera.up.set(0, 0, 1);
-				camera.target.set(props.camVars.tx, props.camVars.ty, props.camVars.tz);
-			case 4:
-				camera.pos.set(props.camVars.tx + Math.cos(ang + 0.02) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.ty + Math.sin(ang + 0.02) * Math.cos(Math.PI / 2 * props.camVars.angCoef) * dist, props.camVars.tz + dist * Math.sin(Math.PI / 2 * props.camVars.angCoef));
-				camera.up.set(0, 0, 1);
-				camera.target.set(props.camVars.tx, props.camVars.ty, props.camVars.tz);
-*/
 
 		switch( e.keyCode ) {
-		case K.NUMBER_1:
-			var b = obj.getBounds();
-			var pz = b.zMax * 2 - b.zMin ;
-			cam.pos.set(pz*0.001, pz*0.001, pz);
-			cam.target.set(0, 0, 0);
-			s3d.camera.follow = null;
-		case K.NUMBER_2:
-			//props.view = 2;
-		case K.NUMBER_3:
-			//props.view = 3;
-		case K.NUMBER_4:
-			//props.view = 4;
+		case K.LEFT :
+			var d = hxd.Math.distance(light.direction.x, light.direction.y);
+			var a = Math.atan2(light.direction.y, light.direction.x) + 0.1;
+			light.direction.x = d * Math.cos(a);
+			light.direction.y = d * Math.sin(a);
+		case K.RIGHT :
+			var d = hxd.Math.distance(light.direction.x, light.direction.y);
+			var a = Math.atan2(light.direction.y, light.direction.x) - 0.1;
+			light.direction.x = d * Math.cos(a);
+			light.direction.y = d * Math.sin(a);
+
+		case K.NUMPAD_ADD:
+			props.speed = Math.min(10, props.speed * 1.2);
+		case K.NUMPAD_SUB:
+			props.speed = Math.max(0, props.speed / 1.2);
 		case K.F1:
 			askLoad();
 		case K.F2:
@@ -230,6 +231,14 @@ class Viewer extends hxd.App {
 				var path = props.curFile.substr(0, -4) + "_tree.xml";
 				hxd.File.saveAs(haxe.io.Bytes.ofString(data), { defaultPath : path } );
 			}
+		case "O".code:
+			props.treeview = !props.treeview;
+			if(tree != null)
+				tree.visible = props.treeview;
+		case "G".code:
+			props.checker = !props.checker;
+			showChecker(props.checker);
+
 		case "R".code:
 			if( props.convertHMD ) return;
 			rightHand = !rightHand;
@@ -257,13 +266,16 @@ class Viewer extends hxd.App {
 				s3d.addChild(box);
 			else
 				s3d.removeChild(box);
+		case "F".code if( K.isDown(K.CTRL) ):
+			engine.fullScreen = !engine.fullScreen;
 		case "F".code:
 			resetCamera();
 		case "H".code:
 			tf_keys.visible = !tf_keys.visible;
-		case K.SPACE:
-			if( obj.currentAnimation != null )
-				obj.currentAnimation.pause = !obj.currentAnimation.pause;
+		case K.SPACE, "P".code:
+			if(props.speed != 0)
+				props.speed = 0;
+			else props.speed = 1;
 		case "S".code:
 			if( hxd.Key.isDown(hxd.Key.SHIFT) )
 				props.speed *= 0.5;
@@ -305,10 +317,9 @@ class Viewer extends hxd.App {
 		});
 		l.addEventListener(flash.events.Event.COMPLETE, function(_) {
 			loadData(haxe.io.Bytes.ofData(l.data));
-			if( newFbx ) {
-				resetCamera();
+			resetCamera();
+			if( newFbx )
 				save();
-			}
 		});
 		l.load(new flash.net.URLRequest(file));
 	}
@@ -461,19 +472,73 @@ class Viewer extends hxd.App {
 
 		s3d.addChild(obj);
 
+		infos = getInfos(obj);
+
 		//
 		var b = obj.getBounds();
-
 
 		var dx = b.xMax - b.xMin;
 		var dy = b.yMax - b.yMin;
 
 		box = new h3d.scene.Box(0xFFFF9910);
 
+		TreeView.init(s2d);
+		tree = new TreeView(obj);
+		tree.x = 0;
+		tree.y = 0;
+		tree.visible = props.treeview;
+
 		setMaterial();
 		setAnim();
 
+		for( m in obj.getMaterials() )
+			m.shadows = true;
+
+		showChecker(props.checker);
+
 		save();
+	}
+
+	function getInfos(obj : h3d.scene.Object) {
+		var tri = 0, objs = 0, verts = 0;
+		function getObjectsRec( o : h3d.scene.Object) {
+			objs++;
+			if(o.isMesh()) {
+				tri += o.toMesh().primitive.triCount();
+				verts += o.toMesh().primitive.vertexCount();
+			}
+			for( e in o )
+				getObjectsRec(e);
+		}
+		getObjectsRec(obj);
+		return { tri : tri, objs : objs, verts : verts };
+	}
+
+	function showChecker(b : Bool) {
+		if(!b) {
+			if(checker != null)
+				checker.remove();
+			return;
+		}
+
+		if(checker == null) {
+			var w = 10;
+			var p = new h3d.prim.Cube(w, w, 0);
+			p.unindex();
+			p.addNormals();
+			p.addUVs();
+			for( v in p.uvs ) {
+				v.u *= 1.25;
+				v.v *= 1.25;
+			}
+			p.translate( -w * 0.5, -w * 0.5, 0);
+
+			checker = new h3d.scene.Mesh(p, s3d);
+			checker.material.texture = Res.checker.toTexture();
+			checker.material.texture.wrap = Repeat;
+			checker.material.shadows = true;
+		}
+		s3d.addChild(checker);
 	}
 
 	function getCamerasRec( o : h3d.scene.Object, cam : Array<h3d.scene.Object> ) {
@@ -489,11 +554,11 @@ class Viewer extends hxd.App {
 		var dx = Math.max(Math.abs(b.xMax),Math.abs(b.xMin));
 		var dy = Math.max(Math.abs(b.yMax),Math.abs(b.yMin));
 		var dz = Math.max(Math.abs(b.zMax),Math.abs(b.zMin));
-		var dist = Math.max(Math.max(dx * 4, dy * 4),dz * 3);
+		var dist = Math.max(Math.max(dx * 6, dy * 6), dz * 4);
 		var ang = Math.PI / 4;
-		var zang = Math.PI / 4;
-		s3d.camera.pos.set(Math.sin(zang) * Math.cos(ang) * dist, Math.sin(zang) * Math.sin(ang) * dist, Math.cos(ang) * dist);
-		s3d.camera.target.set(0, 0, 0);
+		var zang = Math.PI * 0.4;
+		s3d.camera.pos.set(Math.sin(zang) * Math.cos(ang) * dist, Math.sin(zang) * Math.sin(ang) * dist, Math.cos(zang) * dist);
+		s3d.camera.target.set(0, 0, (b.zMax + b.zMin) * 0.5);
 
 		var c = b.getCenter();
 		box.x = c.x;
@@ -530,6 +595,8 @@ class Viewer extends hxd.App {
 			var s = Std.instance(o, h3d.scene.Skin);
 			if( s != null )
 				s.showJoints = props.showBones;
+			if(tree != null)
+				tree.showJoints = props.showBones;
 			if( props.normals ) {
 				if( m.name != "__normals__" ) {
 					var n = new h3d.scene.Mesh(m.primitive.buildNormalsDisplay(), m);
@@ -601,6 +668,9 @@ class Viewer extends hxd.App {
 	override function update( dt : Float ) {
 		var cam = s3d.camera;
 
+		if(tree != null)
+			tree.update(dt);
+
 		//FREE MOUSE MOVE
 		if (freeMove) {
 			var dx = (s2d.mouseX - pMouse.x) * 0.01;
@@ -612,33 +682,26 @@ class Viewer extends hxd.App {
 			var d = cam.pos.sub(cam.target);
 			var dist = d.length();
 			var r = Math.acos(d.z / dist);
-			var k = Math.atan2(d.y, d.x);
 			r -= dy * cam.up.z;
+			r = Math.max(0.0001, Math.min(Math.PI - 0.0001, r));
+			var k = Math.atan2(d.y, d.x);
 			k += dx * cam.up.z;
-			if( r < 0 ) {
-				k += Math.PI;
-				r = -r;
-				cam.up.z *= -1;
-			} else if( r > Math.PI ) {
-				r -= Math.PI * 2;
-				cam.up.z *= -1;
-			}
-			cam.pos.set(Math.sin(r) * Math.cos(k) * dist, Math.sin(r) * Math.sin(k) * dist, Math.cos(r) * dist);
+
+			cam.pos.set(cam.target.x + Math.sin(r) * Math.cos(k) * dist, cam.target.y + Math.sin(r) * Math.sin(k) * dist, cam.target.z + Math.cos(r) * dist);
 			pMouse.set(s2d.mouseX, s2d.mouseY);
 		}
 		else if (rightClick) {
 
-			var dx = (pMouse.x - s2d.mouseX);
-			var dy = (pMouse.y - s2d.mouseY);
-
+			var dx = (pMouse.x - s2d.mouseX) / s2d.width;
+			var dy = (pMouse.y - s2d.mouseY) / s2d.height;
 			if( dx != 0 || dy != 0 )
 				cam.follow = null;
 
-			var d = cam.pos.sub(cam.target);
+			var d : h3d.Vector = cam.pos.sub(cam.target);
 			var dist = d.length();
 
-			dx *= 0.01 / dist;
-			dy *= 0.01 / dist;
+			dx *= dist;
+			dy *= dist;
 
 			d.normalize();
 			var left = d.cross(cam.up);
@@ -647,8 +710,8 @@ class Viewer extends hxd.App {
 			left.scale3(dx);
 			up.scale3(dy);
 
-			cam.pos = cam.pos.add(left).add(up);
-			cam.target = cam.target.add(left).add(up);
+			cam.pos = cam.pos.add(left).sub(up);
+			cam.target = cam.target.add(left).sub(up);
 
 			pMouse.set(s2d.mouseX, s2d.mouseY);
 		}
@@ -662,10 +725,6 @@ class Viewer extends hxd.App {
 		cam.zFar = dist * 5;
 		cam.zNear = dist * 0.1;
 		cam.rightHanded = rightHand;
-
-		axis.x = cam.target.x;
-		axis.y = cam.target.y;
-		axis.z = cam.target.z;
 
 		if( box != null ) {
 			var b = obj.getBounds();
@@ -690,17 +749,19 @@ class Viewer extends hxd.App {
 			"[Y] Axis = "+props.showAxis,
 			"[K] Bones = "+props.showBones,
 			"[B] Bounds = "+props.showBox+(box == null ? "" : " ["+fmt(box.scaleX)+" x "+fmt(box.scaleY)+" x "+fmt(box.scaleZ)+"]"),
-			"[S] Slow Animation = "+props.speed,
+			"[S] Slow Animation",
+			"[+/-] Speed Animation = "+props.speed,
 			"[R] Right-Hand Camera = "+rightHand,
 			"[M] Tex Smoothing = " + props.smoothing,
 			"[N] Show normals = "+props.normals,
-			"[F] Default camera",
 			"[I] Lights = " + props.lights,
 			"[C] Use HMD model = " + props.convertHMD,
 			"[Q] Queue anims = "+props.queueAnims,
-			"[1~4] Views",
+			"[O] Show objects = "+props.treeview,
+			"[G] Show ground = "+props.checker,
 			"",
-			"[Space] Pause Animation",
+			"[F] Default camera",
+			"[Space/P] Pause Animation",
 			"[LMB + Move] Rotation",
 			"[RMB + Move] translation",
 			"[Wheel] Zoom"
@@ -714,8 +775,9 @@ class Viewer extends hxd.App {
 		file += " (" + Math.ceil(curDataSize / 1024) + "KB)";
 		tf.text = [
 			(cam.rightHanded ? "R " : "") + fmt(hxd.Timer.fps()),
+			"speed : " + hxd.Math.fmt(props.speed),
 			file,
-			(engine.drawTriangles - (props.showBox ? 26 : 0) - (props.showAxis ? 6 : 0)) + " tri " + (obj.getObjectsCount() + 1)+ " objs",
+			infos != null ? infos.tri + " tri  /  " + infos.objs + " obj  /  " + infos.verts + " vert" : "",
 		].join("\n");
 
 		hxd.Timer.tmod *= props.speed;
