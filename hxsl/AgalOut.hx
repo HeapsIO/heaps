@@ -26,7 +26,7 @@ class AgalOut {
 
 	public function compile( s : RuntimeShaderData, version ) : Data {
 		current = s;
-		nullReg = { t : RTemp, index : -1, swiz : null, access : null };
+		nullReg = new Reg(RTemp, -1, null);
 		this.version = version;
 		opcodes = [];
 		tmpCount = 0;
@@ -41,20 +41,20 @@ class AgalOut {
 			case Param, Global:
 				switch( v.type ) {
 				case TArray(TSampler2D | TSamplerCube, SConst(n)):
-					r = { t : RTexture, index : texCount, swiz : null, access : null };
+					r = new Reg(RTexture, texCount, null);
 					texCount += n;
 				default:
-					r = { t : RConst, index : paramCount, swiz : defSwiz(v.type), access : null };
+					r = new Reg(RConst, paramCount, defSwiz(v.type));
 					paramCount += regSize(v.type);
 				}
 			case Var:
-				r = { t : RVar, index : v.id, swiz : defSwiz(v.type), access : null };
+				r = new Reg(RVar, v.id, defSwiz(v.type));
 				varying.push(r);
 			case Output:
-				r = { t : ROut, index : outCount, swiz : defSwiz(v.type), access : null };
+				r = new Reg(ROut, outCount, defSwiz(v.type));
 				outCount += regSize(v.type);
 			case Input:
-				r = { t : RAttr, index : inputCount, swiz : defSwiz(v.type), access : null };
+				r = new Reg(RAttr, inputCount, defSwiz(v.type));
 				inputCount += regSize(v.type);
 			case Local, Function:
 				continue;
@@ -105,9 +105,9 @@ class AgalOut {
 			if( v.length == 0 ) continue;
 			for( i in 0...opcodes.length )
 				switch( opcodes[i] ) {
-				case OMov(dst = { t : RVar, index : idx }, val) if( idx == vid ):
-					var dst = Reflect.copy(dst);
-					var val = Reflect.copy(val);
+				case OMov(dst, val) if( dst.index == vid && dst.t == RVar ):
+					var dst = dst.clone();
+					var val = val.clone();
 					val.swiz = null;
 					dst.swiz = null;
 					opcodes[i] = OMov(dst, val);
@@ -150,22 +150,12 @@ class AgalOut {
 		var sw = sw;
 		if( r.swiz != null )
 			sw = [for( c in sw ) r.swiz[c.getIndex()]];
-		return {
-			t : r.t,
-			index : r.index,
-			swiz : sw,
-			access : null
-		};
+		return new Reg(r.t, r.index, sw);
 	}
 
 	inline function offset( r : Reg, k : Int ) : Reg {
 		if( r.access != null ) throw "assert";
-		return {
-			t : r.t,
-			index : r.index + k,
-			swiz : r.swiz == null ? null : r.swiz.copy(),
-			access : null,
-		};
+		return new Reg(r.t, r.index + k, r.swiz == null ? null : r.swiz.copy());
 	}
 
 	function getConst( v : Float ) : Reg {
@@ -178,7 +168,7 @@ class AgalOut {
 					g = g.next;
 				}
 				var p = g.pos + i;
-				return { t : RConst, index : p >> 2, swiz : [COMPS[p & 3]], access : null };
+				return new Reg(RConst, p >> 2, [COMPS[p & 3]]);
 			}
 		throw "Missing required const "+v;
 	}
@@ -201,7 +191,7 @@ class AgalOut {
 					g = g.next;
 				}
 				var p = g.pos + i;
-				return { t : RConst, index : p >> 2, swiz : defSwiz(TVec(va.length,VFloat)), access : null };
+				return new Reg(RConst, p >> 2, defSwiz(TVec(va.length,VFloat)));
 			}
 		}
 		throw "Missing required consts "+va;
@@ -271,7 +261,7 @@ class AgalOut {
 					for( i in 0...stride )
 						swiz.push(COMPS[(i + index) & 3]);
 				} else if( index & 3 != 0 ) throw "assert"; // not register-aligned !
-				return { t : r.t, index : r.index + (index>>2), swiz : swiz, access : null };
+				return new Reg(r.t, r.index + (index>>2), swiz);
 			default:
 				var r = expr(ea);
 				var delta = 0;
@@ -293,7 +283,7 @@ class AgalOut {
 				if( r.swiz != null || r.access != null ) throw "assert";
 				if( i.swiz == null || i.swiz.length != 1 || i.access != null ) throw "assert";
 				var out = allocReg();
-				op(OMov(out, { t : i.t, index : i.index, swiz : null, access : { t : r.t, offset : r.index + delta, comp : i.swiz[0] } } ));
+				op(OMov(out, new Reg(i.t, i.index, null, new RegAccess(r.t, i.swiz[0], r.index + delta))));
 				return out;
 			}
 		case TSwiz(e, regs):
@@ -378,7 +368,7 @@ class AgalOut {
 					op(OMov(swiz(r, [W]), getConst(1)));
 					r1 = r;
 				} else {
-					r1 = Reflect.copy(r1);
+					r1 = r1.clone();
 					r1.swiz = null;
 				}
 				op(ODp4(swiz(r,[X]), r1, r2));
@@ -709,7 +699,7 @@ class AgalOut {
 				throw "assert " + args[i].t;
 			}
 			for( i in 0...regs.length ) {
-				regs[i] = Reflect.copy(regs[i]);
+				regs[i] = regs[i].clone();
 				if( regs[i].swiz == null ) regs[i].swiz = defSwiz.copy();
 				if( regs[i].access != null ) throw "assert";
 			}
@@ -722,7 +712,7 @@ class AgalOut {
 					sr.push(regs[0].swiz.shift());
 				}
 				if( regs[0].swiz.length == 0 ) regs.shift();
-				var m = OMov( { t : RTemp, index : w, swiz : sw, access : null }, { t : r.t, index : r.index, swiz : sr, access : null } );
+				var m = OMov( new Reg(RTemp, w, sw), new Reg(r.t, r.index, sr) );
 				op(m);
 			}
 		}
@@ -763,7 +753,7 @@ class AgalOut {
 	}
 
 	function allocReg( ?t : Type ) : Reg {
-		var r = { t : RTemp, index : tmpCount, swiz : t == null ? null : defSwiz(t), access : null };
+		var r = new Reg(RTemp, tmpCount, t == null ? null : defSwiz(t));
 		tmpCount += t == null ? 1 : regSize(t);
 		return r;
 	}
