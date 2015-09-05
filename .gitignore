@@ -4,3 +4,4 @@
 *.js.map
 bin
 .tmp
+/hxd/net/inspect.css
