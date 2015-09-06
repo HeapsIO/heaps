@@ -88,8 +88,12 @@ class Socket {
 			onConnect();
 		});
 		s.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
-			out = new SocketOutput();
+			close();
 			onError(e.text);
+		});
+		s.addEventListener(flash.events.Event.CLOSE, function(_) {
+			close();
+			onError("Closed");
 		});
 		s.connect(host, port);
 		#else
@@ -100,7 +104,8 @@ class Socket {
 	public function close() {
 		#if flash
 		if( s != null ) {
-			try s.close() catch( e : Dynamic ) {};
+			try s.close() catch( e : Dynamic ) { };
+			out = new SocketOutput();
 			s = null;
 		}
 		#else
