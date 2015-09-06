@@ -1,3 +1,17 @@
-.test {
-	color : red;
+.jqpage {
+
+	.panel {
+		overflow : auto;
+	}
+
+	#log {
+		font-family : Courier;
+		.line {
+			padding : 1px 3px;
+		}
+		CSS(".line:nth-child(even)") {
+			background-color : #eee;
+		}
+	}
+
 }
