@@ -168,7 +168,13 @@ class Stage3dDriver extends Driver {
 			this.width = width;
 			this.height = height;
 		} catch( e : flash.errors.Error ) {
-			throw new flash.errors.Error("" + e+" (" + width + "x" + height + ")");
+			// large screen but bad video card ?
+			if( width > 2048 || height > 2048 ) {
+				if( width > 2048 ) width = 2048;
+				if( height > 2048 ) height = 2048;
+				resize(width, height);
+			} else
+				throw new flash.errors.Error("" + e+" (" + width + "x" + height + ")");
 		}
 	}
 
