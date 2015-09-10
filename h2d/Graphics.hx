@@ -167,8 +167,14 @@ class Graphics extends Drawable {
 		var last = linePts.length - 1;
 		var prev = linePts[last];
 		var p = linePts[0];
+		var count = linePts.length;
+		var closed = p.x == prev.x && p.y == prev.y;
+		if( !closed ) {
+			linePts.push(new LinePoint(prev.x * 2 - p.x, prev.y * 2 - p.y, 0, 0, 0, 0));
+			prev = new LinePoint(p.x * 2 - prev.x, p.y * 2 - prev.y, 0, 0, 0, 0);
+		}
 		var start = pindex;
-		for( i in 0...linePts.length ) {
+		for( i in 0...count ) {
 			var next = linePts[(i + 1) % linePts.length];
 			var nx1 = prev.y - p.y;
 			var ny1 = p.x - prev.x;
