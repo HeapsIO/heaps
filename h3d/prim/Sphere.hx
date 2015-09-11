@@ -46,7 +46,7 @@ class Sphere extends Polygon {
 		uvs = [];
 		for( y in 0...segsH + 1 )
 			for( x in 0...segsW + 1 )
-				uvs.push(new UV(x / segsW, y / segsH));
+				uvs.push(new UV(1 - x / segsW, y / segsH));
 	}
 
 }
