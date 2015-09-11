@@ -1,18 +1,22 @@
 package h3d.prim;
 
 /**
-	Enable to add more than 65K triangles into a single primitive.
+	Vertex buffers are limited to 65K vertexes because of the 16-bits limitation of the index buffers.
+	BigPrimitive allows you to easily create large buffers by spliting the buffers.
 **/
 class BigPrimitive extends Primitive {
 
+	var isRaw : Bool;
 	var stride : Int;
 	var buffers : Array<Buffer>;
 	var allIndexes : Array<Indexes>;
 	var tmpBuf : hxd.FloatBuffer;
 	var tmpIdx : hxd.IndexBuffer;
 	var bounds : h3d.col.Bounds;
+	var startIndex : Int;
 
-	public function new(stride) {
+	public function new(stride, isRaw=false) {
+		this.isRaw = isRaw;
 		buffers = [];
 		allIndexes = [];
 		bounds = new h3d.col.Bounds();
@@ -20,19 +24,25 @@ class BigPrimitive extends Primitive {
 		if( stride < 3 ) throw "Minimum stride = 3";
 	}
 
+	/**
+		Call begin() before starting to add vertexes/indexes to the primitive.
+		The count value is the number of vertexes you will add, it will automatically flush() if it doesn't fit into the current buffer.
+	**/
 	public function begin(count) {
-		if( currentVerticesCount() + count >= 65535 )
+		startIndex = tmpBuf == null ? 0 : Std.int(tmpBuf.length / stride);
+		if( startIndex + count >= 65535 ) {
+			if( count >= 65535 ) throw "Too many vertices in begin()";
 			flush();
+		}
 		if( tmpBuf == null ) {
 			tmpBuf = new hxd.FloatBuffer();
 			tmpIdx = new hxd.IndexBuffer();
 		}
 	}
 
-	public function currentVerticesCount() {
-		return tmpBuf == null ? 0 : Std.int(tmpBuf.length / stride);
-	}
-
+	/**
+		This is similar to addVertexValue for X Y and Z, but will also update the bounds if you wish to have them calculated.
+	**/
 	public inline function addPoint(x, y, z) {
 		tmpBuf.push(x);
 		tmpBuf.push(y);
@@ -44,14 +54,13 @@ class BigPrimitive extends Primitive {
 		bounds.addPos(x, y, z);
 	}
 
-	public inline function addVerticeValue(v) {
+	public inline function addVertexValue(v) {
 		tmpBuf.push(v);
 	}
 
 	public inline function addIndex(i) {
-		tmpIdx.push(i);
+		tmpIdx.push(i + startIndex);
 	}
-
 
 	override function triCount() {
 		var count = 0;
@@ -71,16 +80,21 @@ class BigPrimitive extends Primitive {
 		return count;
 	}
 
+	/**
+		Flush the current buffer.
+		It is required to call begin() after a flush()
+	**/
 	public function flush() {
 		if( tmpBuf != null ) {
 			if( tmpBuf.length > 0 && tmpIdx.length > 0 ) {
 				var b = h3d.Buffer.ofFloats(tmpBuf, stride);
-				if( stride < 8 ) b.flags.set(RawFormat);
+				if( isRaw ) b.flags.set(RawFormat);
 				buffers.push(b);
 				allIndexes.push(h3d.Indexes.alloc(tmpIdx));
 			}
 			tmpBuf = null;
 			tmpIdx = null;
+			startIndex = 0;
 		}
 	}
 
@@ -110,28 +124,27 @@ class BigPrimitive extends Primitive {
 		tmpIdx = null;
 	}
 
+	/**
+		Adds a complete object to the primitive, with custom position,scale,rotation.
+		See addSub for complete documentation.
+	**/
 	public function add( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1 ) {
 		return addSub(buf, idx, 0, 0, Std.int(buf.length / (stride < 0 ? this.stride : stride)), Std.int(idx.length / 3), dx, dy, dz, rotation, scale, stride);
 	}
-
+	/**
+		Adds a buffer to the primitive, with custom position,scale,rotation.
+		The buffer can have more stride than the BigPrimitive, but not less.
+		It is assumed that the buffer contains [X,Y,Z,NX,NY,NZ,U,V,R,G,B] (depending on his stride) so the different offsets are applied to the corresponding components.
+		However if the stride is 5, we assume [X,Y,Z,U,V]
+	**/
 	@:noDebug
 	public function addSub( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, startVert, startTri, nvert, triCount, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1, deltaU = 0., deltaV = 0., color = 1. ) {
-		if( tmpBuf == null ) {
-			tmpBuf = new hxd.FloatBuffer();
-			tmpIdx = new hxd.IndexBuffer();
-		}
 		if( stride < 0 ) stride = this.stride;
-		var start = Std.int(tmpBuf.length / this.stride);
-		if( start + nvert >= 65535 ) {
-			if( nvert >= 65535 ) throw "Too many vertices in buffer";
-			flush();
-			tmpBuf = new hxd.FloatBuffer();
-			tmpIdx = new hxd.IndexBuffer();
-			start = 0;
-		}
+		if( stride < this.stride ) throw "only stride >= " + this.stride+" allowed";
+		begin(nvert);
+		var start = startIndex;
 		var cr = Math.cos(rotation);
 		var sr = Math.sin(rotation);
-		if( stride < this.stride ) throw "only stride >= " + this.stride+" allowed";
 		for( i in 0...nvert ) {
 			var p = (i + startVert) * stride;
 			var x = buf[p++];
@@ -175,7 +188,7 @@ class BigPrimitive extends Primitive {
 				tmpBuf.push(tnx);
 				tmpBuf.push(tny);
 				tmpBuf.push(nz);
-				tmpBuf.push(buf[p++]);
+				tmpBuf.push(buf[p++] + deltaU);
 			case 8, 9, 10:
 				var nx = buf[p++];
 				var ny = buf[p++];

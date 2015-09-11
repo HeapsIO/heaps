@@ -57,7 +57,6 @@ class Graphics extends Mesh {
 
 	public function lineTo( x : Float, y : Float, z : Float ) {
 		bprim.begin(4);
-		var start = bprim.currentVerticesCount();
 		var nx = x - curX;
 		var ny = y - curY;
 		var nz = z - curZ;
@@ -66,7 +65,7 @@ class Graphics extends Mesh {
 		bprim.addBounds(x, y, z);
 
 		inline function push(v) {
-			bprim.addVerticeValue(v);
+			bprim.addVertexValue(v);
 		}
 
 		inline function add(u, v) {
@@ -92,12 +91,12 @@ class Graphics extends Mesh {
 		add(1, 0);
 		add(1, 1);
 
-		bprim.addIndex(start);
-		bprim.addIndex(start + 1);
-		bprim.addIndex(start + 2);
-		bprim.addIndex(start + 2);
-		bprim.addIndex(start + 3);
-		bprim.addIndex(start + 1);
+		bprim.addIndex(0);
+		bprim.addIndex(1);
+		bprim.addIndex(2);
+		bprim.addIndex(2);
+		bprim.addIndex(3);
+		bprim.addIndex(1);
 
 		curX = x;
 		curY = y;
