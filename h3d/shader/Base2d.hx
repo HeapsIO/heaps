@@ -29,6 +29,8 @@ class Base2d extends hxsl.Shader {
 		@param var color : Vec4;
 		@param var absoluteMatrixA : Vec3;
 		@param var absoluteMatrixB : Vec3;
+		@param var filterMatrixA : Vec3;
+		@param var filterMatrixB : Vec3;
 		@const var hasUVPos : Bool;
 		@param var uvPos : Vec4;
 
@@ -51,6 +53,11 @@ class Base2d extends hxsl.Shader {
 		}
 
 		function vertex() {
+			// transform from global to render texture coordinates
+			var tmp = vec3(absolutePosition.xy, 1);
+			absolutePosition.x = tmp.dot(filterMatrixA);
+			absolutePosition.y = tmp.dot(filterMatrixB);
+			// transform to viewport
 			absolutePosition.xy = (absolutePosition.xy + viewport.xy) * viewport.zw;
 			// http://msdn.microsoft.com/en-us/library/windows/desktop/bb219690(v=vs.85).aspx
 			if( pixelAlign ) absolutePosition.xy -= halfPixelInverse;

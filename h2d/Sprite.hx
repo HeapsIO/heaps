@@ -483,21 +483,31 @@ class Sprite {
 
 		// reset transform and update childs
 		var oldAlpha = ctx.globalAlpha;
-		var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;
-		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
+		var shader = @:privateAccess ctx.baseShader;
+		var oldA = shader.filterMatrixA.clone();
+		var oldB = shader.filterMatrixB.clone();
+		var oldF = @:privateAccess ctx.inFilter;
+
+		// 2x3 inverse matrix
+		var invDet = 1 / (matA * matD - matB * matC);
+		var invA = matD * invDet;
+		var invB = -matB * invDet;
+		var invC = -matC * invDet;
+		var invD = matA * invDet;
+		var invX = -(absX * invA + absY * invC);
+		var invY = -(absX * invB + absY * invD);
+
+		@:privateAccess ctx.inFilter = true;
+		shader.filterMatrixA.set(invA, invC, invX);
+		shader.filterMatrixB.set(invB, invD, invY);
 		ctx.globalAlpha = 1;
-		for( c in childs )
-			c.posChanged = true;
 		draw(ctx);
 		for( c in childs )
 			c.drawRec(ctx);
-		matA = oldA;
-		matB = oldB;
-		matC = oldC;
-		matD = oldD;
-		absX = oldX;
-		absY = oldY;
 		ctx.flush();
+		shader.filterMatrixA.load(oldA);
+		shader.filterMatrixB.load(oldB);
+		@:privateAccess ctx.inFilter = oldF;
 
 		var final = h2d.Tile.fromTexture(t);
 		final.dx = xMin;
