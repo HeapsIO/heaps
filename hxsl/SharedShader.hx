@@ -49,21 +49,7 @@ class SharedShader {
 		globals = [];
 		for( v in data.vars )
 			browseVar(v);
-		if( consts == null ) {
-			var hasFun = false;
-			for( f in data.funs )
-				switch( f.ref.name ) {
-				case "vertex", "fragment", "__init__", "__init__vertex", "__init__fragment":
-				default: hasFun = true; break;
-				}
-			if( !hasFun ) {
-				var i = new ShaderInstance(data);
-				paramsCount = 0;
-				for( v in data.vars )
-					addSelfParam(i, v);
-				instanceCache.set(0, i);
-			}
-		}
+		// don't try to optimize if consts is null, we need to do a few things in Eval
 	}
 
 	public inline function getInstance( constBits : Int ) {
