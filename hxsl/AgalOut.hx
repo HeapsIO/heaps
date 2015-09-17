@@ -748,12 +748,12 @@ class AgalOut {
 
 	function regSize( t : Type ) {
 		return switch( t ) {
-		case TInt, TFloat, TVec(_), TBytes(_): 1;
+		case TInt, TFloat, TVec(_), TBytes(_), TBool: 1;
 		case TMat3, TMat3x4: 3;
 		case TMat4: 4;
 		case TArray(t, SConst(size)): (Tools.size(t) * size + 3) >> 2;
 		case TStruct(vl): throw "TODO";
-		case TVoid, TString, TBool, TSampler2D, TSamplerCube, TFun(_), TArray(_): throw "assert "+t;
+		case TVoid, TString, TSampler2D, TSamplerCube, TFun(_), TArray(_): throw "assert "+t;
 		}
 	}
 

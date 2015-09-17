@@ -80,7 +80,7 @@ class Eval {
 			funMap.set(f2.ref, f);
 		}
 		for( i in 0...funs.length )
-			funs[i].expr = evalExpr(funs[i].expr);
+			funs[i].expr = evalExpr(funs[i].expr,false);
 		return {
 			name : s.name,
 			vars : [for( v in s.vars ) mapVar(v)],
@@ -153,7 +153,7 @@ class Eval {
 		}
 	}
 
-	function evalExpr( e : TExpr ) : TExpr {
+	function evalExpr( e : TExpr, isVal = true ) : TExpr {
 		var d : TExprDef = switch( e.e ) {
 		case TGlobal(_), TConst(_): e.e;
 		case TVar(v):
@@ -187,6 +187,7 @@ class Eval {
 				var v = evalCall(g, args);
 				if( v != null ) v else TCall(c, args);
 			case TVar(v) if( funMap.exists(v) ):
+				// inline the function call
 				var f = funMap.get(v);
 				var outExprs = [], undo = [];
 				for( i in 0...f.args.length ) {
@@ -209,7 +210,7 @@ class Eval {
 						outExprs.push( { e : TVarDecl(v2, e), t : TVoid, p : e.p } );
 					}
 				}
-				var e = handleReturn(evalExpr(f.expr), true);
+				var e = handleReturn(evalExpr(f.expr,false), true);
 				for( u in undo ) u();
 				switch( e.e ) {
 				case TBlock(el):
@@ -226,9 +227,10 @@ class Eval {
 			var out = [];
 			var last = el.length - 1;
 			for( i in 0...el.length ) {
-				var e = evalExpr(el[i]);
+				var isVal = isVal && i == last;
+				var e = evalExpr(el[i], isVal);
 				switch( e.e ) {
-				case TConst(_), TVar(_) if( i < last ):
+				case TConst(_), TVar(_) if( !isVal ):
 				default:
 					out.push(e);
 				}
@@ -334,17 +336,20 @@ class Eval {
 				TUnop(op, e);
 			}
 		case TParenthesis(e):
-			var e = evalExpr(e);
+			var e = evalExpr(e, isVal);
 			switch( e.e ) {
 			case TConst(_): e.e;
 			default: TParenthesis(e);
 			}
 		case TIf(econd, eif, eelse):
-			var e = evalExpr(econd);
-			switch( e.e ) {
-			case TConst(CBool(b)): b ? evalExpr(eif).e : eelse == null ? TConst(CNull) : evalExpr(eelse).e;
+			var econd = evalExpr(econd);
+			switch( econd.e ) {
+			case TConst(CBool(b)): b ? evalExpr(eif, isVal).e : eelse == null ? TConst(CNull) : evalExpr(eelse, isVal).e;
 			default:
-				TIf(e, evalExpr(eif), eelse == null ? null : evalExpr(eelse));
+				if( isVal && eelse != null )
+					TCall( { e : TGlobal(Mix), t : e.t, p : e.p }, [eif, eelse, { e : TCall( { e : TGlobal(ToFloat), t : TFun([]), p : econd.p }, [econd]), t : TFloat, p : e.p } ]);
+				else
+					TIf(econd, evalExpr(eif,isVal), eelse == null ? null : evalExpr(eelse,isVal));
 			}
 		case TBreak:
 			TBreak;
@@ -360,12 +365,12 @@ class Eval {
 				var out = [];
 				for( i in start...len ) {
 					constants.set(v, TConst(CInt(i)));
-					out.push(evalExpr(loop));
+					out.push(evalExpr(loop,false));
 				}
 				constants.remove(v);
 				TBlock(out);
 			default:
-				TFor(v2, it, evalExpr(loop));
+				TFor(v2, it, evalExpr(loop,false));
 			}
 			varMap.remove(v);
 			e;
