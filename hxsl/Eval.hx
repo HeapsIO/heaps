@@ -9,8 +9,11 @@ using hxsl.Ast;
 class Eval {
 
 	public var varMap : Map<TVar,TVar>;
+	public var inlineCalls : Bool;
+	public var unrollLoops : Bool;
 	var constants : Map<TVar,TExprDef>;
 	var funMap : Map<TVar,TFunction>;
+	var curFun : TFunction;
 
 	public function new() {
 		varMap = new Map();
@@ -75,12 +78,14 @@ class Eval {
 				ret : f.ret,
 				expr : f.expr,
 			};
-			if( f.kind != Helper )
+			if( !inlineCalls || f.kind != Helper )
 				funs.push(f2);
 			funMap.set(f2.ref, f);
 		}
-		for( i in 0...funs.length )
-			funs[i].expr = evalExpr(funs[i].expr,false);
+		for( i in 0...funs.length ) {
+			curFun = funs[i];
+			curFun.expr = evalExpr(curFun.expr,false);
+		}
 		return {
 			name : s.name,
 			vars : [for( v in s.vars ) mapVar(v)],
@@ -186,6 +191,8 @@ class Eval {
 			case TGlobal(g):
 				var v = evalCall(g, args);
 				if( v != null ) v else TCall(c, args);
+			case TVar(_) if( !inlineCalls ):
+				TCall(c, args);
 			case TVar(v) if( funMap.exists(v) ):
 				// inline the function call
 				var f = funMap.get(v);
@@ -235,7 +242,7 @@ class Eval {
 					out.push(e);
 				}
 			}
-			if( out.length == 1 )
+			if( out.length == 1 && curFun.kind != Init )
 				out[0].e
 			else
 				TBlock(out);
@@ -361,7 +368,7 @@ class Eval {
 			var v2 = mapVar(v);
 			var it = evalExpr(it);
 			var e = switch( it.e ) {
-			case TBinop(OpInterval, { e : TConst(CInt(start)) }, { e : TConst(CInt(len)) } ):
+			case TBinop(OpInterval, { e : TConst(CInt(start)) }, { e : TConst(CInt(len)) } ) if( unrollLoops ):
 				var out = [];
 				for( i in start...len ) {
 					constants.set(v, TConst(CInt(i)));
