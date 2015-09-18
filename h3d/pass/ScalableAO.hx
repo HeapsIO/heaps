@@ -19,11 +19,11 @@ private class SAOShader extends h3d.shader.ScreenShader {
 		@param var cameraInverseViewProj : Mat4;
 
 		@param var screenRatio : Vec2;
+		@param var fovTan : Float;
 
 		function sampleAO(uv : Vec2, position : Vec3, normal : Vec3, radiusSS : Float, tapIndex : Int, rotationAngle : Float) : Float {
 			// returns a unit vector and a screen-space radius for the tap on a unit disk
 			// (the caller should scale by the actual disk radius)
-			// radius relative to radiusSS
 			var alpha = (float(tapIndex) + 0.5) * (1.0 / float(numSamples));
 			var angle = alpha * (float(numSpiralTurns) * 6.28) + rotationAngle;
 
@@ -33,7 +33,7 @@ private class SAOShader extends h3d.shader.ScreenShader {
 			var v = Q - position;
 
 			var vv = dot(v, v);
-			var vn = dot(v, normal) - (bias / sampleRadius);
+			var vn = dot(v, normal) - (bias * sampleRadius);
 
 			// Smoother transition to zero (lowers contrast, smoothing out corners). [Recommended]
 			var radius2 = sampleRadius * sampleRadius;
@@ -60,13 +60,13 @@ private class SAOShader extends h3d.shader.ScreenShader {
 			var sampleNoise = noiseTexture.get(vUV * noiseScale / screenRatio).x;
 			var randomPatternRotationAngle = 2.0 * PI * sampleNoise;
 
-			// is it correct enough to go from WS to DepthUV space ?
-			var radiusSS = sampleRadius * 0.5 / (origin * cameraView).z;
+			// change from WS to DepthUV space
+			var radiusSS = (sampleRadius * fovTan) / (origin * cameraView).z;
 
 			for( i in 0...numSamples )
 				occlusion += sampleAO(vUV, origin, normal, radiusSS, i, randomPatternRotationAngle);
 
-			occlusion = 1.0 - occlusion / (5.0 * float(numSamples));
+			occlusion = 1.0 - occlusion / float(numSamples);
 			occlusion = clamp(pow(occlusion, 1.0 + intensity), 0.0, 1.0);
 
 			output.color = vec4(occlusion.xxx, 1.);
@@ -111,6 +111,7 @@ class ScalableAO extends h3d.pass.ScreenFx<SAOShader> {
 		shader.cameraView = camera.mcam;
 		shader.cameraInverseViewProj = camera.getInverseViewProj();
 		shader.screenRatio.set(engine.height / engine.width, 1);
+		shader.fovTan = 1.0 / (2.0 * Math.tan(camera.fovY * (Math.PI / 180) * 0.5));
 		render();
 	}
 

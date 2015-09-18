@@ -4,7 +4,7 @@ import hxd.Key in K;
 
 class CustomRenderer extends h3d.scene.Renderer {
 
-	var sao : h3d.pass.ScalableAO;
+	public var sao : h3d.pass.ScalableAO;
 	public var saoBlur : h3d.pass.Blur;
 	var out : h3d.mat.Texture;
 	public var mode = 0;
@@ -14,6 +14,7 @@ class CustomRenderer extends h3d.scene.Renderer {
 		sao = new h3d.pass.ScalableAO();
 		// TODO : use a special Blur that prevents bluring across depths
 		saoBlur = new h3d.pass.Blur(2, 3, 2);
+		sao.shader.sampleRadius	= 0.2;
 	}
 
 	override function process( ctx, passes ) {
@@ -102,6 +103,28 @@ class Main extends hxd.App {
 			r.mode = 2;
 		if(K.isPressed("B".code))
 			r.saoBlur.passes = r.saoBlur.passes == 0 ? 3 : 0;
+
+		if( K.isDown(K.CTRL) && K.isDown(K.SHIFT) ) {
+			if(K.isDown(K.NUMPAD_ADD))
+				r.sao.shader.bias *= 1.02;
+			if(K.isDown(K.NUMPAD_SUB))
+				r.sao.shader.bias /= 1.02;
+		} else if( K.isDown(K.SHIFT) ) {
+			if(K.isDown(K.NUMPAD_ADD))
+				s3d.camera.fovY *= 1.02;
+			if(K.isDown(K.NUMPAD_SUB))
+				s3d.camera.fovY /= 1.02;
+		} else if( K.isDown(K.CTRL) ) {
+			if(K.isDown(K.NUMPAD_ADD))
+				r.sao.shader.intensity *= 1.02;
+			if(K.isDown(K.NUMPAD_SUB))
+				r.sao.shader.intensity /= 1.02;
+		} else {
+			if(K.isDown(K.NUMPAD_ADD))
+				r.sao.shader.sampleRadius *= 1.02;
+			if(K.isDown(K.NUMPAD_SUB))
+				r.sao.shader.sampleRadius /= 1.02;
+		}
 
 		if(!paused)
 			time += dt * 0.001;
