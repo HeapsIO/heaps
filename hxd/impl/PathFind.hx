@@ -100,6 +100,78 @@ class PathFind {
 		}
 	}
 
+	public function nearestReachable( x : Int, y : Int, fromX : Int = -1, fromY : Int = -1 ) {
+		if( t[x + y * width] > 0 )
+			return { x : x, y : y };
+		var sz = 1;
+		var bestX = -1, bestY = -1, bestD = 0x7FFFFFFF, bestSZ = 0;
+		while( true ) {
+			var xMin = x - sz;
+			var xMax = x + sz;
+			var yMin = y - sz;
+			var yMax = y + sz;
+			var out = true;
+			var xs = xMin < 0 ? 0 : xMin;
+			var xe = xMax >= width ? width - 1 : xMax;
+			var ys = yMin < 0 ? 0 : yMin;
+			var ye = yMax >= height ? height - 1 : yMax;
+
+			inline function check(cx, cy) {
+				if( t[cx + cy * height] > 0 ) {
+					var dx = cx - x;
+					var dy = cy - y;
+					var d = dx * dx + dy * dy;
+					if( d == bestD && fromX >= 0 ) {
+						var bx = bestX - fromX;
+						var by = bestY - fromY;
+						var bd = bx * bx + by * by;
+						var nx = cx - fromX;
+						var ny = cy - fromY;
+						var nd = nx * nx + ny * ny;
+						if( nd < bd ) bestD++;
+					}
+					if( d < bestD ) {
+						bestX = cx;
+						bestY = cy;
+						bestD = d;
+						bestSZ = sz;
+					}
+				}
+			}
+
+			if( ys == yMin ) {
+				for( cx in xs...xe+1 )
+					check(cx, yMin);
+				out = false;
+			}
+
+			if( ye == yMax ) {
+				for( cx in xs...xe+1 )
+					check(cx, yMax);
+				out = false;
+			}
+
+			if( xs == xMin ) {
+				for( cy in ys...ye+1 )
+					check(xMin, cy);
+				out = false;
+			}
+
+			if( xe == xMax ) {
+				for( cy in ys...ye+1 )
+					check(xMax, cy);
+				out = false;
+			}
+
+			sz++;
+
+			if( out || (bestSZ > 0 && sz * sz > bestD) ) break;
+		}
+		if( bestX < 0 )
+			return null;
+		return { x : bestX, y : bestY };
+	}
+
 	public function getPath( x : Int, y : Int, ?prefDir : hxd.Direction ) {
 		var a = x + y * width;
 		var k = Math.iabs(t[a]);
