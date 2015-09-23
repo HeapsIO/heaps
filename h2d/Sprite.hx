@@ -35,7 +35,7 @@ class Sprite {
 	public function new( ?parent : Sprite ) {
 		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
 		x = 0; y = 0; scaleX = 1; scaleY = 1; rotation = 0;
-		posChanged = false;
+		posChanged = parent != null;
 		visible = true;
 		childs = [];
 		filters = [];
@@ -58,16 +58,16 @@ class Sprite {
 	}
 
 	function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds ) {
-		var n = childs.length;
-		if( n == 0 ) {
-			out.empty();
-			return;
-		}
 		if( posChanged ) {
 			calcAbsPos();
 			for( c in childs )
 				c.posChanged = true;
 			posChanged = false;
+		}
+		var n = childs.length;
+		if( n == 0 ) {
+			out.empty();
+			return;
 		}
 		if( n == 1 ) {
 			var c = childs[0];
