@@ -20,4 +20,11 @@ class ColorMatrix extends Filter {
 		return h2d.Tile.fromTexture(tout);
 	}
 
+	public static function grayed() {
+		var m = new h3d.Matrix();
+		m.identity();
+		m.colorSaturation(0);
+		return new ColorMatrix(m);
+	}
+
 }
