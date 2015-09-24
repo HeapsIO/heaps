@@ -45,7 +45,8 @@ class Main extends hxd.App {
 		obj2.scale(0.6);
 
 		// adds a directional light to the scene
-		new h3d.scene.DirLight(new h3d.Vector(0.5, 0.5, -0.5), s3d);
+		var light = new h3d.scene.DirLight(new h3d.Vector(0.5, 0.5, -0.5), s3d);
+		light.enableSpecular = true;
 
 		// set the ambient light to 30%
 		s3d.lightSystem.ambientLight.set(0.3, 0.3, 0.3);
@@ -61,7 +62,7 @@ class Main extends hxd.App {
 		time += 0.01 * dt;
 
 		// move the camera position around the two cubes
-		var dist = 3;
+		var dist = 5;
 		s3d.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, dist * 0.7 * Math.sin(time));
 
 		// rotate the second cube along a given axis + angle
