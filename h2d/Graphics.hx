@@ -86,7 +86,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	}
 
 
-	public function reset() {
+	public function clear() {
 		dispose();
 		tmp = new hxd.FloatBuffer();
 		index = new hxd.IndexBuffer();
@@ -133,7 +133,7 @@ class Graphics extends Drawable {
 	}
 
 	public function clear() {
-		content.reset();
+		content.clear();
 		pts = [];
 		prev = [];
 		linePts = [];

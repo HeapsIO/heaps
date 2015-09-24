@@ -21,19 +21,19 @@ class ScaleGrid extends h2d.TileGroup {
 
 	function set_tileBorders(b) {
 		this.tileBorders = b;
-		reset();
+		clear();
 		return b;
 	}
 
 	function set_width(w) {
 		this.width = w;
-		reset();
+		clear();
 		return w;
 	}
 
 	function set_height(h) {
 		this.height = h;
-		reset();
+		clear();
 		return h;
 	}
 

@@ -34,7 +34,7 @@ class HtmlText extends Text {
 
 	override function initGlyphs( text : String, rebuild = true, ?lines : Array<Int> ) {
 		if( rebuild ) {
-			glyphs.reset();
+			glyphs.clear();
 			for( i in images ) i.remove();
 			images = [];
 		}

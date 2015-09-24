@@ -145,7 +145,7 @@ class Text extends Drawable {
 	}
 
 	function initGlyphs( text : String, rebuild = true, lines : Array<Int> = null ) : { width : Int, height : Int } {
-		if( rebuild ) glyphs.reset();
+		if( rebuild ) glyphs.clear();
 		var x = 0, y = 0, xMax = 0, prevChar = -1;
 		var align = rebuild ? textAlign : Left;
 		switch( align ) {

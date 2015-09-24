@@ -26,8 +26,8 @@ class Emitter extends Particles implements Randomized {
 		setState(state);
 	}
 
-	override function reset() {
-		super.reset();
+	override function clear() {
+		super.clear();
 		time = 0;
 		emitCount = 0;
 		rnd = Math.random();

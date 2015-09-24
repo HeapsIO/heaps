@@ -69,7 +69,7 @@ class Particles extends h3d.scene.Mesh {
 		}
 	}
 
-	public function reset() {
+	public function clear() {
 		while( head != null )
 			kill(head);
 	}

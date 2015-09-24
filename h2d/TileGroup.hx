@@ -9,10 +9,10 @@ private class TileLayerContent extends h3d.prim.Primitive {
 	public var yMax : Float;
 
 	public function new() {
-		reset();
+		clear();
 	}
 
-	public function reset() {
+	public function clear() {
 		tmp = new hxd.FloatBuffer();
 		if( buffer != null ) buffer.dispose();
 		buffer = null;
@@ -298,7 +298,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 	}
 
 	override public function alloc(engine:h3d.Engine) {
-		if( tmp == null ) reset();
+		if( tmp == null ) clear();
 		buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
 	}
 
@@ -331,8 +331,8 @@ class TileGroup extends Drawable {
 		addBounds(relativeTo, out, content.xMin, content.yMin, content.xMax - content.xMin, content.yMax - content.yMin);
 	}
 
-	public function reset() {
-		content.reset();
+	public function clear() {
+		content.clear();
 	}
 
 	/**
