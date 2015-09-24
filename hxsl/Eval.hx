@@ -129,6 +129,9 @@ class Eval {
 				case TIf(econd, eif, null) if( final && hasReturn(eif) ):
 					out.push(handleReturn( { e : TIf(econd, eif, { e : TBlock(el.slice(i)), t : e.t, p : e.p } ), t : e.t, p : e.p } ));
 					break;
+				case TReturn(e):
+					out.push(handleReturn(e, final));
+					break;
 				default:
 					out.push(handleReturn(e));
 				}
