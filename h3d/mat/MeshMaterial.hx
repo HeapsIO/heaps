@@ -4,9 +4,12 @@ class MeshMaterial extends Material {
 
 	var mshader : h3d.shader.BaseMesh;
 	public var textureShader(default, null) : h3d.shader.Texture;
-	public var texture(get,set) : h3d.mat.Texture;
+	public var specularShader(default, null) : h3d.shader.SpecularTexture;
+	public var texture(get, set) : h3d.mat.Texture;
+	public var specularTexture(get,set) : h3d.mat.Texture;
 
 	public var color(get, set) : Vector;
+	public var specularPower(get, set) : Float;
 	public var blendMode(default, set) : BlendMode;
 
 	public function new(?texture) {
@@ -14,6 +17,14 @@ class MeshMaterial extends Material {
 		blendMode = None;
 		super(mshader);
 		this.texture = texture;
+	}
+
+	inline function get_specularPower() {
+		return mshader.specularPower;
+	}
+
+	inline function set_specularPower(v) {
+		return mshader.specularPower = v;
 	}
 
 	inline function get_color() {
@@ -68,6 +79,10 @@ class MeshMaterial extends Material {
 		return blendMode = v;
 	}
 
+	function get_specularTexture() {
+		return specularShader == null ? null : specularShader.texture;
+	}
+
 	function get_texture() {
 		return textureShader == null ? null : textureShader.texture;
 	}
@@ -84,6 +99,22 @@ class MeshMaterial extends Material {
 				mainPass.addShader(textureShader);
 			}
 			textureShader.texture = t;
+		}
+		return t;
+	}
+
+	function set_specularTexture(t) {
+		if( t == null ) {
+			if( specularShader != null ) {
+				mainPass.removeShader(specularShader);
+				specularShader = null;
+			}
+		} else {
+			if( specularShader == null ) {
+				specularShader = new h3d.shader.SpecularTexture();
+				mainPass.addShader(specularShader);
+			}
+			specularShader.texture = t;
 		}
 		return t;
 	}

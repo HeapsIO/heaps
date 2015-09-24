@@ -5,17 +5,33 @@ class DirLight extends hxsl.Shader {
 	static var SRC = {
 		@param var color : Vec3;
 		@param var direction : Vec3;
+		@const var enableSpecular : Bool;
+		@global var camera : {
+			var position : Vec3;
+		};
 
 		var lightColor : Vec3;
 		var lightPixelColor : Vec3;
 		var transformedNormal : Vec3;
+		var transformedPosition : Vec3;
+		var specAmount : Float;
+		var specPower : Float;
+
+		function calcLighting() : Vec3 {
+			var diff = transformedNormal.dot(-direction).max(0.);
+			if( !enableSpecular )
+				return color * diff;
+			var r = reflect(direction, transformedNormal).normalize();
+			var specValue = r.dot((camera.position - transformedPosition).normalize()).max(0.);
+			return color * (diff + specAmount * pow(specValue, specPower));
+		}
 
 		function vertex() {
-			lightColor.rgb += color * transformedNormal.dot(direction).max(0.);
+			lightColor.rgb += calcLighting();
 		}
 
 		function fragment() {
-			lightPixelColor.rgb += color * transformedNormal.dot(direction).max(0.);
+			lightPixelColor.rgb += calcLighting();
 		}
 
 	}

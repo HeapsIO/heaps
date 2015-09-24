@@ -40,8 +40,13 @@ class BaseMesh extends hxsl.Shader {
 		var projectedPosition : Vec4;
 		var pixelColor : Vec4;
 		var depth : Float;
+		var screenUV : Vec2;
+		var specPower : Float;
+		var specAmount : Float;
 
 		@param var color : Vec4;
+		@param var specularPower : Float;
+		@param var specularAmount : Float;
 
 		// each __init__ expr is out of order dependency-based
 		function __init__() {
@@ -52,10 +57,15 @@ class BaseMesh extends hxsl.Shader {
 			camera.dir = (camera.position - transformedPosition).normalize();
 			pixelColor = color;
 			depth = projectedPosition.z / projectedPosition.w;
+			screenUV = (projectedPosition.xy / projectedPosition.w) * vec2(0.5, -0.5) + 0.5;
+			specPower = specularPower;
+			specAmount = specularAmount;
 		}
 
 		function __init__fragment() {
 			transformedNormal = transformedNormal.normalize();
+			specPower = specularPower;
+			specAmount = specularAmount;
 		}
 
 		function vertex() {
@@ -74,6 +84,8 @@ class BaseMesh extends hxsl.Shader {
 	public function new() {
 		super();
 		color.set(1, 1, 1);
+		specularPower = 50;
+		specularAmount = 1;
 	}
 
 }

@@ -13,20 +13,26 @@ class AmbientLight extends hxsl.Shader {
 		var lightPixelColor : Vec3;
 		var lightColor : Vec3;
 
+		@const var oldModel : Bool;
+
 		function __init__() {
-			lightColor = global.ambientLight;
+			lightColor = oldModel ? global.ambientLight : vec3(0.);
 		}
 
 		function __init__fragment() {
-			lightPixelColor = global.ambientLight;
+			lightPixelColor = oldModel ? global.ambientLight : vec3(0.);
+		}
+
+		function calcLight( lightColor : Vec3 ) : Vec3 {
+			return oldModel ? lightColor : (global.ambientLight + (1 - global.ambientLight).max(0.) * lightColor);
 		}
 
 		function vertex() {
-			if( !global.perPixelLighting ) pixelColor.rgb *= lightColor;
+			if( !global.perPixelLighting ) pixelColor.rgb *= calcLight(lightColor);
 		}
 
 		function fragment() {
-			if( global.perPixelLighting ) pixelColor.rgb *= lightPixelColor;
+			if( global.perPixelLighting ) pixelColor.rgb *= calcLight(lightPixelColor);
 		}
 
 	}

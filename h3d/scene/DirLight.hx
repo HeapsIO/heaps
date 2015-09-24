@@ -16,8 +16,13 @@ class DirLight extends Light {
 		return dshader.color;
 	}
 
+	override function set_enableSpecular(b) {
+		dshader.enableSpecular = b;
+		return false;
+	}
+
 	override function emit(ctx) {
-		dshader.direction.set(-direction.x, -direction.y, -direction.z);
+		dshader.direction.set(direction.x, direction.y, direction.z);
 		dshader.direction.normalize();
 		super.emit(ctx);
 	}

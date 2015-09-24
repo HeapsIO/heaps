@@ -14,10 +14,24 @@ class LightSystem {
 	public var ambientLight : h3d.Vector;
 	public var perPixelLighting : Bool = true;
 
+	/**
+		In the old lighting model, the lights are added after the ambient.
+		In the new one (by default), the lights will be modulated against the ambient, so an ambient of 1 will turn off all lights
+	**/
+	public var oldModel(get, set) : Bool;
+
 	public function new() {
 		shadowDirection = new h3d.Vector(0, 0, -1);
 		ambientLight = new h3d.Vector(0.5, 0.5, 0.5);
 		ambientShader = new h3d.shader.AmbientLight();
+	}
+
+	function get_oldModel() {
+		return Std.instance(ambientShader,h3d.shader.AmbientLight).oldModel;
+	}
+
+	function set_oldModel(b) {
+		return Std.instance(ambientShader,h3d.shader.AmbientLight).oldModel = b;
 	}
 
 	public function initLights( globals : hxsl.Globals, ctx : h3d.scene.RenderContext ) {
