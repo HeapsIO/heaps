@@ -70,7 +70,7 @@ private class Cross extends h2d.css.Fill {
 	}
 
 	public function setColor(color:Int) {
-		reset();
+		clear();
 		lineRect(FillStyle.Color(color), 0, 0, size, size, 1);
 	}
 }
@@ -151,7 +151,7 @@ private class Color extends h2d.Sprite {
 	}
 
 	public function drawAll() {
-		canvas.reset();
+		canvas.clear();
 		canvas.fillRectColor(0, 0, width, height * 0.5, preview);
 		canvas.fillRectColor(0, 0, width * 0.5, height * 0.5, color);
 		canvas.fillRectColor(0, height * 0.5 - 4, width, 4, 0xFF000000);
@@ -220,7 +220,7 @@ private class Palette extends h2d.Sprite {
 		var s = 1;
 		var l = 0.5;
 		var seg = height / 6;
-		canvas.reset();
+		canvas.clear();
 		for (i in 0...6) {
 			var up = ColorPicker.HSLtoINT(1 - i / 6, s, l);
 			var down = ColorPicker.HSLtoINT(1 - (i + 1) / 6, s, l);
@@ -320,7 +320,7 @@ private class Chart extends h2d.Sprite{
 	}
 
 	public function drawAll() {
-		canvas.reset();
+		canvas.clear();
 		var rgb = [(refColor >> 16) & 0xFF, (refColor >> 8) & 0xFF,  refColor & 0xFF];
 		for (i in 0...width>>1) {
 			for (j in 0...height>>1) {
@@ -491,7 +491,7 @@ private class ColorGauge extends h2d.Sprite{
 			case RGBA.B: left = ColorPicker.RGBtoINT(r, g, 0);	right = ColorPicker.RGBtoINT(r, g, 255);
 			case RGBA.A: left = 0xFF000000;						right = 0xFFFFFFFF;
 		}
-		canvas.reset();
+		canvas.clear();
 		canvas.fillRectGradient(0, 0, width, height, left, right, left, right);
 		canvas.lineRect(FillStyle.Color(ColorPicker.borderColor), 0, 0, width, height, 1);
 	}

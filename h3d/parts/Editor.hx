@@ -182,7 +182,7 @@ class Editor extends h2d.Sprite implements Randomized {
 			slow : false,
 		};
 		buildUI();
-		emit.reset();
+		emit.clear();
 	}
 
 	override function onAlloc() {
@@ -529,7 +529,7 @@ class Editor extends h2d.Sprite implements Randomized {
 								<checkbox checked="${props.slow}" onchange="api.props.slow = this.checked"/> <span>Slow</span>
 							</div>
 							<div class="line">
-								<button value="Restart" onclick="api.reset()"/>
+								<button value="Restart" onclick="api.clear()"/>
 							</div>
 							<div class="line">
 								<button value="Load" onclick="api.load()"/> <button value="Save" onclick="api.save()"/>
@@ -591,7 +591,7 @@ class Editor extends h2d.Sprite implements Randomized {
 			blendModes : Type.allEnums(BlendMode),
 			sortModes : Type.allEnums(SortMode),
 			converge : Type.allEnums(Converge),
-			reset : emit.reset,
+			clear : emit.clear,
 			props : props,
 			curve : curve,
 			setCurveMode : setCurveMode,
@@ -970,7 +970,7 @@ class Editor extends h2d.Sprite implements Randomized {
 			if( lastPartSeen == null )
 				lastPartSeen = emit.time;
 			else if( emit.time - lastPartSeen > 0.5 ) {
-				emit.reset();
+				emit.clear();
 				if( Math.isNaN(props.startTime) ) props.startTime = 0;
 				var dt = 1 / 60;
 				var t = props.startTime;

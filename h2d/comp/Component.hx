@@ -235,7 +235,7 @@ class Component extends Sprite {
 				if( c.xPos != null ) x = c.xPos + style.offsetX + extLeft();
 				if( c.yPos != null ) y = c.yPos + style.offsetY + extTop();
 			}
-			bg.reset();
+			bg.clear();
 			bg.x = style.marginLeft - extLeft();
 			bg.y = style.marginTop - extTop();
 

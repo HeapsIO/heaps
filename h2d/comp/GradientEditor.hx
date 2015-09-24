@@ -350,7 +350,7 @@ private class ColorSelector extends h2d.Sprite {
 	}
 
 	function redraw() {
-		canvas.reset();
+		canvas.clear();
 		canvas.fillRectColor(0, 0, 110, 25, color);
 		canvas.lineRect(FillStyle.Color(gradient.borderColor), 0, 0, 110, 25, 1);
 	}
