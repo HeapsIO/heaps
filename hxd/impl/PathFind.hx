@@ -43,6 +43,41 @@ class PathFind {
 		});
 	}
 
+	public inline function buildMap( isStart : Int -> Int -> Bool, collide : Int -> Int -> Bool ) {
+		var tmp = new FastIO.FastIntIO();
+		var k = 0;
+		for( y in 0...height )
+			for( x in 0...width )
+				if( isStart(x, y) )
+					tmp.add2d(x, y, bits);
+		var k = 1;
+		while( true ) {
+			tmp.flushMax(4);
+			if( !tmp.hasNext() )
+				break;
+			for( id in tmp ) {
+				var x = id & ((1 << bits) - 1);
+				var y = id >>> bits;
+
+				var a = x + y * width;
+				var p = t[a];
+				if( p != 0 ) continue;
+
+				if( collide(x, y) ) {
+					t[a] = -k;
+					if( k == 1 ) continue;
+				}
+				t[a] = k;
+				if( x < width-1 ) tmp.add2d(x + 1, y, bits);
+				if( x > 0 ) tmp.add2d(x - 1, y, bits);
+				if( y < height - 1 ) tmp.add2d(x, y + 1, bits);
+				if( y > 0 ) tmp.add2d(x, y - 1, bits);
+			}
+			k++;
+		}
+	}
+
+
 	/**
 		The collide function will return the allowed movements for a given position as a set of bits 1|2|4|8 for Up|Down|Left|Right
 	**/
