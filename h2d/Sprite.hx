@@ -47,7 +47,8 @@ class Sprite {
 		if( out == null ) out = new h2d.col.Bounds();
 		if( relativeTo != null )
 			relativeTo.syncPos();
-		syncPos();
+		if( relativeTo != this )
+			syncPos();
 		getBoundsRec(relativeTo, out);
 		if( out.isEmpty() ) {
 			addBounds(relativeTo, out, -1, -1, 2, 2);
