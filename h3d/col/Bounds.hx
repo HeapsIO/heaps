@@ -271,7 +271,7 @@ class Bounds {
 	}
 
 	public function toString() {
-		return "Bounds{" + getMin() + "," + getMax() + "}";
+		return "Bounds{" + getMin() + "," + getSize() + "}";
 	}
 
 	public inline function toSphere() {

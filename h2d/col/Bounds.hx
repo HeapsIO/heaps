@@ -215,7 +215,7 @@ class Bounds {
 	}
 
 	public function toString() {
-		return "{" + getMin() + "," + getMax() + "}";
+		return "{" + getMin() + "," + getSize() + "}";
 	}
 
 	public static inline function fromValues( x0 : Float, y0 : Float, width : Float, height : Float ) {
