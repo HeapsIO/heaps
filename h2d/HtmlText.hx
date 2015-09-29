@@ -45,7 +45,7 @@ class HtmlText extends Text {
 		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
 		for( e in doc )
 			addNode(e, rebuild);
-		return { width : xPos > xMax ? xPos : xMax, height : xPos > 0 ? yPos + (font.lineHeight + lineSpacing) : yPos };
+		return cachedSize = { width : xPos > xMax ? xPos : xMax, height : xPos > 0 ? yPos + (font.lineHeight + lineSpacing) : yPos };
 	}
 
 	function addNode( e : Xml, rebuild : Bool ) {
@@ -107,6 +107,7 @@ class HtmlText extends Text {
 	}
 
 	override function set_textColor(c) {
+		if( this.textColor == c ) return c;
 		this.textColor = c;
 		rebuild();
 		return c;

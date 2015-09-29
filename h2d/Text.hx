@@ -21,6 +21,7 @@ class Text extends Drawable {
 	public var lineSpacing(default,set) : Int;
 
 	var glyphs : TileGroup;
+	var cachedSize : { width : Int, height : Int };
 
 	public function new( font : Font, ?parent ) {
 		super(parent);
@@ -33,6 +34,7 @@ class Text extends Drawable {
 	}
 
 	function set_font(font) {
+		if( this.font == font ) return font;
 		this.font = font;
 		if( glyphs != null ) glyphs.remove();
 		glyphs = new TileGroup(font == null ? null : font.tile, this);
@@ -42,18 +44,21 @@ class Text extends Drawable {
 	}
 
 	function set_textAlign(a) {
+		if( textAlign == a ) return a;
 		textAlign = a;
 		rebuild();
 		return a;
 	}
 
 	function set_letterSpacing(s) {
+		if( letterSpacing == s ) return s;
 		letterSpacing = s;
 		rebuild();
 		return s;
 	}
 
 	function set_lineSpacing(s) {
+		if( lineSpacing == s ) return s;
 		lineSpacing = s;
 		rebuild();
 		return s;
@@ -93,11 +98,15 @@ class Text extends Drawable {
 	}
 
 	function rebuild() {
+		cachedSize = null;
 		if( allocated && text != null && font != null ) initGlyphs(text);
 	}
 
 	public function calcTextWidth( text : String ) {
-		return initGlyphs(text,false).width;
+		var old = cachedSize;
+		var w = initGlyphs(text,false).width;
+		cachedSize = old;
+		return w;
 	}
 
 	public function splitText( text : String, leftMargin = 0 ) {
@@ -205,24 +214,28 @@ class Text extends Drawable {
 				prevChar = cc;
 		}
 		if( calcLines ) lines.push(x);
-		return { width : x > xMax ? x : xMax, height : x > 0 ? y + dl : y > 0 ? y : dl };
+		return cachedSize = { width : x > xMax ? x : xMax, height : x > 0 ? y + dl : y > 0 ? y : dl };
 	}
 
 	function get_textHeight() {
+		if( cachedSize != null ) return cachedSize.height;
 		return initGlyphs(text,false).height;
 	}
 
 	function get_textWidth() {
+		if( cachedSize != null ) return cachedSize.width;
 		return initGlyphs(text,false).width;
 	}
 
 	function set_maxWidth(w) {
+		if( maxWidth == w ) return w;
 		maxWidth = w;
 		rebuild();
 		return w;
 	}
 
 	function set_textColor(c) {
+		if( this.textColor == c ) return c;
 		this.textColor = c;
 		var a = color.w;
 		color.setColor(c);
@@ -231,9 +244,16 @@ class Text extends Drawable {
 	}
 
 	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds ) {
-		glyphs.visible = true;
-		super.getBoundsRec(relativeTo, out);
-		glyphs.visible = false;
+		if( !allocated ) {
+			// if not on scene, the text is not yet built !
+			super.getBoundsRec(relativeTo, out);
+			var size = cachedSize == null ? initGlyphs(text, false) : cachedSize;
+			addBounds(relativeTo, out, 0, 0, size.width, size.height);
+		} else {
+			glyphs.visible = true;
+			super.getBoundsRec(relativeTo, out);
+			glyphs.visible = false;
+		}
 	}
 
 }
