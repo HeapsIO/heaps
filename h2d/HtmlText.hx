@@ -70,6 +70,7 @@ class HtmlText extends Text {
 				var i = loadImage(e.get("src"));
 				if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
 				if( maxWidth != null && xPos + i.width > maxWidth && xPos > 0 ) {
+					if( xPos > xMax ) xMax = xPos;
 					xPos = 0;
 					yPos += font.lineHeight + lineSpacing;
 				}
@@ -92,6 +93,7 @@ class HtmlText extends Text {
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
 				if( cc == "\n".code ) {
+					if( xPos > xMax ) xMax = xPos;
 					xPos = 0;
 					yPos += font.lineHeight + lineSpacing;
 					prevChar = -1;
