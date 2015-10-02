@@ -14,8 +14,8 @@ class DirLight extends hxsl.Shader {
 		var lightPixelColor : Vec3;
 		var transformedNormal : Vec3;
 		var transformedPosition : Vec3;
-		var specAmount : Float;
 		var specPower : Float;
+		var specColor : Vec3;
 
 		function calcLighting() : Vec3 {
 			var diff = transformedNormal.dot(-direction).max(0.);
@@ -23,7 +23,7 @@ class DirLight extends hxsl.Shader {
 				return color * diff;
 			var r = reflect(direction, transformedNormal).normalize();
 			var specValue = r.dot((camera.position - transformedPosition).normalize()).max(0.);
-			return color * (diff + specAmount * pow(specValue, specPower));
+			return color * (diff + specColor * pow(specValue, specPower));
 		}
 
 		function vertex() {

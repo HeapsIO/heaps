@@ -16,9 +16,12 @@ class DirLight extends Light {
 		return dshader.color;
 	}
 
+	override function get_enableSpecular() {
+		return dshader.enableSpecular;
+	}
+
 	override function set_enableSpecular(b) {
-		dshader.enableSpecular = b;
-		return false;
+		return dshader.enableSpecular = b;
 	}
 
 	override function emit(ctx) {

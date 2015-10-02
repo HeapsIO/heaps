@@ -5,10 +5,10 @@ class SpecularTexture extends hxsl.Shader {
 	static var SRC = {
 		@param var texture : Sampler2D;
 		var calculatedUV : Vec2;
-		var specAmount : Float;
+		var specColor : Vec3;
 
 		function fragment() {
-			specAmount *= texture.get(calculatedUV).x;
+			specColor *= texture.get(calculatedUV).rgb;
 		}
 	}
 

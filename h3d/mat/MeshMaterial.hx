@@ -9,6 +9,7 @@ class MeshMaterial extends Material {
 	public var specularTexture(get,set) : h3d.mat.Texture;
 
 	public var color(get, set) : Vector;
+	public var specularAmount(get, set) : Float;
 	public var specularPower(get, set) : Float;
 	public var blendMode(default, set) : BlendMode;
 
@@ -25,6 +26,14 @@ class MeshMaterial extends Material {
 
 	inline function set_specularPower(v) {
 		return mshader.specularPower = v;
+	}
+
+	inline function get_specularAmount() {
+		return mshader.specularAmount;
+	}
+
+	inline function set_specularAmount(v) {
+		return mshader.specularAmount = v;
 	}
 
 	inline function get_color() {
