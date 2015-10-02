@@ -71,13 +71,22 @@ class Renderer {
 		return p;
 	}
 
+	function getPassPriority( p : { name : String, p : h3d.pass.Base }  ) {
+		var pr = p.p.priority * 10;
+		switch( p.name ) {
+		case "alpha": pr -= 1;
+		case "additive": pr -= 2;
+		}
+		return pr;
+	}
+
 	public function setPass( name : String, p : h3d.pass.Base ) {
 		for( p in allPasses )
 			if( p.name == name )
 				allPasses.remove(p);
 		passes.set(name, p);
 		allPasses.push({ name : name, p : p });
-		allPasses.sort(function(p1, p2) return p2.p.priority - p1.p.priority);
+		allPasses.sort(function(p1, p2) return getPassPriority(p2) - getPassPriority(p1));
 	}
 
 	@:access(h3d.scene.Object)
