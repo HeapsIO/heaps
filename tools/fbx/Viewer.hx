@@ -452,8 +452,12 @@ class Viewer extends hxd.App {
 			});
 
 			for( m in obj.getMaterials() ) {
+				var t = m.mainPass.getShader(h3d.shader.Texture);
 				m.mainPass.culling = None;
-				m.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
+				if( t != null) {
+					t.killAlpha = true;
+					if( !t.texture.flags.has(IsNPOT) ) t.texture.wrap = Repeat;
+				}
 				if( m.mainPass.blendDst == Zero ) m.mainPass.blend(SrcAlpha, OneMinusSrcAlpha);
 			}
 
