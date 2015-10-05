@@ -210,6 +210,16 @@ class Bounds {
 		zMax = b.zMax;
 	}
 
+	public inline function scalePivot( v : Float ) {
+		xMin *= v;
+		yMin *= v;
+		zMin *= v;
+		xMax *= v;
+		yMax *= v;
+		zMax *= v;
+	}
+
+
 	public function scaleCenter( v : Float ) {
 		var dx = (xMax - xMin) * 0.5 * v;
 		var dy = (yMax - yMin) * 0.5 * v;
