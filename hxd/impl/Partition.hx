@@ -102,7 +102,6 @@ class Partition<T : { x : Float, y : Float, partChunk : Int, partNext : T, partQ
 					if( d <= rr ) {
 						if( r == null ) {
 							r = last = e;
-							r.partQueryNext = null;
 						} else {
 							last.partQueryNext = e;
 							last = e;
@@ -112,6 +111,8 @@ class Partition<T : { x : Float, y : Float, partChunk : Int, partNext : T, partQ
 				}
 			}
 		}
+		if( last != null )
+			last.partQueryNext = null;
 		return r;
 	}
 
@@ -158,8 +159,8 @@ class Partition<T : { x : Float, y : Float, partChunk : Int, partNext : T, partQ
 		Multiple removes of the same entity does not have any side effect.
 	**/
 	public function remove( e : T ) {
+		if( e.partChunk < 0 ) return;
 		var c = chunks[e.partChunk];
-		if( c == null ) return;
 		removeFromChunk(c, e);
 		e.partChunk = -1;
 	}
@@ -198,16 +199,18 @@ class Partition<T : { x : Float, y : Float, partChunk : Int, partNext : T, partQ
 				#end
 
 				// faster remove
+				var next = e.partNext;
 				if( prev == null )
-					c.elements = e.partNext;
+					c.elements = next;
 				else
-					prev.partNext = e.partNext;
+					prev.partNext = next;
 
 				var cid = cx + cy * pwidth;
 				var cnew = chunks[cid];
 				e.partChunk = cid;
 				e.partNext = cnew.elements;
 				cnew.elements = e;
+				e = next;
 			}
 		}
 	}
