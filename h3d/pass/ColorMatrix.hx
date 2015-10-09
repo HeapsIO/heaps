@@ -39,7 +39,7 @@ class ColorMatrix extends ScreenFx<ColorMatrixShader> {
 
 	public function new( ?m : h3d.Matrix ) {
 		super(new ColorMatrixShader());
-		if( m != null ) shader.matrix = m;
+		if( m != null ) shader.matrix = m else shader.matrix.identity();
 		shader.maskPower = 1;
 		shader.maskChannel.set(1, 0, 0, 0); // red channel
 	}
