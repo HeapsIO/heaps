@@ -21,17 +21,15 @@ class WavData extends hxd.snd.Data {
 			var rpos = 0.;
 			var max = data.length >> (h.bitsPerSample >> 4);
 			var delta = h.samplingRate / 44100;
-			var scale = (1 << h.bitsPerSample) - 1;
+			var next = h.channels;
 			while( rpos < max ) {
 				var ipos = Std.int(rpos);
-				var npos = ipos + 1;
-				if( npos >= max ) npos = max - 1;
+				var npos = ipos + next;
+				if( npos >= max ) npos = max - next;
 				var v1, v2;
 
-				inline function getI8(p) {
-					var v = data.get(p);
-					if( v & 0x80 != 0 ) v -= 256;
-					return v;
+				inline function getUI8(p) {
+					return data.get(p);
 				}
 				inline function getI16(p) {
 					var v = data.get(p) | (data.get(p + 1) << 8);
@@ -39,15 +37,15 @@ class WavData extends hxd.snd.Data {
 					return v;
 				}
 				if( h.bitsPerSample == 8 ) {
-					v1 = getI8(ipos) / 255;
-					v2 = getI8(npos) / 255;
+					v1 = getUI8(ipos);
+					v2 = getUI8(npos);
 				} else {
-					v1 = getI16(ipos<<1) / 65535;
-					v2 = getI16(npos<<1) / 65535;
+					v1 = getI16(ipos<<1);
+					v2 = getI16(npos<<1);
 				}
-				var v = Std.int(hxd.Math.lerp(v1, v2, rpos - ipos) * scale);
+				var v = Std.int(hxd.Math.lerp(v1, v2, rpos - ipos));
 				if( h.bitsPerSample == 8 )
-					out.writeInt8(v);
+					out.writeByte(v);
 				else
 					out.writeInt16(v);
 				rpos += delta;
