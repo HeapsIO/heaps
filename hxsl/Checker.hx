@@ -557,7 +557,7 @@ class Checker {
 			}
 			loop(e);
 			var sexpr = null;
-			try sexpr = loadShader(path.join(".")) catch( err : Dynamic ) error(Std.string(err), e.pos);
+			try sexpr = loadShader(path.join(".")) catch( err : haxe.macro.Expr.Error ) throw err catch( err : Dynamic ) error(Std.string(err), e.pos);
 			if( sexpr != null )
 				checkExpr(sexpr, funs, true, isExtends);
 		case ECall( { expr : EIdent("extends") }, [e]):
