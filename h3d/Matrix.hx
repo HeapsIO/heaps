@@ -577,6 +577,18 @@ class Matrix {
 		_33 = _33 * k + b33 * ik;
 	}
 
+	public inline function colorAdd( c : Int ) {
+		_41 += ((c >> 16) & 0xFF) / 255;
+		_42 += ((c >> 8) & 0xFF) / 255;
+		_43 += (c & 0xFF) / 255;
+	}
+
+	public inline function colorSet( c : Int, alpha = 1. ) {
+		zero();
+		_44 = alpha;
+		colorAdd(c);
+	}
+
 	// STATICS
 
 	public static function I() {
