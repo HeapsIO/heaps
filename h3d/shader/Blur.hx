@@ -11,6 +11,7 @@ class Blur extends ScreenShader {
 		@param var pixel : Vec2;
 
 		@const var hasFixedColor : Bool;
+		@const var smoothFixedColor : Bool;
 		@param var fixedColor : Vec4;
 
 		function fragment() {
@@ -27,7 +28,10 @@ class Blur extends ScreenShader {
 			}
 			if( hasFixedColor ) {
 				output.color.rgb = fixedColor.rgb;
-				output.color.a *= fixedColor.a;
+				if( smoothFixedColor )
+					output.color.a *= fixedColor.a;
+				else
+					output.color.a = fixedColor.a * float(output.color.a > 0);
 			}
 		}
 	}
