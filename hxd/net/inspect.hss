@@ -1,4 +1,4 @@
-.jqpage {
+.jqpage, .dialog-floating {
 
 	div, a, li, td, th {
 		user-select : none;
@@ -30,27 +30,55 @@
 			ul {
 				padding-left : 20px;
 			}
+			li.selected {
+				background-color : #eee;
+			}
 		}
 	}
 
 	#material {
-		.pass {
-			background-color : #555;
-			color : #bbb;
-			font-weight : bold;
-			padding : 2px 4px;
-			cursor : pointer;
-		}
 	}
 
 	table.props {
+		tr.pgroup {
+			cursor : pointer;
+			th {
+				text-align : left;
+				background-color : #555;
+				color : #bbb;
+				font-weight : bold;
+				padding : 2px 4px;
+				cursor : pointer;
+			}
+		}
 		td {
-			select {
+			height : 24px;
+			input, select {
 				padding-left : 0px;
-				height : 20px;
+				height : 18px;
+				border : 1px solid #888;
 				width : 100%;
 			}
 		}
+
+		tr.ptexture img {
+			max-width : 128px;
+			max-height : 128px;
+		}
+
+		tr.pcolor td {
+			.modal {
+				opacity : 0.;
+			}
+			.color {
+				display : inline-block;
+				width : 20px;
+				height : 20px;
+				border : 2px solid white;
+				outline : 1px solid black;
+			}
+		}
+
 	}
 
 }

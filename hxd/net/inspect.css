@@ -1,41 +1,70 @@
-.jqpage div, .jqpage a, .jqpage li, .jqpage td, .jqpage th {
+.jqpage div, .jqpage a, .jqpage li, .jqpage td, .jqpage th, .dialog-floating div, .dialog-floating a, .dialog-floating li, .dialog-floating td, .dialog-floating th {
 	user-select : none;
 	-moz-user-select : none;
 	-webkit-user-select : none;
 }
-.jqpage .panel {
+.jqpage .panel, .dialog-floating .panel {
 	overflow : auto;
 }
-.jqpage #log {
+.jqpage #log, .dialog-floating #log {
 	font-family : Courier;
 }
-.jqpage #log .line {
+.jqpage #log .line, .dialog-floating #log .line {
 	padding : 1px 3px;
 }
-.jqpage #log .line:nth-child(even) {
+.jqpage #log .line:nth-child(even), .dialog-floating #log .line:nth-child(even) {
 	background-color : #eee;
 }
-.jqpage #scene ul.elt {
+.jqpage #scene ul.elt, .dialog-floating #scene ul.elt {
 	background-color : transparent;
 }
-.jqpage #scene ul.elt li {
+.jqpage #scene ul.elt li, .dialog-floating #scene ul.elt li {
 	cursor : pointer;
 }
-.jqpage #scene ul.elt li .content:hover {
+.jqpage #scene ul.elt li .content:hover, .dialog-floating #scene ul.elt li .content:hover {
 	background-color : #eee;
 }
-.jqpage #scene ul.elt ul {
+.jqpage #scene ul.elt ul, .dialog-floating #scene ul.elt ul {
 	padding-left : 20px;
 }
-.jqpage #material .pass {
+.jqpage #scene ul.elt li.selected, .dialog-floating #scene ul.elt li.selected {
+	background-color : #eee;
+}
+.jqpage table.props tr.pgroup, .dialog-floating table.props tr.pgroup {
+	cursor : pointer;
+}
+.jqpage table.props tr.pgroup th, .dialog-floating table.props tr.pgroup th {
+	text-align : left;
 	background-color : #555;
 	color : #bbb;
 	font-weight : bold;
 	padding : 2px 4px;
 	cursor : pointer;
 }
-.jqpage table.props td select {
+.jqpage table.props td, .dialog-floating table.props td {
+	height : 24px;
+}
+.jqpage table.props td input, .jqpage table.props td select, .dialog-floating table.props td input, .dialog-floating table.props td select {
 	padding-left : 0px;
-	height : 20px;
+	height : 18px;
+	border : 1px solid #888;
 	width : 100%;
+}
+.jqpage table.props tr.ptexture img, .dialog-floating table.props tr.ptexture img {
+	max-width : 128px;
+	max-height : 128px;
+}
+.jqpage table.props tr.pcolor td .modal, .dialog-floating table.props tr.pcolor td .modal {
+	opacity : 0;
+	filter : alpha(opacity=0);
+	zoom : 1;
+}
+.jqpage table.props tr.pcolor td .color, .dialog-floating table.props tr.pcolor td .color {
+	display : inline-block;
+	zoom : 1;
+	*display : inline;
+	width : 20px;
+	height : 20px;
+	border : 2px solid white;
+	outline : 1px solid black;
 }
