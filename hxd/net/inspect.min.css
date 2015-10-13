@@ -1,5 +1,0 @@
-.jqpage .panel{overflow:auto;}
-.jqpage #log{font-family:Courier;}
-.jqpage #log .line{padding:1px 3px;}
-.jqpage #log .line:nth-child(even){background-color:#eee;}
-

@@ -66,14 +66,42 @@ private class FlashSocketOutput extends SocketOutput {
 	}
 
 }
+
+private class FlashSocketInput extends haxe.io.Input {
+
+	var sock : flash.net.Socket;
+
+	public function new(s) {
+		sock = s;
+	}
+
+	override function readBytes( bytes : haxe.io.Bytes, pos : Int, len : Int ) {
+		if( len > (sock.bytesAvailable : Int) ) {
+			len = sock.bytesAvailable;
+			if( len == 0 ) throw new haxe.io.Eof();
+		}
+		if( len > 0 )
+			sock.readBytes(bytes.getData(), pos, len);
+		return len;
+	}
+
+	override function readByte() {
+		if( sock.bytesAvailable == 0 )
+			throw new haxe.io.Eof();
+		return sock.readUnsignedByte();
+	}
+
+}
 #end
 
 class Socket {
 
+	static var openedSocks = [];
 	#if flash
 	var s : flash.net.Socket;
 	#end
 	public var out(default, null) : SocketOutput;
+	public var input(default, null) : haxe.io.Input;
 
 	public function new() {
 		out = new SocketOutput();
@@ -81,10 +109,12 @@ class Socket {
 
 	public function connect( host : String, port : Int, onConnect : Void -> Void ) {
 		close();
+		openedSocks.push(this);
 		#if flash
 		s = new flash.net.Socket();
 		s.addEventListener(flash.events.Event.CONNECT, function(_) {
 			out = new FlashSocketOutput(s);
+			input = new FlashSocketInput(s);
 			onConnect();
 		});
 		s.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
@@ -95,6 +125,9 @@ class Socket {
 			close();
 			onError("Closed");
 		});
+		s.addEventListener(flash.events.ProgressEvent.SOCKET_DATA, function(e:flash.events.ProgressEvent) {
+			onData();
+		});
 		s.connect(host, port);
 		#else
 		throw "Not implemented";
@@ -102,6 +135,7 @@ class Socket {
 	}
 
 	public function close() {
+		openedSocks.remove(this);
 		#if flash
 		if( s != null ) {
 			try s.close() catch( e : Dynamic ) { };
@@ -115,6 +149,9 @@ class Socket {
 
 	public dynamic function onError(msg:String) {
 		throw "Socket Error " + msg;
+	}
+
+	public dynamic function onData() {
 	}
 
 }

@@ -51,6 +51,16 @@ class Material {
 		return passes;
 	}
 
+	public function getPasses() {
+		var p = passes;
+		var out = [];
+		while( p != null ) {
+			out.push(p);
+			p = p.nextPass;
+		}
+		return out.iterator();
+	}
+
 	public function getPass( name : String ) : Pass {
 		var p = passes;
 		while( p != null ) {

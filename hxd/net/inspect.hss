@@ -1,5 +1,9 @@
 .jqpage {
 
+	div, a, li, td, th {
+		user-select : none;
+	}
+
 	.panel {
 		overflow : auto;
 	}
@@ -11,6 +15,41 @@
 		}
 		CSS(".line:nth-child(even)") {
 			background-color : #eee;
+		}
+	}
+
+	#scene {
+		ul.elt {
+			background-color : transparent;
+			li {
+				cursor : pointer;
+			}
+			li .content:hover {
+				background-color : #eee;
+			}
+			ul {
+				padding-left : 20px;
+			}
+		}
+	}
+
+	#material {
+		.pass {
+			background-color : #555;
+			color : #bbb;
+			font-weight : bold;
+			padding : 2px 4px;
+			cursor : pointer;
+		}
+	}
+
+	table.props {
+		td {
+			select {
+				padding-left : 0px;
+				height : 20px;
+				width : 100%;
+			}
 		}
 	}
 

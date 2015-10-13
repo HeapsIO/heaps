@@ -1,0 +1,41 @@
+.jqpage div, .jqpage a, .jqpage li, .jqpage td, .jqpage th {
+	user-select : none;
+	-moz-user-select : none;
+	-webkit-user-select : none;
+}
+.jqpage .panel {
+	overflow : auto;
+}
+.jqpage #log {
+	font-family : Courier;
+}
+.jqpage #log .line {
+	padding : 1px 3px;
+}
+.jqpage #log .line:nth-child(even) {
+	background-color : #eee;
+}
+.jqpage #scene ul.elt {
+	background-color : transparent;
+}
+.jqpage #scene ul.elt li {
+	cursor : pointer;
+}
+.jqpage #scene ul.elt li .content:hover {
+	background-color : #eee;
+}
+.jqpage #scene ul.elt ul {
+	padding-left : 20px;
+}
+.jqpage #material .pass {
+	background-color : #555;
+	color : #bbb;
+	font-weight : bold;
+	padding : 2px 4px;
+	cursor : pointer;
+}
+.jqpage table.props td select {
+	padding-left : 0px;
+	height : 20px;
+	width : 100%;
+}
