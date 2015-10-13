@@ -123,7 +123,7 @@ class Pass {
 
 	public function getShader< T:hxsl.Shader >(t:Class<T>) : T {
 		var s = shaders;
-		while( s != null ) {
+		while( s != parentShaders ) {
 			var sh = Std.instance(s.s, t);
 			if( sh != null )
 				return sh;
@@ -133,7 +133,7 @@ class Pass {
 	}
 
 	public inline function getShaders() {
-		return shaders.iterator();
+		return shaders.iterateTo(parentShaders);
 	}
 
 	function getShadersRec() {

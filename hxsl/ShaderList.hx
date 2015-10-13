@@ -11,17 +11,22 @@ class ShaderList {
 		return new ShaderList(s.clone(), next == null ? null : next.clone());
 	}
 	public inline function iterator() {
-		return new ShaderIterator(this);
+		return new ShaderIterator(this,null);
+	}
+	public inline function iterateTo(s) {
+		return new ShaderIterator(this,s);
 	}
 }
 
 private class ShaderIterator {
 	var l : ShaderList;
-	public inline function new(l) {
+	var last : ShaderList;
+	public inline function new(l,last) {
 		this.l = l;
+		this.last = last;
 	}
 	public inline function hasNext() {
-		return l != null;
+		return l != last;
 	}
 	public inline function next() {
 		var s = l.s;
