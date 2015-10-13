@@ -258,4 +258,18 @@ class File {
 		#end
 	}
 
+	public static function applicationPath() : String {
+		#if flash
+		var path = flash.Lib.current.loaderInfo.loaderURL.substr(7); // file://
+		if( path.charCodeAt(2) == "|".code ) // driver letter on windows
+			path = path.charAt(1) + ":" + path.substr(3);
+		var path = path.split("/");
+		path[path.length - 1] = "";
+		return path.join("/");
+		#else
+		throw "Not supported";
+		return null;
+		#end
+	}
+
 }
