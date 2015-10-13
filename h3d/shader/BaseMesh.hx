@@ -11,6 +11,8 @@ class BaseMesh extends hxsl.Shader {
 			var projDiag : Vec3;
 			var viewProj : Mat4;
 			var inverseViewProj : Mat4;
+			var zNear : Float;
+			var zFar : Float;
 			@var var dir : Vec3;
 		};
 

@@ -17,6 +17,8 @@ class Default extends Base {
 	inline function get_globals() return manager.globals;
 
 	@global("camera.view") var cameraView : h3d.Matrix = ctx.camera.mcam;
+	@global("camera.zNear") var cameraNear : Float = ctx.camera.zNear;
+	@global("camera.zFar") var cameraFar : Float = ctx.camera.zFar;
 	@global("camera.proj") var cameraProj : h3d.Matrix = ctx.camera.mproj;
 	@global("camera.position") var cameraPos : h3d.Vector = ctx.camera.pos;
 	@global("camera.projDiag") var cameraProjDiag : h3d.Vector = new h3d.Vector(ctx.camera.mproj._11,ctx.camera.mproj._22,ctx.camera.mproj._33,ctx.camera.mproj._44);
