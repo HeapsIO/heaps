@@ -83,9 +83,19 @@ class Macros {
 		}
 	}
 
+	static function addParamRec( eparams : Array<haxe.macro.Expr>, e : haxe.macro.Expr, t : Type ) {
+		switch( t ) {
+		case TStruct(vl):
+			for( v in vl )
+				addParamRec(eparams, { expr : EField(e, v.name), pos : e.pos }, v.type);
+		default:
+			eparams.push(e);
+		}
+	}
+
 	static function buildFields( shader : ShaderData, pos : Position ) {
 		var fields = new Array<Field>();
-		var globals = [], consts = [], params = [];
+		var globals = [], consts = [], params = [], eparams = [];
 		for( v in shader.vars ) {
 			var cpos = consts.length;
 			getConsts(v, pos, consts);
@@ -142,6 +152,7 @@ class Macros {
 				fields.push(f);
 				fields.push(f2);
 				params.push(name);
+				addParamRec(eparams, { expr : EConst(CIdent(name)), pos:pos }, v.type);
 				fields.push(fget);
 				fields.push(fset);
 			case Global:
@@ -195,7 +206,7 @@ class Macros {
 				args : [ { name : "index", type : macro : Int } ],
 				expr : {
 					expr : EBlock([
-						{ expr : ESwitch(macro index, [for( p in params ) { values : [macro $v{ index++ } ], expr : macro return $i{ p } } ], macro {}), pos : pos },
+						{ expr : ESwitch(macro index, [for( p in eparams ) { values : [macro $v{ index++ } ], expr : macro return $p } ], macro {}), pos : pos },
 						macro return null,
 					]),
 					pos : pos,
