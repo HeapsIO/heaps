@@ -79,10 +79,6 @@ class Engine {
 		return driver.getDriverName(details);
 	}
 
-	public function setCapture( bmp : hxd.BitmapData, callb : Void -> Void ) {
-		driver.setCapture(bmp,callb);
-	}
-
 	public function selectShader( shader : hxsl.RuntimeShader ) {
 		if( driver.selectShader(shader) )
 			shaderSwitches++;

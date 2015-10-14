@@ -88,7 +88,7 @@ class Driver {
 	public function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
 	}
 
-	public function setCapture( bmp : hxd.BitmapData, callb : Void -> Void ) {
+	public function captureRenderBuffer( bmp : hxd.BitmapData ) {
 	}
 
 	public function reset() {

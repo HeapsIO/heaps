@@ -69,7 +69,6 @@ class Stage3dDriver extends Driver {
 	var width : Int;
 	var height : Int;
 	var enableDraw : Bool;
-	var capture : { bmp : hxd.BitmapData, callb : Void -> Void };
 	var frame : Int;
 	var programs : Map<Int, CompiledShader>;
 	var isStandardMode : Bool;
@@ -186,8 +185,8 @@ class Stage3dDriver extends Driver {
 		ctx.clear( color == null ? 0 : color.r, color == null ? 0 : color.g, color == null ? 0 : color.b, color == null ? 1 : color.a, depth == null ? 1 : depth, stencil == null ? 0 : stencil, mask);
 	}
 
-	override function setCapture( bmp : hxd.BitmapData, onCapture : Void -> Void ) {
-		capture = { bmp : bmp, callb : onCapture };
+	override function captureRenderBuffer( bmp : hxd.BitmapData ) {
+		ctx.drawToBitmapData(bmp.toNative());
 	}
 
 	override function dispose() {
@@ -201,14 +200,6 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function present() {
-		if( capture != null ) {
-			ctx.drawToBitmapData(capture.bmp.toNative());
-			ctx.present();
-			var callb = capture.callb;
-			capture = null;
-			callb();
-			return;
-		}
 		ctx.present();
 	}
 

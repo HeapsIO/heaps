@@ -175,6 +175,37 @@ class Texture {
 		}
 	}
 
+	/**
+		Downloads the current texture data from the GPU. On some platforms, color might be premultiplied by Alpha.
+		Beware, this is a very slow operation that shouldn't be done during rendering.
+	**/
+	public function captureBitmap() {
+		var e = h3d.Engine.getCurrent();
+		var oldW = e.width, oldH = e.height;
+		var oldF = filter, oldM = mipMap, oldWrap = wrap;
+		if( e.width < width || e.height < height )
+			e.resize(width, height);
+		e.driver.clear(new h3d.Vector(0, 0, 0, 0),1,0);
+		var s2d = new h2d.Scene();
+		new h2d.Bitmap(h2d.Tile.fromTexture(this), s2d);
+
+		mipMap = None;
+
+		s2d.render(e);
+
+		filter = oldF;
+		mipMap = oldM;
+		wrap = oldWrap;
+
+		var bmp = new hxd.BitmapData(width, height);
+		e.driver.captureRenderBuffer(bmp);
+		if( e.width != oldW || e.height != oldH )
+			e.resize(oldW, oldH);
+		e.driver.clear(new h3d.Vector(0, 0, 0, 0));
+		s2d.dispose();
+		return bmp;
+	}
+
 	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
 		var t = new Texture(bmp.width, bmp.height, allocPos);
 		t.uploadBitmap(bmp);
