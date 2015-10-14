@@ -105,6 +105,21 @@ class Pass {
 		return s;
 	}
 
+	public function addShaderAt<T:hxsl.Shader>(s:T, index:Int) : T {
+		var prev = null;
+		var cur = shaders;
+		while( index > 0 && cur != parentShaders ) {
+			prev = cur;
+			cur = cur.next;
+			index--;
+		}
+		if( prev == null )
+			shaders = new hxsl.ShaderList(s, cur);
+		else
+			prev.next = new hxsl.ShaderList(s, cur);
+		return s;
+	}
+
 	public function removeShader(s) {
 		var sl = shaders, prev = null;
 		while( sl != null ) {
