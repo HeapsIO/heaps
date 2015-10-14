@@ -146,9 +146,9 @@ class Checker {
 				{ id : Tools.allocVarId(), name : a.name, kind : Local, type : a.type };
 			}];
 			var kind = switch( f.name ) {
-			case "vertex", "__init__vertex":  Vertex;
-			case "fragment", "__init__fragment": Fragment;
-			case "__init__": Init;
+			case "vertex":  Vertex;
+			case "fragment": Fragment;
+			case "__init__", "__init__vertex", "__init__fragment": Init;
 			default: Helper;
 			}
 			if( args.length != 0 && kind != Helper )

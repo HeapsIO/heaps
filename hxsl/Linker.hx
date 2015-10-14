@@ -45,12 +45,13 @@ class Linker {
 	var varIdMap : Map<Int,Int>;
 	var locals : Map<Int,Bool>;
 	var curInstance : Int;
+	var debugDepth = 0;
 
 	public function new() {
 	}
 
 	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
-		//haxe.Log.trace(msg, pos);
+		//for( i in 0...debugDepth ) msg = "    " + msg; haxe.Log.trace(msg, pos);
 	}
 
 	function error( msg : String, p : Position ) : Dynamic {
@@ -225,26 +226,28 @@ class Linker {
 		return s2.priority - s1.priority;
 	}
 
-	function buildDependency( parent : ShaderInfos, v : AllocatedVar, isWritten : Bool ) {
+	function buildDependency( s : ShaderInfos, v : AllocatedVar, isWritten : Bool ) {
 		var found = !isWritten;
-		for( s in shaders ) {
+		for( parent in shaders ) {
 			if( parent == s ) {
 				found = true;
 				continue;
 			} else if( !found )
 				continue;
-			if( !s.write.exists(v.id) )
+			if( !parent.write.exists(v.id) )
 				continue;
-			if( parent.vertex && s.vertex == false )
+			if( s.vertex && parent.vertex == false )
 				continue;
-			debug(parent.name + " => " + s.name + " (" + v.path + ")");
-			parent.deps.set(s, true);
-			initDependencies(s);
-			if( !s.read.exists(v.id) )
+			debug(s.name + " => " + parent.name + " (" + v.path + ")");
+			s.deps.set(parent, true);
+			debugDepth++;
+			initDependencies(parent);
+			debugDepth--;
+			if( !parent.read.exists(v.id) )
 				return;
 		}
 		if( v.v.kind == Var )
-			error("Variable " + v.path + " required by " + parent.name + " is missing initializer", null);
+			error("Variable " + v.path + " required by " + s.name + " is missing initializer", null);
 	}
 
 	function initDependencies( s : ShaderInfos ) {
@@ -344,14 +347,19 @@ class Linker {
 					addShader(s.name + "." + (v.kind == Vertex ? "vertex" : "fragment"), v.kind == Vertex, f.expr, priority);
 
 				case Init:
+					var status : Null<Bool> = switch( f.ref.name ) {
+					case "__init__vertex": true;
+					case "__init__fragment": false;
+					default: null;
+					}
 					switch( f.expr.e ) {
 					case TBlock(el):
 						var index = 0;
 						var priority = -el.length;
 						for( e in el )
-							addShader(s.name+".__init__"+(index++),null,e, priority++);
+							addShader(s.name+"."+f.ref.name+(index++),status,e, priority++);
 					default:
-						addShader(s.name+".__init__",null,f.expr, -1);
+						addShader(s.name+"."+f.ref.name,status,f.expr, -1);
 					}
 				case Helper:
 					throw "Unexpected helper function in linker "+v.v.name;
