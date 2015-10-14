@@ -30,14 +30,39 @@
 .jqpage #log .line:nth-child(even), .dialog-floating #log .line:nth-child(even) {
 	background-color : #eee;
 }
+.jqpage ul.toolbar, .dialog-floating ul.toolbar {
+	color : #AAA;
+	background-color : #333;
+	border-top : 1px solid black;
+	border-bottom : 1px solid black;
+}
+.jqpage ul.toolbar li, .dialog-floating ul.toolbar li {
+	padding : 5px;
+	display : inline-block;
+	zoom : 1;
+	*display : inline;
+	border : 1px solid #555;
+}
+.jqpage ul.toolbar li:hover, .dialog-floating ul.toolbar li:hover {
+	color : white;
+	background-color : #555;
+	border-color : white;
+}
+.jqpage ul.toolbar li.active, .dialog-floating ul.toolbar li.active {
+	color : white;
+}
 .jqpage #scene ul.elt, .dialog-floating #scene ul.elt {
 	background-color : transparent;
 }
 .jqpage #scene ul.elt li, .dialog-floating #scene ul.elt li {
 	cursor : pointer;
 }
+.jqpage #scene ul.elt li>i, .dialog-floating #scene ul.elt li>i {
+	text-align : center;
+	width : 16px;
+}
 .jqpage #scene ul.elt li>.content, .dialog-floating #scene ul.elt li>.content {
-	margin-left : 4px;
+	margin-left : 2px;
 	display : inline-block;
 	zoom : 1;
 	*display : inline;

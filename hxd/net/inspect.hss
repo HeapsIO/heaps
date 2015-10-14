@@ -30,14 +30,42 @@
 		}
 	}
 
+	ul.toolbar {
+		color : #AAA;
+		background-color : #333;
+		border-top : 1px solid black;
+		border-bottom : 1px solid black;
+		li {
+			padding : 5px;
+			display : inline-block;
+			border : 1px solid #555;
+		}
+		li:hover {
+			color : white;
+			background-color : #555;
+			border-color : white;
+		}
+		li.active {
+			color : white;
+		}
+	}
+
+
 	#scene {
+
 		ul.elt {
 			background-color : transparent;
 			li {
 				cursor : pointer;
 			}
+
+			li > i {
+				text-align : center;
+				width : 16px;
+			}
+
 			li > .content {
-				margin-left : 4px;
+				margin-left : 2px;
 				display : inline-block;
 				height : 18px;
 			}

@@ -77,11 +77,17 @@ class System {
 	}
 
 	static var loop = null;
+	static var loopFunc = null;
 	#if nme
 	static var VIEW = null;
 	#end
 
+	public static function getCurrentLoop() {
+		return loopFunc;
+	}
+
 	public static function setLoop( f : Void -> Void ) {
+		loopFunc = f;
 		#if nme
 		if( VIEW == null ) {
 			VIEW = new nme.display.OpenGLView();
@@ -252,6 +258,10 @@ class System {
 			window.mozRequestAnimationFrame;
 		rqf(loopFunc);
 		if( LOOP != null ) LOOP();
+	}
+
+	public static function getCurrentLoop() {
+		return LOOP;
 	}
 
 	public static function setLoop( f : Void -> Void ) {

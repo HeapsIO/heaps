@@ -64,6 +64,7 @@ class CdbInspector extends cdb.jq.Client {
 	var sceneObjects : Array<SceneObject> = [];
 	var scenePosition = 0;
 	var flushWait = false;
+	var oldLoop : Void -> Void;
 
 	public function new( ?host, ?port ) {
 		super();
@@ -128,9 +129,17 @@ class CdbInspector extends cdb.jq.Client {
 		sock.out.write(msg);
 	}
 
+	function pauseLoop() {
+		scene.setElapsedTime(0);
+		h3d.Engine.getCurrent().render(scene);
+	}
+
 	function refresh() {
 		sceneObjects = [];
 		j.html('
+			<ul id="toolbar" class="toolbar">
+				<li id="scene-pause"><i class="fa fa-pause" alt="Pause Game"></i></li>
+			</ul>
 			<div id="scene" class="panel" caption="Scene">
 				<ul id="scontent" class="elt">
 				</ul>
@@ -143,6 +152,21 @@ class CdbInspector extends cdb.jq.Client {
 		send(SetCSS(CSS));
 		var scene = J("#scene");
 		scene.dock(root, Left, 0.2);
+
+		var pause = j.find("#scene-pause");
+		pause.click(function(_) {
+
+			if( oldLoop != null ) {
+				hxd.System.setLoop(oldLoop);
+				oldLoop = null;
+			} else {
+				oldLoop = hxd.System.getCurrentLoop();
+				hxd.System.setLoop(pauseLoop);
+			}
+
+			pause.toggleClass("active", oldLoop != null);
+		});
+
 		J("#log").dock(root, Down, 0.3);
 		J("#props").dock(scene.get(), Down, 0.5);
 	}
@@ -150,6 +174,17 @@ class CdbInspector extends cdb.jq.Client {
 	public function sync() {
 		if( scene == null || !connected ) return;
 		scenePosition = 0;
+		if( sceneObjects.length == 0 ) {
+			var lj = J("<li>");
+			lj.html('<i class="fa fa-object-group"></i><div class="content">Renderer</div>');
+			lj.appendTo(J("#scontent"));
+			lj.find(".content").click(function(_) {
+				J("#scene").find(".selected").removeClass("selected");
+				lj.addClass("selected");
+				selectRenderer();
+			});
+			sceneObjects.push(null);
+		}
 		syncRec(scene, null);
 	}
 
@@ -274,10 +309,12 @@ class CdbInspector extends cdb.jq.Client {
 
 		case PBool(name, get, set):
 			jname.text(name);
-			jprop.text(get() ? "Yes" : "No");
-			j.dblclick(function(_) {
-				set(!get());
-				jprop.text(get() ? "Yes" : "No");
+			var v = get();
+			jprop.text(v ? "Yes" : "No");
+			jprop.click(function(_) {
+				v = !v;
+				set(v);
+				jprop.text(v ? "Yes" : "No");
 			});
 		case PEnum(name, tenum, get, set):
 			jname.text(name);
@@ -514,7 +551,7 @@ class CdbInspector extends cdb.jq.Client {
 					case 0:
 						if( index == 0 ) return; // Don't allow toggle base shader
 						if( !pass.removeShader(s) )
-							pass.addShaderAt(s, shaders.length - (index + 2));
+							pass.addShaderAt(s, shaders.length - (index + 1));
 						j.toggleClass("disable");
 					case 1:
 						var shader = @:privateAccess s.shader;
@@ -574,9 +611,14 @@ class CdbInspector extends cdb.jq.Client {
 		props.push(PFloat("z", function() return o.z, function(v) o.z = v));
 		props.push(PBool("visible", function() return o.visible, function(v) o.visible = v));
 
-		if( o.isMesh() )
-			props.push(getMaterialProps(o.toMesh().material));
-		else {
+		if( o.isMesh() ) {
+			var multi = Std.instance(o, h3d.scene.MultiMaterial);
+			if( multi != null && multi.materials.length > 1 ) {
+				for( m in multi.materials )
+					props.push(getMaterialProps(m));
+			} else
+				props.push(getMaterialProps(o.toMesh().material));
+		} else {
 			var c = Std.instance(o, h3d.scene.CustomObject);
 			if( c != null )
 				props.push(getMaterialProps(c.material));
@@ -588,6 +630,78 @@ class CdbInspector extends cdb.jq.Client {
 		var j = J("#props");
 		j.text("");
 
+		var t = makeProps(props);
+		t.appendTo(j);
+	}
+
+	function getTextures( t : h3d.impl.TextureCache ) {
+		var cache = @:privateAccess t.cache;
+		var props = [];
+		for( i in 0...cache.length ) {
+			var t = cache[i];
+			props.push(PTexture(t.name, function() return t, null));
+		}
+		return props;
+	}
+
+	function getDynamicProps( v : Dynamic ) {
+		var fx = Std.instance(v,h3d.pass.ScreenFx);
+		if( fx != null )
+			return [getShaderProps(fx.shader)];
+		var s = Std.instance(v, hxsl.Shader);
+		if( s != null )
+			return [getShaderProps(s)];
+		return null;
+	}
+
+	function getPassProps( p : h3d.pass.Base ) {
+		var props = [];
+		var def = Std.instance(p, h3d.pass.Default);
+		if( def == null ) return props;
+
+		for( f in Type.getInstanceFields(Type.getClass(p)) ) {
+			var pl = getDynamicProps(Reflect.field(p, f));
+			if( pl != null )
+				props.push(PGroup(f,pl));
+		}
+
+		for( t in getTextures(@:privateAccess def.tcache) )
+			props.push(t);
+
+		return props;
+	}
+
+	function selectRenderer() {
+		var props = [];
+
+		var ls = scene.lightSystem;
+		props.push(PGroup("LightSystem", [
+			PInt("maxLightsPerObject", function() return ls.maxLightsPerObject, function(s) ls.maxLightsPerObject = s),
+			PColor("ambientLight", false, function() return ls.ambientLight, function(v) ls.ambientLight = v),
+			PBool("perPixelLighting", function() return ls.perPixelLighting, function(b) ls.perPixelLighting = b),
+		]));
+
+		var r = scene.renderer;
+
+		var tex = getTextures(@:privateAccess r.tcache);
+		if( tex.length > 0 )
+			props.push( PGroup("Textures", tex) );
+
+		var pmap = new Map();
+		for( p in @:privateAccess r.allPasses ) {
+			if( pmap.exists(p.p) ) continue;
+			pmap.set(p.p, true);
+			props.push(PGroup("Pass " + p.name, getPassProps(p.p)));
+		}
+
+		for( f in Type.getInstanceFields(Type.getClass(r)) ) {
+			var pl = getDynamicProps(Reflect.field(r, f));
+			if( pl != null )
+				props.push(PGroup(f,pl));
+		}
+
+		var j = J("#props");
+		j.text("");
 		var t = makeProps(props);
 		t.appendTo(j);
 	}
