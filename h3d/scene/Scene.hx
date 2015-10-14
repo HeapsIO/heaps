@@ -85,6 +85,7 @@ class Scene extends Object implements h3d.IDrawable {
 
 		// send to rendered
 		ctx.lightSystem = lightSystem;
+		lightSystem.initLights(ctx);
 		renderer.process(ctx, passes);
 
 		// check that passes have been rendered

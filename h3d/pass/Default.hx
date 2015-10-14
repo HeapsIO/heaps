@@ -73,7 +73,7 @@ class Default extends Base {
 			shaders = processShaders(p, shaders);
 			if( p.pass.enableLights && ctx.lightSystem != null ) {
 				if( !lightInit ) {
-					ctx.lightSystem.initLights(globals, ctx);
+					ctx.lightSystem.initGlobals(globals);
 					lightInit = true;
 				}
 				shaders = ctx.lightSystem.computeLight(p.obj, shaders);

@@ -10,7 +10,7 @@ class LightSystem {
 	var ambientShader : hxsl.Shader;
 	var lightCount : Int;
 	var ctx : h3d.scene.RenderContext;
-	public var shadowDirection : h3d.Vector;
+	public var shadowLight : h3d.scene.DirLight;
 	public var ambientLight : h3d.Vector;
 	public var perPixelLighting : Bool = true;
 
@@ -21,7 +21,6 @@ class LightSystem {
 	public var additiveLighting(get, set) : Bool;
 
 	public function new() {
-		shadowDirection = new h3d.Vector(0, 0, -1);
 		ambientLight = new h3d.Vector(0.5, 0.5, 0.5);
 		ambientShader = new h3d.shader.AmbientLight();
 		additiveLighting = true;
@@ -35,7 +34,7 @@ class LightSystem {
 		return Std.instance(ambientShader,h3d.shader.AmbientLight).additive = b;
 	}
 
-	public function initLights( globals : hxsl.Globals, ctx : h3d.scene.RenderContext ) {
+	public function initLights( ctx : h3d.scene.RenderContext ) {
 		lightCount = 0;
 		this.ctx = ctx;
 		var l = ctx.lights, prev = null;
@@ -63,6 +62,20 @@ class LightSystem {
 		}
 		if( lightCount <= maxLightsPerObject )
 			ctx.lights = haxe.ds.ListSort.sortSingleLinked(ctx.lights, sortLight);
+		if( shadowLight == null || shadowLight.parent == null ) {
+			var l = ctx.lights;
+			while( l != null ) {
+				var dl = Std.instance(l, h3d.scene.DirLight);
+				if( dl != null ) {
+					shadowLight = dl;
+					break;
+				}
+				l = l.next;
+			}
+		}
+	}
+
+	public function initGlobals( globals : hxsl.Globals ) {
 		globals.set("global.ambientLight", ambientLight);
 		globals.set("global.perPixelLighting", perPixelLighting);
 	}
