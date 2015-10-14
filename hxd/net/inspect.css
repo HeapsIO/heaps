@@ -3,14 +3,29 @@
 	-moz-user-select : none;
 	-webkit-user-select : none;
 }
+.jqpage pre, .dialog-floating pre {
+	user-select : text;
+	-moz-user-select : text;
+	-webkit-user-select : text;
+}
+.jqpage pre .kwd, .dialog-floating pre .kwd {
+	color : #1518FF;
+}
+.jqpage pre .meta, .dialog-floating pre .meta {
+	color : #156018;
+}
 .jqpage .panel, .dialog-floating .panel {
 	overflow : auto;
+	background-color : white;
 }
 .jqpage #log, .dialog-floating #log {
 	font-family : Courier;
 }
 .jqpage #log .line, .dialog-floating #log .line {
 	padding : 1px 3px;
+	user-select : all;
+	-moz-user-select : all;
+	-webkit-user-select : all;
 }
 .jqpage #log .line:nth-child(even), .dialog-floating #log .line:nth-child(even) {
 	background-color : #eee;
@@ -21,14 +36,36 @@
 .jqpage #scene ul.elt li, .dialog-floating #scene ul.elt li {
 	cursor : pointer;
 }
+.jqpage #scene ul.elt li>.content, .dialog-floating #scene ul.elt li>.content {
+	margin-left : 4px;
+	display : inline-block;
+	zoom : 1;
+	*display : inline;
+	height : 18px;
+}
 .jqpage #scene ul.elt li .content:hover, .dialog-floating #scene ul.elt li .content:hover {
 	background-color : #eee;
 }
 .jqpage #scene ul.elt ul, .dialog-floating #scene ul.elt ul {
 	padding-left : 20px;
 }
-.jqpage #scene ul.elt li.selected, .dialog-floating #scene ul.elt li.selected {
+.jqpage #scene ul.elt li.selected>.content, .dialog-floating #scene ul.elt li.selected>.content {
 	background-color : #eee;
+}
+.jqpage #scene ul.elt li.hidden, .dialog-floating #scene ul.elt li.hidden {
+	opacity : 0.5;
+	filter : alpha(opacity=50);
+	zoom : 1;
+}
+.jqpage #scene ul.elt li.culled>.content, .dialog-floating #scene ul.elt li.culled>.content {
+	opacity : 0.5;
+	filter : alpha(opacity=50);
+	zoom : 1;
+	font-style : italic;
+}
+.jqpage #scene>ul.elt, .dialog-floating #scene>ul.elt {
+	padding : 5px;
+	padding-bottom : 40px;
 }
 .jqpage table.props tr.pgroup, .dialog-floating table.props tr.pgroup {
 	cursor : pointer;
@@ -40,6 +77,11 @@
 	font-weight : bold;
 	padding : 2px 4px;
 	cursor : pointer;
+}
+.jqpage table.props tr.disable, .dialog-floating table.props tr.disable {
+	opacity : 0.5;
+	filter : alpha(opacity=50);
+	zoom : 1;
 }
 .jqpage table.props td, .dialog-floating table.props td {
 	height : 24px;

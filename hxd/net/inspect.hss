@@ -4,14 +4,26 @@
 		user-select : none;
 	}
 
+	pre {
+		user-select : text;
+		.kwd {
+			color : #1518FF;
+		}
+		.meta {
+			color : #156018;
+		}
+	}
+
 	.panel {
 		overflow : auto;
+		background-color : white;
 	}
 
 	#log {
 		font-family : Courier;
 		.line {
 			padding : 1px 3px;
+			user-select : all;
 		}
 		CSS(".line:nth-child(even)") {
 			background-color : #eee;
@@ -24,19 +36,37 @@
 			li {
 				cursor : pointer;
 			}
+			li > .content {
+				margin-left : 4px;
+				display : inline-block;
+				height : 18px;
+			}
 			li .content:hover {
 				background-color : #eee;
 			}
 			ul {
 				padding-left : 20px;
 			}
-			li.selected {
+			li.selected > .content {
 				background-color : #eee;
+			}
+			li.hidden {
+				opacity : 0.5;
+			}
+			li.culled > .content {
+				opacity : 0.5;
+				font-style : italic;
 			}
 		}
 	}
 
-	#material {
+	#scene > ul.elt {
+		padding : 5px;
+		padding-bottom : 40px;
+	}
+
+
+	#props {
 	}
 
 	table.props {
@@ -51,6 +81,11 @@
 				cursor : pointer;
 			}
 		}
+
+		tr.disable {
+			opacity : 0.5;
+		}
+
 		td {
 			height : 24px;
 			input, select {
