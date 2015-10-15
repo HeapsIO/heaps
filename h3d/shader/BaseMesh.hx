@@ -66,6 +66,7 @@ class BaseMesh extends hxsl.Shader {
 		}
 
 		function __init__fragment() {
+			depth = projectedPosition.z / projectedPosition.w; // in case it's used in vertex : we don't want to interpolate in screen space
 			transformedNormal = transformedNormal.normalize();
 			specPower = specularPower;
 			specColor = specularColor * specularAmount;

@@ -236,4 +236,27 @@ class Texture {
 		return t;
 	}
 
+	static var noiseTextures = new Map<Int,h3d.mat.Texture>();
+
+	public static function genNoise(size) {
+		var t = noiseTextures.get(size);
+		if( t != null && !t.isDisposed() )
+			return t;
+		var t = new h3d.mat.Texture(size, size, [NoAlloc]);
+		t.realloc = allocNoise.bind(t,size);
+		noiseTextures.set(size, t);
+		return t;
+	}
+
+	static function allocNoise( t : h3d.mat.Texture, size : Int ) {
+		var b = new hxd.BitmapData(size, size);
+		for( x in 0...size )
+			for( y in 0...size ) {
+				var n = Std.random(256);
+				b.setPixel(x, y, 0xFF000000 | n | (n << 8) | (n << 16));
+			}
+		t.uploadBitmap(b);
+		b.dispose();
+	}
+
 }

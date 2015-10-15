@@ -17,7 +17,7 @@ class Normal extends Default {
 	override function draw( passes ) {
 		var texture = tcache.allocTarget("normalMal", ctx, ctx.engine.width, ctx.engine.height);
 		ctx.engine.setTarget(texture);
-		ctx.engine.clear(0, 1);
+		ctx.engine.clear(0x808080, 1);
 		passes = super.draw(passes);
 		ctx.setGlobalID(normalMapId, texture);
 		return passes;

@@ -81,20 +81,8 @@ private class SAOShader extends h3d.shader.ScreenShader {
 		numSpiralTurns = 7;
 		bias = 0.01;
 		noiseScale.set(10, 10);
-		noiseTexture = getNoise(128);
+		noiseTexture = h3d.mat.Texture.genNoise(128);
 		noiseTexture.wrap = Repeat;
-	}
-
-	public function getNoise(size) {
-		var b = new hxd.BitmapData(size, size);
-		for( x in 0...size )
-			for( y in 0...size ) {
-				var n = Std.random(256);
-				b.setPixel(x, y, 0xFF000000 | n | (n << 8) | (n << 16));
-			}
-		var t = h3d.mat.Texture.fromBitmap(b);
-		b.dispose();
-		return t;
 	}
 
 }
