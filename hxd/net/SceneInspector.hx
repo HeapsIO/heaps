@@ -61,10 +61,21 @@ class SceneInspector {
 		inspect.resolveProps = resolveProps;
 		inspect.onRefresh = refresh;
 		inspect.onChange = onChange;
+		inspect.handleKey = onKey;
 	}
 
 	inline function J( ?elt : cdb.jq.Dom, ?query : String ) {
 		return inspect.J(elt,query);
+	}
+
+	function onKey( e : cdb.jq.Event ) {
+		switch( e.keyCode ) {
+		case 'S'.code if( e.ctrlKey ):
+			save();
+		case hxd.Key.F1:
+			load();
+		default:
+		}
 	}
 
 	function onTrace( v : Dynamic, ?pos : haxe.PosInfos ) {
@@ -133,57 +144,61 @@ class SceneInspector {
 		});
 		j.find("#history-undo").click(function(_) inspect.undo());
 		j.find("#history-redo").click(function(_) inspect.redo());
-		j.find("#state-save").click(function(_) {
-			var o : Dynamic = { };
-			for( s in state.keys() ) {
-				var path = s.split(".");
-				var o = o;
-				while( path.length > 1 ) {
-					var name = path.shift();
-					var s = Reflect.field(o, name);
-					if( s == null ) {
-						s = { };
-						Reflect.setField(o, name, s);
-					}
-					o = s;
-				}
-				Reflect.setField(o, path[0], state.get(s).current);
-			}
-			var js = haxe.Json.stringify(o, null, "\t");
-			hxd.File.saveAs(haxe.io.Bytes.ofString(js), { defaultPath : savedFile, saveFileName : function(name) savedFile = name } );
-		});
-		j.find("#state-load").click(function(_) {
-			hxd.File.browse(function(b) {
-				savedFile = b.fileName;
-				b.load(function(bytes) {
-					var o : Dynamic = haxe.Json.parse(bytes.toString());
-					state = new Map();
-					function browseRec( path : Array<String>, v : Dynamic ) {
-						switch( Type.typeof(v) ) {
-						case TNull, TInt, TFloat, TBool, TClass(_):
-							var path = path.join(".");
-							state.set(path, { original : null, current : v });
-						case TUnknown, TFunction, TEnum(_):
-							throw "Invalid value " + v;
-						case TObject:
-							for( f in Reflect.fields(v) ) {
-								var fv = Reflect.field(v, f);
-								path.push(f);
-								browseRec(path, fv);
-								path.pop();
-							}
-						}
-					}
-					browseRec([], o);
-					for( s in state.keys() )
-						inspect.setPathPropValue(s, state.get(s).current);
-				});
-
-			},{ defaultPath : savedFile, fileTypes : [ { name:"Scene Props", extensions:["js"] } ] } );
-		});
+		j.find("#state-save").click(function(_) save());
+		j.find("#state-load").click(function(_) load());
 
 		J("#log").dock(j.get(), Down, 0.3);
 		J("#props").dock(scene.get(), Down, 0.5);
+	}
+
+	function load() {
+		hxd.File.browse(function(b) {
+			savedFile = b.fileName;
+			b.load(function(bytes) {
+				var o : Dynamic = haxe.Json.parse(bytes.toString());
+				state = new Map();
+				function browseRec( path : Array<String>, v : Dynamic ) {
+					switch( Type.typeof(v) ) {
+					case TNull, TInt, TFloat, TBool, TClass(_):
+						var path = path.join(".");
+						state.set(path, { original : null, current : v });
+					case TUnknown, TFunction, TEnum(_):
+						throw "Invalid value " + v;
+					case TObject:
+						for( f in Reflect.fields(v) ) {
+							var fv = Reflect.field(v, f);
+							path.push(f);
+							browseRec(path, fv);
+							path.pop();
+						}
+					}
+				}
+				browseRec([], o);
+				for( s in state.keys() )
+					inspect.setPathPropValue(s, state.get(s).current);
+			});
+
+		},{ defaultPath : savedFile, fileTypes : [ { name:"Scene Props", extensions:["js"] } ] } );
+	}
+
+	function save() {
+		var o : Dynamic = { };
+		for( s in state.keys() ) {
+			var path = s.split(".");
+			var o = o;
+			while( path.length > 1 ) {
+				var name = path.shift();
+				var s = Reflect.field(o, name);
+				if( s == null ) {
+					s = { };
+					Reflect.setField(o, name, s);
+				}
+				o = s;
+			}
+			Reflect.setField(o, path[0], state.get(s).current);
+		}
+		var js = haxe.Json.stringify(o, null, "\t");
+		hxd.File.saveAs(haxe.io.Bytes.ofString(js), { defaultPath : savedFile, saveFileName : function(name) savedFile = name } );
 	}
 
 	function addElement( name : String, icon : String, getProps : Void -> Array<Property> ) {

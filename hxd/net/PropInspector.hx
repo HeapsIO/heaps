@@ -44,6 +44,20 @@ class PropInspector extends cdb.jq.Client {
 		connect();
 	}
 
+	override function onKey(e:cdb.jq.Event) {
+		switch( e.keyCode ) {
+		case 'Z'.code if( e.ctrlKey ):
+			undo();
+		case 'Y'.code if( e.ctrlKey ):
+			redo();
+		default:
+			handleKey(e);
+		}
+	}
+
+	public dynamic function handleKey( e : cdb.jq.Event ) {
+	}
+
 	function connect() {
 		sock.close();
 		sock.connect(host, port, function() {
@@ -152,6 +166,8 @@ class PropInspector extends cdb.jq.Client {
 		case PTexture(_, _, set):
 			if( !Std.is(v, String) ) throw "Invalid texture value " + v;
 			var path : String = v;
+			if( path.charCodeAt(0) != '/'.code && path.charCodeAt(1) != ':'.code )
+				path = hxd.File.applicationPath() + path;
 			hxd.File.load(path, function(data) set( hxd.res.Any.fromBytes(path, data).toTexture() ));
 		case PGroup(_), PPopup(_):
 			throw "Cannot set property " + p.getName();
@@ -393,7 +409,7 @@ class PropInspector extends cdb.jq.Client {
 			});
 			init();
 		case PTexture(_, get, set):
-			var path = null;
+			var filePath = null;
 			var isLoaded = false;
 			function init() {
 				var t = get();
@@ -407,16 +423,16 @@ class PropInspector extends cdb.jq.Client {
 					// resolve path
 					var lfs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 					if( lfs != null )
-						path = lfs.baseDir + res.entry.path;
+						filePath = lfs.baseDir + res.entry.path;
 					else {
 						var resPath = haxe.macro.Compiler.getDefine("resPath");
 						if( resPath == null ) resPath = "res";
-						path = hxd.File.applicationPath() + resPath + "/" + res.entry.path;
+						filePath = hxd.File.applicationPath() + resPath + "/" + res.entry.path;
 					}
 				} else if( t != null && t.name != null && (t.name.charCodeAt(0) == '/'.code || t.name.charCodeAt(1) == ':'.code) )
-					path = t.name;
+					filePath = t.name;
 
-				if( path == null ) {
+				if( filePath == null ) {
 					if( t == null )
 						jprop.text("");
 					else {
@@ -434,19 +450,29 @@ class PropInspector extends cdb.jq.Client {
 						});
 					}
 				} else
-					jprop.html('<img src="file://$path"/>');
+					jprop.html('<img src="file://$filePath"/>');
 			}
 			init();
+
+			function relPath(path) {
+				var base = hxd.File.applicationPath();
+				if( StringTools.startsWith(path, base) )
+					return path.substr(base.length);
+				return path;
+			}
+
 			jprop.dblclick(function(_) {
-				jprop.special("fileSelect", [path, "png,jpg,jpeg,gif"], function(path) {
+				jprop.special("fileSelect", [filePath, "png,jpg,jpeg,gif"], function(newPath) {
 
-					if( path == null ) return;
+					if( newPath == null ) return;
 
-					hxd.File.load(path, function(data) {
+					hxd.File.load(newPath, function(data) {
 						if( isLoaded ) get().dispose();
 						isLoaded = true;
-						set( hxd.res.Any.fromBytes(path, data).toTexture() );
+						set( hxd.res.Any.fromBytes(newPath, data).toTexture() );
+						addHistory(path, relPath(filePath), relPath(newPath));
 						init();
+						filePath = newPath;
 					});
 
 				});
