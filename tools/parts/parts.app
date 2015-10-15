@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<application xmlns="http://ns.adobe.com/air/application/3.6">
+<application xmlns="http://ns.adobe.com/air/application/15.0">
     <id>PartsEditor</id>
     <name>PartsEditor</name>
     <filename>PartsEditor</filename>

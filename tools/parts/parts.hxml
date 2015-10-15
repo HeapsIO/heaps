@@ -1,7 +1,7 @@
 -swf parts.swf
 -swf-header 1200:900:60:000000
 --flash-strict
--swf-version 11.6
+-swf-version 12
 -main Main
 -lib heaps
 -lib hscript
