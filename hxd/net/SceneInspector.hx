@@ -34,6 +34,47 @@ private class SceneObject {
 	}
 }
 
+class Element {
+	public var name : String;
+	public var icon : String;
+	public var props : Void -> Array<Property>;
+	public function new() {
+	}
+}
+
+class Tool {
+	public var name(default,set) : String;
+	public var icon(default,set) : String;
+	public var click : Void -> Void;
+	public var j : JQuery;
+	public var jicon : JQuery;
+	public var active(get, set) : Bool;
+	public function new() {
+	}
+	public function reset( i : SceneInspector ) {
+		j = i.J("<li>");
+		jicon = i.J("<i>").appendTo(j);
+		j.click(function(_) click());
+		this.name = name;
+		this.icon = icon;
+	}
+	function get_active() {
+		return j.hasClass("active");
+	}
+	function set_active(v) {
+		j.toggleClass("active", v);
+		return v;
+	}
+	function set_name(v) {
+		if( jicon != null ) jicon.attr("alt", v);
+		return name = v;
+	}
+	function set_icon(v) {
+		if( jicon != null ) jicon.attr("class", "fa fa-"+v);
+		return icon = v;
+	}
+}
+
 class SceneInspector {
 
 	static var CSS = hxd.res.Embed.getFileContent("hxd/net/inspect.css");
@@ -48,13 +89,15 @@ class SceneInspector {
 	var scenePosition = 0;
 	var oldLoop : Void -> Void;
 	var state : Map<String,{ original : Dynamic, current : Dynamic }>;
-	var rootElements : Map<String, Void -> Array<Property>>;
+	var rootElements : Array<Element>;
+	var tools : Array<Tool> ;
+	var activeTool : JQuery;
 
-	public function new( ?host, ?port ) {
-		rootElements = new Map();
+	public function new( scene, ?host, ?port ) {
 		event = new DrawEvent(this);
 		savedFile = "sceneProps.js";
 		state = new Map();
+		tools = [];
 		oldLog = haxe.Log.trace;
 		haxe.Log.trace = onTrace;
 		inspect = new PropInspector(host, port);
@@ -62,10 +105,45 @@ class SceneInspector {
 		inspect.onRefresh = refresh;
 		inspect.onChange = onChange;
 		inspect.handleKey = onKey;
+		this.scene = scene;
+		rootElements = new Array();
+		addElement("Renderer", "object-group", getRendererProps);
+		addTool("Load...", "download", load);
+		addTool("Save...", "save", save);
+		addTool("Undo", "undo", inspect.undo);
+		addTool("Repeat", "repeat", inspect.redo);
+		var pause : Tool = null;
+		pause = addTool("Pause", "pause", function() {
+			if( oldLoop != null ) {
+				hxd.System.setLoop(oldLoop);
+				oldLoop = null;
+			} else {
+				oldLoop = hxd.System.getCurrentLoop();
+				hxd.System.setLoop(pauseLoop);
+			}
+			pause.active = oldLoop != null;
+		});
 	}
 
-	inline function J( ?elt : cdb.jq.Dom, ?query : String ) {
+	public inline function J( ?elt : cdb.jq.Dom, ?query : String ) {
 		return inspect.J(elt,query);
+	}
+
+	public function getActiveTool() {
+		return activeTool;
+	}
+
+	public function createPanel( title ) {
+		return inspect.createPanel(title);
+	}
+
+	public function addTool( name : String, icon : String, click : Void -> Void ) {
+		var t = new Tool();
+		t.name = name;
+		t.icon = icon;
+		t.click = click;
+		tools.push(t);
+		return t;
 	}
 
 	function onKey( e : cdb.jq.Event ) {
@@ -110,11 +188,6 @@ class SceneInspector {
 		var j = J(inspect.getRoot());
 		j.html('
 			<ul id="toolbar" class="toolbar">
-				<li id="state-load"><i class="fa fa-download" alt="Load..."></i></li>
-				<li id="state-save"><i class="fa fa-save" alt="Save..."></i></li>
-				<li id="history-undo"><i class="fa fa-undo" alt="Undo"></i></li>
-				<li id="history-redo"><i class="fa fa-repeat" alt="Repeat"></i></li>
-				<li id="scene-pause"><i class="fa fa-pause" alt="Pause Game"></i></li>
 			</ul>
 			<div id="scene" class="panel" caption="Scene">
 				<ul id="scontent" class="elt">
@@ -125,28 +198,15 @@ class SceneInspector {
 			<div id="log" class="panel" caption="Log">
 			</div>
 		');
+		var tbar = j.find("#toolbar");
+		for( t in tools ) {
+			t.reset(this);
+			t.j.appendTo(tbar);
+		}
+		inspect.setName("Scene");
 		inspect.setCSS(CSS);
-
 		var scene = J("#scene");
 		scene.dock(j.get(), Left, 0.2);
-
-		var pause = j.find("#scene-pause");
-		pause.click(function(_) {
-			if( oldLoop != null ) {
-				hxd.System.setLoop(oldLoop);
-				oldLoop = null;
-			} else {
-				oldLoop = hxd.System.getCurrentLoop();
-				hxd.System.setLoop(pauseLoop);
-			}
-
-			pause.toggleClass("active", oldLoop != null);
-		});
-		j.find("#history-undo").click(function(_) inspect.undo());
-		j.find("#history-redo").click(function(_) inspect.redo());
-		j.find("#state-save").click(function(_) save());
-		j.find("#state-load").click(function(_) load());
-
 		J("#log").dock(j.get(), Down, 0.3);
 		J("#props").dock(scene.get(), Down, 0.5);
 	}
@@ -156,7 +216,6 @@ class SceneInspector {
 			savedFile = b.fileName;
 			b.load(function(bytes) {
 				var o : Dynamic = haxe.Json.parse(bytes.toString());
-				state = new Map();
 				function browseRec( path : Array<String>, v : Dynamic ) {
 					switch( Type.typeof(v) ) {
 					case TNull, TInt, TFloat, TBool, TClass(_):
@@ -201,26 +260,37 @@ class SceneInspector {
 		hxd.File.saveAs(haxe.io.Bytes.ofString(js), { defaultPath : savedFile, saveFileName : function(name) savedFile = name } );
 	}
 
-	function addElement( name : String, icon : String, getProps : Void -> Array<Property> ) {
-		var lj = J("<li>");
-		lj.html('<i class="fa fa-$icon"></i><div class="content">$name</div>');
-		lj.appendTo(J("#scontent"));
-		lj.find(".content").click(function(_) {
-			J("#scene").find(".selected").removeClass("selected");
-			lj.addClass("selected");
-			fillProps(name, getProps());
-		});
-		rootElements.set(name, getProps);
+	public function addElement( name : String, icon : String, getProps : Void -> Array<Property> ) {
+		var e = new Element();
+		e.name = name.split(".").join(" ");
+		e.icon = icon;
+		e.props = getProps;
+		rootElements.push(e);
+		showElement(e);
 	}
 
 	public function sync() {
 		if( scene == null || !inspect.connected ) return;
 		scenePosition = 0;
 		if( sceneObjects.length == 0 ) {
-			addElement("Renderer", "object-group", getRendererProps);
 			sceneObjects.push(null);
+			for( e in rootElements )
+				showElement(e);
 		}
 		syncRec(scene, null);
+	}
+
+	function showElement( e : Element ) {
+		if( scene == null || !inspect.connected || sceneObjects.length == 0 ) return;
+		var lj = J("<li>");
+		lj.html('<i class="fa fa-${e.icon}"></i><div class="content">${e.name}</div>');
+		lj.appendTo(J("#scontent"));
+		var fullPath = e.name;
+		lj.find(".content").click(function(_) {
+			J("#scene").find(".selected").removeClass("selected");
+			lj.addClass("selected");
+			fillProps(fullPath, e.props());
+		});
 	}
 
 	function resolveProps( path : Array<String> ) {
@@ -263,10 +333,10 @@ class SceneInspector {
 			}
 			return getObjectProps(o);
 		case p:
-			var get = rootElements.get(p);
-			if( get == null )
-				throw "Unknown root prop " + p;
-			return get();
+			for( r in rootElements )
+				if( r.name == p )
+					return r.props();
+			throw "Unknown root prop " + p;
 		}
 	}
 

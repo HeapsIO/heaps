@@ -11,4 +11,5 @@ enum Property {
 	PTexture( name : String, get : Void -> h3d.mat.Texture, set : h3d.mat.Texture -> Void );
 	PFloats( name : String, get : Void -> Array<Float>, set : Array<Float> -> Void );
 	PPopup( p : Property, menu : Array<String>, click : cdb.jq.JQuery -> Int -> Void );
+	PCustom( name : String, content : Void -> cdb.jq.JQuery, ?set : Dynamic -> Void );
 }

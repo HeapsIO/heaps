@@ -70,6 +70,10 @@ class PropInspector extends cdb.jq.Client {
 		send(SetCSS(value));
 	}
 
+	public function setName( value : String ) {
+		send(SetName(value));
+	}
+
 	override function sendBytes( msg : haxe.io.Bytes ) {
 		if( !flushWait ) {
 			flushWait = true;
@@ -169,7 +173,9 @@ class PropInspector extends cdb.jq.Client {
 			if( path.charCodeAt(0) != '/'.code && path.charCodeAt(1) != ':'.code )
 				path = hxd.File.applicationPath() + path;
 			hxd.File.load(path, function(data) set( hxd.res.Any.fromBytes(path, data).toTexture() ));
-		case PGroup(_), PPopup(_):
+		case PCustom(_, _, set) if( set != null ):
+			set(v);
+		case PGroup(_), PPopup(_), PCustom(_):
 			throw "Cannot set property " + p.getName();
 		}
 	}
@@ -229,7 +235,7 @@ class PropInspector extends cdb.jq.Client {
 
 	function getPropName( p : Property ) {
 		return switch( propFollow(p) ) {
-		case PGroup(name, _), PBool(name, _), PInt(name, _), PFloat(name, _), PFloats(name, _), PString(name, _), PColor(name, _), PTexture(name, _), PEnum(name,_,_,_): name;
+		case PGroup(name, _), PBool(name, _), PInt(name, _), PFloat(name, _), PFloats(name, _), PString(name, _), PColor(name, _), PTexture(name, _), PEnum(name,_,_,_), PCustom(name,_): name;
 		case PPopup(_): null;
 		}
 	}
@@ -350,6 +356,25 @@ class PropInspector extends cdb.jq.Client {
 					}
 				}
 			));
+			j.mousedown(function(e) {
+				if( e.which == 3 ) {
+					var old = get();
+					var cur : Float = old;
+					j.addClass("active");
+					j.special("startDrag", [], function(v: { done:Bool, dx:Float, dy:Float } ) {
+						var delta = ( Math.max(Math.abs(old == 0 ? 1 : old),1e-3) / 200 ) * v.dx;
+						cur += delta;
+						cur = hxd.Math.fmt(cur);
+						var icur = Math.round(cur);
+						set(icur);
+						jprop.text("" + icur);
+						if( v.done ) {
+							j.removeClass("active");
+							addHistory(path, old, icur);
+						}
+					});
+				}
+			});
 		case PFloat(_, get, set):
 			jprop.text("" + get());
 			j.dblclick(function(_) editValue(jprop,function() return "" + get(),
@@ -361,6 +386,24 @@ class PropInspector extends cdb.jq.Client {
 					}
 				}
 			));
+			j.mousedown(function(e) {
+				if( e.which == 3 ) {
+					var old = get();
+					var cur = old;
+					j.addClass("active");
+					j.special("startDrag", [], function(v: { done:Bool, dx:Float, dy:Float } ) {
+						var delta = ( Math.max(Math.abs(old == 0 ? 1 : old),1e-3) / 100 ) * v.dx;
+						cur += delta;
+						cur = hxd.Math.fmt(cur);
+						set(cur);
+						jprop.text("" + cur);
+						if( v.done ) {
+							j.removeClass("active");
+							addHistory(path, old, cur);
+						}
+					});
+				}
+			});
 		case PFloats(_, get, set):
 			var values = get();
 			jprop.html("<table><tr></tr></table>");
@@ -484,6 +527,9 @@ class PropInspector extends cdb.jq.Client {
 				if( e.which == 3 )
 					j.special("popupMenu", menu, function(i) click(j,i));
 			});
+		case PCustom(_, content, _):
+			var c = content();
+			if( c != null ) c.appendTo(jprop);
 		}
 		return j;
 	}

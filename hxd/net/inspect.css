@@ -117,6 +117,9 @@
 	border : 1px solid #888;
 	width : 100%;
 }
+.jqpage table.props tr.active td, .dialog-floating table.props tr.active td {
+	font-weight : bold;
+}
 .jqpage table.props tr.ptexture img, .dialog-floating table.props tr.ptexture img {
 	max-width : 128px;
 	max-height : 128px;

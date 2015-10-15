@@ -25,8 +25,43 @@ class Main extends hxd.App {
 		s3d.lightSystem.ambientLight.set(0.4, 0.4, 0.4);
 
 		var shadow = cast(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
-		shadow.lightDirection = dir.direction;
 		shadow.power = 50;
+		dir.enableSpecular = true;
+
+		#if castle
+		// this is an example for connecting to scene inspector
+		// and enable extra properties
+		// this requires to compile with -lib castle and run CDB
+		var i = new hxd.net.SceneInspector(s3d);
+
+		var delta = s3d.camera.pos.sub(s3d.camera.target);
+		delta.z = 0;
+		var angle = Math.atan2(delta.y, delta.x);
+		var dist = delta.length();
+
+		// add node to scene graph
+		i.addElement("Rotation", "repeat", function() {
+			return [
+				PFloat("v", function() return angle, function(v) {
+					angle = v;
+					s3d.camera.pos.x = Math.cos(angle) * dist;
+					s3d.camera.pos.y = Math.sin(angle) * dist;
+				}),
+				PCustom("", function() {
+					var j = i.J("<button>");
+					j.text("Click Me!");
+					j.click(function(_) {
+						var j = i.createPanel("New Panel");
+						j.text("Nothing to see there.");
+					});
+					return j;
+				})
+			];
+		});
+		i.addTool("Exit", "bomb", function() {
+			hxd.System.exit();
+		});
+		#end
 	}
 
 	function loadTexture( name : String ) {
