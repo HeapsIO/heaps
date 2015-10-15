@@ -1,21 +1,9 @@
 package hxd.net;
 import cdb.jq.JQuery;
+import hxd.net.Property;
 
-enum Property {
-	PBool( name : String, get : Void -> Bool, set : Bool -> Void );
-	PInt( name : String, get : Void -> Int, set : Int -> Void );
-	PFloat( name : String, get : Void -> Float, set : Float -> Void );
-	PString( name : String, get : Void -> String, set : String -> Void );
-	PEnum( name : String, e : Enum<Dynamic>, get : Void -> Dynamic, set : Dynamic -> Void );
-	PColor( name : String, hasAlpha : Bool, get : Void -> h3d.Vector, set : h3d.Vector -> Void );
-	PGroup( name : String, props : Array<Property> );
-	PTexture( name : String, get : Void -> h3d.mat.Texture, set : h3d.mat.Texture -> Void );
-	PFloats( name : String, get : Void -> Array<Float>, set : Array<Float> -> Void );
-	PPopup( p : Property, menu : Array<String>, click : JQuery -> Int -> Void );
-}
-
-private class CdbEvent implements h3d.IDrawable {
-	var i : CdbInspector;
+private class DrawEvent implements h3d.IDrawable {
+	var i : SceneInspector;
 	public function new(i) {
 		this.i = i;
 	}
@@ -46,57 +34,50 @@ private class SceneObject {
 	}
 }
 
-
-class CdbInspector extends cdb.jq.Client {
+class SceneInspector {
 
 	static var CSS = hxd.res.Embed.getFileContent("hxd/net/inspect.css");
 
-	public var host : String = "127.0.0.1";
-	public var port = 6669;
-
 	public var scene(default,set) : h3d.scene.Scene;
 
-	var event : CdbEvent;
-	var sock : hxd.net.Socket;
-	var connected = false;
+	var inspect : PropInspector;
+	var event : DrawEvent;
 	var oldLog : Dynamic -> haxe.PosInfos -> Void;
-
+	var savedFile : String;
 	var sceneObjects : Array<SceneObject> = [];
 	var scenePosition = 0;
-	var flushWait = false;
 	var oldLoop : Void -> Void;
+	var state : Map<String,{ original : Dynamic, current : Dynamic }>;
+	var rootElements : Map<String, Void -> Array<Property>>;
 
 	public function new( ?host, ?port ) {
-		super();
-		event = new CdbEvent(this);
-		if( host != null )
-			this.host = host;
-		if( port != null )
-			this.port = port;
-		sock = new hxd.net.Socket();
-		sock.onError = function(e) {
-			connected = false;
-			haxe.Timer.delay(connect,500);
-		};
-		sock.onData = function() {
-			while( true ) {
-				var len = try sock.input.readUInt16() catch( e : haxe.io.Eof ) -1;
-				if( len < 0 ) break;
-				var data = sock.input.read(len);
-				var msg : cdb.jq.Message.Answer = cdb.BinSerializer.unserialize(data);
-				handle(msg);
-			}
-		}
-		connect();
+		rootElements = new Map();
+		event = new DrawEvent(this);
+		savedFile = "sceneProps.js";
+		state = new Map();
 		oldLog = haxe.Log.trace;
 		haxe.Log.trace = onTrace;
+		inspect = new PropInspector(host, port);
+		inspect.resolveProps = resolveProps;
+		inspect.onRefresh = refresh;
+		inspect.onChange = onChange;
+	}
+
+	inline function J( ?elt : cdb.jq.Dom, ?query : String ) {
+		return inspect.J(elt,query);
 	}
 
 	function onTrace( v : Dynamic, ?pos : haxe.PosInfos ) {
-		if( !connected )
+		if( !inspect.connected )
 			oldLog(v, pos);
 		else {
-			J("<pre>").addClass("line").text(pos.fileName+"(" + pos.lineNumber + ") : " + Std.string(v)).appendTo(J("#log"));
+			var vstr = null;
+			if( pos.customParams != null ) {
+				pos.customParams.unshift(v);
+				vstr = [for( v in pos.customParams ) Std.string(v)].join(",");
+			} else
+				vstr = Std.string(v);
+			J("<pre>").addClass("line").text(pos.fileName+"(" + pos.lineNumber + ") : " + vstr).appendTo(J("#log"));
 		}
 	}
 
@@ -108,27 +89,6 @@ class CdbInspector extends cdb.jq.Client {
 		return scene = s;
 	}
 
-	function connect() {
-		sock.close();
-		sock.connect(host, port, function() {
-			connected = true;
-			refresh();
-		});
-	}
-
-	override function sendBytes( msg : haxe.io.Bytes ) {
-		if( !flushWait ) {
-			flushWait = true;
-			sock.out.wait();
-			haxe.Timer.delay(function() {
-				flushWait = false;
-				sock.out.flush();
-			},0);
-		}
-		sock.out.writeInt32(msg.length);
-		sock.out.write(msg);
-	}
-
 	function pauseLoop() {
 		scene.setElapsedTime(0);
 		h3d.Engine.getCurrent().render(scene);
@@ -136,8 +96,13 @@ class CdbInspector extends cdb.jq.Client {
 
 	function refresh() {
 		sceneObjects = [];
+		var j = J(inspect.getRoot());
 		j.html('
 			<ul id="toolbar" class="toolbar">
+				<li id="state-load"><i class="fa fa-download" alt="Load..."></i></li>
+				<li id="state-save"><i class="fa fa-save" alt="Save..."></i></li>
+				<li id="history-undo"><i class="fa fa-undo" alt="Undo"></i></li>
+				<li id="history-redo"><i class="fa fa-repeat" alt="Repeat"></i></li>
 				<li id="scene-pause"><i class="fa fa-pause" alt="Pause Game"></i></li>
 			</ul>
 			<div id="scene" class="panel" caption="Scene">
@@ -149,13 +114,13 @@ class CdbInspector extends cdb.jq.Client {
 			<div id="log" class="panel" caption="Log">
 			</div>
 		');
-		send(SetCSS(CSS));
+		inspect.setCSS(CSS);
+
 		var scene = J("#scene");
-		scene.dock(root, Left, 0.2);
+		scene.dock(j.get(), Left, 0.2);
 
 		var pause = j.find("#scene-pause");
 		pause.click(function(_) {
-
 			if( oldLoop != null ) {
 				hxd.System.setLoop(oldLoop);
 				oldLoop = null;
@@ -166,26 +131,142 @@ class CdbInspector extends cdb.jq.Client {
 
 			pause.toggleClass("active", oldLoop != null);
 		});
+		j.find("#history-undo").click(function(_) inspect.undo());
+		j.find("#history-redo").click(function(_) inspect.redo());
+		j.find("#state-save").click(function(_) {
+			var o : Dynamic = { };
+			for( s in state.keys() ) {
+				var path = s.split(".");
+				var o = o;
+				while( path.length > 1 ) {
+					var name = path.shift();
+					var s = Reflect.field(o, name);
+					if( s == null ) {
+						s = { };
+						Reflect.setField(o, name, s);
+					}
+					o = s;
+				}
+				Reflect.setField(o, path[0], state.get(s).current);
+			}
+			var js = haxe.Json.stringify(o, null, "\t");
+			hxd.File.saveAs(haxe.io.Bytes.ofString(js), { defaultPath : savedFile, saveFileName : function(name) savedFile = name } );
+		});
+		j.find("#state-load").click(function(_) {
+			hxd.File.browse(function(b) {
+				savedFile = b.fileName;
+				b.load(function(bytes) {
+					var o : Dynamic = haxe.Json.parse(bytes.toString());
+					state = new Map();
+					function browseRec( path : Array<String>, v : Dynamic ) {
+						switch( Type.typeof(v) ) {
+						case TNull, TInt, TFloat, TBool, TClass(_):
+							var path = path.join(".");
+							state.set(path, { original : null, current : v });
+						case TUnknown, TFunction, TEnum(_):
+							throw "Invalid value " + v;
+						case TObject:
+							for( f in Reflect.fields(v) ) {
+								var fv = Reflect.field(v, f);
+								path.push(f);
+								browseRec(path, fv);
+								path.pop();
+							}
+						}
+					}
+					browseRec([], o);
+					for( s in state.keys() )
+						inspect.setPathPropValue(s, state.get(s).current);
+				});
 
-		J("#log").dock(root, Down, 0.3);
+			},{ defaultPath : savedFile, fileTypes : [ { name:"Scene Props", extensions:["js"] } ] } );
+		});
+
+		J("#log").dock(j.get(), Down, 0.3);
 		J("#props").dock(scene.get(), Down, 0.5);
 	}
 
+	function addElement( name : String, icon : String, getProps : Void -> Array<Property> ) {
+		var lj = J("<li>");
+		lj.html('<i class="fa fa-$icon"></i><div class="content">$name</div>');
+		lj.appendTo(J("#scontent"));
+		lj.find(".content").click(function(_) {
+			J("#scene").find(".selected").removeClass("selected");
+			lj.addClass("selected");
+			fillProps(name, getProps());
+		});
+		rootElements.set(name, getProps);
+	}
+
 	public function sync() {
-		if( scene == null || !connected ) return;
+		if( scene == null || !inspect.connected ) return;
 		scenePosition = 0;
 		if( sceneObjects.length == 0 ) {
-			var lj = J("<li>");
-			lj.html('<i class="fa fa-object-group"></i><div class="content">Renderer</div>');
-			lj.appendTo(J("#scontent"));
-			lj.find(".content").click(function(_) {
-				J("#scene").find(".selected").removeClass("selected");
-				lj.addClass("selected");
-				selectRenderer();
-			});
+			addElement("Renderer", "object-group", getRendererProps);
 			sceneObjects.push(null);
 		}
 		syncRec(scene, null);
+	}
+
+	function resolveProps( path : Array<String> ) {
+		switch( path.shift() ) {
+		case "Scene":
+			var o : h3d.scene.Object = scene;
+			while( path.length > 0 ) {
+				var name = path.shift();
+				var found = false;
+				for( i in 0...o.numChildren ) {
+					var n = o.getChildAt(i);
+					if( objectName(n) == name ) {
+						o = n;
+						found = true;
+						break;
+					}
+				}
+				if( !found ) {
+					var prevName = name;
+					var p = name.split("@");
+					var count = Std.parseInt(p.pop());
+					var name = p.join("@");
+					if( count != null )
+						for( i in 0...o.numChildren ) {
+							var n = o.getChildAt(i);
+							if( objectName(n) == name ) {
+								count--;
+								if( count == 0 ) {
+									o = n;
+									found = true;
+									break;
+								}
+							}
+						}
+				}
+				if( !found ) {
+					path.unshift(name);
+					break;
+				}
+			}
+			return getObjectProps(o);
+		case p:
+			var get = rootElements.get(p);
+			if( get == null )
+				throw "Unknown root prop " + p;
+			return get();
+		}
+	}
+
+	function getObjectIcon( o : h3d.scene.Object) {
+		if( Std.is(o, h3d.scene.Skin) )
+			return "child";
+		if( Std.is(o, h3d.scene.Mesh) )
+			return "cube";
+		if( Std.is(o, h3d.scene.CustomObject) )
+			return "globe";
+		if( Std.is(o, h3d.scene.Scene) )
+			return "picture-o";
+		if( Std.is(o, h3d.scene.Light) )
+			return "lightbulb-o";
+		return null;
 	}
 
 	function syncRec( o : h3d.scene.Object, p : SceneObject ) {
@@ -194,18 +275,8 @@ class CdbInspector extends cdb.jq.Client {
 			so = new SceneObject(o, p);
 			sceneObjects.insert(scenePosition, so);
 			so.j = J("<li>");
-			var icon = null;
-			if( Std.is(o, h3d.scene.Skin) )
-				icon = "child"
-			else if( Std.is(o, h3d.scene.Mesh) )
-				icon = "cube";
-			else if( Std.is(o, h3d.scene.CustomObject) )
-				icon = "globe";
-			else if( Std.is(o, h3d.scene.Scene) )
-				icon = "picture-o";
-			else if( Std.is(o, h3d.scene.Light) )
-				icon = "lightbulb-o";
-			else
+			var icon = getObjectIcon(o);
+			if( icon == null )
 				icon = "circle-o";
 			so.j.html('<i class="fa fa-$icon"></i><div class="content">${o.name == null ? o.toString() : o.name}</div>');
 			so.j.find("i").click(function(_) {
@@ -217,7 +288,7 @@ class CdbInspector extends cdb.jq.Client {
 			so.j.find(".content").click(function(_) {
 				J("#scene").find(".selected").removeClass("selected");
 				so.j.addClass("selected");
-				selectObject(o);
+				fillProps(objectPath(o), getObjectProps(o));
 			});
 			so.j.appendTo( p != null ? p.jchild : J("#scontent") );
 			if( p != null ) p.childs.push(so);
@@ -248,224 +319,16 @@ class CdbInspector extends cdb.jq.Client {
 		}
 	}
 
-	function makeProps( props : Array<Property>, expandLevel = 1 ) {
-		var t = J("<table>");
-		t.addClass("props");
-		for( p in props )
-			addProp(t, p, [], expandLevel);
-		return t;
-	}
-
-	public function createPanel( name : String ) {
-		var panel = J('<div>');
-		panel.addClass("panel");
-		panel.attr("caption", ""+name);
-		panel.appendTo(j);
-		panel.dock(root, Fill);
-		return panel;
-	}
-
-	function addProp( t : JQuery, p : Property, gids : Array<Int>, expandLevel ) {
-		var j = J("<tr>");
-		j.addClass("prop");
-		for( g in gids )
-			j.addClass("g_" + g);
-		j.addClass(p.getName().toLowerCase());
-		if( gids.length > expandLevel )
-			j.style("display", "none");
-		if( gids.length > 0 )
-			j.addClass("gs_" + gids[gids.length - 1]);
-		j.appendTo(t);
-
-		var jname = J("<th>");
-		var jprop = J("<td>");
-		jname.appendTo(j);
-		jprop.appendTo(j);
-
-		switch( p ) {
-		case PGroup(name, props):
-
-			jname.attr("colspan", "2");
-			jname.style("padding-left", (gids.length * 16) + "px");
-			jname.html('<i class="fa ' + (gids.length + 1 > expandLevel ? 'fa-arrow-right' : 'fa-arrow-down') +'"/> ' + StringTools.htmlEscape(name));
-			var gid = t.get().childs.length;
-			j.click(function(_) {
-				var i = jname.find("i");
-				var show = i.hasClass("fa-arrow-right");
-				i.attr("class", "fa "+(show ? "fa-arrow-down" : "fa-arrow-right"));
-				if( show )
-					t.find(".gs_" + gid).style("display", "");
-				else {
-					var all = t.find(".g_" + gid);
-					all.style("display", "none");
-					all.find("i.fa-arrow-down").attr("class", "fa fa-arrow-right");
-				}
-			});
-			jprop.remove();
-			gids.push(gid);
-			for( p in props )
-				addProp(t, p, gids, expandLevel);
-			gids.pop();
-
-		case PBool(name, get, set):
-			jname.text(name);
-			var v = get();
-			jprop.text(v ? "Yes" : "No");
-			jprop.click(function(_) {
-				v = !v;
-				set(v);
-				jprop.text(v ? "Yes" : "No");
-			});
-		case PEnum(name, tenum, get, set):
-			jname.text(name);
-			jprop.text(get());
-			j.dblclick(function(_) {
-
-				var input = J("<select>");
-				var cur = (get() : EnumValue).getIndex();
-				var all : Array<EnumValue> = tenum.createAll();
-				for( p in all ) {
-					var name = p.getName();
-					var idx = p.getIndex();
-					J("<option>").attr("value", "" + p.getIndex()).attr(idx == cur ? "selected" : "_sel", "selected").text(name).appendTo(input);
-				}
-				jprop.text("");
-				input.appendTo(jprop);
-				input.focus();
-				input.blur(function(_) {
-					input.remove();
-					jprop.text(get());
-				});
-				input.change(function(_) {
-					var v = Std.parseInt(input.getValue());
-					if( v != null )
-						set(all[v]);
-					input.remove();
-					jprop.text(get());
-				});
-			});
-		case PInt(name, get, set):
-			jname.text(name);
-			jprop.text("" + get());
-			j.dblclick(function(_) editValue(jprop, function() return "" + get(), function(s) { var i = Std.parseInt(s); if( i != null ) set(i); } ));
-		case PFloat(name, get, set):
-			jname.text(name);
-			jprop.text("" + get());
-			j.dblclick(function(_) editValue(jprop, function() return "" + get(), function(s) { var i = Std.parseFloat(s); if( !Math.isNaN(i) ) set(i); } ));
-
-		case PFloats(name, get, set):
-			jname.text(name);
-			var values = get();
-			jprop.html("<table><tr></tr></table>");
-			var jt = jprop.find("tr");
-			for( i in 0...values.length ) {
-				var jv = J("<td>").appendTo(jt);
-				jv.text(""+values[i]);
-				jv.dblclick(function(_) editValue(jv, function() return "" + values[i], function(s) { var f = Std.parseFloat(s); if( !Math.isNaN(f) ) { values[i] = f; set(values); } }));
-			}
-		case PString(name, get, set):
-			jname.text(name);
-			jprop.text("" + get());
-			j.dblclick(function(_) editValue(jprop, get, set));
-		case PColor(name, alpha, get, set):
-			jname.text(name);
-			function init() {
-				var v = get().toColor() & 0xFFFFFF;
-				jprop.html('<div class="color" style="background:#${StringTools.hex(v,6)}"></div>');
-			}
-			jprop.dblclick(function(_) {
-				jprop.special("colorPick", [get().toColor(),alpha], function(c) {
-					set(h3d.Vector.fromColor(c.color));
-					if( c.done ) init();
-				});
-			});
-			init();
-		case PTexture(name, get, set):
-			jname.text(name);
-			var path = null;
-			var isLoaded = false;
-			function init() {
-				var t = get();
-				var res = null;
-				try {
-					if( t != null && t.name != null )
-						res = hxd.res.Loader.currentInstance.load(t.name).toImage();
-				} catch( e : Dynamic ) {
-				}
-				if( res != null ) {
-					// resolve path
-					var lfs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-					if( lfs != null )
-						path = lfs.baseDir + res.entry.path;
-					else {
-						var resPath = haxe.macro.Compiler.getDefine("resPath");
-						if( resPath == null ) resPath = "res";
-						path = hxd.File.applicationPath() + resPath + "/" + res.entry.path;
-					}
-				} else if( t != null && t.name != null && (t.name.charCodeAt(0) == '/'.code || t.name.charCodeAt(1) == ':'.code) )
-					path = t.name;
-
-				if( path == null ) {
-					if( t == null )
-						jprop.text("");
-					else {
-						jprop.html(StringTools.htmlEscape("" + t) + " <button>View</button>");
-						jprop.find("button").click(function(_) {
-							var p = createPanel("" + t);
-							p.html("Loading...");
-							haxe.Timer.delay(function() {
-								var bmp = t.captureBitmap();
-								var png = bmp.toPNG();
-								bmp.dispose();
-								var pngBase64 = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")).encodeBytes(png).toString();
-								p.html('<img src="data:image/png;base64,$pngBase64" style="background:#696969"/>');
-							},0);
-						});
-					}
-				} else
-					jprop.html('<img src="file://$path"/>');
-			}
-			init();
-			jprop.dblclick(function(_) {
-				jprop.special("fileSelect", [path, "png,jpg,jpeg,gif"], function(path) {
-
-					if( path == null ) return;
-
-					hxd.File.load(path, function(data) {
-						if( isLoaded ) get().dispose();
-						isLoaded = true;
-						set( hxd.res.Any.fromBytes(path, data).toTexture() );
-						init();
-					});
-
-				});
-			});
-		case PPopup(p, menu, click):
-			j.remove();
-			j = addProp(t, p, gids, expandLevel);
-			j.mousedown(function(e) {
-				if( e.which == 3 )
-					j.special("popupMenu", menu, function(i) click(j,i));
-			});
+	function onChange( path : String, oldV : Dynamic, newV : Dynamic ) {
+		var s = state.get(path);
+		if( s == null )
+			state.set(path, { original : oldV, current : newV } );
+		else {
+			if( inspect.sameValue(s.original,newV) )
+				state.remove(path);
+			else
+				s.current = newV;
 		}
-		return j;
-	}
-
-	function editValue( j : JQuery, get : Void -> String, set : String -> Void ) {
-		var input = J("<input>");
-		input.attr("value", get());
-		j.text("");
-		input.appendTo(j);
-		input.focus();
-		input.blur(function(_) {
-			input.remove();
-			set(input.getValue());
-			j.text(get());
-		});
-		input.keydown(function(e) {
-			if( e.keyCode == 13 )
-				input.blur();
-		});
 	}
 
 	function getShaderProps( s : hxsl.Shader ) {
@@ -516,6 +379,7 @@ class CdbInspector extends cdb.jq.Client {
 		var name = data.data.name;
 		if( StringTools.startsWith(name, "h3d.shader.") )
 			name = name.substr(11);
+		name = name.split(".").join(" "); // no dot in prop name !
 
 		return PGroup("shader "+name, props);
 	}
@@ -555,7 +419,7 @@ class CdbInspector extends cdb.jq.Client {
 						j.toggleClass("disable");
 					case 1:
 						var shader = @:privateAccess s.shader;
-						var p = createPanel(shader.data.name+" shader");
+						var p = inspect.createPanel(shader.data.name+" shader");
 						var toString = hxsl.Printer.shaderToString;
 						var code = toString(shader.data);
 						p.html("<pre class='code'>"+colorize(code)+"</pre>");
@@ -573,7 +437,7 @@ class CdbInspector extends cdb.jq.Client {
 						mat.addPass(pass);
 					j.toggleClass("disable");
 				case 1:
-					var p = createPanel(pass.name+" shader");
+					var p = inspect.createPanel(pass.name+" shader");
 
 					var shader = scene.renderer.compileShader(pass);
 					var toString = hxsl.Printer.shaderToString;
@@ -600,11 +464,29 @@ class CdbInspector extends cdb.jq.Client {
 		return PGroup("Light", props);
 	}
 
+	function objectName( o : h3d.scene.Object ) {
+		if( o.name != null )
+			return o.name;
+		return o.toString();
+	}
 
-	function selectObject( o : h3d.scene.Object ) {
+	function objectPath( o : h3d.scene.Object ) {
+		if( o.parent == null )
+			return o == scene ? "Scene" : "?";
+		var p = objectPath(o.parent);
+		var name = objectName(o);
+		var idx = Lambda.indexOf(@:privateAccess o.parent.childs, o);
+		var count = 0;
+		for( i in 0...idx )
+			if( objectName(o) == name )
+				count++;
+		if( count > 0 )
+			name += "@" + count;
+		return p + "." + name;
+	}
 
+	function getObjectProps( o : h3d.scene.Object ) {
 		var props = [];
-
 		props.push(PString("name", function() return o.name == null ? "" : o.name, function(v) o.name = v == "" ? null : v));
 		props.push(PFloat("x", function() return o.x, function(v) o.x = v));
 		props.push(PFloat("y", function() return o.y, function(v) o.y = v));
@@ -626,11 +508,13 @@ class CdbInspector extends cdb.jq.Client {
 			if( l != null )
 				props.push(getLightProps(l));
 		}
+		return props;
+	}
 
+	function fillProps( basePath : String, props : Array<Property> ) {
 		var j = J("#props");
 		j.text("");
-
-		var t = makeProps(props);
+		var t = inspect.makeProps(basePath, props);
 		t.appendTo(j);
 	}
 
@@ -671,9 +555,8 @@ class CdbInspector extends cdb.jq.Client {
 		return props;
 	}
 
-	function selectRenderer() {
+	function getRendererProps() {
 		var props = [];
-
 		var ls = scene.lightSystem;
 		props.push(PGroup("LightSystem", [
 			PInt("maxLightsPerObject", function() return ls.maxLightsPerObject, function(s) ls.maxLightsPerObject = s),
@@ -699,11 +582,7 @@ class CdbInspector extends cdb.jq.Client {
 			if( pl != null )
 				props.push(PGroup(f,pl));
 		}
-
-		var j = J("#props");
-		j.text("");
-		var t = makeProps(props);
-		t.appendTo(j);
+		return props;
 	}
 
 }
