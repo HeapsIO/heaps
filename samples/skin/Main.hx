@@ -40,7 +40,7 @@ class Main extends hxd.App {
 		var dist = delta.length();
 
 		// add node to scene graph
-		i.addElement("Rotation", "repeat", function() {
+		var n = i.addNode("Rotation", "repeat", function() {
 			return [
 				PFloat("v", function() return angle, function(v) {
 					angle = v;
@@ -58,6 +58,7 @@ class Main extends hxd.App {
 				})
 			];
 		});
+		i.addNode("Test", "", n);
 		i.addTool("Exit", "bomb", function() {
 			hxd.System.exit();
 		});

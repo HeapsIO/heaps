@@ -12,34 +12,114 @@ private class DrawEvent implements h3d.IDrawable {
 	}
 }
 
-private class SceneObject {
-	public var o : h3d.scene.Object;
-	public var parent : SceneObject;
-	public var j : cdb.jq.JQuery;
-	public var jchild : cdb.jq.JQuery;
-	public var childs : Array<SceneObject>;
-	public var visible = true;
-	public var culled = false;
-	public function new(o, p) {
-		this.o = o;
-		this.parent = p;
+class Node {
+
+	public var name(default,set) : String;
+	public var icon(default, set) : String;
+	public var parent(default, null) : Node;
+
+	public var props : Void -> Array<Property>;
+
+	var childs : Array<Node>;
+	var j : cdb.jq.JQuery;
+	var jchild : cdb.jq.JQuery;
+
+	public function new( root : JQuery, ?parent) {
+
+		j = root.query("<li>");
+		j.html('<i/><div class="content"></div>');
+
 		childs = [];
+
+		this.parent = parent;
+		if( parent != null ) {
+			if( parent.jchild == null ) {
+				parent.jchild = root.query("<ul>");
+				parent.jchild.addClass("elt");
+				parent.jchild.appendTo(parent.j);
+			}
+			j.appendTo(parent.jchild);
+			parent.childs.push(this);
+		} else
+			j.appendTo(root);
+
+		j.children("i").click(function(_) {
+			if( childs.length > 0 ) {
+				j.toggleClass("expand");
+				jchild.slideToggle(50);
+			}
+		});
+		j.children(".content").click(function(_) {
+			root.find(".selected").removeClass("selected");
+			j.addClass("selected");
+			onSelect();
+		});
 	}
+
+	public function getPathName() {
+		return name.split(".").join(" ");
+	}
+
+	public function getFullPath() {
+		var n = getPathName();
+		if( parent == null )
+			return n;
+		return parent.getFullPath() + "." + n;
+	}
+
+	public dynamic function onSelect() {
+	}
+
 	public function remove() {
+		j.dispose();
 		for( c in childs )
 			c.remove();
-		j.remove();
 		if( parent != null )
 			parent.childs.remove(this);
 	}
+
+	function set_name(v) {
+		j.children(".content").text(v);
+		return name = v;
+	}
+
+	function set_icon(v) {
+		j.children("i").attr("class", "fa fa-"+v);
+		return icon = v;
+	}
+
 }
 
-class Element {
-	public var name : String;
-	public var icon : String;
-	public var props : Void -> Array<Property>;
-	public function new() {
+private class SceneObject extends Node {
+
+	public var o : h3d.scene.Object;
+	public var visible = true;
+	public var culled = false;
+
+	public function new(i, o, p) {
+		super(i,p);
+		this.o = o;
 	}
+
+	function objectName( o : h3d.scene.Object ) {
+		var name = o.name != null ? o.name : o.toString();
+		return name.split(".").join("_");
+	}
+
+	override public function getPathName() {
+		var name = objectName(o);
+		if( o.parent == null )
+			return name;
+		var idx = Lambda.indexOf(@:privateAccess o.parent.childs, o);
+		var count = 0;
+		for( i in 0...idx )
+			if( objectName(o) == name )
+				count++;
+		if( count > 0 )
+			name += "@" + count;
+		return name;
+	}
+
 }
 
 class Tool {
@@ -51,13 +131,6 @@ class Tool {
 	public var active(get, set) : Bool;
 	public function new() {
 	}
-	public function reset( i : SceneInspector ) {
-		j = i.J("<li>");
-		jicon = i.J("<i>").appendTo(j);
-		j.click(function(_) click());
-		this.name = name;
-		this.icon = icon;
-	}
 	function get_active() {
 		return j.hasClass("active");
 	}
@@ -66,11 +139,11 @@ class Tool {
 		return v;
 	}
 	function set_name(v) {
-		if( jicon != null ) jicon.attr("alt", v);
+		jicon.attr("alt", v);
 		return name = v;
 	}
 	function set_icon(v) {
-		if( jicon != null ) jicon.attr("class", "fa fa-"+v);
+		jicon.attr("class", "fa fa-"+v);
 		return icon = v;
 	}
 }
@@ -82,6 +155,7 @@ class SceneInspector {
 	public var scene(default,set) : h3d.scene.Scene;
 
 	var inspect : PropInspector;
+	var jroot : JQuery;
 	var event : DrawEvent;
 	var oldLog : Dynamic -> haxe.PosInfos -> Void;
 	var savedFile : String;
@@ -89,25 +163,27 @@ class SceneInspector {
 	var scenePosition = 0;
 	var oldLoop : Void -> Void;
 	var state : Map<String,{ original : Dynamic, current : Dynamic }>;
-	var rootElements : Array<Element>;
-	var tools : Array<Tool> ;
 	var activeTool : JQuery;
+	var rootNodes : Array<Node>;
+
 
 	public function new( scene, ?host, ?port ) {
 		event = new DrawEvent(this);
 		savedFile = "sceneProps.js";
 		state = new Map();
-		tools = [];
-		oldLog = haxe.Log.trace;
-		haxe.Log.trace = onTrace;
+		//oldLog = haxe.Log.trace;
+		//haxe.Log.trace = onTrace;
 		inspect = new PropInspector(host, port);
 		inspect.resolveProps = resolveProps;
-		inspect.onRefresh = refresh;
 		inspect.onChange = onChange;
 		inspect.handleKey = onKey;
 		this.scene = scene;
-		rootElements = new Array();
-		addElement("Renderer", "object-group", getRendererProps);
+		rootNodes = [];
+		sceneObjects = [];
+
+		init();
+
+		addNode("Renderer", "object-group", getRendererProps);
 		addTool("Load...", "download", load);
 		addTool("Save...", "save", save);
 		addTool("Undo", "undo", inspect.undo);
@@ -139,10 +215,13 @@ class SceneInspector {
 
 	public function addTool( name : String, icon : String, click : Void -> Void ) {
 		var t = new Tool();
+		t.j = J("<li>");
+		t.jicon = J("<i>").appendTo(t.j);
+		t.j.click(function(_) t.click());
 		t.name = name;
 		t.icon = icon;
 		t.click = click;
-		tools.push(t);
+		t.j.appendTo(jroot.find("#toolbar"));
 		return t;
 	}
 
@@ -183,10 +262,10 @@ class SceneInspector {
 		h3d.Engine.getCurrent().render(scene);
 	}
 
-	function refresh() {
-		sceneObjects = [];
-		var j = J(inspect.getRoot());
-		j.html('
+	function init() {
+		jroot = J(inspect.getRoot());
+		jroot.html('
+			<style>$CSS</style>
 			<ul id="toolbar" class="toolbar">
 			</ul>
 			<div id="scene" class="panel" caption="Scene">
@@ -198,16 +277,10 @@ class SceneInspector {
 			<div id="log" class="panel" caption="Log">
 			</div>
 		');
-		var tbar = j.find("#toolbar");
-		for( t in tools ) {
-			t.reset(this);
-			t.j.appendTo(tbar);
-		}
-		inspect.setName("Scene");
-		inspect.setCSS(CSS);
+		jroot.attr("title", "Inspect");
 		var scene = J("#scene");
-		scene.dock(j.get(), Left, 0.2);
-		J("#log").dock(j.get(), Down, 0.3);
+		scene.dock(jroot.get(), Left, 0.2);
+		J("#log").dock(jroot.get(), Down, 0.3);
 		J("#props").dock(scene.get(), Down, 0.5);
 	}
 
@@ -260,84 +333,47 @@ class SceneInspector {
 		hxd.File.saveAs(haxe.io.Bytes.ofString(js), { defaultPath : savedFile, saveFileName : function(name) savedFile = name } );
 	}
 
-	public function addElement( name : String, icon : String, getProps : Void -> Array<Property> ) {
-		var e = new Element();
-		e.name = name.split(".").join(" ");
-		e.icon = icon;
-		e.props = getProps;
-		rootElements.push(e);
-		showElement(e);
+	public function addNode( name : String, icon : String, ?getProps : Void -> Array<Property>, ?parent : Node ) : Node {
+		var n = new Node(J("#scontent"), parent);
+		n.name = name;
+		n.icon = icon;
+		n.props = getProps;
+		if( getProps != null )
+			n.onSelect = function() fillProps(n.getFullPath(), getProps());
+		if( parent == null )
+			rootNodes.push(n);
+		return n;
 	}
 
 	public function sync() {
 		if( scene == null || !inspect.connected ) return;
 		scenePosition = 0;
-		if( sceneObjects.length == 0 ) {
-			sceneObjects.push(null);
-			for( e in rootElements )
-				showElement(e);
-		}
 		syncRec(scene, null);
-	}
-
-	function showElement( e : Element ) {
-		if( scene == null || !inspect.connected || sceneObjects.length == 0 ) return;
-		var lj = J("<li>");
-		lj.html('<i class="fa fa-${e.icon}"></i><div class="content">${e.name}</div>');
-		lj.appendTo(J("#scontent"));
-		var fullPath = e.name;
-		lj.find(".content").click(function(_) {
-			J("#scene").find(".selected").removeClass("selected");
-			lj.addClass("selected");
-			fillProps(fullPath, e.props());
-		});
+		while( sceneObjects.length > scenePosition )
+			sceneObjects.pop().remove();
 	}
 
 	function resolveProps( path : Array<String> ) {
-		switch( path.shift() ) {
-		case "Scene":
-			var o : h3d.scene.Object = scene;
-			while( path.length > 0 ) {
-				var name = path.shift();
-				var found = false;
-				for( i in 0...o.numChildren ) {
-					var n = o.getChildAt(i);
-					if( objectName(n) == name ) {
-						o = n;
-						found = true;
-						break;
-					}
-				}
-				if( !found ) {
-					var prevName = name;
-					var p = name.split("@");
-					var count = Std.parseInt(p.pop());
-					var name = p.join("@");
-					if( count != null )
-						for( i in 0...o.numChildren ) {
-							var n = o.getChildAt(i);
-							if( objectName(n) == name ) {
-								count--;
-								if( count == 0 ) {
-									o = n;
-									found = true;
-									break;
-								}
-							}
-						}
-				}
-				if( !found ) {
-					path.unshift(name);
+		var cur = null;
+		var nodes = rootNodes;
+		while( true ) {
+			var k = path.shift();
+			if( k == null ) break;
+			var found = false;
+			for( n in nodes ) {
+				if( n.getPathName() == k ) {
+					found = true;
+					cur = n;
+					nodes = @:privateAccess n.childs;
 					break;
 				}
 			}
-			return getObjectProps(o);
-		case p:
-			for( r in rootElements )
-				if( r.name == p )
-					return r.props();
-			throw "Unknown root prop " + p;
+			if( !found ) {
+				path.unshift(k);
+				break;
+			}
 		}
+		return cur == null || cur.props == null ? null : cur.props();
 	}
 
 	function getObjectIcon( o : h3d.scene.Object) {
@@ -354,29 +390,19 @@ class SceneInspector {
 		return null;
 	}
 
+	@:access(hxd.net.Node)
 	function syncRec( o : h3d.scene.Object, p : SceneObject ) {
 		var so = sceneObjects[scenePosition];
 		if( so == null || so.o != o || so.parent != p ) {
-			so = new SceneObject(o, p);
+			so = new SceneObject(J("#scontent"), o, p);
+			so.name = o.name != null ? o.name : o.toString();
 			sceneObjects.insert(scenePosition, so);
-			so.j = J("<li>");
 			var icon = getObjectIcon(o);
-			if( icon == null )
-				icon = "circle-o";
-			so.j.html('<i class="fa fa-$icon"></i><div class="content">${o.name == null ? o.toString() : o.name}</div>');
-			so.j.find("i").click(function(_) {
-				if( o.numChildren > 0 ) {
-					so.j.toggleClass("expand");
-					so.jchild.slideToggle(50);
-				}
-			});
-			so.j.find(".content").click(function(_) {
-				J("#scene").find(".selected").removeClass("selected");
-				so.j.addClass("selected");
-				fillProps(objectPath(o), getObjectProps(o));
-			});
-			so.j.appendTo( p != null ? p.jchild : J("#scontent") );
-			if( p != null ) p.childs.push(so);
+			so.icon = icon == null ? "circle-o" : getObjectIcon(o);
+			so.props = function() return getObjectProps(o);
+			so.onSelect = function() fillProps(so.getFullPath(), getObjectProps(o));
+			if( p == null )
+				rootNodes.push(so);
 		}
 		if( o.visible != so.visible ) {
 			so.visible = o.visible;
@@ -389,11 +415,6 @@ class SceneInspector {
 
 		scenePosition++;
 		if( o.numChildren > 0 ) {
-			if( so.jchild == null ) {
-				so.jchild = J("<ul>");
-				so.jchild.addClass("elt");
-				so.jchild.appendTo(so.j);
-			}
 			for( c in o )
 				syncRec(c, so);
 		} else if( so.jchild != null ) {
@@ -547,27 +568,6 @@ class SceneInspector {
 		if( pl != null )
 			props.push(PFloats("params", function() return [pl.params.x, pl.params.y, pl.params.z], function(fl) pl.params.set(fl[0], fl[1], fl[2], fl[3])));
 		return PGroup("Light", props);
-	}
-
-	function objectName( o : h3d.scene.Object ) {
-		if( o.name != null )
-			return o.name;
-		return o.toString();
-	}
-
-	function objectPath( o : h3d.scene.Object ) {
-		if( o.parent == null )
-			return o == scene ? "Scene" : "?";
-		var p = objectPath(o.parent);
-		var name = objectName(o);
-		var idx = Lambda.indexOf(@:privateAccess o.parent.childs, o);
-		var count = 0;
-		for( i in 0...idx )
-			if( objectName(o) == name )
-				count++;
-		if( count > 0 )
-			name += "@" + count;
-		return p + "." + name;
 	}
 
 	function getObjectProps( o : h3d.scene.Object ) {

@@ -29,6 +29,7 @@ class PropInspector extends cdb.jq.Client {
 			this.port = port;
 		sock = new hxd.net.Socket();
 		sock.onError = function(e) {
+			if( connected ) onConnected(false);
 			connected = false;
 			haxe.Timer.delay(connect,500);
 		};
@@ -62,16 +63,9 @@ class PropInspector extends cdb.jq.Client {
 		sock.close();
 		sock.connect(host, port, function() {
 			connected = true;
-			onRefresh();
+			syncDom();
+			onConnected(true);
 		});
-	}
-
-	public function setCSS( value : String ) {
-		send(SetCSS(value));
-	}
-
-	public function setName( value : String ) {
-		send(SetName(value));
 	}
 
 	override function sendBytes( msg : haxe.io.Bytes ) {
@@ -87,7 +81,7 @@ class PropInspector extends cdb.jq.Client {
 		sock.out.write(msg);
 	}
 
-	public dynamic function onRefresh() {
+	public dynamic function onConnected(b:Bool) {
 	}
 
 	public function undo() {
@@ -372,6 +366,7 @@ class PropInspector extends cdb.jq.Client {
 							j.removeClass("active");
 							addHistory(path, old, icur);
 						}
+						return v.done;
 					});
 				}
 			});
@@ -401,6 +396,7 @@ class PropInspector extends cdb.jq.Client {
 							j.removeClass("active");
 							addHistory(path, old, cur);
 						}
+						return v.done;
 					});
 				}
 			});
@@ -448,6 +444,7 @@ class PropInspector extends cdb.jq.Client {
 					}
 					set(color);
 					if( c.done ) init();
+					return c.done;
 				});
 			});
 			init();
@@ -507,7 +504,7 @@ class PropInspector extends cdb.jq.Client {
 			jprop.dblclick(function(_) {
 				jprop.special("fileSelect", [filePath, "png,jpg,jpeg,gif"], function(newPath) {
 
-					if( newPath == null ) return;
+					if( newPath == null ) return true;
 
 					hxd.File.load(newPath, function(data) {
 						if( isLoaded ) get().dispose();
@@ -518,6 +515,7 @@ class PropInspector extends cdb.jq.Client {
 						filePath = newPath;
 					});
 
+					return true;
 				});
 			});
 		case PPopup(p, menu, click):
@@ -525,7 +523,7 @@ class PropInspector extends cdb.jq.Client {
 			j = addProp(basePath, t, p, gids, expandLevel);
 			j.mousedown(function(e) {
 				if( e.which == 3 )
-					j.special("popupMenu", menu, function(i) click(j,i));
+					j.special("popupMenu", menu, function(i) { click(j, i); return true; });
 			});
 		case PCustom(_, content, _):
 			var c = content();
