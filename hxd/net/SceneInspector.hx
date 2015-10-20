@@ -445,7 +445,9 @@ class SceneInspector {
 	function getShaderProps( s : hxsl.Shader ) {
 		var props = [];
 		var data = @:privateAccess s.shader;
-		for( v in data.data.vars ) {
+		var vars = data.data.vars.copy();
+		vars.sort(function(v1, v2) return Reflect.compare(v1.name, v2.name));
+		for( v in vars ) {
 			switch( v.kind ) {
 			case Param:
 				var name = v.name+"__";
@@ -633,7 +635,9 @@ class SceneInspector {
 		var def = Std.instance(p, h3d.pass.Default);
 		if( def == null ) return props;
 
-		for( f in Type.getInstanceFields(Type.getClass(p)) ) {
+		var fields = Type.getInstanceFields(Type.getClass(p));
+		fields.sort(Reflect.compare);
+		for( f in fields ) {
 			var pl = getDynamicProps(Reflect.field(p, f));
 			if( pl != null )
 				props.push(PGroup(f,pl));
@@ -667,7 +671,9 @@ class SceneInspector {
 			props.push(PGroup("Pass " + p.name, getPassProps(p.p)));
 		}
 
-		for( f in Type.getInstanceFields(Type.getClass(r)) ) {
+		var fields = Type.getInstanceFields(Type.getClass(r));
+		fields.sort(Reflect.compare);
+		for( f in fields ) {
 			var pl = getDynamicProps(Reflect.field(r, f));
 			if( pl != null )
 				props.push(PGroup(f,pl));
