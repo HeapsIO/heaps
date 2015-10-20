@@ -350,7 +350,7 @@ class BitmapData {
 
 	public function getPixels() : Pixels {
 		#if (flash || nme || openfl)
-		var p = new Pixels(width, height, haxe.io.Bytes.ofData(bmp.getPixels(bmp.rect)), ARGB);
+		var p = new Pixels(width, height, haxe.io.Bytes.ofData(bmp.getPixels(bmp.rect)#if openfl .getData() #end), ARGB);
 		p.flags.set(AlphaPremultiplied);
 		return p;
 		#elseif js
