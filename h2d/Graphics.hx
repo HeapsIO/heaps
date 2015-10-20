@@ -151,11 +151,15 @@ class Graphics extends Drawable {
 	}
 
 	function isConvex( points : Array<GraphicsPoint> ) {
+		var first = true, sign = false;
 		for( i in 0...points.length ) {
 			var p1 = points[i];
 			var p2 = points[(i + 1) % points.length];
 			var p3 = points[(i + 2) % points.length];
-			if( (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x) > 0 )
+			var s = (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x) > 0;
+			if( first )
+				sign = s;
+			else if( sign != s )
 				return false;
 		}
 		return true;
