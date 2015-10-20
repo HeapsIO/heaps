@@ -161,6 +161,24 @@ class Camera {
 		target.z += p.z;
 	}
 
+	public function forward(speed = 1.) {
+		var c = 1 - 0.025 * speed;
+		pos.set(
+			target.x + (pos.x - target.x) * c,
+			target.y + (pos.y - target.y) * c,
+			target.z + (pos.z - target.z) * c
+		);
+	}
+
+	public function backward(speed = 1.) {
+		var c = 1 + 0.025 * speed;
+		pos.set(
+			target.x + (pos.x - target.x) * c,
+			target.y + (pos.y - target.y) * c,
+			target.z + (pos.z - target.z) * c
+		);
+	}
+
 	function makeCameraMatrix( m : Matrix ) {
 		// in leftHanded the z axis is positive else it's negative
 		// this way we make sure that our [ax,ay,-az] matrix follow the same handness as our world

@@ -152,7 +152,8 @@ class SceneInspector {
 
 	static var CSS = hxd.res.Embed.getFileContent("hxd/net/inspect.css");
 
-	public var scene(default,set) : h3d.scene.Scene;
+	public var scene(default, set) : h3d.scene.Scene;
+	public var connected(get, never): Bool;
 
 	var inspect : PropInspector;
 	var jroot : JQuery;
@@ -199,6 +200,10 @@ class SceneInspector {
 			}
 			pause.active = oldLoop != null;
 		});
+	}
+
+	inline function get_connected() {
+		return inspect.connected;
 	}
 
 	public inline function J( ?elt : cdb.jq.Dom, ?query : String ) {

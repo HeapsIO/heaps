@@ -140,7 +140,6 @@ class Viewer extends hxd.App {
 
 		light = new h3d.scene.DirLight(new h3d.Vector(-4, -3, -10), s3d);
 		var shadows = Std.instance(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
-		shadows.lightDirection = light.direction;
 		shadows.power = 10;
 
 		if( props.curFile != null )
@@ -475,7 +474,6 @@ class Viewer extends hxd.App {
 		}
 
 		s3d.addChild(obj);
-
 		infos = getInfos(obj);
 
 		//
