@@ -118,6 +118,13 @@ class Graphics extends Drawable {
 	var xMax : Float;
 	var yMax : Float;
 
+	var ma : Float = 1.;
+	var mb : Float = 0.;
+	var mc : Float = 0.;
+	var md : Float = 1.;
+	var mx : Float = 0.;
+	var my : Float = 0.;
+
 	public var tile : h2d.Tile;
 
 	public function new(?parent) {
@@ -257,6 +264,35 @@ class Graphics extends Drawable {
 		doFill = true;
 	}
 
+	public function beginTileFill( ?dx : Float, ?dy : Float, ?scaleX : Float, ?scaleY : Float, ?tile : h2d.Tile ) {
+		beginFill(0xFFFFFF);
+		if( dx == null ) dx = 0;
+		if( dy == null ) dy = 0;
+		if( tile != null ) {
+			if( this.tile != null && tile.getTexture() != this.tile.getTexture() ) {
+				var tex = this.tile.getTexture();
+				if( tex.width != 1 || tex.height != 1 )
+					throw "All tiles must be of the same texture";
+			}
+			this.tile = tile;
+		} else
+			tile = this.tile;
+		if( tile == null )
+			throw "Tile not specified";
+		if( scaleX == null ) scaleX = 1;
+		if( scaleY == null ) scaleY = 1;
+
+		var tex = tile.getTexture();
+		var pixWidth = 1 / tex.width;
+		var pixHeight = 1 / tex.height;
+		ma = pixWidth / scaleX;
+		mb = 0;
+		mc = 0;
+		md = pixHeight / scaleY;
+		mx = -dx * ma;
+		my = -dy * md;
+	}
+
 	public function lineStyle( size : Float = 0, color = 0, alpha = 1. ) {
 		flush();
 		this.lineSize = size;
@@ -296,6 +332,21 @@ class Graphics extends Drawable {
 		}
 	}
 
+	public function drawPie( cx : Float, cy : Float, ray : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
+		flush();
+		addPoint(cx, cy);
+		if( nsegments == 0 )
+			nsegments = Math.ceil(ray * angleLength / 4);
+		if( nsegments < 3 ) nsegments = 3;
+		var angle = angleLength / (nsegments - 1);
+		for( i in 0...nsegments ) {
+			var a = i * angle + angleStart;
+			addPoint(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
+		}
+		addPoint(cx, cy);
+		flush();
+	}
+
 	public function addHole() {
 		if( pts.length > 0 ) {
 			prev.push(pts);
@@ -305,7 +356,7 @@ class Graphics extends Drawable {
 	}
 
 	public inline function addPoint( x : Float, y : Float ) {
-		addPointFull(x, y, curR, curG, curB, curA);
+		addPointFull(x, y, curR, curG, curB, curA, x * ma + y * mc + mx, x * mb + y * md + my);
 	}
 
 	public function addPointFull( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, u : Float = 0., v : Float = 0. ) {

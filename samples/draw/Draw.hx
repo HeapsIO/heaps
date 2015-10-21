@@ -1,5 +1,5 @@
 class Draw extends hxd.App {
-	
+
 	override function init() {
 		var g = new h2d.Graphics(s2d);
 		g.beginFill(0xFF0000);
@@ -10,9 +10,31 @@ class Draw extends hxd.App {
 		g.lineStyle(1, 0xFF00FF);
 		g.drawCircle(100, 100, 30);
 		g.endFill();
-		
+
+		// check pie + draw texture
+
+		var g = new h2d.Graphics(s2d);
+		var bmp = new hxd.BitmapData(64, 64);
+		for( x in 0...64 )
+			for( y in 0...64 )
+				bmp.setPixel(x, y, 0xFF000000 | (x * 4) | ((y * 4) << 8));
+		var tile = h2d.Tile.fromBitmap(bmp);
+		bmp.dispose();
+		g.lineStyle();
+
+		g.beginTileFill(-32,-32,tile);
+		g.drawPie(0, 0, 32, Math.PI / 3, Math.PI);
+		g.endFill();
+
+		g.beginTileFill(100, -64, 2, 2, tile);
+		g.drawRect(100, -64, 128, 128);
+		g.endFill();
+
+		g.x = 200;
+		g.y = 100;
+
 		// check the size and alignment of scaled bitmaps
-		
+
 		var bmp = new hxd.BitmapData(256, 256);
 		bmp.clear(0xFFFF00FF);
 		bmp.fill(19, 21, 13, 15, 0xFF202020);
@@ -21,23 +43,23 @@ class Draw extends hxd.App {
 		bmp.fill(19+13, 21, 1, 15, 0xFF0000FF);
 		bmp.fill(19, 21 + 15, 13, 1, 0xFF00FFFF);
 		var tile = h2d.Tile.fromBitmap(bmp);
-		
+
 		bmp.dispose();
-		
+
 		var b = new h2d.Bitmap(tile.sub(19, 21, 13, 15), s2d);
 		b.x = 200;
 		b.y = 200;
 		b.scale(32);
-		
+
 		var b = new h2d.Bitmap(tile.sub(18, 20, 15, 17), s2d);
 		b.x = 300;
 		b.y = 300;
 		b.scale(13);
 
 	}
-	
+
 	static function main() {
 		new Draw();
 	}
-	
+
 }
