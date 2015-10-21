@@ -175,18 +175,30 @@ class Graphics extends Drawable {
 	function flushLine() {
 		if( linePts.length == 0 )
 			return;
+
 		var last = linePts.length - 1;
 		var prev = linePts[last];
 		var p = linePts[0];
-		var count = linePts.length;
+
 		var closed = p.x == prev.x && p.y == prev.y;
+		var count = linePts.length;
 		if( !closed ) {
-			linePts.push(new LinePoint(prev.x * 2 - p.x, prev.y * 2 - p.y, 0, 0, 0, 0));
-			prev = new LinePoint(p.x * 2 - prev.x, p.y * 2 - prev.y, 0, 0, 0, 0);
+			var prevLast = linePts[last - 1];
+			if( prevLast == null ) prevLast = p;
+			linePts.push(new LinePoint(prev.x * 2 - prevLast.x, prev.y * 2 - prevLast.y, 0, 0, 0, 0));
+			var pNext = linePts[1];
+			if( pNext == null ) pNext = p;
+			prev = new LinePoint(p.x * 2 - pNext.x, p.y * 2 - pNext.y, 0, 0, 0, 0);
+		} else if( p != prev ) {
+			count--;
+			last--;
+			prev = linePts[last];
 		}
+
 		var start = pindex;
 		for( i in 0...count ) {
 			var next = linePts[(i + 1) % linePts.length];
+
 			var nx1 = prev.y - p.y;
 			var ny1 = p.x - prev.x;
 			var ns1 = Math.invSqrt(nx1 * nx1 + ny1 * ny1);
@@ -194,21 +206,27 @@ class Graphics extends Drawable {
 			var ny2 = next.x - p.x;
 			var ns2 = Math.invSqrt(nx2 * nx2 + ny2 * ny2);
 
-			var nx = (nx1 * ns1 + nx2 * ns2) * lineSize * 0.5;
-			var ny = (ny1 * ns1 + ny2 * ns2) * lineSize * 0.5;
+			var nx = nx1 * ns1 + nx2 * ns2;
+			var ny = ny1 * ns1 + ny2 * ns2;
+			var ns = Math.invSqrt(nx * nx + ny * ny) * lineSize * 0.5;
+
+			nx *= ns;
+			ny *= ns;
 
 			content.add(p.x + nx, p.y + ny, 0, 0, p.r, p.g, p.b, p.a);
 			content.add(p.x - nx, p.y - ny, 0, 0, p.r, p.g, p.b, p.a);
 
 			var pnext = i == last ? start : pindex + 2;
 
-			content.addIndex(pindex);
-			content.addIndex(pindex + 1);
-			content.addIndex(pnext);
+			if( i < count-1 || closed ) {
+				content.addIndex(pindex);
+				content.addIndex(pindex + 1);
+				content.addIndex(pnext);
 
-			content.addIndex(pindex + 1);
-			content.addIndex(pnext);
-			content.addIndex(pnext + 1);
+				content.addIndex(pindex + 1);
+				content.addIndex(pnext);
+				content.addIndex(pnext + 1);
+			}
 
 			pindex += 2;
 
@@ -253,7 +271,7 @@ class Graphics extends Drawable {
 			pindex = 0;
 	}
 
-	function flush() {
+	public function flush() {
 		flushFill();
 		flushLine();
 	}
@@ -302,6 +320,15 @@ class Graphics extends Drawable {
 		lineB = (color & 0xFF) / 255.;
 	}
 
+	public inline function moveTo(x,y) {
+		flush();
+		addPoint(x, y);
+	}
+
+	public inline function lineTo(x, y) {
+		addPoint(x, y);
+	}
+
 	public function endFill() {
 		flush();
 		doFill = false;
@@ -315,13 +342,16 @@ class Graphics extends Drawable {
 	}
 
 	public function drawRect( x : Float, y : Float, w : Float, h : Float ) {
+		flush();
 		addPoint(x, y);
 		addPoint(x + w, y);
 		addPoint(x + w, y + h);
 		addPoint(x, y + h);
+		flush();
 	}
 
 	public function drawCircle( cx : Float, cy : Float, ray : Float, nsegments = 0 ) {
+		flush();
 		if( nsegments == 0 )
 			nsegments = Math.ceil(ray * 3.14 * 2 / 4);
 		if( nsegments < 3 ) nsegments = 3;
@@ -330,6 +360,7 @@ class Graphics extends Drawable {
 			var a = i * angle;
 			addPoint(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
 		}
+		flush();
 	}
 
 	public function drawPie( cx : Float, cy : Float, ray : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
