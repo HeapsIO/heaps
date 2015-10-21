@@ -379,9 +379,41 @@ class Stage3dDriver extends Driver {
 
 	function compileShader( s : hxsl.RuntimeShader.RuntimeShaderData, usedTextures : Array<Bool> ) {
 		//trace(hxsl.Printer.shaderToString(s.data));
-		var agal = hxsl.AgalOut.toAgal(s, isStandardMode ? 2 : 1);
+		var agalVersion = isStandardMode ? 2 : 1;
+		var agal = hxsl.AgalOut.toAgal(s, agalVersion);
 		//var old = format.agal.Tools.toString(agal);
-		agal = new hxsl.AgalOptim().optimize(agal);
+		var optim = new hxsl.AgalOptim();
+		agal = optim.optimize(agal);
+		#if debug
+		var maxVarying = format.agal.Tools.getProps(RVar, !s.vertex, agalVersion).count;
+		var maxTextures = format.agal.Tools.getProps(RTexture, !s.vertex, agalVersion).count;
+		for( op in agal.code )
+			optim.iter(op, function(r, _) {
+				switch( r.t ) {
+				case RVar:
+					if( r.index >= maxVarying ) {
+						var vars = [];
+						for( v in s.data.vars )
+							switch( v.kind ) {
+							case Var: vars.push(v.name);
+							default:
+							}
+						throw "Too many varying for this shader ("+vars.join(",")+")";
+					}
+				case RTexture:
+					if( r.index >= maxTextures ) {
+						var vars = [];
+						for( v in s.data.vars )
+							switch( v.type ) {
+							case TSampler2D, TSamplerCube: vars.push(v.name);
+							default:
+							}
+						throw "Too many textures for this shader ("+vars.join(",")+")";
+					}
+				default:
+				}
+			});
+		#end
 		//var opt = format.agal.Tools.toString(agal);
 		for( op in agal.code )
 			switch( op ) {
@@ -389,7 +421,7 @@ class Stage3dDriver extends Driver {
 			default:
 			}
 		var size = s.globalsSize+s.paramsSize;
-		var max = format.agal.Tools.getProps(RConst, !s.vertex, isStandardMode?2:1).count;
+		var max = format.agal.Tools.getProps(RConst, !s.vertex, agalVersion).count;
 		if( size > max )
 			throw (s.vertex?"Vertex ":"Fragment ") + " shader uses " + size+" constant registers while " + max + " is allowed";
 		var o = new haxe.io.BytesOutput();

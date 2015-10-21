@@ -675,7 +675,7 @@ class AgalOptim {
 			continue;
 	}
 
-	function iter( op : Opcode, reg : Reg -> Bool -> Void ) {
+	public function iter( op : Opcode, reg : Reg -> Bool -> Void ) {
 		switch( op ) {
 		case OUnused:
 			// nothing
