@@ -78,7 +78,7 @@ class System {
 
 	static var loop = null;
 	static var loopFunc = null;
-	#if nme
+	#if (nme || openfl)
 	static var VIEW = null;
 	#end
 
@@ -94,7 +94,14 @@ class System {
 			VIEW.name = "glView";
 			flash.Lib.current.addChildAt(VIEW,0);
 		}
-		VIEW.render = function(_) if( f != null ) f();
+		VIEW.render = function(_) if ( f != null ) f();
+		#elseif openfl
+		if( VIEW == null ) {
+			VIEW = new openfl.display.OpenGLView();
+			VIEW.name = "glView";
+			flash.Lib.current.addChildAt(VIEW,0);
+		}
+		VIEW.render = function(_) if ( f != null ) f();
 		#else
 		if( loop != null )
 			flash.Lib.current.removeEventListener(flash.events.Event.ENTER_FRAME, loop);
@@ -143,6 +150,64 @@ class System {
          (0 == 2 ? nme.Lib.HW_AA : 0),
          "Heaps Application"
 		);
+		#elseif openfl
+		var windowSize = haxe.macro.Compiler.getDefine("window");
+		if( windowSize == null ) windowSize = "800x600";
+		var windowSize = windowSize.split("x");
+		var width = Std.parseInt(windowSize[0]), height = Std.parseInt(windowSize[1]);
+		if( width < 100 ) width = 100;
+		if ( height < 100 ) height = 100;
+		
+		var config = {
+			
+			build: "1",
+			company: "Heaps",
+			fps: 60,
+			orientation: "",
+			packageName: "heaps.application",
+			version: "0.0.1",
+			windows: [
+				
+				{
+					antialiasing: 0,
+					background: 16777215,
+					borderless: false,
+					depthBuffer: true,
+					display: 0,
+					fullscreen: false,
+					hardware: true,
+					height: height,
+					parameters: "{}",
+					resizable: true,
+					stencilBuffer: true,
+					title: "Heaps Application",
+					vsync: true,
+					width: width,
+					x: null,
+					y: null
+				},
+			]
+			
+		};
+		
+		var app = new openfl.display.Application ();
+		app.create (config);
+		
+		try {
+			callb();
+		} catch( e : Dynamic ) {
+			Sys.println(e);
+			#if debug
+			Sys.println(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
+			#end
+		}
+		
+		var result = app.exec ();
+		
+		#if sys
+		Sys.exit(result);
+		#end
+		
 		#else
 		callb();
 		#end

@@ -71,8 +71,8 @@ class Stage {
 			setupOnCloseEvent();
 		#end
 	}
-
-	#if flash
+	
+	#if (flash || openfl)
 
 	function initGesture(b) {
 		if( hxd.System.isTouch && ENABLE_TOUCH ) {

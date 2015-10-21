@@ -12,6 +12,14 @@ private typedef GL = js.html.webgl.GL;
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
 private typedef GLShader = js.html.webgl.Shader;
+#elseif lime
+import lime.graphics.opengl.GL;
+private typedef Uniform = Dynamic;
+private typedef Program = lime.graphics.opengl.GLProgram;
+private typedef GLShader = lime.graphics.opengl.GLShader;
+private typedef Uint16Array = lime.utils.UInt16Array;
+private typedef Uint8Array = lime.utils.UInt8Array;
+private typedef Float32Array = lime.utils.Float32Array;
 #elseif nme
 import nme.gl.GL;
 private typedef Uniform = Dynamic;
@@ -137,7 +145,7 @@ class GlDriver extends Driver {
 		var code = glout.run(shader.data);
 		gl.shaderSource(s, code);
 		gl.compileShader(s);
-		if( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
+		if ( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
 			var log = gl.getShaderInfoLog(s);
 			var lid = Std.parseInt(log.substr(9));
 			var line = lid == null ? null : code.split("\n")[lid - 1];
@@ -464,6 +472,8 @@ class GlDriver extends Driver {
 		pixels.setFlip(true);
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, bmp.width, bmp.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels.bytes.getData());
 		pixels.dispose();
+		#elseif lime
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, bmp.width, bmp.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, img.image.data);
 		#else
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, img.getImageData(0, 0, bmp.width, bmp.height));
 		#end
