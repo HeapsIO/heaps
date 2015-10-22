@@ -196,22 +196,30 @@ class Graphics extends Drawable {
 		}
 
 		var start = pindex;
+
 		for( i in 0...count ) {
 			var next = linePts[(i + 1) % linePts.length];
 
 			var nx1 = prev.y - p.y;
 			var ny1 = p.x - prev.x;
 			var ns1 = Math.invSqrt(nx1 * nx1 + ny1 * ny1);
+
 			var nx2 = p.y - next.y;
 			var ny2 = next.x - p.x;
 			var ns2 = Math.invSqrt(nx2 * nx2 + ny2 * ny2);
 
 			var nx = nx1 * ns1 + nx2 * ns2;
 			var ny = ny1 * ns1 + ny2 * ns2;
-			var ns = Math.invSqrt(nx * nx + ny * ny) * lineSize * 0.5;
+			var ns = Math.invSqrt(nx * nx + ny * ny);
 
 			nx *= ns;
 			ny *= ns;
+
+			var size = nx * nx1 * ns1 + ny * ny1 * ns1; // N.N1
+			if( size < 0.1 ) size = 0.1;	//TODO : biseauter les angles quand size très faible
+			var d = lineSize * 0.5 / size;
+			nx *= d;
+			ny *= d;
 
 			content.add(p.x + nx, p.y + ny, 0, 0, p.r, p.g, p.b, p.a);
 			content.add(p.x - nx, p.y - ny, 0, 0, p.r, p.g, p.b, p.a);
