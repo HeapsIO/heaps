@@ -164,9 +164,10 @@ class Graphics extends Drawable {
 			var p2 = points[(i + 1) % points.length];
 			var p3 = points[(i + 2) % points.length];
 			var s = (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x) > 0;
-			if( first )
+			if( first ) {
+				first = false;
 				sign = s;
-			else if( sign != s )
+			} else if( sign != s )
 				return false;
 		}
 		return true;
