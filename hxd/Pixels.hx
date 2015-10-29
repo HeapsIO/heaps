@@ -22,6 +22,38 @@ class Pixels {
 		this.offset = offset;
 	}
 
+	public function clear( color : Int ) {
+		var a, b, c, d;
+		switch( format ) {
+		case RGBA:
+			a = color >> 16;
+			b = color >> 8;
+			c = color;
+			d = color >>> 24;
+		case ARGB:
+			a = color >>> 24;
+			b = color >> 16;
+			c = color >> 8;
+			d = color;
+		case BGRA:
+			a = color;
+			b = color >> 8;
+			c = color >> 16;
+			d = color >>> 24;
+		}
+		a &= 0xFF;
+		b &= 0xFF;
+		c &= 0xFF;
+		d &= 0xFF;
+		var p = 0;
+		for( i in 0...width * height ) {
+			bytes.set(p++, a);
+			bytes.set(p++, b);
+			bytes.set(p++, c);
+			bytes.set(p++, d);
+		}
+	}
+
 	public function makeSquare( ?copy : Bool ) {
 		var w = width, h = height;
 		var tw = w == 0 ? 0 : 1, th = h == 0 ? 0 : 1;
@@ -96,7 +128,7 @@ class Pixels {
 				mem.wb(p+3, a);
 			}
 			mem.end();
-		case [BGRA, RGBA]:
+		case [BGRA, RGBA], [RGBA,BGRA]:
 			var mem = hxd.impl.Memory.select(bytes);
 			for( i in 0...width*height ) {
 				var p = (i << 2) + offset;
