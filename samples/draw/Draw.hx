@@ -1,5 +1,7 @@
 class Draw extends hxd.App {
 
+	var bclone : h2d.Bitmap;
+
 	override function init() {
 		var g = new h2d.Graphics(s2d);
 		g.beginFill(0xFF0000);
@@ -56,6 +58,34 @@ class Draw extends hxd.App {
 		b.y = 300;
 		b.scale(13);
 
+		// check drawTo texture
+
+		var t = new h3d.mat.Texture(256, 256,[Target]);
+		var b = new h2d.Bitmap(h2d.Tile.fromTexture(t), s2d);
+		b.blendMode = None; // prevent residual alpha bugs
+		var timer = new haxe.Timer(100);
+		timer.run = function() redraw(t);
+		b.y = 256;
+
+		// test capture bitmap
+
+		bclone = new h2d.Bitmap(h2d.Tile.fromTexture(new h3d.mat.Texture(256, 256)), s2d);
+		#if js
+		bclone.blendMode = None; // prevent residual alpha bugs
+		#end
+		bclone.y = 512;
+	}
+
+	function redraw(t:h3d.mat.Texture) {
+		var g = new h2d.Graphics();
+		g.beginFill(0xFF8040, 0.1);
+		for( i in 0...10 )
+			g.drawCircle(Math.random() * 256, Math.random() * 256, (0.1 + Math.random()) * 10);
+		g.drawTo(t);
+
+		var pix = t.capturePixels();
+		bclone.tile.getTexture().uploadPixels(pix);
+		pix.dispose();
 	}
 
 	static function main() {
