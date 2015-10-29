@@ -247,6 +247,12 @@ class Sprite {
 		if( this != null && parent != null ) parent.removeChild(this);
 	}
 
+	public function drawTo( t : h3d.mat.Texture ) {
+		var s = getScene();
+		if( s == null ) s = new h2d.Scene();
+		@:privateAccess s.drawImplTo(this, t);
+	}
+
 	function draw( ctx : RenderContext ) {
 	}
 
