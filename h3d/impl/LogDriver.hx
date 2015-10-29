@@ -44,9 +44,9 @@ class LogDriver extends Driver {
 		d.clear(color, depth, stencil);
 	}
 
-	override function captureRenderBuffer( bmp : hxd.BitmapData ) {
-		log('CaptureRenderBuffer ${bmp.width}x${bmp.height}');
-		d.captureRenderBuffer(bmp);
+	override function captureRenderBuffer( pixels : hxd.Pixels ) {
+		log('CaptureRenderBuffer ${pixels.width}x${pixels.height}');
+		d.captureRenderBuffer(pixels);
 	}
 
 	override function reset() {

@@ -355,6 +355,7 @@ class GlDriver extends Driver {
 			bits |= GL.STENCIL_BUFFER_BIT;
 		}
 		if( bits != 0 ) gl.clear(bits);
+		if( curTarget != null ) curTarget.flags.set(WasCleared);
 	}
 
 	override function resize(width, height) {
@@ -388,6 +389,7 @@ class GlDriver extends Driver {
 		else if( t.flags.has(Fmt4_4_4_4) )
 			tt.fmt = GL.UNSIGNED_SHORT_4_4_4_4;
 		t.lastFrame = frame;
+		t.flags.unset(WasCleared);
 		gl.bindTexture(GL.TEXTURE_2D, tt.t);
 		var mipMap = t.flags.has(MipMapped) ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR;
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, mipMap);
@@ -480,6 +482,7 @@ class GlDriver extends Driver {
 		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
 		#end
+		t.flags.set(WasCleared);
 	}
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
@@ -494,6 +497,7 @@ class GlDriver extends Driver {
 		#end
 		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
+		t.flags.set(WasCleared);
 	}
 
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
@@ -677,6 +681,15 @@ class GlDriver extends Driver {
 		case FullClearRequired:
 			false;
 		}
+	}
+
+	override function captureRenderBuffer( pixels : hxd.Pixels ) {
+		if( curTarget == null )
+			throw "Can't capture main render buffer in GL";
+		#if js
+		gl.readPixels(0, 0, pixels.width, pixels.height, GL.RGBA, GL.UNSIGNED_BYTE, @:privateAccess pixels.bytes.b);
+		pixels.format = RGBA;
+		#end
 	}
 
 	static var TFILTERS = [

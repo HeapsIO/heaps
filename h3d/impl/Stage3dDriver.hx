@@ -185,8 +185,19 @@ class Stage3dDriver extends Driver {
 		ctx.clear( color == null ? 0 : color.r, color == null ? 0 : color.g, color == null ? 0 : color.b, color == null ? 1 : color.a, depth == null ? 1 : depth, stencil == null ? 0 : stencil, mask);
 	}
 
-	override function captureRenderBuffer( bmp : hxd.BitmapData ) {
-		ctx.drawToBitmapData(bmp.toNative());
+	override function captureRenderBuffer( pixels : hxd.Pixels ) {
+		if( inTarget != null )
+			throw "Can't capture render target in flash";
+		var bmp = new flash.display.BitmapData(pixels.width, pixels.height, true, 0);
+		ctx.drawToBitmapData(bmp);
+
+		var pix = bmp.getPixels(bmp.rect);
+		bmp.dispose();
+		var b = pixels.bytes.getData();
+		b.position = 0;
+		b.writeBytes(pix, 0, pixels.width * pixels.height * 4);
+		pixels.format = ARGB;
+		pixels.flags.set(AlphaPremultiplied);
 	}
 
 	override function dispose() {

@@ -90,8 +90,8 @@ class ScnDriver extends Driver {
 		d.clear(color, depth, stencil);
 	}
 
-	override function captureRenderBuffer( bmp : hxd.BitmapData ) {
-		d.captureRenderBuffer(bmp);
+	override function captureRenderBuffer( pixels : hxd.Pixels ) {
+		d.captureRenderBuffer(pixels);
 	}
 
 	override function reset() {
