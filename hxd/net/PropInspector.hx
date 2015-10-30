@@ -481,7 +481,7 @@ class PropInspector extends cdb.jq.Client {
 							var p = createPanel("" + t);
 							p.html("Loading...");
 							haxe.Timer.delay(function() {
-								var bmp = t.captureBitmap();
+								var bmp = t.capturePixels();
 								var png = bmp.toPNG();
 								bmp.dispose();
 								var pngBase64 = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")).encodeBytes(png).toString();
