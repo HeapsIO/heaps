@@ -426,11 +426,10 @@ class Sprite {
 		add(bounds.xMax, bounds.yMax);
 
 		// clip with our scene
-		var scene = ctx.scene;
 		if( view.xMin < 0 ) view.xMin = 0;
 		if( view.yMin < 0 ) view.yMin = 0;
-		if( view.xMax > scene.width ) view.xMax = scene.width;
-		if( view.yMax > scene.height ) view.yMax = scene.height;
+		@:privateAccess if( view.xMax > ctx.curWidth ) view.xMax = ctx.curWidth;
+		@:privateAccess if( view.yMax > ctx.curHeight ) view.yMax = ctx.curHeight;
 
 		// inverse our matrix
 		var invDet = 1 / (matA * matD - matB * matC);
