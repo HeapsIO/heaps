@@ -14,6 +14,8 @@ class FileEntry {
 
 	public function getBytes() : haxe.io.Bytes return null;
 
+	public function getText() return getBytes().toString();
+
 	public function getTmpBytes() return getBytes();
 
 	public function open() { }
