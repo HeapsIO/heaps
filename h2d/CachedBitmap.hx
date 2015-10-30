@@ -64,7 +64,7 @@ class CachedBitmap extends Drawable {
 	}
 
 	override function drawRec( ctx : RenderContext ) {
-		var scene = getScene();
+		var scene = ctx.scene;
 		if( tile != null && ((width < 0 && scene.width != tile.width) || (height < 0 && scene.height != tile.height)) )
 			clean();
 		var tile = getTile();

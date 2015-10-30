@@ -8,6 +8,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var buffer : hxd.FloatBuffer;
 	public var bufPos : Int;
 	public var textures : h3d.impl.TextureCache;
+	public var scene : h2d.Scene;
 
 	public var tmpBounds = new h2d.col.Bounds();
 	var texture : h3d.mat.Texture;
@@ -21,7 +22,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	var baseShaderList : hxsl.ShaderList;
 	var currentObj : Drawable;
 	var stride : Int;
-	var s2d : Scene;
 	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int }>;
 	var hasUVPos : Bool;
 	var inFilter : Bool;
@@ -31,9 +31,9 @@ class RenderContext extends h3d.impl.RenderContext {
 	var curWidth : Int;
 	var curHeight : Int;
 
-	public function new(s2d) {
+	public function new(scene) {
 		super();
-		this.s2d = s2d;
+		this.scene = scene;
 		if( BUFFERING )
 			buffer = new hxd.FloatBuffer();
 		bufPos = 0;
@@ -61,13 +61,13 @@ class RenderContext extends h3d.impl.RenderContext {
 		curX = 0;
 		curY = 0;
 		inFilter = false;
-		curWidth = s2d.width;
-		curHeight = s2d.height;
+		curWidth = scene.width;
+		curHeight = scene.height;
 		manager.globals.set("time", time);
 		// todo : we might prefer to auto-detect this by running a test and capturing its output
 		baseShader.pixelAlign = #if flash true #else false #end;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
-		baseShader.viewport.set( -s2d.width * 0.5, -s2d.height * 0.5, 2 / s2d.width, -2 / s2d.height);
+		baseShader.viewport.set( -scene.width * 0.5, -scene.height * 0.5, 2 / scene.width, -2 / scene.height);
 		baseShader.filterMatrixA.set(1, 0, 0);
 		baseShader.filterMatrixB.set(0, 1, 0);
 		baseShaderList.next = null;
@@ -100,8 +100,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		flush();
 		engine.setTarget(t);
 		initShaders(baseShaderList);
-		if( width < 0 ) width = t == null ? s2d.width : t.width;
-		if( height < 0 ) height = t == null ? s2d.height : t.height;
+		if( width < 0 ) width = t == null ? scene.width : t.width;
+		if( height < 0 ) height = t == null ? scene.height : t.height;
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
 		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);
 		targetsStack.push( { t : t, x : startX, y : startY, w : width, h : height } );
@@ -122,8 +122,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		var t = tinf == null ? null : tinf.t;
 		var startX = tinf == null ? 0 : tinf.x;
 		var startY = tinf == null ? 0 : tinf.y;
-		var width = tinf == null ? s2d.width : tinf.w;
-		var height = tinf == null ? s2d.height : tinf.h;
+		var width = tinf == null ? scene.width : tinf.w;
+		var height = tinf == null ? scene.height : tinf.h;
 		engine.setTarget(t);
 		initShaders(baseShaderList);
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));

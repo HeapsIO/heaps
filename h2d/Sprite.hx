@@ -249,8 +249,10 @@ class Sprite {
 
 	public function drawTo( t : h3d.mat.Texture ) {
 		var s = getScene();
+		var needDispose = s == null;
 		if( s == null ) s = new h2d.Scene();
 		@:privateAccess s.drawImplTo(this, t);
+		if( needDispose ) s.dispose();
 	}
 
 	function draw( ctx : RenderContext ) {

@@ -30,7 +30,7 @@ class Mask extends Sprite {
 		var x2 = width * matA + height * matC + absX;
 		var y2 = width * matB + height * matD + absY;
 
-		var s = getScene();
+		var s = ctx.scene;
 		x1 *= ctx.engine.width / s.width;
 		x2 *= ctx.engine.width / s.width;
 		y1 *= ctx.engine.height / s.height;
