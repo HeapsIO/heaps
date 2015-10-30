@@ -297,7 +297,7 @@ class Console extends h2d.Sprite {
 	}
 
 	override function sync(ctx:h2d.RenderContext) {
-		var scene = getScene();
+		var scene = ctx.scene;
 		if( scene != null ) {
 			x = 0;
 			y = scene.height - height;

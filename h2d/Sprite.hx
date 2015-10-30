@@ -426,7 +426,7 @@ class Sprite {
 		add(bounds.xMax, bounds.yMax);
 
 		// clip with our scene
-		var scene = getScene();
+		var scene = ctx.scene;
 		if( view.xMin < 0 ) view.xMin = 0;
 		if( view.yMin < 0 ) view.yMin = 0;
 		if( view.xMax > scene.width ) view.xMax = scene.width;

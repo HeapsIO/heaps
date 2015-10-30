@@ -39,9 +39,9 @@ class CachedBitmap extends Drawable {
 		return h;
 	}
 
-	public function getTile() {
+	public function getTile( ?ctx : RenderContext ) {
 		if( tile == null ) {
-			var scene = getScene();
+			var scene = ctx == null ? getScene() : ctx.scene;
 			if( scene == null ) return null;
 			var tw = width < 0 ? scene.width : width;
 			var th = height < 0 ? scene.height : height;
@@ -67,7 +67,7 @@ class CachedBitmap extends Drawable {
 		var scene = ctx.scene;
 		if( tile != null && ((width < 0 && scene.width != tile.width) || (height < 0 && scene.height != tile.height)) )
 			clean();
-		var tile = getTile();
+		var tile = getTile(ctx);
 		if( !freezed || !renderDone ) {
 			var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;
 

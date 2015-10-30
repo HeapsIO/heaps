@@ -25,7 +25,7 @@ class Draw extends hxd.App {
 		g.lineStyle();
 
 		g.beginTileFill(-32,-32,tile);
-		g.drawPie(0, 0, 32, Math.PI / 3, Math.PI);
+		//g.drawPie(0, 0, 32, Math.PI / 3, Math.PI);
 		g.endFill();
 
 		g.beginTileFill(100, -64, 2, 2, tile);
@@ -78,9 +78,10 @@ class Draw extends hxd.App {
 
 	function redraw(t:h3d.mat.Texture) {
 		var g = new h2d.Graphics();
-		g.beginFill(0xFF8040, 0.1);
+		g.beginFill(0xFF8040, 0.5);
 		for( i in 0...10 )
 			g.drawCircle(Math.random() * 256, Math.random() * 256, (0.1 + Math.random()) * 10);
+		g.filters = [new h2d.filter.Blur(2,2,10)];
 		g.drawTo(t);
 
 		var pix = t.capturePixels();
