@@ -62,9 +62,9 @@ class Renderer {
 		}
 	}
 
-	public function getPass( name : String ) {
+	public function getPass( name : String, create = true ) {
 		var p = passes.get(name);
-		if( p == null ) {
+		if( p == null && create ) {
 			p = createDefaultPass(name);
 			setPass(name, p);
 		}

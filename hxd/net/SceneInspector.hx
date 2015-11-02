@@ -658,6 +658,16 @@ class SceneInspector {
 			PBool("perPixelLighting", function() return ls.perPixelLighting, function(b) ls.perPixelLighting = b),
 		]));
 
+		var s = Std.instance(scene.renderer.getPass("shadow", false),h3d.pass.ShadowMap);
+		if( s != null ) {
+			props.push(PGroup("Shadows", [
+				PInt("size", function() return s.size, function(sz) s.size = sz),
+				PColor("color", false, function() return s.color, function(v) s.color = v),
+				PFloat("power", function() return s.power, function(v) s.power = v),
+				PFloat("bias", function() return s.bias, function(v) s.bias = v),
+			]));
+		}
+
 		var r = scene.renderer;
 
 		var tex = getTextures(@:privateAccess r.tcache);
