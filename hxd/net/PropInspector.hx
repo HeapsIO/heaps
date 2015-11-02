@@ -407,7 +407,7 @@ class PropInspector extends cdb.jq.Client {
 			for( i in 0...values.length ) {
 				var jv = J("<td>").appendTo(jt);
 				jv.text("" + values[i]);
-				j.dblclick(function(_) editValue(jv,function() return "" + values[i],
+				jv.dblclick(function(_) editValue(jv,function() return "" + values[i],
 					function(s) {
 						var f = Std.parseFloat(s);
 						if( !Math.isNaN(f) ) {
@@ -418,6 +418,25 @@ class PropInspector extends cdb.jq.Client {
 						}
 					}
 				));
+				jv.mousedown(function(e) {
+					if( e.which == 3 ) {
+						var old = values[i];
+						var cur = old;
+						jv.addClass("active");
+						jv.special("startDrag", [], function(v: { done:Bool, dx:Float, dy:Float } ) {
+							var delta = ( Math.max(Math.abs(old == 0 ? 1 : old), 1e-3) / 100 ) * v.dx;
+							cur += delta;
+							values[i] = hxd.Math.fmt(cur);
+							set(values);
+							jv.text("" + values[i]);
+							if( v.done ) {
+								jv.removeClass("active");
+								addHistory(path, old, values[i]);
+							}
+							return v.done;
+						});
+					}
+			});
 			}
 		case PString(_, get, set):
 			var cur = get();
