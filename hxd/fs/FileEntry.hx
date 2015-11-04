@@ -4,6 +4,7 @@ class FileEntry {
 
 	public var name(default, null) : String;
 	public var path(get, never) : String;
+	public var directory(get, never) : String;
 	public var extension(get, never) : String;
 	public var size(get, never) : Int;
 	public var isDirectory(get, never) : Bool;
@@ -36,6 +37,15 @@ class FileEntry {
 	function get_isDirectory() return false;
 	function get_size() return 0;
 	function get_path() : String { throw "path() not implemented"; return null; };
+
+	function get_directory() {
+		var p = path.split("/");
+		p.pop();
+		if( p.length == 0 )
+			return "";
+		return p.join("/")+"/";
+	}
+
 	function get_extension() {
 		var np = name.split(".");
 		return np.length == 1 ? "" : np.pop().toLowerCase();
