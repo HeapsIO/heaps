@@ -230,11 +230,14 @@ class World extends Object {
 		soil.x = c.x;
 		soil.y = c.y;
 		soil.material.texture = h3d.mat.Texture.fromColor(soilColor);
+		soil.material.shadows = true;
 	}
 
 	function initMaterial( mesh : h3d.scene.Mesh, mat : WorldModelMaterial ) {
 		mesh.material.blendMode = mat.t.blend;
 		mesh.material.texture = mat.t.t.tex;
+		mesh.material.mainPass.enableLights = true;
+		mesh.material.shadows = true;
 	}
 
 	override function dispose() {
@@ -252,6 +255,7 @@ class World extends Object {
 			var b = c.buffers.get(mat.bits);
 			if( b == null ) {
 				b = new h3d.scene.Mesh(new h3d.prim.BigPrimitive(model.stride, true), c.root);
+				c.buffers.set(mat.bits, b);
 				initMaterial(b, mat);
 			}
 			var p = Std.instance(b.primitive, h3d.prim.BigPrimitive);
