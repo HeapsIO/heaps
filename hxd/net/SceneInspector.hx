@@ -635,12 +635,22 @@ class SceneInspector {
 		var def = Std.instance(p, h3d.pass.Default);
 		if( def == null ) return props;
 
-		var fields = Type.getInstanceFields(Type.getClass(p));
+		var cl = Type.getClass(p);
+		var meta = haxe.rtti.Meta.getFields(cl);
+		var fields = Type.getInstanceFields(cl);
 		fields.sort(Reflect.compare);
 		for( f in fields ) {
 			var pl = getDynamicProps(Reflect.field(p, f));
 			if( pl != null )
-				props.push(PGroup(f,pl));
+				props.push(PGroup(f, pl));
+			else {
+				// @inspect metadata
+				var m = Reflect.field(meta, f);
+				if( m != null && Reflect.hasField(m, "inspect") ) {
+					if( Std.is(pl, Bool) )
+						props.push(PBool(f, function() return Reflect.getProperty(p, f), function(v) Reflect.setProperty(p, f, v)));
+				}
+			}
 		}
 
 		for( t in getTextures(@:privateAccess def.tcache) )
