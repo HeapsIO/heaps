@@ -630,17 +630,13 @@ class SceneInspector {
 		return null;
 	}
 
-	function getPassProps( p : h3d.pass.Base ) {
-		var props = [];
-		var def = Std.instance(p, h3d.pass.Default);
-		if( def == null ) return props;
-
-		var cl = Type.getClass(p);
+	function addDynamicProps( props : Array<Property>, o : Dynamic ) {
+		var cl = Type.getClass(o);
 		var meta = haxe.rtti.Meta.getFields(cl);
 		var fields = Type.getInstanceFields(cl);
 		fields.sort(Reflect.compare);
 		for( f in fields ) {
-			var pl = getDynamicProps(Reflect.field(p, f));
+			var pl = getDynamicProps(Reflect.field(o, f));
 			if( pl != null )
 				props.push(PGroup(f, pl));
 			else {
@@ -648,10 +644,18 @@ class SceneInspector {
 				var m = Reflect.field(meta, f);
 				if( m != null && Reflect.hasField(m, "inspect") ) {
 					if( Std.is(pl, Bool) )
-						props.push(PBool(f, function() return Reflect.getProperty(p, f), function(v) Reflect.setProperty(p, f, v)));
+						props.unshift(PBool(f, function() return Reflect.getProperty(o, f), function(v) Reflect.setProperty(o, f, v)));
 				}
 			}
 		}
+	}
+
+	function getPassProps( p : h3d.pass.Base ) {
+		var props = [];
+		var def = Std.instance(p, h3d.pass.Default);
+		if( def == null ) return props;
+
+		addDynamicProps(props, p);
 
 		for( t in getTextures(@:privateAccess def.tcache) )
 			props.push(t);
@@ -691,13 +695,7 @@ class SceneInspector {
 			props.push(PGroup("Pass " + p.name, getPassProps(p.p)));
 		}
 
-		var fields = Type.getInstanceFields(Type.getClass(r));
-		fields.sort(Reflect.compare);
-		for( f in fields ) {
-			var pl = getDynamicProps(Reflect.field(r, f));
-			if( pl != null )
-				props.push(PGroup(f,pl));
-		}
+		addDynamicProps(props, r);
 		return props;
 	}
 
