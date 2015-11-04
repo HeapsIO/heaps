@@ -1,0 +1,6 @@
+-swf world.swf
+-swf-header 800:600:60:000000
+-swf-version 15.0
+-main Main
+-lib heaps
+-dce full
