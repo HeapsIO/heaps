@@ -77,6 +77,10 @@ class Loader {
 		return new TiledMap(fs.get(path));
 	}
 
+	function loadAtlas( path : String ) {
+		return new Atlas(fs.get(path));
+	}
+
 	public function dispose() {
 		cleanCache();
 		fs.dispose();
