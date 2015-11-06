@@ -6,14 +6,12 @@ class BigTextureElement {
 	public var dv : Float;
 	public var su : Float;
 	public var sv : Float;
-	public var blend : BlendMode;
-	public function new(t, du, dv, su, sv, blend) {
+	public function new(t, du, dv, su, sv) {
 		this.t = t;
 		this.du = du;
 		this.dv = dv;
 		this.su = su;
 		this.sv = sv;
-		this.blend = blend;
 	}
 }
 
@@ -133,7 +131,7 @@ class BigTexture {
 		flush();
 	}
 
-	public function add( t : hxd.res.Image,  blend ) {
+	public function add( t : hxd.res.Image ) {
 		var tsize = t.getSize();
 		var q = allocPos(t,tsize.width,tsize.height);
 		if( q == null )
@@ -146,7 +144,7 @@ class BigTexture {
 		}
 		q.texture = t;
 		t.watch(rebuild);
-		return new BigTextureElement(this,x / size, y / size, tsize.width / size, tsize.height / size, blend);
+		return new BigTextureElement(this,x / size, y / size, tsize.width / size, tsize.height / size);
 	}
 
 	function upload( t : hxd.res.Image, x : Int, y : Int, width : Int, height : Int ) {

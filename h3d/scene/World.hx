@@ -10,6 +10,7 @@ class WorldChunk {
 	public var root : h3d.scene.Object;
 	public var buffers : Map<Int, h3d.scene.Mesh>;
 	public var bounds : h3d.col.Bounds;
+	public var initialized = false;
 
 	public function new(cx, cy) {
 		this.cx = cx;
@@ -23,21 +24,33 @@ class WorldChunk {
 		root.remove();
 		root.dispose();
 	}
-
 }
 
-class WorldModelMaterial {
-	public var t : h3d.mat.BigTexture.BigTextureElement;
-	public var m : hxd.fmt.hmd.Data.Material;
+class WorldMaterial {
 	public var bits : Int;
+	public var t : h3d.mat.BigTexture.BigTextureElement;
+	public var mat : hxd.fmt.hmd.Data.Material;
+	public var blend : h3d.mat.BlendMode;
+	public var killAlpha : Null<Float>;
+	public var lights : Bool;
+	public var shadows : Bool;
+	public function new() {
+		lights = true;
+		shadows = true;
+	}
+	public function updateBits() {
+		bits = (t.t.id << 6) | (blend.getIndex() << 3) | ((killAlpha == null ? 0 : 1)<<2) | ((lights ? 1 : 0)<<1) | (shadows ? 1 : 0);
+	}
+}
+
+class WorldModelGeometry {
+	public var m : WorldMaterial;
 	public var startVertex : Int;
 	public var startIndex : Int;
 	public var vertexCount : Int;
 	public var indexCount : Int;
-	public function new(m, t) {
+	public function new(m) {
 		this.m = m;
-		this.t = t;
-		this.bits = t.blend.getIndex() | (t.t.id << 3);
 	}
 }
 
@@ -46,13 +59,13 @@ class WorldModel {
 	public var stride : Int;
 	public var buf : hxd.FloatBuffer;
 	public var idx : hxd.IndexBuffer;
-	public var materials : Array<WorldModelMaterial>;
+	public var geometries : Array<WorldModelGeometry>;
 	public var bounds : h3d.col.Bounds;
 	public function new(r) {
 		this.r = r;
 		this.buf = new hxd.FloatBuffer();
 		this.idx = new hxd.IndexBuffer();
-		this.materials = [];
+		this.geometries = [];
 		bounds = new h3d.col.Bounds();
 	}
 }
@@ -69,7 +82,7 @@ class World extends Object {
 	var chunks : Array<WorldChunk>;
 	var allChunks : Array<WorldChunk>;
 	var bigTextures : Array<h3d.mat.BigTexture>;
-	var textures : Map<String, h3d.mat.BigTexture.BigTextureElement>;
+	var textures : Map<String, WorldMaterial>;
 
 	public function new( chunkSize : Int, worldSize : Int, ?parent ) {
 		super(parent);
@@ -102,24 +115,31 @@ class World extends Object {
 		return Alpha;
 	}
 
-	function loadMaterialTexture( r : hxd.res.FbxModel, mat : hxd.fmt.hmd.Data.Material ) {
+	function loadMaterialTexture( r : hxd.res.FbxModel, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
 		var texturePath = r.entry.directory + mat.diffuseTexture.split("/").pop();
-		var t = textures.get(texturePath);
-		if( t != null )
-			return t;
+		var m = textures.get(texturePath);
+		if( m != null )
+			return m;
+		var t = null;
 		var rt = hxd.res.Loader.currentInstance.load(texturePath).toImage();
-		var blend = getBlend(rt);
 		for( b in bigTextures ) {
-			t = b.add(rt, blend);
+			t = b.add(rt);
 			if( t != null ) break;
 		}
 		if( t == null ) {
 			var b = new h3d.mat.BigTexture(bigTextures.length, bigTextureSize, bigTextureBG);
 			bigTextures.unshift(b);
-			t = b.add(rt, blend);
+			t = b.add(rt);
 			if( t == null ) throw "Texture " + texturePath + " is too big";
 		}
-		return t;
+		var m = new WorldMaterial();
+		m.t = t;
+		m.blend = getBlend(rt);
+		m.killAlpha = null;
+		m.mat = mat;
+		m.updateBits();
+		textures.set(texturePath, m);
+		return m;
 	}
 
 	public function done() {
@@ -143,17 +163,16 @@ class World extends Object {
 			if( geom == null ) continue;
 			var pos = m.position.toMatrix();
 			for( mid in 0...m.materials.length ) {
-				var mat = lib.header.materials[m.materials[mid]];
-				var tex = loadMaterialTexture(r, mat);
-				if( tex == null ) continue;
+				var mat = loadMaterialTexture(r, lib.header.materials[m.materials[mid]]);
+				if( mat == null ) continue;
 				var data = lib.getBuffers(geom, format.fmt, format.defaults, mid);
 
-				var m = new WorldModelMaterial(mat, tex);
+				var m = new WorldModelGeometry(mat);
 				m.vertexCount = Std.int(data.vertexes.length / model.stride);
 				m.indexCount = data.indexes.length;
 				m.startVertex = startVertex;
 				m.startIndex = startIndex;
-				model.materials.push(m);
+				model.geometries.push(m);
 
 				var vl = data.vertexes;
 				var p = 0;
@@ -185,8 +204,8 @@ class World extends Object {
 					model.buf.push(n.z * len);
 
 					// uv
-					model.buf.push(u * tex.su + tex.du);
-					model.buf.push(v * tex.sv + tex.dv);
+					model.buf.push(u * mat.t.su + mat.t.du);
+					model.buf.push(v * mat.t.sv + mat.t.dv);
 
 					// extra
 					for( k in 0...extra )
@@ -217,7 +236,7 @@ class World extends Object {
 			addChild(c.root);
 			chunks[cid] = c;
 			allChunks.push(c);
-			initSoil(c);
+			//initSoil(c);
 		}
 		return c;
 	}
@@ -233,11 +252,13 @@ class World extends Object {
 		soil.material.shadows = true;
 	}
 
-	function initMaterial( mesh : h3d.scene.Mesh, mat : WorldModelMaterial ) {
-		mesh.material.blendMode = mat.t.blend;
+	function initMaterial( mesh : h3d.scene.Mesh, mat : WorldMaterial ) {
+		mesh.material.blendMode = mat.blend;
 		mesh.material.texture = mat.t.t.tex;
-		mesh.material.mainPass.enableLights = true;
-		mesh.material.shadows = true;
+		mesh.material.textureShader.killAlpha = mat.killAlpha != null;
+		mesh.material.textureShader.killAlphaThreshold = mat.killAlpha;
+		mesh.material.mainPass.enableLights = mat.lights;
+		mesh.material.shadows = mat.shadows;
 	}
 
 	override function dispose() {
@@ -251,15 +272,15 @@ class World extends Object {
 	public function add( model : WorldModel, x : Float, y : Float, z : Float, scale = 1., rotation = 0. ) {
 		var c = getChunk(x, y, true);
 
-		for( mat in model.materials ) {
-			var b = c.buffers.get(mat.bits);
+		for( g in model.geometries ) {
+			var b = c.buffers.get(g.m.bits);
 			if( b == null ) {
 				b = new h3d.scene.Mesh(new h3d.prim.BigPrimitive(model.stride, true), c.root);
-				c.buffers.set(mat.bits, b);
-				initMaterial(b, mat);
+				c.buffers.set(g.m.bits, b);
+				initMaterial(b, g.m);
 			}
 			var p = Std.instance(b.primitive, h3d.prim.BigPrimitive);
-			p.addSub(model.buf, model.idx, mat.startVertex, Std.int(mat.startIndex / 3), mat.vertexCount, Std.int(mat.indexCount / 3), x, y, z, rotation, scale);
+			p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), x, y, z, rotation, scale);
 		}
 
 
@@ -285,8 +306,14 @@ class World extends Object {
 
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
-		for( c in allChunks )
+
+		for( c in allChunks ) {
 			c.root.visible = c.bounds.inFrustum(ctx.camera.m);
+			if(c.root.visible && !c.initialized) {
+				c.initialized = true;
+				initSoil(c);
+			}
+		}
 	}
 
 }
