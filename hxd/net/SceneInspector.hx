@@ -172,8 +172,8 @@ class SceneInspector {
 		event = new DrawEvent(this);
 		savedFile = "sceneProps.js";
 		state = new Map();
-		//oldLog = haxe.Log.trace;
-		//haxe.Log.trace = onTrace;
+		oldLog = haxe.Log.trace;
+		haxe.Log.trace = onTrace;
 		inspect = new PropInspector(host, port);
 		inspect.resolveProps = resolveProps;
 		inspect.onChange = onChange;
@@ -241,9 +241,8 @@ class SceneInspector {
 	}
 
 	function onTrace( v : Dynamic, ?pos : haxe.PosInfos ) {
-		if( !inspect.connected )
-			oldLog(v, pos);
-		else {
+		oldLog(v, pos);
+		if( inspect.connected ) {
 			var vstr = null;
 			if( pos.customParams != null ) {
 				pos.customParams.unshift(v);
