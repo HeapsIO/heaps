@@ -635,14 +635,15 @@ class SceneInspector {
 		var fields = Type.getInstanceFields(cl);
 		fields.sort(Reflect.compare);
 		for( f in fields ) {
-			var pl = getDynamicProps(Reflect.field(o, f));
+			var v = Reflect.field(o, f);
+			var pl = getDynamicProps(v);
 			if( pl != null )
 				props.push(PGroup(f, pl));
 			else {
 				// @inspect metadata
 				var m = Reflect.field(meta, f);
 				if( m != null && Reflect.hasField(m, "inspect") ) {
-					if( Std.is(pl, Bool) )
+					if( Std.is(v, Bool) )
 						props.unshift(PBool(f, function() return Reflect.getProperty(o, f), function(v) Reflect.setProperty(o, f, v)));
 				}
 			}
