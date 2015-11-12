@@ -39,7 +39,7 @@ class WorldMaterial {
 		shadows = true;
 	}
 	public function updateBits() {
-		bits = (t.t.id << 6) | (blend.getIndex() << 3) | ((killAlpha == null ? 0 : 1)<<2) | ((lights ? 1 : 0)<<1) | (shadows ? 1 : 0);
+		bits = (t.t.id << 6) | (blend.getIndex() << 3) | ((killAlpha == null ? 0 : 1) << 2) | ((lights ? 1 : 0) << 1) | (shadows ? 1 : 0);
 	}
 }
 
@@ -117,6 +117,7 @@ class World extends Object {
 
 	function loadMaterialTexture( r : hxd.res.FbxModel, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
 		var texturePath = r.entry.directory + mat.diffuseTexture.split("/").pop();
+
 		var m = textures.get(texturePath);
 		if( m != null )
 			return m;
@@ -259,6 +260,8 @@ class World extends Object {
 		mesh.material.textureShader.killAlphaThreshold = mat.killAlpha;
 		mesh.material.mainPass.enableLights = mat.lights;
 		mesh.material.shadows = mat.shadows;
+		mesh.material.allocPass("normal");
+		mesh.material.allocPass("depth");
 	}
 
 	override function dispose() {
