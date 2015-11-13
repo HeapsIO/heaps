@@ -24,6 +24,15 @@ class AgalOut {
 		throw msg;
 	}
 
+	function isWriteMask( swiz : Array<C> ) {
+		if( swiz == null || swiz.length == 1 )
+			return true;
+		for( i in 0...swiz.length )
+			if( swiz[i] != COMPS[i] )
+				return false;
+		return true;
+	}
+
 	public function compile( s : RuntimeShaderData, version ) : Data {
 		current = s;
 		nullReg = new Reg(RTemp, -1, null);
@@ -78,9 +87,7 @@ class AgalOut {
 				found = i;
 				break;
 			}
-			// disable varying packing : some results show that if stored in XY or ZW the result will differ ! (AGAL bug ?)
-			// also maybe a bad idea since it doesn't allow texture pre-fetch
-			if( found < 0 || true ) {
+			if( found < 0 ) {
 				found = valloc.length;
 				valloc.push([X, Y, Z, W]);
 			}
@@ -99,6 +106,31 @@ class AgalOut {
 		if( s.data.funs.length != 1 ) throw "assert";
 		expr(s.data.funs[0].expr);
 
+		// write mask are just masks, not full swizzle, we then need to change all our writes
+		//    for instance  V.zw = T.xy  actually mean  V.??zw = T.xyyy (? = ignore write)
+		for( i in 0...opcodes.length ) {
+			var op = opcodes[i];
+			switch( op ) {
+			case OMov(dst, v), ORcp(dst, v) if( !isWriteMask(dst.swiz) ):
+				var dst = dst.clone();
+				var v = v.clone();
+				// reinterpret swizzling accordingly to write mask
+				var last = X;
+				v.swiz = [for( i in 0...4 ) {
+					var k = dst.swiz.indexOf(COMPS[i]);
+					if( k >= 0 ) last = v.swiz[k];
+					last;
+				}];
+				opcodes[i] = OMov(dst, v);
+			case OIfe(_), OIne(_), OIfg(_), OIfl(_), OEls, OEif, OKil(_):
+				// ignore
+			default:
+				var dst : Reg = op.getParameters()[0];
+				if( !isWriteMask(dst.swiz) )
+					throw "invalid write mask in "+format.agal.Tools.opStr(op);
+			}
+		}
+
 		// force write of missing varying components
 		for( vid in 0...valloc.length ) {
 			var v = valloc[vid];
@@ -108,7 +140,8 @@ class AgalOut {
 				case OMov(dst, val) if( dst.index == vid && dst.t == RVar ):
 					var dst = dst.clone();
 					var val = val.clone();
-					val.swiz = null;
+					var last = X;
+					val.swiz = [for( i in 0...4 ) { var k = dst.swiz.indexOf(COMPS[i]); if( k >= 0 ) last = val.swiz[k]; last; } ];
 					dst.swiz = null;
 					opcodes[i] = OMov(dst, val);
 					break;
