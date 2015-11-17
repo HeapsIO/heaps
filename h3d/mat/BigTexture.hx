@@ -59,6 +59,24 @@ class BigTexture {
 		pending = [];
 	}
 
+	public function dispose() {
+		if( tex != null ) {
+			tex.dispose();
+			tex = null;
+		}
+		if( allPixels != null ) {
+			allPixels.dispose();
+			allPixels = null;
+		}
+		pending = [];
+		if( waitTimer != null ) {
+			waitTimer.stop();
+			waitTimer = null;
+		}
+		isDone = false;
+		space = null;
+	}
+
 	function initPixels() {
 		if( allPixels == null )
 			allPixels = hxd.Pixels.alloc(size, size, BGRA);
@@ -99,7 +117,7 @@ class BigTexture {
 		return split(q.tl, sw, sh, rw, rh);
 	}
 
-	function allocPos( t : hxd.res.Image, w : Int, h : Int ) {
+	function allocPos( w : Int, h : Int ) {
 		var q = findBest(space, w, h);
 		if( q == null )
 			return null;
@@ -133,7 +151,7 @@ class BigTexture {
 
 	public function add( t : hxd.res.Image ) {
 		var tsize = t.getSize();
-		var q = allocPos(t,tsize.width,tsize.height);
+		var q = allocPos(tsize.width,tsize.height);
 		if( q == null )
 			return null;
 		var x = q.x, y = q.y;
