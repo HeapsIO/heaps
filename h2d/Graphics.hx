@@ -264,8 +264,14 @@ class Graphics extends Drawable {
 			}
 		} else {
 			var ctx = new hxd.poly2tri.SweepContext();
-			for( p in prev )
+			for( p in prev ) {
+				var p0 = p[0];
+				var p1 = p[p.length - 1];
+				if( p0 == null ) continue;
+				if( p0.x == p1.x && p0.y == p1.y )
+					p.pop();
 				ctx.addPolyline(p);
+			}
 
 			var p = new hxd.poly2tri.Sweep(ctx);
 			p.triangulate();
@@ -365,7 +371,7 @@ class Graphics extends Drawable {
 			nsegments = Math.ceil(ray * 3.14 * 2 / 4);
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = Math.PI * 2 / nsegments;
-		for( i in 0...nsegments ) {
+		for( i in 0...nsegments + 1 ) {
 			var a = i * angle;
 			addPoint(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
 		}
