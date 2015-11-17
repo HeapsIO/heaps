@@ -148,8 +148,11 @@ class Text extends Drawable {
 			} else
 				prevChar = cc;
 		}
-		if( restPos < text.length )
+		if( restPos < text.length ) {
+			if( lines.length == 0 && leftMargin > 0 && x > maxWidth )
+				lines.push("");
 			lines.push(text.substr(restPos, text.length - restPos));
+		}
 		return lines.join("\n");
 	}
 
