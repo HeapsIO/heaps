@@ -189,6 +189,16 @@ class Math {
 		return if( da > -max && da < max ) b else a + (da < 0 ? -max : max);
 	}
 
+	public static inline function shuffle<T>( a : Array<T> ) {
+		var len = a.length;
+		for( i in 0...len ) {
+			var x = Std.random(len);
+			var y = Std.random(len);
+			var tmp = a[x];
+			a[x] = a[y];
+			a[y] = tmp;
+		}
+	}
 
 	public inline static function random( max = 1.0 ) {
 		return std.Math.random() * max;

@@ -42,6 +42,17 @@ class Rand {
 		return uint() % n;
 	}
 
+	public inline function shuffle<T>( a : Array<T> ) {
+		var len = a.length;
+		for( i in 0...len ) {
+			var x = random(len);
+			var y = random(len);
+			var tmp = a[x];
+			a[x] = a[y];
+			a[y] = tmp;
+		}
+	}
+
 	public inline function rand() {
 		// we can't use a divider > 16807 or else two consecutive seeds
 		// might generate a similar float
