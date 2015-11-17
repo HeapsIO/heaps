@@ -29,14 +29,18 @@ class WorldChunk {
 class WorldMaterial {
 	public var bits : Int;
 	public var t : h3d.mat.BigTexture.BigTextureElement;
+	public var spec : h3d.mat.BigTexture.BigTextureElement;
 	public var mat : hxd.fmt.hmd.Data.Material;
 	public var blend : h3d.mat.BlendMode;
 	public var killAlpha : Null<Float>;
 	public var lights : Bool;
 	public var shadows : Bool;
+	public var shaders : Array<hxsl.Shader>;
+
 	public function new() {
 		lights = true;
 		shadows = true;
+		shaders = [];
 	}
 	public function updateBits() {
 		bits = (t.t.id << 6) | (blend.getIndex() << 3) | ((killAlpha == null ? 0 : 1) << 2) | ((lights ? 1 : 0) << 1) | (shadows ? 1 : 0);
@@ -81,8 +85,9 @@ class World extends Object {
 	var soilColor = 0x408020;
 	var chunks : Array<WorldChunk>;
 	var allChunks : Array<WorldChunk>;
-	var bigTextures : Array<h3d.mat.BigTexture>;
+	var bigTextures : Array<{ diffuse : h3d.mat.BigTexture, spec : h3d.mat.BigTexture }>;
 	var textures : Map<String, WorldMaterial>;
+	public var enableSpecular = false;
 
 	public function new( chunkSize : Int, worldSize : Int, ?parent ) {
 		super(parent);
@@ -115,26 +120,54 @@ class World extends Object {
 		return Alpha;
 	}
 
+	function resolveSpecularTexture( diffuse : hxd.res.Image ) : hxd.res.Image {
+		var path = diffuse.entry.directory + "spec.jpg";
+		try {
+			return hxd.res.Loader.currentInstance.load(path).toImage();
+		} catch( e : hxd.res.NotFound ) {
+			return null;
+		}
+	}
+
 	function loadMaterialTexture( r : hxd.res.FbxModel, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
 		var texturePath = r.entry.directory + mat.diffuseTexture.split("/").pop();
 
 		var m = textures.get(texturePath);
 		if( m != null )
 			return m;
-		var t = null;
+
 		var rt = hxd.res.Loader.currentInstance.load(texturePath).toImage();
+		var t = null;
+		var btex = null;
 		for( b in bigTextures ) {
-			t = b.add(rt);
-			if( t != null ) break;
+			t = b.diffuse.add(rt);
+			if( t != null ) {
+				btex = b;
+				break;
+			}
 		}
 		if( t == null ) {
 			var b = new h3d.mat.BigTexture(bigTextures.length, bigTextureSize, bigTextureBG);
-			bigTextures.unshift(b);
+			btex = { diffuse : b, spec : null };
+			bigTextures.unshift( btex );
 			t = b.add(rt);
 			if( t == null ) throw "Texture " + texturePath + " is too big";
 		}
+
+		var specTex = null;
+		if( enableSpecular ) {
+			var res = resolveSpecularTexture(rt);
+			if( btex.spec == null )
+				btex.spec = new h3d.mat.BigTexture(-1, bigTextureSize, bigTextureBG);
+			if( res != null )
+				specTex = btex.spec.add(res);
+			else
+				@:privateAccess btex.spec.allocPos(t.t.tex.width, t.t.tex.height); // keep UV in-sync
+		}
+
 		var m = new WorldMaterial();
 		m.t = t;
+		m.spec = specTex;
 		m.blend = getBlend(rt);
 		m.killAlpha = null;
 		m.mat = mat;
@@ -144,8 +177,11 @@ class World extends Object {
 	}
 
 	public function done() {
-		for( b in bigTextures )
-			b.done();
+		for( b in bigTextures ) {
+			b.diffuse.done();
+			if(b.spec != null)
+				b.spec.done();
+		}
 	}
 
 	public function loadModel( r : hxd.res.FbxModel ) : WorldModel {
@@ -237,7 +273,6 @@ class World extends Object {
 			addChild(c.root);
 			chunks[cid] = c;
 			allChunks.push(c);
-			//initSoil(c);
 		}
 		return c;
 	}
@@ -260,8 +295,18 @@ class World extends Object {
 		mesh.material.textureShader.killAlphaThreshold = mat.killAlpha;
 		mesh.material.mainPass.enableLights = mat.lights;
 		mesh.material.shadows = mat.shadows;
-		mesh.material.allocPass("normal");
-		mesh.material.allocPass("depth");
+
+		if(mat.shadows) {
+			mesh.material.allocPass("normal");
+			mesh.material.allocPass("depth");
+		}
+
+		for(s in mat.shaders)
+			mesh.material.mainPass.addShader(s);
+
+		if(mat.spec != null)
+			mesh.material.specularTexture = mat.spec.t.tex;
+		else mesh.material.specularAmount = 0;
 	}
 
 	override function dispose() {
@@ -270,6 +315,17 @@ class World extends Object {
 			c.dispose();
 		allChunks = [];
 		chunks = [];
+		for(b in bigTextures) {
+			b.diffuse.dispose();
+			if(b.spec != null)
+				b.spec.dispose();
+		}
+		bigTextures = [];
+		textures = new Map();
+	}
+
+	function getStride( model : WorldModel ) {
+		return model.stride;
 	}
 
 	public function add( model : WorldModel, x : Float, y : Float, z : Float, scale = 1., rotation = 0. ) {
@@ -278,12 +334,12 @@ class World extends Object {
 		for( g in model.geometries ) {
 			var b = c.buffers.get(g.m.bits);
 			if( b == null ) {
-				b = new h3d.scene.Mesh(new h3d.prim.BigPrimitive(model.stride, true), c.root);
+				b = new h3d.scene.Mesh(new h3d.prim.BigPrimitive(getStride(model), true), c.root);
 				c.buffers.set(g.m.bits, b);
 				initMaterial(b, g.m);
 			}
 			var p = Std.instance(b.primitive, h3d.prim.BigPrimitive);
-			p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), x, y, z, rotation, scale);
+			p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), x, y, z, rotation, scale, model.stride);
 		}
 
 
