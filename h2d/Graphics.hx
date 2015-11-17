@@ -248,10 +248,8 @@ class Graphics extends Drawable {
 	}
 
 	function flushFill() {
-		if( pts.length > 0 ) {
-			prev.push(pts);
-			pts = [];
-		}
+		if( pts.length > 0 )
+			closeShape();
 		if( prev.length == 0 )
 			return;
 
@@ -264,14 +262,8 @@ class Graphics extends Drawable {
 			}
 		} else {
 			var ctx = new hxd.poly2tri.SweepContext();
-			for( p in prev ) {
-				var p0 = p[0];
-				var p1 = p[p.length - 1];
-				if( p0 == null ) continue;
-				if( p0.x == p1.x && p0.y == p1.y )
-					p.pop();
+			for( p in prev )
 				ctx.addPolyline(p);
-			}
 
 			var p = new hxd.poly2tri.Sweep(ctx);
 			p.triangulate();
@@ -393,11 +385,22 @@ class Graphics extends Drawable {
 		flush();
 	}
 
-	public function addHole() {
-		if( pts.length > 0 ) {
-			prev.push(pts);
+	function closeShape() {
+		if( pts.length < 3 ) {
 			pts = [];
+			return;
 		}
+		var p0 = pts[0];
+		var p1 = pts[pts.length - 1];
+		if( hxd.Math.abs(p0.x - p1.x) < 1e-9 && hxd.Math.abs(p0.y - p1.y) < 1e-9 )
+			pts.pop();
+		prev.push(pts);
+		pts = [];
+	}
+
+	public function addHole() {
+		if( pts.length > 0 )
+			closeShape();
 		flushLine();
 	}
 
