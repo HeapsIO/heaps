@@ -19,6 +19,7 @@ class GlslOut {
 		m.set(ToFloat, "float");
 		m.set(ToBool, "bool");
 		m.set(Texture2D, "_texture2D");
+		m.set(LReflect, "reflect");
 		for( g in m )
 			KWDS.set(g, true);
 		m;

@@ -68,10 +68,8 @@ class SharedShader {
 			});
 			c = c.next;
 		}
-		#if flash
 		eval.inlineCalls = true;
 		eval.unrollLoops = true;
-		#end
 		var i = new ShaderInstance(eval.eval(data));
 		#if debug
 		Printer.check(i.shader, [data]);
