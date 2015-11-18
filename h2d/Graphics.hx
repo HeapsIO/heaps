@@ -3,7 +3,7 @@ import hxd.Math;
 
 private typedef GraphicsPoint = hxd.poly2tri.Point;
 
-private class LinePoint {
+private class GPoint {
 	public var x : Float;
 	public var y : Float;
 	public var r : Float;
@@ -98,10 +98,8 @@ private class GraphicsContent extends h3d.prim.Primitive {
 class Graphics extends Drawable {
 
 	var content : GraphicsContent;
-	var pts : Array<GraphicsPoint>;
-	var linePts : Array<LinePoint>;
+	var tmpPoints : Array<GPoint>;
 	var pindex : Int;
-	var prev : Array<Array<GraphicsPoint>>;
 	var curR : Float;
 	var curG : Float;
 	var curB : Float;
@@ -141,9 +139,7 @@ class Graphics extends Drawable {
 
 	public function clear() {
 		content.clear();
-		pts = [];
-		prev = [];
-		linePts = [];
+		tmpPoints = [];
 		pindex = 0;
 		lineSize = 0;
 		xMin = Math.POSITIVE_INFINITY;
@@ -157,7 +153,7 @@ class Graphics extends Drawable {
 		if( tile != null ) addBounds(relativeTo, out, xMin, yMin, xMax - xMin, yMax - yMin);
 	}
 
-	function isConvex( points : Array<GraphicsPoint> ) {
+	function isConvex( points : Array<GPoint> ) {
 		var first = true, sign = false;
 		for( i in 0...points.length ) {
 			var p1 = points[i];
@@ -173,33 +169,29 @@ class Graphics extends Drawable {
 		return true;
 	}
 
-	function flushLine() {
-		if( linePts.length == 0 )
-			return;
-
-		var last = linePts.length - 1;
-		var prev = linePts[last];
-		var p = linePts[0];
+	function flushLine( start ) {
+		var pts = tmpPoints;
+		var last = pts.length - 1;
+		var prev = pts[last];
+		var p = pts[0];
 
 		var closed = p.x == prev.x && p.y == prev.y;
-		var count = linePts.length;
+		var count = pts.length;
 		if( !closed ) {
-			var prevLast = linePts[last - 1];
+			var prevLast = pts[last - 1];
 			if( prevLast == null ) prevLast = p;
-			linePts.push(new LinePoint(prev.x * 2 - prevLast.x, prev.y * 2 - prevLast.y, 0, 0, 0, 0));
-			var pNext = linePts[1];
+			pts.push(new GPoint(prev.x * 2 - prevLast.x, prev.y * 2 - prevLast.y, 0, 0, 0, 0));
+			var pNext = pts[1];
 			if( pNext == null ) pNext = p;
-			prev = new LinePoint(p.x * 2 - pNext.x, p.y * 2 - pNext.y, 0, 0, 0, 0);
+			prev = new GPoint(p.x * 2 - pNext.x, p.y * 2 - pNext.y, 0, 0, 0, 0);
 		} else if( p != prev ) {
 			count--;
 			last--;
-			prev = linePts[last];
+			prev = pts[last];
 		}
 
-		var start = pindex;
-
 		for( i in 0...count ) {
-			var next = linePts[(i + 1) % linePts.length];
+			var next = pts[(i + 1) % pts.length];
 
 			var nx1 = prev.y - p.y;
 			var ny1 = p.x - prev.x;
@@ -242,45 +234,56 @@ class Graphics extends Drawable {
 			prev = p;
 			p = next;
 		}
-		linePts = [];
-		if( content.next() )
-			pindex = 0;
 	}
 
-	function flushFill() {
-		if( pts.length > 0 )
-			closeShape();
-		if( prev.length == 0 )
+	static var EARCUT = null;
+
+	function flushFill( i0 ) {
+
+		if( tmpPoints.length < 3 )
 			return;
 
-		if( prev.length == 1 && isConvex(prev[0]) ) {
-			var p0 = prev[0][0].id;
-			for( i in 1...prev[0].length - 1 ) {
-				content.addIndex(p0);
-				content.addIndex(p0 + i);
-				content.addIndex(p0 + i + 1);
+		var pts = tmpPoints;
+		var p0 = pts[0];
+		var p1 = pts[pts.length - 1];
+		var last = null;
+		// closed poly
+		if( hxd.Math.abs(p0.x - p1.x) < 1e-9 && hxd.Math.abs(p0.y - p1.y) < 1e-9 )
+			last = pts.pop();
+
+		if( isConvex(pts) ) {
+			for( i in 1...pts.length - 1 ) {
+				content.addIndex(i0);
+				content.addIndex(i0 + i);
+				content.addIndex(i0 + i + 1);
 			}
 		} else {
-			var ctx = new hxd.poly2tri.SweepContext();
-			for( p in prev )
-				ctx.addPolyline(p);
-
-			var p = new hxd.poly2tri.Sweep(ctx);
-			p.triangulate();
-
-			for( t in ctx.triangles )
-				for( p in t.points )
-					content.addIndex(p.id);
+			var ear = EARCUT;
+			if( ear == null )
+				EARCUT = ear = new hxd.earcut.Earcut();
+			for( i in ear.triangulate(pts) )
+				content.addIndex(i + i0);
 		}
 
-		prev = [];
-		if( content.next() )
-			pindex = 0;
+		if( last != null )
+			pts.push(last);
 	}
 
 	public function flush() {
-		flushFill();
-		flushLine();
+		if( tmpPoints.length == 0 )
+			return;
+		if( doFill ) {
+			flushFill(pindex);
+			pindex += tmpPoints.length;
+			if( content.next() )
+				pindex = 0;
+		}
+		if( lineSize > 0 ) {
+			flushLine(pindex);
+			if( content.next() )
+				pindex = 0;
+		}
+		tmpPoints = [];
 	}
 
 	public function beginFill( color : Int = 0, alpha = 1.  ) {
@@ -385,25 +388,6 @@ class Graphics extends Drawable {
 		flush();
 	}
 
-	function closeShape() {
-		if( pts.length < 3 ) {
-			pts = [];
-			return;
-		}
-		var p0 = pts[0];
-		var p1 = pts[pts.length - 1];
-		if( hxd.Math.abs(p0.x - p1.x) < 1e-9 && hxd.Math.abs(p0.y - p1.y) < 1e-9 )
-			pts.pop();
-		prev.push(pts);
-		pts = [];
-	}
-
-	public function addHole() {
-		if( pts.length > 0 )
-			closeShape();
-		flushLine();
-	}
-
 	public inline function addPoint( x : Float, y : Float ) {
 		addPointFull(x, y, curR, curG, curB, curA, x * ma + y * mc + mx, x * mb + y * md + my);
 	}
@@ -413,14 +397,9 @@ class Graphics extends Drawable {
 		if( y < yMin ) yMin = y;
 		if( x > xMax ) xMax = x;
 		if( y > yMax ) yMax = y;
-		if( doFill ) {
-			var p = new GraphicsPoint(x, y);
-			p.id = pindex++;
-			pts.push(p);
+		if( doFill )
 			content.add(x, y, u, v, r, g, b, a);
-		}
-		if( lineSize > 0 )
-			linePts.push(new LinePoint(x, y, lineR, lineG, lineB, lineA));
+		tmpPoints.push(new GPoint(x, y, lineR, lineG, lineB, lineA));
 	}
 
 	override function draw(ctx:RenderContext) {

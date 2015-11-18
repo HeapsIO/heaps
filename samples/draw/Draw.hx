@@ -1,13 +1,12 @@
 class Draw extends hxd.App {
 
 	var bclone : h2d.Bitmap;
+	var texture : h3d.mat.Texture;
 
 	override function init() {
 		var g = new h2d.Graphics(s2d);
 		g.beginFill(0xFF0000);
 		g.drawRect(10, 10, 100, 100);
-		g.addHole();
-		g.drawRect(20, 20, 80, 80);
 		g.beginFill(0x00FF00, 0.5);
 		g.lineStyle(1, 0xFF00FF);
 		g.drawCircle(100, 100, 30);
@@ -25,7 +24,7 @@ class Draw extends hxd.App {
 		g.lineStyle();
 
 		g.beginTileFill(-32,-32,tile);
-		//g.drawPie(0, 0, 32, Math.PI / 3, Math.PI);
+		g.drawPie(0, 0, 32, Math.PI / 3, Math.PI * 5 / 4);
 		g.endFill();
 
 		g.beginTileFill(100, -64, 2, 2, tile);
@@ -60,11 +59,9 @@ class Draw extends hxd.App {
 
 		// check drawTo texture
 
-		var t = new h3d.mat.Texture(256, 256,[Target]);
-		var b = new h2d.Bitmap(h2d.Tile.fromTexture(t), s2d);
+		texture = new h3d.mat.Texture(256, 256,[Target]);
+		var b = new h2d.Bitmap(h2d.Tile.fromTexture(texture), s2d);
 		b.blendMode = None; // prevent residual alpha bugs
-		var timer = new haxe.Timer(100);
-		timer.run = function() redraw(t);
 		b.y = 256;
 
 		// test capture bitmap
@@ -79,14 +76,22 @@ class Draw extends hxd.App {
 	function redraw(t:h3d.mat.Texture) {
 		var g = new h2d.Graphics();
 		g.beginFill(0xFF8040, 0.5);
-		for( i in 0...10 )
-			g.drawCircle(Math.random() * 256, Math.random() * 256, (0.1 + Math.random()) * 10);
+		for( i in 0...100 ) {
+			var r = (0.1 + Math.random()) * 10;
+			var s = Math.random() * Math.PI * 2;
+			var a = Math.random() * Math.PI * 2;
+			g.drawPie(Math.random() * 256, Math.random() * 256, r, s, a);
+		}
 		g.filters = [new h2d.filter.Blur(2,2,10)];
 		g.drawTo(t);
 
 		var pix = t.capturePixels();
 		bclone.tile.getTexture().uploadPixels(pix);
 		pix.dispose();
+	}
+
+	override function update(dt:Float) {
+		redraw(texture);
 	}
 
 	static function main() {
