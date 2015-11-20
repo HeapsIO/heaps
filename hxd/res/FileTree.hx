@@ -281,7 +281,7 @@ class FileTree {
 			}
 			if( field != null ) {
 				var fname = invalidChars.replace(f, "_");
-				if( fname.charCodeAt(0) >= "0".code && fname.charCodeAt(0) <= "9".code )
+				if( fname == "" || (fname.charCodeAt(0) >= "0".code && fname.charCodeAt(0) <= "9".code) )
 					fname = "_" + fname;
 				var other = dict.get(fname);
 				if( other != null ) {
