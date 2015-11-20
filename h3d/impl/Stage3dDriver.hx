@@ -627,7 +627,6 @@ class Stage3dDriver extends Driver {
 					ctx.setVertexBufferAt(pos++, m.vbuf, offset, FORMAT[size]);
 					offset += size == 0 ? 1 : size;
 					if( offset > m.b.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
-					bits >>= 3;
 				}
 				bits >>= 3;
 			}
