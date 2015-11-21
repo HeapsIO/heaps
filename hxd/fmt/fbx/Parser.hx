@@ -67,7 +67,7 @@ class Parser {
 				props.push(PString(s));
 			case TIdent(s):
 				props.push(PIdent(s));
-			case TBraceOpen, TBraceClose:
+			case TBraceOpen, TBraceClose, TNode(_):
 				token = t;
 			case TLength(v):
 				except(TBraceOpen);

@@ -94,6 +94,11 @@ class BaseLibrary {
 	var animationEvents : Array<{ frame : Int, data : String }>;
 
 	/**
+		The FBX version that was decoded
+	**/
+	public var version : Float = 0.;
+
+	/**
 		Allows to prevent some terminal unskinned joints to be removed, for instance if we want to track their position
 	**/
 	public var keepJoints : Map<String,Bool>;
@@ -142,6 +147,11 @@ class BaseLibrary {
 	public function load( root : FbxNode ) {
 		reset();
 		this.root = root;
+
+		version = root.get("FBXHeaderExtension.FBXVersion").props[0].toInt() / 1000;
+		if( Std.int(version) != 7 )
+			throw "FBX Version 7.x required : use FBX 2010 export";
+
 		for( c in root.childs )
 			init(c);
 
