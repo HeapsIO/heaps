@@ -471,7 +471,7 @@ class BaseLibrary {
 
 
 	public function mergeModels( modelNames : Array<String> ) {
-		if( modelNames.length == 0 )
+		if( modelNames.length <= 1 )
 			return;
 		var models = root.getAll("Objects.Model");
 		function getModel(name) {
@@ -1003,6 +1003,7 @@ class BaseLibrary {
 				if( geom == null ) continue;
 				var model2 = getParent(geom, "Model");
 				if( model2 == null ) continue;
+
 				var id = model2.getId();
 				var g = mergeGroups.get(id);
 				if( g != null ) {
@@ -1020,6 +1021,15 @@ class BaseLibrary {
 		}
 		for( group in toMerge ) {
 			group.sort(function(m1, m2) return Reflect.compare(m1.getName(), m2.getName()));
+			for( g in toMerge )
+				if( g != group ) {
+					var found = false;
+					for( m in group )
+						if( g.remove(m) )
+							found = true;
+					if( found )
+						g.push(group[0]);
+				}
 			mergeModels([for( g in group ) g.getName()]);
 		}
 	}
