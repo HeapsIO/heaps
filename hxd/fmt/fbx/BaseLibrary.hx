@@ -452,7 +452,7 @@ class BaseLibrary {
 			return null;
 		// if it's a move animation on a terminal unskinned joint, let's skip it
 		if( def.wasRemoved != null ) {
-			if( curveName != "Visibility" && curveName != "UV" )
+			if( (curveName != "Visibility" && curveName != "UV") || def.wasRemoved == -1 )
 				return null;
 			// apply it on the skin instead
 			model = ids.get(def.wasRemoved);
