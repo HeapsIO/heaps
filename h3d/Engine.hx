@@ -41,6 +41,7 @@ class Engine {
 	var targetStack : TargetTmp;
 	var currentTarget : h3d.mat.Texture;
 	var needFlushTarget : Bool;
+	var nullTexture : h3d.mat.Texture;
 
 	@:access(hxd.Stage)
 	public function new( hardware = true, aa = 0 ) {
@@ -286,6 +287,14 @@ class Engine {
 		}
 		targetStack = c;
 		needFlushTarget = currentTarget != tex;
+	}
+
+	public function pushTargets( textures : Array<h3d.mat.Texture> ) {
+		if( nullTexture == null ) nullTexture = new h3d.mat.Texture(0, 0, [NoAlloc]);
+		pushTarget(nullTexture);
+		driver.setRenderTargets(textures);
+		currentTarget = nullTexture;
+		needFlushTarget = false;
 	}
 
 	public function popTarget() {

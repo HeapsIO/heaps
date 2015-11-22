@@ -6,8 +6,9 @@ class CustomRenderer extends h3d.scene.Renderer {
 
 	public var sao : h3d.pass.ScalableAO;
 	public var saoBlur : h3d.pass.Blur;
-	var out : h3d.mat.Texture;
 	public var mode = 0;
+	public var hasMRT : Bool;
+	var out : h3d.mat.Texture;
 
 	public function new() {
 		super();
@@ -15,17 +16,23 @@ class CustomRenderer extends h3d.scene.Renderer {
 		// TODO : use a special Blur that prevents bluring across depths
 		saoBlur = new h3d.pass.Blur(2, 3, 2);
 		sao.shader.sampleRadius	= 0.2;
+		hasMRT = h3d.Engine.getCurrent().driver.hasFeature(MultipleRenderTargets);
+		if( hasMRT )
+			def = new h3d.pass.MRT(["color","depth","normal"],0,true);
 	}
 
-	override function process( ctx, passes ) {
-		super.process(ctx, passes);
-
+	override function render() {
+		super.render();
 		if(mode != 1) {
 			var saoTarget = allocTarget("sao",0,false);
-			setTarget(saoTarget);
-			sao.apply(depth.getTexture(), normal.getTexture(), ctx.camera);
+			pushTarget(saoTarget);
+			if( hasMRT )
+				sao.apply(def.getTexture(1), def.getTexture(2), ctx.camera);
+			else
+				sao.apply(depth.getTexture(), normal.getTexture(), ctx.camera);
+			popTarget();
 			saoBlur.apply(saoTarget, allocTarget("saoBlurTmp", 1, false));
-
+			if( hasMRT ) h3d.pass.Copy.run(def.getTexture(0), null);
 			h3d.pass.Copy.run(saoTarget, null, mode == 0 ? Multiply : null);
 		}
 	}
@@ -41,12 +48,16 @@ class Main extends hxd.App {
 
 	function initMaterial( m : h3d.mat.MeshMaterial ) {
 		m.mainPass.enableLights = true;
-		m.addPass(new h3d.mat.Pass("depth", m.mainPass));
-		m.addPass(new h3d.mat.Pass("normal", m.mainPass));
+		if( !Std.instance(s3d.renderer,CustomRenderer).hasMRT ) {
+			m.addPass(new h3d.mat.Pass("depth", m.mainPass));
+			m.addPass(new h3d.mat.Pass("normal", m.mainPass));
+		}
 	}
 
 	override function init() {
 		var r = new hxd.Rand(Std.random(0xFFFFFF));
+
+		s3d.renderer = new CustomRenderer();
 
 		var floor = new h3d.prim.Grid(40,40,0.25,0.25);
 		floor.addNormals();
@@ -74,7 +85,6 @@ class Main extends hxd.App {
 		var dir = new h3d.scene.DirLight(new h3d.Vector( -0.3, -0.2, -1), s3d);
 		dir.color.set(0.5, 0.5, 0.5);
 
-		s3d.renderer = new CustomRenderer();
 		time = Math.PI * 0.25;
 		camdist = 6 * wscale;
 	}

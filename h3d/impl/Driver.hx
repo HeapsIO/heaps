@@ -134,6 +134,9 @@ class Driver {
 	public function setRenderTarget( tex : Null<h3d.mat.Texture> ) {
 	}
 
+	public function setRenderTargets( textures : Array<h3d.mat.Texture> ) {
+	}
+
 	public function present() {
 	}
 

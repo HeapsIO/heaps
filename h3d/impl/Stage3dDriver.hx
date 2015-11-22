@@ -64,7 +64,7 @@ class Stage3dDriver extends Driver {
 	var curAttributes : Int;
 	var curTextures : Array<h3d.mat.Texture>;
 	var curSamplerBits : Array<Int>;
-	var inTarget : h3d.mat.Texture;
+	var renderTargets : Int;
 	var antiAlias : Int;
 	var width : Int;
 	var height : Int;
@@ -186,7 +186,7 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
-		if( inTarget != null )
+		if( renderTargets != 0 )
 			throw "Can't capture render target in flash";
 		var bmp = new flash.display.BitmapData(pixels.width, pixels.height, true, 0);
 		ctx.drawToBitmapData(bmp);
@@ -709,8 +709,8 @@ class Stage3dDriver extends Driver {
 				height += y;
 				y = 0;
 			}
-			var tw = inTarget == null ? this.width : 9999;
-			var th = inTarget == null ? this.height : 9999;
+			var tw = renderTargets == 0 ? this.width : 9999;
+			var th = renderTargets == 0 ? this.height : 9999;
 			if( x + width > tw ) width = tw - x;
 			if( y + height > th ) height = th - y;
 			enableDraw = width > 0 && height > 0;
@@ -720,14 +720,19 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function setRenderTarget( t : Null<h3d.mat.Texture>) {
+		if( renderTargets > 1 ) {
+			for( i in 1...renderTargets )
+				ctx.setRenderToTexture(null, false, 0, 0, i);
+			renderTargets = 0;
+		}
 		if( t == null ) {
 			ctx.setRenderToBackBuffer();
-			inTarget = null;
+			renderTargets = 0;
 		} else {
 			if( t.t == null )
 				t.alloc();
 			ctx.setRenderToTexture(t.t, t.flags.has(TargetUseDefaultDepth));
-			inTarget = t;
+			renderTargets = 1;
 			t.lastFrame = frame;
 			// make sure we at least clear the color the first time
 			if( flashVersion >= 15 && !t.flags.has(WasCleared) ) {
@@ -735,6 +740,24 @@ class Stage3dDriver extends Driver {
 				ctx.clear(0, 0, 0, 0, 1, 0, flash.display3D.Context3DClearMask.COLOR);
 			}
 		}
+		reset();
+	}
+
+	override function setRenderTargets( textures : Array<h3d.mat.Texture>) {
+		if( textures.length == 0 ) {
+			setRenderTarget(null);
+			return;
+		}
+		for( i in 0...textures.length ) {
+			var t = textures[i];
+			if( t.t == null )
+				t.alloc();
+			ctx.setRenderToTexture(t.t, t.flags.has(TargetUseDefaultDepth), 0, 0, i);
+			t.lastFrame = frame;
+		}
+		for( i in textures.length...renderTargets )
+			ctx.setRenderToTexture(null, false, 0, 0, i);
+		renderTargets = textures.length;
 		reset();
 	}
 

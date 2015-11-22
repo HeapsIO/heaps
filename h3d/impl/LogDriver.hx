@@ -261,6 +261,11 @@ class LogDriver extends Driver {
 		d.setRenderTarget(tex);
 	}
 
+	override function setRenderTargets( textures : Array<h3d.mat.Texture> ) {
+		log('SetRenderTargets $textures');
+		d.setRenderTargets(textures);
+	}
+
 	override function present() {
 		log('Present');
 		d.present();
