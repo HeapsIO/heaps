@@ -50,11 +50,11 @@ class BigTexture {
 	var waitTimer : haxe.Timer;
 	var lastEvent : Float;
 
-	public function new(id, size, bgColor = 0xFF8080FF) {
+	public function new(id, size, bgColor = 0xFF8080FF, ?allocPos : h3d.impl.AllocPos ) {
 		this.id = id;
 		this.size = size;
 		space = new QuadTree(0,0,size,size);
-		tex = new h3d.mat.Texture(1, 1);
+		tex = new h3d.mat.Texture(1, 1, allocPos);
 		tex.clear(bgColor);
 		pending = [];
 	}
