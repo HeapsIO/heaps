@@ -8,11 +8,12 @@ enum Flags {
 
 class Pixels {
 	public var bytes : haxe.io.Bytes;
-	public var format : PixelFormat;
+	public var format(default,set) : PixelFormat;
 	public var width : Int;
 	public var height : Int;
 	public var offset : Int;
 	public var flags: haxe.EnumFlags<Flags>;
+	var bpp : Int;
 
 	public function new(width : Int, height : Int, bytes : haxe.io.Bytes, format : hxd.PixelFormat, offset = 0) {
 		this.width = width;
@@ -20,6 +21,16 @@ class Pixels {
 		this.bytes = bytes;
 		this.format = format;
 		this.offset = offset;
+	}
+
+	function set_format(fmt) {
+		this.format = fmt;
+		bpp = bytesPerPixel(fmt);
+		return fmt;
+	}
+
+	function invalidFormat() {
+		throw "Unsupported format for this operation : " + format;
 	}
 
 	public function clear( color : Int ) {
@@ -40,6 +51,8 @@ class Pixels {
 			b = color >> 8;
 			c = color >> 16;
 			d = color >>> 24;
+		default:
+			invalidFormat();
 		}
 		a &= 0xFF;
 		b &= 0xFF;
@@ -93,7 +106,7 @@ class Pixels {
 		if( flags.has(FlipY) == b ) return;
 		if( flags.has(ReadOnly) ) copyInner();
 		if( b ) flags.set(FlipY) else flags.unset(FlipY);
-		var stride = width * bytesPerPixel(format);
+		var stride = width * bpp;
 		for( y in 0...height >> 1 ) {
 			var p1 = y * stride;
 			var p2 = (height - 1 - y) * stride;
@@ -161,20 +174,23 @@ class Pixels {
 
 	public function getPixel(x, y) : Int {
 		if( flags.has(FlipY) ) y = height - 1 - y;
-		var p = ((x + y * width) << 2) + offset;
+		var p = ((x + y * width) * bpp) + offset;
 		switch(format) {
 		case BGRA:
 			return bytes.get(p) | (bytes.get( p+1 )<<8) | (bytes.get( p+2 )<<16) | (bytes.get( p+3 )<<24);
 		case RGBA:
 			return (bytes.get(p)<<16) | (bytes.get( p+1 )<<8) | bytes.get( p+2 ) | (bytes.get( p+3 )<<24);
 		case ARGB:
-			return (bytes.get(p)<<24) | (bytes.get( p+1 )<<16) | (bytes.get( p+2 )<<8) | bytes.get( p+3 );
+			return (bytes.get(p) << 24) | (bytes.get( p + 1 ) << 16) | (bytes.get( p + 2 ) << 8) | bytes.get( p + 3 );
+		default:
+			invalidFormat();
+			return 0;
 		}
 	}
 
 	public function setPixel(x, y, color) : Void {
 		if( flags.has(FlipY) ) y = height - 1 - y;
-		var p = ((x + y * width) << 2) + offset;
+		var p = ((x + y * width) * bpp) + offset;
 		var a = color >>> 24;
 		var r = (color >> 16) & 0xFF;
 		var g = (color >> 8) & 0xFF;
@@ -195,6 +211,8 @@ class Pixels {
 			bytes.set(p++, r);
 			bytes.set(p++, g);
 			bytes.set(p++, b);
+		default:
+			invalidFormat();
 		}
 	}
 
@@ -234,6 +252,8 @@ class Pixels {
 	public static function bytesPerPixel( format : PixelFormat ) {
 		return switch( format ) {
 		case ARGB, BGRA, RGBA: 4;
+		case RGBA16F: 8;
+		case RGBA32F: 16;
 		}
 	}
 

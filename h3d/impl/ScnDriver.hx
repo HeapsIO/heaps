@@ -72,6 +72,10 @@ class ScnDriver extends Driver {
 		return d.hasFeature(f);
 	}
 
+	override function isSupportedFormat( fmt ) {
+		return d.isSupportedFormat(fmt);
+	}
+
 	override function isDisposed() {
 		return d.isDisposed();
 	}

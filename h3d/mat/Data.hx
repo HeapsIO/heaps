@@ -94,22 +94,6 @@ enum TextureFlags {
 	**/
 	Dynamic;
 	/**
-		The texture format will contain Float values
-	**/
-	FmtFloat;
-	/**
-		16-bit RGB format
-	**/
-	Fmt5_6_5;
-	/**
-		16-bit RGBA format
-	**/
-	Fmt4_4_4_4;
-	/**
-		16-bit RGBA format (1 bit of alpha)
-	**/
-	Fmt5_5_5_1;
-	/**
 		Assumes that the color value of the texture is premultiplied by the alpha component.
 	**/
 	AlphaPremultiplied;
@@ -119,4 +103,5 @@ enum TextureFlags {
 	WasCleared;
 }
 
+typedef TextureFormat = hxd.PixelFormat;
 

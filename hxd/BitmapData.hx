@@ -379,7 +379,7 @@ class BitmapData {
 			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
 		case ARGB:
 			bytes.endian = flash.utils.Endian.BIG_ENDIAN;
-		case RGBA:
+		default:
 			pixels.convert(BGRA);
 			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
 		}

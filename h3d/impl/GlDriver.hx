@@ -371,26 +371,41 @@ class GlDriver extends Driver {
 		gl.viewport(0, 0, width, height);
 	}
 
+	function getChannels( t : Texture ) {
+		return switch( t.internalFmt ) {
+		case GL.RGBA: GL.RGBA;
+		default: throw "Invalid format " + t.internalFmt;
+		}
+	}
+
+	override function isSupportedFormat( fmt : h3d.mat.Data.TextureFormat ) {
+		return switch( fmt ) {
+		case RGBA: true;
+		case RGBA32F: hasFeature(FloatTextures);
+		default: false;
+		}
+	}
+
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		if( t.flags.has(TargetUseDefaultDepth) )
 			throw "TargetUseDefaultDepth not supported in GL";
 		var tt = gl.createTexture();
-		var tt : Texture = { t : tt, width : t.width, height : t.height, fmt : GL.UNSIGNED_BYTE };
-		if( t.flags.has(FmtFloat) )
-			tt.fmt = GL.FLOAT;
-		else if( t.flags.has(Fmt5_5_5_1) )
-			tt.fmt = GL.UNSIGNED_SHORT_5_5_5_1;
-		else if( t.flags.has(Fmt5_6_5) )
-			tt.fmt = GL.UNSIGNED_SHORT_5_6_5;
-		else if( t.flags.has(Fmt4_4_4_4) )
-			tt.fmt = GL.UNSIGNED_SHORT_4_4_4_4;
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE };
+		switch( t.format ) {
+		case RGBA:
+			// default
+		case RGBA32F if( hasFeature(FloatTextures) ):
+			tt.pixelFmt = GL.FLOAT;
+		default:
+			throw "Unsupported texture format "+t.format;
+		}
 		t.lastFrame = frame;
 		t.flags.unset(WasCleared);
 		gl.bindTexture(GL.TEXTURE_2D, tt.t);
 		var mipMap = t.flags.has(MipMapped) ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR;
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, mipMap);
 		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, mipMap);
-		gl.texImage2D(GL.TEXTURE_2D, 0, GL.RGBA, tt.width, tt.height, 0, GL.RGBA, tt.fmt, null);
+		gl.texImage2D(GL.TEXTURE_2D, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 		if( t.flags.has(Target) ) {
 			var fb = gl.createFramebuffer();
 			gl.bindFramebuffer(GL.FRAMEBUFFER, fb);
@@ -458,38 +473,39 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-		#if nme
+		#if (nme || hxsdl)
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
 		#else
-		var img = bmp.toNative();
-		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-		#if hxsdl
-		var pixels = bmp.getPixels();
-		pixels.setFlip(true);
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, bmp.width, bmp.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels.bytes.getData());
-		pixels.dispose();
-		#elseif lime
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, bmp.width, bmp.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, img.image.data);
-		#else
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, GL.RGBA, GL.UNSIGNED_BYTE, img.getImageData(0, 0, bmp.width, bmp.height));
+		if( t.format != RGBA ) {
+			var pixels = bmp.getPixels();
+			uploadTexturePixels(t, pixels, mipLevel, side);
+			pixels.dispose();
+		} else {
+			var img = bmp.toNative();
+			gl.bindTexture(GL.TEXTURE_2D, t.t.t);
+			#if lime
+			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, bmp.width, bmp.height, 0, getChannels(t.t), t.pixelFmt, img.image.data);
+			#else
+			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
+			#end
+			if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
+			gl.bindTexture(GL.TEXTURE_2D, null);
+			t.flags.set(WasCleared);
+		}
 		#end
-		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
-		gl.bindTexture(GL.TEXTURE_2D, null);
-		#end
-		t.flags.set(WasCleared);
 	}
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-		pixels.convert(RGBA);
+		pixels.convert(t.format);
 		#if hxsdl
 		pixels.setFlip(true);
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels.bytes.getData());
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, pixels.bytes.getData());
 		#else
 		var pixels = new Uint8Array(pixels.bytes.getData());
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, GL.RGBA, t.width, t.height, 0, GL.RGBA, GL.UNSIGNED_BYTE, pixels);
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, pixels);
 		#end
 		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);

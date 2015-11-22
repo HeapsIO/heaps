@@ -25,6 +25,10 @@ class LogDriver extends Driver {
 		return d.hasFeature(f);
 	}
 
+	override function isSupportedFormat( fmt : h3d.mat.Data.TextureFormat ) {
+		return d.isSupportedFormat(fmt);
+	}
+
 	override function isDisposed() {
 		return d.isDisposed();
 	}

@@ -254,10 +254,22 @@ class Stage3dDriver extends Driver {
 		return levels;
 	}
 
+	override function isSupportedFormat( fmt : h3d.mat.Data.TextureFormat ) {
+		return switch( fmt ) {
+		case BGRA: true;
+		case RGBA16F: true;
+		default: false;
+		}
+	}
+
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		if( t.flags.has(TargetDepth) )
 			throw "TargetDepth not supported in Stage3D";
-		var fmt = flash.display3D.Context3DTextureFormat.BGRA;
+		var fmt = switch( t.format ) {
+		case BGRA: flash.display3D.Context3DTextureFormat.BGRA;
+		case RGBA16F: flash.display3D.Context3DTextureFormat.RGBA_HALF_FLOAT;
+		default: throw "Unsupported texture format " + t.format;
+		}
 		t.lastFrame = frame;
 		t.flags.unset(WasCleared);
 		try {

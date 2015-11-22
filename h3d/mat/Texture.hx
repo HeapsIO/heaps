@@ -7,14 +7,15 @@ class Texture {
 	static var UID = 0;
 
 	/**
-		The preferred native format that the Driver will process faster.
+		The default texture color format
 	**/
-	public static var nativeFormat(default,never) : hxd.PixelFormat =
+	public static var nativeFormat(default,never) : TextureFormat =
 		#if flash
-			BGRA;
+			BGRA
 		#else
-			RGBA; // OpenGL
-		#end
+			RGBA // OpenGL, WebGL
+		#end;
+
 	/**
 		Tells if the Driver requires y-flipping the texture pixels before uploading.
 	**/
@@ -30,6 +31,7 @@ class Texture {
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var flags(default, null) : haxe.EnumFlags<TextureFlags>;
+	public var format(default, null) : TextureFormat;
 
 	var lastFrame : Int;
 	var bits : Int;
@@ -43,12 +45,14 @@ class Texture {
 	**/
 	public var realloc : Void -> Void;
 
-	public function new(w, h, ?flags : Array<TextureFlags>, ?allocPos : h3d.impl.AllocPos ) {
+	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat, ?allocPos : h3d.impl.AllocPos ) {
 		#if !noEngine
 		var engine = h3d.Engine.getCurrent();
 		this.mem = engine.mem;
 		#end
+		if( format == null ) format = nativeFormat;
 		this.id = ++UID;
+		this.format = format;
 		this.flags = new haxe.EnumFlags();
 		if( flags != null )
 			for( f in flags )
