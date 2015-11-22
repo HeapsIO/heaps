@@ -98,7 +98,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	public function pushTarget( t : h3d.mat.Texture, startX = 0, startY = 0, width = -1, height = -1 ) {
 		flush();
-		engine.setTarget(t);
+		engine.pushTarget(t);
 		initShaders(baseShaderList);
 		if( width < 0 ) width = t == null ? scene.width : t.width;
 		if( height < 0 ) height = t == null ? scene.height : t.height;
@@ -115,6 +115,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		flush();
 		var tinf = targetsStack.pop();
 		if( tinf == null ) throw "Too many popTarget()";
+		engine.popTarget();
 
 		if( !restore ) return;
 
@@ -124,7 +125,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		var startY = tinf == null ? 0 : tinf.y;
 		var width = tinf == null ? scene.width : tinf.w;
 		var height = tinf == null ? scene.height : tinf.h;
-		engine.setTarget(t);
 		initShaders(baseShaderList);
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
 		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);

@@ -18,7 +18,7 @@ class Writer {
 			case Log(str):
 				out.addInt32(str.length);
 				out.addString(str);
-			case Begin, Reset, Present:
+			case Begin, Present:
 			case Clear(color, depth, stencil):
 				out.addByte((color == null ? 0 : 1) | (depth == null ? 0 : 2) | (stencil == null ? 0 : 4));
 				if( color != null ) {

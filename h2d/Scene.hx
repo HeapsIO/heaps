@@ -433,16 +433,18 @@ class Scene extends Layers implements h3d.IDrawable {
 		}
 		engine.begin();
 		engine.setRenderZone(target.x, target.y, target.width, target.height);
+
 		var tex = target.getTexture();
-		engine.setTarget(tex);
+		engine.pushTarget(tex);
 		var ow = width, oh = height, of = fixedSize;
 		setFixedSize(tex.width, tex.height);
 		render(engine);
+		engine.popTarget();
+
 		width = ow;
 		height = oh;
 		fixedSize = of;
 		posChanged = true;
-		engine.setTarget(null);
 		engine.setRenderZone();
 		engine.end();
 		return new Bitmap(target);

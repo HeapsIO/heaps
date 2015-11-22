@@ -6,7 +6,6 @@ enum Operation {
 	Log( str : String );
 	Begin;
 	Clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int );
-	Reset;
 	Resize( width : Int, height : Int );
 	SelectShader( id : Int, ?data : Serialized<hxsl.RuntimeShader> );
 	Material( bits : Int );

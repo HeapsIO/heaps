@@ -95,9 +95,6 @@ class Driver {
 	public function captureRenderBuffer( pixels : hxd.Pixels ) {
 	}
 
-	public function reset() {
-	}
-
 	public function getDriverName( details : Bool ) {
 		return "Not available";
 	}

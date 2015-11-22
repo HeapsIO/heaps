@@ -94,11 +94,6 @@ class ScnDriver extends Driver {
 		d.captureRenderBuffer(pixels);
 	}
 
-	override function reset() {
-		ops.push(Reset);
-		d.reset();
-	}
-
 	override function getDriverName( details : Bool ) {
 		return d.getDriverName(details);
 	}
@@ -330,8 +325,6 @@ class ScnDriver extends Driver {
 			d.begin(++frame);
 		case Clear(color, depth, stencil):
 			d.clear(color,depth,stencil);
-		case Reset:
-			d.reset();
 		case Resize(w, h):
 			d.resize(w,h);
 		case SelectShader(id, data):

@@ -29,7 +29,7 @@ class Displacement extends Filter {
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
 		var out = ctx.textures.allocTarget("displacementOutput", ctx, t.width, t.height, false);
-		ctx.engine.setTarget(out);
+		ctx.engine.pushTarget(out);
 		var s = disp.shader;
 		s.texture = t.getTexture();
 		s.displacement.set(dispX / t.width, dispY / t.height);
@@ -37,6 +37,7 @@ class Displacement extends Filter {
 		s.normalPos.set(normalMap.u, normalMap.v);
 		s.normalScale.set(normalMap.u2 - normalMap.u, normalMap.v2 - normalMap.v);
 		disp.render();
+		ctx.engine.popTarget();
 		return h2d.Tile.fromTexture(out);
 	}
 

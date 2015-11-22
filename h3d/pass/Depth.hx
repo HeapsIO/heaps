@@ -18,9 +18,10 @@ class Depth extends Default {
 
 	override function draw( passes ) {
 		var texture = tcache.allocTarget("depthMap", ctx, ctx.engine.width >> reduceSize, ctx.engine.height >> reduceSize);
-		ctx.engine.setTarget(texture);
+		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(enableSky ? 0 : 0xFF0000, 1);
 		passes = super.draw(passes);
+		ctx.engine.popTarget();
 		ctx.setGlobalID(depthMapId, texture);
 		return passes;
 	}

@@ -50,7 +50,7 @@ class ColorMatrix extends ScreenFx<ColorMatrixShader> {
 	inline function set_maskPower(p) return shader.maskPower = p;
 
 	public function apply( src : h3d.mat.Texture, out : h3d.mat.Texture, ?mask : h3d.mat.Texture, ?maskMatrix : h2d.col.Matrix ) {
-		var old = engine.setTarget(out);
+		engine.pushTarget(out);
 		shader.texture = src;
 		shader.useMask = mask != null;
 		if( mask != null ) {
@@ -64,7 +64,7 @@ class ColorMatrix extends ScreenFx<ColorMatrixShader> {
 			}
 		}
 		render();
-		engine.setTarget(old);
+		engine.popTarget();
 	}
 
 }

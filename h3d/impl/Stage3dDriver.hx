@@ -102,7 +102,7 @@ class Stage3dDriver extends Driver {
 		this.frame = frame;
 	}
 
-	override function reset() {
+	function reset() {
 		enableDraw = true;
 		curMatBits = -1;
 		curShader = null;

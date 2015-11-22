@@ -183,10 +183,11 @@ class Texture {
 		#if js
 
 		var e = h3d.Engine.getCurrent();
-		var old = e.setTarget(this);
+		e.pushTarget(this);
+		@:privateAccess e.flushTarget();
 		var pixels = hxd.Pixels.alloc(width, height, RGBA);
 		e.driver.captureRenderBuffer(pixels);
-		e.setTarget(old);
+		e.popTarget();
 
 		#else
 		var e = h3d.Engine.getCurrent();

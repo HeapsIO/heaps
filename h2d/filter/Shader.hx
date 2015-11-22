@@ -25,10 +25,11 @@ class Shader< T:h3d.shader.ScreenShader > extends Filter {
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
 		var out = ctx.textures.allocTarget("shaderTmp", ctx, t.width, t.height, false);
-		ctx.engine.setTarget(out);
+		ctx.engine.pushTarget(out);
 		Reflect.setField(shader, textureParam + "__", t.getTexture());
 		if( nearest ) t.getTexture().filter = Nearest;
 		pass.render();
+		ctx.engine.popTarget();
 		return h2d.Tile.fromTexture(out);
 	}
 

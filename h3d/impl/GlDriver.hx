@@ -121,10 +121,6 @@ class GlDriver extends Driver {
 		curAttribs = 0;
 		curMatBits = -1;
 		#end
-		reset();
-	}
-
-	override function reset() {
 		gl.useProgram(null);
 		curShader = null;
 		curBuffer = null;

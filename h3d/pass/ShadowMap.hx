@@ -83,10 +83,11 @@ class ShadowMap extends Default {
 		lightCamera.pos.load(ct);
 		lightCamera.update();
 
-		ctx.engine.setTarget(texture);
+		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1, tcache.fullClearRequired ? 0 : null);
 		passes = super.draw(passes);
 		if( border != null ) border.render();
+		ctx.engine.popTarget();
 
 		if( blur.quality > 0 && blur.passes > 0 )
 			blur.apply(texture, tcache.allocTarget("tmpBlur", ctx, size, size, false), true);

@@ -23,6 +23,7 @@ class Renderer {
 	var allPasses : Array<{ name : String, p : h3d.pass.Base }>;
 	var ctx : RenderContext;
 	var tcache : h3d.impl.TextureCache;
+	var hasSetTarget = false;
 
 	public function new() {
 		passes = new SMap();
@@ -122,8 +123,18 @@ class Renderer {
 		ctx.engine.clear(color, depth, stencil);
 	}
 
+	inline function pushTarget( tex ) {
+		ctx.engine.pushTarget(tex);
+	}
+
 	inline function setTarget( tex ) {
-		ctx.engine.setTarget(tex);
+		if( hasSetTarget ) ctx.engine.popTarget();
+		ctx.engine.pushTarget(tex);
+		hasSetTarget = true;
+	}
+
+	inline function popTarget() {
+		ctx.engine.popTarget();
 	}
 
 	function get( name : String ) {
@@ -148,10 +159,8 @@ class Renderer {
 				var passes = pdata == null ? null : pdata.passes;
 				if( p.name == "alpha" )
 					passes = depthSort(passes);
-				if( p.name == "default" ) {
-					setTarget(null);
+				if( p.name == "default" )
 					passes = depthSort(passes, true);
-				}
 				passes = p.p.draw(passes);
 				if( pdata != null ) {
 					pdata.passes = passes;
@@ -163,12 +172,17 @@ class Renderer {
 
 	public function process( ctx : RenderContext, passes : Array<PassGroup> ) {
 		this.ctx = ctx;
+		hasSetTarget = false;
 		// alloc passes
 		for( p in passes ) {
 			getPass(p.name).setContext(ctx);
 			passGroups.set(p.name, p);
 		}
 		render();
+		if( hasSetTarget ) {
+			ctx.engine.popTarget();
+			hasSetTarget = false;
+		}
 		for( p in passes )
 			passGroups.set(p.name, null);
 	}

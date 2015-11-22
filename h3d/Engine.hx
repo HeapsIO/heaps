@@ -1,6 +1,15 @@
 package h3d;
 import h3d.mat.Data;
 
+private class TargetTmp {
+	public var t : h3d.mat.Texture;
+	public var next : TargetTmp;
+	public function new(t, n) {
+		this.t = t;
+		this.next = n;
+	}
+}
+
 class Engine {
 
 	public var driver(default,null) : h3d.impl.Driver;
@@ -27,7 +36,11 @@ class Engine {
 	var lastTime : Float;
 	var antiAlias : Int;
 	var tmpVector = new h3d.Vector();
+
+	var targetTmp : TargetTmp;
+	var targetStack : TargetTmp;
 	var currentTarget : h3d.mat.Texture;
+	var needFlushTarget : Bool;
 
 	@:access(hxd.Stage)
 	public function new( hardware = true, aa = 0 ) {
@@ -80,6 +93,7 @@ class Engine {
 	}
 
 	public function selectShader( shader : hxsl.RuntimeShader ) {
+		flushTarget();
 		if( driver.selectShader(shader) )
 			shaderSwitches++;
 	}
@@ -95,6 +109,7 @@ class Engine {
 	function selectBuffer( buf : Buffer ) {
 		if( buf.isDisposed() )
 			return false;
+		flushTarget();
 		driver.selectBuffer(buf);
 		return true;
 	}
@@ -161,6 +176,7 @@ class Engine {
 	public function renderMultiBuffers( buffers : Buffer.BufferOffset, indexes : Indexes, startTri = 0, drawTri = -1 ) {
 		var maxTri = Std.int(indexes.count / 3);
 		if( maxTri <= 0 ) return;
+		flushTarget();
 		driver.selectMultiBuffers(buffers);
 		if( indexes.isDisposed() )
 			return;
@@ -244,14 +260,11 @@ class Engine {
 		drawTriangles = 0;
 		shaderSwitches = 0;
 		drawCalls = 0;
-		currentTarget = null;
+		targetStack = null;
+		needFlushTarget = currentTarget != null;
 		driver.begin(frameCount);
 		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
 		return true;
-	}
-
-	function reset() {
-		driver.reset();
 	}
 
 	public function hasFeature(f) {
@@ -260,29 +273,49 @@ class Engine {
 
 	public function end() {
 		driver.present();
-		reset();
 	}
 
-	public function getTarget() {
-		return currentTarget;
+	public function pushTarget( tex : h3d.mat.Texture ) {
+		var c = targetTmp;
+		if( c == null )
+			c = new TargetTmp(tex, targetStack);
+		else {
+			targetTmp = c.next;
+			c.t = tex;
+			c.next = targetStack;
+		}
+		targetStack = c;
+		needFlushTarget = currentTarget != tex;
 	}
 
-	/**
-	 * Setus a render target to do off screen rendering, might be costly on low end devices
-     * setTarget to null when you're finished rendering to it.
-	 */
-	public function setTarget( tex : h3d.mat.Texture ) {
-		var prev = currentTarget;
-		if( prev == tex )
-			return prev;
+	public function popTarget() {
+		var c = targetStack;
+		if( c == null )
+			throw "popTarget() with no matching pushTarget()";
+		targetStack = c.next;
+		var tex = targetStack == null ? null : targetStack.t;
+		needFlushTarget = currentTarget != tex;
+		// recycle
+		c.t = null;
+		c.next = targetTmp;
+		targetTmp = c;
+	}
+
+	inline function flushTarget() {
+		if( needFlushTarget ) doFlushTarget();
+	}
+
+	function doFlushTarget() {
+		var tex = targetStack == null ? null : targetStack.t;
 		currentTarget = tex;
 		driver.setRenderTarget(tex);
-		return prev;
+		needFlushTarget = false;
 	}
 
 	public function clear( ?color : Int, ?depth : Float, ?stencil : Int ) {
 		if( color != null )
 			tmpVector.setColor(color);
+		flushTarget();
 		driver.clear(color == null ? null : tmpVector, depth, stencil);
 	}
 

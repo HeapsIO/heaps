@@ -49,11 +49,6 @@ class LogDriver extends Driver {
 		d.captureRenderBuffer(pixels);
 	}
 
-	override function reset() {
-		log('Reset');
-		d.reset();
-	}
-
 	override function getDriverName( details : Bool ) {
 		return d.getDriverName(details);
 	}

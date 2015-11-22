@@ -20,12 +20,12 @@ class Copy extends ScreenFx<CopyShader> {
 
 	public function apply( from, to, ?blend : h3d.mat.BlendMode, ?uvDelta : h3d.Vector ) {
 		pass.setBlendMode(blend == null ? None : blend);
-		var prev = engine.setTarget(to);
+		engine.pushTarget(to);
 		shader.texture = from;
 		if( uvDelta == null ) shader.uvDelta.set(0, 0) else shader.uvDelta.set(uvDelta.x, uvDelta.y);
 		render();
 		shader.texture = null;
-		engine.setTarget(prev);
+		engine.popTarget();
 	}
 
 	static var inst : Copy;
