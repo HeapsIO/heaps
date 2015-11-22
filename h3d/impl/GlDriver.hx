@@ -146,7 +146,7 @@ class GlDriver extends Driver {
 			var lid = Std.parseInt(log.substr(9));
 			var line = lid == null ? null : code.split("\n")[lid - 1];
 			if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
-			throw "An error occurred compiling the shaders: " + log + line;
+			throw "An error occurred compiling the shaders: " + log + line+"\n\n"+code;
 		}
 		return new CompiledShader(s, shader.vertex, shader);
 	}
@@ -654,6 +654,10 @@ class GlDriver extends Driver {
 		tex.lastFrame = frame;
 		gl.bindFramebuffer(GL.FRAMEBUFFER, tex.t.fb);
 		gl.viewport(0, 0, tex.width, tex.height);
+	}
+
+	override public function setRenderTargets( textures : Array<h3d.mat.Texture> )  {
+		throw "TODO";
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
