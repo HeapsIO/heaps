@@ -18,6 +18,7 @@ class WorldChunk {
 		root = new h3d.scene.Object();
 		buffers = new Map();
 		bounds = new h3d.col.Bounds();
+		root.name = "chunk[" + cx + "-" + cy + "]";
 	}
 
 	public function dispose() {
@@ -36,6 +37,7 @@ class WorldMaterial {
 	public var lights : Bool;
 	public var shadows : Bool;
 	public var shaders : Array<hxsl.Shader>;
+	public var name : String;
 
 	public function new() {
 		lights = true;
@@ -296,11 +298,6 @@ class World extends Object {
 		mesh.material.mainPass.enableLights = mat.lights;
 		mesh.material.shadows = mat.shadows;
 
-		if(mat.shadows) {
-			mesh.material.allocPass("normal");
-			mesh.material.allocPass("depth");
-		}
-
 		for(s in mat.shaders)
 			mesh.material.mainPass.addShader(s);
 
@@ -335,6 +332,7 @@ class World extends Object {
 			var b = c.buffers.get(g.m.bits);
 			if( b == null ) {
 				b = new h3d.scene.Mesh(new h3d.prim.BigPrimitive(getStride(model), true), c.root);
+				b.name = g.m.name;
 				c.buffers.set(g.m.bits, b);
 				initMaterial(b, g.m);
 			}
