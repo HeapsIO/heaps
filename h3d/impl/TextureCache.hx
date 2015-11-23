@@ -19,6 +19,10 @@ class TextureCache {
 		return cache[index];
 	}
 
+	public function set( t, index ) {
+		cache[index] = t;
+	}
+
 	public function begin( ctx : h3d.impl.RenderContext ) {
 		if( frame != ctx.frame ) {
 			// dispose extra textures we didn't use

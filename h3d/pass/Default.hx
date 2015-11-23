@@ -42,6 +42,10 @@ class Default extends Base {
 		return tcache.get(index);
 	}
 
+	override public function setTexture(t:h3d.mat.Texture, index = 0) {
+		tcache.set(t, index);
+	}
+
 	override function dispose() {
 		super.dispose();
 		tcache.dispose();
