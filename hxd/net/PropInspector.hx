@@ -214,6 +214,7 @@ class PropInspector extends cdb.jq.Client {
 		if( sameValue(oldV, newV) )
 			return;
 		history.push( { path : path, oldV : oldV, newV : newV } );
+		redoHistory = [];
 		onChange(path, oldV, newV);
 	}
 
@@ -350,12 +351,13 @@ class PropInspector extends cdb.jq.Client {
 					}
 				}
 			));
-			j.mousedown(function(e) {
+			jprop.mousedown(function(e) {
 				if( e.which == 3 ) {
+					if( jprop.find("input").length > 0 ) return;
 					var old = get();
 					var cur : Float = old;
 					j.addClass("active");
-					j.special("startDrag", [], function(v: { done:Bool, dx:Float, dy:Float } ) {
+					jprop.special("startDrag", [], function(v: { done:Bool, dx:Float, dy:Float } ) {
 						var delta = ( Math.max(Math.abs(old == 0 ? 1 : old),1e-3) / 200 ) * v.dx;
 						cur += delta;
 						cur = hxd.Math.fmt(cur);
@@ -381,12 +383,13 @@ class PropInspector extends cdb.jq.Client {
 					}
 				}
 			));
-			j.mousedown(function(e) {
+			jprop.mousedown(function(e) {
 				if( e.which == 3 ) {
+					if( jprop.find("input").length > 0 ) return;
 					var old = get();
 					var cur = old;
 					j.addClass("active");
-					j.special("startDrag", [], function(v: { done:Bool, dx:Float, dy:Float } ) {
+					jprop.special("startDrag", [], function(v: { done:Bool, dx:Float, dy:Float } ) {
 						var delta = ( Math.max(Math.abs(old == 0 ? 1 : old),1e-3) / 100 ) * v.dx;
 						cur += delta;
 						cur = hxd.Math.fmt(cur);
@@ -420,6 +423,7 @@ class PropInspector extends cdb.jq.Client {
 				));
 				jv.mousedown(function(e) {
 					if( e.which == 3 ) {
+						if( jv.find("input").length > 0 ) return;
 						var old = values[i];
 						var cur = old;
 						jv.addClass("active");
@@ -552,11 +556,15 @@ class PropInspector extends cdb.jq.Client {
 	}
 
 	function editValue( j : JQuery, get : Void -> String, set : String -> Void ) {
+
+		if( j.find("input").length > 0 ) return;
+
 		var input = J("<input>");
 		input.attr("value", get());
 		j.text("");
 		input.appendTo(j);
 		input.focus();
+		input.select();
 		input.blur(function(_) {
 			input.remove();
 			set(input.getValue());

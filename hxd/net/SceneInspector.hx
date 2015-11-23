@@ -289,9 +289,16 @@ class SceneInspector {
 	}
 
 	function load() {
+		try {
 		hxd.File.browse(function(b) {
 			savedFile = b.fileName;
 			b.load(function(bytes) {
+
+				// reset to default
+				for( s in state.keys() )
+					inspect.setPathPropValue(s, state.get(s).original);
+				state = new Map();
+
 				var o : Dynamic = haxe.Json.parse(bytes.toString());
 				function browseRec( path : Array<String>, v : Dynamic ) {
 					switch( Type.typeof(v) ) {
@@ -315,6 +322,9 @@ class SceneInspector {
 			});
 
 		},{ defaultPath : savedFile, fileTypes : [ { name:"Scene Props", extensions:["js"] } ] } );
+		} catch( e : Dynamic ) {
+			// already open
+		}
 	}
 
 	function save() {
@@ -334,7 +344,11 @@ class SceneInspector {
 			Reflect.setField(o, path[0], state.get(s).current);
 		}
 		var js = haxe.Json.stringify(o, null, "\t");
-		hxd.File.saveAs(haxe.io.Bytes.ofString(js), { defaultPath : savedFile, saveFileName : function(name) savedFile = name } );
+		try {
+			hxd.File.saveAs(haxe.io.Bytes.ofString(js), { defaultPath : savedFile, saveFileName : function(name) savedFile = name } );
+		} catch( e : Dynamic ) {
+			// already open
+		}
 	}
 
 	public function addNode( name : String, icon : String, ?getProps : Void -> Array<Property>, ?parent : Node ) : Node {
