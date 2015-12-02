@@ -61,7 +61,7 @@ class WorldModelGeometry {
 }
 
 class WorldModel {
-	public var r : hxd.res.FbxModel;
+	public var r : hxd.res.Model;
 	public var stride : Int;
 	public var buf : hxd.FloatBuffer;
 	public var idx : hxd.IndexBuffer;
@@ -131,7 +131,7 @@ class World extends Object {
 		}
 	}
 
-	function loadMaterialTexture( r : hxd.res.FbxModel, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
+	function loadMaterialTexture( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
 		var texturePath = r.entry.directory + mat.diffuseTexture.split("/").pop();
 
 		var m = textures.get(texturePath);
@@ -186,7 +186,7 @@ class World extends Object {
 		}
 	}
 
-	public function loadModel( r : hxd.res.FbxModel ) : WorldModel {
+	public function loadModel( r : hxd.res.Model ) : WorldModel {
 		var lib = r.toHmd();
 		var models = lib.header.models;
 		var format = buildFormat();
