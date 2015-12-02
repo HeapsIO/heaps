@@ -28,10 +28,10 @@ class Loader {
 		return new Any(this, fs.get(path));
 	}
 
-	function loadFbxModel( path : String ) : FbxModel {
-		var m : FbxModel = cache.get(path);
+	function loadModel( path : String ) : Model {
+		var m : Model = cache.get(path);
 		if( m == null ) {
-			m = new FbxModel(fs.get(path));
+			m = new Model(fs.get(path));
 			cache.set(path, m);
 		}
 		return m;

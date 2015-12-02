@@ -368,7 +368,7 @@ class FileTree {
 		case "jpg", "png", "jpeg", "gif":
 			return { e : macro loader.loadImage($epath), t : macro : hxd.res.Image };
 		case "fbx", "hmd":
-			return { e : macro loader.loadFbxModel($epath), t : macro : hxd.res.FbxModel };
+			return { e : macro loader.loadModel($epath), t : macro : hxd.res.Model };
 		case "ttf":
 			return { e : macro loader.loadFont($epath), t : macro : hxd.res.Font };
 		case "fnt":

@@ -28,7 +28,7 @@ class Any extends Resource {
 	}
 
 	public function toHmd() {
-		return loader.loadFbxModel(entry.path).toHmd();
+		return loader.loadModel(entry.path).toHmd();
 	}
 
 	public function toTexture() {
