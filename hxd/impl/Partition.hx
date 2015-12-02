@@ -74,11 +74,50 @@ class Partition<T : { x : Float, y : Float, partChunk : Int, partNext : T, partQ
 		return new PartitionIterator(q);
 	}
 
+	public inline function count( x : Float, y : Float, ray : Float, cond : T -> Bool ) {
+		var k = 0;
+		iterElements(x, y, ray, function(e) {
+			if( cond(e) ) k++;
+		});
+		return k;
+	}
+
 	function runQueryDist(x, y, r) {
 		return runQueryInline(x, y, r, function(e) { var dx = e.x - x; var dy = e.y - y; return dx * dx + dy * dy; } );
 	}
 
 	inline function runQueryInline(x:Float, y:Float, r:Float, calcDistSq : T -> Float ) : T {
+		var rr = r * r;
+		var head : T = null, last : T = null;
+		iterElements(x, y, r, function(e) {
+			var d = calcDistSq(e);
+			if( d <= rr && d >= 0. ) {
+				if( head == null ) {
+					head = last = e;
+				} else {
+					last.partQueryNext = e;
+					last = e;
+				}
+			}
+		});
+		if( last != null )
+			last.partQueryNext = null;
+		return head;
+	}
+
+	public inline function queryNearest( x : Float, y : Float, ray : Float, calcDistSq : T -> Float ) : T {
+		var best : T = null, bestD = ray * ray;
+		iterElements(x,y,ray,function(e) {
+			var d = calcDistSq(e);
+			if( d <= bestD && d >= 0. ) {
+				best = e;
+				bestD = d;
+			}
+		});
+		return best;
+	}
+
+	inline function iterElements(x:Float, y:Float, r:Float, iterFun) {
 		var xMin = Math.floor(x - r) >> pbits;
 		var yMin = Math.floor(y - r) >> pbits;
 		var xMax = (Math.ceil(x + r) + (psize-1)) >> pbits;
@@ -91,8 +130,6 @@ class Partition<T : { x : Float, y : Float, partChunk : Int, partNext : T, partQ
 		if( yMin < 0 ) yMin = 0;
 		if( xMax > pwidth ) xMax = pwidth;
 		if( yMax > pheight ) yMax = pheight;
-		var rr = r * r;
-		var r : T = null, last : T = null;
 		for( cy in yMin...yMax ) {
 			var cid = cy * pwidth + xMin;
 			for( cx in xMin...xMax ) {
@@ -100,56 +137,11 @@ class Partition<T : { x : Float, y : Float, partChunk : Int, partNext : T, partQ
 				var e = c.elements;
 				if( e == null ) continue;
 				while( e != null ) {
-					var d = calcDistSq(e);
-					if( d <= rr && d >= 0. ) {
-						if( r == null ) {
-							r = last = e;
-						} else {
-							last.partQueryNext = e;
-							last = e;
-						}
-					}
+					iterFun(e);
 					e = e.partNext;
 				}
 			}
 		}
-		if( last != null )
-			last.partQueryNext = null;
-		return r;
-	}
-
-
-	public inline function queryNearest( x : Float, y : Float, ray : Float, calcDistSq : T -> Float ) : T {
-		var xMin = Math.floor(x - ray) >> pbits;
-		var yMin = Math.floor(y - ray) >> pbits;
-		var xMax = (Math.ceil(x + ray) + (psize-1)) >> pbits;
-		var yMax = (Math.ceil(y + ray) + (psize-1)) >> pbits;
-		var best : T = null, bestD = ray * ray;
-		xMin -= 1;
-		yMin -= 1;
-		xMax += 2;
-		yMax += 2;
-		if( xMin < 0 ) xMin = 0;
-		if( yMin < 0 ) yMin = 0;
-		if( xMax > pwidth ) xMax = pwidth;
-		if( yMax > pheight ) yMax = pheight;
-		for( cy in yMin...yMax ) {
-			var cid = cy * pwidth + xMin;
-			for( cx in xMin...xMax ) {
-				var c = chunks[cid++];
-				var e = c.elements;
-				if( e == null ) continue;
-				while( e != null ) {
-					var d = calcDistSq(e);
-					if( d <= bestD && d >= 0. ) {
-						best = e;
-						bestD = d;
-					}
-					e = e.partNext;
-				}
-			}
-		}
-		return best;
 	}
 
 
