@@ -53,6 +53,7 @@ class Pixels {
 			d = color >>> 24;
 		default:
 			invalidFormat();
+			a = b = c = d = 0;
 		}
 		a &= 0xFF;
 		b &= 0xFF;
