@@ -120,6 +120,10 @@ class Text extends Drawable {
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
 			if( font.charset.isBreakChar(cc) ) {
+				if( lines.length == 0 && leftMargin > 0 && x > maxWidth ) {
+					lines.push("");
+					x -= leftMargin;
+				}
 				var size = x + esize + letterSpacing;
 				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
