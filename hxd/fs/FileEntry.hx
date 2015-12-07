@@ -41,9 +41,7 @@ class FileEntry {
 	function get_directory() {
 		var p = path.split("/");
 		p.pop();
-		if( p.length == 0 )
-			return "";
-		return p.join("/")+"/";
+		return p.join("/");
 	}
 
 	function get_extension() {
