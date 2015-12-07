@@ -91,7 +91,7 @@ class MemoryManager {
 			if( usedMemory - freeMemorySize() == size ) {
 				if( bufferCount >= MAX_BUFFERS )
 					throw "Too many buffer";
-				throw "Memory full";
+				throw "Memory full ("+(size>>10)+" KB,"+bufferCount+" buffers)";
 			}
 		}
 		usedMemory += mem;
@@ -326,7 +326,7 @@ class MemoryManager {
 			bufferCount : bufferCount,
 			freeManagedMemory : free,
 			managedMemory : total,
-			totalVertexMemory : usedMemory,
+			totalMemory : usedMemory + texMemory,
 			textureCount : textures.length,
 			textureMemory : texMemory,
 		};
