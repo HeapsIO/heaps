@@ -125,6 +125,7 @@ private class SceneObject extends Node {
 class Tool {
 	public var name(default,set) : String;
 	public var icon(default,set) : String;
+	public var title(default,set) : String;
 	public var click : Void -> Void;
 	public var j : JQuery;
 	public var jicon : JQuery;
@@ -145,6 +146,10 @@ class Tool {
 	function set_icon(v) {
 		jicon.attr("class", "fa fa-"+v);
 		return icon = v;
+	}
+	function set_title(v) {
+		j.attr("title", v);
+		return title = v;
 	}
 }
 
@@ -185,10 +190,10 @@ class SceneInspector {
 		init();
 
 		addNode("Renderer", "object-group", getRendererProps);
-		addTool("Load...", "download", load);
-		addTool("Save...", "save", save);
-		addTool("Undo", "undo", inspect.undo);
-		addTool("Repeat", "repeat", inspect.redo);
+		addTool("Load...", "download", load, "Load settings");
+		addTool("Save...", "save", save, "Save settings");
+		addTool("Undo", "undo", inspect.undo, "Undo");
+		addTool("Repeat", "repeat", inspect.redo, "Redo");
 		var pause : Tool = null;
 		pause = addTool("Pause", "pause", function() {
 			if( oldLoop != null ) {
@@ -199,7 +204,8 @@ class SceneInspector {
 				hxd.System.setLoop(pauseLoop);
 			}
 			pause.active = oldLoop != null;
-		});
+		}, "Pause scene");
+		addTool("Statistics", "bar-chart", getStats, "Open statistics");
 	}
 
 	inline function get_connected() {
@@ -218,13 +224,14 @@ class SceneInspector {
 		return inspect.createPanel(title);
 	}
 
-	public function addTool( name : String, icon : String, click : Void -> Void ) {
+	public function addTool( name : String, icon : String, click : Void -> Void, ?title : String = "" ) {
 		var t = new Tool();
 		t.j = J("<li>");
 		t.jicon = J("<i>").appendTo(t.j);
 		t.j.click(function(_) t.click());
 		t.name = name;
 		t.icon = icon;
+		t.title = title;
 		t.click = click;
 		t.j.appendTo(jroot.find("#toolbar"));
 		return t;
@@ -257,7 +264,7 @@ class SceneInspector {
 		if( scene != null )
 			scene.removePass(event);
 		if( s != null )
-			s.addPass(event, true);
+			s.addPass(event);
 		return scene = s;
 	}
 
@@ -273,8 +280,18 @@ class SceneInspector {
 			<ul id="toolbar" class="toolbar">
 			</ul>
 			<div id="scene" class="panel" caption="Scene">
-				<ul id="scontent" class="elt">
+				<ul class="buttons">
+					<li id="bt_hide" title="Show/Hide invisible objects">
+						<i class="fa fa-eye" />
+					</li>
+					<li id="bt_highlight" title="[TODO] Auto highlight in scene selected object">
+						<i class="fa fa-cube" />
+					</li>
 				</ul>
+				<div class="scrollable">
+					<ul id="scontent" class="elt root">
+					</ul>
+				</div>
 			</div>
 			<div id="props" class="panel" caption="Properties">
 			</div>
@@ -286,6 +303,18 @@ class SceneInspector {
 		scene.dock(jroot.get(), Left, 0.2);
 		J("#log").dock(jroot.get(), Down, 0.3);
 		J("#props").dock(scene.get(), Down, 0.5);
+
+		var bt = J("#bt_hide");
+		bt.addClass("active");
+		bt.click(function(_) {
+			bt.toggleClass("active");
+			J("#scontent").toggleClass("masked");
+		});
+
+		var bt = J("#bt_highlight");
+		bt.click(function(_) {
+			bt.toggleClass("active");
+		});
 	}
 
 	function load() {
@@ -369,6 +398,7 @@ class SceneInspector {
 		syncRec(scene, null);
 		while( sceneObjects.length > scenePosition )
 			sceneObjects.pop().remove();
+		syncStats();
 	}
 
 	function resolveProps( path : Array<String> ) {
@@ -422,6 +452,7 @@ class SceneInspector {
 			if( p == null )
 				rootNodes.push(so);
 		}
+
 		if( o.visible != so.visible ) {
 			so.visible = o.visible;
 			so.j.toggleClass("hidden");
@@ -441,6 +472,8 @@ class SceneInspector {
 			for( o in so.childs )
 				o.remove();
 		}
+
+
 	}
 
 	function onChange( path : String, oldV : Dynamic, newV : Dynamic ) {
@@ -711,6 +744,118 @@ class SceneInspector {
 
 		addDynamicProps(props, r);
 		return props;
+	}
+
+	function getStats() {
+		var p = inspect.createPanel("Statistics");
+		p.html('
+			<style>$CSS</style>
+			<div id="stats" class="panel">
+				<li>Renderer</li>
+				<table>
+					<tr>
+						<th>Framerate</th>
+						<td id="fps">0</td>
+					</tr>
+					<tr>
+						<th>Draw Calls</th>
+						<td id="calls">0</td>
+					</tr>
+					<tr>
+						<th>Drawn Triangles</th>
+						<td id="tris">0</td>
+					</tr>
+				</table>
+				<li>Memory</li>
+				<table>
+					<tr id="debugOnly">
+						<th id="bufMemTitle">Buffers</th>
+						<td id="bufMem"></td>
+					</tr>
+					<tr id="debugOnly">
+						<th id="texMemTitle">Textures</th>
+						<td id="texMem"></td>
+					</tr>
+					<tr id="debugOnly">
+						<th>Total</th>
+						<td id="totMem"></td>
+					</tr>
+				</table>
+			</div>
+		');
+	}
+
+
+	inline function numberFormat(v : Int) {
+		var tmp = Std.string(v);
+		var n = Math.ceil(tmp.length / 3);
+		var str = "";
+		for( i in 0...n) {
+			if(str != "") str = "," + str;
+			var start = tmp.length - 3 * (i + 1);
+			str = Std.string(tmp.substring(Math.imax(0, start), start + 3)) + str;
+		}
+		return Std.string(str);
+	}
+
+	function syncStats() {
+		var p = J("#stats");
+		if(!p.hasClass("panel")) return;
+
+		var engine = h3d.Engine.getCurrent();
+		p.find("#fps").text(Std.string(engine.fps));
+		p.find("#calls").text(numberFormat(engine.drawCalls));
+		p.find("#tris").text(numberFormat(engine.drawTriangles));
+
+		var bufMem = p.find("#bufMem");
+		var texMem = p.find("#texMem");
+		var totMem = p.find("#totMem");
+		var bufMemTitle = p.find("#bufMemTitle");
+		var texMemTitle = p.find("#texMemTitle");
+
+		#if !debug
+			var debug = p.find("#debugOnly");
+			if(!debug.hasClass("debug"))
+				debug.toggleClass("debug");
+			bufMem.text("(Debug mode required)");
+			texMem.text("(Debug mode required)");
+			totMem.text("(Debug mode required)");
+		#else
+			var stats = engine.mem.stats();
+			var idx = (stats.totalMemory - (stats.textureMemory + stats.managedMemory));
+			var sum : Float = (idx + stats.managedMemory) >> 10;
+			var freeMem : Float = stats.freeManagedMemory >> 10;
+			var totTex : Float = stats.textureMemory >> 10;
+			var totalMem : Float = stats.totalMemory >> 10;
+
+			//trace(stats);
+			bufMem.text((sum > 1024 ?  Math.fmt(sum / 1024) + " MB" : totTex + " KB") + " (" + (freeMem > 1024 ?  Math.fmt(freeMem / 1024) + " MB" : freeMem + " KB") + " free)");
+			texMem.text(totTex > 1024 ?  Math.fmt(totTex / 1024) + " MB" : totTex + " KB");
+			totMem.text(totalMem > 1024 ?  Math.fmt(totalMem / 1024) + " MB" : totTex + " KB");
+			bufMemTitle.text("Buffers [" + Std.string(stats.bufferCount) + "]");
+			texMemTitle.text("Textures [" + Std.string(stats.textureCount) + "]");
+
+			//var m = new Map();
+			@:privateAccess for( b in engine.mem.buffers ) {
+				var b = b;
+				while( b != null ) {
+					var buf = b.allocHead;
+					while( buf != null ) {
+						var mem = buf.buffer.stride * buf.vertices * 4;
+						//buf.allocPos
+						buf = buf.allocNext;
+					}
+					b = b.next;
+				}
+			}
+			@:privateAccess for( t in engine.mem.textures ) {
+				// t.allocPos
+			}
+/*
+			tot >>= 10;
+			bufCount.text(Std.string(count));
+			bufMem.text(tot / 1024 > 1 ? Math.fmt(tot / 1024) + " MB" :  tot + " KB");*/
+		#end
 	}
 
 }

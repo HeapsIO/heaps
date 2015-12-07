@@ -51,6 +51,13 @@
 .jqpage ul.toolbar li.active, .dialog-floating ul.toolbar li.active {
 	color : white;
 }
+.jqpage #scene .scrollable, .dialog-floating #scene .scrollable {
+	height : 100%;
+	overflow : auto;
+}
+.jqpage #scene ul.elt.root, .dialog-floating #scene ul.elt.root {
+	padding : 5px;
+}
 .jqpage #scene ul.elt, .dialog-floating #scene ul.elt {
 	background-color : transparent;
 }
@@ -88,9 +95,33 @@
 	zoom : 1;
 	font-style : italic;
 }
+.jqpage #scene #scontent.masked li.hidden, .jqpage #scene #scontent.masked li.culled, .dialog-floating #scene #scontent.masked li.hidden, .dialog-floating #scene #scontent.masked li.culled {
+	display : none;
+}
+.jqpage #scene>ul.buttons, .dialog-floating #scene>ul.buttons {
+	color : #AAA;
+	background-color : #333;
+	border-right : 1px solid black;
+	float : left;
+	width : 25px;
+	height : 100%;
+}
+.jqpage #scene>ul.buttons li, .dialog-floating #scene>ul.buttons li {
+	padding : 5px;
+	display : inline-block;
+	zoom : 1;
+	*display : inline;
+	border : 1px solid #555;
+}
+.jqpage #scene>ul.buttons li:hover, .dialog-floating #scene>ul.buttons li:hover {
+	background-color : #555;
+	border-color : white;
+}
+.jqpage #scene>ul.buttons li.active, .dialog-floating #scene>ul.buttons li.active {
+	color : white;
+}
 .jqpage #scene>ul.elt, .dialog-floating #scene>ul.elt {
 	padding : 5px;
-	padding-bottom : 40px;
 }
 .jqpage table.props tr.pgroup, .dialog-floating table.props tr.pgroup {
 	cursor : pointer;
@@ -137,4 +168,36 @@
 	height : 20px;
 	border : 2px solid white;
 	outline : 1px solid black;
+}
+.jqpage #stats table, .dialog-floating #stats table {
+	cursor : pointer;
+}
+.jqpage #stats table th, .dialog-floating #stats table th {
+	text-align : left;
+	background-color : #333;
+	color : #AAA;
+	font-weight : bold;
+	padding : 2px 4px;
+	width : 140px;
+	height : 24px;
+}
+.jqpage #stats table tr.debug th, .dialog-floating #stats table tr.debug th {
+	opacity : 0.5;
+	filter : alpha(opacity=50);
+	zoom : 1;
+}
+.jqpage #stats table tr.debug td, .dialog-floating #stats table tr.debug td {
+	opacity : 0.5;
+	filter : alpha(opacity=50);
+	zoom : 1;
+	font-style : italic;
+}
+.jqpage #stats>li, .dialog-floating #stats>li {
+	text-align : left;
+	background-color : #555;
+	color : #eee;
+	font-weight : bold;
+	padding : 2px 4px;
+	cursor : pointer;
+	border-bottom : 1px solid #888;
 }

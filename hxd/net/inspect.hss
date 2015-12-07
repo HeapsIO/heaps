@@ -53,6 +53,15 @@
 
 	#scene {
 
+		.scrollable {
+			height:100%;
+			overflow : auto;
+		}
+
+		ul.elt.root {
+			padding : 5px;
+		}
+
 		ul.elt {
 			background-color : transparent;
 			li {
@@ -86,13 +95,38 @@
 				font-style : italic;
 			}
 		}
+
+		#scontent.masked {
+			li.hidden, li.culled {
+				display : none;
+			}
+		}
 	}
+
+	#scene > ul.buttons {
+			color : #AAA;
+			background-color : #333;
+			border-right : 1px solid black;
+			float : left;
+			width : 25px;
+			height : 100%;
+			li {
+				padding : 5px;
+				display : inline-block;
+				border : 1px solid #555;
+			}
+			li:hover {
+				background-color : #555;
+				border-color : white;
+			}
+			li.active {
+				color : white;
+			}
+		}
 
 	#scene > ul.elt {
 		padding : 5px;
-		padding-bottom : 40px;
 	}
-
 
 	#props {
 	}
@@ -146,6 +180,40 @@
 			}
 		}
 
+	}
+
+	#stats {
+		table {
+			cursor : pointer;
+			th {
+				text-align : left;
+				background-color : #333;
+				color : #AAA;
+				font-weight : bold;
+				padding : 2px 4px;
+				width : 140px;
+				height : 24px;
+			}
+			tr.debug {
+				th {
+					opacity : 0.5;
+				}
+				td {
+					opacity : 0.5;
+					font-style: italic;
+				}
+			}
+		}
+	}
+
+	#stats > li {
+		text-align: left;
+		background-color: #555;
+		color: #eee;
+		font-weight: bold;
+		padding: 2px 4px;
+		cursor: pointer;
+		border-bottom : 1px solid #888;
 	}
 
 }
