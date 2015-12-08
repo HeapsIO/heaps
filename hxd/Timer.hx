@@ -2,7 +2,7 @@ package hxd;
 
 class Timer {
 
-	public static var wantedFPS = 60;
+	public static var wantedFPS = 0.;
 	public static var maxDeltaTime = 0.5;
 	public static var oldTime = haxe.Timer.stamp();
 	public static var tmod_factor = 0.95;
@@ -12,6 +12,8 @@ class Timer {
 	static var frameCount = 0;
 
 	public inline static function update() {
+		if( wantedFPS == 0 )
+			wantedFPS = hxd.System.getDefaultFrameRate();
 		frameCount++;
 		var newTime = haxe.Timer.stamp();
 		deltaT = newTime - oldTime;
