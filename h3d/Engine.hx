@@ -50,7 +50,7 @@ class Engine {
 		this.autoResize = true;
 		fullScreen = !hxd.System.isWindowed;
 		var stage = hxd.Stage.getInstance();
-		realFps = stage.getFrameRate();
+		realFps = hxd.System.getDefaultFrameRate();
 		lastTime = haxe.Timer.stamp();
 		stage.addResizeEvent(onStageResize);
 		#if (js || cpp)

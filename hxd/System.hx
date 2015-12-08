@@ -586,4 +586,12 @@ class System {
 
 	#end
 
+	public static function getDefaultFrameRate() : Float {
+		#if (flash || openfl)
+		return flash.Lib.current.stage.frameRate;
+		#else
+		return 60.;
+		#end
+	}
+
 }

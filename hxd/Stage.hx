@@ -12,8 +12,8 @@ class Stage {
 	var stage : flash.display.Stage;
 	var fsDelayed : Bool;
 	#end
-	var resizeEvents : List < Void -> Void > ;
-	var eventTargets : List < Event -> Void > ;
+	var resizeEvents : List<Void -> Void>;
+	var eventTargets : List<Event -> Void>;
 
 	#if js
 	@:allow(hxd)
@@ -138,14 +138,6 @@ class Stage {
 
 	public function removeResizeEvent( f : Void -> Void ) {
 		resizeEvents.remove(f);
-	}
-
-	public function getFrameRate() : Float {
-		#if (flash || openfl)
-		return stage.frameRate;
-		#else
-		return 60.;
-		#end
 	}
 
 	function onResize(e:Dynamic) {

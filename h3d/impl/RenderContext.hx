@@ -11,7 +11,7 @@ class RenderContext {
 		engine = h3d.Engine.getCurrent();
 		frame = 0;
 		time = 0.;
-		elapsedTime = 1. / hxd.Stage.getInstance().getFrameRate();
+		elapsedTime = 1. / hxd.System.getDefaultFrameRate();
 	}
 
 }
