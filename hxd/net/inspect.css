@@ -170,34 +170,49 @@
 	outline : 1px solid black;
 }
 .jqpage #stats table, .dialog-floating #stats table {
+	cursor : default;
+	width : 100%;
+}
+.jqpage #stats table tr th.button, .dialog-floating #stats table tr th.button {
 	cursor : pointer;
 }
-.jqpage #stats table th, .dialog-floating #stats table th {
-	text-align : left;
-	background-color : #333;
-	color : #AAA;
-	font-weight : bold;
-	padding : 2px 4px;
-	width : 140px;
-	height : 24px;
-}
-.jqpage #stats table tr.debug th, .dialog-floating #stats table tr.debug th {
-	opacity : 0.5;
-	filter : alpha(opacity=50);
-	zoom : 1;
-}
-.jqpage #stats table tr.debug td, .dialog-floating #stats table tr.debug td {
-	opacity : 0.5;
-	filter : alpha(opacity=50);
-	zoom : 1;
-	font-style : italic;
-}
-.jqpage #stats>li, .dialog-floating #stats>li {
+.jqpage #stats table tr th.title, .dialog-floating #stats table tr th.title {
+	font-size : 14px;
 	text-align : left;
 	background-color : #555;
+	color : #bbb;
+	font-weight : bold;
+	padding : 2px 4px;
+	border-bottom : 1px solid #888;
+}
+.jqpage #stats table tr th, .dialog-floating #stats table tr th {
+	text-align : left;
+	background-color : #333;
 	color : #eee;
 	font-weight : bold;
 	padding : 2px 4px;
-	cursor : pointer;
-	border-bottom : 1px solid #888;
+	height : 24px;
+}
+.jqpage #stats table tr th i, .dialog-floating #stats table tr th i {
+	color : #eee;
+}
+.jqpage #stats table tr th div, .dialog-floating #stats table tr th div {
+	float : right;
+}
+.jqpage #stats table tr.subMem th, .dialog-floating #stats table tr.subMem th {
+	font-weight : normal;
+	overflow : hidden;
+	background-color : #eee;
+	color : black;
+	border-bottom : 1px solid #ccc;
+}
+.jqpage #stats table tr.subMem th div, .dialog-floating #stats table tr.subMem th div {
+	float : right;
+}
+.jqpage #stats table th.debug, .dialog-floating #stats table th.debug {
+	background-color : white;
+	font-weight : normal;
+	color : #333;
+	font-style : italic;
+	border : none;
 }

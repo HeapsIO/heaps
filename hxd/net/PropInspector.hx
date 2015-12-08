@@ -186,12 +186,13 @@ class PropInspector extends cdb.jq.Client {
 		return t;
 	}
 
-	public function createPanel( name : String ) {
+	public function createPanel( name : String, ?dock : cdb.jq.Message.DockDirection, ?size) {
 		var panel = J('<div>');
 		panel.addClass("panel");
 		panel.attr("caption", ""+name);
 		panel.appendTo(j);
-		panel.dock(root, Fill);
+		if( dock == null ) dock = Fill;
+		panel.dock(root, dock, size);
 		return panel;
 	}
 
