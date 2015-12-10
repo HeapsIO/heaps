@@ -282,7 +282,19 @@ class World extends Object {
 		return c;
 	}
 
-	function initSoil( c : WorldChunk ) {
+	function initChunksBounds() {
+		var n = Std.int(worldSize / chunkSize);
+		for(x in 0...n)
+			for(y in 0...n) {
+				var c = getChunk(x * chunkSize, y * chunkSize, true);
+				c.bounds.addPoint(new h3d.col.Point(c.x, c.y));
+				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y));
+				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y + chunkSize));
+				c.bounds.addPoint(new h3d.col.Point(c.x, c.y + chunkSize));
+			}
+	}
+
+	function initChunk( c : WorldChunk ) {
 		var cube = new h3d.prim.Cube(chunkSize, chunkSize, 0);
 		cube.addNormals();
 		cube.addUVs();
@@ -291,6 +303,26 @@ class World extends Object {
 		soil.y = c.y;
 		soil.material.texture = h3d.mat.Texture.fromColor(soilColor);
 		soil.material.shadows = true;
+	}
+
+	function updateChunkBounds(c : WorldChunk, model : WorldModel, rotation : Float, scale : Float) {
+		var cosR = Math.cos(rotation);
+		var sinR = Math.sin(rotation);
+
+		inline function addPoint(dx:Float, dy:Float, dz:Float) {
+			var tx = dx * cosR - dy * sinR;
+			var ty = dx * sinR + dy * cosR;
+			c.bounds.addPos(tx * scale + x, ty * scale + y, dz * scale + z);
+		}
+
+		addPoint(model.bounds.xMin, model.bounds.yMin, model.bounds.zMin);
+		addPoint(model.bounds.xMin, model.bounds.yMin, model.bounds.zMax);
+		addPoint(model.bounds.xMin, model.bounds.yMax, model.bounds.zMin);
+		addPoint(model.bounds.xMin, model.bounds.yMax, model.bounds.zMax);
+		addPoint(model.bounds.xMax, model.bounds.yMin, model.bounds.zMin);
+		addPoint(model.bounds.xMax, model.bounds.yMin, model.bounds.zMax);
+		addPoint(model.bounds.xMax, model.bounds.yMax, model.bounds.zMin);
+		addPoint(model.bounds.xMax, model.bounds.yMax, model.bounds.zMax);
 	}
 
 	function initMaterial( mesh : h3d.scene.Mesh, mat : WorldMaterial ) {
@@ -343,25 +375,7 @@ class World extends Object {
 			p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), x, y, z, rotation, scale, model.stride);
 		}
 
-
-		// update bounds
-		var cosR = Math.cos(rotation);
-		var sinR = Math.sin(rotation);
-
-		inline function addPoint(dx:Float, dy:Float, dz:Float) {
-			var tx = dx * cosR - dy * sinR;
-			var ty = dx * sinR + dy * cosR;
-			c.bounds.addPos(tx * scale + x, ty * scale + y, dz * scale + z);
-		}
-
-		addPoint(model.bounds.xMin, model.bounds.yMin, model.bounds.zMin);
-		addPoint(model.bounds.xMin, model.bounds.yMin, model.bounds.zMax);
-		addPoint(model.bounds.xMin, model.bounds.yMax, model.bounds.zMin);
-		addPoint(model.bounds.xMin, model.bounds.yMax, model.bounds.zMax);
-		addPoint(model.bounds.xMax, model.bounds.yMin, model.bounds.zMin);
-		addPoint(model.bounds.xMax, model.bounds.yMin, model.bounds.zMax);
-		addPoint(model.bounds.xMax, model.bounds.yMax, model.bounds.zMin);
-		addPoint(model.bounds.xMax, model.bounds.yMax, model.bounds.zMax);
+		updateChunkBounds(c, model, rotation, scale);
 	}
 
 	override function sync(ctx:RenderContext) {
@@ -372,7 +386,7 @@ class World extends Object {
 			if( c.root.visible ) {
 				if( !c.initialized) {
 					c.initialized = true;
-					initSoil(c);
+					initChunk(c);
 				}
 				c.lastFrame = ctx.frame;
 			}
