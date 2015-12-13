@@ -24,19 +24,27 @@ class App {
 	}
 
 	function setup() {
+		var initDone = false;
 		engine.onResized = function() {
 			if( s2d == null ) return; // if disposed
 			s2d.checkResize();
-			onResize();
+			if( initDone ) onResize();
 		};
 		s3d = new h3d.scene.Scene();
 		s2d = new h2d.Scene();
 		s3d.addPass(s2d);
-		init();
-		hxd.Timer.skip();
-		mainLoop();
-		hxd.System.setLoop(mainLoop);
-		hxd.Key.initialize();
+		loadAssets(function() {
+			initDone = true;
+			init();
+			hxd.Timer.skip();
+			mainLoop();
+			hxd.System.setLoop(mainLoop);
+			hxd.Key.initialize();
+		});
+	}
+
+	function loadAssets( onLoaded ) {
+		onLoaded();
 	}
 
 	function init() {

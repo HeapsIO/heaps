@@ -26,7 +26,8 @@ class Res {
 		if( dir == null ) dir = "res";
 		return macro {
 			var dir = $v{dir};
-			var pak = new hxd.fmt.pak.FileSystem(dir+".pak");
+			var pak = new hxd.fmt.pak.FileSystem();
+			pak.loadPak(dir + ".pak");
 			var i = 1;
 			while( true ) {
 				if( !hxd.File.exists(dir + i + ".pak") ) break;

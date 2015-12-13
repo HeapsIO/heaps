@@ -209,8 +209,20 @@ class FileTree {
 			fields.push({
 				name : "loader",
 				access : [APublic, AStatic],
-				kind : FProp("default","set",loaderType),
+				kind : FProp("get","set",loaderType),
 				pos : pos,
+			});
+			fields.push( {
+				name : "get_loader",
+				access : [AStatic],
+				kind : FFun( {
+					args : [],
+					ret : loaderType,
+					expr : macro {
+						return hxd.res.Loader.currentInstance;
+					}
+				}),
+				pos : pos
 			});
 			fields.push( {
 				name : "set_loader",
@@ -219,8 +231,7 @@ class FileTree {
 					args : [ { name : "l", type : loaderType } ],
 					ret : loaderType,
 					expr : macro {
-						hxd.res.Loader.currentInstance = l;
-						return loader = l;
+						return hxd.res.Loader.currentInstance = l;
 					}
 				}),
 				pos : pos
