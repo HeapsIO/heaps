@@ -27,12 +27,21 @@ class Mp3Data extends Data {
 			var end = startEnd & ((1 << 12) - 1);
 			samples -= start + end + 1152; // first frame is empty
 		}
+
+		var sampling = format.mp3.Constants.MPEG.srEnum2Num(mp.frames[0].header.samplingRate);
+		#if flash
+		if( sampling != 44100 )
+			samples = Math.ceil(samples * 44100 / sampling);
+		#elseif js
+		var ctx = @:privateAccess NativeChannel.getContext();
+		samples = Math.ceil(samples * ctx.sampleRate / sampling);
+		#end
+
 		#if flash
 		snd = new flash.media.Sound();
 		bytes.getData().position = 0;
 		snd.loadCompressedDataFromByteArray(bytes.getData(), bytes.length);
 		#elseif js
-		var ctx = @:privateAccess NativeChannel.getContext();
 		ctx.decodeAudioData(bytes.getData(), processBuffer);
 		#end
 	}
