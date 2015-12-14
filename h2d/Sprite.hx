@@ -204,8 +204,14 @@ class Sprite {
 			if( !s.allocated )
 				s.onAlloc();
 			else
-				s.onParentChanged();
+				s.onParentChangedRec();
 		}
+	}
+
+	function onParentChangedRec() {
+		onParentChanged();
+		for( c in childs )
+			c.onParentChangedRec();
 	}
 
 	// called when we're allocated already but moved in hierarchy
