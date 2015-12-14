@@ -24,15 +24,6 @@ class AgalOut {
 		throw msg;
 	}
 
-	function isWriteMask( swiz : Array<C> ) {
-		if( swiz == null || swiz.length == 1 )
-			return true;
-		for( i in 0...swiz.length )
-			if( swiz[i] != COMPS[i] )
-				return false;
-		return true;
-	}
-
 	public function compile( s : RuntimeShaderData, version ) : Data {
 		current = s;
 		nullReg = new Reg(RTemp, -1, null);
@@ -105,31 +96,6 @@ class AgalOut {
 
 		if( s.data.funs.length != 1 ) throw "assert";
 		expr(s.data.funs[0].expr);
-
-		// write mask are just masks, not full swizzle, we then need to change all our writes
-		//    for instance  V.zw = T.xy  actually mean  V.??zw = T.xyyy (? = ignore write)
-		for( i in 0...opcodes.length ) {
-			var op = opcodes[i];
-			switch( op ) {
-			case OMov(dst, v), ORcp(dst, v) if( !isWriteMask(dst.swiz) ):
-				var dst = dst.clone();
-				var v = v.clone();
-				// reinterpret swizzling accordingly to write mask
-				var last = X;
-				v.swiz = [for( i in 0...4 ) {
-					var k = dst.swiz.indexOf(COMPS[i]);
-					if( k >= 0 ) last = v.swiz[k];
-					last;
-				}];
-				opcodes[i] = OMov(dst, v);
-			case OIfe(_), OIne(_), OIfg(_), OIfl(_), OEls, OEif, OKil(_):
-				// ignore
-			default:
-				var dst : Reg = op.getParameters()[0];
-				if( !isWriteMask(dst.swiz) )
-					throw "invalid write mask in "+format.agal.Tools.opStr(op);
-			}
-		}
 
 		// force write of missing varying components
 		for( vid in 0...valloc.length ) {
