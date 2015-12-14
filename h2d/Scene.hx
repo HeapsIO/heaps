@@ -176,9 +176,10 @@ class Scene extends Layers implements h3d.IDrawable {
 
 			i.handleEvent(event);
 
-			if( event.cancel )
+			if( event.cancel ) {
 				event.cancel = false;
-			else if( checkOver ) {
+				event.propagate = true;
+			} else if( checkOver ) {
 				if( currentOver != i ) {
 					var old = event.propagate;
 					if( currentOver != null ) {
