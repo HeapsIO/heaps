@@ -32,7 +32,7 @@ class Loader extends h2d.Sprite {
 		bg.beginFill(0x404040);
 		bg.drawRect(0, 0, 100, 10);
 		bg.beginFill(0x40C040);
-		bg.drawRect(1, 1, Std.int(progress * 98), 10);
+		bg.drawRect(1, 1, Std.int(progress * 98), 8);
 	}
 
 	override function sync(ctx:h2d.RenderContext)  {
