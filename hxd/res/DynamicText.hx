@@ -100,7 +100,7 @@ class DynamicText {
 			var fields = new Array<Field>();
 			while( i < vars.length ) {
 				tdict.set(vars[i], true);
-				fields.push( { name : vars[i], kind : FVar(tstring), pos : pos, meta : [] } );
+			fields.push( { name : vars[i], kind : FVar(macro : Dynamic), pos : pos, meta : [] } );
 				i += 2;
 			}
 			return TFunction([TAnonymous(fields)], tstring);
