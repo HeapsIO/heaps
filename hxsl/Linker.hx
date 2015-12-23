@@ -51,7 +51,7 @@ class Linker {
 	}
 
 	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
-		//for( i in 0...debugDepth ) msg = "    " + msg; haxe.Log.trace(msg, pos);
+		// for( i in 0...debugDepth ) msg = "    " + msg; haxe.Log.trace(msg, pos);
 	}
 
 	function error( msg : String, p : Position ) : Dynamic {
@@ -387,6 +387,21 @@ class Linker {
 				entry.deps.set(s, true);
 			}
 
+		// force shaders reading only params into fragment shader
+		// (pixelColor = color with no effect in BaseMesh)
+		for( s in shaders ) {
+			if( s.vertex != null ) continue;
+			var onlyParams = true;
+			for( r in s.read )
+				if( r.v.kind != Param ) {
+					onlyParams = false;
+					break;
+				}
+			if( onlyParams ) {
+				debug("Force " + s.name+" into fragment since it only reads params");
+				s.vertex = false;
+			}
+		}
 
 		// collect needed dependencies
 		var v = [], f = [];
