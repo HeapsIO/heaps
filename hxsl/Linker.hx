@@ -264,6 +264,13 @@ class Linker {
 					s.vertex = false;
 					break;
 				}
+		// propagate vertex flag
+		if( s.vertex )
+			for( d in s.deps.keys() )
+				if( d.vertex == null ) {
+					debug(d.name + " marked as vertex because of " + s.name);
+					d.vertex = true;
+				}
 	}
 
 	function collect( cur : ShaderInfos, out : Array<ShaderInfos>, vertex : Bool ) {
