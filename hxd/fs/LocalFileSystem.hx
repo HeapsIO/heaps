@@ -421,7 +421,9 @@ class LocalFileSystem implements FileSystem {
 	}
 
 	public function dispose() {
+		#if air3
 		fileCache = new Map();
+		#end
 	}
 
 }
