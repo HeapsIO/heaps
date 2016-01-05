@@ -351,7 +351,7 @@ class CdbLevel extends Layers {
 				lprops = lp.p;
 				break;
 			}
-		var mode : cdb.Data.LayerMode = lprops != null ? lprops.mode : Tiles;
+		var mode : cdb.Data.LayerMode = lprops != null && lprops.mode != null ? lprops.mode : Tiles;
 		switch( mode ) {
 		case Tiles:
 			l.data = LTiles(data);
