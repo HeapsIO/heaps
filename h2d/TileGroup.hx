@@ -335,6 +335,11 @@ class TileGroup extends Drawable {
 		content.clear();
 	}
 
+	public function invalidate() {
+		if( content.buffer!=null )
+			content.buffer.dispose();
+	}
+
 	/**
 		Returns the number of tiles added to the group
 	**/

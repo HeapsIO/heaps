@@ -58,6 +58,11 @@ class Tile {
 		return sub(0, 0, width, height, -(width>>1), -(height>>1));
 	}
 
+	public inline function setCenterRatio(?px:Float=0.5, ?py:Float=0.5) : Void {
+		dx = -Std.int(px*width);
+		dy = -Std.int(py*height);
+	}
+
 	public function flipX() {
 		var tmp = u; u = u2; u2 = tmp;
 		dx = -dx - width;

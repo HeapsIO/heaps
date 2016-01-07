@@ -27,6 +27,7 @@ class BatchElement {
 	public var a : Float;
 	public var t : Tile;
 	public var alpha(get,set) : Float;
+	public var visible : Bool;
 	public var batch(default, null) : SpriteBatch;
 
 	var prev : BatchElement;
@@ -35,6 +36,7 @@ class BatchElement {
 	public function new(t) {
 		x = 0; y = 0; r = 1; g = 1; b = 1; a = 1;
 		rotation = 0; scale = 1;
+		visible = true;
 		this.t = t;
 	}
 
@@ -50,7 +52,7 @@ class BatchElement {
 		return true;
 	}
 
-	public inline function remove() {
+	public function remove() {
 		if( batch != null ) {
 			batch.delete(this);
 			batch = null;
@@ -179,6 +181,11 @@ class SpriteBatch extends Drawable {
 		var e = first;
 		var tmp = tmpBuf;
 		while( e != null ) {
+			if( !e.visible ) {
+				e = e.next();
+				continue;
+			}
+
 			var t = e.t;
 			if( hasRotationScale ) {
 				var ca = Math.cos(e.rotation), sa = Math.sin(e.rotation);
