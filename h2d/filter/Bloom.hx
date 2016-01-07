@@ -21,7 +21,7 @@ class Bloom extends Blur {
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
 		var dst = ctx.textures.allocTarget("dest", ctx, t.width, t.height, false);
-		dst.clear(0, 0);
+		//dst.clear(0, 0);
 		h3d.pass.Copy.run(t.getTexture(), dst);
 		var blurred = super.draw(ctx, t);
 		bloom.shader.texture = blurred.getTexture();
