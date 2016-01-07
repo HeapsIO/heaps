@@ -67,6 +67,10 @@ class Any extends Resource {
 		return loader.loadTiledMap(entry.path);
 	}
 
+	public function toAtlas() {
+		return loader.loadAtlas(entry.path);
+	}
+
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator([for( f in entry ) new Any(loader,f)]);
 	}
