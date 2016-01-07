@@ -44,6 +44,32 @@ class Key {
 	public static inline var NUMPAD_9	= 105;
 
 	public static inline var A			= 65;
+	public static inline var B			= 66;
+	public static inline var C			= 67;
+	public static inline var D			= 68;
+	public static inline var E			= 69;
+	public static inline var F			= 70;
+	public static inline var G			= 71;
+	public static inline var H			= 72;
+	public static inline var I			= 73;
+	public static inline var J			= 74;
+	public static inline var K			= 75;
+	public static inline var L			= 76;
+	public static inline var M			= 77;
+	public static inline var N			= 78;
+	public static inline var O			= 79;
+	public static inline var P			= 80;
+	public static inline var Q			= 81;
+	public static inline var R			= 82;
+	public static inline var S			= 83;
+	public static inline var T			= 84;
+	public static inline var U			= 85;
+	public static inline var V			= 86;
+	public static inline var W			= 87;
+	public static inline var X			= 88;
+	public static inline var Y			= 89;
+	public static inline var Z			= 90;
+
 	public static inline var F1			= 112;
 	public static inline var F2			= 113;
 	public static inline var F3			= 114;
