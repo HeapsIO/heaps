@@ -27,6 +27,7 @@ class BatchElement {
 	public var a : Float;
 	public var t : Tile;
 	public var alpha(get,set) : Float;
+	public var visible : Bool;
 	public var batch(default, null) : SpriteBatch;
 
 	var prev : BatchElement;
@@ -35,6 +36,7 @@ class BatchElement {
 	public function new(t) {
 		x = 0; y = 0; r = 1; g = 1; b = 1; a = 1;
 		rotation = 0; scale = 1;
+		visible = true;
 		this.t = t;
 	}
 
@@ -50,7 +52,7 @@ class BatchElement {
 		return true;
 	}
 
-	public inline function remove() {
+	public function remove() {
 		if( batch != null ) {
 			batch.delete(this);
 			batch = null;
@@ -179,81 +181,83 @@ class SpriteBatch extends Drawable {
 		var e = first;
 		var tmp = tmpBuf;
 		while( e != null ) {
-			var t = e.t;
-			if( hasRotationScale ) {
-				var ca = Math.cos(e.rotation), sa = Math.sin(e.rotation);
-				var hx = t.width, hy = t.height;
-				var px = t.dx, py = t.dy;
-				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
-				tmp[pos++] = t.u;
-				tmp[pos++] = t.v;
-				tmp[pos++] = e.r;
-				tmp[pos++] = e.g;
-				tmp[pos++] = e.b;
-				tmp[pos++] = e.a;
-				var px = t.dx + hx, py = t.dy;
-				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
-				tmp[pos++] = t.u2;
-				tmp[pos++] = t.v;
-				tmp[pos++] = e.r;
-				tmp[pos++] = e.g;
-				tmp[pos++] = e.b;
-				tmp[pos++] = e.a;
-				var px = t.dx, py = t.dy + hy;
-				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
-				tmp[pos++] = t.u;
-				tmp[pos++] = t.v2;
-				tmp[pos++] = e.r;
-				tmp[pos++] = e.g;
-				tmp[pos++] = e.b;
-				tmp[pos++] = e.a;
-				var px = t.dx + hx, py = t.dy + hy;
-				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
-				tmp[pos++] = t.u2;
-				tmp[pos++] = t.v2;
-				tmp[pos++] = e.r;
-				tmp[pos++] = e.g;
-				tmp[pos++] = e.b;
-				tmp[pos++] = e.a;
-			} else {
-				var sx = e.x + t.dx;
-				var sy = e.y + t.dy;
-				tmp[pos++] = sx;
-				tmp[pos++] = sy;
-				tmp[pos++] = t.u;
-				tmp[pos++] = t.v;
-				tmp[pos++] = e.r;
-				tmp[pos++] = e.g;
-				tmp[pos++] = e.b;
-				tmp[pos++] = e.a;
-				tmp[pos++] = sx + t.width + 0.1;
-				tmp[pos++] = sy;
-				tmp[pos++] = t.u2;
-				tmp[pos++] = t.v;
-				tmp[pos++] = e.r;
-				tmp[pos++] = e.g;
-				tmp[pos++] = e.b;
-				tmp[pos++] = e.a;
-				tmp[pos++] = sx;
-				tmp[pos++] = sy + t.height + 0.1;
-				tmp[pos++] = t.u;
-				tmp[pos++] = t.v2;
-				tmp[pos++] = e.r;
-				tmp[pos++] = e.g;
-				tmp[pos++] = e.b;
-				tmp[pos++] = e.a;
-				tmp[pos++] = sx + t.width + 0.1;
-				tmp[pos++] = sy + t.height + 0.1;
-				tmp[pos++] = t.u2;
-				tmp[pos++] = t.v2;
-				tmp[pos++] = e.r;
-				tmp[pos++] = e.g;
-				tmp[pos++] = e.b;
-				tmp[pos++] = e.a;
+			if( e.visible ) {
+				var t = e.t;
+				if( hasRotationScale ) {
+					var ca = Math.cos(e.rotation), sa = Math.sin(e.rotation);
+					var hx = t.width, hy = t.height;
+					var px = t.dx, py = t.dy;
+					tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
+					tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
+					tmp[pos++] = t.u;
+					tmp[pos++] = t.v;
+					tmp[pos++] = e.r;
+					tmp[pos++] = e.g;
+					tmp[pos++] = e.b;
+					tmp[pos++] = e.a;
+					var px = t.dx + hx, py = t.dy;
+					tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
+					tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
+					tmp[pos++] = t.u2;
+					tmp[pos++] = t.v;
+					tmp[pos++] = e.r;
+					tmp[pos++] = e.g;
+					tmp[pos++] = e.b;
+					tmp[pos++] = e.a;
+					var px = t.dx, py = t.dy + hy;
+					tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
+					tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
+					tmp[pos++] = t.u;
+					tmp[pos++] = t.v2;
+					tmp[pos++] = e.r;
+					tmp[pos++] = e.g;
+					tmp[pos++] = e.b;
+					tmp[pos++] = e.a;
+					var px = t.dx + hx, py = t.dy + hy;
+					tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
+					tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
+					tmp[pos++] = t.u2;
+					tmp[pos++] = t.v2;
+					tmp[pos++] = e.r;
+					tmp[pos++] = e.g;
+					tmp[pos++] = e.b;
+					tmp[pos++] = e.a;
+				} else {
+					var sx = e.x + t.dx;
+					var sy = e.y + t.dy;
+					tmp[pos++] = sx;
+					tmp[pos++] = sy;
+					tmp[pos++] = t.u;
+					tmp[pos++] = t.v;
+					tmp[pos++] = e.r;
+					tmp[pos++] = e.g;
+					tmp[pos++] = e.b;
+					tmp[pos++] = e.a;
+					tmp[pos++] = sx + t.width + 0.1;
+					tmp[pos++] = sy;
+					tmp[pos++] = t.u2;
+					tmp[pos++] = t.v;
+					tmp[pos++] = e.r;
+					tmp[pos++] = e.g;
+					tmp[pos++] = e.b;
+					tmp[pos++] = e.a;
+					tmp[pos++] = sx;
+					tmp[pos++] = sy + t.height + 0.1;
+					tmp[pos++] = t.u;
+					tmp[pos++] = t.v2;
+					tmp[pos++] = e.r;
+					tmp[pos++] = e.g;
+					tmp[pos++] = e.b;
+					tmp[pos++] = e.a;
+					tmp[pos++] = sx + t.width + 0.1;
+					tmp[pos++] = sy + t.height + 0.1;
+					tmp[pos++] = t.u2;
+					tmp[pos++] = t.v2;
+					tmp[pos++] = e.r;
+					tmp[pos++] = e.g;
+					tmp[pos++] = e.b;
+					tmp[pos++] = e.a;
+				}
 			}
 			e = e.next;
 		}
