@@ -2,9 +2,27 @@ package hxd.fmt.pak;
 import hxd.fs.FileEntry;
 #if air3
 import hxd.impl.Air3File;
-#else
+#elseif sys
 import sys.io.File;
 import sys.io.FileInput;
+#else
+enum FileSeek {
+	SeekBegin;
+	SeekEnd;
+	SeedCurrent;
+}
+class FileInput extends haxe.io.BytesInput {
+	public function seek( pos : Int, seekMode : FileSeek ) {
+		switch( seekMode ) {
+		case SeekBegin:
+			this.position = pos;
+		case SeekEnd:
+			this.position = this.length - pos;
+		case SeedCurrent:
+			this.position += pos;
+		}
+	}
+}
 #end
 
 @:allow(hxd.fmt.pak.FileSystem)
@@ -138,7 +156,7 @@ class FileSystem implements hxd.fs.FileSystem {
 	var dict : Map<String,PakEntry>;
 	var files : Array<FileInput>;
 
-	public function new( pakFile : String ) {
+	public function new() {
 		dict = new Map();
 		var f = new Data.File();
 		f.name = "<root>";
@@ -146,11 +164,17 @@ class FileSystem implements hxd.fs.FileSystem {
 		f.content = [];
 		files = [];
 		root = new PakEntry(null, f, null);
-		loadPak(pakFile);
 	}
 
 	public function loadPak( file : String ) {
-		var s = File.read(file);
+		#if (air3 || sys)
+		addPak(File.read(file));
+		#else
+		throw "TODO";
+		#end
+	}
+
+	public function addPak( s : FileInput ) {
 		var pak = new Reader(s).readHeader();
 		if( pak.root.isDirectory ) {
 			for( f in pak.root.content )

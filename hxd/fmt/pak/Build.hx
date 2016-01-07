@@ -100,31 +100,30 @@ class Build {
 		return out;
 	}
 
-	public static function make( dir = "res" ) {
+	public static function make( dir = "res", out = "res", ?pakDiff ) {
 		var pak = new Data();
 		var outBytes = { bytes : [], size : 0 };
 		pak.version = 0;
 		pak.root = buildRec(dir,"",outBytes);
-		var out = "res";
 
-		#if pakDiff
-		var id = 0;
-		while( true ) {
-			var name = out + (id == 0 ? "" : "" + id) + ".pak";
-			if( !sys.FileSystem.exists(name) ) break;
-			var oldPak = new Reader(sys.io.File.read(name)).readHeader();
-			filter(pak.root, oldPak.root);
-			id++;
-		}
-		if( id > 0 ) {
-			out += id;
-			if( pak.root.content.length == 0 ) {
-				Sys.println("No changes in resources");
-				return;
+		if( pakDiff ) {
+			var id = 0;
+			while( true ) {
+				var name = out + (id == 0 ? "" : "" + id) + ".pak";
+				if( !sys.FileSystem.exists(name) ) break;
+				var oldPak = new Reader(sys.io.File.read(name)).readHeader();
+				filter(pak.root, oldPak.root);
+				id++;
 			}
+			if( id > 0 ) {
+				out += id;
+				if( pak.root.content.length == 0 ) {
+					Sys.println("No changes in resources");
+					return;
+				}
+			}
+			outBytes.bytes = rebuild(pak, outBytes.bytes);
 		}
-		outBytes.bytes = rebuild(pak, outBytes.bytes);
-		#end
 
 		var f = sys.io.File.write(out + ".pak");
 		new Writer(f).write(pak, null, outBytes.bytes);
@@ -133,7 +132,7 @@ class Build {
 
 	static function main() {
 		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.n") catch( e : Dynamic ) {};
-		make(haxe.macro.Compiler.getDefine("resourcesPath"));
+		make(haxe.macro.Compiler.getDefine("resourcesPath"),null #if pakDiff, true #end);
 	}
 
 }

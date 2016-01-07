@@ -70,6 +70,10 @@ class Text extends Drawable {
 	}
 
 	override function draw(ctx:RenderContext) {
+		if( glyphs == null ) {
+			emitTile(ctx, h2d.Tile.fromColor(0xFF00FF, 16, 16));
+			return;
+		}
 		if( dropShadow != null ) {
 			var oldX = absX, oldY = absY;
 			absX += dropShadow.dx * matA + dropShadow.dy * matC;
@@ -257,9 +261,12 @@ class Text extends Drawable {
 			var size = cachedSize == null ? initGlyphs(text, false) : cachedSize;
 			addBounds(relativeTo, out, 0, 0, size.width, size.height);
 		} else {
-			glyphs.visible = true;
+			if( glyphs != null ) glyphs.visible = true;
 			super.getBoundsRec(relativeTo, out);
-			glyphs.visible = false;
+			if( glyphs != null )
+				glyphs.visible = false;
+			else
+				addBounds(relativeTo, out, 0, 0, 16, 16);
 		}
 	}
 

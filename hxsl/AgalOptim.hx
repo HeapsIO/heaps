@@ -44,6 +44,15 @@ class AgalOptim {
 		return format.agal.Tools.opStr(op);
 	}
 
+	function isWriteMask( swiz : Array<C> ) {
+		if( swiz == null || swiz.length == 1 )
+			return true;
+		for( i in 0...swiz.length )
+			if( swiz[i] != COMPS[i] )
+				return false;
+		return true;
+	}
+
 	public function optimize( d : Data ) : Data {
 		data = d;
 		code = d.code.copy();
@@ -89,6 +98,32 @@ class AgalOptim {
 		}
 
 		optiMat();
+
+
+		// write mask are just masks, not full swizzle, we then need to change all our writes
+		//    for instance  V.zw = T.xy  actually mean  V.??zw = T.xyyy (? = ignore write)
+		for( i in 0...code.length ) {
+			var op = code[i];
+			switch( op ) {
+			case OMov(dst, v), ORcp(dst, v) if( !isWriteMask(dst.swiz) ):
+				var dst = dst.clone();
+				var v = v.clone();
+				// reinterpret swizzling accordingly to write mask
+				var last = X;
+				v.swiz = [for( i in 0...4 ) {
+					var k = dst.swiz.indexOf(COMPS[i]);
+					if( k >= 0 ) last = v.swiz[k];
+					last;
+				}];
+				code[i] = OMov(dst, v);
+			case OIfe(_), OIne(_), OIfg(_), OIfl(_), OEls, OEif, OKil(_):
+				// ignore
+			default:
+				var dst : Reg = op.getParameters()[0];
+				if( !isWriteMask(dst.swiz) )
+					throw "invalid write mask in "+format.agal.Tools.opStr(op);
+			}
+		}
 
 		return {
 			version : d.version,

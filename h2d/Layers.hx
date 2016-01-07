@@ -3,12 +3,12 @@ package h2d;
 class Layers extends Sprite {
 
 	// the per-layer insert position
-	var layers : Array<Int>;
+	var layersIndexes : Array<Int>;
 	var layerCount : Int;
 
 	public function new(?parent) {
 		super(parent);
-		layers = [];
+		layersIndexes = [];
 		layerCount = 0;
 	}
 
@@ -29,10 +29,10 @@ class Layers extends Sprite {
 		}
 		// new layer
 		while( layer >= layerCount )
-			layers[layerCount++] = childs.length;
-		super.addChildAt(s,layers[layer]);
+			layersIndexes[layerCount++] = childs.length;
+		super.addChildAt(s,layersIndexes[layer]);
 		for( i in layer...layerCount )
-			layers[i]++;
+			layersIndexes[i]++;
 	}
 
 	override function removeChild( s : Sprite ) {
@@ -42,8 +42,8 @@ class Layers extends Sprite {
 				if( s.allocated ) s.onDelete();
 				s.parent = null;
 				var k = layerCount - 1;
-				while( k >= 0 && layers[k] > i ) {
-					layers[k]--;
+				while( k >= 0 && layersIndexes[k] > i ) {
+					layersIndexes[k]--;
 					k--;
 				}
 				break;
@@ -55,7 +55,7 @@ class Layers extends Sprite {
 		for( i in 0...childs.length )
 			if( childs[i] == s ) {
 				var pos = 0;
-				for( l in layers )
+				for( l in layersIndexes )
 					if( l > i )
 						break;
 					else
@@ -73,7 +73,7 @@ class Layers extends Sprite {
 	public function over( s : Sprite ) {
 		for( i in 0...childs.length )
 			if( childs[i] == s ) {
-				for( l in layers )
+				for( l in layersIndexes )
 					if( l > i ) {
 						for( p in i...l-1 )
 							childs[p] = childs[p + 1];
@@ -89,8 +89,8 @@ class Layers extends Sprite {
 		if( layer >= layerCount )
 			a = [];
 		else {
-			var start = layer == 0 ? 0 : layers[layer - 1];
-			var max = layers[layer];
+			var start = layer == 0 ? 0 : layersIndexes[layer - 1];
+			var max = layersIndexes[layer];
 			a = childs.slice(start, max);
 		}
 		return new hxd.impl.ArrayIterator(a);
@@ -98,8 +98,8 @@ class Layers extends Sprite {
 
 	public function ysort( layer : Int ) {
 		if( layer >= layerCount ) return;
-		var start = layer == 0 ? 0 : layers[layer - 1];
-		var max = layers[layer];
+		var start = layer == 0 ? 0 : layersIndexes[layer - 1];
+		var max = layersIndexes[layer];
 		if( start == max )
 			return;
 		var pos = start;

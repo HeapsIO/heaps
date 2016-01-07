@@ -391,8 +391,7 @@ class Flatten {
 		case TFloat if( t == VFloat ): 1;
 		case TVec(n, t2) if( t == t2 ): n;
 		case TMat4 if( t == VFloat ): 16;
-		case TMat3x4 if( t == VFloat ): 12;
-		case TMat3 if( t == VFloat ): 9;
+		case TMat3, TMat3x4 if( t == VFloat ): 12;
 		case TArray(at, SConst(n)): varSize(at, t) * n;
 		default:
 			throw v.toString() + " size unknown for type " + t;
