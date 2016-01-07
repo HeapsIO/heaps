@@ -59,20 +59,8 @@ class Tile {
 	}
 
 	public inline function setCenterRatio(?px:Float=0.5, ?py:Float=0.5) : Void {
-		copy( sub(0, 0, width, height, -Std.int(px*width), -Std.int(py*height)) );
-	}
-
-	public inline function copy(t:h2d.Tile) {
-		innerTex = t.innerTex;
-		u = t.u;
-		u2 = t.u2;
-		v = t.v;
-		v2 = t.v2;
-		dx = t.dx;
-		dy = t.dy;
-		width = t.width;
-		height = t.height;
-		return t;
+		dx = -Std.int(px*width);
+		dy = -Std.int(py*height);
 	}
 
 	public function flipX() {
