@@ -182,7 +182,7 @@ class SpriteBatch extends Drawable {
 		var tmp = tmpBuf;
 		while( e != null ) {
 			if( !e.visible ) {
-				e = e.next();
+				e = e.next;
 				continue;
 			}
 
