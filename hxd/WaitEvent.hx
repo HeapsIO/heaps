@@ -25,8 +25,8 @@ class WaitEvent {
 	}
 
 	public function wait( time : Float, callb ) {
-		function tmp(_) {
-			time -= hxd.Timer.deltaT;
+		function tmp(dt) {
+			time -= dt / hxd.Timer.wantedFPS;
 			if( time < 0 ) {
 				callb();
 				return true;
