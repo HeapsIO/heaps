@@ -46,7 +46,7 @@ class Sound extends Resource {
 		}
 	}
 
-	public function play( loop = false, volume = 1. ) {
+	public function play( ?loop = false, volume = 1. ) {
 		lastPlay = haxe.Timer.stamp();
 		return channel = getWorker().play(this, loop, volume);
 	}
