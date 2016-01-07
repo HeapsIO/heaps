@@ -36,13 +36,26 @@
 
 package hxd.clipper;
 
+
+private enum EdgeSide {
+	Left;
+	Right;
+}
+
+private enum Direction {
+	RightToLeft;
+	LeftToRight;
+}
+
 @:allow(hxd.clipper)
 private class PolyNode {
 
 	public var parent(default,null) : PolyNode;
-	public var childs(default,null) : Array<PolyNode>;
+	public var childs(default, null) : Array<PolyNode>;
 	var polygon : Polygon;
 	var index : Int;
+	var jointype : JoinType;
+	var endtype : EndType;
 
 	public function new() {
 		polygon = new Polygon([]);
@@ -138,7 +151,9 @@ private class PolyTree extends PolyNode {
 	public var total(get, never) : Int;
 
 	inline function get_total() {
-		return allPolys.length;
+		var result = allPolys.length;
+		if( result > 0 && childs[0] != allPolys[0] ) result--;
+		return result;
     }
 
 }
@@ -151,35 +166,14 @@ private class Ref<T> {
 	}
 }
 
-private class EdgeSide {
-	public static inline var Left = 1;
-	public static inline var Right = 2;
-}
-
-private class Protects {
-	public static inline var None = 0;
-	public static inline var Left = 1;
-	public static inline var Right = 1;
-	public static inline var Both = 3;
-}
-
-private class Direction {
-	public static inline var RightToLeft = 0;
-	public static inline var LeftToRight = 1;
-}
-
 private class TEdge {
-	public var xbot : Int;
-	public var ybot : Int;
-	public var xcurr : Int;
-	public var ycurr : Int;
-	public var xtop : Int;
-	public var ytop : Int;
+	public var bot : Point;
+	public var curr : Point;
+	public var top : Point;
+	public var delta : Point;
 	public var dx : Float;
-	public var deltaX : Int;
-	public var deltaY : Int;
 	public var polyType : PolyType;
-	public var side : Int;
+	public var side : EdgeSide;
 	public var windDelta : Int; //1 or -1 depending on winding direction
 	public var windCnt : Int;
 	public var windCnt2 : Int; //winding count of the opposite polytype
@@ -192,6 +186,10 @@ private class TEdge {
 	public var nextInSEL : TEdge;
 	public var prevInSEL : TEdge;
 	public function new() {
+		bot = new Point();
+		curr = new Point();
+		top = new Point();
+		delta = new Point();
 	}
 }
 
@@ -199,7 +197,6 @@ private class IntersectNode {
 	public var edge1 : TEdge;
 	public var edge2 : TEdge;
 	public var pt : Point;
-	public var next : IntersectNode;
 	public function new() {
 	}
 }
@@ -240,20 +237,10 @@ private class OutPt {
 	}
 }
 
-private class JoinRec {
-	public var pt1a : Point;
-	public var pt1b : Point;
-	public var poly1Idx : Int;
-	public var pt2a : Point;
-	public var pt2b : Point;
-	public var poly2Idx : Int;
-	public function new() {
-	}
-}
-
-private class HorzJoinRec {
-	public var edge : TEdge;
-	public var savedIdx : Int;
+private class Join {
+	public var outPt1 : OutPt;
+	public var outPt2 : OutPt;
+	public var offPt : Point;
 	public function new() {
 	}
 }
@@ -262,310 +249,23 @@ private typedef DoublePoint = h2d.col.Point;
 
 //------------------------------------------------------------------------------
 
-private class PolyOffsetBuilder
-{
-	private var m_p : Polygons;
-	private var currentPoly : Polygon;
-	private var normals : Array<DoublePoint>;
-	private var m_delta : Float;
-	private var m_r : Float;
-	private var m_rmin : Float;
-	private var m_i : Int;
-	private var m_j : Int;
-	private var m_k : Int;
-	private static inline var m_buffLength = 128;
-
-	function OffsetPoint(jointype:JoinType,limit:Float)
-	{
-		switch (jointype)
-		{
-			case JoinType.Miter:
-				{
-					m_r = 1 + (normals[m_j].x * normals[m_k].x +
-						normals[m_j].y * normals[m_k].y);
-					if (m_r >= m_rmin) DoMiter(); else DoSquare();
-				}
-			case JoinType.Square: DoSquare();
-			case JoinType.Round: DoRound(limit);
-		}
-		m_k = m_j;
-	}
-	//------------------------------------------------------------------------------
-
-	public function new(pts:Polygons, solution:Polygons, isPolygon:Bool, delta:Float,jointype:JoinType, endtype:EndType, limit:Float = 0)
-	{
-		//precondition: solution != pts
-		normals = [];
-
-		if (delta == 0) {solution = pts; return; }
-		m_p = pts;
-		m_delta = delta;
-		m_rmin = 0.5;
-
-		if (jointype == JoinType.Miter)
-		{
-			if (limit > 2) m_rmin = 2.0 / (limit * limit);
-			limit = 0.25; //just in case endtype == etRound
-		}
-		else
-		{
-			if (limit <= 0) limit = 0.25;
-			else if (limit > Math.abs(delta)) limit = Math.abs(delta);
-		}
-
-		var deltaSq = delta * delta;
-		solution.splice(0,solution.length);
-		var m_i = -1;
-		while( ++m_i < pts.length )
-		{
-			var len:Int = pts[m_i].length;
-			if (len == 0 || (len < 3 && delta <= 0))
-				continue;
-			else if (len == 1)
-			{
-				currentPoly = new Polygon();
-				currentPoly = Clipper.BuildArc(pts[m_i][0], 0, 2*Math.PI, delta, limit);
-				solution.push(currentPoly);
-				continue;
-			}
-
-			var forceClose = ClipperBase.PointsEqual(pts[m_i][0], pts[m_i][len - 1]);
-			if (forceClose) len--;
-
-			//build normals
-			normals = [];
-
-			for( j in 0...len-1 )
-				normals.push(Clipper.GetUnitNormal(pts[m_i][j], pts[m_i][j+1]));
-			if (isPolygon || forceClose)
-				normals.push(Clipper.GetUnitNormal(pts[m_i][len - 1], pts[m_i][0]));
-			else {
-				var n = normals[len - 2];
-				normals.push(new DoublePoint(n.x,n.y));
-			}
-
-			currentPoly = new Polygon();
-			if (isPolygon || forceClose)
-			{
-				m_k = len - 1;
-				m_j = 0;
-				while( m_j < len ) {
-					OffsetPoint(jointype, limit);
-					m_j++;
-				}
-				solution.push(currentPoly);
-				if (!isPolygon)
-				{
-					currentPoly = new Polygon();
-					m_delta = -m_delta;
-					m_k = len - 1;
-					m_j = 0;
-					while( m_j < len ) {
-						OffsetPoint(jointype, limit);
-						m_j++;
-					}
-					m_delta = -m_delta;
-					currentPoly.reverse();
-					solution.push(currentPoly);
-				}
-			}
-			else
-			{
-				m_k = 0;
-				m_j = 1;
-				while( m_j < len - 1 ) {
-					OffsetPoint(jointype, limit);
-					m_j++;
-				}
-
-				var pt1;
-				if (endtype == EndType.Butt)
-				{
-					m_j = len - 1;
-					pt1 = new Point(Round(pts[m_i][m_j].x + normals[m_j].x *
-						delta), Round(pts[m_i][m_j].y + normals[m_j].y * delta));
-					AddPoint(pt1);
-					pt1 = new Point(Round(pts[m_i][m_j].x - normals[m_j].x *
-						delta), Round(pts[m_i][m_j].y - normals[m_j].y * delta));
-					AddPoint(pt1);
-				}
-				else
-				{
-					m_j = len - 1;
-					m_k = len - 2;
-					normals[m_j].x = -normals[m_j].x;
-					normals[m_j].y = -normals[m_j].y;
-					if (endtype == EndType.Square) DoSquare();
-					else DoRound(limit);
-				}
-
-				//re-build Normals
-				var j = len - 1;
-				while( j > 0 ) {
-					normals[j].x = -normals[j - 1].x;
-					normals[j].y = -normals[j - 1].y;
-					j--;
-				}
-				normals[0].x = -normals[1].x;
-				normals[0].y = -normals[1].y;
-
-				m_k = len - 1;
-				m_j = m_k - 1;
-				while( m_j > 0 ) {
-					OffsetPoint(jointype, limit);
-					m_j--;
-				}
-
-				if (endtype == EndType.Butt)
-				{
-					pt1 = new Point(Round(pts[m_i][0].x - normals[0].x * delta),
-						Round(pts[m_i][0].y - normals[0].y * delta));
-					AddPoint(pt1);
-					pt1 = new Point(Round(pts[m_i][0].x + normals[0].x * delta),
-						Round(pts[m_i][0].y + normals[0].y * delta));
-					AddPoint(pt1);
-				}
-				else
-				{
-					m_k = 1;
-					if (endtype == EndType.Square) DoSquare();
-					else DoRound(limit);
-				}
-				solution.push(currentPoly);
-			}
-		}
-
-		//finally, clean up untidy corners
-		var clpr:Clipper = new Clipper();
-		clpr.addPolygons(solution, PolyType.Subject);
-		if (delta > 0)
-		{
-			clpr.execute(ClipType.Union, solution, PolyFillType.Positive, PolyFillType.Positive);
-		}
-		else
-		{
-			var r:Rect = clpr.GetBounds();
-			var outer:Polygon = new Polygon();
-
-			outer.add(r.left - 10, r.bottom + 10);
-			outer.add(r.right + 10, r.bottom + 10);
-			outer.add(r.right + 10, r.top - 10);
-			outer.add(r.left - 10, r.top - 10);
-
-			clpr.addPolygon(outer, PolyType.Subject);
-			clpr.reverseSolution = true;
-			clpr.execute(ClipType.Union, solution, PolyFillType.Negative, PolyFillType.Negative);
-			if (solution.length > 0) solution.shift();
-		}
-	}
-	//------------------------------------------------------------------------------
-
-	inline function AddPoint(pt:Point)
-	{
-		currentPoly.addPoint(pt);
-	}
-	//------------------------------------------------------------------------------
-
-	function DoSquare()
-	{
-		var pt1 = new Point(Round(m_p[m_i][m_j].x + normals[m_k].x * m_delta),
-			Round(m_p[m_i][m_j].y + normals[m_k].y * m_delta));
-		var pt2 = new Point(Round(m_p[m_i][m_j].x + normals[m_j].x * m_delta),
-			Round(m_p[m_i][m_j].y + normals[m_j].y * m_delta));
-		if ((normals[m_k].x * normals[m_j].y - normals[m_j].x * normals[m_k].y) * m_delta >= 0)
-		{
-			var a1 = Math.atan2(normals[m_k].y, normals[m_k].x);
-			var a2 = Math.atan2(-normals[m_j].y, -normals[m_j].x);
-			a1 = Math.abs(a2 - a1);
-			if (a1 > Math.PI) a1 = Math.PI * 2 - a1;
-			var dx:Float = Math.tan((Math.PI - a1) / 4) * Math.abs(m_delta);
-			pt1 = new Point(Std.int(pt1.x - normals[m_k].y * dx),
-				Std.int(pt1.y + normals[m_k].x * dx));
-			AddPoint(pt1);
-			pt2 = new Point(Std.int(pt2.x + normals[m_j].y * dx),
-				Std.int(pt2.y - normals[m_j].x * dx));
-			AddPoint(pt2);
-		}
-		else
-		{
-			AddPoint(pt1);
-			AddPoint(m_p[m_i][m_j]);
-			AddPoint(pt2);
-		}
-	}
-	//------------------------------------------------------------------------------
-
-
-	inline function Round(v:Float) {
-		return Math.round(v);
-	}
-
-	function DoMiter()
-	{
-		if ((normals[m_k].x * normals[m_j].y - normals[m_j].x * normals[m_k].y) * m_delta >= 0)
-		{
-			var q:Float = m_delta / m_r;
-			AddPoint(new Point(Round(m_p[m_i][m_j].x +
-				(normals[m_k].x + normals[m_j].x) * q),
-				Round(m_p[m_i][m_j].y + (normals[m_k].y + normals[m_j].y) * q)));
-		}
-		else
-		{
-			var pt1 = new Point(Round(m_p[m_i][m_j].x + normals[m_k].x * m_delta),
-				Round(m_p[m_i][m_j].y + normals[m_k].y * m_delta));
-			var pt2 = new Point(Round(m_p[m_i][m_j].x + normals[m_j].x * m_delta),
-				Round(m_p[m_i][m_j].y + normals[m_j].y * m_delta));
-			AddPoint(pt1);
-			AddPoint(m_p[m_i][m_j]);
-			AddPoint(pt2);
-		}
-	}
-	//------------------------------------------------------------------------------
-
-	function DoRound(Limit:Float)
-	{
-		var pt1 = new Point(Round(m_p[m_i][m_j].x + normals[m_k].x * m_delta),
-			Round(m_p[m_i][m_j].y + normals[m_k].y * m_delta));
-		var pt2 = new Point(Round(m_p[m_i][m_j].x + normals[m_j].x * m_delta),
-			Round(m_p[m_i][m_j].y + normals[m_j].y * m_delta));
-		AddPoint(pt1);
-		//round off reflex angles (ie > 180 deg) unless almost flat (ie < 10deg).
-		//cross product normals < 0 . angle > 180 deg.
-		//dot product normals == 1 . no angle
-		if ((normals[m_k].x * normals[m_j].y - normals[m_j].x * normals[m_k].y) * m_delta >= 0)
-		{
-			if ((normals[m_j].x * normals[m_k].x + normals[m_j].y * normals[m_k].y) < 0.985)
-			{
-				var a1 = Math.atan2(normals[m_k].y, normals[m_k].x);
-				var a2 = Math.atan2(normals[m_j].y, normals[m_j].x);
-				if (m_delta > 0 && a2 < a1) a2 += Math.PI * 2;
-				else if (m_delta < 0 && a2 > a1) a2 -= Math.PI * 2;
-				var arc:Polygon = Clipper.BuildArc(m_p[m_i][m_j], a1, a2, m_delta, Limit);
-				for ( pt in arc.points )
-					AddPoint(pt);
-			}
-		}
-		else
-			AddPoint(m_p[m_i][m_j]);
-		AddPoint(pt2);
-	}
-	//------------------------------------------------------------------------------
-
-}
-
 @:allow(hxd.clipper)
 private class ClipperBase
 {
 	static inline var HORIZONTAL = -9007199254740992.; // -2^53, big enough for JS
+	static inline var TOLERANCE = 1E-20;
+	static inline var SKIP = -2;
+	static inline var UNASSIGNED = -1;
+
+	public var preserveCollinear : Bool;
 
 	var m_MinimaList : LocalMinima;
 	var m_CurrentLM : LocalMinima;
 	var m_edges : Array<Array<TEdge>>;
 
 	//------------------------------------------------------------------------------
-
-	inline static function PointsEqual(pt1:Point, pt2:Point) {
-		return pt1.x == pt2.x && pt1.y == pt2.y;
+	public function isHorizontal(e : TEdge) {
+		return e.delta.y == 0;
 	}
 
 	inline function abs(i:Int):Int {
@@ -574,10 +274,16 @@ private class ClipperBase
 
 	//------------------------------------------------------------------------------
 
+	public function nearZero (v : Float) : Bool {
+		return v > -TOLERANCE && v < TOLERANCE;
+	}
+
+	//------------------------------------------------------------------------------
+
 	function PointIsVertex(pt:Point, pp:OutPt) {
 		var pp2 = pp;
 		do {
-			if( ClipperBase.PointsEqual(pp2.pt, pt) ) return true;
+			if( pp2.pt == pt ) return true;
 			pp2 = pp2.next;
 		} while (pp2 != pp);
 		return false;
@@ -608,68 +314,18 @@ private class ClipperBase
 
 	//------------------------------------------------------------------------------
 
-	function PointInPolygon(pt:Point, pp:OutPt)
-	{
-		var pp2 = pp;
-		var result = false;
-		/*
-		if (useFulllongRange)
-		{
-			do
-			{
-				if ((((pp2.pt.y <= pt.y) && (pt.y < pp2.prev.pt.y)) ||
-					((pp2.prev.pt.y <= pt.y) && (pt.y < pp2.pt.y))) &&
-					new Int128(pt.x - pp2.pt.x) <
-					Int128.Int128Mul(pp2.prev.pt.x - pp2.pt.x,	pt.y - pp2.pt.y) /
-					new Int128(pp2.prev.pt.y - pp2.pt.y))
-					result = !result;
-				pp2 = pp2.next;
-			}
-			while (pp2 != pp);
-		}
-		else
-		*/
-		{
-			do
-			{
-				if ((((pp2.pt.y <= pt.y) && (pt.y < pp2.prev.pt.y)) ||
-				((pp2.prev.pt.y <= pt.y) && (pt.y < pp2.pt.y))) &&
-				(pt.x - pp2.pt.x < (pp2.prev.pt.x - pp2.pt.x) * (pt.y - pp2.pt.y) /
-				(pp2.prev.pt.y - pp2.pt.y))) result = !result;
-				pp2 = pp2.next;
-			}
-			while (pp2 != pp);
-		}
-		return result;
+	inline function SlopesEqual(e1:TEdge, e2:TEdge) {
+		return e1.delta.y * e2.delta.x == e1.delta.x * e2.delta.y;
 	}
 	//------------------------------------------------------------------------------
 
-	static inline function SlopesEqual(e1:TEdge, e2:TEdge) {
-		/*
-		if (useFullRange)
-			return Int128.Int128Mul(e1.deltaY, e2.deltaX) ==
-				Int128.Int128Mul(e1.deltaX, e2.deltaY);
-		else
-		*/
-		return e1.deltaY * e2.deltaX == e1.deltaX * e2.deltaY;
+	inline function SlopesEqual3(pt1:Point, pt2:Point, pt3:Point) {
+		return (pt1.y - pt2.y) * (pt2.x - pt3.x) - (pt1.x - pt2.x) * (pt2.y - pt3.y) == 0;
 	}
 	//------------------------------------------------------------------------------
 
-	static inline function SlopesEqual3(pt1:Point, pt2:Point,pt3:Point) {
-		/*if (useFullRange)
-			return Int128.Int128Mul(pt1.y - pt2.y, pt2.x - pt3.x) ==
-				Int128.Int128Mul(pt1.x - pt2.x, pt2.y - pt3.y);
-		else*/ return
-			(pt1.y - pt2.y) * (pt2.x - pt3.x) - (pt1.x - pt2.x) * (pt2.y - pt3.y) == 0;
-	}
-	//------------------------------------------------------------------------------
-
-	static inline function SlopesEqual4(pt1:Point, pt2:Point, pt3:Point, pt4:Point) {
-		/*if (useFullRange)
-			return Int128.Int128Mul(pt1.y - pt2.y, pt3.x - pt4.x) ==
-				Int128.Int128Mul(pt1.x - pt2.x, pt3.y - pt4.y);
-		else*/ return
-			(pt1.y - pt2.y) * (pt3.x - pt4.x) - (pt1.x - pt2.x) * (pt3.y - pt4.y) == 0;
+	inline function SlopesEqual4(pt1:Point, pt2:Point, pt3:Point, pt4:Point) {
+		return (pt1.y - pt2.y) * (pt3.x - pt4.x) - (pt1.x - pt2.x) * (pt3.y - pt4.y) == 0;
 	}
 
 	//------------------------------------------------------------------------------
@@ -680,25 +336,12 @@ private class ClipperBase
 		m_MinimaList = null;
 		m_CurrentLM = null;
 	}
-	//------------------------------------------------------------------------------
 
-	//destructor - commented out since I gather this impedes the GC
-	//~ClipperBase()
-	//{
-	//	Clear();
-	//}
 	//------------------------------------------------------------------------------
 
 	public function clear()
 	{
 		disposeLocalMinimaList();
-		/*
-		for (var i:Int = 0; i < m_edges.length; ++i)
-		{
-			for (var j:Int = 0; j < m_edges[i].Count; ++j) m_edges[i][j] = null;
-			m_edges[i] = [];
-		}
-		*/
 		m_edges = [];
 	}
 	//------------------------------------------------------------------------------
@@ -726,195 +369,352 @@ private class ClipperBase
 
 	public function addPolygon(pg:Polygon, polyType:PolyType)
 	{
-		var len = pg.length;
-		if (len < 3) return false;
-
-		var p = new Polygon();
-		p.add(pg[0].x, pg[0].y);
-		var j = 0;
-		for( i in 1...len )
-		{
-			if (ClipperBase.PointsEqual(p[j], pg[i])) continue;
-			else if (j > 0 && SlopesEqual3(p[j-1], p[j], pg[i]))
-			{
-				if (ClipperBase.PointsEqual(p[j-1], pg[i])) j--;
-			} else j++;
-			if (j < p.length)
-				p[j] = pg[i]; else
-				p.add(pg[i].x, pg[i].y);
-		}
-		if (j < 2) return false;
-
-		len = j+1;
-		while (len > 2)
-		{
-			//nb: test for point equality before testing slopes
-			if (ClipperBase.PointsEqual(p[j], p[0])) j--;
-			else if (ClipperBase.PointsEqual(p[0], p[1]) || SlopesEqual3(p[j], p[0], p[1]))
-				p[0] = p[j--];
-			else if (SlopesEqual3(p[j - 1], p[j], p[0])) j--;
-			else if (SlopesEqual3(p[0], p[1], p[2]))
-			{
-				for ( i in 2...j+1 ) p[i - 1] = p[i];
-				j--;
-			}
-			else break;
-			len--;
-		}
-		if (len < 3) return false;
+		var highI = pg.length - 1;
+		while(highI > 0 && pg[highI] == pg[0]) highI--;
+		while(highI > 0 && pg[highI] == pg[highI - 1]) highI--;
+		if(highI < 2) return false;
 
 		//create a new edge array
 		var edges = [];
-		for ( i in 0...len ) edges.push(new TEdge());
-		m_edges.push(edges);
+		for( i in 0...highI + 1)
+			edges.push(new TEdge());
 
-		//convert vertices to a Float-linked-list of edges and initialize
-		edges[0].xcurr = p[0].x;
-		edges[0].ycurr = p[0].y;
-		InitEdge(edges[len - 1], edges[0], edges[len - 2], p[len - 1], polyType);
-		var i = len - 2;
-		while( i > 0 ) {
-			InitEdge(edges[i], edges[i + 1], edges[i - 1], p[i], polyType);
+		//basic edge initialization
+		var isFlat = true;
+		edges[1].curr.x = pg[1].x;
+		edges[1].curr.y = pg[1].y;
+		InitEdge(edges[0], edges[1], edges[highI], pg[0]);
+		InitEdge(edges[highI], edges[0], edges[highI - 1], pg[highI]);
+		var i = highI - 1;
+		while(i > 0) {
+			InitEdge(edges[i], edges[i + 1], edges[i - 1], pg[i]);
 			i--;
 		}
-		InitEdge(edges[0], edges[1], edges[len-1], p[0], polyType);
 
-		//reset xcurr & ycurr and find 'eHighest' (given the y axis coordinates
-		//increase downward so the 'highest' edge will have the smallest ytop)
-		var e = edges[0];
-		var eHighest = e;
-		do
-		{
-			e.xcurr = e.xbot;
-			e.ycurr = e.ybot;
-			if (e.ytop < eHighest.ytop) eHighest = e;
+		//remove ducplicate vertices and collinear edges
+		var eStart = edges[0];
+		var eStop = eStart;
+		var e = eStart;
+		while(true) {
+			if(e.curr.x == e.next.curr.x && e.curr.y == e.next.curr.y) {
+				if(e == e.next) break;
+				if(e == eStart)	eStart = e.next;
+				e = RemoveEdge(e);
+				eStop = e;
+				continue;
+			}
+
+			if(e.prev == e.next) break; //only two vertices
+			if(SlopesEqual3(e.prev.curr, e.curr, e.next.curr) && (!preserveCollinear || !Pt2IsBetweenPt1AndPt3(e.prev.curr, e.curr, e.next.curr))) {
+				//the default is to merge adjacent collinear edges into a single edge.
+				//However, if the PreserveCollinear property is enabled, only overlapping
+				//collinear edges (ie spikes) will be removed from polygons.
+				if(e == eStart) eStart = e.next;
+				e = RemoveEdge(e);
+				e = e.prev;
+				eStop = e;
+				continue;
+			}
+
 			e = e.next;
-		} while ( e != edges[0]);
-
-		//make sure eHighest is positioned so the following loop works safely
-		if (eHighest.windDelta > 0) eHighest = eHighest.next;
-		if (eHighest.dx == ClipperBase.HORIZONTAL) eHighest = eHighest.next;
-
-		//finally insert each local minima
-		e = eHighest;
-		do {
-		e = AddBoundsToLML(e);
+			if(e == eStop) break;
 		}
-		while( e != eHighest );
 
+		if(e.prev == e.next)
+			return false;
+
+		//do second part of edge initialization
+		e = eStart;
+		do {
+			InitEdge2(e, polyType);
+			e = e.next;
+			if(e.curr.y != eStart.curr.y)
+				isFlat = false;
+		}
+		while(e != eStart);
+
+		if(isFlat)
+			return false;
+
+		//add edge bounds to LocalMinima list ...
+		m_edges.push(edges);
+		var leftBoundIsForward : Bool;
+		var eMin = null;
+
+		//workaround to avoid an endless loop in the while loop below when
+		//open paths have matching start and end points ...
+		if (e.prev.bot.x == e.prev.top.x && e.prev.bot.y == e.prev.top.y) e = e.next;
+
+		var old = null;
+		while(true) {
+			e = FindNextLocMin(e);
+			if(e == eMin) break;
+			else if (eMin == null) eMin = e;
+
+			if(e == old) throw("!");
+			old = e;
+
+			//e and e.prev now share a local minima (left aligned if horizontal).
+			//Compare their slopes to find which starts which bound ...
+			var locMin = new LocalMinima();
+			locMin.next = null;
+			locMin.y = e.bot.y;
+			if(e.dx < e.prev.dx) {
+				locMin.leftBound = e.prev;
+				locMin.rightBound = e;
+				leftBoundIsForward = false;
+			}
+			else {
+				locMin.leftBound = e;
+				locMin.rightBound = e.prev;
+				leftBoundIsForward = true;
+			}
+
+			locMin.leftBound.side = EdgeSide.Left;
+			locMin.rightBound.side = EdgeSide.Right;
+			if (locMin.leftBound.next == locMin.rightBound)
+			  locMin.leftBound.windDelta = -1;
+			else locMin.leftBound.windDelta = 1;
+			locMin.rightBound.windDelta = -locMin.leftBound.windDelta;
+
+			e = ProcessBound(locMin.leftBound, leftBoundIsForward);
+			if(e.outIdx == SKIP) e = ProcessBound(e, leftBoundIsForward);
+
+			var e2 = ProcessBound(locMin.rightBound, !leftBoundIsForward);
+			if(e2.outIdx == SKIP) e2 = ProcessBound(e2, !leftBoundIsForward);
+
+			if(locMin.leftBound.outIdx == SKIP)
+				locMin.leftBound = null;
+			else if(locMin.rightBound.outIdx == SKIP)
+				locMin.rightBound = null;
+			InsertLocalMinima(locMin);
+			if(!leftBoundIsForward)
+				e = e2;
+		}
 
 		return true;
 	}
 	//------------------------------------------------------------------------------
 
-	private function InitEdge(e:TEdge, eNext:TEdge,ePrev:TEdge, pt:Point, polyType:PolyType) {
-		e.next = eNext;
-		e.prev = ePrev;
-		e.xcurr = pt.x;
-		e.ycurr = pt.y;
-		if (e.ycurr >= e.next.ycurr)
-		{
-			e.xbot = e.xcurr;
-			e.ybot = e.ycurr;
-			e.xtop = e.next.xcurr;
-			e.ytop = e.next.ycurr;
-			e.windDelta = 1;
-		} else {
-			e.xtop = e.xcurr;
-			e.ytop = e.ycurr;
-			e.xbot = e.next.xcurr;
-			e.ybot = e.next.ycurr;
-			e.windDelta = -1;
-		}
-		SetDx(e);
-		e.polyType = polyType;
-		e.outIdx = -1;
+	function InitEdge(e:TEdge, eNext:TEdge, ePrev:TEdge, pt:Point) {
+      e.next = eNext;
+      e.prev = ePrev;
+      e.curr = pt;
+      e.outIdx = UNASSIGNED;
 	}
+
+	function InitEdge2(e:TEdge, polyType : PolyType ) {
+      if (e.curr.y >= e.next.curr.y) {
+        e.bot = e.curr.clone();
+        e.top = e.next.curr.clone();
+      }
+      else {
+        e.top = e.curr.clone();
+        e.bot = e.next.curr.clone();
+      }
+      SetDx(e);
+      e.polyType = polyType;
+    }
+
 	//------------------------------------------------------------------------------
+
+	function RemoveEdge(e : TEdge) {
+      //removes e from double_linked_list (but without removing from memory)
+      e.prev.next = e.next;
+      e.next.prev = e.prev;
+      var result = e.next;
+      e.prev = null; //flag as removed (see ClipperBase.Clear)
+      return result;
+    }
+
+    //------------------------------------------------------------------------------
+
+    function FindNextLocMin(e : TEdge)  {
+		var e2 : TEdge;
+
+		while(true) {
+			while (e.bot.x != e.prev.bot.x || e.bot.y != e.prev.bot.y || (e.curr.x == e.top.x && e.curr.y == e.top.y)) e = e.next;
+			if (e.dx != HORIZONTAL && e.prev.dx != HORIZONTAL) break;
+			while (e.prev.dx == HORIZONTAL) e = e.prev;
+			e2 = e;
+			while (e.dx == HORIZONTAL) e = e.next;
+			if (e.top.y == e.prev.bot.y) continue; //ie just an intermediate horz.
+			if (e2.prev.bot.x < e.bot.x) e = e2;
+			break;
+		}
+		return e;
+    }
+
+	//------------------------------------------------------------------------------
+
+	function ProcessBound(E : TEdge, LeftBoundIsForward : Bool) {
+		var EStart : TEdge;
+		var Horz : TEdge;
+		var Result = E;
+
+		if (Result.outIdx == SKIP)
+		{
+			//check if there are edges beyond the skip edge in the bound and if so
+			//create another LocMin and calling ProcessBound once more ...
+			E = Result;
+			if (LeftBoundIsForward) {
+				while (E.top.y == E.next.bot.y) E = E.next;
+				while (E != Result && E.dx == HORIZONTAL) E = E.prev;
+			}
+			else {
+				while (E.top.y == E.prev.bot.y) E = E.prev;
+				while (E != Result && E.dx == HORIZONTAL) E = E.next;
+			}
+			if (E == Result)
+			{
+				if (LeftBoundIsForward) Result = E.next;
+				else Result = E.prev;
+			}
+			else
+			{
+				//there are more edges in the bound beyond result starting with E
+				if (LeftBoundIsForward)
+					E = Result.next;
+				else E = Result.prev;
+				var locMin = new LocalMinima();
+				locMin.next = null;
+				locMin.y = E.bot.y;
+				locMin.leftBound = null;
+				locMin.rightBound = E;
+				E.windDelta = 0;
+				Result = ProcessBound(E, LeftBoundIsForward);
+				InsertLocalMinima(locMin);
+			}
+			return Result;
+		}
+
+		if (E.dx == HORIZONTAL)
+		{
+			//We need to be careful with open paths because this may not be a
+			//true local minima (ie E may be following a skip edge).
+			//Also, consecutive horz. edges may start heading left before going right.
+			if (LeftBoundIsForward) EStart = E.prev;
+			else EStart = E.next;
+			if (EStart.outIdx != SKIP)
+			{
+				if (EStart.dx == HORIZONTAL) //ie an adjoining horizontal skip edge
+				{
+					if (EStart.bot.x != E.bot.x && EStart.top.x != E.bot.x)
+						ReverseHorizontal(E);
+				}
+				else if (EStart.bot.x != E.bot.x)
+					ReverseHorizontal(E);
+			}
+		}
+
+		EStart = E;
+		if (LeftBoundIsForward)
+		{
+			while (Result.top.y == Result.next.bot.y && Result.next.outIdx != SKIP)
+				Result = Result.next;
+			if (Result.dx == HORIZONTAL && Result.next.outIdx != SKIP)
+			{
+				//nb: at the top of a bound, horizontals are added to the bound
+				//only when the preceding edge attaches to the horizontal's left vertex
+				//unless a Skip edge is encountered when that becomes the top divide
+				Horz = Result;
+				while (Horz.prev.dx == HORIZONTAL) Horz = Horz.prev;
+				if (Horz.prev.top.x == Result.next.top.x)
+				{
+					if (!LeftBoundIsForward) Result = Horz.prev;
+				}
+				else if (Horz.prev.top.x > Result.next.top.x) Result = Horz.prev;
+			}
+			while (E != Result)
+			{
+				E.nextInLML = E.next;
+				if (E.dx == HORIZONTAL && E != EStart && E.bot.x != E.prev.top.x)
+					ReverseHorizontal(E);
+				E = E.next;
+			}
+			if (E.dx == HORIZONTAL && E != EStart && E.bot.x != E.prev.top.x)
+				ReverseHorizontal(E);
+			Result = Result.next; //move to the edge just beyond current bound
+		}
+		else
+		{
+		while (Result.top.y == Result.prev.bot.y && Result.prev.outIdx != SKIP)
+		  Result = Result.prev;
+		if (Result.dx == HORIZONTAL && Result.prev.outIdx != SKIP)
+		{
+		  Horz = Result;
+		  while (Horz.next.dx == HORIZONTAL) Horz = Horz.next;
+		  if (Horz.next.top.x == Result.prev.top.x)
+		  {
+			if (!LeftBoundIsForward) Result = Horz.next;
+		  }
+		  else if (Horz.next.top.x > Result.prev.top.x) Result = Horz.next;
+		}
+
+		while (E != Result)
+		{
+		  E.nextInLML = E.prev;
+		  if (E.dx == HORIZONTAL && E != EStart && E.bot.x != E.next.top.x)
+			ReverseHorizontal(E);
+		  E = E.prev;
+		}
+		if (E.dx == HORIZONTAL && E != EStart && E.bot.x != E.next.top.x)
+			ReverseHorizontal(E);
+		Result = Result.prev; //move to the edge just beyond current bound
+		}
+		return Result;
+    }
+
+	//------------------------------------------------------------------------------
+
+	function ReverseHorizontal(e : TEdge)
+    {
+		//swap horizontal edges' top and bottom x's so they follow the natural
+		//progression of the bounds - ie so their xbots will align with the
+		//adjoining lower edge. [Helpful in the ProcessHorizontal() method.]
+		var tmp = e.top.x;
+		e.top.x = e.bot.x;
+		e.bot.x = tmp;
+	}
+
+
+    //------------------------------------------------------------------------------
+
+    function Pt2IsBetweenPt1AndPt3(pt1 : Point, pt2 : Point, pt3 : Point) {
+      if ((pt1 == pt3) || (pt1 == pt2) || (pt3 == pt2)) return false;
+      else if (pt1.x != pt3.x) return (pt2.x > pt1.x) == (pt2.x < pt3.x);
+      else return (pt2.y > pt1.y) == (pt2.y < pt3.y);
+    }
+
+    //------------------------------------------------------------------------------
 
 	private function SetDx(e:TEdge)
 	{
-		e.deltaX = (e.xtop - e.xbot);
-		e.deltaY = (e.ytop - e.ybot);
-		if (e.deltaY == 0) e.dx = ClipperBase.HORIZONTAL;
-		else e.dx = e.deltaX / e.deltaY;
+		e.delta.x = (e.top.x - e.bot.x);
+		e.delta.y = (e.top.y - e.bot.y);
+		if (e.delta.y == 0) e.dx = HORIZONTAL;
+		else e.dx = e.delta.x / e.delta.y;
 	}
 	//---------------------------------------------------------------------------
 
-	function AddBoundsToLML(e:TEdge)
-	{
-		//Starting at the top of one bound we progress to the bottom where there's
-		//a local minima. We then go to the top of the next bound. These two bounds
-		//form the left and right (or right and left) bounds of the local minima.
-		e.nextInLML = null;
-		e = e.next;
-		while( true )
-		{
-		if ( e.dx == ClipperBase.HORIZONTAL )
-		{
-			//nb: proceed through horizontals when approaching from their right,
-			//	but break on ClipperBase.HORIZONTAL minima if approaching from their left.
-			//	This ensures 'local minima' are always on the left of horizontals.
-			if (e.next.ytop < e.ytop && e.next.xbot > e.prev.xbot) break;
-			if (e.xtop != e.prev.xbot) SwapX(e);
-			e.nextInLML = e.prev;
-		}
-		else if (e.ycurr == e.prev.ycurr) break;
-		else e.nextInLML = e.prev;
-		e = e.next;
-		}
-
-		//e and e.prev are now at a local minima
-		var newLm = new LocalMinima();
-		newLm.next = null;
-		newLm.y = e.prev.ybot;
-
-		if ( e.dx == ClipperBase.HORIZONTAL ) //ClipperBase.HORIZONTAL edges never start a left bound
-		{
-		if (e.xbot != e.prev.xbot) SwapX(e);
-		newLm.leftBound = e.prev;
-		newLm.rightBound = e;
-		} else if (e.dx < e.prev.dx)
-		{
-		newLm.leftBound = e.prev;
-		newLm.rightBound = e;
-		} else
-		{
-		newLm.leftBound = e;
-		newLm.rightBound = e.prev;
-		}
-		newLm.leftBound.side = EdgeSide.Left;
-		newLm.rightBound.side = EdgeSide.Right;
-		InsertLocalMinima( newLm );
-
-		while( true )
-		{
-		if ( e.next.ytop == e.ytop && e.next.dx != ClipperBase.HORIZONTAL ) break;
-		e.nextInLML = e.next;
-		e = e.next;
-		if ( e.dx == ClipperBase.HORIZONTAL && e.xbot != e.prev.xtop) SwapX(e);
-		}
-		return e.next;
-	}
-	//------------------------------------------------------------------------------
 
 	private function InsertLocalMinima(newLm:LocalMinima)
 	{
 		if( m_MinimaList == null )
 		{
-		m_MinimaList = newLm;
+			m_MinimaList = newLm;
 		}
 		else if( newLm.y >= m_MinimaList.y )
 		{
-		newLm.next = m_MinimaList;
-		m_MinimaList = newLm;
+			newLm.next = m_MinimaList;
+			m_MinimaList = newLm;
 		} else
 		{
-		var tmpLm = m_MinimaList;
-		while( tmpLm.next != null	&& ( newLm.y < tmpLm.next.y ) )
-			tmpLm = tmpLm.next;
-		newLm.next = tmpLm.next;
-		tmpLm.next = newLm;
+			var tmpLm = m_MinimaList;
+			while( tmpLm.next != null && ( newLm.y < tmpLm.next.y ) )
+				tmpLm = tmpLm.next;
+			newLm.next = tmpLm.next;
+			tmpLm.next = newLm;
 		}
 	}
 	//------------------------------------------------------------------------------
@@ -930,9 +730,9 @@ private class ClipperBase
 		//swap ClipperBase.HORIZONTAL edges' top and bottom x's so they follow the natural
 		//progression of the bounds - ie so their xbots will align with the
 		//adjoining lower edge. [Helpful in the ProcessHorizontal() method.]
-		e.xcurr = e.xtop;
-		e.xtop = e.xbot;
-		e.xbot = e.xcurr;
+		e.curr.x = e.top.x;
+		e.top.x = e.bot.x;
+		e.bot.x = e.curr.x;
 	}
 	//------------------------------------------------------------------------------
 
@@ -945,21 +745,21 @@ private class ClipperBase
 		while (lm != null)
 		{
 			var e = lm.leftBound;
-			while (e != null)
+			if (e != null)
 			{
-				e.xcurr = e.xbot;
-				e.ycurr = e.ybot;
+				e.curr.x = e.bot.x;
+				e.curr.y = e.bot.y;
 				e.side = EdgeSide.Left;
-				e.outIdx = -1;
+				e.outIdx = UNASSIGNED;
 				e = e.nextInLML;
 			}
 			e = lm.rightBound;
-			while (e != null)
+			if (e != null)
 			{
-				e.xcurr = e.xbot;
-				e.ycurr = e.ybot;
+				e.curr.x = e.bot.x;
+				e.curr.y = e.bot.y;
 				e.side = EdgeSide.Right;
-				e.outIdx = -1;
+				e.outIdx = UNASSIGNED;
 				e = e.nextInLML;
 			}
 			lm = lm.next;
@@ -968,91 +768,84 @@ private class ClipperBase
 	}
 	//------------------------------------------------------------------------------
 
-	public function GetBounds()
-	{
+	public function GetBounds(pols : Polygons) {
 		var result = new Rect();
-		var lm = m_MinimaList;
-		if (lm == null) return result;
-		result.left = lm.leftBound.xbot;
-		result.top = lm.leftBound.ybot;
-		result.right = lm.leftBound.xbot;
-		result.bottom = lm.leftBound.ybot;
-		while (lm != null)
-		{
-			if (lm.leftBound.ybot > result.bottom)
-				result.bottom = lm.leftBound.ybot;
-			var e = lm.leftBound;
-			while( true )
-			{
-				var bottomE = e;
-				while (e.nextInLML != null)
-				{
-					if (e.xbot < result.left) result.left = e.xbot;
-					if (e.xbot > result.right) result.right = e.xbot;
-					e = e.nextInLML;
-				}
-				if (e.xbot < result.left) result.left = e.xbot;
-				if (e.xbot > result.right) result.right = e.xbot;
-				if (e.xtop < result.left) result.left = e.xtop;
-				if (e.xtop > result.right) result.right = e.xtop;
-				if (e.ytop < result.top) result.top = e.ytop;
+		var i = 0;
+		var count = pols.length;
+		while(i < count && pols[i].length == 0) i++;
+		if(i == count) result;
 
-				if (bottomE == lm.leftBound) e = lm.rightBound;
-				else break;
+		result.left = result.right = pols[i][0].x;
+		result.top = result.bottom = pols[i][0].y;
+		for( i in 0...count)
+			for(p in pols[i]) {
+				if(p.x < result.left) result.left = p.x;
+				else if(p.x > result.right) result.right = p.x;
+				if(p.y < result.top) result.top = p.y;
+				else if(p.y > result.bottom) result.bottom = p.y;
 			}
-			lm = lm.next;
-		}
+
 		return result;
 	}
 
 } //ClipperBase
 
+
+
+
+enum NodeType {
+	Any;
+	Open;
+	Closed;
+}
+
+
 @:allow(hxd.clipper)
 class Clipper extends ClipperBase {
+
+	//InitOptions that can be passed to the constructor ...
+	public var ioReverseSolution = 1;
+	public var ioStrictlySimple = 2;
+	public var ioPreserveCollinear = 4;
+
+	public var strictlySimple : Bool;
+	public var reverseSolution : Bool;
 
 	var m_PolyOuts : Array<OutRec>;
 	var m_ClipType : ClipType;
 	var m_Scanbeam : Scanbeam;
 	var m_ActiveEdges : TEdge;
 	var m_SortedEdges : TEdge;
-	var m_IntersectNodes : IntersectNode;
+	var m_IntersectList : Array<IntersectNode>;
 	var m_ExecuteLocked : Bool;
 	var m_ClipFillType : PolyFillType;
 	var m_SubjFillType : PolyFillType;
-	var m_Joins : Array<JoinRec>;
-	var m_HorizJoins : Array<HorzJoinRec>;
-	var m_ReverseOutput : Bool;
+	var m_Joins : Array<Join>;
+	var m_GhostJoins : Array<Join>;
 	var m_UsingPolyTree : Bool;
-	public var forceSimple: Bool;
 
-	public function new()
+	public function new(initOptions = 0)
 	{
 		super();
 		m_Scanbeam = null;
 		m_ActiveEdges = null;
 		m_SortedEdges = null;
-		m_IntersectNodes = null;
+		m_IntersectList = [];
 		m_ExecuteLocked = false;
 		m_UsingPolyTree = false;
-		m_PolyOuts = new Array();
-		m_Joins = new Array();
-		m_HorizJoins = new Array();
-		m_ReverseOutput = false;
-		forceSimple = false;
+		m_PolyOuts = [];
+		m_Joins = [];
+		m_GhostJoins = [];
+
+		reverseSolution = (ioReverseSolution & initOptions) != 0;
+		strictlySimple = (ioStrictlySimple & initOptions) != 0;
+		preserveCollinear = (ioPreserveCollinear & initOptions) != 0;
 	}
 
 	inline function xor(a, b) {
 		return if( a ) !b else b;
 	}
 
-	//------------------------------------------------------------------------------
-
-	public override function clear()
-	{
-		if (m_edges.length == 0) return; //avoids problems with ClipperBase destructor
-		DisposeAllPolyPts();
-		super.clear();
-	}
 	//------------------------------------------------------------------------------
 
 	function DisposeScanbeamList()
@@ -1071,7 +864,7 @@ class Clipper extends ClipperBase {
 		m_Scanbeam = null;
 		m_ActiveEdges = null;
 		m_SortedEdges = null;
-		DisposeAllPolyPts();
+
 		var lm = m_MinimaList;
 		while (lm != null)
 		{
@@ -1082,60 +875,67 @@ class Clipper extends ClipperBase {
 
 	//------------------------------------------------------------------------------
 
-	public var reverseSolution(get, set) : Bool;
-
-	function get_reverseSolution() {
-		return m_ReverseOutput;
-	}
-	function set_reverseSolution(v) {
-		return m_ReverseOutput = v;
-	}
-
-	//------------------------------------------------------------------------------
-
 	private function InsertScanbeam(y:Int)
 	{
 		if( m_Scanbeam == null )
 		{
-		m_Scanbeam = new Scanbeam();
-		m_Scanbeam.next = null;
-		m_Scanbeam.y = y;
+			m_Scanbeam = new Scanbeam();
+			m_Scanbeam.next = null;
+			m_Scanbeam.y = y;
 		}
-		else if(	y > m_Scanbeam.y )
+		else if( y > m_Scanbeam.y )
 		{
-		var newSb = new Scanbeam();
-		newSb.y = y;
-		newSb.next = m_Scanbeam;
-		m_Scanbeam = newSb;
+			var newSb = new Scanbeam();
+			newSb.y = y;
+			newSb.next = m_Scanbeam;
+			m_Scanbeam = newSb;
 		} else
 		{
 		var sb2 = m_Scanbeam;
 		while( sb2.next != null	&& ( y <= sb2.next.y ) ) sb2 = sb2.next;
-		if(	y == sb2.y ) return; //ie ignores duplicates
-		var newSb = new Scanbeam();
-		newSb.y = y;
-		newSb.next = sb2.next;
-		sb2.next = newSb;
+			if(	y == sb2.y ) return; //ie ignores duplicates
+			var newSb = new Scanbeam();
+			newSb.y = y;
+			newSb.next = sb2.next;
+			sb2.next = newSb;
 		}
 	}
 	//------------------------------------------------------------------------------
 
-	public function execute(clipType:ClipType,solution:Polygons,?subjFillType,?clipFillType) : Bool
+	public function execute(clipType:ClipType, ?subjFillType, ?clipFillType)
 	{
 		if( subjFillType == null ) subjFillType = PolyFillType.EvenOdd;
 		if( clipFillType == null ) clipFillType = PolyFillType.EvenOdd;
-		if (m_ExecuteLocked) return false;
+		if (m_ExecuteLocked) return [];
+
 		m_ExecuteLocked = true;
-		solution.splice(0,solution.length);
+		var solution = [];
+
 		m_SubjFillType = subjFillType;
 		m_ClipFillType = clipFillType;
 		m_ClipType = clipType;
 		m_UsingPolyTree = false;
-		var succeeded = ExecuteInternal();
-		//build the return polygons
-		if (succeeded) BuildResult(solution);
+
+		var succeeded = false;
+		//try {
+			succeeded = ExecuteInternal();
+			//build the return polygons
+			if (succeeded) solution = BuildResult();
+		//}
+		//catch(e : Dynamic) { trace(e); }
+
+		DisposeAllPolyPts();
 		m_ExecuteLocked = false;
-		return succeeded;
+
+		/*
+		trace("------------");
+		for(s in solution) {
+			trace(s.length);
+			for(p in s)
+				trace(p);
+		}*/
+
+		return solution;
 	}
 	//------------------------------------------------------------------------------
 
@@ -1171,224 +971,207 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private function ExecuteInternal() : Bool
-	{
-		var succeeded;
-//		try
+	private function ExecuteInternal() {
+		Reset();
+		if (m_CurrentLM == null) return false;
+		var botY = PopScanbeam();
+		do
 		{
-			Reset();
-			if (m_CurrentLM == null) return true;
-			var botY = PopScanbeam();
-			do
-			{
-				InsertLocalMinimaIntoAEL(botY);
-				m_HorizJoins = [];
-				ProcessHorizontals();
-				var topY = PopScanbeam();
-				succeeded = ProcessIntersections(botY, topY);
-				if (!succeeded) break;
-				ProcessEdgesAtTopOfScanbeam(topY);
-				botY = topY;
-			} while (m_Scanbeam != null || m_CurrentLM != null);
-		}
-//		catch { succeeded = false; }
+			InsertLocalMinimaIntoAEL(botY);
+			m_GhostJoins = [];
+			ProcessHorizontals(false);
+			if(m_Scanbeam == null) break;
 
-		if (succeeded)
-		{
-			//tidy up output polygons and fix orientations where necessary
-			for ( outRec in m_PolyOuts)
-			{
-				if (outRec.pts == null) continue;
-				FixupOutPolygon(outRec);
-				if (outRec.pts == null) continue;
-				if (xor(outRec.isHole,m_ReverseOutput) == (Area(outRec) > 0))
-					ReversePolyPtLinks(outRec.pts);
-			}
-			JoinCommonEdges();
-			if (forceSimple) DoSimplePolygons();
+			var topY = PopScanbeam();
+			if(!ProcessIntersections(topY)) return false;
+			ProcessEdgesAtTopOfScanbeam(topY);
+			botY = topY;
+		} while (m_Scanbeam != null || m_CurrentLM != null);
+
+
+		//fix orientations ...
+		for( outRec in m_PolyOuts ) {
+			if(outRec.pts == null) continue;
+			if (xor(outRec.isHole, reverseSolution) == (Area(outRec) > 0))
+				ReversePolyPtLinks(outRec.pts);
 		}
-		m_Joins = [] /*clear*/;
-		m_HorizJoins = [] /*clear*/;
-		return succeeded;
+
+		JoinCommonEdges();
+		for( outRec in m_PolyOuts )
+			if(outRec.pts != null)
+				FixupOutPolygon(outRec);
+
+		if(strictlySimple)
+			DoSimplePolygons();
+
+		m_Joins = [];
+		m_GhostJoins = [];
+
+		return true;
 	}
 	//------------------------------------------------------------------------------
 
 	private function PopScanbeam() : Int
 	{
 		var y = m_Scanbeam.y;
-		var sb2 = m_Scanbeam;
 		m_Scanbeam = m_Scanbeam.next;
-		sb2 = null;
 		return y;
 	}
 	//------------------------------------------------------------------------------
 
-	private function DisposeAllPolyPts(){
-		for ( i in 0...m_PolyOuts.length ) DisposeOutRec(i);
+	private function DisposeAllPolyPts() {
+		for ( i in 0...m_PolyOuts.length )
+			DisposeOutRec(i);
 		m_PolyOuts = [];
 	}
+
 	//------------------------------------------------------------------------------
 
-	function DisposeOutRec(index:Int)
-	{
+	function DisposeOutRec(index:Int) {
 		var outRec = m_PolyOuts[index];
-		if (outRec.pts != null) DisposeOutPts(outRec.pts);
+		outRec.pts = null;
 		outRec = null;
 		m_PolyOuts[index] = null;
 	}
+
 	//------------------------------------------------------------------------------
 
-	private function DisposeOutPts(pp:OutPt)
-	{
-		if (pp == null) return;
-		var tmpPp = null;
-		pp.prev.next = null;
-		while (pp != null)
-		{
-			tmpPp = pp;
-			pp = pp.next;
-			tmpPp = null;
-		}
+	private function AddJoin(op1:OutPt, op2:OutPt, offPt:Point) {
+		var j = new Join();
+		j.outPt1 = op1;
+		j.outPt2 = op2;
+		j.offPt = offPt;
+		m_Joins.push(j);
 	}
+
 	//------------------------------------------------------------------------------
 
-	private function AddJoin(e1:TEdge,e2:TEdge,e1OutIdx:Int,e2OutIdx:Int)
-	{
-		var jr:JoinRec = new JoinRec();
-		if (e1OutIdx >= 0)
-			jr.poly1Idx = e1OutIdx; else
-		jr.poly1Idx = e1.outIdx;
-		jr.pt1a = new Point(e1.xcurr, e1.ycurr);
-		jr.pt1b = new Point(e1.xtop, e1.ytop);
-		if (e2OutIdx >= 0)
-			jr.poly2Idx = e2OutIdx; else
-			jr.poly2Idx = e2.outIdx;
-		jr.pt2a = new Point(e2.xcurr, e2.ycurr);
-		jr.pt2b = new Point(e2.xtop, e2.ytop);
-		m_Joins.push(jr);
+	private function AddGhostJoin(op : OutPt, offPt : Point) {
+		var j = new Join();
+		j.outPt1 = op;
+		j.offPt = offPt;
+		m_GhostJoins.push(j);
 	}
+
 	//------------------------------------------------------------------------------
 
-	private function AddHorzJoin(e:TEdge,idx:Int)
-	{
-		var hj:HorzJoinRec = new HorzJoinRec();
-		hj.edge = e;
-		hj.savedIdx = idx;
-		m_HorizJoins.push(hj);
-	}
-	//------------------------------------------------------------------------------
+	private function InsertLocalMinimaIntoAEL(botY:Int) {
 
-	private function InsertLocalMinimaIntoAEL(botY:Int)
-	{
 		while(	m_CurrentLM != null	&& ( m_CurrentLM.y == botY ) )
 		{
-		var lb:TEdge = m_CurrentLM.leftBound;
-		var rb:TEdge = m_CurrentLM.rightBound;
+			var lb:TEdge = m_CurrentLM.leftBound;
+			var rb:TEdge = m_CurrentLM.rightBound;
+			PopLocalMinima();
 
-		InsertEdgeIntoAEL( lb );
-		InsertScanbeam( lb.ytop );
-		InsertEdgeIntoAEL( rb );
+			var op1 = null;
 
-		if (IsEvenOddFillType(lb))
-		{
-			lb.windDelta = 1;
-			rb.windDelta = 1;
-		}
-		else
-		{
-			rb.windDelta = -lb.windDelta;
-		}
-		SetWindingCount(lb);
-		rb.windCnt = lb.windCnt;
-		rb.windCnt2 = lb.windCnt2;
-
-		if(	rb.dx == ClipperBase.HORIZONTAL )
-		{
-			//nb: only rightbounds can have a ClipperBase.HORIZONTAL bottom edge
-			AddEdgeToSEL( rb );
-			InsertScanbeam( rb.nextInLML.ytop );
-		}
-		else
-			InsertScanbeam( rb.ytop );
-
-		if( IsContributing(lb) )
-			AddLocalMinPoly(lb, rb, new Point(lb.xcurr, m_CurrentLM.y));
-
-		//if any output polygons share an edge, they'll need joining later
-		if (rb.outIdx >= 0 && rb.dx == ClipperBase.HORIZONTAL)
-		{
-			var i = -1;
-			while( ++i < m_HorizJoins.length )
-			{
-				var hj:HorzJoinRec = m_HorizJoins[i];
-				//if horizontals rb and hj.edge overlap, flag for joining later
-				if (HasOverlapSegment(new Point(hj.edge.xbot, hj.edge.ybot),
-					new Point(hj.edge.xtop, hj.edge.ytop),
-					new Point(rb.xbot, rb.ybot),
-					new Point(rb.xtop, rb.ytop)))
-					AddJoin(hj.edge, rb, hj.savedIdx, -1);
+			if(lb == null) {
+				InsertEdgeIntoAEL(rb);
+				SetWindingCount(rb);
+				if(IsContributing(rb))
+					op1 = AddOutPt(rb, rb.bot);
 			}
-		}
-
-
-		if( lb.nextInAEL != rb )
-		{
-			if (rb.outIdx >= 0 && rb.prevInAEL.outIdx >= 0 &&
-				ClipperBase.SlopesEqual(rb.prevInAEL, rb))
-				AddJoin(rb, rb.prevInAEL, -1, -1);
-
-			var e:TEdge = lb.nextInAEL;
-			var pt:Point = new Point(lb.xcurr, lb.ycurr);
-			while( e != rb )
-			{
-			if(e == null)
-				throw "InsertLocalMinimaIntoAEL: missing rightbound!";
-			//nb: For calculating winding counts etc, IntersectEdges() assumes
-			//that param1 will be to the right of param2 ABOVE the intersection
-			IntersectEdges( rb , e , pt , Protects.None); //order important here
-			e = e.nextInAEL;
+			else if(rb == null) {
+				InsertEdgeIntoAEL(lb);
+				SetWindingCount(lb);
+				if(IsContributing(lb))
+					op1 = AddOutPt(lb, lb.bot);
+				InsertScanbeam(lb.top.y);
 			}
-		}
-		PopLocalMinima();
+			else {
+				InsertEdgeIntoAEL(lb);
+				InsertEdgeIntoAEL(rb, lb);
+
+				SetWindingCount(lb);
+
+				rb.windCnt = lb.windCnt;
+				rb.windCnt2 = lb.windCnt2;
+
+				if(IsContributing(lb))
+					op1 = AddLocalMinPoly(lb, rb, lb.bot);
+
+				InsertScanbeam(lb.top.y);
+			}
+
+			if(rb != null) {
+				if(isHorizontal(rb))
+					AddEdgeToSEL(rb);
+				else InsertScanbeam(rb.top.y);
+			}
+
+			if(lb == null || rb == null) continue;
+
+			//if output polygons share an Edge with a horizontal rb, they'll need joining later ...
+			if(op1 != null && isHorizontal(rb) && m_GhostJoins.length > 0 && rb.windDelta != 0) {
+				for(j in m_GhostJoins) {
+					//if the horizontal Rb and a 'ghost' horizontal overlap, then convert
+					//the 'ghost' join to a real join ready for later ...
+					if(HorzSegmentsOverlap(j.outPt1.pt.x, j.offPt.x, rb.bot.x, rb.top.x))
+						AddJoin(j.outPt1, op1, j.offPt);
+				}
+			}
+
+			if(lb.outIdx >= 0 && lb.prevInAEL != null && lb.prevInAEL.curr.x == lb.bot.x && lb.prevInAEL.outIdx >= 0 && SlopesEqual(lb.prevInAEL, lb) && lb.windDelta != 0 && lb.prevInAEL.windDelta != 0) {
+				var op2 = AddOutPt(lb.prevInAEL, lb.bot);
+				AddJoin(op1, op2, lb.top);
+			}
+
+			if(lb.nextInAEL != rb) {
+				if(rb.outIdx >= 0 && rb.prevInAEL.outIdx >= 0 && SlopesEqual(rb.prevInAEL, rb) && rb.windDelta != 0 && rb.prevInAEL.windDelta != 0) {
+					var op2 = AddOutPt(rb.prevInAEL, rb.bot);
+					AddJoin(op1, op2, rb.top);
+				}
+
+				var e = lb.nextInAEL;
+				if(e != null)
+					while(e != rb) {
+						//nb: For calculating winding counts etc, IntersectEdges() assumes
+						//that param1 will be to the right of param2 ABOVE the intersection ...
+						IntersectEdges(rb, e, lb.curr); //order important here
+						e = e.nextInAEL;
+					}
+			}
 		}
 	}
 	//------------------------------------------------------------------------------
 
-	private function InsertEdgeIntoAEL(edge:TEdge)
+	private function InsertEdgeIntoAEL(edge:TEdge, startEdge : TEdge = null)
 	{
-		edge.prevInAEL = null;
-		edge.nextInAEL = null;
 		if (m_ActiveEdges == null)
 		{
-		m_ActiveEdges = edge;
+			edge.prevInAEL = null;
+			edge.nextInAEL = null;
+			m_ActiveEdges = edge;
 		}
-		else if( E2InsertsBeforeE1(m_ActiveEdges, edge) )
-		{
-		edge.nextInAEL = m_ActiveEdges;
-		m_ActiveEdges.prevInAEL = edge;
-		m_ActiveEdges = edge;
-		} else
-		{
-		var e:TEdge = m_ActiveEdges;
-		while (e.nextInAEL != null && !E2InsertsBeforeE1(e.nextInAEL, edge))
-			e = e.nextInAEL;
-		edge.nextInAEL = e.nextInAEL;
-		if (e.nextInAEL != null) e.nextInAEL.prevInAEL = edge;
-		edge.prevInAEL = e;
-		e.nextInAEL = edge;
+		else if( startEdge == null && E2InsertsBeforeE1(m_ActiveEdges, edge) ) {
+			edge.prevInAEL = null;
+			edge.nextInAEL = m_ActiveEdges;
+			m_ActiveEdges.prevInAEL = edge;
+			m_ActiveEdges = edge;
+		}
+		else {
+			if(startEdge == null)
+				startEdge = m_ActiveEdges;
+			while (startEdge.nextInAEL != null && !E2InsertsBeforeE1(startEdge.nextInAEL, edge))
+				startEdge = startEdge.nextInAEL;
+
+			edge.nextInAEL = startEdge.nextInAEL;
+			if (startEdge.nextInAEL != null) startEdge.nextInAEL.prevInAEL = edge;
+			edge.prevInAEL = startEdge;
+			startEdge.nextInAEL = edge;
 		}
 	}
 	//----------------------------------------------------------------------
 
 	private function E2InsertsBeforeE1(e1:TEdge,e2:TEdge) : Bool
 	{
-		if (e2.xcurr == e1.xcurr)
+		if (e2.curr.x == e1.curr.x)
 		{
-			if (e2.ytop > e1.ytop)
-				return e2.xtop < TopX(e1, e2.ytop);
-			else return e1.xtop > TopX(e2, e1.ytop);
+			if (e2.top.y > e1.top.y)
+				return e2.top.x < TopX(e1, e2.top.y);
+			else return e1.top.x > TopX(e2, e1.top.y);
 		}
-		else return e2.xcurr < e1.xcurr;
+		else return e2.curr.x < e1.curr.x;
 	}
 	//------------------------------------------------------------------------------
 
@@ -1427,6 +1210,7 @@ class Clipper extends ClipperBase {
 		switch (pft)
 		{
 			case PolyFillType.EvenOdd:
+				if (edge.windDelta == 0 && edge.windCnt != 1) return false;
 			case PolyFillType.NonZero:
 				if (Math.abs(edge.windCnt) != 1) return false;
 			case PolyFillType.Positive:
@@ -1435,13 +1219,13 @@ class Clipper extends ClipperBase {
 				if (edge.windCnt != -1) return false;
 		}
 
+
 		switch (m_ClipType)
 		{
 			case ClipType.Intersection:
 				switch (pft2)
 				{
-					case PolyFillType.EvenOdd:
-					case PolyFillType.NonZero:
+					case PolyFillType.EvenOdd, PolyFillType.NonZero:
 						return (edge.windCnt2 != 0);
 					case PolyFillType.Positive:
 						return (edge.windCnt2 > 0);
@@ -1451,8 +1235,7 @@ class Clipper extends ClipperBase {
 			case ClipType.Union:
 				switch (pft2)
 				{
-					case PolyFillType.EvenOdd:
-					case PolyFillType.NonZero:
+					case PolyFillType.EvenOdd, PolyFillType.NonZero:
 						return (edge.windCnt2 == 0);
 					case PolyFillType.Positive:
 						return (edge.windCnt2 <= 0);
@@ -1463,8 +1246,7 @@ class Clipper extends ClipperBase {
 				if (edge.polyType == PolyType.Subject)
 					switch (pft2)
 					{
-						case PolyFillType.EvenOdd:
-						case PolyFillType.NonZero:
+						case PolyFillType.EvenOdd, PolyFillType.NonZero:
 							return (edge.windCnt2 == 0);
 						case PolyFillType.Positive:
 							return (edge.windCnt2 <= 0);
@@ -1474,8 +1256,7 @@ class Clipper extends ClipperBase {
 				else
 					switch (pft2)
 					{
-						case PolyFillType.EvenOdd:
-						case PolyFillType.NonZero:
+						case PolyFillType.EvenOdd, PolyFillType.NonZero:
 							return (edge.windCnt2 != 0);
 						case PolyFillType.Positive:
 							return (edge.windCnt2 > 0);
@@ -1483,79 +1264,97 @@ class Clipper extends ClipperBase {
 							return (edge.windCnt2 < 0);
 					}
 			case ClipType.Xor:
-				// nothing
+				if (edge.windDelta == 0) //XOr always contributing unless open
+                  switch (pft2)
+                  {
+                    case PolyFillType.EvenOdd, PolyFillType.NonZero:
+                      return (edge.windCnt2 == 0);
+                    case PolyFillType.Positive:
+                      return (edge.windCnt2 <= 0);
+                    default:
+                      return (edge.windCnt2 >= 0);
+                  }
+                else
+                  return true;
 		}
 		return true;
 	}
 	//------------------------------------------------------------------------------
 
-	private function SetWindingCount(edge:TEdge)
-	{
-		var e:TEdge = edge.prevInAEL;
+	private function SetWindingCount(edge:TEdge) {
+		var e = edge.prevInAEL;
 		//find the edge of the same polytype that immediately preceeds 'edge' in AEL
-		while (e != null && e.polyType != edge.polyType)
-			e = e.prevInAEL;
-		if (e == null)
-		{
-			edge.windCnt = edge.windDelta;
+		while (e != null && ((e.polyType != edge.polyType) || (e.windDelta == 0))) e = e.prevInAEL;
+		if (e == null) {
+			edge.windCnt = (edge.windDelta == 0 ? 1 : edge.windDelta);
 			edge.windCnt2 = 0;
 			e = m_ActiveEdges; //ie get ready to calc windCnt2
-		}
-		else if (IsEvenOddFillType(edge))
-		{
-			//even-odd filling
+		} else if (edge.windDelta == 0 && m_ClipType != ClipType.Union) {
 			edge.windCnt = 1;
 			edge.windCnt2 = e.windCnt2;
 			e = e.nextInAEL; //ie get ready to calc windCnt2
-		}
-		else
-		{
-			//nonZero filling
-			if (e.windCnt * e.windDelta < 0)
-			{
-				if (Math.abs(e.windCnt) > 1)
-				{
-					if (e.windDelta * edge.windDelta < 0)
-						edge.windCnt = e.windCnt;
-					else
-						edge.windCnt = e.windCnt + edge.windDelta;
+		} else if (IsEvenOddFillType(edge)) {
+			//EvenOdd filling ...
+			if (edge.windDelta == 0) {
+				//are we inside a subj polygon ...
+				var Inside = true;
+				var e2 = e.prevInAEL;
+				while (e2 != null) {
+					if (e2.polyType == e.polyType && e2.windDelta != 0)
+						Inside = !Inside;
+					e2 = e2.prevInAEL;
 				}
-				else
-					edge.windCnt = e.windCnt + e.windDelta + edge.windDelta;
-			}
-			else
-			{
-				if (Math.abs(e.windCnt) > 1 && e.windDelta * edge.windDelta < 0)
+				edge.windCnt = (Inside ? 0 : 1);
+			} else
+				edge.windCnt = edge.windDelta;
+			edge.windCnt2 = e.windCnt2;
+			e = e.nextInAEL; //ie get ready to calc windCnt2
+		} else {
+			//nonZero, Positive or Negative filling ...
+			if (e.windCnt * e.windDelta < 0) {
+				//prev edge is 'decreasing' WindCount (WC) toward zero
+				//so we're outside the previous polygon ...
+				if (e.windCnt > 1 || e.windCnt < -1) {
+					//outside prev poly but still inside another.
+					//when reversing direction of prev poly use the same WC
+					if (e.windDelta * edge.windDelta < 0) edge.windCnt = e.windCnt;
+					//otherwise continue to 'decrease' WC ...
+					else edge.windCnt = e.windCnt + edge.windDelta;
+				} else
+					//now outside all polys of same polytype so set own WC ...
+					edge.windCnt = (edge.windDelta == 0 ? 1 : edge.windDelta);
+			} else {
+				//prev edge is 'increasing' WindCount (WC) away from zero
+				//so we're inside the previous polygon ...
+				if (edge.windDelta == 0)
+					edge.windCnt = (e.windCnt < 0 ? e.windCnt - 1 : e.windCnt + 1);
+				//if wind direction is reversing prev then use same WC
+				else if (e.windDelta * edge.windDelta < 0)
 					edge.windCnt = e.windCnt;
-				else if (e.windCnt + edge.windDelta == 0)
-					edge.windCnt = e.windCnt;
-				else
-					edge.windCnt = e.windCnt + edge.windDelta;
+				//otherwise add to WC ...
+				else edge.windCnt = e.windCnt + edge.windDelta;
 			}
 			edge.windCnt2 = e.windCnt2;
 			e = e.nextInAEL; //ie get ready to calc windCnt2
 		}
 
-		//update windCnt2
-		if (IsEvenOddAltFillType(edge))
-		{
-			//even-odd filling
-			while (e != edge)
-			{
-				edge.windCnt2 = (edge.windCnt2 == 0) ? 1 : 0;
+		//update windCnt2 ...
+		if (IsEvenOddAltFillType(edge)) {
+			//EvenOdd filling ...
+			while (e != edge) {
+				if (e.windDelta != 0)
+					edge.windCnt2 = (edge.windCnt2 == 0 ? 1 : 0);
 				e = e.nextInAEL;
 			}
-		}
-		else
-		{
-			//nonZero filling
-			while (e != edge)
-			{
+		} else {
+			//nonZero, Positive or Negative filling ...
+			while (e != edge) {
 				edge.windCnt2 += e.windDelta;
 				e = e.nextInAEL;
 			}
 		}
 	}
+
 	//------------------------------------------------------------------------------
 
 	private function AddEdgeToSEL(edge:TEdge)
@@ -1591,8 +1390,11 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private function SwapPositionsInAEL(edge1:TEdge,edge2:TEdge)
-	{
+	private function SwapPositionsInAEL(edge1:TEdge, edge2:TEdge) {
+        //check that one or other edge hasn't already been removed from AEL ...
+          if (edge1.nextInAEL == edge1.prevInAEL ||
+            edge2.nextInAEL == edge2.prevInAEL) return;
+
 		if (edge1.nextInAEL == edge2)
 		{
 			var next:TEdge = edge2.nextInAEL;
@@ -1706,10 +1508,11 @@ class Clipper extends ClipperBase {
 	private function AddLocalMaxPoly(e1:TEdge,e2:TEdge,pt:Point)
 	{
 		AddOutPt(e1, pt);
+        if (e2.windDelta == 0) AddOutPt(e2, pt);
 		if (e1.outIdx == e2.outIdx)
 		{
-			e1.outIdx = -1;
-			e2.outIdx = -1;
+			e1.outIdx = ClipperBase.UNASSIGNED;
+			e2.outIdx = ClipperBase.UNASSIGNED;
 		}
 		else if (e1.outIdx < e2.outIdx)
 			AppendPolygon(e1, e2);
@@ -1720,10 +1523,12 @@ class Clipper extends ClipperBase {
 
 	private function AddLocalMinPoly(e1:TEdge,e2:TEdge,pt:Point)
 	{
-		var e, prevE;
-		if (e2.dx == ClipperBase.HORIZONTAL || (e1.dx > e2.dx))
+		var result : OutPt;
+		var e, prevE : TEdge;
+
+		if( isHorizontal(e2) || (e1.dx > e2.dx))
 		{
-			AddOutPt(e1, pt);
+			result = AddOutPt(e1, pt);
 			e2.outIdx = e1.outIdx;
 			e1.side = EdgeSide.Left;
 			e2.side = EdgeSide.Right;
@@ -1735,7 +1540,7 @@ class Clipper extends ClipperBase {
 		}
 		else
 		{
-			AddOutPt(e2, pt);
+			result = AddOutPt(e2, pt);
 			e1.outIdx = e2.outIdx;
 			e1.side = EdgeSide.Right;
 			e2.side = EdgeSide.Left;
@@ -1746,18 +1551,18 @@ class Clipper extends ClipperBase {
 				prevE = e.prevInAEL;
 		}
 
-		if (prevE != null && prevE.outIdx >= 0 &&
-			(TopX(prevE, pt.y) == TopX(e, pt.y)) &&
-			 ClipperBase.SlopesEqual(e, prevE))
-				 AddJoin(e, prevE, -1, -1);
-
+		if (prevE != null && prevE.outIdx >= 0 && (TopX(prevE, pt.y) == TopX(e, pt.y)) && SlopesEqual(e, prevE) && (e.windDelta != 0) && (prevE.windDelta != 0)) {
+			var out = AddOutPt(prevE, pt);
+			AddJoin(result, out, e.top);
+		}
+		return result;
 	}
 	//------------------------------------------------------------------------------
 
 	private function CreateOutRec() : OutRec
 	{
 		var result:OutRec = new OutRec();
-		result.idx = -1;
+		result.idx = ClipperBase.UNASSIGNED;
 		result.isHole = false;
 		result.firstLeft = null;
 		result.pts = null;
@@ -1775,134 +1580,57 @@ class Clipper extends ClipperBase {
 		if(	e.outIdx < 0 )
 		{
 			var outRec = CreateOutRec();
-			e.outIdx = outRec.idx;
-			var op:OutPt = new OutPt();
+			var op = new OutPt();
 			outRec.pts = op;
-			op.pt = pt;
 			op.idx = outRec.idx;
+			op.pt = pt;
 			op.next = op;
 			op.prev = op;
 			SetHoleState(e, outRec);
+			e.outIdx = outRec.idx; //nb: do this after SetZ !
+			return op;
 		} else
 		{
 			var outRec = m_PolyOuts[e.outIdx];
-			var op:OutPt = outRec.pts, op2;
-			if (ToFront && ClipperBase.PointsEqual(pt, op.pt) ||
-				(!ToFront && ClipperBase.PointsEqual(pt, op.prev.pt))) return;
+			var op:OutPt = outRec.pts;
+			if (ToFront && pt == op.pt)
+				return op;
+			else if(!ToFront && pt == op.prev.pt)
+				return op.prev;
 
-			op2 = new OutPt();
-			op2.pt = pt;
+			var op2 = new OutPt();
 			op2.idx = outRec.idx;
+			op2.pt = pt;
 			op2.next = op;
 			op2.prev = op.prev;
 			op2.prev.next = op2;
 			op.prev = op2;
 			if (ToFront) outRec.pts = op2;
-		}
-	}
-	//------------------------------------------------------------------------------
-	/*
-	function SwapPoints(ref Point pt1, ref Point pt2)
-	{
-		var tmp:Point = pt1;
-		pt1 = pt2;
-		pt2 = tmp;
-	}
-	*/
-	//------------------------------------------------------------------------------
-
-	private inline function HasOverlapSegment(pt1a:Point, pt1b:Point, pt2a:Point,pt2b:Point) : Bool {
-		//precondition: segments are colinear.
-		if (abs(pt1a.x - pt1b.x) > abs(pt1a.y - pt1b.y))
-		{
-			if (pt1a.x > pt1b.x) {
-				var tmp = pt1a;
-				pt1a = pt1b;
-				pt1b = tmp;
-			}
-			if (pt2a.x > pt2b.x) {
-				var tmp = pt2a;
-				pt2a = pt2b;
-				pt2b = tmp;
-			}
-			var pt1 = if (pt1a.x > pt2a.x) pt1a else pt2a;
-			var pt2 = if (pt1b.x < pt2b.x) pt1b else pt2b;
-			return pt1.x < pt2.x;
-		} else {
-			if (pt1a.y < pt1b.y) {
-				var tmp = pt1a;
-				pt1a = pt1b;
-				pt1b = tmp;
-			}
-			if (pt2a.y < pt2b.y) {
-				var tmp = pt2a;
-				pt2a = pt2b;
-				pt2b = tmp;
-			}
-			var pt1 = if (pt1a.y < pt2a.y) pt1a else pt2a;
-			var pt2 = if (pt1b.y > pt2b.y) pt1b else pt2b;
-			return pt1.y > pt2.y;
-		}
-	}
-
-
-	private function GetOverlapSegment(pt1a:Point, pt1b:Point, pt2a:Point,pt2b:Point,pt1:Ref<Point>,pt2:Ref<Point>) : Bool {
-		//precondition: segments are colinear.
-		if (abs(pt1a.x - pt1b.x) > abs(pt1a.y - pt1b.y))
-		{
-			if (pt1a.x > pt1b.x) {
-				var tmp = pt1a;
-				pt1a = pt1b;
-				pt1b = tmp;
-			}
-			if (pt2a.x > pt2b.x) {
-				var tmp = pt2a;
-				pt2a = pt2b;
-				pt2b = tmp;
-			}
-			pt1.val = if (pt1a.x > pt2a.x) pt1a else pt2a;
-			pt2.val = if (pt1b.x < pt2b.x) pt1b else pt2b;
-			return pt1.val.x < pt2.val.x;
-		} else {
-			if (pt1a.y < pt1b.y) {
-				var tmp = pt1a;
-				pt1a = pt1b;
-				pt1b = tmp;
-			}
-			if (pt2a.y < pt2b.y) {
-				var tmp = pt2a;
-				pt2a = pt2b;
-				pt2b = tmp;
-			}
-			pt1.val = if (pt1a.y < pt2a.y) pt1a else pt2a;
-			pt2.val = if (pt1b.y > pt2b.y) pt1b else pt2b;
-			return pt1.val.y > pt2.val.y;
+			return op2;
 		}
 	}
 
 	//------------------------------------------------------------------------------
-
-	private function FindSegment(pp : OutPt,  pt1 : Ref<Point>, pt2 : Ref<Point>) {
-		if (pp == null) return null;
-		var pp2 : OutPt = pp;
-		var pt1a = pt1.val.clone();
-		var pt2a = pt2.val.clone();
-		do
-		{
-			if (ClipperBase.SlopesEqual4(pt1a, pt2a, pp.pt, pp.prev.pt) &&
-				ClipperBase.SlopesEqual3(pt1a, pt2a, pp.pt) &&
-				GetOverlapSegment(pt1a, pt2a, pp.pt, pp.prev.pt, pt1, pt2))
-					return pp;
-			pp = pp.next;
+	function HorzSegmentsOverlap(seg1a : Int, seg1b : Int, seg2a : Int, seg2b : Int) {
+		if (seg1a > seg1b) {
+			var tmp = seg1a;
+			seg1a = seg1b;
+			seg1b = tmp;
 		}
-		while (pp != pp2);
-		return null;
+        if (seg2a > seg2b) {
+			var tmp = seg2a;
+			seg2a = seg2b;
+			seg2b = tmp;
+		}
+
+		return seg1a < seg2b && seg2a < seg1b;
 	}
+
 	//------------------------------------------------------------------------------
 
 	function Pt3IsBetweenPt1AndPt2(pt1:Point, pt2:Point, pt3:Point)
 	{
-		if (ClipperBase.PointsEqual(pt1, pt3) || ClipperBase.PointsEqual(pt2, pt3)) return true;
+		if (pt1 == pt3 || pt2 == pt3) return true;
 		else if (pt1.x != pt2.x) return (pt1.x < pt3.x) == (pt3.x < pt2.x);
 		else return (pt1.y < pt3.y) == (pt3.y < pt2.y);
 	}
@@ -1935,7 +1663,7 @@ class Clipper extends ClipperBase {
 		var e2 = e.prevInAEL;
 		while (e2 != null)
 		{
-			if (e2.outIdx >= 0)
+			if (e2.outIdx >= 0 && e2.windDelta != 0)
 			{
 				isHole = !isHole;
 				if (outRec.firstLeft == null)
@@ -1957,17 +1685,17 @@ class Clipper extends ClipperBase {
 	private function FirstIsBottomPt(btmPt1:OutPt,btmPt2:OutPt) : Bool
 	{
 		var p:OutPt = btmPt1.prev;
-		while (ClipperBase.PointsEqual(p.pt, btmPt1.pt) && (p != btmPt1)) p = p.prev;
+		while (p.pt == btmPt1.pt && (p != btmPt1)) p = p.prev;
 		var dx1p = Math.abs(GetDx(btmPt1.pt, p.pt));
 		p = btmPt1.next;
-		while (ClipperBase.PointsEqual(p.pt, btmPt1.pt) && (p != btmPt1)) p = p.next;
+		while (p.pt == btmPt1.pt && (p != btmPt1)) p = p.next;
 		var dx1n = Math.abs(GetDx(btmPt1.pt, p.pt));
 
 		p = btmPt2.prev;
-		while (ClipperBase.PointsEqual(p.pt, btmPt2.pt) && (p != btmPt2)) p = p.prev;
+		while (p.pt == btmPt2.pt && (p != btmPt2)) p = p.prev;
 		var dx2p = Math.abs(GetDx(btmPt2.pt, p.pt));
 		p = btmPt2.next;
-		while (ClipperBase.PointsEqual(p.pt, btmPt2.pt) && (p != btmPt2)) p = p.next;
+		while (p.pt == btmPt2.pt && (p != btmPt2)) p = p.next;
 		var dx2n = Math.abs(GetDx(btmPt2.pt, p.pt));
 		return (dx1p >= dx2p && dx1p >= dx2n) || (dx1n >= dx2p && dx1n >= dx2n);
 	}
@@ -2004,7 +1732,7 @@ class Clipper extends ClipperBase {
 		{
 			if (!FirstIsBottomPt(p, dups)) pp = dups;
 			dups = dups.next;
-			while (!ClipperBase.PointsEqual(dups.pt, pp.pt)) dups = dups.next;
+			while (dups.pt != pp.pt) dups = dups.next;
 		}
 		}
 		return pp;
@@ -2070,7 +1798,7 @@ class Clipper extends ClipperBase {
 		var p2_lft = outRec2.pts;
 		var p2_rt = p2_lft.prev;
 
-		var side : Int;
+		var side : EdgeSide;
 		//join e2 poly onto e1 poly and delete pointers to e2
 		if(	e1.side == EdgeSide.Left )
 		{
@@ -2129,8 +1857,8 @@ class Clipper extends ClipperBase {
 		var OKIdx = e1.outIdx;
 		var ObsoleteIdx = e2.outIdx;
 
-		e1.outIdx = -1; //nb: safe because we only get here via AddLocalMaxPoly
-		e2.outIdx = -1;
+		e1.outIdx = ClipperBase.UNASSIGNED; //nb: safe because we only get here via AddLocalMaxPoly
+		e2.outIdx = ClipperBase.UNASSIGNED;
 
 		var e:TEdge = m_ActiveEdges;
 		while( e != null )
@@ -2179,17 +1907,12 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private function IntersectEdges(e1:TEdge,e2:TEdge,pt:Point,protects:Int)
-	{
+	private function IntersectEdges(e1:TEdge, e2:TEdge, pt:Point) {
 		//e1 will be to the left of e2 BELOW the intersection. Therefore e1 is before
 		//e2 in AEL except when e1 is being inserted at the intersection point
 
-		var e1stops = (Protects.Left & protects) == 0 && e1.nextInLML == null &&
-			e1.xtop == pt.x && e1.ytop == pt.y;
-		var e2stops = (Protects.Right & protects) == 0 && e2.nextInLML == null &&
-			e2.xtop == pt.x && e2.ytop == pt.y;
 		var e1Contributing = (e1.outIdx >= 0);
-		var e2contributing = (e2.outIdx >= 0);
+		var e2Contributing = (e2.outIdx >= 0);
 
 		//update winding counts
 		//assumes that e1 will be to the right of e2 ABOVE the intersection
@@ -2253,11 +1976,9 @@ class Clipper extends ClipperBase {
 			default: e2Wc = abs(e2.windCnt);
 		}
 
-		if (e1Contributing && e2contributing)
+		if (e1Contributing && e2Contributing)
 		{
-			if ( e1stops || e2stops ||
-				(e1Wc != 0 && e1Wc != 1) || (e2Wc != 0 && e2Wc != 1) ||
-				(e1.polyType != e2.polyType && m_ClipType != ClipType.Xor))
+			if ((e1Wc != 0 && e1Wc != 1) || (e2Wc != 0 && e2Wc != 1) ||	(e1.polyType != e2.polyType && m_ClipType != ClipType.Xor))
 				AddLocalMaxPoly(e1, e2, pt);
 			else
 			{
@@ -2277,7 +1998,7 @@ class Clipper extends ClipperBase {
 			}
 
 		}
-		else if (e2contributing)
+		else if (e2Contributing)
 		{
 			if (e1Wc == 0 || e1Wc == 1)
 			{
@@ -2286,8 +2007,7 @@ class Clipper extends ClipperBase {
 				SwapPolyIndexes(e1, e2);
 			}
 		}
-		else if ( (e1Wc == 0 || e1Wc == 1) &&
-			(e2Wc == 0 || e2Wc == 1) && !e1stops && !e2stops )
+		else if ((e1Wc == 0 || e1Wc == 1) && (e2Wc == 0 || e2Wc == 1) )
 		{
 			//neither edge is currently contributing
 			var e1Wc2, e2Wc2;
@@ -2325,17 +2045,6 @@ class Clipper extends ClipperBase {
 			else
 				SwapSides(e1, e2);
 		}
-
-		if ((e1stops != e2stops) &&
-			((e1stops && (e1.outIdx >= 0)) || (e2stops && (e2.outIdx >= 0))))
-		{
-			SwapSides(e1, e2);
-			SwapPolyIndexes(e1, e2);
-		}
-
-		//finally, delete any non-contributing maxima edges
-		if (e1stops) DeleteFromAEL(e1);
-		if (e2stops) DeleteFromAEL(e2);
 	}
 	//------------------------------------------------------------------------------
 
@@ -2387,142 +2096,150 @@ class Clipper extends ClipperBase {
 		e.nextInLML.windDelta = e.windDelta;
 		e.nextInLML.windCnt = e.windCnt;
 		e.nextInLML.windCnt2 = e.windCnt2;
+
 		e = e.nextInLML;
+		e.curr = e.bot.clone();
 		e.prevInAEL = AelPrev;
 		e.nextInAEL = AelNext;
-		if (e.dx != ClipperBase.HORIZONTAL) InsertScanbeam(e.ytop);
+		if (!isHorizontal(e))
+			InsertScanbeam(e.top.y);
 		return e;
 	}
+
+    //------------------------------------------------------------------------------
+
+	function GetHorzDirection(HorzEdge : TEdge) {
+		if (HorzEdge.bot.x < HorzEdge.top.x)
+			return { left : HorzEdge.bot.x, right : HorzEdge.top.x, dir : Direction.LeftToRight };
+		else return { left : HorzEdge.top.x, right : HorzEdge.bot.x, dir : Direction.RightToLeft };
+	}
+
 	//------------------------------------------------------------------------------
 
-	private function ProcessHorizontals()
+	private function ProcessHorizontals(isTopOfScanbeam : Bool)
 	{
 		var horzEdge = m_SortedEdges;
 		while (horzEdge != null)
 		{
 			DeleteFromSEL(horzEdge);
-			ProcessHorizontal(horzEdge);
+			ProcessHorizontal(horzEdge, isTopOfScanbeam);
 			horzEdge = m_SortedEdges;
 		}
 	}
 	//------------------------------------------------------------------------------
 
-	private function ProcessHorizontal(horzEdge:TEdge)
-	{
-		var dir;
-		var horzLeft, horzRight;
+	function ProcessHorizontal(horzEdge : TEdge, isTopOfScanbeam : Bool ) {
+		var res = GetHorzDirection(horzEdge);
+		var dir : Direction = res.dir;
+		var horzLeft : Int = res.left;
+		var horzRight : Int = res.right;
 
-		if (horzEdge.xcurr < horzEdge.xtop)
-		{
-			horzLeft = horzEdge.xcurr;
-			horzRight = horzEdge.xtop;
-			dir = Direction.LeftToRight;
-		}
-		else
-		{
-			horzLeft = horzEdge.xtop;
-			horzRight = horzEdge.xcurr;
-			dir = Direction.RightToLeft;
-		}
+		var eLastHorz = horzEdge;
+		var eMaxPair = null;
+		while (eLastHorz.nextInLML != null && isHorizontal(eLastHorz.nextInLML))
+			eLastHorz = eLastHorz.nextInLML;
+		if (eLastHorz.nextInLML == null)
+			eMaxPair = GetMaximaPair(eLastHorz);
 
-		var eMaxPair;
-		if (horzEdge.nextInLML != null)
-			eMaxPair = null;
-		else
-			eMaxPair = GetMaximaPair(horzEdge);
+		while(true) {
+			var IsLastHorz = (horzEdge == eLastHorz);
+			var e = GetNextInAEL(horzEdge, dir);
 
-		var e:TEdge = GetNextInAEL(horzEdge, dir);
-		while (e != null)
-		{
-			if (e.xcurr == horzEdge.xtop && eMaxPair == null)
-			{
-				if (ClipperBase.SlopesEqual(e, horzEdge.nextInLML))
+			while(e != null) {
+				//Break if we've got to the end of an intermediate horizontal edge ...
+				//nb: Smaller Dx's are to the right of larger Dx's ABOVE the horizontal.
+				if (e.curr.x == horzEdge.top.x && horzEdge.nextInLML != null &&	e.dx < horzEdge.nextInLML.dx) break;
+
+				var eNext = GetNextInAEL(e, dir); //saves eNext for later
+
+				if ((dir == Direction.LeftToRight && e.curr.x <= horzRight) || (dir == Direction.RightToLeft && e.curr.x >= horzLeft))
 				{
-					//if output polygons share an edge, they'll need joining later
-					if (horzEdge.outIdx >= 0 && e.outIdx >= 0)
-						AddJoin(horzEdge.nextInLML, e, horzEdge.outIdx, -1);
-					break; //we've reached the end of the ClipperBase.HORIZONTAL line
+					//so far we're still in range of the horizontal Edge  but make sure
+					//we're at the last of consec. horizontals when matching with eMaxPair
+					if(e == eMaxPair && IsLastHorz)
+					{
+						if (horzEdge.outIdx >= 0)
+						{
+							var op1 = AddOutPt(horzEdge, horzEdge.top);
+							var eNextHorz = m_SortedEdges;
+							while (eNextHorz != null)
+							{
+								if (eNextHorz.outIdx >= 0 && HorzSegmentsOverlap(horzEdge.bot.x, horzEdge.top.x, eNextHorz.bot.x, eNextHorz.top.x))	{
+									var op2 = AddOutPt(eNextHorz, eNextHorz.bot);
+									AddJoin(op2, op1, eNextHorz.top);
+								}
+								eNextHorz = eNextHorz.nextInSEL;
+							}
+							AddGhostJoin(op1, horzEdge.bot);
+							AddLocalMaxPoly(horzEdge, eMaxPair, horzEdge.top);
+						}
+						DeleteFromAEL(horzEdge);
+						DeleteFromAEL(eMaxPair);
+						return;
+					}
+					else if(dir == Direction.LeftToRight)
+					{
+						var Pt = new Point(e.curr.x, horzEdge.curr.y);
+						IntersectEdges(horzEdge, e, Pt);
+					}
+					else
+					{
+						var Pt = new Point(e.curr.x, horzEdge.curr.y);
+						IntersectEdges(e, horzEdge, Pt);
+					}
+					SwapPositionsInAEL(horzEdge, e);
 				}
-				else if (e.dx < horzEdge.nextInLML.dx)
-					//we really have got to the end of the intermediate horz edge so quit.
-					//nb: More -ve slopes follow more +ve slopes ABOVE the ClipperBase.HORIZONTAL.
+				else if ((dir == Direction.LeftToRight && e.curr.x >= horzRight) ||
+				(dir == Direction.RightToLeft && e.curr.x <= horzLeft))
 					break;
-			}
+				e = eNext;
+			} //end while
 
-			var eNext = GetNextInAEL(e, dir);
-			if (eMaxPair != null ||
-				((dir == Direction.LeftToRight) && (e.xcurr < horzRight)) ||
-				((dir == Direction.RightToLeft) && (e.xcurr > horzLeft)))
-			{
-				//so far we're still in range of the ClipperBase.HORIZONTAL edge
+			if (horzEdge.nextInLML != null && isHorizontal(horzEdge.nextInLML)) {
+				horzEdge = UpdateEdgeIntoAEL(horzEdge);
+				if (horzEdge.outIdx >= 0) AddOutPt(horzEdge, horzEdge.bot);
+				var out = GetHorzDirection(horzEdge);
+				dir = out.dir;
+				horzLeft = out.left;
+				horzRight = out.right;
+			} else break;
+		}
 
-				if (e == eMaxPair)
-				{
-					//horzEdge is evidently a maxima ClipperBase.HORIZONTAL and we've arrived at its end.
-					if (dir == Direction.LeftToRight)
-						IntersectEdges(horzEdge, e, new Point(e.xcurr, horzEdge.ycurr), 0);
-					else
-						IntersectEdges(e, horzEdge, new Point(e.xcurr, horzEdge.ycurr), 0);
-					if (eMaxPair.outIdx >= 0) throw "ProcessHorizontal error";
-					return;
-				}
-				else if (e.dx == ClipperBase.HORIZONTAL && !IsMinima(e) && !(e.xcurr > e.xtop))
-				{
-					if (dir == Direction.LeftToRight)
-						IntersectEdges(horzEdge, e, new Point(e.xcurr, horzEdge.ycurr),
-							(IsTopHorz(horzEdge, e.xcurr)) ? Protects.Left : Protects.Both);
-					else
-						IntersectEdges(e, horzEdge, new Point(e.xcurr, horzEdge.ycurr),
-							(IsTopHorz(horzEdge, e.xcurr)) ? Protects.Right : Protects.Both);
-				}
-				else if (dir == Direction.LeftToRight)
-				{
-					IntersectEdges(horzEdge, e, new Point(e.xcurr, horzEdge.ycurr),
-						(IsTopHorz(horzEdge, e.xcurr)) ? Protects.Left : Protects.Both);
-				}
-				else
-				{
-					IntersectEdges(e, horzEdge, new Point(e.xcurr, horzEdge.ycurr),
-						(IsTopHorz(horzEdge, e.xcurr)) ? Protects.Right : Protects.Both);
-				}
-				SwapPositionsInAEL(horzEdge, e);
-			}
-			else if ( (dir == Direction.LeftToRight && e.xcurr >= horzRight) ||
-				(dir == Direction.RightToLeft && e.xcurr <= horzLeft) ) break;
-			e = eNext;
-		} //end while ( e )
-
-		if (horzEdge.nextInLML != null)
+		if(horzEdge.nextInLML != null)
 		{
-			if (horzEdge.outIdx >= 0)
-				AddOutPt(horzEdge, new Point(horzEdge.xtop, horzEdge.ytop));
-			horzEdge = UpdateEdgeIntoAEL(horzEdge);
+			if(horzEdge.outIdx >= 0)
+			{
+				var op1 = AddOutPt( horzEdge, horzEdge.top);
+				if (isTopOfScanbeam) AddGhostJoin(op1, horzEdge.bot);
+
+				horzEdge = UpdateEdgeIntoAEL(horzEdge);
+				if (horzEdge.windDelta == 0) return;
+				//nb: HorzEdge is no longer horizontal here
+				var ePrev = horzEdge.prevInAEL;
+				var eNext = horzEdge.nextInAEL;
+				if (ePrev != null && ePrev.curr.x == horzEdge.bot.x && ePrev.curr.y == horzEdge.bot.y && ePrev.windDelta != 0 && (ePrev.outIdx >= 0 && ePrev.curr.y > ePrev.top.y && SlopesEqual(horzEdge, ePrev)))
+				{
+					var op2 = AddOutPt(ePrev, horzEdge.bot);
+					AddJoin(op1, op2, horzEdge.top);
+				}
+				else if (eNext != null && eNext.curr.x == horzEdge.bot.x &&	eNext.curr.y == horzEdge.bot.y && eNext.windDelta != 0 && eNext.outIdx >= 0 && eNext.curr.y > eNext.top.y && SlopesEqual(horzEdge, eNext))
+				{
+					var op2 = AddOutPt(eNext, horzEdge.bot);
+					AddJoin(op1, op2, horzEdge.top);
+				}
+			}
+			else horzEdge = UpdateEdgeIntoAEL(horzEdge);
 		}
 		else
 		{
-			if (horzEdge.outIdx >= 0)
-				IntersectEdges(horzEdge, eMaxPair,
-					new Point(horzEdge.xtop, horzEdge.ycurr), Protects.Both);
-			DeleteFromAEL(eMaxPair);
+			if (horzEdge.outIdx >= 0) AddOutPt(horzEdge, horzEdge.top);
 			DeleteFromAEL(horzEdge);
 		}
 	}
+
 	//------------------------------------------------------------------------------
 
-	private function IsTopHorz(horzEdge:TEdge,XPos:Float) : Bool
-	{
-		var e:TEdge = m_SortedEdges;
-		while (e != null)
-		{
-			if ((XPos >= Math.min(e.xcurr, e.xtop)) && (XPos <= Math.max(e.xcurr, e.xtop)))
-				return false;
-			e = e.nextInSEL;
-		}
-		return true;
-	}
-	//------------------------------------------------------------------------------
-
-	private function GetNextInAEL(e:TEdge,dir:Int) : TEdge
+	private function GetNextInAEL(e:TEdge,dir:Direction) : TEdge
 	{
 		return dir == Direction.LeftToRight ? e.nextInAEL: e.prevInAEL;
 	}
@@ -2536,45 +2253,51 @@ class Clipper extends ClipperBase {
 
 	private function IsMaxima(e:TEdge,y:Float) : Bool
 	{
-		return (e != null && e.ytop == y && e.nextInLML == null);
+		return (e != null && e.top.y == y && e.nextInLML == null);
 	}
 	//------------------------------------------------------------------------------
 
 	private function IsIntermediate(e:TEdge,y:Float) : Bool
 	{
-		return (e.ytop == y && e.nextInLML != null);
+		return (e.top.y == y && e.nextInLML != null);
 	}
 	//------------------------------------------------------------------------------
 
 	private function GetMaximaPair(e:TEdge) : TEdge
 	{
-		if (!IsMaxima(e.next, e.ytop) || (e.next.xtop != e.xtop))
-			return e.prev; else
-			return e.next;
+		var result = null;
+        if ((e.next.top.x == e.top.x && e.next.top.y == e.top.y) && e.next.nextInLML == null)
+			result = e.next;
+        else if ((e.prev.top.x == e.top.x && e.prev.top.y == e.top.y) && e.prev.nextInLML == null)
+			result = e.prev;
+        if (result != null && (result.outIdx == ClipperBase.SKIP || (result.nextInAEL == result.prevInAEL && !isHorizontal(result))))
+			return null;
+        return result;
 	}
 	//------------------------------------------------------------------------------
 
-	private function ProcessIntersections(botY:Int,topY:Int) : Bool
+	private function ProcessIntersections(topY:Int) : Bool
 	{
 		if( m_ActiveEdges == null ) return true;
-		try {
-			BuildIntersectList(botY, topY);
-			if ( m_IntersectNodes == null) return true;
-			if (m_IntersectNodes.next == null || FixupIntersectionOrder())
-				ProcessIntersectList();
-			else
-				return false;
-		} catch( e : Dynamic ) {
-			m_SortedEdges = null;
-			DisposeIntersectNodes();
-			throw "ProcessIntersections error";
-		}
-		m_SortedEdges = null;
-		return true;
+        try {
+          BuildIntersectList(topY);
+		  if ( m_IntersectList.length == 0) return true;
+          if (m_IntersectList.length == 1 || FixupIntersectionOrder())
+              ProcessIntersectList();
+          else
+              return false;
+        }
+        catch (e : Dynamic) {
+          m_SortedEdges = null;
+          m_IntersectList = [];
+          throw "ProcessIntersections error";
+        }
+        m_SortedEdges = null;
+        return true;
 	}
 	//------------------------------------------------------------------------------
 
-	private function BuildIntersectList(botY:Int,topY:Int)
+	private function BuildIntersectList(topY:Int)
 	{
 		if ( m_ActiveEdges == null ) return;
 
@@ -2583,40 +2306,39 @@ class Clipper extends ClipperBase {
 		m_SortedEdges = e;
 		while( e != null )
 		{
-		e.prevInSEL = e.prevInAEL;
-		e.nextInSEL = e.nextInAEL;
-		e.xcurr = TopX( e, topY );
-		e = e.nextInAEL;
+			e.prevInSEL = e.prevInAEL;
+			e.nextInSEL = e.nextInAEL;
+			e.curr.x = TopX( e, topY );
+			e = e.nextInAEL;
 		}
 
 		//bubblesort
 		var isModified = true;
 		while( isModified && m_SortedEdges != null )
 		{
-		isModified = false;
-		e = m_SortedEdges;
-		while( e.nextInSEL != null )
-		{
-			var eNext = e.nextInSEL;
-			var pt:Point = new Point();
-			if (e.xcurr > eNext.xcurr)
+			isModified = false;
+			e = m_SortedEdges;
+			while( e.nextInSEL != null )
 			{
-				if (!IntersectPoint(e, eNext, pt) && e.xcurr > eNext.xcurr +1)
-					throw "Intersection error";
-				if (pt.y > botY)
+				var eNext = e.nextInSEL;
+				var pt;
+				if (e.curr.x > eNext.curr.x)
 				{
-					pt.y = botY;
-					pt.x = TopX(e, pt.y);
+					pt = IntersectPoint(e, eNext);
+					var newNode = new IntersectNode();
+					newNode.edge1 = e;
+					newNode.edge2 = eNext;
+					newNode.pt = pt;
+
+					m_IntersectList.push(newNode);
+
+					SwapPositionsInSEL(e, eNext);
+					isModified = true;
 				}
-				InsertIntersectNode(e, eNext, pt);
-				SwapPositionsInSEL(e, eNext);
-				isModified = true;
+				else e = eNext;
 			}
-			else
-			e = eNext;
-		}
-		if( e.prevInSEL != null ) e.prevInSEL.nextInSEL = null;
-		else break;
+			if( e.prevInSEL != null ) e.prevInSEL.nextInSEL = null;
+			else break;
 		}
 		m_SortedEdges = null;
 	}
@@ -2629,45 +2351,60 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
+	static function IntersectNodeSort(node1 : IntersectNode, node2 : IntersectNode)
+	{
+		//the following typecast is safe because the differences in Pt.y will
+		//be limited to the height of the scanbeam.
+		return Std.int(node2.pt.y - node1.pt.y);
+	}
+
+    //------------------------------------------------------------------------------
+
 	private function FixupIntersectionOrder() : Bool
 	{
-		//pre-condition: intersections are sorted bottom-most (then left-most) first.
-		//Now it's crucial that intersections are made only between adjacent edges,
-		//so to ensure this the order of intersections may need adjusting
-		var inode:IntersectNode = m_IntersectNodes;
-		CopyAELToSEL();
-		while (inode != null)
-		{
-			if (!EdgesAdjacent(inode))
-			{
-				var nextNode = inode.next;
-				while (nextNode != null && !EdgesAdjacent(nextNode))
-					nextNode = nextNode.next;
-				if (nextNode == null)
-					return false;
-				SwapIntersectNodes(inode, nextNode);
-			}
-			SwapPositionsInSEL(inode.edge1, inode.edge2);
-			inode = inode.next;
-		}
+		//pre-condition: intersections are sorted bottom-most first.
+        //Now it's crucial that intersections are made only between adjacent edges,
+        //so to ensure this the order of intersections may need adjusting ...
+        m_IntersectList.sort(function(n1, n2) {
+			var i = n2.pt.y - n1.pt.y;
+			if (i > 0) return 1;
+			else if (i < 0) return -1;
+			else return 0;
+		});
+
+        CopyAELToSEL();
+        var cnt = m_IntersectList.length;
+        for (i in 0...cnt)
+        {
+          if (!EdgesAdjacent(m_IntersectList[i]))
+          {
+            var j = i + 1;
+            while (j < cnt && !EdgesAdjacent(m_IntersectList[j])) j++;
+            if (j == cnt) return false;
+
+            var tmp = m_IntersectList[i];
+            m_IntersectList[i] = m_IntersectList[j];
+            m_IntersectList[j] = tmp;
+
+          }
+          SwapPositionsInSEL(m_IntersectList[i].edge1, m_IntersectList[i].edge2);
+        }
 		return true;
 	}
 	//------------------------------------------------------------------------------
 
 	private function ProcessIntersectList()
 	{
-		while (m_IntersectNodes != null)
-		{
-		var iNode = m_IntersectNodes.next;
-		{
-			IntersectEdges( m_IntersectNodes.edge1 ,
-			m_IntersectNodes.edge2 , m_IntersectNodes.pt, Protects.Both );
-			SwapPositionsInAEL( m_IntersectNodes.edge1 , m_IntersectNodes.edge2 );
-		}
-		m_IntersectNodes = null;
-		m_IntersectNodes = iNode;
-		}
+		for (i in 0...m_IntersectList.length) {
+			var iNode = m_IntersectList[i];
+			{
+				IntersectEdges(iNode.edge1, iNode.edge2, iNode.pt);
+				SwapPositionsInAEL(iNode.edge1, iNode.edge2);
+			}
+        }
+        m_IntersectList = [];
 	}
+
 	//------------------------------------------------------------------------------
 
 	private static function Round(value:Float) : Int
@@ -2678,92 +2415,57 @@ class Clipper extends ClipperBase {
 
 	private static function TopX(edge:TEdge,currentY:Int) : Int
 	{
-		if (currentY == edge.ytop)
-			return edge.xtop;
-		return edge.xbot + Round(edge.dx *(currentY - edge.ybot));
+		if (currentY == edge.top.y)
+			return edge.top.x;
+		return edge.bot.x + Round(edge.dx *(currentY - edge.bot.y));
 	}
+
 	//------------------------------------------------------------------------------
 
-	private function InsertIntersectNode(e1:TEdge,e2:TEdge,pt:Point)
+	function IntersectPoint(edge1 : TEdge, edge2 : TEdge)
 	{
-		var newNode = new IntersectNode();
-		newNode.edge1 = e1;
-		newNode.edge2 = e2;
-		newNode.pt = pt;
-		newNode.next = null;
-		if (m_IntersectNodes == null) m_IntersectNodes = newNode;
-		else if (newNode.pt.y > m_IntersectNodes.pt.y)
-		{
-		newNode.next = m_IntersectNodes;
-		m_IntersectNodes = newNode;
-		}
-		else
-		{
-		var iNode = m_IntersectNodes;
-		while (iNode.next != null && newNode.pt.y < iNode.next.pt.y)
-			iNode = iNode.next;
-		newNode.next = iNode.next;
-		iNode.next = newNode;
-		}
-	}
-	//------------------------------------------------------------------------------
-
-	private function SwapIntersectNodes(int1:IntersectNode,int2:IntersectNode)
-	{
-		var e1 = int1.edge1;
-		var e2 = int1.edge2;
-		var p:Point = int1.pt;
-		int1.edge1 = int2.edge1;
-		int1.edge2 = int2.edge2;
-		int1.pt = int2.pt;
-		int2.edge1 = e1;
-		int2.edge2 = e2;
-		int2.pt = p;
-	}
-	//------------------------------------------------------------------------------
-
-	private function IntersectPoint(edge1:TEdge,edge2:TEdge,ip:Point)
-	{
+		var ip = new Point();
 		var b1, b2;
-		if (ClipperBase.SlopesEqual(edge1, edge2))
+		//nb: with very large coordinate values, it's possible for SlopesEqual() to
+		//return false but for the edge.Dx value be equal due to double precision rounding.
+		if (edge1.dx == edge2.dx)
 		{
-			if (edge2.ybot > edge1.ybot)
-			ip.y = edge2.ybot;
-			else
-			ip.y = edge1.ybot;
-			return false;
+			ip.y = edge1.curr.y;
+			ip.x = TopX(edge1, ip.y);
+			return ip;
 		}
-		else if (edge1.dx == 0)
+
+		if (edge1.delta.x == 0)
 		{
-			ip.x = edge1.xbot;
-			if (edge2.dx == ClipperBase.HORIZONTAL)
+			ip.x = edge1.bot.x;
+			if (isHorizontal(edge2))
 			{
-				ip.y = edge2.ybot;
+				ip.y = edge2.bot.y;
 			}
 			else
 			{
-				b2 = edge2.ybot - (edge2.xbot / edge2.dx);
-				ip.y = Round(ip.x / edge2.dx + b2);
+				b2 = edge2.bot.y - (edge2.bot.x / edge2.dx);
+				ip.y = Round(ip.y / edge2.dx + b2);
 			}
 		}
-		else if (edge2.dx == 0)
+		else if (edge2.delta.x == 0)
 		{
-			ip.x = edge2.xbot;
-			if (edge1.dx == ClipperBase.HORIZONTAL)
+			ip.x = edge2.bot.x;
+			if (isHorizontal(edge1))
 			{
-				ip.y = edge1.ybot;
+				ip.y = edge1.bot.y;
 			}
 			else
 			{
-				b1 = edge1.ybot - (edge1.xbot / edge1.dx);
+				b1 = edge1.bot.y - (edge1.bot.x / edge1.dx);
 				ip.y = Round(ip.x / edge1.dx + b1);
 			}
 		}
 		else
 		{
-			b1 = edge1.xbot - edge1.ybot * edge1.dx;
-			b2 = edge2.xbot - edge2.ybot * edge2.dx;
-			var q:Float = (b2 - b1) / (edge1.dx - edge2.dx);
+			b1 = edge1.bot.x - edge1.bot.y * edge1.dx;
+			b2 = edge2.bot.x - edge2.bot.y * edge2.dx;
+			var q = (b2 - b1) / (edge1.dx - edge2.dx);
 			ip.y = Round(q);
 			if (Math.abs(edge1.dx) < Math.abs(edge2.dx))
 				ip.x = Round(edge1.dx * q + b1);
@@ -2771,160 +2473,160 @@ class Clipper extends ClipperBase {
 				ip.x = Round(edge2.dx * q + b2);
 		}
 
-		if (ip.y < edge1.ytop || ip.y < edge2.ytop)
+		if (ip.y < edge1.top.y || ip.y < edge2.top.y)
 		{
-			if (edge1.ytop > edge2.ytop)
+			if (edge1.top.y > edge2.top.y)
+				ip.y = edge1.top.y;
+			else
+				ip.y = edge2.top.y;
+			if (Math.abs(edge1.dx) < Math.abs(edge2.dx))
+				ip.x = TopX(edge1, ip.y);
+			else
+				ip.x = TopX(edge2, ip.y);
+		}
+		//finally, don't allow 'ip' to be BELOW curr.y (ie bottom of scanbeam) ...
+		if (ip.y > edge1.curr.y)
+		{
+			ip.y = edge1.curr.y;
+			//better to use the more vertical edge to derive X ...
+			if (Math.abs(edge1.dx) > Math.abs(edge2.dx))
+				ip.x = TopX(edge2, ip.y);
+			else
+				ip.x = TopX(edge1, ip.y);
+		}
+
+		return ip;
+	}
+	//------------------------------------------------------------------------------
+
+	function ProcessEdgesAtTopOfScanbeam(topY : Int) {
+		var e = m_ActiveEdges;
+		while(e != null)
+		{
+			//1. process maxima, treating them as if they're 'bent' horizontal edges,
+			//   but exclude maxima with horizontal edges. nb: e can't be a horizontal.
+			var IsMaximaEdge = IsMaxima(e, topY);
+
+			if(IsMaximaEdge)
 			{
-				ip.x = edge1.xtop;
-				ip.y = edge1.ytop;
-				return TopX(edge2, edge1.ytop) < edge1.xtop;
+				var eMaxPair = GetMaximaPair(e);
+				IsMaximaEdge = (eMaxPair == null || !isHorizontal(eMaxPair));
+			}
+
+			if(IsMaximaEdge)
+			{
+				var ePrev = e.prevInAEL;
+				DoMaxima(e);
+				if( ePrev == null) e = m_ActiveEdges;
+				else e = ePrev.nextInAEL;
 			}
 			else
 			{
-				ip.x = edge2.xtop;
-				ip.y = edge2.ytop;
-				return TopX(edge1, edge2.ytop) > edge2.xtop;
-			}
-		}
-		else
-			return true;
-	}
-	//------------------------------------------------------------------------------
-
-	private function DisposeIntersectNodes()
-	{
-		while ( m_IntersectNodes != null )
-		{
-		var iNode = m_IntersectNodes.next;
-		m_IntersectNodes = null;
-		m_IntersectNodes = iNode;
-		}
-	}
-	//------------------------------------------------------------------------------
-
-	private function ProcessEdgesAtTopOfScanbeam(topY:Int)
-	{
-		var e:TEdge = m_ActiveEdges;
-		while( e != null )
-		{
-		//1. process maxima, treating them as if they're 'bent' ClipperBase.HORIZONTAL edges,
-		//	 but exclude maxima with ClipperBase.HORIZONTAL edges. nb: e can't be a ClipperBase.HORIZONTAL.
-		if( IsMaxima(e, topY) && GetMaximaPair(e).dx != ClipperBase.HORIZONTAL )
-		{
-			//'e' might be removed from AEL, as may any following edges so
-			var ePrev = e.prevInAEL;
-			DoMaxima(e, topY);
-			if( ePrev == null ) e = m_ActiveEdges;
-			else e = ePrev.nextInAEL;
-		}
-		else
-		{
-			var intermediateVert = IsIntermediate(e, topY);
-			//2. promote ClipperBase.HORIZONTAL edges, otherwise update xcurr and ycurr
-			if (intermediateVert && e.nextInLML.dx == ClipperBase.HORIZONTAL)
-			{
-			if (e.outIdx >= 0)
-			{
-				AddOutPt(e, new Point(e.xtop, e.ytop));
-
-				var i = -1;
-				while( ++i < m_HorizJoins.length ) {
-					var hj:HorzJoinRec = m_HorizJoins[i];
-					if (HasOverlapSegment(new Point(hj.edge.xbot, hj.edge.ybot),
-						new Point(hj.edge.xtop, hj.edge.ytop),
-						new Point(e.nextInLML.xbot, e.nextInLML.ybot),
-						new Point(e.nextInLML.xtop, e.nextInLML.ytop)))
-							AddJoin(hj.edge, e.nextInLML, hj.savedIdx, e.outIdx);
+				//2. promote horizontal edges, otherwise update Curr.x and Curr.y ...
+				if (IsIntermediate(e, topY) && isHorizontal(e.nextInLML))
+				{
+					e = UpdateEdgeIntoAEL(e);
+					if (e.outIdx >= 0)
+						AddOutPt(e, e.bot);
+					AddEdgeToSEL(e);
+				}
+				else
+				{
+					e.curr.x = TopX( e, topY );
+					e.curr.y = topY;
 				}
 
-				AddHorzJoin(e.nextInLML, e.outIdx);
+				if (strictlySimple)
+				{
+					var ePrev = e.prevInAEL;
+					if ((e.outIdx >= 0) && (e.windDelta != 0) && ePrev != null && (ePrev.outIdx >= 0) && (ePrev.curr.x == e.curr.x) && (ePrev.windDelta != 0))
+					{
+						var ip = new Point(e.curr.x, e.curr.y);
+						var op = AddOutPt(ePrev, ip);
+						var op2 = AddOutPt(e, ip);
+						AddJoin(op, op2, ip); //StrictlySimple (type-3) join
+					}
+				}
+
+				e = e.nextInAEL;
 			}
-			e = UpdateEdgeIntoAEL(e);
-			AddEdgeToSEL(e);
-			}
-			else
+		}
+
+		//3. Process horizontals at the Top of the scanbeam ...
+		ProcessHorizontals(true);
+
+		//4. Promote intermediate vertices ...
+		e = m_ActiveEdges;
+		while (e != null)
+		{
+			if(IsIntermediate(e, topY))
 			{
-			e.xcurr = TopX( e, topY );
-			e.ycurr = topY;
-			if (forceSimple && e.prevInAEL != null &&
-				e.prevInAEL.xcurr == e.xcurr &&
-				e.outIdx >= 0 && e.prevInAEL.outIdx >= 0)
-			{
-				if (intermediateVert)
-					AddOutPt(e.prevInAEL, new Point(e.xcurr, topY));
-				else
-					AddOutPt(e, new Point(e.xcurr, topY));
-			}
+				var op = null;
+				if( e.outIdx >= 0 )
+					op = AddOutPt(e, e.top);
+				e = UpdateEdgeIntoAEL(e);
+
+				//if output polygons share an edge, they'll need joining later ...
+				var ePrev = e.prevInAEL;
+				var eNext = e.nextInAEL;
+				if (ePrev != null && ePrev.curr.x == e.bot.x &&	ePrev.curr.y == e.bot.y && op != null && ePrev.outIdx >= 0 && ePrev.curr.y > ePrev.top.y &&	SlopesEqual(e, ePrev) && (e.windDelta != 0) && (ePrev.windDelta != 0))
+				{
+					var op2 = AddOutPt(ePrev, e.bot);
+					AddJoin(op, op2, e.top);
+				}
+				else if (eNext != null && eNext.curr.x == e.bot.x && eNext.curr.y == e.bot.y && op != null && eNext.outIdx >= 0 && eNext.curr.y > eNext.top.y && SlopesEqual(e, eNext) && (e.windDelta != 0) && (eNext.windDelta != 0))
+				{
+					var op2 = AddOutPt(eNext, e.bot);
+					AddJoin(op, op2, e.top);
+				}
 			}
 			e = e.nextInAEL;
 		}
-		}
-
-		//3. Process horizontals at the top of the scanbeam
-		ProcessHorizontals();
-
-		//4. Promote intermediate vertices
-		e = m_ActiveEdges;
-		while( e != null )
-		{
-		if( IsIntermediate( e, topY ) )
-		{
-			if (e.outIdx >= 0) AddOutPt(e, new Point(e.xtop, e.ytop));
-			e = UpdateEdgeIntoAEL(e);
-
-			//if output polygons share an edge, they'll need joining later
-			var ePrev = e.prevInAEL;
-			var eNext = e.nextInAEL;
-			if (ePrev != null && ePrev.xcurr == e.xbot &&
-			ePrev.ycurr == e.ybot && e.outIdx >= 0 &&
-			ePrev.outIdx >= 0 && ePrev.ycurr > ePrev.ytop &&
-			ClipperBase.SlopesEqual(e, ePrev))
-			{
-				AddOutPt(ePrev, new Point(e.xbot, e.ybot));
-				AddJoin(e, ePrev, -1, -1);
-			}
-			else if (eNext != null && eNext.xcurr == e.xbot &&
-			eNext.ycurr == e.ybot && e.outIdx >= 0 &&
-			eNext.outIdx >= 0 && eNext.ycurr > eNext.ytop &&
-			ClipperBase.SlopesEqual(e, eNext))
-			{
-				AddOutPt(eNext, new Point(e.xbot, e.ybot));
-				AddJoin(e, eNext, -1, -1);
-			}
-		}
-		e = e.nextInAEL;
-		}
 	}
 	//------------------------------------------------------------------------------
 
-	private function DoMaxima(e:TEdge,topY:Int)
+	private function DoMaxima(e:TEdge)
 	{
-		var eMaxPair = GetMaximaPair(e);
-		var x:Int = e.xtop;
-		var eNext = e.nextInAEL;
-		while( eNext != eMaxPair )
-		{
-		if (eNext == null) throw "DoMaxima error";
-		IntersectEdges( e, eNext, new Point(x, topY), Protects.Both );
-		SwapPositionsInAEL(e, eNext);
-		eNext = e.nextInAEL;
-		}
-		if( e.outIdx < 0 && eMaxPair.outIdx < 0 )
-		{
-		DeleteFromAEL( e );
-		DeleteFromAEL( eMaxPair );
-		}
-		else if( e.outIdx >= 0 && eMaxPair.outIdx >= 0 )
-		{
-			IntersectEdges(e, eMaxPair, new Point(x, topY), Protects.None);
-		}
-		else throw "DoMaxima error";
+        var eMaxPair = GetMaximaPair(e);
+        if (eMaxPair == null)
+        {
+          if (e.outIdx >= 0)
+            AddOutPt(e, e.top);
+          DeleteFromAEL(e);
+          return;
+        }
+
+        var eNext = e.nextInAEL;
+        while(eNext != null && eNext != eMaxPair)
+        {
+          IntersectEdges(e, eNext, e.top);
+          SwapPositionsInAEL(e, eNext);
+          eNext = e.nextInAEL;
+        }
+
+        if(e.outIdx == ClipperBase.UNASSIGNED && eMaxPair.outIdx == ClipperBase.UNASSIGNED)
+        {
+          DeleteFromAEL(e);
+          DeleteFromAEL(eMaxPair);
+        }
+        else if( e.outIdx >= 0 && eMaxPair.outIdx >= 0 )
+        {
+          if (e.outIdx >= 0) AddLocalMaxPoly(e, eMaxPair, e.top);
+          DeleteFromAEL(e);
+          DeleteFromAEL(eMaxPair);
+        }
+        else throw "DoMaxima error";
 	}
 	//------------------------------------------------------------------------------
 
 	static function reversePolygons(polys:Polygons)
 	{
 		for( p in polys ) p.reverse();
+	}
+
+	public static function Orientation(poly : Polygon )
+	{
+		return polArea(poly) >= 0;
 	}
 
 	//------------------------------------------------------------------------------
@@ -2944,23 +2646,25 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private function BuildResult(polyg:Polygons)
+	private function BuildResult()
 	{
-		polyg.splice(0,polyg.length);
+		var solution = [];
 		for( outRec in m_PolyOuts )
 		{
 			if (outRec.pts == null) continue;
-			var p:OutPt = outRec.pts;
+			if (outRec.isHole) continue; //TODO : add parameter for keeping holes or not !!!
+			var p:OutPt = outRec.pts.prev;
 			var cnt:Int = PointCount(p);
-			if (cnt < 3) continue;
+			if (cnt < 2) continue;
 			var pg:Polygon = new Polygon();
 			for( j in 0...cnt )
 			{
 				pg.addPoint(p.pt);
 				p = p.prev;
 			}
-			polyg.push(pg);
+			solution.push(pg);
 		}
+		return solution;
 	}
 	//------------------------------------------------------------------------------
 
@@ -2971,13 +2675,13 @@ class Clipper extends ClipperBase {
 		//add each output polygon/contour to polytree
 		for ( outRec in m_PolyOuts )
 		{
-			var cnt:Int = PointCount(outRec.pts);
+			var cnt = PointCount(outRec.pts);
 			if (cnt < 3) continue;
-			FixHoleLinkage(outRec);
+            FixHoleLinkage(outRec);
 			var pn:PolyNode = new PolyNode();
 			polytree.allPolys.push(pn);
 			outRec.polyNode = pn;
-			var op:OutPt = outRec.pts;
+			var op:OutPt = outRec.pts.prev;
 			for( j in 0...cnt )
 			{
 				pn.polygon.addPoint(op.pt);
@@ -2988,11 +2692,11 @@ class Clipper extends ClipperBase {
 		//fixup PolyNode links etc
 		for( outRec in m_PolyOuts )
 		{
-			if (outRec.polyNode == null) continue;
-			if (outRec.firstLeft == null)
-				polytree.addChild(outRec.polyNode);
-			else
-				outRec.firstLeft.polyNode.addChild(outRec.polyNode);
+		  if (outRec.polyNode == null) continue;
+		  else if (outRec.firstLeft != null && outRec.firstLeft.polyNode != null)
+			  outRec.firstLeft.polyNode.addChild(outRec.polyNode);
+		  else
+			polytree.addChild(outRec.polyNode);
 		}
 	}
 	//------------------------------------------------------------------------------
@@ -3008,14 +2712,12 @@ class Clipper extends ClipperBase {
 		{
 			if (pp.prev == pp || pp.prev == pp.next)
 			{
-				DisposeOutPts(pp);
 				outRec.pts = null;
 				return;
 			}
 			//test for duplicate points and for same slope (cross-product)
-			if (ClipperBase.PointsEqual(pp.pt, pp.next.pt) ||
-				ClipperBase.SlopesEqual3(pp.prev.pt, pp.pt, pp.next.pt))
-			{
+			if ((pp.pt == pp.next.pt) || (pp.pt == pp.prev.pt) || (SlopesEqual3(pp.prev.pt, pp.pt, pp.next.pt) && (!preserveCollinear || !Pt2IsBetweenPt1AndPt3(pp.prev.pt, pp.pt, pp.next.pt))))
+             {
 				lastOK = null;
 				var tmp:OutPt = pp;
 				pp.prev.next = pp.next;
@@ -3023,7 +2725,8 @@ class Clipper extends ClipperBase {
 				pp = pp.prev;
 				tmp = null;
 			}
-			else if (pp == lastOK) break;
+			else if (pp == lastOK)
+				break;
 			else
 			{
 				if (lastOK == null) lastOK = pp;
@@ -3034,128 +2737,428 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private function JoinPoints(j:JoinRec) : Null<{ p1 : OutPt, p2 : OutPt }>
+	function DupOutPt(outPt : OutPt, InsertAfter : Bool)
 	{
-		var p1 = null, p2 = null;
-		var outRec1 = m_PolyOuts[j.poly1Idx];
-		var outRec2 = m_PolyOuts[j.poly2Idx];
-		if (outRec1	== null || outRec2 == null)	return null;
-		var pp1a = outRec1.pts;
-		var pp2a = outRec2.pts;
-		var pt1 = new Ref<Point>(j.pt2a), pt2 = new Ref<Point>(j.pt2b);
-		var pt3 = new Ref<Point>(j.pt1a), pt4 = new Ref<Point>(j.pt1b);
-		pp1a = FindSegment(pp1a, pt1, pt2);
-		if( pp1a == null ) return null;
-		if (outRec1 == outRec2)
+		var result = new OutPt();
+		result.pt = outPt.pt;
+		result.idx = outPt.idx;
+		if (InsertAfter)
 		{
-			//we're searching the same polygon for overlapping segments so
-			//segment 2 mustn't be the same as segment 1
-			pp2a = pp1a.next;
-			pp2a = FindSegment(pp2a, pt3, pt4);
-			if( pp2a == null || pp2a == pp1a )
-				return null;
-		}
-		else {
-			pp2a = FindSegment(pp2a, pt3, pt4);
-			if( pp2a == null )
-				return null;
-		}
-
-		if (!GetOverlapSegment(pt1.val, pt2.val, pt3.val, pt4.val, pt1, pt2)) return null;
-
-		// unref
-		var pt1 = pt1.val;
-		var pt2 = pt2.val;
-		var pt3 = pt3.val;
-		var pt4 = pt4.val;
-
-		var p3, p4, prev = pp1a.prev;
-		//get p1 & p2 polypts - the overlap start & endpoints on poly1
-		if (ClipperBase.PointsEqual(pp1a.pt, pt1)) p1 = pp1a;
-		else if (ClipperBase.PointsEqual(prev.pt, pt1)) p1 = prev;
-		else p1 = InsertPolyPtBetween(pp1a, prev, pt1);
-
-		if (ClipperBase.PointsEqual(pp1a.pt, pt2)) p2 = pp1a;
-		else if (ClipperBase.PointsEqual(prev.pt, pt2)) p2 = prev;
-		else if ((p1 == pp1a) || (p1 == prev))
-			p2 = InsertPolyPtBetween(pp1a, prev, pt2);
-		else if (Pt3IsBetweenPt1AndPt2(pp1a.pt, p1.pt, pt2))
-			p2 = InsertPolyPtBetween(pp1a, p1, pt2); else
-			p2 = InsertPolyPtBetween(p1, prev, pt2);
-
-		//get p3 & p4 polypts - the overlap start & endpoints on poly2
-		prev = pp2a.prev;
-		if (ClipperBase.PointsEqual(pp2a.pt, pt1)) p3 = pp2a;
-		else if (ClipperBase.PointsEqual(prev.pt, pt1)) p3 = prev;
-		else p3 = InsertPolyPtBetween(pp2a, prev, pt1);
-
-		if (ClipperBase.PointsEqual(pp2a.pt, pt2)) p4 = pp2a;
-		else if (ClipperBase.PointsEqual(prev.pt, pt2)) p4 = prev;
-		else if ((p3 == pp2a) || (p3 == prev))
-			p4 = InsertPolyPtBetween(pp2a, prev, pt2);
-		else if (Pt3IsBetweenPt1AndPt2(pp2a.pt, p3.pt, pt2))
-			p4 = InsertPolyPtBetween(pp2a, p3, pt2); else
-			p4 = InsertPolyPtBetween(p3, prev, pt2);
-
-		//p1.pt == p3.pt and p2.pt == p4.pt so join p1 to p3 and p2 to p4
-		if (p1.next == p2 && p3.prev == p4)
-		{
-			p1.next = p3;
-			p3.prev = p1;
-			p2.prev = p4;
-			p4.next = p2;
-			return {p1:p1,p2:p2};
-		}
-		else if (p1.prev == p2 && p3.next == p4)
-		{
-			p1.prev = p3;
-			p3.next = p1;
-			p2.next = p4;
-			p4.prev = p2;
-			return {p1:p1,p2:p2};
+			result.next = outPt.next;
+			result.prev = outPt;
+			outPt.next.prev = result;
+			outPt.next = result;
 		}
 		else
-			return null; //an orientation is probably wrong
-	}
-	//----------------------------------------------------------------------
-
-	private function FixupJoinRecs(j:JoinRec,pt:OutPt,startIdx:Int)
-	{
-		for( j2 in m_Joins )
 		{
-			if (j2.poly1Idx == j.poly1Idx && PointIsVertex(j2.pt1a, pt))
-			j2.poly1Idx = j.poly2Idx;
-			if (j2.poly2Idx == j.poly1Idx && PointIsVertex(j2.pt2a, pt))
-			j2.poly2Idx = j.poly2Idx;
+			result.prev = outPt.prev;
+			result.next = outPt;
+			outPt.prev.next = result;
+			outPt.prev = result;
+		}
+		return result;
+	}
+	//------------------------------------------------------------------------------
+
+	function GetOverlap(a1 : Int, a2 : Int, b1 : Int, b2 : Int)
+	{
+		var Left : Int;
+		var Right : Int;
+
+		if (a1 < a2)
+		{
+			if (b1 < b2) {
+				Left = Math.imax(a1, b1);
+				Right = Math.imin(a2, b2);
+			}
+			else {
+				Left = Math.imax(a1, b2);
+				Right = Math.imin(a2, b1);
+			}
+		}
+		else
+		{
+			if (b1 < b2) {
+				Left = Math.imax(a2, b1);
+				Right = Math.imin(a1, b2);
+			}
+			else {
+				Left = Math.imax(a2, b2);
+				Right = Math.imin(a1, b1);
+			}
+		}
+		return { left : Left, right : Right,  done : Left < Right };
+	}
+
+	//------------------------------------------------------------------------------
+	function JoinHorz(op1 : OutPt, op1b : OutPt, op2 : OutPt, op2b : OutPt, pt : Point, DiscardLeft : Bool) {
+		var Dir1 = (op1.pt.x > op1b.pt.x ? Direction.RightToLeft : Direction.LeftToRight);
+		var Dir2 = (op2.pt.x > op2b.pt.x ? Direction.RightToLeft : Direction.LeftToRight);
+		if (Dir1 == Dir2) return false;
+
+		//When DiscardLeft, we want Op1b to be on the Left of Op1, otherwise we
+		//want Op1b to be on the Right. (And likewise with Op2 and Op2b.)
+		//So, to facilitate this while inserting Op1b and Op2b ...
+		//when DiscardLeft, make sure we're AT or RIGHT of Pt before adding Op1b,
+		//otherwise make sure we're AT or LEFT of Pt. (Likewise with Op2b.)
+		if (Dir1 == Direction.LeftToRight)
+		{
+			while (op1.next.pt.x <= pt.x &&	op1.next.pt.x >= op1.pt.x && op1.next.pt.y == pt.y)
+				op1 = op1.next;
+			if (DiscardLeft && (op1.pt.x != pt.x))
+				op1 = op1.next;
+			op1b = DupOutPt(op1, !DiscardLeft);
+			if (op1b.pt != pt)
+			{
+				op1 = op1b;
+				op1.pt = pt;
+				op1b = DupOutPt(op1, !DiscardLeft);
+			}
+		}
+		else
+		{
+			while (op1.next.pt.x >= pt.x &&
+				op1.next.pt.x <= op1.pt.x && op1.next.pt.y == pt.y)
+			op1 = op1.next;
+			if (!DiscardLeft && (op1.pt.x != pt.x)) op1 = op1.next;
+				op1b = DupOutPt(op1, DiscardLeft);
+			if (op1b.pt != pt)
+			{
+				op1 = op1b;
+				op1.pt = pt;
+				op1b = DupOutPt(op1, DiscardLeft);
+			}
+		}
+
+		if (Dir2 == Direction.LeftToRight)
+		{
+			while (op2.next.pt.x <= pt.x &&
+				op2.next.pt.x >= op2.pt.x && op2.next.pt.y == pt.y)
+			op2 = op2.next;
+			if (DiscardLeft && (op2.pt.x != pt.x)) op2 = op2.next;
+				op2b = DupOutPt(op2, !DiscardLeft);
+			if (op2b.pt != pt)
+			{
+				op2 = op2b;
+				op2.pt = pt;
+				op2b = DupOutPt(op2, !DiscardLeft);
+			};
+		} else
+		{
+			while (op2.next.pt.x >= pt.x &&	op2.next.pt.x <= op2.pt.x && op2.next.pt.y == pt.y)
+			op2 = op2.next;
+			if (!DiscardLeft && (op2.pt.x != pt.x)) op2 = op2.next;
+			op2b = DupOutPt(op2, DiscardLeft);
+			if (op2b.pt != pt)
+			{
+				op2 = op2b;
+				op2.pt = pt;
+				op2b = DupOutPt(op2, DiscardLeft);
+			};
+		};
+
+		if ((Dir1 == Direction.LeftToRight) == DiscardLeft)
+		{
+			op1.prev = op2;
+			op2.next = op1;
+			op1b.next = op2b;
+			op2b.prev = op1b;
+		}
+		else
+		{
+			op1.next = op2;
+			op2.prev = op1;
+			op1b.prev = op2b;
+			op2b.next = op1b;
+		}
+
+		return true;
+	}
+    //------------------------------------------------------------------------------
+
+
+	function JoinPoints(j : Join, outRec1 : OutRec, outRec2 : OutRec)
+	{
+		var op1 = j.outPt1, op1b;
+		var op2 = j.outPt2, op2b;
+
+		//There are 3 kinds of joins for output polygons ...
+		//1. Horizontal joins where Join.OutPt1 & Join.OutPt2 are a vertices anywhere
+		//along (horizontal) collinear edges (& Join.OffPt is on the same horizontal).
+		//2. Non-horizontal joins where Join.OutPt1 & Join.OutPt2 are at the same
+		//location at the Bottom of the overlapping segment (& Join.OffPt is above).
+		//3. StrictlySimple joins where edges touch but are not collinear and where
+		//Join.OutPt1, Join.OutPt2 & Join.OffPt all share the same point.
+		var isHorizontal = (j.outPt1.pt.y == j.offPt.y);
+		if (isHorizontal && (j.offPt == j.outPt1.pt) && (j.offPt == j.outPt2.pt))
+		{
+			//Strictly Simple join ...
+			if (outRec1 != outRec2) return false;
+			op1b = j.outPt1.next;
+			while (op1b != op1 && (op1b.pt == j.offPt))
+				op1b = op1b.next;
+			var reverse1 = (op1b.pt.y > j.offPt.y);
+			op2b = j.outPt2.next;
+			while (op2b != op2 && (op2b.pt == j.offPt))
+				op2b = op2b.next;
+			var reverse2 = (op2b.pt.y > j.offPt.y);
+			if (reverse1 == reverse2) return false;
+			if (reverse1)
+			{
+				op1b = DupOutPt(op1, false);
+				op2b = DupOutPt(op2, true);
+				op1.prev = op2;
+				op2.next = op1;
+				op1b.next = op2b;
+				op2b.prev = op1b;
+				j.outPt1 = op1;
+				j.outPt2 = op1b;
+				return true;
+				} else
+				{
+				op1b = DupOutPt(op1, true);
+				op2b = DupOutPt(op2, false);
+				op1.next = op2;
+				op2.prev = op1;
+				op1b.prev = op2b;
+				op2b.next = op1b;
+				j.outPt1 = op1;
+				j.outPt2 = op1b;
+				return true;
+			}
+		}
+		else if (isHorizontal)
+		{
+			//treat horizontal joins differently to non-horizontal joins since with
+			//them we're not yet sure where the overlapping is. OutPt1.Pt & OutPt2.Pt
+			//may be anywhere along the horizontal edge.
+			op1b = op1;
+			while (op1.prev.pt.y == op1.pt.y && op1.prev != op1b && op1.prev != op2)
+			op1 = op1.prev;
+			while (op1b.next.pt.y == op1b.pt.y && op1b.next != op1 && op1b.next != op2)
+			op1b = op1b.next;
+			if (op1b.next == op1 || op1b.next == op2) return false; //a flat 'polygon'
+
+			op2b = op2;
+			while (op2.prev.pt.y == op2.pt.y && op2.prev != op2b && op2.prev != op1b)
+			op2 = op2.prev;
+			while (op2b.next.pt.y == op2b.pt.y && op2b.next != op2 && op2b.next != op1)
+			op2b = op2b.next;
+			if (op2b.next == op2 || op2b.next == op1) return false; //a flat 'polygon'
+
+			//Op1 -. Op1b & Op2 -. Op2b are the extremites of the horizontal edges
+			var out = GetOverlap(op1.pt.x, op1b.pt.x, op2.pt.x, op2b.pt.x);
+			if(!out.done)
+				return false;
+			var Left = out.left;
+			var Right = out.right;
+
+			//DiscardLeftSide: when overlapping edges are joined, a spike will created
+			//which needs to be cleaned up. However, we don't want Op1 or Op2 caught up
+			//on the discard Side as either may still be needed for other joins ...
+			var  Pt;
+			var DiscardLeftSide;
+			if (op1.pt.x >= Left && op1.pt.x <= Right)
+			{
+				Pt = op1.pt; DiscardLeftSide = (op1.pt.x > op1b.pt.x);
+			}
+			else if (op2.pt.x >= Left&& op2.pt.x <= Right)
+			{
+				Pt = op2.pt; DiscardLeftSide = (op2.pt.x > op2b.pt.x);
+			}
+			else if (op1b.pt.x >= Left && op1b.pt.x <= Right)
+			{
+				Pt = op1b.pt; DiscardLeftSide = op1b.pt.x > op1.pt.x;
+			}
+			else
+			{
+				Pt = op2b.pt; DiscardLeftSide = (op2b.pt.x > op2.pt.x);
+			}
+			j.outPt1 = op1;
+			j.outPt2 = op2;
+			return JoinHorz(op1, op1b, op2, op2b, Pt, DiscardLeftSide);
+		} else
+		{
+			//nb: For non-horizontal joins ...
+			//    1. Jr.OutPt1.Pt.y == Jr.OutPt2.Pt.y
+			//    2. Jr.OutPt1.Pt > Jr.OffPt.y
+
+			//make sure the polygons are correctly oriented ...
+			op1b = op1.next;
+			while ((op1b.pt == op1.pt) && (op1b != op1)) op1b = op1b.next;
+			var Reverse1 = ((op1b.pt.y > op1.pt.y) || !SlopesEqual3(op1.pt, op1b.pt, j.offPt));
+			if (Reverse1)
+			{
+				op1b = op1.prev;
+				while ((op1b.pt == op1.pt) && (op1b != op1)) op1b = op1b.prev;
+				if ((op1b.pt.y > op1.pt.y) ||
+				!SlopesEqual3(op1.pt, op1b.pt, j.offPt)) return false;
+			};
+
+			op2b = op2.next;
+			while ((op2b.pt == op2.pt) && (op2b != op2)) op2b = op2b.next;
+			var Reverse2 = ((op2b.pt.y > op2.pt.y) ||
+			!SlopesEqual3(op2.pt, op2b.pt, j.offPt));
+			if (Reverse2)
+			{
+				op2b = op2.prev;
+				while ((op2b.pt == op2.pt) && (op2b != op2)) op2b = op2b.prev;
+				if ((op2b.pt.y > op2.pt.y) ||
+				!SlopesEqual3(op2.pt, op2b.pt, j.offPt)) return false;
+			}
+
+			if ((op1b == op1) || (op2b == op2) || (op1b == op2b) || ((outRec1 == outRec2) && (Reverse1 == Reverse2))) return false;
+
+			if (Reverse1)
+			{
+				op1b = DupOutPt(op1, false);
+				op2b = DupOutPt(op2, true);
+				op1.prev = op2;
+				op2.next = op1;
+				op1b.next = op2b;
+				op2b.prev = op1b;
+				j.outPt1 = op1;
+				j.outPt2 = op1b;
+				return true;
+			} else
+			{
+				op1b = DupOutPt(op1, true);
+				op2b = DupOutPt(op2, false);
+				op1.next = op2;
+				op2.prev = op1;
+				op1b.prev = op2b;
+				op2b.next = op1b;
+				j.outPt1 = op1;
+				j.outPt2 = op1b;
+				return true;
+			}
 		}
 	}
-	//----------------------------------------------------------------------
 
-	private function Poly2ContainsPoly1(outPt1:OutPt,outPt2:OutPt) : Bool
-	{
-		var pt:OutPt = outPt1;
-		//Because the polygons may be touching, we need to find a vertex that
-		//isn't touching the other polygon
-		if (PointOnPolygon(pt.pt, outPt2))
-		{
-			pt = pt.next;
-			while (pt != outPt1 && PointOnPolygon(pt.pt, outPt2))
-				pt = pt.next;
-			if (pt == outPt1) return true;
-		}
-		return PointInPolygon(pt.pt, outPt2);
+	//----------------------------------------------------------------------
+	public function PointInPolygon(pt : Point, pol : Polygon)
+    {
+        //returns 0 if false, +1 if true, -1 if pt ON polygon boundary
+        //See "The Point in Polygon Problem for Arbitrary Polygons" by Hormann & Agathos
+        //http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.88.5498&rep=rep1&type=pdf
+        var result = 0;
+		var cnt = pol.length;
+        if (cnt < 3) return 0;
+        var ip = pol[0];
+
+		for (i in 1...cnt + 1)
+        {
+          var ipNext = (i == cnt ? pol[0] : pol[i]);
+          if (ipNext.y == pt.y)
+          {
+            if ((ipNext.x == pt.x) || (ip.y == pt.y && ((ipNext.x > pt.x) == (ip.x < pt.x)))) return -1;
+          }
+          if ((ip.y < pt.y) != (ipNext.y < pt.y))
+          {
+            if (ip.x >= pt.x)
+            {
+              if (ipNext.x > pt.x) result = 1 - result;
+              else
+              {
+                var d = (ip.x - pt.x) * (ipNext.y - pt.y) - (ipNext.x - pt.x) * (ip.y - pt.y);
+                if (d == 0) return -1;
+                else if ((d > 0) == (ipNext.y > ip.y)) result = 1 - result;
+              }
+            }
+            else
+            {
+              if (ipNext.x > pt.x)
+              {
+                var d = (ip.x - pt.x) * (ipNext.y - pt.y) - (ipNext.x - pt.x) * (ip.y - pt.y);
+                if (d == 0) return -1;
+                else if ((d > 0) == (ipNext.y > ip.y)) result = 1 - result;
+              }
+            }
+          }
+          ip = ipNext;
+        }
+        return result;
+    }
+
+    //------------------------------------------------------------------------------
+
+    function PointInPolygon2(pt : Point, op : OutPt)
+    {
+        //returns 0 if false, +1 if true, -1 if pt ON polygon boundary
+        //See "The Point in Polygon Problem for Arbitrary Polygons" by Hormann & Agathos
+        //http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.88.5498&rep=rep1&type=pdf
+        var result = 0;
+        var startOp = op;
+        var ptx = pt.x;
+		var pty = pt.y;
+        var poly0x = op.pt.x;
+		var poly0y = op.pt.y;
+        do
+        {
+          op = op.next;
+          var poly1x = op.pt.x;
+		  var poly1y = op.pt.y;
+
+          if (poly1y == pty)
+          {
+            if ((poly1x == ptx) || (poly0y == pty &&
+              ((poly1x > ptx) == (poly0x < ptx)))) return -1;
+          }
+          if ((poly0y < pty) != (poly1y < pty))
+          {
+            if (poly0x >= ptx)
+            {
+              if (poly1x > ptx) result = 1 - result;
+              else
+              {
+                var d = (poly0x - ptx) * (poly1y - pty) - (poly1x - ptx) * (poly0y - pty);
+                if (d == 0) return -1;
+                if ((d > 0) == (poly1y > poly0y)) result = 1 - result;
+              }
+            }
+            else
+            {
+              if (poly1x > ptx)
+              {
+                var d = (poly0x - ptx) * (poly1y - pty) - (poly1x - ptx) * (poly0y - pty);
+                if (d == 0) return -1;
+                if ((d > 0) == (poly1y > poly0y)) result = 1 - result;
+              }
+            }
+          }
+          poly0x = poly1x;
+		  poly0y = poly1y;
+        } while (startOp != op);
+        return result;
+    }
+    //------------------------------------------------------------------------------
+
+
+	private function Poly2ContainsPoly1(outPt1:OutPt, outPt2:OutPt) : Bool	{
+		var op = outPt1;
+        do
+        {
+          //nb: PointInPolygon returns 0 if false, +1 if true, -1 if pt on polygon
+          var res = PointInPolygon2(op.pt, outPt2);
+          if (res >= 0) return res > 0;
+          op = op.next;
+        }
+        while (op != outPt1);
+        return true;
 	}
 	//----------------------------------------------------------------------
 
-	private function FixupFirstLefts1(OldOutRec:OutRec,NewOutRec:OutRec)
+	private function FixupFirstLefts1(OldOutRec:OutRec, NewOutRec:OutRec)
 	{
 		for ( outRec in m_PolyOuts )
 		{
-			if (outRec.pts != null && outRec.firstLeft == OldOutRec)
-			{
-				if (Poly2ContainsPoly1(outRec.pts, NewOutRec.pts))
-					outRec.firstLeft = NewOutRec;
-			}
+			if (outRec.pts == null || outRec.firstLeft == null) continue;
+              var firstLeft = ParseFirstLeft(outRec.firstLeft);
+              if (firstLeft == OldOutRec)
+              {
+                  if (Poly2ContainsPoly1(outRec.pts, NewOutRec.pts))
+                      outRec.firstLeft = NewOutRec;
+              }
 		}
 	}
 	//----------------------------------------------------------------------
@@ -3167,112 +3170,114 @@ class Clipper extends ClipperBase {
 	}
 	//----------------------------------------------------------------------
 
-	private function JoinCommonEdges()
+	function ParseFirstLeft(FirstLeft : OutRec)
 	{
-		var i = -1;
-		while( ++i < m_Joins.length )
-		{
-			var j = m_Joins[i];
-
-		var outRec1 = GetOutRec(j.poly1Idx);
-		var outRec2 = GetOutRec(j.poly2Idx);
-
-		if (outRec1.pts == null || outRec2.pts == null) continue;
-
-		//get the polygon fragment with the correct hole state (firstLeft)
-		//before calling JoinPoints()
-		var holeStateRec;
-		if (outRec1 == outRec2) holeStateRec = outRec1;
-		else if (Param1RightOfParam2(outRec1, outRec2)) holeStateRec = outRec2;
-		else if (Param1RightOfParam2(outRec2, outRec1)) holeStateRec = outRec1;
-		else holeStateRec = GetLowermostRec(outRec1, outRec2);
-
-		var r = JoinPoints(j);
-		if( r == null ) continue;
-		var p1 = r.p1, p2 = r.p2;
-
-		if (outRec1 == outRec2)
-		{
-			//instead of joining two polygons, we've just created a new one by
-			//splitting one polygon into two.
-			outRec1.pts = p1;
-			outRec1.bottomPt = null;
-			outRec2 = CreateOutRec();
-			outRec2.pts = p2;
-
-			if (Poly2ContainsPoly1(outRec2.pts, outRec1.pts))
-			{
-				//outRec2 is contained by outRec1
-				outRec2.isHole = !outRec1.isHole;
-				outRec2.firstLeft = outRec1;
-
-				FixupJoinRecs(j, p2, i + 1);
-
-				//fixup firstLeft pointers that may need reassigning to OutRec1
-				if (m_UsingPolyTree) FixupFirstLefts2(outRec2, outRec1);
-
-				FixupOutPolygon(outRec1); //nb: do this BEFORE testing orientation
-				FixupOutPolygon(outRec2); //	but AFTER calling FixupJoinRecs()
-
-				if (xor(outRec2.isHole,m_ReverseOutput) == (Area(outRec2) > 0))
-					ReversePolyPtLinks(outRec2.pts);
-
-			}
-			else if (Poly2ContainsPoly1(outRec1.pts, outRec2.pts))
-			{
-				//outRec1 is contained by outRec2
-				outRec2.isHole = outRec1.isHole;
-				outRec1.isHole = !outRec2.isHole;
-				outRec2.firstLeft = outRec1.firstLeft;
-				outRec1.firstLeft = outRec2;
-
-				FixupJoinRecs(j, p2, i + 1);
-
-				//fixup firstLeft pointers that may need reassigning to OutRec1
-				if (m_UsingPolyTree) FixupFirstLefts2(outRec1, outRec2);
-
-				FixupOutPolygon(outRec1); //nb: do this BEFORE testing orientation
-				FixupOutPolygon(outRec2); //	but AFTER calling FixupJoinRecs()
-
-				if (xor(outRec1.isHole,m_ReverseOutput) == (Area(outRec1) > 0))
-					ReversePolyPtLinks(outRec1.pts);
-			}
-			else
-			{
-				//the 2 polygons are completely separate
-				outRec2.isHole = outRec1.isHole;
-				outRec2.firstLeft = outRec1.firstLeft;
-
-				FixupJoinRecs(j, p2, i + 1);
-
-				//fixup firstLeft pointers that may need reassigning to OutRec2
-				if (m_UsingPolyTree) FixupFirstLefts1(outRec1, outRec2);
-
-				FixupOutPolygon(outRec1); //nb: do this BEFORE testing orientation
-				FixupOutPolygon(outRec2); //	but AFTER calling FixupJoinRecs()
-			}
-		}
-		else
-		{
-			//joined 2 polygons together
-
-			//cleanup redundant edges
-			FixupOutPolygon(outRec1);
-
-			outRec2.pts = null;
-			outRec2.bottomPt = null;
-			outRec2.idx = outRec1.idx;
-
-			outRec1.isHole = holeStateRec.isHole;
-			if (holeStateRec == outRec2)
-				outRec1.firstLeft = outRec2.firstLeft;
-			outRec2.firstLeft = outRec1;
-
-			//fixup firstLeft pointers that may need reassigning to OutRec1
-			if (m_UsingPolyTree) FixupFirstLefts2(outRec2, outRec1);
-		}
-		}
+		while (FirstLeft != null && FirstLeft.pts == null)
+		  FirstLeft = FirstLeft.firstLeft;
+		return FirstLeft;
 	}
+	//------------------------------------------------------------------------------
+
+
+	private function JoinCommonEdges() {
+		for (i in 0...m_Joins.length)
+        {
+          var join = m_Joins[i];
+
+          var outRec1 = GetOutRec(join.outPt1.idx);
+          var outRec2 = GetOutRec(join.outPt2.idx);
+
+          if (outRec1.pts == null || outRec2.pts == null) continue;
+
+          //get the polygon fragment with the correct hole state (FirstLeft)
+          //before calling JoinPoints() ...
+          var holeStateRec;
+          if (outRec1 == outRec2) holeStateRec = outRec1;
+          else if (Param1RightOfParam2(outRec1, outRec2)) holeStateRec = outRec2;
+          else if (Param1RightOfParam2(outRec2, outRec1)) holeStateRec = outRec1;
+          else holeStateRec = GetLowermostRec(outRec1, outRec2);
+
+          if (!JoinPoints(join, outRec1, outRec2)) continue;
+
+          if (outRec1 == outRec2)
+          {
+            //instead of joining two polygons, we've just created a new one by
+            //splitting one polygon into two.
+            outRec1.pts = join.outPt1;
+            outRec1.bottomPt = null;
+            outRec2 = CreateOutRec();
+            outRec2.pts = join.outPt2;
+
+            //update all OutRec2.Pts Idx's ...
+            UpdateOutPtIdxs(outRec2);
+
+            //We now need to check every OutRec.FirstLeft pointer. If it points
+            //to OutRec1 it may need to point to OutRec2 instead ...
+            if (m_UsingPolyTree)
+              for (j in 0...m_PolyOuts.length - 1)
+              {
+                var oRec = m_PolyOuts[j];
+                if (oRec.pts == null || ParseFirstLeft(oRec.firstLeft) != outRec1 ||
+                  oRec.isHole == outRec1.isHole) continue;
+                if (Poly2ContainsPoly1(oRec.pts, join.outPt2))
+                  oRec.firstLeft = outRec2;
+              }
+
+            if (Poly2ContainsPoly1(outRec2.pts, outRec1.pts))
+            {
+              //outRec2 is contained by outRec1 ...
+              outRec2.isHole = !outRec1.isHole;
+              outRec2.firstLeft = outRec1;
+
+              //fixup FirstLeft pointers that may need reassigning to OutRec1
+              if (m_UsingPolyTree) FixupFirstLefts2(outRec2, outRec1);
+
+             if (xor(outRec2.isHole, reverseSolution) == (Area(outRec2) > 0))
+                ReversePolyPtLinks(outRec2.pts);
+
+            }
+            else if (Poly2ContainsPoly1(outRec1.pts, outRec2.pts))
+            {
+              //outRec1 is contained by outRec2 ...
+              outRec2.isHole = outRec1.isHole;
+              outRec1.isHole = !outRec2.isHole;
+              outRec2.firstLeft = outRec1.firstLeft;
+              outRec1.firstLeft = outRec2;
+
+              //fixup FirstLeft pointers that may need reassigning to OutRec1
+              if (m_UsingPolyTree) FixupFirstLefts2(outRec1, outRec2);
+
+              if (xor(outRec1.isHole, reverseSolution) == (Area(outRec1) > 0))
+               ReversePolyPtLinks(outRec1.pts);
+            }
+            else
+            {
+              //the 2 polygons are completely separate ...
+              outRec2.isHole = outRec1.isHole;
+              outRec2.firstLeft = outRec1.firstLeft;
+
+              //fixup FirstLeft pointers that may need reassigning to OutRec2
+              if (m_UsingPolyTree) FixupFirstLefts1(outRec1, outRec2);
+            }
+
+          } else
+          {
+            //joined 2 polygons together ...
+
+            outRec2.pts = null;
+            outRec2.bottomPt = null;
+            outRec2.idx = outRec1.idx;
+
+            outRec1.isHole = holeStateRec.isHole;
+            if (holeStateRec == outRec2)
+              outRec1.firstLeft = outRec2.firstLeft;
+            outRec2.firstLeft = outRec1;
+
+            //fixup FirstLeft pointers that may need reassigning to OutRec1
+            if (m_UsingPolyTree) FixupFirstLefts2(outRec2, outRec1);
+          }
+        }
+    }
 	//------------------------------------------------------------------------------
 
 	private function UpdateOutPtIdxs(outrec:OutRec)
@@ -3300,7 +3305,7 @@ class Clipper extends ClipperBase {
 			var op2 = op.next;
 			while (op2 != outrec.pts)
 			{
-			if (ClipperBase.PointsEqual(op.pt, op2.pt) && op2.next != op && op2.prev != op)
+			if (op.pt == op2.pt && op2.next != op && op2.prev != op)
 			{
 				//split the polygon into two
 				var op3 = op.prev;
@@ -3316,23 +3321,23 @@ class Clipper extends ClipperBase {
 				UpdateOutPtIdxs(outrec2);
 				if (Poly2ContainsPoly1(outrec2.pts, outrec.pts))
 				{
-				//OutRec2 is contained by OutRec1
-				outrec2.isHole = !outrec.isHole;
-				outrec2.firstLeft = outrec;
+					//OutRec2 is contained by OutRec1
+					outrec2.isHole = !outrec.isHole;
+					outrec2.firstLeft = outrec;
 				}
 				else
 				if (Poly2ContainsPoly1(outrec.pts, outrec2.pts))
 				{
-				//OutRec1 is contained by OutRec2
-				outrec2.isHole = outrec.isHole;
-				outrec.isHole = !outrec2.isHole;
-				outrec2.firstLeft = outrec.firstLeft;
-				outrec.firstLeft = outrec2;
+					//OutRec1 is contained by OutRec2
+					outrec2.isHole = outrec.isHole;
+					outrec.isHole = !outrec2.isHole;
+					outrec2.firstLeft = outrec.firstLeft;
+					outrec.firstLeft = outrec2;
 				} else
 				{
-				//the 2 polygons are separate
-				outrec2.isHole = outrec.isHole;
-				outrec2.firstLeft = outrec.firstLeft;
+					//the 2 polygons are separate
+					outrec2.isHole = outrec.isHole;
+					outrec2.firstLeft = outrec.firstLeft;
 				}
 				op2 = op; //ie get ready for the next iteration
 			}
@@ -3346,6 +3351,18 @@ class Clipper extends ClipperBase {
 
 	//------------------------------------------------------------------------------
 
+	public static function polArea(poly:Polygon) {
+		var cnt = poly.length;
+        if (cnt < 3) return 0.;
+        var a = 0.;
+		var j = cnt - 1;
+		for (i in 0...cnt) {
+          a += (poly[j].x + poly[i].x) * (poly[j].y - poly[i].y);
+          j = i;
+        }
+        return -a * 0.5;
+	}
+
 	static function Area(outRec:OutRec) {
 		var op:OutPt = outRec.pts;
 		if (op == null) return 0.;
@@ -3354,249 +3371,276 @@ class Clipper extends ClipperBase {
 			a = a + (op.pt.x + op.prev.pt.x) * (op.prev.pt.y - op.pt.y);
 			op = op.next;
 		} while (op != outRec.pts);
-		return a/2;
+		return a / 2;
 	}
 
-	//------------------------------------------------------------------------------
-	// OffsetPolygon functions
-	//------------------------------------------------------------------------------
-
-	static function BuildArc(pt:Point , a1:Float , a2:Float , r:Float , limit:Float) : Polygon
-	{
-		//see notes in clipper.pas regarding steps
-		var arcFrac = Math.abs(a2 - a1) / (2 * Math.PI);
-		var steps:Int = Std.int(arcFrac * Math.PI / Math.acos(1 - limit / Math.abs(r)));
-		if (steps < 2)
-			steps = 2;
-		else if (steps > Std.int(222.0 * arcFrac))
-			steps = Std.int(222.0 * arcFrac);
-
-		var x:Float = Math.cos(a1);
-		var y:Float = Math.sin(a1);
-		var c:Float = Math.cos((a2 - a1) / steps);
-		var s:Float = Math.sin((a2 - a1) / steps);
-		var result:Polygon = new Polygon();
-		for ( i in 0...steps+1 )
-		{
-			result.add(pt.x + Round(x * r), pt.y + Round(y * r));
-			var x2 = x;
-			x = x * c - s * y;	//cross product
-			y = x2 * s + y * c; //dot product
-		}
-		return result;
-	}
-	//------------------------------------------------------------------------------
-
-	static function GetUnitNormal(pt1:Point, pt2:Point)
-	{
-		var dx:Float = (pt2.x - pt1.x);
-		var dy:Float = (pt2.y - pt1.y);
-		if ((dx == 0) && (dy == 0)) return new DoublePoint();
-
-		var f:Float = 1 * 1.0 / Math.sqrt(dx * dx + dy * dy);
-		dx *= f;
-		dy *= f;
-
-		return new DoublePoint(dy, -dx);
-	}
-	//------------------------------------------------------------------------------
-
-	static inline function UpdateBotPt(pt:Point, botPt:Point)
-	{
-		return if (pt.y > botPt.y || (pt.y == botPt.y && pt.x < botPt.x)) pt else null;
-	}
-	//------------------------------------------------------------------------------
-
-	public static function offsetPolygons(poly:Polygons, delta:Float, ?jointype:JoinType, MiterLimit:Float=0, AutoFix:Bool=true) : Polygons
-	{
-		if( jointype == null )
-			jointype = JoinType.Square;
-		var result:Polygons = new Polygons();
-
-		//AutoFix - fixes polygon orientation if necessary and removes
-		//duplicate vertices. Can be set false when you're sure that polygon
-		//orientation is correct and that there are no duplicate vertices.
-		if (AutoFix)
-		{
-			var Len = poly.length, botI = 0;
-			while (botI < Len && poly[botI].length == 0) botI++;
-			if (botI == Len) return result;
-
-			//botPt: used to find the lowermost (in inverted y-axis) & leftmost point
-			//This point (on pts[botI]) must be on an outer polygon ring and if
-			//its orientation is false (counterclockwise) then assume all polygons
-			//need reversing
-			var botPt = poly[botI][0];
-			for ( i in botI...Len )
-			{
-				if (poly[i].length == 0) continue;
-				var tmp = UpdateBotPt(poly[i][0], botPt);
-				if( tmp != null ) {
-					botPt = tmp;
-					botI = i;
-				}
-				var j = poly[i].length - 1;
-				while( j > 0 )
-				{
-					if (ClipperBase.PointsEqual(poly[i][j], poly[i][j - 1]))
-						poly[i].removeAt(j);
-					else {
-						var tmp = UpdateBotPt(poly[i][j], botPt);
-						if (tmp != null) {
-							botPt = tmp;
-							botI = i;
-						}
-					}
-					j--;
-				}
-			}
-			if (!poly[botI].getOrientation())
-				reversePolygons(poly);
-		}
-
-		new PolyOffsetBuilder(poly, result, true, delta, jointype, EndType.Closed, MiterLimit);
-		return result;
-	}
-
-	//------------------------------------------------------------------------------
-
-	public static function offsetPolyLines(lines:Polygons, delta:Float, jointype:JoinType, endtype:EndType, limit:Float) {
-		var result:Polygons = new Polygons();
-
-		//automatically strip duplicate points because it gets complicated with
-		//open and closed lines and when to strip duplicates across begin-end
-		var pts:Polygons = lines.copy();
-		for( poly in pts ) {
-			var j = poly.length - 1;
-			while( j > 0 ) {
-				if (ClipperBase.PointsEqual(poly[j], poly[j - 1]))
-					poly.removeAt(j);
-				j--;
-			}
-		}
-
-		if (endtype == EndType.Closed)
-		{
-			var sz:Int = pts.length;
-			for ( i in 0...sz )
-			{
-				var line:Polygon = new Polygon(pts[i].points.copy());
-				line.reverse();
-				pts.push(line);
-			}
-			new PolyOffsetBuilder(pts, result, true, delta, jointype, endtype, limit);
-		}
-		else
-			new PolyOffsetBuilder(pts, result, false, delta, jointype, endtype, limit);
-
-		return result;
-	}
-	//------------------------------------------------------------------------------
 
 	//------------------------------------------------------------------------------
 	// SimplifyPolygon functions
 	// Convert self-intersecting polygons into simple polygons
 	//------------------------------------------------------------------------------
 
-	public static function simplifyPolygon(poly:Polygon, ?fillType ) : Polygons {
-		if( fillType == null ) fillType = PolyFillType.EvenOdd;
-		var result:Polygons = new Polygons();
-		var c:Clipper = new Clipper();
-		c.forceSimple = true;
-		c.addPolygon(poly, PolyType.Subject);
-		c.execute(ClipType.Union, result, fillType, fillType);
-		return result;
-	}
-	//------------------------------------------------------------------------------
+      public static function SimplifyPolygon(poly : Polygon, ?fillType)
+      {
+		  if(fillType == null) fillType = PolyFillType.EvenOdd;
+          var c = new Clipper();
+          c.strictlySimple = true;
+          c.addPolygon(poly, PolyType.Subject);
+          return c.execute(ClipType.Union, fillType, fillType);
+      }
+      //------------------------------------------------------------------------------
 
-	public static function simplifyPolygons(polys:Polygons, ?fillType) : Polygons {
-		if( fillType == null ) fillType = PolyFillType.EvenOdd;
-		var result:Polygons = new Polygons();
-		var c:Clipper = new Clipper();
-		c.forceSimple = true;
-		c.addPolygons(polys, PolyType.Subject);
-		c.execute(ClipType.Union, result, fillType, fillType);
-		return result;
-	}
-	//------------------------------------------------------------------------------
+      public static function SimplifyPolygons(polys : Polygons, ?fillType)
+      {
+		  if(fillType == null) fillType = PolyFillType.EvenOdd;
+          var c = new Clipper();
+          c.strictlySimple = true;
+          c.addPolygons(polys, PolyType.Subject);
+          return c.execute(ClipType.Union, fillType, fillType);
+      }
+      //------------------------------------------------------------------------------
 
-	private static function DistanceSqrd(pt1:Point,pt2:Point) : Float
-	{
-		var dx:Float = (pt1.x*1.0 - pt2.x);
-		var dy:Float = (pt1.y*1.0 - pt2.y);
-		return (dx*dx + dy*dy);
-	}
-	//------------------------------------------------------------------------------
+      private static function DistanceFromLineSqrd(pt : Point, ln1 : Point, ln2 : Point)
+      {
+        //The equation of a line in general form (Ax + By + C = 0)
+        //given 2 points (x¹,y¹) & (x²,y²) is ...
+        //(y¹ - y²)x + (x² - x¹)y + (y² - y¹)x¹ - (x² - x¹)y¹ = 0
+        //A = (y¹ - y²); B = (x² - x¹); C = (y² - y¹)x¹ - (x² - x¹)y¹
+        //perpendicular distance of point (x³,y³) = (Ax³ + By³ + C)/Sqrt(A² + B²)
+        //see http://en.wikipedia.org/wiki/Perpendicular_distance
+        var A = ln1.y - ln2.y;
+        var B = ln2.x - ln1.x;
+        var C = A * ln1.x  + B * ln1.y;
+        C = A * pt.x + B * pt.y - C;
+        return (C * C) / (A * A + B * B);
+      }
+      //---------------------------------------------------------------------------
 
-	private static function ClosestPointOnLine(pt:Point,linePt1:Point,linePt2:Point) : DoublePoint
-	{
-		var dx:Float = (linePt2.x*1.0 - linePt1.x);
-		var dy:Float = (linePt2.y*1.0 - linePt1.y);
-		if (dx == 0 && dy == 0)
-			return new DoublePoint(linePt1.x, linePt1.y);
-		var q:Float = ((pt.x-linePt1.x)*dx + (pt.y-linePt1.y)*dy) / (dx*dx + dy*dy);
-		return new DoublePoint(
-			(1-q)*linePt1.x + q*linePt2.x,
-			(1-q)*linePt1.y + q*linePt2.y);
-	}
-	//------------------------------------------------------------------------------
+      private static function SlopesNearCollinear(pt1 : Point, pt2 : Point , pt3 : Point, distSqrd : Float)
+      {
+        //this function is more accurate when the point that's GEOMETRICALLY
+        //between the other 2 points is the one that's tested for distance.
+        //nb: with 'spikes', either pt1 or pt3 is geometrically between the other pts
+        if (Math.abs(pt1.x - pt2.x) > Math.abs(pt1.y - pt2.y))
+	      {
+          if ((pt1.x > pt2.x) == (pt1.x < pt3.x))
+            return DistanceFromLineSqrd(pt1, pt2, pt3) < distSqrd;
+          else if ((pt2.x > pt1.x) == (pt2.x < pt3.x))
+            return DistanceFromLineSqrd(pt2, pt1, pt3) < distSqrd;
+		      else
+	          return DistanceFromLineSqrd(pt3, pt1, pt2) < distSqrd;
+	      }
+	      else
+	      {
+          if ((pt1.y > pt2.y) == (pt1.y < pt3.y))
+            return DistanceFromLineSqrd(pt1, pt2, pt3) < distSqrd;
+          else if ((pt2.y > pt1.y) == (pt2.y < pt3.y))
+            return DistanceFromLineSqrd(pt2, pt1, pt3) < distSqrd;
+		      else
+            return DistanceFromLineSqrd(pt3, pt1, pt2) < distSqrd;
+	      }
+      }
 
-	private static function SlopesNearColinear(pt1:Point,pt2:Point,pt3:Point,distSqrd:Float) : Bool {
-		if (DistanceSqrd(pt1, pt2) > DistanceSqrd(pt1, pt3)) return false;
-		var cpol:DoublePoint = ClosestPointOnLine(pt2, pt1, pt3);
-		var dx:Float = pt2.x - cpol.x;
-		var dy:Float = pt2.y - cpol.y;
-		return (dx*dx + dy*dy) < distSqrd;
-	}
-	//------------------------------------------------------------------------------
+      //------------------------------------------------------------------------------
 
-	private static function PointsAreClose(pt1:Point,pt2:Point,distSqrd:Float) : Bool
-	{
-		var dx:Float = pt1.x*1.0 - pt2.x;
-		var dy:Float = pt1.y*1.0 - pt2.y;
-		return ((dx * dx) + (dy * dy) <= distSqrd);
-	}
-	//------------------------------------------------------------------------------
+      private static function PointsAreClose(pt1 : Point, pt2 : Point, distSqrd : Float)
+      {
+          var dx = pt1.x - pt2.x;
+          var dy = pt1.y - pt2.y;
+          return ((dx * dx) + (dy * dy) <= distSqrd);
+      }
+      //------------------------------------------------------------------------------
 
-	public static function cleanPolygon(poly:Polygon, distance:Float = 1.415) {
-		//distance = proximity in units/pixels below which vertices
-		//will be stripped. Default ~= sqrt(2) so when adjacent
-		//vertices have both x & y coords within 1 unit, then
-		//the second vertex will be stripped.
-		var distSqrd = (distance * distance);
-		var highI = poly.length -1;
-		var result:Polygon = new Polygon();
-		while (highI > 0 && PointsAreClose(poly[highI], poly[0], distSqrd)) highI--;
-		if (highI < 2) return result;
-		var pt:Point = poly[highI];
-		var i:Int = 0;
-		while( true )
-		{
-			while (i < highI && PointsAreClose(pt, poly[i], distSqrd)) i+=2;
-			var i2 = i;
-			while (i < highI && (PointsAreClose(poly[i], poly[i + 1], distSqrd) ||
-				SlopesNearColinear(pt, poly[i], poly[i + 1], distSqrd))) i++;
-			if (i >= highI) break;
-			else if (i != i2) continue;
-			pt = poly[i++];
-			result.addPoint(pt);
-		}
-		if (i <= highI) result.addPoint(poly[i]);
-		i = result.length;
-		if (i > 2 && SlopesNearColinear(result[i - 2], result[i - 1], result[0], distSqrd))
-			result.removeAt(i -  1);
-		if (result.length < 3) result = new Polygon([]) /*clear*/;
-		return result;
-	}
-	//------------------------------------------------------------------------------
+      private static function ExcludeOp(op : OutPt)
+      {
+        var result = op.prev;
+        result.next = op.next;
+        op.next.prev = result;
+        result.idx = 0;
+        return result;
+      }
+      //------------------------------------------------------------------------------
 
-	public static function cleanPolygons(polys:Polygons, ?distance:Float = 1.415)
-	{
-		return [for( p in polys ) cleanPolygon(p,distance)];
-	}
+      public static function CleanPolygon(path : Polygon, distance = 1.415)
+      {
+        //distance = proximity in units/pixels below which vertices will be stripped.
+        //Default ~= sqrt(2) so when adjacent vertices or semi-adjacent vertices have
+        //both x & y coords within 1 unit, then the second vertex will be stripped.
+
+        var cnt = path.length;
+        if (cnt == 0) return new Polygon();
+
+        var outPts = [];
+        for (i in 0...cnt)
+        {
+		  outPts[i] = new OutPt();
+          outPts[i].pt = path[i];
+          outPts[i].next = outPts[(i + 1) % cnt];
+          outPts[i].next.prev = outPts[i];
+          outPts[i].idx = 0;
+        }
+
+        var distSqrd = distance * distance;
+        var op = outPts[0];
+        while (op.idx == 0 && op.next != op.prev)
+        {
+          if (PointsAreClose(op.pt, op.prev.pt, distSqrd))
+          {
+            op = ExcludeOp(op);
+            cnt--;
+          }
+          else if (PointsAreClose(op.prev.pt, op.next.pt, distSqrd))
+          {
+            ExcludeOp(op.next);
+            op = ExcludeOp(op);
+            cnt -= 2;
+          }
+          else if (SlopesNearCollinear(op.prev.pt, op.pt, op.next.pt, distSqrd))
+          {
+            op = ExcludeOp(op);
+            cnt--;
+          }
+          else
+          {
+            op.idx = 1;
+            op = op.next;
+          }
+        }
+
+        if (cnt < 3) cnt = 0;
+        var result = new Polygon();
+        for (i in 0...cnt)
+        {
+          result.addPoint(op.pt);
+          op = op.next;
+        }
+        outPts = null;
+        return result;
+      }
+
+      //------------------------------------------------------------------------------
+
+      public static function CleanPolygons(polys : Polygons, distance = 1.415)
+      {
+        var result = new Polygons();
+        for (i in 0...polys.length)
+          result.push(CleanPolygon(polys[i], distance));
+        return result;
+      }
+      //------------------------------------------------------------------------------
+
+      static function Minkowski(pattern : Polygon, path : Polygon , IsSum : Bool, IsClosed : Bool)
+      {
+        var delta = (IsClosed ? 1 : 0);
+        var polyCnt = pattern.length;
+        var pathCnt = path.length;
+        var result = new Polygons();
+        if (IsSum)
+          for (i in 0...pathCnt)
+          {
+            var p = new Polygon();
+            for (ip in pattern)
+              p.addPoint(new Point(path[i].x + ip.x, path[i].y + ip.y));
+            result.push(p);
+          }
+        else
+          for (i in 0...pathCnt)
+          {
+            var p = new Polygon();
+            for (ip in pattern)
+              p.addPoint(new Point(path[i].x - ip.x, path[i].y - ip.y));
+            result.push(p);
+          }
+
+        var quads = new Polygons();
+        for (i in 0...pathCnt - 1 + delta)
+          for (j in 0...polyCnt)
+          {
+            var quad = new Polygon();
+            quad.addPoint(result[i % pathCnt][j % polyCnt]);
+            quad.addPoint(result[(i + 1) % pathCnt][j % polyCnt]);
+            quad.addPoint(result[(i + 1) % pathCnt][(j + 1) % polyCnt]);
+            quad.addPoint(result[i % pathCnt][(j + 1) % polyCnt]);
+            if (!Orientation(quad)) quad.reverse();
+            quads.push(quad);
+          }
+        return quads;
+      }
+
+      //------------------------------------------------------------------------------
+
+      public static function MinkowskiSum(pattern : Polygon, path : Polygon, pathIsClosed : Bool)
+      {
+        var paths = Minkowski(pattern, path, true, pathIsClosed);
+        var c = new Clipper();
+        c.addPolygons(paths, PolyType.Subject);
+        return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);
+      }
+
+      //------------------------------------------------------------------------------
+
+      private static function TranslatePath(path : Polygon, delta : Point)
+      {
+        var outPath = new Polygon();
+        for (i in 0...path.length)
+          outPath.addPoint(new Point(path[i].x + delta.x, path[i].y + delta.y));
+        return outPath;
+      }
+      //------------------------------------------------------------------------------
+
+      public static function MinkowskiSums(pattern : Polygon, paths : Polygons, pathIsClosed : Bool)
+      {
+        var c = new Clipper();
+        for (i in 0...paths.length)
+        {
+          var tmp = Minkowski(pattern, paths[i], true, pathIsClosed);
+          c.addPolygons(tmp, PolyType.Subject);
+          if (pathIsClosed)
+          {
+            var path = TranslatePath(paths[i], pattern[0]);
+            c.addPolygon(path, PolyType.Clip);
+          }
+        }
+        return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);
+      }
+      //------------------------------------------------------------------------------
+
+      public static function MinkowskiDiff(poly1 : Polygon, poly2 : Polygon)
+      {
+        var paths = Minkowski(poly1, poly2, false, true);
+        var c = new Clipper();
+        c.addPolygons(paths, PolyType.Subject);
+        return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);
+      }
+
+
+      //------------------------------------------------------------------------------
+
+
+      public static function PolyTreeToPaths(polytree : PolyTree)
+      {
+        var result = new Polygons();
+        AddPolyNodeToPaths(polytree, NodeType.Any, result);
+        return result;
+      }
+      //------------------------------------------------------------------------------
+
+      static function AddPolyNodeToPaths(polynode : PolyNode, nt : NodeType, paths : Polygons)
+      {
+        var match = true;
+        switch (nt)
+        {
+          case NodeType.Open: return;
+          default:
+        }
+
+        if (polynode.polygon.length > 0 && match)
+          paths.push(polynode.polygon);
+        for (pn in polynode.childs)
+          AddPolyNodeToPaths(pn, nt, paths);
+      }
+
+      //------------------------------------------------------------------------------
 
 }
-
-//------------------------------------------------------------------------------
-
 

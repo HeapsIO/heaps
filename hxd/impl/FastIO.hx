@@ -8,7 +8,7 @@ class FastIO<T> {
 	var max : Int;
 	var table : #if flash flash.Vector<T> #else Array<T> #end;
 
-	public inline function new() {
+	public function new() {
 		reset();
 		table = #if flash new flash.Vector() #else [] #end;
 	}

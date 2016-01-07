@@ -51,11 +51,11 @@ abstract Polygon(Array<Point>) {
 	}
 
 	public inline function clean(?distance) {
-		return Clipper.cleanPolygon(this, distance);
+		return Clipper.CleanPolygon(this, distance);
 	}
 
 	public inline function simplify(?fillType) {
-		return Clipper.simplifyPolygon(this, fillType);
+		return Clipper.SimplifyPolygon(this, fillType);
 	}
 
 	public inline function getOrientation() : Bool {

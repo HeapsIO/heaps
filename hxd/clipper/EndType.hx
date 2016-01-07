@@ -1,8 +1,9 @@
 package hxd.clipper;
 
 enum EndType {
-	Closed;
-	Butt;
-	Square;
-	Round;
+	ClosedPol;
+	ClosedLine;
+	OpenButt;
+	OpenSquare;
+	OpenRound;
 }
