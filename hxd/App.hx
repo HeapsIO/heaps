@@ -6,6 +6,8 @@ class App {
 	public var s3d : h3d.scene.Scene;
 	public var s2d : h2d.Scene;
 
+	public var wantedFPS(get, set) : Float;
+
 	public function new(?engine) {
 		if( engine != null ) {
 			this.engine = engine;
@@ -19,6 +21,9 @@ class App {
 			});
 		}
 	}
+
+	function get_wantedFPS() return hxd.Timer.wantedFPS;
+	function set_wantedFPS(fps) return hxd.Timer.wantedFPS = fps;
 
 	function onResize() {
 	}
