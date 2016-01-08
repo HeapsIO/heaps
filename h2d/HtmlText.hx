@@ -81,8 +81,8 @@ class HtmlText extends Text {
 					yPos += font.lineHeight + lineSpacing;
 				}
 				var py = yPos + font.baseLine - i.height;
-				if( py + i.tile.dy < calcYMin )
-					calcYMin = py + i.tile.dy;
+				if( py + i.dy < calcYMin )
+					calcYMin = py + i.dy;
 				if( rebuild ) {
 					var b = new Bitmap(i, this);
 					b.x = xPos;

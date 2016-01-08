@@ -96,6 +96,12 @@ class Flow extends Sprite {
 	**/
 	public var isVertical(default, set) : Bool;
 
+	/**
+		When isInline is set to true, the flow size will be reported based on the size of the elements instead of their bounds.
+		This is useful if you want to include flows in other flows while keeping the text aligned.
+	**/
+	public var isInline = false;
+
 	var background : h2d.ScaleGrid;
 	var properties : Array<FlowProperties> = [];
 
@@ -175,7 +181,9 @@ class Flow extends Sprite {
 	override function getBoundsRec( relativeTo, out, forSize ) {
 		if( needReflow ) reflow();
 		if( forSize ) {
-			if( calculatedWidth != 0 )
+			if( !isInline )
+				super.getBoundsRec(relativeTo, out, false);
+			else if( calculatedWidth != 0 )
 				addBounds(relativeTo, out, 0, 0, calculatedWidth, calculatedHeight);
 		} else
 			super.getBoundsRec(relativeTo, out, forSize);
@@ -402,7 +410,9 @@ class Flow extends Sprite {
 
 				if( p.align == Absolute ) continue;
 
-				var b = c.getSize(tmpBounds);
+				// use getBounds instead of getSize for vertical align
+				var b = c.getBounds(this, tmpBounds);
+
 				p.calculatedWidth = b.xMax - c.x + p.paddingLeft + p.paddingRight;
 				p.calculatedHeight = b.yMax - c.y + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
