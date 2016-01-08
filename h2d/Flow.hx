@@ -454,6 +454,13 @@ class Flow extends Sprite {
 		calculatedWidth = cw;
 		calculatedHeight = ch;
 		needReflow = false;
+		onReflow();
+	}
+
+	/**
+		Called each time a reflow() was done.
+	**/
+	public dynamic function onReflow() {
 	}
 
 }
