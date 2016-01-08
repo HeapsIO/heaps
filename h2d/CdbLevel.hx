@@ -230,6 +230,22 @@ class CdbLevel extends Layers {
 		return layersMap.get(name);
 	}
 
+	public function buildIntProperty( name : String ) {
+		var collide = null;
+		for( l in layers ) {
+			var layer = l.buildIntProperty(name);
+			if( collide == null )
+				collide = layer;
+			else
+				for( i in 0...width	* height ) {
+					var v = layer[i];
+					if( v != 0 && v > collide[i] ) collide[i] = v;
+				}
+		}
+		if( collide == null ) collide = [for( i in 0...width * height ) 0];
+		return collide;
+	}
+
 	public function getTileset( file : String ) : LevelTileset {
 		return tilesets.get(file);
 	}
