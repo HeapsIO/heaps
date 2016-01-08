@@ -53,16 +53,6 @@ class Flow extends Sprite {
 	public var maxHeight(default, set) : Null<Int>;
 
 	/**
-		The calculated width based on the flow elements.
-	**/
-	public var calculatedWidth(get, null) = 0.;
-
-	/**
-		The calculated height based on the flow elements.
-	**/
-	public var calculatedHeight(get, null) = 0.;
-
-	/**
 		Will set all padding values at the same time.
 	**/
 	public var padding(never, set) : Int;
@@ -109,13 +99,11 @@ class Flow extends Sprite {
 	var background : h2d.ScaleGrid;
 	var properties : Array<FlowProperties> = [];
 
+	var calculatedWidth : Float = 0.;
+	var calculatedHeight : Float = 0.;
+
 	public function new(?parent) {
 		super(parent);
-	}
-
-	override public function getBounds(?relativeTo:Sprite, ?out:h2d.col.Bounds):h2d.col.Bounds {
-		reflow();
-		return super.getBounds(relativeTo, out);
 	}
 
 	/**
@@ -184,13 +172,13 @@ class Flow extends Sprite {
 		return paddingBottom = v;
 	}
 
-	override function getBoundsRec( relativeTo, out ) {
-		super.getBoundsRec(relativeTo, out);
+	override function getBoundsRec( relativeTo, out, forSize ) {
 		if( needReflow ) reflow();
-		var cw = calculatedWidth;
-		var ch = calculatedHeight;
-		if( cw != 0 || ch != 0 )
-			addBounds(relativeTo, out, 0, 0, cw, ch);
+		if( forSize ) {
+			if( calculatedWidth != 0 )
+				addBounds(relativeTo, out, 0, 0, calculatedWidth, calculatedHeight);
+		} else
+			super.getBoundsRec(relativeTo, out, forSize);
 	}
 
 	override function addChildAt( s, pos ) {
@@ -357,10 +345,7 @@ class Flow extends Sprite {
 
 				if( p.align == Absolute ) continue;
 
-				c.x = 0;
-				c.y = 0;
-				var b = c.getBounds(this, tmpBounds);
-
+				var b = c.getSize(tmpBounds);
 				p.calculatedWidth = b.xMax + p.paddingLeft + p.paddingRight;
 				p.calculatedHeight = b.yMax + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
@@ -417,12 +402,9 @@ class Flow extends Sprite {
 
 				if( p.align == Absolute ) continue;
 
-				c.x = 0;
-				c.y = 0;
-				var b = c.getBounds(this, tmpBounds);
-
-				p.calculatedWidth = b.xMax + p.paddingLeft + p.paddingRight;
-				p.calculatedHeight = b.yMax + p.paddingTop + p.paddingBottom;
+				var b = c.getSize(tmpBounds);
+				p.calculatedWidth = b.xMax - c.x + p.paddingLeft + p.paddingRight;
+				p.calculatedHeight = b.yMax - c.y + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 

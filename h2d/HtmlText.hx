@@ -42,10 +42,16 @@ class HtmlText extends Text {
 		xPos = 0;
 		yPos = 0;
 		xMax = 0;
+		calcYMin = 0;
 		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
 		for( e in doc )
 			addNode(e, rebuild);
-		return cachedSize = { width : xPos > xMax ? xPos : xMax, height : xPos > 0 ? yPos + (font.lineHeight + lineSpacing) : yPos };
+
+		var x = xPos, y = yPos;
+		calcWidth = x > xMax ? x : xMax;
+		calcHeight = y > 0 && x == 0 ? y - lineSpacing : y + font.lineHeight;
+		calcSizeHeight = y > 0 && x == 0 ? y + (font.baseLine - font.lineHeight - lineSpacing) : y + font.baseLine;
+		calcDone = true;
 	}
 
 	function addNode( e : Xml, rebuild : Bool ) {
@@ -74,10 +80,13 @@ class HtmlText extends Text {
 					xPos = 0;
 					yPos += font.lineHeight + lineSpacing;
 				}
+				var py = yPos + font.baseLine - i.height;
+				if( py + i.tile.dy < calcYMin )
+					calcYMin = py + i.tile.dy;
 				if( rebuild ) {
 					var b = new Bitmap(i, this);
 					b.x = xPos;
-					b.y = yPos + font.baseLine - i.height;
+					b.y = py;
 					images.push(b);
 				}
 				xPos += i.width + letterSpacing;
@@ -102,6 +111,7 @@ class HtmlText extends Text {
 				var e = font.getChar(cc);
 				xPos += e.getKerningOffset(prevChar);
 				if( rebuild ) glyphs.add(xPos, yPos, e.t);
+				if( yPos == 0 && e.t.dy < calcYMin ) calcYMin = e.t.dy;
 				xPos += e.width + letterSpacing;
 				prevChar = cc;
 			}

@@ -11,8 +11,8 @@ class Mask extends Sprite {
 		this.height = height;
 	}
 
-	override function getBoundsRec( relativeTo, out ) {
-		super.getBoundsRec(relativeTo, out);
+	override function getBoundsRec( relativeTo, out, forSize ) {
+		super.getBoundsRec(relativeTo, out, forSize);
 		var xMin = out.xMin, yMin = out.yMin, xMax = out.xMax, yMax = out.yMax;
 		out.empty();
 		addBounds(relativeTo, out, 0, 0, width, height);
