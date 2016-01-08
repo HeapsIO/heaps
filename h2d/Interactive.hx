@@ -48,16 +48,6 @@ class Interactive extends Drawable {
 		}
 	}
 
-	override function calcAbsPos() {
-		super.calcAbsPos();
-		// force a move event if we update the current over interactive
-		if( scene != null && scene.currentOver == this ) {
-			var stage = hxd.Stage.getInstance();
-			var e = new hxd.Event(EMove, stage.mouseX, stage.mouseY);
-			@:privateAccess scene.onEvent(e);
-		}
-	}
-
 	override function onDelete() {
 		if( scene != null ) {
 			scene.removeEventTarget(this);
