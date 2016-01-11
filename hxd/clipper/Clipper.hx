@@ -272,6 +272,10 @@ private class ClipperBase
 		return i < 0 ? -i : i;
 	}
 
+    static function near_zero(val : Float) {
+		return (val > -TOLERANCE) && (val < TOLERANCE);
+	}
+
 	//------------------------------------------------------------------------------
 
 	public function nearZero (v : Float) : Bool {
@@ -283,7 +287,7 @@ private class ClipperBase
 	function PointIsVertex(pt:Point, pp:OutPt) {
 		var pp2 = pp;
 		do {
-			if( pp2.pt == pt ) return true;
+			if( equals(pp2.pt, pt) ) return true;
 			pp2 = pp2.next;
 		} while (pp2 != pp);
 		return false;
@@ -295,8 +299,7 @@ private class ClipperBase
 			((pt.x == linePt2.x) && (pt.y == linePt2.y)) ||
 			(((pt.x > linePt1.x) == (pt.x < linePt2.x)) &&
 			((pt.y > linePt1.y) == (pt.y < linePt2.y)) &&
-			((pt.x - linePt1.x) * (linePt2.y - linePt1.y) ==
-			(linePt2.x - linePt1.x) * (pt.y - linePt1.y)));
+			((pt.x - linePt1.x) * (linePt2.y - linePt1.y) == (linePt2.x - linePt1.x) * (pt.y - linePt1.y)));
 	}
 	//------------------------------------------------------------------------------
 
@@ -672,11 +675,10 @@ private class ClipperBase
 		e.bot.x = tmp;
 	}
 
-
     //------------------------------------------------------------------------------
 
     function Pt2IsBetweenPt1AndPt3(pt1 : Point, pt2 : Point, pt3 : Point) {
-      if ((pt1 == pt3) || (pt1 == pt2) || (pt3 == pt2)) return false;
+      if (equals(pt1, pt3) || equals(pt1, pt2) || equals(pt3,  pt2)) return false;
       else if (pt1.x != pt3.x) return (pt2.x > pt1.x) == (pt2.x < pt3.x);
       else return (pt2.y > pt1.y) == (pt2.y < pt3.y);
     }
@@ -731,6 +733,11 @@ private class ClipperBase
 	}
 	//------------------------------------------------------------------------------
 
+
+	inline function equals(pt1 : Point, pt2 : Point) {
+		return pt1.x == pt2.x && pt1.y == pt2.y;
+	}
+
 	function Reset()
 	{
 		m_CurrentLM = m_MinimaList;
@@ -763,7 +770,7 @@ private class ClipperBase
 	}
 	//------------------------------------------------------------------------------
 
-	public function GetBounds(pols : Polygons) {
+	public static function getBounds(pols : Polygons) {
 		var result = new Rect();
 		var i = 0;
 		var count = pols.length;
@@ -794,12 +801,19 @@ enum NodeType {
 	Closed;
 }
 
+enum ResultKind {
+	All;
+	NoHoles;
+	HolesOnly;
+}
+
 
 @:allow(hxd.clipper)
 class Clipper extends ClipperBase {
 
 	public var strictlySimple : Bool;
 	public var reverseSolution : Bool;
+	public var resultKind : ResultKind;
 
 	var m_PolyOuts : Array<OutRec>;
 	var m_ClipType : ClipType;
@@ -830,6 +844,7 @@ class Clipper extends ClipperBase {
 		reverseSolution = false;
 		strictlySimple = false;
 		preserveCollinear = false;
+		resultKind = All;
 	}
 
 	inline function xor(a, b) {
@@ -906,13 +921,8 @@ class Clipper extends ClipperBase {
 		m_ClipType = clipType;
 		m_UsingPolyTree = false;
 
-		var succeeded = false;
-		//try {
-			succeeded = ExecuteInternal();
-			//build the return polygons
-			if (succeeded) solution = BuildResult();
-		//}
-		//catch(e : Dynamic) { trace(e); }
+		var succeeded = ExecuteInternal();
+		if (succeeded) solution = BuildResult();
 
 		DisposeAllPolyPts();
 		m_ExecuteLocked = false;
@@ -977,13 +987,16 @@ class Clipper extends ClipperBase {
 				ReversePolyPtLinks(outRec.pts);
 		}
 
+
 		JoinCommonEdges();
+
 		for( outRec in m_PolyOuts )
 			if(outRec.pts != null)
 				FixupOutPolygon(outRec);
 
 		if(strictlySimple)
 			DoSimplePolygons();
+
 
 		m_Joins = [];
 		m_GhostJoins = [];
@@ -1558,6 +1571,7 @@ class Clipper extends ClipperBase {
 	private function AddOutPt(e:TEdge,pt:Point)
 	{
 		var ToFront = (e.side == EdgeSide.Left);
+
 		if(	e.outIdx < 0 )
 		{
 			var outRec = CreateOutRec();
@@ -1574,14 +1588,12 @@ class Clipper extends ClipperBase {
 		{
 			var outRec = m_PolyOuts[e.outIdx];
 			var op:OutPt = outRec.pts;
-			if (ToFront && pt == op.pt)
-				return op;
-			else if(!ToFront && pt == op.prev.pt)
-				return op.prev;
+			if (ToFront && equals(pt, op.pt)) return op;
+			else if(!ToFront && equals(pt, op.prev.pt)) return op.prev;
 
 			var op2 = new OutPt();
 			op2.idx = outRec.idx;
-			op2.pt = pt;
+			op2.pt = pt.clone();
 			op2.next = op;
 			op2.prev = op.prev;
 			op2.prev.next = op2;
@@ -1605,36 +1617,6 @@ class Clipper extends ClipperBase {
 		}
 
 		return seg1a < seg2b && seg2a < seg1b;
-	}
-
-	//------------------------------------------------------------------------------
-
-	function Pt3IsBetweenPt1AndPt2(pt1:Point, pt2:Point, pt3:Point)
-	{
-		if (pt1 == pt3 || pt2 == pt3) return true;
-		else if (pt1.x != pt2.x) return (pt1.x < pt3.x) == (pt3.x < pt2.x);
-		else return (pt1.y < pt3.y) == (pt3.y < pt2.y);
-	}
-	//------------------------------------------------------------------------------
-
-	private function InsertPolyPtBetween(p1:OutPt,p2:OutPt,pt:Point) : OutPt
-	{
-		var result:OutPt = new OutPt();
-		result.pt = pt;
-		if (p2 == p1.next)
-		{
-			p1.next = result;
-			p2.prev = result;
-			result.next = p2;
-			result.prev = p1;
-		} else
-		{
-			p2.next = result;
-			p1.prev = result;
-			result.next = p1;
-			result.prev = p2;
-		}
-		return result;
 	}
 	//------------------------------------------------------------------------------
 
@@ -1666,17 +1648,17 @@ class Clipper extends ClipperBase {
 	private function FirstIsBottomPt(btmPt1:OutPt,btmPt2:OutPt) : Bool
 	{
 		var p:OutPt = btmPt1.prev;
-		while (p.pt == btmPt1.pt && (p != btmPt1)) p = p.prev;
+		while (equals(p.pt, btmPt1.pt) && (p != btmPt1)) p = p.prev;
 		var dx1p = Math.abs(GetDx(btmPt1.pt, p.pt));
 		p = btmPt1.next;
-		while (p.pt == btmPt1.pt && (p != btmPt1)) p = p.next;
+		while (equals(p.pt, btmPt1.pt) && (p != btmPt1)) p = p.next;
 		var dx1n = Math.abs(GetDx(btmPt1.pt, p.pt));
 
 		p = btmPt2.prev;
-		while (p.pt == btmPt2.pt && (p != btmPt2)) p = p.prev;
+		while (equals(p.pt, btmPt2.pt) && (p != btmPt2)) p = p.prev;
 		var dx2p = Math.abs(GetDx(btmPt2.pt, p.pt));
 		p = btmPt2.next;
-		while (p.pt == btmPt2.pt && (p != btmPt2)) p = p.next;
+		while (equals(p.pt, btmPt2.pt) && (p != btmPt2)) p = p.next;
 		var dx2n = Math.abs(GetDx(btmPt2.pt, p.pt));
 		return (dx1p >= dx2p && dx1p >= dx2n) || (dx1n >= dx2p && dx1n >= dx2n);
 	}
@@ -2017,8 +1999,7 @@ class Clipper extends ClipperBase {
 						if (e1Wc2 <= 0 && e2Wc2 <= 0)
 							AddLocalMinPoly(e1, e2, pt);
 					case ClipType.Difference:
-						if (((e1.polyType == PolyType.Clip) && (e1Wc2 > 0) && (e2Wc2 > 0)) ||
-							((e1.polyType == PolyType.Subject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
+						if (((e1.polyType == PolyType.Clip) && (e1Wc2 > 0) && (e2Wc2 > 0)) || ((e1.polyType == PolyType.Subject) && (e1Wc2 <= 0) && (e2Wc2 <= 0)))
 								AddLocalMinPoly(e1, e2, pt);
 					case ClipType.Xor:
 						AddLocalMinPoly(e1, e2, pt);
@@ -2633,7 +2614,8 @@ class Clipper extends ClipperBase {
 		for( outRec in m_PolyOuts )
 		{
 			if (outRec.pts == null) continue;
-			if (outRec.isHole) continue; //TODO : add parameter for keeping holes or not !!!
+			if (resultKind == NoHoles && outRec.isHole) continue;
+			if (resultKind == HolesOnly && !outRec.isHole) continue;
 			var p:OutPt = outRec.pts.prev;
 			var cnt:Int = PointCount(p);
 			if (cnt < 2) continue;
@@ -2697,7 +2679,7 @@ class Clipper extends ClipperBase {
 				return;
 			}
 			//test for duplicate points and for same slope (cross-product)
-			if ((pp.pt == pp.next.pt) || (pp.pt == pp.prev.pt) || (SlopesEqual3(pp.prev.pt, pp.pt, pp.next.pt) && (!preserveCollinear || !Pt2IsBetweenPt1AndPt3(pp.prev.pt, pp.pt, pp.next.pt))))
+			if (equals(pp.pt, pp.next.pt) || equals(pp.pt, pp.prev.pt) || (SlopesEqual3(pp.prev.pt, pp.pt, pp.next.pt) && (!preserveCollinear || !Pt2IsBetweenPt1AndPt3(pp.prev.pt, pp.pt, pp.next.pt))))
              {
 				lastOK = null;
 				var tmp:OutPt = pp;
@@ -2871,16 +2853,16 @@ class Clipper extends ClipperBase {
 		//3. StrictlySimple joins where edges touch but are not collinear and where
 		//Join.OutPt1, Join.OutPt2 & Join.OffPt all share the same point.
 		var isHorizontal = (j.outPt1.pt.y == j.offPt.y);
-		if (isHorizontal && (j.offPt == j.outPt1.pt) && (j.offPt == j.outPt2.pt))
+		if (isHorizontal && equals(j.offPt, j.outPt1.pt) && equals(j.offPt, j.outPt2.pt))
 		{
 			//Strictly Simple join ...
 			if (outRec1 != outRec2) return false;
 			op1b = j.outPt1.next;
-			while (op1b != op1 && (op1b.pt == j.offPt))
+			while (op1b != op1 && equals(op1b.pt, j.offPt))
 				op1b = op1b.next;
 			var reverse1 = (op1b.pt.y > j.offPt.y);
 			op2b = j.outPt2.next;
-			while (op2b != op2 && (op2b.pt == j.offPt))
+			while (op2b != op2 && equals(op2b.pt, j.offPt))
 				op2b = op2b.next;
 			var reverse2 = (op2b.pt.y > j.offPt.y);
 			if (reverse1 == reverse2) return false;
@@ -2966,24 +2948,24 @@ class Clipper extends ClipperBase {
 
 			//make sure the polygons are correctly oriented ...
 			op1b = op1.next;
-			while ((op1b.pt == op1.pt) && (op1b != op1)) op1b = op1b.next;
+			while (equals(op1b.pt, op1.pt) && (op1b != op1)) op1b = op1b.next;
 			var Reverse1 = ((op1b.pt.y > op1.pt.y) || !SlopesEqual3(op1.pt, op1b.pt, j.offPt));
 			if (Reverse1)
 			{
 				op1b = op1.prev;
-				while ((op1b.pt == op1.pt) && (op1b != op1)) op1b = op1b.prev;
+				while (equals(op1b.pt, op1.pt) && (op1b != op1)) op1b = op1b.prev;
 				if ((op1b.pt.y > op1.pt.y) ||
 				!SlopesEqual3(op1.pt, op1b.pt, j.offPt)) return false;
 			};
 
 			op2b = op2.next;
-			while ((op2b.pt == op2.pt) && (op2b != op2)) op2b = op2b.next;
+			while (equals(op2b.pt, op2.pt) && (op2b != op2)) op2b = op2b.next;
 			var Reverse2 = ((op2b.pt.y > op2.pt.y) ||
 			!SlopesEqual3(op2.pt, op2b.pt, j.offPt));
 			if (Reverse2)
 			{
 				op2b = op2.prev;
-				while ((op2b.pt == op2.pt) && (op2b != op2)) op2b = op2b.prev;
+				while (equals(op2b.pt, op2.pt) && (op2b != op2)) op2b = op2b.prev;
 				if ((op2b.pt.y > op2.pt.y) ||
 				!SlopesEqual3(op2.pt, op2b.pt, j.offPt)) return false;
 			}
@@ -3266,8 +3248,8 @@ class Clipper extends ClipperBase {
 		var op:OutPt = outrec.pts;
 		do
 		{
-		op.idx = outrec.idx;
-		op = op.prev;
+			op.idx = outrec.idx;
+			op = op.prev;
 		}
 		while(op != outrec.pts);
 	}
@@ -3286,7 +3268,7 @@ class Clipper extends ClipperBase {
 				var op2 = op.next;
 				while (op2 != outrec.pts)
 				{
-					if (op.pt == op2.pt && op2.next != op && op2.prev != op)
+					if (equals(op.pt, op2.pt) && op2.next != op && op2.prev != op)
 					{
 						//split the polygon into two
 						var op3 = op.prev;
@@ -3515,45 +3497,41 @@ class Clipper extends ClipperBase {
         var polyCnt = pattern.length;
         var pathCnt = path.length;
         var result = new Polygons();
-        if (IsSum)
-          for (i in 0...pathCnt)
-          {
-            var p = new Polygon();
-            for (ip in pattern)
-              p.addPoint(new Point(path[i].x + ip.x, path[i].y + ip.y));
-            result.push(p);
-          }
-        else
-          for (i in 0...pathCnt)
-          {
-            var p = new Polygon();
-            for (ip in pattern)
-              p.addPoint(new Point(path[i].x - ip.x, path[i].y - ip.y));
-            result.push(p);
-          }
+
+		for (i in 0...pathCnt) {
+			var p = new Polygon();
+			for (ip in pattern) {
+				if (IsSum)
+					p.addPoint(new Point(path[i].x + ip.x, path[i].y + ip.y));
+				else
+					p.addPoint(new Point(path[i].x - ip.x, path[i].y - ip.y));
+			}
+			result.push(p);
+		}
 
         var quads = new Polygons();
         for (i in 0...pathCnt)
-          for (j in 0...polyCnt)
-          {
-            var quad = new Polygon();
-            quad.addPoint(result[i % pathCnt][j % polyCnt]);
-            quad.addPoint(result[(i + 1) % pathCnt][j % polyCnt]);
-            quad.addPoint(result[(i + 1) % pathCnt][(j + 1) % polyCnt]);
-            quad.addPoint(result[i % pathCnt][(j + 1) % polyCnt]);
-            if (!Orientation(quad)) quad.reverse();
-            quads.push(quad);
-          }
+			for (j in 0...polyCnt)
+			{
+				var quad = new Polygon();
+				quad.addPoint(result[i % pathCnt][j % polyCnt]);
+				quad.addPoint(result[(i + 1) % pathCnt][j % polyCnt]);
+				quad.addPoint(result[(i + 1) % pathCnt][(j + 1) % polyCnt]);
+				quad.addPoint(result[i % pathCnt][(j + 1) % polyCnt]);
+				if (!Orientation(quad)) quad.reverse();
+				quads.push(quad);
+			}
         return quads;
       }
 
       //------------------------------------------------------------------------------
 
-      public static function MinkowskiSum(pattern : Polygon, pol : Polygon)
+      public static function MinkowskiSum(pattern : Polygon, pol : Polygon, ?kind : ResultKind)
       {
         var paths = Minkowski(pattern, pol, true);
         var c = new Clipper();
-        c.addPolygons(paths, PolyType.Subject);
+		c.resultKind = kind == null ? All : kind;
+		c.addPolygons(paths, PolyType.Subject);
         return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);
       }
 
@@ -3568,10 +3546,11 @@ class Clipper extends ClipperBase {
       }
       //------------------------------------------------------------------------------
 
-      public static function MinkowskiSums(pattern : Polygon, pols : Polygons)
+      public static function MinkowskiSums(pattern : Polygon, pols : Polygons, ?kind : ResultKind)
       {
         var c = new Clipper();
-        for (i in 0...pols.length)
+        c.resultKind = kind == null ? All : kind;
+		for (i in 0...pols.length)
         {
           var tmp = Minkowski(pattern, pols[i], true);
           c.addPolygons(tmp, PolyType.Subject);
@@ -3582,12 +3561,13 @@ class Clipper extends ClipperBase {
       }
       //------------------------------------------------------------------------------
 
-      public static function MinkowskiDiff(poly1 : Polygon, poly2 : Polygon)
+      public static function MinkowskiDiff(pattern : Polygon, pol : Polygon, ?kind : ResultKind)
       {
-        var paths = Minkowski(poly1, poly2, false);
+        var paths = Minkowski(pattern, pol, false);
         var c = new Clipper();
-        c.addPolygons(paths, PolyType.Subject);
-        return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);
+        c.resultKind = kind == null ? All : kind;
+		c.addPolygons(paths, PolyType.Subject);
+		return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);
       }
 
 
@@ -3619,5 +3599,391 @@ class Clipper extends ClipperBase {
 
       //------------------------------------------------------------------------------
 
+
 }
 
+
+@:allow(hxd.clipper)
+class ClipperOffset
+{
+	private var m_destPolys : Polygons;
+	private var m_srcPoly : Polygon;
+	private var m_destPoly : Polygon;
+	private var m_normals : Array<h2d.col.Point>;
+	private var m_delta : Float;
+	private var m_sinA : Float;
+	private var m_sin : Float;
+	private var m_cos : Float;
+	private var m_miterLim : Float;
+	private var m_StepsPerRad : Float;
+
+	private var m_lowest : Point;
+	private var m_polyNodes : PolyNode;
+
+	public var ArcTolerance : Float;
+	public var MiterLimit : Float;
+	public var resultKind : ResultKind;
+
+	private var def_arc_tolerance = 0.25;
+	private var two_pi = Math.PI * 2;
+
+	public function new (miterLimit = 2.0, arcTolerance = 0.25) {
+		MiterLimit = miterLimit;
+		ArcTolerance = arcTolerance;
+		m_lowest = new Point( -1, 0);
+		m_normals = [];
+		m_polyNodes = new PolyNode();
+		resultKind = All;
+	}
+    //------------------------------------------------------------------------------
+
+    public function clear() {
+		m_polyNodes = new PolyNode();
+		m_lowest.x = -1;
+    }
+
+    //------------------------------------------------------------------------------
+
+    public function addPolygon(pol : Polygon, joinType : JoinType, endType : EndType) {
+		var highI = pol.length - 1;
+		if (highI < 0) return;
+		var newNode = new PolyNode();
+		newNode.jointype = joinType;
+		newNode.endtype = endType;
+
+		//strip duplicate points from path and also get index to the lowest point ...
+		if (endType == EndType.ClosedLine || endType == EndType.ClosedPol)
+			while (highI > 0 && pol[0] == pol[highI])
+				highI--;
+		newNode.polygon.addPoint(pol[0]);
+		var j = 0, k = 0;
+		for (i in 1...highI + 1)
+			if (newNode.polygon[j] != pol[i]) {
+				j++;
+				newNode.polygon.addPoint(pol[i]);
+				if (pol[i].y > newNode.polygon[k].y || (pol[i].y == newNode.polygon[k].y && pol[i].x < newNode.polygon[k].x))
+					k = j;
+			}
+		if (endType == EndType.ClosedPol && j < 2) return;
+
+		m_polyNodes.addChild(newNode);
+
+		//if this path's lowest pt is lower than all the others then update m_lowest
+		if (endType != EndType.ClosedPol) return;
+		if (m_lowest.x < 0)
+			m_lowest = new Point(m_polyNodes.childCount - 1, k);
+		else
+		{
+			var ip = m_polyNodes.childs[m_lowest.x].polygon[m_lowest.y];
+			if (newNode.polygon[k].y > ip.y || (newNode.polygon[k].y == ip.y && newNode.polygon[k].x < ip.x))
+				m_lowest = new Point(m_polyNodes.childCount - 1, k);
+		}
+    }
+    //------------------------------------------------------------------------------
+
+    public function addPolygons(pols : Polygons, joinType : JoinType, endType : EndType)
+    {
+		for( p in pols)
+			addPolygon(p, joinType, endType);
+    }
+
+    //------------------------------------------------------------------------------
+
+    function fixOrientations()
+    {
+		//fixup orientations of all closed paths if the orientation of the
+		//closed path with the lowermost vertex is wrong ...
+		if (m_lowest.x >= 0 && !Clipper.Orientation(m_polyNodes.childs[m_lowest.x].polygon)) {
+			for (node in m_polyNodes.childs)
+				if (node.endtype == EndType.ClosedPol || (node.endtype == EndType.ClosedLine && Clipper.Orientation(node.polygon)))
+					node.polygon.reverse();
+		}
+		else
+		{
+			for (node in m_polyNodes.childs)
+			{
+				if (node.endtype == EndType.ClosedLine && !Clipper.Orientation(node.polygon))
+					node.polygon.reverse();
+			}
+		}
+    }
+    //------------------------------------------------------------------------------
+
+    static function getUnitNormal(pt1 : Point, pt2 : Point)
+    {
+		var dx : Float = (pt2.x - pt1.x);
+		var dy : Float = (pt2.y - pt1.y);
+		if ((dx == 0) && (dy == 0)) return new h2d.col.Point();
+
+		var f = 1 / Math.distance(dx, dy);
+		dx *= f;
+		dy *= f;
+
+		return new h2d.col.Point(dy, -dx);
+    }
+    //------------------------------------------------------------------------------
+
+	function doOffset(delta : Float) {
+		m_destPolys = new Polygons();
+		m_delta = delta;
+
+		//if Zero offset, just copy any CLOSED polygons to m_p and return ...
+		if (ClipperBase.near_zero(delta)) {
+			for (node in m_polyNodes.childs) {
+				if (node.endtype == EndType.ClosedPol)
+				m_destPolys.push(node.polygon);
+			}
+			return;
+		}
+
+		//see offset_triginometry3.svg in the documentation folder ...
+		if (MiterLimit > 2) m_miterLim = 2 / (MiterLimit * MiterLimit);
+		else m_miterLim = 0.5;
+
+		var y : Float;
+		if (ArcTolerance <= 0.0)
+			y = def_arc_tolerance;
+		else if (ArcTolerance > Math.abs(delta) * def_arc_tolerance)
+			y = Math.abs(delta) * def_arc_tolerance;
+		else
+			y = ArcTolerance;
+		//see offset_triginometry2.svg in the documentation folder ...
+		var steps = Std.int(Math.PI / Math.acos(1 - y / Math.abs(delta)));
+		m_sin = Math.sin(two_pi / steps);
+		m_cos = Math.cos(two_pi / steps);
+		m_StepsPerRad = steps / two_pi;
+		if (delta < 0.) m_sin = -m_sin;
+
+		for (node in m_polyNodes.childs)
+		{
+			m_srcPoly = node.polygon;
+			var len = m_srcPoly.length;
+
+			if (len == 0 || (delta <= 0 && (len < 3 || node.endtype != EndType.ClosedPol)))
+				continue;
+
+			m_destPoly = new Polygon();
+
+			if (len == 1) {
+				if (node.jointype == JoinType.Round) {
+					var X = 1., Y = 0.;
+					for (j in 1...steps + 1) {
+						m_destPoly.addPoint(new Point( Math.round(m_srcPoly[0].x + X * delta), Math.round(m_srcPoly[0].y + Y * delta)));
+						var X2 = X;
+						X = X * m_cos - m_sin * Y;
+						Y = X2 * m_sin + Y * m_cos;
+					}
+				}
+				else {
+					var X = -1., Y = -1.;
+					for (j in 0...4) {
+						m_destPoly.addPoint(new Point( Math.round(m_srcPoly[0].x + X * delta), Math.round(m_srcPoly[0].y + Y * delta)));
+						if (X < 0) X = 1;
+						else if (Y < 0) Y = 1;
+						else X = -1;
+					}
+				}
+				m_destPolys.push(m_destPoly);
+				continue;
+			}
+
+			//build m_normals ...
+			m_normals = [];
+			for (j in 0...len - 1)
+				m_normals.push(getUnitNormal(m_srcPoly[j], m_srcPoly[j + 1]));
+			if (node.endtype == EndType.ClosedLine || node.endtype == EndType.ClosedPol)
+				m_normals.push(getUnitNormal(m_srcPoly[len - 1], m_srcPoly[0]));
+			else
+				m_normals.push(m_normals[len - 2]);
+
+			if (node.endtype == EndType.ClosedPol)  {
+				var k = len - 1;
+				for (j in 0...len)
+					k = offsetPoint(j, k, node.jointype);
+				m_destPolys.push(m_destPoly);
+			}
+			else if (node.endtype == EndType.ClosedLine) {
+				var k = len - 1;
+				for (j in 0...len)
+				k = offsetPoint(j, k, node.jointype);
+				m_destPolys.push(m_destPoly);
+				m_destPoly = new Polygon();
+				//re-build m_normals ...
+				var n = m_normals[len - 1];
+				var j = len - 1;
+				while(j > 0) {
+					m_normals[j] = new h2d.col.Point(-m_normals[j - 1].x, -m_normals[j - 1].y);
+					j--;
+				}
+				m_normals[0] = new DoublePoint(-n.x, -n.y);
+				k = 0;
+				var j = len - 1;
+				while(j > 0) {
+					k = offsetPoint(j, k, node.jointype);
+					j--;
+				}
+				m_destPolys.push(m_destPoly);
+			}
+			else {
+				var k = 0;
+				for (j in 1...len - 1)
+					k = offsetPoint(j, k, node.jointype);
+
+				var pt1 : Point;
+				if (node.endtype == EndType.OpenButt) {
+					var j = len - 1;
+					pt1 = new Point(Math.round(m_srcPoly[j].x + m_normals[j].x * delta), Math.round(m_srcPoly[j].y + m_normals[j].y * delta));
+					m_destPoly.addPoint(pt1);
+					pt1 = new Point(Math.round(m_srcPoly[j].x - m_normals[j].x * delta), Math.round(m_srcPoly[j].y - m_normals[j].y * delta));
+					m_destPoly.addPoint(pt1);
+				}
+				else {
+					var j = len - 1;
+					k = len - 2;
+					m_sinA = 0;
+					m_normals[j] = new DoublePoint(-m_normals[j].x, -m_normals[j].y);
+					if (node.endtype == EndType.OpenSquare)
+						doSquare(j, k);
+					else
+						doRound(j, k);
+				}
+
+				//re-build m_normals ...
+				var j = len - 1;
+				while(j > 0) {
+					m_normals[j] = new h2d.col.Point( -m_normals[j - 1].x, -m_normals[j - 1].y);
+					j--;
+				}
+
+				m_normals[0] = new DoublePoint(-m_normals[1].x, -m_normals[1].y);
+
+				k = len - 1;
+				var j = k - 1;
+				while(j > 0) {
+					k = offsetPoint(j, k, node.jointype);
+					j--;
+				}
+
+				if (node.endtype == EndType.OpenButt) {
+					pt1 = new Point(Math.round(m_srcPoly[0].x - m_normals[0].x * delta), Math.round(m_srcPoly[0].y - m_normals[0].y * delta));
+					m_destPoly.addPoint(pt1);
+					pt1 = new Point(Math.round(m_srcPoly[0].x + m_normals[0].x * delta), Math.round(m_srcPoly[0].y + m_normals[0].y * delta));
+					m_destPoly.addPoint(pt1);
+				}
+				else {
+					k = 1;
+					m_sinA = 0;
+					if (node.endtype == EndType.OpenSquare)
+						doSquare(0, 1);
+					else
+						doRound(0, 1);
+				}
+				m_destPolys.push(m_destPoly);
+			}
+		}
+    }
+    //------------------------------------------------------------------------------
+
+    public function execute(delta : Float) {
+		fixOrientations();
+		doOffset(delta);
+
+		//now clean up 'corners' ...
+		var clpr = new Clipper();
+		clpr.resultKind = resultKind;
+		clpr.addPolygons(m_destPolys, PolyType.Subject);
+		if (delta > 0) return clpr.execute(ClipType.Union, PolyFillType.Positive, PolyFillType.Positive);
+		else {
+			var r = ClipperBase.getBounds(m_destPolys);
+			var outer = new Polygon();
+
+			outer.addPoint(new Point(r.left - 10, r.bottom + 10));
+			outer.addPoint(new Point(r.right + 10, r.bottom + 10));
+			outer.addPoint(new Point(r.right + 10, r.top - 10));
+			outer.addPoint(new Point(r.left - 10, r.top - 10));
+
+			clpr.addPolygon(outer, PolyType.Subject);
+			clpr.reverseSolution = true;
+			var out = clpr.execute(ClipType.Union, PolyFillType.Negative, PolyFillType.Negative);
+			if (out.length > 0) out.shift();
+/*
+			trace(out.length);
+			for(o in out)
+				for(p in o.points)
+					trace(p);*/
+			return out;
+		}
+    }
+    //------------------------------------------------------------------------------
+
+    function offsetPoint(j : Int, k : Int, jointype : JoinType)
+    {
+		//cross product ...
+		m_sinA = (m_normals[k].x * m_normals[j].y - m_normals[j].x * m_normals[k].y);
+
+		if (Math.abs(m_sinA * m_delta) < 1.0)
+		{
+			//dot product ...
+			var cosA = (m_normals[k].x * m_normals[j].x + m_normals[j].y * m_normals[k].y);
+			if (cosA > 0) // angle ==> 0 degrees
+			{
+				m_destPoly.addPoint(new Point(Math.round(m_srcPoly[j].x + m_normals[k].x * m_delta), Math.round(m_srcPoly[j].y + m_normals[k].y * m_delta)));
+				return k;
+			}
+			//else angle ==> 180 degrees
+		}
+		else if (m_sinA > 1.0) m_sinA = 1.0;
+		else if (m_sinA < -1.0) m_sinA = -1.0;
+
+		if (m_sinA * m_delta < 0)
+		{
+			m_destPoly.addPoint(new Point(Math.round(m_srcPoly[j].x + m_normals[k].x * m_delta), Math.round(m_srcPoly[j].y + m_normals[k].y * m_delta)));
+			m_destPoly.addPoint(m_srcPoly[j]);
+			m_destPoly.addPoint(new Point(Math.round(m_srcPoly[j].x + m_normals[j].x * m_delta), Math.round(m_srcPoly[j].y + m_normals[j].y * m_delta)));
+		}
+		else
+		switch (jointype)
+		{
+			case JoinType.Miter:
+				var r = 1 + (m_normals[j].x * m_normals[k].x + m_normals[j].y * m_normals[k].y);
+				if (r >= m_miterLim)
+					doMiter(j, k, r);
+				else doSquare(j, k);
+			case JoinType.Square: doSquare(j, k);
+			case JoinType.Round: doRound(j, k);
+		}
+
+		return j;
+    }
+    //------------------------------------------------------------------------------
+
+    inline function doSquare(j : Int, k : Int)
+    {
+		var dx = Math.tan(Math.atan2(m_sinA, m_normals[k].x * m_normals[j].x + m_normals[k].y * m_normals[j].y) * 0.25);
+		m_destPoly.addPoint(new Point(Math.round(m_srcPoly[j].x + m_delta * (m_normals[k].x - m_normals[k].y * dx)), Math.round(m_srcPoly[j].y + m_delta * (m_normals[k].y + m_normals[k].x * dx))));
+		m_destPoly.addPoint(new Point(Math.round(m_srcPoly[j].x + m_delta * (m_normals[j].x + m_normals[j].y * dx)), Math.round(m_srcPoly[j].y + m_delta * (m_normals[j].y - m_normals[j].x * dx))));
+    }
+    //------------------------------------------------------------------------------
+
+   inline function doMiter(j : Int, k : Int, r : Float)
+    {
+		var q = m_delta / r;
+		m_destPoly.addPoint(new Point(Math.round(m_srcPoly[j].x + (m_normals[k].x + m_normals[j].x) * q), Math.round(m_srcPoly[j].y + (m_normals[k].y + m_normals[j].y) * q)));
+    }
+    //------------------------------------------------------------------------------
+
+   inline function doRound(j : Int, k : Int)
+    {
+		var a = Math.atan2(m_sinA, m_normals[k].x * m_normals[j].x + m_normals[k].y * m_normals[j].y);
+		var steps = Math.imax(Math.round(m_StepsPerRad * Math.abs(a)), 1);
+
+		var X = m_normals[k].x, Y = m_normals[k].y, X2;
+		for (i in 0...steps) {
+			m_destPoly.addPoint(new Point(Math.round(m_srcPoly[j].x + X * m_delta), Math.round(m_srcPoly[j].y + Y * m_delta)));
+			X2 = X;
+			X = X * m_cos - m_sin * Y;
+			Y = X2 * m_sin + Y * m_cos;
+		}
+		m_destPoly.addPoint(new Point(Math.round(m_srcPoly[j].x + m_normals[j].x * m_delta), Math.round(m_srcPoly[j].y + m_normals[j].y * m_delta)));
+    }
+}
