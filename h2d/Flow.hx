@@ -52,6 +52,9 @@ class Flow extends Sprite {
 	public var maxWidth(default, set) : Null<Int>;
 	public var maxHeight(default, set) : Null<Int>;
 
+	public var lineHeight(default, set) : Null<Int>;
+	public var colWidth(default, set) : Null<Int>;
+
 	/**
 		Will set all padding values at the same time.
 	**/
@@ -134,6 +137,20 @@ class Flow extends Sprite {
 		return align = v;
 	}
 
+	function set_lineHeight(v) {
+		if( lineHeight == v )
+			return v;
+		needReflow = true;
+		return lineHeight = v;
+	}
+
+	function set_colWidth(v) {
+		if( colWidth == v )
+			return v;
+		needReflow = true;
+		return colWidth = v;
+	}
+
 	function set_padding(v) {
 		paddingLeft = v;
 		paddingTop = v;
@@ -191,15 +208,17 @@ class Flow extends Sprite {
 
 	override function addChildAt( s, pos ) {
 		if( background != null ) pos++;
+		var fp = getProperties(s);
 		super.addChildAt(s, pos);
-		properties.insert(pos, new FlowProperties());
+		if( fp == null ) fp = new FlowProperties() else properties.remove(fp);
+		properties.insert(pos, fp);
 		needReflow = true;
 	}
 
 	override public function removeChild(s:Sprite) {
 		var index = getChildIndex(s);
 		super.removeChild(s);
-		if( index > 0 ) {
+		if( index >= 0 ) {
 			needReflow = true;
 			properties.splice(index, 1);
 		}
@@ -332,15 +351,16 @@ class Flow extends Sprite {
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
+				var lineHeight = this.lineHeight == null ? maxLineHeight : lineHeight;
 				for( i in lastIndex...maxIndex ) {
 					var c = childs[i];
 					var p = properties[i];
 					var a = p.align != null ? p.align : align;
 					switch( a ) {
 					case Bottom:
-						c.y += maxLineHeight - p.calculatedHeight;
+						c.y += lineHeight - p.calculatedHeight;
 					case Middle:
-						c.y += Std.int((maxLineHeight - p.calculatedHeight) * 0.5);
+						c.y += Std.int((lineHeight - p.calculatedHeight) * 0.5);
 					default:
 					}
 				}
@@ -389,15 +409,16 @@ class Flow extends Sprite {
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
+				var colWidth = this.colWidth == null ? maxColWidth : colWidth;
 				for( i in lastIndex...maxIndex ) {
 					var c = childs[i];
 					var p = properties[i];
 					var a = p.align != null ? p.align : align;
 					switch( a ) {
 					case Right:
-						c.x += maxColWidth - p.calculatedWidth;
+						c.x += colWidth - p.calculatedWidth;
 					case Middle:
-						c.x += Std.int((maxColWidth - p.calculatedWidth) * 0.5);
+						c.x += Std.int((colWidth - p.calculatedWidth) * 0.5);
 					default:
 					}
 				}
