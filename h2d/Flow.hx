@@ -94,6 +94,15 @@ class Flow extends Sprite {
 	public var borderHeight(default, set) : Int = 0;
 
 	/**
+		Calculate the client width, which is the innner size of the flow without the borders and padding.
+	**/
+	public var clientWidth(get, never) : Int;
+	/**
+		Calculate the client height, which is the innner size of the flow without the borders and padding.
+	**/
+	public var clientHeight(get, never) : Int;
+
+	/**
 		By default, elements will be flowed horizontaly, then in several lines if maxWidth is reached.
 		You can instead flow them vertically, then to next column is maxHeight is reached by setting the isVertical flag to true.
 	**/
@@ -157,6 +166,14 @@ class Flow extends Sprite {
 		paddingRight = v;
 		paddingBottom = v;
 		return v;
+	}
+
+	function get_clientWidth() {
+		return Std.int(getBounds(this,tmpBounds).xMax) - (paddingLeft + paddingRight + borderWidth * 2);
+	}
+
+	function get_clientHeight() {
+		return Std.int(getBounds(this,tmpBounds).yMax) - (paddingTop + paddingBottom + borderHeight * 2);
 	}
 
 	function get_calculatedWidth() {
