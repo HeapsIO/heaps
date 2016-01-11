@@ -375,9 +375,9 @@ class Cell {
 	static function sortByAngle(a:Halfedge, b:Halfedge) {
 		return b.angle > a.angle ? 1 : (b.angle < a.angle ? -1 : 0);
 	}
-
-	// Return a list of the neighbor Ids
-	public function getNeighborIds() {
+	
+	// Return a list of the neighbors
+	public function getNeighbors() {
 		var neighbors = [],
 			iHalfedge = this.halfedges.length,
 			edge;
@@ -389,6 +389,24 @@ class Cell {
 				}
 			else if (edge.rPoint != null && edge.rPoint != this.point){
 				neighbors.push(edge.rPoint);
+				}
+			}
+		return neighbors;
+    }
+
+	// Return a list of the neighbor Indexes
+	public function getNeighborIndexes() {
+		var neighbors = [],
+			iHalfedge = this.halfedges.length,
+			edge;
+		while (iHalfedge-- != 0){
+			edge = this.halfedges[iHalfedge].edge;
+			// NC : changes pointId check to object == check
+			if (edge.lPoint != null && edge.lPoint != this.point) {
+				neighbors.push(edge.lCell.id);
+				}
+			else if (edge.rPoint != null && edge.rPoint != this.point){
+				neighbors.push(edge.rCell.id);
 				}
 			}
 		return neighbors;
