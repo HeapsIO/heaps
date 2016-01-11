@@ -37,9 +37,9 @@ class ScaleGrid extends h2d.TileGroup {
 		return h;
 	}
 
-	override function getBoundsRec(relativeTo, out) {
+	override function getBoundsRec(relativeTo, out, forSize) {
 		if( content.isEmpty() ) updateContent();
-		super.getBoundsRec(relativeTo, out);
+		super.getBoundsRec(relativeTo, out, forSize);
 	}
 
 	function updateContent() {

@@ -25,6 +25,7 @@ class Scene extends Layers implements h3d.IDrawable {
 	var pushList : Array<Interactive>;
 	var currentDrag : { f : hxd.Event -> Void, onCancel : Void -> Void, ref : Null<Int> };
 	var eventListeners : Array< hxd.Event -> Void >;
+	var fakeMove : hxd.Event;
 
 	public function new() {
 		super(null);
@@ -231,7 +232,7 @@ class Scene extends Layers implements h3d.IDrawable {
 			event.kind = EMove;
 			currentOver = null;
 		}
-		if( !handled ) {
+		if( !handled && event != fakeMove ) {
 			if( event.kind == EPush )
 				pushList.push(null);
 			dispatchListeners(event);
@@ -252,10 +253,12 @@ class Scene extends Layers implements h3d.IDrawable {
 		if( old.length == 0 )
 			return;
 		pendingEvents = null;
+		var checkMoved = false;
 		for( e in old ) {
 			var ox = e.relX, oy = e.relY;
 			e.relX = screenXToLocal(ox);
 			e.relY = screenYToLocal(oy);
+			if( e.kind == EMove ) checkMoved = true;
 
 			if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
 				currentDrag.f(e);
@@ -291,6 +294,14 @@ class Scene extends Layers implements h3d.IDrawable {
 			e.relX = ox;
 			e.relY = oy;
 		}
+
+		if( !checkMoved && currentDrag == null ) {
+			if( fakeMove == null ) fakeMove = new hxd.Event(EMove);
+			fakeMove.relX = mouseX;
+			fakeMove.relY = mouseY;
+			emitEvent(fakeMove);
+		}
+
 		if( hasEvents() )
 			pendingEvents = new Array();
 	}

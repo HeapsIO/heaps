@@ -138,8 +138,8 @@ class SpriteBatch extends Drawable {
 		}
 	}
 
-	override function getBoundsRec( relativeTo, out ) {
-		super.getBoundsRec(relativeTo, out);
+	override function getBoundsRec( relativeTo, out, forSize ) {
+		super.getBoundsRec(relativeTo, out, forSize);
 		var e = first;
 		while( e != null ) {
 			var t = e.t;

@@ -3,5 +3,5 @@
 -lib heaps
 -dce full
 -D resourcesPath=../res
---macro include('h2d')
+--macro include('h2d',['h2d.CdbLevel'])
 -lib hxsdl

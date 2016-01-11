@@ -326,8 +326,8 @@ class TileGroup extends Drawable {
 		content = new TileLayerContent();
 	}
 
-	override function getBoundsRec( relativeTo, out ) {
-		super.getBoundsRec(relativeTo, out);
+	override function getBoundsRec( relativeTo, out, forSize ) {
+		super.getBoundsRec(relativeTo, out, forSize);
 		addBounds(relativeTo, out, content.xMin, content.yMin, content.xMax - content.xMin, content.yMax - content.yMin);
 	}
 

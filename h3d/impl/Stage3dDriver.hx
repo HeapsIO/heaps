@@ -50,7 +50,8 @@ private class CompiledShader {
 
 class Stage3dDriver extends Driver {
 
-	public static var PROFILE = #if flash14 cast "standard" #else flash.display3D.Context3DProfile.BASELINE #end;
+	// standard profile was introduced with Flash14 but it causes problems with filters, only enable it for flash15+
+	public static var PROFILE = #if flash15 cast "standard" #else flash.display3D.Context3DProfile.BASELINE #end;
 
 	var s3d : flash.display.Stage3D;
 	var ctx : flash.display3D.Context3D;

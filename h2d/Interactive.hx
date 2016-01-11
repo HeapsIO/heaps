@@ -36,8 +36,8 @@ class Interactive extends Drawable {
 		if( backgroundColor != null ) emitTile(ctx, h2d.Tile.fromColor(backgroundColor, Std.int(width), Std.int(height), (backgroundColor>>>24)/255 ));
 	}
 
-	override function getBoundsRec( relativeTo, out ) {
-		super.getBoundsRec(relativeTo, out);
+	override function getBoundsRec( relativeTo, out, forSize ) {
+		super.getBoundsRec(relativeTo, out, forSize);
 		if( backgroundColor != null ) addBounds(relativeTo, out, 0, 0, Std.int(width), Std.int(height));
 	}
 
@@ -45,16 +45,6 @@ class Interactive extends Drawable {
 		if( scene != null ) {
 			scene.removeEventTarget(this);
 			scene.addEventTarget(this);
-		}
-	}
-
-	override function calcAbsPos() {
-		super.calcAbsPos();
-		// force a move event if we update the current over interactive
-		if( scene != null && scene.currentOver == this ) {
-			var stage = hxd.Stage.getInstance();
-			var e = new hxd.Event(EMove, stage.mouseX, stage.mouseY);
-			@:privateAccess scene.onEvent(e);
 		}
 	}
 

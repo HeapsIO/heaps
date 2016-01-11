@@ -170,7 +170,8 @@ private class TEdge {
 	public var bot : Point;
 	public var curr : Point;
 	public var top : Point;
-	public var delta : Point;
+	public var deltaX : Int;
+	public var deltaY : Int;
 	public var dx : Float;
 	public var polyType : PolyType;
 	public var side : EdgeSide;
@@ -189,7 +190,6 @@ private class TEdge {
 		bot = new Point();
 		curr = new Point();
 		top = new Point();
-		delta = new Point();
 	}
 }
 
@@ -265,7 +265,7 @@ private class ClipperBase
 
 	//------------------------------------------------------------------------------
 	public function isHorizontal(e : TEdge) {
-		return e.delta.y == 0;
+		return e.deltaY == 0;
 	}
 
 	inline function abs(i:Int):Int {
@@ -315,17 +315,12 @@ private class ClipperBase
 	//------------------------------------------------------------------------------
 
 	inline function SlopesEqual(e1:TEdge, e2:TEdge) {
-		return e1.delta.y * e2.delta.x == e1.delta.x * e2.delta.y;
+		return e1.deltaY * e2.deltaX == e1.deltaX * e2.deltaY;
 	}
 	//------------------------------------------------------------------------------
 
 	inline function SlopesEqual3(pt1:Point, pt2:Point, pt3:Point) {
 		return (pt1.y - pt2.y) * (pt2.x - pt3.x) - (pt1.x - pt2.x) * (pt2.y - pt3.y) == 0;
-	}
-	//------------------------------------------------------------------------------
-
-	inline function SlopesEqual4(pt1:Point, pt2:Point, pt3:Point, pt4:Point) {
-		return (pt1.y - pt2.y) * (pt3.x - pt4.x) - (pt1.x - pt2.x) * (pt3.y - pt4.y) == 0;
 	}
 
 	//------------------------------------------------------------------------------
@@ -391,7 +386,7 @@ private class ClipperBase
 			i--;
 		}
 
-		//remove ducplicate vertices and collinear edges
+		//remove duplicate vertices and collinear edges
 		var eStart = edges[0];
 		var eStop = eStart;
 		var e = eStart;
@@ -499,7 +494,7 @@ private class ClipperBase
 	function InitEdge(e:TEdge, eNext:TEdge, ePrev:TEdge, pt:Point) {
       e.next = eNext;
       e.prev = ePrev;
-      e.curr = pt;
+      e.curr = pt.clone();
       e.outIdx = UNASSIGNED;
 	}
 
@@ -690,10 +685,10 @@ private class ClipperBase
 
 	private function SetDx(e:TEdge)
 	{
-		e.delta.x = (e.top.x - e.bot.x);
-		e.delta.y = (e.top.y - e.bot.y);
-		if (e.delta.y == 0) e.dx = HORIZONTAL;
-		else e.dx = e.delta.x / e.delta.y;
+		e.deltaX = (e.top.x - e.bot.x);
+		e.deltaY = (e.top.y - e.bot.y);
+		if (e.deltaY == 0) e.dx = HORIZONTAL;
+		else e.dx = e.deltaX / e.deltaY;
 	}
 	//---------------------------------------------------------------------------
 
@@ -803,11 +798,6 @@ enum NodeType {
 @:allow(hxd.clipper)
 class Clipper extends ClipperBase {
 
-	//InitOptions that can be passed to the constructor ...
-	public var ioReverseSolution = 1;
-	public var ioStrictlySimple = 2;
-	public var ioPreserveCollinear = 4;
-
 	public var strictlySimple : Bool;
 	public var reverseSolution : Bool;
 
@@ -824,7 +814,7 @@ class Clipper extends ClipperBase {
 	var m_GhostJoins : Array<Join>;
 	var m_UsingPolyTree : Bool;
 
-	public function new(initOptions = 0)
+	public function new()
 	{
 		super();
 		m_Scanbeam = null;
@@ -837,9 +827,9 @@ class Clipper extends ClipperBase {
 		m_Joins = [];
 		m_GhostJoins = [];
 
-		reverseSolution = (ioReverseSolution & initOptions) != 0;
-		strictlySimple = (ioStrictlySimple & initOptions) != 0;
-		preserveCollinear = (ioPreserveCollinear & initOptions) != 0;
+		reverseSolution = false;
+		strictlySimple = false;
+		preserveCollinear = false;
 	}
 
 	inline function xor(a, b) {
@@ -927,14 +917,6 @@ class Clipper extends ClipperBase {
 		DisposeAllPolyPts();
 		m_ExecuteLocked = false;
 
-		/*
-		trace("------------");
-		for(s in solution) {
-			trace(s.length);
-			for(p in s)
-				trace(p);
-		}*/
-
 		return solution;
 	}
 	//------------------------------------------------------------------------------
@@ -987,7 +969,6 @@ class Clipper extends ClipperBase {
 			ProcessEdgesAtTopOfScanbeam(topY);
 			botY = topY;
 		} while (m_Scanbeam != null || m_CurrentLM != null);
-
 
 		//fix orientations ...
 		for( outRec in m_PolyOuts ) {
@@ -2435,7 +2416,7 @@ class Clipper extends ClipperBase {
 			return ip;
 		}
 
-		if (edge1.delta.x == 0)
+		if (edge1.deltaX == 0)
 		{
 			ip.x = edge1.bot.x;
 			if (isHorizontal(edge2))
@@ -2448,7 +2429,7 @@ class Clipper extends ClipperBase {
 				ip.y = Round(ip.y / edge2.dx + b2);
 			}
 		}
-		else if (edge2.delta.x == 0)
+		else if (edge2.deltaX == 0)
 		{
 			ip.x = edge2.bot.x;
 			if (isHorizontal(edge1))
@@ -3297,55 +3278,55 @@ class Clipper extends ClipperBase {
 		var i:Int = 0;
 		while (i < m_PolyOuts.length)
 		{
-		var outrec:OutRec = m_PolyOuts[i++];
-		var op:OutPt = outrec.pts;
-		if (op == null) continue;
-		do //for each Pt in Polygon until duplicate found do
-		{
-			var op2 = op.next;
-			while (op2 != outrec.pts)
+			var outrec:OutRec = m_PolyOuts[i++];
+			var op:OutPt = outrec.pts;
+			if (op == null) continue;
+			do //for each Pt in Polygon until duplicate found do
 			{
-			if (op.pt == op2.pt && op2.next != op && op2.prev != op)
-			{
-				//split the polygon into two
-				var op3 = op.prev;
-				var op4 = op2.prev;
-				op.prev = op4;
-				op4.next = op;
-				op2.prev = op3;
-				op3.next = op2;
+				var op2 = op.next;
+				while (op2 != outrec.pts)
+				{
+					if (op.pt == op2.pt && op2.next != op && op2.prev != op)
+					{
+						//split the polygon into two
+						var op3 = op.prev;
+						var op4 = op2.prev;
+						op.prev = op4;
+						op4.next = op;
+						op2.prev = op3;
+						op3.next = op2;
 
-				outrec.pts = op;
-				var outrec2 = CreateOutRec();
-				outrec2.pts = op2;
-				UpdateOutPtIdxs(outrec2);
-				if (Poly2ContainsPoly1(outrec2.pts, outrec.pts))
-				{
-					//OutRec2 is contained by OutRec1
-					outrec2.isHole = !outrec.isHole;
-					outrec2.firstLeft = outrec;
+						outrec.pts = op;
+						var outrec2 = CreateOutRec();
+						outrec2.pts = op2;
+						UpdateOutPtIdxs(outrec2);
+						if (Poly2ContainsPoly1(outrec2.pts, outrec.pts))
+						{
+							//OutRec2 is contained by OutRec1
+							outrec2.isHole = !outrec.isHole;
+							outrec2.firstLeft = outrec;
+						}
+						else
+						if (Poly2ContainsPoly1(outrec.pts, outrec2.pts))
+						{
+							//OutRec1 is contained by OutRec2
+							outrec2.isHole = outrec.isHole;
+							outrec.isHole = !outrec2.isHole;
+							outrec2.firstLeft = outrec.firstLeft;
+							outrec.firstLeft = outrec2;
+						} else
+						{
+							//the 2 polygons are separate
+							outrec2.isHole = outrec.isHole;
+							outrec2.firstLeft = outrec.firstLeft;
+						}
+						op2 = op; //ie get ready for the next iteration
+					}
+					op2 = op2.next;
 				}
-				else
-				if (Poly2ContainsPoly1(outrec.pts, outrec2.pts))
-				{
-					//OutRec1 is contained by OutRec2
-					outrec2.isHole = outrec.isHole;
-					outrec.isHole = !outrec2.isHole;
-					outrec2.firstLeft = outrec.firstLeft;
-					outrec.firstLeft = outrec2;
-				} else
-				{
-					//the 2 polygons are separate
-					outrec2.isHole = outrec.isHole;
-					outrec2.firstLeft = outrec.firstLeft;
-				}
-				op2 = op; //ie get ready for the next iteration
+				op = op.next;
 			}
-			op2 = op2.next;
-			}
-			op = op.next;
-		}
-		while (op != outrec.pts);
+			while (op != outrec.pts);
 		}
 	}
 
@@ -3529,9 +3510,8 @@ class Clipper extends ClipperBase {
       }
       //------------------------------------------------------------------------------
 
-      static function Minkowski(pattern : Polygon, path : Polygon , IsSum : Bool, IsClosed : Bool)
+      static function Minkowski(pattern : Polygon, path : Polygon , IsSum : Bool)
       {
-        var delta = (IsClosed ? 1 : 0);
         var polyCnt = pattern.length;
         var pathCnt = path.length;
         var result = new Polygons();
@@ -3553,7 +3533,7 @@ class Clipper extends ClipperBase {
           }
 
         var quads = new Polygons();
-        for (i in 0...pathCnt - 1 + delta)
+        for (i in 0...pathCnt)
           for (j in 0...polyCnt)
           {
             var quad = new Polygon();
@@ -3569,9 +3549,9 @@ class Clipper extends ClipperBase {
 
       //------------------------------------------------------------------------------
 
-      public static function MinkowskiSum(pattern : Polygon, path : Polygon, pathIsClosed : Bool)
+      public static function MinkowskiSum(pattern : Polygon, pol : Polygon)
       {
-        var paths = Minkowski(pattern, path, true, pathIsClosed);
+        var paths = Minkowski(pattern, pol, true);
         var c = new Clipper();
         c.addPolygons(paths, PolyType.Subject);
         return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);
@@ -3588,18 +3568,15 @@ class Clipper extends ClipperBase {
       }
       //------------------------------------------------------------------------------
 
-      public static function MinkowskiSums(pattern : Polygon, paths : Polygons, pathIsClosed : Bool)
+      public static function MinkowskiSums(pattern : Polygon, pols : Polygons)
       {
         var c = new Clipper();
-        for (i in 0...paths.length)
+        for (i in 0...pols.length)
         {
-          var tmp = Minkowski(pattern, paths[i], true, pathIsClosed);
+          var tmp = Minkowski(pattern, pols[i], true);
           c.addPolygons(tmp, PolyType.Subject);
-          if (pathIsClosed)
-          {
-            var path = TranslatePath(paths[i], pattern[0]);
-            c.addPolygon(path, PolyType.Clip);
-          }
+          var path = TranslatePath(pols[i], pattern[0]);
+          c.addPolygon(path, PolyType.Clip);
         }
         return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);
       }
@@ -3607,7 +3584,7 @@ class Clipper extends ClipperBase {
 
       public static function MinkowskiDiff(poly1 : Polygon, poly2 : Polygon)
       {
-        var paths = Minkowski(poly1, poly2, false, true);
+        var paths = Minkowski(poly1, poly2, false);
         var c = new Clipper();
         c.addPolygons(paths, PolyType.Subject);
         return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);

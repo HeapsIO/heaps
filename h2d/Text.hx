@@ -21,7 +21,12 @@ class Text extends Drawable {
 	public var lineSpacing(default,set) : Int;
 
 	var glyphs : TileGroup;
-	var cachedSize : { width : Int, height : Int };
+
+	var calcDone:Bool;
+	var calcYMin:Int;
+	var calcWidth:Int;
+	var calcHeight:Int;
+	var calcSizeHeight:Int;
 
 	public function new( font : Font, ?parent ) {
 		super(parent);
@@ -102,15 +107,25 @@ class Text extends Drawable {
 	}
 
 	function rebuild() {
-		cachedSize = null;
+		calcDone = false;
 		if( allocated && text != null && font != null ) initGlyphs(text);
 	}
 
 	public function calcTextWidth( text : String ) {
-		var old = cachedSize;
-		var w = initGlyphs(text,false).width;
-		cachedSize = old;
-		return w;
+		if( calcDone ) {
+			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, oy = calcYMin;
+			initGlyphs(text, false);
+			var w = calcWidth;
+			calcWidth = ow;
+			calcHeight = oh;
+			calcSizeHeight = osh;
+			calcYMin = oy;
+			return w;
+		} else {
+			initGlyphs(text, false);
+			calcDone = false;
+			return calcWidth;
+		}
 	}
 
 	public function splitText( text : String, leftMargin = 0 ) {
@@ -164,15 +179,15 @@ class Text extends Drawable {
 		return lines.join("\n");
 	}
 
-	function initGlyphs( text : String, rebuild = true, lines : Array<Int> = null ) : { width : Int, height : Int } {
+	function initGlyphs( text : String, rebuild = true, lines : Array<Int> = null ) : Void {
 		if( rebuild ) glyphs.clear();
 		var x = 0, y = 0, xMax = 0, prevChar = -1;
 		var align = rebuild ? textAlign : Left;
 		switch( align ) {
 		case Center, Right:
 			lines = [];
-			var inf = initGlyphs(text, false, lines);
-			var max = maxWidth == null ? inf.width : Std.int(maxWidth);
+			initGlyphs(text, false, lines);
+			var max = maxWidth == null ? calcWidth : Std.int(maxWidth);
 			var k = align == Center ? 1 : 0;
 			for( i in 0...lines.length )
 				lines[i] = (max - lines[i]) >> k;
@@ -181,6 +196,7 @@ class Text extends Drawable {
 		}
 		var dl = font.lineHeight + lineSpacing;
 		var calcLines = !rebuild && lines != null;
+		var yMin = 0;
 		for( i in 0...text.length ) {
 			var cc = text.charCodeAt(i);
 			var e = font.getChar(cc);
@@ -205,6 +221,7 @@ class Text extends Drawable {
 			}
 			if( e != null ) {
 				if( rebuild ) glyphs.add(x, y, e.t);
+				if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
 				x += esize + letterSpacing;
 			}
 			if( newline ) {
@@ -225,17 +242,26 @@ class Text extends Drawable {
 				prevChar = cc;
 		}
 		if( calcLines ) lines.push(x);
-		return cachedSize = { width : x > xMax ? x : xMax, height : x > 0 ? y + dl : y > 0 ? y : dl };
+
+		calcYMin = yMin;
+		calcWidth = x > xMax ? x : xMax;
+		calcHeight = y > 0 && x == 0 ? y - lineSpacing : y + font.lineHeight;
+		calcSizeHeight = y > 0 && x == 0 ? y + (font.baseLine - dl) : y + font.baseLine;
+		calcDone = true;
+	}
+
+	inline function updateSize() {
+		if( !calcDone ) initGlyphs(text, false);
 	}
 
 	function get_textHeight() {
-		if( cachedSize != null ) return cachedSize.height;
-		return initGlyphs(text,false).height;
+		updateSize();
+		return calcHeight;
 	}
 
 	function get_textWidth() {
-		if( cachedSize != null ) return cachedSize.width;
-		return initGlyphs(text,false).width;
+		updateSize();
+		return calcWidth;
 	}
 
 	function set_maxWidth(w) {
@@ -254,20 +280,10 @@ class Text extends Drawable {
 		return c;
 	}
 
-	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds ) {
-		if( !allocated ) {
-			// if not on scene, the text is not yet built !
-			super.getBoundsRec(relativeTo, out);
-			var size = cachedSize == null ? initGlyphs(text, false) : cachedSize;
-			addBounds(relativeTo, out, 0, 0, size.width, size.height);
-		} else {
-			if( glyphs != null ) glyphs.visible = true;
-			super.getBoundsRec(relativeTo, out);
-			if( glyphs != null )
-				glyphs.visible = false;
-			else
-				addBounds(relativeTo, out, 0, 0, 16, 16);
-		}
+	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
+		super.getBoundsRec(relativeTo, out, forSize);
+		updateSize();
+		addBounds(relativeTo, out, 0, forSize ? 0 : calcYMin, calcWidth, forSize ? calcSizeHeight : calcHeight - calcYMin);
 	}
 
 }
