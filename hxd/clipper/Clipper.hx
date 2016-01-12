@@ -882,22 +882,19 @@ class Clipper extends ClipperBase {
 
 	private function InsertScanbeam(y:Int)
 	{
-		if( m_Scanbeam == null )
-		{
+		if( m_Scanbeam == null ) {
 			m_Scanbeam = new Scanbeam();
 			m_Scanbeam.next = null;
 			m_Scanbeam.y = y;
 		}
-		else if( y > m_Scanbeam.y )
-		{
+		else if( y > m_Scanbeam.y )	{
 			var newSb = new Scanbeam();
 			newSb.y = y;
 			newSb.next = m_Scanbeam;
 			m_Scanbeam = newSb;
-		} else
-		{
-		var sb2 = m_Scanbeam;
-		while( sb2.next != null	&& ( y <= sb2.next.y ) ) sb2 = sb2.next;
+		} else {
+			var sb2 = m_Scanbeam;
+			while( sb2.next != null	&& ( y <= sb2.next.y ) ) sb2 = sb2.next;
 			if(	y == sb2.y ) return; //ie ignores duplicates
 			var newSb = new Scanbeam();
 			newSb.y = y;
@@ -1502,7 +1499,7 @@ class Clipper extends ClipperBase {
 	private function AddLocalMaxPoly(e1:TEdge,e2:TEdge,pt:Point)
 	{
 		AddOutPt(e1, pt);
-        if (e2.windDelta == 0) AddOutPt(e2, pt);
+		if (e2.windDelta == 0) AddOutPt(e2, pt);
 		if (e1.outIdx == e2.outIdx)
 		{
 			e1.outIdx = ClipperBase.UNASSIGNED;
@@ -1510,8 +1507,7 @@ class Clipper extends ClipperBase {
 		}
 		else if (e1.outIdx < e2.outIdx)
 			AppendPolygon(e1, e2);
-		else
-			AppendPolygon(e2, e1);
+		else AppendPolygon(e2, e1);
 	}
 	//------------------------------------------------------------------------------
 
@@ -1670,33 +1666,32 @@ class Clipper extends ClipperBase {
 		var p:OutPt = pp.next;
 		while (p != pp)
 		{
-		if (p.pt.y > pp.pt.y)
-		{
-			pp = p;
-			dups = null;
-		}
-		else if (p.pt.y == pp.pt.y && p.pt.x <= pp.pt.x)
-		{
-			if (p.pt.x < pp.pt.x)
+			if (p.pt.y > pp.pt.y)
 			{
-				dups = null;
 				pp = p;
-			} else
-			{
-			if (p.next != pp && p.prev != pp) dups = p;
+				dups = null;
 			}
+			else if (p.pt.y == pp.pt.y && p.pt.x <= pp.pt.x)
+			{
+				if (p.pt.x < pp.pt.x)
+				{
+					dups = null;
+					pp = p;
+				} else if (p.next != pp && p.prev != pp) dups = p;
+			}
+			p = p.next;
 		}
-		p = p.next;
-		}
+
 		if (dups != null)
 		{
-		//there appears to be at least 2 vertices at bottomPt so
-		while (dups != p)
-		{
-			if (!FirstIsBottomPt(p, dups)) pp = dups;
-			dups = dups.next;
-			while (dups.pt != pp.pt) dups = dups.next;
-		}
+			var n = 0;
+			//there appears to be at least 2 vertices at bottomPt so
+			while (dups != p)
+			{
+				if (!FirstIsBottomPt(p, dups)) pp = dups;
+				dups = dups.next;
+				while (!equals(dups.pt, pp.pt)) dups = dups.next;
+			}
 		}
 		return pp;
 	}
@@ -1711,6 +1706,7 @@ class Clipper extends ClipperBase {
 			outRec2.bottomPt = GetBottomPt(outRec2.pts);
 		var bPt1 = outRec1.bottomPt;
 		var bPt2 = outRec2.bottomPt;
+
 		if (bPt1.pt.y > bPt2.pt.y) return outRec1;
 		else if (bPt1.pt.y < bPt2.pt.y) return outRec2;
 		else if (bPt1.pt.x < bPt2.pt.x) return outRec1;
@@ -2463,6 +2459,7 @@ class Clipper extends ClipperBase {
 
 	function ProcessEdgesAtTopOfScanbeam(topY : Int) {
 		var e = m_ActiveEdges;
+
 		while(e != null)
 		{
 			//1. process maxima, treating them as if they're 'bent' horizontal edges,
@@ -2549,33 +2546,33 @@ class Clipper extends ClipperBase {
 
 	private function DoMaxima(e:TEdge)
 	{
-        var eMaxPair = GetMaximaPair(e);
+		var eMaxPair = GetMaximaPair(e);
         if (eMaxPair == null)
         {
-          if (e.outIdx >= 0)
-            AddOutPt(e, e.top);
-          DeleteFromAEL(e);
-          return;
+			if (e.outIdx >= 0)
+				AddOutPt(e, e.top);
+			DeleteFromAEL(e);
+			return;
         }
 
         var eNext = e.nextInAEL;
         while(eNext != null && eNext != eMaxPair)
         {
-          IntersectEdges(e, eNext, e.top);
-          SwapPositionsInAEL(e, eNext);
-          eNext = e.nextInAEL;
+			IntersectEdges(e, eNext, e.top);
+			SwapPositionsInAEL(e, eNext);
+			eNext = e.nextInAEL;
         }
 
         if(e.outIdx == ClipperBase.UNASSIGNED && eMaxPair.outIdx == ClipperBase.UNASSIGNED)
         {
-          DeleteFromAEL(e);
-          DeleteFromAEL(eMaxPair);
+			DeleteFromAEL(e);
+			DeleteFromAEL(eMaxPair);
         }
         else if( e.outIdx >= 0 && eMaxPair.outIdx >= 0 )
         {
-          if (e.outIdx >= 0) AddLocalMaxPoly(e, eMaxPair, e.top);
-          DeleteFromAEL(e);
-          DeleteFromAEL(eMaxPair);
+			if (e.outIdx >= 0) AddLocalMaxPoly(e, eMaxPair, e.top);
+			DeleteFromAEL(e);
+			DeleteFromAEL(eMaxPair);
         }
         else throw "DoMaxima error";
 	}
@@ -3906,11 +3903,6 @@ class ClipperOffset
 			clpr.reverseSolution = true;
 			var out = clpr.execute(ClipType.Union, PolyFillType.Negative, PolyFillType.Negative);
 			if (out.length > 0) out.shift();
-/*
-			trace(out.length);
-			for(o in out)
-				for(p in o.points)
-					trace(p);*/
 			return out;
 		}
     }
