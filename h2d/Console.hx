@@ -66,11 +66,11 @@ class Console extends h2d.Sprite {
 
 	override function onAlloc() {
 		super.onAlloc();
-		getScene().addEventListener(onEvent);
+		hxd.Stage.getInstance().addEventTarget(onEvent);
 	}
 
 	override function onDelete() {
-		getScene().removeEventListener(onEvent);
+		hxd.Stage.getInstance().removeEventTarget(onEvent);
 		super.onDelete();
 	}
 
