@@ -51,7 +51,7 @@ abstract Polygon(Array<Point>) {
 	}
 
 	public inline function clean(?distance) {
-		return Clipper.CleanPolygon(this, distance);
+		return new Clipper().CleanPolygon(this, distance);
 	}
 
 	public inline function simplify(?fillType) {

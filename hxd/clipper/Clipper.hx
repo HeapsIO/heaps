@@ -130,7 +130,7 @@ private class PolyTree extends PolyNode {
 		addRec(this, polygons);
 	}
 
-	static function addRec(polynode:PolyNode,polygons:Polygons) {
+	function addRec(polynode:PolyNode,polygons:Polygons) {
 		if (polynode.contour.length > 0)
 			polygons.push(polynode.contour);
 		for(pn in polynode.childs)
@@ -264,7 +264,7 @@ private class ClipperBase
 	var m_edges : Array<Array<TEdge>>;
 
 	//------------------------------------------------------------------------------
-	public function isHorizontal(e : TEdge) {
+	public inline function isHorizontal(e : TEdge) {
 		return e.deltaY == 0;
 	}
 
@@ -272,13 +272,7 @@ private class ClipperBase
 		return i < 0 ? -i : i;
 	}
 
-    static function near_zero(val : Float) {
-		return (val > -TOLERANCE) && (val < TOLERANCE);
-	}
-
-	//------------------------------------------------------------------------------
-
-	public function nearZero (v : Float) : Bool {
+	public static inline function nearZero (v : Float) : Bool {
 		return v > -TOLERANCE && v < TOLERANCE;
 	}
 
@@ -722,7 +716,7 @@ private class ClipperBase
 	}
 	//------------------------------------------------------------------------------
 
-	private function SwapX(e:TEdge)
+	private inline function SwapX(e:TEdge)
 	{
 		//swap ClipperBase.HORIZONTAL edges' top and bottom x's so they follow the natural
 		//progression of the bounds - ie so their xbots will align with the
@@ -1166,7 +1160,7 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private function IsEvenOddFillType(edge:TEdge) : Bool
+	private inline function IsEvenOddFillType(edge:TEdge) : Bool
 	{
 		if (edge.polyType == PolyType.Subject)
 			return m_SubjFillType == PolyFillType.EvenOdd;
@@ -1175,7 +1169,7 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private function IsEvenOddAltFillType(edge:TEdge) : Bool
+	private inline function IsEvenOddAltFillType(edge:TEdge) : Bool
 	{
 		if (edge.polyType == PolyType.Subject)
 			return m_ClipFillType == PolyFillType.EvenOdd;
@@ -1368,7 +1362,7 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private function CopyAELToSEL()
+	private inline function CopyAELToSEL()
 	{
 		var e:TEdge = m_ActiveEdges;
 		m_SortedEdges = e;
@@ -1850,7 +1844,7 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private static function SwapSides(edge1:TEdge,edge2:TEdge)
+	private inline function SwapSides(edge1:TEdge,edge2:TEdge)
 	{
 		var side = edge1.side;
 		edge1.side = edge2.side;
@@ -1858,7 +1852,7 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private static function SwapPolyIndexes(edge1:TEdge,edge2:TEdge)
+	private function SwapPolyIndexes(edge1:TEdge,edge2:TEdge)
 	{
 		var outIdx = edge1.outIdx;
 		edge1.outIdx = edge2.outIdx;
@@ -2197,25 +2191,25 @@ class Clipper extends ClipperBase {
 
 	//------------------------------------------------------------------------------
 
-	private function GetNextInAEL(e:TEdge,dir:Direction) : TEdge
+	private inline function GetNextInAEL(e:TEdge,dir:Direction) : TEdge
 	{
 		return dir == Direction.LeftToRight ? e.nextInAEL: e.prevInAEL;
 	}
 	//------------------------------------------------------------------------------
 
-	private function IsMinima(e:TEdge) : Bool
+	private inline function IsMinima(e:TEdge) : Bool
 	{
 		return e != null && (e.prev.nextInLML != e) && (e.next.nextInLML != e);
 	}
 	//------------------------------------------------------------------------------
 
-	private function IsMaxima(e:TEdge,y:Float) : Bool
+	private inline function IsMaxima(e:TEdge,y:Float) : Bool
 	{
 		return (e != null && e.top.y == y && e.nextInLML == null);
 	}
 	//------------------------------------------------------------------------------
 
-	private function IsIntermediate(e:TEdge,y:Float) : Bool
+	private inline function IsIntermediate(e:TEdge,y:Float) : Bool
 	{
 		return (e.top.y == y && e.nextInLML != null);
 	}
@@ -2261,6 +2255,7 @@ class Clipper extends ClipperBase {
 
 		//prepare for sorting
 		var e:TEdge = m_ActiveEdges;
+
 		m_SortedEdges = e;
 		while( e != null )
 		{
@@ -2283,6 +2278,7 @@ class Clipper extends ClipperBase {
 				if (e.curr.x > eNext.curr.x)
 				{
 					pt = IntersectPoint(e, eNext);
+
 					var newNode = new IntersectNode();
 					newNode.edge1 = e;
 					newNode.edge2 = eNext;
@@ -2302,14 +2298,14 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	private function EdgesAdjacent(inode:IntersectNode) : Bool
+	private inline function EdgesAdjacent(inode:IntersectNode) : Bool
 	{
 		return (inode.edge1.nextInSEL == inode.edge2) ||
 		(inode.edge1.prevInSEL == inode.edge2);
 	}
 	//------------------------------------------------------------------------------
 
-	static function IntersectNodeSort(node1 : IntersectNode, node2 : IntersectNode)
+	inline function IntersectNodeSort(node1 : IntersectNode, node2 : IntersectNode)
 	{
 		//the following typecast is safe because the differences in Pt.y will
 		//be limited to the height of the scanbeam.
@@ -2318,17 +2314,14 @@ class Clipper extends ClipperBase {
 
     //------------------------------------------------------------------------------
 
+	static function compareY(n1, n2) return n2.pt.y - n1.pt.y;
+
 	private function FixupIntersectionOrder() : Bool
 	{
 		//pre-condition: intersections are sorted bottom-most first.
         //Now it's crucial that intersections are made only between adjacent edges,
         //so to ensure this the order of intersections may need adjusting ...
-        m_IntersectList.sort(function(n1, n2) {
-			var i = n2.pt.y - n1.pt.y;
-			if (i > 0) return 1;
-			else if (i < 0) return -1;
-			else return 0;
-		});
+        m_IntersectList.sort(compareY);
 
         CopyAELToSEL();
         var cnt = m_IntersectList.length;
@@ -2365,13 +2358,13 @@ class Clipper extends ClipperBase {
 
 	//------------------------------------------------------------------------------
 
-	private static function Round(value:Float) : Int
+	private inline function Round(value:Float) : Int
 	{
 		return value < 0 ? Std.int(value - 0.5) : Std.int(value + 0.5);
 	}
 	//------------------------------------------------------------------------------
 
-	private static function TopX(edge:TEdge,currentY:Int) : Int
+	private inline function TopX(edge:TEdge,currentY:Int) : Int
 	{
 		if (currentY == edge.top.y)
 			return edge.top.x;
@@ -2403,7 +2396,7 @@ class Clipper extends ClipperBase {
 			else
 			{
 				b2 = edge2.bot.y - (edge2.bot.x / edge2.dx);
-				ip.y = Round(ip.y / edge2.dx + b2);
+				ip.y = Round(ip.x / edge2.dx + b2);
 			}
 		}
 		else if (edge2.deltaX == 0)
@@ -2578,12 +2571,12 @@ class Clipper extends ClipperBase {
 	}
 	//------------------------------------------------------------------------------
 
-	static function reversePolygons(polys:Polygons)
+	function reversePolygons(polys:Polygons)
 	{
 		for( p in polys ) p.reverse();
 	}
 
-	public static function Orientation(poly : Polygon )
+	public static inline function Orientation(poly : Polygon )
 	{
 		return polArea(poly) >= 0;
 	}
@@ -3323,7 +3316,7 @@ class Clipper extends ClipperBase {
         return -a * 0.5;
 	}
 
-	static function Area(outRec:OutRec) {
+	function Area(outRec:OutRec) {
 		var op:OutPt = outRec.pts;
 		if (op == null) return 0.;
 		var a:Float = 0;
@@ -3340,7 +3333,7 @@ class Clipper extends ClipperBase {
 	// Convert self-intersecting polygons into simple polygons
 	//------------------------------------------------------------------------------
 
-      public static function SimplifyPolygon(poly : Polygon, ?fillType)
+	public static function SimplifyPolygon(poly : Polygon, ?fillType)
       {
 		  if(fillType == null) fillType = PolyFillType.EvenOdd;
           var c = new Clipper();
@@ -3360,7 +3353,7 @@ class Clipper extends ClipperBase {
       }
       //------------------------------------------------------------------------------
 
-      private static function DistanceFromLineSqrd(pt : Point, ln1 : Point, ln2 : Point)
+      private function DistanceFromLineSqrd(pt : Point, ln1 : Point, ln2 : Point)
       {
         //The equation of a line in general form (Ax + By + C = 0)
         //given 2 points (x¹,y¹) & (x²,y²) is ...
@@ -3376,7 +3369,7 @@ class Clipper extends ClipperBase {
       }
       //---------------------------------------------------------------------------
 
-      private static function SlopesNearCollinear(pt1 : Point, pt2 : Point , pt3 : Point, distSqrd : Float)
+      private function SlopesNearCollinear(pt1 : Point, pt2 : Point , pt3 : Point, distSqrd : Float)
       {
         //this function is more accurate when the point that's GEOMETRICALLY
         //between the other 2 points is the one that's tested for distance.
@@ -3403,7 +3396,7 @@ class Clipper extends ClipperBase {
 
       //------------------------------------------------------------------------------
 
-      private static function PointsAreClose(pt1 : Point, pt2 : Point, distSqrd : Float)
+      private function PointsAreClose(pt1 : Point, pt2 : Point, distSqrd : Float)
       {
           var dx = pt1.x - pt2.x;
           var dy = pt1.y - pt2.y;
@@ -3411,7 +3404,7 @@ class Clipper extends ClipperBase {
       }
       //------------------------------------------------------------------------------
 
-      private static function ExcludeOp(op : OutPt)
+      private function ExcludeOp(op : OutPt)
       {
         var result = op.prev;
         result.next = op.next;
@@ -3421,7 +3414,7 @@ class Clipper extends ClipperBase {
       }
       //------------------------------------------------------------------------------
 
-      public static function CleanPolygon(path : Polygon, distance = 1.415)
+      public function CleanPolygon(path : Polygon, distance = 1.415)
       {
         //distance = proximity in units/pixels below which vertices will be stripped.
         //Default ~= sqrt(2) so when adjacent vertices or semi-adjacent vertices have
@@ -3480,7 +3473,7 @@ class Clipper extends ClipperBase {
 
       //------------------------------------------------------------------------------
 
-      public static function CleanPolygons(polys : Polygons, distance = 1.415)
+      public function CleanPolygons(polys : Polygons, distance = 1.415)
       {
         var result = new Polygons();
         for (i in 0...polys.length)
@@ -3489,7 +3482,7 @@ class Clipper extends ClipperBase {
       }
       //------------------------------------------------------------------------------
 
-      static function Minkowski(pattern : Polygon, path : Polygon , IsSum : Bool)
+      function Minkowski(pattern : Polygon, path : Polygon , IsSum : Bool)
       {
         var polyCnt = pattern.length;
         var pathCnt = path.length;
@@ -3523,7 +3516,7 @@ class Clipper extends ClipperBase {
 
       //------------------------------------------------------------------------------
 
-      public static function MinkowskiSum(pattern : Polygon, pol : Polygon, ?kind : ResultKind)
+      public function MinkowskiSum(pattern : Polygon, pol : Polygon, ?kind : ResultKind)
       {
         var paths = Minkowski(pattern, pol, true);
         var c = new Clipper();
@@ -3534,7 +3527,7 @@ class Clipper extends ClipperBase {
 
       //------------------------------------------------------------------------------
 
-      private static function TranslatePath(path : Polygon, delta : Point)
+      private function TranslatePath(path : Polygon, delta : Point)
       {
         var outPath = new Polygon();
         for (i in 0...path.length)
@@ -3549,9 +3542,9 @@ class Clipper extends ClipperBase {
         c.resultKind = kind == null ? All : kind;
 		for (i in 0...pols.length)
         {
-          var tmp = Minkowski(pattern, pols[i], true);
+          var tmp = c.Minkowski(pattern, pols[i], true);
           c.addPolygons(tmp, PolyType.Subject);
-          var path = TranslatePath(pols[i], pattern[0]);
+          var path = c.TranslatePath(pols[i], pattern[0]);
           c.addPolygon(path, PolyType.Clip);
         }
         return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);
@@ -3560,8 +3553,8 @@ class Clipper extends ClipperBase {
 
       public static function MinkowskiDiff(pattern : Polygon, pol : Polygon, ?kind : ResultKind)
       {
-        var paths = Minkowski(pattern, pol, false);
         var c = new Clipper();
+        var paths = c.Minkowski(pattern, pol, false);
         c.resultKind = kind == null ? All : kind;
 		c.addPolygons(paths, PolyType.Subject);
 		return c.execute(ClipType.Union, PolyFillType.NonZero, PolyFillType.NonZero);
@@ -3571,7 +3564,7 @@ class Clipper extends ClipperBase {
       //------------------------------------------------------------------------------
 
 
-      public static function PolyTreeToPaths(polytree : PolyTree)
+      public function PolyTreeToPaths(polytree : PolyTree)
       {
         var result = new Polygons();
         AddPolyNodeToPaths(polytree, NodeType.Any, result);
@@ -3579,7 +3572,7 @@ class Clipper extends ClipperBase {
       }
       //------------------------------------------------------------------------------
 
-      static function AddPolyNodeToPaths(polynode : PolyNode, nt : NodeType, paths : Polygons)
+      function AddPolyNodeToPaths(polynode : PolyNode, nt : NodeType, paths : Polygons)
       {
         var match = true;
         switch (nt)
@@ -3706,7 +3699,7 @@ class ClipperOffset
     }
     //------------------------------------------------------------------------------
 
-    static function getUnitNormal(pt1 : Point, pt2 : Point)
+    function getUnitNormal(pt1 : Point, pt2 : Point)
     {
 		var dx : Float = (pt2.x - pt1.x);
 		var dy : Float = (pt2.y - pt1.y);
@@ -3725,7 +3718,7 @@ class ClipperOffset
 		m_delta = delta;
 
 		//if Zero offset, just copy any CLOSED polygons to m_p and return ...
-		if (ClipperBase.near_zero(delta)) {
+		if (ClipperBase.nearZero(delta)) {
 			for (node in m_polyNodes.childs) {
 				if (node.endtype == EndType.ClosedPol)
 				m_destPolys.push(node.polygon);
