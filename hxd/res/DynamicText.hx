@@ -81,7 +81,7 @@ class DynamicText {
 				var fields = new Array<Field>();
 				for( e in x.elements ) {
 					tdict.set(e.att.id, true);
-					fields.push( { name : e.att.id, kind : FVar(typeFromXml(e, tdict, pos)), pos : pos, meta : [] } );
+					fields.push( { name : e.att.id, kind : FProp("default","never",typeFromXml(e, tdict, pos)), pos : pos, meta : [] } );
 				}
 				return TAnonymous(fields);
 			} else {
