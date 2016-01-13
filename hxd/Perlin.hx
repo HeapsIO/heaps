@@ -33,6 +33,7 @@ class Perlin {
 			gradients.push(0); // padding
 		}
 		#end
+		select();
 	}
 
 	public inline function select() {
