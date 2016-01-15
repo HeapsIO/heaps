@@ -115,6 +115,53 @@ class Scene extends Layers implements h3d.IDrawable {
 		}
 	}
 
+	public function getInteractive( x : Float, y : Float ) {
+		var rx = x * matA + y * matB + absX;
+		var ry = x * matC + y * matD + absY;
+		for( i in interactive ) {
+
+			var dx = rx - i.absX;
+			var dy = ry - i.absY;
+
+			var w1 = i.width * i.matA;
+			var h1 = i.width * i.matC;
+			var ky = h1 * dx + w1 * dy;
+
+			// up line
+			if( ky < 0 )
+				continue;
+
+			var w2 = i.height * i.matB;
+			var h2 = i.height * i.matD;
+			var kx = w2 * dy + h2 * dx;
+
+			// left line
+			if( kx < 0 )
+				continue;
+
+			var max = w1 * h2 - h1 * w2;
+
+			// bottom/right
+			if( ky >= max || kx >= max )
+				continue;
+
+			// check visibility
+			var visible = true;
+			var p : Sprite = i;
+			while( p != null ) {
+				if( !p.visible ) {
+					visible = false;
+					break;
+				}
+				p = p.parent;
+			}
+			if( !visible ) continue;
+
+			return i;
+		}
+		return null;
+	}
+
 	function emitEvent( event : hxd.Event ) {
 		var x = event.relX, y = event.relY;
 		var rx = x * matA + y * matB + absX;
