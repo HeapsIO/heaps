@@ -18,13 +18,15 @@ class Text extends Drawable {
 	public var textHeight(get, null) : Int;
 	public var textAlign(default, set) : Align;
 	public var letterSpacing(default, set) : Int;
-	public var lineSpacing(default,set) : Int;
+	public var lineSpacing(default, set) : Int;
+	
 
 	var glyphs : TileGroup;
 
 	var calcDone:Bool;
 	var calcYMin:Int;
 	var calcWidth:Int;
+	var calcXMax:Int;
 	var calcHeight:Int;
 	var calcSizeHeight:Int;
 
@@ -219,7 +221,7 @@ class Text extends Drawable {
 					if( font.charset.isSpace(cc) ) e = null;
 				}
 			}
-			if( e != null ) {
+			if ( e != null ) {
 				if( rebuild ) glyphs.add(x, y, e.t);
 				if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
 				x += esize + letterSpacing;
@@ -244,7 +246,13 @@ class Text extends Drawable {
 		if( calcLines ) lines.push(x);
 
 		calcYMin = yMin;
-		calcWidth = x > xMax ? x : xMax;
+		switch( align ){
+			case Left:
+				calcWidth = x > xMax ? x : xMax;
+				calcXMax = calcWidth;
+			case Right, Center:
+				calcXMax = x > xMax ? x : xMax;
+		}
 		calcHeight = y > 0 && x == 0 ? y - lineSpacing : y + font.lineHeight;
 		calcSizeHeight = y > 0 && x == 0 ? y + (font.baseLine - dl) : y + font.baseLine;
 		calcDone = true;
@@ -283,7 +291,6 @@ class Text extends Drawable {
 	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		updateSize();
-		addBounds(relativeTo, out, 0, forSize ? 0 : calcYMin, calcWidth, forSize ? calcSizeHeight : calcHeight - calcYMin);
+		addBounds(relativeTo, out, 0, forSize ? 0 : calcYMin, calcXMax, forSize ? calcSizeHeight : calcHeight - calcYMin);
 	}
-
 }

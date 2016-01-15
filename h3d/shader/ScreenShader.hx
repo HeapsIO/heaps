@@ -17,5 +17,4 @@ class ScreenShader extends hxsl.Shader {
 			output.position = vec4(input.position, 0, 1);
 		}
 	};
-
 }
