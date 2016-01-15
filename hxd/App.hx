@@ -70,7 +70,7 @@ class App {
 			engine.setDriver(log);
 			try {
 				engine.render(s3d);
-			} catch( e : Dynamic ) { 
+			} catch( e : Dynamic ) {
 				log.logLines.push(Std.string(e));
 			}
 			driver.logEnable = old;
