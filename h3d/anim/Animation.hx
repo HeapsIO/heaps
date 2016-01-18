@@ -182,6 +182,7 @@ class Animation {
 		if( events != null && onEvent != null ) {
 			var f0 = Std.int(frame);
 			var f1 = Std.int(frame + dt * speed * sampling);
+			if( f1 >= frameCount ) f1 = frameCount - 1;
 			for( f in f0...f1 + 1 ) {
 				if( f == lastEvent ) continue;
 				lastEvent = f;
