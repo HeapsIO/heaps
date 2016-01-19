@@ -378,12 +378,13 @@ class Flow extends Sprite {
 			var y : Float = paddingTop + borderHeight;
 			cw = x;
 			var maxLineHeight = 0.;
+			var minLineHeight = this.lineHeight != null ? lineHeight : (this.minHeight != null && this.maxWidth == null) ? (this.minHeight - (paddingTop + paddingBottom + borderWidth * 2)) : 0;
 			var tmpBounds = tmpBounds;
 			var maxWidth = maxWidth == null ? 100000000 : maxWidth - (paddingLeft + paddingRight + borderWidth * 2);
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
-				var lineHeight = this.lineHeight == null ? maxLineHeight : lineHeight;
+				if( maxLineHeight < minLineHeight ) maxLineHeight = minLineHeight;
 				for( i in lastIndex...maxIndex ) {
 					var p = properties[i];
 					if( p.isAbsolute ) continue;
@@ -392,9 +393,9 @@ class Flow extends Sprite {
 					c.y = y + p.offsetY + p.paddingTop;
 					switch( a ) {
 					case Bottom:
-						c.y += lineHeight - p.calculatedHeight;
+						c.y += maxLineHeight - p.calculatedHeight;
 					case Middle:
-						c.y += Std.int((lineHeight - p.calculatedHeight) * 0.5);
+						c.y += Std.int((maxLineHeight - p.calculatedHeight) * 0.5);
 					default:
 					}
 				}
@@ -487,12 +488,13 @@ class Flow extends Sprite {
 			var x : Float = paddingLeft + borderWidth;
 			ch = y;
 			var maxColWidth = 0.;
+			var minColWidth = this.colWidth != null ? colWidth : (this.minWidth != null && this.maxHeight == null) ? (this.minWidth - (paddingLeft + paddingRight + borderWidth * 2)) : 0;
 			var tmpBounds = tmpBounds;
 			var maxHeight = maxHeight == null ? 100000000 : maxHeight - (paddingTop + paddingBottom + borderHeight * 2);
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
-				var colWidth = this.colWidth == null ? maxColWidth : colWidth;
+				if( maxColWidth < minColWidth ) maxColWidth = minColWidth;
 				for( i in lastIndex...maxIndex ) {
 					var p = properties[i];
 					if( p.isAbsolute ) continue;
@@ -501,9 +503,9 @@ class Flow extends Sprite {
 					c.x = x + p.offsetX + p.paddingLeft;
 					switch( a ) {
 					case Right:
-						c.x += colWidth - p.calculatedWidth;
+						c.x += maxColWidth - p.calculatedWidth;
 					case Middle:
-						c.x += Std.int((colWidth - p.calculatedWidth) * 0.5);
+						c.x += Std.int((maxColWidth - p.calculatedWidth) * 0.5);
 					default:
 					}
 				}
