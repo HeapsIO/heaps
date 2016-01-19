@@ -369,6 +369,7 @@ class Viewer extends hxd.App {
 				t.resize(size.width, size.height);
 				t.uploadPixels(new hxd.Pixels(size.width,size.height,pixels,BGRA));
 				mat.mainPass.culling = None;
+				if( !t.flags.has(IsNPOT) ) t.wrap = Repeat;
 			});
 			loader.load(new flash.net.URLRequest(textureName));
 		} else {
@@ -379,6 +380,7 @@ class Viewer extends hxd.App {
 				t.resize(bmp.width, bmp.height);
 				t.uploadBitmap(hxd.BitmapData.fromNative(bmp));
 				mat.mainPass.culling = None;
+				if( !t.flags.has(IsNPOT) ) t.wrap = Repeat;
 			});
 			loader.load(new flash.net.URLRequest(textureName));
 		}
@@ -453,10 +455,7 @@ class Viewer extends hxd.App {
 			for( m in obj.getMaterials() ) {
 				var t = m.mainPass.getShader(h3d.shader.Texture);
 				m.mainPass.culling = None;
-				if( t != null) {
-					t.killAlpha = true;
-					if( !t.texture.flags.has(IsNPOT) ) t.texture.wrap = Repeat;
-				}
+				if( t != null) t.killAlpha = true;
 				if( m.mainPass.blendDst == Zero ) m.mainPass.blend(SrcAlpha, OneMinusSrcAlpha);
 			}
 
