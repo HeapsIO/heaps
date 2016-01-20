@@ -45,13 +45,29 @@ class ModelCache {
 		var tres;
 		try {
 			tres = hxd.res.Loader.currentInstance.load(texturePath);
-		} catch( e : hxd.res.NotFound ) try {
+		} catch( error : hxd.res.NotFound ) {
 			// try again to load into the current model directory
 			var path = model.entry.directory;
 			if( path != "" ) path += "/";
 			path += texturePath.split("/").pop();
-			tres = hxd.res.Loader.currentInstance.load(path);
+			try {
+				tres = hxd.res.Loader.currentInstance.load(path);
+			} catch( e : hxd.res.NotFound ) try {
+				// if this still fails, maybe our first letter is wrongly cased
+				var name = path.split("/").pop();
+				var c = name.charAt(0);
+				if(c == c.toLowerCase())
+					name = c.toUpperCase() + name.substr(1);
+				else
+					name = c.toLowerCase() + name.substr(1);
+				path = path.substr(0, -name.length) + name;
+				tres = hxd.res.Loader.currentInstance.load(path);
+			} catch( e : hxd.res.NotFound ) {
+				// force good path error
+				throw error;
+			}
 		}
+
 		t = tres.toTexture();
 		textures.set(fullPath, t);
 		return t;
