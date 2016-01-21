@@ -342,7 +342,7 @@ class Flow extends Sprite {
 				background = null;
 			}
 		}
-		return t;
+		return backgroundTile = t;
 	}
 
 	function set_borderWidth(v) {
