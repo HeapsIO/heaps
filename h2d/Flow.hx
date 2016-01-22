@@ -6,9 +6,9 @@ enum FlowAlign {
 	Right;
 	Middle;
 	Bottom;
-	Absolute;
 }
 
+@:allow(h2d.Flow)
 class FlowProperties {
 
 	public var paddingLeft = 0;
@@ -16,7 +16,9 @@ class FlowProperties {
 	public var paddingRight = 0;
 	public var paddingBottom = 0;
 
-	public var align : Null<FlowAlign>;
+	public var isAbsolute = false;
+	public var halign : Null<FlowAlign>;
+	public var valign : Null<FlowAlign>;
 
 	public var offsetX = 0;
 	public var offsetY = 0;
@@ -26,6 +28,8 @@ class FlowProperties {
 
 	public var calculatedWidth : Float = 0.;
 	public var calculatedHeight : Float = 0.;
+
+	public var isBreak(default,null) : Bool;
 
 	public function new() {
 	}
@@ -45,7 +49,8 @@ class Flow extends Sprite {
 		Each change in one of the flow properties or addition/removal of elements will set needReflow to true.
 	**/
 	public var needReflow : Bool = true;
-	public var align(default,set) : FlowAlign = Bottom;
+	public var halign(default,set) : Null<FlowAlign>;
+	public var valign(default,set) : Null<FlowAlign>;
 
 	public var minWidth(default, set) : Null<Int>;
 	public var minHeight(default, set) : Null<Int>;
@@ -139,11 +144,18 @@ class Flow extends Sprite {
 		return isVertical = v;
 	}
 
-	function set_align(v) {
-		if( align == v )
+	function set_halign(v) {
+		if( halign == v )
 			return v;
 		needReflow = true;
-		return align = v;
+		return halign = v;
+	}
+
+	function set_valign(v) {
+		if( valign == v )
+			return v;
+		needReflow = true;
+		return valign = v;
 	}
 
 	function set_lineHeight(v) {
@@ -294,7 +306,7 @@ class Flow extends Sprite {
 		if( b ) {
 			if( interactive == null ) {
 				interactive = new h2d.Interactive(0, 0, this);
-				properties[properties.length - 1].align = Absolute;
+				properties[properties.length - 1].isAbsolute = true;
 				if( !needReflow ) {
 					interactive.width = calculatedWidth;
 					interactive.height = calculatedHeight;
@@ -316,7 +328,7 @@ class Flow extends Sprite {
 			if( background == null ) {
 				var background = new h2d.ScaleGrid(t, borderWidth, borderHeight);
 				addChildAt(background, 0);
-				properties[0].align = Absolute;
+				properties[0].isAbsolute = true;
 				this.background = background;
 				if( !needReflow ) {
 					background.width = Math.ceil(calculatedWidth);
@@ -330,7 +342,7 @@ class Flow extends Sprite {
 				background = null;
 			}
 		}
-		return t;
+		return backgroundTile = t;
 	}
 
 	function set_borderWidth(v) {
@@ -358,26 +370,32 @@ class Flow extends Sprite {
 		var cw, ch;
 		if( !isVertical ) {
 
+			var halign = halign == null ? Left : halign;
+			var valign = valign == null ? Bottom : valign;
+
 			var startX = paddingLeft + borderWidth;
 			var x : Float = startX;
 			var y : Float = paddingTop + borderHeight;
 			cw = x;
 			var maxLineHeight = 0.;
+			var minLineHeight = this.lineHeight != null ? lineHeight : (this.minHeight != null && this.maxWidth == null) ? (this.minHeight - (paddingTop + paddingBottom + borderWidth * 2)) : 0;
 			var tmpBounds = tmpBounds;
 			var maxWidth = maxWidth == null ? 100000000 : maxWidth - (paddingLeft + paddingRight + borderWidth * 2);
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
-				var lineHeight = this.lineHeight == null ? maxLineHeight : lineHeight;
+				if( maxLineHeight < minLineHeight ) maxLineHeight = minLineHeight;
 				for( i in lastIndex...maxIndex ) {
-					var c = childs[i];
 					var p = properties[i];
-					var a = p.align != null ? p.align : align;
+					if( p.isAbsolute ) continue;
+					var c = childs[i];
+					var a = p.valign != null ? p.valign : valign;
+					c.y = y + p.offsetY + p.paddingTop;
 					switch( a ) {
 					case Bottom:
-						c.y += lineHeight - p.calculatedHeight;
+						c.y += maxLineHeight - p.calculatedHeight;
 					case Middle:
-						c.y += Std.int((lineHeight - p.calculatedHeight) * 0.5);
+						c.y += Std.int((maxLineHeight - p.calculatedHeight) * 0.5);
 					default:
 					}
 				}
@@ -385,27 +403,23 @@ class Flow extends Sprite {
 			}
 
 			for( i in 0...childs.length ) {
-				var c = childs[i];
 				var p = properties[i];
-
-				if( p.align == Absolute ) continue;
-
+				if( p.isAbsolute ) continue;
+				var c = childs[i];
 				var b = c.getSize(tmpBounds);
+				var br = false;
 				p.calculatedWidth = b.xMax + p.paddingLeft + p.paddingRight;
 				p.calculatedHeight = b.yMax + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
-
 				if( x + p.calculatedWidth > maxWidth && x > startX ) {
+					br = true;
 					alignLine(i);
 					y += maxLineHeight + verticalSpacing;
 					maxLineHeight = 0;
 					x = startX;
 				}
-
-				c.x = x + p.offsetX + p.paddingLeft;
-				c.y = y + p.offsetY + p.paddingTop;
-
+				p.isBreak = br;
 				x += p.calculatedWidth;
 				if( x > cw ) cw = x;
 				x += horitontalSpacing;
@@ -414,28 +428,84 @@ class Flow extends Sprite {
 			alignLine(childs.length);
 			cw += paddingRight + borderWidth;
 			ch = y + maxLineHeight + paddingBottom + borderHeight;
+
+			// horizontal align
+			if( minWidth != null && cw < minWidth ) cw = minWidth;
+			var endX = cw - (paddingRight + borderWidth);
+			var xmin : Float = startX, xmax : Float = endX;
+			var midSpace = 0;
+			for( i in 0...childs.length ) {
+				var p = properties[i];
+				if( p.isAbsolute ) continue;
+				if( p.isBreak ) {
+					xmin = startX;
+					xmax = endX;
+					midSpace = 0;
+				}
+				var px;
+				var align = p.halign == null ? halign : p.halign;
+				switch( align ) {
+				case Right:
+					if( midSpace != 0 ) {
+						xmin += midSpace;
+						midSpace = 0;
+					}
+					xmax -= p.calculatedWidth;
+					px = xmax;
+					xmax -= horitontalSpacing;
+				case Middle:
+					if( midSpace != 0 ) {
+						var remSize = p.calculatedWidth;
+						for( j in i + 1...childs.length ) {
+							var p = properties[i];
+							if( p.isAbsolute ) continue;
+							if( p.isBreak ) break;
+							remSize += horitontalSpacing + p.calculatedWidth;
+						}
+						midSpace = Std.int(((xmax - xmin) - remSize) * 0.5);
+						xmin += midSpace;
+					}
+					px = xmin;
+					xmin += p.calculatedWidth + horitontalSpacing;
+				default:
+					if( midSpace != 0 ) {
+						xmin += midSpace;
+						midSpace = 0;
+					}
+					px = xmin;
+					xmin += p.calculatedWidth + horitontalSpacing;
+				}
+				childs[i].x = px + p.offsetX + p.paddingLeft;
+			}
+
 		} else {
+
+			var halign = halign == null ? Left : halign;
+			var valign = valign == null ? Top : valign;
 
 			var startY = paddingTop + borderHeight;
 			var y : Float = startY;
 			var x : Float = paddingLeft + borderWidth;
 			ch = y;
 			var maxColWidth = 0.;
+			var minColWidth = this.colWidth != null ? colWidth : (this.minWidth != null && this.maxHeight == null) ? (this.minWidth - (paddingLeft + paddingRight + borderWidth * 2)) : 0;
 			var tmpBounds = tmpBounds;
 			var maxHeight = maxHeight == null ? 100000000 : maxHeight - (paddingTop + paddingBottom + borderHeight * 2);
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
-				var colWidth = this.colWidth == null ? maxColWidth : colWidth;
+				if( maxColWidth < minColWidth ) maxColWidth = minColWidth;
 				for( i in lastIndex...maxIndex ) {
-					var c = childs[i];
 					var p = properties[i];
-					var a = p.align != null ? p.align : align;
+					if( p.isAbsolute ) continue;
+					var c = childs[i];
+					var a = p.halign != null ? p.halign : halign;
+					c.x = x + p.offsetX + p.paddingLeft;
 					switch( a ) {
 					case Right:
-						c.x += colWidth - p.calculatedWidth;
+						c.x += maxColWidth - p.calculatedWidth;
 					case Middle:
-						c.x += Std.int((colWidth - p.calculatedWidth) * 0.5);
+						c.x += Std.int((maxColWidth - p.calculatedWidth) * 0.5);
 					default:
 					}
 				}
@@ -443,13 +513,13 @@ class Flow extends Sprite {
 			}
 
 			for( i in 0...childs.length ) {
-				var c = childs[i];
 				var p = properties[i];
-
-				if( p.align == Absolute ) continue;
+				if( p.isAbsolute ) continue;
 
 				// use getBounds instead of getSize for vertical align
+				var c = childs[i];
 				var b = c.getBounds(this, tmpBounds);
+				var br = false;
 
 				p.calculatedWidth = b.xMax - c.x + p.paddingLeft + p.paddingRight;
 				p.calculatedHeight = b.yMax - c.y + p.paddingTop + p.paddingBottom;
@@ -457,15 +527,14 @@ class Flow extends Sprite {
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 
 				if( y + p.calculatedHeight > maxHeight && y > startY ) {
+					br = true;
 					alignLine(i);
 					x += maxColWidth + horitontalSpacing;
 					maxColWidth = 0;
 					y = startY;
 				}
-
-				c.x = x + p.offsetX + p.paddingLeft;
+				p.isBreak = br;
 				c.y = y + p.offsetY + p.paddingTop;
-
 				y += p.calculatedHeight;
 				if( y > ch ) ch = y;
 				y += verticalSpacing;
@@ -474,6 +543,56 @@ class Flow extends Sprite {
 			alignLine(childs.length);
 			ch += paddingTop + borderHeight;
 			cw = x + maxColWidth + paddingRight + borderWidth;
+
+
+			// horizontal align
+			if( minHeight != null && ch < minHeight ) ch = minHeight;
+			var endY = ch - (paddingBottom + borderHeight);
+			var ymin : Float = startY, ymax : Float = endY;
+			var midSpace = 0;
+			for( i in 0...childs.length ) {
+				var p = properties[i];
+				if( p.isAbsolute ) continue;
+				if( p.isBreak ) {
+					ymin = startY;
+					ymax = endY;
+					midSpace = 0;
+				}
+				var py;
+				var align = p.valign == null ? valign : p.valign;
+				switch( align ) {
+				case Bottom:
+					if( midSpace != 0 ) {
+						ymin += midSpace;
+						midSpace = 0;
+					}
+					ymax -= p.calculatedHeight;
+					py = ymax;
+					ymax -= verticalSpacing;
+				case Middle:
+					if( midSpace != 0 ) {
+						var remSize = p.calculatedHeight;
+						for( j in i + 1...childs.length ) {
+							var p = properties[i];
+							if( p.isAbsolute ) continue;
+							if( p.isBreak ) break;
+							remSize += verticalSpacing + p.calculatedHeight;
+						}
+						midSpace = Std.int(((ymax - ymin) - remSize) * 0.5);
+						ymin += midSpace;
+					}
+					py = ymin;
+					ymin += p.calculatedHeight + verticalSpacing;
+				default:
+					if( midSpace != 0 ) {
+						ymin += midSpace;
+						midSpace = 0;
+					}
+					py = ymin;
+					ymin += p.calculatedHeight + verticalSpacing;
+				}
+				childs[i].y = py + p.offsetY + p.paddingTop;
+			}
 		}
 
 		if( minWidth != null && cw < minWidth ) cw = minWidth;
