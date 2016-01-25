@@ -465,20 +465,25 @@ class Matrix {
 	static inline var lumG = 0.71516;
 	static inline var lumB = 0.072169;
 
+	static inline var SQ13 = 0.57735026918962576450914878050196; // sqrt(1/3)
 	public function colorHue( hue : Float ) {
 		if( hue == 0. )
 			return;
-		var cv = Math.cos(hue);
-		var sv = Math.sin(hue);
-		tmp._11 = lumR + cv * (1 - lumR) - sv * lumR;
-		tmp._12 = lumR - cv * lumR + sv * 0.143;
-		tmp._13 = lumR - cv * lumR - sv * (1 - lumR);
-		tmp._21 = lumG - cv * lumG - sv * lumG;
-		tmp._22 = lumG + cv * (1 - lumG) + sv * 0.140;
-		tmp._23 = lumG - cv * lumG + sv * lumG;
-		tmp._31 = lumB - cv * lumB - sv * lumB;
-		tmp._32 = lumB - cv * lumB - sv * 0.283;
-		tmp._33 = lumB + cv * (1 - lumB) + sv * lumB;
+
+		var cosA = Math.cos(-hue);
+		var sinA = Math.sin(-hue);
+		var ch = (1 - cosA) / 3;
+
+		tmp._11 = cosA + ch;
+		tmp._12 = ch - SQ13 * sinA;
+		tmp._13 = ch + SQ13 * sinA;
+		tmp._21 = ch + SQ13 * sinA;
+		tmp._22 = cosA + ch;
+		tmp._23 = ch - SQ13 * sinA;
+		tmp._31 = ch - SQ13 * sinA;
+		tmp._32 = ch + SQ13 * sinA;
+		tmp._33 = cosA + ch;
+
 		tmp._34 = 0;
 		tmp._41 = 0;
 		tmp._42 = 0;
