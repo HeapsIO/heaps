@@ -1,5 +1,22 @@
 package h3d.scene;
 
+class WorldElement {
+	public var model : WorldModel;
+	public var x : Float;
+	public var y : Float;
+	public var z : Float;
+	public var scale : Float;
+	public var rotation : Float;
+	public function new( model, x, y, z, scale = 1., rotation = 0. ) {
+		this.model = model;
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		this.scale = scale;
+		this.rotation = rotation;
+	}
+}
+
 class WorldChunk {
 
 	public var cx : Int;
@@ -12,10 +29,12 @@ class WorldChunk {
 	public var bounds : h3d.col.Bounds;
 	public var initialized = false;
 	public var lastFrame : Int;
+	public var elements : Array<WorldElement>;
 
 	public function new(cx, cy) {
 		this.cx = cx;
 		this.cy = cy;
+		elements = [];
 		root = new h3d.scene.Object();
 		buffers = new Map();
 		bounds = new h3d.col.Bounds();
@@ -92,7 +111,7 @@ class World extends Object {
 	var textures : Map<String, WorldMaterial>;
 	public var enableSpecular = false;
 
-	public function new( chunkSize : Int, worldSize : Int, ?parent ) {
+	public function new( chunkSize : Int, worldSize : Int, ?parent, ?autoCollect = true ) {
 		super(parent);
 		chunks = [];
 		bigTextures = [];
@@ -104,6 +123,17 @@ class World extends Object {
 		this.chunkSize = 1 << chunkBits;
 		this.worldSize = worldSize;
 		this.worldStride = Math.ceil(worldSize / chunkSize);
+		if( autoCollect )
+			h3d.Engine.getCurrent().mem.garbage = garbage;
+	}
+
+	public function garbage() {
+		var last : WorldChunk = null;
+		for( c in allChunks )
+			if( c.initialized && (last == null || c.lastFrame < last.lastFrame) )
+				last = c;
+		if( last != null )
+			cleanChunk(last);
 	}
 
 	function buildFormat() {
@@ -294,7 +324,7 @@ class World extends Object {
 			}
 	}
 
-	function initChunk( c : WorldChunk ) {
+	function initChunkSoil( c : WorldChunk ) {
 		var cube = new h3d.prim.Cube(chunkSize, chunkSize, 0);
 		cube.addNormals();
 		cube.addUVs();
@@ -303,6 +333,33 @@ class World extends Object {
 		soil.y = c.y;
 		soil.material.texture = h3d.mat.Texture.fromColor(soilColor);
 		soil.material.shadows = true;
+	}
+
+	function initChunkElements( c : WorldChunk ) {
+		for( e in c.elements ) {
+			var model = e.model;
+			for( g in model.geometries ) {
+				var b = c.buffers.get(g.m.bits);
+				if( b == null ) {
+					b = new h3d.scene.Mesh(new h3d.prim.BigPrimitive(getStride(model), true), c.root);
+					b.name = g.m.name;
+					c.buffers.set(g.m.bits, b);
+					initMaterial(b, g.m);
+				}
+				var p = Std.instance(b.primitive, h3d.prim.BigPrimitive);
+				p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), e.x, e.y, e.z, e.rotation, e.scale, model.stride);
+			}
+		}
+	}
+
+	function cleanChunk( c : WorldChunk ) {
+		if( !c.initialized ) return;
+		c.initialized = false;
+		for( b in c.buffers ) {
+			b.dispose();
+			b.remove();
+		}
+		c.buffers = new Map();
 	}
 
 	function updateChunkBounds(c : WorldChunk, model : WorldModel, rotation : Float, scale : Float) {
@@ -362,19 +419,7 @@ class World extends Object {
 
 	public function add( model : WorldModel, x : Float, y : Float, z : Float, scale = 1., rotation = 0. ) {
 		var c = getChunk(x, y, true);
-
-		for( g in model.geometries ) {
-			var b = c.buffers.get(g.m.bits);
-			if( b == null ) {
-				b = new h3d.scene.Mesh(new h3d.prim.BigPrimitive(getStride(model), true), c.root);
-				b.name = g.m.name;
-				c.buffers.set(g.m.bits, b);
-				initMaterial(b, g.m);
-			}
-			var p = Std.instance(b.primitive, h3d.prim.BigPrimitive);
-			p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), x, y, z, rotation, scale, model.stride);
-		}
-
+		c.elements.push(new WorldElement(model, x, y, z, scale, rotation));
 		updateChunkBounds(c, model, rotation, scale);
 	}
 
@@ -384,11 +429,12 @@ class World extends Object {
 		for( c in allChunks ) {
 			c.root.visible = c.bounds.inFrustum(ctx.camera.m);
 			if( c.root.visible ) {
-				if( !c.initialized) {
-					c.initialized = true;
-					initChunk(c);
-				}
 				c.lastFrame = ctx.frame;
+				if( !c.initialized ) {
+					c.initialized = true;
+					initChunkSoil(c);
+					initChunkElements(c);
+				}
 			}
 		}
 	}
