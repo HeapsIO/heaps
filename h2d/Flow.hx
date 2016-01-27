@@ -454,7 +454,7 @@ class Flow extends Sprite {
 					px = xmax;
 					xmax -= horitontalSpacing;
 				case Middle:
-					if( midSpace != 0 ) {
+					if( midSpace == 0 ) {
 						var remSize = p.calculatedWidth;
 						for( j in i + 1...childs.length ) {
 							var p = properties[i];
@@ -545,7 +545,7 @@ class Flow extends Sprite {
 			cw = x + maxColWidth + paddingRight + borderWidth;
 
 
-			// horizontal align
+			// vertical align
 			if( minHeight != null && ch < minHeight ) ch = minHeight;
 			var endY = ch - (paddingBottom + borderHeight);
 			var ymin : Float = startY, ymax : Float = endY;
@@ -570,7 +570,7 @@ class Flow extends Sprite {
 					py = ymax;
 					ymax -= verticalSpacing;
 				case Middle:
-					if( midSpace != 0 ) {
+					if( midSpace == 0 ) {
 						var remSize = p.calculatedHeight;
 						for( j in i + 1...childs.length ) {
 							var p = properties[i];
