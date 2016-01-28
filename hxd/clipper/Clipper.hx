@@ -969,6 +969,7 @@ class Clipper extends ClipperBase {
 			if(!ProcessIntersections(topY)) return false;
 			ProcessEdgesAtTopOfScanbeam(topY);
 			botY = topY;
+
 		} while (m_Scanbeam != null || m_CurrentLM != null);
 
 		//fix orientations ...
@@ -977,7 +978,6 @@ class Clipper extends ClipperBase {
 			if (xor(outRec.isHole, reverseSolution) == (Area(outRec) > 0))
 				ReversePolyPtLinks(outRec.pts);
 		}
-
 
 		JoinCommonEdges();
 
@@ -1568,7 +1568,7 @@ class Clipper extends ClipperBase {
 			var op = new OutPt();
 			outRec.pts = op;
 			op.idx = outRec.idx;
-			op.pt = pt;
+			op.pt = pt.clone();
 			op.next = op;
 			op.prev = op;
 			SetHoleState(e, outRec);
@@ -2232,17 +2232,17 @@ class Clipper extends ClipperBase {
 	{
 		if( m_ActiveEdges == null ) return true;
         try {
-          BuildIntersectList(topY);
-		  if ( m_IntersectList.length == 0) return true;
-          if (m_IntersectList.length == 1 || FixupIntersectionOrder())
-              ProcessIntersectList();
-          else
-              return false;
+			BuildIntersectList(topY);
+			if ( m_IntersectList.length == 0) return true;
+			if (m_IntersectList.length == 1 || FixupIntersectionOrder())
+				ProcessIntersectList();
+			else
+				return false;
         }
         catch (e : Dynamic) {
-          m_SortedEdges = null;
-          m_IntersectList = [];
-          throw "ProcessIntersections error";
+			m_SortedEdges = null;
+			m_IntersectList = [];
+			throw "ProcessIntersections error";
         }
         m_SortedEdges = null;
         return true;
@@ -2253,9 +2253,10 @@ class Clipper extends ClipperBase {
 	{
 		if ( m_ActiveEdges == null ) return;
 
+
+
 		//prepare for sorting
 		var e:TEdge = m_ActiveEdges;
-
 		m_SortedEdges = e;
 		while( e != null )
 		{
@@ -2278,14 +2279,12 @@ class Clipper extends ClipperBase {
 				if (e.curr.x > eNext.curr.x)
 				{
 					pt = IntersectPoint(e, eNext);
-
 					var newNode = new IntersectNode();
 					newNode.edge1 = e;
 					newNode.edge2 = eNext;
 					newNode.pt = pt;
 
 					m_IntersectList.push(newNode);
-
 					SwapPositionsInSEL(e, eNext);
 					isModified = true;
 				}
@@ -2314,30 +2313,30 @@ class Clipper extends ClipperBase {
 
     //------------------------------------------------------------------------------
 
-	static function compareY(n1, n2) return n2.pt.y - n1.pt.y;
+	static function compareY(n1, n2) return n2.pt.y - n1.pt.y >= 0 ? 1 : -1;
 
 	private function FixupIntersectionOrder() : Bool
 	{
 		//pre-condition: intersections are sorted bottom-most first.
         //Now it's crucial that intersections are made only between adjacent edges,
         //so to ensure this the order of intersections may need adjusting ...
-        m_IntersectList.sort(compareY);
+		m_IntersectList.sort(compareY);
 
         CopyAELToSEL();
         var cnt = m_IntersectList.length;
         for (i in 0...cnt)
         {
-          if (!EdgesAdjacent(m_IntersectList[i]))
+		  if (!EdgesAdjacent(m_IntersectList[i]))
           {
-            var j = i + 1;
+			var j = i + 1;
             while (j < cnt && !EdgesAdjacent(m_IntersectList[j])) j++;
             if (j == cnt) return false;
 
             var tmp = m_IntersectList[i];
             m_IntersectList[i] = m_IntersectList[j];
             m_IntersectList[j] = tmp;
-
           }
+
           SwapPositionsInSEL(m_IntersectList[i].edge1, m_IntersectList[i].edge2);
         }
 		return true;
