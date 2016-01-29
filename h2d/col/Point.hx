@@ -11,6 +11,10 @@ class Point {
 		this.y = y;
 	}
 
+	public inline function toIPoint( scale = 1. ) {
+		return new IPoint(Math.floor(x * scale), Math.floor(y * scale));
+	}
+
 	public inline function distanceSq( p : Point ) {
 		var dx = x - p.x;
 		var dy = y - p.y;

@@ -1,9 +1,9 @@
 package h2d.col;
 import hxd.Math;
 
-abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
+abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 
-	public var points(get, never) : Array<Point>;
+	public var points(get, never) : Array<IPoint>;
 
 	inline function get_points() return this;
 
@@ -11,30 +11,19 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		this = points;
 	}
 
-	public function toSegments() : Segments {
-		var segments = [];
-		var p1 = points[points.length - 1];
-		for( p2 in points ) {
-			var s = new Segment(p1, p2);
-			segments.push(s);
-			p1 = p2;
-		}
-		return segments;
+	public function toPolygon( scale = 1. ) {
+		return [for( p in points ) p.toPoint(scale)];
 	}
 
-	public function toIPolygon( scale = 1. ) {
-		return [for( p in points ) p.toIPoint(scale)];
-	}
-
-	public function getBounds( ?b : Bounds ) {
-		if( b == null ) b = new Bounds();
+	public function getBounds( ?b : IBounds ) {
+		if( b == null ) b = new IBounds();
 		for( p in points )
 			b.addPoint(p);
 		return b;
 	}
 
 	public function convexHull() {
-		inline function side(p1 : Point, p2 : Point, p3 : Point) {
+		inline function side(p1 : IPoint, p2 : IPoint, p3 : IPoint) {
 			return (p2.y - p1.y) * (p3.x - p2.x) - (p2.x - p1.x) * (p3.y - p2.y);
 		}
 
@@ -124,17 +113,17 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	/**
 		Creates a new optimized polygon by eliminating almost colinear edges according to epsilon distance.
 	**/
-	public function optimize( epsilon : Float ) : Polygon {
+	public function optimize( epsilon : Float ) : IPolygon {
 		var out = [];
 		optimizeRec(points, 0, points.length, out, epsilon);
 		return out;
 	}
 
-	static function optimizeRec( points : Array<Point>, index : Int, len : Int, out : Array<Point>, epsilon : Float ) {
+	static function optimizeRec( points : Array<IPoint>, index : Int, len : Int, out : Array<IPoint>, epsilon : Float ) {
 		var dmax = 0.;
 		var result = [];
 
-		inline function distPointSeg(p0:Point, p1:Point, p2:Point) {
+		inline function distPointSeg(p0:IPoint, p1:IPoint, p2:IPoint) {
 			var A = p0.x - p1.x;
 			var B = p0.y - p1.y;
 			var C = p2.x - p1.x;
@@ -146,7 +135,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 			if (dist != 0)
 			  param = dot / dist;
 
-			var xx, yy;
+			var xx : Float, yy : Float;
 
 			if (param < 0) {
 				xx = p1.x;

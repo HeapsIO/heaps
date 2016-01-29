@@ -19,15 +19,19 @@ class Bounds {
 		empty();
 	}
 
-	public inline function collide( b : Bounds ) {
+	public inline function toIBounds( scale = 1. ) {
+		return IBounds.fromValues(Math.floor(x * scale), Math.floor(y * scale), Math.floor(width * scale), Math.floor(height * scale));
+	}
+
+	public inline function intersects( b : Bounds ) {
 		return !(xMin > b.xMax || yMin > b.yMax || xMax < b.xMin || yMax < b.yMin);
 	}
 
-	public inline function include( p : Point ) {
+	public inline function contains( p : Point ) {
 		return p.x >= xMin && p.x < xMax && p.y >= yMin && p.y < yMax;
 	}
 
-	public inline function add( b : Bounds ) {
+	public inline function addBounds( b : Bounds ) {
 		if( b.xMin < xMin ) xMin = b.xMin;
 		if( b.xMax > xMax ) xMax = b.xMax;
 		if( b.yMin < yMin ) yMin = b.yMin;
@@ -65,14 +69,14 @@ class Bounds {
 		yMax = p.y;
 	}
 
-	public inline function intersectWith( b : Bounds ) {
+	public inline function doIntersect( b : Bounds ) {
 		xMin = Math.max(xMin, b.xMin);
 		yMin = Math.max(yMin, b.yMin);
 		xMax = Math.min(xMax, b.xMax);
 		yMax = Math.min(yMax, b.yMax);
 	}
 
-	public inline function unionWith( b : Bounds ) {
+	public inline function doUnion( b : Bounds ) {
 		xMin = Math.min(xMin, b.xMin);
 		yMin = Math.min(yMin, b.yMin);
 		xMax = Math.max(xMax, b.xMax);

@@ -480,7 +480,7 @@ class Sprite {
 		add(sxMax, syMax);
 
 		// intersects
-		bounds.intersectWith(view);
+		bounds.doIntersect(view);
 	}
 
 	function drawFilters( ctx : RenderContext ) {
@@ -493,7 +493,7 @@ class Sprite {
 				if( f.boundsExtend > maxExtent ) maxExtent = f.boundsExtend;
 			} else {
 				f.getBounds(this, bounds);
-				total.add(bounds);
+				total.addBounds(bounds);
 			}
 		}
 		if( maxExtent >= 0 ) {
@@ -502,7 +502,7 @@ class Sprite {
 			bounds.yMin -= maxExtent;
 			bounds.xMax += maxExtent;
 			bounds.yMax += maxExtent;
-			total.add(bounds);
+			total.addBounds(bounds);
 		}
 
 		clipBounds(ctx, total);
