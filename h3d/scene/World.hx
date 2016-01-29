@@ -362,7 +362,7 @@ class World extends Object {
 		c.buffers = new Map();
 	}
 
-	function updateChunkBounds(c : WorldChunk, model : WorldModel, rotation : Float, scale : Float) {
+	function updateChunkBounds(c : WorldChunk, model : WorldModel, x : Float, y : Float, z : Float, rotation : Float, scale : Float) {
 		var cosR = Math.cos(rotation);
 		var sinR = Math.sin(rotation);
 
@@ -420,7 +420,7 @@ class World extends Object {
 	public function add( model : WorldModel, x : Float, y : Float, z : Float, scale = 1., rotation = 0. ) {
 		var c = getChunk(x, y, true);
 		c.elements.push(new WorldElement(model, x, y, z, scale, rotation));
-		updateChunkBounds(c, model, rotation, scale);
+		updateChunkBounds(c, model, x, y, z, rotation, scale);
 	}
 
 	override function sync(ctx:RenderContext) {
