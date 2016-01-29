@@ -1,7 +1,7 @@
 package h2d.col;
 import hxd.Math;
 
-class Seg {
+class Segment {
 
 	public var x : Float;
 	public var y : Float;
