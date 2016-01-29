@@ -4,11 +4,29 @@ import hxd.Math;
 abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 
 	public var points(get, never) : Array<Point>;
-
+	public var length(get, never) : Int;
+	inline function get_length() return this.length;
 	inline function get_points() return this;
 
-	public inline function new( points ) {
-		this = points;
+	public inline function new( ?points ) {
+		this = points == null ? [] : points;
+	}
+
+	public inline function iterator() {
+		return new hxd.impl.ArrayIterator(this);
+	}
+
+	public inline function addPoint( p : Point ) {
+		this.push(p);
+	}
+
+	/**
+		Uses EarCut algorithm to quickly triangulate the polygon.
+		This will not create the best triangulation possible but is quite solid wrt self-intersections and merged points.
+		Returns the points indexes
+	**/
+	public function fastTriangulate() {
+		return new hxd.earcut.Earcut().triangulate(points);
 	}
 
 	public function toSegments() : Segments {
@@ -106,7 +124,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		this.reverse();
 	}
 
-	public inline function contains( p : Point, isConvex ) {
+	public function contains( p : Point, isConvex ) {
 		if( isConvex ) {
 			var p1 = points[points.length - 1];
 			for( p2 in points ) {

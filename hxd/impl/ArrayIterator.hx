@@ -1,6 +1,6 @@
 package hxd.impl;
 
-class ArrayIterator<T> {
+@:generic class ArrayIterator<T> {
 	var i : Int;
 	var l : Int;
 	var a : Array<T>;
@@ -12,7 +12,7 @@ class ArrayIterator<T> {
 	public inline function hasNext() {
 		return i < l;
 	}
-	public inline function next() {
+	public inline function next() : T {
 		return a[i++];
 	}
 }

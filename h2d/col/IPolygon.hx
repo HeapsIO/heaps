@@ -1,14 +1,29 @@
 package h2d.col;
 import hxd.Math;
 
+enum OffsetKind {
+	Square;
+	Miter;
+	Round( arc : Float );
+}
+
 abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 
 	public var points(get, never) : Array<IPoint>;
-
+	public var length(get, never) : Int;
+	inline function get_length() return this.length;
 	inline function get_points() return this;
 
-	public inline function new( points ) {
-		this = points;
+	public inline function new( ?points ) {
+		this = points == null ? [] : points;
+	}
+
+	public inline function addPoint( p : IPoint ) {
+		this.push(p);
+	}
+
+	public inline function iterator() {
+		return new hxd.impl.ArrayIterator(this);
 	}
 
 	public function toPolygon( scale = 1. ) {
@@ -20,6 +35,45 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		for( p in points )
 			b.addPoint(p);
 		return b;
+	}
+
+	public function union( p : IPolygon, withHoles = false ) : IPolygons {
+		var c = new hxd.clipper.Clipper();
+		if( !withHoles ) c.resultKind = NoHoles;
+		c.addPolygon(this, Clip);
+		c.addPolygon(p,Clip);
+		return c.execute(Union, NonZero, NonZero);
+	}
+
+	public inline function intersection( p : IPolygon, withHoles = false ) : IPolygons {
+		return clipperOp(p, Intersection, withHoles);
+	}
+
+	public inline function subtraction( p : IPolygon, withHoles = false ) : IPolygons {
+		return clipperOp(p, Difference, withHoles);
+	}
+
+	public function offset( delta : Float, kind : OffsetKind, withHoles = false ) : IPolygons {
+		var c = new hxd.clipper.Clipper.ClipperOffset();
+		switch( kind ) {
+		case Square:
+			c.addPolygon(this, Square, ClosedPol);
+		case Miter:
+			c.addPolygon(this, Miter, ClosedPol);
+		case Round(arc):
+			c.ArcTolerance = arc;
+			c.addPolygon(this, Round, ClosedPol);
+		}
+		if( !withHoles ) c.resultKind = NoHoles;
+		return c.execute(delta);
+	}
+
+	function clipperOp( p : IPolygon, op, withHoles ) : IPolygons {
+		var c = new hxd.clipper.Clipper();
+		if( !withHoles ) c.resultKind = NoHoles;
+		c.addPolygon(this, Subject);
+		c.addPolygon(p, Clip);
+		return c.execute(op, NonZero, NonZero);
 	}
 
 	public function convexHull() {
@@ -95,7 +149,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		this.reverse();
 	}
 
-	public inline function contains( p : Point, isConvex ) {
+	public function contains( p : Point, isConvex ) {
 		if( isConvex ) {
 			var p1 = points[points.length - 1];
 			for( p2 in points ) {

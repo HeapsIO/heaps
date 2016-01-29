@@ -66,4 +66,8 @@ class Point {
 		y *= f;
 	}
 
+	public inline function clone() {
+		return new Point(x, y);
+	}
+
 }

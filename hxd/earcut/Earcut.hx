@@ -87,7 +87,7 @@ class Earcut {
 		return result;
 	}
 
-	function setLinkedList < T: { x:Float, y:Float } > (points : Array<T>, start : Int, end : Int, clockwise : Bool) {
+	@:generic function setLinkedList < T: { x:Float, y:Float } > (points : Array<T>, start : Int, end : Int, clockwise : Bool) {
 
 		// check polygon winding
 		var sum = 0.;
@@ -121,7 +121,7 @@ class Earcut {
 	}
 
 	// link every hole into the outer loop, producing a single-ring polygon without holes
-	function eliminateHoles < T: { x:Float, y:Float } > (points : Array<T>, holes : Array<Int>, root : EarNode) {
+	@:generic function eliminateHoles < T: { x:Float, y:Float } > (points : Array<T>, holes : Array<Int>, root : EarNode) {
 		var queue = [];
 
 		for(i in 0...holes.length) {

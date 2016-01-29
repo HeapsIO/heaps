@@ -9,6 +9,12 @@ abstract Segments(Array<Segment>) from Array<Segment> to Array<Segment> {
 
 	public var segments(get, never) : Array<Segment>;
 	inline function get_segments() return this;
+	public var length(get, never) : Int;
+	inline function get_length() return this.length;
+
+	public inline function iterator() {
+		return new hxd.impl.ArrayIterator(this);
+	}
 
 	public function containsPoint( p : Point, isConvex ) {
 		if( isConvex ) {

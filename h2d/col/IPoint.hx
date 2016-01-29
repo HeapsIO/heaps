@@ -54,4 +54,8 @@ class IPoint {
 		this.y = y;
 	}
 
+	public inline function clone() {
+		return new IPoint(x, y);
+	}
+
 }
