@@ -4,14 +4,16 @@ class Atlas extends Resource {
 
 	public function toAtlas() : Map<String,h2d.Tile> {
 		var tiles = new Map();
+
 		var lines = entry.getBytes().toString().split("\n");
+
 		var basePath = entry.path.split("/");
 		basePath.pop();
 		var basePath = basePath.join("/");
 		if( basePath.length > 0 ) basePath += "/";
 		while( lines.length > 0 ) {
 			var line = StringTools.trim(lines.shift());
-			if( line == "" ) continue;
+			if ( line == "" ) continue;
 			var file = hxd.res.Loader.currentInstance.load(basePath + line).toTile();
 			while( lines.length > 0 ) {
 				var line = StringTools.trim(lines.shift());
@@ -19,7 +21,7 @@ class Atlas extends Resource {
 				var prop = line.split(": ");
 				if( prop.length > 1 ) continue;
 				var key = line;
-				var tileX = 0, tileY = 0, tileW = 0, tileH = 0;
+				var tileX = 0, tileY = 0, tileW = 0, tileH = 0, tileDX = 0, tileDY = 0;
 				while( lines.length > 0 ) {
 					var line = StringTools.trim(lines.shift());
 					var prop = line.split(": ");
@@ -39,13 +41,17 @@ class Atlas extends Resource {
 						var vals = v.split(", ");
 						tileW = Std.parseInt(vals[0]);
 						tileH = Std.parseInt(vals[1]);
-					case "index", "orig", "offset":
+					case "offset":
+						var vals = v.split(", ");
+						tileDX = Std.parseInt(vals[0]);
+						tileDY = Std.parseInt(vals[1]);
+					case "index", "orig":
 						// ?
 					default:
 						trace("Unknown prop " + prop[0]);
 					}
 				}
-				var t = file.sub(tileX, tileY, tileW, tileH);
+				var t = file.sub(tileX, tileY, tileW, tileH, -tileDX, -tileDY);
 				tiles.set(key, t);
 			}
 		}
