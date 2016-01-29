@@ -115,13 +115,14 @@ class Text extends Drawable {
 
 	public function calcTextWidth( text : String ) {
 		if( calcDone ) {
-			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, oy = calcYMin;
+			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, oy = calcYMin, ox = calcXMax;
 			initGlyphs(text, false);
 			var w = calcWidth;
 			calcWidth = ow;
 			calcHeight = oh;
 			calcSizeHeight = osh;
 			calcYMin = oy;
+			calcXMax = ox;
 			return w;
 		} else {
 			initGlyphs(text, false);
