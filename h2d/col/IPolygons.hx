@@ -29,23 +29,23 @@ abstract IPolygons(Array<IPolygon>) from Array<IPolygon> to Array<IPolygon> {
 		return b;
 	}
 
-	public function union( p : IPolygons, withHoles = false ) : IPolygons {
+	public function union( ?p : IPolygons, withHoles = true ) : IPolygons {
 		var c = new hxd.clipper.Clipper();
 		if( !withHoles ) c.resultKind = NoHoles;
 		c.addPolygons(this, Clip);
-		c.addPolygons(p, Clip);
+		if(p != null) c.addPolygons(p, Clip);
 		return c.execute(Union, NonZero, NonZero);
 	}
 
-	public inline function intersection( p : IPolygons, withHoles = false ) : IPolygons {
+	public inline function intersection( p : IPolygons, withHoles = true ) : IPolygons {
 		return clipperOp(p, Intersection, withHoles);
 	}
 
-	public inline function subtraction( p : IPolygons, withHoles = false ) : IPolygons {
+	public inline function subtraction( p : IPolygons, withHoles = true ) : IPolygons {
 		return clipperOp(p, Difference, withHoles);
 	}
 
-	public function offset( delta : Float, kind : IPolygon.OffsetKind, withHoles = false ) : IPolygons {
+	public function offset( delta : Float, kind : IPolygon.OffsetKind, withHoles = true ) : IPolygons {
 		var c = new hxd.clipper.Clipper.ClipperOffset();
 		switch( kind ) {
 		case Square:

@@ -34,7 +34,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return b;
 	}
 
-	public function union( p : IPolygon, withHoles = false ) : IPolygons {
+	public function union( p : IPolygon, withHoles = true ) : IPolygons {
 		var c = new hxd.clipper.Clipper();
 		if( !withHoles ) c.resultKind = NoHoles;
 		c.addPolygon(this, Clip);
@@ -42,15 +42,15 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return c.execute(Union, NonZero, NonZero);
 	}
 
-	public inline function intersection( p : IPolygon, withHoles = false ) : IPolygons {
+	public inline function intersection( p : IPolygon, withHoles = true ) : IPolygons {
 		return clipperOp(p, Intersection, withHoles);
 	}
 
-	public inline function subtraction( p : IPolygon, withHoles = false ) : IPolygons {
+	public inline function subtraction( p : IPolygon, withHoles = true ) : IPolygons {
 		return clipperOp(p, Difference, withHoles);
 	}
 
-	public function offset( delta : Float, kind : OffsetKind, withHoles = false ) : IPolygons {
+	public function offset( delta : Float, kind : OffsetKind, withHoles = true ) : IPolygons {
 		var c = new hxd.clipper.Clipper.ClipperOffset();
 		switch( kind ) {
 		case Square:
