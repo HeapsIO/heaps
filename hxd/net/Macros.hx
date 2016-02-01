@@ -148,7 +148,7 @@ class Macros {
 			case "Int":
 				return macro $v = cast $ctx.getInt();
 			case "Bool":
-				return macro $v = cast $ctx.getInt();
+				return macro $v = cast $ctx.getBool();
 			case "Map":
 				var kt = pl[0].toComplexType();
 				var vt = pl[1].toComplexType();
@@ -164,7 +164,7 @@ class Macros {
 			}
 		case TEnum(e, []):
 			var ct = t.toComplexType();
-			return macro $v = cast (null : hxd.net.Serializable.SerializableEnum<$ct>).unserialize($ctx);
+			return macro { var e : $ct; e = (null : hxd.net.Serializable.SerializableEnum<$ct>).unserialize($ctx); $v = cast e; }
 		case TAnonymous(a):
 			var a = a.get();
 			var nullables = [for( f in a.fields ) if( isNullable(f.type) ) f];
@@ -176,7 +176,8 @@ class Macros {
 				if( fbits == 0 )
 					$v = cast null;
 				else {
-					var obj : $ct = cast {};
+					var obj : $ct = cast { };
+					fbits--;
 					$b{[
 						for( f in a.fields ) {
 							var nidx = nullables.indexOf(f);
@@ -219,6 +220,12 @@ class Macros {
 		return null;
 	}
 
+	static function withPos( e : Expr, p : Position ) {
+		e.pos = p;
+		haxe.macro.ExprTools.iter(e, function(e) withPos(e, p));
+		return e;
+	}
+
 	public static function buildSerializable() {
 		var fields = Context.getBuildFields();
 		var toSerialize = [];
@@ -240,10 +247,8 @@ class Macros {
 		var el = [], ul = [];
 		for( f in toSerialize ) {
 			var fname = f.f.name;
-			var ev = macro this.$fname;
-			ev.pos = f.f.pos;
-			el.push(macro hxd.net.Macros.serializeValue(ctx, $ev));
-			ul.push(macro hxd.net.Macros.unserializeValue(ctx, $ev));
+			el.push(withPos(macro hxd.net.Macros.serializeValue(ctx, this.$fname),f.f.pos));
+			ul.push(withPos(macro hxd.net.Macros.unserializeValue(ctx, this.$fname),f.f.pos));
 		}
 		var access = [APublic];
 		if( isSubSer )
@@ -285,6 +290,31 @@ class Macros {
 				expr : macro @:privateAccess { ${ if( isSubSer ) macro super.serialize(ctx) else macro { } }; $b{el} }
 			}),
 		});
+
+		var unserExpr = macro @:privateAccess { ${ if( isSubSer ) macro super.unserialize(ctx) else macro { } }; $b{ul} };
+
+		for( f in fields )
+			if( f.name == "unserialize" ) {
+				var found = false;
+				function repl(e:Expr) {
+					switch( e.expr ) {
+					case ECall( { expr : EField( { expr : EConst(CIdent("super")) }, "unserialize") }, [ctx]):
+						found = true;
+						return macro { var ctx : hxd.net.Serializer = $ctx; $unserExpr; }
+					default:
+						return haxe.macro.ExprTools.map(e, repl);
+					}
+				}
+				switch( f.kind ) {
+				case FFun(f):
+					f.expr = repl(f.expr);
+				default:
+				}
+				f.meta.push( { name:":keep", pos:pos } );
+				if( !found ) Context.error("Override of unserialize() with no super.unserialize(ctx) found", f.pos);
+				return fields;
+			}
+
 		fields.push({
 			name : "unserialize",
 			pos : pos,
@@ -293,7 +323,7 @@ class Macros {
 			kind : FFun({
 				args : [ { name : "ctx", type : macro : hxd.net.Serializer } ],
 				ret : null,
-				expr : macro @:privateAccess { ${ if( isSubSer ) macro super.unserialize(ctx) else macro { } }; $b{ul} }
+				expr : unserExpr,
 			}),
 		});
 
@@ -309,7 +339,7 @@ class Macros {
 				return Context.getType("hxd.net.enumSer." + name);
 			} catch( _ : Dynamic ) {
 				var pos = Context.currentPos();
-				var cases = [];
+				var cases = [], ucases = [];
 				if( e.names.length >= 256 )
 					Context.error("Too many constructors", pos);
 				for( f in e.names ) {
@@ -320,14 +350,32 @@ class Macros {
 						cases.push({
 							values : [{ expr : ECall({ expr : EConst(CIdent(c.name)), pos : pos },[for( a in args ) { expr : EConst(CIdent(a.name)), pos : pos }]), pos : pos }],
 							expr : macro {
-								ctx.addByte($v{c.index});
+								ctx.addByte($v{c.index+1});
 								$b{eargs};
 							}
 						});
+
+						var evals = [];
+						for( a in args ) {
+							var aname = "_"+a.name;
+							var at = a.t.toComplexType();
+							evals.push(macro var $aname : $at);
+							evals.push(macro hxd.net.Macros.unserializeValue(ctx,$i{aname}));
+						}
+						evals.push({ expr : ECall({ expr : EConst(CIdent(c.name)), pos : pos },[for( a in args ) { expr : EConst(CIdent("_"+a.name)), pos : pos }]), pos : pos });
+						ucases.push({
+							values : [macro $v{c.index+1}],
+							expr : { expr : EBlock(evals), pos : pos },
+						});
+
 					default:
 						cases.push({
 							values : [ { expr : EConst(CIdent(c.name)), pos : pos } ],
-							expr : macro ctx.addByte($v{c.index}),
+							expr : macro ctx.addByte($v{c.index+1}),
+						});
+						ucases.push({
+							values : [macro $v{c.index+1}],
+							expr : { expr : EConst(CIdent(c.name)), pos : pos },
 						});
 					}
 				}
@@ -337,6 +385,7 @@ class Macros {
 					kind : TDClass(),
 					fields : [{
 						name : "serialize",
+						meta : [{name:":extern",pos:pos}],
 						access : [APublic, AInline],
 						pos : pos,
 						kind : FFun( {
@@ -347,12 +396,15 @@ class Macros {
 					},{
 						name : "unserialize",
 						access : [APublic, AInline],
+						meta : [{name:":extern",pos:pos}],
 						pos : pos,
 						kind : FFun( {
 							args : [{ name : "ctx", type : macro : hxd.net.Serializer }],
-							expr : macro {
-								throw "TODO";
-								return null;
+							expr : macro @:privateAccess {
+								var b = ctx.getByte();
+								if( b == 0 )
+									return null;
+								return ${{ expr : ESwitch(macro b,ucases,macro throw "Invalid enum index "+b), pos : pos }}
 							},
 							ret : tenum.toComplexType(),
 						}),
