@@ -138,6 +138,10 @@ class Serializer {
 		return m;
 	}
 
+	inline function getBool() {
+		return getByte() != 0;
+	}
+
 	inline function getInt() {
 		var v = getByte();
 		if( v == 0x80 ) {
@@ -149,7 +153,7 @@ class Serializer {
 
 	inline function getDouble() {
 		var v = input.getDouble(inPos);
-		inPos += 4;
+		inPos += 8;
 		return v;
 	}
 
@@ -192,6 +196,7 @@ class Serializer {
 		if( id == 0 ) return null;
 		if( refs[id] != null )
 			return cast refs[id];
+		if( UID < id ) UID = id;
 		var clid = CLIDS[clid];
 		var i = Type.createEmptyInstance(clid == 0 ? c : cast CLASSES[getByte()]);
 		i.__uid = id;
