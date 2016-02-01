@@ -1,6 +1,7 @@
 package h2d.col;
 import hxd.Math;
 
+@:forward(push,remove)
 abstract Polygons(Array<Polygon>) from Array<Polygon> to Array<Polygon> {
 
 	public var polygons(get, never) : Array<Polygon>;
@@ -8,8 +9,8 @@ abstract Polygons(Array<Polygon>) from Array<Polygon> to Array<Polygon> {
 	inline function get_length() return this.length;
 	inline function get_polygons() return this;
 
-	public inline function new( polygons ) {
-		this = polygons;
+	public inline function new( ?polygons ) {
+		this = polygons == null ? [] : polygons;
 	}
 
 	public inline function iterator() {

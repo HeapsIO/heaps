@@ -7,6 +7,7 @@ enum OffsetKind {
 	Round( arc : Float );
 }
 
+@:forward(push,remove)
 abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 
 	public var points(get, never) : Array<IPoint>;
@@ -16,10 +17,6 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 
 	public inline function new( ?points ) {
 		this = points == null ? [] : points;
-	}
-
-	public inline function addPoint( p : IPoint ) {
-		this.push(p);
 	}
 
 	public inline function iterator() {

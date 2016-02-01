@@ -1,6 +1,7 @@
 package h2d.col;
 import hxd.Math;
 
+@:forward(push,remove)
 abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 
 	public var points(get, never) : Array<Point>;
@@ -14,10 +15,6 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator(this);
-	}
-
-	public inline function addPoint( p : Point ) {
-		this.push(p);
 	}
 
 	/**
