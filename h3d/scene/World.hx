@@ -97,10 +97,11 @@ class WorldModel {
 }
 
 class World extends Object {
+	public var worldSize : Int;
+	public var chunkSize : Int;
+	public var enableSpecular = false;
 
 	var chunkBits : Int;
-	var chunkSize : Int;
-	var worldSize : Int;
 	var worldStride : Int;
 	var bigTextureSize = 2048;
 	var bigTextureBG = 0xFF8080FF;
@@ -109,7 +110,6 @@ class World extends Object {
 	var allChunks : Array<WorldChunk>;
 	var bigTextures : Array<{ diffuse : h3d.mat.BigTexture, spec : h3d.mat.BigTexture }>;
 	var textures : Map<String, WorldMaterial>;
-	public var enableSpecular = false;
 
 	public function new( chunkSize : Int, worldSize : Int, ?parent, ?autoCollect = true ) {
 		super(parent);
