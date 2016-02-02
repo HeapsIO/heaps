@@ -95,7 +95,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 			hull.push(points[curr]);
 			next = (curr + 1) % len;
 			for( i in 0...len ) {
-			   if( side(points[i], points[curr], points[next].toPoint()) < 0 )
+			   if( side(points[i], points[curr], points[next]) < 0 )
 				   next = i;
 			}
 			curr = next;
@@ -123,7 +123,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return sum * 0.5;
 	}
 
-	inline function side( p1 : IPoint, p2 : IPoint, t : Point ) {
+	inline function side( p1 : IPoint, p2 : IPoint, t : IPoint ) {
 		return (p2.x - p1.x) * (t.y - p1.y) - (p2.y - p1.y) * (t.x - p1.x);
 	}
 
@@ -131,12 +131,12 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		var p1 = points[points.length - 2];
 		var p2 = points[points.length - 1];
 		var p3 = points[0];
-		var s = side(p1, p2, p3.toPoint()) > 0;
+		var s = side(p1, p2, p3) > 0;
 		for( i in 1...points.length ) {
 			p1 = p2;
 			p2 = p3;
 			p3 = points[i];
-			if( side(p1, p2, p3.toPoint()) > 0 != s )
+			if( side(p1, p2, p3) > 0 != s )
 				return false;
 		}
 		return true;
@@ -150,7 +150,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		if( isConvex ) {
 			var p1 = points[points.length - 1];
 			for( p2 in points ) {
-				if( side(p1, p2, p) < 0 )
+				if( (p2.x - p1.x) * (p.y - p1.y) - (p2.y - p1.y) * (p.x - p1.x) < 0 )
 					return false;
 				p1 = p2;
 			}
@@ -160,10 +160,10 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 			var p1 = points[points.length - 1];
 			for (p2 in points) {
 				if (p2.y <= p.y) {
-					if (p1.y > p.y && side(p2, p1, p) > 0)
+					if (p1.y > p.y && (p1.x - p2.x) * (p.y - p2.y) - (p1.y - p2.y) * (p.x - p2.x) > 0)
 						w++;
 				}
-				else if (p1.y <= p.y && side(p2, p1, p) < 0)
+				else if (p1.y <= p.y && (p1.x - p2.x) * (p.y - p2.y) - (p1.y - p2.y) * (p.x - p2.x) < 0)
 					w--;
 				p1 = p2;
 			}
