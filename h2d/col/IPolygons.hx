@@ -68,7 +68,7 @@ abstract IPolygons(Array<IPolygon>) from Array<IPolygon> to Array<IPolygon> {
 		return c.execute(op, NonZero, NonZero);
 	}
 
-	public function contains( p : Point, isConvex ) {
+	public function contains( p : Point, isConvex = false ) {
 		for( pl in polygons )
 			if( pl.contains(p, isConvex) )
 				return true;

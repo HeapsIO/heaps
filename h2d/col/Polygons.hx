@@ -28,7 +28,7 @@ abstract Polygons(Array<Polygon>) from Array<Polygon> to Array<Polygon> {
 		return b;
 	}
 
-	public function contains( p : Point, isConvex ) {
+	public function contains( p : Point, isConvex = false ) {
 		for( pl in polygons )
 			if( pl.contains(p, isConvex) )
 				return true;
