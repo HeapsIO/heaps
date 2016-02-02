@@ -49,10 +49,6 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	}
 
 	public function convexHull() {
-		inline function side(p1 : Point, p2 : Point, p3 : Point) {
-			return (p2.y - p1.y) * (p3.x - p2.x) - (p2.x - p1.x) * (p3.y - p2.y);
-		}
-
 		var len = points.length;
 		if( len < 3 )
 			throw "convexHull() needs at least 3 points";
@@ -74,7 +70,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 			hull.push(points[curr]);
 			next = (curr + 1) % len;
 			for( i in 0...len ) {
-			   if( side(points[i], points[curr], points[next]) > 0 )
+			   if( side(points[i], points[curr], points[next]) < 0 )
 				   next = i;
 			}
 			curr = next;
@@ -102,16 +98,20 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return sum * 0.5;
 	}
 
+	inline function side( p1 : Point, p2 : Point, t : Point ) {
+		return (p2.x - p1.x) * (t.y - p1.y) - (p2.y - p1.y) * (t.x - p1.x);
+	}
+
 	public function isConvex() {
 		var p1 = points[points.length - 2];
 		var p2 = points[points.length - 1];
 		var p3 = points[0];
-		var side = (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x) > 0;
+		var s = side(p1, p2, p3) > 0;
 		for( i in 1...points.length ) {
 			p1 = p2;
 			p2 = p3;
 			p3 = points[i];
-			if( ((p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x) > 0) != side )
+			if( side(p1, p2, p3) > 0 != s )
 				return false;
 		}
 		return true;
@@ -125,14 +125,24 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		if( isConvex ) {
 			var p1 = points[points.length - 1];
 			for( p2 in points ) {
-				var side = (p2.x - p1.x) * (p.y - p1.y) - (p2.y - p1.y) * (p.x - p1.x);
-				if( side < 0 )
+				if( side(p1, p2, p) < 0 )
 					return false;
 				p1 = p2;
 			}
 			return true;
 		} else {
-			throw "TODO";
+			var w = 0;
+			var p1 = points[points.length - 1];
+			for (p2 in points) {
+				if (p2.y <= p.y) {
+					if (p1.y > p.y && side(p2, p1, p) > 0)
+						w++;
+				}
+				else if (p1.y <= p.y && side(p2, p1, p) < 0)
+					w--;
+				p1 = p2;
+			}
+			return w != 0;
 		}
 	}
 
