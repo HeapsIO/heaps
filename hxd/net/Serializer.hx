@@ -52,9 +52,13 @@ class Serializer {
 		if( CLIDS == null ) initClassIDS();
 	}
 
-	public function serialize( s : Serializable ) {
+	public function begin() {
 		out = new haxe.io.BytesBuffer();
 		refs = [];
+	}
+
+	public function serialize( s : Serializable ) {
+		begin();
 		addRef(s);
 		return out.getBytes();
 	}
@@ -66,15 +70,15 @@ class Serializer {
 		return getRef(c, Reflect.field(c,"__clid"));
 	}
 
-	inline function getByte() {
+	public inline function getByte() {
 		return input.get(inPos++);
 	}
 
-	inline function addByte(v:Int) {
+	public inline function addByte(v:Int) {
 		out.addByte(v);
 	}
 
-	inline function addInt(v:Int) {
+	public inline function addInt(v:Int) {
 		if( v >= 0 && v < 0x80 )
 			out.addByte(v);
 		else {
@@ -83,15 +87,19 @@ class Serializer {
 		}
 	}
 
-	inline function addDouble(v:Float) {
+	public inline function addFloat(v:Float) {
+		out.addFloat(v);
+	}
+
+	public inline function addDouble(v:Float) {
 		out.addDouble(v);
 	}
 
-	inline function addBool(v:Bool) {
+	public inline function addBool(v:Bool) {
 		addByte(v?1:0);
 	}
 
-	inline function addArray<T>(a:Array<T>,f:T->Void) {
+	public inline function addArray<T>(a:Array<T>,f:T->Void) {
 		if( a == null ) {
 			addByte(0);
 			return;
@@ -101,7 +109,7 @@ class Serializer {
 			f(v);
 	}
 
-	inline function getArray<T>(f:Void->T) : Array<T> {
+	public inline function getArray<T>(f:Void->T) : Array<T> {
 		var len = getInt();
 		if( len == 0 )
 			return null;
@@ -112,7 +120,7 @@ class Serializer {
 		return a;
 	}
 
-	inline function addMap<K,T>(a:Map<K,T>,fk:K->Void,ft:T->Void) {
+	public inline function addMap<K,T>(a:Map<K,T>,fk:K->Void,ft:T->Void) {
 		if( a == null ) {
 			addByte(0);
 			return;
@@ -125,7 +133,7 @@ class Serializer {
 		}
 	}
 
-	@:extern inline function getMap<K,T>(fk:Void->K, ft:Void->T) : Map<K,T> {
+	@:extern public inline function getMap<K,T>(fk:Void->K, ft:Void->T) : Map<K,T> {
 		var len = getInt();
 		if( len == 0 )
 			return null;
@@ -138,11 +146,11 @@ class Serializer {
 		return m;
 	}
 
-	inline function getBool() {
+	public inline function getBool() {
 		return getByte() != 0;
 	}
 
-	inline function getInt() {
+	public inline function getInt() {
 		var v = getByte();
 		if( v == 0x80 ) {
 			v = input.getInt32(inPos);
@@ -151,13 +159,19 @@ class Serializer {
 		return v;
 	}
 
-	inline function getDouble() {
+	public inline function getDouble() {
 		var v = input.getDouble(inPos);
 		inPos += 8;
 		return v;
 	}
 
-	inline function addString( s : String ) {
+	public inline function getFloat() {
+		var v = input.getDouble(inPos);
+		inPos += 4;
+		return v;
+	}
+
+	public inline function addString( s : String ) {
 		if( s == null )
 			addByte(0);
 		else {
@@ -166,7 +180,7 @@ class Serializer {
 		}
 	}
 
-	inline function getString() {
+	public inline function getString() {
 		var len = getInt();
 		if( len == 0 )
 			return null;
@@ -176,7 +190,7 @@ class Serializer {
 		return s;
 	}
 
-	inline function addRef( s : Serializable ) {
+	public inline function addRef( s : Serializable ) {
 		if( s == null ) {
 			addByte(0);
 			return;
@@ -191,7 +205,7 @@ class Serializer {
 		s.serialize(this);
 	}
 
-	inline function getRef<T:Serializable>( c : Class<T>, clid : Int ) : T {
+	public inline function getRef<T:Serializable>( c : Class<T>, clid : Int ) : T {
 		var id = getInt();
 		if( id == 0 ) return null;
 		if( refs[id] != null )
