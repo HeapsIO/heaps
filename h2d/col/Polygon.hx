@@ -92,7 +92,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		var sum = 0.;
 		var p1 = points[points.length - 1];
 		for( p2 in points ) {
-			sum += p1.y * p2.x - p2.x * p1.y;
+			sum += p1.x * p2.y - p2.x * p1.y;
 			p1 = p2;
 		}
 		return sum * 0.5;
