@@ -333,6 +333,8 @@ class Macros {
 			return null;
 		var fields = Context.getBuildFields();
 		var toSerialize = [];
+
+		if( !Context.defined("display") )
 		for( f in fields ) {
 			if( f.meta == null ) continue;
 			var m = null;
@@ -353,6 +355,7 @@ class Macros {
 			el.push(withPos(macro hxd.net.Macros.serializeValue(ctx, this.$fname),f.f.pos));
 			ul.push(withPos(macro hxd.net.Macros.unserializeValue(ctx, this.$fname),f.f.pos));
 		}
+
 		var access = [APublic];
 		if( isSubSer )
 			access.push(AOverride);
@@ -573,6 +576,8 @@ class Macros {
 			return null;
 		var fields = Context.getBuildFields();
 		var toSerialize = [];
+
+		if( !Context.defined("display") )
 		for( f in fields ) {
 			if( f.meta == null ) continue;
 			var m = null;
