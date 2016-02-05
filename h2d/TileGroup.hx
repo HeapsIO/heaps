@@ -302,8 +302,12 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
 	}
 
-	public function doRender(engine, min, len) {
+	public inline function flush() {
 		if( buffer == null || buffer.isDisposed() ) alloc(engine);
+	}
+
+	public function doRender(engine, min, len) {
+		flush();
 		engine.renderQuadBuffer(buffer, min, len);
 	}
 
@@ -369,6 +373,15 @@ class TileGroup extends Drawable {
 
 	override function draw(ctx:RenderContext) {
 		drawWith(ctx,this);
+	}
+
+
+	override function sync( ctx : RenderContext ) {
+		super.sync(ctx);
+		// On some mobile GPU, uploading while rendering does create a lot of stall.
+		// Let's make sure to force the upload before starting while we are still
+		// syncing our 2d scene.
+		content.flush();
 	}
 
 	@:allow(h2d)
