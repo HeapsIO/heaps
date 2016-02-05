@@ -16,6 +16,8 @@ interface NetworkSerializable extends Serializable extends ProxyHost {
 	public var __next : NetworkSerializable;
 	public var enableReplication(get, set) : Bool;
 	public function networkFlush( ctx : Serializer ) : Void;
+	public function networkSync( ctx : Serializer ) : Void;
+	public function alive() : Void;
 }
 
 @:genericBuild(hxd.net.Macros.buildSerializableProxy())

@@ -4,6 +4,7 @@ class Serializer {
 
 	static var UID = 0;
 	static var CLASSES = [];
+	static var CL_BYID = null;
 	static var CLIDS = null;
 	static function registerClass( c : Class<Dynamic> ) {
 		if( CLIDS != null ) throw "Too late to register class";
@@ -35,11 +36,11 @@ class Serializer {
 			return 1 + ((v & 0x3FFFFFFF) % 255);
 		}
 		CLIDS = [for( i in 0...CLASSES.length ) if( subClasses[i].length == 0 && !isSub[i] ) 0 else hash(Type.getClassName(cl[i]))];
-		CLASSES = [];
+		CL_BYID = [];
 		for( i in 0...CLIDS.length ) {
 			var cid = CLIDS[i];
-			if( CLASSES[cid] != null ) throw "Conflicting CLID between " + Type.getClassName(CLASSES[cid]) + " and " + Type.getClassName(cl[i]);
-			CLASSES[cid] = cl[i];
+			if( CL_BYID[cid] != null ) throw "Conflicting CLID between " + Type.getClassName(CL_BYID[cid]) + " and " + Type.getClassName(cl[i]);
+			CL_BYID[cid] = cl[i];
 		}
 	}
 
@@ -57,16 +58,20 @@ class Serializer {
 		refs = [];
 	}
 
+	public function setInput(data, pos) {
+		input = data;
+		inPos = pos;
+	}
+
 	public function serialize( s : Serializable ) {
 		begin();
-		addRef(s);
+		addKnownRef(s);
 		return out.getBytes();
 	}
 
 	public function unserialize<T:Serializable>( data : haxe.io.Bytes, c : Class<T> ) : T {
 		refs = [];
-		input = data;
-		inPos = 0;
+		setInput(data, 0);
 		return getRef(c, Reflect.field(c,"__clid"));
 	}
 
@@ -166,7 +171,7 @@ class Serializer {
 	}
 
 	public inline function getFloat() {
-		var v = input.getDouble(inPos);
+		var v = input.getFloat(inPos);
 		inPos += 4;
 		return v;
 	}
@@ -190,7 +195,20 @@ class Serializer {
 		return s;
 	}
 
-	public inline function addRef( s : Serializable ) {
+	public inline function addAnyRef( s : Serializable ) {
+		if( s == null ) {
+			addByte(0);
+			return;
+		}
+		addInt(s.__uid);
+		if( refs[s.__uid] != null )
+			return;
+		refs[s.__uid] = s;
+		addInt(s.getCLID());
+		s.serialize(this);
+	}
+
+	public inline function addKnownRef( s : Serializable ) {
 		if( s == null ) {
 			addByte(0);
 			return;
@@ -205,6 +223,20 @@ class Serializer {
 		s.serialize(this);
 	}
 
+	public inline function getAnyRef() : Serializable {
+		var id = getInt();
+		if( id == 0 ) return null;
+		if( refs[id] != null )
+			return cast refs[id];
+		if( UID < id ) UID = id;
+		var clid = getInt();
+		var i : Serializable = Type.createEmptyInstance(CLASSES[clid]);
+		i.__uid = id;
+		refs[id] = i;
+		i.unserialize(this);
+		return i;
+	}
+
 	public inline function getRef<T:Serializable>( c : Class<T>, clid : Int ) : T {
 		var id = getInt();
 		if( id == 0 ) return null;
@@ -212,7 +244,7 @@ class Serializer {
 			return cast refs[id];
 		if( UID < id ) UID = id;
 		var clid = CLIDS[clid];
-		var i = Type.createEmptyInstance(clid == 0 ? c : cast CLASSES[getByte()]);
+		var i = Type.createEmptyInstance(clid == 0 ? c : cast CL_BYID[getByte()]);
 		i.__uid = id;
 		refs[id] = i;
 		i.unserialize(this);

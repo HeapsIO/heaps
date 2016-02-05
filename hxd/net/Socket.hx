@@ -100,11 +100,22 @@ class Socket {
 	#if flash
 	var s : flash.net.Socket;
 	#end
+	#if (flash && air3)
+	var serv : flash.net.ServerSocket;
+	#end
 	public var out(default, null) : SocketOutput;
 	public var input(default, null) : haxe.io.Input;
+	public var timeout(default, set) : Null<Float>;
 
 	public function new() {
 		out = new SocketOutput();
+	}
+
+	public function set_timeout(t:Null<Float>) {
+		#if flash
+		if( s != null ) s.timeout = t == null ? 0x7FFFFFFF : Math.ceil(t * 1000);
+		#end
+		return this.timeout = t;
 	}
 
 	public function connect( host : String, port : Int, onConnect : Void -> Void ) {
@@ -112,6 +123,7 @@ class Socket {
 		openedSocks.push(this);
 		#if flash
 		s = new flash.net.Socket();
+		if( timeout != null ) this.timeout = timeout;
 		s.addEventListener(flash.events.Event.CONNECT, function(_) {
 			out = new FlashSocketOutput(s);
 			input = new FlashSocketInput(s);
@@ -134,8 +146,38 @@ class Socket {
 		#end
 	}
 
+	public function bind( host : String, port : Int, onConnect : Socket -> Void, listenCount = 5 ) {
+		close();
+		openedSocks.push(this);
+		#if (flash && air3)
+		serv = new flash.net.ServerSocket();
+		try serv.bind(port, host) catch( e : Dynamic ) {
+			close();
+			throw e;
+		};
+		serv.listen(listenCount);
+		serv.addEventListener(flash.events.ServerSocketConnectEvent.CONNECT, function(e:flash.events.ServerSocketConnectEvent) {
+			var sock = e.socket;
+			var s = new Socket();
+			s.s = sock;
+			s.out = new FlashSocketOutput(sock);
+			s.input = new FlashSocketInput(sock);
+			openedSocks.push(s);
+			onConnect(s);
+		});
+		#else
+		throw "Not implemented";
+		#end
+	}
+
 	public function close() {
 		openedSocks.remove(this);
+		#if (flash && air3)
+		if( serv != null ) {
+			try serv.close() catch( e : Dynamic ) { };
+			serv = null;
+		}
+		#end
 		#if flash
 		if( s != null ) {
 			try s.close() catch( e : Dynamic ) { };

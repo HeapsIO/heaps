@@ -234,7 +234,7 @@ class Macros {
 			var ve = { expr : EConst(CIdent("e")), pos : v.pos };
 			return macro $ctx.addArray($v, function(e:$at) return hxd.net.Macros.serializeValue($ctx, $ve));
 		case PSerializable(_):
-			return macro $ctx.addRef($v);
+			return macro $ctx.addKnownRef($v);
 		case PProxy(t):
 			return serializeExpr(ctx, { expr : EField(v, "__value"), pos : v.pos }, t);
 		case PAlias(_, t):
@@ -619,6 +619,7 @@ class Macros {
 		}
 
 		var flushExpr = [];
+		var syncExpr = [];
 		var noComplete : Metadata = [ { name : ":noCompletion", pos : pos } ];
 
 		for( f in toSerialize ) {
@@ -696,7 +697,8 @@ class Macros {
 						ret : ftype,
 					}),
 				});
-			flushExpr.push(macro if( b & (1 << $v{ bitID }) != 0 ) hxd.net.Macros.serializeValue(ctx, this.$fname));
+			flushExpr.push(macro if( b & (1 << $v{ bitID } ) != 0 ) hxd.net.Macros.serializeValue(ctx, this.$fname));
+			syncExpr.push(macro if( __bits & (1 << $v{ bitID } ) != 0 ) hxd.net.Macros.unserializeValue(ctx, this.$fname));
 		}
 		if( startFID > 32 ) Context.error("Too many serializable fields", pos);
 		cl.meta.add(":fieldID", [macro $v { startFID } ], pos);
@@ -706,9 +708,11 @@ class Macros {
 			if( isSubSer ) {
 				access.push(AOverride);
 				flushExpr.unshift(macro super.networkFlush(ctx));
+				syncExpr.unshift(macro super.networkSync(ctx));
 			} else {
 				flushExpr.unshift(macro ctx.addInt(__bits));
 				flushExpr.push(macro __bits = 0);
+				syncExpr.unshift(macro __bits = ctx.getInt());
 			}
 			flushExpr.unshift(macro var b = __bits);
 			fields.push({
@@ -722,6 +726,19 @@ class Macros {
 					expr : { expr : EBlock(flushExpr), pos : pos },
 				}),
 			});
+
+			fields.push({
+				name : "networkSync",
+				pos : pos,
+				access : access,
+				meta : noComplete,
+				kind : FFun({
+					args : [ { name : "ctx", type : macro : hxd.net.Serializer } ],
+					ret : null,
+					expr : macro @:privateAccess $b{syncExpr},
+				}),
+			});
+
 		}
 
 		return fields;
