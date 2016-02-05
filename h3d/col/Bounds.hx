@@ -288,7 +288,7 @@ class Bounds {
 		var dx = xMax - xMin;
 		var dy = yMax - yMin;
 		var dz = zMax - zMin;
-		return new Sphere((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, (zMin + zMax) * 0.5, Math.sqrt(dx*dx+dy*dy+dz*dz));
+		return new Sphere((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, (zMin + zMax) * 0.5, Math.sqrt(dx * dx + dy * dy + dz * dz) * 0.5);
 	}
 
 	public static inline function fromPoints( min : Point, max : Point ) {
