@@ -71,7 +71,7 @@ class Stage {
 			setupOnCloseEvent();
 		#end
 	}
-	
+
 	#if (flash || openfl)
 
 	function initGesture(b) {
@@ -173,12 +173,17 @@ class Stage {
 
 #if (flash || openfl || nme)
 
+	#if !air3 static inline #end
+	var multipleWindowsSupport = false;
+	var lastX : Float = -1.;
+	var lastY : Float = -1.;
+
 	inline function get_mouseX() {
-		return Std.int(stage.mouseX);
+		return Std.int( multipleWindowsSupport ? lastX : stage.mouseX );
 	}
 
 	inline function get_mouseY() {
-		return Std.int(stage.mouseY);
+		return Std.int( multipleWindowsSupport ? lastY : stage.mouseY );
 	}
 
 	inline function get_width() {
@@ -225,7 +230,11 @@ class Stage {
 		event(e);
 	}
 
-	function onMouseMove(e:Dynamic) {
+	function onMouseMove(e:flash.events.MouseEvent) {
+		if( multipleWindowsSupport ) {
+			lastX = e.stageX;
+			lastY = e.stageY;
+		}
 		event(new Event(EMove, mouseX, mouseY));
 	}
 
