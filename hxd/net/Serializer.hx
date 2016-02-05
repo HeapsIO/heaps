@@ -3,7 +3,7 @@ package hxd.net;
 class Serializer {
 
 	static var UID = 0;
-	static var CLASSES = [];
+	static var CLASSES : Array<Class<Dynamic>> = [];
 	static var CL_BYID = null;
 	static var CLIDS = null;
 	static function registerClass( c : Class<Dynamic> ) {
@@ -44,7 +44,7 @@ class Serializer {
 		}
 	}
 
-	var refs : Array<Serializable>;
+	public var refs : Array<Serializable>;
 	var out : haxe.io.BytesBuffer;
 	var input : haxe.io.Bytes;
 	var inPos : Int;

@@ -1,0 +1,8 @@
+-swf network.swf
+-swf-header 600:400:60:FFFFFF
+-swf-version 15.0
+-main Main
+-lib heaps
+-lib air3
+-D native-trace
+-D dump=pretty

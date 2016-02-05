@@ -129,6 +129,15 @@ class Socket {
 			input = new FlashSocketInput(s);
 			onConnect();
 		});
+		bindEvents();
+		s.connect(host, port);
+		#else
+		throw "Not implemented";
+		#end
+	}
+
+	function bindEvents() {
+		#if flash
 		s.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
 			close();
 			onError(e.text);
@@ -140,9 +149,6 @@ class Socket {
 		s.addEventListener(flash.events.ProgressEvent.SOCKET_DATA, function(e:flash.events.ProgressEvent) {
 			onData();
 		});
-		s.connect(host, port);
-		#else
-		throw "Not implemented";
 		#end
 	}
 
@@ -160,6 +166,7 @@ class Socket {
 			var sock = e.socket;
 			var s = new Socket();
 			s.s = sock;
+			s.bindEvents();
 			s.out = new FlashSocketOutput(sock);
 			s.input = new FlashSocketInput(sock);
 			openedSocks.push(s);

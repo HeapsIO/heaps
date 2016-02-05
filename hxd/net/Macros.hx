@@ -654,8 +654,8 @@ class Macros {
 
 			var setExpr = macro
 				if( this.$fname != v ) {
-					if( this.__bits == 0 && __host != null ) {
-						@:privateAccess __host.mark(this);
+					if( __host != null ) {
+						if( this.__bits == 0 ) @:privateAccess __host.mark(this);
 						this.__bits |= 1 << $v{ bitID };
 					}
 					this.$fname = v;

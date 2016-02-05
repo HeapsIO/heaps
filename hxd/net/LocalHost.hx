@@ -79,6 +79,7 @@ class LocalHost extends NetworkHost {
 		socket.connect(host, port, function() {
 			connected = true;
 			if( host == "127.0.0.1" ) enableSound = false;
+			clients = [me];
 			onConnect(true);
 		});
 	}
@@ -100,8 +101,8 @@ class LocalHost extends NetworkHost {
 		var opt = new flash.display.NativeWindowInitOptions();
 		opt.renderMode = flash.display.NativeWindowRenderMode.DIRECT;
 		var win = new flash.display.NativeWindow(opt);
-		win.width = flash.Lib.current.stage.stageWidth;
-		win.height = flash.Lib.current.stage.stageHeight;
+		win.width += flash.Lib.current.stage.stageWidth - win.stage.stageWidth;
+		win.height += flash.Lib.current.stage.stageHeight - win.stage.stageHeight;
 		win.title = "Client";
 		var l = new flash.display.Loader();
 		var ctx = new flash.system.LoaderContext(false, new flash.system.ApplicationDomain());

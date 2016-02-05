@@ -13,7 +13,7 @@ class NetworkClient {
 
 	public function fullSync( obj : Serializable ) {
 		var ctx = host.ctx;
-		var refs = @:privateAccess ctx.refs;
+		var refs = ctx.refs;
 		ctx.begin();
 		ctx.addByte(NetworkHost.FULLSYNC);
 		ctx.addAnyRef(obj);
@@ -37,22 +37,25 @@ class NetworkClient {
 		ctx.setInput(bytes, pos);
 		switch( ctx.getByte() ) {
 		case NetworkHost.SYNC:
-			var o : hxd.net.NetworkSerializable = cast @:privateAccess ctx.refs[ctx.getInt()];
+			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
+			var old = o.__bits;
 			o.networkSync(ctx);
+			o.__bits = old;
 		case NetworkHost.REG:
 			var o : hxd.net.NetworkSerializable = cast ctx.getAnyRef();
 			if( host.isAlive ) host.makeAlive();
 		case NetworkHost.UNREG:
-			var o : hxd.net.NetworkSerializable = cast @:privateAccess ctx.refs[ctx.getInt()];
+			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
 			o.enableReplication = false;
-			@:privateAccess ctx.refs[o.__uid] = null;
+			ctx.refs[o.__uid] = null;
 		case NetworkHost.FULLSYNC:
-			@:privateAccess ctx.refs = [];
-			host.onSync(ctx.getAnyRef());
+			ctx.refs = [];
+			var obj = ctx.getAnyRef();
 			while( true ) {
 				var o = ctx.getAnyRef();
 				if( o == null ) break;
 			}
+			host.onSync(obj);
 		case x:
 			error("Unknown message code " + x);
 		}
@@ -77,6 +80,7 @@ class NetworkHost {
 	var ctx : Serializer;
 	var clients : Array<NetworkClient>;
 	var isAlive = false;
+	var logger : String -> Void;
 
 	public function new() {
 		current = this;
@@ -93,25 +97,35 @@ class NetworkHost {
 
 	public function makeAlive() {
 		isAlive = true;
-		for( o in @:privateAccess ctx.refs ) {
+		for( o in ctx.refs ) {
 			if( o == null ) continue;
 			var n = Std.instance(o, NetworkSerializable);
 			if( n == null || n.__host != null ) continue;
+			if( logger != null )
+				logger("Alive " + n +"#"+n.__uid);
 			n.alive();
 		}
 	}
 
+	public function setLogger( log : String -> Void ) {
+		this.logger = log;
+	}
+
 	function register(o : NetworkSerializable) {
-		if( @:privateAccess ctx.refs[o.__uid] != null )
+		if( ctx.refs[o.__uid] != null )
 			return;
+		if( logger != null )
+			logger("Register " + o+"#"+o.__uid);
 		ctx.addByte(REG);
 		ctx.addAnyRef(o);
 	}
 
 	function unregister(o : NetworkSerializable) {
+		if( logger != null )
+			logger("Unregister " + o+"#"+o.__uid);
 		ctx.addByte(UNREG);
 		ctx.addInt(o.__uid);
-		@:privateAccess ctx.refs[o.__uid] = null;
+		ctx.refs[o.__uid] = null;
 	}
 
 	function send( bytes : haxe.io.Bytes ) {
@@ -125,13 +139,21 @@ class NetworkHost {
 
 	public function flush() {
 		var o = markHead;
+		var hasData = false;
 		while( o != null ) {
-			ctx.addByte(SYNC);
-			ctx.addInt(o.__uid);
-			o.networkFlush(ctx);
+			if( o.__bits != 0 ) {
+//				if( logger != null )
+//					logger("Sync " + o + "#" + o.__uid + " " + o.__bits);
+				ctx.addByte(SYNC);
+				ctx.addInt(o.__uid);
+				o.networkFlush(ctx);
+				hasData = true;
+			}
 			o = o.__next;
 		}
 		markHead = null;
+		if( !hasData )
+			return;
 		@:privateAccess {
 			var bytes = ctx.out.getBytes();
 			ctx.out = new haxe.io.BytesBuffer();
