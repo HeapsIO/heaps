@@ -5,4 +5,3 @@
 -lib heaps
 -lib air3
 -D native-trace
--D dump=pretty

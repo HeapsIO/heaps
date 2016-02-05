@@ -24,7 +24,7 @@
     <option noInlineOnDebug="False" />
     <option mainClass="Main" />
     <option enabledebug="False" />
-    <option additional="-lib heaps&#xA;-lib air3&#xA;-D native-trace&#xA;&#xA;-D dump=pretty" />
+    <option additional="-lib heaps&#xA;-lib air3&#xA;-D native-trace" />
   </build>
   <!-- haxelib libraries -->
   <haxelib>
