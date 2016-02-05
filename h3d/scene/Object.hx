@@ -94,6 +94,30 @@ class Object {
 		currentAnimation = null;
 	}
 
+	/**
+		When an object is loaded, its position scale and rotation will always be set to the default values (0 for position/rotation and 1 for scale).
+		If it's part of a group/scene or if it's animated, then its position/rotation/scale will be stored into the defaultTransform matrix.
+		Calling this function will reset the defaultTransform to null and instead initialize x/y/z/rotation/scale properties.
+		This will not change the actual position of the object but allows you to move the object more freely on your own.
+		Do not use on an object that is currently being animated, since it will set again defaultTransform and apply twice the transformation.
+	**/
+	public function applyAnimationTransform( recursive = true ) {
+		if( defaultTransform != null ) {
+			var s = defaultTransform.getScale();
+			scaleX = s.x;
+			scaleY = s.y;
+			scaleZ = s.z;
+			qRot.initRotateMatrix(defaultTransform);
+			x = defaultTransform.tx;
+			y = defaultTransform.ty;
+			z = defaultTransform.tz;
+			defaultTransform = null;
+		}
+		if( recursive )
+			for( c in childs )
+				c.applyAnimationTransform();
+	}
+
 	public function getObjectsCount() {
 		var k = 0;
 		for( c in childs )
