@@ -303,7 +303,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 	}
 
 	public inline function flush() {
-		if( buffer == null || buffer.isDisposed() ) alloc(engine);
+		if( buffer == null || buffer.isDisposed() ) alloc(h3d.Engine.getCurrent());
 	}
 
 	public function doRender(engine, min, len) {
