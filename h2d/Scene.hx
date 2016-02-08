@@ -1,7 +1,7 @@
 package h2d;
 import hxd.Math;
 
-class Scene extends Layers implements h3d.IDrawable {
+class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.InteractiveScene {
 
 	public var width(default,null) : Int;
 	public var height(default, null) : Int;
@@ -13,19 +13,11 @@ class Scene extends Layers implements h3d.IDrawable {
 
 	var fixedSize : Bool;
 	var interactive : Array<Interactive>;
-	var pendingEvents : Array<hxd.Event>;
+	var eventListeners : Array< hxd.Event -> Void >;
 	var ctx : RenderContext;
 	var stage : hxd.Stage;
-
 	@:allow(h2d.Interactive)
-	var currentOver : Interactive;
-	@:allow(h2d.Interactive)
-	var currentFocus : Interactive;
-
-	var pushList : Array<Interactive>;
-	var currentDrag : { f : hxd.Event -> Void, onCancel : Void -> Void, ref : Null<Int> };
-	var eventListeners : Array< hxd.Event -> Void >;
-	var fakeMove : hxd.Event;
+	var events : hxd.SceneEvents;
 
 	public function new() {
 		super(null);
@@ -34,10 +26,13 @@ class Scene extends Layers implements h3d.IDrawable {
 		width = e.width;
 		height = e.height;
 		interactive = new Array();
-		pushList = new Array();
 		eventListeners = new Array();
 		stage = hxd.Stage.getInstance();
 		posChanged = true;
+	}
+
+	public function setEvents(events) {
+		this.events = events;
 	}
 
 	function get_zoom() {
@@ -75,26 +70,11 @@ class Scene extends Layers implements h3d.IDrawable {
 		}
 	}
 
-	override function onAlloc() {
-		stage.addEventTarget(onEvent);
-		super.onAlloc();
-	}
-
-	override function onDelete() {
-		stage.removeEventTarget(onEvent);
-		super.onDelete();
-	}
-
-	function onEvent( e : hxd.Event ) {
-		if( pendingEvents != null )
-			pendingEvents.push(e);
-	}
-
-	function screenXToLocal(mx:Float) {
+	inline function screenXToLocal(mx:Float) {
 		return mx * width / (stage.width * scaleX) - x;
 	}
 
-	function screenYToLocal(my:Float) {
+	inline function screenYToLocal(my:Float) {
 		return my * height / (stage.height * scaleY) - y;
 	}
 
@@ -106,9 +86,8 @@ class Scene extends Layers implements h3d.IDrawable {
 		return screenYToLocal(stage.mouseY);
 	}
 
-	function dispatchListeners( event : hxd.Event ) {
-		event.propagate = true;
-		event.cancel = false;
+	public function dispatchListeners( event : hxd.Event ) {
+		screenToLocal(event);
 		for( l in eventListeners ) {
 			l(event);
 			if( !event.propagate ) break;
@@ -162,25 +141,23 @@ class Scene extends Layers implements h3d.IDrawable {
 		return null;
 	}
 
-	function emitEvent( event : hxd.Event ) {
-		var x = event.relX, y = event.relY;
+	public function screenToLocal( e : hxd.Event ) {
+		var x = screenXToLocal(e.relX);
+		var y = screenYToLocal(e.relY);
 		var rx = x * matA + y * matB + absX;
 		var ry = x * matC + y * matD + absY;
-		var handled = false;
-		var checkOver = false, checkPush = false, cancelFocus = false;
-		switch( event.kind ) {
-		case EMove: checkOver = true;
-		case EPush: cancelFocus = true; checkPush = true;
-		case ERelease: checkPush = true;
-		case EKeyUp, EKeyDown, EWheel:
-			if( currentFocus != null ) {
-				currentFocus.handleEvent(event);
-				if( !event.propagate )
-					return;
-			}
-		default:
-		}
-		for( i in interactive ) {
+		e.relX = rx;
+		e.relY = ry;
+	}
+
+	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
+		screenToLocal(event);
+		var rx = event.relX;
+		var ry = event.relY;
+		var index = last == null ? 0 : interactive.indexOf(cast last);
+		for( idx in index...interactive.length ) {
+			var i = interactive[idx];
+			if( i == null ) break;
 
 			var dx = rx - i.absX;
 			var dy = ry - i.absY;
@@ -227,130 +204,12 @@ class Scene extends Layers implements h3d.IDrawable {
 			if( event.cancel ) {
 				event.cancel = false;
 				event.propagate = true;
-			} else if( checkOver ) {
-				if( currentOver != i ) {
-					var old = event.propagate;
-					if( currentOver != null ) {
-						event.kind = EOut;
-						// relX/relY is not correct here
-						currentOver.handleEvent(event);
-					}
-					event.kind = EOver;
-					event.cancel = false;
-					i.handleEvent(event);
-					if( event.cancel )
-						currentOver = null;
-					else {
-						currentOver = i;
-						checkOver = false;
-					}
-					event.kind = EMove;
-					event.cancel = false;
-					event.propagate = old;
-				} else
-					checkOver = false;
-			} else {
-				if( checkPush ) {
-					if( event.kind == EPush )
-						pushList.push(i);
-					else
-						pushList.remove(i);
-				}
-				if( cancelFocus && i == currentFocus )
-					cancelFocus = false;
-			}
-
-			if( event.propagate ) {
-				event.propagate = false;
 				continue;
 			}
 
-			handled = true;
-			break;
+			return i;
 		}
-		if( cancelFocus && currentFocus != null ) {
-			event.kind = EFocusLost;
-			currentFocus.handleEvent(event);
-			event.kind = EPush;
-		}
-		if( checkOver && currentOver != null ) {
-			event.kind = EOut;
-			currentOver.handleEvent(event);
-			event.kind = EMove;
-			currentOver = null;
-		}
-		if( !handled && event != fakeMove ) {
-			if( event.kind == EPush )
-				pushList.push(null);
-			dispatchListeners(event);
-		}
-	}
-
-	function hasEvents() {
-		return interactive.length > 0 || eventListeners.length > 0;
-	}
-
-	public function checkEvents() {
-		if( pendingEvents == null ) {
-			if( !hasEvents() )
-				return;
-			pendingEvents = new Array();
-		}
-		var old = pendingEvents;
-		if( old.length == 0 )
-			return;
-		pendingEvents = null;
-		var checkMoved = false;
-		for( e in old ) {
-			var ox = e.relX, oy = e.relY;
-			e.relX = screenXToLocal(ox);
-			e.relY = screenYToLocal(oy);
-			if( e.kind == EMove ) checkMoved = true;
-
-			if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
-				currentDrag.f(e);
-				if( e.cancel ) {
-					e.relX = ox;
-					e.relY = oy;
-					continue;
-				}
-			}
-
-			emitEvent(e);
-
-			/*
-				We want to make sure that after we have pushed, we send a release even if the mouse
-				has been outside of the Interactive (release outside). We will reset the mouse button
-				to prevent click to be generated
-			*/
-			if( e.kind == ERelease && pushList.length > 0 ) {
-				e.relX = screenXToLocal(ox);
-				e.relY = screenYToLocal(oy);
-				for( i in pushList ) {
-					if( i == null )
-						dispatchListeners(e);
-					else {
-						@:privateAccess i.isMouseDown = -1;
-						// relX/relY not good here
-						i.handleEvent(e);
-					}
-				}
-				pushList = new Array();
-			}
-
-			e.relX = ox;
-			e.relY = oy;
-		}
-
-		if( !checkMoved && currentDrag == null ) {
-			if( fakeMove == null ) fakeMove = new hxd.Event(EMove);
-			fakeMove.relX = mouseX;
-			fakeMove.relY = mouseY;
-			emitEvent(fakeMove);
-		}
-
-		if( hasEvents() )
-			pendingEvents = new Array();
+		return null;
 	}
 
 	public function addEventListener( f : hxd.Event -> Void ) {
@@ -362,17 +221,26 @@ class Scene extends Layers implements h3d.IDrawable {
 	}
 
 	public function startDrag( f : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
-		if( currentDrag != null && currentDrag.onCancel != null )
-			currentDrag.onCancel();
-		currentDrag = { f : f, ref : refEvent == null ? null : refEvent.touchId, onCancel : onCancel };
+		events.startDrag(function(e) {
+			screenToLocal(e);
+			f(e);
+		},onCancel, refEvent);
 	}
 
 	public function stopDrag() {
-		currentDrag = null;
+		events.stopDrag();
 	}
 
 	public function getFocus() {
-		return currentFocus;
+		if( events == null )
+			return null;
+		var f = events.getFocus();
+		if( f == null )
+			return null;
+		var i = Std.instance(f, h2d.Interactive);
+		if( i == null )
+			return null;
+		return interactive[interactive.indexOf(i)];
 	}
 
 	@:allow(h2d)
@@ -428,12 +296,14 @@ class Scene extends Layers implements h3d.IDrawable {
 	}
 
 	@:allow(h2d)
-	function removeEventTarget(i) {
+	function removeEventTarget(i,notify=false) {
 		for( k in 0...interactive.length )
 			if( interactive[k] == i ) {
 				interactive.splice(k, 1);
 				break;
 			}
+		if( notify && events != null )
+			@:privateAccess events.onRemove(i);
 	}
 
 	public function dispose() {

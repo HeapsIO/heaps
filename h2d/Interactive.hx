@@ -1,6 +1,6 @@
 package h2d;
 
-class Interactive extends Drawable {
+class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	public var width : Float;
 	public var height : Float;
@@ -50,13 +50,8 @@ class Interactive extends Drawable {
 
 	override function onDelete() {
 		if( scene != null ) {
-			scene.removeEventTarget(this);
-			if( scene.currentOver == this ) {
-				scene.currentOver = null;
-				hxd.System.setCursor(Default);
-			}
-			if( scene.currentFocus == this )
-				scene.currentFocus = null;
+			scene.removeEventTarget(this, true);
+			scene = null;
 		}
 		super.onDelete();
 	}
@@ -68,8 +63,11 @@ class Interactive extends Drawable {
 		}
 	}
 
-	@:allow(h2d.Scene)
-	function handleEvent( e : hxd.Event ) {
+	@:noCompletion public function getInteractiveScene() : hxd.SceneEvents.InteractiveScene {
+		return getScene();
+	}
+
+	@:noCompletion public function handleEvent( e : hxd.Event ) {
 		if( isEllipse && checkBounds(e) ) {
 			var cx = width * 0.5, cy = height * 0.5;
 			var dx = (e.relX - cx) / cx;
@@ -96,6 +94,13 @@ class Interactive extends Drawable {
 					onClick(e);
 			}
 			isMouseDown = -1;
+		case EReleaseNoClick:
+			if( enableRightButton || e.button == 0 ) {
+				e.kind = ERelease;
+				onRelease(e);
+				e.kind = EReleaseNoClick;
+			}
+			isMouseDown = -1;
 		case EOver:
 			hxd.System.setCursor(cursor);
 			onOver(e);
@@ -107,10 +112,8 @@ class Interactive extends Drawable {
 			onWheel(e);
 		case EFocusLost:
 			onFocusLost(e);
-			if( !e.cancel && scene != null && scene.currentFocus == this ) scene.currentFocus = null;
 		case EFocus:
 			onFocus(e);
-			if( !e.cancel && scene != null ) scene.currentFocus = this;
 		case EKeyUp:
 			onKeyUp(e);
 		case EKeyDown:
@@ -120,7 +123,7 @@ class Interactive extends Drawable {
 
 	function set_cursor(c) {
 		this.cursor = c;
-		if( scene != null && scene.currentOver == this )
+		if( isOver() )
 			hxd.System.setCursor(cursor);
 		return c;
 	}
@@ -166,32 +169,21 @@ class Interactive extends Drawable {
 	}
 
 	public function focus() {
-		if( scene == null )
+		if( scene == null || scene.events == null )
 			return;
-		var ev = new hxd.Event(null);
-		if( scene.currentFocus != null ) {
-			if( scene.currentFocus == this )
-				return;
-			ev.kind = EFocusLost;
-			scene.currentFocus.handleEvent(ev);
-			if( ev.cancel ) return;
-		}
-		ev.kind = EFocus;
-		handleEvent(ev);
+		scene.events.focus(this);
 	}
 
 	public function blur() {
-		if( scene == null )
-			return;
-		if( scene.currentFocus == this ) {
-			var ev = new hxd.Event(null);
-			ev.kind = EFocusLost;
-			scene.currentFocus.handleEvent(ev);
-		}
+		if( hasFocus() ) scene.events.blur();
+	}
+
+	public function isOver() {
+		return scene != null && scene.events != null && @:privateAccess scene.events.currentOver == this;
 	}
 
 	public function hasFocus() {
-		return scene != null && scene.currentFocus == this;
+		return scene != null && scene.events != null && @:privateAccess scene.events.currentFocus == this;
 	}
 
 	public dynamic function onOver( e : hxd.Event ) {

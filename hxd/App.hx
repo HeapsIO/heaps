@@ -5,6 +5,7 @@ class App {
 	public var engine : h3d.Engine;
 	public var s3d : h3d.scene.Scene;
 	public var s2d : h2d.Scene;
+	public var sevents : hxd.SceneEvents;
 
 	public var wantedFPS(get, set) : Float;
 
@@ -38,6 +39,8 @@ class App {
 		s3d = new h3d.scene.Scene();
 		s2d = new h2d.Scene();
 		s3d.addPass(s2d);
+		sevents = new hxd.SceneEvents();
+		sevents.addScene(s2d);
 		loadAssets(function() {
 			initDone = true;
 			init();
@@ -46,6 +49,12 @@ class App {
 			hxd.System.setLoop(mainLoop);
 			hxd.Key.initialize();
 		});
+	}
+	
+	function dispose() {
+		s2d.dispose();
+		s3d.dispose();
+		sevents.dispose();
 	}
 
 	function loadAssets( onLoaded ) {
@@ -57,7 +66,7 @@ class App {
 
 	function mainLoop() {
 		hxd.Timer.update();
-		s2d.checkEvents();
+		sevents.checkEvents();
 		update(hxd.Timer.tmod);
 		s2d.setElapsedTime(Timer.tmod/60);
 		s3d.setElapsedTime(Timer.tmod / 60);

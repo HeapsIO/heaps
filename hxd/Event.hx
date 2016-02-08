@@ -11,6 +11,7 @@ enum EventKind {
 	EFocusLost;
 	EKeyDown;
 	EKeyUp;
+	EReleaseNoClick;
 }
 
 class Event {
