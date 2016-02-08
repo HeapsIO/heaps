@@ -36,8 +36,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		var z1 = i1.hitPoint.w;
 		var z2 = i2.hitPoint.w;
 		if( z1 > z2 )
-			return 1;
-		return -1;
+			return -1;
+		return 1;
 	}
 
 	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
@@ -90,9 +90,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				hitInteractives.sort(sortHitPointByCameraDistance);
 			}
 
-			hitInteractives.push(null);
+			hitInteractives.unshift(null);
 		}
-
 
 		while( hitInteractives.length > 0 ) {
 
@@ -110,6 +109,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				event.propagate = true;
 				continue;
 			}
+
+			if( !event.propagate )
+				hitInteractives = [];
 
 			return i;
 		}
