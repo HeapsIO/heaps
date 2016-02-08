@@ -20,7 +20,7 @@ class ModelCache {
 		textures = new Map();
 	}
 
-	function loadLibrary( res : hxd.res.Model ) : hxd.fmt.hmd.Library {
+	public function loadLibrary( res : hxd.res.Model ) : hxd.fmt.hmd.Library {
 		var path = res.entry.path;
 		var lib = models.get(path);
 		if( lib == null ) {
