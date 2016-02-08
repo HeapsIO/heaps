@@ -141,13 +141,39 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		return null;
 	}
 
-	public function screenToLocal( e : hxd.Event ) {
+	function screenToLocal( e : hxd.Event ) {
 		var x = screenXToLocal(e.relX);
 		var y = screenYToLocal(e.relY);
 		var rx = x * matA + y * matB + absX;
 		var ry = x * matC + y * matD + absY;
 		e.relX = rx;
 		e.relY = ry;
+	}
+
+	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
+		var i : Interactive = cast to;
+		screenToLocal(event);
+
+		var rx = event.relX;
+		var ry = event.relY;
+
+		var dx = rx - i.absX;
+		var dy = ry - i.absY;
+
+		var w1 = i.width * i.matA;
+		var h1 = i.width * i.matC;
+		var ky = h1 * dx + w1 * dy;
+
+		var w2 = i.height * i.matB;
+		var h2 = i.height * i.matD;
+		var kx = w2 * dy + h2 * dx;
+
+		var max = w1 * h2 - h1 * w2;
+
+		event.relX = (kx / max) * i.width;
+		event.relY = (ky / max) * i.height;
+
+		i.handleEvent(event);
 	}
 
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
@@ -297,11 +323,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	@:allow(h2d)
 	function removeEventTarget(i,notify=false) {
-		for( k in 0...interactive.length )
-			if( interactive[k] == i ) {
-				interactive.splice(k, 1);
-				break;
-			}
+		interactive.remove(i);
 		if( notify && events != null )
 			@:privateAccess events.onRemove(i);
 	}

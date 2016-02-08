@@ -1,6 +1,6 @@
 package h3d.scene;
 
-class Scene extends Object implements h3d.IDrawable {
+class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.InteractiveScene {
 
 	public var camera : h3d.Camera;
 	public var lightSystem : h3d.pass.LightSystem;
@@ -8,15 +8,113 @@ class Scene extends Object implements h3d.IDrawable {
 	var prePasses : Array<h3d.IDrawable>;
 	var postPasses : Array<h3d.IDrawable>;
 	var ctx : RenderContext;
+	var interactives : Array<Interactive>;
+	@:allow(h3d.scene.Interactive)
+	var events : hxd.SceneEvents;
+	var hitInteractives : Array<Interactive>;
 
 	public function new() {
 		super(null);
+		hitInteractives = [];
+		interactives = [];
 		camera = new h3d.Camera();
 		ctx = new RenderContext();
 		renderer = new Renderer();
 		lightSystem = new h3d.pass.LightSystem();
 		postPasses = [];
 		prePasses = [];
+	}
+
+	@:noCompletion public function setEvents(events) {
+		this.events = events;
+	}
+
+	public function dispatchListeners(event:hxd.Event) {
+	}
+
+	function sortHitPointByCameraDistance( i1 : Interactive, i2 : Interactive ) {
+		var z1 = i1.hitPoint.w;
+		var z2 = i2.hitPoint.w;
+		if( z1 > z2 )
+			return 1;
+		return -1;
+	}
+
+	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
+		var i : Interactive = cast to;
+		// TODO : compute relX/Y/Z
+		i.handleEvent(event);
+	}
+
+	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) {
+
+		if( interactives.length == 0 )
+			return null;
+
+		if( hitInteractives.length == 0 ) {
+
+			var stage = hxd.Stage.getInstance();
+			var screenX = (event.relX / stage.width - 0.5) * 2;
+			var screenY = -(event.relY / stage.height - 0.5) * 2;
+			var p0 = camera.unproject(screenX, screenY, 0);
+			var p1 = camera.unproject(screenX, screenY, 1);
+			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
+			var saveR = r.clone();
+
+			var hitTmp = new h3d.col.Point();
+			for( i in interactives ) {
+				var minv = i.getInvPos();
+				r.transform(minv);
+				r.normalize();
+				var hit = i.shape.rayIntersection(r, hitTmp);
+				r.load(saveR);
+				if( hit == null ) continue;
+
+				i.hitPoint.x = hit.x;
+				i.hitPoint.y = hit.y;
+				i.hitPoint.z = hit.z;
+				hitInteractives.push(i);
+			}
+
+			if( hitInteractives.length == 0 )
+				return null;
+
+			if( hitInteractives.length > 1 ) {
+				for( i in hitInteractives ) {
+					var m = i.invPos;
+					var p = i.hitPoint.clone();
+					p.transform3x4(i.absPos);
+					p.project(camera.m);
+					i.hitPoint.w = p.z;
+				}
+				hitInteractives.sort(sortHitPointByCameraDistance);
+			}
+
+			hitInteractives.push(null);
+		}
+
+
+		while( hitInteractives.length > 0 ) {
+
+			var i = hitInteractives.pop();
+			if( i == null )
+				return null;
+
+			event.relX = i.hitPoint.x;
+			event.relY = i.hitPoint.y;
+			event.relZ = i.hitPoint.z;
+			i.handleEvent(event);
+
+			if( event.cancel ) {
+				event.cancel = false;
+				event.propagate = true;
+				continue;
+			}
+
+			return i;
+		}
+
+		return null;
 	}
 
 	override function clone( ?o : Object ) {
@@ -47,6 +145,17 @@ class Scene extends Object implements h3d.IDrawable {
 		prePasses.remove(p);
 	}
 
+	@:allow(h3d)
+	function addEventTarget(i:Interactive) {
+		interactives.push(i);
+	}
+
+	@:allow(h3d)
+	function removeEventTarget(i:Interactive) {
+		if( interactives.remove(i) && events != null )
+			@:privateAccess events.onRemove(i);
+	}
+
 	public function setElapsedTime( elapsedTime ) {
 		ctx.elapsedTime = elapsedTime;
 	}
@@ -54,6 +163,10 @@ class Scene extends Object implements h3d.IDrawable {
 	@:access(h3d.mat.Pass)
 	@:access(h3d.scene.RenderContext)
 	public function render( engine : h3d.Engine ) {
+
+		if( !allocated )
+			onAlloc();
+
 		camera.screenRatio = engine.width / engine.height;
 		camera.update();
 		ctx.camera = camera;

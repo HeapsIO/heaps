@@ -1,11 +1,9 @@
-package h2d;
+package h3d.scene;
 
-class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
+class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
-	public var width : Float;
-	public var height : Float;
+	public var shape : h3d.col.RayCollider;
 	public var cursor(default,set) : hxd.System.Cursor;
-	public var isEllipse : Bool;
 	/**
 		Set the default `cancel` mode (see `hxd.Event`), default to false.
 	**/
@@ -14,15 +12,16 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		Set the default `propagate` mode (see `hxd.Event`), default to false.
 	**/
 	public var propagateEvents : Bool = false;
-	public var backgroundColor : Null<Int>;
 	public var enableRightButton : Bool;
 	var scene : Scene;
 	var isMouseDown : Int;
 
-	public function new(width, height, ?parent) {
+	@:allow(h3d.scene.Scene)
+	var hitPoint = new h3d.Vector();
+
+	public function new(shape, ?parent) {
 		super(parent);
-		this.width = width;
-		this.height = height;
+		this.shape = shape;
 		cursor = Button;
 	}
 
@@ -32,35 +31,12 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		super.onAlloc();
 	}
 
-	override function draw( ctx : RenderContext ) {
-		if( backgroundColor != null ) emitTile(ctx, h2d.Tile.fromColor(backgroundColor, Std.int(width), Std.int(height), (backgroundColor>>>24)/255 ));
-	}
-
-	override function getBoundsRec( relativeTo, out, forSize ) {
-		super.getBoundsRec(relativeTo, out, forSize);
-		if( backgroundColor != null ) addBounds(relativeTo, out, 0, 0, Std.int(width), Std.int(height));
-	}
-
-	override function onParentChanged() {
-		if( scene != null ) {
-			scene.removeEventTarget(this);
-			scene.addEventTarget(this);
-		}
-	}
-
 	override function onDelete() {
 		if( scene != null ) {
-			scene.removeEventTarget(this, true);
+			scene.removeEventTarget(this);
 			scene = null;
 		}
 		super.onDelete();
-	}
-
-	function checkBounds( e : hxd.Event ) {
-		return switch( e.kind ) {
-		case EOut, ERelease, EFocus, EFocusLost: false;
-		default: true;
-		}
 	}
 
 	@:noCompletion public function getInteractiveScene() : hxd.SceneEvents.InteractiveScene {
@@ -68,15 +44,6 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	@:noCompletion public function handleEvent( e : hxd.Event ) {
-		if( isEllipse && checkBounds(e) ) {
-			var cx = width * 0.5, cy = height * 0.5;
-			var dx = (e.relX - cx) / cx;
-			var dy = (e.relY - cy) / cy;
-			if( dx * dx + dy * dy > 1 ) {
-				e.cancel = true;
-				return;
-			}
-		}
 		if( propagateEvents ) e.propagate = true;
 		if( cancelEvents ) e.cancel = true;
 		switch( e.kind ) {
@@ -126,46 +93,6 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		if( isOver() )
 			hxd.System.setCursor(cursor);
 		return c;
-	}
-
-	function eventToLocal( e : hxd.Event ) {
-		// convert global event to our local space
-		var x = e.relX, y = e.relY;
-		var rx = x * scene.matA + y * scene.matB + scene.absX;
-		var ry = x * scene.matC + y * scene.matD + scene.absY;
-		var r = scene.height / scene.width;
-
-		var i = this;
-
-		var dx = rx - i.absX;
-		var dy = ry - i.absY;
-
-		var w1 = i.width * i.matA * r;
-		var h1 = i.width * i.matC;
-		var ky = h1 * dx - w1 * dy;
-
-		var w2 = i.height * i.matB * r;
-		var h2 = i.height * i.matD;
-		var kx = w2 * dy - h2 * dx;
-
-		var max = h1 * w2 - w1 * h2;
-
-		e.relX = (kx * r / max) * i.width;
-		e.relY = (ky / max) * i.height;
-	}
-
-	public function startDrag(callb,?onCancel) {
-		scene.startDrag(function(event) {
-			var x = event.relX, y = event.relY;
-			eventToLocal(event);
-			callb(event);
-			event.relX = x;
-			event.relY = y;
-		},onCancel);
-	}
-
-	public function stopDrag() {
-		scene.stopDrag();
 	}
 
 	public function focus() {

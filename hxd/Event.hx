@@ -19,6 +19,7 @@ class Event {
 	public var kind : EventKind;
 	public var relX : Float;
 	public var relY : Float;
+	public var relZ : Float;
 	/**
 		Will propagate the event to other interactives that are below the current one.
 	**/

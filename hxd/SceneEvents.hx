@@ -2,8 +2,8 @@ package hxd;
 
 interface InteractiveScene {
 	public function setEvents( s : SceneEvents ) : Void;
-	public function screenToLocal( e : Event ) : Void;
 	public function handleEvent( e : Event, last : Interactive ) : Interactive;
+	public function dispatchEvent( e : Event, to : Interactive ) : Void;
 	public function dispatchListeners( e : Event ) : Void;
 }
 
@@ -188,8 +188,7 @@ class SceneEvents {
 					var s = i.getInteractiveScene();
 					if( s == null ) continue;
 					event.kind = EReleaseNoClick;
-					s.screenToLocal(event);
-					i.handleEvent(event);
+					s.dispatchEvent(event,i);
 					event.kind = ERelease;
 					event.relX = oldX;
 					event.relY = oldY;

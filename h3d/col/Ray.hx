@@ -4,14 +4,34 @@ import hxd.Math;
 @:allow(h3d.col)
 class Ray {
 
-	var px : Float;
-	var py : Float;
-	var pz : Float;
-	var lx : Float;
-	var ly : Float;
-	var lz : Float;
+	public var px : Float;
+	public var py : Float;
+	public var pz : Float;
+	public var lx : Float;
+	public var ly : Float;
+	public var lz : Float;
 
 	inline function new() {
+	}
+
+	public inline function clone() {
+		var r = new Ray();
+		r.px = px;
+		r.py = py;
+		r.pz = pz;
+		r.lx = lx;
+		r.ly = ly;
+		r.lz = lz;
+		return r;
+	}
+
+	public inline function load( r : Ray ) {
+		px = r.px;
+		py = r.py;
+		pz = r.pz;
+		lx = r.lx;
+		ly = r.ly;
+		lz = r.lz;
 	}
 
 	public function normalize() {
@@ -20,6 +40,19 @@ class Ray {
 		lx *= l;
 		ly *= l;
 		lz *= l;
+	}
+
+	public inline function transform( m : h3d.Matrix ) {
+		var p = new h3d.Vector(px, py, pz);
+		p.transform3x4(m);
+		px = p.x;
+		py = p.y;
+		pz = p.z;
+		var l = new h3d.Vector(lx, ly, lz);
+		l.transform3x3(m);
+		lx = l.x;
+		ly = l.y;
+		lz = l.z;
 	}
 
 	public inline function getPos() {

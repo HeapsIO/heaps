@@ -41,6 +41,7 @@ class App {
 		s3d.addPass(s2d);
 		sevents = new hxd.SceneEvents();
 		sevents.addScene(s2d);
+		sevents.addScene(s3d);
 		loadAssets(function() {
 			initDone = true;
 			init();
@@ -50,7 +51,7 @@ class App {
 			hxd.Key.initialize();
 		});
 	}
-	
+
 	function dispose() {
 		s2d.dispose();
 		s3d.dispose();

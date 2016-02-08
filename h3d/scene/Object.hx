@@ -6,6 +6,7 @@ package h3d.scene;
 	public var FCulled = 4;
 	public var FFollowPosition = 8;
 	public var FLightCameraCenter = 16;
+	public var FAllocated = 32;
 	public inline function toInt() return this;
 }
 
@@ -25,7 +26,8 @@ class Object {
 	public var scaleX(default,set) : Float;
 	public var scaleY(default, set) : Float;
 	public var scaleZ(default,set) : Float;
-	public var visible(get,set) : Bool;
+	public var visible(get, set) : Bool;
+	var allocated(get,set) : Bool;
 
 	/**
 		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
@@ -69,6 +71,7 @@ class Object {
 	}
 
 	inline function get_visible() return (flags & FVisible.toInt()) != 0;
+	inline function get_allocated() return (flags & FAllocated.toInt()) != 0;
 	inline function get_posChanged() return (flags & FPosChanged.toInt()) != 0;
 	inline function get_culled() return (flags & FCulled.toInt()) != 0;
 	inline function get_followPositionOnly() return (flags & FFollowPosition.toInt()) != 0;
@@ -76,6 +79,7 @@ class Object {
 	inline function set_posChanged(b) { if( b ) flags |= FPosChanged.toInt() else flags &= ~FPosChanged.toInt(); return b; }
 	inline function set_culled(b) { if( b ) flags |= FCulled.toInt() else flags &= ~FCulled.toInt(); return b; }
 	inline function set_visible(b) { culled = !b; if( b ) flags |= FVisible.toInt() else flags &= ~FVisible.toInt(); return b; }
+	inline function set_allocated(b) { if( b ) flags |= FAllocated.toInt() else flags &= ~FAllocated.toInt(); return b; }
 	inline function set_followPositionOnly(b) { if( b ) flags |= FFollowPosition.toInt() else flags &= ~FFollowPosition.toInt(); return b; }
 	inline function set_lightCameraCenter(b) { if( b ) flags |= FLightCameraCenter.toInt() else flags &= ~FLightCameraCenter.toInt(); return b; }
 
@@ -235,17 +239,62 @@ class Object {
 			if( p == o ) throw "Recursive addChild";
 			p = p.parent;
 		}
-		if( o.parent != null )
+		if( o.parent != null ) {
+			// prevent calling onDelete
+			var old = o.allocated;
+			o.allocated = false;
 			o.parent.removeChild(o);
-		childs.insert(pos,o);
+			o.allocated = old;
+		}
+		childs.insert(pos, o);
+		if( !allocated && o.allocated )
+			o.onDelete();
 		o.parent = this;
-		o.lastFrame = -1;
 		o.posChanged = true;
+		// ensure that proper alloc/delete is done if we change parent
+		if( allocated ) {
+			if( !o.allocated )
+				o.onAlloc();
+			else
+				o.onParentChangedRec();
+		}
+	}
+
+	function onParentChangedRec() {
+		onParentChanged();
+		for( c in childs )
+			c.onParentChangedRec();
+	}
+
+	// called when we're allocated already but moved in hierarchy
+	function onParentChanged() {
+	}
+
+	// kept for internal init
+	function onAlloc() {
+		allocated = true;
+		for( c in childs )
+			c.onAlloc();
+	}
+
+	// kept for internal cleanup
+	function onDelete() {
+		allocated = false;
+		for( c in childs )
+			c.onDelete();
 	}
 
 	public function removeChild( o : Object ) {
-		if( childs.remove(o) )
+		if( childs.remove(o) ) {
+			if( o.allocated ) o.onDelete();
 			o.parent = null;
+		}
+	}
+
+	function getScene() {
+		var p = this;
+		while( p.parent != null ) p = p.parent;
+		return Std.instance(p, Scene);
 	}
 
 	public inline function isMesh() {
