@@ -3,8 +3,15 @@ import h3d.col.Point;
 
 class Cube extends Polygon {
 
+	var sizeX : Float;
+	var sizeY : Float;
+	var sizeZ : Float;
+
 	public function new( x = 1., y = 1., z = 1. )
 	{
+		this.sizeX = x;
+		this.sizeY = y;
+		this.sizeZ = z;
 		var p = [
 			new Point(0, 0, 0),
 			new Point(x, 0, 0),
@@ -53,6 +60,10 @@ class Cube extends Polygon {
 			z, o, x,
 			z, y, o,
 		];
+	}
+
+	override public function getCollider() : h3d.col.RayCollider {
+		return h3d.col.Bounds.fromValues(translatedX, translatedY, translatedZ, sizeX * scaled, sizeY * scaled, sizeZ * scaled);
 	}
 
 }

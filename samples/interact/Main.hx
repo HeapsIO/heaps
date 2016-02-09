@@ -19,6 +19,7 @@ class Main extends hxd.App {
 
 	var rnd : hxd.Rand;
 	var light : h3d.scene.DirLight;
+	var obj : h3d.scene.Object;
 
 	function initInteract( i : h3d.scene.Interactive, m : h3d.scene.Mesh ) {
 		var beacon = null;
@@ -55,15 +56,15 @@ class Main extends hxd.App {
 		s3d.lightSystem.ambientLight.set(0.74, 0.74, 0.74);
 
 		rnd = new hxd.Rand(5);
-		for(i in 0...6) {
-			var c = new h3d.prim.Sphere(1,64,32);
+		for(i in 0...8) {
+			var c = if( rnd.random(2) == 0 ) new h3d.prim.Cube() else new h3d.prim.Sphere(1,64,32);
 			//c.unindex();
 			c.addNormals();
 			c.addUVs();
 			var m = new h3d.scene.Mesh(c, s3d);
-			m.x = rnd.srand() * 0.8;
-			m.y = rnd.srand() * 0.8;
-			m.scale(0.25 + rnd.rand() * 0.5);
+			m.x = rnd.srand() * 0.9;
+			m.y = rnd.srand() * 0.9;
+			m.scale(0.25 + rnd.rand() * 0.3);
 			m.material.mainPass.enableLights = true;
 			m.material.shadows = true;
 			var c = 0.3 + rnd.rand() * 0.3;
@@ -75,7 +76,7 @@ class Main extends hxd.App {
 		}
 
 		var cache = new h3d.prim.ModelCache();
-		var obj = cache.loadModel(hxd.Res.Model);
+		obj = cache.loadModel(hxd.Res.Model);
 		obj.scale(1 / 20);
 		obj.rotate(0,0,Math.PI / 2);
 		obj.y = 0.2;
@@ -117,6 +118,10 @@ class Main extends hxd.App {
 			pix.remove();
 			pix = null;
 		};
+	}
+
+	override function update(dt:Float) {
+		obj.rotate(0, 0, 0.01 * dt);
 	}
 
 

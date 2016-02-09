@@ -1,7 +1,7 @@
 package h3d.col;
 import hxd.Math;
 
-class Bounds {
+class Bounds implements RayCollider {
 
 	public var xMin : Float;
 	public var xMax : Float;
@@ -40,6 +40,31 @@ class Bounds {
 		if( c < 0 ) c = -c;
 		var rr = a * (xMax - xMin) + b * (yMax - yMin) + c * (zMax - zMin);
 		return dd + rr - p.d*2;
+	}
+
+	public function rayIntersection( r : Ray, ?p : Point ) : Null<Point> {
+		var minTx = (xMin - r.px) / r.lx;
+		var minTy = (yMin - r.py) / r.ly;
+		var minTz = (zMin - r.pz) / r.lz;
+		var maxTx = (xMax - r.px) / r.lx;
+		var maxTy = (yMax - r.py) / r.ly;
+		var maxTz = (zMax - r.pz) / r.lz;
+
+		var realMinTx = Math.min(minTx, maxTx);
+		var realMinTy = Math.min(minTy, maxTy);
+		var realMinTz = Math.min(minTz, maxTz);
+		var realMaxTx = Math.max(minTx, maxTx);
+		var realMaxTy = Math.max(minTy, maxTy);
+		var realMaxTz = Math.max(minTz, maxTz);
+
+		var minmax = Math.min( Math.min(realMaxTx, realMaxTy), realMaxTz);
+		var maxmin = Math.max( Math.max(realMinTx, realMinTy), realMinTz);
+
+		if(minmax < maxmin)	return null;
+
+		if( p == null ) p = new Point();
+		p.set(r.px + maxmin * r.lx , r.py + maxmin * r.ly, r.pz + maxmin * r.lz);
+		return p;
 	}
 
 	/**
