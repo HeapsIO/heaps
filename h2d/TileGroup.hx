@@ -339,9 +339,12 @@ class TileGroup extends Drawable {
 		content.clear();
 	}
 
+	/**
+		If you want to add tiles after the GPU memory has been allocated (when the tilegroup with sync/displayed),
+		make sure to call invalidate() first to force a refresh of your data.
+	**/
 	public function invalidate() {
-		if( content.buffer!=null )
-			content.buffer.dispose();
+		content.dispose();
 	}
 
 	/**
@@ -386,9 +389,11 @@ class TileGroup extends Drawable {
 
 	@:allow(h2d)
 	function drawWith( ctx:RenderContext, obj : Drawable ) {
+		var max = content.triCount();
+		if( max == 0 )
+			return;
 		ctx.beginDrawObject(obj, tile.getTexture());
 		var min = rangeMin < 0 ? 0 : rangeMin * 2;
-		var max = content.triCount();
 		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;
 		content.doRender(ctx.engine, min, max - min);
 	}

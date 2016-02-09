@@ -105,9 +105,12 @@ class ScaleGrid extends h2d.TileGroup {
 		content.addColor(bw, bh, curColor, t);
 	}
 
-	override function draw( ctx : RenderContext ) {
-		if( content.isEmpty() ) updateContent();
-		super.draw(ctx);
+	override function sync( ctx : RenderContext ) {
+		if( content.isEmpty() ) {
+			content.dispose();
+			updateContent();
+		}
+		super.sync(ctx);
 	}
 
 }
