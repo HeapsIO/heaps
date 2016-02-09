@@ -13,6 +13,11 @@ class Primitive {
 		return 0;
 	}
 
+	public function getCollider() : h3d.col.RayCollider {
+		throw "not implemented";
+		return null;
+	}
+
 	public function getBounds() : h3d.col.Bounds {
 		throw "not implemented";
 		return null;

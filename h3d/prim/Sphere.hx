@@ -3,10 +3,12 @@ import h3d.col.Point;
 
 class Sphere extends Polygon {
 
+	var ray : Float;
 	var segsH : Int;
 	var segsW : Int;
 
-	public function new( segsW = 8, segsH = 6 ) {
+	public function new( ray = 1., segsW = 8, segsH = 6 ) {
+		this.ray = ray;
 		this.segsH = segsH;
 		this.segsW = segsW;
 		var t = 0., dt = Math.PI / segsH, dp = Math.PI * 2 / segsW;
@@ -20,7 +22,7 @@ class Sphere extends Polygon {
 				var px = st * Math.cos(p);
 				var py = st * Math.sin(p);
 				var i = pts.length;
-				pts.push(new Point(px, py, pz));
+				pts.push(new Point(px * ray, py * ray, pz * ray));
 				p += dp;
 				if( x != segsW ) {
 					idx.push(i);
@@ -36,6 +38,10 @@ class Sphere extends Polygon {
 		for( x in 0...segsW + 1 )
 			pts.push(new Point(0, 0, -1));
 		super(pts, idx);
+	}
+
+	override public function getCollider() : h3d.col.RayCollider {
+		return new h3d.col.Sphere(translatedX, translatedY, translatedZ, ray * scaled);
 	}
 
 	override function addNormals() {

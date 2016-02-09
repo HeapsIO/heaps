@@ -8,6 +8,10 @@ class Polygon extends Primitive {
 	public var uvs : Array<UV>;
 	public var idx : hxd.IndexBuffer;
 	public var colors : Array<Point>;
+	var scaled = 1.;
+	var translatedX = 0.;
+	var translatedY = 0.;
+	var translatedZ = 0.;
 
 	public function new( points, ?idx ) {
 		this.points = points;
@@ -96,6 +100,9 @@ class Polygon extends Primitive {
 	}
 
 	public function translate( dx, dy, dz ) {
+		translatedX += dx;
+		translatedY += dy;
+		translatedZ += dz;
 		for( p in points ) {
 			p.x += dx;
 			p.y += dy;
@@ -104,6 +111,7 @@ class Polygon extends Primitive {
 	}
 
 	public function scale( s : Float ) {
+		scaled *= s;
 		for( p in points ) {
 			p.x *= s;
 			p.y *= s;
@@ -169,5 +177,5 @@ class Polygon extends Primitive {
 	override function vertexCount() {
 		return points.length;
 	}
-	
+
 }

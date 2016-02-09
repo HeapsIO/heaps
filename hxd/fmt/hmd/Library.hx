@@ -248,7 +248,7 @@ class Library {
 	function makePrimitive( id : Int ) {
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
-		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, entry);
+		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this);
 		cachedPrimitives[id] = p;
 		return p;
 	}

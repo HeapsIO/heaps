@@ -1,0 +1,7 @@
+-swf interact.swf
+-swf-header 800:600:60:FFFFFF
+-swf-version 11.8
+-main Main
+-lib heaps
+-dce full
+-D resourcesPath=../skin/res

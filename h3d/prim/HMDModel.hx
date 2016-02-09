@@ -6,13 +6,14 @@ class HMDModel extends MeshPrimitive {
 	var dataPosition : Int;
 	var indexCount : Int;
 	var indexesTriPos : Array<Int>;
-	var entry : hxd.fs.FileEntry;
+	var lib : hxd.fmt.hmd.Library;
 	var curMaterial : Int;
+	var collider : h3d.col.RayCollider;
 
-	public function new(data, dataPos, entry) {
+	public function new(data, dataPos, lib) {
 		this.data = data;
 		this.dataPosition = dataPos;
-		this.entry = entry;
+		this.lib = lib;
 	}
 
 	override function triCount() {
@@ -35,6 +36,7 @@ class HMDModel extends MeshPrimitive {
 		dispose();
 		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride);
 
+		var entry = @:privateAccess lib.entry;
 		entry.open();
 
 		entry.skip(dataPosition + data.vertexPosition);
@@ -76,6 +78,18 @@ class HMDModel extends MeshPrimitive {
 			alloc(engine);
 		engine.renderMultiBuffers(getBuffers(engine), indexes, indexesTriPos[curMaterial], Std.int(data.indexCounts[curMaterial]/3));
 		curMaterial = -1;
+	}
+
+	override function getCollider() {
+		if( collider != null )
+			return collider;
+
+		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
+		var poly = new h3d.col.Polygon();
+		poly.addBuffers(pos.vertexes, pos.indexes);
+		var sphere = data.bounds.toSphere();
+		collider = new h3d.col.RayCollider.OptimizedCollider(sphere, poly);
+		return collider;
 	}
 
 }
