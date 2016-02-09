@@ -192,6 +192,15 @@ class Object {
 		return b;
 	}
 
+	public function getMeshes( ?out : Array<Mesh> ) {
+		if( out == null ) out = [];
+		var m = Std.instance(this, Mesh);
+		if( m != null ) out.push(m);
+		for( c in childs )
+			c.getMeshes(out);
+		return out;
+	}
+
 	public function getObjectByName( name : String ) {
 		if( this.name == name )
 			return this;
