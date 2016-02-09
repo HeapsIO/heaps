@@ -69,6 +69,49 @@ class HMDModel extends MeshPrimitive {
 		}
 	}
 
+	public function recomputeNormals( ?name : String ) {
+
+		if( name == null ) name = "normal";
+
+		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
+		var ids = new Array();
+		var pts : Array<h3d.col.Point> = [];
+
+		for( i in 0...data.vertexCount ) {
+			var added = false;
+			var pt = new h3d.col.Point(pos.vertexes[i * 3], pos.vertexes[i * 3 + 1], pos.vertexes[i * 3 + 2]);
+			for(i in 0...pts.length) {
+				var p = pts[i];
+				if(p.x == pt.x && p.y == pt.y && p.z == pt.z) {
+					ids.push(i);
+					added = true;
+					break;
+				}
+			}
+			if( !added ) {
+				ids.push(pts.length);
+				pts.push(pt);
+			}
+		}
+
+		var idx = new hxd.IndexBuffer();
+		for( i in pos.indexes )
+			idx.push(ids[i]);
+
+		var pol = new Polygon(pts, idx);
+		pol.addNormals();
+
+		var v = new hxd.FloatBuffer();
+		for( i in 0...data.vertexCount ) {
+			var n = pol.normals[ids[i]];
+			v.push(n.x);
+			v.push(n.y);
+			v.push(n.z);
+		}
+		var buf = h3d.Buffer.ofFloats(v, 3);
+		addBuffer(name, buf, 0);
+	}
+
 	override function render( engine : h3d.Engine ) {
 		if( curMaterial < 0 ) {
 			super.render(engine);
