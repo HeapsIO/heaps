@@ -11,6 +11,7 @@ class Skin extends hxsl.Shader {
 			var indexes : Bytes4;
 		};
 
+		var relativePosition : Vec3;
 		var transformedPosition : Vec3;
 		var transformedNormal : Vec3;
 
@@ -22,9 +23,9 @@ class Skin extends hxsl.Shader {
 			error("TODO : access bonesMatrixes as vertex array");
 			#else
 			transformedPosition =
-				(input.position * bonesMatrixes[input.indexes.x]) * input.weights.x +
-				(input.position * bonesMatrixes[input.indexes.y]) * input.weights.y +
-				(input.position * bonesMatrixes[input.indexes.z]) * input.weights.z;
+				(relativePosition * bonesMatrixes[input.indexes.x]) * input.weights.x +
+				(relativePosition * bonesMatrixes[input.indexes.y]) * input.weights.y +
+				(relativePosition * bonesMatrixes[input.indexes.z]) * input.weights.z;
 			transformedNormal = normalize(
 				(input.normal * mat3(bonesMatrixes[input.indexes.x])) * input.weights.x +
 				(input.normal * mat3(bonesMatrixes[input.indexes.y])) * input.weights.y +
