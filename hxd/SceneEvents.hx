@@ -200,28 +200,27 @@ class SceneEvents {
 
 	public function checkEvents() {
 		var old = pendingEvents;
-		if( old.length == 0 )
-			return;
-
-		pendingEvents = [];
 		var checkMoved = false;
-		for( e in old ) {
-			var ox = e.relX, oy = e.relY;
-			if( e.kind == EMove ) {
-				checkMoved = true;
-				mouseX = e.relX;
-				mouseY = e.relY;
-			}
+		if( old.length > 0 ) {
+			pendingEvents = [];
+			for( e in old ) {
+				var ox = e.relX, oy = e.relY;
+				if( e.kind == EMove ) {
+					checkMoved = true;
+					mouseX = e.relX;
+					mouseY = e.relY;
+				}
 
-			if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
-				currentDrag.f(e);
-				e.relX = ox;
-				e.relY = oy;
-				if( e.cancel )
-					continue;
-			}
+				if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
+					currentDrag.f(e);
+					e.relX = ox;
+					e.relY = oy;
+					if( e.cancel )
+						continue;
+				}
 
-			emitEvent(e);
+				emitEvent(e);
+			}
 		}
 
 		if( !checkMoved && currentDrag == null ) {
