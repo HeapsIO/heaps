@@ -16,6 +16,7 @@ class Cursor implements hxd.net.NetworkSerializable {
 	}
 
 	function set_x( v : Float ) {
+		if( v == x ) return v;
 		if( bmp != null ) bmp.x = v;
 		return this.x = v;
 	}
@@ -39,6 +40,24 @@ class Cursor implements hxd.net.NetworkSerializable {
 		bmp.drawCircle(0, 0, 5);
 
 		enableReplication = true;
+
+		var i = new h2d.Interactive(10, 10, bmp);
+		i.x = i.y = -5;
+		i.isEllipse = true;
+		i.onClick = function(_) blink( 2 + Math.random() * 2 );
+	}
+
+	@:rpc function blink( s : Float ) {
+		bmp.scale(s);
+		main.event.waitUntil(function(dt) {
+			bmp.scaleX *= Math.pow(0.9, dt);
+			bmp.scaleY *= Math.pow(0.9, dt);
+			if( bmp.scaleX < 1 ) {
+				bmp.scaleX = bmp.scaleY = 1;
+				return true;
+			}
+			return false;
+		});
 	}
 
 	public function alive() {
@@ -56,9 +75,11 @@ class Main extends hxd.App {
 	static var PORT = 6676;
 
 	public var host : hxd.net.LocalHost;
+	public var event : hxd.WaitEvent;
 	var cursor : Cursor;
 
 	override function init() {
+		event = new hxd.WaitEvent();
 		host = new hxd.net.LocalHost();
 		host.setLogger(function(msg) log(msg));
 		try {
@@ -108,6 +129,7 @@ class Main extends hxd.App {
 	}
 
 	override function update(dt:Float) {
+		event.update(dt);
 		if( cursor != null ) {
 			cursor.x = s2d.mouseX;
 			cursor.y = s2d.mouseY;

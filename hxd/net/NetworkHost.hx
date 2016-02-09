@@ -56,6 +56,16 @@ class NetworkClient {
 				if( o == null ) break;
 			}
 			host.onSync(obj);
+		case NetworkHost.RPC:
+			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
+			var fid = ctx.getByte();
+			if( !o.__host.isAuth ) {
+				var old = o.__host;
+				o.__host = null;
+				o.networkRPC(ctx, fid);
+				o.__host = old;
+			} else
+				o.networkRPC(ctx, fid);
 		case x:
 			error("Unknown message code " + x);
 		}
@@ -67,11 +77,11 @@ class NetworkClient {
 @:allow(hxd.net.NetworkClient)
 class NetworkHost {
 
-	static inline var SYNC = 0;
-	static inline var REG = 1;
-	static inline var UNREG = 2;
-	static inline var FULLSYNC = 3;
-	static inline var EOF = 0xFF;
+	static inline var SYNC 		= 1;
+	static inline var REG 		= 2;
+	static inline var UNREG 	= 3;
+	static inline var FULLSYNC 	= 4;
+	static inline var RPC 		= 5;
 
 	public static var current : NetworkHost = null;
 
@@ -81,6 +91,7 @@ class NetworkHost {
 	var clients : Array<NetworkClient>;
 	var isAlive = false;
 	var logger : String -> Void;
+	var hasData = false;
 
 	public function new() {
 		current = this;
@@ -93,6 +104,19 @@ class NetworkHost {
 	inline function mark(o:NetworkSerializable) {
 		o.__next = markHead;
 		markHead = o;
+	}
+
+	public function beginRPC(o:NetworkSerializable, id:Int) {
+		flushProps();
+		hasData = true;
+		if( ctx.refs[o.__uid] == null )
+			throw "Can't call RPC on an object not previously transferred";
+		ctx.addByte(RPC);
+		ctx.addInt(o.__uid);
+		ctx.addByte(id);
+		if( logger != null )
+			logger("RPC " + o +"#"+id);
+		return ctx;
 	}
 
 	public function makeAlive() {
@@ -137,9 +161,8 @@ class NetworkHost {
 		trace("SYNC " + obj);
 	}
 
-	public function flush() {
+	function flushProps() {
 		var o = markHead;
-		var hasData = false;
 		while( o != null ) {
 			if( o.__bits != 0 ) {
 //				if( logger != null )
@@ -152,6 +175,10 @@ class NetworkHost {
 			o = o.__next;
 		}
 		markHead = null;
+	}
+
+	public function flush() {
+		flushProps();
 		if( !hasData )
 			return;
 		@:privateAccess {
@@ -159,6 +186,7 @@ class NetworkHost {
 			ctx.out = new haxe.io.BytesBuffer();
 			send(bytes);
 		}
+		hasData = false;
 	}
 
 	public static function enableReplication( o : NetworkSerializable, b : Bool ) {

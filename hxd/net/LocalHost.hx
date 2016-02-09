@@ -22,6 +22,8 @@ class LocalClient extends NetworkClient {
 
 	function readData() {
 		if( messageLength < 0 ) {
+			if( socket.input.available < 4 )
+				return;
 			messageLength = socket.input.readInt32();
 			if( pendingBuffer == null || pendingBuffer.length < messageLength )
 				pendingBuffer = haxe.io.Bytes.alloc(messageLength);
@@ -34,10 +36,12 @@ class LocalClient extends NetworkClient {
 			while( pendingPos < messageLength )
 				pendingPos = processMessage(pendingBuffer, pendingPos);
 			messageLength = -1;
+			readData();
 		}
 	}
 
 	override function send( bytes : haxe.io.Bytes ) {
+		socket.out.wait();
 		socket.out.writeInt32(bytes.length);
 		socket.out.write(bytes);
 		socket.out.flush();

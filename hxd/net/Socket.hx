@@ -20,6 +20,16 @@ private class SocketOutput extends haxe.io.Output {
 
 }
 
+private class SocketInput extends haxe.io.Input {
+
+	public var available(get, never) : Int;
+
+	function get_available() {
+		return 0;
+	}
+
+}
+
 #if flash
 private class FlashSocketOutput extends SocketOutput {
 	var s : flash.net.Socket;
@@ -67,12 +77,16 @@ private class FlashSocketOutput extends SocketOutput {
 
 }
 
-private class FlashSocketInput extends haxe.io.Input {
+private class FlashSocketInput extends SocketInput {
 
 	var sock : flash.net.Socket;
 
 	public function new(s) {
 		sock = s;
+	}
+
+	override function get_available() {
+		return sock.bytesAvailable;
 	}
 
 	override function readBytes( bytes : haxe.io.Bytes, pos : Int, len : Int ) {
@@ -104,7 +118,7 @@ class Socket {
 	var serv : flash.net.ServerSocket;
 	#end
 	public var out(default, null) : SocketOutput;
-	public var input(default, null) : haxe.io.Input;
+	public var input(default, null) : SocketInput;
 	public var timeout(default, set) : Null<Float>;
 
 	public function new() {

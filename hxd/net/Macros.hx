@@ -576,26 +576,37 @@ class Macros {
 			return null;
 		var fields = Context.getBuildFields();
 		var toSerialize = [];
+		var rpc = [];
 
 		if( !Context.defined("display") )
 		for( f in fields ) {
 			if( f.meta == null ) continue;
 			var m = null;
-			for( meta in f.meta )
+			for( meta in f.meta ) {
 				if( meta.name == ":s" ) {
 					toSerialize.push({ f : f, m : m });
 					break;
 				}
+				if( meta.name == ":rpc" ) {
+					rpc.push({ f : f, m:m });
+					break;
+				}
+			}
 		}
 
 		var sup = cl.superClass;
 		var isSubSer = sup != null && isSerializable(sup.t);
-		var startFID = 0;
-		if( isSubSer )
+		var startFID = 0, rpcID = 0;
+		if( isSubSer ) {
 			startFID = switch( sup.t.get().meta.extract(":fieldID")[0].params[0].expr ) {
 			case EConst(CInt(i)): Std.parseInt(i);
 			default: throw "assert";
 			}
+			rpcID = switch( sup.t.get().meta.extract(":rpcID")[0].params[0].expr ) {
+			case EConst(CInt(i)): Std.parseInt(i);
+			default: throw "assert";
+			}
+		}
 
 		var pos = Context.currentPos();
 		if( !isSubSer ) {
@@ -700,13 +711,54 @@ class Macros {
 			flushExpr.push(macro if( b & (1 << $v{ bitID } ) != 0 ) hxd.net.Macros.serializeValue(ctx, this.$fname));
 			syncExpr.push(macro if( __bits & (1 << $v{ bitID } ) != 0 ) hxd.net.Macros.unserializeValue(ctx, this.$fname));
 		}
-		if( startFID > 32 ) Context.error("Too many serializable fields", pos);
-		cl.meta.add(":fieldID", [macro $v { startFID } ], pos);
+
+		// BUILD RPC
+		var firstRPCID = rpcID;
+		var rpcCases = [];
+		for( r in rpc ) {
+			switch( r.f.kind ) {
+			case FFun(f):
+				var id = rpcID++;
+				if( f.ret != null && haxe.macro.ComplexTypeTools.toString(f.ret) != "Void" )
+					Context.error("RPC function cannot return a value", r.f.pos);
+				if( f.ret == null )
+					f.ret = macro : Void;
+				for( a in f.args )
+					if( a.type == null )
+						Context.error("Type required for rpc function argument " + r.f.name+"(" + a.name+")", r.f.pos);
+				var expr = f.expr;
+				f.expr = macro {
+					inline function __dispatch() {
+						var __ctx = __host.beginRPC(this,$v{id});
+						$b{[
+							for( a in f.args )
+								macro hxd.net.Macros.serializeValue(__ctx,$i{a.name})
+						] };
+					}
+					if( __host != null && !__host.isAuth ) {
+						__dispatch();
+						return;
+					}
+					$expr;
+					if( __host != null ) __dispatch();
+				};
+				var p = r.f.pos;
+				var exprs = [{ expr : EVars([for( a in f.args ) { name : a.name, type : a.type, expr : null }]), pos : p }];
+				for( a in f.args )
+					exprs.push(macro hxd.net.Macros.unserializeValue(__ctx,$i{a.name}));
+				exprs.push( { expr : ECall( { expr : EField({ expr : EConst(CIdent("this")), pos:p }, r.f.name), pos : p }, [for( a in f.args ) { expr : EConst(CIdent(a.name)), pos : p } ]), pos : p } );
+				rpcCases.push({ values : [{ expr : EConst(CInt(""+id)), pos : p }], guard : null, expr : { expr : EBlock(exprs), pos : p } });
+			default:
+				Context.error("Cannot use @:rpc on non function", r.f.pos);
+			}
+		}
+
+		// Add network methods
+		var access = [APublic];
+		if( isSubSer ) access.push(AOverride);
 
 		if( fields.length != 0 || !isSubSer ) {
-			var access = [APublic];
 			if( isSubSer ) {
-				access.push(AOverride);
 				flushExpr.unshift(macro super.networkFlush(ctx));
 				syncExpr.unshift(macro super.networkSync(ctx));
 			} else {
@@ -738,8 +790,30 @@ class Macros {
 					expr : macro @:privateAccess $b{syncExpr},
 				}),
 			});
-
 		}
+
+		if( rpc.length != 0 || !isSubSer ) {
+			var swExpr = { expr : ESwitch( { expr : EConst(CIdent("__id")), pos : pos }, rpcCases, macro throw "Unknown RPC identifier " + __id), pos : pos };
+			fields.push({
+				name : "networkRPC",
+				pos : pos,
+				access : access,
+				meta : noComplete,
+				kind : FFun({
+					args : [ { name : "__ctx", type : macro : hxd.net.Serializer }, { name : "__id", type : macro : Int } ],
+					ret : null,
+					expr : if( isSubSer && firstRPCID > 0 ) macro { if( __id < $v { firstRPCID } ) { super.networkRPC(__ctx, __id); return; } $swExpr; } else swExpr,
+				}),
+			});
+		}
+
+
+		// add metadata
+
+		if( startFID > 32 ) Context.error("Too many serializable fields", pos);
+		if( rpcID > 255 ) Context.error("Too many rpc calls", pos);
+		cl.meta.add(":fieldID", [macro $v { startFID } ], pos);
+		cl.meta.add(":rpcID", [macro $v { rpcID } ], pos);
 
 		return fields;
 	}
