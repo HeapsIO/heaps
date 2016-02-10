@@ -4,6 +4,25 @@ import haxe.macro.Type;
 import haxe.macro.Context;
 using haxe.macro.TypeTools;
 
+enum RpcMode {
+	/*
+		When called on the client: will forward the call on the server, but not execute locally.
+		When called on the server: will forward the call to the clients (and force its execution), then execute.
+		This is the default behavior.
+	*/
+	All;
+	/*
+		When called on the server: will forward the call to the clients, but not execute locally.
+		When called on the client: will execute locally.
+	*/
+	Client;
+	/*
+		When called on the client: will forward the call the server, but not execute locally.
+		When called on the server: will execute locally.
+	*/
+	Server;
+}
+
 enum PropType {
 	PInt;
 	PFloat;
@@ -337,10 +356,9 @@ class Macros {
 		if( !Context.defined("display") )
 		for( f in fields ) {
 			if( f.meta == null ) continue;
-			var m = null;
 			for( meta in f.meta )
 				if( meta.name == ":s" ) {
-					toSerialize.push({ f : f, m : m });
+					toSerialize.push({ f : f, m : meta });
 					break;
 				}
 		}
@@ -570,6 +588,26 @@ class Macros {
 		return macro : hxd.net.NetworkSerializable.Proxy<$t>;
 	}
 
+
+	static var hasRetVal : Bool;
+	static function hasReturnVal( e : Expr ) {
+		hasRetVal = false;
+		checkRetVal(e);
+		return hasRetVal;
+	}
+
+	static function checkRetVal( e : Expr ) {
+		if( hasRetVal )
+			return;
+		switch( e.expr ) {
+		case EReturn(e):
+			if( e != null )
+				hasRetVal = true;
+		default:
+			haxe.macro.ExprTools.iter(e, checkRetVal);
+		}
+	}
+
 	public static function buildNetworkSerializable() {
 		var cl = Context.getLocalClass().get();
 		if( cl.isInterface )
@@ -581,14 +619,22 @@ class Macros {
 		if( !Context.defined("display") )
 		for( f in fields ) {
 			if( f.meta == null ) continue;
-			var m = null;
 			for( meta in f.meta ) {
 				if( meta.name == ":s" ) {
-					toSerialize.push({ f : f, m : m });
+					toSerialize.push({ f : f, m : meta });
 					break;
 				}
 				if( meta.name == ":rpc" ) {
-					rpc.push({ f : f, m:m });
+					var mode : RpcMode = All;
+					if( meta.params.length != 0 )
+						switch( meta.params[0].expr ) {
+						case EConst(CIdent("all")):
+						case EConst(CIdent("client")): mode = Client;
+						case EConst(CIdent("server")): mode = Server;
+						default:
+							Context.error("Unexpected Rpc mode : should be all|client|server", meta.params[0].pos);
+						}
+					rpc.push({ f : f, mode:mode });
 					break;
 				}
 			}
@@ -626,6 +672,9 @@ class Macros {
 					hxd.net.NetworkHost.enableReplication(this, b);
 					return b;
 				}
+				public inline function networkCancelProperty( props : hxd.net.NetworkSerializable.Property ) {
+					__bits &= ~props.toInt();
+				}
 			}).fields);
 		}
 
@@ -634,6 +683,7 @@ class Macros {
 		var noComplete : Metadata = [ { name : ":noCompletion", pos : pos } ];
 
 		for( f in toSerialize ) {
+			var pos = f.f.pos;
 			var fname = f.f.name;
 			var bitID = startFID++;
 			var ftype : ComplexType;
@@ -643,7 +693,7 @@ class Macros {
 				ftype = t;
 				proxy = needProxy(t, e);
 				if( proxy ) {
-					if( ftype == null ) Context.error("Type required", f.f.pos);
+					if( ftype == null ) Context.error("Type required", pos);
 					ftype = toProxy(ftype);
 				}
 				f.f.kind = FProp("default", "set", ftype, e);
@@ -651,13 +701,13 @@ class Macros {
 				ftype = t;
 				proxy = needProxy(t, e);
 				if( proxy ) {
-					if( ftype == null ) Context.error("Type required", f.f.pos);
+					if( ftype == null ) Context.error("Type required", pos);
 					ftype = toProxy(ftype);
 				}
 				if( set == "null" )
-					Context.warning("Null setter is not respected when using NetworkSerializable", f.f.pos);
+					Context.warning("Null setter is not respected when using NetworkSerializable", pos);
 				else if( set != "default" && set != "set" )
-					Context.error("Invalid setter", f.f.pos);
+					Context.error("Invalid setter", pos);
 				f.f.kind = FProp(get,"set", ftype, e);
 			default:
 				throw "assert";
@@ -701,7 +751,7 @@ class Macros {
 			if( !found )
 				fields.push({
 					name : "set_" + fname,
-					pos : f.f.pos,
+					pos : pos,
 					kind : FFun({
 						args : [ { name : "v", type : ftype } ],
 						expr : macro { $setExpr; return v; },
@@ -709,7 +759,25 @@ class Macros {
 					}),
 				});
 			flushExpr.push(macro if( b & (1 << $v{ bitID } ) != 0 ) hxd.net.Macros.serializeValue(ctx, this.$fname));
-			syncExpr.push(macro if( __bits & (1 << $v{ bitID } ) != 0 ) hxd.net.Macros.unserializeValue(ctx, this.$fname));
+			syncExpr.push(macro if( __bits & (1 << $v { bitID } ) != 0 ) hxd.net.Macros.unserializeValue(ctx, this.$fname));
+
+			var prop = "networkProp" + fname.charAt(0).toUpperCase() + fname.substr(1);
+			fields.push({
+				name : prop,
+				pos : pos,
+				kind : FProp("get", "never", macro : hxd.net.NetworkSerializable.Property),
+				access : [APublic],
+			});
+			fields.push({
+				name : "get_"+prop,
+				pos : pos,
+				kind : FFun( {
+					args : [],
+					expr : macro return new hxd.net.NetworkSerializable.Property(1 << $v{bitID}),
+					ret : null,
+				}),
+				access : [AInline],
+			});
 		}
 
 		// BUILD RPC
@@ -719,34 +787,79 @@ class Macros {
 			switch( r.f.kind ) {
 			case FFun(f):
 				var id = rpcID++;
-				if( f.ret != null && haxe.macro.ComplexTypeTools.toString(f.ret) != "Void" )
-					Context.error("RPC function cannot return a value", r.f.pos);
-				if( f.ret == null )
-					f.ret = macro : Void;
+				var ret = f.ret;
+				f.ret = macro : Void;
 				for( a in f.args )
 					if( a.type == null )
 						Context.error("Type required for rpc function argument " + r.f.name+"(" + a.name+")", r.f.pos);
+
+				var hasReturnVal = hasReturnVal(f.expr);
+
 				var expr = f.expr;
-				f.expr = macro {
-					inline function __dispatch() {
-						var __ctx = __host.beginRPC(this,$v{id});
-						$b{[
-							for( a in f.args )
-								macro hxd.net.Macros.serializeValue(__ctx,$i{a.name})
-						] };
+				var resultCall = macro null;
+
+				if( hasReturnVal ) {
+					expr = macro {
+						inline function __execute() ${f.expr};
+						onResult(__execute());
 					}
-					if( __host != null && !__host.isAuth ) {
-						__dispatch();
-						return;
+					resultCall = macro function(__ctx) {
+						var v = cast null;
+						if( false ) onResult(v); // type
+						hxd.net.Macros.unserializeValue(__ctx, v);
+						onResult(v);
+					};
+				}
+
+				var forwardRPC = macro {
+					var __ctx = __host.beginRPC(this,$v{id},$resultCall);
+					$b{[
+						for( a in f.args )
+							macro hxd.net.Macros.serializeValue(__ctx,$i{a.name})
+					]};
+				};
+
+				f.expr = switch( r.mode ) {
+				case All:
+					macro {
+						if( __host != null ) {
+							$forwardRPC;
+							if( !__host.isAuth ) return;
+						}
+						$expr;
 					}
-					$expr;
-					if( __host != null ) __dispatch();
+				case Client:
+					macro {
+						if( __host != null && __host.isAuth ) {
+							$forwardRPC;
+							return;
+						}
+						$expr;
+					}
+				case Server:
+					macro {
+						if( __host != null && !__host.isAuth ) {
+							$forwardRPC;
+							return;
+						}
+						$expr;
+					}
 				};
 				var p = r.f.pos;
 				var exprs = [{ expr : EVars([for( a in f.args ) { name : a.name, type : a.type, expr : null }]), pos : p }];
 				for( a in f.args )
-					exprs.push(macro hxd.net.Macros.unserializeValue(__ctx,$i{a.name}));
-				exprs.push( { expr : ECall( { expr : EField({ expr : EConst(CIdent("this")), pos:p }, r.f.name), pos : p }, [for( a in f.args ) { expr : EConst(CIdent(a.name)), pos : p } ]), pos : p } );
+					exprs.push(macro hxd.net.Macros.unserializeValue(__ctx, $i { a.name } ));
+
+				var cargs = [for( a in f.args ) { expr : EConst(CIdent(a.name)), pos : p } ];
+				if( hasReturnVal ) {
+					f.args.push( { name : "onResult", type : ret == null ? null : TFunction([ret], macro:Void) } );
+					cargs.push(macro function(result) {
+						@:privateAccess __clientResult.beginRPCResult();
+						hxd.net.Macros.serializeValue(__ctx, result);
+					});
+				}
+
+				exprs.push( { expr : ECall( { expr : EField({ expr : EConst(CIdent("this")), pos:p }, r.f.name), pos : p }, cargs), pos : p } );
 				rpcCases.push({ values : [{ expr : EConst(CInt(""+id)), pos : p }], guard : null, expr : { expr : EBlock(exprs), pos : p } });
 			default:
 				Context.error("Cannot use @:rpc on non function", r.f.pos);
@@ -800,9 +913,9 @@ class Macros {
 				access : access,
 				meta : noComplete,
 				kind : FFun({
-					args : [ { name : "__ctx", type : macro : hxd.net.Serializer }, { name : "__id", type : macro : Int } ],
+					args : [ { name : "__ctx", type : macro : hxd.net.Serializer }, { name : "__id", type : macro : Int }, { name : "__clientResult", type : macro : hxd.net.NetworkHost.NetworkClient } ],
 					ret : null,
-					expr : if( isSubSer && firstRPCID > 0 ) macro { if( __id < $v { firstRPCID } ) { super.networkRPC(__ctx, __id); return; } $swExpr; } else swExpr,
+					expr : if( isSubSer && firstRPCID > 0 ) macro { if( __id < $v { firstRPCID } ) { super.networkRPC(__ctx, __id, __clientResult); return; } $swExpr; } else swExpr,
 				}),
 			});
 		}

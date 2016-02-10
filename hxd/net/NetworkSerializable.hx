@@ -17,7 +17,7 @@ interface NetworkSerializable extends Serializable extends ProxyHost {
 	public var enableReplication(get, set) : Bool;
 	public function networkFlush( ctx : Serializer ) : Void;
 	public function networkSync( ctx : Serializer ) : Void;
-	public function networkRPC( ctx : Serializer, rpcID : Int ) : Void;
+	public function networkRPC( ctx : Serializer, rpcID : Int, clientResult : NetworkHost.NetworkClient ) : Void;
 	public function alive() : Void;
 }
 
@@ -41,4 +41,18 @@ class BaseProxy implements ProxyHost implements ProxyChild {
 	public inline function unbindHost() {
 		this.obj = null;
 	}
+}
+
+abstract Property(Int) {
+
+	public inline function new(x:Int) {
+		this = x;
+	}
+
+	public inline function toInt() {
+		return this;
+	}
+
+	@:op(a|b) inline function opOr(a:Property) return new Property(this | a.toInt());
+
 }

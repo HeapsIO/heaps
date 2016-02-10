@@ -3,12 +3,13 @@ package hxd.net;
 class NetworkClient {
 
 	var host : NetworkHost;
+	var resultID : Int;
 
 	public function new(h) {
 		this.host = h;
 	}
 
-	function send(bytes : haxe.io.Bytes) {
+	public function send(bytes : haxe.io.Bytes) {
 	}
 
 	public function fullSync( obj : Serializable ) {
@@ -62,14 +63,48 @@ class NetworkClient {
 			if( !o.__host.isAuth ) {
 				var old = o.__host;
 				o.__host = null;
-				o.networkRPC(ctx, fid);
+				o.networkRPC(ctx, fid, this);
 				o.__host = old;
 			} else
-				o.networkRPC(ctx, fid);
+				o.networkRPC(ctx, fid, this);
+		case NetworkHost.RPC_WITH_RESULT:
+
+			var old = resultID;
+			resultID = ctx.getInt();
+			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
+			var fid = ctx.getByte();
+
+			if( !o.__host.isAuth ) {
+				var old = o.__host;
+				o.__host = null;
+				o.networkRPC(ctx, fid, this);
+				o.__host = old;
+			} else
+				o.networkRPC(ctx, fid, this);
+
+			host.doSend();
+			host.targetClient = null;
+			resultID = old;
+
+		case NetworkHost.RPC_RESULT:
+
+			var resultID = ctx.getInt();
+			var callb = host.rpcWaits.get(resultID);
+			host.rpcWaits.remove(resultID);
+			callb(ctx);
+
 		case x:
 			error("Unknown message code " + x);
 		}
 		return @:privateAccess ctx.inPos;
+	}
+
+	function beginRPCResult() {
+		var ctx = host.ctx;
+		host.flush();
+		host.targetClient = this;
+		ctx.addByte(NetworkHost.RPC_RESULT);
+		ctx.addInt(resultID);
 	}
 
 }
@@ -82,6 +117,8 @@ class NetworkHost {
 	static inline var UNREG 	= 3;
 	static inline var FULLSYNC 	= 4;
 	static inline var RPC 		= 5;
+	static inline var RPC_WITH_RESULT = 6;
+	static inline var RPC_RESULT = 7;
 
 	public static var current : NetworkHost = null;
 
@@ -92,6 +129,10 @@ class NetworkHost {
 	var isAlive = false;
 	var logger : String -> Void;
 	var hasData = false;
+	var rpcUID = Std.random(0x1000000);
+	var rpcWaits = new Map<Int,Serializer->Void>();
+
+	var targetClient : NetworkClient;
 
 	public function new() {
 		current = this;
@@ -106,17 +147,32 @@ class NetworkHost {
 		markHead = o;
 	}
 
-	public function beginRPC(o:NetworkSerializable, id:Int) {
+	public function beginRPC(o:NetworkSerializable, id:Int, onResult:Serializer->Void) {
 		flushProps();
 		hasData = true;
 		if( ctx.refs[o.__uid] == null )
 			throw "Can't call RPC on an object not previously transferred";
-		ctx.addByte(RPC);
+		if( onResult != null ) {
+			var id = rpcUID++;
+			ctx.addByte(RPC_WITH_RESULT);
+			ctx.addInt(id);
+			rpcWaits.set(id, onResult);
+		} else
+			ctx.addByte(RPC);
 		ctx.addInt(o.__uid);
 		ctx.addByte(id);
 		if( logger != null )
-			logger("RPC " + o +"#"+id);
+			logger("RPC " + o +"#"+id+(onResult == null ? "" : "->" + (rpcUID-1)));
 		return ctx;
+	}
+
+	public function defaultLogger( ?filter : String -> Bool ) {
+		setLogger(function(str) {
+			if( filter != null && !filter(str) ) return;
+			str = (isAuth ? "[S] " : "[C] ") + str;
+			str = haxe.Timer.stamp() + " " + str;
+			#if	sys Sys.println(str); #else trace(str); #end
+		});
 	}
 
 	public function makeAlive() {
@@ -152,9 +208,20 @@ class NetworkHost {
 		ctx.refs[o.__uid] = null;
 	}
 
+	function doSend() {
+		@:privateAccess {
+			var bytes = ctx.out.getBytes();
+			ctx.out = new haxe.io.BytesBuffer();
+			send(bytes);
+		}
+	}
+
 	function send( bytes : haxe.io.Bytes ) {
-		for( c in clients )
-			@:privateAccess c.send(bytes);
+		if( targetClient != null )
+			targetClient.send(bytes);
+		else
+			for( c in clients )
+				c.send(bytes);
 	}
 
 	public dynamic function onSync( obj : Serializable ) {
@@ -165,8 +232,8 @@ class NetworkHost {
 		var o = markHead;
 		while( o != null ) {
 			if( o.__bits != 0 ) {
-//				if( logger != null )
-//					logger("Sync " + o + "#" + o.__uid + " " + o.__bits);
+				if( logger != null )
+					logger("SYNC " + o + "#" + o.__uid + " " + o.__bits);
 				ctx.addByte(SYNC);
 				ctx.addInt(o.__uid);
 				o.networkFlush(ctx);
@@ -181,11 +248,7 @@ class NetworkHost {
 		flushProps();
 		if( !hasData )
 			return;
-		@:privateAccess {
-			var bytes = ctx.out.getBytes();
-			ctx.out = new haxe.io.BytesBuffer();
-			send(bytes);
-		}
+		doSend();
 		hasData = false;
 	}
 
