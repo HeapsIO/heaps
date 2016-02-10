@@ -32,7 +32,7 @@ enum PropType {
 	PEnum( t : ComplexType );
 	PMap( k : PropType, v : PropType );
 	PArray( k : PropType );
-	PObj( fields : Array<{ name : String, type : PropType }> );
+	PObj( fields : Array<{ name : String, type : PropType, opt : Bool }> );
 	PNull( v : PropType );
 	PProxy( v : PropType );
 	PAlias( t : ComplexType, v : PropType );
@@ -117,7 +117,7 @@ class Macros {
 			for( f in a.fields ) {
 				var ft = getPropType(f.type);
 				if( ft == null ) return null;
-				fields.push( { name : f.name, type : ft } );
+				fields.push( { name : f.name, type : ft, opt : f.meta.has(":optional") } );
 			}
 			return PObj(fields);
 		case TInst(c, pl):
@@ -195,7 +195,7 @@ class Macros {
 		case PAlias(t, _):
 			return t;
 		}
-		return TPath( { pack : [], name : name } );
+		return TPath( { pack : [], name : name, params : params == null ? null : [for( p in params ) TPType(p)] } );
 	}
 
 	static function serializeExpr( ctx : Expr, v : Expr, t : PropType ) {
@@ -270,7 +270,7 @@ class Macros {
 		case PBool:
 			return macro $v = $ctx.getBool();
 		case PNull(t):
-			return macro if( $ctx.getBytes() == 0 ) $v = null else { ${ unserializeExpr(ctx, v, t) }; };
+			return macro if( $ctx.getByte() == 0 ) $v = null else { ${ unserializeExpr(ctx, v, t) }; };
 		case PMap(k,t):
 			var kt = toComplex(k);
 			var vt = toComplex(t);
@@ -545,42 +545,47 @@ class Macros {
 		return null;
 	}
 
-	static function needProxy( t : ComplexType, e : Null<Expr> ) {
-		if( t == null ) {
-			if( e != null )
-				switch( e.expr ) {
-				case EConst(CInt(_)), EConst(CFloat(_)), EConst(CString(_)):
-					return false;
-				default:
-				}
+	static function maybeNeedProxy( e : Expr ) {
+		if( e == null )
 			return true;
-		}
-		switch( t ) {
-		case TPath(t):
-			if( t.pack.length == 0 )
-				switch( t.name ) {
-				case "Array", "Map":
-					return true;
-				default:
-				}
-		case TAnonymous(_):
-			return true;
+		switch( e.expr ) {
+		case EConst(CInt(_)), EConst(CFloat(_)), EConst(CString(_)), EConst(CIdent("true"|"false")):
+			return false;
 		default:
 		}
-		return false;
+		return true;
+	}
+
+	static function needProxy( t : PropType ) {
+		if( t == null )
+			return false;
+		switch( t ) {
+		case PMap(_), PArray(_), PObj(_), PProxy(_):
+			return true;
+		case PAlias(_, v):
+			return needProxy(v);
+		default:
+			return false;
+		}
+	}
+
+	static function toProxyRec( t : ComplexType ) {
+		var tt = Context.resolveType(t, Context.currentPos());
+		var p = getPropType(tt);
+		if( !needProxy(p) )
+			return t;
+		return toProxy(t);
 	}
 
 	static function toProxy( t : ComplexType ) {
-		if( !needProxy(t, null) )
-			return t;
 		switch( t ) {
 		case TPath(t):
-			t.params = [for( p in t.params ) switch( p ) { case TPType(t): TPType(toProxy(t)); default: p; }];
+			t.params = [for( p in t.params ) switch( p ) { case TPType(t): TPType(toProxyRec(t)); default: p; }];
 		case TAnonymous(a):
 			for( f in a )
 				switch( f.kind ) {
 				case FVar(t, e):
-					f.kind = FVar(toProxy(t), e);
+					f.kind = FVar(toProxyRec(t), e);
 				default:
 				}
 		default:
@@ -691,18 +696,26 @@ class Macros {
 			switch( f.f.kind ) {
 			case FVar(t, e):
 				ftype = t;
-				proxy = needProxy(t, e);
-				if( proxy ) {
-					if( ftype == null ) Context.error("Type required", pos);
-					ftype = toProxy(ftype);
+				if( ftype == null ) {
+					if( maybeNeedProxy(e) ) Context.error("Type required", pos);
+				} else {
+					var tt = Context.resolveType(t, pos);
+					if( needProxy(getPropType(tt)) ) {
+						proxy = true;
+						ftype = toProxy(ftype);
+					}
 				}
 				f.f.kind = FProp("default", "set", ftype, e);
 			case FProp(get, set, t, e):
 				ftype = t;
-				proxy = needProxy(t, e);
-				if( proxy ) {
-					if( ftype == null ) Context.error("Type required", pos);
-					ftype = toProxy(ftype);
+				if( ftype == null ) {
+					if( maybeNeedProxy(e) ) Context.error("Type required", pos);
+				} else {
+					var tt = Context.resolveType(t, pos);
+					if( needProxy(getPropType(tt)) ) {
+						proxy = true;
+						ftype = toProxy(ftype);
+					}
 				}
 				if( set == "null" )
 					Context.warning("Null setter is not respected when using NetworkSerializable", pos);
@@ -931,92 +944,103 @@ class Macros {
 		return fields;
 	}
 
+	static function buildProxyType( p : PropType ) {
+		switch( p ) {
+		case PArray(k):
+			var name = switch( k ) {
+			case PProxy(_): "ArrayProxy2";
+			default: "ArrayProxy";
+			}
+			return toType(TPath( { pack : ["hxd", "net"], name : "ArrayProxy", sub : name, params : [TPType(toComplex(k))] } ));
+		case PMap(k, v):
+			var name = switch( v ) {
+			case PProxy(_): "MapProxy2";
+			default: "MapProxy";
+			}
+			return toType(TPath( { pack : ["hxd", "net"], name : "MapProxy", sub : name, params : [TPType(toComplex(k)),TPType(toComplex(v))] } ));
+		case PObj(fields):
+			// define type
+			var name = "ObjProxy_";
+			fields.sort(function(f1, f2) return Reflect.compare(f1.name, f2.name));
+			name += [for( f in fields ) f.name+"_" + haxe.macro.ComplexTypeTools.toString(toComplex(f.type)).split(".").join("_")].join("_");
+			try {
+				return Context.getType("hxd.net." + name);
+			} catch( e : Dynamic ) {
+				var pos = Context.currentPos();
+				var pt = toComplex(p);
+				var myT = TPath( { pack : ["hxd", "net"], name : name } );
+				var tfields = (macro class {
+					var obj : hxd.net.NetworkSerializable.ProxyHost;
+					var bit : Int;
+					@:noCompletion public var __value(get, never) : $pt;
+					inline function get___value() : $pt return cast this;
+					inline function mark() if( obj != null ) obj.setNetworkBit(bit);
+					@:noCompletion public function setNetworkBit(_) mark();
+					@:noCompletion public function bindHost(obj, bit) { this.obj = obj; this.bit = bit; }
+					@:noCompletion public function unbindHost() this.obj = null;
+				}).fields;
+				for( f in fields ) {
+					var ft = toComplex(f.type);
+					var fname = f.name;
+					tfields.push({
+						name : f.name,
+						pos : pos,
+						access : [APublic],
+						kind : FProp("default","set",ft),
+					});
+					tfields.push( {
+						name : "set_" + f.name,
+						pos : pos,
+						access : [AInline],
+						kind : FFun({
+							ret : ft,
+							args : [ { name : "v", type : ft } ],
+							expr : macro { this.$fname = v; mark(); return v; }
+						}),
+					});
+				}
+				tfields.push({
+					name : "new",
+					pos : pos,
+					access : [APublic],
+					kind : FFun({
+						ret : null,
+						args : [for( f in fields ) { name : f.name, type : toComplex(f.type), opt : f.opt } ],
+						expr : { expr : EBlock([for( f in fields ) { var fname = f.name; macro this.$fname = $i{fname}; }]), pos : pos },
+					})
+				});
+				var t : TypeDefinition = {
+					pos : pos,
+					pack : ["hxd", "net"],
+					meta : [{ name : ":structInit", pos : pos }],
+					name : name,
+					kind : TDClass([
+						{ pack : ["hxd", "net"], name : "NetworkSerializable", sub : "ProxyHost" },
+						{ pack : ["hxd", "net"], name : "NetworkSerializable", sub : "ProxyChild" },
+					]),
+					fields : tfields,
+				};
+				Context.defineType(t);
+				return Context.getType("hxd.net." + name);
+			}
+		case PAlias(_, p):
+			return buildProxyType(p);
+		case PProxy(_):
+			return toType(toComplex(p));
+		default:
+		}
+		return null;
+	}
+
 	public static function buildSerializableProxy() {
 		var t = Context.getLocalType();
 		switch( t ) {
 		case TInst(_, [pt]):
 			var p = getPropType(pt);
-			if( p != null )
-				switch( p ) {
-				case PArray(k):
-					var name = switch( k ) {
-					case PProxy(_): "ArrayProxy2";
-					default: "ArrayProxy";
-					}
-					return toType(TPath( { pack : ["hxd", "net"], name : "ArrayProxy", sub : name, params : [TPType(toComplex(k))] } ));
-				case PMap(k, v):
-					var name = switch( v ) {
-					case PProxy(_): "MapProxy2";
-					default: "MapProxy";
-					}
-					return toType(TPath( { pack : ["hxd", "net"], name : "MapProxy", sub : name, params : [TPType(toComplex(k)),TPType(toComplex(v))] } ));
-				case PObj(fields):
-					// define type
-					var name = "ObjProxy_";
-					fields.sort(function(f1, f2) return Reflect.compare(f1.name, f2.name));
-					name += [for( f in fields ) f.name+"_" + haxe.macro.ComplexTypeTools.toString(toComplex(f.type)).split(".").join("_")].join("_");
-					try {
-						return Context.getType("hxd.net." + name);
-					} catch( e : Dynamic ) {
-						var pos = Context.currentPos();
-						var pt = toComplex(p);
-						var myT = TPath( { pack : ["hxd", "net"], name : name } );
-						var tfields = (macro class {
-							var obj : hxd.net.NetworkSerializable.ProxyHost;
-							var bit : Int;
-							@:noCompletion public var __value(get, never) : $pt;
-							inline function get___value() : $pt return cast this;
-							inline function mark() if( obj != null ) obj.setNetworkBit(bit);
-							@:noCompletion public function setNetworkBit(_) mark();
-							@:noCompletion public function bindHost(obj, bit) { this.obj = obj; this.bit = bit; }
-							@:noCompletion public function unbindHost() this.obj = null;
-						}).fields;
-						for( f in fields ) {
-							var ft = toComplex(f.type);
-							var fname = f.name;
-							tfields.push({
-								name : f.name,
-								pos : pos,
-								access : [APublic],
-								kind : FProp("default","set",ft),
-							});
-							tfields.push( {
-								name : "set_" + f.name,
-								pos : pos,
-								access : [AInline],
-								kind : FFun({
-									ret : ft,
-									args : [ { name : "v", type : ft } ],
-									expr : macro { this.$fname = v; mark(); return v; }
-								}),
-							});
-						}
-						tfields.push({
-							name : "new",
-							pos : pos,
-							access : [APublic],
-							kind : FFun({
-								ret : null,
-								args : [for( f in fields ) { name : f.name, type : toComplex(f.type) } ],
-								expr : { expr : EBlock([for( f in fields ) { var fname = f.name; macro this.$fname = $i{fname}; }]), pos : pos },
-							})
-						});
-						var t : TypeDefinition = {
-							pos : pos,
-							pack : ["hxd", "net"],
-							meta : [{ name : ":structInit", pos : pos }],
-							name : name,
-							kind : TDClass([
-								{ pack : ["hxd", "net"], name : "NetworkSerializable", sub : "ProxyHost" },
-								{ pack : ["hxd", "net"], name : "NetworkSerializable", sub : "ProxyChild" },
-							]),
-							fields : tfields,
-						};
-						Context.defineType(t);
-						return Context.getType("hxd.net." + name);
-					}
-				default:
-				}
+			if( p != null ) {
+				var t = buildProxyType(p);
+				if( t != null ) return t;
+			}
 			throw "TODO "+pt+" ("+p+")";
 		default:
 			throw "assert";
