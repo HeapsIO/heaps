@@ -6,6 +6,7 @@ class Anim extends Drawable {
 	public var currentFrame(get,set) : Float;
 	public var speed : Float;
 	public var loop : Bool = true;
+	public var fading : Bool = false;
 	var curFrame : Float;
 
 	public function new( ?frames, ?speed, ?parent ) {
@@ -62,7 +63,23 @@ class Anim extends Drawable {
 
 	override function draw( ctx : RenderContext ) {
 		var t = getFrame();
-		emitTile(ctx,t);
+		if( fading ) {
+			var i = Std.int(curFrame) + 1;
+			if( i >= frames.length ) {
+				if( !loop ) return;
+				i = 0;
+			}
+			var t2 = frames[i];
+			var old = ctx.globalAlpha;
+			var alpha = curFrame - Std.int(curFrame);
+			ctx.globalAlpha *= 1 - alpha;
+			emitTile(ctx, t);
+			ctx.globalAlpha = old * alpha;
+			emitTile(ctx, t2);
+			ctx.globalAlpha = old;
+		} else {
+			emitTile(ctx,t);
+		}
 	}
 
 }
