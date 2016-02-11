@@ -180,7 +180,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		screenToLocal(event);
 		var rx = event.relX;
 		var ry = event.relY;
-		var index = last == null ? 0 : interactive.indexOf(cast last);
+		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		for( idx in index...interactive.length ) {
 			var i = interactive[idx];
 			if( i == null ) break;
