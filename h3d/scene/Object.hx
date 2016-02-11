@@ -297,6 +297,7 @@ class Object {
 		if( childs.remove(o) ) {
 			if( o.allocated ) o.onDelete();
 			o.parent = null;
+			o.posChanged = true;
 		}
 	}
 
