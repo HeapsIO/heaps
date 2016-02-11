@@ -634,6 +634,16 @@ class Macros {
 		}
 	}
 
+	static function wrapReturns( e : Expr ) {
+		switch( e.expr ) {
+		case EReturn(v):
+			v = wrapReturns(v);
+			return { expr : EBlock([ { expr : ECall( { expr : EConst(CIdent("onResult")), pos : e.pos }, [v]), pos : e.pos }, { expr : EReturn(), pos : e.pos } ]), pos : e.pos };
+		default:
+			return haxe.macro.ExprTools.map(e, wrapReturns);
+		}
+	}
+
 	public static function buildNetworkSerializable() {
 		var cl = Context.getLocalClass().get();
 		if( cl.isInterface )
@@ -834,13 +844,11 @@ class Macros {
 				var resultCall = macro null;
 
 				if( hasReturnVal ) {
-					expr = macro {
-						inline function __execute() ${f.expr};
-						onResult(__execute());
-					}
+					if( ret == null )
+						Context.error("Please specify return type", r.f.pos);
+					expr = wrapReturns(f.expr);
 					resultCall = macro function(__ctx) {
-						var v = cast null;
-						if( false ) onResult(v); // type
+						var v : $ret;
 						hxd.net.Macros.unserializeValue(__ctx, v);
 						onResult(v);
 					};

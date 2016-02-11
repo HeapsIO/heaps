@@ -123,6 +123,12 @@ class NetworkHost {
 	public static var current : NetworkHost = null;
 
 	public var isAuth(default, null) : Bool;
+
+	public var sendRate : Float = 0.;
+	public var totalSentBytes : Int = 0;
+
+	var lastSentTime : Float = 0.;
+	var lastSentBytes = 0;
 	var markHead : NetworkSerializable;
 	var ctx : Serializer;
 	var clients : Array<NetworkClient>;
@@ -140,6 +146,16 @@ class NetworkHost {
 		clients = [];
 		ctx = new Serializer();
 		ctx.begin();
+	}
+
+	public function saveState( s : Serializable ) {
+		return new hxd.net.Serializer().serialize(s);
+	}
+
+	public function loadSave<T:Serializable>( bytes : haxe.io.Bytes, c : Class<T> ) : T {
+		ctx.refs = [];
+		ctx.setInput(bytes, 0);
+		return ctx.getKnownRef(c);
 	}
 
 	inline function mark(o:NetworkSerializable) {
@@ -217,11 +233,15 @@ class NetworkHost {
 	}
 
 	function send( bytes : haxe.io.Bytes ) {
-		if( targetClient != null )
+		if( targetClient != null ) {
+			totalSentBytes += bytes.length;
 			targetClient.send(bytes);
-		else
+		}
+		else {
+			totalSentBytes += bytes.length * clients.length;
 			for( c in clients )
 				c.send(bytes);
+		}
 	}
 
 	public dynamic function onSync( obj : Serializable ) {
@@ -246,10 +266,20 @@ class NetworkHost {
 
 	public function flush() {
 		flushProps();
-		if( !hasData )
+		if( hasData ) {
+			doSend();
+			hasData = false;
+		}
+		// update sendRate
+		var now = haxe.Timer.stamp();
+		var dt = now - lastSentTime;
+		if( dt < 0.5 )
 			return;
-		doSend();
-		hasData = false;
+		var db = totalSentBytes - lastSentBytes;
+		var rate = db / dt;
+		sendRate = (sendRate + rate) * 0.5; // smooth
+		lastSentTime = now;
+		lastSentBytes = totalSentBytes;
 	}
 
 	public static function enableReplication( o : NetworkSerializable, b : Bool ) {

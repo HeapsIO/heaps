@@ -251,4 +251,8 @@ class Serializer {
 		return i;
 	}
 
+	public inline function getKnownRef<T:Serializable>( c : Class<T> ) : T {
+		return getRef(c, untyped c.__clid);
+	}
+
 }
