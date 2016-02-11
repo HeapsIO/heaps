@@ -40,7 +40,10 @@ class NetworkClient {
 		case NetworkHost.SYNC:
 			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
 			var old = o.__bits;
+			var oldH = o.__host;
+			o.__host = null;
 			o.networkSync(ctx);
+			o.__host = oldH;
 			o.__bits = old;
 		case NetworkHost.REG:
 			var o : hxd.net.NetworkSerializable = cast ctx.getAnyRef();

@@ -634,16 +634,6 @@ class Macros {
 		}
 	}
 
-	static function wrapReturns( e : Expr ) {
-		switch( e.expr ) {
-		case EReturn(v):
-			v = wrapReturns(v);
-			return { expr : EBlock([ { expr : ECall( { expr : EConst(CIdent("onResult")), pos : e.pos }, [v]), pos : e.pos }, { expr : EReturn(), pos : e.pos } ]), pos : e.pos };
-		default:
-			return haxe.macro.ExprTools.map(e, wrapReturns);
-		}
-	}
-
 	public static function buildNetworkSerializable() {
 		var cl = Context.getLocalClass().get();
 		if( cl.isInterface )
@@ -651,10 +641,33 @@ class Macros {
 		var fields = Context.getBuildFields();
 		var toSerialize = [];
 		var rpc = [];
+		var superRPC = new Map();
+		{
+			var sup = cl.superClass;
+			while( sup != null ) {
+				var c = sup.t.get();
+				for( m in c.meta.get() )
+					if( m.name == ":rpc" )
+						for( a in m.params )
+							switch( a.expr ) {
+							case EConst(CIdent(id)):
+								superRPC.set(id, true);
+							default:
+							}
+				sup = c.superClass;
+			}
+		}
 
 		if( !Context.defined("display") )
 		for( f in fields ) {
+
+			if( superRPC.exists(f.name) ) {
+				f.name += "__impl";
+				continue;
+			}
+
 			if( f.meta == null ) continue;
+
 			for( meta in f.meta ) {
 				if( meta.name == ":s" ) {
 					toSerialize.push({ f : f, m : meta });
@@ -670,7 +683,8 @@ class Macros {
 						default:
 							Context.error("Unexpected Rpc mode : should be all|client|server", meta.params[0].pos);
 						}
-					rpc.push({ f : f, mode:mode });
+					rpc.push( { f : f, mode:mode } );
+					superRPC.set(f.name, true);
 					break;
 				}
 			}
@@ -756,6 +770,7 @@ class Macros {
 			}
 
 			var markExpr = macro if( __host != null ) {
+				if( !__host.isAuth ) throw "Client can't set "+$v{fname};
 				if( this.__bits == 0 ) @:privateAccess __host.mark(this);
 				this.__bits |= 1 << $v{ bitID };
 			};
@@ -832,26 +847,28 @@ class Macros {
 			switch( r.f.kind ) {
 			case FFun(f):
 				var id = rpcID++;
-				var ret = f.ret;
-				f.ret = macro : Void;
-				for( a in f.args )
-					if( a.type == null )
-						Context.error("Type required for rpc function argument " + r.f.name+"(" + a.name+")", r.f.pos);
-
 				var hasReturnVal = hasReturnVal(f.expr);
+				var name = r.f.name;
+				var p = r.f.pos;
+				r.f.name += "__impl";
 
-				var expr = f.expr;
+				var cargs = [for( a in f.args ) { expr : EConst(CIdent(a.name)), pos : p } ];
+				var fcall = { expr : ECall( { expr : EField( { expr : EConst(CIdent("this")), pos:p }, r.f.name), pos : p }, cargs), pos : p };
+
+				var doCall = fcall;
+				var rpcArgs = f.args;
 				var resultCall = macro null;
 
 				if( hasReturnVal ) {
-					if( ret == null )
-						Context.error("Please specify return type", r.f.pos);
-					expr = wrapReturns(f.expr);
+					doCall = macro onResult($fcall);
 					resultCall = macro function(__ctx) {
-						var v : $ret;
+						var v = cast null;
+						if( false ) v = $fcall;
 						hxd.net.Macros.unserializeValue(__ctx, v);
 						onResult(v);
 					};
+					rpcArgs = rpcArgs.copy();
+					rpcArgs.push( { name : "onResult", type: f.ret == null ? null : TFunction([f.ret], macro:Void) } );
 				}
 
 				var forwardRPC = macro {
@@ -862,14 +879,14 @@ class Macros {
 					]};
 				};
 
-				f.expr = switch( r.mode ) {
+				var rpcExpr = switch( r.mode ) {
 				case All:
 					macro {
 						if( __host != null ) {
 							$forwardRPC;
 							if( !__host.isAuth ) return;
 						}
-						$expr;
+						$doCall;
 					}
 				case Client:
 					macro {
@@ -877,7 +894,7 @@ class Macros {
 							$forwardRPC;
 							return;
 						}
-						$expr;
+						$doCall;
 					}
 				case Server:
 					macro {
@@ -885,25 +902,42 @@ class Macros {
 							$forwardRPC;
 							return;
 						}
-						$expr;
+						$doCall;
 					}
 				};
-				var p = r.f.pos;
-				var exprs = [{ expr : EVars([for( a in f.args ) { name : a.name, type : a.type, expr : null }]), pos : p }];
+
+				var rpc : Field = {
+					name : name,
+					access : r.f.access.copy(),
+					kind : FFun({
+						args : rpcArgs,
+						ret : macro : Void,
+						expr : rpcExpr,
+					}),
+					pos : p,
+					meta : [{ name : ":final", pos : p }],
+				};
+				fields.push(rpc);
+
+				r.f.access.remove(APublic);
+				r.f.meta.push( { name : ":noCompletion", pos : p } );
+
+				var exprs = [ { expr : EVars([for( a in f.args ) { name : a.name, type : a.type, expr : macro cast null } ]), pos : p } ];
+				exprs.push(macro if( false ) $fcall); // force typing
 				for( a in f.args )
 					exprs.push(macro hxd.net.Macros.unserializeValue(__ctx, $i { a.name } ));
 
-				var cargs = [for( a in f.args ) { expr : EConst(CIdent(a.name)), pos : p } ];
 				if( hasReturnVal ) {
-					f.args.push( { name : "onResult", type : ret == null ? null : TFunction([ret], macro:Void) } );
-					cargs.push(macro function(result) {
+					exprs.push({ expr : EVars([ { name : "result", type : f.ret, expr : fcall } ]), pos : p } );
+					exprs.push(macro {
 						@:privateAccess __clientResult.beginRPCResult();
 						hxd.net.Macros.serializeValue(__ctx, result);
 					});
-				}
+				} else
+					exprs.push(fcall);
 
-				exprs.push( { expr : ECall( { expr : EField({ expr : EConst(CIdent("this")), pos:p }, r.f.name), pos : p }, cargs), pos : p } );
 				rpcCases.push({ values : [{ expr : EConst(CInt(""+id)), pos : p }], guard : null, expr : { expr : EBlock(exprs), pos : p } });
+
 			default:
 				Context.error("Cannot use @:rpc on non function", r.f.pos);
 			}
@@ -970,6 +1004,9 @@ class Macros {
 		if( rpcID > 255 ) Context.error("Too many rpc calls", pos);
 		cl.meta.add(":fieldID", [macro $v { startFID } ], pos);
 		cl.meta.add(":rpcID", [macro $v { rpcID } ], pos);
+
+		if( rpc.length > 0 )
+			cl.meta.add(":rpc", [for( r in rpc ) { expr : EConst(CIdent(r.f.name.substr(0,-6))), pos : pos } ], pos);
 
 		return fields;
 	}
