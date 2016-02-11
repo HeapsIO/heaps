@@ -268,6 +268,7 @@ class Sprite {
 		if( childs.remove(s) ) {
 			if( s.allocated ) s.onDelete();
 			s.parent = null;
+			s.posChanged = true;
 		}
 	}
 
