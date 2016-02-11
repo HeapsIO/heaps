@@ -5,8 +5,8 @@ class Atlas extends Resource {
 	var contents : Map<String,Array<{ t : h2d.Tile, width : Int, height : Int }>>;
 
 	function tileAlign( t : h2d.Tile, halign : h2d.Flow.FlowAlign, valign : h2d.Flow.FlowAlign, width : Int, height : Int ) {
-		if( halign == null ) halign = Top;
-		if( valign == null ) valign = Left;
+		if( halign == null ) halign = Left;
+		if( valign == null ) valign = Top;
 		var dx = 0, dy = 0;
 		switch( halign ) {
 		case Middle:
@@ -30,14 +30,22 @@ class Atlas extends Resource {
 		if( c == null )
 			return null;
 		var t = c[0];
+		if( t == null )
+			return null;
 		return tileAlign(t.t, horizontalAlign, verticalAlign, t.width, t.height);
 	}
 
-	public function getAnim( name : String, ?horizontalAlign : h2d.Flow.FlowAlign, ?verticalAlign : h2d.Flow.FlowAlign ) : Array<h2d.Tile> {
+	public function getAnim( ?name : String, ?horizontalAlign : h2d.Flow.FlowAlign, ?verticalAlign : h2d.Flow.FlowAlign ) : Array<h2d.Tile> {
+		if( name == null ) {
+			var cont = getContents().keys();
+			name = cont.next();
+			if( cont.hasNext() )
+				throw "Altas has several items in it " + Lambda.array( { iterator : contents.keys } );
+		}
 		var c = getContents().get(name);
 		if( c == null )
 			return null;
-		return [for( t in c ) tileAlign(t.t, horizontalAlign, verticalAlign, t.width, t.height)];
+		return [for( t in c ) if( t == null ) null else tileAlign(t.t, horizontalAlign, verticalAlign, t.width, t.height)];
 	}
 
 	public function getContents() {
