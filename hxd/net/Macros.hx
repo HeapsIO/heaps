@@ -3,6 +3,7 @@ import haxe.macro.Expr;
 import haxe.macro.Type;
 import haxe.macro.Context;
 using haxe.macro.TypeTools;
+using haxe.macro.ComplexTypeTools;
 
 enum RpcMode {
 	/*
@@ -23,19 +24,25 @@ enum RpcMode {
 	Server;
 }
 
-enum PropType {
+enum PropTypeDesc {
 	PInt;
 	PFloat;
 	PBool;
 	PString;
-	PSerializable( t : ComplexType );
-	PEnum( t : ComplexType );
+	PSerializable;
+	PEnum;
 	PMap( k : PropType, v : PropType );
 	PArray( k : PropType );
 	PObj( fields : Array<{ name : String, type : PropType, opt : Bool }> );
-	PNull( v : PropType );
-	PProxy( v : PropType );
-	PAlias( t : ComplexType, v : PropType );
+	PAlias( k : PropType );
+	PUnknown;
+}
+
+typedef PropType = {
+	var d : PropTypeDesc;
+	var t : ComplexType;
+	@:optional var isNull : Bool;
+	@:optional var increment : Float;
 }
 
 class Macros {
@@ -79,83 +86,121 @@ class Macros {
 		return false;
 	}
 
-	static function getPropType( t : haxe.macro.Type, isNull = false ) {
-		switch( t ) {
+	static function getPropField( ft : Type, meta : Metadata ) {
+		var t = getPropType(ft);
+		if( t == null )
+			return null;
+		var mincr = Lambda.find(meta, function(m) return m.name == ":increment");
+		if( mincr != null ) {
+			var inc : Null<Float> = null;
+			if( mincr.params.length == 1 )
+				switch( mincr.params[0].expr ) {
+				case EConst(CInt(i)): inc = Std.parseInt(i);
+				case EConst(CFloat(f)): inc = Std.parseFloat(f);
+				default:
+				}
+			if( inc == null )
+				Context.error("Increment requires value parameter", mincr.pos);
+			switch( t.d ) {
+			case PFloat:
+				t.increment = inc;
+			default:
+				Context.error("Increment not allowed on " + t.t.toString(), mincr.pos);
+			}
+		}
+		return t;
+	}
+
+	static function getPropType( t : haxe.macro.Type ) : PropType {
+		var desc = switch( t ) {
 		case TAbstract(a, pl):
 			switch( a.toString() ) {
 			case "Float":
-				return isNull ? PNull(PFloat) : PFloat;
+				PFloat;
 			case "Int":
-				return isNull ? PNull(PInt) : PInt;
+				PInt;
 			case "Bool":
-				return isNull ? PNull(PBool) : PBool;
+				PBool;
 			case "Map":
 				var tk = getPropType(pl[0]);
 				var tv = getPropType(pl[1]);
-				if( tk == null || tv == null ) return null;
-				return PMap(tk, tv);
+				if( tk == null || tv == null )
+					return null;
+				PMap(tk, tv);
 			case "hxd.net.ArrayProxy", "hxd.net.ArrayProxy2":
 				var t = getPropType(pl[0]);
-				if( t == null ) return null;
-				return PProxy(PArray(t));
+				if( t == null )
+					return null;
+				PArray(t);
 			case "hxd.net.MapProxy", "hxd.net.MapProxy2":
 				var k = getPropType(pl[0]);
 				var v = getPropType(pl[1]);
 				if( k == null || v == null ) return null;
-				return PProxy(PMap(k,v));
+				PMap(k,v);
 			default:
-				var pt = getPropType(Context.followWithAbstracts(t, true), isNull);
+				var pt = getPropType(Context.followWithAbstracts(t, true));
 				if( pt == null ) return null;
-				return PAlias(t.toComplexType(),pt);
+				PAlias(pt);
 			}
-		case TEnum(e, []):
-			var et = t.toComplexType();
-			return PEnum(et);
+		case TEnum(_):
+			PEnum;
 		case TAnonymous(a):
 			var a = a.get();
 			var fields = [];
 			for( f in a.fields ) {
-				var ft = getPropType(f.type);
+				var ft = getPropField(f.type, f.meta.get());
 				if( ft == null ) return null;
 				fields.push( { name : f.name, type : ft, opt : f.meta.has(":optional") } );
 			}
-			return PObj(fields);
+			PObj(fields);
 		case TInst(c, pl):
 			switch( c.toString() ) {
 			case "String":
-				return PString;
+				PString;
 			case "Array":
 				var at = getPropType(pl[0]);
 				if( at == null ) return null;
-				return PArray(at);
+				PArray(at);
 			case name if( StringTools.startsWith(name, "hxd.net.ObjProxy_") ):
 				var fields = c.get().fields.get();
 				for( f in fields )
-					if( f.name == "__value" ) {
-						var t = getPropType(f.type);
-						if( t == null ) return null;
-						return PProxy(t);
-					}
+					if( f.name == "__value" )
+						return getPropType(f.type);
+				throw "assert";
 			default:
 				if( isSerializable(c) )
-					return PSerializable(t.toComplexType());
+					PSerializable;
+				else
+					return null;
 			}
 		case TType(td, pl):
 			switch( td.toString() ) {
 			case "Null":
-				return getPropType(pl[0], true);
+				var p = getPropType(pl[0]);
+				if( p != null && !isNullable(p) ) {
+					p.isNull = true;
+					p.t = TPath( { pack : [], name : "Null", params : [TPType(p.t)] } );
+				}
+				return p;
 			default:
-				return getPropType(Context.follow(t, true), isNull);
+				var p = getPropType(Context.follow(t, true));
+				if( p != null )
+					p.t = t.toComplexType(); // more general, still identical
+				return p;
 			}
 		default:
+			return null;
 		}
-		return null;
+		return {
+			d : desc,
+			t : t.toComplexType(),
+		};
 	}
 
 	static function isNullable( t : PropType ) {
-		switch( t ) {
+		switch( t.d ) {
 		case PInt, PFloat, PBool:
-			return false;
+			return t.isNull;
 		default:
 			return true;
 		}
@@ -165,60 +210,35 @@ class Macros {
 		return Context.typeof(macro (null:$t));
 	}
 
-	static function toComplex( t : PropType ) : ComplexType {
-		var name, params = null;
-		switch( t ) {
-		case PFloat:
-			name = "Float";
-		case PInt:
-			name = "Int";
-		case PBool:
-			name = "Bool";
-		case PString:
-			name = "String";
-		case PNull(t):
-			name = "Null";
-			params = [toComplex(t)];
-		case PMap(k, v):
-			name = "Map";
-			params = [toComplex(k), toComplex(v)];
-		case PArray(t):
-			name = "Array";
-			params = [toComplex(t)];
-		case PObj(fl):
-			var pos = Context.currentPos();
-			return TAnonymous([for( f in fl ) { name : f.name, kind : FVar(toComplex(f.type)), pos : pos } ]);
-		case PSerializable(t), PEnum(t):
-			return t;
-		case PProxy(t):
-			return TPath( { pack : ["hxd", "net"], name : "NetworkSerializable", sub : "Proxy", params : [TPType(toComplex(t))] } );
-		case PAlias(t, _):
-			return t;
-		}
-		return TPath( { pack : [], name : name, params : params == null ? null : [for( p in params ) TPType(p)] } );
-	}
+	static function serializeExpr( ctx : Expr, v : Expr, t : PropType, skipCheck = false ) {
 
-	static function serializeExpr( ctx : Expr, v : Expr, t : PropType ) {
-		switch( t ) {
+		if( needProxy(t) && !skipCheck )
+			return serializeExpr(ctx, { expr : EField(v, "__value"), pos : v.pos }, t, true);
+
+		if( t.isNull && !skipCheck ) {
+			var e = serializeExpr(ctx, v, t, true);
+			return macro if( $v == null ) $ctx.addByte(0) else { $ctx.addByte(1); $e; };
+		}
+
+		switch( t.d ) {
 		case PFloat:
 			return macro $ctx.addFloat($v);
 		case PInt:
 			return macro $ctx.addInt($v);
 		case PBool:
 			return macro $ctx.addBool($v);
-		case PNull(t):
-			return macro if( $v == null ) $ctx.addByte(0) else { $ctx.addByte(1); ${serializeExpr(ctx,v,t)}; };
 		case PMap(kt, vt):
-			var kt = toComplex(kt);
-			var vt = toComplex(vt);
+			var kt = kt.t;
+			var vt = vt.t;
 			var vk = { expr : EConst(CIdent("k")), pos : v.pos };
 			var vv = { expr : EConst(CIdent("v")), pos : v.pos };
 			return macro $ctx.addMap($v, function(k:$kt) return hxd.net.Macros.serializeValue($ctx, $vk), function(v:$vt) return hxd.net.Macros.serializeValue($ctx, $vv));
-		case PEnum(et):
+		case PEnum:
+			var et = t.t;
 			return macro (null : hxd.net.Serializable.SerializableEnum<$et>).serialize($ctx,$v);
 		case PObj(fields):
 			var nullables = [for( f in fields ) if( isNullable(f.type) ) f];
-			var ct = toComplex(t);
+			var ct = t.t;
 			if( nullables.length >= 32 )
 				Context.error("Too many nullable fields", v.pos);
 			return macro {
@@ -249,31 +269,35 @@ class Macros {
 		case PString:
 			return macro $ctx.addString($v);
 		case PArray(t):
-			var at = toComplex(t);
+			var at = toProxy(t);
 			var ve = { expr : EConst(CIdent("e")), pos : v.pos };
 			return macro $ctx.addArray($v, function(e:$at) return hxd.net.Macros.serializeValue($ctx, $ve));
-		case PSerializable(_):
+		case PSerializable:
 			return macro $ctx.addKnownRef($v);
-		case PProxy(t):
-			return serializeExpr(ctx, { expr : EField(v, "__value"), pos : v.pos }, t);
-		case PAlias(_, t):
+		case PAlias(t):
 			return serializeExpr(ctx, { expr : ECast(v, null), pos : v.pos }, t);
+		case PUnknown:
+			throw "assert";
 		}
 	}
 
-	static function unserializeExpr( ctx : Expr, v : Expr, t : PropType, isProxy = false ) {
-		switch( t ) {
+	static function unserializeExpr( ctx : Expr, v : Expr, t : PropType, skipCheck = false ) {
+
+		if( t.isNull && !skipCheck ) {
+			var e = unserializeExpr(ctx, v, t, true);
+			return macro if( $ctx.getByte() == 0 ) $v = null else $e;
+		}
+
+		switch( t.d ) {
 		case PFloat:
 			return macro $v = $ctx.getFloat();
 		case PInt:
 			return macro $v = $ctx.getInt();
 		case PBool:
 			return macro $v = $ctx.getBool();
-		case PNull(t):
-			return macro if( $ctx.getByte() == 0 ) $v = null else { ${ unserializeExpr(ctx, v, t) }; };
 		case PMap(k,t):
-			var kt = toComplex(k);
-			var vt = toComplex(t);
+			var kt = k.t;
+			var vt = t.t;
 			var vk = { expr : EConst(CIdent("k")), pos : v.pos };
 			var vv = { expr : EConst(CIdent("v")), pos : v.pos };
 			return macro {
@@ -281,13 +305,14 @@ class Macros {
 				var v : $vt;
 				$v = $ctx.getMap(function() { hxd.net.Macros.unserializeValue($ctx, $vk); return $vk; }, function() { hxd.net.Macros.unserializeValue($ctx, $vv); return $vv; });
 			};
-		case PEnum(et):
+		case PEnum:
+			var et = t.t;
 			return macro { var e : $et; e = (null : hxd.net.Serializable.SerializableEnum<$et>).unserialize($ctx); $v = e; }
 		case PObj(fields):
 			var nullables = [for( f in fields ) if( isNullable(f.type) ) f];
 			if( nullables.length >= 32 )
 				Context.error("Too many nullable fields", v.pos);
-			var ct = toComplex(t);
+			var ct = t.t;
 			return macro {
 				var fbits = $ctx.getByte();
 				if( fbits == 0 )
@@ -300,7 +325,7 @@ class Macros {
 						for( f in fields ) {
 							var nidx = nullables.indexOf(f);
 							var name = f.name;
-							var ct = toComplex(f.type);
+							var ct = f.type.t;
 							vars.push( { field : name, expr : { expr : EConst(CIdent(name)), pos:v.pos } } );
 							if( nidx < 0 ) {
 								exprs.unshift(macro var $name : $ct);
@@ -318,25 +343,34 @@ class Macros {
 		case PString:
 			return macro $v = $ctx.getString();
 		case PArray(at):
-			var at = toComplex(at);
+			var at = toProxy(at);
 			var ve = { expr : EConst(CIdent("e")), pos : v.pos };
 			return macro {
 				var e : $at;
 				$v = $ctx.getArray(function() { hxd.net.Macros.unserializeValue($ctx, e); return e; });
 			};
-		case PSerializable(ct):
-			var path = haxe.macro.ComplexTypeTools.toString(ct);
-			var cexpr = Context.parseInlineString(path, v.pos);
+		case PSerializable:
+			function loop(t:ComplexType) {
+				switch( t ) {
+				case TPath( { name : "Null", params:[TPType(t)] } ):
+					return loop(t);
+				case TPath( p = { params:a } ) if( a.length > 0 ):
+					return TPath( { pack : p.pack, name:p.name, sub:p.sub } );
+				default:
+					return t;
+				}
+			}
+			var cexpr = Context.parse(loop(t.t).toString(), v.pos);
 			return macro $v = $ctx.getRef($cexpr,$cexpr.__clid);
-		case PProxy(t):
-			return unserializeExpr(ctx, v, t, true);
-		case PAlias(ct, vt):
-			var cvt = toComplex(vt);
+		case PAlias(at):
+			var cvt = at.t;
 			return macro {
 				var v : $cvt;
-				${unserializeExpr(ctx,macro v,vt)};
+				${unserializeExpr(ctx,macro v,at)};
 				$v = cast v;
 			};
+		case PUnknown:
+			throw "assert";
 		}
 	}
 
@@ -545,52 +579,39 @@ class Macros {
 		return null;
 	}
 
-	static function maybeNeedProxy( e : Expr ) {
+	static function quickInferType( e : Expr ) {
 		if( e == null )
-			return true;
+			return null;
 		switch( e.expr ) {
-		case EConst(CInt(_)), EConst(CFloat(_)), EConst(CString(_)), EConst(CIdent("true"|"false")):
-			return false;
+		case EConst(CInt(_)):
+			return macro : Int;
+		case EConst(CFloat(_)):
+			return macro : Float;
+		case EConst(CString(_)):
+			return macro : String;
+		case EConst(CIdent("true" | "false")):
+			return macro : Bool;
 		default:
 		}
-		return true;
+		return null;
 	}
 
 	static function needProxy( t : PropType ) {
 		if( t == null )
 			return false;
-		switch( t ) {
-		case PMap(_), PArray(_), PObj(_), PProxy(_):
+		switch( t.d ) {
+		case PMap(_), PArray(_), PObj(_):
 			return true;
-		case PAlias(_, v):
-			return needProxy(v);
 		default:
 			return false;
 		}
 	}
 
-	static function toProxyRec( t : ComplexType ) {
-		var tt = Context.resolveType(t, Context.currentPos());
-		var p = getPropType(tt);
+	static function toProxy( p : PropType ) {
 		if( !needProxy(p) )
-			return t;
-		return toProxy(t);
-	}
-
-	static function toProxy( t : ComplexType ) {
-		switch( t ) {
-		case TPath(t):
-			t.params = [for( p in t.params ) switch( p ) { case TPType(t): TPType(toProxyRec(t)); default: p; }];
-		case TAnonymous(a):
-			for( f in a )
-				switch( f.kind ) {
-				case FVar(t, e):
-					f.kind = FVar(toProxyRec(t), e);
-				default:
-				}
-		default:
-		}
-		return macro : hxd.net.NetworkSerializable.Proxy<$t>;
+			return p.t;
+		var pt = p.t;
+		return macro : hxd.net.NetworkSerializable.Proxy<$pt>;
 	}
 
 
@@ -691,47 +712,48 @@ class Macros {
 			var pos = f.f.pos;
 			var fname = f.f.name;
 			var bitID = startFID++;
-			var ftype : ComplexType;
+			var ftype : PropType;
 			var proxy = false;
 			switch( f.f.kind ) {
 			case FVar(t, e):
-				ftype = t;
-				if( ftype == null ) {
-					if( maybeNeedProxy(e) ) Context.error("Type required", pos);
-				} else {
-					var tt = Context.resolveType(t, pos);
-					if( needProxy(getPropType(tt)) ) {
-						proxy = true;
-						ftype = toProxy(ftype);
-					}
+				if( t == null ) t = quickInferType(e);
+				if( t == null ) Context.error("Type required", pos);
+				var tt = Context.resolveType(t, pos);
+				ftype = getPropField(tt, f.f.meta);
+				if( ftype == null ) ftype = { t : t, d : PUnknown };
+				if( needProxy(ftype) ) {
+					proxy = true;
+					ftype.t = toProxy(ftype);
 				}
-				f.f.kind = FProp("default", "set", ftype, e);
+				f.f.kind = FProp("default", "set", ftype.t, e);
 			case FProp(get, set, t, e):
-				ftype = t;
-				if( ftype == null ) {
-					if( maybeNeedProxy(e) ) Context.error("Type required", pos);
-				} else {
-					var tt = Context.resolveType(t, pos);
-					if( needProxy(getPropType(tt)) ) {
-						proxy = true;
-						ftype = toProxy(ftype);
-					}
+				if( t == null ) t = quickInferType(e);
+				if( t == null ) Context.error("Type required", pos);
+				var tt = Context.resolveType(t, pos);
+				ftype = getPropField(tt, f.f.meta);
+				if( ftype == null ) ftype = { t : t, d : PUnknown };
+				if( needProxy(ftype) ) {
+					proxy = true;
+					ftype.t = toProxy(ftype);
 				}
 				if( set == "null" )
 					Context.warning("Null setter is not respected when using NetworkSerializable", pos);
 				else if( set != "default" && set != "set" )
 					Context.error("Invalid setter", pos);
-				f.f.kind = FProp(get,"set", ftype, e);
+				f.f.kind = FProp(get,"set", ftype.t, e);
 			default:
 				throw "assert";
 			}
 
+			var markExpr = macro if( __host != null ) {
+				if( this.__bits == 0 ) @:privateAccess __host.mark(this);
+				this.__bits |= 1 << $v{ bitID };
+			};
+			markExpr = makeMarkExpr(fields, fname, ftype, markExpr);
+
 			var setExpr = macro
 				if( this.$fname != v ) {
-					if( __host != null ) {
-						if( this.__bits == 0 ) @:privateAccess __host.mark(this);
-						this.__bits |= 1 << $v{ bitID };
-					}
+					$markExpr;
 					this.$fname = v;
 					${if( proxy ) macro this.$fname.bindHost(this,$v{bitID}) else macro {}};
 				};
@@ -766,9 +788,9 @@ class Macros {
 					name : "set_" + fname,
 					pos : pos,
 					kind : FFun({
-						args : [ { name : "v", type : ftype } ],
+						args : [ { name : "v", type : ftype.t } ],
 						expr : macro { $setExpr; return v; },
-						ret : ftype,
+						ret : ftype.t,
 					}),
 				});
 			flushExpr.push(macro if( b & (1 << $v{ bitID } ) != 0 ) hxd.net.Macros.serializeValue(ctx, this.$fname));
@@ -944,30 +966,40 @@ class Macros {
 		return fields;
 	}
 
-	static function buildProxyType( p : PropType ) {
-		switch( p ) {
+	static function makeMarkExpr( fields : Array<Field>, fname : String, t : PropType, mark : Expr ) {
+		if( t.increment != null ) {
+			var rname = "__ref_" + fname;
+			fields.push({
+				name : rname,
+				pos : mark.pos,
+				meta : [{ name : ":noCompletion", pos : mark.pos }],
+				kind : FVar(t.t,macro 0),
+			});
+			mark = macro if( hxd.Math.abs(this.$fname - this.$rname) > $v{ t.increment } ) { this.$rname = this.$fname; $mark; };
+		}
+		return mark;
+	}
+
+	static function buildProxyType( p : PropType ) : ComplexType {
+		if( !needProxy(p) )
+			return p.t;
+		switch( p.d ) {
 		case PArray(k):
-			var name = switch( k ) {
-			case PProxy(_): "ArrayProxy2";
-			default: "ArrayProxy";
-			}
-			return toType(TPath( { pack : ["hxd", "net"], name : "ArrayProxy", sub : name, params : [TPType(toComplex(k))] } ));
+			var name = needProxy(k) ? "ArrayProxy2" : "ArrayProxy";
+			return TPath( { pack : ["hxd", "net"], name : "ArrayProxy", sub : name, params : [TPType(toProxy(k))] } );
 		case PMap(k, v):
-			var name = switch( v ) {
-			case PProxy(_): "MapProxy2";
-			default: "MapProxy";
-			}
-			return toType(TPath( { pack : ["hxd", "net"], name : "MapProxy", sub : name, params : [TPType(toComplex(k)),TPType(toComplex(v))] } ));
+			var name = needProxy(v) ? "MapProxy2" : "MapProxy";
+			return TPath( { pack : ["hxd", "net"], name : "MapProxy", sub : name, params : [TPType(k.t),TPType(toProxy(v))] } );
 		case PObj(fields):
 			// define type
 			var name = "ObjProxy_";
 			fields.sort(function(f1, f2) return Reflect.compare(f1.name, f2.name));
-			name += [for( f in fields ) f.name+"_" + haxe.macro.ComplexTypeTools.toString(toComplex(f.type)).split(".").join("_")].join("_");
+			name += [for( f in fields ) f.name+"_" + ~/[<>.]/g.replace(f.type.t.toString(),"_")].join("_");
 			try {
-				return Context.getType("hxd.net." + name);
+				return Context.getType("hxd.net." + name).toComplexType();
 			} catch( e : Dynamic ) {
 				var pos = Context.currentPos();
-				var pt = toComplex(p);
+				var pt = p.t;
 				var myT = TPath( { pack : ["hxd", "net"], name : name } );
 				var tfields = (macro class {
 					var obj : hxd.net.NetworkSerializable.ProxyHost;
@@ -980,7 +1012,7 @@ class Macros {
 					@:noCompletion public function unbindHost() this.obj = null;
 				}).fields;
 				for( f in fields ) {
-					var ft = toComplex(f.type);
+					var ft = f.type.t;
 					var fname = f.name;
 					tfields.push({
 						name : f.name,
@@ -988,6 +1020,9 @@ class Macros {
 						access : [APublic],
 						kind : FProp("default","set",ft),
 					});
+
+					var markExpr = makeMarkExpr(tfields, fname, f.type, macro mark());
+
 					tfields.push( {
 						name : "set_" + f.name,
 						pos : pos,
@@ -995,7 +1030,7 @@ class Macros {
 						kind : FFun({
 							ret : ft,
 							args : [ { name : "v", type : ft } ],
-							expr : macro { this.$fname = v; mark(); return v; }
+							expr : macro { this.$fname = v; $markExpr; return v; }
 						}),
 					});
 				}
@@ -1005,7 +1040,7 @@ class Macros {
 					access : [APublic],
 					kind : FFun({
 						ret : null,
-						args : [for( f in fields ) { name : f.name, type : toComplex(f.type), opt : f.opt } ],
+						args : [for( f in fields ) { name : f.name, type : f.type.t, opt : f.opt } ],
 						expr : { expr : EBlock([for( f in fields ) { var fname = f.name; macro this.$fname = $i{fname}; }]), pos : pos },
 					})
 				});
@@ -1021,12 +1056,8 @@ class Macros {
 					fields : tfields,
 				};
 				Context.defineType(t);
-				return Context.getType("hxd.net." + name);
+				return TPath({ pack : ["hxd","net"], name : name });
 			}
-		case PAlias(_, p):
-			return buildProxyType(p);
-		case PProxy(_):
-			return toType(toComplex(p));
 		default:
 		}
 		return null;
@@ -1039,7 +1070,7 @@ class Macros {
 			var p = getPropType(pt);
 			if( p != null ) {
 				var t = buildProxyType(p);
-				if( t != null ) return t;
+				if( t != null ) return toType(t);
 			}
 			throw "TODO "+pt+" ("+p+")";
 		default:
