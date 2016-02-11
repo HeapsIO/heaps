@@ -68,7 +68,7 @@ class Any extends Resource {
 	}
 
 	public function toAtlas() {
-		return loader.loadAtlas(entry.path).toAtlas();
+		return loader.loadAtlas(entry.path);
 	}
 
 	public inline function iterator() {

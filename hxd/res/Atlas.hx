@@ -2,9 +2,49 @@ package hxd.res;
 
 class Atlas extends Resource {
 
-	public function toAtlas() : Map<String,h2d.Tile> {
-		var tiles = new Map();
+	var contents : Map<String,Array<{ t : h2d.Tile, width : Int, height : Int }>>;
 
+	function tileAlign( t : h2d.Tile, halign : h2d.Flow.FlowAlign, valign : h2d.Flow.FlowAlign, width : Int, height : Int ) {
+		if( halign == null ) halign = Top;
+		if( valign == null ) valign = Left;
+		var dx = 0, dy = 0;
+		switch( halign ) {
+		case Middle:
+			dx = width >> 1;
+		case Right:
+			dx = width;
+		default:
+		}
+		switch( valign ) {
+		case Middle:
+			dy = height >> 1;
+		case Bottom:
+			dy = height;
+		default:
+		}
+		return t.sub(0, 0, t.width, t.height, t.dx - dx, t.dy - dy);
+	}
+
+	public function get( name : String, ?horizontalAlign : h2d.Flow.FlowAlign, ?verticalAlign : h2d.Flow.FlowAlign ) : h2d.Tile {
+		var c = getContents().get(name);
+		if( c == null )
+			return null;
+		var t = c[0];
+		return tileAlign(t.t, horizontalAlign, verticalAlign, t.width, t.height);
+	}
+
+	public function getAnim( name : String, ?horizontalAlign : h2d.Flow.FlowAlign, ?verticalAlign : h2d.Flow.FlowAlign ) : Array<h2d.Tile> {
+		var c = getContents().get(name);
+		if( c == null )
+			return null;
+		return [for( t in c ) tileAlign(t.t, horizontalAlign, verticalAlign, t.width, t.height)];
+	}
+
+	public function getContents() {
+		if( contents != null )
+			return contents;
+
+		contents = new Map();
 		var lines = entry.getBytes().toString().split("\n");
 
 		var basePath = entry.path.split("/");
@@ -21,7 +61,7 @@ class Atlas extends Resource {
 				var prop = line.split(": ");
 				if( prop.length > 1 ) continue;
 				var key = line;
-				var tileX = 0, tileY = 0, tileW = 0, tileH = 0, tileDX = 0, tileDY = 0;
+				var tileX = 0, tileY = 0, tileW = 0, tileH = 0, tileDX = 0, tileDY = 0, origW = 0, origH = 0, index = 0;
 				while( lines.length > 0 ) {
 					var line = StringTools.trim(lines.shift());
 					var prop = line.split(": ");
@@ -45,17 +85,30 @@ class Atlas extends Resource {
 						var vals = v.split(", ");
 						tileDX = Std.parseInt(vals[0]);
 						tileDY = Std.parseInt(vals[1]);
-					case "index", "orig":
-						// ?
+					case "orig":
+						var vals = v.split(", ");
+						origW = Std.parseInt(vals[0]);
+						origH = Std.parseInt(vals[1]);
+					case "index":
+						index = Std.parseInt(v);
+						if( index < 0 ) index = 0;
 					default:
 						trace("Unknown prop " + prop[0]);
 					}
 				}
-				var t = file.sub(tileX, tileY, tileW, tileH, -tileDX, -tileDY);
-				tiles.set(key, t);
+				// offset is bottom-relative
+				tileDY = origH - (tileH + tileDY);
+
+				var t = file.sub(tileX, tileY, tileW, tileH, tileDX, tileDY);
+				var tl = contents.get(key);
+				if( tl == null ) {
+					tl = [];
+					contents.set(key, tl);
+				}
+				tl[index] = { t : t, width : origW, height : origH };
 			}
 		}
-		return tiles;
+		return contents;
 	}
 
 }
