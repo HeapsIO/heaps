@@ -137,8 +137,14 @@ class Macros {
 				var v = getPropType(pl[1]);
 				if( k == null || v == null ) return null;
 				PMap(k,v);
-			default:
-				var pt = getPropType(Context.followWithAbstracts(t, true));
+			case name:
+				var t2 = Context.followWithAbstracts(t, true);
+				switch( t2 ) {
+				case TAbstract(a2, _) if( a2.toString() == name ):
+					return null;
+				default:
+				}
+				var pt = getPropType(t2);
 				if( pt == null ) return null;
 				PAlias(pt);
 			}
@@ -629,6 +635,8 @@ class Macros {
 		case EReturn(e):
 			if( e != null )
 				hasRetVal = true;
+		case EFunction(_):
+			return;
 		default:
 			haxe.macro.ExprTools.iter(e, checkRetVal);
 		}
