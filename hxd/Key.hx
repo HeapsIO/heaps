@@ -92,6 +92,8 @@ class Key {
 
 	public static inline var MOUSE_LEFT = 0;
 	public static inline var MOUSE_RIGHT = 1;
+	public static inline var MOUSE_WHEEL_UP = 2;
+	public static inline var MOUSE_WHEEL_DOWN = 3;
 
 	/** a bit that is set for left keys **/
 	public static inline var LOC_LEFT = 256;
@@ -170,6 +172,8 @@ class Key {
 			keyPressed[e.button] = getFrame();
 		case ERelease:
 			keyPressed[e.button] = -getFrame();
+		case EWheel:
+			keyPressed[e.wheelDelta > 0 ? MOUSE_WHEEL_DOWN : MOUSE_WHEEL_UP] = getFrame();
 		default:
 		}
 	}
