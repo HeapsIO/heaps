@@ -232,10 +232,10 @@ class Serializer {
 		if( UID < id ) UID = id;
 		var clid = getInt();
 		var i : Serializable = Type.createEmptyInstance(CLASSES[clid]);
+		if( newObjects != null ) newObjects.push(i);
 		i.__uid = id;
 		refs[id] = i;
 		i.unserialize(this);
-		if( newObjects != null ) newObjects.push(i);
 		return i;
 	}
 
@@ -247,10 +247,10 @@ class Serializer {
 		if( UID < id ) UID = id;
 		var clid = CLIDS[clid];
 		var i = Type.createEmptyInstance(clid == 0 ? c : cast CL_BYID[getByte()]);
+		if( newObjects != null ) newObjects.push(i);
 		i.__uid = id;
 		refs[id] = i;
 		i.unserialize(this);
-		if( newObjects != null ) newObjects.push(i);
 		return i;
 	}
 
