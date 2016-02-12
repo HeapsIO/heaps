@@ -45,6 +45,7 @@ class Serializer {
 	}
 
 	public var refs : Array<Serializable>;
+	var newObjects : Array<Serializable>;
 	var out : haxe.io.BytesBuffer;
 	var input : haxe.io.Bytes;
 	var inPos : Int;
@@ -234,6 +235,7 @@ class Serializer {
 		i.__uid = id;
 		refs[id] = i;
 		i.unserialize(this);
+		if( newObjects != null ) newObjects.push(i);
 		return i;
 	}
 
@@ -248,6 +250,7 @@ class Serializer {
 		i.__uid = id;
 		refs[id] = i;
 		i.unserialize(this);
+		if( newObjects != null ) newObjects.push(i);
 		return i;
 	}
 

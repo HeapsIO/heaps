@@ -642,6 +642,15 @@ class Macros {
 		}
 	}
 
+	static function superImpl( name : String, e : Expr ) {
+		switch( e.expr ) {
+		case EField( esup = { expr : EConst(CIdent("super")) }, fname) if( fname == name ):
+			e.expr = EField(esup, name+"__impl");
+		default:
+		}
+		return haxe.macro.ExprTools.map(e, superImpl.bind(name));
+	}
+
 	public static function buildNetworkSerializable() {
 		var cl = Context.getLocalClass().get();
 		if( cl.isInterface )
@@ -670,6 +679,11 @@ class Macros {
 		for( f in fields ) {
 
 			if( superRPC.exists(f.name) ) {
+				switch( f.kind ) {
+				case FFun(ff):
+					ff.expr = superImpl(f.name, ff.expr);
+				default:
+				}
 				f.name += "__impl";
 				continue;
 			}

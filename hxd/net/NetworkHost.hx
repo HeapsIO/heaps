@@ -47,6 +47,7 @@ class NetworkClient {
 			o.__bits = old;
 		case NetworkHost.REG:
 			var o : hxd.net.NetworkSerializable = cast ctx.getAnyRef();
+			o.__host = host;
 			if( host.isAlive ) host.makeAlive();
 		case NetworkHost.UNREG:
 			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
@@ -54,6 +55,7 @@ class NetworkClient {
 			ctx.refs[o.__uid] = null;
 		case NetworkHost.FULLSYNC:
 			ctx.refs = [];
+			@:privateAccess ctx.newObjects = [];
 			var obj = ctx.getAnyRef();
 			while( true ) {
 				var o = ctx.getAnyRef();
@@ -63,7 +65,7 @@ class NetworkClient {
 		case NetworkHost.RPC:
 			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
 			var fid = ctx.getByte();
-			if( !o.__host.isAuth ) {
+			if( !host.isAuth ) {
 				var old = o.__host;
 				o.__host = null;
 				o.networkRPC(ctx, fid, this);
@@ -76,8 +78,7 @@ class NetworkClient {
 			resultID = ctx.getInt();
 			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
 			var fid = ctx.getByte();
-
-			if( !o.__host.isAuth ) {
+			if( !host.isAuth ) {
 				var old = o.__host;
 				o.__host = null;
 				o.networkRPC(ctx, fid, this);
@@ -105,6 +106,7 @@ class NetworkClient {
 	function beginRPCResult() {
 		var ctx = host.ctx;
 		host.flush();
+		host.hasData = true;
 		host.targetClient = this;
 		ctx.addByte(NetworkHost.RPC_RESULT);
 		ctx.addInt(resultID);
@@ -140,7 +142,6 @@ class NetworkHost {
 	var hasData = false;
 	var rpcUID = Std.random(0x1000000);
 	var rpcWaits = new Map<Int,Serializer->Void>();
-
 	var targetClient : NetworkClient;
 
 	public function new() {
@@ -148,6 +149,7 @@ class NetworkHost {
 		isAuth = true;
 		clients = [];
 		ctx = new Serializer();
+		@:privateAccess ctx.newObjects = [];
 		ctx.begin();
 	}
 
@@ -157,6 +159,7 @@ class NetworkHost {
 
 	public function loadSave<T:Serializable>( bytes : haxe.io.Bytes, c : Class<T> ) : T {
 		ctx.refs = [];
+		@:privateAccess ctx.newObjects = [];
 		ctx.setInput(bytes, 0);
 		return ctx.getKnownRef(c);
 	}
@@ -196,12 +199,15 @@ class NetworkHost {
 
 	public function makeAlive() {
 		isAlive = true;
-		for( o in ctx.refs ) {
-			if( o == null ) continue;
+		var objs = @:privateAccess ctx.newObjects;
+		if( objs.length == 0 )
+			return;
+		@:privateAccess ctx.newObjects = [];
+		for( o in objs ) {
 			var n = Std.instance(o, NetworkSerializable);
-			if( n == null || n.__host != null ) continue;
+			if( n == null ) continue;
 			if( logger != null )
-				logger("Alive " + n +"#"+n.__uid);
+				logger("Alive " + n +"#" + n.__uid);
 			n.alive();
 		}
 	}
@@ -210,7 +216,8 @@ class NetworkHost {
 		this.logger = log;
 	}
 
-	function register(o : NetworkSerializable) {
+	function register( o : NetworkSerializable ) {
+		o.__host = this;
 		if( ctx.refs[o.__uid] != null )
 			return;
 		if( logger != null )
@@ -219,7 +226,10 @@ class NetworkHost {
 		ctx.addAnyRef(o);
 	}
 
-	function unregister(o : NetworkSerializable) {
+	function unregister( o : NetworkSerializable ) {
+		flushProps(); // send changes
+		o.__host = null;
+		o.__bits = 0;
 		if( logger != null )
 			logger("Unregister " + o+"#"+o.__uid);
 		ctx.addByte(UNREG);
@@ -228,11 +238,13 @@ class NetworkHost {
 	}
 
 	function doSend() {
+		var bytes;
 		@:privateAccess {
-			var bytes = ctx.out.getBytes();
+			bytes = ctx.out.getBytes();
 			ctx.out = new haxe.io.BytesBuffer();
-			send(bytes);
 		}
+		send(bytes);
+		hasData = false;
 	}
 
 	function send( bytes : haxe.io.Bytes ) {
@@ -262,17 +274,16 @@ class NetworkHost {
 				o.networkFlush(ctx);
 				hasData = true;
 			}
-			o = o.__next;
+			var n = o.__next;
+			o.__next = null;
+			o = n;
 		}
 		markHead = null;
 	}
 
 	public function flush() {
 		flushProps();
-		if( hasData ) {
-			doSend();
-			hasData = false;
-		}
+		if( hasData ) doSend();
 		// update sendRate
 		var now = haxe.Timer.stamp();
 		var dt = now - lastSentTime;
@@ -288,13 +299,11 @@ class NetworkHost {
 	public static function enableReplication( o : NetworkSerializable, b : Bool ) {
 		if( b ) {
 			if( o.__host != null ) return;
-			o.__host = current;
-			if( o.__host == null ) throw "No NetworkHost defined";
+			if( current == null ) throw "No NetworkHost defined";
 			current.register(o);
 		} else {
 			if( o.__host == null ) return;
 			o.__host.unregister(o);
-			o.__host = null;
 		}
 	}
 
