@@ -113,6 +113,7 @@ class Macros {
 	}
 
 	static function getPropType( t : haxe.macro.Type ) : PropType {
+		var isProxy = false;
 		var desc = switch( t ) {
 		case TAbstract(a, pl):
 			switch( a.toString() ) {
@@ -132,11 +133,13 @@ class Macros {
 				var t = getPropType(pl[0]);
 				if( t == null )
 					return null;
+				isProxy = true;
 				PArray(t);
 			case "hxd.net.MapProxy", "hxd.net.MapProxy2":
 				var k = getPropType(pl[0]);
 				var v = getPropType(pl[1]);
 				if( k == null || v == null ) return null;
+				isProxy = true;
 				PMap(k,v);
 			case name:
 				var t2 = Context.followWithAbstracts(t, true);
@@ -171,8 +174,11 @@ class Macros {
 			case name if( StringTools.startsWith(name, "hxd.net.ObjProxy_") ):
 				var fields = c.get().fields.get();
 				for( f in fields )
-					if( f.name == "__value" )
-						return getPropType(f.type);
+					if( f.name == "__value" ) {
+						var t = getPropType(f.type);
+						t.isProxy = true;
+						return t;
+					}
 				throw "assert";
 			default:
 				if( isSerializable(c) )
@@ -198,10 +204,12 @@ class Macros {
 		default:
 			return null;
 		}
-		return {
+		var p : PropType = {
 			d : desc,
 			t : t.toComplexType(),
 		};
+		if( isProxy ) p.isProxy = isProxy;
+		return p;
 	}
 
 	static function isNullable( t : PropType ) {
@@ -604,13 +612,20 @@ class Macros {
 	}
 
 	static function needProxy( t : PropType ) {
-		if( t == null )
+		if( t == null || t.isProxy )
 			return false;
 		switch( t.d ) {
 		case PMap(_), PArray(_), PObj(_):
 			return true;
 		default:
 			return false;
+		}
+	}
+
+	static function checkProxy( p : PropType ) {
+		if( needProxy(p) ) {
+			p.isProxy = true;
+			p.t = toProxy(p);
 		}
 	}
 
@@ -763,7 +778,6 @@ class Macros {
 			var fname = f.f.name;
 			var bitID = startFID++;
 			var ftype : PropType;
-			var proxy = false;
 			switch( f.f.kind ) {
 			case FVar(t, e):
 				if( t == null ) t = quickInferType(e);
@@ -771,10 +785,7 @@ class Macros {
 				var tt = Context.resolveType(t, pos);
 				ftype = getPropField(tt, f.f.meta);
 				if( ftype == null ) ftype = { t : t, d : PUnknown };
-				if( needProxy(ftype) ) {
-					proxy = true;
-					ftype.t = toProxy(ftype);
-				}
+				checkProxy(ftype);
 				f.f.kind = FProp("default", "set", ftype.t, e);
 			case FProp(get, set, t, e):
 				if( t == null ) t = quickInferType(e);
@@ -782,10 +793,7 @@ class Macros {
 				var tt = Context.resolveType(t, pos);
 				ftype = getPropField(tt, f.f.meta);
 				if( ftype == null ) ftype = { t : t, d : PUnknown };
-				if( needProxy(ftype) ) {
-					proxy = true;
-					ftype.t = toProxy(ftype);
-				}
+				checkProxy(ftype);
 				if( set == "null" )
 					Context.warning("Null setter is not respected when using NetworkSerializable", pos);
 				else if( set != "default" && set != "set" )
@@ -802,7 +810,7 @@ class Macros {
 				if( this.$fname != v ) {
 					$markExpr;
 					this.$fname = v;
-					${if( proxy ) macro this.$fname.bindHost(this,$v{bitID}) else macro {}};
+					${if( ftype.isProxy ) macro this.$fname.bindHost(this,$v{bitID}) else macro {}};
 				};
 
 			var found = false;
@@ -1052,11 +1060,13 @@ class Macros {
 			return p.t;
 		switch( p.d ) {
 		case PArray(k):
-			var name = needProxy(k) ? "ArrayProxy2" : "ArrayProxy";
-			return TPath( { pack : ["hxd", "net"], name : "ArrayProxy", sub : name, params : [TPType(toProxy(k))] } );
+			checkProxy(k);
+			var name = k.isProxy ? "ArrayProxy2" : "ArrayProxy";
+			return TPath( { pack : ["hxd", "net"], name : "ArrayProxy", sub : name, params : [TPType(k.t)] } );
 		case PMap(k, v):
-			var name = needProxy(v) ? "MapProxy2" : "MapProxy";
-			return TPath( { pack : ["hxd", "net"], name : "MapProxy", sub : name, params : [TPType(k.t),TPType(toProxy(v))] } );
+			checkProxy(v);
+			var name = k.isProxy ? "MapProxy2" : "MapProxy";
+			return TPath( { pack : ["hxd", "net"], name : "MapProxy", sub : name, params : [TPType(k.t),TPType(v.t)] } );
 		case PObj(fields):
 			// define type
 			var name = "ObjProxy_";
