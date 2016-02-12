@@ -22,6 +22,11 @@ enum RpcMode {
 		When called on the server: will execute locally.
 	*/
 	Server;
+	/*
+		When called on the client: will forward the call to the server if not the owner, or else execute locally.
+		When called on the server: will forward the call to the owner
+	*/
+	Owner;
 }
 
 enum PropTypeDesc {
@@ -718,8 +723,9 @@ class Macros {
 						case EConst(CIdent("all")):
 						case EConst(CIdent("client")): mode = Client;
 						case EConst(CIdent("server")): mode = Server;
+						case EConst(CIdent("owner")): mode = Owner;
 						default:
-							Context.error("Unexpected Rpc mode : should be all|client|server", meta.params[0].pos);
+							Context.error("Unexpected Rpc mode : should be all|client|server|owner", meta.params[0].pos);
 						}
 					rpc.push( { f : f, mode:mode } );
 					superRPC.set(f.name, true);
@@ -930,6 +936,22 @@ class Macros {
 					macro {
 						if( __host != null && !__host.isAuth ) {
 							$forwardRPC;
+							return;
+						}
+						$doCall;
+					}
+				case Owner:
+					macro {
+						if( __host == null ) return;
+						var owner = networkGetOwner();
+						if( owner == null ) throw "Calling RPC(owner) function on a not owned object";
+						if( owner != __host.self.ownerObject ) @:privateAccess {
+							var old = __host.targetClient;
+							if( __host.setTargetOwner(owner) ) {
+								$forwardRPC;
+								__host.setTargetOwner(null);
+							}
+							__host.targetClient = old;
 							return;
 						}
 						$doCall;

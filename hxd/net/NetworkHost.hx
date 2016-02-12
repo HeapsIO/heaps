@@ -196,6 +196,24 @@ class NetworkHost {
 		targetClient = null;
 	}
 
+	function setTargetOwner( owner : NetworkSerializable ) {
+		if( !isAuth )
+			return true;
+		if( owner == null ) {
+			doSend();
+			targetClient = null;
+			return true;
+		}
+		flush();
+		targetClient = null;
+		for( c in clients )
+			if( c.ownerObject == owner ) {
+				targetClient = c;
+				break;
+			}
+		return targetClient != null; // owner not connected
+	}
+
 	function beginRPC(o:NetworkSerializable, id:Int, onResult:Serializer->Void) {
 		flushProps();
 		hasData = true;

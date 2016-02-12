@@ -12,7 +12,7 @@ class LocalClient extends NetworkClient {
 	public function new(host, s) {
 		super(host);
 		this.socket = s;
-		s.onData = readData;
+		if( s != null ) s.onData = readData;
 	}
 
 	override function error(msg:String) {
@@ -100,6 +100,7 @@ class LocalHost extends NetworkHost {
 		close();
 		isAuth = false;
 		socket = new Socket();
+		self = new LocalClient(this, null);
 		socket.bind(host, port, function(s) {
 			var c = new LocalClient(this, s);
 			pendingClients.push(c);
