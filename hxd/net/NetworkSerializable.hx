@@ -1,7 +1,7 @@
 package hxd.net;
 
 interface ProxyHost {
-	public function setNetworkBit( bit : Int ) : Void;
+	public function networkSetBit( bit : Int ) : Void;
 }
 
 interface ProxyChild {
@@ -15,10 +15,12 @@ interface NetworkSerializable extends Serializable extends ProxyHost {
 	public var __bits : Int;
 	public var __next : NetworkSerializable;
 	public var enableReplication(get, set) : Bool;
+	public function alive() : Void; // user defined
+
 	public function networkFlush( ctx : Serializer ) : Void;
 	public function networkSync( ctx : Serializer ) : Void;
 	public function networkRPC( ctx : Serializer, rpcID : Int, clientResult : NetworkHost.NetworkClient ) : Void;
-	public function alive() : Void;
+	public function networkGetOwner() : NetworkSerializable;
 }
 
 @:genericBuild(hxd.net.Macros.buildSerializableProxy())
@@ -28,11 +30,11 @@ class Proxy<T> {
 class BaseProxy implements ProxyHost implements ProxyChild {
 	public var obj : ProxyHost;
 	public var bit : Int;
-	public inline function setNetworkBit(_) {
+	public inline function networkSetBit(_) {
 		mark();
 	}
 	public inline function mark() {
-		if( obj != null ) obj.setNetworkBit(bit);
+		if( obj != null ) obj.networkSetBit(bit);
 	}
 	public inline function bindHost(o, bit) {
 		this.obj = o;

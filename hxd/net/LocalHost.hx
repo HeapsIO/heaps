@@ -47,6 +47,14 @@ class LocalClient extends NetworkClient {
 		socket.out.flush();
 	}
 
+	override function stop() {
+		super.stop();
+		if( socket != null ) {
+			socket.close();
+			socket = null;
+		}
+	}
+
 }
 
 class LocalHost extends NetworkHost {
@@ -68,7 +76,7 @@ class LocalHost extends NetworkHost {
 		connected = false;
 	}
 
-	public function connect( host : String, port : Int, onConnect : Bool -> Void ) {
+	public function connect( host : String, port : Int, ?onConnect : Bool -> Void ) {
 		close();
 		isAuth = false;
 		socket = new Socket();
@@ -79,23 +87,23 @@ class LocalHost extends NetworkHost {
 			} else
 				throw msg;
 		};
-		var me = new LocalClient(this, socket);
+		self = new LocalClient(this, socket);
 		socket.connect(host, port, function() {
 			connected = true;
 			if( host == "127.0.0.1" ) enableSound = false;
-			clients = [me];
+			clients = [self];
 			onConnect(true);
 		});
 	}
 
-	public function wait( host : String, port : Int, onClient : NetworkClient -> Void ) {
+	public function wait( host : String, port : Int, ?onConnected : NetworkClient -> Void ) {
 		close();
 		isAuth = false;
 		socket = new Socket();
 		socket.bind(host, port, function(s) {
 			var c = new LocalClient(this, s);
-			clients.push(c);
-			onClient(c);
+			pendingClients.push(c);
+			if( onConnected != null ) onConnected(c);
 		});
 		isAuth = true;
 	}

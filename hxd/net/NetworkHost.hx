@@ -4,29 +4,22 @@ class NetworkClient {
 
 	var host : NetworkHost;
 	var resultID : Int;
+	public var ownerObject : NetworkSerializable;
 
 	public function new(h) {
 		this.host = h;
 	}
 
-	public function send(bytes : haxe.io.Bytes) {
+	public function sync() {
+		host.fullSync(this);
 	}
 
-	public function fullSync( obj : Serializable ) {
-		var ctx = host.ctx;
-		var refs = ctx.refs;
-		ctx.begin();
-		ctx.addByte(NetworkHost.FULLSYNC);
-		ctx.addAnyRef(obj);
-		for( o in refs )
-			if( o != null )
-				ctx.addAnyRef(o);
-		ctx.addAnyRef(null);
-		@:privateAccess {
-			var bytes = ctx.out.getBytes();
-			ctx.out = new haxe.io.BytesBuffer();
-			send(bytes);
-		}
+	@:allow(hxd.net.NetworkHost)
+	function send(bytes : haxe.io.Bytes) {
+	}
+
+	public function sendMessage( msg : Dynamic ) {
+		host.sendMessage(msg, this);
 	}
 
 	function error( msg : String ) {
@@ -48,7 +41,7 @@ class NetworkClient {
 		case NetworkHost.REG:
 			var o : hxd.net.NetworkSerializable = cast ctx.getAnyRef();
 			o.__host = host;
-			if( host.isAlive ) host.makeAlive();
+			host.makeAlive();
 		case NetworkHost.UNREG:
 			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
 			o.enableReplication = false;
@@ -56,12 +49,11 @@ class NetworkClient {
 		case NetworkHost.FULLSYNC:
 			ctx.refs = [];
 			@:privateAccess ctx.newObjects = [];
-			var obj = ctx.getAnyRef();
 			while( true ) {
 				var o = ctx.getAnyRef();
 				if( o == null ) break;
 			}
-			host.onSync(obj);
+			host.makeAlive();
 		case NetworkHost.RPC:
 			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
 			var fid = ctx.getByte();
@@ -97,6 +89,10 @@ class NetworkClient {
 			host.rpcWaits.remove(resultID);
 			callb(ctx);
 
+		case NetworkHost.MSG:
+			var msg = haxe.Unserializer.run(ctx.getString());
+			host.onMessage(this, msg);
+
 		case x:
 			error("Unknown message code " + x);
 		}
@@ -104,12 +100,20 @@ class NetworkClient {
 	}
 
 	function beginRPCResult() {
-		var ctx = host.ctx;
 		host.flush();
+		var ctx = host.ctx;
 		host.hasData = true;
 		host.targetClient = this;
 		ctx.addByte(NetworkHost.RPC_RESULT);
 		ctx.addInt(resultID);
+		// after that RPC will add result value then return
+	}
+
+	public function stop() {
+		if( host == null ) return;
+		host.clients.remove(this);
+		host.pendingClients.remove(this);
+		host = null;
 	}
 
 }
@@ -124,6 +128,7 @@ class NetworkHost {
 	static inline var RPC 		= 5;
 	static inline var RPC_WITH_RESULT = 6;
 	static inline var RPC_RESULT = 7;
+	static inline var MSG		 = 8;
 
 	public static var current : NetworkHost = null;
 
@@ -136,18 +141,20 @@ class NetworkHost {
 	var lastSentBytes = 0;
 	var markHead : NetworkSerializable;
 	var ctx : Serializer;
+	var pendingClients : Array<NetworkClient>;
 	var clients : Array<NetworkClient>;
-	var isAlive = false;
 	var logger : String -> Void;
 	var hasData = false;
 	var rpcUID = Std.random(0x1000000);
 	var rpcWaits = new Map<Int,Serializer->Void>();
 	var targetClient : NetworkClient;
+	public var self(default,null) : NetworkClient;
 
 	public function new() {
 		current = this;
 		isAuth = true;
 		clients = [];
+		pendingClients = [];
 		ctx = new Serializer();
 		@:privateAccess ctx.newObjects = [];
 		ctx.begin();
@@ -164,12 +171,32 @@ class NetworkHost {
 		return ctx.getKnownRef(c);
 	}
 
-	inline function mark(o:NetworkSerializable) {
+	function mark(o:NetworkSerializable) {
+		if( !isAuth ) {
+			var owner = o.networkGetOwner();
+			if( owner == null || clients[0].ownerObject != owner )
+				throw "Client can't set property on " + o + " without ownership ("+owner + " should be "+clients[0].ownerObject+")";
+			// allow to modify the property localy but don't send it to server
+			return false;
+		}
 		o.__next = markHead;
 		markHead = o;
+		return true;
 	}
 
-	public function beginRPC(o:NetworkSerializable, id:Int, onResult:Serializer->Void) {
+	public dynamic function onMessage( from : NetworkClient, msg : Dynamic ) {
+	}
+
+	public function sendMessage( msg : Dynamic, ?to : NetworkClient ) {
+		flush();
+		targetClient = to;
+		ctx.addByte(MSG);
+		ctx.addString(haxe.Serializer.run(msg));
+		doSend();
+		targetClient = null;
+	}
+
+	function beginRPC(o:NetworkSerializable, id:Int, onResult:Serializer->Void) {
 		flushProps();
 		hasData = true;
 		if( ctx.refs[o.__uid] == null )
@@ -188,6 +215,23 @@ class NetworkHost {
 		return ctx;
 	}
 
+	function fullSync( c : NetworkClient ) {
+		if( !pendingClients.remove(c) )
+			return;
+		flush();
+		clients.push(c);
+		var refs = ctx.refs;
+		ctx.begin();
+		ctx.addByte(NetworkHost.FULLSYNC);
+		for( o in refs )
+			if( o != null )
+				ctx.addAnyRef(o);
+		ctx.addAnyRef(null);
+		targetClient = c;
+		doSend();
+		targetClient = null;
+	}
+
 	public function defaultLogger( ?filter : String -> Bool ) {
 		setLogger(function(str) {
 			if( filter != null && !filter(str) ) return;
@@ -198,7 +242,6 @@ class NetworkHost {
 	}
 
 	public function makeAlive() {
-		isAlive = true;
 		var objs = @:privateAccess ctx.newObjects;
 		if( objs.length == 0 )
 			return;
@@ -259,10 +302,6 @@ class NetworkHost {
 		}
 	}
 
-	public dynamic function onSync( obj : Serializable ) {
-		trace("SYNC " + obj);
-	}
-
 	function flushProps() {
 		var o = markHead;
 		while( o != null ) {
@@ -296,7 +335,7 @@ class NetworkHost {
 		lastSentBytes = totalSentBytes;
 	}
 
-	public static function enableReplication( o : NetworkSerializable, b : Bool ) {
+	static function enableReplication( o : NetworkSerializable, b : Bool ) {
 		if( b ) {
 			if( o.__host != null ) return;
 			if( current == null ) throw "No NetworkHost defined";

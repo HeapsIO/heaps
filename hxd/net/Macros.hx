@@ -41,6 +41,7 @@ enum PropTypeDesc {
 typedef PropType = {
 	var d : PropTypeDesc;
 	var t : ComplexType;
+	@:optional var isProxy : Bool;
 	@:optional var isNull : Bool;
 	@:optional var increment : Float;
 }
@@ -218,7 +219,7 @@ class Macros {
 
 	static function serializeExpr( ctx : Expr, v : Expr, t : PropType, skipCheck = false ) {
 
-		if( needProxy(t) && !skipCheck )
+		if( t.isProxy && !skipCheck )
 			return serializeExpr(ctx, { expr : EField(v, "__value"), pos : v.pos }, t, true);
 
 		if( t.isNull && !skipCheck ) {
@@ -614,7 +615,7 @@ class Macros {
 	}
 
 	static function toProxy( p : PropType ) {
-		if( !needProxy(p) )
+		if( !p.isProxy )
 			return p.t;
 		var pt = p.t;
 		return macro : hxd.net.NetworkSerializable.Proxy<$pt>;
@@ -732,22 +733,25 @@ class Macros {
 				@:noCompletion public var __host : hxd.net.NetworkHost;
 				@:noCompletion public var __bits : Int = 0;
 				@:noCompletion public var __next : hxd.net.NetworkSerializable;
-				@:noCompletion public function setNetworkBit( b : Int ) {
-					if( __host != null ) {
-						if( __bits == 0 ) @:privateAccess __host.mark(this);
+				@:noCompletion public inline function networkSetBit( b : Int ) {
+					if( __host != null && (__bits != 0 || @:privateAccess __host.mark(this)) )
 						__bits |= 1 << b;
-					}
 				}
 				public var enableReplication(get, set) : Bool;
 				inline function get_enableReplication() return __host != null;
 				function set_enableReplication(b) {
-					hxd.net.NetworkHost.enableReplication(this, b);
+					@:privateAccess hxd.net.NetworkHost.enableReplication(this, b);
 					return b;
 				}
 				public inline function networkCancelProperty( props : hxd.net.NetworkSerializable.Property ) {
 					__bits &= ~props.toInt();
 				}
 			}).fields);
+
+			if( !Lambda.exists(fields, function(f) return f.name == "networkGetOwner") )
+				fields = fields.concat((macro class {
+					public function networkGetOwner() : hxd.net.NetworkSerializable { return null; }
+				}).fields);
 		}
 
 		var flushExpr = [];
@@ -791,11 +795,7 @@ class Macros {
 				throw "assert";
 			}
 
-			var markExpr = macro if( __host != null ) {
-				if( !__host.isAuth ) throw "Client can't set "+$v{fname};
-				if( this.__bits == 0 ) @:privateAccess __host.mark(this);
-				this.__bits |= 1 << $v{ bitID };
-			};
+			var markExpr = macro networkSetBit($v{ bitID });
 			markExpr = makeMarkExpr(fields, fname, ftype, markExpr);
 
 			var setExpr = macro
@@ -894,7 +894,7 @@ class Macros {
 				}
 
 				var forwardRPC = macro {
-					var __ctx = __host.beginRPC(this,$v{id},$resultCall);
+					var __ctx = @:privateAccess __host.beginRPC(this,$v{id},$resultCall);
 					$b{[
 						for( a in f.args )
 							macro hxd.net.Macros.serializeValue(__ctx,$i{a.name})
@@ -1073,8 +1073,8 @@ class Macros {
 					var bit : Int;
 					@:noCompletion public var __value(get, never) : $pt;
 					inline function get___value() : $pt return cast this;
-					inline function mark() if( obj != null ) obj.setNetworkBit(bit);
-					@:noCompletion public function setNetworkBit(_) mark();
+					inline function mark() if( obj != null ) obj.networkSetBit(bit);
+					@:noCompletion public function networkSetBit(_) mark();
 					@:noCompletion public function bindHost(obj, bit) { this.obj = obj; this.bit = bit; }
 					@:noCompletion public function unbindHost() this.obj = null;
 				}).fields;
