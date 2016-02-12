@@ -66,6 +66,7 @@ class TreeView
 	public var visible(default, set): Bool;
 	public var x(default, set) : Float;
 	public var y(default, set) : Float;
+	public var selected : TreeView;
 
 	public function new (o, parent = null) {
 		if(cont == null)
@@ -109,6 +110,8 @@ class TreeView
 				var id = Std.int(e.relY / height);
 				var row = curr[id];
 
+				selected = row;
+
 				if(row.childs.length == 0) {
 					if(fg.y == select.y)
 						select.visible = !select.visible;
@@ -149,6 +152,12 @@ class TreeView
 			getObjectsLib(this);
 			draw();
 		}
+	}
+
+	public function onKey(e:hxd.Event) {
+		if( selected == null ) return;
+		if( e.keyCode == "V".code )
+			selected.obj.visible = !selected.obj.visible;
 	}
 
 	function setHighligth(e : TreeView) {

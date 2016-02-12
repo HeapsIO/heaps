@@ -298,7 +298,7 @@ class Viewer extends hxd.App {
 		case "Q".code:
 			props.queueAnims = !props.queueAnims;
 		default:
-
+			tree.onKey(e);
 		}
 
 		if( reload && curData != null )
