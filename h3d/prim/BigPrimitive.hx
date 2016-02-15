@@ -13,10 +13,15 @@ class BigPrimitive extends Primitive {
 	var tmpBuf : hxd.FloatBuffer;
 	var tmpIdx : hxd.IndexBuffer;
 	var bounds : h3d.col.Bounds;
+	var bufPos : Int;
+	var idxPos : Int;
 	var startIndex : Int;
 	#if debug
 	var allocPos : h3d.impl.AllocPos;
 	#end
+
+	static var PREV_BUFFER : hxd.FloatBuffer;
+	static var PREV_INDEX : hxd.IndexBuffer;
 
 	public function new(stride, isRaw=false, ?pos : h3d.impl.AllocPos ) {
 		this.isRaw = isRaw;
@@ -35,14 +40,25 @@ class BigPrimitive extends Primitive {
 		The count value is the number of vertexes you will add, it will automatically flush() if it doesn't fit into the current buffer.
 	**/
 	public function begin(count) {
-		startIndex = tmpBuf == null ? 0 : Std.int(tmpBuf.length / stride);
+		startIndex = Std.int(bufPos / stride);
 		if( startIndex + count >= 65535 ) {
 			if( count >= 65535 ) throw "Too many vertices in begin()";
 			flush();
 		}
 		if( tmpBuf == null ) {
-			tmpBuf = new hxd.FloatBuffer();
-			tmpIdx = new hxd.IndexBuffer();
+			tmpBuf = PREV_BUFFER;
+			if( tmpBuf == null )
+				tmpBuf = new hxd.FloatBuffer();
+			else
+				PREV_BUFFER = null;
+			tmpBuf.grow(65535 * stride);
+		}
+		if( tmpIdx == null ) {
+			tmpIdx = PREV_INDEX;
+			if( tmpIdx == null )
+				tmpIdx = new hxd.IndexBuffer();
+			else
+				PREV_INDEX = null;
 		}
 	}
 
@@ -50,9 +66,9 @@ class BigPrimitive extends Primitive {
 		This is similar to addVertexValue for X Y and Z, but will also update the bounds if you wish to have them calculated.
 	**/
 	public inline function addPoint(x, y, z) {
-		tmpBuf.push(x);
-		tmpBuf.push(y);
-		tmpBuf.push(z);
+		tmpBuf[bufPos++] = x;
+		tmpBuf[bufPos++] = y;
+		tmpBuf[bufPos++] = z;
 		bounds.addPos(x, y, z);
 	}
 
@@ -61,19 +77,18 @@ class BigPrimitive extends Primitive {
 	}
 
 	public inline function addVertexValue(v) {
-		tmpBuf.push(v);
+		tmpBuf[bufPos++] = v;
 	}
 
 	public inline function addIndex(i) {
-		tmpIdx.push(i + startIndex);
+		tmpIdx[idxPos++] = i + startIndex;
 	}
 
 	override function triCount() {
 		var count = 0;
 		for( i in allIndexes )
 			count += i.count;
-		if( tmpIdx != null )
-			count += tmpIdx.length;
+		count += idxPos;
 		return Std.int(count/3);
 	}
 
@@ -81,10 +96,11 @@ class BigPrimitive extends Primitive {
 		var count = 0;
 		for( b in buffers )
 			count += b.vertices;
-		if( tmpBuf != null )
-			count += Std.int(tmpBuf.length / stride);
+		count += Std.int(bufPos / stride);
 		return count;
 	}
+
+	static var TOTAL = 0;
 
 	/**
 		Flush the current buffer.
@@ -92,14 +108,20 @@ class BigPrimitive extends Primitive {
 	**/
 	public function flush() {
 		if( tmpBuf != null ) {
-			if( tmpBuf.length > 0 && tmpIdx.length > 0 ) {
-				var b = h3d.Buffer.ofFloats(tmpBuf, stride #if debug ,null,allocPos #end);
+			if( bufPos > 0 && idxPos > 0 ) {
+				var b = h3d.Buffer.ofSubFloats(tmpBuf, stride, Std.int(bufPos/stride) #if debug ,null,allocPos #end);
 				if( isRaw ) b.flags.set(RawFormat);
 				buffers.push(b);
-				allIndexes.push(h3d.Indexes.alloc(tmpIdx));
+				allIndexes.push(h3d.Indexes.alloc(tmpIdx, 0, idxPos));
 			}
+			if( PREV_BUFFER == null || PREV_BUFFER.length < tmpBuf.length )
+				PREV_BUFFER = tmpBuf;
+			if( PREV_INDEX == null || PREV_INDEX.length < tmpIdx.length )
+				PREV_INDEX = tmpIdx;
 			tmpBuf = null;
 			tmpIdx = null;
+			bufPos = 0;
+			idxPos = 0;
 			startIndex = 0;
 		}
 	}
@@ -126,6 +148,7 @@ class BigPrimitive extends Primitive {
 			i.dispose();
 		buffers = [];
 		allIndexes = [];
+		bufPos = 0;
 		tmpBuf = null;
 		tmpIdx = null;
 	}
@@ -151,6 +174,8 @@ class BigPrimitive extends Primitive {
 		var start = startIndex;
 		var cr = Math.cos(rotation);
 		var sr = Math.sin(rotation);
+		var pos = bufPos;
+		var tmpBuf = tmpBuf;
 		for( i in 0...nvert ) {
 			var p = (i + startVert) * stride;
 			var x = buf[p++];
@@ -159,58 +184,60 @@ class BigPrimitive extends Primitive {
 			var tx = (x * cr - y * sr) * scale;
 			var ty = (x * sr + y * cr) * scale;
 
+			inline function add(v) tmpBuf[pos++] = v;
+
 			var vx = dx + tx;
 			var vy = dy + ty;
 			var vz = dz + z * scale;
-			tmpBuf.push(vx);
-			tmpBuf.push(vy);
-			tmpBuf.push(vz);
+			add(vx);
+			add(vy);
+			add(vz);
 			bounds.addPos(vx, vy, vz);
 
 			switch( this.stride ) {
 			case 3:
 				continue;
 			case 4:
-				tmpBuf.push(buf[p++]);
+				add(buf[p++]);
 			case 5:
 				// assume no normal
-				tmpBuf.push(buf[p++] + deltaU);
-				tmpBuf.push(buf[p++] + deltaV);
+				add(buf[p++] + deltaU);
+				add(buf[p++] + deltaV);
 			case 6:
 				var nx = buf[p++];
 				var ny = buf[p++];
 				var nz = buf[p++];
 				var tnx = nx * cr - ny * sr;
 				var tny = nx * sr + ny * cr;
-				tmpBuf.push(tnx);
-				tmpBuf.push(tny);
-				tmpBuf.push(nz);
+				add(tnx);
+				add(tny);
+				add(nz);
 			case 7:
 				var nx = buf[p++];
 				var ny = buf[p++];
 				var nz = buf[p++];
 				var tnx = nx * cr - ny * sr;
 				var tny = nx * sr + ny * cr;
-				tmpBuf.push(tnx);
-				tmpBuf.push(tny);
-				tmpBuf.push(nz);
-				tmpBuf.push(buf[p++] + deltaU);
+				add(tnx);
+				add(tny);
+				add(nz);
+				add(buf[p++] + deltaU);
 			case 8, 9, 10:
 				var nx = buf[p++];
 				var ny = buf[p++];
 				var nz = buf[p++];
 				var tnx = nx * cr - ny * sr;
 				var tny = nx * sr + ny * cr;
-				tmpBuf.push(tnx);
-				tmpBuf.push(tny);
-				tmpBuf.push(nz);
+				add(tnx);
+				add(tny);
+				add(nz);
 
 				// UV
-				tmpBuf.push(buf[p++] + deltaU);
-				tmpBuf.push(buf[p++] + deltaV);
+				add(buf[p++] + deltaU);
+				add(buf[p++] + deltaV);
 
 				for( i in 8...this.stride )
-					tmpBuf.push(buf[p++]);
+					add(buf[p++]);
 
 			default:
 				var nx = buf[p++];
@@ -218,26 +245,27 @@ class BigPrimitive extends Primitive {
 				var nz = buf[p++];
 				var tnx = nx * cr - ny * sr;
 				var tny = nx * sr + ny * cr;
-				tmpBuf.push(tnx);
-				tmpBuf.push(tny);
-				tmpBuf.push(nz);
+				add(tnx);
+				add(tny);
+				add(nz);
 
 				// UV
-				tmpBuf.push(buf[p++] + deltaU);
-				tmpBuf.push(buf[p++] + deltaV);
+				add(buf[p++] + deltaU);
+				add(buf[p++] + deltaV);
 
 				// COLOR
-				tmpBuf.push(buf[p++] * color);
-				tmpBuf.push(buf[p++] * color);
-				tmpBuf.push(buf[p++] * color);
+				add(buf[p++] * color);
+				add(buf[p++] * color);
+				add(buf[p++] * color);
 
 				for( i in 11...this.stride )
-					tmpBuf.push(buf[p++]);
+					add(buf[p++]);
 			}
 		}
+		bufPos = pos;
 		start -= startVert;
 		for( i in 0...triCount * 3 )
-			tmpIdx.push(idx[i+startTri*3] + start);
+			tmpIdx[idxPos++] = idx[i+startTri*3] + start;
 	}
 
 }
