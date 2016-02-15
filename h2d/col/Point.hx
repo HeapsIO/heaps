@@ -56,6 +56,13 @@ class Point {
 		y *= k;
 	}
 
+	public inline function normalizeFast() {
+		var k = lengthSq();
+		k = Math.invSqrt(k);
+		x *= k;
+		y *= k;
+	}
+
 	public inline function set(x,y) {
 		this.x = x;
 		this.y = y;

@@ -79,6 +79,14 @@ class Point {
 		z *= k;
 	}
 
+	public inline function normalizeFast() {
+		var k = x * x + y * y + z * z;
+		k = k.invSqrt();
+		x *= k;
+		y *= k;
+		z *= k;
+	}
+	
 	public inline function transform( m : Matrix ) {
 		var px = x * m._11 + y * m._21 + z * m._31 + m._41;
 		var py = x * m._12 + y * m._22 + z * m._32 + m._42;

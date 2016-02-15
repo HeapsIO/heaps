@@ -71,6 +71,13 @@ class Vector {
 		z *= k;
 	}
 
+	public inline function normalizeFast() {
+		var k = lengthSq().invSqrt();
+		x *= k;
+		y *= k;
+		z *= k;
+	}
+
 	public inline function getNormalized() {
 		var k = lengthSq();
 		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
