@@ -52,6 +52,7 @@ class Stage3dDriver extends Driver {
 
 	// standard profile was introduced with Flash14 but it causes problems with filters, only enable it for flash15+
 	public static var PROFILE = #if flash15 cast "standard" #else flash.display3D.Context3DProfile.BASELINE #end;
+	public static var SHADER_CACHE_PATH = null;
 
 	var s3d : flash.display.Stage3D;
 	var ctx : flash.display3D.Context3D;
@@ -500,8 +501,29 @@ class Stage3dDriver extends Driver {
 		if( p == null ) {
 			p = new CompiledShader(shader);
 			p.p = ctx.createProgram();
-			var vdata = compileShader(shader.vertex,[]).bytes.getData();
-			var fdata = compileShader(shader.fragment, p.usedTextures).bytes.getData();
+
+			var cachedShader = null;
+			var file = SHADER_CACHE_PATH;
+			if( SHADER_CACHE_PATH != null ) {
+				file += shader.signature;
+				if( !isStandardMode ) file += "1";
+				file += ".shader";
+				try cachedShader = haxe.Unserializer.run(hxd.File.getBytes(file).toString()) catch( e : Dynamic ) { };
+			}
+			if( cachedShader == null ) {
+				cachedShader = {
+					vertex : compileShader(shader.vertex,[]).bytes,
+					fragment : compileShader(shader.fragment, p.usedTextures).bytes,
+					tex : p.usedTextures,
+				};
+				if( file != null )
+					hxd.File.saveBytes(file, haxe.io.Bytes.ofString(haxe.Serializer.run(cachedShader)));
+			} else {
+				p.usedTextures = cachedShader.tex;
+			}
+
+			var vdata = cachedShader.vertex.getData();
+			var fdata = cachedShader.fragment.getData();
 			vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 			fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 
