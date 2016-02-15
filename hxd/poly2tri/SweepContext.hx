@@ -6,12 +6,6 @@ class SweepContext
 	public var points:Array<Point>;
 	public var edge_list:Array<Edge>;
 
-	#if haxe3
-	public var map:Map<String,Triangle>;
-	#else
-	public var map:Hash<Triangle>;
-	#end
-
 	public var front:AdvancingFront;
 	public var head:Point;
 	public var tail:Point;
@@ -26,16 +20,9 @@ class SweepContext
 		triangles = new Array();
 		points = new Array();
 		edge_list = new Array();
-		#if haxe3
-		map = new Map();
-		#else
-		map = new Hash();
-		#end
-
 
 		basin = new Basin();
 		edge_event = new EdgeEvent();
-
 	}
 
 
@@ -71,7 +58,7 @@ class SweepContext
 
 	public function addToMap(triangle:Triangle)
 	{
-		map.set( triangle.toString(), triangle );
+		//map.set( triangle.toString(), triangle );
 	}
 
 
@@ -118,8 +105,6 @@ class SweepContext
 	{
 		// Initial triangle
 		var triangle = new Triangle(points[0], this.tail, this.head);
-
-		addToMap(triangle);
 
 		var head = new Node( triangle.points[1], triangle );
 		var middle = new Node( triangle.points[0], triangle );
