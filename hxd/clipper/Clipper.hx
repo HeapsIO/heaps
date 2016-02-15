@@ -170,9 +170,12 @@ private class Ref<T> {
 }
 
 private class TEdge {
-	public var bot : IPoint;
-	public var curr : IPoint;
-	public var top : IPoint;
+	public var botX : Int;
+	public var botY : Int;
+	public var currX : Int;
+	public var currY : Int;
+	public var topX : Int;
+	public var topY : Int;
 	public var deltaX : Int;
 	public var deltaY : Int;
 	public var dx : Float;
@@ -189,10 +192,32 @@ private class TEdge {
 	public var prevInAEL : TEdge;
 	public var nextInSEL : TEdge;
 	public var prevInSEL : TEdge;
+
+	public var top(get, set) : IPoint;
+	public var bot(get, set) : IPoint;
+	public var curr(get, set) : IPoint;
+
+	inline function get_top() return new IPoint(topX, topY);
+	inline function get_bot() return new IPoint(botX, botY);
+	inline function get_curr() return new IPoint(currX, currY);
+
+	inline function set_top(p:IPoint) {
+		topX = p.x;
+		topY = p.y;
+		return p;
+	}
+	inline function set_bot(p:IPoint) {
+		botX = p.x;
+		botY = p.y;
+		return p;
+	}
+	inline function set_curr(p:IPoint) {
+		currX = p.x;
+		currY = p.y;
+		return p;
+	}
+
 	public function new() {
-		bot = new IPoint();
-		curr = new IPoint();
-		top = new IPoint();
 	}
 }
 
@@ -375,8 +400,7 @@ private class ClipperBase
 
 		//basic edge initialization
 		var isFlat = true;
-		edges[1].curr.x = pg[1].x;
-		edges[1].curr.y = pg[1].y;
+		edges[1].curr = pg[1];
 		InitEdge(edges[0], edges[1], edges[highI], pg[0]);
 		InitEdge(edges[highI], edges[0], edges[highI - 1], pg[highI]);
 		var i = highI - 1;
@@ -390,7 +414,7 @@ private class ClipperBase
 		var eStop = eStart;
 		var e = eStart;
 		while(true) {
-			if(e.curr.x == e.next.curr.x && e.curr.y == e.next.curr.y) {
+			if(e.currX == e.next.currX && e.currY == e.next.currY) {
 				if(e == e.next) break;
 				if(e == eStart)	eStart = e.next;
 				e = RemoveEdge(e);
@@ -422,7 +446,7 @@ private class ClipperBase
 		do {
 			InitEdge2(e, polyType);
 			e = e.next;
-			if(e.curr.y != eStart.curr.y)
+			if(e.currY != eStart.currY)
 				isFlat = false;
 		}
 		while(e != eStart);
@@ -437,7 +461,7 @@ private class ClipperBase
 
 		//workaround to avoid an endless loop in the while loop below when
 		//open paths have matching start and end points ...
-		if (e.prev.bot.x == e.prev.top.x && e.prev.bot.y == e.prev.top.y) e = e.next;
+		if (e.prev.botX == e.prev.topX && e.prev.botY == e.prev.topY) e = e.next;
 
 		var old = null;
 		while(true) {
@@ -452,7 +476,7 @@ private class ClipperBase
 			//Compare their slopes to find which starts which bound ...
 			var locMin = new LocalMinima();
 			locMin.next = null;
-			locMin.y = e.bot.y;
+			locMin.y = e.botY;
 			if(e.dx < e.prev.dx) {
 				locMin.leftBound = e.prev;
 				locMin.rightBound = e;
@@ -490,21 +514,26 @@ private class ClipperBase
 	}
 	//------------------------------------------------------------------------------
 
-	function InitEdge(e:TEdge, eNext:TEdge, ePrev:TEdge, pt:IPoint) {
+	inline function InitEdge(e:TEdge, eNext:TEdge, ePrev:TEdge, pt:IPoint) {
       e.next = eNext;
       e.prev = ePrev;
-      e.curr = pt.clone();
+      e.currX = pt.x;
+	  e.currY = pt.y;
       e.outIdx = UNASSIGNED;
 	}
 
-	function InitEdge2(e:TEdge, polyType : PolyType ) {
-      if (e.curr.y >= e.next.curr.y) {
-        e.bot = e.curr.clone();
-        e.top = e.next.curr.clone();
+	inline function InitEdge2(e:TEdge, polyType : PolyType ) {
+      if (e.currY >= e.next.currY) {
+        e.botX = e.currX;
+		e.botY = e.currY;
+        e.topX = e.next.currX;
+		e.topY = e.next.currY;
       }
       else {
-        e.top = e.curr.clone();
-        e.bot = e.next.curr.clone();
+        e.topX = e.currX;
+		e.topY = e.currY;
+        e.botX = e.next.currX;
+		e.botY = e.next.currY;
       }
       SetDx(e);
       e.polyType = polyType;
@@ -527,13 +556,13 @@ private class ClipperBase
 		var e2 : TEdge;
 
 		while(true) {
-			while (e.bot.x != e.prev.bot.x || e.bot.y != e.prev.bot.y || (e.curr.x == e.top.x && e.curr.y == e.top.y)) e = e.next;
+			while (e.botX != e.prev.botX || e.botY != e.prev.botY || (e.currX == e.topX && e.currY == e.topY)) e = e.next;
 			if (e.dx != HORIZONTAL && e.prev.dx != HORIZONTAL) break;
 			while (e.prev.dx == HORIZONTAL) e = e.prev;
 			e2 = e;
 			while (e.dx == HORIZONTAL) e = e.next;
-			if (e.top.y == e.prev.bot.y) continue; //ie just an intermediate horz.
-			if (e2.prev.bot.x < e.bot.x) e = e2;
+			if (e.topY == e.prev.botY) continue; //ie just an intermediate horz.
+			if (e2.prev.botX < e.botX) e = e2;
 			break;
 		}
 		return e;
@@ -552,11 +581,11 @@ private class ClipperBase
 			//create another LocMin and calling ProcessBound once more ...
 			E = Result;
 			if (LeftBoundIsForward) {
-				while (E.top.y == E.next.bot.y) E = E.next;
+				while (E.topY == E.next.botY) E = E.next;
 				while (E != Result && E.dx == HORIZONTAL) E = E.prev;
 			}
 			else {
-				while (E.top.y == E.prev.bot.y) E = E.prev;
+				while (E.topY == E.prev.botY) E = E.prev;
 				while (E != Result && E.dx == HORIZONTAL) E = E.next;
 			}
 			if (E == Result)
@@ -572,7 +601,7 @@ private class ClipperBase
 				else E = Result.prev;
 				var locMin = new LocalMinima();
 				locMin.next = null;
-				locMin.y = E.bot.y;
+				locMin.y = E.botY;
 				locMin.leftBound = null;
 				locMin.rightBound = E;
 				E.windDelta = 0;
@@ -593,10 +622,10 @@ private class ClipperBase
 			{
 				if (EStart.dx == HORIZONTAL) //ie an adjoining horizontal skip edge
 				{
-					if (EStart.bot.x != E.bot.x && EStart.top.x != E.bot.x)
+					if (EStart.botX != E.botX && EStart.topX != E.botX)
 						ReverseHorizontal(E);
 				}
-				else if (EStart.bot.x != E.bot.x)
+				else if (EStart.botX != E.botX)
 					ReverseHorizontal(E);
 			}
 		}
@@ -604,7 +633,7 @@ private class ClipperBase
 		EStart = E;
 		if (LeftBoundIsForward)
 		{
-			while (Result.top.y == Result.next.bot.y && Result.next.outIdx != SKIP)
+			while (Result.topY == Result.next.botY && Result.next.outIdx != SKIP)
 				Result = Result.next;
 			if (Result.dx == HORIZONTAL && Result.next.outIdx != SKIP)
 			{
@@ -613,46 +642,46 @@ private class ClipperBase
 				//unless a Skip edge is encountered when that becomes the top divide
 				Horz = Result;
 				while (Horz.prev.dx == HORIZONTAL) Horz = Horz.prev;
-				if (Horz.prev.top.x == Result.next.top.x)
+				if (Horz.prev.topX == Result.next.topX)
 				{
 					if (!LeftBoundIsForward) Result = Horz.prev;
 				}
-				else if (Horz.prev.top.x > Result.next.top.x) Result = Horz.prev;
+				else if (Horz.prev.topX > Result.next.topX) Result = Horz.prev;
 			}
 			while (E != Result)
 			{
 				E.nextInLML = E.next;
-				if (E.dx == HORIZONTAL && E != EStart && E.bot.x != E.prev.top.x)
+				if (E.dx == HORIZONTAL && E != EStart && E.botX != E.prev.topX)
 					ReverseHorizontal(E);
 				E = E.next;
 			}
-			if (E.dx == HORIZONTAL && E != EStart && E.bot.x != E.prev.top.x)
+			if (E.dx == HORIZONTAL && E != EStart && E.botX != E.prev.topX)
 				ReverseHorizontal(E);
 			Result = Result.next; //move to the edge just beyond current bound
 		}
 		else
 		{
-		while (Result.top.y == Result.prev.bot.y && Result.prev.outIdx != SKIP)
+		while (Result.topY == Result.prev.botY && Result.prev.outIdx != SKIP)
 		  Result = Result.prev;
 		if (Result.dx == HORIZONTAL && Result.prev.outIdx != SKIP)
 		{
 		  Horz = Result;
 		  while (Horz.next.dx == HORIZONTAL) Horz = Horz.next;
-		  if (Horz.next.top.x == Result.prev.top.x)
+		  if (Horz.next.topX == Result.prev.topX)
 		  {
 			if (!LeftBoundIsForward) Result = Horz.next;
 		  }
-		  else if (Horz.next.top.x > Result.prev.top.x) Result = Horz.next;
+		  else if (Horz.next.topX > Result.prev.topX) Result = Horz.next;
 		}
 
 		while (E != Result)
 		{
 		  E.nextInLML = E.prev;
-		  if (E.dx == HORIZONTAL && E != EStart && E.bot.x != E.next.top.x)
+		  if (E.dx == HORIZONTAL && E != EStart && E.botX != E.next.topX)
 			ReverseHorizontal(E);
 		  E = E.prev;
 		}
-		if (E.dx == HORIZONTAL && E != EStart && E.bot.x != E.next.top.x)
+		if (E.dx == HORIZONTAL && E != EStart && E.botX != E.next.topX)
 			ReverseHorizontal(E);
 		Result = Result.prev; //move to the edge just beyond current bound
 		}
@@ -666,9 +695,9 @@ private class ClipperBase
 		//swap horizontal edges' top and bottom x's so they follow the natural
 		//progression of the bounds - ie so their xbots will align with the
 		//adjoining lower edge. [Helpful in the ProcessHorizontal() method.]
-		var tmp = e.top.x;
-		e.top.x = e.bot.x;
-		e.bot.x = tmp;
+		var tmp = e.topX;
+		e.topX = e.botX;
+		e.botX = tmp;
 	}
 
     //------------------------------------------------------------------------------
@@ -683,8 +712,8 @@ private class ClipperBase
 
 	private function SetDx(e:TEdge)
 	{
-		e.deltaX = (e.top.x - e.bot.x);
-		e.deltaY = (e.top.y - e.bot.y);
+		e.deltaX = (e.topX - e.botX);
+		e.deltaY = (e.topY - e.botY);
 		if (e.deltaY == 0) e.dx = HORIZONTAL;
 		else e.dx = e.deltaX / e.deltaY;
 	}
@@ -723,9 +752,9 @@ private class ClipperBase
 		//swap ClipperBase.HORIZONTAL edges' top and bottom x's so they follow the natural
 		//progression of the bounds - ie so their xbots will align with the
 		//adjoining lower edge. [Helpful in the ProcessHorizontal() method.]
-		e.curr.x = e.top.x;
-		e.top.x = e.bot.x;
-		e.bot.x = e.curr.x;
+		e.currX = e.topX;
+		e.topX = e.botX;
+		e.botX = e.currX;
 	}
 	//------------------------------------------------------------------------------
 
@@ -745,8 +774,8 @@ private class ClipperBase
 			var e = lm.leftBound;
 			if (e != null)
 			{
-				e.curr.x = e.bot.x;
-				e.curr.y = e.bot.y;
+				e.currX = e.botX;
+				e.currY = e.botY;
 				e.side = EdgeSide.Left;
 				e.outIdx = UNASSIGNED;
 				e = e.nextInLML;
@@ -754,8 +783,8 @@ private class ClipperBase
 			e = lm.rightBound;
 			if (e != null)
 			{
-				e.curr.x = e.bot.x;
-				e.curr.y = e.bot.y;
+				e.currX = e.botX;
+				e.currY = e.botY;
 				e.side = EdgeSide.Right;
 				e.outIdx = UNASSIGNED;
 				e = e.nextInLML;
@@ -963,7 +992,7 @@ class Clipper extends ClipperBase {
 		do
 		{
 			InsertLocalMinimaIntoAEL(botY);
-			m_GhostJoins = [];
+			if( m_GhostJoins.length > 0 ) m_GhostJoins = [];
 			ProcessHorizontals(false);
 			if(m_Scanbeam == null) break;
 
@@ -1063,7 +1092,7 @@ class Clipper extends ClipperBase {
 				SetWindingCount(lb);
 				if(IsContributing(lb))
 					op1 = AddOutPt(lb, lb.bot);
-				InsertScanbeam(lb.top.y);
+				InsertScanbeam(lb.topY);
 			}
 			else {
 				InsertEdgeIntoAEL(lb);
@@ -1077,13 +1106,13 @@ class Clipper extends ClipperBase {
 				if(IsContributing(lb))
 					op1 = AddLocalMinPoly(lb, rb, lb.bot);
 
-				InsertScanbeam(lb.top.y);
+				InsertScanbeam(lb.topY);
 			}
 
 			if(rb != null) {
 				if(isHorizontal(rb))
 					AddEdgeToSEL(rb);
-				else InsertScanbeam(rb.top.y);
+				else InsertScanbeam(rb.topY);
 			}
 
 			if(lb == null || rb == null) continue;
@@ -1093,12 +1122,12 @@ class Clipper extends ClipperBase {
 				for(j in m_GhostJoins) {
 					//if the horizontal Rb and a 'ghost' horizontal overlap, then convert
 					//the 'ghost' join to a real join ready for later ...
-					if(HorzSegmentsOverlap(j.outPt1.pt.x, j.offPt.x, rb.bot.x, rb.top.x))
+					if(HorzSegmentsOverlap(j.outPt1.pt.x, j.offPt.x, rb.botX, rb.topX))
 						AddJoin(j.outPt1, op1, j.offPt);
 				}
 			}
 
-			if(lb.outIdx >= 0 && lb.prevInAEL != null && lb.prevInAEL.curr.x == lb.bot.x && lb.prevInAEL.outIdx >= 0 && SlopesEqual(lb.prevInAEL, lb) && lb.windDelta != 0 && lb.prevInAEL.windDelta != 0) {
+			if(lb.outIdx >= 0 && lb.prevInAEL != null && lb.prevInAEL.currX == lb.botX && lb.prevInAEL.outIdx >= 0 && SlopesEqual(lb.prevInAEL, lb) && lb.windDelta != 0 && lb.prevInAEL.windDelta != 0) {
 				var op2 = AddOutPt(lb.prevInAEL, lb.bot);
 				AddJoin(op1, op2, lb.top);
 			}
@@ -1152,13 +1181,13 @@ class Clipper extends ClipperBase {
 
 	private function E2InsertsBeforeE1(e1:TEdge,e2:TEdge) : Bool
 	{
-		if (e2.curr.x == e1.curr.x)
+		if (e2.currX == e1.currX)
 		{
-			if (e2.top.y > e1.top.y)
-				return e2.top.x < TopX(e1, e2.top.y);
-			else return e1.top.x > TopX(e2, e1.top.y);
+			if (e2.topY > e1.topY)
+				return e2.topX < TopX(e1, e2.topY);
+			else return e1.topX > TopX(e2, e1.topY);
 		}
-		else return e2.curr.x < e1.curr.x;
+		else return e2.currX < e1.currX;
 	}
 	//------------------------------------------------------------------------------
 
@@ -2052,20 +2081,21 @@ class Clipper extends ClipperBase {
 		e.nextInLML.windCnt2 = e.windCnt2;
 
 		e = e.nextInLML;
-		e.curr = e.bot.clone();
+		e.currX = e.botX;
+		e.currY = e.botY;
 		e.prevInAEL = AelPrev;
 		e.nextInAEL = AelNext;
 		if (!isHorizontal(e))
-			InsertScanbeam(e.top.y);
+			InsertScanbeam(e.topY);
 		return e;
 	}
 
     //------------------------------------------------------------------------------
 
 	function GetHorzDirection(HorzEdge : TEdge) {
-		if (HorzEdge.bot.x < HorzEdge.top.x)
-			return { left : HorzEdge.bot.x, right : HorzEdge.top.x, dir : Direction.LeftToRight };
-		else return { left : HorzEdge.top.x, right : HorzEdge.bot.x, dir : Direction.RightToLeft };
+		if (HorzEdge.botX < HorzEdge.topX)
+			return { left : HorzEdge.botX, right : HorzEdge.topX, dir : Direction.LeftToRight };
+		else return { left : HorzEdge.topX, right : HorzEdge.botX, dir : Direction.RightToLeft };
 	}
 
 	//------------------------------------------------------------------------------
@@ -2102,11 +2132,11 @@ class Clipper extends ClipperBase {
 			while(e != null) {
 				//Break if we've got to the end of an intermediate horizontal edge ...
 				//nb: Smaller Dx's are to the right of larger Dx's ABOVE the horizontal.
-				if (e.curr.x == horzEdge.top.x && horzEdge.nextInLML != null &&	e.dx < horzEdge.nextInLML.dx) break;
+				if (e.currX == horzEdge.topX && horzEdge.nextInLML != null &&	e.dx < horzEdge.nextInLML.dx) break;
 
 				var eNext = GetNextInAEL(e, dir); //saves eNext for later
 
-				if ((dir == Direction.LeftToRight && e.curr.x <= horzRight) || (dir == Direction.RightToLeft && e.curr.x >= horzLeft))
+				if ((dir == Direction.LeftToRight && e.currX <= horzRight) || (dir == Direction.RightToLeft && e.currX >= horzLeft))
 				{
 					//so far we're still in range of the horizontal Edge  but make sure
 					//we're at the last of consec. horizontals when matching with eMaxPair
@@ -2118,7 +2148,7 @@ class Clipper extends ClipperBase {
 							var eNextHorz = m_SortedEdges;
 							while (eNextHorz != null)
 							{
-								if (eNextHorz.outIdx >= 0 && HorzSegmentsOverlap(horzEdge.bot.x, horzEdge.top.x, eNextHorz.bot.x, eNextHorz.top.x))	{
+								if (eNextHorz.outIdx >= 0 && HorzSegmentsOverlap(horzEdge.botX, horzEdge.topX, eNextHorz.botX, eNextHorz.topX))	{
 									var op2 = AddOutPt(eNextHorz, eNextHorz.bot);
 									AddJoin(op2, op1, eNextHorz.top);
 								}
@@ -2133,18 +2163,18 @@ class Clipper extends ClipperBase {
 					}
 					else if(dir == Direction.LeftToRight)
 					{
-						var Pt = new IPoint(e.curr.x, horzEdge.curr.y);
+						var Pt = new IPoint(e.currX, horzEdge.currY);
 						IntersectEdges(horzEdge, e, Pt);
 					}
 					else
 					{
-						var Pt = new IPoint(e.curr.x, horzEdge.curr.y);
+						var Pt = new IPoint(e.currX, horzEdge.currY);
 						IntersectEdges(e, horzEdge, Pt);
 					}
 					SwapPositionsInAEL(horzEdge, e);
 				}
-				else if ((dir == Direction.LeftToRight && e.curr.x >= horzRight) ||
-				(dir == Direction.RightToLeft && e.curr.x <= horzLeft))
+				else if ((dir == Direction.LeftToRight && e.currX >= horzRight) ||
+				(dir == Direction.RightToLeft && e.currX <= horzLeft))
 					break;
 				e = eNext;
 			} //end while
@@ -2171,12 +2201,12 @@ class Clipper extends ClipperBase {
 				//nb: HorzEdge is no longer horizontal here
 				var ePrev = horzEdge.prevInAEL;
 				var eNext = horzEdge.nextInAEL;
-				if (ePrev != null && ePrev.curr.x == horzEdge.bot.x && ePrev.curr.y == horzEdge.bot.y && ePrev.windDelta != 0 && (ePrev.outIdx >= 0 && ePrev.curr.y > ePrev.top.y && SlopesEqual(horzEdge, ePrev)))
+				if (ePrev != null && ePrev.currX == horzEdge.botX && ePrev.currY == horzEdge.botY && ePrev.windDelta != 0 && (ePrev.outIdx >= 0 && ePrev.currY > ePrev.topY && SlopesEqual(horzEdge, ePrev)))
 				{
 					var op2 = AddOutPt(ePrev, horzEdge.bot);
 					AddJoin(op1, op2, horzEdge.top);
 				}
-				else if (eNext != null && eNext.curr.x == horzEdge.bot.x &&	eNext.curr.y == horzEdge.bot.y && eNext.windDelta != 0 && eNext.outIdx >= 0 && eNext.curr.y > eNext.top.y && SlopesEqual(horzEdge, eNext))
+				else if (eNext != null && eNext.currX == horzEdge.botX &&	eNext.currY == horzEdge.botY && eNext.windDelta != 0 && eNext.outIdx >= 0 && eNext.currY > eNext.topY && SlopesEqual(horzEdge, eNext))
 				{
 					var op2 = AddOutPt(eNext, horzEdge.bot);
 					AddJoin(op1, op2, horzEdge.top);
@@ -2207,22 +2237,22 @@ class Clipper extends ClipperBase {
 
 	private inline function IsMaxima(e:TEdge,y:Float) : Bool
 	{
-		return (e != null && e.top.y == y && e.nextInLML == null);
+		return (e != null && e.topY == y && e.nextInLML == null);
 	}
 	//------------------------------------------------------------------------------
 
 	private inline function IsIntermediate(e:TEdge,y:Float) : Bool
 	{
-		return (e.top.y == y && e.nextInLML != null);
+		return (e.topY == y && e.nextInLML != null);
 	}
 	//------------------------------------------------------------------------------
 
 	private function GetMaximaPair(e:TEdge) : TEdge
 	{
 		var result = null;
-        if ((e.next.top.x == e.top.x && e.next.top.y == e.top.y) && e.next.nextInLML == null)
+        if ((e.next.topX == e.topX && e.next.topY == e.topY) && e.next.nextInLML == null)
 			result = e.next;
-        else if ((e.prev.top.x == e.top.x && e.prev.top.y == e.top.y) && e.prev.nextInLML == null)
+        else if ((e.prev.topX == e.topX && e.prev.topY == e.topY) && e.prev.nextInLML == null)
 			result = e.prev;
         if (result != null && (result.outIdx == ClipperBase.SKIP || (result.nextInAEL == result.prevInAEL && !isHorizontal(result))))
 			return null;
@@ -2264,7 +2294,7 @@ class Clipper extends ClipperBase {
 		{
 			e.prevInSEL = e.prevInAEL;
 			e.nextInSEL = e.nextInAEL;
-			e.curr.x = TopX( e, topY );
+			e.currX = TopX( e, topY );
 			e = e.nextInAEL;
 		}
 
@@ -2278,7 +2308,7 @@ class Clipper extends ClipperBase {
 			{
 				var eNext = e.nextInSEL;
 				var pt;
-				if (e.curr.x > eNext.curr.x)
+				if (e.currX > eNext.currX)
 				{
 					pt = IntersectPoint(e, eNext);
 					var newNode = new IntersectNode();
@@ -2367,87 +2397,87 @@ class Clipper extends ClipperBase {
 
 	private inline function TopX(edge:TEdge,currentY:Int) : Int
 	{
-		if (currentY == edge.top.y)
-			return edge.top.x;
-		return edge.bot.x + Round(edge.dx *(currentY - edge.bot.y));
+		if (currentY == edge.topY)
+			return edge.topX;
+		return edge.botX + Round(edge.dx *(currentY - edge.botY));
 	}
 
 	//------------------------------------------------------------------------------
 
-	function IntersectPoint(edge1 : TEdge, edge2 : TEdge)
+	inline function IntersectPoint(edge1 : TEdge, edge2 : TEdge)
 	{
-		var ip = new IPoint();
+		var ipx, ipy;
 		var b1, b2;
 		//nb: with very large coordinate values, it's possible for SlopesEqual() to
 		//return false but for the edge.Dx value be equal due to double precision rounding.
 		if (edge1.dx == edge2.dx)
 		{
-			ip.y = edge1.curr.y;
-			ip.x = TopX(edge1, ip.y);
-			return ip;
+			ipy = edge1.currY;
+			ipx = TopX(edge1, ipy);
+			return new IPoint(ipx,ipy);
 		}
 
 		if (edge1.deltaX == 0)
 		{
-			ip.x = edge1.bot.x;
+			ipx = edge1.botX;
 			if (isHorizontal(edge2))
 			{
-				ip.y = edge2.bot.y;
+				ipy = edge2.botY;
 			}
 			else
 			{
-				b2 = edge2.bot.y - (edge2.bot.x / edge2.dx);
-				ip.y = Round(ip.x / edge2.dx + b2);
+				b2 = edge2.botY - (edge2.botX / edge2.dx);
+				ipy = Round(ipx / edge2.dx + b2);
 			}
 		}
 		else if (edge2.deltaX == 0)
 		{
-			ip.x = edge2.bot.x;
+			ipx = edge2.botX;
 			if (isHorizontal(edge1))
 			{
-				ip.y = edge1.bot.y;
+				ipy = edge1.botY;
 			}
 			else
 			{
-				b1 = edge1.bot.y - (edge1.bot.x / edge1.dx);
-				ip.y = Round(ip.x / edge1.dx + b1);
+				b1 = edge1.botY - (edge1.botX / edge1.dx);
+				ipy = Round(ipx / edge1.dx + b1);
 			}
 		}
 		else
 		{
-			b1 = edge1.bot.x - edge1.bot.y * edge1.dx;
-			b2 = edge2.bot.x - edge2.bot.y * edge2.dx;
+			b1 = edge1.botX - edge1.botY * edge1.dx;
+			b2 = edge2.botX - edge2.botY * edge2.dx;
 			var q = (b2 - b1) / (edge1.dx - edge2.dx);
-			ip.y = Round(q);
+			ipy = Round(q);
 			if (Math.abs(edge1.dx) < Math.abs(edge2.dx))
-				ip.x = Round(edge1.dx * q + b1);
+				ipx = Round(edge1.dx * q + b1);
 			else
-				ip.x = Round(edge2.dx * q + b2);
+				ipx = Round(edge2.dx * q + b2);
 		}
 
-		if (ip.y < edge1.top.y || ip.y < edge2.top.y)
+		if (ipy < edge1.topY || ipy < edge2.topY)
 		{
-			if (edge1.top.y > edge2.top.y)
-				ip.y = edge1.top.y;
+			if (edge1.topY > edge2.topY)
+				ipy = edge1.topY;
 			else
-				ip.y = edge2.top.y;
+				ipy = edge2.topY;
 			if (Math.abs(edge1.dx) < Math.abs(edge2.dx))
-				ip.x = TopX(edge1, ip.y);
+				ipx = TopX(edge1, ipy);
 			else
-				ip.x = TopX(edge2, ip.y);
+				ipx = TopX(edge2, ipy);
 		}
 		//finally, don't allow 'ip' to be BELOW curr.y (ie bottom of scanbeam) ...
-		if (ip.y > edge1.curr.y)
+		if (ipy > edge1.currY)
 		{
-			ip.y = edge1.curr.y;
+			ipy = edge1.currY;
 			//better to use the more vertical edge to derive X ...
 			if (Math.abs(edge1.dx) > Math.abs(edge2.dx))
-				ip.x = TopX(edge2, ip.y);
+				ipx = TopX(edge2, ipy);
 			else
-				ip.x = TopX(edge1, ip.y);
+				ipx = TopX(edge1, ipy);
 		}
 
-		return ip;
+		return new IPoint(ipx,ipy);
 	}
 	//------------------------------------------------------------------------------
 
@@ -2485,16 +2515,16 @@ class Clipper extends ClipperBase {
 				}
 				else
 				{
-					e.curr.x = TopX( e, topY );
-					e.curr.y = topY;
+					e.currX = TopX( e, topY );
+					e.currY = topY;
 				}
 
 				if (strictlySimple)
 				{
 					var ePrev = e.prevInAEL;
-					if ((e.outIdx >= 0) && (e.windDelta != 0) && ePrev != null && (ePrev.outIdx >= 0) && (ePrev.curr.x == e.curr.x) && (ePrev.windDelta != 0))
+					if ((e.outIdx >= 0) && (e.windDelta != 0) && ePrev != null && (ePrev.outIdx >= 0) && (ePrev.currX == e.currX) && (ePrev.windDelta != 0))
 					{
-						var ip = new IPoint(e.curr.x, e.curr.y);
+						var ip = new IPoint(e.currX, e.currY);
 						var op = AddOutPt(ePrev, ip);
 						var op2 = AddOutPt(e, ip);
 						AddJoin(op, op2, ip); //StrictlySimple (type-3) join
@@ -2522,12 +2552,12 @@ class Clipper extends ClipperBase {
 				//if output polygons share an edge, they'll need joining later ...
 				var ePrev = e.prevInAEL;
 				var eNext = e.nextInAEL;
-				if (ePrev != null && ePrev.curr.x == e.bot.x &&	ePrev.curr.y == e.bot.y && op != null && ePrev.outIdx >= 0 && ePrev.curr.y > ePrev.top.y &&	SlopesEqual(e, ePrev) && (e.windDelta != 0) && (ePrev.windDelta != 0))
+				if (ePrev != null && ePrev.currX == e.botX &&	ePrev.currY == e.botY && op != null && ePrev.outIdx >= 0 && ePrev.currY > ePrev.topY &&	SlopesEqual(e, ePrev) && (e.windDelta != 0) && (ePrev.windDelta != 0))
 				{
 					var op2 = AddOutPt(ePrev, e.bot);
 					AddJoin(op, op2, e.top);
 				}
-				else if (eNext != null && eNext.curr.x == e.bot.x && eNext.curr.y == e.bot.y && op != null && eNext.outIdx >= 0 && eNext.curr.y > eNext.top.y && SlopesEqual(e, eNext) && (e.windDelta != 0) && (eNext.windDelta != 0))
+				else if (eNext != null && eNext.currX == e.botX && eNext.currY == e.botY && op != null && eNext.outIdx >= 0 && eNext.currY > eNext.topY && SlopesEqual(e, eNext) && (e.windDelta != 0) && (eNext.windDelta != 0))
 				{
 					var op2 = AddOutPt(eNext, e.bot);
 					AddJoin(op, op2, e.top);
@@ -3630,7 +3660,7 @@ class ClipperOffset
 
     public function clear() {
 		m_polyNodes = new PolyNode();
-		m_lowest.x = -1;
+		m_lowest = new IPoint( -1, 0);
     }
 
     //------------------------------------------------------------------------------
