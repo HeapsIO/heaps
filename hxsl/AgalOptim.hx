@@ -5,17 +5,35 @@ private class RegInfos {
 	public var index : Int;
 	public var swiz : Array<C>;
 	public var values : Array<Reg>;
-	public var prevRead : Array<Int>;
-	public var prevWrite : Array<Int>;
-	public var reads : Array<Int>;
-	public var writes : Array<Int>;
+	public var prevRead : haxe.ds.Vector<Int>;
+	public var prevWrite : haxe.ds.Vector<Int>;
+	public var reads : haxe.ds.Vector<Int>;
+	public var writes : haxe.ds.Vector<Int>;
+
 	public var live : Array<Int>;
 	public var invertSwiz : Array<Int>;
 
 	public function new(i) {
 		index = i;
+		prevRead = new haxe.ds.Vector(4);
+		prevWrite = new haxe.ds.Vector(4);
+		reads = new haxe.ds.Vector(4);
+		writes = new haxe.ds.Vector(4);
+		reset();
+	}
+
+	public inline function reset() {
 		live = [];
+		swiz = null;
+		invertSwiz = null;
+		values = null;
 		invertSwiz = [];
+		for( i in 0...4 ) {
+			prevRead[i] = -1;
+			prevWrite[i] = -1;
+			writes[i] = -1;
+			reads[i] = -1;
+		}
 	}
 }
 
@@ -26,6 +44,7 @@ class AgalOptim {
 
 	var code : Array<Opcode>;
 	var codePos : Int;
+	var prevRegs : Array<RegInfos>;
 	var regs : Array<RegInfos>;
 	var flag : Bool;
 	var maxRegs : Int;
@@ -38,6 +57,7 @@ class AgalOptim {
 
 	public function new(debug = false) {
 		this.debug = debug;
+		regs = [];
 	}
 
 	function opStr(op) {
@@ -192,11 +212,11 @@ class AgalOptim {
 			swiz = [r.access.comp];
 		var sout = [];
 		for( s in swiz ) {
-			var s2 = inf.swiz[s.getIndex()];
+			var s2 : Null<C> = inf.swiz[s.getIndex()];
 			if( s2 == null ) {
 				// reading from unassigned component can happen if we are padding a varying
 				for( i in 0...4 ) {
-					var s = inf.swiz[3 - i];
+					var s : Null<C> = inf.swiz[3 - i];
 					if( s != null ) {
 						s2 = s;
 						break;
@@ -466,6 +486,7 @@ class AgalOptim {
 	}
 
 	function buildLive(check) {
+		prevRegs = regs;
 		regs = [];
 		for( i in 0...code.length ) {
 			codePos = i;
@@ -589,12 +610,11 @@ class AgalOptim {
 		if( r.t != RTemp ) return null;
 		var inf = regs[r.index];
 		if( inf == null ) {
-			inf = new RegInfos(r.index);
-			inf.values = null;
-			inf.prevRead = [ -1, -1, -1, -1];
-			inf.reads = [-1, -1, -1, -1];
-			inf.writes = [ -1, -1, -1, -1];
-			inf.prevWrite = [ -1, -1, -1, -1];
+			inf = prevRegs[r.index];
+			if( inf != null )
+				inf.reset();
+			else
+				inf = new RegInfos(r.index);
 			regs[r.index] = inf;
 		}
 		return inf;
@@ -612,6 +632,10 @@ class AgalOptim {
 		return dist(a, b) == 0;
 	}
 
+	inline function sameTex( ta : Tex, tb : Tex ) {
+		return ta.index == tb.index && (ta.flags == tb.flags || ta.flags.join("") == tb.flags.join(""));
+	}
+
 	inline function dist( a : Reg, b : Reg ) {
 		return a.t == b.t && a.access == null && b.access == null ? b.index - a.index : 1000;
 	}
@@ -620,42 +644,112 @@ class AgalOptim {
 		return new Reg(r.t, r.index, null);
 	}
 
+	var optiLoops = 0;
+	var optiChecks = 0;
+
+	function regSign(r:Reg) {
+		return ((r.index << 8)&31) | swizBits(r);
+	}
+
+	function getSign( op : Opcode ) {
+		var ra = 0, rb = 0;
+		inline function regSign(r:Reg) {
+			return ((r.index << 4)&511) ^ swizBits(r);
+		}
+		inline function unop(_, a, _) {
+			ra = regSign(a);
+		}
+		inline function binop(_, a, b, _) {
+			ra = regSign(a);
+			rb = regSign(b);
+		}
+		switch( op ) {
+		case OMov(_): return -1;
+		case OAdd(d, a, b): binop(d, a, b, OAdd);
+		case OSub(d, a, b): binop(d, a, b, OSub);
+		case OMul(d, a, b): binop(d, a, b, OMul);
+		case ODiv(d, a, b): binop(d, a, b, ODiv);
+		case ORcp(d, v): unop(d, v, ORcp);
+		case OMin(d, a, b): binop(d, a, b, OMin);
+		case OMax(d, a, b): binop(d, a, b, OMax);
+		case OFrc(d, v): unop(d, v, OFrc);
+		case OSqt(d, v): unop(d, v, OSqt);
+		case ORsq(d, v): unop(d, v, ORsq);
+		case OPow(d, a, b): binop(d, a, b, OPow);
+		case OLog(d, v): unop(d, v, OLog);
+		case OExp(d, v): unop(d, v, OExp);
+		case ONrm(d, v): unop(d, v, ONrm);
+		case OSin(d, v): unop(d, v, OSin);
+		case OCos(d, v): unop(d, v, OCos);
+		case OCrs(d, a, b): binop(d, a, b, OCrs);
+		case ODp3(d, a, b): binop(d, a, b, ODp3);
+		case ODp4(d, a, b): binop(d, a, b, ODp4);
+		case OAbs(d, v): unop(d, v, OAbs);
+		case ONeg(d, v): unop(d, v, ONeg);
+		case OSat(d, v): unop(d, v, OSat);
+		case OM33(d, a, b): binop(d, a, b, OM33);
+		case OM44(d, a, b): binop(d, a, b, OM44);
+		case OM34(d, a, b): binop(d, a, b, OM34);
+		case ODdx(d, v): unop(d, v, ODdx);
+		case ODdy(d, v): unop(d, v, ODdy);
+		case OIfe(_), OIne(_), OIfg(_), OIfl(_), OEls, OEif, OUnused, OKil(_):
+			return -1;
+		case OTex(_,a,tex):
+			ra = regSign(a);
+			rb = tex.index;
+			return -1;
+		case OSge(d, a, b): binop(d, a, b, OSge);
+		case OSlt(d, a, b): binop(d, a, b, OSlt);
+		case OSgn(d, v): unop(d, v, OSgn);
+		case OSeq(d, a, b): binop(d, a, b, OSeq);
+		case OSne(d, a, b): binop(d, a, b, OSne);
+		}
+		return (op.getIndex() << 26) | (ra << 13) | rb;
+	}
+
 	function optiDup() {
 		// optimize duplication of code
-		for( r1 in regs ) {
-			if( r1 == null ) continue;
-			for( i in 0...4 ) {
-				var p1 = r1.writes[i];
-				var op1 = code[p1];
-				if( op1 == null ) continue;
-				switch( op1 ) {
-				case OMov(_), OTex(_): continue;
+		var opIds = new Map();
+		for( i in 0...code.length ) {
+			var op1 = code[i];
+			var s = getSign(op1);
+			if( s == -1 ) continue;
+			var prev = s;
+			while( true ) {
+				var prev = opIds.get(s);
+				if( prev == null ) {
+					opIds.set(s, i);
+					break;
+				}
+				var op2 = code[prev];
+				if( op1.getIndex() != op2.getIndex() ) {
+					s = s * 1103515245 + 12345;
+					continue;
+				}
+
+				var params1 = op1.getParameters();
+				var params2 = op2.getParameters();
+				var ok = true;
+
+				// additional check
+				if( !same(params1[1], params2[1]) )
+					ok = false;
+				else switch( op1 ) {
+				case OTex(_):
+					if( !sameTex(params1[2], params2[2]) )
+						ok = false;
 				default:
+					if( !same(params1[2], params2[2]) )
+						ok = false;
 				}
-				for( r2 in regs ) {
-					if( r1 == r2 || r2 == null ) continue;
-					for( j in 0...4 ) {
-						var p2 = r2.writes[i];
-						if( p2 < p1 ) continue;
 
-						var op2 = code[p2];
-						if( op1.getIndex() != op2.getIndex() ) continue;
-
-						var args1 : Array<Reg> = cast op1.getParameters();
-						var args2 : Array<Reg> = cast op2.getParameters();
-						var ok = true;
-						for( i in 1...args1.length )
-							if( !same(args1[i], args2[i]) || swizBits(args1[i]) != swizBits(args2[i]) ) {
-								ok = false;
-								break;
-							}
-						if( ok ) {
-							code[p2] = OMov(args2[0], args1[0]);
-							changed = true;
-							return;
-						}
-					}
+				if( ok ) {
+					var pos = i;
+					code[i] = OMov(params1[0], params2[0]);
+					changed = true;
+					break;
 				}
+				s = s * 1103515245 + 12345;
 			}
 		}
 	}
@@ -753,22 +847,24 @@ class AgalOptim {
 		}
 	}
 
-	inline function map( op : Opcode, r : Reg -> Bool -> Reg ) {
+	inline function map( mop : Opcode, r : Reg -> Bool -> Reg ) {
 		inline function unop(d, v, op) {
-			v = r(v, false);
-			return op(r(d, true), v);
+			var v2 = r(v, false);
+			var d2 = r(d, true);
+			return if( v == v2 && d == d2 ) mop else op(d2,v2);
 		}
 		inline function binop(d, a, b, op) {
-			a = r(a, false);
-			b = r(b, false);
-			return op(r(d, true), a, b);
+			var a2 = r(a, false);
+			var b2 = r(b, false);
+			var d2 = r(d, true);
+			return if( a == a2 && b == b2 && d == d2 ) mop else op(d2, a2, b2);
 		}
 		inline function cond(a, b, op) {
-			a = r(a, false);
-			b = r(b, false);
-			return op(a, b);
+			var a2 = r(a, false);
+			var b2 = r(b, false);
+			return if( a2 == a && b2 == b ) mop else op(a2, b2);
 		}
-		return switch( op ) {
+		return switch( mop ) {
 		case OMov(d, v): unop(d, v, OMov);
 		case OAdd(d, a, b): binop(d, a, b, OAdd);
 		case OSub(d, a, b): binop(d, a, b, OSub);
