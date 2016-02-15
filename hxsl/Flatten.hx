@@ -15,6 +15,11 @@ private class Alloc {
 	}
 }
 
+enum ARead {
+	AIndex( a : Alloc );
+	AOffset( a : Alloc, stride : Int, delta : TExpr );
+}
+
 class Flatten {
 
 	var globals : Array<TVar>;
@@ -102,7 +107,7 @@ class Flatten {
 			if( a == null )
 				e
 			else
-				access(a, v.type, e.p, readIndex.bind(a));
+				access(a, v.type, e.p, AIndex(a));
 		case TArray( { e : TVar(v), p : vp }, eindex) if( !eindex.e.match(TConst(CInt(_))) ):
 			var a = varMap.get(v);
 			if( a == null )
@@ -115,7 +120,7 @@ class Flatten {
 					stride >>= 2;
 					eindex = mapExpr(eindex);
 					var toInt = { e : TCall( { e : TGlobal(ToInt), t : TFun([]), p : vp }, [eindex]), t : TInt, p : vp };
-					access(a, t, vp, readOffset.bind(a,stride, stride == 1 ? toInt : { e : TBinop(OpMult,toInt,mkInt(stride,vp)), t : TInt, p : vp }));
+					access(a, t, vp, AOffset(a,stride, stride == 1 ? toInt : { e : TBinop(OpMult,toInt,mkInt(stride,vp)), t : TInt, p : vp }));
 				default:
 					throw "assert";
 				}
@@ -234,17 +239,23 @@ class Flatten {
 		return { e : TConst(CInt(v)), t : TInt, p : pos };
 	}
 
-	function readIndex( a : Alloc, index : Int, pos ) : TExpr {
+	inline function readIndex( a : Alloc, index : Int, pos ) : TExpr {
 		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos },mkInt((a.pos>>2)+index,pos)), t : TVec(4,a.t), p : pos }
 	}
 
-	function readOffset( a : Alloc, stride : Int, delta : TExpr, index : Int, pos ) : TExpr {
+	inline function readOffset( a : Alloc, stride : Int, delta : TExpr, index : Int, pos ) : TExpr {
 		var index = (a.pos >> 2) + index;
 		var offset : TExpr = index == 0 ? delta : { e : TBinop(OpAdd, delta, mkInt(index, pos)), t : TInt, p : pos };
 		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos }, offset), t : TVec(4,a.t), p:pos };
 	}
 
-	function access( a : Alloc, t : Type, pos : Position, read : Int -> Position -> TExpr ) : TExpr {
+	function access( a : Alloc, t : Type, pos : Position, acc : ARead ) : TExpr {
+		inline function read(index, pos) {
+			return switch( acc ) {
+			case AIndex(a): readIndex(a, index, pos);
+			case AOffset(a, stride, delta): readOffset(a, stride, delta, index, pos);
+			}
+		}
 		switch( t ) {
 		case TMat4:
 			return { e : TCall( { e : TGlobal(Mat4), t : TFun([]), p : pos }, [
@@ -260,10 +271,10 @@ class Flatten {
 				read(2,pos),
 			]), t : TMat3x4, p : pos }
 		case TMat3:
-			return { e : TCall( { e : TGlobal(Mat3), t : TFun([]), p : pos } , [access(a, TMat3x4, pos, read)] ), t : TMat3, p : pos };
+			return { e : TCall( { e : TGlobal(Mat3), t : TFun([]), p : pos } , [access(a, TMat3x4, pos, acc)] ), t : TMat3, p : pos };
 		case TArray(t, SConst(len)):
 			var stride = Std.int(a.size / len);
-			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, readIndex.bind(a)); }];
+			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, AIndex(a)); }];
 			return { e : TArrayDecl(earr), t : t, p : pos };
 		case TSampler2D, TSamplerCube:
 			return read(0,pos);
