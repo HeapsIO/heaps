@@ -57,7 +57,7 @@ class Printer {
 				case PerObject: "perObject";
 				case Name(n): "name('" + n + "')";
 				case Shared: "shared";
-				case Precision(p): Std.string(p).toLowerCase() + "p";
+				case Precision(p): p.getName().toLowerCase() + "p";
 				}) + " ");
 		}
 		if( v.kind != defKind )
@@ -123,6 +123,8 @@ class Printer {
 			add("@" + v.id);
 	}
 
+	static var SWIZ = ["x", "y", "z", "w"];
+
 	function addExpr( e : TExpr, tabs : String ) : Void {
 		switch( e.e ) {
 		case TVar(v):
@@ -137,7 +139,7 @@ class Printer {
 			addExpr(e,tabs);
 			add(".");
 			for( r in regs )
-				add(Std.string(r).toLowerCase());
+				add(SWIZ[r.getIndex()]);
 		case TReturn(e):
 			add("return");
 			if( e != null ) {
