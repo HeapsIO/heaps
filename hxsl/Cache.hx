@@ -127,12 +127,12 @@ class Cache {
 		Printer.check(r.fragment.data,[s.fragment]);
 		#end
 
-		var sid = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
-		var r2 = byID.get(sid);
+		r.signature = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
+		var r2 = byID.get(r.signature);
 		if( r2 != null )
 			r.id = r2.id; // same id but different variable mapping
 		else
-			byID.set(sid, r);
+			byID.set(r.signature, r);
 
 		return r;
 	}
