@@ -148,6 +148,7 @@ class NetworkHost {
 	var rpcUID = Std.random(0x1000000);
 	var rpcWaits = new Map<Int,Serializer->Void>();
 	var targetClient : NetworkClient;
+	var aliveEvents : Array<Void->Void>;
 	public var self(default,null) : NetworkClient;
 
 	public function new() {
@@ -155,6 +156,7 @@ class NetworkHost {
 		isAuth = true;
 		self = new NetworkClient(this);
 		clients = [];
+		aliveEvents = [];
 		pendingClients = [];
 		ctx = new Serializer();
 		@:privateAccess ctx.newObjects = [];
@@ -260,6 +262,10 @@ class NetworkHost {
 		});
 	}
 
+	public inline function addAliveEvent(f) {
+		aliveEvents.push(f);
+	}
+
 	public function makeAlive() {
 		var objs = @:privateAccess ctx.newObjects;
 		if( objs.length == 0 )
@@ -271,6 +277,12 @@ class NetworkHost {
 			if( logger != null )
 				logger("Alive " + n +"#" + n.__uid);
 			n.alive();
+		}
+		while( aliveEvents.length > 0 ) {
+			var events = aliveEvents;
+			aliveEvents = [];
+			for( f in events )
+				f();
 		}
 	}
 
