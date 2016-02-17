@@ -276,6 +276,7 @@ private class Join {
 
 //------------------------------------------------------------------------------
 
+@:noDebug
 @:allow(hxd.clipper)
 private class ClipperBase
 {
@@ -832,7 +833,7 @@ enum ResultKind {
 	HolesOnly;
 }
 
-
+@:noDebug
 @:allow(hxd.clipper)
 class Clipper extends ClipperBase {
 

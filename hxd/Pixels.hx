@@ -173,6 +173,7 @@ class Pixels {
 		format = target;
 	}
 
+	@:noDebug
 	public function getPixel(x, y) : Int {
 		if( flags.has(FlipY) ) y = height - 1 - y;
 		var p = ((x + y * width) * bpp) + offset;
