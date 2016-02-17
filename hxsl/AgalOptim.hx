@@ -644,11 +644,8 @@ class AgalOptim {
 		return new Reg(r.t, r.index, null);
 	}
 
-	var optiLoops = 0;
-	var optiChecks = 0;
-
 	function regSign(r:Reg) {
-		return ((r.index << 8)&31) | swizBits(r);
+		return (r.index << 8) | swizBits(r);
 	}
 
 	function getSign( op : Opcode ) {
@@ -707,23 +704,60 @@ class AgalOptim {
 		return (op.getIndex() << 26) | (ra << 13) | rb;
 	}
 
+	function getAssignedReg( op : Opcode ) {
+		return switch( op ) {
+		case OMov(r, _), ORcp(r, _), ORsq(r, _), OFrc(r, _), OSqt(r, _), OLog(r, _), OExp(r, _), ONrm(r, _), OSin(r, _), OCos(r, _), OAbs(r, _), ONeg(r, _), OSat(r, _), ODdx(r, _), ODdy(r, _): r;
+		case OAdd(r, _, _), OSub(r, _, _), OMul(r, _, _), ODiv(r, _, _), OMin(r, _, _), OMax(r, _ , _), OPow(r, _, _), OCrs(r, _, _), ODp3(r, _, _), ODp4(r, _, _), OM33(r, _, _), OM44(r, _, _), OM34(r, _, _), OTex(r, _, _): r;
+		case OIfe(_), OIne(_), OIfg(_), OIfl(_), OEls, OEif, OUnused, OKil(_), OSge(_), OSlt(_), OSgn(_), OSeq(_), OSne(_): null;
+		}
+	}
+
 	function optiDup() {
 		// optimize duplication of code
 		var opIds = new Map();
+
+		// use prevWrite to store our last opcode signature
+		for( r in regs )
+			if( r != null ) {
+				r.prevWrite[0] = -1;
+				r.prevWrite[1] = -1;
+				r.prevWrite[2] = -1;
+				r.prevWrite[3] = -1;
+			}
+
 		for( i in 0...code.length ) {
 			var op1 = code[i];
-			var s = getSign(op1);
-			if( s == -1 ) continue;
-			var prev = s;
+			var sign = getSign(op1);
+
+			inline function clearReg() {
+				// clear previous operation from cache (register has been modified)
+				var r = getAssignedReg(op1);
+				if( r != null && r.t == RTemp ) {
+					var ops = regs[r.index].prevWrite;
+					var sw = r.swiz == null ? COMPS : r.swiz;
+					for( c in sw ) {
+						var id = ops[c.getIndex()];
+						if( id != -1 ) opIds.remove(id);
+						ops[c.getIndex()] = sign;
+					}
+				}
+			}
+
+			if( sign == -1 ) {
+				clearReg();
+				continue;
+			}
+			var prev = sign;
 			while( true ) {
-				var prev = opIds.get(s);
+				var prev = opIds.get(sign);
 				if( prev == null ) {
-					opIds.set(s, i);
+					clearReg();
+					opIds.set(sign, i);
 					break;
 				}
 				var op2 = code[prev];
 				if( op1.getIndex() != op2.getIndex() ) {
-					s = s * 1103515245 + 12345;
+					sign = sign * 1103515245 + 12345;
 					continue;
 				}
 
@@ -749,7 +783,7 @@ class AgalOptim {
 					changed = true;
 					break;
 				}
-				s = s * 1103515245 + 12345;
+				sign = sign * 1103515245 + 12345;
 			}
 		}
 	}
