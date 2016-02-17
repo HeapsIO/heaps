@@ -153,6 +153,7 @@ class NetworkHost {
 	public function new() {
 		current = this;
 		isAuth = true;
+		self = new NetworkClient(this);
 		clients = [];
 		pendingClients = [];
 		ctx = new Serializer();
