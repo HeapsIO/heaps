@@ -45,7 +45,7 @@ class BaseProxy implements ProxyHost implements ProxyChild {
 	}
 }
 
-abstract Property(Int) {
+abstract NetworkProperty(Int) {
 
 	public inline function new(x:Int) {
 		this = x;
@@ -55,6 +55,6 @@ abstract Property(Int) {
 		return this;
 	}
 
-	@:op(a|b) inline function opOr(a:Property) return new Property(this | a.toInt());
+	@:op(a|b) inline function opOr(a:NetworkProperty) return new NetworkProperty(this | a.toInt());
 
 }

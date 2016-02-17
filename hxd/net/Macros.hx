@@ -40,6 +40,7 @@ enum PropTypeDesc {
 	PArray( k : PropType );
 	PObj( fields : Array<{ name : String, type : PropType, opt : Bool }> );
 	PAlias( k : PropType );
+	PVector( k : PropType );
 	PUnknown;
 }
 
@@ -57,7 +58,7 @@ class Macros {
 		var t = Context.typeof(v);
 		var pt = getPropType(t);
 		if( pt == null ) {
-			Context.error("Unsupported type " + t.toString(), v.pos);
+			Context.error("Unsupported serializable type " + t.toString(), v.pos);
 			return macro { };
 		}
 		return serializeExpr(ctx, v, pt);
@@ -67,7 +68,6 @@ class Macros {
 		var t = Context.typeof(v);
 		var pt = getPropType(t);
 		if( pt == null ) {
-			Context.error("Unsupported type " + t.toString(), v.pos);
 			return macro { };
 		}
 		return unserializeExpr(ctx, v, pt);
@@ -134,6 +134,17 @@ class Macros {
 				if( tk == null || tv == null )
 					return null;
 				PMap(tk, tv);
+			case "haxe.ds.Vector":
+				var tk = getPropType(pl[0]);
+				if( tk == null )
+					return null;
+				PVector(tk);
+			case "hxd.net.VectorProxy":
+				var t = getPropType(pl[0]);
+				if( t == null )
+					return null;
+				isProxy = true;
+				PVector(t);
 			case "hxd.net.ArrayProxy", "hxd.net.ArrayProxy2":
 				var t = getPropType(pl[0]);
 				if( t == null )
@@ -292,6 +303,10 @@ class Macros {
 			var at = toProxy(t);
 			var ve = { expr : EConst(CIdent("e")), pos : v.pos };
 			return macro $ctx.addArray($v, function(e:$at) return hxd.net.Macros.serializeValue($ctx, $ve));
+		case PVector(t):
+			var at = toProxy(t);
+			var ve = { expr : EConst(CIdent("e")), pos : v.pos };
+			return macro $ctx.addVector($v, function(e:$at) return hxd.net.Macros.serializeValue($ctx, $ve));
 		case PSerializable:
 			return macro $ctx.addKnownRef($v);
 		case PAlias(t):
@@ -368,6 +383,13 @@ class Macros {
 			return macro {
 				var e : $at;
 				$v = $ctx.getArray(function() { hxd.net.Macros.unserializeValue($ctx, e); return e; });
+			};
+		case PVector(at):
+			var at = toProxy(at);
+			var ve = { expr : EConst(CIdent("e")), pos : v.pos };
+			return macro {
+				var e : $at;
+				$v = $ctx.getVector(function() { hxd.net.Macros.unserializeValue($ctx, e); return e; });
 			};
 		case PSerializable:
 			function loop(t:ComplexType) {
@@ -620,7 +642,7 @@ class Macros {
 		if( t == null || t.isProxy )
 			return false;
 		switch( t.d ) {
-		case PMap(_), PArray(_), PObj(_):
+		case PMap(_), PArray(_), PObj(_), PVector(_):
 			return true;
 		default:
 			return false;
@@ -764,7 +786,7 @@ class Macros {
 					@:privateAccess hxd.net.NetworkHost.enableReplication(this, b);
 					return b;
 				}
-				public inline function networkCancelProperty( props : hxd.net.NetworkSerializable.Property ) {
+				public inline function networkCancelProperty( props : hxd.net.NetworkSerializable.NetworkProperty ) {
 					__bits &= ~props.toInt();
 				}
 			}).fields);
@@ -861,7 +883,7 @@ class Macros {
 			fields.push({
 				name : prop,
 				pos : pos,
-				kind : FProp("get", "never", macro : hxd.net.NetworkSerializable.Property),
+				kind : FProp("get", "never", macro : hxd.net.NetworkSerializable.NetworkProperty),
 				access : [APublic],
 			});
 			fields.push({
@@ -869,7 +891,7 @@ class Macros {
 				pos : pos,
 				kind : FFun( {
 					args : [],
-					expr : macro return new hxd.net.NetworkSerializable.Property(1 << $v{bitID}),
+					expr : macro return new hxd.net.NetworkSerializable.NetworkProperty(1 << $v{bitID}),
 					ret : null,
 				}),
 				access : [AInline],
@@ -1083,12 +1105,16 @@ class Macros {
 		switch( p.d ) {
 		case PArray(k):
 			checkProxy(k);
-			var name = k.isProxy ? "ArrayProxy2" : "ArrayProxy";
-			return TPath( { pack : ["hxd", "net"], name : "ArrayProxy", sub : name, params : [TPType(k.t)] } );
+			var subName = k.isProxy ? "ArrayProxy2" : "ArrayProxy";
+			return TPath( { pack : ["hxd", "net"], name : "ArrayProxy", sub : subName, params : [TPType(k.t)] } );
+		case PVector(k):
+			checkProxy(k);
+			var subName = k.isProxy ? "VectorProxy2" : "VectorProxy";
+			return TPath( { pack : ["hxd", "net"], name : "VectorProxy", sub : subName, params : [TPType(k.t)] } );
 		case PMap(k, v):
 			checkProxy(v);
-			var name = k.isProxy ? "MapProxy2" : "MapProxy";
-			return TPath( { pack : ["hxd", "net"], name : "MapProxy", sub : name, params : [TPType(k.t),TPType(v.t)] } );
+			var subName = k.isProxy ? "MapProxy2" : "MapProxy";
+			return TPath( { pack : ["hxd", "net"], name : "MapProxy", sub : subName, params : [TPType(k.t),TPType(v.t)] } );
 		case PObj(fields):
 			// define type
 			var name = "ObjProxy_";

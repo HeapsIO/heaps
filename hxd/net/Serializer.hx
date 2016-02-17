@@ -115,12 +115,33 @@ class Serializer {
 			f(v);
 	}
 
+	public inline function addVector<T>(a:haxe.ds.Vector<T>,f:T->Void) {
+		if( a == null ) {
+			addByte(0);
+			return;
+		}
+		addInt(a.length + 1);
+		for( v in a )
+			f(v);
+	}
+
 	public inline function getArray<T>(f:Void->T) : Array<T> {
 		var len = getInt();
 		if( len == 0 )
 			return null;
 		len--;
 		var a = [];
+		for( i in 0...len )
+			a[i] = f();
+		return a;
+	}
+
+	public inline function getVector<T>(f:Void->T) : haxe.ds.Vector<T> {
+		var len = getInt();
+		if( len == 0 )
+			return null;
+		len--;
+		var a = new haxe.ds.Vector<T>(len);
 		for( i in 0...len )
 			a[i] = f();
 		return a;
