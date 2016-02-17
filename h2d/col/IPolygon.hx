@@ -120,7 +120,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 			sum += p1.x * p2.y - p2.x * p1.y;
 			p1 = p2;
 		}
-		return sum * 0.5;
+		return Math.abs(sum) * 0.5;
 	}
 
 	inline function side( p1 : IPoint, p2 : IPoint, t : IPoint ) {
