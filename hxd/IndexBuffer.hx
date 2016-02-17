@@ -41,6 +41,14 @@ abstract IndexBuffer(InnerData) {
 		#end
 	}
 
+	public inline function grow( v : Int ) {
+		#if flash
+		if( v > this.length ) this.length = v;
+		#else
+		while( this.length < v ) this.push(0);
+		#end
+	}
+
 	@:arrayAccess inline function arrayRead(key:Int) : Int {
 		return this[key];
 	}

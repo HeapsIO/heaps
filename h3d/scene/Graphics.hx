@@ -56,7 +56,7 @@ class Graphics extends Mesh {
 	}
 
 	public function lineTo( x : Float, y : Float, z : Float ) {
-		bprim.begin(4);
+		bprim.begin(4,6);
 		var nx = x - curX;
 		var ny = y - curY;
 		var nz = z - curZ;

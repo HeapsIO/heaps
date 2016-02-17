@@ -39,10 +39,10 @@ class BigPrimitive extends Primitive {
 		Call begin() before starting to add vertexes/indexes to the primitive.
 		The count value is the number of vertexes you will add, it will automatically flush() if it doesn't fit into the current buffer.
 	**/
-	public function begin(count) {
+	public function begin(vcount,icount) {
 		startIndex = Std.int(bufPos / stride);
-		if( startIndex + count >= 65535 ) {
-			if( count >= 65535 ) throw "Too many vertices in begin()";
+		if( startIndex + vcount >= 65535 ) {
+			if( vcount >= 65535 ) throw "Too many vertices in begin()";
 			flush();
 		}
 		if( tmpBuf == null ) {
@@ -59,6 +59,12 @@ class BigPrimitive extends Primitive {
 				tmpIdx = new hxd.IndexBuffer();
 			else
 				PREV_INDEX = null;
+		}
+		if( idxPos + icount > tmpIdx.length ) {
+			var size = tmpIdx.length == 0 ? 1024 : tmpIdx.length;
+			var req = idxPos + icount;
+			while( size < req ) size <<= 1;
+			tmpIdx.grow(size);
 		}
 	}
 
@@ -170,7 +176,7 @@ class BigPrimitive extends Primitive {
 	public function addSub( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, startVert, startTri, nvert, triCount, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1, deltaU = 0., deltaV = 0., color = 1. ) {
 		if( stride < 0 ) stride = this.stride;
 		if( stride < this.stride ) throw "only stride >= " + this.stride+" allowed";
-		begin(nvert);
+		begin(nvert, triCount*3);
 		var start = startIndex;
 		var cr = Math.cos(rotation);
 		var sr = Math.sin(rotation);
