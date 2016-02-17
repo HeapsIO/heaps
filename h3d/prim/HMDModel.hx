@@ -9,6 +9,7 @@ class HMDModel extends MeshPrimitive {
 	var lib : hxd.fmt.hmd.Library;
 	var curMaterial : Int;
 	var collider : h3d.col.RayCollider;
+	var normalsRecomputed : String;
 
 	public function new(data, dataPos, lib) {
 		this.data = data;
@@ -67,6 +68,9 @@ class HMDModel extends MeshPrimitive {
 			addBuffer(f.name, buffer, pos);
 			pos += f.format.getSize();
 		}
+
+		if( normalsRecomputed != null )
+			recomputeNormals(normalsRecomputed);
 	}
 
 	public function recomputeNormals( ?name : String ) {
@@ -110,6 +114,7 @@ class HMDModel extends MeshPrimitive {
 		}
 		var buf = h3d.Buffer.ofFloats(v, 3);
 		addBuffer(name, buf, 0);
+		normalsRecomputed = name;
 	}
 
 	override function render( engine : h3d.Engine ) {
