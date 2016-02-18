@@ -46,7 +46,7 @@ class NetworkClient {
 			host.makeAlive();
 		case NetworkHost.UNREG:
 			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
-			o.enableReplication = false;
+			o.__host = null;
 			ctx.refs.remove(o.__uid);
 		case NetworkHost.FULLSYNC:
 			ctx.refs = new Map();
