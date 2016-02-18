@@ -72,6 +72,13 @@ class Serializer {
 		refs = new Map();
 	}
 
+	public function end() {
+		var bytes = out.getBytes();
+		out = null;
+		refs = null;
+		return bytes;
+	}
+
 	public function setInput(data, pos) {
 		input = data;
 		inPos = pos;
@@ -220,12 +227,31 @@ class Serializer {
 		}
 	}
 
+	public inline function addBytes( b : haxe.io.Bytes ) {
+		if( b == null )
+			addByte(0);
+		else {
+			addInt(b.length + 1);
+			out.add(b);
+		}
+	}
+
 	public inline function getString() {
 		var len = getInt();
 		if( len == 0 )
 			return null;
 		len--;
 		var s = input.getString(inPos, len);
+		inPos += len;
+		return s;
+	}
+
+	public inline function getBytes() {
+		var len = getInt();
+		if( len == 0 )
+			return null;
+		len--;
+		var s = input.sub(inPos, len);
 		inPos += len;
 		return s;
 	}

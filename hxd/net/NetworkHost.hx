@@ -101,6 +101,10 @@ class NetworkClient {
 			var msg = haxe.Unserializer.run(ctx.getString());
 			host.onMessage(this, msg);
 
+		case NetworkHost.BMSG:
+			var msg = ctx.getBytes();
+			host.onMessage(this, msg);
+
 		case x:
 			error("Unknown message code " + x);
 		}
@@ -137,6 +141,7 @@ class NetworkHost {
 	static inline var RPC_WITH_RESULT = 6;
 	static inline var RPC_RESULT = 7;
 	static inline var MSG		 = 8;
+	static inline var BMSG		 = 9;
 	static inline var EOM		 = 0xFF;
 
 	public var checkEOM(get, never) : Bool;
@@ -175,15 +180,47 @@ class NetworkHost {
 		ctx.begin();
 	}
 
-	public function saveState( s : Serializable ) {
-		return new hxd.net.Serializer().serialize(s);
+	public function saveState() {
+		var s = new hxd.net.Serializer();
+		s.begin();
+		var clids = [];
+		for( r in ctx.refs )
+			if( !s.refs.exists(r.__uid) ) {
+				var cl = r.getCLID();
+				var cval = Type.getClass(r);
+				s.addInt(cl);
+				if( !clids[cl] ) {
+					clids[cl] = true;
+					s.addString(Type.getClassName(cval));
+				}
+				s.addKnownRef(r);
+				s.addByte(EOM);
+			}
+		s.addInt(-1);
+		return s.end();
 	}
 
-	public function loadSave<T:Serializable>( bytes : haxe.io.Bytes, c : Class<T> ) : T {
+	public function loadSave( bytes : haxe.io.Bytes ) {
 		ctx.refs = new Map();
 		@:privateAccess ctx.newObjects = [];
 		ctx.setInput(bytes, 0);
-		return ctx.getKnownRef(c);
+		var classByName = new Map();
+		for( c in @:privateAccess Serializer.CLASSES )
+			classByName.set(Type.getClassName(c), c);
+		var clids = [];
+		while( true ) {
+			var cl = ctx.getInt();
+			if( cl < 0 ) break;
+			var cval = clids[cl];
+			if( cval == null ) {
+				var cname = ctx.getString();
+				cval = classByName.get(cname);
+				if( cval == null ) throw "Unsupported class " + cname;
+				clids[cl] = cval;
+			}
+			ctx.getKnownRef(cval);
+			if( ctx.getByte() != EOM ) throw "Save file is not compatible with current version";
+		}
 	}
 
 	function mark(o:NetworkSerializable) {
@@ -205,8 +242,13 @@ class NetworkHost {
 	public function sendMessage( msg : Dynamic, ?to : NetworkClient ) {
 		flush();
 		targetClient = to;
-		ctx.addByte(MSG);
-		ctx.addString(haxe.Serializer.run(msg));
+		if( Std.is(msg, haxe.io.Bytes) ) {
+			ctx.addByte(BMSG);
+			ctx.addBytes(msg);
+		} else {
+			ctx.addByte(MSG);
+			ctx.addString(haxe.Serializer.run(msg));
+		}
 		if( checkEOM ) ctx.addByte(EOM);
 		doSend();
 		targetClient = null;
