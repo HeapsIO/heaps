@@ -3,6 +3,19 @@ package hxd.net;
 class Serializer {
 
 	static var UID = 0;
+	static var SEQ = 0;
+	static inline var SEQ_BITS = 8;
+	static inline var SEQ_MASK = 0xFFFFFFFF >>> SEQ_BITS;
+
+	public static function resetCounters() {
+		UID = 0;
+		SEQ = 0;
+	}
+
+	static inline function allocUID() {
+		return (SEQ << (32 - SEQ_BITS)) | (++UID);
+	}
+
 	static var CLASSES : Array<Class<Dynamic>> = [];
 	static var CL_BYID = null;
 	static var CLIDS = null;
@@ -44,7 +57,7 @@ class Serializer {
 		}
 	}
 
-	public var refs : Array<Serializable>;
+	public var refs : Map<Int,Serializable>;
 	var newObjects : Array<Serializable>;
 	var out : haxe.io.BytesBuffer;
 	var input : haxe.io.Bytes;
@@ -56,7 +69,7 @@ class Serializer {
 
 	public function begin() {
 		out = new haxe.io.BytesBuffer();
-		refs = [];
+		refs = new Map();
 	}
 
 	public function setInput(data, pos) {
@@ -71,7 +84,7 @@ class Serializer {
 	}
 
 	public function unserialize<T:Serializable>( data : haxe.io.Bytes, c : Class<T> ) : T {
-		refs = [];
+		refs = new Map();
 		setInput(data, 0);
 		return getRef(c, Reflect.field(c,"__clid"));
 	}
@@ -250,7 +263,8 @@ class Serializer {
 		if( id == 0 ) return null;
 		if( refs[id] != null )
 			return cast refs[id];
-		if( UID < id ) UID = id;
+		var rid = id & SEQ_MASK;
+		if( UID < rid ) UID = rid;
 		var clid = getInt();
 		var i : Serializable = Type.createEmptyInstance(CLASSES[clid]);
 		if( newObjects != null ) newObjects.push(i);
@@ -265,7 +279,8 @@ class Serializer {
 		if( id == 0 ) return null;
 		if( refs[id] != null )
 			return cast refs[id];
-		if( UID < id ) UID = id;
+		var rid = id & SEQ_MASK;
+		if( UID < rid ) UID = rid;
 		var clid = CLIDS[clid];
 		var i = Type.createEmptyInstance(clid == 0 ? c : cast CL_BYID[getByte()]);
 		if( newObjects != null ) newObjects.push(i);

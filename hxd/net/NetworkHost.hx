@@ -4,6 +4,7 @@ class NetworkClient {
 
 	var host : NetworkHost;
 	var resultID : Int;
+	public var seqID : Int;
 	public var ownerObject : NetworkSerializable;
 
 	public function new(h) {
@@ -29,7 +30,8 @@ class NetworkClient {
 	function processMessage( bytes : haxe.io.Bytes, pos : Int ) {
 		var ctx = host.ctx;
 		ctx.setInput(bytes, pos);
-		switch( ctx.getByte() ) {
+		var mid = ctx.getByte();
+		switch( mid ) {
 		case NetworkHost.SYNC:
 			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
 			var old = o.__bits;
@@ -45,10 +47,14 @@ class NetworkClient {
 		case NetworkHost.UNREG:
 			var o : hxd.net.NetworkSerializable = cast ctx.refs[ctx.getInt()];
 			o.enableReplication = false;
-			ctx.refs[o.__uid] = null;
+			ctx.refs.remove(o.__uid);
 		case NetworkHost.FULLSYNC:
-			ctx.refs = [];
-			@:privateAccess ctx.newObjects = [];
+			ctx.refs = new Map();
+			@:privateAccess {
+				hxd.net.Serializer.UID = 0;
+				hxd.net.Serializer.SEQ = ctx.getByte();
+				ctx.newObjects = [];
+			};
 			while( true ) {
 				var o = ctx.getAnyRef();
 				if( o == null ) break;
@@ -77,6 +83,8 @@ class NetworkClient {
 				o.__host = old;
 			} else
 				o.networkRPC(ctx, fid, this);
+
+			if( host.checkEOM ) ctx.addByte(NetworkHost.EOM);
 
 			host.doSend();
 			host.targetClient = null;
@@ -129,6 +137,10 @@ class NetworkHost {
 	static inline var RPC_WITH_RESULT = 6;
 	static inline var RPC_RESULT = 7;
 	static inline var MSG		 = 8;
+	static inline var EOM		 = 0xFF;
+
+	public var checkEOM(get, never) : Bool;
+	inline function get_checkEOM() return true;
 
 	public static var current : NetworkHost = null;
 
@@ -168,7 +180,7 @@ class NetworkHost {
 	}
 
 	public function loadSave<T:Serializable>( bytes : haxe.io.Bytes, c : Class<T> ) : T {
-		ctx.refs = [];
+		ctx.refs = new Map();
 		@:privateAccess ctx.newObjects = [];
 		ctx.setInput(bytes, 0);
 		return ctx.getKnownRef(c);
@@ -195,6 +207,7 @@ class NetworkHost {
 		targetClient = to;
 		ctx.addByte(MSG);
 		ctx.addString(haxe.Serializer.run(msg));
+		if( checkEOM ) ctx.addByte(EOM);
 		doSend();
 		targetClient = null;
 	}
@@ -203,6 +216,7 @@ class NetworkHost {
 		if( !isAuth )
 			return true;
 		if( owner == null ) {
+			if( checkEOM ) ctx.addByte(EOM);
 			doSend();
 			targetClient = null;
 			return true;
@@ -236,18 +250,40 @@ class NetworkHost {
 		return ctx;
 	}
 
+	inline function endRPC() {
+		if( checkEOM ) ctx.addByte(EOM);
+	}
+
 	function fullSync( c : NetworkClient ) {
 		if( !pendingClients.remove(c) )
 			return;
 		flush();
+
+		// unique client sequence number
+		var seq = clients.length + 1;
+		while( true ) {
+			var found = false;
+			for( c in clients )
+				if( c.seqID == seq ) {
+					found = true;
+					break;
+				}
+			if( !found ) break;
+			seq++;
+		}
+		ctx.addByte(seq);
+		c.seqID = seq;
+
 		clients.push(c);
 		var refs = ctx.refs;
 		ctx.begin();
-		ctx.addByte(NetworkHost.FULLSYNC);
+		ctx.addByte(FULLSYNC);
+		ctx.addByte(c.seqID);
 		for( o in refs )
 			if( o != null )
 				ctx.addAnyRef(o);
 		ctx.addAnyRef(null);
+		if( checkEOM ) ctx.addByte(EOM);
 		targetClient = c;
 		doSend();
 		targetClient = null;
@@ -295,13 +331,26 @@ class NetworkHost {
 		o.__host = this;
 		if( ctx.refs[o.__uid] != null )
 			return;
+		if( !isAuth ) {
+			var owner = o.networkGetOwner();
+			if( owner == null || owner != self.ownerObject )
+				throw "Can't register "+o+" without ownership (" + owner + " should be " + self.ownerObject + ")";
+		}
 		if( logger != null )
-			logger("Register " + o+"#"+o.__uid);
+			logger("Register " + o + "#" + o.__uid);
 		ctx.addByte(REG);
 		ctx.addAnyRef(o);
+		if( checkEOM ) ctx.addByte(EOM);
 	}
 
 	function unregister( o : NetworkSerializable ) {
+		if( o.__host == null )
+			return;
+		if( !isAuth ) {
+			var owner = o.networkGetOwner();
+			if( owner == null || owner != self.ownerObject )
+				throw "Can't unregister "+o+" without ownership (" + owner + " should be " + self.ownerObject + ")";
+		}
 		flushProps(); // send changes
 		o.__host = null;
 		o.__bits = 0;
@@ -309,7 +358,8 @@ class NetworkHost {
 			logger("Unregister " + o+"#"+o.__uid);
 		ctx.addByte(UNREG);
 		ctx.addInt(o.__uid);
-		ctx.refs[o.__uid] = null;
+		if( checkEOM ) ctx.addByte(EOM);
+		ctx.refs.remove(o.__uid);
 	}
 
 	function doSend() {
@@ -343,6 +393,7 @@ class NetworkHost {
 				ctx.addByte(SYNC);
 				ctx.addInt(o.__uid);
 				o.networkFlush(ctx);
+				if( checkEOM ) ctx.addByte(EOM);
 				hasData = true;
 			}
 			var n = o.__next;

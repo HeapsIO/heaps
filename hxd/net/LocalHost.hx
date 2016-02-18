@@ -33,8 +33,12 @@ class LocalClient extends NetworkClient {
 		pendingPos += len;
 		if( pendingPos == messageLength ) {
 			pendingPos = 0;
-			while( pendingPos < messageLength )
+			while( pendingPos < messageLength ) {
+				var oldPos = pendingPos;
 				pendingPos = processMessage(pendingBuffer, pendingPos);
+				if( host.checkEOM && pendingBuffer.get(pendingPos++) != NetworkHost.EOM )
+					throw "Message missing EOM " + pendingBuffer.sub(oldPos, pendingPos - oldPos).toHex()+"..."+(pendingBuffer.sub(pendingPos,hxd.Math.imin(messageLength-pendingPos,128)).toHex());
+			}
 			messageLength = -1;
 			readData();
 		}

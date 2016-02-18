@@ -439,6 +439,17 @@ class Macros {
 				}
 		}
 
+		var fieldsInits = [];
+		for( f in fields ) {
+			if( f.access.indexOf(AStatic) >= 0 ) continue;
+			switch( f.kind ) {
+			case FVar(_, e), FProp(_, _, _, e) if( e != null ):
+				// before unserializing
+				fieldsInits.push({ expr : EBinop(OpAssign,{ expr : EConst(CIdent(f.name)), pos : e.pos },e), pos : e.pos });
+			default:
+			}
+		}
+
 		var sup = cl.superClass;
 		var isSubSer = sup != null && isSerializable(sup.t);
 
@@ -446,8 +457,8 @@ class Macros {
 		var el = [], ul = [];
 		for( f in toSerialize ) {
 			var fname = f.f.name;
-			el.push(withPos(macro hxd.net.Macros.serializeValue(ctx, this.$fname),f.f.pos));
-			ul.push(withPos(macro hxd.net.Macros.unserializeValue(ctx, this.$fname),f.f.pos));
+			el.push(withPos(macro hxd.net.Macros.serializeValue(__ctx, this.$fname),f.f.pos));
+			ul.push(withPos(macro hxd.net.Macros.unserializeValue(__ctx, this.$fname),f.f.pos));
 		}
 
 		var access = [APublic];
@@ -459,7 +470,7 @@ class Macros {
 				pos : pos,
 				access : [APublic],
 				meta : [{ name : ":noCompletion", pos : pos }],
-				kind : FVar(macro : Int, macro @:privateAccess ++hxd.net.Serializer.UID),
+				kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.allocUID()),
 			});
 		fields.push({
 			name : "__clid",
@@ -476,56 +487,60 @@ class Macros {
 			kind : FFun({ args : [], ret : macro : Int, expr : macro return __clid }),
 		});
 
-		if( toSerialize.length == 0 && isSubSer )
-			return fields;
+		var needSerialize = toSerialize.length != 0 || !isSubSer;
+		var needUnserialize = needSerialize || fieldsInits.length != 0;
 
-		fields.push({
-			name : "serialize",
-			pos : pos,
-			meta : [ { name:":keep", pos:pos } ],
-			access : access,
-			kind : FFun({
-				args : [ { name : "ctx", type : macro : hxd.net.Serializer } ],
-				ret : null,
-				expr : macro @:privateAccess { ${ if( isSubSer ) macro super.serialize(ctx) else macro { } }; $b{el} }
-			}),
-		});
+		if( needSerialize ) {
+			fields.push({
+				name : "serialize",
+				pos : pos,
+				meta : [ { name:":keep", pos:pos } ],
+				access : access,
+				kind : FFun({
+					args : [ { name : "__ctx", type : macro : hxd.net.Serializer } ],
+					ret : null,
+					expr : macro @:privateAccess { ${ if( isSubSer ) macro super.serialize(__ctx) else macro { } }; $b{el} }
+				}),
+			});
+		}
 
-		var unserExpr = macro @:privateAccess { ${ if( isSubSer ) macro super.unserialize(ctx) else macro { } }; $b{ul} };
+		if( needUnserialize ) {
+			var unserExpr = macro @:privateAccess { $b{fieldsInits}; ${ if( isSubSer ) macro super.unserialize(__ctx) else macro { } }; $b{ul} };
 
-		for( f in fields )
-			if( f.name == "unserialize" ) {
-				var found = false;
-				function repl(e:Expr) {
-					switch( e.expr ) {
-					case ECall( { expr : EField( { expr : EConst(CIdent("super")) }, "unserialize") }, [ctx]):
-						found = true;
-						return macro { var ctx : hxd.net.Serializer = $ctx; $unserExpr; }
-					default:
-						return haxe.macro.ExprTools.map(e, repl);
+			for( f in fields )
+				if( f.name == "unserialize" ) {
+					var found = false;
+					function repl(e:Expr) {
+						switch( e.expr ) {
+						case ECall( { expr : EField( { expr : EConst(CIdent("super")) }, "unserialize") }, [ctx]):
+							found = true;
+							return macro { var __ctx : hxd.net.Serializer = $ctx; $unserExpr; }
+						default:
+							return haxe.macro.ExprTools.map(e, repl);
+						}
 					}
+					switch( f.kind ) {
+					case FFun(f):
+						f.expr = repl(f.expr);
+					default:
+					}
+					f.meta.push( { name:":keep", pos:pos } );
+					if( !found ) Context.error("Override of unserialize() with no super.unserialize(ctx) found", f.pos);
+					return fields;
 				}
-				switch( f.kind ) {
-				case FFun(f):
-					f.expr = repl(f.expr);
-				default:
-				}
-				f.meta.push( { name:":keep", pos:pos } );
-				if( !found ) Context.error("Override of unserialize() with no super.unserialize(ctx) found", f.pos);
-				return fields;
-			}
 
-		fields.push({
-			name : "unserialize",
-			pos : pos,
-			meta : [ { name:":keep", pos:pos } ],
-			access : access,
-			kind : FFun({
-				args : [ { name : "ctx", type : macro : hxd.net.Serializer } ],
-				ret : null,
-				expr : unserExpr,
-			}),
-		});
+			fields.push({
+				name : "unserialize",
+				pos : pos,
+				meta : [ { name:":keep", pos:pos } ],
+				access : access,
+				kind : FFun({
+					args : [ { name : "__ctx", type : macro : hxd.net.Serializer } ],
+					ret : null,
+					expr : unserExpr,
+				}),
+			});
+		}
 
 		return fields;
 	}
@@ -934,7 +949,8 @@ class Macros {
 					$b{[
 						for( a in f.args )
 							macro hxd.net.Macros.serializeValue(__ctx,$i{a.name})
-					]};
+					] };
+					@:privateAccess __host.endRPC();
 				};
 
 				var rpcExpr = switch( r.mode ) {
