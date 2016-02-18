@@ -266,24 +266,25 @@ class NetworkHost {
 		aliveEvents.push(f);
 	}
 
+	public function isAliveComplete() {
+		return @:privateAccess ctx.newObjects.length == 0 && aliveEvents.length == 0;
+	}
+
 	public function makeAlive() {
 		var objs = @:privateAccess ctx.newObjects;
 		if( objs.length == 0 )
 			return;
-		@:privateAccess ctx.newObjects = [];
-		for( o in objs ) {
+		while( true ) {
+			var o = objs.shift();
+			if( o == null ) break;
 			var n = Std.instance(o, NetworkSerializable);
 			if( n == null ) continue;
 			if( logger != null )
 				logger("Alive " + n +"#" + n.__uid);
 			n.alive();
 		}
-		while( aliveEvents.length > 0 ) {
-			var events = aliveEvents;
-			aliveEvents = [];
-			for( f in events )
-				f();
-		}
+		while( aliveEvents.length > 0 )
+			aliveEvents.shift()();
 	}
 
 	public function setLogger( log : String -> Void ) {
