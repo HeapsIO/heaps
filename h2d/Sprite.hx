@@ -543,9 +543,6 @@ class Sprite {
 		for( c in childs )
 			c.drawRec(ctx);
 		ctx.flush();
-		shader.filterMatrixA.load(oldA);
-		shader.filterMatrixB.load(oldB);
-		@:privateAccess ctx.inFilter = oldF;
 
 		var final = h2d.Tile.fromTexture(t);
 		final.dx = xMin;
@@ -559,6 +556,10 @@ class Sprite {
 			final.dx = xMin;
 			final.dy = yMin;
 		}
+
+		shader.filterMatrixA.load(oldA);
+		shader.filterMatrixB.load(oldB);
+		@:privateAccess ctx.inFilter = oldF;
 
 		ctx.popTarget();
 
