@@ -709,6 +709,17 @@ class Macros {
 		return haxe.macro.ExprTools.map(e, superImpl.bind(name));
 	}
 
+	static function replaceSetter( fname : String, setExpr : Expr -> Expr, e : Expr ) {
+		switch( e.expr ) {
+		case EBinop(OpAssign, e1 = { expr : (EConst(CIdent(name)) | EField( { expr : EConst(CIdent("this")) }, name)) }, e2) if( name == fname ):
+			e.expr = EBinop(OpAssign,e1,setExpr(e2));
+		case EBinop(OpAssignOp(_), { expr : (EConst(CIdent(name)) | EField( { expr : EConst(CIdent("this")) }, name)) }, _) if( name == fname ):
+			throw "TODO";
+		default:
+			haxe.macro.ExprTools.iter(e, function(e) replaceSetter(fname,setExpr,e));
+		}
+	}
+
 	public static function buildNetworkSerializable() {
 		var cl = Context.getLocalClass().get();
 		if( cl.isInterface )
@@ -717,18 +728,33 @@ class Macros {
 		var toSerialize = [];
 		var rpc = [];
 		var superRPC = new Map();
+		var superFields = new Map();
+		var startFID = 0, rpcID = 0;
 		{
 			var sup = cl.superClass;
 			while( sup != null ) {
 				var c = sup.t.get();
 				for( m in c.meta.get() )
-					if( m.name == ":rpc" )
+					switch( m.name)  {
+					case ":rpcCalls":
 						for( a in m.params )
 							switch( a.expr ) {
 							case EConst(CIdent(id)):
+								rpcID++;
 								superRPC.set(id, true);
 							default:
+								throw "assert";
 							}
+					case ":sFields":
+						for( a in m.params )
+							switch( a.expr ) {
+							case EConst(CIdent(id)):
+								superFields.set(id, true);
+								startFID++;
+							default:
+								throw "assert";
+							}
+					}
 				sup = c.superClass;
 			}
 		}
@@ -743,6 +769,17 @@ class Macros {
 				default:
 				}
 				f.name += "__impl";
+				continue;
+			}
+
+			if( f.access.indexOf(AOverride) >= 0 && StringTools.startsWith(f.name, "set_") && superFields.exists(f.name.substr(4)) ) {
+				// overridden setter of network property
+				var fname = f.name.substr(4);
+				switch( f.kind ) {
+				case FFun(ff):
+					replaceSetter(fname, function(e) return macro $i{"__net_mark_"+fname}($e), ff.expr);
+				default:
+				}
 				continue;
 			}
 
@@ -773,18 +810,6 @@ class Macros {
 
 		var sup = cl.superClass;
 		var isSubSer = sup != null && isSerializable(sup.t);
-		var startFID = 0, rpcID = 0;
-		if( isSubSer ) {
-			startFID = switch( sup.t.get().meta.extract(":fieldID")[0].params[0].expr ) {
-			case EConst(CInt(i)): Std.parseInt(i);
-			default: throw "assert";
-			}
-			rpcID = switch( sup.t.get().meta.extract(":rpcID")[0].params[0].expr ) {
-			case EConst(CInt(i)): Std.parseInt(i);
-			default: throw "assert";
-			}
-		}
-
 		var pos = Context.currentPos();
 		if( !isSubSer ) {
 			fields = fields.concat((macro class {
@@ -849,34 +874,31 @@ class Macros {
 			var markExpr = macro networkSetBit($v{ bitID });
 			markExpr = makeMarkExpr(fields, fname, ftype, markExpr);
 
-			var setExpr = macro
-				if( this.$fname != v ) {
-					$markExpr;
-					this.$fname = v;
-					${if( ftype.isProxy ) macro this.$fname.bindHost(this,$v{bitID}) else macro {}};
-				};
+			var markFun = "__net_mark_" + f.f.name;
+			fields.push( {
+				name : markFun,
+				access : [AInline],
+				meta : noComplete,
+				pos : pos,
+				kind : FFun({
+					args : [{ name : "v", type : ftype.t }],
+					ret : ftype.t,
+					expr : macro {
+						if( this.$fname != v ) {
+							$markExpr;
+							${if( ftype.isProxy ) macro v.bindHost(this,$v{bitID}) else macro {}};
+						}
+						return v;
+					}
+				}),
+			});
 
 			var found = false;
 			for( set in fields )
 				if( set.name == "set_" + f.f.name )
 					switch( set.kind ) {
-					case FFun(f):
-						function replaceRec(e:Expr) {
-							switch( e.expr ) {
-							case EBinop(OpAssign, e1 = { expr : (EConst(CIdent(name)) | EField( { expr : EConst(CIdent("this")) }, name)) }, e2) if( name == fname ):
-								return macro {
-									var v = $e2;
-									$setExpr;
-									v;
-								};
-								return e;
-							case EBinop(OpAssignOp(_), { expr : (EConst(CIdent(name)) | EField( { expr : EConst(CIdent("this")) }, name)) }, _) if( name == fname ):
-								throw "TODO";
-							default:
-								return haxe.macro.ExprTools.map(e, replaceRec);
-							}
-						}
-						f.expr = replaceRec(f.expr);
+					case FFun(fun):
+						replaceSetter(f.f.name, function(e) return macro $i{markFun}($e),fun.expr);
 						found = true;
 						break;
 					default:
@@ -887,7 +909,7 @@ class Macros {
 					pos : pos,
 					kind : FFun({
 						args : [ { name : "v", type : ftype.t } ],
-						expr : macro { $setExpr; return v; },
+						expr : macro return this.$fname = $i{markFun}(v),
 						ret : ftype.t,
 					}),
 				});
@@ -1092,11 +1114,11 @@ class Macros {
 
 		if( startFID > 32 ) Context.error("Too many serializable fields", pos);
 		if( rpcID > 255 ) Context.error("Too many rpc calls", pos);
-		cl.meta.add(":fieldID", [macro $v { startFID } ], pos);
-		cl.meta.add(":rpcID", [macro $v { rpcID } ], pos);
 
 		if( rpc.length > 0 )
-			cl.meta.add(":rpc", [for( r in rpc ) { expr : EConst(CIdent(r.f.name.substr(0,-6))), pos : pos } ], pos);
+			cl.meta.add(":rpcCalls", [for( r in rpc ) { expr : EConst(CIdent(r.f.name.substr(0, -6))), pos : pos } ], pos);
+		if( toSerialize.length > 0 )
+			cl.meta.add(":sFields", [for( r in toSerialize ) { expr : EConst(CIdent(r.f.name)), pos : pos }], pos);
 
 		return fields;
 	}
@@ -1104,12 +1126,13 @@ class Macros {
 	static function makeMarkExpr( fields : Array<Field>, fname : String, t : PropType, mark : Expr ) {
 		if( t.increment != null ) {
 			var rname = "__ref_" + fname;
-			fields.push({
-				name : rname,
-				pos : mark.pos,
-				meta : [{ name : ":noCompletion", pos : mark.pos }],
-				kind : FVar(t.t,macro 0),
-			});
+			if( fields != null )
+				fields.push({
+					name : rname,
+					pos : mark.pos,
+					meta : [{ name : ":noCompletion", pos : mark.pos }],
+					kind : FVar(t.t,macro 0),
+				});
 			mark = macro if( hxd.Math.abs(this.$fname - this.$rname) > $v{ t.increment } ) { this.$rname = this.$fname; $mark; };
 		}
 		return mark;
