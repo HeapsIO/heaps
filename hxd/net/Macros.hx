@@ -34,6 +34,7 @@ enum PropTypeDesc {
 	PFloat;
 	PBool;
 	PString;
+	PBytes;
 	PSerializable;
 	PEnum;
 	PMap( k : PropType, v : PropType );
@@ -187,6 +188,8 @@ class Macros {
 				var at = getPropType(pl[0]);
 				if( at == null ) return null;
 				PArray(at);
+			case "haxe.io.Bytes":
+				PBytes;
 			case name if( StringTools.startsWith(name, "hxd.net.ObjProxy_") ):
 				var fields = c.get().fields.get();
 				for( f in fields )
@@ -258,6 +261,8 @@ class Macros {
 			return macro $ctx.addInt($v);
 		case PBool:
 			return macro $ctx.addBool($v);
+		case PBytes:
+			return macro $ctx.addBytes($v);
 		case PMap(kt, vt):
 			var kt = kt.t;
 			var vt = vt.t;
@@ -330,6 +335,8 @@ class Macros {
 			return macro $v = $ctx.getInt();
 		case PBool:
 			return macro $v = $ctx.getBool();
+		case PBytes:
+			return macro $v = $ctx.getBytes();
 		case PMap(k,t):
 			var kt = k.t;
 			var vt = t.t;
