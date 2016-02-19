@@ -113,6 +113,10 @@ class NetworkClient {
 
 	function beginRPCResult() {
 		host.flush();
+
+		if( host.logger != null )
+			host.logger("RPC RESULT #" + resultID);
+
 		var ctx = host.ctx;
 		host.hasData = true;
 		host.targetClient = this;
@@ -258,7 +262,6 @@ class NetworkHost {
 		if( !isAuth )
 			return true;
 		if( owner == null ) {
-			if( checkEOM ) ctx.addByte(EOM);
 			doSend();
 			targetClient = null;
 			return true;
