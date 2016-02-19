@@ -424,6 +424,7 @@ class NetworkHost {
 		}
 		else {
 			totalSentBytes += bytes.length * clients.length;
+			if( clients.length == 0 ) totalSentBytes += bytes.length; // still count for statistics
 			for( c in clients )
 				c.send(bytes);
 		}
