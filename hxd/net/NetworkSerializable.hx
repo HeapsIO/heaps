@@ -21,6 +21,7 @@ interface NetworkSerializable extends Serializable extends ProxyHost {
 	public function networkSync( ctx : Serializer ) : Void;
 	public function networkRPC( ctx : Serializer, rpcID : Int, clientResult : NetworkHost.NetworkClient ) : Void;
 	public function networkGetOwner() : NetworkSerializable;
+	public function networkGetName( propId : Int, isRPC : Bool = false ) : String;
 }
 
 @:genericBuild(hxd.net.Macros.buildSerializableProxy())

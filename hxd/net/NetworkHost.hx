@@ -291,7 +291,7 @@ class NetworkHost {
 		ctx.addInt(o.__uid);
 		ctx.addByte(id);
 		if( logger != null )
-			logger("RPC " + o +"#"+id+(onResult == null ? "" : "->" + (rpcUID-1)));
+			logger("RPC " + o +"."+o.networkGetName(id,true)+"()");
 		return ctx;
 	}
 
@@ -434,8 +434,16 @@ class NetworkHost {
 		var o = markHead;
 		while( o != null ) {
 			if( o.__bits != 0 ) {
-				if( logger != null )
-					logger("SYNC " + o + "#" + o.__uid + " " + o.__bits);
+				if( logger != null ) {
+					var props = [];
+					var i = 0;
+					while( 1 << i <= o.__bits ) {
+						if( o.__bits & (1 << i) != 0 )
+							props.push(o.networkGetName(i));
+						i++;
+					}
+					logger("SYNC " + o + "#" + o.__uid + " " + props.join("|"));
+				}
 				ctx.addByte(SYNC);
 				ctx.addInt(o.__uid);
 				o.networkFlush(ctx);

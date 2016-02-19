@@ -51,6 +51,7 @@ typedef PropType = {
 	@:optional var isProxy : Bool;
 	@:optional var isNull : Bool;
 	@:optional var increment : Float;
+	@:optional var condSend : Expr;
 }
 
 class Macros {
@@ -97,22 +98,30 @@ class Macros {
 		var t = getPropType(ft);
 		if( t == null )
 			return null;
-		var mincr = Lambda.find(meta, function(m) return m.name == ":increment");
-		if( mincr != null ) {
-			var inc : Null<Float> = null;
-			if( mincr.params.length == 1 )
-				switch( mincr.params[0].expr ) {
-				case EConst(CInt(i)): inc = Std.parseInt(i);
-				case EConst(CFloat(f)): inc = Std.parseFloat(f);
+		for( m in meta) {
+			switch( m.name ) {
+			case ":s", ":optional":
+				//
+			case ":increment":
+				var inc : Null<Float> = null;
+				if( m.params.length == 1 )
+					switch( m.params[0].expr ) {
+					case EConst(CInt(i)): inc = Std.parseInt(i);
+					case EConst(CFloat(f)): inc = Std.parseFloat(f);
+					default:
+					}
+				if( inc == null )
+					Context.error("Increment requires value parameter", m.pos);
+				switch( t.d ) {
+				case PFloat:
+					t.increment = inc;
 				default:
+					Context.error("Increment not allowed on " + t.t.toString(), m.pos);
 				}
-			if( inc == null )
-				Context.error("Increment requires value parameter", mincr.pos);
-			switch( t.d ) {
-			case PFloat:
-				t.increment = inc;
+			case ":condSend" if( m.params.length == 1 ):
+				t.condSend = m.params[0];
 			default:
-				Context.error("Increment not allowed on " + t.t.toString(), mincr.pos);
+				Context.error("Unsupported network metadata", m.pos);
 			}
 		}
 		return t;
@@ -844,10 +853,10 @@ class Macros {
 				}).fields);
 		}
 
+		var firstFID = 0;
 		var flushExpr = [];
 		var syncExpr = [];
 		var noComplete : Metadata = [ { name : ":noCompletion", pos : pos } ];
-
 		for( f in toSerialize ) {
 			var pos = f.f.pos;
 			var fname = f.f.name;
@@ -1117,6 +1126,28 @@ class Macros {
 		}
 
 
+		if( toSerialize.length != 0 || rpc.length != 0 || !isSubSer ) {
+			var cases = [];
+			for( i in 0...toSerialize.length )
+				cases.push( { id : i + firstFID, name : toSerialize[i].f.name } );
+			for( i in 0...rpc.length )
+				cases.push( { id : i + startFID + firstRPCID, name : rpc[i].f.name.substr(0,-6) } );
+			var ecases = [for( c in cases ) { values : [ { expr : EConst(CInt("" + c.id)), pos : pos } ], expr : { expr : EConst(CString(c.name)), pos : pos }, guard : null } ];
+			var swExpr = { expr : EReturn( { expr : ESwitch(macro isRPC ? id + $v { startFID } : id, ecases, macro null), pos : pos } ), pos : pos };
+			fields.push( {
+				name : "networkGetName",
+				pos : pos,
+				access : access,
+				meta : noComplete,
+				kind : FFun({
+					args : [ { name : "id", type : macro : Int }, { name : "isRPC", type : macro : Bool, value:macro false } ],
+					ret : macro : String,
+					expr : if( isSubSer ) macro { if( id < (isRPC ? $v{ firstRPCID } : $v{ firstFID }) ) return super.networkGetName(id, isRPC); $swExpr; } else swExpr,
+				}),
+			});
+		}
+
+
 		// add metadata
 
 		if( startFID > 32 ) Context.error("Too many serializable fields", pos);
@@ -1131,17 +1162,32 @@ class Macros {
 	}
 
 	static function makeMarkExpr( fields : Array<Field>, fname : String, t : PropType, mark : Expr ) {
+		var rname = "__ref_" + fname;
+		var needRef = false;
 		if( t.increment != null ) {
-			var rname = "__ref_" + fname;
-			if( fields != null )
-				fields.push({
-					name : rname,
-					pos : mark.pos,
-					meta : [{ name : ":noCompletion", pos : mark.pos }],
-					kind : FVar(t.t,macro 0),
-				});
+			needRef = true;
 			mark = macro if( hxd.Math.abs(this.$fname - this.$rname) > $v{ t.increment } ) { this.$rname = this.$fname; $mark; };
 		}
+		if( t.condSend != null ) {
+			function loop(e:Expr) {
+				switch( e.expr ) {
+				case EConst(CIdent("current")):
+					return { expr : EConst(CIdent(rname)), pos : e.pos };
+				default:
+					return haxe.macro.ExprTools.map(e, loop);
+				}
+			}
+			var condSend = loop(t.condSend);
+			needRef = true;
+			mark = macro if( $condSend ) { this.$rname = this.$fname; $mark; };
+		}
+		if( needRef && fields != null )
+			fields.push({
+				name : rname,
+				pos : mark.pos,
+				meta : [{ name : ":noCompletion", pos : mark.pos }],
+				kind : FVar(t.t,macro 0),
+			});
 		return mark;
 	}
 
