@@ -232,8 +232,7 @@ class NetworkHost {
 			var owner = o.networkGetOwner();
 			if( owner == null || clients[0].ownerObject != owner )
 				throw "Client can't set property on " + o + " without ownership ("+owner + " should be "+clients[0].ownerObject+")";
-			// allow to modify the property localy but don't send it to server
-			return false;
+			// allow to modify the property localy and send it to server
 		}
 		o.__next = markHead;
 		markHead = o;

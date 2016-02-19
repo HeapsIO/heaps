@@ -853,7 +853,7 @@ class Macros {
 				}).fields);
 		}
 
-		var firstFID = 0;
+		var firstFID = startFID;
 		var flushExpr = [];
 		var syncExpr = [];
 		var noComplete : Metadata = [ { name : ":noCompletion", pos : pos } ];
