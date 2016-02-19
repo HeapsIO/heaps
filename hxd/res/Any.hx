@@ -27,6 +27,10 @@ class Any extends Resource {
 		this.loader = loader;
 	}
 
+	public function toModel() {
+		return loader.loadModel(entry.path);
+	}
+
 	public function toHmd() {
 		return loader.loadModel(entry.path).toHmd();
 	}
