@@ -39,8 +39,10 @@ class SceneEvents {
 	function onRemove(i) {
 		if( i == currentFocus )
 			currentFocus = null;
-		if( i == currentOver )
+		if( i == currentOver ) {
 			currentOver = null;
+			hxd.System.setCursor(Default);
+		}
 		pushList.remove(i);
 	}
 
