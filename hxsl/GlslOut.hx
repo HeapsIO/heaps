@@ -372,7 +372,6 @@ class GlslOut {
 		decls = [];
 		buf = new StringBuf();
 		exprValues = [];
-		decls.push("#version 130");
 		decls.push("precision mediump float;");
 
 		if( s.funs.length != 1 ) throw "assert";
