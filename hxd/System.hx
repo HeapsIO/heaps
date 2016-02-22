@@ -95,14 +95,17 @@ class System {
 			flash.Lib.current.addChildAt(VIEW,0);
 		}
 		VIEW.render = function(_) if ( f != null ) f();
-		#elseif openfl
-		if( VIEW == null ) {
+		#else
+		#if openfl
+		if( VIEW == null && openfl.display.OpenGLView.isSupported) {
 			VIEW = new openfl.display.OpenGLView();
 			VIEW.name = "glView";
-			flash.Lib.current.addChildAt(VIEW,0);
+			flash.Lib.current.addChildAt(VIEW, 0);
+			VIEW.render = function(r) f();
+			return;
 		}
-		VIEW.render = function(_) if ( f != null ) f();
-		#else
+		#end
+		
 		if( loop != null )
 			flash.Lib.current.removeEventListener(flash.events.Event.ENTER_FRAME, loop);
 		if( f == null )
@@ -150,7 +153,7 @@ class System {
          (0 == 2 ? nme.Lib.HW_AA : 0),
          "Heaps Application"
 		);
-		#elseif openfl
+		#elseif (false && openfl)
 		var windowSize = haxe.macro.Compiler.getDefine("window");
 		if( windowSize == null ) windowSize = "800x600";
 		var windowSize = windowSize.split("x");
@@ -196,9 +199,9 @@ class System {
 		try {
 			callb();
 		} catch( e : Dynamic ) {
-			Sys.println(e);
+			trace(e);
 			#if debug
-			Sys.println(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
+			trace(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
 			#end
 		}
 		

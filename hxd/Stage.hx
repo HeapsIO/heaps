@@ -267,7 +267,7 @@ class Stage {
 			e.stopPropagation();
 		}
 		// prevent back exiting app in mobile
-		if( e.keyCode == flash.ui.Keyboard.BACK ) {
+		if( e.keyCode == 8 ) {
 			e.preventDefault();
 			e.stopImmediatePropagation();
 		}
