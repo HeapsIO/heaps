@@ -4,15 +4,15 @@ class Box extends Graphics {
 
 	public var color : Int;
 
-	public function new( ?color = 0xFFFF0000, ?depth = true, ?parent) {
+	public function new( ?color = 0xFFFF0000, ?bounds : h3d.col.Bounds, ?depth = true, ?parent) {
 		super(parent);
 		this.color = color;
 		if( !depth ) material.mainPass.depth(true, Always);
 
-		var dx = new h3d.col.Point(1, 0, 0);
-		var dy = new h3d.col.Point(0, 1, 0);
-		var dz = new h3d.col.Point(0, 0, 1);
-		var p = new h3d.col.Point(-0.5,-0.5,-0.5);
+		var dx = new h3d.col.Point(bounds == null ? 1 : bounds.xMax - bounds.xMin, 0, 0);
+		var dy = new h3d.col.Point(0, bounds == null ? 1 : bounds.yMax - bounds.yMin, 0);
+		var dz = new h3d.col.Point(0, 0, bounds == null ? 1 : bounds.zMax - bounds.zMin);
+		var p = bounds == null ? new h3d.col.Point(-0.5,-0.5,-0.5) : bounds.getMin();
 
 		lineStyle(1, color);
 		drawLine(p, p.add(dx));
