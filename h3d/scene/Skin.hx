@@ -159,6 +159,7 @@ class Skin extends MultiMaterial {
 			splitPalette = null;
 	}
 
+	@:noDebug
 	override function sync( ctx : RenderContext ) {
 		if( culled && !alwaysSync )
 			return;

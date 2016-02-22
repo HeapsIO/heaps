@@ -208,6 +208,15 @@ class SceneInspector {
 		addTool("Statistics", "bar-chart", getStats, "Open statistics");
 	}
 
+	public function dispose() {
+		inspect.dispose();
+		scene = null;
+		if( oldLoop != null ) {
+			hxd.System.setLoop(oldLoop);
+			oldLoop = null;
+		}
+	}
+
 	inline function get_connected() {
 		return inspect.connected;
 	}

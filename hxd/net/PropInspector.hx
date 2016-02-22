@@ -45,6 +45,13 @@ class PropInspector extends cdb.jq.Client {
 		connect();
 	}
 
+	public function dispose() {
+		if( sock != null ) {
+			sock.close();
+			sock = null;
+		}
+	}
+
 	override function onKey(e:cdb.jq.Event) {
 		switch( e.keyCode ) {
 		case 'Z'.code if( e.ctrlKey ):

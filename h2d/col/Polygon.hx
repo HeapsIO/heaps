@@ -121,6 +121,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		this.reverse();
 	}
 
+	@:noDebug
 	public function contains( p : Point, isConvex = false ) {
 		if( isConvex ) {
 			var p1 = points[points.length - 1];
