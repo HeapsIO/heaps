@@ -33,6 +33,10 @@ class HMDModel extends MeshPrimitive {
 		curMaterial = i;
 	}
 
+	public function getDataBuffers(fmt, ?defaults,?material) {
+		return lib.getBuffers(data, fmt, defaults, material);
+	}
+
 	override function alloc(engine:h3d.Engine) {
 		dispose();
 		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride);
