@@ -1,6 +1,7 @@
 package h3d;
 import hxd.Math;
 
+@:noDebug
 class Matrix {
 
 	static var tmp = new Matrix();
