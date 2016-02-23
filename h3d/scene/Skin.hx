@@ -59,10 +59,6 @@ class Skin extends MultiMaterial {
 	var jointsGraphics : Graphics;
 
 	public var showJoints : Bool;
-	/**
-		Always synchronize the joints position even if the object is invisible or culled.
-	**/
-	public var alwaysSync : Bool = false;
 
 	public function new(s, ?mat, ?parent) {
 		super(null, mat, parent);
@@ -161,7 +157,7 @@ class Skin extends MultiMaterial {
 
 	@:noDebug
 	override function sync( ctx : RenderContext ) {
-		if( culled && !alwaysSync )
+		if( !ctx.visibleFlag )
 			return;
 		if( jointsUpdated || posChanged ) {
 			for( j in skinData.allJoints ) {
