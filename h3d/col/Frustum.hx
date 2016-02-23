@@ -25,7 +25,7 @@ class Frustum {
 		pfar.normalize();
 	}
 
-	public function checkSphere( s : Sphere ) {
+	public function hasSphere( s : Sphere ) {
 		var p = s.getCenter();
 		if( pleft.distance(p) < -s.r ) return false;
 		if( pright.distance(p) < -s.r ) return false;
@@ -38,4 +38,20 @@ class Frustum {
 		return true;
 	}
 
+	public function hasBounds( b : Bounds ) @:privateAccess {
+		if( b.testPlane(pleft) < 0 )
+			return false;
+		if( b.testPlane(pright) < 0 )
+			return false;
+		if( b.testPlane(ptop) < 0 )
+			return false;
+		if( b.testPlane(ptop) < 0 )
+			return false;
+		if( b.testPlane(pnear) < 0 )
+			return false;
+		if( b.testPlane(pfar) < 0 )
+			return false;
+		return true;
+	}
+	
 }
