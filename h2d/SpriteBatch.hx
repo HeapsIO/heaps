@@ -19,7 +19,9 @@ private class ElementsIterator {
 class BatchElement {
 	public var x : Float;
 	public var y : Float;
-	public var scale : Float;
+	public var scale(never,set) : Float;
+	public var scaleX : Float;
+	public var scaleY : Float;
 	public var rotation : Float;
 	public var r : Float;
 	public var g : Float;
@@ -35,9 +37,13 @@ class BatchElement {
 
 	public function new(t) {
 		x = 0; y = 0; r = 1; g = 1; b = 1; a = 1;
-		rotation = 0; scale = 1;
+		rotation = 0; scaleX = scaleY = 1;
 		visible = true;
 		this.t = t;
+	}
+
+	inline function set_scale(v) {
+		return scaleX = scaleY = v;
 	}
 
 	inline function get_alpha() {
@@ -149,23 +155,23 @@ class SpriteBatch extends Drawable {
 				var px = t.dx, py = t.dy;
 				var x, y;
 
-				x = (px * ca - py * sa) * e.scale + e.x;
-				y = (py * ca + px * sa) * e.scale + e.y;
+				x = (px * ca - py * sa) * e.scaleX + e.x;
+				y = (py * ca + px * sa) * e.scaleY + e.y;
 				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
 
 				var px = t.dx + hx, py = t.dy;
-				x = (px * ca - py * sa) * e.scale + e.x;
-				y = (py * ca + px * sa) * e.scale + e.y;
+				x = (px * ca - py * sa) * e.scaleX + e.x;
+				y = (py * ca + px * sa) * e.scaleY + e.y;
 				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
 
 				var px = t.dx, py = t.dy + hy;
-				x = (px * ca - py * sa) * e.scale + e.x;
-				y = (py * ca + px * sa) * e.scale + e.y;
+				x = (px * ca - py * sa) * e.scaleX + e.x;
+				y = (py * ca + px * sa) * e.scaleY + e.y;
 				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
 
 				var px = t.dx + hx, py = t.dy + hy;
-				x = (px * ca - py * sa) * e.scale + e.x;
-				y = (py * ca + px * sa) * e.scale + e.y;
+				x = (px * ca - py * sa) * e.scaleX + e.x;
+				y = (py * ca + px * sa) * e.scaleY + e.y;
 				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
 			} else
 				addBounds(relativeTo, out, e.x + tile.dx, e.y + tile.dy, tile.width, tile.height);
@@ -191,8 +197,8 @@ class SpriteBatch extends Drawable {
 				var ca = Math.cos(e.rotation), sa = Math.sin(e.rotation);
 				var hx = t.width, hy = t.height;
 				var px = t.dx, py = t.dy;
-				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
+				tmp[pos++] = (px * ca - py * sa) * e.scaleX + e.x;
+				tmp[pos++] = (py * ca + px * sa) * e.scaleY + e.y;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v;
 				tmp[pos++] = e.r;
@@ -200,8 +206,8 @@ class SpriteBatch extends Drawable {
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
 				var px = t.dx + hx, py = t.dy;
-				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
+				tmp[pos++] = (px * ca - py * sa) * e.scaleX + e.x;
+				tmp[pos++] = (py * ca + px * sa) * e.scaleY + e.y;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v;
 				tmp[pos++] = e.r;
@@ -209,8 +215,8 @@ class SpriteBatch extends Drawable {
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
 				var px = t.dx, py = t.dy + hy;
-				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
+				tmp[pos++] = (px * ca - py * sa) * e.scaleX + e.x;
+				tmp[pos++] = (py * ca + px * sa) * e.scaleY + e.y;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v2;
 				tmp[pos++] = e.r;
@@ -218,8 +224,8 @@ class SpriteBatch extends Drawable {
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
 				var px = t.dx + hx, py = t.dy + hy;
-				tmp[pos++] = (px * ca - py * sa) * e.scale + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scale + e.y;
+				tmp[pos++] = (px * ca - py * sa) * e.scaleX + e.x;
+				tmp[pos++] = (py * ca + px * sa) * e.scaleY + e.y;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v2;
 				tmp[pos++] = e.r;
