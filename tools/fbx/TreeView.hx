@@ -156,8 +156,10 @@ class TreeView
 
 	public function onKey(e:hxd.Event) {
 		if( selected == null ) return;
-		if( e.keyCode == "V".code )
+		if( e.keyCode == "V".code ) {
 			selected.obj.visible = !selected.obj.visible;
+			draw();
+		}
 	}
 
 	function setHighligth(e : TreeView) {
@@ -293,6 +295,8 @@ class TreeView
 		tf = new h2d.Text(font, cont);
 		var str = obj.toString();
 		tf.text = str.indexOf("Joint") != -1 ? str.substr(5, str.length - 6) : str;
+
+		tf.color.setColor(obj.visible ? 0xFFFFFFFF : 0xFF808080);
 		tf.x = 5 + dx;
 		tf.y = 5 + minHeight;
 
