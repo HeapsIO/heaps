@@ -6,6 +6,26 @@ enum Flags {
 	FlipY;
 }
 
+@:forward(bytes, width, height, offset, flags, clear, dispose, toPNG, clone, toVector)
+abstract PixelsARGB(Pixels) to Pixels {
+
+
+	public inline function getPixel(x, y) {
+		return Pixels.switchEndian( this.bytes.getInt32(((x + y * this.width) << 2) + this.offset) );
+	}
+
+	public inline function setPixel(x, y, v) {
+		this.bytes.setInt32(((x + y * this.width) << 2) + this.offset, Pixels.switchEndian(v));
+	}
+
+	@:from public static function fromPixels(p:Pixels) : PixelsARGB {
+		p.convert(ARGB);
+		p.setFlip(false);
+		return cast p;
+	}
+}
+
+@:noDebug
 class Pixels {
 	public var bytes : haxe.io.Bytes;
 	public var format(default,set) : PixelFormat;
@@ -23,6 +43,14 @@ class Pixels {
 		this.offset = offset;
 	}
 
+	public static inline function switchEndian(v) {
+		return (v >>> 24) | ((v >> 8) & 0xFF00) | ((v << 8) & 0xFF0000) | (v << 24);
+	}
+
+	public static inline function switchBR(v) {
+		return (v & 0xFF00FF00) | ((v << 16) & 0xFF0000) | ((v >> 16) & 0xFF);
+	}
+
 	function set_format(fmt) {
 		this.format = fmt;
 		bpp = bytesPerPixel(fmt);
@@ -34,38 +62,67 @@ class Pixels {
 	}
 
 	public function clear( color : Int ) {
-		var a, b, c, d;
+		if( color == 0 ) {
+			bytes.fill(offset, width * height * bytesPerPixel(format), 0);
+			return;
+		}
 		switch( format ) {
-		case RGBA:
-			a = color >> 16;
-			b = color >> 8;
-			c = color;
-			d = color >>> 24;
-		case ARGB:
-			a = color >>> 24;
-			b = color >> 16;
-			c = color >> 8;
-			d = color;
 		case BGRA:
-			a = color;
-			b = color >> 8;
-			c = color >> 16;
-			d = color >>> 24;
+		case RGBA:
+			color = switchBR(color);
+		case ARGB:
+			color = switchEndian(color);
 		default:
 			invalidFormat();
-			a = b = c = d = 0;
 		}
-		a &= 0xFF;
-		b &= 0xFF;
-		c &= 0xFF;
-		d &= 0xFF;
-		var p = 0;
+		var p = offset;
 		for( i in 0...width * height ) {
-			bytes.set(p++, a);
-			bytes.set(p++, b);
-			bytes.set(p++, c);
-			bytes.set(p++, d);
+			bytes.setInt32(p, color);
+			p += 4;
 		}
+	}
+
+	public function toVector() : haxe.ds.Vector<Int> {
+		var vec = new haxe.ds.Vector<Int>(width * height);
+		var idx = 0;
+		var p = offset;
+		var dl = 0;
+		var bpp = bytesPerPixel(format);
+		if( flags.has(FlipY) ) {
+			p += ((height - 1) * width) * bpp;
+			dl = -width * 2 * bpp;
+		}
+		switch(format) {
+		case BGRA:
+			for( y in 0...height ) {
+				for( x in 0...width ) {
+					vec[idx++] = bytes.getInt32(p);
+					p += 4;
+				}
+				p += dl;
+			}
+		case RGBA:
+			for( y in 0...height ) {
+				for( x in 0...width ) {
+					var v = bytes.getInt32(p);
+					vec[idx++] = switchBR(v);
+					p += 4;
+				}
+				p += dl;
+			}
+		case ARGB:
+			for( y in 0...height ) {
+				for( x in 0...width ) {
+					var v = bytes.getInt32(p);
+					vec[idx++] = switchEndian(v);
+					p += 4;
+				}
+				p += dl;
+			}
+		default:
+			invalidFormat();
+		}
+		return vec;
 	}
 
 	public function makeSquare( ?copy : Bool ) {
@@ -80,11 +137,15 @@ class Pixels {
 			out.blit(p, bytes, b, w * 4);
 			p += w * 4;
 			b += w * 4;
-			for( i in 0...(tw - w) * 4 )
-				out.set(p++, 0);
+			for( i in 0...tw - w ) {
+				out.setInt32(p, 0);
+				p += 4;
+			}
 		}
-		for( i in 0...(th - h) * tw * 4 )
-			out.set(p++, 0);
+		for( i in 0...(th - h) * tw ) {
+			out.setInt32(p, 0);
+			p += 4;
+		}
 		if( copy )
 			return new Pixels(tw, th, out, format);
 		if( !flags.has(ReadOnly) ) hxd.impl.Tmp.saveBytes(bytes);
@@ -111,16 +172,17 @@ class Pixels {
 		for( y in 0...height >> 1 ) {
 			var p1 = y * stride;
 			var p2 = (height - 1 - y) * stride;
-			for( x in 0...stride ) {
-				var a = bytes.get(p1);
-				var b = bytes.get(p2);
-				bytes.set(p1++, b);
-				bytes.set(p2++, a);
+			for( x in 0...stride>>2 ) {
+				var a = bytes.getInt32(p1);
+				var b = bytes.getInt32(p2);
+				bytes.setInt32(p1, b);
+				bytes.setInt32(p2, a);
+				p1 += 4;
+				p2 += 4;
 			}
 		}
 	}
 
-	@:noDebug
 	public function convert( target : PixelFormat ) {
 		if( format == target )
 			return;
@@ -173,17 +235,16 @@ class Pixels {
 		format = target;
 	}
 
-	@:noDebug
 	public function getPixel(x, y) : Int {
 		if( flags.has(FlipY) ) y = height - 1 - y;
 		var p = ((x + y * width) * bpp) + offset;
 		switch(format) {
 		case BGRA:
-			return bytes.get(p) | (bytes.get( p+1 )<<8) | (bytes.get( p+2 )<<16) | (bytes.get( p+3 )<<24);
+			return bytes.getInt32(p);
 		case RGBA:
-			return (bytes.get(p)<<16) | (bytes.get( p+1 )<<8) | bytes.get( p+2 ) | (bytes.get( p+3 )<<24);
+			return switchBR(bytes.getInt32(p));
 		case ARGB:
-			return (bytes.get(p) << 24) | (bytes.get( p + 1 ) << 16) | (bytes.get( p + 2 ) << 8) | bytes.get( p + 3 );
+			return switchEndian(bytes.getInt32(p));
 		default:
 			invalidFormat();
 			return 0;
@@ -193,26 +254,13 @@ class Pixels {
 	public function setPixel(x, y, color) : Void {
 		if( flags.has(FlipY) ) y = height - 1 - y;
 		var p = ((x + y * width) * bpp) + offset;
-		var a = color >>> 24;
-		var r = (color >> 16) & 0xFF;
-		var g = (color >> 8) & 0xFF;
-		var b = color & 0xFF;
 		switch(format) {
 		case BGRA:
-			bytes.set(p++, b);
-			bytes.set(p++, g);
-			bytes.set(p++, r);
-			bytes.set(p++, a);
+			bytes.setInt32(p, color);
 		case RGBA:
-			bytes.set(p++, r);
-			bytes.set(p++, g);
-			bytes.set(p++, b);
-			bytes.set(p++, a);
+			bytes.setInt32(p, switchBR(color));
 		case ARGB:
-			bytes.set(p++, a);
-			bytes.set(p++, r);
-			bytes.set(p++, g);
-			bytes.set(p++, b);
+			bytes.setInt32(p, switchEndian(color));
 		default:
 			invalidFormat();
 		}
