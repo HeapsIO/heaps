@@ -838,7 +838,7 @@ class Macros {
 				@:noCompletion public var __bits : Int = 0;
 				@:noCompletion public var __next : hxd.net.NetworkSerializable;
 				@:noCompletion public inline function networkSetBit( b : Int ) {
-					if( __host != null && (__bits != 0 || @:privateAccess __host.mark(this)) )
+					if( __host != null && (__next != null || @:privateAccess __host.mark(this)) )
 						__bits |= 1 << b;
 				}
 				public var enableReplication(get, set) : Bool;

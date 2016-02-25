@@ -386,6 +386,22 @@ class NetworkHost {
 		ctx.addAnyRef(o);
 		if( checkEOM ) ctx.addByte(EOM);
 	}
+	
+	function unmark( o : NetworkSerializable ) {
+		if( o.__next == null )
+			return;
+		var prev = null;
+		var h = markHead;
+		while( h != o ) {
+			prev = h;
+			h = h.__next;
+		}
+		if( prev == null )
+			markHead = o.__next;
+		else
+			prev.__next = o.__next;
+		o.__next = null;
+	}
 
 	function unregister( o : NetworkSerializable ) {
 		if( o.__host == null )
@@ -397,7 +413,8 @@ class NetworkHost {
 		}
 		flushProps(); // send changes
 		o.__host = null;
-		o.__bits = 0;
+		o.__bits = 0;		
+		unmark(o);
 		if( logger != null )
 			logger("Unregister " + o+"#"+o.__uid);
 		ctx.addByte(UNREG);
