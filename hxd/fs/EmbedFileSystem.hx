@@ -109,7 +109,7 @@ private class EmbedEntry extends FileEntry {
 	}
 
 	override function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void {
-		#if flash
+		#if (flash || openfl)
 		var loader = new flash.display.Loader();
 		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
 			throw Std.string(e) + " while loading " + relPath;
@@ -140,6 +140,9 @@ private class EmbedEntry extends FileEntry {
 		for( i in 0...(3-(bytes*4)%3)%3 )
 			extra += "=";
 		image.src = "data:image/" + extension + ";base64," + rawData + extra;
+		#elseif lime
+		open();
+		onLoaded( new LoadedBitmap(lime.graphics.Image.fromBytes(bytes)) );
 		#else
 		throw "TODO";
 		#end
