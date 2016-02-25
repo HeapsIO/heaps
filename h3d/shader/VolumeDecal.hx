@@ -34,10 +34,10 @@ class VolumeDecal extends hxsl.Shader {
 
 	};
 
-	public function new() {
+	public function new( objectWidth : Float, objectHeight : Float ) {
 		super();
 		normal.set(0, 0, 1);
-		scale.set(1, 1);
+		scale.set(1/objectWidth, 1/objectHeight);
 	}
 
 }
