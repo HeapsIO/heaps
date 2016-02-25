@@ -499,6 +499,14 @@ class GlDriver extends Driver {
 		#end
 	}
 
+	inline static function bytesToUint8Array( b : haxe.io.Bytes ) : Uint8Array {
+		#if lime
+		return new Uint8Array(b);
+		#else
+		return new Uint8Array(b.getData());
+		#end
+	}
+
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 		pixels.convert(t.format);
@@ -506,8 +514,7 @@ class GlDriver extends Driver {
 		pixels.setFlip(true);
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, pixels.bytes.getData());
 		#else
-		var pixels = new Uint8Array(pixels.bytes.getData());
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, pixels);
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#end
 		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
@@ -533,7 +540,7 @@ class GlDriver extends Driver {
 		#if hxsdl
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, buf.getData(), bufPos, vertexCount * stride * 4);
 		#else
-		var buf = new Uint8Array(buf.getData());
+		var buf = bytesToUint8Array(buf);
 		var sub = new Uint8Array(buf.buffer, bufPos, vertexCount * stride * 4);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		#end
@@ -557,7 +564,7 @@ class GlDriver extends Driver {
 		#if hxsdl
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, buf.getData(), bufPos, indiceCount * 2);
 		#else
-		var buf = new Uint8Array(buf.getData());
+		var buf = bytesToUint8Array(buf);
 		var sub = new Uint8Array(buf.buffer, bufPos, indiceCount * 2);
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
 		#end
