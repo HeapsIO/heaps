@@ -297,7 +297,6 @@ class System {
 	}
 
 	public static function start(callb) {
-		trace( "hxd.System start" );
 		callb();
 	}
 
