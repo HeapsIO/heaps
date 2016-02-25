@@ -95,17 +95,16 @@ class System {
 			flash.Lib.current.addChildAt(VIEW,0);
 		}
 		VIEW.render = function(_) if ( f != null ) f();
-		#else
-		#if openfl
-		if( VIEW == null && openfl.display.OpenGLView.isSupported) {
-			VIEW = new openfl.display.OpenGLView();
-			VIEW.name = "glView";
-			flash.Lib.current.addChildAt(VIEW, 0);
+		#elseif openfl
+		if( openfl.display.OpenGLView.isSupported ){
+			if( VIEW == null ) {
+				VIEW = new openfl.display.OpenGLView();
+				VIEW.name = "glView";
+				flash.Lib.current.addChildAt(VIEW, 0);
+			}
 			VIEW.render = function(r) f();
-			return;
 		}
-		#end
-		
+		#else
 		if( loop != null )
 			flash.Lib.current.removeEventListener(flash.events.Event.ENTER_FRAME, loop);
 		if( f == null )
@@ -313,6 +312,94 @@ class System {
 	static function get_lang() {
 		return flash.system.Capabilities.language;
 	}
+
+	#elseif lime
+
+	static function get_isWindowed() {
+		return true;
+	}
+
+	static function get_isTouch() {
+		return false;
+	}
+
+	static function get_width() {
+		return lime.app.Application.current.window.width;
+	}
+
+	static function get_height() {
+		return lime.app.Application.current.window.height;
+	}
+
+	static function get_isAndroid() {
+		return #if android true #else false #end;
+	}
+
+	static function get_isIOS() {
+		return #if ios true #else false #end;
+	}
+
+	static function get_screenDPI() {
+		return 0; // TODO
+	}
+
+	@:allow(hxd.impl.LimeStage)
+	static var loopFunc = null;
+
+	public static function getCurrentLoop() {
+		return loopFunc;
+	}
+
+	public static function setLoop( f : Void -> Void ) {
+		loopFunc = f;
+	}
+
+	public static function start(callb) {
+		trace( "hxd.System start" );
+		callb();
+	}
+
+	public static function getClipboard() : String {
+		return lime.system.Clipboard.text;
+	}
+
+	public static function exit() {
+		return lime.system.System.exit( 0 );
+	}
+
+	public static function setNativeCursor( c : Cursor ) {
+		lime.ui.Mouse.cursor = switch( c ){
+		case Default: DEFAULT;
+		case Button: POINTER;
+		case Move: MOVE;
+		case TextInput: TEXT;
+		case Hide: DEFAULT;
+		case Custom(_,_,_,_):
+			throw "not supported";
+		}
+		if( c == Hide ) lime.ui.Mouse.hide() else lime.ui.Mouse.show();
+	}
+
+
+	/**
+		Returns the device name:
+			"PC" for a desktop computer
+			Or the android device name
+			(will add iPad/iPhone/iPod soon)
+	**/
+	static var CACHED_NAME = null;
+	public static function getDeviceName() {
+		if( CACHED_NAME != null )
+			return CACHED_NAME;
+		var name;
+		name = "Unknown"; // TODO
+		CACHED_NAME = name;
+		return name;
+	}
+
+	static function get_lang() {
+		return null; // TODO
+	}	
 
 	#elseif js
 

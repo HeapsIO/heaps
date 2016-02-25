@@ -11,6 +11,8 @@ class Stage {
 	#if (flash || openfl || nme)
 	var stage : flash.display.Stage;
 	var fsDelayed : Bool;
+	#elseif lime
+	var limeStage : hxd.impl.LimeStage;
 	#end
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
@@ -65,6 +67,9 @@ class Stage {
 				onResize(null);
 			}
 		};
+		#elseif lime
+		limeStage = new hxd.impl.LimeStage( this );
+		lime.app.Application.current.addModule( limeStage );
 		#end
 		#if flash
 		if( untyped hxd.System.isAir() )
@@ -267,7 +272,7 @@ class Stage {
 			e.stopPropagation();
 		}
 		// prevent back exiting app in mobile
-		if( e.keyCode == 8 ) {
+		if( e.keyCode == flash.ui.Keyboard.BACK ) {
 			e.preventDefault();
 			e.stopImmediatePropagation();
 		}
@@ -411,6 +416,33 @@ class Stage {
 
 	function get_height() {
 		return @:privateAccess System.windowHeight;
+	}
+
+	function get_mouseLock() {
+		return false;
+	}
+
+	function set_mouseLock(b) {
+		if( b ) throw "Not implemented";
+		return b;
+	}
+
+#elseif lime
+
+	inline function get_mouseX() {
+		return limeStage.mouseX;
+	}
+
+	inline function get_mouseY() {
+		return limeStage.mouseY;
+	}
+
+	inline function get_width() {
+		return limeStage.width;
+	}
+
+	inline function get_height() {
+		return limeStage.height;
 	}
 
 	function get_mouseLock() {

@@ -485,8 +485,10 @@ class GlDriver extends Driver {
 		} else {
 			var img = bmp.toNative();
 			gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-			#if lime
+			#if openfl
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, bmp.width, bmp.height, 0, getChannels(t.t), t.t.pixelFmt, img.image.data);
+			#elseif lime
+			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, bmp.width, bmp.height, 0, getChannels(t.t), t.t.pixelFmt, img.data);
 			#else
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
 			#end

@@ -5,6 +5,8 @@ typedef BitmapInnerData =
 	flash.display.BitmapData;
 #elseif js
 	js.html.CanvasRenderingContext2D;
+#elseif lime
+	lime.graphics.Image;
 #else
 	BitmapInnerDataImpl;
 
@@ -49,6 +51,8 @@ class BitmapData {
 			canvas.width = width;
 			canvas.height = height;
 			ctx = canvas.getContext2d();
+			#elseif lime
+			data = new lime.graphics.Image( null, 0, 0, width, height );
 			#else
 			data = new BitmapInnerData();
 			data.pixels = new haxe.ds.Vector(width * height);
@@ -97,7 +101,11 @@ class BitmapData {
 		for( dy in 0...height ) {
 			var p = x + (y + dy) * data.width;
 			for( dx in 0...width )
+				#if lime
+				data.buffer.data[p++] = color;
+				#else
 				data.pixels[p++] = color;
+				#end
 		}
 		#end
 	}
@@ -292,6 +300,8 @@ class BitmapData {
 			i = ctx.getImageData(x, y, 1, 1);
 		}
 		return (i.data[a] << 16) | (i.data[a|1] << 8) | i.data[a|2] | (i.data[a|3] << 24);
+		#elseif lime
+		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.buffer.data[x + y * data.width] else 0;
 		#else
 		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.pixels[x + y * data.width] else 0;
 		#end
@@ -323,6 +333,8 @@ class BitmapData {
 		i.data[2] = c & 0xFF;
 		i.data[3] = (c >>> 24) & 0xFF;
 		ctx.putImageData(i, x, y);
+		#elseif lime
+		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.buffer.data[x + y * data.width] = c;
 		#else
 		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.pixels[x + y * data.width] = c;
 		#end
@@ -359,6 +371,11 @@ class BitmapData {
 		var data = ctx.getImageData(0, 0, w, h).data;
 		var pixels = data.buffer;
 		return new Pixels(w, h, haxe.io.Bytes.ofData(pixels), RGBA);
+		#elseif lime
+		var out = hxd.impl.Tmp.getBytes(data.width * data.height * 4);
+		for( i in 0...data.width*data.height )
+			out.setInt32(i << 2, data.buffer.data[i]);
+		return new Pixels(data.width, data.height, out, BGRA);
 		#else
 		var out = hxd.impl.Tmp.getBytes(data.width * data.height * 4);
 		for( i in 0...data.width*data.height )
@@ -392,6 +409,17 @@ class BitmapData {
 		#elseif (nme || openfl)
 		pixels.convert(BGRA);
 		bmp.setPixels(bmp.rect, flash.utils.ByteArray.fromBytes(pixels.bytes));
+		#elseif lime
+		// TODO format
+		pixels.convert(BGRA);
+		var src = pixels.bytes;
+		var i = 0;
+		for( y in 0...height ){
+			for( x in 0...width  ){
+				data.setPixel32( x, y, src.getInt32(i<<2) );
+				i++;
+			}
+		}
 		#else
 		pixels.convert(BGRA);
 		var src = pixels.bytes;
