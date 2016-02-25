@@ -10,6 +10,10 @@ class Bounds implements RayCollider {
 	public var zMin : Float;
 	public var zMax : Float;
 
+	public var xSize(get,set) : Float;
+	public var ySize(get,set) : Float;
+	public var zSize(get,set) : Float;
+	
 	public inline function new() {
 		empty();
 	}
@@ -275,6 +279,13 @@ class Bounds implements RayCollider {
 	public inline function getMax() {
 		return new Point(xMax, yMax, zMax);
 	}
+	
+	inline function get_xSize() return xMax - xMin;
+	inline function get_ySize() return yMax - yMin;
+	inline function get_zSize() return zMax - zMin;
+	inline function set_xSize(v) { xMax = xMin + v; return v; }
+	inline function set_ySize(v) { yMax = yMin + v; return v; }
+	inline function set_zSize(v) { zMax = zMin + v; return v; }
 
 	public inline function empty() {
 		xMin = 1e20;
