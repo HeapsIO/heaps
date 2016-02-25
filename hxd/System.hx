@@ -262,7 +262,11 @@ class System {
 	}
 
 	static function get_isTouch() {
+		#if desktop
 		return false;
+		#else
+		return true;
+		#end
 	}
 
 	static function get_width() {
