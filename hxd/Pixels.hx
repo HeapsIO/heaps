@@ -6,7 +6,7 @@ enum Flags {
 	FlipY;
 }
 
-@:forward(bytes, width, height, offset, flags, clear, dispose, toPNG, clone, toVector)
+@:forward(bytes, width, height, offset, flags, clear, dispose, toPNG, clone, toVector, sub, blit)
 abstract PixelsARGB(Pixels) to Pixels {
 
 
