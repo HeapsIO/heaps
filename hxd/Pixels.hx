@@ -60,10 +60,44 @@ class Pixels {
 	function invalidFormat() {
 		throw "Unsupported format for this operation : " + format;
 	}
+	
+	public function sub( x : Int, y : Int, width : Int, height : Int ) {
+		if( x < 0 || y < 0 || x + width > this.width || y + height >= this.height )
+			throw "Pixels.sub() outside bounds";
+		var out = hxd.impl.Tmp.getBytes(width * height * bpp);
+		var stride = width * bpp;
+		var outP = 0;		
+		for( dy in 0...height ) {
+			var p = (x + yflip(y + dy) * this.width) * bpp + offset;			
+			out.blit(outP, this.bytes, p, stride);
+			outP += stride;
+		}
+		return new hxd.Pixels(width, height, out, format);
+	}
+	
+	inline function yflip(y:Int) {
+		return if( flags.has(FlipY) ) this.height - 1 - y else y;
+	}
+	
+	public function blit( x : Int, y : Int, src : hxd.Pixels, srcX : Int, srcY : Int, width : Int, height : Int ) {
+		if( x < 0 || y < 0 || x + width > this.width || y + height > this.height )
+			throw "Pixels.blit() outside bounds";
+		if( srcX < 0 || srcX < 0 || srcX + width > src.width || srcY + height > src.height )
+			throw "Pixels.blit() outside src bounds";
+		willChange();
+		src.convert(format);
+		var stride = width * bpp;		
+		for( dy in 0...height ) {
+			var srcP = (srcX + src.yflip(dy + srcY) * src.width) * bpp + src.offset;
+			var dstP = (x + yflip(dy + y) * this.width) * bpp + offset;
+			bytes.blit(dstP, src.bytes, srcP, stride);
+		}
+	}
 
 	public function clear( color : Int ) {
+		willChange();
 		if( color == 0 ) {
-			bytes.fill(offset, width * height * bytesPerPixel(format), 0);
+			bytes.fill(offset, width * height * bpp, 0);
 			return;
 		}
 		switch( format ) {
@@ -87,7 +121,6 @@ class Pixels {
 		var idx = 0;
 		var p = offset;
 		var dl = 0;
-		var bpp = bytesPerPixel(format);
 		if( flags.has(FlipY) ) {
 			p += ((height - 1) * width) * bpp;
 			dl = -width * 2 * bpp;
@@ -163,10 +196,14 @@ class Pixels {
 		flags.unset(ReadOnly);
 	}
 
+	inline function willChange() {
+		if( flags.has(ReadOnly) ) copyInner();
+	}
+	
 	public function setFlip( b : Bool ) {
 		#if js if( b == null ) b = false; #end
 		if( flags.has(FlipY) == b ) return;
-		if( flags.has(ReadOnly) ) copyInner();
+		willChange();
 		if( b ) flags.set(FlipY) else flags.unset(FlipY);
 		var stride = width * bpp;
 		for( y in 0...height >> 1 ) {
@@ -186,8 +223,7 @@ class Pixels {
 	public function convert( target : PixelFormat ) {
 		if( format == target )
 			return;
-		if( flags.has(ReadOnly) )
-			copyInner();
+		willChange();
 		switch( [format, target] ) {
 		case [BGRA, ARGB], [ARGB, BGRA]:
 			// reverse bytes
@@ -236,8 +272,7 @@ class Pixels {
 	}
 
 	public function getPixel(x, y) : Int {
-		if( flags.has(FlipY) ) y = height - 1 - y;
-		var p = ((x + y * width) * bpp) + offset;
+		var p = ((x + yflip(y) * width) * bpp) + offset;
 		switch(format) {
 		case BGRA:
 			return bytes.getInt32(p);
@@ -252,8 +287,8 @@ class Pixels {
 	}
 
 	public function setPixel(x, y, color) : Void {
-		if( flags.has(FlipY) ) y = height - 1 - y;
-		var p = ((x + y * width) * bpp) + offset;
+		var p = ((x + yflip(y) * width) * bpp) + offset;
+		willChange();
 		switch(format) {
 		case BGRA:
 			bytes.setInt32(p, color);
@@ -292,7 +327,7 @@ class Pixels {
 		p.flags = flags;
 		p.flags.unset(ReadOnly);
 		if( bytes != null ) {
-			var size = width * height * bytesPerPixel(format);
+			var size = width * height * bpp;
 			p.bytes = hxd.impl.Tmp.getBytes(size);
 			p.bytes.blit(0, bytes, offset, size);
 		}
