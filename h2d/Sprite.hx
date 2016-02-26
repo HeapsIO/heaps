@@ -535,7 +535,7 @@ class Sprite {
 		var invX = -(absX * invA + absY * invC);
 		var invY = -(absX * invB + absY * invD);
 
-		@:privateAccess ctx.inFilter = true;
+		@:privateAccess ctx.inFilter = this;
 		shader.filterMatrixA.set(invA, invC, invX);
 		shader.filterMatrixB.set(invB, invD, invY);
 		ctx.globalAlpha = 1;
@@ -562,7 +562,7 @@ class Sprite {
 		@:privateAccess ctx.inFilter = oldF;
 
 		ctx.popTarget();
-
+		
 		ctx.globalAlpha = oldAlpha * alpha;
 		emitTile(ctx, final);
 		ctx.globalAlpha = oldAlpha;
