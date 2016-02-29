@@ -13,7 +13,7 @@ class Primitive {
 		return 0;
 	}
 
-	public function getCollider() : h3d.col.RayCollider {
+	public function getCollider() : h3d.col.Collider {
 		throw "not implemented";
 		return null;
 	}

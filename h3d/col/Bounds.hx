@@ -1,7 +1,7 @@
 package h3d.col;
 import hxd.Math;
 
-class Bounds implements RayCollider {
+class Bounds implements Collider {
 
 	public var xMin : Float;
 	public var xMax : Float;
@@ -163,7 +163,7 @@ class Bounds implements RayCollider {
 		return !(xMin > b.xMax || yMin > b.yMax || zMin > b.zMax || xMax < b.xMin || yMax < b.yMin || zMax < b.zMin);
 	}
 
-	public inline function include( p : Point ) {
+	public inline function contains( p : Point ) {
 		return p.x >= xMin && p.x < xMax && p.y >= yMin && p.y < yMax && p.z >= zMin && p.z < zMax;
 	}
 

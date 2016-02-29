@@ -8,7 +8,7 @@ class HMDModel extends MeshPrimitive {
 	var indexesTriPos : Array<Int>;
 	var lib : hxd.fmt.hmd.Library;
 	var curMaterial : Int;
-	var collider : h3d.col.RayCollider;
+	var collider : h3d.col.Collider;
 	var normalsRecomputed : String;
 
 	public function new(data, dataPos, lib) {
@@ -140,7 +140,7 @@ class HMDModel extends MeshPrimitive {
 		var poly = new h3d.col.Polygon();
 		poly.addBuffers(pos.vertexes, pos.indexes);
 		var sphere = data.bounds.toSphere();
-		collider = new h3d.col.RayCollider.OptimizedCollider(sphere, poly);
+		collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
 		return collider;
 	}
 

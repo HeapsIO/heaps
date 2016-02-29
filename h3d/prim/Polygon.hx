@@ -178,7 +178,7 @@ class Polygon extends Primitive {
 		return points.length;
 	}
 
-	override function getCollider() : h3d.col.RayCollider {
+	override function getCollider() : h3d.col.Collider {
 		var vertexes = new haxe.ds.Vector<hxd.impl.Float32>(points.length * 3);
 		var indexes = new haxe.ds.Vector<hxd.impl.UInt16>(idx.length);
 		var vid = 0;

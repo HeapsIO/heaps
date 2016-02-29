@@ -1,6 +1,6 @@
 package h3d.col;
 
-class Sphere implements RayCollider {
+class Sphere implements Collider {
 
 	public var x : Float;
 	public var y : Float;
@@ -16,6 +16,13 @@ class Sphere implements RayCollider {
 
 	public inline function getCenter() {
 		return new Point(x, y, z);
+	}
+	
+	public inline function contains( p : Point ) {
+		var dx = p.x - x;
+		var dy = p.y - y;
+		var dz = p.z - z;
+		return dx * dx + dy * dy + dz * dz < r * r;
 	}
 
 	public function rayIntersection( r : Ray, ?p : Point ) : Null<Point> {
