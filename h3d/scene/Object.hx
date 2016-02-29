@@ -4,17 +4,27 @@ package h3d.scene;
 	public var FPosChanged = 1;
 	public var FVisible = 2;
 	public var FCulled = 4;
-	public var FFollowPosition = 8;
+	public var FFollowPositionOnly = 8;
 	public var FLightCameraCenter = 16;
 	public var FAllocated = 32;
+	public var FAlwaysSync = 64;
+	public var FInheritCulled = 128;
+	public inline function new() {
+		this = 0;
+	}
 	public inline function toInt() return this;
+	public inline function has(f:ObjectFlags) return this & f.toInt() != 0;
+	public inline function set(f:ObjectFlags, b) {
+		if( b ) this |= f.toInt() else this &= ~f.toInt();
+		return b;
+	}
 }
 
 class Object {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 
-	var flags : Int;
+	var flags : ObjectFlags;
 	var childs : Array<Object>;
 	public var parent(default, null) : Object;
 	public var numChildren(get, never) : Int;
@@ -48,8 +58,21 @@ class Object {
 	**/
 	public var lightCameraCenter(get, set) : Bool;
 
-	// internal flag to inform that the object is not to be displayed
-	var culled(get,set) : Bool;
+	/**
+		Inform that the object is not to be displayed and his animation doesn't have to be sync. Unlike visible, this doesn't apply to children unless inheritCulled is set to true.
+	**/
+	public var culled(get, set) : Bool;
+
+	/**
+		When an object is not visible or culled, its animation does not get synchronized unless you set alwaysSync=true
+	**/
+	public var alwaysSync(get, set) : Bool;
+
+	/**
+		When enable, the culled flag is inherited by children objects.
+	**/
+	public var inheritCulled(get, set) : Bool;
+
 
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
@@ -58,7 +81,7 @@ class Object {
 	var lastFrame : Int;
 
 	public function new( ?parent : Object ) {
-		flags = 0;
+		flags = new ObjectFlags();
 		absPos = new h3d.Matrix();
 		absPos.identity();
 		x = 0; y = 0; z = 0; scaleX = 1; scaleY = 1; scaleZ = 1;
@@ -70,18 +93,22 @@ class Object {
 			parent.addChild(this);
 	}
 
-	inline function get_visible() return (flags & FVisible.toInt()) != 0;
-	inline function get_allocated() return (flags & FAllocated.toInt()) != 0;
-	inline function get_posChanged() return (flags & FPosChanged.toInt()) != 0;
-	inline function get_culled() return (flags & FCulled.toInt()) != 0;
-	inline function get_followPositionOnly() return (flags & FFollowPosition.toInt()) != 0;
-	inline function get_lightCameraCenter() return (flags & FLightCameraCenter.toInt()) != 0;
-	inline function set_posChanged(b) { if( b ) flags |= FPosChanged.toInt() else flags &= ~FPosChanged.toInt(); return b; }
-	inline function set_culled(b) { if( b ) flags |= FCulled.toInt() else flags &= ~FCulled.toInt(); return b; }
-	inline function set_visible(b) { culled = !b; if( b ) flags |= FVisible.toInt() else flags &= ~FVisible.toInt(); return b; }
-	inline function set_allocated(b) { if( b ) flags |= FAllocated.toInt() else flags &= ~FAllocated.toInt(); return b; }
-	inline function set_followPositionOnly(b) { if( b ) flags |= FFollowPosition.toInt() else flags &= ~FFollowPosition.toInt(); return b; }
-	inline function set_lightCameraCenter(b) { if( b ) flags |= FLightCameraCenter.toInt() else flags &= ~FLightCameraCenter.toInt(); return b; }
+	inline function get_visible() return flags.has(FVisible);
+	inline function get_allocated() return flags.has(FAllocated);
+	inline function get_posChanged() return flags.has(FPosChanged);
+	inline function get_culled() return flags.has(FCulled);
+	inline function get_followPositionOnly() return flags.has(FFollowPositionOnly);
+	inline function get_lightCameraCenter() return flags.has(FLightCameraCenter);
+	inline function get_alwaysSync() return flags.has(FAlwaysSync);
+	inline function get_inheritCulled() return flags.has(FInheritCulled);
+	inline function set_posChanged(b) return flags.set(FPosChanged, b);
+	inline function set_culled(b) return flags.set(FCulled, b);
+	inline function set_visible(b) { culled = !b; return flags.set(FVisible,b); }
+	inline function set_allocated(b) return flags.set(FAllocated, b);
+	inline function set_followPositionOnly(b) return flags.set(FFollowPositionOnly, b);
+	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
+	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
+	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 
 	public function playAnimation( a : h3d.anim.Animation ) {
 		return currentAnimation = a.createInstance(this);
@@ -374,10 +401,14 @@ class Object {
 			var dt = ctx.elapsedTime;
 			while( dt > 0 && currentAnimation != null )
 				dt = currentAnimation.update(dt);
-			if( currentAnimation != null )
+			if( currentAnimation != null && ((ctx.visibleFlag && visible && !culled) || alwaysSync)  )
 				currentAnimation.sync();
-			if( parent == null && old != null ) return; // if we were removed by an animation event
+			if( parent == null && old != null )
+				return; // if we were removed by an animation event
 		}
+		var old = ctx.visibleFlag;
+		if( !visible || (culled && inheritCulled) )
+			ctx.visibleFlag = false;
 		var changed = posChanged;
 		if( changed ) calcAbsPos();
 		sync(ctx);
@@ -400,6 +431,7 @@ class Object {
 			} else
 				p++;
 		}
+		ctx.visibleFlag = old;
 	}
 
 	function syncPos() {

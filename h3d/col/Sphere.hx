@@ -42,27 +42,27 @@ class Sphere implements RayCollider {
 		var p = getCenter();
 		var pl = Plane.frustumLeft(mvp);
 		pl.normalize();
-		if( pl.distance(p) > r )
+		if( pl.distance(p) < -r )
 			return false;
-		pl = Plane.frustumRight(mvp);
+		var pl = Plane.frustumRight(mvp);
 		pl.normalize();
-		if( pl.distance(p) > r )
+		if( pl.distance(p) < -r )
 			return false;
-		pl = Plane.frustumBottom(mvp);
+		var pl = Plane.frustumBottom(mvp);
 		pl.normalize();
-		if( pl.distance(p) > r )
+		if( pl.distance(p) < -r )
 			return false;
-		pl = Plane.frustumTop(mvp);
+		var pl = Plane.frustumTop(mvp);
 		pl.normalize();
-		if( pl.distance(p) > r )
+		if( pl.distance(p) < -r )
 			return false;
-		pl = Plane.frustumNear(mvp);
+		var pl = Plane.frustumNear(mvp);
 		pl.normalize();
-		if( pl.distance(p) > r )
+		if( pl.distance(p) < -r )
 			return false;
-		pl = Plane.frustumNear(mvp);
+		var pl = Plane.frustumNear(mvp);
 		pl.normalize();
-		if( pl.distance(p) > r )
+		if( pl.distance(p) < -r )
 			return false;
 		return true;
 	}

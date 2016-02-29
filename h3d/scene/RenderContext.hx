@@ -19,6 +19,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var lightSystem : h3d.pass.LightSystem;
 	public var uploadParams : Void -> Void;
 	public var extraShaders : hxsl.ShaderList;
+	public var visibleFlag : Bool;
 
 	var pool : ObjectPass;
 	var firstAlloc : ObjectPass;
@@ -49,6 +50,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		lights = null;
 		uploadParams = null;
 		cachedPos = 0;
+		visibleFlag = true;
 		time += elapsedTime;
 		frame++;
 	}

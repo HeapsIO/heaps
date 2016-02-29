@@ -4,6 +4,7 @@ using hxd.Math;
 /**
 	A 4 floats vector. Everytime a Vector is returned, it means a copy is created.
 **/
+@:noDebug
 class Vector {
 
 	public var x : Float;

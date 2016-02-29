@@ -52,6 +52,7 @@ typedef PropType = {
 	@:optional var isNull : Bool;
 	@:optional var increment : Float;
 	@:optional var condSend : Expr;
+	@:optional var notMutable : Bool;
 }
 
 class Macros {
@@ -120,6 +121,8 @@ class Macros {
 				}
 			case ":condSend" if( m.params.length == 1 ):
 				t.condSend = m.params[0];
+			case ":notMutable":
+				t.notMutable = true;
 			default:
 				Context.error("Unsupported network metadata", m.pos);
 			}
@@ -184,6 +187,8 @@ class Macros {
 			var a = a.get();
 			var fields = [];
 			for( f in a.fields ) {
+				if( f.meta.has(":noSerialize") )
+					continue;
 				var ft = getPropField(f.type, f.meta.get());
 				if( ft == null ) return null;
 				fields.push( { name : f.name, type : ft, opt : f.meta.has(":optional") } );
@@ -674,7 +679,7 @@ class Macros {
 			return false;
 		switch( t.d ) {
 		case PMap(_), PArray(_), PObj(_), PVector(_):
-			return true;
+			return !t.notMutable;
 		default:
 			return false;
 		}
@@ -833,7 +838,7 @@ class Macros {
 				@:noCompletion public var __bits : Int = 0;
 				@:noCompletion public var __next : hxd.net.NetworkSerializable;
 				@:noCompletion public inline function networkSetBit( b : Int ) {
-					if( __host != null && (__bits != 0 || @:privateAccess __host.mark(this)) )
+					if( __host != null && (__next != null || @:privateAccess __host.mark(this)) )
 						__bits |= 1 << b;
 				}
 				public var enableReplication(get, set) : Bool;
@@ -844,6 +849,12 @@ class Macros {
 				}
 				public inline function networkCancelProperty( props : hxd.net.NetworkSerializable.NetworkProperty ) {
 					__bits &= ~props.toInt();
+				}
+				inline function networkLocalChange( f : Void -> Void ) {
+					var old = __host;
+					__host = null;
+					f();
+					__host = old;
 				}
 			}).fields);
 

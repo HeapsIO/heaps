@@ -79,6 +79,7 @@ class SmoothTarget extends Animation {
 		frame = target.frame;
 	}
 
+	@:noDebug
 	override function sync( decompose = false ) {
 		if( decompose ) throw "assert";
 		var objects : Array<SmoothObject> = cast objects;

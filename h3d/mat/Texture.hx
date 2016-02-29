@@ -163,11 +163,13 @@ class Texture {
 	public function uploadBitmap( bmp : hxd.BitmapData, mipLevel = 0, side = 0 ) {
 		alloc();
 		mem.driver.uploadTextureBitmap(this, bmp, mipLevel, side);
+		flags.set(WasCleared);
 	}
 
 	public function uploadPixels( pixels : hxd.Pixels, mipLevel = 0, side = 0 ) {
 		alloc();
 		mem.driver.uploadTexturePixels(this, pixels, mipLevel, side);
+		flags.set(WasCleared);
 	}
 
 	public function dispose() {

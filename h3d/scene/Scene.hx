@@ -61,8 +61,14 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
 			var saveR = r.clone();
 
-			var hitTmp = new h3d.col.Point();
+			var hitTmp = new h3d.col.Point();			
 			for( i in interactives ) {
+				
+				var p : h3d.scene.Object = i;
+				while( p != null && p.visible )
+					p = p.parent;
+				if( p != null ) continue;
+				
 				var minv = i.getInvPos();
 				r.transform(minv);
 				r.normalize();

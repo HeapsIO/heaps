@@ -2264,19 +2264,19 @@ class Clipper extends ClipperBase {
 	private function ProcessIntersections(topY:Int) : Bool
 	{
 		if( m_ActiveEdges == null ) return true;
-        try {
+        //try {
 			BuildIntersectList(topY);
 			if ( m_IntersectList.length == 0) return true;
 			if (m_IntersectList.length == 1 || FixupIntersectionOrder())
 				ProcessIntersectList();
 			else
 				return false;
-        }
+        /*}
         catch (e : Dynamic) {
 			m_SortedEdges = null;
 			m_IntersectList = [];
 			throw "ProcessIntersections error";
-        }
+        }*/
         m_SortedEdges = null;
         return true;
 	}

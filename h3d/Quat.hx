@@ -1,6 +1,7 @@
 package h3d;
 using hxd.Math;
 
+@:noDebug
 class Quat {
 
 	public var x : Float;

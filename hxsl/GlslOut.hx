@@ -372,6 +372,10 @@ class GlslOut {
 		decls = [];
 		buf = new StringBuf();
 		exprValues = [];
+		//Version is required on desktop for precision qualifier, but version 1.0.0 only is supported on webgl
+		#if !js
+		decls.push("#version 130");
+		#end
 		decls.push("precision mediump float;");
 
 		if( s.funs.length != 1 ) throw "assert";

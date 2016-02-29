@@ -24,7 +24,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var stride : Int;
 	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int }>;
 	var hasUVPos : Bool;
-	var inFilter : Bool;
+	var inFilter : Sprite;
 
 	var curX : Int;
 	var curY : Int;
@@ -48,6 +48,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		targetsStack = [];
 		textures = new h3d.impl.TextureCache();
 	}
+	
+	public function dispose() {
+		textures.dispose();	
+		if( fixedBuffer != null ) fixedBuffer.dispose();
+	}
 
 	public inline function hasBuffering() {
 		return BUFFERING;
@@ -60,7 +65,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		stride = 0;
 		curX = 0;
 		curY = 0;
-		inFilter = false;
+		inFilter = null;
 		curWidth = scene.width;
 		curHeight = scene.height;
 		manager.globals.set("time", time);
@@ -155,7 +160,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.texture = texture;
 		texture.filter = currentObj.filter ? Linear : Nearest;
 		texture.wrap = currentObj.tileWrap ? Repeat : Clamp;
-		pass.setBlendMode(currentObj.blendMode);
+		var blend = currentObj.blendMode;
+		if( inFilter == currentObj  && blend == Erase ) blend = Add; // add THEN erase
+		pass.setBlendMode(blend);
 		manager.fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);
 		engine.uploadShaderBuffers(buffers, Params);
@@ -165,7 +172,10 @@ class RenderContext extends h3d.impl.RenderContext {
 	@:access(h2d.Drawable)
 	public function beginDrawObject( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
 		beginDraw(obj, texture, true);
-		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
+		if( inFilter == obj )
+			baseShader.color.set(1,1,1,1);
+		else
+			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
 		baseShader.absoluteMatrixA.set(obj.matA, obj.matC, obj.absX);
 		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
 		beforeDraw();
@@ -180,7 +190,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function drawTile( obj : h2d.Drawable, tile : h2d.Tile ) {
 
 		var matA, matB, matC, matD, absX, absY;
-		if( inFilter ) {
+		if( inFilter != null ) {
 			var f1 = baseShader.filterMatrixA;
 			var f2 = baseShader.filterMatrixB;
 			matA = obj.matA * f1.x + obj.matB * f1.y;
@@ -229,7 +239,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 
 		beginDraw(obj, tile.getTexture(), true, true);
-		baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
+		if( inFilter == obj )
+			baseShader.color.set(1, 1, 1, 1);
+		else
+			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
 		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.height * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
 		baseShader.absoluteMatrixB.set(tile.width * obj.matB, tile.height * obj.matD, obj.absY + tile.dx * obj.matB + tile.dy * obj.matD);
 		baseShader.uvPos.set(tile.u, tile.v, tile.u2 - tile.u, tile.v2 - tile.v);

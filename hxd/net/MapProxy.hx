@@ -52,34 +52,9 @@ abstract MapProxy<K,V>(MapData<K,V>) {
 		return v;
 	}
 
-	@:from static inline function fromStringMap<V>(map:haxe.ds.StringMap<V>):MapProxy< String, V > {
+	@:from static inline function fromMap<K,V>(map:Map<K,V>):MapProxy<K,V> {
 		if( map == null ) return null;
 		return cast new MapData(map);
 	}
-
-	@:from static inline function fromIntMap<V>(map:haxe.ds.IntMap<V>):MapProxy< Int, V > {
-		if( map == null ) return null;
-		return cast new MapData(map);
-	}
-
-	@:from static inline function fromObjectMap<K:{ }, V>(map:haxe.ds.ObjectMap<K,V>):MapProxy<K,V> {
-		if( map == null ) return null;
-		return cast new MapData(map);
-	}
-
-	@:from static inline function fromStringMap2<V>(map:Map<String,V>):MapProxy< String, V > {
-		if( map == null ) return null;
-		return cast new MapData(map);
-	}
-
-	@:from static inline function fromIntMap2<V>(map:Map<Int,V>):MapProxy< Int, V > {
-		if( map == null ) return null;
-		return cast new MapData(map);
-	}
-
-	@:from static inline function fromObjectMap2<K:{ }, V>(map:Map<K,V>):MapProxy<K,V> {
-		if( map == null ) return null;
-		return cast new MapData(map);
-	}
-
+	
 }
