@@ -57,6 +57,10 @@ class TriPlane implements Collider {
 		return isPointInTriangle(p.x, p.y, p.z);
 	}
 	
+	public inline function side( p : Point ) {
+		return nx * p.x + ny * p.y + nz * p.z - d >= 0;
+	}
+	
 	public function inFrustum( m : h3d.Matrix ) {
 		throw "Not implemented";
 		return false;
@@ -126,6 +130,23 @@ class Polygon implements Collider {
 			triPlanes = t;
 		}
 	}
+	
+	public function isConvex() {
+		// TODO : check + cache result
+		return true;
+	}
+	
+	public function contains( p : Point ) {	
+		if( !isConvex() )
+			throw "Not implemented for concave polygon";
+		var t = triPlanes;
+		while( t != null ) {
+			if( t.side(p) )
+				return false;
+			t = t.next;
+		}
+		return true;
+	}
 
 	public function rayIntersection( r : Ray, ?pt : Point ) {
 		var t = triPlanes;
@@ -142,9 +163,4 @@ class Polygon implements Collider {
 		return false;
 	}
 
-	public function contains( p : Point ) {
-		throw "Not implemented";
-		return false;
-	}
-	
 }
