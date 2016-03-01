@@ -93,7 +93,7 @@ class GlDriver extends Driver {
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
-		#elseif (nme || openfl)
+		#elseif (nme || openfl || lime)
 		// check for a bug in HxCPP handling of sub buffers
 		var tmp = new Float32Array(8);
 		var sub = new Float32Array(tmp.buffer, 0, 4);
@@ -473,11 +473,11 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-		#if (nme || hxsdl || openfl)
+	#if (nme || hxsdl || openfl || lime)
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
-		#else
+	#else
 		if( t.format != RGBA ) {
 			var pixels = bmp.getPixels();
 			uploadTexturePixels(t, pixels, mipLevel, side);
@@ -485,18 +485,12 @@ class GlDriver extends Driver {
 		} else {
 			var img = bmp.toNative();
 			gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-			#if openfl
-			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, bmp.width, bmp.height, 0, getChannels(t.t), t.t.pixelFmt, img.image.data);
-			#elseif lime
-			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, bmp.width, bmp.height, 0, getChannels(t.t), t.t.pixelFmt, img.data);
-			#else
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
-			#end
 			if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 			gl.bindTexture(GL.TEXTURE_2D, null);
 			t.flags.set(WasCleared);
 		}
-		#end
+	#end
 	}
 
 	inline static function bytesToUint8Array( b : haxe.io.Bytes ) : Uint8Array {
@@ -513,6 +507,9 @@ class GlDriver extends Driver {
 		#if hxsdl
 		pixels.setFlip(true);
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, pixels.bytes.getData());
+		#elseif lime
+		pixels.setFlip(true);
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#else
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#end
@@ -635,7 +632,7 @@ class GlDriver extends Driver {
 	}
 
 	override function isDisposed() {
-		#if (nme || openfl)
+		#if (nme || openfl) //lime ??
 		return false;
 		#else
 		return gl.isContextLost();

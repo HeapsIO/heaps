@@ -372,10 +372,8 @@ class BitmapData {
 		var pixels = data.buffer;
 		return new Pixels(w, h, haxe.io.Bytes.ofData(pixels), RGBA);
 		#elseif lime
-		var out = hxd.impl.Tmp.getBytes(data.width * data.height * 4);
-		for( i in 0...data.width*data.height )
-			out.setInt32(i << 2, data.buffer.data[i]);
-		return new Pixels(data.width, data.height, out, BGRA);
+		var p = new Pixels(width, height, this.data.data.buffer, RGBA);
+		return p;
 		#else
 		var out = hxd.impl.Tmp.getBytes(data.width * data.height * 4);
 		for( i in 0...data.width*data.height )

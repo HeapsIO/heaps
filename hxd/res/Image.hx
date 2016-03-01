@@ -86,7 +86,7 @@ class Image extends Resource {
 		case Png:
 			var bytes = entry.getBytes(); // using getTmpBytes cause bug in E2
 
-			#if lime
+			#if (lime && (cpp || neko || nodejs))
 			// native PNG loader is faster
 			var i = lime.graphics.format.PNG.decodeBytes( bytes, true );
 			pixels = new Pixels(inf.width, inf.height, i.data.toBytes(), RGBA );
@@ -164,6 +164,7 @@ class Image extends Resource {
 			entry.loadBitmap(function(bmp) {
 				var bmp = bmp.toBitmap();
 				tex.alloc();
+				
 				if( bmp.width != tex.width || bmp.height != tex.height ) {
 					var pixels = bmp.getPixels();
 					pixels.makeSquare();
@@ -171,6 +172,7 @@ class Image extends Resource {
 					pixels.dispose();
 				} else
 					tex.uploadBitmap(bmp);
+				
 				bmp.dispose();
 				tex.realloc = loadTexture;
 				watch(watchCallb);
