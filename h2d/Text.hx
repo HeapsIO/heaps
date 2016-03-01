@@ -187,7 +187,7 @@ class Text extends Drawable {
 		case Center, Right:
 			lines = [];
 			initGlyphs(text, false, lines);
-			var max = maxWidth == null ? calcWidth : Std.int(maxWidth);
+			var max = maxWidth == null ? 0 : Std.int(maxWidth);
 			var k = align == Center ? 1 : 0;
 			for( i in 0...lines.length )
 				lines[i] = (max - lines[i]) >> k;
