@@ -98,6 +98,8 @@ class Font {
 		for( c in glyphs ) {
 			c.width = Std.int(c.width * ratio);
 			c.t.scaleToSize(Std.int(c.t.width * ratio), Std.int(c.t.height * ratio));
+			c.t.dx = Std.int(c.t.dx * ratio);
+			c.t.dy = Std.int(c.t.dy * ratio);
 		}		
 		lineHeight = Std.int(lineHeight * ratio);
 		baseLine = Std.int(baseLine * ratio);
