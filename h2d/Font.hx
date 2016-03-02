@@ -66,6 +66,22 @@ class Font {
 		}
 		return c;
 	}
+	
+	public function clone() {
+		var f = new Font(name, size);
+		f.baseLine = baseLine;
+		f.lineHeight = lineHeight;
+		f.tile = tile.clone();
+		f.charset = charset;
+		f.defaultChar.t = defaultChar.t.clone();
+		for( g in glyphs.keys() ) {
+			var c = glyphs.get(g);
+			var c2 = new FontChar(c.t.clone(), c.width);
+			@:privateAccess (c2.kerning = c.kerning);
+			f.glyphs.set(g, c2);
+		}
+		return f;
+	}
 
 	/**
 		This is meant to create smoother fonts by creating them with double size while still keeping the original glyph size.
