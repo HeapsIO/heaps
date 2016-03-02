@@ -36,6 +36,12 @@ class FontChar {
 		}
 		return 0;
 	}
+	
+	public function clone() {
+		var c = new FontChar(t.clone(), width);
+		c.kerning = kerning;
+		return c;
+	}
 
 }
 
@@ -73,11 +79,12 @@ class Font {
 		f.lineHeight = lineHeight;
 		f.tile = tile.clone();
 		f.charset = charset;
-		f.defaultChar.t = defaultChar.t.clone();
+		f.defaultChar = defaultChar.clone();
 		for( g in glyphs.keys() ) {
 			var c = glyphs.get(g);
-			var c2 = new FontChar(c.t.clone(), c.width);
-			@:privateAccess (c2.kerning = c.kerning);
+			var c2 = c.clone();
+			if( c == defaultChar )
+				f.defaultChar = c2;
 			f.glyphs.set(g, c2);
 		}
 		return f;
@@ -91,8 +98,9 @@ class Font {
 		for( c in glyphs ) {
 			c.width = Std.int(c.width * ratio);
 			c.t.scaleToSize(Std.int(c.t.width * ratio), Std.int(c.t.height * ratio));
-		}
+		}		
 		lineHeight = Std.int(lineHeight * ratio);
+		baseLine = Std.int(baseLine * ratio);
 		this.size = size;
 	}
 
