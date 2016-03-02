@@ -14,6 +14,12 @@ class Res {
 	public static macro function initEmbed(?options:haxe.macro.Expr.ExprOf<hxd.res.EmbedOptions>) {
 		return macro hxd.Res.loader = new hxd.res.Loader(hxd.fs.EmbedFileSystem.create(null,$options));
 	}
+	
+	#if lime
+	public static macro function initLime() {
+		return macro hxd.Res.loader = new hxd.res.Loader(new hxd.fs.LimeFileSystem());
+	}
+	#end
 
 	public static macro function initLocal() {
 		var dir = haxe.macro.Context.definedValue("resourcesPath");

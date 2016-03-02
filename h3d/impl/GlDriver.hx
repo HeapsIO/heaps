@@ -494,7 +494,7 @@ class GlDriver extends Driver {
 	}
 
 	inline static function bytesToUint8Array( b : haxe.io.Bytes ) : Uint8Array {
-		#if lime
+		#if (lime && !js)
 		return new Uint8Array(b);
 		#else
 		return new Uint8Array(b.getData());
