@@ -850,7 +850,7 @@ class Macros {
 				public inline function networkCancelProperty( props : hxd.net.NetworkSerializable.NetworkProperty ) {
 					__bits &= ~props.toInt();
 				}
-				inline function networkLocalChange( f : Void -> Void ) {
+				public inline function networkLocalChange( f : Void -> Void ) {
 					var old = __host;
 					__host = null;
 					f();
@@ -997,7 +997,7 @@ class Macros {
 					var __ctx = @:privateAccess __host.beginRPC(this,$v{id},$resultCall);
 					$b{[
 						for( a in f.args )
-							macro hxd.net.Macros.serializeValue(__ctx,$i{a.name})
+							withPos(macro hxd.net.Macros.serializeValue(__ctx, $i{a.name}), f.expr.pos)
 					] };
 					@:privateAccess __host.endRPC();
 				};
