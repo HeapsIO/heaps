@@ -161,6 +161,8 @@ class LimeStage implements lime.app.IModule {
 	
 	public function onWindowRestore( window ){ }
 
+	public function onWindowDropFile( window, file:String ){ }
+
 	public function update( dt ){ }
 		
 }
