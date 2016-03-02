@@ -3,6 +3,7 @@ package hxd.res;
 typedef FontBuildOptions = {
 	?antiAliasing : Bool,
 	?chars : String,
+	?kerning : Bool,
 };
 
 /**
@@ -224,14 +225,16 @@ class FontBuilder {
 		var surf = 0;
 		var bh = 0;
 		var tmp = [];
+		var gcode = new Map<lime.text.Glyph,Int>();
 		for( i in 0...haxe.Utf8.length(options.chars) ) {
 			var c = haxe.Utf8.sub(options.chars, i,1);
 			var code = haxe.Utf8.charCodeAt(options.chars, i);
 			var g = f.getGlyph(c);
+			gcode.set(g, code);
 			var img = f.renderGlyph(g,font.size);
 			var m = f.getGlyphMetrics(g);
 			if( img == null ){
-				tmp[i] = { i: null, w:0, h:0, x:0, y:0, adv:Std.int(m.advance.x/64) };
+				tmp[i] = { i: null, w:0, h:0, x:0, y:0, adv:Std.int(m.advance.x)>>6 };
 				continue;
 			}
 			var w = img.width;
@@ -245,7 +248,7 @@ class FontBuilder {
 				font.lineHeight = h + 1;
 			if( h - y > bh )
 				bh = h - y;
-			tmp[i] = { i: img, w:w, h:h, x: x, y:y, adv:Std.int(m.advance.x/64) };
+			tmp[i] = { i: img, w:w, h:h, x: x, y:y, adv:Std.int(m.advance.x)>>6 };
 		}
 		var baseline = font.lineHeight - bh;
 
@@ -290,6 +293,20 @@ class FontBuilder {
 				x += w + 1;
 			}
 		} while( px == null );
+
+		// Kerning
+		// lime font.decompose() currently force size to 320*64 (= 20*1024)
+		if( options.kerning ){
+			var kernratio = font.size / (320 * 64);
+			var kerning = f.decompose().kerning;
+			for( k in kerning ){
+				var v = Math.round(k.x * kernratio);
+				if( v == 0 || !gcode.exists(k.right_glyph) || !gcode.exists(k.left_glyph) )
+					continue;
+				var c = font.glyphs.get( gcode.get(k.right_glyph) );
+				c.addKerning( gcode.get(k.left_glyph), v );
+			}
+		}
 
 		var pixels = new hxd.Pixels( width, height, px, ALPHA );
 		if( innerTex == null ) {
