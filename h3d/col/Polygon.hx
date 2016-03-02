@@ -1,6 +1,6 @@
 package h3d.col;
 
-class TriPlane implements RayCollider {
+class TriPlane implements Collider {
 
 	public var next : TriPlane;
 
@@ -52,6 +52,19 @@ class TriPlane implements RayCollider {
 		dot11 = d2.dot(d2);
 		invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
 	}
+	
+	public inline function contains( p : Point ) {
+		return isPointInTriangle(p.x, p.y, p.z);
+	}
+	
+	public inline function side( p : Point ) {
+		return nx * p.x + ny * p.y + nz * p.z - d >= 0;
+	}
+	
+	public function inFrustum( m : h3d.Matrix ) {
+		throw "Not implemented";
+		return false;
+	}
 
 	inline public function rayIntersection( r : Ray, ?pt : Point ) @:privateAccess {
 		var dr = r.lx * nx + r.ly * ny + r.lz * nz;
@@ -90,7 +103,7 @@ class TriPlane implements RayCollider {
 }
 
 
-class Polygon implements RayCollider {
+class Polygon implements Collider {
 
 	var triPlanes : TriPlane;
 
@@ -117,6 +130,23 @@ class Polygon implements RayCollider {
 			triPlanes = t;
 		}
 	}
+	
+	public function isConvex() {
+		// TODO : check + cache result
+		return true;
+	}
+	
+	public function contains( p : Point ) {	
+		if( !isConvex() )
+			throw "Not implemented for concave polygon";
+		var t = triPlanes;
+		while( t != null ) {
+			if( t.side(p) )
+				return false;
+			t = t.next;
+		}
+		return true;
+	}
 
 	public function rayIntersection( r : Ray, ?pt : Point ) {
 		var t = triPlanes;
@@ -126,6 +156,11 @@ class Polygon implements RayCollider {
 			t = t.next;
 		}
 		return null;
+	}
+
+	public function inFrustum( m : h3d.Matrix ) {
+		throw "Not implemented";
+		return false;
 	}
 
 }

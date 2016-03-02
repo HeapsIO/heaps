@@ -62,7 +62,7 @@ class Cube extends Polygon {
 		];
 	}
 
-	override public function getCollider() : h3d.col.RayCollider {
+	override public function getCollider() : h3d.col.Collider {
 		return h3d.col.Bounds.fromValues(translatedX, translatedY, translatedZ, sizeX * scaled, sizeY * scaled, sizeZ * scaled);
 	}
 

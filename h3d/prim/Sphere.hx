@@ -40,7 +40,7 @@ class Sphere extends Polygon {
 		super(pts, idx);
 	}
 
-	override public function getCollider() : h3d.col.RayCollider {
+	override public function getCollider() : h3d.col.Collider {
 		return new h3d.col.Sphere(translatedX, translatedY, translatedZ, ray * scaled);
 	}
 

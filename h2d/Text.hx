@@ -187,7 +187,7 @@ class Text extends Drawable {
 		case Center, Right:
 			lines = [];
 			initGlyphs(text, false, lines);
-			var max = maxWidth == null ? calcWidth : Std.int(maxWidth);
+			var max = maxWidth == null ? 0 : Std.int(maxWidth);
 			var k = align == Center ? 1 : 0;
 			for( i in 0...lines.length )
 				lines[i] = (max - lines[i]) >> k;
@@ -201,7 +201,8 @@ class Text extends Drawable {
 			var cc = text.charCodeAt(i);
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
-			var esize = e.width + e.getKerningOffset(prevChar);
+			var offs = e.getKerningOffset(prevChar);
+			var esize = e.width + offs;
 			// if the next word goes past the max width, change it into a newline
 			if( font.charset.isBreakChar(cc) && maxWidth != null ) {
 				var size = x + esize + letterSpacing;
@@ -220,7 +221,7 @@ class Text extends Drawable {
 				}
 			}
 			if( e != null ) {
-				if( rebuild ) glyphs.add(x, y, e.t);
+				if( rebuild ) glyphs.add(x + offs, y, e.t);
 				if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
 				x += esize + letterSpacing;
 			}

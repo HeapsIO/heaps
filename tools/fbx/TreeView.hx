@@ -10,7 +10,7 @@ class Joint {
 	public function new (j : h3d.anim.Skin.Joint, parent: h3d.scene.Skin) {
 		this.j = j;
 
-		var p = new h3d.prim.Sphere(16, 16);
+		var p = new h3d.prim.Sphere(1, 16, 16);
 		p.addNormals();
 		s = new h3d.scene.Mesh(p, parent);
 		s.setScale(0.015);

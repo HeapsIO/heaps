@@ -72,6 +72,13 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				var minv = i.getInvPos();
 				r.transform(minv);
 				r.normalize();
+				
+				// check for NaN
+				if( r.lx != r.lx ) {
+					r.load(saveR);
+					continue;
+				}
+				
 				var hit = i.shape.rayIntersection(r, hitTmp);
 				r.load(saveR);
 				if( hit == null ) continue;

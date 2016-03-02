@@ -325,7 +325,7 @@ class HMDOut extends BaseLibrary {
 					if( p != null ) p.childs.remove(o);
 					// move not joint to new parent
 					// (only first level, others will follow their respective joint)
-					for( c in o.childs )
+					for( c in o.childs.copy() )
 						if( !c.isJoint ) {
 							o.childs.remove(c);
 							o2.childs.push(c);

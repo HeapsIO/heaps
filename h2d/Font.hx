@@ -36,6 +36,12 @@ class FontChar {
 		}
 		return 0;
 	}
+	
+	public function clone() {
+		var c = new FontChar(t.clone(), width);
+		c.kerning = kerning;
+		return c;
+	}
 
 }
 
@@ -66,6 +72,23 @@ class Font {
 		}
 		return c;
 	}
+	
+	public function clone() {
+		var f = new Font(name, size);
+		f.baseLine = baseLine;
+		f.lineHeight = lineHeight;
+		f.tile = tile.clone();
+		f.charset = charset;
+		f.defaultChar = defaultChar.clone();
+		for( g in glyphs.keys() ) {
+			var c = glyphs.get(g);
+			var c2 = c.clone();
+			if( c == defaultChar )
+				f.defaultChar = c2;
+			f.glyphs.set(g, c2);
+		}
+		return f;
+	}
 
 	/**
 		This is meant to create smoother fonts by creating them with double size while still keeping the original glyph size.
@@ -75,8 +98,11 @@ class Font {
 		for( c in glyphs ) {
 			c.width = Std.int(c.width * ratio);
 			c.t.scaleToSize(Std.int(c.t.width * ratio), Std.int(c.t.height * ratio));
-		}
+			c.t.dx = Std.int(c.t.dx * ratio);
+			c.t.dy = Std.int(c.t.dy * ratio);
+		}		
 		lineHeight = Std.int(lineHeight * ratio);
+		baseLine = Std.int(baseLine * ratio);
 		this.size = size;
 	}
 
