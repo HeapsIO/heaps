@@ -27,6 +27,10 @@ class Text extends Drawable {
 	var calcWidth:Int;
 	var calcHeight:Int;
 	var calcSizeHeight:Int;
+	
+	#if lime
+	var waShader : h3d.shader.WhiteAlpha;
+	#end
 
 	public function new( font : Font, ?parent ) {
 		super(parent);
@@ -41,6 +45,12 @@ class Text extends Drawable {
 	function set_font(font) {
 		if( this.font == font ) return font;
 		this.font = font;
+		#if lime
+		if( font.tile.getTexture().format == ALPHA )
+			if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
+		else
+			if( waShader != null ) removeShader( waShader );
+		#end
 		if( glyphs != null ) glyphs.remove();
 		glyphs = new TileGroup(font == null ? null : font.tile, this);
 		glyphs.visible = false;
