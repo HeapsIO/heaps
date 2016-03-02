@@ -217,6 +217,94 @@ class FontBuilder {
 		return font;
 	}
 
+	#elseif lime
+
+	function build() : h2d.Font {
+		var f = lime.text.Font.fromBytes( hxd.Res.load(font.name).entry.getBytes() );
+		var surf = 0;
+		var bh = 0;
+		var tmp = [];
+		for( i in 0...haxe.Utf8.length(options.chars) ) {
+			var c = haxe.Utf8.sub(options.chars, i,1);
+			var code = haxe.Utf8.charCodeAt(options.chars, i);
+			var g = f.getGlyph(c);
+			var img = f.renderGlyph(g,font.size);
+			var m = f.getGlyphMetrics(g);
+			if( img == null ){
+				tmp[i] = { i: null, w:0, h:0, x:0, y:0, adv:Std.int(m.advance.x/64) };
+				continue;
+			}
+			var w = img.width;
+			var h = img.height;
+			var x = Std.int(img.x);
+			if( x < 0 )
+				x = 0;
+			var y = Std.int(img.y); // baseline y pos
+			surf += (w + 2) * (h + 2);
+			if( h+1 > font.lineHeight )
+				font.lineHeight = h + 1;
+			if( h - y > bh )
+				bh = h - y;
+			tmp[i] = { i: img, w:w, h:h, x: x, y:y, adv:Std.int(m.advance.x/64) };
+		}
+		var baseline = font.lineHeight - bh;
+
+		var side = Math.ceil( Math.sqrt(surf) );
+		var width = 1;
+		while( side > width )
+			width <<= 1;
+		var height = width;
+		while( width * height >> 1 > surf )
+			height >>= 1;
+
+		var all, px;
+		do {
+			font.glyphs = new Map();
+			all = [];
+			var x = 0, y = 0, lineH = font.lineHeight;
+			px = haxe.io.Bytes.alloc( width * height  );
+			for( i in 0...haxe.Utf8.length(options.chars) ) {
+				var size = tmp[i];
+				var w = size.x + size.w + 1;
+				if( x + w > width ) {
+					x = 0;
+					y += lineH + 1;
+				}
+				// no space, resize
+				if( y + lineH + 1 > height ) {
+					px = null;
+					height <<= 1;
+					break;
+				}
+				var gy = baseline-size.y;
+				var gx = size.x;
+				if( size.w > 0 && size.h > 0 ){
+					var ib = size.i.buffer.data.toBytes();
+					for( ty in 0...size.h )
+						px.blit( (gx+x+(y+gy+ty)*width), ib, ty*size.w, size.w );
+				}
+				var t = new h2d.Tile(innerTex, x, y, gx+size.w, gy+size.h);
+				all.push(t);
+				font.glyphs.set(haxe.Utf8.charCodeAt(options.chars,i), new h2d.Font.FontChar(t,size.adv-1));
+				// next element
+				x += w + 1;
+			}
+		} while( px == null );
+
+		var pixels = new hxd.Pixels( width, height, px, ALPHA );
+		if( innerTex == null ) {
+			innerTex = new h3d.mat.Texture(pixels.width, pixels.height, h3d.mat.Data.TextureFormat.ALPHA);
+			innerTex.uploadPixels(pixels);
+			font.tile = h2d.Tile.fromTexture(innerTex);
+			for( t in all )
+				t.setTexture(innerTex);
+			innerTex.realloc = build;
+		} else
+			innerTex.uploadPixels(pixels);
+		pixels.dispose();
+
+		return font;
+	}
 
 	#else
 
