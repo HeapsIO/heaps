@@ -185,12 +185,15 @@ class Object {
 		Transform a point from the global coordinates to the object local ones. The point is modified and returned.
 	**/
 	public function globalToLocal( pt : h3d.Vector ) {
-		syncPos();
 		pt.transform3x4(getInvPos());
 		return pt;
 	}
 
-	function getInvPos() {
+	/**
+		Returns the updated inverse position matrix. Please note that this is not a copy and should not be modified.
+	**/
+	public function getInvPos() {
+		syncPos();
 		if( invPos == null ) {
 			invPos = new h3d.Matrix();
 			invPos._44 = 0;
@@ -332,6 +335,14 @@ class Object {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
 		return Std.instance(p, Scene);
+	}
+	
+	/**
+		Returns the updated absolute position matrix. Please note that this is not a copy so it should not be modified.
+	**/
+	public function getAbsPos() {
+		syncPos();
+		return absPos;
 	}
 
 	public inline function isMesh() {
