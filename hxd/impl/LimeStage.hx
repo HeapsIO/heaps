@@ -27,9 +27,9 @@ class LimeStage implements lime.app.IModule {
 			hxd.System.loopFunc();
 	}
 
-	public function onWindowResize(win, w, h){
-		width = w;
-		height = h;
+	public function onWindowResize(win:lime.ui.Window, w, h){
+		width = Std.int(w * win.scale);
+		height = Std.int(h * win.scale);
 		stage.onResize(null);
 	}
 
@@ -160,6 +160,8 @@ class LimeStage implements lime.app.IModule {
 	public function onWindowMinimize( window ){ }
 	
 	public function onWindowRestore( window ){ }
+
+	public function onWindowDropFile( window, file:String ){ }
 
 	public function update( dt ){ }
 		

@@ -336,6 +336,7 @@ class Pixels {
 
 	public static function bytesPerPixel( format : PixelFormat ) {
 		return switch( format ) {
+		case ALPHA: 1;
 		case ARGB, BGRA, RGBA: 4;
 		case RGBA16F: 8;
 		case RGBA32F: 16;

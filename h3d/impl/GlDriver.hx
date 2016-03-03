@@ -374,13 +374,14 @@ class GlDriver extends Driver {
 	function getChannels( t : Texture ) {
 		return switch( t.internalFmt ) {
 		case GL.RGBA: GL.RGBA;
+		case GL.ALPHA: GL.ALPHA;
 		default: throw "Invalid format " + t.internalFmt;
 		}
 	}
 
 	override function isSupportedFormat( fmt : h3d.mat.Data.TextureFormat ) {
 		return switch( fmt ) {
-		case RGBA: true;
+		case RGBA, ALPHA: true;
 		case RGBA32F: hasFeature(FloatTextures);
 		default: false;
 		}
@@ -394,6 +395,8 @@ class GlDriver extends Driver {
 		switch( t.format ) {
 		case RGBA:
 			// default
+		case ALPHA:
+			tt.internalFmt = GL.ALPHA;
 		case RGBA32F if( hasFeature(FloatTextures) ):
 			tt.pixelFmt = GL.FLOAT;
 		default:

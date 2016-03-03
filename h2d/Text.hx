@@ -27,6 +27,10 @@ class Text extends Drawable {
 	var calcWidth:Int;
 	var calcHeight:Int;
 	var calcSizeHeight:Int;
+	
+	#if lime
+	var waShader : h3d.shader.WhiteAlpha;
+	#end
 
 	public function new( font : Font, ?parent ) {
 		super(parent);
@@ -41,6 +45,12 @@ class Text extends Drawable {
 	function set_font(font) {
 		if( this.font == font ) return font;
 		this.font = font;
+		#if lime
+		if( font.tile.getTexture().format == ALPHA )
+			if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
+		else
+			if( waShader != null ) removeShader( waShader );
+		#end
 		if( glyphs != null ) glyphs.remove();
 		glyphs = new TileGroup(font == null ? null : font.tile, this);
 		glyphs.visible = false;
@@ -133,8 +143,8 @@ class Text extends Drawable {
 			return text;
 		var lines = [], rest = text, restPos = 0;
 		var x = leftMargin, prevChar = -1;
-		for( i in 0...text.length ) {
-			var cc = text.charCodeAt(i);
+		for( i in 0...haxe.Utf8.length(text) ) {
+			var cc = haxe.Utf8.charCodeAt(text, i);
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
@@ -144,10 +154,10 @@ class Text extends Drawable {
 					x -= leftMargin;
 				}
 				var size = x + esize + letterSpacing;
-				var k = i + 1, max = text.length;
+				var k = i + 1, max = haxe.Utf8.length(text);
 				var prevChar = prevChar;
-				while( size <= maxWidth && k < text.length ) {
-					var cc = text.charCodeAt(k++);
+				while( size <= maxWidth && k < max ) {
+					var cc = haxe.Utf8.charCodeAt(text, k++);
 					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
@@ -155,7 +165,7 @@ class Text extends Drawable {
 				}
 				if( size > maxWidth ) {
 					newline = true;
-					lines.push(text.substr(restPos, i - restPos));
+					lines.push(haxe.Utf8.sub(text,restPos, i - restPos));
 					restPos = i;
 					if( font.charset.isSpace(cc) ) {
 						e = null;
@@ -171,10 +181,10 @@ class Text extends Drawable {
 			} else
 				prevChar = cc;
 		}
-		if( restPos < text.length ) {
+		if( restPos < haxe.Utf8.length(text) ) {
 			if( lines.length == 0 && leftMargin > 0 && x > maxWidth )
 				lines.push("");
-			lines.push(text.substr(restPos, text.length - restPos));
+			lines.push(haxe.Utf8.sub(text, restPos, haxe.Utf8.length(text) - restPos));
 		}
 		return lines.join("\n");
 	}
@@ -197,8 +207,8 @@ class Text extends Drawable {
 		var dl = font.lineHeight + lineSpacing;
 		var calcLines = !rebuild && lines != null;
 		var yMin = 0;
-		for( i in 0...text.length ) {
-			var cc = text.charCodeAt(i);
+		for( i in 0...haxe.Utf8.length(text) ) {
+			var cc = haxe.Utf8.charCodeAt(text,i);
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
 			var offs = e.getKerningOffset(prevChar);
@@ -206,10 +216,10 @@ class Text extends Drawable {
 			// if the next word goes past the max width, change it into a newline
 			if( font.charset.isBreakChar(cc) && maxWidth != null ) {
 				var size = x + esize + letterSpacing;
-				var k = i + 1, max = text.length;
+				var k = i + 1, max = haxe.Utf8.length(text);
 				var prevChar = prevChar;
-				while( size <= maxWidth && k < text.length ) {
-					var cc = text.charCodeAt(k++);
+				while( size <= maxWidth && k < max ) {
+					var cc = haxe.Utf8.charCodeAt(text, k++);
 					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);

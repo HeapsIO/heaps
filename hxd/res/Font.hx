@@ -11,6 +11,8 @@ class Font extends Resource {
 		#elseif js
 		var name = "R_" + ~/[^A-Za-z0-9_]/g.replace(entry.path, "_");
 		return FontBuilder.getFont(name, size, options);
+		#elseif lime
+		return FontBuilder.getFont(name, size, options);
 		#else
 		throw "Not implemented for this platform";
 		return null;
