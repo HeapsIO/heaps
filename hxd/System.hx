@@ -270,11 +270,13 @@ class System {
 	}
 
 	static function get_width() {
-		return lime.app.Application.current.window.width;
+		var win = lime.app.Application.current.window;
+		return Std.int(win.width * win.scale);
 	}
 
 	static function get_height() {
-		return lime.app.Application.current.window.height;
+		var win = lime.app.Application.current.window;
+		return Std.int(win.height * win.scale);
 	}
 
 	static function get_isAndroid() {
