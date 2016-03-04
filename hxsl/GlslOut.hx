@@ -372,10 +372,14 @@ class GlslOut {
 		decls = [];
 		buf = new StringBuf();
 		exprValues = [];
-		//Version is required on desktop for precision qualifier, but version 1.0.0 only is supported on webgl
-		#if (windows||linux)
+		
+		//#if GL_ES_VERSION_2_0  would be the test to use at compilation time, but would require a GL context to call glGetString (GL_SHADING_LANGUAGE_VERSION)
+		//#ifdef GL_ES is to test in the shader itself but #version  muse be declared first
+		#if((cpp && mobile)||js)
+		decls.push("#version 100");
+		#else
 		decls.push("#version 130");
-		#end
+		#end 
 		decls.push("precision mediump float;");
 		
 		if( s.funs.length != 1 ) throw "assert";

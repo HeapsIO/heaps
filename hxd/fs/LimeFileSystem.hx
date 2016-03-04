@@ -136,7 +136,10 @@ private class LimeEntry extends FileEntry {
 		loader.loadBytes(bytes);
 		close(); // flash will copy bytes content in loadBytes() !
 		#else
-		onLoaded( new LoadedBitmap(lime.graphics.Image.fromBytes(bytes)) );
+		
+		lime.graphics.Image.fromBytes(bytes, function(img) {
+			onLoaded(new hxd.fs.LoadedBitmap(img));
+		});
 		close();
 		#end
 	}

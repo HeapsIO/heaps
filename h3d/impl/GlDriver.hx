@@ -86,18 +86,18 @@ class GlDriver extends Driver {
 	var curTarget : h3d.mat.Texture;
 
 	public function new() {
-		#if js
+		#if (nme || openfl || lime)
+		// check for a bug in HxCPP handling of sub buffers
+		var tmp = new Float32Array(8);
+		var sub = new Float32Array(tmp.buffer, 0, 4);
+		#if cpp fixMult = sub.length == 1; #end  // should be 4
+		#elseif js
 		canvas = @:privateAccess hxd.Stage.getCanvas();
 		if( canvas == null ) throw "Canvas #webgl not found";
 		gl = canvas.getContextWebGL({alpha:false});
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
-		#elseif (nme || openfl || lime)
-		// check for a bug in HxCPP handling of sub buffers
-		var tmp = new Float32Array(8);
-		var sub = new Float32Array(tmp.buffer, 0, 4);
-		fixMult = sub.length == 1; // should be 4
 		#end
 		programs = new Map();
 		curAttribs = 0;

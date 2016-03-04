@@ -17,7 +17,7 @@ class Stage {
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
 
-	#if js
+	#if (js && !lime)
 	@:allow(hxd)
 	static function getCanvas() {
 		var canvas : js.html.CanvasElement = cast js.Browser.document.getElementById("webgl");
@@ -42,6 +42,9 @@ class Stage {
 		stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
 		stage.addEventListener(flash.events.Event.RESIZE, onResize);
 		initGesture(false);
+		#elseif lime
+		limeStage = new hxd.impl.LimeStage( this );
+		lime.app.Application.current.addModule( limeStage );
 		#elseif js
 		canvas = getCanvas();
 		canvasPos = canvas.getBoundingClientRect();
@@ -67,9 +70,6 @@ class Stage {
 				onResize(null);
 			}
 		};
-		#elseif lime
-		limeStage = new hxd.impl.LimeStage( this );
-		lime.app.Application.current.addModule( limeStage );
 		#end
 		#if flash
 		if( untyped hxd.System.isAir() )
@@ -336,7 +336,7 @@ class Stage {
 		event(ev);
 	}
 
-#elseif js
+#elseif (js && !lime)
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
