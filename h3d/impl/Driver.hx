@@ -21,9 +21,9 @@ typedef IndexBuffer = sdl.GL.Buffer;
 typedef VertexBuffer = { b : sdl.GL.Buffer, stride : Int };
 typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, ?fb : sdl.GL.Framebuffer, ?rb : sdl.GL.Renderbuffer };
 #else
-typedef IndexBuffer = Int;
-typedef VertexBuffer = Int;
-typedef Texture = Int;
+typedef IndexBuffer = {};
+typedef VertexBuffer = {};
+typedef Texture = {};
 #end
 
 enum Feature {

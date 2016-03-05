@@ -157,9 +157,9 @@ class System {
 		var width = Std.parseInt(windowSize[0]), height = Std.parseInt(windowSize[1]);
 		if( width < 100 ) width = 100;
 		if ( height < 100 ) height = 100;
-		
+
 		var config = {
-			
+
 			build: "1",
 			company: "Heaps",
 			fps: 60,
@@ -167,7 +167,7 @@ class System {
 			packageName: "heaps.application",
 			version: "0.0.1",
 			windows: [
-				
+
 				{
 					antialiasing: 0,
 					background: 16777215,
@@ -187,12 +187,12 @@ class System {
 					y: null
 				},
 			]
-			
+
 		};
-		
+
 		var app = new openfl.display.Application ();
 		app.create (config);
-		
+
 		try {
 			callb();
 		} catch( e : Dynamic ) {
@@ -201,13 +201,13 @@ class System {
 			Sys.println(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
 			#end
 		}
-		
+
 		var result = app.exec ();
-		
+
 		#if sys
 		Sys.exit(result);
 		#end
-		
+
 		#else
 		callb();
 		#end
@@ -583,6 +583,61 @@ class System {
 		sdl.Sdl.quit();
 	}
 
+	#elseif hl
+
+	static var LOOP = null;
+
+	public static function exit() {
+		Sys.exit(0);
+	}
+
+	public static function start( init : Void -> Void ) {
+		init();
+		while( LOOP != null ) LOOP();
+	}
+
+	public static function setLoop( f : Void -> Void ) {
+		LOOP = f;
+	}
+
+	public static function setNativeCursor( c : Cursor ) {
+	}
+
+	static function get_screenDPI() {
+		return 72.;
+	}
+
+	static function get_lang() {
+		return "en";
+	}
+
+	static function get_isAndroid() {
+		return false;
+	}
+
+	public static function getClipboard() {
+		return "";
+	}
+
+	static function get_isIOS() {
+		return false;
+	}
+
+	static function get_isWindowed() {
+		return true;
+	}
+
+	static function get_isTouch() {
+		return false;
+	}
+
+	static function get_width() {
+		return 800;
+	}
+
+	static function get_height() {
+		return 600;
+	}
 
 	#end
 
