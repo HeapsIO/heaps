@@ -1,19 +1,3 @@
-class OptimizedIntersect implements h3d.col.RayCollider {
-
-	var sphere : h3d.col.Sphere;
-	// triangles
-
-	public function new( mesh : h3d.scene.Mesh ) {
-	}
-
-	public function rayIntersection( r : h3d.col.Ray, ?p : h3d.col.Point ) : Null<h3d.col.Point> {
-		//if( !checkRaySphere(r, sphere) )
-		//	return null;
-		// check triangles
-		// ...
-		return null;
-	}
-}
 
 class Main extends hxd.App {
 
