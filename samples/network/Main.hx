@@ -2,17 +2,23 @@
 class Cursor implements hxd.net.NetworkSerializable {
 
 	@:s var color : Int;
+	@:s public var uid : Int;
 	@:s public var x(default, set) : Float;
 	@:s public var y(default, set) : Float;
 
 	var main : Main;
 	var bmp : h2d.Graphics;
 
-	public function new( color ) {
+	public function new( color, uid=0 ) {
 		this.color = color;
+		this.uid = uid;
 		init();
 		x = 0;
 		y = 0;
+	}
+
+	public function networkGetOwner() {
+		return this;
 	}
 
 	function set_x( v : Float ) {
@@ -65,6 +71,10 @@ class Cursor implements hxd.net.NetworkSerializable {
 		// refresh bmp
 		this.x = x;
 		this.y = y;
+		if( uid == Main.inst.uid ) {
+			Main.inst.cursor = this;
+			Main.inst.host.self.ownerObject = this;
+		}
 	}
 
 }
@@ -76,7 +86,8 @@ class Main extends hxd.App {
 
 	public var host : hxd.net.LocalHost;
 	public var event : hxd.WaitEvent;
-	var cursor : Cursor;
+	public var uid : Int;
+	public var cursor : Cursor;
 
 	override function init() {
 		event = new hxd.WaitEvent();
@@ -84,12 +95,14 @@ class Main extends hxd.App {
 		host.setLogger(function(msg) log(msg));
 		try {
 			host.wait(HOST, PORT, function(c) {
-				log("Client Connected, sending data");
-
-				var cursorClient = new Cursor(0x0000FF);
-				c.fullSync(cursorClient);
-
+				log("Client Connected");
 			});
+			host.onMessage = function(c,uid:Int) {
+				log("Client identified ("+uid+")");
+				var cursorClient = new Cursor(0x0000FF, uid);
+				c.ownerObject = cursorClient;
+				c.sync();
+			};
 			log("Server Started");
 
 			start();
@@ -100,19 +113,14 @@ class Main extends hxd.App {
 			// we could not start the server
 			log("Connecting");
 
+			uid = 1 + Std.random(1000);
 			host.connect(HOST, PORT, function(b) {
 				if( !b ) {
 					log("Failed to connect to server");
 					return;
 				}
 				log("Connected to server");
-				host.onSync = function(c) {
-					log("Received " + c + " from server");
-					cursor = cast c;
-
-					log("Live");
-					host.makeAlive();
-				};
+				host.sendMessage(uid);
 			});
 		}
 	}
