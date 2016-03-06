@@ -22,7 +22,6 @@ class Comps {
 
 	function update() {
 		engine.render(scene);
-		scene.checkEvents();
 	}
 
 	static function main() {

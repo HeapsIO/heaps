@@ -54,7 +54,7 @@ class BytesFileEntry extends FileEntry {
 	override function exists( name : String ) : Bool return false;
 	override function get( name : String ) : FileEntry return null;
 
-	override function iterator() : hxd.impl.ArrayIterator<FileEntry> return new hxd.impl.ArrayIterator([]);
+	override function iterator() : hxd.impl.ArrayIterator<FileEntry> return new hxd.impl.ArrayIterator(new Array<FileEntry>());
 
 	override function get_size() return bytes.length;
 
