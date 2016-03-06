@@ -23,7 +23,6 @@ class Loader extends h2d.Sprite {
 	}
 
 	function render() {
-		s2d.checkEvents();
 		h3d.Engine.getCurrent().render(s2d);
 	}
 
