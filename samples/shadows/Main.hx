@@ -34,9 +34,9 @@ class Main extends hxd.App {
 		s3d.lightSystem.ambientLight.set(0.5, 0.5, 0.5);
 
 		dir = new h3d.scene.DirLight(new h3d.Vector(-0.3, -0.2, -1), s3d);
-
+		s3d.lightSystem.shadowLight = dir;
+		
 		shadow = cast(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
-		shadow.lightDirection = dir.direction;
 		shadow.blur.passes = 3;
 	}
 

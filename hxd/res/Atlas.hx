@@ -40,7 +40,7 @@ class Atlas extends Resource {
 			var cont = getContents().keys();
 			name = cont.next();
 			if( cont.hasNext() )
-				throw "Altas has several items in it " + Lambda.array( { iterator : contents.keys } );
+				throw "Altas has several items in it " + Lambda.array( contents );
 		}
 		var c = getContents().get(name);
 		if( c == null )
