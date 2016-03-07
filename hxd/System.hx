@@ -346,7 +346,7 @@ class System {
 
 	static function get_lang() {
 		return null; // TODO
-	}	
+	}
 
 	#elseif js
 
