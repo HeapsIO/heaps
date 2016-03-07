@@ -58,7 +58,8 @@ class Engine {
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver();
 		#else
-		throw "No driver";
+		driver = new h3d.impl.LogDriver(new h3d.impl.NullDriver());
+		driver.logEnable = true;
 		#end
 		setCurrent();
 	}
