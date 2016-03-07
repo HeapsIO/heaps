@@ -2,7 +2,7 @@ package hxd.res;
 
 typedef FontBuildOptions = {
 	?antiAliasing : Bool,
-	?chars : String,
+	?chars : hxd.UString,
 	?kerning : Bool,
 };
 
@@ -226,9 +226,9 @@ class FontBuilder {
 		var bh = 0;
 		var tmp = [];
 		var gcode = new Map<lime.text.Glyph,Int>();
-		for( i in 0...haxe.Utf8.length(options.chars) ) {
-			var c = haxe.Utf8.sub(options.chars, i,1);
-			var code = haxe.Utf8.charCodeAt(options.chars, i);
+		for( i in 0...options.chars.length ) {
+			var c = options.chars.charAt(i);
+			var code = options.chars.charCodeAt(i);
 			var g = f.getGlyph(c);
 			gcode.set(g, code);
 			var img = f.renderGlyph(g,font.size);
@@ -266,7 +266,7 @@ class FontBuilder {
 			all = [];
 			var x = 0, y = 0, lineH = font.lineHeight;
 			px = haxe.io.Bytes.alloc( width * height  );
-			for( i in 0...haxe.Utf8.length(options.chars) ) {
+			for( i in 0...options.chars.length ) {
 				var size = tmp[i];
 				var w = size.x + size.w + 1;
 				if( x + w > width ) {
@@ -288,7 +288,7 @@ class FontBuilder {
 				}
 				var t = new h2d.Tile(innerTex, x, y, gx+size.w, gy+size.h);
 				all.push(t);
-				font.glyphs.set(haxe.Utf8.charCodeAt(options.chars,i), new h2d.Font.FontChar(t,size.adv-1));
+				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,size.adv-1));
 				// next element
 				x += w + 1;
 			}

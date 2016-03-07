@@ -9,7 +9,7 @@ enum Align {
 class Text extends Drawable {
 
 	public var font(default, set) : Font;
-	public var text(default, set) : String;
+	public var text(default, set) : hxd.UString;
 	public var textColor(default, set) : Int;
 	public var maxWidth(default, set) : Null<Float>;
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
@@ -108,7 +108,7 @@ class Text extends Drawable {
 		glyphs.drawWith(ctx,this);
 	}
 
-	function set_text(t) {
+	function set_text(t : hxd.UString) {
 		var t = t == null ? "null" : t;
 		if( t == this.text ) return t;
 		this.text = t;
@@ -121,7 +121,7 @@ class Text extends Drawable {
 		if( allocated && text != null && font != null ) initGlyphs(text);
 	}
 
-	public function calcTextWidth( text : String ) {
+	public function calcTextWidth( text : hxd.UString ) {
 		if( calcDone ) {
 			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, oy = calcYMin;
 			initGlyphs(text, false);
@@ -138,13 +138,13 @@ class Text extends Drawable {
 		}
 	}
 
-	public function splitText( text : String, leftMargin = 0 ) {
+	public function splitText( text : hxd.UString, leftMargin = 0 ) {
 		if( maxWidth == null )
 			return text;
 		var lines = [], rest = text, restPos = 0;
 		var x = leftMargin, prevChar = -1;
-		for( i in 0...haxe.Utf8.length(text) ) {
-			var cc = haxe.Utf8.charCodeAt(text, i);
+		for( i in 0...text.length ) {
+			var cc = text.charCodeAt(i);
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
@@ -154,10 +154,10 @@ class Text extends Drawable {
 					x -= leftMargin;
 				}
 				var size = x + esize + letterSpacing;
-				var k = i + 1, max = haxe.Utf8.length(text);
+				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
 				while( size <= maxWidth && k < max ) {
-					var cc = haxe.Utf8.charCodeAt(text, k++);
+					var cc = text.charCodeAt(k++);
 					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
@@ -165,7 +165,7 @@ class Text extends Drawable {
 				}
 				if( size > maxWidth ) {
 					newline = true;
-					lines.push(haxe.Utf8.sub(text,restPos, i - restPos));
+					lines.push(text.substr(restPos, i - restPos));
 					restPos = i;
 					if( font.charset.isSpace(cc) ) {
 						e = null;
@@ -181,15 +181,15 @@ class Text extends Drawable {
 			} else
 				prevChar = cc;
 		}
-		if( restPos < haxe.Utf8.length(text) ) {
+		if( restPos < text.length ) {
 			if( lines.length == 0 && leftMargin > 0 && x > maxWidth )
 				lines.push("");
-			lines.push(haxe.Utf8.sub(text, restPos, haxe.Utf8.length(text) - restPos));
+			lines.push(text.substr(restPos, text.length - restPos));
 		}
 		return lines.join("\n");
 	}
 
-	function initGlyphs( text : String, rebuild = true, lines : Array<Int> = null ) : Void {
+	function initGlyphs( text : hxd.UString, rebuild = true, lines : Array<Int> = null ) : Void {
 		if( rebuild ) glyphs.clear();
 		var x = 0, y = 0, xMax = 0, prevChar = -1;
 		var align = rebuild ? textAlign : Left;
@@ -207,8 +207,8 @@ class Text extends Drawable {
 		var dl = font.lineHeight + lineSpacing;
 		var calcLines = !rebuild && lines != null;
 		var yMin = 0;
-		for( i in 0...haxe.Utf8.length(text) ) {
-			var cc = haxe.Utf8.charCodeAt(text,i);
+		for( i in 0...text.length ) {
+			var cc = text.charCodeAt(i);
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
 			var offs = e.getKerningOffset(prevChar);
@@ -216,10 +216,10 @@ class Text extends Drawable {
 			// if the next word goes past the max width, change it into a newline
 			if( font.charset.isBreakChar(cc) && maxWidth != null ) {
 				var size = x + esize + letterSpacing;
-				var k = i + 1, max = haxe.Utf8.length(text);
+				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
 				while( size <= maxWidth && k < max ) {
-					var cc = haxe.Utf8.charCodeAt(text, k++);
+					var cc = text.charCodeAt(k++);
 					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
