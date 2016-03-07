@@ -96,12 +96,14 @@ class System {
 		}
 		VIEW.render = function(_) if ( f != null ) f();
 		#elseif openfl
-		if( VIEW == null ) {
-			VIEW = new openfl.display.OpenGLView();
-			VIEW.name = "glView";
-			flash.Lib.current.addChildAt(VIEW,0);
+		if( openfl.display.OpenGLView.isSupported ){
+			if( VIEW == null ) {
+				VIEW = new openfl.display.OpenGLView();
+				VIEW.name = "glView";
+				flash.Lib.current.addChildAt(VIEW, 0);
+			}
+			VIEW.render = function(_) if ( f != null ) f();
 		}
-		VIEW.render = function(_) if ( f != null ) f();
 		#else
 		if( loop != null )
 			flash.Lib.current.removeEventListener(flash.events.Event.ENTER_FRAME, loop);
@@ -150,64 +152,6 @@ class System {
          (0 == 2 ? nme.Lib.HW_AA : 0),
          "Heaps Application"
 		);
-		#elseif openfl
-		var windowSize = haxe.macro.Compiler.getDefine("window");
-		if( windowSize == null ) windowSize = "800x600";
-		var windowSize = windowSize.split("x");
-		var width = Std.parseInt(windowSize[0]), height = Std.parseInt(windowSize[1]);
-		if( width < 100 ) width = 100;
-		if ( height < 100 ) height = 100;
-
-		var config = {
-
-			build: "1",
-			company: "Heaps",
-			fps: 60,
-			orientation: "",
-			packageName: "heaps.application",
-			version: "0.0.1",
-			windows: [
-
-				{
-					antialiasing: 0,
-					background: 16777215,
-					borderless: false,
-					depthBuffer: true,
-					display: 0,
-					fullscreen: false,
-					hardware: true,
-					height: height,
-					parameters: "{}",
-					resizable: true,
-					stencilBuffer: true,
-					title: "Heaps Application",
-					vsync: true,
-					width: width,
-					x: null,
-					y: null
-				},
-			]
-
-		};
-
-		var app = new openfl.display.Application ();
-		app.create (config);
-
-		try {
-			callb();
-		} catch( e : Dynamic ) {
-			Sys.println(e);
-			#if debug
-			Sys.println(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
-			#end
-		}
-
-		var result = app.exec ();
-
-		#if sys
-		Sys.exit(result);
-		#end
-
 		#else
 		callb();
 		#end
@@ -309,6 +253,99 @@ class System {
 
 	static function get_lang() {
 		return flash.system.Capabilities.language;
+	}
+
+	#elseif lime
+
+	static function get_isWindowed() {
+		return true;
+	}
+
+	static function get_isTouch() {
+		#if desktop
+		return false;
+		#else
+		return true;
+		#end
+	}
+
+	static function get_width() {
+		var win = lime.app.Application.current.window;
+		return Std.int(win.width * win.scale);
+	}
+
+	static function get_height() {
+		var win = lime.app.Application.current.window;
+		return Std.int(win.height * win.scale);
+	}
+
+	static function get_isAndroid() {
+		return #if android true #else false #end;
+	}
+
+	static function get_isIOS() {
+		return #if ios true #else false #end;
+	}
+
+	static function get_screenDPI() {
+		return 0; // TODO
+	}
+
+	@:allow(hxd.impl.LimeStage)
+	static var loopFunc = null;
+
+	public static function getCurrentLoop() {
+		return loopFunc;
+	}
+
+	public static function setLoop( f : Void -> Void ) {
+		loopFunc = f;
+	}
+
+	public static function start(callb) {
+		callb();
+	}
+
+	public static function getClipboard() : String {
+		return lime.system.Clipboard.text;
+	}
+
+	public static function exit() {
+		return lime.system.System.exit( 0 );
+	}
+
+	public static function setNativeCursor( c : Cursor ) {
+		lime.ui.Mouse.cursor = switch( c ){
+		case Default: DEFAULT;
+		case Button: POINTER;
+		case Move: MOVE;
+		case TextInput: TEXT;
+		case Hide: DEFAULT;
+		case Custom(_,_,_,_):
+			throw "not supported";
+		}
+		if( c == Hide ) lime.ui.Mouse.hide() else lime.ui.Mouse.show();
+	}
+
+
+	/**
+		Returns the device name:
+			"PC" for a desktop computer
+			Or the android device name
+			(will add iPad/iPhone/iPod soon)
+	**/
+	static var CACHED_NAME = null;
+	public static function getDeviceName() {
+		if( CACHED_NAME != null )
+			return CACHED_NAME;
+		var name;
+		name = "Unknown"; // TODO
+		CACHED_NAME = name;
+		return name;
+	}
+
+	static function get_lang() {
+		return null; // TODO
 	}
 
 	#elseif js

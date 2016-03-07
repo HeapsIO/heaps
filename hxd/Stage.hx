@@ -11,11 +11,13 @@ class Stage {
 	#if (flash || openfl || nme)
 	var stage : flash.display.Stage;
 	var fsDelayed : Bool;
+	#elseif lime
+	var limeStage : hxd.impl.LimeStage;
 	#end
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
 
-	#if js
+	#if (js && !lime)
 	@:allow(hxd)
 	static function getCanvas() {
 		var canvas : js.html.CanvasElement = cast js.Browser.document.getElementById("webgl");
@@ -40,6 +42,9 @@ class Stage {
 		stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
 		stage.addEventListener(flash.events.Event.RESIZE, onResize);
 		initGesture(false);
+		#elseif lime
+		limeStage = new hxd.impl.LimeStage( this );
+		lime.app.Application.current.addModule( limeStage );
 		#elseif js
 		canvas = getCanvas();
 		canvasPos = canvas.getBoundingClientRect();
@@ -331,7 +336,7 @@ class Stage {
 		event(ev);
 	}
 
-#elseif js
+#elseif (js && !lime)
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
@@ -411,6 +416,33 @@ class Stage {
 
 	function get_height() {
 		return @:privateAccess System.windowHeight;
+	}
+
+	function get_mouseLock() {
+		return false;
+	}
+
+	function set_mouseLock(b) {
+		if( b ) throw "Not implemented";
+		return b;
+	}
+
+#elseif lime
+
+	inline function get_mouseX() {
+		return limeStage.mouseX;
+	}
+
+	inline function get_mouseY() {
+		return limeStage.mouseY;
+	}
+
+	inline function get_width() {
+		return limeStage.width;
+	}
+
+	inline function get_height() {
+		return limeStage.height;
 	}
 
 	function get_mouseLock() {

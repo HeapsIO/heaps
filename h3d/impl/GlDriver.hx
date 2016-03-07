@@ -86,18 +86,18 @@ class GlDriver extends Driver {
 	var curTarget : h3d.mat.Texture;
 
 	public function new() {
-		#if js
+		#if (nme || openfl || lime)
+		// check for a bug in HxCPP handling of sub buffers
+		var tmp = new Float32Array(8);
+		var sub = new Float32Array(tmp.buffer, 0, 4);
+		#if cpp fixMult = sub.length == 1; #end  // should be 4
+		#elseif js
 		canvas = @:privateAccess hxd.Stage.getCanvas();
 		if( canvas == null ) throw "Canvas #webgl not found";
 		gl = canvas.getContextWebGL({alpha:false});
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
-		#elseif (nme || openfl)
-		// check for a bug in HxCPP handling of sub buffers
-		var tmp = new Float32Array(8);
-		var sub = new Float32Array(tmp.buffer, 0, 4);
-		fixMult = sub.length == 1; // should be 4
 		#end
 		programs = new Map();
 		curAttribs = 0;
@@ -374,13 +374,14 @@ class GlDriver extends Driver {
 	function getChannels( t : Texture ) {
 		return switch( t.internalFmt ) {
 		case GL.RGBA: GL.RGBA;
+		case GL.ALPHA: GL.ALPHA;
 		default: throw "Invalid format " + t.internalFmt;
 		}
 	}
 
 	override function isSupportedFormat( fmt : h3d.mat.Data.TextureFormat ) {
 		return switch( fmt ) {
-		case RGBA: true;
+		case RGBA, ALPHA: true;
 		case RGBA32F: hasFeature(FloatTextures);
 		default: false;
 		}
@@ -394,6 +395,8 @@ class GlDriver extends Driver {
 		switch( t.format ) {
 		case RGBA:
 			// default
+		case ALPHA:
+			tt.internalFmt = GL.ALPHA;
 		case RGBA32F if( hasFeature(FloatTextures) ):
 			tt.pixelFmt = GL.FLOAT;
 		default:
@@ -473,11 +476,11 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-		#if (nme || hxsdl)
+	#if (nme || hxsdl || openfl || lime)
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
-		#else
+	#else
 		if( t.format != RGBA ) {
 			var pixels = bmp.getPixels();
 			uploadTexturePixels(t, pixels, mipLevel, side);
@@ -485,15 +488,19 @@ class GlDriver extends Driver {
 		} else {
 			var img = bmp.toNative();
 			gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-			#if lime
-			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, bmp.width, bmp.height, 0, getChannels(t.t), t.pixelFmt, img.image.data);
-			#else
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
-			#end
 			if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 			gl.bindTexture(GL.TEXTURE_2D, null);
 			t.flags.set(WasCleared);
 		}
+	#end
+	}
+
+	inline static function bytesToUint8Array( b : haxe.io.Bytes ) : Uint8Array {
+		#if (lime && !js)
+		return new Uint8Array(b);
+		#else
+		return new Uint8Array(b.getData());
 		#end
 	}
 
@@ -503,9 +510,11 @@ class GlDriver extends Driver {
 		#if hxsdl
 		pixels.setFlip(true);
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, pixels.bytes.getData());
+		#elseif lime
+		pixels.setFlip(true);
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#else
-		var pixels = new Uint8Array(pixels.bytes.getData());
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, pixels);
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#end
 		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
@@ -531,7 +540,7 @@ class GlDriver extends Driver {
 		#if hxsdl
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, buf.getData(), bufPos, vertexCount * stride * 4);
 		#else
-		var buf = new Uint8Array(buf.getData());
+		var buf = bytesToUint8Array(buf);
 		var sub = new Uint8Array(buf.buffer, bufPos, vertexCount * stride * 4);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		#end
@@ -555,7 +564,7 @@ class GlDriver extends Driver {
 		#if hxsdl
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, buf.getData(), bufPos, indiceCount * 2);
 		#else
-		var buf = new Uint8Array(buf.getData());
+		var buf = bytesToUint8Array(buf);
 		var sub = new Uint8Array(buf.buffer, bufPos, indiceCount * 2);
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
 		#end
@@ -626,7 +635,7 @@ class GlDriver extends Driver {
 	}
 
 	override function isDisposed() {
-		#if (nme || openfl)
+		#if (nme || openfl) //lime ??
 		return false;
 		#else
 		return gl.isContextLost();

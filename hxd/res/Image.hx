@@ -85,6 +85,12 @@ class Image extends Resource {
 		switch( inf.format ) {
 		case Png:
 			var bytes = entry.getBytes(); // using getTmpBytes cause bug in E2
+
+			#if (lime && (cpp || neko || nodejs))
+			// native PNG loader is faster
+			var i = lime.graphics.format.PNG.decodeBytes( bytes, true );
+			pixels = new Pixels(inf.width, inf.height, i.data.toBytes(), RGBA );
+			#else
 			var png = new format.png.Reader(new haxe.io.BytesInput(bytes));
 			png.checkCRC = false;
 			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
@@ -100,6 +106,7 @@ class Image extends Resource {
 			if( flipY ) pixels.flags.set(FlipY);
 			#else
 			format.png.Tools.extract32(png.read(), pixels.bytes);
+			#end
 			#end
 		case Gif:
 			var bytes = entry.getBytes();
@@ -157,6 +164,7 @@ class Image extends Resource {
 			entry.loadBitmap(function(bmp) {
 				var bmp = bmp.toBitmap();
 				tex.alloc();
+				
 				if( bmp.width != tex.width || bmp.height != tex.height ) {
 					var pixels = bmp.getPixels();
 					pixels.makeSquare();
@@ -164,6 +172,7 @@ class Image extends Resource {
 					pixels.dispose();
 				} else
 					tex.uploadBitmap(bmp);
+				
 				bmp.dispose();
 				tex.realloc = loadTexture;
 				watch(watchCallb);

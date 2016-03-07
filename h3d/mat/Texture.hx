@@ -19,7 +19,10 @@ class Texture {
 	/**
 		Tells if the Driver requires y-flipping the texture pixels before uploading.
 	**/
-	public static inline var nativeFlip = #if hxsdl true #else false #end;
+	public static inline var nativeFlip = 	#if (hxsdl) true
+											#elseif (openfl) false
+											#elseif (lime && (cpp || neko || nodejs)) true
+											#else false #end;
 
 	var t : h3d.impl.Driver.Texture;
 	var mem : h3d.impl.MemoryManager;

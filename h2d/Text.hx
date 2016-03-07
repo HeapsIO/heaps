@@ -9,7 +9,7 @@ enum Align {
 class Text extends Drawable {
 
 	public var font(default, set) : Font;
-	public var text(default, set) : String;
+	public var text(default, set) : hxd.UString;
 	public var textColor(default, set) : Int;
 	public var maxWidth(default, set) : Null<Float>;
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
@@ -27,6 +27,10 @@ class Text extends Drawable {
 	var calcWidth:Int;
 	var calcHeight:Int;
 	var calcSizeHeight:Int;
+	
+	#if lime
+	var waShader : h3d.shader.WhiteAlpha;
+	#end
 
 	public function new( font : Font, ?parent ) {
 		super(parent);
@@ -41,6 +45,12 @@ class Text extends Drawable {
 	function set_font(font) {
 		if( this.font == font ) return font;
 		this.font = font;
+		#if lime
+		if( font.tile.getTexture().format == ALPHA )
+			if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
+		else
+			if( waShader != null ) removeShader( waShader );
+		#end
 		if( glyphs != null ) glyphs.remove();
 		glyphs = new TileGroup(font == null ? null : font.tile, this);
 		glyphs.visible = false;
@@ -98,7 +108,7 @@ class Text extends Drawable {
 		glyphs.drawWith(ctx,this);
 	}
 
-	function set_text(t) {
+	function set_text(t : hxd.UString) {
 		var t = t == null ? "null" : t;
 		if( t == this.text ) return t;
 		this.text = t;
@@ -111,7 +121,7 @@ class Text extends Drawable {
 		if( allocated && text != null && font != null ) initGlyphs(text);
 	}
 
-	public function calcTextWidth( text : String ) {
+	public function calcTextWidth( text : hxd.UString ) {
 		if( calcDone ) {
 			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, oy = calcYMin;
 			initGlyphs(text, false);
@@ -128,7 +138,7 @@ class Text extends Drawable {
 		}
 	}
 
-	public function splitText( text : String, leftMargin = 0 ) {
+	public function splitText( text : hxd.UString, leftMargin = 0 ) {
 		if( maxWidth == null )
 			return text;
 		var lines = [], rest = text, restPos = 0;
@@ -146,7 +156,7 @@ class Text extends Drawable {
 				var size = x + esize + letterSpacing;
 				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
-				while( size <= maxWidth && k < text.length ) {
+				while( size <= maxWidth && k < max ) {
 					var cc = text.charCodeAt(k++);
 					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
 					var e = font.getChar(cc);
@@ -179,7 +189,7 @@ class Text extends Drawable {
 		return lines.join("\n");
 	}
 
-	function initGlyphs( text : String, rebuild = true, lines : Array<Int> = null ) : Void {
+	function initGlyphs( text : hxd.UString, rebuild = true, lines : Array<Int> = null ) : Void {
 		if( rebuild ) glyphs.clear();
 		var x = 0, y = 0, xMax = 0, prevChar = -1;
 		var align = rebuild ? textAlign : Left;
@@ -208,7 +218,7 @@ class Text extends Drawable {
 				var size = x + esize + letterSpacing;
 				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
-				while( size <= maxWidth && k < text.length ) {
+				while( size <= maxWidth && k < max ) {
 					var cc = text.charCodeAt(k++);
 					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
 					var e = font.getChar(cc);
