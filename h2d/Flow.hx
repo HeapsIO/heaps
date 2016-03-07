@@ -227,9 +227,14 @@ class Flow extends Sprite {
 	override function getBoundsRec( relativeTo, out, forSize ) {
 		if( needReflow ) reflow();
 		if( forSize ) {
-			if( !isInline )
+			if( !isInline ) {
 				super.getBoundsRec(relativeTo, out, false);
-			else if( calculatedWidth != 0 )
+				// TODO : use proper addBounds instead
+				if( relativeTo == parent ) {
+					out.xMax += paddingRight + borderWidth;
+					out.yMax += paddingBottom + borderHeight;
+				}
+			} else if( calculatedWidth != 0 )
 				addBounds(relativeTo, out, 0, 0, calculatedWidth, calculatedHeight);
 		} else
 			super.getBoundsRec(relativeTo, out, forSize);
@@ -516,13 +521,12 @@ class Flow extends Sprite {
 				var p = properties[i];
 				if( p.isAbsolute ) continue;
 
-				// use getBounds instead of getSize for vertical align
 				var c = childs[i];
-				var b = c.getBounds(this, tmpBounds);
+				var b = c.getSize(tmpBounds);
 				var br = false;
 
-				p.calculatedWidth = b.xMax - c.x + p.paddingLeft + p.paddingRight;
-				p.calculatedHeight = b.yMax - c.y + p.paddingTop + p.paddingBottom;
+				p.calculatedWidth = b.xMax + p.paddingLeft + p.paddingRight;
+				p.calculatedHeight = b.yMax + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 
