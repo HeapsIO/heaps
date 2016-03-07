@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+	<meta title="Basic" package="heaps.samples.Basic" version="1.0.0" company="" />
+	
+	<app main="LimeApp" file="Basic" path="bin" />
+	<app min-swf-version="12.0" />
+	
+	<window background="#000000" fps="30" />
+	<window width="800" height="600" unless="mobile" />
+	<window orientation="landscape" vsync="false" antialiasing="0" if="cpp" colors32b="true" allow-high-dpi="true"/>
+
+	<haxedef name="resourcesPath" value="../res"/>
+	<haxelib name="lime" />
+	<haxelib name="heaps" />
+</project>
