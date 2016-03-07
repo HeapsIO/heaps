@@ -3,7 +3,7 @@ package hxd.snd;
 
 class Convert {
 
-	#if flash
+	#if (flash && air3)
 	static var processing = new Map();
 	#end
 

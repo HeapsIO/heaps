@@ -1,7 +1,5 @@
 package hxd.impl;
 
-typedef File = Air3File;
-
 enum FileSeek {
 	SeekBegin;
 	SeekCur;
@@ -9,6 +7,9 @@ enum FileSeek {
 }
 
 #if air3
+
+typedef File = Air3File;
+
 class FileInput extends haxe.io.Input {
 
 	var fs : flash.filesystem.FileStream;

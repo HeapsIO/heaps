@@ -40,6 +40,15 @@ class Point {
 	public inline function dot( p : Point ) {
 		return x * p.x + y * p.y;
 	}
+	
+	public inline function rotate( angle : Float ) {
+		var c = Math.cos(angle);
+		var s = Math.sin(angle);
+		var x2 = x * c - y * s;
+		var y2 = x * s + y * c;
+		x = x2;
+		y = y2;
+	}
 
 	public inline function lengthSq() {
 		return x * x + y * y;

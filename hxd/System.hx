@@ -620,6 +620,61 @@ class System {
 		sdl.Sdl.quit();
 	}
 
+	#elseif hl
+
+	static var LOOP = null;
+
+	public static function exit() {
+		Sys.exit(0);
+	}
+
+	public static function start( init : Void -> Void ) {
+		init();
+		while( LOOP != null ) LOOP();
+	}
+
+	public static function setLoop( f : Void -> Void ) {
+		LOOP = f;
+	}
+
+	public static function setNativeCursor( c : Cursor ) {
+	}
+
+	static function get_screenDPI() {
+		return 72.;
+	}
+
+	static function get_lang() {
+		return "en";
+	}
+
+	static function get_isAndroid() {
+		return false;
+	}
+
+	public static function getClipboard() {
+		return "";
+	}
+
+	static function get_isIOS() {
+		return false;
+	}
+
+	static function get_isWindowed() {
+		return true;
+	}
+
+	static function get_isTouch() {
+		return false;
+	}
+
+	static function get_width() {
+		return 800;
+	}
+
+	static function get_height() {
+		return 600;
+	}
 
 	#end
 

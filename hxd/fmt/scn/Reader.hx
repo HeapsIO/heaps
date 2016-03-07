@@ -30,35 +30,33 @@ class Reader {
 				bits & 2 == 0 ? null : i.readFloat(),
 				bits & 4 == 0 ? null : i.readInt32()
 			);
-		case 3:
-			Reset;
-		case 4:
-			Resize(i.readInt32(), i.readInt32());
 		case 5:
+			Resize(i.readInt32(), i.readInt32());
+		case 6:
 			var id = i.readInt32();
 			var len = i.readInt32();
 			SelectShader(id, len == 0 ? null : i.read(len));
-		case 6:
-			Material(i.readInt32());
 		case 7:
-			UploadShaderBuffers(i.readByte() == 1, [for( k in 0...i.readInt32() ) i.readFloat()], [for( k in 0...i.readInt32() ) i.readFloat()]);
+			Material(i.readInt32());
 		case 8:
-			UploadShaderTextures([for( k in 0...i.readByte() ) i.readInt32()], [for( k in 0...i.readByte() ) i.readInt32()]);
+			UploadShaderBuffers(i.readByte() == 1, [for( k in 0...i.readInt32() ) i.readFloat()], [for( k in 0...i.readInt32() ) i.readFloat()]);
 		case 9:
+			UploadShaderTextures([for( k in 0...i.readByte() ) i.readInt32()], [for( k in 0...i.readByte() ) i.readInt32()]);
+		case 10:
 			var id = i.readInt32();
 			var len = i.readInt32();
 			AllocTexture(id, len < 0 ? null : i.readString(len), i.readInt32(), i.readInt32(), haxe.EnumFlags.ofInt(i.readInt32()));
-		case 10:
-			AllocIndexes(i.readInt32(), i.readInt32());
 		case 11:
-			AllocVertexes(i.readInt32(), i.readInt32(), i.readInt32(), haxe.EnumFlags.ofInt(i.readInt32()) );
+			AllocIndexes(i.readInt32(), i.readInt32());
 		case 12:
-			DisposeTexture(i.readInt32());
+			AllocVertexes(i.readInt32(), i.readInt32(), i.readInt32(), haxe.EnumFlags.ofInt(i.readInt32()) );
 		case 13:
-			DisposeIndexes(i.readInt32());
+			DisposeTexture(i.readInt32());
 		case 14:
-			DisposeVertexes(i.readInt32());
+			DisposeIndexes(i.readInt32());
 		case 15:
+			DisposeVertexes(i.readInt32());
+		case 16:
 			var id = i.readInt32();
 			var w = i.readInt32();
 			var h = i.readInt32();
@@ -67,21 +65,21 @@ class Reader {
 			var pixels = new hxd.Pixels(w, h, i.read(w * h * 4), format);
 			pixels.flags = flags;
 			UploadTexture(id, pixels, i.readInt32(), i.readByte());
-		case 16:
-			UploadIndexes(i.readInt32(), i.readInt32(), i.readInt32(), i.read(i.readInt32()) );
 		case 17:
-			UploadVertexes(i.readInt32(), i.readInt32(), i.readInt32(), i.read(i.readInt32()) );
+			UploadIndexes(i.readInt32(), i.readInt32(), i.readInt32(), i.read(i.readInt32()) );
 		case 18:
-			SelectBuffer(i.readInt32(), i.readByte() != 0 );
+			UploadVertexes(i.readInt32(), i.readInt32(), i.readInt32(), i.read(i.readInt32()) );
 		case 19:
-			SelectMultiBuffer([for( k in 0...i.readByte() ) { vbuf : i.readInt32(), offset : i.readByte() } ]);
+			SelectBuffer(i.readInt32(), i.readByte() != 0 );
 		case 20:
-			Draw(i.readInt32(), i.readInt32(), i.readInt32());
+			SelectMultiBuffer([for( k in 0...i.readByte() ) { vbuf : i.readInt32(), offset : i.readByte() } ]);
 		case 21:
-			RenderZone(i.readInt32(), i.readInt32(), i.readInt32(), i.readInt32());
+			Draw(i.readInt32(), i.readInt32(), i.readInt32());
 		case 22:
-			RenderTarget(i.readInt32());
+			RenderZone(i.readInt32(), i.readInt32(), i.readInt32(), i.readInt32());
 		case 23:
+			RenderTarget(i.readInt32());
+		case 24:
 			Present;
 		case x:
 			throw "Invalid SCN tag " + x;
