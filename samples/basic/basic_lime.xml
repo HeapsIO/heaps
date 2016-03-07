@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
-	<meta title="Basic" package="Basic" version="1.0.0" company="" />
+	<meta title="Basic" package="heaps.samples.Basic" version="1.0.0" company="" />
 	
 	<app main="LimeApp" file="Basic" path="bin" />
 	<app min-swf-version="12.0" />
