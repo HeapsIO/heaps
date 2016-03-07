@@ -12,6 +12,10 @@ abstract UString(String) from String to String {
 		#end
 	}
 
+	@:op(a + b) inline static function add( a : UString, b : UString ) : String {
+		return (a:String) + (b:String);
+	}
+
 	public inline function charCodeAt( pos : Int ) : Int {
 		#if (flash || js)
 		return this.charCodeAt( pos );
