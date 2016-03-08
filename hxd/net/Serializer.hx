@@ -46,12 +46,14 @@ class Serializer {
 			var v = 1;
 			for( i in 0...name.length )
 				v = v * 223 + StringTools.fastCodeAt(name,i);
-			return 1 + ((v & 0x3FFFFFFF) % 255);
+			v = 1 + ((v & 0x3FFFFFFF) % 255);
+			return v;
 		}
 		CLIDS = [for( i in 0...CLASSES.length ) if( subClasses[i].length == 0 && !isSub[i] ) 0 else hash(Type.getClassName(cl[i]))];
 		CL_BYID = [];
 		for( i in 0...CLIDS.length ) {
 			var cid = CLIDS[i];
+			if( cid == 0 ) continue;
 			if( CL_BYID[cid] != null ) throw "Conflicting CLID between " + Type.getClassName(CL_BYID[cid]) + " and " + Type.getClassName(cl[i]);
 			CL_BYID[cid] = cl[i];
 		}
