@@ -1177,7 +1177,7 @@ class Macros {
 		var needRef = false;
 		if( t.increment != null ) {
 			needRef = true;
-			mark = macro if( hxd.Math.abs(this.$fname - this.$rname) > $v{ t.increment } ) { this.$rname = this.$fname; $mark; };
+			mark = macro if( Math.floor(this.$fname / $v{t.increment}) != this.$rname ) { this.$rname = Math.floor(this.$fname / $v{t.increment}); $mark; };
 		}
 		if( t.condSend != null ) {
 			function loop(e:Expr) {
