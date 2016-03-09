@@ -230,7 +230,7 @@ class Flow extends Sprite {
 			if( !isInline ) {
 				super.getBoundsRec(relativeTo, out, false);
 				// TODO : use proper addBounds instead
-				if( relativeTo == parent ) {
+				if( relativeTo == parent && background == null ) {
 					out.xMax += paddingRight + borderWidth;
 					out.yMax += paddingBottom + borderHeight;
 				}
