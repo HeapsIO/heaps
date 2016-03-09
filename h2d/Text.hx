@@ -27,7 +27,7 @@ class Text extends Drawable {
 	var calcWidth:Int;
 	var calcHeight:Int;
 	var calcSizeHeight:Int;
-	
+
 	#if lime
 	var waShader : h3d.shader.WhiteAlpha;
 	#end
@@ -189,14 +189,14 @@ class Text extends Drawable {
 		return lines.join("\n");
 	}
 
-	function initGlyphs( text : hxd.UString, rebuild = true, lines : Array<Int> = null ) : Void {
+	function initGlyphs( text : hxd.UString, rebuild = true, handleAlign = true, lines : Array<Int> = null ) : Void {
 		if( rebuild ) glyphs.clear();
 		var x = 0, y = 0, xMax = 0, prevChar = -1;
-		var align = rebuild ? textAlign : Left;
+		var align = handleAlign ? textAlign : Left;
 		switch( align ) {
 		case Center, Right:
 			lines = [];
-			initGlyphs(text, false, lines);
+			initGlyphs(text, false, false, lines);
 			var max = maxWidth == null ? 0 : Std.int(maxWidth);
 			var k = align == Center ? 1 : 0;
 			for( i in 0...lines.length )
@@ -294,7 +294,19 @@ class Text extends Drawable {
 	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		updateSize();
-		addBounds(relativeTo, out, 0, forSize ? 0 : calcYMin, calcWidth, forSize ? calcSizeHeight : calcHeight - calcYMin);
+		var x, y, w, h;
+		if( forSize ) {
+			x = 0;
+			y = 0;
+			w = maxWidth != null && textAlign != Left && maxWidth > calcWidth ? maxWidth : calcWidth;
+			h = calcSizeHeight;
+		} else {
+			x = 0;
+			y = calcYMin;
+			w = calcWidth;
+			h = calcHeight - calcYMin;
+		}
+		addBounds(relativeTo, out, x, y, w, h);
 	}
 
 }
