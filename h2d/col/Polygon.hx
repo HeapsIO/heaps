@@ -147,6 +147,22 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		}
 	}
 
+	public function rayIntersection( r : h2d.col.Ray ) {
+		var segs = toSegments();
+		var dmin = 1E9;
+		var pt = null;
+		for(s in segs) {
+			var p = s.rayIntersection(r);
+			if( p == null) continue;
+			var d = Math.distanceSq(p.x - r.x, p.y - r.y);
+			if(d < dmin) {
+				pt = p;
+				dmin = d;
+			}
+		}
+		return pt;
+	}
+
 	/**
 		Creates a new optimized polygon by eliminating almost colinear edges according to epsilon distance.
 	**/
