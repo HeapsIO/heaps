@@ -187,10 +187,16 @@ class Animation {
 				if( f == lastEvent ) continue;
 				lastEvent = f;
 				if( events[f] != null ) {
+					var oldF = frame, oldDT = dt;
 					dt -= (f - frame) / (speed * sampling);
 					frame = f;
 					onEvent(events[f]);
-					return dt;
+					if( frame == f && f == frameCount - 1 ) {
+						frame = oldF;
+						dt = oldDT;
+						break;
+					} else
+						return dt;
 				}
 			}
 		}
