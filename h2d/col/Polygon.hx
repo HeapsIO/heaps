@@ -150,8 +150,12 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	public function rayIntersection( r : h2d.col.Ray, ?pt : Point ) {
 		var dmin = 1E9;
 		var p0 = points[points.length - 1];
+
 		for(p in points) {
-			if(r.side(p0) * r.side(p) > 0) continue;
+			if(r.side(p0) * r.side(p) > 0) {
+				p0 = p;
+				continue;
+			}
 
 			var u = ( r.dx * (p0.y - r.y) - r.dy * (p0.x - r.x) ) / ( r.dy * (p.x - p0.x) - r.dx * (p.y - p0.y) );
 			var x = p0.x + u * (p.x - p0.x);
