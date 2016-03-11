@@ -63,20 +63,16 @@ class Segment {
 		}
 	}
 
-	public function rayIntersection( r : h2d.col.Ray ) {
+	public inline function rayIntersection( r : h2d.col.Ray, ?pt : Point ) {
 		if(r.side(new Point(x, y)) * r.side(new Point(x + dx, y + dy)) > 0)
 			return null;
 
-		var x1 = x, y1 = y;
-		var x2 = x + dx, y2 = y + dy;
-		var x3 = r.x, y3 = r.y;
-		var x4 = r.x + r.dx, y4 = r.y + r.dy;
+		var u = ( r.dx * (y - r.y) - r.dy * (x - r.x) ) / ( r.dy * dx - r.dx * dy );
+		if( pt == null ) pt = new Point();
+		pt.x = x + u * dx;
+		pt.y = y + u * dy;
 
-		var u = ( (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3) ) / ( (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1) );
-		var px = x1 + u * (x2 - x1);
-		var py = y1 + u * (y2 - y1);
-
-		return new Point(px, py);
+		return pt;
 	}
 
 }
