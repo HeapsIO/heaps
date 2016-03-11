@@ -4,7 +4,7 @@ import h3d.impl.Driver;
 class NullDriver extends Driver {
 
 	var cur : hxsl.RuntimeShader;
-	
+
 	public function new() {
 	}
 
@@ -14,6 +14,14 @@ class NullDriver extends Driver {
 
 	override function isSupportedFormat( fmt : h3d.mat.Data.TextureFormat ) {
 		return true;
+	}
+
+	override function logImpl(str:String) {
+		#if sys
+		Sys.println(str);
+		#else
+		trace(str);
+		#end
 	}
 
 	override function isDisposed() {
