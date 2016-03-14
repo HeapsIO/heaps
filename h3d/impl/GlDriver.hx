@@ -496,6 +496,7 @@ class GlDriver extends Driver {
 	#end
 	}
 
+	#if !hxsdl
 	inline static function bytesToUint8Array( b : haxe.io.Bytes ) : Uint8Array {
 		#if (lime && !js)
 		return new Uint8Array(b);
@@ -503,6 +504,7 @@ class GlDriver extends Driver {
 		return new Uint8Array(b.getData());
 		#end
 	}
+	#end
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
