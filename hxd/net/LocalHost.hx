@@ -108,6 +108,7 @@ class LocalHost extends NetworkHost {
 		socket.bind(host, port, function(s) {
 			var c = new LocalClient(this, s);
 			pendingClients.push(c);
+			s.onError = function(_) c.stop();
 			if( onConnected != null ) onConnected(c);
 		});
 		isAuth = true;
