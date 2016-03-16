@@ -1,8 +1,9 @@
-package h3d.pass;
+package h3d.mat;
 
-class Params {
+class Defaults {
 
 	public static var defaultKillAlphaThreshold = 0.5;
+	public static var loadingTextureColor = 0xFFFF00FF;
 
 	@:isVar public static var shadowShader(get, set) : hxsl.Shader;
 
@@ -15,6 +16,10 @@ class Params {
 
 	static function set_shadowShader(s) {
 		return shadowShader = s;
+	}
+
+	public dynamic static function makeVolumeDecal( bounds : h3d.col.Bounds ) : hxsl.Shader {
+		return new h3d.shader.VolumeDecal(bounds.xSize, bounds.ySize);
 	}
 
 }

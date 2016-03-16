@@ -115,7 +115,7 @@ class Material {
 	function set_receiveShadows(v) {
 		if( v == receiveShadows )
 			return v;
-		var shadows = h3d.pass.Params.shadowShader;
+		var shadows = h3d.mat.Defaults.shadowShader;
 		if( v )
 			mainPass.addShader(shadows);
 		else

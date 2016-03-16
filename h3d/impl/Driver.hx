@@ -60,7 +60,6 @@ enum Feature {
 class Driver {
 
 	public var logEnable : Bool;
-	public var loadingTextureColor = 0xFFFF00FF;
 
 	public function hasFeature( f : Feature ) {
 		return false;
