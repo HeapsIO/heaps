@@ -20,8 +20,13 @@ class Dump {
 
 	function addProps( props : Properties ) {
 		if( props == null ) return;
-		for( p in props )
-			add(Type.enumConstructor(p) + " : " + [for( p in Type.enumParameters(p) ) Std.string(p)].join(", "));
+		for( p in props ) {
+			var params = Type.enumParameters(p);
+			if( params.length == 0 )
+				add(Type.enumConstructor(p));
+			else
+				add(Type.enumConstructor(p) + " : " + [for( p in params ) Std.string(p)].join(", "));
+		}
 	}
 
 	public function dump( h : Data ) : String {
@@ -49,6 +54,7 @@ class Dump {
 			prefix = "";
 		}
 		if( h.geometries.length > 0 ) add('');
+		var flags = MaterialFlag.createAll();
 		for( k in 0...h.materials.length ) {
 			var m = h.materials[k];
 			add('@$k MATERIAL');
@@ -59,6 +65,9 @@ class Dump {
 			if( m.diffuseTexture != null ) add('Texture : ${m.diffuseTexture}');
 			if( m.killAlpha != null ) add('KillAlpha : ${m.killAlpha}');
 			addProps(m.props);
+			for( f in flags )
+				if( m.flags.has(f) )
+					add(f);
 			prefix = "";
 		}
 		if( h.materials.length > 0 ) add('');

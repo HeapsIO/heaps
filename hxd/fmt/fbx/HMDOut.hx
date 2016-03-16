@@ -409,6 +409,7 @@ class HMDOut extends BaseLibrary {
 					mids.push(mid);
 					continue;
 				}
+				var hasHeapsProps = false;
 				var mat = new Material();
 				mid = d.materials.length;
 				mids.push(mid);
@@ -417,15 +418,51 @@ class HMDOut extends BaseLibrary {
 
 				mat.name = m.getName();
 				mat.culling = Back; // don't use FBX Culling infos (OFF by default)
-				mat.blendMode = None;
+				mat.blendMode = null;
+				mat.flags = Material.DEFAULT_FLAGS;
 
 				// if there's a slight amount of opacity on the material
 				// it's usually meant to perform additive blending on 3DSMax
-				for( p in m.getAll("Properties70.P") )
-					if( p.props[0].toString() == "Opacity" ) {
-						var v = p.props[4].toFloat();
-						if( v < 1 && v > 0.98 ) mat.blendMode = Add;
+				for( p in m.getAll("Properties70.P") ) {
+					var pval = p.props[4];
+					switch( p.props[0].toString() ) {
+					case "Opacity":
+						var v = pval.toFloat();
+						if( v < 1 && v > 0.98 && mat.blendMode == null ) mat.blendMode = Add;
+					case pname:
+						if( StringTools.startsWith(pname, "3dsMax|heaps|_") ) {
+							hasHeapsProps = true;
+							switch( pname.substr(14) ) {
+							case "blend":
+								mat.blendMode = ([null, None, Alpha, Add, SoftAdd] : Array<h2d.BlendMode>)[pval.toInt() - 1];
+							case "shadows":
+								switch( pval.toInt() ) {
+								case 2:
+									mat.flags.unset(CastShadows);
+									mat.flags.unset(ReceiveShadows);
+								case 3:
+									mat.flags.unset(CastShadows);
+								case 4:
+									mat.flags.unset(ReceiveShadows);
+								}
+							case "lighting":
+								if( pval.toInt() == 0 ) mat.flags.unset(HasLighting);
+							case "twoSided":
+								if( pval.toInt() == 1 ) mat.culling = None;
+							case "killAlpha":
+								if( pval.toInt() == 1 ) mat.killAlpha = 1;
+							case "killAlphaThreshold":
+								if( mat.killAlpha != null ) mat.killAlpha = pval.toFloat();
+							case "decal":
+								if( pval.toInt() == 1 ) mat.flags.set(IsVolumeDecal);
+							case "wrap":
+								if( pval.toInt() == 1 ) mat.flags.set(TextureWrap);
+							case name:
+								throw "Unknown heaps property " + name;
+							}
+						}
 					}
+				}
 
 				// get texture
 				var texture = getSpecChild(m, "DiffuseColor");
@@ -456,11 +493,17 @@ class HMDOut extends BaseLibrary {
 					if( path != "" ) {
 						if( texture != null && path.toLowerCase() == texture.get("FileName").props[0].toString().toLowerCase() ) {
 							// if that's the same file, we're doing alpha blending
-							mat.blendMode = Alpha;
+							if( mat.blendMode == null ) mat.blendMode = Alpha;
 						} else
 							throw "TODO : alpha texture";
 					}
 				}
+
+				if( hasHeapsProps ) {
+					if( mat.props == null ) mat.props = [];
+					mat.props.push(HasMaterialFlags);
+				}
+				if( mat.blendMode == null ) mat.blendMode = None;
 			}
 
 			var g = getChild(o.model, "Geometry");

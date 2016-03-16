@@ -17,6 +17,8 @@ class Reader {
 		switch( i.readByte() ) {
 		case 0:
 			return CameraFOVY(i.readFloat());
+		case 1:
+			return HasMaterialFlags;
 		case unk:
 			throw "Unknown property #" + unk;
 		}
@@ -141,6 +143,8 @@ class Reader {
 			m.culling = CULLING[i.readByte()];
 			m.killAlpha = i.readFloat();
 			if( m.killAlpha == 1 ) m.killAlpha = null;
+			if( m.props != null && m.props.indexOf(HasMaterialFlags) >= 0 )
+				m.flags = haxe.EnumFlags.ofInt(i.readInt32());
 			d.materials.push(m);
 		}
 

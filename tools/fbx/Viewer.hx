@@ -139,8 +139,6 @@ class Viewer extends hxd.App {
 		axis.lineTo(0, 0, len);
 
 		light = new h3d.scene.DirLight(new h3d.Vector(-4, -3, -10), s3d);
-		var shadows = Std.instance(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
-		shadows.power = 10;
 
 		if( props.curFile != null )
 			loadFile(props.curFile, false);
@@ -329,7 +327,6 @@ class Viewer extends hxd.App {
 		var mat = new h3d.mat.MeshMaterial(t);
 		loadTexture(textureName, mat);
 		mat.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
-		mat.mainPass.culling = Both;
 		mat.mainPass.blend(SrcAlpha, OneMinusSrcAlpha);
 		for( p in matData.getAll("Properties70.P") )
 			if( p.props[0].toString() == "TransparencyFactor" && p.props[4].toFloat() < 0.999 ) {
@@ -349,8 +346,7 @@ class Viewer extends hxd.App {
 			if( texBasePath.join("/") != fileBasePath.join("/") ) {
 				fileBasePath.push(texFile);
 				loadTexture(fileBasePath.join("/"), mat, handleAlpha);
-			} else
-				mat.mainPass.culling = None;
+			}
 		}
 		if( textureName.split(".").pop().toLowerCase() == "png" && handleAlpha ) {
 			var loader = new flash.net.URLLoader();
@@ -368,8 +364,6 @@ class Viewer extends hxd.App {
 				}
 				t.resize(size.width, size.height);
 				t.uploadPixels(new hxd.Pixels(size.width,size.height,pixels,BGRA));
-				mat.mainPass.culling = None;
-				if( !t.flags.has(IsNPOT) ) t.wrap = Repeat;
 			});
 			loader.load(new flash.net.URLRequest(textureName));
 		} else {
@@ -379,8 +373,6 @@ class Viewer extends hxd.App {
 				var bmp = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;
 				t.resize(bmp.width, bmp.height);
 				t.uploadBitmap(hxd.BitmapData.fromNative(bmp));
-				mat.mainPass.culling = None;
-				if( !t.flags.has(IsNPOT) ) t.wrap = Repeat;
 			});
 			loader.load(new flash.net.URLRequest(textureName));
 		}
@@ -452,13 +444,6 @@ class Viewer extends hxd.App {
 				return t;
 			});
 
-			for( m in obj.getMaterials() ) {
-				var t = m.mainPass.getShader(h3d.shader.Texture);
-				m.mainPass.culling = None;
-				if( t != null) t.killAlpha = true;
-				if( m.mainPass.blendDst == Zero ) m.mainPass.blend(SrcAlpha, OneMinusSrcAlpha);
-			}
-
 		} else {
 
 			curFbx = new hxd.fmt.fbx.Library();
@@ -491,10 +476,6 @@ class Viewer extends hxd.App {
 
 		setMaterial();
 		setAnim();
-
-		for( m in obj.getMaterials() )
-			m.shadows = true;
-
 		showChecker(props.checker);
 
 		save();
@@ -580,8 +561,20 @@ class Viewer extends hxd.App {
 	}
 
 	function setMaterial( ?o : h3d.scene.Object ) {
-		if( o == null )
+		if( o == null ) {
 			o = obj;
+
+			var v = props.lights ? 1 : 0;
+			light.color.set(v, v, v, 1);
+			var v = props.lights ? 0.5 : 1;
+			s3d.lightSystem.ambientLight.set(v, v, v, 1);
+
+			var shadows = Std.instance(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
+			shadows.power = 10;
+			var v = props.lights ? 0.2 : 1;
+			shadows.color.set(v, v, v, 1);
+		}
+
 		if( o.isMesh() ) {
 			var m = o.toMesh();
 			var materials = [m.material];
@@ -591,7 +584,6 @@ class Viewer extends hxd.App {
 				if( m == null ) continue;
 				if( m.texture != null )
 					m.texture.filter = props.smoothing ? Linear : Nearest;
-				m.mainPass.enableLights = props.lights;
 			}
 			var s = Std.instance(o, h3d.scene.Skin);
 			if( s != null )

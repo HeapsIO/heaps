@@ -15,6 +15,7 @@ class Writer {
 		switch( p ) {
 		case CameraFOVY(v):
 			out.writeFloat(v);
+		case HasMaterialFlags:
 		}
 	}
 
@@ -133,6 +134,8 @@ class Writer {
 			out.writeByte(m.blendMode.getIndex());
 			out.writeByte(m.culling.getIndex());
 			writeFloat(m.killAlpha == null ? 1 : m.killAlpha);
+			if( m.props != null && m.props.indexOf(HasMaterialFlags) >= 0 )
+				out.writeInt32(m.flags.toInt());
 		}
 
 		out.writeInt32(d.models.length);

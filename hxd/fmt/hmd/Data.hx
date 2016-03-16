@@ -40,6 +40,7 @@ typedef Index<T> = Int;
 
 enum Property<T> {
 	CameraFOVY( v : Float ) : Property<Float>;
+	HasMaterialFlags;
 }
 
 typedef Properties = Null<Array<Property<Dynamic>>>;
@@ -117,13 +118,32 @@ class Geometry {
 	}
 }
 
+enum MaterialFlag {
+	HasLighting;
+	CastShadows;
+	ReceiveShadows;
+	TextureWrap;
+	IsVolumeDecal;
+}
+
 class Material {
+
+	public static var DEFAULT_FLAGS = {
+		var f = new haxe.EnumFlags();
+		f.set(HasLighting);
+		f.set(CastShadows);
+		f.set(ReceiveShadows);
+		f;
+	}
+
 	public var name : String;
 	public var props : Properties;
 	public var diffuseTexture : Null<String>;
 	public var blendMode : h3d.mat.BlendMode;
 	public var culling : h3d.mat.Data.Face;
 	public var killAlpha : Null<Float>;
+	public var flags : haxe.EnumFlags<MaterialFlag>;
+
 	public function new() {
 	}
 }

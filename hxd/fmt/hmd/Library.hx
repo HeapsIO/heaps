@@ -253,7 +253,7 @@ class Library {
 		return p;
 	}
 
-	function makeMaterial( mid : Int, loadTexture : String -> h3d.mat.Texture ) {
+	function makeMaterial( model : Model, mid : Int, loadTexture : String -> h3d.mat.Texture ) {
 		var m = header.materials[mid];
 		var mat = new h3d.mat.MeshMaterial();
 		mat.name = m.name;
@@ -267,6 +267,17 @@ class Library {
 			var t = mat.mainPass.getShader(h3d.shader.Texture);
 			t.killAlpha = true;
 			t.killAlphaThreshold = m.killAlpha;
+		}
+		if( m.props != null && m.props.indexOf(HasMaterialFlags) >= 0 ) {
+			if( m.flags.has(HasLighting) ) mat.mainPass.enableLights = true;
+			if( m.flags.has(CastShadows) ) mat.castShadows = true;
+			if( m.flags.has(ReceiveShadows) ) mat.receiveShadows = true;
+			if( m.flags.has(IsVolumeDecal) ) {
+				var s = h3d.mat.Defaults.makeVolumeDecal(header.geometries[model.geometry].bounds);
+				mat.mainPass.addShader(s);
+			}
+			if( m.flags.has(TextureWrap) )
+				mat.texture.wrap = Repeat;
 		}
 		return mat;
 	}
@@ -338,11 +349,11 @@ class Library {
 				if( m.skin != null ) {
 					var skinData = makeSkin(m.skin);
 					skinData.primitive = prim;
-					obj = new h3d.scene.Skin(skinData, [for( m in m.materials ) makeMaterial(m, loadTexture)]);
+					obj = new h3d.scene.Skin(skinData, [for( mat in m.materials ) makeMaterial(m, mat, loadTexture)]);
 				} else if( m.materials.length == 1 )
-					obj = new h3d.scene.Mesh(prim, makeMaterial(m.materials[0],loadTexture));
+					obj = new h3d.scene.Mesh(prim, makeMaterial(m, m.materials[0],loadTexture));
 				else
-					obj = new h3d.scene.MultiMaterial(prim, [for( m in m.materials ) makeMaterial(m,loadTexture)]);
+					obj = new h3d.scene.MultiMaterial(prim, [for( mat in m.materials ) makeMaterial(m, mat, loadTexture)]);
 			}
 			obj.name = m.name;
 			obj.defaultTransform = m.position.toMatrix();

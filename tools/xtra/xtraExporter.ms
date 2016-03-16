@@ -90,3 +90,34 @@ macroScript XtraExport Category:"Shiro" tooltip:"Add Extra Infos" buttontext:"XT
 )
 
 
+plugin material heapsMaterial
+name:"Heaps Material"
+classID:#(0x304e3c9e, 0x1ec538a1)
+extends:Standard version:1
+(
+  parameters heaps rollout:params (
+	  _blend type:#integer default:1 ui:ui_blend
+	  _lighting type:#boolean default:true ui:ui_lighting
+	  _shadows type:#integer default:1 ui:ui_shadows
+	  _killAlpha type:#boolean default:false ui:ui_killAlpha
+	  _killAlphaThreshold type:#float default:1 ui:ui_killAlphaThreshold
+	  _twoSided type:#boolean default:false ui:ui_twoSided
+	  _decal type:#boolean default:false ui:ui_decal
+	  _wrap type:#boolean default:false ui:ui_wrap
+  )
+  
+  rollout params "Heaps Parameters"
+  (
+	  dropdownlist ui_blend "Blend Mode" items:#("Auto","None","Alpha","Add","SoftAdd") width:80
+	  dropdownlist ui_shadows "Shadows" items:#("Active","None","Receive","Cast") width:80 offset:[100,-45]
+	  checkbox ui_lighting "Use Lighting"
+	  checkbox ui_twoSided "Two Sided"
+	  checkbox ui_killAlpha "Kill Alpha"
+	  spinner ui_killAlphaThreshold "Threshold" type:#float align:#left range:[0,1,0] fieldWidth:30 offset:[100,-19]
+	  checkbox ui_wrap "Texture Wrap"
+	  checkbox ui_decal "Volume Decal"
+  )
+  on create do
+  (
+  )
+)
