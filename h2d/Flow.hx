@@ -394,6 +394,7 @@ class Flow extends Sprite {
 					var p = properties[i];
 					if( p.isAbsolute ) continue;
 					var c = childs[i];
+					if( !c.visible ) continue;
 					var a = p.valign != null ? p.valign : valign;
 					c.y = y + p.offsetY + p.paddingTop;
 					switch( a ) {
@@ -411,6 +412,7 @@ class Flow extends Sprite {
 				var p = properties[i];
 				if( p.isAbsolute ) continue;
 				var c = childs[i];
+				if( !c.visible ) continue;
 				var b = c.getSize(tmpBounds);
 				var br = false;
 				p.calculatedWidth = b.xMax + p.paddingLeft + p.paddingRight;
@@ -441,7 +443,7 @@ class Flow extends Sprite {
 			var midSpace = 0;
 			for( i in 0...childs.length ) {
 				var p = properties[i];
-				if( p.isAbsolute ) continue;
+				if( p.isAbsolute || !childs[i].visible ) continue;
 				if( p.isBreak ) {
 					xmin = startX;
 					xmax = endX;
@@ -463,7 +465,7 @@ class Flow extends Sprite {
 						var remSize = p.calculatedWidth;
 						for( j in i + 1...childs.length ) {
 							var p = properties[i];
-							if( p.isAbsolute ) continue;
+							if( p.isAbsolute || !childs[j].visible ) continue;
 							if( p.isBreak ) break;
 							remSize += horitontalSpacing + p.calculatedWidth;
 						}
@@ -504,6 +506,7 @@ class Flow extends Sprite {
 					var p = properties[i];
 					if( p.isAbsolute ) continue;
 					var c = childs[i];
+					if( !c.visible ) continue;
 					var a = p.halign != null ? p.halign : halign;
 					c.x = x + p.offsetX + p.paddingLeft;
 					switch( a ) {
@@ -522,6 +525,8 @@ class Flow extends Sprite {
 				if( p.isAbsolute ) continue;
 
 				var c = childs[i];
+				if( !c.visible ) continue;
+
 				var b = c.getSize(tmpBounds);
 				var br = false;
 
@@ -556,7 +561,7 @@ class Flow extends Sprite {
 			var midSpace = 0;
 			for( i in 0...childs.length ) {
 				var p = properties[i];
-				if( p.isAbsolute ) continue;
+				if( p.isAbsolute || !childs[i].visible ) continue;
 				if( p.isBreak ) {
 					ymin = startY;
 					ymax = endY;
@@ -578,7 +583,7 @@ class Flow extends Sprite {
 						var remSize = p.calculatedHeight;
 						for( j in i + 1...childs.length ) {
 							var p = properties[i];
-							if( p.isAbsolute ) continue;
+							if( p.isAbsolute || !childs[j].visible ) continue;
 							if( p.isBreak ) break;
 							remSize += verticalSpacing + p.calculatedHeight;
 						}
