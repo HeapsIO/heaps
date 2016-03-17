@@ -51,7 +51,7 @@
 	}
 
 
-	#scene {
+	.panel.scene {
 
 		.scrollable {
 			height:100%;
@@ -96,14 +96,14 @@
 			}
 		}
 
-		#scontent.masked {
+		.elt.root.masked {
 			li.hidden, li.culled {
 				display : none;
 			}
 		}
 	}
 
-	#scene > ul.buttons {
+	.panel.scene > ul.buttons {
 			color : #AAA;
 			background-color : #333;
 			border-right : 1px solid black;
@@ -124,11 +124,8 @@
 			}
 		}
 
-	#scene > ul.elt {
+	.panel.scene > ul.elt {
 		padding : 5px;
-	}
-
-	#props {
 	}
 
 	table.props {

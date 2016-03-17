@@ -1,6 +1,6 @@
-package hxd.net;
+package hxd.inspect;
 import cdb.jq.JQuery;
-import hxd.net.Property;
+import hxd.inspect.Property;
 
 private typedef History = { path : String, oldV : Dynamic, newV : Dynamic };
 
@@ -192,16 +192,6 @@ class PropInspector extends cdb.jq.Client {
 		};
 		refreshProps();
 		return t;
-	}
-
-	public function createPanel( name : String, ?dock : cdb.jq.Message.DockDirection, ?size) {
-		var panel = J('<div>');
-		panel.addClass("panel");
-		panel.attr("caption", ""+name);
-		panel.appendTo(j);
-		if( dock == null ) dock = Fill;
-		panel.dock(root, dock, size);
-		return panel;
 	}
 
 	public function sameValue( v1 : Dynamic, v2 : Dynamic ) {
@@ -510,14 +500,14 @@ class PropInspector extends cdb.jq.Client {
 					else {
 						jprop.html(StringTools.htmlEscape("" + t) + " <button>View</button>");
 						jprop.find("button").click(function(_) {
-							var p = createPanel("" + t);
-							p.html("Loading...");
+							var p = new Panel(null, "" + t);
+							p.j.html("Loading...");
 							haxe.Timer.delay(function() {
 								var bmp = t.capturePixels();
 								var png = bmp.toPNG();
 								bmp.dispose();
 								var pngBase64 = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")).encodeBytes(png).toString();
-								p.html('<img src="data:image/png;base64,$pngBase64" style="background:#696969"/>');
+								p.j.html('<img src="data:image/png;base64,$pngBase64" style="background:#696969"/>');
 							},0);
 						});
 					}

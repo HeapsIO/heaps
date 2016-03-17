@@ -51,54 +51,54 @@
 .jqpage ul.toolbar li.active, .dialog-floating ul.toolbar li.active {
 	color : white;
 }
-.jqpage #scene .scrollable, .dialog-floating #scene .scrollable {
+.jqpage .panel.scene .scrollable, .dialog-floating .panel.scene .scrollable {
 	height : 100%;
 	overflow : auto;
 }
-.jqpage #scene ul.elt.root, .dialog-floating #scene ul.elt.root {
+.jqpage .panel.scene ul.elt.root, .dialog-floating .panel.scene ul.elt.root {
 	padding : 5px;
 }
-.jqpage #scene ul.elt, .dialog-floating #scene ul.elt {
+.jqpage .panel.scene ul.elt, .dialog-floating .panel.scene ul.elt {
 	background-color : transparent;
 }
-.jqpage #scene ul.elt li, .dialog-floating #scene ul.elt li {
+.jqpage .panel.scene ul.elt li, .dialog-floating .panel.scene ul.elt li {
 	cursor : pointer;
 }
-.jqpage #scene ul.elt li>i, .dialog-floating #scene ul.elt li>i {
+.jqpage .panel.scene ul.elt li>i, .dialog-floating .panel.scene ul.elt li>i {
 	text-align : center;
 	width : 16px;
 }
-.jqpage #scene ul.elt li>.content, .dialog-floating #scene ul.elt li>.content {
+.jqpage .panel.scene ul.elt li>.content, .dialog-floating .panel.scene ul.elt li>.content {
 	margin-left : 2px;
 	display : inline-block;
 	zoom : 1;
 	*display : inline;
 	height : 18px;
 }
-.jqpage #scene ul.elt li .content:hover, .dialog-floating #scene ul.elt li .content:hover {
+.jqpage .panel.scene ul.elt li .content:hover, .dialog-floating .panel.scene ul.elt li .content:hover {
 	background-color : #eee;
 }
-.jqpage #scene ul.elt ul, .dialog-floating #scene ul.elt ul {
+.jqpage .panel.scene ul.elt ul, .dialog-floating .panel.scene ul.elt ul {
 	padding-left : 20px;
 }
-.jqpage #scene ul.elt li.selected>.content, .dialog-floating #scene ul.elt li.selected>.content {
+.jqpage .panel.scene ul.elt li.selected>.content, .dialog-floating .panel.scene ul.elt li.selected>.content {
 	background-color : #eee;
 }
-.jqpage #scene ul.elt li.hidden, .dialog-floating #scene ul.elt li.hidden {
+.jqpage .panel.scene ul.elt li.hidden, .dialog-floating .panel.scene ul.elt li.hidden {
 	opacity : 0.5;
 	filter : alpha(opacity=50);
 	zoom : 1;
 }
-.jqpage #scene ul.elt li.culled>.content, .dialog-floating #scene ul.elt li.culled>.content {
+.jqpage .panel.scene ul.elt li.culled>.content, .dialog-floating .panel.scene ul.elt li.culled>.content {
 	opacity : 0.5;
 	filter : alpha(opacity=50);
 	zoom : 1;
 	font-style : italic;
 }
-.jqpage #scene #scontent.masked li.hidden, .jqpage #scene #scontent.masked li.culled, .dialog-floating #scene #scontent.masked li.hidden, .dialog-floating #scene #scontent.masked li.culled {
+.jqpage .panel.scene .elt.root.masked li.hidden, .jqpage .panel.scene .elt.root.masked li.culled, .dialog-floating .panel.scene .elt.root.masked li.hidden, .dialog-floating .panel.scene .elt.root.masked li.culled {
 	display : none;
 }
-.jqpage #scene>ul.buttons, .dialog-floating #scene>ul.buttons {
+.jqpage .panel.scene>ul.buttons, .dialog-floating .panel.scene>ul.buttons {
 	color : #AAA;
 	background-color : #333;
 	border-right : 1px solid black;
@@ -106,21 +106,21 @@
 	width : 25px;
 	height : 100%;
 }
-.jqpage #scene>ul.buttons li, .dialog-floating #scene>ul.buttons li {
+.jqpage .panel.scene>ul.buttons li, .dialog-floating .panel.scene>ul.buttons li {
 	padding : 5px;
 	display : inline-block;
 	zoom : 1;
 	*display : inline;
 	border : 1px solid #555;
 }
-.jqpage #scene>ul.buttons li:hover, .dialog-floating #scene>ul.buttons li:hover {
+.jqpage .panel.scene>ul.buttons li:hover, .dialog-floating .panel.scene>ul.buttons li:hover {
 	background-color : #555;
 	border-color : white;
 }
-.jqpage #scene>ul.buttons li.active, .dialog-floating #scene>ul.buttons li.active {
+.jqpage .panel.scene>ul.buttons li.active, .dialog-floating .panel.scene>ul.buttons li.active {
 	color : white;
 }
-.jqpage #scene>ul.elt, .dialog-floating #scene>ul.elt {
+.jqpage .panel.scene>ul.elt, .dialog-floating .panel.scene>ul.elt {
 	padding : 5px;
 }
 .jqpage table.props tr.pgroup, .dialog-floating table.props tr.pgroup {
