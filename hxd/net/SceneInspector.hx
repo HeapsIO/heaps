@@ -16,32 +16,24 @@ class Node {
 
 	public var name(default,set) : String;
 	public var icon(default, set) : String;
-	public var parent(default, null) : Node;
+	public var parent(default, set) : Node;
 
 	public var props : Void -> Array<Property>;
 
+	var root : JQuery;
 	var childs : Array<Node>;
 	var j : cdb.jq.JQuery;
 	var jchild : cdb.jq.JQuery;
 
 	public function new( root : JQuery, ?parent) {
 
+		this.root = root;
 		j = root.query("<li>");
 		j.html('<i/><div class="content"></div>');
 
 		childs = [];
 
 		this.parent = parent;
-		if( parent != null ) {
-			if( parent.jchild == null ) {
-				parent.jchild = root.query("<ul>");
-				parent.jchild.addClass("elt");
-				parent.jchild.appendTo(parent.j);
-			}
-			j.appendTo(parent.jchild);
-			parent.childs.push(this);
-		} else
-			j.appendTo(root);
 
 		j.children("i").click(function(_) {
 			if( childs.length > 0 ) {
@@ -54,6 +46,28 @@ class Node {
 			j.addClass("selected");
 			onSelect();
 		});
+	}
+
+	function set_parent(p:Node) {
+		j.detach();
+		if( parent != null ) {
+			parent.childs.remove(this);
+			if( parent.jchild.get().numChildren == 0 ) {
+				parent.jchild.remove();
+				parent.jchild = null;
+			}
+		}
+		if( p != null ) {
+			if( p.jchild == null ) {
+				p.jchild = root.query("<ul>");
+				p.jchild.addClass("elt");
+				p.jchild.appendTo(p.j);
+			}
+			j.appendTo(p.jchild);
+			p.childs.push(this);
+		} else
+			j.appendTo(root);
+		return parent = p;
 	}
 
 	public function getPathName() {
@@ -450,7 +464,17 @@ class SceneInspector {
 	@:access(hxd.net.Node)
 	function syncRec( o : h3d.scene.Object, p : SceneObject ) {
 		var so = sceneObjects[scenePosition];
-		if( so == null || so.o != o || so.parent != p ) {
+		if( so != null && so.o != o ) {
+			for( i in scenePosition + 1...sceneObjects.length )
+				if( sceneObjects[i].o == o ) {
+					var tmp = sceneObjects[i];
+					sceneObjects[i] = so;
+					sceneObjects[scenePosition] = tmp;
+					so = tmp;
+					break;
+				}
+		}
+		if( so == null || so.o != o ) {
 			so = new SceneObject(J("#scontent"), o, p);
 			so.name = o.name != null ? o.name : o.toString();
 			sceneObjects.insert(scenePosition, so);
@@ -461,6 +485,8 @@ class SceneInspector {
 			if( p == null )
 				rootNodes.push(so);
 		}
+
+		if( so.parent != p ) so.parent = p;
 
 		if( o.visible != so.visible ) {
 			so.visible = o.visible;
@@ -481,8 +507,6 @@ class SceneInspector {
 			for( o in so.childs )
 				o.remove();
 		}
-
-
 	}
 
 	function onChange( path : String, oldV : Dynamic, newV : Dynamic ) {
