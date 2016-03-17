@@ -67,6 +67,7 @@ class PropInspector extends cdb.jq.Client {
 	}
 
 	function connect() {
+		if( sock == null ) return; // was closed
 		sock.close();
 		sock.connect(host, port, function() {
 			connected = true;
