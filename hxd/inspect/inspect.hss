@@ -128,7 +128,8 @@
 		padding : 5px;
 	}
 
-	table.props {
+	table.iprops {
+
 		tr.pgroup {
 			cursor : pointer;
 			th {

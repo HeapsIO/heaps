@@ -16,7 +16,7 @@ class Node {
 	}
 
 	function getJRoot() {
-		return @:privateAccess SceneInspector.current.jroot;
+		return @:privateAccess Inspector.current.jroot;
 	}
 
 	function initContent() {

@@ -3,7 +3,7 @@ import cdb.jq.JQuery;
 import hxd.inspect.Property;
 
 private class DrawEvent implements h3d.IDrawable {
-	var i : SceneInspector;
+	var i : Inspector;
 	public function new(i) {
 		this.i = i;
 	}
@@ -43,15 +43,15 @@ class Tool {
 	}
 }
 
-class SceneInspector {
+class Inspector {
 
 	static var CSS = hxd.res.Embed.getFileContent("hxd/inspect/inspect.css");
-	static var current : SceneInspector;
+	static var current : Inspector;
 
 	public var scene(default, set) : h3d.scene.Scene;
 	public var connected(get, never): Bool;
 
-	var inspect : PropInspector;
+	var inspect : PropManager;
 	var jroot : JQuery;
 	var event : DrawEvent;
 	var oldLog : Dynamic -> haxe.PosInfos -> Void;
@@ -75,8 +75,8 @@ class SceneInspector {
 		savedFile = "sceneProps.js";
 		state = new Map();
 		oldLog = haxe.Log.trace;
-		//haxe.Log.trace = onTrace;
-		inspect = new PropInspector(host, port);
+		haxe.Log.trace = onTrace;
+		inspect = new PropManager(host, port);
 		inspect.resolveProps = resolveProps;
 		inspect.onChange = onChange;
 		inspect.handleKey = onKey;
@@ -162,7 +162,7 @@ class SceneInspector {
 				vstr = [for( v in pos.customParams ) Std.string(v)].join(",");
 			} else
 				vstr = Std.string(v);
-			J("<pre>").addClass("line").text(pos.fileName+"(" + pos.lineNumber + ") : " + vstr).appendTo(J("#log"));
+			J("<pre>").addClass("line").text(pos.fileName+"(" + pos.lineNumber + ") : " + vstr).appendTo(logPanel.content);
 		}
 	}
 
@@ -301,7 +301,7 @@ class SceneInspector {
 		}
 	}
 
-	function fillProps( n : TreeNode ) {
+	public function editProps( n : Node ) {
 		var t = inspect.makeProps(n.getFullPath(), n.props());
 		propsPanel.j.text("");
 		propsPanel.parent = n;

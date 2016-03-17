@@ -24,7 +24,7 @@ private class SceneObject extends TreeNode {
 		var idx = Lambda.indexOf(@:privateAccess o.parent.childs, o);
 		var count = 0;
 		for( i in 0...idx )
-			if( objectName(o) == name )
+			if( objectName(o.parent.getChildAt(i)) == name )
 				count++;
 		if( count > 0 )
 			name += "@" + count;
@@ -82,7 +82,7 @@ class ScenePanel extends Panel {
 		n.icon = icon;
 		n.props = getProps;
 		if( getProps != null )
-			n.onSelect = function() @:privateAccess SceneInspector.current.fillProps(n);
+			n.onSelect = function() inspect.editProps(n);
 		return n;
 	}
 
@@ -126,7 +126,7 @@ class ScenePanel extends Panel {
 			var icon = getObjectIcon(o);
 			so.icon = icon == null ? "circle-o" : getObjectIcon(o);
 			so.props = function() return getObjectProps(o);
-			so.onSelect = function() @:privateAccess SceneInspector.current.fillProps(so);
+			so.onSelect = function() inspect.editProps(so);
 		}
 
 		if( so.parent != p ) so.parent = p;

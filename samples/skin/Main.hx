@@ -33,7 +33,7 @@ class Main extends hxd.App {
 		// this is an example for connecting to scene inspector
 		// and enable extra properties
 		// this requires to compile with -lib castle and run CDB
-		var i = new hxd.net.SceneInspector(s3d);
+		var i = new hxd.inspect.Inspector(s3d);
 
 		var delta = s3d.camera.pos.sub(s3d.camera.target);
 		delta.z = 0;
@@ -41,7 +41,7 @@ class Main extends hxd.App {
 		var dist = delta.length();
 
 		// add node to scene graph
-		var n = i.addNode("Rotation", "repeat", function() {
+		var n = i.scenePanel.addNode("Rotation", "repeat", function() {
 			return [
 				PFloat("v", function() return angle, function(v) {
 					angle = v;
@@ -52,14 +52,15 @@ class Main extends hxd.App {
 					var j = i.J("<button>");
 					j.text("Click Me!");
 					j.click(function(_) {
-						var j = i.createPanel("New Panel");
-						j.text("Nothing to see there.");
+						var j = new hxd.inspect.Panel(null,"New Panel");
+						j.content.text("Nothing to see there.");
+						j.show();
 					});
 					return j;
 				})
 			];
 		});
-		i.addNode("Test", "", n);
+		i.scenePanel.addNode("Test", "", n);
 		i.addTool("Exit", "bomb", function() {
 			hxd.System.exit();
 		});

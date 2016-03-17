@@ -123,10 +123,10 @@
 .jqpage .panel.scene>ul.elt, .dialog-floating .panel.scene>ul.elt {
 	padding : 5px;
 }
-.jqpage table.props tr.pgroup, .dialog-floating table.props tr.pgroup {
+.jqpage table.iprops tr.pgroup, .dialog-floating table.iprops tr.pgroup {
 	cursor : pointer;
 }
-.jqpage table.props tr.pgroup th, .dialog-floating table.props tr.pgroup th {
+.jqpage table.iprops tr.pgroup th, .dialog-floating table.iprops tr.pgroup th {
 	text-align : left;
 	background-color : #555;
 	color : #bbb;
@@ -134,33 +134,33 @@
 	padding : 2px 4px;
 	cursor : pointer;
 }
-.jqpage table.props tr.disable, .dialog-floating table.props tr.disable {
+.jqpage table.iprops tr.disable, .dialog-floating table.iprops tr.disable {
 	opacity : 0.5;
 	filter : alpha(opacity=50);
 	zoom : 1;
 }
-.jqpage table.props td, .dialog-floating table.props td {
+.jqpage table.iprops td, .dialog-floating table.iprops td {
 	height : 24px;
 }
-.jqpage table.props td input, .jqpage table.props td select, .dialog-floating table.props td input, .dialog-floating table.props td select {
+.jqpage table.iprops td input, .jqpage table.iprops td select, .dialog-floating table.iprops td input, .dialog-floating table.iprops td select {
 	padding-left : 0px;
 	height : 18px;
 	border : 1px solid #888;
 	width : 100%;
 }
-.jqpage table.props tr.active td, .dialog-floating table.props tr.active td {
+.jqpage table.iprops tr.active td, .dialog-floating table.iprops tr.active td {
 	font-weight : bold;
 }
-.jqpage table.props tr.ptexture img, .dialog-floating table.props tr.ptexture img {
+.jqpage table.iprops tr.ptexture img, .dialog-floating table.iprops tr.ptexture img {
 	max-width : 128px;
 	max-height : 128px;
 }
-.jqpage table.props tr.pcolor td .modal, .dialog-floating table.props tr.pcolor td .modal {
+.jqpage table.iprops tr.pcolor td .modal, .dialog-floating table.iprops tr.pcolor td .modal {
 	opacity : 0;
 	filter : alpha(opacity=0);
 	zoom : 1;
 }
-.jqpage table.props tr.pcolor td .color, .dialog-floating table.props tr.pcolor td .color {
+.jqpage table.iprops tr.pcolor td .color, .dialog-floating table.iprops tr.pcolor td .color {
 	display : inline-block;
 	zoom : 1;
 	*display : inline;

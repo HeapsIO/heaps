@@ -32,7 +32,7 @@ class StatsPanel extends Panel {
 				<tr>
 					<th>
 						<span>Total</span>
-						<div id="totMemCount"></div>
+						<span id="totMemCount"></span>
 					</th>
 					<td id="totMem"></td>
 				</tr>
@@ -40,7 +40,7 @@ class StatsPanel extends Panel {
 					<th class="button hidden">
 						<i class="fa fa-arrow-right"/>
 						<span id="bufMemTitle">Buffers</span>
-						<div id="bufMemCount"></div>
+						<span id="bufMemCount"></span>
 					</th>
 					<td id="bufMem"></td>
 				</tr>
@@ -48,7 +48,7 @@ class StatsPanel extends Panel {
 					<th class="button hidden">
 						<i class="fa fa-arrow-right"/>
 						<span id="texMemTitle">Textures</span>
-						<div id="texMemCount"></div>
+						<span id="texMemCount"></span>
 					</th>
 					<td id="texMem"></td>
 				</tr>
@@ -119,15 +119,19 @@ class StatsPanel extends Panel {
 				var elements = [for( k in m ) k];
 				elements.sort(function(e1, e2) return e1.mem - e2.mem);
 				for( e in elements) {
-					e.mem >>= 10;
 					var newElement = j.query("<tr>");
 					newElement.addClass("subMem");
 					newElement.addClass("detail_" + id);
-					newElement.html("<th>" + e.name + "<div>[" + e.count + "]</div></th><td>" + (e.mem > 1024 ? Math.fmt(e.mem / 1024) + " MB" : e.mem + " KB") + "</td>");
+					newElement.html("<th>" + e.name + "<span>[" + e.count + "]</span></th><td>" + fmtSize(e.mem) + "</td>");
 					newElement.insertAfter(button.parent());
 				}
 			}
 		#end
+	}
+
+	function fmtSize( size : Float ) {
+		size /= 1024;
+		return size > 1024 ? Math.fmt(size / 1024) + " MB" : Math.ceil(size) + " KB";
 	}
 
 	inline function numberFormat(v : Int) {
@@ -161,14 +165,14 @@ class StatsPanel extends Panel {
 
 		var stats = engine.mem.stats();
 		var idx = (stats.totalMemory - (stats.textureMemory + stats.managedMemory));
-		var sum : Float = (idx + stats.managedMemory) >> 10;
-		var freeMem : Float = stats.freeManagedMemory >> 10;
-		var totTex : Float = stats.textureMemory >> 10;
-		var totalMem : Float = stats.totalMemory >> 10;
+		var sum : Float = idx + stats.managedMemory;
+		var freeMem : Float = stats.freeManagedMemory;
+		var totTex : Float = stats.textureMemory;
+		var totalMem : Float = stats.totalMemory;
 
-		bufMem.text((sum > 1024 ?  Math.fmt(sum / 1024) + " MB" : totTex + " KB") + " (" + (freeMem > 1024 ?  Math.fmt(freeMem / 1024) + " MB" : freeMem + " KB") + " free)");
-		texMem.text(totTex > 1024 ?  Math.fmt(totTex / 1024) + " MB" : totTex + " KB");
-		totMem.text(totalMem > 1024 ?  Math.fmt(totalMem / 1024) + " MB" : totTex + " KB");
+		bufMem.text(fmtSize(sum) + " (" + fmtSize(freeMem) + " free)");
+		texMem.text(fmtSize(totTex));
+		totMem.text(fmtSize(totalMem));
 		bufMemTitle.text("Buffers");
 		bufMemCount.text("[" + Std.string(stats.bufferCount) + "]");
 		texMemTitle.text("Textures");

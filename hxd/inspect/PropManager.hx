@@ -4,7 +4,7 @@ import hxd.inspect.Property;
 
 private typedef History = { path : String, oldV : Dynamic, newV : Dynamic };
 
-class PropInspector extends cdb.jq.Client {
+class PropManager extends cdb.jq.Client {
 
 	public var host : String = "127.0.0.1";
 	public var port = 6669;
@@ -184,7 +184,7 @@ class PropInspector extends cdb.jq.Client {
 
 	public function makeProps( basePath : String, props : Array<Property>, expandLevel = 1 ) {
 		var t = J("<table>");
-		t.addClass("props");
+		t.addClass("iprops");
 		refreshProps = function() {
 			t.text("");
 			for( p in props )
