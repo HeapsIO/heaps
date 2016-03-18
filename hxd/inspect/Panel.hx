@@ -1,8 +1,18 @@
 package hxd.inspect;
 
+enum DockDirection {
+	Left;
+	Right;
+	Up;
+	Down;
+	Fill;
+}
+
 class Panel extends Node {
 
 	var inspect : Inspector;
+	var panel : cdb.jq.JQuery;
+	var saveDock : { align : DockDirection, size : Float, into : Panel };
 	public var visible(default, null) : Bool;
 	public var caption(default, set) : String;
 	public var content : cdb.jq.JQuery;
@@ -15,17 +25,41 @@ class Panel extends Node {
 			inspect.panels.push(this);
 			inspect.rootNodes.push(this);
 		}
-		if( name == null ) onClose = remove;
 	}
 
-	public function dock( to : cdb.jq.JQuery, align : cdb.jq.Message.DockDirection, ?size : Float ) {
-		j.dock(to.get(), align, size);
-		j.bind("panelclose", function(_) onClose());
+	public function dock( align : DockDirection, ?size : Float, ?into : Panel ) {
+		undock();
+		saveDock = { align : align, size : size, into : into };
+		panel = j.query("<panel>");
+		panel.appendTo(into == null || into.panel == null ? @:privateAccess inspect.jroot : into.panel);
+		if( caption != null ) panel.attr("caption", caption);
+		panel.attr("docksize", "" + size);
+		panel.attr("dock", "" + align);
+		panel.bind("paneldock", function(e) {
+			if( e.target == null ) {
+				visible = false;
+				return;
+			}
+		});
 		visible = true;
+		j.appendTo(panel);
+	}
+
+	override function dispose() {
+		undock();
+		super.dispose();
+	}
+
+	public function undock() {
+		if( panel == null ) return;
+		j.detach();
+		panel.removeAttr("dock");
+		panel.dispose();
+		panel = null;
 	}
 
 	function set_caption(c) {
-		j.attr("caption", c);
+		if( panel != null ) panel.attr("caption", c);
 		return caption = c;
 	}
 
@@ -60,14 +94,15 @@ class Panel extends Node {
 		return parent = p;
 	}
 
-	public dynamic function onClose() {
-		visible = false;
-		trace("TODO:UNDOCK");
-	}
-
 	public function show() {
-		trace("TODO:REDOCK");
-		visible = true;
+		if( visible ) return;
+		var old = saveDock;
+		if( saveDock != null && saveDock.into != null && saveDock.into.visible )
+			dock(saveDock.align, saveDock.size, saveDock.into);
+		else {
+			dock(Fill);
+			saveDock = old;
+		}
 	}
 
 	public function sync() {

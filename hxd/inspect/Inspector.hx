@@ -106,7 +106,7 @@ class Inspector {
 		addTool("Statistics", "bar-chart", function() {
 			if( statsPanel == null ) {
 				statsPanel = new StatsPanel();
-				statsPanel.dock(jroot, Right, 0.35);
+				statsPanel.dock(Right, 0.35);
 			}
 			statsPanel.show();
 		}, "Open statistics");
@@ -192,9 +192,9 @@ class Inspector {
 		propsPanel = new Panel("props","Properties");
 		logPanel = new Panel("log", "Log");
 
-		scenePanel.dock(jroot, Left, 0.2);
-		logPanel.dock(jroot, Down, 0.3);
-		propsPanel.dock(scenePanel.j, Down, 0.5);
+		scenePanel.dock(Left, 0.2);
+		logPanel.dock(Down, 0.3);
+		propsPanel.dock(Down, 0.5, scenePanel);
 	}
 
 	function load() {

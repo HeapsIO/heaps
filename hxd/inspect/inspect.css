@@ -3,6 +3,10 @@
 	-moz-user-select : none;
 	-webkit-user-select : none;
 }
+.jqpage panel, .dialog-floating panel {
+	display : block;
+	overflow : auto;
+}
 .jqpage pre, .dialog-floating pre {
 	user-select : text;
 	-moz-user-select : text;

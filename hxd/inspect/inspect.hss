@@ -4,6 +4,11 @@
 		user-select : none;
 	}
 
+	panel {
+		display:block;
+		overflow:auto;
+	}
+
 	pre {
 		user-select : text;
 		.kwd {
