@@ -36,7 +36,7 @@ class Texture2 extends hxsl.Shader {
 	public function new(?tex) {
 		super();
 		this.texture = tex;
-		this.killAlphaThreshold = h3d.pass.Params.defaultKillAlphaThreshold;
+		this.killAlphaThreshold = h3d.mat.Defaults.defaultKillAlphaThreshold;
 	}
 
 }
