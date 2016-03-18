@@ -71,7 +71,7 @@ class StatsPanel extends Panel {
 
 		#if !debug
 			if(!button.hasClass("hidden")) {
-				var newElement = J("<tr>");
+				var newElement = j.query("<tr>");
 				newElement.addClass("detail_" + id);
 				newElement.html("<th class='debug' colspan='2'>(Debug mode only)</th>");
 				newElement.insertAfter(button.parent());
