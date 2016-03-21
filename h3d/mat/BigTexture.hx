@@ -137,6 +137,8 @@ class BigTexture {
 		var tsize = t.getSize();
 		upload(t, Math.round(et.du * size), Math.round(et.dv * size), tsize.width, tsize.height);
 		// todo : update q.texture & setup watch
+		et.q.texture = t;
+		t.watch(rebuild);
 	}
 
 	function rebuild() {
