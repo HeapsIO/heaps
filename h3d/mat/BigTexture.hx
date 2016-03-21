@@ -2,16 +2,22 @@ package h3d.mat;
 
 class BigTextureElement {
 	public var t : BigTexture;
+	public var q : QuadTree;
 	public var du : Float;
 	public var dv : Float;
 	public var su : Float;
 	public var sv : Float;
-	public function new(t, du, dv, su, sv) {
+	public function new(t, q, du, dv, su, sv) {
 		this.t = t;
+		this.q = q;
 		this.du = du;
 		this.dv = dv;
 		this.su = su;
 		this.sv = sv;
+	}
+
+	public function set(tex : hxd.res.Image) {
+		t.set(tex, this);
 	}
 }
 
@@ -162,7 +168,7 @@ class BigTexture {
 		}
 		q.texture = t;
 		t.watch(rebuild);
-		return new BigTextureElement(this,x / size, y / size, tsize.width / size, tsize.height / size);
+		return new BigTextureElement(this, q, x / size, y / size, tsize.width / size, tsize.height / size);
 	}
 
 	function upload( t : hxd.res.Image, x : Int, y : Int, width : Int, height : Int ) {
