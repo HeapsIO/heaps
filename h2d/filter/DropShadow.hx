@@ -22,13 +22,14 @@ class DropShadow extends Glow {
 		pass.shader.fixedColor.w = alpha;
 		var save = ctx.textures.allocTarget("glowSave", ctx, t.width, t.height, false);
 		h3d.pass.Copy.run(t.getTexture(), save, None);
-		pass.apply(t.getTexture(), ctx.textures.allocTarget("glowTmp", ctx, t.width, t.height, false));
+		pass.apply(save, ctx.textures.allocTarget("glowTmp", ctx, t.width, t.height, false));
 		var dx = Math.round(Math.cos(angle) * distance);
 		var dy = Math.round(Math.sin(angle) * distance);
-		h3d.pass.Copy.run(save, t.getTexture(), Alpha, new h3d.Vector( dx / t.width, dy / t.height) );
-		t.dx = dx;
-		t.dy = dy;
-		return t;
+		h3d.pass.Copy.run(t.getTexture(), save, Alpha, new h3d.Vector( dx / t.width, dy / t.height) );
+		var ret = h2d.Tile.fromTexture(save);
+		ret.dx = dx;
+		ret.dy = dy;
+		return ret;
 	}
 
 }

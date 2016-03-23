@@ -548,13 +548,16 @@ class Sprite {
 		final.dx = xMin;
 		final.dy = yMin;
 		for( f in filters ) {
+			var prev = final;
 			final = f.draw(ctx, final);
 			if( final == null ) {
 				ctx.popTarget();
 				return;
 			}
-			final.dx = xMin;
-			final.dy = yMin;
+			if( final != prev ) {
+				final.dx += xMin;
+				final.dy += yMin;
+			}
 		}
 
 		shader.filterMatrixA.load(oldA);
@@ -562,7 +565,7 @@ class Sprite {
 		@:privateAccess ctx.inFilter = oldF;
 
 		ctx.popTarget();
-		
+
 		ctx.globalAlpha = oldAlpha * alpha;
 		emitTile(ctx, final);
 		ctx.globalAlpha = oldAlpha;
