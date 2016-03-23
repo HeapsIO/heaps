@@ -63,6 +63,7 @@ class Inspector {
 	var rootNodes : Array<Node>;
 
 	public var scenePanel : ScenePanel;
+	public var resPanel : ResPanel;
 	var propsPanel : Panel;
 	var logPanel : Panel;
 	var panelList : Array<{ name : String, create : Void -> Panel, p : Panel } >;
@@ -215,28 +216,30 @@ class Inspector {
 		scenePanel = new ScenePanel("s3d",scene);
 		propsPanel = new Panel("props","Properties");
 		logPanel = new Panel("log", "Log");
+		resPanel = new ResPanel("res", hxd.res.Loader.currentInstance);
 
-		scenePanel.dock(Left, 0.2);
+
+		resPanel.dock(Left, 0.2);
+		scenePanel.dock(Fill, null, resPanel);
 		logPanel.dock(Down, 0.3);
 		propsPanel.dock(Down, 0.5, scenePanel);
+
 		addPanel("Scene", function() return scenePanel);
 		addPanel("Properties", function() return propsPanel);
+		addPanel("Resources", function() return resPanel);
 		addPanel("Log", function() return logPanel);
 	}
 
 	function load() {
-		try {
-		hxd.File.browse(function(b) {
-			savedFile = b.fileName;
-			b.load(function(bytes) {
+		jroot.special("fileSelect", [savedFile, "js"], function(newPath) {
+			if( newPath == null ) return true;
+			hxd.File.load(newPath,function(bytes) {
+				savedFile = newPath;
 				resetDefaults();
 				loadProps(bytes.toString());
 			});
-
-		},{ defaultPath : savedFile, fileTypes : [ { name:"Scene Props", extensions:["js"] } ] } );
-		} catch( e : Dynamic ) {
-			// already open
-		}
+			return true;
+		});
 	}
 
 	public function resetDefaults() {
@@ -288,11 +291,10 @@ class Inspector {
 			Reflect.setField(o, path[0], state.get(s).current);
 		}
 		var js = haxe.Json.stringify(o, null, "\t");
-		try {
-			hxd.File.saveAs(haxe.io.Bytes.ofString(js), { defaultPath : savedFile, saveFileName : function(name) savedFile = name } );
-		} catch( e : Dynamic ) {
-			// already open
-		}
+		jroot.special("fileSave", [savedFile, "js", haxe.io.Bytes.ofString(js)], function(path) {
+			if( path != null ) savedFile = path;
+			return true;
+		});
 	}
 
 	public function sync() {

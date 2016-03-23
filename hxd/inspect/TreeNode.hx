@@ -3,6 +3,7 @@ package hxd.inspect;
 class TreeNode extends Node {
 
 	public var icon(default, set) : String;
+	public var openIcon(default, set) : Null<String>;
 	var jchild : cdb.jq.JQuery;
 
 	override function initContent() {
@@ -11,6 +12,7 @@ class TreeNode extends Node {
 		j.children("i").click(function(_) {
 			if( jchild != null ) {
 				j.toggleClass("expand");
+				if( openIcon != null ) syncIcon();
 				jchild.slideToggle(50);
 			}
 		});
@@ -29,6 +31,7 @@ class TreeNode extends Node {
 		super.removeChild(n);
 		n.j.detach();
 		if( jchild != null && jchild.get().numChildren == 0 ) {
+			j.toggleClass("expand",false);
 			jchild.remove();
 			jchild = null;
 		}
@@ -37,9 +40,11 @@ class TreeNode extends Node {
 	override function addChild(n:Node) {
 		super.addChild(n);
 		if( jchild == null ) {
+			j.toggleClass("expand",true);
 			jchild = j.query("<ul>");
 			jchild.addClass("elt");
 			jchild.appendTo(j);
+			if( openIcon != null ) syncIcon();
 		}
 		n.j.appendTo(jchild);
 	}
@@ -56,9 +61,20 @@ class TreeNode extends Node {
 		return name = v;
 	}
 
+	function syncIcon() {
+		j.children("i").attr("class", "fa fa-"+(openIcon == null || !j.hasClass("expand") ? icon : openIcon));
+	}
+
 	function set_icon(v) {
-		j.children("i").attr("class", "fa fa-"+v);
-		return icon = v;
+		icon = v;
+		syncIcon();
+		return v;
+	}
+
+	function set_openIcon(v) {
+		openIcon = v;
+		syncIcon();
+		return v;
 	}
 
 }

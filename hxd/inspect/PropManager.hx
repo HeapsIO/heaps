@@ -378,7 +378,10 @@ class PropManager extends cdb.jq.Client {
 			});
 		case PEnum(_, tenum, get, set):
 			jprop.text(get());
-			j.dblclick(function(_) {
+			var delay = false;
+			jprop.click(function(_) {
+
+				if( delay ) return;
 
 				var input = J("<select>");
 				var cur = (get() : EnumValue).getIndex();
@@ -404,11 +407,13 @@ class PropManager extends cdb.jq.Client {
 					}
 					input.remove();
 					jprop.text(get());
+					delay = true;
+					haxe.Timer.delay(function() delay = false, 200);
 				});
 			});
 		case PInt(_, get, set):
 			jprop.text("" + get());
-			j.dblclick(function(_) editValue(jprop,function() return "" + get(),
+			jprop.click(function(_) editValue(jprop,function() return "" + get(),
 				function(s) {
 					var i = Std.parseInt(s);
 					if( i != null ) {
@@ -440,7 +445,7 @@ class PropManager extends cdb.jq.Client {
 			});
 		case PFloat(_, get, set):
 			jprop.text("" + get());
-			j.dblclick(function(_) editValue(jprop,function() return "" + get(),
+			jprop.click(function(_) editValue(jprop,function() return "" + get(),
 				function(s) {
 					var f = Std.parseFloat(s);
 					if( !Math.isNaN(f) ) {
@@ -476,7 +481,7 @@ class PropManager extends cdb.jq.Client {
 			for( i in 0...values.length ) {
 				var jv = J("<td>").appendTo(jt);
 				jv.text("" + values[i]);
-				jv.dblclick(function(_) editValue(jv,function() return "" + values[i],
+				jv.click(function(_) editValue(jv,function() return "" + values[i],
 					function(s) {
 						var f = Std.parseFloat(s);
 						if( !Math.isNaN(f) ) {
@@ -511,7 +516,7 @@ class PropManager extends cdb.jq.Client {
 		case PString(_, get, set):
 			var cur = get();
 			jprop.text("" + cur);
-			j.dblclick(function(_) editValue(jprop, get, function(s) {
+			jprop.click(function(_) editValue(jprop, get, function(s) {
 				addHistory(path, cur, s);
 				cur = s;
 				set(cur);
@@ -523,7 +528,7 @@ class PropManager extends cdb.jq.Client {
 				if( !alpha ) cur &= 0xFFFFFF;
 				jprop.html('<div class="color" style="background:#${StringTools.hex(cur&0xFFFFFF,6)}"></div>');
 			}
-			jprop.dblclick(function(_) {
+			jprop.click(function(_) {
 				jprop.special("colorPick", [get().toColor(), alpha], function(c) {
 					var color = h3d.Vector.fromColor(c.color);
 					if( c.done ) {
@@ -542,7 +547,7 @@ class PropManager extends cdb.jq.Client {
 			var isLoaded = false;
 			function init() {
 				var t = get();
-				var filePath = getTexturePath(t, true);
+				filePath = getTexturePath(t, true);
 				if( filePath == null ) {
 					if( t == null )
 						jprop.text("");
@@ -565,9 +570,8 @@ class PropManager extends cdb.jq.Client {
 			}
 			init();
 
-			jprop.dblclick(function(_) {
+			function onTextureSelect(_) {
 				jprop.special("fileSelect", [filePath, "png,jpg,jpeg,gif"], function(newPath) {
-
 					if( newPath == null ) return true;
 
 					hxd.File.load(newPath, function(data) {
@@ -583,7 +587,14 @@ class PropManager extends cdb.jq.Client {
 
 					return true;
 				});
-			});
+			}
+
+			if( filePath == null )
+				jprop.dblclick(onTextureSelect);
+			else
+				jprop.click(onTextureSelect);
+
+
 		case PPopup(p, menu, click):
 			j.remove();
 			j = addProp(basePath, t, p, gids, expandLevel);

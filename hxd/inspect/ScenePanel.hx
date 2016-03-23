@@ -39,7 +39,7 @@ class ScenePanel extends Panel {
 	var scenePosition = 0;
 
 	public function new(name, scene) {
-		super(name, "Scene");
+		super(name, "Scene 3D");
 		sceneObjects = [];
 		this.scene = scene;
 	}
@@ -142,6 +142,10 @@ class ScenePanel extends Panel {
 
 		scenePosition++;
 		if( o.numChildren > 0 ) {
+			if( so.openIcon == null && so.icon == "circle-o" ) {
+				so.openIcon = "circle-o";
+				so.icon = "dot-circle-o";
+			}
 			for( c in o )
 				syncRec(c, so);
 		} else if( so.jchild != null ) {
@@ -149,6 +153,10 @@ class ScenePanel extends Panel {
 			so.jchild = null;
 			for( o in so.childs )
 				o.remove();
+			if( so.openIcon == "circle-o" ) {
+				so.openIcon = null;
+				so.icon = "circle-o";
+			}
 		}
 	}
 

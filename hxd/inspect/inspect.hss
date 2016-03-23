@@ -56,7 +56,7 @@
 	}
 
 
-	.panel.scene {
+	.panel {
 
 		.scrollable {
 			height:100%;
@@ -92,6 +92,11 @@
 			li.selected > .content {
 				background-color : #eee;
 			}
+		}
+	}
+
+	.panel.scene {
+		ul.elt {
 			li.hidden {
 				opacity : 0.5;
 			}
@@ -108,30 +113,27 @@
 		}
 	}
 
-	.panel.scene > ul.buttons {
-			color : #AAA;
-			background-color : #333;
-			border-right : 1px solid black;
-			float : left;
-			width : 25px;
-			height : 100%;
-			li {
-				padding : 5px;
-				display : inline-block;
-				border : 1px solid #555;
-			}
-			li:hover {
-				background-color : #555;
-				border-color : white;
-			}
-			li.active {
-				color : white;
-			}
+	.panel > ul.buttons {
+		color : #AAA;
+		background-color : #333;
+		border-right : 1px solid black;
+		float : left;
+		width : 25px;
+		height : 100%;
+		li {
+			padding : 5px;
+			display : inline-block;
+			border : 1px solid #555;
 		}
-
-	.panel.scene > ul.elt {
-		padding : 5px;
+		li:hover {
+			background-color : #555;
+			border-color : white;
+		}
+		li.active {
+			color : white;
+		}
 	}
+
 
 	table.iprops {
 
