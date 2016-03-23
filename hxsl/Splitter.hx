@@ -41,7 +41,7 @@ class Splitter {
 				throw "assert";
 			}
 		varMap = new Map();
-		for( inf in vvars ) {
+		for( inf in Lambda.array(vvars) ) {
 			var v = inf.v;
 			switch( v.kind ) {
 			case Var, Local:
@@ -79,6 +79,7 @@ class Splitter {
 			}
 		}
 		var finits = [];
+		var todo = [];
 		for( inf in fvars ) {
 			var v = inf.v;
 			switch( v.kind ) {
@@ -102,7 +103,7 @@ class Splitter {
 				vvars.set(nv.id, vp);
 				var fp = new VarProps(nv);
 				fp.read = 1;
-				fvars.set(nv.id, fp);
+				todo.push(fp);
 				addExpr(vfun, { e : TBinop(OpAssign, { e : TVar(nv), t : v.type, p : vfun.expr.p }, { e : TVar(v), t : v.type, p : vfun.expr.p } ), t : v.type, p : vfun.expr.p } );
 				varMap.set(v, nv);
 				inf.local = true;
@@ -119,6 +120,8 @@ class Splitter {
 			default:
 			}
 		}
+		for( v in todo )
+			fvars.set(v.v.id, v);
 
 		// final check
 		for( v in vvars )
