@@ -65,7 +65,7 @@ class Inspector {
 	public var scenePanel : ScenePanel;
 	var propsPanel : Panel;
 	var logPanel : Panel;
-	var statsPanel : Panel;
+	var panelList : Array<{ name : String, create : Void -> Panel, p : Panel } >;
 
 	public function new( scene, ?host, ?port ) {
 
@@ -82,6 +82,7 @@ class Inspector {
 		inspect.handleKey = onKey;
 		this.scene = scene;
 		panels = [];
+		panelList = [];
 		rootNodes = [];
 
 		init();
@@ -103,13 +104,28 @@ class Inspector {
 			}
 			pause.active = oldLoop != null;
 		}, "Pause scene");
-		addTool("Statistics", "bar-chart", function() {
-			if( statsPanel == null ) {
-				statsPanel = new StatsPanel();
-				statsPanel.dock(Right, 0.35);
-			}
-			statsPanel.show();
-		}, "Open statistics");
+
+		var sp : Tool = null;
+		sp = addTool("Show Panel", "bars", function() {
+			var panels = [for( p in panelList ) p.name];
+			panels.push("New...");
+			sp.j.special("popupMenu", panels, function(i) {
+				var p = panelList[i];
+				if( p == null ) {
+					newPanel();
+					return true;
+				}
+				if( p.p == null ) p.p = p.create();
+				if( !p.p.visible ) p.p.show();
+				return true;
+			});
+		}, "Show/Hide panel");
+
+		addPanel("Stats", function() {
+			var s = new StatsPanel();
+			s.dock(Right, 0.35);
+			return s;
+		});
 	}
 
 	public function dispose() {
@@ -141,6 +157,13 @@ class Inspector {
 		t.click = click;
 		t.j.appendTo(jroot.find("#toolbar"));
 		return t;
+	}
+
+	function newPanel() {
+	}
+
+	public function addPanel( name : String, create : Void -> Panel ) {
+		panelList.push({ name : name, create : create, p : null });
 	}
 
 	function onKey( e : cdb.jq.Event ) {
@@ -195,6 +218,9 @@ class Inspector {
 		scenePanel.dock(Left, 0.2);
 		logPanel.dock(Down, 0.3);
 		propsPanel.dock(Down, 0.5, scenePanel);
+		addPanel("Scene", function() return scenePanel);
+		addPanel("Properties", function() return propsPanel);
+		addPanel("Log", function() return logPanel);
 	}
 
 	function load() {
@@ -202,12 +228,7 @@ class Inspector {
 		hxd.File.browse(function(b) {
 			savedFile = b.fileName;
 			b.load(function(bytes) {
-
-				// reset to default
-				for( s in state.keys() )
-					inspect.setPathPropValue(s, state.get(s).original);
-				state = new Map();
-
+				resetDefaults();
 				loadProps(bytes.toString());
 			});
 
@@ -215,6 +236,12 @@ class Inspector {
 		} catch( e : Dynamic ) {
 			// already open
 		}
+	}
+
+	public function resetDefaults() {
+		for( s in state.keys() )
+			inspect.setPathPropValue(s, state.get(s).original);
+		state = new Map();
 	}
 
 	public function loadProps( props : String ) {
@@ -267,7 +294,8 @@ class Inspector {
 	public function sync() {
 		if( scene == null || !inspect.connected ) return;
 		for( p in panels )
-			p.sync();
+			if( p.visible )
+				p.sync();
 	}
 
 	function resolveProps( path : Array<String> ) {
