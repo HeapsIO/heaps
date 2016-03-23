@@ -112,17 +112,31 @@ class PropManager extends cdb.jq.Client {
 		return null;
 	}
 
-	public function setPathPropValue( path : String, v : Dynamic ) {
+	function resolvePropPath( path : String ) : Property {
 		var fullPath = path;
 		var path = path.split(".");
 		var props = resolveProps(path);
-		if( props == null ) return;
+		if( props == null ) {
+			trace("Prop not found " + path);
+			return null;
+		}
 		var ppath = path.join(".");
 		var p = getPropPath(path, props);
+		if( p == null )
+			trace("Prop not found " + ppath + " in "+fullPath.substr(0, fullPath.length - (ppath.length + 1)));
+		return p;
+	}
+
+	public function getPathPropValue( path : String ) : Dynamic {
+		var p = resolvePropPath(path);
+		if( p == null ) return null;
+		return getPropValue(p);
+	}
+
+	public function setPathPropValue( path : String, v : Dynamic ) {
+		var p = resolvePropPath(path);
 		if( p != null )
 			setPropValue(p, v);
-		else
-			trace("Prop not found " + ppath + " in "+fullPath.substr(0, fullPath.length - (ppath.length + 1)));
 	}
 
 	function getPropPath( path : Array<String>, props : Array<Property> ) {
@@ -172,13 +186,33 @@ class PropManager extends cdb.jq.Client {
 		case PTexture(_, _, set):
 			if( !Std.is(v, String) ) throw "Invalid texture value " + v;
 			var path : String = v;
-			if( path.charCodeAt(0) != '/'.code && path.charCodeAt(1) != ':'.code )
+			if( path.charCodeAt(0) != '/'.code && path.charCodeAt(1) != ':'.code ) {
+				set(hxd.res.Loader.currentInstance.load(path).toTexture());
+			} else {
 				path = hxd.File.applicationPath() + path;
-			hxd.File.load(path, function(data) set( hxd.res.Any.fromBytes(path, data).toTexture() ));
+				hxd.File.load(path, function(data) set( hxd.res.Any.fromBytes(path, data).toTexture() ));
+			}
 		case PCustom(_, _, set) if( set != null ):
 			set(v);
 		case PGroup(_), PPopup(_), PCustom(_):
 			throw "Cannot set property " + p.getName();
+		}
+	}
+
+	function getPropValue( p : Property ) : Dynamic {
+		switch( p ) {
+		case PInt(_, get, _): return get();
+		case PFloat(_, get, _): return get();
+		case PString(_, get, _): return get();
+		case PBool(_, get, _): return get();
+		case PEnum(_, _, get, _): return get();
+		case PColor(_, alpha, get, _): return "#" + StringTools.hex(get().toColor(),alpha?8:6);
+		case PFloats(_, get, _): return get().copy();
+		case PTexture(_, get, _):
+			var t = get();
+			return getTexturePath(t, false);
+		case PGroup(_), PPopup(_), PCustom(_):
+			throw "Cannot get property " + p.getName();
 		}
 	}
 
@@ -232,6 +266,39 @@ class PropManager extends cdb.jq.Client {
 		case PGroup(name, _), PBool(name, _), PInt(name, _), PFloat(name, _), PFloats(name, _), PString(name, _), PColor(name, _), PTexture(name, _), PEnum(name,_,_,_), PCustom(name,_): name;
 		case PPopup(_): null;
 		}
+	}
+
+	var cachedResPath = null;
+
+	function getResPath() {
+		if( cachedResPath != null )
+			return cachedResPath;
+		var lfs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		if( lfs != null )
+			cachedResPath = lfs.baseDir;
+		else {
+			var resPath = haxe.macro.Compiler.getDefine("resPath");
+			if( resPath == null ) resPath = "res";
+			cachedResPath = hxd.File.applicationPath() + resPath + "/";
+		}
+		return cachedResPath;
+	}
+
+	function getTexturePath( t : h3d.mat.Texture, absolute : Bool ) {
+		var res = null;
+		try {
+			if( t != null && t.name != null )
+				res = hxd.res.Loader.currentInstance.load(t.name).toImage();
+		} catch( e : Dynamic ) {
+		}
+		if( res != null ) {
+			if( !absolute )
+				return res.entry.path;
+			return getResPath() + res.entry.path;
+		}
+		if( t != null && t.name != null && (t.name.charCodeAt(0) == '/'.code || t.name.charCodeAt(1) == ':'.code) )
+			return t.name;
+		return null;
 	}
 
 	function addProp( basePath : String, t : JQuery, p : Property, gids : Array<Int>, expandLevel ) {
@@ -475,25 +542,7 @@ class PropManager extends cdb.jq.Client {
 			var isLoaded = false;
 			function init() {
 				var t = get();
-				var res = null;
-				try {
-					if( t != null && t.name != null )
-						res = hxd.res.Loader.currentInstance.load(t.name).toImage();
-				} catch( e : Dynamic ) {
-				}
-				if( res != null ) {
-					// resolve path
-					var lfs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-					if( lfs != null )
-						filePath = lfs.baseDir + res.entry.path;
-					else {
-						var resPath = haxe.macro.Compiler.getDefine("resPath");
-						if( resPath == null ) resPath = "res";
-						filePath = hxd.File.applicationPath() + resPath + "/" + res.entry.path;
-					}
-				} else if( t != null && t.name != null && (t.name.charCodeAt(0) == '/'.code || t.name.charCodeAt(1) == ':'.code) )
-					filePath = t.name;
-
+				var filePath = getTexturePath(t, true);
 				if( filePath == null ) {
 					if( t == null )
 						jprop.text("");
@@ -516,13 +565,6 @@ class PropManager extends cdb.jq.Client {
 			}
 			init();
 
-			function relPath(path) {
-				var base = hxd.File.applicationPath();
-				if( StringTools.startsWith(path, base) )
-					return path.substr(base.length);
-				return path;
-			}
-
 			jprop.dblclick(function(_) {
 				jprop.special("fileSelect", [filePath, "png,jpg,jpeg,gif"], function(newPath) {
 
@@ -531,8 +573,10 @@ class PropManager extends cdb.jq.Client {
 					hxd.File.load(newPath, function(data) {
 						if( isLoaded ) get().dispose();
 						isLoaded = true;
+						if( StringTools.startsWith(newPath.toLowerCase(), getResPath().toLowerCase()) )
+							newPath = newPath.substr(getResPath().length);
 						set( hxd.res.Any.fromBytes(newPath, data).toTexture() );
-						addHistory(path, relPath(filePath), relPath(newPath));
+						addHistory(path, filePath, newPath);
 						init();
 						filePath = newPath;
 					});

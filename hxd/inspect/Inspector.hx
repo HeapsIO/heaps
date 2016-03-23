@@ -88,6 +88,7 @@ class Inspector {
 		init();
 
 		scenePanel.addNode("Renderer", "object-group", scenePanel.getRendererProps);
+		scenePanel.sync();
 
 		addTool("Load...", "download", load, "Load settings");
 		addTool("Save...", "save", save, "Save settings");
@@ -239,8 +240,11 @@ class Inspector {
 	}
 
 	public function resetDefaults() {
-		for( s in state.keys() )
-			inspect.setPathPropValue(s, state.get(s).original);
+		for( s in state.keys() ) {
+			var v = state.get(s);
+			if( v.original != null )
+				inspect.setPathPropValue(s, v.original);
+		}
 		state = new Map();
 	}
 
@@ -250,7 +254,7 @@ class Inspector {
 			switch( Type.typeof(v) ) {
 			case TNull, TInt, TFloat, TBool, TClass(_):
 				var path = path.join(".");
-				state.set(path, { original : null, current : v });
+				state.set(path, { original : inspect.getPathPropValue(path), current : v });
 			case TUnknown, TFunction, TEnum(_):
 				throw "Invalid value " + v;
 			case TObject:
