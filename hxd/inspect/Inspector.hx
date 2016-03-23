@@ -208,32 +208,36 @@ class Inspector {
 					inspect.setPathPropValue(s, state.get(s).original);
 				state = new Map();
 
-				var o : Dynamic = haxe.Json.parse(bytes.toString());
-				function browseRec( path : Array<String>, v : Dynamic ) {
-					switch( Type.typeof(v) ) {
-					case TNull, TInt, TFloat, TBool, TClass(_):
-						var path = path.join(".");
-						state.set(path, { original : null, current : v });
-					case TUnknown, TFunction, TEnum(_):
-						throw "Invalid value " + v;
-					case TObject:
-						for( f in Reflect.fields(v) ) {
-							var fv = Reflect.field(v, f);
-							path.push(f);
-							browseRec(path, fv);
-							path.pop();
-						}
-					}
-				}
-				browseRec([], o);
-				for( s in state.keys() )
-					inspect.setPathPropValue(s, state.get(s).current);
+				loadProps(bytes.toString());
 			});
 
 		},{ defaultPath : savedFile, fileTypes : [ { name:"Scene Props", extensions:["js"] } ] } );
 		} catch( e : Dynamic ) {
 			// already open
 		}
+	}
+
+	public function loadProps( props : String ) {
+		var o : Dynamic = haxe.Json.parse(props);
+		function browseRec( path : Array<String>, v : Dynamic ) {
+			switch( Type.typeof(v) ) {
+			case TNull, TInt, TFloat, TBool, TClass(_):
+				var path = path.join(".");
+				state.set(path, { original : null, current : v });
+			case TUnknown, TFunction, TEnum(_):
+				throw "Invalid value " + v;
+			case TObject:
+				for( f in Reflect.fields(v) ) {
+					var fv = Reflect.field(v, f);
+					path.push(f);
+					browseRec(path, fv);
+					path.pop();
+				}
+			}
+		}
+		browseRec([], o);
+		for( s in state.keys() )
+			inspect.setPathPropValue(s, state.get(s).current);
 	}
 
 	function save() {
