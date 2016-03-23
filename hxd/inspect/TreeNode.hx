@@ -28,7 +28,7 @@ class TreeNode extends Node {
 	override function removeChild(n:Node) {
 		super.removeChild(n);
 		n.j.detach();
-		if( jchild.get().numChildren == 0 ) {
+		if( jchild != null && jchild.get().numChildren == 0 ) {
 			jchild.remove();
 			jchild = null;
 		}
