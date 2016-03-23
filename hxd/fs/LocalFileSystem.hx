@@ -198,12 +198,13 @@ private class LocalEntry extends FileEntry {
 		#end
 	}
 
-	override function get_isDirectory() {
+	var isDirCached : Null<Bool>;
+	override function get_isDirectory() : Bool {
+		if( isDirCached != null ) return isDirCached;
 		#if air3
-		return file.isDirectory;
+		return isDirCached = file.isDirectory;
 		#else
-		throw "TODO";
-		return false;
+		return isDirCached = sys.FileSystem.isDirectory(file);
 		#end
 	}
 
@@ -259,8 +260,10 @@ private class LocalEntry extends FileEntry {
 			switch( f.name ) {
 			case ".svn", ".git" if( f.isDirectory ):
 				continue;
+			case ".tmp" if( this == fs.root ):
+				continue;
 			default:
-				arr.push(new LocalEntry(fs, f.name, relPath == null ? f.name : relPath + "/" + f.name, f));
+				arr.push(fs.open(relPath == null ? f.name : relPath + "/" + f.name,false));
 			}
 		return new hxd.impl.ArrayIterator(arr);
 		#else
@@ -269,8 +272,10 @@ private class LocalEntry extends FileEntry {
 			switch( f ) {
 			case ".svn", ".git" if( sys.FileSystem.isDirectory(file+"/"+f) ):
 				continue;
+			case ".tmp" if( this == fs.root ):
+				continue;
 			default:
-				arr.push(new LocalEntry(fs, f, relPath == null ? f : relPath + "/" + f, file+"/"+f));
+				arr.push(fs.open(relPath == null ? f : relPath + "/" + f,false));
 			}
 		}
 		return new hxd.impl.ArrayIterator(arr);
@@ -338,9 +343,7 @@ private class LocalEntry extends FileEntry {
 class LocalFileSystem implements FileSystem {
 
 	var root : FileEntry;
-	#if air3
-	var fileCache = new Map<String,{r:flash.filesystem.File}>();
-	#end
+	var fileCache = new Map<String,{r:LocalEntry}>();
 	public var baseDir(default,null) : String;
 	var createHMD : Bool = true;
 	public var createMP3 : Bool;
@@ -376,54 +379,40 @@ class LocalFileSystem implements FileSystem {
 		return root;
 	}
 
-	function open( path : String ) {
-		#if air3
+	function open( path : String, check = true ) {
 		var r = fileCache.get(path);
 		if( r != null )
 			return r.r;
+		var e = null;
+		#if air3
 		var f = new flash.filesystem.File(baseDir + path);
 		// ensure exact case / no relative path
-		f.canonicalize();
-		if( !f.exists || f.nativePath.split("\\").join("/") != baseDir + path )
-			f = null;
-		fileCache.set(path, { r:f } );
-		return f;
+		if( check ) f.canonicalize();
+		if( !check || (f.exists && f.nativePath.split("\\").join("/") == baseDir + path) )
+			e = new LocalEntry(this, path.split("/").pop(), path, f);
 		#else
 		var f = sys.FileSystem.fullPath(baseDir + path).split("\\").join("/");
-		if( f != baseDir + path )
-			return null;
-		return f;
+		if( !check || (f == baseDir + path && sys.FileSystem.exists(f)) )
+			e = new LocalEntry(this, path.split("/").pop(), path, f);
 		#end
+		fileCache.set(path, {r:e});
+		return e;
 	}
 
 	public function exists( path : String ) {
-		#if air3
 		var f = open(path);
 		return f != null;
-		#else
-		var f = open(path);
-		return f != null && sys.FileSystem.exists(f);
-		#end
 	}
 
 	public function get( path : String ) {
-		#if air3
 		var f = open(path);
-		if( f == null || !f.exists )
+		if( f == null )
 			throw new NotFound(path);
-		return new LocalEntry(this, path.split("/").pop(), path, f);
-		#else
-		var f = open(path);
-		if( f == null ||!sys.FileSystem.exists(f) )
-			throw new NotFound(path);
-		return new LocalEntry(this, path.split("/").pop(), path, f);
-		#end
+		return f;
 	}
 
 	public function dispose() {
-		#if air3
 		fileCache = new Map();
-		#end
 	}
 
 }

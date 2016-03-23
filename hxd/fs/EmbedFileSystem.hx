@@ -228,14 +228,16 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 			r = Reflect.field(r, p);
 		if( r == null )
 			throw path + " is not a directory";
-		return [for( name in Reflect.fields(r) ) get(path == "." ? name : path + "/" + name)];
+		var fields = Reflect.fields(r);
+		fields.sort(Reflect.compare);
+		return [for( name in fields ) get(path == "." ? name : path + "/" + name)];
 	}
 
 	function isDirectory( path : String ) {
-		var r = root;
+		var r : Dynamic = root;
 		for( p in splitPath(path) )
 			r = Reflect.field(r, p);
-		return r != null;
+		return r != null && r != true;
 	}
 
 	public function exists( path : String ) {
