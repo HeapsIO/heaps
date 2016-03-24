@@ -10,8 +10,6 @@ class Timer {
 	public static var tmod : Float = 1;
 	public static var deltaT : Float = 1;
 
-	public static var smoothing : Bool = true;
-
 	static var frameCount = 0;
 
 	public inline static function update() {
@@ -21,14 +19,7 @@ class Timer {
 		oldTime = newTime;
 		if( deltaT < maxDeltaTime )
 		{
-			if(smoothing)
-			{
-				calc_tmod = calc_tmod * tmod_factor + (1 - tmod_factor) * deltaT * wantedFPS;
-			}
-			else
-			{
-				calc_tmod = deltaT;
-			}
+			calc_tmod = calc_tmod * tmod_factor + (1 - tmod_factor) * deltaT;
 		}
 		else
 		{
