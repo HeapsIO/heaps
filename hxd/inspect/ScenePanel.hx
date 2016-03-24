@@ -104,7 +104,7 @@ class ScenePanel extends Panel {
 		scenePosition = 0;
 		syncRec(scene, this);
 		while( sceneObjects.length > scenePosition )
-			sceneObjects.pop().remove();
+			sceneObjects.pop().dispose();
 	}
 
 	@:access(hxd.inspect.TreeNode)
@@ -149,10 +149,10 @@ class ScenePanel extends Panel {
 			for( c in o )
 				syncRec(c, so);
 		} else if( so.jchild != null ) {
+			for( o in so.childs )
+				o.dispose();
 			so.jchild.remove();
 			so.jchild = null;
-			for( o in so.childs )
-				o.remove();
 			if( so.openIcon == "circle-o" ) {
 				so.openIcon = null;
 				so.icon = "circle-o";

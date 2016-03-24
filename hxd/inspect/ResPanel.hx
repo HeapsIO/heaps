@@ -34,7 +34,7 @@ class ResPanel extends Panel {
 		for( e in subs )
 			syncRec(e, this);
 		while( files.length > filePos )
-			files.pop().remove();
+			files.pop().dispose();
 	}
 
 	override function initContent() {

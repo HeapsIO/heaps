@@ -11,7 +11,7 @@ class PropManager extends cdb.jq.Client {
 	public var connected(default,null) = false;
 
 	var sock : hxd.net.Socket;
-	var flushWait = false;
+	var pendingMessages : Array<cdb.jq.Message>;
 
 	var refreshProps : Void -> Void;
 	var history : Array<History>;
@@ -76,17 +76,23 @@ class PropManager extends cdb.jq.Client {
 		});
 	}
 
-	override function sendBytes( msg : haxe.io.Bytes ) {
-		if( !flushWait ) {
-			flushWait = true;
-			sock.out.wait();
-			haxe.Timer.delay(function() {
-				flushWait = false;
-				sock.out.flush();
-			},0);
+	function flushMessages() {
+		if( pendingMessages == null ) return;
+		var msg = pendingMessages.length == 1 ? pendingMessages[0] : cdb.jq.Message.Group(pendingMessages);
+		pendingMessages = null;
+		var data = cdb.BinSerializer.serialize(msg);
+		sock.out.wait();
+		sock.out.writeInt32(data.length);
+		sock.out.write(data);
+		sock.out.flush();
+	}
+
+	override function send( msg : cdb.jq.Message ) {
+		if( pendingMessages == null ) {
+			pendingMessages = [];
+			haxe.Timer.delay(flushMessages,0);
 		}
-		sock.out.writeInt32(msg.length);
-		sock.out.write(msg);
+		pendingMessages.push(msg);
 	}
 
 	public dynamic function onConnected(b:Bool) {
@@ -528,8 +534,12 @@ class PropManager extends cdb.jq.Client {
 				if( !alpha ) cur &= 0xFFFFFF;
 				jprop.html('<div class="color" style="background:#${StringTools.hex(cur&0xFFFFFF,6)}"></div>');
 			}
+			var delay = false;
 			jprop.click(function(_) {
+				if( delay ) return;
 				jprop.special("colorPick", [get().toColor(), alpha], function(c) {
+					delay = true;
+					haxe.Timer.delay(function() delay = false, 200);
 					var color = h3d.Vector.fromColor(c.color);
 					if( c.done ) {
 						if( !alpha ) c.color &= 0xFFFFFF;
@@ -555,6 +565,8 @@ class PropManager extends cdb.jq.Client {
 						jprop.html(StringTools.htmlEscape("" + t) + " <button>View</button>");
 						jprop.find("button").click(function(_) {
 							var p = new Panel(null, "" + t);
+							p.show();
+							p.onClose = p.dispose;
 							p.j.html("Loading...");
 							haxe.Timer.delay(function() {
 								var bmp = t.capturePixels();

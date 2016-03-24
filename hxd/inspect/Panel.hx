@@ -38,11 +38,15 @@ class Panel extends Node {
 		panel.bind("paneldock", function(e) {
 			if( e.target == null ) {
 				visible = false;
+				onClose();
 				return;
 			}
 		});
 		visible = true;
 		j.appendTo(panel);
+	}
+
+	public dynamic function onClose() {
 	}
 
 	override function dispose() {

@@ -49,15 +49,11 @@ class Node {
 		return parent.getFullPath() + "." + n;
 	}
 
-	function dispose() {
-		if( j != null ) j.dispose();
-	}
-
-	public function remove() {
+	public function dispose() {
 		parent = null;
-		dispose();
+		if( j != null ) j.dispose();
 		for( c in childs )
-			c.remove();
+			c.dispose();
 	}
 
 	function set_name(v) {
