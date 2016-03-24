@@ -14,10 +14,14 @@ class MacroParser {
 	function applyMeta( m : MetadataEntry, v : Ast.VarDecl ) {
 		switch( m.params ) {
 		case []:
+			// fallthrough
 		case [ { expr : EConst(CString(n)), pos : pos } ] if( m.name == "var" || m.name == "global" || m.name == "input" ):
 			v.qualifiers.push(Name(n));
 		case [ { expr : EConst(CInt(n)), pos : pos } ] if( m.name == "const" ):
 			v.qualifiers.push(Const(Std.parseInt(n)));
+			return;
+		case [ { expr : EConst(CInt(a) | CFloat(a)) }, { expr : EConst(CInt(b) | CFloat(b)) } ] if( m.name == "range" ):
+			v.qualifiers.push(Range(Std.parseFloat(a),Std.parseFloat(b)));
 			return;
 		default:
 			error("Invalid meta parameter", m.pos);
@@ -47,6 +51,8 @@ class MacroParser {
 			v.qualifiers.push(Precision(Medium));
 		case "highp":
 			v.qualifiers.push(Precision(High));
+		case "ignore":
+			v.qualifiers.push(Ignore);
 		default:
 			error("Unsupported qualifier " + m.name, m.pos);
 		}

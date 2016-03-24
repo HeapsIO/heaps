@@ -1,20 +1,24 @@
 package h3d.pass;
 
+@ignore("shader")
 class Blur extends ScreenFx<h3d.shader.Blur> {
 
 	/**
 		Gives the blur quality : 0 for disable, 1 for 3x3, 2 for 5x5, etc.
 	**/
+	@range(1, 4, 1) @inspect
 	public var quality(default, set) : Int;
 
 	/**
 		The amount of blur (gaussian blur value).
 	**/
+	@range(0, 2) @inspect
 	public var sigma(default, set) : Float;
 
 	/**
 		The number of blur passes we perform (default = 1)
 	**/
+	@range(0, 5, 1) @inspect
 	public var passes : Int;
 
 

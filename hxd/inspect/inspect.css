@@ -149,6 +149,19 @@
 	border : 1px solid #888;
 	width : 100%;
 }
+.jqpage table.iprops tr.prange input.range, .dialog-floating table.iprops tr.prange input.range {
+	width : auto;
+	display : inline-block;
+	zoom : 1;
+	*display : inline;
+	padding-bottom : 1px;
+}
+.jqpage table.iprops tr.prange .range_text, .dialog-floating table.iprops tr.prange .range_text {
+	width : 30px;
+	display : inline-block;
+	zoom : 1;
+	*display : inline;
+}
 .jqpage table.iprops tr.active td, .dialog-floating table.iprops tr.active td {
 	font-weight : bold;
 }

@@ -170,6 +170,9 @@ class PropManager extends cdb.jq.Client {
 		case PFloat(_, _, set):
 			if( !Std.is(v, Float) ) throw "Invalid float value " + v;
 			set(v);
+		case PRange(_, _, _, _, set):
+			if( !Std.is(v, Float) ) throw "Invalid float value " + v;
+			set(v);
 		case PBool(_, _, set):
 			if( !Std.is(v, Bool) ) throw "Invalid bool value " + v;
 			set(v);
@@ -209,6 +212,7 @@ class PropManager extends cdb.jq.Client {
 		switch( p ) {
 		case PInt(_, get, _): return get();
 		case PFloat(_, get, _): return get();
+		case PRange(_, _, _, get, _): return get();
 		case PString(_, get, _): return get();
 		case PBool(_, get, _): return get();
 		case PEnum(_, _, get, _): return get();
@@ -269,7 +273,7 @@ class PropManager extends cdb.jq.Client {
 
 	function getPropName( p : Property ) {
 		return switch( propFollow(p) ) {
-		case PGroup(name, _), PBool(name, _), PInt(name, _), PFloat(name, _), PFloats(name, _), PString(name, _), PColor(name, _), PTexture(name, _), PEnum(name,_,_,_), PCustom(name,_): name;
+		case PGroup(name, _), PBool(name, _), PInt(name, _), PFloat(name, _), PFloats(name, _), PString(name, _), PColor(name, _), PTexture(name, _), PEnum(name,_,_,_), PCustom(name,_), PRange(name,_): name;
 		case PPopup(_): null;
 		}
 	}
@@ -480,6 +484,35 @@ class PropManager extends cdb.jq.Client {
 					});
 				}
 			});
+		case PRange(_, min, max, get, set, incr):
+			var v = get();
+			if( incr == null ) incr = (max - min) / 400;
+			jprop.html('<input class="range" type="range" min="$min" max="$max" value="$v" step="$incr"/> <span class="range_text">$v</span>');
+			var ji = jprop.find("input.range");
+			var jt = jprop.find("span");
+			ji.bind("input",function(_) {
+				var nv = Std.parseFloat(ji.getValue());
+				set(nv);
+				jt.text("" + nv);
+			});
+			ji.bind("change", function(_) {
+				var nv = Std.parseFloat(ji.getValue());
+				if( v != nv ) {
+					addHistory(path, v, nv);
+					v = nv;
+				}
+				set(nv);
+				jt.text("" + nv);
+			});
+			jt.click(function(_) editValue(jt, function() return "" + get(), function(s) {
+				var nv = Std.parseFloat(s);
+				if( !Math.isNaN(nv) && v != nv ) {
+					addHistory(path, v, nv);
+					v = nv;
+					set(nv);
+					ji.val(nv);
+				}
+			}));
 		case PFloats(_, get, set):
 			var values = get();
 			jprop.html("<table><tr></tr></table>");

@@ -9,7 +9,7 @@ class Texture extends hxsl.Shader {
 
 		@const var additive : Bool;
 		@const var killAlpha : Bool;
-		@param var killAlphaThreshold : Float;
+		@range(0,1) @param var killAlphaThreshold : Float;
 
 		@param var texture : Sampler2D;
 		var calculatedUV : Vec2;

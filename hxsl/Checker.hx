@@ -629,6 +629,13 @@ class Checker {
 					default:
 						error("Precision qualifier not supported on " + v.type, pos);
 					}
+				case Range(min,max):
+					switch( v.type ) {
+					case TFloat, TInt, TVec(_, VFloat):
+					default:
+						error("Precision qualifier not supported on " + v.type, pos);
+					}
+				case Ignore:
 				}
 		}
 		if( tv.type != null )

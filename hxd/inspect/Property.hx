@@ -4,6 +4,7 @@ enum Property {
 	PBool( name : String, get : Void -> Bool, set : Bool -> Void );
 	PInt( name : String, get : Void -> Int, set : Int -> Void );
 	PFloat( name : String, get : Void -> Float, set : Float -> Void );
+	PRange( name : String, min : Float, max : Float, get : Void -> Float, set : Float -> Void, ?incr : Float );
 	PString( name : String, get : Void -> String, set : String -> Void );
 	PEnum( name : String, e : Enum<Dynamic>, get : Void -> Dynamic, set : Dynamic -> Void );
 	PColor( name : String, hasAlpha : Bool, get : Void -> h3d.Vector, set : h3d.Vector -> Void );

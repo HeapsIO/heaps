@@ -58,6 +58,8 @@ class Printer {
 				case Name(n): "name('" + n + "')";
 				case Shared: "shared";
 				case Precision(p): p.getName().toLowerCase() + "p";
+				case Range(min, max): "range(" + min + "," + max + ")";
+				case Ignore: "ignore";
 				}) + " ");
 		}
 		if( v.kind != defKind )

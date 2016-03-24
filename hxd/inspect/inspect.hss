@@ -163,6 +163,18 @@
 			}
 		}
 
+		tr.prange {
+			input.range {
+				width : auto;
+				display : inline-block;
+				padding-bottom : 1px;
+			}
+			.range_text {
+				width : 30px;
+				display : inline-block;
+			}
+		}
+
 		tr.active td {
 			font-weight : bold;
 		}

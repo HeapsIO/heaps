@@ -169,6 +169,9 @@ class ScenePanel extends Panel {
 		for( v in vars ) {
 			switch( v.kind ) {
 			case Param:
+
+				if( v.qualifiers != null && v.qualifiers.indexOf(Ignore) >= 0 ) continue;
+
 				var name = v.name+"__";
 				function set(val:Dynamic) {
 					Reflect.setField(s, name, val);
@@ -179,9 +182,31 @@ class ScenePanel extends Panel {
 				case TBool:
 					props.push(PBool(v.name, function() return Reflect.field(s,name), set ));
 				case TInt:
-					props.push(PInt(v.name, function() return Reflect.field(s,name), set ));
+					var done = false;
+					if( v.qualifiers != null )
+						for( q in v.qualifiers )
+							switch( q ) {
+							case Range(min, max):
+								done = true;
+								props.push(PRange(v.name, min, max, function() return Reflect.field(s, name), set,1));
+								break;
+							default:
+							}
+					if( !done )
+						props.push(PInt(v.name, function() return Reflect.field(s,name), set ));
 				case TFloat:
-					props.push(PFloat(v.name, function() return Reflect.field(s, name), set));
+					var done = false;
+					if( v.qualifiers != null )
+						for( q in v.qualifiers )
+							switch( q ) {
+							case Range(min, max):
+								done = true;
+								props.push(PRange(v.name, min, max, function() return Reflect.field(s, name), set));
+								break;
+							default:
+							}
+					if( !done )
+						props.push(PFloat(v.name, function() return Reflect.field(s, name), set));
 				case TVec(size = (3 | 4), VFloat) if( v.name.toLowerCase().indexOf("color") >= 0 ):
 					props.push(PColor(v.name, size == 4, function() return Reflect.field(s, name), set));
 				case TSampler2D, TSamplerCube:
@@ -284,7 +309,7 @@ class ScenePanel extends Panel {
 	function getLightProps( l : h3d.scene.Light ) {
 		var props = [];
 		props.push(PColor("color", false, function() return l.color, function(c) l.color.load(c)));
-		props.push(PInt("priority", function() return l.priority, function(p) l.priority = p));
+		props.push(PRange("priority", 0, 10, function() return l.priority, function(p) l.priority = Std.int(p),1));
 		props.push(PBool("enableSpecular", function() return l.enableSpecular, function(b) l.enableSpecular = b));
 		var dl = Std.instance(l, h3d.scene.DirLight);
 		if( dl != null )
@@ -321,10 +346,13 @@ class ScenePanel extends Panel {
 		return props;
 	}
 
-	function getDynamicProps( v : Dynamic ) {
+	function getDynamicProps( v : Dynamic ) : Array<Property> {
 		var fx = Std.instance(v,h3d.pass.ScreenFx);
-		if( fx != null )
-			return [getShaderProps(fx.shader)];
+		if( fx != null ) {
+			var props = [];
+			addDynamicProps(props, v);
+			return props;
+		}
 		var s = Std.instance(v, hxsl.Shader);
 		if( s != null )
 			return [getShaderProps(s)];
@@ -333,20 +361,52 @@ class ScenePanel extends Panel {
 
 	function addDynamicProps( props : Array<Property>, o : Dynamic ) {
 		var cl = Type.getClass(o);
+		var ignoreList = null;
+		var ccur = cl;
+		while( ccur != null ) {
+			var cmeta : Dynamic = haxe.rtti.Meta.getType(ccur);
+			var ignore : Array<String> = cmeta.ignore;
+			if( ignore != null ) {
+				if( ignoreList == null ) ignoreList = [];
+				for( i in ignore )
+					ignoreList.push(i);
+			}
+			ccur = Type.getSuperClass(ccur);
+		}
+
 		var meta = haxe.rtti.Meta.getFields(cl);
 		var fields = Type.getInstanceFields(cl);
 		fields.sort(Reflect.compare);
 		for( f in fields ) {
+
+			if( ignoreList != null && ignoreList.indexOf(f) >= 0 ) continue;
+
 			var v = Reflect.field(o, f);
-			var pl = getDynamicProps(v);
-			if( pl != null )
-				props.push(PGroup(f, pl));
-			else {
-				// @inspect metadata
-				var m = Reflect.field(meta, f);
-				if( m != null && Reflect.hasField(m, "inspect") ) {
-					if( Std.is(v, Bool) )
-						props.unshift(PBool(f, function() return Reflect.getProperty(o, f), function(v) Reflect.setProperty(o, f, v)));
+
+			// @inspect metadata
+			var m : Dynamic = Reflect.field(meta, f);
+
+			if( m != null && Reflect.hasField(m, "ignore") )
+				continue;
+
+			if( m != null && Reflect.hasField(m, "inspect") ) {
+				if( Std.is(v, Bool) )
+					props.unshift(PBool(f, function() return Reflect.getProperty(o, f), function(v) Reflect.setProperty(o, f, v)));
+				else if( Std.is(v, Float) ) {
+					var range : Array<Null<Float>> = m.range;
+					if( range != null )
+						props.unshift(PRange(f, range[0], range[1], function() return Reflect.getProperty(o, f), function(v) Reflect.setProperty(o, f, v), range[2]));
+					else
+						props.unshift(PFloat(f, function() return Reflect.getProperty(o, f), function(v) Reflect.setProperty(o, f, v)));
+				}
+			} else {
+
+				var pl = getDynamicProps(v);
+				if( pl != null ) {
+					if( pl.length == 1 && pl[0].match(PGroup(_)) )
+						props.push(pl[0]);
+					else
+						props.push(PGroup(f, pl));
 				}
 			}
 		}
@@ -369,7 +429,7 @@ class ScenePanel extends Panel {
 		var props = [];
 		var ls = scene.lightSystem;
 		props.push(PGroup("LightSystem", [
-			PInt("maxLightsPerObject", function() return ls.maxLightsPerObject, function(s) ls.maxLightsPerObject = s),
+			PRange("maxLightsPerObject", 0, 10, function() return ls.maxLightsPerObject, function(s) ls.maxLightsPerObject = Std.int(s), 1),
 			PColor("ambientLight", false, function() return ls.ambientLight, function(v) ls.ambientLight = v),
 			PBool("perPixelLighting", function() return ls.perPixelLighting, function(b) ls.perPixelLighting = b),
 		]));
@@ -377,10 +437,10 @@ class ScenePanel extends Panel {
 		var s = Std.instance(scene.renderer.getPass("shadow", false),h3d.pass.ShadowMap);
 		if( s != null ) {
 			props.push(PGroup("Shadows", [
-				PInt("size", function() return s.size, function(sz) s.size = sz),
+				PRange("size", 64, 2048, function() return s.size, function(sz) s.size = Std.int(sz), 64),
 				PColor("color", false, function() return s.color, function(v) s.color = v),
-				PFloat("power", function() return s.power, function(v) s.power = v),
-				PFloat("bias", function() return s.bias, function(v) s.bias = v),
+				PRange("power", 0, 100, function() return s.power, function(v) s.power = v),
+				PRange("bias", 0, 0.1, function() return s.bias, function(v) s.bias = v),
 			]));
 		}
 

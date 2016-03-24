@@ -8,7 +8,7 @@ class ShadowMap extends Default {
 	var shadowColorId : Int;
 	var shadowPowerId : Int;
 	var shadowBiasId : Int;
-	public var border : Border;
+	@ignore public var border : Border;
 	public var size(default,set) : Int;
 	public var color : h3d.Vector;
 	public var power = 10.0;

@@ -47,8 +47,8 @@ class BaseMesh extends hxsl.Shader {
 		var specColor : Vec3;
 
 		@param var color : Vec4;
-		@param var specularPower : Float;
-		@param var specularAmount : Float;
+		@range(0,100) @param var specularPower : Float;
+		@range(0,10) @param var specularAmount : Float;
 		@param var specularColor : Vec3;
 
 		// each __init__ expr is out of order dependency-based

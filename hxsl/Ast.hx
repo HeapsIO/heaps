@@ -76,6 +76,8 @@ enum VarQualifier {
 	Name( n : String );
 	Shared;
 	Precision( p : Prec );
+	Range( min : Float, max : Float );
+	Ignore; // the variable is ignored in reflection (inspector)
 }
 
 enum Prec {
