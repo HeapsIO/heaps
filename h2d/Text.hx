@@ -46,10 +46,11 @@ class Text extends Drawable {
 		if( this.font == font ) return font;
 		this.font = font;
 		#if lime
-		if( font.tile.getTexture().format == ALPHA )
+		if( font.tile.getTexture().format == ALPHA ){
 			if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
-		else
+		}else{
 			if( waShader != null ) removeShader( waShader );
+		}
 		#end
 		if( glyphs != null ) glyphs.remove();
 		glyphs = new TileGroup(font == null ? null : font.tile, this);
