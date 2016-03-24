@@ -49,6 +49,10 @@ class Console extends h2d.Sprite {
 		commands = new Map();
 		aliases = new Map();
 		addCommand("help", "Show help", [ { name : "command", t : AString, opt : true } ], showHelp);
+		addCommand("cls", "Clear console", [], function() {
+			logs = [];
+			logTxt.text = "";
+		});
 		addAlias("?", "help");
 	}
 

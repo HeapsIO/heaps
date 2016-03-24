@@ -272,6 +272,11 @@ class Sprite {
 		}
 	}
 
+	public function removeChildren() {
+		while( numChildren>0 )
+			removeChild( getChildAt(0) );
+	}
+
 	// shortcut for parent.removeChild
 	public inline function remove() {
 		if( this != null && parent != null ) parent.removeChild(this);
