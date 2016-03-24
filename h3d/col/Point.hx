@@ -51,6 +51,13 @@ class Point {
 		return x * x + y * y + z * z;
 	}
 
+	public inline function setLength(len:Float) {
+		normalizeFast();
+		x *= len;
+		y *= len;
+		z *= len;
+	}
+
 	public inline function length() {
 		return lengthSq().sqrt();
 	}
