@@ -87,9 +87,34 @@ class Inspector {
 		rootNodes = [];
 
 		init();
+	}
 
-		scenePanel.addNode("Renderer", "object-group", scenePanel.getRendererProps);
-		scenePanel.sync();
+
+
+	function init() {
+		jroot = J(inspect.getRoot());
+		jroot.html('
+			<style>$CSS</style>
+			<ul id="toolbar" class="toolbar">
+			</ul>
+		');
+		jroot.attr("title", "Inspect");
+
+		scenePanel = new ScenePanel("s3d",scene);
+		propsPanel = new Panel("props","Properties");
+		logPanel = new Panel("log", "Log");
+		resPanel = new ResPanel("res", hxd.res.Loader.currentInstance);
+
+
+		resPanel.dock(Left, 0.2);
+		scenePanel.dock(Fill, null, resPanel);
+		logPanel.dock(Down, 0.3);
+		propsPanel.dock(Down, 0.5, scenePanel);
+
+		addPanel("Scene", function() return scenePanel);
+		addPanel("Properties", function() return propsPanel);
+		addPanel("Resources", function() return resPanel);
+		addPanel("Log", function() return logPanel);
 
 		addTool("Load...", "download", load, "Load settings");
 		addTool("Save...", "save", save, "Save settings");
@@ -202,32 +227,6 @@ class Inspector {
 	function pauseLoop() {
 		scene.setElapsedTime(0);
 		h3d.Engine.getCurrent().render(scene);
-	}
-
-	function init() {
-		jroot = J(inspect.getRoot());
-		jroot.html('
-			<style>$CSS</style>
-			<ul id="toolbar" class="toolbar">
-			</ul>
-		');
-		jroot.attr("title", "Inspect");
-
-		scenePanel = new ScenePanel("s3d",scene);
-		propsPanel = new Panel("props","Properties");
-		logPanel = new Panel("log", "Log");
-		resPanel = new ResPanel("res", hxd.res.Loader.currentInstance);
-
-
-		resPanel.dock(Left, 0.2);
-		scenePanel.dock(Fill, null, resPanel);
-		logPanel.dock(Down, 0.3);
-		propsPanel.dock(Down, 0.5, scenePanel);
-
-		addPanel("Scene", function() return scenePanel);
-		addPanel("Properties", function() return propsPanel);
-		addPanel("Resources", function() return resPanel);
-		addPanel("Log", function() return logPanel);
 	}
 
 	function load() {

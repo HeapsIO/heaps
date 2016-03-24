@@ -1,6 +1,12 @@
 package hxd.inspect;
 import hxd.inspect.Property;
 
+enum RendererSection {
+	Core;
+	Textures;
+	Lights;
+}
+
 private class SceneObject extends TreeNode {
 
 	public var o : h3d.scene.Object;
@@ -42,6 +48,51 @@ class ScenePanel extends Panel {
 		super(name, "Scene 3D");
 		sceneObjects = [];
 		this.scene = scene;
+
+		initRenderer();
+	}
+
+	function initRenderer() {
+		var r = addNode("Renderer", "sliders", getRendererProps.bind(Core));
+		addNode("Lights", "adjust", getRendererProps.bind(Lights), r);
+		var s = addNode("Shaders", "code-fork", function() return [], r);
+		addNode("Passes", "gears", getRendererProps.bind(Textures), r);
+
+		var r = scene.renderer;
+		var cl = Type.getClass(r);
+		var ignoreList = getIgnoreList(cl);
+		var fields = Type.getInstanceFields(cl);
+		var meta = haxe.rtti.Meta.getFields(cl);
+		fields.sort(Reflect.compare);
+		var prev : { name : String, group : Array<{ name : String, v : Dynamic }> } = null;
+		for( f in fields ) {
+			if( ignoreList != null && ignoreList.indexOf(f) >= 0 ) continue;
+			var m = Reflect.field(meta, f);
+			if( m != null && Reflect.hasField(m, "ignore") ) continue;
+			var v = Reflect.field(r, f);
+			if( !Std.is(v, hxsl.Shader) && !Std.is(v, h3d.pass.ScreenFx) && !Std.is(v,Group) ) continue;
+
+			if( prev != null && StringTools.startsWith(f, prev.name) ) {
+				prev.group.push({ name : f.substr(prev.name.length), v : v });
+				continue;
+			}
+
+			var subs = { name : f, group : [] };
+			prev = subs;
+			addNode(f, "circle", function() {
+				var props = getDynamicProps(v);
+				for( g in subs.group ) {
+					var gp = getDynamicProps(g.v);
+					if( gp.length == 1 )
+						switch( gp[0] ) {
+						case PGroup(_, props): gp = props;
+						default:
+						}
+					props.push(PGroup(g.name, gp));
+				}
+				return props;
+			}, s);
+		}
 	}
 
 	override function initContent() {
@@ -347,8 +398,7 @@ class ScenePanel extends Panel {
 	}
 
 	function getDynamicProps( v : Dynamic ) : Array<Property> {
-		var fx = Std.instance(v,h3d.pass.ScreenFx);
-		if( fx != null ) {
+		if( Std.is(v,h3d.pass.ScreenFx) || Std.is(v,Group) ) {
 			var props = [];
 			addDynamicProps(props, v);
 			return props;
@@ -356,24 +406,35 @@ class ScenePanel extends Panel {
 		var s = Std.instance(v, hxsl.Shader);
 		if( s != null )
 			return [getShaderProps(s)];
+		var o = Std.instance(v, h3d.scene.Object);
+		if( o != null )
+			return getObjectProps(o);
+		var s = Std.instance(v, hxsl.Shader);
+		if( s != null )
+			return [getShaderProps(s)];
 		return null;
 	}
 
-	function addDynamicProps( props : Array<Property>, o : Dynamic ) {
-		var cl = Type.getClass(o);
+	function getIgnoreList( c : Class<Dynamic> ) {
 		var ignoreList = null;
-		var ccur = cl;
-		while( ccur != null ) {
-			var cmeta : Dynamic = haxe.rtti.Meta.getType(ccur);
-			var ignore : Array<String> = cmeta.ignore;
-			if( ignore != null ) {
-				if( ignoreList == null ) ignoreList = [];
-				for( i in ignore )
-					ignoreList.push(i);
+		while( c != null ) {
+			var cmeta : Dynamic = haxe.rtti.Meta.getType(c);
+			if( cmeta != null ) {
+				var ignore : Array<String> = cmeta.ignore;
+				if( ignore != null ) {
+					if( ignoreList == null ) ignoreList = [];
+					for( i in ignore )
+						ignoreList.push(i);
+				}
 			}
-			ccur = Type.getSuperClass(ccur);
+			c = Type.getSuperClass(c);
 		}
+		return ignoreList;
+	}
 
+	function addDynamicProps( props : Array<Property>, o : Dynamic, ?filter : Dynamic -> Bool ) {
+		var cl = Type.getClass(o);
+		var ignoreList = getIgnoreList(cl);
 		var meta = haxe.rtti.Meta.getFields(cl);
 		var fields = Type.getInstanceFields(cl);
 		fields.sort(Reflect.compare);
@@ -382,6 +443,8 @@ class ScenePanel extends Panel {
 			if( ignoreList != null && ignoreList.indexOf(f) >= 0 ) continue;
 
 			var v = Reflect.field(o, f);
+
+			if( filter != null && !filter(v) ) continue;
 
 			// @inspect metadata
 			var m : Dynamic = Reflect.field(meta, f);
@@ -425,40 +488,60 @@ class ScenePanel extends Panel {
 		return props;
 	}
 
-	public function getRendererProps() {
+	public function getRendererProps( section : RendererSection ) {
 		var props = [];
-		var ls = scene.lightSystem;
-		props.push(PGroup("LightSystem", [
-			PRange("maxLightsPerObject", 0, 10, function() return ls.maxLightsPerObject, function(s) ls.maxLightsPerObject = Std.int(s), 1),
-			PColor("ambientLight", false, function() return ls.ambientLight, function(v) ls.ambientLight = v),
-			PBool("perPixelLighting", function() return ls.perPixelLighting, function(b) ls.perPixelLighting = b),
-		]));
-
-		var s = Std.instance(scene.renderer.getPass("shadow", false),h3d.pass.ShadowMap);
-		if( s != null ) {
-			props.push(PGroup("Shadows", [
-				PRange("size", 64, 2048, function() return s.size, function(sz) s.size = Std.int(sz), 64),
-				PColor("color", false, function() return s.color, function(v) s.color = v),
-				PRange("power", 0, 100, function() return s.power, function(v) s.power = v),
-				PRange("bias", 0, 0.1, function() return s.bias, function(v) s.bias = v),
-			]));
-		}
 
 		var r = scene.renderer;
 
-		var tex = getTextures(@:privateAccess r.tcache);
-		if( tex.length > 0 )
-			props.push( PGroup("Textures", tex) );
+		switch( section ) {
+		case Lights:
 
-		var pmap = new Map();
-		for( p in @:privateAccess r.allPasses ) {
-			if( pmap.exists(p.p) ) continue;
-			pmap.set(p.p, true);
-			props.push(PGroup("Pass " + p.name, getPassProps(p.p)));
+			var ls = scene.lightSystem;
+			var props = [];
+			props.push(PGroup("LightSystem",[
+				PRange("maxLightsPerObject", 0, 10, function() return ls.maxLightsPerObject, function(s) ls.maxLightsPerObject = Std.int(s), 1),
+				PColor("ambientLight", false, function() return ls.ambientLight, function(v) ls.ambientLight = v),
+				PBool("perPixelLighting", function() return ls.perPixelLighting, function(b) ls.perPixelLighting = b),
+			]));
+
+			if( ls.shadowLight != null )
+				props.push(PGroup("DirLight", getObjectProps(ls.shadowLight)));
+
+			var s = Std.instance(r.getPass("shadow", false),h3d.pass.ShadowMap);
+			if( s != null ) {
+				props.push(PGroup("Shadows",[
+					PRange("size", 64, 2048, function() return s.size, function(sz) s.size = Std.int(sz), 64),
+					PColor("color", false, function() return s.color, function(v) s.color = v),
+					PRange("power", 0, 100, function() return s.power, function(v) s.power = v),
+					PRange("bias", 0, 0.1, function() return s.bias, function(v) s.bias = v),
+					PGroup("blur", getDynamicProps(s.blur)),
+				]));
+			}
+
+			return props;
+
+		case Textures:
+
+			var props = [];
+			var tp = getTextures(@:privateAccess r.tcache);
+			if( tp.length > 0 )
+				props.push(PGroup("Textures",tp));
+
+			var pmap = new Map();
+			for( p in @:privateAccess r.allPasses ) {
+				if( pmap.exists(p.p) ) continue;
+				pmap.set(p.p, true);
+				props.push(PGroup("Pass " + p.name, getPassProps(p.p)));
+			}
+			return props;
+
+		case Core:
+
+			var props = [];
+			addDynamicProps(props, r, function(v) return !Std.is(v,hxsl.Shader) && !Std.is(v,h3d.pass.ScreenFx) && !Std.is(v,Group));
+			return props;
+
 		}
-
-		addDynamicProps(props, r);
-		return props;
 	}
 
 	function getTextures( t : h3d.impl.TextureCache ) {
