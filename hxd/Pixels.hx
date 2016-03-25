@@ -60,25 +60,25 @@ class Pixels {
 	function invalidFormat() {
 		throw "Unsupported format for this operation : " + format;
 	}
-	
+
 	public function sub( x : Int, y : Int, width : Int, height : Int ) {
 		if( x < 0 || y < 0 || x + width > this.width || y + height >= this.height )
 			throw "Pixels.sub() outside bounds";
 		var out = hxd.impl.Tmp.getBytes(width * height * bpp);
 		var stride = width * bpp;
-		var outP = 0;		
+		var outP = 0;
 		for( dy in 0...height ) {
-			var p = (x + yflip(y + dy) * this.width) * bpp + offset;			
+			var p = (x + yflip(y + dy) * this.width) * bpp + offset;
 			out.blit(outP, this.bytes, p, stride);
 			outP += stride;
 		}
 		return new hxd.Pixels(width, height, out, format);
 	}
-	
+
 	inline function yflip(y:Int) {
 		return if( flags.has(FlipY) ) this.height - 1 - y else y;
 	}
-	
+
 	public function blit( x : Int, y : Int, src : hxd.Pixels, srcX : Int, srcY : Int, width : Int, height : Int ) {
 		if( x < 0 || y < 0 || x + width > this.width || y + height > this.height )
 			throw "Pixels.blit() outside bounds";
@@ -86,7 +86,7 @@ class Pixels {
 			throw "Pixels.blit() outside src bounds";
 		willChange();
 		src.convert(format);
-		var stride = width * bpp;		
+		var stride = width * bpp;
 		for( dy in 0...height ) {
 			var srcP = (srcX + src.yflip(dy + srcY) * src.width) * bpp + src.offset;
 			var dstP = (x + yflip(dy + y) * this.width) * bpp + offset;
@@ -199,7 +199,7 @@ class Pixels {
 	inline function willChange() {
 		if( flags.has(ReadOnly) ) copyInner();
 	}
-	
+
 	public function setFlip( b : Bool ) {
 		#if js if( b == null ) b = false; #end
 		if( flags.has(FlipY) == b ) return;
@@ -340,6 +340,27 @@ class Pixels {
 		case ARGB, BGRA, RGBA: 4;
 		case RGBA16F: 8;
 		case RGBA32F: 16;
+		}
+	}
+
+	/**
+		Returns the byte offset for the requested channel (0=R,1=G,2=B,3=A)
+		Returns -1 if the channel is not found
+	**/
+	public static function getChannelOffset( format : PixelFormat, channel : Int ) {
+		return switch( format ) {
+		case ALPHA:
+			if( channel == 3 ) 0 else -1;
+		case ARGB:
+			[1, 2, 3, 0][channel];
+		case BGRA:
+			[2, 1, 0, 3][channel];
+		case RGBA:
+			channel;
+		case RGBA16F:
+			channel * 2;
+		case RGBA32F:
+			channel * 4;
 		}
 	}
 

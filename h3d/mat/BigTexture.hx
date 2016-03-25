@@ -87,7 +87,7 @@ class BigTexture {
 
 	function initPixels() {
 		if( allPixels == null )
-			allPixels = hxd.Pixels.alloc(size, size, BGRA);
+			allPixels = hxd.Pixels.alloc(size, size, h3d.mat.Texture.nativeFormat);
 	}
 
 	function findBest( q : QuadTree, w : Int, h : Int ) {
@@ -180,23 +180,22 @@ class BigTexture {
 
 	function uploadPixels( pixels : hxd.Pixels, x : Int, y : Int, alphaChannel ) {
 		initPixels();
-		pixels.convert(allPixels.format);
 		var bpp = hxd.Pixels.bytesPerPixel(allPixels.format);
 		if( alphaChannel ) {
-			var alphaPos = switch( allPixels.format ) {
-			case BGRA: 3;
-			default: throw "TODO";
-			}
+			var alphaPos = hxd.Pixels.getChannelOffset(allPixels.format, 3);
+			var srcRedPos = hxd.Pixels.getChannelOffset(pixels.format, 0);
+			var srcBpp = hxd.Pixels.bytesPerPixel(pixels.format);
 			for( dy in 0...pixels.height ) {
 				var w = (x + (y + dy) * size) * bpp + alphaPos;
-				var r = dy * pixels.width * bpp + alphaPos;
+				var r = dy * pixels.width * srcBpp + srcRedPos;
 				for( dx in 0...pixels.width ) {
 					allPixels.bytes.set(w, pixels.bytes.get(r));
 					w += bpp;
-					r += bpp;
+					r += srcBpp;
 				}
 			}
 		} else {
+			pixels.convert(allPixels.format);
 			for( dy in 0...pixels.height )
 				allPixels.bytes.blit((x + (y + dy) * size) * bpp, pixels.bytes, dy * pixels.width * bpp, pixels.width * bpp);
 		}
