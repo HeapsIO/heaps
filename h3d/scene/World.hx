@@ -65,7 +65,7 @@ class WorldMaterial {
 		shaders = [];
 	}
 	public function updateBits() {
-		bits = (t.t.id << 6) | (blend.getIndex() << 3) | ((killAlpha == null ? 0 : 1) << 2) | ((lights ? 1 : 0) << 1) | (shadows ? 1 : 0);
+		bits = (t.t.id << 7) | (blend.getIndex() << 4) | ((killAlpha == null ? 0 : 1) << 3) | ((lights ? 1 : 0) << 2) | ((shadows ? 1 : 0)<<1) | (spec == null ? 0 : 1);
 	}
 }
 
