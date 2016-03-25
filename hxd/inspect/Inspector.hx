@@ -79,6 +79,7 @@ class Inspector {
 		haxe.Log.trace = onTrace;
 		inspect = new PropManager(host, port);
 		inspect.resolveProps = resolveProps;
+		inspect.onShowTexture = onShowTexture;
 		inspect.onChange = onChange;
 		inspect.handleKey = onKey;
 		this.scene = scene;
@@ -153,6 +154,43 @@ class Inspector {
 			s.dock(Right, 0.35);
 			return s;
 		});
+	}
+
+	function onShowTexture( t : h3d.mat.Texture ) {
+		var p = new Panel(null, "" + t);
+		p.onClose = p.dispose;
+		function load( mode = "rgba" ) {
+			p.j.html("Loading...");
+			haxe.Timer.delay(function() {
+				var bmp = t.capturePixels(true);
+				switch( mode ) {
+				case "rgb":
+					for( x in 0...bmp.width )
+						for( y in 0...bmp.height )
+							bmp.setPixel(x, y, bmp.getPixel(x, y) | 0xFF000000);
+				case "alpha":
+					for( x in 0...bmp.width )
+						for( y in 0...bmp.height ) {
+							var a = bmp.getPixel(x, y) >>> 24;
+							bmp.setPixel(x, y, 0xFF000000 | a | (a<<8) | (a<<16));
+						}
+				default:
+				}
+
+				var png = bmp.toPNG();
+				bmp.dispose();
+				var pngBase64 = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")).encodeBytes(png).toString();
+				p.j.html('
+					<select class="imageprops"><option value="rgba">RGBA</option><option value="rgb">RGB</option><option value="alpha">Alpha</option></select>
+					<img src="data:image/png;base64,$pngBase64" style="background:#696969;max-width:100%"/>
+				');
+				var props = p.j.find(".imageprops");
+				props.val(mode);
+				props.change(function(_) load(props.getValue()));
+			}, 0);
+		}
+		load();
+		p.show();
 	}
 
 	public function dispose() {

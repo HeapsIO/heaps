@@ -55,7 +55,16 @@
 .jqpage ul.toolbar li.active, .dialog-floating ul.toolbar li.active {
 	color : white;
 }
+.jqpage .panel, .dialog-floating .panel {
+	position : relative;
+}
+.jqpage .panel .imageprops, .dialog-floating .panel .imageprops {
+	position : absolute;
+	right : 5px;
+	top : 5px;
+}
 .jqpage .panel .scrollable, .dialog-floating .panel .scrollable {
+	position : relative;
 	height : 100%;
 	overflow : auto;
 }

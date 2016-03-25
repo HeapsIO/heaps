@@ -58,7 +58,16 @@
 
 	.panel {
 
+		position : relative;
+
+		.imageprops {
+			position : absolute;
+			right : 5px;
+			top : 5px;
+		}
+
 		.scrollable {
+			position : relative;
 			height:100%;
 			overflow : auto;
 		}

@@ -311,6 +311,9 @@ class PropManager extends cdb.jq.Client {
 		return null;
 	}
 
+	public dynamic function onShowTexture( t : h3d.mat.Texture ) {
+	}
+
 	function addProp( basePath : String, t : JQuery, p : Property, gids : Array<Int>, expandLevel ) {
 		var j = J("<tr>");
 		j.addClass("prop");
@@ -596,23 +599,7 @@ class PropManager extends cdb.jq.Client {
 						jprop.text("");
 					else {
 						jprop.html(StringTools.htmlEscape("" + t) + " <button>View</button>");
-						jprop.find("button").click(function(_) {
-							t = get();
-							var p = new Panel(null, "" + t);
-							p.show();
-							p.onClose = p.dispose;
-							function load() {
-								p.j.html("Loading...");
-								haxe.Timer.delay(function() {
-									var bmp = t.capturePixels();
-									var png = bmp.toPNG();
-									bmp.dispose();
-									var pngBase64 = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")).encodeBytes(png).toString();
-									p.j.html('<img src="data:image/png;base64,$pngBase64" style="background:#696969"/>');
-								}, 0);
-							}
-							load();
-						});
+						jprop.find("button").click(function(_) onShowTexture(get()));
 					}
 				} else
 					jprop.html('<img src="file://$filePath"/>');
