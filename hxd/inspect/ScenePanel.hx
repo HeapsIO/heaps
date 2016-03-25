@@ -330,7 +330,8 @@ class ScenePanel extends Panel {
 						var p = new Panel(null, shader.data.name+" shader");
 						var toString = hxsl.Printer.shaderToString;
 						var code = toString(shader.data);
-						p.j.html("<pre class='code'>"+colorize(code)+"</pre>");
+						p.j.html("<pre class='code'>" + colorize(code) + "</pre>");
+						p.show();
 					}
 
 				});
@@ -350,6 +351,7 @@ class ScenePanel extends Panel {
 					var toString = hxsl.Printer.shaderToString;
 					var code = toString(shader.vertex.data) + "\n\n" + toString(shader.fragment.data);
 					p.j.html("<pre class='code'>" + colorize(code) + "</pre>");
+					p.show();
 				}
 			});
 			props.push(p);
