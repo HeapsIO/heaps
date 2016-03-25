@@ -28,10 +28,12 @@ private class QuadTree {
 	public var height : Int;
 	public var used : Bool;
 	public var texture : hxd.res.Image;
+	public var alphaChannel : hxd.res.Image;
 	public var tr : QuadTree;
 	public var tl : QuadTree;
 	public var br : QuadTree;
 	public var bl : QuadTree;
+	public var loadingColor : Bool;
 	public function new(x, y, w, h) {
 		this.x = x;
 		this.y = y;
@@ -52,7 +54,7 @@ class BigTexture {
 	var modified : Bool = true;
 	var isDone : Bool;
 	var isUploaded : Bool;
-	var pending : Array<{ t : hxd.res.Image, x : Int, y : Int, w : Int, h : Int, skip : Bool }>;
+	var pending : Array<{ t : hxd.res.Image, q : QuadTree, alpha : Bool, skip : Bool }>;
 	var waitTimer : haxe.Timer;
 	var lastEvent : Float;
 
@@ -134,19 +136,24 @@ class BigTexture {
 	}
 
 	public function set( t : hxd.res.Image, et : BigTextureElement ) {
-		var tsize = t.getSize();
-		upload(t, Math.round(et.du * size), Math.round(et.dv * size), tsize.width, tsize.height);
 		et.q.texture = t;
+		upload(t, et.q, false);
+		t.watch(rebuild);
+	}
+
+	public function setAlpha( t : hxd.res.Image, et : BigTextureElement ) {
+		et.q.alphaChannel = t;
+		upload(t, et.q, true);
 		t.watch(rebuild);
 	}
 
 	function rebuild() {
 		function rebuildRec( q : QuadTree ) {
 			if( q == null ) return;
-			if( q.texture != null ) {
-				var tsize = q.texture.getSize();
-				upload(q.texture, q.x, q.y, tsize.width, tsize.height);
-			}
+			if( q.texture != null )
+				upload(q.texture, q, false);
+			if( q.alphaChannel != null )
+				upload(q.alphaChannel, q, true);
 			rebuildRec(q.tl);
 			rebuildRec(q.tr);
 			rebuildRec(q.bl);
@@ -161,55 +168,84 @@ class BigTexture {
 		var q = allocPos(tsize.width,tsize.height);
 		if( q == null )
 			return null;
-		var x = q.x, y = q.y;
-		upload(t, x, y, tsize.width, tsize.height);
+		upload(t, q, false);
 		if( isUploaded ) {
 			isUploaded = false;
 			rebuild();
 		}
 		q.texture = t;
 		t.watch(rebuild);
-		return new BigTextureElement(this, q, x / size, y / size, tsize.width / size, tsize.height / size);
+		return new BigTextureElement(this, q, q.x / size, q.y / size, tsize.width / size, tsize.height / size);
 	}
 
-	function upload( t : hxd.res.Image, x : Int, y : Int, width : Int, height : Int ) {
+	function uploadPixels( pixels : hxd.Pixels, x : Int, y : Int, alphaChannel ) {
+		initPixels();
+		pixels.convert(allPixels.format);
+		var bpp = hxd.Pixels.bytesPerPixel(allPixels.format);
+		if( alphaChannel ) {
+			var alphaPos = switch( allPixels.format ) {
+			case BGRA: 3;
+			default: throw "TODO";
+			}
+			for( dy in 0...pixels.height ) {
+				var w = (x + (y + dy) * size) * bpp + alphaPos;
+				var r = dy * pixels.width * bpp + alphaPos;
+				for( dx in 0...pixels.width ) {
+					allPixels.bytes.set(w, pixels.bytes.get(r));
+					w += bpp;
+					r += bpp;
+				}
+			}
+		} else {
+			for( dy in 0...pixels.height )
+				allPixels.bytes.blit((x + (y + dy) * size) * bpp, pixels.bytes, dy * pixels.width * bpp, pixels.width * bpp);
+		}
+		pixels.dispose();
+		modified = true;
+	}
+
+	function upload( t : hxd.res.Image, q : QuadTree, alphaChannel ) {
 		switch( t.getFormat() ) {
 		case Png, Gif:
-			initPixels();
-			var pixels = t.getPixels();
-			pixels.convert(allPixels.format);
-			for( dy in 0...height )
-				allPixels.bytes.blit((x + (y + dy) * size) * 4, pixels.bytes, dy * width * 4, width * 4);
-			pixels.dispose();
-			modified = true;
+			uploadPixels(t.getPixels(), q.x, q.y, alphaChannel);
 		case Jpg:
 			loadCount++;
-			var o = { t : t, x : x, y : y, w : width, h : height, skip : false };
+			var o = { t : t, q : q, alpha : alphaChannel, skip : false };
 			pending.push(o);
-			t.entry.loadBitmap(function(bmp) {
-				if( o.skip ) return;
-				lastEvent = haxe.Timer.stamp();
-				pending.remove(o);
-				initPixels();
-				#if heaps
-				var bmp = bmp.toBitmap();
-				var pixels = bmp.getPixels();
-				bmp.dispose();
-				#else
-				var pixels = bmp.getPixels();
-				#end
-				pixels.convert(allPixels.format);
-				for( dy in 0...height )
-					allPixels.bytes.blit((x + (y + dy) * size) * 4, pixels.bytes, dy * width * 4, width * 4);
-				modified = true;
-				pixels.dispose();
-				loadCount--;
-				if( isDone )
-					done();
-				else
-					flush();
-			});
+			function load() {
+				if( alphaChannel ) {
+					if( o.skip )
+						return;
+					// wait for the color to be set before overwriting alpha
+					if( q.loadingColor ) {
+						haxe.Timer.delay(load, 10);
+						return;
+					}
+				} else
+					q.loadingColor = true;
+				t.entry.loadBitmap(function(bmp) {
+					if( o.skip ) return;
+					if( !alphaChannel ) q.loadingColor = false;
+					lastEvent = haxe.Timer.stamp();
+					pending.remove(o);
+					#if heaps
+					var bmp = bmp.toBitmap();
+					var pixels = bmp.getPixels();
+					bmp.dispose();
+					#else
+					var pixels = bmp.getPixels();
+					#end
+					uploadPixels(pixels, q.x, q.y, alphaChannel);
+					loadCount--;
+					if( isDone )
+						done();
+					else
+						flush();
+				});
+			}
+			load();
 		}
+
 	}
 
 	function retry() {
@@ -226,7 +262,7 @@ class BigTexture {
 		pending = [];
 		for( o in old ) {
 			o.skip = true;
-			upload(o.t, o.x, o.y, o.w, o.h);
+			upload(o.t, o.q, o.alpha);
 		}
 	}
 

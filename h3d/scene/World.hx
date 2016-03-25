@@ -99,7 +99,16 @@ class WorldModel {
 class World extends Object {
 	public var worldSize : Int;
 	public var chunkSize : Int;
+
+	/*
+		For each texture loaded, will call resolveSpecularTexture and have separate spec texture.
+	*/
 	public var enableSpecular = false;
+	/*
+		When enableSpecular=true, will store the specular value in the alpha channel instead of a different texture.
+		This will erase alpha value of transparent textures, so should only be used if specular is only on opaque models.
+	*/
+	public var specularInAlpha = false;
 
 	var chunkBits : Int;
 	var worldStride : Int;
@@ -192,12 +201,19 @@ class World extends Object {
 		var specTex = null;
 		if( enableSpecular ) {
 			var res = resolveSpecularTexture(texturePath);
-			if( btex.spec == null )
-				btex.spec = new h3d.mat.BigTexture(-1, bigTextureSize, bigTextureBG);
-			if( res != null )
-				specTex = btex.spec.add(res);
-			else
-				@:privateAccess btex.spec.allocPos(t.t.tex.width, t.t.tex.height); // keep UV in-sync
+			if( specularInAlpha ) {
+				if( res != null ) {
+					t.t.setAlpha(res, t);
+					specTex = t;
+				}
+			} else {
+				if( btex.spec == null )
+					btex.spec = new h3d.mat.BigTexture(-1, bigTextureSize, bigTextureBG);
+				if( res != null )
+					specTex = btex.spec.add(res);
+				else
+					@:privateAccess btex.spec.allocPos(t.t.tex.width, t.t.tex.height); // keep UV in-sync
+			}
 		}
 
 		var m = new WorldMaterial();
@@ -393,9 +409,14 @@ class World extends Object {
 		for(s in mat.shaders)
 			mesh.material.mainPass.addShader(s);
 
-		if(mat.spec != null)
-			mesh.material.specularTexture = mat.spec.t.tex;
-		else mesh.material.specularAmount = 0;
+		if( mat.spec != null ) {
+			if( specularInAlpha ) {
+				mesh.material.specularTexture = null;
+				mesh.material.textureShader.specularAlpha = true;
+			} else
+				mesh.material.specularTexture = mat.spec.t.tex;
+		} else
+			mesh.material.specularAmount = 0;
 	}
 
 	override function dispose() {
