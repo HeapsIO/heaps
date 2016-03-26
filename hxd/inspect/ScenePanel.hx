@@ -43,6 +43,9 @@ class ScenePanel extends Panel {
 	var scene : h3d.scene.Scene;
 	var sceneObjects : Array<SceneObject>;
 	var scenePosition = 0;
+	var currentPick(default,set) : h3d.scene.Mesh;
+	var currentPickPass : h3d.mat.Pass;
+	var btPick : cdb.jq.JQuery;
 
 	public function new(name, scene) {
 		super(name, "Scene 3D");
@@ -103,8 +106,8 @@ class ScenePanel extends Panel {
 				<li class="bt_hide" title="Show/Hide invisible objects">
 					<i class="fa fa-eye" />
 				</li>
-				<li class="bt_highlight" title="[TODO] Auto highlight in scene selected object">
-					<i class="fa fa-cube" />
+				<li class="bt_pick" title="Pick object in game">
+					<i class="fa fa-hand-o-up" />
 				</li>
 			</ul>
 			<div class="scrollable">
@@ -121,11 +124,89 @@ class ScenePanel extends Panel {
 			content.toggleClass("masked");
 		});
 
-		var bt = j.find(".bt_highlight");
-		bt.click(function(_) {
-			bt.toggleClass("active");
-			// TODO
+		btPick = j.find(".bt_pick");
+		btPick.click(function(_) {
+			btPick.toggleClass("active");
+			var stage = hxd.Stage.getInstance();
+			if( !btPick.hasClass("active") ) {
+				currentPick = null;
+				stage.removeEventTarget(onPickEvent);
+				return;
+			}
+			stage.addEventTarget(onPickEvent);
 		});
+	}
+
+	function set_currentPick(m) {
+		if( currentPick != null ) {
+			currentPick.material.removePass(currentPickPass);
+			currentPickPass = null;
+		}
+		currentPick = m;
+		if( currentPick != null ) {
+			var p = currentPick.material.allocPass("add");
+			p.depthTest = LessEqual;
+			p.culling = None;
+			var m = new h3d.shader.ColorMatrix();
+			m.matrix.zero();
+			m.matrix.colorAdd(0x800080);
+			p.addShader(m);
+			p.blend(One, One);
+			currentPickPass = p;
+		}
+		return m;
+	}
+
+	function onPickEvent( e : hxd.Event ) {
+		switch( e.kind ) {
+		case EMove:
+			var r = scene.camera.rayFromScreen(e.relX, e.relY);
+			var best = { m : null, z : 1. };
+			pickRec(r, scene, best);
+			if( currentPick == best.m )
+				return;
+			currentPick = best.m;
+		case EPush:
+			if( currentPick == null ) return;
+
+			for( o in sceneObjects )
+				if( o.o == currentPick ) {
+					o.click();
+					o.j.scrollIntoView();
+					break;
+				}
+
+			btPick.click();
+		default:
+		}
+	}
+
+	function pickRec( r : h3d.col.Ray, obj : h3d.scene.Object, best : { m : h3d.scene.Mesh, z : Float } ) {
+		if( !obj.visible )
+			return;
+		if( obj.isMesh() && !obj.culled ) {
+			var m = obj.toMesh();
+			if( m.primitive != null ) {
+				var c = m.primitive.getCollider();
+				var r2 = r.clone();
+				r2.transform(m.getInvPos());
+				r2.normalize();
+				var pt = c.rayIntersection(r2);
+				if( pt != null ) {
+					pt.transform(m.getAbsPos());
+					var pt = pt.toVector();
+					pt.project(scene.camera.m);
+					if( pt.z < best.z ) {
+						best.z = pt.z;
+						best.m = m;
+					}
+				}
+			}
+		}
+		if( obj.culled && obj.inheritCulled )
+			return;
+		for( o in obj )
+			pickRec(r, o, best);
 	}
 
 	public function addNode( name : String, icon : String, ?getProps : Void -> Array<Property>, ?parent : TreeNode ) {
