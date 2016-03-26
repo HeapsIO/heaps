@@ -14,12 +14,12 @@ class Primitive {
 	}
 
 	public function getCollider() : h3d.col.Collider {
-		throw "not implemented";
+		throw "not implemented for "+this;
 		return null;
 	}
 
 	public function getBounds() : h3d.col.Bounds {
-		throw "not implemented";
+		throw "not implemented for "+this;
 		return null;
 	}
 
@@ -31,7 +31,7 @@ class Primitive {
 	}
 
 	public function buildNormalsDisplay() : Primitive {
-		throw "not implemented";
+		throw "not implemented for "+this;
 		return null;
 	}
 
