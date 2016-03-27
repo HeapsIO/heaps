@@ -61,24 +61,24 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
 			var saveR = r.clone();
 
-			var hitTmp = new h3d.col.Point();			
+			var hitTmp = new h3d.col.Point();
 			for( i in interactives ) {
-				
+
 				var p : h3d.scene.Object = i;
 				while( p != null && p.visible )
 					p = p.parent;
 				if( p != null ) continue;
-				
+
 				var minv = i.getInvPos();
 				r.transform(minv);
 				r.normalize();
-				
+
 				// check for NaN
 				if( r.lx != r.lx ) {
 					r.load(saveR);
 					continue;
 				}
-				
+
 				var hit = i.shape.rayIntersection(r, hitTmp);
 				r.load(saveR);
 				if( hit == null ) continue;
@@ -141,6 +141,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	override function dispose() {
 		super.dispose();
+		if( hardwarePass != null ) {
+			hardwarePass.dispose();
+			hardwarePass = null;
+		}
 		renderer.dispose();
 		renderer = new Renderer();
 	}
@@ -173,6 +177,54 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	public function setElapsedTime( elapsedTime ) {
 		ctx.elapsedTime = elapsedTime;
+	}
+
+	var hardwarePass : h3d.pass.HardwarePick;
+
+	/**
+		Use GPU rendering to pick a model at the given pixel position.
+		hardwarePick() will check all scene visible meshes bounds against a ray cast with current camera, then draw them into a 1x1 pixel texture with a specific shader.
+		The texture will then be read and the color will identify the object that was rendered at this pixel.
+		This is a very precise way of doing scene picking since it performs exactly the same transformations (skinning, custom shaders, etc.) but might be more costly than using CPU colliders.
+		Please note that when done during/after rendering, this might clear the screen on some platforms so it should always be done before rendering.
+	**/
+	public function hardwarePick( pixelX : Float, pixelY : Float) {
+		var engine = h3d.Engine.getCurrent();
+		camera.screenRatio = engine.width / engine.height;
+		camera.update();
+		ctx.camera = camera;
+		ctx.engine = engine;
+		ctx.start();
+
+		var ray = camera.rayFromScreen(pixelX, pixelY);
+		hardwarePickEmit(ray, ctx);
+		ctx.lightSystem = null;
+
+		var found = null;
+		var passes = @:privateAccess ctx.passes;
+
+		if( passes != null ) {
+			var p = hardwarePass;
+			if( p == null )
+				hardwarePass = p = new h3d.pass.HardwarePick();
+			ctx.setGlobal("depthMap", h3d.mat.Texture.fromColor(0xFF00000, 0));
+			p.pickX = pixelX;
+			p.pickY = pixelY;
+			p.setContext(ctx);
+			@:privateAccess ctx.passes = passes = p.draw(passes);
+			if( p.pickedIndex >= 0 ) {
+				while( p.pickedIndex > 0 ) {
+					p.pickedIndex--;
+					passes = passes.next;
+				}
+				found = passes.obj;
+			}
+		}
+
+		ctx.done();
+		ctx.camera = null;
+		ctx.engine = null;
+		return found;
 	}
 
 	@:access(h3d.mat.Pass)

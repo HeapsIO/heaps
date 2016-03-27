@@ -105,6 +105,12 @@ class Default extends Base {
 		ctx.engine.driver.log(str);
 	}
 
+	function drawObject( p : Object ) {
+		ctx.drawPass = p;
+		ctx.engine.selectMaterial(p.pass);
+		@:privateAccess p.obj.draw(ctx);
+	}
+
 	@:access(h3d.scene)
 	override function draw( passes : Object ) {
 		for( g in ctx.sharedGlobals )
@@ -156,9 +162,7 @@ class Default extends Base {
 				ctx.engine.uploadShaderBuffers(buf, Params);
 				ctx.engine.uploadShaderBuffers(buf, Textures);
 			}
-			ctx.drawPass = p;
-			ctx.engine.selectMaterial(p.pass);
-			p.obj.draw(ctx);
+			drawObject(p);
 			p = p.next;
 		}
 		if( ctx.engine.driver.logEnable ) {

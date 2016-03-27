@@ -28,6 +28,17 @@ class Mesh extends Object {
 		return m;
 	}
 
+	override function hardwarePickEmit(r:h3d.col.Ray, ctx:RenderContext) {
+		if( visible && !culled && primitive != null ) {
+			var save = r.clone();
+			r.transform(getInvPos());
+			if( primitive.getBounds().rayIntersection(r) != null )
+				ctx.emitPass(material.mainPass, this);
+			r.load(save);
+		}
+		super.hardwarePickEmit(r, ctx);
+	}
+
 	override function draw( ctx : RenderContext ) {
 		primitive.render(ctx.engine);
 	}

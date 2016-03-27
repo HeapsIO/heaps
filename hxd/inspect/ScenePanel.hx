@@ -44,8 +44,9 @@ class ScenePanel extends Panel {
 	var sceneObjects : Array<SceneObject>;
 	var scenePosition = 0;
 	var currentPick(default,set) : h3d.scene.Mesh;
-	var currentPickPass : h3d.mat.Pass;
+	var currentPickShader : hxsl.Shader;
 	var btPick : cdb.jq.JQuery;
+	var lastPickEvent : Null<Int>;
 
 	public function new(name, scene) {
 		super(name, "Scene 3D");
@@ -130,29 +131,30 @@ class ScenePanel extends Panel {
 			var stage = hxd.Stage.getInstance();
 			if( !btPick.hasClass("active") ) {
 				currentPick = null;
+				lastPickEvent = null;
 				stage.removeEventTarget(onPickEvent);
 				return;
 			}
+			lastPickEvent = 0;
 			stage.addEventTarget(onPickEvent);
 		});
 	}
 
 	function set_currentPick(m) {
+		if( currentPick == m )
+			return m;
 		if( currentPick != null ) {
-			currentPick.material.removePass(currentPickPass);
-			currentPickPass = null;
+			currentPick.material.mainPass.removeShader(currentPickShader);
+			currentPickShader = null;
 		}
 		currentPick = m;
 		if( currentPick != null ) {
-			var p = currentPick.material.allocPass("add");
-			p.depthTest = LessEqual;
-			p.culling = None;
 			var m = new h3d.shader.ColorMatrix();
-			m.matrix.zero();
-			m.matrix.colorAdd(0x800080);
-			p.addShader(m);
-			p.blend(One, One);
-			currentPickPass = p;
+			m.matrix.identity();
+			m.matrix.colorHue(0.1);
+			m.matrix.colorBrightness(0.2);
+			currentPickShader = m;
+			currentPick.material.mainPass.addShader(m);
 		}
 		return m;
 	}
@@ -160,12 +162,9 @@ class ScenePanel extends Panel {
 	function onPickEvent( e : hxd.Event ) {
 		switch( e.kind ) {
 		case EMove:
-			var r = scene.camera.rayFromScreen(e.relX, e.relY);
-			var best = { m : null, z : 1. };
-			pickRec(r, scene, best);
-			if( currentPick == best.m )
-				return;
-			currentPick = best.m;
+			lastPickEvent = h3d.Engine.getCurrent().frameCount;
+			var obj = scene.hardwarePick(e.relX, e.relY);
+			currentPick = obj == null ? null : obj.toMesh();
 		case EPush:
 			if( currentPick == null ) return;
 
@@ -179,34 +178,6 @@ class ScenePanel extends Panel {
 			btPick.click();
 		default:
 		}
-	}
-
-	function pickRec( r : h3d.col.Ray, obj : h3d.scene.Object, best : { m : h3d.scene.Mesh, z : Float } ) {
-		if( !obj.visible )
-			return;
-		if( obj.isMesh() && !obj.culled ) {
-			var m = obj.toMesh();
-			if( m.primitive != null ) {
-				var c = m.primitive.getCollider();
-				var r2 = r.clone();
-				r2.transform(m.getInvPos());
-				r2.normalize();
-				var pt = c.rayIntersection(r2);
-				if( pt != null ) {
-					pt.transform(m.getAbsPos());
-					var pt = pt.toVector();
-					pt.project(scene.camera.m);
-					if( pt.z < best.z ) {
-						best.z = pt.z;
-						best.m = m;
-					}
-				}
-			}
-		}
-		if( obj.culled && obj.inheritCulled )
-			return;
-		for( o in obj )
-			pickRec(r, o, best);
 	}
 
 	public function addNode( name : String, icon : String, ?getProps : Void -> Array<Property>, ?parent : TreeNode ) {
@@ -237,6 +208,12 @@ class ScenePanel extends Panel {
 		syncRec(scene, this);
 		while( sceneObjects.length > scenePosition )
 			sceneObjects.pop().dispose();
+		var frame = h3d.Engine.getCurrent().frameCount;
+		if( lastPickEvent != null && lastPickEvent < frame - 1 ) {
+			var stage = hxd.Stage.getInstance();
+			var e = new hxd.Event(EMove, stage.mouseX, stage.mouseY);
+			haxe.Timer.delay(function() { if( lastPickEvent == null ) return; onPickEvent(e); }, 0); // flash don't like to capture while rendering
+		}
 	}
 
 	@:access(hxd.inspect.TreeNode)
