@@ -167,15 +167,15 @@ class ScenePanel extends Panel {
 			currentPick = obj == null ? null : obj.toMesh();
 		case EPush:
 			if( currentPick == null ) return;
-
+			var cur = currentPick;
+			currentPick = null;
+			btPick.click();
 			for( o in sceneObjects )
-				if( o.o == currentPick ) {
+				if( o.o == cur ) {
 					o.click();
 					o.j.scrollIntoView();
 					break;
 				}
-
-			btPick.click();
 		default:
 		}
 	}
