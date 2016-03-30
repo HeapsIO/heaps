@@ -56,7 +56,10 @@ class Default extends Base {
 	}
 
 	override function compileShader( p : h3d.mat.Pass ) {
-		return manager.compileShaders(p.getShadersRec());
+		var o = new Object();
+		o.pass = p;
+		setupShaders(o);
+		return manager.compileShaders(o.shaders);
 	}
 
 	function processShaders( p : Object, shaders : hxsl.ShaderList ) {
