@@ -760,7 +760,7 @@ class Stage3dDriver extends Driver {
 		if( renderTargets > 1 ) {
 			for( i in 1...renderTargets )
 				ctx.setRenderToTexture(null, false, 0, 0, i);
-			renderTargets = 0;
+			renderTargets = 1;
 		}
 		if( t == null ) {
 			ctx.setRenderToBackBuffer();
