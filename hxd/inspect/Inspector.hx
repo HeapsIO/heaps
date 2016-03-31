@@ -163,17 +163,27 @@ class Inspector {
 			p.j.html("Loading...");
 			haxe.Timer.delay(function() {
 				var bmp = t.capturePixels(true);
+				function setChannel(v) {
+					var bits = v * 8;
+					for( x in 0...bmp.width )
+						for( y in 0...bmp.height ) {
+							var a = (bmp.getPixel(x, y) >>> bits) & 0xFF;
+							bmp.setPixel(x, y, 0xFF000000 | a | (a<<8) | (a<<16));
+						}
+				}
 				switch( mode ) {
 				case "rgb":
 					for( x in 0...bmp.width )
 						for( y in 0...bmp.height )
 							bmp.setPixel(x, y, bmp.getPixel(x, y) | 0xFF000000);
 				case "alpha":
-					for( x in 0...bmp.width )
-						for( y in 0...bmp.height ) {
-							var a = bmp.getPixel(x, y) >>> 24;
-							bmp.setPixel(x, y, 0xFF000000 | a | (a<<8) | (a<<16));
-						}
+					setChannel(3);
+				case "red":
+					setChannel(2);
+				case "green":
+					setChannel(1);
+				case "blue":
+					setChannel(0);
 				default:
 				}
 
@@ -181,7 +191,7 @@ class Inspector {
 				bmp.dispose();
 				var pngBase64 = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")).encodeBytes(png).toString();
 				p.j.html('
-					<select class="imageprops"><option value="rgba">RGBA</option><option value="rgb">RGB</option><option value="alpha">Alpha</option></select>
+					<select class="imageprops"><option value="rgba">RGBA</option><option value="rgb">RGB</option><option value="alpha">Alpha</option><option value="red">Red</option><option value="green">Green</option><option value="blue">Blue</option></select>
 					<img src="data:image/png;base64,$pngBase64" style="background:#696969;max-width:100%"/>
 				');
 				var props = p.j.find(".imageprops");
