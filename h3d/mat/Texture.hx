@@ -270,20 +270,21 @@ class Texture {
 	}
 
 	/*
-		Doing this has proved to be quite unreliable in flash, which even mess up render targets for no known reason :'(
 
-	public function setChannels( c : TextureChannel, with : h3d.mat.Texture, ?srcChannel : TextureChannel ) {
-		if( with.t == null )
+		// Seems unreliable on flash, not sure why...
+		// eg :
+		//    var t = hxd.Res.tex1.toTexture();
+		//	  t.onLoaded = function() { var s = hxd.Res.tex2.toTexture(); s.onLoaded = function() t.setChannel(A,s,R); }
+		// using setChannel here will clear the texture, for no known reason
+
+	public function setChannel( c : hxd.Pixels.Channel, with : h3d.mat.Texture, ?srcChannel : hxd.Pixels.Channel ) {
+		if( t == null || with.t == null )
 			throw "Can't set disposed or loading texture";
 		var pass = new h3d.mat.Pass("");
-		pass.colorMask = c.toInt();
+		pass.colorMask = 1 << c.toInt();
 		pass.depth(false, Always);
 		pass.culling = None;
-		#if flash
-		if( c.toInt() & (A:TextureChannel).toInt() != 0 )
-			throw "setting alpha channel is not supported in flash (unknown stage3d issue)";
-		#end
-		if( srcChannel != null && (srcChannel.toInt() & c.toInt()) != srcChannel.toInt() )
+		if( srcChannel != null && srcChannel != c )
 			pass.addShader(new h3d.shader.ChannelSelect(srcChannel.toInt()));
 		h3d.pass.Copy.run(with, this, null, pass);
 	}

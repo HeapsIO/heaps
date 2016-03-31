@@ -41,7 +41,7 @@ class TextureChannels extends Texture {
 		}
 	}
 
-	public function setChannel( c : hxd.Pixels.Channel, res : hxd.res.Image, ?srcChannel : hxd.Pixels.Channel ) {
+	public function setResource( c : hxd.Pixels.Channel, res : hxd.res.Image, ?srcChannel : hxd.Pixels.Channel ) {
 		if( srcChannel == null ) srcChannel = c;
 		switch( res.getFormat() ) {
 		case Png, Gif:
@@ -54,7 +54,7 @@ class TextureChannels extends Texture {
 				setPixels(c, pix, srcChannel);
 			});
 		}
-		res.watch(function() if( t != null ) setChannel(c, res, srcChannel));
+		res.watch(function() if( t != null ) setResource(c, res, srcChannel));
 	}
 
 }
