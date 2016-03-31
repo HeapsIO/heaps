@@ -6,9 +6,14 @@ private class CopyShader extends h3d.shader.ScreenShader {
 		@param var texture : Sampler2D;
 
 		var pixelColor : Vec4;
+		var calculatedUV : Vec2;
+
+		function __init__() {
+			calculatedUV = input.uv;
+		}
 
 		function __init__fragment() {
-			pixelColor = texture.get(input.uv);
+			pixelColor = texture.get(calculatedUV);
 		}
 
 		function fragment() {
@@ -29,11 +34,14 @@ class Copy extends ScreenFx<CopyShader> {
 		if( customPass != null ) {
 			var old = pass;
 			pass = customPass;
-			pass.addShaderAt(shader, 0);
 			if( blend != null ) pass.setBlendMode(blend);
+			var h = shaders;
+			while( h.next != null )
+				h = h.next;
+			h.next = @:privateAccess pass.shaders;
 			render();
-			pass.removeShader(shader);
 			pass = old;
+			h.next = null;
 		} else {
 			pass.setBlendMode(blend == null ? None : blend);
 			render();
