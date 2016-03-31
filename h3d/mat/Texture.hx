@@ -40,7 +40,14 @@ class Texture {
 	var bits : Int;
 	public var mipMap(default,set) : MipMap;
 	public var filter(default,set) : Filter;
-	public var wrap(default,set) : Wrap;
+	public var wrap(default, set) : Wrap;
+
+	/**
+		Some textures might take some time to load. You can check flags.has(Loading)
+		or bind onLoaded which will get called either immediately if the texture is already loaded
+		or when loading is complete.
+	**/
+	public var onLoaded(default, set) : Void -> Void;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when
@@ -86,6 +93,12 @@ class Texture {
 	public function alloc() {
 		if( t == null )
 			mem.allocTexture(this);
+	}
+
+	function set_onLoaded(v) {
+		onLoaded = v;
+		if( v != null && !flags.has(Loading) ) v();
+		return v;
 	}
 
 	function toString() {
@@ -221,10 +234,6 @@ class Texture {
 
 		s2d.render(e);
 
-		filter = oldF;
-		mipMap = oldM;
-		wrap = oldWrap;
-
 		var pixels = hxd.Pixels.alloc(width, height, ARGB);
 		e.driver.captureRenderBuffer(pixels);
 
@@ -233,8 +242,8 @@ class Texture {
 			s2d.render(e); // render only alpha channel
 			var alpha = hxd.Pixels.alloc(width, height, ARGB);
 			e.driver.captureRenderBuffer(alpha);
-			var alphaPos = hxd.Pixels.getChannelOffset(alpha.format, 3);
-			var redPos = hxd.Pixels.getChannelOffset(alpha.format, 0);
+			var alphaPos = hxd.Pixels.getChannelOffset(alpha.format, A);
+			var redPos = hxd.Pixels.getChannelOffset(alpha.format, R);
 			var bpp = hxd.Pixels.bytesPerPixel(alpha.format);
 			for( y in 0...height ) {
 				var p = y * width * bpp;
@@ -251,9 +260,35 @@ class Texture {
 			e.resize(oldW, oldH);
 		e.driver.clear(new h3d.Vector(0, 0, 0, 0));
 		s2d.dispose();
+
+		filter = oldF;
+		mipMap = oldM;
+		wrap = oldWrap;
+
 		#end
 		return pixels;
 	}
+
+	/*
+		Doing this has proved to be quite unreliable in flash, which even mess up render targets for no known reason :'(
+
+	public function setChannels( c : TextureChannel, with : h3d.mat.Texture, ?srcChannel : TextureChannel ) {
+		if( with.t == null )
+			throw "Can't set disposed or loading texture";
+		var pass = new h3d.mat.Pass("");
+		pass.colorMask = c.toInt();
+		pass.depth(false, Always);
+		pass.culling = None;
+		#if flash
+		if( c.toInt() & (A:TextureChannel).toInt() != 0 )
+			throw "setting alpha channel is not supported in flash (unknown stage3d issue)";
+		#end
+		if( srcChannel != null && (srcChannel.toInt() & c.toInt()) != srcChannel.toInt() )
+			pass.addShader(new h3d.shader.ChannelSelect(srcChannel.toInt()));
+		h3d.pass.Copy.run(with, this, null, pass);
+	}
+
+	*/
 
 	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
 		var t = new Texture(bmp.width, bmp.height, allocPos);

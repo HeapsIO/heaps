@@ -161,10 +161,11 @@ class Image extends Resource {
 				entry.load(load);
 		case Jpg:
 			// use native decoding
+			tex.flags.set(Loading);
 			entry.loadBitmap(function(bmp) {
 				var bmp = bmp.toBitmap();
 				tex.alloc();
-				
+
 				if( bmp.width != tex.width || bmp.height != tex.height ) {
 					var pixels = bmp.getPixels();
 					pixels.makeSquare();
@@ -172,9 +173,11 @@ class Image extends Resource {
 					pixels.dispose();
 				} else
 					tex.uploadBitmap(bmp);
-				
+
 				bmp.dispose();
 				tex.realloc = loadTexture;
+				tex.flags.unset(Loading);
+				if( tex.onLoaded != null ) tex.onLoaded();
 				watch(watchCallb);
 			});
 		}
