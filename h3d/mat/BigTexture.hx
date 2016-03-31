@@ -182,8 +182,8 @@ class BigTexture {
 		initPixels();
 		var bpp = hxd.Pixels.bytesPerPixel(allPixels.format);
 		if( alphaChannel ) {
-			var alphaPos = hxd.Pixels.getChannelOffset(allPixels.format, 3);
-			var srcRedPos = hxd.Pixels.getChannelOffset(pixels.format, 0);
+			var alphaPos = hxd.Pixels.getChannelOffset(allPixels.format, A);
+			var srcRedPos = hxd.Pixels.getChannelOffset(pixels.format, R);
 			var srcBpp = hxd.Pixels.bytesPerPixel(pixels.format);
 			for( dy in 0...pixels.height ) {
 				var w = (x + (y + dy) * size) * bpp + alphaPos;

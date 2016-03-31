@@ -25,6 +25,15 @@ abstract PixelsARGB(Pixels) to Pixels {
 	}
 }
 
+
+@:enum abstract Channel(Int) {
+	public var R = 0;
+	public var G = 1;
+	public var B = 2;
+	public var A = 3;
+	public inline function toInt() return this;
+}
+
 @:noDebug
 class Pixels {
 	public var bytes : haxe.io.Bytes;
@@ -347,20 +356,20 @@ class Pixels {
 		Returns the byte offset for the requested channel (0=R,1=G,2=B,3=A)
 		Returns -1 if the channel is not found
 	**/
-	public static function getChannelOffset( format : PixelFormat, channel : Int ) {
+	public static function getChannelOffset( format : PixelFormat, channel : Channel ) {
 		return switch( format ) {
 		case ALPHA:
-			if( channel == 3 ) 0 else -1;
+			if( channel == A ) 0 else -1;
 		case ARGB:
-			[1, 2, 3, 0][channel];
+			[1, 2, 3, 0][channel.toInt()];
 		case BGRA:
-			[2, 1, 0, 3][channel];
+			[2, 1, 0, 3][channel.toInt()];
 		case RGBA:
-			channel;
+			channel.toInt();
 		case RGBA16F:
-			channel * 2;
+			channel.toInt() * 2;
 		case RGBA32F:
-			channel * 4;
+			channel.toInt() * 4;
 		}
 	}
 
