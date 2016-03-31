@@ -4,7 +4,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	public var camera : h3d.Camera;
 	public var lightSystem : h3d.pass.LightSystem;
-	public var renderer : Renderer;
+	public var renderer(default,set) : Renderer;
 	var prePasses : Array<h3d.IDrawable>;
 	var postPasses : Array<h3d.IDrawable>;
 	var ctx : RenderContext;
@@ -30,6 +30,12 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	public function dispatchListeners(event:hxd.Event) {
+	}
+
+	function set_renderer(r) {
+		renderer = r;
+		if( r != null ) @:privateAccess r.ctx = ctx;
+		return r;
 	}
 
 	function sortHitPointByCameraDistance( i1 : Interactive, i2 : Interactive ) {
@@ -266,7 +272,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		// send to rendered
 		ctx.lightSystem = lightSystem;
 		lightSystem.initLights(ctx);
-		renderer.process(ctx, passes);
+		renderer.process(passes);
 
 		// check that passes have been rendered
 		#if debug
