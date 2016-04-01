@@ -80,6 +80,7 @@ class PropManager extends cdb.jq.Client {
 		if( pendingMessages == null ) return;
 		var msg = pendingMessages.length == 1 ? pendingMessages[0] : cdb.jq.Message.Group(pendingMessages);
 		pendingMessages = null;
+		if( sock == null ) return;
 		var data = cdb.BinSerializer.serialize(msg);
 		sock.out.wait();
 		sock.out.writeInt32(data.length);

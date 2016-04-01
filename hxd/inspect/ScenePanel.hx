@@ -192,6 +192,8 @@ class ScenePanel extends Panel {
 	function getObjectIcon( o : h3d.scene.Object) {
 		if( Std.is(o, h3d.scene.Skin) )
 			return "child";
+		if( Std.is(o, h3d.parts.Particles) || Std.is(o,h3d.parts.GpuParticles) )
+			return "sun-o";
 		if( Std.is(o, h3d.scene.Mesh) )
 			return "cube";
 		if( Std.is(o, h3d.scene.CustomObject) )
@@ -258,10 +260,8 @@ class ScenePanel extends Panel {
 			for( c in o )
 				syncRec(c, so);
 		} else if( so.jchild != null ) {
-			for( o in so.childs )
+			for( o in so.childs.copy() )
 				o.dispose();
-			so.jchild.remove();
-			so.jchild = null;
 			if( so.openIcon == "circle-o" ) {
 				so.openIcon = null;
 				so.icon = "circle-o";
@@ -446,6 +446,11 @@ class ScenePanel extends Panel {
 					props.push(getMaterialProps(m));
 			} else
 				props.push(getMaterialProps(o.toMesh().material));
+
+			var gp = Std.instance(o, h3d.parts.GpuParticles);
+			if( gp != null )
+				props = props.concat(getPartsProps(gp));
+
 		} else {
 			var c = Std.instance(o, h3d.scene.CustomObject);
 			if( c != null )
@@ -454,6 +459,42 @@ class ScenePanel extends Panel {
 			if( l != null )
 				props.push(getLightProps(l));
 		}
+		return props;
+	}
+
+	function getPartsProps( o : h3d.parts.GpuParticles ) {
+		var props = [];
+		props.push(PGroup("Emitter", [
+			PEnum("mode", h3d.parts.GpuParticles.GpuEmitMode, function() return o.emitMode, function(v) o.emitMode = v),
+			PInt("seed", function() return o.seed, function(v) o.seed = v),
+			PRange("count", 0, 1000, function() return o.nparts, function(v) o.nparts = Std.int(v), 1),
+			PRange("distance", 0, 10, function() return o.emitDist, function(v) o.emitDist = v),
+			PRange("angle", -Math.PI, Math.PI * 2, function() return o.emitAngle, function(v) o.emitAngle = v),
+		]));
+
+		props.push(PGroup("Life", [
+			PRange("initial", 0, 10, function() return o.life, function(v) o.life = v),
+			PRange("randomNess", 0, 1, function() return o.lifeRand, function(v) o.lifeRand = v),
+		]));
+
+		props.push(PGroup("Speed", [
+			PRange("initial", 0, 10, function() return o.speed, function(v) o.speed = v),
+			PRange("randomNess", 0, 1, function() return o.speedRand, function(v) o.speedRand = v),
+			PRange("acceleration", -1, 1, function() return o.speedIncr, function(v) o.speedIncr = v),
+		]));
+
+		props.push(PGroup("Size", [
+			PRange("initial", 0.01, 2, function() return o.size, function(v) o.size = v),
+			PRange("randomNess", 0, 1, function() return o.sizeRand, function(v) o.sizeRand = v),
+			PRange("grow", -1, 1, function() return o.sizeIncr, function(v) o.sizeIncr = v),
+		]));
+
+		props.push(PGroup("Rotation", [
+			PRange("init", 0, 1, function() return o.rotInit, function(v) o.rotInit = v),
+			PRange("speed", 0, 5, function() return o.rotSpeed, function(v) o.rotSpeed = v),
+			PRange("randomNess", 0, 1, function() return o.rotSpeedRand, function(v) o.rotSpeedRand = v),
+		]));
+
 		return props;
 	}
 
