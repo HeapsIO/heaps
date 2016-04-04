@@ -39,7 +39,7 @@ class NativeChannelData {
 	public var busy : Int;
 	public function new(w:Worker) {
 		channels = [];
-		tmpBuf = haxe.io.Bytes.alloc(w.bufferSamples * 4 * 2);
+		tmpBuf = haxe.io.Bytes.alloc(w.bufferSamples * 4 * 2 #if flash * 2 #end);
 	}
 }
 
@@ -239,8 +239,15 @@ class Worker extends hxd.Worker<Message> {
 		chan.next = haxe.Timer.stamp() + bufferSamples / 44100;
 		var cid = 0;
 		var cmax = chan.channels.length;
+		#if flash
+		var outOffset = bufferSamples * 4 * 2;
+		flash.Memory.select(chan.tmpBuf.getData());
+		for( i in 0...bufferSamples*2 )
+			flash.Memory.setFloat(outOffset + (i << 2), 0);
+		#else
 		for( i in 0...bufferSamples*2 )
 			out[i] = 0;
+		#end
 		if( cmax == 0 ) {
 			if( chan.busy > 0 ) chan.busy = 0 else chan.busy--;
 		} else
@@ -270,8 +277,14 @@ class Worker extends hxd.Worker<Message> {
 					flash.Memory.select(chan.tmpBuf.getData());
 					#end
 					for( i in 0...size * 2 ) {
-						var v = #if flash flash.Memory.getFloat #else chan.tmpBuf.getFloat #end(i << 2) * vol;
+						#if flash
+						var v = flash.Memory.getFloat(i << 2) * vol;
+						var iout = outOffset + ((w++) << 2);
+						flash.Memory.setFloat(iout, flash.Memory.getFloat(iout) + v);
+						#else
+						var v = chan.tmpBuf.getFloat(i << 2) * vol;
 						out[w++] += v;
+						#end
 						if( c.volumeSpeed != 0 ) {
 							c.vol += c.volumeSpeed;
 							if( (c.volumeSpeed > 0) == (c.vol > c.volumeTarget) ) {
@@ -304,6 +317,11 @@ class Worker extends hxd.Worker<Message> {
 				}
 			}
 		}
+		#if flash
+		flash.Memory.select(chan.tmpBuf.getData());
+		for( i in 0...bufferSamples * 2 )
+			out[i] = flash.Memory.getFloat(outOffset + (i << 2));
+		#end
 	}
 
 	function set_volume( v : Float ) {
