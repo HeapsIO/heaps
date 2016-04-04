@@ -227,7 +227,23 @@ class Console extends h2d.Sprite {
 		logs.push(command);
 		logIndex = -1;
 
-		var args = ~/[ \t]+/g.split(command);
+		var r = ~/([a-zA-Z0-9_]+)|(?:['|"])([a-zA-Z0-9_ ]+)(?:["|'])*/g;
+		var args = [];
+		var pos = {
+			pos: 0,
+			len: 0,
+		};
+
+		while (r.matchSub(command, pos.pos + pos.len)) {
+			var arg = r.matched(0);
+			if (arg.charAt(0) == "'" || arg.charAt(0) == '"') {
+				arg = arg.substring(1, arg.length - 1);
+			}
+			args.push(arg);
+			
+			pos = r.matchedPos();
+		}
+		
 		var cmdName = args[0];
 		if( aliases.exists(cmdName) ) cmdName = aliases.get(cmdName);
 		var cmd = commands.get(cmdName);
