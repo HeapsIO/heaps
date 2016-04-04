@@ -136,6 +136,17 @@ class Console extends h2d.Sprite {
 	public function isActive() {
 		return bg.visible;
 	}
+	
+	public function hide() {
+		bg.visible = false;
+		tf.text = "";
+		cursorPos = 0;
+	}
+	
+	public function show() {
+		bg.visible = true;
+		logIndex = -1;
+	}
 
 	function set_cursorPos(v:Int) {
 		if( v > tf.text.length ) v = tf.text.length;
@@ -145,8 +156,7 @@ class Console extends h2d.Sprite {
 
 	function handleKey( e : hxd.Event ) {
 		if( e.charCode == shortKeyChar && !bg.visible ) {
-			bg.visible = true;
-			logIndex = -1;
+			show();
 		}
 		if( !bg.visible )
 			return;
@@ -205,12 +215,6 @@ class Console extends h2d.Sprite {
 			tf.text = curCmd = tf.text.substr(0, cursorPos) + String.fromCharCode(e.charCode) + tf.text.substr(cursorPos);
 			cursorPos++;
 		}
-	}
-
-	function hide() {
-		bg.visible = false;
-		tf.text = "";
-		cursorPos = 0;
 	}
 
 	function handleCommand( command : String ) {
@@ -293,7 +297,7 @@ class Console extends h2d.Sprite {
 	public function log( text : String, ?color ) {
 		if( color == null ) color = tf.textColor;
 		var oldH = logTxt.textHeight;
-		logTxt.text += '<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>';
+		logTxt.text = logTxt.text + '<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>';
 		if( logDY != 0 ) logDY += logTxt.textHeight - oldH;
 		logTxt.alpha = 1;
 		logTxt.visible = true;
