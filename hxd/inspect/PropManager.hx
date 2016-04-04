@@ -163,8 +163,8 @@ class PropManager extends cdb.jq.Client {
 		return null;
 	}
 
-	function setPropValue( p : Property, v : Dynamic ) {
-		switch( propFollow(p) ) {
+	public static function setPropValue( p : Property, v : Dynamic ) {
+		switch( p ) {
 		case PInt(_, _, set):
 			if( !Std.is(v, Int) ) throw "Invalid int value " + v;
 			set(v);
@@ -204,7 +204,9 @@ class PropManager extends cdb.jq.Client {
 			}
 		case PCustom(_, _, set) if( set != null ):
 			set(v);
-		case PGroup(_), PPopup(_), PCustom(_):
+		case PPopup(p, _):
+			setPropValue(p, v);
+		case PGroup(_), PCustom(_):
 			throw "Cannot set property " + p.getName();
 		}
 	}
@@ -272,10 +274,10 @@ class PropManager extends cdb.jq.Client {
 		}
 	}
 
-	function getPropName( p : Property ) {
-		return switch( propFollow(p) ) {
+	public static function getPropName( p : Property ) {
+		return switch( p ) {
 		case PGroup(name, _), PBool(name, _), PInt(name, _), PFloat(name, _), PFloats(name, _), PString(name, _), PColor(name, _), PTexture(name, _), PEnum(name,_,_,_), PCustom(name,_), PRange(name,_): name;
-		case PPopup(_): null;
+		case PPopup(p, _): getPropName(p);
 		}
 	}
 
