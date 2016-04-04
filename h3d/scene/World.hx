@@ -52,6 +52,7 @@ class WorldMaterial {
 	public var t : h3d.mat.BigTexture.BigTextureElement;
 	public var spec : h3d.mat.BigTexture.BigTextureElement;
 	public var mat : hxd.fmt.hmd.Data.Material;
+	public var culling : Bool;
 	public var blend : h3d.mat.BlendMode;
 	public var killAlpha : Null<Float>;
 	public var lights : Bool;
@@ -65,7 +66,7 @@ class WorldMaterial {
 		shaders = [];
 	}
 	public function updateBits() {
-		bits = (t.t.id << 7) | (blend.getIndex() << 4) | ((killAlpha == null ? 0 : 1) << 3) | ((lights ? 1 : 0) << 2) | ((shadows ? 1 : 0)<<1) | (spec == null ? 0 : 1);
+		bits = (t.t.id << 8) | (blend.getIndex() << 5) | ((killAlpha == null ? 0 : 1) << 4) | ((lights ? 1 : 0) << 3) | ((shadows ? 1 : 0) << 2) | ((spec == null ? 0 : 1) << 1) | (culling ? 1 : 0);
 	}
 }
 
@@ -222,6 +223,7 @@ class World extends Object {
 		m.blend = getBlend(rt);
 		m.killAlpha = null;
 		m.mat = mat;
+		m.culling = mat.culling != None;
 		m.updateBits();
 		textures.set(texturePath, m);
 		return m;
@@ -405,6 +407,7 @@ class World extends Object {
 		mesh.material.textureShader.killAlphaThreshold = mat.killAlpha;
 		mesh.material.mainPass.enableLights = mat.lights;
 		mesh.material.shadows = mat.shadows;
+		mesh.material.mainPass.culling = mat.culling ? Back : None;
 
 		for(s in mat.shaders)
 			mesh.material.mainPass.addShader(s);
