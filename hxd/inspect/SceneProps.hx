@@ -18,6 +18,9 @@ class SceneProps {
 		initRenderer();
 	}
 
+	function refresh() {
+	}
+
 	function addNode( name : String, icon : String, props : Void -> Array<Property>, ?parent : Node ) : Node {
 		if( parent == null ) parent = root;
 		var n = new Node(name, parent);
@@ -294,7 +297,11 @@ class SceneProps {
 	function getPartsGroupProps( parts : h3d.parts.GpuParticles, o : h3d.parts.GpuParticles.GpuPartGroup ) {
 		var props = [];
 		props.push(PGroup("Emitter", [
+			PString("name", function() return o.name, function(v) { o.name = v; refresh(); }),
 			PBool("enable", function() return o.enable, function(v) o.enable = v),
+			PBool("loop", function() return o.emitLoop, function(v) { o.emitLoop = v; parts.currentTime = 0; }),
+			PRange("sync", 0, 1, function() return o.emitSync, function(v) o.emitSync = v),
+			PRange("delay", 0, 10, function() return o.emitDelay, function(v) o.emitDelay = v),
 			PEnum("mode", h3d.parts.GpuParticles.GpuEmitMode, function() return o.emitMode, function(v) o.emitMode = v),
 			PRange("count", 0, 1000, function() return o.nparts, function(v) o.nparts = Std.int(v), 1),
 			PRange("distance", 0, 10, function() return o.emitDist, function(v) o.emitDist = v),
@@ -328,10 +335,14 @@ class SceneProps {
 			PRange("randomNess", 0, 1, function() return o.rotSpeedRand, function(v) o.rotSpeedRand = v),
 		]));
 
-		props.push(PGroup("Texture", [
-			PTexture("diffuse", function() return o.texture, function(v) o.texture = v),
+		props.push(PGroup("Animation", [
+			PTexture("diffuseTexture", function() return o.texture, function(v) o.texture = v),
+			PEnum("blend", h3d.mat.BlendMode, function() return o.blendMode, function(v) o.blendMode = v),
+			PRange("animationRepeat", 0, 10, function() return o.animationRepeat, function(v) o.animationRepeat = v),
+			PRange("frameDivisionX", 1, 16, function() return o.frameDivisionX, function(v) o.frameDivisionX = Std.int(v), 1),
+			PRange("frameDivisionY", 1, 16, function() return o.frameDivisionY, function(v) o.frameDivisionY = Std.int(v), 1),
 			PRange("frameCount", 0, 32, function() return o.frameCount, function(v) o.frameCount = Std.int(v), 1),
-			PTexture("color", function() return o.colorTexture, function(v) o.colorTexture = v),
+			PTexture("colorGradient", function() return o.colorGradient, function(v) o.colorGradient = v),
 		]));
 
 		return PGroup(o.name, props);

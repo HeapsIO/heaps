@@ -172,6 +172,15 @@
 			}
 		}
 
+		tr.pcustom {
+			button {
+				margin-left : 5px;
+			}
+			.buttonGroup {
+				text-align : right;
+			}
+		}
+
 		tr.prange {
 			input.range {
 				width : auto;

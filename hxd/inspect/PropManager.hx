@@ -198,10 +198,8 @@ class PropManager extends cdb.jq.Client {
 			var path : String = v;
 			if( path.charCodeAt(0) != '/'.code && path.charCodeAt(1) != ':'.code ) {
 				set(hxd.res.Loader.currentInstance.load(path).toTexture());
-			} else {
-				path = hxd.File.applicationPath() + path;
+			} else
 				hxd.File.load(path, function(data) set( hxd.res.Any.fromBytes(path, data).toTexture() ));
-			}
 		case PCustom(_, _, set) if( set != null ):
 			set(v);
 		case PPopup(p, _):
@@ -283,7 +281,7 @@ class PropManager extends cdb.jq.Client {
 
 	var cachedResPath = null;
 
-	function getResPath() {
+	public function getResPath() {
 		if( cachedResPath != null )
 			return cachedResPath;
 		var lfs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
@@ -377,7 +375,7 @@ class PropManager extends cdb.jq.Client {
 				groupsStatus.set(path, show);
 
 			});
-			jprop.remove();
+			jprop.dispose();
 			gids.push(gid);
 			for( p in props )
 				addProp(path, t, p, gids, expandLevel);
@@ -411,7 +409,7 @@ class PropManager extends cdb.jq.Client {
 				input.appendTo(jprop);
 				input.focus();
 				input.blur(function(_) {
-					input.remove();
+					input.dispose();
 					jprop.text(get());
 				});
 				input.change(function(_) {
@@ -421,7 +419,7 @@ class PropManager extends cdb.jq.Client {
 						cur = v;
 						set(all[v]);
 					}
-					input.remove();
+					input.dispose();
 					jprop.text(get());
 					delay = true;
 					haxe.Timer.delay(function() delay = false, 200);
@@ -635,13 +633,17 @@ class PropManager extends cdb.jq.Client {
 
 
 		case PPopup(p, menu, click):
-			j.remove();
+			j.dispose();
 			j = addProp(basePath, t, p, gids, expandLevel);
 			j.mousedown(function(e) {
 				if( e.which == 3 )
 					j.special("popupMenu", menu, function(i) { click(j, i); return true; });
 			});
-		case PCustom(_, content, _):
+		case PCustom(name, content, _):
+			if( name == "" ) {
+				jname.dispose();
+				jprop.attr("colspan", "2");
+			}
 			var c = content();
 			if( c != null ) c.appendTo(jprop);
 		}
@@ -659,7 +661,7 @@ class PropManager extends cdb.jq.Client {
 		input.focus();
 		input.select();
 		input.blur(function(_) {
-			input.remove();
+			input.dispose();
 			set(input.getValue());
 			j.text(get());
 		});

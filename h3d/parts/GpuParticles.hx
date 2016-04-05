@@ -8,48 +8,66 @@ enum GpuEmitMode {
 	ParentBounds;
 }
 
-enum GpuPartFlag {
-}
-
 @:allow(h3d.parts.GpuParticles)
-class GpuPartGroup /*implements hxd.net.Serializable*/ {
+class GpuPartGroup {
+
+	static var FIELDS = null;
+	static function getFields( inst : GpuPartGroup ) {
+		if( FIELDS != null )
+			return FIELDS;
+		FIELDS = Type.getInstanceFields(GpuPartGroup);
+		for( f in ["blendMode", "emitMode", "needRebuild", "pshader", "partIndex", "texture", "colorGradient"] )
+			FIELDS.remove(f);
+		for( f in FIELDS.copy() )
+			if( Reflect.isFunction(Reflect.field(inst, f)) )
+				FIELDS.remove(f);
+		FIELDS.sort(Reflect.compare);
+		return FIELDS;
+	}
+
 
 	var needRebuild = true;
 	var pshader = new h3d.shader.GpuParticle();
 	var partIndex = 0;
 
-	@:s public var name : String;
-	@:s public var enable = true;
-	@:s public var blendMode : h3d.mat.BlendMode = Alpha;
+	public var name : String;
+	public var enable = true;
+	public var blendMode : h3d.mat.BlendMode = Alpha;
 
-	@:s public var nparts(default, set) : Int 		= 100;
-	@:s public var emitMode(default,set):GpuEmitMode= Point;
-	@:s public var emitDist(default, set) : Float	= 1.;
-	@:s public var emitAngle(default,set) : Float 	= Math.PI/2;
+	public var nparts(default, set) : Int 		= 100;
+	public var emitLoop(default, set) : Bool 	= true;
+	public var emitMode(default,set):GpuEmitMode= Point;
+	public var emitDist(default, set) : Float	= 1.;
+	public var emitAngle(default,set) : Float 	= 1.5;
+	public var emitSync(default, set) : Float	= 0;
+	public var emitDelay(default, set) : Float	= 0;
 
-	@:s public var size(default, set) : Float		= 1;
-	@:s public var sizeIncr(default, set) : Float	= 0;
-	@:s public var sizeRand(default, set) : Float	= 0;
+	public var size(default, set) : Float		= 1;
+	public var sizeIncr(default, set) : Float	= 0;
+	public var sizeRand(default, set) : Float	= 0;
 
-	@:s public var life(default, set) : Float		= 1;
-	@:s public var lifeRand(default, set) : Float	= 0;
+	public var life(default, set) : Float		= 1;
+	public var lifeRand(default, set) : Float	= 0;
 
-	@:s public var speed(default, set) : Float		= 1;
-	@:s public var speedRand(default, set) : Float	= 0;
-	@:s public var speedIncr : Float				= 0;
-	@:s public var gravity : Float					= 0;
+	public var speed(default, set) : Float		= 1;
+	public var speedRand(default, set) : Float	= 0;
+	public var speedIncr : Float				= 0;
+	public var gravity : Float					= 0;
 
-	@:s public var rotInit(default, set) : Float	= 0;
-	@:s public var rotSpeed(default, set) : Float	= 0;
-	@:s public var rotSpeedRand(default, set):Float = 0;
+	public var rotInit(default, set) : Float	= 0;
+	public var rotSpeed(default, set) : Float	= 0;
+	public var rotSpeedRand(default, set):Float = 0;
 
-	@:s public var fadeIn : Float					= 0.2;
-	@:s public var fadeOut : Float					= 0.2;
-	@:s public var fadePower : Float				= 1;
+	public var fadeIn : Float					= 0.2;
+	public var fadeOut : Float					= 0.2;
+	public var fadePower : Float				= 1;
 
-	@:s public var frameCount 						= 0;
-	@:s public var texture : h3d.mat.Texture		= null;
-	@:s public var colorTexture : h3d.mat.Texture	= null;
+	public var frameCount : Int					= 0;
+	public var frameDivisionX : Int				= 1;
+	public var frameDivisionY : Int				= 1;
+	public var animationRepeat : Float			= 1;
+	public var texture : h3d.mat.Texture		= null;
+	public var colorGradient : h3d.mat.Texture	= null;
 
 	inline function set_size(v) { needRebuild = true; return size = v; }
 	inline function set_sizeRand(v) { needRebuild = true; return sizeRand = v; }
@@ -59,9 +77,12 @@ class GpuPartGroup /*implements hxd.net.Serializable*/ {
 	inline function set_life(v) { needRebuild = true; return life = v; }
 	inline function set_lifeRand(v) { needRebuild = true; return lifeRand = v; }
 	inline function set_nparts(n) { if( n > nparts ) needRebuild = true; return nparts = n; }
+	inline function set_emitLoop(v) { needRebuild = true; return emitLoop = v; }
 	inline function set_emitMode(v) { needRebuild = true; return emitMode = v; }
 	inline function set_emitDist(v) { needRebuild = true; return emitDist = v; }
 	inline function set_emitAngle(v) { needRebuild = true; return emitAngle = v; }
+	inline function set_emitSync(v) { needRebuild = true; return emitSync = v; }
+	inline function set_emitDelay(v) { needRebuild = true; return emitDelay = v; }
 	inline function set_rotInit(v) { needRebuild = true; return rotInit = v; }
 	inline function set_rotSpeed(v) { needRebuild = true; return rotSpeed = v; }
 	inline function set_rotSpeedRand(v) { needRebuild = true; return rotSpeedRand = v; }
@@ -69,23 +90,65 @@ class GpuPartGroup /*implements hxd.net.Serializable*/ {
 	public function new() {
 	}
 
-	public function syncParams() {
+	public function syncParams(time) {
 		pshader.speedIncr = speedIncr;
 		pshader.fadeIn = fadeIn;
 		pshader.fadeOut = fadeOut;
 		pshader.fadePower = fadePower;
 		pshader.gravity = gravity;
-		pshader.color = colorTexture == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : colorTexture;
+		pshader.color = colorGradient == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : colorGradient;
+		pshader.loopCounter = emitLoop ? 1 : 100000;
+		pshader.time = time;
+		pshader.texture = texture == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : texture;
+		var frameCount = frameCount == 0 ? frameDivisionX * frameDivisionY : frameCount;
+		pshader.animationRepeat = animationRepeat == 0 ? 0 : animationRepeat * frameCount - 1;
+		pshader.animationFixedFrame = animationRepeat == 0 ? frameCount : 0;
+		pshader.totalFrames = frameCount;
+		pshader.frameDivision.set(frameDivisionX, 1 / frameDivisionX, 1 / frameDivisionY);
+	}
+
+	public function save() : Dynamic {
+		var o = {
+			blendMode : blendMode.getIndex(),
+			emitMode : emitMode.getIndex(),
+			texture : texture == null ? null : texture.name,
+			colorGradient : colorGradient == null ? null : colorGradient.name,
+		};
+		for( f in getFields(this) )
+			Reflect.setField(o, f, Reflect.field(this, f));
+		return o;
+	}
+
+	function loadTexture( path : String ) {
+		if( path == null )
+			return null;
+		try	{
+			return hxd.res.Loader.currentInstance.load(path).toTexture();
+		} catch( e : hxd.res.NotFound ) {
+			return h3d.mat.Texture.fromColor(0xFF00FF);
+		}
+	}
+
+	public function load( version : Int, o : Dynamic ) {
+		for( f in getFields(this) )
+			Reflect.setField(this, f, Reflect.field(o, f));
+		blendMode = h3d.mat.BlendMode.createByIndex(o.blendMode);
+		emitMode = GpuEmitMode.createByIndex(o.emitMode);
+		texture = loadTexture(o.texture);
+		colorGradient = loadTexture(o.colorGradient);
 	}
 
 }
 
 class GpuParticles extends h3d.scene.MultiMaterial {
 
+	static inline var VERSION = 1;
 	var groups : Array<GpuPartGroup>;
 	var bounds : h3d.col.Bounds;
 	public var seed(default, set) : Int	= Std.random(0x1000000);
 	public var volumeBounds(default, set) : h3d.col.Bounds;
+	public var currentTime : Float = 0.;
+	public var duration : Float = 0.;
 
 	public function new( ?parent ) {
 		super(null, [], parent);
@@ -94,7 +157,22 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		groups = [];
 	}
 
-	public function addGroup( ?g : GpuPartGroup, ?material : h3d.mat.MeshMaterial ) {
+	public dynamic function onEnd() {
+		currentTime = -1;
+	}
+
+	public function save() : Dynamic {
+		return { v : VERSION, g : [for( g in groups ) g.save()] };
+	}
+
+	public function load( o : Dynamic ) {
+		var ver : Int = o.v;
+		if( ver == 0 || ver > VERSION ) throw "Unsupported version " + o.v;
+		for( g in (o.g:Array<Dynamic>) )
+			addGroup().load(ver, g);
+	}
+
+	public function addGroup( ?g : GpuPartGroup, ?material : h3d.mat.MeshMaterial, ?index ) {
 		if( g == null )
 			g = new GpuPartGroup();
 		if( material == null ) {
@@ -106,8 +184,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		}
 		if( g.name == null ) g.name = "Group#" + (groups.length + 1);
 		material.mainPass.addShader(g.pshader);
-		materials.push(material);
-		groups.push(g);
+		if( index == null )
+			index = groups.length;
+		materials.insert(index, material);
+		groups.insert(index, g);
 		g.needRebuild = true;
 		return g;
 	}
@@ -143,13 +223,16 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		var rnd = new hxd.Rand(0);
 		var ebounds = null, calcEmit = null, partCount = 0;
 		bounds.empty();
+		duration = 0.;
 		for( gid in 0...groups.length ) {
 			var g = groups[gid];
 			rnd.init(seed + gid);
 			g.partIndex = partCount;
 			g.needRebuild = false;
-			g.syncParams();
+			g.syncParams(currentTime);
 			partCount += g.nparts;
+			if( g.emitLoop )
+				duration = Math.POSITIVE_INFINITY;
 			for( i in 0...g.nparts ) {
 
 				inline function rand() return rnd.rand();
@@ -159,7 +242,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				var vsize = g.sizeIncr, vrot = g.rotSpeed * (1 + rand() * g.rotSpeedRand) * (srand() < 0 ? -1 : 1);
 
 
-				var life = g.life * (1 + srand() * g.lifeRand), time = rand() * life;
+				var life = g.life * (1 + srand() * g.lifeRand), time = -rand() * life * (1 - g.emitSync) - g.emitDelay;
+
+				var totalLife = life - time;
+				if( totalLife > duration ) duration = totalLife;
 
 				var p = new h3d.col.Point();
 				var v = new h3d.col.Point();
@@ -242,6 +328,8 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		}
 		primitive = new h3d.prim.RawPrimitive( { vbuf : vbuf, stride : 14, quads : true, bounds:bounds }, true);
 		primitive.buffer.flags.set(RawFormat);
+		if( currentTime > duration )
+			currentTime = duration;
 	}
 
 	override function emit( ctx : h3d.scene.RenderContext ) {
@@ -257,6 +345,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 	override function sync(ctx) {
 		super.sync(ctx);
+		var prev = currentTime;
+		currentTime += ctx.elapsedTime;
+		if( prev < duration && currentTime >= duration )
+			onEnd();
 		for( g in groups )
 			if( g.needRebuild ) {
 				rebuild();
@@ -266,7 +358,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 	override function draw( ctx : h3d.scene.RenderContext ) {
 		var g = groups[ctx.drawPass.index];
-		g.syncParams(); // one frame late, but ok
+		g.syncParams(currentTime); // one frame late, but ok
 		@:privateAccess if( primitive.buffer == null || primitive.buffer.isDisposed() ) primitive.alloc(ctx.engine);
 		@:privateAccess ctx.engine.renderQuadBuffer(primitive.buffer,g.partIndex*2,g.nparts*2);
 	}

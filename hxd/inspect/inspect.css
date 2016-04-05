@@ -158,6 +158,12 @@
 	border : 1px solid #888;
 	width : 100%;
 }
+.jqpage table.iprops tr.pcustom button, .dialog-floating table.iprops tr.pcustom button {
+	margin-left : 5px;
+}
+.jqpage table.iprops tr.pcustom .buttonGroup, .dialog-floating table.iprops tr.pcustom .buttonGroup {
+	text-align : right;
+}
 .jqpage table.iprops tr.prange input.range, .dialog-floating table.iprops tr.prange input.range {
 	width : auto;
 	display : inline-block;

@@ -30,15 +30,23 @@ private class SceneObject extends TreeNode {
 			name += "@" + count;
 		return name;
 	}
+
 }
 
 private class CustomSceneProps extends SceneProps {
 
+	var inspect : Inspector;
 	var panel : ScenePanel;
+	var resPath : Map<h3d.scene.Object, String> = new Map();
 
 	public function new(panel, scene) {
+		this.inspect = Inspector.getCurrent();
 		this.panel = panel;
 		super(scene);
+	}
+
+	override function refresh() {
+		haxe.Timer.delay(inspect.refreshProps, 0);
 	}
 
 	override function addNode(name:String, icon:String, props:Void-> Array<Property>, ?parent:Node) : Node {
@@ -100,22 +108,66 @@ private class CustomSceneProps extends SceneProps {
 	override function getPartsProps( parts : h3d.parts.GpuParticles ) {
 		var props = super.getPartsProps(parts);
 		props.push(PCustom("", function() {
-			var b = panel.j.query("<button>");
-			b.text("Add Group");
+
+			var comp = panel.j.query("<div>");
+			comp.addClass("buttonGroup");
+
+			var b = comp.query("<button>");
+			b.appendTo(comp);
+			b.html('<i class="fa fa-plus"/> Add');
 			b.click(function(_) {
 				parts.addGroup();
-				panel.refreshProps();
+				inspect.refreshProps();
 			});
-			return b;
+
+			var b = comp.query("<button>");
+			b.appendTo(comp);
+			b.html('<i class="fa fa-folder-open-o"/> Load');
+			b.click(function(_) {
+				inspect.loadFile("json", function(path, bytes) {
+					resPath.set(parts, path);
+					var data = haxe.Json.parse(bytes.toString());
+					for( g in Lambda.array({ iterator : parts.getGroups }) )
+						parts.removeGroup(g);
+					parts.load(data);
+					inspect.refreshProps();
+				},resPath.get(parts));
+			});
+
+			var b = comp.query("<button>");
+			b.appendTo(comp);
+			b.html('<i class="fa fa-save"/> Save');
+			b.click(function(_) {
+				var data = haxe.Json.stringify(parts.save(), null, "\t");
+				var path = resPath.get(parts);
+				if( path == null ) path = "particles.json";
+				inspect.saveFile(path, "json", haxe.io.Bytes.ofString(data), function(path) resPath.set(parts,path));
+			});
+
+			return comp;
 		}));
 		return props;
 	}
 
 	override function getPartsGroupProps( parts : h3d.parts.GpuParticles, g : h3d.parts.GpuParticles.GpuPartGroup ) {
 		var p = super.getPartsGroupProps(parts, g);
-		p = PPopup(p, ["Remove"], function(j, i) {
-			parts.removeGroup(g);
-			panel.refreshProps();
+		p = PPopup(p, ["Move Up", "Move Down", "Remove"], function(j, i) {
+			var groups = Lambda.array({ iterator : parts.getGroups });
+			var index = groups.indexOf(g);
+			if( index < 0 ) return;
+			switch( i ) {
+			case 0:
+				if( index == 0 ) return;
+				parts.removeGroup(g);
+				parts.addGroup(g, null, index - 1);
+			case 1:
+				if( index == groups.length - 1 ) return;
+				parts.removeGroup(g);
+				parts.addGroup(g, null, index + 1);
+			case 2:
+				parts.removeGroup(g);
+			}
+			inspect.refreshProps();
 		});
 		return p;
 	}

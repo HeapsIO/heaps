@@ -27,10 +27,6 @@ class Panel extends Node {
 		}
 	}
 
-	public function refreshProps() {
-		inspect.refreshProps();
-	}
-
 	public function dock( align : DockDirection, ?size : Float, ?into : Panel ) {
 		undock();
 		saveDock = { align : align, size : size, into : into };

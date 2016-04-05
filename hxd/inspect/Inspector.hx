@@ -48,6 +48,8 @@ class Inspector {
 	static var CSS = hxd.res.Embed.getFileContent("hxd/inspect/inspect.css");
 	static var current : Inspector;
 
+	public static function getCurrent() return current;
+
 	public var scene(default, set) : h3d.scene.Scene;
 	public var connected(get, never): Bool;
 
@@ -278,16 +280,51 @@ class Inspector {
 		h3d.Engine.getCurrent().render(scene);
 	}
 
-	function load() {
-		jroot.special("fileSelect", [savedFile, "js"], function(newPath) {
-			if( newPath == null ) return true;
-			hxd.File.load(newPath,function(bytes) {
-				savedFile = newPath;
-				resetDefaults();
-				loadProps(bytes.toString());
-			});
+	public function saveFile( defaultName : String, ext : String, bytes : haxe.io.Bytes, onSelect : String -> Void ) {
+		if( defaultName.charCodeAt(0) != "/".code && defaultName.charCodeAt(1) != ":".code )
+			defaultName = inspect.getResPath() + defaultName;
+		jroot.special("fileSave", [defaultName, ext, bytes], function(path) {
+			if( path != null ) onSelect(path);
 			return true;
 		});
+	}
+
+	public function loadFile( ext : String, onLoad : String -> haxe.io.Bytes -> Void, ?defaultPath : String ) {
+		if( defaultPath != null && defaultPath.charCodeAt(0) != "/".code && defaultPath.charCodeAt(1) != ":".code )
+			defaultPath = inspect.getResPath() + defaultPath;
+		jroot.special("fileSelect", [defaultPath, ext], function(newPath) {
+			if( newPath == null ) return true;
+			hxd.File.load(newPath, function(bytes) onLoad(newPath, bytes));
+			return true;
+		});
+	}
+
+	function load() {
+		loadFile("js", function(newPath, data) {
+			savedFile = newPath;
+			resetDefaults();
+			loadProps(data.toString());
+		}, savedFile);
+	}
+
+	function save() {
+		var o : Dynamic = { };
+		for( s in state.keys() ) {
+			var path = s.split(".");
+			var o = o;
+			while( path.length > 1 ) {
+				var name = path.shift();
+				var s = Reflect.field(o, name);
+				if( s == null ) {
+					s = { };
+					Reflect.setField(o, name, s);
+				}
+				o = s;
+			}
+			Reflect.setField(o, path[0], state.get(s).current);
+		}
+		var js = haxe.Json.stringify(o, null, "\t");
+		saveFile(savedFile, "js", haxe.io.Bytes.ofString(js), function(name) savedFile = name);
 	}
 
 	public function resetDefaults() {
@@ -320,29 +357,6 @@ class Inspector {
 		browseRec([], o);
 		for( s in state.keys() )
 			inspect.setPathPropValue(s, state.get(s).current);
-	}
-
-	function save() {
-		var o : Dynamic = { };
-		for( s in state.keys() ) {
-			var path = s.split(".");
-			var o = o;
-			while( path.length > 1 ) {
-				var name = path.shift();
-				var s = Reflect.field(o, name);
-				if( s == null ) {
-					s = { };
-					Reflect.setField(o, name, s);
-				}
-				o = s;
-			}
-			Reflect.setField(o, path[0], state.get(s).current);
-		}
-		var js = haxe.Json.stringify(o, null, "\t");
-		jroot.special("fileSave", [savedFile, "js", haxe.io.Bytes.ofString(js)], function(path) {
-			if( path != null ) savedFile = path;
-			return true;
-		});
 	}
 
 	public function sync() {
