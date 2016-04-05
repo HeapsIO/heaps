@@ -208,11 +208,19 @@ class SceneEvents {
 			pendingEvents = [];
 			for( e in old ) {
 				var ox = e.relX, oy = e.relY;
-				if( e.kind == EMove ) {
+
+				switch( e.kind ) {
+				case EMove:
 					checkMoved = true;
 					mouseX = e.relX;
 					mouseY = e.relY;
 					lastTouch = e.touchId;
+				case EPush, ERelease:
+					// on mobile, the mouse teleports
+					mouseX = e.relX;
+					mouseY = e.relY;
+					lastTouch = e.touchId;
+				default:
 				}
 
 				if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
