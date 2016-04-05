@@ -283,25 +283,37 @@ class SceneProps {
 		return props;
 	}
 
-	function getPartsProps( o : h3d.parts.GpuParticles ) {
+	function getPartsProps( parts : h3d.parts.GpuParticles ) {
+		var props = [];
+		props.push(PInt("seed", function() return parts.seed, function(v) parts.seed = v));
+		for( g in parts.getGroups() )
+			props.push(getPartsGroupProps(parts, g));
+		return props;
+	}
+
+	function getPartsGroupProps( parts : h3d.parts.GpuParticles, o : h3d.parts.GpuParticles.GpuPartGroup ) {
 		var props = [];
 		props.push(PGroup("Emitter", [
+			PBool("enable", function() return o.enable, function(v) o.enable = v),
 			PEnum("mode", h3d.parts.GpuParticles.GpuEmitMode, function() return o.emitMode, function(v) o.emitMode = v),
-			PInt("seed", function() return o.seed, function(v) o.seed = v),
 			PRange("count", 0, 1000, function() return o.nparts, function(v) o.nparts = Std.int(v), 1),
 			PRange("distance", 0, 10, function() return o.emitDist, function(v) o.emitDist = v),
-			PRange("angle", -Math.PI, Math.PI * 2, function() return o.emitAngle, function(v) o.emitAngle = v),
+			PRange("angle", -90, 180, function() return Math.round(o.emitAngle*180/Math.PI), function(v) o.emitAngle = v*Math.PI/180, 1),
 		]));
 
 		props.push(PGroup("Life", [
 			PRange("initial", 0, 10, function() return o.life, function(v) o.life = v),
 			PRange("randomNess", 0, 1, function() return o.lifeRand, function(v) o.lifeRand = v),
+			PRange("fadeIn", 0, 1, function() return o.fadeIn, function(v) o.fadeIn = v),
+			PRange("fadeOut", 0, 1, function() return o.fadeOut, function(v) o.fadeOut = v),
+			PRange("fadePower", 0, 3, function() return o.fadePower, function(v) o.fadePower = v),
 		]));
 
 		props.push(PGroup("Speed", [
 			PRange("initial", 0, 10, function() return o.speed, function(v) o.speed = v),
 			PRange("randomNess", 0, 1, function() return o.speedRand, function(v) o.speedRand = v),
 			PRange("acceleration", -1, 1, function() return o.speedIncr, function(v) o.speedIncr = v),
+			PRange("gravity", -5, 5, function() return o.gravity, function(v) o.gravity = v),
 		]));
 
 		props.push(PGroup("Size", [
@@ -316,7 +328,13 @@ class SceneProps {
 			PRange("randomNess", 0, 1, function() return o.rotSpeedRand, function(v) o.rotSpeedRand = v),
 		]));
 
-		return props;
+		props.push(PGroup("Texture", [
+			PTexture("diffuse", function() return o.texture, function(v) o.texture = v),
+			PRange("frameCount", 0, 32, function() return o.frameCount, function(v) o.frameCount = Std.int(v), 1),
+			PTexture("color", function() return o.colorTexture, function(v) o.colorTexture = v),
+		]));
+
+		return PGroup(o.name, props);
 	}
 
 	function getDynamicProps( v : Dynamic ) : Array<Property> {

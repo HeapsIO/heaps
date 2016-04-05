@@ -97,6 +97,29 @@ private class CustomSceneProps extends SceneProps {
 		return code;
 	}
 
+	override function getPartsProps( parts : h3d.parts.GpuParticles ) {
+		var props = super.getPartsProps(parts);
+		props.push(PCustom("", function() {
+			var b = panel.j.query("<button>");
+			b.text("Add Group");
+			b.click(function(_) {
+				parts.addGroup();
+				panel.refreshProps();
+			});
+			return b;
+		}));
+		return props;
+	}
+
+	override function getPartsGroupProps( parts : h3d.parts.GpuParticles, g : h3d.parts.GpuParticles.GpuPartGroup ) {
+		var p = super.getPartsGroupProps(parts, g);
+		p = PPopup(p, ["Remove"], function(j, i) {
+			parts.removeGroup(g);
+			panel.refreshProps();
+		});
+		return p;
+	}
+
 }
 
 class ScenePanel extends Panel {

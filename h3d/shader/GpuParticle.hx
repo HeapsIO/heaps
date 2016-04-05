@@ -14,14 +14,21 @@ class GpuParticle extends hxsl.Shader {
 			var delta : Vec2;
 		};
 
+		@param var fadeIn : Float;
+		@param var fadeOut : Float;
 		@param var fadePower : Float;
 		@param var speedIncr : Float;
+		@param var gravity : Float;
+		@param var color : Sampler2D;
 
 		var t : Float;
+		var normT : Float;
 
 		function __init__() {
 			t = (props.time + global.time) % props.life;
-			transformedPosition = input.position + input.normal * t; // already transformed
+			normT = t / props.life;
+			transformedPosition = input.position + (input.normal * (1 + speedIncr*t)) * t; // already transformed
+			transformedPosition.z -= gravity * t * t;
 			transformedNormal = camera.dir;
 		}
 
@@ -32,7 +39,12 @@ class GpuParticle extends hxsl.Shader {
 			var rot = current.x;
 			var crot = cos(rot), srot = sin(rot);
 			projectedPosition.xy += vec2(size.x * crot - size.y * srot, size.x * srot + size.y * crot) * vec2(global.pixelSize.x / global.pixelSize.y, 1);
-			pixelColor.a = 1 - abs((t / props.life) * 2 - 1).pow(fadePower);
+			var comp = vec2(normT, 1 - fadeOut) < vec2(fadeIn, normT);
+			pixelColor.a *= 1 - comp.x * (1 - (t / fadeIn).pow(fadePower)) - comp.y * ((normT - 1 + fadeOut) / fadeOut).pow(fadePower);
+		}
+
+		function fragment() {
+			pixelColor *= color.get(vec2(normT, props.time / props.life));
 		}
 
 	};
