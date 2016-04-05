@@ -67,6 +67,7 @@ class Inspector {
 	var propsPanel : Panel;
 	var logPanel : Panel;
 	var panelList : Array<{ name : String, create : Void -> Panel, p : Panel } >;
+	var currentNode : Node;
 
 	public function new( scene, ?host, ?port ) {
 
@@ -386,7 +387,12 @@ class Inspector {
 		}
 	}
 
+	public function refreshProps() {
+		if( currentNode != null ) editProps(currentNode);
+	}
+
 	public function editProps( n : Node ) {
+		currentNode = n;
 		var t = inspect.makeProps(n.getFullPath(), n.props());
 		propsPanel.j.text("");
 		propsPanel.parent = n;
