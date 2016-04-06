@@ -42,6 +42,7 @@ class Camera {
 	public var follow : { pos : h3d.scene.Object, target : h3d.scene.Object };
 
 	var minv : Matrix;
+	var miview : Matrix;
 	var needInv : Bool;
 
 	public function new( fovY = 25., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
@@ -100,6 +101,19 @@ class Camera {
 	}
 
 	/**
+		Returns the inverse of the camera matrix view only. Cache the result until the next update().
+	**/
+	public function getInverseView() {
+		if( miview == null ) {
+			miview = new h3d.Matrix();
+			miview._44 = 0;
+		}
+		if( miview._44 == 0 )
+			miview.inverse(mcam);
+		return miview;
+	}
+
+	/**
 		Transforms a 2D screen position into the 3D one according to the current camera.
 		The screenX and screenY values must be in the [-1,1] range.
 		The camZ value represents the normalized z in the frustum in the [0,1] range.
@@ -146,6 +160,7 @@ class Camera {
 		makeFrustumMatrix(mproj);
 		m.multiply(mcam, mproj);
 		needInv = true;
+		if( miview != null ) miview._44 = 0;
 	}
 
 	public function lostUp() {
