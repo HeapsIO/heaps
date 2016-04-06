@@ -258,9 +258,8 @@ class SceneProps {
 	public function getObjectProps( o : h3d.scene.Object ) {
 		var props = [];
 		props.push(PString("name", function() return o.name == null ? "" : o.name, function(v) o.name = v == "" ? null : v));
-		props.push(PFloat("x", function() return o.x, function(v) o.x = v));
-		props.push(PFloat("y", function() return o.y, function(v) o.y = v));
-		props.push(PFloat("z", function() return o.z, function(v) o.z = v));
+		props.push(PFloats("pos", function() return [o.x, o.y, o.z], function(v) { o.x = v[0]; o.y = v[1]; o.z = v[2]; }));
+		props.push(PFloats("scale", function() return [o.scaleX, o.scaleY, o.scaleZ], function(v) { o.scaleX = v[0]; o.scaleY = v[1]; o.scaleZ = v[2]; }));
 		props.push(PBool("visible", function() return o.visible, function(v) o.visible = v));
 
 		if( o.isMesh() ) {
@@ -272,8 +271,38 @@ class SceneProps {
 				props.push(getMaterialProps(o.toMesh().material));
 
 			var gp = Std.instance(o, h3d.parts.GpuParticles);
-			if( gp != null )
+			if( gp != null ) {
+				props.push(PFloats("volumePos", function() {
+					var b = gp.volumeBounds;
+					if( b == null ) return [0, 0, 0];
+					var p = b.getCenter();
+					return [p.x, p.y, p.z];
+				}, function(v) {
+					var b = gp.volumeBounds;
+					if( b != null ) {
+						var c = b.getCenter();
+						b.offset(v[0] - c.x, v[1] - c.y, v[2] - c.z);
+						gp.volumeBounds = null;
+						gp.volumeBounds = b;
+					}
+				}));
+				props.push(PFloats("volumeSize", function() {
+					var b = gp.volumeBounds;
+					if( b == null ) return [0, 0, 0];
+					return [b.xSize, b.ySize, b.zSize];
+				}, function(v) {
+					var b = gp.volumeBounds;
+					if( b != null ) {
+						var c = b.getCenter();
+						b.xMin = c.x - v[0] * 0.5; b.xSize = v[0];
+						b.yMin = c.y - v[1] * 0.5; b.ySize = v[1];
+						b.zMin = c.z - v[2] * 0.5; b.zSize = v[2];
+						gp.volumeBounds = null;
+						gp.volumeBounds = b;
+					}
+				}));
 				props = props.concat(getPartsProps(gp));
+			}
 
 		} else {
 			var c = Std.instance(o, h3d.scene.CustomObject);
@@ -298,14 +327,15 @@ class SceneProps {
 		var props = [];
 		props.push(PGroup("Emitter", [
 			PString("name", function() return o.name, function(v) { o.name = v; refresh(); }),
-			PBool("enable", function() return o.enable, function(v) o.enable = v),
-			PBool("loop", function() return o.emitLoop, function(v) { o.emitLoop = v; parts.currentTime = 0; }),
-			PRange("sync", 0, 1, function() return o.emitSync, function(v) o.emitSync = v),
-			PRange("delay", 0, 10, function() return o.emitDelay, function(v) o.emitDelay = v),
 			PEnum("mode", h3d.parts.GpuParticles.GpuEmitMode, function() return o.emitMode, function(v) o.emitMode = v),
+			PBool("enable", function() return o.enable, function(v) o.enable = v),
 			PRange("count", 0, 1000, function() return o.nparts, function(v) o.nparts = Std.int(v), 1),
 			PRange("distance", 0, 10, function() return o.emitDist, function(v) o.emitDist = v),
 			PRange("angle", -90, 180, function() return Math.round(o.emitAngle*180/Math.PI), function(v) o.emitAngle = v*Math.PI/180, 1),
+			PBool("loop", function() return o.emitLoop, function(v) { o.emitLoop = v; parts.currentTime = 0; }),
+			PRange("sync", 0, 1, function() return o.emitSync, function(v) o.emitSync = v),
+			PRange("delay", 0, 10, function() return o.emitDelay, function(v) o.emitDelay = v),
+			PBool("transform3D", function() return o.transform3D, function(v) o.transform3D = v),
 		]));
 
 		props.push(PGroup("Life", [

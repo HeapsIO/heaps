@@ -1,11 +1,33 @@
 package h3d.parts;
 import hxd.Math;
 
+private typedef GpuSave = {
+	var version : Int;
+	var bounds : Array<Float>;
+	var groups : Array<Dynamic>;
+}
+
 enum GpuEmitMode {
+	/**
+		A single Point, emit in all directions
+	**/
 	Point;
+	/**
+		A cone, parametrized with emitAngle and emitDistance
+	**/
 	Cone;
+	/**
+		The GpuParticles specified volumeBounds
+	**/
 	VolumeBounds;
+	/**
+		The GpuParticles parent.getBounds()
+	**/
 	ParentBounds;
+	/**
+		Same as VolumeBounds, but in Camera space, not world space.
+	**/
+	CameraBounds;
 }
 
 @:allow(h3d.parts.GpuParticles)
@@ -16,7 +38,7 @@ class GpuPartGroup {
 		if( FIELDS != null )
 			return FIELDS;
 		FIELDS = Type.getInstanceFields(GpuPartGroup);
-		for( f in ["blendMode", "emitMode", "needRebuild", "pshader", "partIndex", "texture", "colorGradient"] )
+		for( f in ["blendMode", "emitMode", "needRebuild", "pshader", "partIndex", "texture", "colorGradient","displayedParts"] )
 			FIELDS.remove(f);
 		for( f in FIELDS.copy() )
 			if( Reflect.isFunction(Reflect.field(inst, f)) )
@@ -30,6 +52,11 @@ class GpuPartGroup {
 	var pshader = new h3d.shader.GpuParticle();
 	var partIndex = 0;
 
+	/**
+		Tells how many particles to display. This can be used to progressively display a particle effect.
+	**/
+	public var displayedParts = -1;
+
 	public var name : String;
 	public var enable = true;
 	public var blendMode : h3d.mat.BlendMode = Alpha;
@@ -41,6 +68,9 @@ class GpuPartGroup {
 	public var emitAngle(default,set) : Float 	= 1.5;
 	public var emitSync(default, set) : Float	= 0;
 	public var emitDelay(default, set) : Float	= 0;
+
+	public var clipBounds : Bool				= false;
+	public var transform3D : Bool				= false;
 
 	public var size(default, set) : Float		= 1;
 	public var sizeIncr(default, set) : Float	= 0;
@@ -90,21 +120,22 @@ class GpuPartGroup {
 	public function new() {
 	}
 
-	public function syncParams(time) {
+	public function syncParams() {
 		pshader.speedIncr = speedIncr;
 		pshader.fadeIn = fadeIn;
 		pshader.fadeOut = fadeOut;
 		pshader.fadePower = fadePower;
 		pshader.gravity = gravity;
-		pshader.color = colorGradient == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : colorGradient;
 		pshader.loopCounter = emitLoop ? 1 : 100000;
-		pshader.time = time;
+		pshader.color = colorGradient == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : colorGradient;
 		pshader.texture = texture == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : texture;
 		var frameCount = frameCount == 0 ? frameDivisionX * frameDivisionY : frameCount;
 		pshader.animationRepeat = animationRepeat == 0 ? 0 : animationRepeat * frameCount - 1;
 		pshader.animationFixedFrame = animationRepeat == 0 ? frameCount : 0;
 		pshader.totalFrames = frameCount;
 		pshader.frameDivision.set(frameDivisionX, 1 / frameDivisionX, 1 / frameDivisionY);
+		pshader.clipBounds = emitMode == CameraBounds || clipBounds;
+		pshader.transform3D = transform3D;
 	}
 
 	public function save() : Dynamic {
@@ -162,14 +193,27 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	}
 
 	public function save() : Dynamic {
-		return { v : VERSION, g : [for( g in groups ) g.save()] };
+		var bounds = null;
+		for( g in groups )
+			switch( g.emitMode ) {
+			case CameraBounds, VolumeBounds:
+				if( volumeBounds != null ) {
+					var c = volumeBounds.getCenter();
+					bounds = [c.x, c.y, c.z, volumeBounds.xSize, volumeBounds.ySize, volumeBounds.zSize];
+					break;
+				}
+			default:
+			}
+		return ({ version : VERSION, groups : [for( g in groups ) g.save()], bounds : bounds } : GpuSave);
 	}
 
-	public function load( o : Dynamic ) {
-		var ver : Int = o.v;
-		if( ver == 0 || ver > VERSION ) throw "Unsupported version " + o.v;
-		for( g in (o.g:Array<Dynamic>) )
-			addGroup().load(ver, g);
+	public function load( _o : Dynamic ) {
+		var o : GpuSave = _o;
+		if( o.version == 0 || o.version > VERSION ) throw "Unsupported version " + _o.version;
+		for( g in o.groups )
+			addGroup().load(o.version, g);
+		if( o.bounds != null )
+			volumeBounds = h3d.col.Bounds.fromValues(o.bounds[0] - o.bounds[3] * 0.5, o.bounds[1] - o.bounds[4] * 0.5, o.bounds[2] - o.bounds[5] * 0.5, o.bounds[3], o.bounds[4], o.bounds[5]);
 	}
 
 	public function addGroup( ?g : GpuPartGroup, ?material : h3d.mat.MeshMaterial, ?index ) {
@@ -184,6 +228,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		}
 		if( g.name == null ) g.name = "Group#" + (groups.length + 1);
 		material.mainPass.addShader(g.pshader);
+		material.mainPass.dynamicParameters = true;
 		if( index == null )
 			index = groups.length;
 		materials.insert(index, material);
@@ -207,13 +252,14 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		if( idx < 0 ) return;
 		groups.splice(idx,1);
 		materials.splice(idx, 1);
+		if( materials.length == 0 ) material = null;
 	}
 
 	public inline function getGroups() {
 		return groups.iterator();
 	}
 
-	function rebuild() {
+	function rebuild(cam) {
 		if( primitive != null ) {
 			primitive.dispose();
 			primitive = null;
@@ -228,8 +274,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			var g = groups[gid];
 			rnd.init(seed + gid);
 			g.partIndex = partCount;
-			g.needRebuild = false;
-			g.syncParams(currentTime);
+			g.syncParams();
 			partCount += g.nparts;
 			if( g.emitLoop )
 				duration = Math.POSITIVE_INFINITY;
@@ -270,7 +315,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 					p.y = v.y * r;
 					p.z = v.z * r;
 
-				case ParentBounds, VolumeBounds:
+				case ParentBounds, VolumeBounds, CameraBounds:
 
 					if( calcEmit != g.emitMode ) {
 						calcEmit = g.emitMode;
@@ -279,7 +324,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 							ebounds.transform3x4(getInvPos());
 						} else {
 							ebounds = volumeBounds;
-							if( ebounds == null ) ebounds = h3d.col.Bounds.fromValues( -1, -1, -1, 2, 2, 2 );
+							if( ebounds == null ) ebounds = volumeBounds = h3d.col.Bounds.fromValues( -1, -1, -1, 2, 2, 2 );
 						}
 					}
 
@@ -300,6 +345,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				v.x *= speed;
 				v.y *= speed;
 				v.z *= speed;
+
 
 				bounds.addPos(p.x, p.y, p.z);
 				// todo : add end-of-life pos ?
@@ -326,6 +372,8 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				}
 			}
 		}
+		for( g in groups )
+			g.needRebuild = false;
 		primitive = new h3d.prim.RawPrimitive( { vbuf : vbuf, stride : 14, quads : true, bounds:bounds }, true);
 		primitive.buffer.flags.set(RawFormat);
 		if( currentTime > duration )
@@ -336,8 +384,11 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		for( i in 0...materials.length ) {
 			var m = materials[i];
 			var g = groups[i];
-			if( m != null && g.enable ) {
+			if( m != null && g.enable && g.displayedParts != 0 ) {
+				var old = m.mainPass.name;
 				m.blendMode = g.blendMode;
+				if( old != "default" && old != "alpha" && old != "add" )
+					m.mainPass.setPassName(old);
 				ctx.emit(m, this, i);
 			}
 		}
@@ -351,16 +402,38 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			onEnd();
 		for( g in groups )
 			if( g.needRebuild ) {
-				rebuild();
+				rebuild(ctx.camera);
 				break;
 			}
 	}
 
 	override function draw( ctx : h3d.scene.RenderContext ) {
 		var g = groups[ctx.drawPass.index];
-		g.syncParams(currentTime); // one frame late, but ok
+		g.syncParams();
+		g.pshader.time = currentTime;
+		if( g.pshader.clipBounds ) {
+			g.pshader.volumeMin.set(volumeBounds.xMin, volumeBounds.yMin, volumeBounds.zMin);
+			g.pshader.volumeSize.set(volumeBounds.xSize, volumeBounds.ySize, volumeBounds.zSize);
+		}
+		if( g.pshader.transform3D ) {
+			var r = ctx.camera.target.sub(ctx.camera.pos);
+			r.normalize();
+			var q = new h3d.Quat();
+			q.initDirection(r);
+			q.saveToMatrix(g.pshader.cameraRotation);
+		}
+		if( g.emitMode == CameraBounds ) {
+			g.pshader.transform.loadFrom(ctx.camera.getInverseView());
+			g.pshader.offset.set( -ctx.camera.pos.x * g.emitDist, -ctx.camera.pos.y * g.emitDist, -ctx.camera.pos.z * g.emitDist );
+			g.pshader.offset.transform3x3( ctx.camera.mcam );
+			g.pshader.offset.x %= volumeBounds.xSize;
+			g.pshader.offset.y %= volumeBounds.ySize;
+			g.pshader.offset.z %= volumeBounds.zSize;
+		} else
+			g.pshader.transform.loadFrom(absPos);
+		ctx.uploadParams();
 		@:privateAccess if( primitive.buffer == null || primitive.buffer.isDisposed() ) primitive.alloc(ctx.engine);
-		@:privateAccess ctx.engine.renderQuadBuffer(primitive.buffer,g.partIndex*2,g.nparts*2);
+		@:privateAccess ctx.engine.renderQuadBuffer(primitive.buffer,g.partIndex*2,(g.displayedParts < 0 || g.displayedParts >= g.nparts ? g.nparts : g.displayedParts)*2);
 	}
 
 

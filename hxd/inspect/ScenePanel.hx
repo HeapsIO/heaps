@@ -12,6 +12,23 @@ private class SceneObject extends TreeNode {
 		super(o.name != null ? o.name : o.toString(), p);
 	}
 
+	override function initContent() {
+		super.initContent();
+		j.children(".content").mousedown(function(e) {
+			if( e.which == 3 ) {
+				var menu = getContextMenu();
+				j.special("popupMenu", [for( m in menu ) m.name], function(i) { if( i >= 0 ) menu[i].call(); return true; });
+			}
+		});
+	}
+
+	function getContextMenu() {
+		return [
+			{ name : "Remove", call : function() o.remove() },
+			{ name : "Add Particles", call : function() new h3d.parts.GpuParticles(o) },
+		];
+	}
+
 	function objectName( o : h3d.scene.Object ) {
 		var name = o.name != null ? o.name : o.toString();
 		return name.split(".").join("_");
@@ -172,6 +189,104 @@ private class CustomSceneProps extends SceneProps {
 		return p;
 	}
 
+	function getWorldInfos( world : h3d.scene.World, o : h3d.scene.Object ) {
+		var emap = new Map();
+		var extraMap = new Map();
+		var all = [];
+		for( chunk in @:privateAccess world.allChunks ) {
+
+			if( o == null && !panel.showHidden && (!chunk.root.visible || chunk.root.culled) )
+				continue;
+
+			for( mid in chunk.buffers.keys() ) {
+				var buf = chunk.buffers.get(mid);
+				if( (o == null && (panel.showHidden || (buf.visible && !buf.culled))) || chunk.root == o || buf == o ) {
+					for( e in chunk.elements )
+						for( g in e.model.geometries )
+							if( g.m.bits == mid ) {
+								var inf = emap.get(g);
+								if( inf == null ) {
+									inf = { count : 0, pass : Lambda.count({ iterator : buf.material.getPasses }), tri : 0, name : e.model.r.name, e : e, g : g };
+									all.push(inf);
+									emap.set(g, inf);
+								}
+								inf.count++;
+							}
+				}
+			}
+			// negative ids are reserved for custom usage
+			var meshes = [for( mid in chunk.buffers.keys() ) if( mid >= 0 ) (chunk.buffers.get(mid):h3d.scene.Object)];
+			for( r in chunk.root )
+				if( r.name != null && !meshes.remove(r) && r.isMesh() && ((o == null && (panel.showHidden || (r.visible && !r.culled))) || chunk.root == o) ) {
+					var m = r.toMesh();
+					var inf = extraMap.get(r.name);
+					var npass = Lambda.count({ iterator : m.material.getPasses });
+					if( inf == null ) {
+						inf = { count : 0, pass : npass, tri : 0, name : r.name, e : null, g : null };
+						all.push(inf);
+						extraMap.set(r.name, inf);
+					}
+					inf.count++;
+					inf.tri += m.primitive.triCount() * npass;
+				}
+		}
+		if( all.length == 0 )
+			return null;
+		for( e in all )
+			if( e.e != null )
+				e.tri = Std.int(e.g.indexCount / 3) * e.count * e.pass;
+		all.sort(function(e1, e2) return e2.tri - e1.tri);
+		return PCustom("", function() {
+			var j = panel.j.query("<table>");
+
+			var totCount = 0, totTri = 0;
+			for( e in all ) {
+				totCount += e.count;
+				totTri += e.tri;
+			}
+
+			j.html('
+				<tr><th>Material</th><th>Count</th><th>Passes</th><th>Tri</th></tr>
+				<tr><td>TOTAL</td><td>$totCount</td><td></td><td>$totTri</td></tr>
+			');
+
+			for( e in all ) {
+				var name = e.name;
+				if( e.e != null && e.e.model.geometries.length > 1 )
+					name += ":" + e.g.m.name;
+				var line = j.query("<tr>");
+				j.query("<td>").text(name).appendTo(line);
+				j.query("<td>").text("" + e.count).appendTo(line);
+				j.query("<td>").text("" + e.pass).appendTo(line);
+				j.query("<td>").text("" + e.tri).appendTo(line);
+				line.appendTo(j);
+			}
+			return j;
+		});
+	}
+
+	override function getObjectProps( o : h3d.scene.Object ) {
+		var props = super.getObjectProps(o);
+		var world = Std.instance(o, h3d.scene.World);
+		var worldObject = world == null ? o : null;
+		if( world == null ) {
+			world = Std.instance(o.parent, h3d.scene.World);
+			if( world != null && !Lambda.exists(@:privateAccess world.allChunks, function(c) return c.root == o) )
+				world = null;
+		}
+		if( world == null && o.parent != null ) {
+			world = Std.instance(o.parent.parent, h3d.scene.World);
+			if( world != null && !Lambda.exists(@:privateAccess world.allChunks, function(c) return c.root == o.parent) )
+				world = null;
+		}
+		if( world != null ) {
+			var infos = getWorldInfos(world, worldObject);
+			if( infos != null ) props.push(infos);
+		}
+		return props;
+	}
+
+
 }
 
 class ScenePanel extends Panel {
@@ -184,6 +299,7 @@ class ScenePanel extends Panel {
 	var btPick : cdb.jq.JQuery;
 	var lastPickEvent : Null<Int>;
 	var sprops : SceneProps;
+	public var showHidden(default, null) : Bool = true;
 
 	public function new(name, scene) {
 		super(name, "Scene 3D");
@@ -214,6 +330,7 @@ class ScenePanel extends Panel {
 		var bt = j.find(".bt_hide");
 		bt.addClass("active");
 		bt.click(function(_) {
+			showHidden = !showHidden;
 			bt.toggleClass("active");
 			content.toggleClass("masked");
 		});

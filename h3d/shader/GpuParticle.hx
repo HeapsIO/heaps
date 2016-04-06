@@ -31,6 +31,16 @@ class GpuParticle extends hxsl.Shader {
 		@param var totalFrames : Float;
 		@param var frameSize : Vec2;
 		@param var frameDivision : Vec3;
+		@param var transform : Mat3x4;
+
+		// clip
+		@const var clipBounds : Bool;
+		@param var volumeMin : Vec3;
+		@param var volumeSize : Vec3;
+		@param var offset : Vec3;
+
+		@param var cameraRotation : Mat3;
+		@const var transform3D : Bool;
 
 		var t : Float;
 		var normT : Float;
@@ -48,7 +58,10 @@ class GpuParticle extends hxsl.Shader {
 			t = (props.time + time) % (props.life * loopCounter);
 			normT = t / props.life;
 			randProp = -props.time / props.life;
-			transformedPosition = input.position + (input.normal * (1 + speedIncr*t)) * t; // already transformed
+			transformedPosition = input.position + (input.normal * (1 + speedIncr * t)) * t + offset;
+			if( clipBounds )
+				transformedPosition = (transformedPosition - volumeMin) % volumeSize + volumeMin;
+			transformedPosition *= transform;
 			transformedPosition.z -= gravity * t * t;
 			transformedNormal = camera.dir;
 			calculatedUV = vec2(props.uv.x, 1 - props.uv.y);
@@ -67,11 +80,16 @@ class GpuParticle extends hxsl.Shader {
 
 		function vertex() {
 			var current = props.init + props.delta * t;
-			projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
 			var size = (props.uv - 0.5) * current.y.max(0.);
 			var rot = current.x;
 			var crot = cos(rot), srot = sin(rot);
-			projectedPosition.xy += vec2(size.x * crot - size.y * srot, size.x * srot + size.y * crot) * vec2(global.pixelSize.x / global.pixelSize.y, 1);
+			var dist = vec2(size.x * crot - size.y * srot, size.x * srot + size.y * crot) * vec2(global.pixelSize.x / global.pixelSize.y, 1);
+			if( transform3D ) {
+				transformedPosition += vec3(0., dist.x, dist.y) * cameraRotation;
+			} else {
+				projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
+				projectedPosition.xy += dist;
+			}
 			var comp = vec2(normT, 1 - fadeOut) < vec2(fadeIn, normT);
 			pixelColor.a *= 1 - comp.x * (1 - (t / fadeIn).pow(fadePower)) - comp.y * ((normT - 1 + fadeOut) / fadeOut).pow(fadePower);
 			colorUV = vec2(normT, randProp);

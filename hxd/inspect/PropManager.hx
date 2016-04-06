@@ -538,18 +538,18 @@ class PropManager extends cdb.jq.Client {
 				jv.mousedown(function(e) {
 					if( e.which == 3 ) {
 						if( jv.find("input").length > 0 ) return;
-						var old = values[i];
-						var cur = old;
+						var old = values.copy();
+						var cur = old[i];
 						jv.addClass("active");
 						jv.special("startDrag", [], function(v: { done:Bool, dx:Float, dy:Float } ) {
-							var delta = ( Math.max(Math.abs(old == 0 ? 1 : old), 1e-3) / 100 ) * v.dx;
+							var delta = ( Math.max(Math.abs(old[i] == 0 ? 1 : old[i]), 1e-3) / 100 ) * v.dx;
 							cur += delta;
 							values[i] = hxd.Math.fmt(cur);
 							set(values);
 							jv.text("" + values[i]);
 							if( v.done ) {
 								jv.removeClass("active");
-								addHistory(path, old, values[i]);
+								addHistory(path, old, values.copy());
 							}
 							return v.done;
 						});
@@ -661,8 +661,8 @@ class PropManager extends cdb.jq.Client {
 		input.focus();
 		input.select();
 		input.blur(function(_) {
-			input.dispose();
 			set(input.getValue());
+			input.dispose();
 			j.text(get());
 		});
 		input.keydown(function(e) {
