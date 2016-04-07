@@ -226,28 +226,68 @@ class Console extends h2d.Sprite {
 		}
 		logs.push(command);
 		logIndex = -1;
+		
+		var errorColor = 0xC00000;
 
-		var r = ~/([a-zA-Z0-9_]+)|(?:['|"])([a-zA-Z0-9_ ]+)(?:["|'])*/g;
 		var args = [];
-		var pos = {
-			pos: 0,
-			len: 0,
-		};
+		var c = '';
+		var i = 0;
 
-		while (r.matchSub(command, pos.pos + pos.len)) {
-			var arg = r.matched(0);
-			if (arg.charAt(0) == "'" || arg.charAt(0) == '"') {
-				arg = arg.substring(1, arg.length - 1);
-			}
-			args.push(arg);
+		function readString(endChar:String) {
+			var string = '';
 			
-			pos = r.matchedPos();
+			while (i < command.length) {
+				c = command.charAt(++i);
+				if (c == endChar) {
+					++i;
+					return string;
+				}
+				string += c;
+			}
+	
+			return null;
 		}
+		
+		inline function skipSpace() {
+			c = command.charAt(i);
+			while (c == ' ' || c == '\t') {
+				c = command.charAt(++i);
+			}
+			--i;
+		}
+		
+		var last = '';
+		while (i < command.length) {
+			c = command.charAt(i);
+
+			switch (c) {
+			case ' ' | '\t':
+				skipSpace();
+				
+				args.push(last);
+				last = '';
+			case "'" | '"':
+				var string = readString(c);
+				if (string == null) {
+					log('Bad formated string', errorColor);
+					return;
+				}
+				
+				args.push(string);
+				last = '';
+				
+				skipSpace();
+			default:
+				last += c;
+			}
+			
+			++i;
+		}
+		args.push(last);
 		
 		var cmdName = args[0];
 		if( aliases.exists(cmdName) ) cmdName = aliases.get(cmdName);
 		var cmd = commands.get(cmdName);
-		var errorColor = 0xC00000;
 		if( cmd == null ) {
 			log('Unknown command "${cmdName}"',errorColor);
 			return;
