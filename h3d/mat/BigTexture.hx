@@ -19,6 +19,11 @@ class BigTextureElement {
 	public function set(tex : hxd.res.Image) {
 		t.set(tex, this);
 	}
+
+	public function setAlpha(tex : hxd.res.Image) {
+		t.setAlpha(tex, this);
+	}
+
 }
 
 private class QuadTree {
