@@ -576,7 +576,7 @@ class PropManager extends cdb.jq.Client {
 				if( delay ) return;
 				jprop.special("colorPick", [get().toColor(), alpha], function(c) {
 					if( jprop.get() == null || jprop.get().id < 0 )
-						return;
+						return true;
 					delay = true;
 					haxe.Timer.delay(function() delay = false, 200);
 					var color = h3d.Vector.fromColor(c.color);
