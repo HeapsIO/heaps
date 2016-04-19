@@ -93,11 +93,20 @@ class Point {
 		y *= k;
 		z *= k;
 	}
-	
+
 	public inline function transform( m : Matrix ) {
 		var px = x * m._11 + y * m._21 + z * m._31 + m._41;
 		var py = x * m._12 + y * m._22 + z * m._32 + m._42;
 		var pz = x * m._13 + y * m._23 + z * m._33 + m._43;
+		x = px;
+		y = py;
+		z = pz;
+	}
+
+	public inline function transform3x3( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31;
+		var py = x * m._12 + y * m._22 + z * m._32;
+		var pz = x * m._13 + y * m._23 + z * m._33;
 		x = px;
 		y = py;
 		z = pz;

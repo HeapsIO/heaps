@@ -4,9 +4,9 @@
 }
 
 class PerlinView extends hxd.App {
-	
+
 	var globalScale : Float = 2;
-	
+
 	var bmp : h2d.Bitmap;
 	var octaves = 3;
 	var persist = 0.5;
@@ -17,14 +17,14 @@ class PerlinView extends hxd.App {
 	var gain = 2.0;
 	var offset = 0.5;
 	var mode = Mode.Perlin;
-	
+
 	var dx = 1000.;
 	var dy = 1000.;
-	
+
 	override function onResize() {
 		generate();
 	}
-	
+
 	override function init() {
 		var comp = h2d.comp.Parser.fromHtml('
 			<div class="panel" style="padding:10px; dock:top; height : 20px">
@@ -70,7 +70,7 @@ class PerlinView extends hxd.App {
 		s2d.addChild(comp);
 		generate();
 	}
-	
+
 	function generate() {
 		if( bmp.tile != null )
 			bmp.tile.dispose();
@@ -105,7 +105,7 @@ class PerlinView extends hxd.App {
 		this.bmp.setScale(globalScale);
 		bmp.dispose();
 	}
-	
+
 	static function main() {
 		new PerlinView();
 	}

@@ -16,11 +16,13 @@ class TreeNode extends Node {
 				jchild.slideToggle(50);
 			}
 		});
-		j.children(".content").click(function(_) {
-			getJRoot().find(".selected").removeClass("selected");
-			j.addClass("selected");
-			onSelect();
-		});
+		j.children(".content").click(function(_) click());
+	}
+
+	public function click() {
+		getJRoot().find(".selected").removeClass("selected");
+		j.addClass("selected");
+		onSelect();
 	}
 
 	override function getJRoot() {

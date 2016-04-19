@@ -340,4 +340,18 @@ class LogDriver extends Driver {
 		d.uploadTexturePixels(t, pixels, mipLevel, side);
 	}
 
+	public static function debug( f : Void -> Void ) {
+		#if !debug
+		throw "Requires -debug";
+		#end
+		var engine = h3d.Engine.getCurrent();
+		var driver = engine.driver;
+		var old = driver.logEnable;
+		var log = new h3d.impl.LogDriver(driver);
+		engine.setDriver(log);
+		f();
+		driver.logEnable = old;
+		engine.setDriver(driver);
+	}
+
 }

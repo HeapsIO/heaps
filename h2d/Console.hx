@@ -136,6 +136,17 @@ class Console extends h2d.Sprite {
 	public function isActive() {
 		return bg.visible;
 	}
+	
+	public function hide() {
+		bg.visible = false;
+		tf.text = "";
+		cursorPos = 0;
+	}
+	
+	public function show() {
+		bg.visible = true;
+		logIndex = -1;
+	}
 
 	function set_cursorPos(v:Int) {
 		if( v > tf.text.length ) v = tf.text.length;
@@ -145,8 +156,7 @@ class Console extends h2d.Sprite {
 
 	function handleKey( e : hxd.Event ) {
 		if( e.charCode == shortKeyChar && !bg.visible ) {
-			bg.visible = true;
-			logIndex = -1;
+			show();
 		}
 		if( !bg.visible )
 			return;
@@ -207,12 +217,6 @@ class Console extends h2d.Sprite {
 		}
 	}
 
-	function hide() {
-		bg.visible = false;
-		tf.text = "";
-		cursorPos = 0;
-	}
-
 	function handleCommand( command : String ) {
 		command = StringTools.trim(command);
 		if( command.charCodeAt(0) == "/".code ) command = command.substr(1);
@@ -222,12 +226,68 @@ class Console extends h2d.Sprite {
 		}
 		logs.push(command);
 		logIndex = -1;
+		
+		var errorColor = 0xC00000;
 
-		var args = ~/[ \t]+/g.split(command);
+		var args = [];
+		var c = '';
+		var i = 0;
+
+		function readString(endChar:String) {
+			var string = '';
+			
+			while (i < command.length) {
+				c = command.charAt(++i);
+				if (c == endChar) {
+					++i;
+					return string;
+				}
+				string += c;
+			}
+	
+			return null;
+		}
+		
+		inline function skipSpace() {
+			c = command.charAt(i);
+			while (c == ' ' || c == '\t') {
+				c = command.charAt(++i);
+			}
+			--i;
+		}
+		
+		var last = '';
+		while (i < command.length) {
+			c = command.charAt(i);
+
+			switch (c) {
+			case ' ' | '\t':
+				skipSpace();
+				
+				args.push(last);
+				last = '';
+			case "'" | '"':
+				var string = readString(c);
+				if (string == null) {
+					log('Bad formated string', errorColor);
+					return;
+				}
+				
+				args.push(string);
+				last = '';
+				
+				skipSpace();
+			default:
+				last += c;
+			}
+			
+			++i;
+		}
+		args.push(last);
+		
 		var cmdName = args[0];
 		if( aliases.exists(cmdName) ) cmdName = aliases.get(cmdName);
 		var cmd = commands.get(cmdName);
-		var errorColor = 0xC00000;
 		if( cmd == null ) {
 			log('Unknown command "${cmdName}"',errorColor);
 			return;
@@ -293,7 +353,7 @@ class Console extends h2d.Sprite {
 	public function log( text : String, ?color ) {
 		if( color == null ) color = tf.textColor;
 		var oldH = logTxt.textHeight;
-		logTxt.text += '<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>';
+		logTxt.text = logTxt.text + '<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>';
 		if( logDY != 0 ) logDY += logTxt.textHeight - oldH;
 		logTxt.alpha = 1;
 		logTxt.visible = true;

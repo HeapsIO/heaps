@@ -24,6 +24,7 @@ class SceneEvents {
 	var currentDrag : { f : hxd.Event -> Void, onCancel : Void -> Void, ref : Null<Int> };
 	var mouseX = -1.;
 	var mouseY = -1.;
+	var lastTouch = 0;
 
 	var focusLost = new hxd.Event(EFocusLost);
 	var fakeMove = new hxd.Event(EMove);
@@ -207,10 +208,19 @@ class SceneEvents {
 			pendingEvents = [];
 			for( e in old ) {
 				var ox = e.relX, oy = e.relY;
-				if( e.kind == EMove ) {
+
+				switch( e.kind ) {
+				case EMove:
 					checkMoved = true;
 					mouseX = e.relX;
 					mouseY = e.relY;
+					lastTouch = e.touchId;
+				case EPush, ERelease:
+					// on mobile, the mouse teleports
+					mouseX = e.relX;
+					mouseY = e.relY;
+					lastTouch = e.touchId;
+				default:
 				}
 
 				if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
@@ -228,6 +238,7 @@ class SceneEvents {
 		if( !checkMoved && currentDrag == null ) {
 			fakeMove.relX = mouseX;
 			fakeMove.relY = mouseY;
+			fakeMove.touchId = lastTouch;
 			fakeMove.cancel = false;
 			fakeMove.propagate = false;
 			emitEvent(fakeMove);

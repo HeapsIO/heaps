@@ -299,6 +299,13 @@ class Object {
 		}
 	}
 
+	function hardwarePickEmit( r : h3d.col.Ray, ctx : RenderContext ) {
+		if( !visible || (culled && inheritCulled) )
+			return;
+		for( o in childs )
+			o.hardwarePickEmit(r, ctx);
+	}
+
 	function onParentChangedRec() {
 		onParentChanged();
 		for( c in childs )
@@ -336,7 +343,7 @@ class Object {
 		while( p.parent != null ) p = p.parent;
 		return Std.instance(p, Scene);
 	}
-	
+
 	/**
 		Returns the updated absolute position matrix. Please note that this is not a copy so it should not be modified.
 	**/

@@ -25,7 +25,7 @@ class Stage {
 		return canvas;
 	}
 	var canvas : js.html.CanvasElement;
-	var canvasPos : js.html.ClientRect;
+	var canvasPos : { var width(default, never) : Float; var height(default, never) : Float; var left(default, never) : Float; var top(default, never) : Float; };
 	#end
 
 	public var width(get, null) : Int;

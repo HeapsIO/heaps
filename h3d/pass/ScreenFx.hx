@@ -23,6 +23,11 @@ class ScreenFx<T:hxsl.Shader> {
 		fullClearRequired = engine.hasFeature(FullClearRequired);
 	}
 
+	public function setGlobals( ctx :  h3d.scene.RenderContext ) {
+		for( g in @:privateAccess ctx.sharedGlobals )
+			manager.globals.fastSet(g.gid, g.value);
+	}
+
 	public function render() {
 		var rts = manager.compileShaders(shaders);
 		engine.selectMaterial(pass);

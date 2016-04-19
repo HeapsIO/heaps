@@ -60,6 +60,7 @@ class Panel extends Node {
 		panel.removeAttr("dock");
 		panel.dispose();
 		panel = null;
+		visible = false;
 	}
 
 	function set_caption(c) {

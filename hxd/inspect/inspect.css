@@ -55,7 +55,16 @@
 .jqpage ul.toolbar li.active, .dialog-floating ul.toolbar li.active {
 	color : white;
 }
+.jqpage .panel, .dialog-floating .panel {
+	position : relative;
+}
+.jqpage .panel .imageprops, .dialog-floating .panel .imageprops {
+	position : absolute;
+	right : 5px;
+	top : 5px;
+}
 .jqpage .panel .scrollable, .dialog-floating .panel .scrollable {
+	position : relative;
 	height : 100%;
 	overflow : auto;
 }
@@ -148,6 +157,12 @@
 	height : 18px;
 	border : 1px solid #888;
 	width : 100%;
+}
+.jqpage table.iprops tr.pcustom button, .dialog-floating table.iprops tr.pcustom button {
+	margin-left : 5px;
+}
+.jqpage table.iprops tr.pcustom .buttonGroup, .dialog-floating table.iprops tr.pcustom .buttonGroup {
+	text-align : right;
 }
 .jqpage table.iprops tr.prange input.range, .dialog-floating table.iprops tr.prange input.range {
 	width : auto;

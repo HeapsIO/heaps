@@ -48,6 +48,8 @@ class Inspector {
 	static var CSS = hxd.res.Embed.getFileContent("hxd/inspect/inspect.css");
 	static var current : Inspector;
 
+	public static function getCurrent() return current;
+
 	public var scene(default, set) : h3d.scene.Scene;
 	public var connected(get, never): Bool;
 
@@ -67,6 +69,7 @@ class Inspector {
 	var propsPanel : Panel;
 	var logPanel : Panel;
 	var panelList : Array<{ name : String, create : Void -> Panel, p : Panel } >;
+	var currentNode : Node;
 
 	public function new( scene, ?host, ?port ) {
 
@@ -79,6 +82,7 @@ class Inspector {
 		haxe.Log.trace = onTrace;
 		inspect = new PropManager(host, port);
 		inspect.resolveProps = resolveProps;
+		inspect.onShowTexture = onShowTexture;
 		inspect.onChange = onChange;
 		inspect.handleKey = onKey;
 		this.scene = scene;
@@ -87,9 +91,34 @@ class Inspector {
 		rootNodes = [];
 
 		init();
+	}
 
-		scenePanel.addNode("Renderer", "object-group", scenePanel.getRendererProps);
-		scenePanel.sync();
+
+
+	function init() {
+		jroot = J(inspect.getRoot());
+		jroot.html('
+			<style>$CSS</style>
+			<ul id="toolbar" class="toolbar">
+			</ul>
+		');
+		jroot.attr("title", "Inspect");
+
+		scenePanel = new ScenePanel("s3d",scene);
+		propsPanel = new Panel("props","Properties");
+		logPanel = new Panel("log", "Log");
+		resPanel = new ResPanel("res", hxd.res.Loader.currentInstance);
+
+
+		resPanel.dock(Left, 0.2);
+		scenePanel.dock(Fill, null, resPanel);
+		logPanel.dock(Down, 0.3);
+		propsPanel.dock(Down, 0.5, scenePanel);
+
+		addPanel("Scene", function() return scenePanel);
+		addPanel("Properties", function() return propsPanel);
+		addPanel("Resources", function() return resPanel);
+		addPanel("Log", function() return logPanel);
 
 		addTool("Load...", "download", load, "Load settings");
 		addTool("Save...", "save", save, "Save settings");
@@ -128,6 +157,53 @@ class Inspector {
 			s.dock(Right, 0.35);
 			return s;
 		});
+	}
+
+	function onShowTexture( t : h3d.mat.Texture ) {
+		var p = new Panel(null, "" + t);
+		p.onClose = p.dispose;
+		function load( mode = "rgba" ) {
+			p.j.html("Loading...");
+			haxe.Timer.delay(function() {
+				var bmp = t.capturePixels(true);
+				function setChannel(v) {
+					var bits = v * 8;
+					for( x in 0...bmp.width )
+						for( y in 0...bmp.height ) {
+							var a = (bmp.getPixel(x, y) >>> bits) & 0xFF;
+							bmp.setPixel(x, y, 0xFF000000 | a | (a<<8) | (a<<16));
+						}
+				}
+				switch( mode ) {
+				case "rgb":
+					for( x in 0...bmp.width )
+						for( y in 0...bmp.height )
+							bmp.setPixel(x, y, bmp.getPixel(x, y) | 0xFF000000);
+				case "alpha":
+					setChannel(3);
+				case "red":
+					setChannel(2);
+				case "green":
+					setChannel(1);
+				case "blue":
+					setChannel(0);
+				default:
+				}
+
+				var png = bmp.toPNG();
+				bmp.dispose();
+				var pngBase64 = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")).encodeBytes(png).toString();
+				p.j.html('
+					<select class="imageprops"><option value="rgba">RGBA</option><option value="rgb">RGB</option><option value="alpha">Alpha</option><option value="red">Red</option><option value="green">Green</option><option value="blue">Blue</option></select>
+					<img src="data:image/png;base64,$pngBase64" style="background:#696969;max-width:100%"/>
+				');
+				var props = p.j.find(".imageprops");
+				props.val(mode);
+				props.change(function(_) load(props.getValue()));
+			}, 0);
+		}
+		load();
+		p.show();
 	}
 
 	public function dispose() {
@@ -204,42 +280,51 @@ class Inspector {
 		h3d.Engine.getCurrent().render(scene);
 	}
 
-	function init() {
-		jroot = J(inspect.getRoot());
-		jroot.html('
-			<style>$CSS</style>
-			<ul id="toolbar" class="toolbar">
-			</ul>
-		');
-		jroot.attr("title", "Inspect");
+	public function saveFile( defaultName : String, ext : String, bytes : haxe.io.Bytes, onSelect : String -> Void ) {
+		if( defaultName.charCodeAt(0) != "/".code && defaultName.charCodeAt(1) != ":".code )
+			defaultName = inspect.getResPath() + defaultName;
+		jroot.special("fileSave", [defaultName, ext, bytes], function(path) {
+			if( path != null ) onSelect(path);
+			return true;
+		});
+	}
 
-		scenePanel = new ScenePanel("s3d",scene);
-		propsPanel = new Panel("props","Properties");
-		logPanel = new Panel("log", "Log");
-		resPanel = new ResPanel("res", hxd.res.Loader.currentInstance);
-
-
-		resPanel.dock(Left, 0.2);
-		scenePanel.dock(Fill, null, resPanel);
-		logPanel.dock(Down, 0.3);
-		propsPanel.dock(Down, 0.5, scenePanel);
-
-		addPanel("Scene", function() return scenePanel);
-		addPanel("Properties", function() return propsPanel);
-		addPanel("Resources", function() return resPanel);
-		addPanel("Log", function() return logPanel);
+	public function loadFile( ext : String, onLoad : String -> haxe.io.Bytes -> Void, ?defaultPath : String ) {
+		if( defaultPath != null && defaultPath.charCodeAt(0) != "/".code && defaultPath.charCodeAt(1) != ":".code )
+			defaultPath = inspect.getResPath() + defaultPath;
+		jroot.special("fileSelect", [defaultPath, ext], function(newPath) {
+			if( newPath == null ) return true;
+			hxd.File.load(newPath, function(bytes) onLoad(newPath, bytes));
+			return true;
+		});
 	}
 
 	function load() {
-		jroot.special("fileSelect", [savedFile, "js"], function(newPath) {
-			if( newPath == null ) return true;
-			hxd.File.load(newPath,function(bytes) {
-				savedFile = newPath;
-				resetDefaults();
-				loadProps(bytes.toString());
-			});
-			return true;
-		});
+		loadFile("js", function(newPath, data) {
+			savedFile = newPath;
+			resetDefaults();
+			loadProps(data.toString());
+		}, savedFile);
+	}
+
+	function save() {
+		var o : Dynamic = { };
+		for( s in state.keys() ) {
+			var path = s.split(".");
+			var o = o;
+			while( path.length > 1 ) {
+				var name = path.shift();
+				var s = Reflect.field(o, name);
+				if( s == null ) {
+					s = { };
+					Reflect.setField(o, name, s);
+				}
+				o = s;
+			}
+			Reflect.setField(o, path[0], state.get(s).current);
+		}
+		var js = haxe.Json.stringify(o, null, "\t");
+		saveFile(savedFile, "js", haxe.io.Bytes.ofString(js), function(name) savedFile = name);
 	}
 
 	public function resetDefaults() {
@@ -272,29 +357,6 @@ class Inspector {
 		browseRec([], o);
 		for( s in state.keys() )
 			inspect.setPathPropValue(s, state.get(s).current);
-	}
-
-	function save() {
-		var o : Dynamic = { };
-		for( s in state.keys() ) {
-			var path = s.split(".");
-			var o = o;
-			while( path.length > 1 ) {
-				var name = path.shift();
-				var s = Reflect.field(o, name);
-				if( s == null ) {
-					s = { };
-					Reflect.setField(o, name, s);
-				}
-				o = s;
-			}
-			Reflect.setField(o, path[0], state.get(s).current);
-		}
-		var js = haxe.Json.stringify(o, null, "\t");
-		jroot.special("fileSave", [savedFile, "js", haxe.io.Bytes.ofString(js)], function(path) {
-			if( path != null ) savedFile = path;
-			return true;
-		});
 	}
 
 	public function sync() {
@@ -339,7 +401,12 @@ class Inspector {
 		}
 	}
 
+	public function refreshProps() {
+		if( currentNode != null ) editProps(currentNode);
+	}
+
 	public function editProps( n : Node ) {
+		currentNode = n;
 		var t = inspect.makeProps(n.getFullPath(), n.props());
 		propsPanel.j.text("");
 		propsPanel.parent = n;

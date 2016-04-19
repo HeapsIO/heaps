@@ -101,6 +101,10 @@ enum TextureFlags {
 		Tells if the target texture has been cleared (reserved for internal engine usage).
 	**/
 	WasCleared;
+	/**
+		The texture is being currently loaded. Set onLoaded to get event when loading is complete.
+	**/
+	Loading;
 }
 
 typedef TextureFormat = hxd.PixelFormat;

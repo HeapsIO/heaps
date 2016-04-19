@@ -14,6 +14,8 @@ class Mesh extends Object {
 
 	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
 		b = super.getBounds(b, rec);
+		if( primitive == null )
+			return b;
 		var tmp = primitive.getBounds().clone();
 		tmp.transform3x4(absPos);
 		b.add(tmp);
@@ -26,6 +28,17 @@ class Mesh extends Object {
 		m.material = cast material.clone();
 		super.clone(m);
 		return m;
+	}
+
+	override function hardwarePickEmit(r:h3d.col.Ray, ctx:RenderContext) {
+		if( visible && !culled && primitive != null ) {
+			var save = r.clone();
+			r.transform(getInvPos());
+			if( primitive.getBounds().rayIntersection(r) != null )
+				ctx.emitPass(material.mainPass, this);
+			r.load(save);
+		}
+		super.hardwarePickEmit(r, ctx);
 	}
 
 	override function draw( ctx : RenderContext ) {

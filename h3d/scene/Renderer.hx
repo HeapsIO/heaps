@@ -43,7 +43,9 @@ class Renderer {
 	}
 
 	public function compileShader( pass : h3d.mat.Pass ) {
-		return getPass(pass.name).compileShader(pass);
+		var p = getPass(pass.name);
+		p.setContext(ctx);
+		return p.compileShader(pass);
 	}
 
 	function createDefaultPass( name : String ) : h3d.pass.Base {
@@ -170,8 +172,7 @@ class Renderer {
 		}
 	}
 
-	public function process( ctx : RenderContext, passes : Array<PassGroup> ) {
-		this.ctx = ctx;
+	public function process( passes : Array<PassGroup> ) {
 		hasSetTarget = false;
 		// alloc passes
 		for( p in passes ) {

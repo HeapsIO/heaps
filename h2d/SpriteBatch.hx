@@ -152,26 +152,26 @@ class SpriteBatch extends Drawable {
 			if( hasRotationScale ) {
 				var ca = Math.cos(e.rotation), sa = Math.sin(e.rotation);
 				var hx = t.width, hy = t.height;
-				var px = t.dx, py = t.dy;
+				var px = t.dx * e.scaleX, py = t.dy * e.scaleY;
 				var x, y;
 
-				x = (px * ca - py * sa) * e.scaleX + e.x;
-				y = (py * ca + px * sa) * e.scaleY + e.y;
+				x = px * ca - py * sa + e.x;
+				y = py * ca + px * sa + e.y;
 				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
 
-				var px = t.dx + hx, py = t.dy;
-				x = (px * ca - py * sa) * e.scaleX + e.x;
-				y = (py * ca + px * sa) * e.scaleY + e.y;
+				var px = (t.dx + hx) * e.scaleX, py = t.dy * e.scaleY;
+				x = px * ca - py * sa + e.x;
+				y = py * ca + px * sa + e.y;
 				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
 
-				var px = t.dx, py = t.dy + hy;
-				x = (px * ca - py * sa) * e.scaleX + e.x;
-				y = (py * ca + px * sa) * e.scaleY + e.y;
+				var px = t.dx * e.scaleX, py = (t.dy + hy) * e.scaleY;
+				x = px * ca - py * sa + e.x;
+				y = py * ca + px * sa + e.y;
 				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
 
-				var px = t.dx + hx, py = t.dy + hy;
-				x = (px * ca - py * sa) * e.scaleX + e.x;
-				y = (py * ca + px * sa) * e.scaleY + e.y;
+				var px = (t.dx + hx) * e.scaleX, py = (t.dy + hy) * e.scaleY;
+				x = px * ca - py * sa + e.x;
+				y = py * ca + px * sa + e.y;
 				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
 			} else
 				addBounds(relativeTo, out, e.x + tile.dx, e.y + tile.dy, tile.width, tile.height);
@@ -196,36 +196,36 @@ class SpriteBatch extends Drawable {
 			if( hasRotationScale ) {
 				var ca = Math.cos(e.rotation), sa = Math.sin(e.rotation);
 				var hx = t.width, hy = t.height;
-				var px = t.dx, py = t.dy;
-				tmp[pos++] = (px * ca - py * sa) * e.scaleX + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scaleY + e.y;
+				var px = t.dx * e.scaleX, py = t.dy * e.scaleY;
+				tmp[pos++] = px * ca - py * sa + e.x;
+				tmp[pos++] = py * ca + px * sa + e.y;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v;
 				tmp[pos++] = e.r;
 				tmp[pos++] = e.g;
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
-				var px = t.dx + hx, py = t.dy;
-				tmp[pos++] = (px * ca - py * sa) * e.scaleX + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scaleY + e.y;
+				var px = (t.dx + hx) * e.scaleX, py = t.dy * e.scaleY;
+				tmp[pos++] = px * ca - py * sa + e.x;
+				tmp[pos++] = py * ca + px * sa + e.y;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v;
 				tmp[pos++] = e.r;
 				tmp[pos++] = e.g;
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
-				var px = t.dx, py = t.dy + hy;
-				tmp[pos++] = (px * ca - py * sa) * e.scaleX + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scaleY + e.y;
+				var px = t.dx * e.scaleX, py = (t.dy + hy) * e.scaleY;
+				tmp[pos++] = px * ca - py * sa + e.x;
+				tmp[pos++] = py * ca + px * sa + e.y;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v2;
 				tmp[pos++] = e.r;
 				tmp[pos++] = e.g;
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
-				var px = t.dx + hx, py = t.dy + hy;
-				tmp[pos++] = (px * ca - py * sa) * e.scaleX + e.x;
-				tmp[pos++] = (py * ca + px * sa) * e.scaleY + e.y;
+				var px = (t.dx + hx) * e.scaleX, py = (t.dy + hy) * e.scaleY;
+				tmp[pos++] = px * ca - py * sa + e.x;
+				tmp[pos++] = py * ca + px * sa + e.y;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v2;
 				tmp[pos++] = e.r;

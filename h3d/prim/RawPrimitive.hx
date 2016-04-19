@@ -4,10 +4,12 @@ class RawPrimitive extends Primitive {
 
 	var vcount : Int;
 	var tcount : Int;
+	var bounds : h3d.col.Bounds;
 	public var onContextLost : Void -> { vbuf : hxd.FloatBuffer, stride : Int, ?ibuf : hxd.IndexBuffer, ?quads : Bool };
 
-	public function new( inf : { vbuf : hxd.FloatBuffer, stride : Int, ?ibuf : hxd.IndexBuffer, ?quads : Bool }, persist = false ) {
+	public function new( inf : { vbuf : hxd.FloatBuffer, stride : Int, ?ibuf : hxd.IndexBuffer, ?quads : Bool, ?bounds : h3d.col.Bounds }, persist = false ) {
 		onContextLost = function() return inf;
+		this.bounds = inf.bounds;
 		alloc(null);
 		if( !persist ) onContextLost = null;
 	}
@@ -27,6 +29,11 @@ class RawPrimitive extends Primitive {
 			indexes.dispose();
 			indexes = null;
 		}
+	}
+
+	override public function getBounds() {
+		if( bounds == null ) throw "Bounds not defined for " + this;
+		return bounds;
 	}
 
 	override function triCount() {

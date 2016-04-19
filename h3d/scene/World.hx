@@ -52,6 +52,7 @@ class WorldMaterial {
 	public var t : h3d.mat.BigTexture.BigTextureElement;
 	public var spec : h3d.mat.BigTexture.BigTextureElement;
 	public var mat : hxd.fmt.hmd.Data.Material;
+	public var culling : Bool;
 	public var blend : h3d.mat.BlendMode;
 	public var killAlpha : Null<Float>;
 	public var lights : Bool;
@@ -65,7 +66,7 @@ class WorldMaterial {
 		shaders = [];
 	}
 	public function updateBits() {
-		bits = (t.t.id << 6) | (blend.getIndex() << 3) | ((killAlpha == null ? 0 : 1) << 2) | ((lights ? 1 : 0) << 1) | (shadows ? 1 : 0);
+		bits = (t.t.id << 8) | (blend.getIndex() << 5) | ((killAlpha == null ? 0 : 1) << 4) | ((lights ? 1 : 0) << 3) | ((shadows ? 1 : 0) << 2) | ((spec == null ? 0 : 1) << 1) | (culling ? 1 : 0);
 	}
 }
 
@@ -99,7 +100,16 @@ class WorldModel {
 class World extends Object {
 	public var worldSize : Int;
 	public var chunkSize : Int;
+
+	/*
+		For each texture loaded, will call resolveSpecularTexture and have separate spec texture.
+	*/
 	public var enableSpecular = false;
+	/*
+		When enableSpecular=true, will store the specular value in the alpha channel instead of a different texture.
+		This will erase alpha value of transparent textures, so should only be used if specular is only on opaque models.
+	*/
+	public var specularInAlpha = false;
 
 	var chunkBits : Int;
 	var worldStride : Int;
@@ -192,12 +202,19 @@ class World extends Object {
 		var specTex = null;
 		if( enableSpecular ) {
 			var res = resolveSpecularTexture(texturePath);
-			if( btex.spec == null )
-				btex.spec = new h3d.mat.BigTexture(-1, bigTextureSize, bigTextureBG);
-			if( res != null )
-				specTex = btex.spec.add(res);
-			else
-				@:privateAccess btex.spec.allocPos(t.t.tex.width, t.t.tex.height); // keep UV in-sync
+			if( specularInAlpha ) {
+				if( res != null ) {
+					t.t.setAlpha(res, t);
+					specTex = t;
+				}
+			} else {
+				if( btex.spec == null )
+					btex.spec = new h3d.mat.BigTexture(-1, bigTextureSize, bigTextureBG);
+				if( res != null )
+					specTex = btex.spec.add(res);
+				else
+					@:privateAccess btex.spec.allocPos(t.t.tex.width, t.t.tex.height); // keep UV in-sync
+			}
 		}
 
 		var m = new WorldMaterial();
@@ -206,6 +223,7 @@ class World extends Object {
 		m.blend = getBlend(rt);
 		m.killAlpha = null;
 		m.mat = mat;
+		m.culling = mat.culling != None;
 		m.updateBits();
 		textures.set(texturePath, m);
 		return m;
@@ -389,13 +407,19 @@ class World extends Object {
 		mesh.material.textureShader.killAlphaThreshold = mat.killAlpha;
 		mesh.material.mainPass.enableLights = mat.lights;
 		mesh.material.shadows = mat.shadows;
+		mesh.material.mainPass.culling = mat.culling ? Back : None;
 
 		for(s in mat.shaders)
 			mesh.material.mainPass.addShader(s);
 
-		if(mat.spec != null)
-			mesh.material.specularTexture = mat.spec.t.tex;
-		else mesh.material.specularAmount = 0;
+		if( mat.spec != null ) {
+			if( specularInAlpha ) {
+				mesh.material.specularTexture = null;
+				mesh.material.textureShader.specularAlpha = true;
+			} else
+				mesh.material.specularTexture = mat.spec.t.tex;
+		} else
+			mesh.material.specularAmount = 0;
 	}
 
 	override function dispose() {

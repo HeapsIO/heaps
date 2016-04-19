@@ -58,7 +58,16 @@
 
 	.panel {
 
+		position : relative;
+
+		.imageprops {
+			position : absolute;
+			right : 5px;
+			top : 5px;
+		}
+
 		.scrollable {
+			position : relative;
 			height:100%;
 			overflow : auto;
 		}
@@ -160,6 +169,15 @@
 				height : 18px;
 				border : 1px solid #888;
 				width : 100%;
+			}
+		}
+
+		tr.pcustom {
+			button {
+				margin-left : 5px;
+			}
+			.buttonGroup {
+				text-align : right;
 			}
 		}
 

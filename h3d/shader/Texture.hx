@@ -9,11 +9,13 @@ class Texture extends hxsl.Shader {
 
 		@const var additive : Bool;
 		@const var killAlpha : Bool;
+		@const var specularAlpha : Bool;
 		@range(0,1) @param var killAlphaThreshold : Float;
 
 		@param var texture : Sampler2D;
 		var calculatedUV : Vec2;
 		var pixelColor : Vec4;
+		var specColor : Vec3;
 
 		function vertex() {
 			calculatedUV = input.uv;
@@ -26,6 +28,8 @@ class Texture extends hxsl.Shader {
 				pixelColor += c;
 			else
 				pixelColor *= c;
+			if( specularAlpha )
+				specColor *= c.aaa;
 		}
 	}
 

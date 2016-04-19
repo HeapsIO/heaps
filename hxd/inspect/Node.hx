@@ -38,6 +38,13 @@ class Node {
 		return parent = p;
 	}
 
+	public function getChildByName( name : String ) {
+		for( n in childs )
+			if( n.getPathName() == name )
+				return n;
+		return null;
+	}
+
 	public function getPathName() {
 		return name;
 	}

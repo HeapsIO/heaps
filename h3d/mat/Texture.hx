@@ -40,7 +40,14 @@ class Texture {
 	var bits : Int;
 	public var mipMap(default,set) : MipMap;
 	public var filter(default,set) : Filter;
-	public var wrap(default,set) : Wrap;
+	public var wrap(default, set) : Wrap;
+
+	/**
+		Some textures might take some time to load. You can check flags.has(Loading)
+		or bind onLoaded which will get called either immediately if the texture is already loaded
+		or when loading is complete.
+	**/
+	public var onLoaded(default, set) : Void -> Void;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when
@@ -86,6 +93,12 @@ class Texture {
 	public function alloc() {
 		if( t == null )
 			mem.allocTexture(this);
+	}
+
+	function set_onLoaded(v) {
+		onLoaded = v;
+		if( v != null && !flags.has(Loading) ) v();
+		return v;
 	}
 
 	function toString() {
@@ -185,10 +198,10 @@ class Texture {
 	}
 
 	/**
-		Downloads the current texture data from the GPU. On some platforms, color might be premultiplied by Alpha.
+		Downloads the current texture data from the GPU. On some platforms, color might be premultiplied by Alpha unless withAlpha = true.
 		Beware, this is a very slow operation that shouldn't be done during rendering.
 	**/
-	public function capturePixels() {
+	public function capturePixels( withAlpha = false ) {
 		#if js
 
 		var e = h3d.Engine.getCurrent();
@@ -199,6 +212,9 @@ class Texture {
 		e.popTarget();
 
 		#else
+
+		var twoPassCapture = #if flash withAlpha #else false #end;
+
 		var e = h3d.Engine.getCurrent();
 		var oldW = e.width, oldH = e.height;
 		var oldF = filter, oldM = mipMap, oldWrap = wrap;
@@ -207,25 +223,73 @@ class Texture {
 		e.driver.clear(new h3d.Vector(0, 0, 0, 0),1,0);
 		var s2d = new h2d.Scene();
 		var b = new h2d.Bitmap(h2d.Tile.fromTexture(this), s2d);
+		var shader = null;
+		if( twoPassCapture ) {
+			shader = new h3d.shader.AlphaChannel();
+			b.addShader(shader); // erase alpha
+		}
 		b.blendMode = None;
 
 		mipMap = None;
 
 		s2d.render(e);
 
-		filter = oldF;
-		mipMap = oldM;
-		wrap = oldWrap;
-
 		var pixels = hxd.Pixels.alloc(width, height, ARGB);
 		e.driver.captureRenderBuffer(pixels);
+
+		if( twoPassCapture ) {
+			shader.showAlpha = true;
+			s2d.render(e); // render only alpha channel
+			var alpha = hxd.Pixels.alloc(width, height, ARGB);
+			e.driver.captureRenderBuffer(alpha);
+			var alphaPos = hxd.Pixels.getChannelOffset(alpha.format, A);
+			var redPos = hxd.Pixels.getChannelOffset(alpha.format, R);
+			var bpp = hxd.Pixels.bytesPerPixel(alpha.format);
+			for( y in 0...height ) {
+				var p = y * width * bpp;
+				for( x in 0...width ) {
+					pixels.bytes.set(p + alphaPos, alpha.bytes.get(p + redPos)); // copy alpha value only
+					p += bpp;
+				}
+			}
+			alpha.dispose();
+			pixels.flags.unset(AlphaPremultiplied);
+		}
+
 		if( e.width != oldW || e.height != oldH )
 			e.resize(oldW, oldH);
 		e.driver.clear(new h3d.Vector(0, 0, 0, 0));
 		s2d.dispose();
+
+		filter = oldF;
+		mipMap = oldM;
+		wrap = oldWrap;
+
 		#end
 		return pixels;
 	}
+
+	/*
+
+		// Seems unreliable on flash, not sure why...
+		// eg :
+		//    var t = hxd.Res.tex1.toTexture();
+		//	  t.onLoaded = function() { var s = hxd.Res.tex2.toTexture(); s.onLoaded = function() t.setChannel(A,s,R); }
+		// using setChannel here will clear the texture, for no known reason
+
+	public function setChannel( c : hxd.Pixels.Channel, with : h3d.mat.Texture, ?srcChannel : hxd.Pixels.Channel ) {
+		if( t == null || with.t == null )
+			throw "Can't set disposed or loading texture";
+		var pass = new h3d.mat.Pass("");
+		pass.colorMask = 1 << c.toInt();
+		pass.depth(false, Always);
+		pass.culling = None;
+		if( srcChannel != null && srcChannel != c )
+			pass.addShader(new h3d.shader.ChannelSelect(srcChannel.toInt()));
+		h3d.pass.Copy.run(with, this, null, pass);
+	}
+
+	*/
 
 	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
 		var t = new Texture(bmp.width, bmp.height, allocPos);
