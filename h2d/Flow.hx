@@ -181,21 +181,13 @@ class Flow extends Sprite {
 	}
 
 	function get_clientWidth() {
-		return Std.int(getBounds(this,tmpBounds).xMax) - (paddingLeft + paddingRight + borderWidth * 2);
+		if( needReflow ) reflow();
+		return Math.ceil(calculatedWidth) - (paddingLeft + paddingRight + borderWidth * 2);
 	}
 
 	function get_clientHeight() {
-		return Std.int(getBounds(this,tmpBounds).yMax) - (paddingTop + paddingBottom + borderHeight * 2);
-	}
-
-	function get_calculatedWidth() {
 		if( needReflow ) reflow();
-		return calculatedWidth;
-	}
-
-	function get_calculatedHeight() {
-		if( needReflow ) reflow();
-		return calculatedHeight;
+		return Math.ceil(calculatedHeight) - (paddingTop + paddingBottom + borderHeight * 2);
 	}
 
 	function set_paddingLeft(v) {
