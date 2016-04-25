@@ -15,6 +15,10 @@ class Node {
 		this.parent = parent;
 	}
 
+	public function isDisposed() {
+		return j == null || j.length == 0;
+	}
+
 	function getJRoot() {
 		return @:privateAccess Inspector.current.jroot;
 	}
