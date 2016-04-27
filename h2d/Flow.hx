@@ -193,7 +193,6 @@ class Flow extends Sprite {
 	function set_paddingLeft(v) {
 		if( paddingLeft == v ) return v;
 		needReflow = true;
-		if( background != null ) background.borderWidth = paddingLeft;
 		return paddingLeft = v;
 	}
 
@@ -206,7 +205,6 @@ class Flow extends Sprite {
 	function set_paddingTop(v) {
 		if( paddingTop == v ) return v;
 		needReflow = true;
-		if( background != null ) background.borderHeight = paddingTop;
 		return paddingTop = v;
 	}
 
