@@ -357,6 +357,7 @@ class Graphics extends Drawable {
 		addPoint(x + w, y);
 		addPoint(x + w, y + h);
 		addPoint(x, y + h);
+		addPoint(x, y);
 		flush();
 	}
 
