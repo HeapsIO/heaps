@@ -57,6 +57,11 @@ class Flow extends Sprite {
 	public var maxWidth(default, set) : Null<Int>;
 	public var maxHeight(default, set) : Null<Int>;
 
+	/**
+		Disabling overflow will make a flow report a size of maxWidth/maxHeight even if the elements go past this size.
+	**/
+	public var overflow(default, set) : Bool = true;
+
 	public var lineHeight(default, set) : Null<Int>;
 	public var colWidth(default, set) : Null<Int>;
 
@@ -114,12 +119,18 @@ class Flow extends Sprite {
 	public var isVertical(default, set) : Bool;
 
 	/**
-		When isInline is set to true, the flow size will be reported based on the size of the elements instead of their bounds.
-		This is useful if you want to include flows in other flows while keeping the text aligned.
+		When isInline is set to false, the flow size will be reported based on its bounds instead of its calculated size.
+		See getSize() documentation.
 	**/
-	public var isInline = false;
+	public var isInline = true;
+
+	/**
+		When set to true, the debug will display red box around the flow, green box for the client space and blue boxes for each element.
+	**/
+	public var debug(default,set) : Bool;
 
 	var background : h2d.ScaleGrid;
+	var debugGraphics : h2d.Graphics;
 	var properties : Array<FlowProperties> = [];
 
 	var calculatedWidth : Float = 0.;
@@ -151,11 +162,32 @@ class Flow extends Sprite {
 		return halign = v;
 	}
 
+	function set_debug(v) {
+		if( debug == v )
+			return v;
+		needReflow = true;
+		if( v ) {
+			debugGraphics = new h2d.Graphics(this);
+			getProperties(debugGraphics).isAbsolute = true;
+		} else {
+			debugGraphics.remove();
+			debugGraphics = null;
+		}
+		return debug = v;
+	}
+
 	function set_valign(v) {
 		if( valign == v )
 			return v;
 		needReflow = true;
 		return valign = v;
+	}
+
+	function set_overflow(v) {
+		if( overflow == v )
+			return v;
+		needReflow = true;
+		return overflow = v;
 	}
 
 	function set_lineHeight(v) {
@@ -237,6 +269,9 @@ class Flow extends Sprite {
 		if( fp == null ) fp = new FlowProperties() else properties.remove(fp);
 		properties.insert(pos, fp);
 		needReflow = true;
+		if( debugGraphics != null && (getProperties(debugGraphics) == null || !getProperties(debugGraphics).isAbsolute) ) {
+			throw childs+" -> "+getProperties(debugGraphics)+" @"+properties.indexOf(getProperties(debugGraphics))+" "+childs.indexOf(debugGraphics)+" "+debugGraphics.parent;
+		}
 	}
 
 	override public function removeChild(s:Sprite) {
@@ -596,6 +631,10 @@ class Flow extends Sprite {
 
 		if( minWidth != null && cw < minWidth ) cw = minWidth;
 		if( minHeight != null && ch < minHeight ) ch = minHeight;
+		if( !overflow ) {
+			if( maxWidth != null && cw > maxWidth ) cw = maxWidth;
+			if( maxHeight != null && ch > maxHeight ) ch = maxHeight;
+		}
 
 		if( interactive != null ) {
 			interactive.width = cw;
@@ -609,6 +648,26 @@ class Flow extends Sprite {
 
 		calculatedWidth = cw;
 		calculatedHeight = ch;
+
+		if( debug ) {
+			debugGraphics.clear();
+			if( debugGraphics != childs[childs.length-1] ) addChild(debugGraphics); // always on-top
+
+			if( paddingLeft != 0 || paddingRight != 0 || paddingTop != 0 || paddingBottom != 0 || borderWidth != 0 || borderHeight != 0 ) {
+				debugGraphics.lineStyle(1, 0x00FF00);
+				debugGraphics.drawRect(paddingLeft + borderWidth, paddingTop + borderHeight, clientWidth, clientHeight);
+			}
+			debugGraphics.lineStyle(1, 0x0080FF);
+			for( i in 0...childs.length ) {
+				var p = properties[i];
+				var c = childs[i];
+				if( p.isAbsolute || !c.visible ) continue;
+				debugGraphics.drawRect(c.x, c.y, p.calculatedWidth, p.calculatedHeight);
+			}
+			debugGraphics.lineStyle(1, 0xFF0000);
+			debugGraphics.drawRect(0, 0, cw, ch);
+		}
+
 		needReflow = false;
 		onReflow();
 	}
