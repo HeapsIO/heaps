@@ -269,9 +269,6 @@ class Flow extends Sprite {
 		if( fp == null ) fp = new FlowProperties() else properties.remove(fp);
 		properties.insert(pos, fp);
 		needReflow = true;
-		if( debugGraphics != null && (getProperties(debugGraphics) == null || !getProperties(debugGraphics).isAbsolute) ) {
-			throw childs+" -> "+getProperties(debugGraphics)+" @"+properties.indexOf(getProperties(debugGraphics))+" "+childs.indexOf(debugGraphics)+" "+debugGraphics.parent;
-		}
 	}
 
 	override public function removeChild(s:Sprite) {
@@ -489,7 +486,7 @@ class Flow extends Sprite {
 					if( midSpace == 0 ) {
 						var remSize = p.calculatedWidth;
 						for( j in i + 1...childs.length ) {
-							var p = properties[i];
+							var p = properties[j];
 							if( p.isAbsolute || !childs[j].visible ) continue;
 							if( p.isBreak ) break;
 							remSize += horitontalSpacing + p.calculatedWidth;
@@ -607,7 +604,7 @@ class Flow extends Sprite {
 					if( midSpace == 0 ) {
 						var remSize = p.calculatedHeight;
 						for( j in i + 1...childs.length ) {
-							var p = properties[i];
+							var p = properties[j];
 							if( p.isAbsolute || !childs[j].visible ) continue;
 							if( p.isBreak ) break;
 							remSize += verticalSpacing + p.calculatedHeight;
@@ -648,11 +645,14 @@ class Flow extends Sprite {
 
 		calculatedWidth = cw;
 		calculatedHeight = ch;
+		needReflow = false;
 
 		if( debug ) {
 			debugGraphics.clear();
-			if( debugGraphics != childs[childs.length-1] ) addChild(debugGraphics); // always on-top
-
+			if( debugGraphics != childs[childs.length - 1] ) {
+				addChild(debugGraphics); // always on-top
+				needReflow = false;
+			}
 			if( paddingLeft != 0 || paddingRight != 0 || paddingTop != 0 || paddingBottom != 0 || borderWidth != 0 || borderHeight != 0 ) {
 				debugGraphics.lineStyle(1, 0x00FF00);
 				debugGraphics.drawRect(paddingLeft + borderWidth, paddingTop + borderHeight, clientWidth, clientHeight);
@@ -668,7 +668,6 @@ class Flow extends Sprite {
 			debugGraphics.drawRect(0, 0, cw, ch);
 		}
 
-		needReflow = false;
 		onReflow();
 	}
 
