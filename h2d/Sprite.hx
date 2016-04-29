@@ -50,7 +50,7 @@ class Sprite {
 		You can pass an already allocated bounds or getBounds will allocate one for you and return it.
 	**/
 	public function getBounds( ?relativeTo : Sprite, ?out : h2d.col.Bounds ) : h2d.col.Bounds {
-		if( out == null ) out = new h2d.col.Bounds();
+		if( out == null ) out = new h2d.col.Bounds() else out.empty();
 		if( relativeTo != null )
 			relativeTo.syncPos();
 		if( relativeTo != this )
@@ -70,7 +70,9 @@ class Sprite {
 		the full glyphs size whereas getSize() will ignore the pixels under the baseline.
 	**/
 	public function getSize( ?out : h2d.col.Bounds ) : h2d.col.Bounds {
-		if( out == null ) out = new h2d.col.Bounds();
+		if( out == null ) out = new h2d.col.Bounds() else out.empty();
+		if( parent != null )
+			parent.syncPos();
 		getBoundsRec(parent, out, true);
 		if( out.isEmpty() ) {
 			addBounds(parent, out, -1, -1, 2, 2);
