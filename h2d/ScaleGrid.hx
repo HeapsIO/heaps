@@ -55,7 +55,7 @@ class ScaleGrid extends h2d.TileGroup {
 		super.getBoundsRec(relativeTo, out, forSize);
 	}
 
-	function updateContent() {
+	function drawContent() {
 		var bw = borderWidth, bh = borderHeight;
 
 		// 4 corners
@@ -118,7 +118,7 @@ class ScaleGrid extends h2d.TileGroup {
 		content.addColor(bw, bh, curColor, t);
 	}
 
-	function updateHoldContent() {
+	function drawHoldContent() {
 		if( tileBorders ) throw("TODO");
 
 		var bw : Int = borderWidth, bh : Int = borderHeight;
@@ -191,11 +191,15 @@ class ScaleGrid extends h2d.TileGroup {
 		content.addColor(bw, bh, curColor, t);
 	}
 
+	function updateContent() {
+		if(holdSize == null) drawContent();
+		else drawHoldContent();
+	}
+
 	override function sync( ctx : RenderContext ) {
 		if( content.isEmpty() ) {
 			content.dispose();
-			if(holdSize == null) updateContent();
-			else updateHoldContent();
+			updateContent();
 		}
 		super.sync(ctx);
 	}
