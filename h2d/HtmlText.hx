@@ -54,6 +54,19 @@ class HtmlText extends Text {
 		calcDone = true;
 	}
 
+	function htmlToText( t : hxd.UString )  {
+		t = ~/[\r\n\t ]+/g.replace(t, " ");
+		t = ~/&([A-Za-z]+);/g.map(t, function(r) {
+			switch( r.matched(1).toLowerCase() ) {
+			case "lt": return "<";
+			case "gt": return ">";
+			case "nbsp": return String.fromCharCode(0xA0);
+			default: return r.matched(0);
+			}
+		});
+		return t;
+	}
+
 	function addNode( e : Xml, rebuild : Bool ) {
 		if( e.nodeType == Xml.Element ) {
 			var colorChanged = false;
@@ -97,7 +110,7 @@ class HtmlText extends Text {
 			if( colorChanged )
 				glyphs.setDefaultColor(textColor);
 		} else {
-			var t = splitText(e.nodeValue.split("\n").join(" "), xPos);
+			var t = splitText(htmlToText(e.nodeValue), xPos);
 			var prevChar = -1;
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
