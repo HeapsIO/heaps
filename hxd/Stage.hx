@@ -59,6 +59,11 @@ class Stage {
 			e.stopPropagation();
 			e.preventDefault();
 		});
+		canvas.oncontextmenu = function(e){
+			e.stopPropagation();
+			e.preventDefault();
+			return false;
+		};
 		var curW = this.width, curH = this.height;
 		var t0 = new haxe.Timer(100);
 		t0.run = function() {
@@ -367,11 +372,15 @@ class Stage {
 	}
 
 	function onMouseDown(e:js.html.MouseEvent) {
-		event(new Event(EPush, mouseX, mouseY));
+		var ev = new Event(EPush, mouseX, mouseY);
+		if (e.button == 2) ev.button = 1;
+		event(ev);
 	}
 
 	function onMouseUp(e:js.html.MouseEvent) {
-		event(new Event(ERelease, mouseX, mouseY));
+		var ev = new Event(ERelease, mouseX, mouseY);
+		if (e.button == 2) ev.button = 1;
+		event(ev);
 	}
 
 	function onMouseMove(e:js.html.MouseEvent) {
