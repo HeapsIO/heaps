@@ -48,15 +48,15 @@ class NullDriver extends Driver {
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
-		return null;
+		return cast {};
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
-		return null;
+		return cast {};
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
-		return null;
+		return cast {};
 	}
 
 }

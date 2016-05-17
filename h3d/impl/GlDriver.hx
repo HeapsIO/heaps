@@ -2,7 +2,7 @@ package h3d.impl;
 import h3d.impl.Driver;
 import h3d.mat.Pass;
 
-#if (js||cpp)
+#if (js||cpp||hxsdl)
 
 #if js
 import js.html.Uint16Array;
@@ -62,7 +62,7 @@ private class CompiledProgram {
 }
 
 @:access(h3d.impl.Shader)
-#if cpp
+#if (cpp||hxsdl)
 @:build(h3d.impl.MacroHelper.replaceGL())
 #end
 class GlDriver extends Driver {
@@ -529,7 +529,8 @@ class GlDriver extends Driver {
 		var stride : Int = v.stride;
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		#if hxsdl
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, buf.getNative(), bufPos, vertexCount * stride * 4);
+		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBase.ArrayF32).bytes #else buf.getNative() #end;
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, data, bufPos, vertexCount * stride * 4);
 		#else
 		var buf = new Float32Array(buf.getNative());
 		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride #if cpp * (fixMult?4:1) #end);
@@ -554,7 +555,8 @@ class GlDriver extends Driver {
 	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
 		#if hxsdl
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, buf.getNative(), bufPos, indiceCount * 2);
+		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBase.ArrayI16).bytes #else buf.getNative() #end;
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, data, bufPos, indiceCount * 2);
 		#else
 		var buf = new Uint16Array(buf.getNative());
 		var sub = new Uint16Array(buf.buffer, bufPos, indiceCount #if cpp * (fixMult?2:1) #end);

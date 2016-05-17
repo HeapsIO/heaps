@@ -7,11 +7,13 @@ private class ChannelMapper extends sdl.SoundChannel {
 		super(samples);
 		this.native = native;
 	}
+	#if cpp
 	override function onSample( buf : cpp.Pointer<cpp.Float32>, len : Int ) {
 		var data : haxe.io.BytesData = [];
 		cpp.NativeArray.setUnmanagedData(data, buf.reinterpret(), len<<2);
 		@:privateAccess native.onSample(haxe.io.Float32Array.fromBytes(haxe.io.Bytes.ofData(data)));
 	}
+	#end
 }
 #elseif lime_openal
 import lime.audio.openal.AL;
@@ -22,7 +24,7 @@ private class ALChannel {
 
 	var buffers : Array<Int>;
 	var src : Int;
-	
+
 	var fbuf : haxe.io.Bytes;
 	var ibuf : haxe.io.Bytes;
 	var iview : lime.utils.ArrayBufferView;
@@ -37,7 +39,7 @@ private class ALChannel {
 		fbuf = haxe.io.Bytes.alloc( samples<<3 );
 		ibuf = haxe.io.Bytes.alloc( samples<<2 );
 		iview = new lime.utils.Int16Array(ibuf);
-		
+
 		for ( b in buffers )
 			onSample(b);
 		forcePlay();
@@ -56,7 +58,7 @@ private class ALChannel {
 
 	@:noDebug function onSample( buf : Int ) {
 		@:privateAccess native.onSample(haxe.io.Float32Array.fromBytes(fbuf));
-		
+
 		// Convert Float32 to Int16
 		#if cpp
 		var fb = fbuf.getData();
@@ -74,10 +76,10 @@ private class ALChannel {
 		AL.bufferData(buf, AL.FORMAT_STEREO16, iview, ibuf.length, 44100);
 		AL.sourceQueueBuffers(src, 1, [buf]);
 	}
-	
+
 	inline function forcePlay() {
 		if( AL.getSourcei(src,AL.SOURCE_STATE) != AL.PLAYING )
-			AL.sourcePlay(src);	
+			AL.sourcePlay(src);
 	}
 
 	function onUpdate( i : Int ){
