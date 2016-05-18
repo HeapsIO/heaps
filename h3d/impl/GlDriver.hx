@@ -223,7 +223,7 @@ class GlDriver extends Driver {
 		case Globals:
 			if( s.globals != null ) {
 				#if hxsdl
-				gl.uniform4fv(s.globals, buf.globals.toData(), 0, s.shader.globalsSize);
+				gl.uniform4fv(s.globals, @:privateAccess (cast buf.globals.toData() : hl.types.ArrayBase.ArrayF32).bytes, 0, s.shader.globalsSize * 4);
 				#else
 				var a = new Float32Array(buf.globals.toData()).subarray(0, s.shader.globalsSize * 4);
 				gl.uniform4fv(s.globals, a);
@@ -232,7 +232,7 @@ class GlDriver extends Driver {
 		case Params:
 			if( s.params != null ) {
 				#if hxsdl
-				gl.uniform4fv(s.params, buf.params.toData(), 0, s.shader.paramsSize);
+				gl.uniform4fv(s.params, @:privateAccess (cast buf.params.toData() : hl.types.ArrayBase.ArrayF32).bytes, 0, s.shader.paramsSize * 4);
 				#else
 				var a = new Float32Array(buf.params.toData()).subarray(0, s.shader.paramsSize * 4);
 				gl.uniform4fv(s.params, a);

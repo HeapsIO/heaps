@@ -88,7 +88,7 @@ class HMDOut extends BaseLibrary {
 
 		g.bounds = new h3d.col.Bounds();
 		var tmpBuf = new haxe.ds.Vector(stride);
-		var vertexRemap = [];
+		var vertexRemap = new Array<Int>();
 		var index = geom.getPolygons();
 		var count = 0, matPos = 0, stri = 0;
 		var lookup = new Map();
