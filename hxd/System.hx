@@ -507,10 +507,12 @@ class System {
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
 			eh = new Event(EPush, e.mouseX, e.mouseY);
+			eh.button = e.button;
 		case MouseUp:
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
 			eh = new Event(ERelease, e.mouseX, e.mouseY);
+			eh.button = e.button;
 		case MouseMove:
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
