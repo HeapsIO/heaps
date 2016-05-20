@@ -252,9 +252,18 @@ class BitmapData {
 		var b = new flash.display.BitmapData(w, h);
 		b.copyPixels(bmp, new flash.geom.Rectangle(x, y, w, h), new flash.geom.Point(0, 0));
 		return fromNative(b);
-		#else
+		#elseif (js || lime)
 		notImplemented();
 		return null;
+		#else
+		if( x < 0 || y < 0 || w < 0 || h < 0 || x + w > width || y + h > height ) throw "Outside bounds";
+		var b = new BitmapInnerData();
+		b.width = w;
+		b.height = h;
+		b.pixels = new haxe.ds.Vector(w * h);
+		for( dy in 0...h )
+			haxe.ds.Vector.blit(data.pixels, x + (y + dy) * width * 4, b.pixels, dy * w * 4, w * 4);
+		return fromNative(b);
 		#end
 	}
 
