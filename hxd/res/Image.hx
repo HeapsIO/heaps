@@ -1,9 +1,27 @@
 package hxd.res;
 
-enum ImageFormat {
-	Jpg;
-	Png;
-	Gif;
+@:enum abstract ImageFormat(Int) {
+
+	var Jpg = 0;
+	var Png = 1;
+	var Gif = 2;
+
+	/*
+		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
+		This for example occurs when we want to decode progressive JPG in JS.
+	*/
+	public var useAsyncDecode(get, never) : Bool;
+
+	inline function get_useAsyncDecode() {
+		#if hl
+		return false;
+		#else
+		return this == Jpg.toInt();
+		#end
+	}
+
+	inline function toInt() return this;
+
 }
 
 class Image extends Resource {
@@ -114,8 +132,14 @@ class Image extends Resource {
 			pixels = new Pixels(inf.width, inf.height, format.gif.Tools.extractFullBGRA(gif, 0), BGRA);
 		case Jpg:
 			var bytes = entry.getBytes();
+			#if hl
+			if( fmt == null ) fmt = BGRA;
+			pixels = hxd.impl.FmtSupport.decodeJPG(bytes, inf.width, inf.height, fmt, flipY);
+			if( pixels == null ) throw "Failed to decode JPG " + entry.path;
+			#else
 			var p = NanoJpeg.decode(bytes);
-			pixels = new Pixels(p.width,p.height,p.pixels, BGRA);
+			pixels = new Pixels(p.width, p.height, p.pixels, BGRA);
+			#end
 		}
 		if( fmt != null ) pixels.convert(fmt);
 		if( flipY != null ) pixels.setFlip(flipY);
@@ -142,8 +166,7 @@ class Image extends Resource {
 	}
 
 	function loadTexture() {
-		switch( getFormat() ) {
-		case Png, Gif:
+		if( !getFormat().useAsyncDecode ) {
 			function load() {
 				// immediately loading the PNG is faster than going through loadBitmap
 				tex.alloc();
@@ -159,7 +182,7 @@ class Image extends Resource {
 				load();
 			else
 				entry.load(load);
-		case Jpg:
+		} else {
 			// use native decoding
 			tex.flags.set(Loading);
 			entry.loadBitmap(function(bmp) {

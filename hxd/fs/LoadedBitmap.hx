@@ -4,10 +4,10 @@ package hxd.fs;
 typedef LoadedBitmapData = flash.display.BitmapData;
 #elseif lime
 typedef LoadedBitmapData = lime.graphics.Image;
-#elseif js 
+#elseif js
 typedef LoadedBitmapData = js.html.Image;
-#else 
-typedef LoadedBitmapData = Dynamic;
+#else
+typedef LoadedBitmapData = hxd.BitmapData;
 #end
 
 abstract LoadedBitmap(LoadedBitmapData) {
@@ -31,8 +31,7 @@ abstract LoadedBitmap(LoadedBitmapData) {
 		@:privateAccess bmp.ctx.drawImage(this, 0, 0);
 		return bmp;
 		#else
-		throw "TODO";
-		return null;
+		return this;
 		#end
 	}
 

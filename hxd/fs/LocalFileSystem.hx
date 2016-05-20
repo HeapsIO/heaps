@@ -209,11 +209,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function load( ?onReady : Void -> Void ) : Void {
-		#if air3
 		if( onReady != null ) haxe.Timer.delay(onReady, 1);
-		#else
-		throw "TODO";
-		#end
 	}
 
 	override function loadBitmap( onLoaded : hxd.fs.LoadedBitmap -> Void ) : Void {
@@ -229,7 +225,8 @@ private class LocalEntry extends FileEntry {
 		});
 		loader.load(new flash.net.URLRequest(file.url));
 		#else
-		throw "TODO";
+		var bmp = new hxd.res.Image(this).toBitmap();
+		onLoaded(new hxd.fs.LoadedBitmap(bmp));
 		#end
 	}
 

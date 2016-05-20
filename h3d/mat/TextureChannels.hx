@@ -43,10 +43,9 @@ class TextureChannels extends Texture {
 
 	public function setResource( c : hxd.Pixels.Channel, res : hxd.res.Image, ?srcChannel : hxd.Pixels.Channel ) {
 		if( srcChannel == null ) srcChannel = c;
-		switch( res.getFormat() ) {
-		case Png, Gif:
+		if( !res.getFormat().useAsyncDecode )
 			setPixels(c, res.getPixels(), srcChannel);
-		case Jpg:
+		else {
 			res.entry.loadBitmap(function(bmp) {
 				var bmp = bmp.toBitmap();
 				var pix = bmp.getPixels();
