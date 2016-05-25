@@ -11,7 +11,11 @@ typedef BitmapInnerData =
 	BitmapInnerDataImpl;
 
 class BitmapInnerDataImpl {
+	#if hl
+	public var pixels : hl.types.BytesAccess<Int>;
+	#else
 	public var pixels : haxe.ds.Vector<Int>;
+	#end
 	public var width : Int;
 	public var height : Int;
 	public function new() {
@@ -55,7 +59,11 @@ class BitmapData {
 			data = new lime.graphics.Image( null, 0, 0, width, height );
 			#else
 			data = new BitmapInnerData();
+			#if hl
+			data.pixels = new hl.types.Bytes(width * height * 4);
+			#else
 			data.pixels = new haxe.ds.Vector(width * height);
+			#end
 			data.width = width;
 			data.height = height;
 			#end
@@ -203,6 +211,18 @@ class BitmapData {
 		m.a = 1;
 		m.d = 1;
 
+		#elseif hl
+
+		if( blendMode != None ) throw "BitmapData.drawScaled blendMode no supported : " + blendMode;
+		if( x < 0 || y < 0 || width < 0 || height < 0 || srcX < 0 || srcY < 0 || srcWidth < 0 || srcHeight < 0 ||
+			x + width > this.width || y + height > this.height || srcX + srcWidth > src.width || srcY + srcHeight > src.height )
+			throw "Outside bounds";
+		hxd.impl.FmtSupport.scaleImage(
+			data.pixels, (x + y * this.width) << 2, this.width<<2, width, height,
+			src.data.pixels, (srcX + srcY * src.width)<<2, src.width<<2, srcWidth, srcHeight,
+			smooth?1:0
+		);
+
 		#else
 		notImplemented();
 		#end
@@ -260,9 +280,15 @@ class BitmapData {
 		var b = new BitmapInnerData();
 		b.width = w;
 		b.height = h;
+		#if hl
+		b.pixels = new hl.types.Bytes(w * h * 4);
+		for( dy in 0...h )
+			b.pixels.blit(dy * w, data.pixels, x + (y + dy) * width, w);
+		#else
 		b.pixels = new haxe.ds.Vector(w * h);
 		for( dy in 0...h )
-			haxe.ds.Vector.blit(data.pixels, x + (y + dy) * width * 4, b.pixels, dy * w * 4, w * 4);
+			haxe.ds.Vector.blit(data.pixels, x + (y + dy) * width, b.pixels, dy * w, w);
+		#end
 		return fromNative(b);
 		#end
 	}

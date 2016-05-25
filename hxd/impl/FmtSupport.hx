@@ -44,5 +44,9 @@ class FmtSupport {
 		return false;
 	}
 
+	@:hlNative("fmt","img_scale")
+	public static function scaleImage( out : hl.types.Bytes, outPos : Int,  outStride : Int, outWidth : Int, outHeight : Int, _in : hl.types.Bytes, inPos : Int,  inStride : Int, inWidth : Int, inHeight : Int, flags : Int ) {
+	}
+
 }
 #end
