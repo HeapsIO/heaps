@@ -21,6 +21,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 	@range(0, 5, 1) @inspect
 	public var passes : Int;
 
+	public var glow(default, set) : Bool;
 
 	public var depthBlur(default,set) : {
 		depths : h3d.mat.Texture,
@@ -45,6 +46,10 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 	function set_sigma(s) {
 		values = null;
 		return sigma = s;
+	}
+
+	function set_glow(v) {
+		return shader.isGlow = v;
 	}
 
 

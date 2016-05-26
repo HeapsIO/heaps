@@ -10,6 +10,7 @@ class Blur extends ScreenShader {
 		@param var depthTexture : Sampler2D;
 		@param @const var Quality : Int;
 		@param @const var isDepth : Bool;
+		@param @const var isGlow  : Bool;
 		@param var values : Array<Float,Quality>;
 		@param var pixel : Vec2;
 
@@ -45,6 +46,11 @@ class Blur extends ScreenShader {
 				for( i in -Quality + 1...Quality )
 					val += unpack(texture.get(input.uv + pixel * float(i))) * values[i < 0 ? -i : i];
 				output.color = pack(val.min(0.9999999));
+			} else if ( isGlow ) {
+				var color = vec4(0, 0, 0, 0);
+				for( i in -Quality + 1...Quality )
+					color += texture.get(input.uv + pixel * float(i)) * values[i < 0 ? -i : i];
+				output.color = max(color, texture.get(input.uv));
 			} else {
 				var color = vec4(0, 0, 0, 0);
 				for( i in -Quality + 1...Quality )
