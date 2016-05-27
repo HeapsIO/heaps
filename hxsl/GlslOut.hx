@@ -227,6 +227,22 @@ class GlslOut {
 				add(",");
 				addValue(e2, tabs);
 				add(")");
+			case [OpEq | OpNotEq | OpLt | OpGt | OpLte | OpGte, TVec(n, _), TVec(_)]:
+				add("vec" + n + "(");
+				add(switch( op ) {
+				case OpEq: "equal";
+				case OpNotEq: "notEqual";
+				case OpLt: "lessThan";
+				case OpGt: "greaterThan";
+				case OpLte: "lessThanEqual";
+				case OpGte: "greaterThanEqual";
+				default: throw "assert";
+				});
+				add("(");
+				addValue(e1, tabs);
+				add(",");
+				addValue(e2, tabs);
+				add("))");
 			default:
 				addValue(e1, tabs);
 				add(" ");
@@ -372,16 +388,16 @@ class GlslOut {
 		decls = [];
 		buf = new StringBuf();
 		exprValues = [];
-		
+
 		//#if GL_ES_VERSION_2_0  would be the test to use at compilation time, but would require a GL context to call glGetString (GL_SHADING_LANGUAGE_VERSION)
 		//#ifdef GL_ES is to test in the shader itself but #version  muse be declared first
 		#if((cpp && mobile)||js)
 		decls.push("#version 100");
 		#else
 		decls.push("#version 130");
-		#end 
+		#end
 		decls.push("precision mediump float;");
-		
+
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
 		isVertex = f.kind == Vertex;
