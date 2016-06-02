@@ -520,7 +520,6 @@ class GlDriver extends Driver {
 		#else
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#end
-		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
 		t.flags.set(WasCleared);
 	}
