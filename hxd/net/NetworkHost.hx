@@ -68,8 +68,11 @@ class NetworkClient {
 				o.__host = null;
 				o.networkRPC(ctx, fid, this);
 				o.__host = old;
-			} else
+			} else {
+				host.rpcClientValue = this;
 				o.networkRPC(ctx, fid, this);
+				host.rpcClientValue = null;
+			}
 		case NetworkHost.RPC_WITH_RESULT:
 
 			var old = resultID;
@@ -155,6 +158,11 @@ class NetworkHost {
 
 	public var isAuth(default, null) : Bool;
 
+	/**
+		When a RPC of type Server is performed, this will tell the originating client from the RPC.
+	**/
+	public var rpcClient(get, never) : NetworkClient;
+
 	public var sendRate : Float = 0.;
 	public var totalSentBytes : Int = 0;
 
@@ -169,6 +177,7 @@ class NetworkHost {
 	var rpcUID = Std.random(0x1000000);
 	var rpcWaits = new Map<Int,Serializer->Void>();
 	var targetClient : NetworkClient;
+	var rpcClientValue : NetworkClient;
 	var aliveEvents : Array<Void->Void>;
 	public var self(default,null) : NetworkClient;
 
@@ -237,6 +246,10 @@ class NetworkHost {
 		o.__next = markHead;
 		markHead = o;
 		return true;
+	}
+
+	function get_rpcClient() {
+		return rpcClientValue == null ? self : rpcClientValue;
 	}
 
 	public dynamic function onMessage( from : NetworkClient, msg : Dynamic ) {
