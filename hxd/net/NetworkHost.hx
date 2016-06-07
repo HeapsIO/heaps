@@ -200,7 +200,7 @@ class NetworkHost {
 				s.addKnownRef(r);
 				s.addByte(EOM);
 			}
-		s.addInt(-1);
+		s.addCLID(0xFFFF);
 		return s.end();
 	}
 
@@ -214,7 +214,7 @@ class NetworkHost {
 		var clids = [];
 		while( true ) {
 			var cl = ctx.getCLID();
-			if( cl < 0 ) break;
+			if( cl == 0xFFFF ) break;
 			var cval = clids[cl];
 			if( cval == null ) {
 				var cname = ctx.getString();
