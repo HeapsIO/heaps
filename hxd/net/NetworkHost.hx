@@ -192,7 +192,7 @@ class NetworkHost {
 			if( !s.refs.exists(r.__uid) ) {
 				var cl = r.getCLID();
 				var cval = Type.getClass(r);
-				s.addInt(cl);
+				s.addCLID(cl);
 				if( !clids[cl] ) {
 					clids[cl] = true;
 					s.addString(Type.getClassName(cval));
@@ -213,7 +213,7 @@ class NetworkHost {
 			classByName.set(Type.getClassName(c), c);
 		var clids = [];
 		while( true ) {
-			var cl = ctx.getInt();
+			var cl = ctx.getCLID();
 			if( cl < 0 ) break;
 			var cval = clids[cl];
 			if( cval == null ) {
@@ -386,7 +386,7 @@ class NetworkHost {
 		ctx.addAnyRef(o);
 		if( checkEOM ) ctx.addByte(EOM);
 	}
-	
+
 	function unmark( o : NetworkSerializable ) {
 		if( o.__next == null )
 			return;
@@ -413,7 +413,7 @@ class NetworkHost {
 		}
 		flushProps(); // send changes
 		o.__host = null;
-		o.__bits = 0;		
+		o.__bits = 0;
 		unmark(o);
 		if( logger != null )
 			logger("Unregister " + o+"#"+o.__uid);

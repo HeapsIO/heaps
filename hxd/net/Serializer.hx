@@ -46,7 +46,7 @@ class Serializer {
 			var v = 1;
 			for( i in 0...name.length )
 				v = v * 223 + StringTools.fastCodeAt(name,i);
-			v = 1 + ((v & 0x3FFFFFFF) % 255);
+			v = 1 + ((v & 0x3FFFFFFF) % 65423);
 			return v;
 		}
 		CLIDS = [for( i in 0...CLASSES.length ) if( subClasses[i].length == 0 && !isSub[i] ) 0 else hash(Type.getClassName(cl[i]))];
@@ -258,6 +258,15 @@ class Serializer {
 		return s;
 	}
 
+	public inline function addCLID( clid : Int ) {
+		addByte(clid >> 8);
+		addByte(clid & 0xFF);
+	}
+
+	public inline function getCLID() {
+		return (getByte() << 8) | getByte();
+	}
+
 	public inline function addAnyRef( s : Serializable ) {
 		if( s == null ) {
 			addByte(0);
@@ -267,7 +276,7 @@ class Serializer {
 		if( refs[s.__uid] != null )
 			return;
 		refs[s.__uid] = s;
-		addInt(s.getCLID());
+		addCLID(s.getCLID());
 		s.serialize(this);
 	}
 
@@ -282,7 +291,7 @@ class Serializer {
 		refs[s.__uid] = s;
 		var clid = CLIDS[s.getCLID()];
 		if( clid != 0 )
-			addByte(clid);
+			addCLID(clid);
 		s.serialize(this);
 	}
 
@@ -293,7 +302,7 @@ class Serializer {
 			return cast refs[id];
 		var rid = id & SEQ_MASK;
 		if( UID < rid ) UID = rid;
-		var clid = getInt();
+		var clid = getCLID();
 		var i : Serializable = Type.createEmptyInstance(CLASSES[clid]);
 		if( newObjects != null ) newObjects.push(i);
 		i.__uid = id;
@@ -310,7 +319,7 @@ class Serializer {
 		var rid = id & SEQ_MASK;
 		if( UID < rid ) UID = rid;
 		var clid = CLIDS[clid];
-		var i = Type.createEmptyInstance(clid == 0 ? c : cast CL_BYID[getByte()]);
+		var i = Type.createEmptyInstance(clid == 0 ? c : cast CL_BYID[getCLID()]);
 		if( newObjects != null ) newObjects.push(i);
 		i.__uid = id;
 		refs[id] = i;
