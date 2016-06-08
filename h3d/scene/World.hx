@@ -237,6 +237,7 @@ class World extends Object {
 		}
 	}
 
+	@:noDebug
 	public function loadModel( r : hxd.res.Model ) : WorldModel {
 		var lib = r.toHmd();
 		var models = lib.header.models;
