@@ -913,7 +913,7 @@ class Macros {
 					expr : macro {
 						if( this.$fname != v ) {
 							$markExpr;
-							${if( ftype.isProxy ) macro v.bindHost(this,$v{bitID}) else macro {}};
+							${if( ftype.isProxy ) macro (if( v != null ) v.bindHost(this,$v{bitID})) else macro {}};
 						}
 						return v;
 					}
