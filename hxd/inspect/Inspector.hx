@@ -53,7 +53,7 @@ class Inspector {
 	public var scene(default, set) : h3d.scene.Scene;
 	public var connected(get, never): Bool;
 
-	var inspect : PropManager;
+	var props : PropManager;
 	var jroot : JQuery;
 	var event : DrawEvent;
 	var oldLog : Dynamic -> haxe.PosInfos -> Void;
@@ -80,11 +80,11 @@ class Inspector {
 		state = new Map();
 		oldLog = haxe.Log.trace;
 		haxe.Log.trace = onTrace;
-		inspect = new PropManager(host, port);
-		inspect.resolveProps = resolveProps;
-		inspect.onShowTexture = onShowTexture;
-		inspect.onChange = onChange;
-		inspect.handleKey = onKey;
+		props = new PropManager(host, port);
+		props.resolveProps = resolveProps;
+		props.onShowTexture = onShowTexture;
+		props.onChange = onChange;
+		props.handleKey = onKey;
 		this.scene = scene;
 		panels = [];
 		panelList = [];
@@ -96,7 +96,7 @@ class Inspector {
 
 
 	function init() {
-		jroot = J(inspect.getRoot());
+		jroot = J(props.getRoot());
 		jroot.html('
 			<style>$CSS</style>
 			<ul id="toolbar" class="toolbar">
@@ -104,26 +104,24 @@ class Inspector {
 		');
 		jroot.attr("title", "Inspect");
 
-		scenePanel = new ScenePanel("s3d",scene);
-		propsPanel = new Panel("props","Properties");
+		scenePanel = new ScenePanel("s3d", scene);
 		logPanel = new Panel("log", "Log");
 		resPanel = new ResPanel("res", hxd.res.Loader.currentInstance);
-
 
 		resPanel.dock(Left, 0.2);
 		scenePanel.dock(Fill, null, resPanel);
 		logPanel.dock(Down, 0.3);
-		propsPanel.dock(Down, 0.5, scenePanel);
+		getPropsPanel();
 
 		addPanel("Scene", function() return scenePanel);
-		addPanel("Properties", function() return propsPanel);
+		addPanel("Properties", function() return getPropsPanel());
 		addPanel("Resources", function() return resPanel);
 		addPanel("Log", function() return logPanel);
 
 		addTool("Load...", "download", load, "Load settings");
 		addTool("Save...", "save", save, "Save settings");
-		addTool("Undo", "undo", inspect.undo, "Undo");
-		addTool("Repeat", "repeat", inspect.redo, "Redo");
+		addTool("Undo", "undo", props.undo, "Undo");
+		addTool("Repeat", "repeat", props.redo, "Redo");
 		var pause : Tool = null;
 		pause = addTool("Pause", "pause", function() {
 			if( oldLoop != null ) {
@@ -157,6 +155,14 @@ class Inspector {
 			s.dock(Right, 0.35);
 			return s;
 		});
+	}
+
+	function getPropsPanel() {
+		if( propsPanel == null || propsPanel.isDisposed() ) {
+			propsPanel = new Panel("props","Properties");
+			propsPanel.dock(Down, 0.5, scenePanel);
+		}
+		return propsPanel;
 	}
 
 	function onShowTexture( t : h3d.mat.Texture ) {
@@ -208,7 +214,7 @@ class Inspector {
 
 	public function dispose() {
 		if( current == this ) current = null;
-		inspect.dispose();
+		props.dispose();
 		scene = null;
 		if( oldLoop != null ) {
 			hxd.System.setLoop(oldLoop);
@@ -217,11 +223,11 @@ class Inspector {
 	}
 
 	inline function get_connected() {
-		return inspect.connected;
+		return props.connected;
 	}
 
 	public inline function J( ?elt : cdb.jq.Dom, ?query : String ) {
-		return inspect.J(elt,query);
+		return props.J(elt,query);
 	}
 
 	public function addTool( name : String, icon : String, click : Void -> Void, ?title : String = "" ) {
@@ -256,7 +262,7 @@ class Inspector {
 
 	function onTrace( v : Dynamic, ?pos : haxe.PosInfos ) {
 		oldLog(v, pos);
-		if( inspect.connected ) {
+		if( props.connected ) {
 			var vstr = null;
 			if( pos.customParams != null ) {
 				pos.customParams.unshift(v);
@@ -282,7 +288,7 @@ class Inspector {
 
 	public function saveFile( defaultName : String, ext : String, bytes : haxe.io.Bytes, onSelect : String -> Void ) {
 		if( defaultName.charCodeAt(0) != "/".code && defaultName.charCodeAt(1) != ":".code )
-			defaultName = inspect.getResPath() + defaultName;
+			defaultName = props.getResPath() + defaultName;
 		jroot.special("fileSave", [defaultName, ext, bytes], function(path) {
 			if( path != null ) onSelect(path);
 			return true;
@@ -291,7 +297,7 @@ class Inspector {
 
 	public function loadFile( ext : String, onLoad : String -> haxe.io.Bytes -> Void, ?defaultPath : String ) {
 		if( defaultPath != null && defaultPath.charCodeAt(0) != "/".code && defaultPath.charCodeAt(1) != ":".code )
-			defaultPath = inspect.getResPath() + defaultPath;
+			defaultPath = props.getResPath() + defaultPath;
 		jroot.special("fileSelect", [defaultPath, ext], function(newPath) {
 			if( newPath == null ) return true;
 			hxd.File.load(newPath, function(bytes) onLoad(newPath, bytes));
@@ -331,7 +337,7 @@ class Inspector {
 		for( s in state.keys() ) {
 			var v = state.get(s);
 			if( v.original != null )
-				inspect.setPathPropValue(s, v.original);
+				props.setPathPropValue(s, v.original);
 		}
 		state = new Map();
 	}
@@ -342,7 +348,7 @@ class Inspector {
 			switch( Type.typeof(v) ) {
 			case TNull, TInt, TFloat, TBool, TClass(_):
 				var path = path.join(".");
-				state.set(path, { original : inspect.getPathPropValue(path), current : v });
+				state.set(path, { original : this.props.getPathPropValue(path), current : v });
 			case TUnknown, TFunction, TEnum(_):
 				throw "Invalid value " + v;
 			case TObject:
@@ -356,11 +362,12 @@ class Inspector {
 		}
 		browseRec([], o);
 		for( s in state.keys() )
-			inspect.setPathPropValue(s, state.get(s).current);
+			this.props.setPathPropValue(s, state.get(s).current);
+		refreshProps();
 	}
 
 	public function sync() {
-		if( scene == null || !inspect.connected ) return;
+		if( scene == null || !props.connected ) return;
 		for( p in panels )
 			if( p.visible )
 				p.sync();
@@ -394,7 +401,7 @@ class Inspector {
 		if( s == null )
 			state.set(path, { original : oldV, current : newV } );
 		else {
-			if( inspect.sameValue(s.original,newV) )
+			if( props.sameValue(s.original,newV) )
 				state.remove(path);
 			else
 				s.current = newV;
@@ -407,7 +414,8 @@ class Inspector {
 
 	public function editProps( n : Node ) {
 		currentNode = n;
-		var t = inspect.makeProps(n.getFullPath(), n.props());
+		var t = props.makeProps(n.getFullPath(), n.props());
+		getPropsPanel();
 		propsPanel.j.text("");
 		propsPanel.parent = n;
 		t.appendTo(propsPanel.j);

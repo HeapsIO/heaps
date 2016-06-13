@@ -68,8 +68,11 @@ class NetworkClient {
 				o.__host = null;
 				o.networkRPC(ctx, fid, this);
 				o.__host = old;
-			} else
+			} else {
+				host.rpcClientValue = this;
 				o.networkRPC(ctx, fid, this);
+				host.rpcClientValue = null;
+			}
 		case NetworkHost.RPC_WITH_RESULT:
 
 			var old = resultID;
@@ -155,6 +158,11 @@ class NetworkHost {
 
 	public var isAuth(default, null) : Bool;
 
+	/**
+		When a RPC of type Server is performed, this will tell the originating client from the RPC.
+	**/
+	public var rpcClient(get, never) : NetworkClient;
+
 	public var sendRate : Float = 0.;
 	public var totalSentBytes : Int = 0;
 
@@ -169,6 +177,7 @@ class NetworkHost {
 	var rpcUID = Std.random(0x1000000);
 	var rpcWaits = new Map<Int,Serializer->Void>();
 	var targetClient : NetworkClient;
+	var rpcClientValue : NetworkClient;
 	var aliveEvents : Array<Void->Void>;
 	public var self(default,null) : NetworkClient;
 
@@ -192,7 +201,7 @@ class NetworkHost {
 			if( !s.refs.exists(r.__uid) ) {
 				var cl = r.getCLID();
 				var cval = Type.getClass(r);
-				s.addInt(cl);
+				s.addCLID(cl);
 				if( !clids[cl] ) {
 					clids[cl] = true;
 					s.addString(Type.getClassName(cval));
@@ -200,7 +209,7 @@ class NetworkHost {
 				s.addKnownRef(r);
 				s.addByte(EOM);
 			}
-		s.addInt(-1);
+		s.addCLID(0xFFFF);
 		return s.end();
 	}
 
@@ -213,8 +222,8 @@ class NetworkHost {
 			classByName.set(Type.getClassName(c), c);
 		var clids = [];
 		while( true ) {
-			var cl = ctx.getInt();
-			if( cl < 0 ) break;
+			var cl = ctx.getCLID();
+			if( cl == 0xFFFF ) break;
 			var cval = clids[cl];
 			if( cval == null ) {
 				var cname = ctx.getString();
@@ -237,6 +246,10 @@ class NetworkHost {
 		o.__next = markHead;
 		markHead = o;
 		return true;
+	}
+
+	function get_rpcClient() {
+		return rpcClientValue == null ? self : rpcClientValue;
 	}
 
 	public dynamic function onMessage( from : NetworkClient, msg : Dynamic ) {
@@ -386,7 +399,7 @@ class NetworkHost {
 		ctx.addAnyRef(o);
 		if( checkEOM ) ctx.addByte(EOM);
 	}
-	
+
 	function unmark( o : NetworkSerializable ) {
 		if( o.__next == null )
 			return;
@@ -413,7 +426,7 @@ class NetworkHost {
 		}
 		flushProps(); // send changes
 		o.__host = null;
-		o.__bits = 0;		
+		o.__bits = 0;
 		unmark(o);
 		if( logger != null )
 			logger("Unregister " + o+"#"+o.__uid);

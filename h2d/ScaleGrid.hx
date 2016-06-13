@@ -9,14 +9,27 @@ class ScaleGrid extends h2d.TileGroup {
 	public var width(default,set) : Int;
 	public var height(default,set) : Int;
 
-	public var tileBorders(default,set) : Bool;
+	public var tileBorders(default, set) : Bool;
 
-	public function new( tile, borderW, borderH, ?parent ) {
+	public var holdPosition(default, set) : Float = 0.5;
+	public var holdSize : Null<Int>;
+	public var holdVertical : Bool;
+
+	public function new( tile, borderW, borderH, ?holdSize : Int, ?holdVertical = false, ?parent ) {
 		super(tile,parent);
 		borderWidth = borderW;
 		borderHeight = borderH;
 		width = tile.width;
 		height = tile.height;
+		this.holdSize = holdSize;
+		this.holdVertical = holdVertical;
+	}
+
+	function set_holdPosition(v) {
+		v = Math.max(0, Math.min(1, v));
+		this.holdPosition = v;
+		clear();
+		return v;
 	}
 
 	function set_tileBorders(b) {
@@ -42,7 +55,7 @@ class ScaleGrid extends h2d.TileGroup {
 		super.getBoundsRec(relativeTo, out, forSize);
 	}
 
-	function updateContent() {
+	function drawContent() {
 		var bw = borderWidth, bh = borderHeight;
 
 		// 4 corners
@@ -103,6 +116,84 @@ class ScaleGrid extends h2d.TileGroup {
 		var t = tile.sub(bw, bh, sizeX, sizeY);
 		t.scaleToSize(width - bw * 2,height - bh * 2);
 		content.addColor(bw, bh, curColor, t);
+	}
+
+	function drawHoldContent() {
+		if( tileBorders ) throw("TODO");
+
+		var bw : Int = borderWidth, bh : Int = borderHeight;
+		var holdw = holdVertical ? holdSize : 0, holdh = holdVertical ? 0 : holdSize;
+		var wpos = holdVertical ? holdPosition : 0.5, hpos = holdVertical ? 0.5 : holdPosition;
+		var sizeX1 = Math.floor(((tile.width - bw * 2) - holdw) * 0.5);
+		var sizeX2 = Math.ceil(((tile.width - bw * 2) - holdw) * 0.5);
+		var sizeY1 = Math.floor(((tile.height - bh * 2) - holdh) * 0.5);
+		var sizeY2 = Math.ceil(((tile.height - bh * 2) - holdh) * 0.5);
+		var w1 = Math.floor(((width - bw * 2) - holdw) * wpos);
+		var w2 = Math.ceil(((width - bw * 2) - holdw) * (1 - wpos));
+		var h1 = Math.floor(((height - bh * 2) - holdh) * hpos);
+		var h2 = Math.ceil(((height - bh * 2) - holdh) * (1 - hpos));
+
+		// 4 corners
+		content.addColor(0, 0, curColor, tile.sub(0, 0, bw, bh));
+		content.addColor(bw + w1 + w2 + holdw, 0, curColor, tile.sub(bw + sizeX1 + sizeX2 + holdw, 0, bw, bh));
+		content.addColor(0, bh + h1 + h2 + holdh, curColor, tile.sub(0, bh + sizeY1 + sizeY2 + holdh, bw, bh));
+		content.addColor(bw + w1 + w2 + holdw, bh + h1 + h2 + holdh, curColor, tile.sub(bw + sizeX1 + sizeX2 + holdw, bh + sizeY1 + sizeY2 + holdh, bw, bh));
+
+		//8 borders
+		//top (left part)
+		var t = tile.sub(bw, 0, sizeX1, bh);
+		t.scaleToSize(w1, bh);
+		content.addColor(bw, 0, curColor, t);
+		//top (right part)
+		var t = tile.sub(bw + sizeX1 + holdw, 0, sizeX2, bh);
+		t.scaleToSize(w2, bh);
+		content.addColor(bw + w1 + holdw, 0, curColor, t);
+		//bottom (left part)
+		var t = tile.sub(bw, bh + sizeY1 + sizeY2 + holdh, sizeX1, bh);
+		t.scaleToSize(w1, bh);
+		content.addColor(bw, bh + h1 + h2 + holdh, curColor, t);
+		//bottom (right part)
+		var t = tile.sub(bw + sizeX1 + holdw, bh + sizeY1 + sizeY2 + holdh, sizeX2, bh);
+		t.scaleToSize(w2, bh);
+		content.addColor(bw + w1 + holdw, bh + h1 + h2 + holdh, curColor, t);
+		//left (top part)
+		var t = tile.sub(0, bh, bw, sizeY1);
+		t.scaleToSize(bw, h1);
+		content.addColor(0, bh, curColor, t);
+		//left (bottom part)
+		var t = tile.sub(0, bh + sizeY1 + holdh, bw, sizeY2);
+		t.scaleToSize(bw, h2);
+		content.addColor(0, bh + h1 + holdh, curColor, t);
+		//right (top part)
+		var t = tile.sub(bw + sizeX1 + sizeX2 + holdw, bh, bw, sizeY1);
+		t.scaleToSize(bw, h1);
+		content.addColor(bw + w1 + w2 + holdw, bh, curColor, t);
+		//right (bottom part)
+		var t = tile.sub(bw + sizeX1 + sizeX2 + holdw, bh + sizeY1 + holdh, bw, sizeY2);
+		t.scaleToSize(bw, h2);
+		content.addColor(bw + w1 + w2 + holdw, bh + h1 + holdh, curColor, t);
+
+		//top middle
+		var t = tile.sub(bw + sizeX1, 0, holdw, bh);
+		content.addColor(bw + w1, 0, curColor, t);
+		//bottom middle
+		var t = tile.sub(bw + sizeX1, bh + sizeY1 + sizeY2 + holdh, holdw, bh);
+		content.addColor(bw + w1, bh + h1 + h2 + holdh, curColor, t);
+		//left middle
+		var t = tile.sub(0, bh + sizeY1, bw, holdh);
+		content.addColor(0, bh + h1, curColor, t);
+		//right middle
+		var t = tile.sub(bw + sizeX1 + sizeX2 + holdw, bh + sizeY1, bw, holdh);
+		content.addColor(bw + w1 + w2 + holdw, bh + h1, curColor, t);
+		//center
+		var t = tile.sub(bw, bh, sizeX1 + sizeX2 + holdw, sizeY1 + sizeY2 + holdh);
+		t.scaleToSize(w1 + w2 + holdw, h1 + h2 + holdh);
+		content.addColor(bw, bh, curColor, t);
+	}
+
+	function updateContent() {
+		if(holdSize == null) drawContent();
+		else drawHoldContent();
 	}
 
 	override function sync( ctx : RenderContext ) {

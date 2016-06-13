@@ -43,20 +43,23 @@ class NullDriver extends Driver {
 	}
 
 	override function getShaderInputNames() : Array<String> {
-		throw "TODO:getShaderInputNames";
-		return null;
+		var names = [];
+		for( v in cur.vertex.data.vars )
+			if( v.kind == Input )
+				names.push(v.name);
+		return names;
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
-		return null;
+		return cast {};
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
-		return null;
+		return cast {};
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
-		return null;
+		return cast {};
 	}
 
 }

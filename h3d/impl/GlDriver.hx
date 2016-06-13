@@ -2,7 +2,7 @@ package h3d.impl;
 import h3d.impl.Driver;
 import h3d.mat.Pass;
 
-#if (js||cpp)
+#if (js||cpp||hxsdl)
 
 #if js
 import js.html.Uint16Array;
@@ -62,7 +62,7 @@ private class CompiledProgram {
 }
 
 @:access(h3d.impl.Shader)
-#if cpp
+#if (cpp||hxsdl)
 @:build(h3d.impl.MacroHelper.replaceGL())
 #end
 class GlDriver extends Driver {
@@ -223,7 +223,7 @@ class GlDriver extends Driver {
 		case Globals:
 			if( s.globals != null ) {
 				#if hxsdl
-				gl.uniform4fv(s.globals, buf.globals.toData(), 0, s.shader.globalsSize);
+				gl.uniform4fv(s.globals, @:privateAccess (cast buf.globals.toData() : hl.types.ArrayBase.ArrayF32).bytes, 0, s.shader.globalsSize * 4);
 				#else
 				var a = new Float32Array(buf.globals.toData()).subarray(0, s.shader.globalsSize * 4);
 				gl.uniform4fv(s.globals, a);
@@ -232,7 +232,7 @@ class GlDriver extends Driver {
 		case Params:
 			if( s.params != null ) {
 				#if hxsdl
-				gl.uniform4fv(s.params, buf.params.toData(), 0, s.shader.paramsSize);
+				gl.uniform4fv(s.params, @:privateAccess (cast buf.params.toData() : hl.types.ArrayBase.ArrayF32).bytes, 0, s.shader.paramsSize * 4);
 				#else
 				var a = new Float32Array(buf.params.toData()).subarray(0, s.shader.paramsSize * 4);
 				gl.uniform4fv(s.params, a);
@@ -513,12 +513,12 @@ class GlDriver extends Driver {
 		pixels.convert(t.format);
 		#if hxsdl
 		pixels.setFlip(true);
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, pixels.bytes.getData());
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, pixels.bytes.getData());
 		#elseif lime
 		pixels.setFlip(true);
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#else
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, t.width, t.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#end
 		if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 		gl.bindTexture(GL.TEXTURE_2D, null);
@@ -529,7 +529,8 @@ class GlDriver extends Driver {
 		var stride : Int = v.stride;
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		#if hxsdl
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, buf.getNative(), bufPos, vertexCount * stride * 4);
+		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBase.ArrayF32).bytes #else buf.getNative() #end;
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, data, bufPos, vertexCount * stride * 4);
 		#else
 		var buf = new Float32Array(buf.getNative());
 		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride #if cpp * (fixMult?4:1) #end);
@@ -554,7 +555,8 @@ class GlDriver extends Driver {
 	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
 		#if hxsdl
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, buf.getNative(), bufPos, indiceCount * 2);
+		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBase.ArrayI16).bytes #else buf.getNative() #end;
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, data, bufPos, indiceCount * 2);
 		#else
 		var buf = new Uint16Array(buf.getNative());
 		var sub = new Uint16Array(buf.buffer, bufPos, indiceCount #if cpp * (fixMult?2:1) #end);

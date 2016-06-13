@@ -431,7 +431,7 @@ class System {
 	#elseif hxsdl
 
 	public static function setNativeCursor( c : Cursor ) {
-		trace("TODO " + c);
+		//trace("TODO " + c);
 	}
 
 	static function get_screenDPI() {
@@ -507,10 +507,12 @@ class System {
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
 			eh = new Event(EPush, e.mouseX, e.mouseY);
+			eh.button = e.button;
 		case MouseUp:
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
 			eh = new Event(ERelease, e.mouseX, e.mouseY);
+			eh.button = e.button;
 		case MouseMove:
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
@@ -546,6 +548,36 @@ class System {
 			CODEMAP[sdl] = keyCode;
 			if( charCode != 0 ) CHARMAP[sdl] = charCode;
 		}
+
+		/*
+			SDL 2.0 does not allow to get the charCode from a key event.
+			let's for now do a simple mapping, even if not very efficient
+		*/
+
+		// ASCII
+		CHARMAP[K.BACKSPACE] = 8;
+		CHARMAP[K.TAB] = 9;
+		CHARMAP[K.ENTER] = 13;
+		for( i in 32...127 )
+			CHARMAP[i] = i;
+		for( i in 0...26 )
+			addKey(97 + i, K.A + i);
+		for( i in 0...12 )
+			addKey(1058 + i, K.F1 + i);
+
+		// NUMPAD
+		CHARMAP[1098] = "0".code;
+		CHARMAP[1085] = "*".code;
+		CHARMAP[1087] = "+".code;
+		CHARMAP[1088] = 13;
+		CHARMAP[1086] = "-".code;
+		CHARMAP[1084] = "/".code;
+		CHARMAP[1099] = ".".code;
+		addKey(1088, K.NUMPAD_0, "0".code);
+		for( i in 0...9 )
+			addKey(1089 + i, K.NUMPAD_1 + i, "1".code + i);
+
+		// EXTRA
 		var keys = [
 			//K.BACKSPACE
 			//K.TAB
@@ -568,8 +600,7 @@ class System {
 			1081 => K.DOWN,
 			1073 => K.INSERT,
 			127 => K.DELETE,
-			//K.NUMBER_0-9
-			1098 => K.NUMPAD_0,
+			//K.NUMPAD_0-9
 			//K.A-Z
 			//K.F1-F12
 			1085 => K.NUMPAD_MULT,
@@ -579,34 +610,9 @@ class System {
 			1099 => K.NUMPAD_DOT,
 			1084 => K.NUMPAD_DIV,
 		];
-
-		/*
-			SDL 2.0 does not allow to get the charCode from a key event.
-			let's for now do a simple mapping, even if not very efficient
-		*/
-		CHARMAP[1098] = "0".code;
-		CHARMAP[1085] = "*".code;
-		CHARMAP[1087] = "+".code;
-		CHARMAP[1088] = 13;
-		CHARMAP[1086] = "-".code;
-		CHARMAP[1084] = "/".code;
-		CHARMAP[1099] = ".".code;
-		CHARMAP[K.BACKSPACE] = 8;
-		CHARMAP[K.TAB] = 9;
-		CHARMAP[K.ENTER] = 13;
-		CHARMAP[K.SPACE] = 32;
-
-		for( i in 0...10 )
-			CHARMAP[K.NUMBER_0 + i] = "0".code + i;
-
-		for( i in 0...9 )
-			addKey(1089 + i, K.NUMPAD_1 + i, "1".code + i);
-		for( i in 0...26 )
-			addKey(97 + i, K.A + i, "a".code + i);
-		for( i in 0...12 )
-			addKey(1058 + i, K.F1 + i);
 		for( sdl in keys.keys() )
 			addKey(sdl, keys.get(sdl));
+
 		sdl.Sdl.init();
 		var size = haxe.macro.Compiler.getDefine("windowSize");
 		if( size != null ) {
@@ -616,8 +622,13 @@ class System {
 		}
 		win = new sdl.Window("", windowWidth, windowHeight);
 		init();
+		#if hl
+		sdl.Sdl.defaultEventHandler = onEvent;
+		haxe.MainLoop.add(mainLoop);
+		#else
 		sdl.Sdl.loop(mainLoop,onEvent);
 		sdl.Sdl.quit();
+		#end
 	}
 
 	#elseif hl

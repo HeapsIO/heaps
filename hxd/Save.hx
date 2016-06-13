@@ -15,6 +15,12 @@ class Save {
 	}
 	#end
 
+	#if sys
+	static function savePath( name : String ) {
+		return name + ".sav";
+	}
+	#end
+
 	public static function load<T>( ?defValue : T, ?name = "save" ) : T {
 		#if flash
 		try {
@@ -24,6 +30,8 @@ class Save {
 		} catch( e : Dynamic ) {
 			return defValue;
 		}
+		#elseif sys
+		return try haxe.Unserializer.run(sys.io.File.getContent(savePath(name))) catch( e : Dynamic ) defValue;
 		#else
 		return defValue;
 		#end
@@ -37,6 +45,12 @@ class Save {
 		cur.set(name, data);
 		getObj(name).setProperty("data", data);
 		if( !quick ) try saveObj.flush() catch( e : Dynamic ) throw "Can't write save (disk full ?)";
+		return true;
+		#elseif sys
+		var data = haxe.Serializer.run(val);
+		var file = savePath(name);
+		try if( sys.io.File.getContent(file) == data ) return false catch( e : Dynamic ) {};
+		sys.io.File.saveContent(file, data);
 		return true;
 		#else
 		return false;

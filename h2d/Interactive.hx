@@ -17,7 +17,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	public var backgroundColor : Null<Int>;
 	public var enableRightButton : Bool;
 	var scene : Scene;
-	var isMouseDown : Int;
+	var mouseDownButton : Int = -1;
 
 	public function new(width, height, ?parent) {
 		super(parent);
@@ -84,28 +84,28 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			onMove(e);
 		case EPush:
 			if( enableRightButton || e.button == 0 ) {
-				isMouseDown = e.button;
+				mouseDownButton = e.button;
 				onPush(e);
 			}
 		case ERelease:
 			if( enableRightButton || e.button == 0 ) {
 				onRelease(e);
-				if( isMouseDown == e.button )
+				if( mouseDownButton == e.button )
 					onClick(e);
 			}
-			isMouseDown = -1;
+			mouseDownButton = -1;
 		case EReleaseNoClick:
 			if( enableRightButton || e.button == 0 ) {
 				e.kind = ERelease;
 				onRelease(e);
 				e.kind = EReleaseNoClick;
 			}
-			isMouseDown = -1;
+			mouseDownButton = -1;
 		case EOver:
 			hxd.System.setCursor(cursor);
 			onOver(e);
 		case EOut:
-			isMouseDown = -1;
+			mouseDownButton = -1;
 			hxd.System.setCursor(Default);
 			onOut(e);
 		case EWheel:

@@ -209,10 +209,9 @@ class BigTexture {
 	}
 
 	function upload( t : hxd.res.Image, q : QuadTree, alphaChannel ) {
-		switch( t.getFormat() ) {
-		case Png, Gif:
+		if( !t.getFormat().useAsyncDecode )
 			uploadPixels(t.getPixels(), q.x, q.y, alphaChannel);
-		case Jpg:
+		else {
 			loadCount++;
 			var o = { t : t, q : q, alpha : alphaChannel, skip : false };
 			pending.push(o);

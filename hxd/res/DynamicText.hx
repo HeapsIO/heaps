@@ -112,7 +112,14 @@ class DynamicText {
 
 	public static function build( file : String, ?withDict : Bool ) {
 		var path = FileTree.resolvePath();
-		var x = Xml.parse(sys.io.File.getContent(path + "/" + file));
+		var fullPath = path + "/" + file;
+		var x = null;
+		try {
+			x = Xml.parse(sys.io.File.getContent(fullPath));
+		} catch( e : haxe.xml.Parser.XmlParserException ) {
+			Context.error(e.message, Context.makePosition({min:e.position, max:e.position, file:fullPath}));
+			return null;
+		}
 		Context.registerModuleDependency(Context.getLocalModule(), path + "/" + file);
 		var fields = Context.getBuildFields();
 		var pos = Context.currentPos();
