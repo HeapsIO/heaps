@@ -424,7 +424,7 @@ class Macros {
 				}
 			}
 			var cexpr = Context.parse(loop(t.t).toString(), v.pos);
-			return macro $v = $ctx.getRef($cexpr,$cexpr.__clid);
+			return macro $v = $ctx.getRef($cexpr,@:privateAccess $cexpr.__clid);
 		case PAlias(at):
 			var cvt = at.t;
 			return macro {
