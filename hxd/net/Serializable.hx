@@ -6,6 +6,7 @@ interface Serializable {
 	public function getCLID() : Int;
 	public function serialize( ctx : Serializer ) : Void;
 	public function unserialize( ctx : Serializer ) : Void;
+	public function getSerializeSchema() : Schema;
 }
 
 @:genericBuild(hxd.net.Macros.buildSerializableEnum())
