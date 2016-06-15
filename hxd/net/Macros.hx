@@ -169,7 +169,7 @@ class Macros {
 			switch( a.toString() ) {
 			case "Float":
 				PFloat;
-			case "Int":
+			case "Int","UInt":
 				PInt;
 			case "Bool":
 				PBool;
