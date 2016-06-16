@@ -114,7 +114,7 @@ class LocalHost extends NetworkHost {
 		isAuth = true;
 	}
 
-	public static function openNewWindow() {
+	public static function openNewWindow( ?params : Dynamic<String> ) {
 		#if (flash && air3)
 		var opt = new flash.display.NativeWindowInitOptions();
 		opt.renderMode = flash.display.NativeWindowRenderMode.DIRECT;
@@ -126,7 +126,9 @@ class LocalHost extends NetworkHost {
 		var ctx = new flash.system.LoaderContext(false, new flash.system.ApplicationDomain());
 		ctx.allowCodeImport = true;
 		win.stage.addChild(l);
-		l.loadBytes(flash.Lib.current.stage.loaderInfo.bytes, ctx);
+		if( params != null )
+			ctx.parameters = params;
+		l.loadBytes(flash.Lib.current.loaderInfo.bytes, ctx);
 		win.activate();
 		#else
 		throw "Not implemented";
