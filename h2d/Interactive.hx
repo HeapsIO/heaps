@@ -18,6 +18,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	public var enableRightButton : Bool;
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
+	var parentMask : Mask;
 
 	public function new(width, height, ?parent) {
 		super(parent);
@@ -29,6 +30,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	override function onAlloc() {
 		this.scene = getScene();
 		if( scene != null ) scene.addEventTarget(this);
+		updateMask();
 		super.onAlloc();
 	}
 
@@ -45,6 +47,20 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		if( scene != null ) {
 			scene.removeEventTarget(this);
 			scene.addEventTarget(this);
+		}
+		updateMask();
+	}
+
+	function updateMask() {
+		parentMask = null;
+		var p = parent;
+		while( p != null ) {
+			var m = Std.instance(p, Mask);
+			if( m != null ) {
+				parentMask = m;
+				break;
+			}
+			p = p.parent;
 		}
 	}
 
@@ -68,6 +84,22 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	@:noCompletion public function handleEvent( e : hxd.Event ) {
+		if( parentMask != null ) {
+			var p = parentMask;
+			var pt = new h2d.col.Point(e.relX, e.relY);
+			localToGlobal(pt);
+			var saveX = pt.x, saveY = pt.y;
+			while( p != null ) {
+				pt.x = saveX;
+				pt.y = saveY;
+				var pt = p.globalToLocal(pt);
+				if( pt.x < 0 || pt.y < 0 || pt.x > p.width || pt.y > p.height ) {
+					e.cancel = true;
+					return;
+				}
+				p = @:privateAccess p.parentMask;
+			}
+		}
 		if( isEllipse && checkBounds(e) ) {
 			var cx = width * 0.5, cy = height * 0.5;
 			var dx = (e.relX - cx) / cx;
