@@ -528,7 +528,7 @@ class Macros {
 			name : "__clid",
 			pos : pos,
 			access : [AStatic],
-			meta : [{ name : ":noCompletion", pos : pos }, { name : ":keep", pos : pos }],
+			meta : [{ name : ":noCompletion", pos : pos }],
 			kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.registerClass($i{cl.name})),
 		});
 		fields.push({
@@ -546,7 +546,6 @@ class Macros {
 			fields.push({
 				name : "serialize",
 				pos : pos,
-				meta : [ { name:":keep", pos:pos } ],
 				access : access,
 				kind : FFun({
 					args : [ { name : "__ctx", type : macro : hxd.net.Serializer } ],
@@ -590,7 +589,6 @@ class Macros {
 						f.expr = repl(f.expr);
 					default:
 					}
-					f.meta.push( { name:":keep", pos:pos } );
 					if( !found ) Context.error("Override of unserialize() with no super.unserialize(ctx) found", f.pos);
 					return fields;
 				}
@@ -598,7 +596,6 @@ class Macros {
 			fields.push({
 				name : "unserialize",
 				pos : pos,
-				meta : [ { name:":keep", pos:pos } ],
 				access : access,
 				kind : FFun({
 					args : [ { name : "__ctx", type : macro : hxd.net.Serializer } ],
