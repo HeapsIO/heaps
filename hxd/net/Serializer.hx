@@ -64,6 +64,7 @@ class Serializer {
 	var out : haxe.io.BytesBuffer;
 	var input : haxe.io.Bytes;
 	var inPos : Int;
+	var usedClasses : Array<Bool> = [];
 
 	public function new() {
 		if( CLIDS == null ) initClassIDS();
@@ -113,6 +114,10 @@ class Serializer {
 			out.addByte(0x80);
 			out.addInt32(v);
 		}
+	}
+
+	public inline function addInt32(v:Int) {
+		out.addInt32(v);
 	}
 
 	public inline function addFloat(v:Float) {
@@ -208,6 +213,12 @@ class Serializer {
 		return v;
 	}
 
+	public inline function getInt32() {
+		var v = input.getInt32(inPos);
+		inPos += 4;
+		return v;
+	}
+
 	public inline function getDouble() {
 		var v = input.getDouble(inPos);
 		inPos += 8;
@@ -267,7 +278,7 @@ class Serializer {
 		return (getByte() << 8) | getByte();
 	}
 
-	public inline function addAnyRef( s : Serializable ) {
+	public function addAnyRef( s : Serializable ) {
 		if( s == null ) {
 			addByte(0);
 			return;
@@ -276,11 +287,13 @@ class Serializer {
 		if( refs[s.__uid] != null )
 			return;
 		refs[s.__uid] = s;
-		addCLID(s.getCLID());
+		var index = s.getCLID();
+		usedClasses[index] = true;
+		addCLID(index);
 		s.serialize(this);
 	}
 
-	public inline function addKnownRef( s : Serializable ) {
+	public function addKnownRef( s : Serializable ) {
 		if( s == null ) {
 			addByte(0);
 			return;
@@ -289,13 +302,15 @@ class Serializer {
 		if( refs[s.__uid] != null )
 			return;
 		refs[s.__uid] = s;
-		var clid = CLIDS[s.getCLID()];
+		var index = s.getCLID();
+		usedClasses[index] = true;
+		var clid = CLIDS[index];
 		if( clid != 0 )
 			addCLID(clid);
 		s.serialize(this);
 	}
 
-	public inline function getAnyRef() : Serializable {
+	public function getAnyRef() : Serializable {
 		var id = getInt();
 		if( id == 0 ) return null;
 		if( refs[id] != null )
@@ -311,7 +326,7 @@ class Serializer {
 		return i;
 	}
 
-	public inline function getRef<T:Serializable>( c : Class<T>, clid : Int ) : T {
+	public function getRef<T:Serializable>( c : Class<T>, clid : Int ) : T {
 		var id = getInt();
 		if( id == 0 ) return null;
 		if( refs[id] != null )
@@ -319,7 +334,7 @@ class Serializer {
 		var rid = id & SEQ_MASK;
 		if( UID < rid ) UID = rid;
 		var clid = CLIDS[clid];
-		var i = Type.createEmptyInstance(clid == 0 ? c : cast CL_BYID[getCLID()]);
+		var i : T = Type.createEmptyInstance(clid == 0 ? c : cast CL_BYID[getCLID()]);
 		if( newObjects != null ) newObjects.push(i);
 		i.__uid = id;
 		refs[id] = i;
@@ -329,6 +344,85 @@ class Serializer {
 
 	public inline function getKnownRef<T:Serializable>( c : Class<T> ) : T {
 		return getRef(c, untyped c.__clid);
+	}
+
+
+	public function beginSave() {
+		begin();
+		usedClasses = [];
+	}
+
+	public function endSave() {
+		var content = end();
+		begin();
+		var classes = [];
+		var schemas = [];
+		var sidx = CLASSES.indexOf(Schema);
+		for( i in 0...usedClasses.length ) {
+			if( !usedClasses[i] || i == sidx ) continue;
+			var c = CLASSES[i];
+			var schema = (Type.createEmptyInstance(c) : Serializable).getSerializeSchema();
+			schemas.push(schema);
+			classes.push(i);
+			addKnownRef(schema);
+		}
+		var schemaData = end();
+		begin();
+		addString("HXS");
+		addByte(1);
+		for( i in 0...classes.length ) {
+			var index = classes[i];
+			addString(Type.getClassName(CLASSES[index]));
+			addCLID(index);
+			addInt32(schemas[i].checkSum);
+		}
+		addString(null);
+		addInt(schemaData.length);
+		out.add(schemaData);
+		out.add(content);
+		return end();
+	}
+
+	public function beginLoadSave() {
+		var classByName = new Map();
+		var convert = [];
+		var mapClasses = [];
+		var needConvert = false;
+		var needReindex = false;
+		for( i in 0...CLASSES.length )
+			classByName.set(Type.getClassName(CLASSES[i]), i);
+		if( getString() != "HXS" )
+			throw "Invalid HXS data";
+		var version = getByte();
+		if( version != 1 )
+			throw "Unsupported HXS version " + version;
+		while( true ) {
+			var clname = getString();
+			if( clname == null ) break;
+			var index = getCLID();
+			var crc = getInt32();
+
+			var ourClassIndex = classByName.get(clname);
+			if( ourClassIndex == null ) throw "Missing class " + clname+" found in HXS data";
+			var ourSchema = (Type.createEmptyInstance(CLASSES[ourClassIndex]) : Serializable).getSerializeSchema();
+			if( ourSchema.checkSum != crc ) {
+				needConvert = true;
+				convert[index] = ourSchema;
+			}
+			if( index != ourClassIndex )
+				needReindex = true;
+			mapClasses[index] = ourClassIndex;
+		}
+		if( needConvert ) {
+			throw "TODO : convert schema (save file not compatible)";
+		} else {
+			// skip schema data
+			var schemaDataSize = getInt();
+			inPos += schemaDataSize;
+		}
+		if( needReindex ) {
+			throw "TODO : reindex (save file not compatible)";
+		}
 	}
 
 }
