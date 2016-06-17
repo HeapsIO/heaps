@@ -1,5 +1,99 @@
 package hxd.net;
 
+class ConvertField {
+	public var index : Int;
+	public var same : Bool;
+	public var defaultValue : Dynamic;
+	public var from : Null<Schema.FieldType>;
+	public var to : Null<Schema.FieldType>;
+	public function new(from, to) {
+		this.from = from;
+		this.to = to;
+	}
+}
+
+class Convert {
+
+	public var read : Array<ConvertField>;
+	public var write : Array<ConvertField>;
+
+	public function new( ourSchema : Schema, schema : Schema ) {
+		var ourMap = new Map();
+		for( i in 0...ourSchema.fieldsNames.length )
+			ourMap.set(ourSchema.fieldsNames[i], ourSchema.fieldsTypes[i]);
+		read = [];
+
+		var map = new Map();
+		for( i in 0...schema.fieldsNames.length ) {
+			var oldT = schema.fieldsTypes[i];
+			var newT = ourMap.get(schema.fieldsNames[i]);
+			var c = new ConvertField(oldT, newT);
+			if( newT != null && sameType(oldT, newT) )
+				c.same = true;
+			c.index = read.length;
+			read.push(c);
+			map.set(schema.fieldsNames[i], c);
+		}
+
+		write = [];
+		for( i in 0...ourSchema.fieldsNames.length ) {
+			var newT = ourSchema.fieldsTypes[i];
+			var c = map.get(ourSchema.fieldsNames[i]);
+			if( c == null ) {
+				c = new ConvertField(null, newT);
+				// resolve default value using a specific method ?
+				c.defaultValue = getDefault(newT);
+			}
+			write.push(c);
+		}
+	}
+
+	static function sameType( a : Schema.FieldType, b : Schema.FieldType ) {
+		switch( [a, b] ) {
+		case [PMap(ak, av), PMap(bk, bv)]:
+			return sameType(ak, bk) && sameType(av, bv);
+		case [PArray(a), PArray(b)],[PVector(a),PVector(b)],[PNull(a),PNull(b)]:
+			return sameType(a, b);
+		case [PObj(fa), PObj(fb)]:
+			if( fa.length != fb.length ) return false;
+			for( i in 0...fa.length ) {
+				var a = fa[i];
+				var b = fb[i];
+				if( a.name != b.name || a.opt != b.opt || !sameType(a.type, b.type) )
+					return false;
+			}
+			return true;
+		case [PAlias(a), PAlias(b)]:
+			return sameType(a, b);
+		case [PAlias(a), _]:
+			return sameType(a, b);
+		case [_, PAlias(b)]:
+			return sameType(a, b);
+		default:
+			return Type.enumEq(a, b);
+		}
+	}
+
+	function getDefault(t:Schema.FieldType) : Dynamic {
+		return switch( t ) {
+		case PInt: 0;
+		case PFloat: 0.;
+		case PArray(_): [];
+		case PMap(k, _):
+			switch( k ) {
+			case PInt: new Map<Int,Dynamic>();
+			case PString: new Map<String,Dynamic>();
+			default: new Map<{},Dynamic>();
+			}
+		case PVector(_): new haxe.ds.Vector<Dynamic>(0);
+		case PBool: false;
+		case PAlias(t): getDefault(t);
+		case PEnum(_), PNull(_), PObj(_), PSerializable(_), PString, PUnknown, PBytes: null;
+		};
+	}
+
+}
+
 class Serializer {
 
 	static var UID = 0;
@@ -65,6 +159,7 @@ class Serializer {
 	var input : haxe.io.Bytes;
 	var inPos : Int;
 	var usedClasses : Array<Bool> = [];
+	var convert : Array<Convert>;
 
 	public function new() {
 		if( CLIDS == null ) initClassIDS();
@@ -317,28 +412,34 @@ class Serializer {
 			return cast refs[id];
 		var rid = id & SEQ_MASK;
 		if( UID < rid ) UID = rid;
-		var clid = getCLID();
-		var i : Serializable = Type.createEmptyInstance(CLASSES[clid]);
+		var clidx = getCLID();
+		var i : Serializable = Type.createEmptyInstance(CLASSES[clidx]);
 		if( newObjects != null ) newObjects.push(i);
 		i.__uid = id;
 		refs[id] = i;
-		i.unserialize(this);
+		if( convert != null && convert[clidx] != null )
+			convertRef(i, convert[clidx]);
+		else
+			i.unserialize(this);
 		return i;
 	}
 
-	public function getRef<T:Serializable>( c : Class<T>, clid : Int ) : T {
+	public function getRef<T:Serializable>( c : Class<T>, clidx : Int ) : T {
 		var id = getInt();
 		if( id == 0 ) return null;
 		if( refs[id] != null )
 			return cast refs[id];
 		var rid = id & SEQ_MASK;
 		if( UID < rid ) UID = rid;
-		var clid = CLIDS[clid];
+		var clid = CLIDS[clidx];
 		var i : T = Type.createEmptyInstance(clid == 0 ? c : cast CL_BYID[getCLID()]);
 		if( newObjects != null ) newObjects.push(i);
 		i.__uid = id;
 		refs[id] = i;
-		i.unserialize(this);
+		if( convert != null && convert[clidx] != null )
+			convertRef(i, convert[clidx]);
+		else
+			i.unserialize(this);
 		return i;
 	}
 
@@ -385,8 +486,9 @@ class Serializer {
 
 	public function beginLoadSave() {
 		var classByName = new Map();
-		var convert = [];
+		var schemas = [];
 		var mapClasses = [];
+		var indexes = [];
 		var needConvert = false;
 		var needReindex = false;
 		for( i in 0...CLASSES.length )
@@ -407,21 +509,166 @@ class Serializer {
 			var ourSchema = (Type.createEmptyInstance(CLASSES[ourClassIndex]) : Serializable).getSerializeSchema();
 			if( ourSchema.checkSum != crc ) {
 				needConvert = true;
-				convert[index] = ourSchema;
+				schemas[index] = ourSchema;
 			}
 			if( index != ourClassIndex )
 				needReindex = true;
 			mapClasses[index] = ourClassIndex;
+			indexes.push(index);
 		}
+		var schemaDataSize = getInt();
 		if( needConvert ) {
-			throw "TODO : convert schema (save file not compatible)";
+			convert = [];
+			for( index in indexes ) {
+				var ourSchema = schemas[index];
+				var schema = getKnownRef(Schema);
+				if( ourSchema != null )
+					convert[index] = new Convert(ourSchema, schema);
+			}
 		} else {
 			// skip schema data
-			var schemaDataSize = getInt();
 			inPos += schemaDataSize;
 		}
 		if( needReindex ) {
 			throw "TODO : reindex (save file not compatible)";
+		}
+	}
+
+	function convertRef( i : Serializable, c : Convert ) {
+		var values = new haxe.ds.Vector<Dynamic>(c.read.length);
+		var writePos = 0;
+		for( r in c.read )
+			values[r.index] = readValue(r.from);
+		var oldOut = this.out;
+		out = new haxe.io.BytesBuffer();
+		for( w in c.write ) {
+			var v : Dynamic;
+			if( w.from == null )
+				v = w.defaultValue;
+			else {
+				v = values[w.index];
+				if( !w.same )
+					v = convertValue(v, w.from, w.to);
+			}
+			writeValue(v, w.to);
+		}
+		var bytes = out.getBytes();
+		out = oldOut;
+		var oldIn = input;
+		var oldPos = inPos;
+		setInput(bytes, 0);
+		i.unserialize(this);
+		setInput(oldIn, oldPos);
+	}
+
+	function isNullable( t : Schema.FieldType ) {
+		return switch( t ) {
+		case PInt, PFloat, PBool: false;
+		default: true;
+		}
+	}
+
+	function convertValue( v : Dynamic, from : Schema.FieldType, to : Schema.FieldType ) : Dynamic {
+		if( v == null && isNullable(to) )
+			return null;
+		throw "Cannot convert " + v + " from " + from + " to " + to;
+	}
+
+	function readValue( t : Schema.FieldType ) : Dynamic {
+		return switch( t ) {
+		case PInt: getInt();
+		case PFloat: getFloat();
+		case PAlias(t): readValue(t);
+		case PBool: getBool();
+		case PString: getString();
+		case PArray(t): getArray(function() return readValue(t));
+		case PVector(t): getVector(function() return readValue(t));
+		case PBytes: getBytes();
+		case PEnum(name):
+			var ser = "hxd.net.enumSer." + name.split(".").join("_");
+			if( ser == null ) throw "No enum unserializer found for " + name;
+			return (Type.resolveClass(ser) : Dynamic).doUnserialize(this);
+		case PSerializable(name): getKnownRef(Type.resolveClass(name));
+		case PNull(t): getByte() == 0 ? null : readValue(t);
+		case PObj(fields):
+			var bits = getByte();
+			if( bits == 0 )
+				return null;
+			var o = {};
+			bits--;
+			var nullables = [for( f in fields ) if( isNullable(f.type) ) f];
+			for( f in fields ) {
+				var nidx = nullables.indexOf(f);
+				if( nidx >= 0 && bits & (1 << nidx) == 0 ) continue;
+				Reflect.setField(o, f.name, readValue(f.type));
+			}
+			return o;
+		case PMap(k, v):
+			switch( k ) {
+			case PInt:
+				(getMap(function() return readValue(k), function() return readValue(v)) : Map<Int,Dynamic>);
+			case PString:
+				(getMap(function() return readValue(k), function() return readValue(v)) : Map<String,Dynamic>);
+			default:
+				(getMap(function() return readValue(k), function() return readValue(v)) : Map<{},Dynamic>);
+			}
+		case PUnknown:
+			throw "assert";
+		}
+	}
+
+	function writeValue( v : Dynamic, t : Schema.FieldType )  {
+		switch( t ) {
+		case PInt:
+			addInt(v);
+		case PFloat:
+			addFloat(v);
+		case PAlias(t):
+			writeValue(v,t);
+		case PBool:
+			addBool(v);
+		case PString:
+			addString(v);
+		case PArray(t):
+			addArray(v, function(v) return writeValue(v,t));
+		case PVector(t):
+			addVector(v, function(v) return writeValue(v,t));
+		case PBytes:
+			addBytes(v);
+		case PEnum(name):
+			var ser = "hxd.net.enumSer." + name.split(".").join("_");
+			if( ser == null ) throw "No enum unserializer found for " + name;
+			(Type.resolveClass(ser) : Dynamic).doSerialize(this,v);
+		case PSerializable(_):
+			addKnownRef(v);
+		case PNull(t):
+			if( v == null ) {
+				addByte(0);
+			} else {
+				addByte(1);
+				writeValue(v, t);
+			}
+		case PObj(fields):
+			if( v == null )
+				addByte(0);
+			else {
+				var fbits = 0;
+				var nullables = [for( f in fields ) if( isNullable(f.type) ) f];
+				for( i in 0...nullables.length )
+					if( Reflect.field(v, nullables[i].name) != null )
+						fbits |= 1 << i;
+				addByte(fbits + 1);
+				for( f in fields ) {
+					var nidx = nullables.indexOf(f);
+					var name = f.name;
+					if( nidx >= 0 && fbits & (1 << nidx) == 0 ) continue;
+					writeValue(Reflect.field(v, f.name), f.type);
+				}
+			}
+		case PMap(k, t):
+			addMap(v,function(v) writeValue(v,k), function(v) writeValue(v,t));
+		case PUnknown:
+			throw "assert";
 		}
 	}
 
