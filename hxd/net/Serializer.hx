@@ -534,6 +534,10 @@ class Serializer {
 		}
 	}
 
+	public function endLoadSave() {
+		convert = null;
+	}
+
 	function convertRef( i : Serializable, c : Convert ) {
 		var values = new haxe.ds.Vector<Dynamic>(c.read.length);
 		var writePos = 0;

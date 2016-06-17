@@ -212,7 +212,8 @@ class NetworkHost {
 			var v = ctx.getAnyRef();
 			if( v == null ) break;
 		}
-		ctx.setInput(null,0);
+		ctx.endLoadSave();
+		ctx.setInput(null, 0);
 	}
 
 	function mark(o:NetworkSerializable) {
