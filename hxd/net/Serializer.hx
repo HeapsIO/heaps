@@ -330,8 +330,9 @@ class Serializer {
 		if( s == null )
 			addByte(0);
 		else {
-			addInt(s.length + 1);
-			out.addString(s);
+			var b = haxe.io.Bytes.ofString(s);
+			addInt(b.length + 1);
+			out.add(b);
 		}
 	}
 
