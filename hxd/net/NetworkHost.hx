@@ -195,45 +195,25 @@ class NetworkHost {
 
 	public function saveState() {
 		var s = new hxd.net.Serializer();
-		s.begin();
-		var clids = [];
+		s.beginSave();
 		for( r in ctx.refs )
-			if( !s.refs.exists(r.__uid) ) {
-				var cl = r.getCLID();
-				var cval = Type.getClass(r);
-				s.addCLID(cl);
-				if( !clids[cl] ) {
-					clids[cl] = true;
-					s.addString(Type.getClassName(cval));
-				}
-				s.addKnownRef(r);
-				s.addByte(EOM);
-			}
-		s.addCLID(0xFFFF);
-		return s.end();
+			if( !s.refs.exists(r.__uid) )
+				s.addAnyRef(r);
+		s.addAnyRef(null);
+		return s.endSave();
 	}
 
 	public function loadSave( bytes : haxe.io.Bytes ) {
 		ctx.refs = new Map();
 		@:privateAccess ctx.newObjects = [];
 		ctx.setInput(bytes, 0);
-		var classByName = new Map();
-		for( c in @:privateAccess Serializer.CLASSES )
-			classByName.set(Type.getClassName(c), c);
-		var clids = [];
+		ctx.beginLoadSave();
 		while( true ) {
-			var cl = ctx.getCLID();
-			if( cl == 0xFFFF ) break;
-			var cval = clids[cl];
-			if( cval == null ) {
-				var cname = ctx.getString();
-				cval = classByName.get(cname);
-				if( cval == null ) throw "Unsupported class " + cname;
-				clids[cl] = cval;
-			}
-			ctx.getKnownRef(cval);
-			if( ctx.getByte() != EOM ) throw "Save file is not compatible with current version";
+			var v = ctx.getAnyRef();
+			if( v == null ) break;
 		}
+		ctx.endLoadSave();
+		ctx.setInput(null, 0);
 	}
 
 	function mark(o:NetworkSerializable) {
