@@ -9,6 +9,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var bufPos : Int;
 	public var textures : h3d.impl.TextureCache;
 	public var scene : h2d.Scene;
+	public var defaultFilter : Bool = false;
 
 	public var tmpBounds = new h2d.col.Bounds();
 	var texture : h3d.mat.Texture;
@@ -48,9 +49,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		targetsStack = [];
 		textures = new h3d.impl.TextureCache();
 	}
-	
+
 	public function dispose() {
-		textures.dispose();	
+		textures.dispose();
 		if( fixedBuffer != null ) fixedBuffer.dispose();
 	}
 
@@ -158,7 +159,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function beforeDraw() {
 		if( texture == null ) texture = h3d.mat.Texture.fromColor(0xFF00FF);
 		baseShader.texture = texture;
-		texture.filter = currentObj.filter ? Linear : Nearest;
+		var f = currentObj.filter;
+		texture.filter = (currentObj.filter == null ? defaultFilter : currentObj.filter) ? Linear : Nearest;
 		texture.wrap = currentObj.tileWrap ? Repeat : Clamp;
 		var blend = currentObj.blendMode;
 		if( inFilter == currentObj  && blend == Erase ) blend = Add; // add THEN erase

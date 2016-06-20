@@ -10,6 +10,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var mouseY(get, null) : Float;
 
 	public var zoom(get, set) : Int;
+	public var defaultFilter(get, set) : Bool;
 
 	var fixedSize : Bool;
 	var interactive : Array<Interactive>;
@@ -30,6 +31,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		stage = hxd.Stage.getInstance();
 		posChanged = true;
 	}
+
+	inline function get_defaultFilter() return ctx.defaultFilter;
+	inline function set_defaultFilter(v) return ctx.defaultFilter = v;
 
 	public function setEvents(events) {
 		this.events = events;
