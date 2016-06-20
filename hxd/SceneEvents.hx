@@ -190,7 +190,7 @@ class SceneEvents {
 				else {
 					var s = i.getInteractiveScene();
 					if( s == null ) continue;
-					event.kind = EReleaseNoClick;
+					event.kind = EReleaseOutside;
 					s.dispatchEvent(event,i);
 					event.kind = ERelease;
 					event.relX = oldX;

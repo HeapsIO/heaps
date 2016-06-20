@@ -61,11 +61,11 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 					onClick(e);
 			}
 			isMouseDown = -1;
-		case EReleaseNoClick:
+		case EReleaseOutside:
 			if( enableRightButton || e.button == 0 ) {
 				e.kind = ERelease;
 				onRelease(e);
-				e.kind = EReleaseNoClick;
+				e.kind = EReleaseOutside;
 			}
 			isMouseDown = -1;
 		case EOver:

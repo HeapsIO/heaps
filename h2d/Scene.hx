@@ -228,7 +228,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 			event.relX = (kx / max) * i.width;
 			event.relY = (ky / max) * i.height;
-
 			i.handleEvent(event);
 
 			if( event.cancel ) {

@@ -74,7 +74,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	function checkBounds( e : hxd.Event ) {
 		return switch( e.kind ) {
-		case EOut, ERelease, EFocus, EFocusLost: false;
+		case EOut, EFocus, EFocusLost: false;
 		default: true;
 		}
 	}
@@ -84,7 +84,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	@:noCompletion public function handleEvent( e : hxd.Event ) {
-		if( parentMask != null ) {
+		if( parentMask != null && checkBounds(e) ) {
 			var p = parentMask;
 			var pt = new h2d.col.Point(e.relX, e.relY);
 			localToGlobal(pt);
@@ -94,6 +94,10 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 				pt.y = saveY;
 				var pt = p.globalToLocal(pt);
 				if( pt.x < 0 || pt.y < 0 || pt.x > p.width || pt.y > p.height ) {
+					if( e.kind == ERelease ) {
+						mouseDownButton = -1;
+						break;
+					}
 					e.cancel = true;
 					return;
 				}
@@ -105,8 +109,12 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			var dx = (e.relX - cx) / cx;
 			var dy = (e.relY - cy) / cy;
 			if( dx * dx + dy * dy > 1 ) {
-				e.cancel = true;
-				return;
+				if( e.kind == ERelease )
+					mouseDownButton = -1;
+				else {
+					e.cancel = true;
+					return;
+				}
 			}
 		}
 		if( propagateEvents ) e.propagate = true;
@@ -126,11 +134,11 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 					onClick(e);
 			}
 			mouseDownButton = -1;
-		case EReleaseNoClick:
+		case EReleaseOutside:
 			if( enableRightButton || e.button == 0 ) {
 				e.kind = ERelease;
 				onRelease(e);
-				e.kind = EReleaseNoClick;
+				e.kind = EReleaseOutside;
 			}
 			mouseDownButton = -1;
 		case EOver:
