@@ -138,4 +138,14 @@ class HtmlText extends Text {
 		return c;
 	}
 
+	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
+		if( forSize )
+			for( i in images )
+				i.visible = false;
+		super.getBoundsRec(relativeTo, out, forSize);
+		if( forSize )
+			for( i in images )
+				i.visible = true;
+	}
+
 }
