@@ -473,6 +473,7 @@ class Serializer {
 			schemas.push(schema);
 			classes.push(i);
 			addKnownRef(schema);
+			refs.remove(schema.__uid);
 		}
 		var schemaData = end();
 		begin();
@@ -540,7 +541,7 @@ class Serializer {
 				var schema = getKnownRef(Schema);
 				refs.remove(schema.__uid);
 				if( ourSchema != null )
-					convert[index] = new Convert(ourSchema, schema);
+					convert[mapIndexes[index]] = new Convert(ourSchema, schema);
 			}
 		} else {
 			// skip schema data
