@@ -84,7 +84,7 @@ class Flow extends Sprite {
 	/**
 		The horizontal space between two flowed elements.
 	**/
-	public var horitontalSpacing(default, set) : Int = 0;
+	public var horizontalSpacing(default, set) : Int = 0;
 
 	/**
 		The vertical space between two flowed elements.
@@ -332,11 +332,11 @@ class Flow extends Sprite {
 		return minHeight = h;
 	}
 
-	function set_horitontalSpacing(s) {
-		if( horitontalSpacing == s )
+	function set_horizontalSpacing(s) {
+		if( horizontalSpacing == s )
 			return s;
 		needReflow = true;
-		return horitontalSpacing = s;
+		return horizontalSpacing = s;
 	}
 
 	function set_verticalSpacing(s) {
@@ -472,7 +472,7 @@ class Flow extends Sprite {
 				p.isBreak = br;
 				x += p.calculatedWidth;
 				if( x > cw ) cw = x;
-				x += horitontalSpacing;
+				x += horizontalSpacing;
 				if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
 			}
 			alignLine(childs.length);
@@ -502,7 +502,7 @@ class Flow extends Sprite {
 					}
 					xmax -= p.calculatedWidth;
 					px = xmax;
-					xmax -= horitontalSpacing;
+					xmax -= horizontalSpacing;
 				case Middle:
 					if( midSpace == 0 ) {
 						var remSize = p.calculatedWidth;
@@ -510,20 +510,20 @@ class Flow extends Sprite {
 							var p = properties[j];
 							if( p.isAbsolute || !childs[j].visible ) continue;
 							if( p.isBreak ) break;
-							remSize += horitontalSpacing + p.calculatedWidth;
+							remSize += horizontalSpacing + p.calculatedWidth;
 						}
 						midSpace = Std.int(((xmax - xmin) - remSize) * 0.5);
 						xmin += midSpace;
 					}
 					px = xmin;
-					xmin += p.calculatedWidth + horitontalSpacing;
+					xmin += p.calculatedWidth + horizontalSpacing;
 				default:
 					if( midSpace != 0 ) {
 						xmin += midSpace;
 						midSpace = 0;
 					}
 					px = xmin;
-					xmin += p.calculatedWidth + horitontalSpacing;
+					xmin += p.calculatedWidth + horizontalSpacing;
 				}
 				childs[i].x = px + p.offsetX + p.paddingLeft;
 			}
@@ -584,7 +584,7 @@ class Flow extends Sprite {
 				if( y + p.calculatedHeight > maxHeight && y > startY ) {
 					br = true;
 					alignLine(i);
-					x += maxColWidth + horitontalSpacing;
+					x += maxColWidth + horizontalSpacing;
 					maxColWidth = 0;
 					y = startY;
 				}
