@@ -79,6 +79,13 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		}
 	}
 
+	/**
+		This can be called during or after a push event in order to prevent the release from triggering a click.
+	**/
+	public function preventClick() {
+		mouseDownButton = -1;
+	}
+
 	@:noCompletion public function getInteractiveScene() : hxd.SceneEvents.InteractiveScene {
 		return scene;
 	}
