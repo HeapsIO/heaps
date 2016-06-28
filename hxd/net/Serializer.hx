@@ -28,10 +28,12 @@ class Convert {
 			var oldT = schema.fieldsTypes[i];
 			var newT = ourMap.get(schema.fieldsNames[i]);
 			var c = new ConvertField(oldT, newT);
-			if( newT != null && sameType(oldT, newT) )
-				c.same = true;
-			else
-				c.defaultValue = getDefault(newT);
+			if( newT != null ) {
+				if( sameType(oldT, newT) )
+					c.same = true;
+				else
+					c.defaultValue = getDefault(newT);
+			}
 			c.index = read.length;
 			read.push(c);
 			map.set(schema.fieldsNames[i], c);
@@ -440,6 +442,7 @@ class Serializer {
 		if( CLIDS[clidx] != 0 ) {
 			var realIdx = getCLID();
 			c = cast CL_BYID[realIdx];
+			if( convert != null ) clidx = untyped c.__clid; // real class convert
 		}
 		var i : T = Type.createEmptyInstance(c);
 		if( newObjects != null ) newObjects.push(i);
