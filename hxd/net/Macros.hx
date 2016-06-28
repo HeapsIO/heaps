@@ -24,7 +24,8 @@ enum RpcMode {
 	Server;
 	/*
 		When called on the client: will forward the call to the server if not the owner, or else execute locally.
-		When called on the server: will forward the call to the owner
+		When called on the server: will forward the call to the owner.
+		Will fail if there is no owner.
 	*/
 	Owner;
 }

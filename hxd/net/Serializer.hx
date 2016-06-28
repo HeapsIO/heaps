@@ -30,6 +30,8 @@ class Convert {
 			var c = new ConvertField(oldT, newT);
 			if( newT != null && sameType(oldT, newT) )
 				c.same = true;
+			else
+				c.defaultValue = getDefault(newT);
 			c.index = read.length;
 			read.push(c);
 			map.set(schema.fieldsNames[i], c);
@@ -569,8 +571,12 @@ class Serializer {
 				v = w.defaultValue;
 			else {
 				v = values[w.index];
-				if( !w.same )
-					v = convertValue(v, w.from, w.to);
+				if( !w.same ) {
+					if( v == null )
+						v = w.defaultValue;
+					else
+						v = convertValue(v, w.from, w.to);
+				}
 			}
 			writeValue(v, w.to);
 		}
@@ -591,8 +597,6 @@ class Serializer {
 	}
 
 	function convertValue( v : Dynamic, from : Schema.FieldType, to : Schema.FieldType ) : Dynamic {
-		if( v == null && isNullable(to) )
-			return null;
 		throw "Cannot convert " + v + " from " + from + " to " + to;
 	}
 
