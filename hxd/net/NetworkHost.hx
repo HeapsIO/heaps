@@ -343,10 +343,15 @@ class NetworkHost {
 		return @:privateAccess ctx.newObjects.length == 0 && aliveEvents.length == 0;
 	}
 
+	static function sortByUID(o1:Serializable, o2:Serializable) {
+		return o1.__uid - o2.__uid;
+	}
+
 	public function makeAlive() {
 		var objs = @:privateAccess ctx.newObjects;
 		if( objs.length == 0 )
 			return;
+		objs.sort(sortByUID);
 		while( true ) {
 			var o = objs.shift();
 			if( o == null ) break;
