@@ -126,6 +126,7 @@ abstract ArrayProxy<T>(ArrayProxyData<T>) {
 	}
 
 	@:from static inline function fromArray<T>( a : Array<T> ) {
+		if( a == null ) return null;
 		return new ArrayProxy(new ArrayProxyData(a));
 	}
 }
