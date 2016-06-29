@@ -10,6 +10,7 @@ class HMDModel extends MeshPrimitive {
 	var curMaterial : Int;
 	var collider : h3d.col.Collider;
 	var normalsRecomputed : String;
+	var bufferAliases : Map<String,{ realName : String, offset : Int }> = new Map();
 
 	public function new(data, dataPos, lib) {
 		this.data = data;
@@ -35,6 +36,10 @@ class HMDModel extends MeshPrimitive {
 
 	public function getDataBuffers(fmt, ?defaults,?material) {
 		return lib.getBuffers(data, fmt, defaults, material);
+	}
+
+	public function addAlias( name : String, realName : String, offset = 0 ) {
+		bufferAliases.set(name, {realName : realName, offset : offset });
 	}
 
 	override function alloc(engine:h3d.Engine) {
@@ -75,6 +80,14 @@ class HMDModel extends MeshPrimitive {
 
 		if( normalsRecomputed != null )
 			recomputeNormals(normalsRecomputed);
+
+		for( name in bufferAliases.keys() ) {
+			var alias = bufferAliases.get(name);
+			var buffer = bufferCache.get(hxsl.Globals.allocID(alias.realName));
+			if( buffer == null ) throw "Buffer " + alias.realName+" not found for alias " + name;
+			if( buffer.offset + alias.offset > buffer.buffer.buffer.stride ) throw "Alias " + name+" for buffer " + alias.realName+" outside stride";
+			addBuffer(name, buffer.buffer, buffer.offset + alias.offset);
+		}
 	}
 
 	public function recomputeNormals( ?name : String ) {
