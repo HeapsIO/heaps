@@ -421,9 +421,9 @@ class Serializer {
 		var clidx = getCLID();
 		if( mapIndexes != null ) clidx = mapIndexes[clidx];
 		var i : Serializable = Type.createEmptyInstance(CLASSES[clidx]);
-
 		if( newObjects != null ) newObjects.push(i);
 		i.__uid = id;
+		i.unserializeInit();
 		refs[id] = i;
 		if( convert != null && convert[clidx] != null )
 			convertRef(i, convert[clidx]);
@@ -447,6 +447,7 @@ class Serializer {
 		var i : T = Type.createEmptyInstance(c);
 		if( newObjects != null ) newObjects.push(i);
 		i.__uid = id;
+		i.unserializeInit();
 		refs[id] = i;
 		if( convert != null && convert[clidx] != null )
 			convertRef(i, convert[clidx]);

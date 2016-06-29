@@ -514,6 +514,7 @@ class Macros {
 			ul.push(withPos(macro hxd.net.Macros.unserializeValue(__ctx, this.$fname),f.f.pos));
 		}
 
+		var noCompletion = [{ name : ":noCompletion", pos : pos }];
 		var access = [APublic];
 		if( isSubSer )
 			access.push(AOverride);
@@ -522,21 +523,21 @@ class Macros {
 				name : "__uid",
 				pos : pos,
 				access : [APublic],
-				meta : [{ name : ":noCompletion", pos : pos }],
+				meta : noCompletion,
 				kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.allocUID()),
 			});
 		fields.push({
 			name : "__clid",
 			pos : pos,
 			access : [AStatic],
-			meta : [{ name : ":noCompletion", pos : pos }],
+			meta : noCompletion,
 			kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.registerClass($i{cl.name})),
 		});
 		fields.push({
 			name : "getCLID",
 			pos : pos,
 			access : access,
-			meta : [{ name : ":noCompletion", pos : pos }],
+			meta : noCompletion,
 			kind : FFun({ args : [], ret : macro : Int, expr : macro return __clid }),
 		});
 
@@ -562,6 +563,7 @@ class Macros {
 				name : "getSerializeSchema",
 				pos : pos,
 				access : access,
+				meta : noCompletion,
 				kind : FFun({
 					args : [],
 					ret : null,
@@ -570,8 +572,21 @@ class Macros {
 			});
 		}
 
+		if( fieldsInits.length > 0 || !isSubSer )
+			fields.push({
+				name : "unserializeInit",
+				pos : pos,
+				meta : noCompletion,
+				access : access,
+				kind : FFun({
+					args : [],
+					ret : null,
+					expr : isSubSer ? macro { super.unserializeInit(); $b{fieldsInits}; } : { expr : EBlock(fieldsInits), pos : pos },
+				})
+			});
+
 		if( needUnserialize ) {
-			var unserExpr = macro @:privateAccess { $b{fieldsInits}; ${ if( isSubSer ) macro super.unserialize(__ctx) else macro { } }; $b{ul} };
+			var unserExpr = macro @:privateAccess { ${ if( isSubSer ) macro super.unserialize(__ctx) else macro { } }; $b{ul} };
 
 			for( f in fields )
 				if( f.name == "unserialize" ) {
