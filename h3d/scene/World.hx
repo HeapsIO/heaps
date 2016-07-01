@@ -131,6 +131,8 @@ class World extends Object {
 		while( chunkSize > (1 << chunkBits) )
 			chunkBits++;
 		this.chunkSize = 1 << chunkBits;
+		if( worldSize % chunkSize != 0 )
+			throw "World size must be a multiple of chunk size";
 		this.worldSize = worldSize;
 		this.worldStride = Math.ceil(worldSize / chunkSize);
 		if( autoCollect )
