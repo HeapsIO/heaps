@@ -68,8 +68,11 @@ class NetworkClient {
 				o.__host = null;
 				o.networkRPC(ctx, fid, this);
 				o.__host = old;
-			} else
+			} else {
+				host.rpcClientValue = this;
 				o.networkRPC(ctx, fid, this);
+				host.rpcClientValue = null;
+			}
 		case NetworkHost.RPC_WITH_RESULT:
 
 			var old = resultID;
@@ -155,6 +158,11 @@ class NetworkHost {
 
 	public var isAuth(default, null) : Bool;
 
+	/**
+		When a RPC of type Server is performed, this will tell the originating client from the RPC.
+	**/
+	public var rpcClient(get, never) : NetworkClient;
+
 	public var sendRate : Float = 0.;
 	public var totalSentBytes : Int = 0;
 
@@ -169,6 +177,7 @@ class NetworkHost {
 	var rpcUID = Std.random(0x1000000);
 	var rpcWaits = new Map<Int,Serializer->Void>();
 	var targetClient : NetworkClient;
+	var rpcClientValue : NetworkClient;
 	var aliveEvents : Array<Void->Void>;
 	public var self(default,null) : NetworkClient;
 
@@ -186,45 +195,25 @@ class NetworkHost {
 
 	public function saveState() {
 		var s = new hxd.net.Serializer();
-		s.begin();
-		var clids = [];
+		s.beginSave();
 		for( r in ctx.refs )
-			if( !s.refs.exists(r.__uid) ) {
-				var cl = r.getCLID();
-				var cval = Type.getClass(r);
-				s.addInt(cl);
-				if( !clids[cl] ) {
-					clids[cl] = true;
-					s.addString(Type.getClassName(cval));
-				}
-				s.addKnownRef(r);
-				s.addByte(EOM);
-			}
-		s.addInt(-1);
-		return s.end();
+			if( !s.refs.exists(r.__uid) )
+				s.addAnyRef(r);
+		s.addAnyRef(null);
+		return s.endSave();
 	}
 
 	public function loadSave( bytes : haxe.io.Bytes ) {
 		ctx.refs = new Map();
 		@:privateAccess ctx.newObjects = [];
 		ctx.setInput(bytes, 0);
-		var classByName = new Map();
-		for( c in @:privateAccess Serializer.CLASSES )
-			classByName.set(Type.getClassName(c), c);
-		var clids = [];
+		ctx.beginLoadSave();
 		while( true ) {
-			var cl = ctx.getInt();
-			if( cl < 0 ) break;
-			var cval = clids[cl];
-			if( cval == null ) {
-				var cname = ctx.getString();
-				cval = classByName.get(cname);
-				if( cval == null ) throw "Unsupported class " + cname;
-				clids[cl] = cval;
-			}
-			ctx.getKnownRef(cval);
-			if( ctx.getByte() != EOM ) throw "Save file is not compatible with current version";
+			var v = ctx.getAnyRef();
+			if( v == null ) break;
 		}
+		ctx.endLoadSave();
+		ctx.setInput(null, 0);
 	}
 
 	function mark(o:NetworkSerializable) {
@@ -237,6 +226,10 @@ class NetworkHost {
 		o.__next = markHead;
 		markHead = o;
 		return true;
+	}
+
+	function get_rpcClient() {
+		return rpcClientValue == null ? self : rpcClientValue;
 	}
 
 	public dynamic function onMessage( from : NetworkClient, msg : Dynamic ) {
@@ -350,10 +343,15 @@ class NetworkHost {
 		return @:privateAccess ctx.newObjects.length == 0 && aliveEvents.length == 0;
 	}
 
+	static function sortByUID(o1:Serializable, o2:Serializable) {
+		return o1.__uid - o2.__uid;
+	}
+
 	public function makeAlive() {
 		var objs = @:privateAccess ctx.newObjects;
 		if( objs.length == 0 )
 			return;
+		objs.sort(sortByUID);
 		while( true ) {
 			var o = objs.shift();
 			if( o == null ) break;
@@ -386,7 +384,7 @@ class NetworkHost {
 		ctx.addAnyRef(o);
 		if( checkEOM ) ctx.addByte(EOM);
 	}
-	
+
 	function unmark( o : NetworkSerializable ) {
 		if( o.__next == null )
 			return;
@@ -413,7 +411,7 @@ class NetworkHost {
 		}
 		flushProps(); // send changes
 		o.__host = null;
-		o.__bits = 0;		
+		o.__bits = 0;
 		unmark(o);
 		if( logger != null )
 			logger("Unregister " + o+"#"+o.__uid);

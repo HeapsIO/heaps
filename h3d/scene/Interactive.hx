@@ -14,7 +14,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	public var propagateEvents : Bool = false;
 	public var enableRightButton : Bool;
 	var scene : Scene;
-	var isMouseDown : Int;
+	var mouseDownButton : Int = -1;
 
 	@:allow(h3d.scene.Scene)
 	var hitPoint = new h3d.Vector();
@@ -39,6 +39,13 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		super.onDelete();
 	}
 
+	/**
+		This can be called during or after a push event in order to prevent the release from triggering a click.
+	**/
+	public function preventClick() {
+		mouseDownButton = -1;
+	}
+
 	@:noCompletion public function getInteractiveScene() : hxd.SceneEvents.InteractiveScene {
 		return scene;
 	}
@@ -51,28 +58,28 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 			onMove(e);
 		case EPush:
 			if( enableRightButton || e.button == 0 ) {
-				isMouseDown = e.button;
+				mouseDownButton = e.button;
 				onPush(e);
 			}
 		case ERelease:
 			if( enableRightButton || e.button == 0 ) {
 				onRelease(e);
-				if( isMouseDown == e.button )
+				if( mouseDownButton == e.button )
 					onClick(e);
 			}
-			isMouseDown = -1;
-		case EReleaseNoClick:
+			mouseDownButton = -1;
+		case EReleaseOutside:
 			if( enableRightButton || e.button == 0 ) {
 				e.kind = ERelease;
 				onRelease(e);
-				e.kind = EReleaseNoClick;
+				e.kind = EReleaseOutside;
 			}
-			isMouseDown = -1;
+			mouseDownButton = -1;
 		case EOver:
 			hxd.System.setCursor(cursor);
 			onOver(e);
 		case EOut:
-			isMouseDown = -1;
+			mouseDownButton = -1;
 			hxd.System.setCursor(Default);
 			onOut(e);
 		case EWheel:

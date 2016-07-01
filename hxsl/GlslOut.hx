@@ -20,11 +20,12 @@ class GlslOut {
 		m.set(ToBool, "bool");
 		m.set(Texture2D, "_texture2D");
 		m.set(LReflect, "reflect");
+		m.set(Mat3x4, "_mat3x4");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
 	};
-	static var MAT34 = "struct mat3x4 { vec4 a; vec4 b; vec4 c; };";
+	static var MAT34 = "struct _mat3x4 { vec4 a; vec4 b; vec4 c; };";
 
 	var buf : StringBuf;
 	var exprIds = 0;
@@ -85,7 +86,7 @@ class GlslOut {
 			add("mat4");
 		case TMat3x4:
 			decl(MAT34);
-			add("mat3x4");
+			add("_mat3x4");
 		case TSampler2D:
 			add("sampler2D");
 		case TSamplerCube:
@@ -215,7 +216,7 @@ class GlslOut {
 			switch( [op, e1.t, e2.t] ) {
 			case [OpMult, TVec(3,VFloat), TMat3x4]:
 				decl(MAT34);
-				decl("vec3 m3x4mult( vec3 v, mat3x4 m) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }");
+				decl("vec3 m3x4mult( vec3 v, _mat3x4 m) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }");
 				add("m3x4mult(");
 				addValue(e1, tabs);
 				add(",");
@@ -269,7 +270,7 @@ class GlslOut {
 				add("/*var*/");
 			}
 		case TCall( { e : TGlobal(Mat3) }, [e]) if( e.t == TMat3x4 ):
-			decl("mat3 _mat3( mat3x4 v ) { return mat3(v.a.xyz,v.b.xyz,v.c.xyz); }");
+			decl("mat3 _mat3( _mat3x4 v ) { return mat3(v.a.xyz,v.b.xyz,v.c.xyz); }");
 			add("_mat3(");
 			addValue(e, tabs);
 			add(")");

@@ -622,8 +622,13 @@ class System {
 		}
 		win = new sdl.Window("", windowWidth, windowHeight);
 		init();
+		#if hl
+		sdl.Sdl.defaultEventHandler = onEvent;
+		haxe.MainLoop.add(mainLoop);
+		#else
 		sdl.Sdl.loop(mainLoop,onEvent);
 		sdl.Sdl.quit();
+		#end
 	}
 
 	#elseif hl

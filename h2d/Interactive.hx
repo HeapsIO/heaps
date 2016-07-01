@@ -17,7 +17,8 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	public var backgroundColor : Null<Int>;
 	public var enableRightButton : Bool;
 	var scene : Scene;
-	var isMouseDown : Int;
+	var mouseDownButton : Int = -1;
+	var parentMask : Mask;
 
 	public function new(width, height, ?parent) {
 		super(parent);
@@ -29,6 +30,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	override function onAlloc() {
 		this.scene = getScene();
 		if( scene != null ) scene.addEventTarget(this);
+		updateMask();
 		super.onAlloc();
 	}
 
@@ -46,6 +48,20 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			scene.removeEventTarget(this);
 			scene.addEventTarget(this);
 		}
+		updateMask();
+	}
+
+	function updateMask() {
+		parentMask = null;
+		var p = parent;
+		while( p != null ) {
+			var m = Std.instance(p, Mask);
+			if( m != null ) {
+				parentMask = m;
+				break;
+			}
+			p = p.parent;
+		}
 	}
 
 	override function onDelete() {
@@ -58,9 +74,16 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	function checkBounds( e : hxd.Event ) {
 		return switch( e.kind ) {
-		case EOut, ERelease, EFocus, EFocusLost: false;
+		case EOut, EFocus, EFocusLost: false;
 		default: true;
 		}
+	}
+
+	/**
+		This can be called during or after a push event in order to prevent the release from triggering a click.
+	**/
+	public function preventClick() {
+		mouseDownButton = -1;
 	}
 
 	@:noCompletion public function getInteractiveScene() : hxd.SceneEvents.InteractiveScene {
@@ -68,13 +91,37 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	@:noCompletion public function handleEvent( e : hxd.Event ) {
+		if( parentMask != null && checkBounds(e) ) {
+			var p = parentMask;
+			var pt = new h2d.col.Point(e.relX, e.relY);
+			localToGlobal(pt);
+			var saveX = pt.x, saveY = pt.y;
+			while( p != null ) {
+				pt.x = saveX;
+				pt.y = saveY;
+				var pt = p.globalToLocal(pt);
+				if( pt.x < 0 || pt.y < 0 || pt.x > p.width || pt.y > p.height ) {
+					if( e.kind == ERelease ) {
+						mouseDownButton = -1;
+						break;
+					}
+					e.cancel = true;
+					return;
+				}
+				p = @:privateAccess p.parentMask;
+			}
+		}
 		if( isEllipse && checkBounds(e) ) {
 			var cx = width * 0.5, cy = height * 0.5;
 			var dx = (e.relX - cx) / cx;
 			var dy = (e.relY - cy) / cy;
 			if( dx * dx + dy * dy > 1 ) {
-				e.cancel = true;
-				return;
+				if( e.kind == ERelease )
+					mouseDownButton = -1;
+				else {
+					e.cancel = true;
+					return;
+				}
 			}
 		}
 		if( propagateEvents ) e.propagate = true;
@@ -84,28 +131,28 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			onMove(e);
 		case EPush:
 			if( enableRightButton || e.button == 0 ) {
-				isMouseDown = e.button;
+				mouseDownButton = e.button;
 				onPush(e);
 			}
 		case ERelease:
 			if( enableRightButton || e.button == 0 ) {
 				onRelease(e);
-				if( isMouseDown == e.button )
+				if( mouseDownButton == e.button )
 					onClick(e);
 			}
-			isMouseDown = -1;
-		case EReleaseNoClick:
+			mouseDownButton = -1;
+		case EReleaseOutside:
 			if( enableRightButton || e.button == 0 ) {
 				e.kind = ERelease;
 				onRelease(e);
-				e.kind = EReleaseNoClick;
+				e.kind = EReleaseOutside;
 			}
-			isMouseDown = -1;
+			mouseDownButton = -1;
 		case EOver:
 			hxd.System.setCursor(cursor);
 			onOver(e);
 		case EOut:
-			isMouseDown = -1;
+			mouseDownButton = -1;
 			hxd.System.setCursor(Default);
 			onOut(e);
 		case EWheel:

@@ -24,38 +24,41 @@ enum RpcMode {
 	Server;
 	/*
 		When called on the client: will forward the call to the server if not the owner, or else execute locally.
-		When called on the server: will forward the call to the owner
+		When called on the server: will forward the call to the owner.
+		Will fail if there is no owner.
 	*/
 	Owner;
 }
 
-enum PropTypeDesc {
+enum PropTypeDesc<PropType> {
 	PInt;
 	PFloat;
 	PBool;
 	PString;
 	PBytes;
-	PSerializable;
-	PEnum;
+	PSerializable( name : String );
+	PEnum( name : String );
 	PMap( k : PropType, v : PropType );
 	PArray( k : PropType );
 	PObj( fields : Array<{ name : String, type : PropType, opt : Bool }> );
 	PAlias( k : PropType );
 	PVector( k : PropType );
+	PNull( t : PropType );
 	PUnknown;
 }
 
 typedef PropType = {
-	var d : PropTypeDesc;
+	var d : PropTypeDesc<PropType>;
 	var t : ComplexType;
 	@:optional var isProxy : Bool;
-	@:optional var isNull : Bool;
 	@:optional var increment : Float;
 	@:optional var condSend : Expr;
 	@:optional var notMutable : Bool;
 }
 
 class Macros {
+
+	static var IN_ENUM_SER = false;
 
 	public static macro function serializeValue( ctx : Expr, v : Expr ) : Expr {
 		var t = Context.typeof(v);
@@ -64,6 +67,7 @@ class Macros {
 			Context.error("Unsupported serializable type " + t.toString(), v.pos);
 			return macro { };
 		}
+		IN_ENUM_SER = StringTools.startsWith(Context.getLocalClass().toString(), "hxd.net.enumSer.");
 		return serializeExpr(ctx, v, pt);
 	}
 
@@ -73,10 +77,39 @@ class Macros {
 		if( pt == null ) {
 			return macro { };
 		}
+		IN_ENUM_SER = StringTools.startsWith(Context.getLocalClass().toString(), "hxd.net.enumSer.");
 		return unserializeExpr(ctx, v, pt);
 	}
 
+	public static macro function getFieldType( v : Expr ) {
+		var t = Context.typeof(v);
+		var pt = getPropType(t);
+		if( pt == null )
+			return macro null;
+		var v = toFieldType(pt);
+		return macro $v{v};
+	}
+
 	#if macro
+
+	static function toFieldType( t : PropType ) : Schema.FieldType {
+		return switch( t.d ) {
+		case PInt: PInt;
+		case PFloat: PFloat;
+		case PBool: PBool;
+		case PString: PString;
+		case PBytes: PBytes;
+		case PSerializable(name): PSerializable(name);
+		case PEnum(name): PEnum(name);
+		case PMap(k, v): PMap(toFieldType(k), toFieldType(v));
+		case PArray(v): PArray(toFieldType(v));
+		case PObj(fields): PObj([for( f in fields ) { name : f.name, type : toFieldType(f.type), opt : f.opt }]);
+		case PAlias(t): return toFieldType(t);
+		case PVector(k): PVector(toFieldType(k));
+		case PNull(t): PNull(toFieldType(t));
+		case PUnknown: PUnknown;
+		};
+	}
 
 	static function isSerializable( c : Ref<ClassType> ) {
 		while( true ) {
@@ -114,7 +147,7 @@ class Macros {
 				if( inc == null )
 					Context.error("Increment requires value parameter", m.pos);
 				switch( t.d ) {
-				case PFloat:
+				case PFloat, PNull({ d : PFloat }):
 					t.increment = inc;
 				default:
 					Context.error("Increment not allowed on " + t.t.toString(), m.pos);
@@ -137,7 +170,7 @@ class Macros {
 			switch( a.toString() ) {
 			case "Float":
 				PFloat;
-			case "Int":
+			case "Int","UInt":
 				PInt;
 			case "Bool":
 				PBool;
@@ -181,8 +214,8 @@ class Macros {
 				if( pt == null ) return null;
 				PAlias(pt);
 			}
-		case TEnum(_):
-			PEnum;
+		case TEnum(e,_):
+			PEnum(e.toString());
 		case TAnonymous(a):
 			var a = a.get();
 			var fields = [];
@@ -215,7 +248,7 @@ class Macros {
 				throw "assert";
 			default:
 				if( isSerializable(c) )
-					PSerializable;
+					PSerializable(c.toString());
 				else
 					return null;
 			}
@@ -223,10 +256,8 @@ class Macros {
 			switch( td.toString() ) {
 			case "Null":
 				var p = getPropType(pl[0]);
-				if( p != null && !isNullable(p) ) {
-					p.isNull = true;
-					p.t = TPath( { pack : [], name : "Null", params : [TPType(p.t)] } );
-				}
+				if( p != null && !isNullable(p) )
+					p = { d : PNull(p), t : TPath( { pack : [], name : "Null", params : [TPType(p.t)] } ) };
 				return p;
 			default:
 				var p = getPropType(Context.follow(t, true));
@@ -248,7 +279,7 @@ class Macros {
 	static function isNullable( t : PropType ) {
 		switch( t.d ) {
 		case PInt, PFloat, PBool:
-			return t.isNull;
+			return false;
 		default:
 			return true;
 		}
@@ -262,11 +293,6 @@ class Macros {
 
 		if( t.isProxy && !skipCheck )
 			return serializeExpr(ctx, { expr : EField(v, "__value"), pos : v.pos }, t, true);
-
-		if( t.isNull && !skipCheck ) {
-			var e = serializeExpr(ctx, v, t, true);
-			return macro if( $v == null ) $ctx.addByte(0) else { $ctx.addByte(1); $e; };
-		}
 
 		switch( t.d ) {
 		case PFloat:
@@ -283,9 +309,12 @@ class Macros {
 			var vk = { expr : EConst(CIdent("k")), pos : v.pos };
 			var vv = { expr : EConst(CIdent("v")), pos : v.pos };
 			return macro $ctx.addMap($v, function(k:$kt) return hxd.net.Macros.serializeValue($ctx, $vk), function(v:$vt) return hxd.net.Macros.serializeValue($ctx, $vv));
-		case PEnum:
+		case PEnum(_):
 			var et = t.t;
-			return macro (null : hxd.net.Serializable.SerializableEnum<$et>).serialize($ctx,$v);
+			var ser = "serialize";
+			if( IN_ENUM_SER )
+				ser += "2";
+			return macro (null : hxd.net.Serializable.SerializableEnum<$et>).$ser($ctx,$v);
 		case PObj(fields):
 			var nullables = [for( f in fields ) if( isNullable(f.type) ) f];
 			var ct = t.t;
@@ -326,22 +355,19 @@ class Macros {
 			var at = toProxy(t);
 			var ve = { expr : EConst(CIdent("e")), pos : v.pos };
 			return macro $ctx.addVector($v, function(e:$at) return hxd.net.Macros.serializeValue($ctx, $ve));
-		case PSerializable:
+		case PSerializable(_):
 			return macro $ctx.addKnownRef($v);
 		case PAlias(t):
 			return serializeExpr(ctx, { expr : ECast(v, null), pos : v.pos }, t);
+		case PNull(t):
+			var e = serializeExpr(ctx, v, t);
+			return macro if( $v == null ) $ctx.addByte(0) else { $ctx.addByte(1); $e; };
 		case PUnknown:
 			throw "assert";
 		}
 	}
 
-	static function unserializeExpr( ctx : Expr, v : Expr, t : PropType, skipCheck = false ) {
-
-		if( t.isNull && !skipCheck ) {
-			var e = unserializeExpr(ctx, v, t, true);
-			return macro if( $ctx.getByte() == 0 ) $v = null else $e;
-		}
-
+	static function unserializeExpr( ctx : Expr, v : Expr, t : PropType ) {
 		switch( t.d ) {
 		case PFloat:
 			return macro $v = $ctx.getFloat();
@@ -361,9 +387,12 @@ class Macros {
 				var v : $vt;
 				$v = $ctx.getMap(function() { hxd.net.Macros.unserializeValue($ctx, $vk); return $vk; }, function() { hxd.net.Macros.unserializeValue($ctx, $vv); return $vv; });
 			};
-		case PEnum:
+		case PEnum(_):
 			var et = t.t;
-			return macro { var e : $et; e = (null : hxd.net.Serializable.SerializableEnum<$et>).unserialize($ctx); $v = e; }
+			var unser = "unserialize";
+			if( IN_ENUM_SER )
+				unser += "2";
+			return macro { var __e : $et; __e = (null : hxd.net.Serializable.SerializableEnum<$et>).$unser($ctx); $v = __e; }
 		case PObj(fields):
 			var nullables = [for( f in fields ) if( isNullable(f.type) ) f];
 			if( nullables.length >= 32 )
@@ -412,7 +441,7 @@ class Macros {
 				var e : $at;
 				$v = $ctx.getVector(function() { hxd.net.Macros.unserializeValue($ctx, e); return e; });
 			};
-		case PSerializable:
+		case PSerializable(_):
 			function loop(t:ComplexType) {
 				switch( t ) {
 				case TPath( { name : "Null", params:[TPType(t)] } ):
@@ -424,7 +453,7 @@ class Macros {
 				}
 			}
 			var cexpr = Context.parse(loop(t.t).toString(), v.pos);
-			return macro $v = $ctx.getRef($cexpr,$cexpr.__clid);
+			return macro $v = $ctx.getRef($cexpr,@:privateAccess $cexpr.__clid);
 		case PAlias(at):
 			var cvt = at.t;
 			return macro {
@@ -432,6 +461,9 @@ class Macros {
 				${unserializeExpr(ctx,macro v,at)};
 				$v = cast v;
 			};
+		case PNull(t):
+			var e = unserializeExpr(ctx, v, t);
+			return macro if( $ctx.getByte() == 0 ) $v = null else $e;
 		case PUnknown:
 			throw "assert";
 		}
@@ -482,6 +514,7 @@ class Macros {
 			ul.push(withPos(macro hxd.net.Macros.unserializeValue(__ctx, this.$fname),f.f.pos));
 		}
 
+		var noCompletion = [{ name : ":noCompletion", pos : pos }];
 		var access = [APublic];
 		if( isSubSer )
 			access.push(AOverride);
@@ -490,21 +523,21 @@ class Macros {
 				name : "__uid",
 				pos : pos,
 				access : [APublic],
-				meta : [{ name : ":noCompletion", pos : pos }],
+				meta : noCompletion,
 				kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.allocUID()),
 			});
 		fields.push({
 			name : "__clid",
 			pos : pos,
 			access : [AStatic],
-			meta : [{ name : ":noCompletion", pos : pos }, { name : ":keep", pos : pos }],
+			meta : noCompletion,
 			kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.registerClass($i{cl.name})),
 		});
 		fields.push({
 			name : "getCLID",
 			pos : pos,
 			access : access,
-			meta : [{ name : ":noCompletion", pos : pos }],
+			meta : noCompletion,
 			kind : FFun({ args : [], ret : macro : Int, expr : macro return __clid }),
 		});
 
@@ -515,7 +548,6 @@ class Macros {
 			fields.push({
 				name : "serialize",
 				pos : pos,
-				meta : [ { name:":keep", pos:pos } ],
 				access : access,
 				kind : FFun({
 					args : [ { name : "__ctx", type : macro : hxd.net.Serializer } ],
@@ -523,10 +555,38 @@ class Macros {
 					expr : macro @:privateAccess { ${ if( isSubSer ) macro super.serialize(__ctx) else macro { } }; $b{el} }
 				}),
 			});
+			var schema = [for( s in toSerialize ) {
+				var name = s.f.name;
+				macro { schema.fieldsNames.push($v{name}); schema.fieldsTypes.push(hxd.net.Macros.getFieldType(this.$name)); }
+			}];
+			fields.push({
+				name : "getSerializeSchema",
+				pos : pos,
+				access : access,
+				meta : noCompletion,
+				kind : FFun({
+					args : [],
+					ret : null,
+					expr : macro { var schema = ${if( isSubSer ) macro super.getSerializeSchema() else macro new hxd.net.Schema()}; $b{schema}; return schema; }
+				})
+			});
 		}
 
+		if( fieldsInits.length > 0 || !isSubSer )
+			fields.push({
+				name : "unserializeInit",
+				pos : pos,
+				meta : noCompletion,
+				access : access,
+				kind : FFun({
+					args : [],
+					ret : null,
+					expr : isSubSer ? macro { super.unserializeInit(); $b{fieldsInits}; } : { expr : EBlock(fieldsInits), pos : pos },
+				})
+			});
+
 		if( needUnserialize ) {
-			var unserExpr = macro @:privateAccess { $b{fieldsInits}; ${ if( isSubSer ) macro super.unserialize(__ctx) else macro { } }; $b{ul} };
+			var unserExpr = macro @:privateAccess { ${ if( isSubSer ) macro super.unserialize(__ctx) else macro { } }; $b{ul} };
 
 			for( f in fields )
 				if( f.name == "unserialize" ) {
@@ -545,7 +605,6 @@ class Macros {
 						f.expr = repl(f.expr);
 					default:
 					}
-					f.meta.push( { name:":keep", pos:pos } );
 					if( !found ) Context.error("Override of unserialize() with no super.unserialize(ctx) found", f.pos);
 					return fields;
 				}
@@ -553,7 +612,6 @@ class Macros {
 			fields.push({
 				name : "unserialize",
 				pos : pos,
-				meta : [ { name:":keep", pos:pos } ],
 				access : access,
 				kind : FFun({
 					args : [ { name : "__ctx", type : macro : hxd.net.Serializer } ],
@@ -567,8 +625,15 @@ class Macros {
 	}
 
 	public static function buildSerializableEnum() {
-		switch( Context.getLocalType() ) {
-		case TInst(_, [tenum = TEnum(e, [])]):
+		var pt = switch( Context.getLocalType() ) {
+		case TInst(_, [pt]): pt;
+		default: null;
+		}
+		if( pt != null )
+			pt = Context.follow(pt);
+		if( pt != null )
+		switch( pt ) {
+		case TEnum(e, tparams):
 			var e = e.get();
 			var name = e.pack.length == 0 ? e.name : e.pack.join("_") + "_" + e.name;
 			try {
@@ -593,8 +658,8 @@ class Macros {
 
 						var evals = [];
 						for( a in args ) {
-							var aname = "_"+a.name;
-							var at = a.t.toComplexType();
+							var aname = "_" + a.name;
+							var at = haxe.macro.TypeTools.applyTypeParameters(a.t,e.params,tparams).toComplexType();
 							evals.push(macro var $aname : $at);
 							evals.push(macro hxd.net.Macros.unserializeValue(ctx,$i{aname}));
 						}
@@ -619,20 +684,19 @@ class Macros {
 					name : name,
 					pack : ["hxd","net","enumSer"],
 					kind : TDClass(),
-					fields : [{
-						name : "serialize",
-						meta : [{name:":extern",pos:pos}],
-						access : [APublic, AInline],
+					fields : [
+					{
+						name : "doSerialize",
+						access : [AStatic],
 						pos : pos,
 						kind : FFun( {
-							args : [{ name : "ctx", type : macro : hxd.net.Serializer },{ name : "v", type : tenum.toComplexType() }],
+							args : [{ name : "ctx", type : macro : hxd.net.Serializer },{ name : "v", type : pt.toComplexType() }],
 							expr : macro @:privateAccess if( v == null ) ctx.addByte(0) else ${{ expr : ESwitch(macro v,cases,null), pos : pos }},
-							ret : null,
+							ret : macro : Void,
 						}),
 					},{
-						name : "unserialize",
-						access : [APublic, AInline],
-						meta : [{name:":extern",pos:pos}],
+						name : "doUnserialize",
+						access : [AStatic],
 						pos : pos,
 						kind : FFun( {
 							args : [{ name : "ctx", type : macro : hxd.net.Serializer }],
@@ -642,12 +706,41 @@ class Macros {
 									return null;
 								return ${{ expr : ESwitch(macro b,ucases,macro throw "Invalid enum index "+b), pos : pos }}
 							},
-							ret : tenum.toComplexType(),
+							ret : pt.toComplexType(),
 						}),
 
+					},{
+						name : "serialize",
+						access : [AInline, APublic],
+						meta : [{name:":extern",pos:pos}],
+						pos : pos,
+						kind : FFun( {
+							args : [{ name : "ctx", type : macro : hxd.net.Serializer },{ name : "v", type : pt.toComplexType() }],
+							expr : macro doSerialize(ctx,v),
+							ret : null,
+						}),
+					},{
+						name : "unserialize",
+						access : [AInline, APublic],
+						meta : [{name:":extern",pos:pos}],
+						pos : pos,
+						kind : FFun( {
+							args : [{ name : "ctx", type : macro : hxd.net.Serializer }],
+							expr : macro return doUnserialize(ctx),
+							ret : null,
+						}),
 					}],
 					pos : pos,
 				};
+
+				// hack to allow recursion (duplicate serialize/unserialize for recursive usage)
+				var tf = Reflect.copy(t.fields[t.fields.length - 2]);
+				tf.name += "2";
+				t.fields.push(tf);
+				var tf = Reflect.copy(t.fields[t.fields.length - 2]);
+				tf.name += "2";
+				t.fields.push(tf);
+
 				Context.defineType(t);
 				return Context.getType("hxd.net.enumSer." + name);
 			}
@@ -913,7 +1006,7 @@ class Macros {
 					expr : macro {
 						if( this.$fname != v ) {
 							$markExpr;
-							${if( ftype.isProxy ) macro v.bindHost(this,$v{bitID}) else macro {}};
+							${if( ftype.isProxy ) macro (if( v != null ) v.bindHost(this,$v{bitID})) else macro {}};
 						}
 						return v;
 					}

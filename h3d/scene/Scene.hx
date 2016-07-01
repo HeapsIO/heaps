@@ -125,7 +125,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 			if( event.cancel ) {
 				event.cancel = false;
-				event.propagate = true;
+				event.propagate = false;
 				continue;
 			}
 

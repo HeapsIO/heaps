@@ -4,11 +4,34 @@ class Mask extends Sprite {
 
 	public var width : Int;
 	public var height : Int;
+	var parentMask : Mask;
 
 	public function new(width, height, ?parent) {
 		super(parent);
 		this.width = width;
 		this.height = height;
+	}
+
+	override function onParentChanged() {
+		updateMask();
+	}
+
+	override function onAlloc() {
+		super.onAlloc();
+		updateMask();
+	}
+
+	function updateMask() {
+		parentMask = null;
+		var p = parent;
+		while( p != null ) {
+			var m = Std.instance(p, Mask);
+			if( m != null ) {
+				parentMask = m;
+				break;
+			}
+			p = p.parent;
+		}
 	}
 
 	override function getBoundsRec( relativeTo, out, forSize ) {

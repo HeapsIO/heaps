@@ -55,6 +55,7 @@ abstract VectorProxy<T>(VectorProxyData<T>) {
 	}
 
 	@:from static inline function fromVector<T>( a : haxe.ds.Vector<T> ) {
+		if( a == null ) return null;
 		return new VectorProxy(new VectorProxyData(a));
 	}
 }
