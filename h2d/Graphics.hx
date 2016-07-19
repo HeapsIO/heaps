@@ -124,6 +124,7 @@ class Graphics extends Drawable {
 	var my : Float = 0.;
 
 	public var tile : h2d.Tile;
+	public var bevel = 0.25; //0 = not beveled, 1 = always beveled
 
 	public function new(?parent) {
 		super(parent);
@@ -209,27 +210,77 @@ class Graphics extends Drawable {
 			ny *= ns;
 
 			var size = nx * nx1 * ns1 + ny * ny1 * ns1; // N.N1
-			if( size < 0.1 ) size = 0.1;	//TODO : biseauter les angles quand size très faible
+			if(size < 0.1) size = 0.1;
 			var d = lineSize * 0.5 / size;
 			nx *= d;
 			ny *= d;
 
-			content.add(p.x + nx, p.y + ny, 0, 0, p.r, p.g, p.b, p.a);
-			content.add(p.x - nx, p.y - ny, 0, 0, p.r, p.g, p.b, p.a);
+			if(size > bevel) {
+				content.add(p.x + nx, p.y + ny, 0, 0, p.r, p.g, p.b, p.a);
+				content.add(p.x - nx, p.y - ny, 0, 0, p.r, p.g, p.b, p.a);
 
-			var pnext = i == last ? start : pindex + 2;
+				var pnext = i == last ? start : pindex + 2;
 
-			if( i < count-1 || closed ) {
+				if( i < count - 1 || closed ) {
+					content.addIndex(pindex);
+					content.addIndex(pindex + 1);
+					content.addIndex(pnext);
+
+					content.addIndex(pindex + 1);
+					content.addIndex(pnext);
+					content.addIndex(pnext + 1);
+				}
+				pindex += 2;
+			}
+			else {
+				//bevel
+				var n0x = next.x - p.x;
+				var n0y = next.y - p.y;
+				var sign = n0x * nx + n0y * ny;
+
+				var nnx = -ny;
+				var nny = nx;
+
+				var size = nnx * nx1 * ns1 + nny * ny1 * ns1;
+				var d = lineSize * 0.5 / size;
+				nnx *= d;
+				nny *= d;
+
+				var pnext = i == last ? start : pindex + 3;
+
+				if(sign > 0) {
+					content.add(p.x + nx, p.y + ny, 0, 0, p.r, p.g, p.b, p.a);
+					content.add(p.x - nnx, p.y - nny, 0, 0, p.r, p.g, p.b, p.a);
+					content.add(p.x + nnx, p.y + nny, 0, 0, p.r, p.g, p.b, p.a);
+
+					content.addIndex(pindex);
+					content.addIndex(pnext);
+					content.addIndex(pindex + 2);
+
+					content.addIndex(pindex + 2);
+					content.addIndex(pnext);
+					content.addIndex(pnext + 1);
+				}
+				else {
+					content.add(p.x + nnx, p.y + nny, 0, 0, p.r, p.g, p.b, p.a);
+					content.add(p.x - nx, p.y - ny, 0, 0, p.r, p.g, p.b, p.a);
+					content.add(p.x - nnx, p.y - nny, 0, 0, p.r, p.g, p.b, p.a);
+
+					content.addIndex(pindex + 1);
+					content.addIndex(pnext);
+					content.addIndex(pindex + 2);
+
+					content.addIndex(pindex + 1);
+					content.addIndex(pnext);
+					content.addIndex(pnext + 1);
+				}
+
 				content.addIndex(pindex);
 				content.addIndex(pindex + 1);
-				content.addIndex(pnext);
+				content.addIndex(pindex + 2);
 
-				content.addIndex(pindex + 1);
-				content.addIndex(pnext);
-				content.addIndex(pnext + 1);
+				pindex += 3;
 			}
-
-			pindex += 2;
 
 			prev = p;
 			p = next;
