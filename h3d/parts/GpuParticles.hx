@@ -7,6 +7,17 @@ private typedef GpuSave = {
 	var groups : Array<Dynamic>;
 }
 
+enum GpuSortMode {
+	/**
+		Particles are not sorted.
+	**/
+	None;
+	/**
+		Particles are sorted back-to-front every frame based on their current position.
+	**/
+	Dynamic;
+}
+
 enum GpuEmitMode {
 	/**
 		A single Point, emit in all directions
@@ -30,6 +41,44 @@ enum GpuEmitMode {
 	CameraBounds;
 }
 
+private class GpuPart {
+
+	public var x : Float;
+	public var y : Float;
+	public var z : Float;
+	public var w : Float;
+
+	// params
+	public var sx : Float;
+	public var sy : Float;
+	public var sz : Float;
+
+	public var vx : Float;
+	public var vy : Float;
+	public var vz : Float;
+
+	public var time : Float;
+	public var life : Float;
+
+	public var initX : Float;
+	public var initY : Float;
+	public var deltaX : Float;
+	public var deltaY : Float;
+
+	public var next : GpuPart;
+
+	public function new() {
+	}
+
+	public function updatePos( time : Float, gravity : Float ) {
+		var t = (time + this.time) % this.life;
+		x = sx + vx * t;
+		y = sy + vy * t;
+		z = sz + (vz - gravity * t) * t;
+	}
+
+}
+
 @:allow(h3d.parts.GpuParticles)
 class GpuPartGroup {
 
@@ -38,7 +87,7 @@ class GpuPartGroup {
 		if( FIELDS != null )
 			return FIELDS;
 		FIELDS = Type.getInstanceFields(GpuPartGroup);
-		for( f in ["blendMode", "emitMode", "needRebuild", "pshader", "partIndex", "texture", "colorGradient","displayedParts"] )
+		for( f in ["blendMode", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "texture", "colorGradient","displayedParts"] )
 			FIELDS.remove(f);
 		for( f in FIELDS.copy() )
 			if( Reflect.isFunction(Reflect.field(inst, f)) )
@@ -51,15 +100,18 @@ class GpuPartGroup {
 	var needRebuild = true;
 	var pshader = new h3d.shader.GpuParticle();
 	var partIndex = 0;
+	var particles : GpuPart;
 
 	/**
 		Tells how many particles to display. This can be used to progressively display a particle effect.
+		A negative value mean that all particles are displayed.
 	**/
 	public var displayedParts = -1;
 
 	public var name : String;
 	public var enable = true;
 	public var blendMode : h3d.mat.BlendMode = Alpha;
+	public var sortMode(default, set) : GpuSortMode = None;
 
 	public var nparts(default, set) : Int 		= 100;
 	public var emitLoop(default, set) : Bool 	= true;
@@ -68,6 +120,7 @@ class GpuPartGroup {
 	public var emitAngle(default,set) : Float 	= 1.5;
 	public var emitSync(default, set) : Float	= 0;
 	public var emitDelay(default, set) : Float	= 0;
+
 
 	public var clipBounds : Bool				= false;
 	public var transform3D : Bool				= false;
@@ -99,6 +152,7 @@ class GpuPartGroup {
 	public var texture : h3d.mat.Texture		= null;
 	public var colorGradient : h3d.mat.Texture	= null;
 
+	inline function set_sortMode(v) { needRebuild = true; return sortMode = v; }
 	inline function set_size(v) { needRebuild = true; return size = v; }
 	inline function set_sizeRand(v) { needRebuild = true; return sizeRand = v; }
 	inline function set_sizeIncr(v) { needRebuild = true; return sizeIncr = v; }
@@ -141,6 +195,7 @@ class GpuPartGroup {
 	public function save() : Dynamic {
 		var o = {
 			blendMode : blendMode.getIndex(),
+			sortMode : sortMode.getIndex(),
 			emitMode : emitMode.getIndex(),
 			texture : texture == null ? null : texture.name,
 			colorGradient : colorGradient == null ? null : colorGradient.name,
@@ -164,6 +219,7 @@ class GpuPartGroup {
 		for( f in getFields(this) )
 			Reflect.setField(this, f, Reflect.field(o, f));
 		blendMode = h3d.mat.BlendMode.createByIndex(o.blendMode);
+		sortMode = GpuSortMode.createByIndex(o.sortMode);
 		emitMode = GpuEmitMode.createByIndex(o.emitMode);
 		texture = loadTexture(o.texture);
 		colorGradient = loadTexture(o.colorGradient);
@@ -176,6 +232,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	static inline var VERSION = 1;
 	var groups : Array<GpuPartGroup>;
 	var bounds : h3d.col.Bounds;
+	var primitiveBuffer : hxd.FloatBuffer;
 	public var seed(default, set) : Int	= Std.random(0x1000000);
 	public var volumeBounds(default, set) : h3d.col.Bounds;
 	public var currentTime : Float = 0.;
@@ -259,13 +316,15 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		return groups.iterator();
 	}
 
+	static var PUVS = [new h3d.prim.UV(0, 0), new h3d.prim.UV(1, 0), new h3d.prim.UV(0, 1), new h3d.prim.UV(1, 1)];
+
 	function rebuild(cam) {
 		if( primitive != null ) {
 			primitive.dispose();
 			primitive = null;
 		}
 		var vbuf = new hxd.FloatBuffer();
-		var uvs = [new h3d.prim.UV(0, 0), new h3d.prim.UV(1, 0), new h3d.prim.UV(0, 1), new h3d.prim.UV(1, 1)];
+		var uvs = PUVS;
 		var rnd = new hxd.Rand(0);
 		var ebounds = null, calcEmit = null, partCount = 0;
 		bounds.empty();
@@ -278,6 +337,11 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			partCount += g.nparts;
 			if( g.emitLoop )
 				duration = Math.POSITIVE_INFINITY;
+
+			var partAlloc = g.particles;
+			var needPart = g.sortMode != None;
+			g.particles = null;
+
 			for( i in 0...g.nparts ) {
 
 				inline function rand() return rnd.rand();
@@ -346,9 +410,36 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				v.y *= speed;
 				v.z *= speed;
 
-
 				bounds.addPos(p.x, p.y, p.z);
 				// todo : add end-of-life pos ?
+
+				if( needPart ) {
+					var pt = partAlloc;
+					if( pt == null )
+						pt = new GpuPart();
+					else
+						partAlloc = partAlloc.next;
+					// when sorted/progressive, use absolute coordinates
+					p.transform(absPos);
+					v.transform3x3(absPos);
+
+
+					pt.sx = p.x;
+					pt.sy = p.y;
+					pt.sz = p.z;
+					pt.vx = v.x;
+					pt.vy = v.y;
+					pt.vz = v.z;
+					pt.time = time;
+					pt.life = life;
+					pt.initX = rot;
+					pt.initY = size;
+					pt.deltaX = vrot;
+					pt.deltaY = vsize;
+
+					pt.next = g.particles;
+					g.particles = pt;
+				}
 
 				inline function add(v) vbuf.push(v);
 				for( u in uvs ) {
@@ -372,12 +463,73 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				}
 			}
 		}
-		for( g in groups )
-			g.needRebuild = false;
 		primitive = new h3d.prim.RawPrimitive( { vbuf : vbuf, stride : 14, quads : true, bounds:bounds }, true);
 		primitive.buffer.flags.set(RawFormat);
+		primitiveBuffer = vbuf;
 		if( currentTime > duration )
 			currentTime = duration;
+		for( g in groups )
+			g.needRebuild = false;
+	}
+
+	function syncGroup( g : GpuPartGroup, camera : h3d.Camera ) {
+		var p = g.particles;
+		var m = camera.m;
+		var needSort = g.sortMode != None;
+		while( p != null ) {
+			var t = p.time + currentTime;
+			if( g.emitLoop ) t %= p.life;
+
+			var acc = (1 + g.speedIncr * t) * t;
+			p.x = p.sx + p.vx * acc;
+			p.y = p.sy + p.vy * acc;
+			p.z = p.sz + p.vz * acc - g.gravity * t * t;
+
+			if( needSort ) {
+				var cz = p.x * m._13 + p.y * m._23 + p.z * m._33 + m._43;
+				var cw = p.x * m._14 + p.y * m._24 + p.z * m._34 + m._44;
+				p.w = cz / cw;
+			}
+
+			p = p.next;
+		}
+
+		if( !needSort )
+			return;
+
+		g.particles = haxe.ds.ListSort.sortSingleLinked(g.particles, function(p1:GpuPart, p2:GpuPart) return p1.w < p2.w ? 1 : -1);
+
+		var startIndex = g.partIndex * primitive.buffer.buffer.stride * 4;
+		var index = startIndex;
+		var vbuf = primitiveBuffer;
+		var p = g.particles;
+		var uvs = PUVS;
+		while( p != null ) {
+
+			inline function add(v) vbuf[index++] = v;
+			for( u in uvs ) {
+				add(p.sx);
+				add(p.sy);
+				add(p.sz);
+
+				add(p.vx);
+				add(p.vy);
+				add(p.vz);
+
+				add(u.u);
+				add(u.v);
+				add(p.time);
+				add(p.life);
+
+				add(p.initX);
+				add(p.initY);
+				add(p.deltaX);
+				add(p.deltaY);
+			}
+
+			p = p.next;
+		}
+		primitive.buffer.uploadVector(vbuf, startIndex, g.nparts * 4, g.partIndex * 4);
 	}
 
 	override function emit( ctx : h3d.scene.RenderContext ) {
@@ -405,6 +557,8 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				rebuild(ctx.camera);
 				break;
 			}
+		for( g in groups )
+			syncGroup(g, ctx.camera);
 	}
 
 	override function draw( ctx : h3d.scene.RenderContext ) {
@@ -429,8 +583,13 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			g.pshader.offset.x %= volumeBounds.xSize;
 			g.pshader.offset.y %= volumeBounds.ySize;
 			g.pshader.offset.z %= volumeBounds.zSize;
-		} else
+		} else if( g.sortMode == None ) {
 			g.pshader.transform.loadFrom(absPos);
+			g.pshader.offset.set(0, 0, 0);
+		} else {
+			g.pshader.transform.identity();
+			g.pshader.offset.set(0, 0, 0);
+		}
 		ctx.uploadParams();
 		@:privateAccess if( primitive.buffer == null || primitive.buffer.isDisposed() ) primitive.alloc(ctx.engine);
 		@:privateAccess ctx.engine.renderQuadBuffer(primitive.buffer,g.partIndex*2,(g.displayedParts < 0 || g.displayedParts >= g.nparts ? g.nparts : g.displayedParts)*2);

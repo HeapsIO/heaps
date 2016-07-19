@@ -368,6 +368,7 @@ class SceneProps {
 		props.push(PGroup("Animation", [
 			PTexture("diffuseTexture", function() return o.texture, function(v) o.texture = v),
 			PEnum("blend", h3d.mat.BlendMode, function() return o.blendMode, function(v) o.blendMode = v),
+			PEnum("sort", h3d.parts.GpuParticles.GpuSortMode, function() return o.sortMode, function(v) o.sortMode = v),
 			PRange("animationRepeat", 0, 10, function() return o.animationRepeat, function(v) o.animationRepeat = v),
 			PRange("frameDivisionX", 1, 16, function() return o.frameDivisionX, function(v) o.frameDivisionX = Std.int(v), 1),
 			PRange("frameDivisionY", 1, 16, function() return o.frameDivisionY, function(v) o.frameDivisionY = Std.int(v), 1),
