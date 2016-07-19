@@ -210,7 +210,12 @@ class Graphics extends Drawable {
 			ny *= ns;
 
 			var size = nx * nx1 * ns1 + ny * ny1 * ns1; // N.N1
+
+
+			// *HACK* we should instead properly detect limits when the angle is too small
 			if(size < 0.1) size = 0.1;
+
+
 			var d = lineSize * 0.5 / size;
 			nx *= d;
 			ny *= d;
@@ -320,7 +325,7 @@ class Graphics extends Drawable {
 			pts.push(last);
 	}
 
-	public function flush() {
+	function flush() {
 		if( tmpPoints.length == 0 )
 			return;
 		if( doFill ) {
@@ -383,11 +388,7 @@ class Graphics extends Drawable {
 
 	public inline function moveTo(x,y) {
 		flush();
-		addPoint(x, y);
-	}
-
-	public inline function lineTo(x, y) {
-		addPoint(x, y);
+		lineTo(x, y);
 	}
 
 	public function endFill() {
@@ -404,11 +405,11 @@ class Graphics extends Drawable {
 
 	public function drawRect( x : Float, y : Float, w : Float, h : Float ) {
 		flush();
-		addPoint(x, y);
-		addPoint(x + w, y);
-		addPoint(x + w, y + h);
-		addPoint(x, y + h);
-		addPoint(x, y);
+		lineTo(x, y);
+		lineTo(x + w, y);
+		lineTo(x + w, y + h);
+		lineTo(x, y + h);
+		lineTo(x, y);
 		flush();
 	}
 
@@ -420,31 +421,31 @@ class Graphics extends Drawable {
 		var angle = Math.PI * 2 / nsegments;
 		for( i in 0...nsegments + 1 ) {
 			var a = i * angle;
-			addPoint(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
+			lineTo(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
 		}
 		flush();
 	}
 
 	public function drawPie( cx : Float, cy : Float, ray : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
 		flush();
-		addPoint(cx, cy);
+		lineTo(cx, cy);
 		if( nsegments == 0 )
 			nsegments = Math.ceil(ray * angleLength / 4);
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = angleLength / (nsegments - 1);
 		for( i in 0...nsegments ) {
 			var a = i * angle + angleStart;
-			addPoint(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
+			lineTo(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
 		}
-		addPoint(cx, cy);
+		lineTo(cx, cy);
 		flush();
 	}
 
-	public inline function addPoint( x : Float, y : Float ) {
-		addPointFull(x, y, curR, curG, curB, curA, x * ma + y * mc + mx, x * mb + y * md + my);
+	public inline function lineTo( x : Float, y : Float ) {
+		addVertex(x, y, curR, curG, curB, curA, x * ma + y * mc + mx, x * mb + y * md + my);
 	}
 
-	public function addPointFull( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, u : Float = 0., v : Float = 0. ) {
+	public function addVertex( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, u : Float = 0., v : Float = 0. ) {
 		if( x < xMin ) xMin = x;
 		if( y < yMin ) yMin = y;
 		if( x > xMax ) xMax = x;
