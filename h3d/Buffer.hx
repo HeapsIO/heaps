@@ -82,12 +82,17 @@ class Buffer {
 		return count;
 	}
 
-	public function uploadVector( buf : hxd.FloatBuffer, bufPos : Int, vertices : Int ) {
+	public function uploadVector( buf : hxd.FloatBuffer, bufPos : Int, vertices : Int, startVertice = 0 ) {
 		var cur = this;
+		while( cur != null && startVertice > cur.vertices ) {
+			startVertice -= cur.vertices;
+			cur = cur.next;
+		}
 		while( vertices > 0 ) {
 			if( cur == null ) throw "Too many vertices";
-			var count = vertices > cur.vertices ? cur.vertices : vertices;
-			cur.buffer.uploadVertexBuffer(cur.position, count, buf, bufPos);
+			var count = vertices + startVertice > cur.vertices ? cur.vertices - startVertice : vertices;
+			cur.buffer.uploadVertexBuffer(cur.position + startVertice, count, buf, bufPos);
+			startVertice = 0;
 			bufPos += count * buffer.stride;
 			vertices -= count;
 			cur = cur.next;
