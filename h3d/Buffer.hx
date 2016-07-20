@@ -84,7 +84,7 @@ class Buffer {
 
 	public function uploadVector( buf : hxd.FloatBuffer, bufPos : Int, vertices : Int, startVertice = 0 ) {
 		var cur = this;
-		while( cur != null && startVertice > cur.vertices ) {
+		while( cur != null && startVertice >= cur.vertices ) {
 			startVertice -= cur.vertices;
 			cur = cur.next;
 		}

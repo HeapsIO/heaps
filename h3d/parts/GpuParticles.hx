@@ -43,6 +43,8 @@ enum GpuEmitMode {
 
 private class GpuPart {
 
+	public var index : Int;
+
 	public var x : Float;
 	public var y : Float;
 	public var z : Float;
@@ -95,7 +97,6 @@ class GpuPartGroup {
 		FIELDS.sort(Reflect.compare);
 		return FIELDS;
 	}
-
 
 	var needRebuild = true;
 	var pshader = new h3d.shader.GpuParticle();
@@ -230,6 +231,8 @@ class GpuPartGroup {
 class GpuParticles extends h3d.scene.MultiMaterial {
 
 	static inline var VERSION = 1;
+	static inline var STRIDE = 14;
+
 	var groups : Array<GpuPartGroup>;
 	var bounds : h3d.col.Bounds;
 	var primitiveBuffer : hxd.FloatBuffer;
@@ -424,6 +427,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 					v.transform3x3(absPos);
 
 
+					pt.index = i;
 					pt.sx = p.x;
 					pt.sy = p.y;
 					pt.sz = p.z;
@@ -463,7 +467,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				}
 			}
 		}
-		primitive = new h3d.prim.RawPrimitive( { vbuf : vbuf, stride : 14, quads : true, bounds:bounds }, true);
+		primitive = new h3d.prim.RawPrimitive( { vbuf : vbuf, stride : STRIDE, quads : true, bounds:bounds }, true);
 		primitive.buffer.flags.set(RawFormat);
 		primitiveBuffer = vbuf;
 		if( currentTime > duration )
@@ -499,12 +503,22 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 		g.particles = haxe.ds.ListSort.sortSingleLinked(g.particles, function(p1:GpuPart, p2:GpuPart) return p1.w < p2.w ? 1 : -1);
 
-		var startIndex = g.partIndex * primitive.buffer.buffer.stride * 4;
+		var startIndex = g.partIndex * STRIDE * 4;
 		var index = startIndex;
 		var vbuf = primitiveBuffer;
 		var p = g.particles;
 		var uvs = PUVS;
+		var pidx = 0;
+		var firstPart = g.nparts;
+		var lastPart = -1;
 		while( p != null ) {
+
+			if( p.index == pidx ) {
+				pidx++;
+				index += STRIDE * 4;
+				p = p.next;
+				continue;
+			}
 
 			inline function add(v) vbuf[index++] = v;
 			for( u in uvs ) {
@@ -527,9 +541,14 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				add(p.deltaY);
 			}
 
+			if( pidx < firstPart ) firstPart = pidx;
+			if( pidx > lastPart ) lastPart = pidx;
+
+			p.index = pidx++;
 			p = p.next;
 		}
-		primitive.buffer.uploadVector(vbuf, startIndex, g.nparts * 4, g.partIndex * 4);
+		if( firstPart <= lastPart )
+			primitive.buffer.uploadVector(vbuf, (g.partIndex + firstPart) * STRIDE * 4, (lastPart - firstPart + 1) * 4, (g.partIndex + firstPart) * 4);
 	}
 
 	override function emit( ctx : h3d.scene.RenderContext ) {
