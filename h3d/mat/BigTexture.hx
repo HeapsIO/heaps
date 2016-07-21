@@ -1,8 +1,9 @@
 package h3d.mat;
 
+@:access(h3d.mat.BigTexture)
 class BigTextureElement {
 	public var t : BigTexture;
-	public var q : QuadTree;
+	var q : QuadTree;
 	public var du : Float;
 	public var dv : Float;
 	public var su : Float;
@@ -17,11 +18,19 @@ class BigTextureElement {
 	}
 
 	public function set(tex : hxd.res.Image) {
-		t.set(tex, this);
+		if( q.texture == tex )
+			return;
+		q.texture = tex;
+		t.isDone = false;
+		if( tex != null ) tex.watch(t.rebuild);
 	}
 
 	public function setAlpha(tex : hxd.res.Image) {
-		t.setAlpha(tex, this);
+		if( q.alphaChannel == tex )
+			return;
+		q.alphaChannel = tex;
+		t.isDone = false;
+		if( tex != null ) tex.watch(t.rebuild);
 	}
 
 }
@@ -56,9 +65,7 @@ class BigTexture {
 	var size : Int;
 	var space : QuadTree;
 	var allPixels : hxd.Pixels;
-	var modified : Bool = true;
 	var isDone : Bool;
-	var isUploaded : Bool;
 	var pending : Array<{ t : hxd.res.Image, q : QuadTree, alpha : Bool, skip : Bool }>;
 	var waitTimer : haxe.Timer;
 	var lastEvent : Float;
@@ -69,6 +76,7 @@ class BigTexture {
 		space = new QuadTree(0,0,size,size);
 		tex = new h3d.mat.Texture(1, 1, allocPos);
 		tex.clear(bgColor);
+		tex.realloc = rebuild;
 		pending = [];
 	}
 
@@ -88,11 +96,6 @@ class BigTexture {
 		}
 		isDone = false;
 		space = null;
-	}
-
-	function initPixels() {
-		if( allPixels == null )
-			allPixels = hxd.Pixels.alloc(size, size, h3d.mat.Texture.nativeFormat);
 	}
 
 	function findBest( q : QuadTree, w : Int, h : Int ) {
@@ -140,32 +143,14 @@ class BigTexture {
 		return split(q, w2<<1, h2<<1, w, h);
 	}
 
-	public function set( t : hxd.res.Image, et : BigTextureElement ) {
-		et.q.texture = t;
-		upload(t, et.q, false);
-		t.watch(rebuild);
-	}
-
-	public function setAlpha( t : hxd.res.Image, et : BigTextureElement ) {
-		et.q.alphaChannel = t;
-		upload(t, et.q, true);
-		t.watch(rebuild);
-	}
-
 	function rebuild() {
-		function rebuildRec( q : QuadTree ) {
-			if( q == null ) return;
-			if( q.texture != null )
-				upload(q.texture, q, false);
-			if( q.alphaChannel != null )
-				upload(q.alphaChannel, q, true);
-			rebuildRec(q.tl);
-			rebuildRec(q.tr);
-			rebuildRec(q.bl);
-			rebuildRec(q.br);
-		}
-		rebuildRec(space);
-		flush();
+		var old = space;
+		var oldT = tex;
+		tex = null;
+		dispose();
+		tex = oldT;
+		space = old;
+		done();
 	}
 
 	public function add( t : hxd.res.Image ) {
@@ -173,18 +158,12 @@ class BigTexture {
 		var q = allocPos(tsize.width,tsize.height);
 		if( q == null )
 			return null;
-		upload(t, q, false);
-		if( isUploaded ) {
-			isUploaded = false;
-			rebuild();
-		}
-		q.texture = t;
-		t.watch(rebuild);
-		return new BigTextureElement(this, q, q.x / size, q.y / size, tsize.width / size, tsize.height / size);
+		var e = new BigTextureElement(this, q, q.x / size, q.y / size, tsize.width / size, tsize.height / size);
+		e.set(t);
+		return e;
 	}
 
 	function uploadPixels( pixels : hxd.Pixels, x : Int, y : Int, alphaChannel ) {
-		initPixels();
 		var bpp = hxd.Pixels.bytesPerPixel(allPixels.format);
 		if( alphaChannel ) {
 			var alphaPos = hxd.Pixels.getChannelOffset(allPixels.format, A);
@@ -205,7 +184,6 @@ class BigTexture {
 				allPixels.bytes.blit((x + (y + dy) * size) * bpp, pixels.bytes, dy * pixels.width * bpp, pixels.width * bpp);
 		}
 		pixels.dispose();
-		modified = true;
 	}
 
 	function upload( t : hxd.res.Image, q : QuadTree, alphaChannel ) {
@@ -231,19 +209,12 @@ class BigTexture {
 					if( !alphaChannel ) q.loadingColor = false;
 					lastEvent = haxe.Timer.stamp();
 					pending.remove(o);
-					#if heaps
 					var bmp = bmp.toBitmap();
 					var pixels = bmp.getPixels();
 					bmp.dispose();
-					#else
-					var pixels = bmp.getPixels();
-					#end
 					uploadPixels(pixels, q.x, q.y, alphaChannel);
 					loadCount--;
-					if( isDone )
-						done();
-					else
-						flush();
+					flush();
 				});
 			}
 			load();
@@ -251,8 +222,8 @@ class BigTexture {
 
 	}
 
-	function retry() {
-		if( isUploaded ) {
+	function retry( pixels ) {
+		if( allPixels != pixels ) {
 			waitTimer.stop();
 			waitTimer = null;
 			return;
@@ -269,33 +240,51 @@ class BigTexture {
 		}
 	}
 
-	public function flush() {
-		if( !modified || allPixels == null || loadCount > 0 )
+	function flush() {
+		if( allPixels == null || loadCount > 0 )
 			return;
 		if( tex.width != size ) tex.resize(size, size);
 		tex.uploadPixels(allPixels);
-		modified = false;
-		isUploaded = true;
+		allPixels.dispose();
+		allPixels = null;
+		if( waitTimer != null ) {
+			waitTimer.stop();
+			waitTimer = null;
+		}
 	}
 
 	public function done() {
+		if( isDone )
+			return;
 		isDone = true;
+		if( allPixels == null )
+			allPixels = hxd.Pixels.alloc(size, size, h3d.mat.Texture.nativeFormat);
+		// start loading all
+		function loadRec(q:QuadTree) {
+			if( q == null )
+				return;
+			if( q.texture != null )
+				upload(q.texture, q, false);
+			if( q.alphaChannel != null )
+				upload(q.alphaChannel, q, true);
+			loadRec(q.tl);
+			loadRec(q.tr);
+			loadRec(q.bl);
+			loadRec(q.br);
+		}
+		loadRec(space);
 		if( loadCount > 0 ) {
 			#if flash
 			// flash seems to sometime fail to load texture
 			if( waitTimer == null ) {
 				lastEvent = haxe.Timer.stamp();
 				waitTimer = new haxe.Timer(1000);
-				waitTimer.run = retry;
+				waitTimer.run = retry.bind(allPixels);
 			}
 			#end
 			return;
 		}
 		flush();
-		if( allPixels != null ) {
-			allPixels.dispose();
-			allPixels = null;
-		}
 	}
 
 }
