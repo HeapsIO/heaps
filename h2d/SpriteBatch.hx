@@ -174,7 +174,7 @@ class SpriteBatch extends Drawable {
 				y = py * ca + px * sa + e.y;
 				addBounds(relativeTo, out, x, y, 1e-10, 1e-10);
 			} else
-				addBounds(relativeTo, out, e.x + tile.dx, e.y + tile.dy, tile.width, tile.height);
+				addBounds(relativeTo, out, e.x + t.dx, e.y + t.dy, t.width, t.height);
 			e = e.next;
 		}
 	}
