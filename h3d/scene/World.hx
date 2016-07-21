@@ -206,7 +206,7 @@ class World extends Object {
 			var res = resolveSpecularTexture(texturePath);
 			if( specularInAlpha ) {
 				if( res != null ) {
-					t.t.setAlpha(res, t);
+					t.setAlpha(res);
 					specTex = t;
 				}
 			} else {
@@ -438,6 +438,11 @@ class World extends Object {
 		}
 		bigTextures = [];
 		textures = new Map();
+	}
+
+	public function onContextLost() {
+		for( c in allChunks )
+			cleanChunk(c);
 	}
 
 	function getStride( model : WorldModel ) {
