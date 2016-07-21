@@ -18,6 +18,10 @@ class Comps {
 		var document = h2d.comp.Parser.fromHtml(hxd.res.Embed.getFileContent("components.html"),{ fmt : hxd.Math.fmt });
 		scene.addChild(document);
 		engine.onResized = function() document.setStyle(null);
+		var rounded1: h2d.comp.Box = cast document.getElementById('rounded1');
+		rounded1.onClick = function() {
+			new h2d.comp.JQuery(document, '.window').toggleClass('showBorders');
+		}
 	}
 
 	function update() {

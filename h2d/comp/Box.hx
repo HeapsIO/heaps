@@ -3,6 +3,8 @@ package h2d.comp;
 class Box extends Component {
 
 	var input : h2d.Interactive;
+	var active : Bool;
+	var activeRight : Bool;
 	var scrollX : Float = 0.;
 	var scrollY : Float = 0.;
 
@@ -199,10 +201,48 @@ class Box extends Component {
 			width = contentWidth + extX + extRight();
 			height = contentHeight + extY + extBottom();
 		} else {
-			if( style.backgroundColor != Transparent ) {
+			if( style.backgroundColor != Transparent || style.icon != null) {
 				if( input == null ) {
 					input = new h2d.Interactive(0, 0);
+					input.enableRightButton = true;
+					active = false;
+					activeRight = false;
 					input.cursor = Default;
+					input.onPush = function(e) {
+						switch( e.button ) {
+						case 0:
+							active = true;
+							onMouseDown();
+						case 1:
+							activeRight = true;
+						}
+					};
+					input.onOver = function(_) {
+						addClass(":hover");
+						onMouseOver();
+					};
+					input.onOut = function(_) {
+						active = false;
+						activeRight = false;
+						removeClass(":hover");
+						onMouseOut();
+					};
+					input.onRelease = function(e) {
+						switch( e.button ) {
+						case 0:
+							if( active ) {
+								active = false;
+								onClick();
+							}
+							onMouseUp();
+						case 1:
+							if( activeRight ) {
+								activeRight = false;
+								onRightClick();
+							}
+						}
+					};
+
 					bg.addChildAt(input, 0);
 				}
 				input.width = width - (style.marginLeft + style.marginRight);
@@ -214,5 +254,22 @@ class Box extends Component {
 		}
 	}
 
+	public dynamic function onMouseOver() {
+	}
+
+	public dynamic function onMouseOut() {
+	}
+
+	public dynamic function onMouseDown() {
+	}
+
+	public dynamic function onMouseUp() {
+	}
+
+	public dynamic function onClick() {
+	}
+
+	public dynamic function onRightClick() {
+	}
 
 }
