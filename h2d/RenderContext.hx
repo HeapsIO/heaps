@@ -23,7 +23,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var baseShaderList : hxsl.ShaderList;
 	var currentObj : Drawable;
 	var stride : Int;
-	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int }>;
+	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int, renderZone : {x:Float,y:Float,w:Float,h:Float} }>;
 	var hasUVPos : Bool;
 	var inFilter : Sprite;
 
@@ -31,6 +31,12 @@ class RenderContext extends h3d.impl.RenderContext {
 	var curY : Int;
 	var curWidth : Int;
 	var curHeight : Int;
+
+	var hasRenderZone : Bool;
+	var renderX : Float;
+	var renderY : Float;
+	var renderW : Float;
+	var renderH : Float;
 
 	public function new(scene) {
 		super();
@@ -110,34 +116,54 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( height < 0 ) height = t == null ? scene.height : t.height;
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
 		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);
-		targetsStack.push( { t : t, x : startX, y : startY, w : width, h : height } );
+		targetsStack.push( { t : t, x : startX, y : startY, w : width, h : height, renderZone : hasRenderZone ? {x:renderX,y:renderY,w:renderW,h:renderH} : null } );
 		curX = startX;
 		curY = startY;
 		curWidth = width;
 		curHeight = height;
+		if( hasRenderZone ) clearRenderZone();
 	}
 
 	public function popTarget( restore = true ) {
 		flush();
-		var tinf = targetsStack.pop();
-		if( tinf == null ) throw "Too many popTarget()";
+		var pinf = targetsStack.pop();
+		if( pinf == null ) throw "Too many popTarget()";
 		engine.popTarget();
 
-		if( !restore ) return;
+		if( restore ) {
+			var tinf = targetsStack[targetsStack.length - 1];
+			var t = tinf == null ? null : tinf.t;
+			var startX = tinf == null ? 0 : tinf.x;
+			var startY = tinf == null ? 0 : tinf.y;
+			var width = tinf == null ? scene.width : tinf.w;
+			var height = tinf == null ? scene.height : tinf.h;
+			initShaders(baseShaderList);
+			baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
+			baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);
+			curX = startX;
+			curY = startY;
+			curWidth = width;
+			curHeight = height;
+		}
 
-		tinf = targetsStack[targetsStack.length - 1];
-		var t = tinf == null ? null : tinf.t;
-		var startX = tinf == null ? 0 : tinf.x;
-		var startY = tinf == null ? 0 : tinf.y;
-		var width = tinf == null ? scene.width : tinf.w;
-		var height = tinf == null ? scene.height : tinf.h;
-		initShaders(baseShaderList);
-		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
-		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);
-		curX = startX;
-		curY = startY;
-		curWidth = width;
-		curHeight = height;
+		var rz = pinf.renderZone;
+		if( rz != null ) setRenderZone(rz.x, rz.y, rz.w, rz.h);
+	}
+
+	public function setRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+		hasRenderZone = true;
+		renderX = x;
+		renderY = y;
+		renderW = w;
+		renderH = h;
+		var scaleX = engine.width / scene.width;
+		var scaleY = engine.height / scene.height;
+		engine.setRenderZone(Std.int((renderX + curX) * scaleX + 1e-10), Std.int((renderY + curY) * scaleY + 1e-10), Std.int(renderW * scaleX + 1e-10), Std.int(renderH * scaleY + 1e-10));
+	}
+
+	public inline function clearRenderZone() {
+		hasRenderZone = false;
+		engine.setRenderZone();
 	}
 
 	public inline function flush() {

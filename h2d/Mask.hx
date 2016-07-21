@@ -45,25 +45,26 @@ class Mask extends Sprite {
 		if( yMax < out.yMax ) out.yMax = yMax;
 	}
 
-	override function drawRec( ctx : h2d.RenderContext ) {
-
+	override function drawRec( ctx : h2d.RenderContext ) @:privateAccess {
 		var x1 = absX;
 		var y1 = absY;
 
 		var x2 = width * matA + height * matC + absX;
 		var y2 = width * matB + height * matD + absY;
 
-		var s = ctx.scene;
-		x1 *= ctx.engine.width / s.width;
-		x2 *= ctx.engine.width / s.width;
-		y1 *= ctx.engine.height / s.height;
-		y2 *= ctx.engine.height / s.height;
-
 		ctx.flush();
-		ctx.engine.setRenderZone(Std.int(x1+1e-10), Std.int(y1+1e-10), Std.int(x2-x1+1e-10), Std.int(y2-y1+1e-10));
-		super.drawRec(ctx);
-		ctx.flush();
-		ctx.engine.setRenderZone();
+		if( ctx.hasRenderZone ) {
+			var oldX = ctx.renderX, oldY = ctx.renderY, oldW = ctx.renderW, oldH = ctx.renderH;
+			ctx.setRenderZone(x1, y1, x2-x1, y2-y1);
+			super.drawRec(ctx);
+			ctx.flush();
+			ctx.setRenderZone(oldX, oldY, oldW, oldH);
+		} else {
+			ctx.setRenderZone(x1, y1, x2-x1, y2-y1);
+			super.drawRec(ctx);
+			ctx.flush();
+			ctx.clearRenderZone();
+		}
 	}
 
 }
