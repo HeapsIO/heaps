@@ -440,6 +440,8 @@ class Viewer extends hxd.App {
 			obj = curHmd.makeObject(function(name) {
 				var t = new h3d.mat.Texture(1, 1);
 				t.clear(0xFF00FF);
+				t.wrap = Repeat;
+				t.setName(name);
 				loadTexture(name, new h3d.mat.MeshMaterial(t));
 				return t;
 			});

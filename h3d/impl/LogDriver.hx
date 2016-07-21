@@ -221,12 +221,12 @@ class LogDriver extends Driver {
 			inline function logVars( s : hxsl.RuntimeShader.RuntimeShaderData, buf : h3d.shader.Buffers.ShaderBuffers ) {
 				var t = s.textures2D;
 				while( t != null ) {
-					log('Set ${s.vertex ? "Vertex" : "Fragment"} Texture@${t.pos} ' + t.name+"=" + (buf.tex.length <= t.pos ? 'OUT OF BOUNDS' : '' + buf.tex[t.pos]));
+					log('Set ${s.vertex ? "Vertex" : "Fragment"} Texture@${t.pos} ' + t.name+"=" + textureInfos(buf.tex,t.pos));
 					t = t.next;
 				}
 				t = s.texturesCube;
 				while( t != null ) {
-					log('Set ${s.vertex ? "Vertex" : "Fragment"} TextureCube@${t.pos} ' + t.name+"=" + (buf.tex.length <= t.pos ? 'OUT OF BOUNDS' : '' + buf.tex[t.pos + s.textures2DCount]));
+					log('Set ${s.vertex ? "Vertex" : "Fragment"} TextureCube@${t.pos} ' + t.name+"=" + textureInfos(buf.tex,t.pos + s.textures2DCount));
 					t = t.next;
 				}
 			}
@@ -234,6 +234,20 @@ class LogDriver extends Driver {
 			logVars(currentShader.fragment, buffers.fragment);
 		}
 		d.uploadShaderBuffers(buffers, which);
+	}
+
+	function textureInfos( buf : haxe.ds.Vector<h3d.mat.Texture>, tid : Int ) {
+		if( tid < 0 || tid >= buf.length )
+			return 'OUT OF BOUNDS';
+		var t = buf[tid];
+		if( t == null )
+			return 'NULL';
+		var inf = '' + t;
+		if( t.wrap != Clamp )
+			inf += " wrap=" + t.wrap;
+		if( t.mipMap != None )
+			inf += " mip=" + t.mipMap;
+		return inf;
 	}
 
 	override function getShaderInputNames() : Array<String> {
