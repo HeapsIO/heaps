@@ -3,6 +3,8 @@ import hxd.fmt.pak.Data;
 
 class Build {
 
+	public static var excludedExt : Array<String> = [];
+
 	static function buildRec( dir : String, path : String, out : { bytes : Array<haxe.io.Bytes>, size : Int } ) {
 		var f = new File();
 		f.name = path.split("/").pop();
@@ -22,8 +24,10 @@ class Build {
 			case "fbx":
 				dir = getTemp(dir,path,"hmd");
 			case "wav":
-				dir = getTemp(dir,path,#if stb_ogg_sound "ogg" #else "mp3" #end);
-			default:
+				dir = getTemp(dir, path, #if stb_ogg_sound "ogg" #else "mp3" #end);
+			case ext:
+				if( excludedExt.indexOf(ext) >= 0 )
+					return null;
 			}
 			var data = sys.io.File.getBytes(dir);
 			f.dataPosition = #if pakDiff out.bytes.length #else out.size #end;
@@ -131,8 +135,10 @@ class Build {
 	}
 
 	static function main() {
-		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.n") catch( e : Dynamic ) {};
-		make(haxe.macro.Compiler.getDefine("resourcesPath"),null #if pakDiff, true #end);
+		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.n") catch( e : Dynamic ) {};		
+		var ext = haxe.macro.Compiler.getDefine("excludeExt");
+		excludedExt = ext == null ? [] : ext.split(",");
+		make(haxe.macro.Compiler.getDefine("resourcesPath"), null #if pakDiff, true #end);
 	}
 
 }
