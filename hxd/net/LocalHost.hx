@@ -114,6 +114,12 @@ class LocalHost extends NetworkHost {
 		isAuth = true;
 	}
 
+	public function offlineServer() {
+		close();
+		self = new LocalClient(this, null);
+		isAuth = true;
+	}
+
 	public static function openNewWindow( ?params : Dynamic<String> ) {
 		#if (flash && air3)
 		var opt = new flash.display.NativeWindowInitOptions();
