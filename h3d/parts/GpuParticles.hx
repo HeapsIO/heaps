@@ -315,6 +315,13 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		if( materials.length == 0 ) material = null;
 	}
 
+	public function getGroup( name : String ) {
+		for( g in groups )
+			if( g.name == name )
+				return g;
+		return null;
+	}
+
 	public inline function getGroups() {
 		return groups.iterator();
 	}
