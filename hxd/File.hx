@@ -169,6 +169,20 @@ class File {
 		#end
 	}
 
+	public static function listDirectory( path : String ) {
+		#if air3
+		try {
+			return [for( f in getRelPath(path).getDirectoryListing() ) f.name];
+		} catch( e : Dynamic ) {
+			return [];
+		}
+		#elseif sys
+		return sys.FileSystem.readDirectory(path);
+		#else
+		throw "Not supported";
+		#end
+	}
+
 	public static function getBytes( path : String ) : haxe.io.Bytes {
 		#if air3
 		var file = getRelPath(path);
