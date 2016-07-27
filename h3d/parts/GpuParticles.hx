@@ -89,7 +89,7 @@ class GpuPartGroup {
 		if( FIELDS != null )
 			return FIELDS;
 		FIELDS = Type.getInstanceFields(GpuPartGroup);
-		for( f in ["blendMode", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "texture", "colorGradient","displayedParts"] )
+		for( f in ["blendMode", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "particles", "texture", "colorGradient","displayedParts"] )
 			FIELDS.remove(f);
 		for( f in FIELDS.copy() )
 			if( Reflect.isFunction(Reflect.field(inst, f)) )
