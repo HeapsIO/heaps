@@ -6,25 +6,29 @@ class HtmlText extends Text {
 	var xPos : Int;
 	var yPos : Int;
 	var xMax : Int;
+	var dropMatrix : h3d.shader.ColorMatrix;
 
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
 			var oldX = absX, oldY = absY;
 			absX += dropShadow.dx * matA + dropShadow.dy * matC;
 			absY += dropShadow.dx * matB + dropShadow.dy * matD;
-			var old = this.colorMatrix;
-			this.colorMatrix = new h3d.Matrix();
-			this.colorMatrix.zero();
-			this.colorMatrix._41 = ((dropShadow.color >> 16) & 0xFF) / 255;
-			this.colorMatrix._42 = ((dropShadow.color >> 8) & 0xFF) / 255;
-			this.colorMatrix._43 = (dropShadow.color & 0xFF) / 255;
-			this.colorMatrix._44 = dropShadow.alpha;
+			if( dropMatrix == null )
+				dropMatrix = new h3d.shader.ColorMatrix();
+			addShader(dropMatrix);
+			var m = dropMatrix.matrix;
+			m.zero();
+			m._41 = ((dropShadow.color >> 16) & 0xFF) / 255;
+			m._42 = ((dropShadow.color >> 8) & 0xFF) / 255;
+			m._43 = (dropShadow.color & 0xFF) / 255;
+			m._44 = dropShadow.alpha;
 			glyphs.drawWith(ctx, this);
-			this.colorMatrix = old;
+			removeShader(dropMatrix);
 			absX = oldX;
 			absY = oldY;
 			calcAbsPos();
-		}
+		} else
+			dropMatrix = null;
 		glyphs.drawWith(ctx,this);
 	}
 
