@@ -157,7 +157,7 @@ private class CustomSceneProps extends SceneProps {
 			b.click(function(_) {
 				var data = haxe.Json.stringify(parts.save(), null, "\t");
 				var path = resPath.get(parts);
-				if( path == null ) path = "particles.json";
+				if( path == null ) path = @:privateAccess (parts.resourcePath == null ? "particles.json" : parts.resourcePath);
 				inspect.saveFile(path, "json", haxe.io.Bytes.ofString(data), function(path) resPath.set(parts,path));
 			});
 

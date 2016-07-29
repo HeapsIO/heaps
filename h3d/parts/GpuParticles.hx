@@ -89,7 +89,7 @@ class GpuPartGroup {
 		if( FIELDS != null )
 			return FIELDS;
 		FIELDS = Type.getInstanceFields(GpuPartGroup);
-		for( f in ["blendMode", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "particles", "texture", "colorGradient","displayedParts"] )
+		for( f in ["material", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "particles", "texture", "colorGradient","displayedParts"] )
 			FIELDS.remove(f);
 		for( f in FIELDS.copy() )
 			if( Reflect.isFunction(Reflect.field(inst, f)) )
@@ -111,7 +111,7 @@ class GpuPartGroup {
 
 	public var name : String;
 	public var enable = true;
-	public var blendMode : h3d.mat.BlendMode = Alpha;
+	public var material : h3d.mat.MaterialProps = h3d.mat.MaterialProps.particlesDefault();
 	public var sortMode(default, set) : GpuSortMode = None;
 
 	public var nparts(default, set) : Int 		= 100;
@@ -195,7 +195,7 @@ class GpuPartGroup {
 
 	public function save() : Dynamic {
 		var o = {
-			blendMode : blendMode.getIndex(),
+			material : material.getData(),
 			sortMode : sortMode.getIndex(),
 			emitMode : emitMode.getIndex(),
 			texture : texture == null ? null : texture.name,
@@ -219,7 +219,7 @@ class GpuPartGroup {
 	public function load( version : Int, o : Dynamic ) {
 		for( f in getFields(this) )
 			Reflect.setField(this, f, Reflect.field(o, f));
-		blendMode = h3d.mat.BlendMode.createByIndex(o.blendMode);
+		if( o.material != null ) material.loadData(o.material);
 		sortMode = GpuSortMode.createByIndex(o.sortMode);
 		emitMode = GpuEmitMode.createByIndex(o.emitMode);
 		texture = loadTexture(o.texture);
@@ -236,6 +236,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	var groups : Array<GpuPartGroup>;
 	var bounds : h3d.col.Bounds;
 	var primitiveBuffer : hxd.FloatBuffer;
+	var resourcePath : String;
 	public var seed(default, set) : Int	= Std.random(0x1000000);
 	public var volumeBounds(default, set) : h3d.col.Bounds;
 	public var currentTime : Float = 0.;
@@ -267,7 +268,8 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		return ({ version : VERSION, groups : [for( g in groups ) g.save()], bounds : bounds } : GpuSave);
 	}
 
-	public function load( _o : Dynamic ) {
+	public function load( _o : Dynamic, ?resourcePath : String ) {
+		this.resourcePath = resourcePath;
 		var o : GpuSave = _o;
 		if( o.version == 0 || o.version > VERSION ) throw "Unsupported version " + _o.version;
 		for( g in o.groups )
@@ -563,10 +565,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			var m = materials[i];
 			var g = groups[i];
 			if( m != null && g.enable && g.displayedParts != 0 ) {
-				var old = m.mainPass.name;
-				m.blendMode = g.blendMode;
-				if( old != "default" && old != "alpha" && old != "add" )
-					m.mainPass.setPassName(old);
+				if( m.props != g.material ) {
+					m.name = g.name;
+					m.props = g.material;
+				}
 				ctx.emit(m, this, i);
 			}
 		}

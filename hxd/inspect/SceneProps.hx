@@ -234,9 +234,13 @@ class SceneProps {
 	function getMaterialProps( mat : h3d.mat.Material ) {
 		var props = [];
 		props.push(PString("name", function() return mat.name == null ? "" : mat.name, function(n) mat.name = n == "" ? null : n));
-		for( pass in mat.getPasses() ) {
-			var p = getMaterialPassProps(mat, pass);
-			props.push(p);
+		if( mat.props == null ) {
+			for( pass in mat.getPasses() ) {
+				var p = getMaterialPassProps(mat, pass);
+				props.push(p);
+			}
+		} else {
+			props = props.concat(mat.props.inspect(function() mat.props.apply(mat)));
 		}
 		return PGroup("Material",props);
 	}
@@ -263,13 +267,6 @@ class SceneProps {
 		props.push(PBool("visible", function() return o.visible, function(v) o.visible = v));
 
 		if( o.isMesh() ) {
-			var multi = Std.instance(o, h3d.scene.MultiMaterial);
-			if( multi != null && multi.materials.length > 1 ) {
-				for( m in multi.materials )
-					props.push(getMaterialProps(m));
-			} else
-				props.push(getMaterialProps(o.toMesh().material));
-
 			var gp = Std.instance(o, h3d.parts.GpuParticles);
 			if( gp != null ) {
 				props.push(PFloats("volumePos", function() {
@@ -302,6 +299,13 @@ class SceneProps {
 					}
 				}));
 				props = props.concat(getPartsProps(gp));
+			} else {
+				var multi = Std.instance(o, h3d.scene.MultiMaterial);
+				if( multi != null && multi.materials.length > 1 ) {
+					for( m in multi.materials )
+						props.push(getMaterialProps(m));
+				} else
+					props.push(getMaterialProps(o.toMesh().material));
 			}
 
 		} else {
@@ -365,16 +369,23 @@ class SceneProps {
 			PRange("randomNess", 0, 1, function() return o.rotSpeedRand, function(v) o.rotSpeedRand = v),
 		]));
 
-		props.push(PGroup("Animation", [
+		var mat : h3d.mat.MaterialProps = {};
+		mat.loadData(o.material.getData());
+		var matProps = mat.inspect(function() {
+			var mat2 : h3d.mat.MaterialProps = {};
+			mat2.loadData(mat.getData());
+			o.material = mat2;
+		});
+
+		props.push(PGroup("Animation", matProps.concat([
 			PTexture("diffuseTexture", function() return o.texture, function(v) o.texture = v),
-			PEnum("blend", h3d.mat.BlendMode, function() return o.blendMode, function(v) o.blendMode = v),
 			PEnum("sort", h3d.parts.GpuParticles.GpuSortMode, function() return o.sortMode, function(v) o.sortMode = v),
 			PRange("animationRepeat", 0, 10, function() return o.animationRepeat, function(v) o.animationRepeat = v),
 			PRange("frameDivisionX", 1, 16, function() return o.frameDivisionX, function(v) o.frameDivisionX = Std.int(v), 1),
 			PRange("frameDivisionY", 1, 16, function() return o.frameDivisionY, function(v) o.frameDivisionY = Std.int(v), 1),
 			PRange("frameCount", 0, 32, function() return o.frameCount, function(v) o.frameCount = Std.int(v), 1),
 			PTexture("colorGradient", function() return o.colorGradient, function(v) o.colorGradient = v),
-		]));
+		])));
 
 		return PGroup(o.name, props);
 	}
