@@ -495,59 +495,64 @@ class Stage3dDriver extends Driver {
 		return fmt(vertex, shader.vertex) + "\n" + fmt(fragment, shader.fragment);
 	}
 
+	function initShader( shader : hxsl.RuntimeShader ) {
+		var p = new CompiledShader(shader);
+		p.p = ctx.createProgram();
+
+		var cachedShader = null;
+		var file = SHADER_CACHE_PATH;
+		if( SHADER_CACHE_PATH != null ) {
+			file += shader.signature;
+			if( !isStandardMode ) file += "1";
+			file += ".shader";
+			try cachedShader = haxe.Unserializer.run(hxd.File.getBytes(file).toString()) catch( e : Dynamic ) { };
+		}
+		if( cachedShader == null ) {
+			cachedShader = {
+				vertex : compileShader(shader.vertex,[]).bytes,
+				fragment : compileShader(shader.fragment, p.usedTextures).bytes,
+				tex : p.usedTextures,
+			};
+			if( file != null )
+				hxd.File.saveBytes(file, haxe.io.Bytes.ofString(haxe.Serializer.run(cachedShader)));
+		} else {
+			p.usedTextures = cachedShader.tex;
+		}
+
+		var vdata = cachedShader.vertex.getData();
+		var fdata = cachedShader.fragment.getData();
+		vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
+		fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
+
+		var pos = 0;
+		for( v in shader.vertex.data.vars )
+			if( v.kind == Input ) {
+				var size;
+				var fmt = switch( v.type ) {
+				case TBytes(4): size = 1; flash.display3D.Context3DVertexBufferFormat.BYTES_4;
+				case TFloat: size = 1; flash.display3D.Context3DVertexBufferFormat.FLOAT_1;
+				case TVec(2, VFloat): size = 2; flash.display3D.Context3DVertexBufferFormat.FLOAT_2;
+				case TVec(3, VFloat): size = 3; flash.display3D.Context3DVertexBufferFormat.FLOAT_3;
+				case TVec(4, VFloat): size = 4; flash.display3D.Context3DVertexBufferFormat.FLOAT_4;
+				default: throw "unsupported input " + v.type;
+				}
+				var idx = FORMAT.indexOf(fmt);
+				if( idx < 0 ) throw "assert " + fmt;
+				p.bufferFormat |= idx << (pos * 3);
+				p.inputNames.push(v.name);
+				p.stride += size;
+				pos++;
+			}
+
+		p.p.upload(vdata, fdata);
+		return p;
+	}
+
 	override function selectShader( shader : hxsl.RuntimeShader ) {
 		var shaderChanged = false;
 		var p = programs.get(shader.id);
 		if( p == null ) {
-			p = new CompiledShader(shader);
-			p.p = ctx.createProgram();
-
-			var cachedShader = null;
-			var file = SHADER_CACHE_PATH;
-			if( SHADER_CACHE_PATH != null ) {
-				file += shader.signature;
-				if( !isStandardMode ) file += "1";
-				file += ".shader";
-				try cachedShader = haxe.Unserializer.run(hxd.File.getBytes(file).toString()) catch( e : Dynamic ) { };
-			}
-			if( cachedShader == null ) {
-				cachedShader = {
-					vertex : compileShader(shader.vertex,[]).bytes,
-					fragment : compileShader(shader.fragment, p.usedTextures).bytes,
-					tex : p.usedTextures,
-				};
-				if( file != null )
-					hxd.File.saveBytes(file, haxe.io.Bytes.ofString(haxe.Serializer.run(cachedShader)));
-			} else {
-				p.usedTextures = cachedShader.tex;
-			}
-
-			var vdata = cachedShader.vertex.getData();
-			var fdata = cachedShader.fragment.getData();
-			vdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
-			fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
-
-			var pos = 0;
-			for( v in shader.vertex.data.vars )
-				if( v.kind == Input ) {
-					var size;
-					var fmt = switch( v.type ) {
-					case TBytes(4): size = 1; flash.display3D.Context3DVertexBufferFormat.BYTES_4;
-					case TFloat: size = 1; flash.display3D.Context3DVertexBufferFormat.FLOAT_1;
-					case TVec(2, VFloat): size = 2; flash.display3D.Context3DVertexBufferFormat.FLOAT_2;
-					case TVec(3, VFloat): size = 3; flash.display3D.Context3DVertexBufferFormat.FLOAT_3;
-					case TVec(4, VFloat): size = 4; flash.display3D.Context3DVertexBufferFormat.FLOAT_4;
-					default: throw "unsupported input " + v.type;
-					}
-					var idx = FORMAT.indexOf(fmt);
-					if( idx < 0 ) throw "assert " + fmt;
-					p.bufferFormat |= idx << (pos * 3);
-					p.inputNames.push(v.name);
-					p.stride += size;
-					pos++;
-				}
-
-			p.p.upload(vdata, fdata);
+			p = initShader(shader);
 			programs.set(shader.id, p);
 			curShader = null;
 		}

@@ -21,7 +21,7 @@ class Triangle {
 		return new Point((a.x + b.x + c.x) / 3, (a.y + b.y + c.y) / 3);
 	}
 
-	public function getArea() {
+	public inline function getArea() {
 		if( area == UNDEF ) {
 			area = ((a.y * b.x - a.x * b.y) + (b.y * c.x - b.x * c.y) + (c.y * a.x - c.x * a.y)) * -0.5;
 			invArea = 1 / area;
