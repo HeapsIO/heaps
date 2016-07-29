@@ -8,6 +8,7 @@ class App {
 	public var sevents : hxd.SceneEvents;
 
 	public var wantedFPS(get, set) : Float;
+	var isDisposed : Bool;
 
 	public function new(?engine) {
 		if( engine != null ) {
@@ -53,6 +54,7 @@ class App {
 	}
 
 	function dispose() {
+		isDisposed = true;
 		s2d.dispose();
 		s3d.dispose();
 		sevents.dispose();
@@ -68,7 +70,9 @@ class App {
 	function mainLoop() {
 		hxd.Timer.update();
 		sevents.checkEvents();
+		if( isDisposed ) return;
 		update(hxd.Timer.tmod);
+		if( isDisposed ) return;
 		s2d.setElapsedTime(Timer.tmod/60);
 		s3d.setElapsedTime(Timer.tmod / 60);
 		#if debug
