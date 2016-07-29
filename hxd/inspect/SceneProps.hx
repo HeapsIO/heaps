@@ -334,6 +334,7 @@ class SceneProps {
 			PEnum("mode", h3d.parts.GpuParticles.GpuEmitMode, function() return o.emitMode, function(v) o.emitMode = v),
 			PBool("enable", function() return o.enable, function(v) o.enable = v),
 			PRange("count", 0, 1000, function() return o.nparts, function(v) o.nparts = Std.int(v), 1),
+			PRange("startDistance", 0, 10, function() return o.emitStartDist, function(v) o.emitStartDist = v),
 			PRange("distance", 0, 10, function() return o.emitDist, function(v) o.emitDist = v),
 			PRange("angle", -90, 180, function() return Math.round(o.emitAngle*180/Math.PI), function(v) o.emitAngle = v*Math.PI/180, 1),
 			PBool("loop", function() return o.emitLoop, function(v) { o.emitLoop = v; parts.currentTime = 0; }),

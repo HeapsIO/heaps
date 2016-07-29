@@ -116,7 +116,8 @@ class GpuPartGroup {
 
 	public var nparts(default, set) : Int 		= 100;
 	public var emitLoop(default, set) : Bool 	= true;
-	public var emitMode(default,set):GpuEmitMode= Point;
+	public var emitMode(default, set):GpuEmitMode = Point;
+	public var emitStartDist(default, set) : Float = 0.;
 	public var emitDist(default, set) : Float	= 1.;
 	public var emitAngle(default,set) : Float 	= 1.5;
 	public var emitSync(default, set) : Float	= 0;
@@ -164,6 +165,7 @@ class GpuPartGroup {
 	inline function set_nparts(n) { if( n > nparts ) needRebuild = true; return nparts = n; }
 	inline function set_emitLoop(v) { needRebuild = true; return emitLoop = v; }
 	inline function set_emitMode(v) { needRebuild = true; return emitMode = v; }
+	inline function set_emitStartDist(v) { needRebuild = true; return emitStartDist = v; }
 	inline function set_emitDist(v) { needRebuild = true; return emitDist = v; }
 	inline function set_emitAngle(v) { needRebuild = true; return emitAngle = v; }
 	inline function set_emitSync(v) { needRebuild = true; return emitSync = v; }
@@ -224,6 +226,7 @@ class GpuPartGroup {
 		emitMode = GpuEmitMode.createByIndex(o.emitMode);
 		texture = loadTexture(o.texture);
 		colorGradient = loadTexture(o.colorGradient);
+		if( Math.isNaN(emitStartDist) ) emitStartDist = 0;
 	}
 
 }
@@ -378,12 +381,16 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 					v.y = srand();
 					v.z = srand();
 					v.normalizeFast();
+					var r = g.emitStartDist + g.emitDist * rand();
+					p.x = v.x * r;
+					p.y = v.y * r;
+					p.z = v.z * r;
 
 				case Cone:
 					var theta = rand() * Math.PI * 2;
 					var phi = g.emitAngle * srand();
 					if( g.emitAngle < 0 ) phi += Math.PI;
-					var r = g.emitDist * rand();
+					var r = g.emitStartDist + g.emitDist * rand();
 					v.x = Math.sin(phi) * Math.cos(theta);
 					v.y = Math.sin(phi) * Math.sin(theta);
 					v.z = Math.cos(phi);
@@ -404,9 +411,41 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 						}
 					}
 
-					p.x = rand() * ebounds.xSize + ebounds.xMin;
-					p.y = rand() * ebounds.ySize + ebounds.yMin;
-					p.z = rand() * ebounds.zSize + ebounds.zMin;
+					var max = 1 + g.emitDist;
+					if( max < 0 ) max = 0;
+
+					if( g.emitStartDist > 0 ) {
+
+						var min = g.emitStartDist * 0.5;
+
+						// prevent too low volume
+						if( min > 0.49 ) min = 0.49;
+
+						// inner volume check
+
+						do {
+							p.x = rand() - 0.5;
+							p.y = rand() - 0.5;
+							p.z = rand() - 0.5;
+						} while( (p.x > -min && p.x < min) && (p.y > -min && p.y < min) && (p.z > -min && p.z < min) );
+
+						p.x *= max;
+						p.y *= max;
+						p.z *= max;
+
+					} else {
+
+						p.x = (rand() - 0.5) * max;
+						p.y = (rand() - 0.5) * max;
+						p.z = (rand() - 0.5) * max;
+
+					}
+
+
+					var c = ebounds.getCenter();
+					p.x = p.x * ebounds.xSize + c.x;
+					p.y = p.y * ebounds.xSize + c.y;
+					p.z = p.z * ebounds.zSize + c.z;
 
 					v.x = srand();
 					v.y = srand();
