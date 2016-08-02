@@ -3,6 +3,7 @@ package hxd.snd;
 class Data {
 
 	public var samples(default, null) : Int;
+	public var duration(get, never) : Float;
 
 	/**
 		Decode sound samples as stereo 32 bit floats 44.1Khz
@@ -19,6 +20,10 @@ class Data {
 	**/
 	public function load( onEnd : Void -> Void ) {
 		onEnd();
+	}
+
+	function get_duration() {
+		return samples / 44100;
 	}
 
 }
