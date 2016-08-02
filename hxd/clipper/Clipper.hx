@@ -3955,7 +3955,7 @@ class ClipperOffset
 		if (m_sinA * m_delta < 0)
 		{
 			m_destPoly.push(new IPoint(Math.round(m_srcPoly[j].x + m_normals[k].x * m_delta), Math.round(m_srcPoly[j].y + m_normals[k].y * m_delta)));
-			m_destPoly.push(m_srcPoly[j]);
+			//m_destPoly.push(m_srcPoly[j]);	//disabled : exists in original C# version but sometimes generate wrong shapes
 			m_destPoly.push(new IPoint(Math.round(m_srcPoly[j].x + m_normals[j].x * m_delta), Math.round(m_srcPoly[j].y + m_normals[j].y * m_delta)));
 		}
 		else
