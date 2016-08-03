@@ -3954,9 +3954,13 @@ class ClipperOffset
 
 		if (m_sinA * m_delta < 0)
 		{
-			m_destPoly.push(new IPoint(Math.round(m_srcPoly[j].x + m_normals[k].x * m_delta), Math.round(m_srcPoly[j].y + m_normals[k].y * m_delta)));
-			m_destPoly.push(m_srcPoly[j]);
-			m_destPoly.push(new IPoint(Math.round(m_srcPoly[j].x + m_normals[j].x * m_delta), Math.round(m_srcPoly[j].y + m_normals[j].y * m_delta)));
+			var p1 = new IPoint(Math.round(m_srcPoly[j].x + m_normals[k].x * m_delta), Math.round(m_srcPoly[j].y + m_normals[k].y * m_delta));
+			var p2 = new IPoint(Math.round(m_srcPoly[j].x + m_normals[j].x * m_delta), Math.round(m_srcPoly[j].y + m_normals[j].y * m_delta));
+			m_destPoly.push(p1);
+			if(hxd.Math.distanceSq(p1.x - p2.x, p1.y -p2.y ) > 1){
+				m_destPoly.push(m_srcPoly[j]);
+				m_destPoly.push(p2);
+			}
 		}
 		else
 		switch (jointype)
