@@ -87,7 +87,15 @@ class DefaultMaterialProps {
 	}
 
 	public static function particlesDefault() : MaterialProps {
+	#if (haxe_ver < 3.3)
+		var m = new DefaultMaterialProps();
+		m.kind = Alpha;
+		m.shadows = None;
+		m.cull = false;
+		return m;
+	#else
 		return { kind : Alpha, shadows : None, cull : false }
+	#end
 	}
 
 }
