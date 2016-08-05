@@ -79,6 +79,63 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		if( y > yMax ) yMax = y;
 	}
 
+	public function addTransform( x : Int, y : Int, sx : Float, sy : Float, r : Float, c : Int, t : Tile ) {
+
+		var ca = Math.cos(r), sa = Math.sin(r);
+		var hx = t.width, hy = t.height;
+
+		inline function updateBounds( x, y ) {
+			if( x < xMin ) xMin = x;
+			if( y < yMin ) yMin = y;
+			if( x > xMax ) xMax = x;
+			if( y > yMax ) yMax = y;
+		}
+
+		var dx = t.dx * sx, dy = t.dy * sy;
+		var px = dx * ca - dy * sa + x;
+		var py = dy * ca + dx * sa + y;
+
+		tmp.push(px);
+		tmp.push(py);
+		tmp.push(t.u);
+		tmp.push(t.v);
+		insertColor(c);
+		updateBounds(px, py);
+
+		var dx = (t.dx + hx) * sx, dy = t.dy * sy;
+		var px = dx * ca - dy * sa + x;
+		var py = dy * ca + dx * sa + y;
+
+		tmp.push(px);
+		tmp.push(py);
+		tmp.push(t.u2);
+		tmp.push(t.v);
+		insertColor(c);
+		updateBounds(px, py);
+
+		var dx = t.dx * sx, dy = (t.dy + hy) * sy;
+		var px = dx * ca - dy * sa + x;
+		var py = dy * ca + dx * sa + y;
+
+		tmp.push(px);
+		tmp.push(py);
+		tmp.push(t.u);
+		tmp.push(t.v2);
+		insertColor(c);
+		updateBounds(px, py);
+
+		var dx = (t.dx + hx) * sx, dy = (t.dy + hy) * sy;
+		var px = dx * ca - dy * sa + x;
+		var py = dy * ca + dx * sa + y;
+
+		tmp.push(px);
+		tmp.push(py);
+		tmp.push(t.u2);
+		tmp.push(t.v2);
+		insertColor(c);
+		updateBounds(px, py);
+	}
+
 	public function addPoint( x : Float, y : Float, color : Int ) {
 		tmp.push(x);
 		tmp.push(y);
@@ -372,6 +429,10 @@ class TileGroup extends Drawable {
 
 	public inline function addColor(x, y, r, g, b, a, t) {
 		content.add(x, y, r, g, b, a, t);
+	}
+
+	public inline function addTransform(x, y, sx, sy, r, t) {
+		content.addTransform(x, y, sx, sy, r, curColor.toColor(), t);
 	}
 
 	override function draw(ctx:RenderContext) {
