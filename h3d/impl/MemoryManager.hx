@@ -90,7 +90,7 @@ class MemoryManager {
 			cleanManagedBuffers();
 			if( usedMemory - freeMemorySize() == size ) {
 				if( bufferCount >= MAX_BUFFERS )
-					throw "Too many buffer";
+					throw "Too many buffers";
 				throw "Memory full ("+(size>>10)+" KB,"+bufferCount+" buffers)";
 			}
 		}
