@@ -2,6 +2,7 @@ class Draw extends hxd.App {
 
 	var bclone : h2d.Bitmap;
 	var texture : h3d.mat.Texture;
+	var pg : h2d.Graphics;
 
 	override function init() {
 		var g = new h2d.Graphics(s2d);
@@ -71,19 +72,23 @@ class Draw extends hxd.App {
 		bclone.blendMode = None; // prevent residual alpha bugs
 		#end
 		bclone.y = 512;
+
+		// set up graphics instance for use in redraw()
+
+		pg = new h2d.Graphics();
+		pg.filters = [new h2d.filter.Blur(2,2,10)];
+		pg.beginFill(0xFF8040, 0.5);
 	}
 
 	function redraw(t:h3d.mat.Texture) {
-		var g = new h2d.Graphics();
-		g.beginFill(0xFF8040, 0.5);
+		pg.clear();
 		for( i in 0...100 ) {
 			var r = (0.1 + Math.random()) * 10;
 			var s = Math.random() * Math.PI * 2;
 			var a = Math.random() * Math.PI * 2;
-			g.drawPie(Math.random() * 256, Math.random() * 256, r, s, a);
+			pg.drawPie(Math.random() * 256, Math.random() * 256, r, s, a);
 		}
-		g.filters = [new h2d.filter.Blur(2,2,10)];
-		g.drawTo(t);
+		pg.drawTo(t);
 
 		var pix = t.capturePixels();
 		bclone.tile.getTexture().uploadPixels(pix);
