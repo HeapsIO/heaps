@@ -5,6 +5,7 @@ class TextureCache {
 	var cache : Array<h3d.mat.Texture>;
 	var position : Int = 0;
 	var frame : Int;
+	public var defaultFormat : hxd.PixelFormat;
 	public var hasDefaultDepth(default,null) : Bool;
 	public var fullClearRequired(default,null) : Bool;
 
@@ -13,6 +14,7 @@ class TextureCache {
 		var engine = h3d.Engine.getCurrent();
 		hasDefaultDepth = engine.driver.hasFeature(TargetUseDefaultDepthBuffer);
 		fullClearRequired = engine.driver.hasFeature(FullClearRequired);
+		defaultFormat = h3d.mat.Texture.nativeFormat;
 	}
 
 	public inline function get( index = 0 ) {
@@ -35,14 +37,15 @@ class TextureCache {
 		}
 	}
 
-	public function allocTarget( name : String, ctx : h3d.impl.RenderContext, width : Int, height : Int, hasDepth=true ) {
+	public function allocTarget( name : String, ctx : h3d.impl.RenderContext, width : Int, height : Int, hasDepth=true, ?format:hxd.PixelFormat ) {
 		begin(ctx);
 		var t = cache[position];
-		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.flags.has(hasDefaultDepth ? TargetUseDefaultDepth : TargetDepth) != hasDepth ) {
+		if( format == null ) format = defaultFormat;
+		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.flags.has(hasDefaultDepth ? TargetUseDefaultDepth : TargetDepth) != hasDepth || t.format != format ) {
 			if( t != null ) t.dispose();
 			var flags : Array<h3d.mat.Data.TextureFlags> = [Target];
 			if( hasDepth ) flags.push(hasDefaultDepth ? TargetUseDefaultDepth : TargetDepth);
-			t = new h3d.mat.Texture(width, height, flags);
+			t = new h3d.mat.Texture(width, height, flags, format);
 			cache[position] = t;
 		}
 		t.setName(name);
