@@ -59,10 +59,8 @@ class BatchElement {
 	}
 
 	public function remove() {
-		if( batch != null ) {
+		if( batch != null )
 			batch.delete(this);
-			batch = null;
-		}
 	}
 
 }
@@ -104,11 +102,13 @@ class SpriteBatch extends Drawable {
 
 	public function add(e:BatchElement) {
 		e.batch = this;
-		if( first == null )
+		if( first == null ) {
 			first = last = e;
-		else {
+			e.prev = e.next = null;
+		} else {
 			last.next = e;
 			e.prev = last;
+			e.next = null;
 			last = e;
 		}
 		return e;
@@ -130,6 +130,7 @@ class SpriteBatch extends Drawable {
 				last = e.prev;
 		} else
 			e.next.prev = e.prev;
+		e.batch = null;
 	}
 
 	override function sync(ctx) {
