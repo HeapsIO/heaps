@@ -72,7 +72,16 @@ class DynamicText {
 
 	#if macro
 
-	static function typeFromXml( x : haxe.xml.Fast, tdict : Map<String,Bool>, pos ) {
+	static function findPos( pos : { file : String, content : String }, str : String ) {
+		// this might lead to false positive in case the same id is used several times
+		// but until we have a Xml parser with original position info that's the best we have
+		var index = pos.content.indexOf(str);
+		if( index < 0 )
+			return Context.makePosition({ min : 0, max : 0, file : pos.file });
+		return Context.makePosition({ min : index, max : index + str.length, file : pos.file });
+	}
+
+	static function typeFromXml( x : haxe.xml.Fast, tdict : Map<String,Bool>, pos : { file : String, content : String, pos : Position } ) {
 		switch( x.name ) {
 		case "g":
 			var first = x.elements.next();
@@ -80,8 +89,9 @@ class DynamicText {
 			if( first != null && first.has.id ) {
 				var fields = new Array<Field>();
 				for( e in x.elements ) {
-					tdict.set(e.att.id, true);
-					fields.push( { name : e.att.id, kind : FProp("default","never",typeFromXml(e, tdict, pos)), pos : pos, meta : [] } );
+					var id = e.att.id;
+					tdict.set(id, true);
+					fields.push( { name : id, kind : FProp("default","never",typeFromXml(e, tdict, pos)), pos : findPos(pos, 'id="${id.toLowerCase()}"'), meta : [] } );
 				}
 				return TAnonymous(fields);
 			} else {
@@ -100,12 +110,12 @@ class DynamicText {
 			var fields = new Array<Field>();
 			while( i < vars.length ) {
 				tdict.set(vars[i], true);
-			fields.push( { name : vars[i], kind : FVar(macro : Dynamic), pos : pos, meta : [] } );
+				fields.push( { name : vars[i], kind : FVar(macro : Dynamic), pos : pos.pos, meta : [] } );
 				i += 2;
 			}
 			return TFunction([TAnonymous(fields)], tstring);
 		default:
-			Context.error("Unknown node " + x.name, pos);
+			Context.error("Unknown node " + x.name, findPos(pos,'<${x.name.toLowerCase()}'));
 		}
 		return null;
 	}
@@ -113,20 +123,22 @@ class DynamicText {
 	public static function build( file : String, ?withDict : Bool ) {
 		var path = FileTree.resolvePath();
 		var fullPath = path + "/" + file;
-		var x = null;
+		var content = null, x = null;
 		try {
-			x = Xml.parse(sys.io.File.getContent(fullPath));
+			content = sys.io.File.getContent(fullPath);
+			x = Xml.parse(content);
 		} catch( e : haxe.xml.Parser.XmlParserException ) {
 			Context.error(e.message, Context.makePosition({min:e.position, max:e.position, file:fullPath}));
 			return null;
 		}
-		Context.registerModuleDependency(Context.getLocalModule(), path + "/" + file);
+		Context.registerModuleDependency(Context.getLocalModule(), fullPath);
 		var fields = Context.getBuildFields();
 		var pos = Context.currentPos();
+		var fpos = { file : fullPath, content : content.toLowerCase(), pos : pos };
 		var tdict = new Map();
 		for( x in new haxe.xml.Fast(x.firstElement()).elements ) {
 			var id = x.att.id;
-			var t = typeFromXml(x, tdict, pos);
+			var t = typeFromXml(x, tdict, fpos);
 			tdict.set(id, true);
 			fields.push( {
 				name : id,
