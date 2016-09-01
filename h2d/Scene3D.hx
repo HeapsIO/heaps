@@ -44,6 +44,12 @@ class ObjectFollower extends Sprite {
 		visible = p.z > 0;
 	}
 
+	override function calcAbsPos() {
+		super.calcAbsPos();
+		absX = x;
+		absY = y;
+	}
+
 	override function syncPos() {
 		followObject();
 		super.syncPos();
