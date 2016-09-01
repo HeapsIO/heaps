@@ -52,7 +52,7 @@ class Convert {
 		}
 	}
 
-	static function sameType( a : Schema.FieldType, b : Schema.FieldType ) {
+	public static function sameType( a : Schema.FieldType, b : Schema.FieldType ) {
 		switch( [a, b] ) {
 		case [PMap(ak, av), PMap(bk, bv)]:
 			return sameType(ak, bk) && sameType(av, bv);
@@ -78,7 +78,7 @@ class Convert {
 		}
 	}
 
-	function getDefault(t:Schema.FieldType) : Dynamic {
+	public static function getDefault(t:Schema.FieldType) : Dynamic {
 		return switch( t ) {
 		case PInt: 0;
 		case PFloat: 0.;
@@ -601,6 +601,35 @@ class Serializer {
 	}
 
 	function convertValue( v : Dynamic, from : Schema.FieldType, to : Schema.FieldType ) : Dynamic {
+
+		if( v == null && isNullable(to) )
+			return null;
+
+		if( Convert.sameType(from,to) )
+			return v;
+
+		switch( [from, to] ) {
+		case [PObj(obj1), PObj(obj2)]:
+			var v2 = {};
+			for( f in obj2 ) {
+				var found = false;
+				var field : Dynamic = null;
+				for( f2 in obj1 )
+					if( f2.name == f.name ) {
+						found = true;
+						field = convertValue(Reflect.field(v, f2.name), f2.type, f.type);
+						break;
+					}
+				if( !found ) {
+					if( f.opt ) continue;
+					field = Convert.getDefault(f.type);
+				} else if( field == null && f.opt )
+					continue;
+				Reflect.setField(v2, f.name, field);
+			}
+			return v2;
+		default:
+		}
 		throw "Cannot convert " + v + " from " + from + " to " + to;
 	}
 
