@@ -76,12 +76,14 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 			}
 			mouseDownButton = -1;
 		case EOver:
-			hxd.System.setCursor(cursor);
 			onOver(e);
+			if( !e.cancel )
+				hxd.System.setCursor(cursor);
 		case EOut:
 			mouseDownButton = -1;
-			hxd.System.setCursor(Default);
 			onOut(e);
+			if( !e.cancel )
+				hxd.System.setCursor(Default);
 		case EWheel:
 			onWheel(e);
 		case EFocusLost:
