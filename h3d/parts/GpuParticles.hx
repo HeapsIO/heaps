@@ -619,6 +619,9 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		currentTime += ctx.elapsedTime;
 		if( prev < duration && currentTime >= duration )
 			onEnd();
+		if( primitive == null || primitive.buffer.isDisposed() )
+			for( g in groups )
+				g.needRebuild = true;
 		for( g in groups )
 			if( g.needRebuild ) {
 				rebuild(ctx.camera);
