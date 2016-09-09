@@ -58,6 +58,7 @@ class Viewer extends hxd.App {
 	var tree : TreeView;
 	var checker : h3d.scene.Mesh;
 	var infos : { tri : Int, objs : Int, verts : Int};
+	var reload : Array<Void -> Void> = [];
 
 	function new() {
 		super();
@@ -215,6 +216,11 @@ class Viewer extends hxd.App {
 			askLoad();
 		case K.F2:
 			askLoad(true);
+		case K.F5:
+			var old = this.reload;
+			this.reload = [];
+			for( f in old ) f();
+			return;
 		case "S".code if( K.isDown(K.CTRL) ):
 			if( curHmd != null ) {
 				var h = curHmd.header;
@@ -363,7 +369,8 @@ class Viewer extends hxd.App {
 					return;
 				}
 				t.resize(size.width, size.height);
-				t.uploadPixels(new hxd.Pixels(size.width,size.height,pixels,BGRA));
+				t.uploadPixels(new hxd.Pixels(size.width, size.height, pixels, BGRA));
+				reload.push(loadTexture.bind(textureName, mat, handleAlpha));
 			});
 			loader.load(new flash.net.URLRequest(textureName));
 		} else {
@@ -373,6 +380,7 @@ class Viewer extends hxd.App {
 				var bmp = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;
 				t.resize(bmp.width, bmp.height);
 				t.uploadBitmap(hxd.BitmapData.fromNative(bmp));
+				reload.push(loadTexture.bind(textureName, mat, handleAlpha));
 			});
 			loader.load(new flash.net.URLRequest(textureName));
 		}
@@ -382,6 +390,7 @@ class Viewer extends hxd.App {
 		hxd.File.browse(function(sel) {
 			sel.load(function(bytes) {
 				haxe.Log.clear();
+				reload = [];
 				if( anim ) {
 					if( props.convertHMD || bytes.get(0) == 'H'.code ) {
 						ahmd = fbxToHmd(bytes, false).toHmd();
