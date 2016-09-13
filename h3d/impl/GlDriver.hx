@@ -554,7 +554,7 @@ class GlDriver extends Driver {
 	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
 		#if hxsdl
-		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBase.ArrayI16).bytes #else buf.getNative() #end;
+		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBase.ArrayUI16).bytes #else buf.getNative() #end;
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, data, bufPos, indiceCount * 2);
 		#else
 		var buf = new Uint16Array(buf.getNative());
