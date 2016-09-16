@@ -291,10 +291,8 @@ class Macros {
 						var check = new Checker();
 						check.loadShader = loadShader;
 						var shader = check.check(name, shader);
-						#if debug
-						Printer.check(shader);
-						#end
-						var str = Serializer.run(shader);
+						//Printer.check(shader);
+						var str = Context.defined("display") ? "" : Serializer.run(shader);
 						f.kind = FVar(null, { expr : EConst(CString(str)), pos : pos } );
 						f.meta.push({
 							name : ":keep",
