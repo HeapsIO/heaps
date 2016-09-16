@@ -18,6 +18,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		hitInteractives = [];
 		interactives = [];
 		camera = new h3d.Camera();
+		// update ratio before render (prevent first-frame difference)
+		var engine = h3d.Engine.getCurrent();
+		if( engine != null )
+			camera.screenRatio = engine.width / engine.height;
 		ctx = new RenderContext();
 		renderer = new Renderer();
 		lightSystem = new h3d.pass.LightSystem();
