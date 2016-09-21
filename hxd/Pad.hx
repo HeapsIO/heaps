@@ -33,6 +33,9 @@ class Pad {
 	public var yAxis : Float = 0.;
 	public var buttons : Array<Bool> = [];
 	public var values : Array<Float> = [];
+	
+	public dynamic function onDisconnect(){
+	}
 
 	function new() {
 	}
@@ -60,6 +63,7 @@ class Pad {
 	static var waitPad : Pad -> Void;
 	static var initDone = false;
 	static var inst : flash.ui.GameInput;
+	static var pads : Array<hxd.Pad> = [];
 	#end
 
 	/**
@@ -73,6 +77,7 @@ class Pad {
 			inst = new flash.ui.GameInput();
 			inst.addEventListener(flash.events.GameInputEvent.DEVICE_ADDED, function(e:flash.events.GameInputEvent) {
 				var p = new Pad();
+				pads.push( p );
 				p.d = e.device;
 				//trace(p.d.name, p.d.id);
 				for( i in 0...flash.ui.GameInput.numDevices )
@@ -109,6 +114,26 @@ class Pad {
 				}
 
 				if( waitPad != null ) waitPad(p);
+			});
+			inst.addEventListener(flash.events.GameInputEvent.DEVICE_REMOVED, function(e:flash.events.GameInputEvent) {
+				for( p in pads )
+					if( p.d.id == e.device.id ){
+						pads.remove( p );
+						p.d.enabled = false;
+						p.connected = false;
+						p.onDisconnect();
+						break;
+					}
+			});
+			inst.addEventListener(flash.events.GameInputEvent.DEVICE_UNUSABLE, function(e:flash.events.GameInputEvent) {
+				for( p in pads )
+					if( p.d.id == e.device.id ){
+						pads.remove( p );
+						p.d.enabled = false;
+						p.connected = false;
+						p.onDisconnect();
+						break;
+					}
 			});
 			var count = flash.ui.GameInput.numDevices; // necessary to trigger added
 		}
