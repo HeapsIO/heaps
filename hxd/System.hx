@@ -473,7 +473,11 @@ class System {
 	public static function getClipboard() : String {
 		return "";
 	}
-
+	
+	public static function getCurrentLoop() {
+		return currentLoop;
+	}
+	
 	static var win : sdl.Window;
 	static var windowWidth = 800;
 	static var windowHeight = 600;
@@ -507,12 +511,12 @@ class System {
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
 			eh = new Event(EPush, e.mouseX, e.mouseY);
-			eh.button = e.button;
+			eh.button = e.button - 1;
 		case MouseUp:
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
 			eh = new Event(ERelease, e.mouseX, e.mouseY);
-			eh.button = e.button;
+			eh.button = e.button - 1;
 		case MouseMove:
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
@@ -648,6 +652,10 @@ class System {
 		LOOP = f;
 	}
 
+	public static function getCurrentLoop() {
+		return LOOP;
+	}
+	
 	public static function setNativeCursor( c : Cursor ) {
 	}
 
