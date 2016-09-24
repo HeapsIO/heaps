@@ -217,7 +217,7 @@ class BitmapData {
 		if( x < 0 || y < 0 || width < 0 || height < 0 || srcX < 0 || srcY < 0 || srcWidth < 0 || srcHeight < 0 ||
 			x + width > this.width || y + height > this.height || srcX + srcWidth > src.width || srcY + srcHeight > src.height )
 			throw "Outside bounds";
-		hxd.impl.FmtSupport.scaleImage(
+		hl.Format.scaleImage(
 			data.pixels, (x + y * this.width) << 2, this.width<<2, width, height,
 			src.data.pixels, (srcX + srcY * src.width)<<2, src.width<<2, srcWidth, srcHeight,
 			smooth?1:0
