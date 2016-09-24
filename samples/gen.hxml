@@ -1,0 +1,3 @@
+-lib hscript
+-dce no
+--macro Generator.generateProjects()

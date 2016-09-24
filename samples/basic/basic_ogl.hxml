@@ -1,7 +1,0 @@
--cpp bin
--main Main
--lib heaps
--D resourcesPath=../res
--dce full
--lib hxsdl
---macro include('h3d')

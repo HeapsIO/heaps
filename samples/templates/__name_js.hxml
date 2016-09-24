@@ -1,0 +1,5 @@
+-lib heaps
+-cp ../..
+-js ::name::.js
+-main ::main::
+::params::

@@ -1,1 +1,4 @@
---macro All.main()
+-D silent
+gen.hxml
+--next
+--macro Generator.compile()
