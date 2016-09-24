@@ -34,6 +34,9 @@ private typedef Uniform = sdl.GL.Uniform;
 private typedef Program = sdl.GL.Program;
 private typedef GLShader = sdl.GL.Shader;
 private typedef Texture = h3d.impl.Driver.Texture;
+#if cpp
+private typedef Float32Array = Array<cpp.Float32>;
+#end
 #end
 
 private class CompiledShader {
@@ -224,6 +227,8 @@ class GlDriver extends Driver {
 			if( s.globals != null ) {
 				#if hl
 				gl.uniform4fv(s.globals, @:privateAccess (cast buf.globals.toData() : hl.types.ArrayBase.ArrayF32).bytes, 0, s.shader.globalsSize * 4);
+				#elseif hxsdl
+				gl.uniform4fv(s.globals, buf.globals.toData(), 0, s.shader.globalsSize * 4);
 				#else
 				var a = new Float32Array(buf.globals.toData()).subarray(0, s.shader.globalsSize * 4);
 				gl.uniform4fv(s.globals, a);
@@ -233,6 +238,8 @@ class GlDriver extends Driver {
 			if( s.params != null ) {
 				#if hl
 				gl.uniform4fv(s.params, @:privateAccess (cast buf.params.toData() : hl.types.ArrayBase.ArrayF32).bytes, 0, s.shader.paramsSize * 4);
+				#elseif hxsdl
+				gl.uniform4fv(s.params, buf.params.toData(), 0, s.shader.paramsSize * 4);
 				#else
 				var a = new Float32Array(buf.params.toData()).subarray(0, s.shader.paramsSize * 4);
 				gl.uniform4fv(s.params, a);
