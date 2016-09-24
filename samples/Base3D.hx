@@ -1,6 +1,6 @@
 import h3d.scene.*;
 
-class Basic3D extends hxd.App {
+class Base3D extends hxd.App {
 
 	var time : Float = 0.;
 	var obj1 : Mesh;
@@ -75,7 +75,7 @@ class Basic3D extends hxd.App {
 		hxd.Res.initEmbed();
 
 		// start the application
-		new Basic3D();
+		new Base3D();
 	}
 
 }
