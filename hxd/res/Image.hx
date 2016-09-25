@@ -106,7 +106,7 @@ class Image extends Resource {
 
 			#if (lime && (cpp || neko || nodejs))
 			// native PNG loader is faster
-			var i = lime.graphics.format.PNG.decodeBytes( bytes, true );
+			var i = lime.graphics.Image.fromBytes( bytes );
 			pixels = new Pixels(inf.width, inf.height, i.data.toBytes(), RGBA );
 			#else
 			var png = new format.png.Reader(new haxe.io.BytesInput(bytes));
