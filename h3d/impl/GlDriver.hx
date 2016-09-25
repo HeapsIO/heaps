@@ -120,6 +120,7 @@ class GlDriver extends Driver {
 
 	override function begin(frame) {
 		this.frame = frame;
+		resetStream();
 		#if cpp
 		curAttribs = 0;
 		curMatBits = -1;
@@ -226,7 +227,7 @@ class GlDriver extends Driver {
 		case Globals:
 			if( s.globals != null ) {
 				#if hl
-				gl.uniform4fv(s.globals, @:privateAccess (cast buf.globals.toData() : hl.types.ArrayBase.ArrayF32).bytes, 0, s.shader.globalsSize * 4);
+				gl.uniform4fv(s.globals, streamData(@:privateAccess (cast buf.globals.toData() : hl.types.ArrayBase.ArrayF32).bytes, 0, s.shader.globalsSize * 16), 0, s.shader.globalsSize * 4);
 				#elseif hxsdl
 				gl.uniform4fv(s.globals, buf.globals.toData(), 0, s.shader.globalsSize * 4);
 				#else
@@ -237,7 +238,7 @@ class GlDriver extends Driver {
 		case Params:
 			if( s.params != null ) {
 				#if hl
-				gl.uniform4fv(s.params, @:privateAccess (cast buf.params.toData() : hl.types.ArrayBase.ArrayF32).bytes, 0, s.shader.paramsSize * 4);
+				gl.uniform4fv(s.params, streamData(@:privateAccess (cast buf.params.toData() : hl.types.ArrayBase.ArrayF32).bytes, 0, s.shader.paramsSize * 16), 0, s.shader.paramsSize * 4);
 				#elseif hxsdl
 				gl.uniform4fv(s.params, buf.params.toData(), 0, s.shader.paramsSize * 4);
 				#else
@@ -514,13 +515,64 @@ class GlDriver extends Driver {
 		#end
 	}
 	#end
+	
+	/*
+		GL async model create crashes if the GC free the memory that we send it.
+		Instead, we will copy the data into a temp location before uploading.
+	*/
+	
+	static inline var STREAM_POS = #if hl 0 #else 1 #end;
+	#if hl
+	
+	var streamBytes : hl.types.Bytes;
+	var streamLen : Int;
+	var streamPos : Int;
+	
+	function expandStream(needed:Int) {
+		// too much data in our tmp buffer, let's flush it
+		if( streamPos > (needed >> 1) && needed > 16 << 20 ) {
+			GL.finish();
+			needed -= streamPos;
+			streamPos = 0;
+			if( needed < streamLen )
+				return;
+		}
+		
+		var newLen = streamLen == 0 ? 0x10000 : streamLen;
+		while( newLen < needed )
+			newLen = (newLen * 3) >> 1;
+		var newBytes = new hl.types.Bytes(newLen);
+		if( streamPos > 0 )
+			newBytes.blit(0, streamBytes, 0, streamPos);
+		streamLen = newLen;
+		streamBytes = newBytes;		
+	}
+	
+	#end
+	
+	function resetStream() {
+		#if hl
+		streamPos = 0;
+		#end		
+	}
+	
+	inline function streamData(data, pos:Int, length:Int) {
+		#if hl
+		var needed = streamPos + length;
+		if( needed > streamLen ) expandStream(needed);
+		streamBytes.blit(streamPos, data, pos, length);
+		data = streamBytes.offset(streamPos);
+		streamPos += length;
+		#end
+		return data;
+	}
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 		pixels.convert(t.format);
 		#if hxsdl
 		pixels.setFlip(true);
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, pixels.bytes.getData());
+		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, streamData(pixels.bytes.getData(),0,pixels.width*pixels.height*4));
 		#elseif lime
 		pixels.setFlip(true);
 		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
@@ -536,7 +588,7 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		#if hxsdl
 		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBase.ArrayF32).bytes #else buf.getNative() #end;
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, data, bufPos, vertexCount * stride * 4);
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(data,bufPos,vertexCount * stride * 4), bufPos * STREAM_POS, vertexCount * stride * 4);
 		#else
 		var buf = new Float32Array(buf.getNative());
 		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride #if cpp * (fixMult?4:1) #end);
@@ -549,7 +601,7 @@ class GlDriver extends Driver {
 		var stride : Int = v.stride;
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		#if hxsdl
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, buf.getData(), bufPos, vertexCount * stride * 4);
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(buf.getData(),bufPos,vertexCount * stride * 4), bufPos * STREAM_POS, vertexCount * stride * 4);
 		#else
 		var buf = bytesToUint8Array(buf);
 		var sub = new Uint8Array(buf.buffer, bufPos, vertexCount * stride * 4);
@@ -562,7 +614,7 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
 		#if hxsdl
 		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBase.ArrayUI16).bytes #else buf.getNative() #end;
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, data, bufPos, indiceCount * 2);
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(data,bufPos,indiceCount*2), bufPos * STREAM_POS, indiceCount * 2);
 		#else
 		var buf = new Uint16Array(buf.getNative());
 		var sub = new Uint16Array(buf.buffer, bufPos, indiceCount #if cpp * (fixMult?2:1) #end);
@@ -574,7 +626,7 @@ class GlDriver extends Driver {
 	override function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
 		#if hxsdl
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, buf.getData(), bufPos, indiceCount * 2);
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(buf.getData(),bufPos, indiceCount * 2), bufPos * STREAM_POS, indiceCount * 2);
 		#else
 		var buf = bytesToUint8Array(buf);
 		var sub = new Uint8Array(buf.buffer, bufPos, indiceCount * 2);
