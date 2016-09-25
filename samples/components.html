@@ -1,0 +1,98 @@
+<body>		
+	<style>		
+		.window {		
+			layout : absolute;		
+			padding : 15;		
+		}		
+		button.big {		
+			width : 500px;		
+		}		
+				
+		.main {		
+			layout : inline;		
+		}		
+				
+		.main:vertical {		
+			layout : vertical;		
+		}		
+		
+		.main:absolute {		
+			layout : absolute;		
+		}		
+				
+		.border {		
+			border : 1px solid #888;		
+		}		
+				
+		.dock {		
+			layout:dock;		
+		}		
+				
+		.showBorders box {		
+			border : 1px solid red;		
+		}		
+		.showBorders label, .showBorders box.dock {		
+			border : 1px solid #0FF;		
+		}		
+		.rounded1 {		
+			border-radius: 10px;		
+			border-width: 4px;		
+			border-color: #7a7a78;		
+			background-color: rgba(224, 220, 123, 0.9);		
+			width: 200px;		
+			height: 100px;		
+			offset: 400 570;		
+		}		
+				
+	</style>		
+	<div class="panel window">		
+		<div class="main" id="box">		
+			<button value="V Box" onclick="$('#box').style('layout : vertical')"/>		
+			<button value="H Box" onclick="$('#box').style('layout : horizontal')"/>		
+			<button value="I Box" onclick="$('#box').style('layout : inline')"/>		
+			<button class="big" value="A slightly long one (styled with CSS)" onclick="$(this).text('Clicked!')"/>		
+			<div>		
+				<button value="Show Borders" onclick="$('.window').toggleClass('showBorders')"/>		
+			</div>		
+			<slider onchange="$('#lb1').text(api.fmt($(this).val()))"/>		
+			<label id="lb1"></label>		
+			<slider onchange="$('#lb2').text(api.fmt($(this).val()))" style="increment:0.1"/>		
+			<label id="lb2"></label>		
+			<div>		
+				<checkbox onchange="$('#lbc').text($(this).val()?'ON':'OFF')"/>		
+				<label id="lbc">OFF</label>		
+			</div>		
+					
+			<itemlist selected="1">		
+				<div class="line">		
+					<span>Item 1</span>		
+				</div>		
+				<div class="line">		
+					<span>Item 2</span>		
+				</div>		
+				<div class="line">		
+					<checkbox/>		
+					<span>Item 3</span>		
+				</div>		
+			</itemlist>		
+					
+			<input value="bla"/>		
+			<input/>		
+					
+			<colorpicker/>		
+			<gradienteditor/>		
+					
+			<div class="dock">		
+				<div class="panel border" style="dock:top; height:60px"/>		
+				<div class="panel border" style="dock:left; width:30px"/>		
+				<div class="panel border" style="dock:right; width:40px"/>		
+				<div class="panel border" style="dock:bottom; height:40px"/>		
+				<div class="panel border" style="dock:left; width:20px"/>		
+				<div class="panel border" style="dock:full"/>		
+				<div class="panel border" style="dock:full; width : 20px; height : 20px"/>		
+			</div>		
+		</div>		
+	</div>		
+	<button value="Standalone" x="700" y="570"/>		
+	<div class="rounded1"  ></div>		
+</body>

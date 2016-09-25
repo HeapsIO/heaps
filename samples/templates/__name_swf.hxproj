@@ -8,7 +8,7 @@
     <movie fps="60" />
     <movie width="1280" />
     <movie height="800" />
-    <movie version="14" />
+    <movie version="15" />
     <movie minorVersion="0" />
     <movie platform="Flash Player" />
     <movie background="#FFFFFF" />
