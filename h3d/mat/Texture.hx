@@ -202,16 +202,7 @@ class Texture {
 		Beware, this is a very slow operation that shouldn't be done during rendering.
 	**/
 	public function capturePixels( withAlpha = false ) {
-		#if js
-
-		var e = h3d.Engine.getCurrent();
-		e.pushTarget(this);
-		@:privateAccess e.flushTarget();
-		var pixels = hxd.Pixels.alloc(width, height, RGBA);
-		e.driver.captureRenderBuffer(pixels);
-		e.popTarget();
-
-		#else
+		#if flash
 
 		var twoPassCapture = #if flash withAlpha #else false #end;
 
@@ -265,6 +256,15 @@ class Texture {
 		mipMap = oldM;
 		wrap = oldWrap;
 
+		#else
+
+		var e = h3d.Engine.getCurrent();
+		e.pushTarget(this);
+		@:privateAccess e.flushTarget();
+		var pixels = hxd.Pixels.alloc(width, height, RGBA);
+		e.driver.captureRenderBuffer(pixels);
+		e.popTarget();
+		
 		#end
 		return pixels;
 	}

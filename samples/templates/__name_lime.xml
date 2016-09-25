@@ -5,11 +5,13 @@
 	<app main="LimeApp" file="::name::" path="bin" />
 	<app min-swf-version="12.0" />
 	
+	<source path="../.."/>
+	
 	<window background="#000000" fps="60" />
 	<window width="1280" height="800" unless="mobile" />
 	<window orientation="landscape" vsync="false" antialiasing="0" if="cpp" colors32b="true" allow-high-dpi="true"/>
 
-	<haxedef name="resourcesPath" value="::{ var k = params.split("-D resourcesPath="); if( k[1] == null ) "res" else StringTools.trim(k[1].split("\n")[0]); }::"/>
+	<haxedef name="resourcesPath" value="::{ var k = params.split("-D resourcesPath="); if( k[1] == null ) "../../res" else StringTools.trim(k[1].split("\n")[0]); }::"/>
 	<haxelib name="lime" />
 	<haxelib name="heaps" />
 </project>
