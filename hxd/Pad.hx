@@ -25,6 +25,31 @@ class Pad {
 		dpadRight : 19,
 		names : ["LX","LY","RX","RY","A","B","X","Y","LB","RB","LT","RT","Select","Start","LCLK","RCLK","DUp","DDown","DLeft","DRight"],
 	};
+	
+	public static var CONFIG_SDL = {
+		analogX : 0,
+		analogY : 1,
+		ranalogX : 2,
+		ranalogY : 3,
+		A : 6,
+		B : 7,
+		X : 8,
+		Y : 9,
+		LB : 15,
+		RB : 16,
+		LT : 4,
+		RT : 5,
+		back : 10,
+		start : 12,
+		analogClick : 13,
+		ranalogClick : 14,
+		dpadUp : 17,
+		dpadDown : 18,
+		dpadLeft : 19,
+		dpadRight : 20,
+		names : ["LX","LY","RX","RY","LT","RT","A","B","X","Y","Select","Guide","Start","LCLK","RCLK","LB","RB","DUp","DDown","DLeft","DRight"],
+	};
+
 
 	public var connected(default, null) = true;
 	public var name(get, never) : String;
@@ -42,7 +67,7 @@ class Pad {
 
 	function get_name() {
 		if( index < 0 ) return "Dummy GamePad";
-		#if flash
+		#if (flash || hlsdl)
 		return d.name;
 		#else
 		return "GamePad";
@@ -64,6 +89,11 @@ class Pad {
 	static var initDone = false;
 	static var inst : flash.ui.GameInput;
 	static var pads : Array<hxd.Pad> = [];
+	#elseif hlsdl
+	var d : sdl.GameController;
+	static var waitPad : Pad -> Void;
+	static var initDone = false;
+	static var pads : Map<Int, hxd.Pad> = new Map();
 	#end
 
 	/**
@@ -137,8 +167,79 @@ class Pad {
 			});
 			var count = flash.ui.GameInput.numDevices; // necessary to trigger added
 		}
-		#else
+		#elseif hlsdl
+		waitPad = onPad;
+		if( !initDone ) {
+			initDone = true;
+			var c = @:privateAccess sdl.GameController.gctrlCount();
+			for( idx in 0...c )
+				initPad( idx );
+		}
 		#end
 	}
+	
+	#if hlsdl
+	inline function _setAxis( axisId : Int, value : Int ){
+		var v = value / 0x7FFF;
+		
+		// Invert Y axis
+		if( axisId == 1 || axisId == 3 )
+			values[ axisId ] = -v;
+		else
+			values[ axisId ] = v;
+		
+		if( axisId == 0 )
+			xAxis = v;
+		else if( axisId == 1 )
+			yAxis = v;
+	}
+	
+	inline function _setButton( btnId : Int, down : Bool ){
+		buttons[ btnId+6 ] = down;
+		values[ btnId+6 ] = down ? 1 : 0;
+	}
+	
+	static function initPad( index ){
+		var sp = new sdl.GameController( index );
+		if( @:privateAccess sp.ptr == null )
+			return;
+		var p = new hxd.Pad();
+		p.index = sp.id;
+		p.d = sp;
+		pads.set( p.index, p );
+		for( axis in 0...6 )
+			p._setAxis( axis, sp.getAxis(axis) );
+		for( button in 0...15 )
+			p._setButton( button, sp.getButton(button) );
+		waitPad( p );
+	}
+	
+	static function onEvent( e : sdl.Event ){
+		var p = pads.get( e.controller );
+		switch( e.type ){
+			case GControllerAdded:
+				if( initDone )
+					initPad(e.controller);
+			case GControllerRemoved:
+				if( p != null ){
+					pads.remove( p.index );
+					p.d.close();
+					p.connected = false;
+					p.onDisconnect();
+				}
+			case GControllerDown:
+				if( p != null && e.button > -1 )
+					p._setButton( e.button, true );
+			case GControllerUp:
+				if( p != null && e.button > -1 )
+					p._setButton( e.button, false );
+			case GControllerAxis:
+				if( p != null && e.button > -1 && e.button < 6 )
+					p._setAxis( e.button, e.value );
+			default:
+		}
+		
+	}
+	#end
 
 }

@@ -542,6 +542,8 @@ class System {
 		case MouseWheel:
 			eh = new Event(EWheel, mouseX, mouseY);
 			eh.wheelDelta = -e.wheelDelta;
+		case GControllerAdded, GControllerRemoved, GControllerUp, GControllerDown, GControllerAxis:
+			@:privateAccess hxd.Pad.onEvent( e );
 		default:
 		}
 		if( eh != null ) Stage.getInstance().event(eh);
