@@ -68,9 +68,7 @@ class GraphicsDraw extends hxd.App {
 		// test capture bitmap
 
 		bclone = new h2d.Bitmap(h2d.Tile.fromTexture(new h3d.mat.Texture(256, 256)), s2d);
-		#if js
 		bclone.blendMode = None; // prevent residual alpha bugs
-		#end
 		bclone.y = 512;
 
 		// set up graphics instance for use in redraw()
@@ -90,7 +88,7 @@ class GraphicsDraw extends hxd.App {
 		}
 		pg.drawTo(t);
 
-		var pix = t.capturePixels();
+		var pix = t.capturePixels(true);
 		bclone.tile.getTexture().uploadPixels(pix);
 		pix.dispose();
 	}

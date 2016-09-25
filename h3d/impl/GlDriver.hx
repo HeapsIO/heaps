@@ -723,7 +723,7 @@ class GlDriver extends Driver {
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
 		if( curTarget == null )
 			throw "Can't capture main render buffer in GL";
-		#if js
+		#if (js || hl)
 		gl.readPixels(0, 0, pixels.width, pixels.height, GL.RGBA, GL.UNSIGNED_BYTE, @:privateAccess pixels.bytes.b);
 		pixels.format = RGBA;
 		#end
