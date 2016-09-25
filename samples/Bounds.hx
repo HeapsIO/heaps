@@ -29,7 +29,7 @@ class Bounds extends hxd.App {
 		for( b in boxes )
 			new h2d.Graphics(b);
 
-		var tf = new h2d.Text(hxd.res.FontBuilder.getFont("Verdana", 16), boxes[0]);
+		var tf = new h2d.Text(hxd.Res.customFont.toFont(), boxes[0]);
 		tf.text = "Some quite long rotating text";
 		tf.x = -5;
 		tf.y = 15;
@@ -58,6 +58,7 @@ class Bounds extends hxd.App {
 	}
 
 	static function main() {
+		hxd.Res.initEmbed();
 		new Bounds();
 	}
 

@@ -31,7 +31,7 @@ class Base2D extends hxd.App {
 			bmp.blendMode = Add;
 		}
 
-		#if !cpp
+		#if !(cpp || hl)
 		// load a true type font, can be not very high quality
 		var font = hxd.Res.trueTypeFont.build(64);
 
