@@ -3,7 +3,7 @@ import hxd.Event;
 
 @:allow(hxd.Stage)
 @:access(hxd.Stage)
-class LimeStage implements lime.app.IModule {
+class LimeStage extends lime.app.Module {
 	
 	var stage : hxd.Stage;
 
@@ -16,45 +16,46 @@ class LimeStage implements lime.app.IModule {
 	var mouseY : Int = 0;
 
 	public function new( s : hxd.Stage ){
+		super();
 		stage = s;
 		enableMouse = !hxd.System.isTouch;
 		width = hxd.System.width;
 		height = hxd.System.height;
 	}
-
-	public function render(renderer){
+	
+	override public function render(renderer){
 		if( hxd.System.loopFunc != null )
 			hxd.System.loopFunc();
 	}
 
-	public function onWindowResize(win:lime.ui.Window, w, h){
+	override public function onWindowResize(win:lime.ui.Window, w, h){
 		width = Std.int(w * win.scale);
 		height = Std.int(h * win.scale);
 		stage.onResize(null);
 	}
 
-	public function onMouseMove(win, x : Float, y : Float){
+	override public function onMouseMove(win, x : Float, y : Float){
 		if( !enableMouse ) return;
 		mouseX = Std.int(x);
 		mouseY = Std.int(y);
 		stage.event(new Event(EMove, mouseX, mouseY));
 	}
 
-	public function onMouseDown(win, x : Float, y : Float, button : Int ){
+	override public function onMouseDown(win, x : Float, y : Float, button : Int ){
 		if( !enableMouse ) return;
 		var e = new Event(EPush, x, y);
 		e.button = button;
 		stage.event(e);
 	}
 
-	public function onMouseUp(win, x : Float, y : Float, button : Int){
+	override public function onMouseUp(win, x : Float, y : Float, button : Int){
 		if( !enableMouse ) return;
 		var e = new Event(ERelease, x, y);
 		e.button = button;
 		stage.event(e);
 	}
 	
-	public function onMouseWheel( win, dx : Float, dy : Float ){
+	override public function onMouseWheel( win, dx : Float, dy : Float ){
 		if( dy != 0 ){
 			var ev = new Event(EWheel, mouseX, mouseY);
 			ev.wheelDelta = dy;
@@ -62,108 +63,41 @@ class LimeStage implements lime.app.IModule {
 		}
 	}
 
-	public function onTouchEnd( touch : lime.ui.Touch ){
+	override public function onTouchEnd( touch : lime.ui.Touch ){
 		if( !hxd.Stage.ENABLE_TOUCH ) return;
 		var e = new Event( ERelease, touch.x*width, touch.y*height );
 		e.touchId = touch.id;
 		stage.event(e);
 	}
 
-	public function onTouchMove( touch : lime.ui.Touch ){
+	override public function onTouchMove( touch : lime.ui.Touch ){
 		if( !hxd.Stage.ENABLE_TOUCH ) return;
 		var e = new Event( EMove, touch.x*width, touch.y*height );
 		e.touchId = touch.id;
 		stage.event(e);
 	}
 
-	public function onTouchStart( touch : lime.ui.Touch ){
+	override public function onTouchStart( touch : lime.ui.Touch ){
 		if( !hxd.Stage.ENABLE_TOUCH ) return;
 		var e = new Event( EPush, touch.x*width, touch.y*height );
 		e.touchId = touch.id;
 		stage.event(e);
 	}
 
-	public function onKeyDown( window, keyCode:lime.ui.KeyCode, modifier:lime.ui.KeyModifier ){
+	override public function onKeyDown( window, keyCode:lime.ui.KeyCode, modifier:lime.ui.KeyModifier ){
 		var ev = new Event(EKeyDown, mouseX, mouseY);
 		ev.keyCode = Keyboard.convertKeyCode(keyCode);
 		ev.charCode = Keyboard.getCharCode(ev.keyCode, modifier.shiftKey);
 		stage.event(ev);
 	}
 
-	public function onKeyUp( window, keyCode:lime.ui.KeyCode, modifier:lime.ui.KeyModifier ){
+	override public function onKeyUp( window, keyCode:lime.ui.KeyCode, modifier:lime.ui.KeyModifier ){
 		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = Keyboard.convertKeyCode(keyCode);
 		ev.charCode = Keyboard.getCharCode(ev.keyCode, modifier.shiftKey);
 		stage.event(ev);
 	}
 
-	public function onGamepadAxisMove( gamepad, axis, value:Float ){ }
-	
-	public function onGamepadButtonDown( gamepad, button ){ }
-	
-	public function onGamepadButtonUp( gamepad, button ){ }
-	
-	public function onGamepadConnect( gamepad ){}
-
-	public function onGamepadDisconnect( gamepad ){ }
-	
-	public function onJoystickAxisMove( joystick, axis:Int, value:Float ){ }
-
-	public function onJoystickButtonDown( joystick, button:Int ){ }
-
-	public function onJoystickButtonUp( joystick, button:Int ){ }
-
-	public function onJoystickConnect( joystick ){ }
-
-	public function onJoystickDisconnect( joystick ){ }
-
-	public function onJoystickHatMove( joystick, hat:Int, position ){ }
-	
-	public function onJoystickTrackballMove( joystick, trackball:Int, value:Float ){ }
-
-	public function onModuleExit( code:Int ){ }
-	
-	public function onMouseMoveRelative( window, x:Float, y:Float ){ }
-	
-	public function onPreloadComplete(  ){ }
-	
-	public function onPreloadProgress( loaded:Int, total:Int ){ }
-
-	public function onRenderContextLost( renderer ){ }
-
-	public function onRenderContextRestored( renderer, context ){ }
-
-	public function onTextEdit( window, text:String, start:Int, length:Int ){ }
-
-	public function onTextInput( window, text:String ){ }
-
-	public function onWindowActivate( window ){ }
-
-	public function onWindowClose( window ){ }
-	
-	public function onWindowCreate( window ){ }
-	
-	public function onWindowDeactivate( window ){ }
-
-	public function onWindowEnter( window ){ }
-	
-	public function onWindowFocusIn( window ){ }
-
-	public function onWindowFocusOut( window ){ }
-
-	public function onWindowFullscreen( window ){ }
-	
-	public function onWindowLeave( window ){ }
-	
-	public function onWindowMove( window, x:Float, y:Float ){ }
-	
-	public function onWindowMinimize( window ){ }
-	
-	public function onWindowRestore( window ){ }
-
-	public function onWindowDropFile( window, file:String ){ }
-
-	public function update( dt ){ }
 		
 }
 
