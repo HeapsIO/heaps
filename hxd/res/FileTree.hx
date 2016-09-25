@@ -175,7 +175,7 @@ class FileTree {
 				kind : TDClass({ pack : ["flash","utils"], name : "ByteArray", params : [] }),
 			});
 			embedTypes.push("hxd._res." + name);
-		} else if( isJS || isCPP ) {
+		} else {
 			switch( ext.toLowerCase() ) {
 			case "ttf" if( isJS ):
 				Embed.doEmbedFont(name, fullPath, options.fontsChars);
@@ -184,8 +184,6 @@ class FileTree {
 			default:
 			}
 			Context.addResource(name, sys.io.File.getBytes(fullPath));
-		} else {
-			return false;
 		}
 		return true;
 	}
