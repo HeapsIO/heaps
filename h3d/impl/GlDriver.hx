@@ -529,9 +529,10 @@ class GlDriver extends Driver {
 	var streamPos : Int;
 	
 	function expandStream(needed:Int) {
+		GL.finish();
+		
 		// too much data in our tmp buffer, let's flush it
 		if( streamPos > (needed >> 1) && needed > 16 << 20 ) {
-			GL.finish();
 			needed -= streamPos;
 			streamPos = 0;
 			if( needed < streamLen )
