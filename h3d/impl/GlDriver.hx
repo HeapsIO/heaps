@@ -431,7 +431,7 @@ class GlDriver extends Driver {
 				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, tt.rb);
 				gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 			}
-			gl.bindFramebuffer(GL.FRAMEBUFFER, curTarget == null ? null : curTarget.t.fb);
+			gl.bindFramebuffer(GL.FRAMEBUFFER, curTarget == null || curTarget.t == null ? null : curTarget.t.fb);
 		}
 		gl.bindTexture(GL.TEXTURE_2D, null);
 		return tt;
@@ -515,22 +515,22 @@ class GlDriver extends Driver {
 		#end
 	}
 	#end
-	
+
 	/*
 		GL async model create crashes if the GC free the memory that we send it.
 		Instead, we will copy the data into a temp location before uploading.
 	*/
-	
+
 	static inline var STREAM_POS = #if hl 0 #else 1 #end;
 	#if hl
-	
+
 	var streamBytes : hl.types.Bytes;
 	var streamLen : Int;
 	var streamPos : Int;
-	
+
 	function expandStream(needed:Int) {
 		GL.finish();
-		
+
 		// too much data in our tmp buffer, let's flush it
 		if( streamPos > (needed >> 1) && needed > 16 << 20 ) {
 			needed -= streamPos;
@@ -538,7 +538,7 @@ class GlDriver extends Driver {
 			if( needed < streamLen )
 				return;
 		}
-		
+
 		var newLen = streamLen == 0 ? 0x10000 : streamLen;
 		while( newLen < needed )
 			newLen = (newLen * 3) >> 1;
@@ -546,17 +546,17 @@ class GlDriver extends Driver {
 		if( streamPos > 0 )
 			newBytes.blit(0, streamBytes, 0, streamPos);
 		streamLen = newLen;
-		streamBytes = newBytes;		
+		streamBytes = newBytes;
 	}
-	
+
 	#end
-	
+
 	function resetStream() {
 		#if hl
 		streamPos = 0;
-		#end		
+		#end
 	}
-	
+
 	inline function streamData(data, pos:Int, length:Int) {
 		#if hl
 		var needed = streamPos + length;
