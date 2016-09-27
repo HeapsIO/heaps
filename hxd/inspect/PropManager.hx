@@ -186,6 +186,7 @@ class PropManager extends cdb.jq.Client {
 			set(e);
 		case PColor(_, _, _, set):
 			if( !Std.is(v, String) ) throw "Invalid color value " + v;
+			var v : String = v;
 			set(h3d.Vector.fromColor(Std.parseInt("0x"+v.substr(1))));
 		case PFloats(_, get, set):
 			if( !Std.is(v, Array) ) throw "Invalid floats value " + v;
