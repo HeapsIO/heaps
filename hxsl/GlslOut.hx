@@ -214,15 +214,23 @@ class GlslOut {
 			add("}");
 		case TBinop(op, e1, e2):
 			switch( [op, e1.t, e2.t] ) {
-			case [OpMult, TVec(3,VFloat), TMat3x4]:
+			case [OpAssignOp(OpMult) | OpMult, TVec(3,VFloat), TMat3x4]:
 				decl(MAT34);
 				decl("vec3 m3x4mult( vec3 v, _mat3x4 m) { vec4 ve = vec4(v,1.0); return vec3(dot(m.a,ve),dot(m.b,ve),dot(m.c,ve)); }");
+				if( op.match(OpAssignOp(_)) ) {
+					addValue(e1, tabs);
+					add(" = ");
+				}
 				add("m3x4mult(");
 				addValue(e1, tabs);
 				add(",");
 				addValue(e2, tabs);
 				add(")");
-			case [OpMod, _, _]:
+			case [OpAssignOp(OpMod) | OpMod, _, _]:
+				if( op.match(OpAssignOp(_)) ) {
+					addValue(e1, tabs);
+					add(" = ");
+				}
 				add("mod(");
 				addValue(e1, tabs);
 				add(",");

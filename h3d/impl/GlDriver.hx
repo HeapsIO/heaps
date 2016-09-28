@@ -177,7 +177,7 @@ class GlDriver extends Driver {
 			gl.deleteShader(p.fragment.s);
 			if( gl.getProgramParameter(p.p, GL.LINK_STATUS) != cast 1 ) {
 				var log = gl.getProgramInfoLog(p.p);
-				throw "Program linkage failure: "+log;
+				throw "Program linkage failure: "+log+"\nVertex=\n"+glout.run(shader.vertex.data)+"\n\nFragment=\n"+glout.run(shader.fragment.data);
 			}
 			initShader(p, p.vertex, shader.vertex);
 			initShader(p, p.fragment, shader.fragment);
