@@ -108,9 +108,16 @@ class DynamicText {
 			// printer function
 			var i = 1;
 			var fields = new Array<Field>();
+			var map = new Map();
 			while( i < vars.length ) {
-				tdict.set(vars[i], true);
-				fields.push( { name : vars[i], kind : FVar(macro : Dynamic), pos : pos.pos, meta : [] } );
+				var name = vars[i];
+				if( map.exists(name) ) {
+					i += 2;
+					continue;
+				}
+				map.set(name, true);
+				tdict.set(name, true);
+				fields.push( { name : name, kind : FVar(macro : Dynamic), pos : pos.pos, meta : [] } );
 				i += 2;
 			}
 			return TFunction([TAnonymous(fields)], tstring);
