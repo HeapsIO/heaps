@@ -94,6 +94,7 @@ class SpriteBatch extends Drawable {
 	var first : BatchElement;
 	var last : BatchElement;
 	var tmpBuf : hxd.FloatBuffer;
+	var buffer : h3d.Buffer;
 
 	public function new(t,?parent) {
 		super(parent);
@@ -143,6 +144,7 @@ class SpriteBatch extends Drawable {
 				e = e.next;
 			}
 		}
+		flush();
 	}
 
 	override function getBoundsRec( relativeTo, out, forSize ) {
@@ -180,7 +182,11 @@ class SpriteBatch extends Drawable {
 		}
 	}
 
-	override function draw( ctx : RenderContext ) {
+	function flush() {
+		if( buffer != null ) {
+			buffer.dispose();
+			buffer = null;
+		}
 		if( first == null )
 			return;
 		if( tmpBuf == null ) tmpBuf = new hxd.FloatBuffer();
@@ -271,10 +277,13 @@ class SpriteBatch extends Drawable {
 			}
 			e = e.next;
 		}
-		var buffer = h3d.Buffer.ofSubFloats(tmpBuf, 8, Std.int(pos/8), [Dynamic, Quads, RawFormat]);
+		buffer = h3d.Buffer.ofSubFloats(tmpBuf, 8, Std.int(pos/8), [Dynamic, Quads, RawFormat]);
+	}
+
+	override function draw( ctx : RenderContext ) {
+		if( first == null || buffer == null || buffer.isDisposed() ) return;
 		ctx.beginDrawObject(this, tile.getTexture());
 		ctx.engine.renderQuadBuffer(buffer);
-		buffer.dispose();
 	}
 
 	public inline function isEmpty() {
@@ -285,4 +294,10 @@ class SpriteBatch extends Drawable {
 		return new ElementsIterator(first);
 	}
 
+	override function onDelete()  {
+		if( buffer != null ) {
+			buffer.dispose();
+			buffer = null;
+		}
+	}
 }
