@@ -69,10 +69,14 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	override function render( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
-		if( buffer == null || buffer.isDisposed() ) alloc(engine);
+		flush();
 		for( b in buffers )
 			engine.renderIndexed(b.vbuf, b.ibuf);
 		super.render(engine);
+	}
+
+	public inline function flush() {
+		if( buffer == null || buffer.isDisposed() ) alloc(h3d.Engine.getCurrent());
 	}
 
 	override function dispose() {
@@ -461,4 +465,8 @@ class Graphics extends Drawable {
 		content.render(ctx.engine);
 	}
 
+	override function sync(ctx:RenderContext) {
+		super.sync(ctx);
+		content.flush();
+	}
 }
