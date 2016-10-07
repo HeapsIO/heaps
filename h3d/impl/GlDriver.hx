@@ -195,7 +195,10 @@ class GlDriver extends Driver {
 					default: throw "assert " + v.type;
 					}
 					var index = gl.getAttribLocation(p.p, glout.varNames.get(v.id));
-					if( index < 0 ) continue;
+					if( index < 0 ) {
+						p.stride += size;
+						continue;
+					}
 					p.attribs.push( { offset : p.stride, index : index, size:size, type:t } );
 					p.attribNames.push(v.name);
 					p.stride += size;
