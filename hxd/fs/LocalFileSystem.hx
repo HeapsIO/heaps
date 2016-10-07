@@ -358,8 +358,12 @@ class LocalFileSystem implements FileSystem {
 		if( !StringTools.endsWith(baseDir, "/") ) baseDir += "/";
 		root = new LocalEntry(this, "root", null, froot);
 		#else
-		var exePath = Sys.executablePath().split("\\").join("/").split("/");
-		exePath.pop();
+		#if (haxe_ver >= 3.3)
+			var exePath = Sys.programPath().split("\\").join("/").split("/");
+		#else
+			var exePath = Sys.executablePath().split("\\").join("/").split("/");
+			exePath.pop();
+		#end
 		var froot = sys.FileSystem.fullPath(exePath.join("/") + "/" + baseDir);
 		if( !sys.FileSystem.isDirectory(froot) ) {
 			froot = sys.FileSystem.fullPath(baseDir);
