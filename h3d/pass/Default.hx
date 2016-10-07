@@ -13,6 +13,7 @@ class Default extends Base {
 	var shaderIdMap : Array<Int>;
 	var textureIdMap : Array<Int>;
 	var sortPasses = true;
+	var logEnable(get, never) : Bool;
 
 	inline function get_globals() return manager.globals;
 
@@ -36,6 +37,14 @@ class Default extends Base {
 		shaderIdMap = [];
 		textureIdMap = [];
 		initGlobals();
+	}
+
+	inline function get_logEnable() {
+		#if debug
+		return ctx.engine.driver.logEnable;
+		#else
+		return false;
+		#end
 	}
 
 	override function getTexture( index = 0 ) : h3d.mat.Texture {
@@ -140,13 +149,13 @@ class Default extends Base {
 		var buf = cachedBuffer, prevShader = null;
 		var drawTri = 0, drawCalls = 0, shaderSwitches = 0;
 		if( ctx.engine.driver.logEnable ) {
-			log("Pass " + (passes == null ? "???" : passes.pass.name) + " start");
+			if( logEnable ) log("Pass " + (passes == null ? "???" : passes.pass.name) + " start");
 			drawTri = ctx.engine.drawTriangles;
 			drawCalls = ctx.engine.drawCalls;
 			shaderSwitches = ctx.engine.shaderSwitches;
 		}
 		while( p != null ) {
-			log("Render " + p.obj + "." + p.pass.name);
+			if( logEnable ) log("Render " + p.obj + "." + p.pass.name);
 			globalModelView = p.obj.absPos;
 			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
 				globalModelViewInverse = p.obj.getInvPos();
@@ -168,7 +177,7 @@ class Default extends Base {
 			drawObject(p);
 			p = p.next;
 		}
-		if( ctx.engine.driver.logEnable ) {
+		if( logEnable ) {
 			log("Pass " + (passes == null ? "???" : passes.pass.name) + " end");
 			log("\t" + (ctx.engine.drawTriangles - drawTri) + " tri " + (ctx.engine.drawCalls - drawCalls) + " calls " + (ctx.engine.shaderSwitches - shaderSwitches) + " shaders");
 		}
