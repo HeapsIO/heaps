@@ -402,7 +402,7 @@ class HMDOut extends BaseLibrary {
 
 			if( !o.isMesh ) continue;
 
-			var mids = [];
+			var mids : Array<Int> = [];
 			for( m in getChilds(o.model, "Material") ) {
 				var mid = hmat.get(m.getId());
 				if( mid != null ) {
