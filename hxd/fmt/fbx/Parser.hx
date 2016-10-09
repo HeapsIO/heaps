@@ -72,7 +72,7 @@ class Parser {
 			case TLength(v):
 				except(TBraceOpen);
 				except(TNode("a"));
-				var ints = [];
+				var ints : Array<Int> = [];
 				var floats : Array<Float> = null;
 				var i = 0;
 				while( i < v ) {

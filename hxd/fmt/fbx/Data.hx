@@ -91,7 +91,8 @@ class FbxTools {
 	}
 
 	static inline function idToInt( f : Float ) {
-		#if neko
+		#if (neko || hl)
+		// ids are unsigned
 		f %= 4294967296.;
 		if( f >= 2147483648. )
 			f -= 4294967296.;
