@@ -73,9 +73,8 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		var hull = [ p0, pts[0], pts[1] ];
 		for (i in 2...pts.length) {
 			var pi = pts[i];
-			while (side(hull[hull.length - 2], hull[hull.length - 1], pi) <= 0) {
+			while (side(hull[hull.length - 2], hull[hull.length - 1], pi) < 0)
 				hull.pop();
-			}
 			hull.push(pi);
 		}
 
