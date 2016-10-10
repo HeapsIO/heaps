@@ -48,33 +48,37 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return b;
 	}
 
+	//sources : https://fr.wikipedia.org/wiki/Parcours_de_Graham
+	//step by step demonstration : http://www.algomation.com/algorithm/graham-scan-convex-hull
 	public function convexHull() {
 		var len = points.length;
-		if( len < 3 )
-			throw "convexHull() needs at least 3 points";
+		if( points.length < 3 )
+			return points;
 
-		var first = 0;
-		var firstX = points[first].x;
-		for( i in 1...points.length ) {
-			var px = points[i].x;
-			if( px < firstX ) {
-				first = i;
-				firstX = px;
-			}
+		//find lowest y points
+		var pts = points.copy();
+		var p0 = pts[0];
+		for( p in pts ) {
+			if( p.y < p0.y || (p.y == p0.y && p.x < p0.x) )
+				p0 = p;
 		}
 
-		var hull = [];
-		var curr = first;
-		var next = 0;
-		do {
-			hull.push(points[curr]);
-			next = (curr + 1) % len;
-			for( i in 0...len ) {
-			   if( side(points[i], points[curr], points[next]) < 0 )
-				   next = i;
+		//sort by polar angle from/to P
+		for(p in pts)
+			if(p.x == p0.x && p.y == p0.y)
+				pts.remove(p);
+		pts.sort(function(p1, p2) return side(p0, p1, p2) > 0 ? -1 : 1);
+
+		//set hull
+		var hull = [ p0, pts[0], pts[1] ];
+		for (i in 2...pts.length) {
+			var pi = pts[i];
+			while (side(hull[hull.length - 2], hull[hull.length - 1], pi) <= 0) {
+				hull.pop();
 			}
-			curr = next;
-		} while( curr != first );
+			hull.push(pi);
+		}
+
 		return hull;
 	}
 
