@@ -56,24 +56,39 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 			return points;
 
 		//find lowest y points
-		var pts = points.copy();
-		var p0 = pts[0];
-		for( p in pts ) {
+		var p0 = points[0];
+		for( p in points ) {
 			if( p.y < p0.y || (p.y == p0.y && p.x < p0.x) )
 				p0 = p;
 		}
 
-		//sort by polar angle from/to P
-		for(p in pts)
-			if(p.x == p0.x && p.y == p0.y)
-				pts.remove(p);
-		pts.sort(function(p1, p2) return side(p0, p1, p2) > 0 ? -1 : 1);
+		//sort by angle from p0
+		var pts : Array<{p : h2d.col.Point, a : Float}> = [];
+		var p1 = new h2d.col.Point(p0.x + 1e5, p0.y);
+		for(p in points) {
+			if(p.x == p0.x && p.y == p0.y) continue;
+			pts.push({p : p, a : side(p0, p1, p)});
+		}
+		pts.sort(function(pa, pb) return side(p0, pa.p, pb.p) > 0 ? -1 : 1);
+
+		//remove same angle points (includes duplicated points)
+		var index = pts.length - 1;
+		while(index > 0) {
+			var cur = pts[index];
+			var prev = pts[index - 1];
+			if(cur.a == prev.a) {
+				if(Math.distanceSq(cur.p.x - p0.x, cur.p.y - p0.y) < Math.distanceSq(prev.p.x - p0.x, prev.p.y - p0.y))
+					pts.remove(cur);
+				else pts.remove(prev);
+			}
+			index--;
+		}
 
 		//set hull
-		var hull = [ p0, pts[0], pts[1] ];
+		var hull = [ p0, pts[0].p, pts[1].p ];
 		for (i in 2...pts.length) {
-			var pi = pts[i];
-			while (side(hull[hull.length - 2], hull[hull.length - 1], pi) < 0)
+			var pi = pts[i].p;
+			while (side(hull[hull.length - 2], hull[hull.length - 1], pi) <= 0)
 				hull.pop();
 			hull.push(pi);
 		}
