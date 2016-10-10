@@ -198,7 +198,7 @@ class Stage3dDriver extends Driver {
 		var b = pixels.bytes.getData();
 		b.position = 0;
 		b.writeBytes(pix, 0, pixels.width * pixels.height * 4);
-		pixels.format = ARGB;
+		@:privateAccess pixels.innerFormat = ARGB;
 		pixels.flags.set(AlphaPremultiplied);
 	}
 
