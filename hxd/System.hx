@@ -430,8 +430,50 @@ class System {
 
 	#elseif hxsdl
 
+	static var currentNativeCursor : Cursor = Default;
+	static var currentCursor : sdl.Cursor;
+	static var cursorVisible = true;
+
 	public static function setNativeCursor( c : Cursor ) {
-		//trace("TODO " + c);
+		if( c.equals(currentNativeCursor) )
+			return;
+		currentNativeCursor = c;
+		if( c == Hide ) {
+			cursorVisible = false;
+			sdl.Cursor.show(false);
+			return;
+		}
+		var cur : sdl.Cursor;
+		switch( c ) {
+		case Default:
+			cur = sdl.Cursor.createSystem(Arrow);
+		case Button:
+			cur = sdl.Cursor.createSystem(Hand);
+		case Move:
+			throw "Cursor not supported";
+		case TextInput:
+			cur = sdl.Cursor.createSystem(IBeam);
+		case Hide:
+			throw "assert";
+		case Custom(frames, speed, offsetX, offsetY):
+			if( frames.length > 1 ) throw "Animated cursor not supported";
+			var pixels = frames[0].getPixels();
+			pixels.convert(BGRA);
+			var surf = sdl.Surface.fromBGRA(pixels.bytes, pixels.width, pixels.height);
+			cur = sdl.Cursor.create(surf, offsetX, offsetY);
+			surf.free();
+			pixels.dispose();
+		}
+		if( currentCursor != null ) {
+			currentCursor.free();
+			currentCursor = null;
+		}
+		currentCursor = cur;
+		cur.set();
+		if( !cursorVisible ) {
+			cursorVisible = true;
+			sdl.Cursor.show(true);
+		}
 	}
 
 	static function get_screenDPI() {
@@ -473,11 +515,11 @@ class System {
 	public static function getClipboard() : String {
 		return "";
 	}
-	
+
 	public static function getCurrentLoop() {
 		return currentLoop;
 	}
-	
+
 	static var win : sdl.Window;
 	static var windowWidth = 800;
 	static var windowHeight = 600;
@@ -657,7 +699,7 @@ class System {
 	public static function getCurrentLoop() {
 		return LOOP;
 	}
-	
+
 	public static function setNativeCursor( c : Cursor ) {
 	}
 
