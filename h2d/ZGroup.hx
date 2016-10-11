@@ -35,7 +35,7 @@ private class DepthEntry {
 	public function new() { }
 }
 
-private class DepthMap {
+class DepthMap {
 	var map      : Map<Sprite, DepthEntry>;
 	var curIndex : Int;
 	var free     : DepthEntry;
