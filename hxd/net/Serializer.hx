@@ -193,9 +193,9 @@ class Serializer {
 		return out.getBytes();
 	}
 
-	public function unserialize<T:Serializable>( data : haxe.io.Bytes, c : Class<T> ) : T {
+	public function unserialize<T:Serializable>( data : haxe.io.Bytes, c : Class<T>, startPos = 0 ) : T {
 		refs = new Map();
-		setInput(data, 0);
+		setInput(data, startPos);
 		return getKnownRef(c);
 	}
 
