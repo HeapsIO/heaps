@@ -251,12 +251,13 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	@:access(h2d.Drawable)
 	public function beginDrawBatch( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
-		if( !beginDraw(obj, texture, false) ) return false;
-		return true;
+		return beginDraw(obj, texture, false);
 	}
 
 	@:access(h2d.Drawable)
 	public function drawTile( obj : h2d.Drawable, tile : h2d.Tile ) {
+		if( !beginDraw(obj, tile.getTexture(), true, true) ) return false;
+
 		var matA, matB, matC, matD, absX, absY;
 		if( inFilter != null ) {
 			var f1 = baseShader.filterMatrixA;
@@ -275,8 +276,6 @@ class RenderContext extends h3d.impl.RenderContext {
 			absX = obj.absX;
 			absY = obj.absY;
 		}
-
-		if( !beginDraw(obj, tile.getTexture(), true, true) ) return false;
 
 		// check if our tile is outside of the viewport
 		if( matB == 0 && matC == 0 ) {

@@ -386,7 +386,7 @@ class Sprite {
 			nullDrawable.matB = matB;
 			nullDrawable.matC = matC;
 			nullDrawable.matD = matD;
-			if( !ctx.drawTile(nullDrawable, tile) ) return;
+			ctx.drawTile(nullDrawable, tile);
 			return;
 		}
 		if( !ctx.beginDrawBatch(nullDrawable, tile.getTexture()) ) return;
