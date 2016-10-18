@@ -399,7 +399,7 @@ class Macros {
 				Context.error("Too many nullable fields", v.pos);
 			var ct = t.t;
 			return macro {
-				var fbits = $ctx.getByte();
+				var fbits = $ctx.getInt();
 				if( fbits == 0 )
 					$v = null;
 				else {
