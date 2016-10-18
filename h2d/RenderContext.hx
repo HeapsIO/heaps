@@ -256,8 +256,6 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	@:access(h2d.Drawable)
 	public function drawTile( obj : h2d.Drawable, tile : h2d.Tile ) {
-		if( !beginDraw(obj, tile.getTexture(), true, true) ) return false;
-
 		var matA, matB, matC, matD, absX, absY;
 		if( inFilter != null ) {
 			var f1 = baseShader.filterMatrixA;
@@ -306,6 +304,8 @@ class RenderContext extends h3d.impl.RenderContext {
 			if( cx + xMax < 0 || cy + yMax < 0 || cx + xMin > curWidth || cy + yMin > curHeight )
 				return false;
 		}
+
+		if( !beginDraw(obj, tile.getTexture(), true, true) ) return false;
 
 		if( inFilter == obj )
 			baseShader.color.set(1, 1, 1, 1);
