@@ -34,6 +34,7 @@ class Base2d extends hxsl.Shader {
 		@const var hasUVPos : Bool;
 		@param var uvPos : Vec4;
 
+		@const var killAlpha : Bool;
 		@const var pixelAlign : Bool;
 		@param var halfPixelInverse : Vec2;
 		@param var viewport : Vec4;
@@ -65,6 +66,7 @@ class Base2d extends hxsl.Shader {
 		}
 
 		function fragment() {
+			if( killAlpha && pixelColor.a < 0.001 ) discard;
 			output.color = pixelColor;
 		}
 

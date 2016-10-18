@@ -10,6 +10,12 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var textures : h3d.impl.TextureCache;
 	public var scene : h2d.Scene;
 	public var defaultFilter : Bool = false;
+	public var killAlpha : Bool;
+	public var front2back : Bool;
+
+	public var onBeginDraw : h2d.Drawable->Bool; // return false to cancel drawing
+	public var onEnterFilter : h2d.Sprite->Bool;
+	public var onLeaveFilter : h2d.Sprite->Void;
 
 	public var tmpBounds = new h2d.col.Bounds();
 	var texture : h3d.mat.Texture;
@@ -25,6 +31,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var stride : Int;
 	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int, renderZone : {x:Float,y:Float,w:Float,h:Float} }>;
 	var hasUVPos : Bool;
+	var filterStack : Array<h2d.Sprite>;
 	var inFilter : Sprite;
 
 	var curX : Int;
@@ -53,6 +60,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.zValue = 0.;
 		baseShaderList = new hxsl.ShaderList(baseShader);
 		targetsStack = [];
+		filterStack = [];
 		textures = new h3d.impl.TextureCache();
 	}
 
@@ -106,6 +114,24 @@ class RenderContext extends h3d.impl.RenderContext {
 		currentObj = null;
 		baseShaderList.next = null;
 		if( targetsStack.length != 0 ) throw "Missing popTarget()";
+	}
+
+	public function pushFilter( spr : h2d.Sprite ) {
+		if( filterStack.length == 0 && onEnterFilter != null )
+			if( !onEnterFilter(spr) ) return false;
+		filterStack.push(spr);
+		inFilter = spr;
+		return true;
+	}
+
+	public function popFilter() {
+		var spr = filterStack.pop();
+		if( filterStack.length > 0 ) {
+			inFilter = filterStack[filterStack.length - 1];
+		} else {
+			inFilter = null;
+			if( onLeaveFilter != null ) onLeaveFilter(spr);
+		}
 	}
 
 	public function pushTarget( t : h3d.mat.Texture, startX = 0, startY = 0, width = -1, height = -1 ) {
@@ -212,7 +238,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	@:access(h2d.Drawable)
 	public function beginDrawObject( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
-		beginDraw(obj, texture, true);
+		if ( !beginDraw(obj, texture, true) ) return false;
 		if( inFilter == obj )
 			baseShader.color.set(1,1,1,1);
 		else
@@ -220,16 +246,16 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.absoluteMatrixA.set(obj.matA, obj.matC, obj.absX);
 		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
 		beforeDraw();
+		return true;
 	}
 
 	@:access(h2d.Drawable)
 	public function beginDrawBatch( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
-		beginDraw(obj, texture, false);
+		return beginDraw(obj, texture, false);
 	}
 
 	@:access(h2d.Drawable)
 	public function drawTile( obj : h2d.Drawable, tile : h2d.Tile ) {
-
 		var matA, matB, matC, matD, absX, absY;
 		if( inFilter != null ) {
 			var f1 = baseShader.filterMatrixA;
@@ -256,7 +282,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			var tr = (tile.width > tile.height ? tile.width : tile.height) * 1.5 * hxd.Math.max(hxd.Math.abs(obj.matA),hxd.Math.abs(obj.matD));
 			var cx = absX + tx * matA - curX;
 			var cy = absY + ty * matD - curY;
-			if( cx < -tr || cy < -tr || cx - tr > curWidth || cy - tr > curHeight ) return;
+			if( cx < -tr || cy < -tr || cx - tr > curWidth || cy - tr > curHeight ) return false;
 		} else {
 			var xMin = 1e20, yMin = 1e20, xMax = -1e20, yMax = -1e20;
 			inline function calc(x:Int, y:Int) {
@@ -276,10 +302,11 @@ class RenderContext extends h3d.impl.RenderContext {
 			var cx = absX - curX;
 			var cy = absY - curY;
 			if( cx + xMax < 0 || cy + yMax < 0 || cx + xMin > curWidth || cy + yMin > curHeight )
-				return;
+				return false;
 		}
 
-		beginDraw(obj, tile.getTexture(), true, true);
+		if( !beginDraw(obj, tile.getTexture(), true, true) ) return false;
+
 		if( inFilter == obj )
 			baseShader.color.set(1, 1, 1, 1);
 		else
@@ -296,10 +323,14 @@ class RenderContext extends h3d.impl.RenderContext {
 			fixedBuffer.uploadVector(k, 0, 4);
 		}
 		engine.renderQuadBuffer(fixedBuffer);
+		return true;
 	}
 
 	@:access(h2d.Drawable)
 	function beginDraw(	obj : h2d.Drawable, texture : h3d.mat.Texture, isRelative : Bool, hasUVPos = false ) {
+		if( onBeginDraw != null && !onBeginDraw(obj) )
+			return false;
+
 		var stride = 8;
 		if( hasBuffering() && currentObj != null && (texture != this.texture || stride != this.stride || obj.blendMode != currentObj.blendMode || obj.filter != currentObj.filter) )
 			flush();
@@ -319,12 +350,13 @@ class RenderContext extends h3d.impl.RenderContext {
 					shaderChanged = true;
 			}
 		}
-		if( objShaders != null || curShaders != null || baseShader.isRelative != isRelative || baseShader.hasUVPos != hasUVPos )
+		if( objShaders != null || curShaders != null || baseShader.isRelative != isRelative || baseShader.hasUVPos != hasUVPos || baseShader.killAlpha != killAlpha )
 			shaderChanged = true;
 		if( shaderChanged ) {
 			flush();
 			baseShader.hasUVPos = hasUVPos;
 			baseShader.isRelative = isRelative;
+			baseShader.killAlpha = killAlpha;
 			baseShader.updateConstants(manager.globals);
 			baseShaderList.next = obj.shaders;
 			initShaders(baseShaderList);
@@ -338,6 +370,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		this.texture = texture;
 		this.stride = stride;
 		this.currentObj = obj;
+
+		return true;
 	}
 
 }

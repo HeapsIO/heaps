@@ -134,10 +134,10 @@ class Drawable extends Sprite {
 		if( tile == null )
 			tile = new Tile(null, 0, 0, 5, 5);
 		if( !ctx.hasBuffering() ) {
-			ctx.drawTile(this, tile);
+			if( !ctx.drawTile(this, tile) ) return;
 			return;
 		}
-		ctx.beginDrawBatch(this, tile.getTexture());
+		if( !ctx.beginDrawBatch(this, tile.getTexture()) ) return;
 
 		var alpha = color.a * ctx.globalAlpha;
 		var ax = absX + tile.dx * matA + tile.dy * matC;

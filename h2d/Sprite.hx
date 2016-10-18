@@ -389,7 +389,7 @@ class Sprite {
 			ctx.drawTile(nullDrawable, tile);
 			return;
 		}
-		ctx.beginDrawBatch(nullDrawable, tile.getTexture());
+		if( !ctx.beginDrawBatch(nullDrawable, tile.getTexture()) ) return;
 
 		var ax = absX + tile.dx * matA + tile.dy * matC;
 		var ay = absY + tile.dx * matB + tile.dy * matD;
@@ -492,6 +492,8 @@ class Sprite {
 	}
 
 	function drawFilters( ctx : RenderContext ) {
+		if( !ctx.pushFilter(this) ) return;
+
 		var bounds = ctx.tmpBounds;
 		var total = new h2d.col.Bounds();
 		var maxExtent = -1.;
@@ -542,7 +544,6 @@ class Sprite {
 		var invX = -(absX * invA + absY * invC);
 		var invY = -(absX * invB + absY * invD);
 
-		@:privateAccess ctx.inFilter = this;
 		shader.filterMatrixA.set(invA, invC, invX);
 		shader.filterMatrixB.set(invB, invD, invY);
 		ctx.globalAlpha = 1;
@@ -569,9 +570,9 @@ class Sprite {
 
 		shader.filterMatrixA.load(oldA);
 		shader.filterMatrixB.load(oldB);
-		@:privateAccess ctx.inFilter = oldF;
 
 		ctx.popTarget();
+		ctx.popFilter();
 
 		ctx.globalAlpha = oldAlpha * alpha;
 		emitTile(ctx, final);
@@ -595,9 +596,14 @@ class Sprite {
 		} else {
 			var old = ctx.globalAlpha;
 			ctx.globalAlpha *= alpha;
-			draw(ctx);
-			for( c in childs )
-				c.drawRec(ctx);
+			if( ctx.front2back ) {
+				var nchilds = childs.length;
+				for (i in 0...nchilds) childs[nchilds - 1 - i].drawRec(ctx);
+				draw(ctx);
+			} else {
+				draw(ctx);
+				for( c in childs ) c.drawRec(ctx);
+			}
 			ctx.globalAlpha = old;
 		}
 	}

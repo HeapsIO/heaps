@@ -465,7 +465,7 @@ class TileGroup extends Drawable {
 		var max = content.triCount();
 		if( max == 0 )
 			return;
-		ctx.beginDrawObject(obj, tile.getTexture());
+		if( !ctx.beginDrawObject(obj, tile.getTexture()) ) return;
 		var min = rangeMin < 0 ? 0 : rangeMin * 2;
 		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;
 		content.doRender(ctx.engine, min, max - min);
