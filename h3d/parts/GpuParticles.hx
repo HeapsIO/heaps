@@ -641,6 +641,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		}
 		if( g.pshader.transform3D ) {
 			var r = ctx.camera.target.sub(ctx.camera.pos);
+			r.z = 0;
 			r.normalize();
 			var q = new h3d.Quat();
 			q.initDirection(r);
