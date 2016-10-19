@@ -114,10 +114,12 @@ class BigPrimitive extends Primitive {
 	**/
 	public function flush() {
 		if( tmpBuf != null ) {
+			if( tmpIdx == null ) throw "tmpIdx is null";
 			if( bufPos > 0 && idxPos > 0 ) {
 				var b = h3d.Buffer.ofSubFloats(tmpBuf, stride, Std.int(bufPos/stride) #if debug ,null,allocPos #end);
 				if( isRaw ) b.flags.set(RawFormat);
 				buffers.push(b);
+				if( tmpIdx == null ) throw "tmpIdx is null(2)";
 				allIndexes.push(h3d.Indexes.alloc(tmpIdx, 0, idxPos));
 			}
 			if( PREV_BUFFER == null || PREV_BUFFER.length < tmpBuf.length )
