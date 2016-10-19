@@ -1281,6 +1281,8 @@ class Macros {
 					return haxe.macro.ExprTools.map(e, loop);
 				}
 			}
+			if( t.condSend.expr.match(EConst(CIdent("false"))) )
+				return macro {}; // no marking
 			var condSend = loop(t.condSend);
 			needRef = true;
 			mark = macro if( $condSend ) { this.$rname = this.$fname; $mark; };
