@@ -1,6 +1,7 @@
 package h3d.impl;
 import h3d.impl.Driver;
 import h3d.mat.Pass;
+import h3d.mat.Data;
 
 #if flash
 
@@ -59,6 +60,8 @@ class Stage3dDriver extends Driver {
 	var onCreateCallback : Bool -> Void;
 
 	var curMatBits : Int;
+	var curStOpBits : Int;
+	var curStRefBits : Int;
 	var curShader : CompiledShader;
 	var curBuffer : Buffer;
 	var curManagedBuffer : ManagedBuffer;
@@ -107,6 +110,8 @@ class Stage3dDriver extends Driver {
 	function reset() {
 		enableDraw = true;
 		curMatBits = -1;
+		curStOpBits = -1;
+		curStRefBits = -1;
 		curShader = null;
 		curBuffer = null;
 		curMultiBuffer[0] = -1;
@@ -362,7 +367,11 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function selectMaterial( pass : Pass ) {
-		selectMaterialBits(@:privateAccess pass.bits);
+		selectMaterialBits(@:privateAccess pass.materialBits);
+		selectStencilBits(
+			@:privateAccess pass.stencilOpBits,
+			@:privateAccess pass.stencilFrontRefBits,
+			@:privateAccess pass.stencilBackRefBits);
 	}
 
 	function selectMaterialBits( bits : Int ) {
@@ -400,6 +409,43 @@ class Stage3dDriver extends Driver {
 			ctx.setColorMask(m & 1 != 0, m & 2 != 0, m & 4 != 0, m & 8 != 0);
 		}
 		curMatBits = bits;
+	}
+
+	function selectStencilBits( opBits : Int, frBits : Int, brBits : Int ) {
+		if( frBits != brBits ) throw "different stencil ref & mask values per face is not allowed in flash";
+
+		var diffOp  = opBits ^ curStOpBits;
+		var diffRef = frBits ^ curStRefBits;
+
+		if( (diffOp | diffRef) == 0 ) return;
+
+		if( diffOp & (Pass.stencilFrontTest_mask | Pass.stencilFrontSTfail_mask | Pass.stencilFrontDPfail_mask | Pass.stencilFrontDPpass_mask) != 0 ) {
+			ctx.setStencilActions(
+				FACE[Type.enumIndex(Front)],
+				COMPARE[Pass.getStencilFrontTest(opBits)],
+				STENCIL_OP[Pass.getStencilFrontDPpass(opBits)],
+				STENCIL_OP[Pass.getStencilFrontDPfail(opBits)],
+				STENCIL_OP[Pass.getStencilFrontSTfail(opBits)]);
+		}
+
+		if( diffOp & (Pass.stencilBackTest_mask | Pass.stencilBackSTfail_mask | Pass.stencilBackDPfail_mask | Pass.stencilBackDPpass_mask) != 0 ) {
+			ctx.setStencilActions(
+				FACE[Type.enumIndex(Back)],
+				COMPARE[Pass.getStencilBackTest(opBits)],
+				STENCIL_OP[Pass.getStencilBackDPpass(opBits)],
+				STENCIL_OP[Pass.getStencilBackDPfail(opBits)],
+				STENCIL_OP[Pass.getStencilBackSTfail(opBits)]);
+		}
+
+		if( diffRef != 0 ) {
+			ctx.setStencilReferenceValue(
+				Pass.getStencilFrontRef(frBits),
+				Pass.getStencilFrontReadMask(frBits),
+				Pass.getStencilFrontWriteMask(frBits));
+		}
+
+		curStOpBits = opBits;
+		curStRefBits = frBits;
 	}
 
 	function compileShader( s : hxsl.RuntimeShader.RuntimeShaderData, usedTextures : Array<Bool> ) {
@@ -834,6 +880,17 @@ class Stage3dDriver extends Driver {
 		flash.display3D.Context3DCompareMode.GREATER_EQUAL,
 		flash.display3D.Context3DCompareMode.LESS,
 		flash.display3D.Context3DCompareMode.LESS_EQUAL,
+	];
+
+	static var STENCIL_OP = [
+		flash.display3D.Context3DStencilAction.KEEP,
+		flash.display3D.Context3DStencilAction.ZERO,
+		flash.display3D.Context3DStencilAction.SET,
+		flash.display3D.Context3DStencilAction.INCREMENT_SATURATE,
+		flash.display3D.Context3DStencilAction.INCREMENT_WRAP,
+		flash.display3D.Context3DStencilAction.DECREMENT_SATURATE,
+		flash.display3D.Context3DStencilAction.DECREMENT_WRAP,
+		flash.display3D.Context3DStencilAction.INVERT,
 	];
 
 	static var FORMAT = [

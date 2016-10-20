@@ -7,19 +7,36 @@ class BitsBuilder {
 	public static function build() {
 		var fields = Context.getBuildFields();
 		var pos = Context.currentPos();
-		var offset = 0;
+		var offsetMap = new Map<String, Int>();
 		for( f in fields.copy() ) {
 			var bits = 0;
+			var field : String = null;
 			for( m2 in f.meta ) {
 				if( m2.name == ":bits" ) {
-					switch( m2.params ) {
-					case [ { expr : EConst(CInt(v)) } ]: bits = Std.parseInt(v);
-					default: bits = -1;
+					if( m2.params.length < 1 )
+						Context.error("Please specify the bits field", f.pos);
+
+					bits  = -1;
+					field = switch( m2.params[0] ) {
+						case { expr : EConst(CIdent(v)) } : v;
+						default : null;
+					}
+
+					if( m2.params.length > 1 ) {
+						bits = switch( m2.params[1] ) {
+							case { expr : EConst(CInt(v)) } : Std.parseInt(v);
+							default : -1;
+						}
 					}
 					break;
 				}
 			}
+
 			if( bits == 0 ) continue;
+
+			var offset = offsetMap.get(field);
+			if( offset == null ) offset = 0;
+
 			switch( f.kind ) {
 			case FVar(vt = TPath( { pack : pack, name : name }), init):
 				f.kind = FProp("default", "set", vt, init);
@@ -59,10 +76,11 @@ class BitsBuilder {
 					kind : FFun({
 						args : [ { name : "v", type : vt } ],
 						ret : vt,
-						expr : macro { bits = (bits & $v{erase}) | ($expr << $v{offset}); return this.$name = v; }
+						expr : macro { this.$field = (this.$field & $v{erase}) | ($expr << $v{offset}); return this.$name = v; }
 					}),
 					pos : f.pos,
 				});
+
 				fields.push({
 					name : "get" + f.name.charAt(0).toUpperCase() + f.name.substr(1),
 					access : [AStatic,APublic,AInline],
@@ -94,9 +112,11 @@ class BitsBuilder {
 				offset += bits;
 			default:
 			}
+			if( offset > 32 )
+				Context.error(offset + " bits were used while maximum was 32", pos);
+			offsetMap.set(field, offset);
 		}
-		if( offset > 32 )
-			Context.error(offset + " bits were used while maximum was 32", pos);
+
 		return fields;
 	}
 

@@ -37,6 +37,16 @@ enum Compare {
 	LessEqual;
 }
 
+	Keep;
+	Zero;
+	Replace;
+	Increment;
+	IncrementWrap;
+	Decrement;
+	DecrementWrap;
+	Invert;
+}
+
 enum MipMap {
 	None;
 	Nearest;

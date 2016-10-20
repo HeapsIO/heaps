@@ -133,7 +133,7 @@ class ScnDriver extends Driver {
 	}
 
 	override function selectMaterial( pass : h3d.mat.Pass ) {
-		ops.push(Material(@:privateAccess pass.bits));
+		ops.push(Material(@:privateAccess pass.materialBits));
 		d.selectMaterial(pass);
 	}
 
@@ -339,7 +339,7 @@ class ScnDriver extends Driver {
 			}
 			d.selectShader(savedShaders.get(id));
 		case Material(bits):
-			@:privateAccess tmpPass.bits = bits;
+			@:privateAccess tmpPass.materialBits = bits;
 			d.selectMaterial(tmpPass);
 		case UploadShaderBuffers(globals, vertex, fragment):
 			var b = tmpBuf;
