@@ -37,6 +37,7 @@ enum Compare {
 	LessEqual;
 }
 
+enum StencilOp {
 	Keep;
 	Zero;
 	Replace;
