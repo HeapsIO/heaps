@@ -58,7 +58,7 @@ class GpuParticle extends hxsl.Shader {
 			t = (props.time + time) % (props.life * loopCounter);
 			normT = t / props.life;
 			randProp = -props.time / props.life;
-			transformedPosition = input.position + (input.normal * (1 + speedIncr * t)) * t + offset;
+			transformedPosition = relativePosition + (input.normal * (1 + speedIncr * t)) * t + offset;
 			if( clipBounds )
 				transformedPosition = (transformedPosition - volumeMin) % volumeSize + volumeMin;
 			transformedPosition *= transform;
