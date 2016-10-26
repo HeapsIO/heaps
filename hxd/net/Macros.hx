@@ -526,12 +526,14 @@ class Macros {
 				meta : noCompletion,
 				kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.allocUID()),
 			});
+	
+		var clName = StringTools.endsWith(cl.module,"."+cl.name) ? cl.module.split(".") : [cl.name];
 		fields.push({
 			name : "__clid",
 			pos : pos,
 			access : [AStatic],
 			meta : noCompletion,
-			kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.registerClass($i{cl.name})),
+			kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.registerClass($p{clName})),
 		});
 		fields.push({
 			name : "getCLID",
