@@ -62,8 +62,8 @@ class Pass {
 		blend(One, Zero);
 		depth(true, Less);
 		setStencilFunc(Both, Always, 0, 0xFF);
-		setStencilMask(Both, 0xFF);
 		setStencilOp(Both, Keep, Keep, Keep);
+		setStencilMask(Both, 0x00);
 		blendOp = blendAlphaOp = Add;
 		colorMask = 15;
 	}
