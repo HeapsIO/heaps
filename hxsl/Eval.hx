@@ -357,7 +357,7 @@ class Eval {
 			case TConst(CBool(b)): b ? evalExpr(eif, isVal).e : eelse == null ? TConst(CNull) : evalExpr(eelse, isVal).e;
 			default:
 				if( isVal && eelse != null )
-					TCall( { e : TGlobal(Mix), t : e.t, p : e.p }, [eif, eelse, { e : TCall( { e : TGlobal(ToFloat), t : TFun([]), p : econd.p }, [econd]), t : TFloat, p : e.p } ]);
+					TCall( { e : TGlobal(Mix), t : e.t, p : e.p }, [eelse, eif, { e : TCall( { e : TGlobal(ToFloat), t : TFun([]), p : econd.p }, [econd]), t : TFloat, p : e.p } ]);
 				else
 					TIf(econd, evalExpr(eif,isVal), eelse == null ? null : evalExpr(eelse,isVal));
 			}
