@@ -71,8 +71,7 @@ class Sprite {
 	**/
 	public function getSize( ?out : h2d.col.Bounds ) : h2d.col.Bounds {
 		if( out == null ) out = new h2d.col.Bounds() else out.empty();
-		if( parent != null )
-			parent.syncPos();
+		syncPos();
 		getBoundsRec(parent, out, true);
 		if( out.isEmpty() ) {
 			addBounds(parent, out, -1, -1, 2, 2);
