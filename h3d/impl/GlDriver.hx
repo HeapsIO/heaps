@@ -72,6 +72,7 @@ class GlDriver extends Driver {
 
 	#if js
 	var canvas : js.html.CanvasElement;
+	var mrtExt : { function drawBuffersWEBGL( colors : Array<Int> ) : Void; }
 	public var gl : js.html.webgl.RenderingContext;
 	#elseif cpp
 	var fixMult : Bool;
@@ -87,6 +88,7 @@ class GlDriver extends Driver {
 	var bufferWidth : Int;
 	var bufferHeight : Int;
 	var curTarget : h3d.mat.Texture;
+	var numTargets : Int;
 
 	public function new() {
 		#if (nme || openfl || lime)
@@ -719,7 +721,19 @@ class GlDriver extends Driver {
 		}
 	}
 
+	inline function unbindTargets() {
+		if( curTarget != null && numTargets > 1 ) {
+			while( numTargets > 1 )
+				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0 + (--numTargets), GL.TEXTURE_2D, null, 0);
+			#if js
+			if( mrtExt != null )
+				mrtExt.drawBuffersWEBGL([GL.COLOR_ATTACHMENT0]);
+			#end
+		}
+	}
+
 	override function setRenderTarget( tex : h3d.mat.Texture ) {
+		unbindTargets();
 		curTarget = tex;
 		if( tex == null ) {
 			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
@@ -733,8 +747,29 @@ class GlDriver extends Driver {
 		gl.viewport(0, 0, tex.width, tex.height);
 	}
 
-	override public function setRenderTargets( textures : Array<h3d.mat.Texture> )  {
-		throw "TODO";
+	override function setRenderTargets( textures : Array<h3d.mat.Texture> ) {
+		unbindTargets();
+		if( textures.length < 2 ) {
+			setRenderTarget(textures[0]);
+			return;
+		}
+		curTarget = textures[0];
+		numTargets = textures.length;
+		for( tex in textures ) {
+			if( tex.t == null )
+				tex.alloc();
+			if( tex == curTarget ) {
+				gl.bindFramebuffer(GL.FRAMEBUFFER, curTarget.t.fb);
+				gl.viewport(0, 0, tex.width, tex.height);
+			} else {
+				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0 + textures.indexOf(tex), GL.TEXTURE_2D, tex.t.t, 0);
+			}
+			tex.lastFrame = frame;
+		}
+		#if js
+		if( mrtExt != null )
+			mrtExt.drawBuffersWEBGL([for( i in 0...textures.length ) GL.COLOR_ATTACHMENT0 + i]);
+		#end
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
@@ -763,7 +798,7 @@ class GlDriver extends Driver {
 		case FloatTextures:
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null;
 		case MultipleRenderTargets:
-			gl.getExtension('WEBGL_draw_buffers') != null;
+			mrtExt != null || (mrtExt = gl.getExtension('WEBGL_draw_buffers')) != null;
 		#end
 		case PerTargetDepthBuffer:
 			true;

@@ -34,6 +34,7 @@ class GlslOut {
 	var decls : Array<String>;
 	var isVertex : Bool;
 	var allNames : Map<String, Int>;
+	var outIndexes : Map<Int, Int>;
 	public var varNames : Map<Int,String>;
 	public var flipY : Bool;
 
@@ -54,7 +55,10 @@ class GlslOut {
 	function decl( s : String ) {
 		for( d in decls )
 			if( d == s ) return;
-		decls.push(s);
+		if( s.charCodeAt(0) == '#'.code )
+			decls.unshift(s);
+		else
+			decls.push(s);
 	}
 
 	function addType( t : Type ) {
@@ -372,8 +376,13 @@ class GlslOut {
 	}
 
 	function varName( v : TVar ) {
-		if( v.kind == Output )
-			return isVertex ? "gl_Position" : "gl_FragColor";
+		if( v.kind == Output ) {
+			if( isVertex )
+				return "gl_Position";
+			if( outIndexes == null )
+				return "gl_FragColor";
+			return 'gl_FragData[${outIndexes.get(v.id)}]';
+		}
 		var n = varNames.get(v.id);
 		if( n != null )
 			return n;
@@ -398,19 +407,14 @@ class GlslOut {
 		buf = new StringBuf();
 		exprValues = [];
 
-		//#if GL_ES_VERSION_2_0  would be the test to use at compilation time, but would require a GL context to call glGetString (GL_SHADING_LANGUAGE_VERSION)
-		//#ifdef GL_ES is to test in the shader itself but #version  muse be declared first
-		#if((cpp && mobile)||js)
-		decls.push("#version 100");
-		#else
-		decls.push("#version 130");
-		#end
-		decls.push("precision mediump float;");
+		decl("precision mediump float;");
 
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
 		isVertex = f.kind == Vertex;
 
+		var outIndex = 0;
+		outIndexes = new Map();
 		for( v in s.vars ) {
 			switch( v.kind ) {
 			case Param, Global:
@@ -419,7 +423,11 @@ class GlslOut {
 				add("attribute ");
 			case Var:
 				add("varying ");
-			case Function, Output: continue;
+			case Output:
+				outIndexes.set(v.id, outIndex++);
+				continue;
+			case Function:
+				continue;
 			case Local:
 			}
 			if( v.qualifiers != null )
@@ -437,6 +445,11 @@ class GlslOut {
 			add(";\n");
 		}
 		add("\n");
+
+		if( outIndex < 2 )
+			outIndexes = null;
+		else if( !isVertex )
+			decl("#extension GL_EXT_draw_buffers : enable");
 
 		var tmp = buf;
 		buf = new StringBuf();
@@ -465,6 +478,15 @@ class GlslOut {
 			add(e);
 			add("\n\n");
 		}
+
+		//#if GL_ES_VERSION_2_0  would be the test to use at compilation time, but would require a GL context to call glGetString (GL_SHADING_LANGUAGE_VERSION)
+		//#ifdef GL_ES is to test in the shader itself but #version  muse be declared first
+		#if((cpp && mobile)||js)
+		decl("#version 100");
+		#else
+		decl("#version 130");
+		#end
+
 		decls.push(buf.toString());
 		buf = null;
 		return decls.join("\n");
