@@ -1,0 +1,6 @@
+-lib heaps
+-cp ../..
+-hl ::name::.hl
+-lib hlsdl
+-main ::main::
+::params::
