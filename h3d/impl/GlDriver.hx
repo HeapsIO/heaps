@@ -728,6 +728,8 @@ class GlDriver extends Driver {
 			#if js
 			if( mrtExt != null )
 				mrtExt.drawBuffersWEBGL([GL.COLOR_ATTACHMENT0]);
+			#elseif hlsdl
+			gl.drawBuffers(1, @:privateAccess CBUFFERS.bytes);
 			#end
 		}
 	}
@@ -769,6 +771,8 @@ class GlDriver extends Driver {
 		#if js
 		if( mrtExt != null )
 			mrtExt.drawBuffersWEBGL([for( i in 0...textures.length ) GL.COLOR_ATTACHMENT0 + i]);
+		#elseif hlsdl
+			gl.drawBuffers(textures.length, @:privateAccess CBUFFERS.bytes);
 		#end
 	}
 
@@ -873,6 +877,10 @@ class GlDriver extends Driver {
 		GL.FUNC_SUBTRACT,
 		GL.FUNC_REVERSE_SUBTRACT
 	];
+
+	#if hlsdl
+	static var CBUFFERS = (cast [for( i in 0...32 ) GL.COLOR_ATTACHMENT0 + i] : hl.types.ArrayBase.ArrayBasic<Int>);
+	#end
 
 }
 
