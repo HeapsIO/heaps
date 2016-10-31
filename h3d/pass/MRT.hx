@@ -1,5 +1,38 @@
 package h3d.pass;
 
+@:access(h3d.pass.MRT)
+class MRTSubPass extends Default {
+
+	var mrt : MRT;
+	var output : Int;
+	var varId : Int;
+
+	public function new( m, output ) {
+		this.mrt = m;
+		this.output = output;
+		super();
+		this.varId = hxsl.Globals.allocID(mrt.fragmentOutputs[output] + "Map");
+	}
+
+	override function getOutputs() {
+		return ["output.position", "output."+mrt.fragmentOutputs[output]];
+	}
+
+	override function getTexture( index = 0 ) {
+		return index == 0 ? mrt.getTexture(output) : null;
+	}
+
+	override function draw( passes ) {
+		var texture = mrt.getTexture(output);
+		ctx.engine.pushTarget(texture);
+		passes = super.draw(passes);
+		ctx.engine.popTarget();
+		ctx.setGlobalID(varId, texture);
+		return passes;
+	}
+
+}
+
 class MRT extends Default {
 
 	var fragmentOutputs : Array<String>;
@@ -39,6 +72,14 @@ class MRT extends Default {
 		passes = super.draw(passes);
 		ctx.engine.popTarget();
 		return passes;
+	}
+
+	public function getSubPass( output : Int ) {
+		return new MRTSubPass(this, output);
+	}
+
+	public function drawImmediate( passes : Object ) {
+		return super.draw(passes);
 	}
 
 }
