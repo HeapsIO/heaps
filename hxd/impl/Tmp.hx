@@ -8,6 +8,7 @@ class Tmp {
 	}
 
 	public static function getBytes( size : Int ) {
+		#if hl return haxe.io.Bytes.alloc(size); #end
 		var found = -1;
 		for( i in 0...bytes.length ) {
 			var b = bytes[i];
@@ -40,6 +41,7 @@ class Tmp {
 	}
 
 	public static function saveBytes( b : haxe.io.Bytes ) {
+		#if hl return; #end
 		for( i in 0...bytes.length ) {
 			if( bytes[i].length <= b.length ) {
 				bytes.insert(i, b);

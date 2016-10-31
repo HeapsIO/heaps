@@ -33,7 +33,7 @@ abstract FloatBuffer(InnerData) {
 		#end
 	}
 
-	public inline function push( v : Float ) {
+	public inline function push( v : hxd.impl.Float32 ) {
 		#if flash
 		this[this.length] = v;
 		#else
@@ -59,11 +59,11 @@ abstract FloatBuffer(InnerData) {
 	}
 
 
-	@:arrayAccess inline function arrayRead(key:Int) : Float {
+	@:arrayAccess inline function arrayRead(key:Int) : hxd.impl.Float32 {
 		return this[key];
 	}
 
-	@:arrayAccess inline function arrayWrite(key:Int, value : Float) : Float {
+	@:arrayAccess inline function arrayWrite(key:Int, value : hxd.impl.Float32) : hxd.impl.Float32 {
 		return this[key] = value;
 	}
 
