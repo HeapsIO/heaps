@@ -359,6 +359,36 @@ class Tools {
 		};
 	}
 
+	public static function hasSideEffect( e : TExpr ) {
+		switch( e.e ) {
+		case TParenthesis(e):
+			return hasSideEffect(e);
+		case TBlock(el), TArrayDecl(el):
+			for( e in el )
+				if( hasSideEffect(e) )
+					return true;
+			return false;
+		case TBinop(OpAssign | OpAssignOp(_), _, _):
+			return true;
+		case TBinop(_, e1, e2):
+			return hasSideEffect(e1) || hasSideEffect(e2);
+		case TUnop(_, e1):
+			return hasSideEffect(e1);
+		case TSwiz(e, _):
+			return hasSideEffect(e);
+		case TIf(econd, eif, eelse):
+			return hasSideEffect(econd) || hasSideEffect(eif) || (eelse != null && hasSideEffect(eelse));
+		case TFor(_, it, loop):
+			return hasSideEffect(it) || hasSideEffect(loop);
+		case TArray(e, index):
+			return hasSideEffect(e) || hasSideEffect(index);
+		case TConst(_), TVar(_), TGlobal(_):
+			return false;
+		case TVarDecl(_), TCall(_), TDiscard, TContinue, TBreak, TReturn(_):
+			return true;
+		}
+	}
+
 	public static function iter( e : TExpr, f : TExpr -> Void ) {
 		switch( e.e ) {
 		case TParenthesis(e): f(e);

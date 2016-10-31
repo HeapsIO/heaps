@@ -341,6 +341,7 @@ class GlslOut {
 			add(") ");
 			addExpr(eif, tabs);
 			if( eelse != null ) {
+				if( !eif.e.match(TBlock(_)) ) add(";");
 				add(" else ");
 				addExpr(eelse, tabs);
 			}
