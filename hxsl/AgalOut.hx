@@ -301,7 +301,7 @@ class AgalOut {
 				op(OKil(r));
 				return nullReg;
 			default:
-				throw "Discard cond not supported " + e.e;
+				throw "Discard cond not supported " + e.e+ " "+e.p;
 			}
 		case TUnop(uop, e):
 			switch( uop ) {
@@ -311,9 +311,37 @@ class AgalOut {
 				return r;
 			default:
 			}
+		case TIf(econd, eif, eelse):
+			switch( econd.e ) {
+			case TBinop(bop, e1, e2) if( e1.t == TFloat ):
+				inline function cop(f) {
+					op(f(expr(e1), expr(e2)));
+					expr(eif);
+					if( eelse != null ) {
+						op(OEls);
+						expr(eelse);
+					}
+					op(OEif);
+					return nullReg;
+				}
+				switch( bop ) {
+				case OpEq:
+					return cop(OIfe);
+				case OpNotEq:
+					return cop(OIfe);
+				case OpGt:
+					return cop(OIfg);
+				case OpLt:
+					return cop(OIfl);
+				default:
+					throw "Conditional operation not supported " + bop+" " + econd.p;
+				}
+			default:
+			}
+			throw "Conditional not supported " + econd.e+" " + econd.p;
 		default:
+			throw "Expression '" + Printer.toString(e)+"' not supported in AGAL "+e.p;
 		}
-		throw "TODO " + e.e;
 		return null;
 	}
 
