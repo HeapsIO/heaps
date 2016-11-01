@@ -184,6 +184,10 @@ class BigPrimitive extends Primitive {
 		var sr = Math.sin(rotation);
 		var pos = bufPos;
 		var tmpBuf = tmpBuf;
+		#if hl
+		var buf = @:privateAccess (cast buf.getNative() : hl.types.ArrayBasic.ArrayF32).bytes;
+		var tmpBuf = @:privateAccess (cast tmpBuf.getNative() : hl.types.ArrayBasic.ArrayF32).bytes;
+		#end
 		for( i in 0...nvert ) {
 			var p = (i + startVert) * stride;
 			var x = buf[p++];
