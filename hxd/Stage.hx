@@ -3,10 +3,10 @@ package hxd;
 class Stage {
 
 	/**
-		Touch is enabled by default and will be activated if the screen has touch capacities (see hxd.System.isTouch).
-		But for Flash/AIR Desktop, you might prefer to disable it in order to keep mouse/keys events.
+		Touch is disabled by default and will be activated only if the screen has touch capacities (see hxd.System.isTouch).
+		For Flash/AIR Desktop, enabling touch has the effect of disabling normal mouse/keys events.
 	**/
-	public static var ENABLE_TOUCH = true;
+	public static var ENABLE_TOUCH = false;
 
 	#if (flash || openfl || nme)
 	var stage : flash.display.Stage;
