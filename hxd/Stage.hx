@@ -139,7 +139,11 @@ class Stage {
 	}
 
 	public function removeEventTarget(et) {
-		eventTargets.remove(et);
+		for( e in eventTargets )
+			if( Reflect.compareMethods(e,et) ) {
+				eventTargets.remove(e);
+				break;
+			}
 	}
 
 	public function addResizeEvent( f : Void -> Void ) {
@@ -147,7 +151,11 @@ class Stage {
 	}
 
 	public function removeResizeEvent( f : Void -> Void ) {
-		resizeEvents.remove(f);
+		for( e in resizeEvents )
+			if( Reflect.compareMethods(e,f) ) {
+				resizeEvents.remove(f);
+				break;
+			}
 	}
 
 	function onResize(e:Dynamic) {

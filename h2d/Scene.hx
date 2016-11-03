@@ -246,7 +246,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	public function removeEventListener( f : hxd.Event -> Void ) {
-		return eventListeners.remove(f);
+		for( e in eventListeners )
+			if( Reflect.compareMethods(e, f) ) {
+				eventListeners.remove(e);
+				return true;
+			}
+		return false;
 	}
 
 	public function startDrag( f : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {

@@ -21,7 +21,12 @@ class WaitEvent {
 	}
 
 	public function remove(callb) {
-		updateList.remove(callb);
+		for( e in updateList )
+			if( Reflect.compareMethods(e, callb) ) {
+				updateList.remove(e);
+				return true;
+			}
+		return false;
 	}
 
 	public function wait( time : Float, callb ) {
