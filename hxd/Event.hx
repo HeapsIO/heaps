@@ -41,7 +41,12 @@ class Event {
 	}
 
 	public function toString() {
-		return kind + "[" + Std.int(relX) + "," + Std.int(relY) + "]";
+		return kind + "[" + Std.int(relX) + "," + Std.int(relY) + "]" + switch( kind ) {
+		case EPush, ERelease, EReleaseOutside: ",button=" + button;
+		case EMove, EOver, EOut, EFocus, EFocusLost: "";
+		case EWheel: ",wheelDelta=" + wheelDelta;
+		case EKeyDown, EKeyUp: ",keyCode=" + keyCode+",charCode=" + charCode;
+		}
 	}
 
 }
