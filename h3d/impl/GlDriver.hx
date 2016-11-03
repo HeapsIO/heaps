@@ -802,7 +802,11 @@ class GlDriver extends Driver {
 		case FloatTextures:
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null;
 		case MultipleRenderTargets:
+			#if js
 			mrtExt != null || (mrtExt = gl.getExtension('WEBGL_draw_buffers')) != null;
+			#else
+			false; // no support for glDrawBuffers in OpenFL
+			#end
 		#end
 		case PerTargetDepthBuffer:
 			true;
