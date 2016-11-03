@@ -314,7 +314,7 @@ class GlDriver extends Driver {
 	}
 
 	override function selectMaterial( pass : Pass ) {
-		selectMaterialBits(@:privateAccess pass.bits);
+		selectMaterialBits(@:privateAccess pass.materialBits);
 		// TODO : Blend Op value sync
 	}
 
