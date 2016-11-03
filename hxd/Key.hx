@@ -169,9 +169,9 @@ class Key {
 		case EKeyUp:
 			keyPressed[e.keyCode] = -getFrame();
 		case EPush:
-			keyPressed[e.button] = getFrame();
+			if( e.button < 2 ) keyPressed[e.button] = getFrame();
 		case ERelease:
-			keyPressed[e.button] = -getFrame();
+			if( e.button < 2 ) keyPressed[e.button] = -getFrame();
 		case EWheel:
 			keyPressed[e.wheelDelta > 0 ? MOUSE_WHEEL_DOWN : MOUSE_WHEEL_UP] = getFrame();
 		default:

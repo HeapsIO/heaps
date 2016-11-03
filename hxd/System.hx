@@ -553,12 +553,23 @@ class System {
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
 			eh = new Event(EPush, e.mouseX, e.mouseY);
-			eh.button = e.button - 1;
+			// middle button -> 2 / right button -> 1
+			eh.button = switch( e.button - 1 ) {
+			case 0: 0;
+			case 1: 2;
+			case 2: 1;
+			case x: x;
+			}
 		case MouseUp:
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
 			eh = new Event(ERelease, e.mouseX, e.mouseY);
-			eh.button = e.button - 1;
+			eh.button = switch( e.button - 1 ) {
+			case 0: 0;
+			case 1: 2;
+			case 2: 1;
+			case x: x;
+			};
 		case MouseMove:
 			mouseX = e.mouseX;
 			mouseY = e.mouseY;
