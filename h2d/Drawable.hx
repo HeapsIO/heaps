@@ -67,13 +67,13 @@ class Drawable extends Sprite {
 		if( s == null ) {
 			if( m != null ) {
 				s = addShader(new h3d.shader.ColorMatrix());
-				s.matrix.loadFrom(m);
+				s.matrix = m;
 			}
 		} else {
 			if( m == null )
 				removeShader(s);
 			else
-				s.matrix.loadFrom(m);
+				s.matrix = m;
 		}
 		return m;
 	}
