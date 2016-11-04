@@ -81,6 +81,10 @@ class Loader {
 		return new Atlas(fs.get(path));
 	}
 
+	function loadGradients( path : String ) {
+		return new Gradients(fs.get(path));
+	}
+
 	public function dispose() {
 		cleanCache();
 		fs.dispose();
