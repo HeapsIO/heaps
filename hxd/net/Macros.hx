@@ -399,7 +399,7 @@ class Macros {
 				Context.error("Too many nullable fields", v.pos);
 			var ct = t.t;
 			return macro {
-				var fbits = $ctx.getByte();
+				var fbits = $ctx.getInt();
 				if( fbits == 0 )
 					$v = null;
 				else {
@@ -526,12 +526,14 @@ class Macros {
 				meta : noCompletion,
 				kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.allocUID()),
 			});
+	
+		var clName = StringTools.endsWith(cl.module,"."+cl.name) ? cl.module.split(".") : [cl.name];
 		fields.push({
 			name : "__clid",
 			pos : pos,
 			access : [AStatic],
 			meta : noCompletion,
-			kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.registerClass($i{cl.name})),
+			kind : FVar(macro : Int, macro @:privateAccess hxd.net.Serializer.registerClass($p{clName})),
 		});
 		fields.push({
 			name : "getCLID",
