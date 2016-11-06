@@ -427,6 +427,9 @@ class GlslOut {
 		return n;
 	}
 
+	@:allow(h3d.impl.GlDriver)
+	static var GL_SHADING_LANGUAGE_VERSION = 100;
+	
 	public function run( s : ShaderData ) {
 		locals = new Map();
 		decls = [];
@@ -505,13 +508,7 @@ class GlslOut {
 			add("\n\n");
 		}
 
-		//#if GL_ES_VERSION_2_0  would be the test to use at compilation time, but would require a GL context to call glGetString (GL_SHADING_LANGUAGE_VERSION)
-		//#ifdef GL_ES is to test in the shader itself but #version  muse be declared first
-		#if((cpp && mobile)||js)
-		decl("#version 100");
-		#else
-		decl("#version 130");
-		#end
+		decl("#version "+GL_SHADING_LANGUAGE_VERSION);
 
 		decls.push(buf.toString());
 		buf = null;

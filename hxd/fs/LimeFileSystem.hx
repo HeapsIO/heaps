@@ -54,9 +54,9 @@ private class LimeEntry extends FileEntry {
 	}
 	
 	override function open() {
-		if(lime.Assets.isLocal(name)) {
-			var inBytes = lime.Assets.getBytes(name);
-			if( inBytes == null ) throw "Missing resource " + name;
+		if(lime.Assets.isLocal(path)) {
+			var inBytes = lime.Assets.getBytes(path);
+			if( inBytes == null ) throw "Missing resource " + path;
 			#if flash
 			bytes = inBytes.getData();
 			bytes.position = 0;
@@ -69,7 +69,7 @@ private class LimeEntry extends FileEntry {
 			//#if flash
 			//	throw "Non embeded files are not supported on flash platform with Lime";
 			//#else
-			lime.Assets.loadBytes(name).onComplete(function(inBytes) {
+			lime.Assets.loadBytes(path).onComplete(function(inBytes) {
 				#if flash
 				bytes = inBytes.getData();
 				bytes.position = 0;
