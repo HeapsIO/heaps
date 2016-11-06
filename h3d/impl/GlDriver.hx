@@ -72,7 +72,7 @@ class GlDriver extends Driver {
 
 	#if js
 	var canvas : js.html.CanvasElement;
-	var mrtExt : { function drawBuffersWEBGL( colors : Array<Int> ) : Void; }
+	var mrtExt : { function drawBuffersWEBGL( colors : Array<Int> ) : Void; };
 	public var gl : js.html.webgl.RenderingContext;
 	#elseif cpp
 	var fixMult : Bool;
