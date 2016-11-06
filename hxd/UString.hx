@@ -24,7 +24,7 @@ abstract UString(String) from String to String {
 		#end
 	}
 
-	public inline function substr( pos : Int, ?len : Int ) : UString {
+	public inline function substr( pos : Int, #if flash len = 0x7fffffff #else ?len : Int #end ) : UString {
 		#if (flash  || js)
 		return this.substr( pos, len );
 		#else
