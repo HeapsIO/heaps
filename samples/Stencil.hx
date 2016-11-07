@@ -27,9 +27,11 @@ class Stencil extends hxd.App {
 			obj.material.color.setColor(0x55C8FF);
 
 			var p = obj.material.mainPass;
+			var s = new h3d.mat.Stencil();
 			p.culling = Front;
-			p.setStencilFunc(Both, Equal, 1, 0xFF);
-			p.setStencilMask(Both, 0x00);
+			s.setFunc(Both, Equal, 1, 0xFF);
+			s.setMask(Both, 0x00);
+			p.stencil = s;
 			p.enableLights = true;
 		}
 
@@ -39,13 +41,16 @@ class Stencil extends hxd.App {
 			prim.translate( -1, -1, 0);
 
 			var obj = new Mesh(prim, root);
-			obj.material.color.setColor(0x55C8FF);
+			obj.material.color.setColor(0x0080C0);
 
 			var p = obj.material.mainPass;
+			var s = new h3d.mat.Stencil();
 			p.depthWrite = false;
-			p.setStencilFunc(Both, Always, 1, 0xFF);
-			p.setStencilOp(Both, Keep, Keep, Replace);
-			p.setStencilMask(Both, 0xFF);
+			p.stencil = new h3d.mat.Stencil();
+			s.setFunc(Both, Always, 1, 0xFF);
+			s.setOp(Both, Keep, Keep, Replace);
+			s.setMask(Both, 0xFF);
+			p.stencil = s;
 		}
 
 		// adds a directional light to the scene

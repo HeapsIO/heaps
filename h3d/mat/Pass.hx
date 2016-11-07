@@ -7,12 +7,7 @@ class Pass {
 
 	public var name(default, null) : String;
 	var passId : Int;
-
-	var materialBits        : Int = 0;
-	var stencilFrontRefBits : Int = 0;
-	var stencilBackRefBits  : Int = 0;
-	var stencilOpBits       : Int = 0;
-
+	var bits : Int = 0;
 	var parentPass : Pass;
 	var parentShaders : hxsl.ShaderList;
 	var shaders : hxsl.ShaderList;
@@ -25,34 +20,18 @@ class Pass {
 	**/
 	public var dynamicParameters : Bool;
 
-	@:bits(materialBits) public var culling : Face;
-	@:bits(materialBits) public var depthWrite : Bool;
-	@:bits(materialBits) public var depthTest : Compare;
-	@:bits(materialBits) public var blendSrc : Blend;
-	@:bits(materialBits) public var blendDst : Blend;
-	@:bits(materialBits) public var blendAlphaSrc : Blend;
-	@:bits(materialBits) public var blendAlphaDst : Blend;
-	@:bits(materialBits) public var blendOp : Operation;
-	@:bits(materialBits) public var blendAlphaOp : Operation;
-	@:bits(materialBits, 4) public var colorMask : Int;
+	@:bits(bits) public var culling : Face;
+	@:bits(bits) public var depthWrite : Bool;
+	@:bits(bits) public var depthTest : Compare;
+	@:bits(bits) public var blendSrc : Blend;
+	@:bits(bits) public var blendDst : Blend;
+	@:bits(bits) public var blendAlphaSrc : Blend;
+	@:bits(bits) public var blendAlphaDst : Blend;
+	@:bits(bits) public var blendOp : Operation;
+	@:bits(bits) public var blendAlphaOp : Operation;
+	@:bits(bits, 4) public var colorMask : Int;
 
-	@:bits(stencilOpBits) public var stencilFrontTest : Compare;
-	@:bits(stencilOpBits) public var stencilFrontSTfail : StencilOp;
-	@:bits(stencilOpBits) public var stencilFrontDPfail : StencilOp;
-	@:bits(stencilOpBits) public var stencilFrontDPpass : StencilOp;
-
-	@:bits(stencilFrontRefBits, 8) public var stencilFrontRef : Int;
-	@:bits(stencilFrontRefBits, 8) public var stencilFrontReadMask : Int;
-	@:bits(stencilFrontRefBits, 8) public var stencilFrontWriteMask : Int;
-
-	@:bits(stencilOpBits) public var stencilBackTest : Compare;
-	@:bits(stencilOpBits) public var stencilBackSTfail : StencilOp;
-	@:bits(stencilOpBits) public var stencilBackDPfail : StencilOp;
-	@:bits(stencilOpBits) public var stencilBackDPpass : StencilOp;
-
-	@:bits(stencilBackRefBits, 8) public var stencilBackRef : Int;
-	@:bits(stencilBackRefBits, 8) public var stencilBackReadMask : Int;
-	@:bits(stencilBackRefBits, 8) public var stencilBackWriteMask : Int;
+	public var stencil : Stencil;
 
 	public function new(name, ?shaders, ?parent) {
 		this.parentPass = parent;
@@ -61,9 +40,6 @@ class Pass {
 		culling = Back;
 		blend(One, Zero);
 		depth(true, Less);
-		setStencilFunc(Both, Always, 0, 0xFF);
-		setStencilOp(Both, Keep, Keep, Keep);
-		setStencilMask(Both, 0x00);
 		blendOp = blendAlphaOp = Add;
 		colorMask = 15;
 	}
@@ -71,10 +47,7 @@ class Pass {
 	public function loadProps( p : Pass ) {
 		name = p.name;
 		passId = p.passId;
-		materialBits = p.materialBits;
-		stencilFrontRefBits = p.stencilFrontRefBits;
-		stencilBackRefBits = p.stencilBackRefBits;
-		stencilOpBits = p.stencilOpBits;
+		bits = p.bits;
 		enableLights = p.enableLights;
 		dynamicParameters = p.dynamicParameters;
 		culling = p.culling;
@@ -87,6 +60,10 @@ class Pass {
 		blendAlphaDst = p.blendAlphaDst;
 		blendAlphaOp = p.blendAlphaOp;
 		colorMask = p.colorMask;
+		if (p.stencil != null) {
+			if (stencil == null) stencil = new Stencil();
+			stencil.loadProps(p.stencil);
+		}
 	}
 
 	public function setPassName( name : String ) {
@@ -127,54 +104,6 @@ class Pass {
 
 	public function setColorMask(r, g, b, a) {
 		this.colorMask = (r?1:0) | (g?2:0) | (b?4:0) | (a?8:0);
-	}
-
-	public function setStencilOp( face : Face, stfail : StencilOp, dpfail : StencilOp, dppass : StencilOp ) {
-		switch( face ) {
-			case Front :
-				stencilFrontSTfail = stfail;
-				stencilFrontDPfail = dpfail;
-				stencilFrontDPpass = dppass;
-			case Back :
-				stencilBackSTfail = stfail;
-				stencilBackDPfail = dpfail;
-				stencilBackDPpass = dppass;
-			case Both :
-				stencilFrontSTfail = stencilBackSTfail = stfail;
-				stencilFrontDPfail = stencilBackDPfail = dpfail;
-				stencilFrontDPpass = stencilBackDPpass = dppass;
-			default : throw "Invalid face (" + face + "), should be one of [Front, Back, Both]";
-		}
-	}
-
-	public function setStencilMask( face : Face, mask : Int ) {
-		switch( face ) {
-			case Front :
-				stencilFrontWriteMask = mask;
-			case Back :
-				stencilBackWriteMask = mask;
-			case Both :
-				stencilFrontWriteMask = stencilBackWriteMask = mask;
-			default : throw "Invalid face (" + face + "), should be one of [Front, Back, Both]";
-		}
-	}
-
-	public function setStencilFunc( face : Face, test : Compare, ref : Int, mask : Int ) {
-		switch( face ) {
-			case Front :
-				stencilFrontTest = test;
-				stencilFrontRef = ref;
-				stencilFrontReadMask = mask;
-			case Back :
-				stencilBackTest = test;
-				stencilBackRef = ref;
-				stencilBackReadMask = mask;
-			case Both :
-				stencilFrontTest = stencilBackTest = test;
-				stencilFrontRef = stencilBackRef = ref;
-				stencilFrontReadMask = stencilBackReadMask = mask;
-			default : throw "Invalid face (" + face + "), should be one of [Front, Back, Both]";
-		}
 	}
 
 	public function addShader<T:hxsl.Shader>(s:T) : T {
@@ -247,11 +176,9 @@ class Pass {
 
 	public function clone() {
 		var p = new Pass(name, shaders.clone());
-		p.materialBits = materialBits;
-		p.stencilFrontRefBits = stencilFrontRefBits;
-		p.stencilBackRefBits = stencilBackRefBits;
-		p.stencilOpBits = stencilOpBits;
+		p.bits = bits;
 		p.enableLights = enableLights;
+		if (stencil != null) p.stencil = stencil.clone();
 		return p;
 	}
 
