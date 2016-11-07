@@ -1,17 +1,21 @@
 package h2d;
 import hxd.Key in K;
 
+private typedef TextHistoryElement = { t : String, c : Int, sel : { start : Int, length : Int } };
 
 class TextInput extends Text {
 
-	public var interactive : h2d.Interactive;
 	public var cursorIndex : Int = -1;
 	public var cursorTile : h2d.Tile;
 	public var selectionTile : h2d.Tile;
 	public var cursorBlinkTime = 0.5;
 	public var inputWidth : Null<Int>;
 	public var selectionRange : { start : Int, length : Int };
+	public var canEdit = true;
 
+	public var backgroundColor(get, set) : Null<Int>;
+
+	var interactive : h2d.Interactive;
 	var cursorText : String;
 	var cursorX : Int;
 	var cursorXIndex : Int;
@@ -20,18 +24,55 @@ class TextInput extends Text {
 	var scrollX = 0;
 	var selectionPos : Int;
 	var selectionSize : Int;
+	var undo : Array<TextHistoryElement> = [];
+	var redo : Array<TextHistoryElement> = [];
+	var lastChange = 0.;
+	var maxHistorySize = 100;
 
 	public function new(font, ?parent) {
 		super(font, parent);
 		interactive = new h2d.Interactive(0, 0);
 		interactive.cursor = TextInput;
-		interactive.onClick = function(e:hxd.Event) {
-			interactive.focus();
-			cursorBlink = 0;
-			cursorIndex = textPos(e.relX, e.relY);
+		interactive.onPush = function(e:hxd.Event) {
+			onPush(e);
+			if( !e.cancel && e.button == 0 ) {
+				if( !interactive.hasFocus() ) {
+					e.kind = EFocus;
+					onFocus(e);
+					e.kind = EPush;
+					if( e.cancel ) return;
+					interactive.focus();
+				}
+				cursorBlink = 0;
+				var startIndex = textPos(e.relX, e.relY);
+				cursorIndex = startIndex;
+				selectionRange = null;
+
+				var pt = new h2d.col.Point();
+				var scene = getScene();
+				scene.startDrag(function(e) {
+					pt.x = e.relX;
+					pt.y = e.relY;
+					globalToLocal(pt);
+					var index = textPos(pt.x, pt.y);
+					if( index == startIndex )
+						selectionRange = null;
+					else if( index < startIndex )
+						selectionRange = { start : index, length : startIndex - index };
+					else
+						selectionRange = { start : startIndex, length : index - startIndex };
+					selectionSize = 0;
+					cursorIndex = index;
+					if( e.kind == ERelease || getScene() != scene )
+						scene.stopDrag();
+				});
+			}
 		};
 		interactive.onKeyDown = function(e:hxd.Event) {
-			if( cursorIndex < 0 )
+
+			onKeyDown(e);
+
+			if( e.cancel || cursorIndex < 0 )
 				return;
 
 			var oldIndex = cursorIndex;
@@ -48,25 +89,43 @@ class TextInput extends Text {
 				cursorIndex = 0;
 			case K.END:
 				cursorIndex = text.length;
-			case K.DELETE:
-				text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1 , text.length - (cursorIndex + 1));
+			case K.BACKSPACE, K.DELETE if( selectionRange != null ):
+				if( !canEdit ) return;
+				beforeChange();
+				cursorIndex = selectionRange.start;
+				var end = cursorIndex + selectionRange.length;
+				text = text.substr(0, cursorIndex) + text.substr(end);
+				selectionRange = null;
 				onChange();
-			case K.BACKSPACE:
-				if( cursorIndex > 0 ) {
-					if( selectionRange == null ) {
-						text = text.substr(0, cursorIndex - 1) + text.substr(cursorIndex, text.length - cursorIndex);
-						cursorIndex--;
-					} else {
-						cursorIndex = selectionRange.start;
-						var end = cursorIndex + selectionRange.length;
-						text = text.substr(0, cursorIndex) + text.substr(end, text.length - end);
-						selectionRange = null;
-					}
+			case K.DELETE:
+				if( cursorIndex < text.length && canEdit ) {
+					beforeChange();
+					text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1);
 					onChange();
 				}
+			case K.BACKSPACE:
+				if( cursorIndex > 0 && canEdit ) {
+					beforeChange();
+					text = text.substr(0, cursorIndex - 1) + text.substr(cursorIndex);
+					cursorIndex--;
+					onChange();
+				}
+			case K.Z if( K.isDown(K.CTRL) ):
+				if( undo.length > 0 && canEdit ) {
+					redo.push(curHistoryState());
+					setState(undo.pop());
+				}
+				return;
+			case K.Y if( K.isDown(K.CTRL) ):
+				if( redo.length > 0 && canEdit ) {
+					undo.push(curHistoryState());
+					setState(redo.pop());
+				}
+				return;
 			default:
-				if( e.charCode != 0 ) {
-					text = text.substr(0, cursorIndex) + String.fromCharCode(e.charCode) + text.substr(cursorIndex, text.length - cursorIndex);
+				if( e.charCode != 0 && canEdit ) {
+					beforeChange();
+					text = text.substr(0, cursorIndex) + String.fromCharCode(e.charCode) + text.substr(cursorIndex);
 					cursorIndex++;
 					onChange();
 				}
@@ -76,17 +135,71 @@ class TextInput extends Text {
 
 			if( K.isDown(K.SHIFT) && text == oldText ) {
 
+				if( cursorIndex == oldIndex ) return;
+
 				if( selectionRange == null )
 					selectionRange = oldIndex < cursorIndex ? { start : oldIndex, length : cursorIndex - oldIndex } : { start : cursorIndex, length : oldIndex - cursorIndex };
-				else {
-					// TODO
+				else if( oldIndex == selectionRange.start ) {
+					selectionRange.length += oldIndex - cursorIndex;
+					selectionRange.start = cursorIndex;
+				} else
+					selectionRange.length += cursorIndex - oldIndex;
+
+				if( selectionRange.length == 0 )
+					selectionRange = null;
+				else if( selectionRange.length < 0 ) {
+					selectionRange.start += selectionRange.length;
+					selectionRange.length = -selectionRange.length;
 				}
+				selectionSize = 0;
+
 			} else
 				selectionRange = null;
 
 		};
-		interactive.onFocusLost = function(_) cursorIndex = -1;
+		interactive.onFocusLost = function(e) {
+			cursorIndex = -1;
+			onFocusLost(e);
+		};
+
+		interactive.onKeyUp = function(e) onKeyUp(e);
+		interactive.onRelease = function(e) onRelease(e);
+		interactive.onFocus = function(e) onFocus(e);
+		interactive.onKeyUp = function(e) onKeyUp(e);
+		interactive.onClick = function(e) onClick(e);
+		interactive.onMove = function(e) onMove(e);
+		interactive.onOver = function(e) onOver(e);
+		interactive.onOut = function(e) onOut(e);
+
 		addChildAt(interactive, 0);
+	}
+
+	function setState(h:TextHistoryElement) {
+		text = h.t;
+		cursorIndex = h.c;
+		selectionRange = h.sel;
+		if( selectionRange != null )
+			cursorIndex = selectionRange.start + selectionRange.length;
+	}
+
+	function curHistoryState() : TextHistoryElement {
+		return { t : text, c : cursorIndex, sel : selectionRange == null ? null : { start : selectionRange.start, length : selectionRange.length } };
+	}
+
+	function beforeChange() {
+		var t = haxe.Timer.stamp();
+		if( t - lastChange < 1 ) {
+			lastChange = t;
+			return;
+		}
+		lastChange = t;
+		undo.push(curHistoryState());
+		redo = [];
+		while( undo.length > maxHistorySize ) undo.shift();
+	}
+
+	public function getSelectedText() {
+		return selectionRange == null ? null : text.substr(selectionRange.start, selectionRange.length);
 	}
 
 	override function set_font(f) {
@@ -138,10 +251,10 @@ class TextInput extends Text {
 				selectionPos = calcTextWidth(text.substr(0, selectionRange.start));
 				selectionSize = calcTextWidth(text.substr(selectionRange.start, selectionRange.length));
 			}
-			selectionTile.dx += selectionPos - scrollX;
+			selectionTile.dx += selectionPos;
 			selectionTile.width += selectionSize;
 			emitTile(ctx, selectionTile);
-			selectionTile.dx -= selectionPos - scrollX;
+			selectionTile.dx -= selectionPos;
 			selectionTile.width -= selectionSize;
 		}
 
@@ -162,6 +275,44 @@ class TextInput extends Text {
 			ctx.clearRenderZone();
 	}
 
+	public function focus() {
+		interactive.focus();
+	}
+
+	public function hasFocus() {
+		return interactive.hasFocus();
+	}
+
+	public dynamic function onOut(e:hxd.Event) {
+	}
+
+	public dynamic function onOver(e:hxd.Event) {
+	}
+
+	public dynamic function onMove(e:hxd.Event) {
+	}
+
+	public dynamic function onClick(e:hxd.Event) {
+	}
+
+	public dynamic function onPush(e:hxd.Event) {
+	}
+
+	public dynamic function onRelease(e:hxd.Event) {
+	}
+
+	public dynamic function onKeyDown(e:hxd.Event) {
+	}
+
+	public dynamic function onKeyUp(e:hxd.Event) {
+	}
+
+	public dynamic function onFocus(e:hxd.Event) {
+	}
+
+	public dynamic function onFocusLost(e:hxd.Event) {
+	}
+
 	public dynamic function onChange() {
 	}
 
@@ -172,5 +323,8 @@ class TextInput extends Text {
 		super.drawRec(ctx);
 		interactive.visible = true;
 	}
+
+	function get_backgroundColor() return interactive.backgroundColor;
+	function set_backgroundColor(v) return interactive.backgroundColor = v;
 
 }

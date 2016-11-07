@@ -17,10 +17,8 @@ class Console extends h2d.Sprite {
 	var width : Int;
 	var height : Int;
 	var bg : h2d.Bitmap;
-	var tf : h2d.Text;
+	var tf : h2d.TextInput;
 	var logTxt : h2d.HtmlText;
-	var cursor : h2d.Bitmap;
-	var cursorPos(default, set) : Int;
 	var lastLogTime : Float;
 	var commands : Map < String, { help : String, args : Array<{ name : String, t : ConsoleArg, ?opt : Bool }>, callb : Dynamic } > ;
 	var aliases : Map<String,String>;
@@ -41,11 +39,12 @@ class Console extends h2d.Sprite {
 		logIndex = -1;
 		bg = new h2d.Bitmap(h2d.Tile.fromColor(0,1,1,0.5), this);
 		bg.visible = false;
-		tf = new h2d.Text(font, bg);
+		tf = new h2d.TextInput(font, bg);
+		tf.onKeyDown = handleKey;
+		tf.onFocusLost = function(_) hide();
 		tf.x = 2;
 		tf.y = 1;
 		tf.textColor = 0xFFFFFFFF;
-		cursor = new h2d.Bitmap(h2d.Tile.fromColor(tf.textColor, 1, font.lineHeight), tf);
 		commands = new Map();
 		aliases = new Map();
 		addCommand("help", "Show help", [ { name : "command", t : AString, opt : true } ], showHelp);
@@ -88,8 +87,8 @@ class Console extends h2d.Sprite {
 				e.propagate = false;
 			}
 		case EKeyDown:
-			handleKey(e);
-			if( bg.visible ) e.propagate = false;
+			if( e.charCode == shortKeyChar && !bg.visible )
+				show();
 		default:
 		}
 	}
@@ -140,56 +139,29 @@ class Console extends h2d.Sprite {
 	public function hide() {
 		bg.visible = false;
 		tf.text = "";
-		cursorPos = 0;
+		tf.cursorIndex = -1;
 	}
 
 	public function show() {
 		bg.visible = true;
+		tf.focus();
+		tf.cursorIndex = tf.text.length;
 		logIndex = -1;
 	}
 
-	function set_cursorPos(v:Int) {
-		if( v > tf.text.length ) v = tf.text.length;
-		cursor.x = tf.calcTextWidth(tf.text.substr(0, v));
-		return cursorPos = v;
-	}
-
 	function handleKey( e : hxd.Event ) {
-		if( e.charCode == shortKeyChar && !bg.visible ) {
-			show();
-		}
 		if( !bg.visible )
 			return;
 		switch( e.keyCode ) {
-		case Key.LEFT:
-			if( cursorPos > 0 )
-				cursorPos--;
-		case Key.RIGHT:
-			if( cursorPos < tf.text.length )
-				cursorPos++;
-		case Key.HOME:
-			cursorPos = 0;
-		case Key.END:
-			cursorPos = tf.text.length;
-		case Key.DELETE:
-			tf.text = tf.text.substr(0, cursorPos) + tf.text.substr(cursorPos + 1);
-			return;
-		case Key.BACKSPACE:
-			if( cursorPos > 0 ) {
-				tf.text = tf.text.substr(0, cursorPos - 1) + tf.text.substr(cursorPos);
-				cursorPos--;
-			}
-			return;
 		case Key.ENTER:
 			var cmd = tf.text;
 			tf.text = "";
-			cursorPos = 0;
 			handleCommand(cmd);
 			if( !logTxt.visible ) bg.visible = false;
+			e.cancel = true;
 			return;
 		case Key.ESCAPE:
 			hide();
-			return;
 		case Key.UP:
 			if(logs.length == 0 || logIndex == 0) return;
 			if(logIndex == -1) {
@@ -198,22 +170,18 @@ class Console extends h2d.Sprite {
 			}
 			else logIndex--;
 			tf.text = logs[logIndex];
-			cursorPos = tf.text.length;
+			tf.cursorIndex = tf.text.length;
 		case Key.DOWN:
 			if(tf.text == curCmd) return;
 			if(logIndex == logs.length - 1) {
 				tf.text = curCmd;
-				cursorPos = tf.text.length;
+				tf.cursorIndex = tf.text.length;
 				logIndex = -1;
 				return;
 			}
 			logIndex++;
 			tf.text = logs[logIndex];
-			cursorPos = tf.text.length;
-		}
-		if( e.charCode != 0 ) {
-			tf.text = curCmd = tf.text.substr(0, cursorPos) + String.fromCharCode(e.charCode) + tf.text.substr(cursorPos);
-			cursorPos++;
+			tf.cursorIndex = tf.text.length;
 		}
 	}
 
@@ -366,6 +334,7 @@ class Console extends h2d.Sprite {
 			x = 0;
 			y = scene.height - height;
 			width = scene.width;
+			tf.maxWidth = width;
 			bg.tile.scaleToSize(width, height);
 		}
 		var log = logTxt;
