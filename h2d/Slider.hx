@@ -43,7 +43,7 @@ class Slider extends h2d.Interactive {
 	override function draw(ctx:RenderContext) {
 		super.draw(ctx);
 		emitTile(ctx, tile);
-		var px = Math.round( (value - minValue) * width / (maxValue - minValue) );
+		var px = Math.round( (value - minValue) * (width - cursorTile.width) / (maxValue - minValue) ) - cursorTile.dx;
 		cursorTile.dx += px;
 		emitTile(ctx, cursorTile);
 		cursorTile.dx -= px;
