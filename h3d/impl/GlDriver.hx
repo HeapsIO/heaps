@@ -74,8 +74,6 @@ class GlDriver extends Driver {
 	var canvas : js.html.CanvasElement;
 	var mrtExt : { function drawBuffersWEBGL( colors : Array<Int> ) : Void; };
 	public var gl : js.html.webgl.RenderingContext;
-	#elseif cpp
-	var fixMult : Bool;
 	#end
 
 	var curAttribs : Int;
@@ -91,12 +89,7 @@ class GlDriver extends Driver {
 	var numTargets : Int;
 
 	public function new() {
-		#if (nme || openfl || lime)
-		// check for a bug in HxCPP handling of sub buffers
-		var tmp = new Float32Array(8);
-		var sub = new Float32Array(tmp.buffer, 0, 4);
-		#if cpp fixMult = sub.length == 1; #end  // should be 4
-		#elseif js
+		#if js
 		canvas = @:privateAccess hxd.Stage.getCanvas();
 		if( canvas == null ) throw "Canvas #webgl not found";
 		gl = canvas.getContextWebGL({alpha:false});
@@ -594,10 +587,10 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		#if hxsdl
 		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBasic.ArrayF32).bytes #else buf.getNative() #end;
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(data,bufPos,vertexCount * stride * 4), bufPos * STREAM_POS, vertexCount * stride * 4);
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(data,bufPos * 4,vertexCount * stride * 4), bufPos * 4 * STREAM_POS, vertexCount * stride * 4);
 		#else
 		var buf = new Float32Array(buf.getNative());
-		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride #if cpp * (fixMult?4:1) #end);
+		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
@@ -607,10 +600,10 @@ class GlDriver extends Driver {
 		var stride : Int = v.stride;
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		#if hxsdl
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(buf.getData(),bufPos,vertexCount * stride * 4), bufPos * STREAM_POS, vertexCount * stride * 4);
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(buf.getData(),bufPos * 4,vertexCount * stride * 4), bufPos * 4 * STREAM_POS, vertexCount * stride * 4);
 		#else
 		var buf = bytesToUint8Array(buf);
-		var sub = new Uint8Array(buf.buffer, bufPos, vertexCount * stride * 4);
+		var sub = new Uint8Array(buf.buffer, bufPos * 4, vertexCount * stride * 4);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
@@ -620,10 +613,10 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
 		#if hxsdl
 		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBasic.ArrayUI16).bytes #else buf.getNative() #end;
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(data,bufPos,indiceCount*2), bufPos * STREAM_POS, indiceCount * 2);
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(data,bufPos*2,indiceCount*2), bufPos * 2 * STREAM_POS, indiceCount * 2);
 		#else
 		var buf = new Uint16Array(buf.getNative());
-		var sub = new Uint16Array(buf.buffer, bufPos, indiceCount #if cpp * (fixMult?2:1) #end);
+		var sub = new Uint16Array(buf.buffer, bufPos, indiceCount);
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
 		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
@@ -632,10 +625,10 @@ class GlDriver extends Driver {
 	override function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
 		#if hxsdl
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(buf.getData(),bufPos, indiceCount * 2), bufPos * STREAM_POS, indiceCount * 2);
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(buf.getData(),bufPos * 2, indiceCount * 2), bufPos * 2 * STREAM_POS, indiceCount * 2);
 		#else
 		var buf = bytesToUint8Array(buf);
-		var sub = new Uint8Array(buf.buffer, bufPos, indiceCount * 2);
+		var sub = new Uint8Array(buf.buffer, bufPos * 2, indiceCount * 2);
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
 		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
