@@ -29,10 +29,10 @@ class Stencil extends hxd.App {
 			var p = obj.material.mainPass;
 			var s = new h3d.mat.Stencil();
 			p.culling = Front;
+			p.enableLights = true;
 			s.setFunc(Both, Equal, 1, 0xFF);
 			s.setMask(Both, 0x00);
 			p.stencil = s;
-			p.enableLights = true;
 		}
 
 		{	// create reflection plane

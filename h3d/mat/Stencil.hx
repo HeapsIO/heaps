@@ -30,7 +30,7 @@ class Stencil
 	public function new() {
 		setFunc(Both, Always, 0, 0xFF);
 		setOp(Both, Keep, Keep, Keep);
-		setMask(Both, 0x00);
+		setMask(Both, 0xFF);
 	}
 
 	public function setOp( ?face : Face, stfail : StencilOp, dpfail : StencilOp, dppass : StencilOp ) {
