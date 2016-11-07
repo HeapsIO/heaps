@@ -110,6 +110,10 @@ class TextInput extends Text {
 					cursorIndex--;
 					onChange();
 				}
+			case K.ENTER:
+				cursorIndex = -1;
+				interactive.blur();
+				return;
 			case K.Z if( K.isDown(K.CTRL) ):
 				if( undo.length > 0 && canEdit ) {
 					redo.push(curHistoryState());
@@ -233,7 +237,8 @@ class TextInput extends Text {
 			ctx.setRenderZone(absX, absY, h.x - absX, h.y - absY);
 		}
 
-		if( cursorIndex >=0 && (text != cursorText || cursorIndex != cursorXIndex) ) {
+		if( cursorIndex >= 0 && (text != cursorText || cursorIndex != cursorXIndex) ) {
+			if( cursorIndex > text.length ) cursorIndex = text.length;
 			cursorText = text;
 			cursorXIndex = cursorIndex;
 			cursorX = calcTextWidth(text.substr(0, cursorIndex));
