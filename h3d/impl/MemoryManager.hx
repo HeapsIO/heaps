@@ -84,6 +84,9 @@ class MemoryManager {
 		if( m.vbuf != null ) return;
 
 		var mem = m.size * m.stride * 4;
+
+		if( mem == 0 ) return;
+
 		while( usedMemory + mem > MAX_MEMORY || bufferCount >= MAX_BUFFERS || (m.vbuf = driver.allocVertexes(m)) == null ) {
 			var size = usedMemory - freeMemorySize();
 			garbage();

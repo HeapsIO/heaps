@@ -51,8 +51,12 @@ class Buffer {
 		if( flags != null )
 			for( f in flags )
 				this.flags.set(f);
+		#if flash
+		// flash strictly requires indexes to be within the bounds of the buffer
+		// so we cannot use quad/triangle indexes unless the buffer is large enough
 		if( this.flags.has(Quads) || this.flags.has(Triangles) )
 			this.flags.set(Managed);
+		#end
 		if( !this.flags.has(NoAlloc) )
 			h3d.Engine.getCurrent().mem.allocBuffer(this, stride);
 	}
