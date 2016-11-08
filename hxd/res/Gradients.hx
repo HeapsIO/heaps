@@ -2,7 +2,7 @@ package hxd.res;
 import hxd.fmt.grd.Data;
 
 class Gradients extends Resource {
-	var data   : Data;
+	var data : Data;
 
 	// creates a texture for the specified "name" gradient
 	public function toTexture(name : String, ?resolution = 256) : h3d.mat.Texture {
@@ -26,9 +26,9 @@ class Gradients extends Resource {
 		var tile  = h2d.Tile.fromTexture(tex);
 
 		var map = new Map<String, h2d.Tile>();
-		var y = 0;
+		var y = 1;
 		for (d in grads) {
-			map.set(d.name, tile.sub(0, y + 1, resolution, 1));
+			map.set(d.name, tile.sub(0, y, resolution, 1));
 			y += 3;
 		}
 		return map;
