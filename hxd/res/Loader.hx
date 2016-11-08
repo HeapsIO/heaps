@@ -82,7 +82,12 @@ class Loader {
 	}
 
 	function loadGradients( path : String ) {
-		return new Gradients(fs.get(path));
+		var g : Gradients = cache.get(path);
+		if( g == null ) {
+			g = new Gradients(fs.get(path));
+			cache.set(path, g);
+		}
+		return g;
 	}
 
 	public function dispose() {

@@ -2,73 +2,66 @@ package hxd.res;
 import hxd.fmt.grd.Data;
 
 class Gradients extends Resource {
-	var data : Data;
+	var data   : Data;
 
 	// creates a texture for the specified "name" gradient
 	public function toTexture(name : String, ?resolution = 256) : h3d.mat.Texture {
-		if (!isPOT(resolution)) throw "gradient resolution should be a power of two";
-
-		var data   = getData();
-		var pixels = hxd.Pixels.alloc(resolution, 1, ARGB);
-		appendPixels(pixels, data.get(name), resolution, 1, 0);
-		return h3d.mat.Texture.fromPixels(pixels);
+		var data = getData();
+		return createTexture([data.get(name)], resolution);
 	}
 
-	// creates a texture for each specified gradient in "names"
-	// if "names" is null, all gradient textures are created
-	public function toTextureMap(?names : Array<String>, ?resolution = 256) : Map<String, h3d.mat.Texture> {
-		if (!isPOT(resolution)) throw "gradient resolution should be a power of two";
-
-		var data   = getData();
-		var map    = new Map<String, h3d.mat.Texture>();
-		var pixels = hxd.Pixels.alloc(resolution, 1, ARGB);
-
-		for (d in data) {
-			if (names != null && names.indexOf(d.name) < 0) continue;
-			appendPixels(pixels, d, resolution, 1, 0);
-			map.set(d.name, h3d.mat.Texture.fromPixels(pixels));
-		}
-
+	// creates a texture for each gradient
+	public function toTextureMap(?resolution = 256) : Map<String, h3d.mat.Texture> {
+		var map  = new Map<String, h3d.mat.Texture>();
+		var data = getData();
+		for (d in data) map.set(d.name, createTexture([d], resolution));
 		return map;
 	}
 
 	// all gradients are written into the same texture
-	// if "names" is null, all gradient tiles are created
-	@:access(h2d.Tile)
-	public function toTileMap(?names : Array<String>, ?resolution = 256) : Map<String, h2d.Tile> {
-		if (!isPOT(resolution)) throw "gradient resolution should be a power of two";
+	public function toTileMap(?resolution = 256) : Map<String, h2d.Tile> {
+		var data  = getData();
+		var grads = [for (d in data) d];
+		var tex   = createTexture(grads, resolution);
+		var tile  = h2d.Tile.fromTexture(tex);
 
-		var data   = getData();
-		var map    = new Map<String, h2d.Tile>();
-
-		var grads = [];
-		var thei  = 0;
-		for (d in data) {
-			if (names != null && names.indexOf(d.name) < 0) continue;
-			grads.push(d);
-			thei += 3;
-		}
-		thei = nextPOT(thei);
-
-		var pixels = hxd.Pixels.alloc(resolution, 1, ARGB);
-		var yoff   = 0;
+		var map = new Map<String, h2d.Tile>();
+		var y = 0;
 		for (d in grads) {
-			appendPixels(pixels, d, resolution, 3, yoff);
-			map.set(d.name, new h2d.Tile(null, 0, yoff + 1, resolution, 1));
-			yoff += 3;
+			map.set(d.name, tile.sub(0, y + 1, resolution, 1));
+			y += 3;
 		}
-
-		var tex = h3d.mat.Texture.fromPixels(pixels);
-		for (t in map) t.setTexture(tex);
-
 		return map;
 	}
 
-	inline function isPOT(v : Int) : Bool {
+	static function createTexture(grads : Array<Gradient>, twid : Int) {
+		if (!isPOT(twid)) throw "gradient resolution should be a power of two";
+
+		var ghei = grads.length > 1 ? 3 : 1;
+		var thei = nextPOT(ghei * grads.length);
+		var tex  = new h3d.mat.Texture(twid, thei);
+
+		function uploadPixels() {
+			var pixels = hxd.Pixels.alloc(twid, thei, ARGB);
+			var yoff   = 0;
+			for (g in grads) {
+				appendPixels(pixels, g, tex.width, ghei, yoff);
+				yoff += ghei;
+			}
+			tex.uploadPixels(pixels);
+			pixels.dispose();
+		}
+
+		uploadPixels();
+		tex.realloc = uploadPixels;
+		return tex;
+	}
+
+	static inline function isPOT(v : Int) : Bool {
 		return (v & (v - 1)) == 0;
 	}
 
-	inline function nextPOT(v : Int) : Int {
+	static inline function nextPOT(v : Int) : Int {
 		--v;
 		v |= v >> 1;
 		v |= v >> 2;
@@ -100,7 +93,7 @@ class Gradients extends Resource {
 				colors.push( { value : colors[colors.length-1].value, loc : wid-1 } );
 		}
 
-		{	// create gradient texture
+		{	// create gradient pixels
 			var px = 0;
 			var ci = 0; // color index
 			var tmpCol = new h3d.Vector();
