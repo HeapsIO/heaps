@@ -23,10 +23,14 @@ class MRTSubPass extends Default {
 	}
 
 	override function draw( passes ) {
+		if( ctx == null )
+			ctx = mrt.ctx;
 		var texture = mrt.getTexture(output);
-		ctx.engine.pushTarget(texture);
-		passes = super.draw(passes);
-		ctx.engine.popTarget();
+		if( passes != null ) {
+			ctx.engine.pushTarget(texture);
+			passes = super.draw(passes);
+			ctx.engine.popTarget();
+		}
 		ctx.setGlobalID(varId, texture);
 		return passes;
 	}
@@ -75,7 +79,9 @@ class MRT extends Default {
 	}
 
 	public function getSubPass( output : Int ) {
-		return new MRTSubPass(this, output);
+		var s = new MRTSubPass(this, output);
+		s.setContext(ctx);
+		return s;
 	}
 
 	public function drawImmediate( passes : Object ) {
