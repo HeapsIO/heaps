@@ -92,10 +92,7 @@ class TextInput extends Text {
 			case K.BACKSPACE, K.DELETE if( selectionRange != null ):
 				if( !canEdit ) return;
 				beforeChange();
-				cursorIndex = selectionRange.start;
-				var end = cursorIndex + selectionRange.length;
-				text = text.substr(0, cursorIndex) + text.substr(end);
-				selectionRange = null;
+				cutSelection();
 				onChange();
 			case K.DELETE:
 				if( cursorIndex < text.length && canEdit ) {
@@ -129,6 +126,8 @@ class TextInput extends Text {
 			default:
 				if( e.charCode != 0 && canEdit ) {
 					beforeChange();
+					if( selectionRange != null )
+						cutSelection();
 					text = text.substr(0, cursorIndex) + String.fromCharCode(e.charCode) + text.substr(cursorIndex);
 					cursorIndex++;
 					onChange();
@@ -176,6 +175,15 @@ class TextInput extends Text {
 		interactive.onOut = function(e) onOut(e);
 
 		addChildAt(interactive, 0);
+	}
+
+	function cutSelection() {
+		if(selectionRange == null) return false;
+		cursorIndex = selectionRange.start;
+		var end = cursorIndex + selectionRange.length;
+		text = text.substr(0, cursorIndex) + text.substr(end);
+		selectionRange = null;
+		return true;
 	}
 
 	function setState(h:TextHistoryElement) {
