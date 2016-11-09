@@ -392,6 +392,8 @@ class FileTree {
 			return { e : macro loader.loadTiledMap($epath), t : macro : hxd.res.TiledMap };
 		case "atlas":
 			return { e : macro loader.loadAtlas($epath), t : macro : hxd.res.Atlas };
+		case "grd":
+			return { e : macro loader.loadGradients($epath), t : macro : hxd.res.Gradients };
 		default:
 			return { e : macro loader.loadData($epath), t : macro : hxd.res.Resource };
 		}
