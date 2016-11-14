@@ -493,10 +493,11 @@ class NanoJpeg {
 			njSkip(2);
 		}
 		var start = get(0);
-		var count = get(0);
-		if( (!progressive && start != 0) || (count != 63 - start) || get(2) != 0 ) notSupported();
+		var count = get(1);
+		var other = get(2);
+		if( (!progressive && start != 0) || (count != 63 - start) || other != 0 ) notSupported();
 		njSkip(length);
-		
+
 		if( progressive ) throw "Unsupported progressive JPG";
 
 		var mbx = 0, mby = 0;
