@@ -272,7 +272,14 @@ class BitmapData {
 		var b = new flash.display.BitmapData(w, h);
 		b.copyPixels(bmp, new flash.geom.Rectangle(x, y, w, h), new flash.geom.Point(0, 0));
 		return fromNative(b);
-		#elseif (js || lime)
+		#elseif js
+		var canvas = js.Browser.document.createCanvasElement();
+		canvas.width = w;
+		canvas.height = h;
+		var ctx = canvas.getContext2d();
+		ctx.drawImage(this.ctx.canvas, x, y);
+		return fromNative(ctx);
+		#elseif lime
 		notImplemented();
 		return null;
 		#else
