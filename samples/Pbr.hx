@@ -7,40 +7,109 @@ class PbrShader extends hxsl.Shader {
 
 		@param var exposure : Float;
 
-		@param var dirLight : Vec3;
+		@param var lightPos : Vec3;
+		@param var lightColor : Vec3;
 
 		@const var specularMode : Bool;
-		@param var specularPower : Float;
+		@param var metalness : Float;
 
 		@param var roughness : Float;
 
+		@param var cubeMap : SamplerCube;
+
+		var l : Vec3;
+		var n : Vec3;
+		var v : Vec3;
+		var h : Vec3;
+
+		function calcG(v:Vec3) : Float {
+
+			// UE4 uses   k = (R + 1)² / 8  "disney hotness" for analytic light sources
+
+			var k = (roughness * roughness) / 2;
+			return n.dot(v) / (n.dot(v) * (1 - k) + k);
+		}
+
 		function fragment() {
 
-			var color = pixelColor.rgb;
+			var color : Vec3;
 
-			var dirLight = (-dirLight).normalize();
+			var diffuseColor = pixelColor.rgb;
+			var lightDir = (lightPos - transformedPosition).normalize();
 			var normal = transformedNormal.normalize();
 			var view = (camera.position - transformedPosition).normalize();
 
 
-			var lambert = dirLight.dot(normal).max(0.);
+			var lambert = lightDir.dot(normal).max(0.);
 
 			if( specularMode ) {
 
-				var r = reflect(-dirLight, normal).normalize();
+				var specularPower = metalness * 40.;
+				var r = reflect(-lightDir, normal).normalize();
 				var specValue = r.dot(view).max(0.).pow(specularPower);
-				color *= (lambert + specValue);
+				color = diffuseColor * (lambert + specValue) * lightColor;
 
 			} else {
 
-				color *= lambert;
+				l = lightDir;
+				n = normal;
+				v = (camera.position - transformedPosition).normalize();
+				h = (l + v).normalize();
 
 
-				var alpha = roughness.pow(2);
 
-				// GGX (Trowbridge-Reitz)
+				// diffuse BRDF
+				var direct : Vec3;
+				var F = 0.;
 
-				// var D = alpha.pow(2) / (PI * ( n.dot(m).pow(2) * (alpha.pow(2) - 1.) + 1).pow(2));
+				#if !flash
+				if( n.dot(l) < 0 ) {
+					direct = vec3(0.);
+				} else
+				#end
+				{
+
+					// ------------- DIRECT LIGHT -------------------------
+
+					var F0 = metalness;
+					var diffuse = diffuseColor * n.dot(l) / PI;
+
+					// General Cook-Torrance formula for microfacet BRDF
+					// 		f(l,v) = D(h).F(v,h).G(l,v,h) / 4(n.l)(n.v)
+
+					// formulas below from 2013 Siggraph "Real Shading in UE4"
+					var alpha = roughness.pow(2);
+
+					// D = normal distribution fonction
+					// GGX (Trowbridge-Reitz) "Disney"
+					var D = alpha.pow(2) / (PI * ( n.dot(h).pow(2) * (alpha.pow(2) - 1.) + 1).pow(2));
+
+					// F = fresnel term
+
+					// Schlick approx
+					// var F = F0 + (1 - F0) * pow(1 - v.dot(h), 5.);
+					// pow 5 optimized with Spherical Gaussian
+					F = F0 + (1 - F0) * (2.).pow( ( -5.55473 * v.dot(h) - 6.98316) * v.dot(h) );
+
+					// G = geometric attenuation
+					// Schlick (modified for UE4 with k=alpha/2)
+					var G = calcG(l) * calcG(v);
+
+					var specular = D * F * G / (4 * n.dot(l) * n.dot(v));
+
+					direct = (diffuse + specular) * lightColor;
+
+
+				}
+
+
+				// ------------- INDIRECT LIGHT -------------------------
+
+				var diffuse = vec3(0, 0, 0); // TODO - generate Irradiance EnvMap from CubeMap
+				var specular = vec3(0, 0, 0); // TODO - generate PMREM from CubeMap
+				var indirect = diffuse + specular;
+
+				color = direct + indirect;
 
 
 				// reinhard tonemapping
@@ -52,6 +121,9 @@ class PbrShader extends hxsl.Shader {
 
 			}
 
+			#if flash
+			color *= float(n.dot(l) > 0.);
+			#end
 
 			pixelColor.rgb = color;
 		}
@@ -61,9 +133,9 @@ class PbrShader extends hxsl.Shader {
 	public function new() {
 		super();
 		exposure = 0;
-		specularMode = true;
-		specularPower = 40;
-		dirLight.set(0.5, -0.5, -1);
+		specularMode = false;
+		lightPos.set(5, 15, 20);
+		lightColor.set(1, 1, 1);
 	}
 
 }
@@ -74,6 +146,11 @@ class Pbr extends hxd.App {
 	var cameraRot = Math.PI / 4;
 	var cameraDist = 5.5;
 	var font : h2d.Font;
+	var hue : Float;
+	var saturation : Float;
+	var brightness : Float;
+	var color : h2d.Bitmap;
+	var sphere : h3d.scene.Mesh;
 
 	override function init() {
 
@@ -82,8 +159,12 @@ class Pbr extends hxd.App {
 		var sp = new h3d.prim.Sphere(1, 128, 128);
 		sp.addNormals();
 		sp.addUVs();
-		var sphere = new h3d.scene.Mesh(sp, s3d);
+		sphere = new h3d.scene.Mesh(sp, s3d);
 		var shader = sphere.material.mainPass.addShader(new PbrShader());
+
+		var bg = new h3d.scene.Mesh(sp, s3d);
+		bg.scale(10);
+		bg.material.mainPass.culling = Front;
 
 		fui = new h2d.Flow(s2d);
 		fui.y = 5;
@@ -102,9 +183,57 @@ class Pbr extends hxd.App {
 		g.lineTo(0, 0, 2);
 		g.lineStyle();
 
-		addCheck("Specular", function() return shader.specularMode, function(b) { trace(b); shader.specularMode = b; });
-		addSlider("Specular Power", 0, 30, function() return shader.specularPower, function(v) shader.specularPower = v);
+		engine.debug = true;
+
+
+		var cube = new h3d.mat.Texture(512, 512, [Cubic]);
+		inline function set(face:Int, res:hxd.res.Image) {
+			#if flash
+			// all mipmap levels required
+			var bmp = res.toBitmap();
+			var level = 0;
+			while( true ) {
+				cube.uploadBitmap(bmp, level++, face);
+				if( bmp.width == 1 ) break;
+				var sub = new hxd.BitmapData(bmp.width >> 1, bmp.height >> 1);
+				sub.drawScaled(0, 0, sub.width, sub.height, bmp, 0, 0, bmp.width, bmp.height);
+				bmp.dispose();
+				bmp = sub;
+			}
+			bmp.dispose();
+			#else
+			var pix = res.getPixels();
+			cube.uploadPixels(pix, 0, face);
+			#end
+		}
+		set(0, hxd.Res.front);
+		set(1, hxd.Res.back);
+		set(2, hxd.Res.right);
+		set(3, hxd.Res.left);
+		set(4, hxd.Res.top);
+		set(5, hxd.Res.bottom);
+
+		shader.cubeMap = cube;
+		bg.material.mainPass.addShader(new h3d.shader.CubeMap(cube));
+
+		shader.metalness = 0.2;
+		shader.roughness = 0.3;
+		hue = 0.2;
+		saturation = 0.2;
+		brightness = 0.2;
+
+		addCheck("PBR", function() return !shader.specularMode, function(b) shader.specularMode = !b);
 		addSlider("Exposure", -3, 3, function() return shader.exposure, function(v) shader.exposure = v);
+		addSlider("Metalness", 0, 1, function() return shader.metalness, function(v) shader.metalness = v);
+		addSlider("Roughness", 0, 1, function() return shader.roughness, function(v) shader.roughness = v);
+
+		color = new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFF, 30, 30), fui);
+		fui.getProperties(color).paddingLeft = 50;
+
+		addSlider("Hue", 0, Math.PI, function() return hue, function(v) hue = v);
+		addSlider("Saturation", 0, 1, function() return saturation, function(v) saturation = v);
+		addSlider("Brightness", 0, 1, function() return brightness, function(v) brightness = v);
+
 
 		s2d.addEventListener(onEvent);
 	}
@@ -145,7 +274,6 @@ class Pbr extends hxd.App {
 
 		i.onClick = function(_) {
 			var v = !get();
-			trace(v);
 			set(v);
 			t.text = text + ":" + (v?"ON":"OFF");
 		};
@@ -190,9 +318,22 @@ class Pbr extends hxd.App {
 
 	override function update(dt:Float) {
 		s3d.camera.pos.set(Math.cos(cameraRot) * cameraDist, Math.sin(cameraRot) * cameraDist, cameraDist * 2 / 3);
+
+		var color = new h3d.Vector(1, 0, 0);
+		var m = new h3d.Matrix();
+		m.identity();
+		m.colorHue(hue);
+		m.colorSaturation(saturation);
+		m.colorBrightness(brightness);
+		color.transform3x4(m);
+
+		this.color.color.load(color);
+		this.sphere.material.color.load(color);
+
 	}
 
 	static function main() {
+		hxd.Res.initEmbed();
 		#if hl
 		@:privateAccess {
 			hxd.System.windowWidth = 1280;
