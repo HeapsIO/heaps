@@ -136,7 +136,6 @@ class GlDriver extends Driver {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
 		var code = glout.run(shader.data);
-		trace(code);
 		gl.shaderSource(s, code);
 		gl.compileShader(s);
 		if ( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
