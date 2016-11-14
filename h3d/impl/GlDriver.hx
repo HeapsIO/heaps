@@ -45,6 +45,7 @@ private class CompiledShader {
 	public var globals : Uniform;
 	public var params : Uniform;
 	public var textures : Array<Uniform>;
+	public var cubeTextures : Array<Uniform>;
 	public var shader : hxsl.RuntimeShader.RuntimeShaderData;
 	public function new(s,vertex,shader) {
 		this.s = s;
@@ -100,9 +101,6 @@ class GlDriver extends Driver {
 		programs = new Map();
 		curAttribs = 0;
 		curMatBits = -1;
-		#if js
-		gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, 1);
-		#end
 	}
 
 	override function logImpl( str : String ) {
@@ -138,6 +136,7 @@ class GlDriver extends Driver {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
 		var code = glout.run(shader.data);
+		trace(code);
 		gl.shaderSource(s, code);
 		gl.compileShader(s);
 		if ( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
@@ -155,6 +154,7 @@ class GlDriver extends Driver {
 		s.globals = gl.getUniformLocation(p.p, prefix + "Globals");
 		s.params = gl.getUniformLocation(p.p, prefix + "Params");
 		s.textures = [for( i in 0...shader.textures2DCount ) gl.getUniformLocation(p.p, prefix + "Textures[" + i + "]")];
+		s.cubeTextures = [for( i in 0...shader.texturesCubeCount ) gl.getUniformLocation(p.p, prefix + "TexturesCube[" + i + "]")];
 	}
 
 	override function selectShader( shader : hxsl.RuntimeShader ) {
@@ -245,7 +245,7 @@ class GlDriver extends Driver {
 				#end
 			}
 		case Textures:
-			for( i in 0...s.textures.length ) {
+			for( i in 0...s.textures.length + s.cubeTextures.length ) {
 				var t = buf.tex[i];
 				if( t == null || t.isDisposed() ) {
 					var color = h3d.mat.Defaults.loadingTextureColor;
@@ -256,7 +256,10 @@ class GlDriver extends Driver {
 					t.realloc();
 				}
 				t.lastFrame = frame;
+			}
 
+			for( i in 0...s.textures.length ) {
+				var t = buf.tex[i];
 				gl.activeTexture(GL.TEXTURE0 + i);
 				gl.uniform1i(s.textures[i], i);
 
@@ -268,6 +271,21 @@ class GlDriver extends Driver {
 				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, w);
 				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, w);
 			}
+
+			for( i in 0...s.cubeTextures.length ) {
+				var t = buf.tex[i + s.textures.length];
+				gl.activeTexture(GL.TEXTURE0 + i + s.textures.length);
+				gl.uniform1i(s.cubeTextures[i], i + s.textures.length);
+
+				gl.bindTexture(GL.TEXTURE_CUBE_MAP, t.t.t);
+				var flags = TFILTERS[Type.enumIndex(t.mipMap)][Type.enumIndex(t.filter)];
+				gl.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MAG_FILTER, flags[0]);
+				gl.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MIN_FILTER, flags[1]);
+				var w = TWRAP[Type.enumIndex(t.wrap)];
+				gl.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_S, w);
+				gl.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_T, w);
+			}
+
 		}
 	}
 
@@ -412,11 +430,16 @@ class GlDriver extends Driver {
 		}
 		t.lastFrame = frame;
 		t.flags.unset(WasCleared);
-		gl.bindTexture(GL.TEXTURE_2D, tt.t);
+		var bind = t.flags.has(Cubic) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+		gl.bindTexture(bind, tt.t);
 		var mipMap = t.flags.has(MipMapped) ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR;
-		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, mipMap);
-		gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, mipMap);
-		gl.texImage2D(GL.TEXTURE_2D, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
+		gl.texParameteri(bind, GL.TEXTURE_MAG_FILTER, mipMap);
+		gl.texParameteri(bind, GL.TEXTURE_MIN_FILTER, mipMap);
+		if( t.flags.has(Cubic) ) {
+			for( i in 0...6 )
+				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
+		} else
+			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 		if( t.flags.has(Target) ) {
 			var fb = gl.createFramebuffer();
 			gl.bindFramebuffer(GL.FRAMEBUFFER, fb);
@@ -431,7 +454,7 @@ class GlDriver extends Driver {
 			}
 			gl.bindFramebuffer(GL.FRAMEBUFFER, curTarget == null || curTarget.t == null ? null : curTarget.t.fb);
 		}
-		gl.bindTexture(GL.TEXTURE_2D, null);
+		gl.bindTexture(bind, null);
 		return tt;
 	}
 
@@ -489,13 +512,16 @@ class GlDriver extends Driver {
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
 	#else
-		if( t.format != RGBA ) {
+		if( t.format != RGBA || t.flags.has(Cubic) ) {
 			var pixels = bmp.getPixels();
 			uploadTexturePixels(t, pixels, mipLevel, side);
 			pixels.dispose();
 		} else {
 			var img = bmp.toNative();
 			gl.bindTexture(GL.TEXTURE_2D, t.t.t);
+			#if js
+			gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, 1);
+			#end
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
 			if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 			gl.bindTexture(GL.TEXTURE_2D, null);
@@ -567,18 +593,22 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
-		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
+		var cubic = t.flags.has(Cubic);
+		var bind = cubic ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
+		gl.bindTexture(bind, t.t.t);
 		pixels.convert(t.format);
 		#if hxsdl
-		pixels.setFlip(true);
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, streamData(pixels.bytes.getData(),0,pixels.width*pixels.height*4));
+		pixels.setFlip(!cubic);
+		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, streamData(pixels.bytes.getData(),0,pixels.width*pixels.height*4));
 		#elseif lime
-		pixels.setFlip(true);
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
+		pixels.setFlip(!cubic);
+		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#else
-		gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
+		gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, cubic ? 0 : 1);
+		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#end
-		gl.bindTexture(GL.TEXTURE_2D, null);
+		gl.bindTexture(bind, null);
 		t.flags.set(WasCleared);
 	}
 
@@ -873,6 +903,15 @@ class GlDriver extends Driver {
 		GL.FUNC_ADD,
 		GL.FUNC_SUBTRACT,
 		GL.FUNC_REVERSE_SUBTRACT
+	];
+
+	static var CUBE_FACES = [
+		GL.TEXTURE_CUBE_MAP_POSITIVE_X,
+		GL.TEXTURE_CUBE_MAP_NEGATIVE_X,
+		GL.TEXTURE_CUBE_MAP_POSITIVE_Y,
+		GL.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+		GL.TEXTURE_CUBE_MAP_POSITIVE_Z,
+		GL.TEXTURE_CUBE_MAP_NEGATIVE_Z,
 	];
 
 	#if hlsdl
