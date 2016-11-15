@@ -224,6 +224,8 @@ enum TGlobal {
 	DFdx;
 	DFdy;
 	Fwidth;
+	// debug
+	Trace;
 }
 
 enum Component {

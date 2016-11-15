@@ -137,6 +137,11 @@ class Dce {
 			writeTo.pop();
 			check(eif, writeTo);
 			if( eelse != null ) check(eelse, writeTo);
+		case TFor(v, it, loop):
+			writeTo.push(null);
+			check(it, writeTo);
+			check(loop, writeTo);
+			writeTo.pop();
 		default:
 			e.iter(check.bind(_, writeTo));
 		}

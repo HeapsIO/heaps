@@ -157,6 +157,10 @@ class Eval {
 	function evalCall( g : TGlobal, args : Array<TExpr> ) {
 		return switch( [g,args] ) {
 		case [ToFloat, [ { e : TConst(CInt(i)) } ]]: TConst(CFloat(i));
+		case [Trace, args]:
+			for( a in args )
+				haxe.Log.trace(Printer.toString(a), { fileName : a.p.file, lineNumber : 0, className : null, methodName : null });
+			TBlock([]);
 		default: null;
 		}
 	}

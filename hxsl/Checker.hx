@@ -30,8 +30,6 @@ class Checker {
 
 	public function new() {
 		globals = new Map();
-		inline function g(gl:TGlobal, vars) {
-		}
 		var genType = [TFloat, vec2, vec3, vec4];
 		var baseType = [TFloat, TBool, TInt];
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
@@ -107,6 +105,8 @@ class Checker {
 				[ { args : [ { name : "value", type : TVec(4, VFloat) } ], ret : TVec(3, VFloat) } ];
 			case PackNormal:
 				[ { args : [ { name : "value", type : TVec(3, VFloat) } ], ret : TVec(4, VFloat) } ];
+			case Trace:
+				[];
 			}
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );
@@ -459,7 +459,10 @@ class Checker {
 				};
 				var old = vars.get(v.name);
 				vars.set(v.name, v);
+				var oldL = inLoop;
+				inLoop = true;
 				var block = typeExpr(block, NoValue);
+				inLoop = oldL;
 				if( old == null ) vars.remove(v.name) else vars.set(v.name, old);
 				TFor(v, it, block);
 			default:
@@ -846,6 +849,8 @@ class Checker {
 			default:
 				error("Cannot apply " + g.toString() + " to these parameters", pos);
 			}
+		case Trace:
+			type = TVoid;
 		default:
 		}
 		if( type == null )
