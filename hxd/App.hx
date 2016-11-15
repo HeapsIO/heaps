@@ -90,10 +90,10 @@ class App {
 			driver.logEnable = old;
 			engine.setDriver(driver);
 			hxd.File.saveBytes("log.txt", haxe.io.Bytes.ofString(log.logLines.join("\n")));
+			return;
 		}
-		#else
-			engine.render(s3d);
 		#end
+		engine.render(s3d);
 	}
 
 	function update( dt : Float ) {
