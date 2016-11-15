@@ -12,11 +12,13 @@ private typedef GL = js.html.webgl.GL;
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
 private typedef GLShader = js.html.webgl.Shader;
+private typedef Framebuffer = js.html.webgl.Framebuffer;
 #elseif lime
 import lime.graphics.opengl.GL;
 private typedef Uniform = Dynamic;
 private typedef Program = lime.graphics.opengl.GLProgram;
 private typedef GLShader = lime.graphics.opengl.GLShader;
+private typedef Framebuffer = lime.graphics.opengl.Framebuffer;
 private typedef Uint16Array = lime.utils.UInt16Array;
 private typedef Uint8Array = lime.utils.UInt8Array;
 private typedef Float32Array = lime.utils.Float32Array;
@@ -25,6 +27,7 @@ import nme.gl.GL;
 private typedef Uniform = Dynamic;
 private typedef Program = nme.gl.GLProgram;
 private typedef GLShader = nme.gl.GLShader;
+private typedef Framebuffer = nme.gl.Framebuffer;
 private typedef Uint16Array = nme.utils.Int16Array;
 private typedef Uint8Array = nme.utils.UInt8Array;
 private typedef Float32Array = nme.utils.Float32Array;
@@ -33,6 +36,7 @@ import sdl.GL;
 private typedef Uniform = sdl.GL.Uniform;
 private typedef Program = sdl.GL.Program;
 private typedef GLShader = sdl.GL.Shader;
+private typedef Framebuffer = sdl.GL.Framebuffer;
 private typedef Texture = h3d.impl.Driver.Texture;
 #if cpp
 private typedef Float32Array = Array<cpp.Float32>;
@@ -77,6 +81,7 @@ class GlDriver extends Driver {
 	public var gl : js.html.webgl.RenderingContext;
 	#end
 
+	var commonFB : Framebuffer;
 	var curAttribs : Int;
 	var curShader : CompiledProgram;
 	var curBuffer : h3d.Buffer;
@@ -98,6 +103,7 @@ class GlDriver extends Driver {
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
 		#end
+		commonFB = gl.createFramebuffer();
 		programs = new Map();
 		curAttribs = 0;
 		curMatBits = -1;
@@ -439,19 +445,11 @@ class GlDriver extends Driver {
 				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 		} else
 			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
-		if( t.flags.has(Target) ) {
-			var fb = gl.createFramebuffer();
-			gl.bindFramebuffer(GL.FRAMEBUFFER, fb);
-			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, tt.t, 0);
-			tt.fb = fb;
-			if( t.flags.has(TargetDepth) ) {
-				tt.rb = gl.createRenderbuffer();
-				gl.bindRenderbuffer(GL.RENDERBUFFER, tt.rb);
-				gl.renderbufferStorage(GL.RENDERBUFFER, GL.DEPTH_COMPONENT16, tt.width, tt.height);
-				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, tt.rb);
-				gl.bindRenderbuffer(GL.RENDERBUFFER, null);
-			}
-			gl.bindFramebuffer(GL.FRAMEBUFFER, curTarget == null || curTarget.t == null ? null : curTarget.t.fb);
+		if( t.flags.has(TargetDepth) ) {
+			tt.rb = gl.createRenderbuffer();
+			gl.bindRenderbuffer(GL.RENDERBUFFER, tt.rb);
+			gl.renderbufferStorage(GL.RENDERBUFFER, GL.DEPTH_COMPONENT16, tt.width, tt.height);
+			gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 		}
 		gl.bindTexture(bind, null);
 		return tt;
@@ -494,7 +492,6 @@ class GlDriver extends Driver {
 		t.t = null;
 		gl.deleteTexture(tt.t);
 		if( tt.rb != null ) gl.deleteRenderbuffer(tt.rb);
-		if( tt.fb != null ) gl.deleteFramebuffer(tt.fb);
 	}
 
 	override function disposeIndexes( i : IndexBuffer ) {
@@ -756,7 +753,7 @@ class GlDriver extends Driver {
 		}
 	}
 
-	override function setRenderTarget( tex : h3d.mat.Texture ) {
+	override function setRenderTarget( tex : h3d.mat.Texture, face = 0 ) {
 		unbindTargets();
 		curTarget = tex;
 		if( tex == null ) {
@@ -767,27 +764,26 @@ class GlDriver extends Driver {
 		if( tex.t == null )
 			tex.alloc();
 		tex.lastFrame = frame;
-		gl.bindFramebuffer(GL.FRAMEBUFFER, tex.t.fb);
+		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
+		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cubic) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, 0);
+		if( tex.t.rb != null )
+			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, tex.t.rb);
+		else
+			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, null);
 		gl.viewport(0, 0, tex.width, tex.height);
 	}
 
 	override function setRenderTargets( textures : Array<h3d.mat.Texture> ) {
 		unbindTargets();
-		if( textures.length < 2 ) {
-			setRenderTarget(textures[0]);
+		setRenderTarget(textures[0]);
+		if( textures.length < 2 )
 			return;
-		}
-		curTarget = textures[0];
 		numTargets = textures.length;
-		for( tex in textures ) {
+		for( i in 1...textures.length ) {
+			var tex = textures[i];
 			if( tex.t == null )
 				tex.alloc();
-			if( tex == curTarget ) {
-				gl.bindFramebuffer(GL.FRAMEBUFFER, curTarget.t.fb);
-				gl.viewport(0, 0, tex.width, tex.height);
-			} else {
-				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0 + textures.indexOf(tex), GL.TEXTURE_2D, tex.t.t, 0);
-			}
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0 + i, GL.TEXTURE_2D, tex.t.t, 0);
 			tex.lastFrame = frame;
 		}
 		#if js

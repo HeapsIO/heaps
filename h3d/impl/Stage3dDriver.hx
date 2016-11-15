@@ -761,7 +761,7 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
-	override function setRenderTarget( t : Null<h3d.mat.Texture>) {
+	override function setRenderTarget( t : Null<h3d.mat.Texture>, face = 0 ) {
 		if( renderTargets > 1 ) {
 			for( i in 1...renderTargets )
 				ctx.setRenderToTexture(null, false, 0, 0, i);
@@ -773,7 +773,7 @@ class Stage3dDriver extends Driver {
 		} else {
 			if( t.t == null )
 				t.alloc();
-			ctx.setRenderToTexture(t.t, t.flags.has(TargetUseDefaultDepth));
+			ctx.setRenderToTexture(t.t, t.flags.has(TargetUseDefaultDepth), 0, face);
 			renderTargets = 1;
 			t.lastFrame = frame;
 			// make sure we at least clear the color the first time

@@ -90,21 +90,6 @@ class App {
 			driver.logEnable = old;
 			engine.setDriver(driver);
 			hxd.File.saveBytes("log.txt", haxe.io.Bytes.ofString(log.logLines.join("\n")));
-		} else {
-			var scnDriver = Std.instance(engine.driver, h3d.impl.ScnDriver);
-			if( hxd.Key.isDown(hxd.Key.CTRL) && hxd.Key.isDown(hxd.Key.F11) ) {
-				if( scnDriver == null ) {
-					engine.setDriver(new h3d.impl.ScnDriver(engine.driver));
-					engine.mem.onContextLost();
-					engine.onContextLost();
-					engine.resize(engine.width, engine.height);
-					engine.render(s3d); // first render to perform allocations
-				}
-			} else if( scnDriver != null ) {
-				engine.setDriver(scnDriver.getDriver());
-				hxd.File.saveBytes("record.scn", scnDriver.getBytes());
-			}
-			engine.render(s3d);
 		}
 		#else
 			engine.render(s3d);
