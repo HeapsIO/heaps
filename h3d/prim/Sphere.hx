@@ -11,32 +11,42 @@ class Sphere extends Polygon {
 		this.ray = ray;
 		this.segsH = segsH;
 		this.segsW = segsW;
-		var t = 0., dt = Math.PI / segsH, dp = Math.PI * 2 / segsW;
+
+		var dp = Math.PI * 2 / segsW;
 		var pts = [], idx = new hxd.IndexBuffer();
 		var dx = 1, dy = segsW + 1;
-		for( y in 0...segsH ) {
-			var p = 0.;
+		for( y in 0...segsH+1 ) {
+			var t = (y / segsH) * Math.PI;
 			var st = Math.sin(t);
 			var pz = Math.cos(t);
-			for( x in 0...segsW + 1 ) {
+			var p = 0.;
+			for( x in 0...segsW+1 ) {
 				var px = st * Math.cos(p);
 				var py = st * Math.sin(p);
 				var i = pts.length;
 				pts.push(new Point(px * ray, py * ray, pz * ray));
 				p += dp;
-				if( x != segsW ) {
-					idx.push(i);
-					idx.push(i + dy);
-					idx.push(i + dx);
-					idx.push(i + dy);
-					idx.push(i + dx + dy);
-					idx.push(i + dx);
+			}
+		}
+		for( y in 0...segsH )
+			for( x in 0...segsW ) {
+				inline function vertice(x, y) return x + y * (segsW + 1);
+				var v1 = vertice(x + 1, y);
+				var v2 = vertice(x, y);
+				var v3 = vertice(x, y + 1);
+				var v4 = vertice(x + 1, y + 1);
+				if( y != 0 ) {
+					idx.push(v1);
+					idx.push(v2);
+					idx.push(v4);
+				}
+				if( y != segsH - 1 ) {
+					idx.push(v2);
+					idx.push(v3);
+					idx.push(v4);
 				}
 			}
-			t += dt;
-		}
-		for( x in 0...segsW + 1 )
-			pts.push(new Point(0, 0, -1));
+
 		super(pts, idx);
 	}
 
