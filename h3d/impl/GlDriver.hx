@@ -149,7 +149,10 @@ class GlDriver extends Driver {
 			var lid = Std.parseInt(log.substr(9));
 			var line = lid == null ? null : code.split("\n")[lid - 1];
 			if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
-			throw "An error occurred compiling the shaders: " + log + line+"\n\n"+code;
+			var codeLines = code.split("\n");
+			for( i in 0...codeLines.length )
+				codeLines[i] = (i+1) + "\t" + codeLines[i];
+			throw "An error occurred compiling the shaders: " + log + line+"\n\n"+codeLines.join("\n");
 		}
 		return new CompiledShader(s, shader.vertex, shader);
 	}
