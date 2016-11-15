@@ -384,6 +384,40 @@ class Eval {
 			}
 			varMap.remove(v);
 			e;
+		case TSwitch(e, cases, def):
+			var e = evalExpr(e);
+			var cases = [for( c in cases ) { values : [for( v in c.values ) evalExpr(v)], expr : evalExpr(c.expr, isVal) }];
+			var def = def == null ? null : evalExpr(def, isVal);
+			var hasCase = false;
+			switch( e.e ) {
+			case TConst(c):
+				switch( c ) {
+				case CInt(val):
+					for( c in cases ) {
+						for( v in c.values )
+							switch( v.e ) {
+							case TConst(cst):
+								switch( cst ) {
+								case CInt(k) if( k == val ): return c.expr;
+								case CFloat(k) if( k == val ): return c.expr;
+								default:
+								}
+							default:
+								hasCase = true;
+							}
+					}
+				default:
+					throw "Unsupported switch constant "+c;
+				}
+			default:
+				hasCase = true;
+			}
+			if( hasCase )
+				TSwitch(e, cases, def);
+			else if( def == null )
+				TBlock([]);
+			else
+				def.e;
 		case TArrayDecl(el):
 			TArrayDecl([for( e in el ) evalExpr(e)]);
 		};

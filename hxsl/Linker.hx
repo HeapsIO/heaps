@@ -207,6 +207,8 @@ class Linker {
 			}
 		case TVarDecl(v, _):
 			locals.set(v.id, true);
+		case TFor(v, _, _):
+			locals.set(v.id, true);
 		default:
 		}
 		return e.map(mapExprVar);

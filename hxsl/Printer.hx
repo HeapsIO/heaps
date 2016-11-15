@@ -169,10 +169,38 @@ class Printer {
 			}
 			add(")");
 		case TFor(v, it, loop):
-			add("for( " + v.name + " in ");
+			add("for( ");
+			addVarName(v);
+			add(" in ");
 			addExpr(it, tabs);
-			add(") ");
+			add(" ) ");
 			addExpr(loop, tabs);
+		case TSwitch(e, cases, def):
+			add("switch( ");
+			addExpr(e, tabs);
+			add(") {");
+			var old = tabs;
+			for( c in cases ) {
+				add("\n" + tabs);
+				add("case ");
+				var first = true;
+				for( v in c.values ) {
+					if( first ) first = false else add(", ");
+					addExpr(v, tabs);
+				}
+				tabs += "\t";
+				add(":\n"+tabs);
+				addExpr(c.expr, tabs);
+				tabs = old;
+			}
+			if( def != null ) {
+				add("\n" + tabs);
+				tabs += "\t";
+				add("default:\n" + tabs);
+				addExpr(def, tabs);
+				tabs = old;
+			}
+			add("\n" + tabs + "}");
 		case TContinue:
 			add("continue");
 		case TBreak:

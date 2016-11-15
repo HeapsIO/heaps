@@ -251,6 +251,12 @@ class Splitter {
 				checkExpr(init);
 				inf.write++;
 			}
+		case TFor(v, it, loop):
+			checkExpr(it);
+			var inf = get(v);
+			inf.local = true;
+			inf.write++;
+			checkExpr(loop);
 		default:
 			e.iter(checkExpr);
 		}

@@ -140,6 +140,68 @@ class PbrShader extends hxsl.Shader {
 
 }
 
+class Irradiance extends h3d.shader.ScreenShader {
+
+	static var SRC = {
+
+		@const var face : Int;
+		@const var samplesBits : Int;
+		@param var envMap : SamplerCube;
+
+		function _reversebits( i : Int ) : Int {
+			var r = (i << 16) | (i >>> 16);
+			r = ((r & 0x00ff00ff) << 8) | ((r & 0xff00ff00) >>> 8);
+			r = ((r & 0x0f0f0f0f) << 4) | ((r & 0xf0f0f0f0) >>> 4);
+			r = ((r & 0x33333333) << 2) | ((r & 0xcccccccc) >>> 2);
+			r = ((r & 0x55555555) << 1) | ((r & 0xaaaaaaaa) >>> 1);
+			return r;
+		}
+
+		function hammersley( i : Int, max : Int ) : Vec2 {
+			var ri = _reversebits(i) * 2.3283064365386963e-10;
+			return vec2(float(i) / float(max), ri);
+		}
+
+		function cosineWeightedSampling( p : Vec2 ) : Vec3 {
+			var sq = sqrt(1 - p.x);
+			var alpha = 2 * PI * p.y;
+			return vec3( sq * cos(alpha),  sq * sin(alpha), sqrt(p.x));
+		}
+
+		function getNormal() : Vec3 {
+			var d = input.uv * 2. - 1.;
+			var n : Vec3;
+			switch( face ) {
+			case 0: n = vec3(1, -d.y, -d.x);
+			default: n = vec3( -d.x, -d.y, -1);
+			}
+			return n.normalize();
+		}
+
+		function fragment() {
+			var color = vec3(0.);
+			var n = getNormal();
+			var up = abs(n.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
+			var tanX = normalize(cross(up, n));
+			var tanY = cross(n, tanX);
+			var totalWeight = 1e-10;
+			var numSamples = 1 << samplesBits;
+			for( i in 0...numSamples ) {
+				var p = hammersley(i, numSamples);
+				var ltan = cosineWeightedSampling(p);
+				var l = normalize(tanX * ltan.x + tanY * ltan.y + n * ltan.z);
+				var amount = n.dot(l);
+				color += envMap.get(l).rgb * amount;
+				totalWeight += amount;
+			}
+			output.color = vec4(color / totalWeight, 1.);
+		}
+
+	}
+
+}
+
+
 class Pbr extends hxd.App {
 
 	var fui : h2d.Flow;
@@ -214,6 +276,19 @@ class Pbr extends hxd.App {
 		set(5, hxd.Res.bottom);
 
 		shader.cubeMap = cube;
+
+
+		var irradDiffuse = new h3d.mat.Texture(128, 128, [Cubic]);
+		var screen = new h3d.pass.ScreenFx(new Irradiance());
+		screen.shader.samplesBits = 8;
+		screen.shader.envMap = cube;
+		for( i in 0...6 ) {
+			screen.shader.face = i;
+			engine.driver.setRenderTarget(irradDiffuse, i);
+			screen.render();
+		}
+		engine.driver.setRenderTarget(null);
+
 		bg.material.mainPass.addShader(new h3d.shader.CubeMap(cube));
 
 		shader.metalness = 0.2;

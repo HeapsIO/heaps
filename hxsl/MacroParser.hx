@@ -218,6 +218,8 @@ class MacroParser {
 			EArray(parseExpr(e1), parseExpr(e2));
 		case EArrayDecl(el):
 			EArrayDecl([for( e in el ) parseExpr(e)]);
+		case ESwitch(e, cases, def):
+			ESwitch(parseExpr(e), [for( c in cases ) { expr : parseExpr(c.expr), values : [for( v in c.values ) parseExpr(v)] }], def == null ? null : parseExpr(def));
 		default:
 			null;
 		};

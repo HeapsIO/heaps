@@ -128,6 +128,7 @@ enum ExprDef {
 	EContinue;
 	EArray( e : Expr, eindex : Expr );
 	EArrayDecl( el : Array<Expr> );
+	ESwitch( e : Expr, cases : Array<{ values : Array<Expr>, expr:Expr }>, def : Null<Expr> );
 }
 
 typedef TVar = {
@@ -251,6 +252,7 @@ enum TExprDef {
 	TBreak;
 	TArray( e : TExpr, index : TExpr );
 	TArrayDecl( el : Array<TExpr> );
+	TSwitch( e : TExpr, cases : Array<{ values : Array<TExpr>, expr:TExpr }>, def : Null<TExpr> );
 }
 
 typedef TExpr = { e : TExprDef, t : Type, p : Position }
@@ -386,6 +388,12 @@ class Tools {
 			return false;
 		case TVarDecl(_), TCall(_), TDiscard, TContinue, TBreak, TReturn(_):
 			return true;
+		case TSwitch(e, cases, def):
+			for( c in cases ) {
+				for( v in c.values ) if( hasSideEffect(v) ) return true;
+				if( hasSideEffect(c.expr) ) return true;
+			}
+			return hasSideEffect(e) || (def != null && hasSideEffect(def));
 		}
 	}
 
@@ -403,6 +411,13 @@ class Tools {
 		case TFor(_, it, loop): f(it); f(loop);
 		case TArray(e, index): f(e); f(index);
 		case TArrayDecl(el): for( e in el ) f(e);
+		case TSwitch(e, cases, def):
+			f(e);
+			for( c in cases ) {
+				for( v in c.values ) f(v);
+				f(c.expr);
+			}
+			if( def != null ) f(def);
 		case TConst(_),TVar(_),TGlobal(_), TDiscard, TContinue, TBreak:
 		}
 	}
@@ -421,6 +436,7 @@ class Tools {
 		case TFor(v, it, loop): TFor(v, f(it), f(loop));
 		case TArray(e, index): TArray(f(e), f(index));
 		case TArrayDecl(el): TArrayDecl([for( e in el ) f(e)]);
+		case TSwitch(e, cases, def): TSwitch(f(e), [for( c in cases ) { values : [for( v in c.values ) f(v)], expr : f(c.expr) }], def == null ? null : f(def));
 		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak: e.e;
 		}
 		return { e : ed, t : e.t, p : e.p };

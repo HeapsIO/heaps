@@ -240,6 +240,13 @@ class GlslOut {
 				add(",");
 				addValue(e2, tabs);
 				add(")");
+			case [OpUShr, _, _]:
+				decl("int _ushr( uint i, uint j ) { return int(i >> j); }");
+				add("_ushr(");
+				addValue(e1, tabs);
+				add(",");
+				addValue(e2, tabs);
+				add(")");
 			case [OpEq | OpNotEq | OpLt | OpGt | OpLte | OpGte, TVec(n, _), TVec(_)]:
 				add("vec" + n + "(");
 				add(switch( op ) {
@@ -355,7 +362,25 @@ class GlslOut {
 				addValue(e, tabs);
 			}
 		case TFor(v, it, loop):
-			add("for(...)");
+			locals.set(v.id, v);
+			switch( it.e ) {
+			case TBinop(OpInterval, e1, e2):
+				add("for(");
+				add(v.name+"=");
+				addValue(e1,tabs);
+				add(";"+v.name+"<");
+				addValue(e2,tabs);
+				add(";" + v.name+"++) {");
+				tabs += "\t";
+				add("\n" + tabs);
+				addExpr(loop, tabs);
+				tabs = tabs.substr(1);
+				add("\n" + tabs+"}");
+			default:
+				throw "assert";
+			}
+		case TSwitch(_):
+			add("switch(...)");
 		case TContinue:
 			add("continue");
 		case TBreak:

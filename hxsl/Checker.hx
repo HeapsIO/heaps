@@ -502,6 +502,12 @@ class Checker {
 				unifyExpr(el[i], t);
 			type = TArray(t, SConst(el.length));
 			TArrayDecl(el);
+		case ESwitch(e, cases, def):
+			var et = typeExpr(e, Value);
+			var cases = [for( c in cases ) { values : [for( v in c.values ) typeWith(v, et.t)], expr : typeExpr(c.expr, with) }];
+			var def = def == null ? null : typeExpr(def, with);
+			type = TVoid;
+			TSwitch(et, cases, def);
 		}
 		if( type == null ) throw "assert";
 		return { e : ed, t : type, p : e.pos };
@@ -983,6 +989,10 @@ class Checker {
 			unifyExpr(e1, TInt);
 			unifyExpr(e2, TInt);
 			TArray(TInt, SConst(0));
+		case OpShl, OpShr, OpUShr, OpOr, OpAnd, OpXor:
+			unifyExpr(e1, TInt);
+			unifyExpr(e2, TInt);
+			TInt;
 		default:
 			error("Unsupported operator " + op, pos);
 		}
