@@ -761,7 +761,9 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
-	override function setRenderTarget( t : Null<h3d.mat.Texture>, face = 0 ) {
+	override function setRenderTarget( t : Null<h3d.mat.Texture>, face = 0, mipLevel = 0 ) {
+		if( mipLevel != 0 )
+			throw "Cannot render to mipmap in flash, use upload()";
 		if( renderTargets > 1 ) {
 			for( i in 1...renderTargets )
 				ctx.setRenderToTexture(null, false, 0, 0, i);

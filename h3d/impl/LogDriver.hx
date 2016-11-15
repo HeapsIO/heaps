@@ -274,8 +274,8 @@ class LogDriver extends Driver {
 		d.setRenderZone(x, y, width, height);
 	}
 
-	override function setRenderTarget( tex : Null<h3d.mat.Texture>, face = 0 ) {
-		log('SetRenderTarget $tex $face');
+	override function setRenderTarget( tex : Null<h3d.mat.Texture>, face = 0, mipMap = 0 ) {
+		log('SetRenderTarget $tex $face $mipMap');
 		d.setRenderTarget(tex, face);
 	}
 

@@ -94,6 +94,8 @@ class GlDriver extends Driver {
 	var curTarget : h3d.mat.Texture;
 	var numTargets : Int;
 
+	var debug : Bool;
+
 	public function new() {
 		#if js
 		canvas = @:privateAccess hxd.Stage.getCanvas();
@@ -115,6 +117,10 @@ class GlDriver extends Driver {
 		#else
 		Sys.println(str);
 		#end
+	}
+
+	override function setDebug(d) {
+		this.debug = d;
 	}
 
 	override function begin(frame) {
@@ -268,6 +274,9 @@ class GlDriver extends Driver {
 
 			for( i in 0...s.textures.length ) {
 				var t = buf.tex[i];
+
+				if( s.textures[i] == null ) continue;
+
 				gl.activeTexture(GL.TEXTURE0 + i);
 				gl.uniform1i(s.textures[i], i);
 
@@ -282,6 +291,9 @@ class GlDriver extends Driver {
 
 			for( i in 0...s.cubeTextures.length ) {
 				var t = buf.tex[i + s.textures.length];
+
+				if( s.cubeTextures[i] == null ) continue;
+
 				gl.activeTexture(GL.TEXTURE0 + i + s.textures.length);
 				gl.uniform1i(s.cubeTextures[i], i + s.textures.length);
 
@@ -440,9 +452,6 @@ class GlDriver extends Driver {
 		t.flags.unset(WasCleared);
 		var bind = t.flags.has(Cubic) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 		gl.bindTexture(bind, tt.t);
-		var mipMap = t.flags.has(MipMapped) ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR;
-		gl.texParameteri(bind, GL.TEXTURE_MAG_FILTER, mipMap);
-		gl.texParameteri(bind, GL.TEXTURE_MIN_FILTER, mipMap);
 		if( t.flags.has(Cubic) ) {
 			for( i in 0...6 )
 				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
@@ -451,7 +460,7 @@ class GlDriver extends Driver {
 		if( t.flags.has(TargetDepth) ) {
 			tt.rb = gl.createRenderbuffer();
 			gl.bindRenderbuffer(GL.RENDERBUFFER, tt.rb);
-			gl.renderbufferStorage(GL.RENDERBUFFER, GL.DEPTH_COMPONENT16, tt.width, tt.height);
+			gl.renderbufferStorage(GL.RENDERBUFFER, #if hl GL.DEPTH_COMPONENT24 #else GL.DEPTH_COMPONENT16 #end, tt.width, tt.height);
 			gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 		}
 		gl.bindTexture(bind, null);
@@ -522,7 +531,6 @@ class GlDriver extends Driver {
 			gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, 1);
 			#end
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
-			if( t.flags.has(MipMapped) ) gl.generateMipmap(GL.TEXTURE_2D);
 			gl.bindTexture(GL.TEXTURE_2D, null);
 			t.flags.set(WasCleared);
 		}
@@ -756,7 +764,7 @@ class GlDriver extends Driver {
 		}
 	}
 
-	override function setRenderTarget( tex : h3d.mat.Texture, face = 0 ) {
+	override function setRenderTarget( tex : h3d.mat.Texture, face = 0, mipLevel = 0 ) {
 		unbindTargets();
 		curTarget = tex;
 		if( tex == null ) {
@@ -764,16 +772,28 @@ class GlDriver extends Driver {
 			gl.viewport(0, 0, bufferWidth, bufferHeight);
 			return;
 		}
+		#if js
+		if( mipLevel > 0 ) throw "Cannot render to mipLevel, use upload() instead";
+		#end
 		if( tex.t == null )
 			tex.alloc();
+
+		if( tex.flags.has(MipMapped) && !tex.flags.has(WasCleared) ) {
+			var bind = tex.flags.has(Cubic) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+			gl.bindTexture(bind, tex.t.t);
+			gl.generateMipmap(bind);
+			gl.bindTexture(bind, null);
+			tex.flags.set(WasCleared);
+		}
+
 		tex.lastFrame = frame;
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
-		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cubic) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, 0);
+		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cubic) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 		if( tex.t.rb != null )
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, tex.t.rb);
 		else
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, null);
-		gl.viewport(0, 0, tex.width, tex.height);
+		gl.viewport(0, 0, tex.width >> mipLevel, tex.height >> mipLevel);
 	}
 
 	override function setRenderTargets( textures : Array<h3d.mat.Texture> ) {

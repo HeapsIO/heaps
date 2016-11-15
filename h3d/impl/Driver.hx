@@ -134,7 +134,7 @@ class Driver {
 	public function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
 	}
 
-	public function setRenderTarget( tex : Null<h3d.mat.Texture>, face = 0 ) {
+	public function setRenderTarget( tex : Null<h3d.mat.Texture>, face = 0, mipLevel = 0 ) {
 	}
 
 	public function setRenderTargets( textures : Array<h3d.mat.Texture> ) {
