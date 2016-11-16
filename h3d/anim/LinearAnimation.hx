@@ -147,7 +147,7 @@ class LinearAnimation extends Animation {
 		var frame2 = (frame1 + 1) % frameCount;
 		var k2 = frame - frame1;
 		var k1 = 1 - k2;
-		if( frame1 < 0 ) frame1 = frame2 = 0 else if( frame >= frameCount ) frame1 = frame2 = frameCount - 1;
+		if( frame1 < 0 ) frame1 = frame2 = 0 else if( frame >= frameCount ) frame1 = frame2 = frameCount - 1 else if( !loop && frame2 == 0 ) frame2 = frameCount - 1;
 		syncFrame = frame;
 		if( decompose ) isSync = false;
 		for( o in getFrames() ) {
