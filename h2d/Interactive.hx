@@ -101,10 +101,6 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 				pt.y = saveY;
 				var pt = p.globalToLocal(pt);
 				if( pt.x < 0 || pt.y < 0 || pt.x > p.width || pt.y > p.height ) {
-					if( e.kind == ERelease ) {
-						mouseDownButton = -1;
-						break;
-					}
 					e.cancel = true;
 					return;
 				}
@@ -116,12 +112,8 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			var dx = (e.relX - cx) / cx;
 			var dy = (e.relY - cy) / cy;
 			if( dx * dx + dy * dy > 1 ) {
-				if( e.kind == ERelease )
-					mouseDownButton = -1;
-				else {
-					e.cancel = true;
-					return;
-				}
+				e.cancel = true;
+				return;
 			}
 		}
 		if( propagateEvents ) e.propagate = true;
