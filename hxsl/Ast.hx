@@ -224,6 +224,8 @@ enum TGlobal {
 	DFdx;
 	DFdy;
 	Fwidth;
+	TextureCubeLod;
+	Texture2DLod;
 	// debug
 	Trace;
 }
