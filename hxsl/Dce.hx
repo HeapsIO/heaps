@@ -153,8 +153,9 @@ class Dce {
 			var out = [];
 			var count = 0;
 			for( e in el ) {
+				var isVar = isVar && count == el.length - 1;
 				var e = mapExpr(e, isVar);
-				if( e.hasSideEffect() || (isVar && count == el.length - 1) )
+				if( e.hasSideEffect() || isVar )
 					out.push(e);
 				count++;
 			}
@@ -165,7 +166,15 @@ class Dce {
 			var e = mapExpr(e, true);
 			var econd = mapExpr(econd, isVar);
 			var eelse = eelse == null ? null : mapExpr(eelse, isVar);
+			if( !isVar && !econd.hasSideEffect() && (eelse == null || !eelse.hasSideEffect()) )
+				return { e : TConst(CNull), t : e.t, p : e.p };
 			return { e : TIf(e, econd, eelse), p : e.p, t : e.t };
+		case TFor(v, it, loop):
+			var it = mapExpr(it, true);
+			var loop = mapExpr(loop, false);
+			if( !loop.hasSideEffect() )
+				return { e : TConst(CNull), t : e.t, p : e.p };
+			return { e : TFor(v, it, loop), p : e.p, t : e.t };
 		default:
 			return e.map(function(e) return mapExpr(e,true));
 		}
