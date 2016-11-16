@@ -276,17 +276,20 @@ class Macros {
 						var shader = new MacroParser().parseExpr(expr);
 						var c = Context.getLocalClass();
 						var csup = c.get().superClass;
-						var sup = Std.string(csup.t);
 						var supFields = new Map();
 						// add auto extends
-						if( sup != "hxsl.Shader" ) {
-							shader = { expr : EBlock([ { expr : ECall( { expr : EIdent("extends"), pos : pos }, [ { expr : EConst(CString(sup)), pos : pos } ]), pos : pos }, shader]), pos : pos };
-							for( f in csup.t.get().fields.get() )
+						do {
+							var sup = Std.string(csup.t);
+							if( sup == "hxsl.Shader" ) break;
+							var tsup = csup.t.get();
+							for( f in tsup.fields.get() )
 								supFields.set(f.name, true);
+							shader = { expr : EBlock([ { expr : ECall( { expr : EIdent("extends"), pos : pos }, [ { expr : EConst(CString(sup)), pos : pos } ]), pos : pos }, shader]), pos : pos };
 							supFields.remove("updateConstants");
 							supFields.remove("getParamValue");
 							supFields.remove("clone");
-						}
+							csup = tsup.superClass;
+						} while( true);
 						var name = Std.string(c);
 						var check = new Checker();
 						check.loadShader = loadShader;
