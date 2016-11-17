@@ -29,6 +29,7 @@
   <!-- haxelib libraries -->
   <haxelib>
     <library name="heaps" />
+    <library name="hlsdl" />
   </haxelib>
   <!-- Class files to compile (other referenced classes will automatically be included) -->
   <compileTargets>

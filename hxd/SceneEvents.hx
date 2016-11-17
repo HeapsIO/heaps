@@ -266,8 +266,8 @@ class SceneEvents {
 	function dispatchListeners( event : hxd.Event ) {
 		var ox = event.relX, oy = event.relY;
 		event.propagate = true;
-		event.cancel = false;
 		for( s in scenes ) {
+			event.cancel = false;
 			s.dispatchListeners(event);
 			event.relX = ox;
 			event.relY = oy;

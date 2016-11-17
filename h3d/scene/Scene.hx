@@ -12,9 +12,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:allow(h3d.scene.Interactive)
 	var events : hxd.SceneEvents;
 	var hitInteractives : Array<Interactive>;
+	var eventListeners : Array<hxd.Event -> Void>;
 
 	public function new() {
 		super(null);
+		eventListeners = [];
 		hitInteractives = [];
 		interactives = [];
 		camera = new h3d.Camera();
@@ -33,7 +35,24 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		this.events = events;
 	}
 
+	public function addEventListener( f : hxd.Event -> Void ) {
+		eventListeners.push(f);
+	}
+
+	public function removeEventListener( f : hxd.Event -> Void ) {
+		for( e in eventListeners )
+			if( Reflect.compareMethods(e, f) ) {
+				eventListeners.remove(e);
+				return true;
+			}
+		return false;
+	}
+
 	public function dispatchListeners(event:hxd.Event) {
+		for( l in eventListeners ) {
+			l(event);
+			if( !event.propagate ) break;
+		}
 	}
 
 	function set_renderer(r) {

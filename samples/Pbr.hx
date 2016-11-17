@@ -428,8 +428,6 @@ class IrradianceLut extends IrradBase {
 class Pbr extends hxd.App {
 
 	var fui : h2d.Flow;
-	var cameraRot = -Math.PI / 4;
-	var cameraDist = 5.5;
 	var font : h2d.Font;
 	var hue : Float;
 	var saturation : Float;
@@ -448,6 +446,8 @@ class Pbr extends hxd.App {
 	var irradSpecular : h3d.mat.Texture;
 
 	override function init() {
+
+		new h3d.scene.CameraController(5.5, s3d);
 
 		#if flash
 		engine.debug = true;
@@ -614,8 +614,6 @@ class Pbr extends hxd.App {
 		cube.translate( -r * 0.5, -r * 0.5, -r * 0.5);
 		var prims : Array<h3d.prim.Primitive> = [sp, cube];
 		addChoice("Prim", ["Sphere","Cube"], function(i) sphere.primitive = prims[i], prims.indexOf(sphere.primitive));
-
-		s2d.addEventListener(onEvent);
 	}
 
 	function addSeparator() {
@@ -686,27 +684,6 @@ class Pbr extends hxd.App {
 			}
 		}
 		engine.driver.setRenderTarget(null);
-	}
-
-	function onEvent(e:hxd.Event) {
-		switch( e.kind ) {
-		case EPush:
-			var px = e.relX;
-			s2d.startDrag(function(e2) {
-				switch( e2.kind ) {
-				case EMove:
-					var dx = e2.relX - px;
-					px += dx;
-					cameraRot += dx * 0.01;
-				case ERelease:
-					s2d.stopDrag();
-				default:
-				}
-			});
-		case EWheel:
-			cameraDist *= Math.pow(1.1, e.wheelDelta);
-		default:
-		}
 	}
 
 	function addCheck( text, get : Void -> Bool, set : Bool -> Void ) {
@@ -790,8 +767,6 @@ class Pbr extends hxd.App {
 	}
 
 	override function update(dt:Float) {
-
-		s3d.camera.pos.set(Math.cos(cameraRot) * cameraDist, Math.sin(cameraRot) * cameraDist, cameraDist * 2 / 3);
 
 		var color = new h3d.Vector(1, 0, 0);
 		var m = new h3d.Matrix();
