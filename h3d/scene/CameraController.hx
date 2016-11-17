@@ -5,10 +5,14 @@ class CameraController extends h3d.scene.Object {
 	public var distance(get, never) : Float;
 	public var theta(get, never) : Float;
 	public var phi(get, never) : Float;
+	public var fovY(get, never) : Float;
+	public var target(get, never) : h3d.col.Point;
 
-	public var friction = 0.8;
+	public var friction = 0.7;
 	public var rotateSpeed = 1.;
 	public var zoomAmount = 1.15;
+	public var fovZoomAmount = 1.1;
+	public var panSpeed = 1.;
 
 	var scene : h3d.scene.Scene;
 	var pushing = -1;
@@ -18,7 +22,7 @@ class CameraController extends h3d.scene.Object {
 	var moveY = 0.;
 	var curPos = new h3d.Vector();
 	var curOffset = new h3d.Vector();
-	var targetPos = new h3d.Vector(10., Math.PI / 4, Math.PI * 5 / 13);
+	var targetPos = new h3d.Vector(10. / 25., Math.PI / 4, Math.PI * 5 / 13);
 	var targetOffset = new h3d.Vector();
 
 	public function new(?distance,?parent) {
@@ -27,23 +31,53 @@ class CameraController extends h3d.scene.Object {
 		toTarget();
 	}
 
-	inline function get_distance() return curPos.x;
+	inline function get_distance() return curPos.x / curOffset.w;
 	inline function get_theta() return curPos.y;
 	inline function get_phi() return curPos.z;
+	inline function get_fovY() return curOffset.w;
+	inline function get_target() return curOffset.toPoint();
 
-	public function set(?distance, ?theta, ?phi, ?offsetX, ?offsetY) {
-		if( distance != null )
-			targetPos.x = distance;
+	/**
+		Set the controller parameters.
+		Distance is ray distance from target.
+		Theta and Phi are the two spherical angles
+		Target is the target position
+	**/
+	public function set(?distance, ?theta, ?phi, ?target:h3d.col.Point, ?fovY) {
 		if( theta != null )
 			targetPos.y = theta;
 		if( phi != null )
 			targetPos.z = phi;
-		if( offsetX != null )
-			targetOffset.x = offsetX;
-		if( offsetY != null )
-			targetOffset.y = offsetY;
+		if( target != null )
+			targetOffset.set(target.x, target.y, target.z, targetOffset.w);
+		if( fovY != null )
+			targetOffset.w = fovY;
+		if( distance != null )
+			targetPos.x = distance * targetOffset.w;
 	}
 
+	/**
+		Load current position from current camera position and target.
+		Call if you want to modify manually the camera.
+	**/
+	public function loadFromCamera( animate = false ) {
+		var scene = if( scene == null ) getScene() else scene;
+		if( scene == null ) throw "Not in scene";
+		targetOffset.load(scene.camera.target);
+		targetOffset.w = scene.camera.fovY;
+
+		var pos = scene.camera.pos.sub(scene.camera.target);
+		var r = pos.length();
+		targetPos.set(r, Math.atan2(pos.y, pos.x), Math.acos(pos.z / r));
+		targetPos.x *= targetOffset.w;
+
+		if( !animate ) toTarget();
+	}
+
+	/**
+		Stop animation by directly moving to end position.
+		Call after set() if you don't want to animate the change
+	**/
 	public function toTarget() {
 		curPos.load(targetPos);
 		curOffset.load(targetOffset);
@@ -53,6 +87,7 @@ class CameraController extends h3d.scene.Object {
 		super.onAlloc();
 		scene = getScene();
 		scene.addEventListener(onEvent);
+		curOffset.w = scene.camera.fovY; // load
 		targetPos.load(curPos);
 		targetOffset.load(curOffset);
 	}
@@ -66,7 +101,14 @@ class CameraController extends h3d.scene.Object {
 	function onEvent( e : hxd.Event ) {
 		switch( e.kind ) {
 		case EWheel:
-			targetPos.x *= Math.pow(zoomAmount, e.wheelDelta);
+			if( hxd.Key.isDown(hxd.Key.CTRL) ) {
+				targetOffset.w += e.wheelDelta * fovZoomAmount * 2;
+				if( targetOffset.w >= 179 )
+					targetOffset.w = 179;
+				if( targetOffset.w < 1 )
+					targetOffset.w = 1;
+			} else
+				targetPos.x *= Math.pow(zoomAmount, e.wheelDelta);
 		case EPush:
 			@:privateAccess scene.events.startDrag(onEvent, function() pushing = -1, e);
 			pushing = e.button;
@@ -85,9 +127,11 @@ class CameraController extends h3d.scene.Object {
 				pushX = e.relX;
 				pushY = e.relY;
 			case 1:
-				var v = new h3d.Vector( (e.relX - pushX) * 0.001 * distance, -(e.relY - pushY) * 0.001 * distance );
+				var m = 0.001 * curPos.x * panSpeed / 25;
+				var v = new h3d.Vector( -(e.relX - pushX) * m, (e.relY - pushY) * m );
 				scene.camera.update();
 				v.transform3x3(scene.camera.getInverseView());
+				v.w = 0;
 				targetOffset = targetOffset.add(v);
 				pushX = e.relX;
 				pushY = e.relY;
@@ -100,13 +144,13 @@ class CameraController extends h3d.scene.Object {
 	override function sync(ctx:RenderContext) {
 
 		if( moveX != 0 ) {
-			targetPos.y += moveX * 0.002 * rotateSpeed;
+			targetPos.y += moveX * 0.003 * rotateSpeed;
 			moveX *= friction;
 			if( Math.abs(moveX) < 1 ) moveX = 0;
 		}
 
 		if( moveY != 0 ) {
-			targetPos.z -= moveY * 0.002 * rotateSpeed;
+			targetPos.z -= moveY * 0.003 * rotateSpeed;
 			var E = 1e-8;
 			var bound = Math.PI - E;
 			if( targetPos.z < E ) targetPos.z = E;
@@ -121,9 +165,11 @@ class CameraController extends h3d.scene.Object {
 		curPos.lerp(curPos, targetPos, dt );
 
 		cam.target.load(curOffset);
+		cam.target.w = 1;
 		cam.pos.set( distance * Math.cos(theta) * Math.sin(phi) + cam.target.x, distance * Math.sin(theta) * Math.sin(phi) + cam.target.y, distance * Math.cos(phi) + cam.target.z );
 		cam.zNear = distance * 0.01;
 		cam.zFar = distance * 100;
+		cam.fovY = curOffset.w;
 
 		super.sync(ctx);
 	}
