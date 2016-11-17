@@ -44,7 +44,7 @@ class TreeView
 	static var curr : Array<TreeView>;
 	static var cont : h2d.Sprite;
 	static var box : h2d.Bitmap;
-	static var height = 22;
+	static var height = 18;
 	static var bt : h2d.Interactive;
 	static var fg : h2d.Bitmap;
 	static var select : h2d.Bitmap;
@@ -280,15 +280,15 @@ class TreeView
 			clear();
 
 		var dx = 14 + (parent != null ? parent.tf.x : 0);
-		var font = hxd.res.FontBuilder.getFont("Verdana", 12);
+		var font = hxd.res.DefaultFont.get();
 
 		if(childs.length != 0) {
 			var t = Res.arrow.toTile();
 			t.dx -= t.width >> 1;
 			t.dy -= t.height >> 1;
 			arrow = new h2d.Bitmap(t, cont);
-			arrow.x = dx + height * 0.5 - 16;
-			arrow.y = minHeight + height * 0.5 + 1;
+			arrow.x = dx - 5;
+			arrow.y = minHeight + (height >> 1) + 1;
 		}
 
 		if(tf != null) tf.remove();
@@ -298,7 +298,7 @@ class TreeView
 
 		tf.color.setColor(obj.visible ? 0xFFFFFFFF : 0xFF808080);
 		tf.x = 5 + dx;
-		tf.y = 5 + minHeight;
+		tf.y = 1 + minHeight;
 
 		minWidth = Std.int(Math.max(minWidth, tf.x + tf.textWidth + 10));
 		minHeight += height;
