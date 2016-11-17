@@ -419,6 +419,9 @@ class GlDriver extends Driver {
 
 	function getChannels( t : Texture ) {
 		return switch( t.internalFmt ) {
+		#if !js
+		case GL.RGBA32F, GL.RGBA16F: GL.RGBA;
+		#end
 		case GL.RGBA: GL.RGBA;
 		case GL.ALPHA: GL.ALPHA;
 		default: throw "Invalid format " + t.internalFmt;
@@ -429,6 +432,9 @@ class GlDriver extends Driver {
 		return switch( fmt ) {
 		case RGBA, ALPHA: true;
 		case RGBA32F: hasFeature(FloatTextures);
+		#if !js
+		case RGBA16F: hasFeature(FloatTextures);
+		#end
 		default: false;
 		}
 	}
@@ -444,7 +450,17 @@ class GlDriver extends Driver {
 		case ALPHA:
 			tt.internalFmt = GL.ALPHA;
 		case RGBA32F if( hasFeature(FloatTextures) ):
+			#if js
 			tt.pixelFmt = GL.FLOAT;
+			#else
+			tt.internalFmt = GL.RGBA32F;
+			tt.pixelFmt = GL.FLOAT;
+			#end
+		#if !js
+		case RGBA16F if( hasFeature(FloatTextures) ):
+			tt.pixelFmt = GL.HALF_FLOAT;
+			tt.internalFmt = GL.RGBA16F;
+		#end
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
