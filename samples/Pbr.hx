@@ -13,6 +13,9 @@ class PbrShader extends hxsl.Shader {
 		@const var specularMode : Bool;
 		var metalness : Float;
 		var roughness : Float;
+		var occlusion : Float;
+		var albedoColor : Vec3;
+		var specularColor : Vec3;
 
 		@param var defMetalness : Float;
 		@param var defRoughness : Float;
@@ -32,9 +35,15 @@ class PbrShader extends hxsl.Shader {
 		var v : Vec3;
 		var h : Vec3;
 
+		function vertex() {
+			albedoColor = pixelColor.rgb;
+		}
+
 		function __init__fragment() {
 			metalness = defMetalness;
 			roughness = defRoughness;
+			occlusion = 1.;
+			specularColor = vec3(metalness);
 		}
 
 		function calcG(v:Vec3) : Float {
@@ -46,8 +55,6 @@ class PbrShader extends hxsl.Shader {
 		function calcLight( lightPos : Vec3 ) : Vec3 {
 
 			var color = vec3(0.);
-			var diffuseColor = pixelColor.rgb;
-			var specularColor = vec3(metalness);
 			var normal = transformedNormal.normalize();
 			var view = (camera.position - transformedPosition).normalize();
 			var lightDir = (lightPos - transformedPosition).normalize();
@@ -59,7 +66,7 @@ class PbrShader extends hxsl.Shader {
 				var specularPower = metalness * 40.;
 				var r = reflect(-lightDir, normal).normalize();
 				var specular = r.dot(view).max(0.).pow(specularPower);
-				color = diffuseColor * (diffuse + specular) * lightColor;
+				color = albedoColor * (diffuse + specular) * lightColor;
 
 			} else {
 
@@ -80,7 +87,7 @@ class PbrShader extends hxsl.Shader {
 				// ------------- DIRECT LIGHT -------------------------
 
 				var F0 = metalness;
-				var diffuse = diffuseColor * n.dot(l).saturate() / PI;
+				var diffuse = albedoColor * n.dot(l).saturate() / PI;
 
 				// General Cook-Torrance formula for microfacet BRDF
 				// 		f(l,v) = D(h).F(v,h).G(l,v,h) / 4(n.l)(n.v)
@@ -115,7 +122,7 @@ class PbrShader extends hxsl.Shader {
 
 				// ------------- INDIRECT LIGHT -------------------------
 
-				var diffuse = irrDiffuse.get(normal).rgb.pow(vec3(2.2)) * diffuseColor;
+				var diffuse = irrDiffuse.get(normal).rgb.pow(vec3(2.2)) * albedoColor;
 
 				var envSpec = textureCubeLod(irrSpecular, reflect(-v,n), roughness * irrSpecularLevels).rgb.pow(vec3(2.2));
 
@@ -125,7 +132,7 @@ class PbrShader extends hxsl.Shader {
 				if( !specularLighting )
 					specular = vec3(0.);
 
-				var indirect = diffuse + specular;
+				var indirect = diffuse * occlusion + specular;
 
 				if( directLighting )
 					color += direct;
@@ -184,6 +191,72 @@ class AdjustShader extends hxsl.Shader {
 		super();
 		roughnessValue = rough;
 		metalnessValue = metal;
+	}
+
+}
+
+class PbrMaterialShader extends hxsl.Shader {
+
+	static var SRC = {
+
+		@input var input : { uv : Vec2 };
+		@global var camera : { position : Vec3 };
+		@global var global : { modelViewInverse : Mat4 };
+
+		var output : { color : Vec4 };
+
+		@param var albedoMap : Sampler2D;
+		@param var roughnessMap : Sampler2D;
+		@param var metalnessMap : Sampler2D;
+		@param var normalMap : Sampler2D;
+		@param var heightMap : Sampler2D;
+		@param var occlusionMap : Sampler2D;
+
+		@param var normalPower : Float;
+		@param var parallaxScale : Float;
+		@param var occlusionScale : Float;
+
+		var roughness : Float;
+		var metalness : Float;
+		var occlusion : Float;
+		var calculatedUV : Vec2;
+		var albedoColor : Vec3;
+
+		var transformedPosition : Vec3;
+		var transformedNormal : Vec3;
+
+		function vertex() {
+			calculatedUV = input.uv;
+		}
+
+		function fragment() {
+
+
+			var n = transformedNormal;
+			var up = abs(n.z) < 0.999 ? vec3(0, 0, 1) : vec3(0, 1, 0);
+			var tanX = normalize(cross(up, n));
+			var tanY = normalize(cross(n, tanX));
+
+			var uv = calculatedUV;
+			var height = heightMap.get(calculatedUV).r;
+
+			var viewWS = (camera.position - transformedPosition).normalize();
+			var viewNS = vec3(viewWS.dot(tanX), viewWS.dot(tanY), viewWS.dot(n)).normalize();
+
+			uv -= viewNS.xy * height * parallaxScale;
+
+			occlusion = mix(1., occlusionScale * occlusionMap.get(uv).r, occlusionScale);
+			albedoColor = albedoMap.get(uv).rgb.pow(vec3(2.2));
+			roughness = roughnessMap.get(uv).r;
+			metalness = metalnessMap.get(uv).r;
+
+			var nf = unpackNormal(normalMap.get(uv));
+
+			nf.xy *= normalPower;
+			nf = nf.normalize();
+
+			transformedNormal = (-nf.x * tanX - nf.y * tanY + nf.z * n).normalize();
+		}
 	}
 
 }
@@ -368,6 +441,7 @@ class Pbr extends hxd.App {
 	var sampleBits : Int;
 
 	var shader : PbrShader;
+	var material : PbrMaterialShader;
 
 	var envMap : h3d.mat.Texture;
 	var irradDiffuse : h3d.mat.Texture;
@@ -379,10 +453,7 @@ class Pbr extends hxd.App {
 		engine.debug = true;
 		#end
 
-		//displaySampling(256, new h3d.Vector(0.5, 0.5, 0.5), 0.3);
-
 		font = hxd.res.DefaultFont.get();
-
 
 		shader = new PbrShader();
 
@@ -426,6 +497,21 @@ class Pbr extends hxd.App {
 		set(4, hxd.Res.top);
 		set(5, hxd.Res.bottom);
 
+		var axis = new h3d.scene.Graphics(s3d);
+		axis.lineStyle(2, 0xFF0000);
+		axis.lineTo(2, 0, 0);
+		axis.lineStyle(2, 0x00FF00);
+		axis.moveTo(0, 0, 0);
+		axis.lineTo(0, 2, 0);
+		axis.lineStyle(2, 0x0000FF);
+		axis.moveTo(0, 0, 0);
+		axis.lineTo(0, 0, 2);
+
+		axis.lineStyle(2, 0xFFFFFF, 0.5);
+		axis.moveTo(shader.lightPos.x, shader.lightPos.y, shader.lightPos.z);
+		axis.lineTo(shader.lightPos.x * 0.1, shader.lightPos.y * 0.1, shader.lightPos.z * 0.1);
+		axis.material.blendMode = Alpha;
+		axis.visible = false;
 
 		var size, ssize;
 		#if (js || flash)
@@ -453,11 +539,10 @@ class Pbr extends hxd.App {
 
 		shader.defMetalness = 0.2;
 		shader.defRoughness = 0.5;
-		shader.exposure = 0.;
+		shader.exposure = 2.;
 		hue = 0.2;
 		saturation = 0.2;
 		brightness = -1;
-
 
 		function addSphere(x,y) {
 			var sphere = new h3d.scene.Mesh(sp, s3d);
@@ -468,12 +553,18 @@ class Pbr extends hxd.App {
 		}
 
 		sphere = addSphere(0, 0);
+		material = new PbrMaterialShader();
+		material.normalPower = 1;
+		material.parallaxScale = 1 / 64;
+		material.occlusionScale = 1;
+
+		//loadMaterial("mat/harshbricks-");
 
 		grid = new h3d.scene.Object(s3d);
 		var max = 5;
 		for( x in 0...max )
 			for( y in 0...max ) {
-				var s = addSphere(x - max * 0.5, y - max * 0.5);
+				var s = addSphere(x - (max - 1) * 0.5, y - (max - 1) * 0.5);
 				grid.addChild(s);
 				s.scale(0.4);
 				s.material.mainPass.addShader(new AdjustShader( Math.pow(x / (max - 1), 1), Math.pow(y / (max - 1), 2)));
@@ -481,27 +572,71 @@ class Pbr extends hxd.App {
 		grid.visible = false;
 
 		addCheck("PBR", function() return !shader.specularMode, function(b) shader.specularMode = !b);
+
+		// camera
+		addSeparator();
 		addSlider("Exposure", -3, 3, function() return shader.exposure, function(v) shader.exposure = v);
+		addSlider("Light", 0, 10, function() return shader.lightColor.x, function(v) shader.lightColor.set(v, v, v));
+
+		// material color
+		color = new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFF, 30, 30), fui);
+		fui.getProperties(color).paddingLeft = 150;
+		addSlider("Hue", 0, Math.PI*2, function() return hue, function(v) hue = v);
+		addSlider("Saturation", 0, 1, function() return saturation, function(v) saturation = v);
+		addSlider("Brightness", -1, 1, function() return brightness, function(v) brightness = v);
+
 		addSlider("Metalness", 0.02, 0.99, function() return shader.defMetalness, function(v) shader.defMetalness = v);
 		addSlider("Roughness", 0, 1, function() return shader.defRoughness, function(v) shader.defRoughness = v);
 
+		// material properties
+		addSeparator();
+		addSlider("NormalPower", 0, 2, function() return material.normalPower, function(v) material.normalPower = v);
+		addSlider("Parallax", 0, 1, function() return material.parallaxScale * 64, function(v) material.parallaxScale = v / 64);
+		addSlider("Occlusion", 0, 1, function() return material.occlusionScale, function(v) material.occlusionScale = v);
+
+		// debug
+		addSeparator();
 		addCheck("Direct", function() return shader.directLighting, function(b) shader.directLighting = b);
 		addCheck("Indirect", function() return shader.indirectLighting, function(b) shader.indirectLighting = b);
 		addCheck("Specular", function() return shader.specularLighting, function(b) shader.specularLighting = b);
+		addCheck("Axis", function() return axis.visible, function(b) axis.visible = b);
 		addCheck("Grid", function() return grid.visible, function(b) {
 			grid.visible = !grid.visible;
 			sphere.visible = !sphere.visible;
 		});
 
-		color = new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFF, 30, 30), fui);
-		fui.getProperties(color).paddingLeft = 50;
-
-		addSlider("Hue", 0, Math.PI*2, function() return hue, function(v) hue = v);
-		addSlider("Saturation", 0, 1, function() return saturation, function(v) saturation = v);
-		addSlider("Brightness", -1, 1, function() return brightness, function(v) brightness = v);
-		addChoice("Env", ["Default", "IDiff", "ISpec"], function(i) cubeShader.texture = [envMap, irradDiffuse, irradSpecular][i]);
+		addChoice("EnvMap", ["Default", "IDiff", "ISpec"], function(i) cubeShader.texture = [envMap, irradDiffuse, irradSpecular][i]);
+		var r = Math.sqrt(2);
+		var cube = new h3d.prim.Cube(r,r,r);
+		cube.unindex();
+		cube.addNormals();
+		cube.addUVs();
+		cube.translate( -r * 0.5, -r * 0.5, -r * 0.5);
+		var prims : Array<h3d.prim.Primitive> = [sp, cube];
+		addChoice("Prim", ["Sphere","Cube"], function(i) sphere.primitive = prims[i], prims.indexOf(sphere.primitive));
 
 		s2d.addEventListener(onEvent);
+	}
+
+	function addSeparator() {
+		fui.getProperties(fui.getChildAt(fui.numChildren - 1)).paddingBottom += 20;
+	}
+
+	function loadMaterial( filePath : String ) {
+		var mat = material;
+		function load(name) {
+			var t = hxd.Res.load(filePath + name+".png").toTexture();
+			t.wrap = Repeat;
+			return t;
+		}
+		sphere.material.mainPass.removeShader(mat);
+		mat.albedoMap = load("albedo");
+		mat.normalMap = load("normal");
+		mat.roughnessMap = load("roughness");
+		mat.metalnessMap = load("metalness");
+		mat.heightMap = load("height");
+		mat.occlusionMap = load("ao");
+		sphere.material.mainPass.addShader(mat);
 	}
 
 	function computeIrradLut() {
@@ -575,9 +710,7 @@ class Pbr extends hxd.App {
 	}
 
 	function addCheck( text, get : Void -> Bool, set : Bool -> Void ) {
-
-
-		var i = new h2d.Interactive(80, font.lineHeight, fui);
+		var i = new h2d.Interactive(110, font.lineHeight, fui);
 		i.backgroundColor = 0xFF808080;
 
 		fui.getProperties(i).paddingLeft = 20;
@@ -602,7 +735,7 @@ class Pbr extends hxd.App {
 	}
 
 	function addChoice( text, choices, callb, value = 0 ) {
-		var i = new h2d.Interactive(80, font.lineHeight, fui);
+		var i = new h2d.Interactive(110, font.lineHeight, fui);
 		i.backgroundColor = 0xFF808080;
 		fui.getProperties(i).paddingLeft = 20;
 
@@ -758,12 +891,14 @@ class Pbr extends hxd.App {
 
 
 	static function main() {
-		hxd.Res.initEmbed();
 		#if hl
+		hxd.Res.initLocal();
 		@:privateAccess {
 			hxd.System.windowWidth = 1280;
 			hxd.System.windowHeight = 800;
 		}
+		#else
+		hxd.Res.initEmbed();
 		#end
 		new Pbr();
 	}
