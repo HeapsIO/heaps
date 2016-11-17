@@ -241,7 +241,7 @@ class GlslOut {
 				addValue(e2, tabs);
 				add(")");
 			case [OpUShr, _, _]:
-				decl("int _ushr( uint i, uint j ) { return int(i >> j); }");
+				decl("int _ushr( int i, int j ) { return int(uint(i) >> uint(j)); }");
 				add("_ushr(");
 				addValue(e1, tabs);
 				add(",");
