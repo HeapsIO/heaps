@@ -27,6 +27,7 @@ class TextInput extends Text {
 	var undo : Array<TextHistoryElement> = [];
 	var redo : Array<TextHistoryElement> = [];
 	var lastChange = 0.;
+	var lastClick = 0.;
 	var maxHistorySize = 100;
 
 	public function new(font, ?parent) {
@@ -162,14 +163,27 @@ class TextInput extends Text {
 		};
 		interactive.onFocusLost = function(e) {
 			cursorIndex = -1;
+			selectionRange = null;
 			onFocusLost(e);
+		};
+
+		interactive.onClick = function(e) {
+			onClick(e);
+			if( e.cancel ) return;
+			var t = haxe.Timer.stamp();
+			// double click to select all
+			if( t - lastClick < 0.2 && text.length != 0 ) {
+				selectionRange = { start : 0, length : text.length };
+				selectionSize = 0;
+				cursorIndex = text.length;
+			}
+			lastClick = t;
 		};
 
 		interactive.onKeyUp = function(e) onKeyUp(e);
 		interactive.onRelease = function(e) onRelease(e);
 		interactive.onFocus = function(e) onFocus(e);
 		interactive.onKeyUp = function(e) onKeyUp(e);
-		interactive.onClick = function(e) onClick(e);
 		interactive.onMove = function(e) onMove(e);
 		interactive.onOver = function(e) onOver(e);
 		interactive.onOut = function(e) onOut(e);
