@@ -47,16 +47,16 @@ class Cube extends Polygon {
 		var o = new UV(1, 0);
 
 		uvs = [
-			z, x, o,
-			z, o, y,
+			x, z, y,
+			x, y, o,
 			x, z, y,
 			x, y, o,
 			x, z, y,
 			x, y, o,
 			z, o, x,
 			z, y, o,
-			x, y, z,
-			x, o, y,
+			z, o, x,
+			z, y, o,
 			z, o, x,
 			z, y, o,
 		];
