@@ -379,6 +379,24 @@ class GlslOut {
 			default:
 				throw "assert";
 			}
+		case TWhile(e, loop, false):
+			var old = tabs;
+			tabs += "\t";
+			add("do {\n" + tabs);
+			addExpr(loop,tabs);
+			tabs = old;
+			add("\n" + tabs + "} while( ");
+			addValue(e,tabs);
+			add(" )");
+		case TWhile(e, loop, _):
+			add("while( ");
+			addValue(e, tabs);
+			var old = tabs;
+			tabs += "\t";
+			add(" ) {\n" + tabs);
+			addExpr(loop,tabs);
+			tabs = old;
+			add("\n" + tabs + "}");
 		case TSwitch(_):
 			add("switch(...)");
 		case TContinue:

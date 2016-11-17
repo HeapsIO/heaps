@@ -257,6 +257,24 @@ class Printer {
 				addExpr(e,tabs);
 			}
 			add("]");
+		case TWhile(e, loop, false):
+			var old = tabs;
+			tabs += "\t";
+			add("do {\n" + tabs);
+			addExpr(loop,tabs);
+			tabs = old;
+			add("\n" + tabs + "} while( ");
+			addExpr(e,tabs);
+			add(" )");
+		case TWhile(e, loop, _):
+			add("while( ");
+			addExpr(e, tabs);
+			var old = tabs;
+			tabs += "\t";
+			add(" ) {\n" + tabs);
+			addExpr(loop,tabs);
+			tabs = old;
+			add("\n" + tabs + "}");
 		}
 	}
 

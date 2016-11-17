@@ -388,6 +388,10 @@ class Eval {
 			}
 			varMap.remove(v);
 			e;
+		case TWhile(cond, loop, normalWhile):
+			var cond = evalExpr(cond);
+			var loop = evalExpr(loop, false);
+			TWhile(cond, loop, normalWhile);
 		case TSwitch(e, cases, def):
 			var e = evalExpr(e);
 			var cases = [for( c in cases ) { values : [for( v in c.values ) evalExpr(v)], expr : evalExpr(c.expr, isVal) }];

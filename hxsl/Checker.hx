@@ -472,6 +472,14 @@ class Checker {
 			default:
 				error("Cannot iterate on " + it.t.toString(), it.p);
 			}
+		case EWhile(cond, loop, normalWhile):
+			type = TVoid;
+			var cond = typeWith(cond, TBool);
+			var oldL = inLoop;
+			inLoop = true;
+			var loop = typeExpr(loop, NoValue);
+			inLoop = oldL;
+			TWhile(cond, loop, normalWhile);
 		case EContinue:
 			if( !inLoop ) error("Continue outside loop", e.pos);
 			type = TVoid;
