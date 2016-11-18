@@ -168,7 +168,7 @@ class PbrShader extends hxsl.Shader {
 		directLighting = true;
 		indirectLighting = true;
 		specularLighting = true;
-		lightPos.set(10, 30, 40);
+		lightPos.set(30, 10, 40);
 		lightColor.set(0.1, 0.1, 0.1);
 	}
 
