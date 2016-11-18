@@ -27,7 +27,7 @@ class Blur extends ScreenShader {
 				var ccur = texture.get(input.uv);
 				var color = vec4(0, 0, 0, 0);
 				var ncur = unpackNormal(normalTexture.get(input.uv));
-				for( i in -Quality + 1...Quality ) {
+				@unroll for( i in -Quality + 1...Quality ) {
 					var uv = input.uv + pixel * float(i);
 					var c = texture.get(uv);
 					var p = getPosition(uv);
@@ -42,12 +42,12 @@ class Blur extends ScreenShader {
 			}
 			else if( isDepth ) {
 				var val = 0.;
-				for( i in -Quality + 1...Quality )
+				@unroll for( i in -Quality + 1...Quality )
 					val += unpack(texture.get(input.uv + pixel * float(i))) * values[i < 0 ? -i : i];
 				output.color = pack(val.min(0.9999999));
 			} else {
 				var color = vec4(0, 0, 0, 0);
-				for( i in -Quality + 1...Quality )
+				@unroll for( i in -Quality + 1...Quality )
 					color += texture.get(input.uv + pixel * float(i)) * values[i < 0 ? -i : i];
 				output.color = color;
 			}

@@ -262,6 +262,14 @@ class Checker {
 			case CFloat(_): TFloat;
 			};
 			TConst(c);
+		case EMeta(name, args, e):
+			var e = typeExpr(e, with);
+			type = e.t;
+			TMeta(name, [for( c in args ) switch( c.expr ) {
+				case EConst(c): c;
+				case EIdent(i): CString(i); // convert ident to string
+				default: error("Metadata parameter should be constant", c.pos);
+			}], e);
 		case EBlock(el):
 			var old = saveVars();
 			var el = el.copy(), tl = [];

@@ -69,6 +69,9 @@ class SharedShader {
 			c = c.next;
 		}
 		eval.inlineCalls = true;
+		#if flash
+		eval.eliminateConditionals = true;
+		#end
 		#if (js || flash)
 		eval.unrollLoops = true;
 		#end

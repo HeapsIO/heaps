@@ -11,6 +11,7 @@ class Eval {
 	public var varMap : Map<TVar,TVar>;
 	public var inlineCalls : Bool;
 	public var unrollLoops : Bool;
+	public var eliminateConditionals : Bool;
 	var constants : Map<TVar,TExprDef>;
 	var funMap : Map<TVar,TFunction>;
 	var curFun : TFunction;
@@ -360,8 +361,8 @@ class Eval {
 			switch( econd.e ) {
 			case TConst(CBool(b)): b ? evalExpr(eif, isVal).e : eelse == null ? TConst(CNull) : evalExpr(eelse, isVal).e;
 			default:
-				if( isVal && eelse != null )
-					TCall( { e : TGlobal(Mix), t : e.t, p : e.p }, [eelse, eif, { e : TCall( { e : TGlobal(ToFloat), t : TFun([]), p : econd.p }, [econd]), t : TFloat, p : e.p } ]);
+				if( isVal && eelse != null && eliminateConditionals )
+					TCall( { e : TGlobal(Mix), t : e.t, p : e.p }, [evalExpr(eelse,true), evalExpr(eif,true), { e : TCall( { e : TGlobal(ToFloat), t : TFun([]), p : econd.p }, [econd]), t : TFloat, p : e.p } ]);
 				else
 					TIf(econd, evalExpr(eif,isVal), eelse == null ? null : evalExpr(eelse,isVal));
 			}
@@ -428,6 +429,18 @@ class Eval {
 				def.e;
 		case TArrayDecl(el):
 			TArrayDecl([for( e in el ) evalExpr(e)]);
+		case TMeta(name, args, e):
+			var e2;
+			switch( name ) {
+			case "unroll":
+				var old = unrollLoops;
+				unrollLoops = true;
+				e2 = evalExpr(e, isVal);
+				unrollLoops = false;
+			default:
+				e2 = evalExpr(e, isVal);
+			}
+			TMeta(name, args, e2);
 		};
 		return { e : d, t : e.t, p : e.p }
 	}

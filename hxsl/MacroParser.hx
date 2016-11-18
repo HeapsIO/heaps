@@ -142,7 +142,7 @@ class MacroParser {
 				case ":import":
 					ECall({ expr : EIdent("import"), pos : m.pos }, [e2]);
 				default:
-					error("Qualifier only supported before 'var'", e.pos);
+					EMeta(m.name, [for( e in m.params ) parseExpr(e)], e2);
 				}
 			}
 		case EVars(vl):
