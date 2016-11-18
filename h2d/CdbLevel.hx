@@ -179,6 +179,32 @@ class LevelLayer {
 		return out;
 	}
 
+	public function buildStringProperty( name : String ) {
+		var tprops = [for( p in tileset.tilesProps ) p == null ? null : Reflect.field(p, name)];
+		var out : Array<String> = [for( i in 0...level.width * level.height ) null];
+		switch( data ) {
+		case LTiles(data), LGround(data):
+			for( i in 0...level.width * level.height ) {
+				var t = data[i];
+				if( t == 0 ) continue;
+				out[i] = tprops[t - 1];
+			}
+		case LObjects(objects):
+			for( o in objects ) {
+				var ox = Std.int(o.x / tileset.size);
+				var oy = Std.int(o.y / tileset.size);
+				for( dy in 0...o.obj.height )
+					for( dx in 0...o.obj.width ) {
+						var idx = ox + dx + (oy + dy) * level.width;
+						var cur = tprops[o.obj.id + dx + dy * tileset.stride];
+						if( cur != null )
+							out[idx] = cur;
+					}
+			}
+		}
+		return out;
+	}
+
 	function set_objectsBehind(v) {
 		if( v == objectsBehind )
 			return v;
@@ -243,6 +269,22 @@ class CdbLevel extends Layers {
 				}
 		}
 		if( collide == null ) collide = [for( i in 0...width * height ) 0];
+		return collide;
+	}
+
+	public function buildStringProperty( name : String ) {
+		var collide = null;
+		for( l in layers ) {
+			var layer = l.buildStringProperty(name);
+			if( collide == null )
+				collide = layer;
+			else
+				for( i in 0...width	* height ) {
+					var v = layer[i];
+					if( v != null ) collide[i] = v;
+				}
+		}
+		if( collide == null ) collide = [for( i in 0...width * height ) null];
 		return collide;
 	}
 
