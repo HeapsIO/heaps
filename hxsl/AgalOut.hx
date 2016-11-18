@@ -339,6 +339,8 @@ class AgalOut {
 			default:
 			}
 			throw "Conditional not supported " + econd.e+" " + econd.p;
+		case TMeta(_, _, e):
+			return expr(e);
 		default:
 			throw "Expression '" + Printer.toString(e)+"' not supported in AGAL "+e.p;
 		}
