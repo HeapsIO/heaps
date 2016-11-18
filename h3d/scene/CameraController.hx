@@ -8,7 +8,7 @@ class CameraController extends h3d.scene.Object {
 	public var fovY(get, never) : Float;
 	public var target(get, never) : h3d.col.Point;
 
-	public var friction = 0.7;
+	public var friction = 0.4;
 	public var rotateSpeed = 1.;
 	public var zoomAmount = 1.15;
 	public var fovZoomAmount = 1.1;
@@ -23,7 +23,7 @@ class CameraController extends h3d.scene.Object {
 	var curPos = new h3d.Vector();
 	var curOffset = new h3d.Vector();
 	var targetPos = new h3d.Vector(10. / 25., Math.PI / 4, Math.PI * 5 / 13);
-	var targetOffset = new h3d.Vector();
+	var targetOffset = new h3d.Vector(0, 0, 0, 0);
 
 	public function new(?distance,?parent) {
 		super(parent);
@@ -43,7 +43,7 @@ class CameraController extends h3d.scene.Object {
 		Theta and Phi are the two spherical angles
 		Target is the target position
 	**/
-	public function set(?distance, ?theta, ?phi, ?target:h3d.col.Point, ?fovY) {
+	public function set(?distance:Float, ?theta:Float, ?phi:Float, ?target:h3d.col.Point, ?fovY:Float) {
 		if( theta != null )
 			targetPos.y = theta;
 		if( phi != null )
@@ -53,7 +53,7 @@ class CameraController extends h3d.scene.Object {
 		if( fovY != null )
 			targetOffset.w = fovY;
 		if( distance != null )
-			targetPos.x = distance * targetOffset.w;
+			targetPos.x = distance * (targetOffset.w == 0 ? 1 : targetOffset.w);
 	}
 
 	/**
@@ -87,6 +87,8 @@ class CameraController extends h3d.scene.Object {
 		super.onAlloc();
 		scene = getScene();
 		scene.addEventListener(onEvent);
+		if( curOffset.w == 0 )
+			curPos.x *= scene.camera.fovY;
 		curOffset.w = scene.camera.fovY; // load
 		targetPos.load(curPos);
 		targetOffset.load(curOffset);
@@ -122,8 +124,12 @@ class CameraController extends h3d.scene.Object {
 		case EMove:
 			switch( pushing ) {
 			case 0:
-				moveX += e.relX - pushX;
-				moveY += e.relY - pushY;
+				if( hxd.Key.isDown(hxd.Key.ALT) ) {
+					targetPos.x *= Math.pow(zoomAmount, -((e.relX - pushX) +  (e.relY - pushY)) * 0.03);
+				} else {
+					moveX += e.relX - pushX;
+					moveY += e.relY - pushY;
+				}
 				pushX = e.relX;
 				pushY = e.relY;
 			case 1:
@@ -145,7 +151,7 @@ class CameraController extends h3d.scene.Object {
 
 		if( moveX != 0 ) {
 			targetPos.y += moveX * 0.003 * rotateSpeed;
-			moveX *= friction;
+			moveX *= 1 - friction;
 			if( Math.abs(moveX) < 1 ) moveX = 0;
 		}
 
@@ -155,7 +161,7 @@ class CameraController extends h3d.scene.Object {
 			var bound = Math.PI - E;
 			if( targetPos.z < E ) targetPos.z = E;
 			if( targetPos.z > bound ) targetPos.z = bound;
-			moveY *= friction;
+			moveY *= 1 - friction;
 			if( Math.abs(moveY) < 1 ) moveY = 0;
 		}
 
