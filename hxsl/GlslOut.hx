@@ -37,6 +37,8 @@ class GlslOut {
 	var outIndexes : Map<Int, Int>;
 	public var varNames : Map<Int,String>;
 	public var flipY : Bool;
+	public var glES : Bool;
+	public var version : Null<Int>;
 
 	public function new() {
 		varNames = new Map();
@@ -160,9 +162,22 @@ class GlslOut {
 			buf = tmp;
 			add(name);
 			add("()");
+		case TIf(econd, eif, eelse):
+			add("( ");
+			addValue(econd, tabs);
+			add(" ) ? ");
+			addValue(eif, tabs);
+			add(" : ");
+			addValue(eelse, tabs);
+		case TMeta(_, _, e):
+			addValue(e, tabs);
 		default:
 			addExpr(e, tabs);
 		}
+	}
+
+	function addBlock( e : TExpr, tabs : String ) {
+		addExpr(e, tabs);
 	}
 
 	function addExpr( e : TExpr, tabs : String ) {
@@ -198,7 +213,12 @@ class GlslOut {
 			case Texture2D:
 				// convert S/T (bottom left) to U/V (top left)
 				// we don't use 1. because of pixel rounding (fixes artifacts in blur)
-				decl("vec4 _texture2D( sampler2D t, vec2 v ) { return texture2D(t,vec2(v.x,"+(flipY?"0.999999-v.y":"v.y")+")); }");
+				decl('vec4 _texture2D( sampler2D t, vec2 v ) { return ${glES?"texture2D":"texture"}(t,vec2(v.x,${flipY?"0.999999-v.y":"v.y"})); }');
+			case TextureCube:
+				if( !glES ) {
+					add("texture");
+					return;
+				}
 			default:
 			}
 			add(GLOBALS.get(g));
@@ -212,7 +232,7 @@ class GlslOut {
 			for( e in el ) {
 				add(t2);
 				addExpr(e, t2);
-				add(";\n");
+				newLine(e);
 			}
 			add(tabs);
 			add("}");
@@ -348,7 +368,7 @@ class GlslOut {
 			add(") ");
 			addExpr(eif, tabs);
 			if( eelse != null ) {
-				if( !eif.e.match(TBlock(_)) ) add(";");
+				if( !isBlock(eif) ) add(";");
 				add(" else ");
 				addExpr(eelse, tabs);
 			}
@@ -370,33 +390,24 @@ class GlslOut {
 				addValue(e1,tabs);
 				add(";"+v.name+"<");
 				addValue(e2,tabs);
-				add(";" + v.name+"++) {");
-				tabs += "\t";
-				add("\n" + tabs);
-				addExpr(loop, tabs);
-				tabs = tabs.substr(1);
-				add("\n" + tabs+"}");
+				add(";" + v.name+"++) ");
+				addBlock(loop, tabs);
 			default:
 				throw "assert";
 			}
 		case TWhile(e, loop, false):
 			var old = tabs;
 			tabs += "\t";
-			add("do {\n" + tabs);
-			addExpr(loop,tabs);
-			tabs = old;
-			add("\n" + tabs + "} while( ");
+			add("do ");
+			addBlock(loop,tabs);
+			add(" while( ");
 			addValue(e,tabs);
 			add(" )");
 		case TWhile(e, loop, _):
 			add("while( ");
 			addValue(e, tabs);
-			var old = tabs;
-			tabs += "\t";
-			add(" ) {\n" + tabs);
-			addExpr(loop,tabs);
-			tabs = old;
-			add("\n" + tabs + "}");
+			add(" ) ");
+			addBlock(loop,tabs);
 		case TSwitch(_):
 			add("switch(...)");
 		case TContinue:
@@ -416,6 +427,8 @@ class GlslOut {
 				addValue(e,tabs);
 			}
 			add("]");
+		case TMeta(_, _, e):
+			addExpr(e, tabs);
 		}
 	}
 
@@ -445,6 +458,24 @@ class GlslOut {
 		return n;
 	}
 
+	function newLine( e : TExpr ) {
+		if( isBlock(e) )
+			add("\n");
+		else
+			add(";\n");
+	}
+
+	function isBlock( e : TExpr ) {
+		switch( e.e ) {
+		case TFor(_, _, loop), TWhile(_,loop,true):
+			return isBlock(loop);
+		case TBlock(_):
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	public function run( s : ShaderData ) {
 		locals = new Map();
 		decls = [];
@@ -464,9 +495,9 @@ class GlslOut {
 			case Param, Global:
 				add("uniform ");
 			case Input:
-				add("attribute ");
+				add( glES ? "attribute " : "in ");
 			case Var:
-				add("varying ");
+				add( glES ? "varying " : (isVertex ? "out " : "in "));
 			case Output:
 				outIndexes.set(v.id, outIndex++);
 				continue;
@@ -492,7 +523,7 @@ class GlslOut {
 
 		if( outIndex < 2 )
 			outIndexes = null;
-		else if( !isVertex )
+		else if( !isVertex && glES )
 			decl("#extension GL_EXT_draw_buffers : enable");
 
 		var tmp = buf;
@@ -503,7 +534,7 @@ class GlslOut {
 			for( e in el ) {
 				add("\t");
 				addExpr(e, "\t");
-				add(";\n");
+				newLine(e);
 			}
 		default:
 			addExpr(f.expr, "");
@@ -523,13 +554,12 @@ class GlslOut {
 			add("\n\n");
 		}
 
-		//#if GL_ES_VERSION_2_0  would be the test to use at compilation time, but would require a GL context to call glGetString (GL_SHADING_LANGUAGE_VERSION)
-		//#ifdef GL_ES is to test in the shader itself but #version  muse be declared first
-		#if((cpp && mobile)||js)
-		decl("#version 100");
-		#else
-		decl("#version 130");
-		#end
+		if( version != null )
+			decl("#version " + version);
+		else if( glES )
+			decl("#version 100");
+		else
+			decl("#version 130"); // OpenGL 3.0
 
 		decls.push(buf.toString());
 		buf = null;
@@ -537,7 +567,11 @@ class GlslOut {
 	}
 
 	public static function toGlsl( s : ShaderData ) {
-		return new GlslOut().run(s);
+		var out = new GlslOut();
+		#if js
+		out.glES = true;
+		#end
+		return out.run(s);
 	}
 
 }

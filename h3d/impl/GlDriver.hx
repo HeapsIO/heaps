@@ -140,8 +140,7 @@ class GlDriver extends Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		var glout = new hxsl.GlslOut();
-		return "// vertex:\n" + glout.run(shader.vertex.data) + "// fragment:\n" + glout.run(shader.fragment.data);
+		return "// vertex:\n" + hxsl.GlslOut.toGlsl(shader.vertex.data) + "// fragment:\n" + hxsl.GlslOut.toGlsl(shader.fragment.data);
 	}
 
 	function compileShader( glout : hxsl.GlslOut, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
@@ -150,6 +149,8 @@ class GlDriver extends Driver {
 		var code = glout.run(shader.data);
 		gl.shaderSource(s, code);
 		gl.compileShader(s);
+		var log = gl.getShaderInfoLog(s);
+		if( log != "" ) trace(log);
 		if ( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
 			var log = gl.getShaderInfoLog(s);
 			var lid = Std.parseInt(log.substr(9));
@@ -176,6 +177,9 @@ class GlDriver extends Driver {
 		if( p == null ) {
 			p = new CompiledProgram();
 			var glout = new hxsl.GlslOut();
+			#if js
+			glout.glES = true;
+			#end
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 			p.p = gl.createProgram();
