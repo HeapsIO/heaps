@@ -13,6 +13,12 @@ class Point {
 		this.z = z;
 	}
 
+	public inline function scale( v : Float ) {
+		x *= v;
+		y *= v;
+		z *= v;
+	}
+
 	public function inFrustum( mvp : Matrix ) {
 		if( !Plane.frustumLeft(mvp).side(this) )
 			return false;
