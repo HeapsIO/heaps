@@ -38,7 +38,7 @@ class Animation {
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
 	var isSync : Bool;
-	var events : Array<String>;
+	var events : Array<Array<String>>;
 	var lastEvent : Int;
 
 	function new(name, frameCount, sampling) {
@@ -77,8 +77,10 @@ class Animation {
 	**/
 	public function setEvents( el : Iterable<{ frame : Int, data : String }> ) {
 		events = [for( i in 0...frameCount ) null];
-		for( e in el )
-			events[e.frame] = e.data;
+		for( e in el ) {
+			if(events[e.frame] == null) events[e.frame] = [];
+			events[e.frame].push(e.data);
+		}
 	}
 
 	public function setFrame( f : Float ) {
@@ -190,7 +192,8 @@ class Animation {
 					var oldF = frame, oldDT = dt;
 					dt -= (f - frame) / (speed * sampling);
 					frame = f;
-					onEvent(events[f]);
+					for(e in events[f])
+						onEvent(e);
 					if( frame == f && f == frameCount - 1 ) {
 						frame = oldF;
 						dt = oldDT;
