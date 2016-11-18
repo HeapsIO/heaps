@@ -75,6 +75,23 @@ class CameraController extends h3d.scene.Object {
 	}
 
 	/**
+		Initialize to look at the whole scene, based on reported scene bounds.
+	**/
+	public function initFromScene() {
+		var scene = getScene();
+		if( scene == null ) throw "Not in scene";
+		var bounds = scene.getBounds();
+		var center = bounds.getCenter();
+		scene.camera.target.load(center.toVector());
+		var d = bounds.getMax().sub(center);
+		d.scale(5);
+		d.z *= 0.5;
+		d = d.add(center);
+		scene.camera.pos.load(d.toVector());
+		loadFromCamera();
+	}
+
+	/**
 		Stop animation by directly moving to end position.
 		Call after set() if you don't want to animate the change
 	**/
