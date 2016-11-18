@@ -109,6 +109,16 @@ class GlDriver extends Driver {
 		programs = new Map();
 		curAttribs = 0;
 		curMatBits = -1;
+		#if !js
+		var reg = ~/[0-9]+\.[0-9]+/;
+		var v : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
+		if( v.indexOf("ES") < 0 && reg.match(v) ){
+			var version = Std.int( Std.parseFloat(reg.matched(0)) * 100 );
+			if( version > 130 )
+				version = 130;
+			hxsl.GlslOut.GL_SHADING_LANGUAGE_VERSION = version;
+		}
+		#end
 	}
 
 	override function logImpl( str : String ) {

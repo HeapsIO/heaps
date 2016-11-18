@@ -17,12 +17,13 @@ private class ChannelMapper extends sdl.SoundChannel {
 }
 #elseif lime_openal
 import lime.audio.openal.AL;
+import lime.audio.openal.ALBuffer;
 
 private class ALChannel {
 	var native : NativeChannel;
 	var samples : Int;
 
-	var buffers : Array<Int>;
+	var buffers : Array<ALBuffer>;
 	var src : Int;
 
 	var fbuf : haxe.io.Bytes;
