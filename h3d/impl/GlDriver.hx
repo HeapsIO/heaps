@@ -243,7 +243,7 @@ class GlDriver extends Driver {
 		case Globals:
 			if( s.globals != null ) {
 				#if hl
-				gl.uniform4fv(s.globals, streamData(@:privateAccess (cast buf.globals.toData() : hl.types.ArrayBasic.ArrayF32).bytes, 0, s.shader.globalsSize * 16), 0, s.shader.globalsSize * 4);
+				gl.uniform4fv(s.globals, streamData(hl.Bytes.getArray(buf.globals.toData()), 0, s.shader.globalsSize * 16), 0, s.shader.globalsSize * 4);
 				#elseif hxsdl
 				gl.uniform4fv(s.globals, buf.globals.toData(), 0, s.shader.globalsSize * 4);
 				#else
@@ -254,7 +254,7 @@ class GlDriver extends Driver {
 		case Params:
 			if( s.params != null ) {
 				#if hl
-				gl.uniform4fv(s.params, streamData(@:privateAccess (cast buf.params.toData() : hl.types.ArrayBasic.ArrayF32).bytes, 0, s.shader.paramsSize * 16), 0, s.shader.paramsSize * 4);
+				gl.uniform4fv(s.params, streamData(hl.Bytes.getArray(buf.params.toData()), 0, s.shader.paramsSize * 16), 0, s.shader.paramsSize * 4);
 				#elseif hxsdl
 				gl.uniform4fv(s.params, buf.params.toData(), 0, s.shader.paramsSize * 4);
 				#else
@@ -575,7 +575,7 @@ class GlDriver extends Driver {
 	static inline var STREAM_POS = #if hl 0 #else 1 #end;
 	#if hl
 
-	var streamBytes : hl.types.Bytes;
+	var streamBytes : hl.Bytes;
 	var streamLen : Int;
 	var streamPos : Int;
 
@@ -593,7 +593,7 @@ class GlDriver extends Driver {
 		var newLen = streamLen == 0 ? 0x10000 : streamLen;
 		while( newLen < needed )
 			newLen = (newLen * 3) >> 1;
-		var newBytes = new hl.types.Bytes(newLen);
+		var newBytes = new hl.Bytes(newLen);
 		if( streamPos > 0 )
 			newBytes.blit(0, streamBytes, 0, streamPos);
 		streamLen = newLen;
@@ -643,7 +643,7 @@ class GlDriver extends Driver {
 		var stride : Int = v.stride;
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
 		#if hxsdl
-		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBasic.ArrayF32).bytes #else buf.getNative() #end;
+		var data = #if hl hl.Bytes.getArray(buf.getNative()) #else buf.getNative() #end;
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(data,bufPos * 4,vertexCount * stride * 4), bufPos * 4 * STREAM_POS, vertexCount * stride * 4);
 		#else
 		var buf = new Float32Array(buf.getNative());
@@ -669,7 +669,7 @@ class GlDriver extends Driver {
 	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
 		#if hxsdl
-		var data = #if hl @:privateAccess (cast buf.getNative() : hl.types.ArrayBasic.ArrayUI16).bytes #else buf.getNative() #end;
+		var data = #if hl hl.Bytes.getArray(buf.getNative()) #else buf.getNative() #end;
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(data,bufPos*2,indiceCount*2), bufPos * 2 * STREAM_POS, indiceCount * 2);
 		#else
 		var buf = new Uint16Array(buf.getNative());
@@ -779,7 +779,7 @@ class GlDriver extends Driver {
 			if( mrtExt != null )
 				mrtExt.drawBuffersWEBGL([GL.COLOR_ATTACHMENT0]);
 			#elseif hlsdl
-			gl.drawBuffers(1, @:privateAccess CBUFFERS.bytes);
+			gl.drawBuffers(1, CBUFFERS);
 			#end
 		}
 	}
@@ -833,7 +833,7 @@ class GlDriver extends Driver {
 		if( mrtExt != null )
 			mrtExt.drawBuffersWEBGL([for( i in 0...textures.length ) GL.COLOR_ATTACHMENT0 + i]);
 		#elseif hlsdl
-			gl.drawBuffers(textures.length, @:privateAccess CBUFFERS.bytes);
+			gl.drawBuffers(textures.length, CBUFFERS);
 		#end
 	}
 
@@ -953,7 +953,7 @@ class GlDriver extends Driver {
 	];
 
 	#if hlsdl
-	static var CBUFFERS = (cast [for( i in 0...32 ) GL.COLOR_ATTACHMENT0 + i] : hl.types.ArrayBasic<Int>);
+	static var CBUFFERS = hl.Bytes.getArray([for( i in 0...32 ) GL.COLOR_ATTACHMENT0 + i]);
 	#end
 
 }

@@ -12,7 +12,7 @@ typedef BitmapInnerData =
 
 class BitmapInnerDataImpl {
 	#if hl
-	public var pixels : hl.types.BytesAccess<Int>;
+	public var pixels : hl.BytesAccess<Int>;
 	#else
 	public var pixels : haxe.ds.Vector<Int>;
 	#end
@@ -60,7 +60,7 @@ class BitmapData {
 			#else
 			data = new BitmapInnerData();
 			#if hl
-			data.pixels = new hl.types.Bytes(width * height * 4);
+			data.pixels = new hl.Bytes(width * height * 4);
 			#else
 			data.pixels = new haxe.ds.Vector(width * height);
 			#end
@@ -288,7 +288,7 @@ class BitmapData {
 		b.width = w;
 		b.height = h;
 		#if hl
-		b.pixels = new hl.types.Bytes(w * h * 4);
+		b.pixels = new hl.Bytes(w * h * 4);
 		for( dy in 0...h )
 			b.pixels.blit(dy * w, data.pixels, x + (y + dy) * width, w);
 		#else
