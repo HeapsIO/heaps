@@ -436,9 +436,11 @@ class GlslOut {
 		if( v.kind == Output ) {
 			if( isVertex )
 				return "gl_Position";
-			if( outIndexes == null )
-				return "gl_FragColor";
-			return 'gl_FragData[${outIndexes.get(v.id)}]';
+			if( glES ) {
+				if( outIndexes == null )
+					return "gl_FragColor";
+				return 'gl_FragData[${outIndexes.get(v.id)}]';
+			}
 		}
 		var n = varNames.get(v.id);
 		if( n != null )
@@ -499,8 +501,11 @@ class GlslOut {
 			case Var:
 				add( glES ? "varying " : (isVertex ? "out " : "in "));
 			case Output:
-				outIndexes.set(v.id, outIndex++);
-				continue;
+				if( glES ) {
+					outIndexes.set(v.id, outIndex++);
+					continue;
+				}
+				add("out ");
 			case Function:
 				continue;
 			case Local:
