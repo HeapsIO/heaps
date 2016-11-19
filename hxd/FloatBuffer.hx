@@ -30,6 +30,7 @@ abstract FloatBuffer(InnerData) {
 		this = new InnerData(length);
 		#else
 		this = new InnerData();
+		if( length > 0 ) grow(length);
 		#end
 	}
 
@@ -44,8 +45,10 @@ abstract FloatBuffer(InnerData) {
 	public inline function grow( v : Int ) {
 		#if flash
 		if( v > this.length ) this.length = v;
+		#elseif js
+		while( v < this.length ) this.push(0.);
 		#else
-		while( this.length < v ) this.push(0.);
+		if( v > this.length ) this[v - 1] = 0.;
 		#end
 	}
 
@@ -53,8 +56,7 @@ abstract FloatBuffer(InnerData) {
 		#if flash
 		this.length = v;
 		#else
-		while( this.length < v ) this.push(0.);
-		if( this.length > v ) this.splice(v, this.length - v);
+		if( this.length > v ) this.splice(v, this.length - v) else grow(v);
 		#end
 	}
 

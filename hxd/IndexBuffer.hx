@@ -30,6 +30,7 @@ abstract IndexBuffer(InnerData) {
 		this = new InnerData(length);
 		#else
 		this = new InnerData();
+		if( length > 0 ) grow(length);
 		#end
 	}
 
@@ -44,8 +45,10 @@ abstract IndexBuffer(InnerData) {
 	public inline function grow( v : Int ) {
 		#if flash
 		if( v > this.length ) this.length = v;
-		#else
+		#elseif js
 		while( this.length < v ) this.push(0);
+		#else
+		if( v > this.length ) this[v - 1] = 0;
 		#end
 	}
 
