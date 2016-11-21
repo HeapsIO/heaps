@@ -625,16 +625,16 @@ class System {
 			addKey(1058 + i, K.F1 + i);
 
 		// NUMPAD
-		CHARMAP[1098] = "0".code;
-		CHARMAP[1085] = "*".code;
-		CHARMAP[1087] = "+".code;
-		CHARMAP[1088] = 13;
-		CHARMAP[1086] = "-".code;
-		CHARMAP[1084] = "/".code;
-		CHARMAP[1099] = ".".code;
-		addKey(1088, K.NUMPAD_0, "0".code);
+
+		addKey(1084, K.NUMPAD_DIV, "/".code);
+		addKey(1085, K.NUMPAD_MULT, "*".code);
+		addKey(1086, K.NUMPAD_SUB, "-".code);
+		addKey(1087, K.NUMPAD_ADD, "+".code);
+		addKey(1088, K.NUMPAD_ENTER, 13);
 		for( i in 0...9 )
 			addKey(1089 + i, K.NUMPAD_1 + i, "1".code + i);
+		addKey(1098, K.NUMPAD_0, "0".code);
+		addKey(1099, K.NUMPAD_DOT, ".".code);
 
 		// EXTRA
 		var keys = [

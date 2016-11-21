@@ -153,7 +153,7 @@ class Console extends h2d.Sprite {
 		if( !bg.visible )
 			return;
 		switch( e.keyCode ) {
-		case Key.ENTER:
+		case Key.ENTER, Key.NUMPAD_ENTER:
 			var cmd = tf.text;
 			tf.text = "";
 			handleCommand(cmd);
