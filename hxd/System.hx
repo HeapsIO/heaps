@@ -525,6 +525,7 @@ class System {
 	static var windowHeight = 600;
 	static var mouseX = 0;
 	static var mouseY = 0;
+	static var shiftDown : Bool;
 	static var currentLoop = null;
 	static var CODEMAP = [for( i in 0...2048 ) i];
 	static var CHARMAP = [for( i in 0...2048 ) 0];
@@ -579,8 +580,11 @@ class System {
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
 			eh.charCode = CHARMAP[e.keyCode];
+			if( eh.charCode >= 'a'.code && eh.charCode <= 'z'.code && shiftDown )
+				eh.charCode += 'A'.code - 'a'.code;
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
+				if( e.keyCode == K.SHIFT ) shiftDown = true;
 				onEvent(e);
 			}
 		case KeyUp:
@@ -588,8 +592,11 @@ class System {
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
 			eh.charCode = CHARMAP[e.keyCode];
+			if( eh.charCode >= 'a'.code && eh.charCode <= 'z'.code && shiftDown )
+				eh.charCode += 'A'.code - 'a'.code;
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
+				if( e.keyCode == K.SHIFT ) shiftDown = false;
 				onEvent(e);
 			}
 		case MouseWheel:
