@@ -173,11 +173,9 @@ class Key {
 	static function onEvent( e : Event ) {
 		switch( e.kind ) {
 		case EKeyDown:
-			trace(e.keyCode);
 			if( !ALLOW_KEY_REPEAT && keyPressed[e.keyCode] > 0 ) return;
 			keyPressed[e.keyCode] = getFrame();
 		case EKeyUp:
-			trace(e.keyCode);
 			keyPressed[e.keyCode] = -getFrame();
 		case EPush:
 			if( e.button < 2 ) keyPressed[e.button] = getFrame();
