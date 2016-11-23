@@ -12,6 +12,10 @@ enum EventKind {
 	EKeyDown;
 	EKeyUp;
 	EReleaseOutside;
+	/**
+		Used to check if we are still on the interactive if no EMove was triggered this frame.
+	**/
+	ECheck;
 }
 
 class Event {
@@ -43,7 +47,7 @@ class Event {
 	public function toString() {
 		return kind + "[" + Std.int(relX) + "," + Std.int(relY) + "]" + switch( kind ) {
 		case EPush, ERelease, EReleaseOutside: ",button=" + button;
-		case EMove, EOver, EOut, EFocus, EFocusLost: "";
+		case EMove, EOver, EOut, EFocus, EFocusLost, ECheck: "";
 		case EWheel: ",wheelDelta=" + wheelDelta;
 		case EKeyDown, EKeyUp: ",keyCode=" + keyCode+",charCode=" + charCode;
 		}

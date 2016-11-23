@@ -27,7 +27,7 @@ class SceneEvents {
 	var lastTouch = 0;
 
 	var focusLost = new hxd.Event(EFocusLost);
-	var fakeMove = new hxd.Event(EMove);
+	var checkPos = new hxd.Event(ECheck);
 	var onOut = new hxd.Event(EOut);
 
 	public function new() {
@@ -171,7 +171,7 @@ class SceneEvents {
 				currentOver = null;
 		}
 
-		if( !handled && event != fakeMove ) {
+		if( !handled && event != checkPos ) {
 			if( event.kind == EPush )
 				pushList.push(null);
 			else if( event.kind == ERelease )
@@ -236,12 +236,12 @@ class SceneEvents {
 		}
 
 		if( !checkMoved && currentDrag == null ) {
-			fakeMove.relX = mouseX;
-			fakeMove.relY = mouseY;
-			fakeMove.touchId = lastTouch;
-			fakeMove.cancel = false;
-			fakeMove.propagate = false;
-			emitEvent(fakeMove);
+			checkPos.relX = mouseX;
+			checkPos.relY = mouseY;
+			checkPos.touchId = lastTouch;
+			checkPos.cancel = false;
+			checkPos.propagate = false;
+			emitEvent(checkPos);
 		}
 	}
 

@@ -159,6 +159,8 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			onKeyUp(e);
 		case EKeyDown:
 			onKeyDown(e);
+		case ECheck:
+			onCheck(e);
 		}
 	}
 
@@ -258,6 +260,9 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	public dynamic function onKeyDown( e : hxd.Event ) {
+	}
+
+	public dynamic function onCheck( e : hxd.Event ) {
 	}
 
 }
