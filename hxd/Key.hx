@@ -114,6 +114,14 @@ class Key {
 	static var initDone = false;
 	static var keyPressed : Array<Int> = [];
 
+	/**
+		This enable the native key repeat behavior, and will
+		report several times isPressed() in case a key is kept
+		pressed for a long time if this is allowed by the target
+		platform.
+	**/
+	public static var ALLOW_KEY_REPEAT = false;
+
 	public static function isDown( code : Int ) {
 		return keyPressed[code] > 0;
 	}
@@ -165,8 +173,11 @@ class Key {
 	static function onEvent( e : Event ) {
 		switch( e.kind ) {
 		case EKeyDown:
+			trace(e.keyCode);
+			if( !ALLOW_KEY_REPEAT && keyPressed[e.keyCode] > 0 ) return;
 			keyPressed[e.keyCode] = getFrame();
 		case EKeyUp:
+			trace(e.keyCode);
 			keyPressed[e.keyCode] = -getFrame();
 		case EPush:
 			if( e.button < 2 ) keyPressed[e.button] = getFrame();
