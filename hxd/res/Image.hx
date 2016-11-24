@@ -141,7 +141,7 @@ class Image extends Resource {
 			pixels = decodeJPG(bytes, inf.width, inf.height, fmt, flipY);
 			if( pixels == null ) throw "Failed to decode JPG " + entry.path;
 			#else
-			var p = NanoJpeg.decode(bytes);
+			var p = try NanoJpeg.decode(bytes) catch( e : Dynamic ) throw "Failed to decode JPG " + entry.path + " (" + e+")";
 			pixels = new Pixels(p.width, p.height, p.pixels, BGRA);
 			#end
 		}
