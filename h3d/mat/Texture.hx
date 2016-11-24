@@ -95,6 +95,12 @@ class Texture {
 			mem.allocTexture(this);
 	}
 
+	public function clone( ?allocPos : h3d.impl.AllocPos ) {
+		var t = new Texture(width, height, null, format, allocPos);
+		h3d.pass.Copy.run(this, t);
+		return t;
+	}
+
 	function set_onLoaded(v) {
 		onLoaded = v;
 		if( v != null && !flags.has(Loading) ) v();
@@ -198,6 +204,18 @@ class Texture {
 	}
 
 	/**
+		Swap two textures, this is an immediate operation.
+		BEWARE : if the texture is a cached image (hxd.res.Image), the swap will affect the cache!
+	**/
+	public function swapTexture( t : Texture ) {
+		if( isDisposed() || t.isDisposed() )
+			throw "One of the two texture is disposed";
+		var tmp = this.t;
+		this.t = t.t;
+		t.t = tmp;
+	}
+
+	/**
 		Downloads the current texture data from the GPU. On some platforms, color might be premultiplied by Alpha unless withAlpha = true.
 		Beware, this is a very slow operation that shouldn't be done during rendering.
 	**/
@@ -264,7 +282,7 @@ class Texture {
 		var pixels = hxd.Pixels.alloc(width, height, RGBA);
 		e.driver.captureRenderBuffer(pixels);
 		e.popTarget();
-		
+
 		#end
 		return pixels;
 	}
