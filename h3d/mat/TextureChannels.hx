@@ -4,6 +4,7 @@ import h3d.mat.Data;
 class TextureChannels extends Texture {
 
 	var pixels : hxd.Pixels;
+	public var allowAsync : Bool = true;
 
 	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat, ?allocPos : h3d.impl.AllocPos ) {
 		if( flags == null ) flags = [];
@@ -43,7 +44,7 @@ class TextureChannels extends Texture {
 
 	public function setResource( c : hxd.Pixels.Channel, res : hxd.res.Image, ?srcChannel : hxd.Pixels.Channel ) {
 		if( srcChannel == null ) srcChannel = c;
-		if( !res.getFormat().useAsyncDecode )
+		if( !allowAsync || !res.getFormat().useAsyncDecode )
 			setPixels(c, res.getPixels(), srcChannel);
 		else {
 			res.entry.loadBitmap(function(bmp) {
