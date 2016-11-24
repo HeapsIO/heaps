@@ -265,6 +265,28 @@ class Flow extends Sprite {
 		return paddingBottom = v;
 	}
 
+	/**
+		Adds some spacing by either increasing the padding of the latest
+		non absolute element or the padding of the flow if no element was found.
+		The padding affected depends on the isVertical property.
+	**/
+	public function addSpacing( v : Int ) {
+		var last = properties.length - 1;
+		while( last >= 0 && properties[last].isAbsolute )
+			last--;
+		if( isVertical ) {
+			if( last >= 0 )
+				properties[last].paddingBottom += v;
+			else
+				paddingTop += v;
+		} else {
+			if( last >= 0 )
+				properties[last].paddingRight += v;
+			else
+				paddingLeft += v;
+		}
+	}
+
 	override function getBoundsRec( relativeTo, out, forSize ) {
 		if( needReflow ) reflow();
 		if( forSize ) {
