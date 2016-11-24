@@ -1,11 +1,31 @@
 package h3d.pass;
 
+private class FixedColor extends hxsl.Shader {
+
+	static var SRC = {
+		@param var colorID : Vec4;
+		@param var viewport : Vec4;
+		var output : {
+			position : Vec4,
+			pickPosition : Vec4,
+			colorID : Vec4
+		};
+		function vertex() {
+			output.pickPosition = (output.position + vec4(viewport.xy, 0., 0.) * output.position.w) * vec4(viewport.zw, 1., 1.);
+		}
+		function fragment() {
+			output.colorID = colorID;
+		}
+	}
+
+}
+
 class HardwarePick extends Default {
 
 	public var pickX : Float;
 	public var pickY : Float;
 
-	var fixedColor = new h3d.shader.FixedColor();
+	var fixedColor = new FixedColor();
 	var colorID : Int;
 	var texOut : h3d.mat.Texture;
 	var material : h3d.mat.Pass;
