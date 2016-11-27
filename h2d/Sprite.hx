@@ -450,6 +450,24 @@ class Sprite {
 	**/
 	function clipBounds( ctx : RenderContext, bounds : h2d.col.Bounds ) {
 		var view = ctx.tmpBounds;
+		var matA, matB, matC, matD, absX, absY;
+		@:privateAccess if( ctx.inFilter != null ) {
+			var f1 = ctx.baseShader.filterMatrixA;
+			var f2 = ctx.baseShader.filterMatrixB;
+			matA = this.matA * f1.x + this.matB * f1.y;
+			matB = this.matA * f2.x + this.matB * f2.y;
+			matC = this.matC * f1.x + this.matD * f1.y;
+			matD = this.matC * f2.x + this.matD * f2.y;
+			absX = this.absX * f1.x + this.absY * f1.y + f1.z;
+			absY = this.absX * f2.x + this.absY * f2.y + f2.z;
+		} else {
+			matA = this.matA;
+			matB = this.matB;
+			matC = this.matC;
+			matD = this.matD;
+			absX = this.absX;
+			absY = this.absY;
+		}
 
 		// intersect our transformed local view with our viewport in global space
 		view.empty();
@@ -462,10 +480,12 @@ class Sprite {
 		add(bounds.xMax, bounds.yMax);
 
 		// clip with our scene
-		if( view.xMin < 0 ) view.xMin = 0;
-		if( view.yMin < 0 ) view.yMin = 0;
-		@:privateAccess if( view.xMax > ctx.curWidth ) view.xMax = ctx.curWidth;
-		@:privateAccess if( view.yMax > ctx.curHeight ) view.yMax = ctx.curHeight;
+		@:privateAccess {
+			if( view.xMin < ctx.curX ) view.xMin = ctx.curX;
+			if( view.yMin < ctx.curY ) view.yMin = ctx.curY;
+			if( view.xMax > ctx.curX + ctx.curWidth ) view.xMax = ctx.curX + ctx.curWidth;
+			if( view.yMax > ctx.curY + ctx.curHeight ) view.yMax = ctx.curY + ctx.curHeight;
+		}
 
 		// inverse our matrix
 		var invDet = 1 / (matA * matD - matB * matC);
@@ -524,7 +544,7 @@ class Sprite {
 		if( width <= 0 || height <= 0 || total.xMax < total.xMin ) return;
 
 		var t = ctx.textures.allocTarget("filterTemp", ctx, width, height, false);
-		ctx.pushTarget(t, xMin, yMin);
+		ctx.pushTarget(t, xMin, yMin, width, height);
 		ctx.engine.clear(0);
 
 		// reset transform and update childs
