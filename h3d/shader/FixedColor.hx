@@ -4,6 +4,7 @@ class FixedColor extends hxsl.Shader {
 
 	static var SRC = {
 		@param var color : Vec4;
+		var output : { color : Vec4 };
 		function fragment() {
 			output.color = color;
 		}
@@ -11,7 +12,7 @@ class FixedColor extends hxsl.Shader {
 
 	public function new( color = 0, alpha = 1. ) {
 		super();
-		color.loadColor(color,alpha);
+		this.color.setColor(color,alpha);
 	}
 
 }
