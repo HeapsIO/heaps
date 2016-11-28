@@ -163,17 +163,30 @@ class PropManager extends cdb.jq.Client {
 		return null;
 	}
 
-	public static function setPropValue( p : Property, v : Dynamic ) {
+	public static function setPropValue( p : Property, v : Dynamic, lerp = 1. ) {
 		switch( p ) {
-		case PInt(_, _, set):
+		case PInt(_, get, set):
 			if( !Std.is(v, Int) ) throw "Invalid int value " + v;
-			set(v);
-		case PFloat(_, _, set):
+			var v : Int = v;
+			if( lerp == 1 )
+				set(v);
+			else {
+				var prev = get();
+				var u = hxd.Math.lerp(prev, v, lerp);
+				set( prev < v ? Math.ceil(u) : Math.floor(u) );
+			}
+		case PFloat(_, get, set):
 			if( !Std.is(v, Float) ) throw "Invalid float value " + v;
-			set(v);
-		case PRange(_, _, _, _, set):
+			if( lerp == 1 )
+				set(v);
+			else
+				set(hxd.Math.lerp(get(), v, lerp));
+		case PRange(_, _, _, get, set):
 			if( !Std.is(v, Float) ) throw "Invalid float value " + v;
-			set(v);
+			if( lerp == 1 )
+				set(v);
+			else
+				set(hxd.Math.lerp(get(), v, lerp));
 		case PBool(_, _, set):
 			if( !Std.is(v, Bool) ) throw "Invalid bool value " + v;
 			set(v);
@@ -184,16 +197,34 @@ class PropManager extends cdb.jq.Client {
 			var e = en.createAll()[v];
 			if( e == null || !Std.is(v, Int) ) throw "Invalid enum " + en.getName() + " value " + v;
 			set(e);
-		case PColor(_, _, _, set):
+		case PColor(_, _, get, set):
 			if( !Std.is(v, String) ) throw "Invalid color value " + v;
 			var v : String = v;
-			set(h3d.Vector.fromColor(Std.parseInt("0x"+v.substr(1))));
+			var newV = h3d.Vector.fromColor(Std.parseInt("0x" + v.substr(1)));
+			if( lerp == 1 )
+				set(newV);
+			else {
+				var prev = get();
+				newV.r = hxd.Math.lerp(prev.r, newV.r, lerp);
+				newV.g = hxd.Math.lerp(prev.g, newV.g, lerp);
+				newV.b = hxd.Math.lerp(prev.b, newV.b, lerp);
+				newV.a = hxd.Math.lerp(prev.a, newV.a, lerp);
+				set(newV);
+			}
 		case PFloats(_, get, set):
 			if( !Std.is(v, Array) ) throw "Invalid floats value " + v;
 			var a : Array<Float> = v;
-			var need = get().length;
-			if( a.length != need ) throw "Require "+need+" floats in value " + v;
-			set(a.copy());
+			var prev = get();
+			var need = prev.length;
+			if( a.length != need ) throw "Require " + need + " floats in value " + v;
+			if( lerp == 1 )
+				set(a.copy());
+			else {
+				var newA = a.copy();
+				for( i in 0...need )
+					newA[i] = hxd.Math.lerp(prev[i], newA[i], lerp);
+				set(newA);
+			}
 		case PTexture(_, _, set):
 			if( !Std.is(v, String) ) throw "Invalid texture value " + v;
 			var path : String = v;

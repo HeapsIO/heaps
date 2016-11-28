@@ -492,7 +492,7 @@ class SceneProps {
 		return props;
 	}
 
-	public function applyProps( propsValues : Dynamic, ?node : Node, ?onError : String -> Void ) {
+	public function applyProps( propsValues : Dynamic, ?node : Node, ?onError : String -> Void, lerp = 1. ) {
 		if( propsValues == null )
 			return;
 		if( node == null )
@@ -504,7 +504,7 @@ class SceneProps {
 			if( isObj ) {
 				var n = node.getChildByName(f);
 				if( n != null ) {
-					applyProps(v, n, onError);
+					applyProps(v, n, onError, lerp);
 					continue;
 				}
 			}
@@ -525,14 +525,14 @@ class SceneProps {
 			}
 			switch( p ) {
 			case PGroup(_, props) if( isObj ):
-				applyPropsGroup(node.getFullPath()+"."+f, v, props, onError);
+				applyPropsGroup(node.getFullPath()+"."+f, v, props, onError, lerp);
 			default:
-				PropManager.setPropValue(p, v);
+				PropManager.setPropValue(p, v, lerp);
 			}
 		}
 	}
 
-	function applyPropsGroup( path : String, propsValues : Dynamic, props : Array<Property>, onError : String -> Void ) {
+	function applyPropsGroup( path : String, propsValues : Dynamic, props : Array<Property>, onError : String -> Void, lerp : Float ) {
 		var pmap = new Map();
 		for( p in props )
 			pmap.set(PropManager.getPropName(p), p);
@@ -545,9 +545,9 @@ class SceneProps {
 			var v : Dynamic = Reflect.field(propsValues, f);
 			switch( p ) {
 			case PGroup(_, props):
-				applyPropsGroup(path + "." + f, v, props, onError);
+				applyPropsGroup(path + "." + f, v, props, onError, lerp);
 			default:
-				PropManager.setPropValue(p, v);
+				PropManager.setPropValue(p, v, lerp);
 			}
 		}
 	}
