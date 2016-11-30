@@ -196,7 +196,9 @@ class NetworkHost {
 	public function saveState() {
 		var s = new hxd.net.Serializer();
 		s.beginSave();
-		for( r in ctx.refs )
+		var refs = [for( r in ctx.refs ) r];
+		refs.sort(sortByUID);
+		for( r in refs )
 			if( !s.refs.exists(r.__uid) )
 				s.addAnyRef(r);
 		s.addAnyRef(null);
