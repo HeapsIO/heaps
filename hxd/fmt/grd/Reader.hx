@@ -84,7 +84,8 @@ class Reader {
 			var obj = obj.Grad;
 			var grd = new Gradient();
 
-			grd.name = obj.Nm.substring(obj.Nm.indexOf("=") + 1);
+			var nm : String = obj.Nm;
+			grd.name = nm.substring(nm.indexOf("=") + 1);
 			grd.interpolation = obj.Intr;
 
 			createColorStops        (obj.Clrs, grd.colorStops);
