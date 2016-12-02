@@ -20,16 +20,18 @@ class Pass {
 	**/
 	public var dynamicParameters : Bool;
 
-	@:bits public var culling : Face;
-	@:bits public var depthWrite : Bool;
-	@:bits public var depthTest : Compare;
-	@:bits public var blendSrc : Blend;
-	@:bits public var blendDst : Blend;
-	@:bits public var blendAlphaSrc : Blend;
-	@:bits public var blendAlphaDst : Blend;
-	@:bits public var blendOp : Operation;
-	@:bits public var blendAlphaOp : Operation;
-	@:bits(4) public var colorMask : Int;
+	@:bits(bits) public var culling : Face;
+	@:bits(bits) public var depthWrite : Bool;
+	@:bits(bits) public var depthTest : Compare;
+	@:bits(bits) public var blendSrc : Blend;
+	@:bits(bits) public var blendDst : Blend;
+	@:bits(bits) public var blendAlphaSrc : Blend;
+	@:bits(bits) public var blendAlphaDst : Blend;
+	@:bits(bits) public var blendOp : Operation;
+	@:bits(bits) public var blendAlphaOp : Operation;
+	@:bits(bits, 4) public var colorMask : Int;
+
+	public var stencil : Stencil;
 
 	public function new(name, ?shaders, ?parent) {
 		this.parentPass = parent;
@@ -58,6 +60,10 @@ class Pass {
 		blendAlphaDst = p.blendAlphaDst;
 		blendAlphaOp = p.blendAlphaOp;
 		colorMask = p.colorMask;
+		if (p.stencil != null) {
+			if (stencil == null) stencil = new Stencil();
+			stencil.loadProps(p.stencil);
+		}
 	}
 
 	public function setPassName( name : String ) {
@@ -172,6 +178,7 @@ class Pass {
 		var p = new Pass(name, shaders.clone());
 		p.bits = bits;
 		p.enableLights = enableLights;
+		if (stencil != null) p.stencil = stencil.clone();
 		return p;
 	}
 

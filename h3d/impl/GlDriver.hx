@@ -1,6 +1,8 @@
 package h3d.impl;
 import h3d.impl.Driver;
 import h3d.mat.Pass;
+import h3d.mat.Stencil;
+import h3d.mat.Data;
 
 #if (js||cpp||hxsdl)
 
@@ -86,6 +88,11 @@ class GlDriver extends Driver {
 	var curShader : CompiledProgram;
 	var curBuffer : h3d.Buffer;
 	var curMatBits : Int;
+	var curStOpBits : Int;
+	var curStFrBits : Int;
+	var curStBrBits : Int;
+	var curStEnabled : Bool;
+	var defStencil : Stencil;
 	var programs : Map<Int, CompiledProgram>;
 	var frame : Int;
 
@@ -109,6 +116,7 @@ class GlDriver extends Driver {
 		programs = new Map();
 		curAttribs = 0;
 		curMatBits = -1;
+		defStencil = new Stencil();
 	}
 
 	override function logImpl( str : String ) {
@@ -315,6 +323,20 @@ class GlDriver extends Driver {
 
 	override function selectMaterial( pass : Pass ) {
 		selectMaterialBits(@:privateAccess pass.bits);
+		var s = defStencil;
+		if( pass.stencil == null ) {
+			if( curStEnabled ) {
+				gl.disable(GL.STENCIL_TEST);
+				curStEnabled = false;
+			}
+		} else {
+			s = pass.stencil;
+			if( !curStEnabled ) {
+				gl.enable(GL.STENCIL_TEST);
+				curStEnabled = true;
+			}
+		}
+		@:privateAccess selectStencilBits(s.opBits, s.frontRefBits, s.backRefBits);
 		// TODO : Blend Op value sync
 	}
 
@@ -381,6 +403,56 @@ class GlDriver extends Driver {
 		curMatBits = bits;
 	}
 
+	function selectStencilBits( opBits : Int, frBits : Int, brBits : Int ) {
+		var diffOp = opBits ^ curStOpBits;
+		var diffFr = frBits ^ curStFrBits;
+		var diffBr = brBits ^ curStBrBits;
+
+		if ( (diffOp | diffFr | diffBr) == 0 ) return;
+
+		if( diffOp & (Stencil.frontSTfail_mask | Stencil.frontDPfail_mask | Stencil.frontDPpass_mask) != 0 ) {
+			gl.stencilOpSeparate(
+				FACES[Type.enumIndex(Front)],
+				STENCIL_OP[Stencil.getFrontSTfail(opBits)],
+				STENCIL_OP[Stencil.getFrontDPfail(opBits)],
+				STENCIL_OP[Stencil.getFrontDPpass(opBits)]);
+		}
+
+		if( diffOp & (Stencil.backSTfail_mask | Stencil.backDPfail_mask | Stencil.backDPpass_mask) != 0 ) {
+			gl.stencilOpSeparate(
+				FACES[Type.enumIndex(Back)],
+				STENCIL_OP[Stencil.getBackSTfail(opBits)],
+				STENCIL_OP[Stencil.getBackDPfail(opBits)],
+				STENCIL_OP[Stencil.getBackDPpass(opBits)]);
+		}
+
+		if( (diffOp & Stencil.frontTest_mask) | (diffFr & (Stencil.frontRef_mask | Stencil.frontReadMask_mask)) != 0 ) {
+			gl.stencilFuncSeparate(
+				FACES[Type.enumIndex(Front)],
+				COMPARE[Stencil.getFrontTest(opBits)],
+				Stencil.getFrontRef(frBits),
+				Stencil.getFrontReadMask(frBits));
+		}
+
+		if( (diffOp & Stencil.backTest_mask) | (diffBr & (Stencil.backRef_mask | Stencil.backReadMask_mask)) != 0 ) {
+			gl.stencilFuncSeparate(
+				FACES[Type.enumIndex(Back)],
+				COMPARE[Stencil.getBackTest(opBits)],
+				Stencil.getBackRef(brBits),
+				Stencil.getBackReadMask(brBits));
+		}
+
+		if( diffFr & Stencil.frontWriteMask_mask != 0 )
+			gl.stencilMaskSeparate(FACES[Type.enumIndex(Front)], Stencil.getFrontWriteMask(frBits));
+
+		if( diffBr & Stencil.backWriteMask_mask != 0 )
+			gl.stencilMaskSeparate(FACES[Type.enumIndex(Back)], Stencil.getBackWriteMask(brBits));
+
+		curStOpBits = opBits;
+		curStFrBits = frBits;
+		curStBrBits = brBits;
+	}
+
 	override function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
 		var bits = 0;
 		if( color != null ) {
@@ -397,6 +469,7 @@ class GlDriver extends Driver {
 		}
 		if( stencil != null ) {
 			// reset stencyl mask when we allow to change it
+			@:privateAccess selectStencilBits(defStencil.opBits, defStencil.frontRefBits, defStencil.backRefBits);
 			gl.clearStencil(stencil);
 			bits |= GL.STENCIL_BUFFER_BIT;
 		}
@@ -935,6 +1008,17 @@ class GlDriver extends Driver {
 		GL.GEQUAL,
 		GL.LESS,
 		GL.LEQUAL,
+	];
+
+	static var STENCIL_OP = [
+		GL.KEEP,
+		GL.ZERO,
+		GL.REPLACE,
+		GL.INCR,
+		GL.INCR_WRAP,
+		GL.DECR,
+		GL.DECR_WRAP,
+		GL.INVERT,
 	];
 
 	static var OP = [

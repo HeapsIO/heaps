@@ -37,6 +37,17 @@ enum Compare {
 	LessEqual;
 }
 
+enum StencilOp {
+	Keep;
+	Zero;
+	Replace;
+	Increment;
+	IncrementWrap;
+	Decrement;
+	DecrementWrap;
+	Invert;
+}
+
 enum MipMap {
 	None;
 	Nearest;
