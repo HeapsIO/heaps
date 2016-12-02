@@ -455,9 +455,9 @@ class World extends Object {
 		updateChunkBounds(c, model, x, y, z, rotation, scale);
 	}
 
-	override function sync(ctx:RenderContext) {
-		super.sync(ctx);
-
+	override function syncRec(ctx:RenderContext) {
+		super.syncRec(ctx);
+		// don't do in sync() since animations in our world might affect our chunks
 		for( c in allChunks ) {
 			c.root.visible = c.bounds.inFrustum(ctx.camera.m);
 			if( c.root.visible ) {
