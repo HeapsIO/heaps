@@ -31,7 +31,6 @@ class Cache {
 		if( id != null )
 			return id;
 		vars = vars.copy();
-		vars.sort(Reflect.compare);
 		id = outVarsMap.get(vars.join(","));
 		if( id != null ) {
 			outVarsMap.set(key, id);
