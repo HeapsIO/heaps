@@ -142,7 +142,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			mouseDownButton = -1;
 		case EOver:
 			onOver(e);
-			if( !e.cancel )
+			if( !e.cancel && cursor != null )
 				hxd.System.setCursor(cursor);
 		case EOut:
 			mouseDownButton = -1;
@@ -166,7 +166,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	function set_cursor(c) {
 		this.cursor = c;
-		if( isOver() )
+		if( isOver() && cursor != null )
 			hxd.System.setCursor(cursor);
 		return c;
 	}
