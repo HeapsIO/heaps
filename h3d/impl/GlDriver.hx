@@ -840,7 +840,8 @@ class GlDriver extends Driver {
 			gl.disable(GL.SCISSOR_TEST);
 		else {
 			gl.enable(GL.SCISSOR_TEST);
-			gl.scissor(x, bufferHeight - (y + height), width, height);
+			var th = curTarget == null ? bufferHeight : curTarget.height;
+			gl.scissor(x, th - (y + height), width, height);
 		}
 	}
 
