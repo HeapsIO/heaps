@@ -39,18 +39,27 @@ class FBXModel extends MeshPrimitive {
 			return bounds;
 		bounds = new h3d.col.Bounds();
 		var verts = geom.getVertices();
-		var gt = geom.getGeomTranslate();
-		if( gt == null ) gt = new Point();
+		var gm = geom.getGeomMatrix();
+		var tmp = new h3d.col.Point();
 		if( verts.length > 0 ) {
-			bounds.xMin = bounds.xMax = verts[0] + gt.x;
-			bounds.yMin = bounds.yMax = verts[1] + gt.y;
-			bounds.zMin = bounds.zMax = verts[2] + gt.z;
+			tmp.set(verts[0], verts[1], verts[2]);
+			if( gm != null ) tmp.transform(gm);
+			bounds.xMin = bounds.xMax = tmp.x;
+			bounds.yMin = bounds.yMax = tmp.y;
+			bounds.zMin = bounds.zMax = tmp.z;
 		}
 		var pos = 3;
 		for( i in 1...Std.int(verts.length / 3) ) {
-			var x = verts[pos++] + gt.x;
-			var y = verts[pos++] + gt.y;
-			var z = verts[pos++] + gt.z;
+			var x = verts[pos++];
+			var y = verts[pos++];
+			var z = verts[pos++];
+			if( gm != null ) {
+				tmp.set(x, y, z);
+				tmp.transform(gm);
+				x = tmp.x;
+				y = tmp.y;
+				z = tmp.z;
+			}
 			if( x > bounds.xMax ) bounds.xMax = x;
 			if( x < bounds.xMin ) bounds.xMin = x;
 			if( y > bounds.yMax ) bounds.yMax = y;
@@ -104,9 +113,8 @@ class FBXModel extends MeshPrimitive {
 		var tuvs = geom.getUVs()[0];
 		var colors = geom.getColors();
 		var mats = multiMaterial ? geom.getMaterials() : null;
-
-		var gt = geom.getGeomTranslate();
-		if( gt == null ) gt = new Point();
+		var gm = geom.getGeomMatrix();
+		var tmp = new h3d.col.Point();
 
 		var idx = new hxd.IndexBuffer();
 		var midx = new Array<hxd.IndexBuffer>();
@@ -135,9 +143,16 @@ class FBXModel extends MeshPrimitive {
 					var k = n + start;
 					var vidx = index[k];
 
-					var x = verts[vidx * 3] + gt.x;
-					var y = verts[vidx * 3 + 1] + gt.y;
-					var z = verts[vidx * 3 + 2] + gt.z;
+					var x = verts[vidx * 3];
+					var y = verts[vidx * 3 + 1];
+					var z = verts[vidx * 3 + 2];
+					if( gm != null ) {
+						tmp.set(x, y, z);
+						tmp.transform(gm);
+						x = tmp.x;
+						y = tmp.y;
+						z = tmp.z;
+					}
 					pbuf.push(x);
 					pbuf.push(y);
 					pbuf.push(z);

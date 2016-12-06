@@ -77,9 +77,7 @@ class HMDOut extends BaseLibrary {
 		g.vertexCount = 0;
 
 		// build geometry
-		var gt = geom.getGeomTranslate();
-		if( gt == null ) gt = new h3d.col.Point();
-
+		var gm = geom.getGeomMatrix();
 		var vbuf = new hxd.FloatBuffer();
 		var ibufs = [];
 
@@ -92,6 +90,7 @@ class HMDOut extends BaseLibrary {
 		var index = geom.getPolygons();
 		var count = 0, matPos = 0, stri = 0;
 		var lookup = new Map();
+		var tmp = new h3d.col.Point();
 		for( pos in 0...index.length ) {
 			var i = index[pos];
 			count++;
@@ -104,9 +103,16 @@ class HMDOut extends BaseLibrary {
 				var vidx = index[k];
 				var p = 0;
 
-				var x = verts[vidx * 3] + gt.x;
-				var y = verts[vidx * 3 + 1] + gt.y;
-				var z = verts[vidx * 3 + 2] + gt.z;
+				var x = verts[vidx * 3];
+				var y = verts[vidx * 3 + 1];
+				var z = verts[vidx * 3 + 2];
+				if( gm != null ) {
+					tmp.set(x, y, z);
+					tmp.transform(gm);
+					x = tmp.x;
+					y = tmp.y;
+					z = tmp.z;
+				}
 				tmpBuf[p++] = x;
 				tmpBuf[p++] = y;
 				tmpBuf[p++] = z;

@@ -48,7 +48,7 @@ class Geometry {
 	public function merge( g : Geometry, materials : Array<Int> ) {
 		var vl = getVertices();
 		var vcount = Std.int(vl.length / 3);
-		if( g.getGeomTranslate() != null || this.getGeomTranslate() != null )
+		if( g.getGeomMatrix() != null || this.getGeomMatrix() != null )
 			throw "TODO";
 
 		// merge vertices
@@ -207,12 +207,29 @@ class Geometry {
 	}
 
 	@:access(hxd.fmt.fbx.BaseLibrary.leftHand)
-	public function getGeomTranslate() {
+	public function getGeomMatrix() {
+		var rot = null, trans = null;
 		for( p in lib.getParent(root, "Model").getAll("Properties70.P") )
-			if( p.props[0].toString() == "GeometricTranslation" )
-				return new h3d.col.Point(p.props[4].toFloat() * (lib.leftHand ? -1 : 1), p.props[5].toFloat(), p.props[6].toFloat());
-		return null;
+			switch( p.props[0].toString() ) {
+			case "GeometricTranslation":
+				trans = new h3d.col.Point(p.props[4].toFloat() * (lib.leftHand ? -1 : 1), p.props[5].toFloat(), p.props[6].toFloat());
+			case "GeometricRotation":
+				rot = new h3d.col.Point(p.props[4].toFloat() * Math.PI / 180, p.props[5].toFloat() * Math.PI / 180, p.props[6].toFloat() * Math.PI / 180);
+			default:
+			}
+		if( rot == null && trans == null )
+			return null;
+		var m = new h3d.Matrix();
+		if( rot == null )
+			m.identity();
+		else
+			m.initRotate(rot.x, rot.y, rot.z);
+		if( trans != null ) {
+			m.tx += trans.x;
+			m.ty += trans.y;
+			m.tz += trans.z;
+		}
+		return m;
 	}
-
 
 }
