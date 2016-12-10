@@ -449,7 +449,8 @@ class CdbLevel extends Layers {
 				redrawLayer(l);
 	}
 
-	override function draw(ctx:RenderContext) {
+	override function sync(ctx:RenderContext) {
+		super.sync(ctx);
 		for( l in layers ) {
 			if( l.needRedraw )
 				redrawLayer(l);
