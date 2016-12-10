@@ -74,7 +74,7 @@ class Pixels {
 	}
 
 	public function sub( x : Int, y : Int, width : Int, height : Int ) {
-		if( x < 0 || y < 0 || x + width > this.width || y + height >= this.height )
+		if( x < 0 || y < 0 || x + width > this.width || y + height > this.height )
 			throw "Pixels.sub() outside bounds";
 		var out = hxd.impl.Tmp.getBytes(width * height * bpp);
 		var stride = width * bpp;
