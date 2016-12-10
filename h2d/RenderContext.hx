@@ -96,6 +96,16 @@ class RenderContext extends h3d.impl.RenderContext {
 		textures.begin(this);
 	}
 
+	public function allocTarget(name, filter = false, size = 0) {
+		var t = textures.allocTarget(name, this, scene.width >> size, scene.height >> size, false);
+		t.filter = filter ? Linear : Nearest;
+		return t;
+	}
+
+	public function clear(color) {
+		engine.clear(color);
+	}
+
 	function initShaders( shaders ) {
 		currentShaders = shaders;
 		compiledShader = manager.compileShaders(shaders);
@@ -203,6 +213,10 @@ class RenderContext extends h3d.impl.RenderContext {
 	public inline function clearRenderZone() {
 		hasRenderZone = false;
 		engine.setRenderZone();
+	}
+
+	public function drawScene() {
+		@:privateAccess scene.drawRec(this);
 	}
 
 	public inline function flush() {
