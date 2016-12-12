@@ -21,6 +21,7 @@ class Blur extends Filter {
 
 	public function new( quality = 1, passes = 1, sigma = 1. ) {
 		super();
+		filter = true;
 		pass = new h3d.pass.Blur(quality, passes, sigma);
 	}
 
@@ -36,7 +37,9 @@ class Blur extends Filter {
 	}
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
-		pass.apply(t.getTexture(), ctx.textures.allocTarget("blurTmp",ctx,t.width,t.height,false));
+		var tex = ctx.textures.allocTarget("blurTmp", ctx, t.width, t.height, false);
+		tex.filter = filter ? Linear : Nearest;
+		pass.apply(t.getTexture(), tex);
 		return t;
 	}
 
