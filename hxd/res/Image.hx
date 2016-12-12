@@ -63,9 +63,8 @@ class Image extends Resource {
 			}
 		case 0x5089: // PNG
 			format = Png;
-			var TMP = hxd.impl.Tmp.getBytes(256);
 			f.bigEndian = true;
-			f.readBytes(TMP, 0, 6);
+			f.skip(6); // header
 			while( true ) {
 				var dataLen = f.readInt32();
 				if( f.readInt32() == ('I'.code << 24) | ('H'.code << 16) | ('D'.code << 8) | 'R'.code ) {
@@ -73,16 +72,8 @@ class Image extends Resource {
 					height = f.readInt32();
 					break;
 				}
-				// skip data
-				while( dataLen > 0 ) {
-					var k = dataLen > TMP.length ? TMP.length : dataLen;
-					f.readBytes(TMP, 0, k);
-					dataLen -= k;
-				}
-				var crc = f.readInt32();
+				f.skip(dataLen + 4); // CRC
 			}
-			hxd.impl.Tmp.saveBytes(TMP);
-
 		case 0x4947: // GIF
 			format = Gif;
 			f.readInt32(); // skip
