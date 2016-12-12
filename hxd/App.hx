@@ -1,6 +1,6 @@
 package hxd;
 
-class App {
+class App implements h3d.IDrawable {
 
 	public var engine : h3d.Engine;
 	public var s3d : h3d.scene.Scene;
@@ -33,7 +33,6 @@ class App {
 	function setScene3D( s3d : h3d.scene.Scene, disposePrevious = true ) {
 		sevents.removeScene(this.s3d);
 		sevents.addScene(s3d);
-		s3d.addPass(s2d);
 		if( disposePrevious )
 			this.s3d.dispose();
 		this.s3d = s3d;
@@ -42,11 +41,14 @@ class App {
 	function setScene2D( s2d : h2d.Scene, disposePrevious = true ) {
 		sevents.removeScene(this.s2d);
 		sevents.addScene(s2d,0);
-		s3d.removePass(this.s2d);
-		s3d.addPass(s2d);
 		if( disposePrevious )
 			this.s2d.dispose();
 		this.s2d = s2d;
+	}
+
+	public function render(e:h3d.Engine) {
+		s3d.render(e);
+		s2d.render(e);
 	}
 
 	function setup() {
@@ -58,7 +60,6 @@ class App {
 		};
 		s3d = new h3d.scene.Scene();
 		s2d = new h2d.Scene();
-		s3d.addPass(s2d);
 		sevents = new hxd.SceneEvents();
 		sevents.addScene(s2d);
 		sevents.addScene(s3d);
@@ -102,7 +103,7 @@ class App {
 			log.logLines = [];
 			engine.setDriver(log);
 			try {
-				engine.render(s3d);
+				engine.render(this);
 			} catch( e : Dynamic ) {
 				log.logLines.push(Std.string(e));
 			}
@@ -112,7 +113,7 @@ class App {
 			return;
 		}
 		#end
-		engine.render(s3d);
+		engine.render(this);
 	}
 
 	function update( dt : Float ) {

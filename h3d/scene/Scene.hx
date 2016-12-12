@@ -5,8 +5,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var camera : h3d.Camera;
 	public var lightSystem : h3d.pass.LightSystem;
 	public var renderer(default,set) : Renderer;
-	var prePasses : Array<h3d.IDrawable>;
-	var postPasses : Array<h3d.IDrawable>;
 	var ctx : RenderContext;
 	var interactives : Array<Interactive>;
 	@:allow(h3d.scene.Interactive)
@@ -27,8 +25,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx = new RenderContext();
 		renderer = new Renderer();
 		lightSystem = new h3d.pass.LightSystem();
-		postPasses = [];
-		prePasses = [];
 	}
 
 	@:noCompletion public function setEvents(events) {
@@ -178,21 +174,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		renderer = new Renderer();
 	}
 
-	/**
-	 allow to customize render passes (for example, branch sub scene or 2d context)
-	 */
-	public function addPass(p,before=false) {
-		if( before )
-			prePasses.push(p);
-		else
-			postPasses.push(p);
-	}
-
-	public function removePass(p) {
-		postPasses.remove(p);
-		prePasses.remove(p);
-	}
-
 	@:allow(h3d)
 	function addEventTarget(i:Interactive) {
 		interactives.push(i);
@@ -272,8 +253,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.camera = camera;
 		ctx.engine = engine;
 		ctx.start();
-		for( p in prePasses )
-			p.render(engine);
+
 		syncRec(ctx);
 		emitRec(ctx);
 		// sort by pass id
@@ -316,8 +296,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		#end
 
 		ctx.done();
-		for( p in postPasses )
-			p.render(engine);
 		ctx.camera = null;
 		ctx.engine = null;
 	}
