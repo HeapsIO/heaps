@@ -277,6 +277,10 @@ class Engine {
 		driver.present();
 	}
 
+	public function getCurrentTarget() {
+		return targetStack == null ? null : targetStack.t;
+	}
+
 	public function pushTarget( tex : h3d.mat.Texture ) {
 		var c = targetTmp;
 		if( c == null )

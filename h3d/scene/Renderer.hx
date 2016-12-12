@@ -125,18 +125,17 @@ class Renderer {
 		ctx.engine.clear(color, depth, stencil);
 	}
 
-	inline function pushTarget( tex ) {
-		ctx.engine.pushTarget(tex);
-	}
-
-	inline function setTarget( tex ) {
+	function setTarget( tex ) {
 		if( hasSetTarget ) ctx.engine.popTarget();
 		ctx.engine.pushTarget(tex);
 		hasSetTarget = true;
 	}
 
-	inline function popTarget() {
-		ctx.engine.popTarget();
+	function resetTarget() {
+		if( hasSetTarget ) {
+			ctx.engine.popTarget();
+			hasSetTarget = false;
+		}
 	}
 
 	function get( name : String ) {
@@ -180,10 +179,7 @@ class Renderer {
 			passGroups.set(p.name, p);
 		}
 		render();
-		if( hasSetTarget ) {
-			ctx.engine.popTarget();
-			hasSetTarget = false;
-		}
+		resetTarget();
 		for( p in passes )
 			passGroups.set(p.name, null);
 	}

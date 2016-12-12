@@ -263,7 +263,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( !allocated )
 			onAlloc();
 
-		camera.screenRatio = engine.width / engine.height;
+		var t = engine.getCurrentTarget();
+		if( t == null )
+			camera.screenRatio = engine.width / engine.height;
+		else
+			camera.screenRatio = t.width / t.height;
 		camera.update();
 		ctx.camera = camera;
 		ctx.engine = engine;

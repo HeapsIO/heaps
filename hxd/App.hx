@@ -30,6 +30,25 @@ class App {
 	function onResize() {
 	}
 
+	function setScene3D( s3d : h3d.scene.Scene, disposePrevious = true ) {
+		sevents.removeScene(this.s3d);
+		sevents.addScene(s3d);
+		s3d.addPass(s2d);
+		if( disposePrevious )
+			this.s3d.dispose();
+		this.s3d = s3d;
+	}
+
+	function setScene2D( s2d : h2d.Scene, disposePrevious = true ) {
+		sevents.removeScene(this.s2d);
+		sevents.addScene(s2d,0);
+		s3d.removePass(this.s2d);
+		s3d.addPass(s2d);
+		if( disposePrevious )
+			this.s2d.dispose();
+		this.s2d = s2d;
+	}
+
 	function setup() {
 		var initDone = false;
 		engine.onResized = function() {
