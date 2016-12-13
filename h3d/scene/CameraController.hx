@@ -118,6 +118,16 @@ class CameraController extends h3d.scene.Object {
 	}
 
 	function onEvent( e : hxd.Event ) {
+
+		var p : Object = this;
+		while( p != null ) {
+			if( !p.visible ) {
+				e.propagate = true;
+				return;
+			}
+			p = p.parent;
+		}
+
 		switch( e.kind ) {
 		case EWheel:
 			if( hxd.Key.isDown(hxd.Key.CTRL) ) {

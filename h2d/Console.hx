@@ -55,8 +55,8 @@ class Console extends h2d.Sprite {
 		addAlias("?", "help");
 	}
 
-	public function addCommand( name, help, args, callb : Dynamic ) {
-		commands.set(name, { help : help, args:args, callb:callb } );
+	public function addCommand( name, ?help, args, callb : Dynamic ) {
+		commands.set(name, { help : help == null ? "" : help, args:args, callb:callb } );
 	}
 
 	public function addAlias( name, command ) {
