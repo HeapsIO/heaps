@@ -68,6 +68,8 @@ class TreeView
 	public var y(default, set) : Float;
 	public var selected : TreeView;
 
+	public static var currentOver : TreeView;
+
 	public function new (o, parent = null) {
 		if(cont == null)
 			throw("TreeView must be initialized");
@@ -89,17 +91,27 @@ class TreeView
 			isdummy = true;
 
 		if(parent == null) {
+
+			function getCur(e:hxd.Event) {
+				var id = Std.int(e.relY / height);
+				return curr[id];
+			}
+
 			bt.onOver = function(e:hxd.Event) {
 				fg.visible = true;
+				currentOver = getCur(e);
 			}
 			bt.onOut = function(e:hxd.Event) {
 				fg.visible = false;
 				if(!select.visible)
 					setHighligth(null);
+				currentOver = null;
 			}
 			bt.onMove = function(e:hxd.Event) {
 				var id = Std.int(e.relY / height);
 				fg.y = id * height;
+				currentOver = getCur(e);
+
 				if(!select.visible){
 					select.y = id * height;
 					setHighligth(curr[id]);
@@ -107,8 +119,7 @@ class TreeView
 				else setHighligth(curr[Std.int(select.y / height)]);
 			}
 			bt.onClick = function(e:hxd.Event) {
-				var id = Std.int(e.relY / height);
-				var row = curr[id];
+				var row = getCur(e);
 
 				selected = row;
 
@@ -141,13 +152,19 @@ class TreeView
 							}
 						}
 				}
-				e.propagate = false;
+
+				bt.onMove(e);
 			}
 			bt.onWheel = function(e : hxd.Event) {
 				cont.y -= e.wheelDelta * height * 3;
-				e.propagate = false;
 			};
-			bt.onPush = function(e : hxd.Event) { e.propagate = false; }
+
+			bt.onKeyDown = function(e) {
+				e.propagate = true;
+			};
+			bt.onKeyUp = function(e) {
+				e.propagate = true;
+			};
 
 			getObjectsLib(this);
 			draw();
@@ -155,16 +172,13 @@ class TreeView
 	}
 
 	public function onKey(e:hxd.Event) {
-		if( selected == null ) return;
-		if( e.keyCode == "V".code ) {
-			selected.obj.visible = !selected.obj.visible;
-			draw();
-		}
+		if( e.keyCode == "V".code )
+			obj.visible = !obj.visible;
 	}
 
 	function setHighligth(e : TreeView) {
 		if(highlight != null) {
-			for( m in highlight.obj.getMaterials() )
+			for( m in highlight.getMaterials() )
 				m.mainPass.removeShader(m.mainPass.getShader(h3d.shader.ColorAdd));
 			var skin = highlight.joints != null ? highlight : null;
 			if(skin == null && highlight.parent != null)
@@ -208,6 +222,15 @@ class TreeView
 				e.childs.push(child);
 				getObjectsRec(child);
 			}
+			if( Viewer.props.materials ) {
+				var m = e.obj.isMesh() ? e.obj.toMesh() : null;
+				var mm = Std.instance(m, h3d.scene.MultiMaterial);
+				var mats = if( mm != null ) mm.materials else if( m != null && m.material.name != null ) [m.material] else [];
+				for( m in mats ) {
+					var child = new TreeMaterial(e.obj, e, m);
+					e.childs.push(child);
+				}
+			}
 		}
 		getObjectsRec(parent);
 	}
@@ -245,7 +268,6 @@ class TreeView
 			select = new h2d.Bitmap(h2d.Tile.fromColor(0), cont);
 			select.visible = false;
 			bt = new h2d.Interactive(0, 0, cont);
-			bt.propagateEvents = true;
 
 			var t = Res.dot.toTile();
 			t.dx -= t.width >> 1;
@@ -275,6 +297,15 @@ class TreeView
 				}
 	}
 
+	function getName() {
+		var str = obj.toString();
+		return StringTools.startsWith(str, "Mesh(Joint(") ? str.substr(5, str.length - 6) : str;
+	}
+
+	function isVisible() {
+		return obj.visible;
+	}
+
 	public function draw(level = 0) {
 		if(level == 0)
 			clear();
@@ -293,10 +324,9 @@ class TreeView
 
 		if(tf != null) tf.remove();
 		tf = new h2d.Text(font, cont);
-		var str = obj.toString();
-		tf.text = str.indexOf("Joint") != -1 ? str.substr(5, str.length - 6) : str;
+		tf.text = getName();
 
-		tf.color.setColor(obj.visible ? 0xFFFFFFFF : 0xFF808080);
+		tf.color.setColor(isVisible() ? 0xFFFFFFFF : 0xFF808080);
 		tf.x = 5 + dx;
 		tf.y = 1 + minHeight;
 
@@ -324,6 +354,9 @@ class TreeView
 		return showJoints = b;
 	}
 
+	function getMaterials() {
+		return obj.getMaterials();
+	}
 
 	function setDummy(?o : h3d.scene.Object) {
 		if(o == null) {
@@ -352,7 +385,7 @@ class TreeView
 			if(highlight != null) {
 				var s = 0.8 + 0.2 * Math.sin(cpt);
 				var color = new h3d.Vector(vect.x * s, vect.y * s, vect.z * s);
-				for( m in highlight.obj.getMaterials() ) {
+				for( m in highlight.getMaterials() ) {
 					m.mainPass.removeShader(m.mainPass.getShader(h3d.shader.ColorAdd));
 					m.mainPass.addShader(new h3d.shader.ColorAdd(color.toColor()));
 				}
@@ -398,4 +431,45 @@ class TreeView
 		for(c in childs)
 			c.trace(level + 1);
 	}
+}
+
+class TreeMaterial extends TreeView {
+
+	var mat : h3d.mat.MeshMaterial;
+
+	public function new(o, parent, mat) {
+		this.mat = mat;
+		super(o, parent);
+	}
+
+	override function getObjectsLib(parent:TreeView) {
+		// nothing
+	}
+
+	override function getName() {
+		return "Material" + mat.name;
+	}
+
+	override function onKey(e:hxd.Event) {
+		switch( e.keyCode ) {
+		case "V".code:
+			mat.mainPass.culling = (mat.mainPass.culling == Both ? None : Both);
+		case "T".code:
+			hxd.File.browse(function(sel) {
+				sel.load(function(bytes) {
+					mat.texture = hxd.res.Any.fromBytes("", bytes).toTexture();
+				});
+			},{ fileTypes : [{ name : "Texture", extensions : ["png","gif","jpg","jpeg"] }] });
+		default:
+		}
+	}
+
+	override function getMaterials() : Array<h3d.mat.Material> {
+		return [mat];
+	}
+
+	override function isVisible() {
+		return mat.mainPass.culling != Both && super.isVisible();
+	}
+
 }
