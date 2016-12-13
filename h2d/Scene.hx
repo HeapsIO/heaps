@@ -102,6 +102,15 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 	}
 
+	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) {
+		var s : Sprite = cast i;
+		while( s != null ) {
+			if( !s.visible ) return false;
+			s = s.parent;
+		}
+		return true;
+	}
+
 	public function getInteractive( x : Float, y : Float ) {
 		var rx = x * matA + y * matB + absX;
 		var ry = x * matC + y * matD + absY;

@@ -71,6 +71,15 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		i.handleEvent(event);
 	}
 
+	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) {
+		var o : Object = cast i;
+		while( o != null ) {
+			if( !o.visible ) return false;
+			o = o.parent;
+		}
+		return true;
+	}
+
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) {
 
 		if( interactives.length == 0 )

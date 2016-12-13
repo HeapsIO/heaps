@@ -5,6 +5,7 @@ interface InteractiveScene {
 	public function handleEvent( e : Event, last : Interactive ) : Interactive;
 	public function dispatchEvent( e : Event, to : Interactive ) : Void;
 	public function dispatchListeners( e : Event ) : Void;
+	public function isInteractiveVisible( i : Interactive ) : Bool;
 }
 
 interface Interactive {
@@ -96,12 +97,15 @@ class SceneEvents {
 		case ERelease: checkPush = true;
 		case EKeyUp, EKeyDown, EWheel:
 			if( currentFocus != null ) {
-				event.relX = event.relY = 0;
-				currentFocus.handleEvent(event);
-				event.relX = oldX;
-				event.relY = oldY;
-				if( !event.propagate )
-					return;
+				var s = currentFocus.getInteractiveScene();
+				if( s != null && s.isInteractiveVisible(currentFocus) ) {
+					event.relX = event.relY = 0;
+					currentFocus.handleEvent(event);
+					event.relX = oldX;
+					event.relY = oldY;
+					if( !event.propagate )
+						return;
+				}
 			}
 		default:
 		}
