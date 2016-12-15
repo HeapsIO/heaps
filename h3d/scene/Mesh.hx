@@ -10,6 +10,7 @@ class Mesh extends Object {
 		this.primitive = prim;
 		if( mat == null ) mat = new h3d.mat.MeshMaterial(null);
 		this.material = mat;
+		this.primitive.alloc(null);
 	}
 
 	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
