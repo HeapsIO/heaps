@@ -2,7 +2,7 @@ package h2d;
 
 class HtmlText extends Text {
 
-	var images : Array<Bitmap> = [];
+	var elements : Array<Sprite> = [];
 	var xPos : Int;
 	var yPos : Int;
 	var xMax : Int;
@@ -36,11 +36,15 @@ class HtmlText extends Text {
 		return null;
 	}
 
+	public dynamic function loadFont( name : String ) : Font {
+		return font;
+	}
+
 	override function initGlyphs( text : String, rebuild = true, handleAlign = true, ?lines : Array<Int> ) {
 		if( rebuild ) {
 			glyphs.clear();
-			for( i in images ) i.remove();
-			images = [];
+			for( e in elements ) e.remove();
+			elements = [];
 		}
 		glyphs.setDefaultColor(textColor);
 		xPos = 0;
@@ -49,7 +53,7 @@ class HtmlText extends Text {
 		calcYMin = 0;
 		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
 		for( e in doc )
-			addNode(e, rebuild);
+			addNode(e, font, rebuild);
 
 		var x = xPos, y = yPos;
 		calcWidth = x > xMax ? x : xMax;
@@ -71,17 +75,24 @@ class HtmlText extends Text {
 		return t;
 	}
 
-	function addNode( e : Xml, rebuild : Bool ) {
+	function addNode( e : Xml, font : Font, rebuild : Bool ) {
 		if( e.nodeType == Xml.Element ) {
-			var colorChanged = false;
+			var prevColor = null, prevGlyphs = null;
 			switch( e.nodeName.toLowerCase() ) {
 			case "font":
 				for( a in e.attributes() ) {
 					var v = e.get(a);
 					switch( a.toLowerCase() ) {
 					case "color":
-						colorChanged = true;
+						if( prevColor == null ) prevColor = @:privateAccess glyphs.curColor.clone();
 						glyphs.setDefaultColor(Std.parseInt("0x" + v.substr(1)));
+					case "face":
+						font = loadFont(v);
+						if( prevGlyphs == null ) prevGlyphs = glyphs;
+						var prev = glyphs;
+						glyphs = new TileGroup(font == null ? null : font.tile, this);
+						@:privateAccess glyphs.curColor.load(prev.curColor);
+						elements.push(glyphs);
 					default:
 					}
 				}
@@ -104,18 +115,21 @@ class HtmlText extends Text {
 					var b = new Bitmap(i, this);
 					b.x = xPos;
 					b.y = py;
-					images.push(b);
+					elements.push(b);
 				}
 				xPos += i.width + letterSpacing;
 			default:
 			}
 			for( child in e )
-				addNode(child, rebuild);
-			if( colorChanged )
-				glyphs.setDefaultColor(textColor);
+				addNode(child, font, rebuild);
+			if( prevGlyphs != null )
+				glyphs = prevGlyphs;
+			if( prevColor != null )
+				@:privateAccess glyphs.curColor.load(prevColor);
 		} else {
 			var t = splitText(htmlToText(e.nodeValue), xPos);
 			var prevChar = -1;
+			var dy = this.font.baseLine - font.baseLine;
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
 				if( cc == "\n".code ) {
@@ -127,8 +141,8 @@ class HtmlText extends Text {
 				}
 				var e = font.getChar(cc);
 				xPos += e.getKerningOffset(prevChar);
-				if( rebuild ) glyphs.add(xPos, yPos, e.t);
-				if( yPos == 0 && e.t.dy < calcYMin ) calcYMin = e.t.dy;
+				if( rebuild ) glyphs.add(xPos, yPos + dy, e.t);
+				if( yPos == 0 && e.t.dy+dy < calcYMin ) calcYMin = e.t.dy + dy;
 				xPos += e.width + letterSpacing;
 				prevChar = cc;
 			}
@@ -144,11 +158,12 @@ class HtmlText extends Text {
 
 	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
 		if( forSize )
-			for( i in images )
-				i.visible = false;
+			for( i in elements )
+				if( Std.is(i,h2d.Bitmap) )
+					i.visible = false;
 		super.getBoundsRec(relativeTo, out, forSize);
 		if( forSize )
-			for( i in images )
+			for( i in elements )
 				i.visible = true;
 	}
 

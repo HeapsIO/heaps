@@ -53,6 +53,8 @@ class BitmapFont extends Resource {
 		if( a == null )
 			a = glyphs.get("a".code);
 		if( a == null )
+			a = glyphs.get("0".code); // numerical only
+		if( a == null )
 			font.baseLine = font.lineHeight - 2;
 		else
 			font.baseLine = a.t.dy + a.t.height;
