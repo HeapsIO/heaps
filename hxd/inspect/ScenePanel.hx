@@ -296,7 +296,7 @@ class ScenePanel extends Panel {
 	var scenePosition = 0;
 	var currentPick(default,set) : h3d.scene.Mesh;
 	var currentPickShader : hxsl.Shader;
-	var btPick : cdb.jq.JQuery;
+	var btPick : vdom.JQuery;
 	var lastPickEvent : Null<Int>;
 	var sprops : SceneProps;
 	public var showHidden(default, null) : Bool = true;

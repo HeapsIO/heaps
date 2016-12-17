@@ -1,17 +1,17 @@
 package hxd.inspect;
-import cdb.jq.JQuery;
+import vdom.JQuery;
 import hxd.inspect.Property;
 
 private typedef History = { path : String, oldV : Dynamic, newV : Dynamic };
 
-class PropManager extends cdb.jq.Client {
+class PropManager extends vdom.Client {
 
 	public var host : String = "127.0.0.1";
 	public var port = 6669;
 	public var connected(default,null) = false;
 
 	var sock : hxd.net.Socket;
-	var pendingMessages : Array<cdb.jq.Message>;
+	var pendingMessages : Array<vdom.Message>;
 
 	var refreshProps : Void -> Void;
 	var history : Array<History>;
@@ -38,8 +38,7 @@ class PropManager extends cdb.jq.Client {
 				var len = try sock.input.readUInt16() catch( e : haxe.io.Eof ) -1;
 				if( len < 0 ) break;
 				var data = sock.input.read(len);
-				var msg : cdb.jq.Message.Answer = cdb.BinSerializer.unserialize(data);
-				handle(msg);
+				handle(decodeAnswer(data));
 			}
 		}
 		connect();
@@ -52,7 +51,7 @@ class PropManager extends cdb.jq.Client {
 		}
 	}
 
-	override function onKey(e:cdb.jq.Event) {
+	override function onKey(e:vdom.Event) {
 		switch( e.keyCode ) {
 		case 'Z'.code if( e.ctrlKey ):
 			undo();
@@ -63,7 +62,7 @@ class PropManager extends cdb.jq.Client {
 		}
 	}
 
-	public dynamic function handleKey( e : cdb.jq.Event ) {
+	public dynamic function handleKey( e : vdom.Event ) {
 	}
 
 	function connect() {
@@ -78,17 +77,17 @@ class PropManager extends cdb.jq.Client {
 
 	function flushMessages() {
 		if( pendingMessages == null ) return;
-		var msg = pendingMessages.length == 1 ? pendingMessages[0] : cdb.jq.Message.Group(pendingMessages);
+		var msg = pendingMessages.length == 1 ? pendingMessages[0] : vdom.Message.Group(pendingMessages);
 		pendingMessages = null;
 		if( sock == null ) return;
-		var data = cdb.BinSerializer.serialize(msg);
+		var data = encodeMessage(msg);
 		sock.out.wait();
 		sock.out.writeInt32(data.length);
 		sock.out.write(data);
 		sock.out.flush();
 	}
 
-	override function send( msg : cdb.jq.Message ) {
+	override function send( msg : vdom.Message ) {
 		if( pendingMessages == null ) {
 			pendingMessages = [];
 			haxe.Timer.delay(flushMessages,0);

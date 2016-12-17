@@ -1,5 +1,5 @@
 package hxd.inspect;
-import cdb.jq.JQuery;
+import vdom.JQuery;
 import hxd.inspect.Property;
 
 class Tool {
@@ -215,7 +215,7 @@ class Inspector {
 		return props.connected;
 	}
 
-	public inline function J( ?elt : cdb.jq.Dom, ?query : String ) {
+	public inline function J( ?elt : vdom.Dom, ?query : String ) {
 		return props.J(elt,query);
 	}
 
@@ -239,7 +239,7 @@ class Inspector {
 		panelList.push({ name : name, create : create, p : null });
 	}
 
-	function onKey( e : cdb.jq.Event ) {
+	function onKey( e : vdom.Event ) {
 		switch( e.keyCode ) {
 		case 'S'.code if( e.ctrlKey ):
 			save();

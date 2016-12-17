@@ -65,7 +65,7 @@ class StatsPanel extends Panel {
 		}
 	}
 
-	function showMemoryDetails( button : cdb.jq.JQuery ) {
+	function showMemoryDetails( button : vdom.JQuery ) {
 		var id = button.find("span").getAttr("id");
 		button.parent().parent().find(".detail_" + id).remove();
 

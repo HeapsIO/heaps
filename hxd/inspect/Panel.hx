@@ -11,11 +11,11 @@ enum DockDirection {
 class Panel extends Node {
 
 	var inspect : Inspector;
-	var panel : cdb.jq.JQuery;
+	var panel : vdom.JQuery;
 	var saveDock : { align : DockDirection, size : Float, into : Panel };
 	public var visible(default, null) : Bool;
 	public var caption(default, set) : String;
-	public var content : cdb.jq.JQuery;
+	public var content : vdom.JQuery;
 
 	public function new( name, caption, ?panelGroup ) {
 		super(name, panelGroup);

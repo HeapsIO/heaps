@@ -11,8 +11,8 @@ enum Property {
 	PGroup( name : String, props : Array<Property> );
 	PTexture( name : String, get : Void -> h3d.mat.Texture, set : h3d.mat.Texture -> Void );
 	PFloats( name : String, get : Void -> Array<Float>, set : Array<Float> -> Void );
-#if castle
-	PPopup( p : Property, menu : Array<String>, click : cdb.jq.JQuery -> Int -> Void );
-	PCustom( name : String, content : Void -> cdb.jq.JQuery, ?set : Dynamic -> Void );
+#if hxbit
+	PPopup( p : Property, menu : Array<String>, click : vdom.JQuery -> Int -> Void );
+	PCustom( name : String, content : Void -> vdom.JQuery, ?set : Dynamic -> Void );
 #end
 }

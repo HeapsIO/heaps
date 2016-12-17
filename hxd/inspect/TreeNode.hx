@@ -4,7 +4,7 @@ class TreeNode extends Node {
 
 	public var icon(default, set) : String;
 	public var openIcon(default, set) : Null<String>;
-	var jchild : cdb.jq.JQuery;
+	var jchild : vdom.JQuery;
 
 	override function initContent() {
 		j = getJRoot().query("<li>");

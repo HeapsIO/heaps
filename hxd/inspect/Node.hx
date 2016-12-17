@@ -5,7 +5,7 @@ class Node {
 	public var name(default,set) : String;
 	public var parent(default, set) : Node;
 	public var props : Void -> Array<Property>;
-	public var j : cdb.jq.JQuery;
+	public var j : vdom.JQuery;
 	var childs : Array<Node>;
 
 	public function new( name, ?parent ) {

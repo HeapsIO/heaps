@@ -74,13 +74,17 @@ class SocketHost extends NetworkHost {
 		isAuth = false;
 	}
 
-	public function close() {
+	public function dispose() {
+		close();
+		if( NetworkHost.current == this ) NetworkHost.current = null;
+	}
+
+	function close() {
 		if( socket != null ) {
 			socket.close();
 			socket = null;
 		}
 		connected = false;
-		if( NetworkHost.current == this ) NetworkHost.current = null;
 	}
 
 	public function connect( host : String, port : Int, ?onConnect : Bool -> Void ) {
