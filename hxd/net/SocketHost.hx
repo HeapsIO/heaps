@@ -80,6 +80,7 @@ class SocketHost extends NetworkHost {
 			socket = null;
 		}
 		connected = false;
+		if( NetworkHost.current == this ) NetworkHost.current = null;
 	}
 
 	public function connect( host : String, port : Int, ?onConnect : Bool -> Void ) {
