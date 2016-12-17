@@ -166,6 +166,8 @@ class Socket {
 		#end
 	}
 
+	public static inline var ALLOW_BIND = #if (flash && air3) true #else false #end;
+
 	public function bind( host : String, port : Int, onConnect : Socket -> Void, listenCount = 5 ) {
 		close();
 		openedSocks.push(this);

@@ -1,5 +1,5 @@
 
-class Cursor implements hxd.net.NetworkSerializable {
+class Cursor implements hxbit.NetworkSerializable {
 
 	@:s var color : Int;
 	@:s public var uid : Int;
@@ -79,20 +79,30 @@ class Cursor implements hxd.net.NetworkSerializable {
 
 }
 
+//PARAM=-lib hxbit
 class Network extends hxd.App {
 
 	static var HOST = "127.0.0.1";
 	static var PORT = 6676;
 
-	public var host : hxd.net.LocalHost;
+	public var host : hxd.net.SocketHost;
 	public var event : hxd.WaitEvent;
 	public var uid : Int;
 	public var cursor : Cursor;
 
 	override function init() {
 		event = new hxd.WaitEvent();
-		host = new hxd.net.LocalHost();
+		host = new hxd.net.SocketHost();
 		host.setLogger(function(msg) log(msg));
+
+		if( !hxd.net.Socket.ALLOW_BIND ) {
+			#if flash
+			log("Using network with flash requires compiling with -lib air3 and running through AIR");
+			#else
+			log("Server not allowed on this platform");
+			#end
+		}
+
 		try {
 			host.wait(HOST, PORT, function(c) {
 				log("Client Connected");
@@ -108,8 +118,9 @@ class Network extends hxd.App {
 			start();
 
 			// force a new window to open, which will connect the client
-			hxd.net.LocalHost.openNewWindow();
+			hxd.net.SocketHost.openNewWindow();
 		} catch( e : Dynamic ) {
+
 			// we could not start the server
 			log("Connecting");
 
