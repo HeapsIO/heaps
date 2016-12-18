@@ -22,7 +22,7 @@ private class ALChannel {
 	var native : NativeChannel;
 	var samples : Int;
 
-	var buffers : Array<Int>;
+	var buffers : Array<lime.audio.openal.ALBuffer>;
 	var src : Int;
 
 	var fbuf : haxe.io.Bytes;

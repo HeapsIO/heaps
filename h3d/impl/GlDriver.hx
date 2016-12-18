@@ -20,7 +20,7 @@ import lime.graphics.opengl.GL;
 private typedef Uniform = Dynamic;
 private typedef Program = lime.graphics.opengl.GLProgram;
 private typedef GLShader = lime.graphics.opengl.GLShader;
-private typedef Framebuffer = lime.graphics.opengl.Framebuffer;
+private typedef Framebuffer = lime.graphics.opengl.GLFramebuffer;
 private typedef Uint16Array = lime.utils.UInt16Array;
 private typedef Uint8Array = lime.utils.UInt8Array;
 private typedef Float32Array = lime.utils.Float32Array;
