@@ -43,7 +43,8 @@ class File {
 			try f = flash.filesystem.File.applicationDirectory.resolvePath(options.defaultPath) catch( e : Dynamic ) {}
 		lastBrowseDir = f;
 		var basePath = f.clone();
-		f.addEventListener(flash.events.Event.SELECT, function(_) {
+		function onSelect(_) {
+			f.removeEventListener(flash.events.Event.SELECT, onSelect);
 			var path = f.nativePath;
 			if( options.relativePath ) {
 				if( !basePath.isDirectory ) basePath = basePath.parent;
@@ -65,7 +66,8 @@ class File {
 				},
 			};
 			onSelect(sel);
-		});
+		}
+		f.addEventListener(flash.events.Event.SELECT, onSelect);
 		f.browseForOpen(options.title == null ? "" : options.title, filters);
 	}
 	#end
@@ -105,7 +107,8 @@ class File {
 		if( options.defaultPath != null )
 			try f = f.resolvePath(options.defaultPath) catch( e : Dynamic ) {}
 		var basePath = f.clone();
-		f.addEventListener(flash.events.Event.SELECT, function(_) {
+		function onSelect(_) {
+			f.removeEventListener(flash.events.Event.SELECT, onSelect);
 			// save data
 			var o = new flash.filesystem.FileStream();
 			o.open(f, flash.filesystem.FileMode.WRITE);
@@ -121,7 +124,8 @@ class File {
 				}
 				options.saveFileName(path);
 			}
-		});
+		};
+		f.addEventListener(flash.events.Event.SELECT, onSelect);
 		f.browseForSave(options.title == null ? "" : options.title);
 	}
 	#end
