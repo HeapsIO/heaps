@@ -43,8 +43,8 @@ class File {
 			try f = flash.filesystem.File.applicationDirectory.resolvePath(options.defaultPath) catch( e : Dynamic ) {}
 		lastBrowseDir = f;
 		var basePath = f.clone();
-		function onSelect(_) {
-			f.removeEventListener(flash.events.Event.SELECT, onSelect);
+		function onSelectCallb(_) {
+			f.removeEventListener(flash.events.Event.SELECT, onSelectCallb);
 			var path = f.nativePath;
 			if( options.relativePath ) {
 				if( !basePath.isDirectory ) basePath = basePath.parent;
@@ -67,7 +67,7 @@ class File {
 			};
 			onSelect(sel);
 		}
-		f.addEventListener(flash.events.Event.SELECT, onSelect);
+		f.addEventListener(flash.events.Event.SELECT, onSelectCallb);
 		f.browseForOpen(options.title == null ? "" : options.title, filters);
 	}
 	#end
