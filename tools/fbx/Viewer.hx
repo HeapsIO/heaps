@@ -301,6 +301,7 @@ class Viewer extends hxd.App {
 					return;
 				}
 				t.resize(size.width, size.height);
+				t.wrap = t.flags.has(IsNPOT) ? Clamp : Repeat;
 				t.uploadPixels(new hxd.Pixels(size.width, size.height, pixels, BGRA));
 				reload.push(loadTexture.bind(textureName, mat, handleAlpha));
 			});
@@ -311,6 +312,7 @@ class Viewer extends hxd.App {
 			loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
 				var bmp = flash.Lib.as(loader.content, flash.display.Bitmap).bitmapData;
 				t.resize(bmp.width, bmp.height);
+				t.wrap = t.flags.has(IsNPOT) ? Clamp : Repeat;
 				t.uploadBitmap(hxd.BitmapData.fromNative(bmp));
 				reload.push(loadTexture.bind(textureName, mat, handleAlpha));
 			});
