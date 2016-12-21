@@ -183,7 +183,7 @@ class GpuPartGroup {
 		pshader.fadeOut = fadeOut;
 		pshader.fadePower = fadePower;
 		pshader.gravity = gravity;
-		pshader.loopCounter = emitLoop ? 1 : 100000;
+		pshader.loopCounter = emitLoop ? 1 : 1000000;
 		pshader.color = colorGradient == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : colorGradient;
 		pshader.texture = texture == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : texture;
 		var frameCount = frameCount == 0 ? frameDivisionX * frameDivisionY : frameCount;
@@ -227,6 +227,117 @@ class GpuPartGroup {
 		texture = loadTexture(o.texture);
 		colorGradient = loadTexture(o.colorGradient);
 		if( Math.isNaN(emitStartDist) ) emitStartDist = 0;
+	}
+
+	public function emitPart( rnd : hxd.Rand, pt : GpuPart, ebounds : h3d.col.Bounds, absPos : h3d.Matrix ) {
+		var g = this;
+		inline function rand() return rnd.rand();
+		inline function srand() return rnd.srand();
+
+		var size = g.size * (1 + srand() * g.sizeRand), rot = srand() * Math.PI * g.rotInit;
+		var vsize = g.sizeIncr, vrot = g.rotSpeed * (1 + rand() * g.rotSpeedRand) * (srand() < 0 ? -1 : 1);
+
+
+		var life = g.life * (1 + srand() * g.lifeRand), time = -rand() * life * (1 - g.emitSync) - g.emitDelay;
+
+		var p = new h3d.col.Point();
+		var v = new h3d.col.Point();
+
+		switch( g.emitMode ) {
+		case Point:
+
+			v.x = srand();
+			v.y = srand();
+			v.z = srand();
+			v.normalizeFast();
+			var r = g.emitStartDist + g.emitDist * rand();
+			p.x = v.x * r;
+			p.y = v.y * r;
+			p.z = v.z * r;
+
+		case Cone:
+			var theta = rand() * Math.PI * 2;
+			var phi = g.emitAngle * srand();
+			if( g.emitAngle < 0 ) phi += Math.PI;
+			var r = g.emitStartDist + g.emitDist * rand();
+			v.x = Math.sin(phi) * Math.cos(theta);
+			v.y = Math.sin(phi) * Math.sin(theta);
+			v.z = Math.cos(phi);
+			p.x = v.x * r;
+			p.y = v.y * r;
+			p.z = v.z * r;
+
+		case ParentBounds, VolumeBounds, CameraBounds:
+
+			var max = 1 + g.emitDist;
+			if( max < 0 ) max = 0;
+
+			if( g.emitStartDist > 0 ) {
+
+				var min = g.emitStartDist * 0.5;
+
+				// prevent too low volume
+				if( min > 0.49 ) min = 0.49;
+
+				// inner volume check
+
+				do {
+					p.x = rand() - 0.5;
+					p.y = rand() - 0.5;
+					p.z = rand() - 0.5;
+				} while( (p.x > -min && p.x < min) && (p.y > -min && p.y < min) && (p.z > -min && p.z < min) );
+
+				p.x *= max;
+				p.y *= max;
+				p.z *= max;
+
+			} else {
+
+				p.x = (rand() - 0.5) * max;
+				p.y = (rand() - 0.5) * max;
+				p.z = (rand() - 0.5) * max;
+
+			}
+
+
+			var c = ebounds.getCenter();
+			p.x = p.x * ebounds.xSize + c.x;
+			p.y = p.y * ebounds.xSize + c.y;
+			p.z = p.z * ebounds.zSize + c.z;
+
+			v.x = srand();
+			v.y = srand();
+			v.z = srand();
+			v.normalizeFast();
+
+		}
+
+
+		var speed = g.speed * (1 + srand() * g.speedRand);
+
+		v.x *= speed;
+		v.y *= speed;
+		v.z *= speed;
+
+
+		// when sorted/progressive, use absolute coordinates
+		if( absPos != null ) {
+			p.transform(absPos);
+			v.transform3x3(absPos);
+		}
+
+		pt.sx = p.x;
+		pt.sy = p.y;
+		pt.sz = p.z;
+		pt.vx = v.x;
+		pt.vy = v.y;
+		pt.vz = v.z;
+		pt.time = time;
+		pt.life = life;
+		pt.initX = rot;
+		pt.initY = size;
+		pt.deltaX = vrot;
+		pt.deltaY = vsize;
 	}
 
 }
@@ -353,165 +464,66 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			if( g.emitLoop )
 				duration = Math.POSITIVE_INFINITY;
 
-			var partAlloc = g.particles;
 			var needPart = g.sortMode != None;
+			var partAlloc = g.particles;
+			var useAbsPos = needPart;
 			g.particles = null;
+			var pt = needPart ? null : new GpuPart();
+
+			if( calcEmit != g.emitMode ) {
+				calcEmit = g.emitMode;
+				switch( g.emitMode ) {
+				case ParentBounds:
+					ebounds = parent.getBounds();
+					ebounds.transform3x4(getInvPos());
+				case VolumeBounds, CameraBounds:
+					ebounds = volumeBounds;
+					if( ebounds == null ) ebounds = volumeBounds = h3d.col.Bounds.fromValues( -1, -1, -1, 2, 2, 2 );
+				default:
+				}
+			}
 
 			for( i in 0...g.nparts ) {
 
-				inline function rand() return rnd.rand();
-				inline function srand() return rnd.srand();
-
-				var size = g.size * (1 + srand() * g.sizeRand), rot = srand() * Math.PI * g.rotInit;
-				var vsize = g.sizeIncr, vrot = g.rotSpeed * (1 + rand() * g.rotSpeedRand) * (srand() < 0 ? -1 : 1);
-
-
-				var life = g.life * (1 + srand() * g.lifeRand), time = -rand() * life * (1 - g.emitSync) - g.emitDelay;
-
-				var totalLife = life - time;
-				if( totalLife > duration ) duration = totalLife;
-
-				var p = new h3d.col.Point();
-				var v = new h3d.col.Point();
-
-				switch( g.emitMode ) {
-				case Point:
-
-					v.x = srand();
-					v.y = srand();
-					v.z = srand();
-					v.normalizeFast();
-					var r = g.emitStartDist + g.emitDist * rand();
-					p.x = v.x * r;
-					p.y = v.y * r;
-					p.z = v.z * r;
-
-				case Cone:
-					var theta = rand() * Math.PI * 2;
-					var phi = g.emitAngle * srand();
-					if( g.emitAngle < 0 ) phi += Math.PI;
-					var r = g.emitStartDist + g.emitDist * rand();
-					v.x = Math.sin(phi) * Math.cos(theta);
-					v.y = Math.sin(phi) * Math.sin(theta);
-					v.z = Math.cos(phi);
-					p.x = v.x * r;
-					p.y = v.y * r;
-					p.z = v.z * r;
-
-				case ParentBounds, VolumeBounds, CameraBounds:
-
-					if( calcEmit != g.emitMode ) {
-						calcEmit = g.emitMode;
-						if( g.emitMode == ParentBounds ) {
-							ebounds = parent.getBounds();
-							ebounds.transform3x4(getInvPos());
-						} else {
-							ebounds = volumeBounds;
-							if( ebounds == null ) ebounds = volumeBounds = h3d.col.Bounds.fromValues( -1, -1, -1, 2, 2, 2 );
-						}
-					}
-
-					var max = 1 + g.emitDist;
-					if( max < 0 ) max = 0;
-
-					if( g.emitStartDist > 0 ) {
-
-						var min = g.emitStartDist * 0.5;
-
-						// prevent too low volume
-						if( min > 0.49 ) min = 0.49;
-
-						// inner volume check
-
-						do {
-							p.x = rand() - 0.5;
-							p.y = rand() - 0.5;
-							p.z = rand() - 0.5;
-						} while( (p.x > -min && p.x < min) && (p.y > -min && p.y < min) && (p.z > -min && p.z < min) );
-
-						p.x *= max;
-						p.y *= max;
-						p.z *= max;
-
-					} else {
-
-						p.x = (rand() - 0.5) * max;
-						p.y = (rand() - 0.5) * max;
-						p.z = (rand() - 0.5) * max;
-
-					}
-
-
-					var c = ebounds.getCenter();
-					p.x = p.x * ebounds.xSize + c.x;
-					p.y = p.y * ebounds.xSize + c.y;
-					p.z = p.z * ebounds.zSize + c.z;
-
-					v.x = srand();
-					v.y = srand();
-					v.z = srand();
-					v.normalizeFast();
-
-				}
-
-
-				var speed = g.speed * (1 + srand() * g.speedRand);
-
-				v.x *= speed;
-				v.y *= speed;
-				v.z *= speed;
-
-				bounds.addPos(p.x, p.y, p.z);
-				// todo : add end-of-life pos ?
-
 				if( needPart ) {
-					var pt = partAlloc;
+					pt = partAlloc;
 					if( pt == null )
 						pt = new GpuPart();
 					else
 						partAlloc = partAlloc.next;
-					// when sorted/progressive, use absolute coordinates
-					p.transform(absPos);
-					v.transform3x3(absPos);
-
-
 					pt.index = i;
-					pt.sx = p.x;
-					pt.sy = p.y;
-					pt.sz = p.z;
-					pt.vx = v.x;
-					pt.vy = v.y;
-					pt.vz = v.z;
-					pt.time = time;
-					pt.life = life;
-					pt.initX = rot;
-					pt.initY = size;
-					pt.deltaX = vrot;
-					pt.deltaY = vsize;
-
 					pt.next = g.particles;
 					g.particles = pt;
 				}
 
+				g.emitPart(rnd, pt, ebounds, useAbsPos ? absPos : null);
+
+
+				// total : also add end of life pos ?
+				bounds.addPos(pt.sx, pt.sy, pt.sz);
+
+				var totalLife = pt.life - pt.time;
+				if( totalLife > duration ) duration = totalLife;
+
 				inline function add(v) vbuf.push(v);
 				for( u in uvs ) {
-					add(p.x);
-					add(p.y);
-					add(p.z);
+					add(pt.sx);
+					add(pt.sy);
+					add(pt.sz);
 
-					add(v.x);
-					add(v.y);
-					add(v.z);
+					add(pt.vx);
+					add(pt.vy);
+					add(pt.vz);
 
 					add(u.u);
 					add(u.v);
-					add(time);
-					add(life);
+					add(pt.time);
+					add(pt.life);
 
-					add(rot);
-					add(size);
-					add(vrot);
-					add(vsize);
+					add(pt.initX);
+					add(pt.initY);
+					add(pt.deltaX);
+					add(pt.deltaY);
 				}
 			}
 		}
