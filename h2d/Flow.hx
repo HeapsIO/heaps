@@ -26,10 +26,14 @@ class FlowProperties {
 	public var minWidth : Null<Int>;
 	public var minHeight : Null<Int>;
 
-	public var calculatedWidth : Float = 0.;
-	public var calculatedHeight : Float = 0.;
+	public var calculatedWidth(default,null) : Float = 0.;
+	public var calculatedHeight(default,null) : Float = 0.;
 
 	public var isBreak(default,null) : Bool;
+
+	public var overflow : Bool = false;
+
+	var tf : h2d.Text;
 
 	public function new() {
 	}
@@ -307,7 +311,11 @@ class Flow extends Sprite {
 		if( background != null ) pos++;
 		var fp = getProperties(s);
 		super.addChildAt(s, pos);
-		if( fp == null ) fp = new FlowProperties() else properties.remove(fp);
+		if( fp == null ) {
+			fp = new FlowProperties();
+			fp.tf = Std.instance(s, h2d.Text);
+		} else
+			properties.remove(fp);
 		properties.insert(pos, fp);
 		needReflow = true;
 	}
@@ -478,6 +486,10 @@ class Flow extends Sprite {
 				if( p.isAbsolute ) continue;
 				var c = childs[i];
 				if( !c.visible ) continue;
+
+				if( p.tf != null && !p.overflow && this.maxWidth != null )
+					p.tf.maxWidth = maxWidth - (p.paddingLeft + p.paddingRight);
+
 				var b = c.getSize(tmpBounds);
 				var br = false;
 				p.calculatedWidth = b.xMax + p.paddingLeft + p.paddingRight;
@@ -562,6 +574,7 @@ class Flow extends Sprite {
 			var maxColWidth = 0.;
 			var minColWidth = this.colWidth != null ? colWidth : (this.minWidth != null && !multiline) ? (this.minWidth - (paddingLeft + paddingRight + borderWidth * 2)) : 0;
 			var tmpBounds = tmpBounds;
+			var maxWidth = maxWidth == null ? 100000000 : maxWidth - (paddingLeft + paddingRight + borderWidth * 2);
 			var maxHeight = maxHeight == null ? 100000000 : maxHeight - (paddingTop + paddingBottom + borderHeight * 2);
 			var lastIndex = 0;
 
@@ -594,6 +607,9 @@ class Flow extends Sprite {
 
 				var c = childs[i];
 				if( !c.visible ) continue;
+
+				if( p.tf != null && !p.overflow && this.maxWidth != null )
+					p.tf.maxWidth = maxWidth - (p.paddingLeft + p.paddingRight);
 
 				var b = c.getSize(tmpBounds);
 				var br = false;
