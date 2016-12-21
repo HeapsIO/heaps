@@ -7,6 +7,7 @@ class Sprite {
 	static var nullDrawable : h2d.Drawable;
 
 	var childs : Array<Sprite>;
+	var parentContainer : Container;
 	public var parent(default, null) : Sprite;
 	public var numChildren(get, never) : Int;
 
@@ -15,7 +16,7 @@ class Sprite {
 	public var scaleX(default,set) : Float;
 	public var scaleY(default,set) : Float;
 	public var rotation(default, set) : Float;
-	public var visible : Bool;
+	public var visible(default, set) : Bool;
 	public var name : String;
 	public var alpha : Float = 1.;
 
@@ -199,6 +200,14 @@ class Sprite {
 		return Std.instance(p, Scene);
 	}
 
+	function set_visible(b) {
+		if( visible == b )
+			return b;
+		visible = b;
+		onContentChanged();
+		return b;
+	}
+
 	public function addChild( s : Sprite ) {
 		addChildAt(s, childs.length);
 	}
@@ -222,6 +231,7 @@ class Sprite {
 		if( !allocated && s.allocated )
 			s.onDelete();
 		s.parent = this;
+		s.parentContainer = parentContainer;
 		s.posChanged = true;
 		// ensure that proper alloc/delete is done if we change parent
 		if( allocated ) {
@@ -230,6 +240,11 @@ class Sprite {
 			else
 				s.onParentChangedRec();
 		}
+		onContentChanged();
+	}
+
+	inline function onContentChanged() {
+		if( parentContainer != null ) parentContainer.contentChanged(this);
 	}
 
 	function onParentChangedRec() {
@@ -269,7 +284,9 @@ class Sprite {
 		if( childs.remove(s) ) {
 			if( s.allocated ) s.onDelete();
 			s.parent = null;
+			s.parentContainer = null;
 			s.posChanged = true;
+			onContentChanged();
 		}
 	}
 
@@ -701,3 +718,9 @@ class Sprite {
 	}
 
 }
+
+class Container extends Sprite {
+	@:noCompletion public function contentChanged( s : Sprite ) {
+	}
+}
+

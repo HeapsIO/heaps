@@ -120,6 +120,7 @@ class Text extends Drawable {
 	function rebuild() {
 		calcDone = false;
 		if( allocated && text != null && font != null ) initGlyphs(text);
+		onContentChanged();
 	}
 
 	public function calcTextWidth( text : hxd.UString ) {

@@ -40,7 +40,7 @@ class FlowProperties {
 
 }
 
-class Flow extends Sprite {
+class Flow extends Sprite.Container {
 
 	static var tmpBounds = new h2d.col.Bounds();
 
@@ -269,6 +269,15 @@ class Flow extends Sprite {
 		return paddingBottom = v;
 	}
 
+	override function contentChanged( s : Sprite ) {
+		while( s.parent != this )
+			s = s.parent;
+		if( getProperties(s).isAbsolute )
+			return;
+		needReflow = true;
+		onContentChanged();
+	}
+
 	/**
 		Adds some spacing by either increasing the padding of the latest
 		non absolute element or the padding of the flow if no element was found.
@@ -318,6 +327,7 @@ class Flow extends Sprite {
 			properties.remove(fp);
 		properties.insert(pos, fp);
 		needReflow = true;
+		s.parentContainer = this;
 	}
 
 	override public function removeChild(s:Sprite) {
@@ -442,6 +452,8 @@ class Flow extends Sprite {
 		See needReflow for more informations.
 	**/
 	public function reflow() {
+
+		onBeforeReflow();
 
 		var cw, ch;
 		if( !isVertical ) {
@@ -634,7 +646,7 @@ class Flow extends Sprite {
 				if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
 			}
 			alignLine(childs.length);
-			ch += paddingTop + borderHeight;
+			ch += paddingBottom + borderHeight;
 			cw = x + maxColWidth + paddingRight + borderWidth;
 
 
@@ -730,13 +742,20 @@ class Flow extends Sprite {
 			debugGraphics.drawRect(0, 0, cw, ch);
 		}
 
-		onReflow();
+		onContentChanged();
+		onAfterReflow();
 	}
 
 	/**
-		Called each time a reflow() was done.
+		Called before each reflow() is done.
 	**/
-	public dynamic function onReflow() {
+	public dynamic function onBeforeReflow() {
+	}
+
+	/**
+		Called after each time a reflow() was done.
+	**/
+	public dynamic function onAfterReflow() {
 	}
 
 }
