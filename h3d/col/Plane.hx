@@ -10,7 +10,7 @@ class Plane {
 	var nz : Float;
 	var d : Float;
 
-	inline function new(nx, ny, nz, d) {
+	public inline function new(nx, ny, nz, d) {
 		this.nx = nx;
 		this.ny = ny;
 		this.nz = nz;
@@ -26,6 +26,29 @@ class Plane {
 
 	public inline function getNormalDistance() {
 		return d;
+	}
+
+	public function transform( m : h3d.Matrix ) {
+		var m2 = new h3d.Matrix();
+		m2.initInverse(m);
+		m2.transpose();
+		transformInverseTranspose(m2);
+	}
+
+	public function transform3x3( m : h3d.Matrix ) {
+		var m2 = new h3d.Matrix();
+		m2.initInverse3x3(m);
+		m2.transpose();
+		transformInverseTranspose(m2);
+	}
+
+	inline function transformInverseTranspose(m:h3d.Matrix) {
+		var v = new h3d.Vector(nx, ny, nz, -d);
+		v.transform(m);
+		nx = v.x;
+		ny = v.y;
+		nz = v.z;
+		d = -v.w;
 	}
 
 	/**

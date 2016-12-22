@@ -14,7 +14,7 @@ class CustomObject extends Object {
 	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
 		b = super.getBounds(b, rec);
 		var tmp = primitive.getBounds().clone();
-		tmp.transform3x4(absPos);
+		tmp.transform(absPos);
 		b.add(tmp);
 		return b;
 	}

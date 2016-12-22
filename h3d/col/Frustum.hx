@@ -25,6 +25,46 @@ class Frustum {
 		pfar.normalize();
 	}
 
+	public function transform( m : h3d.Matrix ) @:privateAccess {
+		var m2 = new h3d.Matrix();
+		m2.initInverse(m);
+		m2.transpose();
+
+		pleft.transformInverseTranspose(m2);
+		pright.transformInverseTranspose(m2);
+		ptop.transformInverseTranspose(m2);
+		pbottom.transformInverseTranspose(m2);
+		pfar.transformInverseTranspose(m2);
+		pnear.transformInverseTranspose(m2);
+
+		pleft.normalize();
+		pright.normalize();
+		ptop.normalize();
+		pbottom.normalize();
+		pnear.normalize();
+		pfar.normalize();
+	}
+
+	public function transform3x3( m : h3d.Matrix ) @:privateAccess {
+		var m2 = new h3d.Matrix();
+		m2.initInverse3x3(m);
+		m2.transpose();
+
+		pleft.transformInverseTranspose(m2);
+		pright.transformInverseTranspose(m2);
+		ptop.transformInverseTranspose(m2);
+		pbottom.transformInverseTranspose(m2);
+		pfar.transformInverseTranspose(m2);
+		pnear.transformInverseTranspose(m2);
+
+		pleft.normalize();
+		pright.normalize();
+		ptop.normalize();
+		pbottom.normalize();
+		pnear.normalize();
+		pfar.normalize();
+	}
+
 	public function hasSphere( s : Sphere ) {
 		var p = s.getCenter();
 		if( pleft.distance(p) < -s.r ) return false;
@@ -53,5 +93,5 @@ class Frustum {
 			return false;
 		return true;
 	}
-	
+
 }

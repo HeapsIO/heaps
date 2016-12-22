@@ -325,7 +325,7 @@ class Matrix {
 	}
 
 	public inline function invert() {
-		inverse(this);
+		initInverse(this);
 	}
 
 	public inline function getDeterminant() {
@@ -366,7 +366,7 @@ class Matrix {
 		_41 *= invDet; _42 *= invDet; _43 *= invDet;
 	}
 
-	public function inverse( m : Matrix ) {
+	public function initInverse( m : Matrix ) {
 		var m11 = m._11; var m12 = m._12; var m13 = m._13; var m14 = m._14;
 		var m21 = m._21; var m22 = m._22; var m23 = m._23; var m24 = m._24;
 		var m31 = m._31; var m32 = m._32; var m33 = m._33; var m34 = m._34;
@@ -412,6 +412,47 @@ class Matrix {
 		_42 *= det;
 		_43 *= det;
 		_44 *= det;
+	}
+
+
+	public function initInverse3x3( m : Matrix ) {
+		var m11 = m._11; var m12 = m._12; var m13 = m._13;
+		var m21 = m._21; var m22 = m._22; var m23 = m._23;
+		var m31 = m._31; var m32 = m._32; var m33 = m._33;
+
+		_11 = m22 * m33 - m32 * m23;
+		_12 = -m12 * m33 + m32 * m13;
+		_13 = m12 * m23 - m22 * m13;
+		_21 = -m21 * m33 + m31 * m23;
+		_22 = m11 * m33 - m31 * m13;
+		_23 = -m11 * m23 + m21 * m13;
+		_31 = m21 * m32 - m31 * m22;
+		_32 = -m11 * m32 + m31 * m12;
+		_33 = m11 * m22 - m21 * m12;
+
+		var det = m11 * _11 + m12 * _21 + m13 * _31;
+		if(	Math.abs(det) < Math.EPSILON ) {
+			zero();
+			return;
+		}
+
+		det = 1.0 / det;
+		_11 *= det;
+		_12 *= det;
+		_13 *= det;
+		_14 = 0;
+		_21 *= det;
+		_22 *= det;
+		_23 *= det;
+		_24 = 0;
+		_31 *= det;
+		_32 *= det;
+		_33 *= det;
+		_34 = 0;
+		_41 = 0;
+		_42 = 0;
+		_43 = 0;
+		_44 = 1;
 	}
 
 	public function transpose() {

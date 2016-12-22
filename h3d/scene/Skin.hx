@@ -88,9 +88,9 @@ class Skin extends MultiMaterial {
 				mtmp.multiply3x4(b0.defMat, mtmp);
 			if( b0.transPos != null )
 				mtmp.multiply3x4(b0.transPos, mtmp);
-			tmp.transform3x4(mtmp);
+			tmp.transform(mtmp);
 		} else
-			tmp.transform3x4(absPos);
+			tmp.transform(absPos);
 		b.add(tmp);
 		return b;
 	}

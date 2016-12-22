@@ -13,6 +13,7 @@ private class SharedGlobal {
 class RenderContext extends h3d.impl.RenderContext {
 
 	public var camera : h3d.Camera;
+	public var scene : Scene;
 	public var drawPass : ObjectPass;
 
 	var sharedGlobals : Array<SharedGlobal>;

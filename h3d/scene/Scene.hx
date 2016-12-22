@@ -213,10 +213,20 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		camera.update();
 		ctx.camera = camera;
 		ctx.engine = engine;
+		ctx.scene = this;
 		ctx.start();
 
 		var ray = camera.rayFromScreen(pixelX, pixelY);
-		hardwarePickEmit(ray, ctx);
+		var savedRay = ray.clone();
+
+		iterVisibleMeshes(function(m) {
+			if( m.primitive == null ) return;
+			ray.transform(m.getInvPos());
+			if( m.primitive.getBounds().rayIntersection(ray) != null )
+				ctx.emitPass(m.material.mainPass, m);
+			ray.load(savedRay);
+		});
+
 		ctx.lightSystem = null;
 
 		var found = null;
@@ -243,6 +253,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.done();
 		ctx.camera = null;
 		ctx.engine = null;
+		ctx.scene = null;
 		return found;
 	}
 
@@ -261,6 +272,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		camera.update();
 		ctx.camera = camera;
 		ctx.engine = engine;
+		ctx.scene = this;
 		ctx.start();
 
 		syncRec(ctx);
@@ -305,6 +317,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		#end
 
 		ctx.done();
+		ctx.scene = null;
 		ctx.camera = null;
 		ctx.engine = null;
 	}

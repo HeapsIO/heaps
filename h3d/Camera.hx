@@ -94,7 +94,7 @@ class Camera {
 	public function getInverseViewProj() {
 		if( minv == null ) minv = new h3d.Matrix();
 		if( needInv ) {
-			minv.inverse(m);
+			minv.initInverse(m);
 			needInv = false;
 		}
 		return minv;
@@ -109,7 +109,7 @@ class Camera {
 			miview._44 = 0;
 		}
 		if( miview._44 == 0 )
-			miview.inverse(mcam);
+			miview.initInverse(mcam);
 		return miview;
 	}
 

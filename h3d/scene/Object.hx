@@ -299,11 +299,15 @@ class Object {
 		}
 	}
 
-	function hardwarePickEmit( r : h3d.col.Ray, ctx : RenderContext ) {
+	public function iterVisibleMeshes( callb : Mesh -> Void ) {
 		if( !visible || (culled && inheritCulled) )
 			return;
+		if( !culled ) {
+			var m = Std.instance(this, Mesh);
+			if( m != null ) callb(m);
+		}
 		for( o in childs )
-			o.hardwarePickEmit(r, ctx);
+			o.iterVisibleMeshes(callb);
 	}
 
 	function onParentChangedRec() {
