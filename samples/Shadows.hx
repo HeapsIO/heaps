@@ -35,14 +35,15 @@ class Shadows extends hxd.App {
 
 		dir = new h3d.scene.DirLight(new h3d.Vector(-0.3, -0.2, -1), s3d);
 		dir.enableSpecular = true;
-		s3d.lightSystem.shadowLight = dir;
 
 		shadow = cast(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
 		shadow.blur.passes = 3;
+
+		s3d.camera.pos.set(12, 12, 6);
+		new h3d.scene.CameraController(s3d).loadFromCamera();
 	}
 
 	override function update( dt : Float ) {
-		s3d.camera.pos.set(12, 12, 6);
 		time += dt * 0.01;
 		dir.direction.set(Math.cos(time), Math.sin(time) * 2, -1);
 	}

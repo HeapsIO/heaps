@@ -47,11 +47,11 @@ class Lights extends hxd.App {
 
 		s3d.lightSystem.ambientLight.set(0, 0, 0);
 
-		engine.render(s3d);
+		s3d.camera.pos.set(5, 1, 3);
+		new h3d.scene.CameraController(s3d).loadFromCamera();
 	}
 
 	override function update( dt : Float ) {
-		var dist = 5;
 		time += 0.002 * dt;
 
 		var a = [0.4, 0.2, 0.5, 0.8, 1.2, 0.5, 0.7];
@@ -65,7 +65,6 @@ class Lights extends hxd.App {
 
 		dir.direction.set(Math.cos(time * 0.3) * 0.2, Math.sin(time * 0.35) * 0.3 + 0.3, -1);
 
-		s3d.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, 3);
 	}
 
 	static function main() {

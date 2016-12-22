@@ -27,12 +27,15 @@ class Skin extends hxd.App {
 
 		var shadow = cast(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
 		shadow.power = 20;
+		shadow.color.setColor(0x301030);
 		dir.enableSpecular = true;
 
-		#if castle
+		new h3d.scene.CameraController(s3d).loadFromCamera();
+
+		#if hxbit
 		// this is an example for connecting to scene inspector
 		// and enable extra properties
-		// this requires to compile with -lib castle and run CDB
+		// this requires to compile with -lib hxbit and run http://castledb.org
 		var i = new hxd.inspect.Inspector(s3d);
 
 		var delta = s3d.camera.pos.sub(s3d.camera.target);
