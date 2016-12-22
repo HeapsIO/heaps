@@ -228,9 +228,9 @@ class Bounds implements Collider {
 		var xMin = Math.max(a.xMin, b.xMin);
 		var yMin = Math.max(a.yMin, b.yMin);
 		var zMin = Math.max(a.zMin, b.zMin);
-		var xMax = Math.max(a.xMax, b.xMax);
-		var yMax = Math.max(a.yMax, b.yMax);
-		var zMax = Math.max(a.zMax, b.zMax);
+		var xMax = Math.min(a.xMax, b.xMax);
+		var yMax = Math.min(a.yMax, b.yMax);
+		var zMax = Math.min(a.zMax, b.zMax);
 		this.xMin = xMin;
 		this.xMax = xMax;
 		this.yMin = yMin;
