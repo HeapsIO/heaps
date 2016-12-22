@@ -400,6 +400,7 @@ class Flow extends Sprite.Container {
 		if( b ) {
 			if( interactive == null ) {
 				interactive = new h2d.Interactive(0, 0, this);
+				interactive.cursor = Default;
 				properties[properties.length - 1].isAbsolute = true;
 				if( !needReflow ) {
 					interactive.width = calculatedWidth;
