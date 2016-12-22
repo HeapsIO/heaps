@@ -47,12 +47,58 @@ class ShadowMap extends Default {
 
 	public dynamic function calcShadowBounds( camera : h3d.Camera ) {
 		var bounds = camera.orthoBounds;
-		bounds.xMin = -10;
-		bounds.yMin = -10;
-		bounds.zMin = -10;
-		bounds.xMax = 10;
-		bounds.yMax = 10;
-		bounds.zMax = 10;
+		var mtmp = new h3d.Matrix();
+
+
+		// add visible casters in light camera position
+		ctx.scene.iterVisibleMeshes(function(m) {
+			if( m.primitive == null || !m.material.castShadows ) return;
+			var b = m.primitive.getBounds();
+			if( b.xMin > b.xMax ) return;
+			mtmp.multiply3x4(m.getAbsPos(), camera.mcam);
+
+			var p = new h3d.col.Point(b.xMin, b.yMin, b.zMin);
+			p.transform(mtmp);
+			bounds.addPoint(p);
+
+			var p = new h3d.col.Point(b.xMin, b.yMin, b.zMax);
+			p.transform(mtmp);
+			bounds.addPoint(p);
+
+			var p = new h3d.col.Point(b.xMin, b.yMax, b.zMin);
+			p.transform(mtmp);
+			bounds.addPoint(p);
+
+			var p = new h3d.col.Point(b.xMin, b.yMax, b.zMax);
+			p.transform(mtmp);
+			bounds.addPoint(p);
+
+			var p = new h3d.col.Point(b.xMax, b.yMin, b.zMin);
+			p.transform(mtmp);
+			bounds.addPoint(p);
+
+			var p = new h3d.col.Point(b.xMax, b.yMin, b.zMax);
+			p.transform(mtmp);
+			bounds.addPoint(p);
+
+			var p = new h3d.col.Point(b.xMax, b.yMax, b.zMin);
+			p.transform(mtmp);
+			bounds.addPoint(p);
+
+			var p = new h3d.col.Point(b.xMax, b.yMax, b.zMax);
+			p.transform(mtmp);
+			bounds.addPoint(p);
+
+		});
+
+		// intersect with frustum bounds
+		var cameraBounds = new h3d.col.Bounds();
+		for( pt in ctx.camera.getFrustumCorners() ) {
+			pt.transform(camera.mcam);
+			cameraBounds.addPos(pt.x, pt.y, pt.z);
+		}
+		bounds.intersection(bounds, cameraBounds);
+		bounds.scaleCenter(1.01);
 	}
 
 	override function getOutputs() {
