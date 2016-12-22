@@ -163,6 +163,17 @@ class Camera {
 		if( miview != null ) miview._44 = 0;
 	}
 
+	public function getFrustum() {
+		return new h3d.col.Frustum(m);
+	}
+
+	public function getFrustumCorners() : Array<h3d.Vector> {
+		return [
+			unproject(-1, 1, 0), unproject(1, 1, 0), unproject(1, -1, 0), unproject(-1, -1, 0),
+			unproject(-1, 1, 1), unproject(1, 1, 1), unproject(1, -1, 1), unproject(-1, -1, 1)
+		];
+	}
+
 	public function lostUp() {
 		var p2 = pos.clone();
 		p2.normalize();
