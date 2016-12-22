@@ -52,7 +52,7 @@ class Flow extends Sprite.Container {
 		If a reflow is needed, reflow() will be called before rendering the flow.
 		Each change in one of the flow properties or addition/removal of elements will set needReflow to true.
 	**/
-	public var needReflow : Bool = true;
+	public var needReflow(default, set) : Bool = true;
 
 	/**
 		Horizontal alignment of elements inside the flow.
@@ -211,6 +211,14 @@ class Flow extends Sprite.Container {
 			return v;
 		needReflow = true;
 		return multiline = v;
+	}
+
+	function set_needReflow(v) {
+		if( needReflow == v )
+			return v;
+		if( v )
+			onContentChanged();
+		return needReflow = v;
 	}
 
 	function set_lineHeight(v) {
@@ -742,7 +750,6 @@ class Flow extends Sprite.Container {
 			debugGraphics.drawRect(0, 0, cw, ch);
 		}
 
-		onContentChanged();
 		onAfterReflow();
 	}
 
