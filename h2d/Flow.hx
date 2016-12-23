@@ -161,6 +161,10 @@ class Flow extends Sprite {
 
 	var calculatedWidth : Float = 0.;
 	var calculatedHeight : Float = 0.;
+	var constraintWidth : Float = -1;
+	var constraintHeight : Float = -1;
+	var realMaxWidth : Float = -1;
+	var realMaxHeight : Float = -1;
 
 	public function new(?parent) {
 		super(parent);
@@ -287,6 +291,12 @@ class Flow extends Sprite {
 		return paddingBottom = v;
 	}
 
+	override function constraintSize( width, height ) {
+		constraintWidth = width;
+		constraintHeight = height;
+		updateConstraint();
+	}
+
 	override function contentChanged( s : Sprite ) {
 		while( s.parent != this )
 			s = s.parent;
@@ -362,15 +372,25 @@ class Flow extends Sprite {
 	function set_maxWidth(w) {
 		if( maxWidth == w )
 			return w;
-		needReflow = true;
-		return maxWidth = w;
+		maxWidth = w;
+		updateConstraint();
+		return w;
 	}
 
 	function set_maxHeight(h) {
 		if( maxHeight == h )
 			return h;
-		needReflow = true;
-		return maxHeight = h;
+		maxHeight = h;
+		updateConstraint();
+		return h;
+	}
+
+	function updateConstraint() {
+		var oldW = realMaxWidth, oldH = realMaxHeight;
+		realMaxWidth = if( maxWidth == null ) constraintWidth else if( constraintWidth < 0 ) maxWidth else hxd.Math.min(maxWidth, constraintWidth);
+		realMaxHeight = if( maxHeight == null ) constraintHeight else if( constraintHeight < 0 ) maxHeight else hxd.Math.min(maxHeight, constraintHeight);
+		if( realMaxWidth != oldW || realMaxHeight != oldH )
+			needReflow = true;
 	}
 
 	function set_minWidth(w) {
@@ -471,11 +491,11 @@ class Flow extends Sprite {
 
 		onBeforeReflow();
 
-		var isConstraintWidth = this.maxWidth != null;
-		var isConstraintHeight = this.maxHeight != null;
+		var isConstraintWidth = realMaxWidth >= 0;
+		var isConstraintHeight = realMaxHeight >= 0;
 		// outter size
-		var maxTotWidth = maxWidth == null ? 100000000 : maxWidth;
-		var maxTotHeight = maxHeight == null ? 100000000 : maxHeight;
+		var maxTotWidth = realMaxWidth < 0 ? 100000000 : realMaxWidth;
+		var maxTotHeight = realMaxHeight < 0 ? 100000000 : realMaxHeight;
 		// inner size
 		var maxWidth = maxTotWidth - (paddingLeft + paddingRight + borderWidth * 2);
 		var maxHeight = maxTotHeight - (paddingTop + paddingBottom + borderHeight * 2);
