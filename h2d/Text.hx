@@ -27,6 +27,8 @@ class Text extends Drawable {
 	var calcWidth:Int;
 	var calcHeight:Int;
 	var calcSizeHeight:Int;
+	var constraintWidth:Float = -1;
+	var realMaxWidth:Float = -1;
 
 	#if lime
 	var waShader : h3d.shader.WhiteAlpha;
@@ -78,6 +80,11 @@ class Text extends Drawable {
 		lineSpacing = s;
 		rebuild();
 		return s;
+	}
+
+	override function constraintSize(width:Float, height:Float) {
+		constraintWidth = width;
+		updateConstraint();
 	}
 
 	override function onAlloc() {
@@ -141,7 +148,7 @@ class Text extends Drawable {
 	}
 
 	public function splitText( text : hxd.UString, leftMargin = 0 ) {
-		if( maxWidth == null )
+		if( realMaxWidth < 0 )
 			return text;
 		var lines = [], rest = text, restPos = 0;
 		var x = leftMargin, prevChar = -1;
@@ -151,21 +158,21 @@ class Text extends Drawable {
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
 			if( font.charset.isBreakChar(cc) ) {
-				if( lines.length == 0 && leftMargin > 0 && x > maxWidth ) {
+				if( lines.length == 0 && leftMargin > 0 && x > realMaxWidth ) {
 					lines.push("");
 					x -= leftMargin;
 				}
 				var size = x + esize + letterSpacing;
 				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
-				while( size <= maxWidth && k < max ) {
+				while( size <= realMaxWidth && k < max ) {
 					var cc = text.charCodeAt(k++);
 					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 					prevChar = cc;
 				}
-				if( size > maxWidth ) {
+				if( size > realMaxWidth ) {
 					newline = true;
 					lines.push(text.substr(restPos, i - restPos));
 					restPos = i;
@@ -184,7 +191,7 @@ class Text extends Drawable {
 				prevChar = cc;
 		}
 		if( restPos < text.length ) {
-			if( lines.length == 0 && leftMargin > 0 && x > maxWidth )
+			if( lines.length == 0 && leftMargin > 0 && x > realMaxWidth )
 				lines.push("");
 			lines.push(text.substr(restPos, text.length - restPos));
 		}
@@ -199,7 +206,7 @@ class Text extends Drawable {
 		case Center, Right:
 			lines = [];
 			initGlyphs(text, false, false, lines);
-			var max = maxWidth == null ? 0 : Std.int(maxWidth);
+			var max = realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
 			var k = align == Center ? 1 : 0;
 			for( i in 0...lines.length )
 				lines[i] = (max - lines[i]) >> k;
@@ -216,18 +223,18 @@ class Text extends Drawable {
 			var offs = e.getKerningOffset(prevChar);
 			var esize = e.width + offs;
 			// if the next word goes past the max width, change it into a newline
-			if( font.charset.isBreakChar(cc) && maxWidth != null ) {
+			if( font.charset.isBreakChar(cc) && realMaxWidth >= 0 ) {
 				var size = x + esize + letterSpacing;
 				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
-				while( size <= maxWidth && k < max ) {
+				while( size <= realMaxWidth && k < max ) {
 					var cc = text.charCodeAt(k++);
 					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 					prevChar = cc;
 				}
-				if( size > maxWidth ) {
+				if( size > realMaxWidth ) {
 					newline = true;
 					if( font.charset.isSpace(cc) ) e = null;
 				}
@@ -280,8 +287,20 @@ class Text extends Drawable {
 	function set_maxWidth(w) {
 		if( maxWidth == w ) return w;
 		maxWidth = w;
-		rebuild();
+		updateConstraint();
 		return w;
+	}
+
+	function updateConstraint() {
+		var old = realMaxWidth;
+		if( maxWidth == null )
+			realMaxWidth = constraintWidth;
+		else if( constraintWidth < 0 )
+			realMaxWidth = maxWidth;
+		else
+			realMaxWidth = hxd.Math.min(maxWidth, constraintWidth);
+		if( realMaxWidth != old )
+			rebuild();
 	}
 
 	function set_textColor(c) {
@@ -300,7 +319,7 @@ class Text extends Drawable {
 		if( forSize ) {
 			x = 0;
 			y = 0;
-			w = maxWidth != null && textAlign != Left && maxWidth > calcWidth ? maxWidth : calcWidth;
+			w = realMaxWidth >= 0 && textAlign != Left && realMaxWidth > calcWidth ? realMaxWidth : calcWidth;
 			h = calcSizeHeight;
 		} else {
 			x = 0;

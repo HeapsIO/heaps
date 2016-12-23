@@ -11,12 +11,14 @@ enum FlowAlign {
 @:allow(h2d.Flow)
 class FlowProperties {
 
+	var elt : Sprite;
+
 	public var paddingLeft = 0;
 	public var paddingTop = 0;
 	public var paddingRight = 0;
 	public var paddingBottom = 0;
 
-	public var isAbsolute = false;
+	public var isAbsolute(default,set) = false;
 	public var horizontalAlign : Null<FlowAlign>;
 	public var verticalAlign : Null<FlowAlign>;
 
@@ -31,16 +33,23 @@ class FlowProperties {
 
 	public var isBreak(default,null) : Bool;
 
-	public var overflow : Bool = false;
+	/**
+		If our flow have a maximum size, it will constraint the children by using .constraintSize()
+	**/
+	public var constraint = true;
 
-	var tf : h2d.Text;
+	public function new(elt) {
+		this.elt = elt;
+	}
 
-	public function new() {
+	function set_isAbsolute(a) {
+		if( a ) @:privateAccess elt.constraintSize( -1, -1); // remove constraint
+		return isAbsolute = a;
 	}
 
 }
 
-class Flow extends Sprite.Container {
+class Flow extends Sprite {
 
 	static var tmpBounds = new h2d.col.Bounds();
 
@@ -68,6 +77,7 @@ class Flow extends Sprite.Container {
 	public var minHeight(default, set) : Null<Int>;
 	public var maxWidth(default, set) : Null<Int>;
 	public var maxHeight(default, set) : Null<Int>;
+
 	public var lineHeight(default, set) : Null<Int>;
 	public var colWidth(default, set) : Null<Int>;
 
@@ -328,11 +338,7 @@ class Flow extends Sprite.Container {
 		if( background != null ) pos++;
 		var fp = getProperties(s);
 		super.addChildAt(s, pos);
-		if( fp == null ) {
-			fp = new FlowProperties();
-			fp.tf = Std.instance(s, h2d.Text);
-		} else
-			properties.remove(fp);
+		if( fp == null ) fp = new FlowProperties(s) else properties.remove(fp);
 		properties.insert(pos, fp);
 		needReflow = true;
 		s.parentContainer = this;
@@ -344,6 +350,7 @@ class Flow extends Sprite.Container {
 		if( index >= 0 ) {
 			needReflow = true;
 			properties.splice(index, 1);
+			s.constraintSize( -1, -1); // remove constraint
 		}
 	}
 
@@ -464,6 +471,15 @@ class Flow extends Sprite.Container {
 
 		onBeforeReflow();
 
+		var isConstraintWidth = this.maxWidth != null;
+		var isConstraintHeight = this.maxHeight != null;
+		// outter size
+		var maxTotWidth = maxWidth == null ? 100000000 : maxWidth;
+		var maxTotHeight = maxHeight == null ? 100000000 : maxHeight;
+		// inner size
+		var maxWidth = maxTotWidth - (paddingLeft + paddingRight + borderWidth * 2);
+		var maxHeight = maxTotHeight - (paddingTop + paddingBottom + borderHeight * 2);
+
 		var cw, ch;
 		if( !isVertical ) {
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
@@ -476,7 +492,6 @@ class Flow extends Sprite.Container {
 			var maxLineHeight = 0.;
 			var minLineHeight = this.lineHeight != null ? lineHeight : (this.minHeight != null && !multiline) ? (this.minHeight - (paddingTop + paddingBottom + borderHeight * 2)) : 0;
 			var tmpBounds = tmpBounds;
-			var maxWidth = maxWidth == null ? 100000000 : maxWidth - (paddingLeft + paddingRight + borderWidth * 2);
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
@@ -508,8 +523,10 @@ class Flow extends Sprite.Container {
 				var c = childs[i];
 				if( !c.visible ) continue;
 
-				if( p.tf != null && !p.overflow && this.maxWidth != null )
-					p.tf.maxWidth = maxWidth - (p.paddingLeft + p.paddingRight);
+				c.constraintSize(
+					isConstraintWidth && p.constraint ? maxWidth - (p.paddingLeft + p.paddingRight) : -1,
+					isConstraintHeight && p.constraint ? maxHeight - (p.paddingTop + p.paddingBottom) : -1
+				);
 
 				var b = c.getSize(tmpBounds);
 				var br = false;
@@ -517,7 +534,7 @@ class Flow extends Sprite.Container {
 				p.calculatedHeight = b.yMax + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
-				if( x + p.calculatedWidth > maxWidth && x > startX ) {
+				if( multiline && x + p.calculatedWidth > maxWidth && x > startX ) {
 					br = true;
 					alignLine(i);
 					y += maxLineHeight + verticalSpacing;
@@ -595,8 +612,6 @@ class Flow extends Sprite.Container {
 			var maxColWidth = 0.;
 			var minColWidth = this.colWidth != null ? colWidth : (this.minWidth != null && !multiline) ? (this.minWidth - (paddingLeft + paddingRight + borderWidth * 2)) : 0;
 			var tmpBounds = tmpBounds;
-			var maxWidth = maxWidth == null ? 100000000 : maxWidth - (paddingLeft + paddingRight + borderWidth * 2);
-			var maxHeight = maxHeight == null ? 100000000 : maxHeight - (paddingTop + paddingBottom + borderHeight * 2);
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
@@ -629,8 +644,10 @@ class Flow extends Sprite.Container {
 				var c = childs[i];
 				if( !c.visible ) continue;
 
-				if( p.tf != null && !p.overflow && this.maxWidth != null )
-					p.tf.maxWidth = maxWidth - (p.paddingLeft + p.paddingRight);
+				c.constraintSize(
+					isConstraintWidth && p.constraint ? maxWidth - (p.paddingLeft + p.paddingRight) : -1,
+					isConstraintHeight && p.constraint ? maxHeight - (p.paddingTop + p.paddingBottom) : -1
+				);
 
 				var b = c.getSize(tmpBounds);
 				var br = false;
@@ -640,7 +657,7 @@ class Flow extends Sprite.Container {
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 
-				if( y + p.calculatedHeight > maxHeight && y > startY ) {
+				if( multiline && y + p.calculatedHeight > maxHeight && y > startY ) {
 					br = true;
 					alignLine(i);
 					x += maxColWidth + horizontalSpacing;
@@ -712,8 +729,8 @@ class Flow extends Sprite.Container {
 		if( minWidth != null && cw < minWidth ) cw = minWidth;
 		if( minHeight != null && ch < minHeight ) ch = minHeight;
 		if( overflow ) {
-			if( maxWidth != null && cw > maxWidth ) cw = maxWidth;
-			if( maxHeight != null && ch > maxHeight ) ch = maxHeight;
+			if( isConstraintWidth && cw > maxTotWidth ) cw = maxTotWidth;
+			if( isConstraintHeight && ch > maxTotHeight ) ch = maxTotHeight;
 		}
 
 		if( interactive != null ) {

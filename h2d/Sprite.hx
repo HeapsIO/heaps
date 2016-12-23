@@ -7,7 +7,7 @@ class Sprite {
 	static var nullDrawable : h2d.Drawable;
 
 	var childs : Array<Sprite>;
-	var parentContainer : Container;
+	var parentContainer : Sprite;
 	public var parent(default, null) : Sprite;
 	public var numChildren(get, never) : Int;
 
@@ -717,10 +717,20 @@ class Sprite {
 		return name == null ? c : name + "(" + c + ")";
 	}
 
-}
+	// ---- additional methods for containers (h2d.Flow)
 
-class Container extends Sprite {
-	@:noCompletion public function contentChanged( s : Sprite ) {
+	/**
+		This is called by our children if we have defined their parentContainer when they get resized
+	**/
+	function contentChanged( s : Sprite ) {
 	}
+
+	/**
+		This can be called by a parent container to constraint the size of its children.
+		Negative value mean that constraint is to be disable.
+	**/
+	function constraintSize( maxWidth : Float, maxHeight : Float ) {
+	}
+
 }
 
