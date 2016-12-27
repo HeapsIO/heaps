@@ -53,7 +53,8 @@ class Anim extends Drawable {
 		if( curFrame < frames.length )
 			return;
 		if( loop ) {
-			curFrame %= frames.length;
+			if(frames.length != 0)
+				curFrame %= frames.length;
 			onAnimEnd();
 		} else if( curFrame >= frames.length ) {
 			curFrame = frames.length;
