@@ -332,14 +332,14 @@ class Pixels {
 		}
 	}
 
-	public function toPNG() {
+	public function toPNG( ?level = 9 ) {
 		var png;
 		switch( format ) {
 		case ARGB:
-			png = std.format.png.Tools.build32ARGB(width, height, bytes);
+			png = std.format.png.Tools.build32ARGB(width, height, bytes #if (format >= "3.3") , level #end);
 		default:
 			convert(BGRA);
-			png = std.format.png.Tools.build32BGRA(width, height, bytes);
+			png = std.format.png.Tools.build32BGRA(width, height, bytes #if (format >= "3.3") , level #end);
 		}
 		var o = new haxe.io.BytesOutput();
 		new format.png.Writer(o).write(png);
