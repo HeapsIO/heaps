@@ -49,11 +49,13 @@ private class ALChannel {
 	}
 
 	public function stop() {
-		if( src != 0 ){
+		if ( src != null ){
 			lime.app.Application.current.onUpdate.remove( onUpdate );
+			
+			AL.sourceStop(src);
 			AL.deleteSource(src);
 			AL.deleteBuffers(buffers);
-			src = 0;
+			src = null;
 			buffers = null;
 		}
 	}
