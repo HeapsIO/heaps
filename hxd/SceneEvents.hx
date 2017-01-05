@@ -92,7 +92,7 @@ class SceneEvents {
 		var handled = false;
 		var checkOver = false, checkPush = false, cancelFocus = false;
 		switch( event.kind ) {
-		case EMove: checkOver = true;
+		case EMove, ECheck: checkOver = true;
 		case EPush: cancelFocus = true; checkPush = true;
 		case ERelease: checkPush = true;
 		case EKeyUp, EKeyDown, EWheel:
