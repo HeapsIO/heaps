@@ -46,6 +46,15 @@ class Sound extends Resource {
 		}
 	}
 
+	#if hl
+
+	public function play( ?loop = false, volume = 1. ) {
+		throw "TODO";
+		return null;
+	}
+
+	#else
+
 	public function play( ?loop = false, volume = 1. ) {
 		lastPlay = haxe.Timer.stamp();
 		return channel = getWorker().play(this, loop, volume);
@@ -71,5 +80,7 @@ class Sound extends Resource {
 		defaultWorker = new hxd.snd.Worker();
 		return defaultWorker.start();
 	}
+
+	#end
 
 }

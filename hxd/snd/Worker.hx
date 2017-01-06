@@ -1,4 +1,5 @@
 package hxd.snd;
+#if !hl
 
 private enum Message {
 	Play( path : String, loop : Bool, volume : Float, time : Float );
@@ -346,3 +347,5 @@ class Worker extends hxd.Worker<Message> {
 	}
 
 }
+
+#end
