@@ -7,6 +7,7 @@ class ColorMatrixShader extends h3d.shader.ScreenShader {
 		@param var texture : Sampler2D;
 		@param var matrix : Mat4;
 
+		@const var useAlpha : Bool;
 		@const var useMask : Bool;
 		@const var maskInvert : Bool;
 		@const var hasSecondMatrix : Bool;
@@ -17,15 +18,19 @@ class ColorMatrixShader extends h3d.shader.ScreenShader {
 		@param var maskPower : Float;
 		@param var maskChannel : Vec4;
 
+		function apply( color : Vec4, mat : Mat4 ) : Vec4 {
+			return useAlpha ? color * mat : vec4(color.rgb * matrix.mat3x4(), (color * matrix).a);
+		}
+
 		function fragment() {
 			if( useMask ) {
 				var color = texture.get(input.uv);
 				var uv = vec3(input.uv, 1);
 				var k = pow(mask.get( vec2(uv.dot(maskMatA), uv.dot(maskMatB)) ).dot(maskChannel), maskPower);
-				var color2 = hasSecondMatrix ? color * matrix2 : color;
-				output.color = maskInvert ? mix(color2, color * matrix, k) : mix(color * matrix, color2, k);
+				var color2 = hasSecondMatrix ? apply(color,matrix2) : color;
+				output.color = maskInvert ? mix(color2, apply(color,matrix), k) : mix(apply(color,matrix), color2, k);
 			} else
-				output.color = texture.get(input.uv) * matrix;
+				output.color = apply(texture.get(input.uv),matrix);
 		}
 
 	};
