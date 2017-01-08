@@ -1,15 +1,14 @@
 package hxd.snd;
 
-@:allow(hxd.snd.System)
 class Channel extends ChannelBase {
 	static var ID = 0;
 
 	@:noCompletion public var next     : Channel;
-	@:noCompletion public var nextFree : Channel;
+	var driver : Driver;
+	var source : Driver.Source;
 
 	public var id           (default, null) : Int;
-	public var soundRes     (default, null) : hxd.res.Sound;
-	public var soundData    (default, null) : hxd.snd.Data;
+	public var sound     	(default, null) : hxd.res.Sound;
 	public var soundGroup   (default, null) : SoundGroup;
 	public var channelGroup (default, null) : ChannelGroup;
 	public var duration     (default, null) : Float;
@@ -29,6 +28,9 @@ class Channel extends ChannelBase {
 		id = ++ID;
 	}
 
+	public dynamic function onEnd() {
+	}
+
 	function set_position(v : Float) {
 		lastStamp = haxe.Timer.stamp();
 		positionChanged = true;
@@ -40,16 +42,16 @@ class Channel extends ChannelBase {
 		return pause = v;
 	}
 
-	function init(sound : hxd.res.Sound) {
+	function init(driver, sound : hxd.res.Sound) {
 		reset();
+		this.driver = driver;
 		pause     = false;
 		isVirtual = false;
 		loop      = false;
 		lastStamp = haxe.Timer.stamp();
 
-		soundRes  = sound;
-		soundData = sound.getData();
-		duration  = soundData.samples / 44100;
+		this.sound  = sound;
+		duration  = sound.getData().duration;
 		position  = 0.0;
 		audibleGain = 1.0;
 		initStamp = haxe.Timer.stamp();
@@ -62,6 +64,10 @@ class Channel extends ChannelBase {
 	}
 
 	public function stop() {
-		@:privateAccess System.instance.releaseChannel(this);
+		if( driver != null ) {
+			@:privateAccess driver.releaseChannel(this);
+			driver = null;
+		}
 	}
+
 }

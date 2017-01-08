@@ -1,6 +1,5 @@
 package hxd.snd;
 
-@:allow(audiov2.System)
 class Effect {
 	public var gain (get, set) : Float;
 
@@ -10,11 +9,9 @@ class Effect {
 		return v;
 	}
 
-	private function new() { }
+	function new() { }
 
-	#if hl
-	function apply(channel : Channel, source : openal.AL.Source) {
+	function apply( channel : Channel, source : Driver.Source ) {
 	}
-	#end
 
 }

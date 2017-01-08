@@ -28,16 +28,20 @@ class Mp3Data extends Data {
 			samples -= start + end + 1152; // first frame is empty
 		}
 
-		var sampling = format.mp3.Constants.MPEG.srEnum2Num(mp.frames[0].header.samplingRate);
-		#if flash
-		if( sampling != 44100 )
-			samples = Math.ceil(samples * 44100.0 / sampling);
-		#elseif js
-		var ctx = @:privateAccess NativeChannel.getContext();
-		samples = Math.ceil(samples * ctx.sampleRate / sampling);
-		#end
+		var header = mp.frames[0].header;
+		sampleFormat = F32;
+		samplingRate = format.mp3.Constants.MPEG.srEnum2Num(header.samplingRate);
+		channels = header.channelMode == Mono ? 1 : 2;
 
 		#if flash
+
+		// flash only allows to decode mp3 in stereo 44.1Khz
+		channels = 2;
+		if( samplingRate != 44100 ) {
+			samples = Math.ceil(samples * 44100.0 / samplingRate);
+			samplingRate = 44100;
+		}
+
 		snd = new flash.media.Sound();
 		bytes.getData().position = 0;
 		snd.loadCompressedDataFromByteArray(bytes.getData(), bytes.length);
@@ -54,6 +58,13 @@ class Mp3Data extends Data {
 
 	function processBuffer( buf : js.html.audio.AudioBuffer ) {
 		var left = buf.getChannelData(0);
+		samples = buf.length; // actual decoded samples
+
+		if( channels == 1 ) {
+			buffer = haxe.io.Bytes.ofData(left);
+			return;
+		}
+
 		var right = buf.numberOfChannels < 2 ? left : buf.getChannelData(1);
 		var join = new js.html.Float32Array(left.length * 2);
 		var w = 0;
@@ -61,7 +72,7 @@ class Mp3Data extends Data {
 			join[w++] = left[i];
 			join[w++] = right[i];
 		}
-		samples = buf.length; // actual decoded samples
+
  		buffer = haxe.io.Bytes.ofData(join.buffer);
 		if( onEnd != null ) {
 			onEnd();
@@ -70,7 +81,7 @@ class Mp3Data extends Data {
 	}
 	#end
 
-	override public function decode(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int) {
+	override function decodeBuffer(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int) {
 		#if flash
 		var b = out.getData();
 		b.position = outPos;
@@ -90,9 +101,9 @@ class Mp3Data extends Data {
 		#elseif js
 		if( buffer == null ) {
 			// not yet available : fill with blanks
-			out.fill(outPos, sampleCount * 8, 0);
+			out.fill(outPos, sampleCount * 4 * channels, 0);
 		} else {
-			out.blit(outPos, buffer, sampleStart * 8, sampleCount * 8);
+			out.blit(outPos, buffer, sampleStart * 4 * channels, sampleCount * 4 * channels);
 		}
 		#else
 		throw "MP3 decoding is not available for this platform";

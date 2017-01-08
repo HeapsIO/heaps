@@ -1,9 +1,9 @@
-package audiov2.effect;
+package hxd.snd.effect;
 
 import openal.AL;
 
-@:keep
 class Spatialization extends Effect {
+
 	public var position  : h3d.Vector;
 	public var velocity  : h3d.Vector;
 	public var direction : h3d.Vector;
@@ -13,7 +13,7 @@ class Spatialization extends Effect {
 	public var fadeDistance : Null<Float>;
 	public var rollOffFactor : Float;
 
-	private function new() {
+	public function new() {
 		super();
 		position  = new h3d.Vector();
 		velocity  = new h3d.Vector();
@@ -24,7 +24,7 @@ class Spatialization extends Effect {
 	}
 
 	function getFadeGain() {
-		var dist = audiov2.System.instance.listenerPos.distance(position);
+		var dist = System.get().listener.position.distance(position);
 		if (maxDistance != null) dist -= maxDistance;
 		else dist -= referenceDistance;
 		var gain = 1 - dist / fadeDistance;
@@ -33,32 +33,33 @@ class Spatialization extends Effect {
 		return gain;
 	}
 
-	override function apply(channel : Channel, source : Source) {
-		AL.source3f(source, AL.POSITION,  position.x,  position.y,  position.z);
-		AL.source3f(source, AL.VELOCITY,  velocity.x,  velocity.y,  velocity.z);
-		AL.source3f(source, AL.DIRECTION, direction.x, direction.y, direction.z);
+	override function apply(channel : Channel, s : System.Source) {
+		AL.source3f(s.inst, AL.POSITION,  position.x,  position.y,  position.z);
+		AL.source3f(s.inst, AL.VELOCITY,  velocity.x,  velocity.y,  velocity.z);
+		AL.source3f(s.inst, AL.DIRECTION, direction.x, direction.y, direction.z);
 
-		AL.sourcef(source, AL.REFERENCE_DISTANCE, referenceDistance);
-		AL.sourcef(source, AL.ROLLOFF_FACTOR, rollOffFactor);
-		AL.sourcef(source, AL.MIN_GAIN, 0);
+		AL.sourcef(s.inst, AL.REFERENCE_DISTANCE, referenceDistance);
+		AL.sourcef(s.inst, AL.ROLLOFF_FACTOR, rollOffFactor);
+		AL.sourcef(s.inst, AL.MIN_GAIN, 0);
 
 		if (maxDistance != null) {
 			var md : Float = maxDistance;
-			AL.sourcef(source, AL.MAX_DISTANCE, md);
+			AL.sourcef(s.inst, AL.MAX_DISTANCE, md);
 		}
 
 		if (fadeDistance != null) {
 			var volume = channel.volume * channel.soundGroup.volume * channel.channelGroup.volume;
-			AL.sourcef(source, AL.GAIN, getFadeGain() * volume);
+			AL.sourcef(s.inst, AL.GAIN, getFadeGain() * volume);
 		}
 	}
 
 	override function get_gain() {
-		var dist = audiov2.System.instance.listenerPos.distance(position);
+		var dist = System.get().listener.position.distance(position);
 		dist = Math.max(dist, referenceDistance);
 		if (maxDistance != null) dist = Math.min(dist, maxDistance);
 		var gain = referenceDistance/(referenceDistance + rollOffFactor * (dist - referenceDistance));
 		if (fadeDistance != null) gain *= getFadeGain();
 		return gain;
 	}
+
 }

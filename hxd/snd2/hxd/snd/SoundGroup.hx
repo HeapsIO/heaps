@@ -1,6 +1,5 @@
 package hxd.snd;
 
-@:allow(hxd.snd.System)
 class SoundGroup {
 	public var name (default, null) : String;
 	public var volume               : Float;
@@ -9,7 +8,7 @@ class SoundGroup {
 	public var muteFadeSpeed        : Float;
 	public var mono					: Bool;
 
-	private function new(name : String) {
+	public function new(name : String) {
 		this.name  = name;
 		maxAudible = -1;
 		muteFadeSpeed = 0;

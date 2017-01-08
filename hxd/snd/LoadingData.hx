@@ -9,7 +9,7 @@ class LoadingData extends Data {
 		this.snd = snd;
 	}
 
-	override public function decode(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int):Void {
+	override function decode(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int):Void {
 		var d = snd.getData();
 		if( Std.is(d, LoadingData) )
 			throw "Sound data is not yet available, use load() first";

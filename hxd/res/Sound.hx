@@ -1,10 +1,35 @@
 package hxd.res;
 
+enum SoundFormat {
+	Wav;
+	Mp3;
+	OggVorbis;
+}
+
 class Sound extends Resource {
 
 	var data : hxd.snd.Data;
 	var channel : hxd.snd.Channel;
 	public var lastPlay(default, null) = 0.;
+
+	public static function supportedFormat( fmt : SoundFormat ) {
+		return switch( fmt ) {
+		case Wav:
+			return true;
+		case Mp3:
+			#if (flash || js)
+			return true;
+			#else
+			return false;
+			#end
+		case OggVorbis:
+			#if stb_ogg_sound
+			return true;
+			#else
+			return false;
+			#end
+		}
+	}
 
 	public function getData() : hxd.snd.Data {
 		if( data != null )
@@ -48,9 +73,11 @@ class Sound extends Resource {
 
 	#if hl
 
-	public function play( ?loop = false, volume = 1. ) {
-		throw "TODO";
-		return null;
+	public function play( ?loop = false, ?channelGroup, ?soundGroup ) {
+		lastPlay = haxe.Timer.stamp();
+		channel = hxd.snd.Driver.get().play(this, channelGroup, soundGroup);
+		channel.loop = loop;
+		return channel;
 	}
 
 	#else

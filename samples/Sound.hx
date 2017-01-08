@@ -17,13 +17,19 @@ class NoiseChannel extends hxd.snd.NativeChannel {
 class Sound extends hxd.App {
 
 	var time = 0.;
-	static var music : hxd.snd.Worker;
 
 	override function init() {
-		var c = new NoiseChannel();
-		haxe.Timer.delay(c.stop, 1000);
-		var c = hxd.Res.music_loop.play(true);
-		c.onEnd = function() trace("LOOP");
+		var res = if( hxd.res.Sound.supportedFormat(Mp3) )
+			hxd.Res.music_loop_mp3
+		else if( hxd.res.Sound.supportedFormat(OggVorbis) )
+			hxd.Res.music_loop_ogg;
+		else
+			null;
+		if( res != null ) {
+			trace("Playing "+res);
+			var c = res.play(true);
+			c.onEnd = function() trace("LOOP");
+		}
 	}
 
 	override function update(dt:Float) {
@@ -34,12 +40,15 @@ class Sound extends hxd.App {
 			engine.backgroundColor = 0xFFFF0000;
 		} else
 			engine.backgroundColor = 0;
+
+		if( hxd.Key.isPressed(hxd.Key.SPACE) ) {
+			var c = new NoiseChannel();
+			haxe.Timer.delay(c.stop, 1000);
+		}
 	}
 
 	static function main() {
-		hxd.Res.initEmbed({compressSounds:true});
-		if( hxd.res.Sound.startWorker() )
-			return;
+		hxd.Res.initEmbed();
 		new Sound();
 	}
 

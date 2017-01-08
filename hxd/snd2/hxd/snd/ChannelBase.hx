@@ -1,13 +1,14 @@
 package hxd.snd;
 
 class ChannelBase {
+
 	public var priority : Float;
 	public var volume   : Float;
 	public var pan      : Float;
 	public var mute     : Bool;
 	public var effects  : Array<Effect>;
 
-	public function new() {
+	function new() {
 		reset();
 	}
 
@@ -30,7 +31,7 @@ class ChannelBase {
 	}
 
 	public function reset() {
-		effects  = [];
+		if( effects == null || effects.length > 0 ) effects  = [];
 		priority = 0.0;
 		volume   = 1.0;
 		pan      = 0.0;
