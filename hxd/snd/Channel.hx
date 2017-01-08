@@ -6,8 +6,8 @@ class Channel extends ChannelBase {
 	@:noCompletion public var next     : Channel;
 	var driver : Driver;
 	var source : Driver.Source;
+	var id : Int;
 
-	public var id           (default, null) : Int;
 	public var sound     	(default, null) : hxd.res.Sound;
 	public var soundGroup   (default, null) : SoundGroup;
 	public var channelGroup (default, null) : ChannelGroup;
@@ -17,17 +17,26 @@ class Channel extends ChannelBase {
 	public var pause (default, set) : Bool;
 	public var loop  : Bool;
 	var audibleGain : Float;
-	var initStamp   : Float;
 	var lastStamp   : Float;
 	var isVirtual   : Bool;
 	var positionChanged : Bool;
+	var queue : Array<hxd.res.Sound> = [];
 
-
-	private function new() {
+	function new() {
 		super();
-		id = ++ID;
+		id = ID++;
+		pause     = false;
+		isVirtual = false;
+		loop      = false;
+		position  = 0.0;
+		audibleGain = 1.0;
 	}
 
+	/**
+		onEnd() is called when a sound which does not loop has finished playing
+		or when we switch buffer in a queue
+		or when a sound which is streamed loops.
+	**/
 	public dynamic function onEnd() {
 	}
 
@@ -42,25 +51,18 @@ class Channel extends ChannelBase {
 		return pause = v;
 	}
 
-	function init(driver, sound : hxd.res.Sound) {
-		reset();
-		this.driver = driver;
-		pause     = false;
-		isVirtual = false;
-		loop      = false;
-		lastStamp = haxe.Timer.stamp();
-
-		this.sound  = sound;
-		duration  = sound.getData().duration;
-		position  = 0.0;
-		audibleGain = 1.0;
-		initStamp = haxe.Timer.stamp();
-	}
-
 	public function calcAudibleGain() {
 		audibleGain = volume * channelGroup.volume * soundGroup.volume;
 		for (e in effects) audibleGain *= e.gain;
 		return audibleGain;
+	}
+
+	/**
+		Add a sound to the queue. When the current sound is finished playing, the next one will seamlessly continue.
+		This will also trigger an onEnd() event.
+	**/
+	public function queueSound( sound : hxd.res.Sound ) {
+		queue.push(sound);
 	}
 
 	public function stop() {

@@ -21,6 +21,13 @@ class Source {
 	public var channel : Channel;
 	public var buffer : Buffer;
 
+	public var loop = false;
+	public var volume = 1.;
+	public var playing = false;
+
+	public var nextSound : hxd.res.Sound;
+	public var nextBuffer : Buffer;
+
 	public function new(inst) {
 		this.inst = inst;
 	}
@@ -34,6 +41,11 @@ class Buffer {
 
 	public function new(inst) {
 		this.inst = inst;
+	}
+
+	public function unref() {
+		playCount--;
+		if( playCount == 0 ) lastStop = haxe.Timer.stamp();
 	}
 }
 
@@ -134,7 +146,9 @@ class Driver {
 		if (soundGroup   == null) soundGroup   = masterSoundGroup;
 		if (channelGroup == null) channelGroup = masterChannelGroup;
 		var c = new Channel();
-		c.init(this, sound);
+		c.driver = this;
+		c.sound = sound;
+		c.duration = c.sound.getData().duration;
 		c.soundGroup   = soundGroup;
 		c.channelGroup = channelGroup;
 		c.next = channels;
@@ -144,6 +158,8 @@ class Driver {
 
 	public function update() {
 		// update playing channels from sources & release stopped channels
+		var now = haxe.Timer.stamp();
+
 		for( s in sources ) {
 			var c = s.channel;
 			if( c == null ) continue;
@@ -154,9 +170,12 @@ class Driver {
 				c.onEnd();
 			case AL.PLAYING:
 				if (!c.positionChanged) {
-					var position= AL.getSourcef(s.inst, AL.SEC_OFFSET);
+					var position = AL.getSourcef(s.inst, AL.SEC_OFFSET);
+					var prev = c.position;
 					c.position = position;
+					c.lastStamp = now;
 					c.positionChanged = false;
+					if( position < prev ) c.onEnd();
 				}
 			default:
 			}
@@ -236,12 +255,9 @@ class Driver {
 			s.channel = c;
 			c.source = s;
 
-			// bind buf & play source
-			setBuffer(s, getBuffer(c));
+			// bind buf and force full sync
+			setBuffer(s, getBuffer(c.sound, c.soundGroup));
 			c.positionChanged = true;
-			syncSource(s);
-			AL.sourcePlay(s.inst);
-
 			c = c.next;
 		}
 
@@ -254,13 +270,15 @@ class Driver {
 
 		// update virtual channels
 		var c = channels;
-		var now = haxe.Timer.stamp();
 		while (c != null) {
 			var next = c.next;
 			if (!c.pause && c.isVirtual) {
 				c.position += now - c.lastStamp;
-				if (!c.loop && c.position >= c.duration)
+				c.lastStamp = now;
+				if( c.position >= c.duration && !queueNext(c) && !c.loop ) {
 					releaseChannel(c);
+					c.onEnd();
+				}
 			}
 			c = next;
 		}
@@ -269,14 +287,57 @@ class Driver {
 	function syncSource( s : Source ) {
 		var c = s.channel;
 		if( c == null ) return;
-		if (c.positionChanged) {
+		if( c.positionChanged ) {
 			AL.sourcef(s.inst, AL.SEC_OFFSET, c.position);
 			c.positionChanged = false;
 		}
-		AL.sourcei(s.inst, AL.LOOPING, c.loop ? AL.TRUE : AL.FALSE);
-		AL.sourcef(s.inst, AL.GAIN, c.volume * c.channelGroup.volume * c.soundGroup.volume);
+		if( s.loop != c.loop ) {
+			s.loop = c.loop;
+			AL.sourcei(s.inst, AL.LOOPING, c.loop ? AL.TRUE : AL.FALSE);
+		}
+		var v = c.volume * c.channelGroup.volume * c.soundGroup.volume;
+		if( s.volume != v ) {
+			s.volume = v;
+			AL.sourcef(s.inst, AL.GAIN, v);
+		}
 		for(e in c.effects)
 			e.apply(c, s);
+		if( !s.playing ) {
+			s.playing = true;
+			AL.sourcePlay(s.inst);
+		}
+
+		// sync queuing
+		var nextSound = c.queue[0];
+		if( s.nextSound != nextSound ) {
+			if( s.nextSound != null ) {
+				tmpBytes.setInt32(0, s.nextBuffer.inst.toInt());
+				AL.sourceUnqueueBuffers(s.inst, 1, tmpBytes);
+				s.nextBuffer.unref();
+				s.nextSound = null;
+				s.nextBuffer = null;
+			}
+			if( nextSound != null ) {
+				s.nextSound = nextSound;
+				s.nextBuffer = getBuffer(nextSound, c.soundGroup);
+				s.nextBuffer.playCount++;
+				tmpBytes.setInt32(0, s.nextBuffer.inst.toInt());
+				AL.sourceQueueBuffers(s.inst, 1, tmpBytes);
+				if( AL.getError() != 0 )
+					throw "Failed to queue buffer : format differs between " + c.sound + " and " + nextSound;
+			}
+		}
+	}
+
+	function queueNext( c : Channel ) {
+		var snd = c.queue.shift();
+		if( snd == null )
+			return false;
+		c.sound = snd;
+		c.position -= c.duration;
+		c.duration = snd.getData().duration;
+		c.positionChanged = false;
+		return true;
 	}
 
 	// ------------------------------------------------------------------------
@@ -285,7 +346,10 @@ class Driver {
 
 	function releaseSource( s : Source ) {
 		s.channel = null;
-		AL.sourceStop(s.inst);
+		if( s.playing ) {
+			s.playing = false;
+			AL.sourceStop(s.inst);
+		}
 		setBuffer(s, null);
 	}
 
@@ -294,8 +358,7 @@ class Driver {
 			return;
 		if( b == null ) {
 			AL.sourcei(s.inst, AL.BUFFER, AL.NONE);
-			s.buffer.playCount--;
-			if( s.buffer.playCount == 0 ) s.buffer.lastStop = haxe.Timer.stamp();
+			s.buffer.unref();
 			s.buffer = null;
 		} else {
 			AL.sourcei(s.inst, AL.BUFFER, b.inst.toInt());
@@ -304,8 +367,8 @@ class Driver {
 		}
 	}
 
-	function getBuffer( c : Channel ) : Buffer {
-		var b = bufferMap.get(c.sound);
+	function getBuffer( snd : hxd.res.Sound, grp : SoundGroup ) : Buffer {
+		var b = bufferMap.get(snd);
 		if( b != null )
 			return b;
 		if( buffers.length >= 256 ) {
@@ -317,11 +380,11 @@ class Driver {
 		}
 		AL.genBuffers(1, tmpBytes);
 		var b = new Buffer(ALBuffer.ofInt(tmpBytes.getInt32(0)));
-		b.sound = c.sound;
+		b.sound = snd;
 		buffers.push(b);
-		bufferMap.set(c.sound, b);
-		var data = c.sound.getData();
-		var mono = c.soundGroup.mono;
+		bufferMap.set(snd, b);
+		var data = snd.getData();
+		var mono = grp.mono;
 		data.load(function() fillBuffer(b, data, mono));
 		return b;
 	}
@@ -347,7 +410,7 @@ class Driver {
 		if (a.audibleGain != b.audibleGain)
 			return a.audibleGain < b.audibleGain ? 1 : -1;
 
-		return a.initStamp < b.initStamp ? 1 : -1;
+		return a.id < b.id ? 1 : -1;
 	}
 
 	function releaseChannel(c : Channel) {
@@ -360,6 +423,7 @@ class Driver {
 			prev.next = c.next;
 		}
 		c.next = null;
+		c.driver = null;
 		if( c.source != null ) {
 			releaseSource(c.source);
 			c.source = null;

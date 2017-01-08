@@ -58,6 +58,11 @@ private class ALChannel extends NativeChannel {
 }
 
 class ALSource {
+
+	// Necessary to prevent stopping the channel while it's still playing
+	// This seems related to some lag in NativeChannel creation and data delivery
+	static inline var STOP_DELAY = #if js 200 #else 0 #end;
+
 	static var ID = 0;
 	static var all = new Map<Int,ALSource>();
 
@@ -85,7 +90,10 @@ class ALSource {
 
 	public function stop() {
 		if( chan != null ) {
-			chan.stop();
+			if( STOP_DELAY == 0 )
+				chan.stop();
+			else
+				haxe.Timer.delay(chan.stop, STOP_DELAY);
 			chan = null;
 		}
 	}
@@ -133,10 +141,6 @@ class ALBuffer {
 class ALEmulator {
 
 	public static var NATIVE_FREQ : Int = #if js @:privateAccess Std.int(NativeChannel.getContext().sampleRate) #else 44100 #end;
-
-	// Necessary to prevent reporting the channel as stopped too early
-	// This seems related to some lag in NativeChannel creation and data delivery
-	static inline var STOP_DELAY = #if js 0.2 #else 0. #end;
 
 	// api
 
@@ -295,7 +299,19 @@ class ALEmulator {
 	public static function getSourcef(source : Source, param : Int) : F32 {
 		switch( param ) {
 		case SEC_OFFSET:
-			return source.buffer == null ? 0 : (haxe.Timer.stamp() - source.playedTime);
+			if( source.buffer == null )
+				return 0;
+			var now = haxe.Timer.stamp();
+			var t = now - source.playedTime;
+			var maxT = source.buffer.samples / source.buffer.frequency;
+			if( source.loop ) {
+				while( t > maxT ) {
+					t -= maxT;
+					source.playedTime += maxT;
+				}
+			} else if( t > maxT )
+				t = maxT;
+			return t;
 		default:
 			throw "Unsupported param 0x" + StringTools.hex(param);
 		}
@@ -303,7 +319,7 @@ class ALEmulator {
 	public static function getSourcei(source : Source, param : Int) : Int {
 		switch( param ) {
 		case SOURCE_STATE:
-			return !source.playing || source.buffer == null || (!source.loop && (haxe.Timer.stamp() - source.playedTime - STOP_DELAY) >= source.buffer.samples/source.buffer.frequency ) ? STOPPED : PLAYING;
+			return !source.playing || source.buffer == null || (!source.loop && (haxe.Timer.stamp() - source.playedTime) >= source.buffer.samples/source.buffer.frequency ) ? STOPPED : PLAYING;
 		default:
 			throw "Unsupported param 0x" + StringTools.hex(param);
 		}
