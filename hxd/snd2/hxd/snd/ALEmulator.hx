@@ -10,6 +10,8 @@ private typedef Source = ALSource;
 private class ALChannel extends NativeChannel {
 
 	var source : ALSource;
+	var startup = 0.;
+	static inline var FADE_START = 10; // prevent clic at startup
 
 	public function new(source, samples) {
 		this.source = source;
@@ -26,9 +28,20 @@ private class ALChannel extends NativeChannel {
 				if( scount > count ) scount = count;
 				var read = source.currentSample << 1;
 				var data = source.buffer.data;
-				for( i in 0...scount ) {
-					out[pos++] = data[read++] * volume;
-					out[pos++] = data[read++] * volume;
+				if( startup < 1 ) {
+					for( i in 0...scount ) {
+						out[pos++] = data[read++] * volume * startup;
+						out[pos++] = data[read++] * volume * startup;
+						if( startup < 1. ) {
+							startup += 1 / FADE_START;
+							if( startup > 1 ) startup = 1;
+						}
+					}
+				} else {
+					for( i in 0...scount ) {
+						out[pos++] = data[read++] * volume;
+						out[pos++] = data[read++] * volume;
+					}
 				}
 				count -= scount;
 				source.currentSample += scount;
@@ -113,137 +126,17 @@ class ALBuffer {
 
 }
 
-class ALDevice {
-	public function new() {
-	}
-}
-
-class ALContext {
-	public var device : Device;
-	public function new(d) {
-		this.device = d;
-	}
-}
-
-class ALCEmulator {
-
-	static var ctx : Context = null;
-
-	public static function getError( device : Device ) : Int {
-		return 0;
-	}
-
-	// Context management
-	public static function createContext(device  : Device, attrlist : Bytes) : Context {
-		return new Context(device);
-	}
-
-	public static function makeContextCurrent(context : Context) : Bool {
-		ctx = context;
-		return true;
-	}
-
-	public static function processContext(context : Context) {
-	}
-
-	public static function suspendContext(context : Context) {
-	}
-
-	public static function destroyContext(context : Context) {
-	}
-
-	public static function getCurrentContext() : Context {
-		return ctx;
-	}
-
-	public static function getContextsDevice(context : Context) : Device {
-		return ctx.device;
-	}
-
-	// Device management
-	public static function openDevice(devicename : Bytes) : Device {
-		return new Device();
-	}
-
-	public static function closeDevice(device : Device) : Bool {
-		return true;
-	}
-
-	// Extension support
-	public static function isExtensionPresent(device : Device, extname : Bytes) : Bool {
-		return false;
-	}
-	public static function getEnumValue(device : Device, enumname : Bytes) : Int {
-		throw "TODO";
-	}
-	// public static function alcGetProcAddress(device : Device, const ALCchar *funcname);
-
-	// Query function
-	public static function getString   (device : Device, param : Int) : Bytes {
-		throw "TODO";
-	}
-	public static function getIntegerv (device : Device, param : Int, size : Int, values : Bytes) {
-		throw "TODO";
-	}
-
-	// Capture function
-	// public static function captureOpenDevice(devicename : hl.Bytes, frequency : Int, format : Int, buffersize : Int) : Device;
-	// public static function captureCloseDevice (device : Device) : Bool;
-	// public static function captureStart       (device : Device) : Void;
-	// public static function captureStop        (device : Device) : Void;
-	// public static function captureSamples     (device : Device, buffer : hl.Bytes, samples : Int) : Void;
-
-	// ------------------------------------------------------------------------
-	// Constants
-	// ------------------------------------------------------------------------
-
-	public static inline var ALC_FALSE                            = 0;
-	public static inline var ALC_TRUE                             = 1;
-
-	// Context attributes
-	public static inline var ALC_FREQUENCY                        = 0x1007;
-	public static inline var ALC_REFRESH                          = 0x1008;
-	public static inline var ALC_SYNC                             = 0x1009;
-	public static inline var ALC_MONO_SOURCES                     = 0x1010;
-	public static inline var ALC_STEREO_SOURCES                   = 0x1011;
-
-	// Errors
-	public static inline var ALC_NO_ERROR                         = 0;
-	public static inline var ALC_INVALID_DEVICE                   = 0xA001;
-	public static inline var ALC_INVALID_CONTEXT                  = 0xA002;
-	public static inline var ALC_INVALID_ENUM                     = 0xA003;
-	public static inline var ALC_INVALID_VALUE                    = 0xA004;
-	public static inline var ALC_OUT_OF_MEMORY                    = 0xA005;
-
-	// Runtime ALC version
-	public static inline var ALC_MAJOR_VERSION                    = 0x1000;
-	public static inline var ALC_MINOR_VERSION                    = 0x1001;
-
-	// Context attribute list properties
-	public static inline var ALC_ATTRIBUTES_SIZE                  = 0x1002;
-	public static inline var ALC_ALL_ATTRIBUTES                   = 0x1003;
-
-	// Device strings
-	public static inline var ALC_DEFAULT_DEVICE_SPECIFIER         = 0x1004;
-	public static inline var ALC_DEVICE_SPECIFIER                 = 0x1005;
-	public static inline var ALC_EXTENSIONS                       = 0x1006;
-
-	// Capture extension
-	public static inline var ALC_EXT_CAPTURE                      = 1;
-	public static inline var ALC_CAPTURE_DEVICE_SPECIFIER         = 0x310;
-	public static inline var ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER = 0x311;
-	public static inline var ALC_CAPTURE_SAMPLES                  = 0x312;
-
-	// Enumerate All extension
-	public static inline var ALC_ENUMERATE_ALL_EXT                = 1;
-	public static inline var ALC_DEFAULT_ALL_DEVICES_SPECIFIER    = 0x1012;
-	public static inline var ALC_ALL_DEVICES_SPECIFIER            = 0x1013;
-
-}
-
+/**
+	On platforms that don't have native support for OpenAL, the Driver uses this
+	emulator that only requires a NativeChannel implementation
+**/
 class ALEmulator {
 
-	public static inline var NATIVE_FREQ = 44100;
+	public static var NATIVE_FREQ : Int = #if js @:privateAccess Std.int(NativeChannel.getContext().sampleRate) #else 44100 #end;
+
+	// Necessary to prevent reporting the channel as stopped too early
+	// This seems related to some lag in NativeChannel creation and data delivery
+	static inline var STOP_DELAY = #if js 0.2 #else 0. #end;
 
 	// api
 
@@ -410,7 +303,7 @@ class ALEmulator {
 	public static function getSourcei(source : Source, param : Int) : Int {
 		switch( param ) {
 		case SOURCE_STATE:
-			return !source.playing || source.buffer == null || (!source.loop && (haxe.Timer.stamp() - source.playedTime) >= source.buffer.samples/source.buffer.frequency ) ? STOPPED : PLAYING;
+			return !source.playing || source.buffer == null || (!source.loop && (haxe.Timer.stamp() - source.playedTime - STOP_DELAY) >= source.buffer.samples/source.buffer.frequency ) ? STOPPED : PLAYING;
 		default:
 			throw "Unsupported param 0x" + StringTools.hex(param);
 		}
@@ -677,5 +570,136 @@ class ALEmulator {
 	public static inline var LINEAR_DISTANCE_CLAMPED   = 0xD004;
 	public static inline var EXPONENT_DISTANCE         = 0xD005;
 	public static inline var EXPONENT_DISTANCE_CLAMPED = 0xD006;
+
+}
+
+
+
+
+class ALDevice {
+	public function new() {
+	}
+}
+
+class ALContext {
+	public var device : Device;
+	public function new(d) {
+		this.device = d;
+	}
+}
+
+class ALCEmulator {
+
+	static var ctx : Context = null;
+
+	public static function getError( device : Device ) : Int {
+		return 0;
+	}
+
+	// Context management
+	public static function createContext(device  : Device, attrlist : Bytes) : Context {
+		return new Context(device);
+	}
+
+	public static function makeContextCurrent(context : Context) : Bool {
+		ctx = context;
+		return true;
+	}
+
+	public static function processContext(context : Context) {
+	}
+
+	public static function suspendContext(context : Context) {
+	}
+
+	public static function destroyContext(context : Context) {
+	}
+
+	public static function getCurrentContext() : Context {
+		return ctx;
+	}
+
+	public static function getContextsDevice(context : Context) : Device {
+		return ctx.device;
+	}
+
+	// Device management
+	public static function openDevice(devicename : Bytes) : Device {
+		return new Device();
+	}
+
+	public static function closeDevice(device : Device) : Bool {
+		return true;
+	}
+
+	// Extension support
+	public static function isExtensionPresent(device : Device, extname : Bytes) : Bool {
+		return false;
+	}
+	public static function getEnumValue(device : Device, enumname : Bytes) : Int {
+		throw "TODO";
+	}
+	// public static function alcGetProcAddress(device : Device, const ALCchar *funcname);
+
+	// Query function
+	public static function getString   (device : Device, param : Int) : Bytes {
+		throw "TODO";
+	}
+	public static function getIntegerv (device : Device, param : Int, size : Int, values : Bytes) {
+		throw "TODO";
+	}
+
+	// Capture function
+	// public static function captureOpenDevice(devicename : hl.Bytes, frequency : Int, format : Int, buffersize : Int) : Device;
+	// public static function captureCloseDevice (device : Device) : Bool;
+	// public static function captureStart       (device : Device) : Void;
+	// public static function captureStop        (device : Device) : Void;
+	// public static function captureSamples     (device : Device, buffer : hl.Bytes, samples : Int) : Void;
+
+	// ------------------------------------------------------------------------
+	// Constants
+	// ------------------------------------------------------------------------
+
+	public static inline var ALC_FALSE                            = 0;
+	public static inline var ALC_TRUE                             = 1;
+
+	// Context attributes
+	public static inline var ALC_FREQUENCY                        = 0x1007;
+	public static inline var ALC_REFRESH                          = 0x1008;
+	public static inline var ALC_SYNC                             = 0x1009;
+	public static inline var ALC_MONO_SOURCES                     = 0x1010;
+	public static inline var ALC_STEREO_SOURCES                   = 0x1011;
+
+	// Errors
+	public static inline var ALC_NO_ERROR                         = 0;
+	public static inline var ALC_INVALID_DEVICE                   = 0xA001;
+	public static inline var ALC_INVALID_CONTEXT                  = 0xA002;
+	public static inline var ALC_INVALID_ENUM                     = 0xA003;
+	public static inline var ALC_INVALID_VALUE                    = 0xA004;
+	public static inline var ALC_OUT_OF_MEMORY                    = 0xA005;
+
+	// Runtime ALC version
+	public static inline var ALC_MAJOR_VERSION                    = 0x1000;
+	public static inline var ALC_MINOR_VERSION                    = 0x1001;
+
+	// Context attribute list properties
+	public static inline var ALC_ATTRIBUTES_SIZE                  = 0x1002;
+	public static inline var ALC_ALL_ATTRIBUTES                   = 0x1003;
+
+	// Device strings
+	public static inline var ALC_DEFAULT_DEVICE_SPECIFIER         = 0x1004;
+	public static inline var ALC_DEVICE_SPECIFIER                 = 0x1005;
+	public static inline var ALC_EXTENSIONS                       = 0x1006;
+
+	// Capture extension
+	public static inline var ALC_EXT_CAPTURE                      = 1;
+	public static inline var ALC_CAPTURE_DEVICE_SPECIFIER         = 0x310;
+	public static inline var ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER = 0x311;
+	public static inline var ALC_CAPTURE_SAMPLES                  = 0x312;
+
+	// Enumerate All extension
+	public static inline var ALC_ENUMERATE_ALL_EXT                = 1;
+	public static inline var ALC_DEFAULT_ALL_DEVICES_SPECIFIER    = 0x1012;
+	public static inline var ALC_ALL_DEVICES_SPECIFIER            = 0x1013;
 
 }

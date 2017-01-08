@@ -51,6 +51,7 @@ class Data {
 			var isample = Std.int(targetSample);
 			var offset = targetSample - isample;
 			var srcPos = isample * bpp;
+			if( isample == samples - 1 ) resample = false;
 			for( k in 0...commonChannels ) {
 				var sval1, sval2 = 0.;
 

@@ -45,8 +45,16 @@ class Mp3Data extends Data {
 		snd = new flash.media.Sound();
 		bytes.getData().position = 0;
 		snd.loadCompressedDataFromByteArray(bytes.getData(), bytes.length);
+
 		#elseif js
+
+		var ctx = @:privateAccess NativeChannel.getContext();
 		ctx.decodeAudioData(bytes.getData(), processBuffer);
+
+		var decodedRate = Std.int(ctx.sampleRate);
+		samples = Math.ceil(samples * decodedRate / samplingRate);
+		samplingRate = decodedRate;
+
 		#end
 	}
 
@@ -61,7 +69,7 @@ class Mp3Data extends Data {
 		samples = buf.length; // actual decoded samples
 
 		if( channels == 1 ) {
-			buffer = haxe.io.Bytes.ofData(left);
+			buffer = haxe.io.Bytes.ofData(left.buffer);
 			return;
 		}
 

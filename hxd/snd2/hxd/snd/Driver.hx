@@ -320,7 +320,9 @@ class Driver {
 		b.sound = c.sound;
 		buffers.push(b);
 		bufferMap.set(c.sound, b);
-		fillBuffer(b, c.sound.getData(), c.soundGroup.mono);
+		var data = c.sound.getData();
+		var mono = c.soundGroup.mono;
+		data.load(function() fillBuffer(b, data, mono));
 		return b;
 	}
 
@@ -366,6 +368,12 @@ class Driver {
 
 	function fillBuffer(buf : Buffer, dat : hxd.snd.Data, forceMono = false) {
 		var targetRate = dat.samplingRate;
+
+		#if !hl
+		// perform resampling to nativechannel frequency
+		targetRate = AL.NATIVE_FREQ;
+		#end
+
 		var targetChannels = forceMono || dat.channels == 1 ? 1 : 2;
 		var alFormat;
 		var targetFormat : hxd.snd.Data.SampleFormat = switch( dat.sampleFormat ) {
