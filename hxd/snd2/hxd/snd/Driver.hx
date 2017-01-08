@@ -1,10 +1,23 @@
 package hxd.snd;
 
-import openal.AL;
-import openal.ALC;
+#if hl
+typedef AL = openal.AL;
+private typedef ALC = openal.ALC;
+private typedef ALSource = openal.AL.Source;
+private typedef ALBuffer = openal.AL.Buffer;
+private typedef ALDevice = openal.ALC.Device;
+private typedef ALContext = openal.ALC.Context;
+#else
+typedef AL = hxd.snd.ALEmulator;
+private typedef ALC = hxd.snd.ALEmulator.ALCEmulator;
+private typedef ALSource = hxd.snd.ALEmulator.ALSource;
+private typedef ALBuffer = hxd.snd.ALEmulator.ALBuffer;
+private typedef ALDevice = hxd.snd.ALEmulator.ALDevice;
+private typedef ALContext = hxd.snd.ALEmulator.ALContext;
+#end
 
 class Source {
-	public var inst : openal.AL.Source;
+	public var inst : ALSource;
 	public var channel : Channel;
 	public var buffer : Buffer;
 
@@ -14,7 +27,7 @@ class Source {
 }
 
 class Buffer {
-	public var inst : openal.AL.Buffer;
+	public var inst : ALBuffer;
 	public var sound : hxd.res.Sound;
 	public var playCount : Int;
 	public var lastStop : Float;
@@ -45,8 +58,8 @@ class Driver {
 
 	var tmpBytes : haxe.io.Bytes;
 
-	var alDevice      : Device;
-	var alContext     : Context;
+	var alDevice      : ALDevice;
+	var alContext     : ALContext;
 
 	var buffers       : Array<Buffer>;
 	var sources       : Array<Source>;
@@ -71,7 +84,7 @@ class Driver {
 		// alloc sources
 		var bytes = haxe.io.Bytes.alloc(4 * AL_NUM_SOURCES);
 		AL.genSources(AL_NUM_SOURCES, bytes);
-		sources = [for (i in 0...AL_NUM_SOURCES) new Source(cast bytes.getInt32(i * 4))];
+		sources = [for (i in 0...AL_NUM_SOURCES) new Source(ALSource.ofInt(bytes.getInt32(i * 4)))];
 
 		tmpBytes = haxe.io.Bytes.alloc(4 * 3 * 2);
 	}
@@ -96,8 +109,19 @@ class Driver {
 	public function dispose() {
 		stopAll();
 
-		AL.deleteSources(sources.length, hl.Bytes.getArray([for( s in sources ) s.inst]));
-		AL.deleteBuffers(buffers.length, hl.Bytes.getArray([for( b in buffers ) b.inst]));
+		inline function arrayBytes(a:Array<Int>) {
+			#if hl
+			return hl.Bytes.getArray(a);
+			#else
+			var b = haxe.io.Bytes.alloc(a.length * 4);
+			for( i in 0...a.length )
+				b.setInt32(i << 2, a[i]);
+			return b;
+			#end
+		}
+
+		AL.deleteSources(sources.length, arrayBytes([for( s in sources ) s.inst.toInt()]));
+		AL.deleteBuffers(buffers.length, arrayBytes([for( b in buffers ) b.inst.toInt()]));
 		sources = [];
 		buffers = [];
 
@@ -123,16 +147,14 @@ class Driver {
 		for( s in sources ) {
 			var c = s.channel;
 			if( c == null ) continue;
-			var state  = 0;
-			AL.getSourcei(s.inst, AL.SOURCE_STATE, new hl.Ref(state));
+			var state = AL.getSourcei(s.inst, AL.SOURCE_STATE);
 			switch (state) {
 			case AL.STOPPED:
 				releaseChannel(c);
 				c.onEnd();
 			case AL.PLAYING:
 				if (!c.positionChanged) {
-					var position : hl.F32 = 0.0;
-					AL.getSourcef(s.inst, AL.SEC_OFFSET, new hl.Ref(position));
+					var position= AL.getSourcef(s.inst, AL.SEC_OFFSET);
 					c.position = position;
 					c.positionChanged = false;
 				}
@@ -216,27 +238,18 @@ class Driver {
 
 			// bind buf & play source
 			setBuffer(s, getBuffer(c));
+			c.positionChanged = true;
+			syncSource(s);
 			AL.sourcePlay(s.inst);
-			AL.sourcef(s.inst, AL.SEC_OFFSET, c.position);
-			c.positionChanged = false;
+
 			c = c.next;
 		}
 
-		// update source paramaters
+		// update source parameters
 		for ( s in sources ) {
 			var c = s.channel;
 			if( c == null) continue;
-
-			if (c.positionChanged) {
-				AL.sourcef(s.inst, AL.SEC_OFFSET, c.position);
-				c.positionChanged = false;
-			}
-
-			AL.sourcei(s.inst, AL.LOOPING, c.loop ? AL.TRUE : AL.FALSE);
-			AL.sourcef(s.inst, AL.GAIN, c.volume * c.channelGroup.volume * c.soundGroup.volume);
-
-			for(e in c.effects)
-				e.apply(c, s);
+			syncSource(s);
 		}
 
 		// update virtual channels
@@ -251,6 +264,19 @@ class Driver {
 			}
 			c = next;
 		}
+	}
+
+	function syncSource( s : Source ) {
+		var c = s.channel;
+		if( c == null ) return;
+		if (c.positionChanged) {
+			AL.sourcef(s.inst, AL.SEC_OFFSET, c.position);
+			c.positionChanged = false;
+		}
+		AL.sourcei(s.inst, AL.LOOPING, c.loop ? AL.TRUE : AL.FALSE);
+		AL.sourcef(s.inst, AL.GAIN, c.volume * c.channelGroup.volume * c.soundGroup.volume);
+		for(e in c.effects)
+			e.apply(c, s);
 	}
 
 	// ------------------------------------------------------------------------
@@ -272,7 +298,7 @@ class Driver {
 			if( s.buffer.playCount == 0 ) s.buffer.lastStop = haxe.Timer.stamp();
 			s.buffer = null;
 		} else {
-			AL.sourcei(s.inst, AL.BUFFER, b.inst);
+			AL.sourcei(s.inst, AL.BUFFER, b.inst.toInt());
 			b.playCount++;
 			s.buffer = b;
 		}
@@ -290,7 +316,7 @@ class Driver {
 					releaseBuffer(b);
 		}
 		AL.genBuffers(1, tmpBytes);
-		var b = new Buffer(cast tmpBytes.getInt32(0));
+		var b = new Buffer(ALBuffer.ofInt(tmpBytes.getInt32(0)));
 		b.sound = c.sound;
 		buffers.push(b);
 		bufferMap.set(c.sound, b);
@@ -302,7 +328,7 @@ class Driver {
 		buffers.remove(b);
 		bufferMap.remove(b.sound);
 		@:privateAccess b.sound.data = null; // free cached decoded data
-		tmpBytes.setInt32(0, cast b.inst);
+		tmpBytes.setInt32(0, b.inst.toInt());
 		AL.deleteBuffers(1, tmpBytes);
 	}
 
