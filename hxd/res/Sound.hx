@@ -71,43 +71,11 @@ class Sound extends Resource {
 		}
 	}
 
-	#if hl
-
 	public function play( ?loop = false, ?channelGroup, ?soundGroup ) {
 		lastPlay = haxe.Timer.stamp();
 		channel = hxd.snd.Driver.get().play(this, channelGroup, soundGroup);
 		channel.loop = loop;
 		return channel;
 	}
-
-	#else
-
-	public function play( ?loop = false, volume = 1. ) {
-		lastPlay = haxe.Timer.stamp();
-		return channel = getWorker().play(this, loop, volume);
-	}
-
-	static var defaultWorker : hxd.snd.Worker = null;
-
-	public static function getWorker() {
-		if( defaultWorker == null ) {
-			// don't use a native worker since we haven't setup it in our main()
-			var old = hxd.Worker.ENABLE;
-			hxd.Worker.ENABLE = false;
-			defaultWorker = new hxd.snd.Worker();
-			defaultWorker.start();
-			hxd.Worker.ENABLE = old;
-		}
-		return defaultWorker;
-	}
-
-	public static function startWorker() {
-		if( defaultWorker != null )
-			return true;
-		defaultWorker = new hxd.snd.Worker();
-		return defaultWorker.start();
-	}
-
-	#end
 
 }
