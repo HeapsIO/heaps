@@ -1,5 +1,88 @@
 package hxd.snd;
 
+#if hl
+
+private typedef OggFile = hl.Abstract<"fmt_ogg">;
+
+class OggData extends Data {
+
+	var bytes : haxe.io.Bytes;
+	var reader : OggFile;
+	var currentSample : Int;
+
+	public function new( bytes : haxe.io.Bytes ) {
+		this.bytes = bytes;
+		reader = ogg_open(bytes, bytes.length);
+		if( reader == null ) throw "Failed to decode OGG data";
+
+		var b = 0, f = 0, s = 0, c = 0;
+		ogg_info(reader, b, f, s, c);
+		channels = c;
+		samples = s;
+		sampleFormat = I16;
+		samplingRate = f;
+	}
+
+	override function resample(rate:Int, format:Data.SampleFormat, channels:Int):Data  {
+		switch( format ) {
+		case UI8, I16 if( channels == this.channels && rate == this.samplingRate ):
+			var g = new OggData(bytes);
+			g.sampleFormat = format;
+			return g;
+		default:
+			return super.resample(rate, format, channels);
+		}
+	}
+
+	override function decodeBuffer(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int) {
+		if( currentSample != sampleStart ) {
+			currentSample = sampleStart;
+			if( !ogg_seek(reader, sampleStart) ) throw "Invalid sample start";
+		}
+		var bpp = getBytesPerSample();
+		var output : hl.Bytes = out;
+		output = output.offset(outPos);
+		var format = switch( sampleFormat ) {
+		case UI8: 1 | 256;
+		case I16: 2;
+		default:
+			throw "assert";
+		}
+		var bytesNeeded = sampleCount * bpp;
+		while( bytesNeeded > 0 ) {
+			var read = ogg_read(reader, output, bytesNeeded, format);
+			if( read < 0 ) throw "Failed to decode OGG data";
+			if( read == 0 ) {
+				// EOF
+				output.fill(0,bytesNeeded, sampleFormat == UI8 ? 0x80 : 0);
+				break;
+			}
+			bytesNeeded -= read;
+			output = output.offset(read);
+		}
+		currentSample += sampleCount;
+	}
+
+	@:hlNative("fmt", "ogg_open") static function ogg_open( bytes : hl.Bytes, size : Int ) : OggFile {
+		return null;
+	}
+
+	@:hlNative("fmt", "ogg_seek") static function ogg_seek( o : OggFile, sample : Int ) : Bool {
+		return false;
+	}
+
+	@:hlNative("fmt", "ogg_info") static function ogg_info( o : OggFile, bitrate : hl.Ref<Int>, freq : hl.Ref<Int>, samples : hl.Ref<Int>, channels : hl.Ref<Int> ) : Void {
+	}
+
+	@:hlNative("fmt", "ogg_read") static function ogg_read( o : OggFile, output : hl.Bytes, size : Int, format : Int ) : Int {
+		return 0;
+	}
+
+}
+
+
+#else
+
 private class BytesOutput extends haxe.io.Output {
 
 	var bytes : haxe.io.Bytes;
@@ -118,3 +201,5 @@ class OggData extends Data {
 
 
 }
+
+#end
