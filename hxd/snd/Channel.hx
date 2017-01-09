@@ -14,8 +14,16 @@ class Channel extends ChannelBase {
 	public var duration     (default, null) : Float;
 	public var position     (default, set)  : Float;
 
-	public var pause (default, set) : Bool;
-	public var loop  : Bool;
+	public var pause(default, set) : Bool;
+	public var loop : Bool;
+
+	/**
+		Instead of being decoded at once and cached for reuse, the sound will be progressively
+		decoded as it plays and will not be cached. It is automatically set to true if the sound
+		duration is longer than hxd.snd.Driver.STREAM_DURATION (default to 5 seconds.)
+	**/
+	public var streaming(default,set) : Bool;
+
 	var audibleGain : Float;
 	var lastStamp   : Float;
 	var isVirtual   : Bool;
@@ -49,6 +57,11 @@ class Channel extends ChannelBase {
 	function set_pause(v : Bool) {
 		if (!v) lastStamp = haxe.Timer.stamp();
 		return pause = v;
+	}
+
+	function set_streaming(v:Bool) {
+		if( source != null ) throw "Can't change streaming mode while playing";
+		return streaming = v;
 	}
 
 	public function calcAudibleGain() {

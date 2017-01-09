@@ -24,10 +24,12 @@ class Source {
 	public var loop = false;
 	public var volume = 1.;
 	public var playing = false;
-
-	public var nextSound : hxd.res.Sound;
-	public var nextBuffer : Buffer;
 	public var hasQueue = false;
+
+	public var streamData : hxd.snd.Data;
+	public var streamSample : Int;
+	public var streamPosition : Float;
+	public var streamPositionNext : Float;
 
 	public function new(inst) {
 		this.inst = inst;
@@ -46,14 +48,31 @@ class Buffer {
 	}
 
 	public function unref() {
-		playCount--;
-		if( playCount == 0 ) lastStop = haxe.Timer.stamp();
+		if( sound == null ) {
+			var tmp = haxe.io.Bytes.alloc(4);
+			tmp.setInt32(0, inst.toInt());
+			AL.deleteBuffers(1, tmp);
+		} else {
+			playCount--;
+			if( playCount == 0 ) lastStop = haxe.Timer.stamp();
+		}
 	}
 }
 
 @:access(hxd.snd.Channel)
 @:access(hxd.snd.Effect)
 class Driver {
+
+	/**
+		When a channel is streaming, how much data should be bufferize.
+	**/
+	public static var STREAM_BUFSIZE = 1 << 19;
+
+	/**
+		Automatically set the channel to streaming mode if its duration exceed this value.
+	**/
+	public static var STREAM_DURATION = 5.;
+
 	static var instance : Driver;
 
 	public var masterVolume	: Float;
@@ -71,6 +90,7 @@ class Driver {
 	static inline var AL_NUM_SOURCES = 16;
 
 	var cachedBytes : haxe.io.Bytes;
+	var resampleBytes : haxe.io.Bytes;
 
 	var alDevice      : ALDevice;
 	var alContext     : ALContext;
@@ -160,6 +180,7 @@ class Driver {
 		c.soundGroup   = soundGroup;
 		c.channelGroup = channelGroup;
 		c.next = channels;
+		c.streaming = c.duration > STREAM_DURATION;
 		channels = c;
 		return c;
 	}
@@ -177,7 +198,45 @@ class Driver {
 				releaseChannel(c);
 				c.onEnd();
 			case AL.PLAYING:
-				if (!c.positionChanged) {
+				if( c.streaming ) {
+					if( c.positionChanged ) {
+						// force full resync
+						releaseSource(s);
+						c.source = null;
+						continue;
+					}
+					var count = AL.getSourcei(s.inst, AL.BUFFERS_PROCESSED);
+					if( count > 0 ) {
+						// swap buffers
+						var b0 = s.buffers[0];
+						var b1 = s.buffers[1];
+						var tmp = getTmp(8);
+						tmp.setInt32(0, b0.inst.toInt());
+						AL.sourceUnqueueBuffers(s.inst, 1, tmp);
+						s.streamPosition = s.streamPositionNext;
+						updateStreaming(s, b0);
+						tmp.setInt32(0, b0.inst.toInt());
+						AL.sourceQueueBuffers(s.inst, 1, tmp);
+						s.buffers[0] = b1;
+						s.buffers[1] = b0;
+					}
+					var position = AL.getSourcef(s.inst, AL.SEC_OFFSET);
+					var prev = c.position;
+					c.position = position + s.streamPosition;
+					c.lastStamp = now;
+					if( c.position > c.duration ) {
+						if( c.queue.length > 0 ) {
+							s.streamPosition -= c.duration;
+							queueNext(c);
+							c.onEnd();
+						} else if( c.loop ) {
+							c.position -= c.duration;
+							s.streamPosition -= c.duration;
+							c.onEnd();
+						}
+					}
+					c.positionChanged = false;
+				} else if( !c.positionChanged ) {
 					var position = AL.getSourcef(s.inst, AL.SEC_OFFSET);
 					var prev = c.position;
 					c.position = position;
@@ -308,10 +367,13 @@ class Driver {
 		var c = s.channel;
 		if( c == null ) return;
 		if( c.positionChanged ) {
-			AL.sourcef(s.inst, AL.SEC_OFFSET, c.position);
+			if( !c.streaming ) {
+				AL.sourcef(s.inst, AL.SEC_OFFSET, c.position);
+				c.position = AL.getSourcef(s.inst, AL.SEC_OFFSET); // prevent rounding
+			}
 			c.positionChanged = false;
 		}
-		var loopFlag = c.loop && c.queue.length == 0;
+		var loopFlag = c.loop && c.queue.length == 0 && !c.streaming;
 		if( s.loop != loopFlag ) {
 			s.loop = loopFlag;
 			AL.sourcei(s.inst, AL.LOOPING, loopFlag ? AL.TRUE : AL.FALSE);
@@ -369,7 +431,31 @@ class Driver {
 			for( b in s.buffers )
 				b.unref();
 			s.buffers = [];
+			s.streamData = null;
 			s.hasQueue = false;
+
+		} else if( c.streaming ) {
+
+			if( !s.hasQueue ) {
+				if( s.buffers.length != 0 ) throw "assert";
+				s.hasQueue = true;
+				var tmpBytes = getTmp(8);
+				AL.genBuffers(2, tmpBytes);
+				s.buffers = [new Buffer(ALBuffer.ofInt(tmpBytes.getInt32(0))), new Buffer(ALBuffer.ofInt(tmpBytes.getInt32(4)))];
+				s.streamData = c.sound.getData();
+				s.streamSample = Std.int(c.position * s.streamData.samplingRate);
+				// fill first two buffers
+				updateStreaming(s, s.buffers[0]);
+				s.streamPosition = s.streamPositionNext;
+				updateStreaming(s, s.buffers[1]);
+				tmpBytes.setInt32(0, s.buffers[0].inst.toInt());
+				tmpBytes.setInt32(4, s.buffers[1].inst.toInt());
+				AL.sourceQueueBuffers(s.inst, 2, tmpBytes);
+				var error = AL.getError();
+				if( error != 0 )
+					throw "Failed to queue streaming buffers 0x"+StringTools.hex(error);
+			}
+
 		} else if( s.hasQueue || c.queue.length > 0 ) {
 
 			if( !s.hasQueue && s.buffers.length > 0 )
@@ -378,16 +464,21 @@ class Driver {
 			var buffers = [getBuffer(c.sound, c.soundGroup)];
 			for( snd in c.queue )
 				buffers.push(getBuffer(snd, c.soundGroup));
+
+			// only append new ones
+			for( i in 0...s.buffers.length )
+				if( buffers.shift() != s.buffers[i] )
+					throw "assert";
+
 			var tmpBytes = getTmp(buffers.length * 4);
 			for( i in 0...buffers.length ) {
 				var b = buffers[i];
 				b.playCount++;
 				tmpBytes.setInt32(i << 2, b.inst.toInt());
 			}
-			for( b in s.buffers )
-				b.unref();
 			AL.sourceQueueBuffers(s.inst, buffers.length, tmpBytes);
-			s.buffers = buffers;
+			for( b in buffers )
+				s.buffers.push(b);
 			if( AL.getError() != 0 )
 				throw "Failed to queue buffers : format differs";
 
@@ -398,6 +489,85 @@ class Driver {
 				s.buffers[0].unref();
 			s.buffers[0] = buffer;
 			buffer.playCount++;
+		}
+	}
+
+	var targetRate : Int;
+	var targetFormat : Data.SampleFormat;
+	var targetChannels : Int;
+	var alFormat : Int;
+
+	function checkTargetFormat( dat : hxd.snd.Data, forceMono = false ) {
+		targetRate = dat.samplingRate;
+		#if !hl
+		// perform resampling to nativechannel frequency
+		targetRate = AL.NATIVE_FREQ;
+		#end
+		targetChannels = forceMono || dat.channels == 1 ? 1 : 2;
+		targetFormat = switch( dat.sampleFormat ) {
+		case UI8:
+			alFormat = targetChannels == 1 ? AL.FORMAT_MONO8 : AL.FORMAT_STEREO8;
+			UI8;
+		case I16:
+			alFormat = targetChannels == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
+			I16;
+		case F32:
+			#if hl
+			alFormat = targetChannels == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
+			I16;
+			#else
+			alFormat = targetChannels == 1 ? AL.FORMAT_MONOF32 : AL.FORMAT_STEREOF32;
+			F32;
+			#end
+		}
+		return targetChannels == dat.channels && targetFormat == dat.sampleFormat && targetRate == dat.samplingRate;
+	}
+
+	function updateStreaming( s : Source, buf : Buffer ) {
+		// decode
+		var tmpBytes = getTmp(STREAM_BUFSIZE >> 1);
+		var bpp = s.streamData.getBytesPerSample();
+		var reqSamples = Std.int((STREAM_BUFSIZE >> 1) / bpp);
+		var samples = reqSamples;
+		var outPos = 0;
+		var qPos = 0;
+
+		while( samples > 0 ) {
+			var avail = s.streamData.samples - s.streamSample;
+			if( avail <= 0 ) {
+				var next = s.channel.queue[qPos++];
+				if( next != null ) {
+					s.streamSample -= s.streamData.samples;
+					s.streamData = next.getData();
+				} else if( !s.channel.loop || s.streamData.samples == 0 )
+					break;
+				else
+					s.streamSample -= s.streamData.samples;
+			} else {
+				var count = samples < avail ? samples : avail;
+				if( outPos == 0 )
+					s.streamPositionNext = s.streamSample / s.streamData.samplingRate;
+				s.streamData.decode(tmpBytes, outPos, s.streamSample, count);
+				s.streamSample += count;
+				outPos += count * bpp;
+				samples -= count;
+			}
+		}
+
+		if( !checkTargetFormat(s.streamData) ) {
+			reqSamples -= samples;
+			var bytes = resampleBytes;
+			var reqBytes = targetChannels * reqSamples * Data.formatBytes(targetFormat);
+			if( bytes == null || bytes.length < reqBytes ) {
+				bytes = haxe.io.Bytes.alloc(reqBytes);
+				resampleBytes = bytes;
+			}
+			s.streamData.resampleBuffer(resampleBytes, 0, tmpBytes, 0, targetRate, targetFormat, targetChannels, reqSamples);
+			AL.bufferData(buf.inst, alFormat, resampleBytes, reqBytes, targetRate);
+		} else {
+			AL.bufferData(buf.inst, alFormat, tmpBytes, outPos, s.streamData.samplingRate);
+			if( AL.getError() != 0 )
+				throw "Failed to upload buffer data";
 		}
 	}
 
@@ -467,35 +637,13 @@ class Driver {
 	}
 
 	function fillBuffer(buf : Buffer, dat : hxd.snd.Data, forceMono = false) {
-		var targetRate = dat.samplingRate;
-
-		#if !hl
-		// perform resampling to nativechannel frequency
-		targetRate = AL.NATIVE_FREQ;
-		#end
-
-		var targetChannels = forceMono || dat.channels == 1 ? 1 : 2;
-		var alFormat;
-		var targetFormat : hxd.snd.Data.SampleFormat = switch( dat.sampleFormat ) {
-		case UI8:
-			alFormat = targetChannels == 1 ? AL.FORMAT_MONO8 : AL.FORMAT_STEREO8;
-			UI8;
-		case I16:
-			alFormat = targetChannels == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
-			I16;
-		case F32:
-			#if hl
-			alFormat = targetChannels == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
-			I16;
-			#else
-			alFormat = targetChannels == 1 ? AL.FORMAT_MONOF32 : AL.FORMAT_STEREOF32;
-			F32;
-			#end
-		}
-		if( targetChannels != dat.channels || targetFormat != dat.sampleFormat || targetRate != dat.samplingRate )
+		if( !checkTargetFormat(dat, forceMono) )
 			dat = dat.resample(targetRate, targetFormat, targetChannels);
 		var dataBytes = haxe.io.Bytes.alloc(dat.samples * dat.getBytesPerSample());
 		dat.decode(dataBytes, 0, 0, dat.samples);
 		AL.bufferData(buf.inst, alFormat, dataBytes, dataBytes.length, dat.samplingRate);
+		if( AL.getError() != 0 )
+			throw "Failed to upload buffer data";
 	}
+
 }

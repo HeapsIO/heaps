@@ -67,6 +67,7 @@ private class ALChannel extends NativeChannel {
 				curSample += scount;
 			}
 			source.currentSample = baseSample + curSample;
+			if( source.currentSample < 0 ) throw baseSample+"/" + curSample;
 		}
 
 		for( i in 0...count<<1 )
@@ -94,6 +95,7 @@ class ALSource {
 	public var volume : F32 = 1.;
 	public var playing(get, never) : Bool;
 	public var duration : Float;
+	public var frequency : Int;
 
 	public function new() {
 		id = ++ID;
@@ -101,6 +103,7 @@ class ALSource {
 	}
 
 	public function updateDuration() {
+		frequency = buffers.length == 0 ? 1 : buffers[0].frequency;
 		duration = 0.;
 		for( b in buffers )
 			duration += b.samples / b.frequency;
@@ -109,13 +112,15 @@ class ALSource {
 	inline function get_playing() return chan != null;
 
 	public function play() {
-		if( chan == null )
+		if( chan == null ) {
+			playedTime = haxe.Timer.stamp() - currentSample / frequency;
 			chan = new ALChannel(this, 4096 /* 100 ms latency @44.1Khz */);
+		}
 	}
 
-	public function stop() {
+	public function stop( immediate = false ) {
 		if( chan != null ) {
-			if( STOP_DELAY == 0 )
+			if( STOP_DELAY == 0 || immediate )
 				chan.stop();
 			else
 				haxe.Timer.delay(chan.stop, STOP_DELAY);
@@ -140,8 +145,8 @@ class ALBuffer {
 
 	public var id : Int;
 	public var data : haxe.ds.Vector<F32>;
-	public var frequency : Int;
-	public var samples : Int;
+	public var frequency : Int = 1;
+	public var samples : Int = 0;
 
 	public function new() {
 		id = ++ID;
@@ -152,6 +157,12 @@ class ALBuffer {
 		data = null;
 		all.remove(id);
 		id = 0;
+	}
+
+	public function alloc(size) {
+		if( data == null || data.length != size )
+			data = new haxe.ds.Vector(size);
+		return data;
 	}
 
 	public inline function toInt() return id;
@@ -273,10 +284,14 @@ class ALEmulator {
 	}
 
 	// Set Source parameters
-	public static function sourcef(source : Source, param : Int, value  : F32) {
+	public static function sourcef(source : Source, param : Int, value : F32) {
 		switch( param ) {
 		case SEC_OFFSET:
-			source.currentSample = source.buffers.length == 0 ? 0 : Std.int(value * source.buffers[0].frequency);
+			source.currentSample = source.buffers.length == 0 ? 0 : Std.int(value * source.frequency);
+			if( source.playing ) {
+				source.stop(true);
+				source.play();
+			}
 		case GAIN:
 			source.volume = value;
 		default:
@@ -390,12 +405,12 @@ class ALEmulator {
 	}
 
 	public static function sourcePlay(source : Source) {
-		source.playedTime = haxe.Timer.stamp();
 		source.play();
 	}
 
 	public static function sourceStop(source : Source) {
 		source.stop();
+		source.currentSample = 0;
 	}
 
 	public static function sourceRewind(source : Source) {
@@ -407,24 +422,26 @@ class ALEmulator {
 
 	// Queue buffers onto a source
 	public static function sourceQueueBuffers(source : Source, nb : Int, buffers : Bytes) {
-		var queue = [];
 		for( i in 0...nb ) {
 			var b = Buffer.ofInt(buffers.getInt32(i * 4));
-			queue.push(b);
+			if( b == null ) throw "assert";
+			source.buffers.push(b);
 		}
-		source.buffers = queue;
 		source.updateDuration();
 	}
 
 	public static function sourceUnqueueBuffers(source : Source, nb : Int, buffers : Bytes) {
 		for( i in 0...nb ) {
 			var b = Buffer.ofInt(buffers.getInt32(i * 4));
-			if( b == source.buffers[0] ) {
+			if( b != source.buffers[0] ) throw "assert";
+			if( source.playing ) {
+				if( source.currentSample < b.samples ) throw "assert";
 				source.buffers.shift();
 				source.currentSample -= b.samples;
 				source.playedTime += b.samples / b.frequency;
-				source.updateDuration();
-			}
+			} else
+				source.buffers.shift();
+			source.updateDuration();
 		}
 	}
 
@@ -450,40 +467,40 @@ class ALEmulator {
 		}
 		switch( format ) {
 		case FORMAT_MONO8:
-			buffer.data = new haxe.ds.Vector(size*2);
+			var bdata = buffer.alloc(size*2);
 			for( i in 0...size ) {
 				var v = data.get(i) / 0xFF;
-				buffer.data[i << 1] = v;
-				buffer.data[(i<<1) | 1] = v;
+				bdata[i << 1] = v;
+				bdata[(i<<1) | 1] = v;
 			}
 		case FORMAT_STEREO8:
-			buffer.data = new haxe.ds.Vector(size);
+			var bdata = buffer.alloc(size);
 			for( i in 0...size ) {
 				var v = data.get(i) / 0xFF;
-				buffer.data[i] = v;
+				bdata[i] = v;
 			}
 		case FORMAT_MONO16:
-			buffer.data = new haxe.ds.Vector(size);
+			var bdata = buffer.alloc(size);
 			for( i in 0...size>>1 ) {
 				var v = sext16(data.getUInt16(i << 1)) / 0x8000;
-				buffer.data[i << 1] = v;
-				buffer.data[(i<<1) | 1] = v;
+				bdata[i << 1] = v;
+				bdata[(i<<1) | 1] = v;
 			}
 		case FORMAT_STEREO16:
-			buffer.data = new haxe.ds.Vector(size >> 1);
+			var bdata = buffer.alloc(size >> 1);
 			for( i in 0...size>>1 ) {
 				var v = sext16(data.getUInt16(i << 1)) / 0x8000;
-				buffer.data[i] = v;
+				bdata[i] = v;
 			}
 		case FORMAT_MONOF32:
-			buffer.data = new haxe.ds.Vector(size >> 1);
+			var bdata = buffer.alloc(size >> 1);
 			for( i in 0...size >> 1 ) {
 				var f = data.getFloat(i << 2);
-				buffer.data[i << 1] = f;
-				buffer.data[(i<<1) | 1] = f;
+				bdata[i << 1] = f;
+				bdata[(i<<1) | 1] = f;
 			}
 		case FORMAT_STEREOF32:
-			buffer.data = new haxe.ds.Vector(size >> 2);
+			var bdata = buffer.alloc(size >> 2);
 			#if flash
 			flash.Memory.select(data.getData());
 			#end
