@@ -444,9 +444,17 @@ class Driver {
 		case UI8:
 			alFormat = targetChannels == 1 ? AL.FORMAT_MONO8 : AL.FORMAT_STEREO8;
 			UI8;
-		case I16, F32:
+		case I16:
 			alFormat = targetChannels == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
 			I16;
+		case F32:
+			#if hl
+			alFormat = targetChannels == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
+			I16;
+			#else
+			alFormat = targetChannels == 1 ? AL.FORMAT_MONOF32 : AL.FORMAT_STEREOF32;
+			F32;
+			#end
 		}
 		if( targetChannels != dat.channels || targetFormat != dat.sampleFormat || targetRate != dat.samplingRate )
 			dat = dat.resample(targetRate, targetFormat, targetChannels);

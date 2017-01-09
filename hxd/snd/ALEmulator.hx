@@ -18,6 +18,7 @@ private class ALChannel extends NativeChannel {
 		super(samples);
 	}
 
+	@:noDebug
 	override function onSample( out : haxe.io.Float32Array ) {
 		var pos = 0;
 		var count = out.length >> 1;
@@ -386,12 +387,11 @@ class ALEmulator {
 	public static function isBuffer(buffer : Buffer) : Bool {
 		return buffer != null;
 	}
+
+	@:noDebug
 	public static function bufferData(buffer : Buffer, format : Int, data : Bytes, size : Int, freq : Int) {
 		if( freq != NATIVE_FREQ )
 			throw "Unsupported frequency value: " + freq +" should be " + NATIVE_FREQ;
-		inline function sext8(v:Int) {
-			return (v & 0x80) == 0 ? v : v | 0xFFFFFF00;
-		}
 		inline function sext16(v:Int) {
 			return (v & 0x8000) == 0 ? v : v | 0xFFFF0000;
 		}
@@ -399,14 +399,14 @@ class ALEmulator {
 		case FORMAT_MONO8:
 			buffer.data = new haxe.ds.Vector(size*2);
 			for( i in 0...size ) {
-				var v = sext8(data.get(i)) / 0x80;
+				var v = data.get(i) / 0xFF;
 				buffer.data[i << 1] = v;
 				buffer.data[(i<<1) | 1] = v;
 			}
 		case FORMAT_STEREO8:
 			buffer.data = new haxe.ds.Vector(size);
 			for( i in 0...size ) {
-				var v = sext8(data.get(i)) / 0x80;
+				var v = data.get(i) / 0xFF;
 				buffer.data[i] = v;
 			}
 		case FORMAT_MONO16:
@@ -422,6 +422,20 @@ class ALEmulator {
 				var v = sext16(data.getUInt16(i << 1)) / 0x8000;
 				buffer.data[i] = v;
 			}
+		case FORMAT_MONOF32:
+			buffer.data = new haxe.ds.Vector(size >> 1);
+			for( i in 0...size >> 1 ) {
+				var f = data.getFloat(i << 2);
+				buffer.data[i << 1] = f;
+				buffer.data[(i<<1) | 1] = f;
+			}
+		case FORMAT_STEREOF32:
+			buffer.data = new haxe.ds.Vector(size >> 2);
+			#if flash
+			flash.Memory.select(data.getData());
+			#end
+			for( i in 0...size>>2 )
+				buffer.data[i] = #if flash flash.Memory.getFloat #else data.getFloat #end(i<<2);
 		default:
 			throw "Format not supported 0x" + StringTools.hex(format);
 		}
@@ -491,6 +505,12 @@ class ALEmulator {
 	public static function getBufferiv(buffer : Buffer, param : Int, values : Bytes) {
 		throw "TODO";
 	}
+
+
+	// --- our own float32 extension
+
+	public static inline var FORMAT_MONOF32				= 0x1110;
+	public static inline var FORMAT_STEREOF32			= 0x1111;
 
 	// ------------------------------------------------------------------------
 	// Constants

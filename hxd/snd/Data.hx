@@ -31,6 +31,7 @@ class Data {
 		decodeBuffer(out, outPos, sampleStart, sampleCount);
 	}
 
+	@:noDebug
 	public function resample( rate : Int, format : SampleFormat, channels : Int ) : Data {
 		if( sampleFormat == format && samplingRate == rate && this.channels == channels )
 			return this;
