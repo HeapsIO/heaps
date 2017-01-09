@@ -71,11 +71,16 @@ class Sound extends Resource {
 		}
 	}
 
-	public function play( ?loop = false, ?channelGroup, ?soundGroup ) {
+	public function play( ?loop = false, ?volume = 1., ?channelGroup, ?soundGroup ) {
 		lastPlay = haxe.Timer.stamp();
 		channel = hxd.snd.Driver.get().play(this, channelGroup, soundGroup);
 		channel.loop = loop;
+		channel.volume = volume;
 		return channel;
+	}
+
+	public static function startWorker() {
+		return false;
 	}
 
 }
