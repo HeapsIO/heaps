@@ -22,13 +22,32 @@ private class ALChannel extends NativeChannel {
 	override function onSample( out : haxe.io.Float32Array ) {
 		var pos = 0;
 		var count = out.length >> 1;
-		var volume = source.volume;
-		while( source.buffer != null && count > 0 ) {
-			var scount = source.buffer.samples - source.currentSample;
-			if( scount > 0 ) {
+		if( source.duration > 0 ) {
+			var volume = source.volume;
+			var bufferIndex = 0;
+			var baseSample = 0;
+			var curSample = source.currentSample;
+			var buffer = source.buffers[bufferIndex++];
+			while( count > 0 ) {
+				while( buffer != null && curSample >= buffer.samples ) {
+					baseSample += buffer.samples;
+					curSample -= buffer.samples;
+					buffer = source.buffers[bufferIndex++];
+				}
+				if( buffer == null ) {
+					if( source.loop ) {
+						curSample = 0;
+						baseSample = 0;
+						bufferIndex = 0;
+						buffer = source.buffers[bufferIndex++];
+						continue;
+					}
+					break;
+				}
+				var scount = buffer.samples - curSample;
 				if( scount > count ) scount = count;
-				var read = source.currentSample << 1;
-				var data = source.buffer.data;
+				var read = curSample << 1;
+				var data = buffer.data;
 				if( startup < 1 ) {
 					for( i in 0...scount ) {
 						out[pos++] = data[read++] * volume * startup;
@@ -45,13 +64,11 @@ private class ALChannel extends NativeChannel {
 					}
 				}
 				count -= scount;
-				source.currentSample += scount;
-			} else if( source.loop ) {
-				source.currentSample = 0;
-			} else {
-				break;
+				curSample += scount;
 			}
+			source.currentSample = baseSample + curSample;
 		}
+
 		for( i in 0...count<<1 )
 			out[pos++] = 0.;
 	}
@@ -72,14 +89,21 @@ class ALSource {
 
 	public var playedTime = 0.;
 	public var currentSample : Int = 0;
-	public var buffer : Buffer;
+	public var buffers : Array<Buffer> = [];
 	public var loop = false;
 	public var volume : F32 = 1.;
 	public var playing(get, never) : Bool;
+	public var duration : Float;
 
 	public function new() {
 		id = ++ID;
 		all.set(id, this);
+	}
+
+	public function updateDuration() {
+		duration = 0.;
+		for( b in buffers )
+			duration += b.samples / b.frequency;
 	}
 
 	inline function get_playing() return chan != null;
@@ -252,7 +276,7 @@ class ALEmulator {
 	public static function sourcef(source : Source, param : Int, value  : F32) {
 		switch( param ) {
 		case SEC_OFFSET:
-			source.currentSample = Std.int(value * source.buffer.frequency);
+			source.currentSample = source.buffers.length == 0 ? 0 : Std.int(value * source.buffers[0].frequency);
 		case GAIN:
 			source.volume = value;
 		default:
@@ -274,9 +298,10 @@ class ALEmulator {
 	public static function sourcei(source : Source, param : Int, value  : Int) {
 		switch( param ) {
 		case BUFFER:
-			source.buffer = Buffer.ofInt(value);
+			var b = Buffer.ofInt(value);
+			source.buffers = b == null ? [] : [b];
+			source.updateDuration();
 			source.currentSample = 0;
-			source.playedTime = haxe.Timer.stamp();
 		case LOOPING:
 			source.loop = value != 0;
 		default:
@@ -300,11 +325,11 @@ class ALEmulator {
 	public static function getSourcef(source : Source, param : Int) : F32 {
 		switch( param ) {
 		case SEC_OFFSET:
-			if( source.buffer == null )
+			if( source.buffers.length == 0 )
 				return 0;
 			var now = haxe.Timer.stamp();
 			var t = now - source.playedTime;
-			var maxT = source.buffer.samples / source.buffer.frequency;
+			var maxT = source.duration;
 			if( source.loop ) {
 				while( t > maxT ) {
 					t -= maxT;
@@ -320,7 +345,19 @@ class ALEmulator {
 	public static function getSourcei(source : Source, param : Int) : Int {
 		switch( param ) {
 		case SOURCE_STATE:
-			return !source.playing || source.buffer == null || (!source.loop && (haxe.Timer.stamp() - source.playedTime) >= source.buffer.samples/source.buffer.frequency ) ? STOPPED : PLAYING;
+			return !source.playing || source.buffers.length == 0 || (!source.loop && (haxe.Timer.stamp() - source.playedTime) >= source.duration ) ? STOPPED : PLAYING;
+		case BUFFERS_PROCESSED:
+			if( source.loop )
+				return 0;
+			var count = 0;
+			var cur = source.currentSample;
+			for( b in source.buffers )
+				if( cur >= b.samples ) {
+					cur -= b.samples;
+					count++;
+				} else
+					break;
+			return count;
 		default:
 			throw "Unsupported param 0x" + StringTools.hex(param);
 		}
@@ -353,6 +390,7 @@ class ALEmulator {
 	}
 
 	public static function sourcePlay(source : Source) {
+		source.playedTime = haxe.Timer.stamp();
 		source.play();
 	}
 
@@ -369,10 +407,25 @@ class ALEmulator {
 
 	// Queue buffers onto a source
 	public static function sourceQueueBuffers(source : Source, nb : Int, buffers : Bytes) {
-		throw "TODO";
+		var queue = [];
+		for( i in 0...nb ) {
+			var b = Buffer.ofInt(buffers.getInt32(i * 4));
+			queue.push(b);
+		}
+		source.buffers = queue;
+		source.updateDuration();
 	}
+
 	public static function sourceUnqueueBuffers(source : Source, nb : Int, buffers : Bytes) {
-		throw "TODO";
+		for( i in 0...nb ) {
+			var b = Buffer.ofInt(buffers.getInt32(i * 4));
+			if( b == source.buffers[0] ) {
+				source.buffers.shift();
+				source.currentSample -= b.samples;
+				source.playedTime += b.samples / b.frequency;
+				source.updateDuration();
+			}
+		}
 	}
 
 	// Buffer management
@@ -441,11 +494,6 @@ class ALEmulator {
 		}
 		buffer.samples = buffer.data.length >> 1;
 		buffer.frequency = freq;
-		// prevent infinite loop
-		if( buffer.samples == 0 ) {
-			buffer.samples = 128;
-			buffer.data = new haxe.ds.Vector(buffer.samples * 2);
-		}
 	}
 
 	// Set Buffer parameters

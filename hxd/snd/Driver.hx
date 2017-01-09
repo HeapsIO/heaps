@@ -19,7 +19,7 @@ private typedef ALContext = hxd.snd.ALEmulator.ALContext;
 class Source {
 	public var inst : ALSource;
 	public var channel : Channel;
-	public var buffer : Buffer;
+	public var buffers : Array<Buffer>;
 
 	public var loop = false;
 	public var volume = 1.;
@@ -27,9 +27,11 @@ class Source {
 
 	public var nextSound : hxd.res.Sound;
 	public var nextBuffer : Buffer;
+	public var hasQueue = false;
 
 	public function new(inst) {
 		this.inst = inst;
+		buffers = [];
 	}
 }
 
@@ -68,7 +70,7 @@ class Driver {
 
 	static inline var AL_NUM_SOURCES = 16;
 
-	var tmpBytes : haxe.io.Bytes;
+	var cachedBytes : haxe.io.Bytes;
 
 	var alDevice      : ALDevice;
 	var alContext     : ALContext;
@@ -98,7 +100,13 @@ class Driver {
 		AL.genSources(AL_NUM_SOURCES, bytes);
 		sources = [for (i in 0...AL_NUM_SOURCES) new Source(ALSource.ofInt(bytes.getInt32(i * 4)))];
 
-		tmpBytes = haxe.io.Bytes.alloc(4 * 3 * 2);
+		cachedBytes = haxe.io.Bytes.alloc(4 * 3 * 2);
+	}
+
+	function getTmp(size) {
+		if( cachedBytes.length < size )
+			cachedBytes = haxe.io.Bytes.alloc(size);
+		return cachedBytes;
 	}
 
 	static function soundUpdate() {
@@ -175,7 +183,18 @@ class Driver {
 					c.position = position;
 					c.lastStamp = now;
 					c.positionChanged = false;
-					if( position < prev ) c.onEnd();
+					if( c.queue.length > 0 ) {
+						var count = AL.getSourcei(s.inst, AL.BUFFERS_PROCESSED);
+						while( count > 0 ) {
+							var tmp = getTmp(4);
+							tmp.setInt32(0, s.buffers[0].inst.toInt());
+							AL.sourceUnqueueBuffers(s.inst, 1, tmp);
+							queueNext(c);
+							count--;
+							c.onEnd();
+						}
+					} else if( position < prev )
+						c.onEnd();
 				}
 			default:
 			}
@@ -225,6 +244,7 @@ class Driver {
 		AL.listener3f(AL.POSITION, listener.position.x, listener.position.y, listener.position.z);
 
 		listener.direction.normalize();
+		var tmpBytes = getTmp(24);
 		tmpBytes.setFloat(0,  listener.direction.x);
 		tmpBytes.setFloat(4,  listener.direction.y);
 		tmpBytes.setFloat(8,  listener.direction.z);
@@ -256,7 +276,7 @@ class Driver {
 			c.source = s;
 
 			// bind buf and force full sync
-			setBuffer(s, getBuffer(c.sound, c.soundGroup));
+			syncBuffers(s, c);
 			c.positionChanged = true;
 			c = c.next;
 		}
@@ -291,9 +311,10 @@ class Driver {
 			AL.sourcef(s.inst, AL.SEC_OFFSET, c.position);
 			c.positionChanged = false;
 		}
-		if( s.loop != c.loop ) {
-			s.loop = c.loop;
-			AL.sourcei(s.inst, AL.LOOPING, c.loop ? AL.TRUE : AL.FALSE);
+		var loopFlag = c.loop && c.queue.length == 0;
+		if( s.loop != loopFlag ) {
+			s.loop = loopFlag;
+			AL.sourcei(s.inst, AL.LOOPING, loopFlag ? AL.TRUE : AL.FALSE);
 		}
 		var v = c.volume * c.channelGroup.volume * c.soundGroup.volume;
 		if( s.volume != v ) {
@@ -302,30 +323,10 @@ class Driver {
 		}
 		for(e in c.effects)
 			e.apply(c, s);
+
 		if( !s.playing ) {
 			s.playing = true;
 			AL.sourcePlay(s.inst);
-		}
-
-		// sync queuing
-		var nextSound = c.queue[0];
-		if( s.nextSound != nextSound ) {
-			if( s.nextSound != null ) {
-				tmpBytes.setInt32(0, s.nextBuffer.inst.toInt());
-				AL.sourceUnqueueBuffers(s.inst, 1, tmpBytes);
-				s.nextBuffer.unref();
-				s.nextSound = null;
-				s.nextBuffer = null;
-			}
-			if( nextSound != null ) {
-				s.nextSound = nextSound;
-				s.nextBuffer = getBuffer(nextSound, c.soundGroup);
-				s.nextBuffer.playCount++;
-				tmpBytes.setInt32(0, s.nextBuffer.inst.toInt());
-				AL.sourceQueueBuffers(s.inst, 1, tmpBytes);
-				if( AL.getError() != 0 )
-					throw "Failed to queue buffer : format differs between " + c.sound + " and " + nextSound;
-			}
 		}
 	}
 
@@ -350,20 +351,53 @@ class Driver {
 			s.playing = false;
 			AL.sourceStop(s.inst);
 		}
-		setBuffer(s, null);
+		syncBuffers(s, null);
 	}
 
-	function setBuffer( s : Source, b : Buffer ) {
-		if( s.buffer == b )
-			return;
-		if( b == null ) {
-			AL.sourcei(s.inst, AL.BUFFER, AL.NONE);
-			s.buffer.unref();
-			s.buffer = null;
+	function syncBuffers( s : Source, c : Channel ) {
+		if( c == null ) {
+			if( s.buffers.length == 0 )
+				return;
+			if( !s.hasQueue )
+				AL.sourcei(s.inst, AL.BUFFER, AL.NONE);
+			else {
+				var tmpBytes = getTmp(4 * s.buffers.length);
+				for( i in 0...s.buffers.length )
+					tmpBytes.setInt32(i << 2, s.buffers[i].inst.toInt());
+				AL.sourceUnqueueBuffers(s.inst, s.buffers.length, tmpBytes);
+			}
+			for( b in s.buffers )
+				b.unref();
+			s.buffers = [];
+			s.hasQueue = false;
+		} else if( s.hasQueue || c.queue.length > 0 ) {
+
+			if( !s.hasQueue && s.buffers.length > 0 )
+				throw "Can't queue on a channel that is currently playing an unstreamed data";
+
+			var buffers = [getBuffer(c.sound, c.soundGroup)];
+			for( snd in c.queue )
+				buffers.push(getBuffer(snd, c.soundGroup));
+			var tmpBytes = getTmp(buffers.length * 4);
+			for( i in 0...buffers.length ) {
+				var b = buffers[i];
+				b.playCount++;
+				tmpBytes.setInt32(i << 2, b.inst.toInt());
+			}
+			for( b in s.buffers )
+				b.unref();
+			AL.sourceQueueBuffers(s.inst, buffers.length, tmpBytes);
+			s.buffers = buffers;
+			if( AL.getError() != 0 )
+				throw "Failed to queue buffers : format differs";
+
 		} else {
-			AL.sourcei(s.inst, AL.BUFFER, b.inst.toInt());
-			b.playCount++;
-			s.buffer = b;
+			var buffer = getBuffer(c.sound, c.soundGroup);
+			AL.sourcei(s.inst, AL.BUFFER, buffer.inst.toInt());
+			if( s.buffers[0] != null )
+				s.buffers[0].unref();
+			s.buffers[0] = buffer;
+			buffer.playCount++;
 		}
 	}
 
@@ -378,6 +412,7 @@ class Driver {
 				if( b.playCount == 0 && b.lastStop < now - 60 )
 					releaseBuffer(b);
 		}
+		var tmpBytes = getTmp(4);
 		AL.genBuffers(1, tmpBytes);
 		var b = new Buffer(ALBuffer.ofInt(tmpBytes.getInt32(0)));
 		b.sound = snd;
@@ -393,6 +428,7 @@ class Driver {
 		buffers.remove(b);
 		bufferMap.remove(b.sound);
 		@:privateAccess b.sound.data = null; // free cached decoded data
+		var tmpBytes = getTmp(4);
 		tmpBytes.setInt32(0, b.inst.toInt());
 		AL.deleteBuffers(1, tmpBytes);
 	}

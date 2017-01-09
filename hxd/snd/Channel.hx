@@ -63,6 +63,8 @@ class Channel extends ChannelBase {
 	**/
 	public function queueSound( sound : hxd.res.Sound ) {
 		queue.push(sound);
+		if( driver != null && source != null )
+			@:privateAccess driver.syncBuffers(source, this);
 	}
 
 	public function stop() {
