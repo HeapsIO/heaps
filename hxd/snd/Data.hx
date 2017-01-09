@@ -1,7 +1,7 @@
 package hxd.snd;
 
 enum SampleFormat {
-	I8;
+	UI8;
 	I16;
 	F32;
 }
@@ -55,17 +55,14 @@ class Data {
 			for( k in 0...commonChannels ) {
 				var sval1, sval2 = 0.;
 
-				inline function sext8(v:Int) {
-					return (v & 0x80) == 0 ? v : v | 0xFFFFFF00;
-				}
 				inline function sext16(v:Int) {
 					return (v & 0x8000) == 0 ? v : v | 0xFFFF0000;
 				}
 
 				switch( sampleFormat ) {
-				case I8:
-					sval1 = sext8(data.get(srcPos)) / 128;
-					if( resample ) sval2 = sext8(data.get(srcPos + bpp)) / 128;
+				case UI8:
+					sval1 = data.get(srcPos) / 0xFF;
+					if( resample ) sval2 = data.get(srcPos + bpp) / 0xFF;
 					srcPos++;
 				case I16:
 					sval1 = sext16(data.getUInt16(srcPos)) / 0x8000;
@@ -79,10 +76,10 @@ class Data {
 
 				sval = resample ? hxd.Math.lerp(sval1, sval2, offset) : sval1;
 				switch( format ) {
-				case I8:
-					ival = Std.int(sval * 128);
-					if( ival > 127 ) ival = 127;
-					out.addByte(ival & 0xFF);
+				case UI8:
+					ival = Std.int((sval + 1) * 128);
+					if( ival > 255 ) ival = 255;
+					out.addByte(ival);
 				case I16:
 					ival = Std.int(sval * 0x8000);
 					if( ival > 0x7FFF ) ival = 0x7FFF;
@@ -94,8 +91,8 @@ class Data {
 			}
 			for( i in 0...extraChannels )
 				switch( format ) {
-				case I8:
-					out.addByte(ival & 0xFF);
+				case UI8:
+					out.addByte(ival);
 				case I16:
 					out.addByte(ival & 0xFF);
 					out.addByte((ival>>>8) & 0xFF);
@@ -119,7 +116,7 @@ class Data {
 
 	public function getBytesPerSample() {
 		return channels * switch( sampleFormat ) {
-		case I8: 1;
+		case UI8: 1;
 		case I16: 2;
 		case F32: 4;
 		}

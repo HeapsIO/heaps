@@ -441,9 +441,9 @@ class Driver {
 		var targetChannels = forceMono || dat.channels == 1 ? 1 : 2;
 		var alFormat;
 		var targetFormat : hxd.snd.Data.SampleFormat = switch( dat.sampleFormat ) {
-		case I8:
+		case UI8:
 			alFormat = targetChannels == 1 ? AL.FORMAT_MONO8 : AL.FORMAT_STEREO8;
-			I8;
+			UI8;
 		case I16, F32:
 			alFormat = targetChannels == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
 			I16;

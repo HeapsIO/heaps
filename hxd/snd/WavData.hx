@@ -15,7 +15,7 @@ class WavData extends hxd.snd.Data {
 		samplingRate = h.samplingRate;
 		channels = h.channels;
 		sampleFormat = switch( h.bitsPerSample ) {
-		case 8: I8;
+		case 8: UI8;
 		case 16: I16;
 		default:
 			throw "Unsupported WAV " + h.bitsPerSample + " bits";
