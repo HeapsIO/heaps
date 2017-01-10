@@ -4,6 +4,14 @@ import haxe.macro.Expr;
 
 private typedef FileEntry = { e : Expr, t : ComplexType };
 
+enum Platform {
+	Flash;
+	HL;
+	Cpp;
+	JS;
+	Unknown;
+}
+
 class FileTree {
 
 	var path : String;
@@ -14,11 +22,9 @@ class FileTree {
 	var pairedExt : Map<String,Array<String>>;
 	var ignoredPairedExt : Map<String,Array<String>>;
 	var options : EmbedOptions;
-	var isFlash : Bool;
-	var isJS : Bool;
-	var isCPP : Bool;
 	var embedTypes : Array<String>;
 	var checkTmp : Bool;
+	var platform : Platform;
 
 	public function new(dir) {
 		this.path = resolvePath(dir);
@@ -33,9 +39,12 @@ class FileTree {
 		pairedExt.set("fbx", ["png","jpg","jpeg","gif"]);
 		pairedExt.set("cdb", ["img"]);
 		pairedExt.set("atlas", ["png"]);
-		isFlash = Context.defined("flash");
-		isJS = Context.defined("js");
-		isCPP = Context.defined("cpp");
+		platform =
+			if( Context.defined("flash") ) Flash else
+			if( Context.defined("js") ) JS else
+			if( Context.defined("cpp") ) Cpp else
+			if( Context.defined("hl") ) HL else
+			Unknown;
 	}
 
 	public static function resolvePath( ?dir:String ) {
@@ -57,7 +66,7 @@ class FileTree {
 		if( options == null ) options = { };
 		if( options.tmpDir == null ) options.tmpDir = path + "/.tmp/";
 		// if the OGG library is detected, compress as OGG by default, unless compressAsMp3 is set
-		if( options.compressAsMp3 == null ) options.compressAsMp3 = options.compressSounds && !Context.defined("stb_ogg_sound");
+		if( options.compressAsMp3 == null ) options.compressAsMp3 = options.compressSounds && !(Context.defined("stb_ogg_sound") || platform == HL);
 		checkTmp = false;
 		this.options = options;
 		embedTypes = [];
@@ -156,7 +165,7 @@ class FileTree {
 		default:
 		}
 
-		if( isFlash ) {
+		if( platform == Flash ) {
 			switch( ext.toLowerCase() ) {
 			case "ttf":
 				Embed.doEmbedFont(name, fullPath, options.fontsChars);
@@ -181,7 +190,7 @@ class FileTree {
 			embedTypes.push("hxd._res." + name);
 		} else {
 			switch( ext.toLowerCase() ) {
-			case "ttf" if( isJS ):
+			case "ttf" if( platform == JS ):
 				Embed.doEmbedFont(name, fullPath, options.fontsChars);
 				embedTypes.push("hxd._res." + name);
 				return true;
