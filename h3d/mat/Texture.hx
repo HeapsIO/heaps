@@ -55,6 +55,12 @@ class Texture {
 	**/
 	public var realloc : Void -> Void;
 
+	/**
+		When the texture is used as render target, tells which depth buffer will be used.
+		If set to null, depth testing is disabled.
+	**/
+	public var depthBuffer : DepthBuffer;
+
 	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat, ?allocPos : h3d.impl.AllocPos ) {
 		#if !noEngine
 		var engine = h3d.Engine.getCurrent();

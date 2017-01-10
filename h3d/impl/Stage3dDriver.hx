@@ -81,6 +81,7 @@ class Stage3dDriver extends Driver {
 	var isStandardMode : Bool;
 	var flashVersion : Float;
 	var tdisposed : Texture;
+	var defaultDepth : h3d.mat.DepthBuffer;
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -95,6 +96,7 @@ class Stage3dDriver extends Driver {
 		curSamplerBits = [];
 		curMultiBuffer = [];
 		defStencil = new Stencil();
+		defaultDepth = new h3d.mat.DepthBuffer( -1, -1);
 	}
 
 	override function logImpl( str : String ) {
@@ -164,9 +166,7 @@ class Stage3dDriver extends Driver {
 		return switch( f ) {
 		case HardwareAccelerated: ctx != null && ctx.driverInfo.toLowerCase().indexOf("software") == -1;
 		case StandardDerivatives, FloatTextures: isStandardMode;
-		case PerTargetDepthBuffer: false;
-		case TargetUseDefaultDepthBuffer: true;
-		case FullClearRequired: flashVersion < 15;
+		case AllocDepthBuffer: false;
 		case MultipleRenderTargets: (PROFILE == cast "standard") || (PROFILE == cast "standardExtended");
 		}
 	}
@@ -176,6 +176,10 @@ class Stage3dDriver extends Driver {
 			ctx.configureBackBuffer(width, height, antiAlias);
 			this.width = width;
 			this.height = height;
+			@:privateAccess {
+				defaultDepth.width = width;
+				defaultDepth.height = height;
+			}
 		} catch( e : flash.errors.Error ) {
 			// large screen but bad video card ?
 			if( width > 2048 || height > 2048 ) {
@@ -273,8 +277,6 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
-		if( t.flags.has(TargetDepth) )
-			throw "TargetDepth not supported in Stage3D";
 		var fmt = switch( t.format ) {
 		case BGRA: flash.display3D.Context3DTextureFormat.BGRA;
 		case RGBA16F: flash.display3D.Context3DTextureFormat.RGBA_HALF_FLOAT;
@@ -776,6 +778,14 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
+	override function allocDepthBuffer(b:h3d.mat.DepthBuffer):DepthBuffer {
+		throw "You can't allocate custom depth buffer on this platform.";
+	}
+
+	override function getDefaultDepthBuffer() {
+		return defaultDepth;
+	}
+
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 		if( enableDraw ) {
 			if( ctx.enableErrorChecking )
@@ -822,7 +832,7 @@ class Stage3dDriver extends Driver {
 		} else {
 			if( t.t == null )
 				t.alloc();
-			ctx.setRenderToTexture(t.t, t.flags.has(TargetUseDefaultDepth), 0, face);
+			ctx.setRenderToTexture(t.t, t.depthBuffer != null, 0, face);
 			renderTargets = 1;
 			t.lastFrame = frame;
 			// make sure we at least clear the color the first time
@@ -839,11 +849,12 @@ class Stage3dDriver extends Driver {
 			setRenderTarget(null);
 			return;
 		}
+		var hasDepth = textures[0].depthBuffer != null;
 		for( i in 0...textures.length ) {
 			var t = textures[i];
 			if( t.t == null )
 				t.alloc();
-			ctx.setRenderToTexture(t.t, t.flags.has(TargetUseDefaultDepth), 0, 0, i);
+			ctx.setRenderToTexture(t.t, hasDepth, 0, 0, i);
 			t.lastFrame = frame;
 		}
 		for( i in textures.length...renderTargets )

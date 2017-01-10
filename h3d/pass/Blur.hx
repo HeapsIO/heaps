@@ -101,21 +101,25 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		if( depthBlur != null )
 			shader.cameraInverseViewProj = depthBlur.camera.getInverseViewProj();
 
+		var outDepth = output.depthBuffer;
+		var tmpDepth = tmp.depthBuffer;
+		output.depthBuffer = null;
+		tmp.depthBuffer = null;
 		for( i in 0...passes ) {
 			shader.texture = src;
 			shader.pixel.set(1 / src.width, 0);
 			engine.pushTarget(tmp);
-			if( fullClearRequired ) engine.clear(0, 1, 0);
 			render();
 			engine.popTarget();
 
 			shader.texture = tmp;
 			shader.pixel.set(0, 1 / tmp.height);
 			engine.pushTarget(output);
-			if( fullClearRequired ) engine.clear(0, 1, 0);
 			render();
 			engine.popTarget();
 		}
+		output.depthBuffer = outDepth;
+		tmp.depthBuffer = tmpDepth;
 
 		if( alloc )
 			tmp.dispose();

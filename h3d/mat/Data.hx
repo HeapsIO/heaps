@@ -77,14 +77,6 @@ enum TextureFlags {
 	**/
 	Target;
 	/**
-		Add depth buffer on target texture
-	**/
-	TargetDepth;
-	/**
-		Use depth depth buffer when rendering to target texture
-	**/
-	TargetUseDefaultDepth;
-	/**
 		Allocate a cubic texture. Might be restricted to power of two textures only.
 	**/
 	Cubic;

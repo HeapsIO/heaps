@@ -7,7 +7,6 @@ class ScreenFx<T:hxsl.Shader> {
 	var manager : h3d.shader.Manager;
 	var plan : h3d.prim.Primitive;
 	var engine : h3d.Engine;
-	var fullClearRequired : Bool;
 	var shaders : hxsl.ShaderList;
 	var buffers : h3d.shader.Buffers;
 
@@ -20,7 +19,6 @@ class ScreenFx<T:hxsl.Shader> {
 		pass.depth(false, Always);
 		plan = h3d.prim.Plan2D.get();
 		engine = h3d.Engine.getCurrent();
-		fullClearRequired = engine.hasFeature(FullClearRequired);
 	}
 
 	public function setGlobals( ctx :  h3d.scene.RenderContext ) {

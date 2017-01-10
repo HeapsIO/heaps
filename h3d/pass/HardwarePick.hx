@@ -35,12 +35,20 @@ class HardwarePick extends Default {
 		super();
 		material = new h3d.mat.Pass("");
 		material.blend(One, Zero);
-		texOut = new h3d.mat.Texture(3, 3, [Target, TargetUseDefaultDepth]);
+		texOut = new h3d.mat.Texture(3, 3, [Target]);
+		#if !flash
+		texOut.depthBuffer = new h3d.mat.DepthBuffer(3, 3);
+		#else
+		texOut.depthBuffer = h3d.mat.DepthBuffer.getDefault();
+		#end
 	}
 
 	override function dispose() {
 		super.dispose();
 		texOut.dispose();
+		#if !flash
+		texOut.depthBuffer.dispose();
+		#end
 	}
 
 	override function getOutputs() {

@@ -492,6 +492,13 @@ class GlDriver extends Driver {
 		bufferWidth = width;
 		bufferHeight = height;
 		gl.viewport(0, 0, width, height);
+
+		@:privateAccess if( defaultDepth != null ) {
+			disposeDepthBuffer(defaultDepth);
+			defaultDepth.width = this.bufferWidth;
+			defaultDepth.height = this.bufferHeight;
+			defaultDepth.b = allocDepthBuffer(defaultDepth);
+		}
 	}
 
 	function getChannels( t : Texture ) {
@@ -517,8 +524,6 @@ class GlDriver extends Driver {
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
-		if( t.flags.has(TargetUseDefaultDepth) )
-			throw "TargetUseDefaultDepth not supported in GL";
 		var tt = gl.createTexture();
 		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE };
 		switch( t.format ) {
@@ -550,14 +555,32 @@ class GlDriver extends Driver {
 				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 		} else
 			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
-		if( t.flags.has(TargetDepth) ) {
-			tt.rb = gl.createRenderbuffer();
-			gl.bindRenderbuffer(GL.RENDERBUFFER, tt.rb);
-			gl.renderbufferStorage(GL.RENDERBUFFER, #if hl GL.DEPTH_COMPONENT24 #else GL.DEPTH_COMPONENT16 #end, tt.width, tt.height);
-			gl.bindRenderbuffer(GL.RENDERBUFFER, null);
-		}
 		gl.bindTexture(bind, null);
 		return tt;
+	}
+
+	override function allocDepthBuffer( b : h3d.mat.DepthBuffer ) : DepthBuffer {
+		var r = gl.createRenderbuffer();
+		gl.bindRenderbuffer(GL.RENDERBUFFER, r);
+		gl.renderbufferStorage(GL.RENDERBUFFER, #if hl GL.DEPTH_COMPONENT24 #else GL.DEPTH_COMPONENT16 #end, b.width, b.height);
+		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
+		return { r : r };
+	}
+
+	override function disposeDepthBuffer( b : h3d.mat.DepthBuffer ) {
+		@:privateAccess if( b.b != null && b.b.r != null ) {
+			gl.deleteRenderbuffer(b.b.r);
+			b.b = null;
+		}
+	}
+
+	var defaultDepth : h3d.mat.DepthBuffer;
+
+	override function getDefaultDepthBuffer() : h3d.mat.DepthBuffer {
+		if( defaultDepth != null )
+			return defaultDepth;
+		defaultDepth = new h3d.mat.DepthBuffer(bufferWidth, bufferHeight);
+		return defaultDepth;
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
@@ -596,7 +619,6 @@ class GlDriver extends Driver {
 		if( tt == null ) return;
 		t.t = null;
 		gl.deleteTexture(tt.t);
-		if( tt.rb != null ) gl.deleteRenderbuffer(tt.rb);
 	}
 
 	override function disposeIndexes( i : IndexBuffer ) {
@@ -883,8 +905,8 @@ class GlDriver extends Driver {
 		tex.lastFrame = frame;
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
 		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cubic) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, mipLevel);
-		if( tex.t.rb != null )
-			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, tex.t.rb);
+		if( tex.depthBuffer != null )
+			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r);
 		else
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, null);
 		gl.viewport(0, 0, tex.width >> mipLevel, tex.height >> mipLevel);
@@ -943,14 +965,10 @@ class GlDriver extends Driver {
 			false; // no support for glDrawBuffers in OpenFL
 			#end
 		#end
-		case PerTargetDepthBuffer:
-			true;
-		case TargetUseDefaultDepthBuffer:
-			false;
 		case HardwareAccelerated:
 			true;
-		case FullClearRequired:
-			false;
+		case AllocDepthBuffer:
+			true;
 		}
 	}
 
