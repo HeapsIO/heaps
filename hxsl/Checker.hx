@@ -428,6 +428,13 @@ class Checker {
 				}
 				type = e1.t;
 				TUnop(op, e1);
+			case OpIncrement, OpDecrement:
+				switch( e1.t ) {
+				case TFloat, TInt:
+				default: error("Cannot increment " + e1.t.toString(), e.pos);
+				}
+				type = TVoid;
+				TBinop(OpAssignOp(op == OpIncrement ? OpAdd : OpSub), e1, { e : TConst(CInt(1)), t : TInt, p : e1.p });
 			default:
 				error("Operation non supported", e.pos);
 			}

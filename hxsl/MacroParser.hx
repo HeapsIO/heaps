@@ -177,6 +177,8 @@ class MacroParser {
 			EBinop(op, parseExpr(e1), parseExpr(e2));
 		case EUnop(op, false, e1):
 			EUnop(op, parseExpr(e1));
+		case EUnop(op, true, e1):
+			EUnop(op, parseExpr(e1)); // TODO : ++/-- postfix with lvalue
 		case EConst(c):
 			switch( c ) {
 			case CString(s):
