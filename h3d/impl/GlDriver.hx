@@ -505,6 +505,7 @@ class GlDriver extends Driver {
 		return switch( t.internalFmt ) {
 		#if !js
 		case GL.RGBA32F, GL.RGBA16F: GL.RGBA;
+		case GL.ALPHA16F, GL.ALPHA32F: GL.ALPHA;
 		#end
 		case GL.RGBA: GL.RGBA;
 		case GL.ALPHA: GL.ALPHA;
@@ -517,7 +518,7 @@ class GlDriver extends Driver {
 		case RGBA, ALPHA: true;
 		case RGBA32F: hasFeature(FloatTextures);
 		#if !js
-		case RGBA16F: hasFeature(FloatTextures);
+		case ALPHA16F, ALPHA32F, RGBA16F: hasFeature(FloatTextures);
 		#end
 		default: false;
 		}
@@ -542,6 +543,12 @@ class GlDriver extends Driver {
 		case RGBA16F if( hasFeature(FloatTextures) ):
 			tt.pixelFmt = GL.HALF_FLOAT;
 			tt.internalFmt = GL.RGBA16F;
+		case ALPHA16F if( hasFeature(FloatTextures) ):
+			tt.pixelFmt = GL.HALF_FLOAT;
+			tt.internalFmt = GL.ALPHA16F;
+		case ALPHA32F if( hasFeature(FloatTextures) ):
+			tt.pixelFmt = GL.FLOAT;
+			tt.internalFmt = GL.ALPHA32F;
 		#end
 		default:
 			throw "Unsupported texture format "+t.format;
