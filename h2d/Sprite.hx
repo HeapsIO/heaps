@@ -284,10 +284,16 @@ class Sprite {
 		if( childs.remove(s) ) {
 			if( s.allocated ) s.onDelete();
 			s.parent = null;
-			s.parentContainer = null;
+			if( s.parentContainer != null ) s.setParentContainer(null);
 			s.posChanged = true;
 			onContentChanged();
 		}
+	}
+
+	function setParentContainer( c : Sprite ) {
+		parentContainer = c;
+		for( s in childs )
+			s.setParentContainer(c);
 	}
 
 	public function removeChildren() {

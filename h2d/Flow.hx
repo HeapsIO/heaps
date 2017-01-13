@@ -344,6 +344,11 @@ class Flow extends Sprite {
 			super.getBoundsRec(relativeTo, out, forSize);
 	}
 
+	override function setParentContainer(c) {
+		parentContainer = c;
+		// break propogation
+	}
+
 	override function addChildAt( s, pos ) {
 		if( background != null ) pos++;
 		var fp = getProperties(s);
@@ -351,7 +356,7 @@ class Flow extends Sprite {
 		if( fp == null ) fp = new FlowProperties(s) else properties.remove(fp);
 		properties.insert(pos, fp);
 		needReflow = true;
-		s.parentContainer = this;
+		s.setParentContainer(this);
 	}
 
 	override public function removeChild(s:Sprite) {
