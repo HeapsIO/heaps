@@ -10,6 +10,8 @@ class CustomRenderer extends h3d.scene.Renderer {
 	public var hasMRT : Bool;
 	var out : h3d.mat.Texture;
 
+	public var bench = new h3d.impl.Benchmark();
+
 	public function new() {
 		super();
 		sao = new h3d.pass.ScalableAO();
@@ -18,12 +20,18 @@ class CustomRenderer extends h3d.scene.Renderer {
 		sao.shader.sampleRadius	= 0.2;
 		hasMRT = h3d.Engine.getCurrent().driver.hasFeature(MultipleRenderTargets);
 		if( hasMRT )
-			def = new h3d.pass.MRT(["color","depth","normal"],0,true);
+			def = new h3d.pass.MRT(["color", "depth", "normal"], 0, true);
+	}
+
+	override function renderPass(name, p:h3d.pass.Base, passes) {
+		bench.measure(name);
+		return super.renderPass(name, p, passes);
 	}
 
 	override function render() {
 		super.render();
 		if(mode != 1) {
+			bench.measure("sao");
 			var saoTarget = allocTarget("sao",0,false);
 			setTarget(saoTarget);
 			if( hasMRT )
@@ -31,7 +39,9 @@ class CustomRenderer extends h3d.scene.Renderer {
 			else
 				sao.apply(depth.getTexture(), normal.getTexture(), ctx.camera);
 			resetTarget();
+			bench.measure("saoBlur");
 			saoBlur.apply(saoTarget, allocTarget("saoBlurTmp", 0, false));
+			bench.measure("saoBlend");
 			if( hasMRT ) h3d.pass.Copy.run(def.getTexture(0), null);
 			h3d.pass.Copy.run(saoTarget, null, mode == 0 ? Multiply : null);
 		}
@@ -43,6 +53,7 @@ class Sao extends hxd.App {
 
 	var wscale = 1.;
 	var fui : h2d.Flow;
+	var renderer : CustomRenderer;
 
 	function initMaterial( m : h3d.mat.MeshMaterial ) {
 		m.mainPass.enableLights = true;
@@ -50,6 +61,14 @@ class Sao extends hxd.App {
 			m.addPass(new h3d.mat.Pass("depth", m.mainPass));
 			m.addPass(new h3d.mat.Pass("normal", m.mainPass));
 		}
+	}
+
+	override function render(e:h3d.Engine) {
+		renderer.bench.begin();
+		s3d.render(e);
+		renderer.bench.measure("ui");
+		s2d.render(e);
+		renderer.bench.end();
 	}
 
 	override function init() {
@@ -60,8 +79,9 @@ class Sao extends hxd.App {
 
 		var r = new hxd.Rand(Std.random(0xFFFFFF));
 
-		var c = new CustomRenderer();
-		s3d.renderer = c;
+		renderer = new CustomRenderer();
+		s2d.add(renderer.bench, 10);
+		s3d.renderer = renderer;
 
 		var floor = new h3d.prim.Grid(40,40,0.25,0.25);
 		floor.addNormals();
@@ -94,11 +114,13 @@ class Sao extends hxd.App {
 		s3d.camera.pos.set(camdist * Math.cos(time), camdist * Math.sin(time), camdist * 0.5);
 		new h3d.scene.CameraController(s3d).loadFromCamera();
 
+		var c = renderer;
 		addSlider("Bias", 0, 0.3, function() return c.sao.shader.bias, function(v) c.sao.shader.bias = v);
 		addSlider("Intensity", 0, 10, function() return c.sao.shader.intensity, function(v) c.sao.shader.intensity = v);
 		addSlider("Radius", 0, 1, function() return c.sao.shader.sampleRadius, function(v) c.sao.shader.sampleRadius = v);
 		addSlider("Blur", 0, 3, function() return c.saoBlur.sigma, function(v) c.saoBlur.sigma = v);
 
+		onResize();
 	}
 
 	function addSlider( text, min : Float, max : Float, get : Void -> Float, set : Float -> Void ) {
@@ -137,6 +159,10 @@ class Sao extends hxd.App {
 			s3d.getChildAt(0).remove();
 		s3d.dispose();
 		init();
+	}
+
+	override function onResize() {
+		renderer.bench.y = s2d.height - renderer.bench.height;
 	}
 
 	override function update( dt : Float ) {

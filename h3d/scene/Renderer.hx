@@ -150,6 +150,10 @@ class Renderer {
 		def.draw(get(name));
 	}
 
+	function renderPass( name : String, p : h3d.pass.Base, passes ) {
+		return p.draw(passes);
+	}
+
 	function render() {
 		for( p in allPasses ) {
 			var pdata = passGroups.get(p.name);
@@ -162,7 +166,7 @@ class Renderer {
 					passes = depthSort(passes);
 				if( p.name == "default" )
 					passes = depthSort(passes, true);
-				passes = p.p.draw(passes);
+				passes = renderPass(p.name, p.p, passes);
 				if( pdata != null ) {
 					pdata.passes = passes;
 					pdata.rendered = true;

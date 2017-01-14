@@ -5,31 +5,37 @@ typedef IndexBuffer = flash.display3D.IndexBuffer3D;
 typedef VertexBuffer = Stage3dDriver.VertexWrapper;
 typedef Texture = flash.display3D.textures.TextureBase;
 typedef DepthBuffer = {};
+typedef Query = {};
 #elseif js
 typedef IndexBuffer = js.html.webgl.Buffer;
 typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int };
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int };
 typedef DepthBuffer = { r : js.html.webgl.Renderbuffer };
+typedef Query = {};
 #elseif nme
 typedef IndexBuffer = nme.gl.GLBuffer;
 typedef VertexBuffer = { b : nme.gl.GLBuffer, stride : Int };
 typedef Texture = { t : nme.gl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int };
 typedef DepthBuffer = { r : nme.gl.Renderbuffer };
+typedef Query = {};
 #elseif lime
 typedef IndexBuffer = lime.graphics.opengl.GLBuffer;
 typedef VertexBuffer = { b : lime.graphics.opengl.GLBuffer, stride : Int };
 typedef Texture = { t : lime.graphics.opengl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int };
 typedef DepthBuffer = { r : lime.graphics.opengl.GLRenderbuffer };
+typedef Query = {};
 #elseif hxsdl
 typedef IndexBuffer = sdl.GL.Buffer;
 typedef VertexBuffer = { b : sdl.GL.Buffer, stride : Int };
 typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int };
 typedef DepthBuffer = { r : sdl.GL.Renderbuffer };
+typedef Query = { q : sdl.GL.Query, kind : QueryKind };
 #else
 typedef IndexBuffer = {};
 typedef VertexBuffer = {};
 typedef Texture = {};
 typedef DepthBuffer = {};
+typedef Query = {};
 #end
 
 enum Feature {
@@ -55,6 +61,21 @@ enum Feature {
 		Allows to render on several render targets with a single draw.
 	*/
 	MultipleRenderTargets;
+	/*
+		Does it supports query objects API.
+	*/
+	Queries;
+}
+
+enum QueryKind {
+	/**
+		The result will give the GPU Timestamp (in nanoseconds, 1e-9 seconds) at the time the endQuery is performed
+	**/
+	TimeStamp;
+	/**
+		The result will give the number of samples that passes the depth buffer between beginQuery/endQuery range
+	**/
+	Samples;
 }
 
 class Driver {
@@ -194,6 +215,29 @@ class Driver {
 	}
 
 	public function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
+	}
+
+	// --- QUERY API
+
+	public function allocQuery( queryKind : QueryKind ) : Query {
+		return null;
+	}
+
+	public function deleteQuery( q : Query ) {
+	}
+
+	public function beginQuery( q : Query ) {
+	}
+
+	public function endQuery( q : Query ) {
+	}
+
+	public function queryResultAvailable( q : Query ) {
+		return true;
+	}
+
+	public function queryResult( q : Query ) {
+		return 0.;
 	}
 
 }

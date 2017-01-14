@@ -40,6 +40,7 @@ private typedef Program = sdl.GL.Program;
 private typedef GLShader = sdl.GL.Shader;
 private typedef Framebuffer = sdl.GL.Framebuffer;
 private typedef Texture = h3d.impl.Driver.Texture;
+private typedef Query = h3d.impl.Driver.Query;
 #if cpp
 private typedef Float32Array = Array<cpp.Float32>;
 #end
@@ -958,7 +959,7 @@ class GlDriver extends Driver {
 	override function hasFeature( f : Feature ) : Bool {
 		return switch( f ) {
 		#if hxsdl
-		case StandardDerivatives, FloatTextures, MultipleRenderTargets:
+		case StandardDerivatives, FloatTextures, MultipleRenderTargets, Queries:
 			true; // runtime extension detect required ?
 		#else
 		case StandardDerivatives:
@@ -971,6 +972,8 @@ class GlDriver extends Driver {
 			#else
 			false; // no support for glDrawBuffers in OpenFL
 			#end
+		case Queries:
+			false;
 		#end
 		case HardwareAccelerated:
 			true;
@@ -988,6 +991,45 @@ class GlDriver extends Driver {
 		pixels.flags.set(FlipY);
 		#end
 	}
+
+	#if hl
+
+	override function allocQuery(kind:QueryKind) {
+		return { q : GL.createQuery(), kind : kind };
+	}
+
+	override function deleteQuery( q : Query ) {
+		GL.deleteQuery(q.q);
+		q.q = null;
+	}
+
+	override function beginQuery( q : Query ) {
+		switch( q.kind ) {
+		case TimeStamp:
+			throw "use endQuery() for timestamp queries";
+		case Samples:
+			GL.beginQuery(GL.SAMPLES_PASSED, q.q);
+		}
+	}
+
+	override function endQuery( q : Query ) {
+		switch( q.kind ) {
+		case TimeStamp:
+			GL.queryCounter(q.q, GL.TIMESTAMP);
+		case Samples:
+			GL.endQuery(GL.SAMPLES_PASSED);
+		}
+	}
+
+	override function queryResultAvailable(q:Query) {
+		return GL.queryResultAvailable(q.q);
+	}
+
+	override function queryResult(q:Query) {
+		return GL.queryResult(q.q);
+	}
+
+	#end
 
 	static var TFILTERS = [
 		[[GL.NEAREST,GL.NEAREST],[GL.LINEAR,GL.LINEAR]],
