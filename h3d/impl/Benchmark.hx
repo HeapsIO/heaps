@@ -23,6 +23,11 @@ private class QueryObject {
 		return driver.queryResultAvailable(q);
 	}
 
+	public function dispose() {
+		driver.deleteQuery(q);
+		q = null;
+	}
+
 }
 
 private class StatsObject {
@@ -48,7 +53,8 @@ class Benchmark extends h2d.Graphics {
 	var labels : Array<h2d.Text>;
 	var interact : h2d.Interactive;
 
-	public var enable : Bool;
+	public var estimateCpuWait = true;
+	public var enable(default,set) : Bool;
 
 	public var width : Null<Int>;
 	public var height = 16;
@@ -56,17 +62,21 @@ class Benchmark extends h2d.Graphics {
 	public var colors = new Array<Int>();
 	public var font : h2d.Font;
 
+	public var recalTime = 1e9;
+	public var smooth = 0.95;
+
 	var tip : h2d.Text;
 	var tipCurrent : StatsObject;
 	var tipCurName : String;
 	var curWidth : Int;
+	var prevFrame : Float;
+	var frameTime : Float;
 
 	public function new(?parent) {
 		super(parent);
 		waitFrames = [];
 		labels = [];
 		engine = h3d.Engine.getCurrent();
-		enable = engine.driver.hasFeature(Queries);
 		interact = new h2d.Interactive(0,0,this);
 		interact.onMove = onMove;
 		interact.cursor = Default;
@@ -76,6 +86,45 @@ class Benchmark extends h2d.Graphics {
 			tip = null;
 			tipCurrent = null;
 		}
+		enable = engine.driver.hasFeature(Queries);
+	}
+
+	function set_enable(e) {
+		if( !e )
+			cleanup();
+		return enable = e;
+	}
+
+	function cleanup() {
+		while( waitFrames.length > 0 ) {
+			var w = waitFrames.pop();
+			while( w != null ) {
+				w.dispose();
+				w = w.next;
+			}
+		}
+		while( cachedQueries != null ) {
+			cachedQueries.dispose();
+			cachedQueries = cachedQueries.next;
+		}
+		while( currentFrame != null ) {
+			currentFrame.dispose();
+			currentFrame = currentFrame.next;
+		}
+	}
+
+	override function clear() {
+		super.clear();
+		if( labels != null ) {
+			for( t in labels ) t.remove();
+			labels = [];
+		}
+		if( interact != null ) interact.width = interact.height = 0;
+	}
+
+	override function onDelete() {
+		super.onDelete();
+		cleanup();
 	}
 
 	function onMove(e:hxd.Event) {
@@ -93,6 +142,7 @@ class Benchmark extends h2d.Graphics {
 		if( s == null )
 			return;
 		tip = new h2d.Text(font, this);
+		tip.dropShadow = { dx : 0, dy : 1, color : 0, alpha : 1 };
 		tip.y = -20;
 		tipCurrent = s;
 		tipCurName = s.name;
@@ -100,7 +150,7 @@ class Benchmark extends h2d.Graphics {
 	}
 
 	function syncTip(s:StatsObject) {
-		tip.text = s.name+"(" + Std.int(s.time / 1000) + " us " + s.drawCalls + " draws)";
+		tip.text = s.name+"( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e5)%100),"0",2) + " ms " + s.drawCalls + " draws )";
 		var tw = tip.textWidth;
 		var tx = s.xPos + ((s.xSize - tw) >> 1);
 		if( tx + tw > curWidth ) tx = curWidth - tw;
@@ -111,6 +161,14 @@ class Benchmark extends h2d.Graphics {
 	public function begin() {
 
 		if( !enable ) return;
+
+		var t0 = haxe.Timer.stamp();
+		var ft = (t0 - prevFrame) * 1e9;
+		if( hxd.Math.abs(ft - frameTime) > recalTime )
+			frameTime = ft;
+		else
+			frameTime = frameTime * smooth + ft * (1 - smooth);
+		prevFrame = t0;
 
 		// end was not called...
 		if( currentFrame != null )
@@ -135,25 +193,14 @@ class Benchmark extends h2d.Graphics {
 			currentStats = null;
 
 			var prev : QueryObject = null;
+			var totalTime = 0.;
 			while( q != null ) {
 				q.sync();
 				if( prev != null ) {
-					var s = allocStat();
 					var dt = prev.value - q.value;
-					if( s.name == q.name ) {
-						// smooth
-						var et = hxd.Math.abs(dt - s.time);
-						if( et > 4e6 )
-							s.time = dt;
-						else
-							s.time = s.time * 0.9 + dt * 0.1;
-					} else {
-						s.name = q.name;
-						s.time = dt;
-					}
+					var s = allocStat(q.name, dt);
+					totalTime += dt;
 					s.drawCalls = prev.drawCalls - q.drawCalls;
-					s.next = currentStats;
-					currentStats = s;
 				}
 				// recycle
 				var n = q.next;
@@ -162,6 +209,25 @@ class Benchmark extends h2d.Graphics {
 				prev = q;
 				q = n;
 			}
+
+			if( estimateCpuWait ) {
+				var waitT = frameTime - totalTime;
+				if( waitT > 0 ) {
+					if( hxd.System.isVSync() ) {
+						var vst = 1e9 / hxd.System.getDefaultFrameRate() - totalTime;
+						if( vst > waitT ) vst = waitT;
+						if( vst > 0 ) {
+							var s = allocStat("vsync", vst);
+							waitT -= vst;
+						}
+					}
+					if( waitT > 0.5e6 /* 0.5 ms */ ) {
+						var s = allocStat("cpuwait", waitT);
+						s.drawCalls = 0;
+					}
+				}
+			}
+
 			// stats updated
 			changed = true;
 		}
@@ -174,7 +240,11 @@ class Benchmark extends h2d.Graphics {
 
 	function syncVisual() {
 		var s2d = getScene();
+		var old = labels;
+		labels = null;
 		clear();
+		labels = old;
+
 		var width = width == null ? s2d.width : width;
 		curWidth = width;
 		beginFill(0, 0.5);
@@ -215,9 +285,11 @@ class Benchmark extends h2d.Graphics {
 			drawRect(xPos, 0, xSize, height);
 
 			var l = allocLabel(count);
-			if( xSize < s.name.length * 4 )
+			if( xSize < s.name.length * 6 )
 				l.visible = false;
 			else {
+				l.visible = true;
+				l.textColor = textColor;
 				l.text = s.name;
 				l.x = xPos + ((xSize - l.textWidth) >> 1);
 			}
@@ -235,6 +307,7 @@ class Benchmark extends h2d.Graphics {
 
 		var time = allocLabel(count++);
 		time.x = xPos + 10;
+		time.visible = true;
 		time.textColor = 0xFFFFFF;
 		var timeMs = totalTime / 1e6;
 		time.text = Std.int(timeMs) + "." + Std.int((timeMs * 10) % 10);
@@ -249,7 +322,6 @@ class Benchmark extends h2d.Graphics {
 			return l;
 		if( font == null ) font = hxd.res.DefaultFont.get();
 		l = new h2d.Text(font, this);
-		l.textColor = textColor;
 		labels[index] = l;
 		return l;
 	}
@@ -261,12 +333,25 @@ class Benchmark extends h2d.Graphics {
 		currentFrame = null;
 	}
 
-	function allocStat() {
+	function allocStat( name, time : Float ) {
 		var s = cachedStats;
 		if( s != null )
 			cachedStats = s.next;
 		else
 			s = new StatsObject();
+		if( name == s.name ) {
+			// smooth
+			var et = hxd.Math.abs(time - s.time);
+			if( et > recalTime )
+				s.time = time;
+			else
+				s.time = s.time * smooth + time * (1 - smooth);
+		} else {
+			s.name = name;
+			s.time = time;
+		}
+		s.next = currentStats;
+		currentStats = s;
 		return s;
 	}
 
@@ -281,6 +366,8 @@ class Benchmark extends h2d.Graphics {
 
 	public function measure( name : String ) {
 		if( !enable ) return;
+		if( currentFrame != null && currentFrame.name == name )
+			return;
 		var q = allocQuery();
 		q.name = name;
 		q.drawCalls = engine.drawCalls;

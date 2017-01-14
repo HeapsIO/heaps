@@ -179,6 +179,10 @@ class Sao extends hxd.App {
 			r.mode = 2;
 		if(K.isPressed("B".code))
 			r.saoBlur.passes = r.saoBlur.passes == 0 ? 3 : 0;
+		#if hl
+		if( K.isPressed("V".code) )
+			@:privateAccess hxd.System.win.vsync = !hxd.System.win.vsync;
+		#end
 	}
 
 	static function main() {

@@ -767,4 +767,12 @@ class System {
 		#end
 	}
 
+	public static function isVSync() {
+		#if hl
+		return win.vsync;
+		#else
+		return true;
+		#end
+	}
+
 }
