@@ -558,12 +558,27 @@ class GlDriver extends Driver {
 		t.flags.unset(WasCleared);
 		var bind = t.flags.has(Cubic) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 		gl.bindTexture(bind, tt.t);
+		var outOfMem = false;
 		if( t.flags.has(Cubic) ) {
-			for( i in 0...6 )
+			for( i in 0...6 ) {
 				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
-		} else
+				if( gl.getError() == GL.OUT_OF_MEMORY ) {
+					outOfMem = true;
+					break;
+				}
+			}
+		} else {
 			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
+			if( gl.getError() == GL.OUT_OF_MEMORY )
+				outOfMem = true;
+		}
 		gl.bindTexture(bind, null);
+
+		if( outOfMem ) {
+			gl.deleteTexture(tt.t);
+			return null;
+		}
+
 		return tt;
 	}
 
@@ -603,7 +618,12 @@ class GlDriver extends Driver {
 		var tmp = new Uint8Array(m.size * m.stride * 4);
 		gl.bufferData(GL.ARRAY_BUFFER, tmp, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#end
+		var outOfMem = gl.getError() == GL.OUT_OF_MEMORY;
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
+		if( outOfMem ) {
+			gl.deleteBuffer(b);
+			return null;
+		}
 		return { b : b, stride : m.stride };
 	}
 
@@ -618,7 +638,12 @@ class GlDriver extends Driver {
 		var tmp = new Uint16Array(count);
 		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, tmp, GL.STATIC_DRAW);
 		#end
+		var outOfMem = gl.getError() == GL.OUT_OF_MEMORY;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
+		if( outOfMem ) {
+			gl.deleteBuffer(b);
+			return null;
+		}
 		return b;
 	}
 
