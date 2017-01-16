@@ -202,7 +202,6 @@ class Driver {
 					if( c.positionChanged ) {
 						// force full resync
 						releaseSource(s);
-						c.source = null;
 						continue;
 					}
 					var count = AL.getSourcei(s.inst, AL.BUFFERS_PROCESSED);
@@ -408,7 +407,11 @@ class Driver {
 	// ------------------------------------------------------------------------
 
 	function releaseSource( s : Source ) {
-		s.channel = null;
+		if (s.channel != null) {
+			s.channel.source = null;
+			s.channel = null;
+		}
+		
 		if( s.playing ) {
 			s.playing = false;
 			AL.sourceStop(s.inst);
@@ -630,10 +633,8 @@ class Driver {
 		}
 		c.next = null;
 		c.driver = null;
-		if( c.source != null ) {
+		if( c.source != null )
 			releaseSource(c.source);
-			c.source = null;
-		}
 	}
 
 	function fillBuffer(buf : Buffer, dat : hxd.snd.Data, forceMono = false) {

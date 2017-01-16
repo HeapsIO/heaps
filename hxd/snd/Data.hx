@@ -59,7 +59,7 @@ class Data {
 		var resample = samples != newSamples;
 		var srcChannels = this.channels;
 		var commonChannels = channels < srcChannels ? channels : srcChannels;
-		var extraChannels = (channels > srcChannels ? channels : srcChannels) - commonChannels;
+		var extraChannels  = channels - commonChannels;
 		var sval = 0., ival = 0;
 		for( i in 0...newSamples ) {
 			var targetSample = (i / (newSamples - 1)) * (samples - 1);
