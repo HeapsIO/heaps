@@ -33,7 +33,7 @@ class Spatialization extends Effect {
 		return gain;
 	}
 
-	override function apply(channel : Channel, s : System.Source) {
+	override function apply(channel : Channel, s : Driver.Source) {
 		AL.source3f(s.inst, AL.POSITION,  position.x,  position.y,  position.z);
 		AL.source3f(s.inst, AL.VELOCITY,  velocity.x,  velocity.y,  velocity.z);
 		AL.source3f(s.inst, AL.DIRECTION, direction.x, direction.y, direction.z);
