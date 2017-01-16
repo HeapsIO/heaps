@@ -150,7 +150,7 @@ class Benchmark extends h2d.Graphics {
 	}
 
 	function syncTip(s:StatsObject) {
-		tip.text = s.name+"( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e5)%100),"0",2) + " ms " + s.drawCalls + " draws )";
+		tip.text = s.name+"( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e4)%100),"0",2) + " ms " + s.drawCalls + " draws )";
 		var tw = tip.textWidth;
 		var tx = s.xPos + ((s.xSize - tw) >> 1);
 		if( tx + tw > curWidth ) tx = curWidth - tw;
