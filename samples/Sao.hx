@@ -49,10 +49,9 @@ class CustomRenderer extends h3d.scene.Renderer {
 
 }
 
-class Sao extends hxd.App {
+class Sao extends SampleApp {
 
 	var wscale = 1.;
-	var fui : h2d.Flow;
 	var renderer : CustomRenderer;
 
 	function initMaterial( m : h3d.mat.MeshMaterial ) {
@@ -72,10 +71,7 @@ class Sao extends hxd.App {
 	}
 
 	override function init() {
-
-		fui = new h2d.Flow(s2d);
-		fui.isVertical = true;
-		fui.verticalSpacing = 5;
+		super.init();
 
 		var r = new hxd.Rand(Std.random(0xFFFFFF));
 
@@ -121,37 +117,6 @@ class Sao extends hxd.App {
 		addSlider("Blur", 0, 3, function() return c.saoBlur.sigma, function(v) c.saoBlur.sigma = v);
 
 		onResize();
-	}
-
-	function addSlider( text, min : Float, max : Float, get : Void -> Float, set : Float -> Void ) {
-		var f = new h2d.Flow(fui);
-
-		f.horizontalSpacing = 5;
-
-		var font = hxd.res.DefaultFont.get();
-		var tf = new h2d.Text(font, f);
-		tf.text = text;
-		tf.maxWidth = 70;
-		tf.textAlign = Right;
-
-		var sli = new h2d.Slider(100, 10, f);
-		sli.minValue = min;
-		sli.maxValue = max;
-		sli.value = get();
-
-		var tf = new h2d.TextInput(font, f);
-		tf.text = "" + hxd.Math.fmt(sli.value);
-		sli.onChange = function() {
-			set(sli.value);
-			tf.text = "" + hxd.Math.fmt(sli.value);
-			f.needReflow = true;
-		};
-		tf.onChange = function() {
-			var v = Std.parseFloat(tf.text);
-			if( Math.isNaN(v) ) return;
-			sli.value = v;
-			set(v);
-		};
 	}
 
 	function reset() {

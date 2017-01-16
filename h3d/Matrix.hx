@@ -534,6 +534,7 @@ class Matrix {
 	}
 
 	public function colorSaturation( sat : Float ) {
+		sat += 1;
 		var is = 1 - sat;
 		var r = is * lumR;
 		var g = is * lumG;
@@ -570,10 +571,10 @@ class Matrix {
 		multiply3x4(this, tmp);
 	}
 
-	public function colorBrightness( brightness : Float ) {
-		_41 += brightness;
-		_42 += brightness;
-		_43 += brightness;
+	public function colorLightness( lightness : Float ) {
+		_41 += lightness;
+		_42 += lightness;
+		_43 += lightness;
 	}
 
 	public function colorBits( bits : Int, blend : Float ) {

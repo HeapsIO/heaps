@@ -57,6 +57,23 @@ class Drawable extends Sprite {
 		return colorKey = v;
 	}
 
+	public function adjustColor( saturation = 0., lightness = 0., hue = 0., contrast = 0. ) {
+		if( saturation == 0 && lightness == 0 && hue == 0 && contrast == 0 )
+			colorMatrix = null;
+		else {
+			var m = colorMatrix;
+			if( m == null ) {
+				m = new h3d.Matrix();
+				colorMatrix = m;
+			}
+			m.identity();
+			if( hue != 0 ) m.colorHue(hue);
+			if( saturation != 0 ) m.colorSaturation(saturation);
+			if( contrast != 0 ) m.colorContrast(contrast);
+			if( lightness != 0 ) m.colorLightness(lightness);
+		}
+	}
+
 	function get_colorMatrix() {
 		var s = getShader(h3d.shader.ColorMatrix);
 		return s == null ? null : s.matrix;
