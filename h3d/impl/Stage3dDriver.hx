@@ -166,7 +166,7 @@ class Stage3dDriver extends Driver {
 		return switch( f ) {
 		case HardwareAccelerated: ctx != null && ctx.driverInfo.toLowerCase().indexOf("software") == -1;
 		case StandardDerivatives, FloatTextures: isStandardMode;
-		case AllocDepthBuffer: false;
+		case AllocDepthBuffer, Queries : false;
 		case MultipleRenderTargets: (PROFILE == cast "standard") || (PROFILE == cast "standardExtended");
 		}
 	}
