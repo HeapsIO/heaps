@@ -41,7 +41,7 @@ class Mask extends hxd.App {
 		cache.freezed = (time % 2.) > 1;
 		cache.colorMatrix.identity();
 		cache.colorMatrix.colorHue(time);
-		cache.colorMatrix.colorSaturation(cache.freezed ? 0 : 1);
+		cache.colorMatrix.colorSaturation(cache.freezed ? -1 : 0);
 	}
 
 	static function main() {

@@ -362,7 +362,7 @@ class ScenePanel extends Panel {
 			var m = new h3d.shader.ColorMatrix();
 			m.matrix.identity();
 			m.matrix.colorHue(0.1);
-			m.matrix.colorBrightness(0.2);
+			m.matrix.colorLightness(0.2);
 			currentPickShader = m;
 			currentPick.material.mainPass.addShader(m);
 		}

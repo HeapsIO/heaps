@@ -23,7 +23,7 @@ class ColorMatrix extends Filter {
 	public static function grayed() {
 		var m = new h3d.Matrix();
 		m.identity();
-		m.colorSaturation(0);
+		m.colorSaturation(-1);
 		return new ColorMatrix(m);
 	}
 

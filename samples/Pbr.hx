@@ -771,9 +771,9 @@ class Pbr extends hxd.App {
 		var color = new h3d.Vector(1, 0, 0);
 		var m = new h3d.Matrix();
 		m.identity();
-		m.colorSaturation(saturation);
+		m.colorSaturation(saturation - 1);
 		m.colorHue(hue);
-		m.colorBrightness(brightness);
+		m.colorLightness(brightness);
 		color.transform3x4(m);
 		color.setColor(color.toColor()); // saturate
 
