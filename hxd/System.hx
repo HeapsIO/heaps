@@ -580,6 +580,8 @@ class System {
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
 			eh.charCode = CHARMAP[e.keyCode];
+			if( eh.charCode == ":".code && shiftDown )
+				eh.charCode = "/".code;
 			if( eh.charCode >= 'a'.code && eh.charCode <= 'z'.code && shiftDown )
 				eh.charCode += 'A'.code - 'a'.code;
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
@@ -592,6 +594,8 @@ class System {
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
 			eh.charCode = CHARMAP[e.keyCode];
+			if( eh.charCode == ":".code && shiftDown )
+				eh.charCode = "/".code;
 			if( eh.charCode >= 'a'.code && eh.charCode <= 'z'.code && shiftDown )
 				eh.charCode += 'A'.code - 'a'.code;
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
