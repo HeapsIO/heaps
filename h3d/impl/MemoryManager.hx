@@ -2,8 +2,8 @@ package h3d.impl;
 
 class MemoryManager {
 
-	static inline var MAX_MEMORY = 250 << 20; // MB
-	static inline var MAX_BUFFERS = 4096;
+	static inline var MAX_MEMORY = #if flash 250 #else 4096 #end * (1024. * 1024.); // MB
+	static inline var MAX_BUFFERS = #if flash 4096 #else 1 << 16 #end;
 	static inline var SIZE = 65533;
 	static var ALL_FLAGS = Type.allEnums(Buffer.BufferFlag);
 
@@ -15,8 +15,8 @@ class MemoryManager {
 
 	public var triIndexes(default,null) : Indexes;
 	public var quadIndexes(default,null) : Indexes;
-	public var usedMemory(default, null) : Int = 0;
-	public var texMemory(default, null) : Int = 0;
+	public var usedMemory(default, null) : Float = 0;
+	public var texMemory(default, null) : Float = 0;
 	public var bufferCount(default,null) : Int = 0;
 
 	public function new(driver) {
@@ -94,7 +94,7 @@ class MemoryManager {
 			if( usedMemory - freeMemorySize() == size ) {
 				if( bufferCount >= MAX_BUFFERS )
 					throw "Too many buffers";
-				throw "Memory full ("+(size>>10)+" KB,"+bufferCount+" buffers)";
+				throw "Memory full (" + Math.fceil(size / 1024) + " KB," + bufferCount + " buffers)";
 			}
 		}
 		usedMemory += mem;
