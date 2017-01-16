@@ -142,7 +142,7 @@ class World extends Object {
 	public function garbage() {
 		var last : WorldChunk = null;
 		for( c in allChunks )
-			if( c.initialized && (last == null || c.lastFrame < last.lastFrame) )
+			if( c.initialized && !c.root.visible && (last == null || c.lastFrame < last.lastFrame) )
 				last = c;
 		if( last != null )
 			cleanChunk(last);
