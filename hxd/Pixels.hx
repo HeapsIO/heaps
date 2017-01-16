@@ -334,6 +334,7 @@ class Pixels {
 
 	public function toPNG( ?level = 9 ) {
 		var png;
+		setFlip(false);
 		switch( format ) {
 		case ARGB:
 			png = std.format.png.Tools.build32ARGB(width, height, bytes #if (format >= "3.3") , level #end);
