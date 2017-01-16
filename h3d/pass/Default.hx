@@ -100,7 +100,7 @@ class Default extends Base {
 			if( t == null )
 				p.texture = 0;
 			else {
-				var t : h3d.mat.Texture = manager.getParamValue(t, shaders);
+				var t : h3d.mat.Texture = manager.getParamValue(t, shaders, true);
 				p.texture = t == null ? 0 : t.id;
 			}
 			p = p.next;

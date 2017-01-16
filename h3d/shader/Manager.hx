@@ -133,7 +133,7 @@ class Manager {
 		return 0;
 	}
 
-	public inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList ) : Dynamic {
+	public inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList, opt = false ) : Dynamic {
 		if( p.perObjectGlobal != null ) {
 			var v = globals.fastGet(p.perObjectGlobal.gid);
 			if( v == null ) throw "Missing global value " + p.perObjectGlobal.path;
@@ -143,7 +143,7 @@ class Manager {
 		var n = p.instance;
 		while( n-- > 0 ) si = si.next;
 		var v = si.s.getParamValue(p.index);
-		if( v == null ) throw "Missing param value " + si.s + "." + p.name;
+		if( v == null && !opt ) throw "Missing param value " + si.s + "." + p.name;
 		return v;
 	}
 

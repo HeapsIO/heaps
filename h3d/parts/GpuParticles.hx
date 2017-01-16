@@ -644,6 +644,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	}
 
 	override function draw( ctx : h3d.scene.RenderContext ) {
+
+		if( primitive == null || primitive.buffer.isDisposed() )
+			return; // wait next sync()
+
 		var g = groups[ctx.drawPass.index];
 		g.syncParams();
 		g.pshader.time = currentTime;
