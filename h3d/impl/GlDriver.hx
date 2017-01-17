@@ -199,6 +199,13 @@ class GlDriver extends Driver {
 			var glout = new hxsl.GlslOut();
 			#if js
 			glout.glES = true;
+			#else
+			var reg = ~/[0-9]+\.[0-9]+/;
+			var v : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
+			if( v.indexOf("ES") > -1 )
+				glout.glES = true;
+			else if( reg.match(v) )
+				glout.version = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
 			#end
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
