@@ -105,6 +105,27 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return Math.abs(sum) * 0.5;
 	}
 
+	public function centroid() {
+		var A = 0.;
+		var cx = 0.;
+		var cy = 0.;
+
+		var p0 = points[points.length - 1];
+		for(p in points) {
+			var a = p0.x * p.y - p.x * p0.y;
+			cx += (p0.x + p.x) * a;
+			cy += (p0.y + p.y) * a;
+			A += a;
+			p0 = p;
+		}
+
+		A *= 0.5;
+		cx *= 1 / (6 * A);
+		cy *= 1 / (6 * A);
+
+		return new h2d.col.Point(cx, cy);
+	}
+
 	inline function side( p1 : Point, p2 : Point, t : Point ) {
 		return (p2.x - p1.x) * (t.y - p1.y) - (p2.y - p1.y) * (t.x - p1.x);
 	}
