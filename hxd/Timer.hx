@@ -31,4 +31,9 @@ class Timer {
 		oldTime = haxe.Timer.stamp();
 	}
 
+	public static function reset() {
+		oldTime = haxe.Timer.stamp();
+		calc_tmod = 1.;
+	}
+
 }
