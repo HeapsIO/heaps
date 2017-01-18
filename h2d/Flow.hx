@@ -90,6 +90,8 @@ class Flow extends Sprite {
 		Will set all padding values at the same time.
 	**/
 	public var padding(never, set) : Int;
+	public var paddingHorizontal(never, set) : Int;
+	public var paddingVertical(never, set) : Int;
 	public var paddingLeft(default, set) : Int = 0;
 	public var paddingRight(default, set) : Int = 0;
 	public var paddingTop(default, set) : Int = 0;
@@ -253,6 +255,18 @@ class Flow extends Sprite {
 		paddingLeft = v;
 		paddingTop = v;
 		paddingRight = v;
+		paddingBottom = v;
+		return v;
+	}
+
+	inline function set_paddingHorizontal(v) {
+		paddingLeft = v;
+		paddingRight = v;
+		return v;
+	}
+
+	inline function set_paddingVertical(v) {
+		paddingTop = v;
 		paddingBottom = v;
 		return v;
 	}
