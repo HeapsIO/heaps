@@ -223,7 +223,7 @@ class MacroParser {
 		case ESwitch(e, cases, def):
 			ESwitch(parseExpr(e), [for( c in cases ) { expr : parseExpr(c.expr), values : [for( v in c.values ) parseExpr(v)] }], def == null ? null : parseExpr(def));
 		case EWhile(cond, e, normalWhile):
-			hxsl.ExprDef.EWhile(parseExpr(cond), parseExpr(e), normalWhile);
+			EWhile(parseExpr(cond), parseExpr(e), normalWhile);
 		default:
 			null;
 		};
