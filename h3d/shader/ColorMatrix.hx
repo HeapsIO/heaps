@@ -8,9 +8,7 @@ class ColorMatrix extends hxsl.Shader {
 		@param var matrix : Mat4;
 
 		function fragment() {
-			var rgb = pixelColor.rgb * matrix.mat3x4();
-			pixelColor.a = (pixelColor * matrix).a;
-			pixelColor.rgb = rgb;
+			pixelColor = vec4( (vec4(pixelColor.rgb,1.) * matrix).rgb, (pixelColor * matrix).a);
 		}
 
 	};

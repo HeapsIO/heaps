@@ -19,7 +19,9 @@ class ColorMatrixShader extends h3d.shader.ScreenShader {
 		@param var maskChannel : Vec4;
 
 		function apply( color : Vec4, mat : Mat4 ) : Vec4 {
-			return useAlpha ? color * mat : vec4(color.rgb * matrix.mat3x4(), (color * matrix).a);
+			// by default we ignore alpha since it's not accurate 
+			// in a render target because of alpha blending
+			return useAlpha ? color * mat : vec4(color.rgb, 1.) * mat;
 		}
 
 		function fragment() {
