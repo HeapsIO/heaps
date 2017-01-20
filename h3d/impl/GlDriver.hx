@@ -203,6 +203,17 @@ class GlDriver extends Driver {
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 			p.p = gl.createProgram();
+			#if hxsdl
+			if( !glout.glES ) {
+				var outCount = 0;
+				for( v in shader.fragment.data.vars )
+					switch( v.kind ) {
+					case Output:
+						gl.bindFragDataLocation(p.p, outCount++, v.name);
+					default:
+					}
+			}
+			#end
 			gl.attachShader(p.p, p.vertex.s);
 			gl.attachShader(p.p, p.fragment.s);
 			gl.linkProgram(p.p);
