@@ -103,6 +103,7 @@ class GlDriver extends Driver {
 	var numTargets : Int;
 
 	var debug : Bool;
+	var boundTextures : Array<h3d.mat.Texture> = [];
 
 	public function new() {
 		#if js
@@ -272,6 +273,7 @@ class GlDriver extends Driver {
 				#end
 			}
 		case Textures:
+			var tcount = s.textures.length;
 			for( i in 0...s.textures.length + s.cubeTextures.length ) {
 				var t = buf.tex[i];
 				if( t == null || t.isDisposed() ) {
@@ -283,42 +285,32 @@ class GlDriver extends Driver {
 					t.realloc();
 				}
 				t.lastFrame = frame;
-			}
 
-			for( i in 0...s.textures.length ) {
-				var t = buf.tex[i];
+				var isCube = i >= tcount;
+				var pt = isCube ? s.cubeTextures[i - tcount] : s.textures[i];
+				if( pt == null ) continue;
+				if( boundTextures[i] == t ) continue;
+				boundTextures[i] = t;
 
-				if( s.textures[i] == null ) continue;
-
+				var mode = isCube ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 				gl.activeTexture(GL.TEXTURE0 + i);
-				gl.uniform1i(s.textures[i], i);
+				gl.uniform1i(pt, i);
+				gl.bindTexture(mode, t.t.t);
 
-				gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-				var flags = TFILTERS[Type.enumIndex(t.mipMap)][Type.enumIndex(t.filter)];
-				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, flags[0]);
-				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, flags[1]);
-				var w = TWRAP[Type.enumIndex(t.wrap)];
-				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_S, w);
-				gl.texParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, w);
+				var mip = Type.enumIndex(t.mipMap);
+				var filter = Type.enumIndex(t.filter);
+				var wrap = Type.enumIndex(t.wrap);
+				var bits = mip | (filter << 3) | (wrap << 6);
+				if( bits != t.t.bits ) {
+					t.t.bits = bits;
+					var flags = TFILTERS[mip][filter];
+					gl.texParameteri(mode, GL.TEXTURE_MAG_FILTER, flags[0]);
+					gl.texParameteri(mode, GL.TEXTURE_MIN_FILTER, flags[1]);
+					var w = TWRAP[wrap];
+					gl.texParameteri(mode, GL.TEXTURE_WRAP_S, w);
+					gl.texParameteri(mode, GL.TEXTURE_WRAP_T, w);
+				}
 			}
-
-			for( i in 0...s.cubeTextures.length ) {
-				var t = buf.tex[i + s.textures.length];
-
-				if( s.cubeTextures[i] == null ) continue;
-
-				gl.activeTexture(GL.TEXTURE0 + i + s.textures.length);
-				gl.uniform1i(s.cubeTextures[i], i + s.textures.length);
-
-				gl.bindTexture(GL.TEXTURE_CUBE_MAP, t.t.t);
-				var flags = TFILTERS[Type.enumIndex(t.mipMap)][Type.enumIndex(t.filter)];
-				gl.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MAG_FILTER, flags[0]);
-				gl.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_MIN_FILTER, flags[1]);
-				var w = TWRAP[Type.enumIndex(t.wrap)];
-				gl.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_S, w);
-				gl.texParameteri(GL.TEXTURE_CUBE_MAP, GL.TEXTURE_WRAP_T, w);
-			}
-
 		}
 	}
 
@@ -527,7 +519,7 @@ class GlDriver extends Driver {
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var tt = gl.createTexture();
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1 };
 		switch( t.format ) {
 		case RGBA:
 			// default
