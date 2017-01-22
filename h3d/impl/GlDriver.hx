@@ -61,13 +61,22 @@ private class CompiledShader {
 	}
 }
 
+private class CompiledAttribute {
+	public var index : Int;
+	public var type : Int;
+	public var size : Int;
+	public var offset : Int;
+	public function new() {
+	}
+}
+
 private class CompiledProgram {
 	public var p : Program;
 	public var vertex : CompiledShader;
 	public var fragment : CompiledShader;
 	public var stride : Int;
 	public var attribNames : Array<String>;
-	public var attribs : Array<{ index : Int, type : Int, size : Int, offset : Int }>;
+	public var attribs : Array<CompiledAttribute>;
 	public function new() {
 	}
 }
@@ -88,6 +97,7 @@ class GlDriver extends Driver {
 	var curAttribs : Int;
 	var curShader : CompiledProgram;
 	var curBuffer : h3d.Buffer;
+	var curIndexBuffer : IndexBuffer;
 	var curMatBits : Int;
 	var curStOpBits : Int;
 	var curStFrBits : Int;
@@ -222,7 +232,12 @@ class GlDriver extends Driver {
 						p.stride += size;
 						continue;
 					}
-					p.attribs.push( { offset : p.stride, index : index, size:size, type:t } );
+					var a = new CompiledAttribute();
+					a.type = t;
+					a.size = size;
+					a.index = index;
+					a.offset = p.stride;
+					p.attribs.push(a);
 					p.attribNames.push(v.name);
 					p.stride += size;
 				default:
@@ -632,6 +647,7 @@ class GlDriver extends Driver {
 		#end
 		var outOfMem = gl.getError() == GL.OUT_OF_MEMORY;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
+		curIndexBuffer = null;
 		if( outOfMem ) {
 			gl.deleteBuffer(b);
 			return null;
@@ -797,6 +813,7 @@ class GlDriver extends Driver {
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
 		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
+		curIndexBuffer = null;
 	}
 
 	override function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
@@ -809,6 +826,7 @@ class GlDriver extends Driver {
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
 		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
+		curIndexBuffer = null;
 	}
 
 	override function selectBuffer( v : h3d.Buffer ) {
@@ -831,26 +849,30 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ARRAY_BUFFER, m.b);
 
 		if( v.flags.has(RawFormat) ) {
-			for( a in curShader.attribs )
-				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, a.offset * 4);
+			for( a in curShader.attribs ) {
+				var pos = a.offset;
+				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, pos * 4);
+			}
 		} else {
 			var offset = 8;
 			for( i in 0...curShader.attribs.length ) {
 				var a = curShader.attribs[i];
+				var pos;
 				switch( curShader.attribNames[i] ) {
 				case "position":
-					gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, 0);
+					pos = 0;
 				case "normal":
 					if( m.stride < 6 ) throw "Buffer is missing NORMAL data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
-					gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, 3 * 4);
+					pos = 3;
 				case "uv":
 					if( m.stride < 8 ) throw "Buffer is missing UV data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
-					gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, 6 * 4);
+					pos = 6;
 				case s:
-					gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, offset * 4);
+					pos = offset;
 					offset += a.size;
 					if( offset > m.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
 				}
+				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, pos * 4);
 			}
 		}
 	}
@@ -865,9 +887,11 @@ class GlDriver extends Driver {
 	}
 
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
-		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
+		if( ibuf != curIndexBuffer ) {
+			curIndexBuffer = ibuf;
+			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
+		}
 		gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
-		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 	}
 
 	override function present() {
