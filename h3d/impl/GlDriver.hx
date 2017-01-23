@@ -897,6 +897,10 @@ class GlDriver extends Driver {
 	}
 
 	override function present() {
+		#if hxsdl
+		// let the window buffer swap do the job
+		return;
+		#end
 		gl.finish();
 	}
 
