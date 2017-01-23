@@ -209,7 +209,7 @@ class GlDriver extends Driver {
 				for( v in shader.fragment.data.vars )
 					switch( v.kind ) {
 					case Output:
-						gl.bindFragDataLocation(p.p, outCount++, v.name);
+						gl.bindFragDataLocation(p.p, outCount++, glout.varNames.get(v.id));
 					default:
 					}
 			}
