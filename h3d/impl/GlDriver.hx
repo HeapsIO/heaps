@@ -113,7 +113,7 @@ class GlDriver extends Driver {
 	var numTargets : Int;
 
 	var debug : Bool;
-	var boundTextures : Array<h3d.mat.Texture> = [];
+	var boundTextures : Array<Texture> = [];
 
 	public function new() {
 		#if js
@@ -255,6 +255,8 @@ class GlDriver extends Driver {
 			gl.disableVertexAttribArray(--curAttribs);
 		curShader = p;
 		curBuffer = null;
+		for( i in 0...boundTextures.length )
+			boundTextures[i] = null;
 		return true;
 	}
 
@@ -304,8 +306,8 @@ class GlDriver extends Driver {
 				var isCube = i >= tcount;
 				var pt = isCube ? s.cubeTextures[i - tcount] : s.textures[i];
 				if( pt == null ) continue;
-				if( boundTextures[i] == t ) continue;
-				boundTextures[i] = t;
+				if( boundTextures[i] == t.t ) continue;
+				boundTextures[i] = t.t;
 
 				var mode = isCube ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 				gl.activeTexture(GL.TEXTURE0 + i);
