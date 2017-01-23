@@ -53,7 +53,7 @@ class Benchmark extends h2d.Graphics {
 	var labels : Array<h2d.Text>;
 	var interact : h2d.Interactive;
 
-	public var estimateCpuWait = true;
+	public var estimateWait = true;
 	public var enable(default,set) : Bool;
 
 	public var width : Null<Int>;
@@ -64,6 +64,8 @@ class Benchmark extends h2d.Graphics {
 
 	public var recalTime = 1e9;
 	public var smooth = 0.95;
+
+	public var measureCpu = true;
 
 	var tip : h2d.Text;
 	var tipCurrent : StatsObject;
@@ -195,7 +197,7 @@ class Benchmark extends h2d.Graphics {
 			var prev : QueryObject = null;
 			var totalTime = 0.;
 			while( q != null ) {
-				q.sync();
+				if( !measureCpu ) q.sync();
 				if( prev != null ) {
 					var dt = prev.value - q.value;
 					var s = allocStat(q.name, dt);
@@ -210,7 +212,7 @@ class Benchmark extends h2d.Graphics {
 				q = n;
 			}
 
-			if( estimateCpuWait ) {
+			if( estimateWait ) {
 				var waitT = frameTime - totalTime;
 				if( waitT > 0 ) {
 					if( hxd.System.isVSync() ) {
@@ -218,11 +220,12 @@ class Benchmark extends h2d.Graphics {
 						if( vst > waitT ) vst = waitT;
 						if( vst > 0 ) {
 							var s = allocStat("vsync", vst);
+							s.drawCalls = 0;
 							waitT -= vst;
 						}
 					}
 					if( waitT > 0.5e6 /* 0.5 ms */ ) {
-						var s = allocStat("cpuwait", waitT);
+						var s = allocStat(measureCpu ? "gpuwait" : "cpuwait", waitT);
 						s.drawCalls = 0;
 					}
 				}
@@ -374,6 +377,7 @@ class Benchmark extends h2d.Graphics {
 		q.next = currentFrame;
 		currentFrame = q;
 		engine.driver.endQuery(q.q);
+		if( measureCpu ) q.value = haxe.Timer.stamp() * 1e9;
 	}
 
 }
