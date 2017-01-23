@@ -10,7 +10,51 @@ enum Cursor {
 	Move;
 	TextInput;
 	Hide;
-	Custom( frames : Array<hxd.BitmapData>, speed : Float, offsetX : Int, offsetY : Int );
+	Custom( custom : CustomCursor );
+}
+
+@:allow(hxd.System)
+class CustomCursor {
+
+	var frames : Array<hxd.BitmapData>;
+	var speed : Float;
+	var offsetX : Int;
+	var offsetY : Int;
+	#if hlsdl
+	var alloc : sdl.Cursor;
+	#elseif flash
+	static var UID = 0;
+	var name : String;
+	var alloc : flash.ui.MouseCursorData;
+	#end
+
+	public function new( frames, speed, offsetX, offsetY ) {
+		this.frames = frames;
+		this.speed = speed;
+		this.offsetX = offsetX;
+		this.offsetY = offsetY;
+		#if flash
+		name = "custom_" + UID++;
+		#end
+	}
+
+	public function dispose() {
+		for( f in frames )
+			f.dispose();
+		frames = [];
+		#if hlsdl
+		if( alloc != null ) {
+			alloc.free();
+			alloc = null;
+		}
+		#elseif flash
+		if( alloc != null ) {
+			flash.ui.Mouse.unregisterCursor(name);
+			alloc = null;
+		}
+		#end
+	}
+
 }
 
 class System {
@@ -191,18 +235,21 @@ class System {
 		case Move: "hand";
 		case TextInput: "ibeam";
 		case Hide: "auto";
-		case Custom(frames, speed, offsetX, offsetY):
+		case Custom(cursor):
 			#if cpp
 				throw "not supported on openFL for now";
 			#else
-				var customCursor = new flash.ui.MouseCursorData();
-				var v = new flash.Vector();
-				for( f in frames ) v.push(f.toNative());
-				customCursor.data = v;
-				customCursor.frameRate = speed;
-				customCursor.hotSpot = new flash.geom.Point(offsetX, offsetY);
-				flash.ui.Mouse.registerCursor("custom", customCursor);
-				"custom";
+				if( cursor.alloc == null ) {
+					var c = new flash.ui.MouseCursorData();
+					var v = new flash.Vector();
+					for( f in cursor.frames ) v.push(f.toNative());
+					c.data = v;
+					c.frameRate = cursor.speed;
+					c.hotSpot = new flash.geom.Point(cursor.offsetX, cursor.offsetY);
+					cursor.alloc = c;
+					flash.ui.Mouse.registerCursor(cursor.name, cursor.alloc);
+				}
+				cursor.name;
 			#end
 		}
 		#end
@@ -431,7 +478,6 @@ class System {
 	#elseif hxsdl
 
 	static var currentNativeCursor : Cursor = Default;
-	static var currentCursor : sdl.Cursor;
 	static var cursorVisible = true;
 
 	public static function setNativeCursor( c : Cursor ) {
@@ -455,20 +501,18 @@ class System {
 			cur = sdl.Cursor.createSystem(IBeam);
 		case Hide:
 			throw "assert";
-		case Custom(frames, speed, offsetX, offsetY):
-			if( frames.length > 1 ) throw "Animated cursor not supported";
-			var pixels = frames[0].getPixels();
-			pixels.convert(BGRA);
-			var surf = sdl.Surface.fromBGRA(pixels.bytes, pixels.width, pixels.height);
-			cur = sdl.Cursor.create(surf, offsetX, offsetY);
-			surf.free();
-			pixels.dispose();
+		case Custom(c):
+			if( c.alloc == null ) {
+				if( c.frames.length > 1 ) throw "Animated cursor not supported";
+				var pixels = c.frames[0].getPixels();
+				pixels.convert(BGRA);
+				var surf = sdl.Surface.fromBGRA(pixels.bytes, pixels.width, pixels.height);
+				c.alloc = sdl.Cursor.create(surf, c.offsetX, c.offsetY);
+				surf.free();
+				pixels.dispose();
+			}
+			cur = c.alloc;
 		}
-		if( currentCursor != null ) {
-			currentCursor.free();
-			currentCursor = null;
-		}
-		currentCursor = cur;
 		cur.set();
 		if( !cursorVisible ) {
 			cursorVisible = true;
