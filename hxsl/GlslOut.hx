@@ -505,6 +505,7 @@ class GlslOut {
 					outIndexes.set(v.id, outIndex++);
 					continue;
 				}
+				if( isVertex ) continue;
 				add("out ");
 			case Function:
 				continue;
