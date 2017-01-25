@@ -41,6 +41,7 @@ private typedef GLShader = sdl.GL.Shader;
 private typedef Framebuffer = sdl.GL.Framebuffer;
 private typedef Texture = h3d.impl.Driver.Texture;
 private typedef Query = h3d.impl.Driver.Query;
+private typedef VertexArray = sdl.GL.VertexArray;
 #if cpp
 private typedef Float32Array = Array<cpp.Float32>;
 #end
@@ -93,6 +94,10 @@ class GlDriver extends Driver {
 	public var gl : js.html.webgl.RenderingContext;
 	#end
 
+	#if hxsdl
+	var commonVA : VertexArray;
+	#end
+
 	var commonFB : Framebuffer;
 	var curAttribs : Int;
 	var curShader : CompiledProgram;
@@ -129,6 +134,13 @@ class GlDriver extends Driver {
 		curAttribs = 0;
 		curMatBits = -1;
 		defStencil = new Stencil();
+		#if hxsdl
+		var v : String = gl.getParameter(GL.VERSION);
+		if( v.indexOf("ES") < 0 ){
+			commonVA = gl.createVertexArray();
+			gl.bindVertexArray( commonVA );
+		}
+		#end
 	}
 
 	override function logImpl( str : String ) {
@@ -199,10 +211,28 @@ class GlDriver extends Driver {
 			var glout = new hxsl.GlslOut();
 			#if js
 			glout.glES = true;
+			#else
+			var reg = ~/[0-9]+\.[0-9]+/;
+			var v : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
+			if( v.indexOf("ES") > -1 )
+				glout.glES = true;
+			else if( reg.match(v) )
+				glout.version = hxd.Math.imin( 150, Math.round( Std.parseFloat(reg.matched(0)) * 100 ) );
 			#end
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 			p.p = gl.createProgram();
+			#if hxsdl
+			if( !glout.glES ) {
+				var outCount = 0;
+				for( v in shader.fragment.data.vars )
+					switch( v.kind ) {
+					case Output:
+						gl.bindFragDataLocation(p.p, outCount++, glout.varNames.get(v.id));
+					default:
+					}
+			}
+			#end
 			gl.attachShader(p.p, p.vertex.s);
 			gl.attachShader(p.p, p.fragment.s);
 			gl.linkProgram(p.p);
@@ -961,6 +991,8 @@ class GlDriver extends Driver {
 		else
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, null);
 		gl.viewport(0, 0, tex.width >> mipLevel, tex.height >> mipLevel);
+		for( i in 0...boundTextures.length )
+			boundTextures[i] = null;
 	}
 
 	override function setRenderTargets( textures : Array<h3d.mat.Texture> ) {
