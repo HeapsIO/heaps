@@ -217,7 +217,7 @@ class GlDriver extends Driver {
 			if( v.indexOf("ES") > -1 )
 				glout.glES = true;
 			else if( reg.match(v) )
-				glout.version = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
+				glout.version = hxd.Math.imin( 150, Math.round( Std.parseFloat(reg.matched(0)) * 100 ) );
 			#end
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
