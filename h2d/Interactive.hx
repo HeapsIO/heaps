@@ -172,28 +172,25 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	function eventToLocal( e : hxd.Event ) {
-		// convert global event to our local space
-		var x = e.relX, y = e.relY;
-		var rx = x * scene.matA + y * scene.matB + scene.absX;
-		var ry = x * scene.matC + y * scene.matD + scene.absY;
-		var r = scene.height / scene.width;
+		// convert scene event to our local space
+		var rx = e.relX, ry = e.relY;
 
 		var i = this;
 
 		var dx = rx - i.absX;
 		var dy = ry - i.absY;
 
-		var w1 = i.width * i.matA * r;
+		var w1 = i.width * i.matA;
 		var h1 = i.width * i.matC;
 		var ky = h1 * dx - w1 * dy;
 
-		var w2 = i.height * i.matB * r;
+		var w2 = i.height * i.matB;
 		var h2 = i.height * i.matD;
 		var kx = w2 * dy - h2 * dx;
 
 		var max = h1 * w2 - w1 * h2;
 
-		e.relX = (kx * r / max) * i.width;
+		e.relX = (kx / max) * i.width;
 		e.relY = (ky / max) * i.height;
 	}
 
