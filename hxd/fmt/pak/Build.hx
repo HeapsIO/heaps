@@ -47,6 +47,8 @@ class Build {
 			switch( ext ) {
 			case "mp3":
 				hxd.snd.Convert.toMP3(dir, f);
+			case "ogg":
+				hxd.snd.Convert.toOGG(dir, f);
 			default:
 				throw 'Missing \'$f\' required by \'$dir\'';
 			}
