@@ -163,6 +163,13 @@ class Stage {
 			r();
 	}
 
+	public function resize( width : Int, height : Int ) {
+		#if hxsdl
+		var win = @:privateAccess System.win;
+		win.resize(width, height);
+		#end
+	}
+
 	public function setFullScreen( v : Bool ) {
 		#if flash
 		var isAir = flash.system.Capabilities.playerType == "Desktop";
