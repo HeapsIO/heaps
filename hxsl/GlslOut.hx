@@ -309,6 +309,7 @@ class GlslOut {
 				add("/*var*/");
 			}
 		case TCall( { e : TGlobal(Mat3) }, [e]) if( e.t == TMat3x4 ):
+			decl(MAT34);
 			decl("mat3 _mat3( _mat3x4 v ) { return mat3(v.a.xyz,v.b.xyz,v.c.xyz); }");
 			add("_mat3(");
 			addValue(e, tabs);
