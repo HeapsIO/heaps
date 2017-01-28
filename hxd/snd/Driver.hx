@@ -146,6 +146,12 @@ class Driver {
 			channels.stop();
 	}
 
+	public function cleanCache() {
+		for( b in buffers.copy() )
+			if( b.playCount == 0 )
+				releaseBuffer(b);
+	}
+
 	public function dispose() {
 		stopAll();
 
@@ -261,9 +267,8 @@ class Driver {
 		// calc audible gain & virtualize inaudible channels
 		var c = channels;
 		while (c != null) {
-			c.isVirtual = false;
-			c.calcAudibleGain();
-			if (c.pause || c.mute || c.channelGroup.mute || c.audibleGain < 1e-5 ) c.isVirtual = true;
+			c.calcAudibleGain(now);
+			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || c.audibleGain < 1e-5;
 			c = c.next;
 		}
 
@@ -377,7 +382,7 @@ class Driver {
 			s.loop = loopFlag;
 			AL.sourcei(s.inst, AL.LOOPING, loopFlag ? AL.TRUE : AL.FALSE);
 		}
-		var v = c.volume * c.channelGroup.volume * c.soundGroup.volume;
+		var v = c.currentVolume;
 		if( s.volume != v ) {
 			s.volume = v;
 			AL.sourcef(s.inst, AL.GAIN, v);
@@ -411,7 +416,6 @@ class Driver {
 			s.channel.source = null;
 			s.channel = null;
 		}
-		
 		if( s.playing ) {
 			s.playing = false;
 			AL.sourceStop(s.inst);
@@ -608,7 +612,7 @@ class Driver {
 
 	function sortChannel(a : Channel, b : Channel) {
 		if (a.isVirtual != b.isVirtual)
-			return (a.isVirtual && !b.isVirtual) ? 1 : -1;
+			return a.isVirtual ? 1 : -1;
 
 		if (a.channelGroup.priority != b.channelGroup.priority)
 			return a.channelGroup.priority < b.channelGroup.priority ? 1 : -1;

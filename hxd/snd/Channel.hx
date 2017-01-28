@@ -64,10 +64,22 @@ class Channel extends ChannelBase {
 		return streaming = v;
 	}
 
-	public function calcAudibleGain() {
-		audibleGain = volume * channelGroup.volume * soundGroup.volume;
+	override function updateCurrentVolume( now : Float ) {
+		if( pause && currentFade != null ) {
+			var f = currentFade;
+			currentFade = null;
+			updateCurrentVolume(now);
+			currentFade = f;
+		}
+		super.updateCurrentVolume(now);
+		channelGroup.updateCurrentVolume(now);
+		currentVolume *= channelGroup.currentVolume * soundGroup.volume;
+	}
+
+	public function calcAudibleGain( now : Float ) {
+		updateCurrentVolume(now);
+		audibleGain = currentVolume;
 		for (e in effects) audibleGain *= e.gain;
-		return audibleGain;
 	}
 
 	/**
