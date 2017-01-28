@@ -45,6 +45,10 @@ class FileTree {
 			if( Context.defined("cpp") ) Cpp else
 			if( Context.defined("hl") ) HL else
 			Unknown;
+		if( platform == HL )
+			pairedExt.set("ogg", ["mp3", "wav"]);
+		else
+			pairedExt.set("mp3", ["ogg", "wav"]);
 	}
 
 	public static function resolvePath( ?dir:String ) {
