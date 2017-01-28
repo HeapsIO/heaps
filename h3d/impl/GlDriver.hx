@@ -795,7 +795,7 @@ class GlDriver extends Driver {
 		pixels.convert(t.format);
 		#if hxsdl
 		pixels.setFlip(!cubic);
-		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, streamData(pixels.bytes.getData(),0,pixels.width*pixels.height*4));
+		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, streamData(pixels.bytes.getData(),pixels.offset,pixels.width*pixels.height*4));
 		#elseif lime
 		pixels.setFlip(!cubic);
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
