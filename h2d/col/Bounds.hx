@@ -30,6 +30,9 @@ class Bounds {
 	public inline function contains( p : Point ) {
 		return p.x >= xMin && p.x < xMax && p.y >= yMin && p.y < yMax;
 	}
+	public inline function containsXY( x:Float, y:Float ) {
+		return x >= xMin && x < xMax && y >= yMin && y < yMax;
+	}
 
 	public inline function addBounds( b : Bounds ) {
 		if( b.xMin < xMin ) xMin = b.xMin;
