@@ -1,0 +1,13 @@
+haxe:
+  - development
+  - "3.4"
+
+script:
+  - yes | haxelib install all.hxml
+  - all.hxml
+  - cd samples
+  - yes | haxelib install all.hxml
+  - all.hxml
+
+notifications:
+  email: false
