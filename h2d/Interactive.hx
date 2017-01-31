@@ -74,7 +74,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	function checkBounds( e : hxd.Event ) {
 		return switch( e.kind ) {
-		case EOut, EFocus, EFocusLost: false;
+		case EOut, EFocus, EFocusLost, EReleaseOutside: false;
 		default: true;
 		}
 	}
