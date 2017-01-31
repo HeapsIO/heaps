@@ -20,7 +20,7 @@ class WaitEvent {
 		updateList.push(callb);
 	}
 
-	public function remove(callb) {
+	public function remove( callb : Float->Bool ) {
 		for( e in updateList )
 			if( Reflect.compareMethods(e, callb) ) {
 				updateList.remove(e);
