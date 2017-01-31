@@ -16,9 +16,9 @@ private class ChannelMapper extends sdl.SoundChannel {
 	#end
 }
 #elseif lime_openal
-import lime.audio.openal.AL;
-import lime.audio.openal.ALBuffer;
-import lime.audio.openal.ALSource;
+import lime.media.openal.AL;
+import lime.media.openal.ALBuffer;
+import lime.media.openal.ALSource;
 
 private class ALChannel {
 	var native : NativeChannel;
