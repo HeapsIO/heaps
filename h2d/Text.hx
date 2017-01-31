@@ -315,11 +315,11 @@ class Text extends Drawable {
 	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		updateSize();
-		var x, y, w, h;
+		var x, y, w : Float, h;
 		if( forSize ) {
 			x = 0;
 			y = 0;
-			w = realMaxWidth >= 0 && textAlign != Left && realMaxWidth > calcWidth ? realMaxWidth : calcWidth;
+			w = realMaxWidth >= 0 && textAlign != Left && realMaxWidth > calcWidth ? realMaxWidth : (calcWidth == 0 ? 1 : calcWidth);
 			h = calcSizeHeight;
 		} else {
 			x = 0;

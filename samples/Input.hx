@@ -16,7 +16,7 @@ class Input extends hxd.App {
 
 		input = new h2d.TextInput(font, s2d);
 		input.backgroundColor = 0x80808080;
-		input.inputWidth = 100;
+	//	input.inputWidth = 100;
 
 		input.text = "Click to édit";
 		input.textColor = 0xAAAAAA;
@@ -29,6 +29,11 @@ class Input extends hxd.App {
 		}
 		input.onFocusLost = function(_) {
 			input.textColor = 0xAAAAAA;
+		}
+
+		input.onChange = function() {
+			while( input.text.length > 20 )
+				input.text = input.text.substr(0, -1);
 		}
 	}
 

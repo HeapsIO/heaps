@@ -104,8 +104,8 @@ class TextInput extends Text {
 			case K.BACKSPACE:
 				if( cursorIndex > 0 && canEdit ) {
 					beforeChange();
-					text = text.substr(0, cursorIndex - 1) + text.substr(cursorIndex);
 					cursorIndex--;
+					text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1);
 					onChange();
 				}
 			case K.ENTER, K.NUMPAD_ENTER:
@@ -228,12 +228,23 @@ class TextInput extends Text {
 		return selectionRange == null ? null : text.substr(selectionRange.start, selectionRange.length);
 	}
 
+	override function set_text(t:hxd.UString) {
+		super.set_text(t);
+		if( cursorIndex > t.length ) cursorIndex = t.length;
+		return t;
+	}
+
 	override function set_font(f) {
 		super.set_font(f);
 		cursorTile = h2d.Tile.fromColor(0xFFFFFF, 1, font.size);
 		cursorTile.dy = 2;
 		selectionTile = h2d.Tile.fromColor(0x3399FF, 0, font.lineHeight);
 		return f;
+	}
+
+	override function initGlyphs(text:hxd.UString, rebuild = true, handleAlign = true, lines:Array<Int> = null):Void {
+		super.initGlyphs(text, rebuild, handleAlign, lines);
+		if( rebuild ) this.calcWidth += cursorTile.width; // cursor end pos
 	}
 
 	function textPos( x : Float, y : Float ) {
@@ -277,6 +288,7 @@ class TextInput extends Text {
 			if( selectionSize == 0 ) {
 				selectionPos = calcTextWidth(text.substr(0, selectionRange.start));
 				selectionSize = calcTextWidth(text.substr(selectionRange.start, selectionRange.length));
+				if( selectionRange.start + selectionRange.length == text.length ) selectionSize += cursorTile.width; // last pixel
 			}
 			selectionTile.dx += selectionPos;
 			selectionTile.width += selectionSize;
