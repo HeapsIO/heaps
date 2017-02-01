@@ -42,7 +42,22 @@ class Loader extends h2d.Sprite {
 			bg.y = (s2d.height - 10) >> 1;
 			updateBG(0);
 
-			cur = new hxd.net.BinaryLoader("res" + (resCount == 0 ? "" : "" + resCount) + ".pak");
+			var name = "res" + (resCount == 0 ? "" : "" + resCount) + ".pak";
+			#if sys
+			var f = try sys.io.File.read(name) catch( e : Dynamic ) {
+				if( resCount == 0 )
+					trace(e);
+				else {
+					remove();
+					onDone();
+				}
+				return;
+			} 
+			fs.addPak(f);
+			resCount++;
+			f.close();
+			#else
+			cur = new hxd.net.BinaryLoader(name);
 			cur.onLoaded = function(bytes) {
 				try {
 					fs.addPak(new FileSystem.FileInput(bytes));
@@ -64,6 +79,7 @@ class Loader extends h2d.Sprite {
 				}
 			};
 			cur.load();
+			#end
 		}
 	}
 

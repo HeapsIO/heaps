@@ -170,7 +170,9 @@ class Stage {
 		#end
 	}
 
+	#if hxsdl
 	var fullScreenMode : sdl.Window.DisplayMode = Borderless;
+	#end
 
 	public function setFullScreen( v : Bool ) {
 		#if flash

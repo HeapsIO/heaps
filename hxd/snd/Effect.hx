@@ -12,6 +12,7 @@ class Effect {
 	function new() { }
 
 	function apply( channel : Channel, source : Driver.Source ) {
+		throw this+" is not supported on this platform";
 	}
 
 }

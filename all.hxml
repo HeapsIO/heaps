@@ -1,5 +1,6 @@
 -lib heaps
 -lib castle
+-lib hxbit
 -lib stb_ogg_sound
 --macro include('h3d')
 --macro include('h2d')
@@ -9,8 +10,16 @@
 --each
 
 -js heaps.js
+-xml heaps_js.xml
 
 --next
 
 -swf heaps.swf
 -swf-version 15
+-xml heaps_swf.xml
+
+--next
+
+-hl heaps.hl
+-lib hlsdl
+-xml heaps_hl.xml

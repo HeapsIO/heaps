@@ -1,6 +1,8 @@
 package hxd.snd.effect;
 
+#if hlsdl
 import openal.AL;
+#end
 
 class Spatialization extends Effect {
 
@@ -33,6 +35,7 @@ class Spatialization extends Effect {
 		return gain;
 	}
 
+	#if hlsdl
 	override function apply(channel : Channel, s : Driver.Source) {
 		AL.source3f(s.inst, AL.POSITION,  position.x,  position.y,  position.z);
 		AL.source3f(s.inst, AL.VELOCITY,  velocity.x,  velocity.y,  velocity.z);
@@ -52,6 +55,7 @@ class Spatialization extends Effect {
 			AL.sourcef(s.inst, AL.GAIN, getFadeGain() * volume);
 		}
 	}
+	#end
 
 	override function get_gain() {
 		var dist = Driver.get().listener.position.distance(position);
