@@ -170,6 +170,8 @@ class Stage {
 		#end
 	}
 
+	var fullScreenMode : sdl.Window.DisplayMode = Borderless;
+
 	public function setFullScreen( v : Bool ) {
 		#if flash
 		var isAir = flash.system.Capabilities.playerType == "Desktop";
@@ -186,7 +188,7 @@ class Stage {
 		}
 		#elseif hxsdl
 		var win = @:privateAccess System.win;
-		win.fullScreen = v;
+		win.displayMode = v ? fullScreenMode : Windowed;
 		#end
 	}
 
