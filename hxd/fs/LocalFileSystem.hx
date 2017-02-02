@@ -310,6 +310,12 @@ private class LocalEntry extends FileEntry {
 				f.open(w.file, flash.filesystem.FileMode.APPEND);
 				f.close();
 			} catch( e : Dynamic ) return;
+			#elseif sys
+			if( !w.isDirectory )
+			try {
+				var fp = sys.io.File.append(w.file);
+				fp.close();
+			}catch( e : Dynamic ) return;
 			#end
 			w.watchTime = t;
 			w.watchCallback();
