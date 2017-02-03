@@ -119,6 +119,7 @@ class Driver {
 		var bytes = haxe.io.Bytes.alloc(4 * AL_NUM_SOURCES);
 		AL.genSources(AL_NUM_SOURCES, bytes);
 		sources = [for (i in 0...AL_NUM_SOURCES) new Source(ALSource.ofInt(bytes.getInt32(i * 4)))];
+		for (s in sources) AL.sourcei(s.inst, AL.SOURCE_RELATIVE, AL.TRUE);
 
 		cachedBytes = haxe.io.Bytes.alloc(4 * 3 * 2);
 	}
@@ -420,6 +421,10 @@ class Driver {
 			s.playing = false;
 			AL.sourceStop(s.inst);
 		}
+		AL.sourcei(s.inst,  AL.SOURCE_RELATIVE, AL.TRUE);
+		AL.source3f(s.inst, AL.POSITION,  0, 0, 0);
+		AL.source3f(s.inst, AL.VELOCITY,  0, 0, 0);
+		AL.source3f(s.inst, AL.DIRECTION, 0, 0, 0);
 		syncBuffers(s, null);
 	}
 
