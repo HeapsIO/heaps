@@ -87,6 +87,17 @@ class SceneEvents {
 			currentFocus = null;
 	}
 
+	function checkFocus() {
+		if( currentFocus == null ) return;
+		var s = currentFocus.getInteractiveScene();
+		if( s == null ) {
+			currentFocus = null;
+			return;
+		}
+		if( !s.isInteractiveVisible(currentFocus) )
+			blur();
+	}
+
 	function emitEvent( event : hxd.Event ) {
 		var oldX = event.relX, oldY = event.relY;
 		var handled = false;
@@ -97,15 +108,12 @@ class SceneEvents {
 		case ERelease: checkPush = true;
 		case EKeyUp, EKeyDown, EWheel:
 			if( currentFocus != null ) {
-				var s = currentFocus.getInteractiveScene();
-				if( s != null && s.isInteractiveVisible(currentFocus) ) {
-					event.relX = event.relY = 0;
-					currentFocus.handleEvent(event);
-					event.relX = oldX;
-					event.relY = oldY;
-					if( !event.propagate )
-						return;
-				}
+				event.relX = event.relY = 0;
+				currentFocus.handleEvent(event);
+				event.relX = oldX;
+				event.relY = oldY;
+				if( !event.propagate )
+					return;
 			}
 		default:
 		}
@@ -208,6 +216,7 @@ class SceneEvents {
 	public function checkEvents() {
 		var old = pendingEvents;
 		var checkMoved = false;
+		var checkFocused = currentFocus == null;
 		if( old.length > 0 ) {
 			pendingEvents = [];
 			for( e in old ) {
@@ -224,6 +233,11 @@ class SceneEvents {
 					mouseX = e.relX;
 					mouseY = e.relY;
 					lastTouch = e.touchId;
+				case EKeyUp, EKeyDown, EWheel:
+					if( !checkFocused ) {
+						checkFocused = true;
+						checkFocus();
+					}
 				default:
 				}
 
@@ -238,6 +252,9 @@ class SceneEvents {
 				emitEvent(e);
 			}
 		}
+
+		if( !checkFocused )
+			checkFocus();
 
 		if( !checkMoved && currentDrag == null ) {
 			checkPos.relX = mouseX;
