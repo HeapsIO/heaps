@@ -57,6 +57,28 @@ class Data {
 		var bpp = getBytesPerSample();
 		var newSamples = Math.ceil(samples * (rate / samplingRate));
 		var resample = samples != newSamples;
+		// optimized version for simple stereo to mono convertion (used for spatialization)
+		if( !resample && this.sampleFormat == I16 && format == I16 && channels == 1 && this.channels == 2 ) {
+			var r = inPos, w = outPos;
+			inline function sext16(v:Int) {
+				return (v & 0x8000) == 0 ? v : v | 0xFFFF0000;
+			}
+			for( i in 0...samples ) {
+				var sl = input.getUInt16(r); r += 2;
+				var sr = input.getUInt16(r); r += 2;
+				var s;
+				if( (sl ^ sr) >= 0x8000 ) {
+					// not same signess
+					sl = sext16(sl);
+					sr = sext16(sr);
+					s = ((sl + sr) >> 1) & 0xFFFF;
+				} else
+					s = (sl + sr) >> 1;
+				out.setUInt16(w, s);
+				w += 2;
+			}
+			return;
+		}
 		var srcChannels = this.channels;
 		var commonChannels = channels < srcChannels ? channels : srcChannels;
 		var extraChannels  = channels - commonChannels;
@@ -98,8 +120,9 @@ class Data {
 				case I16:
 					ival = Std.int(sval * 0x8000);
 					if( ival > 0x7FFF ) ival = 0x7FFF;
-					out.set(outPos++, ival & 0xFF);
-					out.set(outPos++, (ival>>>8) & 0xFF);
+					ival = ival & 0xFFFF;
+					out.setUInt16(outPos, ival);
+					outPos += 2;
 				case F32:
 					out.setFloat(outPos, sval);
 					outPos += 4;
@@ -110,8 +133,8 @@ class Data {
 				case UI8:
 					out.set(outPos++,ival);
 				case I16:
-					out.set(outPos++,ival & 0xFF);
-					out.set(outPos++,(ival>>>8) & 0xFF);
+					out.setUInt16(outPos, ival);
+					outPos += 2;
 				case F32:
 					out.setFloat(outPos, sval);
 					outPos += 4;
