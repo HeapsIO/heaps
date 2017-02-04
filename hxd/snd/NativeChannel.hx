@@ -108,8 +108,10 @@ class NativeChannel {
 		if( ctx == null ) {
 			try {
 				ctx = new js.html.audio.AudioContext();
+			} catch( e : Dynamic ) try {
+				ctx = untyped __js__('new window.webkitAudioContext()');
 			} catch( e : Dynamic ) {
-				throw "Web Audio API not available for this browser";
+				ctx = null;
 			}
 		}
 		return ctx;
@@ -131,6 +133,7 @@ class NativeChannel {
 		channel = snd.play(0, 0x7FFFFFFF);
 		#elseif js
 		var ctx = getContext();
+		if( ctx == null ) return;
 		sproc = ctx.createScriptProcessor(bufferSamples, 2, 2);
 		tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
 		sproc.connect(ctx.destination);

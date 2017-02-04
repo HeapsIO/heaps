@@ -49,6 +49,7 @@ class Mp3Data extends Data {
 		#elseif js
 
 		var ctx = @:privateAccess NativeChannel.getContext();
+		if( ctx == null ) return;
 		ctx.decodeAudioData(bytes.getData(), processBuffer);
 
 		var decodedRate = Std.int(ctx.sampleRate);
