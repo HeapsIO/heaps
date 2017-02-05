@@ -176,7 +176,7 @@ class ALBuffer {
 **/
 class ALEmulator {
 
-	public static var NATIVE_FREQ : Int = #if js @:privateAccess Std.int(NativeChannel.getContext().sampleRate) #else 44100 #end;
+	public static var NATIVE_FREQ : Int = #if js @:privateAccess Std.int(NativeChannel.getContext() == null ? 44100 : NativeChannel.getContext().sampleRate) #else 44100 #end;
 
 	// api
 
