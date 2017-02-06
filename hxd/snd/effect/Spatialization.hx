@@ -48,10 +48,7 @@ class Spatialization extends Effect {
 		AL.sourcef(s.inst, AL.ROLLOFF_FACTOR, rollOffFactor);
 		AL.sourcef(s.inst, AL.MIN_GAIN, 0);
 
-		if (maxDistance != null) {
-			var md : Float = maxDistance;
-			AL.sourcef(s.inst, AL.MAX_DISTANCE, md);
-		}
+		AL.sourcef(s.inst, AL.MAX_DISTANCE, maxDistance == null ? 3.40282347e38 /* FLT_MAX */ : (maxDistance:Float) );
 	}
 	#end
 

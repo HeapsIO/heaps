@@ -177,7 +177,7 @@ class Driver {
 		ALC.closeDevice(alDevice);
 	}
 
-	public function play(sound : hxd.res.Sound, ?soundGroup : SoundGroup, ?channelGroup : ChannelGroup) {
+	public function play(sound : hxd.res.Sound, ?channelGroup : ChannelGroup, ?soundGroup : SoundGroup) {
 		if (soundGroup   == null) soundGroup   = masterSoundGroup;
 		if (channelGroup == null) channelGroup = masterChannelGroup;
 		var c = new Channel();
