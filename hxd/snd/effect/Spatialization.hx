@@ -25,7 +25,8 @@ class Spatialization extends Effect {
 		rollOffFactor =  1.0;
 	}
 
-	function getFadeGain() {
+	override function getVolumeModifier() {
+		if( fadeDistance == null ) return 1.;
 		var dist = Driver.get().listener.position.distance(position);
 		if (maxDistance != null) dist -= maxDistance;
 		else dist -= referenceDistance;
@@ -51,11 +52,6 @@ class Spatialization extends Effect {
 			var md : Float = maxDistance;
 			AL.sourcef(s.inst, AL.MAX_DISTANCE, md);
 		}
-
-		if (fadeDistance != null) {
-			var volume = channel.volume * channel.soundGroup.volume * channel.channelGroup.volume;
-			AL.sourcef(s.inst, AL.GAIN, getFadeGain() * volume);
-		}
 	}
 	#end
 
@@ -64,7 +60,6 @@ class Spatialization extends Effect {
 		dist = Math.max(dist, referenceDistance);
 		if (maxDistance != null) dist = Math.min(dist, maxDistance);
 		var gain = referenceDistance/(referenceDistance + rollOffFactor * (dist - referenceDistance));
-		if (fadeDistance != null) gain *= getFadeGain();
 		return gain;
 	}
 

@@ -74,6 +74,7 @@ class Channel extends ChannelBase {
 		super.updateCurrentVolume(now);
 		channelGroup.updateCurrentVolume(now);
 		currentVolume *= channelGroup.currentVolume * soundGroup.volume;
+		for( e in effects ) currentVolume *= e.getVolumeModifier();
 	}
 
 	public function calcAudibleGain( now : Float ) {
