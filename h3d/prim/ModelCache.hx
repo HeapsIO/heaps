@@ -87,9 +87,13 @@ class ModelCache {
 		var a = anims.get(path);
 		if( a != null )
 			return a;
-		a = loadLibrary(anim).loadAnimation(name);
+		a = initAnimation(anim,name);
 		anims.set(path, a);
 		return a;
+	}
+
+	function initAnimation( anim : hxd.res.Model, name : String ) {
+		return loadLibrary(anim).loadAnimation(name);
 	}
 
 }

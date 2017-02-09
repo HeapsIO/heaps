@@ -257,6 +257,28 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		return found;
 	}
 
+	/**
+		Only sync without rendering
+	**/
+	public function syncOnly( et : Float ) {
+		var engine = h3d.Engine.getCurrent();
+		setElapsedTime(et);
+		var t = engine.getCurrentTarget();
+		if( t == null )
+			camera.screenRatio = engine.width / engine.height;
+		else
+			camera.screenRatio = t.width / t.height;
+		camera.update();
+		ctx.camera = camera;
+		ctx.engine = engine;
+		ctx.scene = this;
+		ctx.start();
+		syncRec(ctx);
+		ctx.camera = null;
+		ctx.engine = null;
+		ctx.scene = null;
+	}
+
 	@:access(h3d.mat.Pass)
 	@:access(h3d.scene.RenderContext)
 	public function render( engine : h3d.Engine ) {
