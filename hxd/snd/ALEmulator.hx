@@ -300,6 +300,8 @@ class ALEmulator {
 	}
 	public static function source3f(source : Source, param : Int, value1 : F32, value2 : F32, value3 : F32) {
 		switch( param ) {
+		case POSITION, VELOCITY, DIRECTION:
+			// nothing
 		default:
 			throw "Unsupported param 0x" + StringTools.hex(param);
 		}
@@ -319,6 +321,8 @@ class ALEmulator {
 			source.currentSample = 0;
 		case LOOPING:
 			source.loop = value != 0;
+		case SOURCE_RELATIVE:
+			// nothing
 		default:
 			throw "Unsupported param 0x" + StringTools.hex(param);
 		}
