@@ -34,6 +34,7 @@ class Console extends h2d.Sprite {
 		height = font.lineHeight + 2;
 		logTxt = new h2d.HtmlText(font, this);
 		logTxt.x = 2;
+		logTxt.dropShadow = { dx : 0, dy : 1, color : 0, alpha : 0.5 };
 		logTxt.visible = false;
 		logs = [];
 		logIndex = -1;
