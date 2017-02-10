@@ -497,9 +497,11 @@ class HMDOut extends BaseLibrary {
 				if( transp != null ) {
 					var path = transp.get("FileName").props[0].toString();
 					if( path != "" ) {
-						if( texture != null && path.toLowerCase() == texture.get("FileName").props[0].toString().toLowerCase() ) {
+						path = path.toLowerCase();
+						var ext = path.split(".").pop();
+						if( texture != null && path == texture.get("FileName").props[0].toString().toLowerCase() ) {
 							// if that's the same file, we're doing alpha blending
-							if( mat.blendMode == null ) mat.blendMode = Alpha;
+							if( mat.blendMode == null && ext != "jpg" && ext != "jpeg" ) mat.blendMode = Alpha;
 						} else
 							throw "TODO : alpha texture";
 					}
