@@ -3,7 +3,6 @@ package hxd.snd;
 class ChannelBase {
 
 	public var priority : Float = 0.;
-	public var pan      : Float = 0.;
 	public var mute     : Bool = false;
 	public var effects  : Array<Effect> = [];
 	public var volume(default, set) : Float = 1.;
