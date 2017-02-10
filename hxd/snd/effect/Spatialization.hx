@@ -40,9 +40,9 @@ class Spatialization extends Effect {
 	override function apply(channel : Channel, s : Driver.Source) {
 		AL.sourcei(s.inst,  AL.SOURCE_RELATIVE, AL.FALSE);
 
-		AL.source3f(s.inst, AL.POSITION,  position.x,  position.y,  position.z);
-		AL.source3f(s.inst, AL.VELOCITY,  velocity.x,  velocity.y,  velocity.z);
-		AL.source3f(s.inst, AL.DIRECTION, direction.x, direction.y, direction.z);
+		AL.source3f(s.inst, AL.POSITION,  -position.x,  position.y,  position.z);
+		AL.source3f(s.inst, AL.VELOCITY,  -velocity.x,  velocity.y,  velocity.z);
+		AL.source3f(s.inst, AL.DIRECTION, -direction.x, direction.y, direction.z);
 
 		AL.sourcef(s.inst, AL.REFERENCE_DISTANCE, referenceDistance);
 		AL.sourcef(s.inst, AL.ROLLOFF_FACTOR, rollOffFactor);

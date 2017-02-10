@@ -305,16 +305,16 @@ class Driver {
 
 		// update listener parameters
 		AL.listenerf(AL.GAIN, masterVolume);
-		AL.listener3f(AL.POSITION, listener.position.x, listener.position.y, listener.position.z);
+		AL.listener3f(AL.POSITION, -listener.position.x, listener.position.y, listener.position.z);
 
 		listener.direction.normalize();
 		var tmpBytes = getTmp(24);
-		tmpBytes.setFloat(0,  listener.direction.x);
+		tmpBytes.setFloat(0,  -listener.direction.x);
 		tmpBytes.setFloat(4,  listener.direction.y);
 		tmpBytes.setFloat(8,  listener.direction.z);
 
 		listener.up.normalize();
-		tmpBytes.setFloat(12, listener.up.x);
+		tmpBytes.setFloat(12, -listener.up.x);
 		tmpBytes.setFloat(16, listener.up.y);
 		tmpBytes.setFloat(20, listener.up.z);
 
