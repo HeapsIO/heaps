@@ -219,6 +219,11 @@ class GlslOut {
 					add("texture");
 					return;
 				}
+			case TextureCubeLod:
+				if( !glES ) {
+					add("textureLod");
+					return;
+				}
 			default:
 			}
 			add(GLOBALS.get(g));
