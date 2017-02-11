@@ -608,7 +608,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			p = p.next;
 		}
 		if( firstPart <= lastPart )
-			primitive.buffer.uploadVector(vbuf, (g.partIndex + firstPart) * STRIDE * 4, (lastPart - firstPart + 1) * 4, (g.partIndex + firstPart) * 4);
+			primitive.buffer.uploadVector(vbuf, (g.partIndex + firstPart) * 4 * STRIDE, (lastPart - firstPart + 1) * 4, (g.partIndex + firstPart) * 4);
 	}
 
 	override function emit( ctx : h3d.scene.RenderContext ) {

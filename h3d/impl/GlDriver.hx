@@ -813,7 +813,7 @@ class GlDriver extends Driver {
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(data,bufPos * 4,vertexCount * stride * 4), bufPos * 4 * STREAM_POS, vertexCount * stride * 4);
 		#else
 		var buf = new Float32Array(buf.getNative());
-		var sub = new Float32Array(buf.buffer, bufPos, vertexCount * stride);
+		var sub = new Float32Array(buf.buffer, bufPos * 4, vertexCount * stride);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
@@ -839,7 +839,7 @@ class GlDriver extends Driver {
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(data,bufPos*2,indiceCount*2), bufPos * 2 * STREAM_POS, indiceCount * 2);
 		#else
 		var buf = new Uint16Array(buf.getNative());
-		var sub = new Uint16Array(buf.buffer, bufPos, indiceCount);
+		var sub = new Uint16Array(buf.buffer, bufPos * 2, indiceCount);
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
 		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
