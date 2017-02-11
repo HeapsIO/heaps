@@ -279,21 +279,28 @@ private class LocalEntry extends FileEntry {
 		#end
 	}
 
-	#if air3
-
 	var watchCallback : Void -> Void;
 	var watchTime : Float;
 	static var WATCH_INDEX = 0;
 	static var WATCH_LIST : Array<LocalEntry> = null;
 
-	static function checkFiles(_) {
+	inline function getModifTime(){
+		#if air3
+		return file.modificationDate.getTime();
+		#else
+		return sys.FileSystem.stat(file).mtime.getTime();
+		#end
+	}
+
+	static function checkFiles() {
 		var w = WATCH_LIST[WATCH_INDEX++];
 		if( w == null ) {
 			WATCH_INDEX = 0;
 			return;
 		}
-		var t = try w.file.modificationDate.getTime() catch( e : Dynamic ) -1;
+		var t = try w.getModifTime() catch( e : Dynamic ) -1;
 		if( t != w.watchTime ) {
+			#if air3
 			// check we can write (might be deleted/renamed/currently writing)
 			if( !w.isDirectory )
 			try {
@@ -303,6 +310,13 @@ private class LocalEntry extends FileEntry {
 				f.open(w.file, flash.filesystem.FileMode.APPEND);
 				f.close();
 			} catch( e : Dynamic ) return;
+			#elseif sys
+			if( !w.isDirectory )
+			try {
+				var fp = sys.io.File.append(w.file);
+				fp.close();
+			}catch( e : Dynamic ) return;
+			#end
 			w.watchTime = t;
 			w.watchCallback();
 		}
@@ -319,7 +333,11 @@ private class LocalEntry extends FileEntry {
 		if( watchCallback == null ) {
 			if( WATCH_LIST == null ) {
 				WATCH_LIST = [];
-				flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, checkFiles);
+				#if air3
+				flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, function(_) checkFiles());
+				#else
+				haxe.MainLoop.add(checkFiles);
+				#end
 			}
 			var path = path;
 			for( w in WATCH_LIST )
@@ -329,12 +347,9 @@ private class LocalEntry extends FileEntry {
 				}
 			WATCH_LIST.push(this);
 		}
-		watchTime = file.modificationDate.getTime();
+		watchTime = getModifTime();
 		watchCallback = onChanged;
-		return;
 	}
-
-	#end
 
 }
 
