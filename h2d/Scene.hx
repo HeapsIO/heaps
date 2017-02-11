@@ -368,11 +368,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.globalAlpha = alpha;
 		ctx.begin();
 		ctx.pushTarget(t);
-		if( !t.flags.has(WasCleared) )
-			ctx.engine.driver.clear(new h3d.Vector(0, 0, 0, 0),1,0);
 		s.drawRec(ctx);
 		ctx.popTarget();
-		ctx.engine.driver.clear(new h3d.Vector(0, 0, 0, 0),1,0);
 	}
 
 	public function render( engine : h3d.Engine ) {

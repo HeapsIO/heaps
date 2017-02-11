@@ -720,7 +720,6 @@ class GlDriver extends Driver {
 			#end
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
 			gl.bindTexture(GL.TEXTURE_2D, null);
-			t.flags.set(WasCleared);
 		}
 	#end
 	}
@@ -804,7 +803,6 @@ class GlDriver extends Driver {
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#end
 		gl.bindTexture(bind, null);
-		t.flags.set(WasCleared);
 	}
 
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
@@ -980,9 +978,9 @@ class GlDriver extends Driver {
 			gl.bindTexture(bind, tex.t.t);
 			gl.generateMipmap(bind);
 			gl.bindTexture(bind, null);
-			tex.flags.set(WasCleared);
 		}
 
+		tex.flags.set(WasCleared); // once we draw to, do not clear again
 		tex.lastFrame = frame;
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
 		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cubic) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, mipLevel);
@@ -1007,6 +1005,7 @@ class GlDriver extends Driver {
 				tex.alloc();
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0 + i, GL.TEXTURE_2D, tex.t.t, 0);
 			tex.lastFrame = frame;
+			tex.flags.set(WasCleared); // once we draw to, do not clear again
 		}
 		#if js
 		if( mrtExt != null )
