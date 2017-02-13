@@ -369,6 +369,8 @@ class Graphics extends Drawable {
 			throw "Tile not specified";
 		if( scaleX == null ) scaleX = 1;
 		if( scaleY == null ) scaleY = 1;
+		dx -= tile.x;
+		dy -= tile.y;
 
 		var tex = tile.getTexture();
 		var pixWidth = 1 / tex.width;
