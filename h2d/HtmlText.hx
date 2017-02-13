@@ -86,6 +86,9 @@ class HtmlText extends Text {
 					case "color":
 						if( prevColor == null ) prevColor = @:privateAccess glyphs.curColor.clone();
 						glyphs.setDefaultColor(Std.parseInt("0x" + v.substr(1)));
+					case "opacity":
+						if( prevColor == null ) prevColor = @:privateAccess glyphs.curColor.clone();
+						@:privateAccess glyphs.curColor.a *= Std.parseFloat(v);
 					case "face":
 						font = loadFont(v);
 						if( prevGlyphs == null ) prevGlyphs = glyphs;
