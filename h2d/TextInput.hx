@@ -188,6 +188,8 @@ class TextInput extends Text {
 		interactive.onOver = function(e) onOver(e);
 		interactive.onOut = function(e) onOut(e);
 
+		interactive.cursor = TextInput;
+
 		addChildAt(interactive, 0);
 	}
 
