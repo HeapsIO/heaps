@@ -42,8 +42,8 @@ class Build {
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	static function getTemp( dir : String, path : String, ext : String ) {
 		var name = "R_" + invalidChars.replace(path, "_");
-		var f = dir.substr(0, dir.length - path.length)+".tmp/"+name+"."+ext;
-		if( !sys.FileSystem.exists(f) ) {
+		var f = dir.substr(0, dir.length - path.length)+".tmp/"+name+"."+ext;		
+		if( !sys.FileSystem.exists(f) || sys.FileSystem.stat(f).mtime.getTime() < sys.FileSystem.stat(dir).mtime.getTime() ) {
 			switch( ext ) {
 			case "mp3":
 				hxd.snd.Convert.toMP3(dir, f);
