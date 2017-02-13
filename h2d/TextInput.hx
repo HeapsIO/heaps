@@ -78,8 +78,10 @@ class TextInput extends Text {
 
 			var oldIndex = cursorIndex;
 			var oldText = text;
-
 			switch( e.keyCode ) {
+			case K.SHIFT:
+			case K.LEFT_OSX_COMMAND:
+			case K.RIGHT_OSX_COMMAND:
 			case K.LEFT:
 				if( cursorIndex > 0 )
 					cursorIndex--;
@@ -125,11 +127,11 @@ class TextInput extends Text {
 				}
 				return;
 			default:
-				if( e.charCode != 0 && canEdit ) {
+				if( e.keyCode != 0 && canEdit ) {
 					beforeChange();
 					if( selectionRange != null )
 						cutSelection();
-					text = text.substr(0, cursorIndex) + String.fromCharCode(e.charCode) + text.substr(cursorIndex);
+					text = text.substr(0, cursorIndex) + String.fromCharCode(e.keyCode) + text.substr(cursorIndex);
 					cursorIndex++;
 					onChange();
 				}
