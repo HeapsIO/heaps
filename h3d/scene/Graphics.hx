@@ -180,6 +180,12 @@ class Graphics extends Mesh {
 		}
 	}
 
+	override function sync(ctx:RenderContext) {
+		super.sync(ctx);
+		flush();
+		bprim.flush();
+	}
+
 	override function draw( ctx : RenderContext ) {
 		flush();
 		bprim.flush();
