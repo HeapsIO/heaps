@@ -108,6 +108,12 @@ class DepthMap {
 	inline public function getDepth(spr : Sprite) {
 		return map.get(spr).depth;
 	}
+
+	public function clear(){
+		map = new Map();
+		free = null;
+		first = null;
+	}
 }
 
 @:access(h2d.RenderContext)
