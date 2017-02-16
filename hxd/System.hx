@@ -553,7 +553,12 @@ class System {
 	}
 
 	public static function exit() {
-		Sys.exit(0);
+		try {
+			Sys.exit(0);
+		} catch( e : Dynamic ) {
+			// access violation sometimes ?
+			exit();
+		}
 	}
 
 	public static function getClipboard() : String {
