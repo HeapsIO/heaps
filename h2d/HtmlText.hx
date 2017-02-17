@@ -26,7 +26,6 @@ class HtmlText extends Text {
 			removeShader(dropMatrix);
 			absX = oldX;
 			absY = oldY;
-			calcAbsPos();
 		} else
 			dropMatrix = null;
 		glyphs.drawWith(ctx,this);
