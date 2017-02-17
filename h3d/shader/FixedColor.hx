@@ -12,7 +12,8 @@ class FixedColor extends hxsl.Shader {
 
 	public function new( color = 0, alpha = 1. ) {
 		super();
-		this.color.setColor(color,alpha);
+		this.color.setColor(color);
+		this.color.w = alpha;
 	}
 
 }

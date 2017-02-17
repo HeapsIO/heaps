@@ -184,12 +184,11 @@ class Vector {
 	inline function set_b(v) return z = v;
 	inline function set_a(v) return w = v;
 
-	public inline function setColor( c : Int, scale : Float = 1.0 ) {
-		var s = scale / 255;
-		r = ((c >> 16) & 0xFF) * s;
-		g = ((c >> 8) & 0xFF) * s;
-		b = (c & 0xFF) * s;
-		a = (c >>> 24) * s;
+	public inline function setColor( c : Int ) {
+		r = ((c >> 16) & 0xFF) / 255;
+		g = ((c >> 8) & 0xFF) / 255;
+		b = (c & 0xFF) / 255;
+		a = (c >>> 24) / 255;
 	}
 
 	public function makeColor( hue : Float, saturation : Float = 1., brightness : Float = 0.5 ) {
