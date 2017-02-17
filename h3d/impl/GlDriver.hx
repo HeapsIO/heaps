@@ -119,6 +119,8 @@ class GlDriver extends Driver {
 
 	var debug : Bool;
 	var boundTextures : Array<Texture> = [];
+	var shaderVersion : Null<Int>;
+	var firstShader = true;
 
 	public function new() {
 		#if js
@@ -140,6 +142,11 @@ class GlDriver extends Driver {
 			commonVA = gl.createVertexArray();
 			gl.bindVertexArray( commonVA );
 		}
+
+		var reg = ~/[0-9]+\.[0-9]+/;
+		var v : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
+		if( v.indexOf("ES") < 0 &&reg.match(v) )
+			shaderVersion = hxd.Math.imin( 150, Math.round( Std.parseFloat(reg.matched(0)) * 100 ) );
 		#end
 	}
 
@@ -209,16 +216,9 @@ class GlDriver extends Driver {
 		if( p == null ) {
 			p = new CompiledProgram();
 			var glout = new hxsl.GlslOut();
-			#if js
 			glout.glES = true;
-			#else
-			var reg = ~/[0-9]+\.[0-9]+/;
-			var v : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
-			if( v.indexOf("ES") > -1 )
-				glout.glES = true;
-			else if( reg.match(v) )
-				glout.version = hxd.Math.imin( 150, Math.round( Std.parseFloat(reg.matched(0)) * 100 ) );
-			#end
+			if( shaderVersion != null )
+				glout.version = shaderVersion;
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 			p.p = gl.createProgram();
@@ -240,8 +240,21 @@ class GlDriver extends Driver {
 			gl.deleteShader(p.fragment.s);
 			if( gl.getProgramParameter(p.p, GL.LINK_STATUS) != cast 1 ) {
 				var log = gl.getProgramInfoLog(p.p);
+				#if js
+				gl.deleteProgram(p.p);
+				#end
+				#if hxsdl
+				/*
+					Tentative patch on some driver that report an higher shader version that it's allowed to use.
+				*/
+				if( log == "" && shaderVersion > 130 && firstShader ) {
+					shaderVersion -= 10;
+					return selectShader(shader);
+				}
+				#end
 				throw "Program linkage failure: "+log+"\nVertex=\n"+glout.run(shader.vertex.data)+"\n\nFragment=\n"+glout.run(shader.fragment.data);
 			}
+			firstShader = false;
 			initShader(p, p.vertex, shader.vertex);
 			initShader(p, p.fragment, shader.fragment);
 			p.attribNames = [];
