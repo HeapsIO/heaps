@@ -216,9 +216,10 @@ class GlDriver extends Driver {
 		if( p == null ) {
 			p = new CompiledProgram();
 			var glout = new hxsl.GlslOut();
-			glout.glES = true;
 			if( shaderVersion != null )
 				glout.version = shaderVersion;
+			else
+				glout.glES = true;
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 			p.p = gl.createProgram();
