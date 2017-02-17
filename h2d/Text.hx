@@ -111,7 +111,6 @@ class Text extends Drawable {
 			absX = oldX;
 			absY = oldY;
 			color.set(oldR, oldG, oldB, oldA);
-			calcAbsPos();
 		}
 		glyphs.drawWith(ctx,this);
 	}
