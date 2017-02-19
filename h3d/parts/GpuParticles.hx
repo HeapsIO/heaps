@@ -89,7 +89,7 @@ class GpuPartGroup {
 		if( FIELDS != null )
 			return FIELDS;
 		FIELDS = Type.getInstanceFields(GpuPartGroup);
-		for( f in ["material", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "particles", "texture", "colorGradient","displayedParts"] )
+		for( f in ["material", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "particles", "texture", "colorGradient", "amount", "currentParts", "ebounds", "maxTime"] )
 			FIELDS.remove(f);
 		for( f in FIELDS.copy() )
 			if( Reflect.isFunction(Reflect.field(inst, f)) )
@@ -101,13 +101,12 @@ class GpuPartGroup {
 	var needRebuild = true;
 	var pshader = new h3d.shader.GpuParticle();
 	var partIndex = 0;
+	var currentParts = 0;
 	var particles : GpuPart;
+	var ebounds : h3d.col.Bounds;
+	var maxTime : Float = -1.;
 
-	/**
-		Tells how many particles to display. This can be used to progressively display a particle effect.
-		A negative value mean that all particles are displayed.
-	**/
-	public var displayedParts = -1;
+	public var amount = 1.;
 
 	public var name : String;
 	public var enable = true;
@@ -136,8 +135,8 @@ class GpuPartGroup {
 
 	public var speed(default, set) : Float		= 1;
 	public var speedRand(default, set) : Float	= 0;
-	public var speedIncr : Float				= 0;
-	public var gravity : Float					= 0;
+	public var speedIncr(default, set) : Float	= 0;
+	public var gravity(default, set) : Float	= 0;
 
 	public var rotInit(default, set) : Float	= 0;
 	public var rotSpeed(default, set) : Float	= 0;
@@ -159,6 +158,8 @@ class GpuPartGroup {
 	inline function set_sizeRand(v) { needRebuild = true; return sizeRand = v; }
 	inline function set_sizeIncr(v) { needRebuild = true; return sizeIncr = v; }
 	inline function set_speed(v) { needRebuild = true; return speed = v; }
+	inline function set_speedIncr(v) { needRebuild = true; return speedIncr = v; }
+	inline function set_gravity(v) { needRebuild = true; return gravity = v; }
 	inline function set_speedRand(v) { needRebuild = true; return speedRand = v; }
 	inline function set_life(v) { needRebuild = true; return life = v; }
 	inline function set_lifeRand(v) { needRebuild = true; return lifeRand = v; }
@@ -183,7 +184,7 @@ class GpuPartGroup {
 		pshader.fadeOut = fadeOut;
 		pshader.fadePower = fadePower;
 		pshader.gravity = gravity;
-		pshader.loopCounter = emitLoop ? 1 : 1000000;
+		pshader.loopCounter = emitLoop ? 1 : 10000000;
 		pshader.color = colorGradient == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : colorGradient;
 		pshader.texture = texture == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : texture;
 		var frameCount = frameCount == 0 ? frameDivisionX * frameDivisionY : frameCount;
@@ -193,6 +194,7 @@ class GpuPartGroup {
 		pshader.frameDivision.set(frameDivisionX, 1 / frameDivisionX, 1 / frameDivisionY);
 		pshader.clipBounds = emitMode == CameraBounds || clipBounds;
 		pshader.transform3D = transform3D;
+		pshader.maxTime = maxTime < 0 ? 1e10 : maxTime;
 	}
 
 	public function save() : Dynamic {
@@ -229,7 +231,42 @@ class GpuPartGroup {
 		if( Math.isNaN(emitStartDist) ) emitStartDist = 0;
 	}
 
-	public function emitPart( rnd : hxd.Rand, pt : GpuPart, ebounds : h3d.col.Bounds, absPos : h3d.Matrix ) {
+	public function updateBounds( bounds : h3d.col.Bounds ) {
+		var life = life * (1 + lifeRand);
+		var speedMin = speed * hxd.Math.max(1 - speedRand, 0.);
+		var speed = speed * (1 + speedRand);
+		switch( emitMode ) {
+		case Point, Cone:
+			var start = emitStartDist + emitDist;
+			var d = speed * (1 + speedIncr * life) * life + start;
+			var zmin = start + (speed * speed) / (4 * (gravity - speed * speedIncr)); // local minima
+			if( !(zmin < d) )
+				zmin = d;
+			var zmax = speedMin * (1 + speedIncr * life) * life + start - gravity * life * life;
+
+			if( emitMode == Cone ) {
+				var phi = emitAngle;
+				d *= Math.sin(phi);
+			}
+
+			bounds.addPos(0, 0, start);
+ 			bounds.addPos(-d, -d, zmin);
+			bounds.addPos(d, d, zmax);
+		case ParentBounds, VolumeBounds, CameraBounds:
+			var d = speed * (1 + speedIncr * life) * life;
+			var max = (1 + emitDist) * 0.5;
+			if( max < 0 ) max = 0;
+			var c = ebounds.getCenter();
+			var size = ebounds.getSize();
+			var dx = size.x * max + d;
+			var dy = size.y * max + d;
+			var dz = size.z * max + d;
+			bounds.addPos(c.x - dx, c.y - dy, c.z - dz);
+			bounds.addPos(c.x + dx, c.y + dy, c.z + dz);
+		}
+	}
+
+	public function emitPart( rnd : hxd.Rand, pt : GpuPart, absPos : h3d.Matrix ) {
 		var g = this;
 		inline function rand() return rnd.rand();
 		inline function srand() return rnd.srand();
@@ -348,13 +385,26 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	static inline var STRIDE = 14;
 
 	var groups : Array<GpuPartGroup>;
-	var bounds : h3d.col.Bounds;
 	var primitiveBuffer : hxd.FloatBuffer;
 	var resourcePath : String;
+	var partAlloc : GpuPart;
+	var rnd = new hxd.Rand(0);
 	public var seed(default, set) : Int	= Std.random(0x1000000);
 	public var volumeBounds(default, set) : h3d.col.Bounds;
 	public var currentTime : Float = 0.;
-	public var duration : Float = 0.;
+	public var duration(default, null) : Float = 0.;
+	public var bounds(default, null) : h3d.col.Bounds;
+
+	/**
+		Tells how much percent of the particles to display. This can be used to progressively display a particle effect.
+		This can also be done per group in GpuPartGroup.progress
+	**/
+	public var amount : Float = 1.;
+
+	/**
+		Tells how many particles were uploaded to GPU last frame (for performance tuning).
+	**/
+	public var uploadedCount(default,null) : Int;
 
 	public function new( ?parent ) {
 		super(null, [], parent);
@@ -404,7 +454,6 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		}
 		if( g.name == null ) g.name = "Group#" + (groups.length + 1);
 		material.mainPass.addShader(g.pshader);
-		material.mainPass.dynamicParameters = true;
 		if( index == null )
 			index = groups.length;
 		materials.insert(index, material);
@@ -442,34 +491,31 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		return groups.iterator();
 	}
 
-	static var PUVS = [new h3d.prim.UV(0, 0), new h3d.prim.UV(1, 0), new h3d.prim.UV(0, 1), new h3d.prim.UV(1, 1)];
-
-	function rebuild(cam) {
+	function rebuildAll(cam) {
 		if( primitive != null ) {
 			primitive.dispose();
 			primitive = null;
 		}
-		var vbuf = new hxd.FloatBuffer();
-		var uvs = PUVS;
-		var rnd = new hxd.Rand(0);
-		var ebounds = null, calcEmit = null, partCount = 0;
+		var ebounds = null, calcEmit = null, partCount = 0, partAlloc = this.partAlloc;
 		bounds.empty();
 		duration = 0.;
+
+		var hasLoop = false;
 		for( gid in 0...groups.length ) {
 			var g = groups[gid];
-			rnd.init(seed + gid);
 			g.partIndex = partCount;
-			g.syncParams();
 			partCount += g.nparts;
-			if( g.emitLoop )
-				duration = Math.POSITIVE_INFINITY;
 
-			var needPart = g.sortMode != None;
-			var partAlloc = g.particles;
-			var useAbsPos = needPart;
+			var p = g.particles;
+			while( p != null ) {
+				var n = p.next;
+				p.next = partAlloc;
+				partAlloc = p;
+				p = n;
+			}
 			g.particles = null;
-			var pt = needPart ? null : new GpuPart();
-
+			g.currentParts = 0;
+			g.maxTime = -1;
 			if( calcEmit != g.emitMode ) {
 				calcEmit = g.emitMode;
 				switch( g.emitMode ) {
@@ -479,90 +525,143 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				case VolumeBounds, CameraBounds:
 					ebounds = volumeBounds;
 					if( ebounds == null ) ebounds = volumeBounds = h3d.col.Bounds.fromValues( -1, -1, -1, 2, 2, 2 );
-				default:
+				case Cone, Point:
+					ebounds = null;
 				}
 			}
+			g.ebounds = ebounds;
 
-			for( i in 0...g.nparts ) {
-
-				if( needPart ) {
-					pt = partAlloc;
-					if( pt == null )
-						pt = new GpuPart();
-					else
-						partAlloc = partAlloc.next;
-					pt.index = i;
-					pt.next = g.particles;
-					g.particles = pt;
-				}
-
-				g.emitPart(rnd, pt, ebounds, useAbsPos ? absPos : null);
-
-
-				// total : also add end of life pos ?
-				bounds.addPos(pt.sx, pt.sy, pt.sz);
-
-				var totalLife = pt.life - pt.time;
-				if( totalLife > duration ) duration = totalLife;
-
-				inline function add(v) vbuf.push(v);
-				for( u in uvs ) {
-					add(pt.sx);
-					add(pt.sy);
-					add(pt.sz);
-
-					add(pt.vx);
-					add(pt.vy);
-					add(pt.vz);
-
-					add(u.u);
-					add(u.v);
-					add(pt.time);
-					add(pt.life);
-
-					add(pt.initX);
-					add(pt.initY);
-					add(pt.deltaX);
-					add(pt.deltaY);
-				}
-			}
+			var maxLife = g.life * (1 + g.lifeRand) * (2 - g.emitSync) + g.emitDelay;
+			if( maxLife > duration )
+				duration = maxLife;
+			if( g.emitLoop )
+				hasLoop = true;
+			g.updateBounds(bounds);
 		}
-		primitive = new h3d.prim.RawPrimitive( { vbuf : vbuf, stride : STRIDE, quads : true, bounds:bounds }, true);
+
+		this.partAlloc = partAlloc;
+		if( primitiveBuffer == null || primitiveBuffer.length > STRIDE * partCount * 4 )
+			primitiveBuffer = new hxd.FloatBuffer();
+		primitiveBuffer.grow(STRIDE * partCount * 4);
+		primitive = new h3d.prim.RawPrimitive( { vbuf : primitiveBuffer, stride : STRIDE, quads : true, bounds:bounds }, true);
 		primitive.buffer.flags.set(RawFormat);
-		primitiveBuffer = vbuf;
-		if( currentTime > duration )
+		if( hasLoop ) {
+			if( currentTime < duration )
+				currentTime = duration;
+		} else if( currentTime > duration )
 			currentTime = duration;
 		for( g in groups )
 			g.needRebuild = false;
+		rnd.init(seed);
 	}
 
-	function syncGroup( g : GpuPartGroup, camera : h3d.Camera ) {
+
+	static var PUVS = [new h3d.prim.UV(0, 0), new h3d.prim.UV(1, 0), new h3d.prim.UV(0, 1), new h3d.prim.UV(1, 1)];
+
+	function cleanParts( g : GpuPartGroup ) {
+		if( g.maxTime < 0 )
+			return;
+		var pneeded = Math.ceil(hxd.Math.clamp(g.amount * amount) * g.nparts);
 		var p = g.particles;
-		var m = camera.m;
-		var needSort = g.sortMode != None;
-		while( p != null ) {
+		var prev = null;
+		var ftime = g.maxTime;
+		while( p != null && g.currentParts > pneeded ) {
 			var t = p.time + currentTime;
-			if( g.emitLoop ) t %= p.life;
+			if( t - (t % p.life) > p.time + ftime ) {
+				var n = p.next;
+				p.next = partAlloc;
+				partAlloc = p;
+				if( prev == null )
+					g.particles = n;
+				else
+					prev.next = n;
+				g.currentParts--;
+				p = n;
+				continue;
+			}
+			prev = p;
+			p = p.next;
+		}
+		g.maxTime = -1;
+	}
 
-			var acc = (1 + g.speedIncr * t) * t;
-			p.x = p.sx + p.vx * acc;
-			p.y = p.sy + p.vy * acc;
-			p.z = p.sz + p.vz * acc - g.gravity * t * t;
+	function syncGroup( g : GpuPartGroup, camera : h3d.Camera, prevTime : Float, visible : Bool ) {
+		// emit
+		var needSync = false;
+		var pneeded = Math.ceil(hxd.Math.clamp(g.amount * amount) * g.nparts);
 
-			if( needSort ) {
+		if( g.currentParts != pneeded ) {
+
+			if( g.currentParts < pneeded ) {
+				cleanParts(g);
+				var partAlloc = partAlloc;
+				while( g.currentParts < pneeded ) {
+					var pt = partAlloc;
+					if( pt == null )
+						pt = new GpuPart();
+					else
+						partAlloc = pt.next;
+					g.emitPart(rnd, pt, absPos);
+					pt.time -= prevTime;
+					pt.index = -1;
+					pt.next = g.particles;
+					g.particles = pt;
+					g.currentParts++;
+				}
+				this.partAlloc = partAlloc;
+				needSync = true;
+			}
+
+			if( g.currentParts > pneeded ) {
+				var ftime = g.maxTime;
+				if( ftime < 0 )
+					g.maxTime = ftime = currentTime;
+				// count how many particles life has ended
+				var p = g.particles;
+				var count = 0;
+				while( p != null ) {
+					var t = p.time + currentTime;
+					if( t - (t % p.life) > p.time + ftime ) count++;
+					p = p.next;
+				}
+				// remove at once
+				if( g.currentParts - count <= pneeded || count > 1000 ) {
+					cleanParts(g);
+					if( g.currentParts > pneeded ) g.maxTime = ftime;
+					needSync = true;
+				}
+			}
+
+		}
+
+		// sort
+		var needSort = g.sortMode != None && visible;
+		if( needSort ) {
+			var p = g.particles;
+			var m = camera.m;
+			while( p != null ) {
+				var t = p.time + currentTime;
+				if( g.emitLoop ) t %= p.life;
+
+				var acc = (1 + g.speedIncr * t) * t;
+				p.x = p.sx + p.vx * acc;
+				p.y = p.sy + p.vy * acc;
+				p.z = p.sz + p.vz * acc - g.gravity * t * t;
+
 				var cz = p.x * m._13 + p.y * m._23 + p.z * m._33 + m._43;
 				var cw = p.x * m._14 + p.y * m._24 + p.z * m._34 + m._44;
 				p.w = cz / cw;
-			}
 
-			p = p.next;
+				p = p.next;
+			}
+			g.particles = haxe.ds.ListSort.sortSingleLinked(g.particles, function(p1:GpuPart, p2:GpuPart) return p1.w < p2.w ? 1 : -1);
+			needSync = true;
 		}
 
-		if( !needSort )
+		if( !needSync )
 			return;
 
-		g.particles = haxe.ds.ListSort.sortSingleLinked(g.particles, function(p1:GpuPart, p2:GpuPart) return p1.w < p2.w ? 1 : -1);
-
+		// sync buffer
 		var startIndex = g.partIndex * STRIDE * 4;
 		var index = startIndex;
 		var vbuf = primitiveBuffer;
@@ -607,15 +706,17 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			p.index = pidx++;
 			p = p.next;
 		}
-		if( firstPart <= lastPart )
+		if( firstPart <= lastPart ) {
+			uploadedCount += lastPart - firstPart + 1;
 			primitive.buffer.uploadVector(vbuf, (g.partIndex + firstPart) * 4 * STRIDE, (lastPart - firstPart + 1) * 4, (g.partIndex + firstPart) * 4);
+		}
 	}
 
 	override function emit( ctx : h3d.scene.RenderContext ) {
 		for( i in 0...materials.length ) {
 			var m = materials[i];
 			var g = groups[i];
-			if( m != null && g.enable && g.displayedParts != 0 ) {
+			if( m != null && g.enable && g.currentParts > 0 ) {
 				if( m.props != g.material ) {
 					m.name = g.name;
 					m.props = g.material;
@@ -627,59 +728,70 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 	override function sync(ctx) {
 		super.sync(ctx);
+
+		// free memory
+		if( partAlloc != null )
+			partAlloc = partAlloc.next;
+
 		var prev = currentTime;
 		currentTime += ctx.elapsedTime;
-		if( prev < duration && currentTime >= duration )
+		if( prev < duration && currentTime >= duration ) {
 			onEnd();
-		if( primitive == null || primitive.buffer.isDisposed() )
+			if( !allocated )
+				return; // was removed
+		}
+		if( primitive != null )
 			for( g in groups )
-				g.needRebuild = true;
-		for( g in groups )
-			if( g.needRebuild ) {
-				rebuild(ctx.camera);
-				break;
+				if( g.needRebuild ) {
+					prev = 0;
+					currentTime = 0;
+					primitive.dispose();
+					primitive = null;
+					break;
+				}
+		if( primitive == null || primitive.buffer.isDisposed() )
+			rebuildAll(ctx.camera);
+
+		uploadedCount = 0;
+		for( g in groups ) {
+			syncGroup(g, ctx.camera, prev, ctx.visibleFlag);
+			if( g.currentParts == 0 )
+				continue;
+			// sync shader params
+			g.syncParams();
+			g.pshader.time = currentTime;
+			if( g.pshader.clipBounds ) {
+				g.pshader.volumeMin.set(volumeBounds.xMin, volumeBounds.yMin, volumeBounds.zMin);
+				g.pshader.volumeSize.set(volumeBounds.xSize, volumeBounds.ySize, volumeBounds.zSize);
 			}
-		for( g in groups )
-			syncGroup(g, ctx.camera);
+			if( g.pshader.transform3D ) {
+				var r = ctx.camera.target.sub(ctx.camera.pos);
+				r.z = 0;
+				r.normalize();
+				var q = new h3d.Quat();
+				q.initDirection(r);
+				q.saveToMatrix(g.pshader.cameraRotation);
+			}
+			if( g.emitMode == CameraBounds ) {
+				g.pshader.transform.loadFrom(ctx.camera.getInverseView());
+				g.pshader.offset.set( -ctx.camera.pos.x * g.emitDist, -ctx.camera.pos.y * g.emitDist, -ctx.camera.pos.z * g.emitDist );
+				g.pshader.offset.transform3x3( ctx.camera.mcam );
+				g.pshader.offset.x %= volumeBounds.xSize;
+				g.pshader.offset.y %= volumeBounds.ySize;
+				g.pshader.offset.z %= volumeBounds.zSize;
+			} else {
+				g.pshader.transform.identity();
+				g.pshader.offset.set(0, 0, 0);
+			}
+		}
 	}
 
 	override function draw( ctx : h3d.scene.RenderContext ) {
-
 		if( primitive == null || primitive.buffer.isDisposed() )
 			return; // wait next sync()
-
 		var g = groups[ctx.drawPass.index];
-		g.syncParams();
-		g.pshader.time = currentTime;
-		if( g.pshader.clipBounds ) {
-			g.pshader.volumeMin.set(volumeBounds.xMin, volumeBounds.yMin, volumeBounds.zMin);
-			g.pshader.volumeSize.set(volumeBounds.xSize, volumeBounds.ySize, volumeBounds.zSize);
-		}
-		if( g.pshader.transform3D ) {
-			var r = ctx.camera.target.sub(ctx.camera.pos);
-			r.z = 0;
-			r.normalize();
-			var q = new h3d.Quat();
-			q.initDirection(r);
-			q.saveToMatrix(g.pshader.cameraRotation);
-		}
-		if( g.emitMode == CameraBounds ) {
-			g.pshader.transform.loadFrom(ctx.camera.getInverseView());
-			g.pshader.offset.set( -ctx.camera.pos.x * g.emitDist, -ctx.camera.pos.y * g.emitDist, -ctx.camera.pos.z * g.emitDist );
-			g.pshader.offset.transform3x3( ctx.camera.mcam );
-			g.pshader.offset.x %= volumeBounds.xSize;
-			g.pshader.offset.y %= volumeBounds.ySize;
-			g.pshader.offset.z %= volumeBounds.zSize;
-		} else if( g.sortMode == None ) {
-			g.pshader.transform.loadFrom(absPos);
-			g.pshader.offset.set(0, 0, 0);
-		} else {
-			g.pshader.transform.identity();
-			g.pshader.offset.set(0, 0, 0);
-		}
-		ctx.uploadParams();
 		@:privateAccess if( primitive.buffer == null || primitive.buffer.isDisposed() ) primitive.alloc(ctx.engine);
-		@:privateAccess ctx.engine.renderQuadBuffer(primitive.buffer,g.partIndex*2,(g.displayedParts < 0 || g.displayedParts >= g.nparts ? g.nparts : g.displayedParts)*2);
+		@:privateAccess ctx.engine.renderQuadBuffer(primitive.buffer,g.partIndex*2,g.currentParts*2);
 	}
 
 

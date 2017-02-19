@@ -23,6 +23,7 @@ class GpuParticle extends hxsl.Shader {
 		@param var texture : Sampler2D;
 
 		@param var time : Float;
+		@param var maxTime : Float;
 		@param var loopCounter : Float;
 
 		// animation
@@ -53,9 +54,14 @@ class GpuParticle extends hxsl.Shader {
 		var colorUV : Vec2;
 		var frameUV : Vec2;
 		var frameUV2 : Vec2;
+		var visibility : Float;
 
 		function __init__() {
-			t = (props.time + time) % (props.life * loopCounter);
+			{
+				var totTime = props.time + time;
+				t = totTime % (props.life * loopCounter);
+				visibility = float(totTime >= 0) * float(totTime - t < props.time + maxTime);
+			}
 			normT = t / props.life;
 			randProp = -props.time / props.life;
 			transformedPosition = relativePosition + (input.normal * (1 + speedIncr * t)) * t + offset;
@@ -86,12 +92,15 @@ class GpuParticle extends hxsl.Shader {
 			var dist = vec2(size.x * crot - size.y * srot, size.x * srot + size.y * crot) * vec2(global.pixelSize.x / global.pixelSize.y, 1);
 			if( transform3D ) {
 				transformedPosition += vec3(0., dist.x, dist.y) * cameraRotation;
+				projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
 			} else {
 				projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
 				projectedPosition.xy += dist;
 			}
+			projectedPosition *= visibility;
 			var comp = vec2(normT, 1 - fadeOut) < vec2(fadeIn, normT);
-			pixelColor.a *= (1 - comp.x * (1 - (t / fadeIn).pow(fadePower)) - comp.y * ((normT - 1 + fadeOut) / fadeOut).pow(fadePower)).min(1.);
+			var fade = vec2(t / fadeIn, (normT - 1 + fadeOut) / fadeOut).pow(fadePower.xx);
+			pixelColor.a *= (1 - comp.x * (1 - fade.x) - comp.y * fade.y).min(1.);
 			colorUV = vec2(normT, randProp);
 		}
 

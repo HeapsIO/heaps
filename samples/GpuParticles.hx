@@ -1,6 +1,10 @@
 class GpuParticles extends SampleApp {
 
 	var parts : h3d.parts.GpuParticles;
+	var group : h3d.parts.GpuParticles.GpuPartGroup;
+	var box : h3d.scene.Box;
+	var tf : h2d.Text;
+	var prevParts = 0;
 
 	override function init() {
 		super.init();
@@ -10,6 +14,7 @@ class GpuParticles extends SampleApp {
 
 		g.emitMode = Cone;
 		g.emitAngle = 0.5;
+		g.emitDist = 0;
 
 		g.fadeIn = 0.1;
 		g.fadeOut = 0.2;
@@ -24,25 +29,40 @@ class GpuParticles extends SampleApp {
 
 		g.life = 2;
 		g.lifeRand = 0.5;
-		//g.sortMode = Dynamic;
 		g.nparts = 10000;
-		g.displayedParts = g.nparts;
 
-		addSlider("Parts", 0, 10000, function() return g.displayedParts, function(v) g.displayedParts = Std.int(v));
+		addSlider("Amount", function() return parts.amount, function(v) parts.amount = v);
+		addSlider("Speed", function() return g.speed, function(v) g.speed = v, 0, 10);
+		addSlider("Gravity", function() return g.gravity, function(v) g.gravity = v, 0, 5);
+		addCheck("Sort", function() return g.sortMode == Dynamic, function(v) g.sortMode = v ? Dynamic : None);
+		addCheck("Loop", function() return g.emitLoop, function(v) { g.emitLoop = v; if( !v ) parts.currentTime = 0; });
 
+		parts.onEnd = function() {
+			engine.backgroundColor = 0xFF000080;
+			parts.currentTime = 0;
+		};
 		parts.addGroup(g);
-		new h3d.scene.CameraController(20, s3d);
+		group = g;
 
+		new h3d.scene.CameraController(20, s3d);
+		box = new h3d.scene.Box(0x80404050, parts.bounds, parts);
+
+		tf = addText();
 	}
 
-	/*
-	var time = 0.;
+
 
 	override function update(dt:Float) {
-		time += dt;
-		parts.x = Math.cos(time) * 2;
-		parts.y = Math.sin(time) * 2;
-	}*/
+
+
+		if( engine.backgroundColor&0xFFFFFF > 0 )
+			engine.backgroundColor -= 8;
+
+		var cur = @:privateAccess group.currentParts;
+		tf.text = ("cur=" + Std.int(cur * 100 / group.nparts) + "%");
+		if( parts.uploadedCount > 0 )
+			tf.text += " U="+parts.uploadedCount;
+	}
 
 	static function main() {
 		new GpuParticles();
