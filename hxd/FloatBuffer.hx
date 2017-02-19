@@ -46,7 +46,8 @@ abstract FloatBuffer(InnerData) {
 		#if flash
 		if( v > this.length ) this.length = v;
 		#elseif js
-		while( v < this.length ) this.push(0.);
+		for( i in this.length...v )
+			this.push(0.);
 		#else
 		if( v > this.length ) this[v - 1] = 0.;
 		#end
