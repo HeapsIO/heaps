@@ -11,7 +11,7 @@ class Cursor extends hxd.App {
 		bmp.line(0, 31, 31, 31, 0xFFFF0000);
 		bmp.line(31, 0, 31, 31, 0xFF00FF00);
 
-		var cursors : Array<hxd.System.Cursor> = [Default,Button,Move,TextInput,Hide,Custom([bmp],0.,16,16)];
+		var cursors : Array<hxd.System.Cursor> = [Default,Button,Move,TextInput,Hide,Custom(new hxd.System.CustomCursor([bmp],0.,16,16))];
 		var pos = 0;
 		for( c in cursors ) {
 			var i = new h2d.Interactive(100, 20, s2d);

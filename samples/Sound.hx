@@ -21,12 +21,7 @@ class Sound extends hxd.App {
 	var music : hxd.snd.Channel;
 
 	override function init() {
-		var res = if( hxd.res.Sound.supportedFormat(Mp3) )
-			hxd.Res.music_loop_mp3
-		else if( hxd.res.Sound.supportedFormat(OggVorbis) )
-			hxd.Res.music_loop_ogg;
-		else
-			null;
+		var res = if( hxd.res.Sound.supportedFormat(Mp3) || hxd.res.Sound.supportedFormat(OggVorbis) ) hxd.Res.music_loop else null;
 		if( res != null ) {
 			trace("Playing "+res);
 			music = res.play(true);
