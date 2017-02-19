@@ -3,44 +3,62 @@ package h3d.scene;
 class Box extends Graphics {
 
 	public var color : Int;
+	public var bounds : h3d.col.Bounds;
+	var prevXMin = 1e9;
+	var prevYMin = 1e9;
+	var prevZMin = 1e9;
+	var prevXMax = -1e9;
+	var prevYMax = -1e9;
+	var prevZMax = -1e9;
 
 	public function new( ?color = 0xFFFF0000, ?bounds : h3d.col.Bounds, ?depth = true, ?parent) {
 		super(parent);
 		this.color = color;
+		this.bounds = bounds;
 		if( !depth ) material.mainPass.depth(true, Always);
-
-		var dx = new h3d.col.Point(bounds == null ? 1 : bounds.xMax - bounds.xMin, 0, 0);
-		var dy = new h3d.col.Point(0, bounds == null ? 1 : bounds.yMax - bounds.yMin, 0);
-		var dz = new h3d.col.Point(0, 0, bounds == null ? 1 : bounds.zMax - bounds.zMin);
-		var p = bounds == null ? new h3d.col.Point(-0.5,-0.5,-0.5) : bounds.getMin();
-
-		lineStyle(1, color);
-		drawLine(p, p.add(dx));
-		drawLine(p, p.add(dy));
-		drawLine(p, p.add(dz));
-		drawLine(p.add(dx), p.add(dx).add(dz));
-		drawLine(p.add(dy), p.add(dy).add(dz));
-		drawLine(p.add(dx), p.add(dx).add(dy));
-		drawLine(p.add(dy), p.add(dx).add(dy));
-		drawLine(p.add(dx).add(dy), p.add(dx).add(dy).add(dz));
-		p = p.add(dz);
-		drawLine(p, p.add(dx));
-		drawLine(p, p.add(dy));
-		drawLine(p.add(dx), p.add(dx).add(dy));
-		drawLine(p.add(dy), p.add(dx).add(dy));
-		drawLine(p.add(dy), p.add(dx).add(dy));
 	}
 
-	public static function ofBounds( bounds : h3d.col.Bounds, ?parent : Object ) {
-		var b = new Box();
-		if( parent != null ) parent.addChild(b);
-		b.x = (bounds.xMin + bounds.xMax) * 0.5;
-		b.y = (bounds.yMin + bounds.yMax) * 0.5;
-		b.z = (bounds.zMin + bounds.zMax) * 0.5;
-		b.scaleX = bounds.xMax - bounds.xMin;
-		b.scaleY = bounds.yMax - bounds.yMin;
-		b.scaleZ = bounds.zMax - bounds.zMin;
-		return b;
+	override function sync(ctx) {
+		if( bounds == null ) {
+			if( prevXMin == -0.5 && prevYMin == -0.5 && prevZMin == -0.5 && prevXMax == 0.5 && prevYMax == 0.5 && prevZMax == 0.5 )
+				return;
+			prevXMin = -0.5;
+			prevYMin = -0.5;
+			prevZMin = -0.5;
+			prevXMax = 0.5;
+			prevYMax = 0.5;
+			prevZMax = 0.5;
+		} else {
+			if( prevXMin == bounds.xMin && prevYMin == bounds.yMin && prevZMin == bounds.zMin && prevXMax == bounds.xMax && prevYMax == bounds.yMax && prevZMax == bounds.zMax )
+				return;
+			prevXMin = bounds.xMin;
+			prevYMin = bounds.yMin;
+			prevZMin = bounds.zMin;
+			prevXMax = bounds.xMax;
+			prevYMax = bounds.yMax;
+			prevZMax = bounds.zMax;
+		}
+		clear();
+		lineStyle(1, color);
+		moveTo(prevXMin, prevYMin, prevZMin);
+		lineTo(prevXMax, prevYMin, prevZMin);
+		lineTo(prevXMax, prevYMax, prevZMin);
+		lineTo(prevXMin, prevYMax, prevZMin);
+		lineTo(prevXMin, prevYMin, prevZMin);
+		lineTo(prevXMin, prevYMin, prevZMax);
+		lineTo(prevXMax, prevYMin, prevZMax);
+		lineTo(prevXMax, prevYMax, prevZMax);
+		lineTo(prevXMin, prevYMax, prevZMax);
+		lineTo(prevXMin, prevYMin, prevZMax);
+
+		moveTo(prevXMax, prevYMin, prevZMin);
+		lineTo(prevXMax, prevYMin, prevZMax);
+		moveTo(prevXMin, prevYMax, prevZMin);
+		lineTo(prevXMin, prevYMax, prevZMax);
+		moveTo(prevXMax, prevYMax, prevZMin);
+		lineTo(prevXMax, prevYMax, prevZMax);
+
+		super.sync(ctx);
 	}
 
 }
