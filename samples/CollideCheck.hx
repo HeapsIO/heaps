@@ -62,9 +62,6 @@ class CollideCheck extends hxd.App {
 	override function update(dt:Float) {
 		var px = s2d.mouseX;
 		var py = s2d.mouseY;
-		#if js
-		new js.jquery.JQuery("#log").html(px+","+py+","+s2d.width+","+s2d.height);
-		#end
 
 		var r = new h2d.col.RoundRect(rrect.x, rrect.y, RW * 2, RH * 2, rrect.rotation);
 		var pt = new h2d.col.Point(px, py);
