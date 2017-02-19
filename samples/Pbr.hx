@@ -356,6 +356,7 @@ class Irradiance extends IrradBase {
 			var n = getNormal();
 			var totalWeight = 1e-10;
 			var numSamples = 1 << samplesBits;
+			#if (js || flash) @:unroll #end
 			for( i in 0...1 << samplesBits ) {
 				var p = hammersley(i, numSamples);
 				var l : Vec3;
@@ -399,7 +400,8 @@ class IrradianceLut extends IrradBase {
 			var n = vec3(0, 0, 1.);
 			var numSamples = 1 << samplesBits;
 			var a = 0., b = 0.;
-			for( i in 0...numSamples ) {
+			#if (js || flash) @:unroll #end
+			for( i in 0...1 << samplesBits ) {
 				var xi = hammersley(i, numSamples);
 				var h = importanceSampleGGX( roughness, xi, n );
 				var l = reflect(-v, h);
@@ -449,11 +451,13 @@ class Pbr extends hxd.App {
 
 		new h3d.scene.CameraController(5.5, s3d);
 
-		#if flash
-		engine.debug = true;
-		#end
 
 		font = hxd.res.DefaultFont.get();
+
+		#if (js || flash)
+		new h2d.Text(font, s2d).text = "Not supported on this platform (requires render to mipmap target and fragment textureCubeLod support)";
+		return;
+		#end
 
 		shader = new PbrShader();
 
@@ -640,6 +644,13 @@ class Pbr extends hxd.App {
 	function computeIrradLut() {
 		var irradLut = new h3d.mat.Texture(128, 128, #if js RGBA32F #else RGBA16F #end);
 		var screen = new h3d.pass.ScreenFx(new IrradianceLut());
+		screen.shader.samplesBits = sampleBits;
+		#if (js || flash)
+		var nsamples = 1 << sampleBits;
+		screen.shader.SamplesCount = nsamples;
+		screen.shader.hammerTbl = [for( i in 0...nsamples ) hammersley(i, nsamples)];
+		#end
+
 		engine.driver.setRenderTarget(irradLut);
 		screen.render();
 		engine.driver.setRenderTarget(null);
@@ -767,6 +778,8 @@ class Pbr extends hxd.App {
 	}
 
 	override function update(dt:Float) {
+
+		if( grid == null ) return;
 
 		var color = new h3d.Vector(1, 0, 0);
 		var m = new h3d.Matrix();
