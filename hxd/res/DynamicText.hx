@@ -22,6 +22,10 @@ class DynamicText {
 	static var r_attr = ~/::([A-Za-z0-9]+)::/g;
 
 	static function applyText( path : Array<String>, old : Dynamic, str : String, onMissing ) {
+		if( str == null ) {
+			onMissing(path.join(".") + " is missing");
+			return null;
+		}
 		var strOld : String = if( Reflect.isFunction(old) ) old({}) else old;
 		var mparams = new Map();
 		var ok = true;
@@ -65,10 +69,9 @@ class DynamicText {
 				if( sub == null ) continue;
 				var first = x.elements.next();
 				// build structure
+				path.push(id);
 				if( first != null && first.has.id ) {
-					path.push(id);
 					applyRec(path, sub, x, onMissing);
-					path.pop();
 				} else {
 					var elements : Array<Dynamic> = sub;
 					var data = [for( e in x.elements ) e];
@@ -78,7 +81,7 @@ class DynamicText {
 						if( Std.is(e, Array) ) {
 							trace("TODO");
 						} else if( Std.is(e, String) ) {
-							var enew = applyText(path, e, data[i].innerHTML, onMissing);
+							var enew = applyText(path, e, data[i] == null ? null : data[i].innerHTML, onMissing);
 							if( enew != null )
 								elements[i] = enew;
 						} else {
@@ -88,6 +91,7 @@ class DynamicText {
 						path.pop();
 					}
 				}
+				path.pop();
 				fields.remove(id);
 			}
 		}
