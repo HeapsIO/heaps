@@ -540,8 +540,15 @@ class System {
 		return false;
 	}
 
+	@:hlNative("std","sys_locale") static function getLocale() : hl.Bytes { return null; }
+
+	static var _lang : String;
 	static function get_lang() {
-		return "en";
+		if( _lang == null ) {
+			var str = @:privateAccess String.fromUCS2(getLocale());
+			_lang = ~/[.@_-]/g.split(str)[0];
+		}
+		return _lang;
 	}
 
 	static function get_width() {
