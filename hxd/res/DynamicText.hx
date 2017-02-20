@@ -6,25 +6,99 @@ import haxe.macro.Expr;
 
 class DynamicText {
 
-	public static function parse( data : String, ?dict : Map<String,String> ) : Dynamic {
+	public static function parse( data : String ) : Dynamic {
 		var x = new haxe.xml.Fast(Xml.parse(data).firstElement());
-		var idict = null;
-		if( dict != null ) {
-			idict = new Map();
-			for( f in dict.keys() )
-				idict.set(dict.get(f), f);
-		}
 		var obj = {};
 		for( e in x.elements )
-			Reflect.setField(obj, getDict(dict,e.att.id), parseXmlData(e,dict,idict));
+			Reflect.setField(obj, e.att.id, parseXmlData(e));
 		return obj;
 	}
 
-	static inline function getDict( d : Map<String,String>, x : String ) {
-		return d == null ? x : d.get(x);
+	public static function apply( obj : Dynamic, data : String, ?onMissing ) {
+		var x = new haxe.xml.Fast(Xml.parse(data).firstElement());
+		applyRec([], obj, x, onMissing);
 	}
 
-	static function parseXmlData( x : haxe.xml.Fast, hdict : Map<String,String>, idict : Map<String,String> ) : Dynamic {
+	static var r_attr = ~/::([A-Za-z0-9]+)::/g;
+
+	static function applyText( path : Array<String>, old : Dynamic, str : String, onMissing ) {
+		var strOld : String = if( Reflect.isFunction(old) ) old({}) else old;
+		var mparams = new Map();
+		var ok = true;
+		r_attr.map(strOld, function(r) { mparams.set(r.matched(1), true); return ""; });
+		r_attr.map(str, function(r) {
+			var p = r.matched(1);
+			if( !mparams.exists(p) ) {
+				onMissing(path.join(".") + " has extra param '" + p + "'");
+				ok = false;
+			}
+			mparams.set(p, false);
+			return "";
+		});
+		for( p in mparams.keys() )
+			if( mparams.get(p) ) {
+				onMissing(path.join(".") + " is missing param '" + p + "'");
+				ok = false;
+			}
+		if( !ok )
+			return null;
+		return parseText(str);
+	}
+
+	public static function applyRec( path : Array<String>, obj : Dynamic, data : haxe.xml.Fast, onMissing ) {
+		var fields = new Map();
+		for( f in Reflect.fields(obj) ) fields.set(f, true);
+		if( data != null )
+		for( x in data.elements ) {
+			switch( x.name ) {
+			case "t":
+				var id = x.att.id;
+				path.push(id);
+				var vnew = applyText(path, Reflect.field(obj, id), x.innerHTML, onMissing);
+				if( vnew != null )
+					Reflect.setField(obj, id, vnew);
+				path.pop();
+				fields.remove(id);
+			case "g":
+				var id = x.att.id;
+				var sub : Dynamic = Reflect.field(obj, id);
+				if( sub == null ) continue;
+				var first = x.elements.next();
+				// build structure
+				if( first != null && first.has.id ) {
+					path.push(id);
+					applyRec(path, sub, x, onMissing);
+					path.pop();
+				} else {
+					var elements : Array<Dynamic> = sub;
+					var data = [for( e in x.elements ) e];
+					for( i in 0...elements.length ) {
+						var e = elements[i];
+						path.push("[" + i + "]");
+						if( Std.is(e, Array) ) {
+							trace("TODO");
+						} else if( Std.is(e, String) ) {
+							var enew = applyText(path, e, data[i].innerHTML, onMissing);
+							if( enew != null )
+								elements[i] = enew;
+						} else {
+							//trace(e);
+							applyRec(path, elements[i], data[i], onMissing);
+						}
+						path.pop();
+					}
+				}
+				fields.remove(id);
+			}
+		}
+		for( f in fields.keys() ) {
+			path.push(f);
+			onMissing(path.join(".") +" is missing");
+			path.pop();
+		}
+	}
+
+	static function parseXmlData( x : haxe.xml.Fast ) : Dynamic {
 		switch( x.name ) {
 		case "g":
 			var first = x.elements.next();
@@ -32,13 +106,13 @@ class DynamicText {
 			if( first != null && first.has.id ) {
 				var o = {};
 				for( e in x.elements )
-					Reflect.setField(o, getDict(hdict, e.att.id), parseXmlData(e, hdict, idict));
+					Reflect.setField(o, e.att.id, parseXmlData(e));
 				return o;
 			} else {
 				var a = new Array<Dynamic>();
 				var isArray = false;
 				for( e in x.elements ) {
-					var v : Dynamic = parseXmlData(e,hdict,idict);
+					var v : Dynamic = parseXmlData(e);
 					if( isArray ) {
 						if( !Std.is(v, Array) ) v = [v];
 					} else {
@@ -56,18 +130,21 @@ class DynamicText {
 				return a;
 			}
 		case "t":
-			var str = x.innerHTML;
-			if( str.split("::").length <= 1 )
-				return str;
-			return function(vars) {
-				var str = str;
-				for( f in Reflect.fields(vars) )
-					str = str.split("::" + getDict(idict,f) + "::").join(Reflect.field(vars, f));
-				return str;
-			};
+			return parseText(x.innerHTML);
 		default:
 			throw "Unknown tag " + x.name;
 		}
+	}
+
+	static function parseText( str : String ) : Dynamic {
+		if( str.split("::").length <= 1 )
+			return str;
+		return function(vars) {
+			var str = str;
+			for( f in Reflect.fields(vars) )
+				str = str.split("::" + f + "::").join(Reflect.field(vars, f));
+			return str;
+		};
 	}
 
 	#if macro
@@ -81,7 +158,7 @@ class DynamicText {
 		return Context.makePosition({ min : index, max : index + str.length, file : pos.file });
 	}
 
-	static function typeFromXml( x : haxe.xml.Fast, tdict : Map<String,Bool>, pos : { file : String, content : String, pos : Position } ) {
+	static function typeFromXml( x : haxe.xml.Fast, pos : { file : String, content : String, pos : Position } ) {
 		switch( x.name ) {
 		case "g":
 			var first = x.elements.next();
@@ -90,8 +167,7 @@ class DynamicText {
 				var fields = new Array<Field>();
 				for( e in x.elements ) {
 					var id = e.att.id;
-					tdict.set(id, true);
-					fields.push( { name : id, kind : FProp("default","never",typeFromXml(e, tdict, pos)), pos : findPos(pos, 'id="${id.toLowerCase()}"'), meta : [] } );
+					fields.push( { name : id, kind : FProp("default","never",typeFromXml(e, pos)), pos : findPos(pos, 'id="${id.toLowerCase()}"'), meta : [] } );
 				}
 				return TAnonymous(fields);
 			} else {
@@ -116,7 +192,6 @@ class DynamicText {
 					continue;
 				}
 				map.set(name, true);
-				tdict.set(name, true);
 				fields.push( { name : name, kind : FVar(macro : Dynamic), pos : pos.pos, meta : [] } );
 				i += 2;
 			}
@@ -127,7 +202,7 @@ class DynamicText {
 		return null;
 	}
 
-	public static function build( file : String, ?withDict : Bool ) {
+	public static function build( file : String ) {
 		var path = FileTree.resolvePath();
 		var fullPath = path + "/" + file;
 		var content = null, x = null;
@@ -142,11 +217,9 @@ class DynamicText {
 		var fields = Context.getBuildFields();
 		var pos = Context.currentPos();
 		var fpos = { file : fullPath, content : content.toLowerCase(), pos : pos };
-		var tdict = new Map();
 		for( x in new haxe.xml.Fast(x.firstElement()).elements ) {
 			var id = x.att.id;
-			var t = typeFromXml(x, tdict, fpos);
-			tdict.set(id, true);
+			var t = typeFromXml(x, fpos);
 			fields.push( {
 				name : id,
 				doc : null,
@@ -169,39 +242,19 @@ class DynamicText {
 				pos : pos,
 			});
 		}
-		var c : TypeDefinition;
-		if( withDict ) {
-			var fdict = [];
-			for( name in tdict.keys() )
-				fdict.push( { field : name, expr : macro $v { name } } );
-			var edict = { expr : EObjectDecl(fdict), pos : pos };
-			c = macro class {
-				static var DATA : Dynamic = null;
-				static var DICT = $edict;
-				static var HDICT : Map<String,String> = null;
-				public static function resolve( key : String ) : Dynamic {
-					return Reflect.field(DATA, HDICT.get(key));
-				}
-				public static function load( data : String ) {
-					if( HDICT == null ) {
-						HDICT = new Map();
-						for( f in Reflect.fields(DICT) )
-							HDICT.set(Reflect.field(DICT, f), f);
-					}
-					DATA = hxd.res.DynamicText.parse(data,HDICT);
-				}
-			};
-		} else {
-			c = macro class {
-				static var DATA : Dynamic = null;
-				public static inline function resolve( key : String ) : Dynamic {
-					return Reflect.field(DATA, key);
-				}
-				public static function load( data : String ) {
-					DATA = hxd.res.DynamicText.parse(data);
-				}
-			};
-		}
+		var c = macro class {
+			static var DATA : Dynamic = null;
+			public static inline function resolve( key : String ) : Dynamic {
+				return Reflect.field(DATA, key);
+			}
+			public static function load( data : String ) {
+				DATA = hxd.res.DynamicText.parse(data);
+			}
+			public static function applyLang( data : String, ?onMissing ) {
+				if( onMissing == null ) onMissing = function(msg) trace(msg);
+				hxd.res.DynamicText.apply(DATA,data,onMissing);
+			}
+		};
 		for( f in c.fields )
 			fields.push(f);
 		return fields;
