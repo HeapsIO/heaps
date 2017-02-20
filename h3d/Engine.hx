@@ -54,10 +54,11 @@ class Engine {
 		lastTime = haxe.Timer.stamp();
 		stage.addResizeEvent(onStageResize);
 		#if (js || cpp || hxsdl)
-		driver = new h3d.impl.GlDriver();
+		driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif flash
-		driver = new h3d.impl.Stage3dDriver();
+		driver = new h3d.impl.Stage3dDriver(antiAlias);
 		#else
+		#if sys Sys.println #else trace #end("No output driver available.");
 		driver = new h3d.impl.LogDriver(new h3d.impl.NullDriver());
 		driver.logEnable = true;
 		#end

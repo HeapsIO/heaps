@@ -86,12 +86,13 @@ class Stage3dDriver extends Driver {
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
 
-	public function new() {
+	public function new(antiAlias=0) {
 		var v = flash.system.Capabilities.version.split(" ")[1].split(",");
 		flashVersion = Std.parseFloat(v[0] + "." + v[1]);
 		empty = new flash.utils.ByteArray();
 		s3d = flash.Lib.current.stage.stage3Ds[0];
 		programs = new Map();
+		this.antiAlias = antiAlias;
 		curTextures = [];
 		curSamplerBits = [];
 		curMultiBuffer = [];

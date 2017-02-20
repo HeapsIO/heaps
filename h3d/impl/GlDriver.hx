@@ -122,11 +122,11 @@ class GlDriver extends Driver {
 	var shaderVersion : Null<Int>;
 	var firstShader = true;
 
-	public function new() {
+	public function new(antiAlias=0) {
 		#if js
 		canvas = @:privateAccess hxd.Stage.getCanvas();
 		if( canvas == null ) throw "Canvas #webgl not found";
-		gl = canvas.getContextWebGL({alpha:false});
+		gl = canvas.getContextWebGL({alpha:false,antialias:antiAlias>0});
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
