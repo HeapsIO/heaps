@@ -578,9 +578,9 @@ class Driver {
 			AL.bufferData(buf.inst, alFormat, resampleBytes, reqBytes, targetRate);
 		} else {
 			AL.bufferData(buf.inst, alFormat, tmpBytes, outPos, s.streamData.samplingRate);
-			if( AL.getError() != 0 )
-				throw "Failed to upload buffer data";
 		}
+//		if( AL.getError() != 0 )
+//			throw "Failed to upload buffer data";
 	}
 
 	function getBuffer( snd : hxd.res.Sound, grp : SoundGroup ) : Buffer {
@@ -652,8 +652,8 @@ class Driver {
 		var dataBytes = haxe.io.Bytes.alloc(dat.samples * dat.getBytesPerSample());
 		dat.decode(dataBytes, 0, 0, dat.samples);
 		AL.bufferData(buf.inst, alFormat, dataBytes, dataBytes.length, dat.samplingRate);
-		if( AL.getError() != 0 )
-			throw "Failed to upload buffer data";
+//		if( AL.getError() != 0 )
+//			throw "Failed to upload buffer data";
 	}
 
 }
