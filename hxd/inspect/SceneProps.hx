@@ -497,6 +497,12 @@ class SceneProps {
 			return;
 		if( node == null )
 			node = root;
+		if( lerp < 0 )
+			lerp = 0;
+		else if( lerp > 1 )
+			lerp = 1;
+		else if( Math.isNaN(lerp) )
+			throw "lerp is NaN";
 		var props = null;
 		for( f in Reflect.fields(propsValues) ) {
 			var v : Dynamic = Reflect.field(propsValues, f);
