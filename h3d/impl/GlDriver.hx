@@ -559,6 +559,7 @@ class GlDriver extends Driver {
 		#if !js
 		case GL.RGBA32F, GL.RGBA16F: GL.RGBA;
 		case GL.ALPHA16F, GL.ALPHA32F: GL.ALPHA;
+		case GL.RGBA8: GL.BGRA;
 		#end
 		case GL.RGBA: GL.RGBA;
 		case GL.ALPHA: GL.ALPHA;
@@ -593,6 +594,8 @@ class GlDriver extends Driver {
 			tt.pixelFmt = GL.FLOAT;
 			#end
 		#if !js
+		case BGRA:
+			tt.internalFmt = GL.RGBA8;
 		case RGBA16F if( hasFeature(FloatTextures) ):
 			tt.pixelFmt = GL.HALF_FLOAT;
 			tt.internalFmt = GL.RGBA16F;
