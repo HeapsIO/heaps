@@ -95,14 +95,6 @@ class Drawable extends Sprite {
 		return m;
 	}
 
-	inline function get_alpha() {
-		return color.a;
-	}
-
-	inline function set_alpha(v) {
-		return color.a = v;
-	}
-
 	public function getDebugShaderCode( toHxsl = true ) {
 		var shader = @:privateAccess {
 			var ctx = getScene().ctx;
