@@ -15,7 +15,7 @@ class Constants {
 	#if fastPoly2tri
 	static public var EPSILON = 0;
 	#else
-	static public var EPSILON:Float  = 1e-12;
+	static public var EPSILON:Float  = 1e-24;
 	#end
 	static public var PI_2:Float     = Math.PI / 2;
 	static public var PI_3div4:Float = 3 * Math.PI / 4;
