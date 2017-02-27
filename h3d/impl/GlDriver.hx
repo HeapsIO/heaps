@@ -235,11 +235,18 @@ class GlDriver extends Driver {
 			#end
 			gl.attachShader(p.p, p.vertex.s);
 			gl.attachShader(p.p, p.fragment.s);
-			gl.linkProgram(p.p);
+			var error = false, log = null;
+			try {
+				gl.linkProgram(p.p);
+				if( gl.getProgramParameter(p.p, GL.LINK_STATUS) != cast 1 )
+					log = gl.getProgramInfoLog(p.p);
+			} catch( e : Dynamic ) {
+				error = true;
+				log = Std.string(e);
+			}
 			gl.deleteShader(p.vertex.s);
 			gl.deleteShader(p.fragment.s);
-			if( gl.getProgramParameter(p.p, GL.LINK_STATUS) != cast 1 ) {
-				var log = gl.getProgramInfoLog(p.p);
+			if( log != null ) {
 				#if js
 				gl.deleteProgram(p.p);
 				#end
@@ -247,7 +254,7 @@ class GlDriver extends Driver {
 				/*
 					Tentative patch on some driver that report an higher shader version that it's allowed to use.
 				*/
-				if( log == "" && shaderVersion > 130 && firstShader ) {
+				if( (error || log == "") && shaderVersion > 130 && firstShader ) {
 					shaderVersion -= 10;
 					return selectShader(shader);
 				}
