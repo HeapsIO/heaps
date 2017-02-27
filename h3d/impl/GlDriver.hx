@@ -147,6 +147,9 @@ class GlDriver extends Driver {
 		var v : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
 		if( v.indexOf("ES") < 0 &&reg.match(v) )
 			shaderVersion = hxd.Math.imin( 150, Math.round( Std.parseFloat(reg.matched(0)) * 100 ) );
+
+		gl.pixelStorei(GL.PACK_ALIGNMENT, 1);
+		gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1);
 		#end
 	}
 
