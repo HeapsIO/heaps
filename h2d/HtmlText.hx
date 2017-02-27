@@ -6,6 +6,7 @@ class HtmlText extends Text {
 	var xPos : Int;
 	var yPos : Int;
 	var xMax : Int;
+	var sizePos : Int;
 	var dropMatrix : h3d.shader.ColorMatrix;
 
 	override function draw(ctx:RenderContext) {
@@ -49,16 +50,64 @@ class HtmlText extends Text {
 		xPos = 0;
 		yPos = 0;
 		xMax = 0;
+		sizePos = 0;
 		calcYMin = 0;
 		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
+		var sizes = [];
 		for( e in doc )
-			addNode(e, font, rebuild);
+			buildSizes(e,sizes);
+		for( e in doc )
+			addNode(e, font, rebuild, sizes);
 
 		var x = xPos, y = yPos;
 		calcWidth = x > xMax ? x : xMax;
 		calcHeight = y > 0 && x == 0 ? y - lineSpacing : y + font.lineHeight;
 		calcSizeHeight = y > 0 && x == 0 ? y + (font.baseLine - font.lineHeight - lineSpacing) : y + font.baseLine;
 		calcDone = true;
+	}
+
+	function buildSizes( e : Xml, sizes : Array<Int> ) {
+		if( e.nodeType == Xml.Element ) {
+			var len = 0, prevFont = font;
+			switch( e.nodeName.toLowerCase() ) {
+			case "br":
+				len = -1; // break
+			case "img":
+				var i = loadImage(e.get("src"));
+				len = (i == null ? 8 : i.width) + letterSpacing;
+			case "font":
+				for( a in e.attributes() ) {
+					var v = e.get(a);
+					switch( a.toLowerCase() ) {
+					case "face": font = loadFont(v);
+					default:
+					}
+				}
+			default:
+			}
+			sizes.push(len);
+			for( child in e )
+				buildSizes(child, sizes);
+			font = prevFont;
+		} else {
+			var text = htmlToText(e.nodeValue);
+			var prevChar = -1;
+			var xPos = 0;
+			for( i in 0...text.length ) {
+				var cc = text.charCodeAt(i);
+				var stop = false;
+				var e = font.getChar(cc);
+				var sz = e.getKerningOffset(prevChar) + e.width;
+				if( cc == "\n".code || font.charset.isBreakChar(cc) ) {
+					if( cc != "\n".code && !font.charset.isSpace(cc) )
+						xPos += sz;
+					sizes.push( -(xPos + 1));
+					return;
+				}
+				xPos += sz + letterSpacing;
+			}
+			sizes.push(xPos);
+		}
 	}
 
 	function htmlToText( t : hxd.UString )  {
@@ -74,7 +123,21 @@ class HtmlText extends Text {
 		return t;
 	}
 
-	function addNode( e : Xml, font : Font, rebuild : Bool ) {
+	function remainingSize( sizes : Array<Int> ) {
+		var size = 0;
+		for( i in sizePos...sizes.length ) {
+			var s = sizes[i];
+			if( s < 0 ) {
+				size += -s - 1;
+				return size;
+			}
+			size += s;
+		}
+		return size;
+	}
+
+	function addNode( e : Xml, font : Font, rebuild : Bool, sizes : Array<Int> ) {
+		sizePos++;
 		if( e.nodeType == Xml.Element ) {
 			var prevColor = null, prevGlyphs = null;
 			switch( e.nodeName.toLowerCase() ) {
@@ -105,7 +168,7 @@ class HtmlText extends Text {
 			case "img":
 				var i = loadImage(e.get("src"));
 				if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
-				if( maxWidth != null && xPos + i.width > maxWidth && xPos > 0 ) {
+				if( realMaxWidth >= 0 && xPos + i.width + letterSpacing + remainingSize(sizes) > realMaxWidth && xPos > 0 ) {
 					if( xPos > xMax ) xMax = xPos;
 					xPos = 0;
 					yPos += font.lineHeight + lineSpacing;
@@ -123,13 +186,13 @@ class HtmlText extends Text {
 			default:
 			}
 			for( child in e )
-				addNode(child, font, rebuild);
+				addNode(child, font, rebuild, sizes);
 			if( prevGlyphs != null )
 				glyphs = prevGlyphs;
 			if( prevColor != null )
 				@:privateAccess glyphs.curColor.load(prevColor);
 		} else {
-			var t = splitText(htmlToText(e.nodeValue), xPos);
+			var t = splitText(htmlToText(e.nodeValue), xPos, remainingSize(sizes));
 			var prevChar = -1;
 			var dy = this.font.baseLine - font.baseLine;
 			for( i in 0...t.length ) {

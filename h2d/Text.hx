@@ -146,7 +146,7 @@ class Text extends Drawable {
 		}
 	}
 
-	public function splitText( text : hxd.UString, leftMargin = 0 ) {
+	public function splitText( text : hxd.UString, leftMargin = 0, afterData = 0 ) {
 		if( realMaxWidth < 0 )
 			return text;
 		var lines = [], rest = text, restPos = 0;
@@ -161,17 +161,21 @@ class Text extends Drawable {
 					lines.push("");
 					x -= leftMargin;
 				}
-				var size = x + esize + letterSpacing;
+				var size = x + esize; /* no letter spacing */
 				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
+				var breakFound = false;
 				while( size <= realMaxWidth && k < max ) {
 					var cc = text.charCodeAt(k++);
-					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
+					if( font.charset.isSpace(cc) || cc == '\n'.code ) {
+						breakFound = true;
+						break;
+					}
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 					prevChar = cc;
 				}
-				if( size > realMaxWidth ) {
+				if( size > realMaxWidth || (!breakFound && size + afterData > realMaxWidth) ) {
 					newline = true;
 					lines.push(text.substr(restPos, i - restPos));
 					restPos = i;
@@ -190,7 +194,7 @@ class Text extends Drawable {
 				prevChar = cc;
 		}
 		if( restPos < text.length ) {
-			if( lines.length == 0 && leftMargin > 0 && x > realMaxWidth )
+			if( lines.length == 0 && leftMargin > 0 && x + afterData - letterSpacing > realMaxWidth )
 				lines.push("");
 			lines.push(text.substr(restPos, text.length - restPos));
 		}
