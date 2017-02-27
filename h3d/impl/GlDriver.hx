@@ -768,6 +768,7 @@ class GlDriver extends Driver {
 	static inline var STREAM_POS = #if hl 0 #else 1 #end;
 	#if hl
 
+	var streamKeep : Array<{ f : Int, b : hl.Bytes }> = [];
 	var streamBytes : hl.Bytes;
 	var streamLen : Int;
 	var streamPos : Int;
@@ -790,6 +791,7 @@ class GlDriver extends Driver {
 		if( streamPos > 0 )
 			newBytes.blit(0, streamBytes, 0, streamPos);
 		streamLen = newLen;
+		if( streamBytes != null ) streamKeep.push({ f : frame, b : streamBytes });
 		streamBytes = newBytes;
 	}
 
@@ -798,6 +800,8 @@ class GlDriver extends Driver {
 	function resetStream() {
 		#if hl
 		streamPos = 0;
+		// keep during 2 frames
+		while( streamKeep.length > 0 && streamKeep[0].f < frame - 1 ) streamKeep.shift();
 		#end
 	}
 
