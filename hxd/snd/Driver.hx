@@ -463,9 +463,9 @@ class Driver {
 				tmpBytes.setInt32(0, s.buffers[0].inst.toInt());
 				tmpBytes.setInt32(4, s.buffers[1].inst.toInt());
 				AL.sourceQueueBuffers(s.inst, 2, tmpBytes);
-				var error = AL.getError();
+				/*var error = AL.getError();
 				if( error != 0 )
-					throw "Failed to queue streaming buffers 0x"+StringTools.hex(error);
+					throw "Failed to queue streaming buffers 0x"+StringTools.hex(error);*/
 			}
 
 		} else if( s.hasQueue || c.queue.length > 0 ) {
