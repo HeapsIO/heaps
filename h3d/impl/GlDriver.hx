@@ -143,6 +143,7 @@ class GlDriver extends Driver {
 			gl.bindVertexArray( commonVA );
 		}
 
+
 		var reg = ~/[0-9]+\.[0-9]+/;
 		var v : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
 		if( v.indexOf("ES") < 0 &&reg.match(v) )
@@ -150,6 +151,7 @@ class GlDriver extends Driver {
 
 		gl.pixelStorei(GL.PACK_ALIGNMENT, 1);
 		gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1);
+		gl.finish(); // prevent glError() on first bufferData
 		#end
 	}
 

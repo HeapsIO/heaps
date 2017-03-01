@@ -112,6 +112,8 @@ class GlslOut {
 			switch( size ) {
 			case SVar(v):
 				ident(v);
+			case SConst(1):
+				add(2); // intel HD driver fix
 			case SConst(v):
 				add(v);
 			}
@@ -129,6 +131,7 @@ class GlslOut {
 			add("[");
 			switch( size ) {
 			case SVar(v): ident(v);
+			case SConst(1): add(2); // intel HD driver fix
 			case SConst(n): add(n);
 			}
 			add("]");
