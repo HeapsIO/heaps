@@ -189,6 +189,8 @@ class GlDriver extends Driver {
 		var render = gl.getParameter(GL.RENDERER);
 		if( details )
 			render += " GLv" + gl.getParameter(GL.VERSION);
+		else
+			render = render.split("/").shift(); // GeForce reports "/PCIe/SSE2" extension
 		#if js
 		render = render.split("WebGL ").join("");
 		#end
