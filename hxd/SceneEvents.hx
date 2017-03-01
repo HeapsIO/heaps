@@ -123,7 +123,11 @@ class SceneEvents {
 			while( true ) {
 				var i = s.handleEvent(event, last);
 
-				if( i == null ) break;
+				if( i == null ) {
+					event.relX = oldX;
+					event.relY = oldY;
+					break;
+				}
 
 				if( checkOver ) {
 					if( currentOver != i ) {
