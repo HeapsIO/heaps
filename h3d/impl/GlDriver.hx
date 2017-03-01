@@ -185,6 +185,16 @@ class GlDriver extends Driver {
 		return "// vertex:\n" + hxsl.GlslOut.toGlsl(shader.vertex.data) + "// fragment:\n" + hxsl.GlslOut.toGlsl(shader.fragment.data);
 	}
 
+	override public function getDriverName(details:Bool) {
+		var render = gl.getParameter(GL.RENDERER);
+		if( details )
+			render += " GLv" + gl.getParameter(GL.VERSION);
+		#if js
+		render = render.split("WebGL ").join("");
+		#end
+		return "OpenGL "+render;
+	}
+
 	function compileShader( glout : hxsl.GlslOut, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
