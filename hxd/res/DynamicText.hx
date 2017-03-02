@@ -27,6 +27,10 @@ class DynamicText {
 			return null;
 		}
 		var strOld : String = if( Reflect.isFunction(old) ) old({}) else old;
+		if( strOld == null ) {
+			onMissing(path.join(".") + " is no longer used");
+			return null;
+		}
 		var mparams = new Map();
 		var ok = true;
 		r_attr.map(strOld, function(r) { mparams.set(r.matched(1), true); return ""; });
