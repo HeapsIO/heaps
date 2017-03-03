@@ -362,7 +362,7 @@ class CdbLevel extends Layers {
 		t.stride = ldat.stride;
 		t.res = hxd.res.Loader.currentInstance.load(ldat.file).toImage();
 		t.tile = t.res.toTile();
-		t.tiles = t.tile.grid(t.size);
+		t.tiles = t.tile.gridFlatten(t.size);
 		t.objects = [];
 		var tprops = Reflect.field(levelsProps.tileSets, ldat.file);
 		@:privateAccess t.props = tprops;
