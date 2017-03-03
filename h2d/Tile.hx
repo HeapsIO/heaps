@@ -148,16 +148,16 @@ class Tile {
 
 	/**
 		Split the tile into a list of tiles of Size x Size pixels.
+		Unlike grid which is X/Y ordered, gridFlatten returns a single dimensional array ordered in Y/X.
 	**/
-	public function grid( size : Int, dx = 0, dy = 0 ) {
+	public function gridFlatten( size : Int, dx = 0, dy = 0 ) {
 		return [for( y in 0...Std.int(height / size) ) for( x in 0...Std.int(width / size) ) sub(x * size, y * size, size, size, dx, dy)];
 	}
 
 	/**
 		Split the tile into a list of tiles of Size x Size pixels.
-		Unly grid which is Y/X ordered, grid2D returns an X/Y two-dimensional array.
 	**/
-	public function grid2D( size : Int, dx = 0, dy = 0 ) {
+	public function grid( size : Int, dx = 0, dy = 0 ) {
 		return [for( x in 0...Std.int(width / size) ) [for( y in 0...Std.int(height / size) ) sub(x * size, y * size, size, size, dx, dy)]];
 	}
 
