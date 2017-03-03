@@ -161,7 +161,7 @@ class Text extends Drawable {
 					lines.push("");
 					x -= leftMargin;
 				}
-				var size = x + esize; /* no letter spacing */
+				var size = x + esize + letterSpacing; /* TODO : no letter spacing */
 				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
 				var breakFound = false;
