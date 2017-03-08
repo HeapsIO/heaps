@@ -230,6 +230,8 @@ class ALEmulator {
 	}
 
 	// Extension support
+	public static function loadExtensions() {}
+
 	public static function isExtensionPresent(extname : Bytes) : Bool {
 		return false;
 	}
@@ -738,6 +740,8 @@ class ALCEmulator {
 	}
 
 	// Extension support
+	public static function loadExtensions(alDevice : Device) { }
+
 	public static function isExtensionPresent(device : Device, extname : Bytes) : Bool {
 		return false;
 	}
@@ -765,46 +769,46 @@ class ALCEmulator {
 	// Constants
 	// ------------------------------------------------------------------------
 
-	public static inline var ALC_FALSE                            = 0;
-	public static inline var ALC_TRUE                             = 1;
+	public static inline var FALSE                            = 0;
+	public static inline var TRUE                             = 1;
 
 	// Context attributes
-	public static inline var ALC_FREQUENCY                        = 0x1007;
-	public static inline var ALC_REFRESH                          = 0x1008;
-	public static inline var ALC_SYNC                             = 0x1009;
-	public static inline var ALC_MONO_SOURCES                     = 0x1010;
-	public static inline var ALC_STEREO_SOURCES                   = 0x1011;
+	public static inline var FREQUENCY                        = 0x1007;
+	public static inline var REFRESH                          = 0x1008;
+	public static inline var SYNC                             = 0x1009;
+	public static inline var MONO_SOURCES                     = 0x1010;
+	public static inline var STEREO_SOURCES                   = 0x1011;
 
 	// Errors
-	public static inline var ALC_NO_ERROR                         = 0;
-	public static inline var ALC_INVALID_DEVICE                   = 0xA001;
-	public static inline var ALC_INVALID_CONTEXT                  = 0xA002;
-	public static inline var ALC_INVALID_ENUM                     = 0xA003;
-	public static inline var ALC_INVALID_VALUE                    = 0xA004;
-	public static inline var ALC_OUT_OF_MEMORY                    = 0xA005;
+	public static inline var NO_ERROR                         = 0;
+	public static inline var INVALID_DEVICE                   = 0xA001;
+	public static inline var INVALID_CONTEXT                  = 0xA002;
+	public static inline var INVALID_ENUM                     = 0xA003;
+	public static inline var INVALID_VALUE                    = 0xA004;
+	public static inline var OUT_OF_MEMORY                    = 0xA005;
 
 	// Runtime ALC version
-	public static inline var ALC_MAJOR_VERSION                    = 0x1000;
-	public static inline var ALC_MINOR_VERSION                    = 0x1001;
+	public static inline var MAJOR_VERSION                    = 0x1000;
+	public static inline var MINOR_VERSION                    = 0x1001;
 
 	// Context attribute list properties
-	public static inline var ALC_ATTRIBUTES_SIZE                  = 0x1002;
-	public static inline var ALC_ALL_ATTRIBUTES                   = 0x1003;
+	public static inline var ATTRIBUTES_SIZE                  = 0x1002;
+	public static inline var ALL_ATTRIBUTES                   = 0x1003;
 
 	// Device strings
-	public static inline var ALC_DEFAULT_DEVICE_SPECIFIER         = 0x1004;
-	public static inline var ALC_DEVICE_SPECIFIER                 = 0x1005;
-	public static inline var ALC_EXTENSIONS                       = 0x1006;
+	public static inline var DEFAULT_DEVICE_SPECIFIER         = 0x1004;
+	public static inline var DEVICE_SPECIFIER                 = 0x1005;
+	public static inline var EXTENSIONS                       = 0x1006;
 
 	// Capture extension
-	public static inline var ALC_EXT_CAPTURE                      = 1;
-	public static inline var ALC_CAPTURE_DEVICE_SPECIFIER         = 0x310;
-	public static inline var ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER = 0x311;
-	public static inline var ALC_CAPTURE_SAMPLES                  = 0x312;
+	public static inline var EXT_CAPTURE                      = 1;
+	public static inline var CAPTURE_DEVICE_SPECIFIER         = 0x310;
+	public static inline var CAPTURE_DEFAULT_DEVICE_SPECIFIER = 0x311;
+	public static inline var CAPTURE_SAMPLES                  = 0x312;
 
 	// Enumerate All extension
-	public static inline var ALC_ENUMERATE_ALL_EXT                = 1;
-	public static inline var ALC_DEFAULT_ALL_DEVICES_SPECIFIER    = 0x1012;
-	public static inline var ALC_ALL_DEVICES_SPECIFIER            = 0x1013;
+	public static inline var ENUMERATE_ALL_EXT                = 1;
+	public static inline var DEFAULT_ALL_DEVICES_SPECIFIER    = 0x1012;
+	public static inline var ALL_DEVICES_SPECIFIER            = 0x1013;
 
 }

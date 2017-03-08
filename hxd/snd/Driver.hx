@@ -1,18 +1,18 @@
 package hxd.snd;
 
-#if hl
+#if hlsdl
 typedef AL = openal.AL;
-private typedef ALC = openal.ALC;
-private typedef ALSource = openal.AL.Source;
-private typedef ALBuffer = openal.AL.Buffer;
-private typedef ALDevice = openal.ALC.Device;
-private typedef ALContext = openal.ALC.Context;
+private typedef ALC          = openal.ALC;
+private typedef ALSource     = openal.AL.Source;
+private typedef ALBuffer     = openal.AL.Buffer;
+private typedef ALDevice     = openal.ALC.Device;
+private typedef ALContext    = openal.ALC.Context;
 #else
 typedef AL = hxd.snd.ALEmulator;
-private typedef ALC = hxd.snd.ALEmulator.ALCEmulator;
-private typedef ALSource = hxd.snd.ALEmulator.ALSource;
-private typedef ALBuffer = hxd.snd.ALEmulator.ALBuffer;
-private typedef ALDevice = hxd.snd.ALEmulator.ALDevice;
+private typedef ALC       = hxd.snd.ALEmulator.ALCEmulator;
+private typedef ALSource  = hxd.snd.ALEmulator.ALSource;
+private typedef ALBuffer  = hxd.snd.ALEmulator.ALBuffer;
+private typedef ALDevice  = hxd.snd.ALEmulator.ALDevice;
 private typedef ALContext = hxd.snd.ALEmulator.ALContext;
 #end
 
@@ -59,8 +59,6 @@ class Buffer {
 	}
 }
 
-@:access(hxd.snd.Channel)
-@:access(hxd.snd.Effect)
 class Driver {
 
 	/**
@@ -89,15 +87,17 @@ class Driver {
 
 	static inline var AL_NUM_SOURCES = 16;
 
-	var cachedBytes : haxe.io.Bytes;
+	var cachedBytes   : haxe.io.Bytes;
 	var resampleBytes : haxe.io.Bytes;
 
 	var alDevice      : ALDevice;
 	var alContext     : ALContext;
-
 	var buffers       : Array<Buffer>;
 	var sources       : Array<Source>;
 	var bufferMap     : Map<hxd.res.Sound, Buffer>;
+
+	var preUpdateCallbacks  : Array<Void->Void>;
+	var postUpdateCallbacks : Array<Void->Void>;
 
 	// ------------------------------------------------------------------------
 
@@ -110,18 +110,37 @@ class Driver {
 		buffers = [];
 		bufferMap = new Map();
 
+		preUpdateCallbacks  = [];
+		postUpdateCallbacks = [];
+
 		// al init
 		alDevice  = ALC.openDevice(null);
 		alContext = ALC.createContext(alDevice, null);
 		ALC.makeContextCurrent(alContext);
+		ALC.loadExtensions(alDevice);
+		AL.loadExtensions();
 
-		// alloc sources
-		var bytes = haxe.io.Bytes.alloc(4 * AL_NUM_SOURCES);
-		AL.genSources(AL_NUM_SOURCES, bytes);
-		sources = [for (i in 0...AL_NUM_SOURCES) new Source(ALSource.ofInt(bytes.getInt32(i * 4)))];
-		for (s in sources) AL.sourcei(s.inst, AL.SOURCE_RELATIVE, AL.TRUE);
+		{	// alloc sources
+			sources = [];
+			var bytes = haxe.io.Bytes.alloc(4);
+			for (i in 0...AL_NUM_SOURCES) {
+				AL.genSources(1, bytes);
+				if (AL.getError() != AL.NO_ERROR) break;
+				var s = new Source(ALSource.ofInt(bytes.getInt32(0)));
+				AL.sourcei(s.inst, AL.SOURCE_RELATIVE, AL.TRUE);
+				sources.push(s);
+			}
+		}
 
 		cachedBytes = haxe.io.Bytes.alloc(4 * 3 * 2);
+	}
+
+	public function addPreUpdateCallback(f : Void->Void) {
+		preUpdateCallbacks.push(f);
+	}
+
+	public function addPostUpdateCallback(f : Void->Void) {
+		postUpdateCallbacks.push(f);
 	}
 
 	function getTmp(size) {
@@ -131,7 +150,11 @@ class Driver {
 	}
 
 	static function soundUpdate() {
-		if( instance != null ) instance.update();
+		if( instance != null ) {
+			for (f in instance.preUpdateCallbacks) f();
+			instance.update();
+			for (f in instance.postUpdateCallbacks) f();
+		}
 	}
 
 	public static function get() {
@@ -169,9 +192,9 @@ class Driver {
 
 		AL.deleteSources(sources.length, arrayBytes([for( s in sources ) s.inst.toInt()]));
 		AL.deleteBuffers(buffers.length, arrayBytes([for( b in buffers ) b.inst.toInt()]));
-		sources = [];
-		buffers = [];
-
+		sources     = [];
+		buffers     = [];
+		
 		ALC.makeContextCurrent(null);
 		ALC.destroyContext(alContext);
 		ALC.closeDevice(alDevice);
@@ -195,7 +218,6 @@ class Driver {
 	public function update() {
 		// update playing channels from sources & release stopped channels
 		var now = haxe.Timer.stamp();
-
 		for( s in sources ) {
 			var c = s.channel;
 			if( c == null ) continue;
@@ -296,7 +318,6 @@ class Driver {
 			}
 		}
 
-
 		// free sources that points to virtualized channels
 		for ( s in sources ) {
 			if ( s.channel == null || !s.channel.isVirtual) continue;
@@ -351,11 +372,11 @@ class Driver {
 			if( c == null) continue;
 			syncSource(s);
 		}
-
-		// update virtual channels
+		
 		var c = channels;
 		while (c != null) {
 			var next = c.next;
+			// update virtual channels
 			if (!c.pause && c.isVirtual) {
 				c.position += now - c.lastStamp;
 				c.lastStamp = now;
@@ -364,6 +385,10 @@ class Driver {
 					c.onEnd();
 				}
 			}
+
+			// clean removed effects
+			if (c.channelGroup.removedEffects.length > 0) c.channelGroup.removedEffects = [];
+			if (c.removedEffects != null && c.removedEffects.length > 0) c.removedEffects = [];
 			c = next;
 		}
 	}
@@ -388,8 +413,12 @@ class Driver {
 			s.volume = v;
 			AL.sourcef(s.inst, AL.GAIN, v);
 		}
-		for(e in c.effects)
-			e.apply(c, s);
+
+		for (e in c.channelGroup.removedEffects) e.unapply(s);
+		for (e in c.removedEffects) e.unapply(s);
+
+		for (e in c.channelGroup.effects) e.apply(s);
+		for (e in c.effects) e.apply(s);
 
 		if( !s.playing ) {
 			s.playing = true;
@@ -414,6 +443,11 @@ class Driver {
 
 	function releaseSource( s : Source ) {
 		if (s.channel != null) {
+			for (e in s.channel.channelGroup.removedEffects) e.unapply(s);
+			for (e in s.channel.removedEffects) e.unapply(s);
+			for (e in s.channel.channelGroup.effects) e.unapply(s);
+			for (e in s.channel.effects) e.unapply(s);
+
 			s.channel.source = null;
 			s.channel = null;
 		}
@@ -421,10 +455,6 @@ class Driver {
 			s.playing = false;
 			AL.sourceStop(s.inst);
 		}
-		AL.sourcei(s.inst,  AL.SOURCE_RELATIVE, AL.TRUE);
-		AL.source3f(s.inst, AL.POSITION,  0, 0, 0);
-		AL.source3f(s.inst, AL.VELOCITY,  0, 0, 0);
-		AL.source3f(s.inst, AL.DIRECTION, 0, 0, 0);
 		syncBuffers(s, null);
 	}
 
@@ -640,10 +670,13 @@ class Driver {
 				prev = prev.next;
 			prev.next = c.next;
 		}
+		
+		for (e in c.effects) c.removeEffect(e);
+		if  (c.source != null) releaseSource(c.source);
+
 		c.next = null;
 		c.driver = null;
-		if( c.source != null )
-			releaseSource(c.source);
+		c.removedEffects = null;
 	}
 
 	function fillBuffer(buf : Buffer, dat : hxd.snd.Data, forceMono = false) {
@@ -655,5 +688,4 @@ class Driver {
 //		if( AL.getError() != 0 )
 //			throw "Failed to upload buffer data";
 	}
-
 }

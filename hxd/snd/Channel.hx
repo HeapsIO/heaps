@@ -1,5 +1,6 @@
 package hxd.snd;
 
+@:allow(hxd.snd.Driver)
 class Channel extends ChannelBase {
 	static var ID = 0;
 
@@ -74,13 +75,15 @@ class Channel extends ChannelBase {
 		super.updateCurrentVolume(now);
 		channelGroup.updateCurrentVolume(now);
 		currentVolume *= channelGroup.currentVolume * soundGroup.volume;
-		for( e in effects ) currentVolume *= e.getVolumeModifier();
+		for (e in channelGroup.effects) currentVolume *= e.getVolumeModifier();
+		for (e in effects) currentVolume *= e.getVolumeModifier();
 	}
 
 	public function calcAudibleGain( now : Float ) {
 		updateCurrentVolume(now);
 		audibleGain = currentVolume;
-		for (e in effects) audibleGain *= e.gain;
+		for (e in channelGroup.effects) audibleGain = e.applyAudibleGainModifier(audibleGain);
+		for (e in effects) audibleGain = e.applyAudibleGainModifier(audibleGain);
 	}
 
 	/**
