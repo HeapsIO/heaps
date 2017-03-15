@@ -739,6 +739,7 @@ class System {
 		for( sdl in keys.keys() )
 			addKey(sdl, keys.get(sdl));
 
+		sdl.Sdl.tick();
 		sdl.Sdl.init();
 		var size = haxe.macro.Compiler.getDefine("windowSize");
 		if( size != null ) {
