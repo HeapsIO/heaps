@@ -100,8 +100,8 @@ class CameraController extends h3d.scene.Object {
 		curOffset.load(targetOffset);
 	}
 
-	override function onAlloc() {
-		super.onAlloc();
+	override function onAdd() {
+		super.onAdd();
 		scene = getScene();
 		scene.addEventListener(onEvent);
 		if( curOffset.w == 0 )
@@ -111,8 +111,8 @@ class CameraController extends h3d.scene.Object {
 		targetOffset.load(curOffset);
 	}
 
-	override function onDelete() {
-		super.onDelete();
+	override function onRemove() {
+		super.onRemove();
 		scene.removeEventListener(onEvent);
 		scene = null;
 	}

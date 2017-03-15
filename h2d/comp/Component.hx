@@ -77,15 +77,15 @@ class Component extends Sprite {
 		return v;
 	}
 
-	override function onDelete() {
+	override function onRemove() {
 		if( parentComponent != null ) {
 			parentComponent.components.remove(this);
 			parentComponent = null;
 		}
-		super.onDelete();
+		super.onRemove();
 	}
 
-	override function onAlloc() {
+	override function onAdd() {
 		// lookup our parent component
 		var old = parentComponent;
 		var p = parent;
@@ -98,14 +98,14 @@ class Component extends Sprite {
 					c.components.push(this);
 				}
 				needRebuild = true;
-				super.onAlloc();
+				super.onAdd();
 				return;
 			}
 			p = p.parent;
 		}
 		if( old != null ) old.components.remove(this);
 		parentComponent = null;
-		super.onAlloc();
+		super.onAdd();
 	}
 
 	public function addCss(cssString) {

@@ -539,16 +539,16 @@ class ColorPicker extends h2d.comp.Component {
 		return v;
 	}
 
-	override function onAlloc() {
-		super.onAlloc();
+	override function onAdd() {
+		super.onAdd();
 		if( timer == null ) {
 			timer = new haxe.Timer(10);
 			timer.run = doUpdate;
 		}
 	}
 
-	override function onDelete() {
-		super.onDelete();
+	override function onRemove() {
+		super.onRemove();
 		if( timer != null ) {
 			timer.stop();
 			timer = null;

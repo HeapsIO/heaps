@@ -185,13 +185,13 @@ class Editor extends h2d.Sprite implements Randomized {
 		emit.clear();
 	}
 
-	override function onAlloc() {
-		super.onAlloc();
+	override function onAdd() {
+		super.onAdd();
 		getScene().addEventListener(onEvent);
 	}
 
-	override function onDelete() {
-		super.onDelete();
+	override function onRemove() {
+		super.onRemove();
 		getScene().addEventListener(onEvent);
 	}
 

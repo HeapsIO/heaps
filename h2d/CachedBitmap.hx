@@ -22,9 +22,9 @@ class CachedBitmap extends Drawable {
 		}
 	}
 
-	override function onDelete() {
+	override function onRemove() {
 		clean();
-		super.onDelete();
+		super.onRemove();
 	}
 
 	function set_width(w) {
