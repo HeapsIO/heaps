@@ -287,15 +287,15 @@ class Object {
 		}
 		childs.insert(pos, o);
 		if( !allocated && o.allocated )
-			o.onDelete();
+			o.onRemove();
 		o.parent = this;
 		o.posChanged = true;
 		// ensure that proper alloc/delete is done if we change parent
 		if( allocated ) {
 			if( !o.allocated )
-				o.onAlloc();
+				o.onAdd();
 			else
-				o.onParentChangedRec();
+				o.onParentChanged();
 		}
 	}
 
@@ -310,33 +310,28 @@ class Object {
 			o.iterVisibleMeshes(callb);
 	}
 
-	function onParentChangedRec() {
-		onParentChanged();
-		for( c in childs )
-			c.onParentChangedRec();
-	}
-
-	// called when we're allocated already but moved in hierarchy
 	function onParentChanged() {
+		for( c in childs )
+			c.onParentChanged();
 	}
 
 	// kept for internal init
-	function onAlloc() {
+	function onAdd() {
 		allocated = true;
 		for( c in childs )
-			c.onAlloc();
+			c.onAdd();
 	}
 
 	// kept for internal cleanup
-	function onDelete() {
+	function onRemove() {
 		allocated = false;
 		for( c in childs )
-			c.onDelete();
+			c.onRemove();
 	}
 
 	public function removeChild( o : Object ) {
 		if( childs.remove(o) ) {
-			if( o.allocated ) o.onDelete();
+			if( o.allocated ) o.onRemove();
 			o.parent = null;
 			o.posChanged = true;
 		}
@@ -367,7 +362,10 @@ class Object {
 		throw this + " is not a Mesh";
 	}
 
-	// shortcut for parent.removeChild
+	/**
+		Same as parent.removeChild(this), but does nothing if parent is null.
+		In order to capture add/removal from scene, you can override onAdd/onRemove/onParentChanged
+	**/
 	public inline function remove() {
 		if( this != null && parent != null ) parent.removeChild(this);
 	}

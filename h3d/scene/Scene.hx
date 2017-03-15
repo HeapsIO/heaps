@@ -284,7 +284,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	public function render( engine : h3d.Engine ) {
 
 		if( !allocated )
-			onAlloc();
+			onAdd();
 
 		var t = engine.getCurrentTarget();
 		if( t == null )

@@ -137,8 +137,8 @@ class Graphics extends Drawable {
 		clear();
 	}
 
-	override function onDelete() {
-		super.onDelete();
+	override function onRemove() {
+		super.onRemove();
 		clear();
 	}
 

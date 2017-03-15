@@ -423,9 +423,9 @@ class TileGroup extends Drawable {
 		return content.triCount() >> 1;
 	}
 
-	override function onDelete() {
+	override function onRemove() {
 		content.dispose();
-		super.onDelete();
+		super.onRemove();
 	}
 
 	public function setDefaultColor( rgb : Int, alpha = 1.0 ) {

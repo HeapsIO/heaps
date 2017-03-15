@@ -27,11 +27,11 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		cursor = Button;
 	}
 
-	override function onAlloc() {
+	override function onAdd() {
 		this.scene = getScene();
 		if( scene != null ) scene.addEventTarget(this);
 		updateMask();
-		super.onAlloc();
+		super.onAdd();
 	}
 
 	override function draw( ctx : RenderContext ) {
@@ -44,6 +44,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	override function onParentChanged() {
+		super.onParentChanged();
 		if( scene != null ) {
 			scene.removeEventTarget(this);
 			scene.addEventTarget(this);
@@ -64,12 +65,12 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		}
 	}
 
-	override function onDelete() {
+	override function onRemove() {
 		if( scene != null ) {
 			scene.removeEventTarget(this, true);
 			scene = null;
 		}
-		super.onDelete();
+		super.onRemove();
 	}
 
 	function checkBounds( e : hxd.Event ) {

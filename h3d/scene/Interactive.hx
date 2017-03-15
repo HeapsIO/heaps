@@ -25,18 +25,18 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		cursor = Button;
 	}
 
-	override function onAlloc() {
+	override function onAdd() {
 		this.scene = getScene();
 		if( scene != null ) scene.addEventTarget(this);
-		super.onAlloc();
+		super.onAdd();
 	}
 
-	override function onDelete() {
+	override function onRemove() {
 		if( scene != null ) {
 			scene.removeEventTarget(this);
 			scene = null;
 		}
-		super.onDelete();
+		super.onRemove();
 	}
 
 	/**

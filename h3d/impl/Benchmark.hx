@@ -124,8 +124,8 @@ class Benchmark extends h2d.Graphics {
 		if( interact != null ) interact.width = interact.height = 0;
 	}
 
-	override function onDelete() {
-		super.onDelete();
+	override function onRemove() {
+		super.onRemove();
 		cleanup();
 	}
 

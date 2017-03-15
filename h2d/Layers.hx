@@ -39,7 +39,7 @@ class Layers extends Sprite {
 		for( i in 0...childs.length ) {
 			if( childs[i] == s ) {
 				childs.splice(i, 1);
-				if( s.allocated ) s.onDelete();
+				if( s.allocated ) s.onRemove();
 				s.parent = null;
 				var k = layerCount - 1;
 				while( k >= 0 && layersIndexes[k] > i ) {

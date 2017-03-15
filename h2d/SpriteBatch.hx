@@ -294,7 +294,8 @@ class SpriteBatch extends Drawable {
 		return new ElementsIterator(first);
 	}
 
-	override function onDelete()  {
+	override function onRemove()  {
+		super.onRemove();
 		if( buffer != null ) {
 			buffer.dispose();
 			buffer = null;

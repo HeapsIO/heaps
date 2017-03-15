@@ -13,11 +13,12 @@ class Mask extends Sprite {
 	}
 
 	override function onParentChanged() {
+		super.onParentChanged();
 		updateMask();
 	}
 
-	override function onAlloc() {
-		super.onAlloc();
+	override function onAdd() {
+		super.onAdd();
 		updateMask();
 	}
 

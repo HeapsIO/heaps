@@ -87,8 +87,8 @@ class Text extends Drawable {
 		updateConstraint();
 	}
 
-	override function onAlloc() {
-		super.onAlloc();
+	override function onAdd() {
+		super.onAdd();
 		rebuild();
 	}
 

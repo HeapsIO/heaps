@@ -221,7 +221,7 @@ class Sprite {
 			p = p.parent;
 		}
 		if( s.parent != null ) {
-			// prevent calling onDelete
+			// prevent calling onRemove
 			var old = s.allocated;
 			s.allocated = false;
 			s.parent.removeChild(s);
@@ -229,16 +229,16 @@ class Sprite {
 		}
 		childs.insert(pos, s);
 		if( !allocated && s.allocated )
-			s.onDelete();
+			s.onRemove();
 		s.parent = this;
 		s.parentContainer = parentContainer;
 		s.posChanged = true;
 		// ensure that proper alloc/delete is done if we change parent
 		if( allocated ) {
 			if( !s.allocated )
-				s.onAlloc();
+				s.onAdd();
 			else
-				s.onParentChangedRec();
+				s.onParentChanged();
 		}
 		onContentChanged();
 	}
@@ -247,28 +247,24 @@ class Sprite {
 		if( parentContainer != null ) parentContainer.contentChanged(this);
 	}
 
-	function onParentChangedRec() {
-		onParentChanged();
-		for( c in childs )
-			c.onParentChangedRec();
-	}
-
 	// called when we're allocated already but moved in hierarchy
 	function onParentChanged() {
+		for( c in childs )
+			c.onParentChanged();
 	}
 
 	// kept for internal init
-	function onAlloc() {
+	function onAdd() {
 		allocated = true;
 		for( c in childs )
-			c.onAlloc();
+			c.onAdd();
 	}
 
 	// kept for internal cleanup
-	function onDelete() {
+	function onRemove() {
 		allocated = false;
 		for( c in childs )
-			c.onDelete();
+			c.onRemove();
 	}
 
 	function getMatrix( m : h2d.col.Matrix ) {
@@ -282,7 +278,7 @@ class Sprite {
 
 	public function removeChild( s : Sprite ) {
 		if( childs.remove(s) ) {
-			if( s.allocated ) s.onDelete();
+			if( s.allocated ) s.onRemove();
 			s.parent = null;
 			if( s.parentContainer != null ) s.setParentContainer(null);
 			s.posChanged = true;
@@ -301,7 +297,10 @@ class Sprite {
 			removeChild( getChildAt(0) );
 	}
 
-	// shortcut for parent.removeChild
+	/**
+		Same as parent.removeChild(this), but does nothing if parent is null.
+		In order to capture add/removal from scene, you can override onAdd/onRemove/onParentChanged
+	**/
 	public inline function remove() {
 		if( this != null && parent != null ) parent.removeChild(this);
 	}

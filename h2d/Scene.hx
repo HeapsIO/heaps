@@ -351,7 +351,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	public function dispose() {
 		if( allocated )
-			onDelete();
+			onRemove();
 		ctx.dispose();
 	}
 
@@ -386,7 +386,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	override function sync( ctx : RenderContext ) {
 		if( !allocated )
-			onAlloc();
+			onAdd();
 		if( !fixedSize && (width != ctx.engine.width || height != ctx.engine.height) ) {
 			width = ctx.engine.width;
 			height = ctx.engine.height;
