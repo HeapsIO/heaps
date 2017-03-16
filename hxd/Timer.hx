@@ -9,6 +9,7 @@ class Timer {
 	public static var calc_tmod : Float = 1;
 	public static var tmod : Float = 1;
 	public static var deltaT : Float = 1;
+
 	static var frameCount = 0;
 
 	public static function update() {
@@ -17,14 +18,18 @@ class Timer {
 		deltaT = newTime - oldTime;
 		oldTime = newTime;
 		if( deltaT < maxDeltaTime )
-			calc_tmod = calc_tmod * tmod_factor + (1 - tmod_factor) * deltaT * wantedFPS;
+		{
+			calc_tmod = calc_tmod * tmod_factor + (1 - tmod_factor) * deltaT;
+		}
 		else
-			deltaT = 1 / wantedFPS;
+		{
+			calc_tmod = maxDeltaTime;
+		}
 		tmod = calc_tmod;
 	}
 
 	public inline static function fps() : Float {
-		return wantedFPS/calc_tmod;
+		return 1/calc_tmod;
 	}
 
 	public static function skip() {
