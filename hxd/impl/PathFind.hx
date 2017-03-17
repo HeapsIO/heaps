@@ -19,6 +19,9 @@ class PathFind {
 		bits = 0;
 		while( width >= 1 << bits )
 			bits++;
+		#if js
+		clear();
+		#end
 	}
 
 	public function clear() {
