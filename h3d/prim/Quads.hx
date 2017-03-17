@@ -12,11 +12,18 @@ class Quads extends Primitive {
 		this.uvs = uvs;
 		this.normals = normals;
 	}
-	
+
+	override public function getBounds() {
+		var b = new h3d.col.Bounds();
+		for( p in pts )
+			b.addPoint(p);
+		return b;
+	}
+
 	override function triCount() {
 		return pts.length * 2;
 	}
-	
+
 	override function vertexCount() {
 		return pts.length;
 	}
