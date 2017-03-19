@@ -95,6 +95,9 @@ class Key {
 	public static inline var MOUSE_WHEEL_UP = 2;
 	public static inline var MOUSE_WHEEL_DOWN = 3;
 
+	public static inline var LEFT_OSX_COMMAND = 91;
+	public static inline var RIGHT_OSX_COMMAND = 93;
+
 	/** a bit that is set for left keys **/
 	public static inline var LOC_LEFT = 256;
 	/** a bit that is set for right keys **/
