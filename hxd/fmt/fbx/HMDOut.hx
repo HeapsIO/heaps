@@ -319,6 +319,7 @@ class HMDOut extends BaseLibrary {
 				if( o2.model == m ) {
 					foundSkin.push(o);
 					o2.skin = o;
+					if( o.model == null ) o.model = m;
 					ignoreMissingObject(m.getName()); // make sure we don't store animation for the model (only skin object has one)
 					// copy parent
 					var p = o.parent;
