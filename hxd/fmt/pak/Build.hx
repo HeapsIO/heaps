@@ -14,7 +14,7 @@ class Build {
 			f.content = [];
 			for( name in sys.FileSystem.readDirectory(dir) ) {
 
-				if( name.charCodeAt(0) == ".".code ) continue;
+				if( name.charCodeAt(0) == ".".code || name.charCodeAt(0) == "_".code ) continue;
 
 				var s = buildRec(dir+"/"+name,path == "" ? name : path+"/"+name,out);
 				if( s != null ) f.content.push(s);
@@ -42,7 +42,7 @@ class Build {
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	static function getTemp( dir : String, path : String, ext : String ) {
 		var name = "R_" + invalidChars.replace(path, "_");
-		var f = dir.substr(0, dir.length - path.length)+".tmp/"+name+"."+ext;		
+		var f = dir.substr(0, dir.length - path.length)+".tmp/"+name+"."+ext;
 		if( !sys.FileSystem.exists(f) || sys.FileSystem.stat(f).mtime.getTime() < sys.FileSystem.stat(dir).mtime.getTime() ) {
 			switch( ext ) {
 			case "mp3":
@@ -137,7 +137,7 @@ class Build {
 	}
 
 	static function main() {
-		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.n") catch( e : Dynamic ) {};		
+		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.n") catch( e : Dynamic ) {};
 		var ext = haxe.macro.Compiler.getDefine("excludeExt");
 		excludedExt = ext == null ? [] : ext.split(",");
 		make(haxe.macro.Compiler.getDefine("resourcesPath"), null #if pakDiff, true #end);
