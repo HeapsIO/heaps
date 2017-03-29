@@ -308,7 +308,6 @@ class HLSocketInput extends SocketInput {
 			s.onError("Connection closed");
 			return;
 		}
-		//trace(">" + recvData.toBytes(recv).toHex());
 		var req = pos + len + recv;
 		if( req > size && pos >= (size >> 1) ) {
 			data.blit(0, data, pos, len);
@@ -343,10 +342,9 @@ class HLSocketInput extends SocketInput {
 	override function readBytes(s:haxe.io.Bytes, pos:Int, len:Int):Int {
 		if( pos < 0 || len < 0  || pos + len > s.length ) throw haxe.io.Error.OutsideBounds;
 		var max = len < this.len ? len : this.len;
-		@:privateAccess s.b.blit(pos, data, pos, max);
-		//trace("<" + s.sub(pos,len).toHex());
-		pos += max;
-		len -= max;
+		@:privateAccess s.b.blit(pos, data, this.pos, max);
+		this.pos += max;
+		this.len -= max;
 		return max;
 	}
 
