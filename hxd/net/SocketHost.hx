@@ -144,7 +144,13 @@ class SocketHost extends NetworkHost {
 		l.loadBytes(flash.Lib.current.loaderInfo.bytes, ctx);
 		win.activate();
 		#else
-		throw "Not implemented";
+		var args = Sys.args();
+		for( i in 0...args.length )
+			if( args[i] == "--host" )
+				args[i] = "--client";
+		var hlFile = @:privateAccess Sys.makePath(Sys.sys_hl_file());
+		args.unshift(hlFile);
+		new sys.io.Process("hl.exe", args);
 		#end
 	}
 
