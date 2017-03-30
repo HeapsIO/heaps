@@ -127,7 +127,7 @@ class SocketHost extends NetworkHost {
 		isAuth = true;
 	}
 
-	public static function openNewWindow( ?params : Dynamic<String> ) {
+	public static function openNewWindow( ?params : Array<String> ) {
 		#if (flash && air3)
 		var opt = new flash.display.NativeWindowInitOptions();
 		opt.renderMode = flash.display.NativeWindowRenderMode.DIRECT;
@@ -139,18 +139,13 @@ class SocketHost extends NetworkHost {
 		var ctx = new flash.system.LoaderContext(false, new flash.system.ApplicationDomain());
 		ctx.allowCodeImport = true;
 		win.stage.addChild(l);
-		if( params != null )
-			ctx.parameters = params;
 		l.loadBytes(flash.Lib.current.loaderInfo.bytes, ctx);
 		win.activate();
 		#else
-		var args = Sys.args();
-		for( i in 0...args.length )
-			if( args[i] == "--host" )
-				args[i] = "--client";
+		var args = params == null ? [] : params.copy();
 		var hlFile = @:privateAccess Sys.makePath(Sys.sys_hl_file());
 		args.unshift(hlFile);
-		new sys.io.Process("hl.exe", args);
+		new sys.io.Process("hl.exe", args, true);
 		#end
 	}
 
