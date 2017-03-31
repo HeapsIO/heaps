@@ -30,6 +30,12 @@ typedef VertexBuffer = { b : sdl.GL.Buffer, stride : Int };
 typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int };
 typedef DepthBuffer = { r : sdl.GL.Renderbuffer };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
+#elseif psgl
+typedef IndexBuffer = psgl.GL.Buffer;
+typedef VertexBuffer = { b : psgl.GL.Buffer, stride : Int };
+typedef Texture = { t : psgl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int };
+typedef DepthBuffer = { r : psgl.GL.Renderbuffer };
+typedef Query = { q : psgl.GL.Query, kind : QueryKind };
 #else
 typedef IndexBuffer = {};
 typedef VertexBuffer = {};

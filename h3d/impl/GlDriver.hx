@@ -4,7 +4,7 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import h3d.mat.Data;
 
-#if (js||cpp||hxsdl)
+#if (js||cpp||hxsdl||psgl)
 
 #if js
 import js.html.Uint16Array;
@@ -45,6 +45,15 @@ private typedef VertexArray = sdl.GL.VertexArray;
 #if cpp
 private typedef Float32Array = Array<cpp.Float32>;
 #end
+#elseif psgl
+import psgl.GL;
+private typedef Uniform = psgl.GL.Uniform;
+private typedef Program = psgl.GL.Program;
+private typedef GLShader = psgl.GL.Shader;
+private typedef Framebuffer = psgl.GL.Framebuffer;
+private typedef Texture = h3d.impl.Driver.Texture;
+private typedef Query = h3d.impl.Driver.Query;
+private typedef VertexArray = psgl.GL.VertexArray;
 #end
 
 private class CompiledShader {
@@ -83,7 +92,7 @@ private class CompiledProgram {
 }
 
 @:access(h3d.impl.Shader)
-#if (cpp||hxsdl)
+#if (cpp||hxsdl||psgl)
 @:build(h3d.impl.MacroHelper.replaceGL())
 #end
 class GlDriver extends Driver {
@@ -94,7 +103,7 @@ class GlDriver extends Driver {
 	public var gl : js.html.webgl.RenderingContext;
 	#end
 
-	#if hxsdl
+	#if (hxsdl||psgl)
 	var commonVA : VertexArray;
 	#end
 
@@ -337,8 +346,6 @@ class GlDriver extends Driver {
 			if( s.globals != null ) {
 				#if hl
 				gl.uniform4fv(s.globals, streamData(hl.Bytes.getArray(buf.globals.toData()), 0, s.shader.globalsSize * 16), 0, s.shader.globalsSize * 4);
-				#elseif hxsdl
-				gl.uniform4fv(s.globals, buf.globals.toData(), 0, s.shader.globalsSize * 4);
 				#else
 				var a = new Float32Array(buf.globals.toData()).subarray(0, s.shader.globalsSize * 4);
 				gl.uniform4fv(s.globals, a);
@@ -348,8 +355,6 @@ class GlDriver extends Driver {
 			if( s.params != null ) {
 				#if hl
 				gl.uniform4fv(s.params, streamData(hl.Bytes.getArray(buf.params.toData()), 0, s.shader.paramsSize * 16), 0, s.shader.paramsSize * 4);
-				#elseif hxsdl
-				gl.uniform4fv(s.params, buf.params.toData(), 0, s.shader.paramsSize * 4);
 				#else
 				var a = new Float32Array(buf.params.toData()).subarray(0, s.shader.paramsSize * 4);
 				gl.uniform4fv(s.params, a);
@@ -690,7 +695,7 @@ class GlDriver extends Driver {
 		if( m.size * m.stride == 0 ) throw "assert";
 		#if js
 		gl.bufferData(GL.ARRAY_BUFFER, m.size * m.stride * 4, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
-		#elseif hxsdl
+		#elseif hl
 		gl.bufferDataSize(GL.ARRAY_BUFFER, m.size * m.stride * 4, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#else
 		var tmp = new Uint8Array(m.size * m.stride * 4);
@@ -710,7 +715,7 @@ class GlDriver extends Driver {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
 		#if js
 		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, count * 2, GL.STATIC_DRAW);
-		#elseif hxsdl
+		#elseif hl
 		gl.bufferDataSize(GL.ELEMENT_ARRAY_BUFFER, count * 2, GL.STATIC_DRAW);
 		#else
 		var tmp = new Uint16Array(count);
@@ -742,7 +747,7 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-	#if (nme || hxsdl || openfl || lime)
+	#if (nme || hxsdl || psgl || openfl || lime)
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
@@ -763,7 +768,7 @@ class GlDriver extends Driver {
 	#end
 	}
 
-	#if !hxsdl
+	#if !(hxsdl || psgl)
 	inline static function bytesToUint8Array( b : haxe.io.Bytes ) : Uint8Array {
 		#if (lime && !js)
 		return new Uint8Array(b);
@@ -835,7 +840,7 @@ class GlDriver extends Driver {
 		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
 		gl.bindTexture(bind, t.t.t);
 		pixels.convert(t.format);
-		#if hxsdl
+		#if hl
 		pixels.setFlip(!cubic);
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, streamData(pixels.bytes.getData(),pixels.offset,pixels.width*pixels.height*4));
 		#elseif lime
@@ -851,7 +856,7 @@ class GlDriver extends Driver {
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
 		var stride : Int = v.stride;
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
-		#if hxsdl
+		#if hl
 		var data = #if hl hl.Bytes.getArray(buf.getNative()) #else buf.getNative() #end;
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(data,bufPos * 4,vertexCount * stride * 4), bufPos * 4 * STREAM_POS, vertexCount * stride * 4);
 		#else
@@ -865,7 +870,7 @@ class GlDriver extends Driver {
 	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		var stride : Int = v.stride;
 		gl.bindBuffer(GL.ARRAY_BUFFER, v.b);
-		#if hxsdl
+		#if hl
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(buf.getData(),bufPos * 4,vertexCount * stride * 4), bufPos * 4 * STREAM_POS, vertexCount * stride * 4);
 		#else
 		var buf = bytesToUint8Array(buf);
@@ -877,7 +882,7 @@ class GlDriver extends Driver {
 
 	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
-		#if hxsdl
+		#if hl
 		var data = #if hl hl.Bytes.getArray(buf.getNative()) #else buf.getNative() #end;
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(data,bufPos*2,indiceCount*2), bufPos * 2 * STREAM_POS, indiceCount * 2);
 		#else
@@ -891,7 +896,7 @@ class GlDriver extends Driver {
 
 	override function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
-		#if hxsdl
+		#if hl
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(buf.getData(),bufPos * 2, indiceCount * 2), bufPos * 2 * STREAM_POS, indiceCount * 2);
 		#else
 		var buf = bytesToUint8Array(buf);
@@ -1075,7 +1080,7 @@ class GlDriver extends Driver {
 
 	override function hasFeature( f : Feature ) : Bool {
 		return switch( f ) {
-		#if hxsdl
+		#if (hxsdl || psgl)
 		case StandardDerivatives, FloatTextures, MultipleRenderTargets, Queries:
 			true; // runtime extension detect required ?
 		#else
