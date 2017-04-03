@@ -48,7 +48,9 @@ class Socket {
 
 	public function new() {
 		out = new SocketOutput();
+		#if hl
 		hl.uv.Loop.register();
+		#end
 	}
 
 	public function set_timeout(t:Null<Float>) {
