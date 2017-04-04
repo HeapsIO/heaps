@@ -82,6 +82,8 @@ class ALSource {
 	// This seems related to some lag in NativeChannel creation and data delivery
 	static inline var STOP_DELAY = #if js 200 #else 0 #end;
 
+	public static var CHANNEL_BUFSIZE = 4096; /* 100 ms latency @44.1Khz */
+
 	static var ID = 0;
 	static var all = new Map<Int,ALSource>();
 
@@ -114,7 +116,7 @@ class ALSource {
 	public function play() {
 		if( chan == null ) {
 			playedTime = haxe.Timer.stamp() - currentSample / frequency;
-			chan = new ALChannel(this, 4096 /* 100 ms latency @44.1Khz */);
+			chan = new ALChannel(this, CHANNEL_BUFSIZE);
 		}
 	}
 
