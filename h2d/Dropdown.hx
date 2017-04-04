@@ -6,7 +6,7 @@ private class Fake extends Sprite {
 		super(dd);
 		this.dd = dd;
 	}
-	
+
 	override function getBoundsRec(relativeTo:Sprite, out:h2d.col.Bounds, forSize:Bool) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		if (dd.selectedItem >= 0) {
@@ -15,7 +15,7 @@ private class Fake extends Sprite {
 			addBounds(relativeTo, out, 0, 0, size.width, size.height);
 		}
 	}
-	
+
 	override function draw(ctx) {
 		if (dd.selectedItem >= 0) {
 			var item = @:privateAccess dd.items[dd.selectedItem];
@@ -34,28 +34,30 @@ class Dropdown extends Flow {
 	var items : Array<h2d.Sprite>;
 	var fake : Fake;
 	var cursor : h2d.Bitmap;
-	
+
+	public var canEdit : Bool = true;
 	public var dropdownCursor(get,set) : h2d.Tile;
 	public var dropdownList : Flow;
 	public var dropdownLayer : Int = -1;
 	public var selectedItem(default, set) : Int = -1;
 	public var highlightedItem(default, null) : Int = -1;
-	
+
 	public function new(?parent) {
 		super(parent);
-		
+
+		canEdit = true;
 		isVertical = false;
 		dropdownList = new Flow();
-		
+
 		cursor = new h2d.Bitmap(h2d.Tile.fromColor(0x3399FF, 0, 0), dropdownList);
 		dropdownList.getProperties(cursor).isAbsolute = true;
 		dropdownList.isVertical = true;
-		
+
 		fake = new Fake(this);
-		
+
 		items = [];
 		enableInteractive = true;
-		
+
 		interactive.onPush = function(e:hxd.Event) {
 			if( e.button == 0 )
 				interactive.focus();
@@ -71,17 +73,17 @@ class Dropdown extends Flow {
 				open();
 			}
 		}
-		
+
 		interactive.onFocusLost = function(e) {
-			if (highlightedItem >= 0) {
+			if (highlightedItem >= 0 && canEdit) {
 				selectedItem = highlightedItem;
 			}
 			close();
 		}
-		
+
 		dropdownList.enableInteractive = true;
 		dropdownList.interactive.onClick = function(e) {
-			selectedItem = highlightedItem;
+			if( canEdit ) selectedItem = highlightedItem;
 			close();
 		}
 		dropdownList.interactive.onMove = function(e : hxd.Event) {
@@ -115,7 +117,7 @@ class Dropdown extends Flow {
 		}
 		needReflow = true;
 	}
-	
+
 	public function addItem(s : Sprite) {
 		items.push(s);
 		dropdownList.addChild(s);
@@ -123,7 +125,7 @@ class Dropdown extends Flow {
 		if( maxWidth != null && width > maxWidth ) width = maxWidth;
 		minWidth = width;
 	}
-	
+
 	function set_selectedItem(s) {
 		if (s < 0) {
 			return selectedItem = -1;
@@ -136,34 +138,34 @@ class Dropdown extends Flow {
 		needReflow = true;
 		return selectedItem = s;
 	}
-	
+
 	public function open() {
 		getScene().add(dropdownList, dropdownLayer);
 		onOpen();
 	}
-	
+
 	public function close() {
 		dropdownList.remove();
 		onClose();
 	}
-	
+
 	public function get_dropdownCursor() {
 		return cursor.tile;
 	}
-	
+
 	public function set_dropdownCursor(c : h2d.Tile) {
 		return cursor.tile = c;
 	}
-	
+
 	public dynamic function onOpen() {
 	}
-	
+
 	public dynamic function onClose() {
 	}
-	
+
 	public dynamic function onOverItem(item : Sprite) {
 	}
-	
+
 	public dynamic function onOutItem(item : Sprite) {
 	}
 }
