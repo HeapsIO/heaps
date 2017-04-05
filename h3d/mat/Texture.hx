@@ -107,6 +107,14 @@ class Texture {
 		return t;
 	}
 
+	/**
+		In case of out of GPU memory, textures that hasn't been used for a long time will be disposed.
+		Calling this will make this texture not considered for auto disposal.
+	**/
+	public function preventAutoDispose() {
+		lastFrame = 0x7FFFFFFF;
+	}
+
 	function set_onLoaded(v) {
 		onLoaded = v;
 		if( v != null && !flags.has(Loading) ) v();
