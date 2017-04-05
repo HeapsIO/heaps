@@ -129,11 +129,20 @@ class Flow extends Sprite {
 	/**
 		Calculate the client width, which is the innner size of the flow without the borders and padding.
 	**/
-	public var clientWidth(get, never) : Int;
+	public var innerWidth(get, never) : Int;
 	/**
 		Calculate the client height, which is the innner size of the flow without the borders and padding.
 	**/
-	public var clientHeight(get, never) : Int;
+	public var innerHeight(get, never) : Int;
+
+	/**
+		Flow total width (inlcudes borders and paddings)
+	**/
+	public var outerWidth(get, never) : Int;
+	/**
+		Flow total height (inlcudes borders and paddings)
+	**/
+	public var outerHeight(get, never) : Int;
 
 	/**
 		By default, elements will be flowed horizontaly, then in several lines if maxWidth is reached.
@@ -271,12 +280,22 @@ class Flow extends Sprite {
 		return v;
 	}
 
-	function get_clientWidth() {
+	function get_outerWidth() {
+		if( needReflow ) reflow();
+		return Math.ceil(calculatedWidth);
+	}
+
+	function get_outerHeight() {
+		if( needReflow ) reflow();
+		return Math.ceil(calculatedHeight);
+	}
+
+	function get_innerWidth() {
 		if( needReflow ) reflow();
 		return Math.ceil(calculatedWidth) - (paddingLeft + paddingRight + borderWidth * 2);
 	}
 
-	function get_clientHeight() {
+	function get_innerHeight() {
 		if( needReflow ) reflow();
 		return Math.ceil(calculatedHeight) - (paddingTop + paddingBottom + borderHeight * 2);
 	}
@@ -794,7 +813,7 @@ class Flow extends Sprite {
 			}
 			if( paddingLeft != 0 || paddingRight != 0 || paddingTop != 0 || paddingBottom != 0 || borderWidth != 0 || borderHeight != 0 ) {
 				debugGraphics.lineStyle(1, 0x00FF00);
-				debugGraphics.drawRect(paddingLeft + borderWidth, paddingTop + borderHeight, clientWidth, clientHeight);
+				debugGraphics.drawRect(paddingLeft + borderWidth, paddingTop + borderHeight, innerWidth, innerHeight);
 			}
 			debugGraphics.lineStyle(1, 0x0080FF);
 			for( i in 0...childs.length ) {
