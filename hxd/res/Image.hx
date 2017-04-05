@@ -6,6 +6,10 @@ package hxd.res;
 	var Png = 1;
 	var Gif = 2;
 
+	#if flash
+	static var USE_PNG_NATIVE_DECODE = false;
+	#end
+
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
 		This for example occurs when we want to decode progressive JPG in JS.
@@ -15,6 +19,8 @@ package hxd.res;
 	inline function get_useAsyncDecode() {
 		#if hl
 		return false;
+		#elseif flash
+		return this == Jpg.toInt() || (USE_PNG_NATIVE_DECODE && this == Png.toInt());
 		#else
 		return this == Jpg.toInt();
 		#end
