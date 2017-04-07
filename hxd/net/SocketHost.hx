@@ -141,7 +141,7 @@ class SocketHost extends NetworkHost {
 		win.stage.addChild(l);
 		l.loadBytes(flash.Lib.current.loaderInfo.bytes, ctx);
 		win.activate();
-		#else
+		#elseif hl
 		var args = params == null ? [] : params.copy();
 		var hlFile = @:privateAccess Sys.makePath(Sys.sys_hl_file());
 		args.unshift(hlFile);

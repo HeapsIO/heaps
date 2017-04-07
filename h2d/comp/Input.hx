@@ -62,13 +62,13 @@ class Input extends Interactive {
 				if( ctrlDown ) {
 					switch( e.keyCode ) {
 					case "V".code:
-						var clip = hxd.System.getClipboard();
+						/*var clip = hxd.System.getClipboard();
 						if( clip != "" ) {
 							clip = clip.split("\t").join(" ").split("\r\n").join(" ").split("\r").join(" ").split("\n").join(" ");
 							value = value.substr(0, cursorPos) + clip + value.substr(cursorPos);
 							cursorPos += clip.length;
 							onChange(value);
-						}
+						}*/
 					default:
 					}
 					return;

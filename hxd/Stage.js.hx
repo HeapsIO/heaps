@@ -103,7 +103,7 @@ class Stage {
 	public function setFullScreen( v : Bool ) : Void {
 	}
 
-	static var inst = null;
+	static var inst : Stage = null;
 	public static function getInstance() : Stage {
 		if( inst == null ) inst = new Stage();
 		return inst;

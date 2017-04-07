@@ -259,7 +259,7 @@ class Stage {
 			addKey(sdl, keys.get(sdl));
 	}
 
-	static var inst = null;
+	static var inst : Stage = null;
 	public static function getInstance() : Stage {
 		return inst;
 	}
