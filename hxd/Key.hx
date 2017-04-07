@@ -92,8 +92,11 @@ class Key {
 
 	public static inline var MOUSE_LEFT = 0;
 	public static inline var MOUSE_RIGHT = 1;
-	public static inline var MOUSE_WHEEL_UP = 2;
-	public static inline var MOUSE_WHEEL_DOWN = 3;
+	public static inline var MOUSE_MIDDLE = 2;
+	public static inline var MOUSE_BACK = 3;
+	public static inline var MOUSE_FORWARD = 4;
+	public static inline var MOUSE_WHEEL_UP = 5;
+	public static inline var MOUSE_WHEEL_DOWN = 6;
 
 	/** a bit that is set for left keys **/
 	public static inline var LOC_LEFT = 256;
@@ -178,9 +181,9 @@ class Key {
 		case EKeyUp:
 			keyPressed[e.keyCode] = -getFrame();
 		case EPush:
-			if( e.button < 2 ) keyPressed[e.button] = getFrame();
+			if( e.button < 5 ) keyPressed[e.button] = getFrame();
 		case ERelease:
-			if( e.button < 2 ) keyPressed[e.button] = -getFrame();
+			if( e.button < 5 ) keyPressed[e.button] = -getFrame();
 		case EWheel:
 			keyPressed[e.wheelDelta > 0 ? MOUSE_WHEEL_DOWN : MOUSE_WHEEL_UP] = getFrame();
 		default:
