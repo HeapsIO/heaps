@@ -48,7 +48,7 @@ class Engine {
 		this.hardware = hardware;
 		this.antiAlias = aa;
 		this.autoResize = true;
-		fullScreen = !hxd.System.isWindowed;
+		fullScreen = !hxd.System.getValue(IsWindowed);
 		var stage = hxd.Stage.getInstance();
 		realFps = hxd.System.getDefaultFrameRate();
 		lastTime = haxe.Timer.stamp();
@@ -238,7 +238,7 @@ class Engine {
 
 	function set_fullScreen(v) {
 		fullScreen = v;
-		if( mem != null && hxd.System.isWindowed )
+		if( mem != null && hxd.System.getValue(IsWindowed) )
 			hxd.Stage.getInstance().setFullScreen(v);
 		return v;
 	}

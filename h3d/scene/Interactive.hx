@@ -3,7 +3,7 @@ package h3d.scene;
 class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
 	public var shape : h3d.col.Collider;
-	public var cursor(default,set) : hxd.System.Cursor;
+	public var cursor(default,set) : hxd.Cursor;
 	/**
 		Set the default `cancel` mode (see `hxd.Event`), default to false.
 	**/

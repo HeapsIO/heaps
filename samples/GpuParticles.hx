@@ -4,7 +4,8 @@ class GpuParticles extends SampleApp {
 	var group : h3d.parts.GpuParticles.GpuPartGroup;
 	var box : h3d.scene.Box;
 	var tf : h2d.Text;
-	var prevParts = 0;
+	var moving = false;
+	var time = 0.;
 
 	override function init() {
 		super.init();
@@ -36,6 +37,7 @@ class GpuParticles extends SampleApp {
 		addSlider("Gravity", function() return g.gravity, function(v) g.gravity = v, 0, 5);
 		addCheck("Sort", function() return g.sortMode == Dynamic, function(v) g.sortMode = v ? Dynamic : None);
 		addCheck("Loop", function() return g.emitLoop, function(v) { g.emitLoop = v; if( !v ) parts.currentTime = 0; });
+		addCheck("Move", function() return moving, function(v) moving = v);
 
 		parts.onEnd = function() {
 			engine.backgroundColor = 0xFF000080;
@@ -54,6 +56,11 @@ class GpuParticles extends SampleApp {
 
 	override function update(dt:Float) {
 
+		if( moving ) {
+			time += dt * 0.01;
+			parts.x = Math.cos(time) * 5;
+			parts.y = Math.sin(time) * 5;
+		}
 
 		if( engine.backgroundColor&0xFFFFFF > 0 )
 			engine.backgroundColor -= 8;

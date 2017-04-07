@@ -4,7 +4,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	public var width : Float;
 	public var height : Float;
-	public var cursor(default,set) : hxd.System.Cursor;
+	public var cursor(default,set) : hxd.Cursor;
 	public var isEllipse : Bool;
 	/**
 		Set the default `cancel` mode (see `hxd.Event`), default to false.

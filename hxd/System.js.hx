@@ -26,18 +26,46 @@ class System {
 
 	static var loopFunc : Void -> Void;
 
+	// JS
+	static var loopInit = false;
+
 	public static function getCurrentLoop() : Void -> Void {
 		return loopFunc;
 	}
 
 	public static function setLoop( f : Void -> Void ) : Void {
+		if( !loopInit ) {
+			loopInit = true;
+			browserLoop();
+		}
 		loopFunc = f;
 	}
 
+	static function browserLoop() {
+		var window : Dynamic = js.Browser.window;
+		var rqf : Dynamic = window.requestAnimationFrame ||
+			window.webkitRequestAnimationFrame ||
+			window.mozRequestAnimationFrame;
+		rqf(browserLoop);
+		if( loopFunc != null ) loopFunc();
+	}
+
 	public static function start( callb : Void -> Void ) : Void {
+		callb();
 	}
 
 	public static function setNativeCursor( c : Cursor ) : Void {
+		var canvas = Stage.getCanvas();
+		if( canvas != null ) {
+			canvas.style.cursor = switch( c ) {
+			case Default: "default";
+			case Button: "pointer";
+			case Move: "move";
+			case TextInput: "text";
+			case Hide: "none";
+			case Custom(_): throw "Custom cursor not supported";
+			};
+		}
 	}
 
 	public static function getDeviceName() : String {
@@ -57,8 +85,8 @@ class System {
 
 	// getters
 
-	static function get_width() : Int return 0;
-	static function get_height() : Int return 0;
+	static function get_width() : Int return Math.round(js.Browser.document.body.clientWidth * js.Browser.window.devicePixelRatio);
+	static function get_height() : Int return Math.round(js.Browser.document.body.clientHeight  * js.Browser.window.devicePixelRatio);
 	static function get_lang() : String return "en";
 	static function get_platform() : Platform return PC;
 	static function get_screenDPI() : Int return 72;
