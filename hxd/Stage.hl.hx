@@ -14,8 +14,10 @@ class Stage {
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 
+	#if !psgl
 	var window : sdl.Window;
 	var fullScreenMode : sdl.Window.DisplayMode = Borderless;
+	#end
 	var windowWidth = 800;
 	var windowHeight = 600;
 	var curMouseX = 0;
@@ -30,7 +32,9 @@ class Stage {
 		this.windowHeight = height;
 		eventTargets = new List();
 		resizeEvents = new List();
+		#if !psgl
 		window = new sdl.Window(title, width, height);
+		#end
 	}
 
 	public dynamic function onClose() : Bool {
@@ -72,11 +76,15 @@ class Stage {
 	}
 
 	public function resize( width : Int, height : Int ) : Void {
+		#if !psgl
 		window.resize(width, height);
+		#end
 	}
 
 	public function setFullScreen( v : Bool ) : Void {
+		#if !psgl
 		window.displayMode = v ? fullScreenMode : Windowed;
+		#end
 	}
 
 	function get_mouseX() : Int {
@@ -98,6 +106,21 @@ class Stage {
 	function get_mouseLock() : Bool {
 		return false;
 	}
+
+	function set_mouseLock(v:Bool) : Bool {
+		if( v ) throw "Not implemented";
+		return false;
+	}
+
+	#if psgl
+
+	function get_vsync() : Bool return true;
+
+	function set_vsync( b : Bool ) : Bool {
+		return true;
+	}
+
+	#else
 
 	function get_vsync() : Bool return window.vsync;
 
@@ -180,13 +203,6 @@ class Stage {
 		if( eh != null ) event(eh);
 	}
 
-
-	function set_mouseLock(v:Bool) : Bool {
-		if( v ) throw "Not implemented";
-		return false;
-	}
-
-
 	static function initChars() : Void {
 
 		inline function addKey(sdl, keyCode, charCode=0) {
@@ -258,6 +274,7 @@ class Stage {
 		for( sdl in keys.keys() )
 			addKey(sdl, keys.get(sdl));
 	}
+	#end
 
 	static var inst : Stage = null;
 	public static function getInstance() : Stage {

@@ -41,10 +41,19 @@ class System {
 
 	static function mainLoop() : Void {
 		if( loopFunc != null ) loopFunc();
+		#if psgl
+		psgl.Api.present();
+		#else
 		@:privateAccess hxd.Stage.inst.window.present();
+		#end
 	}
 
 	public static function start( init : Void -> Void ) : Void {
+		#if psgl
+		if( !psgl.Api.init() ) return;
+		@:privateAccess Stage.inst = new Stage("", psgl.Api.width, psgl.Api.height);
+		init();
+		#else
 		sdl.Sdl.tick();
 		sdl.Sdl.init();
 		var width = 800;
@@ -62,10 +71,12 @@ class System {
 		@:privateAccess Stage.inst = new Stage(title, width, height);
 		init();
 		sdl.Sdl.defaultEventHandler = @:privateAccess Stage.inst.onEvent;
+		#end
 		haxe.MainLoop.add(mainLoop);
 	}
 
 	public static function setNativeCursor( c : Cursor ) : Void {
+		#if !psgl
 		if( c.equals(currentNativeCursor) )
 			return;
 		currentNativeCursor = c;
@@ -103,10 +114,15 @@ class System {
 			cursorVisible = true;
 			sdl.Cursor.show(true);
 		}
+		#end
 	}
 
 	public static function getDeviceName() : String {
+		#if psgl
+		return psgl.Api.name;
+		#else
 		return "PC/" + sdl.Sdl.getDevices()[0];
+		#end
 	}
 
 	public static function getDefaultFrameRate() : Float {
@@ -115,8 +131,10 @@ class System {
 
 	public static function getValue( s : SystemValue ) : Bool {
 		return switch( s ) {
+		#if !psgl
 		case IsWindowed:
 			return true;
+		#end
 		default:
 			return false;
 		}
@@ -144,9 +162,9 @@ class System {
 
 	// getters
 
-	static function get_width() : Int return sdl.Sdl.getScreenWidth();
-	static function get_height() : Int return sdl.Sdl.getScreenHeight();
-	static function get_platform() : Platform return PC;
+	static function get_width() : Int return #if psgl psgl.Api.width #else sdl.Sdl.getScreenWidth() #end;
+	static function get_height() : Int return #if psgl psgl.Api.height #else sdl.Sdl.getScreenHeight() #end;
+	static function get_platform() : Platform return #if psgl Console #else PC #end;
 	static function get_screenDPI() : Int return 72; // TODO : SDL ?
 
 }
