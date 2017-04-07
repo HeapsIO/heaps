@@ -133,7 +133,7 @@ class Stage {
 		return b;
 	}
 
-	function onEvent( e : sdl.Event ) : Void {
+	function onEvent( e : sdl.Event ) : Bool {
 		var eh = null;
 		switch( e.type ) {
 		case WindowState:
@@ -203,9 +203,12 @@ class Stage {
 				((c & 0x1F) << 12) | (((e.keyCode >> 8) & 0x7F) << 6) | ((e.keyCode >> 16) & 0x7F);
 			else
 				((c & 0x0F) << 18) | (((e.keyCode >> 8) & 0x7F) << 12) | (((e.keyCode >> 16) & 0x7F) << 6) | ((e.keyCode >> 24) & 0x7F);
+		case Quit:
+			return onClose();
 		default:
 		}
 		if( eh != null ) event(eh);
+		return true;
 	}
 
 	static function initChars() : Void {
