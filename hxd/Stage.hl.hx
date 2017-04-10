@@ -7,10 +7,10 @@ class Stage {
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
 
-	public var width(get, null) : Int;
-	public var height(get, null) : Int;
-	public var mouseX(get, null) : Int;
-	public var mouseY(get, null) : Int;
+	public var width(get, never) : Int;
+	public var height(get, never) : Int;
+	public var mouseX(get, never) : Int;
+	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 
@@ -141,8 +141,8 @@ class Stage {
 			default:
 			}
 		case MouseDown:
-			mouseX = e.mouseX;
-			mouseY = e.mouseY;
+			curMouseX = e.mouseX;
+			curMouseY = e.mouseY;
 			eh = new Event(EPush, e.mouseX, e.mouseY);
 			// middle button -> 2 / right button -> 1
 			eh.button = switch( e.button - 1 ) {
@@ -152,8 +152,8 @@ class Stage {
 			case x: x;
 			}
 		case MouseUp:
-			mouseX = e.mouseX;
-			mouseY = e.mouseY;
+			curMouseX = e.mouseX;
+			curMouseY = e.mouseY;
 			eh = new Event(ERelease, e.mouseX, e.mouseY);
 			eh.button = switch( e.button - 1 ) {
 			case 0: 0;
@@ -162,8 +162,8 @@ class Stage {
 			case x: x;
 			};
 		case MouseMove:
-			mouseX = e.mouseX;
-			mouseY = e.mouseY;
+			curMouseX = e.mouseX;
+			curMouseY = e.mouseY;
 			eh = new Event(EMove, e.mouseX, e.mouseY);
 		case KeyDown:
 			eh = new Event(EKeyDown);

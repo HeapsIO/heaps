@@ -5,10 +5,10 @@ class Stage {
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
 
-	public var width(get, null) : Int;
-	public var height(get, null) : Int;
-	public var mouseX(get, null) : Int;
-	public var mouseY(get, null) : Int;
+	public var width(get, never) : Int;
+	public var height(get, never) : Int;
+	public var mouseX(get, never) : Int;
+	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 
