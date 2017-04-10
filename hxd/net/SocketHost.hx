@@ -127,26 +127,4 @@ class SocketHost extends NetworkHost {
 		isAuth = true;
 	}
 
-	public static function openNewWindow( ?params : Array<String> ) {
-		#if (flash && air3)
-		var opt = new flash.display.NativeWindowInitOptions();
-		opt.renderMode = flash.display.NativeWindowRenderMode.DIRECT;
-		var win = new flash.display.NativeWindow(opt);
-		win.width += flash.Lib.current.stage.stageWidth - win.stage.stageWidth;
-		win.height += flash.Lib.current.stage.stageHeight - win.stage.stageHeight;
-		win.title = "Client";
-		var l = new flash.display.Loader();
-		var ctx = new flash.system.LoaderContext(false, new flash.system.ApplicationDomain());
-		ctx.allowCodeImport = true;
-		win.stage.addChild(l);
-		l.loadBytes(flash.Lib.current.loaderInfo.bytes, ctx);
-		win.activate();
-		#elseif hl
-		var args = params == null ? [] : params.copy();
-		var hlFile = @:privateAccess Sys.makePath(Sys.sys_hl_file());
-		args.unshift(hlFile);
-		new sys.io.Process("hl.exe", args, true);
-		#end
-	}
-
 }
