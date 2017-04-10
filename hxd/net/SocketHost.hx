@@ -74,9 +74,9 @@ class SocketHost extends NetworkHost {
 		isAuth = false;
 	}
 
-	public function dispose() {
+	override function dispose() {
+		super.dispose();
 		close();
-		if( NetworkHost.current == this ) NetworkHost.current = null;
 	}
 
 	function close() {
