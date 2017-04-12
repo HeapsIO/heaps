@@ -17,7 +17,7 @@ class BitmapFont extends Resource {
 		var tile = loader.load(entry.path.substr(0, -3) + "png").toTile();
 		var name = entry.path, size = 0, lineHeight = 0, glyphs = new Map();
 		switch( entry.getSign() ) {
-		case 0x6D783F3C: // <?xm : XML file
+		case 0x6D783F3C: // <?xml : XML file
 			var xml = Xml.parse(entry.getBytes().toString());
 			// support only the FontBuilder/Divo format
 			// export with FontBuilder https://github.com/andryblack/fontbuilder/downloads
@@ -37,6 +37,25 @@ class BitmapFont extends Resource {
 					glyphs.set(Std.parseInt(code.substr(2,code.length-3)), fc);
 				else
 					glyphs.set(c.att.code.charCodeAt(0), fc);
+			}
+		case 0x6E6F663C:
+			// support for Littera XML format (starts with <font>)
+			// http://kvazars.com/littera/
+			var xml = Xml.parse(entry.getBytes().toString());
+			var xml = new haxe.xml.Fast(xml.firstElement());
+			size = Std.parseInt(xml.node.info.att.size);
+			lineHeight = Std.parseInt(xml.node.common.att.lineHeight);
+			name = xml.node.info.att.face;
+			var chars = xml.node.chars.elements;
+			for( c in chars) {
+				var t = tile.sub(Std.parseInt(c.att.x), Std.parseInt(c.att.y), Std.parseInt(c.att.width), Std.parseInt(c.att.height), Std.parseInt(c.att.xoffset), Std.parseInt(c.att.yoffset));
+				var fc = new h2d.Font.FontChar(t, Std.parseInt(c.att.width) - 1);
+				var kerns = xml.node.kernings.elements;
+				for (k in kerns) 
+					if (k.att.second == c.att.id)
+						fc.addKerning(Std.parseInt(k.att.first), Std.parseInt(k.att.amount));
+				
+				glyphs.set(Std.parseInt(c.att.id), fc);
 			}
 		case sign:
 			throw "Unknown font signature " + StringTools.hex(sign, 8);
