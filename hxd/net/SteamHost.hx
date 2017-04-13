@@ -63,7 +63,7 @@ class SteamClient extends NetworkClient {
 
 	override function stop() {
 		super.stop();
-		Sys.println("CLOSE " + user);
+		//Sys.println("CLOSE " + user);
 		steam.Networking.closeSession(user);
 	}
 
@@ -161,6 +161,10 @@ class SteamHost extends NetworkHost {
 		if( !isAuth && user == server ) {
 			onConnected(false);
 			return;
+		}
+		if( isAuth ) {
+			var c = getClient(user);
+			if( c != null ) c.stop();
 		}
 	}
 
