@@ -1,9 +1,9 @@
 package hxd.snd.effect;
 
 #if hlopenal
-typedef AL = openal.AL;
+private typedef AL = openal.AL;
 #else
-typedef AL = hxd.snd.ALEmulator;
+private typedef AL = hxd.snd.ALEmulator;
 #end
 
 class Spatialization extends hxd.snd.Effect {
