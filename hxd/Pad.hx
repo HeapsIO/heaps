@@ -1,7 +1,23 @@
 package hxd;
 
+#if hl
+#if hlsdl
+import sdl.Event;
+import sdl.GameController;
+#elseif psgl
+import psgl.GameController;
+#else
+private typedef Event = {
+}
+private class GameController {
+	public var name : String;
+}
+#end
+#end
+
 class Pad {
 
+	#if flash
 	public static var CONFIG_XBOX = {
 		analogX : 0,
 		analogY : 1,
@@ -25,7 +41,12 @@ class Pad {
 		dpadRight : 19,
 		names : ["LX","LY","RX","RY","A","B","X","Y","LB","RB","LT","RT","Select","Start","LCLK","RCLK","DUp","DDown","DLeft","DRight"],
 	};
-	
+	#end
+
+	#if hlsdl
+	/**
+		Works with both DualShock and XBox controllers
+	**/
 	public static var CONFIG_SDL = {
 		analogX : 0,
 		analogY : 1,
@@ -49,7 +70,45 @@ class Pad {
 		dpadRight : 20,
 		names : ["LX","LY","RX","RY","LT","RT","A","B","X","Y","Select","Guide","Start","LCLK","RCLK","LB","RB","DUp","DDown","DLeft","DRight"],
 	};
+	#elseif psgl
 
+	public static var CONFIG_PS4 = {
+
+		// unused
+		start : 0,
+		back : 0,
+		// ----
+
+		analogX : 16,
+		analogY : 17,
+		ranalogX : 18,
+		ranalogY : 19,
+
+		A : 14,
+		B : 13,
+		X : 15,
+		Y : 12,
+		LB : 10,
+		RB : 11,
+		LT : 8,
+		RT : 9,
+		analogClick : 1,
+		ranalogClick : 2,
+		options : 3, // only on PS4
+		dpadUp : 4,
+		dpadDown : 6,
+		dpadLeft : 7,
+		dpadRight : 5,
+		names : [null,null,"LCLK","RCLK","Option","DUp","DRight","DDown","DLeft","L2","R2","L1","R1","Triangle","Circle","Cross","Square","LX","LY","RX","RY","Touchpad"],
+	};
+
+	#end
+
+	public static var DEFAULT_CONFIG =
+		#if hlsdl CONFIG_SDL
+		#elseif psgl CONFIG_PS4
+		#elseif flash CONFIG_XBOX
+		#else {} #end;
 
 	public var connected(default, null) = true;
 	public var name(get, never) : String;
@@ -58,7 +117,7 @@ class Pad {
 	public var yAxis : Float = 0.;
 	public var buttons : Array<Bool> = [];
 	public var values : Array<Float> = [];
-	
+
 	public dynamic function onDisconnect(){
 	}
 
@@ -67,7 +126,7 @@ class Pad {
 
 	function get_name() {
 		if( index < 0 ) return "Dummy GamePad";
-		#if (flash || hlsdl)
+		#if (flash || hl)
 		return d.name;
 		#else
 		return "GamePad";
@@ -89,8 +148,8 @@ class Pad {
 	static var initDone = false;
 	static var inst : flash.ui.GameInput;
 	static var pads : Array<hxd.Pad> = [];
-	#elseif hlsdl
-	var d : sdl.GameController;
+	#elseif hl
+	var d : GameController;
 	static var waitPad : Pad -> Void;
 	static var initDone = false;
 	static var pads : Map<Int, hxd.Pad> = new Map();
@@ -167,40 +226,46 @@ class Pad {
 			});
 			var count = flash.ui.GameInput.numDevices; // necessary to trigger added
 		}
-		#elseif hlsdl
+		#elseif (hlsdl || psgl)
 		waitPad = onPad;
 		if( !initDone ) {
 			initDone = true;
-			var c = @:privateAccess sdl.GameController.gctrlCount();
+			#if psgl
+			haxe.MainLoop.add(syncPads);
+			#end
+			var c = @:privateAccess GameController.gctrlCount();
 			for( idx in 0...c )
 				initPad( idx );
 		}
 		#end
 	}
-	
+
+	#if hl
+	inline function _setButton( btnId : Int, down : Bool ){
+		buttons[ btnId ] = down;
+		values[ btnId ] = down ? 1 : 0;
+	}
+	#end
+
 	#if hlsdl
+
 	inline function _setAxis( axisId : Int, value : Int ){
 		var v = value / 0x7FFF;
-		
+
 		// Invert Y axis
 		if( axisId == 1 || axisId == 3 )
 			values[ axisId ] = -v;
 		else
 			values[ axisId ] = v;
-		
+
 		if( axisId == 0 )
 			xAxis = v;
 		else if( axisId == 1 )
 			yAxis = v;
 	}
-	
-	inline function _setButton( btnId : Int, down : Bool ){
-		buttons[ btnId+6 ] = down;
-		values[ btnId+6 ] = down ? 1 : 0;
-	}
-	
+
 	static function initPad( index ){
-		var sp = new sdl.GameController( index );
+		var sp = new GameController( index );
 		if( @:privateAccess sp.ptr == null )
 			return;
 		var p = new hxd.Pad();
@@ -213,8 +278,8 @@ class Pad {
 			p._setButton( button, sp.getButton(button) );
 		waitPad( p );
 	}
-	
-	static function onEvent( e : sdl.Event ){
+
+	static function onEvent( e : Event ){
 		var p = pads.get( e.controller );
 		switch( e.type ){
 			case GControllerAdded:
@@ -229,17 +294,56 @@ class Pad {
 				}
 			case GControllerDown:
 				if( p != null && e.button > -1 )
-					p._setButton( e.button, true );
+					p._setButton( e.button + 6, true );
 			case GControllerUp:
 				if( p != null && e.button > -1 )
-					p._setButton( e.button, false );
+					p._setButton( e.button + 6, false );
 			case GControllerAxis:
 				if( p != null && e.button > -1 && e.button < 6 )
 					p._setAxis( e.button, e.value );
 			default:
 		}
-		
+
 	}
+	#elseif psgl
+
+	function sync() {
+		var s = d.getState();
+		if( s == null )
+			return;
+		var k = s.buttons;
+		for( i in 1...21 )
+			_setButton(i, k & (1 << i) != 0);
+		for( i in 0...4 )
+			values[16 + i] = (s.getAxis(i) - 0.5) * 2;
+		xAxis = values[16];
+		yAxis = values[17];
+		if( buttons[4] ) yAxis = -1;
+		if( buttons[6] ) yAxis = 1;
+		if( buttons[7] ) xAxis = -1;
+		if( buttons[5] ) xAxis = 1;
+		// L2 / R2
+		values[8] = s.getAxis(5);
+		values[9] = s.getAxis(6);
+	}
+
+	static function syncPads() {
+		for( p in pads )
+			p.sync();
+	}
+
+	static function initPad( index ) {
+		var sp = new GameController( index );
+		if( @:privateAccess sp.ptr < 0 )
+			return;
+		var p = new hxd.Pad();
+		p.index = index;
+		p.d = sp;
+		p.sync();
+		pads.set( p.index, p );
+		waitPad( p );
+	}
+
 	#end
 
 }
