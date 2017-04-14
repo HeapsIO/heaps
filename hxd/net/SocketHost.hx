@@ -36,7 +36,7 @@ class SocketClient extends NetworkClient {
 		if( s != null )
 			s.onData = function() {
 				// process all pending messages
-				while( readData(socket.input, socket.input.available) ) {
+				while( socket != null && readData(socket.input, socket.input.available) ) {
 				}
 			}
 	}
