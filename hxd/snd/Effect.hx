@@ -1,30 +1,39 @@
 package hxd.snd;
 
+@:allow(hxd.snd.Driver)
+@:allow(hxd.snd.ChannelBase)
 class Effect {
+	var refs : Int;
+	
+	var allocated (get, never) : Bool;
+	inline function get_allocated() return refs > 0;
 
-	/**
-		Audible gain used to estimate wether the channel should be cutoff or not
-	**/
-	public var gain (get, set) : Float;
+	function new() { 
+		refs = 0;
+	}
 
-	function get_gain() return 1.0;
-	function set_gain(v) {
-		throw "cannot set the gain on this effect";
+	// used to evaluate gain midification for virtualization sorting
+	public function applyAudibleGainModifier(v : Float) : Float {
 		return v;
 	}
 
-	function new() { }
-
-
-	/**
-		Actual volume change to be performed on channel.
-	**/
+	// used to tweak channel volume after virtualization sorting
 	public function getVolumeModifier() : Float {
 		return 1;
 	}
 
-	function apply( channel : Channel, source : Driver.Source ) {
-		throw this+" is not supported on this platform";
+	inline function incRefs() {
+		if (refs++ == 0) onAlloc();
 	}
 
+	inline function decRefs() {
+		if (refs == 0) return;
+		if (--refs == 0) onDelete();
+	}
+
+	function onAlloc () { }
+	function onDelete() { }
+
+	function apply   (source : Driver.Source) { }
+	function unapply (source : Driver.Source) { }
 }
