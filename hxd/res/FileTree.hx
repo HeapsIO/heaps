@@ -125,7 +125,7 @@ class FileTree {
 
 		switch( ext.toLowerCase() ) {
 		case "wav" if( options.compressSounds ):
-			if( options.compressAsMp3 || !Context.defined("stb_ogg_sound") ) {
+			if( options.compressAsMp3 ) {
 				var tmp = options.tmpDir + name + ".mp3";
 				if( getTime(tmp) < getTime(fullPath) ) {
 					Sys.println("Converting " + relPath);

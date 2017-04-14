@@ -1,6 +1,6 @@
 package hxd.snd;
 
-#if hl
+#if (hl && !psgl)
 typedef AL = openal.AL;
 private typedef ALC = openal.ALC;
 private typedef ALSource = openal.AL.Source;
@@ -157,7 +157,7 @@ class Driver {
 		stopAll();
 
 		inline function arrayBytes(a:Array<Int>) {
-			#if hl
+			#if (hl && !psgl)
 			return hl.Bytes.getArray(a);
 			#else
 			var b = haxe.io.Bytes.alloc(a.length * 4);
