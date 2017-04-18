@@ -207,15 +207,20 @@ class Stage {
 	function onKeyUp(e:flash.events.KeyboardEvent) {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
-		ev.charCode = getCharCode(e);
 		event(ev);
 	}
 
 	function onKeyDown(e:flash.events.KeyboardEvent) {
 		var ev = new Event(EKeyDown, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
-		ev.charCode = getCharCode(e);
 		event(ev);
+
+		var charCode = getCharCode(e);
+		if( charCode != 0 ) {
+			var ev = new Event(ETextInput, mouseX, mouseY);
+			ev.charCode = charCode;
+			event(ev);
+		}
 
 		// prevent escaping fullscreen in air
 		if( e.keyCode == flash.ui.Keyboard.ESCAPE ) e.preventDefault();

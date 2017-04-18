@@ -25,7 +25,6 @@ class Stage {
 	var shiftDown : Bool;
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
-	static var CHARMAP = [for( i in 0...2048 ) 0];
 
 	function new(title:String, width:Int, height:Int) {
 		this.windowWidth = width;
@@ -169,11 +168,6 @@ class Stage {
 			eh = new Event(EKeyDown);
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
-			eh.charCode = CHARMAP[e.keyCode];
-			if( eh.charCode == ":".code && shiftDown )
-				eh.charCode = "/".code;
-			if( eh.charCode >= 'a'.code && eh.charCode <= 'z'.code && shiftDown )
-				eh.charCode += 'A'.code - 'a'.code;
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
 				if( e.keyCode == K.SHIFT ) shiftDown = true;
@@ -183,11 +177,6 @@ class Stage {
 			eh = new Event(EKeyUp);
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
-			eh.charCode = CHARMAP[e.keyCode];
-			if( eh.charCode == ":".code && shiftDown )
-				eh.charCode = "/".code;
-			if( eh.charCode >= 'a'.code && eh.charCode <= 'z'.code && shiftDown )
-				eh.charCode += 'A'.code - 'a'.code;
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
 				if( e.keyCode == K.SHIFT ) shiftDown = false;
@@ -198,6 +187,17 @@ class Stage {
 			eh.wheelDelta = -e.wheelDelta;
 		case GControllerAdded, GControllerRemoved, GControllerUp, GControllerDown, GControllerAxis:
 			@:privateAccess hxd.Pad.onEvent( e );
+		case TextInput:
+			eh = new Event(ETextInput, mouseX, mouseY);
+			var c = e.keyCode & 0xFF;
+			eh.charCode = if( c < 0x7F )
+				c;
+			else if( c < 0xE0 )
+				((c & 0x3F) << 6) | ((e.keyCode >> 8) & 0x7F);
+			else if( c < 0xF0 )
+				((c & 0x1F) << 12) | (((e.keyCode >> 8) & 0x7F) << 6) | ((e.keyCode >> 16) & 0x7F);
+			else
+				((c & 0x0F) << 18) | (((e.keyCode >> 8) & 0x7F) << 12) | (((e.keyCode >> 16) & 0x7F) << 6) | ((e.keyCode >> 24) & 0x7F);
 		default:
 		}
 		if( eh != null ) event(eh);
@@ -205,38 +205,26 @@ class Stage {
 
 	static function initChars() : Void {
 
-		inline function addKey(sdl, keyCode, charCode=0) {
+		inline function addKey(sdl, keyCode) {
 			CODEMAP[sdl] = keyCode;
-			if( charCode != 0 ) CHARMAP[sdl] = charCode;
 		}
 
-		/*
-			SDL 2.0 does not allow to get the charCode from a key event.
-			let's for now do a simple mapping, even if not very efficient
-		*/
-
 		// ASCII
-		CHARMAP[K.BACKSPACE] = 8;
-		CHARMAP[K.TAB] = 9;
-		CHARMAP[K.ENTER] = 13;
-		for( i in 32...127 )
-			CHARMAP[i] = i;
 		for( i in 0...26 )
 			addKey(97 + i, K.A + i);
 		for( i in 0...12 )
 			addKey(1058 + i, K.F1 + i);
 
 		// NUMPAD
-
-		addKey(1084, K.NUMPAD_DIV, "/".code);
-		addKey(1085, K.NUMPAD_MULT, "*".code);
-		addKey(1086, K.NUMPAD_SUB, "-".code);
-		addKey(1087, K.NUMPAD_ADD, "+".code);
-		addKey(1088, K.NUMPAD_ENTER, 13);
+		addKey(1084, K.NUMPAD_DIV);
+		addKey(1085, K.NUMPAD_MULT);
+		addKey(1086, K.NUMPAD_SUB);
+		addKey(1087, K.NUMPAD_ADD);
+		addKey(1088, K.NUMPAD_ENTER);
 		for( i in 0...9 )
-			addKey(1089 + i, K.NUMPAD_1 + i, "1".code + i);
-		addKey(1098, K.NUMPAD_0, "0".code);
-		addKey(1099, K.NUMPAD_DOT, ".".code);
+			addKey(1089 + i, K.NUMPAD_1 + i);
+		addKey(1098, K.NUMPAD_0);
+		addKey(1099, K.NUMPAD_DOT);
 
 		// EXTRA
 		var keys = [

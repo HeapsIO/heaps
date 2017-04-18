@@ -87,7 +87,7 @@ class Console extends h2d.Sprite {
 				if( logDY > logTxt.textHeight ) logDY = logTxt.textHeight;
 				e.propagate = false;
 			}
-		case EKeyDown:
+		case ETextInput:
 			if( e.charCode == shortKeyChar && !bg.visible )
 				show();
 		default:

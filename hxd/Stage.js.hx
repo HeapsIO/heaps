@@ -36,6 +36,7 @@ class Stage {
 		js.Browser.window.addEventListener("mousewheel", onMouseWheel);
 		js.Browser.window.addEventListener("keydown", onKeyDown);
 		js.Browser.window.addEventListener("keyup", onKeyUp);
+		js.Browser.window.addEventListener("keypress", onKeyPress);
 		canvas.addEventListener("mousedown", function(e) {
 			onMouseDown(e);
 			e.stopPropagation();
@@ -168,13 +169,17 @@ class Stage {
 	function onKeyUp(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
-		ev.charCode = e.charCode;
 		event(ev);
 	}
 
 	function onKeyDown(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyDown, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
+		event(ev);
+	}
+
+	function onKeyPress(e:js.html.KeyboardEvent) {
+		var ev = new Event(ETextInput, mouseX, mouseY);
 		ev.charCode = e.charCode;
 		event(ev);
 	}

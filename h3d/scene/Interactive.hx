@@ -96,6 +96,8 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 			onKeyDown(e);
 		case ECheck:
 			onCheck(e);
+		case ETextInput:
+			onTextInput(e);
 		}
 	}
 
@@ -158,6 +160,9 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	}
 
 	public dynamic function onCheck( e : hxd.Event ) {
+	}
+
+	public dynamic function onTextInput( e : hxd.Event ) {
 	}
 
 }

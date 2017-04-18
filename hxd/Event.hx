@@ -12,6 +12,7 @@ enum EventKind {
 	EKeyDown;
 	EKeyUp;
 	EReleaseOutside;
+	ETextInput;
 	/**
 		Used to check if we are still on the interactive if no EMove was triggered this frame.
 	**/
@@ -49,7 +50,8 @@ class Event {
 		case EPush, ERelease, EReleaseOutside: ",button=" + button;
 		case EMove, EOver, EOut, EFocus, EFocusLost, ECheck: "";
 		case EWheel: ",wheelDelta=" + wheelDelta;
-		case EKeyDown, EKeyUp: ",keyCode=" + keyCode+",charCode=" + charCode;
+		case EKeyDown, EKeyUp: ",keyCode=" + keyCode;
+		case ETextInput: ",charCode=" + charCode;
 		}
 	}
 

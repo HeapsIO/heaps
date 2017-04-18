@@ -70,96 +70,12 @@ class TextInput extends Text {
 			}
 		};
 		interactive.onKeyDown = function(e:hxd.Event) {
-
 			onKeyDown(e);
-
-			if( e.cancel || cursorIndex < 0 )
-				return;
-
-			var oldIndex = cursorIndex;
-			var oldText = text;
-
-			switch( e.keyCode ) {
-			case K.LEFT:
-				if( cursorIndex > 0 )
-					cursorIndex--;
-			case K.RIGHT:
-				if( cursorIndex < text.length )
-					cursorIndex++;
-			case K.HOME:
-				cursorIndex = 0;
-			case K.END:
-				cursorIndex = text.length;
-			case K.BACKSPACE, K.DELETE if( selectionRange != null ):
-				if( !canEdit ) return;
-				beforeChange();
-				cutSelection();
-				onChange();
-			case K.DELETE:
-				if( cursorIndex < text.length && canEdit ) {
-					beforeChange();
-					text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1);
-					onChange();
-				}
-			case K.BACKSPACE:
-				if( cursorIndex > 0 && canEdit ) {
-					beforeChange();
-					cursorIndex--;
-					text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1);
-					onChange();
-				}
-			case K.ENTER, K.NUMPAD_ENTER:
-				cursorIndex = -1;
-				interactive.blur();
-				return;
-			case K.Z if( K.isDown(K.CTRL) ):
-				if( undo.length > 0 && canEdit ) {
-					redo.push(curHistoryState());
-					setState(undo.pop());
-				}
-				return;
-			case K.Y if( K.isDown(K.CTRL) ):
-				if( redo.length > 0 && canEdit ) {
-					undo.push(curHistoryState());
-					setState(redo.pop());
-				}
-				return;
-			default:
-				if( e.charCode != 0 && canEdit ) {
-					beforeChange();
-					if( selectionRange != null )
-						cutSelection();
-					text = text.substr(0, cursorIndex) + String.fromCharCode(e.charCode) + text.substr(cursorIndex);
-					cursorIndex++;
-					onChange();
-				}
-			}
-
-			cursorBlink = 0.;
-
-			if( K.isDown(K.SHIFT) && text == oldText ) {
-
-				if( cursorIndex == oldIndex ) return;
-
-				if( selectionRange == null )
-					selectionRange = oldIndex < cursorIndex ? { start : oldIndex, length : cursorIndex - oldIndex } : { start : cursorIndex, length : oldIndex - cursorIndex };
-				else if( oldIndex == selectionRange.start ) {
-					selectionRange.length += oldIndex - cursorIndex;
-					selectionRange.start = cursorIndex;
-				} else
-					selectionRange.length += cursorIndex - oldIndex;
-
-				if( selectionRange.length == 0 )
-					selectionRange = null;
-				else if( selectionRange.length < 0 ) {
-					selectionRange.start += selectionRange.length;
-					selectionRange.length = -selectionRange.length;
-				}
-				selectionSize = 0;
-
-			} else
-				selectionRange = null;
-
+			handleKey(e);
+		};
+		interactive.onTextInput = function(e:hxd.Event) {
+			onTextInput(e);
+			handleKey(e);
 		};
 		interactive.onFocusLost = function(e) {
 			cursorIndex = -1;
@@ -191,6 +107,101 @@ class TextInput extends Text {
 		interactive.cursor = TextInput;
 
 		addChildAt(interactive, 0);
+	}
+
+	function handleKey( e : hxd.Event ) {
+		if( e.cancel || cursorIndex < 0 )
+			return;
+
+		var oldIndex = cursorIndex;
+		var oldText = text;
+
+		switch( e.keyCode ) {
+		case K.LEFT:
+			if( cursorIndex > 0 )
+				cursorIndex--;
+		case K.RIGHT:
+			if( cursorIndex < text.length )
+				cursorIndex++;
+		case K.HOME:
+			cursorIndex = 0;
+		case K.END:
+			cursorIndex = text.length;
+		case K.BACKSPACE, K.DELETE if( selectionRange != null ):
+			if( !canEdit ) return;
+			beforeChange();
+			cutSelection();
+			onChange();
+		case K.DELETE:
+			if( cursorIndex < text.length && canEdit ) {
+				beforeChange();
+				text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1);
+				onChange();
+			}
+		case K.BACKSPACE:
+			if( cursorIndex > 0 && canEdit ) {
+				beforeChange();
+				cursorIndex--;
+				text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1);
+				onChange();
+			}
+		case K.ENTER, K.NUMPAD_ENTER:
+			cursorIndex = -1;
+			interactive.blur();
+			return;
+		case K.Z if( K.isDown(K.CTRL) ):
+			if( undo.length > 0 && canEdit ) {
+				redo.push(curHistoryState());
+				setState(undo.pop());
+			}
+			return;
+		case K.Y if( K.isDown(K.CTRL) ):
+			if( redo.length > 0 && canEdit ) {
+				undo.push(curHistoryState());
+				setState(redo.pop());
+			}
+			return;
+		default:
+			if( e.kind == EKeyDown )
+				return;
+			if( e.charCode != 0 && canEdit ) {
+
+				if( !font.hasChar(e.charCode) ) return; // don't allow chars not supported by font
+
+				beforeChange();
+				if( selectionRange != null )
+					cutSelection();
+				text = text.substr(0, cursorIndex) + String.fromCharCode(e.charCode) + text.substr(cursorIndex);
+				cursorIndex++;
+				onChange();
+			}
+		}
+
+		cursorBlink = 0.;
+
+		if( K.isDown(K.SHIFT) && text == oldText ) {
+
+			if( cursorIndex == oldIndex ) return;
+
+			if( selectionRange == null )
+				selectionRange = oldIndex < cursorIndex ? { start : oldIndex, length : cursorIndex - oldIndex } : { start : cursorIndex, length : oldIndex - cursorIndex };
+			else if( oldIndex == selectionRange.start ) {
+				selectionRange.length += oldIndex - cursorIndex;
+				selectionRange.start = cursorIndex;
+			} else
+				selectionRange.length += cursorIndex - oldIndex;
+
+			if( selectionRange.length == 0 )
+				selectionRange = null;
+			else if( selectionRange.length < 0 ) {
+				selectionRange.start += selectionRange.length;
+				selectionRange.length = -selectionRange.length;
+			}
+			selectionSize = 0;
+
+		} else
+			selectionRange = null;
+
 	}
 
 	function cutSelection() {
@@ -346,6 +357,9 @@ class TextInput extends Text {
 	}
 
 	public dynamic function onKeyUp(e:hxd.Event) {
+	}
+
+	public dynamic function onTextInput(e:hxd.Event) {
 	}
 
 	public dynamic function onFocus(e:hxd.Event) {
