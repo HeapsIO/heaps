@@ -4,6 +4,18 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 #end
 
+abstract NoArg({}) {
+}
+
+abstract Key<T>(String) {
+	public function new( id : String, f : T -> String ) {
+		this = id;
+	}
+	public function getID() : String {
+		return this;
+	}
+}
+
 class DynamicText {
 
 	public static function parse( data : String ) : Dynamic {
@@ -210,6 +222,21 @@ class DynamicText {
 		return null;
 	}
 
+	public static function makeID( path : String, ident : Expr ) {
+		var ipath = haxe.macro.ExprTools.toString(ident);
+		var path = (path + "." + ipath).split(".");
+		var pos = Context.currentPos();
+		var epath : Expr = { expr : EConst(CIdent(path.shift())), pos : pos };
+		while( path.length > 0 )
+			epath = { expr : EField(epath, path.shift()), pos : pos };
+		switch( Context.typeof(epath) ) {
+		case TFun(_):
+			return macro new hxd.res.DynamicText.Key($v{ipath}, function(args) return $epath(args));
+		default:
+			return macro new hxd.res.DynamicText.Key<hxd.res.DynamicText.NoArg>($v{ipath}, function(args) return $epath);
+		}
+	}
+
 	public static function build( file : String ) {
 		var path = FileTree.resolvePath();
 		var fullPath = path + "/" + file;
@@ -253,7 +280,11 @@ class DynamicText {
 		var c = macro class {
 			static var DATA : Dynamic = null;
 			public static inline function resolve( key : String ) : Dynamic {
-				return Reflect.field(DATA, key);
+				var path = key.split(".");
+				var value : Dynamic = DATA;
+				while( path.length > 0 )
+					value = Reflect.field(value, path.shift());
+				return value;
 			}
 			public static function load( data : String ) {
 				DATA = hxd.res.DynamicText.parse(data);
