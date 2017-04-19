@@ -6,10 +6,6 @@ package hxd.res;
 	var Png = 1;
 	var Gif = 2;
 
-	#if flash
-	static var USE_PNG_NATIVE_DECODE = false;
-	#end
-
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
 		This for example occurs when we want to decode progressive JPG in JS.
@@ -19,8 +15,6 @@ package hxd.res;
 	inline function get_useAsyncDecode() {
 		#if hl
 		return false;
-		#elseif flash
-		return this == Jpg.toInt() || (USE_PNG_NATIVE_DECODE && this == Png.toInt());
 		#else
 		return this == Jpg.toInt();
 		#end
@@ -37,6 +31,11 @@ class Image extends Resource {
 	**/
 	public static var ALLOW_NPOT = #if (flash && !flash11_8) false #else true #end;
 	public static var DEFAULT_FILTER : h3d.mat.Data.Filter = Linear;
+	
+	/**
+		Forces async decoding for images if available on the target platform.
+	**/
+	public static var DEFAULT_ASYNC = false;
 
 	var tex : h3d.mat.Texture;
 	var inf : { width : Int, height : Int, format : ImageFormat };
@@ -207,7 +206,7 @@ class Image extends Resource {
 	}
 
 	function loadTexture() {
-		if( !getFormat().useAsyncDecode ) {
+		if( !getFormat().useAsyncDecode && !DEFAULT_ASYNC ) {
 			function load() {
 				// immediately loading the PNG is faster than going through loadBitmap
 				tex.alloc();
