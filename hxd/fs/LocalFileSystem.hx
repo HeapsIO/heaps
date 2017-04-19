@@ -223,7 +223,9 @@ private class LocalEntry extends FileEntry {
 			onLoaded(new hxd.fs.LoadedBitmap(content.bitmapData));
 			loader.unload();
 		});
-		loader.load(new flash.net.URLRequest(file.url));
+		var ctx = new flash.system.LoaderContext();
+		ctx.imageDecodingPolicy = ON_LOAD;
+		loader.load(new flash.net.URLRequest(file.url), ctx);
 		#else
 		var bmp = new hxd.res.Image(this).toBitmap();
 		onLoaded(new hxd.fs.LoadedBitmap(bmp));

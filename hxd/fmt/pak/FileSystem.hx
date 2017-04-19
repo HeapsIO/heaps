@@ -141,7 +141,9 @@ private class PakEntry extends FileEntry {
 			onLoaded(new hxd.fs.LoadedBitmap(content.bitmapData));
 			loader.unload();
 		});
-		loader.loadBytes(openedBytes.getData());
+		var ctx = new flash.system.LoaderContext();
+		ctx.imageDecodingPolicy = ON_LOAD;
+		loader.loadBytes(openedBytes.getData(), ctx);
 		openedBytes = null;
 		#else
 		super.loadBitmap(onLoaded);
