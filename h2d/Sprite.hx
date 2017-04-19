@@ -137,8 +137,11 @@ class Sprite {
 			return;
 		}
 
+		var r = relativeTo.matA * relativeTo.matD - relativeTo.matB * relativeTo.matC;
+		if( r == 0 )
+			return;
 
-		var det = 1 / (relativeTo.matA * relativeTo.matD - relativeTo.matB * relativeTo.matC);
+		var det = 1 / r;
 		var rA = relativeTo.matD * det;
 		var rB = -relativeTo.matB * det;
 		var rC = -relativeTo.matC * det;
