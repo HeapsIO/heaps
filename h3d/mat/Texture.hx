@@ -38,16 +38,10 @@ class Texture {
 
 	var lastFrame : Int;
 	var bits : Int;
+	var waitLoads : Array<Void -> Void>;
 	public var mipMap(default,set) : MipMap;
 	public var filter(default,set) : Filter;
 	public var wrap(default, set) : Wrap;
-
-	/**
-		Some textures might take some time to load. You can check flags.has(Loading)
-		or bind onLoaded which will get called either immediately if the texture is already loaded
-		or when loading is complete.
-	**/
-	public var onLoaded(default, set) : Void -> Void;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when
@@ -115,10 +109,18 @@ class Texture {
 		lastFrame = 0x7FFFFFFF;
 	}
 
-	function set_onLoaded(v) {
-		onLoaded = v;
-		if( v != null && !flags.has(Loading) ) v();
-		return v;
+	/**
+		Some textures might take some time to load. You can check flags.has(Loading)
+		or add a waitLoad callback which will get called either immediately if the texture is already loaded
+		or when loading is complete.
+	**/
+	public function waitLoad( f : Void -> Void ) {
+		if( !flags.has(Loading) ) {
+			f();
+			return;
+		}
+		if( waitLoads == null ) waitLoads = [];
+		waitLoads.push(f);
 	}
 
 	function toString() {
