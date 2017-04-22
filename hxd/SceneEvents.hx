@@ -249,7 +249,7 @@ class SceneEvents {
 					currentDrag.f(e);
 					e.relX = ox;
 					e.relY = oy;
-					if( e.cancel )
+					if( !e.cancel )
 						continue;
 				}
 
