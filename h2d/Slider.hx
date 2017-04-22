@@ -8,7 +8,7 @@ class Slider extends h2d.Interactive {
 	public var maxValue(default, set) : Float = 1;
 	public var value(default, set) : Float = 0;
 
-	public function new(?width:Int, ?height:Int, ?parent) {
+	public function new(?width:Int = 50, ?height:Int = 10, ?parent) {
 		super(width, height, parent);
 
 		tile = h2d.Tile.fromColor(0x808080, width, 4);
@@ -42,6 +42,8 @@ class Slider extends h2d.Interactive {
 
 	override function draw(ctx:RenderContext) {
 		super.draw(ctx);
+		if( tile.width != Std.int(width) )
+			tile.setSize(Std.int(width), tile.height);
 		emitTile(ctx, tile);
 		var px = Math.round( (value - minValue) * (width - cursorTile.width) / (maxValue - minValue) ) - cursorTile.dx;
 		cursorTile.dx += px;
