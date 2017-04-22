@@ -257,7 +257,10 @@ class TextInput extends Text {
 
 	override function initGlyphs(text:hxd.UString, rebuild = true, handleAlign = true, lines:Array<Int> = null):Void {
 		super.initGlyphs(text, rebuild, handleAlign, lines);
-		if( rebuild ) this.calcWidth += cursorTile.width; // cursor end pos
+		if( rebuild ) {
+			this.calcWidth += cursorTile.width; // cursor end pos
+			if( inputWidth != null && this.calcWidth > inputWidth ) this.calcWidth = inputWidth;
+		}
 	}
 
 	function textPos( x : Float, y : Float ) {
