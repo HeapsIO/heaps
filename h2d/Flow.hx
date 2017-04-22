@@ -42,6 +42,11 @@ class FlowProperties {
 		this.elt = elt;
 	}
 
+	public inline function align(vertical, horizontal) {
+		this.verticalAlign = vertical;
+		this.horizontalAlign = horizontal;
+	}
+
 	function set_isAbsolute(a) {
 		if( a ) @:privateAccess elt.constraintSize( -1, -1); // remove constraint
 		return isAbsolute = a;
@@ -399,6 +404,12 @@ class Flow extends Sprite {
 			needReflow = true;
 			properties.splice(index, 1);
 			s.constraintSize( -1, -1); // remove constraint
+		}
+		if( s != null ) {
+			if( s == background )
+				backgroundTile = null;
+			if( s == interactive )
+				enableInteractive = false;
 		}
 	}
 
