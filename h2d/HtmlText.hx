@@ -147,6 +147,8 @@ class HtmlText extends Text {
 					switch( a.toLowerCase() ) {
 					case "color":
 						if( prevColor == null ) prevColor = @:privateAccess glyphs.curColor.clone();
+						if( v.charCodeAt(0) == '#'.code && v.length == 4 )
+							v = "#" + v.charAt(1) + v.charAt(1) + v.charAt(2) + v.charAt(2) + v.charAt(3) + v.charAt(3);
 						glyphs.setDefaultColor(Std.parseInt("0x" + v.substr(1)));
 					case "opacity":
 						if( prevColor == null ) prevColor = @:privateAccess glyphs.curColor.clone();
