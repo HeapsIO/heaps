@@ -610,12 +610,7 @@ class Sprite {
 
 		var prev = final;
 		final = filter.draw(ctx, final);
-		if( final == null ) {
-			ctx.popTarget();
-			ctx.popFilter();
-			return;
-		}
-		if( final != prev ) {
+		if( final != prev && final != null ) {
 			final.dx += xMin;
 			final.dy += yMin;
 		}
@@ -625,6 +620,9 @@ class Sprite {
 
 		ctx.popTarget();
 		ctx.popFilter();
+
+		if( final == null )
+			return;
 
 		ctx.globalAlpha = oldAlpha * alpha;
 		emitTile(ctx, final);
