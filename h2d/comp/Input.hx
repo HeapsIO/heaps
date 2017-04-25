@@ -7,7 +7,7 @@ class Input extends Interactive {
 	var tf : h2d.Text;
 	var cursor : h2d.Bitmap;
 	var cursorPos(default, set) : Int;
-	public var filter = true;
+	public var smooth = true;
 	public var value(default, set) : String;
 
 	public function new(?parent) {
@@ -116,7 +116,7 @@ class Input extends Interactive {
 			tf.font = getFont();
 			tf.textColor = style.color;
 			tf.text = value;
-			tf.filter = filter;
+			tf.smooth = smooth;
 			textAlign(tf);
 			contentWidth = tf.textWidth;
 			contentHeight = tf.textHeight;

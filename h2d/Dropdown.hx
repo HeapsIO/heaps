@@ -35,7 +35,7 @@ class Dropdown extends Flow {
 	var fake : Fake;
 	var cursor : h2d.Bitmap;
 
-	public var canEdit : Bool = true;
+	public var canEdit(default,set) : Bool = true;
 	public var dropdownCursor(get,set) : h2d.Tile;
 	public var dropdownList : Flow;
 	public var dropdownLayer : Int = -1;
@@ -59,13 +59,13 @@ class Dropdown extends Flow {
 		enableInteractive = true;
 
 		interactive.onPush = function(e:hxd.Event) {
-			if( e.button == 0 )
+			if( e.button == 0 && canEdit )
 				interactive.focus();
 		}
 		interactive.onClick = function(e) {
 			if (dropdownList.allocated) {
 				close();
-			} else {
+			} else if( canEdit ) {
 				var bds = this.getBounds();
 				dropdownList.y = bds.yMax;
 				dropdownList.x = bds.xMin;
@@ -124,6 +124,11 @@ class Dropdown extends Flow {
 		var width = Std.int(dropdownList.getSize().width);
 		if( maxWidth != null && width > maxWidth ) width = maxWidth;
 		minWidth = width;
+	}
+
+	function set_canEdit(b) {
+		if( !b ) close();
+		return canEdit = b;
 	}
 
 	function set_selectedItem(s) {

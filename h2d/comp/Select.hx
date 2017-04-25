@@ -132,7 +132,7 @@ class Select extends Interactive {
 			tf.font = getFont();
 			tf.textColor = style.color;
 			tf.text = options[selectedIndex] == null ? "" : options[selectedIndex].label;
-			tf.filter = true;
+			tf.smooth = true;
 			contentWidth = tf.textWidth;
 			contentHeight = tf.textHeight;
 		}

@@ -246,11 +246,16 @@ class SceneEvents {
 				}
 
 				if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
+					e.propagate = false;
+					e.cancel = false;
 					currentDrag.f(e);
 					e.relX = ox;
 					e.relY = oy;
-					if( !e.cancel )
+					if( e.cancel || e.propagate ) {
+						e.cancel = false;
+						e.propagate = false;
 						continue;
+					}
 				}
 
 				emitEvent(e);

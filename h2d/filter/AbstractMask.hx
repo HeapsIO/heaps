@@ -5,6 +5,11 @@ class Hide extends Filter {
 	public var frame : Int;
 	public var input : h2d.Tile;
 
+	public function new() {
+		super();
+		this.boundsExtend = 1;
+	}
+
 	override function draw( ctx : RenderContext, input : h2d.Tile ) {
 		this.frame = ctx.frame;
 		this.input = input;
@@ -19,6 +24,7 @@ class AbstractMask extends Filter {
 	var maskMatrix : h2d.col.Matrix;
 	var tmpMatrix : h2d.col.Matrix;
 	var obj : h2d.Sprite;
+	var bindCount : Int;
 	public var mask(default, set) : h2d.Sprite;
 
 	function new(mask) {
@@ -29,12 +35,31 @@ class AbstractMask extends Filter {
 		tmpMatrix = new h2d.col.Matrix();
 	}
 
+	override function bind(s:Sprite) {
+		bindCount++;
+		if( bindCount == 1 )
+			this.mask = mask;
+	}
+
+	override function unbind(s:Sprite) {
+		bindCount--;
+		if( bindCount == 0 )
+			this.mask = mask;
+	}
+
 	function set_mask(m:h2d.Sprite) {
-		if( mask != null )
-			mask.filters.remove(hide);
+		if( mask != null ) {
+			if( mask.filter == hide )
+				mask.filter = null;
+		}
 		mask = m;
-		if( m != null )
-			m.filters.push(hide);
+		if( m != null && bindCount > 0 ) {
+			if( m.filter != null ) {
+				if( Std.is(m.filter,Hide) ) throw "Same mask can't be part of several filters";
+				throw "Can't set mask with filter "+m.filter;
+			}
+			m.filter = hide;
+		}
 		hide.input = null;
 		return m;
 	}

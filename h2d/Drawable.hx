@@ -4,7 +4,7 @@ class Drawable extends Sprite {
 
 	public var color(default,null) : h3d.Vector;
 	public var blendMode : BlendMode;
-	public var filter : Null<Bool>;
+	public var smooth : Null<Bool>;
 	public var tileWrap(default, set) : Bool;
 	public var colorKey(default, set) : Null<Int>;
 	public var colorMatrix(get, set) : Null<h3d.Matrix>;

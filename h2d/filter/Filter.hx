@@ -12,6 +12,12 @@ class Filter {
 	public function sync( ctx : RenderContext, s : Sprite ) {
 	}
 
+	public function bind( s : Sprite ) {
+	}
+
+	public function unbind( s : Sprite ) {
+	}
+
 	public function getBounds( s : Sprite, bounds : h2d.col.Bounds ) {
 		s.getBounds(s, bounds);
 		bounds.xMin -= boundsExtend;

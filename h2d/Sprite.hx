@@ -20,7 +20,7 @@ class Sprite {
 	public var name : String;
 	public var alpha : Float = 1.;
 
-	public var filters : Array<h2d.filter.Filter>;
+	public var filter(default,set) : h2d.filter.Filter;
 
 	var matA : Float;
 	var matB : Float;
@@ -39,7 +39,6 @@ class Sprite {
 		posChanged = parent != null;
 		visible = true;
 		childs = [];
-		filters = [];
 		if( parent != null )
 			parent.addChild(this);
 	}
@@ -81,6 +80,13 @@ class Sprite {
 		}
 		out.offset( -x, -y);
 		return out;
+	}
+
+	function set_filter(f) {
+		if( filter != null && allocated ) filter.unbind(this);
+		filter = f;
+		if( f != null && allocated ) f.bind(this);
+		return f;
 	}
 
 	function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
@@ -259,6 +265,8 @@ class Sprite {
 	// kept for internal init
 	function onAdd() {
 		allocated = true;
+		if( filter != null )
+			filter.bind(this);
 		for( c in childs )
 			c.onAdd();
 	}
@@ -266,6 +274,8 @@ class Sprite {
 	// kept for internal cleanup
 	function onRemove() {
 		allocated = false;
+		if( filter != null )
+			filter.unbind(this);
 		for( c in childs )
 			c.onRemove();
 	}
@@ -541,14 +551,12 @@ class Sprite {
 		var bounds = ctx.tmpBounds;
 		var total = new h2d.col.Bounds();
 		var maxExtent = -1.;
-		for( f in filters ) {
-			f.sync(ctx, this);
-			if( f.autoBounds ) {
-				if( f.boundsExtend > maxExtent ) maxExtent = f.boundsExtend;
-			} else {
-				f.getBounds(this, bounds);
-				total.addBounds(bounds);
-			}
+		filter.sync(ctx, this);
+		if( filter.autoBounds ) {
+			maxExtent = filter.boundsExtend;
+		} else {
+			filter.getBounds(this, bounds);
+			total.addBounds(bounds);
 		}
 		if( maxExtent >= 0 ) {
 			getBounds(this, bounds);
@@ -599,17 +607,16 @@ class Sprite {
 		var final = h2d.Tile.fromTexture(t);
 		final.dx = xMin;
 		final.dy = yMin;
-		for( f in filters ) {
-			var prev = final;
-			final = f.draw(ctx, final);
-			if( final == null ) {
-				ctx.popTarget();
-				return;
-			}
-			if( final != prev ) {
-				final.dx += xMin;
-				final.dy += yMin;
-			}
+
+		var prev = final;
+		final = filter.draw(ctx, final);
+		if( final == null ) {
+			ctx.popTarget();
+			return;
+		}
+		if( final != prev ) {
+			final.dx += xMin;
+			final.dy += yMin;
 		}
 
 		shader.filterMatrixA.load(oldA);
@@ -635,7 +642,7 @@ class Sprite {
 				c.posChanged = true;
 			posChanged = false;
 		}
-		if( filters.length > 0 ) {
+		if( filter != null ) {
 			drawFilters(ctx);
 		} else {
 			var old = ctx.globalAlpha;

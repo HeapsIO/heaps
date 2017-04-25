@@ -9,7 +9,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var bufPos : Int;
 	public var textures : h3d.impl.TextureCache;
 	public var scene : h2d.Scene;
-	public var defaultFilter : Bool = false;
+	public var defaultSmooth : Bool = false;
 	public var killAlpha : Bool;
 	public var front2back : Bool;
 
@@ -239,7 +239,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( texture == null ) texture = h3d.mat.Texture.fromColor(0xFF00FF);
 		baseShader.texture = texture;
 		var f = currentObj.filter;
-		texture.filter = (currentObj.filter == null ? defaultFilter : currentObj.filter) ? Linear : Nearest;
+		texture.filter = (currentObj.filter == null ? defaultSmooth : currentObj.smooth) ? Linear : Nearest;
 		texture.wrap = currentObj.tileWrap ? Repeat : Clamp;
 		var blend = currentObj.blendMode;
 		if( inFilter == currentObj  && blend == Erase ) blend = Add; // add THEN erase

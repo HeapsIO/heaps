@@ -27,7 +27,7 @@ class Label extends Component {
 			tf.font = getFont();
 			tf.textColor = style.color;
 			tf.text = text;
-			tf.filter = true;
+			tf.smooth = true;
 			contentWidth = tf.textWidth;
 			contentHeight = tf.textHeight;
 		}

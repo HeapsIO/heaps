@@ -26,7 +26,7 @@ class Button extends Interactive {
 			tf.font = getFont();
 			tf.textColor = style.color;
 			tf.text = text;
-			tf.filter = true;
+			tf.smooth = true;
 			contentWidth = tf.textWidth;
 			contentHeight = tf.textHeight;
 		}

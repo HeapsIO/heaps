@@ -9,6 +9,7 @@ class ColorMatrix extends Filter {
 	public function new( ?m : h3d.Matrix ) {
 		super();
 		pass = new h3d.pass.ColorMatrix(m);
+		pass.shader.useAlpha = true;
 	}
 
 	inline function get_matrix() return pass.matrix;

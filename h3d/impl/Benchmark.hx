@@ -63,7 +63,7 @@ class Benchmark extends h2d.Graphics {
 	public var font : h2d.Font;
 
 	public var recalTime = 1e9;
-	public var smooth = 0.95;
+	public var smoothTime = 0.95;
 
 	public var measureCpu = true;
 
@@ -169,7 +169,7 @@ class Benchmark extends h2d.Graphics {
 		if( hxd.Math.abs(ft - frameTime) > recalTime )
 			frameTime = ft;
 		else
-			frameTime = frameTime * smooth + ft * (1 - smooth);
+			frameTime = frameTime * smoothTime + ft * (1 - smoothTime);
 		prevFrame = t0;
 
 		// end was not called...
@@ -348,7 +348,7 @@ class Benchmark extends h2d.Graphics {
 			if( et > recalTime )
 				s.time = time;
 			else
-				s.time = s.time * smooth + time * (1 - smooth);
+				s.time = s.time * smoothTime + time * (1 - smoothTime);
 		} else {
 			s.name = name;
 			s.time = time;

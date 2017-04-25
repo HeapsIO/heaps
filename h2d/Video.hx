@@ -44,7 +44,7 @@ class Video extends Drawable {
 	public function new(?parent) {
 		super(parent);
 		blendMode = None;
-		filter = true;
+		smooth = true;
 	}
 
 	public dynamic function onError( msg : String ) {
