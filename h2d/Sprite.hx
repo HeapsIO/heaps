@@ -612,6 +612,7 @@ class Sprite {
 		final = filter.draw(ctx, final);
 		if( final == null ) {
 			ctx.popTarget();
+			ctx.popFilter();
 			return;
 		}
 		if( final != prev ) {
