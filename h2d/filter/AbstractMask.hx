@@ -4,6 +4,7 @@ class Hide extends Filter {
 
 	public var frame : Int;
 	public var input : h2d.Tile;
+	public var maskVisible : Bool;
 
 	public function new() {
 		super();
@@ -13,7 +14,7 @@ class Hide extends Filter {
 	override function draw( ctx : RenderContext, input : h2d.Tile ) {
 		this.frame = ctx.frame;
 		this.input = input;
-		return null;
+		return maskVisible ? input : null;
 	}
 
 }
@@ -26,6 +27,7 @@ class AbstractMask extends Filter {
 	var obj : h2d.Sprite;
 	var bindCount : Int;
 	public var mask(default, set) : h2d.Sprite;
+	public var maskVisible(default, set) : Bool;
 
 	function new(mask) {
 		super();
@@ -33,6 +35,11 @@ class AbstractMask extends Filter {
 		this.mask = mask;
 		this.maskMatrix = new h2d.col.Matrix();
 		tmpMatrix = new h2d.col.Matrix();
+	}
+
+	function set_maskVisible(b) {
+		hide.maskVisible = b;
+		return maskVisible = b;
 	}
 
 	override function bind(s:Sprite) {

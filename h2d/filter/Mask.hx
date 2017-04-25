@@ -25,9 +25,10 @@ class Mask extends AbstractMask {
 
 	var pass : h3d.pass.ScreenFx<MaskShader>;
 
-	public function new(mask) {
+	public function new(mask, maskVisible=false) {
 		super(mask);
 		pass = new h3d.pass.ScreenFx(new MaskShader());
+		this.maskVisible = maskVisible;
 	}
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
