@@ -97,8 +97,14 @@ class AbstractMask extends Filter {
 
 	override function sync( ctx : RenderContext, obj : h2d.Sprite ) {
 		this.obj = obj;
-		if( mask == null || hide.frame != ctx.frame )
+		if( mask == null || hide.frame != ctx.frame ) {
+			var p = obj;
+			while( p != null ) {
+				if( p == mask ) throw "You can't mask with one of the sprite parents";
+				p = p.parent;
+			}
 			hide.input = null;
+		}
 	}
 
 }
