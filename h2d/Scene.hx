@@ -370,6 +370,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.pushTarget(t);
 		s.drawRec(ctx);
 		ctx.popTarget();
+		ctx.engine.frameCount--;
 	}
 
 	public function render( engine : h3d.Engine ) {
@@ -417,6 +418,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		posChanged = true;
 		engine.setRenderZone();
 		engine.end();
+		engine.frameCount--;
 		return new Bitmap(target);
 	}
 
