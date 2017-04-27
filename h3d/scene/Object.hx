@@ -432,7 +432,7 @@ class Object {
 		var changed = posChanged;
 		if( changed ) calcAbsPos();
 		sync(ctx);
-		posChanged = follow == null;
+		posChanged = follow != null;
 		lastFrame = ctx.frame;
 		var p = 0, len = childs.length;
 		while( p < len ) {
