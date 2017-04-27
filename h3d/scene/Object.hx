@@ -103,7 +103,7 @@ class Object {
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b);
 	inline function set_culled(b) return flags.set(FCulled, b);
-	inline function set_visible(b) { culled = !b; return flags.set(FVisible,b); }
+	inline function set_visible(b) return flags.set(FVisible,b);
 	inline function set_allocated(b) return flags.set(FAllocated, b);
 	inline function set_followPositionOnly(b) return flags.set(FFollowPositionOnly, b);
 	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
@@ -468,7 +468,9 @@ class Object {
 	}
 
 	function emitRec( ctx : RenderContext ) {
-		if( culled ) return;
+		if( !visible || (culled && inheritCulled) )
+			return;
+
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
 		if( posChanged ) {
 			// only sync anim, don't update() (prevent any event from occuring during draw())
@@ -478,7 +480,8 @@ class Object {
 			for( c in childs )
 				c.posChanged = true;
 		}
-		emit(ctx);
+		if( !culled )
+			emit(ctx);
 		for( c in childs )
 			c.emitRec(ctx);
 	}
