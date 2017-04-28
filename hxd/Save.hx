@@ -21,33 +21,52 @@ class Save {
 	}
 	#end
 
-	public static function load<T>( ?defValue : T, ?name = "save" ) : T {
+	static function makeCRC( data : String ) {
+		return haxe.crypto.Sha1.encode(data + haxe.crypto.Sha1.encode(data + "s*al!t")).substr(4, 32);
+	}
+
+	static function loadData( data : String, checkSum : Bool ) : Dynamic {
+		if( data.charCodeAt(data.length - 33) != '#'.code )
+			throw "Missing CRC";
+		var crc = data.substr(data.length - 32);
+		var data = data.substr(0, -33);
+		if( makeCRC(data) != crc )
+			throw "Invalid CRC";
+		return haxe.Unserializer.run(data);
+	}
+
+	static function saveData( value : Dynamic, checkSum : Bool ) : Dynamic {
+		var data = haxe.Serializer.run(value);
+		return checkSum ? data + "#" + makeCRC(data) : data;
+	}
+
+	public static function load<T>( ?defValue : T, ?name = "save", checkSum = false ) : T {
 		#if flash
 		try {
 			var data = Reflect.field(getObj(name).data, "data");
 			cur.set(name, data);
-			return haxe.Unserializer.run(data);
+			return loadData(data,checkSum);
 		} catch( e : Dynamic ) {
 			return defValue;
 		}
 		#elseif sys
-		return try haxe.Unserializer.run(sys.io.File.getContent(savePath(name))) catch( e : Dynamic ) defValue;
+		return try loadData(sys.io.File.getContent(savePath(name)),checkSum) catch( e : Dynamic ) defValue;
 		#else
 		return defValue;
 		#end
 	}
 
-	public static function save( val : Dynamic, ?name = "save", ?quick : Bool ) {
+	public static function save( val : Dynamic, ?name = "save", checkSum = false ) {
 		#if flash
-		var data = haxe.Serializer.run(val);
+		var data = saveData(val, checkSum);
 		if( data == cur.get(name) )
 			return false;
 		cur.set(name, data);
 		getObj(name).setProperty("data", data);
-		if( !quick ) try saveObj.flush() catch( e : Dynamic ) throw "Can't write save (disk full ?)";
+		try saveObj.flush() catch( e : Dynamic ) throw "Can't write save (disk full ?)";
 		return true;
 		#elseif sys
-		var data = haxe.Serializer.run(val);
+		var data = saveData(val,checkSum);
 		var file = savePath(name);
 		try if( sys.io.File.getContent(file) == data ) return false catch( e : Dynamic ) {};
 		sys.io.File.saveContent(file, data);
