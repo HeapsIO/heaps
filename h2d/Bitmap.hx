@@ -24,8 +24,4 @@ class Bitmap extends Drawable {
 		emitTile(ctx,tile);
 	}
 
-	public static function create( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
-		return new Bitmap(Tile.fromBitmap(bmp,allocPos));
-	}
-
 }
