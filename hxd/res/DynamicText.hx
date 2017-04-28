@@ -121,7 +121,7 @@ class DynamicText {
 	static function parseXmlData( x : haxe.xml.Fast ) : Dynamic {
 		switch( x.name ) {
 		case "g":
-			var first = x.elements.next();
+			var first = x.elements.hasNext() ? x.elements.next() : null;
 			// build structure
 			if( first != null && first.has.id ) {
 				var o = {};
