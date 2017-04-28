@@ -2,10 +2,10 @@ package hxd;
 
 class App implements h3d.IDrawable {
 
-	public var engine : h3d.Engine;
-	public var s3d : h3d.scene.Scene;
-	public var s2d : h2d.Scene;
-	public var sevents : hxd.SceneEvents;
+	public var engine(default,null) : h3d.Engine;
+	public var s3d(default,null) : h3d.scene.Scene;
+	public var s2d(default,null) : h2d.Scene;
+	public var sevents(default,null) : hxd.SceneEvents;
 
 	public var wantedFPS(get, set) : Float;
 	var isDisposed : Bool;
@@ -30,12 +30,26 @@ class App implements h3d.IDrawable {
 	function onResize() {
 	}
 
-	function setScene3D( s3d : h3d.scene.Scene, disposePrevious = true ) {
-		sevents.removeScene(this.s3d);
-		sevents.addScene(s3d);
-		if( disposePrevious )
-			this.s3d.dispose();
-		this.s3d = s3d;
+	public function setScene( scene : hxd.SceneEvents.InteractiveScene, disposePrevious = true ) {
+		var new2D = Std.instance(scene, h2d.Scene);
+		var new3D = Std.instance(scene, h3d.scene.Scene);
+		if( new2D != null )
+			sevents.removeScene(s2d);
+		if( new3D != null )
+			sevents.removeScene(s3d);
+		sevents.addScene(scene);
+		if( disposePrevious ) {
+			if( new2D != null )
+				s2d.dispose();
+			else if( new3D != null )
+				s3d.dispose();
+			else
+				throw "Can't dispose previous scene";
+		}
+		if( new2D != null )
+			this.s2d = new2D;
+		if( new3D != null )
+			this.s3d = new3D;
 	}
 
 	function setScene2D( s2d : h2d.Scene, disposePrevious = true ) {
