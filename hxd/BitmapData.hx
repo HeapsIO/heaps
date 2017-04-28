@@ -61,6 +61,7 @@ class BitmapData {
 			data = new BitmapInnerData();
 			#if hl
 			data.pixels = new hl.Bytes(width * height * 4);
+			(data.pixels:hl.Bytes).fill(0, width * height * 4, 0);
 			#else
 			data.pixels = new haxe.ds.Vector(width * height);
 			#end
