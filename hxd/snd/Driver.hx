@@ -220,7 +220,7 @@ class Driver {
 						tmp.setInt32(0, b0.inst.toInt());
 						AL.sourceUnqueueBuffers(s.inst, 1, tmp);
 						s.streamPosition = s.streamPositionNext;
-						updateStreaming(s, b0);
+						updateStreaming(s, b0, c.soundGroup.mono);
 						tmp.setInt32(0, b0.inst.toInt());
 						AL.sourceQueueBuffers(s.inst, 1, tmp);
 						s.buffers[0] = b1;
@@ -457,9 +457,9 @@ class Driver {
 				s.streamData = c.sound.getData();
 				s.streamSample = Std.int(c.position * s.streamData.samplingRate);
 				// fill first two buffers
-				updateStreaming(s, s.buffers[0]);
+				updateStreaming(s, s.buffers[0], c.soundGroup.mono);
 				s.streamPosition = s.streamPositionNext;
-				updateStreaming(s, s.buffers[1]);
+				updateStreaming(s, s.buffers[1], c.soundGroup.mono);
 				tmpBytes.setInt32(0, s.buffers[0].inst.toInt());
 				tmpBytes.setInt32(4, s.buffers[1].inst.toInt());
 				AL.sourceQueueBuffers(s.inst, 2, tmpBytes);
@@ -535,7 +535,7 @@ class Driver {
 		return targetChannels == dat.channels && targetFormat == dat.sampleFormat && targetRate == dat.samplingRate;
 	}
 
-	function updateStreaming( s : Source, buf : Buffer ) {
+	function updateStreaming( s : Source, buf : Buffer, forceMono : Bool ) {
 		// decode
 		var tmpBytes = getTmp(STREAM_BUFSIZE >> 1);
 		var bpp = s.streamData.getBytesPerSample();
@@ -566,7 +566,7 @@ class Driver {
 			}
 		}
 
-		if( !checkTargetFormat(s.streamData) ) {
+		if( !checkTargetFormat(s.streamData, forceMono) ) {
 			reqSamples -= samples;
 			var bytes = resampleBytes;
 			var reqBytes = targetChannels * reqSamples * Data.formatBytes(targetFormat);
