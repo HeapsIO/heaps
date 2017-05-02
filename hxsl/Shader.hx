@@ -15,8 +15,16 @@ class Shader {
 		shader = cl._SHADER;
 		constModified = true;
 		if( shader == null ) {
-			shader = new SharedShader(cl.SRC);
-			cl._SHADER = shader;
+			var curClass : Dynamic = cl;
+			while( curClass != null && curClass.SRC == null )
+				curClass = std.Type.getSuperClass(curClass);
+			if( curClass == null )
+				throw std.Type.getClassName(cl) + " has no shader source";
+			shader = curClass._SHADER;
+			if( shader == null ) {
+				shader = new SharedShader(curClass.SRC);
+				curClass._SHADER = shader;
+			}
 		}
 	}
 
