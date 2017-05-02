@@ -26,12 +26,14 @@ class Save {
 	}
 
 	static function loadData( data : String, checkSum : Bool ) : Dynamic {
-		if( data.charCodeAt(data.length - 33) != '#'.code )
-			throw "Missing CRC";
-		var crc = data.substr(data.length - 32);
-		var data = data.substr(0, -33);
-		if( makeCRC(data) != crc )
-			throw "Invalid CRC";
+		if( checkSum ) {
+			if( data.charCodeAt(data.length - 33) != '#'.code )
+				throw "Missing CRC";
+			var crc = data.substr(data.length - 32);
+			data = data.substr(0, -33);
+			if( makeCRC(data) != crc )
+				throw "Invalid CRC";
+		}
 		return haxe.Unserializer.run(data);
 	}
 
