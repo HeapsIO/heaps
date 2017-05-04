@@ -17,7 +17,7 @@ class Sphere implements Collider {
 	public inline function getCenter() {
 		return new Point(x, y, z);
 	}
-	
+
 	public inline function contains( p : Point ) {
 		var dx = p.x - x;
 		var dy = p.y - y;
@@ -25,7 +25,7 @@ class Sphere implements Collider {
 		return dx * dx + dy * dy + dz * dz < r * r;
 	}
 
-	public function rayIntersection( r : Ray, ?p : Point ) : Null<Point> {
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
 		var r2 = this.r * this.r;
 		var px = r.px + r.lx;
 		var py = r.py + r.ly;
@@ -36,13 +36,11 @@ class Sphere implements Collider {
 		var c = (x * x + y * y + z * z) + (px * px + py * py + pz * pz) - 2 * (x * px + y * py + z * pz) - r2;
 
 		var d = b * b - 4 * a * c;
-		if( d < 0 )	return null;
+		if( d < 0 )	return -1;
 
 		d = Math.sqrt(d);
 		var t = ( -b + d) / (2 * a);
-		if( p == null ) p = new Point();
-		p.set(px - t * r.lx , py - t * r.ly, pz - t * r.lz);
-		return p;
+		return 1 - t;
 	}
 
 	public function inFrustum( mvp : Matrix ) {

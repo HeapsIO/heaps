@@ -13,6 +13,12 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	**/
 	public var propagateEvents : Bool = false;
 	public var enableRightButton : Bool;
+
+	/**
+		Is it required to find the best hit point in a complex mesh or any hit possible point will be enough (default = false, faster).
+	**/
+	public var bestMatch : Bool;
+
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
 

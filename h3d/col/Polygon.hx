@@ -66,24 +66,20 @@ class TriPlane implements Collider {
 		return false;
 	}
 
-	inline public function rayIntersection( r : Ray, ?pt : Point ) @:privateAccess {
+	inline public function rayIntersection( r : Ray, bestMatch : Bool ) @:privateAccess {
 		var dr = r.lx * nx + r.ly * ny + r.lz * nz;
-		if( dr > 0 ) // backface culling
-			return null;
+		if( dr >= 0 ) // backface culling
+			return -1.;
 		var nd = d - (r.px * nx + r.py * ny + r.pz * nz);
 		var k = nd / dr;
 		if( k < 0 )
-			return null;
+			return -1;
 		var px = r.px + r.lx * k;
 		var py = r.py + r.ly * k;
 		var pz = r.pz + r.lz * k;
 		if( !isPointInTriangle(px, py, pz) )
-			return null;
-		if( pt == null ) pt = new Point();
-		pt.x = px;
-		pt.y = py;
-		pt.z = pz;
-		return pt;
+			return -1;
+		return k;
 	}
 
 	inline function isPointInTriangle( x : Float, y : Float, z : Float ) {
@@ -148,14 +144,18 @@ class Polygon implements Collider {
 		return true;
 	}
 
-	public function rayIntersection( r : Ray, ?pt : Point ) {
+	public function rayIntersection( r : Ray, bestMatch : Bool ) {
 		var t = triPlanes;
+		var best = -1.;
 		while( t != null ) {
-			var p = t.rayIntersection(r, pt);
-			if( p != null ) return p;
+			var d = t.rayIntersection(r, bestMatch);
+			if( d >= 0 ) {
+				if( !bestMatch ) return d;
+				if( best < 0 || d < best ) best = d;
+			}
 			t = t.next;
 		}
-		return null;
+		return best;
 	}
 
 	public function inFrustum( m : h3d.Matrix ) {

@@ -63,6 +63,10 @@ class Ray {
 		return new Point(lx, ly, lz);
 	}
 
+	public inline function getPoint( distance : Float ) {
+		return new Point(px + distance * lx, py + distance * ly, pz + distance * lz);
+	}
+
 	public function toString() {
 		return "Ray{" + getPos() + "," + getDir() + "}";
 	}

@@ -46,7 +46,7 @@ class Bounds implements Collider {
 		return dd + rr - p.d*2;
 	}
 
-	public function rayIntersection( r : Ray, ?p : Point ) : Null<Point> {
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
 		var minTx = (xMin - r.px) / r.lx;
 		var minTy = (yMin - r.py) / r.ly;
 		var minTz = (zMin - r.pz) / r.lz;
@@ -64,11 +64,9 @@ class Bounds implements Collider {
 		var minmax = Math.min( Math.min(realMaxTx, realMaxTy), realMaxTz);
 		var maxmin = Math.max( Math.max(realMinTx, realMinTy), realMinTz);
 
-		if(minmax < maxmin)	return null;
+		if(minmax < maxmin)	return -1;
 
-		if( p == null ) p = new Point();
-		p.set(r.px + maxmin * r.lx , r.py + maxmin * r.ly, r.pz + maxmin * r.lz);
-		return p;
+		return maxmin;
 	}
 
 	/**

@@ -95,7 +95,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
 			var saveR = r.clone();
 
-			var hitTmp = new h3d.col.Point();
 			for( i in interactives ) {
 
 				var p : h3d.scene.Object = i;
@@ -113,13 +112,18 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 					continue;
 				}
 
-				var hit = i.shape.rayIntersection(r, hitTmp);
-				r.load(saveR);
-				if( hit == null ) continue;
+				var hit = i.shape.rayIntersection(r, i.bestMatch);
+				if( hit < 0 ) {
+					r.load(saveR);
+					continue;
+				}
 
-				i.hitPoint.x = hit.x;
-				i.hitPoint.y = hit.y;
-				i.hitPoint.z = hit.z;
+				var hitPoint = r.getPoint(hit);
+				r.load(saveR);
+
+				i.hitPoint.x = hitPoint.x;
+				i.hitPoint.y = hitPoint.y;
+				i.hitPoint.z = hitPoint.z;
 				hitInteractives.push(i);
 			}
 
@@ -222,7 +226,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		iterVisibleMeshes(function(m) {
 			if( m.primitive == null ) return;
 			ray.transform(m.getInvPos());
-			if( m.primitive.getBounds().rayIntersection(ray) != null )
+			if( m.primitive.getBounds().rayIntersection(ray,false) >= 0 )
 				ctx.emitPass(m.material.mainPass, m);
 			ray.load(savedRay);
 		});
