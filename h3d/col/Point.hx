@@ -126,6 +126,12 @@ class Point {
 		return new Point(x,y,z);
 	}
 
+	public inline function load( p : Point ) {
+		this.x = p.x;
+		this.y = p.y;
+		this.z = p.z;
+	}
+
 	public function toString() {
 		return 'Point{${x.fmt()},${y.fmt()},${z.fmt()}}';
 	}

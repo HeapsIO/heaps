@@ -34,8 +34,9 @@ class Ray {
 		lz = r.lz;
 	}
 
-	public function normalize() {
+	function normalize() {
 		var l = lx * lx + ly * ly + lz * lz;
+		if( l == 1. ) return;
 		if( l < Math.EPSILON ) l = 0 else l = Math.invSqrt(l);
 		lx *= l;
 		ly *= l;
@@ -53,6 +54,7 @@ class Ray {
 		lx = l.x;
 		ly = l.y;
 		lz = l.z;
+		normalize();
 	}
 
 	public inline function getPos() {
@@ -140,6 +142,7 @@ class Ray {
 		r.lx = p2.x - p1.x;
 		r.ly = p2.y - p1.y;
 		r.lz = p2.z - p1.z;
+		r.normalize();
 		return r;
 	}
 
@@ -151,6 +154,7 @@ class Ray {
 		r.lx = dx;
 		r.ly = dy;
 		r.lz = dz;
+		r.normalize();
 		return r;
 	}
 
