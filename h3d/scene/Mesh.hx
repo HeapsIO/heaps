@@ -30,6 +30,10 @@ class Mesh extends Object {
 		return m;
 	}
 
+	override function getCollider() {
+		return primitive.getCollider();
+	}
+
 	override function draw( ctx : RenderContext ) {
 		primitive.render(ctx.engine);
 	}

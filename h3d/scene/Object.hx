@@ -101,7 +101,7 @@ class Object {
 	inline function get_lightCameraCenter() return flags.has(FLightCameraCenter);
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
-	inline function set_posChanged(b) return flags.set(FPosChanged, b);
+	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
 	inline function set_allocated(b) return flags.set(FAllocated, b);
@@ -362,6 +362,21 @@ class Object {
 		throw this + " is not a Mesh";
 	}
 
+	public function getCollider() : h3d.col.Collider {
+		var colliders = [];
+		for( obj in childs ) {
+			var c = obj.getCollider();
+			var cgrp = Std.instance(c, h3d.col.Collider.GroupCollider);
+			if( cgrp != null ) {
+				for( c in cgrp.colliders )
+					colliders.push(c);
+			} else
+				colliders.push(c);
+		}
+		// TODO : handle child position/transform
+		return new h3d.col.Collider.GroupCollider(colliders);
+	}
+
 	/**
 		Same as parent.removeChild(this), but does nothing if parent is null.
 		In order to capture add/removal from scene, you can override onAdd/onRemove/onParentChanged
@@ -432,7 +447,7 @@ class Object {
 		var changed = posChanged;
 		if( changed ) calcAbsPos();
 		sync(ctx);
-		posChanged = follow != null;
+		posChanged = false;
 		lastFrame = ctx.frame;
 		var p = 0, len = childs.length;
 		while( p < len ) {

@@ -110,6 +110,12 @@ class Skin extends MultiMaterial {
 		return null;
 	}
 
+	override function getCollider() {
+		var col = cast(super.getCollider(), h3d.col.Collider.OptimizedCollider);
+		cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+		return new h3d.col.SkinTransform(this, cast(col.b, h3d.col.PolygonBuffer));
+	}
+
 	override function calcAbsPos() {
 		super.calcAbsPos();
 		// if we update our absolute position, rebuild the matrixes
@@ -155,28 +161,31 @@ class Skin extends MultiMaterial {
 			splitPalette = null;
 	}
 
-	@:noDebug
 	override function sync( ctx : RenderContext ) {
 		if( !ctx.visibleFlag )
 			return;
-		if( jointsUpdated || posChanged ) {
-			for( j in skinData.allJoints ) {
-				var id = j.index;
-				var m = currentAbsPose[id];
-				var r = currentRelPose[id];
-				var bid = j.bindIndex;
-				if( r == null ) r = j.defMat else if( j.retargetAnim ) { r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
-				if( j.parent == null )
-					m.multiply3x4inline(r, absPos);
-				else
-					m.multiply3x4inline(r, currentAbsPose[j.parent.index]);
-				if( bid >= 0 )
-					currentPalette[bid].multiply3x4inline(j.transPos, m);
-			}
-			skinShader.bonesMatrixes = currentPalette;
-			if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
-			jointsUpdated = false;
+		syncJoints();
+	}
+
+	@:noDebug
+	function syncJoints() {
+		if( !jointsUpdated ) return;
+		for( j in skinData.allJoints ) {
+			var id = j.index;
+			var m = currentAbsPose[id];
+			var r = currentRelPose[id];
+			var bid = j.bindIndex;
+			if( r == null ) r = j.defMat else if( j.retargetAnim ) { r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
+			if( j.parent == null )
+				m.multiply3x4inline(r, absPos);
+			else
+				m.multiply3x4inline(r, currentAbsPose[j.parent.index]);
+			if( bid >= 0 )
+				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
+		skinShader.bonesMatrixes = currentPalette;
+		if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
+		jointsUpdated = false;
 	}
 
 	override function emit( ctx : RenderContext ) {

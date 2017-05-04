@@ -38,6 +38,10 @@ class HMDModel extends MeshPrimitive {
 		return lib.getBuffers(data, fmt, defaults, material);
 	}
 
+	public function loadSkin(skin) {
+		lib.loadSkin(data, skin);
+	}
+
 	public function addAlias( name : String, realName : String, offset = 0 ) {
 		bufferAliases.set(name, {realName : realName, offset : offset });
 	}
@@ -148,10 +152,8 @@ class HMDModel extends MeshPrimitive {
 	override function getCollider() {
 		if( collider != null )
 			return collider;
-
 		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
-		var poly = new h3d.col.Polygon();
-		poly.addBuffers(pos.vertexes, pos.indexes);
+		var poly = new h3d.col.PolygonBuffer(pos.vertexes, pos.indexes);
 		var sphere = data.bounds.toSphere();
 		collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
 		return collider;

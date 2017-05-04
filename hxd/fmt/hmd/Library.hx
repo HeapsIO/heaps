@@ -28,6 +28,7 @@ class Library {
 	var cachedPrimitives : Array<h3d.prim.Primitive>;
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
+	var tmp = haxe.io.Bytes.alloc(4);
 
 	public function new(entry, header) {
 		this.entry = entry;
@@ -487,5 +488,32 @@ class Library {
 		entry.close();
 		return l;
 	}
+
+	@:allow(h3d.anim.Skin)
+	public function loadSkin( geom : Geometry, skin : h3d.anim.Skin ) {
+		if( skin.vertexWeights != null )
+			return;
+		@:privateAccess skin.vertexCount = geom.vertexCount;
+		var w = getBuffers(geom, [new hxd.fmt.hmd.Data.GeometryFormat("weights", DVec3)]).vertexes;
+		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
+		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
+		for( i in 0...skin.vertexWeights.length )
+			skin.vertexWeights[i] = w[i];
+		var vidx = getBuffers(geom, [new hxd.fmt.hmd.Data.GeometryFormat("indexes", DBytes4)]).vertexes;
+		var j = 0;
+		for( i in 0...skin.vertexCount ) {
+			var v = ftoint32(vidx[i]);
+			skin.vertexJoints[j++] = v & 0xFF;
+			skin.vertexJoints[j++] = (v >> 8) & 0xFF;
+			skin.vertexJoints[j++] = (v >> 16) & 0xFF;
+		}
+	}
+
+	function ftoint32( v : hxd.impl.Float32 ) : Int {
+		tmp.setFloat(0, v);
+		return tmp.getInt32(0);
+	}
+
+
 
 }
