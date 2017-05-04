@@ -3,6 +3,12 @@ package h3d.scene;
 class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
 	public var shape : h3d.col.Collider;
+
+	/**
+		If several interactive conflicts, the preciseShape (if defined) can be used to distinguish between the two.
+	**/
+	public var preciseShape : Null<h3d.col.Collider>;
+
 	public var cursor(default,set) : hxd.Cursor;
 	/**
 		Set the default `cancel` mode (see `hxd.Event`), default to false.

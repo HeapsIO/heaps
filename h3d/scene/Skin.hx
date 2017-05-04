@@ -111,9 +111,9 @@ class Skin extends MultiMaterial {
 	}
 
 	override function getCollider() {
-		var col = cast(super.getCollider(), h3d.col.Collider.OptimizedCollider);
+		var col = cast(primitive.getCollider(), h3d.col.Collider.OptimizedCollider);
 		cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
-		return new h3d.col.SkinTransform(this, cast(col.b, h3d.col.PolygonBuffer));
+		return new h3d.col.SkinCollider(this, cast(col.b, h3d.col.PolygonBuffer));
 	}
 
 	override function calcAbsPos() {

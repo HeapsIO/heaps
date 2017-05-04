@@ -130,9 +130,7 @@ class Camera {
 		var engine = h3d.Engine.getCurrent();
 		var rx = (pixelX / engine.width - 0.5) * 2;
 		var ry = (0.5 - pixelY / engine.height) * 2;
-		var r = h3d.col.Ray.fromPoints(unproject(rx, ry, 0).toPoint(), unproject(rx, ry, 1).toPoint());
-		r.normalize();
-		return r;
+		return h3d.col.Ray.fromPoints(unproject(rx, ry, 0).toPoint(), unproject(rx, ry, 1).toPoint());
 	}
 
 	public function update() {

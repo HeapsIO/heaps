@@ -373,7 +373,6 @@ class Object {
 			} else
 				colliders.push(c);
 		}
-		// TODO : handle child position/transform
 		return new h3d.col.Collider.GroupCollider(colliders);
 	}
 

@@ -2,7 +2,7 @@ package h3d.col;
 
 @:access(h3d.col.PolygonBuffer)
 @:access(h3d.scene.Skin)
-class SkinTransform implements Collider {
+class SkinCollider implements Collider {
 
 	var obj : h3d.scene.Skin;
 	var col : PolygonBuffer;
@@ -31,7 +31,6 @@ class SkinTransform implements Collider {
 	}
 
 	function applyTransform() {
-		var invMat = obj.getInvPos();
 		if( !obj.jointsUpdated && lastFrame == obj.lastFrame ) return;
 		lastFrame = obj.lastFrame;
 		obj.syncJoints();
@@ -54,14 +53,10 @@ class SkinTransform implements Collider {
 				py += p2.y * w;
 				pz += p2.z * w;
 			}
-
-			var p = new h3d.col.Point(px, py, pz);
-			p.transform(invMat);
-			transform.buffer[v++] = p.x;
-			transform.buffer[v++] = p.y;
-			transform.buffer[v++] = p.z;
+			transform.buffer[v++] = px;
+			transform.buffer[v++] = py;
+			transform.buffer[v++] = pz;
 		}
-
 	}
 
 }

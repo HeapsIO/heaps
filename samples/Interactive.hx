@@ -7,7 +7,7 @@ class Interactive extends hxd.App {
 	var obj : h3d.scene.Object;
 	var b : h2d.Interactive;
 
-	function initInteract( i : h3d.scene.Interactive, m : h3d.scene.Mesh, scale = 1. ) {
+	function initInteract( i : h3d.scene.Interactive, m : h3d.scene.Mesh ) {
 		var beacon = null;
 		var color = m.material.color.clone();
 		i.bestMatch = true;
@@ -15,10 +15,10 @@ class Interactive extends hxd.App {
 			m.material.color.set(0, 1, 0);
 			var s = new h3d.prim.Sphere(1, 32, 32);
 			s.addNormals();
-			beacon = new h3d.scene.Mesh(s, m);
+			beacon = new h3d.scene.Mesh(s, s3d);
 			beacon.material.mainPass.enableLights = true;
 			beacon.material.color.set(1, 0, 0);
-			beacon.scale(0.05 * scale / m.parent.scaleX);
+			beacon.scale(0.01);
 			beacon.x = e.relX;
 			beacon.y = e.relY;
 			beacon.z = e.relZ;
@@ -58,7 +58,7 @@ class Interactive extends hxd.App {
 			var color = new h3d.Vector(c, c * 0.6, c * 0.6);
 			m.material.color.load(color);
 
-			var interact = new h3d.scene.Interactive(m.getCollider(), m);
+			var interact = new h3d.scene.Interactive(m.getCollider(), s3d);
 			initInteract(interact, m);
 		}
 
@@ -74,8 +74,8 @@ class Interactive extends hxd.App {
 
 		for( o in obj ) {
 			var m = o.toMesh();
-			var i = new h3d.scene.Interactive(m.getCollider(), m);
-			initInteract(i, m, 0.2);
+			var i = new h3d.scene.Interactive(m.getCollider(), s3d);
+			initInteract(i, m);
 		}
 
 		b = new h2d.Interactive(150, 100, s2d);

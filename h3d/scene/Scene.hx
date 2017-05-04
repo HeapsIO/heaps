@@ -104,7 +104,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 				var minv = i.getInvPos();
 				r.transform(minv);
-				r.normalize();
 
 				// check for NaN
 				if( r.lx != r.lx ) {
@@ -130,13 +129,30 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			if( hitInteractives.length == 0 )
 				return null;
 
+
 			if( hitInteractives.length > 1 ) {
 				for( i in hitInteractives ) {
 					var m = i.invPos;
+					var wfactor = 0.;
+
+					// adjust result with better precision
+					if( i.preciseShape != null ) {
+						r.transform(m);
+						var hit = i.preciseShape.rayIntersection(r, i.bestMatch);
+						if( hit > 0 ) {
+							var hitPoint = r.getPoint(hit);
+							i.hitPoint.x = hitPoint.x;
+							i.hitPoint.y = hitPoint.y;
+							i.hitPoint.z = hitPoint.z;
+						} else
+							wfactor = 1.;
+						r.load(saveR);
+					}
+
 					var p = i.hitPoint.clone();
 					p.transform3x4(i.absPos);
 					p.project(camera.m);
-					i.hitPoint.w = p.z;
+					i.hitPoint.w = p.z + wfactor;
 				}
 				hitInteractives.sort(sortHitPointByCameraDistance);
 			}
