@@ -15,8 +15,26 @@ class PolygonBuffer implements Collider {
 	}
 
 	public function contains( p : Point ) {
-		throw "Not implemented";
-		return false;
+		// CONVEX only : TODO : check convex (cache result)
+		var i = startIndex;
+		var p = new FPoint(p.x, p.y, p.z);
+		for( t in 0...triCount ) {
+			var i0 = indexes[i++] * 3;
+			var p0 = new FPoint(buffer[i0++], buffer[i0++], buffer[i0]);
+			var i1 = indexes[i++] * 3;
+			var p1 = new FPoint(buffer[i1++], buffer[i1++], buffer[i1]);
+			var i2 = indexes[i++] * 3;
+			var p2 = new FPoint(buffer[i2++], buffer[i2++], buffer[i2]);
+
+			var d1 = p1.sub(p0);
+			var d2 = p2.sub(p0);
+			var n = d1.cross(d2);
+			var d = n.dot(p0);
+
+			if( n.dot(p) >= d )
+				return false;
+		}
+		return true;
 	}
 
 	public function inFrustum( m : h3d.Matrix ) {
