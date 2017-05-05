@@ -242,7 +242,11 @@ class Tile {
 		var xmin = width, ymin = height, xmax = 0, ymax = 0;
 		for( x in 0...width )
 			for( y in 0...height ) {
-				var color : Int = b.getPixel(x+px, y+py);
+				var color : Int = b.getPixel(x + px, y + py);
+				if( color & 0xFF000000 == 0 ) {
+					if( color != 0 ) b.setPixel(x + px, y + py, 0);
+					continue;
+				}
 				if( color != bg ) {
 					empty = false;
 					if( x < xmin ) xmin = x;
@@ -250,7 +254,7 @@ class Tile {
 					if( x > xmax ) xmax = x;
 					if( y > ymax ) ymax = y;
 				}
-				if( color == bg )
+				if( color == bg && color != 0 )
 					b.setPixel(x+px, y+py, 0);
 			}
 		return empty ? null : { dx : xmin, dy : ymin, w : xmax - xmin + 1, h : ymax - ymin + 1 };
