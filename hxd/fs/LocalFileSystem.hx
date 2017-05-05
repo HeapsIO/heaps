@@ -392,6 +392,9 @@ class LocalFileSystem implements FileSystem {
 		root = new LocalEntry(this, "root", null, baseDir);
 		#end
 		tmpDir = baseDir + ".tmp/";
+		#if sys
+		try sys.FileSystem.createDirectory(tmpDir) catch( e : Dynamic ) {};
+		#end
 	}
 
 	public function getRoot() : FileEntry {
