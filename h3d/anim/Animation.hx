@@ -207,7 +207,7 @@ class Animation {
 		// check on anim end
 		if( onAnimEnd != null ) {
 			var end = endFrame();
-			var et = (end - frame) / (speed * sampling);
+			var et = speed == 0 ? 0 : (end - frame) / (speed * sampling);
 			if( et <= dt && et > 0 ) {
 				frame = end;
 				dt -= et;
