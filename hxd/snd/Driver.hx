@@ -224,6 +224,11 @@ class Driver {
 			var state = AL.getSourcei(s.inst, AL.SOURCE_STATE);
 			switch (state) {
 			case AL.STOPPED:
+				if (c.streaming && s.streamPosition != s.streamPositionNext) {
+					// force full resync
+					releaseSource(s);
+					continue;
+				}
 				releaseChannel(c);
 				c.onEnd();
 			case AL.PLAYING:
