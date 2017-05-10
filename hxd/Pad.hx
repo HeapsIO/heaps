@@ -117,8 +117,17 @@ class Pad {
 	public var yAxis : Float = 0.;
 	public var buttons : Array<Bool> = [];
 	public var values : Array<Float> = [];
+	var prevButtons : Array<Bool> = [];
 
 	public dynamic function onDisconnect(){
+	}
+
+	public function isDown( button : Int ) {
+		return buttons[button];
+	}
+
+	public function isPressed( button : Int ) {
+		return buttons[button] && !prevButtons[button];
 	}
 
 	function new() {
@@ -308,6 +317,8 @@ class Pad {
 	#elseif psgl
 
 	function sync() {
+		for( i in 0...buttons.length )
+			prevButtons[i] = buttons[i];
 		var s = d.getState();
 		if( s == null )
 			return;
