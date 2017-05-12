@@ -94,8 +94,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var p1 = camera.unproject(screenX, screenY, 1);
 			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
 			var saveR = r.clone();
+			var priority = 0x80000000;
 
 			for( i in interactives ) {
+
+				if( i.priority < priority ) continue;
 
 				var p : h3d.scene.Object = i;
 				while( p != null && p.visible )
@@ -123,6 +126,12 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				i.hitPoint.x = hitPoint.x;
 				i.hitPoint.y = hitPoint.y;
 				i.hitPoint.z = hitPoint.z;
+
+				if( i.priority > priority ) {
+					while( hitInteractives.length > 0 ) hitInteractives.pop();
+					priority = i.priority;
+				}
+
 				hitInteractives.push(i);
 			}
 

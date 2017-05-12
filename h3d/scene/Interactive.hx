@@ -9,6 +9,11 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	**/
 	public var preciseShape : Null<h3d.col.Collider>;
 
+	/**
+		In case of conflicting shapes, usually the one in front of the camera is prioritized, unless you set an higher priority.
+	**/
+	public var priority : Int;
+
 	public var cursor(default,set) : hxd.Cursor;
 	/**
 		Set the default `cancel` mode (see `hxd.Event`), default to false.
