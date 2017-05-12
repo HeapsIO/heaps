@@ -406,6 +406,11 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	**/
 	public var uploadedCount(default,null) : Int;
 
+	/**
+		Tells how many particles are live actually
+	**/
+	public var count(get,never) : Int;
+
 	public function new( ?parent ) {
 		super(null, [], parent);
 		bounds = new h3d.col.Bounds();
@@ -414,7 +419,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	}
 
 	public dynamic function onEnd() {
-		currentTime = -1;
+		if( duration > 0 ) currentTime = -1;
 	}
 
 	public function save() : Dynamic {
@@ -548,6 +553,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		if( hasLoop ) {
 			if( currentTime < duration )
 				currentTime = duration;
+			duration = 0;
 		} else if( currentTime > duration )
 			currentTime = duration;
 		for( g in groups )
@@ -753,11 +759,13 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			rebuildAll(ctx.camera);
 
 		uploadedCount = 0;
+		var hasPart = false;
 		for( g in groups ) {
 			syncGroup(g, ctx.camera, prev, ctx.visibleFlag);
 			if( g.currentParts == 0 )
 				continue;
 			// sync shader params
+			hasPart = true;
 			g.syncParams();
 			g.pshader.time = currentTime;
 			if( g.pshader.clipBounds ) {
@@ -784,6 +792,16 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				g.pshader.offset.set(0, 0, 0);
 			}
 		}
+
+		if( duration == 0 && !hasPart )
+			onEnd();
+	}
+
+	function get_count() {
+		var n = 0;
+		for( g in groups )
+			n += g.currentParts;
+		return n;
 	}
 
 	override function draw( ctx : h3d.scene.RenderContext ) {
