@@ -145,13 +145,17 @@ class Dropdown extends Flow {
 	}
 
 	public function open() {
-		getScene().add(dropdownList, dropdownLayer);
-		onOpen();
+		if( dropdownList.parent == null ) {
+			getScene().add(dropdownList, dropdownLayer);
+			onOpen();
+		}
 	}
 
 	public function close() {
-		dropdownList.remove();
-		onClose();
+		if( dropdownList.parent != null ) {
+			dropdownList.remove();
+			onClose();
+		}
 	}
 
 	public function get_dropdownCursor() {
@@ -160,6 +164,11 @@ class Dropdown extends Flow {
 
 	public function set_dropdownCursor(c : h2d.Tile) {
 		return cursor.tile = c;
+	}
+
+	override function onRemove() {
+		super.onRemove();
+		close();
 	}
 
 	public dynamic function onOpen() {
