@@ -1,5 +1,13 @@
 package h2d;
 
+typedef ColorAdjust = {
+	?saturation : Float,
+	?lightness : Float,
+	?hue : Float,
+	?contrast : Float,
+	?gain : { color : Int, alpha : Float },
+};
+
 class Drawable extends Sprite {
 
 	public var color(default,null) : h3d.Vector;
@@ -57,8 +65,8 @@ class Drawable extends Sprite {
 		return colorKey = v;
 	}
 
-	public function adjustColor( saturation = 0., lightness = 0., hue = 0., contrast = 0. ) {
-		if( saturation == 0 && lightness == 0 && hue == 0 && contrast == 0 )
+	public function adjustColor( ?col : ColorAdjust ) {
+		if( col == null )
 			colorMatrix = null;
 		else {
 			var m = colorMatrix;
@@ -67,10 +75,11 @@ class Drawable extends Sprite {
 				colorMatrix = m;
 			}
 			m.identity();
-			if( hue != 0 ) m.colorHue(hue);
-			if( saturation != 0 ) m.colorSaturation(saturation);
-			if( contrast != 0 ) m.colorContrast(contrast);
-			if( lightness != 0 ) m.colorLightness(lightness);
+			if( col.hue != null ) m.colorHue(col.hue);
+			if( col.saturation != null ) m.colorSaturation(col.saturation);
+			if( col.contrast != null ) m.colorContrast(col.contrast);
+			if( col.lightness != null ) m.colorLightness(col.lightness);
+			if( col.gain != null ) m.colorGain(col.gain.color, col.gain.alpha);
 		}
 	}
 

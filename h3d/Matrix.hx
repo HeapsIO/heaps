@@ -516,6 +516,7 @@ class Matrix {
 		var sinA = Math.sin(-hue);
 		var ch = (1 - cosA) / 3;
 
+		var tmp = tmp;
 		tmp._11 = cosA + ch;
 		tmp._12 = ch - SQ13 * sinA;
 		tmp._13 = ch + SQ13 * sinA;
@@ -539,6 +540,7 @@ class Matrix {
 		var r = is * lumR;
 		var g = is * lumG;
 		var b = is * lumB;
+		var tmp = tmp;
 		tmp._11 = r + sat;
 		tmp._12 = r;
 		tmp._13 = r;
@@ -555,6 +557,7 @@ class Matrix {
 	}
 
 	public function colorContrast( contrast : Float ) {
+		var tmp = tmp;
 		var v = contrast + 1;
 		tmp._11 = v;
 		tmp._12 = 0;
@@ -576,6 +579,24 @@ class Matrix {
 		_42 += lightness;
 		_43 += lightness;
 	}
+
+	public function colorGain( color : Int, alpha : Float ) {
+		var tmp = tmp;
+		tmp._11 = 1 - alpha;
+		tmp._12 = 0;
+		tmp._13 = 0;
+		tmp._21 = 0;
+		tmp._22 = 1 - alpha;
+		tmp._23 = 0;
+		tmp._31 = 0;
+		tmp._32 = 0;
+		tmp._33 = 1 - alpha;
+		tmp._41 = (((color >> 16) & 0xFF) / 255) * alpha;
+		tmp._42 = (((color >> 8) & 0xFF) / 255) * alpha;
+		tmp._43 = ((color & 0xFF) / 255) * alpha;
+		multiply3x4(this, tmp);
+	}
+
 
 	public function colorBits( bits : Int, blend : Float ) {
 		var t11 = 0., t12 = 0., t13 = 0.;
