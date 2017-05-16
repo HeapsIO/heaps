@@ -159,6 +159,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 					}
 
 					var p = i.hitPoint.clone();
+					p.w = 1;
 					p.transform3x4(i.absPos);
 					p.project(camera.m);
 					i.hitPoint.w = p.z + wfactor;
