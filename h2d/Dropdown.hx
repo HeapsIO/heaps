@@ -199,7 +199,8 @@ class Dropdown extends Flow {
 
 	override function onRemove() {
 		super.onRemove();
-		close();
+		if( dropdownList.parent != this )
+			dropdownList.remove();
 	}
 
 	public dynamic function onOpen() {
