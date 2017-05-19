@@ -34,11 +34,15 @@ class Dropdown extends Flow {
 	var items : Array<h2d.Sprite>;
 	var fake : Fake;
 	var cursor : h2d.Bitmap;
+	var arrow : h2d.Bitmap;
+
+	public var tileOverItem(default, set) : h2d.Tile;
+	public var tileArrow(default, set) : h2d.Tile;
+	public var tileArrowOpen : h2d.Tile;
 
 	public var canEdit(default,set) : Bool = true;
-	public var dropdownCursor(get,set) : h2d.Tile;
 	public var dropdownList : Flow;
-	public var dropdownLayer : Int = -1;
+	public var dropdownLayer : Int = 0;
 	public var selectedItem(default, set) : Int = -1;
 	public var highlightedItem(default, null) : Int = -1;
 
@@ -46,24 +50,40 @@ class Dropdown extends Flow {
 		super(parent);
 
 		canEdit = true;
-		isVertical = false;
-		dropdownList = new Flow();
+		minHeight = maxHeight = 21;
+		paddingLeft = 5;
+		verticalAlign = Middle;
 
-		cursor = new h2d.Bitmap(h2d.Tile.fromColor(0x3399FF, 0, 0), dropdownList);
-		dropdownList.getProperties(cursor).isAbsolute = true;
+		tileOverItem = h2d.Tile.fromColor(0x303030, 1, 1);
+		tileArrow = tileArrowOpen = h2d.Tile.fromColor(0x404040, maxHeight - 2, maxHeight - 2);
+
+		backgroundTile = h2d.Tile.fromColor(0x101010);
+		borderHeight = borderWidth = 1;
+
+		dropdownList = new Flow(this);
 		dropdownList.isVertical = true;
+		dropdownList.borderHeight = dropdownList.borderWidth = 1;
+		dropdownList.paddingLeft = paddingLeft;
+		dropdownList.visible = false;
 
+		cursor = new h2d.Bitmap(tileOverItem, dropdownList);
+		dropdownList.getProperties(cursor).isAbsolute = true;
+
+		arrow = new h2d.Bitmap(tileArrow, this);
+		var p = getProperties(arrow);
+		p.horizontalAlign = Right;
+		p.verticalAlign = Top;
+
+		//
 		fake = new Fake(this);
-
 		items = [];
 		enableInteractive = true;
-
 		interactive.onPush = function(e:hxd.Event) {
 			if( e.button == 0 && canEdit )
 				interactive.focus();
 		}
 		interactive.onClick = function(e) {
-			if (dropdownList.allocated) {
+			if (dropdownList.parent != this ) {
 				close();
 			} else if( canEdit ) {
 				var bds = this.getBounds();
@@ -99,9 +119,9 @@ class Dropdown extends Flow {
 						highlightedItem = i;
 						if (cursor.tile.width != 0 && cursor.tile.height != 0) {
 							cursor.visible = true;
-							cursor.x = 0;
+							cursor.x = 1;
 							cursor.y = item.y;
-							cursor.tile.width = minWidth;
+							cursor.tile.width = minWidth - 2;
 							cursor.tile.height = Std.int(item.getSize().height);
 						}
 						onOverItem(item);
@@ -118,12 +138,28 @@ class Dropdown extends Flow {
 		needReflow = true;
 	}
 
+	override function set_backgroundTile(t) {
+		super.set_backgroundTile(t);
+		if(dropdownList != null) dropdownList.backgroundTile = t;
+		return t;
+	}
+
+	function set_tileArrow(t) {
+		if(arrow != null) arrow.tile = t;
+		return tileArrow = t;
+	}
+
+	function set_tileOverItem(t) {
+		if(cursor != null) cursor.tile = t;
+		return tileOverItem = t;
+	}
+
 	public function addItem(s : Sprite) {
 		items.push(s);
 		dropdownList.addChild(s);
 		var width = Std.int(dropdownList.getSize().width);
 		if( maxWidth != null && width > maxWidth ) width = maxWidth;
-		minWidth = width;
+		minWidth = hxd.Math.imax(minWidth, Std.int(width-arrow.getSize().width));
 	}
 
 	function set_canEdit(b) {
@@ -132,38 +168,33 @@ class Dropdown extends Flow {
 	}
 
 	function set_selectedItem(s) {
-		if (s < 0) {
-			return selectedItem = -1;
-		} else if (s >= items.length) {
-			return selectedItem = items.length - 1;
-		}
+		if( s < 0 )
+			s = -1;
+		else if( s >= items.length )
+			s = items.length - 1;
 		var item = items[s];
-		var itemSize = item.getSize();
-		minHeight = Std.int(itemSize.height);
+		if( item != null )
+			minHeight = Std.int(item.getSize().height);
 		needReflow = true;
 		return selectedItem = s;
 	}
 
 	public function open() {
-		if( dropdownList.parent == null ) {
+		if( dropdownList.parent == this ) {
 			getScene().add(dropdownList, dropdownLayer);
+			dropdownList.visible = true;
+			arrow.tile = tileArrowOpen;
 			onOpen();
 		}
 	}
 
 	public function close() {
-		if( dropdownList.parent != null ) {
-			dropdownList.remove();
+		if( dropdownList.parent != this ) {
+			addChild(dropdownList);
+			dropdownList.visible = false;
+			arrow.tile = tileArrow;
 			onClose();
 		}
-	}
-
-	public function get_dropdownCursor() {
-		return cursor.tile;
-	}
-
-	public function set_dropdownCursor(c : h2d.Tile) {
-		return cursor.tile = c;
 	}
 
 	override function onRemove() {
