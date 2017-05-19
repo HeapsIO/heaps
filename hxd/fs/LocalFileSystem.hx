@@ -39,7 +39,7 @@ private class LocalEntry extends FileEntry {
 			try fbx = hxd.fmt.fbx.Parser.parse(content.toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
 			var hmdout = new hxd.fmt.fbx.HMDOut();
 			hmdout.load(fbx);
-			var hmd = hmdout.toHMD(null, !StringTools.startsWith(name, "Anim_"));
+			var hmd = hmdout.toHMD(null, !(StringTools.startsWith(name, "Anim_") || name.toLowerCase().indexOf("_anim_") > 0));
 			var out = new haxe.io.BytesOutput();
 			new hxd.fmt.hmd.Writer(out).write(hmd);
 			return out.getBytes();
