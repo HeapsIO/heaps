@@ -389,6 +389,8 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	var resourcePath : String;
 	var partAlloc : GpuPart;
 	var rnd = new hxd.Rand(0);
+	var lastMove : Float;
+
 	public var seed(default, set) : Int	= Std.random(0x1000000);
 	public var volumeBounds(default, set) : h3d.col.Bounds;
 	public var currentTime : Float = 0.;
@@ -496,6 +498,11 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		return groups.iterator();
 	}
 
+	override function calcAbsPos() {
+		super.calcAbsPos();
+		lastMove = currentTime;
+	}
+
 	function rebuildAll(cam) {
 		if( primitive != null ) {
 			primitive.dispose();
@@ -564,16 +571,16 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 	static var PUVS = [new h3d.prim.UV(0, 0), new h3d.prim.UV(1, 0), new h3d.prim.UV(0, 1), new h3d.prim.UV(1, 1)];
 
-	function cleanParts( g : GpuPartGroup ) {
+	function cleanParts( g : GpuPartGroup, pneeded : Int, checkMove = false ) {
 		if( g.maxTime < 0 )
 			return;
-		var pneeded = Math.ceil(hxd.Math.clamp(g.amount * amount) * g.nparts);
 		var p = g.particles;
 		var prev = null;
 		var ftime = g.maxTime;
 		while( p != null && g.currentParts > pneeded ) {
 			var t = p.time + currentTime;
-			if( t - (t % p.life) > p.time + ftime ) {
+			var st = t - (t % p.life);
+			if( st > p.time + ftime && (!checkMove || -p.time < ftime) ) {
 				var n = p.next;
 				p.next = partAlloc;
 				partAlloc = p;
@@ -596,10 +603,31 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		var needSync = false;
 		var pneeded = Math.ceil(hxd.Math.clamp(g.amount * amount) * g.nparts);
 
+		if( lastMove != 0 ) {
+			var p = g.particles;
+			while( p != null ) {
+				if( p.time > -lastMove ) break;
+				p = p.next;
+			}
+			if( p == null ) {
+				lastMove = 0;
+			} else {
+				var old = g.maxTime;
+				g.maxTime = lastMove;
+				var count = g.currentParts;
+				cleanParts(g, 0, true);
+				if( g.currentParts < count ) needSync = true;
+				g.maxTime = old;
+			}
+		}
+
 		if( g.currentParts != pneeded ) {
 
 			if( g.currentParts < pneeded ) {
-				cleanParts(g);
+
+				if( lastMove == 0 )
+					cleanParts(g, pneeded);
+
 				var partAlloc = partAlloc;
 				while( g.currentParts < pneeded ) {
 					var pt = partAlloc;
@@ -608,7 +636,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 					else
 						partAlloc = pt.next;
 					g.emitPart(rnd, pt, absPos);
-					pt.time -= prevTime;
+					if( lastMove != 0 ) pt.time = -prevTime /* no delay */ else pt.time -= prevTime;
 					pt.index = -1;
 					pt.next = g.particles;
 					g.particles = pt;
@@ -618,7 +646,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				needSync = true;
 			}
 
-			if( g.currentParts > pneeded ) {
+			if( g.currentParts > pneeded && lastMove == 0 ) {
 				var ftime = g.maxTime;
 				if( ftime < 0 )
 					g.maxTime = ftime = currentTime;
@@ -626,13 +654,12 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				var p = g.particles;
 				var count = 0;
 				while( p != null ) {
-					var t = p.time + currentTime;
-					if( t - (t % p.life) > p.time + ftime ) count++;
+					if( currentTime - ((p.time + currentTime) % p.life) > ftime ) count++;
 					p = p.next;
 				}
 				// remove at once
 				if( g.currentParts - count <= pneeded || count > 1000 ) {
-					cleanParts(g);
+					cleanParts(g, pneeded);
 					if( g.currentParts > pneeded ) g.maxTime = ftime;
 					needSync = true;
 				}
