@@ -109,6 +109,10 @@ class TextInput extends Text {
 		addChildAt(interactive, 0);
 	}
 
+	override function constraintSize(width:Float, height:Float) {
+		// disable (don't allow multiline textinput for now)
+	}
+
 	function handleKey( e : hxd.Event ) {
 		if( e.cancel || cursorIndex < 0 )
 			return;
