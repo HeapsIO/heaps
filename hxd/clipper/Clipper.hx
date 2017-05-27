@@ -2346,7 +2346,7 @@ class Clipper extends ClipperBase {
 
     //------------------------------------------------------------------------------
 
-	static function compareY(n1, n2) return n2.pt.y - n1.pt.y >= 0 ? 1 : -1;
+	static function compareY(n1:IntersectNode, n2:IntersectNode) return n2.pt.y - n1.pt.y >= 0 ? 1 : -1;
 
 	private function FixupIntersectionOrder() : Bool
 	{
