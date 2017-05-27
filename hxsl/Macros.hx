@@ -83,19 +83,20 @@ class Macros {
 		}
 	}
 
-	static function addParamRec( eparams : Array<haxe.macro.Expr>, e : haxe.macro.Expr, t : Type ) {
+	static function addParamRec( eparams : Array<haxe.macro.Expr>, tparams : Array<Type>, e : haxe.macro.Expr, t : Type ) {
 		switch( t ) {
 		case TStruct(vl):
 			for( v in vl )
-				addParamRec(eparams, { expr : EField(e, v.name), pos : e.pos }, v.type);
+				addParamRec(eparams, tparams, { expr : EField(e, v.name), pos : e.pos }, v.type);
 		default:
 			eparams.push(e);
+			tparams.push(t);
 		}
 	}
 
 	static function buildFields( shader : ShaderData, pos : Position ) {
 		var fields = new Array<Field>();
-		var globals = [], consts = [], params = [], eparams = [];
+		var globals = [], consts = [], params = [], eparams = [], tparams = [];
 		for( v in shader.vars ) {
 			var cpos = consts.length;
 			getConsts(v, pos, consts);
@@ -152,7 +153,7 @@ class Macros {
 				fields.push(f);
 				fields.push(f2);
 				params.push(name);
-				addParamRec(eparams, { expr : EConst(CIdent(name)), pos:pos }, v.type);
+				addParamRec(eparams, tparams, { expr : EConst(CIdent(name)), pos:pos }, v.type);
 				fields.push(fget);
 				fields.push(fset);
 			case Global:
@@ -208,6 +209,22 @@ class Macros {
 					expr : EBlock([
 						{ expr : ESwitch(macro index, [for( p in eparams ) { values : [macro $v{ index++ } ], expr : macro return $p } ], macro {}), pos : pos },
 						macro return null,
+					]),
+					pos : pos,
+				},
+			}),
+			access : [AOverride],
+		});
+		fields.push( {
+			name : "getParamFloatValue",
+			pos : pos,
+			kind : FFun( {
+				ret : macro : Float,
+				args : [ { name : "index", type : macro : Int } ],
+				expr : {
+					expr : EBlock([
+						{ expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TFloat ) { values : [macro $v{i}], expr : macro return ${eparams[i]} }], macro {}), pos : pos },
+						macro return 0.,
 					]),
 					pos : pos,
 				},
@@ -287,6 +304,7 @@ class Macros {
 							shader = { expr : EBlock([ { expr : ECall( { expr : EIdent("extends"), pos : pos }, [ { expr : EConst(CString(sup)), pos : pos } ]), pos : pos }, shader]), pos : pos };
 							supFields.remove("updateConstants");
 							supFields.remove("getParamValue");
+							supFields.remove("getParamFloatValue");
 							supFields.remove("clone");
 							csup = tsup.superClass;
 						} while( true);

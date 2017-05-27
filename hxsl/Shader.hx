@@ -33,6 +33,11 @@ class Shader {
 		return null;
 	}
 
+	public function getParamFloatValue( index : Int ) : Float {
+		throw "assert"; // will be subclassed in sub shaders
+		return 0.;
+	}
+
 	public function updateConstants( globals : Globals ) {
 		throw "assert";
 	}

@@ -112,6 +112,13 @@ class Manager {
 				out[pos++] = m._43;
 			}
 			return len * 12;
+		case TArray(TFloat, SConst(len)):
+			var v : Array<Float> = v;
+			var size = 0;
+			var count = v.length < len ? v.length : len;
+			for( i in 0...count )
+				out[pos++] = v[i];
+			return len;
 		case TArray(t, SConst(len)):
 			var v : Array<Dynamic> = v;
 			var size = 0;
@@ -172,7 +179,15 @@ class Manager {
 		inline function fill(buf:Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var p = s.params;
 			while( p != null ) {
-				var v = getParamValue(p, shaders);
+				if( p.type == TFloat && p.perObjectGlobal == null ) {
+					var si = shaders;
+					var n = p.instance;
+					while( n-- > 0 ) si = si.next;
+					buf.params[p.pos] = si.s.getParamFloatValue(p.index);
+					p = p.next;
+					continue;
+				}
+				var v : Dynamic = getParamValue(p, shaders);
 				fillRec(v, p.type, buf.params, p.pos);
 				p = p.next;
 			}
