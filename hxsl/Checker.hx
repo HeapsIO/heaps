@@ -177,9 +177,12 @@ class Checker {
 		}
 		for( i in 0...tfuns.length )
 			typeFun(tfuns[i], funs[i].f.expr);
+
+		var vars = Lambda.array(vars);
+		vars.sort(function(v1, v2) return (v1.id < 0 ? -v1.id : v1.id) - (v2.id < 0 ? -v2.id : v2.id));
 		return {
 			name : name,
-			vars : Lambda.array(vars),
+			vars : vars,
 			funs : tfuns,
 		};
 	}
