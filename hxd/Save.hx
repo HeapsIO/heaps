@@ -58,6 +58,14 @@ class Save {
 		#end
 	}
 
+	public static function delete( name = "save" ) {
+		#if flash
+		throw "TODO";
+		#elseif sys
+		try sys.FileSystem.deleteFile(savePath(name)) catch( e : Dynamic ) {}
+		#end
+	}
+
 	public static function save( val : Dynamic, ?name = "save", checkSum = false ) {
 		#if flash
 		var data = saveData(val, checkSum);
