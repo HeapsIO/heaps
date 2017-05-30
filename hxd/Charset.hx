@@ -91,7 +91,7 @@ class Charset {
 	}
 
 	public function isSpace(code) {
-		return code == ' '.code || code == 0x3000;
+		return code == ' '.code || code == 0x3000 || (code >= 0x4E00 && code <= 0x9FFF) /* CJK */;
 	}
 
 	public function isBreakChar(code) {
