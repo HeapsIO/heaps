@@ -10,7 +10,8 @@ class App implements h3d.IDrawable {
 	public var wantedFPS(get, set) : Float;
 	var isDisposed : Bool;
 
-	public function new(?engine) {
+	public function new() {
+		var engine = h3d.Engine.getCurrent();
 		if( engine != null ) {
 			this.engine = engine;
 			engine.onReady = setup;
