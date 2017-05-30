@@ -267,7 +267,7 @@ class GlDriver extends Driver {
 				if( gl.getProgramParameter(p.p, GL.LINK_STATUS) != cast 1 )
 					log = gl.getProgramInfoLog(p.p);
 			} catch( e : Dynamic ) {
-				throw "Shader linkage error: "+Std.string(e)+" ("+getDriverName(true)+")";
+				throw "Shader linkage error: "+Std.string(e)+" ("+getDriverName(false)+")";
 			}
 			gl.deleteShader(p.vertex.s);
 			gl.deleteShader(p.fragment.s);
