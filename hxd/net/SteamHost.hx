@@ -37,7 +37,6 @@ class SteamClient extends NetworkClient {
 
 	public var user : steam.User;
 
-	var allowData : Bool;
 	var bigPacket : haxe.io.Bytes;
 	var bigPacketPosition = 0;
 
@@ -81,7 +80,6 @@ class SteamHost extends NetworkHost {
 	var server : steam.User;
 	var onConnected : Bool -> Void;
 	var input : haxe.io.BytesInput;
-	var allowData : Bool;
 
 	public function new() {
 		super();
@@ -101,7 +99,6 @@ class SteamHost extends NetworkHost {
 
 	public function startClient( server : steam.User, onConnected : Bool -> Void ) {
 		isAuth = false;
-		allowData = false;
 		this.server = server;
 		clients = [new SteamClient(this, server)];
 		steam.Networking.startP2P(this);
@@ -119,7 +116,6 @@ class SteamHost extends NetworkHost {
 			}
 			sendCustom(CHELLO_SERVER, from);
 		case CHELLO_SERVER if( !isAuth && from == clients[0] ):
-			allowData = true;
 			onConnected(true);
 		case CBIG_PACKET:
 			var from = Std.instance(from, SteamClient);
@@ -149,7 +145,6 @@ class SteamHost extends NetworkHost {
 		this.server = steam.Api.getUser();
 		steam.Networking.startP2P(this);
 		isAuth = true;
-		allowData = true;
 	}
 
 	public function offlineServer() {
@@ -186,12 +181,12 @@ class SteamHost extends NetworkHost {
 		//Sys.println(from + " < [" + data.length+"] " + (data.length > 100 ? data.sub(0,60).toHex()+"..."+data.sub(data.length-8,8).toHex() : data.toHex()));
 		var c = getClient(from);
 		if( c == null ) {
+			// prevent messages coming from previous connection to reach us
+			if( !isCustomMessage(data, CHELLO_CLIENT) )
+				return;
 			c = new SteamClient(this, from);
 			pendingClients.push(c);
 		}
-		// prevent messages coming from previous connection to reach us
-		if( !allowData && data.get(0) != NetworkHost.CUSTOM )
-			return;
 		@:privateAccess c.processMessagesData(data, data.length);
 	}
 
