@@ -67,19 +67,12 @@ class Engine {
 
 	static var CURRENT : Engine = null;
 
-	static inline function check() {
-		#if debug
-		if ( CURRENT == null ) throw "no current context, please do this operation after engine init/creation";
-		#end
-	}
-
 	public function setDriver(d) {
 		driver = d;
 		if( mem != null ) mem.driver = d;
 	}
 
 	public static inline function getCurrent() {
-		check();
 		return CURRENT;
 	}
 
