@@ -51,10 +51,10 @@ class BitmapFont extends Resource {
 				var t = tile.sub(Std.parseInt(c.att.x), Std.parseInt(c.att.y), Std.parseInt(c.att.width), Std.parseInt(c.att.height), Std.parseInt(c.att.xoffset), Std.parseInt(c.att.yoffset));
 				var fc = new h2d.Font.FontChar(t, Std.parseInt(c.att.width) - 1);
 				var kerns = xml.node.kernings.elements;
-				for (k in kerns) 
+				for (k in kerns)
 					if (k.att.second == c.att.id)
 						fc.addKerning(Std.parseInt(k.att.first), Std.parseInt(k.att.amount));
-				
+
 				glyphs.set(Std.parseInt(c.att.id), fc);
 			}
 		case sign:
@@ -68,15 +68,20 @@ class BitmapFont extends Resource {
 		font.lineHeight = lineHeight;
 		font.tile = tile;
 
+		var padding = 0;
+		var space = glyphs.get(" ".code);
+		if( space != null )
+			padding = (space.t.height >> 1);
+
 		var a = glyphs.get("A".code);
 		if( a == null )
 			a = glyphs.get("a".code);
 		if( a == null )
 			a = glyphs.get("0".code); // numerical only
 		if( a == null )
-			font.baseLine = font.lineHeight - 2;
+			font.baseLine = font.lineHeight - 2 - padding;
 		else
-			font.baseLine = a.t.dy + a.t.height;
+			font.baseLine = a.t.dy + a.t.height - padding;
 
 		return font;
 	}
