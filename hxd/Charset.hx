@@ -90,8 +90,12 @@ class Charset {
 		return null;
 	}
 
+	public function isCJK(code) {
+		 return code >= 0x4E00 && code <= 0x9FFF;
+	}
+
 	public function isSpace(code) {
-		return code == ' '.code || code == 0x3000 || (code >= 0x4E00 && code <= 0x9FFF) /* CJK */;
+		return code == ' '.code || code == 0x3000 || isCJK(code);
 	}
 
 	public function isBreakChar(code) {
