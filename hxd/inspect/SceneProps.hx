@@ -450,7 +450,7 @@ class SceneProps {
 				if( Std.is(v, Bool) )
 					props.unshift(PBool(f, function() return Reflect.getProperty(o, f), function(v) Reflect.setProperty(o, f, v)));
 				else if( Std.is(v, Float) ) {
-					var range : Array<Null<Float>> = m.range;
+					var range : Array<Dynamic> = m.range;
 					if( range != null )
 						props.unshift(PRange(f, range[0], range[1], function() return Reflect.getProperty(o, f), function(v) Reflect.setProperty(o, f, v), range[2]));
 					else
