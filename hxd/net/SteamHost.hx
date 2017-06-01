@@ -39,6 +39,9 @@ class SteamClient extends NetworkClient {
 
 	var bigPacket : haxe.io.Bytes;
 	var bigPacketPosition = 0;
+	var blockSentId = 0;
+	var blockRecvId = 0;
+	var cache : haxe.io.Bytes;
 
 	public function new(host, u) {
 		super(host);
@@ -57,8 +60,12 @@ class SteamClient extends NetworkClient {
 			host.sendCustom(SteamHost.CBIG_PACKET_DATA, data.sub(split * MAX_PAYLOAD_SIZE, data.length - split * MAX_PAYLOAD_SIZE), this);
 			return;
 		}
+		if( cache == null || cache.length <= data.length )
+			cache = haxe.io.Bytes.alloc(data.length * 2 + 1);
+		cache.blit(1, data, 0, data.length);
+		cache.set(0, (blockSentId++) & 0xFF);
 		//Sys.println(user + " > [" + data.length+"] " + (data.length > 100 ? data.sub(0,60).toHex()+"..."+data.sub(data.length-8,8).toHex() : data.toHex()));
-		steam.Networking.sendP2P(user, data, Reliable);
+		steam.Networking.sendP2P(user, cache, Reliable, 0, data.length + 1);
 	}
 
 	override function stop() {
@@ -131,7 +138,7 @@ class SteamHost extends NetworkHost {
 				@:privateAccess {
 					var oldIn = ctx.input;
 					var oldPos = ctx.inPos;
-					onData(from.user, data);
+					from.processMessagesData(data, 0, data.length);
 					ctx.input = oldIn;
 					ctx.inPos = oldPos;
 				}
@@ -179,15 +186,18 @@ class SteamHost extends NetworkHost {
 
 	function onData( from : steam.User, data : haxe.io.Bytes ) {
 		//Sys.println(from + " < [" + data.length+"] " + (data.length > 100 ? data.sub(0,60).toHex()+"..."+data.sub(data.length-8,8).toHex() : data.toHex()));
-		var c = getClient(from);
+		var c = Std.instance(getClient(from), SteamClient);
 		if( c == null ) {
 			// prevent messages coming from previous connection to reach us
-			if( !isCustomMessage(data, CHELLO_CLIENT) )
+			if( !isCustomMessage(data, CHELLO_CLIENT, 1) )
 				return;
 			c = new SteamClient(this, from);
 			pendingClients.push(c);
 		}
-		@:privateAccess c.processMessagesData(data, data.length);
+		if( (c.blockRecvId & 0xFF) != data.get(0) )
+			logError("Out of order block received " + data.get(0) + " while expecting " + (c.blockRecvId & 0xFF));
+		c.blockRecvId++;
+		@:privateAccess c.processMessagesData(data, 1, data.length);
 	}
 
 
