@@ -83,7 +83,9 @@ class SteamHost extends NetworkHost {
 	public static inline var CBIG_PACKET = 2;
 	public static inline var CBIG_PACKET_DATA = 3;
 
-	public var enableSound : Bool = true;
+	public var enableRecording(default,set) : Bool = false;
+	var recordedData : haxe.io.BytesBuffer;
+	var recordedStart : Float;
 	var server : steam.User;
 	var onConnected : Bool -> Void;
 	var input : haxe.io.BytesInput;
@@ -93,6 +95,15 @@ class SteamHost extends NetworkHost {
 		isAuth = false;
 		self = new SteamClient(this, steam.Api.getUser());
 		input = new haxe.io.BytesInput(haxe.io.Bytes.alloc(0));
+	}
+
+	function set_enableRecording(b) {
+		if( b && recordedData == null ) {
+			if( isAuth ) throw "Can't record if isAuth";
+			recordedStart = haxe.Timer.stamp();
+			recordedData = new haxe.io.BytesBuffer();
+		}
+		return enableRecording = b;
 	}
 
 	override function dispose() {
@@ -184,7 +195,16 @@ class SteamHost extends NetworkHost {
 		return true;
 	}
 
+	public function getRecordedData() {
+		return recordedData == null ? null : recordedData.getBytes();
+	}
+
 	function onData( from : steam.User, data : haxe.io.Bytes ) {
+		if( recordedData != null ) {
+			recordedData.addFloat(haxe.Timer.stamp() - recordedStart);
+			recordedData.addInt32(data.length);
+			recordedData.addBytes(data, 0, data.length);
+		}
 		//Sys.println(from + " < [" + data.length+"] " + (data.length > 100 ? data.sub(0,60).toHex()+"..."+data.sub(data.length-8,8).toHex() : data.toHex()));
 		var c = Std.instance(getClient(from), SteamClient);
 		if( c == null ) {
