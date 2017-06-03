@@ -36,6 +36,12 @@ typedef VertexBuffer = { b : psgl.GL.Buffer, stride : Int };
 typedef Texture = { t : psgl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int };
 typedef DepthBuffer = { r : psgl.GL.Renderbuffer };
 typedef Query = { q : psgl.GL.Query, kind : QueryKind };
+#elseif hldx
+typedef IndexBuffer = dx.Buffer;
+typedef VertexBuffer = dx.Buffer;
+typedef Texture = {};
+typedef DepthBuffer = {};
+typedef Query = {};
 #else
 typedef IndexBuffer = {};
 typedef VertexBuffer = {};

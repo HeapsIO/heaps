@@ -35,4 +35,23 @@ class DirectXDriver extends h3d.impl.Driver {
 		Driver.present();
 	}
 
+	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
+		return dx.Buffer.alloc(m.size * m.stride, Default, VertexBuffer, None, None, m.stride, null);
+	}
+
+	override function allocIndexes( count : Int ) : IndexBuffer {
+		return dx.Buffer.alloc(count << 1, Default, IndexBuffer, None, None, 2, null);
+	}
+
+	override function disposeVertexes(v:VertexBuffer) {
+		v.release();
+	}
+
+	override function disposeIndexes(i:IndexBuffer) {
+		i.release();
+	}
+
+	override function selectShader(shader:hxsl.RuntimeShader) {
+	}
+
 }
