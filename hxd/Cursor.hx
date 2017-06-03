@@ -18,6 +18,8 @@ class CustomCursor {
 	var offsetY : Int;
 	#if hlsdl
 	var alloc : sdl.Cursor;
+	#elseif hldx
+	var alloc : dx.Cursor;
 	#elseif flash
 	static var UID = 0;
 	var name : String;

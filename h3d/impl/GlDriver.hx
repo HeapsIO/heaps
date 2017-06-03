@@ -4,7 +4,7 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import h3d.mat.Data;
 
-#if (js||cpp||hxsdl||psgl)
+#if (js||cpp||hlsdl||psgl)
 
 #if js
 import js.html.Uint16Array;
@@ -33,7 +33,7 @@ private typedef Framebuffer = nme.gl.Framebuffer;
 private typedef Uint16Array = nme.utils.Int16Array;
 private typedef Uint8Array = nme.utils.UInt8Array;
 private typedef Float32Array = nme.utils.Float32Array;
-#elseif hxsdl
+#elseif hlsdl
 import sdl.GL;
 private typedef Uniform = sdl.GL.Uniform;
 private typedef Program = sdl.GL.Program;
@@ -92,7 +92,7 @@ private class CompiledProgram {
 }
 
 @:access(h3d.impl.Shader)
-#if (cpp||hxsdl||psgl)
+#if (cpp||hlsdl||psgl)
 @:build(h3d.impl.MacroHelper.replaceGL())
 #end
 class GlDriver extends Driver {
@@ -103,7 +103,7 @@ class GlDriver extends Driver {
 	public var gl : js.html.webgl.RenderingContext;
 	#end
 
-	#if (hxsdl||psgl)
+	#if (hlsdl||psgl)
 	var commonVA : VertexArray;
 	#end
 
@@ -145,7 +145,7 @@ class GlDriver extends Driver {
 		curAttribs = 0;
 		curMatBits = -1;
 		defStencil = new Stencil();
-		#if hxsdl
+		#if hlsdl
 		var v : String = gl.getParameter(GL.VERSION);
 		if( v.indexOf("ES") < 0 ){
 			commonVA = gl.createVertexArray();
@@ -248,7 +248,7 @@ class GlDriver extends Driver {
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 			p.p = gl.createProgram();
-			#if hxsdl
+			#if hlsdl
 			if( !glout.glES ) {
 				var outCount = 0;
 				for( v in shader.fragment.data.vars )
@@ -275,7 +275,7 @@ class GlDriver extends Driver {
 				#if js
 				gl.deleteProgram(p.p);
 				#end
-				#if hxsdl
+				#if hlsdl
 				/*
 					Tentative patch on some driver that report an higher shader version that it's allowed to use.
 				*/
@@ -747,7 +747,7 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-	#if (nme || hxsdl || psgl || openfl || lime)
+	#if (nme || hlsdl || psgl || openfl || lime)
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
@@ -768,7 +768,7 @@ class GlDriver extends Driver {
 	#end
 	}
 
-	#if !(hxsdl || psgl)
+	#if !(hlsdl || psgl)
 	inline static function bytesToUint8Array( b : haxe.io.Bytes ) : Uint8Array {
 		#if (lime && !js)
 		return new Uint8Array(b);
@@ -1080,7 +1080,7 @@ class GlDriver extends Driver {
 
 	override function hasFeature( f : Feature ) : Bool {
 		return switch( f ) {
-		#if (hxsdl || psgl)
+		#if (hlsdl || psgl)
 		case StandardDerivatives, FloatTextures, MultipleRenderTargets, Queries:
 			true; // runtime extension detect required ?
 		#else

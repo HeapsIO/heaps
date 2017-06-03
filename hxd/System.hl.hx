@@ -1,5 +1,11 @@
 package hxd;
 
+#if hlsdl
+import sdl.Cursor;
+#elseif hldx
+import dx.Cursor;
+#end
+
 enum Platform {
 	IOS;
 	Android;
@@ -28,7 +34,7 @@ class System {
 	static var loopFunc : Void -> Void;
 
 	// -- HL
-	static var currentNativeCursor : Cursor = Default;
+	static var currentNativeCursor : hxd.Cursor = Default;
 	static var cursorVisible = true;
 
 	public static function getCurrentLoop() : Void -> Void {
@@ -54,8 +60,6 @@ class System {
 		@:privateAccess Stage.inst = new Stage("", psgl.Api.width, psgl.Api.height);
 		init();
 		#else
-		sdl.Sdl.tick();
-		sdl.Sdl.init();
 		var width = 800;
 		var height = 600;
 		var size = haxe.macro.Compiler.getDefine("windowSize");
@@ -67,34 +71,42 @@ class System {
 			width = Std.parseInt(p[0]);
 			height = Std.parseInt(p[1]);
 		}
-		@:privateAccess Stage.initChars();
-		@:privateAccess Stage.inst = new Stage(title, width, height);
-		init();
-		sdl.Sdl.defaultEventHandler = @:privateAccess Stage.inst.onEvent;
+		#if hlsdl
+			sdl.Sdl.tick();
+			sdl.Sdl.init();
+			@:privateAccess Stage.initChars();
+			@:privateAccess Stage.inst = new Stage(title, width, height);
+			init();
+			sdl.Sdl.defaultEventHandler = @:privateAccess Stage.inst.onEvent;
+		#elseif hldx
+			@:privateAccess Stage.inst = new Stage(title, width, height);
+			init();
+		#end
+
 		#end
 		haxe.MainLoop.add(mainLoop);
 	}
 
-	public static function setNativeCursor( c : Cursor ) : Void {
+	public static function setNativeCursor( c : hxd.Cursor ) : Void {
 		#if !psgl
 		if( c.equals(currentNativeCursor) )
 			return;
 		currentNativeCursor = c;
 		if( c == Hide ) {
 			cursorVisible = false;
-			sdl.Cursor.show(false);
+			Cursor.show(false);
 			return;
 		}
-		var cur : sdl.Cursor;
+		var cur : Cursor;
 		switch( c ) {
 		case Default:
-			cur = sdl.Cursor.createSystem(Arrow);
+			cur = Cursor.createSystem(Arrow);
 		case Button:
-			cur = sdl.Cursor.createSystem(Hand);
+			cur = Cursor.createSystem(Hand);
 		case Move:
 			throw "Cursor not supported";
 		case TextInput:
-			cur = sdl.Cursor.createSystem(IBeam);
+			cur = Cursor.createSystem(IBeam);
 		case Hide:
 			throw "assert";
 		case Custom(c):
@@ -102,9 +114,13 @@ class System {
 				if( c.frames.length > 1 ) throw "Animated cursor not supported";
 				var pixels = c.frames[0].getPixels();
 				pixels.convert(BGRA);
+				#if hlsdl
 				var surf = sdl.Surface.fromBGRA(pixels.bytes, pixels.width, pixels.height);
 				c.alloc = sdl.Cursor.create(surf, c.offsetX, c.offsetY);
 				surf.free();
+				#elseif hldx
+				throw "TODO";
+				#end
 				pixels.dispose();
 			}
 			cur = c.alloc;
@@ -112,7 +128,7 @@ class System {
 		cur.set();
 		if( !cursorVisible ) {
 			cursorVisible = true;
-			sdl.Cursor.show(true);
+			Cursor.show(true);
 		}
 		#end
 	}
@@ -120,8 +136,10 @@ class System {
 	public static function getDeviceName() : String {
 		#if psgl
 		return psgl.Api.name;
-		#else
+		#elseif hlsdl
 		return "PC/" + sdl.Sdl.getDevices()[0];
+		#elseif hldx
+		return "PC/" + dx.Driver.getDeviceName();
 		#end
 	}
 
@@ -162,9 +180,24 @@ class System {
 
 	// getters
 
-	static function get_width() : Int return #if psgl psgl.Api.width #else sdl.Sdl.getScreenWidth() #end;
-	static function get_height() : Int return #if psgl psgl.Api.height #else sdl.Sdl.getScreenHeight() #end;
-	static function get_platform() : Platform return #if psgl Console #else PC #end;
-	static function get_screenDPI() : Int return 72; // TODO : SDL ?
+	#if psgl
+	static function get_width() : Int return psgl.Api.width;
+	static function get_height() : Int return psgl.Api.height;
+	static function get_platform() : Platform return Console;
+	#elseif hldx
+	static function get_width() : Int return dx.Driver.getScreenWidth();
+	static function get_height() : Int return dx.Driver.getScreenHeight();
+	static function get_platform() : Platform return PC; // TODO : Xbox ?
+	#elseif hlsdl
+	static function get_width() : Int return sdl.Sdl.getScreenWidth();
+	static function get_height() : Int return sdl.Sdl.getScreenHeight();
+	static function get_platform() : Platform return PC; // TODO : Xbox ?
+	#else
+	static function get_width() : Int return 800;
+	static function get_height() : Int return 600;
+	static function get_platform() : Platform return PC;
+	#end
+
+	static function get_screenDPI() : Int return 72; // TODO
 
 }

@@ -1,21 +1,6 @@
 package hxd.snd;
 
-#if hxsdl
-private class ChannelMapper extends sdl.SoundChannel {
-	var native : NativeChannel;
-	public function new(samples, native) {
-		super(samples);
-		this.native = native;
-	}
-	#if cpp
-	override function onSample( buf : cpp.Pointer<cpp.Float32>, len : Int ) {
-		var data : haxe.io.BytesData = [];
-		cpp.NativeArray.setUnmanagedData(data, buf.reinterpret(), len<<2);
-		@:privateAccess native.onSample(haxe.io.Float32Array.fromBytes(haxe.io.Bytes.ofData(data)));
-	}
-	#end
-}
-#elseif lime_openal
+#if lime_openal
 import lime.media.openal.AL;
 import lime.media.openal.ALBuffer;
 import lime.media.openal.ALSource;
@@ -51,7 +36,7 @@ private class ALChannel {
 	public function stop() {
 		if ( src != null ){
 			lime.app.Application.current.onUpdate.remove( onUpdate );
-			
+
 			AL.sourceStop(src);
 			AL.deleteSource(src);
 			AL.deleteBuffers(buffers);
@@ -118,8 +103,6 @@ class NativeChannel {
 	}
 	var sproc : js.html.audio.ScriptProcessorNode;
 	var tmpBuffer : haxe.io.Float32Array;
-	#elseif hxsdl
-	var channel : ChannelMapper;
 	#elseif lime_openal
 	var channel : ALChannel;
 	#end
@@ -138,8 +121,6 @@ class NativeChannel {
 		tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
 		sproc.connect(ctx.destination);
 		sproc.onaudioprocess = onJsSample;
-		#elseif hxsdl
-		channel = new ChannelMapper(bufferSamples, this);
 		#elseif lime_openal
 		channel = new ALChannel(bufferSamples, this);
 		#end
@@ -182,11 +163,6 @@ class NativeChannel {
 		if( sproc != null ) {
 			sproc.disconnect();
 			sproc = null;
-		}
-		#elseif hxsdl
-		if( channel != null ) {
-			channel.stop();
-			channel = null;
 		}
 		#elseif lime_openal
 		if( channel != null ) {

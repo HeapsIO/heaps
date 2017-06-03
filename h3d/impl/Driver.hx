@@ -24,7 +24,7 @@ typedef VertexBuffer = { b : lime.graphics.opengl.GLBuffer, stride : Int };
 typedef Texture = { t : lime.graphics.opengl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int };
 typedef DepthBuffer = { r : lime.graphics.opengl.GLRenderbuffer };
 typedef Query = {};
-#elseif hxsdl
+#elseif hlsdl
 typedef IndexBuffer = sdl.GL.Buffer;
 typedef VertexBuffer = { b : sdl.GL.Buffer, stride : Int };
 typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int };

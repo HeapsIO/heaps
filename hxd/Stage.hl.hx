@@ -14,9 +14,12 @@ class Stage {
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 
-	#if !psgl
+	#if hlsdl
 	var window : sdl.Window;
 	var fullScreenMode : sdl.Window.DisplayMode = Borderless;
+	#elseif hldx
+	var window : dx.Window;
+	var fullScreenMode : dx.Window.DisplayMode = Borderless;
 	#end
 	var windowWidth = 800;
 	var windowHeight = 600;
@@ -31,8 +34,10 @@ class Stage {
 		this.windowHeight = height;
 		eventTargets = new List();
 		resizeEvents = new List();
-		#if !psgl
+		#if hlsdl
 		window = new sdl.Window(title, width, height);
+		#elseif hldx
+		window = new dx.Window(title, width, height);
 		#end
 	}
 
@@ -111,7 +116,7 @@ class Stage {
 		return false;
 	}
 
-	#if psgl
+	#if (psgl || hldx)
 
 	function get_vsync() : Bool return true;
 
