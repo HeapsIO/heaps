@@ -132,12 +132,28 @@ class DirectXDriver extends h3d.impl.Driver {
 			var vertex = compileShader(shader.vertex);
 			s.vertex = vertex.s;
 			s.fragment = compileShader(shader.fragment).s;
-			var n = new hl.NativeArray(1);
-			var e = new LayoutElement();
-			e.semanticName = @:privateAccess "SV_POSITION".toUtf8();
-			e.format = R32G32B32_FLOAT;
-			e.inputSlotClass = PerVertexData;
-			n[0] = e;
+
+			var layout = [];
+			for( v in shader.vertex.data.vars )
+				if( v.kind == Input ) {
+					var e = new LayoutElement();
+					e.semanticName = @:privateAccess v.name.toUtf8();
+					e.format = switch( v.type ) {
+					case TFloat: R32_FLOAT;
+					case TVec(2, VFloat): R32G32_FLOAT;
+					case TVec(3, VFloat): R32G32B32_FLOAT;
+					case TVec(4, VFloat): R32G32B32A32_FLOAT;
+					default:
+						throw "Unsupported input type " + hxsl.Ast.Tools.toString(v.type);
+					};
+					e.inputSlotClass = PerVertexData;
+					e.alignedByteOffset = -1; // automatic layout
+					layout.push(e);
+				}
+
+			var n = new hl.NativeArray(layout.length);
+			for( i in 0...layout.length )
+				n[i] = layout[i];
 			s.layout = Driver.createInputLayout(n, vertex.bytes, vertex.bytes.length);
 			if( s.layout == null )
 				throw "Failed to create input layout";

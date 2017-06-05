@@ -201,6 +201,8 @@ class HlslOut {
 				decl("float4x3 mat3x4( float4 a, float4 b, float4 c ) { float4x3 m; m._m00_m10_m20_m30 = a; m._m01_m11_m21_m31 = b; m._m02_m12_m22_m32 = c; return m; }");
 			case Mat4:
 				decl("float4x4 mat4( float4 a, float4 b, float4 c, float4 d ) { float4x4 m; m._m00_m10_m20_m30 = a; m._m01_m11_m21_m31 = b; m._m02_m12_m22_m32 = c; m._m03_m13_m23_m33 = d; return m; }");
+			case Mat3:
+				decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
 			default:
 			}
 			add(GLOBALS.get(g));
@@ -409,13 +411,6 @@ class HlslOut {
 		}
 	}
 
-	function addSemantic( v : TVar ) {
-		switch( v.type ) {
-		default:
-			add(isVertex ? "SV_POSITION" : "SV_TARGET");
-		}
-	}
-
 	public function run( s : ShaderData ) {
 		locals = new Map();
 		decls = [];
@@ -429,12 +424,14 @@ class HlslOut {
 		varAccess = new Map();
 
 		add("struct s_input {\n");
+		if( !isVertex )
+			add("\tfloat4 __pos__ : SV_POSITION;\n");
+		var index = 0;
 		for( v in s.vars ) {
 			if( v.kind == Input || (v.kind == Var && !isVertex) ) {
 				add("\t");
 				addVar(v);
-				add(" : ");
-				addSemantic(v);
+				add(" : " + v.name);
 				add(";\n");
 				varAccess.set(v.id, "_in.");
 			}
@@ -442,12 +439,15 @@ class HlslOut {
 		add("};\n\n");
 
 		add("struct s_output {\n");
+		var index = 0;
 		for( v in s.vars ) {
 			if( v.kind == Output || (v.kind == Var && isVertex) ) {
 				add("\t");
 				addVar(v);
-				add(" : ");
-				addSemantic(v);
+				if( v.kind == Output )
+					add(" : " + (isVertex ? "SV_POSITION" : "SV_TARGET" + (index++)));
+				else
+					add(" : " + v.name);
 				add(";\n");
 				varAccess.set(v.id, "_out.");
 			}
@@ -505,6 +505,7 @@ class HlslOut {
 		buf = tmp;
 
 		for( v in locals ) {
+			add("static ");
 			addVar(v);
 			add(";\n");
 		}
