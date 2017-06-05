@@ -98,7 +98,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		throw "TODO";
 	}
 
-	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData, compileOnly = false ) {
 		var h = new hxsl.HlslOut();
 		var source = h.run(shader.data);
 		var bytes = try dx.Driver.compileShader(source, "", "main", shader.vertex?"vs_5_0":"ps_5_0", WarningsAreErrors|OptimizationLevel3) catch( err : String ) {
@@ -110,6 +110,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			});
 			throw "Shader compilation error " + err + "\n\nin\n\n" + source;
 		}
+		if( compileOnly )
+			return { s : null, bytes : bytes };
 		var s = shader.vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
 		if( s == null )
 			throw "Failed to create shader\n" + source;
@@ -122,7 +124,10 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		return "// vertex:\n" + new hxsl.HlslOut().run(shader.vertex.data) + "// fragment:\n" + new hxsl.HlslOut().run(shader.fragment.data);
+		var v = compileShader(shader.vertex.data, true).bytes;
+		var f = compileShader(shader.fragment.data, true).bytes;
+		return Driver.disassembleShader(v, None, null) + "\n" + Driver.disassembleShader(f, None, null);
+		//return "// vertex:\n" + new hxsl.HlslOut().run(shader.vertex.data) + "// fragment:\n" + new hxsl.HlslOut().run(shader.fragment.data);
 	}
 
 	override function selectShader(shader:hxsl.RuntimeShader) {
