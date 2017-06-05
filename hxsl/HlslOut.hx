@@ -20,9 +20,6 @@ class HlslOut {
 		m.set(Vec2, "float2");
 		m.set(Vec3, "float3");
 		m.set(Vec4, "float4");
-		m.set(Mat3, "float3x3");
-		m.set(Mat3x4, "float4x3");
-		m.set(Mat4, "float4x4");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -198,6 +195,14 @@ class HlslOut {
 			if( acc != null ) add(acc);
 			ident(v);
 		case TGlobal(g):
+			switch( g ) {
+			case Mat3x4:
+				// float4x3 constructor uses row-order, we want column order here
+				decl("float4x3 mat3x4( float4 a, float4 b, float4 c ) { float4x3 m; m._m00_m10_m20_m30 = a; m._m01_m11_m21_m31 = b; m._m02_m12_m22_m32 = c; return m; }");
+			case Mat4:
+				decl("float4x4 mat4( float4 a, float4 b, float4 c, float4 d ) { float4x4 m; m._m00_m10_m20_m30 = a; m._m01_m11_m21_m31 = b; m._m02_m12_m22_m32 = c; m._m03_m13_m23_m33 = d; return m; }");
+			default:
+			}
 			add(GLOBALS.get(g));
 		case TParenthesis(e):
 			add("(");
@@ -246,7 +251,7 @@ class HlslOut {
 				addValue(e1, tabs);
 				add(",1.),");
 				addValue(e2, tabs);
-				add(").xyz");
+				add(")");
 			case [OpMult, TVec(_), TMat3 | TMat4]:
 				add("mul(");
 				addValue(e1, tabs);

@@ -65,7 +65,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
-		return dx.Buffer.alloc(m.size * m.stride, Default, VertexBuffer, None, None, 0, null);
+		return dx.Buffer.alloc(m.size * m.stride * 4, Default, VertexBuffer, None, None, 0, null);
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
