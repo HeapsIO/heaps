@@ -7,8 +7,8 @@ private class ShaderContext {
 	public var shader : Shader;
 	public var globalsSize : Int;
 	public var paramsSize : Int;
-	public var globals : dx.Buffer;
-	public var params : dx.Buffer;
+	public var globals : dx.Resource;
+	public var params : dx.Resource;
 	public function new(shader) {
 		this.shader = shader;
 	}
@@ -26,19 +26,41 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	var driver : DriverInstance;
 	var shaders : Map<Int,CompiledShader>;
-	var box = new dx.Buffer.ResourceBox();
-	var buffers = new hl.NativeArray<dx.Buffer>(16);
+	var box = new dx.Resource.ResourceBox();
+	var buffers = new hl.NativeArray<dx.Resource>(16);
 	var strides : Array<Int> = [];
 	var zeroes : Array<Int> = [for( i in 0...16 ) 0];
 	var currentShader : CompiledShader;
-	var currentBuffer : dx.Buffer;
-	var currentIndex : dx.Buffer;
+	var currentBuffer : dx.Resource;
+	var currentIndex : dx.Resource;
+	var defaultTarget : RenderTargetView;
+	var currentTargets = new hl.NativeArray<RenderTargetView>(16);
+	var viewport : hl.BytesAccess<hl.F32> = new hl.Bytes(6 * 4);
 
 	public function new() {
 		shaders = new Map();
-		driver = Driver.create(@:privateAccess dx.Window.windows[0]);
+		var win = @:privateAccess dx.Window.windows[0];
+		driver = Driver.create(win);
 		if( driver == null ) throw "Failed to initialize DirectX driver";
 		Driver.iaSetPrimitiveTopology(TriangleList);
+
+		var buf = Driver.getBackBuffer();
+		defaultTarget = Driver.createRenderTargetView(buf);
+		buf.release();
+
+		viewport[2] = win.width;
+		viewport[3] = win.height;
+		viewport[5] = 1.;
+		Driver.rsSetViewports(1, viewport);
+
+		currentTargets[0] = defaultTarget;
+		Driver.omSetRenderTargets(1, currentTargets);
+
+		var desc = new RasterizerStateDesc();
+		desc.fillMode = Solid;
+		desc.cullMode = None;
+		var rs = Driver.createRasterizerState(desc);
+		Driver.rsSetState(rs);
 	}
 
 	override function isDisposed() {
@@ -51,7 +73,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function clear(?color:h3d.Vector, ?depth:Float, ?stencil:Int) {
 		if( color != null )
-			Driver.clearColor(color.r, color.g, color.b, color.a);
+			Driver.clearColor(currentTargets[0], color.r, color.g, color.b, color.a);
 	}
 
 	override function getDriverName(details:Bool) {
@@ -65,11 +87,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
-		return dx.Buffer.alloc(m.size * m.stride * 4, Default, VertexBuffer, None, None, 0, null);
+		return dx.Resource.createBuffer(m.size * m.stride * 4, Default, VertexBuffer, None, None, 0, null);
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
-		return dx.Buffer.alloc(count << 1, Default, IndexBuffer, None, None, 0, null);
+		return dx.Resource.createBuffer(count << 1, Default, IndexBuffer, None, None, 0, null);
 	}
 
 	override function disposeVertexes(v:VertexBuffer) {
@@ -118,14 +140,14 @@ class DirectXDriver extends h3d.impl.Driver {
 		var ctx = new ShaderContext(s);
 		ctx.globalsSize = shader.globalsSize;
 		ctx.paramsSize = shader.paramsSize;
-		ctx.globals = dx.Buffer.alloc(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
-		ctx.params = dx.Buffer.alloc(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
+		ctx.globals = dx.Resource.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
+		ctx.params = dx.Resource.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		return { s : ctx, bytes : bytes };
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		var v = compileShader(shader.vertex.data, true).bytes;
-		var f = compileShader(shader.fragment.data, true).bytes;
+		var v = compileShader(shader.vertex, true).bytes;
+		var f = compileShader(shader.fragment, true).bytes;
 		return Driver.disassembleShader(v, None, null) + "\n" + Driver.disassembleShader(f, None, null);
 		//return "// vertex:\n" + new hxsl.HlslOut().run(shader.vertex.data) + "// fragment:\n" + new hxsl.HlslOut().run(shader.fragment.data);
 	}
@@ -188,7 +210,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		throw "TODO";
 	}
 
-	function uploadShaderBuffer( sbuffer : dx.Buffer, buffer : haxe.ds.Vector<hxd.impl.Float32>, size : Int ) {
+	function uploadShaderBuffer( sbuffer : dx.Resource, buffer : haxe.ds.Vector<hxd.impl.Float32>, size : Int ) {
 		if( size == 0 ) return;
 		var ptr = sbuffer.map(0, WriteDiscard, true);
 		if( ptr == null ) throw "Can't map buffer " + sbuffer;

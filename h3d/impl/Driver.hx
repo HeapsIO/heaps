@@ -37,10 +37,10 @@ typedef Texture = { t : psgl.GL.Texture, width : Int, height : Int, internalFmt 
 typedef DepthBuffer = { r : psgl.GL.Renderbuffer };
 typedef Query = { q : psgl.GL.Query, kind : QueryKind };
 #elseif hldx
-typedef IndexBuffer = dx.Buffer;
-typedef VertexBuffer = dx.Buffer;
-typedef Texture = {};
-typedef DepthBuffer = {};
+typedef IndexBuffer = dx.Resource;
+typedef VertexBuffer = dx.Resource;
+typedef Texture = dx.Resource;
+typedef DepthBuffer = dx.Driver.DepthStencilView;
 typedef Query = {};
 #else
 typedef IndexBuffer = {};
