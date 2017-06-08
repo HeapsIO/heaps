@@ -36,6 +36,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var defaultTarget : RenderTargetView;
 	var currentTargets = new hl.NativeArray<RenderTargetView>(16);
 	var viewport : hl.BytesAccess<hl.F32> = new hl.Bytes(6 * 4);
+	var depthView : DepthStencilView;
 
 	public function new() {
 		shaders = new Map();
@@ -43,6 +44,20 @@ class DirectXDriver extends h3d.impl.Driver {
 		driver = Driver.create(win);
 		if( driver == null ) throw "Failed to initialize DirectX driver";
 		Driver.iaSetPrimitiveTopology(TriangleList);
+
+		var width = win.width;
+		var height = win.height;
+
+		var depthDesc = new Texture2dDesc();
+		depthDesc.width = width;
+		depthDesc.height = height;
+		depthDesc.mipLevels = 1;
+		depthDesc.arraySize = 1;
+		depthDesc.format = D24_UNORM_S8_UINT;
+		depthDesc.sampleCount = 1;
+		depthDesc.bind = DepthStencil;
+		var depth = Driver.createTexture2d(depthDesc);
+		depthView = Driver.createDepthStencilView(depth,depthDesc.format);
 
 		var buf = Driver.getBackBuffer();
 		defaultTarget = Driver.createRenderTargetView(buf);
@@ -53,12 +68,21 @@ class DirectXDriver extends h3d.impl.Driver {
 		viewport[5] = 1.;
 		Driver.rsSetViewports(1, viewport);
 
+		var desc = new DepthStencilStateDesc();
+		desc.depthFunc = Less;
+		desc.depthEnable = true;
+		desc.depthWrite = true;
+		var ds = Driver.createDepthStencilState(desc);
+		Driver.omSetDepthStencilState(ds);
+
 		currentTargets[0] = defaultTarget;
-		Driver.omSetRenderTargets(1, currentTargets);
+		Driver.omSetRenderTargets(1, currentTargets, depthView);
+
 
 		var desc = new RasterizerStateDesc();
 		desc.fillMode = Solid;
 		desc.cullMode = None;
+		desc.depthClipEnable = true;
 		var rs = Driver.createRasterizerState(desc);
 		Driver.rsSetState(rs);
 	}
@@ -74,6 +98,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	override function clear(?color:h3d.Vector, ?depth:Float, ?stencil:Int) {
 		if( color != null )
 			Driver.clearColor(currentTargets[0], color.r, color.g, color.b, color.a);
+		if( depth != null || stencil != null )
+			Driver.clearDepthStencilView(depthView, depth, stencil);
 	}
 
 	override function getDriverName(details:Bool) {
@@ -87,11 +113,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
-		return dx.Resource.createBuffer(m.size * m.stride * 4, Default, VertexBuffer, None, None, 0, null);
+		return dx.Driver.createBuffer(m.size * m.stride * 4, Default, VertexBuffer, None, None, 0, null);
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
-		return dx.Resource.createBuffer(count << 1, Default, IndexBuffer, None, None, 0, null);
+		return dx.Driver.createBuffer(count << 1, Default, IndexBuffer, None, None, 0, null);
 	}
 
 	override function disposeVertexes(v:VertexBuffer) {
@@ -140,8 +166,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		var ctx = new ShaderContext(s);
 		ctx.globalsSize = shader.globalsSize;
 		ctx.paramsSize = shader.paramsSize;
-		ctx.globals = dx.Resource.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
-		ctx.params = dx.Resource.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
+		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
+		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		return { s : ctx, bytes : bytes };
 	}
 
