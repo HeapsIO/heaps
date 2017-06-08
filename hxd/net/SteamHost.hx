@@ -214,8 +214,10 @@ class SteamHost extends NetworkHost {
 			c = new SteamClient(this, from);
 			pendingClients.push(c);
 		}
-		if( (c.blockRecvId & 0xFF) != data.get(0) )
+		if( (c.blockRecvId & 0xFF) != data.get(0) ) {
 			logError("Out of order block received " + data.get(0) + " while expecting " + (c.blockRecvId & 0xFF));
+			return;
+		}
 		c.blockRecvId++;
 		@:privateAccess c.processMessagesData(data, 1, data.length);
 	}
