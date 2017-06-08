@@ -13,9 +13,9 @@ class Charset {
 	public static var ASCII = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
 	/**
-		The Latin1 (ISO 8859-1) charset (only the extra chars, no the ASCII part)
+		The Latin1 (ISO 8859-1) charset (only the extra chars, no the ASCII part) + euro symbol
 	**/
-	public static var LATIN1 = "¡¢£¤¥¦§¨©ª«¬-®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ";
+	public static var LATIN1 = "¡¢£¤¥¦§¨©ª«¬-®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ€";
 
 	/**
 		Russian support
@@ -64,6 +64,7 @@ class Charset {
 		m("Ý".code, "Y".code);
 		m("ý".code, "y".code);
 		m("ÿ".code, "y".code);
+		m("€".code, "E".code);
 		// unicode spaces
 		m(0x3000, 0x20); // full width space
 		m(0xA0, 0x20); // nbsp
