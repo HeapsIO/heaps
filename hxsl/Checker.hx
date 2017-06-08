@@ -580,7 +580,7 @@ class Checker {
 				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
 				var v = makeVar(v, e.pos);
-				if( isImport && (v.kind == Param || v.kind == Var) )
+				if( isImport && v.kind == Param )
 					continue;
 				vars.set(v.name, v);
 			}
