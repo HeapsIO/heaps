@@ -1,5 +1,5 @@
 package hxsl;
-import hxsl.Ast;
+using hxsl.Ast;
 
 class HlslOut {
 
@@ -86,10 +86,8 @@ class HlslOut {
 			add("float4x4");
 		case TMat3x4:
 			add("float4x3");
-		case TSampler2D:
-			add("sampler2D");
-		case TSamplerCube:
-			add("samplerCube");
+		case TSampler2D, TSamplerCube:
+			add("SamplerState");
 		case TStruct(vl):
 			add("struct { ");
 			for( v in vl ) {
@@ -105,13 +103,20 @@ class HlslOut {
 			switch( size ) {
 			case SVar(v):
 				ident(v);
-			case SConst(1):
-				add(2); // intel HD driver fix
 			case SConst(v):
 				add(v);
 			}
 			add("]");
 		}
+	}
+
+	function addArraySize( size ) {
+		add("[");
+		switch( size ) {
+		case SVar(v): ident(v);
+		case SConst(n): add(n);
+		}
+		add("]");
 	}
 
 	function addVar( v : TVar ) {
@@ -121,13 +126,7 @@ class HlslOut {
 			v.type = t;
 			addVar(v);
 			v.type = old;
-			add("[");
-			switch( size ) {
-			case SVar(v): ident(v);
-			case SConst(1): add(2); // intel HD driver fix
-			case SConst(n): add(n);
-			}
-			add("]");
+			addArraySize(size);
 		default:
 			addType(v.type);
 			add(" ");
@@ -194,6 +193,24 @@ class HlslOut {
 			var acc = varAccess.get(v.id);
 			if( acc != null ) add(acc);
 			ident(v);
+		case TCall({ e : TGlobal(Texture2D) }, args):
+			switch( args[0].e ) {
+			case TArray(e,index):
+				addValue(e, tabs);
+				add("Tex[");
+				addValue(index, tabs);
+				add("]");
+			default:
+				addValue(args[0], tabs);
+				add("Tex");
+			}
+			add(".Sample(");
+			addValue(args[0],tabs);
+			for( i in 1...args.length ) {
+				add(",");
+				addValue(args[i],tabs);
+			}
+			add(")");
 		case TGlobal(g):
 			switch( g ) {
 			case Mat3x4:
@@ -464,14 +481,34 @@ class HlslOut {
 		add("};\n\n");
 
 
+		var textures = [];
 		add("cbuffer _params : register(b1) {\n");
 		for( v in s.vars )
 			if( v.kind == Param ) {
+				switch( v.type ) {
+				case TArray(t, _) if( t.isSampler() ):
+					textures.push(v);
+					continue;
+				default:
+				}
 				add("\t");
 				addVar(v);
 				add(";\n");
 			}
 		add("};\n\n");
+
+		for( v in textures ) {
+			switch( v.type ) {
+			case TArray(t, size):
+				add("Texture2D ");
+				add(v.name+"Tex");
+				addArraySize(size);
+				add(";\n");
+				addVar(v);
+				add(";\n");
+			default:
+			}
+		}
 
 		add("static s_input _in;\n");
 		add("static s_output _out;\n");

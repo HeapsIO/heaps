@@ -51,10 +51,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		var depthDesc = new Texture2dDesc();
 		depthDesc.width = width;
 		depthDesc.height = height;
-		depthDesc.mipLevels = 1;
-		depthDesc.arraySize = 1;
 		depthDesc.format = D24_UNORM_S8_UINT;
-		depthDesc.sampleCount = 1;
 		depthDesc.bind = DepthStencil;
 		var depth = Driver.createTexture2d(depthDesc);
 		depthView = Driver.createDepthStencilView(depth,depthDesc.format);
@@ -85,6 +82,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		desc.depthClipEnable = true;
 		var rs = Driver.createRasterizerState(desc);
 		Driver.rsSetState(rs);
+
+		var desc = new SamplerStateDesc();
+		var ss = Driver.createSamplerState(desc);
+		var sarr = new hl.NativeArray(1);
+		sarr[0] = ss;
+		Driver.psSetSamplers(0, 1, sarr);
 	}
 
 	override function isDisposed() {
@@ -118,6 +121,24 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
 		return dx.Driver.createBuffer(count << 1, Default, IndexBuffer, None, None, 0, null);
+	}
+
+	override function allocTexture(t:h3d.mat.Texture):Texture {
+		var desc = new Texture2dDesc();
+		desc.width = t.width;
+		desc.height = t.height;
+		desc.format = R8G8B8A8_UNORM;
+		desc.usage = Default;
+		desc.bind = ShaderResource;
+		var tex = Driver.createTexture2d(desc);
+		return tex;
+	}
+
+	override function disposeTexture( t : h3d.mat.Texture ) {
+		var tt = t.t;
+		if( tt == null ) return;
+		t.t = null;
+		tt.release();
 	}
 
 	override function disposeVertexes(v:VertexBuffer) {

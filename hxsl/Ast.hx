@@ -346,6 +346,15 @@ class Tools {
 		return false;
 	}
 
+	public static function isSampler( t : Type ) {
+		return switch( t ) {
+		case TSampler2D, TSamplerCube:
+			true;
+		default:
+			false;
+		}
+	}
+
 	public static function toString( t : Type ) {
 		return switch( t ) {
 		case TVec(size, t):
