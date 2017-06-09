@@ -175,7 +175,7 @@ class Console extends h2d.Sprite {
 		case Key.DOWN:
 			if(tf.text == curCmd) return;
 			if(logIndex == logs.length - 1) {
-				tf.text = curCmd;
+				tf.text = curCmd == null ? "" : curCmd;
 				tf.cursorIndex = tf.text.length;
 				logIndex = -1;
 				return;
