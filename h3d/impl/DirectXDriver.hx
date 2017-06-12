@@ -268,7 +268,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData, compileOnly = false ) {
 		var h = new hxsl.HlslOut();
 		var source = h.run(shader.data);
-		var bytes = try dx.Driver.compileShader(source, "", "main", shader.vertex?"vs_5_0":"ps_5_0", WarningsAreErrors|OptimizationLevel3) catch( err : String ) {
+		var bytes = try dx.Driver.compileShader(source, "", "main", shader.vertex?"vs_5_0":"ps_5_0", OptimizationLevel3) catch( err : String ) {
 			err = ~/^\(([0-9]+),([0-9]+)-([0-9]+)\)/gm.map(err, function(r) {
 				var line = Std.parseInt(r.matched(1));
 				var char = Std.parseInt(r.matched(2));

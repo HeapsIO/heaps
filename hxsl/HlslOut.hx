@@ -21,6 +21,8 @@ class HlslOut {
 		m.set(Vec3, "float3");
 		m.set(Vec4, "float4");
 		m.set(LReflect, "reflect");
+		m.set(Fract, "frac");
+		m.set(Mix, "lerp");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -66,8 +68,8 @@ class HlslOut {
 		case TInt:
 			add("int");
 		case TBytes(n):
-			add("vec");
-			add(n);
+			if( n != 4 ) throw "Not supported type " + t;
+			add("uint");
 		case TBool:
 			add("bool");
 		case TFloat:
@@ -221,6 +223,12 @@ class HlslOut {
 				decl("float4x4 mat4( float4 a, float4 b, float4 c, float4 d ) { float4x4 m; m._m00_m10_m20_m30 = a; m._m01_m11_m21_m31 = b; m._m02_m12_m22_m32 = c; m._m03_m13_m23_m33 = d; return m; }");
 			case Mat3:
 				decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
+			case Mod:
+				// unsigned mod like GLSL
+				decl("float mod(float x, float y) { return x - y * floor(x/y); }");
+			case Pow:
+				// negative power might not work
+				decl("#pragma warning(disable:3571)");
 			default:
 			}
 			add(GLOBALS.get(g));
@@ -245,27 +253,16 @@ class HlslOut {
 					addValue(e1, tabs);
 					add(" = ");
 				}
+				decl("float mod(float x, float y) { return x - y * floor(x/y); }");
 				add("mod(");
 				addValue(e1, tabs);
 				add(",");
 				addValue(e2, tabs);
 				add(")");
-			case [OpEq | OpNotEq | OpLt | OpGt | OpLte | OpGte, TVec(n, _), TVec(_)]:
-				add("vec" + n + "(");
-				add(switch( op ) {
-				case OpEq: "equal";
-				case OpNotEq: "notEqual";
-				case OpLt: "lessThan";
-				case OpGt: "greaterThan";
-				case OpLte: "lessThanEqual";
-				case OpGte: "greaterThanEqual";
-				default: throw "assert";
-				});
-				add("(");
+			case [OpAssignOp(op), TVec(_), TMat3x4 | TMat3 | TMat4]:
 				addValue(e1, tabs);
-				add(",");
-				addValue(e2, tabs);
-				add("))");
+				add(" = ");
+				addValue({ e : TBinop(op, e1, e2), t : e.t, p : e.p }, tabs);
 			case [OpMult, TVec(_), TMat3x4]:
 				add("mul(float4(");
 				addValue(e1, tabs);
