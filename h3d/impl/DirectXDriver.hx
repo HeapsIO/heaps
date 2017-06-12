@@ -1,5 +1,7 @@
 package h3d.impl;
 
+#if hldx
+
 import h3d.impl.Driver;
 import dx.Driver;
 
@@ -403,3 +405,5 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 }
+
+#end

@@ -29,15 +29,15 @@ class AdjustColor extends SampleApp {
 			bmps.push(bmp);
 		}
 
-		addSlider("Hue", -180, 180, function() return hue, function(s) hue = s);
-		addSlider("Saturation", -100, 100, function() return sat, function(s) sat = s);
-		addSlider("Brightness", -100, 100, function() return bright, function(s) bright = s);
-		addSlider("Contrast", -100, 100, function() return contrast, function(s) contrast = s);
+		addSlider("Hue", function() return hue, function(s) hue = s, -180, 180);
+		addSlider("Saturation", function() return sat, function(s) sat = s, -100, 100);
+		addSlider("Brightness", function() return bright, function(s) bright = s, -100, 100);
+		addSlider("Contrast", function() return contrast, function(s) contrast = s, -100, 100);
 	}
 
 	override function update(dt:Float) {
 		for( b in bmps )
-			b.adjustColor(sat / 100, bright / 100, hue * Math.PI / 180, contrast / 100);
+			b.adjustColor({ saturation : sat / 100, lightness : bright / 100, hue : hue * Math.PI / 180, contrast : contrast / 100 });
 	}
 
 	public static function main() {

@@ -20,6 +20,7 @@ class HlslOut {
 		m.set(Vec2, "float2");
 		m.set(Vec3, "float3");
 		m.set(Vec4, "float4");
+		m.set(LReflect, "reflect");
 		for( g in m )
 			KWDS.set(g, true);
 		m;

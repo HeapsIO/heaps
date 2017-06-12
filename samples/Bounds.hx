@@ -33,7 +33,7 @@ class Bounds extends hxd.App {
 		tf.text = "Some quite long rotating text";
 		tf.x = -5;
 		tf.y = 15;
-		tf.filter = true;
+		tf.smooth = true;
 	}
 
 	override function update(dt:Float) {

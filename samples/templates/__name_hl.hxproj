@@ -43,7 +43,7 @@
   <hiddenPaths>
   </hiddenPaths>
   <!-- Executed before build -->
-  <preBuildCommand>haxe ::name::_hl.hxml</preBuildCommand>
+  <preBuildCommand>haxe -lib hlsdl ::name::_hl.hxml</preBuildCommand>
   <!-- Executed after build -->
   <postBuildCommand alwaysRun="False" />
   <!-- Other project options -->

@@ -15,6 +15,8 @@ class Generator {
 				if( f != name ) name = f+"/"+name;
 				var pass = false;
 				Sys.println(name);
+				if( StringTools.endsWith(name,"_hl") )
+					d = "-lib hlsdl "+d;
 				try {
 					if( Sys.command("haxe "+d) == 0 ) pass = true;
 				} catch( e : Dynamic ) {
