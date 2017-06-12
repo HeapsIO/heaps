@@ -139,25 +139,18 @@ class Texture {
 	}
 
 	function set_mipMap(m:MipMap) {
-		bits |= 0x80000;
 		bits = (bits & ~(3 << 0)) | (Type.enumIndex(m) << 0);
 		return mipMap = m;
 	}
 
 	function set_filter(f:Filter) {
-		bits |= 0x80000;
 		bits = (bits & ~(3 << 3)) | (Type.enumIndex(f) << 3);
 		return filter = f;
 	}
 
 	function set_wrap(w:Wrap) {
-		bits |= 0x80000;
 		bits = (bits & ~(3 << 6)) | (Type.enumIndex(w) << 6);
 		return wrap = w;
-	}
-
-	inline function hasDefaultFlags() {
-		return bits & 0x80000 == 0;
 	}
 
 	public inline function isDisposed() {
