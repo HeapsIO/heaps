@@ -174,15 +174,17 @@ class Text extends Drawable {
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 					prevChar = cc;
+					if( font.charset.isBreakChar(cc) ) break;
 				}
 				if( size > realMaxWidth || (!breakFound && size + afterData > realMaxWidth) ) {
 					newline = true;
-					lines.push(text.substr(restPos, i - restPos));
-					restPos = i;
-					if( font.charset.isSpace(cc) ) {
+					if( font.charset.isSpace(cc) ){
+						lines.push(text.substr(restPos, i - restPos));
 						e = null;
-						restPos++;
+					}else{
+						lines.push(text.substr(restPos, i + 1 - restPos));
 					}
+					restPos = i + 1;
 				}
 			}
 			if( e != null )
