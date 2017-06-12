@@ -4,6 +4,7 @@ package h3d.impl;
 
 import h3d.impl.Driver;
 import dx.Driver;
+import h3d.mat.Pass;
 
 private class ShaderContext {
 	public var shader : Shader;
@@ -33,10 +34,12 @@ enum PipelineKind {
 class PipelineState {
 	public var kind : PipelineKind;
 	public var samplers = new hl.NativeArray<SamplerState>(64);
+	public var samplerBits = new Array<Int>();
 	public var resources = new hl.NativeArray<ShaderResourceView>(64);
 	public var buffers = new hl.NativeArray<dx.Resource>(16);
 	public function new(kind) {
 		this.kind = kind;
+		for(i in 0...64 ) samplerBits[i] = -1;
 	}
 }
 
@@ -58,6 +61,16 @@ class DirectXDriver extends h3d.impl.Driver {
 	var pixelShader = new PipelineState(Pixel);
 	var buffers = new hl.NativeArray<dx.Resource>(16);
 	var frame : Int;
+	var currentMaterialBits = -1;
+
+	var depthStates : Map<Int,DepthStencilState> = new Map();
+	var blendStates : Map<Int,BlendState> = new Map();
+	var rasterStates : Map<Int,RasterState> = new Map();
+	var samplerStates : Map<Int,SamplerState> = new Map();
+	var currentDepthState : DepthStencilState;
+	var currentBlendState : BlendState;
+	var currentRasterState : RasterState;
+	var blendFactors : hl.BytesAccess<hl.F32> = new hl.Bytes(4 * 4);
 
 	public function new() {
 		shaders = new Map();
@@ -86,23 +99,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		viewport[5] = 1.;
 		Driver.rsSetViewports(1, viewport);
 
-		var desc = new DepthStencilStateDesc();
-		desc.depthFunc = Less;
-		desc.depthEnable = true;
-		desc.depthWrite = true;
-		var ds = Driver.createDepthStencilState(desc);
-		Driver.omSetDepthStencilState(ds);
-
 		currentTargets[0] = defaultTarget;
 		Driver.omSetRenderTargets(1, currentTargets, depthView);
-
-
-		var desc = new RasterizerStateDesc();
-		desc.fillMode = Solid;
-		desc.cullMode = None;
-		desc.depthClipEnable = true;
-		var rs = Driver.createRasterizerState(desc);
-		Driver.rsSetState(rs);
 	}
 
 	override function begin(frame:Int) {
@@ -204,6 +202,67 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( mipLevel != 0 || side != 0 ) throw "TODO";
 		pixels.convert(RGBA);
 		t.t.res.updateSubresource(0, null, pixels.bytes, pixels.width << 2, 0);
+	}
+
+	override public function selectMaterial(pass:h3d.mat.Pass) {
+		var bits = @:privateAccess pass.bits;
+		if( bits == currentMaterialBits )
+			return;
+
+		var depthBits = bits & (Pass.depthWrite_mask | Pass.depthTest_mask);
+		if( pass.stencil != null ) throw "TODO";
+		var depth = depthStates.get(depthBits);
+		if( depth == null ) {
+			var cmp = Pass.getDepthTest(bits);
+			var desc = new DepthStencilDesc();
+			desc.depthEnable = cmp != 0;
+			desc.depthFunc = COMPARE[cmp];
+			desc.depthWrite = Pass.getDepthWrite(bits) != 0;
+			depth = Driver.createDepthStencilState(desc);
+			depthStates.set(depthBits, depth);
+		}
+		if( depth != currentDepthState ) {
+			currentDepthState = depth;
+			Driver.omSetDepthStencilState(depth);
+		}
+
+		var rasterBits = bits & (Pass.culling_mask);
+		var raster = rasterStates.get(rasterBits);
+		if( raster == null ) {
+			var desc = new RasterizerDesc();
+			desc.fillMode = Solid;
+			desc.cullMode = CULL[Pass.getCulling(bits)];
+			if( pass.culling == Both ) throw "Culling:Both Not supported in DirectX";
+			desc.depthClipEnable = true;
+			raster = Driver.createRasterizerState(desc);
+			rasterStates.set(rasterBits, raster);
+		}
+		if( raster != currentRasterState ) {
+			currentRasterState = raster;
+			Driver.rsSetState(raster);
+		}
+
+		var blendBits = bits & (Pass.blendSrc_mask | Pass.blendDst_mask | Pass.blendAlphaSrc_mask | Pass.blendAlphaDst_mask | Pass.blendOp_mask | Pass.blendAlphaOp_mask | Pass.colorMask_mask);
+		var blend = blendStates.get(blendBits);
+		if( blend == null ) {
+			var desc = new RenderTargetBlendDesc();
+			desc.srcBlend = BLEND[Pass.getBlendSrc(bits)];
+			desc.destBlend = BLEND[Pass.getBlendDst(bits)];
+			desc.srcBlendAlpha = BLEND[Pass.getBlendAlphaSrc(bits)];
+			desc.destBlendAlpha = BLEND[Pass.getBlendAlphaDst(bits)];
+			desc.blendOp = BLEND_OP[Pass.getBlendOp(bits)];
+			desc.blendOpAlpha = BLEND_OP[Pass.getBlendAlphaOp(bits)];
+			desc.renderTargetWriteMask = Pass.getColorMask(bits);
+			desc.blendEnable = !(desc.srcBlend == One && desc.srcBlendAlpha == One && desc.destBlend == Zero && desc.destBlendAlpha == Zero && desc.blendOp == Add && desc.blendOpAlpha == Add);
+			var tmp = new hl.NativeArray(1);
+			tmp[0] = desc;
+			blend = Driver.createBlendState(false, false, tmp, 1);
+			blendStates.set(blendBits, blend);
+		}
+		if( blend != currentBlendState ) {
+			currentBlendState = blend;
+			Driver.omSetBlendState(blend, blendFactors, -1);
+		}
 	}
 
 	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData, compileOnly = false ) {
@@ -360,13 +419,27 @@ class DirectXDriver extends h3d.impl.Driver {
 				max = i;
 				if( start < 0 ) start = i;
 
-				// make sampler state
-				var ss = getTextureSampler(t);
-				if( state.samplers[i] == ss ) continue;
-
-				state.samplers[i] = ss;
-				smax = i;
-				if( sstart < 0 ) sstart = i;
+				var bits = @:privateAccess t.bits;
+				if( bits != state.samplerBits[i] ) {
+					var ss = samplerStates.get(bits);
+					if( ss == null ) {
+						var desc = new SamplerDesc();
+						desc.filter = FILTER[t.mipMap.getIndex()][t.filter.getIndex()];
+						desc.addressU = desc.addressV = desc.addressW = WRAP[t.wrap.getIndex()];
+						if( t.mipMap == None ) {
+							desc.minLod = desc.maxLod = 0;
+						} else {
+							desc.minLod = 0;
+							desc.maxLod = 1e30;
+						}
+						ss = Driver.createSamplerState(desc);
+						samplerStates.set(bits, ss);
+					}
+					state.samplerBits[i] = bits;
+					state.samplers[i] = ss;
+					smax = i;
+					if( sstart < 0 ) sstart = i;
+				}
 			}
 			switch( state.kind) {
 			case Vertex:
@@ -379,23 +452,6 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 	}
 
-
-	var defSampler : SamplerState;
-	function getTextureSampler( t : h3d.mat.Texture ) {
-		if( defSampler == null ) {
-			var desc = new SamplerDesc();
-			desc.filter = MinMagMipLinear;
-			desc.addressU = Wrap;
-			desc.addressV = Wrap;
-			desc.addressW = Wrap;
-			desc.maxAnisotropy = 1;
-			desc.comparisonFunc = Always;
-			desc.maxLod = 1e32;
-			defSampler = Driver.createSamplerState(desc);
-		}
-		return defSampler;
-	}
-
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
@@ -404,6 +460,61 @@ class DirectXDriver extends h3d.impl.Driver {
 		dx.Driver.drawIndexed(ntriangles * 3, startIndex, 0);
 	}
 
+	static var COMPARE : Array<ComparisonFunc> = [
+		Always,
+		Never,
+		Equal,
+		NotEqual,
+		Greater,
+		GreaterEqual,
+		Less,
+		LessEqual
+	];
+
+	static var CULL : Array<CullMode> = [
+		None,
+		Back,
+		Front,
+	];
+
+	static var BLEND : Array<Blend> = [
+		One,
+		Zero,
+		SrcAlpha,
+		SrcColor,
+		DestAlpha,
+		DestColor,
+		InvSrcAlpha,
+		InvSrcColor,
+		InvDestAlpha,
+		InvDestColor,
+		Src1Color,
+		Src1Alpha,
+		InvSrc1Color,
+		InvSrc1Alpha,
+		SrcAlphaSat,
+		// BlendFactor/InvBlendFactor : not supported by Heaps for now
+	];
+
+	static var BLEND_OP : Array<BlendOp> = [
+		Add,
+		Subtract,
+		RevSubstract,
+		// Min / Max : not supported by Heaps for now
+	];
+
+	static var FILTER : Array<Array<Filter>> = [
+		[MinMagMipPoint,MinMagMipLinear],
+		[MinMagMipPoint,MinMagLinearMipPoint],
+		[MinMagPointMipLinear, MinMagMipLinear],
+		// Anisotropic , Comparison, Minimum, Maximum
+	];
+
+	static var WRAP : Array<AddressMode> = [
+		Clamp,
+		Wrap,
+		//Mirror , Border , MirrorOnce
+	];
 }
 
 #end
