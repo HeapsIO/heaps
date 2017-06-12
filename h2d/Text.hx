@@ -219,35 +219,19 @@ class Text extends Drawable {
 		var dl = font.lineHeight + lineSpacing;
 		var calcLines = !rebuild && lines != null;
 		var yMin = 0;
-		for( i in 0...text.length ) {
-			var cc = text.charCodeAt(i);
+		var t = splitText(text);
+		for( i in 0...t.length ) {
+			var cc = t.charCodeAt(i);
 			var e = font.getChar(cc);
-			var newline = cc == '\n'.code;
 			var offs = e.getKerningOffset(prevChar);
 			var esize = e.width + offs;
 			// if the next word goes past the max width, change it into a newline
-			if( font.charset.isBreakChar(cc) && realMaxWidth >= 0 ) {
-				var size = x + esize + letterSpacing;
-				var k = i + 1, max = text.length;
-				var prevChar = prevChar;
-				while( size <= realMaxWidth && k < max ) {
-					var cc = text.charCodeAt(k++);
-					if( font.charset.isSpace(cc) || cc == '\n'.code ) break;
-					var e = font.getChar(cc);
-					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
-					prevChar = cc;
-				}
-				if( size > realMaxWidth ) {
-					newline = true;
-					if( font.charset.isSpace(cc) ) e = null;
-				}
-			}
 			if( e != null ) {
 				if( rebuild ) glyphs.add(x + offs, y, e.t);
 				if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
 				x += esize + letterSpacing;
 			}
-			if( newline ) {
+			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
 				if( calcLines ) lines.push(x);
 				if( rebuild )
