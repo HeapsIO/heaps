@@ -39,7 +39,7 @@ typedef Query = { q : psgl.GL.Query, kind : QueryKind };
 #elseif hldx
 typedef IndexBuffer = dx.Resource;
 typedef VertexBuffer = dx.Resource;
-typedef Texture = dx.Resource;
+typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView };
 typedef DepthBuffer = dx.Driver.DepthStencilView;
 typedef Query = {};
 #else
