@@ -49,15 +49,19 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	var driver : DriverInstance;
 	var shaders : Map<Int,CompiledShader>;
+
+	var defaultTarget : RenderTargetView;
+	var defaultDepth : DepthBuffer;
+	var defaultDepthInst : h3d.mat.DepthBuffer;
+
+	var viewport : hl.BytesAccess<hl.F32> = new hl.Bytes(6 * 4);
 	var box = new dx.Resource.ResourceBox();
 	var strides : Array<Int> = [];
 	var offsets : Array<Int> = [];
 	var currentShader : CompiledShader;
 	var currentIndex : IndexBuffer;
-	var defaultTarget : RenderTargetView;
+	var currentDepth : DepthBuffer;
 	var currentTargets = new hl.NativeArray<RenderTargetView>(16);
-	var viewport : hl.BytesAccess<hl.F32> = new hl.Bytes(6 * 4);
-	var depthView : DepthStencilView;
 	var vertexShader = new PipelineState(Vertex);
 	var pixelShader = new PipelineState(Pixel);
 	var currentVBuffers = new hl.NativeArray<dx.Resource>(16);
@@ -73,6 +77,9 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentRasterState : RasterState;
 	var blendFactors : hl.BytesAccess<hl.F32> = new hl.Bytes(4 * 4);
 
+	var outputWidth : Int;
+	var outputHeight : Int;
+
 	public function new() {
 		shaders = new Map();
 		var win = @:privateAccess dx.Window.windows[0];
@@ -80,28 +87,25 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( driver == null ) throw "Failed to initialize DirectX driver";
 		Driver.iaSetPrimitiveTopology(TriangleList);
 
-		var width = win.width;
-		var height = win.height;
+		outputWidth = win.width;
+		outputHeight = win.height;
 
 		var depthDesc = new Texture2dDesc();
-		depthDesc.width = width;
-		depthDesc.height = height;
+		depthDesc.width = outputWidth;
+		depthDesc.height = outputHeight;
 		depthDesc.format = D24_UNORM_S8_UINT;
 		depthDesc.bind = DepthStencil;
 		var depth = Driver.createTexture2d(depthDesc);
-		depthView = Driver.createDepthStencilView(depth,depthDesc.format);
+		var depthView = Driver.createDepthStencilView(depth,depthDesc.format);
 
 		var buf = Driver.getBackBuffer();
 		defaultTarget = Driver.createRenderTargetView(buf);
 		buf.release();
+		defaultDepth = { res : depth, view : depthView };
+		defaultDepthInst = new h3d.mat.DepthBuffer(-1, -1);
+		@:privateAccess defaultDepthInst.b = defaultDepth;
 
-		viewport[2] = win.width;
-		viewport[3] = win.height;
-		viewport[5] = 1.;
-		Driver.rsSetViewports(1, viewport);
-
-		currentTargets[0] = defaultTarget;
-		Driver.omSetRenderTargets(1, currentTargets, depthView);
+		setRenderTarget(null);
 	}
 
 	override function begin(frame:Int) {
@@ -120,7 +124,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( color != null )
 			Driver.clearColor(currentTargets[0], color.r, color.g, color.b, color.a);
 		if( depth != null || stencil != null )
-			Driver.clearDepthStencilView(depthView, depth, stencil);
+			Driver.clearDepthStencilView(currentDepth.view, depth, stencil);
 	}
 
 	override function getDriverName(details:Bool) {
@@ -131,6 +135,10 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function present() {
 		Driver.present();
+	}
+
+	override function getDefaultDepthBuffer():h3d.mat.DepthBuffer {
+		return defaultDepthInst;
 	}
 
 	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
@@ -144,13 +152,43 @@ class DirectXDriver extends h3d.impl.Driver {
 		return { res : res, count : count };
 	}
 
+	override function allocDepthBuffer(b:h3d.mat.DepthBuffer):DepthBuffer {
+		var depthDesc = new Texture2dDesc();
+		depthDesc.width = b.width;
+		depthDesc.height = b.height;
+		depthDesc.format = D24_UNORM_S8_UINT;
+		depthDesc.bind = DepthStencil;
+		var depth = Driver.createTexture2d(depthDesc);
+		return { res : depth, view : Driver.createDepthStencilView(depth,depthDesc.format) };
+	}
+
+	override function disposeDepthBuffer(b:h3d.mat.DepthBuffer) @:privateAccess {
+		var d = b.b;
+		b.b = null;
+		d.view.release();
+		d.res.release();
+	}
+
 	override function allocTexture(t:h3d.mat.Texture):Texture {
+		var rt = t.flags.has(Target);
 		var desc = new Texture2dDesc();
 		desc.width = t.width;
 		desc.height = t.height;
-		desc.format = R8G8B8A8_UNORM;
+		switch( t.format ) {
+		case RGBA:
+			desc.format = R8G8B8A8_UNORM;
+		case ALPHA32F:
+			desc.format = R32_FLOAT;
+		/*case ALPHA16F:
+			desc.format = R16_FLOAT;
+		case ALPHA8:
+			desc.format = R8_UNORM;*/
+		default:
+			throw "Unsupported texture format " + t.format;
+		}
 		desc.usage = Default;
 		desc.bind = ShaderResource;
+		if( rt ) desc.bind |= RenderTarget;
 		var tex = Driver.createTexture2d(desc);
 
 		var vdesc = new ShaderResourceViewDesc();
@@ -159,7 +197,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		vdesc.start = 0; // top mip level
 		vdesc.count = -1; // all mip levels
 		var view = Driver.createShaderResourceView(tex, vdesc);
-		return { res : tex, view : view };
+		return { res : tex, view : view, rt : rt ? Driver.createRenderTargetView(tex) : null };
 	}
 
 	override function disposeTexture( t : h3d.mat.Texture ) {
@@ -168,6 +206,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		t.t = null;
 		tt.view.release();
 		tt.res.release();
+		if( tt.rt != null ) tt.rt.release();
 	}
 
 	override function disposeVertexes(v:VertexBuffer) {
@@ -304,6 +343,51 @@ class DirectXDriver extends h3d.impl.Driver {
 		//return "// vertex:\n" + new hxsl.HlslOut().run(shader.vertex.data) + "// fragment:\n" + new hxsl.HlslOut().run(shader.fragment.data);
 	}
 
+	override function hasFeature(f:Feature) {
+		return switch(f) {
+		case StandardDerivatives, FloatTextures, AllocDepthBuffer, HardwareAccelerated, MultipleRenderTargets:
+			true;
+		case Queries:
+			false;
+		};
+	}
+
+	override function setRenderTarget(tex:Null<h3d.mat.Texture>, face = 0, mipLevel = 0) {
+		if( face != 0 || mipLevel != 0 )
+			throw "TODO";
+		if( tex == null ) {
+			currentDepth = defaultDepth;
+			currentTargets[0] = defaultTarget;
+			Driver.omSetRenderTargets(1, currentTargets, currentDepth.view);
+			viewport[2] = outputWidth;
+			viewport[3] = outputHeight;
+			viewport[5] = 1.;
+			Driver.rsSetViewports(1, viewport);
+			return;
+		}
+		if( tex.t == null )
+			tex.alloc();
+		if( tex.t.rt == null)
+			throw "Can't render to texture which is not allocated with Target flag";
+		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
+			throw "Invalid depth buffer size : does not match render target size";
+		currentDepth = @:privateAccess (tex.depthBuffer == null ? null : tex.depthBuffer.b);
+		currentTargets[0] = tex.t.rt;
+		Driver.omSetRenderTargets(1, currentTargets, currentDepth == null ? null : currentDepth.view);
+		viewport[2] = tex.width;
+		viewport[3] = tex.height;
+		viewport[5] = 1.;
+		Driver.rsSetViewports(1, viewport);
+	}
+
+	override function setRenderTargets(textures:Array<h3d.mat.Texture>) {
+		throw "TODO";
+	}
+
+	override function setRenderZone(x:Int, y:Int, width:Int, height:Int) {
+		throw "TODO";
+	}
+
 	override function selectShader(shader:hxsl.RuntimeShader) {
 		var s = shaders.get(shader.id);
 		if( s == null ) {
@@ -341,7 +425,6 @@ class DirectXDriver extends h3d.impl.Driver {
 					default: throw "assert " + v.type;
 					}
 
-					trace(v.name, offset, size);
 					offset += size;
 				}
 

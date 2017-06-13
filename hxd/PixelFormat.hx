@@ -6,7 +6,7 @@ enum PixelFormat {
 	RGBA;
 	RGBA16F;
 	RGBA32F;
-	ALPHA;
+	ALPHA8;
 	ALPHA16F;
 	ALPHA32F;
 }

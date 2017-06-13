@@ -68,8 +68,7 @@ class HlslOut {
 		case TInt:
 			add("int");
 		case TBytes(n):
-			if( n != 4 ) throw "Not supported type " + t;
-			add("uint");
+			add("uint"+n);
 		case TBool:
 			add("bool");
 		case TFloat:
@@ -223,12 +222,17 @@ class HlslOut {
 				decl("float4x4 mat4( float4 a, float4 b, float4 c, float4 d ) { float4x4 m; m._m00_m10_m20_m30 = a; m._m01_m11_m21_m31 = b; m._m02_m12_m22_m32 = c; m._m03_m13_m23_m33 = d; return m; }");
 			case Mat3:
 				decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
+				decl("float3x3 mat3( float4x3 m ) { return (float3x3)m; }");
 			case Mod:
 				// unsigned mod like GLSL
 				decl("float mod(float x, float y) { return x - y * floor(x/y); }");
 			case Pow:
 				// negative power might not work
 				decl("#pragma warning(disable:3571)");
+			case Pack:
+				decl("float4 pack( float x ) { return float4(x,x,x,x); }");
+			case Unpack:
+				decl("float unpack( float4 v ) { return v.x; }");
 			default:
 			}
 			add(GLOBALS.get(g));

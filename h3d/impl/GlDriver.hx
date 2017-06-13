@@ -597,7 +597,7 @@ class GlDriver extends Driver {
 
 	override function isSupportedFormat( fmt : h3d.mat.Data.TextureFormat ) {
 		return switch( fmt ) {
-		case RGBA, ALPHA: true;
+		case RGBA, ALPHA8: true;
 		case RGBA32F: hasFeature(FloatTextures);
 		#if !js
 		case ALPHA16F, ALPHA32F, RGBA16F: hasFeature(FloatTextures);
@@ -612,7 +612,7 @@ class GlDriver extends Driver {
 		switch( t.format ) {
 		case RGBA:
 			// default
-		case ALPHA:
+		case ALPHA8:
 			tt.internalFmt = GL.ALPHA;
 		case RGBA32F if( hasFeature(FloatTextures) ):
 			#if js

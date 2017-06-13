@@ -361,7 +361,7 @@ class Pixels {
 
 	public static function bytesPerPixel( format : PixelFormat ) {
 		return switch( format ) {
-		case ALPHA: 1;
+		case ALPHA8: 1;
 		case ARGB, BGRA, RGBA: 4;
 		case RGBA16F: 8;
 		case RGBA32F: 16;
@@ -376,7 +376,7 @@ class Pixels {
 	**/
 	public static function getChannelOffset( format : PixelFormat, channel : Channel ) {
 		return switch( format ) {
-		case ALPHA, ALPHA16F, ALPHA32F:
+		case ALPHA8, ALPHA16F, ALPHA32F:
 			if( channel == A ) 0 else -1;
 		case ARGB:
 			[1, 2, 3, 0][channel.toInt()];
