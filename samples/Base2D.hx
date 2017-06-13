@@ -4,7 +4,6 @@ class Base2D extends hxd.App {
 	var tf : h2d.Text;
 
 	override function init() {
-/*
 		// creates a new sprite and put it at the center of the sceen
 		spr = new h2d.Sprite(s2d);
 		spr.x = Std.int(s2d.width / 2);
@@ -64,7 +63,7 @@ class Base2D extends hxd.App {
 
 		tf.y = 20;
 		tf.x = 20;
-		tf.scale(7);*/
+		tf.scale(7);
 	}
 
 	// if we the window has been resized
@@ -86,7 +85,6 @@ class Base2D extends hxd.App {
 	}
 
 	static function main() {
-		trace(hxd.System.width + "x" + hxd.System.height + " " + hxd.System.getDeviceName());
 		hxd.Res.initEmbed();
 		new Base2D();
 	}
