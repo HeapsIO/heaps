@@ -22,6 +22,8 @@ private class CompiledShader {
 	public var vertex : ShaderContext;
 	public var fragment : ShaderContext;
 	public var layout : Layout;
+	public var inputs : Array<String>;
+	public var offsets : Array<Int>;
 	public function new() {
 	}
 }
@@ -49,17 +51,16 @@ class DirectXDriver extends h3d.impl.Driver {
 	var shaders : Map<Int,CompiledShader>;
 	var box = new dx.Resource.ResourceBox();
 	var strides : Array<Int> = [];
-	var zeroes : Array<Int> = [for( i in 0...16 ) 0];
+	var offsets : Array<Int> = [];
 	var currentShader : CompiledShader;
-	var currentBuffer : dx.Resource;
-	var currentIndex : dx.Resource;
+	var currentIndex : IndexBuffer;
 	var defaultTarget : RenderTargetView;
 	var currentTargets = new hl.NativeArray<RenderTargetView>(16);
 	var viewport : hl.BytesAccess<hl.F32> = new hl.Bytes(6 * 4);
 	var depthView : DepthStencilView;
 	var vertexShader = new PipelineState(Vertex);
 	var pixelShader = new PipelineState(Pixel);
-	var buffers = new hl.NativeArray<dx.Resource>(16);
+	var currentVBuffers = new hl.NativeArray<dx.Resource>(16);
 	var frame : Int;
 	var currentMaterialBits = -1;
 
@@ -133,11 +134,14 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
-		return dx.Driver.createBuffer(m.size * m.stride * 4, Default, VertexBuffer, None, None, 0, null);
+		var res = dx.Driver.createBuffer(m.size * m.stride * 4, Default, VertexBuffer, None, None, 0, null);
+		if( res == null ) return null;
+		return { res : res, count : m.size, stride : m.stride };
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
-		return dx.Driver.createBuffer(count << 1, Default, IndexBuffer, None, None, 0, null);
+		var res = dx.Driver.createBuffer(count << 1, Default, IndexBuffer, None, None, 0, null);
+		return { res : res, count : count };
 	}
 
 	override function allocTexture(t:h3d.mat.Texture):Texture {
@@ -167,29 +171,31 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function disposeVertexes(v:VertexBuffer) {
-		v.release();
+		v.res.release();
 	}
 
 	override function disposeIndexes(i:IndexBuffer) {
-		i.release();
+		i.res.release();
 	}
 
 	override function uploadIndexBuffer(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
-		if( startIndice > 0 ) throw "!";
-		i.updateSubresource(0, null, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<1), 0, 0);
+		if( startIndice > 0 || indiceCount != i.count ) throw "TODO";
+		i.res.updateSubresource(0, null, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<1), 0, 0);
 	}
 
 	override function uploadIndexBytes(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		throw "TODO";
+		if( startIndice > 0 || indiceCount != i.count ) throw "TODO";
+		i.res.updateSubresource(0, null, @:privateAccess buf.b.offset(bufPos << 1), 0, 0);
 	}
 
-	override function uploadVertexBuffer(v:VertexBuffer, startIndice:Int, indiceCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
-		if( startIndice > 0 ) throw "!";
-		v.updateSubresource(0, null, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2), 0, 0);
+	override public function uploadVertexBuffer(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
+		if( startVertex > 0 || vertexCount != v.count ) throw "TODO";
+		v.res.updateSubresource(0, null, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2), 0, 0);
 	}
 
-	override function uploadVertexBytes(v:VertexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		throw "TODO";
+	override public function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		if( startVertex > 0 || vertexCount != v.count ) throw "TODO";
+		v.res.updateSubresource(0, null, @:privateAccess buf.b.offset(bufPos << 2), 0, 0);
 	}
 
 	override function uploadTextureBitmap(t:h3d.mat.Texture, bmp:hxd.BitmapData, mipLevel:Int, side:Int) {
@@ -305,23 +311,38 @@ class DirectXDriver extends h3d.impl.Driver {
 			var vertex = compileShader(shader.vertex);
 			s.vertex = vertex.s;
 			s.fragment = compileShader(shader.fragment).s;
+			s.inputs = [];
+			s.offsets = [];
 
-			var layout = [];
+			var layout = [], offset = 0;
 			for( v in shader.vertex.data.vars )
 				if( v.kind == Input ) {
 					var e = new LayoutElement();
 					e.semanticName = @:privateAccess v.name.toUtf8();
+					e.inputSlot = layout.length;
 					e.format = switch( v.type ) {
 					case TFloat: R32_FLOAT;
 					case TVec(2, VFloat): R32G32_FLOAT;
 					case TVec(3, VFloat): R32G32B32_FLOAT;
 					case TVec(4, VFloat): R32G32B32A32_FLOAT;
+					case TBytes(4): R8G8B8A8_UINT;
 					default:
 						throw "Unsupported input type " + hxsl.Ast.Tools.toString(v.type);
 					};
 					e.inputSlotClass = PerVertexData;
-					e.alignedByteOffset = -1; // automatic layout
 					layout.push(e);
+					s.offsets.push(offset);
+					s.inputs.push(v.name);
+
+					var size = switch( v.type ) {
+					case TVec(n, _): n;
+					case TBytes(n): n;
+					case TFloat: 1;
+					default: throw "assert " + v.type;
+					}
+
+					trace(v.name, offset, size);
+					offset += size;
 				}
 
 			var n = new hl.NativeArray(layout.length);
@@ -341,19 +362,43 @@ class DirectXDriver extends h3d.impl.Driver {
 		return true;
 	}
 
-	override function selectBuffer(buffer:Buffer) {
-		var vbuf = @:privateAccess buffer.buffer.vbuf;
-		if( vbuf == currentBuffer )
-			return;
-		currentBuffer = vbuf;
-		buffers[0] = vbuf;
-		strides[0] = buffer.buffer.stride << 2;
-		dx.Driver.iaSetVertexBuffers(0, 1, buffers, hl.Bytes.getArray(strides), hl.Bytes.getArray(zeroes));
-		buffers[0] = null;
+	override function getShaderInputNames():Array<String> {
+		return currentShader.inputs;
 	}
 
-	override function selectMultiBuffers(buffers:Buffer.BufferOffset) {
-		throw "TODO";
+	override function selectBuffer(buffer:Buffer) {
+		var vbuf = @:privateAccess buffer.buffer.vbuf;
+		var start = -1, max = -1, position = 0;
+		for( i in 0...currentShader.inputs.length ) {
+			if( currentVBuffers[i] != vbuf.res || offsets[i] != currentShader.offsets[i] << 2 ) {
+				currentVBuffers[i] = vbuf.res;
+				strides[i] = buffer.buffer.stride << 2;
+				offsets[i] = currentShader.offsets[i] << 2;
+				if( start < 0 ) start = i;
+				max = i;
+			}
+		}
+		if( max >= 0 )
+			Driver.iaSetVertexBuffers(start, max - start + 1, currentVBuffers.getRef().offset(start), hl.Bytes.getArray(strides).offset(start << 2), hl.Bytes.getArray(offsets).offset(start << 2));
+	}
+
+	override function selectMultiBuffers(bl:Buffer.BufferOffset) {
+		var index = 0;
+		var start = -1, max = -1;
+		while( bl != null ) {
+			var vbuf = @:privateAccess bl.buffer.buffer.vbuf;
+			if( currentVBuffers[index] != vbuf.res || offsets[index] != bl.offset << 2 ) {
+				currentVBuffers[index] = vbuf.res;
+				offsets[index] = bl.offset << 2;
+				strides[index] = bl.buffer.buffer.stride << 2;
+				if( start < 0 ) start = index;
+				max = index;
+			}
+			index++;
+			bl = bl.next;
+		}
+		if( max >= 0 )
+			Driver.iaSetVertexBuffers(start, max - start + 1, currentVBuffers.getRef().offset(start), hl.Bytes.getArray(strides).offset(start << 2), hl.Bytes.getArray(offsets).offset(start << 2));
 	}
 
 	function uploadShaderBuffer( sbuffer : dx.Resource, buffer : haxe.ds.Vector<hxd.impl.Float32>, size : Int ) {
@@ -378,9 +423,9 @@ class DirectXDriver extends h3d.impl.Driver {
 					state.buffers[0] = shader.globals;
 					switch( state.kind ) {
 					case Vertex:
-						Driver.vsSetConstantBuffers(0, 1, state.buffers, 0);
+						Driver.vsSetConstantBuffers(0, 1, state.buffers);
 					case Pixel:
-						Driver.psSetConstantBuffers(0, 1, state.buffers, 0);
+						Driver.psSetConstantBuffers(0, 1, state.buffers);
 					}
 				}
 			}
@@ -391,9 +436,9 @@ class DirectXDriver extends h3d.impl.Driver {
 					state.buffers[1] = shader.params;
 					switch( state.kind ) {
 					case Vertex:
-						Driver.vsSetConstantBuffers(1, 1, state.buffers, 1);
+						Driver.vsSetConstantBuffers(1, 1, state.buffers.getRef().offset(1));
 					case Pixel:
-						Driver.psSetConstantBuffers(1, 1, state.buffers, 1);
+						Driver.psSetConstantBuffers(1, 1, state.buffers.getRef().offset(1));
 					}
 				}
 			}
@@ -443,11 +488,11 @@ class DirectXDriver extends h3d.impl.Driver {
 			}
 			switch( state.kind) {
 			case Vertex:
-				if( max >= 0 ) Driver.vsSetShaderResources(start, max - start + 1, state.resources, start);
-				if( smax >= 0 ) Driver.vsSetSamplers(sstart, smax - sstart + 1, state.samplers, sstart);
+				if( max >= 0 ) Driver.vsSetShaderResources(start, max - start + 1, state.resources.getRef().offset(start));
+				if( smax >= 0 ) Driver.vsSetSamplers(sstart, smax - sstart + 1, state.samplers.getRef().offset(sstart));
 			case Pixel:
-				if( max >= 0 ) Driver.psSetShaderResources(start, max - start + 1, state.resources, start);
-				if( smax >= 0 ) Driver.psSetSamplers(sstart, smax - sstart + 1, state.samplers, sstart);
+				if( max >= 0 ) Driver.psSetShaderResources(start, max - start + 1, state.resources.getRef().offset(start));
+				if( smax >= 0 ) Driver.psSetSamplers(sstart, smax - sstart + 1, state.samplers.getRef().offset(sstart));
 			}
 		}
 	}
@@ -455,7 +500,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
-			dx.Driver.iaSetIndexBuffer(ibuf,false,0);
+			dx.Driver.iaSetIndexBuffer(ibuf.res,false,0);
 		}
 		dx.Driver.drawIndexed(ntriangles * 3, startIndex, 0);
 	}
