@@ -233,6 +233,10 @@ class HlslOut {
 				decl("float4 pack( float x ) { return float4(x,x,x,x); }");
 			case Unpack:
 				decl("float unpack( float4 v ) { return v.x; }");
+			case PackNormal:
+				decl("float4 packNormal( float3 n ) { return float4((n + 1.) * 0.5,1.); }");
+			case UnpackNormal:
+				decl("float3 unpackNormal( float4 p ) { return p.xyz * 2. - 1.; }");
 			default:
 			}
 			add(GLOBALS.get(g));

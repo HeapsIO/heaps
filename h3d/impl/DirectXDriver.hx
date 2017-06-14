@@ -55,6 +55,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var defaultDepthInst : h3d.mat.DepthBuffer;
 
 	var viewport : hl.BytesAccess<hl.F32> = new hl.Bytes(6 * 4);
+	var rects : hl.BytesAccess<Int> = new hl.Bytes(4 * 4 * 8);
 	var box = new dx.Resource.ResourceBox();
 	var strides : Array<Int> = [];
 	var offsets : Array<Int> = [];
@@ -79,31 +80,51 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	var outputWidth : Int;
 	var outputHeight : Int;
+	var hasScissor = false;
+
+	var window : dx.Window;
+
+	public var backBufferFormat : dx.Format = R8G8B8A8_UNORM;
+	public var depthStencilFormat : dx.Format = D24_UNORM_S8_UINT;
 
 	public function new() {
 		shaders = new Map();
-		var win = @:privateAccess dx.Window.windows[0];
-		driver = Driver.create(win);
+		window = @:privateAccess dx.Window.windows[0];
+		driver = Driver.create(window, backBufferFormat);
 		if( driver == null ) throw "Failed to initialize DirectX driver";
 		Driver.iaSetPrimitiveTopology(TriangleList);
+		defaultDepthInst = new h3d.mat.DepthBuffer(-1, -1);
+	}
 
-		outputWidth = win.width;
-		outputHeight = win.height;
+	override function resize(width:Int, height:Int)  {
+		if( defaultDepth != null ) {
+			defaultDepth.view.release();
+			defaultDepth.res.release();
+		}
+		if( defaultTarget != null ) {
+			defaultTarget.release();
+			defaultTarget = null;
+		}
+
+		if( !Driver.resize(width, height, backBufferFormat) )
+			throw "Failed to resize backbuffer to " + width + "x" + height;
 
 		var depthDesc = new Texture2dDesc();
-		depthDesc.width = outputWidth;
-		depthDesc.height = outputHeight;
-		depthDesc.format = D24_UNORM_S8_UINT;
+		depthDesc.width = width;
+		depthDesc.height = height;
+		depthDesc.format = depthStencilFormat;
 		depthDesc.bind = DepthStencil;
 		var depth = Driver.createTexture2d(depthDesc);
-		var depthView = Driver.createDepthStencilView(depth,depthDesc.format);
+		var depthView = Driver.createDepthStencilView(depth,depthStencilFormat);
+		defaultDepth = { res : depth, view : depthView };
+		@:privateAccess defaultDepthInst.b = defaultDepth;
 
 		var buf = Driver.getBackBuffer();
 		defaultTarget = Driver.createRenderTargetView(buf);
 		buf.release();
-		defaultDepth = { res : depth, view : depthView };
-		defaultDepthInst = new h3d.mat.DepthBuffer(-1, -1);
-		@:privateAccess defaultDepthInst.b = defaultDepth;
+
+		outputWidth = width;
+		outputHeight = height;
 
 		setRenderTarget(null);
 	}
@@ -134,7 +155,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function present() {
-		Driver.present();
+		Driver.present(window.vsync ? 1 : 0, None);
 	}
 
 	override function getDefaultDepthBuffer():h3d.mat.DepthBuffer {
@@ -249,10 +270,17 @@ class DirectXDriver extends h3d.impl.Driver {
 		t.t.res.updateSubresource(0, null, pixels.bytes, pixels.width << 2, 0);
 	}
 
+	static inline var SCISSOR_BIT = 1 << (Pass.colorMask_offset + 4);
+
 	override public function selectMaterial(pass:h3d.mat.Pass) {
 		var bits = @:privateAccess pass.bits;
+
+		if( hasScissor ) bits |= SCISSOR_BIT;
+
 		if( bits == currentMaterialBits )
 			return;
+
+		currentMaterialBits = bits;
 
 		var depthBits = bits & (Pass.depthWrite_mask | Pass.depthTest_mask);
 		if( pass.stencil != null ) throw "TODO";
@@ -271,7 +299,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			Driver.omSetDepthStencilState(depth);
 		}
 
-		var rasterBits = bits & (Pass.culling_mask);
+		var rasterBits = bits & (Pass.culling_mask | SCISSOR_BIT);
 		var raster = rasterStates.get(rasterBits);
 		if( raster == null ) {
 			var desc = new RasterizerDesc();
@@ -279,6 +307,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			desc.cullMode = CULL[Pass.getCulling(bits)];
 			if( pass.culling == Both ) throw "Culling:Both Not supported in DirectX";
 			desc.depthClipEnable = true;
+			desc.scissorEnable = bits & SCISSOR_BIT != 0;
 			raster = Driver.createRasterizerState(desc);
 			rasterStates.set(rasterBits, raster);
 		}
@@ -378,6 +407,15 @@ class DirectXDriver extends h3d.impl.Driver {
 		viewport[3] = tex.height;
 		viewport[5] = 1.;
 		Driver.rsSetViewports(1, viewport);
+
+		// unbind from resources !
+		var res = tex.t.view;
+		for( i in 0...64 ) {
+			if( vertexShader.resources[i] == res )
+				vertexShader.resources[i] = null;
+			if( pixelShader.resources[i] == res )
+				pixelShader.resources[i] = null;
+		}
 	}
 
 	override function setRenderTargets(textures:Array<h3d.mat.Texture>) {
@@ -385,7 +423,16 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function setRenderZone(x:Int, y:Int, width:Int, height:Int) {
-		throw "TODO";
+		if( x == 0 && y == 0 && width < 0 && height < 0 ) {
+			hasScissor = false;
+			return;
+		}
+		hasScissor = true;
+		rects[0] = x;
+		rects[1] = y;
+		rects[2] = x + width;
+		rects[3] = y + height;
+		Driver.rsSetScissorRects(1, rects);
 	}
 
 	override function selectShader(shader:hxsl.RuntimeShader) {

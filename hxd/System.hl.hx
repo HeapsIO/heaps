@@ -49,7 +49,7 @@ class System {
 		if( loopFunc != null ) loopFunc();
 		#if psgl
 		psgl.Api.present();
-		#else
+		#elseif hlsdl
 		@:privateAccess hxd.Stage.inst.window.present();
 		#end
 	}
@@ -185,8 +185,8 @@ class System {
 	static function get_height() : Int return psgl.Api.height;
 	static function get_platform() : Platform return Console;
 	#elseif hldx
-	static function get_width() : Int return dx.Driver.getScreenWidth();
-	static function get_height() : Int return dx.Driver.getScreenHeight();
+	static function get_width() : Int return dx.Window.getScreenWidth();
+	static function get_height() : Int return dx.Window.getScreenHeight();
 	static function get_platform() : Platform return PC; // TODO : Xbox ?
 	#elseif hlsdl
 	static function get_width() : Int return sdl.Sdl.getScreenWidth();
