@@ -177,6 +177,14 @@ class HlslOut {
 		addExpr(e, tabs);
 	}
 
+	function declMods() {
+		// unsigned mod like GLSL
+		decl("float mod(float x, float y) { return x - y * floor(x/y); }");
+		decl("float2 mod(float2 x, float2 y) { return x - y * floor(x/y); }");
+		decl("float3 mod(float3 x, float3 y) { return x - y * floor(x/y); }");
+		decl("float4 mod(float4 x, float4 y) { return x - y * floor(x/y); }");
+	}
+
 	function addExpr( e : TExpr, tabs : String ) {
 		switch( e.e ) {
 		case TConst(c):
@@ -224,8 +232,7 @@ class HlslOut {
 				decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
 				decl("float3x3 mat3( float4x3 m ) { return (float3x3)m; }");
 			case Mod:
-				// unsigned mod like GLSL
-				decl("float mod(float x, float y) { return x - y * floor(x/y); }");
+				declMods();
 			case Pow:
 				// negative power might not work
 				decl("#pragma warning(disable:3571)");
@@ -261,7 +268,7 @@ class HlslOut {
 					addValue(e1, tabs);
 					add(" = ");
 				}
-				decl("float mod(float x, float y) { return x - y * floor(x/y); }");
+				declMods();
 				add("mod(");
 				addValue(e1, tabs);
 				add(",");
