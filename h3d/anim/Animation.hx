@@ -53,6 +53,10 @@ class Animation {
 		pause = false;
 	}
 
+	public function getDuration() {
+		return frameCount / (sampling * speed);
+	}
+
 	inline function getIFrame() {
 		var f = Std.int(frame);
 		var max = endFrame();
