@@ -344,8 +344,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			var desc = new RenderTargetBlendDesc();
 			desc.srcBlend = BLEND[Pass.getBlendSrc(bits)];
 			desc.destBlend = BLEND[Pass.getBlendDst(bits)];
-			desc.srcBlendAlpha = BLEND[Pass.getBlendAlphaSrc(bits)];
-			desc.destBlendAlpha = BLEND[Pass.getBlendAlphaDst(bits)];
+			desc.srcBlendAlpha = BLEND_ALPHA[Pass.getBlendAlphaSrc(bits)];
+			desc.destBlendAlpha = BLEND_ALPHA[Pass.getBlendAlphaDst(bits)];
 			desc.blendOp = BLEND_OP[Pass.getBlendOp(bits)];
 			desc.blendOpAlpha = BLEND_OP[Pass.getBlendAlphaOp(bits)];
 			desc.renderTargetWriteMask = Pass.getColorMask(bits);
@@ -693,6 +693,26 @@ class DirectXDriver extends h3d.impl.Driver {
 		SrcAlphaSat,
 		// BlendFactor/InvBlendFactor : not supported by Heaps for now
 	];
+
+	static var BLEND_ALPHA : Array<Blend> = [
+		One,
+		Zero,
+		SrcAlpha,
+		SrcAlpha,
+		DestAlpha,
+		DestAlpha,
+		InvSrcAlpha,
+		InvSrcAlpha,
+		InvDestAlpha,
+		InvDestAlpha,
+		Src1Alpha,
+		Src1Alpha,
+		InvSrc1Alpha,
+		InvSrc1Alpha,
+		SrcAlphaSat,
+		// BlendFactor/InvBlendFactor : not supported by Heaps for now
+	];
+
 
 	static var BLEND_OP : Array<BlendOp> = [
 		Add,
