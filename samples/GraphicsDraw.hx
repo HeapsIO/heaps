@@ -74,7 +74,7 @@ class GraphicsDraw extends hxd.App {
 		// set up graphics instance for use in redraw()
 
 		pg = new h2d.Graphics();
-		pg.filters = [new h2d.filter.Blur(2,2,10)];
+		pg.filter = new h2d.filter.Blur(2,2,10);
 		pg.beginFill(0xFF8040, 0.5);
 	}
 

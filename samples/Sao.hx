@@ -111,10 +111,10 @@ class Sao extends SampleApp {
 		new h3d.scene.CameraController(s3d).loadFromCamera();
 
 		var c = renderer;
-		addSlider("Bias", 0, 0.3, function() return c.sao.shader.bias, function(v) c.sao.shader.bias = v);
-		addSlider("Intensity", 0, 10, function() return c.sao.shader.intensity, function(v) c.sao.shader.intensity = v);
-		addSlider("Radius", 0, 1, function() return c.sao.shader.sampleRadius, function(v) c.sao.shader.sampleRadius = v);
-		addSlider("Blur", 0, 3, function() return c.saoBlur.sigma, function(v) c.saoBlur.sigma = v);
+		addSlider("Bias", function() return c.sao.shader.bias, function(v) c.sao.shader.bias = v, 0, 0.3);
+		addSlider("Intensity", function() return c.sao.shader.intensity, function(v) c.sao.shader.intensity = v, 0, 10);
+		addSlider("Radius", function() return c.sao.shader.sampleRadius, function(v) c.sao.shader.sampleRadius = v);
+		addSlider("Blur", function() return c.saoBlur.sigma, function(v) c.saoBlur.sigma = v, 0, 3);
 
 		onResize();
 	}
@@ -146,7 +146,7 @@ class Sao extends SampleApp {
 			r.saoBlur.passes = r.saoBlur.passes == 0 ? 3 : 0;
 		#if hl
 		if( K.isPressed("V".code) )
-			@:privateAccess hxd.System.win.vsync = !hxd.System.win.vsync;
+			@:privateAccess hxd.Stage.getInstance().window.vsync = !hxd.Stage.getInstance().window.vsync;
 		#end
 	}
 
