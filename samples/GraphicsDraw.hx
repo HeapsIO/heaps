@@ -62,20 +62,18 @@ class GraphicsDraw extends hxd.App {
 
 		texture = new h3d.mat.Texture(256, 256,[Target]);
 		var b = new h2d.Bitmap(h2d.Tile.fromTexture(texture), s2d);
-		b.blendMode = None; // prevent residual alpha bugs
 		b.y = 256;
 
 		// test capture bitmap
 
 		bclone = new h2d.Bitmap(h2d.Tile.fromTexture(new h3d.mat.Texture(256, 256)), s2d);
-		bclone.blendMode = None; // prevent residual alpha bugs
 		bclone.y = 512;
 
 		// set up graphics instance for use in redraw()
 
 		pg = new h2d.Graphics();
 		pg.filter = new h2d.filter.Blur(2,2,10);
-		pg.beginFill(0xFF8040, 0.5);
+		pg.beginFill(0xFF8040, 0.8);
 	}
 
 	function redraw(t:h3d.mat.Texture) {

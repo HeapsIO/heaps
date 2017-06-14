@@ -83,6 +83,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var hasScissor = false;
 
 	var window : dx.Window;
+	var curTexture : h3d.mat.Texture;
 
 	public var backBufferFormat : dx.Format = R8G8B8A8_UNORM;
 	public var depthStencilFormat : dx.Format = D24_UNORM_S8_UINT;
@@ -190,23 +191,44 @@ class DirectXDriver extends h3d.impl.Driver {
 		d.res.release();
 	}
 
+	override function captureRenderBuffer( pixels : hxd.Pixels ) {
+		var rt = curTexture;
+		if( rt == null )
+			throw "Can't capture main render buffer in DirectX";
+
+		var desc = new Texture2dDesc();
+		desc.width = rt.width;
+		desc.height = rt.height;
+		desc.access = CpuRead | CpuWrite;
+		desc.usage = Staging;
+		desc.format = getTextureFormat(rt);
+		var tmp = dx.Driver.createTexture2d(desc);
+		if( tmp == null )
+			throw "Capture failed: can't create tmp texture";
+		tmp.copyResource(rt.t.res);
+
+		var ptr = tmp.map(0, Read, true);
+		@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * 4);
+		tmp.unmap(0);
+		tmp.release();
+	}
+
+	function getTextureFormat( t : h3d.mat.Texture ) : dx.Format {
+		return switch( t.format ) {
+		case RGBA: R8G8B8A8_UNORM;
+		case ALPHA32F: R32_FLOAT;
+		case ALPHA16F: R16_FLOAT;
+		case ALPHA8: R8_UNORM;
+		default: throw "Unsupported texture format " + t.format;
+		}
+	}
+
 	override function allocTexture(t:h3d.mat.Texture):Texture {
 		var rt = t.flags.has(Target);
 		var desc = new Texture2dDesc();
 		desc.width = t.width;
 		desc.height = t.height;
-		switch( t.format ) {
-		case RGBA:
-			desc.format = R8G8B8A8_UNORM;
-		case ALPHA32F:
-			desc.format = R32_FLOAT;
-		/*case ALPHA16F:
-			desc.format = R16_FLOAT;
-		case ALPHA8:
-			desc.format = R8_UNORM;*/
-		default:
-			throw "Unsupported texture format " + t.format;
-		}
+		desc.format = getTextureFormat(t);
 		desc.usage = Default;
 		desc.bind = ShaderResource;
 		if( rt ) desc.bind |= RenderTarget;
@@ -384,6 +406,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	override function setRenderTarget(tex:Null<h3d.mat.Texture>, face = 0, mipLevel = 0) {
 		if( face != 0 || mipLevel != 0 )
 			throw "TODO";
+		curTexture = tex;
 		if( tex == null ) {
 			currentDepth = defaultDepth;
 			currentTargets[0] = defaultTarget;
