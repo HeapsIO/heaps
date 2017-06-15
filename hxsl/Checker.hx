@@ -561,9 +561,10 @@ class Checker {
 		case EFunction(f):
 			if( isImport )
 				return;
-			for( f2 in funs )
+			for( f2 in funs.copy() ){
 				if( f2.f.name == f.name && f2.inherit )
 					funs.remove(f2);
+			}
 			funs.push({ f : f, p : e.pos, inherit : isExtends });
 		case EVars(vl):
 			for( v in vl ) {
