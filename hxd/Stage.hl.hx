@@ -25,7 +25,6 @@ class Stage {
 	var windowHeight = 600;
 	var curMouseX = 0;
 	var curMouseY = 0;
-	var shiftDown : Bool;
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
 
@@ -181,7 +180,6 @@ class Stage {
 			eh.keyCode = CODEMAP[e.keyCode];
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
-				if( e.keyCode == K.SHIFT ) shiftDown = true;
 				onEvent(e);
 			}
 		case KeyUp:
@@ -190,7 +188,6 @@ class Stage {
 			eh.keyCode = CODEMAP[e.keyCode];
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
-				if( e.keyCode == K.SHIFT ) shiftDown = false;
 				onEvent(e);
 			}
 		case TextInput:
@@ -204,6 +201,24 @@ class Stage {
 				((c & 0x1F) << 12) | (((e.keyCode >> 8) & 0x7F) << 6) | ((e.keyCode >> 16) & 0x7F);
 			else
 				((c & 0x0F) << 18) | (((e.keyCode >> 8) & 0x7F) << 12) | (((e.keyCode >> 16) & 0x7F) << 6) | ((e.keyCode >> 24) & 0x7F);
+		#elseif hldx
+		case KeyDown:
+			eh = new Event(EKeyDown);
+			eh.keyCode = e.keyCode;
+			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
+				e.keyCode = eh.keyCode & 0xFF;
+				onEvent(e);
+			}
+		case KeyUp:
+			eh = new Event(EKeyUp);
+			eh.keyCode = CODEMAP[e.keyCode];
+			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
+				e.keyCode = eh.keyCode & 0xFF;
+				onEvent(e);
+			}
+		case TextInput:
+			eh = new Event(ETextInput, mouseX, mouseY);
+			eh.charCode = e.keyCode;
 		#end
 		case Quit:
 			return onClose();
