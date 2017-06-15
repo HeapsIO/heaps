@@ -47,6 +47,11 @@ class PipelineState {
 
 class DirectXDriver extends h3d.impl.Driver {
 
+	static inline var NTARGETS = 8;
+	static inline var VIEWPORTS_ELTS = 6 * NTARGETS;
+	static inline var RECTS_ELTS = 4 * NTARGETS;
+	static inline var BLEND_FACTORS = NTARGETS;
+
 	var driver : DriverInstance;
 	var shaders : Map<Int,CompiledShader>;
 
@@ -54,8 +59,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	var defaultDepth : DepthBuffer;
 	var defaultDepthInst : h3d.mat.DepthBuffer;
 
-	var viewport : hl.BytesAccess<hl.F32> = new hl.Bytes(6 * 4);
-	var rects : hl.BytesAccess<Int> = new hl.Bytes(4 * 4 * 8);
+	var viewport : hl.BytesAccess<hl.F32> = new hl.Bytes(4 * VIEWPORTS_ELTS);
+	var rects : hl.BytesAccess<Int> = new hl.Bytes(4 * RECTS_ELTS);
 	var box = new dx.Resource.ResourceBox();
 	var strides : Array<Int> = [];
 	var offsets : Array<Int> = [];
@@ -76,7 +81,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentDepthState : DepthStencilState;
 	var currentBlendState : BlendState;
 	var currentRasterState : RasterState;
-	var blendFactors : hl.BytesAccess<hl.F32> = new hl.Bytes(4 * 4);
+	var blendFactors : hl.BytesAccess<hl.F32> = new hl.Bytes(4 * BLEND_FACTORS);
 
 	var outputWidth : Int;
 	var outputHeight : Int;
@@ -95,6 +100,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( driver == null ) throw "Failed to initialize DirectX driver";
 		Driver.iaSetPrimitiveTopology(TriangleList);
 		defaultDepthInst = new h3d.mat.DepthBuffer(-1, -1);
+		for( i in 0...VIEWPORTS_ELTS )
+			viewport[i] = 0;
+		for( i in 0...RECTS_ELTS )
+			rects[i] = 0;
+		for( i in 0...BLEND_FACTORS )
+			blendFactors[i] = 0;
 	}
 
 	override function resize(width:Int, height:Int)  {
@@ -118,7 +129,11 @@ class DirectXDriver extends h3d.impl.Driver {
 		var depth = Driver.createTexture2d(depthDesc);
 		var depthView = Driver.createDepthStencilView(depth,depthStencilFormat);
 		defaultDepth = { res : depth, view : depthView };
-		@:privateAccess defaultDepthInst.b = defaultDepth;
+		@:privateAccess {
+			defaultDepthInst.b = defaultDepth;
+			defaultDepthInst.width = width;
+			defaultDepthInst.height = height;
+		}
 
 		var buf = Driver.getBackBuffer();
 		defaultTarget = Driver.createRenderTargetView(buf);
