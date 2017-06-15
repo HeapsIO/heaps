@@ -296,7 +296,10 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override public function uploadVertexBuffer(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
-		if( startVertex > 0 || vertexCount != v.count ) throw "TODO";
+		if( startVertex > 0 || vertexCount != v.count ) {
+			trace("TODO:" + startVertex + "," + vertexCount + "/" + v.count);
+			return;
+		}
 		v.res.updateSubresource(0, null, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2), 0, 0);
 	}
 
@@ -312,9 +315,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
-		if( mipLevel != 0 || side != 0 ) throw "TODO";
 		pixels.convert(RGBA);
-		t.t.res.updateSubresource(0, null, pixels.bytes, pixels.width << 2, 0);
+		t.t.res.updateSubresource(mipLevel + side * 6, null, pixels.bytes, pixels.width << 2, 0);
 	}
 
 	static inline var SCISSOR_BIT = 1 << (Pass.colorMask_offset + 4);
