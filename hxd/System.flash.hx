@@ -23,6 +23,10 @@ class System {
 	public static var platform(get, never) : Platform;
 	public static var screenDPI(get,never) : Float;
 	public static var setCursor = setNativeCursor;
+	public static var allowTimeout(get, set) : Bool;
+
+	public static function timeoutTick() : Void {
+	}
 
 	static var loopFunc : Void -> Void;
 
@@ -161,6 +165,9 @@ class System {
 	static function get_screenDPI() : Int {
 		return Std.int(flash.system.Capabilities.screenDPI);
 	}
+
+	static function get_allowTimeout() return true;
+	static function set_allowTimeout(b) return true; // can't be disabled
 
 }
 

@@ -23,7 +23,11 @@ class System {
 	public static var platform(get, never) : Platform;
 	public static var screenDPI(get,never) : Float;
 	public static var setCursor = setNativeCursor;
+	public static var allowTimeout(get, set) : Bool;
 
+	public static function timeoutTick() : Void {
+	}
+	
 	static var loopFunc : Void -> Void;
 
 	// JS
@@ -90,5 +94,7 @@ class System {
 	static function get_lang() : String return "en";
 	static function get_platform() : Platform return PC;
 	static function get_screenDPI() : Int return 72;
+	static function get_allowTimeout() return false;
+	static function set_allowTimeout(b) return false;
 
 }

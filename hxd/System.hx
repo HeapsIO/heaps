@@ -24,6 +24,17 @@ class System {
 	public static var screenDPI(get,never) : Float;
 	public static var setCursor = setNativeCursor;
 
+	/**
+		Can be used to temporarly disable infinite loop check
+	**/
+	public static var allowTimeout(get, set) : Bool;
+
+	/**
+		If you have a time consuming calculus that might trigger a timeout, you can either disable timeouts with [allowTimeout] or call timeoutTick() frequently.
+	**/
+	public static function timeoutTick() : Void {
+	}
+
 	static var loopFunc : Void -> Void;
 
 	public static function getCurrentLoop() : Void -> Void {
@@ -62,5 +73,7 @@ class System {
 	static function get_lang() : String return "en";
 	static function get_platform() : Platform return PC;
 	static function get_screenDPI() : Int return 72;
+	static function get_allowTimeout() return false;
+	static function set_allowTimeout(b) return false;
 
 }

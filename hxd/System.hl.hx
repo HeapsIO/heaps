@@ -30,8 +30,10 @@ class System {
 	public static var platform(get, never) : Platform;
 	public static var screenDPI(get,never) : Float;
 	public static var setCursor = setNativeCursor;
+	public static var allowTimeout(get, set) : Bool;
 
 	static var loopFunc : Void -> Void;
+
 
 	// -- HL
 	static var currentNativeCursor : hxd.Cursor = Default;
@@ -200,5 +202,33 @@ class System {
 	#end
 
 	static function get_screenDPI() : Int return 72; // TODO
+
+	public static function timeoutTick() : Void @:privateAccess {
+		#if hldx
+		dx.Loop.sentinel.tick();
+		#elseif hlsdl
+		sdl.Sdl.sentinel.tick();
+		#end
+	}
+
+	static function get_allowTimeout() @:privateAccess {
+		#if hldx
+		return dx.Loop.sentinel.pause;
+		#elseif hlsdl
+		return sdl.Sdl.sentinel.pause;
+		#else
+		return false;
+		#end
+	}
+
+	static function set_allowTimeout(b) @:privateAccess {
+		#if hldx
+		return dx.Loop.sentinel.pause = b;
+		#elseif hlsdl
+		return sdl.Sdl.sentinel.pause = b;
+		#else
+		return false;
+		#end
+	}
 
 }
