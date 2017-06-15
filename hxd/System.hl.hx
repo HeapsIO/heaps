@@ -105,7 +105,7 @@ class System {
 		case Button:
 			cur = Cursor.createSystem(Hand);
 		case Move:
-			throw "Cursor not supported";
+			cur = Cursor.createSystem(SizeALL);
 		case TextInput:
 			cur = Cursor.createSystem(IBeam);
 		case Hide:
@@ -120,7 +120,7 @@ class System {
 				c.alloc = sdl.Cursor.create(surf, c.offsetX, c.offsetY);
 				surf.free();
 				#elseif hldx
-				throw "TODO";
+				c.alloc = dx.Cursor.createCursor(pixels.width, pixels.height, pixels.bytes, c.offsetX, c.offsetY);
 				#end
 				pixels.dispose();
 			}

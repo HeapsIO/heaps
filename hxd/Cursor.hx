@@ -24,6 +24,8 @@ class CustomCursor {
 	static var UID = 0;
 	var name : String;
 	var alloc : flash.ui.MouseCursorData;
+	#else
+	var alloc : Dynamic;
 	#end
 
 	public function new( frames, speed, offsetX, offsetY ) {
@@ -40,17 +42,18 @@ class CustomCursor {
 		for( f in frames )
 			f.dispose();
 		frames = [];
-		#if hlsdl
 		if( alloc != null ) {
+			#if hlsdl
 			alloc.free();
-			alloc = null;
-		}
-		#elseif flash
-		if( alloc != null ) {
+			#elseif flash
 			flash.ui.Mouse.unregisterCursor(name);
+			#elseif hldx
+			alloc.destroy();
+			#else
+			throw "TODO";
+			#end
 			alloc = null;
 		}
-		#end
 	}
 
 }
