@@ -88,7 +88,7 @@ class TextInput extends Text {
 			if( e.cancel ) return;
 			var t = haxe.Timer.stamp();
 			// double click to select all
-			if( t - lastClick < 0.2 && text.length != 0 ) {
+			if( t - lastClick < 0.3 && text.length != 0 ) {
 				selectionRange = { start : 0, length : text.length };
 				selectionSize = 0;
 				cursorIndex = text.length;
