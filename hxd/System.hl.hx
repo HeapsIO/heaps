@@ -81,6 +81,7 @@ class System {
 		#elseif hldx
 			@:privateAccess Stage.inst = new Stage(title, width, height);
 			init();
+			dx.Loop.defaultEventHandler = @:privateAccess Stage.inst.onEvent;
 		#end
 
 		#end

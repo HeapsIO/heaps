@@ -116,7 +116,7 @@ class Stage {
 		return false;
 	}
 
-	#if (psgl || hldx)
+	#if psgl
 
 	function get_vsync() : Bool return true;
 
@@ -133,7 +133,7 @@ class Stage {
 		return b;
 	}
 
-	function onEvent( e : sdl.Event ) : Bool {
+	function onEvent( e : #if hldx dx.Event #else sdl.Event #end ) : Bool {
 		var eh = null;
 		switch( e.type ) {
 		case WindowState:
@@ -169,6 +169,12 @@ class Stage {
 			curMouseX = e.mouseX;
 			curMouseY = e.mouseY;
 			eh = new Event(EMove, e.mouseX, e.mouseY);
+		case MouseWheel:
+			eh = new Event(EWheel, mouseX, mouseY);
+			eh.wheelDelta = -e.wheelDelta;
+		#if hlsdl
+		case GControllerAdded, GControllerRemoved, GControllerUp, GControllerDown, GControllerAxis:
+			@:privateAccess hxd.Pad.onEvent( e );
 		case KeyDown:
 			eh = new Event(EKeyDown);
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
@@ -187,11 +193,6 @@ class Stage {
 				if( e.keyCode == K.SHIFT ) shiftDown = false;
 				onEvent(e);
 			}
-		case MouseWheel:
-			eh = new Event(EWheel, mouseX, mouseY);
-			eh.wheelDelta = -e.wheelDelta;
-		case GControllerAdded, GControllerRemoved, GControllerUp, GControllerDown, GControllerAxis:
-			@:privateAccess hxd.Pad.onEvent( e );
 		case TextInput:
 			eh = new Event(ETextInput, mouseX, mouseY);
 			var c = e.keyCode & 0xFF;
@@ -203,6 +204,7 @@ class Stage {
 				((c & 0x1F) << 12) | (((e.keyCode >> 8) & 0x7F) << 6) | ((e.keyCode >> 16) & 0x7F);
 			else
 				((c & 0x0F) << 18) | (((e.keyCode >> 8) & 0x7F) << 12) | (((e.keyCode >> 16) & 0x7F) << 6) | ((e.keyCode >> 24) & 0x7F);
+		#end
 		case Quit:
 			return onClose();
 		default:
