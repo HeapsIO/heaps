@@ -144,13 +144,21 @@ class Stage {
 
 	function onMouseDown(e:js.html.MouseEvent) {
 		var ev = new Event(EPush, mouseX, mouseY);
-		if (e.button == 2) ev.button = 1;
+		ev.button = switch( e.button ) {
+			case 1: 2;
+			case 2: 1;
+			case x: x;
+		};
 		event(ev);
 	}
 
 	function onMouseUp(e:js.html.MouseEvent) {
 		var ev = new Event(ERelease, mouseX, mouseY);
-		if (e.button == 2) ev.button = 1;
+		ev.button = switch( e.button ) {
+			case 1: 2;
+			case 2: 1;
+			case x: x;
+		};
 		event(ev);
 	}
 
