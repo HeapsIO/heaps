@@ -96,16 +96,11 @@ class Charset {
 	}
 
 	public function isSpace(code) {
-		return code == ' '.code || code == 0x3000 || isCJK(code);
+		return code == ' '.code || code == 0x3000;
 	}
 
 	public function isBreakChar(code) {
-		return switch( code ) {
-		case '!'.code, '?'.code, '.'.code, ','.code, ':'.code: true;
-		case '！'.code, '？'.code, '．'.code, '，'.code, '：'.code: true; // full width
-		case '・'.code, '、'.code, '。'.code: true; // JP
-		default: isSpace(code);
-		}
+		return isSpace(code) || isCJK(code);
 	}
 
 	static var inst : Charset;
