@@ -237,9 +237,9 @@ class HlslOut {
 				// negative power might not work
 				decl("#pragma warning(disable:3571)");
 			case Pack:
-				decl("float4 pack( float x ) { return float4(x,x,x,x); }");
+				decl("float4 pack( float v ) { float4 color = frac(v * float4(1, 255, 255.*255., 255.*255.*255.)); return color - color.yzww * float4(1. / 255., 1. / 255., 1. / 255., 0.); }");
 			case Unpack:
-				decl("float unpack( float4 v ) { return v.x; }");
+				decl("float unpack( float4 color ) { return dot(color,float4(1., 1. / 255., 1. / (255. * 255.), 1. / (255. * 255. * 255.))); }");
 			case PackNormal:
 				decl("float4 packNormal( float3 n ) { return float4((n + 1.) * 0.5,1.); }");
 			case UnpackNormal:

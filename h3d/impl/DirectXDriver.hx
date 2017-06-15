@@ -58,6 +58,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var defaultTarget : RenderTargetView;
 	var defaultDepth : DepthBuffer;
 	var defaultDepthInst : h3d.mat.DepthBuffer;
+	var extraDepthInst : h3d.mat.DepthBuffer;
 
 	var viewport : hl.BytesAccess<hl.F32> = new hl.Bytes(4 * VIEWPORTS_ELTS);
 	var rects : hl.BytesAccess<Int> = new hl.Bytes(4 * RECTS_ELTS);
@@ -134,6 +135,11 @@ class DirectXDriver extends h3d.impl.Driver {
 			defaultDepthInst.width = width;
 			defaultDepthInst.height = height;
 		}
+		if( extraDepthInst != null ) @:privateAccess {
+			extraDepthInst.width = width;
+			extraDepthInst.height = height;
+			extraDepthInst.dispose();
+		}
 
 		var buf = Driver.getBackBuffer();
 		defaultTarget = Driver.createRenderTargetView(buf);
@@ -175,7 +181,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function getDefaultDepthBuffer():h3d.mat.DepthBuffer {
-		return defaultDepthInst;
+		if( extraDepthInst == null )
+			extraDepthInst = new h3d.mat.DepthBuffer(outputWidth, outputHeight);
+		if( extraDepthInst.isDisposed() )
+			allocDepthBuffer(extraDepthInst);
+		return extraDepthInst;
 	}
 
 	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
@@ -438,16 +448,17 @@ class DirectXDriver extends h3d.impl.Driver {
 			throw "Can't render to texture which is not allocated with Target flag";
 		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
 			throw "Invalid depth buffer size : does not match render target size";
-		currentDepth = @:privateAccess (tex.depthBuffer == null ? null : tex.depthBuffer.b);
+		currentDepth = @:privateAccess (tex.depthBuffer == null ? defaultDepth : tex.depthBuffer.b);
 		currentTargets[0] = tex.t.rt;
-		Driver.omSetRenderTargets(1, currentTargets, currentDepth == null ? null : currentDepth.view);
+		Driver.omSetRenderTargets(1, currentTargets, currentDepth.view);
 		viewport[2] = tex.width;
 		viewport[3] = tex.height;
 		viewport[5] = 1.;
 		Driver.rsSetViewports(1, viewport);
+		unbind(tex.t.view);
+	}
 
-		// unbind from resources !
-		var res = tex.t.view;
+	function unbind( res ) {
 		for( i in 0...64 ) {
 			if( vertexShader.resources[i] == res )
 				vertexShader.resources[i] = null;
@@ -457,7 +468,28 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function setRenderTargets(textures:Array<h3d.mat.Texture>) {
-		throw "TODO";
+		if( textures.length == 0 ) {
+			setRenderTarget(null);
+			return;
+		}
+		var tex = textures[0];
+		curTexture = textures[0];
+		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
+			throw "Invalid depth buffer size : does not match render target size";
+		currentDepth = @:privateAccess (tex.depthBuffer == null ? defaultDepth : tex.depthBuffer.b);
+		for( i in 0...textures.length ) {
+			var tex = textures[i];
+			if( tex.t == null )
+				tex.alloc();
+			currentTargets[i] = tex.t.rt;
+			unbind(tex.t.view);
+		}
+		Driver.omSetRenderTargets(textures.length, currentTargets, currentDepth.view);
+
+		viewport[2] = tex.width;
+		viewport[3] = tex.height;
+		viewport[5] = 1.;
+		Driver.rsSetViewports(1, viewport);
 	}
 
 	override function setRenderZone(x:Int, y:Int, width:Int, height:Int) {

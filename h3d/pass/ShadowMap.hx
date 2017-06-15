@@ -118,7 +118,7 @@ class ShadowMap extends Default {
 	}
 
 	override function draw( passes ) {
-		var texture = tcache.allocTarget("shadowMap", ctx, size, size, false #if hldx ,ALPHA32F #end);
+		var texture = tcache.allocTarget("shadowMap", ctx, size, size, false);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
 			if( depth != null ) depth.dispose();
 			depth = new h3d.mat.DepthBuffer(size, size);
