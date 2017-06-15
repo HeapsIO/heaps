@@ -203,7 +203,7 @@ class HlslOut {
 			var acc = varAccess.get(v.id);
 			if( acc != null ) add(acc);
 			ident(v);
-		case TCall({ e : TGlobal(Texture2D) }, args):
+		case TCall({ e : TGlobal(Texture2D|TextureCube) }, args):
 			switch( args[0].e ) {
 			case TArray(e,index):
 				addValue(e, tabs);
@@ -513,7 +513,14 @@ class HlslOut {
 		for( v in textures ) {
 			switch( v.type ) {
 			case TArray(t, size):
-				add("Texture2D ");
+				switch( t ) {
+				case TSampler2D:
+					add("Texture2D ");
+				case TSamplerCube:
+					add("TextureCube ");
+				default:
+					throw "Unsupported sampler " + t;
+				}
 				add(v.name+"Tex");
 				addArraySize(size);
 				add(";\n");

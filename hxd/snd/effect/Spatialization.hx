@@ -1,6 +1,6 @@
 package hxd.snd.effect;
 
-#if hlsdl
+#if hlopenal
 import openal.AL;
 #end
 
@@ -36,7 +36,7 @@ class Spatialization extends Effect {
 		return gain;
 	}
 
-	#if hlsdl
+	#if hlopenal
 	override function apply(channel : Channel, s : Driver.Source) {
 		AL.sourcei(s.inst,  AL.SOURCE_RELATIVE, AL.FALSE);
 
