@@ -324,11 +324,13 @@ class Cell {
 	public var id : Int;
 	public var point : Point;
 	public var halfedges : Array<Halfedge>;
+	public var closeMe : Bool;
 
 	public function new(id, point) {
 		this.id = id;
 		this.point = point;
 		this.halfedges = [];
+		this.closeMe = false;
     }
 
 	public function getCircle() {
@@ -1145,6 +1147,9 @@ class Voronoi {
 			fy = (ly+ry)/2,
 			fm = 0., fb = 0.;
 
+		pointCell.get(lPoint).closeMe = true;
+		pointCell.get(rPoint).closeMe = true;
+
 		// get the line equation of the bisector if line is not vertical
 		if (ry != ly) {
 			fm = (lx-rx)/(ry-ly);
@@ -1169,7 +1174,7 @@ class Voronoi {
 			if (fx < xl || fx >= xr) {return false;}
 			// downward
 			if (lx > rx) {
-				if (va == null) {
+				if (va == null || va.y < yt) {
 					va = this.createVertex(fx, yt);
 					}
 				else if (va.y >= yb) {
@@ -1179,7 +1184,7 @@ class Voronoi {
 				}
 			// upward
 			else {
-				if (va == null) {
+				if (va == null || va.y > yb) {
 					va = this.createVertex(fx, yb);
 					}
 				else if (va.y < yt) {
@@ -1193,7 +1198,7 @@ class Voronoi {
 		else if (fm < -1 || fm > 1) {
 			// downward
 			if (lx > rx) {
-				if (va == null) {
+				if (va == null || va.y < yt) {
 					va = this.createVertex((yt-fb)/fm, yt);
 					}
 				else if (va.y >= yb) {
@@ -1203,7 +1208,7 @@ class Voronoi {
 				}
 			// upward
 			else {
-				if (va == null) {
+				if (va == null || va.y > yb) {
 					va = this.createVertex((yb-fb)/fm, yb);
 					}
 				else if (va.y < yt) {
@@ -1217,7 +1222,7 @@ class Voronoi {
 		else {
 			// rightward
 			if (ly < ry) {
-				if (va == null) {
+				if (va == null || va.x < xl) {
 					va = this.createVertex(xl, fm*xl+fb);
 					}
 				else if (va.x >= xr) {
@@ -1227,7 +1232,7 @@ class Voronoi {
 				}
 			// leftward
 			else {
-				if (va == null) {
+				if (va == null || va.x > xr) {
 					va = this.createVertex(xr, fm*xr+fb);
 					}
 				else if (va.x < xl) {
@@ -1261,11 +1266,11 @@ class Voronoi {
 		var r = -q/dx;
 		if (dx<0) {
 			if (r<t0) {return false;}
-			else if (r<t1) {t1=r;}
+			if (r<t1) {t1=r;}
 			}
 		else if (dx>0) {
 			if (r>t1) {return false;}
-			else if (r>t0) {t0=r;}
+			if (r>t0) {t0=r;}
 			}
 		// right
 		q = bbox.xMax-ax;
@@ -1273,11 +1278,11 @@ class Voronoi {
 		r = q/dx;
 		if (dx<0) {
 			if (r>t1) {return false;}
-			else if (r>t0) {t0=r;}
+			if (r>t0) {t0=r;}
 			}
 		else if (dx>0) {
 			if (r<t0) {return false;}
-			else if (r<t1) {t1=r;}
+			if (r<t1) {t1=r;}
 			}
 		// top
 		q = ay-bbox.yMin;
@@ -1285,11 +1290,11 @@ class Voronoi {
 		r = -q/dy;
 		if (dy<0) {
 			if (r<t0) {return false;}
-			else if (r<t1) {t1=r;}
+			if (r<t1) {t1=r;}
 			}
 		else if (dy>0) {
 			if (r>t1) {return false;}
-			else if (r>t0) {t0=r;}
+			if (r>t0) {t0=r;}
 			}
 		// bottom
 		q = bbox.yMax-ay;
@@ -1297,11 +1302,11 @@ class Voronoi {
 		r = q/dy;
 		if (dy<0) {
 			if (r>t1) {return false;}
-			else if (r>t0) {t0=r;}
+			if (r>t0) {t0=r;}
 			}
 		else if (dy>0) {
 			if (r<t0) {return false;}
-			else if (r<t1) {t1=r;}
+			if (r<t1) {t1=r;}
 			}
 
 		// if we reach this point, Voronoi edge is within bbox
@@ -1321,6 +1326,13 @@ class Voronoi {
 		if (t1 < 1) {
 			edge.vb = this.createVertex(ax+t1*dx, ay+t1*dy);
 			}
+
+		// va and/or vb were clipped, thus we will need to close
+		// cells which use this edge.
+		if ( t0 > 0 || t1 < 1 ) {
+			pointCell.get(edge.lPoint).closeMe = true;
+			pointCell.get(edge.rPoint).closeMe = true;
+		}
 
 		return true;
 	}
@@ -1360,17 +1372,18 @@ class Voronoi {
 			cells = this.cells,
 			iCell = cells.length,
 			cell,
-			iLeft, iRight,
+			iLeft,
 			halfedges, nHalfedges,
 			edge,
-			startpoint, endpoint,
-			va, vb = null;
+			lastBorderSegment,
+			va, vb, vz = null;
 
 		while (iCell-- != 0) {
 			cell = cells[iCell];
 			// trim non fully-defined halfedges and sort them counterclockwise
-			if (cell.prepare() == 0)
-				continue;
+			if (cell.prepare() == 0) continue;
+			if (!cell.closeMe) continue;
+
 			// close open cells
 			// step 1: find first 'unclosed' point, if any.
 			// an 'unclosed' point will be the end point of a halfedge which
@@ -1379,41 +1392,108 @@ class Voronoi {
 			nHalfedges = halfedges.length;
 			// special case: only one point, in which case, the viewport is the cell
 			// ...
+
 			// all other cases
 			iLeft = 0;
 			while (iLeft < nHalfedges) {
-				iRight = (iLeft+1) % nHalfedges;
-				endpoint = halfedges[iLeft].getEndpoint();
-				startpoint = halfedges[iRight].getStartpoint();
+				va = halfedges[iLeft].getEndpoint();
+            	vz = halfedges[(iLeft+1) % nHalfedges].getStartpoint();
 				// if end point is not equal to start point, we need to add the missing
 				// halfedge(s) to close the cell
-				if (abs(endpoint.x-startpoint.x)>=epsilon || abs(endpoint.y-startpoint.y)>=epsilon) {
-					// if we reach this point, cell needs to be closed by walking
-					// counterclockwise along the bounding box until it connects
-					// to next halfedge in the list
-					va = endpoint;
-					// walk downward along left side
-					if (this.equalWithepsilon(endpoint.x,xl) && this.lessThanWithepsilon(endpoint.y,yb)) {
-						vb = this.createVertex(xl, this.equalWithepsilon(startpoint.x,xl) ? startpoint.y : yb);
-					}
-					// walk rightward along bottom side
-					else if (this.equalWithepsilon(endpoint.y,yb) && this.lessThanWithepsilon(endpoint.x,xr)) {
-						vb = this.createVertex(this.equalWithepsilon(startpoint.y,yb) ? startpoint.x : xr, yb);
-					}
-					// walk upward along right side
-					else if (this.equalWithepsilon(endpoint.x,xr) && this.greaterThanWithepsilon(endpoint.y,yt)) {
-						vb = this.createVertex(xr, this.equalWithepsilon(startpoint.x,xr) ? startpoint.y : yt);
-					}
-					// walk leftward along top side
-					else if (this.equalWithepsilon(endpoint.y,yt) && this.greaterThanWithepsilon(endpoint.x,xl)) {
-						vb = this.createVertex(this.equalWithepsilon(startpoint.y,yt) ? startpoint.x : xl, yt);
-					}
-					edge = this.createBorderEdge(cell.point, va, vb);
-					halfedges.insert(iLeft+1, new Halfedge(edge, cell.point, null));
-					nHalfedges = halfedges.length;
+				if (abs(va.x-vz.x)>=epsilon || abs(va.y-vz.y)>=epsilon) {
+					// rhill 2013-12-02:
+					// "Holes" in the halfedges are not necessarily always adjacent.
+					// https://github.com/gorhill/Javascript-Voronoi/issues/16
+
+					// find entry point:
+					do {
+
+						// walk downward along left side
+						if (this.equalWithepsilon(va.x,xl) && this.lessThanWithepsilon(va.y,yb)) {
+							lastBorderSegment = this.equalWithepsilon(vz.x,xl);
+							vb = this.createVertex(xl, lastBorderSegment ? vz.y : yb);
+							edge = this.createBorderEdge(cell.point, va, vb);
+							iLeft++;
+							halfedges.insert(iLeft, new Halfedge(edge, cell.point, null));
+							nHalfedges++;
+							if ( lastBorderSegment ) { break; }
+							va = vb;
+							// fall through
+						} 
+						
+						if (this.equalWithepsilon(va.y,yb) && this.lessThanWithepsilon(va.x,xr)) {
+							lastBorderSegment = this.equalWithepsilon(vz.y,yb);
+							vb = this.createVertex(lastBorderSegment ? vz.x : xr, yb);
+							edge = this.createBorderEdge(cell.point, va, vb);
+							iLeft++;
+							halfedges.insert(iLeft, new Halfedge(edge, cell.point, null));
+							nHalfedges++;
+							if ( lastBorderSegment ) { break; }
+							va = vb;
+							// fall through
+						} 
+						
+						if (this.equalWithepsilon(va.x,xr) && this.greaterThanWithepsilon(va.y,yt)) {
+							lastBorderSegment = this.equalWithepsilon(vz.x,xr);
+							vb = this.createVertex(xr, lastBorderSegment ? vz.y : yt);
+							edge = this.createBorderEdge(cell.point, va, vb);
+							iLeft++;
+							halfedges.insert(iLeft, new Halfedge(edge, cell.point, null));
+							nHalfedges++;
+							if ( lastBorderSegment ) { break; }
+							va = vb;
+							// fall through
+						} 
+						
+						if (this.equalWithepsilon(va.y,yt) && this.greaterThanWithepsilon(va.x,xl)) {
+							lastBorderSegment = this.equalWithepsilon(vz.y,yt);
+							vb = this.createVertex(lastBorderSegment ? vz.x : xl, yt);
+							edge = this.createBorderEdge(cell.point, va, vb);
+							iLeft++;
+							halfedges.insert(iLeft, new Halfedge(edge, cell.point, null));
+							nHalfedges++;
+							if ( lastBorderSegment ) { break; }
+							va = vb;
+							// fall through
+
+							// walk downward along left side
+							lastBorderSegment = this.equalWithepsilon(vz.x,xl);
+							vb = this.createVertex(xl, lastBorderSegment ? vz.y : yb);
+							edge = this.createBorderEdge(cell.point, va, vb);
+							iLeft++;
+							halfedges.insert(iLeft, new Halfedge(edge, cell.point, null));
+							nHalfedges++;
+							if ( lastBorderSegment ) { break; }
+							va = vb;
+							// fall through
+
+							// walk rightward along bottom side
+							lastBorderSegment = this.equalWithepsilon(vz.y,yb);
+							vb = this.createVertex(lastBorderSegment ? vz.x : xr, yb);
+							edge = this.createBorderEdge(cell.point, va, vb);
+							iLeft++;
+							halfedges.insert(iLeft, new Halfedge(edge, cell.point, null));
+							nHalfedges++;
+							if ( lastBorderSegment ) { break; }
+							va = vb;
+							// fall through
+
+							// walk upward along right side
+							lastBorderSegment = this.equalWithepsilon(vz.x,xr);
+							vb = this.createVertex(xr, lastBorderSegment ? vz.y : yt);
+							edge = this.createBorderEdge(cell.point, va, vb);
+							iLeft++;
+							halfedges.insert(iLeft, new Halfedge(edge, cell.point, null));
+							nHalfedges++;
+							if ( lastBorderSegment ) { break; }
+							// fall through
+						}
+						throw "Voronoi.closeCells() > this makes no sense!";
+					} while (false);
 				}
 				iLeft++;
 			}
+			cell.closeMe = false;
 		}
 	}
 
