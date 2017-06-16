@@ -40,7 +40,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	override function getBoundsRec( relativeTo, out, forSize ) {
 		super.getBoundsRec(relativeTo, out, forSize);
-		if( backgroundColor != null ) addBounds(relativeTo, out, 0, 0, Std.int(width), Std.int(height));
+		if( backgroundColor != null || forSize ) addBounds(relativeTo, out, 0, 0, Std.int(width), Std.int(height));
 	}
 
 	override function onParentChanged() {
