@@ -13,6 +13,21 @@ class SampleApp extends hxd.App {
 		return hxd.res.DefaultFont.get();
 	}
 
+	function addButton( label : String, onClick : Void -> Void ) {
+		var f = new h2d.Flow(fui);
+		f.padding = 5;
+		f.paddingBottom = 7;
+		f.backgroundTile = h2d.Tile.fromColor(0x404040);
+		var tf = new h2d.Text(getFont(), f);
+		tf.text = label;
+		f.enableInteractive = true;
+		f.interactive.cursor = Button;
+		f.interactive.onClick = function(_) onClick();
+		f.interactive.onOver = function(_) f.backgroundTile = h2d.Tile.fromColor(0x606060);
+		f.interactive.onOut = function(_) f.backgroundTile = h2d.Tile.fromColor(0x404040);
+		return f;
+	}
+
 	function addSlider( label : String, get : Void -> Float, set : Float -> Void, min : Float = 0., max : Float = 1. ) {
 		var f = new h2d.Flow(fui);
 
