@@ -213,9 +213,9 @@ class System {
 
 	static function get_allowTimeout() @:privateAccess {
 		#if hldx
-		return dx.Loop.sentinel.pause;
+		return !dx.Loop.sentinel.pause;
 		#elseif hlsdl
-		return sdl.Sdl.sentinel.pause;
+		return !sdl.Sdl.sentinel.pause;
 		#else
 		return false;
 		#end
@@ -223,9 +223,9 @@ class System {
 
 	static function set_allowTimeout(b) @:privateAccess {
 		#if hldx
-		return dx.Loop.sentinel.pause = b;
+		return dx.Loop.sentinel.pause = !b;
 		#elseif hlsdl
-		return sdl.Sdl.sentinel.pause = b;
+		return sdl.Sdl.sentinel.pause = !b;
 		#else
 		return false;
 		#end
