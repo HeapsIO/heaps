@@ -7,17 +7,24 @@ class CubeMap extends hxsl.Shader {
 		var pixelColor : Vec4;
 		var transformedNormal : Vec3;
 
+		@const var reflection : Bool;
 		@param var texture : SamplerCube;
+		@global var camera : {
+			var position : Vec3;
+		};
+		var pixelTransformedPosition : Vec3;
 
 		function fragment() {
-			pixelColor.rgb *= texture.get(transformedNormal).rgb;
+			var n = if( reflection ) reflect(-normalize(camera.position - pixelTransformedPosition), transformedNormal) else transformedNormal;
+			pixelColor.rgb *= texture.get(n).rgb;
 		}
 
 	}
 
-	public function new(texture) {
+	public function new(texture, reflection=false) {
 		super();
 		this.texture = texture;
+		this.reflection = reflection;
 	}
 
 }

@@ -287,7 +287,7 @@ class Stage3dDriver extends Driver {
 		t.flags.unset(WasCleared);
 		try {
 			if( t.flags.has(IsNPOT) ) {
-				if( t.flags.has(Cubic) || t.flags.has(MipMapped) )
+				if( t.flags.has(Cube) || t.flags.has(MipMapped) )
 					throw "Not power of two texture is not supported with these flags";
 				#if !flash11_8
 				throw "Support for rectangle texture requires Flash 11.8+ compilation";
@@ -295,7 +295,7 @@ class Stage3dDriver extends Driver {
 				return ctx.createRectangleTexture(t.width, t.height, fmt, t.flags.has(Target));
 				#end
 			}
-			if( t.flags.has(Cubic) )
+			if( t.flags.has(Cube) )
 				return ctx.createCubeTexture(t.width, fmt, t.flags.has(Target), getMipLevels(t));
 			return ctx.createTexture(t.width, t.height, fmt, t.flags.has(Target), getMipLevels(t));
 		} catch( e : flash.errors.Error ) {
@@ -309,7 +309,7 @@ class Stage3dDriver extends Driver {
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
 		if( t.t == tdisposed ) return;
-		if( t.flags.has(Cubic) ) {
+		if( t.flags.has(Cube) ) {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
 			t.uploadFromBitmapData(bmp.toNative(), side, mipLevel);
 		} else if( t.flags.has(IsNPOT) ) {
@@ -327,7 +327,7 @@ class Stage3dDriver extends Driver {
 		if( t.t == tdisposed ) return;
 		pixels.convert(BGRA);
 		var data = pixels.bytes.getData();
-		if( t.flags.has(Cubic) ) {
+		if( t.flags.has(Cube) ) {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
 			t.uploadFromByteArray(data, pixels.offset, side, mipLevel);
 		} else if( t.flags.has(IsNPOT) ) {

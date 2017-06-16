@@ -77,9 +77,9 @@ enum TextureFlags {
 	**/
 	Target;
 	/**
-		Allocate a cubic texture. Might be restricted to power of two textures only.
+		Allocate a cube texture. Might be restricted to power of two textures only.
 	**/
-	Cubic;
+	Cube;
 	/**
 		Activates Mip Mapping for this texture. Might not be available for target textures.
 	**/

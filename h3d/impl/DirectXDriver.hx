@@ -249,23 +249,34 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function allocTexture(t:h3d.mat.Texture):Texture {
+
+		var mips = 1; // todo
+
 		var rt = t.flags.has(Target);
+		var isCube = t.flags.has(Cube);
+
 		var desc = new Texture2dDesc();
 		desc.width = t.width;
 		desc.height = t.height;
 		desc.format = getTextureFormat(t);
 		desc.usage = Default;
 		desc.bind = ShaderResource;
-		if( rt ) desc.bind |= RenderTarget;
+		if( rt )
+			desc.bind |= RenderTarget;
+		if( isCube ) {
+			desc.arraySize = 6;
+			desc.misc = TextureCube;
+		}
 		var tex = Driver.createTexture2d(desc);
 
 		var vdesc = new ShaderResourceViewDesc();
 		vdesc.format = desc.format;
-		vdesc.dimension = Texture2D;
+		vdesc.dimension = isCube ? TextureCube : Texture2D;
+		vdesc.arraySize = desc.arraySize;
 		vdesc.start = 0; // top mip level
 		vdesc.count = -1; // all mip levels
 		var view = Driver.createShaderResourceView(tex, vdesc);
-		return { res : tex, view : view, rt : rt ? Driver.createRenderTargetView(tex) : null };
+		return { res : tex, view : view, rt : rt ? Driver.createRenderTargetView(tex) : null, mips : mips };
 	}
 
 	override function disposeTexture( t : h3d.mat.Texture ) {
@@ -316,7 +327,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
 		pixels.convert(RGBA);
-		t.t.res.updateSubresource(mipLevel + side * 6, null, pixels.bytes, pixels.width << 2, 0);
+		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, pixels.bytes, pixels.width << 2, 0);
 	}
 
 	static inline var SCISSOR_BIT = 1 << (Pass.colorMask_offset + 4);

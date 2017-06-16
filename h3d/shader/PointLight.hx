@@ -4,28 +4,42 @@ class PointLight extends hxsl.Shader {
 
 	static var SRC = {
 
+		@const var enableSpecular : Bool;
+		@param var color : Vec3;
+		@param var params : Vec3; // [constant, linear, quadratic]
+		@param var lightPosition : Vec3;
+		@global var camera : {
+			var position : Vec3;
+		};
+
 		var lightColor : Vec3;
 		var lightPixelColor : Vec3;
 		var transformedPosition : Vec3;
 		var pixelTransformedPosition : Vec3;
 		var transformedNormal : Vec3;
-		@param var color : Vec3;
-		@param var params : Vec3; // [constant, linear, quadratic]
-		@param var lightPosition : Vec3;
+		var specPower : Float;
+		var specColor : Vec3;
 
-		function vertex() {
-			var dvec = lightPosition - transformedPosition;
+
+		function calcLighting( position : Vec3 ) : Vec3 {
+			var dvec = lightPosition - position;
 			var dist2 = dvec.dot(dvec);
 			var dist = dist2.sqrt();
-			// TN . DVEC is already multiplied by dist
-			lightColor.rgb += color * (transformedNormal.dot(dvec).max(0.) / vec3(dist, dist2, dist * dist2).dot(params));
+			var diff = transformedNormal.dot(dvec).max(0.);
+			var factor = 1 / vec3(dist, dist2, dist * dist2).dot(params);
+			if( !enableSpecular )
+				return color * diff * factor;
+			var r = reflect(-dvec.normalize(), transformedNormal).normalize();
+			var specValue = r.dot((camera.position - position).normalize()).max(0.);
+			return color * (diff * factor + specColor * pow(specValue, specPower));
+		}
+
+		function vertex() {
+			lightColor.rgb += calcLighting(transformedPosition);
 		}
 
 		function fragment() {
-			var dvec = lightPosition - pixelTransformedPosition;
-			var dist2 = dvec.dot(dvec);
-			var dist = dist2.sqrt();
-			lightPixelColor.rgb += color * (transformedNormal.dot(dvec).max(0.) / vec3(dist, dist2, dist * dist2).dot(params));
+			lightPixelColor.rgb += calcLighting(pixelTransformedPosition);
 		}
 
 	};

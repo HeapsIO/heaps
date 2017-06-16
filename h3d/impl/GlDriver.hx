@@ -639,10 +639,10 @@ class GlDriver extends Driver {
 		}
 		t.lastFrame = frame;
 		t.flags.unset(WasCleared);
-		var bind = t.flags.has(Cubic) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+		var bind = t.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 		gl.bindTexture(bind, tt.t);
 		var outOfMem = false;
-		if( t.flags.has(Cubic) ) {
+		if( t.flags.has(Cube) ) {
 			for( i in 0...6 ) {
 				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 				if( gl.getError() == GL.OUT_OF_MEMORY ) {
@@ -752,7 +752,7 @@ class GlDriver extends Driver {
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
 	#else
-		if( t.format != RGBA || t.flags.has(Cubic) ) {
+		if( t.format != RGBA || t.flags.has(Cube) ) {
 			var pixels = bmp.getPixels();
 			uploadTexturePixels(t, pixels, mipLevel, side);
 			pixels.dispose();
@@ -835,7 +835,7 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
-		var cubic = t.flags.has(Cubic);
+		var cubic = t.flags.has(Cube);
 		var bind = cubic ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
 		gl.bindTexture(bind, t.t.t);
@@ -1022,7 +1022,7 @@ class GlDriver extends Driver {
 			tex.alloc();
 
 		if( tex.flags.has(MipMapped) && !tex.flags.has(WasCleared) ) {
-			var bind = tex.flags.has(Cubic) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+			var bind = tex.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 			gl.bindTexture(bind, tex.t.t);
 			gl.generateMipmap(bind);
 			gl.bindTexture(bind, null);
@@ -1031,7 +1031,7 @@ class GlDriver extends Driver {
 		tex.flags.set(WasCleared); // once we draw to, do not clear again
 		tex.lastFrame = frame;
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
-		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cubic) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, mipLevel);
+		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 		if( tex.depthBuffer != null )
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r);
 		else
