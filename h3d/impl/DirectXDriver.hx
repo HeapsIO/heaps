@@ -196,6 +196,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
 		var res = dx.Driver.createBuffer(count << 1, Default, IndexBuffer, None, None, 0, null);
+		if( res == null ) return null;
 		return { res : res, count : count };
 	}
 
@@ -206,6 +207,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		depthDesc.format = D24_UNORM_S8_UINT;
 		depthDesc.bind = DepthStencil;
 		var depth = Driver.createTexture2d(depthDesc);
+		if( depth == null )
+			return null;
 		return { res : depth, view : Driver.createDepthStencilView(depth,depthDesc.format) };
 	}
 
@@ -268,6 +271,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			desc.misc = TextureCube;
 		}
 		var tex = Driver.createTexture2d(desc);
+		if( tex == null )
+			return null;
 
 		var vdesc = new ShaderResourceViewDesc();
 		vdesc.format = desc.format;
