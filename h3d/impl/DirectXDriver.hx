@@ -11,6 +11,7 @@ private class ShaderContext {
 	public var globalsSize : Int;
 	public var paramsSize : Int;
 	public var texturesCount : Int;
+	public var paramsContent : hl.Bytes;
 	public var globals : dx.Resource;
 	public var params : dx.Resource;
 	public function new(shader) {
@@ -91,6 +92,9 @@ class DirectXDriver extends h3d.impl.Driver {
 	var window : dx.Window;
 	var curTexture : h3d.mat.Texture;
 
+	var mapCount : Int;
+	var updateResCount : Int;
+
 	public var backBufferFormat : dx.Format = R8G8B8A8_UNORM;
 	public var depthStencilFormat : dx.Format = D24_UNORM_S8_UINT;
 
@@ -154,6 +158,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function begin(frame:Int) {
+		mapCount = 0;
+		updateResCount = 0;
 		this.frame = frame;
 	}
 
@@ -301,27 +307,31 @@ class DirectXDriver extends h3d.impl.Driver {
 		i.res.release();
 	}
 
+	function updateBuffer( res : dx.Resource, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
+		box.left = startByte;
+		box.top = 0;
+		box.front = 0;
+		box.right = startByte + bytesCount;
+		box.bottom = 1;
+		box.back = 1;
+		res.updateSubresource(0, box, bytes, 0, 0);
+		updateResCount++;
+	}
+
 	override function uploadIndexBuffer(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
-		if( startIndice > 0 || indiceCount != i.count ) throw "TODO";
-		i.res.updateSubresource(0, null, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<1), 0, 0);
+		updateBuffer(i.res, hl.Bytes.getArray(buf.getNative()).offset(bufPos << 1), startIndice << 1, indiceCount << 1);
 	}
 
 	override function uploadIndexBytes(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		if( startIndice > 0 || indiceCount != i.count ) throw "TODO";
-		i.res.updateSubresource(0, null, @:privateAccess buf.b.offset(bufPos << 1), 0, 0);
+		updateBuffer(i.res, @:privateAccess buf.b.offset(bufPos << 1), startIndice << 1, indiceCount << 1);
 	}
 
 	override public function uploadVertexBuffer(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
-		if( startVertex > 0 || vertexCount != v.count ) {
-			trace("TODO:" + startVertex + "," + vertexCount + "/" + v.count);
-			return;
-		}
-		v.res.updateSubresource(0, null, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2), 0, 0);
+		updateBuffer(v.res, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
 	}
 
 	override public function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		if( startVertex > 0 || vertexCount != v.count ) throw "TODO";
-		v.res.updateSubresource(0, null, @:privateAccess buf.b.offset(bufPos << 2), 0, 0);
+		updateBuffer(v.res, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
 	}
 
 	override function uploadTextureBitmap(t:h3d.mat.Texture, bmp:hxd.BitmapData, mipLevel:Int, side:Int) {
@@ -333,6 +343,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
 		pixels.convert(RGBA);
 		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, pixels.bytes, pixels.width << 2, 0);
+		updateResCount++;
 	}
 
 	static inline var SCISSOR_BIT = 1 << (Pass.colorMask_offset + 4);
@@ -421,9 +432,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		var s = shader.vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
 		if( s == null )
 			throw "Failed to create shader\n" + source;
+
 		var ctx = new ShaderContext(s);
 		ctx.globalsSize = shader.globalsSize;
 		ctx.paramsSize = shader.paramsSize;
+		ctx.paramsContent = new hl.Bytes(shader.paramsSize * 16);
+		ctx.paramsContent.fill(0, shader.paramsSize * 16, 0xDD);
 		ctx.texturesCount = shader.textures2DCount + shader.texturesCubeCount;
 		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
@@ -466,9 +480,12 @@ class DirectXDriver extends h3d.impl.Driver {
 			throw "Can't render to texture which is not allocated with Target flag";
 		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
 			throw "Invalid depth buffer size : does not match render target size";
-		currentDepth = @:privateAccess (tex.depthBuffer == null ? defaultDepth : tex.depthBuffer.b);
+
+		// we can't use defaultDepth as it might have different resolution than our rendertarget
+
+		currentDepth = @:privateAccess (tex.depthBuffer == null ? null : tex.depthBuffer.b);
 		currentTargets[0] = tex.t.rt;
-		Driver.omSetRenderTargets(1, currentTargets, currentDepth.view);
+		Driver.omSetRenderTargets(1, currentTargets, currentDepth == null ? null : currentDepth.view);
 		viewport[2] = tex.width;
 		viewport[3] = tex.height;
 		viewport[5] = 1.;
@@ -494,7 +511,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		curTexture = textures[0];
 		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
 			throw "Invalid depth buffer size : does not match render target size";
-		currentDepth = @:privateAccess (tex.depthBuffer == null ? defaultDepth : tex.depthBuffer.b);
+		currentDepth = @:privateAccess (tex.depthBuffer == null ? null : tex.depthBuffer.b);
 		for( i in 0...textures.length ) {
 			var tex = textures[i];
 			if( tex.t == null )
@@ -502,7 +519,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			currentTargets[i] = tex.t.rt;
 			unbind(tex.t.view);
 		}
-		Driver.omSetRenderTargets(textures.length, currentTargets, currentDepth.view);
+		Driver.omSetRenderTargets(textures.length, currentTargets, currentDepth == null ? null : currentDepth.view);
 
 		viewport[2] = tex.width;
 		viewport[3] = tex.height;
@@ -619,24 +636,32 @@ class DirectXDriver extends h3d.impl.Driver {
 			Driver.iaSetVertexBuffers(start, max - start + 1, currentVBuffers.getRef().offset(start), hl.Bytes.getArray(strides).offset(start << 2), hl.Bytes.getArray(offsets).offset(start << 2));
 	}
 
-	function uploadShaderBuffer( sbuffer : dx.Resource, buffer : haxe.ds.Vector<hxd.impl.Float32>, size : Int ) {
-		if( size == 0 ) return;
-		var ptr = sbuffer.map(0, WriteDiscard, true);
-		if( ptr == null ) throw "Can't map buffer " + sbuffer;
-		ptr.blit(0, hl.Bytes.getArray(buffer.toData()), 0, size * 16);
-		sbuffer.unmap(0);
-	}
-
 	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
 		uploadBuffers(vertexShader, currentShader.vertex, buffers.vertex, which);
 		uploadBuffers(pixelShader, currentShader.fragment, buffers.fragment, which);
+	}
+
+	function uploadShaderBuffer( sbuffer : dx.Resource, buffer : haxe.ds.Vector<hxd.impl.Float32>, size : Int, prevContent : hl.Bytes ) {
+		if( size == 0 ) return;
+		var data = hl.Bytes.getArray(buffer.toData());
+		var bytes = size << 4;
+		if( prevContent != null ) {
+			if( prevContent.compare(0, data, 0, bytes) == 0 )
+				return;
+			prevContent.blit(0, data, 0, bytes);
+			mapCount++;
+		}
+		var ptr = sbuffer.map(0, WriteDiscard, true);
+		if( ptr == null ) throw "Can't map buffer " + sbuffer;
+		ptr.blit(0, data, 0, bytes);
+		sbuffer.unmap(0);
 	}
 
 	function uploadBuffers( state : PipelineState, shader : ShaderContext, buffers : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Globals:
 			if( shader.globalsSize > 0 ) {
-				uploadShaderBuffer(shader.globals, buffers.globals, shader.globalsSize);
+				uploadShaderBuffer(shader.globals, buffers.globals, shader.globalsSize, null);
 				if( state.buffers[0] != shader.globals ) {
 					state.buffers[0] = shader.globals;
 					switch( state.kind ) {
@@ -649,7 +674,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			}
 		case Params:
 			if( shader.paramsSize > 0 ) {
-				uploadShaderBuffer(shader.params, buffers.params, shader.paramsSize);
+				uploadShaderBuffer(shader.params, buffers.params, shader.paramsSize, shader.paramsContent);
 				if( state.buffers[1] != shader.params ) {
 					state.buffers[1] = shader.params;
 					switch( state.kind ) {
