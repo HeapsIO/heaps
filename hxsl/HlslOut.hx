@@ -348,7 +348,7 @@ class HlslOut {
 			add("discard");
 		case TReturn(e):
 			if( e == null )
-				add("return");
+				add("return _out");
 			else {
 				add("return ");
 				addValue(e, tabs);
