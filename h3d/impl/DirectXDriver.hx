@@ -239,10 +239,18 @@ class DirectXDriver extends h3d.impl.Driver {
 		var tmp = dx.Driver.createTexture2d(desc);
 		if( tmp == null )
 			throw "Capture failed: can't create tmp texture";
+
 		tmp.copyResource(rt.t.res);
 
-		var ptr = tmp.map(0, Read, true);
-		@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * 4);
+		var pitch = 0;
+		var ptr = tmp.map(0, Read, true, pitch);
+		if( pitch == desc.width * 4 )
+			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * 4);
+		else {
+			for( i in 0...desc.height )
+				@:privateAccess pixels.bytes.b.blit(i * desc.width * 4, ptr, i * pitch, desc.width * 4);
+		}
+
 		tmp.unmap(0);
 		tmp.release();
 	}
@@ -494,8 +502,13 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
 			throw "Invalid depth buffer size : does not match render target size";
 
-		// we can't use defaultDepth as it might have different resolution than our rendertarget
+		// required or we might get some noise
+		if( !tex.flags.has(WasCleared) ) {
+			tex.flags.set(WasCleared);
+			Driver.clearColor(tex.t.rt, 0, 0, 0, 0);
+		}
 
+		// we can't use defaultDepth as it might have different resolution than our rendertarget
 		currentDepth = @:privateAccess (tex.depthBuffer == null ? null : tex.depthBuffer.b);
 		currentTargets[0] = tex.t.rt;
 		Driver.omSetRenderTargets(1, currentTargets, currentDepth == null ? null : currentDepth.view);
@@ -529,6 +542,13 @@ class DirectXDriver extends h3d.impl.Driver {
 			var tex = textures[i];
 			if( tex.t == null )
 				tex.alloc();
+
+			// required or we might get some noise
+			if( !tex.flags.has(WasCleared) ) {
+				tex.flags.set(WasCleared);
+				Driver.clearColor(tex.t.rt, 0, 0, 0, 0);
+			}
+
 			currentTargets[i] = tex.t.rt;
 			unbind(tex.t.view);
 		}
@@ -664,7 +684,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			prevContent.blit(0, data, 0, bytes);
 			mapCount++;
 		}
-		var ptr = sbuffer.map(0, WriteDiscard, true);
+		var ptr = sbuffer.map(0, WriteDiscard, true, null);
 		if( ptr == null ) throw "Can't map buffer " + sbuffer;
 		ptr.blit(0, data, 0, bytes);
 		sbuffer.unmap(0);
