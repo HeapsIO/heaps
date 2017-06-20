@@ -259,7 +259,10 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function allocTexture(t:h3d.mat.Texture):Texture {
 
-		var mips = 1; // todo
+		var mips = 1;
+		if( t.flags.has(MipMapped) ) {
+			while( t.width >= 1 << mips || t.height >= 1 << mips ) mips++;
+		}
 
 		var rt = t.flags.has(Target);
 		var isCube = t.flags.has(Cube);
@@ -270,11 +273,16 @@ class DirectXDriver extends h3d.impl.Driver {
 		desc.format = getTextureFormat(t);
 		desc.usage = Default;
 		desc.bind = ShaderResource;
+		desc.mipLevels = mips;
 		if( rt )
 			desc.bind |= RenderTarget;
 		if( isCube ) {
 			desc.arraySize = 6;
-			desc.misc = TextureCube;
+			desc.misc |= TextureCube;
+		}
+		if( t.flags.has(MipMapped) && !t.flags.has(ManualMipMapGen) ) {
+			desc.bind |= RenderTarget;
+			desc.misc |= GenerateMips;
 		}
 		var tex = Driver.createTexture2d(desc);
 		if( tex == null )
@@ -305,6 +313,10 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function disposeIndexes(i:IndexBuffer) {
 		i.res.release();
+	}
+
+	override function generateMipMaps(texture:h3d.mat.Texture) {
+		Driver.generateMips(texture.t.view);
 	}
 
 	function updateBuffer( res : dx.Resource, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
@@ -342,6 +354,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
 		pixels.convert(RGBA);
+		if( mipLevel >= t.t.mips ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.t.mips - 1) + ")";
 		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, pixels.bytes, pixels.width << 2, 0);
 		updateResCount++;
 	}
@@ -701,11 +714,11 @@ class DirectXDriver extends h3d.impl.Driver {
 				t.lastFrame = frame;
 
 				var view = t.t.view;
-				if( view == state.resources[i] ) continue;
-
-				state.resources[i] = view;
-				max = i;
-				if( start < 0 ) start = i;
+				if( view != state.resources[i] ) {
+					state.resources[i] = view;
+					max = i;
+					if( start < 0 ) start = i;
+				}
 
 				var bits = @:privateAccess t.bits;
 				if( bits != state.samplerBits[i] ) {

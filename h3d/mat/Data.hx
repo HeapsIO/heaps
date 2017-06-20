@@ -85,6 +85,10 @@ enum TextureFlags {
 	**/
 	MipMapped;
 	/**
+		By default, textures created with MipMapped will have their mipmaps generated when you upload the mipmap level 0. This flag disables this and manually upload mipmaps instead.
+	**/
+	ManualMipMapGen;
+	/**
 		This is a not power of two texture. Automatically set when having width or height being not power of two.
 	**/
 	IsNPOT;

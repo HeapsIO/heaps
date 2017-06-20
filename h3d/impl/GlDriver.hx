@@ -431,7 +431,8 @@ class GlDriver extends Driver {
 			if( cull == 0 )
 				gl.disable(GL.CULL_FACE);
 			else {
-				if( Pass.getCulling(curMatBits) == 0 ) gl.enable(GL.CULL_FACE);
+				if( curMatBits < 0 || Pass.getCulling(curMatBits) == 0 )
+					gl.enable(GL.CULL_FACE);
 				gl.cullFace(FACES[cull]);
 			}
 		}
@@ -744,6 +745,13 @@ class GlDriver extends Driver {
 
 	override function disposeVertexes( v : VertexBuffer ) {
 		gl.deleteBuffer(v.b);
+	}
+
+	override function generateMipMaps( t : h3d.mat.Texture ) {
+		var bind = t.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+		gl.bindTexture(bind, t.t.t);
+		gl.generateMipmap(bind);
+		gl.bindTexture(bind, null);
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {

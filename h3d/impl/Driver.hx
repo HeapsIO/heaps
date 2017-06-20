@@ -118,6 +118,10 @@ class Driver {
 		#end
 	}
 
+	public function generateMipMaps( texture : h3d.mat.Texture ) {
+		throw "Mipmaps auto generation is not supported on this platform";
+	}
+
 	public function getNativeShaderCode( shader : hxsl.RuntimeShader ) : String {
 		return null;
 	}

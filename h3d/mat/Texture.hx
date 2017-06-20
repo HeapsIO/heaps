@@ -191,16 +191,30 @@ class Texture {
 		p.dispose();
 	}
 
+	inline function checkSize(width, height, mip) {
+		if( width != this.width >> mip || height != this.height >> mip )
+			throw "Invalid upload size : " + width + "x" + height + " should be " + (this.width >> mip) + "x" + (this.height >> mip);
+	}
+
+	function checkMipMapGen(mipLevel,side) {
+		if( mipLevel == 0 && flags.has(MipMapped) && !flags.has(ManualMipMapGen) && (!flags.has(Cube) || side == 5) )
+			mem.driver.generateMipMaps(this);
+	}
+
 	public function uploadBitmap( bmp : hxd.BitmapData, mipLevel = 0, side = 0 ) {
 		alloc();
+		checkSize(bmp.width, bmp.height, mipLevel);
 		mem.driver.uploadTextureBitmap(this, bmp, mipLevel, side);
 		flags.set(WasCleared);
+		checkMipMapGen(mipLevel, side);
 	}
 
 	public function uploadPixels( pixels : hxd.Pixels, mipLevel = 0, side = 0 ) {
 		alloc();
+		checkSize(pixels.width, pixels.height, mipLevel);
 		mem.driver.uploadTexturePixels(this, pixels, mipLevel, side);
 		flags.set(WasCleared);
+		checkMipMapGen(mipLevel, side);
 	}
 
 	public function dispose() {
