@@ -290,6 +290,12 @@ class HlslOut {
 				add(",");
 				addValue(e2, tabs);
 				add(")");
+			case [OpMult, TMat3 | TMat3x4 | TMat4, TMat3 | TMat3x4 | TMat4]:
+				add("mul(");
+				addValue(e1, tabs);
+				add(",");
+				addValue(e2, tabs);
+				add(")");
 			default:
 				addValue(e1, tabs);
 				add(" ");
