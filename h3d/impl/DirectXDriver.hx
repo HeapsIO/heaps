@@ -139,6 +139,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		depthDesc.format = depthStencilFormat;
 		depthDesc.bind = DepthStencil;
 		var depth = Driver.createTexture2d(depthDesc);
+		if( depth == null ) throw "Failed to create depthBuffer";
 		var depthView = Driver.createDepthStencilView(depth,depthStencilFormat);
 		defaultDepth = { res : depth, view : depthView };
 		@:privateAccess {
