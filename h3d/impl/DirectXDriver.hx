@@ -14,6 +14,9 @@ private class ShaderContext {
 	public var paramsContent : hl.Bytes;
 	public var globals : dx.Resource;
 	public var params : dx.Resource;
+	#if debug
+	public var debugSource : String;
+	#end
 	public function new(shader) {
 		this.shader = shader;
 	}
@@ -101,7 +104,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	public function new() {
 		shaders = new Map();
 		window = @:privateAccess dx.Window.windows[0];
-		driver = Driver.create(window, backBufferFormat);
+		var options : dx.Driver.DriverInitFlags = None;
+		#if debug
+		options |= DebugLayer;
+		#end
+		driver = Driver.create(window, backBufferFormat, options);
 		if( driver == null ) throw "Failed to initialize DirectX driver";
 		Driver.iaSetPrimitiveTopology(TriangleList);
 		defaultDepthInst = new h3d.mat.DepthBuffer(-1, -1);
@@ -462,6 +469,9 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.texturesCount = shader.textures2DCount + shader.texturesCubeCount;
 		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
+		#if debug
+		ctx.debugSource = source;
+		#end
 		return { s : ctx, bytes : bytes };
 	}
 
@@ -508,6 +518,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			Driver.clearColor(tex.t.rt, 0, 0, 0, 0);
 		}
 
+		unbind(tex.t.view);
+
 		// we can't use defaultDepth as it might have different resolution than our rendertarget
 		currentDepth = @:privateAccess (tex.depthBuffer == null ? null : tex.depthBuffer.b);
 		currentTargets[0] = tex.t.rt;
@@ -516,15 +528,18 @@ class DirectXDriver extends h3d.impl.Driver {
 		viewport[3] = tex.height;
 		viewport[5] = 1.;
 		Driver.rsSetViewports(1, viewport);
-		unbind(tex.t.view);
 	}
 
 	function unbind( res ) {
 		for( i in 0...64 ) {
-			if( vertexShader.resources[i] == res )
+			if( vertexShader.resources[i] == res ) {
 				vertexShader.resources[i] = null;
-			if( pixelShader.resources[i] == res )
+				Driver.vsSetShaderResources(i, 1, vertexShader.resources.getRef().offset(i));
+			}
+			if( pixelShader.resources[i] == res ) {
 				pixelShader.resources[i] = null;
+				Driver.psSetShaderResources(i, 1, pixelShader.resources.getRef().offset(i));
+			}
 		}
 	}
 
