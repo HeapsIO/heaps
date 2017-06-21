@@ -459,35 +459,33 @@ class HlslOut {
 
 		varAccess = new Map();
 
+		var index = 0;
+		function declVar(prefix:String, v : TVar ) {
+			add("\t");
+			addVar(v);
+			if( v.kind == Output )
+				add(" : " + (isVertex ? "SV_POSITION" : "SV_TARGET" + (index++)));
+			else
+				add(" : " + v.name);
+			add(";\n");
+			varAccess.set(v.id, prefix);
+		}
+
 		add("struct s_input {\n");
 		if( !isVertex )
 			add("\tfloat4 __pos__ : SV_POSITION;\n");
-		var index = 0;
-		for( v in s.vars ) {
-			if( v.kind == Input || (v.kind == Var && !isVertex) ) {
-				add("\t");
-				addVar(v);
-				add(" : " + v.name);
-				add(";\n");
-				varAccess.set(v.id, "_in.");
-			}
-		}
+		for( v in s.vars )
+			if( v.kind == Input || (v.kind == Var && !isVertex) )
+				declVar("_in.", v);
 		add("};\n\n");
 
 		add("struct s_output {\n");
-		var index = 0;
-		for( v in s.vars ) {
-			if( v.kind == Output || (v.kind == Var && isVertex) ) {
-				add("\t");
-				addVar(v);
-				if( v.kind == Output )
-					add(" : " + (isVertex ? "SV_POSITION" : "SV_TARGET" + (index++)));
-				else
-					add(" : " + v.name);
-				add(";\n");
-				varAccess.set(v.id, "_out.");
-			}
-		}
+		for( v in s.vars )
+			if( v.kind == Output )
+				declVar("_out.", v);
+		for( v in s.vars )
+			if( v.kind == Var && isVertex )
+				declVar("_out.", v);
 		add("};\n\n");
 
 		add("cbuffer _globals : register(b0) {\n");
