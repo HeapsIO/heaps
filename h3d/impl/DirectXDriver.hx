@@ -303,6 +303,9 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( tex == null )
 			return null;
 
+		t.lastFrame = frame;
+		t.flags.unset(WasCleared);
+
 		var vdesc = new ShaderResourceViewDesc();
 		vdesc.format = desc.format;
 		vdesc.dimension = isCube ? TextureCube : Texture2D;
@@ -310,7 +313,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		vdesc.start = 0; // top mip level
 		vdesc.count = -1; // all mip levels
 		var view = Driver.createShaderResourceView(tex, vdesc);
-		return { res : tex, view : view, rt : rt ? Driver.createRenderTargetView(tex) : null, mips : mips };
+		var rtView = rt ? Driver.createRenderTargetView(tex) : null;
+		return { res : tex, view : view, rt : rtView, mips : mips };
 	}
 
 	override function disposeTexture( t : h3d.mat.Texture ) {
@@ -500,11 +504,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		return true;
 	}
 
+	var tmpTextures = new Array<h3d.mat.Texture>();
 	override function setRenderTarget(tex:Null<h3d.mat.Texture>, face = 0, mipLevel = 0) {
 		if( face != 0 || mipLevel != 0 )
 			throw "TODO";
-		curTexture = tex;
 		if( tex == null ) {
+			curTexture = null;
 			currentDepth = defaultDepth;
 			currentTargets[0] = defaultTarget;
 			Driver.omSetRenderTargets(1, currentTargets, currentDepth.view);
@@ -514,22 +519,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			Driver.rsSetViewports(1, viewport);
 			return;
 		}
-		if( tex.t == null )
-			tex.alloc();
-		if( tex.t.rt == null)
-			throw "Can't render to texture which is not allocated with Target flag";
-		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
-			throw "Invalid depth buffer size : does not match render target size";
-		unbind(tex.t.view);
-
-		// we can't use defaultDepth as it might have different resolution than our rendertarget
-		currentDepth = @:privateAccess (tex.depthBuffer == null ? null : tex.depthBuffer.b);
-		currentTargets[0] = tex.t.rt;
-		Driver.omSetRenderTargets(1, currentTargets, currentDepth == null ? null : currentDepth.view);
-		viewport[2] = tex.width;
-		viewport[3] = tex.height;
-		viewport[5] = 1.;
-		Driver.rsSetViewports(1, viewport);
+		tmpTextures[0] = tex;
+		setRenderTargets(tmpTextures);
 	}
 
 	function unbind( res ) {
@@ -559,8 +550,16 @@ class DirectXDriver extends h3d.impl.Driver {
 			var tex = textures[i];
 			if( tex.t == null )
 				tex.alloc();
+			if( tex.t.rt == null )
+				throw "Can't render to texture which is not allocated with Target flag";
+			tex.lastFrame = frame;
 			currentTargets[i] = tex.t.rt;
 			unbind(tex.t.view);
+			// prevent garbage
+			if( !tex.flags.has(WasCleared) ) {
+				tex.flags.set(WasCleared);
+				Driver.clearColor(tex.t.rt, 0, 0, 0, 0);
+			}
 		}
 		Driver.omSetRenderTargets(textures.length, currentTargets, currentDepth == null ? null : currentDepth.view);
 
@@ -575,6 +574,16 @@ class DirectXDriver extends h3d.impl.Driver {
 			hasScissor = false;
 			return;
 		}
+		if( x < 0 ) {
+			width += x;
+			x = 0;
+		}
+		if( y < 0 ) {
+			height += y;
+			y = 0;
+		}
+		if( width < 0 ) width = 0;
+		if( height < 0 ) height = 0;
 		hasScissor = true;
 		rects[0] = x;
 		rects[1] = y;
