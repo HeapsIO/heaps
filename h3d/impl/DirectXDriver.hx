@@ -491,6 +491,15 @@ class DirectXDriver extends h3d.impl.Driver {
 		};
 	}
 
+	override function copyTexture(from:h3d.mat.Texture, to:h3d.mat.Texture) {
+		if( from.t == null || from.format != to.format || from.width != to.width || from.height != to.height )
+			return false;
+		if( to.t == null )
+			to.alloc();
+		to.t.res.copyResource(from.t.res);
+		return true;
+	}
+
 	override function setRenderTarget(tex:Null<h3d.mat.Texture>, face = 0, mipLevel = 0) {
 		if( face != 0 || mipLevel != 0 )
 			throw "TODO";
@@ -511,13 +520,6 @@ class DirectXDriver extends h3d.impl.Driver {
 			throw "Can't render to texture which is not allocated with Target flag";
 		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
 			throw "Invalid depth buffer size : does not match render target size";
-
-		// required or we might get some noise
-		if( !tex.flags.has(WasCleared) ) {
-			tex.flags.set(WasCleared);
-			Driver.clearColor(tex.t.rt, 0, 0, 0, 0);
-		}
-
 		unbind(tex.t.view);
 
 		// we can't use defaultDepth as it might have different resolution than our rendertarget
@@ -557,13 +559,6 @@ class DirectXDriver extends h3d.impl.Driver {
 			var tex = textures[i];
 			if( tex.t == null )
 				tex.alloc();
-
-			// required or we might get some noise
-			if( !tex.flags.has(WasCleared) ) {
-				tex.flags.set(WasCleared);
-				Driver.clearColor(tex.t.rt, 0, 0, 0, 0);
-			}
-
 			currentTargets[i] = tex.t.rt;
 			unbind(tex.t.view);
 		}

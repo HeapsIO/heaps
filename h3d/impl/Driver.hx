@@ -233,6 +233,13 @@ class Driver {
 	public function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 	}
 
+	/**
+		Returns true if we could copy the texture, false otherwise (not supported by driver or mismatch in size/format)
+	**/
+	public function copyTexture( from : h3d.mat.Texture, to : h3d.mat.Texture ) {
+		return false;
+	}
+
 	// --- QUERY API
 
 	public function allocQuery( queryKind : QueryKind ) : Query {
