@@ -101,11 +101,16 @@ class SpriteBatch extends Drawable {
 		tile = t;
 	}
 
-	public function add(e:BatchElement) {
+	public function add(e:BatchElement,before=false) {
 		e.batch = this;
 		if( first == null ) {
 			first = last = e;
 			e.prev = e.next = null;
+		} else if( before ) {
+			e.prev = null;
+			e.next = first;
+			first.prev = e;
+			first = e;
 		} else {
 			last.next = e;
 			e.prev = last;
