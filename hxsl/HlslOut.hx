@@ -221,6 +221,27 @@ class HlslOut {
 				addValue(args[i],tabs);
 			}
 			add(")");
+		case TCall(e = { e : TGlobal(g) }, args):
+			switch( [g,args.length] ) {
+			case [Vec2, 1]:
+				decl("float2 vec2( float v ) { return float2(v,v); }");
+				add("vec2");
+			case [Vec3, 1]:
+				decl("float3 vec3( float v ) { return float3(v,v,v); }");
+				add("vec3");
+			case [Vec4, 1]:
+				decl("float4 vec4( float v ) { return float4(v,v,v,v); }");
+				add("vec4");
+			default:
+				addValue(e,tabs);
+			}
+			add("(");
+			var first = true;
+			for( e in args ) {
+				if( first ) first = false else add(", ");
+				addValue(e, tabs);
+			}
+			add(")");			
 		case TGlobal(g):
 			switch( g ) {
 			case Mat3x4:
