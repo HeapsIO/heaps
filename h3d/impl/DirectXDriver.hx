@@ -91,6 +91,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var outputWidth : Int;
 	var outputHeight : Int;
 	var hasScissor = false;
+	var shaderVersion : String;
 
 	var window : dx.Window;
 	var curTexture : h3d.mat.Texture;
@@ -110,6 +111,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		#end
 		driver = Driver.create(window, backBufferFormat, options);
 		if( driver == null ) throw "Failed to initialize DirectX driver";
+		
+		var version = Driver.getSupportedVersion();
+		shaderVersion = if( version < 10 ) "3_0" else if( version < 11 ) "4_0" else "5_0";
+
 		Driver.iaSetPrimitiveTopology(TriangleList);
 		defaultDepthInst = new h3d.mat.DepthBuffer(-1, -1);
 		for( i in 0...VIEWPORTS_ELTS )
@@ -452,7 +457,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData, compileOnly = false ) {
 		var h = new hxsl.HlslOut();
 		var source = h.run(shader.data);
-		var bytes = try dx.Driver.compileShader(source, "", "main", shader.vertex?"vs_5_0":"ps_5_0", OptimizationLevel3) catch( err : String ) {
+		var bytes = try dx.Driver.compileShader(source, "", "main", (shader.vertex?"vs_":"ps_")+shaderVersion, OptimizationLevel3) catch( err : String ) {
 			err = ~/^\(([0-9]+),([0-9]+)-([0-9]+)\)/gm.map(err, function(r) {
 				var line = Std.parseInt(r.matched(1));
 				var char = Std.parseInt(r.matched(2));
