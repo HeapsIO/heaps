@@ -13,9 +13,9 @@ class BigPrimitive extends Primitive {
 	var tmpBuf : hxd.FloatBuffer;
 	var tmpIdx : hxd.IndexBuffer;
 	var bounds : h3d.col.Bounds;
-	var bufPos : Int;
-	var idxPos : Int;
-	var startIndex : Int;
+	var bufPos : Int = 0;
+	var idxPos : Int = 0;
+	var startIndex : Int = 0;
 	var flushing : Bool;
 	#if debug
 	var allocPos : h3d.impl.AllocPos;
