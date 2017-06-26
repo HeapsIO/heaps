@@ -121,8 +121,9 @@ class PadUI extends h2d.Sprite {
 		}
 	}
 
+	var wasPressed = false;
 	public function update(){
-		var conf = #if flash hxd.Pad.CONFIG_XBOX #else hxd.Pad.CONFIG_SDL #end;
+		var conf = hxd.Pad.DEFAULT_CONFIG;
 		main.x = 20 + 50 + pad.xAxis * 50;
 		main.y = 20 + 50 + pad.yAxis * 50;
 
@@ -139,5 +140,9 @@ class PadUI extends h2d.Sprite {
 
 		for( k in buttons.keys() )
 			buttons[k].alpha = 0.3 + (pad.buttons[ Reflect.field(conf,k) ] ? 0.7 : 0);
+
+		if( !wasPressed && pad.isDown(conf.A) && pad.values[conf.LT] > 0 && pad.values[conf.RT] > 0 )
+			pad.rumble( pad.values[conf.LT], pad.values[conf.RT]*500 );
+		wasPressed = pad.isDown(conf.A);
 	}
 }
