@@ -20,6 +20,9 @@ class Stage {
 	var canvasPos : { var width(default, never) : Float; var height(default, never) : Float; var left(default, never) : Float; var top(default, never) : Float; };
 	var timer : haxe.Timer;
 
+	var curW : Int;
+	var curH : Int;
+
 	function new( ?canvas : js.html.CanvasElement ) : Void {
 		eventTargets = new List();
 		resizeEvents = new List();
@@ -53,17 +56,20 @@ class Stage {
 				return false;
 			};
 		}
-		var curW = this.width, curH = this.height;
+		curW = this.width;
+		curH = this.height;
 		timer = new haxe.Timer(100);
-		timer.run = function() {
-			canvasPos = canvas.getBoundingClientRect();
-			var cw = this.width, ch = this.height;
-			if( curW != cw || curH != ch ) {
-				curW = cw;
-				curH = ch;
-				onResize(null);
-			}
-		};
+		timer.run = checkResize;
+	}
+	
+	function checkResize() {
+		canvasPos = canvas.getBoundingClientRect();
+		var cw = this.width, ch = this.height;
+		if( curW != cw || curH != ch ) {
+			curW = cw;
+			curH = ch;
+			onResize(null);
+		}
 	}
 
 	public function dispose() {
