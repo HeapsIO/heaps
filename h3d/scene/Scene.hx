@@ -11,9 +11,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	var events : hxd.SceneEvents;
 	var hitInteractives : Array<Interactive>;
 	var eventListeners : Array<hxd.Event -> Void>;
+	var stage : hxd.Stage;
 
 	public function new() {
 		super(null);
+		stage = hxd.Stage.getInstance();
 		eventListeners = [];
 		hitInteractives = [];
 		interactives = [];
@@ -87,7 +89,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		if( hitInteractives.length == 0 ) {
 
-			var stage = hxd.Stage.getInstance();
 			var screenX = (event.relX / stage.width - 0.5) * 2;
 			var screenY = -(event.relY / stage.height - 0.5) * 2;
 			var p0 = camera.unproject(screenX, screenY, 0);

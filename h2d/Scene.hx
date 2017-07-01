@@ -46,7 +46,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	function set_zoom(v:Int) {
 		var e = h3d.Engine.getCurrent();
-		var stage = hxd.Stage.getInstance();
 		var twidth = Math.ceil(stage.width / v);
 		var theight = Math.ceil(stage.height / v);
 		var totalWidth = twidth * v;

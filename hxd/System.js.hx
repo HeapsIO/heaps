@@ -59,7 +59,7 @@ class System {
 	}
 
 	public static function setNativeCursor( c : Cursor ) : Void {
-		var canvas = Stage.getCanvas();
+		var canvas = @:privateAccess hxd.Stage.getInstance().canvas;
 		if( canvas != null ) {
 			canvas.style.cursor = switch( c ) {
 			case Default: "default";

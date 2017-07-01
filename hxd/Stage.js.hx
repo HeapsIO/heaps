@@ -15,41 +15,47 @@ class Stage {
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
 
-	@:allow(hxd)
-	static function getCanvas() {
-		var canvas : js.html.CanvasElement = cast js.Browser.document.getElementById("webgl");
-		if( canvas == null ) throw "Missing canvas#webgl";
-		return canvas;
-	}
 	var canvas : js.html.CanvasElement;
+	var element : js.html.EventTarget;
 	var canvasPos : { var width(default, never) : Float; var height(default, never) : Float; var left(default, never) : Float; var top(default, never) : Float; };
+	var timer : haxe.Timer;
 
-	function new() : Void {
+	function new( ?canvas : js.html.CanvasElement ) : Void {
 		eventTargets = new List();
 		resizeEvents = new List();
 
-		canvas = getCanvas();
+		element = canvas == null ? js.Browser.window : canvas;
+		if( canvas == null ) {
+			canvas = cast js.Browser.document.getElementById("webgl");
+			if( canvas == null ) throw "Missing canvas #webgl";
+		}
+		this.canvas = canvas;
 		canvasPos = canvas.getBoundingClientRect();
-		js.Browser.window.addEventListener("mousedown", onMouseDown);
-		js.Browser.window.addEventListener("mousemove", onMouseMove);
-		js.Browser.window.addEventListener("mouseup", onMouseUp);
-		js.Browser.window.addEventListener("mousewheel", onMouseWheel);
-		js.Browser.window.addEventListener("keydown", onKeyDown);
-		js.Browser.window.addEventListener("keyup", onKeyUp);
-		js.Browser.window.addEventListener("keypress", onKeyPress);
-		canvas.addEventListener("mousedown", function(e) {
-			onMouseDown(e);
-			e.stopPropagation();
-			e.preventDefault();
-		});
-		canvas.oncontextmenu = function(e){
-			e.stopPropagation();
-			e.preventDefault();
-			return false;
-		};
+		element.addEventListener("mousedown", onMouseDown);
+		element.addEventListener("mousemove", onMouseMove);
+		element.addEventListener("mouseup", onMouseUp);
+		element.addEventListener("mousewheel", onMouseWheel);
+		element.addEventListener("keydown", onKeyDown);
+		element.addEventListener("keyup", onKeyUp);
+		element.addEventListener("keypress", onKeyPress);
+		if( element == canvas ) {
+			canvas.setAttribute("tabindex","1"); // allow focus
+			canvas.style.outline = 'none';
+		} else {
+			canvas.addEventListener("mousedown", function(e) {
+				onMouseDown(e);
+				e.stopPropagation();
+				e.preventDefault();
+			});
+			canvas.oncontextmenu = function(e){
+				e.stopPropagation();
+				e.preventDefault();
+				return false;
+			};
+		}
 		var curW = this.width, curH = this.height;
-		var t0 = new haxe.Timer(100);
-		t0.run = function() {
+		timer = new haxe.Timer(100);
+		timer.run = function() {
 			canvasPos = canvas.getBoundingClientRect();
 			var cw = this.width, ch = this.height;
 			if( curW != cw || curH != ch ) {
@@ -58,6 +64,10 @@ class Stage {
 				onResize(null);
 			}
 		};
+	}
+
+	public function dispose() {
+		timer.stop();
 	}
 
 	public dynamic function onClose() : Bool {
@@ -102,6 +112,10 @@ class Stage {
 	}
 
 	public function setFullScreen( v : Bool ) : Void {
+	}
+
+	public function setCurrent() {
+		inst = this;
 	}
 
 	static var inst : Stage = null;

@@ -133,8 +133,7 @@ class GlDriver extends Driver {
 
 	public function new(antiAlias=0) {
 		#if js
-		canvas = @:privateAccess hxd.Stage.getCanvas();
-		if( canvas == null ) throw "Canvas #webgl not found";
+		canvas = @:privateAccess hxd.Stage.getInstance().canvas;
 		gl = canvas.getContextWebGL({alpha:false,antialias:antiAlias>0});
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
@@ -1075,12 +1074,15 @@ class GlDriver extends Driver {
 		#if js
 		var ready = false;
 		// wait until all assets have properly load
-		js.Browser.window.addEventListener("load", function(_) {
-			if( !ready ) {
-				ready = true;
-				onCreate(false);
-			}
-		});
+		if( js.Browser.document.readyState == 'complete' )
+			haxe.Timer.delay(onCreate.bind(false), 1);
+		else		
+			js.Browser.window.addEventListener("load", function(_) {
+				if( !ready ) {
+					ready = true;
+					onCreate(false);
+				}
+			});
 		#else
 		haxe.Timer.delay(onCreate.bind(false), 1);
 		#end
