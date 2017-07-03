@@ -474,7 +474,7 @@ class Pbr extends hxd.App {
 		fui.verticalSpacing = 5;
 		fui.isVertical = true;
 
-		envMap = new h3d.mat.Texture(512, 512, [Cubic]);
+		envMap = new h3d.mat.Texture(512, 512, [Cube]);
 		inline function set(face:Int, res:hxd.res.Image) {
 			#if flash
 			// all mipmap levels required
@@ -530,8 +530,8 @@ class Pbr extends hxd.App {
 
 		computeIrradLut();
 
-		irradDiffuse = new h3d.mat.Texture(size, size, [Cubic]);
-		irradSpecular = new h3d.mat.Texture(ssize, ssize, [Cubic, MipMapped]);
+		irradDiffuse = new h3d.mat.Texture(size, size, [Cube]);
+		irradSpecular = new h3d.mat.Texture(ssize, ssize, [Cube, MipMapped]);
 		irradSpecular.mipMap = Linear;
 		computeIrradiance();
 
