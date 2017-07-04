@@ -21,6 +21,7 @@ private class VarDeps {
 class Dce {
 
 	var used : Map<Int,VarDeps>;
+	var channelVars : Array<TVar>;
 
 	public function new() {
 	}
@@ -28,6 +29,7 @@ class Dce {
 	public function dce( vertex : ShaderData, fragment : ShaderData ) {
 		// collect vars dependencies
 		used = new Map();
+		channelVars = [];
 
 		var inputs = [];
 		for( v in vertex.vars ) {
@@ -142,6 +144,14 @@ class Dce {
 			check(it, writeTo);
 			check(loop, writeTo);
 			writeTo.pop();
+		case TCall({ e : TGlobal(ChannelRead) }, [{ e : TVar(c) }, uv, { e : TConst(CInt(cid)) }]):
+			check(uv, writeTo);
+			if( channelVars[cid] == null ) {
+				channelVars[cid] = c;
+				link(c, writeTo);
+			} else {
+				link(channelVars[cid], writeTo);
+			}
 		default:
 			e.iter(check.bind(_, writeTo));
 		}
@@ -162,6 +172,9 @@ class Dce {
 			return { e : TBlock(out), p : e.p, t : e.t };
 		case TVarDecl(v,_) | TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _)) }, _) if( !get(v).used ):
 			return { e : TConst(CNull), t : e.t, p : e.p };
+		case TCall({ e : TGlobal(ChannelRead) }, [_, uv, { e : TConst(CInt(cid)) }]):
+			var c = channelVars[cid];
+			return { e : TCall({ e : TGlobal(Texture2D), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, uv]), t : TVoid, p : e.p };
 		case TIf(e, econd, eelse):
 			var e = mapExpr(e, true);
 			var econd = mapExpr(econd, isVar);

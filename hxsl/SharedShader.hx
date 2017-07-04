@@ -63,7 +63,7 @@ class SharedShader {
 		while( c != null ) {
 			eval.setConstant(c.v, switch( c.v.type ) {
 			case TBool: CBool((constBits >>> c.pos) & 1 != 0);
-			case TInt: CInt((constBits >>> c.pos) & ((1 << c.bits) - 1));
+			case TInt, TChannel(_): CInt((constBits >>> c.pos) & ((1 << c.bits) - 1));
 			default: throw "assert";
 			});
 			c = c.next;

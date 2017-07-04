@@ -109,6 +109,13 @@ class Checker {
 				[ { args : [ { name : "value", type : TVec(4, VFloat) } ], ret : TVec(3, VFloat) } ];
 			case PackNormal:
 				[ { args : [ { name : "value", type : TVec(3, VFloat) } ], ret : TVec(4, VFloat) } ];
+			case ChannelRead:
+				[ 
+					{ args : [ { name : "channel", type : TChannel(1) }, { name : "uv", type : vec2 } ], ret : TFloat }, 
+					{ args : [ { name : "channel", type : TChannel(2) }, { name : "uv", type : vec2 } ], ret : TVec(2,VFloat) }, 
+					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 } ], ret : TVec(3,VFloat) }, 
+					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 } ], ret : TVec(4,VFloat) }, 
+				];
 			case Trace:
 				[];
 			}
@@ -208,6 +215,8 @@ class Checker {
 			return true;
 		switch( [t1, t2] ) {
 		case [TVec(s1, t1), TVec(s2, t2)] if( s1 == s2 && t1 == t2 ):
+			return true;
+		case [TChannel(n1), TChannel(n2)] if( n1 == n2 ):
 			return true;
 		default:
 		}
@@ -767,6 +776,7 @@ class Checker {
 			var gl : TGlobal = switch( [f, e.t] ) {
 			case ["get", TSampler2D]: Texture2D;
 			case ["get", TSamplerCube]: TextureCube;
+			case ["get", TChannel(_)]: ChannelRead;
 			default: null;
 			}
 			if( gl != null )

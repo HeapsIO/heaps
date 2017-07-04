@@ -155,13 +155,44 @@ class Eval {
 		return handleReturn(e);
 	}
 
-	function evalCall( g : TGlobal, args : Array<TExpr> ) {
+	function evalCall( g : TGlobal, args : Array<TExpr>, oldArgs : Array<TExpr>, pos : Position ) {
 		return switch( [g,args] ) {
 		case [ToFloat, [ { e : TConst(CInt(i)) } ]]: TConst(CFloat(i));
 		case [Trace, args]:
 			for( a in args )
 				haxe.Log.trace(Printer.toString(a), { fileName : a.p.file, lineNumber : 0, className : null, methodName : null });
 			TBlock([]);
+		case [ChannelRead, [ { e : TConst(CInt(i)) }, uv ]]:
+			var channel = oldArgs[0];
+			channel.e = switch( channel.e ) {
+			case TVar(v):
+				var v2 = mapVar(v);
+				constants.set(v2, constants.get(v));
+				TVar(v2);
+			default: throw "assert";
+			};
+			var count = switch( channel.t ) { case TChannel(i): i; default: throw "assert"; };
+			var channelMode = hxsl.Types.ChannelSelect.createByIndex(i & 7);
+			var tget = {
+				e : TCall({ e : TGlobal(ChannelRead), t : TVoid, p : pos }, [channel, uv, { e : TConst(CInt(i >> 3)), t : TInt, p : pos }]),
+				t : TVoid,
+				p : pos,
+			};
+			switch( channelMode ) {
+			case R, G, B, A:
+				return TSwiz(tget, [switch( channelMode ) { case R: X; case G: Y; case B: Z; default: W; }]);
+			case Unknown:
+				var zero = { e : TConst(CFloat(0.)), t : TFloat, p : pos };
+				if( count == 1 )
+					return zero.e;
+				return TCall({ e : TGlobal([Vec2, Vec3, Vec4][count - 1]), t : TVoid, p : pos }, [zero]);
+			case PackedFloat:
+				return TCall({ e : TGlobal(Unpack), t:TVoid, p:pos}, [tget]);
+			case PackedNormal:
+				return TCall({ e : TGlobal(UnpackNormal), t:TVoid, p:pos}, [tget]);
+			}
+		case [ChannelRead, [t,_]]:
+			Error.t("Cannot eval complex channel " + Printer.toString(t,true), pos);
 		default: null;
 		}
 	}
@@ -192,12 +223,12 @@ class Eval {
 			TSwiz(evalExpr(e), r.copy());
 		case TReturn(e):
 			TReturn(e == null ? null : evalExpr(e));
-		case TCall(c, args):
+		case TCall(c, eargs):
 			var c = evalExpr(c);
-			var args = [for( a in args ) evalExpr(a)];
+			var args = [for( a in eargs ) evalExpr(a)];
 			switch( c.e ) {
 			case TGlobal(g):
-				var v = evalCall(g, args);
+				var v = evalCall(g, args, eargs, e.p);
 				if( v != null ) v else TCall(c, args);
 			case TVar(_) if( !inlineCalls ):
 				TCall(c, args);

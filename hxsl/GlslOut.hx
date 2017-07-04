@@ -118,6 +118,8 @@ class GlslOut {
 				add(v);
 			}
 			add("]");
+		case TChannel(n):
+			add("channel" + n);
 		}
 	}
 

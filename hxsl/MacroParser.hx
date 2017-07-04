@@ -83,6 +83,10 @@ class MacroParser {
 			case "Bytes2": return TBytes(2);
 			case "Bytes3": return TBytes(3);
 			case "Bytes4": return TBytes(4);
+			case "Channel": return TChannel(1);
+			case "Channel2": return TChannel(2);
+			case "Channel3": return TChannel(3);
+			case "Channel4": return TChannel(4);
 			}
 		case TPath( { pack : [], name : "Array", sub : null, params : [t, size] } ):
 			var t = switch( t ) {

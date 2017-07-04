@@ -1,4 +1,5 @@
 package hxsl;
+import h3d.mat.Texture;
 
 abstract GlobalSlot<T>(Int) {
 	public inline function new(name:String) {
@@ -18,6 +19,8 @@ abstract GlobalSlot<T>(Int) {
 class Globals {
 
 	var map : Map<Int,Dynamic>;
+	var channels : Array<Texture> = [];
+	var maxChannels : Int;
 
 	public function new() {
 		map = new Map<Int,Dynamic>();
@@ -37,6 +40,21 @@ class Globals {
 
 	public inline function fastGet( id : Int ) : Dynamic {
 		return map.get(id);
+	}
+
+	public inline function resetChannels() {
+		maxChannels = 0;
+	}
+
+	public function allocChannelID( t : Texture ) {
+		for( i in 0...maxChannels )
+			if( channels[i] == t )
+				return i;
+		if( maxChannels == 1 << Ast.Tools.MAX_CHANNELS_BITS )
+			throw "Too many unique channels";
+		var i = maxChannels++;
+		channels[i] = t;
+		return i;
 	}
 
 	static var ALL;

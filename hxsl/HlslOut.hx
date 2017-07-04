@@ -109,6 +109,8 @@ class HlslOut {
 				add(v);
 			}
 			add("]");
+		case TChannel(n):
+			add("channel" + n);
 		}
 	}
 

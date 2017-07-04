@@ -802,7 +802,7 @@ class AgalOut {
 		case TMat4: 4;
 		case TArray(t, SConst(size)): (Tools.size(t) * size + 3) >> 2;
 		case TStruct(vl): throw "TODO";
-		case TVoid, TString, TSampler2D, TSamplerCube, TFun(_), TArray(_): throw "assert "+t;
+		case TVoid, TString, TSampler2D, TSamplerCube, TFun(_), TArray(_), TChannel(_): throw "assert "+t;
 		}
 	}
 

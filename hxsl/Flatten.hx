@@ -276,7 +276,7 @@ class Flatten {
 			var stride = Std.int(a.size / len);
 			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, AIndex(a)); }];
 			return { e : TArrayDecl(earr), t : t, p : pos };
-		case TSampler2D, TSamplerCube:
+		case TSampler2D, TSamplerCube, TChannel(_):
 			return read(0,pos);
 		default:
 			var size = varSize(t, a.t);
@@ -331,7 +331,12 @@ class Flatten {
 			kind : Param,
 		};
 		for( v in vars ) {
-			if( v.type != t ) continue;
+			if( v.type != t ) {
+				if( t == TSampler2D && v.type.match(TChannel(_)) ) {
+					// ok
+				} else
+					continue;
+			}
 			// use << 2 for readAccess purposes, then we will fix it before returning
 			var a = new Alloc(g, null, alloc.length << 2, 1);
 			a.v = v;
@@ -356,7 +361,7 @@ class Flatten {
 		};
 		for( v in vars ) {
 			switch( v.type ) {
-			case TSampler2D, TSamplerCube:
+			case TSampler2D, TSamplerCube, TChannel(_):
 				continue;
 			default:
 			}

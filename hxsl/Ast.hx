@@ -16,6 +16,7 @@ enum Type {
 	TStruct( vl : Array<TVar> );
 	TFun( variants : Array<FunType> );
 	TArray( t : Type, size : SizeDecl );
+	TChannel( size : Int );
 }
 
 enum VecType {
@@ -228,6 +229,7 @@ enum TGlobal {
 	Fwidth;
 	TextureCubeLod;
 	Texture2DLod;
+	ChannelRead;
 	// debug
 	Trace;
 }
@@ -276,6 +278,7 @@ class Tools {
 	static var UID = 0;
 
 	public static var SWIZ = Component.createAll();
+	public static var MAX_CHANNELS_BITS = 3;
 
 	public static function allocVarId() {
 		// in order to prevent compile time ids to conflict with runtime allocated ones
@@ -315,12 +318,16 @@ class Tools {
 					return 8;
 				default:
 				}
+		case TChannel(_):
+			return 3 + MAX_CHANNELS_BITS;
 		default:
 		}
 		return 0;
 	}
 
 	public static function isConst( v : TVar ) {
+		if( v.type.match(TChannel(_)) )
+			return true;
 		if( v.qualifiers != null )
 			for( q in v.qualifiers )
 				switch( q ) {
@@ -474,7 +481,7 @@ class Tools {
 		return switch( t ) {
 		case TVoid: 0;
 		case TFloat, TInt: 1;
-		case TVec(n, _): n;
+		case TVec(n, _), TChannel(n): n;
 		case TStruct(vl):
 			var s = 0;
 			for( v in vl ) s += size(v.type);

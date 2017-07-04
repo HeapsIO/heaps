@@ -212,6 +212,7 @@ class Manager {
 	}
 
 	public function compileShaders( shaders : hxsl.ShaderList ) {
+		globals.resetChannels();
 		for( s in shaders ) s.updateConstants(globals);
 		return shaderCache.link(shaders, output);
 	}

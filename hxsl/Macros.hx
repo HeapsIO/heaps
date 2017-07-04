@@ -18,7 +18,14 @@ class Macros {
 				macro : hxsl.Types.BVec;
 			}
 		case TStruct(vl):
-			TAnonymous([for( v in vl ) { pos : Context.currentPos(), name : v.name, kind : FVar(makeType(v.type)) } ]);
+			var fields = [];
+			var pos = Context.currentPos();
+			for( v in vl ) {
+				fields.push({ pos : pos, name : v.name, kind : FVar(makeType(v.type)) });
+				if( v.type.match(TChannel(_)) )
+				fields.push({ pos : pos, name : v.name+"Channel", kind : FVar(macro : hxsl.Types.ChannelSelect) });
+			}
+			TAnonymous(fields);
 		case TSampler2D:
 			macro : hxsl.Types.Sampler2D;
 		case TSamplerCube:
@@ -36,6 +43,8 @@ class Macros {
 		case TArray(t, _):
 			var t = makeType(t);
 			macro : Array<$t>;
+		case TChannel(_):
+			macro : hxsl.Types.Channel;
 		case TFun(_):
 			throw "assert";
 		}
@@ -156,6 +165,22 @@ class Macros {
 				addParamRec(eparams, tparams, { expr : EConst(CIdent(name)), pos:pos }, v.type);
 				fields.push(fget);
 				fields.push(fset);
+
+				if( v.type.match(TChannel(_)) ) {
+					var sel = v.name+"Channel";
+					var selVar = sel + "__";
+					var get_sel = "get_" + sel;
+					var set_sel = "set_" + sel;
+					var sfields = macro class {
+						var $selVar : hxsl.Types.ChannelSelect = Unknown;
+						public var $sel(get, set) : hxsl.Types.ChannelSelect;
+						inline function $get_sel() return $i{selVar};
+						inline function $set_sel(v) { constModified = true; return $i{selVar} = v; }
+					};
+					for( f in sfields.fields )
+						fields.push(f);
+				}
+
 			case Global:
 				globals.push(v);
 			default:
@@ -163,10 +188,11 @@ class Macros {
 		}
 		// updateConstants
 		var exprs = [];
-		function getPath(v:TVar) {
+		function getPath(v:TVar,?suffix) {
+			var name = suffix == null ? v.name : v.name + suffix;
 			if( v.parent == null )
-				return { expr : haxe.macro.Expr.ExprDef.EConst(CIdent(v.name+"__")), pos : pos };
-			return { expr : haxe.macro.Expr.ExprDef.EField(getPath(v.parent), v.name), pos : pos };
+				return { expr : haxe.macro.Expr.ExprDef.EConst(CIdent(name+"__")), pos : pos };
+			return { expr : haxe.macro.Expr.ExprDef.EField(getPath(v.parent), name), pos : pos };
 		}
 		for( c in consts ) {
 			if( c.v.kind == Global ) continue;
@@ -180,6 +206,18 @@ class Macros {
 				});
 			case TBool:
 				exprs.push(macro if( $p ) constBits |= 1 << $v{ c.pos } );
+			case TChannel(n):
+				var psel = getPath(c.v, "Channel");
+				var defFormat = macro throw $v{c.v.name} +"Channel is not set";
+				switch(n) {
+				case 1: defFormat = macro if( hxsl.Types.ChannelTools.isPackedFormat($p) ) $psel = PackedFloat else $defFormat;
+				case 3: defFormat = macro if( hxsl.Types.ChannelTools.isPackedFormat($p) ) $psel = PackedNormal else $defFormat;
+				default: macro throw $v{c.v.name} +"Channel is not set";
+				}
+				exprs.push(macro {
+					if( $p == null ) $psel = Unknown else if( $psel == Unknown ) $defFormat;
+					constBits |= ((globals.allocChannelID($p) << 3) | Type.enumIndex($psel)) << $v{ c.pos };
+				});
 			default:
 				throw "assert";
 			}
