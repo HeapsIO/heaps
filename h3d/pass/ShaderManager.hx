@@ -1,18 +1,24 @@
-package h3d.shader;
+package h3d.pass;
 
-class Manager {
+class ShaderManager {
 
 	public var globals : hxsl.Globals;
 	var shaderCache : hxsl.Cache;
-	var output : Int;
+	var currentOutput : hxsl.ShaderList;
 
-	public function new(output) {
+	public function new(?output:Array<hxsl.Output>) {
 		shaderCache = hxsl.Cache.get();
 		#if flash
 		shaderCache.constsToGlobal = true;
 		#end
 		globals = new hxsl.Globals();
-		this.output = shaderCache.allocOutputVars(output);
+		currentOutput = new hxsl.ShaderList(null);
+		setOutput(output);
+	}
+
+	public function setOutput( ?output : Array<hxsl.Output> ) {
+		if( output == null ) output = [Value("output.color")];
+		currentOutput.s = shaderCache.getLinkShader(output);
 	}
 
 	@:noDebug
@@ -150,14 +156,14 @@ class Manager {
 		}
 		var si = shaders;
 		var n = p.instance;
-		while( n-- > 0 ) si = si.next;
+		while( --n > 0 ) si = si.next;
 		var v = si.s.getParamValue(p.index);
 		if( v == null && !opt ) throw "Missing param value " + si.s + "." + p.name;
 		return v;
 	}
 
-	public function fillGlobals( buf : Buffers, s : hxsl.RuntimeShader ) {
-		inline function fill(buf:Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
+	public function fillGlobals( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader ) {
+		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var g = s.globals;
 			while( g != null ) {
 				var v = globals.fastGet(g.gid);
@@ -177,14 +183,14 @@ class Manager {
 		fill(buf.fragment, s.fragment);
 	}
 
-	public function fillParams( buf : Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
-		inline function fill(buf:Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
+	public function fillParams( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
+		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var p = s.params;
 			while( p != null ) {
 				if( p.type == TFloat && p.perObjectGlobal == null ) {
 					var si = shaders;
 					var n = p.instance;
-					while( n-- > 0 ) si = si.next;
+					while( --n > 0 ) si = si.next;
 					buf.params[p.pos] = si.s.getParamFloatValue(p.index);
 					p = p.next;
 					continue;
@@ -216,7 +222,10 @@ class Manager {
 	public function compileShaders( shaders : hxsl.ShaderList ) {
 		globals.resetChannels();
 		for( s in shaders ) s.updateConstants(globals);
-		return shaderCache.link(shaders, output);
+		currentOutput.next = shaders;
+		var s = shaderCache.link(currentOutput);
+		currentOutput.next = null;
+		return s;
 	}
 
 }

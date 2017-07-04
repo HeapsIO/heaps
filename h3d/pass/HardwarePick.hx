@@ -7,11 +7,10 @@ private class FixedColor extends hxsl.Shader {
 		@param var viewport : Vec4;
 		var output : {
 			position : Vec4,
-			pickPosition : Vec4,
 			colorID : Vec4
 		};
 		function vertex() {
-			output.pickPosition = (output.position + vec4(viewport.xy, 0., 0.) * output.position.w) * vec4(viewport.zw, 1., 1.);
+			output.position = (output.position + vec4(viewport.xy, 0., 0.) * output.position.w) * vec4(viewport.zw, 1., 1.);
 		}
 		function fragment() {
 			output.colorID = colorID;
@@ -51,8 +50,8 @@ class HardwarePick extends Default {
 		#end
 	}
 
-	override function getOutputs() {
-		return ["output.pickPosition", "output.colorID"];
+	override function getOutputs() : Array<hxsl.Output> {
+		return [Value("output.colorID")];
 	}
 
 	override function drawObject(p) {

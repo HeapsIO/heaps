@@ -31,8 +31,8 @@ class BaseMesh extends hxsl.Shader {
 		var output : {
 			var position : Vec4;
 			var color : Vec4;
-			var depth : Vec4;
-			var normal : Vec4;
+			var depth : Float;
+			var normal : Vec3;
 		};
 
 		var relativePosition : Vec3;
@@ -81,8 +81,8 @@ class BaseMesh extends hxsl.Shader {
 
 		function fragment() {
 			output.color = pixelColor;
-			output.depth = pack(depth);
-			output.normal = packNormal(transformedNormal);
+			output.depth = depth;
+			output.normal = transformedNormal;
 		}
 
 	};

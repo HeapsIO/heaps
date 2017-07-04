@@ -7,8 +7,8 @@ class SAO extends ScreenShader {
 		@range(4,30) @const var numSamples : Int;
 		@range(1,10) @const var numSpiralTurns : Int;
 
-		@ignore @param var depthTexture : Sampler2D;
-		@ignore @param var normalTexture : Sampler2D;
+		@ignore @param var depthTexture : Channel;
+		@ignore @param var normalTexture : Channel3;
 		@param var noiseTexture : Sampler2D;
 		@param var noiseScale : Vec2;
 		@range(0,10) @param var sampleRadius : Float;
@@ -43,7 +43,7 @@ class SAO extends ScreenShader {
 		}
 
 		function getPosition( uv : Vec2 ) : Vec3 {
-			var depth = unpack(depthTexture.get(uv));
+			var depth = depthTexture.get(uv);
 			var uv2 = (uv - 0.5) * vec2(2, -2);
 			var temp = vec4(uv2, depth, 1) * cameraInverseViewProj;
 			var originWS = temp.xyz / temp.w;
@@ -55,7 +55,7 @@ class SAO extends ScreenShader {
 			var vUV = input.uv;
 			var occlusion = 0.0;
 			var origin = getPosition(vUV);
-			var normal = unpackNormal(normalTexture.get(vUV));
+			var normal = normalTexture.get(vUV);
 
 			var sampleNoise = noiseTexture.get(vUV * noiseScale / screenRatio).x;
 			var randomPatternRotationAngle = 2.0 * PI * sampleNoise;

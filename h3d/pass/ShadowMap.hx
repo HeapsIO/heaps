@@ -105,8 +105,8 @@ class ShadowMap extends Default {
 		bounds.scaleCenter(1.01);
 	}
 
-	override function getOutputs() {
-		return ["output.position", "output.depth"];
+	override function getOutputs() : Array<hxsl.Output> {
+		return [PackFloat(Value("output.depth"))];
 	}
 
 	override function setGlobals() {
@@ -147,7 +147,7 @@ class ShadowMap extends Default {
 		if( blur.quality > 0 && blur.passes > 0 )
 			blur.apply(texture, tcache.allocTarget("tmpBlur", ctx, size, size, false), true);
 
-		ctx.setGlobalID(shadowMapId, texture);
+		ctx.setGlobalID(shadowMapId, { texture : texture });
 		ctx.setGlobalID(shadowProjId, lightCamera.m);
 		ctx.setGlobalID(shadowColorId, color);
 		ctx.setGlobalID(shadowPowerId, power);

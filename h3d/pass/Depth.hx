@@ -12,8 +12,8 @@ class Depth extends Default {
 		depthMapId = hxsl.Globals.allocID("depthMap");
 	}
 
-	override function getOutputs() {
-		return ["output.position", "output.depth"];
+	override function getOutputs() : Array<hxsl.Output> {
+		return [PackFloat(Value("output.depth"))];
 	}
 
 	override function draw( passes ) {
@@ -22,7 +22,7 @@ class Depth extends Default {
 		ctx.engine.clear(enableSky ? 0 : 0xFF0000, 1);
 		passes = super.draw(passes);
 		ctx.engine.popTarget();
-		ctx.setGlobalID(depthMapId, texture);
+		ctx.setGlobalID(depthMapId, { texture : texture });
 		return passes;
 	}
 

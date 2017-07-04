@@ -44,9 +44,11 @@ class SharedShader {
 
 	public function new(src:String) {
 		instanceCache = new Map();
-		data = haxe.Unserializer.run(src);
 		consts = null;
 		globals = [];
+		if( src == "" )
+			return;
+		data = haxe.Unserializer.run(src);
 		for( v in data.vars )
 			browseVar(v);
 		// don't try to optimize if consts is null, we need to do a few things in Eval

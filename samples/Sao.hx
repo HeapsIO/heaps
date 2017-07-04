@@ -20,7 +20,7 @@ class CustomRenderer extends h3d.scene.Renderer {
 		sao.shader.sampleRadius	= 0.2;
 		hasMRT = h3d.Engine.getCurrent().driver.hasFeature(MultipleRenderTargets);
 		if( hasMRT )
-			def = new h3d.pass.MRT(["color", "depth", "normal"], 0, true);
+			def = new h3d.pass.MRT([Value("output.color"), PackFloat(Value("output.depth")), PackNormal(Value("output.normal"))], 0, true);
 	}
 
 	override function renderPass(name, p:h3d.pass.Base, passes) {

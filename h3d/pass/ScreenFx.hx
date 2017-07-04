@@ -4,7 +4,7 @@ class ScreenFx<T:hxsl.Shader> {
 
 	public var shader : T;
 	var pass : h3d.mat.Pass;
-	var manager : h3d.shader.Manager;
+	var manager : ShaderManager;
 	var plan : h3d.prim.Primitive;
 	var engine : h3d.Engine;
 	var shaders : hxsl.ShaderList;
@@ -13,7 +13,7 @@ class ScreenFx<T:hxsl.Shader> {
 	public function new(shader) {
 		this.shader = shader;
 		shaders = new hxsl.ShaderList(shader);
-		manager = new h3d.shader.Manager(["output.position", "output.color"]);
+		manager = new ShaderManager();
 		pass = new h3d.mat.Pass(Std.string(this), new hxsl.ShaderList(shader));
 		pass.culling = None;
 		pass.depth(false, Always);

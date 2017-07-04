@@ -110,11 +110,11 @@ class Checker {
 			case PackNormal:
 				[ { args : [ { name : "value", type : TVec(3, VFloat) } ], ret : TVec(4, VFloat) } ];
 			case ChannelRead:
-				[ 
-					{ args : [ { name : "channel", type : TChannel(1) }, { name : "uv", type : vec2 } ], ret : TFloat }, 
-					{ args : [ { name : "channel", type : TChannel(2) }, { name : "uv", type : vec2 } ], ret : TVec(2,VFloat) }, 
-					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 } ], ret : TVec(3,VFloat) }, 
-					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 } ], ret : TVec(4,VFloat) }, 
+				[
+					{ args : [ { name : "channel", type : TChannel(1) }, { name : "uv", type : vec2 } ], ret : TFloat },
+					{ args : [ { name : "channel", type : TChannel(2) }, { name : "uv", type : vec2 } ], ret : TVec(2,VFloat) },
+					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 } ], ret : TVec(3,VFloat) },
+					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 } ], ret : TVec(4,VFloat) },
 				];
 			case Trace:
 				[];
@@ -578,7 +578,7 @@ class Checker {
 		case EVars(vl):
 			for( v in vl ) {
 				if( v.kind == null ) {
-					if( v.name == "output" ) v.kind = Output else v.kind = Local;
+					v.kind = Local;
 					for( q in v.qualifiers )
 						switch( q ) {
 						case Const(_): v.kind = Param;

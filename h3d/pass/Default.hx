@@ -4,7 +4,7 @@ package h3d.pass;
 @:access(h3d.mat.Pass)
 class Default extends Base {
 
-	var manager : h3d.shader.Manager;
+	var manager : ShaderManager;
 	var globals(get, never) : hxsl.Globals;
 	var cachedBuffer : h3d.shader.Buffers;
 	var tcache : h3d.impl.TextureCache;
@@ -32,7 +32,7 @@ class Default extends Base {
 
 	public function new() {
 		super();
-		manager = new h3d.shader.Manager(getOutputs());
+		manager = new ShaderManager(getOutputs());
 		tcache = new h3d.impl.TextureCache();
 		shaderIdMap = [];
 		textureIdMap = [];
@@ -60,8 +60,8 @@ class Default extends Base {
 		tcache.dispose();
 	}
 
-	function getOutputs() {
-		return ["output.position", "output.color"];
+	function getOutputs() : Array<hxsl.Output> {
+		return [Value("output.color")];
 	}
 
 	override function compileShader( p : h3d.mat.Pass ) {

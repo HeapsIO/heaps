@@ -183,7 +183,7 @@ class Eval {
 				var zero = { e : TConst(CFloat(0.)), t : TFloat, p : pos };
 				if( count == 1 )
 					return zero.e;
-				return TCall({ e : TGlobal([Vec2, Vec3, Vec4][count - 1]), t : TVoid, p : pos }, [zero]);
+				return TCall({ e : TGlobal([Vec2, Vec3, Vec4][count - 2]), t : TVoid, p : pos }, [zero]);
 			case PackedFloat:
 				return TCall({ e : TGlobal(Unpack), t:TVoid, p:pos}, [tget]);
 			case PackedNormal:

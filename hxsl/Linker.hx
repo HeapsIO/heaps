@@ -140,7 +140,7 @@ class Linker {
 			id : vid,
 			name : vname,
 			type : v.type,
-			kind : v.kind == Output ? Local : v.kind,
+			kind : v.kind,
 			qualifiers : v.qualifiers,
 			parent : parent == null ? null : parent.v,
 		};
@@ -316,7 +316,7 @@ class Linker {
 		}
 	}
 
-	public function link( shadersData : Array<ShaderData>, outVars : Array<String> ) : ShaderData {
+	public function link( shadersData : Array<ShaderData> ) : ShaderData {
 		debug("---------------------- LINKING -----------------------");
 		varMap = new Map();
 		varIdMap = new Map();
@@ -335,9 +335,12 @@ class Linker {
 
 		// globalize vars
 		curInstance = 0;
+		var outVars = [];
 		for( s in shadersData ) {
-			for( v in s.vars )
+			for( v in s.vars ) {
 				allocVar(v, null);
+				if( v.kind == Output ) outVars.push(v);
+			}
 			for( f in s.funs ) {
 				var v = allocVar(f.ref, f.expr.p);
 				v.kind = f.kind;
@@ -381,13 +384,8 @@ class Linker {
 		// build dependency tree
 		var entry = new ShaderInfos("<entry>", false);
 		entry.deps = new Map();
-		for( outVar in outVars ) {
-			var v = varMap.get(outVar);
-			if( v == null )
-				throw "Variable not found " + outVar;
-			v.v.kind = Output;
-			buildDependency(entry, v, false);
-		}
+		for( v in outVars )
+			buildDependency(entry, allocVar(v,null), false);
 
 		// force shaders containing discard to be included
 		for( s in shaders )

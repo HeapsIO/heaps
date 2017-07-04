@@ -11,11 +11,11 @@ class MRTSubPass extends Default {
 		this.mrt = m;
 		this.output = output;
 		super();
-		this.varId = hxsl.Globals.allocID(mrt.fragmentOutputs[output] + "Map");
+		this.varId = hxsl.Globals.allocID(mrt.outputNames[output].split(".").pop() + "Map");
 	}
 
 	override function getOutputs() {
-		return ["output.position", "output."+mrt.fragmentOutputs[output]];
+		return [mrt.fragmentOutputs[output]];
 	}
 
 	override function getTexture( index = 0 ) {
@@ -39,28 +39,39 @@ class MRTSubPass extends Default {
 
 class MRT extends Default {
 
-	var fragmentOutputs : Array<String>;
+	var fragmentOutputs : Array<hxsl.Output>;
+	var outputNames : Array<String>;
 	public var clearColors : Array<Null<Int>>;
 	public var clearSameColor : Null<Int>;
 	public var clearDepth : Null<Float>;
 
 	public function new( fragmentOutputs, ?clearSameColor, ?clearDepth, ?clearColors ) {
 		this.fragmentOutputs = fragmentOutputs;
+		this.outputNames = [for( i in 0...fragmentOutputs.length ) getOutputName(i)];
 		this.clearSameColor = clearSameColor;
 		if( clearDepth ) this.clearDepth = 1.;
 		this.clearColors = clearColors;
 		super();
 	}
 
+	function getOutputName(i:Int) {
+		function getRec(v:hxsl.Output) {
+			return switch( v ) {
+			case Value(v): v;
+			case PackFloat(v), PackNormal(v): getRec(v);
+			case Const(v): "Const" + Std.int(v);
+			case Vec2(_), Vec3(_), Vec4(_): "Output" + i;
+			}
+		}
+		return getRec(fragmentOutputs[i]);
+	}
+
 	override function getOutputs() {
-		var out = ["output.position"];
-		for( o in fragmentOutputs )
-			out.push("output." + o);
-		return out;
+		return fragmentOutputs;
 	}
 
 	override function draw(passes:Object) {
-		var tex = [for( i in 0...fragmentOutputs.length ) tcache.allocTarget(fragmentOutputs[i], ctx, ctx.engine.width, ctx.engine.height, true)];
+		var tex = [for( i in 0...fragmentOutputs.length ) tcache.allocTarget(outputNames[i], ctx, ctx.engine.width, ctx.engine.height, true)];
 		if( clearColors != null )
 			for( i in 0...fragmentOutputs.length ) {
 				var color = clearColors[i];

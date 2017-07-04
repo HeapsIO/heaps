@@ -11,44 +11,137 @@ class SearchMap {
 
 class Cache {
 
-	var linkCache : Map<Int,SearchMap>;
-	var outVarsMap : Map<String, Int>;
-	var outVars : Array<Array<String>>;
+	var linkCache : SearchMap;
+	var linkShaders : Map<String, Shader>;
 	var byID : Map<String, RuntimeShader>;
 	public var constsToGlobal : Bool;
 
 	function new() {
 		constsToGlobal = false;
-		linkCache = new Map();
-		outVarsMap = new Map();
-		outVars = [];
+		linkCache = new SearchMap();
+		linkShaders = new Map();
 		byID = new Map();
 	}
 
-	public function allocOutputVars( vars : Array<String> ) {
+	/**
+		Creates a shader that generate the output requested.
+	**/
+	public function getLinkShader( vars : Array<Output> ) {
 		var key = vars.join(",");
-		var id = outVarsMap.get(key);
-		if( id != null )
-			return id;
-		vars = vars.copy();
-		id = outVarsMap.get(vars.join(","));
-		if( id != null ) {
-			outVarsMap.set(key, id);
-			return id;
+		var shader = linkShaders.get(key);
+		if( shader != null )
+			return shader;
+		var s = new hxsl.SharedShader("");
+		var v = vars.copy();
+		s.data = {
+			name : "shaderLinker",
+			vars : [],
+			funs : [],
+		};
+		var pos = null;
+		var outVars = new Map<String,TVar>();
+		var outputCount = 0;
+		var tvec4 = TVec(4, VFloat);
+		function makeVec( g, size, args : Array<Output>, makeOutExpr : Output -> Int -> TExpr ) {
+			var out = [];
+			var rem = size;
+			for( i in 0...args.length ) {
+				var e = makeOutExpr(args[args.length - 1 - i], rem - (args.length - 1 - i));
+				rem -= Tools.size(e.t);
+				out.unshift(e);
+			}
+			return { e : TCall({ e : TGlobal(g), t : TVoid, p : pos }, out), t : TVec(size,VFloat), p : pos };
 		}
-		id = outVars.length;
-		outVars.push(vars);
-		outVarsMap.set(key, id);
-		return id;
+		function makeVar( name : String, t, parent : TVar ) {
+			var path = parent == null ? name : parent.getName() + "." + name;
+			var v = outVars.get(path);
+			if( v != null )
+				return v;
+			v = {
+				id : Tools.allocVarId(),
+				name : name,
+				type : t,
+				kind : Var,
+				parent : parent,
+			};
+			if( parent == null )
+				s.data.vars.push(v);
+			else {
+				switch( parent.type ) {
+				case TStruct(vl): vl.push(v);
+				default: throw "assert";
+				}
+			}
+			outVars.set(path, v);
+			return v;
+		}
+
+		function makeOutExpr( v : Output, rem : Int ) : TExpr {
+			switch( v ) {
+			case Const(v):
+				return { e : TConst(CFloat(v)), t : TFloat, p : pos };
+			case Vec2(args):
+				return makeVec(Vec2, 2, args, makeOutExpr);
+			case Vec3(args):
+				return makeVec(Vec3, 3, args, makeOutExpr);
+			case Vec4(args):
+				return makeVec(Vec4, 4, args, makeOutExpr);
+			case Value(vname):
+				var v = outVars.get(vname);
+				if( v != null )
+					return { e : TVar(v), t : v.type, p : pos };
+				var path = vname.split(".");
+				var parent : TVar = null;
+				while( path.length > 1 )
+					parent = makeVar(path.shift(), TStruct([]), parent);
+				v = makeVar(path.shift(), rem == 1 ? TFloat : TVec(rem, VFloat), parent);
+				return { e : TVar(v), t : v.type, p : pos };
+			case PackNormal(v):
+				return { e : TCall({ e : TGlobal(PackNormal), t : TVoid, p : pos }, [makeOutExpr(v,3)]), t : tvec4, p : pos };
+			case PackFloat(v):
+				return { e : TCall({ e : TGlobal(Pack), t : TVoid, p : pos }, [makeOutExpr(v,1)]), t : tvec4, p : pos };
+			}
+		}
+		function makeOutput( v : Output ) : TExpr {
+			var ov : TVar = {
+				id : Tools.allocVarId(),
+				type : tvec4,
+				name : "OUTPUT" + (outputCount++),
+				kind : Output,
+			};
+			s.data.vars.push(ov);
+			return { e : TBinop(OpAssign,{ e : TVar(ov), t : tvec4, p : pos }, makeOutExpr(v,4)), t : TVoid, p : pos };
+		}
+		function defineFun( kind : FunctionKind, vars : Array<Output> ) {
+			var fv : TVar = {
+				id : Tools.allocVarId(),
+				type : TFun([]),
+				name : ("" + kind).toLowerCase(),
+				kind : Function,
+			};
+			var f : TFunction = {
+				kind : kind,
+				ref : fv,
+				args : [],
+				ret : TVoid,
+				expr : { e : TBlock([for( v in vars ) makeOutput(v)]), p : pos, t : TVoid },
+			};
+			s.data.funs.push(f);
+		}
+		defineFun(Vertex, [Value("output.position")]);
+		defineFun(Fragment, vars);
+
+		shader = std.Type.createEmptyInstance(Shader);
+		@:privateAccess shader.shader = s;
+		linkShaders.set(key, shader);
+		@:privateAccess shader.updateConstantsFinal(null);
+
+		return shader;
 	}
 
 	@:noDebug
-	public function link( shaders : hxsl.ShaderList, outVars : Int ) {
-		var c = linkCache.get(outVars);
-		if( c == null ) {
-			c = new SearchMap();
-			linkCache.set(outVars, c);
-		}
+	public function link( shaders : hxsl.ShaderList ) {
+		var c = linkCache;
 		for( s in shaders ) {
 			var i = @:privateAccess s.instance;
 			if( c.next == null ) c.next = new Map();
@@ -60,11 +153,11 @@ class Cache {
 			c = cs;
 		}
 		if( c.linked == null )
-			c.linked = compileRuntimeShader(shaders, outVars);
+			c.linked = compileRuntimeShader(shaders);
 		return c.linked;
 	}
 
-	function compileRuntimeShader( shaders : hxsl.ShaderList, outVars : Int ) {
+	function compileRuntimeShader( shaders : hxsl.ShaderList ) {
 		var shaderDatas = [];
 		var index = 0;
 		for( s in shaders ) {
@@ -79,7 +172,7 @@ class Cache {
 		#end
 
 		var linker = new hxsl.Linker();
-		var s = linker.link([for( s in shaderDatas ) s.inst.shader], this.outVars[outVars]);
+		var s = linker.link([for( s in shaderDatas ) s.inst.shader]);
 
 		#if debug
 		Printer.check(s,[for( s in shaderDatas ) s.inst.shader]);

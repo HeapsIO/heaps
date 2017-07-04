@@ -10,8 +10,8 @@ class Normal extends Default {
 		normalMapId = hxsl.Globals.allocID("normalMap");
 	}
 
-	override function getOutputs() {
-		return ["output.position", "output.normal"];
+	override function getOutputs() : Array<hxsl.Output> {
+		return [PackNormal(Value("output.normal"))];
 	}
 
 	override function draw( passes ) {

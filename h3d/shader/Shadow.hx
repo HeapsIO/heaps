@@ -4,7 +4,7 @@ class Shadow extends hxsl.Shader {
 
 	static var SRC = {
 		@global var shadow : {
-			map : Sampler2D,
+			map : Channel,
 			proj : Mat3x4,
 			color : Vec3,
 			power : Float,
@@ -24,7 +24,7 @@ class Shadow extends hxsl.Shader {
 
 			var shadowPos = if( perPixel ) pixelTransformedPosition * shadow.proj * vec3(0.5, -0.5, 1) + vec3(0.5, 0.5, 0) else shadowPos;
 
-			var depth = unpack(shadow.map.get(shadowPos.xy));
+			var depth = shadow.map.get(shadowPos.xy);
 
 			#if false
 			// TODO : integrate surface-based bias
