@@ -58,6 +58,24 @@ class Shader {
 			case TBool:
 				var v : Bool = v;
 				if( v ) constBits |= 1 << c.pos;
+			case TChannel(count):
+				if( v == null ) {
+					c = c.next;
+					continue;
+				}
+				var v : { texture : hxsl.Types.ChannelTexture, channel : hxsl.Channel } = v;
+				var sel : hxsl.Channel = v.channel;
+				if( v.texture == null )
+					sel = Unknown
+				else if( sel == null || sel == Unknown ) {
+					switch( count ) {
+					case 1 if( hxsl.Types.ChannelTools.isPackedFormat(v.texture) ): sel = PackedFloat;
+					case 3 if( hxsl.Types.ChannelTools.isPackedFormat(v.texture) ): sel = PackedNormal;
+					default:
+						throw "Constant " + c.v.name+" does not define channel select value";
+					}
+				}
+				constBits |= ((globals.allocChannelID(v.texture) << 3) | sel.getIndex()) << c.pos;
 			default:
 				throw "assert";
 			}

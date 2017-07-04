@@ -12,7 +12,7 @@ class Eval {
 	public var inlineCalls : Bool;
 	public var unrollLoops : Bool;
 	public var eliminateConditionals : Bool;
-	var constants : Map<TVar,TExprDef>;
+	var constants : Map<Int,TExprDef>;
 	var funMap : Map<TVar,TFunction>;
 	var curFun : TFunction;
 
@@ -23,7 +23,7 @@ class Eval {
 	}
 
 	public function setConstant( v : TVar, c : Const ) {
-		constants.set(v, TConst(c));
+		constants.set(v.id, TConst(c));
 	}
 
 	function mapVar( v : TVar ) {
@@ -39,11 +39,12 @@ class Eval {
 		}
 
 		v2 = {
-			id : Tools.allocVarId(),
+			id : v.type.match(TChannel(_)) ? v.id : Tools.allocVarId(),
 			name : v.name,
 			type : v.type,
 			kind : v.kind,
 		};
+
 		if( v.parent != null ) v2.parent = mapVar(v.parent);
 		if( v.qualifiers != null ) v2.qualifiers = v.qualifiers.copy();
 		varMap.set(v, v2);
@@ -52,7 +53,7 @@ class Eval {
 		case TStruct(vl):
 			v2.type = TStruct([for( v in vl ) mapVar(v)]);
 		case TArray(t, SVar(vs)):
-			var c = constants.get(vs);
+			var c = constants.get(vs.id);
 			if( c != null )
 				switch( c ) {
 				case TConst(CInt(v)):
@@ -165,14 +166,11 @@ class Eval {
 		case [ChannelRead, [ { e : TConst(CInt(i)) }, uv ]]:
 			var channel = oldArgs[0];
 			channel.e = switch( channel.e ) {
-			case TVar(v):
-				var v2 = mapVar(v);
-				constants.set(v2, constants.get(v));
-				TVar(v2);
+			case TVar(v): TVar(mapVar(v));
 			default: throw "assert";
 			};
 			var count = switch( channel.t ) { case TChannel(i): i; default: throw "assert"; };
-			var channelMode = hxsl.Types.ChannelSelect.createByIndex(i & 7);
+			var channelMode = hxsl.Channel.createByIndex(i & 7);
 			var tget = {
 				e : TCall({ e : TGlobal(ChannelRead), t : TVoid, p : pos }, [channel, uv, { e : TConst(CInt(i >> 3)), t : TInt, p : pos }]),
 				t : TVoid,
@@ -192,16 +190,20 @@ class Eval {
 				return TCall({ e : TGlobal(UnpackNormal), t:TVoid, p:pos}, [tget]);
 			}
 		case [ChannelRead, [t,_]]:
-			Error.t("Cannot eval complex channel " + Printer.toString(t,true), pos);
+			Error.t("Cannot eval complex channel " + Printer.toString(t,true)+" "+constantsToString(), pos);
 		default: null;
 		}
+	}
+
+	function constantsToString() {
+		return [for( c in constants.keys() ) c + " => " + Printer.toString({ e : constants.get(c), t : TVoid, p : null }, true)].toString();
 	}
 
 	function evalExpr( e : TExpr, isVal = true ) : TExpr {
 		var d : TExprDef = switch( e.e ) {
 		case TGlobal(_), TConst(_): e.e;
 		case TVar(v):
-			var c = constants.get(v);
+			var c = constants.get(v.id);
 			if( c != null )
 				c;
 			else {
@@ -241,9 +243,9 @@ class Eval {
 					var e = args[i];
 					switch( e.e ) {
 					case TConst(_), TVar({ kind : (Input|Param|Global) }):
-						var old = constants.get(v);
-						undo.push(function() old == null ? constants.remove(v) : constants.set(v, old));
-						constants.set(v, e.e);
+						var old = constants.get(v.id);
+						undo.push(function() old == null ? constants.remove(v.id) : constants.set(v.id, old));
+						constants.set(v.id, e.e);
 					default:
 						var old = varMap.get(v);
 						if( old == null )
@@ -410,10 +412,10 @@ class Eval {
 			case TBinop(OpInterval, { e : TConst(CInt(start)) }, { e : TConst(CInt(len)) } ) if( unrollLoops ):
 				var out = [];
 				for( i in start...len ) {
-					constants.set(v, TConst(CInt(i)));
+					constants.set(v.id, TConst(CInt(i)));
 					out.push(evalExpr(loop,false));
 				}
-				constants.remove(v);
+				constants.remove(v.id);
 				TBlock(out);
 			default:
 				TFor(v2, it, evalExpr(loop,false));

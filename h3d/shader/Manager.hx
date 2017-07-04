@@ -142,8 +142,10 @@ class Manager {
 
 	public inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList, opt = false ) : Dynamic {
 		if( p.perObjectGlobal != null ) {
-			var v = globals.fastGet(p.perObjectGlobal.gid);
+			var v : Dynamic = globals.fastGet(p.perObjectGlobal.gid);
 			if( v == null ) throw "Missing global value " + p.perObjectGlobal.path;
+			if( p.type.match(TChannel(_)) )
+				return v.texture;
 			return v;
 		}
 		var si = shaders;

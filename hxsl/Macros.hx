@@ -23,7 +23,7 @@ class Macros {
 			for( v in vl ) {
 				fields.push({ pos : pos, name : v.name, kind : FVar(makeType(v.type)) });
 				if( v.type.match(TChannel(_)) )
-				fields.push({ pos : pos, name : v.name+"Channel", kind : FVar(macro : hxsl.Types.ChannelSelect) });
+				fields.push({ pos : pos, name : v.name+"Channel", kind : FVar(macro : hxsl.Channel) });
 			}
 			TAnonymous(fields);
 		case TSampler2D:
@@ -44,7 +44,7 @@ class Macros {
 			var t = makeType(t);
 			macro : Array<$t>;
 		case TChannel(_):
-			macro : hxsl.Types.Channel;
+			macro : hxsl.Types.ChannelTexture;
 		case TFun(_):
 			throw "assert";
 		}
@@ -172,8 +172,8 @@ class Macros {
 					var get_sel = "get_" + sel;
 					var set_sel = "set_" + sel;
 					var sfields = macro class {
-						var $selVar : hxsl.Types.ChannelSelect = Unknown;
-						public var $sel(get, set) : hxsl.Types.ChannelSelect;
+						var $selVar : hxsl.Channel = Unknown;
+						public var $sel(get, set) : hxsl.Channel;
 						inline function $get_sel() return $i{selVar};
 						inline function $set_sel(v) { constModified = true; return $i{selVar} = v; }
 					};
