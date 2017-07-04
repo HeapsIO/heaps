@@ -22,4 +22,12 @@
 
 -hl heaps.hl
 -lib hlsdl
+-lib hlopenal
 -xml heaps_hl.xml
+
+--next
+
+-hl heaps.hl
+-lib hldx
+-lib hlopenal
+-xml heaps_hldx.xml
