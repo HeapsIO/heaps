@@ -1,104 +1,52 @@
 package h3d.mat;
-import h3d.mat.Data;
-import h3d.mat.Pass;
 
-class Material {
+class Material extends BaseMaterial {
 
-	var passes : Pass;
-	public var name : String;
-	public var mainPass(get, never) : Pass;
-
-	public var props(default,set) : MaterialProps;
+	var mshader : h3d.shader.BaseMesh;
 
 	public var shadows(get, set) : Bool;
 	public var castShadows(default, set) : Bool;
 	public var receiveShadows(default, set) : Bool;
 
-	public function new(?shader:hxsl.Shader) {
-		if( shader != null )
-			addPass(new Pass("default",null)).addShader(shader);
+	public var textureShader(default, null) : h3d.shader.Texture;
+	public var specularShader(default, null) : h3d.shader.SpecularTexture;
+	public var texture(get, set) : h3d.mat.Texture;
+	public var specularTexture(get,set) : h3d.mat.Texture;
+
+	public var color(get, set) : Vector;
+	public var specularAmount(get, set) : Float;
+	public var specularPower(get, set) : Float;
+	public var blendMode(default, set) : BlendMode;
+
+	public function new(?texture) {
+		mshader = new h3d.shader.BaseMesh();
+		blendMode = None;
+		super(mshader);
+		this.texture = texture;
 	}
 
-	function set_props(p) {
-		this.props = p;
-		if( p != null ) p.apply(this);
-		return p;
+	inline function get_specularPower() {
+		return mshader.specularPower;
 	}
 
-	public function addPass<T:Pass>( p : T ) : T {
-		var prev = null, cur = passes;
-		while( cur != null ) {
-			prev = cur;
-			cur = cur.nextPass;
-		}
-		if( prev == null )
-			passes = p;
-		else
-			prev.nextPass = p;
-		p.nextPass = null;
-		return p;
+	inline function set_specularPower(v) {
+		return mshader.specularPower = v;
 	}
 
-	public function removePass( p : Pass ) {
-		var prev : Pass = null, cur = passes;
-		while( cur != null ) {
-			if( cur == p ) {
-				if( prev == null )
-					passes = p.nextPass;
-				else
-					prev.nextPass = p.nextPass;
-				p.nextPass = null;
-				return true;
-			}
-			prev = cur;
-			cur = cur.nextPass;
-		}
-		return false;
+	inline function get_specularAmount() {
+		return mshader.specularAmount;
 	}
 
-	inline function get_mainPass() {
-		return passes;
+	inline function set_specularAmount(v) {
+		return mshader.specularAmount = v;
 	}
 
-	public function getPasses() {
-		var p = passes;
-		var out = [];
-		while( p != null ) {
-			out.push(p);
-			p = p.nextPass;
-		}
-		return out.iterator();
+	inline function get_color() {
+		return mshader.color;
 	}
 
-	public function getPass( name : String ) : Pass {
-		var p = passes;
-		while( p != null ) {
-			if( p.name == name )
-				return p;
-			p = p.nextPass;
-		}
-		return null;
-	}
-
-	public function allocPass( name : String, ?inheritMain = true ) : Pass {
-		var p = getPass(name);
-		if( p != null ) return p;
-		var p = new Pass(name, null, inheritMain ? mainPass : null);
-		addPass(p);
-		return p;
-	}
-
-	public function clone( ?m : Material ) : Material {
-		if( m == null ) m = new Material();
-		#if debug
-		if( Type.getClass(m) != Type.getClass(this) ) throw this + " is missing clone()";
-		#end
-		m.mainPass.loadProps(mainPass);
-		// DO NOT clone passes (it's up to the superclass to recreate the passes + shaders)
-		m.castShadows = castShadows;
-		m.receiveShadows = receiveShadows;
-		m.name = name;
-		return m;
+	inline function set_color(v) {
+		return mshader.color = v;
 	}
 
 	inline function get_shadows() {
@@ -130,6 +78,92 @@ class Material {
 		else
 			mainPass.removeShader(shadows);
 		return receiveShadows = v;
+	}
+
+	override function clone( ?m : BaseMaterial ) : BaseMaterial {
+		var m = m == null ? new Material() : cast m;
+		super.clone(m);
+		m.castShadows = castShadows;
+		m.receiveShadows = receiveShadows;
+		m.texture = texture;
+		if( textureShader != null ) {
+			m.textureShader.additive = textureShader.additive;
+			m.textureShader.killAlpha = textureShader.killAlpha;
+			m.textureShader.killAlphaThreshold = textureShader.killAlphaThreshold;
+		}
+		m.color = color;
+		m.blendMode = blendMode;
+		return m;
+	}
+
+	function set_blendMode(v:BlendMode) {
+		if( mainPass != null ) {
+			mainPass.setBlendMode(v);
+			switch( v ) {
+			case None:
+				mainPass.depthWrite = true;
+				mainPass.setPassName("default");
+			case Alpha:
+				mainPass.depthWrite = true;
+				mainPass.setPassName("alpha");
+			case Add:
+				mainPass.depthWrite = false;
+				mainPass.setPassName("additive");
+			case SoftAdd:
+				mainPass.depthWrite = false;
+				mainPass.setPassName("additive");
+			case Multiply:
+				mainPass.depthWrite = false;
+				mainPass.setPassName("additive");
+			case Erase:
+				mainPass.depthWrite = false;
+				mainPass.setPassName("additive");
+			case Screen:
+				mainPass.depthWrite = false;
+				mainPass.setPassName("additive");
+			}
+		}
+		return blendMode = v;
+	}
+
+	function get_specularTexture() {
+		return specularShader == null ? null : specularShader.texture;
+	}
+
+	function get_texture() {
+		return textureShader == null ? null : textureShader.texture;
+	}
+
+	function set_texture(t) {
+		if( t == null ) {
+			if( textureShader != null ) {
+				mainPass.removeShader(textureShader);
+				textureShader = null;
+			}
+		} else {
+			if( textureShader == null ) {
+				textureShader = new h3d.shader.Texture();
+				mainPass.addShader(textureShader);
+			}
+			textureShader.texture = t;
+		}
+		return t;
+	}
+
+	function set_specularTexture(t) {
+		if( t == null ) {
+			if( specularShader != null ) {
+				mainPass.removeShader(specularShader);
+				specularShader = null;
+			}
+		} else {
+			if( specularShader == null ) {
+				specularShader = new h3d.shader.SpecularTexture();
+				mainPass.addShader(specularShader);
+			}
+			specularShader.texture = t;
+		}
+		return t;
 	}
 
 }

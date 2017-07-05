@@ -449,11 +449,11 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			volumeBounds = h3d.col.Bounds.fromValues(o.bounds[0] - o.bounds[3] * 0.5, o.bounds[1] - o.bounds[4] * 0.5, o.bounds[2] - o.bounds[5] * 0.5, o.bounds[3], o.bounds[4], o.bounds[5]);
 	}
 
-	public function addGroup( ?g : GpuPartGroup, ?material : h3d.mat.MeshMaterial, ?index ) {
+	public function addGroup( ?g : GpuPartGroup, ?material : h3d.mat.Material, ?index ) {
 		if( g == null )
 			g = new GpuPartGroup();
 		if( material == null ) {
-			material = new h3d.mat.MeshMaterial();
+			material = new h3d.mat.Material();
 			material.mainPass.culling = None;
 			material.mainPass.depthWrite = false;
 			material.blendMode = Alpha;

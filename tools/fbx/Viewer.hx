@@ -262,7 +262,7 @@ class Viewer extends hxd.App {
 	function textureLoader( textureName : String, matData : FbxNode ) {
 		var t = new h3d.mat.Texture(1, 1);
 		t.clear(0xFF0000);
-		var mat = new h3d.mat.MeshMaterial(t);
+		var mat = new h3d.mat.Material(t);
 		loadTexture(textureName, mat);
 		mat.mainPass.getShader(h3d.shader.Texture).killAlpha = true;
 		mat.mainPass.blend(SrcAlpha, OneMinusSrcAlpha);
@@ -274,7 +274,7 @@ class Viewer extends hxd.App {
 		return mat;
 	}
 
-	function loadTexture( textureName : String, mat : h3d.mat.MeshMaterial, handleAlpha = true ) {
+	function loadTexture( textureName : String, mat : h3d.mat.Material, handleAlpha = true ) {
 		var t = mat.texture;
 		var texBasePath = textureName.split("\\").join("/").split("/");
 		var fileBasePath = props.curFile.split("\\").join("/").split("/");
@@ -386,7 +386,7 @@ class Viewer extends hxd.App {
 				t.clear(0xFF00FF);
 				t.wrap = Repeat;
 				t.setName(name);
-				loadTexture(name, new h3d.mat.MeshMaterial(t));
+				loadTexture(name, new h3d.mat.Material(t));
 				return t;
 			});
 
@@ -438,7 +438,7 @@ class Viewer extends hxd.App {
 			// auto hide meshes with special names
 			if( o.name != null && (o.name.toLowerCase().indexOf("selection") != -1 || o.name.toLowerCase().indexOf("collide") != -1) ) {
 				var mats = o.getMaterials();
-				if( o.numChildren == 0 && mats.length == 1 && Std.instance(mats[0], h3d.mat.MeshMaterial).texture == null )
+				if( o.numChildren == 0 && mats.length == 1 && Std.instance(mats[0], h3d.mat.Material).texture == null )
 					o.visible = false;
 			}
 

@@ -435,7 +435,7 @@ class TreeView
 
 class TreeMaterial extends TreeView {
 
-	var mat : h3d.mat.MeshMaterial;
+	var mat : h3d.mat.Material;
 
 	public function new(o, parent, mat) {
 		this.mat = mat;

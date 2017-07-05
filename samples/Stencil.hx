@@ -17,12 +17,12 @@ class Stencil extends hxd.App {
 		var tex = hxd.Res.hxlogo.toTexture();
 
 		{	// create the top cube
-			var obj = new Mesh(prim, new h3d.mat.MeshMaterial(tex), root);
+			var obj = new Mesh(prim, new h3d.mat.Material(tex), root);
 			obj.material.mainPass.enableLights = true;
 		}
 
 		{	// create the cube reflection
-			var obj = new Mesh(prim, new h3d.mat.MeshMaterial(tex), root);
+			var obj = new Mesh(prim, new h3d.mat.Material(tex), root);
 			obj.scaleZ = -1;
 			obj.material.color.setColor(0x55C8FF);
 

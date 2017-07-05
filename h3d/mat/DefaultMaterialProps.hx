@@ -8,27 +8,18 @@ enum MaterialKind {
 	SoftAdd;
 }
 
-enum ShadowsMode {
-	None;
-	Active;
-	CastOnly;
-	ReceiveOnly;
-}
-
 @:structInit
 class DefaultMaterialProps {
 
 	public var kind(default,null) : MaterialKind;
-	public var shadows(default, null) : ShadowsMode;
 	public var cull(default, null) : Bool;
 
-	public function new( ?kind : MaterialKind, ?shadows : ShadowsMode, ?cull : Bool ) {
+	public function new( ?kind : MaterialKind, ?cull : Bool ) {
 		this.kind = kind == null ? Opaque : kind;
-		this.shadows = shadows == null ? Active : shadows;
 		this.cull = cull == null ? true : cull;
 	}
 
-	public function apply( m : Material ) {
+	public function apply( m : BaseMaterial ) {
 		var mainPass = m.mainPass;
 		switch( kind ) {
 		case Opaque, AlphaKill:
@@ -53,36 +44,22 @@ class DefaultMaterialProps {
 			tshader.killAlpha = kind == AlphaKill;
 			tshader.killAlphaThreshold = 0.5;
 		}
-		switch( shadows ) {
-		case None:
-			m.shadows = false;
-		case Active:
-			m.shadows = true;
-		case CastOnly:
-			m.castShadows = true;
-			m.receiveShadows = false;
-		case ReceiveOnly:
-			m.castShadows = false;
-			m.receiveShadows = true;
-		}
 		mainPass.culling = cull ? Back : None;
 	}
 
 	public function inspect( onChange : Void -> Void ) : Array<hxd.inspect.Property> {
 		return [
 			PEnum("kind", MaterialKind, function() return kind, function(v) { kind = v; onChange(); }),
-			PEnum("shadows", ShadowsMode, function() return shadows, function(v) { shadows = v; onChange(); }),
 			PBool("cull", function() return cull, function(v) { cull = v; onChange(); }),
 		];
 	}
 
 	public function getData() : Dynamic {
-		return { kind : kind.getName(), shadows : shadows.getName(), cull : cull };
+		return { kind : kind.getName(), cull : cull };
 	}
 
 	public function loadData( o : Dynamic ) {
 		kind = MaterialKind.createByName(o.kind);
-		shadows = ShadowsMode.createByName(o.shadows);
 		cull = o.cull;
 	}
 
@@ -90,11 +67,10 @@ class DefaultMaterialProps {
 	#if (haxe_ver < 3.3)
 		var m = new DefaultMaterialProps();
 		m.kind = Alpha;
-		m.shadows = None;
 		m.cull = false;
 		return m;
 	#else
-		return { kind : Alpha, shadows : None, cull : false }
+		return { kind : Alpha, cull : false }
 	#end
 	}
 

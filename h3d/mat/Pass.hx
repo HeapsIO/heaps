@@ -1,7 +1,7 @@
 package h3d.mat;
 import h3d.mat.Data;
 
-@:allow(h3d.mat.Material)
+@:allow(h3d.mat.BaseMaterial)
 @:build(hxd.impl.BitsBuilder.build())
 class Pass {
 

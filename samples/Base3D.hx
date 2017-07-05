@@ -27,13 +27,13 @@ class Base3D extends hxd.App {
 		var tex = hxd.Res.hxlogo.toTexture();
 
 		// create a material with this texture
-		var mat = new h3d.mat.MeshMaterial(tex);
+		var mat = new h3d.mat.Material(tex);
 
 		// our first cube mesh on the 3D scene with our created material
 		obj1 = new Mesh(prim, mat, s3d);
 
 		// creates another cube, this time with no texture
-		obj2 = new Mesh(prim, new h3d.mat.MeshMaterial(), s3d);
+		obj2 = new Mesh(prim, new h3d.mat.Material(), s3d);
 
 		// set the second cube color
 		obj2.material.color.setColor(0xFFB280);

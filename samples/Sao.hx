@@ -54,7 +54,7 @@ class Sao extends SampleApp {
 	var wscale = 1.;
 	var renderer : CustomRenderer;
 
-	function initMaterial( m : h3d.mat.MeshMaterial ) {
+	function initMaterial( m : h3d.mat.Material ) {
 		m.mainPass.enableLights = true;
 		if( !Std.instance(s3d.renderer,CustomRenderer).hasMRT ) {
 			m.addPass(new h3d.mat.Pass("depth", m.mainPass));

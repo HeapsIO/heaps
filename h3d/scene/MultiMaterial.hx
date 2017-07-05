@@ -2,7 +2,7 @@ package h3d.scene;
 
 class MultiMaterial extends Mesh {
 
-	public var materials : Array<h3d.mat.MeshMaterial>;
+	public var materials : Array<h3d.mat.Material>;
 
 	public function new( prim, ?mats, ?parent ) {
 		super(prim, mats == null ? null : mats[0], parent);
