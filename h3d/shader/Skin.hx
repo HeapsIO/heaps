@@ -16,7 +16,7 @@ class Skin extends hxsl.Shader {
 		var transformedNormal : Vec3;
 
 		@const var MaxBones : Int;
-		@param var bonesMatrixes : Array<Mat3x4,MaxBones>;
+		@ignore @param var bonesMatrixes : Array<Mat3x4,MaxBones>;
 
 		function vertex() {
 			#if floatSkinIndexes

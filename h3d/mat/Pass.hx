@@ -3,22 +3,22 @@ import h3d.mat.Data;
 
 @:allow(h3d.mat.BaseMaterial)
 @:build(hxd.impl.BitsBuilder.build())
-class Pass {
+class Pass implements h3d.impl.Serializable {
 
-	public var name(default, null) : String;
+	@:s public var name(default, null) : String;
 	var passId : Int;
-	var bits : Int = 0;
-	var parentPass : Pass;
+	@:s var bits : Int = 0;
+	@:s var parentPass : Pass;
 	var parentShaders : hxsl.ShaderList;
 	var shaders : hxsl.ShaderList;
-	var nextPass : Pass;
+	@:s var nextPass : Pass;
 
-	public var enableLights : Bool;
+	@:s public var enableLights : Bool;
 	/**
 		Inform the pass system that the parameters will be modified in object draw() command,
 		so they will be manually uploaded by calling RenderContext.uploadParams.
 	**/
-	public var dynamicParameters : Bool;
+	@:s public var dynamicParameters : Bool;
 
 	@:bits(bits) public var culling : Face;
 	@:bits(bits) public var depthWrite : Bool;
@@ -31,7 +31,7 @@ class Pass {
 	@:bits(bits) public var blendAlphaOp : Operation;
 	@:bits(bits, 4) public var colorMask : Int;
 
-	public var stencil : Stencil;
+	@:s public var stencil : Stencil;
 
 	public function new(name, ?shaders, ?parent) {
 		this.parentPass = parent;
@@ -187,5 +187,35 @@ class Pass {
 		var toString = toHxsl ? hxsl.Printer.shaderToString.bind(_, true) : hxsl.GlslOut.toGlsl;
 		return "VERTEX=\n" + toString(shader.vertex.data) + "\n\nFRAGMENT=\n" + toString(shader.fragment.data);
 	}
+
+	#if hxbit
+
+	public function customSerialize( ctx : hxbit.Serializer ) {
+		var ctx : h3d.impl.Serializable.SceneSerializer = cast ctx;
+		var s = shaders;
+		while( s != parentShaders ) {
+			ctx.addShader(s.s);
+			s = s.next;
+		}
+		ctx.addShader(null);
+	}
+	public function customUnserialize( ctx : hxbit.Serializer ) {
+		var ctx : h3d.impl.Serializable.SceneSerializer = cast ctx;
+		var head = null;
+		while( true ) {
+			var s = ctx.getShader();
+			if( s == null ) break;
+			var sl = new hxsl.ShaderList(s);
+			if( head == null ) {
+				head = shaders = sl;
+			} else {
+				head.next = sl;
+				head = sl;
+			}
+		}
+		setPassName(name);
+		//loadBits(bits);
+	}
+	#end
 
 }

@@ -2,10 +2,10 @@ package h3d.mat;
 import h3d.mat.Data;
 import h3d.mat.Pass;
 
-class BaseMaterial {
+class BaseMaterial implements h3d.impl.Serializable {
 
-	var passes : Pass;
-	public var name : String;
+	@:s var passes : Pass;
+	@:s public var name : String;
 	public var mainPass(get, never) : Pass;
 
 	public var props(default,set) : MaterialProps;

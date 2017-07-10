@@ -28,4 +28,10 @@ class MacroHelper {
 
 #end
 
+	public static macro function getResourcesPath() {
+		var dir = haxe.macro.Context.definedValue("resourcesPath");
+		if( dir == null ) dir = "res";
+		return macro $v{try Context.resolvePath(dir) catch( e : Dynamic ) null};
+	}
+
 }

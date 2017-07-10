@@ -3,9 +3,9 @@ import h3d.col.Point;
 
 class Cube extends Polygon {
 
-	var sizeX : Float;
-	var sizeY : Float;
-	var sizeZ : Float;
+	@:s var sizeX : Float;
+	@:s var sizeY : Float;
+	@:s var sizeZ : Float;
 
 	public function new( x = 1., y = 1., z = 1. )
 	{

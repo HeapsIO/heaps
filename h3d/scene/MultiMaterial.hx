@@ -37,7 +37,7 @@ class MultiMaterial extends Mesh {
 		for( m in materials )
 			if( m != null )
 				a.push(m);
-		for( o in childs )
+		for( o in children )
 			o.getMaterials(a);
 		return a;
 	}
@@ -47,5 +47,18 @@ class MultiMaterial extends Mesh {
 			primitive.selectMaterial(ctx.drawPass.index);
 		super.draw(ctx);
 	}
+
+	#if hxbit
+	override function customSerialize(ctx:hxbit.Serializer) {
+		super.customSerialize(ctx);
+		ctx.addInt(materials.length);
+		for( m in materials ) ctx.addKnownRef(m);
+	}
+
+	override function customUnserialize(ctx:hxbit.Serializer) {
+		super.customUnserialize(ctx);
+		materials = [for( i in 0...ctx.getInt() ) ctx.getKnownRef(h3d.mat.Material)];
+	}
+	#end
 
 }

@@ -30,4 +30,18 @@ class DirLight extends Light {
 		super.emit(ctx);
 	}
 
+	#if hxbit
+	override function customSerialize(ctx:hxbit.Serializer) {
+		super.customSerialize(ctx);
+		ctx.addDouble(direction.x);
+		ctx.addDouble(direction.y);
+		ctx.addDouble(direction.z);
+	}
+	override function customUnserialize(ctx:hxbit.Serializer) {
+		shader = dshader = new h3d.shader.DirLight();
+		super.customUnserialize(ctx);
+		direction = new h3d.Vector(ctx.getDouble(), ctx.getDouble(), ctx.getDouble());
+	}
+	#end
+
 }

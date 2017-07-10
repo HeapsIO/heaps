@@ -4,11 +4,11 @@ class Light extends Object {
 
 	var shader : hxsl.Shader;
 	var objectDistance : Float; // used internaly
-	var cullingDistance : Float = 1e10;
+	@:s var cullingDistance : Float = 1e10;
 	@:noCompletion public var next : Light;
 
+	@:s public var priority : Int = 0;
 	public var color(get, never) : h3d.Vector;
-	public var priority : Int = 0;
 	public var enableSpecular(get, set) : Bool;
 
 	function new(shader,?parent) {
@@ -33,5 +33,22 @@ class Light extends Object {
 	override function emit(ctx:RenderContext) {
 		ctx.emitLight(this);
 	}
+
+	#if hxbit
+	override function customSerialize(ctx:hxbit.Serializer) {
+		super.customSerialize(ctx);
+		ctx.addDouble(color.x);
+		ctx.addDouble(color.y);
+		ctx.addDouble(color.z);
+		ctx.addDouble(color.w);
+		ctx.addBool(enableSpecular);
+	}
+	override function customUnserialize(ctx:hxbit.Serializer) {
+		super.customUnserialize(ctx);
+		color.set(ctx.getDouble(), ctx.getDouble(), ctx.getDouble(), ctx.getDouble());
+		enableSpecular = ctx.getBool();
+	}
+	#end
+
 
 }

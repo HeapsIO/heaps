@@ -166,4 +166,14 @@ class Material extends BaseMaterial {
 		return t;
 	}
 
+	#if hxbit
+	function customSerialize( ctx : hxbit.Serializer ) {
+	}
+	function customUnserialize( ctx : hxbit.Serializer ) {
+		var last = mainPass.shaders;
+		while( last.next != null ) last = last.next;
+		mshader = cast last.s;
+	}
+	#end
+
 }

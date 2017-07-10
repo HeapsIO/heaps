@@ -126,25 +126,27 @@ class Skin extends MultiMaterial {
 		return skinData;
 	}
 
-	public function setSkinData( s ) {
+	public function setSkinData( s, shaderInit = true ) {
 		skinData = s;
 		jointsUpdated = true;
 		primitive = s.primitive;
-		skinShader = new h3d.shader.Skin();
-		var maxBones = 0;
-		if( skinData.splitJoints != null ) {
-			for( s in skinData.splitJoints )
-				if( s.joints.length > maxBones )
-					maxBones = s.joints.length;
-		} else
-			maxBones = skinData.boundJoints.length;
-		if( skinShader.MaxBones < maxBones )
-			skinShader.MaxBones = maxBones;
-		for( m in materials )
-			if( m != null ) {
-				m.mainPass.addShader(skinShader);
-				if( skinData.splitJoints != null ) m.mainPass.dynamicParameters = true;
-			}
+		if( shaderInit ) {
+			skinShader = new h3d.shader.Skin();
+			var maxBones = 0;
+			if( skinData.splitJoints != null ) {
+				for( s in skinData.splitJoints )
+					if( s.joints.length > maxBones )
+						maxBones = s.joints.length;
+			} else
+				maxBones = skinData.boundJoints.length;
+			if( skinShader.MaxBones < maxBones )
+				skinShader.MaxBones = maxBones;
+			for( m in materials )
+				if( m != null ) {
+					m.mainPass.addShader(skinShader);
+					if( skinData.splitJoints != null ) m.mainPass.dynamicParameters = true;
+				}
+		}
 		currentRelPose = [];
 		currentAbsPose = [];
 		currentPalette = [];
@@ -235,6 +237,28 @@ class Skin extends MultiMaterial {
 			primitive.render(ctx.engine);
 		}
 	}
+
+	#if hxbit
+	override function customUnserialize(ctx:hxbit.Serializer) {
+		super.customUnserialize(ctx);
+		var prim = Std.instance(primitive, h3d.prim.HMDModel);
+		if( prim == null ) throw "Cannot load skind primitive " + prim;
+		jointsUpdated = true;
+		skinShader = material.mainPass.getShader(h3d.shader.Skin);
+		@:privateAccess {
+			var lib = prim.lib;
+			for( m in lib.header.models )
+				if( lib.header.geometries[m.geometry] == prim.data ) {
+					var skinData = lib.makeSkin(m.skin);
+					skinData.primitive = prim;
+					setSkinData(skinData, false);
+					break;
+				}
+		}
+		for( p in material.getPasses() )
+			trace(p.name+":"+[for( s in p.getShaders() ) s.toString()]);
+	}
+	#end
 
 
 }

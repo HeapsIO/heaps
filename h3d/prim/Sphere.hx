@@ -3,9 +3,9 @@ import h3d.col.Point;
 
 class Sphere extends Polygon {
 
-	var ray : Float;
-	var segsH : Int;
-	var segsW : Int;
+	@:s var ray : Float;
+	@:s var segsH : Int;
+	@:s var segsW : Int;
 
 	public function new( ray = 1., segsW = 8, segsH = 6 ) {
 		this.ray = ray;
@@ -66,4 +66,3 @@ class Sphere extends Polygon {
 	}
 
 }
-

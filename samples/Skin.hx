@@ -1,6 +1,6 @@
 import h3d.scene.*;
 
-class Skin extends hxd.App {
+class Skin extends SampleApp {
 
 	var cache : h3d.prim.ModelCache;
 
@@ -31,43 +31,6 @@ class Skin extends hxd.App {
 		dir.enableSpecular = true;
 
 		new h3d.scene.CameraController(s3d).loadFromCamera();
-
-		#if hxbit
-		// this is an example for connecting to scene inspector
-		// and enable extra properties
-		// this requires to compile with -lib hxbit and run http://castledb.org
-		var i = new hxd.inspect.Inspector(s3d);
-
-		var delta = s3d.camera.pos.sub(s3d.camera.target);
-		delta.z = 0;
-		var angle = Math.atan2(delta.y, delta.x);
-		var dist = delta.length();
-
-		// add node to scene graph
-		var n = i.scenePanel.addNode("Rotation", "repeat", function() {
-			return [
-				PFloat("v", function() return angle, function(v) {
-					angle = v;
-					s3d.camera.pos.x = Math.cos(angle) * dist;
-					s3d.camera.pos.y = Math.sin(angle) * dist;
-				}),
-				PCustom("", function() {
-					var j = i.J("<button>");
-					j.text("Click Me!");
-					j.click(function(_) {
-						var j = new hxd.inspect.Panel(null,"New Panel");
-						j.content.text("Nothing to see there.");
-						j.show();
-					});
-					return j;
-				})
-			];
-		});
-		i.scenePanel.addNode("Test", "", n);
-		i.addTool("Exit", "bomb", function() {
-			hxd.System.exit();
-		});
-		#end
 	}
 
 	static function main() {

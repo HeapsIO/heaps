@@ -1,6 +1,6 @@
 import h3d.scene.*;
 
-class Base3D extends hxd.App {
+class Base3D extends SampleApp {
 
 	var time : Float = 0.;
 	var obj1 : Mesh;

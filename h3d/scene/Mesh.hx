@@ -58,4 +58,18 @@ class Mesh extends Object {
 		if( primitive != null ) primitive.dispose();
 		super.dispose();
 	}
+
+	#if hxbit
+	override function customSerialize(ctx:hxbit.Serializer) {
+		super.customSerialize(ctx);
+		ctx.addKnownRef(primitive);
+		ctx.addKnownRef(material);
+	}
+	override function customUnserialize(ctx:hxbit.Serializer) {
+		super.customUnserialize(ctx);
+		primitive = ctx.getKnownRef(h3d.prim.Primitive);
+		material = ctx.getKnownRef(h3d.mat.Material);
+	}
+	#end
+
 }

@@ -3,8 +3,8 @@ import h3d.mat.Data;
 
 @:allow(h3d.mat.Material)
 @:build(hxd.impl.BitsBuilder.build())
-class Stencil
-{
+class Stencil implements h3d.impl.Serializable {
+
 	var frontRefBits : Int = 0;
 	var backRefBits  : Int = 0;
 	var opBits       : Int = 0;
@@ -97,5 +97,15 @@ class Stencil
 		backRefBits = s.backRefBits;
 		opBits = s.opBits;
 	}
+
+	#if hxbit
+	public function customSerialize( ctx : hxbit.Serializer ) {
+	}
+	public function customUnserialize( ctx : hxbit.Serializer ) {
+		//loadFrontRefBits(frontRefBits);
+		//loadBackRefBits(backRefBits);
+		//loadOpBits(opBits);
+	}
+	#end
 
 }

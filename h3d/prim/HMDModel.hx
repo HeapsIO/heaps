@@ -159,4 +159,28 @@ class HMDModel extends MeshPrimitive {
 		return collider;
 	}
 
+	#if hxbit
+	override function customSerialize(ctx:hxbit.Serializer) {
+		ctx.addString(@:privateAccess lib.entry.path);
+		for( m in lib.header.models )
+			if( lib.header.geometries[m.geometry] == this.data ) {
+				ctx.addString(m.name);
+				break;
+			}
+	}
+	override function customUnserialize(ctx:hxbit.Serializer) {
+		var libPath = ctx.getString();
+		var modelPath = ctx.getString();
+		var ctx : h3d.impl.Serializable.SceneSerializer = cast ctx;
+		lib = ctx.loadHMD(libPath);
+		for( m in lib.header.models )
+			if( m.name == modelPath ) {
+				this.data = lib.header.geometries[m.geometry];
+				@:privateAccess lib.cachedPrimitives[m.geometry] = this;
+				break;
+			}
+		dataPosition = lib.header.dataPosition;
+	}
+	#end
+
 }

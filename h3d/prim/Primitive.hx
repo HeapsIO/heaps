@@ -1,6 +1,6 @@
 package h3d.prim;
 
-class Primitive {
+class Primitive implements h3d.impl.Serializable {
 
 	public var buffer : Buffer;
 	public var indexes : Indexes;
@@ -56,5 +56,18 @@ class Primitive {
 			indexes = null;
 		}
 	}
+
+	public function toString() {
+		return Type.getClassName(Type.getClass(this)).split(".").pop();
+	}
+
+	#if hxbit
+	function customSerialize( ctx : hxbit.Serializer ) {
+		throw "Cannot serialize " + toString();
+	}
+	function customUnserialize( ctx : hxbit.Serializer ) {
+		throw "customUnserialize not implemented on " + toString();
+	}
+	#end
 
 }

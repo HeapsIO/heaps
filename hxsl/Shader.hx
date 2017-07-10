@@ -11,6 +11,10 @@ class Shader {
 	var constModified : Bool;
 
 	public function new() {
+		initialize();
+	}
+
+	function initialize() {
 		var cl : Dynamic = std.Type.getClass(this);
 		shader = cl._SHADER;
 		constModified = true;
@@ -86,6 +90,10 @@ class Shader {
 
 	public function clone() : Shader {
 		return this;
+	}
+
+	public function toString() {
+		return std.Type.getClassName(std.Type.getClass(this));
 	}
 
 }

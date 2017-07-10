@@ -8,10 +8,10 @@ class Polygon extends Primitive {
 	public var uvs : Array<UV>;
 	public var idx : hxd.IndexBuffer;
 	public var colors : Array<Point>;
-	var scaled = 1.;
-	var translatedX = 0.;
-	var translatedY = 0.;
-	var translatedZ = 0.;
+	@:s var scaled = 1.;
+	@:s var translatedX = 0.;
+	@:s var translatedY = 0.;
+	@:s var translatedZ = 0.;
 
 	public function new( points, ?idx ) {
 		this.points = points;
@@ -193,5 +193,69 @@ class Polygon extends Primitive {
 		poly.addBuffers(vertexes, indexes);
 		return poly;
 	}
+
+	#if hxbit
+	override function customSerialize(ctx:hxbit.Serializer) {
+		ctx.addInt(points.length);
+		for( p in points ) {
+			ctx.addDouble(p.x);
+			ctx.addDouble(p.y);
+			ctx.addDouble(p.z);
+		}
+		if( normals == null )
+			ctx.addInt(0);
+		else {
+			ctx.addInt(normals.length);
+			for( p in normals ) {
+				ctx.addDouble(p.x);
+				ctx.addDouble(p.y);
+				ctx.addDouble(p.z);
+			}
+		}
+		if( uvs == null )
+			ctx.addInt(0);
+		else {
+			ctx.addInt(uvs.length);
+			for( uv in uvs ) {
+				ctx.addDouble(uv.u);
+				ctx.addDouble(uv.v);
+			}
+		}
+		if( idx == null )
+			ctx.addInt(0);
+		else {
+			ctx.addInt(idx.length);
+			for( i in idx )
+				ctx.addInt(i);
+		}
+		if( colors == null )
+			ctx.addInt(0);
+		else {
+			ctx.addInt(colors.length);
+			for( c in colors ) {
+				ctx.addDouble(c.x);
+				ctx.addDouble(c.y);
+				ctx.addDouble(c.z);
+			}
+		}
+	}
+
+	override function customUnserialize(ctx:hxbit.Serializer) {
+		points = [for( i in 0...ctx.getInt() ) new h3d.col.Point(ctx.getDouble(), ctx.getDouble(), ctx.getDouble())];
+		normals = [for( i in 0...ctx.getInt() ) new h3d.col.Point(ctx.getDouble(), ctx.getDouble(), ctx.getDouble())];
+		uvs = [for( i in 0...ctx.getInt() ) new UV(ctx.getDouble(), ctx.getDouble())];
+		if( normals.length == 0 ) normals = null;
+		if( uvs.length == 0 ) uvs = null;
+		var nindex = ctx.getInt();
+		if( nindex > 0 ) {
+			idx = new hxd.IndexBuffer();
+			idx.grow(nindex);
+			for( i in 0...nindex )
+				idx[i] = ctx.getInt();
+		}
+		colors = [for( i in 0...ctx.getInt() ) new h3d.col.Point(ctx.getDouble(), ctx.getDouble(), ctx.getDouble())];
+		if( colors.length == 0 ) colors = null;
+	}
+	#end
 
 }

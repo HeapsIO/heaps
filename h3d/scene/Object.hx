@@ -9,6 +9,7 @@ package h3d.scene;
 	public var FAllocated = 32;
 	public var FAlwaysSync = 64;
 	public var FInheritCulled = 128;
+	public var FNoSerialize = 256;
 	public inline function new() {
 		this = 0;
 	}
@@ -20,29 +21,29 @@ package h3d.scene;
 	}
 }
 
-class Object {
+class Object implements h3d.impl.Serializable {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 
-	var flags : ObjectFlags;
-	var childs : Array<Object>;
+	@:s var flags : ObjectFlags;
+	var children : Array<Object>;
 	public var parent(default, null) : Object;
 	public var numChildren(get, never) : Int;
 
-	public var name : Null<String>;
-	public var x(default,set) : Float;
-	public var y(default, set) : Float;
-	public var z(default, set) : Float;
-	public var scaleX(default,set) : Float;
-	public var scaleY(default, set) : Float;
-	public var scaleZ(default,set) : Float;
+	@:s public var name : Null<String>;
+	@:s public var x(default,set) : Float;
+	@:s public var y(default, set) : Float;
+	@:s public var z(default, set) : Float;
+	@:s public var scaleX(default,set) : Float;
+	@:s public var scaleY(default, set) : Float;
+	@:s public var scaleZ(default,set) : Float;
 	public var visible(get, set) : Bool;
 	var allocated(get,set) : Bool;
 
 	/**
 		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
 	**/
-	public var follow(default, set) : Object;
+	@:s public var follow(default, set) : Object;
 	public var followPositionOnly(get, set) : Bool;
 
 	/**
@@ -88,7 +89,7 @@ class Object {
 		qRot = new h3d.Quat();
 		posChanged = false;
 		visible = true;
-		childs = [];
+		children = [];
 		if( parent != null )
 			parent.addChild(this);
 	}
@@ -145,19 +146,19 @@ class Object {
 			defaultTransform = null;
 		}
 		if( recursive )
-			for( c in childs )
+			for( c in children )
 				c.applyAnimationTransform();
 	}
 
 	public function getObjectsCount() {
 		var k = 0;
-		for( c in childs )
+		for( c in children )
 			k += c.getObjectsCount() + 1;
 		return k;
 	}
 
 	public function getMaterialByName( name : String ) : h3d.mat.Material {
-		for( o in childs ) {
+		for( o in children ) {
 			var m = o.getMaterialByName(name);
 			if( m != null ) return m;
 		}
@@ -166,7 +167,7 @@ class Object {
 
 	public function getMaterials( ?a : Array<h3d.mat.Material> ) {
 		if( a == null ) a = [];
-		for( o in childs )
+		for( o in children )
 			o.getMaterials(a);
 		return a;
 	}
@@ -212,12 +213,12 @@ class Object {
 		if( b == null )
 			b = new h3d.col.Bounds();
 		if( posChanged ) {
-			for( c in childs )
+			for( c in children )
 				c.posChanged = true;
 			posChanged = false;
 			calcAbsPos();
 		}
-		for( c in childs )
+		for( c in children )
 			c.getBounds(b, true);
 		return b;
 	}
@@ -226,7 +227,7 @@ class Object {
 		if( out == null ) out = [];
 		var m = Std.instance(this, Mesh);
 		if( m != null ) out.push(m);
-		for( c in childs )
+		for( c in children )
 			c.getMeshes(out);
 		return out;
 	}
@@ -234,7 +235,7 @@ class Object {
 	public function getObjectByName( name : String ) {
 		if( this.name == name )
 			return this;
-		for( c in childs ) {
+		for( c in children ) {
 			var o = c.getObjectByName(name);
 			if( o != null ) return o;
 		}
@@ -258,21 +259,21 @@ class Object {
 		o.visible = visible;
 		if( defaultTransform != null )
 			o.defaultTransform = defaultTransform.clone();
-		for( c in childs ) {
+		for( c in children ) {
 			var c = c.clone();
 			c.parent = o;
-			o.childs.push(c);
+			o.children.push(c);
 		}
 		return o;
 	}
 
 	public function addChild( o : Object ) {
-		addChildAt(o, childs.length);
+		addChildAt(o, children.length);
 	}
 
 	public function addChildAt( o : Object, pos : Int ) {
 		if( pos < 0 ) pos = 0;
-		if( pos > childs.length ) pos = childs.length;
+		if( pos > children.length ) pos = children.length;
 		var p = this;
 		while( p != null ) {
 			if( p == o ) throw "Recursive addChild";
@@ -285,7 +286,7 @@ class Object {
 			o.parent.removeChild(o);
 			o.allocated = old;
 		}
-		childs.insert(pos, o);
+		children.insert(pos, o);
 		if( !allocated && o.allocated )
 			o.onRemove();
 		o.parent = this;
@@ -306,31 +307,31 @@ class Object {
 			var m = Std.instance(this, Mesh);
 			if( m != null ) callb(m);
 		}
-		for( o in childs )
+		for( o in children )
 			o.iterVisibleMeshes(callb);
 	}
 
 	function onParentChanged() {
-		for( c in childs )
+		for( c in children )
 			c.onParentChanged();
 	}
 
 	// kept for internal init
 	function onAdd() {
 		allocated = true;
-		for( c in childs )
+		for( c in children )
 			c.onAdd();
 	}
 
 	// kept for internal cleanup
 	function onRemove() {
 		allocated = false;
-		for( c in childs )
+		for( c in children )
 			c.onRemove();
 	}
 
 	public function removeChild( o : Object ) {
-		if( childs.remove(o) ) {
+		if( children.remove(o) ) {
 			if( o.allocated ) o.onRemove();
 			o.parent = null;
 			o.posChanged = true;
@@ -364,7 +365,7 @@ class Object {
 
 	public function getCollider() : h3d.col.Collider {
 		var colliders = [];
-		for( obj in childs ) {
+		for( obj in children ) {
 			var c = obj.getCollider();
 			var cgrp = Std.instance(c, h3d.col.Collider.GroupCollider);
 			if( cgrp != null ) {
@@ -448,9 +449,9 @@ class Object {
 		sync(ctx);
 		posChanged = false;
 		lastFrame = ctx.frame;
-		var p = 0, len = childs.length;
+		var p = 0, len = children.length;
 		while( p < len ) {
-			var c = childs[p];
+			var c = children[p];
 			if( c == null )
 				break;
 			if( c.lastFrame != ctx.frame ) {
@@ -459,9 +460,9 @@ class Object {
 			}
 			// if the object was removed, let's restart again.
 			// our lastFrame ensure that no object will get synched twice
-			if( childs[p] != c ) {
+			if( children[p] != c ) {
 				p = 0;
-				len = childs.length;
+				len = children.length;
 			} else
 				p++;
 		}
@@ -473,7 +474,7 @@ class Object {
 		if( posChanged ) {
 			posChanged = false;
 			calcAbsPos();
-			for( c in childs )
+			for( c in children )
 				c.posChanged = true;
 		}
 	}
@@ -491,12 +492,12 @@ class Object {
 			if( currentAnimation != null ) currentAnimation.sync();
 			posChanged = false;
 			calcAbsPos();
-			for( c in childs )
+			for( c in children )
 				c.posChanged = true;
 		}
 		if( !culled )
 			emit(ctx);
-		for( c in childs )
+		for( c in children )
 			c.emitRec(ctx);
 	}
 
@@ -597,20 +598,48 @@ class Object {
 	}
 
 	public inline function getChildAt( n ) {
-		return childs[n];
+		return children[n];
 	}
 
 	inline function get_numChildren() {
-		return childs.length;
+		return children.length;
 	}
 
 	public inline function iterator() : hxd.impl.ArrayIterator<Object> {
-		return new hxd.impl.ArrayIterator(childs);
+		return new hxd.impl.ArrayIterator(children);
 	}
 
 	public function dispose() {
-		for( c in childs )
+		for( c in children )
 			c.dispose();
 	}
+
+	#if hxbit
+	function customSerialize( ctx : hxbit.Serializer ) {
+
+		var children = [for( o in children ) if( !o.flags.has(FNoSerialize) ) o];
+		ctx.addInt(children.length);
+		for( o in children )
+			ctx.addKnownRef(o);
+
+		ctx.addDouble(qRot.x);
+		ctx.addDouble(qRot.y);
+		ctx.addDouble(qRot.z);
+		ctx.addDouble(qRot.w);
+		// defaultTransform
+		// currentAnimation
+	}
+
+	function customUnserialize( ctx : hxbit.Serializer ) {
+		children = [for( i in 0...ctx.getInt() ) ctx.getKnownRef(Object)];
+		qRot = new h3d.Quat(ctx.getDouble(),ctx.getDouble(),ctx.getDouble(),ctx.getDouble());
+		for( c in children )
+			c.parent = this;
+		allocated = false;
+		posChanged = true;
+		absPos = new h3d.Matrix();
+		absPos.identity();
+	}
+	#end
 
 }

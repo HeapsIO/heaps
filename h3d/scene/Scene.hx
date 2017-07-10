@@ -375,4 +375,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.engine = null;
 	}
 
+	#if hxbit
+	override function customSerialize(ctx:hxbit.Serializer) {
+		throw this + " should not be serialized";
+	}
+	#end
+
 }
