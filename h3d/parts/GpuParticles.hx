@@ -2,6 +2,7 @@ package h3d.parts;
 import hxd.Math;
 
 private typedef GpuSave = {
+	var type : String;
 	var version : Int;
 	var bounds : Array<Float>;
 	var groups : Array<Dynamic>;
@@ -89,7 +90,7 @@ class GpuPartGroup {
 		if( FIELDS != null )
 			return FIELDS;
 		FIELDS = Type.getInstanceFields(GpuPartGroup);
-		for( f in ["material", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "particles", "texture", "colorGradient", "amount", "currentParts", "ebounds", "maxTime"] )
+		for( f in ["parent", "material", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "particles", "texture", "colorGradient", "amount", "currentParts", "ebounds", "maxTime"] )
 			FIELDS.remove(f);
 		for( f in FIELDS.copy() )
 			if( Reflect.isFunction(Reflect.field(inst, f)) )
@@ -98,6 +99,7 @@ class GpuPartGroup {
 		return FIELDS;
 	}
 
+	var parent : GpuParticles;
 	var needRebuild = true;
 	var pshader = new h3d.shader.GpuParticle();
 	var partIndex = 0;
@@ -175,7 +177,8 @@ class GpuPartGroup {
 	inline function set_rotSpeed(v) { needRebuild = true; return rotSpeed = v; }
 	inline function set_rotSpeedRand(v) { needRebuild = true; return rotSpeedRand = v; }
 
-	public function new() {
+	public function new(parent) {
+		this.parent = parent;
 	}
 
 	public function syncParams() {
@@ -213,11 +216,7 @@ class GpuPartGroup {
 	function loadTexture( path : String ) {
 		if( path == null )
 			return null;
-		try	{
-			return hxd.res.Loader.currentInstance.load(path).toTexture();
-		} catch( e : hxd.res.NotFound ) {
-			return h3d.mat.Texture.fromColor(0xFF00FF);
-		}
+		return @:privateAccess parent.loadTexture(path);
 	}
 
 	public function load( version : Int, o : Dynamic ) {
@@ -436,7 +435,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				}
 			default:
 			}
-		return ({ version : VERSION, groups : [for( g in groups ) g.save()], bounds : bounds } : GpuSave);
+		return ({ type : "particles3D", version : VERSION, groups : [for( g in groups ) g.save()], bounds : bounds } : GpuSave);
 	}
 
 	public function load( _o : Dynamic, ?resourcePath : String ) {
@@ -451,7 +450,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 	public function addGroup( ?g : GpuPartGroup, ?material : h3d.mat.Material, ?index ) {
 		if( g == null )
-			g = new GpuPartGroup();
+			g = new GpuPartGroup(this);
 		if( material == null ) {
 			material = new h3d.mat.Material();
 			material.mainPass.culling = None;
@@ -839,5 +838,12 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		@:privateAccess ctx.engine.renderQuadBuffer(primitive.buffer,g.partIndex*2,g.currentParts*2);
 	}
 
+	function loadTexture( path : String ) {
+		try	{
+			return hxd.res.Loader.currentInstance.load(path).toTexture();
+		} catch( e : hxd.res.NotFound ) {
+			return h3d.mat.Texture.fromColor(0xFF00FF);
+		}
+	}
 
 }
