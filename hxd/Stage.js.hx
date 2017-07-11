@@ -38,6 +38,9 @@ class Stage {
 		element.addEventListener("mousemove", onMouseMove);
 		element.addEventListener("mouseup", onMouseUp);
 		element.addEventListener("mousewheel", onMouseWheel);
+		element.addEventListener("touchstart", onTouchStart);
+		element.addEventListener("touchmove", onTouchMove);
+		element.addEventListener("touchend", onTouchEnd);
 		element.addEventListener("keydown", onKeyDown);
 		element.addEventListener("keyup", onKeyUp);
 		element.addEventListener("keypress", onKeyPress);
@@ -194,6 +197,42 @@ class Stage {
 		event(ev);
 	}
 
+	function onTouchStart(e:js.html.TouchEvent) {
+		e.preventDefault();
+		var x, y, ev;
+		for (touch in e.changedTouches) {
+			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
+			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			ev = new Event(EPush, x, y);
+			ev.touchId = touch.identifier;
+			event(ev);
+		}
+	}
+
+	function onTouchMove(e:js.html.TouchEvent) {
+		e.preventDefault();
+		var x, y, ev;
+		for (touch in e.changedTouches) {
+			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
+			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			ev = new Event(EMove, x, y);
+			ev.touchId = touch.identifier;
+			event(ev);
+		}
+	}
+
+	function onTouchEnd(e:js.html.TouchEvent) {
+		e.preventDefault();
+		var x, y, ev;
+		for (touch in e.changedTouches) {
+			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
+			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			ev = new Event(ERelease, x, y);
+			ev.touchId = touch.identifier;
+			event(ev);
+		}
+	}
+
 	function onKeyUp(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
@@ -213,8 +252,3 @@ class Stage {
 	}
 
 }
-
-
-
-
-
