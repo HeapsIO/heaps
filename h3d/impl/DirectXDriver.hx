@@ -111,7 +111,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		#end
 		driver = Driver.create(window, backBufferFormat, options);
 		if( driver == null ) throw "Failed to initialize DirectX driver";
-		
+
 		var version = Driver.getSupportedVersion();
 		shaderVersion = if( version < 10 ) "3_0" else if( version < 11 ) "4_0" else "5_0";
 
@@ -508,6 +508,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( to.t == null )
 			to.alloc();
 		to.t.res.copyResource(from.t.res);
+		to.flags.set(WasCleared);
 		return true;
 	}
 
