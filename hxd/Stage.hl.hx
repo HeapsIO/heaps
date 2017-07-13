@@ -132,6 +132,8 @@ class Stage {
 		return b;
 	}
 
+	var wasBlurred : Bool;
+
 	function onEvent( e : #if hldx dx.Event #else sdl.Event #end ) : Bool {
 		var eh = null;
 		switch( e.type ) {
@@ -141,6 +143,17 @@ class Stage {
 				windowWidth = window.width;
 				windowHeight = window.height;
 				onResize(null);
+			case Focus:
+				#if hldx
+				// return to exclusive mode
+				if( fullScreenMode == Fullscreen && wasBlurred ) {
+					window.displayMode = Borderless;
+					window.displayMode = fullScreenMode;
+				}
+				#end
+				wasBlurred = false;
+			case Blur:
+				wasBlurred = true;
 			default:
 			}
 		case MouseDown:
