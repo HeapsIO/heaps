@@ -11,7 +11,7 @@ private abstract Float32Expand({ pos : Int, array : js.html.Float32Array }) {
 		this = { pos : 0, array : new js.html.Float32Array(new js.html.ArrayBuffer(length)) };
 	}
 
-	inline function get_length() return this.array.length;
+	inline function get_length() return this.pos;
 	inline function set_length(v:Int) {
 		if( length != v ) {
 			var newArray = new js.html.Float32Array(v);
