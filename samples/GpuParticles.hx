@@ -11,14 +11,15 @@ class GpuParticles extends SampleApp {
 		super.init();
 		parts = new h3d.parts.GpuParticles(s3d);
 
-		var g = new h3d.parts.GpuParticles.GpuPartGroup();
+		var g = new h3d.parts.GpuParticles.GpuPartGroup(parts);
 
 		g.emitMode = Cone;
 		g.emitAngle = 0.5;
 		g.emitDist = 0;
 
-		g.fadeIn = 0.1;
-		g.fadeOut = 0.2;
+		g.fadeIn = 0.8;
+		g.fadeOut = 0.8;
+		g.fadePower = 10;
 		g.gravity = 1;
 		g.size = 0.1;
 		g.sizeRand = 0.5;

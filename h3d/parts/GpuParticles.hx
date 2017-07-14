@@ -228,6 +228,7 @@ class GpuPartGroup {
 		texture = loadTexture(o.texture);
 		colorGradient = loadTexture(o.colorGradient);
 		if( Math.isNaN(emitStartDist) ) emitStartDist = 0;
+		if( version == 1 ) fadeOut = 1 - fadeOut;
 	}
 
 	public function updateBounds( bounds : h3d.col.Bounds ) {
@@ -380,7 +381,7 @@ class GpuPartGroup {
 
 class GpuParticles extends h3d.scene.MultiMaterial {
 
-	static inline var VERSION = 1;
+	static inline var VERSION = 2;
 	static inline var STRIDE = 14;
 
 	var groups : Array<GpuPartGroup>;
