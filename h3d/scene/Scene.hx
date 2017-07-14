@@ -25,8 +25,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( engine != null )
 			camera.screenRatio = engine.width / engine.height;
 		ctx = new RenderContext();
-		renderer = new Renderer();
-		lightSystem = new h3d.pass.LightSystem();
+		renderer = h3d.mat.MaterialSetup.current.createRenderer();
+		lightSystem = h3d.mat.MaterialSetup.current.createLightSystem();
 	}
 
 	@:noCompletion public function setEvents(events) {

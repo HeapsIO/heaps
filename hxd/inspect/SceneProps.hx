@@ -240,7 +240,7 @@ class SceneProps {
 				props.push(p);
 			}
 		} else {
-			props = props.concat(mat.props.inspect(function() mat.props.apply(mat)));
+			//props = props.concat(mat.props.inspect(function() mat.props.apply(mat)));
 		}
 		return PGroup("Material",props);
 	}
@@ -267,47 +267,12 @@ class SceneProps {
 		props.push(PBool("visible", function() return o.visible, function(v) o.visible = v));
 
 		if( o.isMesh() ) {
-			var gp = Std.instance(o, h3d.parts.GpuParticles);
-			if( gp != null ) {
-				props.push(PFloats("volumePos", function() {
-					var b = gp.volumeBounds;
-					if( b == null ) return [0, 0, 0];
-					var p = b.getCenter();
-					return [p.x, p.y, p.z];
-				}, function(v) {
-					var b = gp.volumeBounds;
-					if( b != null ) {
-						var c = b.getCenter();
-						b.offset(v[0] - c.x, v[1] - c.y, v[2] - c.z);
-						gp.volumeBounds = null;
-						gp.volumeBounds = b;
-					}
-				}));
-				props.push(PFloats("volumeSize", function() {
-					var b = gp.volumeBounds;
-					if( b == null ) return [0, 0, 0];
-					return [b.xSize, b.ySize, b.zSize];
-				}, function(v) {
-					var b = gp.volumeBounds;
-					if( b != null ) {
-						var c = b.getCenter();
-						b.xMin = c.x - v[0] * 0.5; b.xSize = v[0];
-						b.yMin = c.y - v[1] * 0.5; b.ySize = v[1];
-						b.zMin = c.z - v[2] * 0.5; b.zSize = v[2];
-						gp.volumeBounds = null;
-						gp.volumeBounds = b;
-					}
-				}));
-				props = props.concat(getPartsProps(gp));
-			} else {
-				var multi = Std.instance(o, h3d.scene.MultiMaterial);
-				if( multi != null && multi.materials.length > 1 ) {
-					for( m in multi.materials )
-						props.push(getMaterialProps(m));
-				} else
-					props.push(getMaterialProps(o.toMesh().material));
-			}
-
+			var multi = Std.instance(o, h3d.scene.MultiMaterial);
+			if( multi != null && multi.materials.length > 1 ) {
+				for( m in multi.materials )
+					props.push(getMaterialProps(m));
+			} else
+				props.push(getMaterialProps(o.toMesh().material));
 		} else {
 			var c = Std.instance(o, h3d.scene.CustomObject);
 			if( c != null )
@@ -317,78 +282,6 @@ class SceneProps {
 				props.push(getLightProps(l));
 		}
 		return props;
-	}
-
-	function getPartsProps( parts : h3d.parts.GpuParticles ) {
-		var props = [];
-		props.push(PInt("seed", function() return parts.seed, function(v) parts.seed = v));
-		for( g in parts.getGroups() )
-			props.push(getPartsGroupProps(parts, g));
-		return props;
-	}
-
-	function getPartsGroupProps( parts : h3d.parts.GpuParticles, o : h3d.parts.GpuParticles.GpuPartGroup ) {
-		var props = [];
-		props.push(PGroup("Emitter", [
-			PString("name", function() return o.name, function(v) { o.name = v; refresh(); }),
-			PEnum("mode", h3d.parts.GpuParticles.GpuEmitMode, function() return o.emitMode, function(v) o.emitMode = v),
-			PBool("enable", function() return o.enable, function(v) o.enable = v),
-			PRange("count", 0, 1000, function() return o.nparts, function(v) o.nparts = Std.int(v), 1),
-			PRange("startDistance", 0, 10, function() return o.emitStartDist, function(v) o.emitStartDist = v),
-			PRange("distance", 0, 10, function() return o.emitDist, function(v) o.emitDist = v),
-			PRange("angle", -90, 180, function() return Math.round(o.emitAngle*180/Math.PI), function(v) o.emitAngle = v*Math.PI/180, 1),
-			PBool("loop", function() return o.emitLoop, function(v) { o.emitLoop = v; parts.currentTime = 0; }),
-			PRange("sync", 0, 1, function() return o.emitSync, function(v) o.emitSync = v),
-			PRange("delay", 0, 10, function() return o.emitDelay, function(v) o.emitDelay = v),
-			PBool("transform3D", function() return o.transform3D, function(v) o.transform3D = v),
-		]));
-
-		props.push(PGroup("Life", [
-			PRange("initial", 0, 10, function() return o.life, function(v) o.life = v),
-			PRange("randomNess", 0, 1, function() return o.lifeRand, function(v) o.lifeRand = v),
-			PRange("fadeIn", 0, 1, function() return o.fadeIn, function(v) o.fadeIn = v),
-			PRange("fadeOut", 0, 1, function() return o.fadeOut, function(v) o.fadeOut = v),
-			PRange("fadePower", 0, 3, function() return o.fadePower, function(v) o.fadePower = v),
-		]));
-
-		props.push(PGroup("Speed", [
-			PRange("initial", 0, 10, function() return o.speed, function(v) o.speed = v),
-			PRange("randomNess", 0, 1, function() return o.speedRand, function(v) o.speedRand = v),
-			PRange("acceleration", -1, 1, function() return o.speedIncr, function(v) o.speedIncr = v),
-			PRange("gravity", -5, 5, function() return o.gravity, function(v) o.gravity = v),
-		]));
-
-		props.push(PGroup("Size", [
-			PRange("initial", 0.01, 2, function() return o.size, function(v) o.size = v),
-			PRange("randomNess", 0, 1, function() return o.sizeRand, function(v) o.sizeRand = v),
-			PRange("grow", -1, 1, function() return o.sizeIncr, function(v) o.sizeIncr = v),
-		]));
-
-		props.push(PGroup("Rotation", [
-			PRange("init", 0, 1, function() return o.rotInit, function(v) o.rotInit = v),
-			PRange("speed", 0, 5, function() return o.rotSpeed, function(v) o.rotSpeed = v),
-			PRange("randomNess", 0, 1, function() return o.rotSpeedRand, function(v) o.rotSpeedRand = v),
-		]));
-
-		var mat : h3d.mat.MaterialProps = {};
-		mat.loadData(o.material.getData());
-		var matProps = mat.inspect(function() {
-			var mat2 : h3d.mat.MaterialProps = {};
-			mat2.loadData(mat.getData());
-			o.material = mat2;
-		});
-
-		props.push(PGroup("Animation", matProps.concat([
-			PTexture("diffuseTexture", function() return o.texture, function(v) o.texture = v),
-			PEnum("sort", h3d.parts.GpuParticles.GpuSortMode, function() return o.sortMode, function(v) o.sortMode = v),
-			PRange("animationRepeat", 0, 10, function() return o.animationRepeat, function(v) o.animationRepeat = v),
-			PRange("frameDivisionX", 1, 16, function() return o.frameDivisionX, function(v) o.frameDivisionX = Std.int(v), 1),
-			PRange("frameDivisionY", 1, 16, function() return o.frameDivisionY, function(v) o.frameDivisionY = Std.int(v), 1),
-			PRange("frameCount", 0, 32, function() return o.frameCount, function(v) o.frameCount = Std.int(v), 1),
-			PTexture("colorGradient", function() return o.colorGradient, function(v) o.colorGradient = v),
-		])));
-
-		return PGroup(o.name, props);
 	}
 
 	function getDynamicProps( v : Dynamic ) : Array<Property> {

@@ -8,17 +8,9 @@ class BaseMaterial implements h3d.impl.Serializable {
 	@:s public var name : String;
 	public var mainPass(get, never) : Pass;
 
-	public var props(default,set) : MaterialProps;
-
 	public function new(?shader:hxsl.Shader) {
 		if( shader != null )
 			addPass(new Pass("default",null)).addShader(shader);
-	}
-
-	function set_props(p) {
-		this.props = p;
-		if( p != null ) p.apply(this);
-		return p;
 	}
 
 	public function addPass<T:Pass>( p : T ) : T {

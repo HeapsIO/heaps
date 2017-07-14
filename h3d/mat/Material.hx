@@ -4,6 +4,8 @@ class Material extends BaseMaterial {
 
 	var mshader : h3d.shader.BaseMesh;
 
+	public var props(default,set) : Any;
+
 	public var shadows(get, set) : Bool;
 	public var castShadows(default, set) : Bool;
 	public var receiveShadows(default, set) : Bool;
@@ -166,13 +168,30 @@ class Material extends BaseMaterial {
 		return t;
 	}
 
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
+	function set_props(p) {
+		this.props = p;
+		refreshProps();
+		return p;
 	}
+
+	public function refreshProps() {
+		if( props != null ) MaterialSetup.current.applyProps(this);
+	}
+
+	#if hxbit
+
+	static function tempDisable( m : Material ) {
+	}
+
+	function customSerialize( ctx : hxbit.Serializer ) {
+		ctx.addDynamic(props);
+	}
+
 	function customUnserialize( ctx : hxbit.Serializer ) {
 		var last = mainPass.shaders;
 		while( last.next != null ) last = last.next;
 		mshader = cast last.s;
+		props = ctx.getDynamic();
 	}
 	#end
 

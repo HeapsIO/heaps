@@ -33,7 +33,7 @@ class ModelCache {
 	public function loadModel( res : hxd.res.Model ) : h3d.scene.Object {
 		var obj = loadLibrary(res).makeObject(loadTexture.bind(res));
 		for( m in obj.getMaterials() )
-			initMaterial(res, Std.instance(m, h3d.mat.Material));
+			h3d.mat.MaterialSetup.current.initModelMaterial(res, Std.instance(m, h3d.mat.Material));
 		return obj;
 	}
 
@@ -71,14 +71,6 @@ class ModelCache {
 		t = tres.toTexture();
 		textures.set(fullPath, t);
 		return t;
-	}
-
-	/**
-		This can be overriden by subclasses in order to customize material setup depending on your game semantics
-	**/
-	public function initMaterial( model : hxd.res.Model, material : h3d.mat.Material ) {
-		material.mainPass.enableLights = true;
-		material.shadows = true;
 	}
 
 	public function loadAnimation( anim : hxd.res.Model, ?name : String ) : h3d.anim.Animation {
