@@ -32,8 +32,10 @@ class ModelCache {
 
 	public function loadModel( res : hxd.res.Model ) : h3d.scene.Object {
 		var obj = loadLibrary(res).makeObject(loadTexture.bind(res));
-		for( m in obj.getMaterials() )
-			h3d.mat.MaterialSetup.current.initModelMaterial(res, Std.instance(m, h3d.mat.Material));
+		for( m in obj.getMaterials() ) {
+			m.model = res;
+			h3d.mat.MaterialSetup.current.initModelMaterial(m);
+		}
 		return obj;
 	}
 

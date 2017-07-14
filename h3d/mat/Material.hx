@@ -4,7 +4,8 @@ class Material extends BaseMaterial {
 
 	var mshader : h3d.shader.BaseMesh;
 
-	public var props(default,set) : Any;
+	public var props(default, set) : Any;
+	public var model : hxd.res.Resource;
 
 	public var shadows(get, set) : Bool;
 	public var castShadows(default, set) : Bool;
