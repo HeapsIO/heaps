@@ -160,6 +160,9 @@ class Bounds implements Collider {
 	public function transform( m : Matrix ) {
 		var xMin = xMin, yMin = yMin, zMin = zMin, xMax = xMax, yMax = yMax, zMax = zMax;
 		empty();
+		// if empty, keep empty
+		if( xMax < xMin && yMax < yMin && zMax < zMin )
+			return;
 		var v = new h3d.col.Point();
 		v.set(xMin, yMin, zMin);
 		v.transform(m);
