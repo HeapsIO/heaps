@@ -14,7 +14,7 @@ class Mesh extends Object {
 
 	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
 		b = super.getBounds(b, rec);
-		if( primitive == null )
+		if( primitive == null || flags.has(FIgnoreBounds) )
 			return b;
 		var tmp = primitive.getBounds().clone();
 		tmp.transform(absPos);
