@@ -867,7 +867,7 @@ class GlDriver extends Driver {
 		var data = #if hl hl.Bytes.getArray(buf.getNative()) #else buf.getNative() #end;
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(data,bufPos * 4,vertexCount * stride * 4), bufPos * 4 * STREAM_POS, vertexCount * stride * 4);
 		#else
-		var buf = new Float32Array(buf.getNative());
+		var buf : Float32Array = buf.getNative();
 		var sub = new Float32Array(buf.buffer, bufPos * 4, vertexCount * stride);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		#end
@@ -1076,7 +1076,7 @@ class GlDriver extends Driver {
 		// wait until all assets have properly load
 		if( js.Browser.document.readyState == 'complete' )
 			haxe.Timer.delay(onCreate.bind(false), 1);
-		else		
+		else
 			js.Browser.window.addEventListener("load", function(_) {
 				if( !ready ) {
 					ready = true;
