@@ -239,7 +239,7 @@ class GpuPartGroup {
 		case Point, Cone:
 			var start = emitStartDist + emitDist;
 			var d = speed * (1 + speedIncr * life) * life + start;
-			var zmin = start + (speed * speed) / (4 * (gravity - speed * speedIncr)); // local minima
+			var zmin = emitStartDist + (speed * speed) / (4 * (gravity - speed * speedIncr)); // local minima
 			if( !(zmin < d) )
 				zmin = d;
 			var zmax = speedMin * (1 + speedIncr * life) * life + start - gravity * life * life;
@@ -249,9 +249,15 @@ class GpuPartGroup {
 				d *= Math.sin(phi);
 			}
 
-			bounds.addPos(0, 0, start);
+			bounds.addPos(0, 0, emitStartDist);
  			bounds.addPos(-d, -d, zmin);
 			bounds.addPos(d, d, zmax);
+
+			if( emitMode == Point ) {
+				bounds.addPos(d, d, -zmax);
+				bounds.addPos(d, d, -zmin);
+			}
+
 		case ParentBounds, VolumeBounds, CameraBounds:
 			var d = speed * (1 + speedIncr * life) * life;
 			var max = (1 + emitDist) * 0.5;
@@ -418,6 +424,20 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		bounds = new h3d.col.Bounds();
 		bounds.addPos(0, 0, 0);
 		groups = [];
+	}
+
+	override function getBounds(?b:h3d.col.Bounds, rec = true) {
+		var b = super.getBounds(b, rec);
+		for( g in groups )
+			if( g.needRebuild ) {
+				var s = getScene();
+				if( s != null ) sync(@:privateAccess s.renderer.ctx);
+				break;
+			}
+		var tmp = bounds.clone();
+		tmp.transform(absPos);
+		b.add(tmp);
+		return b;
 	}
 
 	public dynamic function onEnd() {
