@@ -18,8 +18,11 @@ private typedef DefaultProps = {
 class MaterialSetup {
 
 	public var name(default,null) : String;
+	var database : MaterialDatabase;
 
 	public function new(name) {
+		if( database == null )
+			database = new MaterialDatabase("materials.json");
 		this.name = name;
 	}
 
@@ -32,73 +35,13 @@ class MaterialSetup {
 	}
 
 	public function initModelMaterial( material : Material ) {
-		var props = getStoredProps(getMaterialDBPath(material));
+		var props = database.loadProps(material, this);
 		if( props == null ) props = getDefaults();
 		material.props = props;
 	}
 
-	function getMaterialDBPath( material : Material ) {
-		var path = material.model.entry.path.split("/");
-		path.pop();
-		path.push(material.name);
-		path.unshift(name);
-		return path;
-	}
-
 	public function saveModelMaterial( material : Material ) {
-		if( materialDB == null ) loadDB();
-		var path = getMaterialDBPath(material);
-		var root : Dynamic = materialDB;
-		var prevs = [];
-		for( i in 0...path.length - 1 ) {
-			var next = Reflect.field(root, path[i]);
-			if( next == null ) {
-				next = {};
-				Reflect.setField(root, path[i], next);
-			}
-			prevs.push(root);
-			root = next;
-		}
-		var name = path.pop();
-		Reflect.deleteField(root, name);
-
-		var currentProps = material.props;
-		initModelMaterial(material); // reset to default
-		if( Std.string(material.props) == Std.string(currentProps) ) {
-			// cleanup
-			while( path.length > 0 ) {
-				var name = path.pop();
-				var root = prevs.pop();
-				if( Reflect.fields(Reflect.field(root, name)).length != 0 )
-					break;
-				Reflect.deleteField(root, name);
-			}
-		} else {
-			Reflect.setField(root, name, currentProps);
-			material.props = currentProps;
-		}
-		saveDB();
-	}
-
-	function saveDB() {
-		#if sys
-		var path = haxe.macro.Compiler.getDefine("resourcesPath");
-		if( path == null ) path = "res";
-		sys.io.File.saveContent(path + "/" + dbPath, haxe.Json.stringify(materialDB, "\t"));
-		#else
-		throw "Can't save material props database " + dbPath;
-		#end
-	}
-
-	function getStoredProps( path : Array<String> ) {
-		if( materialDB == null ) loadDB();
-		var root : Dynamic = materialDB;
-		while( path.length > 0 ) {
-			root = Reflect.field(root, path.shift());
-			if( root == null )
-				return null;
-		}
-		return root;
+		database.saveProps(material, this);
 	}
 
 	public function getDefaults( ?type : String ) : Any {
@@ -177,11 +120,5 @@ class MaterialSetup {
 	}
 
 	public static var current = new MaterialSetup("Default");
-
-	static var dbPath = "materials.json";
-	static var materialDB : Dynamic;
-	static function loadDB() {
-		materialDB = try haxe.Json.parse(hxd.res.Loader.currentInstance.load(dbPath).toText()) catch( e : hxd.res.NotFound ) {};
-	}
 
 }
