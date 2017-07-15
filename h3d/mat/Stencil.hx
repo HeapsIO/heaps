@@ -92,7 +92,7 @@ class Stencil implements h3d.impl.Serializable {
 		return s;
 	}
 
-	public function loadProps(s : Stencil) {
+	public function load(s : Stencil) {
 		frontRefBits = s.frontRefBits;
 		backRefBits = s.backRefBits;
 		opBits = s.opBits;

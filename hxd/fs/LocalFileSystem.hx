@@ -1,6 +1,6 @@
 package hxd.fs;
 
-#if (air3 || sys)
+#if (air3 || sys || nodejs)
 
 @:allow(hxd.fs.LocalFileSystem)
 @:access(hxd.fs.LocalFileSystem)
@@ -226,6 +226,8 @@ private class LocalEntry extends FileEntry {
 		var ctx = new flash.system.LoaderContext();
 		ctx.imageDecodingPolicy = ON_LOAD;
 		loader.load(new flash.net.URLRequest(file.url), ctx);
+		#elseif nodejs
+		throw "Not implemented";
 		#else
 		var bmp = new hxd.res.Image(this).toBitmap();
 		onLoaded(new hxd.fs.LoadedBitmap(bmp));

@@ -65,28 +65,6 @@ class MaterialSetup {
 		return props;
 	}
 
-	#if js
-	public function editMaterial( props : Any ) {
-		return new js.jquery.JQuery('
-			<dl>
-				<dt>Kind</dt>
-				<dd>
-					<select field="kind">
-						<option value="Opaque">Opaque</option>
-						<option value="Alpha">Alpha</option>
-						<option value="AlphaKill">AlphaKill</option>
-						<option value="Add">Add</option>
-						<option value="SoftAdd">SoftAdd</option>
-					</select>
-				</dd>
-				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
-				<dt>Culled</dt><dd><input type="checkbox" field="culled"/></dd>
-				<dt>Lighted</dt><dd><input type="checkbox" field="lighted"/></dd>
-			</dl>
-		');
-	}
-	#end
-
 	public function applyProps( m : Material ) {
 		var props : DefaultProps = m.props;
 		var mainPass = m.mainPass;
@@ -118,6 +96,28 @@ class MaterialSetup {
 		m.shadows = props.shadows;
 		if( m.shadows ) m.getPass("shadow").culling = mainPass.culling;
 	}
+
+	#if js
+	public function editMaterial( props : Any ) {
+		return new js.jquery.JQuery('
+			<dl>
+				<dt>Kind</dt>
+				<dd>
+					<select field="kind">
+						<option value="Opaque">Opaque</option>
+						<option value="Alpha">Alpha</option>
+						<option value="AlphaKill">AlphaKill</option>
+						<option value="Add">Add</option>
+						<option value="SoftAdd">SoftAdd</option>
+					</select>
+				</dd>
+				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
+				<dt>Culled</dt><dd><input type="checkbox" field="culled"/></dd>
+				<dt>Lighted</dt><dd><input type="checkbox" field="lighted"/></dd>
+			</dl>
+		');
+	}
+	#end
 
 	public static var current = new MaterialSetup("Default");
 

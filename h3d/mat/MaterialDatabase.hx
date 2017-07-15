@@ -18,7 +18,7 @@ class MaterialDatabase {
 	}
 
 	function load() {
-		db = try haxe.Json.parse(hxd.res.Loader.currentInstance.load(file).toText()) catch( e : hxd.res.NotFound ) {};
+		db = try haxe.Json.parse(hxd.res.Loader.currentInstance.load(file).toText()) catch( e : hxd.res.NotFound ) { type : "materialDB" };
 	}
 
 	function save() {

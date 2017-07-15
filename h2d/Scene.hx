@@ -302,8 +302,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 		inline function indexOf(p:Sprite, i:Sprite) {
 			var id = -1;
-			for( k in 0...p.childs.length )
-				if( p.childs[k] == i ) {
+			for( k in 0...p.children.length )
+				if( p.children[k] == i ) {
 					id = k;
 					break;
 				}
@@ -378,7 +378,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.time += ctx.elapsedTime;
 		ctx.globalAlpha = alpha;
 		sync(ctx);
-		if( childs.length == 0 ) return;
+		if( children.length == 0 ) return;
 		ctx.begin();
 		ctx.drawScene();
 		ctx.end();

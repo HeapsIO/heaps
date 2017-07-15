@@ -29,16 +29,16 @@ class Layers extends Sprite {
 		}
 		// new layer
 		while( layer >= layerCount )
-			layersIndexes[layerCount++] = childs.length;
+			layersIndexes[layerCount++] = children.length;
 		super.addChildAt(s,layersIndexes[layer]);
 		for( i in layer...layerCount )
 			layersIndexes[i]++;
 	}
 
 	override function removeChild( s : Sprite ) {
-		for( i in 0...childs.length ) {
-			if( childs[i] == s ) {
-				childs.splice(i, 1);
+		for( i in 0...children.length ) {
+			if( children[i] == s ) {
+				children.splice(i, 1);
 				if( s.allocated ) s.onRemove();
 				s.parent = null;
 				var k = layerCount - 1;
@@ -52,8 +52,8 @@ class Layers extends Sprite {
 	}
 
 	public function under( s : Sprite ) {
-		for( i in 0...childs.length )
-			if( childs[i] == s ) {
+		for( i in 0...children.length )
+			if( children[i] == s ) {
 				var pos = 0;
 				for( l in layersIndexes )
 					if( l > i )
@@ -62,22 +62,22 @@ class Layers extends Sprite {
 						pos = l;
 				var p = i;
 				while( p > pos ) {
-					childs[p] = childs[p - 1];
+					children[p] = children[p - 1];
 					p--;
 				}
-				childs[pos] = s;
+				children[pos] = s;
 				break;
 			}
 	}
 
 	public function over( s : Sprite ) {
-		for( i in 0...childs.length )
-			if( childs[i] == s ) {
+		for( i in 0...children.length )
+			if( children[i] == s ) {
 				for( l in layersIndexes )
 					if( l > i ) {
 						for( p in i...l-1 )
-							childs[p] = childs[p + 1];
-						childs[l - 1] = s;
+							children[p] = children[p + 1];
+						children[l - 1] = s;
 						break;
 					}
 				break;
@@ -91,7 +91,7 @@ class Layers extends Sprite {
 		else {
 			var start = layer == 0 ? 0 : layersIndexes[layer - 1];
 			var max = layersIndexes[layer];
-			a = childs.slice(start, max);
+			a = children.slice(start, max);
 		}
 		return new hxd.impl.ArrayIterator(a);
 	}
@@ -103,18 +103,18 @@ class Layers extends Sprite {
 		if( start == max )
 			return;
 		var pos = start;
-		var ymax = childs[pos++].y;
+		var ymax = children[pos++].y;
 		while( pos < max ) {
-			var c = childs[pos];
+			var c = children[pos];
 			if( c.y < ymax ) {
 				var p = pos - 1;
 				while( p >= start ) {
-					var c2 = childs[p];
+					var c2 = children[p];
 					if( c.y >= c2.y ) break;
-					childs[p + 1] = c2;
+					children[p + 1] = c2;
 					p--;
 				}
-				childs[p + 1] = c;
+				children[p + 1] = c;
 			} else
 				ymax = c.y;
 			pos++;

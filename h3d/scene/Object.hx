@@ -166,6 +166,27 @@ class Object implements h3d.impl.Serializable {
 		return null;
 	}
 
+	public function find<T>( f : Object -> Null<T> ) : Null<T> {
+		var v = f(this);
+		if( v != null )
+			return v;
+		for( o in children ) {
+			var v = o.find(f);
+			if( v != null ) return v;
+		}
+		return null;
+	}
+
+	public function findAll<T>( f : Object -> Null<T>, ?arr : Array<T> ) : Array<T> {
+		if( arr == null ) arr = [];
+		var v = f(this);
+		if( v != null )
+			arr.push(v);
+		for( o in children )
+			o.findAll(f,arr);
+		return arr;
+	}
+
 	public function getMaterials( ?a : Array<h3d.mat.Material> ) {
 		if( a == null ) a = [];
 		for( o in children )

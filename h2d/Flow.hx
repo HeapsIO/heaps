@@ -571,7 +571,7 @@ class Flow extends Sprite {
 				for( i in lastIndex...maxIndex ) {
 					var p = properties[i];
 					if( p.isAbsolute ) continue;
-					var c = childs[i];
+					var c = children[i];
 					if( !c.visible ) continue;
 					var a = p.verticalAlign != null ? p.verticalAlign : valign;
 					c.y = y + p.offsetY + p.paddingTop;
@@ -586,10 +586,10 @@ class Flow extends Sprite {
 				lastIndex = maxIndex;
 			}
 
-			for( i in 0...childs.length ) {
+			for( i in 0...children.length ) {
 				var p = properties[i];
 				if( p.isAbsolute ) continue;
-				var c = childs[i];
+				var c = children[i];
 				if( !c.visible ) continue;
 
 				c.constraintSize(
@@ -616,7 +616,7 @@ class Flow extends Sprite {
 				x += horizontalSpacing;
 				if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
 			}
-			alignLine(childs.length);
+			alignLine(children.length);
 			cw += paddingRight + borderWidth;
 			ch = y + maxLineHeight + paddingBottom + borderHeight;
 
@@ -625,9 +625,9 @@ class Flow extends Sprite {
 			var endX = cw - (paddingRight + borderWidth);
 			var xmin : Float = startX, xmax : Float = endX;
 			var midSpace = 0;
-			for( i in 0...childs.length ) {
+			for( i in 0...children.length ) {
 				var p = properties[i];
-				if( p.isAbsolute || !childs[i].visible ) continue;
+				if( p.isAbsolute || !children[i].visible ) continue;
 				if( p.isBreak ) {
 					xmin = startX;
 					xmax = endX;
@@ -647,9 +647,9 @@ class Flow extends Sprite {
 				case Middle:
 					if( midSpace == 0 ) {
 						var remSize = p.calculatedWidth;
-						for( j in i + 1...childs.length ) {
+						for( j in i + 1...children.length ) {
 							var p = properties[j];
-							if( p.isAbsolute || !childs[j].visible ) continue;
+							if( p.isAbsolute || !children[j].visible ) continue;
 							if( p.isBreak ) break;
 							remSize += horizontalSpacing + p.calculatedWidth;
 						}
@@ -666,7 +666,7 @@ class Flow extends Sprite {
 					px = xmin;
 					xmin += p.calculatedWidth + horizontalSpacing;
 				}
-				childs[i].x = px + p.offsetX + p.paddingLeft;
+				children[i].x = px + p.offsetX + p.paddingLeft;
 			}
 
 		} else {
@@ -691,7 +691,7 @@ class Flow extends Sprite {
 				for( i in lastIndex...maxIndex ) {
 					var p = properties[i];
 					if( p.isAbsolute ) continue;
-					var c = childs[i];
+					var c = children[i];
 					if( !c.visible ) continue;
 					var a = p.horizontalAlign != null ? p.horizontalAlign : halign;
 					c.x = x + p.offsetX + p.paddingLeft;
@@ -706,11 +706,11 @@ class Flow extends Sprite {
 				lastIndex = maxIndex;
 			}
 
-			for( i in 0...childs.length ) {
+			for( i in 0...children.length ) {
 				var p = properties[i];
 				if( p.isAbsolute ) continue;
 
-				var c = childs[i];
+				var c = children[i];
 				if( !c.visible ) continue;
 
 				c.constraintSize(
@@ -740,7 +740,7 @@ class Flow extends Sprite {
 				y += verticalSpacing;
 				if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
 			}
-			alignLine(childs.length);
+			alignLine(children.length);
 			ch += paddingBottom + borderHeight;
 			cw = x + maxColWidth + paddingRight + borderWidth;
 
@@ -750,9 +750,9 @@ class Flow extends Sprite {
 			var endY = ch - (paddingBottom + borderHeight);
 			var ymin : Float = startY, ymax : Float = endY;
 			var midSpace = 0;
-			for( i in 0...childs.length ) {
+			for( i in 0...children.length ) {
 				var p = properties[i];
-				if( p.isAbsolute || !childs[i].visible ) continue;
+				if( p.isAbsolute || !children[i].visible ) continue;
 				if( p.isBreak ) {
 					ymin = startY;
 					ymax = endY;
@@ -772,9 +772,9 @@ class Flow extends Sprite {
 				case Middle:
 					if( midSpace == 0 ) {
 						var remSize = p.calculatedHeight;
-						for( j in i + 1...childs.length ) {
+						for( j in i + 1...children.length ) {
 							var p = properties[j];
-							if( p.isAbsolute || !childs[j].visible ) continue;
+							if( p.isAbsolute || !children[j].visible ) continue;
 							if( p.isBreak ) break;
 							remSize += verticalSpacing + p.calculatedHeight;
 						}
@@ -791,7 +791,7 @@ class Flow extends Sprite {
 					py = ymin;
 					ymin += p.calculatedHeight + verticalSpacing;
 				}
-				childs[i].y = py + p.offsetY + p.paddingTop;
+				children[i].y = py + p.offsetY + p.paddingTop;
 			}
 		}
 
@@ -818,7 +818,7 @@ class Flow extends Sprite {
 
 		if( debug ) {
 			debugGraphics.clear();
-			if( debugGraphics != childs[childs.length - 1] ) {
+			if( debugGraphics != children[children.length - 1] ) {
 				addChild(debugGraphics); // always on-top
 				needReflow = false;
 			}
@@ -827,9 +827,9 @@ class Flow extends Sprite {
 				debugGraphics.drawRect(paddingLeft + borderWidth, paddingTop + borderHeight, innerWidth, innerHeight);
 			}
 			debugGraphics.lineStyle(1, 0x0080FF);
-			for( i in 0...childs.length ) {
+			for( i in 0...children.length ) {
 				var p = properties[i];
-				var c = childs[i];
+				var c = children[i];
 				if( p.isAbsolute || !c.visible ) continue;
 				debugGraphics.drawRect(c.x, c.y, p.calculatedWidth, p.calculatedHeight);
 			}

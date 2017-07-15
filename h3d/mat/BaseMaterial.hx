@@ -78,7 +78,7 @@ class BaseMaterial implements h3d.impl.Serializable {
 
 	public function clone( ?m : BaseMaterial ) : BaseMaterial {
 		if( m == null ) m = new BaseMaterial();
-		m.mainPass.loadProps(mainPass);
+		m.mainPass.load(mainPass);
 		// DO NOT clone passes (it's up to the superclass to recreate the passes + shaders)
 		m.name = name;
 		return m;

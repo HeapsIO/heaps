@@ -6,7 +6,7 @@ class Sprite {
 
 	static var nullDrawable : h2d.Drawable;
 
-	var childs : Array<Sprite>;
+	var children : Array<Sprite>;
 	var parentContainer : Sprite;
 	public var parent(default, null) : Sprite;
 	public var numChildren(get, never) : Int;
@@ -38,7 +38,7 @@ class Sprite {
 		x = 0; y = 0; scaleX = 1; scaleY = 1; rotation = 0;
 		posChanged = parent != null;
 		visible = true;
-		childs = [];
+		children = [];
 		if( parent != null )
 			parent.addChild(this);
 	}
@@ -82,6 +82,27 @@ class Sprite {
 		return out;
 	}
 
+	public function find<T>( f : Sprite -> Null<T> ) : Null<T> {
+		var v = f(this);
+		if( v != null )
+			return v;
+		for( o in children ) {
+			var v = o.find(f);
+			if( v != null ) return v;
+		}
+		return null;
+	}
+
+	public function findAll<T>( f : Sprite -> Null<T>, ?arr : Array<T> ) : Array<T> {
+		if( arr == null ) arr = [];
+		var v = f(this);
+		if( v != null )
+			arr.push(v);
+		for( o in children )
+			o.findAll(f,arr);
+		return arr;
+	}
+
 	function set_filter(f) {
 		if( filter != null && allocated ) filter.unbind(this);
 		filter = f;
@@ -92,23 +113,23 @@ class Sprite {
 	function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
 		if( posChanged ) {
 			calcAbsPos();
-			for( c in childs )
+			for( c in children )
 				c.posChanged = true;
 			posChanged = false;
 		}
-		var n = childs.length;
+		var n = children.length;
 		if( n == 0 ) {
 			out.empty();
 			return;
 		}
 		if( n == 1 ) {
-			var c = childs[0];
+			var c = children[0];
 			if( c.visible ) c.getBoundsRec(relativeTo, out,forSize) else out.empty();
 			return;
 		}
 		var xmin = hxd.Math.POSITIVE_INFINITY, ymin = hxd.Math.POSITIVE_INFINITY;
 		var xmax = hxd.Math.NEGATIVE_INFINITY, ymax = hxd.Math.NEGATIVE_INFINITY;
-		for( c in childs ) {
+		for( c in children ) {
 			if( !c.visible ) continue;
 			c.getBoundsRec(relativeTo, out, forSize);
 			if( out.xMin < xmin ) xmin = out.xMin;
@@ -176,7 +197,7 @@ class Sprite {
 
 	public function getSpritesCount() {
 		var k = 0;
-		for( c in childs )
+		for( c in children )
 			k += c.getSpritesCount() + 1;
 		return k;
 	}
@@ -218,12 +239,12 @@ class Sprite {
 	}
 
 	public function addChild( s : Sprite ) {
-		addChildAt(s, childs.length);
+		addChildAt(s, children.length);
 	}
 
 	public function addChildAt( s : Sprite, pos : Int ) {
 		if( pos < 0 ) pos = 0;
-		if( pos > childs.length ) pos = childs.length;
+		if( pos > children.length ) pos = children.length;
 		var p = this;
 		while( p != null ) {
 			if( p == s ) throw "Recursive addChild";
@@ -236,7 +257,7 @@ class Sprite {
 			s.parent.removeChild(s);
 			s.allocated = old;
 		}
-		childs.insert(pos, s);
+		children.insert(pos, s);
 		if( !allocated && s.allocated )
 			s.onRemove();
 		s.parent = this;
@@ -258,7 +279,7 @@ class Sprite {
 
 	// called when we're allocated already but moved in hierarchy
 	function onParentChanged() {
-		for( c in childs )
+		for( c in children )
 			c.onParentChanged();
 	}
 
@@ -267,7 +288,7 @@ class Sprite {
 		allocated = true;
 		if( filter != null )
 			filter.bind(this);
-		for( c in childs )
+		for( c in children )
 			c.onAdd();
 	}
 
@@ -276,7 +297,7 @@ class Sprite {
 		allocated = false;
 		if( filter != null )
 			filter.unbind(this);
-		for( c in childs )
+		for( c in children )
 			c.onRemove();
 	}
 
@@ -290,7 +311,7 @@ class Sprite {
 	}
 
 	public function removeChild( s : Sprite ) {
-		if( childs.remove(s) ) {
+		if( children.remove(s) ) {
 			if( s.allocated ) s.onRemove();
 			s.parent = null;
 			if( s.parentContainer != null ) s.setParentContainer(null);
@@ -301,7 +322,7 @@ class Sprite {
 
 	function setParentContainer( c : Sprite ) {
 		parentContainer = c;
-		for( s in childs )
+		for( s in children )
 			s.setParentContainer(c);
 	}
 
@@ -337,9 +358,9 @@ class Sprite {
 		}
 
 		lastFrame = ctx.frame;
-		var p = 0, len = childs.length;
+		var p = 0, len = children.length;
 		while( p < len ) {
-			var c = childs[p];
+			var c = children[p];
 			if( c == null )
 				break;
 			if( c.lastFrame != ctx.frame ) {
@@ -348,9 +369,9 @@ class Sprite {
 			}
 			// if the object was removed, let's restart again.
 			// our lastFrame ensure that no object will get synched twice
-			if( childs[p] != c ) {
+			if( children[p] != c ) {
 				p = 0;
-				len = childs.length;
+				len = children.length;
 			} else
 				p++;
 		}
@@ -360,7 +381,7 @@ class Sprite {
 		if( parent != null ) parent.syncPos();
 		if( posChanged ) {
 			calcAbsPos();
-			for( c in childs )
+			for( c in children )
 				c.posChanged = true;
 			posChanged = false;
 		}
@@ -580,7 +601,7 @@ class Sprite {
 		ctx.pushTarget(t, xMin, yMin, width, height);
 		ctx.engine.clear(0);
 
-		// reset transform and update childs
+		// reset transform and update children
 		var oldAlpha = ctx.globalAlpha;
 		var shader = @:privateAccess ctx.baseShader;
 		var oldA = shader.filterMatrixA.clone();
@@ -600,7 +621,7 @@ class Sprite {
 		shader.filterMatrixB.set(invB, invD, invY);
 		ctx.globalAlpha = 1;
 		draw(ctx);
-		for( c in childs )
+		for( c in children )
 			c.drawRec(ctx);
 		ctx.flush();
 
@@ -637,7 +658,7 @@ class Sprite {
 			// only sync anim, don't update() (prevent any event from occuring during draw())
 			// if( currentAnimation != null ) currentAnimation.sync();
 			calcAbsPos();
-			for( c in childs )
+			for( c in children )
 				c.posChanged = true;
 			posChanged = false;
 		}
@@ -647,12 +668,12 @@ class Sprite {
 			var old = ctx.globalAlpha;
 			ctx.globalAlpha *= alpha;
 			if( ctx.front2back ) {
-				var nchilds = childs.length;
-				for (i in 0...nchilds) childs[nchilds - 1 - i].drawRec(ctx);
+				var nchilds = children.length;
+				for (i in 0...nchilds) children[nchilds - 1 - i].drawRec(ctx);
 				draw(ctx);
 			} else {
 				draw(ctx);
-				for( c in childs ) c.drawRec(ctx);
+				for( c in children ) c.drawRec(ctx);
 			}
 			ctx.globalAlpha = old;
 		}
@@ -708,22 +729,22 @@ class Sprite {
 	}
 
 	public inline function getChildAt( n ) {
-		return childs[n];
+		return children[n];
 	}
 
 	public function getChildIndex( s ) {
-		for( i in 0...childs.length )
-			if( childs[i] == s )
+		for( i in 0...children.length )
+			if( children[i] == s )
 				return i;
 		return -1;
 	}
 
 	inline function get_numChildren() {
-		return childs.length;
+		return children.length;
 	}
 
 	public inline function iterator() {
-		return new hxd.impl.ArrayIterator(childs);
+		return new hxd.impl.ArrayIterator(children);
 	}
 
 	function toString() {

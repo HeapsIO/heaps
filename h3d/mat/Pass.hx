@@ -44,7 +44,7 @@ class Pass implements h3d.impl.Serializable {
 		colorMask = 15;
 	}
 
-	public function loadProps( p : Pass ) {
+	public function load( p : Pass ) {
 		name = p.name;
 		passId = p.passId;
 		bits = p.bits;
@@ -62,7 +62,7 @@ class Pass implements h3d.impl.Serializable {
 		colorMask = p.colorMask;
 		if (p.stencil != null) {
 			if (stencil == null) stencil = new Stencil();
-			stencil.loadProps(p.stencil);
+			stencil.load(p.stencil);
 		}
 	}
 

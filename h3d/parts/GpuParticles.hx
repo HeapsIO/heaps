@@ -112,7 +112,7 @@ class GpuPartGroup {
 
 	public var name : String;
 	public var enable = true;
-	public var material : {};
+	public var material = {};
 	public var sortMode(default, set) : GpuSortMode = None;
 
 	public var nparts(default, set) : Int 		= 100;

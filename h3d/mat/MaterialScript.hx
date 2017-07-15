@@ -19,32 +19,47 @@ class MaterialScript extends MaterialSetup {
 		return v;
 	}
 
-
 	function initVars() {
-		#if js
-		variables.set("Element", js.jquery.JQuery);
-		#end
 		variables.set("BlendMode", h3d.mat.BlendMode);
 		variables.set("Blend", h3d.mat.Data.Blend);
 		variables.set("Face", h3d.mat.Data.Face);
 		variables.set("Compare", h3d.mat.Data.Compare);
 		variables.set("Operation", h3d.mat.Data.Operation);
+		variables.set("this", this);
+		#if js
+		variables.set("Element", js.jquery.JQuery);
+		#end
 	}
 
-	#if hscript
+	function call( name : String, args : Array<Dynamic> ) : Dynamic {
+		#if hscript
+		try {
+			return Reflect.callMethod(this, getVar(name), args);
+		} catch( e : hscript.Expr.Error ) {
+			onError(Std.string(e));
+			return null;
+		}
+		#else
+		throw "Can't call " + name;
+		#end
+	}
+
 	override function getDefaults(?type:String):Any {
-		return try getVar("getDefaults")(type) catch( e : hscript.Expr.Error ) { onError(Std.string(e)); {}; }
+		return call("getDefaults", [type]);
 	}
 
 	override function applyProps(m:Material) {
-		try getVar("applyProps")(m) catch( e : hscript.Expr.Error ) onError(Std.string(e));
+		return call("applyProps", [m]);
+	}
+
+	override function initModelMaterial(material:Material) {
+		return call("initModelMaterial", [material]);
 	}
 
 	#if js
 	override function editMaterial( props : Any ) {
-		return try getVar("editMaterial")(props) catch( e : hscript.Expr.Error) { onError(Std.string(e)); new js.jquery.JQuery(); }
+		return call("editMaterial", [props]);
 	}
-	#end
 	#end
 
 	public function load( script : String, ?fileName : String ) {
@@ -54,6 +69,7 @@ class MaterialScript extends MaterialSetup {
 		if( fileName == null ) fileName = "Renderer.hx";
 		this.fileName = fileName;
 		var parser = new hscript.Parser();
+		parser.allowTypes = true;
 		var expr = try parser.parseString(script, fileName) catch( e : hscript.Expr.Error ) { onError(Std.string(e)); return; }
 		var interp = new hscript.Interp();
 		variables = interp.variables;
