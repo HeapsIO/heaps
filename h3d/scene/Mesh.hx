@@ -12,6 +12,10 @@ class Mesh extends Object {
 		this.material = mat;
 	}
 
+	public function getMeshMaterials() {
+		return [material];
+	}
+
 	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
 		b = super.getBounds(b, rec);
 		if( primitive == null || flags.has(FIgnoreBounds) )
@@ -50,7 +54,7 @@ class Mesh extends Object {
 
 	override function getMaterials( ?a : Array<h3d.mat.Material> ) {
 		if( a == null ) a = [];
-		if( material != null ) a.push(material);
+		if( material != null && a.indexOf(material) < 0 ) a.push(material);
 		return super.getMaterials(a);
 	}
 

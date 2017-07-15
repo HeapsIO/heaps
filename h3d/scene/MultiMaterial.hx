@@ -9,9 +9,13 @@ class MultiMaterial extends Mesh {
 		this.materials = mats == null ? [material] : mats;
 	}
 
+	override function getMeshMaterials() {
+		return materials.copy();
+	}
+
 	override function clone( ?o : Object ) {
 		var m = o == null ? new MultiMaterial(null,materials) : cast o;
-		m.materials = [for( m in materials ) cast m.clone()];
+		m.materials = [for( m in materials ) if( m == null ) null else cast m.clone()];
 		super.clone(m);
 		m.material = m.materials[0];
 		return m;
@@ -27,7 +31,7 @@ class MultiMaterial extends Mesh {
 
 	override function getMaterialByName( name : String ) : h3d.mat.Material {
 		for( m in materials )
-			if( m.name == name )
+			if( m != null && m.name == name )
 				return m;
 		return super.getMaterialByName(name);
 	}
@@ -35,7 +39,7 @@ class MultiMaterial extends Mesh {
 	override function getMaterials( ?a : Array<h3d.mat.Material> ) {
 		if( a == null ) a = [];
 		for( m in materials )
-			if( m != null )
+			if( m != null && a.indexOf(m) < 0 )
 				a.push(m);
 		for( o in children )
 			o.getMaterials(a);
