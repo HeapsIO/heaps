@@ -72,7 +72,10 @@ class CameraController extends h3d.scene.Object {
 		targetPos.set(r, Math.atan2(pos.y, pos.x), Math.acos(pos.z / r));
 		targetPos.x *= targetOffset.w;
 
-		if( !animate ) toTarget();
+		if( !animate )
+			toTarget();
+		else
+			syncCamera(); // reset camera to current
 	}
 
 	/**
@@ -175,6 +178,16 @@ class CameraController extends h3d.scene.Object {
 		}
 	}
 
+	function syncCamera() {
+		var cam = getScene().camera;
+		cam.target.load(curOffset);
+		cam.target.w = 1;
+		cam.pos.set( distance * Math.cos(theta) * Math.sin(phi) + cam.target.x, distance * Math.sin(theta) * Math.sin(phi) + cam.target.y, distance * Math.cos(phi) + cam.target.z );
+		cam.zNear = distance * 0.01;
+		cam.zFar = distance * 100;
+		cam.fovY = curOffset.w;
+	}
+
 	override function sync(ctx:RenderContext) {
 
 		if( moveX != 0 ) {
@@ -198,12 +211,7 @@ class CameraController extends h3d.scene.Object {
 		curOffset.lerp(curOffset, targetOffset, dt);
 		curPos.lerp(curPos, targetPos, dt );
 
-		cam.target.load(curOffset);
-		cam.target.w = 1;
-		cam.pos.set( distance * Math.cos(theta) * Math.sin(phi) + cam.target.x, distance * Math.sin(theta) * Math.sin(phi) + cam.target.y, distance * Math.cos(phi) + cam.target.z );
-		cam.zNear = distance * 0.01;
-		cam.zFar = distance * 100;
-		cam.fovY = curOffset.w;
+		syncCamera();
 
 		super.sync(ctx);
 	}
