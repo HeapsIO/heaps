@@ -22,13 +22,14 @@ class MaterialDatabase {
 	}
 
 	function save() {
-		#if sys
-		var path = haxe.macro.Compiler.getDefine("resourcesPath");
-		if( path == null ) path = "res";
-		sys.io.File.saveContent(path + "/" + file, haxe.Json.stringify(db, "\t"));
-		#else
-		throw "Can't save material props database " + file;
+		#if (sys || nodejs)
+		var fs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		if( fs != null ) {
+			sys.io.File.saveContent(fs.baseDir + "/" + file, haxe.Json.stringify(db, "\t"));
+			return;
+		}
 		#end
+		throw "Can't save material props database " + file;
 	}
 
 	public function loadProps( material : Material, setup : MaterialSetup ) {
@@ -62,7 +63,7 @@ class MaterialDatabase {
 
 		var currentProps = material.props;
 		setup.initModelMaterial(material); // reset to default
-		if( Std.string(material.props) == Std.string(currentProps) ) {
+		if( currentProps == null || Std.string(material.props) == Std.string(currentProps) ) {
 			// cleanup
 			while( path.length > 0 ) {
 				var name = path.pop();
