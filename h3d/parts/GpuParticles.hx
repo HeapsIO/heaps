@@ -572,7 +572,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				calcEmit = g.emitMode;
 				switch( g.emitMode ) {
 				case ParentBounds:
+					var ignore = flags.has(FIgnoreBounds);
+					flags.set(FIgnoreBounds, true);
 					ebounds = parent.getBounds();
+					flags.set(FIgnoreBounds, ignore);
 					ebounds.transform(getInvPos());
 				case VolumeBounds, CameraBounds:
 					ebounds = volumeBounds;
