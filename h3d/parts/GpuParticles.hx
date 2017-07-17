@@ -446,6 +446,8 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	}
 
 	override function getBounds(?b:h3d.col.Bounds, rec = false) {
+		if( flags.has(FIgnoreBounds) )
+			return super.getBounds(b, rec);
 		for( g in groups )
 			if( g.needRebuild ) {
 				var s = getScene();
