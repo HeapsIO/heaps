@@ -49,6 +49,10 @@ class ManagedBuffer {
 		mem.driver.uploadVertexBytes(vbuf, start, vertices, data, dataPos);
 	}
 
+	public function readVertexBytes( start : Int, vertices : Int, data : haxe.io.Bytes, dataPos = 0 ) {
+		mem.driver.readVertexBytes(vbuf, start, vertices, data, dataPos);
+	}
+
 	public function alloc(vertices,align) {
 		var p = allocPosition(vertices, align);
 		if( p < 0 )

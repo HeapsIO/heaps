@@ -115,6 +115,23 @@ class Buffer {
 		}
 	}
 
+	public function readBytes( bytes : haxe.io.Bytes, bytesPosition : Int, vertices : Int,  startVertice : Int = 0 ) {
+		var cur = this;
+		while( cur != null && startVertice >= cur.vertices ) {
+			startVertice -= cur.vertices;
+			cur = cur.next;
+		}
+		while( vertices > 0 ) {
+			if( cur == null ) throw "Too many vertices";
+			var count = vertices + startVertice > cur.vertices ? cur.vertices - startVertice : vertices;
+			cur.buffer.readVertexBytes(cur.position + startVertice, count, bytes, bytesPosition);
+			startVertice = 0;
+			bytesPosition += count * buffer.stride * 4;
+			vertices -= count;
+			cur = cur.next;
+		}
+	}
+
 	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags, ?allocPos ) {
 		var nvert = Std.int(v.length / stride);
 		var b = new Buffer(nvert, stride, flags, allocPos);

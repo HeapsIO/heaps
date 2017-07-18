@@ -233,6 +233,14 @@ class Driver {
 	public function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 	}
 
+	public function readVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+		throw "Driver does not allow to read vertex bytes";
+	}
+
+	public function readIndexBytes( v : IndexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+		throw "Driver does not allow to read index bytes";
+	}
+
 	/**
 		Returns true if we could copy the texture, false otherwise (not supported by driver or mismatch in size/format)
 	**/

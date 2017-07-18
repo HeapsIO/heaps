@@ -364,12 +364,42 @@ class DirectXDriver extends h3d.impl.Driver {
 		updateBuffer(i.res, @:privateAccess buf.b.offset(bufPos << 1), startIndice << 1, indiceCount << 1);
 	}
 
-	override public function uploadVertexBuffer(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
+	override function uploadVertexBuffer(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
 		updateBuffer(v.res, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
 	}
 
-	override public function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+	override function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
 		updateBuffer(v.res, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
+	}
+
+	override function readIndexBytes(v:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		var tmp = dx.Driver.createBuffer(indiceCount << 1, Staging, None, CpuRead | CpuWrite, None, 0, null);
+		box.left = startIndice << 1;
+		box.top = 0;
+		box.front = 0;
+		box.right = (startIndice + indiceCount) << 1;
+		box.bottom = 1;
+		box.back = 1;
+		tmp.copySubresourceRegion(0, 0, 0, 0, v.res, 0, box);
+		var ptr = tmp.map(0, Read, true, null);
+		@:privateAccess buf.b.blit(bufPos, ptr, 0, indiceCount << 1);
+		tmp.unmap(0);
+		tmp.release();
+	}
+
+	override function readVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		var tmp = dx.Driver.createBuffer(vertexCount * v.stride * 4, Staging, None, CpuRead | CpuWrite, None, 0, null);
+		box.left = startVertex * v.stride * 4;
+		box.top = 0;
+		box.front = 0;
+		box.right = (startVertex + vertexCount) * 4 * v.stride;
+		box.bottom = 1;
+		box.back = 1;
+		tmp.copySubresourceRegion(0, 0, 0, 0, v.res, 0, box);
+		var ptr = tmp.map(0, Read, true, null);
+		@:privateAccess buf.b.blit(bufPos, ptr, 0, vertexCount * v.stride * 4);
+		tmp.unmap(0);
+		tmp.release();
 	}
 
 	override function uploadTextureBitmap(t:h3d.mat.Texture, bmp:hxd.BitmapData, mipLevel:Int, side:Int) {
