@@ -18,29 +18,85 @@ class SceneSerializer extends hxbit.Serializer {
 	var shaderUID = 0;
 	var shaderIndexes = new Map<hxsl.Shader,Int>();
 	var cachedShaders = new Array<hxsl.Shader>();
+	var cachedTextures = new Map<Int,h3d.mat.Texture>();
 
 	function addTexture( t : h3d.mat.Texture ) {
 		if( t == null ) {
 			addInt(0);
 			return true;
 		}
-		if( t.name != null ) {
+		addInt(t.id);
+		if( cachedTextures.exists(t.id) )
+			return true;
+		addInt(t.filter.getIndex());
+		addInt(t.mipMap.getIndex());
+		addInt(t.wrap.getIndex());
+		cachedTextures.set(t.id, t);
+		if( t.name != null && hxd.res.Loader.currentInstance.exists(t.name) ) {
 			addInt(1);
 			addString(t.name);
+			return true;
+		}
+		if( t.flags.has(Serialize) ) {
+			addInt(2);
+			var pix = t.capturePixels();
+			addInt(t.width);
+			addInt(t.height);
+			addInt(t.flags.toInt());
+			addInt(t.format.getIndex());
+			addInt(pix.format.getIndex());
+			addBytesSub(pix.bytes, 0, t.width * t.height * hxd.Pixels.bytesPerPixel(pix.format));
+			return true;
+		}
+		var tch = Std.instance(t, h3d.mat.TextureChannels);
+		if( tch != null ) {
+			addInt(3);
+			var channels = @:privateAccess tch.channels;
+			addInt(channels.length);
+			for( i in 0...channels.length ) {
+				var c = channels[i];
+				if( c == null ) continue;
+				if( c.r == null ) return false;
+				addInt(i);
+				addString(c.r.entry.path);
+				addInt(c.c.toInt());
+			}
 			return true;
 		}
 		return false;
 	}
 
 	function getTexture() {
-		switch( getInt() ) {
-		case 0:
+		var tid = getInt();
+		if( tid == 0 )
 			return null;
+		var t = cachedTextures.get(tid);
+		if( t != null )
+			return t;
+		var filter = h3d.mat.Data.Filter.createByIndex(getInt());
+		var mipmap = h3d.mat.Data.MipMap.createByIndex(getInt());
+		var wrap = h3d.mat.Data.Wrap.createByIndex(getInt());
+		switch( getInt() ) {
 		case 1:
-			return resolveTexture(getString());
+			t = resolveTexture(getString());
+		case 2:
+			var width = getInt(), height = getInt();
+			var flags : haxe.EnumFlags<h3d.mat.Data.TextureFlags> = haxe.EnumFlags.ofInt(getInt());
+			var format = h3d.mat.Data.TextureFormat.createByIndex(getInt());
+			var pixFormat = h3d.mat.Data.TextureFormat.createByIndex(getInt());
+			var flags = [for( f in h3d.mat.Data.TextureFlags.createAll() ) if( flags.has(f) ) f];
+			t = new h3d.mat.Texture(width, height, flags, format);
+			t.uploadPixels(new hxd.Pixels(width, height, getBytes(), pixFormat));
+		case 3:
+			throw "TODO";
 		default:
 			throw "assert";
 		}
+		t.filter = filter;
+		t.mipMap = mipmap;
+		t.wrap = wrap;
+		cachedTextures.set(tid, t);
+		return t;
 	}
 
 	function resolveTexture( path : String ) {
@@ -96,7 +152,7 @@ class SceneSerializer extends hxbit.Serializer {
 	}
 
 	function addShaderVar( v : hxsl.Ast.TVar, s : hxsl.Shader ) {
-		if( !canSerializeVar(v) )
+		if( v.kind != Param )
 			return;
 		switch( v.type ) {
 		case TStruct(vl):
@@ -104,6 +160,10 @@ class SceneSerializer extends hxbit.Serializer {
 				addShaderVar(v, s);
 			return;
 		default:
+		}
+		if( !canSerializeVar(v) ) {
+			shaderVarIndex++;
+			return;
 		}
 		var val : Dynamic = s.getParamValue(shaderVarIndex++);
 		switch( v.type ) {
@@ -123,7 +183,7 @@ class SceneSerializer extends hxbit.Serializer {
 			if( !addTexture(val) )
 				throw "Cannot serialize unnamed texture " + s+"."+v.name+" = "+val;
 		default:
-			throw "Cannot serialize macro var " + v.name+":"+hxsl.Ast.Tools.toString(v.type);
+			throw "Cannot serialize macro var " + v.name+":"+hxsl.Ast.Tools.toString(v.type)+" in "+s;
 		}
 	}
 

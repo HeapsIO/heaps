@@ -4,6 +4,7 @@ import h3d.mat.Data;
 class TextureChannels extends Texture {
 
 	var pixels : hxd.Pixels;
+	var channels : Array<{ r : hxd.res.Image, c : hxd.Pixels.Channel }> = [];
 	public var allowAsync : Bool = true;
 
 	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat, ?allocPos : h3d.impl.AllocPos ) {
@@ -22,9 +23,14 @@ class TextureChannels extends Texture {
 		@:privateAccess if( t != null ) mem.deleteTexture(this);
 	}
 
-	@:noDebug
 	function setPixels( c : hxd.Pixels.Channel, src : hxd.Pixels, srcChannel : hxd.Pixels.Channel ) {
 		reset();
+		channels[c.toInt()] = { r : null, c : srcChannel };
+		setPixelsInner(c, src, srcChannel);
+	}
+
+	@:noDebug
+	function setPixelsInner( c : hxd.Pixels.Channel, src : hxd.Pixels, srcChannel : hxd.Pixels.Channel ) {
 		if( src.width != width || src.height != height )
 			throw "Size mismatch : " + src.width + "x" + src.height + " should be " + width + "x" + height;
 		var bpp = hxd.Pixels.bytesPerPixel(pixels.format);
@@ -45,15 +51,16 @@ class TextureChannels extends Texture {
 	public function setResource( c : hxd.Pixels.Channel, res : hxd.res.Image, ?srcChannel : hxd.Pixels.Channel ) {
 		if( srcChannel == null ) srcChannel = c;
 		if( !allowAsync || !res.getFormat().useAsyncDecode )
-			setPixels(c, res.getPixels(), srcChannel);
+			setPixelsInner(c, res.getPixels(), srcChannel);
 		else {
 			res.entry.loadBitmap(function(bmp) {
 				var bmp = bmp.toBitmap();
 				var pix = bmp.getPixels();
 				bmp.dispose();
-				setPixels(c, pix, srcChannel);
+				setPixelsInner(c, pix, srcChannel);
 			});
 		}
+		channels[c.toInt()] = { r : res, c : srcChannel };
 		res.watch(function() if( t != null ) setResource(c, res, srcChannel));
 	}
 

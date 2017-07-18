@@ -364,6 +364,7 @@ class World extends Object {
 				if( b == null ) {
 					b = new h3d.scene.Mesh(new h3d.prim.BigPrimitive(getStride(model), true), c.root);
 					b.name = g.m.name;
+					b.flags.set(FNoSerialize, true);
 					c.buffers.set(g.m.bits, b);
 					initMaterial(b, g.m);
 				}

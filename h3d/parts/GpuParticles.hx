@@ -512,7 +512,8 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	}
 
 	function set_seed(s) {
-		for( g in groups ) g.needRebuild = true;
+		if( groups != null )
+			for( g in groups ) g.needRebuild = true;
 		return seed = s;
 	}
 
@@ -888,5 +889,35 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			return h3d.mat.Texture.fromColor(0xFF00FF);
 		}
 	}
+
+	#if hxbit
+	override function serialize( ctx : hxbit.Serializer ) {
+		var old = primitive;
+		var oldMat = materials;
+		primitive = null;
+		materials = [];
+		super.serialize(ctx);
+		primitive = old;
+		materials = oldMat;
+	}
+	override function customSerialize(ctx:hxbit.Serializer) {
+		super.customSerialize(ctx);
+		ctx.addString(resourcePath);
+		ctx.addFloat(amount);
+		if( resourcePath == null )
+			ctx.addDynamic(save());
+
+	}
+	override function customUnserialize(ctx:hxbit.Serializer) {
+		super.customUnserialize(ctx);
+		resourcePath = ctx.getString();
+		amount = ctx.getFloat();
+		groups = [];
+		if( resourcePath != null )
+			load(haxe.Json.parse(hxd.res.Loader.currentInstance.load(resourcePath).toText()), resourcePath);
+		else
+			load(ctx.getDynamic());
+	}
+	#end
 
 }

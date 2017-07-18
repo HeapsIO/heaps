@@ -239,13 +239,13 @@ class Texture {
 	}
 
 	/**
-		Downloads the current texture data from the GPU. On some platforms, color might be premultiplied by Alpha unless withAlpha = true.
+		Downloads the current texture data from the GPU.
 		Beware, this is a very slow operation that shouldn't be done during rendering.
 	**/
-	public function capturePixels( withAlpha = false ) {
+	public function capturePixels() {
 		#if flash
 
-		var twoPassCapture = #if flash withAlpha #else false #end;
+		var twoPassCapture = true;
 
 		var e = h3d.Engine.getCurrent();
 		var oldW = e.width, oldH = e.height;

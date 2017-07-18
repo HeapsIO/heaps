@@ -112,6 +112,10 @@ enum TextureFlags {
 		The texture is being currently loaded. Set onLoaded to get event when loading is complete.
 	**/
 	Loading;
+	/**
+		Allow texture data serialization when found in a scene (for user generated textures)
+	**/
+	Serialize;
 }
 
 typedef TextureFormat = hxd.PixelFormat;

@@ -283,4 +283,65 @@ class BigPrimitive extends Primitive {
 			tmpIdx[idxPos++] = idx[i+startTri*3] + start;
 	}
 
+	#if hxbit
+	override function customSerialize(ctx:hxbit.Serializer) {
+		flush();
+		ctx.addBool(isRaw);
+		ctx.addInt(stride);
+		ctx.addFloat(bounds.xMin);
+		ctx.addFloat(bounds.yMin);
+		ctx.addFloat(bounds.zMin);
+		ctx.addFloat(bounds.xMax);
+		ctx.addFloat(bounds.yMax);
+		ctx.addFloat(bounds.zMax);
+		ctx.addInt(buffers.length);
+		var reqSize = 0;
+		for( a in allIndexes ) {
+			var sz = a.count << 1;
+			if( reqSize < sz ) reqSize = sz;
+		}
+		for( b in buffers ) {
+			var sz = (b.vertices * stride) << 2;
+			if( reqSize < sz ) reqSize = sz;
+		}
+		var tmpBytes = haxe.io.Bytes.alloc(reqSize);
+		for( i in 0...buffers.length ) {
+			var idx = allIndexes[i];
+			idx.readBytes(tmpBytes, 0, idx.count);
+			ctx.addInt(idx.count);
+			ctx.addBytesSub(tmpBytes, 0, idx.count << 1);
+
+			var b = buffers[i];
+			b.readBytes(tmpBytes, 0, b.vertices);
+			ctx.addInt(b.vertices);
+			ctx.addBytesSub(tmpBytes, 0, b.vertices * stride << 2);
+		}
+	}
+	override function customUnserialize(ctx:hxbit.Serializer) {
+		isRaw = ctx.getBool();
+		stride = ctx.getInt();
+		bounds = new h3d.col.Bounds();
+		bounds.xMin = ctx.getFloat();
+		bounds.yMin = ctx.getFloat();
+		bounds.zMin = ctx.getFloat();
+		bounds.xMin = ctx.getFloat();
+		bounds.yMax = ctx.getFloat();
+		bounds.zMax = ctx.getFloat();
+		var count = ctx.getInt();
+		buffers = [];
+		allIndexes = [];
+		for( i in 0...count ) {
+			var nidx = ctx.getInt();
+			var idx = new h3d.Indexes(nidx);
+			idx.uploadBytes(ctx.getBytes(), 0, nidx);
+			allIndexes.push(idx);
+
+			var nvert = ctx.getInt();
+			var buf = new h3d.Buffer(nvert, stride);
+			buf.uploadBytes(ctx.getBytes(), 0, nvert);
+			buffers.push(buf);
+		}
+	}
+	#end
+
 }

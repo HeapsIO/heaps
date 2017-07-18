@@ -160,7 +160,7 @@ class Inspector {
 		function load( mode = "rgba" ) {
 			p.j.html("Loading...");
 			haxe.Timer.delay(function() {
-				var bmp = t.capturePixels(true);
+				var bmp = t.capturePixels();
 				function setChannel(v) {
 					var bits = v * 8;
 					for( x in 0...bmp.width )

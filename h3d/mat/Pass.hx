@@ -214,7 +214,7 @@ class Pass implements h3d.impl.Serializable {
 			}
 		}
 		setPassName(name);
-		//loadBits(bits);
+		loadBits(bits);
 	}
 	#end
 
