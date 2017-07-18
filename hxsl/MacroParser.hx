@@ -24,7 +24,7 @@ class MacroParser {
 			v.qualifiers.push(Range(Std.parseFloat(a),Std.parseFloat(b)));
 			return;
 		default:
-			error("Invalid meta parameter", m.pos);
+			error("Invalid meta parameter for "+m.name, m.pos);
 		}
 		switch( m.name ) {
 		case "var":

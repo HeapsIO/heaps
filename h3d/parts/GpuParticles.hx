@@ -913,6 +913,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		resourcePath = ctx.getString();
 		amount = ctx.getFloat();
 		groups = [];
+		bounds = new h3d.col.Bounds();
 		if( resourcePath != null )
 			load(haxe.Json.parse(hxd.res.Loader.currentInstance.load(resourcePath).toText()), resourcePath);
 		else

@@ -15,6 +15,8 @@ class Shader {
 	}
 
 	function initialize() {
+		if( shader != null )
+			return;
 		var cl : Dynamic = std.Type.getClass(this);
 		shader = cl._SHADER;
 		constModified = true;

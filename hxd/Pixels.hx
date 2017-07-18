@@ -32,6 +32,7 @@ abstract PixelsARGB(Pixels) to Pixels {
 	public var B = 2;
 	public var A = 3;
 	public inline function toInt() return this;
+	public static inline function fromInt( v : Int ) : Channel return cast v;
 }
 
 @:noDebug

@@ -176,15 +176,13 @@ class Material extends BaseMaterial {
 	}
 
 	public function refreshProps() {
-		if( props != null ) MaterialSetup.current.applyProps(this);
+		if( props != null && mainPass != null ) MaterialSetup.current.applyProps(this);
 	}
 
 	#if hxbit
 
-	static function tempDisable( m : Material ) {
-	}
-
 	function customSerialize( ctx : hxbit.Serializer ) {
+		ctx.addInt(blendMode.getIndex());
 		ctx.addDynamic(props);
 	}
 
@@ -192,8 +190,14 @@ class Material extends BaseMaterial {
 		var last = mainPass.shaders;
 		while( last.next != null ) last = last.next;
 		mshader = cast last.s;
+
+		var old = passes;
+		passes = null;
+		blendMode = BlendMode.createByIndex(ctx.getInt());
 		props = ctx.getDynamic();
+		passes = old;
 	}
+
 	#end
 
 }

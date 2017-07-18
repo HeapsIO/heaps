@@ -52,12 +52,18 @@ class SceneSerializer extends hxbit.Serializer {
 		if( tch != null ) {
 			addInt(3);
 			var channels = @:privateAccess tch.channels;
-			addInt(channels.length);
-			for( i in 0...channels.length ) {
+			addInt(t.width);
+			addInt(t.height);
+			addInt(t.flags.toInt());
+			addInt(t.format.getIndex());
+			for( i in 0...4 ) {
 				var c = channels[i];
-				if( c == null ) continue;
-				if( c.r == null ) return false;
-				addInt(i);
+				if( c == null ) {
+					addString(null);
+					continue;
+				}
+				if( c.r == null )
+					return false;
 				addString(c.r.entry.path);
 				addInt(c.c.toInt());
 			}
@@ -76,19 +82,30 @@ class SceneSerializer extends hxbit.Serializer {
 		var filter = h3d.mat.Data.Filter.createByIndex(getInt());
 		var mipmap = h3d.mat.Data.MipMap.createByIndex(getInt());
 		var wrap = h3d.mat.Data.Wrap.createByIndex(getInt());
-		switch( getInt() ) {
+		var kind = getInt();
+		switch( kind ) {
 		case 1:
 			t = resolveTexture(getString());
-		case 2:
+		case 2,3:
 			var width = getInt(), height = getInt();
 			var flags : haxe.EnumFlags<h3d.mat.Data.TextureFlags> = haxe.EnumFlags.ofInt(getInt());
 			var format = h3d.mat.Data.TextureFormat.createByIndex(getInt());
-			var pixFormat = h3d.mat.Data.TextureFormat.createByIndex(getInt());
 			var flags = [for( f in h3d.mat.Data.TextureFlags.createAll() ) if( flags.has(f) ) f];
-			t = new h3d.mat.Texture(width, height, flags, format);
-			t.uploadPixels(new hxd.Pixels(width, height, getBytes(), pixFormat));
-		case 3:
-			throw "TODO";
+			if( kind == 2 ) {
+				var pixFormat = h3d.mat.Data.TextureFormat.createByIndex(getInt());
+				t = new h3d.mat.Texture(width, height, flags, format);
+				t.uploadPixels(new hxd.Pixels(width, height, getBytes(), pixFormat));
+			} else {
+				var ct = new h3d.mat.TextureChannels(width, height, flags, format);
+				ct.allowAsync = false;
+				for( i in 0...4 ) {
+					var resPath = getString();
+					if( resPath == null ) continue;
+					var c = hxd.Pixels.Channel.fromInt(getInt());
+					ct.setResource(hxd.Pixels.Channel.fromInt(i), hxd.res.Loader.currentInstance.load(resPath).toImage(), c);
+				}
+				t = ct;
+			}
 		default:
 			throw "assert";
 		}
@@ -126,6 +143,10 @@ class SceneSerializer extends hxbit.Serializer {
 			addShaderVar(v, s);
 	}
 
+	function loadShader( name : String ) : hxsl.Shader {
+		return null;
+	}
+
 	public function getShader() {
 		var id = getInt();
 		if( id == 0 )
@@ -135,8 +156,12 @@ class SceneSerializer extends hxbit.Serializer {
 			return s;
 		var sname = getString();
 		var cl : Class<hxsl.Shader> = cast Type.resolveClass(sname);
-		if( cl == null ) throw "Missing shader " + sname;
-		s = Type.createEmptyInstance(cl);
+		if( cl == null ) {
+			s = loadShader(sname);
+			if( s == null )
+				throw "Missing shader " + sname;
+		} else
+			s = Type.createEmptyInstance(cl);
 		@:privateAccess s.initialize();
 		for( v in @:privateAccess s.shader.data.vars ) {
 			if( !canSerializeVar(v) ) continue;

@@ -255,8 +255,6 @@ class Skin extends MultiMaterial {
 					break;
 				}
 		}
-		for( p in material.getPasses() )
-			trace(p.name+":"+[for( s in p.getShaders() ) s.toString()]);
 	}
 	#end
 
