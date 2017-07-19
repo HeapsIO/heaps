@@ -46,11 +46,6 @@ class Convert {
 	}
 
 	public static function toMP3( srcFile : String, dstFile : String ) {
-		command("lame", ["--resample", "44100", "--silent", "-h", srcFile, dstFile],dstFile);
-	}
-
-	public static function toOGG( srcFile : String, dstFile : String ) {
-		command("oggenc2", ["--resample", "44100", "-Q", srcFile, "-o", dstFile],dstFile);
 	}
 
 }

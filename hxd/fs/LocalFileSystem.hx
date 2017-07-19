@@ -22,79 +22,6 @@ private class LocalEntry extends FileEntry {
 		this.name = name;
 		this.relPath = relPath;
 		this.file = file;
-		if( fs.createHMD && extension == "fbx" )
-			convertToHMD();
-		if( fs.createMP3 && extension == "wav" )
-			convertToMP3();
-		if( fs.createOGG && extension == "wav" )
-			convertToOGG();
-	}
-
-	static var INVALID_CHARS = ~/[^A-Za-z0-9_]/g;
-
-	function convertToHMD() {
-		function getHMD() {
-			var fbx = null;
-			var content = getBytes();
-			try fbx = hxd.fmt.fbx.Parser.parse(content.toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
-			var hmdout = new hxd.fmt.fbx.HMDOut();
-			hmdout.load(fbx);
-			var hmd = hmdout.toHMD(null, !(StringTools.startsWith(name, "Anim_") || name.toLowerCase().indexOf("_anim_") > 0));
-			var out = new haxe.io.BytesOutput();
-			new hxd.fmt.hmd.Writer(out).write(hmd);
-			return out.getBytes();
-		}
-		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".hmd";
-		#if air3
-		var target = new flash.filesystem.File(target);
-		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
-			var hmd = getHMD();
-			var out = new flash.filesystem.FileStream();
-			out.open(target, flash.filesystem.FileMode.WRITE);
-			out.writeBytes(hmd.getData());
-			out.close();
-			checkExists = true;
-		}
-		#else
-		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
-		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() ) {
-			var hmd = getHMD();
-			sys.io.File.saveBytes(target, hmd);
-		}
-		#end
-		file = target;
-	}
-
-	function convertToMP3() {
-		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".mp3";
-		#if air3
-		var target = new flash.filesystem.File(target);
-		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
-			hxd.snd.Convert.toMP3(file.nativePath, target.nativePath);
-			checkExists = true;
-		}
-		#else
-		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
-		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() )
-			hxd.snd.Convert.toMP3(file, target);
-		#end
-		file = target;
-	}
-
-	function convertToOGG() {
-		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".ogg";
-		#if air3
-		var target = new flash.filesystem.File(target);
-		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
-			hxd.snd.Convert.toOGG(file.nativePath, target.nativePath);
-			checkExists = true;
-		}
-		#else
-		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
-		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() )
-			hxd.snd.Convert.toOGG(file, target);
-		#end
-		file = target;
 	}
 
 	override function getSign() : Int {
@@ -209,7 +136,11 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function load( ?onReady : Void -> Void ) : Void {
+		#if macro
+		onReady();
+		#else
 		if( onReady != null ) haxe.Timer.delay(onReady, 1);
+		#end
 	}
 
 	override function loadBitmap( onLoaded : hxd.fs.LoadedBitmap -> Void ) : Void {
@@ -232,6 +163,8 @@ private class LocalEntry extends FileEntry {
 			onLoaded(new LoadedBitmap(image));
 		};
 		image.src = "file://"+file;
+		#elseif (macro || dataOnly)
+		throw "Not implemented";
 		#else
 		var bmp = new hxd.res.Image(this).toBitmap();
 		onLoaded(new hxd.fs.LoadedBitmap(bmp));
@@ -343,7 +276,7 @@ private class LocalEntry extends FileEntry {
 				WATCH_LIST = [];
 				#if air3
 				flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, function(_) checkFiles());
-				#else
+				#elseif !macro
 				haxe.MainLoop.add(checkFiles);
 				#end
 			}
@@ -365,14 +298,14 @@ class LocalFileSystem implements FileSystem {
 
 	var root : FileEntry;
 	var fileCache = new Map<String,{r:LocalEntry}>();
+	var converts : Map<String, hxd.fs.Convert>;
 	public var baseDir(default,null) : String;
-	var createHMD : Bool = true;
-	public var createMP3 : Bool;
-	public var createOGG : Bool;
 	public var tmpDir : String;
 
 	public function new( dir : String ) {
 		baseDir = dir;
+		converts = new Map();
+		addConvert(new Convert.ConvertFBX2HMD());
 		#if air3
 		var froot = new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + baseDir);
 		if( !froot.exists ) throw "Could not find dir " + dir;
@@ -403,6 +336,22 @@ class LocalFileSystem implements FileSystem {
 		#end
 	}
 
+	public function addConvert( c : hxd.fs.Convert ) {
+		converts.set(c.sourceExt, c);
+	}
+
+	public dynamic function onConvert( f : hxd.fs.FileEntry ) {
+	}
+
+	public function getAbsolutePath( f : FileEntry ) : String {
+		var f = cast(f, LocalEntry);
+		#if flash
+		return f.file.nativePath;
+		#else
+		return f.file;
+		#end
+	}
+
 	public function getRoot() : FileEntry {
 		return root;
 	}
@@ -416,15 +365,19 @@ class LocalFileSystem implements FileSystem {
 		var f = new flash.filesystem.File(baseDir + path);
 		// ensure exact case / no relative path
 		if( check ) f.canonicalize();
-		if( !check || (f.exists && f.nativePath.split("\\").join("/") == baseDir + path) )
+		if( !check || (f.exists && f.nativePath.split("\\").join("/") == baseDir + path) ) {
 			e = new LocalEntry(this, path.split("/").pop(), path, f);
+			convert(e);
+		}
 		#else
 		var f = sys.FileSystem.fullPath(baseDir + path);
 		if( f == null )
 			return null;
 		f = f.split("\\").join("/");
-		if( !check || (f == baseDir + path && sys.FileSystem.exists(f)) )
+		if( !check || (f == baseDir + path && sys.FileSystem.exists(f)) ) {
 			e = new LocalEntry(this, path.split("/").pop(), path, f);
+			convert(e);
+		}
 		#end
 		fileCache.set(path, {r:e});
 		return e;
@@ -445,6 +398,137 @@ class LocalFileSystem implements FileSystem {
 	public function dispose() {
 		fileCache = new Map();
 	}
+
+	var times : Map<String,Float>;
+	var hashes : Dynamic;
+	var addedPaths = new Map();
+
+	function convert( e : LocalEntry ) {
+		var ext = e.extension;
+		var conv = converts.get(ext);
+		if( conv == null )
+			return;
+
+		var path = e.path;
+		var tmpFile = tmpDir + path.substr(0, -ext.length) + conv.destExt;
+		e.file = tmpFile;
+
+		if( times == null ) {
+			times = try haxe.Unserializer.run(hxd.File.getBytes(tmpDir + "times.dat").toString()) catch( e : Dynamic ) new Map<String,Float>();
+		}
+		var realFile = baseDir + path;
+		var time = sys.FileSystem.stat(realFile).mtime.getTime();
+		if( sys.FileSystem.exists(tmpFile) && time == times.get(path) )
+			return;
+		if( hashes == null ) {
+			hashes = try haxe.Json.parse(hxd.File.getBytes(tmpDir + "hashes.json").toString()) catch( e : Dynamic ) {};
+		}
+		var root : Dynamic = hashes;
+		for( p in new haxe.io.Path(path).dir.split("/") ) {
+			var f = Reflect.field(root, p);
+			if( f == null ) {
+				f = {};
+				Reflect.setField(root, p, f);
+			}
+			root = f;
+		}
+		var content = hxd.File.getBytes(realFile);
+		var hash = haxe.crypto.Sha1.make(content).toHex();
+		if( sys.FileSystem.exists(tmpFile) && hash == Reflect.field(root, e.name) ) {
+			times.set(path, time);
+			hxd.File.saveBytes(tmpDir + "times.dat", haxe.io.Bytes.ofString(haxe.Serializer.run(times)));
+			return;
+		}
+
+		Reflect.setField(root, e.name, hash);
+
+		var skipConvert = false;
+
+		#if sys
+		// prepare output dir
+		var parts = path.split("/");
+		parts.pop();
+		for( i in 0...parts.length ) {
+			var path = parts.slice(0, i + 1).join("/");
+			sys.FileSystem.createDirectory(tmpDir + path);
+		}
+
+		// previous repo compatibility
+		if( !sys.FileSystem.exists(tmpFile) ) {
+			var oldPath = tmpDir + "R_" + ~/[^A-Za-z0-9_]/g.replace(path, "_") + "." + conv.destExt;
+			if( sys.FileSystem.exists(oldPath) && sys.FileSystem.exists(".svn") ) {
+				oldPath = sys.FileSystem.fullPath(oldPath).split("\\").join("/"); // was wrong case !
+				var cwd = Sys.getCwd();
+				inline function command(cmd) {
+					Sys.println("> "+cmd);
+					var code = Sys.command(cmd);
+					if( code != 0 )
+						throw "Command '" + cmd + "' failed with exit code " + code;
+				}
+				var parts = path.split("/");
+				parts.pop();
+				for( i in 0...parts.length ) {
+					var path = parts.slice(0, i + 1).join("/");
+					if( addedPaths.exists(path) ) continue;
+					addedPaths.set(path, true);
+					try command("svn add " + tmpDir.substr(cwd.length) + path) catch( e : Dynamic ) {};
+				}
+				command("svn move " + oldPath.substr(cwd.length) + " " + tmpFile.substr(cwd.length));
+				skipConvert = true;
+			}
+		}
+		#end
+
+		if( !skipConvert ) {
+			onConvert(e);
+			conv.srcPath = realFile;
+			conv.dstPath = tmpFile;
+			conv.srcBytes = content;
+			conv.srcFilename = e.name;
+			conv.convert();
+			conv.srcPath = null;
+			conv.dstPath = null;
+			conv.srcBytes = null;
+			conv.srcFilename = null;
+		}
+
+		hxd.File.saveBytes(tmpDir + "hashes.json", haxe.io.Bytes.ofString(haxe.Json.stringify(hashes,"\t")));
+	}
+
+	/*
+	function convertToHmd( ) {
+		function getHMD() {
+			var fbx = null;
+			var content = getBytes();
+			try fbx = hxd.fmt.fbx.Parser.parse(content.toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
+			var hmdout = new hxd.fmt.fbx.HMDOut();
+			hmdout.load(fbx);
+			var hmd = hmdout.toHMD(null, !(StringTools.startsWith(name, "Anim_") || name.toLowerCase().indexOf("_anim_") > 0));
+			var out = new haxe.io.BytesOutput();
+			new hxd.fmt.hmd.Writer(out).write(hmd);
+			return out.getBytes();
+		}
+		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".hmd";
+		#if air3
+		var target = new flash.filesystem.File(target);
+		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
+			var hmd = getHMD();
+			var out = new flash.filesystem.FileStream();
+			out.open(target, flash.filesystem.FileMode.WRITE);
+			out.writeBytes(hmd.getData());
+			out.close();
+			checkExists = true;
+		}
+		#else
+		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
+		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() ) {
+			var hmd = getHMD();
+			sys.io.File.saveBytes(target, hmd);
+		}
+		#end
+		file = target;
+	}*/
+
 
 }
 

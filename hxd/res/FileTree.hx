@@ -74,10 +74,17 @@ class FileTree {
 		checkTmp = false;
 		this.options = options;
 		embedTypes = [];
-		return { tree : embedRec(""), types : embedTypes };
+		var fs = new hxd.fs.LocalFileSystem(this.path);
+		if( options.compressAsMp3 )
+			fs.addConvert(new hxd.fs.Convert.ConvertWAV2MP3());
+		else if( options.compressSounds )
+			fs.addConvert(new hxd.fs.Convert.ConvertWAV2MP3());
+		fs.tmpDir = options.tmpDir;
+		fs.onConvert = function(f) Sys.println("Converting " + f.path);
+		return { tree : embedRec(fs,""), types : embedTypes };
 	}
 
-	function embedRec( relPath : String ) {
+	function embedRec( fs : hxd.fs.LocalFileSystem, relPath : String ) {
 		var dir = this.path + relPath;
 		var data = { };
 		// make sure to rescan if one of the directories content has changed (file added or deleted)
@@ -87,7 +94,7 @@ class FileTree {
 			if( sys.FileSystem.isDirectory(path) ) {
 				if( f.charCodeAt(0) == ".".code || f.charCodeAt(0) == "_".code )
 					continue;
-				var sub = embedDir(f, relPath + "/" + f, path);
+				var sub = embedDir(fs, f, relPath + "/" + f, path);
 				if( sub != null )
 					Reflect.setField(data, f, sub);
 			} else {
@@ -96,78 +103,26 @@ class FileTree {
 				var ext = extParts.join(".");
 				if( ignoredExt.exists(ext.toLowerCase()) )
 					continue;
-				if( embedFile(f, ext, relPath + "/" + f, path) )
+				if( embedFile(fs, f, ext, relPath + "/" + f, path) )
 					Reflect.setField(data, f, true);
 			}
 		}
 		return data;
 	}
 
-	function embedDir( dir : String, relPath : String, fullPath : String ) {
-		var f = embedRec(relPath);
+	function embedDir( fs, dir : String, relPath : String, fullPath : String ) {
+		var f = embedRec(fs, relPath);
 		if( Reflect.fields(f).length == 0 )
 			return null;
 		return f;
 	}
 
-	function getTime( file : String ) {
-		if( !checkTmp ) {
-			if( !sys.FileSystem.exists(options.tmpDir) )
-				sys.FileSystem.createDirectory(options.tmpDir);
-			checkTmp = true;
-		}
-		return try sys.FileSystem.stat(file).mtime.getTime() catch( e : Dynamic ) -1.;
-	}
-
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
-	function embedFile( file : String, ext : String, relPath : String, fullPath : String ) {
+	function embedFile( fs : hxd.fs.LocalFileSystem, file : String, ext : String, relPath : String, fullPath : String ) {
 		var name = "R" + invalidChars.replace(relPath, "_");
 
-		switch( ext.toLowerCase() ) {
-		case "wav" if( options.compressSounds ):
-			if( options.compressAsMp3 ) {
-				var tmp = options.tmpDir + name + ".mp3";
-				if( getTime(tmp) < getTime(fullPath) ) {
-					Sys.println("Converting " + relPath);
-					try {
-						hxd.snd.Convert.toMP3(fullPath, tmp);
-						fullPath = tmp;
-					} catch( e : Dynamic ) {
-						Context.warning(e, pos);
-					}
-				} else {
-					fullPath = tmp;
-				}
-			} else {
-				var tmp = options.tmpDir + name + ".ogg";
-				if( getTime(tmp) < getTime(fullPath) ) {
-					Sys.println("Converting " + relPath);
-					try {
-						hxd.snd.Convert.toOGG(fullPath, tmp);
-						fullPath = tmp;
-					} catch( e : Dynamic ) {
-						Context.warning(e, pos);
-					}
-				} else {
-					fullPath = tmp;
-				}
-			}
-			Context.registerModuleDependency(currentModule, fullPath);
-		case "fbx":
-			var tmp = options.tmpDir + name + ".hmd";
-			if( getTime(tmp) < getTime(fullPath) ) {
-				Sys.println("Converting " + relPath);
-				var fbx = new hxd.fmt.fbx.HMDOut();
-				fbx.loadTextFile(sys.io.File.getContent(fullPath));
-				var h3d = fbx.toHMD(fullPath.substr(0,fullPath.length-file.length), !StringTools.startsWith(file,"Anim_") );
-				var out = sys.io.File.write(tmp);
-				new hxd.fmt.hmd.Writer(out).write(h3d);
-				out.close();
-			}
-			Context.registerModuleDependency(currentModule, fullPath);
-			fullPath = tmp;
-		default:
-		}
+		var f = fs.get(relPath.substr(1)); // convert
+		fullPath = fs.getAbsolutePath(f);
 
 		if( platform == Flash ) {
 			switch( ext.toLowerCase() ) {

@@ -237,7 +237,11 @@ class Library {
 				}
 				buf.indexes[i] = rid - 1;
 			}
+			#if neko
+			buf.vertexes = haxe.ds.Vector.fromArrayCopy(vertexes.getNative());
+			#else
 			buf.vertexes = haxe.ds.Vector.fromData(vertexes.getNative());
+			#end
 		}
 
 		entry.close();
@@ -335,6 +339,7 @@ class Library {
 		return def;
 	}
 
+	#if !dataOnly
 	public function makeObject( ?loadTexture : String -> h3d.mat.Texture ) : h3d.scene.Object {
 		if( loadTexture == null )
 			loadTexture = function(_) return h3d.mat.Texture.fromColor(0xFF00FF);
@@ -364,6 +369,7 @@ class Library {
 		}
 		return objs[0];
 	}
+	#end
 
 	public function loadAnimation( ?name : String ) : h3d.anim.Animation {
 

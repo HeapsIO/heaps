@@ -3,9 +3,21 @@ import hxd.fmt.pak.Data;
 
 class Build {
 
-	public static var excludedExt : Array<String> = [];
+	var fs : hxd.fs.LocalFileSystem;
+	var out : { bytes : Array<haxe.io.Bytes>, size : Int };
 
-	static function buildRec( dir : String, path : String, out : { bytes : Array<haxe.io.Bytes>, size : Int } ) {
+	public var excludedExt : Array<String> = [];
+	public var resPath : String = "res";
+	public var outPrefix : String = "res";
+	public var pakDiff = false;
+	public var compressSounds = true;
+	public var compressMP3 = false;
+
+	function new() {
+	}
+
+	function buildRec( path : String ) {
+		var dir = resPath + (path == "" ? "" : "/" + path);
 		var f = new File();
 		f.name = path.split("/").pop();
 		if( sys.FileSystem.isDirectory(dir) ) {
@@ -13,23 +25,16 @@ class Build {
 			f.isDirectory = true;
 			f.content = [];
 			for( name in sys.FileSystem.readDirectory(dir) ) {
-
 				if( name.charCodeAt(0) == ".".code || name.charCodeAt(0) == "_".code ) continue;
-
-				var s = buildRec(dir+"/"+name,path == "" ? name : path+"/"+name,out);
+				var s = buildRec(path == "" ? name : path+"/"+name);
 				if( s != null ) f.content.push(s);
 			}
 		} else {
-			switch( path.split("/").pop().split(".").pop().toLowerCase() ) {
-			case "fbx":
-				dir = getTemp(dir,path,"hmd");
-			case "wav":
-				dir = getTemp(dir, path, #if stb_ogg_sound "ogg" #else "mp3" #end);
-			case ext:
-				if( excludedExt.indexOf(ext) >= 0 )
-					return null;
-			}
-			var data = sys.io.File.getBytes(dir);
+			var ext = path.split("/").pop().split(".").pop().toLowerCase();
+			if( excludedExt.indexOf(ext) >= 0 )
+				return null;
+			var filePath = fs.getAbsolutePath(fs.get(path));
+			var data = sys.io.File.getBytes(filePath);
 			f.dataPosition = #if pakDiff out.bytes.length #else out.size #end;
 			f.dataSize = data.length;
 			f.checksum = haxe.crypto.Adler32.make(data);
@@ -39,24 +44,7 @@ class Build {
 		return f;
 	}
 
-	static var invalidChars = ~/[^A-Za-z0-9_]/g;
-	static function getTemp( dir : String, path : String, ext : String ) {
-		var name = "R_" + invalidChars.replace(path, "_");
-		var f = dir.substr(0, dir.length - path.length)+".tmp/"+name+"."+ext;
-		if( !sys.FileSystem.exists(f) || sys.FileSystem.stat(f).mtime.getTime() < sys.FileSystem.stat(dir).mtime.getTime() ) {
-			switch( ext ) {
-			case "mp3":
-				hxd.snd.Convert.toMP3(dir, f);
-			case "ogg":
-				hxd.snd.Convert.toOGG(dir, f);
-			default:
-				throw 'Missing \'$f\' required by \'$dir\'';
-			}
-		}
-		return f;
-	}
-
-	static function filter( root : File, old : File ) {
+	function filter( root : File, old : File ) {
 		if( root.isDirectory != old.isDirectory )
 			throw "Conflict : new " + root.name+" is a directory while old " + old.name+" is not";
 		if( root.isDirectory ) {
@@ -106,41 +94,74 @@ class Build {
 		return out;
 	}
 
-	public static function make( dir = "res", out = "res", ?pakDiff ) {
+	function makePak() {
+
+		if( resPath == null ) resPath = "res";
+		if( outPrefix == null ) outPrefix = "res";
+
+		if( !sys.FileSystem.exists(resPath) )
+			throw "'" + resPath + "' resource directory was not found";
+
+		fs = new hxd.fs.LocalFileSystem(resPath);
+		if( compressSounds && compressMP3 )
+			fs.addConvert(new hxd.fs.Convert.ConvertWAV2MP3());
+		else if( compressSounds )
+			fs.addConvert(new hxd.fs.Convert.ConvertWAV2OGG());
+		fs.onConvert = function(f) Sys.println("\tConverting " + f.path);
+
 		var pak = new Data();
-		var outBytes = { bytes : [], size : 0 };
+		out = { bytes : [], size : 0 };
 		pak.version = 0;
-		pak.root = buildRec(dir,"",outBytes);
+		pak.root = buildRec("");
 
 		if( pakDiff ) {
 			var id = 0;
 			while( true ) {
-				var name = out + (id == 0 ? "" : "" + id) + ".pak";
+				var name = outPrefix + (id == 0 ? "" : "" + id) + ".pak";
 				if( !sys.FileSystem.exists(name) ) break;
 				var oldPak = new Reader(sys.io.File.read(name)).readHeader();
 				filter(pak.root, oldPak.root);
 				id++;
 			}
 			if( id > 0 ) {
-				out += id;
+				outPrefix += id;
 				if( pak.root.content.length == 0 ) {
 					Sys.println("No changes in resources");
 					return;
 				}
 			}
-			outBytes.bytes = rebuild(pak, outBytes.bytes);
+			out.bytes = rebuild(pak, out.bytes);
 		}
 
-		var f = sys.io.File.write(out + ".pak");
-		new Writer(f).write(pak, null, outBytes.bytes);
+		var f = sys.io.File.write(outPrefix + ".pak");
+		new Writer(f).write(pak, null, out.bytes);
 		f.close();
+	}
+
+	public static function make( dir = "res", out = "res", ?pakDiff ) {
+		var b = new Build();
+		b.resPath = dir;
+		b.outPrefix = out;
+		b.pakDiff = pakDiff;
+		b.makePak();
 	}
 
 	static function main() {
 		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.n") catch( e : Dynamic ) {};
+		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.hl") catch( e : Dynamic ) {};
 		var ext = haxe.macro.Compiler.getDefine("excludeExt");
-		excludedExt = ext == null ? [] : ext.split(",");
-		make(haxe.macro.Compiler.getDefine("resourcesPath"), null #if pakDiff, true #end);
+		var b = new Build();
+		b.excludedExt = ext == null ? [] : ext.split(",");
+		b.resPath = haxe.macro.Compiler.getDefine("resourcesPath");
+		b.compressSounds = true;
+		b.outPrefix = haxe.macro.Compiler.getDefine("outPrefix");
+		#if pakDiff
+		b.pakDiff = true;
+		#end
+		#if !stb_ogg_sound
+		b.compressMP3 = true;
+		#end
+		b.makePak();
 	}
 
 }
