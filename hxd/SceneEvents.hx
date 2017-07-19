@@ -139,6 +139,7 @@ class SceneEvents {
 							currentOver.handleEvent(onOut);
 						if( !onOut.cancel ) {
 							var old = event.propagate;
+							var oldKind = event.kind;
 							event.kind = EOver;
 							event.cancel = false;
 							i.handleEvent(event);
@@ -148,7 +149,7 @@ class SceneEvents {
 								currentOver = i;
 								checkOver = false;
 							}
-							event.kind = EMove;
+							event.kind = oldKind;
 							event.cancel = false;
 							event.propagate = old;
 						}
