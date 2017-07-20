@@ -24,9 +24,13 @@ class Convert {
 	}
 
 	function command( cmd : String, args : Array<String> ) {
+		#if flash
+		trace("TODO");
+		#else
 		var code = Sys.command(cmd, args);
 		if( code != 0 )
 			throw "Command '" + cmd + (args.length == 0 ? "" : " " + args.join(" ")) + "' failed with exit code " + code;
+		#end
 	}
 
 }

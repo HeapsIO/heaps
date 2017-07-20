@@ -28,7 +28,7 @@ class File {
 	}
 	#end
 
-	#if air3
+	#if (flash && air3)
 
 	static function getRelPath( path : String ) {
 		return try new flash.filesystem.File(path) catch( e : Dynamic ) new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + path);
@@ -101,7 +101,7 @@ class File {
 		#end
 	}
 
-	#if air3
+	#if (flash && air3)
 	static function saveAsAir( dataContent : haxe.io.Bytes, options : BrowseOptions ) {
 		var f = flash.filesystem.File.applicationDirectory;
 		if( options.defaultPath != null )
@@ -150,7 +150,7 @@ class File {
 	}
 
 	public static function exists( path : String ) : Bool {
-		#if air3
+		#if (flash && air3)
 		return getRelPath(path).exists;
 		#elseif (sys || nodejs)
 		return sys.FileSystem.exists(path);
@@ -161,7 +161,7 @@ class File {
 	}
 
 	public static function delete( path : String ) {
-		#if air3
+		#if (flash && air3)
 		try {
 			getRelPath(path).deleteFile();
 		} catch( e : Dynamic ) {
@@ -174,7 +174,7 @@ class File {
 	}
 
 	public static function listDirectory( path : String ) {
-		#if air3
+		#if (flash && air3)
 		try {
 			return [for( f in getRelPath(path).getDirectoryListing() ) f.name];
 		} catch( e : Dynamic ) {
@@ -188,7 +188,7 @@ class File {
 	}
 
 	public static function getBytes( path : String ) : haxe.io.Bytes {
-		#if air3
+		#if (flash && air3)
 		var file = getRelPath(path);
 		if( !file.exists ) throw "File not found " + path;
 		var fs = new flash.filesystem.FileStream();
@@ -205,7 +205,7 @@ class File {
 		#end
 	}
 
-	#if air3
+	#if (flash && air3)
 	static function saveBytesAir( path : String, data : haxe.io.Bytes ) {
 		if( path == null ) throw "NULL path";
 		var f = getRelPath(path);
@@ -253,7 +253,7 @@ class File {
 	}
 
 	public static function createDirectory( path : String ) {
-		#if air3
+		#if (flash && air3)
 		getRelPath(path).createDirectory();
 		#elseif (sys || nodejs)
 		sys.FileSystem.createDirectory(path);

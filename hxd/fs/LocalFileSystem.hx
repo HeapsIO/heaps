@@ -8,7 +8,7 @@ private class LocalEntry extends FileEntry {
 
 	var fs : LocalFileSystem;
 	var relPath : String;
-	#if air3
+	#if (flash && air3)
 	var file : flash.filesystem.File;
 	var fread : flash.filesystem.FileStream;
 	var checkExists : Bool;
@@ -25,7 +25,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function getSign() : Int {
-		#if air3
+		#if flash
 		var old = fread == null ? -1 : fread.position;
 		open();
 		fread.endian = flash.utils.Endian.LITTLE_ENDIAN;
@@ -42,7 +42,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function getTmpBytes() {
-		#if air3
+		#if flash
 		if( checkExists && !file.exists )
 			return haxe.io.Bytes.alloc(0);
 		var fs = new flash.filesystem.FileStream();
@@ -57,7 +57,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function getBytes() : haxe.io.Bytes {
-		#if air3
+		#if flash
 		if( checkExists && !file.exists )
 			return haxe.io.Bytes.alloc(0);
 		var fs = new flash.filesystem.FileStream();
@@ -72,7 +72,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function open() {
-		#if air3
+		#if flash
 		if( fread != null )
 			fread.position = 0;
 		else {
@@ -88,7 +88,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function skip(nbytes:Int) {
-		#if air3
+		#if flash
 		fread.position += nbytes;
 		#else
 		fread.seek(nbytes, SeekCur);
@@ -96,7 +96,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function readByte() {
-		#if air3
+		#if flash
 		return fread.readUnsignedByte();
 		#else
 		return fread.readByte();
@@ -104,7 +104,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
-		#if air3
+		#if flash
 		fread.readBytes(out.getData(), pos, size);
 		#else
 		fread.readFullBytes(out, pos, size);
@@ -112,7 +112,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function close() {
-		#if air3
+		#if flash
 		if( fread != null ) {
 			fread.close();
 			fread = null;
@@ -128,7 +128,7 @@ private class LocalEntry extends FileEntry {
 	var isDirCached : Null<Bool>;
 	override function get_isDirectory() : Bool {
 		if( isDirCached != null ) return isDirCached;
-		#if air3
+		#if flash
 		return isDirCached = file.isDirectory;
 		#else
 		return isDirCached = sys.FileSystem.isDirectory(file);
@@ -184,7 +184,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function get_size() {
-		#if air3
+		#if flash
 		return Std.int(file.size);
 		#else
 		return sys.FileSystem.stat(file).size;
@@ -192,7 +192,7 @@ private class LocalEntry extends FileEntry {
 	}
 
 	override function iterator() {
-		#if air3
+		#if flash
 		var arr = new Array<FileEntry>();
 		for( f in file.getDirectoryListing() )
 			switch( f.name ) {
@@ -226,7 +226,7 @@ private class LocalEntry extends FileEntry {
 	static var WATCH_LIST : Array<LocalEntry> = null;
 
 	inline function getModifTime(){
-		#if air3
+		#if flash
 		return file.modificationDate.getTime();
 		#else
 		return sys.FileSystem.stat(file).mtime.getTime();
@@ -241,7 +241,7 @@ private class LocalEntry extends FileEntry {
 		}
 		var t = try w.getModifTime() catch( e : Dynamic ) -1;
 		if( t != w.watchTime ) {
-			#if air3
+			#if flash
 			// check we can write (might be deleted/renamed/currently writing)
 			if( !w.isDirectory )
 			try {
@@ -274,7 +274,7 @@ private class LocalEntry extends FileEntry {
 		if( watchCallback == null ) {
 			if( WATCH_LIST == null ) {
 				WATCH_LIST = [];
-				#if air3
+				#if (flash && air3)
 				flash.Lib.current.stage.addEventListener(flash.events.Event.ENTER_FRAME, function(_) checkFiles());
 				#elseif !macro
 				haxe.MainLoop.add(checkFiles);
@@ -306,7 +306,7 @@ class LocalFileSystem implements FileSystem {
 		baseDir = dir;
 		converts = new Map();
 		addConvert(new Convert.ConvertFBX2HMD());
-		#if air3
+		#if flash
 		var froot = new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + baseDir);
 		if( !froot.exists ) throw "Could not find dir " + dir;
 		baseDir = froot.nativePath;
@@ -361,7 +361,7 @@ class LocalFileSystem implements FileSystem {
 		if( r != null )
 			return r.r;
 		var e = null;
-		#if air3
+		#if flash
 		var f = new flash.filesystem.File(baseDir + path);
 		// ensure exact case / no relative path
 		if( check ) f.canonicalize();
@@ -406,6 +406,8 @@ class LocalFileSystem implements FileSystem {
 	function getFileTime( filePath : String ) : Float {
 		#if (sys || nodejs)
 		return sys.FileSystem.stat(filePath).mtime.getTime();
+		#elseif flash
+		return new flash.filesystem.File(filePath).modificationDate.getTime();
 		#else
 		throw "getFileTime not implemented";
 		#end
@@ -419,7 +421,12 @@ class LocalFileSystem implements FileSystem {
 
 		var path = e.path;
 		var tmpFile = tmpDir + path.substr(0, -ext.length) + conv.destExt;
+
+		#if flash
+		e.file = new flash.filesystem.File(tmpFile);
+		#else
 		e.file = tmpFile;
+		#end
 
 		if( times == null ) {
 			times = try haxe.Unserializer.run(hxd.File.getBytes(tmpDir + "times.dat").toString()) catch( e : Dynamic ) new Map<String,Float>();
@@ -502,41 +509,6 @@ class LocalFileSystem implements FileSystem {
 
 		hxd.File.saveBytes(tmpDir + "hashes.json", haxe.io.Bytes.ofString(haxe.Json.stringify(hashes,"\t")));
 	}
-
-	/*
-	function convertToHmd( ) {
-		function getHMD() {
-			var fbx = null;
-			var content = getBytes();
-			try fbx = hxd.fmt.fbx.Parser.parse(content.toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + relPath;
-			var hmdout = new hxd.fmt.fbx.HMDOut();
-			hmdout.load(fbx);
-			var hmd = hmdout.toHMD(null, !(StringTools.startsWith(name, "Anim_") || name.toLowerCase().indexOf("_anim_") > 0));
-			var out = new haxe.io.BytesOutput();
-			new hxd.fmt.hmd.Writer(out).write(hmd);
-			return out.getBytes();
-		}
-		var target = fs.tmpDir + "R_" + INVALID_CHARS.replace(relPath,"_") + ".hmd";
-		#if air3
-		var target = new flash.filesystem.File(target);
-		if( !target.exists || target.modificationDate.getTime() < file.modificationDate.getTime() ) {
-			var hmd = getHMD();
-			var out = new flash.filesystem.FileStream();
-			out.open(target, flash.filesystem.FileMode.WRITE);
-			out.writeBytes(hmd.getData());
-			out.close();
-			checkExists = true;
-		}
-		#else
-		var ttime = try sys.FileSystem.stat(target) catch( e : Dynamic ) null;
-		if( ttime == null || ttime.mtime.getTime() < sys.FileSystem.stat(file).mtime.getTime() ) {
-			var hmd = getHMD();
-			sys.io.File.saveBytes(target, hmd);
-		}
-		#end
-		file = target;
-	}*/
-
 
 }
 
