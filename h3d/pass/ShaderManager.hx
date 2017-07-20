@@ -22,7 +22,7 @@ class ShaderManager {
 	}
 
 	@:noDebug
-	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : haxe.ds.Vector<hxd.impl.Float32>, pos : Int ) {
+	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : h3d.shader.Buffers.ShaderBufferData, pos : Int ) {
 		switch( type ) {
 		case TFloat:
 			out[pos] = v;

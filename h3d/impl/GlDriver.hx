@@ -346,7 +346,7 @@ class GlDriver extends Driver {
 				#if hl
 				gl.uniform4fv(s.globals, streamData(hl.Bytes.getArray(buf.globals.toData()), 0, s.shader.globalsSize * 16), 0, s.shader.globalsSize * 4);
 				#else
-				var a = new Float32Array(buf.globals.toData()).subarray(0, s.shader.globalsSize * 4);
+				var a = buf.globals.subarray(0, s.shader.globalsSize * 4);
 				gl.uniform4fv(s.globals, a);
 				#end
 			}
@@ -355,7 +355,7 @@ class GlDriver extends Driver {
 				#if hl
 				gl.uniform4fv(s.params, streamData(hl.Bytes.getArray(buf.params.toData()), 0, s.shader.paramsSize * 16), 0, s.shader.paramsSize * 4);
 				#else
-				var a = new Float32Array(buf.params.toData()).subarray(0, s.shader.paramsSize * 4);
+				var a = buf.params.subarray(0, s.shader.paramsSize * 4);
 				gl.uniform4fv(s.params, a);
 				#end
 			}
