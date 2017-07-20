@@ -401,7 +401,15 @@ class LocalFileSystem implements FileSystem {
 
 	var times : Map<String,Float>;
 	var hashes : Dynamic;
-	var addedPaths = new Map();
+	var addedPaths = new Map<String,Bool>();
+
+	function getFileTime( filePath : String ) : Float {
+		#if (sys || nodejs)
+		return sys.FileSystem.stat(filePath).mtime.getTime();
+		#else
+		throw "getFileTime not implemented";
+		#end
+	}
 
 	function convert( e : LocalEntry ) {
 		var ext = e.extension;
@@ -417,8 +425,8 @@ class LocalFileSystem implements FileSystem {
 			times = try haxe.Unserializer.run(hxd.File.getBytes(tmpDir + "times.dat").toString()) catch( e : Dynamic ) new Map<String,Float>();
 		}
 		var realFile = baseDir + path;
-		var time = sys.FileSystem.stat(realFile).mtime.getTime();
-		if( sys.FileSystem.exists(tmpFile) && time == times.get(path) )
+		var time = std.Math.ffloor(getFileTime(realFile) / 1000);
+		if( hxd.File.exists(tmpFile) && time == times.get(path) )
 			return;
 		if( hashes == null ) {
 			hashes = try haxe.Json.parse(hxd.File.getBytes(tmpDir + "hashes.json").toString()) catch( e : Dynamic ) {};
@@ -434,7 +442,7 @@ class LocalFileSystem implements FileSystem {
 		}
 		var content = hxd.File.getBytes(realFile);
 		var hash = haxe.crypto.Sha1.make(content).toHex();
-		if( sys.FileSystem.exists(tmpFile) && hash == Reflect.field(root, e.name) ) {
+		if( hxd.File.exists(tmpFile) && hash == Reflect.field(root, e.name) ) {
 			times.set(path, time);
 			hxd.File.saveBytes(tmpDir + "times.dat", haxe.io.Bytes.ofString(haxe.Serializer.run(times)));
 			return;

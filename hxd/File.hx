@@ -152,7 +152,7 @@ class File {
 	public static function exists( path : String ) : Bool {
 		#if air3
 		return getRelPath(path).exists;
-		#elseif sys
+		#elseif (sys || nodejs)
 		return sys.FileSystem.exists(path);
 		#else
 		throw "Not supported";
@@ -166,7 +166,7 @@ class File {
 			getRelPath(path).deleteFile();
 		} catch( e : Dynamic ) {
 		}
-		#elseif sys
+		#elseif (sys || nodejs)
 		try sys.FileSystem.deleteFile(path) catch( e : Dynamic ) { };
 		#else
 		throw "Not supported";
@@ -180,7 +180,7 @@ class File {
 		} catch( e : Dynamic ) {
 			return [];
 		}
-		#elseif sys
+		#elseif (sys || nodejs)
 		return sys.FileSystem.readDirectory(path);
 		#else
 		throw "Not supported";
@@ -197,7 +197,7 @@ class File {
 		fs.readBytes(bytes.getData());
 		fs.close();
 		return bytes;
-		#elseif sys
+		#elseif (sys || nodejs)
 		return sys.io.File.getBytes(path);
 		#else
 		throw "Not supported";
@@ -225,24 +225,10 @@ class File {
 			}
 			#end
 			saveAs(data, { defaultPath:path } );
-		#elseif sys
+		#elseif (sys || nodejs)
 		sys.io.File.saveBytes(path, data);
 		#else
 		throw "Not supported";
-		#end
-	}
-
-	public static function saveBytesAt( path : String, data : haxe.io.Bytes, dataPos : Int, dataSize : Int, filePos : Int ) {
-		#if air3
-		if( path == null ) throw "NULL path";
-		var f = new flash.filesystem.File(path);
-		var o = new flash.filesystem.FileStream();
-		o.open(f, flash.filesystem.FileMode.UPDATE);
-		if( filePos != o.position ) o.position = filePos;
-		if( dataSize > 0 ) o.writeBytes(data.getData(),dataPos,dataSize);
-		o.close();
-		#else
-		throw "Not supported"; // requires "update" mode
 		#end
 	}
 
@@ -269,7 +255,7 @@ class File {
 	public static function createDirectory( path : String ) {
 		#if air3
 		getRelPath(path).createDirectory();
-		#elseif sys
+		#elseif (sys || nodejs)
 		sys.FileSystem.createDirectory(path);
 		#else
 		throw "Not supported";
