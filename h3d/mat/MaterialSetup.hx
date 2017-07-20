@@ -36,22 +36,23 @@ class MaterialSetup {
 
 	public function initModelMaterial( material : Material ) {
 		var props = database.loadProps(material, this);
-		if( props == null ) props = getDefaults();
-		// use hmd material
-		var props : DefaultProps = props;
-		switch( material.blendMode ) {
-		case Alpha:
-			props.kind = Alpha;
-		case Add:
-			props.kind = Add;
-			props.culled = false;
-			props.shadows = false;
-			props.lighted = false;
-		case None:
-		default:
-			throw "Unsupported HMD material " + material.blendMode;
+		if( props == null ) {
+			props = getDefaults();
+			// use hmd material
+			var props : DefaultProps = props;
+			switch( material.blendMode ) {
+			case Alpha:
+				props.kind = Alpha;
+			case Add:
+				props.kind = Add;
+				props.culled = false;
+				props.shadows = false;
+				props.lighted = false;
+			case None:
+			default:
+				throw "Unsupported HMD material " + material.blendMode;
+			}
 		}
-
 		material.props = props;
 	}
 
