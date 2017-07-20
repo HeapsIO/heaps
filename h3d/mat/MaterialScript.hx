@@ -44,6 +44,12 @@ class MaterialScript extends MaterialSetup {
 		#end
 	}
 
+	override function initMeshAfterLoad( mesh : h3d.scene.Mesh ) {
+		if( variables.exists("initMeshAfterLoad") )
+			call("initMeshAfterLoad", [mesh]);
+	}
+
+
 	override function getDefaults(?type:String):Any {
 		return call("getDefaults", [type]);
 	}

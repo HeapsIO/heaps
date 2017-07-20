@@ -164,10 +164,14 @@ class SceneSerializer extends hxbit.Serializer {
 		} else
 			s = Type.createEmptyInstance(cl);
 		@:privateAccess s.initialize();
+		var sdyn = Std.instance(s, hxsl.DynamicShader);
 		for( v in @:privateAccess s.shader.data.vars ) {
 			if( !canSerializeVar(v) ) continue;
 			var val : Dynamic = getShaderVar(v, s);
-			Reflect.setField(s, v.name+"__", val);
+			if( sdyn != null )
+				sdyn.setParamValue(v, val);
+			else
+				Reflect.setField(s, v.name+"__", val);
 		}
 		cachedShaders[id] = s;
 		return s;
@@ -259,6 +263,9 @@ class SceneSerializer extends hxbit.Serializer {
 			var obj : h3d.scene.Object = cast getAnyRef();
 			objs.push(obj);
 		}
+		for( o in objs )
+			for( m in o.getMeshes() )
+				h3d.mat.MaterialSetup.current.initMeshAfterLoad(m);
 		endLoad();
 		return { content : objs };
 	}

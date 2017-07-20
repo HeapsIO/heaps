@@ -153,6 +153,18 @@ class Pass implements h3d.impl.Serializable {
 		return null;
 	}
 
+	public function getShaderByName( name : String ) : hxsl.Shader {
+		var s = shaders;
+		while( s != parentShaders ) {
+			if( Std.is(s.s, hxsl.DynamicShader) )
+				trace(@:privateAccess s.s.shader.data.name);
+			if( @:privateAccess s.s.shader.data.name == name )
+				return s.s;
+			s = s.next;
+		}
+		return null;
+	}
+
 	public inline function getShaders() {
 		return shaders.iterateTo(parentShaders);
 	}

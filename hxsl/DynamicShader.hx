@@ -2,9 +2,47 @@ package hxsl;
 
 class DynamicShader extends Shader {
 
+	var params = new Array<Dynamic>();
+	var varIndexes = new Map<Int,Int>();
+	var varIndex = 0;
+
 	public function new( s : SharedShader ) {
 		this.shader = s;
 		super();
+		for( v in s.data.vars )
+			addVarIndex(v);
+	}
+
+	function addVarIndex(v:hxsl.Ast.TVar) {
+		if( v.kind != Param )
+			return;
+		switch(v.type){
+		case TStruct(vl):
+			for( v in vl )
+				addVarIndex(v);
+			return;
+		default:
+		}
+		switch( v.type ) {
+		case TSampler2D:
+			params[varIndex] = h3d.mat.Texture.fromColor(0xFF00FF);
+		case TSamplerCube:
+			params[varIndex] = h3d.mat.Texture.defaultCubeTexture();
+		default:
+		}
+		varIndexes.set(v.id, varIndex++);
+	}
+
+	override function getParamValue(index:Int) : Dynamic {
+		return params[index];
+	}
+
+	override public function getParamFloatValue(index:Int):Float {
+		return params[index];
+	}
+
+	public function setParamValue( p : hxsl.Ast.TVar, value : Dynamic ) {
+		params[varIndexes.get(p.id)] = value;
 	}
 
 	override function updateConstants( globals : Globals ) {
@@ -15,11 +53,7 @@ class DynamicShader extends Shader {
 				c = c.next;
 				continue;
 			}
-			var v : Dynamic;
-			if( c.v.parent == null )
-				v = Reflect.field(this, c.v.name+"__");
-			else
-				throw "TODO";
+			var v : Dynamic = params[varIndexes.get(c.v.id)];
 			switch( c.v.type ) {
 			case TInt:
 				var v : Int = v;

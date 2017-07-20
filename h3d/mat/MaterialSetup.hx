@@ -44,6 +44,9 @@ class MaterialSetup {
 		database.saveProps(material, this);
 	}
 
+	public function initMeshAfterLoad( mesh : h3d.scene.Mesh ) {
+	}
+
 	public function getDefaults( ?type : String ) : Any {
 		var props : DefaultProps;
 		switch( type ) {

@@ -362,6 +362,21 @@ class Texture {
 		return t;
 	}
 
+	/**
+		Returns a default dummy 1x1 black cube texture
+	**/
+	public static function defaultCubeTexture() {
+		var engine = h3d.Engine.getCurrent();
+		var t = @:privateAccess engine.resCache.get(Texture);
+		if( t != null )
+			return t;
+		t = new Texture(1, 1, [Cube]);
+		t.clear(0);
+		t.realloc = function() t.clear(0);
+		@:privateAccess engine.resCache.set(Texture,t);
+		return t;
+	}
+
 	static var noiseTextures = new Map<Int,h3d.mat.Texture>();
 
 	public static function genNoise(size) {

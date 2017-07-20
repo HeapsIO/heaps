@@ -472,4 +472,11 @@ class World extends Object {
 		}
 	}
 
+	#if hxbit
+	override function customUnserialize(ctx:hxbit.Serializer) {
+		super.customUnserialize(ctx);
+		allChunks = [];
+	}
+	#end
+
 }
