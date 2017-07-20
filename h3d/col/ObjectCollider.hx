@@ -1,9 +1,9 @@
 package h3d.col;
 
-class ObjectCollider implements Collider {
+class ObjectCollider implements Collider implements h3d.impl.Serializable {
 
-	public var obj : h3d.scene.Object;
-	public var collider : Collider;
+	@:s public var obj : h3d.scene.Object;
+	@:s public var collider : Collider;
 	var tmpRay = new Ray();
 
 	public function new(obj, collider) {
@@ -37,5 +37,12 @@ class ObjectCollider implements Collider {
 		throw "Not implemented";
 		return false;
 	}
+
+	#if hxbit
+	function customSerialize( ctx : hxbit.Serializer ) {
+	}
+	function customUnserialize( ctx : hxbit.Serializer ) {
+	}
+	#end
 
 }

@@ -2,17 +2,18 @@ package h3d.col;
 
 @:access(h3d.col.PolygonBuffer)
 @:access(h3d.scene.Skin)
-class SkinCollider implements Collider {
+class SkinCollider implements h3d.impl.Serializable implements Collider {
 
-	var obj : h3d.scene.Skin;
-	var col : PolygonBuffer;
+	@:s var obj : h3d.scene.Skin;
+	@:s var col : PolygonBuffer;
 	var transform : PolygonBuffer;
 	var lastFrame : Int;
 
 	public function new( obj, col ) {
 		this.obj = obj;
 		this.col = col;
-		this.transform = new PolygonBuffer(col.buffer.copy(), col.indexes, col.startIndex, col.triCount);
+		this.transform = new PolygonBuffer();
+		this.transform.setData(col.buffer.copy(), col.indexes, col.startIndex, col.triCount);
 	}
 
 	public function contains(p) {
@@ -58,5 +59,14 @@ class SkinCollider implements Collider {
 			transform.buffer[v++] = pz;
 		}
 	}
+
+	#if (hxbit && !macro)
+	function customSerialize( ctx : hxbit.Serializer ) {
+	}
+	function customUnserialize( ctx : hxbit.Serializer ) {
+		this.transform = new PolygonBuffer();
+		this.transform.setData(col.buffer.copy(), col.indexes, col.startIndex, col.triCount);
+	}
+	#end
 
 }

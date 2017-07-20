@@ -1,6 +1,6 @@
 package h3d.col;
 
-interface Collider {
+interface Collider extends h3d.impl.Serializable.StructSerializable {
 
 	/**
 		Returns the distance of intersection between the ray and the collider, or negative if no collision.
@@ -12,10 +12,10 @@ interface Collider {
 }
 
 
-class OptimizedCollider implements Collider {
+class OptimizedCollider implements h3d.impl.Serializable implements Collider {
 
-	public var a : Collider;
-	public var b : Collider;
+	@:s public var a : Collider;
+	@:s public var b : Collider;
 
 	public function new(a, b) {
 		this.a = a;
@@ -35,6 +35,14 @@ class OptimizedCollider implements Collider {
 	public function inFrustum( mvp : h3d.Matrix ) {
 		return a.inFrustum(mvp) && b.inFrustum(mvp);
 	}
+
+
+	#if (hxbit && !macro)
+	function customSerialize(ctx:hxbit.Serializer) {
+	}
+	function customUnserialize(ctx:hxbit.Serializer) {
+	}
+	#end
 
 }
 
@@ -71,5 +79,21 @@ class GroupCollider implements Collider {
 				return true;
 		return false;
 	}
+
+
+	#if (hxbit && !macro)
+
+	function customSerialize(ctx:hxbit.Serializer) {
+		ctx.addInt(colliders.length);
+		for( c in colliders )
+			ctx.addStruct(c);
+	}
+
+	function customUnserialize(ctx:hxbit.Serializer) {
+		colliders = [for( i in 0...ctx.getInt() ) ctx.getStruct()];
+	}
+
+	#end
+
 
 }

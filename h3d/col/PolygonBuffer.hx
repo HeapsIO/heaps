@@ -6,8 +6,12 @@ class PolygonBuffer implements Collider {
 	var indexes : haxe.ds.Vector<hxd.impl.UInt16>;
 	var startIndex : Int;
 	var triCount : Int;
+	public var source : { entry : hxd.fs.FileEntry, geometryName : String };
 
-	public function new( buffer, indexes, startIndex = 0, triCount = -1 ) {
+	public function new() {
+	}
+
+	public function setData( buffer, indexes, startIndex = 0, triCount = -1 ) {
 		this.buffer = buffer;
 		this.indexes = indexes;
 		this.startIndex = startIndex;
@@ -83,5 +87,28 @@ class PolygonBuffer implements Collider {
 		return best;
 	}
 
-}
+	#if (hxbit && !macro)
+	function customSerialize( ctx : hxbit.Serializer ) {
+		if( source == null )
+			throw "Cannot serialize " + this;
+		ctx.addString(source.entry.path);
+		ctx.addString(source.geometryName);
+	}
+	function customUnserialize( ctx : hxbit.Serializer ) {
+		var file = ctx.getString();
+		var name = ctx.getString();
+		var lib = hxd.res.Loader.currentInstance.load(file).toHmd();
+		var gindex = -1;
+		for( h in lib.header.models )
+			if( h.name == name ) {
+				gindex = h.geometry;
+				break;
+			}
+		if( gindex < 0 )
+			throw file+" does not have model " + name;
+		var prim = @:privateAccess lib.makePrimitive(gindex);
+		@:privateAccess prim.initCollider(this);
+	}
+	#end
 
+}

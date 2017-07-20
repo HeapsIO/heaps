@@ -76,4 +76,19 @@ class Sphere implements Collider {
 		return "Sphere{" + getCenter()+","+ hxd.Math.fmt(r) + "}";
 	}
 
+	#if (hxbit && !macro)
+	function customSerialize( ctx : hxbit.Serializer ) {
+		ctx.addFloat(x);
+		ctx.addFloat(y);
+		ctx.addFloat(z);
+		ctx.addFloat(r);
+	}
+	function customUnserialize( ctx : hxbit.Serializer ) {
+		x = ctx.getFloat();
+		y = ctx.getFloat();
+		z = ctx.getFloat();
+		r = ctx.getFloat();
+	}
+	#end
+
 }

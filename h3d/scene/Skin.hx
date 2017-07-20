@@ -1,8 +1,8 @@
 package h3d.scene;
 
 class Joint extends Object {
-	public var skin : Skin;
-	public var index : Int;
+	@:s public var skin : Skin;
+	@:s public var index : Int;
 
 	public function new(skin, j : h3d.anim.Skin.Joint ) {
 		super(null);

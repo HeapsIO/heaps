@@ -96,6 +96,14 @@ class TriPlane implements Collider {
 		return (u >= 0) && (v >= 0) && (u + v < 1);
 	}
 
+	#if (hxbit && !macro)
+	function customSerialize( ctx : hxbit.Serializer ) {
+		throw "Cannot serialize "+this;
+	}
+	function customUnserialize( ctx : hxbit.Serializer ) {
+	}
+	#end
+
 }
 
 
@@ -162,5 +170,13 @@ class Polygon implements Collider {
 		throw "Not implemented";
 		return false;
 	}
+
+	#if (hxbit && !macro)
+	function customSerialize( ctx : hxbit.Serializer ) {
+		throw "Cannot serialize "+this;
+	}
+	function customUnserialize( ctx : hxbit.Serializer ) {
+	}
+	#end
 
 }

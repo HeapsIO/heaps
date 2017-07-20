@@ -149,13 +149,29 @@ class HMDModel extends MeshPrimitive {
 		curMaterial = -1;
 	}
 
+	function initCollider( poly : h3d.col.PolygonBuffer ) {
+		var buf= lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
+		poly.setData(buf.vertexes, buf.indexes);
+		if( collider == null ) {
+			var sphere = data.bounds.toSphere();
+			collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
+		}
+	}
+
 	override function getCollider() {
 		if( collider != null )
 			return collider;
-		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
-		var poly = new h3d.col.PolygonBuffer(pos.vertexes, pos.indexes);
-		var sphere = data.bounds.toSphere();
-		collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
+		var poly = new h3d.col.PolygonBuffer();
+		poly.source = {
+			entry : lib.entry,
+			geometryName : null,
+		};
+		for( h in lib.header.models )
+			if( lib.header.geometries[h.geometry] == data ) {
+				poly.source.geometryName = h.name;
+				break;
+			}
+		initCollider(poly);
 		return collider;
 	}
 

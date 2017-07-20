@@ -1,12 +1,13 @@
 package h3d.impl;
 
-#if !hxbit
+#if !(hxbit && !macro)
 private interface EmptyInterface {}
 #end
 
-typedef Serializable = #if hxbit hxbit.Serializable #else EmptyInterface #end;
+typedef Serializable = #if (hxbit && !macro) hxbit.Serializable #else EmptyInterface #end;
+typedef StructSerializable = #if (hxbit && !macro) hxbit.StructSerializable #else EmptyInterface #end;
 
-#if hxbit
+#if (hxbit && !macro)
 class SceneSerializer extends hxbit.Serializer {
 
 	public var materialRef = new Map<String,h3d.mat.Material>();

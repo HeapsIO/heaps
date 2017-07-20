@@ -15,11 +15,11 @@ class Shader {
 	}
 
 	function initialize() {
+		constModified = true;
 		if( shader != null )
 			return;
 		var cl : Dynamic = std.Type.getClass(this);
 		shader = cl._SHADER;
-		constModified = true;
 		if( shader == null ) {
 			var curClass : Dynamic = cl;
 			while( curClass != null && curClass.SRC == null )
