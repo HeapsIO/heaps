@@ -843,7 +843,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				g.pshader.volumeSize.set(volumeBounds.xSize, volumeBounds.ySize, volumeBounds.zSize);
 			}
 			if( g.pshader.transform3D ) {
-				var r = ctx.camera.target.sub(camera.pos);
+				var r = camera.target.sub(camera.pos);
 				r.z = 0;
 				r.normalize();
 				var q = new h3d.Quat();
