@@ -120,6 +120,11 @@ class SpriteBatch extends Drawable {
 		return e;
 	}
 
+	public function clear() {
+		first = last = null;
+		flush();
+	}
+
 	public function alloc(t) {
 		return add(new BatchElement(t));
 	}
@@ -205,6 +210,9 @@ class SpriteBatch extends Drawable {
 			}
 
 			var t = e.t;
+
+			tmp.grow(pos + 8 * 4);
+
 			if( hasRotationScale ) {
 				var ca = Math.cos(e.rotation), sa = Math.sin(e.rotation);
 				var hx = t.width, hy = t.height;

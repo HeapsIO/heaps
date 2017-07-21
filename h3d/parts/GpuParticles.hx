@@ -145,7 +145,7 @@ class GpuPartGroup {
 	public var rotSpeedRand(default, set):Float = 0;
 
 	public var fadeIn : Float					= 0.2;
-	public var fadeOut : Float					= 0.2;
+	public var fadeOut : Float					= 0.8;
 	public var fadePower : Float				= 1;
 
 	public var frameCount : Int					= 0;
