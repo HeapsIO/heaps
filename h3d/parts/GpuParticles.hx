@@ -865,7 +865,6 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 		uploadedCount = 0;
 		var hasPart = false;
-		var screenRatio = ctx.engine.height / ctx.engine.width;
 		for( g in groups ) {
 			syncGroup(g, camera, prev, ctx.visibleFlag);
 			if( g.currentParts == 0 )
@@ -874,7 +873,6 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			hasPart = true;
 			g.syncParams();
 			g.pshader.time = currentTime;
-			g.pshader.screenRatio.set(screenRatio, 1);
 			if( g.pshader.clipBounds ) {
 				g.pshader.volumeMin.set(volumeBounds.xMin, volumeBounds.yMin, volumeBounds.zMin);
 				g.pshader.volumeSize.set(volumeBounds.xSize, volumeBounds.ySize, volumeBounds.zSize);
