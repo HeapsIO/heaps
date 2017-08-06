@@ -439,13 +439,16 @@ class LocalFileSystem implements FileSystem {
 			hashes = try haxe.Json.parse(hxd.File.getBytes(tmpDir + "hashes.json").toString()) catch( e : Dynamic ) {};
 		}
 		var root : Dynamic = hashes;
-		for( p in new haxe.io.Path(path).dir.split("/") ) {
-			var f = Reflect.field(root, p);
-			if( f == null ) {
-				f = {};
-				Reflect.setField(root, p, f);
+		var topDir = new haxe.io.Path(path).dir;
+		if( topDir != null ) {
+			for( p in topDir.split("/") ) {
+				var f = Reflect.field(root, p);
+				if( f == null ) {
+					f = {};
+					Reflect.setField(root, p, f);
+				}
+				root = f;
 			}
-			root = f;
 		}
 		var content = hxd.File.getBytes(realFile);
 		var hash = haxe.crypto.Sha1.make(content).toHex();
