@@ -212,7 +212,11 @@ class MacroParser {
 			EParenthesis(parseExpr(e));
 		case EIf(cond, eif, eelse), ETernary(cond, eif, eelse):
 			EIf(parseExpr(cond), parseExpr(eif), eelse == null ? null : parseExpr(eelse));
+		#if (haxe_ver >= 4)
+		case EFor({ expr : EBinop(OpIn,{ expr : EConst(CIdent(n)) }, eloop) },eblock):
+		#else
 		case EFor( { expr : EIn( { expr : EConst(CIdent(n)) }, eloop) }, eblock):
+		#end
 			EFor(n, parseExpr(eloop), parseExpr(eblock));
 		case EReturn(e):
 			EReturn(e == null ? null : parseExpr(e));

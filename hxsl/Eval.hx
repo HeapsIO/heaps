@@ -368,6 +368,9 @@ class Eval {
 			case OpLte: compare(function(x) return x <= 0);
 			case OpInterval, OpAssign, OpAssignOp(_): TBinop(op, e1, e2);
 			case OpArrow: throw "assert";
+			#if (haxe_ver >= 4)
+			case OpIn: throw "assert";
+			#end
 			}
 		case TUnop(op, e):
 			var e = evalExpr(e);
