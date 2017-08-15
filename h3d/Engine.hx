@@ -336,6 +336,7 @@ class Engine {
 	 * Call with no parameters to reset to full viewport.
 	 */
 	public function setRenderZone( x = 0, y = 0, ?width = -1, ?height = -1 ) : Void {
+		flushTarget();
 		driver.setRenderZone(x, y, width, height);
 	}
 
