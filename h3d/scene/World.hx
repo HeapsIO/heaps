@@ -463,12 +463,16 @@ class World extends Object {
 			c.root.visible = c.bounds.inFrustum(ctx.camera.m);
 			if( c.root.visible ) {
 				c.lastFrame = ctx.frame;
-				if( !c.initialized ) {
-					c.initialized = true;
-					initChunkSoil(c);
-					initChunkElements(c);
-				}
+				initChunk(c);
 			}
+		}
+	}
+
+	function initChunk( c : WorldChunk ) {
+		if( !c.initialized ) {
+			c.initialized = true;
+			initChunkSoil(c);
+			initChunkElements(c);
 		}
 	}
 
