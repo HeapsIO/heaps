@@ -5,8 +5,9 @@ class Anim extends Drawable {
 	public var frames : Array<Tile>;
 	public var currentFrame(get,set) : Float;
 	public var speed : Float;
+	public var pause : Bool = false;
 	public var loop : Bool = true;
-	
+
 	/**
 		When enable, fading will draw two consecutive frames with alpha transition between
 		them instead of directly switching from one to another when it reaches the next frame.
@@ -29,6 +30,7 @@ class Anim extends Drawable {
 	public function play( frames, atFrame = 0. ) {
 		this.frames = frames == null ? [] : frames;
 		currentFrame = atFrame;
+		pause = false;
 	}
 
 	public dynamic function onAnimEnd() {
@@ -49,7 +51,8 @@ class Anim extends Drawable {
 	override function sync( ctx : RenderContext ) {
 		super.sync(ctx);
 		var prev = curFrame;
-		curFrame += speed * ctx.elapsedTime;
+		if (!pause)
+			curFrame += speed * ctx.elapsedTime;
 		if( curFrame < frames.length )
 			return;
 		if( loop ) {
