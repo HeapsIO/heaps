@@ -6,6 +6,7 @@ private typedef GpuSave = {
 	var version : Int;
 	var bounds : Array<Float>;
 	var groups : Array<Dynamic>;
+	@:optional var hide : Dynamic;
 }
 
 enum GpuSortMode {
@@ -415,6 +416,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	var partAlloc : GpuPart;
 	var rnd = new hxd.Rand(0);
 	var lastMove : Float;
+	var hideProps : Dynamic;
 
 	public var seed(default, set) : Int	= Std.random(0x1000000);
 	public var volumeBounds(default, set) : h3d.col.Bounds;
@@ -473,7 +475,9 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				}
 			default:
 			}
-		return ({ type : "particles3D", version : VERSION, groups : [for( g in groups ) g.save()], bounds : bounds } : GpuSave);
+		var save : GpuSave = { type : "particles3D", version : VERSION, groups : [for( g in groups ) g.save()], bounds : bounds };
+		if( hideProps != null ) save.hide = hideProps;
+		return save;
 	}
 
 	public function load( _o : Dynamic, ?resourcePath : String ) {
@@ -484,6 +488,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			addGroup().load(o.version, g);
 		if( o.bounds != null )
 			volumeBounds = h3d.col.Bounds.fromValues(o.bounds[0] - o.bounds[3] * 0.5, o.bounds[1] - o.bounds[4] * 0.5, o.bounds[2] - o.bounds[5] * 0.5, o.bounds[3], o.bounds[4], o.bounds[5]);
+		hideProps = o.hide;
 	}
 
 	public function addGroup( ?g : GpuPartGroup, ?material : h3d.mat.Material, ?index ) {
