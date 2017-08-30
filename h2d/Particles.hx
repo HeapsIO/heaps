@@ -79,7 +79,10 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 		y += vy * et;
 		life += et;
 
-		rotation += vr * et;
+		if( group.rotAuto )
+			rotation = Math.atan2(vy, vx) + life * vr + group.rotInit;
+		else
+			rotation += vr * et;
 		scale = scaleX * Math.pow(1 + vs, et);
 
 		var t = life / maxLife;
@@ -160,6 +163,7 @@ class ParticleGroup {
 	public var rotInit(default, set) : Float	= 0;
 	public var rotSpeed(default, set) : Float	= 0;
 	public var rotSpeedRand(default, set):Float = 0;
+	public var rotAuto							= false;
 
 	public var fadeIn : Float					= 0.2;
 	public var fadeOut : Float					= 0.8;
@@ -205,6 +209,7 @@ class ParticleGroup {
 	public function new(p) {
 		this.parts = p;
 		batch = new SpriteBatch(null, p);
+		batch.visible = false;
 		pshader = new ParticleShader();
 		batch.addShader(pshader);
 		batch.hasRotationScale = true;
@@ -246,6 +251,7 @@ class ParticleGroup {
 		var life = g.life * (1 + srand() * g.lifeRand);
 		var delay = rand() * life * (1 - g.emitSync) + g.emitDelay;
 		var speed = g.speed * (1 + srand() * g.speedRand);
+		if( g.life == 0 ) life = 1e10;
 
 		switch( g.emitMode ) {
 		case Point:
@@ -305,7 +311,7 @@ class ParticleGroup {
 }
 
 @:access(h2d.ParticleGroup)
-class Particles extends Sprite {
+class Particles extends Drawable {
 
 	static inline var VERSION = 1;
 
@@ -376,6 +382,11 @@ class Particles extends Sprite {
 		}
 		if( !hasPart )
 			onEnd();
+	}
+
+	override function draw(ctx:RenderContext) {
+		for( g in groups )
+			g.batch.drawWith(ctx, this);
 	}
 
 	public inline function getGroups() {

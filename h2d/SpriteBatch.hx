@@ -294,8 +294,13 @@ class SpriteBatch extends Drawable {
 	}
 
 	override function draw( ctx : RenderContext ) {
+		drawWith(ctx, this);
+	}
+
+	@:allow(h2d)
+	function drawWith( ctx:RenderContext, obj : Drawable ) {
 		if( first == null || buffer == null || buffer.isDisposed() ) return;
-		if( !ctx.beginDrawObject(this, tile.getTexture()) ) return;
+		if( !ctx.beginDrawObject(obj, tile.getTexture()) ) return;
 		ctx.engine.renderQuadBuffer(buffer);
 	}
 
