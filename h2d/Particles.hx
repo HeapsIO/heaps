@@ -397,12 +397,15 @@ class Particles extends Drawable {
 	}
 
 	override function draw(ctx:RenderContext) {
+		var old = blendMode;
 		for( g in groups )
 			if( g.enable ) {
 				pshader.gradient = g.colorGradient;
 				pshader.hasGradient = g.colorGradient != null;
+				blendMode = g.batch.blendMode;
 				g.batch.drawWith(ctx, this);
 			}
+		blendMode = old;
 	}
 
 	public inline function getGroups() {
