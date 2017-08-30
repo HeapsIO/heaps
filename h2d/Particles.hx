@@ -317,7 +317,8 @@ class ParticleGroup {
 
 	public function load( version : Int, o : Dynamic ) {
 		for( f in getFields(this) )
-			Reflect.setProperty(this, f, Reflect.field(o, f));
+			if( Reflect.hasField(o,f) )
+				Reflect.setProperty(this, f, Reflect.field(o, f));
 		emitMode = PartEmitMode.createByName(o.emitMode);
 		sortMode = PartSortMode.createByName(o.sortMode);
 		blendMode = BlendMode.createByName(o.blendMode);

@@ -231,7 +231,8 @@ class GpuPartGroup {
 
 	public function load( version : Int, o : Dynamic ) {
 		for( f in getFields(this) )
-			Reflect.setField(this, f, Reflect.field(o, f));
+			if( Reflect.hasField(o,f) )
+				Reflect.setField(this, f, Reflect.field(o, f));
 		sortMode = GpuSortMode.createByIndex(o.sortMode);
 		emitMode = GpuEmitMode.createByIndex(o.emitMode);
 		texture = loadTexture(o.texture);
