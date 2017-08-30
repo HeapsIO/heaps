@@ -222,6 +222,14 @@ class ParticleGroup {
 
 	function makeTiles() {
 		var t : h2d.Tile;
+
+		// hide : create default particle
+		if( h3d.Engine.getCurrent() == null ) {
+			tiles = [];
+			needRebuild = true;
+			return;
+		}
+
 		if( texture == null )
 			t = h2d.Tile.fromColor(0xFFFFFF, 16, 16);
 		else
