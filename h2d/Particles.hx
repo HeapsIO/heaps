@@ -52,7 +52,8 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 	var group : ParticleGroup;
 	public var vx : Float;
 	public var vy : Float;
-	public var vs : Float;
+	public var vSizeX : Float;
+	public var vSizeY : Float;
 	public var vr : Float;
 	public var maxLife : Float;
 	public var life : Float;
@@ -77,7 +78,8 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 		var dv = Math.pow(1 + group.speedIncr, et);
 		vx *= dv;
 		vy *= dv;
-		vy += group.gravity * et;
+		vx += group.gravity * et * group.gravityAngle;
+		vy += group.gravity * et * (1 - group.gravityAngle);
 
 		x += vx * et;
 		y += vy * et;
@@ -87,7 +89,8 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 			rotation = Math.atan2(vy, vx) + life * vr + group.rotInit * Math.PI;
 		else
 			rotation += vr * et;
-		scale = scaleX * Math.pow(1 + vs, et);
+		scaleX *= Math.pow(1 + vSizeX, et);
+		scaleY *= Math.pow(1 + vSizeY, et);
 
 		var t = life / maxLife;
 		if( t < group.fadeIn )
@@ -143,26 +146,32 @@ class ParticleGroup {
 	public var blendMode(default, set) : BlendMode = Alpha;
 
 	public var nparts(default, set) : Int 		= 100;
+	public var dx(default, set) : Int 			= 0;
+	public var dy(default, set) : Int 			= 0;
+
 	public var emitLoop(default, set) : Bool 	= true;
 	public var emitMode(default, set):PartEmitMode = Point;
 	public var emitStartDist(default, set) : Float = 0.;
 	public var emitDist(default, set) : Float	= 50.;
 	public var emitDistY(default, set) : Float	= 50.;
-	public var emitAngle(default,set) : Float 	= 1.5;
+	public var emitAngle(default,set) : Float 	= -0.5;
 	public var emitSync(default, set) : Float	= 0;
 	public var emitDelay(default, set) : Float	= 0;
 
 	public var size(default, set) : Float		= 1;
 	public var sizeIncr(default, set) : Float	= 0;
+	public var incrX(default, set) : Bool		= true;
+	public var incrY(default, set) : Bool		= true;
 	public var sizeRand(default, set) : Float	= 0;
 
 	public var life(default, set) : Float		= 1;
 	public var lifeRand(default, set) : Float	= 0;
 
-	public var speed(default, set) : Float		= 50.;
-	public var speedRand(default, set) : Float	= 0;
-	public var speedIncr(default, set) : Float	= 0;
-	public var gravity(default, set) : Float	= 0;
+	public var speed(default, set) : Float			= 50.;
+	public var speedRand(default, set) : Float		= 0;
+	public var speedIncr(default, set) : Float		= 0;
+	public var gravity(default, set) : Float		= 0;
+	public var gravityAngle(default, set) : Float 	= 0;
 
 	public var rotInit(default, set) : Float	= 0;
 	public var rotSpeed(default, set) : Float	= 0;
@@ -186,13 +195,18 @@ class ParticleGroup {
 	inline function set_size(v) { needRebuild = true; return size = v; }
 	inline function set_sizeRand(v) { needRebuild = true; return sizeRand = v; }
 	inline function set_sizeIncr(v) { needRebuild = true; return sizeIncr = v; }
+	inline function set_incrX(v) { needRebuild = true; return incrX = v; }
+	inline function set_incrY(v) { needRebuild = true; return incrY = v; }
 	inline function set_speed(v) { needRebuild = true; return speed = v; }
 	inline function set_speedIncr(v) { needRebuild = true; return speedIncr = v; }
 	inline function set_gravity(v) { needRebuild = true; return gravity = v; }
+	inline function set_gravityAngle(v) { needRebuild = true; return gravityAngle = v; }
 	inline function set_speedRand(v) { needRebuild = true; return speedRand = v; }
 	inline function set_life(v) { needRebuild = true; return life = v; }
 	inline function set_lifeRand(v) { needRebuild = true; return lifeRand = v; }
 	inline function set_nparts(n) { needRebuild = true; return nparts = n; }
+	inline function set_dx(v) { needRebuild = true; return dx = v; }
+	inline function set_dy(v) { needRebuild = true; return dy = v; }
 	inline function set_emitLoop(v) { needRebuild = true; return emitLoop = v; }
 	inline function set_emitMode(v) { needRebuild = true; return emitMode = v; }
 	inline function set_emitStartDist(v) { needRebuild = true; return emitStartDist = v; }
@@ -254,46 +268,68 @@ class ParticleGroup {
 	function init( p : Particle ) {
 		inline function srand() return hxd.Math.srand();
 		inline function rand() return hxd.Math.random();
+		inline function getAngleFromNormalized(a : Float, rand : Float = 1.) : Float {
+			var newAngle = a * 0.5 * Math.PI * rand;
+			if (a < 0) newAngle += Math.PI;
+			return newAngle;
+		};
+
 		var g = this;
 		var size = g.size * (1 + srand() * g.sizeRand);
 		var rot = srand() * Math.PI * g.rotInit;
-		var vsize = g.sizeIncr;
 		var vrot = g.rotSpeed * (1 + rand() * g.rotSpeedRand) * (srand() < 0 ? -1 : 1);
 		var life = g.life * (1 + srand() * g.lifeRand);
 		var delay = rand() * life * (1 - g.emitSync) + g.emitDelay;
 		var speed = g.speed * (1 + srand() * g.speedRand);
-		if( g.life == 0 ) life = 1e10;
+		if( g.life == 0 )
+			life = 1e10;
+		p.x = dx;
+		p.y = dy;
 
 		switch( g.emitMode ) {
-		case Point:
-			p.vx = srand();
-			p.vy = srand();
-			speed *= 1 / hxd.Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+			case Point:
+				p.vx = srand();
+				p.vy = srand();
+				speed *= 1 / hxd.Math.sqrt(p.vx * p.vx + p.vy * p.vy);
 
-			var r = g.emitStartDist + g.emitDist * rand();
-			p.x = p.vx * r;
-			p.y = p.vy * r;
+				var r = g.emitStartDist + g.emitDist * rand();
+				p.x += p.vx * r;
+				p.y += p.vy * r;
 
-		case Cone:
-			var theta = rand() * Math.PI * 2;
-			var phi = g.emitAngle * srand();
-			if( g.emitAngle > 0 ) phi += Math.PI;
-			var r = g.emitStartDist + g.emitDist * rand();
-			p.vx = Math.sin(phi) * Math.cos(theta);
-			p.vy = Math.cos(phi);
-			p.x = p.vx * r;
-			p.y = p.vy * r;
+			case Cone:
+				if (g.emitAngle == 0) {
+					p.vx = 0.;
+					p.vy = 0.;
+				}
+				else {
+					var theta = rand() * Math.PI * 2;
+					var phi = getAngleFromNormalized(g.emitAngle, srand());
+					p.vx = Math.sin(phi) * Math.cos(theta);
+					p.vy = Math.cos(phi);
+				}
+				var r = g.emitStartDist + g.emitDist * rand();
+				p.x += p.vx * r;
+				p.y += p.vy * r;
 
-		case Box:
-			p.vx = srand();
-			p.vy = srand();
-			p.x = g.emitDist * srand();
-			p.y = g.emitDistY * srand();
+			case Box:
+				p.vx = srand();
+				p.vy = srand();
+				p.x += g.emitDist * srand();
+				p.y += g.emitDistY * srand();
+
+				var a = getAngleFromNormalized(g.emitAngle);
+				var cosA = Math.cos(a);
+				var sinA = Math.sin(a);
+				var xx = cosA * (p.x - dx) - sinA * (p.y - dy) + dx;
+				var yy = sinA * (p.x - dx) + cosA * (p.y - dy) + dy;
+				p.x = xx;
+				p.y = yy;
 		}
 
 		p.scale = size;
 		p.rotation = rot;
-		p.vs = vsize;
+		p.vSizeX = g.incrX ? g.sizeIncr : 0.;
+		p.vSizeY = g.incrY ? g.sizeIncr : 0.;
 		p.vr = vrot;
 		p.t = animationRepeat == 0 ? tiles[Std.random(tiles.length)] : tiles[0];
 		p.delay = delay;
