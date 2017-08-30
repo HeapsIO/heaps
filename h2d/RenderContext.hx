@@ -355,13 +355,12 @@ class RenderContext extends h3d.impl.RenderContext {
 			var t = curShaders.s;
 			objShaders = objShaders.next;
 			curShaders = curShaders.next;
-			if( s == t ) continue;
-			paramsChanged = true;
+			var prevInst = @:privateAccess t.instance;
+			if( s != t )
+				paramsChanged = true;
 			s.updateConstants(manager.globals);
-			@:privateAccess {
-				if( s.instance != t.instance )
-					shaderChanged = true;
-			}
+			if( @:privateAccess s.instance != prevInst )
+				shaderChanged = true;
 		}
 		if( objShaders != null || curShaders != null || baseShader.isRelative != isRelative || baseShader.hasUVPos != hasUVPos || baseShader.killAlpha != killAlpha )
 			shaderChanged = true;
