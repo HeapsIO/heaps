@@ -129,7 +129,6 @@ class ParticleGroup {
 	}
 
 	var parts : Particles;
-	var pshader : ParticleShader;
 	var batch : SpriteBatch;
 	var needRebuild = true;
 	var tiles : Array<h2d.Tile>;
@@ -176,7 +175,7 @@ class ParticleGroup {
 	public var texture(default,set) : h3d.mat.Texture;
 	public var colorGradient(default,set) : h3d.mat.Texture;
 
-	inline function set_enable(v) { enable = v; batch.visible = v; if( !v ) { batch.clear(); needRebuild = true; }; return v; }
+	inline function set_enable(v) { enable = v; if( !v ) { batch.clear(); needRebuild = true; }; return v; }
 	inline function set_sortMode(v) { needRebuild = true; return sortMode = v; }
 	inline function set_blendMode(v) { batch.blendMode = v; return blendMode = v; }
 	inline function set_size(v) { needRebuild = true; return size = v; }
@@ -200,7 +199,7 @@ class ParticleGroup {
 	inline function set_rotSpeed(v) { needRebuild = true; return rotSpeed = v; }
 	inline function set_rotSpeedRand(v) { needRebuild = true; return rotSpeedRand = v; }
 	inline function set_texture(t) { texture = t; makeTiles(); return t; }
-	inline function set_colorGradient(t) { colorGradient = t; pshader.gradient = t; pshader.hasGradient = t != null; return t; }
+	inline function set_colorGradient(t) { colorGradient = t; return t; }
 	inline function set_frameCount(v) { frameCount = v; makeTiles(); return v; }
 	inline function set_frameDivisionX(v) { frameDivisionX = v; makeTiles(); return v; }
 	inline function set_frameDivisionY(v) { frameDivisionY = v; makeTiles(); return v; }
@@ -210,8 +209,6 @@ class ParticleGroup {
 		this.parts = p;
 		batch = new SpriteBatch(null, p);
 		batch.visible = false;
-		pshader = new ParticleShader();
-		batch.addShader(pshader);
 		batch.hasRotationScale = true;
 		batch.hasUpdate = true;
 		this.texture = null;
@@ -318,10 +315,13 @@ class Particles extends Drawable {
 	var groups : Array<ParticleGroup>;
 	var resourcePath : String;
 	var hideProps : Dynamic;
+	var pshader : ParticleShader;
 
 	public function new( ?parent ) {
 		super(parent);
 		groups = [];
+		pshader = new ParticleShader();
+		addShader(pshader);
 	}
 
 	function loadTexture( path : String ) {
@@ -386,7 +386,11 @@ class Particles extends Drawable {
 
 	override function draw(ctx:RenderContext) {
 		for( g in groups )
-			g.batch.drawWith(ctx, this);
+			if( g.enable ) {
+				pshader.gradient = g.colorGradient;
+				pshader.hasGradient = g.colorGradient != null;
+				g.batch.drawWith(ctx, this);
+			}
 	}
 
 	public inline function getGroups() {
