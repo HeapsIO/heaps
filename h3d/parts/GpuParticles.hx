@@ -527,6 +527,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		return volumeBounds = v;
 	}
 
+	public function rebuild() {
+		for( g in groups ) g.needRebuild = true;
+	}
+
 	public function removeGroup( g : GpuPartGroup ) {
 		var idx = groups.indexOf(g);
 		if( idx < 0 ) return;
