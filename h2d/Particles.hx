@@ -84,7 +84,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 		life += et;
 
 		if( group.rotAuto )
-			rotation = Math.atan2(vy, vx) + life * vr + group.rotInit;
+			rotation = Math.atan2(vy, vx) + life * vr + group.rotInit * Math.PI;
 		else
 			rotation += vr * et;
 		scale = scaleX * Math.pow(1 + vs, et);
