@@ -20,6 +20,10 @@ enum PartEmitMode {
 		A cone, parametrized with emitAngle and emitDistance
 	**/
 	Cone;
+	/**
+		A box, parametrized with emitDist and emitDistY
+	**/
+	Box;
 }
 
 private class ParticleShader extends hxsl.Shader {
@@ -143,6 +147,7 @@ class ParticleGroup {
 	public var emitMode(default, set):PartEmitMode = Point;
 	public var emitStartDist(default, set) : Float = 0.;
 	public var emitDist(default, set) : Float	= 50.;
+	public var emitDistY(default, set) : Float	= 50.;
 	public var emitAngle(default,set) : Float 	= 1.5;
 	public var emitSync(default, set) : Float	= 0;
 	public var emitDelay(default, set) : Float	= 0;
@@ -192,6 +197,7 @@ class ParticleGroup {
 	inline function set_emitMode(v) { needRebuild = true; return emitMode = v; }
 	inline function set_emitStartDist(v) { needRebuild = true; return emitStartDist = v; }
 	inline function set_emitDist(v) { needRebuild = true; return emitDist = v; }
+	inline function set_emitDistY(v) { needRebuild = true; return emitDistY = v; }
 	inline function set_emitAngle(v) { needRebuild = true; return emitAngle = v; }
 	inline function set_emitSync(v) { needRebuild = true; return emitSync = v; }
 	inline function set_emitDelay(v) { needRebuild = true; return emitDelay = v; }
@@ -269,6 +275,12 @@ class ParticleGroup {
 			p.vy = Math.cos(phi);
 			p.x = p.vx * r;
 			p.y = p.vy * r;
+
+		case Box:
+			p.vx = srand();
+			p.vy = srand();
+			p.x = g.emitDist * srand();
+			p.y = g.emitDistY * srand();
 		}
 
 		p.scale = size;
