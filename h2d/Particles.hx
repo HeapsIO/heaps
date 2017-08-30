@@ -311,6 +311,7 @@ class Particles extends Sprite {
 
 	var groups : Array<ParticleGroup>;
 	var resourcePath : String;
+	var hideProps : Dynamic;
 
 	public function new( ?parent ) {
 		super(parent);
@@ -327,7 +328,9 @@ class Particles extends Sprite {
 	}
 
 	public function save() : Dynamic {
-		return { type : "particles2D", version : VERSION, groups : [for( g in groups ) g.save()] };
+		var obj : Dynamic = { type : "particles2D", version : VERSION, groups : [for( g in groups ) g.save()] };
+		if( hideProps != null ) obj.hide = hideProps;
+		return obj;
 	}
 
 	public function load( o : Dynamic, ?resourcePath : String ) {
@@ -335,6 +338,7 @@ class Particles extends Sprite {
 		if( o.version == 0 || o.version > VERSION ) throw "Unsupported version " + o.version;
 		for( g in (o.groups:Array<Dynamic>) )
 			addGroup().load(o.version, g);
+		hideProps = o.hide;
 	}
 
 	public function addGroup( ?g : ParticleGroup, ?index ) {
