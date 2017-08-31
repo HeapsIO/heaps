@@ -85,7 +85,7 @@ class HMDOut extends BaseLibrary {
 			for( _ in skin.splitJoints ) ibufs.push(new hxd.IndexBuffer());
 
 		g.bounds = new h3d.col.Bounds();
-		var tmpBuf = new haxe.ds.Vector<hxd.impl.Float32>(stride);
+		var tmpBuf = #if js new js.html.Float32Array(stride) #else new haxe.ds.Vector<hxd.impl.Float32>(stride) #end;
 		var vertexRemap = new Array<Int>();
 		var index = geom.getPolygons();
 		var count = 0, matPos = 0, stri = 0;
