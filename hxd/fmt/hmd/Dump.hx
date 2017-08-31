@@ -171,7 +171,11 @@ class Dump {
 			add('@$k GEOMETRY');
 			prefix += '\t';
 			d.position = g.vertexPosition;
-			add('VertexBuffer : ' + Std.string([for( i in 0...g.vertexCount ) [for( j in 0...stride ) d.readFloat()]]));
+			add('VertexBuffer :');
+			prefix += '\t';
+			for( i in 0...g.vertexCount )
+				add(Std.string([for( j in 0...stride ) d.readFloat()]));
+			prefix = prefix.substr(1);
 			d.position = g.indexPosition;
 			add('IndexBuffer : ' + Std.string([for( i in 0...g.indexCount ) d.readUInt16()]));
 			prefix = '';
