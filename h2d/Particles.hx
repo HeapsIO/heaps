@@ -32,15 +32,21 @@ private class ParticleShader extends hxsl.Shader {
 		@input var input : { color : Vec4 };
 
 		@const var hasGradient : Bool;
+		@const var has2DGradient : Bool;
 		@param var gradient : Sampler2D;
 
 		var pixelColor : Vec4;
 		var textureColor : Vec4;
 
 		function fragment() {
-			pixelColor = textureColor;
+			pixelColor = textureColor; // ignore input.color RGB
 			pixelColor.a *= input.color.a;
-			if( hasGradient ) pixelColor *= gradient.get(vec2(input.color.r,textureColor.r));
+			if( has2DGradient ) {
+				var g = gradient.get(vec2(input.color.r, textureColor.r));
+				pixelColor.rgb = g.rgb;
+				pixelColor.a *= g.a;
+			} else if( hasGradient )
+				pixelColor *= gradient.get(input.color.rg);
 		}
 
 	}
@@ -445,7 +451,8 @@ class Particles extends Drawable {
 		for( g in groups )
 			if( g.enable ) {
 				pshader.gradient = g.colorGradient;
-				pshader.hasGradient = g.colorGradient != null;
+				pshader.hasGradient = g.colorGradient != null && g.colorGradient.height == 1;
+				pshader.has2DGradient = g.colorGradient != null && g.colorGradient.height > 1;
 				blendMode = g.batch.blendMode;
 				g.batch.drawWith(ctx, this);
 			}
