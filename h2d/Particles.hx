@@ -40,7 +40,7 @@ private class ParticleShader extends hxsl.Shader {
 		function fragment() {
 			pixelColor = textureColor;
 			pixelColor.a *= input.color.a;
-			if( hasGradient ) pixelColor *= gradient.get(input.color.rg);
+			if( hasGradient ) pixelColor *= gradient.get(vec2(input.color.r,textureColor.r));
 		}
 
 	}
@@ -100,8 +100,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 		else
 			alpha = 1;
 
-		r = t;
-		g = 0;
+		r = t; // pass to pshader for colorGradient
 
 		if( group.animationRepeat > 0 )
 			this.t = group.tiles[Std.int(t * group.tiles.length * group.animationRepeat) % group.tiles.length];
