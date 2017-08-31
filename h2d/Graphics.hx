@@ -436,7 +436,7 @@ class Graphics extends Drawable {
 		flush();
 		lineTo(cx, cy);
 		if( nsegments == 0 )
-			nsegments = Math.ceil(ray * angleLength / 4);
+			nsegments = Math.ceil(Math.abs(ray * angleLength / 4));
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = angleLength / (nsegments - 1);
 		for( i in 0...nsegments ) {
