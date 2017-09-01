@@ -58,8 +58,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 	var group : ParticleGroup;
 	public var vx : Float;
 	public var vy : Float;
-	public var vSizeX : Float;
-	public var vSizeY : Float;
+	public var vSize : Float;
 	public var vr : Float;
 	public var maxLife : Float;
 	public var life : Float;
@@ -84,8 +83,8 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 		var dv = Math.pow(1 + group.speedIncr, et);
 		vx *= dv;
 		vy *= dv;
-		vx += group.gravity * et * group.gravityAngle;
-		vy += group.gravity * et * (1 - group.gravityAngle);
+		vx += group.gravity * et * group.sinGravityAngle;
+		vy += group.gravity * et * group.cosGravityAngle;
 
 		x += vx * et;
 		y += vy * et;
@@ -95,8 +94,11 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 			rotation = Math.atan2(vy, vx) + life * vr + group.rotInit * Math.PI;
 		else
 			rotation += vr * et;
-		scaleX *= Math.pow(1 + vSizeX, et);
-		scaleY *= Math.pow(1 + vSizeY, et);
+
+		if (group.incrX)
+			scaleX *= Math.pow(1 + vSize, et);
+		if (group.incrY)
+			scaleY *= Math.pow(1 + vSize, et);
 
 		var t = life / maxLife;
 		if( t < group.fadeIn )
@@ -177,6 +179,8 @@ class ParticleGroup {
 	public var speedIncr(default, set) : Float		= 0;
 	public var gravity(default, set) : Float		= 0;
 	public var gravityAngle(default, set) : Float 	= 0;
+	public var cosGravityAngle : Float;
+	public var sinGravityAngle : Float;
 
 	public var rotInit(default, set) : Float	= 0;
 	public var rotSpeed(default, set) : Float	= 0;
@@ -205,7 +209,13 @@ class ParticleGroup {
 	inline function set_speed(v) { needRebuild = true; return speed = v; }
 	inline function set_speedIncr(v) { needRebuild = true; return speedIncr = v; }
 	inline function set_gravity(v) { needRebuild = true; return gravity = v; }
-	inline function set_gravityAngle(v) { needRebuild = true; return gravityAngle = v; }
+	inline function set_gravityAngle(v : Float) {
+		needRebuild = true;
+		cosGravityAngle = Math.cos(v * Math.PI * 0.5);
+		sinGravityAngle = Math.sin(v * Math.PI * 0.5);
+		return gravityAngle = v;
+	}
+
 	inline function set_speedRand(v) { needRebuild = true; return speedRand = v; }
 	inline function set_life(v) { needRebuild = true; return life = v; }
 	inline function set_lifeRand(v) { needRebuild = true; return lifeRand = v; }
@@ -333,8 +343,7 @@ class ParticleGroup {
 
 		p.scale = size;
 		p.rotation = rot;
-		p.vSizeX = g.incrX ? g.sizeIncr : 0.;
-		p.vSizeY = g.incrY ? g.sizeIncr : 0.;
+		p.vSize = g.sizeIncr;
 		p.vr = vrot;
 		p.t = animationRepeat == 0 ? tiles[Std.random(tiles.length)] : tiles[0];
 		p.delay = delay;
