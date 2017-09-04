@@ -79,13 +79,13 @@ class Stage {
 	}
 
 	public function resize( width : Int, height : Int ) : Void {
-		#if !psgl
+		#if (hldx || hlsdl)
 		window.resize(width, height);
 		#end
 	}
 
 	public function setFullScreen( v : Bool ) : Void {
-		#if !psgl
+		#if (hldx || hlsdl)
 		window.displayMode = v ? fullScreenMode : Windowed;
 		#end
 	}
@@ -115,15 +115,7 @@ class Stage {
 		return false;
 	}
 
-	#if psgl
-
-	function get_vsync() : Bool return true;
-
-	function set_vsync( b : Bool ) : Bool {
-		return true;
-	}
-
-	#else
+	#if (hldx||hlsdl)
 
 	function get_vsync() : Bool return window.vsync;
 
@@ -300,6 +292,16 @@ class Stage {
 		for( sdl in keys.keys() )
 			addKey(sdl, keys.get(sdl));
 	}
+
+
+	#else
+
+	function get_vsync() : Bool return true;
+
+	function set_vsync( b : Bool ) : Bool {
+		return true;
+	}
+
 	#end
 
 	static var inst : Stage = null;

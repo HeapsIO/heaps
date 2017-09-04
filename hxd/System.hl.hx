@@ -84,6 +84,9 @@ class System {
 			@:privateAccess Stage.inst = new Stage(title, width, height);
 			init();
 			dx.Loop.defaultEventHandler = @:privateAccess Stage.inst.onEvent;
+		#else
+			@:privateAccess Stage.inst = new Stage(title, width, height);
+			init();
 		#end
 
 		#end
@@ -91,7 +94,7 @@ class System {
 	}
 
 	public static function setNativeCursor( c : hxd.Cursor ) : Void {
-		#if !psgl
+		#if (hlsdl || hldx)
 		if( c.equals(currentNativeCursor) )
 			return;
 		currentNativeCursor = c;
@@ -143,6 +146,8 @@ class System {
 		return "PC/" + sdl.Sdl.getDevices()[0];
 		#elseif hldx
 		return "PC/" + dx.Driver.getDeviceName();
+		#else
+		return "PC/Commandline";
 		#end
 	}
 
