@@ -55,7 +55,7 @@ class CachedBitmap extends Drawable {
 	function syncPosRec( s : Sprite ) {
 		s.calcAbsPos();
 		s.posChanged = true;
-		for( c in s.childs )
+		for( c in s.children )
 			syncPosRec(c);
 	}
 
@@ -80,14 +80,14 @@ class CachedBitmap extends Drawable {
 			absY = 0;
 
 			// force full resync
-			for( c in childs )
+			for( c in children )
 				syncPosRec(c);
 
 			ctx.pushTarget(tile.getTexture());
 			ctx.engine.clear(0);
 			var old = ctx.globalAlpha;
 			ctx.globalAlpha = 1;
-			for( c in childs )
+			for( c in children )
 				c.drawRec(ctx);
 			ctx.globalAlpha = old;
 			ctx.popTarget();

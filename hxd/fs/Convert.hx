@@ -26,10 +26,12 @@ class Convert {
 	function command( cmd : String, args : Array<String> ) {
 		#if flash
 		trace("TODO");
-		#else
+		#elseif sys
 		var code = Sys.command(cmd, args);
 		if( code != 0 )
 			throw "Command '" + cmd + (args.length == 0 ? "" : " " + args.join(" ")) + "' failed with exit code " + code;
+		#else
+		throw "Don't know how to run command on this platform";
 		#end
 	}
 

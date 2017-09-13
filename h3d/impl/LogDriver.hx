@@ -195,7 +195,7 @@ class LogDriver extends Driver {
 				log('Upload ' + (s.vertex?"vertex":"fragment") + " globals");
 				var g = s.globals;
 				while( g != null ) {
-					log('\t@${g.pos} ' + g.path + '=' + [for( i in 0...sizeOf(g.type) ) hxd.Math.fmt(buf.globals.toData()[g.pos + i])]);
+					log('\t@${g.pos} ' + g.path + '=' + [for( i in 0...sizeOf(g.type) ) hxd.Math.fmt(buf.globals #if hl .toData() #end[g.pos + i])]);
 					g = g.next;
 				}
 			}
@@ -211,7 +211,7 @@ class LogDriver extends Driver {
 					#if flash
 					pos += s.globalsSize * 4;
 					#end
-					log('\t@$pos ' + p.name + '=' + [for( i in 0...sizeOf(p.type) ) hxd.Math.fmt(buf.params.toData()[p.pos + i])]);
+					log('\t@$pos ' + p.name + '=' + [for( i in 0...sizeOf(p.type) ) hxd.Math.fmt(buf.params #if hl .toData() #end[p.pos + i])]);
 					p = p.next;
 				}
 			}
