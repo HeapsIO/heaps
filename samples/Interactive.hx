@@ -78,16 +78,18 @@ class Interactive extends hxd.App {
 			initInteract(i, m);
 		}
 
+		s2d.scaleX = 1.2;
+		s2d.rotation = 0.2;
 		b = new h2d.Interactive(150, 100, s2d);
-		b.backgroundColor = 0x80204060;
+		b.backgroundColor = 0xC0204060;
 		b.rotation = Math.PI / 3;
-		//b.scaleX = 1.5; // TODO
+		b.scaleX = 1.5;
 
 		var pix = null;
 		b.onOver = function(e) {
-			var t = h2d.Tile.fromColor(0xFF0000, 3, 3);
-			t.dx = -1;
-			t.dy = -1;
+			var t = h2d.Tile.fromColor(0xFF0000, 5, 5);
+			t.dx = -2;
+			t.dy = -2;
 			pix = new h2d.Bitmap(t, b);
 			pix.x = e.relX;
 			pix.y = e.relY;
@@ -112,6 +114,14 @@ class Interactive extends hxd.App {
 
 	override function update(dt:Float) {
 		obj.rotate(0, 0, 0.002 * dt);
+		
+		var i = s2d.getInteractive(s2d.mouseX, s2d.mouseY);
+		if (i != null) {
+			b.alpha = 0.7;
+		}
+		else {
+			b.alpha = 1.0;
+		}
 	}
 
 
