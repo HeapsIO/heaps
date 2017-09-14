@@ -79,11 +79,17 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function get_mouseX() {
-		return this.globalToLocal(new Point(stage.mouseX, stage.mouseY)).x;
+		var mx = stage.mouseX - absX;
+		var my = stage.mouseY - absY;
+		var invDet = 1 / (matA * matD - matB * matC);
+		return (mx * matD - my * matC) * invDet;
 	}
 
 	function get_mouseY() {
-		return this.globalToLocal(new Point(stage.mouseX, stage.mouseY)).y;
+		var mx = stage.mouseX - absX;
+		var my = stage.mouseY - absY;
+		var invDet = 1 / (matA * matD - matB * matC);
+		return (-mx * matB + my * matA) * invDet;
 	}
 
 	public function dispatchListeners( event : hxd.Event ) {
