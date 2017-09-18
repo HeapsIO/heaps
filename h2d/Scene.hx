@@ -109,14 +109,16 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		return true;
 	}
 
+	/**
+	 * Return first Interactive which overlaps with x,y coordinates (Scene space) or null
+	 */
 	public function getInteractive( x : Float, y : Float ) {
 		var rx = x * matA + y * matC + absX;
 		var ry = x * matB + y * matD + absY;
-
 		for ( i in interactive ) {
 
 			// check bounds
-			var local = i.globalToLocal(new Point(rx, ry));
+			var local = interactiveToLocal(i, rx, ry);
 			if (local.x < 0 || local.x > i.width || local.y < 0 || local.y > i.height)
 				continue;
 
@@ -138,28 +140,39 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function screenToLocal( e : hxd.Event ) {
-		var local = this.globalToLocal(new Point(e.relX, e.relY));		
-		e.relX = local.x;
-		e.relY = local.y;
+		var px = e.relX - absX;
+		var py = e.relX - absY;
+		var invDet = 1 / (matA * matD - matB * matC);
+		e.relX = (px * matD - py * matC) * invDet;
+		e.relY = ( -px * matB + py * matA) * invDet;
+	}
+	
+	static function interactiveToLocal( i : Interactive, x : Float, y : Float ) {
+		var px = x - i.absX;
+		var py = y - i.absY;
+		var invDet = 1 / (i.matA * i.matD - i.matB * i.matC);
+		var lx = (px * i.matD - py * i.matC) * invDet;
+		var ly = ( -px * i.matB + py * i.matA) * invDet;
+		return new Point(lx, ly);
 	}
 
 	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
 		var i : Interactive = cast to;
-		var local = i.globalToLocal(new Point(event.relX, event.relY));
+		var local = interactiveToLocal(i, event.relX, event.relY);
 		event.relX = local.x;
 		event.relY = local.y;
 		i.handleEvent(event);
 	}
 
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
-		var pos = new Point(event.relX, event.relY);
+		// var pos = new Point(event.relX, event.relY);
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		for( idx in index...interactive.length ) {
 			var i = interactive[idx];
 			if( i == null ) break;
 
 			// check bounds
-			var local = i.globalToLocal(pos);
+			var local = interactiveToLocal(i, event.relX, event.relY);
 			if (local.x < 0 || local.x > i.width || local.y < 0 || local.y > i.height)
 				continue;
 
