@@ -165,7 +165,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
-		// var pos = new Point(event.relX, event.relY);
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		for( idx in index...interactive.length ) {
 			var i = interactive[idx];
