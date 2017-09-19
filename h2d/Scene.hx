@@ -79,6 +79,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function get_mouseX() {
+		if (rotation == 0) {
+			return stage.mouseX * width / (stage.width * scaleX) - x;
+		}
 		var mx = stage.mouseX - absX;
 		var my = stage.mouseY - absY;
 		var invDet = 1 / (matA * matD - matB * matC);
@@ -86,6 +89,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function get_mouseY() {
+		if (rotation == 0) {
+			return stage.mouseY * height / (stage.height * scaleY) - y;
+		}
 		var mx = stage.mouseX - absX;
 		var my = stage.mouseY - absY;
 		var invDet = 1 / (matA * matD - matB * matC);
@@ -141,7 +147,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	function screenToLocal( e : hxd.Event ) {
 		var px = e.relX - absX;
-		var py = e.relX - absY;
+		var py = e.relY - absY;
 		var invDet = 1 / (matA * matD - matB * matC);
 		e.relX = (px * matD - py * matC) * invDet;
 		e.relY = ( -px * matB + py * matA) * invDet;
