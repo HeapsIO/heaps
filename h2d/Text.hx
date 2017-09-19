@@ -62,6 +62,7 @@ class Text extends Drawable {
 	}
 
 	function set_textAlign(a) {
+		if (a == null) a = Left;
 		if( textAlign == a ) return a;
 		textAlign = a;
 		rebuild();
