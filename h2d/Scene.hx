@@ -77,23 +77,31 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			posChanged = true;
 		}
 	}
+	
+	inline function relMouseX() {
+		return stage.mouseX * width / stage.width;
+	}
+	
+	inline function relMouseY() {
+		return stage.mouseY * height / stage.height;
+	}
 
 	function get_mouseX() {
-		//if (rotation == 0) {
-			//return stage.mouseX * width / (stage.width * scaleX) - x;
-		//}
-		var mx = stage.mouseX * width / stage.width - absX;
-		var my = stage.mouseY * height / stage.height - absY;
+		if (rotation == 0) {
+			return relMouseX() / scaleX - absX;
+		}
+		var mx = relMouseX() - absX;
+		var my = relMouseY() - absY;
 		var invDet = 1 / (matA * matD - matB * matC);
 		return (mx * matD - my * matC) * invDet;
 	}
 
 	function get_mouseY() {
-		//if (rotation == 0) {
-			//return stage.mouseY * height / (stage.height * scaleY) - y;
-		//}
-		var mx = stage.mouseX * width / stage.width - absX;
-		var my = stage.mouseY * height / stage.height - absY;
+		if (rotation == 0) {
+			return relMouseY() / scaleY - absY;
+		}
+		var mx = relMouseX() - absX;
+		var my = relMouseY() - absY;
 		var invDet = 1 / (matA * matD - matB * matC);
 		return (-mx * matB + my * matA) * invDet;
 	}
@@ -124,7 +132,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		for ( i in interactive ) {
 
 			// check bounds
-			var local = interactiveToLocal(i, rx, ry);
+			var local = toInteractiveLocal(i, rx, ry);
 			if (local.x < 0 || local.x > i.width || local.y < 0 || local.y > i.height)
 				continue;
 
@@ -144,10 +152,16 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 		return null;
 	}
+	
+	inline function applyFixedSizeScale( e: hxd.Event ) {
+		if (fixedSize) {
+			e.relX *= width / stage.width;
+			e.relY *= height / stage.height;
+		}
+	}
 
 	function screenToLocal( e : hxd.Event ) {
-		e.relX = e.relX * width / stage.width;
-		e.relY = e.relY * height / stage.height;
+		applyFixedSizeScale(e);
 		var px = e.relX - absX;
 		var py = e.relY - absY;
 		var invDet = 1 / (matA * matD - matB * matC);
@@ -155,7 +169,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		e.relY = ( -px * matB + py * matA) * invDet;
 	}
 	
-	static function interactiveToLocal( i : Interactive, x : Float, y : Float ) {
+	static function toInteractiveLocal( i : Interactive, x : Float, y : Float ) {
 		var px = x - i.absX;
 		var py = y - i.absY;
 		var invDet = 1 / (i.matA * i.matD - i.matB * i.matC);
@@ -166,24 +180,22 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
 		var i : Interactive = cast to;
-		event.relX = event.relX * width / stage.width;
-		event.relY = event.relY * height / stage.height;
-		var local = interactiveToLocal(i, event.relX, event.relY);
+		applyFixedSizeScale(event);
+		var local = toInteractiveLocal(i, event.relX, event.relY);
 		event.relX = local.x;
 		event.relY = local.y;
 		i.handleEvent(event);
 	}
 
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
-		event.relX = event.relX * width / stage.width;
-		event.relY = event.relY * height / stage.height;
+		applyFixedSizeScale(event);
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		for( idx in index...interactive.length ) {
 			var i = interactive[idx];
 			if( i == null ) break;
 
 			// check bounds
-			var local = interactiveToLocal(i, event.relX, event.relY);
+			var local = toInteractiveLocal(i, event.relX, event.relY);
 			if (local.x < 0 || local.x > i.width || local.y < 0 || local.y > i.height)
 				continue;
 
