@@ -79,21 +79,21 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function get_mouseX() {
-		if (rotation == 0) {
-			return stage.mouseX * width / (stage.width * scaleX) - x;
-		}
-		var mx = stage.mouseX - absX;
-		var my = stage.mouseY - absY;
+		//if (rotation == 0) {
+			//return stage.mouseX * width / (stage.width * scaleX) - x;
+		//}
+		var mx = stage.mouseX * width / stage.width - absX;
+		var my = stage.mouseY * height / stage.height - absY;
 		var invDet = 1 / (matA * matD - matB * matC);
 		return (mx * matD - my * matC) * invDet;
 	}
 
 	function get_mouseY() {
-		if (rotation == 0) {
-			return stage.mouseY * height / (stage.height * scaleY) - y;
-		}
-		var mx = stage.mouseX - absX;
-		var my = stage.mouseY - absY;
+		//if (rotation == 0) {
+			//return stage.mouseY * height / (stage.height * scaleY) - y;
+		//}
+		var mx = stage.mouseX * width / stage.width - absX;
+		var my = stage.mouseY * height / stage.height - absY;
 		var invDet = 1 / (matA * matD - matB * matC);
 		return (-mx * matB + my * matA) * invDet;
 	}
@@ -146,6 +146,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function screenToLocal( e : hxd.Event ) {
+		e.relX = e.relX * width / stage.width;
+		e.relY = e.relY * height / stage.height;
 		var px = e.relX - absX;
 		var py = e.relY - absY;
 		var invDet = 1 / (matA * matD - matB * matC);
@@ -164,6 +166,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
 		var i : Interactive = cast to;
+		event.relX = event.relX * width / stage.width;
+		event.relY = event.relY * height / stage.height;
 		var local = interactiveToLocal(i, event.relX, event.relY);
 		event.relX = local.x;
 		event.relY = local.y;
@@ -171,6 +175,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
+		event.relX = event.relX * width / stage.width;
+		event.relY = event.relY * height / stage.height;
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		for( idx in index...interactive.length ) {
 			var i = interactive[idx];
