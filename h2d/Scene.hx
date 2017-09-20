@@ -1,5 +1,4 @@
 package h2d;
-import h2d.col.Point;
 import hxd.Math;
 
 class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.InteractiveScene {
@@ -175,7 +174,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		var invDet = 1 / (i.matA * i.matD - i.matB * i.matC);
 		var lx = (px * i.matD - py * i.matC) * invDet;
 		var ly = ( -px * i.matB + py * i.matA) * invDet;
-		return new Point(lx, ly);
+		return new h2d.col.Point(lx, ly);
 	}
 
 	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
