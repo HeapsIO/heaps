@@ -168,7 +168,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		e.relY = ( -px * matB + py * matA) * invDet;
 	}
 	
-	static function toInteractiveLocal( i : Interactive, x : Float, y : Float ) {
+	static inline function toInteractiveLocal( i : Interactive, x : Float, y : Float ) {
 		var px = x - i.absX;
 		var py = y - i.absY;
 		var invDet = 1 / (i.matA * i.matD - i.matB * i.matC);
