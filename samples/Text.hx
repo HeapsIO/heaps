@@ -1,0 +1,148 @@
+import h2d.Drawable;
+import h2d.Flow;
+import h2d.Font;
+import h2d.Graphics;
+import h2d.Sprite;
+import h2d.Text.Align;
+
+class TextWidget extends Sprite
+{
+	public var align: Align;
+	public var textField: h2d.Text;
+	public var back: Graphics;
+	
+	public function new(parent:h2d.Scene, font: Font, str:String, align:h2d.Text.Align){
+		super(parent);
+		this.align = align;
+		back = new Graphics(this);
+
+		var tf = new h2d.Text(font, this);
+		tf.textColor = 0xffffff;
+		tf.textAlign = align;
+		tf.text = str;
+		// tf.scale(1.0);
+		textField = tf;
+		
+		refreshBounds();
+	}
+	
+	public function refreshBounds() {
+		back.clear();
+		
+		var size = textField.getSize();
+		back.beginFill(0x5050ff,  0.5);
+		back.drawRect(size.x, size.y, size.width, size.height);
+		back.endFill();
+		
+		back.lineStyle(1, 0x50ff50);
+		var bounds = textField.getBounds(this);
+		back.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
+		
+		back.lineStyle(1, 0xff5050);
+		back.moveTo(bounds.x, bounds.y);
+		back.lineTo(bounds.x + textField.textWidth, bounds.y);
+		back.moveTo(bounds.x, bounds.y);
+		back.lineTo(bounds.x, bounds.y + textField.textHeight);
+	}
+
+	public function setMaxWidth(w:Int) {
+		textField.maxWidth = w;
+		refreshBounds();
+	}
+}
+
+class Text extends hxd.App {
+	
+	var textWidgets:Array<TextWidget> = [];
+	var resizeWidgets: Array<TextWidget> = [];
+
+	override function init() {
+
+		// var font = hxd.Res.customFont.toFont();
+		var font = hxd.Res.trueTypeFont.build(13);
+		
+		var yoffset = 10.0;
+
+		function createWidget(str:String, align:h2d.Text.Align) {
+			var w = new TextWidget(s2d, font, str, align);
+			w.y = yoffset;
+			textWidgets.push(w);
+			return w;
+		}
+		
+		// Static single and multiline widgets
+		var multilineText = "This is a multiline text.\nLorem ipsum dolor";
+		var singleText = "Hello text";
+		for (a in [Align.Left, Align.Center, Align.Right]) {
+			var w = createWidget("", a);
+			yoffset += w.textField.textHeight + 10;
+			var w = createWidget(singleText, a);
+			yoffset += w.textField.textHeight + 10;
+			var w = createWidget(multilineText, a);
+			yoffset += w.textField.textHeight + 10;
+		}
+		
+		// Resized widgets
+		yoffset += 20;
+		var longText = "Lorem ipsum dolor sit amet, fabulas repudiare accommodare nec ut. Ut nec facete maiestatis, partem debitis eos id, perfecto ocurreret repudiandae cum no.";
+		for (a in [Align.Left, Align.Center, Align.Right]) {			
+			var w = createWidget(longText, a);
+			w.setMaxWidth(200);
+			resizeWidgets.push(w);
+			yoffset += 100;
+		}
+		
+		
+		// Flows
+		function createText(parent:Sprite, str : String, align:Align) {
+			var tf = new h2d.Text(font, parent);
+			tf.textColor = 0xffffff;
+			tf.textAlign = align;
+			tf.text = str;
+		}
+		
+		
+		yoffset = 0;
+		var flow = new Flow(s2d);
+		flow.debug = true;
+		flow.horizontalSpacing = 10;
+		flow.verticalAlign = FlowAlign.Middle;
+		flow.padding = 10;
+		createText(flow, singleText, Align.Left);
+		createText(flow, multilineText, Align.Left);
+		
+		yoffset += flow.getSize().height + 10;
+		
+		var flow = new Flow(s2d);
+		flow.y = yoffset;
+		flow.debug = true;
+		flow.horizontalSpacing = 10;
+		flow.verticalAlign = FlowAlign.Middle;
+		flow.padding = 10;
+		flow.maxWidth = 100;
+		createText(flow, singleText, Align.Left);
+		createText(flow, multilineText, Align.Center);
+		
+		onResize();
+	}
+	
+
+	// if we the window has been resized
+	override function onResize() {
+		for (w in textWidgets) {
+			w.x = s2d.width / 2;
+		}
+	}
+
+	override function update(dt:Float) {
+		for (w in resizeWidgets) {
+			w.setMaxWidth(Std.int(300 + Math.sin(haxe.Timer.stamp() * 0.5) * 100.0));
+		}
+	}
+
+	static function main() {
+		hxd.Res.initEmbed();
+		new Text();
+	}
+
+}
