@@ -66,7 +66,7 @@ class Sprite {
 
 	/**
 		This is similar to getBounds(parent), but instead of the full content, it will return
-		the size based on the alignement of the Sprite. For instance for a text, getBounds will returns
+		the size based on the alignement of the Sprite. For instance for a text, getBounds will return
 		the full glyphs size whereas getSize() will ignore the pixels under the baseline.
 	**/
 	public function getSize( ?out : h2d.col.Bounds ) : h2d.col.Bounds {
