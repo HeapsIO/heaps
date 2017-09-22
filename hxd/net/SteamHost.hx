@@ -24,7 +24,7 @@ package hxd.net;
 #if !hxbit
 #error	"Using SteamHost requires compiling with -lib hxbit"
 #end
-#if !steamwrap
+#if !hlsteam
 #error	"Using SteamHost requires compiling with -lib steamwrap"
 #end
 import hxbit.NetworkHost;
