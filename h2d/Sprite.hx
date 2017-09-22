@@ -625,15 +625,15 @@ class Sprite {
 			c.drawRec(ctx);
 		ctx.flush();
 
-		var final = h2d.Tile.fromTexture(t);
-		final.dx = xMin;
-		final.dy = yMin;
+		var finalTile = h2d.Tile.fromTexture(t);
+		finalTile.dx = xMin;
+		finalTile.dy = yMin;
 
-		var prev = final;
-		final = filter.draw(ctx, final);
-		if( final != prev && final != null ) {
-			final.dx += xMin;
-			final.dy += yMin;
+		var prev = finalTile;
+		finalTile = filter.draw(ctx, finalTile);
+		if( finalTile != prev && finalTile != null ) {
+			finalTile.dx += xMin;
+			finalTile.dy += yMin;
 		}
 
 		shader.filterMatrixA.load(oldA);
@@ -642,11 +642,11 @@ class Sprite {
 		ctx.popTarget();
 		ctx.popFilter();
 
-		if( final == null )
+		if( finalTile == null )
 			return;
 
 		ctx.globalAlpha = oldAlpha * alpha;
-		emitTile(ctx, final);
+		emitTile(ctx, finalTile);
 		ctx.globalAlpha = oldAlpha;
 		ctx.flush();
 	}
