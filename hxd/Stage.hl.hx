@@ -1,6 +1,10 @@
 package hxd;
 import hxd.Key in K;
 
+#if (hlsdl && hldx)
+#error "You shouldn't use both -lib hlsdl and -lib hldx"
+#end
+
 //@:coreApi
 class Stage {
 
