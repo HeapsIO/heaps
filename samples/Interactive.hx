@@ -1,5 +1,3 @@
-import h2d.Graphics;
-import hxd.Event;
 //PARAM=-D resourcesPath=../../skin_res
 
 class Interactive extends hxd.App {
@@ -80,22 +78,16 @@ class Interactive extends hxd.App {
 			initInteract(i, m);
 		}
 
-		s2d.setPos(10, 10);
-		s2d.scaleY = 1.2;
-		s2d.rotation = 0.3;
-		// s2d.setFixedSize(600, 600);
-
-		
 		b = new h2d.Interactive(150, 100, s2d);
-		b.backgroundColor = 0xC0204060;
+		b.backgroundColor = 0x80204060;
 		b.rotation = Math.PI / 3;
-		b.scaleX = 1.2;
+		//b.scaleX = 1.5; // TODO
 
 		var pix = null;
 		b.onOver = function(e) {
-			var t = h2d.Tile.fromColor(0xFF0000, 5, 5);
-			t.dx = -2;
-			t.dy = -2;
+			var t = h2d.Tile.fromColor(0xFF0000, 3, 3);
+			t.dx = -1;
+			t.dy = -1;
 			pix = new h2d.Bitmap(t, b);
 			pix.x = e.relX;
 			pix.y = e.relY;
@@ -109,22 +101,6 @@ class Interactive extends hxd.App {
 			pix.remove();
 			pix = null;
 		};
-		b.onClick = function(e) {
-			// Dispatch back a move event. Check that pix doesn't move on click
-			var stage = hxd.Stage.getInstance();
-			e.kind = EMove;
-			e.relX = stage.mouseX;
-			e.relY = stage.mouseY;
-			s2d.dispatchEvent(e, b);
-		}
-		s2d.addEventListener(function (e) {
-			if (e.kind == EPush) {
-				var g  = new Graphics(s2d);
-				g.beginFill(0xff0000);
-				g.drawRect(e.relX, e.relY, 4, 4);
-				g.endFill();
-			}
-		});
 
 		onResize();
 	}
@@ -136,14 +112,6 @@ class Interactive extends hxd.App {
 
 	override function update(dt:Float) {
 		obj.rotate(0, 0, 0.002 * dt);
-		
-		var i = s2d.getInteractive(s2d.mouseX, s2d.mouseY);
-		if (i != null) {
-			b.alpha = 0.5;
-		}
-		else {
-			b.alpha = 1.0;
-		}
 	}
 
 
