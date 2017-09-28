@@ -198,7 +198,10 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function present() {
+		var old = hxd.System.allowTimeout;
+		if( old ) hxd.System.allowTimeout = false;
 		Driver.present(window.vsync ? 1 : 0, None);
+		if( old ) hxd.System.allowTimeout = true;
 	}
 
 	override function getDefaultDepthBuffer():h3d.mat.DepthBuffer {
