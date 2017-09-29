@@ -109,7 +109,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		#if debug
 		options |= DebugLayer;
 		#end
-		driver = Driver.create(window, backBufferFormat, options);
+
+		try
+			driver = Driver.create(window, backBufferFormat, options)
+		catch( e : Dynamic )
+			throw "Failed to initialize DirectX driver (" + e+")";
+
 		if( driver == null ) throw "Failed to initialize DirectX driver";
 
 		var version = Driver.getSupportedVersion();
