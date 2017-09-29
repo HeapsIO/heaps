@@ -112,10 +112,10 @@ class Eval {
 		}
 	}
 
-	function handleReturn( e : TExpr, final : Bool = false ) : TExpr {
+	function handleReturn( e : TExpr, isFinal : Bool = false ) : TExpr {
 		switch( e.e ) {
 		case TReturn(v):
-			if( !final )
+			if( !isFinal )
 				Error.t("Cannot inline not final return", e.p);
 			if( v == null )
 				return { e : TBlock([]), t : TVoid, p : e.p };
@@ -126,27 +126,27 @@ class Eval {
 			while( i < last ) {
 				var e = el[i++];
 				if( i == last )
-					out.push(handleReturn(e, final));
+					out.push(handleReturn(e, isFinal));
 				else switch( e.e ) {
-				case TIf(econd, eif, null) if( final && hasReturn(eif) ):
+				case TIf(econd, eif, null) if( isFinal && hasReturn(eif) ):
 					out.push(handleReturn( { e : TIf(econd, eif, { e : TBlock(el.slice(i)), t : e.t, p : e.p } ), t : e.t, p : e.p } ));
 					break;
 				case TReturn(e):
-					out.push(handleReturn(e, final));
+					out.push(handleReturn(e, isFinal));
 					break;
 				default:
 					out.push(handleReturn(e));
 				}
 			}
-			var t = if( final ) out[out.length - 1].t else e.t;
+			var t = if( isFinal ) out[out.length - 1].t else e.t;
 			return { e : TBlock(out), t : t, p : e.p };
 		case TParenthesis(v):
-			var v = handleReturn(v, final);
+			var v = handleReturn(v, isFinal);
 			return { e : TParenthesis(v), t : v.t, p : e.p };
-		case TIf(cond, eif, eelse) if( eelse != null && final ):
+		case TIf(cond, eif, eelse) if( eelse != null && isFinal ):
 			var cond = handleReturn(cond);
-			var eif = handleReturn(eif, final);
-			return { e : TIf(cond, eif, handleReturn(eelse, final)), t : eif.t, p : e.p };
+			var eif = handleReturn(eif, isFinal);
+			return { e : TIf(cond, eif, handleReturn(eelse, isFinal)), t : eif.t, p : e.p };
 		default:
 			return e.map(handleReturnDef);
 		}
