@@ -8,7 +8,7 @@ private abstract Float32Expand({ pos : Int, array : js.html.Float32Array }) {
 	public var length(get, set) : Int;
 
 	public function new(length) {
-		this = { pos : 0, array : new js.html.Float32Array(new js.html.ArrayBuffer(length)) };
+		this = { pos : 0, array : new js.html.Float32Array(new js.html.ArrayBuffer(length<<2)) };
 	}
 
 	inline function get_length() return this.pos;
