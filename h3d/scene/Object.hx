@@ -275,6 +275,7 @@ class Object implements h3d.impl.Serializable {
 		o.scaleX = scaleX;
 		o.scaleY = scaleY;
 		o.scaleZ = scaleZ;
+		o.qRot.load(qRot);
 		o.name = name;
 		o.follow = follow;
 		o.followPositionOnly = followPositionOnly;

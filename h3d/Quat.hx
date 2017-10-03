@@ -36,6 +36,13 @@ class Quat {
 		return lengthSq().sqrt();
 	}
 
+	public inline function load( q : Quat ) {
+		this.x = q.x;
+		this.y = q.y;
+		this.z = q.z;
+		this.w = q.w;
+	}
+
 	public function clone() {
 		return new Quat(x, y, z, w);
 	}
