@@ -14,8 +14,10 @@ class MultiMaterial extends Mesh {
 	}
 
 	override function clone( ?o : Object ) {
-		var m = o == null ? new MultiMaterial(null,materials) : cast o;
-		m.materials = [for( m in materials ) if( m == null ) null else cast m.clone()];
+		var m = o == null ? new MultiMaterial(null, materials) : cast o;
+		m.materials = [];
+		for( mat in materials )
+			m.materials.push(if( mat == null ) null else cast mat.clone());
 		super.clone(m);
 		m.material = m.materials[0];
 		return m;
