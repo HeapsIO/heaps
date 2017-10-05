@@ -35,15 +35,26 @@ class Mask extends Sprite {
 		}
 	}
 
-	override function getBoundsRec( relativeTo, out, forSize ) {
-		super.getBoundsRec(relativeTo, out, forSize);
+	override function getBoundsRec( relativeTo, out:h2d.col.Bounds, forSize ) {
 		var xMin = out.xMin, yMin = out.yMin, xMax = out.xMax, yMax = out.yMax;
 		out.empty();
+		if( posChanged ) {
+			calcAbsPos();
+			for( c in children )
+				c.posChanged = true;
+			posChanged = false;
+		}
 		addBounds(relativeTo, out, 0, 0, width, height);
-		if( xMin > out.xMin ) out.xMin = xMin;
-		if( yMin > out.yMin ) out.yMin = yMin;
-		if( xMax < out.xMax ) out.xMax = xMax;
-		if( yMax < out.yMax ) out.yMax = yMax;
+		var bxMin = out.xMin, byMin = out.yMin, bxMax = out.xMax, byMax = out.yMax;
+		out.xMin = xMin;
+		out.xMax = xMax;
+		out.yMin = yMin;
+		out.yMax = yMax;
+		super.getBoundsRec(relativeTo, out, forSize);
+		if( out.xMin < bxMin ) out.xMin = hxd.Math.min(xMin, bxMin);
+		if( out.yMin < byMin ) out.yMin = hxd.Math.min(yMin, byMin);
+		if( out.xMax > bxMax ) out.xMax = hxd.Math.max(xMax, bxMax);
+		if( out.yMax > byMax ) out.yMax = hxd.Math.max(yMax, byMax);
 	}
 
 	override function drawRec( ctx : h2d.RenderContext ) @:privateAccess {
