@@ -72,45 +72,12 @@ class Pad {
 		dpadRight : 20,
 		names : ["LX","LY","RX","RY","LT","RT","A","B","X","Y","Select","Guide","Start","LCLK","RCLK","LB","RB","DUp","DDown","DLeft","DRight"],
 	};
-	#elseif usesys
-
-	public static var CONFIG_SYS = GameController.CONFIG;
-
-	#elseif hldx
-
-	public static var CONFIG_DX = {
-		analogX : 14,
-		analogY : 15,
-		ranalogX : 16,
-		ranalogY : 17,
-		LT : 18,
-		RT : 19,
-
-		dpadUp : 0,
-		dpadDown : 1,
-		dpadLeft : 2,
-		dpadRight : 3,
-		start : 4,
-		back : 5,
-		analogClick : 6,
-		ranalogClick : 7,
-		LB : 8,
-		RB : 9,
-		A : 10,
-		B : 11,
-		X : 12,
-		Y : 13,
-
-		names : ["DUp","DDown","DLeft","DRight","Start","Back","LCLK","RCLK","LB","RB","A","B","X","Y","LX","LY","RX","RY","LT","RT"],
-	};
-
 	#end
 
 	public static var DEFAULT_CONFIG =
 		#if hlsdl CONFIG_SDL
-		#elseif usesys CONFIG_SYS
 		#elseif flash CONFIG_XBOX
-		#elseif hldx CONFIG_DX
+		#elseif (hldx || usesys) GameController.CONFIG
 		#else {} #end;
 
 	public var connected(default, null) = true;
@@ -140,9 +107,8 @@ class Pad {
 	public function rumble( strength : Float, time_s : Float ){
 		#if hlsdl
 		d.rumble( strength, Std.int(time_s*1000.) );
-		#elseif hldx
-		d.setVibration(strength);
-		rumbleEnd = haxe.Timer.stamp() + time_s;
+		#elseif (hldx || usesys)
+		d.rumble( strength, time_s );
 		#end
 	}
 
@@ -167,22 +133,15 @@ class Pad {
 		return p;
 	}
 
+	static var waitPad : Pad -> Void;
+	static var initDone = false;
+
 	#if flash
 	var d : flash.ui.GameInputDevice;
-	static var waitPad : Pad -> Void;
-	static var initDone = false;
 	static var inst : flash.ui.GameInput;
-	static var pads : Array<hxd.Pad> = [];
-	#elseif hldx
-	var d : GameController;
-	var rumbleEnd : Null<Float>;
-	static var waitPad : Pad -> Void;
-	static var initDone = false;
 	static var pads : Array<hxd.Pad> = [];
 	#else
 	var d : GameController;
-	static var waitPad : Pad -> Void;
-	static var initDone = false;
 	static var pads : Map<Int, hxd.Pad> = new Map();
 	#end
 
@@ -190,8 +149,8 @@ class Pad {
 		Wait until a gamepad gets connected. On some platforms, this might require the user to press a button until it activates
 	**/
 	public static function wait( onPad : Pad -> Void ) {
-		#if flash
 		waitPad = onPad;
+		#if flash
 		if( !initDone ) {
 			initDone = true;
 			inst = new flash.ui.GameInput();
@@ -257,22 +216,17 @@ class Pad {
 			});
 			var count = flash.ui.GameInput.numDevices; // necessary to trigger added
 		}
-		#elseif (hlsdl || hlps)
-		waitPad = onPad;
+		#elseif hlsdl
 		if( !initDone ) {
 			initDone = true;
-			#if hlps
-			haxe.MainLoop.add(syncPads);
-			#end
 			var c = @:privateAccess GameController.gctrlCount();
 			for( idx in 0...c )
 				initPad( idx );
 		}
-		#elseif hldx
-		waitPad = onPad;
+		#elseif (hldx || usesys)
 		if( !initDone ){
 			initDone = true;
-			dx.GameController.init();
+			GameController.init();
 			haxe.MainLoop.add(syncPads);
 		}
 		#end
@@ -343,89 +297,42 @@ class Pad {
 		}
 
 	}
-	#elseif hlps
+	
+	#elseif (hldx || usesys)
 
-	function sync() {
-		for( i in 0...buttons.length )
-			prevButtons[i] = buttons[i];
-		var s = d.getState();
-		if( s == null )
-			return;
-		var k = s.buttons;
-		for( i in 1...21 )
-			_setButton(i, k & (1 << i) != 0);
-		for( i in 0...4 )
-			values[16 + i] = (s.getAxis(i) - 0.5) * 2;
-		xAxis = values[16];
-		yAxis = values[17];
-		if( buttons[4] ) yAxis = -1;
-		if( buttons[6] ) yAxis = 1;
-		if( buttons[7] ) xAxis = -1;
-		if( buttons[5] ) xAxis = 1;
-		// L2 / R2
-		values[8] = s.getAxis(5);
-		values[9] = s.getAxis(6);
-	}
-
-	static function syncPads() {
-		for( p in pads )
-			p.sync();
-	}
-
-	static function initPad( index ) {
-		var sp = new GameController( index );
-		if( @:privateAccess sp.ptr < 0 )
-			return;
-		var p = new hxd.Pad();
-		p.index = index;
-		p.d = sp;
-		p.sync();
-		pads.set( p.index, p );
-		waitPad( p );
-	}
-
-	#elseif hldx
 	static function syncPads(){
-		dx.GameController.detect(onDetect);
-		var t = haxe.Timer.stamp();
+		GameController.detect(onDetect);
 		for( p in pads ){
 			p.d.update();
-			if( p.rumbleEnd != null && t > p.rumbleEnd ){
-				p.d.setVibration(0.);
-				p.rumbleEnd = null;
-			}
-
-			var k = p.d.buttons.toInt();
-			for( i in 0...14 ){
+			var k = p.d.getButtons();
+			for( i in 0...GameController.NUM_BUTTONS ){
 				p.prevButtons[i] = p.buttons[i];
 				p._setButton(i, k & (1 << i) != 0);
 			}
 
-			p.xAxis = p.d.lx;
-			p.yAxis = -p.d.ly;
-			p.values[ 14 ] = p.d.lx;
-			p.values[ 15 ] = p.d.ly;
-			p.values[ 16 ] = p.d.rx;
-			p.values[ 17 ] = p.d.ry;
-			p.values[ 18 ] = p.d.lt;
-			p.values[ 19 ] = p.d.rt;
+			for( i in 0...GameController.NUM_AXES ){
+				var ii = GameController.NUM_BUTTONS + i;
+				var v = p.d.getAxis(i);
+				p.values[ii] = v;
+				if( ii == GameController.CONFIG.analogX )
+					p.xAxis = v;
+				else if( ii == GameController.CONFIG.analogY )
+					p.yAxis = -v;
+			}
 		}
 	}
 
-	static var UID = 0;
-	static function onDetect( ptr:dx.GameController.GameControllerPtr, name:hl.Bytes ){
-		if( name != null ){
-			var d = new dx.GameController(ptr,name);
-			d.update();
+	static function onDetect( d : GameController, active : Bool ){
+		if( active ){
 			var p = new hxd.Pad();
 			p.d = d;
-			p.index = UID++;
-			pads.push(p);
+			p.index = p.d.index;
+			pads.set(p.index, p);
 			waitPad(p);
 		}else{
 			for( p in pads ){
-				if( p.d.ptr == ptr ){
-					pads.remove(p);
+				if( p.d == d ){
+					pads.remove(p.index);
 					p.connected = false;
 					p.onDisconnect();
 					break;
@@ -433,7 +340,6 @@ class Pad {
 			}
 		}
 	}
-
 	#end
 
 }
