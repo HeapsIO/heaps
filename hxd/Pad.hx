@@ -6,6 +6,8 @@ import sdl.Event;
 import sdl.GameController;
 #elseif psgl
 import psgl.GameController;
+#elseif hldx
+import dx.GameController;
 #else
 private typedef Event = {
 }
@@ -101,6 +103,34 @@ class Pad {
 		dpadRight : 5,
 		names : [null,null,"LCLK","RCLK","Option","DUp","DRight","DDown","DLeft","L2","R2","L1","R1","Triangle","Circle","Cross","Square","LX","LY","RX","RY","Touchpad"],
 	};
+	
+	#elseif hldx
+	
+	public static var CONFIG_DX = {
+		analogX : 14,
+		analogY : 15,
+		ranalogX : 16,
+		ranalogY : 17,
+		LT : 18,
+		RT : 19,
+		
+		dpadUp : 0,
+		dpadDown : 1,
+		dpadLeft : 2,
+		dpadRight : 3,
+		start : 4,
+		back : 5,
+		analogClick : 6,
+		ranalogClick : 7,
+		LB : 8,
+		RB : 9,
+		A : 10,
+		B : 11,
+		X : 12,
+		Y : 13,
+		
+		names : ["DUp","DDown","DLeft","DRight","Start","Back","LCLK","RCLK","LB","RB","A","B","X","Y","LX","LY","RX","RY","LT","RT"],
+	};
 
 	#end
 
@@ -108,6 +138,7 @@ class Pad {
 		#if hlsdl CONFIG_SDL
 		#elseif psgl CONFIG_PS4
 		#elseif flash CONFIG_XBOX
+		#elseif hldx CONFIG_DX
 		#else {} #end;
 
 	public var connected(default, null) = true;
@@ -128,6 +159,15 @@ class Pad {
 
 	public function isPressed( button : Int ) {
 		return buttons[button] && !prevButtons[button];
+	}
+	
+	public function rumble( strength : Float, time_s : Float ){
+		#if hlsdl
+		d.rumble( strength, Std.int(time_s*1000.) );
+		#elseif hldx
+		d.setVibration(strength);
+		rumbleEnd = haxe.Timer.stamp() + time_s;
+		#end
 	}
 
 	function new() {
@@ -157,7 +197,13 @@ class Pad {
 	static var initDone = false;
 	static var inst : flash.ui.GameInput;
 	static var pads : Array<hxd.Pad> = [];
-	#elseif hl
+	#elseif hldx
+	var d : GameController;
+	var rumbleEnd : Null<Float>;
+	static var waitPad : Pad -> Void;
+	static var initDone = false;
+	static var pads : Array<hxd.Pad> = [];
+	#else
 	var d : GameController;
 	static var waitPad : Pad -> Void;
 	static var initDone = false;
@@ -246,6 +292,13 @@ class Pad {
 			for( idx in 0...c )
 				initPad( idx );
 		}
+		#elseif hldx
+		waitPad = onPad;
+		if( !initDone ){
+			initDone = true;
+			dx.GameController.init();
+			haxe.MainLoop.add(syncPads);
+		}
 		#end
 	}
 
@@ -257,7 +310,7 @@ class Pad {
 	#end
 
 	#if hlsdl
-
+	
 	inline function _setAxis( axisId : Int, value : Int ){
 		var v = value / 0x7FFF;
 
@@ -284,7 +337,7 @@ class Pad {
 		for( axis in 0...6 )
 			p._setAxis( axis, sp.getAxis(axis) );
 		for( button in 0...15 )
-			p._setButton( button, sp.getButton(button) );
+			p._setButton( button + 6, sp.getButton(button) );
 		waitPad( p );
 	}
 
@@ -354,7 +407,57 @@ class Pad {
 		pads.set( p.index, p );
 		waitPad( p );
 	}
+	
+	#elseif hldx
+	static function syncPads(){
+		dx.GameController.detect(onDetect);
+		var t = haxe.Timer.stamp();
+		for( p in pads ){
+			p.d.update();
+			if( p.rumbleEnd != null && t > p.rumbleEnd ){
+				p.d.setVibration(0.);
+				p.rumbleEnd = null;
+			}
 
+			var k = p.d.buttons.toInt();
+			for( i in 0...14 ){
+				p.prevButtons[i] = p.buttons[i];
+				p._setButton(i, k & (1 << i) != 0);
+			}
+
+			p.xAxis = p.d.lx;
+			p.yAxis = -p.d.ly;
+			p.values[ 14 ] = p.d.lx;
+			p.values[ 15 ] = p.d.ly;
+			p.values[ 16 ] = p.d.rx;
+			p.values[ 17 ] = p.d.ry;
+			p.values[ 18 ] = p.d.lt;
+			p.values[ 19 ] = p.d.rt;
+		}
+	}
+	
+	static var UID = 0;
+	static function onDetect( ptr:dx.GameController.GameControllerPtr, name:hl.Bytes ){
+		if( name != null ){
+			var d = new dx.GameController(ptr,name);
+			d.update();
+			var p = new hxd.Pad();
+			p.d = d;
+			p.index = UID++;
+			pads.push(p);
+			waitPad(p);
+		}else{
+			for( p in pads ){
+				if( p.d.ptr == ptr ){
+					pads.remove(p);
+					p.connected = false;
+					p.onDisconnect();
+					break;
+				}
+			}
+		}
+	}
+	
 	#end
 
 }
