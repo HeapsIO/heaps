@@ -142,7 +142,7 @@ class PadUI extends h2d.Sprite {
 			buttons[k].alpha = 0.3 + (pad.buttons[ Reflect.field(conf,k) ] ? 0.7 : 0);
 
 		if( !wasPressed && pad.isDown(conf.A) && pad.values[conf.LT] > 0 && pad.values[conf.RT] > 0 )
-			pad.rumble( pad.values[conf.LT], pad.values[conf.RT]*500 );
+			pad.rumble( pad.values[conf.LT], pad.values[conf.RT]*0.5 );
 		wasPressed = pad.isDown(conf.A);
 	}
 }

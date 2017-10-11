@@ -161,16 +161,12 @@ class Pad {
 		return buttons[button] && !prevButtons[button];
 	}
 	
-	public function rumble( strength : Float, time_ms : Float ){
+	public function rumble( strength : Float, time_s : Float ){
 		#if hlsdl
-		d.rumble( strength, Std.int(time_ms) );
+		d.rumble( strength, Std.int(time_s*1000.) );
 		#elseif hldx
-		if( curVibration != null ) curVibration.stop();
 		d.setVibration(strength);
-		curVibration = haxe.Timer.delay(function(){
-			d.setVibration(0.);
-			curVibration = null;
-		},Std.int(time_ms));
+		rumbleEnd = haxe.Timer.stamp() + time_s;
 		#end
 	}
 
@@ -203,7 +199,7 @@ class Pad {
 	static var pads : Array<hxd.Pad> = [];
 	#elseif hldx
 	var d : GameController;
-	var curVibration : haxe.Timer;
+	var rumbleEnd : Null<Float>;
 	static var waitPad : Pad -> Void;
 	static var initDone = false;
 	static var pads : Array<hxd.Pad> = [];
@@ -415,37 +411,28 @@ class Pad {
 	#elseif hldx
 	static function syncPads(){
 		dx.GameController.detect(onDetect);
+		var t = haxe.Timer.stamp();
 		for( p in pads ){
 			p.d.update();
+			if( p.rumbleEnd != null && t > p.rumbleEnd ){
+				p.d.setVibration(0.);
+				p.rumbleEnd = null;
+			}
 
-			for( i in 0...p.buttons.length )
+			var k = p.d.buttons.toInt();
+			for( i in 0...14 ){
 				p.prevButtons[i] = p.buttons[i];
-			
-			p._setButton(CONFIG_DX.dpadUp, p.d.buttons.has(Btn_DPadUp));
-			p._setButton(CONFIG_DX.dpadDown, p.d.buttons.has(Btn_DPadDown));
-			p._setButton(CONFIG_DX.dpadLeft, p.d.buttons.has(Btn_DPadLeft));
-			p._setButton(CONFIG_DX.dpadRight, p.d.buttons.has(Btn_DPadRight));
-			p._setButton(CONFIG_DX.start, p.d.buttons.has(Btn_Start));
-			p._setButton(CONFIG_DX.back, p.d.buttons.has(Btn_Back));
-			p._setButton(CONFIG_DX.analogClick, p.d.buttons.has(Btn_LeftStick));
-			p._setButton(CONFIG_DX.ranalogClick, p.d.buttons.has(Btn_RightStick));
-			p._setButton(CONFIG_DX.LB, p.d.buttons.has(Btn_LB));
-			p._setButton(CONFIG_DX.RB, p.d.buttons.has(Btn_RB));
-			p._setButton(CONFIG_DX.A, p.d.buttons.has(Btn_A));
-			p._setButton(CONFIG_DX.B, p.d.buttons.has(Btn_B));
-			p._setButton(CONFIG_DX.X, p.d.buttons.has(Btn_X));
-			p._setButton(CONFIG_DX.Y, p.d.buttons.has(Btn_Y));
-			
-			p.values[ CONFIG_DX.analogX ] = p.d.lx;
-			p.values[ CONFIG_DX.analogY ] = p.d.ly;
+				p._setButton(i, k & (1 << i) != 0);
+			}
+
 			p.xAxis = p.d.lx;
 			p.yAxis = -p.d.ly;
-			
-			p.values[ CONFIG_DX.ranalogX ] = p.d.rx;
-			p.values[ CONFIG_DX.ranalogY ] = p.d.ry;
-			
-			p.values[ CONFIG_DX.LT ] = p.d.lt;
-			p.values[ CONFIG_DX.RT ] = p.d.rt;
+			p.values[ 14 ] = p.d.lx;
+			p.values[ 15 ] = p.d.ly;
+			p.values[ 16 ] = p.d.rx;
+			p.values[ 17 ] = p.d.ry;
+			p.values[ 18 ] = p.d.lt;
+			p.values[ 19 ] = p.d.rt;
 		}
 	}
 	
