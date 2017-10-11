@@ -366,7 +366,7 @@ class GpuPartGroup {
 
 			var c = ebounds.getCenter();
 			p.x = p.x * ebounds.xSize + c.x;
-			p.y = p.y * ebounds.xSize + c.y;
+			p.y = p.y * ebounds.ySize + c.y;
 			p.z = p.z * ebounds.zSize + c.z;
 
 			v.x = srand();

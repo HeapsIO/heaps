@@ -89,13 +89,14 @@ class GpuParticle extends hxsl.Shader {
 			var size = (props.uv - 0.5) * current.y.max(0.);
 			var rot = current.x;
 			var crot = cos(rot), srot = sin(rot);
-			var dist = vec2(size.x * crot - size.y * srot, size.x * srot + size.y * crot) * vec2(global.pixelSize.x / global.pixelSize.y, 1);
+			var screenRatio = vec2(global.pixelSize.x / global.pixelSize.y, 1);
+			var dist = vec2(size.x * crot - size.y * srot, size.x * srot + size.y * crot);
 			if( transform3D ) {
 				transformedPosition += vec3(0., dist.x, dist.y) * cameraRotation;
 				projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
 			} else {
 				projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
-				projectedPosition.xy += dist;
+				projectedPosition.xy += dist * screenRatio;
 			}
 			projectedPosition *= visibility;
 			if( normT < fadeIn )
