@@ -11,6 +11,7 @@ package h3d.scene;
 	public var FInheritCulled = 0x80;
 	public var FNoSerialize = 0x100;
 	public var FIgnoreBounds = 0x200;
+	public var FIgnoreCollide = 0x400;
 	public inline function new() {
 		this = 0;
 	}
@@ -75,6 +76,10 @@ class Object implements h3d.impl.Serializable {
 	**/
 	public var inheritCulled(get, set) : Bool;
 
+	/**
+		When enable, the object is ignore when using getCollider()
+	**/
+	public var ignoreCollide(get, set) : Bool;
 
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
@@ -103,6 +108,7 @@ class Object implements h3d.impl.Serializable {
 	inline function get_lightCameraCenter() return flags.has(FLightCameraCenter);
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
+	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -111,6 +117,7 @@ class Object implements h3d.impl.Serializable {
 	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
 	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
+	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 
 	public function playAnimation( a : h3d.anim.Animation ) {
 		return currentAnimation = a.createInstance(this);
@@ -389,6 +396,7 @@ class Object implements h3d.impl.Serializable {
 	public function getCollider() : h3d.col.Collider {
 		var colliders = [];
 		for( obj in children ) {
+			if( obj.ignoreCollide ) continue;
 			var c = obj.getCollider();
 			var cgrp = Std.instance(c, h3d.col.Collider.GroupCollider);
 			if( cgrp != null ) {
