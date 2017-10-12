@@ -398,10 +398,12 @@ class Object implements h3d.impl.Serializable {
 	}
 
 	public function getCollider() : h3d.col.Collider {
+		if( ignoreCollide )
+			return null;
 		var colliders = [];
 		for( obj in children ) {
-			if( obj.ignoreCollide ) continue;
 			var c = obj.getCollider();
+			if( c == null ) continue;
 			var cgrp = Std.instance(c, h3d.col.Collider.GroupCollider);
 			if( cgrp != null ) {
 				for( c in cgrp.colliders )
@@ -409,6 +411,10 @@ class Object implements h3d.impl.Serializable {
 			} else
 				colliders.push(c);
 		}
+		if( colliders.length == 0 )
+			return null;
+		if( colliders.length == 1 )
+			return colliders[0];
 		return new h3d.col.Collider.GroupCollider(colliders);
 	}
 
