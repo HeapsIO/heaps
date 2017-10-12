@@ -261,6 +261,10 @@ class Object implements h3d.impl.Serializable {
 		return out;
 	}
 
+	public function getMeshByName( name : String) {
+		return Std.instance(getObjectByName(name), Mesh);
+	}
+
 	public function getObjectByName( name : String ) {
 		if( this.name == name )
 			return this;
