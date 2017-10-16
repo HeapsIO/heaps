@@ -300,6 +300,8 @@ class ALEmulator {
 			source.volume = value;
 		case REFERENCE_DISTANCE, ROLLOFF_FACTOR, MAX_DISTANCE:
 			// nothing (spatialization)
+		case PITCH:
+			// nothing
 		default:
 			throw "Unsupported param 0x" + StringTools.hex(param);
 		}
@@ -815,4 +817,8 @@ class ALCEmulator {
 	public static inline var DEFAULT_ALL_DEVICES_SPECIFIER    = 0x1012;
 	public static inline var ALL_DEVICES_SPECIFIER            = 0x1013;
 
+}
+
+class EFXEmulator {
+	//public static function 
 }

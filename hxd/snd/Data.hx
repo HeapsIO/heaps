@@ -17,8 +17,15 @@ class Data {
 
 	public function decode( out : haxe.io.Bytes, outPos : Int, sampleStart : Int, sampleCount : Int ) : Void {
 		var bpp = getBytesPerSample();
-		if( sampleStart < 0 || sampleCount < 0 || outPos < 0 || outPos + sampleCount * bpp > out.length )
-			throw haxe.io.Error.OutsideBounds;
+		if( sampleStart < 0 || sampleCount < 0 || outPos < 0 || outPos + sampleCount * bpp > out.length ) {
+
+			var s = ("sampleStart = " + sampleStart);
+			s += (" sampleCount = " + sampleCount);
+			s += (" outPos = " + outPos);
+			s += (" bpp = " + bpp);
+			s += (" out.length = " + out.length);
+			throw s;
+		}
 		if( sampleStart + sampleCount >= samples ) {
 			var count = 0;
 			if( sampleStart < samples ) {
