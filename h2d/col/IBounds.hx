@@ -152,7 +152,7 @@ class IBounds {
 	}
 
 	public inline function clone() {
-		var b = new Bounds();
+		var b = new IBounds();
 		b.xMin = xMin;
 		b.yMin = yMin;
 		b.xMax = xMax;
