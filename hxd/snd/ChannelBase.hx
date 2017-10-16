@@ -1,12 +1,12 @@
 package hxd.snd;
 
-@:allow(hxd.snd.Driver)
+@:allow(hxd.snd.Manager)
 class ChannelBase {
 
-	public var priority : Float = 0.;
-	public var mute     : Bool = false;
-	public var effects  : Array<Effect> = [];
-	public var removedEffects : Array<Effect> = [];
+	public var priority       : Float = 0.;
+	public var mute           : Bool = false;
+	public var effects        : Array<Effect> = [];
+	public var bindedEffects  : Array<Effect> = [];
 
 	public var volume(default, set) : Float = 1.;
 	var currentFade : { start : Float, duration : Float, startVolume : Float, targetVolume : Float, onEnd : Void -> Void };
@@ -47,21 +47,17 @@ class ChannelBase {
 		currentVolume = volume;
 	}
 
+	@:access(hxd.snd.Manager)
 	public function addEffect<T:Effect>( e : T ) : T {
 		if (e == null) throw "Can't add null effect";
 		if (effects.indexOf(e) >= 0) throw "effect already added on this channel";
-
 		effects.push(e);
-		e.incRefs();
 		return e;
 	}
 
+	@:access(hxd.snd.Manager)
 	public function removeEffect( e : Effect ) {
-		var found = effects.remove(e);
-		if (!found) return;
-
-		removedEffects.push(e);
-		e.decRefs();
+		effects.remove(e);
 	}
 
 }
