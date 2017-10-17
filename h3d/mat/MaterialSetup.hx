@@ -73,6 +73,13 @@ class MaterialSetup {
 				culled : false,
 				lighted : true,
 			};
+		case "trail3D":
+			props = {
+				kind : Opaque,
+				shadows : false,
+				culled : false,
+				lighted : true,
+			};
 		default:
 			props = {
 				kind : Opaque,
