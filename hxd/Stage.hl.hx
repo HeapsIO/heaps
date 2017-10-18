@@ -142,9 +142,9 @@ class Stage {
 			case Focus:
 				#if hldx
 				// return to exclusive mode
-				if( fullScreenMode == Fullscreen && wasBlurred ) {
+				if( window.displayMode == Fullscreen && wasBlurred ) {
 					window.displayMode = Borderless;
-					window.displayMode = fullScreenMode;
+					window.displayMode = Fullscreen;
 				}
 				#end
 				wasBlurred = false;
