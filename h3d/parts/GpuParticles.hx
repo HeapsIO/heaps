@@ -91,7 +91,7 @@ class GpuPartGroup {
 		if( FIELDS != null )
 			return FIELDS;
 		FIELDS = Type.getInstanceFields(GpuPartGroup);
-		for( f in ["parent", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "particles", "texture", "colorGradient", "amount", "currentParts", "ebounds", "maxTime"] )
+		for( f in ["parent", "sortMode", "emitMode", "needRebuild", "pshader", "partIndex", "particles", "texture", "colorGradient", "amount", "currentParts", "ebounds", "maxTime", "lastMove"] )
 			FIELDS.remove(f);
 		for( f in FIELDS.copy() )
 			if( Reflect.isFunction(Reflect.field(inst, f)) )
@@ -108,6 +108,7 @@ class GpuPartGroup {
 	var particles : GpuPart;
 	var ebounds : h3d.col.Bounds;
 	var maxTime : Float = -1.;
+	var lastMove : Float = 0;
 
 	public var amount = 1.;
 
@@ -416,7 +417,9 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	var resourcePath : String;
 	var partAlloc : GpuPart;
 	var rnd = new hxd.Rand(0);
-	var lastMove : Float;
+	var prevX : Float = 0;
+	var prevY : Float = 0;
+	var prevZ : Float = 0;
 	var hideProps : Dynamic;
 
 	public var seed(default, set) : Int	= Std.random(0x1000000);
@@ -454,7 +457,13 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		for( g in groups )
 			if( g.needRebuild ) {
 				var s = getScene();
-				if( s != null ) sync(@:privateAccess s.renderer.ctx);
+				if( s != null ) {
+					if( posChanged ) {
+						calcAbsPos();
+						posChanged = false;
+					}
+					sync(@:privateAccess s.renderer.ctx);
+				}
 				break;
 			}
 		return super.getBounds(b, rec);
@@ -553,7 +562,15 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 	override function calcAbsPos() {
 		super.calcAbsPos();
-		lastMove = currentTime;
+		// should we check for pure rotation too ?
+		if( prevX != absPos.tx || prevY != absPos.ty || prevZ != absPos.tz ) {
+			prevX = absPos.tx;
+			prevY = absPos.ty;
+			prevZ = absPos.tz;
+			for( g in groups )
+				if( g.emitLoop )
+					g.lastMove = currentTime;
+		}
 	}
 
 	function rebuildAll(cam) {
@@ -580,7 +597,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			}
 			g.particles = null;
 			g.currentParts = 0;
-			g.maxTime = -1;
+			g.maxTime = g.emitLoop ? -1 : 0;
 			if( calcEmit != g.emitMode ) {
 				calcEmit = g.emitMode;
 				switch( g.emitMode ) {
@@ -599,7 +616,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			}
 			g.ebounds = ebounds;
 
-			var maxLife = g.life * (1 + g.lifeRand) * (2 - g.emitSync) + g.emitDelay;
+			var maxLife = g.life * (1 + g.lifeRand + 1 - g.emitSync) + g.emitDelay;
 			if( maxLife > duration )
 				duration = maxLife;
 			if( g.emitLoop )
@@ -654,21 +671,22 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	}
 
 	function syncGroup( g : GpuPartGroup, camera : h3d.Camera, prevTime : Float, visible : Bool ) {
+
 		// emit
 		var needSync = false;
 		var pneeded = Math.ceil(hxd.Math.clamp(g.amount * amount) * g.nparts);
 
-		if( lastMove != 0 ) {
+		if( g.lastMove != 0 ) {
 			var p = g.particles;
 			while( p != null ) {
-				if( p.time > -lastMove ) break;
+				if( p.time > -g.lastMove ) break;
 				p = p.next;
 			}
 			if( p == null ) {
-				lastMove = 0;
+				g.lastMove = 0;
 			} else {
 				var old = g.maxTime;
-				g.maxTime = lastMove;
+				g.maxTime = g.lastMove;
 				var count = g.currentParts;
 				cleanParts(g, 0, true);
 				if( g.currentParts < count ) needSync = true;
@@ -680,7 +698,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 			if( g.currentParts < pneeded ) {
 
-				if( lastMove == 0 )
+				if( g.lastMove == 0 )
 					cleanParts(g, pneeded);
 
 				var partAlloc = partAlloc;
@@ -691,7 +709,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 					else
 						partAlloc = pt.next;
 					g.emitPart(rnd, pt, absPos);
-					if( lastMove != 0 ) pt.time = -prevTime /* no delay */ else pt.time -= prevTime;
+					if( g.lastMove != 0 ) pt.time = -prevTime /* no delay */ else pt.time -= prevTime;
 					pt.index = -1;
 					pt.next = g.particles;
 					g.particles = pt;
@@ -701,7 +719,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				needSync = true;
 			}
 
-			if( g.currentParts > pneeded && lastMove == 0 ) {
+			if( g.currentParts > pneeded && g.lastMove == 0 ) {
 				var ftime = g.maxTime;
 				if( ftime < 0 )
 					g.maxTime = ftime = currentTime;
