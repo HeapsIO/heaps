@@ -314,7 +314,9 @@ class LocalFileSystem implements FileSystem {
 		if( !StringTools.endsWith(baseDir, "/") ) baseDir += "/";
 		root = new LocalEntry(this, "root", null, froot);
 		#else
-		#if (haxe_ver >= 3.3)
+		#if (macro && haxe_ver >= 4.0)
+		var exePath = null;
+		#elseif (haxe_ver >= 3.3)
 		var pr = Sys.programPath();
 		var exePath = pr == null ? null : pr.split("\\").join("/").split("/");
 		#else
