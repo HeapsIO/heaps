@@ -63,15 +63,14 @@ class Segment {
 		}
 	}
 
-	public inline function lineIntersection( r : h2d.col.Ray, ?pt : Point, projectPoint = false ) {
-		if( !projectPoint && r.side(new Point(x, y)) * r.side(new Point(x + dx, y + dy)) > 0)
+	public inline function lineIntersection( r : h2d.col.Ray, ?pt : Point ) {
+		if( r.side(new Point(x, y)) * r.side(new Point(x + dx, y + dy)) > 0 )
 			return null;
 
 		var u = ( r.dx * (y - r.y) - r.dy * (x - r.x) ) / ( r.dy * dx - r.dx * dy );
+		if( u < 0 || u > 1 ) return null;
+
 		if( pt == null ) pt = new Point();
-		if( projectPoint ) {
-			if( u < 0 ) u = 0 else if( u > 1 ) u = 1;
-		}
 		pt.x = x + u * dx;
 		pt.y = y + u * dy;
 
