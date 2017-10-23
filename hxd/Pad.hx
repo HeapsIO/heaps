@@ -103,9 +103,9 @@ class Pad {
 		dpadRight : 5,
 		names : [null,null,"LCLK","RCLK","Option","DUp","DRight","DDown","DLeft","L2","R2","L1","R1","Triangle","Circle","Cross","Square","LX","LY","RX","RY","Touchpad"],
 	};
-	
+
 	#elseif hldx
-	
+
 	public static var CONFIG_DX = {
 		analogX : 14,
 		analogY : 15,
@@ -113,7 +113,7 @@ class Pad {
 		ranalogY : 17,
 		LT : 18,
 		RT : 19,
-		
+
 		dpadUp : 0,
 		dpadDown : 1,
 		dpadLeft : 2,
@@ -128,7 +128,7 @@ class Pad {
 		B : 11,
 		X : 12,
 		Y : 13,
-		
+
 		names : ["DUp","DDown","DLeft","DRight","Start","Back","LCLK","RCLK","LB","RB","A","B","X","Y","LX","LY","RX","RY","LT","RT"],
 	};
 
@@ -160,7 +160,11 @@ class Pad {
 	public function isPressed( button : Int ) {
 		return buttons[button] && !prevButtons[button];
 	}
-	
+
+	public function isReleased( button : Int ) {
+		return !buttons[button] && prevButtons[button];
+	}
+
 	public function rumble( strength : Float, time_s : Float ){
 		#if hlsdl
 		d.rumble( strength, Std.int(time_s*1000.) );
@@ -310,7 +314,7 @@ class Pad {
 	#end
 
 	#if hlsdl
-	
+
 	inline function _setAxis( axisId : Int, value : Int ){
 		var v = value / 0x7FFF;
 
@@ -407,7 +411,7 @@ class Pad {
 		pads.set( p.index, p );
 		waitPad( p );
 	}
-	
+
 	#elseif hldx
 	static function syncPads(){
 		dx.GameController.detect(onDetect);
@@ -435,7 +439,7 @@ class Pad {
 			p.values[ 19 ] = p.d.rt;
 		}
 	}
-	
+
 	static var UID = 0;
 	static function onDetect( ptr:dx.GameController.GameControllerPtr, name:hl.Bytes ){
 		if( name != null ){
@@ -457,7 +461,7 @@ class Pad {
 			}
 		}
 	}
-	
+
 	#end
 
 }
