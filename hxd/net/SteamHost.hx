@@ -253,6 +253,7 @@ class SteamHost extends NetworkHost {
 		super();
 		this.gameId = gameId;
 		isAuth = false;
+		perPacketBytes += 20; // STEAM header
 		self = new SteamClient(this, steam.Api.getUser());
 		input = new haxe.io.BytesInput(haxe.io.Bytes.alloc(0));
 	}
