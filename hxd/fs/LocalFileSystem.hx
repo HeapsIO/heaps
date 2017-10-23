@@ -465,7 +465,7 @@ class LocalFileSystem implements FileSystem {
 
 		var skipConvert = false;
 
-		#if sys
+		#if (sys || nodejs)
 		// prepare output dir
 		var parts = path.split("/");
 		parts.pop();
