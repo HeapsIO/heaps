@@ -125,10 +125,11 @@ class GpuPartGroup {
 	public var emitAngle(default,set) : Float 	= 1.5;
 	public var emitSync(default, set) : Float	= 0;
 	public var emitDelay(default, set) : Float	= 0;
-
+	public var emitDir(default, set) : h3d.Vector;
 
 	public var clipBounds : Bool				= false;
 	public var transform3D : Bool				= false;
+	public var rotByVelocity : Bool             = false;
 
 	public var size(default, set) : Float		= 1;
 	public var sizeIncr(default, set) : Float	= 0;
@@ -175,6 +176,7 @@ class GpuPartGroup {
 	inline function set_emitAngle(v) { needRebuild = true; return emitAngle = v; }
 	inline function set_emitSync(v) { needRebuild = true; return emitSync = v; }
 	inline function set_emitDelay(v) { needRebuild = true; return emitDelay = v; }
+	inline function set_emitDir(v) { needRebuild = true; return emitDir = v; }
 	inline function set_rotInit(v) { needRebuild = true; return rotInit = v; }
 	inline function set_rotSpeed(v) { needRebuild = true; return rotSpeed = v; }
 	inline function set_rotSpeedRand(v) { needRebuild = true; return rotSpeedRand = v; }
@@ -199,6 +201,7 @@ class GpuPartGroup {
 		pshader.frameDivision.set(frameDivisionX, 1 / frameDivisionX, 1 / frameDivisionY);
 		pshader.clipBounds = emitMode == CameraBounds || clipBounds;
 		pshader.transform3D = transform3D;
+		pshader.rotByVelocity = rotByVelocity;
 		pshader.maxTime = maxTime < 0 ? 1e10 : maxTime;
 	}
 
@@ -370,13 +373,17 @@ class GpuPartGroup {
 			p.y = p.y * ebounds.ySize + c.y;
 			p.z = p.z * ebounds.zSize + c.z;
 
-			v.x = srand();
-			v.y = srand();
-			v.z = srand();
+			if( emitDir == null ) {
+				v.x = srand();
+				v.y = srand();
+				v.z = srand();
+			} else {
+				v.set(emitDir.x, emitDir.y, emitDir.z);
+			}
+
 			v.normalizeFast();
 
 		}
-
 
 		var speed = g.speed * (1 + srand() * g.speedRand);
 

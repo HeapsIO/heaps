@@ -42,6 +42,7 @@ class GpuParticle extends hxsl.Shader {
 
 		@param var cameraRotation : Mat3;
 		@const var transform3D : Bool;
+		@const var rotByVelocity : Bool;
 
 		var t : Float;
 		var normT : Float;
@@ -88,8 +89,17 @@ class GpuParticle extends hxsl.Shader {
 			var current = props.init + props.delta * t;
 			var size = (props.uv - 0.5) * current.y.max(0.);
 			var rot = current.x;
-			var crot = cos(rot), srot = sin(rot);
+
 			var screenRatio = vec2(global.pixelSize.x / global.pixelSize.y, 1);
+			if( rotByVelocity ) {
+				var vel = input.normal * (1 + speedIncr * t);
+				vel.z -= gravity * t * t;
+				var dir = (vec4(vel, 0.0) * camera.viewProj).xy / screenRatio;
+				dir = dir.normalize();
+				rot = atan(dir.y, dir.x);
+			}
+
+			var crot = cos(rot), srot = sin(rot);
 			var dist = vec2(size.x * crot - size.y * srot, size.x * srot + size.y * crot);
 			if( transform3D ) {
 				transformedPosition += vec3(0., dist.x, dist.y) * cameraRotation;
