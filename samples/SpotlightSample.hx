@@ -12,8 +12,6 @@ class SpotlightShader extends hxsl.Shader {
 		function calculate():Vec3 {
 			// Calculate vector between light and pixel. This vector points from the pixel to the light.
 			var surfaceToLight = lightPosition - pixelTransformedPosition;
-			// Determine length of that vector.
-			var distanceToLight = length(surfaceToLight);
 			// Normalize the vector.
 			surfaceToLight = normalize(surfaceToLight);
 			// Calculate the angle between inverse surfaceToLight vector (= pointing from light to the pixel)
@@ -33,7 +31,7 @@ class SpotlightShader extends hxsl.Shader {
 			if (lightToSurfaceAngle < lightConeAngle) {
 				attenuation = 0.0;
 			} else {
-				attenuation = (1.0 + pow(distanceToLight, 2.0));
+				attenuation = (1.0 + surfaceToLight.dot(surfaceToLight));
 			}
 			// Calculate diffuse normally: Determine angle between the normal vector and the surfaceToLight
 			// vector (= pointing from pixel to the light).
