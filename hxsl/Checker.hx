@@ -471,10 +471,10 @@ class Checker {
 		case EDiscard:
 			type = TVoid;
 			TDiscard;
-		case EReturn(e):
-			if( (e == null) != (curFun.ret == TVoid) )
+		case EReturn(e1):
+			if( (e1 == null) != (curFun.ret == TVoid) )
 				error("This function should return " + curFun.ret.toString(), e.pos);
-			var e = e == null ? null : typeWith(e, curFun.ret);
+			var e = e1 == null ? null : typeWith(e1, curFun.ret);
 			type = TVoid;
 			TReturn(e);
 		case EFor(v, it, block):
