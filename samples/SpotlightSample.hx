@@ -61,13 +61,11 @@ class Spotlight extends h3d.scene.Light {
 	var pshader:SpotlightShader;
 	public var coneDirection:h3d.Vector;
 	public var coneAngle:Float;
-	var coneDirectionNormalized:h3d.Vector;
 
 	public function new(coneDirection:h3d.Vector, coneAngle:Float, parent:h3d.scene.Object) {
 		pshader = new SpotlightShader();
 		this.coneDirection = coneDirection;
 		this.coneAngle = coneAngle;
-		coneDirectionNormalized = new h3d.Vector();
 		super(pshader, parent);
 	}
 
@@ -76,10 +74,8 @@ class Spotlight extends h3d.scene.Light {
 	override function emit(ctx) {
 		// Tell the shader where our light is currently at.
 		pshader.lightPosition.set(absPos._41, absPos._42, absPos._43);
-		var coneDirection = coneDirection.clone();
-		coneDirectionNormalized.load(coneDirection);
-		coneDirectionNormalized.normalize();
-		pshader.lightConeDirection = coneDirectionNormalized;
+		pshader.lightConeDirection.load(coneDirection);
+		pshader.lightConeDirection.normalize();
 		pshader.lightConeAngle = Math.cos(coneAngle);
 		super.emit(ctx);
 	}
