@@ -18,7 +18,7 @@ class SpotlightShader extends hxsl.Shader {
 			surfaceToLight = normalize(surfaceToLight);
 			// Calculate the angle between inverse surfaceToLight vector (= pointing from light to the pixel)
 			// and the light cone angle vector.
-			var lightToSurfaceAngle = acos(dot(-surfaceToLight, normalize(lightConeDirection)));
+			var lightToSurfaceAngle = dot(-surfaceToLight, lightConeDirection);
 			var attenuation:Float;
 			// If the calculated angle is larger than the light cone angle, the pixel is not affected by the
 			// spotlight. Set the attenuation to 0 accordingly.
@@ -30,7 +30,7 @@ class SpotlightShader extends hxsl.Shader {
 			//                    |a/
 			//                    |/
 			//                    L
-			if (lightToSurfaceAngle > lightConeAngle) {
+			if (lightToSurfaceAngle < lightConeAngle) {
 				attenuation = 0.0;
 			} else {
 				attenuation = (1.0 + pow(distanceToLight, 2.0));
@@ -55,30 +55,32 @@ class SpotlightShader extends hxsl.Shader {
 }
 
 /**
-	Spotlight is essentially the Haxe interface to the SpotlightShader. Its fields are properties that
-	read from and write to the shader instance itself.
+	Spotlight is essentially the Haxe interface to the SpotlightShader.
 **/
 class Spotlight extends h3d.scene.Light {
 	var pshader:SpotlightShader;
-	public var coneDirection(get, set):h3d.Vector;
-	public var coneAngle(get, set):Float;
+	public var coneDirection:h3d.Vector;
+	public var coneAngle:Float;
+	var coneDirectionNormalized:h3d.Vector;
 
 	public function new(coneDirection:h3d.Vector, coneAngle:Float, parent:h3d.scene.Object) {
 		pshader = new SpotlightShader();
 		this.coneDirection = coneDirection;
 		this.coneAngle = coneAngle;
+		coneDirectionNormalized = new h3d.Vector();
 		super(pshader, parent);
 	}
 
-	inline function get_coneDirection() return pshader.lightConeDirection;
-	inline function set_coneDirection(value) return pshader.lightConeDirection = value;
-	inline function get_coneAngle() return pshader.lightConeAngle;
-	inline function set_coneAngle(value) return pshader.lightConeAngle = value;
 	override function get_color() return pshader.lightColor;
 
 	override function emit(ctx) {
 		// Tell the shader where our light is currently at.
 		pshader.lightPosition.set(absPos._41, absPos._42, absPos._43);
+		var coneDirection = coneDirection.clone();
+		coneDirectionNormalized.load(coneDirection);
+		coneDirectionNormalized.normalize();
+		pshader.lightConeDirection = coneDirectionNormalized;
+		pshader.lightConeAngle = Math.cos(coneAngle);
 		super.emit(ctx);
 	}
 }
