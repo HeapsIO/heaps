@@ -7,7 +7,7 @@ class Cube extends Polygon {
 	@:s var sizeY : Float;
 	@:s var sizeZ : Float;
 
-	public function new( x = 1., y = 1., z = 1. )
+	public function new( x = 1., y = 1., z = 1., centered = false )
 	{
 		this.sizeX = x;
 		this.sizeY = y;
@@ -36,6 +36,7 @@ class Cube extends Polygon {
 		idx.push(0); idx.push(4); idx.push(1);
 		idx.push(0); idx.push(2); idx.push(4);
 		super(p, idx);
+		if( centered ) translate( -x * 0.5, -y * 0.5, -z * 0.5);
 	}
 
 	override function addUVs() {
