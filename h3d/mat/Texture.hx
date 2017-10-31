@@ -96,8 +96,11 @@ class Texture {
 	}
 
 	public function clone( ?allocPos : h3d.impl.AllocPos ) {
+		var old = lastFrame;
+		preventAutoDispose();
 		var t = new Texture(width, height, null, format, allocPos);
 		h3d.pass.Copy.run(this, t);
+		lastFrame = old;
 		return t;
 	}
 
