@@ -68,6 +68,7 @@ class App implements h3d.IDrawable {
 
 	function setup() {
 		var initDone = false;
+		engine.onReady = staticHandler;
 		engine.onResized = function() {
 			if( s2d == null ) return; // if disposed
 			s2d.checkResize();
@@ -89,6 +90,8 @@ class App implements h3d.IDrawable {
 	}
 
 	function dispose() {
+		engine.onResized = staticHandler;
+		engine.onContextLost = staticHandler;
 		isDisposed = true;
 		s2d.dispose();
 		s3d.dispose();
@@ -115,5 +118,7 @@ class App implements h3d.IDrawable {
 
 	function update( dt : Float ) {
 	}
+
+	static function staticHandler() {}
 
 }
