@@ -50,7 +50,8 @@ class Image extends Resource {
 			return inf;
 		var f = new hxd.fs.FileInput(entry);
 		var width = 0, height = 0, format;
-		switch( f.readUInt16() ) {
+		var head = try f.readUInt16() catch( e : haxe.io.Eof ) 0;
+		switch( head ) {
 		case 0xD8FF: // JPG
 			format = Jpg;
 			f.bigEndian = true;
