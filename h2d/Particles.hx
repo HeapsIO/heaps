@@ -24,6 +24,10 @@ enum PartEmitMode {
 		A box, parametrized with emitDist and emitDistY
 	**/
 	Box;
+	/**
+		A box, parametrized with emitAngle and emitDistance
+	**/
+	Direction;
 }
 
 private class ParticleShader extends hxsl.Shader {
@@ -155,13 +159,15 @@ class ParticleGroup {
 	public var nparts(default, set) : Int 		= 100;
 	public var dx(default, set) : Int 			= 0;
 	public var dy(default, set) : Int 			= 0;
+	public var movable(default, set) : Bool 	= false;
 
 	public var emitLoop(default, set) : Bool 	= true;
 	public var emitMode(default, set):PartEmitMode = Point;
 	public var emitStartDist(default, set) : Float = 0.;
 	public var emitDist(default, set) : Float	= 50.;
 	public var emitDistY(default, set) : Float	= 50.;
-	public var emitAngle(default,set) : Float 	= -0.5;
+	public var emitAngle(default, set) : Float 	= -0.5;
+	public var emitDirectionAsAngle(default, set) : Bool = false;
 	public var emitSync(default, set) : Float	= 0;
 	public var emitDelay(default, set) : Float	= 0;
 
@@ -220,14 +226,16 @@ class ParticleGroup {
 	inline function set_life(v) { needRebuild = true; return life = v; }
 	inline function set_lifeRand(v) { needRebuild = true; return lifeRand = v; }
 	inline function set_nparts(n) { needRebuild = true; return nparts = n; }
-	inline function set_dx(v) { needRebuild = true; return dx = v; }
-	inline function set_dy(v) { needRebuild = true; return dy = v; }
+	inline function set_dx(v) { if (!movable) needRebuild = true; return dx = v; }
+	inline function set_dy(v) { if (!movable) needRebuild = true; return dy = v; }
+	inline function set_movable(v) { return movable = v; }
 	inline function set_emitLoop(v) { needRebuild = true; return emitLoop = v; }
 	inline function set_emitMode(v) { needRebuild = true; return emitMode = v; }
 	inline function set_emitStartDist(v) { needRebuild = true; return emitStartDist = v; }
 	inline function set_emitDist(v) { needRebuild = true; return emitDist = v; }
 	inline function set_emitDistY(v) { needRebuild = true; return emitDistY = v; }
 	inline function set_emitAngle(v) { needRebuild = true; return emitAngle = v; }
+	inline function set_emitDirectionAsAngle(v) { needRebuild = true; return emitDirectionAsAngle = v; }
 	inline function set_emitSync(v) { needRebuild = true; return emitSync = v; }
 	inline function set_emitDelay(v) { needRebuild = true; return emitDelay = v; }
 	inline function set_rotInit(v) { needRebuild = true; return rotInit = v; }
@@ -291,7 +299,6 @@ class ParticleGroup {
 
 		var g = this;
 		var size = g.size * (1 + srand() * g.sizeRand);
-		var rot = srand() * Math.PI * g.rotInit;
 		var vrot = g.rotSpeed * (1 + rand() * g.rotSpeedRand) * (srand() < 0 ? -1 : 1);
 		var life = g.life * (1 + srand() * g.lifeRand);
 		var delay = rand() * life * (1 - g.emitSync) + g.emitDelay;
@@ -339,10 +346,17 @@ class ParticleGroup {
 				var yy = sinA * (p.x - dx) + cosA * (p.y - dy) + dy;
 				p.x = xx;
 				p.y = yy;
+				
+			case Direction:
+				speed = Math.abs(speed);
+				p.vx = Math.cos(g.emitAngle);
+				p.vy = Math.sin(g.emitAngle);
+				var r = g.emitStartDist + g.emitDist * rand();
+				p.x += r * Math.cos(g.emitAngle - Math.PI / 2);
+				p.y += r * Math.sin(g.emitAngle - Math.PI / 2);
 		}
-
+		
 		p.scale = size;
-		p.rotation = rot;
 		p.vSize = g.sizeIncr;
 		p.vr = vrot;
 		p.t = animationRepeat == 0 ? tiles[Std.random(tiles.length)] : tiles[0];
@@ -351,6 +365,9 @@ class ParticleGroup {
 		p.vy *= speed;
 		p.life = 0;
 		p.maxLife = life;
+		
+		var rot = emitDirectionAsAngle ? Math.atan2(p.vy, p.vx) : srand() * Math.PI * g.rotInit;
+		p.rotation = rot;
 	}
 
 	public function save() {
@@ -375,7 +392,6 @@ class ParticleGroup {
 		if( o.texture != null ) texture = @:privateAccess parts.loadTexture(o.texture);
 		if( o.colorGradient != null ) colorGradient = @:privateAccess parts.loadTexture(o.colorGradient);
 	}
-
 }
 
 @:access(h2d.ParticleGroup)
