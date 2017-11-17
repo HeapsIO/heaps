@@ -25,8 +25,10 @@ class Build {
 			f.isDirectory = true;
 			f.content = [];
 			for( name in sys.FileSystem.readDirectory(dir) ) {
-				if( name.charCodeAt(0) == ".".code || name.charCodeAt(0) == "_".code ) continue;
-				var s = buildRec(path == "" ? name : path+"/"+name);
+				var fpath = path == "" ? name : path+"/"+name;
+				if( name.charCodeAt(0) == ".".code || (name.charCodeAt(0) == "_".code && sys.FileSystem.isDirectory(fpath)) )
+					continue;
+				var s = buildRec(fpath);
 				if( s != null ) f.content.push(s);
 			}
 		} else {
