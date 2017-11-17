@@ -56,6 +56,12 @@ private typedef Query = h3d.impl.Driver.Query;
 private typedef VertexArray = haxe.GLTypes.VertexArray;
 #end
 
+#if usegl
+private typedef ShaderCompiler = haxe.GLTypes.ShaderCompiler;
+#else
+private typedef ShaderCompiler = hxsl.GlslOut;
+#end
+
 private class CompiledShader {
 	public var s : GLShader;
 	public var vertex : Bool;
@@ -192,7 +198,7 @@ class GlDriver extends Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		return "// vertex:\n" + hxsl.GlslOut.toGlsl(shader.vertex.data) + "// fragment:\n" + hxsl.GlslOut.toGlsl(shader.fragment.data);
+		return "// vertex:\n" + ShaderCompiler.compile(shader.vertex.data) + "// fragment:\n" + ShaderCompiler.compile(shader.fragment.data);
 	}
 
 	override public function getDriverName(details:Bool) {
@@ -207,7 +213,7 @@ class GlDriver extends Driver {
 		return "OpenGL "+render;
 	}
 
-	function compileShader( glout : hxsl.GlslOut, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+	function compileShader( glout : ShaderCompiler, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
 		var code = glout.run(shader.data);
@@ -239,7 +245,7 @@ class GlDriver extends Driver {
 		var p = programs.get(shader.id);
 		if( p == null ) {
 			p = new CompiledProgram();
-			var glout = new hxsl.GlslOut();
+			var glout = new ShaderCompiler();
 			if( shaderVersion != null )
 				glout.version = shaderVersion;
 			else
