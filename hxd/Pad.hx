@@ -4,8 +4,8 @@ package hxd;
 #if hlsdl
 import sdl.Event;
 import sdl.GameController;
-#elseif psgl
-import psgl.GameController;
+#elseif usesys
+import haxe.GameController;
 #elseif hldx
 import dx.GameController;
 #else
@@ -72,37 +72,9 @@ class Pad {
 		dpadRight : 20,
 		names : ["LX","LY","RX","RY","LT","RT","A","B","X","Y","Select","Guide","Start","LCLK","RCLK","LB","RB","DUp","DDown","DLeft","DRight"],
 	};
-	#elseif psgl
+	#elseif usesys
 
-	public static var CONFIG_PS4 = {
-
-		// unused
-		start : 0,
-		back : 0,
-		// ----
-
-		analogX : 16,
-		analogY : 17,
-		ranalogX : 18,
-		ranalogY : 19,
-
-		A : 14,
-		B : 13,
-		X : 15,
-		Y : 12,
-		LB : 10,
-		RB : 11,
-		LT : 8,
-		RT : 9,
-		analogClick : 1,
-		ranalogClick : 2,
-		options : 3, // only on PS4
-		dpadUp : 4,
-		dpadDown : 6,
-		dpadLeft : 7,
-		dpadRight : 5,
-		names : [null,null,"LCLK","RCLK","Option","DUp","DRight","DDown","DLeft","L2","R2","L1","R1","Triangle","Circle","Cross","Square","LX","LY","RX","RY","Touchpad"],
-	};
+	public static var CONFIG_SYS = GameController.CONFIG;
 
 	#elseif hldx
 
@@ -136,7 +108,7 @@ class Pad {
 
 	public static var DEFAULT_CONFIG =
 		#if hlsdl CONFIG_SDL
-		#elseif psgl CONFIG_PS4
+		#elseif usesys CONFIG_SYS
 		#elseif flash CONFIG_XBOX
 		#elseif hldx CONFIG_DX
 		#else {} #end;
@@ -285,11 +257,11 @@ class Pad {
 			});
 			var count = flash.ui.GameInput.numDevices; // necessary to trigger added
 		}
-		#elseif (hlsdl || psgl)
+		#elseif (hlsdl || hlps)
 		waitPad = onPad;
 		if( !initDone ) {
 			initDone = true;
-			#if psgl
+			#if hlps
 			haxe.MainLoop.add(syncPads);
 			#end
 			var c = @:privateAccess GameController.gctrlCount();
@@ -371,7 +343,7 @@ class Pad {
 		}
 
 	}
-	#elseif psgl
+	#elseif hlps
 
 	function sync() {
 		for( i in 0...buttons.length )

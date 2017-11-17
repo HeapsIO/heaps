@@ -4,7 +4,7 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import h3d.mat.Data;
 
-#if (js||cpp||hlsdl||psgl)
+#if (js||cpp||hlsdl||usegl)
 
 #if js
 import js.html.Uint16Array;
@@ -45,15 +45,15 @@ private typedef VertexArray = sdl.GL.VertexArray;
 #if cpp
 private typedef Float32Array = Array<cpp.Float32>;
 #end
-#elseif psgl
-import psgl.GL;
-private typedef Uniform = psgl.GL.Uniform;
-private typedef Program = psgl.GL.Program;
-private typedef GLShader = psgl.GL.Shader;
-private typedef Framebuffer = psgl.GL.Framebuffer;
+#elseif usegl
+import haxe.GLTypes;
+private typedef Uniform = haxe.GLTypes.Uniform;
+private typedef Program = haxe.GLTypes.Program;
+private typedef GLShader = haxe.GLTypes.Shader;
+private typedef Framebuffer = haxe.GLTypes.Framebuffer;
 private typedef Texture = h3d.impl.Driver.Texture;
 private typedef Query = h3d.impl.Driver.Query;
-private typedef VertexArray = psgl.GL.VertexArray;
+private typedef VertexArray = haxe.GLTypes.VertexArray;
 #end
 
 private class CompiledShader {
@@ -92,7 +92,7 @@ private class CompiledProgram {
 }
 
 @:access(h3d.impl.Shader)
-#if (cpp||hlsdl||psgl)
+#if (cpp||hlsdl||usegl)
 @:build(h3d.impl.MacroHelper.replaceGL())
 #end
 class GlDriver extends Driver {
@@ -103,7 +103,7 @@ class GlDriver extends Driver {
 	public var gl : js.html.webgl.RenderingContext;
 	#end
 
-	#if (hlsdl||psgl)
+	#if (hlsdl||usegl)
 	var commonVA : VertexArray;
 	#end
 
@@ -754,7 +754,7 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-	#if (nme || hlsdl || psgl || openfl || lime)
+	#if (hxcpp || hl)
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
@@ -775,7 +775,7 @@ class GlDriver extends Driver {
 	#end
 	}
 
-	#if !(hlsdl || psgl)
+	#if !hl
 	inline static function bytesToUint8Array( b : haxe.io.Bytes ) : Uint8Array {
 		#if (lime && !js)
 		return new Uint8Array(b);
@@ -1090,7 +1090,7 @@ class GlDriver extends Driver {
 
 	override function hasFeature( f : Feature ) : Bool {
 		return switch( f ) {
-		#if (hlsdl || psgl)
+		#if hl
 		case StandardDerivatives, FloatTextures, MultipleRenderTargets, Queries:
 			true; // runtime extension detect required ?
 		#else

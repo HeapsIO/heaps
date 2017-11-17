@@ -45,7 +45,7 @@ class Engine {
 	var nullTexture : h3d.mat.Texture;
 	var textureColorCache = new Map<Int,h3d.mat.Texture>();
 	@:allow(hxd.res) var resCache = new Map<{},Dynamic>();
-	
+
 	@:access(hxd.Stage)
 	public function new( hardware = true, aa = 0 ) {
 		this.hardware = hardware;
@@ -56,7 +56,7 @@ class Engine {
 		realFps = hxd.System.getDefaultFrameRate();
 		lastTime = haxe.Timer.stamp();
 		stage.addResizeEvent(onStageResize);
-		#if (js || cpp || hlsdl || psgl)
+		#if (js || cpp || hlsdl || usegl)
 		driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver(antiAlias);

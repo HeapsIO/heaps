@@ -49,17 +49,17 @@ class System {
 
 	static function mainLoop() : Void {
 		if( loopFunc != null ) loopFunc();
-		#if psgl
-		psgl.Api.present();
+		#if usesys
+		haxe.System.present();
 		#elseif hlsdl
 		@:privateAccess hxd.Stage.inst.window.present();
 		#end
 	}
 
 	public static function start( init : Void -> Void ) : Void {
-		#if psgl
-		if( !psgl.Api.init() ) return;
-		@:privateAccess Stage.inst = new Stage("", psgl.Api.width, psgl.Api.height);
+		#if usesys
+		if( !haxe.System.init() ) return;
+		@:privateAccess Stage.inst = new Stage("", haxe.System.width, haxe.System.height);
 		init();
 		#else
 		var width = 800;
@@ -140,8 +140,8 @@ class System {
 	}
 
 	public static function getDeviceName() : String {
-		#if psgl
-		return psgl.Api.name;
+		#if usesys
+		return haxe.System.name;
 		#elseif hlsdl
 		return "PC/" + sdl.Sdl.getDevices()[0];
 		#elseif hldx
@@ -157,7 +157,7 @@ class System {
 
 	public static function getValue( s : SystemValue ) : Bool {
 		return switch( s ) {
-		#if !psgl
+		#if !usesys
 		case IsWindowed:
 			return true;
 		#end
@@ -188,9 +188,9 @@ class System {
 
 	// getters
 
-	#if psgl
-	static function get_width() : Int return psgl.Api.width;
-	static function get_height() : Int return psgl.Api.height;
+	#if usesys
+	static function get_width() : Int return haxe.System.width;
+	static function get_height() : Int return haxe.System.height;
 	static function get_platform() : Platform return Console;
 	#elseif hldx
 	static function get_width() : Int return dx.Window.getScreenWidth();
