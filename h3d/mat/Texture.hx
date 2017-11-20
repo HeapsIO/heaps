@@ -19,7 +19,7 @@ class Texture {
 	/**
 		Tells if the Driver requires y-flipping the texture pixels before uploading.
 	**/
-	public static inline var nativeFlip = 	#if (hlsdl) true
+	public static inline var nativeFlip = 	#if (hlsdl||usegl) true
 											#elseif (openfl) false
 											#elseif (lime && (cpp || neko || nodejs)) true
 											#else false #end;
