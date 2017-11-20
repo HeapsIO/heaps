@@ -583,7 +583,7 @@ class GlslOut {
 		return decls.join("\n");
 	}
 
-	public static function toGlsl( s : ShaderData ) {
+	public static function compile( s : ShaderData ) {
 		var out = new GlslOut();
 		#if js
 		out.glES = true;
