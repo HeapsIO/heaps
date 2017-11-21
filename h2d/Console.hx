@@ -10,6 +10,12 @@ enum ConsoleArg {
 	AEnum( values : Array<String> );
 }
 
+typedef ConsoleArgDesc = {
+	name : String,
+	t : ConsoleArg,
+	?opt : Bool,
+}
+
 class Console extends h2d.Sprite {
 
 	public static var HIDE_LOG_TIMEOUT = 3.;
@@ -20,7 +26,7 @@ class Console extends h2d.Sprite {
 	var tf : h2d.TextInput;
 	var logTxt : h2d.HtmlText;
 	var lastLogTime : Float;
-	var commands : Map < String, { help : String, args : Array<{ name : String, t : ConsoleArg, ?opt : Bool }>, callb : Dynamic } > ;
+	var commands : Map < String, { help : String, args : Array<ConsoleArgDesc>, callb : Dynamic } > ;
 	var aliases : Map<String,String>;
 	var logDY : Float = 0;
 	var logs : Array<String>;
