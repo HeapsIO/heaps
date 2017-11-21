@@ -247,17 +247,17 @@ class SceneSerializer extends hxbit.Serializer {
 		}
 	}
 
-	function initSCNPaths( resPath : String, projectPath : String ) {
+	function initHSDPaths( resPath : String, projectPath : String ) {
 		this.resPath = resPath;
 	}
 
-	public function loadSCN( bytes ) {
+	public function loadHSD( bytes ) {
 		setInput(bytes, 0);
-		if( getString() != "SCN" )
-			throw "Invalid SCN file";
+		if( getString() != "HSD" )
+			throw "Invalid HSD file";
 		version = getInt();
 		beginLoad(bytes, inPos);
-		initSCNPaths(getString(), getString());
+		initHSDPaths(getString(), getString());
 		var objs = [];
 		for( i in 0...getInt() ) {
 			var obj : h3d.scene.Object = cast getAnyRef();
@@ -270,9 +270,9 @@ class SceneSerializer extends hxbit.Serializer {
 		return { content : objs };
 	}
 
-	public function saveSCN( obj : h3d.scene.Object, includeRoot : Bool ) {
+	public function saveHSD( obj : h3d.scene.Object, includeRoot : Bool ) {
 		begin();
-		addString("SCN");
+		addString("HSD");
 		addInt(version); // version
 
 		var pos = out.length;
