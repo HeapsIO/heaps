@@ -379,7 +379,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	public function serializeScene() : haxe.io.Bytes {
 		#if hxbit
 		var s = new h3d.impl.Serializable.SceneSerializer();
-		return s.saveHSD(this, false);
+		return s.saveHSD(this, false, camera);
 		#else
 		throw "You need -lib hxbit to serialize the scene data";
 		#end

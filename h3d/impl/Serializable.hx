@@ -266,11 +266,25 @@ class SceneSerializer extends hxbit.Serializer {
 		for( o in objs )
 			for( m in o.getMeshes() )
 				h3d.mat.MaterialSetup.current.initMeshAfterLoad(m);
+
+		var camera = null;
+		if( getBool() ) {
+			camera = new h3d.Camera();
+			camera.pos.set(getFloat(), getFloat(), getFloat());
+			camera.target.set(getFloat(), getFloat(), getFloat());
+			camera.up.set(getFloat(), getFloat(), getFloat());
+			camera.fovY = getFloat();
+			camera.zNear = getFloat();
+			camera.zFar = getFloat();
+			camera.zoom = getFloat();
+			camera.update();
+		}
+
 		endLoad();
-		return { content : objs };
+		return { content : objs, camera : camera };
 	}
 
-	public function saveHSD( obj : h3d.scene.Object, includeRoot : Bool ) {
+	public function saveHSD( obj : h3d.scene.Object, includeRoot : Bool, ?camera : h3d.Camera ) {
 		begin();
 		addString("HSD");
 		addInt(version); // version
@@ -289,6 +303,23 @@ class SceneSerializer extends hxbit.Serializer {
 		addInt(objs.length);
 		for( o in objs )
 			addAnyRef(o);
+
+		addBool(camera != null);
+		if( camera != null ) {
+			addFloat(camera.pos.x);
+			addFloat(camera.pos.y);
+			addFloat(camera.pos.z);
+			addFloat(camera.target.x);
+			addFloat(camera.target.y);
+			addFloat(camera.target.z);
+			addFloat(camera.up.x);
+			addFloat(camera.up.y);
+			addFloat(camera.up.z);
+			addFloat(camera.fovY);
+			addFloat(camera.zNear);
+			addFloat(camera.zFar);
+			addFloat(camera.zoom);
+		}
 
 		return endSave(pos);
 	}
