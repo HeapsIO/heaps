@@ -20,6 +20,7 @@ class SceneSerializer extends hxbit.Serializer {
 	var shaderIndexes = new Map<hxsl.Shader,Int>();
 	var cachedShaders = new Array<hxsl.Shader>();
 	var cachedTextures = new Map<Int,h3d.mat.Texture>();
+	var texOutputFormat : hxd.PixelFormat = RGBA;
 
 	function addTexture( t : h3d.mat.Texture ) {
 		if( t == null ) {
@@ -41,6 +42,7 @@ class SceneSerializer extends hxbit.Serializer {
 		if( t.flags.has(Serialize) ) {
 			addInt(2);
 			var pix = t.capturePixels();
+			pix.convert(texOutputFormat);
 			addInt(t.width);
 			addInt(t.height);
 			addInt(t.flags.toInt());
@@ -298,8 +300,7 @@ class SceneSerializer extends hxbit.Serializer {
 		addString(null);
 		#end
 
-		var objs = includeRoot ? [obj] : [for( o in obj ) o];
-		objs = [for( o in obj ) if( @:privateAccess !o.flags.has(FNoSerialize) ) o];
+		var objs = includeRoot ? [obj] : [for( o in obj ) if( o.allowSerialize ) o];
 		addInt(objs.length);
 		for( o in objs )
 			addAnyRef(o);

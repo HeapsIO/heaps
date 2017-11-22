@@ -180,16 +180,27 @@ class Texture {
 
 	public function clear( color : Int, alpha = 1. ) {
 		alloc();
-		var p = hxd.Pixels.alloc(width, height, BGRA);
+		var p = hxd.Pixels.alloc(width, height, nativeFormat);
 		var k = 0;
 		var b = color & 0xFF, g = (color >> 8) & 0xFF, r = (color >> 16) & 0xFF, a = Std.int(alpha * 255);
 		if( a < 0 ) a = 0 else if( a > 255 ) a = 255;
+		switch( nativeFormat ) {
+		case RGBA:
+		case BGRA:
+			// flip b/r
+			var tmp = r;
+			r = b;
+			b = tmp;
+		default:
+			throw "TODO";
+		}
 		for( i in 0...width * height ) {
-			p.bytes.set(k++,b);
-			p.bytes.set(k++,g);
 			p.bytes.set(k++,r);
+			p.bytes.set(k++,g);
+			p.bytes.set(k++,b);
 			p.bytes.set(k++,a);
 		}
+		if( nativeFlip ) p.flags.set(FlipY);
 		uploadPixels(p);
 		p.dispose();
 	}
