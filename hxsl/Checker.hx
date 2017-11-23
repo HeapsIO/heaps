@@ -91,7 +91,7 @@ class Checker {
 						r.push( { args : [ { name : "edge", type : TFloat }, { name : "x", type : t } ], ret : t } );
 				}
 				r;
-			case SmoothStep:
+			case Smoothstep:
 				var r = [];
 				for( t in genType ) {
 					r.push( { args : [ { name : "edge0", type : t }, { name : "edge1", type : t }, { name : "x", type : t } ], ret : t } );
