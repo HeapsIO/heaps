@@ -48,6 +48,10 @@ class Renderer {
 		return p.compileShader(pass);
 	}
 
+	function hasFeature(f) {
+		return h3d.Engine.getCurrent().driver.hasFeature(f);
+	}
+
 	function createDefaultPass( name : String ) : h3d.pass.Base {
 		switch( name ) {
 		case "depth":
@@ -123,6 +127,10 @@ class Renderer {
 
 	inline function clear( ?color, ?depth, ?stencil ) {
 		ctx.engine.clear(color, depth, stencil);
+	}
+
+	function copy( from, to, ?blend ) {
+		h3d.pass.Copy.run(from, to, blend);
 	}
 
 	function setTarget( tex ) {
