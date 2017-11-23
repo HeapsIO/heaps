@@ -185,7 +185,7 @@ enum TGlobal {
 	Clamp;
 	Mix;
 	Step;
-	SmoothStep;
+	Smoothstep;
 	Length;
 	Distance;
 	Dot;
