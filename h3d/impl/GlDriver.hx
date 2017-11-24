@@ -371,9 +371,14 @@ class GlDriver extends Driver {
 			var tcount = s.textures.length;
 			for( i in 0...s.textures.length + s.cubeTextures.length ) {
 				var t = buf.tex[i];
+				var isCube = i >= tcount;
 				if( t == null || t.isDisposed() ) {
-					var color = h3d.mat.Defaults.loadingTextureColor;
-					t = h3d.mat.Texture.fromColor(color,(color>>>24)/255);
+					if( isCube ) {
+						t = h3d.mat.Texture.defaultCubeTexture();
+					} else {
+						var color = h3d.mat.Defaults.loadingTextureColor;
+						t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
+					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
 					t.alloc();
@@ -381,7 +386,6 @@ class GlDriver extends Driver {
 				}
 				t.lastFrame = frame;
 
-				var isCube = i >= tcount;
 				var pt = isCube ? s.cubeTextures[i - tcount] : s.textures[i];
 				if( pt == null ) continue;
 				if( boundTextures[i] == t.t ) continue;

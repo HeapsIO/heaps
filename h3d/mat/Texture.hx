@@ -201,7 +201,8 @@ class Texture {
 			p.bytes.set(k++,a);
 		}
 		if( nativeFlip ) p.flags.set(FlipY);
-		uploadPixels(p);
+		for( i in 0...(flags.has(Cube) ? 6 : 1) )
+			uploadPixels(p, 0, i);
 		p.dispose();
 	}
 
