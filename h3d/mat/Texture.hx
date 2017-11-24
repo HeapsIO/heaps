@@ -257,8 +257,11 @@ class Texture {
 		Downloads the current texture data from the GPU.
 		Beware, this is a very slow operation that shouldn't be done during rendering.
 	**/
-	public function capturePixels() {
+	public function capturePixels( face = 0, mipLevel = 0 ) {
 		#if flash
+
+		if( face != 0 || mipLevel != 0 )
+			throw "Can't capture face/mipLevel";
 
 		var twoPassCapture = true;
 
@@ -315,7 +318,7 @@ class Texture {
 		#else
 
 		var e = h3d.Engine.getCurrent();
-		e.pushTarget(this);
+		e.pushTarget(this, face, mipLevel);
 		@:privateAccess e.flushTarget();
 		var pixels = hxd.Pixels.alloc(width, height, RGBA);
 		e.driver.captureRenderBuffer(pixels);
@@ -382,12 +385,12 @@ class Texture {
 	**/
 	public static function defaultCubeTexture() {
 		var engine = h3d.Engine.getCurrent();
-		var t = @:privateAccess engine.resCache.get(Texture);
+		var t : h3d.mat.Texture = @:privateAccess engine.resCache.get(Texture);
 		if( t != null )
 			return t;
 		t = new Texture(1, 1, [Cube]);
-		t.clear(0);
-		t.realloc = function() t.clear(0);
+		t.clear(0x202020);
+		t.realloc = function() t.clear(0x202020);
 		@:privateAccess engine.resCache.set(Texture,t);
 		return t;
 	}

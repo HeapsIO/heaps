@@ -41,14 +41,17 @@ class SceneSerializer extends hxbit.Serializer {
 		}
 		if( t.flags.has(Serialize) ) {
 			addInt(2);
-			var pix = t.capturePixels();
-			pix.convert(texOutputFormat);
 			addInt(t.width);
 			addInt(t.height);
 			addInt(t.flags.toInt());
 			addInt(t.format.getIndex());
-			addInt(pix.format.getIndex());
-			addBytesSub(pix.bytes, 0, t.width * t.height * hxd.Pixels.bytesPerPixel(pix.format));
+			var fmt = texOutputFormat;
+			addInt(fmt.getIndex());
+			for( face in 0...(t.flags.has(Cube) ? 6 : 1) ) {
+				var pix = t.capturePixels(face);
+				pix.convert(fmt);
+				addBytesSub(pix.bytes, 0, t.width * t.height * hxd.Pixels.bytesPerPixel(pix.format));
+			}
 			return true;
 		}
 		var tch = Std.instance(t, h3d.mat.TextureChannels);
@@ -97,7 +100,8 @@ class SceneSerializer extends hxbit.Serializer {
 			if( kind == 2 ) {
 				var pixFormat = h3d.mat.Data.TextureFormat.createByIndex(getInt());
 				t = new h3d.mat.Texture(width, height, flags, format);
-				t.uploadPixels(new hxd.Pixels(width, height, getBytes(), pixFormat));
+				for( face in 0...(t.flags.has(Cube)?6:1) )
+					t.uploadPixels(new hxd.Pixels(width, height, getBytes(), pixFormat), 0, face);
 			} else {
 				var ct = new h3d.mat.TextureChannels(width, height, flags, format);
 				ct.allowAsync = false;
