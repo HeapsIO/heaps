@@ -41,10 +41,6 @@ class DynamicShader extends Shader {
 		}
 		var value : Dynamic = null;
 		switch( v.type ) {
-		case TSampler2D:
-			value = h3d.mat.Texture.fromColor(0xFF00FF);
-		case TSamplerCube:
-			value = h3d.mat.Texture.defaultCubeTexture();
 		case TVec(_):
 			value = new h3d.Vector();
 		case TMat3, TMat4, TMat3x4:
@@ -138,6 +134,10 @@ class DynamicShader extends Shader {
 		return values[vid] = value;
 	}
 	#end
+
+	override function toString() {
+		return "DynamicShader<" + shader.data.name+">";
+	}
 
 
 }
