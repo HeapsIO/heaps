@@ -7,7 +7,7 @@ class Cube extends Polygon {
 	@:s var sizeY : Float;
 	@:s var sizeZ : Float;
 
-	public function new( x = 1., y = 1., z = 1. )
+	public function new( x = 1., y = 1., z = 1., centered = false )
 	{
 		this.sizeX = x;
 		this.sizeY = y;
@@ -36,6 +36,7 @@ class Cube extends Polygon {
 		idx.push(0); idx.push(4); idx.push(1);
 		idx.push(0); idx.push(2); idx.push(4);
 		super(p, idx);
+		if( centered ) translate( -x * 0.5, -y * 0.5, -z * 0.5);
 	}
 
 	override function addUVs() {
@@ -59,6 +60,26 @@ class Cube extends Polygon {
 			z, y, o,
 			z, o, x,
 			z, y, o,
+		];
+	}
+
+	public function addUniformUVs(scale = 1.) {
+		unindex();
+
+		var v = scale;
+		uvs = [
+			new UV(v * sizeX, v * sizeZ), new UV(0, v * sizeZ), new UV(0, 0),
+			new UV(v * sizeX, v * sizeZ), new UV(0, 0), new UV(v * sizeX, 0),
+			new UV(v * sizeY, v * sizeZ), new UV(0, v * sizeZ), new UV(0, 0),
+			new UV(v * sizeY, v * sizeZ), new UV(0, 0), new UV(v * sizeY, 0),
+			new UV(v * sizeX, v * sizeY), new UV(0, v * sizeY), new UV(0, 0),
+			new UV(v * sizeX, v * sizeY), new UV(0, 0), new UV(v * sizeX, 0),
+			new UV(0, v * sizeZ), new UV(v * sizeY, 0), new UV(v * sizeY, v * sizeZ),
+			new UV(0, v * sizeZ), new UV(0, 0), new UV(v * sizeY, 0),
+			new UV(0, v * sizeZ), new UV(v * sizeX, 0), new UV(v * sizeX, v * sizeZ),
+			new UV(0, v * sizeZ), new UV(0, 0), new UV(v * sizeX, 0),
+			new UV(0, v * sizeY), new UV(v * sizeX, 0), new UV(v * sizeX, v * sizeY),
+			new UV(0, v * sizeY), new UV(0, 0), new UV(v * sizeX, 0),
 		];
 	}
 

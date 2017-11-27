@@ -314,16 +314,19 @@ class LocalFileSystem implements FileSystem {
 		if( !StringTools.endsWith(baseDir, "/") ) baseDir += "/";
 		root = new LocalEntry(this, "root", null, froot);
 		#else
-		#if (haxe_ver >= 3.3)
-		var exePath = Sys.programPath().split("\\").join("/").split("/");
+		#if (macro && haxe_ver >= 4.0)
+		var exePath = null;
+		#elseif (haxe_ver >= 3.3)
+		var pr = Sys.programPath();
+		var exePath = pr == null ? null : pr.split("\\").join("/").split("/");
 		#else
 		var exePath = Sys.executablePath().split("\\").join("/").split("/");
 		#end
-		exePath.pop();
-		var froot = sys.FileSystem.fullPath(exePath.join("/") + "/" + baseDir);
-		if( froot == null || !sys.FileSystem.isDirectory(froot) ) {
+		if( exePath != null ) exePath.pop();
+		var froot = exePath == null ? baseDir : sys.FileSystem.fullPath(exePath.join("/") + "/" + baseDir);
+		if( froot == null || !sys.FileSystem.exists(froot) || !sys.FileSystem.isDirectory(froot) ) {
 			froot = sys.FileSystem.fullPath(baseDir);
-			if( froot == null || !sys.FileSystem.isDirectory(froot) )
+			if( froot == null || !sys.FileSystem.exists(froot) || !sys.FileSystem.isDirectory(froot) )
 				throw "Could not find dir " + dir;
 		}
 		baseDir = froot.split("\\").join("/");
@@ -462,7 +465,7 @@ class LocalFileSystem implements FileSystem {
 
 		var skipConvert = false;
 
-		#if sys
+		#if (sys || nodejs)
 		// prepare output dir
 		var parts = path.split("/");
 		parts.pop();

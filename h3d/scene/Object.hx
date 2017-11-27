@@ -11,6 +11,7 @@ package h3d.scene;
 	public var FInheritCulled = 0x80;
 	public var FNoSerialize = 0x100;
 	public var FIgnoreBounds = 0x200;
+	public var FIgnoreCollide = 0x400;
 	public inline function new() {
 		this = 0;
 	}
@@ -75,6 +76,15 @@ class Object implements h3d.impl.Serializable {
 	**/
 	public var inheritCulled(get, set) : Bool;
 
+	/**
+		When enable, the object is ignore when using getCollider()
+	**/
+	public var ignoreCollide(get, set) : Bool;
+
+	/**
+		When enable, the object can be serialized (default : true)
+	**/
+	public var allowSerialize(get, set) : Bool;
 
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
@@ -103,6 +113,8 @@ class Object implements h3d.impl.Serializable {
 	inline function get_lightCameraCenter() return flags.has(FLightCameraCenter);
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
+	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
+	inline function get_allowSerialize() return !flags.has(FNoSerialize);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -111,6 +123,8 @@ class Object implements h3d.impl.Serializable {
 	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
 	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
+	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
+	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
 
 	public function playAnimation( a : h3d.anim.Animation ) {
 		return currentAnimation = a.createInstance(this);
@@ -254,6 +268,10 @@ class Object implements h3d.impl.Serializable {
 		return out;
 	}
 
+	public function getMeshByName( name : String) {
+		return Std.instance(getObjectByName(name), Mesh);
+	}
+
 	public function getObjectByName( name : String ) {
 		if( this.name == name )
 			return this;
@@ -275,6 +293,7 @@ class Object implements h3d.impl.Serializable {
 		o.scaleX = scaleX;
 		o.scaleY = scaleY;
 		o.scaleZ = scaleZ;
+		o.qRot.load(qRot);
 		o.name = name;
 		o.follow = follow;
 		o.followPositionOnly = followPositionOnly;
@@ -386,9 +405,12 @@ class Object implements h3d.impl.Serializable {
 	}
 
 	public function getCollider() : h3d.col.Collider {
+		if( ignoreCollide )
+			return null;
 		var colliders = [];
 		for( obj in children ) {
 			var c = obj.getCollider();
+			if( c == null ) continue;
 			var cgrp = Std.instance(c, h3d.col.Collider.GroupCollider);
 			if( cgrp != null ) {
 				for( c in cgrp.colliders )
@@ -396,6 +418,10 @@ class Object implements h3d.impl.Serializable {
 			} else
 				colliders.push(c);
 		}
+		if( colliders.length == 0 )
+			return null;
+		if( colliders.length == 1 )
+			return colliders[0];
 		return new h3d.col.Collider.GroupCollider(colliders);
 	}
 
@@ -639,7 +665,7 @@ class Object implements h3d.impl.Serializable {
 	#if hxbit
 	function customSerialize( ctx : hxbit.Serializer ) {
 
-		var children = [for( o in children ) if( !o.flags.has(FNoSerialize) ) o];
+		var children = [for( o in children ) if( o.allowSerialize ) o];
 		ctx.addInt(children.length);
 		for( o in children )
 			ctx.addKnownRef(o);

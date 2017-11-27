@@ -20,6 +20,7 @@ class SceneSerializer extends hxbit.Serializer {
 	var shaderIndexes = new Map<hxsl.Shader,Int>();
 	var cachedShaders = new Array<hxsl.Shader>();
 	var cachedTextures = new Map<Int,h3d.mat.Texture>();
+	var texOutputFormat : hxd.PixelFormat = RGBA;
 
 	function addTexture( t : h3d.mat.Texture ) {
 		if( t == null ) {
@@ -40,13 +41,17 @@ class SceneSerializer extends hxbit.Serializer {
 		}
 		if( t.flags.has(Serialize) ) {
 			addInt(2);
-			var pix = t.capturePixels();
 			addInt(t.width);
 			addInt(t.height);
 			addInt(t.flags.toInt());
 			addInt(t.format.getIndex());
-			addInt(pix.format.getIndex());
-			addBytesSub(pix.bytes, 0, t.width * t.height * hxd.Pixels.bytesPerPixel(pix.format));
+			var fmt = texOutputFormat;
+			addInt(fmt.getIndex());
+			for( face in 0...(t.flags.has(Cube) ? 6 : 1) ) {
+				var pix = t.capturePixels(face);
+				pix.convert(fmt);
+				addBytesSub(pix.bytes, 0, t.width * t.height * hxd.Pixels.bytesPerPixel(pix.format));
+			}
 			return true;
 		}
 		var tch = Std.instance(t, h3d.mat.TextureChannels);
@@ -95,7 +100,8 @@ class SceneSerializer extends hxbit.Serializer {
 			if( kind == 2 ) {
 				var pixFormat = h3d.mat.Data.TextureFormat.createByIndex(getInt());
 				t = new h3d.mat.Texture(width, height, flags, format);
-				t.uploadPixels(new hxd.Pixels(width, height, getBytes(), pixFormat));
+				for( face in 0...(t.flags.has(Cube)?6:1) )
+					t.uploadPixels(new hxd.Pixels(width, height, getBytes(), pixFormat), 0, face);
 			} else {
 				var ct = new h3d.mat.TextureChannels(width, height, flags, format);
 				ct.allowAsync = false;
@@ -247,17 +253,17 @@ class SceneSerializer extends hxbit.Serializer {
 		}
 	}
 
-	function initSCNPaths( resPath : String, projectPath : String ) {
+	function initHSDPaths( resPath : String, projectPath : String ) {
 		this.resPath = resPath;
 	}
 
-	public function loadSCN( bytes ) {
+	public function loadHSD( bytes ) {
 		setInput(bytes, 0);
-		if( getString() != "SCN" )
-			throw "Invalid SCN file";
+		if( getString() != "HSD" )
+			throw "Invalid HSD file";
 		version = getInt();
 		beginLoad(bytes, inPos);
-		initSCNPaths(getString(), getString());
+		initHSDPaths(getString(), getString());
 		var objs = [];
 		for( i in 0...getInt() ) {
 			var obj : h3d.scene.Object = cast getAnyRef();
@@ -266,13 +272,27 @@ class SceneSerializer extends hxbit.Serializer {
 		for( o in objs )
 			for( m in o.getMeshes() )
 				h3d.mat.MaterialSetup.current.initMeshAfterLoad(m);
+
+		var camera = null;
+		if( getBool() ) {
+			camera = new h3d.Camera();
+			camera.pos.set(getFloat(), getFloat(), getFloat());
+			camera.target.set(getFloat(), getFloat(), getFloat());
+			camera.up.set(getFloat(), getFloat(), getFloat());
+			camera.fovY = getFloat();
+			camera.zNear = getFloat();
+			camera.zFar = getFloat();
+			camera.zoom = getFloat();
+			camera.update();
+		}
+
 		endLoad();
-		return { content : objs };
+		return { content : objs, camera : camera };
 	}
 
-	public function saveSCN( obj : h3d.scene.Object, includeRoot : Bool ) {
+	public function saveHSD( obj : h3d.scene.Object, includeRoot : Bool, ?camera : h3d.Camera ) {
 		begin();
-		addString("SCN");
+		addString("HSD");
 		addInt(version); // version
 
 		var pos = out.length;
@@ -284,11 +304,27 @@ class SceneSerializer extends hxbit.Serializer {
 		addString(null);
 		#end
 
-		var objs = includeRoot ? [obj] : [for( o in obj ) o];
-		objs = [for( o in obj ) if( @:privateAccess !o.flags.has(FNoSerialize) ) o];
+		var objs = includeRoot ? [obj] : [for( o in obj ) if( o.allowSerialize ) o];
 		addInt(objs.length);
 		for( o in objs )
 			addAnyRef(o);
+
+		addBool(camera != null);
+		if( camera != null ) {
+			addFloat(camera.pos.x);
+			addFloat(camera.pos.y);
+			addFloat(camera.pos.z);
+			addFloat(camera.target.x);
+			addFloat(camera.target.y);
+			addFloat(camera.target.z);
+			addFloat(camera.up.x);
+			addFloat(camera.up.y);
+			addFloat(camera.up.z);
+			addFloat(camera.fovY);
+			addFloat(camera.zNear);
+			addFloat(camera.zFar);
+			addFloat(camera.zoom);
+		}
 
 		return endSave(pos);
 	}

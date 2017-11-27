@@ -58,9 +58,9 @@ class MRT extends Default {
 		function getRec(v:hxsl.Output) {
 			return switch( v ) {
 			case Value(v): v;
-			case PackFloat(v), PackNormal(v): getRec(v);
+			case PackFloat(v), PackNormal(v), Swiz(v,_): getRec(v);
 			case Const(v): "Const" + Std.int(v);
-			case Vec2(_), Vec3(_), Vec4(_): "Output" + i;
+			case Vec2(vl), Vec3(vl), Vec4(vl): [for( v in vl ) getRec(v)].join("+");
 			}
 		}
 		return getRec(fragmentOutputs[i]);

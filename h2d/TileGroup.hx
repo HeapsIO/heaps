@@ -443,6 +443,10 @@ class TileGroup extends Drawable {
 		content.add(x, y, r, g, b, a, t);
 	}
 
+	public inline function addAlpha(x, y, a, t) {
+		content.add(x, y, curColor.x, curColor.y, curColor.z, a, t);
+	}
+
 	public inline function addTransform(x, y, sx, sy, r, t) {
 		content.addTransform(x, y, sx, sy, r, curColor, t);
 	}

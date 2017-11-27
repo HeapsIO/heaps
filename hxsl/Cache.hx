@@ -86,7 +86,7 @@ class Cache {
 				return makeVec(Vec3, 3, args, makeOutExpr);
 			case Vec4(args):
 				return makeVec(Vec4, 4, args, makeOutExpr);
-			case Value(vname):
+			case Value(vname,size):
 				var v = outVars.get(vname);
 				if( v != null )
 					return { e : TVar(v), t : v.type, p : pos };
@@ -94,12 +94,16 @@ class Cache {
 				var parent : TVar = null;
 				while( path.length > 1 )
 					parent = makeVar(path.shift(), TStruct([]), parent);
+				if( size != null )
+					rem = size;
 				v = makeVar(path.shift(), rem == 1 ? TFloat : TVec(rem, VFloat), parent);
 				return { e : TVar(v), t : v.type, p : pos };
 			case PackNormal(v):
 				return { e : TCall({ e : TGlobal(PackNormal), t : TVoid, p : pos }, [makeOutExpr(v,3)]), t : tvec4, p : pos };
 			case PackFloat(v):
-				return { e : TCall({ e : TGlobal(Pack), t : TVoid, p : pos }, [makeOutExpr(v,1)]), t : tvec4, p : pos };
+				return { e : TCall({ e : TGlobal(Pack), t : TVoid, p : pos }, [makeOutExpr(v, 1)]), t : tvec4, p : pos };
+			case Swiz(v, comps):
+				return { e : TSwiz(makeOutExpr(v,4), comps), t : TVec(comps.length, VFloat), p : pos };
 			}
 		}
 		function makeOutput( v : Output ) : TExpr {

@@ -74,9 +74,9 @@ class ItemList extends Box {
 					}
 				}
 				int.onWheel = onWheel;
-				if( Lambda.indexOf(childs,int) != 1 + i ) {
-					childs.remove(int);
-					childs.insert(1 + i, int); // insert over bg
+				if( Lambda.indexOf(children,int) != 1 + i ) {
+					children.remove(int);
+					children.insert(1 + i, int); // insert over bg
 					int.onParentChanged();
 				}
 			}

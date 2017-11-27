@@ -1,6 +1,10 @@
 package hxd;
 import hxd.Key in K;
 
+#if (hlsdl && hldx)
+#error "You shouldn't use both -lib hlsdl and -lib hldx"
+#end
+
 //@:coreApi
 class Stage {
 
@@ -138,14 +142,23 @@ class Stage {
 			case Focus:
 				#if hldx
 				// return to exclusive mode
-				if( fullScreenMode == Fullscreen && wasBlurred ) {
+				if( window.displayMode == Fullscreen && wasBlurred ) {
 					window.displayMode = Borderless;
-					window.displayMode = fullScreenMode;
+					window.displayMode = Fullscreen;
 				}
 				#end
 				wasBlurred = false;
 			case Blur:
 				wasBlurred = true;
+				#if hldx
+				// release all keys
+				var ev = new Event(EKeyUp);
+				for( i in 0...@:privateAccess hxd.Key.keyPressed.length )
+					if( hxd.Key.isDown(i) ) {
+						ev.keyCode = i;
+						event(ev);
+					}
+				#end
 			default:
 			}
 		case MouseDown:

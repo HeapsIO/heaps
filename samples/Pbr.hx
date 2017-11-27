@@ -881,10 +881,6 @@ class Pbr extends hxd.App {
 	static function main() {
 		#if hl
 		hxd.Res.initLocal();
-		@:privateAccess {
-			hxd.System.windowWidth = 1280;
-			hxd.System.windowHeight = 800;
-		}
 		#else
 		hxd.Res.initEmbed();
 		#end

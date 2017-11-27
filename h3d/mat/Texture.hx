@@ -19,7 +19,7 @@ class Texture {
 	/**
 		Tells if the Driver requires y-flipping the texture pixels before uploading.
 	**/
-	public static inline var nativeFlip = 	#if (hlsdl) true
+	public static inline var nativeFlip = 	#if (hlsdl||usegl) true
 											#elseif (openfl) false
 											#elseif (lime && (cpp || neko || nodejs)) true
 											#else false #end;
@@ -96,8 +96,11 @@ class Texture {
 	}
 
 	public function clone( ?allocPos : h3d.impl.AllocPos ) {
+		var old = lastFrame;
+		preventAutoDispose();
 		var t = new Texture(width, height, null, format, allocPos);
 		h3d.pass.Copy.run(this, t);
+		lastFrame = old;
 		return t;
 	}
 
@@ -177,17 +180,29 @@ class Texture {
 
 	public function clear( color : Int, alpha = 1. ) {
 		alloc();
-		var p = hxd.Pixels.alloc(width, height, BGRA);
+		var p = hxd.Pixels.alloc(width, height, nativeFormat);
 		var k = 0;
 		var b = color & 0xFF, g = (color >> 8) & 0xFF, r = (color >> 16) & 0xFF, a = Std.int(alpha * 255);
 		if( a < 0 ) a = 0 else if( a > 255 ) a = 255;
+		switch( nativeFormat ) {
+		case RGBA:
+		case BGRA:
+			// flip b/r
+			var tmp = r;
+			r = b;
+			b = tmp;
+		default:
+			throw "TODO";
+		}
 		for( i in 0...width * height ) {
-			p.bytes.set(k++,b);
-			p.bytes.set(k++,g);
 			p.bytes.set(k++,r);
+			p.bytes.set(k++,g);
+			p.bytes.set(k++,b);
 			p.bytes.set(k++,a);
 		}
-		uploadPixels(p);
+		if( nativeFlip ) p.flags.set(FlipY);
+		for( i in 0...(flags.has(Cube) ? 6 : 1) )
+			uploadPixels(p, 0, i);
 		p.dispose();
 	}
 
@@ -242,8 +257,11 @@ class Texture {
 		Downloads the current texture data from the GPU.
 		Beware, this is a very slow operation that shouldn't be done during rendering.
 	**/
-	public function capturePixels() {
+	public function capturePixels( face = 0, mipLevel = 0 ) {
 		#if flash
+
+		if( face != 0 || mipLevel != 0 )
+			throw "Can't capture face/mipLevel";
 
 		var twoPassCapture = true;
 
@@ -300,7 +318,7 @@ class Texture {
 		#else
 
 		var e = h3d.Engine.getCurrent();
-		e.pushTarget(this);
+		e.pushTarget(this, face, mipLevel);
 		@:privateAccess e.flushTarget();
 		var pixels = hxd.Pixels.alloc(width, height, RGBA);
 		e.driver.captureRenderBuffer(pixels);
@@ -367,12 +385,12 @@ class Texture {
 	**/
 	public static function defaultCubeTexture() {
 		var engine = h3d.Engine.getCurrent();
-		var t = @:privateAccess engine.resCache.get(Texture);
+		var t : h3d.mat.Texture = @:privateAccess engine.resCache.get(Texture);
 		if( t != null )
 			return t;
 		t = new Texture(1, 1, [Cube]);
-		t.clear(0);
-		t.realloc = function() t.clear(0);
+		t.clear(0x202020);
+		t.realloc = function() t.clear(0x202020);
 		@:privateAccess engine.resCache.set(Texture,t);
 		return t;
 	}

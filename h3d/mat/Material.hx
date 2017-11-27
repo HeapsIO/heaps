@@ -182,6 +182,7 @@ class Material extends BaseMaterial {
 	#if hxbit
 
 	function customSerialize( ctx : hxbit.Serializer ) {
+		// other props are serialized in BaseMaterial !
 		ctx.addInt(blendMode.getIndex());
 		ctx.addDynamic(props);
 	}
@@ -191,6 +192,8 @@ class Material extends BaseMaterial {
 		while( last.next != null ) last = last.next;
 		mshader = cast last.s;
 
+		// prevent changing the passes while setting blendmode/props
+		// since we have unserialized them, they are correctly set already
 		var old = passes;
 		passes = null;
 		blendMode = BlendMode.createByIndex(ctx.getInt());

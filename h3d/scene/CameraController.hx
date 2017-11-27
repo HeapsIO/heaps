@@ -14,6 +14,8 @@ class CameraController extends h3d.scene.Object {
 	public var fovZoomAmount = 1.1;
 	public var panSpeed = 1.;
 
+	public var lockZPlanes = false;
+
 	var scene : h3d.scene.Scene;
 	var pushing = -1;
 	var pushX = 0.;
@@ -183,8 +185,10 @@ class CameraController extends h3d.scene.Object {
 		cam.target.load(curOffset);
 		cam.target.w = 1;
 		cam.pos.set( distance * Math.cos(theta) * Math.sin(phi) + cam.target.x, distance * Math.sin(theta) * Math.sin(phi) + cam.target.y, distance * Math.cos(phi) + cam.target.z );
-		cam.zNear = distance * 0.01;
-		cam.zFar = distance * 100;
+		if( !lockZPlanes ) {
+			cam.zNear = distance * 0.01;
+			cam.zFar = distance * 100;
+		}
 		cam.fovY = curOffset.w;
 	}
 

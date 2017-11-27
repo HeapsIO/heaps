@@ -87,6 +87,15 @@ class Animation {
 		}
 	}
 
+	public function addEvent(frame : Int, data : String) {
+		if (events == null)
+			events = [];
+		if (events[frame] == null)
+			events[frame] = [data];
+		else
+			events[frame].push(data);
+	}
+
 	public function setFrame( f : Float ) {
 		frame = f;
 		lastEvent = -1;

@@ -4,7 +4,7 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import h3d.mat.Data;
 
-#if (js||cpp||hlsdl||psgl)
+#if (js||cpp||hlsdl||usegl)
 
 #if js
 import js.html.Uint16Array;
@@ -45,15 +45,21 @@ private typedef VertexArray = sdl.GL.VertexArray;
 #if cpp
 private typedef Float32Array = Array<cpp.Float32>;
 #end
-#elseif psgl
-import psgl.GL;
-private typedef Uniform = psgl.GL.Uniform;
-private typedef Program = psgl.GL.Program;
-private typedef GLShader = psgl.GL.Shader;
-private typedef Framebuffer = psgl.GL.Framebuffer;
+#elseif usegl
+import haxe.GLTypes;
+private typedef Uniform = haxe.GLTypes.Uniform;
+private typedef Program = haxe.GLTypes.Program;
+private typedef GLShader = haxe.GLTypes.Shader;
+private typedef Framebuffer = haxe.GLTypes.Framebuffer;
 private typedef Texture = h3d.impl.Driver.Texture;
 private typedef Query = h3d.impl.Driver.Query;
-private typedef VertexArray = psgl.GL.VertexArray;
+private typedef VertexArray = haxe.GLTypes.VertexArray;
+#end
+
+#if usegl
+private typedef ShaderCompiler = haxe.GLTypes.ShaderCompiler;
+#else
+private typedef ShaderCompiler = hxsl.GlslOut;
 #end
 
 private class CompiledShader {
@@ -92,7 +98,7 @@ private class CompiledProgram {
 }
 
 @:access(h3d.impl.Shader)
-#if (cpp||hlsdl||psgl)
+#if (cpp||hlsdl||usegl)
 @:build(h3d.impl.MacroHelper.replaceGL())
 #end
 class GlDriver extends Driver {
@@ -103,7 +109,7 @@ class GlDriver extends Driver {
 	public var gl : js.html.webgl.RenderingContext;
 	#end
 
-	#if (hlsdl||psgl)
+	#if (hlsdl||usegl)
 	var commonVA : VertexArray;
 	#end
 
@@ -120,6 +126,7 @@ class GlDriver extends Driver {
 	var defStencil : Stencil;
 	var programs : Map<Int, CompiledProgram>;
 	var frame : Int;
+	var lastActiveIndex : Int = 0;
 
 	var bufferWidth : Int;
 	var bufferHeight : Int;
@@ -144,7 +151,7 @@ class GlDriver extends Driver {
 		curAttribs = 0;
 		curMatBits = -1;
 		defStencil = new Stencil();
-		#if hlsdl
+		#if (hlsdl || usegl)
 		var v : String = gl.getParameter(GL.VERSION);
 		if( v.indexOf("ES") < 0 ){
 			commonVA = gl.createVertexArray();
@@ -192,7 +199,7 @@ class GlDriver extends Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		return "// vertex:\n" + hxsl.GlslOut.toGlsl(shader.vertex.data) + "// fragment:\n" + hxsl.GlslOut.toGlsl(shader.fragment.data);
+		return "// vertex:\n" + ShaderCompiler.compile(shader.vertex.data) + "// fragment:\n" + ShaderCompiler.compile(shader.fragment.data);
 	}
 
 	override public function getDriverName(details:Bool) {
@@ -207,7 +214,7 @@ class GlDriver extends Driver {
 		return "OpenGL "+render;
 	}
 
-	function compileShader( glout : hxsl.GlslOut, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+	function compileShader( glout : ShaderCompiler, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
 		var code = glout.run(shader.data);
@@ -239,15 +246,16 @@ class GlDriver extends Driver {
 		var p = programs.get(shader.id);
 		if( p == null ) {
 			p = new CompiledProgram();
-			var glout = new hxsl.GlslOut();
+			var glout = new ShaderCompiler();
 			if( shaderVersion != null )
 				glout.version = shaderVersion;
 			else
 				glout.glES = true;
+
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 			p.p = gl.createProgram();
-			#if hlsdl
+			#if (hlsdl || usegl)
 			if( !glout.glES ) {
 				var outCount = 0;
 				for( v in shader.fragment.data.vars )
@@ -363,9 +371,14 @@ class GlDriver extends Driver {
 			var tcount = s.textures.length;
 			for( i in 0...s.textures.length + s.cubeTextures.length ) {
 				var t = buf.tex[i];
+				var isCube = i >= tcount;
 				if( t == null || t.isDisposed() ) {
-					var color = h3d.mat.Defaults.loadingTextureColor;
-					t = h3d.mat.Texture.fromColor(color,(color>>>24)/255);
+					if( isCube ) {
+						t = h3d.mat.Texture.defaultCubeTexture();
+					} else {
+						var color = h3d.mat.Defaults.loadingTextureColor;
+						t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
+					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
 					t.alloc();
@@ -373,7 +386,6 @@ class GlDriver extends Driver {
 				}
 				t.lastFrame = frame;
 
-				var isCube = i >= tcount;
 				var pt = isCube ? s.cubeTextures[i - tcount] : s.textures[i];
 				if( pt == null ) continue;
 				if( boundTextures[i] == t.t ) continue;
@@ -383,6 +395,7 @@ class GlDriver extends Driver {
 				gl.activeTexture(GL.TEXTURE0 + i);
 				gl.uniform1i(pt, i);
 				gl.bindTexture(mode, t.t.t);
+				lastActiveIndex = i;
 
 				var mip = Type.enumIndex(t.mipMap);
 				var filter = Type.enumIndex(t.filter);
@@ -608,7 +621,8 @@ class GlDriver extends Driver {
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var tt = gl.createTexture();
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1 };
+		var bind = t.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind };
 		switch( t.format ) {
 		case RGBA:
 			// default
@@ -639,7 +653,6 @@ class GlDriver extends Driver {
 		}
 		t.lastFrame = frame;
 		t.flags.unset(WasCleared);
-		var bind = t.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 		gl.bindTexture(bind, tt.t);
 		var outOfMem = false;
 		if( t.flags.has(Cube) ) {
@@ -655,7 +668,7 @@ class GlDriver extends Driver {
 			if( gl.getError() == GL.OUT_OF_MEMORY )
 				outOfMem = true;
 		}
-		gl.bindTexture(bind, null);
+		restoreBind();
 
 		if( outOfMem ) {
 			gl.deleteTexture(tt.t);
@@ -663,6 +676,14 @@ class GlDriver extends Driver {
 		}
 
 		return tt;
+	}
+
+	function restoreBind() {
+		var t = boundTextures[lastActiveIndex];
+		if( t == null )
+			gl.bindTexture(GL.TEXTURE_2D, null);
+		else
+			gl.bindTexture(t.bind, t.t);
 	}
 
 	override function allocDepthBuffer( b : h3d.mat.DepthBuffer ) : DepthBuffer {
@@ -735,6 +756,9 @@ class GlDriver extends Driver {
 		var tt = t.t;
 		if( tt == null ) return;
 		t.t = null;
+		for( i in 0...boundTextures.length )
+			if( boundTextures[i] == tt )
+				boundTextures[i] = null;
 		gl.deleteTexture(tt.t);
 	}
 
@@ -750,11 +774,11 @@ class GlDriver extends Driver {
 		var bind = t.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 		gl.bindTexture(bind, t.t.t);
 		gl.generateMipmap(bind);
-		gl.bindTexture(bind, null);
+		restoreBind();
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-	#if (nme || hlsdl || psgl || openfl || lime)
+	#if (hxcpp || hl)
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
@@ -770,12 +794,12 @@ class GlDriver extends Driver {
 			gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, 1);
 			#end
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
-			gl.bindTexture(GL.TEXTURE_2D, null);
+			restoreBind();
 		}
 	#end
 	}
 
-	#if !(hlsdl || psgl)
+	#if !hl
 	inline static function bytesToUint8Array( b : haxe.io.Bytes ) : Uint8Array {
 		#if (lime && !js)
 		return new Uint8Array(b);
@@ -857,7 +881,7 @@ class GlDriver extends Driver {
 		gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, cubic ? 0 : 1);
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#end
-		gl.bindTexture(bind, null);
+		restoreBind();
 	}
 
 	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
@@ -1008,7 +1032,7 @@ class GlDriver extends Driver {
 			#if js
 			if( mrtExt != null )
 				mrtExt.drawBuffersWEBGL([GL.COLOR_ATTACHMENT0]);
-			#elseif hlsdl
+			#elseif (hlsdl || usegl)
 			gl.drawBuffers(1, CBUFFERS);
 			#end
 		}
@@ -1032,7 +1056,7 @@ class GlDriver extends Driver {
 			var bind = tex.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 			gl.bindTexture(bind, tex.t.t);
 			gl.generateMipmap(bind);
-			gl.bindTexture(bind, null);
+			restoreBind();
 		}
 
 		tex.flags.set(WasCleared); // once we draw to, do not clear again
@@ -1065,7 +1089,7 @@ class GlDriver extends Driver {
 		#if js
 		if( mrtExt != null )
 			mrtExt.drawBuffersWEBGL([for( i in 0...textures.length ) GL.COLOR_ATTACHMENT0 + i]);
-		#elseif hlsdl
+		#elseif (hlsdl || usegl)
 			gl.drawBuffers(textures.length, CBUFFERS);
 		#end
 	}
@@ -1090,7 +1114,7 @@ class GlDriver extends Driver {
 
 	override function hasFeature( f : Feature ) : Bool {
 		return switch( f ) {
-		#if (hlsdl || psgl)
+		#if hl
 		case StandardDerivatives, FloatTextures, MultipleRenderTargets, Queries:
 			true; // runtime extension detect required ?
 		#else
@@ -1236,7 +1260,7 @@ class GlDriver extends Driver {
 		GL.TEXTURE_CUBE_MAP_NEGATIVE_Z,
 	];
 
-	#if hlsdl
+	#if (hlsdl || usegl)
 	static var CBUFFERS = hl.Bytes.getArray([for( i in 0...32 ) GL.COLOR_ATTACHMENT0 + i]);
 	#end
 

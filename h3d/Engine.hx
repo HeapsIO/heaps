@@ -4,9 +4,13 @@ import h3d.mat.Data;
 private class TargetTmp {
 	public var t : h3d.mat.Texture;
 	public var next : TargetTmp;
-	public function new(t, n) {
+	public var face : Int;
+	public var mipLevel : Int;
+	public function new(t, n, f, m) {
 		this.t = t;
 		this.next = n;
+		this.face = f;
+		this.mipLevel = m;
 	}
 }
 
@@ -40,12 +44,14 @@ class Engine {
 
 	var targetTmp : TargetTmp;
 	var targetStack : TargetTmp;
-	var currentTarget : h3d.mat.Texture;
+	var currentTargetTex : h3d.mat.Texture;
+	var currentTargetFace : Int;
+	var currentTargetMip : Int;
 	var needFlushTarget : Bool;
 	var nullTexture : h3d.mat.Texture;
 	var textureColorCache = new Map<Int,h3d.mat.Texture>();
 	@:allow(hxd.res) var resCache = new Map<{},Dynamic>();
-	
+
 	@:access(hxd.Stage)
 	public function new( hardware = true, aa = 0 ) {
 		this.hardware = hardware;
@@ -56,7 +62,7 @@ class Engine {
 		realFps = hxd.System.getDefaultFrameRate();
 		lastTime = haxe.Timer.stamp();
 		stage.addResizeEvent(onStageResize);
-		#if (js || cpp || hlsdl || psgl)
+		#if (js || cpp || hlsdl || usegl)
 		driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver(antiAlias);
@@ -261,7 +267,7 @@ class Engine {
 		shaderSwitches = 0;
 		drawCalls = 0;
 		targetStack = null;
-		needFlushTarget = currentTarget != null;
+		needFlushTarget = currentTargetTex != null;
 		driver.begin(frameCount);
 		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
 		return true;
@@ -279,24 +285,34 @@ class Engine {
 		return targetStack == null ? null : targetStack.t;
 	}
 
-	public function pushTarget( tex : h3d.mat.Texture ) {
+	public function pushTarget( tex : h3d.mat.Texture, face = 0, mipLevel = 0 ) {
 		var c = targetTmp;
 		if( c == null )
-			c = new TargetTmp(tex, targetStack);
+			c = new TargetTmp(tex, targetStack, face, mipLevel);
 		else {
 			targetTmp = c.next;
 			c.t = tex;
 			c.next = targetStack;
+			c.mipLevel = mipLevel;
+			c.face = face;
 		}
 		targetStack = c;
-		needFlushTarget = currentTarget != tex;
+		updateNeedFlush();
+	}
+
+	function updateNeedFlush() {
+		var t = targetStack;
+		if( t == null )
+			needFlushTarget = currentTargetTex != null;
+		else
+			needFlushTarget = currentTargetTex != t.t || currentTargetFace != t.face || currentTargetMip != t.mipLevel;
 	}
 
 	public function pushTargets( textures : Array<h3d.mat.Texture> ) {
 		if( nullTexture == null ) nullTexture = new h3d.mat.Texture(0, 0, [NoAlloc]);
 		pushTarget(nullTexture);
 		driver.setRenderTargets(textures);
-		currentTarget = nullTexture;
+		currentTargetTex = nullTexture;
 		needFlushTarget = false;
 	}
 
@@ -305,8 +321,7 @@ class Engine {
 		if( c == null )
 			throw "popTarget() with no matching pushTarget()";
 		targetStack = c.next;
-		var tex = targetStack == null ? null : targetStack.t;
-		needFlushTarget = currentTarget != tex;
+		updateNeedFlush();
 		// recycle
 		c.t = null;
 		c.next = targetTmp;
@@ -318,9 +333,16 @@ class Engine {
 	}
 
 	function doFlushTarget() {
-		var tex = targetStack == null ? null : targetStack.t;
-		currentTarget = tex;
-		driver.setRenderTarget(tex);
+		var t = targetStack;
+		if( t == null ) {
+			driver.setRenderTarget(null);
+			currentTargetTex = null;
+		} else {
+			driver.setRenderTarget(t.t, t.face, t.mipLevel);
+			currentTargetTex = t.t;
+			currentTargetFace = t.face;
+			currentTargetMip = t.mipLevel;
+		}
 		needFlushTarget = false;
 	}
 
@@ -336,6 +358,7 @@ class Engine {
 	 * Call with no parameters to reset to full viewport.
 	 */
 	public function setRenderZone( x = 0, y = 0, ?width = -1, ?height = -1 ) : Void {
+		flushTarget();
 		driver.setRenderZone(x, y, width, height);
 	}
 

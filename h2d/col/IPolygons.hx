@@ -46,6 +46,8 @@ abstract IPolygons(Array<IPolygon>) from Array<IPolygon> to Array<IPolygon> {
 	}
 
 	public function offset( delta : Float, kind : IPolygon.OffsetKind, withHoles = true ) : IPolygons {
+		if( this.length == 0 )
+			return new IPolygons();
 		var c = new hxd.clipper.Clipper.ClipperOffset();
 		switch( kind ) {
 		case Square:

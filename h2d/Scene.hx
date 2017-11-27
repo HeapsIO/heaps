@@ -372,6 +372,16 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.engine.frameCount--;
 	}
 
+	public function syncOnly( et : Float ) {
+		var engine = h3d.Engine.getCurrent();
+		setElapsedTime(et);
+		ctx.engine = engine;
+		ctx.frame++;
+		ctx.time += ctx.elapsedTime;
+		ctx.globalAlpha = alpha;
+		sync(ctx);
+	}
+
 	public function render( engine : h3d.Engine ) {
 		ctx.engine = engine;
 		ctx.frame++;

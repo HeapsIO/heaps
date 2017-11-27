@@ -5,12 +5,18 @@ class MaterialScript extends MaterialSetup {
 	var fileName : String;
 	var variables : Map<String,Dynamic>;
 
-	public function new() {
-		super("Script");
+	public function new( ?name = "Script" ) {
+		super(name);
 	}
 
 	public dynamic function onError( msg : String ) {
 		throw msg;
+	}
+
+	override function createRenderer() {
+		if( variables.exists("createRenderer") )
+			return call("createRenderer", []);
+		return super.createRenderer();
 	}
 
 	function getVar( name : String ) {
@@ -76,11 +82,11 @@ class MaterialScript extends MaterialSetup {
 		this.fileName = fileName;
 		var parser = new hscript.Parser();
 		parser.allowTypes = true;
-		var expr = try parser.parseString(script, fileName) catch( e : hscript.Expr.Error ) { onError(Std.string(e)); return; }
+		var expr = try parser.parseString(script, fileName) catch( e : hscript.Expr.Error ) { onError(hscript.Printer.errorToString(e) #if !hscriptPos +" line "+parser.line #end); return; }
 		var interp = new hscript.Interp();
 		variables = interp.variables;
 		initVars();
-		try interp.execute(expr) catch( e : hscript.Expr.Error ) { onError(Std.string(e)); return; }
+		try interp.execute(expr) catch( e : hscript.Expr.Error ) { onError(hscript.Printer.errorToString(e)); return; }
 		#end
 		name = getVar("name");
 	}

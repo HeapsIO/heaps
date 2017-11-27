@@ -45,9 +45,11 @@ class CachedBitmap extends Drawable {
 			if( scene == null ) return null;
 			var tw = width < 0 ? scene.width : width;
 			var th = height < 0 ? scene.height : height;
-			var tex = new h3d.mat.Texture(tw, th, [Target]);
-			renderDone = false;
-			tile = Tile.fromTexture(tex);
+			if( tw != 0 && th != 0 ){
+				var tex = new h3d.mat.Texture(tw, th, [Target]);
+				renderDone = false;
+				tile = Tile.fromTexture(tex);
+			}
 		}
 		return tile;
 	}
@@ -55,12 +57,13 @@ class CachedBitmap extends Drawable {
 	function syncPosRec( s : Sprite ) {
 		s.calcAbsPos();
 		s.posChanged = true;
-		for( c in s.childs )
+		for( c in s.children )
 			syncPosRec(c);
 	}
 
 	override function draw( ctx : RenderContext ) {
-		emitTile(ctx, tile);
+		if( tile != null )
+			emitTile(ctx, tile);
 	}
 
 	override function drawRec( ctx : RenderContext ) {
@@ -68,7 +71,7 @@ class CachedBitmap extends Drawable {
 		if( tile != null && ((width < 0 && scene.width != tile.width) || (height < 0 && scene.height != tile.height)) )
 			clean();
 		var tile = getTile(ctx);
-		if( !freezed || !renderDone ) {
+		if( (!freezed || !renderDone) && tile != null ) {
 			var oldA = matA, oldB = matB, oldC = matC, oldD = matD, oldX = absX, oldY = absY;
 
 			// init matrix without transformation
@@ -80,14 +83,14 @@ class CachedBitmap extends Drawable {
 			absY = 0;
 
 			// force full resync
-			for( c in childs )
+			for( c in children )
 				syncPosRec(c);
 
 			ctx.pushTarget(tile.getTexture());
 			ctx.engine.clear(0);
 			var old = ctx.globalAlpha;
 			ctx.globalAlpha = 1;
-			for( c in childs )
+			for( c in children )
 				c.drawRec(ctx);
 			ctx.globalAlpha = old;
 			ctx.popTarget();

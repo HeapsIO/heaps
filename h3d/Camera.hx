@@ -314,4 +314,27 @@ class Camera {
 		return p;
 	}
 
+	public function load( cam : Camera ) {
+		pos.load(cam.pos);
+		target.load(cam.target);
+		up.load(cam.up);
+		if( cam.orthoBounds != null ) {
+			orthoBounds = new h3d.col.Bounds();
+			orthoBounds.load(cam.orthoBounds);
+		} else
+			orthoBounds = null;
+		fovY = cam.fovY;
+		screenRatio = cam.screenRatio;
+		zoom = cam.zoom;
+		zNear = cam.zNear;
+		zFar = cam.zFar;
+		if( cam.follow != null )
+			follow = { pos : cam.follow.pos, target : cam.follow.target };
+		else
+			follow = null;
+		viewX = cam.viewX;
+		viewY = cam.viewY;
+		update();
+	}
+
 }
