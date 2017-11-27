@@ -12,8 +12,15 @@ class Build {
 	public var pakDiff = false;
 	public var compressSounds = true;
 	public var compressMP3 = false;
+	public var checkJPG = false;
 
 	function new() {
+	}
+
+	function command( cmd : String, ?args : Array<String> ) {
+		var ret = Sys.command(cmd, args);
+		if( ret != 0 )
+			throw cmd + " has failed with exit code " + ret;
 	}
 
 	function buildRec( path : String ) {
@@ -37,6 +44,16 @@ class Build {
 				return null;
 			var filePath = fs.getAbsolutePath(fs.get(path));
 			var data = sys.io.File.getBytes(filePath);
+
+			switch( ext ) {
+			case "jpg", "jpeg" if( checkJPG ):
+				try hxd.res.NanoJpeg.decode(data) catch( e : Dynamic ) {
+					Sys.println("\tConverting " + path);
+					command("jpegtran", ["-optimize", "-copy","all", filePath, filePath]);
+					data = sys.io.File.getBytes(filePath);
+				}
+			}
+
 			f.dataPosition = #if pakDiff out.bytes.length #else out.size #end;
 			f.dataSize = data.length;
 			f.checksum = haxe.crypto.Adler32.make(data);
@@ -172,6 +189,8 @@ class Build {
 			case "-exclude" if( args.length > 0 ):
 				for( ext in args.shift().split(",") )
 					b.excludedExt.push(ext);
+			case "-check-jpg":
+				b.checkJPG = true;
 			default:
 				throw "Unknown parameter " + f;
 			}
