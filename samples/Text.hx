@@ -101,54 +101,67 @@ class Text extends hxd.App {
 			tf.textColor = 0xffffff;
 			tf.textAlign = align;
 			tf.text = str;
+			tf.maxWidth = 150;
+			return tf;
+		}
+
+		function createFlow(parent:Sprite) {
+			var flow = new Flow(parent);
+			flow.debug = true;
+			flow.horizontalSpacing = 5;
+			flow.verticalSpacing = 5;
+			flow.padding = 5;
+			return flow;
 		}
 		
 		
 		yoffset = 0;
-		var flow = new Flow(s2d);
-		flow.debug = true;
-		flow.horizontalSpacing = 10;
+		var flow = createFlow(s2d);
 		flow.verticalAlign = FlowAlign.Middle;
-		flow.padding = 10;
 		createText(flow, singleText, Align.Left);
 		createText(flow, multilineText, Align.Left);
 		
 		yoffset += flow.getBounds().height + 10;
 		
-		var flow = new Flow(s2d);
+		var flow = createFlow(s2d);
 		flow.y = yoffset;
 		flow.multiline = false;
-		flow.debug = true;
-		flow.horizontalSpacing = 10;
 		flow.verticalAlign = FlowAlign.Middle;
-		flow.padding = 10;
 		createText(flow, multilineText, Align.Center);
 		createText(flow, multilineText, Align.Right);
 		
 		yoffset += flow.getBounds().height + 10;
 		
-		var flow = new Flow(s2d);
+		var flow = createFlow(s2d);
 		flow.y = yoffset;
-		flow.debug = true;
-		flow.horizontalSpacing = 10;
 		flow.verticalAlign = FlowAlign.Middle;
-		flow.padding = 10;
 		flow.maxWidth = 150;
 		createText(flow, singleText, Align.Left);
 		createText(flow, multilineText, Align.Center);
 		
 		yoffset += flow.getBounds().height + 10;
 		
-		var flow = new Flow(s2d);
+		var flow = createFlow(s2d);
 		flow.y = yoffset;
-		flow.debug = true;
-		flow.verticalSpacing = 10;
 		flow.horizontalAlign = FlowAlign.Middle;
-		flow.padding = 10;
 		flow.maxWidth = 150;
 		flow.isVertical = true;
 		createText(flow, singleText, Align.Left);
-		createText(flow, multilineText, Align.Right);		
+		createText(flow, multilineText, Align.Right);
+
+		yoffset += flow.getBounds().height + 10;
+		
+		var flow = createFlow(s2d);
+		flow.y = yoffset;
+		flow.x = 100;
+		flow.horizontalAlign = FlowAlign.Middle;
+		flow.isVertical = true;
+		{
+			var f1 = createFlow(flow);
+			createText(f1, multilineText, Align.Left);
+			var f2 = createFlow(flow);
+			createText(f2, multilineText, Align.Left);
+		}
 		
 		onResize();
 	}
