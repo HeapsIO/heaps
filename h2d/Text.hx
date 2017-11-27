@@ -258,7 +258,7 @@ class Text extends Drawable {
 		calcYMin = yMin;
 		calcWidth = xMax - xMin;
 		calcHeight = y + font.lineHeight;
-		calcSizeHeight = y + (font.baseLine != null ? font.baseLine : font.lineHeight);
+		calcSizeHeight = y + (font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
 	}
 
