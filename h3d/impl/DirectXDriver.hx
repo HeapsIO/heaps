@@ -251,30 +251,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		var rt = curTexture;
 		if( rt == null )
 			throw "Can't capture main render buffer in DirectX";
-
-		var desc = new Texture2dDesc();
-		desc.width = rt.width;
-		desc.height = rt.height;
-		desc.access = CpuRead | CpuWrite;
-		desc.usage = Staging;
-		desc.format = getTextureFormat(rt);
-		var tmp = dx.Driver.createTexture2d(desc);
-		if( tmp == null )
-			throw "Capture failed: can't create tmp texture";
-
-		tmp.copyResource(rt.t.res);
-
-		var pitch = 0;
-		var ptr = tmp.map(0, Read, true, pitch);
-		if( pitch == desc.width * 4 )
-			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * 4);
-		else {
-			for( i in 0...desc.height )
-				@:privateAccess pixels.bytes.b.blit(i * desc.width * 4, ptr, i * pitch, desc.width * 4);
-		}
-
-		tmp.unmap(0);
-		tmp.release();
+		captureTexPixels(pixels, rt, 0, 0);
 	}
 
 	function getTextureFormat( t : h3d.mat.Texture ) : dx.Format {
@@ -411,6 +388,38 @@ class DirectXDriver extends h3d.impl.Driver {
 		@:privateAccess buf.b.blit(bufPos, ptr, 0, vertexCount * v.stride * 4);
 		tmp.unmap(0);
 		tmp.release();
+	}
+
+	override function capturePixels(tex:h3d.mat.Texture, face:Int, mipLevel:Int) : hxd.Pixels {
+		var pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
+		captureTexPixels(pixels, tex, face, mipLevel);
+		return pixels;
+	}
+
+	function captureTexPixels( pixels: hxd.Pixels, tex:h3d.mat.Texture, face:Int, mipLevel:Int)  {
+		var desc = new Texture2dDesc();
+		desc.width = pixels.width;
+		desc.height = pixels.height;
+		desc.access = CpuRead | CpuWrite;
+		desc.usage = Staging;
+		desc.format = getTextureFormat(tex);
+		var tmp = dx.Driver.createTexture2d(desc);
+		if( tmp == null )
+			throw "Capture failed: can't create tmp texture";
+
+		tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.t.mips * face + mipLevel, null);
+
+		var pitch = 0;
+		var ptr = tmp.map(0, Read, true, pitch);
+		if( pitch == desc.width * 4 )
+			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * 4);
+		else {
+			for( i in 0...desc.height )
+				@:privateAccess pixels.bytes.b.blit(i * desc.width * 4, ptr, i * pitch, desc.width * 4);
+		}
+		tmp.unmap(0);
+		tmp.release();
+		return pixels;
 	}
 
 	override function uploadTextureBitmap(t:h3d.mat.Texture, bmp:hxd.BitmapData, mipLevel:Int, side:Int) {

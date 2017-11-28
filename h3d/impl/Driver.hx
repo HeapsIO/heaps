@@ -135,6 +135,11 @@ class Driver {
 	public function captureRenderBuffer( pixels : hxd.Pixels ) {
 	}
 
+	public function capturePixels( tex : h3d.mat.Texture, face : Int, mipLevel : Int ) : hxd.Pixels {
+		throw "Can't capture pixels on this platform";
+		return null;
+	}
+
 	public function getDriverName( details : Bool ) {
 		return "Not available";
 	}

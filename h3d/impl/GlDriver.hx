@@ -132,6 +132,8 @@ class GlDriver extends Driver {
 	var bufferHeight : Int;
 	var curTarget : h3d.mat.Texture;
 	var numTargets : Int;
+	var curTargetFace : Int;
+	var curTargetMip : Int;
 
 	var debug : Bool;
 	var boundTextures : Array<Texture> = [];
@@ -1025,17 +1027,38 @@ class GlDriver extends Driver {
 		}
 	}
 
+	function setDrawBuffers( k : Int ) {
+		#if js
+		if( mrtExt != null )
+			mrtExt.drawBuffersWEBGL(CBUFFERS[k]);
+		#elseif (hlsdl || usegl)
+		gl.drawBuffers(k, CBUFFERS);
+		#end
+	}
+
 	inline function unbindTargets() {
 		if( curTarget != null && numTargets > 1 ) {
 			while( numTargets > 1 )
 				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0 + (--numTargets), GL.TEXTURE_2D, null, 0);
-			#if js
-			if( mrtExt != null )
-				mrtExt.drawBuffersWEBGL([GL.COLOR_ATTACHMENT0]);
-			#elseif (hlsdl || usegl)
-			gl.drawBuffers(1, CBUFFERS);
-			#end
+			setDrawBuffers(1);
 		}
+	}
+
+	override function capturePixels(tex:h3d.mat.Texture, face:Int, mipLevel:Int) {
+		var old = curTarget;
+		var oldCount = numTargets;
+		var oldFace = curTargetFace;
+		var oldMip = curTargetMip;
+		numTargets = 1;
+		setRenderTarget(tex, face, mipLevel);
+		var pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, RGBA);
+		captureRenderBuffer(pixels);
+		setRenderTarget(old, oldFace, oldMip);
+		if( oldCount > 1 ) {
+			setDrawBuffers(oldCount);
+			numTargets = oldCount;
+		}
+		return pixels;
 	}
 
 	override function setRenderTarget( tex : h3d.mat.Texture, face = 0, mipLevel = 0 ) {
@@ -1061,6 +1084,8 @@ class GlDriver extends Driver {
 
 		tex.flags.set(WasCleared); // once we draw to, do not clear again
 		tex.lastFrame = frame;
+		curTargetFace = face;
+		curTargetMip = mipLevel;
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
 		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 		if( tex.depthBuffer != null )
@@ -1086,12 +1111,7 @@ class GlDriver extends Driver {
 			tex.lastFrame = frame;
 			tex.flags.set(WasCleared); // once we draw to, do not clear again
 		}
-		#if js
-		if( mrtExt != null )
-			mrtExt.drawBuffersWEBGL([for( i in 0...textures.length ) GL.COLOR_ATTACHMENT0 + i]);
-		#elseif (hlsdl || usegl)
-			gl.drawBuffers(textures.length, CBUFFERS);
-		#end
+		setDrawBuffers(textures.length);
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
@@ -1260,9 +1280,14 @@ class GlDriver extends Driver {
 		GL.TEXTURE_CUBE_MAP_NEGATIVE_Z,
 	];
 
-	#if (hlsdl || usegl)
-	static var CBUFFERS = hl.Bytes.getArray([for( i in 0...32 ) GL.COLOR_ATTACHMENT0 + i]);
-	#end
+	static var CBUFFERS =
+		#if (hlsdl || usegl)
+			hl.Bytes.getArray([for( i in 0...32 ) GL.COLOR_ATTACHMENT0 + i]);
+		#elseif js
+			[for( i in 0...32 ) [for( k in 0...i ) GL.COLOR_ATTACHMENT0 + k]];
+		#else
+			null;
+		#end
 
 }
 
