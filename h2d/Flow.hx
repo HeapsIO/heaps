@@ -599,7 +599,7 @@ class Flow extends Sprite {
 
 				var b = c.getSize(tmpBounds);
 				var br = false;
-				p.calculatedWidth = b.width + p.paddingLeft + p.paddingRight;
+				p.calculatedWidth = b.xMax + p.paddingLeft + p.paddingRight;
 				p.calculatedHeight = b.yMax + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
@@ -611,7 +611,6 @@ class Flow extends Sprite {
 					x = startX;
 				}
 				p.isBreak = br;
-				p.offsetX = -Std.int(b.xMin);
 				x += p.calculatedWidth;
 				if( x > cw ) cw = x;
 				x += horizontalSpacing;
@@ -832,7 +831,7 @@ class Flow extends Sprite {
 				var p = properties[i];
 				var c = children[i];
 				if( p.isAbsolute || !c.visible ) continue;
-				debugGraphics.drawRect(c.x - p.offsetX, c.y, p.calculatedWidth, p.calculatedHeight);
+				debugGraphics.drawRect(c.x, c.y, p.calculatedWidth, p.calculatedHeight);
 			}
 			debugGraphics.lineStyle(1, 0xFF0000);
 			debugGraphics.drawRect(0, 0, cw, ch);
