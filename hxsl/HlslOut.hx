@@ -211,9 +211,16 @@ class HlslOut {
 			var acc = varAccess.get(v.id);
 			if( acc != null ) add(acc);
 			ident(v);
-		case TCall({ e : TGlobal(Texture2D | TextureCube) }, args):
-			addValue(args[0],tabs);
-			add(".Sample(");
+		case TCall({ e : TGlobal(g = (Texture2D | TextureCube | Texture2DLod | TextureCubeLod)) }, args):
+			addValue(args[0], tabs);
+			switch( g ) {
+			case Texture2D, TextureCube:
+				add(".Sample(");
+			case Texture2DLod, TextureCubeLod:
+				add(".SampleLevel(");
+			default:
+				throw "assert";
+			}
 			switch( args[0].e ) {
 			case TArray(e,index):
 				addValue(e, tabs);
@@ -321,6 +328,13 @@ class HlslOut {
 				add(")");
 			case [OpMult, TMat3 | TMat3x4 | TMat4, TMat3 | TMat3x4 | TMat4]:
 				add("mul(");
+				addValue(e1, tabs);
+				add(",");
+				addValue(e2, tabs);
+				add(")");
+			case [OpUShr, _, _]:
+				decl("int _ushr( int a, int b) { return (int)(((unsigned int)a) >> b); }");
+				add("_ushr(");
 				addValue(e1, tabs);
 				add(",");
 				addValue(e2, tabs);

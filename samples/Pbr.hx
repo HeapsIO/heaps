@@ -339,6 +339,9 @@ class Irradiance extends IrradBase {
 				// https://seblagarde.wordpress.com/2012/06/10/amd-cubemapgen-for-physically-based-rendering/
 				d += cubeScaleFactor * (d * d * d);
 			}
+			#if hldx
+			d.y *= -1;
+			#end
 			var n : Vec3;
 			switch( face ) {
 			case 0: n = vec3(1, d.y, -d.x);
@@ -475,6 +478,7 @@ class Pbr extends hxd.App {
 		fui.isVertical = true;
 
 		envMap = new h3d.mat.Texture(512, 512, [Cube]);
+		envMap.name = "envMap";
 		inline function set(face:Int, res:hxd.res.Image) {
 			#if flash
 			// all mipmap levels required
@@ -530,8 +534,10 @@ class Pbr extends hxd.App {
 
 		computeIrradLut();
 
-		irradDiffuse = new h3d.mat.Texture(size, size, [Cube]);
-		irradSpecular = new h3d.mat.Texture(ssize, ssize, [Cube, MipMapped]);
+		irradDiffuse = new h3d.mat.Texture(size, size, [Cube, Target]);
+		irradDiffuse.name = "irradDiffuse";
+		irradSpecular = new h3d.mat.Texture(ssize, ssize, [Cube, Target, MipMapped, ManualMipMapGen]);
+		irradSpecular.name = "irradSpecular";
 		irradSpecular.mipMap = Linear;
 		computeIrradiance();
 
@@ -642,7 +648,8 @@ class Pbr extends hxd.App {
 	}
 
 	function computeIrradLut() {
-		var irradLut = new h3d.mat.Texture(128, 128, #if js RGBA32F #else RGBA16F #end);
+		var irradLut = new h3d.mat.Texture(128, 128, [Target], #if js RGBA32F #else RGBA16F #end);
+		irradLut.name = "irradLut";
 		var screen = new h3d.pass.ScreenFx(new IrradianceLut());
 		screen.shader.samplesBits = sampleBits;
 		#if (js || flash)
@@ -681,7 +688,7 @@ class Pbr extends hxd.App {
 		while( irradSpecular.width > 1 << (mipLevels - 1) )
 			mipLevels++;
 
-		shader.irrSpecularLevels = mipLevels - 4;
+		shader.irrSpecularLevels = mipLevels - 5;
 
 		for( i in 0...6 ) {
 			screen.shader.face = i;

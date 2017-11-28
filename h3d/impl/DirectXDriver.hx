@@ -11,6 +11,7 @@ private class ShaderContext {
 	public var globalsSize : Int;
 	public var paramsSize : Int;
 	public var texturesCount : Int;
+	public var textures2DCount : Int;
 	public var paramsContent : hl.Bytes;
 	public var globals : dx.Resource;
 	public var params : dx.Resource;
@@ -328,8 +329,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		vdesc.start = 0; // top mip level
 		vdesc.count = -1; // all mip levels
 		var view = Driver.createShaderResourceView(tex, vdesc);
-		var rtView = rt ? Driver.createRenderTargetView(tex) : null;
-		return { res : tex, view : view, rt : rtView, mips : mips };
+		return { res : tex, view : view, rt : rt ? [] : null, mips : mips };
 	}
 
 	override function disposeTexture( t : h3d.mat.Texture ) {
@@ -338,7 +338,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		t.t = null;
 		tt.view.release();
 		tt.res.release();
-		if( tt.rt != null ) tt.rt.release();
+		if( tt.rt != null )
+			for( rt in tt.rt )
+				if( rt != null )
+					rt.release();
 	}
 
 	override function disposeVertexes(v:VertexBuffer) {
@@ -516,6 +519,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.paramsContent = new hl.Bytes(shader.paramsSize * 16);
 		ctx.paramsContent.fill(0, shader.paramsSize * 16, 0xDD);
 		ctx.texturesCount = shader.textures2DCount + shader.texturesCubeCount;
+		ctx.textures2DCount = shader.textures2DCount;
 		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		#if debug
@@ -552,8 +556,6 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	var tmpTextures = new Array<h3d.mat.Texture>();
 	override function setRenderTarget(tex:Null<h3d.mat.Texture>, face = 0, mipLevel = 0) {
-		if( face != 0 || mipLevel != 0 )
-			throw "TODO";
 		if( tex == null ) {
 			curTexture = null;
 			currentDepth = defaultDepth;
@@ -566,7 +568,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			return;
 		}
 		tmpTextures[0] = tex;
-		setRenderTargets(tmpTextures);
+		_setRenderTargets(tmpTextures, face, mipLevel);
 	}
 
 	function unbind( res ) {
@@ -583,6 +585,10 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function setRenderTargets(textures:Array<h3d.mat.Texture>) {
+		_setRenderTargets(textures, 0, 0);
+	}
+
+	function _setRenderTargets( textures:Array<h3d.mat.Texture>, face : Int, mipLevel : Int ) {
 		if( textures.length == 0 ) {
 			setRenderTarget(null);
 			return;
@@ -598,19 +604,30 @@ class DirectXDriver extends h3d.impl.Driver {
 				tex.alloc();
 			if( tex.t.rt == null )
 				throw "Can't render to texture which is not allocated with Target flag";
+			var index = mipLevel * 6 + face;
+			var rt = tex.t.rt[index];
+			if( rt == null ) {
+				var cube = tex.flags.has(Cube);
+				var v = new dx.Driver.RenderTargetDesc(getTextureFormat(tex), cube ? Texture2DArray : Texture2D);
+				v.mipMap = mipLevel;
+				v.firstSlice = face;
+				v.sliceCount = 1;
+				rt = Driver.createRenderTargetView(tex.t.res, v);
+				tex.t.rt[index] = rt;
+			}
 			tex.lastFrame = frame;
-			currentTargets[i] = tex.t.rt;
+			currentTargets[i] = rt;
 			unbind(tex.t.view);
 			// prevent garbage
 			if( !tex.flags.has(WasCleared) ) {
 				tex.flags.set(WasCleared);
-				Driver.clearColor(tex.t.rt, 0, 0, 0, 0);
+				Driver.clearColor(rt, 0, 0, 0, 0);
 			}
 		}
 		Driver.omSetRenderTargets(textures.length, currentTargets, currentDepth == null ? null : currentDepth.view);
 
-		viewport[2] = tex.width;
-		viewport[3] = tex.height;
+		viewport[2] = tex.width >> mipLevel;
+		viewport[3] = tex.height >> mipLevel;
 		viewport[5] = 1.;
 		Driver.rsSetViewports(1, viewport);
 	}
@@ -789,8 +806,12 @@ class DirectXDriver extends h3d.impl.Driver {
 			for( i in 0...shader.texturesCount ) {
 				var t = buffers.tex[i];
 				if( t == null || t.isDisposed() ) {
-					var color = h3d.mat.Defaults.loadingTextureColor;
-					t = h3d.mat.Texture.fromColor(color,(color>>>24)/255);
+					if( i < shader.textures2DCount ) {
+						var color = h3d.mat.Defaults.loadingTextureColor;
+						t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
+					} else {
+						t = h3d.mat.Texture.defaultCubeTexture();
+					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
 					t.alloc();
@@ -812,12 +833,10 @@ class DirectXDriver extends h3d.impl.Driver {
 						var desc = new SamplerDesc();
 						desc.filter = FILTER[t.mipMap.getIndex()][t.filter.getIndex()];
 						desc.addressU = desc.addressV = desc.addressW = WRAP[t.wrap.getIndex()];
-						if( t.mipMap == None ) {
-							desc.minLod = desc.maxLod = 0;
-						} else {
-							desc.minLod = 0;
-							desc.maxLod = 1e30;
-						}
+						// if mipMap = None && hasMipmaps : don't set per-sampler maxLod !
+						// only the first sampler maxLod seems to be taken into account :'(
+						desc.minLod = 0;
+						desc.maxLod = 1e30;
 						ss = Driver.createSamplerState(desc);
 						samplerStates.set(bits, ss);
 					}
