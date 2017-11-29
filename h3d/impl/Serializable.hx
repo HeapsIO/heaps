@@ -215,7 +215,7 @@ class SceneSerializer extends hxbit.Serializer {
 			addFloat(v.y);
 			if( n >= 3 ) addFloat(v.z);
 			if( n >= 4 ) addFloat(v.w);
-		case TSampler2D:
+		case TSampler2D, TSamplerCube:
 			if( !addTexture(val) )
 				throw "Cannot serialize unnamed texture " + s+"."+v.name+" = "+val;
 		default:
@@ -246,7 +246,7 @@ class SceneSerializer extends hxbit.Serializer {
 			if( n >= 3 ) v.z = getFloat();
 			if( n >= 4 ) v.w = getFloat();
 			return v;
-		case TSampler2D:
+		case TSampler2D, TSamplerCube:
 			return getTexture();
 		default:
 			throw "Cannot unserialize macro var " + v.name+":"+hxsl.Ast.Tools.toString(v.type);

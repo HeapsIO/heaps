@@ -86,7 +86,7 @@ class GraphicsDraw extends hxd.App {
 		}
 		pg.drawTo(t);
 
-		var pix = t.capturePixels(true);
+		var pix = t.capturePixels();
 		bclone.tile.getTexture().uploadPixels(pix);
 		pix.dispose();
 	}

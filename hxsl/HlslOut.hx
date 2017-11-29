@@ -4,7 +4,8 @@ using hxsl.Ast;
 class HlslOut {
 
 	static var KWD_LIST = [
-		"s_input", "s_output", "_in", "_out", "in", "out", "mul","matrix","vector","export","half","float","double","line","linear","point","precise"
+		"s_input", "s_output", "_in", "_out", "in", "out", "mul", "matrix", "vector", "export", "half", "float", "double", "line", "linear", "point", "precise",
+		"sample" // pssl
 	];
 	static var KWDS = [for( k in KWD_LIST ) k => true];
 	static var GLOBALS = {
@@ -28,6 +29,9 @@ class HlslOut {
 		m;
 	};
 
+	var SV_POSITION = "SV_POSITION";
+	var SV_TARGET = "SV_TARGET";
+	var STATIC = "static ";
 	var buf : StringBuf;
 	var exprIds = 0;
 	var exprValues : Array<String>;
@@ -135,6 +139,8 @@ class HlslOut {
 			addType(v.type);
 			add(" ");
 			ident(v);
+			if( v.type.isSampler() )
+				add("SS");
 		}
 	}
 
@@ -205,19 +211,26 @@ class HlslOut {
 			var acc = varAccess.get(v.id);
 			if( acc != null ) add(acc);
 			ident(v);
-		case TCall({ e : TGlobal(Texture2D|TextureCube) }, args):
+		case TCall({ e : TGlobal(g = (Texture2D | TextureCube | Texture2DLod | TextureCubeLod)) }, args):
+			addValue(args[0], tabs);
+			switch( g ) {
+			case Texture2D, TextureCube:
+				add(".Sample(");
+			case Texture2DLod, TextureCubeLod:
+				add(".SampleLevel(");
+			default:
+				throw "assert";
+			}
 			switch( args[0].e ) {
 			case TArray(e,index):
 				addValue(e, tabs);
-				add("Tex[");
+				add("SS[");
 				addValue(index, tabs);
 				add("]");
 			default:
 				addValue(args[0], tabs);
-				add("Tex");
+				add("SS");
 			}
-			add(".Sample(");
-			addValue(args[0],tabs);
 			for( i in 1...args.length ) {
 				add(",");
 				addValue(args[i],tabs);
@@ -243,7 +256,7 @@ class HlslOut {
 				if( first ) first = false else add(", ");
 				addValue(e, tabs);
 			}
-			add(")");			
+			add(")");
 		case TGlobal(g):
 			switch( g ) {
 			case Mat3x4:
@@ -315,6 +328,13 @@ class HlslOut {
 				add(")");
 			case [OpMult, TMat3 | TMat3x4 | TMat4, TMat3 | TMat3x4 | TMat4]:
 				add("mul(");
+				addValue(e1, tabs);
+				add(",");
+				addValue(e2, tabs);
+				add(")");
+			case [OpUShr, _, _]:
+				decl("int _ushr( int a, int b) { return (int)(((unsigned int)a) >> b); }");
+				add("_ushr(");
 				addValue(e1, tabs);
 				add(",");
 				addValue(e2, tabs);
@@ -470,24 +490,14 @@ class HlslOut {
 		}
 	}
 
-	public function run( s : ShaderData ) {
-		locals = new Map();
-		decls = [];
-		buf = new StringBuf();
-		exprValues = [];
 
-		if( s.funs.length != 1 ) throw "assert";
-		var f = s.funs[0];
-		isVertex = f.kind == Vertex;
-
-		varAccess = new Map();
-
+	function initVars( s : ShaderData ) {
 		var index = 0;
 		function declVar(prefix:String, v : TVar ) {
 			add("\t");
 			addVar(v);
 			if( v.kind == Output )
-				add(" : " + (isVertex ? "SV_POSITION" : "SV_TARGET" + (index++)));
+				add(" : " + (isVertex ? SV_POSITION : SV_TARGET + (index++)));
 			else
 				add(" : " + v.name);
 			add(";\n");
@@ -496,7 +506,7 @@ class HlslOut {
 
 		add("struct s_input {\n");
 		if( !isVertex )
-			add("\tfloat4 __pos__ : SV_POSITION;\n");
+			add("\tfloat4 __pos__ : "+SV_POSITION+";\n");
 		for( v in s.vars )
 			if( v.kind == Input || (v.kind == Var && !isVertex) )
 				declVar("_in.", v);
@@ -510,7 +520,9 @@ class HlslOut {
 			if( v.kind == Var && isVertex )
 				declVar("_out.", v);
 		add("};\n\n");
+	}
 
+	function initGlobals( s : ShaderData ) {
 		add("cbuffer _globals : register(b0) {\n");
 		for( v in s.vars )
 			if( v.kind == Global ) {
@@ -519,8 +531,9 @@ class HlslOut {
 				add(";\n");
 			}
 		add("};\n\n");
+	}
 
-
+	function initParams( s : ShaderData ) {
 		var textures = [];
 		add("cbuffer _params : register(b1) {\n");
 		for( v in s.vars )
@@ -548,7 +561,7 @@ class HlslOut {
 				default:
 					throw "Unsupported sampler " + t;
 				}
-				add(v.name+"Tex");
+				add(v.name);
 				addArraySize(size);
 				add(";\n");
 				addVar(v);
@@ -556,24 +569,26 @@ class HlslOut {
 			default:
 			}
 		}
+	}
 
-		add("static s_input _in;\n");
-		add("static s_output _out;\n");
+	function initStatics( s : ShaderData ) {
+		add(STATIC + "s_input _in;\n");
+		add(STATIC + "s_output _out;\n");
 
 		add("\n");
 		for( v in s.vars )
 			if( v.kind == Local ) {
-				add("static ");
+				add(STATIC);
 				addVar(v);
 				add(";\n");
 			}
 		add("\n");
+	}
 
-		var tmp = buf;
-		buf = new StringBuf();
+	function emitMain( expr : TExpr ) {
 		add("s_output main( s_input __in ) {\n");
 		add("\t_in = __in;\n");
-		switch( f.expr.e ) {
+		switch( expr.e ) {
 		case TBlock(el):
 			for( e in el ) {
 				add("\t");
@@ -581,15 +596,15 @@ class HlslOut {
 				newLine(e);
 			}
 		default:
-			addExpr(f.expr, "");
+			addExpr(expr, "");
 		}
 		add("\treturn _out;\n");
 		add("}");
-		exprValues.push(buf.toString());
-		buf = tmp;
+	}
 
+	function initLocals() {
 		for( v in locals ) {
-			add("static ");
+			add(STATIC);
 			addVar(v);
 			add(";\n");
 		}
@@ -599,6 +614,32 @@ class HlslOut {
 			add(e);
 			add("\n\n");
 		}
+	}
+
+	public function run( s : ShaderData ) {
+		locals = new Map();
+		decls = [];
+		buf = new StringBuf();
+		exprValues = [];
+
+		if( s.funs.length != 1 ) throw "assert";
+		var f = s.funs[0];
+		isVertex = f.kind == Vertex;
+
+		varAccess = new Map();
+		initVars(s);
+		initGlobals(s);
+		initParams(s);
+		initStatics(s);
+
+		var tmp = buf;
+		buf = new StringBuf();
+		emitMain(f.expr);
+		exprValues.push(buf.toString());
+		buf = tmp;
+
+		initLocals();
+
 		decls.push(buf.toString());
 		buf = null;
 		return decls.join("\n");

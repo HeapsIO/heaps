@@ -75,6 +75,7 @@ class BigTexture {
 		this.size = size;
 		space = new QuadTree(0,0,size,size);
 		tex = new h3d.mat.Texture(1, 1, allocPos);
+		tex.flags.set(Serialize);
 		tex.clear(bgColor);
 		tex.realloc = rebuild;
 		pending = [];

@@ -39,7 +39,7 @@ typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
 #elseif hldx
 typedef IndexBuffer = { res : dx.Resource, count : Int };
 typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int };
-typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, rt : dx.Driver.RenderTargetView, mips : Int };
+typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
 typedef DepthBuffer = { res : dx.Resource, view : dx.Driver.DepthStencilView };
 typedef Query = {};
 #else
@@ -133,6 +133,11 @@ class Driver {
 	}
 
 	public function captureRenderBuffer( pixels : hxd.Pixels ) {
+	}
+
+	public function capturePixels( tex : h3d.mat.Texture, face : Int, mipLevel : Int ) : hxd.Pixels {
+		throw "Can't capture pixels on this platform";
+		return null;
 	}
 
 	public function getDriverName( details : Bool ) {
