@@ -242,7 +242,7 @@ class Skin extends MultiMaterial {
 	override function customUnserialize(ctx:hxbit.Serializer) {
 		super.customUnserialize(ctx);
 		var prim = Std.instance(primitive, h3d.prim.HMDModel);
-		if( prim == null ) throw "Cannot load skind primitive " + prim;
+		if( prim == null ) throw "Cannot load skin primitive " + prim;
 		jointsUpdated = true;
 		skinShader = material.mainPass.getShader(h3d.shader.Skin);
 		@:privateAccess {
