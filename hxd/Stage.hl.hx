@@ -306,6 +306,13 @@ class Stage {
 			addKey(sdl, keys.get(sdl));
 	}
 
+	#elseif usesys
+
+	function get_vsync() : Bool return haxe.System.vsync;
+
+	function set_vsync( b : Bool ) : Bool {
+		return haxe.System.vsync = b;
+	}
 
 	#else
 
