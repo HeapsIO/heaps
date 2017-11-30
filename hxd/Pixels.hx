@@ -107,9 +107,10 @@ class Pixels {
 		}
 	}
 
-	public function clear( color : Int ) {
+	public function clear( color : Int, preserveMask = 0 ) {
+		var mask = preserveMask;
 		willChange();
-		if( color == 0 ) {
+		if( color == 0 && mask == 0 ) {
 			bytes.fill(offset, width * height * bpp, 0);
 			return;
 		}
@@ -117,15 +118,24 @@ class Pixels {
 		case BGRA:
 		case RGBA:
 			color = switchBR(color);
+			mask = switchBR(mask);
 		case ARGB:
 			color = switchEndian(color);
+			mask = switchEndian(mask);
 		default:
 			invalidFormat();
 		}
 		var p = offset;
-		for( i in 0...width * height ) {
-			bytes.setInt32(p, color);
-			p += 4;
+		if( mask == 0 ) {
+			for( i in 0...width * height ) {
+				bytes.setInt32(p, color);
+				p += 4;
+			}
+		} else {
+			for( i in 0...width * height ) {
+				bytes.setInt32(p, color | (bytes.getInt32(p) & mask));
+				p += 4;
+			}
 		}
 	}
 
