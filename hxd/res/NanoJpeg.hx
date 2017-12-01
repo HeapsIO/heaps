@@ -126,6 +126,7 @@ class NanoJpeg {
 		length = 0;
 		buf = 0;
 		bufbits = 0;
+		progressive = false;
 		for( i in 0...3 )
 			comps[i].dcpred = 0;
 	}
@@ -498,8 +499,6 @@ class NanoJpeg {
 		if( (!progressive && start != 0) || (count != 63 - start) || other != 0 ) notSupported();
 		njSkip(length);
 
-		if( progressive ) throw "Unsupported progressive JPG";
-
 		var mbx = 0, mby = 0;
 		var rstcount = rstinterval, nextrst = 0;
 		while( true ) {
@@ -712,6 +711,7 @@ class NanoJpeg {
 				njDecodeSOF();
 			case 0xC2:
 				progressive = true;
+				if( progressive ) throw "Unsupported progressive JPG";
 				for( i in 4...8 )
 					if( vlctab[i] == null )
 						vlctab[i] = alloc(1 << 17);
