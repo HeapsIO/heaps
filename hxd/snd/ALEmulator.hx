@@ -504,7 +504,7 @@ class ALEmulator {
 			}
 		case FORMAT_MONOF32:
 			var bdata = buffer.alloc(size >> 1);
-			for( i in 0...size >> 1 ) {
+			for( i in 0...size >> 2 ) {
 				var f = data.getFloat(i << 2);
 				bdata[i << 1] = f;
 				bdata[(i<<1) | 1] = f;
