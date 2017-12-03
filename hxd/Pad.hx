@@ -78,7 +78,7 @@ class Pad {
 		#if hlsdl CONFIG_SDL
 		#elseif flash CONFIG_XBOX
 		#elseif (hldx || usesys) GameController.CONFIG
-		#else {} #end;
+		#else ({}:Dynamic) #end;
 
 	public var connected(default, null) = true;
 	public var name(get, never) : String;
@@ -140,7 +140,7 @@ class Pad {
 	var d : flash.ui.GameInputDevice;
 	static var inst : flash.ui.GameInput;
 	static var pads : Array<hxd.Pad> = [];
-	#else
+	#elseif !js
 	var d : GameController;
 	static var pads : Map<Int, hxd.Pad> = new Map();
 	#end
@@ -297,7 +297,7 @@ class Pad {
 		}
 
 	}
-	
+
 	#elseif (hldx || usesys)
 
 	static function syncPads(){
