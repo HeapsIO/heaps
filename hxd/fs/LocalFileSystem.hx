@@ -455,11 +455,11 @@ class LocalFileSystem implements FileSystem {
 		}
 		var content = hxd.File.getBytes(realFile);
 		var hash = haxe.crypto.Sha1.make(content).toHex();
-		if( hxd.File.exists(tmpFile) && hash == Reflect.field(root, e.name) ) {
-			times.set(path, time);
-			hxd.File.saveBytes(tmpDir + "times.dat", haxe.io.Bytes.ofString(haxe.Serializer.run(times)));
+		times.set(path, time);
+		hxd.File.saveBytes(tmpDir + "times.dat", haxe.io.Bytes.ofString(haxe.Serializer.run(times)));
+
+		if( hxd.File.exists(tmpFile) && hash == Reflect.field(root, e.name) )
 			return;
-		}
 
 		Reflect.setField(root, e.name, hash);
 
