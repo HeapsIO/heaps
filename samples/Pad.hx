@@ -20,7 +20,11 @@ class Pad extends hxd.App {
 		tf.remove();
 		var ui = new PadUI(p, flow);
 		l.push( ui );
+		if( !p.connected )
+			throw "Pad not connected ?";
 		p.onDisconnect = function(){
+			if( p.connected )
+				throw "OnDisconnect called while still connected ?";
 			ui.remove();
 			l.remove( ui );
 		}
