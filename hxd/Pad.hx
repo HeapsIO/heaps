@@ -405,9 +405,15 @@ class Pad {
 				p.buttons[i] = p.d.buttons[i].pressed;
 				p.values[i] = p.d.buttons[i].value;
 			}
-			for( i in 0...p.d.axes.length>>1 ) {
-				p.values[(i << 1) + p.d.buttons.length] = p.d.axes[i << 1];
-				p.values[(i << 1) + p.d.buttons.length + 1] = -p.d.axes[(i << 1) + 1]; // y neg !
+			for( i in 0...p.d.axes.length >> 1 ) {
+				var x = p.d.axes[i << 1];
+				var y = p.d.axes[(i << 1) + 1]; // y neg !;
+				p.values[(i << 1) + p.d.buttons.length] = x;
+				p.values[(i << 1) + p.d.buttons.length + 1] = -y;
+				if( i == 0 ) {
+					p.xAxis = x;
+					p.yAxis = y;
+				}
 			}
 		}
 	}
