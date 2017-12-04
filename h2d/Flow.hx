@@ -369,14 +369,9 @@ class Flow extends Sprite {
 	override function getBoundsRec( relativeTo, out, forSize ) {
 		if( needReflow ) reflow();
 		if( forSize ) {
-			if( !isInline ) {
-				super.getBoundsRec(relativeTo, out, false);
-				// TODO : use proper addBounds instead
-				if( relativeTo == parent && background == null ) {
-					out.xMax += paddingRight + borderWidth;
-					out.yMax += paddingBottom + borderHeight;
-				}
-			} else if( calculatedWidth != 0 )
+			if( !isInline )
+				super.getBoundsRec(relativeTo, out, true);
+			if( calculatedWidth != 0 )
 				addBounds(relativeTo, out, 0, 0, calculatedWidth, calculatedHeight);
 		} else
 			super.getBoundsRec(relativeTo, out, forSize);

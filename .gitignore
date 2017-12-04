@@ -8,3 +8,4 @@ bin
 /hxd/inspect/inspect.min.css
 /samples/build
 /*.xml
+.vscode
