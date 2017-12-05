@@ -1,6 +1,6 @@
 package h3d.col;
 
-interface Collider extends h3d.impl.Serializable.StructSerializable {
+interface Collider extends hxd.impl.Serializable.StructSerializable {
 
 	/**
 		Returns the distance of intersection between the ray and the collider, or negative if no collision.
@@ -12,7 +12,7 @@ interface Collider extends h3d.impl.Serializable.StructSerializable {
 }
 
 
-class OptimizedCollider implements h3d.impl.Serializable implements Collider {
+class OptimizedCollider implements hxd.impl.Serializable implements Collider {
 
 	@:s public var a : Collider;
 	@:s public var b : Collider;

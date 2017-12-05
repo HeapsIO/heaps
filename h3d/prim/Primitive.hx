@@ -1,6 +1,6 @@
 package h3d.prim;
 
-class Primitive implements h3d.impl.Serializable {
+class Primitive implements hxd.impl.Serializable {
 
 	public var buffer : Buffer;
 	public var indexes : Indexes;

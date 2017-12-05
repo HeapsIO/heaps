@@ -4,7 +4,7 @@ class Serializer extends hxbit.Serializer {
 
 	var version = 0;
 
-	public var resPath : String = MacroHelper.getResourcesPath();
+	public var resPath : String = h3d.impl.MacroHelper.getResourcesPath();
 	var shaderVarIndex : Int;
 	var shaderUID = 0;
 	var shaderIndexes = new Map<hxsl.Shader,Int>();

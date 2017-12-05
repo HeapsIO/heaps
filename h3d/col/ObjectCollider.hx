@@ -1,6 +1,6 @@
 package h3d.col;
 
-class ObjectCollider implements Collider implements h3d.impl.Serializable {
+class ObjectCollider implements Collider implements hxd.impl.Serializable {
 
 	@:s public var obj : h3d.scene.Object;
 	@:s public var collider : Collider;

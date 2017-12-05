@@ -2,7 +2,7 @@ package h3d.col;
 
 @:access(h3d.col.PolygonBuffer)
 @:access(h3d.scene.Skin)
-class SkinCollider implements h3d.impl.Serializable implements Collider {
+class SkinCollider implements hxd.impl.Serializable implements Collider {
 
 	@:s var obj : h3d.scene.Skin;
 	@:s var col : PolygonBuffer;

@@ -23,7 +23,7 @@ package h3d.scene;
 	}
 }
 
-class Object implements h3d.impl.Serializable {
+class Object implements hxd.impl.Serializable {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 

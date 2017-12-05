@@ -187,7 +187,7 @@ class HMDModel extends MeshPrimitive {
 	override function customUnserialize(ctx:hxbit.Serializer) {
 		var libPath = ctx.getString();
 		var modelPath = ctx.getString();
-		var ctx : h3d.impl.Serializable.SceneSerializer = cast ctx;
+		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
 		lib = ctx.loadHMD(libPath);
 		for( m in lib.header.models )
 			if( m.name == modelPath ) {
