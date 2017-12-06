@@ -614,10 +614,12 @@ class BaseLibrary {
 		var animNode = null;
 		for( a in this.root.getAll("Objects.AnimationStack") )
 			if( animName == null || a.getName()	== animName ) {
-				if( animName == null )
-					animName = a.getName();
-				animNode = getChild(a, "AnimationLayer");
-				break;
+				animNode = getChild(a, "AnimationLayer", true);
+				if( animNode != null ) {
+					if( animName == null )
+						animName = a.getName();
+					break;
+				}
 			}
 
 		if( animNode == null ) {

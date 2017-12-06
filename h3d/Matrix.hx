@@ -455,6 +455,24 @@ class Matrix {
 		_44 = 1;
 	}
 
+	public inline function front() {
+        var v = new h3d.Vector(_11, _12, _13);
+        v.normalizeFast();
+        return v;
+    }
+
+    public inline function right() {
+        var v = new h3d.Vector(_21, _22, _23);
+        v.normalizeFast();
+        return v;
+    }
+
+    public inline function up() {
+        var v = new h3d.Vector(_31, _32, _33);
+        v.normalizeFast();
+        return v;
+    }
+
 	public function transpose() {
 		var tmp;
 		tmp = _12; _12 = _21; _21 = tmp;
@@ -722,5 +740,4 @@ class Matrix {
 		m._44 = 1;
 		return m;
 	}
-
 }

@@ -65,21 +65,25 @@ class Material extends BaseMaterial {
 	function set_castShadows(v) {
 		if( castShadows == v )
 			return v;
-		if( v )
-			addPass(new Pass("shadow", null, mainPass));
-		else
-			removePass(getPass("shadow"));
+		if( mainPass != null ) {
+			if( v )
+				addPass(new Pass("shadow", null, mainPass));
+			else
+				removePass(getPass("shadow"));
+		}
 		return castShadows = v;
 	}
 
 	function set_receiveShadows(v) {
 		if( v == receiveShadows )
 			return v;
-		var shadows = h3d.mat.Defaults.shadowShader;
-		if( v )
-			mainPass.addShader(shadows);
-		else
-			mainPass.removeShader(shadows);
+		if( mainPass != null ) {
+			var shadows = h3d.mat.Defaults.shadowShader;
+			if( v )
+				mainPass.addShader(shadows);
+			else
+				mainPass.removeShader(shadows);
+		}
 		return receiveShadows = v;
 	}
 
@@ -184,6 +188,8 @@ class Material extends BaseMaterial {
 	function customSerialize( ctx : hxbit.Serializer ) {
 		// other props are serialized in BaseMaterial !
 		ctx.addInt(blendMode.getIndex());
+		ctx.addBool(castShadows);
+		ctx.addBool(receiveShadows);
 		ctx.addDynamic(props);
 	}
 
@@ -197,6 +203,8 @@ class Material extends BaseMaterial {
 		var old = passes;
 		passes = null;
 		blendMode = BlendMode.createByIndex(ctx.getInt());
+		castShadows = ctx.getBool();
+		receiveShadows = ctx.getBool();
 		props = ctx.getDynamic();
 		passes = old;
 	}

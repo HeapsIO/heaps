@@ -1,20 +1,10 @@
-package h3d.impl;
+package hxd.fmt.hsd;
 
-#if !(hxbit && !macro)
-private interface EmptyInterface {}
-#end
-
-typedef Serializable = #if (hxbit && !macro) hxbit.Serializable #else EmptyInterface #end;
-typedef StructSerializable = #if (hxbit && !macro) hxbit.StructSerializable #else EmptyInterface #end;
-
-#if (hxbit && !macro)
-class SceneSerializer extends hxbit.Serializer {
-
-	public var materialRef = new Map<String,h3d.mat.Material>();
+class Serializer extends hxbit.Serializer {
 
 	var version = 0;
 
-	var resPath : String = MacroHelper.getResourcesPath();
+	public var resPath : String = h3d.impl.MacroHelper.getResourcesPath();
 	var shaderVarIndex : Int;
 	var shaderUID = 0;
 	var shaderIndexes = new Map<hxsl.Shader,Int>();
@@ -330,4 +320,3 @@ class SceneSerializer extends hxbit.Serializer {
 	}
 
 }
-#end

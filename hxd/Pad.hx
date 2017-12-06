@@ -41,7 +41,7 @@ class Pad {
 		dpadDown : 17,
 		dpadLeft : 18,
 		dpadRight : 19,
-		names : ["LX","LY","RX","RY","A","B","X","Y","LB","RB","LT","RT","Select","Start","LCLK","RCLK","DUp","DDown","DLeft","DRight"],
+		names : ["LX","LY","RX","RY","A","B","X","Y","LB","RB","LT","RT","Back","Start","LCLK","RCLK","DUp","DDown","DLeft","DRight"],
 	};
 	#end
 
@@ -70,7 +70,36 @@ class Pad {
 		dpadDown : 18,
 		dpadLeft : 19,
 		dpadRight : 20,
-		names : ["LX","LY","RX","RY","LT","RT","A","B","X","Y","Select","Guide","Start","LCLK","RCLK","LB","RB","DUp","DDown","DLeft","DRight"],
+		names : ["LX","LY","RX","RY","LT","RT","A","B","X","Y","Back",null,"Start","LCLK","RCLK","LB","RB","DUp","DDown","DLeft","DRight"],
+	};
+	#end
+
+	#if js
+	/**
+		Standard mapping
+	**/
+	public static var CONFIG_JS_STD = {
+		A : 0,
+		B : 1,
+		X : 2,
+		Y : 3,
+		LB : 4,
+		RB : 5,
+		LT : 6,
+		RT : 7,
+		back : 8,
+		start : 9,
+		analogClick : 10,
+		ranalogClick : 11,
+		dpadUp : 12,
+		dpadDown : 13,
+		dpadLeft : 14,
+		dpadRight : 15,
+		analogX : 16,
+		analogY : 17,
+		ranalogX : 18,
+		ranalogY : 19,
+		names : ["A","B","X","Y","LB","RB","LT","RT","Select","Start","LCLK","RCLK","DUp","DDown","DLeft","DRight","LX","LY","RX","RY"],
 	};
 	#end
 
@@ -78,7 +107,8 @@ class Pad {
 		#if hlsdl CONFIG_SDL
 		#elseif flash CONFIG_XBOX
 		#elseif (hldx || usesys) GameController.CONFIG
-		#else {} #end;
+		#elseif js  CONFIG_JS_STD
+		#else ({}:Dynamic) #end;
 
 	public var connected(default, null) = true;
 	public var name(get, never) : String;
@@ -119,6 +149,8 @@ class Pad {
 		if( index < 0 ) return "Dummy GamePad";
 		#if (flash || hl)
 		return d.name;
+		#elseif js
+		return d.id;
 		#else
 		return "GamePad";
 		#end
@@ -140,7 +172,10 @@ class Pad {
 	var d : flash.ui.GameInputDevice;
 	static var inst : flash.ui.GameInput;
 	static var pads : Array<hxd.Pad> = [];
-	#else
+	#elseif js
+	var d : js.html.Gamepad;
+	static var pads : Map<Int, hxd.Pad> = new Map();
+	#elseif (hldx || hlsdl || usesys)
 	var d : GameController;
 	static var pads : Map<Int, hxd.Pad> = new Map();
 	#end
@@ -229,6 +264,25 @@ class Pad {
 			GameController.init();
 			haxe.MainLoop.add(syncPads);
 		}
+		#elseif js
+		if( !initDone ) {
+			initDone = true;
+			js.Browser.window.addEventListener("gamepadconnected", function(p) {
+				var pad = new hxd.Pad();
+				pad.d = p.gamepad;
+				pad.index = pad.d.index;
+				pads.set(pad.d.index, pad);
+				waitPad(pad);
+			});
+			js.Browser.window.addEventListener("gamepaddisconnected", function(p) {
+				var pad = pads.get(p.gamepad.index);
+				if( pad == null ) return;
+				pads.remove(p.gamepad.index);
+				pad.connected = false;
+				pad.onDisconnect();
+			});
+			haxe.MainLoop.add(syncPads);
+		}
 		#end
 	}
 
@@ -297,7 +351,7 @@ class Pad {
 		}
 
 	}
-	
+
 	#elseif (hldx || usesys)
 
 	static function syncPads(){
@@ -340,6 +394,30 @@ class Pad {
 			}
 		}
 	}
+
+	#elseif js
+
+	static function syncPads() {
+		try js.Browser.navigator.getGamepads() catch( e : Dynamic ) {};
+		for( p in pads ) {
+			for( i in 0...p.d.buttons.length ) {
+				p.prevButtons[i] = p.buttons[i];
+				p.buttons[i] = p.d.buttons[i].pressed;
+				p.values[i] = p.d.buttons[i].value;
+			}
+			for( i in 0...p.d.axes.length >> 1 ) {
+				var x = p.d.axes[i << 1];
+				var y = p.d.axes[(i << 1) + 1]; // y neg !;
+				p.values[(i << 1) + p.d.buttons.length] = x;
+				p.values[(i << 1) + p.d.buttons.length + 1] = -y;
+				if( i == 0 ) {
+					p.xAxis = x;
+					p.yAxis = y;
+				}
+			}
+		}
+	}
+
 	#end
 
 }

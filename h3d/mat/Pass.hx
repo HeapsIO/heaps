@@ -3,7 +3,7 @@ import h3d.mat.Data;
 
 @:allow(h3d.mat.BaseMaterial)
 @:build(hxd.impl.BitsBuilder.build())
-class Pass implements h3d.impl.Serializable {
+class Pass implements hxd.impl.Serializable {
 
 	@:s public var name(default, null) : String;
 	var passId : Int;
@@ -207,7 +207,7 @@ class Pass implements h3d.impl.Serializable {
 	#if hxbit
 
 	public function customSerialize( ctx : hxbit.Serializer ) {
-		var ctx : h3d.impl.Serializable.SceneSerializer = cast ctx;
+		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
 		var s = shaders;
 		while( s != parentShaders ) {
 			ctx.addShader(s.s);
@@ -216,7 +216,7 @@ class Pass implements h3d.impl.Serializable {
 		ctx.addShader(null);
 	}
 	public function customUnserialize( ctx : hxbit.Serializer ) {
-		var ctx : h3d.impl.Serializable.SceneSerializer = cast ctx;
+		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
 		var head = null;
 		while( true ) {
 			var s = ctx.getShader();

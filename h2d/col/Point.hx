@@ -40,7 +40,7 @@ class Point {
 	public inline function dot( p : Point ) {
 		return x * p.x + y * p.y;
 	}
-	
+
 	public inline function rotate( angle : Float ) {
 		var c = Math.cos(angle);
 		var s = Math.sin(angle);
@@ -80,6 +80,7 @@ class Point {
 	public inline function scale( f : Float ) {
 		x *= f;
 		y *= f;
+		return this;
 	}
 
 	public inline function clone() {

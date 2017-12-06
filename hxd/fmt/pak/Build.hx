@@ -54,7 +54,7 @@ class Build {
 				}
 			}
 
-			f.dataPosition = #if pakDiff out.bytes.length #else out.size #end;
+			f.dataPosition = pakDiff ? out.bytes.length : out.size;
 			f.dataSize = data.length;
 			f.checksum = haxe.crypto.Adler32.make(data);
 			out.bytes.push(data);
