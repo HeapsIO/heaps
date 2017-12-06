@@ -282,7 +282,7 @@ class System {
 	}
 
 	static function get_allowTimeout() @:privateAccess {
-		#if usesys
+		#if (usesys || (haxe_ver < 4))
 		return false;
 		#else
 		return !sentinel.pause;
@@ -290,7 +290,7 @@ class System {
 	}
 
 	static function set_allowTimeout(b) @:privateAccess {
-		#if usesys
+		#if (usesys || (haxe_ver < 4))
 		return false;
 		#else
 		return sentinel.pause = !b;

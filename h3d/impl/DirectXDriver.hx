@@ -1,6 +1,16 @@
 package h3d.impl;
 
-#if hldx
+#if (hldx && haxe_ver < 4)
+
+class DirectXDriver extends h3d.impl.Driver {
+
+	public function new() {
+		throw "HL DirectX support requires Haxe 4.0+";
+	}
+
+}
+
+#elseif hldx
 
 import h3d.impl.Driver;
 import dx.Driver;

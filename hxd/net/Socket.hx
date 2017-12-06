@@ -40,7 +40,7 @@ class Socket {
 	var serv : flash.net.ServerSocket;
 	#end
 	#if hl
-	var s : hl.uv.Stream;
+	var s : #if (haxe_ver >= 4) hl.uv.Stream #else Dynamic #end;
 	#end
 	public var out(default, null) : SocketOutput;
 	public var input(default, null) : SocketInput;
@@ -48,8 +48,12 @@ class Socket {
 
 	public function new() {
 		out = new SocketOutput();
-		#if hl
-		hl.uv.Loop.register();
+		#if hl 
+			#if (haxe_ver >= 4)
+			hl.uv.Loop.register();
+			#else
+			throw "Not supported in Haxe 3.x";
+			#end
 		#end
 	}
 
@@ -73,7 +77,7 @@ class Socket {
 		});
 		bindEvents();
 		s.connect(host, port);
-		#elseif hl
+		#elseif (hl && haxe_ver >= 4)
 		var tcp = new hl.uv.Tcp();
 		s = tcp;
 		tcp.connect(new sys.net.Host(host), port, function(b) {
@@ -129,7 +133,7 @@ class Socket {
 			openedSocks.push(s);
 			onConnect(s);
 		});
-		#elseif hl
+		#elseif (hl && haxe_ver >= 4)
 		var tcp = new hl.uv.Tcp();
 		s = tcp;
 		try {
