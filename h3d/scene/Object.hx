@@ -53,7 +53,7 @@ class Object implements hxd.impl.Serializable {
 		It is used by the animation system.
 	**/
 	public var defaultTransform(default, set) : h3d.Matrix;
-	public var currentAnimation(default, null) : h3d.anim.Animation;
+	@:s public var currentAnimation(default, null) : h3d.anim.Animation;
 
 	/**
 		When selecting the lights to apply to this object, we will use the camera target as reference
@@ -669,24 +669,66 @@ class Object implements hxd.impl.Serializable {
 		ctx.addInt(children.length);
 		for( o in children )
 			ctx.addKnownRef(o);
-
 		ctx.addDouble(qRot.x);
 		ctx.addDouble(qRot.y);
 		ctx.addDouble(qRot.z);
 		ctx.addDouble(qRot.w);
-		// defaultTransform
-		// currentAnimation
+
+		ctx.addBool(defaultTransform != null);
+		if( defaultTransform != null ) {
+			ctx.addFloat(defaultTransform._11);
+			ctx.addFloat(defaultTransform._12);
+			ctx.addFloat(defaultTransform._13);
+			ctx.addFloat(defaultTransform._21);
+			ctx.addFloat(defaultTransform._22);
+			ctx.addFloat(defaultTransform._23);
+			ctx.addFloat(defaultTransform._31);
+			ctx.addFloat(defaultTransform._32);
+			ctx.addFloat(defaultTransform._33);
+			ctx.addFloat(defaultTransform._41);
+			ctx.addFloat(defaultTransform._42);
+			ctx.addFloat(defaultTransform._43);
+		}
+
 	}
+
+	static var COUNT = 0;
 
 	function customUnserialize( ctx : hxbit.Serializer ) {
 		children = [for( i in 0...ctx.getInt() ) ctx.getKnownRef(Object)];
-		qRot = new h3d.Quat(ctx.getDouble(),ctx.getDouble(),ctx.getDouble(),ctx.getDouble());
+		qRot = new h3d.Quat(ctx.getDouble(), ctx.getDouble(), ctx.getDouble(), ctx.getDouble());
+
+		if( ctx.getBool() ) {
+			defaultTransform = new h3d.Matrix();
+			defaultTransform.loadValues([
+				ctx.getFloat(),
+				ctx.getFloat(),
+				ctx.getFloat(),
+				0,
+				ctx.getFloat(),
+				ctx.getFloat(),
+				ctx.getFloat(),
+				0,
+				ctx.getFloat(),
+				ctx.getFloat(),
+				ctx.getFloat(),
+				0,
+				ctx.getFloat(),
+				ctx.getFloat(),
+				ctx.getFloat(),
+				1
+			]);
+		}
+
+		// init
 		for( c in children )
 			c.parent = this;
 		allocated = false;
 		posChanged = true;
 		absPos = new h3d.Matrix();
 		absPos.identity();
+		if( currentAnimation != null )
+			@:privateAccess currentAnimation.initAndBind(this);
 	}
 	#end
 

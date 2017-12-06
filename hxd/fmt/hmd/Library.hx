@@ -393,6 +393,7 @@ class Library {
 		}
 
 		var l = makeAnimation(a);
+		l.resPath = entry.path;
 		cachedAnimations.set(a.name, l);
 		if( name == null ) cachedAnimations.set("", l);
 		return l;

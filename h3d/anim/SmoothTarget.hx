@@ -17,9 +17,9 @@ private class SmoothObject extends Animation.AnimatedObject {
 
 class SmoothTarget extends Animation {
 
-	public var target : Animation;
-	public var blend : Float;
-	var duration : Float;
+	@:s public var target : Animation;
+	@:s public var blend : Float;
+	@:s var duration : Float;
 
 	public function new( target : h3d.anim.Animation, duration = 0.5 ) {
 		super("SmoothTarget(" + target.name+")", target.frameCount, target.sampling);
@@ -79,10 +79,14 @@ class SmoothTarget extends Animation {
 		frame = target.frame;
 	}
 
+	function getObjects() : Array<SmoothObject> {
+		return cast objects;
+	}
+
 	@:noDebug
 	override function sync( decompose = false ) {
 		if( decompose ) throw "assert";
-		var objects : Array<SmoothObject> = cast objects;
+		var objects = getObjects();
 		var q1 = new h3d.Quat(), qout = new h3d.Quat();
 		target.sync(true);
 		for( o in objects ) {
@@ -141,5 +145,73 @@ class SmoothTarget extends Animation {
 			}
 		}
 	}
+
+	#if !(dataOnly || macro)
+	override function initAndBind( obj : h3d.scene.Object ) {
+		super.initAndBind(obj);
+		target.initAndBind(obj);
+		var old : Array<SmoothObject> = getObjects();
+		initObjects();
+		var index = 0;
+		var objects = [for( o in getObjects() ) o.objectName => o];
+
+		for( i in 0...old.length ) {
+			var o = old[i];
+			var n = objects.get(o.objectName);
+			if( n == null )
+				continue;
+			n.tmpMatrix = new h3d.Matrix();
+			n.q = new h3d.Quat();
+			n.tx = o.tx;
+			n.ty = o.ty;
+			n.tz = o.tz;
+			n.sx = o.sx;
+			n.sy = o.sy;
+			n.sz = o.sz;
+			n.q.load(o.q);
+		}
+	}
+	#end
+
+	#if (hxbit && !macro)
+	function customSerialize( ctx : hxbit.Serializer ) {
+		var objects : Array<SmoothObject> = cast objects;
+		var objects = [for( o in objects ) if( o.tmpMatrix != null ) o];
+		ctx.addInt(objects.length);
+		for( o in objects ) {
+			ctx.addString(o.objectName);
+			ctx.addFloat(o.tx);
+			ctx.addFloat(o.ty);
+			ctx.addFloat(o.tz);
+			ctx.addFloat(o.sx);
+			ctx.addFloat(o.sy);
+			ctx.addFloat(o.sz);
+			ctx.addFloat(o.q.x);
+			ctx.addFloat(o.q.y);
+			ctx.addFloat(o.q.z);
+			ctx.addFloat(o.q.w);
+		}
+	}
+	function customUnserialize( ctx : hxbit.Serializer ) {
+		var count = ctx.getInt();
+		var cur = 0;
+		objects = [];
+		for( i in 0...count ) {
+			var o = new SmoothObject(ctx.getString());
+			o.tx = ctx.getFloat();
+			o.ty = ctx.getFloat();
+			o.tz = ctx.getFloat();
+			o.sx = ctx.getFloat();
+			o.sy = ctx.getFloat();
+			o.sz = ctx.getFloat();
+			o.q = new h3d.Quat();
+			o.q.x = ctx.getFloat();
+			o.q.y = ctx.getFloat();
+			o.q.z = ctx.getFloat();
+			o.q.w = ctx.getFloat();
+			objects.push(o);
+		}
+	}
+	#end
 
 }

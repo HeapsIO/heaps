@@ -48,6 +48,7 @@ class LinearObject extends AnimatedObject {
 
 class LinearAnimation extends Animation {
 
+	@:s public var resPath : String;
 	var syncFrame : Float;
 
 	public function new(name,frame,sampling) {
@@ -97,6 +98,8 @@ class LinearAnimation extends Animation {
 		if( a == null )
 			a = new LinearAnimation(name, frameCount, sampling);
 		super.clone(a);
+		var la = Std.instance(a, LinearAnimation);
+		la.resPath = resPath;
 		return a;
 	}
 
@@ -282,6 +285,19 @@ class LinearAnimation extends Animation {
 				o.targetObject.defaultTransform = o.matrix;
 		}
 		if( !decompose ) isSync = true;
+	}
+	#end
+
+
+	#if (hxbit && !macro)
+	function customSerialize(ctx:hxbit.Serializer) {
+	}
+
+	function customUnserialize(ctx:hxbit.Serializer) {
+		var l = cast(ctx, hxd.fmt.hsd.Serializer).loadAnimation(resPath);
+		var objects = [for( a in l.objects ) a.clone()];
+		l.clone(this);
+		this.objects = objects;
 	}
 	#end
 

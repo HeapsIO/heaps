@@ -19,21 +19,21 @@ class AnimatedObject {
 
 }
 
-class Animation {
+class Animation implements hxd.impl.Serializable {
 
 	static inline var EPSILON = 0.000001;
 
-	public var name : String;
-	public var frameCount(default, null) : Int;
-	public var sampling(default,null) : Float;
-	public var frame(default, null) : Float;
+	@:s public var name : String;
+	@:s public var frameCount(default, null) : Int;
+	@:s public var sampling(default,null) : Float;
+	@:s public var frame(default, null) : Float;
 
-	public var speed : Float;
+	@:s public var speed : Float;
 	public var onAnimEnd : Void -> Void;
 	public var onEvent : String -> Void;
 
-	public var pause : Bool;
-	public var loop : Bool;
+	@:s public var pause : Bool;
+	@:s public var loop : Bool;
 
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
@@ -120,7 +120,6 @@ class Animation {
 
 	#if !(dataOnly || macro)
 	public function createInstance( base : h3d.scene.Object ) {
-		var currentSkin : h3d.scene.Skin = null;
 		var objects = [for( a in this.objects ) a.clone()];
 		var a = clone();
 		a.objects = objects;
@@ -249,8 +248,23 @@ class Animation {
 		return 0;
 	}
 
+	#if !(dataOnly || macro)
+	function initAndBind( obj : h3d.scene.Object ) {
+		bind(obj);
+		initInstance();
+		pause = true;
+	}
+	#end
+
 	public function toString() {
 		return name;
 	}
+
+	#if (hxbit && !macro)
+	public function unserialize(ctx) {
+		super.unserialize(ctx);
+		if( objects == null ) objects = [];
+	}
+	#end
 
 }

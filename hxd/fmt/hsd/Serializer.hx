@@ -5,6 +5,7 @@ class Serializer extends hxbit.Serializer {
 	var version = 0;
 
 	public var resPath : String = h3d.impl.MacroHelper.getResourcesPath();
+	public var modelCache = new h3d.prim.ModelCache();
 	var shaderVarIndex : Int;
 	var shaderUID = 0;
 	var shaderIndexes = new Map<hxsl.Shader,Int>();
@@ -118,7 +119,7 @@ class Serializer extends hxbit.Serializer {
 	}
 
 	public function loadHMD( path : String ) {
-		return hxd.res.Loader.currentInstance.load(path).toHmd();
+		return modelCache.loadLibrary(hxd.res.Loader.currentInstance.load(path).toModel());
 	}
 
 	public function addShader( s : hxsl.Shader ) {
@@ -245,6 +246,10 @@ class Serializer extends hxbit.Serializer {
 
 	function initHSDPaths( resPath : String, projectPath : String ) {
 		this.resPath = resPath;
+	}
+
+	public function loadAnimation( resPath : String ) {
+		return loadHMD(resPath).loadAnimation();
 	}
 
 	public function loadHSD( bytes ) {
