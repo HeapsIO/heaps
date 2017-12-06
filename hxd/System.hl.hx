@@ -59,7 +59,7 @@ class System {
 		#elseif hlsdl
 		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
 			return false;
-		#elseif sys
+		#elseif usesys
 		if( !haxe.System.emitEvents(@:privateAccess hxd.Stage.inst.event) )
 			return false;
 		#end
