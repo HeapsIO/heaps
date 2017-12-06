@@ -8,7 +8,7 @@ _High Performance Game Framework_
 Community
 ---------
 
-Join us on Gitter https://gitter.im/heapsio
+Join us on Gitter https://gitter.im/heapsio/Lobby
 
 Samples
 -------
