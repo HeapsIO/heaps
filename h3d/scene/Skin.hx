@@ -36,7 +36,7 @@ class Joint extends Object {
 		}
 		if( lastFrame != skin.lastFrame ) {
 			lastFrame = skin.lastFrame;
-			absPos.loadFrom(skin.currentAbsPose[index]);
+			absPos.load(skin.currentAbsPose[index]);
 			if( skin.jointsAbsPosInv != null && skin.jointsAbsPosInv._44 != 0 ) {
 				absPos.multiply3x4(absPos, skin.jointsAbsPosInv);
 				absPos.multiply3x4(absPos, parent.absPos);

@@ -879,7 +879,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				q.saveToMatrix(g.pshader.cameraRotation);
 			}
 			if( g.emitMode == CameraBounds ) {
-				g.pshader.transform.loadFrom(camera.getInverseView());
+				g.pshader.transform.load(camera.getInverseView());
 				g.pshader.offset.set( -camera.pos.x * g.emitDist, -camera.pos.y * g.emitDist, -camera.pos.z * g.emitDist );
 				g.pshader.offset.transform3x3( camera.mcam );
 				g.pshader.offset.x %= volumeBounds.xSize;
