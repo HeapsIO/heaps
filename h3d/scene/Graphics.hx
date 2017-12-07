@@ -49,6 +49,11 @@ class Graphics extends Mesh {
 		material.mainPass.culling = None;
 	}
 
+	override function onRemove() {
+		super.onRemove();
+		bprim.clear();
+	}
+
 	function set_is3D(v) {
 		if( is3D == v )
 			return v;
