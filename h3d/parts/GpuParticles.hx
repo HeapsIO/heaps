@@ -857,7 +857,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		var camera = ctx.camera;
 		if( camera == null )
 			camera = new h3d.Camera();
-		if( primitive == null || primitive.buffer.isDisposed() )
+		if( primitive == null || primitive.buffer == null || primitive.buffer.isDisposed() )
 			rebuildAll(camera);
 
 		uploadedCount = 0;
