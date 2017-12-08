@@ -841,6 +841,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			if( !allocated )
 				return; // was removed
 		}
+
+		if( !ctx.visibleFlag && !alwaysSync )
+			return;
+
 		if( primitive != null )
 			for( g in groups )
 				if( g.needRebuild ) {

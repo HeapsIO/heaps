@@ -164,7 +164,7 @@ class Skin extends MultiMaterial {
 	}
 
 	override function sync( ctx : RenderContext ) {
-		if( !ctx.visibleFlag )
+		if( !ctx.visibleFlag && !alwaysSync )
 			return;
 		syncJoints();
 	}
