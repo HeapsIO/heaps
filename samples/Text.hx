@@ -27,21 +27,22 @@ class TextWidget extends Sprite
 	
 	public function refreshBounds() {
 		back.clear();
-		
+
+		var bounds = textField.getBounds(this);		
 		var size = textField.getSize();
+
 		back.beginFill(0x5050ff,  0.5);
-		back.drawRect(size.x, size.y, size.width, size.height);
+		back.drawRect(bounds.x, 0, size.width, size.height);
 		back.endFill();
 		
 		back.lineStyle(1, 0x50ff50);
-		var bounds = textField.getBounds(this);
 		back.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
 		
 		back.lineStyle(1, 0xff5050);
-		back.moveTo(bounds.x, bounds.y);
-		back.lineTo(bounds.x + textField.textWidth, bounds.y);
-		back.moveTo(bounds.x, bounds.y);
-		back.lineTo(bounds.x, bounds.y + textField.textHeight);
+		back.moveTo(bounds.x, 0);
+		back.lineTo(bounds.x + textField.textWidth, 0);
+		back.moveTo(bounds.x, 0);
+		back.lineTo(bounds.x, textField.textHeight);
 	}
 
 	public function setMaxWidth(w:Int) {
@@ -150,6 +151,19 @@ class Text extends hxd.App {
 		createText(flow, multilineText, Align.Right);
 
 		yoffset += flow.getBounds().height + 10;
+		
+		{
+			var flow = createFlow(s2d);
+			flow.y = yoffset;
+			flow.horizontalAlign = FlowAlign.Left;
+			flow.maxWidth = 360;
+			flow.horizontalSpacing = 8;
+			flow.isVertical = false;
+			var f = createText(flow, "short text", Align.Right);
+			createText(flow, singleText, Align.Left);
+			yoffset += flow.getBounds().height + 10;
+		}
+
 		
 		var flow = createFlow(s2d);
 		flow.y = yoffset;
