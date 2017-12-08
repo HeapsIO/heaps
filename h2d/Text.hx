@@ -273,7 +273,7 @@ class Text extends Drawable {
 
 	function get_textWidth() {
 		updateSize();
-		return realMaxWidth >= 0 ? Std.int(realMaxWidth) : calcWidth;
+		return calcWidth;
 	}
 
 	function set_maxWidth(w) {
@@ -317,7 +317,7 @@ class Text extends Drawable {
 			x = realMaxWidth >= 0 ? 0 : calcXMin;
 			y = calcYMin;
 			w = realMaxWidth >= 0 ? realMaxWidth : calcWidth;
-			h = calcHeight;
+			h = calcHeight - calcYMin;
 		}
 		addBounds(relativeTo, out, x, y, w, h);
 	}
