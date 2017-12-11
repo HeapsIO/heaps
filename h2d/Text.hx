@@ -309,8 +309,8 @@ class Text extends Drawable {
 		updateSize();
 		var x, y, w : Float, h;
 		if ( forSize ) {
-			x = calcXMin;
-			y = calcYMin;
+			x = calcXMin;  // TODO: Should be 0 as well for consistency, but currently causes problems with Flows
+			y = 0;
 			w = calcWidth;
 			h = calcSizeHeight;
 		} else {
