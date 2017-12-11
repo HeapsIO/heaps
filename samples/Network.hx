@@ -116,9 +116,6 @@ class Network extends hxd.App {
 			log("Server Started");
 
 			start();
-
-			// force a new window to open, which will connect the client
-			hxd.net.SocketHost.openNewWindow();
 		} catch( e : Dynamic ) {
 
 			// we could not start the server
