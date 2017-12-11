@@ -268,6 +268,9 @@ class Engine {
 		drawCalls = 0;
 		targetStack = null;
 		needFlushTarget = currentTargetTex != null;
+		#if usesys
+		haxe.System.beginFrame();
+		#end
 		driver.begin(frameCount);
 		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
 		return true;
