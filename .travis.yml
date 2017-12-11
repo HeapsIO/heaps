@@ -13,10 +13,10 @@ matrix:
     
 script:
   - yes | haxelib install all
-  - all.hxml
+  - haxe all.hxml
   - cd samples
   - yes | haxelib install all
-  - all.hxml
+  - haxe all.hxml
 
 notifications:
   email: false
