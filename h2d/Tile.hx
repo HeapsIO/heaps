@@ -17,7 +17,7 @@ class Tile {
 	public var width(default,null) : Int;
 	public var height(default,null) : Int;
 
-	function new(tex, x, y, w, h, dx=0, dy=0) {
+	function new(tex : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int, dx=0, dy=0) {
 		this.innerTex = tex;
 		this.x = x;
 		this.y = y;
@@ -28,7 +28,7 @@ class Tile {
 		if( tex != null ) setTexture(tex);
 	}
 
-	public inline function getTexture() {
+	public inline function getTexture():h3d.mat.Texture {
 		return innerTex;
 	}
 
@@ -36,7 +36,7 @@ class Tile {
 		return innerTex == null || innerTex.isDisposed();
 	}
 
-	function setTexture(tex) {
+	function setTexture(tex : h3d.mat.Texture) {
 		this.innerTex = tex;
 		if( tex != null ) {
 			this.u = x / tex.width;
@@ -50,11 +50,11 @@ class Tile {
 		setTexture(t.innerTex);
 	}
 
-	public function sub( x, y, w, h, dx = 0, dy = 0 ) {
+	public function sub( x : Int, y : Int, w : Int, h : Int, dx = 0, dy = 0 ) : Tile {
 		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
 
-	public function center() {
+	public function center():Tile {
 		return sub(0, 0, width, height, -(width>>1), -(height>>1));
 	}
 
@@ -63,17 +63,17 @@ class Tile {
 		dy = -Std.int(py*height);
 	}
 
-	public function flipX() {
+	public function flipX() : Void {
 		var tmp = u; u = u2; u2 = tmp;
 		dx = -dx - width;
 	}
 
-	public function flipY() {
+	public function flipY() : Void {
 		var tmp = v; v = v2; v2 = tmp;
 		dy = -dy - height;
 	}
 
-	public function setPos(x, y) {
+	public function setPos(x : Int, y : Int) : Void {
 		this.x = x;
 		this.y = y;
 		var tex = innerTex;
@@ -85,7 +85,7 @@ class Tile {
 		}
 	}
 
-	public function setSize(w, h) {
+	public function setSize(w : Int, h : Int) : Void {
 		this.width = w;
 		this.height = h;
 		var tex = innerTex;
@@ -95,12 +95,12 @@ class Tile {
 		}
 	}
 
-	public function scaleToSize( w, h ) {
+	public function scaleToSize( w : Int, h : Int ) : Void {
 		this.width = w;
 		this.height = h;
 	}
 
-	public function scrollDiscrete( dx : Float, dy : Float ) {
+	public function scrollDiscrete( dx : Float, dy : Float ) : Void {
 		var tex = innerTex;
 		u += dx / tex.width;
 		v -= dy / tex.height;
@@ -110,12 +110,12 @@ class Tile {
 		y = Std.int(v * tex.height);
 	}
 
-	public function dispose() {
+	public function dispose() : Void {
 		if( innerTex != null ) innerTex.dispose();
 		innerTex = null;
 	}
 
-	public function clone() {
+	public function clone() : Tile {
 		var t = new Tile(null, x, y, width, height, dx, dy);
 		t.innerTex = innerTex;
 		t.u = u;
@@ -128,7 +128,7 @@ class Tile {
 	/**
 		Split horizontaly or verticaly the number of given frames
 	**/
-	public function split( frames : Int = 0, vertical = false ) {
+	public function split( frames : Int = 0, vertical = false ) : Array<Tile> {
 		var tl = [];
 		if( vertical ) {
 			if( frames == 0 )
@@ -150,22 +150,22 @@ class Tile {
 		Split the tile into a list of tiles of Size x Size pixels.
 		Unlike grid which is X/Y ordered, gridFlatten returns a single dimensional array ordered in Y/X.
 	**/
-	public function gridFlatten( size : Int, dx = 0, dy = 0 ) {
+	public function gridFlatten( size : Int, dx = 0, dy = 0 ) : Array<Tile> {
 		return [for( y in 0...Std.int(height / size) ) for( x in 0...Std.int(width / size) ) sub(x * size, y * size, size, size, dx, dy)];
 	}
 
 	/**
 		Split the tile into a list of tiles of Size x Size pixels.
 	**/
-	public function grid( size : Int, dx = 0, dy = 0 ) {
+	public function grid( size : Int, dx = 0, dy = 0 ) : Array<Array<Tile>> {
 		return [for( x in 0...Std.int(width / size) ) [for( y in 0...Std.int(height / size) ) sub(x * size, y * size, size, size, dx, dy)]];
 	}
 
-	public function toString() {
+	public function toString() : String {
 		return "Tile(" + x + "," + y + "," + width + "x" + height + (dx != 0 || dy != 0 ? "," + dx + ":" + dy:"") + ")";
 	}
 
-	function upload( bmp:hxd.BitmapData ) {
+	function upload( bmp:hxd.BitmapData ) : Void {
 		var w = innerTex.width;
 		var h = innerTex.height;
 		#if flash
@@ -178,11 +178,11 @@ class Tile {
 			bmp2.dispose();
 		} else
 		#end
-			innerTex.uploadBitmap(bmp);
+		innerTex.uploadBitmap(bmp);
 	}
 
 
-	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?alpha = 1., ?allocPos : h3d.impl.AllocPos ) {
+	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?alpha = 1., ?allocPos : h3d.impl.AllocPos ) : Tile {
 		var t = new Tile(h3d.mat.Texture.fromColor(color,alpha,allocPos),0,0,1,1);
 		// scale to size
 		t.width = width;
@@ -190,7 +190,7 @@ class Tile {
 		return t;
 	}
 
-	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
+	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) : Tile {
 		var tex = h3d.mat.Texture.fromBitmap(bmp, allocPos);
 		return new Tile(tex, 0, 0, bmp.width, bmp.height);
 	}
@@ -226,18 +226,18 @@ class Tile {
 		return { main : main, tiles : tl };
 	}
 
-	public static function fromTexture( t : h3d.mat.Texture ) {
+	public static function fromTexture( t : h3d.mat.Texture ) : Tile {
 		return new Tile(t, 0, 0, t.width, t.height);
 	}
 
-	public static function fromPixels( pixels : hxd.Pixels, ?allocPos : h3d.impl.AllocPos ) {
+	public static function fromPixels( pixels : hxd.Pixels, ?allocPos : h3d.impl.AllocPos ) : Tile {
 		var pix2 = pixels.makeSquare(true);
 		var t = h3d.mat.Texture.fromPixels(pix2);
 		if( pix2 != pixels ) pix2.dispose();
 		return new Tile(t, 0, 0, pixels.width, pixels.height);
 	}
 
-	static function isEmpty( b : hxd.BitmapData, px, py, width, height, bg : Int ) {
+	static function isEmpty( b : hxd.BitmapData, px : int, py : int, width : int, height : int, bg : Int ) {
 		var empty = true;
 		var xmin = width, ymin = height, xmax = 0, ymax = 0;
 		for( x in 0...width )
