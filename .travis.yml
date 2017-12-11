@@ -1,7 +1,16 @@
+language: haxe
+
+os: linux
+dist: trusty
+
 haxe:
   - development
   - "3.4"
 
+matrix:
+  allow_failures:
+    - haxe: development
+    
 script:
   - yes | haxelib install all.hxml
   - all.hxml
