@@ -249,6 +249,11 @@ class Pad {
 						break;
 					}
 			});
+			flash.Lib.current.addEventListener(flash.events.Event.EXIT_FRAME, function(_){
+				for( p in pads )
+					for( i in 0...p.buttons.length )
+						p.prevButtons[i] = p.buttons[i];
+			});
 			var count = flash.ui.GameInput.numDevices; // necessary to trigger added
 		}
 		#elseif hlsdl
@@ -257,6 +262,7 @@ class Pad {
 			var c = @:privateAccess GameController.gctrlCount();
 			for( idx in 0...c )
 				initPad( idx );
+			haxe.MainLoop.add(syncPads);
 		}
 		#elseif (hldx || usesys)
 		if( !initDone ){
@@ -349,7 +355,12 @@ class Pad {
 					p._setAxis( e.button, e.value );
 			default:
 		}
-
+	}
+	
+	static function syncPads(){
+		for( p in pads )
+			for( i in 0...p.buttons.length )
+				p.prevButtons[i] = p.buttons[i];
 	}
 
 	#elseif (hldx || usesys)
