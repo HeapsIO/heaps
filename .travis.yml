@@ -12,10 +12,10 @@ matrix:
     - haxe: development
     
 script:
-  - yes | haxelib install all.hxml
+  - yes | haxelib install all
   - all.hxml
   - cd samples
-  - yes | haxelib install all.hxml
+  - yes | haxelib install all
   - all.hxml
 
 notifications:
