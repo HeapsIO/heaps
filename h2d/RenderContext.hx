@@ -29,7 +29,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	var baseShaderList : hxsl.ShaderList;
 	var currentObj : Drawable;
 	var stride : Int;
-	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int, renderZone : {x:Float,y:Float,w:Float,h:Float} }>;
+	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float }>;
+	var targetsStackIndex : Int;
 	var hasUVPos : Bool;
 	var filterStack : Array<h2d.Sprite>;
 	var inFilter : Sprite;
@@ -60,6 +61,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.zValue = 0.;
 		baseShaderList = new hxsl.ShaderList(baseShader);
 		targetsStack = [];
+		targetsStackIndex = 0;
 		filterStack = [];
 		textures = new h3d.impl.TextureCache();
 	}
@@ -123,7 +125,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		texture = null;
 		currentObj = null;
 		baseShaderList.next = null;
-		if( targetsStack.length != 0 ) throw "Missing popTarget()";
+		if( targetsStackIndex != 0 ) throw "Missing popTarget()";
 	}
 
 	public function pushFilter( spr : h2d.Sprite ) {
@@ -152,7 +154,22 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( height < 0 ) height = t == null ? scene.height : t.height;
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
 		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);
-		targetsStack.push( { t : t, x : startX, y : startY, w : width, h : height, renderZone : hasRenderZone ? {x:renderX,y:renderY,w:renderW,h:renderH} : null } );
+		targetsStackIndex++;
+		if( targetsStackIndex > targetsStack.length ){
+			targetsStack.push( { t : t, x : startX, y : startY, w : width, h : height, hasRZ: hasRenderZone, rzX: renderX, rzY:renderY, rzW:renderW, rzH:renderH } );
+		}else{
+			var o = targetsStack[targetsStackIndex-1];
+			o.t = t;
+			o.x = startX;
+			o.y = startY;
+			o.w = width;
+			o.h = height;
+			o.hasRZ = hasRenderZone;
+			o.rzX = renderX;
+			o.rzY = renderY;
+			o.rzW = renderW;
+			o.rzH = renderH;
+		}
 		curX = startX;
 		curY = startY;
 		curWidth = width;
@@ -162,12 +179,12 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	public function popTarget( restore = true ) {
 		flush();
-		var pinf = targetsStack.pop();
-		if( pinf == null ) throw "Too many popTarget()";
+		if( targetsStackIndex <= 0 ) throw "Too many popTarget()";
+		var pinf = targetsStack[--targetsStackIndex];
 		engine.popTarget();
 
 		if( restore ) {
-			var tinf = targetsStack[targetsStack.length - 1];
+			var tinf = targetsStack[targetsStackIndex - 1];
 			var t = tinf == null ? null : tinf.t;
 			var startX = tinf == null ? 0 : tinf.x;
 			var startY = tinf == null ? 0 : tinf.y;
@@ -182,8 +199,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			curHeight = height;
 		}
 
-		var rz = pinf.renderZone;
-		if( rz != null ) setRenderZone(rz.x, rz.y, rz.w, rz.h);
+		if( pinf.hasRZ ) setRenderZone(pinf.rzX, pinf.rzY, pinf.rzW, pinf.rzH);
 	}
 
 	public function setRenderZone( x : Float, y : Float, w : Float, h : Float ) {
