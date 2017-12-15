@@ -350,8 +350,15 @@ class Pad {
 		var p = pads.get( e.controller );
 		switch( e.type ){
 			case GControllerAdded:
-				if( initDone )
+				if( initDone ){
+					if( p != null ){
+						pads.remove( p.index );
+						p.d.close();
+						p.connected = false;
+						p.onDisconnect();
+					}
 					initPad(e.controller);
+				}
 			case GControllerRemoved:
 				if( p != null ){
 					pads.remove( p.index );
