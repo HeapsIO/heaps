@@ -20,7 +20,7 @@ class Drawable extends Sprite {
 
 	var shaders : hxsl.ShaderList;
 
-	function new(parent) {
+	function new(parent : h2d.Sprite) {
 		super(parent);
 		blendMode = Alpha;
 		color = new h3d.Vector(1, 1, 1, 1);
@@ -65,7 +65,7 @@ class Drawable extends Sprite {
 		return colorKey = v;
 	}
 
-	public function adjustColor( ?col : ColorAdjust ) {
+	public function adjustColor( ?col : ColorAdjust ) : Void {
 		if( col == null )
 			colorMatrix = null;
 		else {

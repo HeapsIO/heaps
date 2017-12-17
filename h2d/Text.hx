@@ -35,7 +35,7 @@ class Text extends Drawable {
 	var waShader : h3d.shader.WhiteAlpha;
 	#end
 
-	public function new( font : Font, ?parent ) {
+	public function new( font : Font, ?parent : h2d.Sprite ) {
 		super(parent);
 		this.font = font;
 		textAlign = Left;

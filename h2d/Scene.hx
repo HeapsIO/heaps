@@ -36,7 +36,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	inline function get_defaultSmooth() return ctx.defaultSmooth;
 	inline function set_defaultSmooth(v) return ctx.defaultSmooth = v;
 
-	public function setEvents(events) {
+	public function setEvents(events : hxd.SceneEvents) {
 		this.events = events;
 	}
 
@@ -60,7 +60,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	function get_renderer() return ctx;
 	function set_renderer(v) { ctx = v; return v; }
 
-	public function setFixedSize( w, h ) {
+	public function setFixedSize( w : Int, h : Int ) {
 		width = w;
 		height = h;
 		fixedSize = true;
@@ -101,7 +101,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 	}
 
-	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) {
+	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) : Bool {
 		var s : Sprite = cast i;
 		while( s != null ) {
 			if( !s.visible ) return false;
@@ -110,7 +110,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		return true;
 	}
 
-	public function getInteractive( x : Float, y : Float ) {
+	public function getInteractive( x : Float, y : Float ) : Interactive {
 		var rx = x * matA + y * matB + absX;
 		var ry = x * matC + y * matD + absY;
 		for( i in interactive ) {
@@ -277,7 +277,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		events.stopDrag();
 	}
 
-	public function getFocus() {
+	public function getFocus() : Interactive {
 		if( events == null )
 			return null;
 		var f = events.getFocus();
