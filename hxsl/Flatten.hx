@@ -373,7 +373,7 @@ class Flatten {
 			if( best != null ) {
 				var free = best.size - size;
 				if( free > 0 ) {
-					var i = Lambda.indexOf(alloc, best);
+					var i = alloc.indexOf(best);
 					var a = new Alloc(g, t, best.pos + size, free);
 					alloc.insert(i + 1, a);
 					best.size = size;
