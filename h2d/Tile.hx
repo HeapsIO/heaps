@@ -237,7 +237,7 @@ class Tile {
 		return new Tile(t, 0, 0, pixels.width, pixels.height);
 	}
 
-	static function isEmpty( b : hxd.BitmapData, px : int, py : int, width : int, height : int, bg : Int ) {
+	static function isEmpty( b : hxd.BitmapData, px : Int, py : Int, width : Int, height : Int, bg : Int ) {
 		var empty = true;
 		var xmin = width, ymin = height, xmax = 0, ymax = 0;
 		for( x in 0...width )
@@ -255,7 +255,7 @@ class Tile {
 					if( y > ymax ) ymax = y;
 				}
 				if( color == bg && color != 0 )
-					b.setPixel(x+px, y+py, 0);
+					b.setPixel(x + px, y + py, 0);
 			}
 		return empty ? null : { dx : xmin, dy : ymin, w : xmax - xmin + 1, h : ymax - ymin + 1 };
 	}
