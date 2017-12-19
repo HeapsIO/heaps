@@ -48,10 +48,8 @@ class Socket {
 
 	public function new() {
 		out = new SocketOutput();
-		#if hl 
-			#if (haxe_ver >= 4)
-			hl.uv.Loop.register();
-			#else
+		#if hl
+			#if (haxe_ver < 4)
 			throw "Not supported in Haxe 3.x";
 			#end
 		#end
