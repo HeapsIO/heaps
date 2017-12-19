@@ -265,7 +265,7 @@ class HMDOut extends BaseLibrary {
 							break;
 						}
 				} else
-					isSkin = Lambda.indexOf(foundSkin, t) >= 0;
+					isSkin = foundSkin.indexOf(t) >= 0;
 				if( isSkin ) {
 					skins.push(t);
 				} else

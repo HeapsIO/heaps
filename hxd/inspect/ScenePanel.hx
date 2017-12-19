@@ -38,7 +38,7 @@ private class SceneObject extends TreeNode {
 		var name = objectName(o);
 		if( o.parent == null )
 			return name;
-		var idx = Lambda.indexOf(@:privateAccess o.parent.children, o);
+		var idx = @:privateAccess o.parent.children.indexOf(o);
 		var count = 0;
 		for( i in 0...idx )
 			if( objectName(o.parent.getChildAt(i)) == name )
