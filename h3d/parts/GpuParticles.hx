@@ -157,6 +157,8 @@ class GpuPartGroup {
 	public var texture : h3d.mat.Texture		= null;
 	public var colorGradient : h3d.mat.Texture	= null;
 
+	public var isRelative(default, set) : Bool	= false;
+
 	inline function set_sortMode(v) { needRebuild = true; return sortMode = v; }
 	inline function set_size(v) { needRebuild = true; return size = v; }
 	inline function set_sizeRand(v) { needRebuild = true; return sizeRand = v; }
@@ -178,6 +180,7 @@ class GpuPartGroup {
 	inline function set_rotInit(v) { needRebuild = true; return rotInit = v; }
 	inline function set_rotSpeed(v) { needRebuild = true; return rotSpeed = v; }
 	inline function set_rotSpeedRand(v) { needRebuild = true; return rotSpeedRand = v; }
+	inline function set_isRelative(v) { needRebuild = true; return isRelative = v; }
 
 	public function new(parent) {
 		this.parent = parent;
@@ -386,7 +389,7 @@ class GpuPartGroup {
 
 
 		// when sorted/progressive, use absolute coordinates
-		if( absPos != null ) {
+		if( absPos != null && !isRelative ) {
 			p.transform(absPos);
 			v.transform3x3(absPos);
 		}
@@ -890,7 +893,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				g.pshader.offset.y %= volumeBounds.ySize;
 				g.pshader.offset.z %= volumeBounds.zSize;
 			} else {
-				g.pshader.transform.identity();
+				if( g.isRelative )
+					g.pshader.transform.load(absPos);
+				else
+					g.pshader.transform.identity();
 				g.pshader.offset.set(0, 0, 0);
 			}
 		}
