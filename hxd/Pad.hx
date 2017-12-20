@@ -103,6 +103,10 @@ class Pad {
 	};
 	#end
 
+	#if hl
+	public static var ANALOG_BUTTON_THRESHOLDS = { press: 0.3, release: 0.25 };
+	#end
+
 	public static var DEFAULT_CONFIG =
 		#if hlsdl CONFIG_SDL
 		#elseif flash CONFIG_XBOX
@@ -292,19 +296,19 @@ class Pad {
 		#end
 	}
 
-	function _detectAnalogButton(index: Int, v: Float) {
-		if(v > 0.3 && v > values[index]) {
-			buttons[ index ] = true;
-		}
-		if(v < 0.25 && v < values[index]) {
-			buttons[ index ] = false;
-		}
-	}
-
 	#if hl
 	inline function _setButton( btnId : Int, down : Bool ){
 		buttons[ btnId ] = down;
 		values[ btnId ] = down ? 1 : 0;
+	}
+
+	function _detectAnalogButton(index: Int, v: Float) {
+		if(v > ANALOG_BUTTON_THRESHOLDS.press && v > values[index]) {
+			buttons[ index ] = true;
+		}
+		if(v < ANALOG_BUTTON_THRESHOLDS.release && v < values[index]) {
+			buttons[ index ] = false;
+		}
 	}
 	#end
 
@@ -313,9 +317,7 @@ class Pad {
 	inline function _setAxis( axisId : Int, value : Int ){
 		var v = value / 0x7FFF;
 
-		if(axisId == 4 || axisId == 5) {
-			_detectAnalogButton(axisId, v);
-		}
+		_detectAnalogButton(axisId, v);
 
 		// Invert Y axis
 		if( axisId == 1 || axisId == 3 )
@@ -388,15 +390,11 @@ class Pad {
 				p._setButton(i, k & (1 << i) != 0);
 			}
 
-			p.prevButtons[GameController.CONFIG.LT] = p.buttons[GameController.CONFIG.LT];
-			p.prevButtons[GameController.CONFIG.RT] = p.buttons[GameController.CONFIG.RT];
-
 			for( i in 0...GameController.NUM_AXES ){
 				var ii = GameController.NUM_BUTTONS + i;
 				var v = p.d.getAxis(i);
-				if(ii == GameController.CONFIG.LT || ii == GameController.CONFIG.RT) {
-					p._detectAnalogButton(ii, v);
-				}
+				p.prevButtons[ii] = p.buttons[ii];
+				p._detectAnalogButton(ii, v);
 				p.values[ii] = v;
 				if( ii == GameController.CONFIG.analogX )
 					p.xAxis = v;
