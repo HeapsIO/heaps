@@ -292,6 +292,15 @@ class Pad {
 		#end
 	}
 
+	function _detectAnalogButton(index: Int, v: Float) {
+		if(v > 0.3 && v > values[index]) {
+			buttons[ index ] = true;
+		}
+		if(v < 0.25 && v < values[index]) {
+			buttons[ index ] = false;
+		}
+	}
+
 	#if hl
 	inline function _setButton( btnId : Int, down : Bool ){
 		buttons[ btnId ] = down;
@@ -303,6 +312,10 @@ class Pad {
 
 	inline function _setAxis( axisId : Int, value : Int ){
 		var v = value / 0x7FFF;
+
+		if(axisId == 4 || axisId == 5) {
+			_detectAnalogButton(axisId, v);
+		}
 
 		// Invert Y axis
 		if( axisId == 1 || axisId == 3 )
@@ -375,9 +388,15 @@ class Pad {
 				p._setButton(i, k & (1 << i) != 0);
 			}
 
+			p.prevButtons[GameController.CONFIG.LT] = p.buttons[GameController.CONFIG.LT];
+			p.prevButtons[GameController.CONFIG.RT] = p.buttons[GameController.CONFIG.RT];
+
 			for( i in 0...GameController.NUM_AXES ){
 				var ii = GameController.NUM_BUTTONS + i;
 				var v = p.d.getAxis(i);
+				if(ii == GameController.CONFIG.LT || ii == GameController.CONFIG.RT) {
+					p._detectAnalogButton(ii, v);
+				}
 				p.values[ii] = v;
 				if( ii == GameController.CONFIG.analogX )
 					p.xAxis = v;

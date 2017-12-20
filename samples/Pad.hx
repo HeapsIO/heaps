@@ -71,7 +71,7 @@ class PadUI extends h2d.Sprite {
 
 		bg = new h2d.Graphics(this);
 		bg.lineStyle(1,0xFFFFFF,0.5);
-		bg.drawRect(0,0,600,160);
+		bg.drawRect(0,0,660,160);
 		bg.lineStyle(1,0xFFFFFF,1);
 		bg.drawRect(20,20,100,100);
 		bg.drawRect(140,20,100,100);
@@ -113,7 +113,7 @@ class PadUI extends h2d.Sprite {
 		buttons = new Map();
 
 		var x = 0;
-		for( n in ["A","B","X","Y","LB","RB","back","start","dpadUp","dpadDown","dpadLeft","dpadRight"] ){
+		for( n in ["A","B","X","Y","LB","RB","LT","RT","back","start","dpadUp","dpadDown","dpadLeft","dpadRight"] ){
 			var t = new h2d.Text(fnt,this);
 			x += 20;
 			t.x = x;
@@ -168,5 +168,9 @@ class PadUI extends h2d.Sprite {
 		if( !wasPressed && pad.isDown(conf.A) && pad.values[conf.LT] > 0 && pad.values[conf.RT] > 0 )
 			pad.rumble( pad.values[conf.LT], pad.values[conf.RT]*0.5 );
 		wasPressed = pad.isDown(conf.A);
+
+		if(hxd.Key.isDown(hxd.Key.ESCAPE)) {
+			hxd.System.exit();
+		}
 	}
 }
