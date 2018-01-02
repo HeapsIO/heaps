@@ -360,7 +360,7 @@ class Engine {
 	 * Sets up a scissored zone to eliminate pixels outside the given range.
 	 * Call with no parameters to reset to full viewport.
 	 */
-	public function setRenderZone( x = 0, y = 0, ?width = -1, ?height = -1 ) : Void {
+	public function setRenderZone( x = 0, y = 0, width = -1, height = -1 ) : Void {
 		flushTarget();
 		driver.setRenderZone(x, y, width, height);
 	}

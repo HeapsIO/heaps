@@ -368,7 +368,8 @@ private class TileLayerContent extends h3d.prim.Primitive {
 
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) clear();
-		buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
+		if( tmp.length > 0 )
+			buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
 	}
 
 	public inline function flush() {
@@ -377,7 +378,8 @@ private class TileLayerContent extends h3d.prim.Primitive {
 
 	public function doRender(engine:h3d.Engine, min, len) {
 		flush();
-		engine.renderQuadBuffer(buffer, min, len);
+		if( buffer != null )
+			engine.renderQuadBuffer(buffer, min, len);
 	}
 
 }
