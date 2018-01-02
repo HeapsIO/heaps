@@ -8,9 +8,9 @@ typedef DepthBuffer = {};
 typedef Query = {};
 #elseif js
 typedef IndexBuffer = js.html.webgl.Buffer;
-typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int };
-typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
-typedef DepthBuffer = { r : js.html.webgl.Renderbuffer };
+typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int #if multidriver, driver : Driver #end };
+typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
+typedef DepthBuffer = { r : js.html.webgl.Renderbuffer #if multidriver, driver : Driver #end };
 typedef Query = {};
 #elseif nme
 typedef IndexBuffer = nme.gl.GLBuffer;

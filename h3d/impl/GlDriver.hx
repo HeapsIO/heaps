@@ -106,6 +106,7 @@ class GlDriver extends Driver {
 	#if js
 	var canvas : js.html.CanvasElement;
 	var mrtExt : { function drawBuffersWEBGL( colors : Array<Int> ) : Void; };
+	static var UID = 0;
 	public var gl : js.html.webgl.RenderingContext;
 	#end
 
@@ -147,6 +148,9 @@ class GlDriver extends Driver {
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
 		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
+		#if multidriver
+		canvas.setAttribute("class", canvas.getAttribute("class") + " _id_" + (UID++));
+		#end
 		#end
 		commonFB = gl.createFramebuffer();
 		programs = new Map();
@@ -393,6 +397,11 @@ class GlDriver extends Driver {
 				if( boundTextures[i] == t.t ) continue;
 				boundTextures[i] = t.t;
 
+				#if multidriver
+				if( t.t.driver != this )
+					throw "Invalid texture context";
+				#end
+
 				var mode = isCube ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
 				gl.activeTexture(GL.TEXTURE0 + i);
 				gl.uniform1i(pt, i);
@@ -624,7 +633,7 @@ class GlDriver extends Driver {
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var tt = gl.createTexture();
 		var bind = t.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind #if multidriver, driver : this #end };
 		switch( t.format ) {
 		case RGBA:
 			// default
@@ -693,7 +702,7 @@ class GlDriver extends Driver {
 		gl.bindRenderbuffer(GL.RENDERBUFFER, r);
 		gl.renderbufferStorage(GL.RENDERBUFFER, #if hl GL.DEPTH_COMPONENT24 #else GL.DEPTH_COMPONENT16 #end, b.width, b.height);
 		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
-		return { r : r };
+		return { r : r #if multidriver, driver : this #end };
 	}
 
 	override function disposeDepthBuffer( b : h3d.mat.DepthBuffer ) {
@@ -730,7 +739,7 @@ class GlDriver extends Driver {
 			gl.deleteBuffer(b);
 			return null;
 		}
-		return { b : b, stride : m.stride };
+		return { b : b, stride : m.stride #if multidriver, driver : this #end };
 	}
 
 	override function allocIndexes( count : Int ) : IndexBuffer {
@@ -957,6 +966,10 @@ class GlDriver extends Driver {
 		if( m.stride < curShader.stride )
 			throw "Buffer stride (" + m.stride + ") and shader stride (" + curShader.stride + ") mismatch";
 
+		#if multidriver
+		if( m.driver != this )
+			throw "Invalid buffer context";
+		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, m.b);
 
 		if( v.flags.has(RawFormat) ) {
@@ -1086,6 +1099,10 @@ class GlDriver extends Driver {
 		tex.lastFrame = frame;
 		curTargetFace = face;
 		curTargetMip = mipLevel;
+		#if multidriver
+		if( tex.t.driver != this )
+			throw "Invalid texture context";
+		#end
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
 		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 		if( tex.depthBuffer != null )
@@ -1107,6 +1124,10 @@ class GlDriver extends Driver {
 			var tex = textures[i];
 			if( tex.t == null )
 				tex.alloc();
+			#if multidriver
+			if( tex.t.driver != this )
+				throw "Invalid texture context";
+			#end
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0 + i, GL.TEXTURE_2D, tex.t.t, 0);
 			tex.lastFrame = frame;
 			tex.flags.set(WasCleared); // once we draw to, do not clear again
