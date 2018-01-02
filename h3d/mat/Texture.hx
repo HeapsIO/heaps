@@ -366,15 +366,21 @@ class Texture {
 		return t;
 	}
 
-	static var noiseTextures = new Map<Int,h3d.mat.Texture>();
+	static var noiseTextureKeys = new Map<Int,{}>();
 
 	public static function genNoise(size) {
-		var t = noiseTextures.get(size);
+		var engine = h3d.Engine.getCurrent();
+		var k = noiseTextureKeys.get(size);
+		var t : Texture = k == null ? null : @:privateAccess engine.resCache.get(k);
 		if( t != null && !t.isDisposed() )
 			return t;
+		if( k == null ) {
+			k = {};
+			noiseTextureKeys.set(size, k);
+		}
 		var t = new h3d.mat.Texture(size, size, [NoAlloc]);
 		t.realloc = allocNoise.bind(t,size);
-		noiseTextures.set(size, t);
+		@:privateAccess engine.resCache.set(k, t);
 		return t;
 	}
 
