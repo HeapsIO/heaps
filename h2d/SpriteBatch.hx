@@ -95,6 +95,7 @@ class SpriteBatch extends Drawable {
 	var last : BatchElement;
 	var tmpBuf : hxd.FloatBuffer;
 	var buffer : h3d.Buffer;
+	var bufferVertices : Int;
 
 	public function new(t,?parent) {
 		super(parent);
@@ -193,12 +194,10 @@ class SpriteBatch extends Drawable {
 	}
 
 	function flush() {
-		if( buffer != null ) {
-			buffer.dispose();
-			buffer = null;
-		}
-		if( first == null )
+		if( first == null ){
+			bufferVertices = 0;
 			return;
+		}
 		if( tmpBuf == null ) tmpBuf = new hxd.FloatBuffer();
 		var pos = 0;
 		var e = first;
@@ -290,7 +289,17 @@ class SpriteBatch extends Drawable {
 			}
 			e = e.next;
 		}
-		buffer = h3d.Buffer.ofSubFloats(tmpBuf, 8, Std.int(pos/8), [Dynamic, Quads, RawFormat]);
+		bufferVertices = pos>>3;
+		if( buffer != null && !buffer.isDisposed() ) {
+			if( buffer.vertices >= bufferVertices ){
+				buffer.uploadVector(tmpBuf, 0, bufferVertices);
+				return;
+			}
+			buffer.dispose();
+			buffer = null;
+		}
+		if( bufferVertices > 0 )
+			buffer = h3d.Buffer.ofSubFloats(tmpBuf, 8, bufferVertices, [Dynamic, Quads, RawFormat]);
 	}
 
 	override function draw( ctx : RenderContext ) {
@@ -299,9 +308,9 @@ class SpriteBatch extends Drawable {
 
 	@:allow(h2d)
 	function drawWith( ctx:RenderContext, obj : Drawable ) {
-		if( first == null || buffer == null || buffer.isDisposed() ) return;
+		if( first == null || buffer == null || buffer.isDisposed() || bufferVertices == 0 ) return;
 		if( !ctx.beginDrawObject(obj, tile.getTexture()) ) return;
-		ctx.engine.renderQuadBuffer(buffer);
+		ctx.engine.renderQuadBuffer(buffer, 0, bufferVertices>>1);
 	}
 
 	public inline function isEmpty() {

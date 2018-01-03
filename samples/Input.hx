@@ -38,7 +38,21 @@ class Input extends hxd.App {
 	}
 
 	override function update(dt:Float) {
-		debug.text = "Cursor: " + input.cursorIndex + ", Sel: " + input.getSelectedText();
+		// check special keys state
+		var keys = [
+			{ name : "Ctrl", id : hxd.Key.CTRL },
+			{ name : "Alt", id : hxd.Key.ALT },
+			{ name : "Shift", id : hxd.Key.SHIFT },
+			{ name : "LCtrl", id : hxd.Key.LCTRL },
+			{ name : "LAlt", id : hxd.Key.LALT },
+			{ name : "LShift", id : hxd.Key.LSHIFT },
+			{ name : "RCtrl", id : hxd.Key.RCTRL },
+			{ name : "RAlt", id : hxd.Key.RALT },
+			{ name : "RShift", id : hxd.Key.RSHIFT },
+			{ name : "Enter", id : hxd.Key.ENTER },
+			{ name : "NumpadEnter", id : hxd.Key.NUMPAD_ENTER },
+		];
+		debug.text = "Cursor: " + input.cursorIndex + ", Sel: " + input.getSelectedText()+", Down: "+[for( k in keys ) if( hxd.Key.isDown(k.id) ) k.name].join(",");
 	}
 
 	static function main() {

@@ -455,6 +455,24 @@ class Matrix {
 		_44 = 1;
 	}
 
+	public inline function front() {
+        var v = new h3d.Vector(_11, _12, _13);
+        v.normalizeFast();
+        return v;
+    }
+
+    public inline function right() {
+        var v = new h3d.Vector(_21, _22, _23);
+        v.normalizeFast();
+        return v;
+    }
+
+    public inline function up() {
+        var v = new h3d.Vector(_31, _32, _33);
+        v.normalizeFast();
+        return v;
+    }
+
 	public function transpose() {
 		var tmp;
 		tmp = _12; _12 = _21; _21 = tmp;
@@ -474,14 +492,14 @@ class Matrix {
 		return m;
 	}
 
-	public function loadFrom( m : Matrix ) {
+	public function load( m : Matrix ) {
 		_11 = m._11; _12 = m._12; _13 = m._13; _14 = m._14;
 		_21 = m._21; _22 = m._22; _23 = m._23; _24 = m._24;
 		_31 = m._31; _32 = m._32; _33 = m._33; _34 = m._34;
 		_41 = m._41; _42 = m._42; _43 = m._43; _44 = m._44;
 	}
 
-	public function load( a : Array<Float> ) {
+	public function loadValues( a : Array<Float> ) {
 		_11 = a[0]; _12 = a[1]; _13 = a[2]; _14 = a[3];
 		_21 = a[4]; _22 = a[5]; _23 = a[6]; _24 = a[7];
 		_31 = a[8]; _32 = a[9]; _33 = a[10]; _34 = a[11];
@@ -668,7 +686,7 @@ class Matrix {
 
 	public static function L( a : Array<Float> ) {
 		var m = new Matrix();
-		m.load(a);
+		m.loadValues(a);
 		return m;
 	}
 
@@ -722,5 +740,4 @@ class Matrix {
 		m._44 = 1;
 		return m;
 	}
-
 }

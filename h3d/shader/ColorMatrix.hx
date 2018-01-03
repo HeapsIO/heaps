@@ -15,7 +15,7 @@ class ColorMatrix extends hxsl.Shader {
 
 	public function new( ?m : Array<Float> ) {
 		super();
-		if( m != null ) this.matrix.load(m) else this.matrix.identity();
+		if( m != null ) this.matrix.loadValues(m) else this.matrix.identity();
 	}
 
 }

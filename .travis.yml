@@ -1,13 +1,22 @@
+language: haxe
+
+os: linux
+dist: trusty
+
 haxe:
   - development
-  - "3.4"
+  - "3.4.4"
 
+matrix:
+  allow_failures:
+    - haxe: development
+    
 script:
-  - yes | haxelib install all.hxml
-  - all.hxml
+  - yes | haxelib install all
+  - haxe all.hxml
   - cd samples
-  - yes | haxelib install all.hxml
-  - all.hxml
+  - yes | haxelib install all
+  - haxe all.hxml
 
 notifications:
   email: false

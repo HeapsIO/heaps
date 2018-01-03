@@ -20,7 +20,7 @@ class Drawable extends Sprite {
 
 	var shaders : hxsl.ShaderList;
 
-	function new(parent) {
+	function new(parent : h2d.Sprite) {
 		super(parent);
 		blendMode = Alpha;
 		color = new h3d.Vector(1, 1, 1, 1);
@@ -65,7 +65,7 @@ class Drawable extends Sprite {
 		return colorKey = v;
 	}
 
-	public function adjustColor( ?col : ColorAdjust ) {
+	public function adjustColor( ?col : ColorAdjust ) : Void {
 		if( col == null )
 			colorMatrix = null;
 		else {
@@ -109,8 +109,12 @@ class Drawable extends Sprite {
 			var ctx = getScene().ctx;
 			ctx.manager.compileShaders(new hxsl.ShaderList(ctx.baseShader,shaders));
 		}
-		var toString = toHxsl ? function(d) return hxsl.Printer.shaderToString(d,true) : hxsl.GlslOut.toGlsl;
-		return "VERTEX=\n" + toString(shader.vertex.data) + "\n\nFRAGMENT=\n" + toString(shader.fragment.data);
+		if( toHxsl ) {
+			var toString = hxsl.Printer.shaderToString.bind(_, true);
+			return "// vertex:\n" + toString(shader.vertex.data) + "\n\nfragment:\n" + toString(shader.fragment.data);
+		} else {
+			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
+		}
 	}
 
 	public function getShader< T:hxsl.Shader >( stype : Class<T> ) : T {

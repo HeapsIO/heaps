@@ -150,6 +150,15 @@ class Stage {
 				wasBlurred = false;
 			case Blur:
 				wasBlurred = true;
+				#if hldx
+				// release all keys
+				var ev = new Event(EKeyUp);
+				for( i in 0...@:privateAccess hxd.Key.keyPressed.length )
+					if( hxd.Key.isDown(i) ) {
+						ev.keyCode = i;
+						event(ev);
+					}
+				#end
 			default:
 			}
 		case MouseDown:
@@ -297,6 +306,13 @@ class Stage {
 			addKey(sdl, keys.get(sdl));
 	}
 
+	#elseif usesys
+
+	function get_vsync() : Bool return haxe.System.vsync;
+
+	function set_vsync( b : Bool ) : Bool {
+		return haxe.System.vsync = b;
+	}
 
 	#else
 

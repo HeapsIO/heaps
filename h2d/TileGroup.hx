@@ -368,7 +368,8 @@ private class TileLayerContent extends h3d.prim.Primitive {
 
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) clear();
-		buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
+		if( tmp.length > 0 )
+			buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
 	}
 
 	public inline function flush() {
@@ -377,7 +378,8 @@ private class TileLayerContent extends h3d.prim.Primitive {
 
 	public function doRender(engine:h3d.Engine, min, len) {
 		flush();
-		engine.renderQuadBuffer(buffer, min, len);
+		if( buffer != null )
+			engine.renderQuadBuffer(buffer, min, len);
 	}
 
 }
@@ -391,7 +393,7 @@ class TileGroup extends Drawable {
 	public var rangeMin : Int;
 	public var rangeMax : Int;
 
-	public function new(t,?parent) {
+	public function new(t : Tile, ?parent : h2d.Sprite) {
 		super(parent);
 		tile = t;
 		rangeMin = rangeMax = -1;
@@ -399,12 +401,12 @@ class TileGroup extends Drawable {
 		content = new TileLayerContent();
 	}
 
-	override function getBoundsRec( relativeTo, out, forSize ) {
+	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		addBounds(relativeTo, out, content.xMin, content.yMin, content.xMax - content.xMin, content.yMax - content.yMin);
 	}
 
-	public function clear() {
+	public function clear() : Void {
 		content.clear();
 	}
 
@@ -412,14 +414,14 @@ class TileGroup extends Drawable {
 		If you want to add tiles after the GPU memory has been allocated (when the tilegroup with sync/displayed),
 		make sure to call invalidate() first to force a refresh of your data.
 	**/
-	public function invalidate() {
+	public function invalidate() : Void {
 		content.dispose();
 	}
 
 	/**
 		Returns the number of tiles added to the group
 	**/
-	public function count() {
+	public function count() : Int {
 		return content.triCount() >> 1;
 	}
 
@@ -435,19 +437,19 @@ class TileGroup extends Drawable {
 		curColor.w = alpha;
 	}
 
-	public inline function add(x, y, t) {
+	public inline function add(x : Int, y : Int, t : h2d.Tile) {
 		content.add(x, y, curColor.x, curColor.y, curColor.z, curColor.w, t);
 	}
 
-	public inline function addColor(x, y, r, g, b, a, t) {
+	public inline function addColor( x : Int, y : Int, r : Float, g : Float, b : Float, a : Float, t : Tile) {
 		content.add(x, y, r, g, b, a, t);
 	}
 
-	public inline function addAlpha(x, y, a, t) {
+	public inline function addAlpha(x : Int, y : Int, a : Float, t : h2d.Tile) {
 		content.add(x, y, curColor.x, curColor.y, curColor.z, a, t);
 	}
 
-	public inline function addTransform(x, y, sx, sy, r, t) {
+	public inline function addTransform(x : Int, y : Int, sx : Float, sy : Float, r : Float, t : Tile) {
 		content.addTransform(x, y, sx, sy, r, curColor, t);
 	}
 

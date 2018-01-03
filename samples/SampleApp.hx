@@ -12,8 +12,8 @@ class SampleApp extends hxd.App {
 	#if hxbit
 	override function mainLoop() {
 		if( hxd.Key.isDown(hxd.Key.CTRL) && hxd.Key.isPressed("S".code) ) {
-			var bytes = new h3d.impl.Serializable.SceneSerializer().saveSCN(s3d,false);
-			hxd.File.saveBytes("scene.scn", bytes);
+			var bytes = s3d.serializeScene();
+			hxd.File.saveBytes("scene.hsd", bytes);
 		}
 		super.mainLoop();
 	}

@@ -20,7 +20,11 @@ class Pad extends hxd.App {
 		tf.remove();
 		var ui = new PadUI(p, flow);
 		l.push( ui );
+		if( !p.connected )
+			throw "Pad not connected ?";
 		p.onDisconnect = function(){
+			if( p.connected )
+				throw "OnDisconnect called while still connected ?";
 			ui.remove();
 			l.remove( ui );
 		}
@@ -56,7 +60,7 @@ class PadUI extends h2d.Sprite {
 	var lt : h2d.Graphics;
 	var rt : h2d.Graphics;
 
-	var buttons : Map<String,h2d.Text>;
+	var buttons : Map<String,{ tf : h2d.Text, bg : h2d.Bitmap }>;
 
 	var pad : hxd.Pad;
 
@@ -67,7 +71,7 @@ class PadUI extends h2d.Sprite {
 
 		bg = new h2d.Graphics(this);
 		bg.lineStyle(1,0xFFFFFF,0.5);
-		bg.drawRect(0,0,600,160);
+		bg.drawRect(0,0,660,160);
 		bg.lineStyle(1,0xFFFFFF,1);
 		bg.drawRect(20,20,100,100);
 		bg.drawRect(140,20,100,100);
@@ -109,14 +113,18 @@ class PadUI extends h2d.Sprite {
 		buttons = new Map();
 
 		var x = 0;
-		for( n in ["A","B","X","Y","LB","RB","back","start","dpadUp","dpadDown","dpadLeft","dpadRight"] ){
+		for( n in ["A","B","X","Y","LB","RB","LT","RT","back","start","dpadUp","dpadDown","dpadLeft","dpadRight"] ){
 			var t = new h2d.Text(fnt,this);
 			x += 20;
 			t.x = x;
 			t.y = 140;
 			t.text = n;
 			t.alpha = 0.1;
-			buttons.set(n,t);
+			var bg = new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFF, t.textWidth, 8), t);
+			bg.y = 10;
+			bg.alpha = 0;
+			buttons.set(n, { tf : t, bg : bg });
+
 			x += t.textWidth;
 		}
 	}
@@ -138,11 +146,31 @@ class PadUI extends h2d.Sprite {
 		lt.scaleY = -pad.values[ conf.LT ];
 		rt.scaleY = -pad.values[ conf.RT ];
 
-		for( k in buttons.keys() )
-			buttons[k].alpha = 0.3 + (pad.buttons[ Reflect.field(conf,k) ] ? 0.7 : 0);
+		for( k in buttons.keys() ) {
+			var bid = Reflect.field(conf, k);
+			var but = buttons[k];
+			but.tf.alpha = 0.3 + (pad.buttons[bid] ? 0.7 : 0);
+
+			if( pad.buttons[bid] != pad.isDown(bid) )
+				throw "Button " + bid + " = " + pad.buttons[bid] + " but isDown = " + pad.isDown(bid);
+
+			var bg = but.bg;
+			if( pad.isPressed(bid) ) {
+				bg.alpha = 1;
+				bg.color.setColor(0xFF00FF00);
+			} else if( pad.isReleased(bid) ) {
+				bg.alpha = 1;
+				bg.color.setColor(0xFFFF0000);
+			} else if( bg.alpha > 0 )
+				bg.alpha -= 0.05;
+		}
 
 		if( !wasPressed && pad.isDown(conf.A) && pad.values[conf.LT] > 0 && pad.values[conf.RT] > 0 )
 			pad.rumble( pad.values[conf.LT], pad.values[conf.RT]*0.5 );
 		wasPressed = pad.isDown(conf.A);
+
+		if(hxd.Key.isDown(hxd.Key.ESCAPE)) {
+			hxd.System.exit();
+		}
 	}
 }

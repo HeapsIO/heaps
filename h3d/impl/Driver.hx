@@ -8,38 +8,38 @@ typedef DepthBuffer = {};
 typedef Query = {};
 #elseif js
 typedef IndexBuffer = js.html.webgl.Buffer;
-typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int };
-typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int };
-typedef DepthBuffer = { r : js.html.webgl.Renderbuffer };
+typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int #if multidriver, driver : Driver #end };
+typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
+typedef DepthBuffer = { r : js.html.webgl.Renderbuffer #if multidriver, driver : Driver #end };
 typedef Query = {};
 #elseif nme
 typedef IndexBuffer = nme.gl.GLBuffer;
 typedef VertexBuffer = { b : nme.gl.GLBuffer, stride : Int };
-typedef Texture = { t : nme.gl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int };
+typedef Texture = { t : nme.gl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef DepthBuffer = { r : nme.gl.Renderbuffer };
 typedef Query = {};
 #elseif lime
 typedef IndexBuffer = lime.graphics.opengl.GLBuffer;
 typedef VertexBuffer = { b : lime.graphics.opengl.GLBuffer, stride : Int };
-typedef Texture = { t : lime.graphics.opengl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int };
+typedef Texture = { t : lime.graphics.opengl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef DepthBuffer = { r : lime.graphics.opengl.GLRenderbuffer };
 typedef Query = {};
 #elseif hlsdl
 typedef IndexBuffer = sdl.GL.Buffer;
 typedef VertexBuffer = { b : sdl.GL.Buffer, stride : Int };
-typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int };
+typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef DepthBuffer = { r : sdl.GL.Renderbuffer };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
-#elseif psgl
-typedef IndexBuffer = psgl.GL.Buffer;
-typedef VertexBuffer = { b : psgl.GL.Buffer, stride : Int };
-typedef Texture = { t : psgl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int };
-typedef DepthBuffer = { r : psgl.GL.Renderbuffer };
-typedef Query = { q : psgl.GL.Query, kind : QueryKind };
+#elseif usegl
+typedef IndexBuffer = haxe.GLTypes.Buffer;
+typedef VertexBuffer = { b : haxe.GLTypes.Buffer, stride : Int };
+typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
+typedef DepthBuffer = { r : haxe.GLTypes.Renderbuffer };
+typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
 #elseif hldx
 typedef IndexBuffer = { res : dx.Resource, count : Int };
 typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int };
-typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, rt : dx.Driver.RenderTargetView, mips : Int };
+typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
 typedef DepthBuffer = { res : dx.Resource, view : dx.Driver.DepthStencilView };
 typedef Query = {};
 #else
@@ -133,6 +133,11 @@ class Driver {
 	}
 
 	public function captureRenderBuffer( pixels : hxd.Pixels ) {
+	}
+
+	public function capturePixels( tex : h3d.mat.Texture, face : Int, mipLevel : Int ) : hxd.Pixels {
+		throw "Can't capture pixels on this platform";
+		return null;
 	}
 
 	public function getDriverName( details : Bool ) {

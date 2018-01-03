@@ -157,6 +157,8 @@ class GpuPartGroup {
 	public var texture : h3d.mat.Texture		= null;
 	public var colorGradient : h3d.mat.Texture	= null;
 
+	public var isRelative(default, set) : Bool	= false;
+
 	inline function set_sortMode(v) { needRebuild = true; return sortMode = v; }
 	inline function set_size(v) { needRebuild = true; return size = v; }
 	inline function set_sizeRand(v) { needRebuild = true; return sizeRand = v; }
@@ -178,6 +180,7 @@ class GpuPartGroup {
 	inline function set_rotInit(v) { needRebuild = true; return rotInit = v; }
 	inline function set_rotSpeed(v) { needRebuild = true; return rotSpeed = v; }
 	inline function set_rotSpeedRand(v) { needRebuild = true; return rotSpeedRand = v; }
+	inline function set_isRelative(v) { needRebuild = true; return isRelative = v; }
 
 	public function new(parent) {
 		this.parent = parent;
@@ -386,7 +389,7 @@ class GpuPartGroup {
 
 
 		// when sorted/progressive, use absolute coordinates
-		if( absPos != null ) {
+		if( absPos != null && !isRelative ) {
 			p.transform(absPos);
 			v.transform3x3(absPos);
 		}
@@ -841,6 +844,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			if( !allocated )
 				return; // was removed
 		}
+
+		if( !ctx.visibleFlag && !alwaysSync )
+			return;
+
 		if( primitive != null )
 			for( g in groups )
 				if( g.needRebuild ) {
@@ -853,7 +860,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		var camera = ctx.camera;
 		if( camera == null )
 			camera = new h3d.Camera();
-		if( primitive == null || primitive.buffer.isDisposed() )
+		if( primitive == null || primitive.buffer == null || primitive.buffer.isDisposed() )
 			rebuildAll(camera);
 
 		uploadedCount = 0;
@@ -879,14 +886,17 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				q.saveToMatrix(g.pshader.cameraRotation);
 			}
 			if( g.emitMode == CameraBounds ) {
-				g.pshader.transform.loadFrom(camera.getInverseView());
+				g.pshader.transform.load(camera.getInverseView());
 				g.pshader.offset.set( -camera.pos.x * g.emitDist, -camera.pos.y * g.emitDist, -camera.pos.z * g.emitDist );
 				g.pshader.offset.transform3x3( camera.mcam );
 				g.pshader.offset.x %= volumeBounds.xSize;
 				g.pshader.offset.y %= volumeBounds.ySize;
 				g.pshader.offset.z %= volumeBounds.zSize;
 			} else {
-				g.pshader.transform.identity();
+				if( g.isRelative )
+					g.pshader.transform.load(absPos);
+				else
+					g.pshader.transform.identity();
 				g.pshader.offset.set(0, 0, 0);
 			}
 		}

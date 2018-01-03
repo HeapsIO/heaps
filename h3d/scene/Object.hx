@@ -23,7 +23,7 @@ package h3d.scene;
 	}
 }
 
-class Object implements h3d.impl.Serializable {
+class Object implements hxd.impl.Serializable {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 
@@ -53,7 +53,7 @@ class Object implements h3d.impl.Serializable {
 		It is used by the animation system.
 	**/
 	public var defaultTransform(default, set) : h3d.Matrix;
-	public var currentAnimation(default, null) : h3d.anim.Animation;
+	@:s public var currentAnimation(default, null) : h3d.anim.Animation;
 
 	/**
 		When selecting the lights to apply to this object, we will use the camera target as reference
@@ -80,6 +80,11 @@ class Object implements h3d.impl.Serializable {
 		When enable, the object is ignore when using getCollider()
 	**/
 	public var ignoreCollide(get, set) : Bool;
+
+	/**
+		When enable, the object can be serialized (default : true)
+	**/
+	public var allowSerialize(get, set) : Bool;
 
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
@@ -109,6 +114,7 @@ class Object implements h3d.impl.Serializable {
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
+	inline function get_allowSerialize() return !flags.has(FNoSerialize);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -118,6 +124,7 @@ class Object implements h3d.impl.Serializable {
 	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
+	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
 
 	public function playAnimation( a : h3d.anim.Animation ) {
 		return currentAnimation = a.createInstance(this);
@@ -658,28 +665,70 @@ class Object implements h3d.impl.Serializable {
 	#if hxbit
 	function customSerialize( ctx : hxbit.Serializer ) {
 
-		var children = [for( o in children ) if( !o.flags.has(FNoSerialize) ) o];
+		var children = [for( o in children ) if( o.allowSerialize ) o];
 		ctx.addInt(children.length);
 		for( o in children )
 			ctx.addKnownRef(o);
-
 		ctx.addDouble(qRot.x);
 		ctx.addDouble(qRot.y);
 		ctx.addDouble(qRot.z);
 		ctx.addDouble(qRot.w);
-		// defaultTransform
-		// currentAnimation
+
+		ctx.addBool(defaultTransform != null);
+		if( defaultTransform != null ) {
+			ctx.addFloat(defaultTransform._11);
+			ctx.addFloat(defaultTransform._12);
+			ctx.addFloat(defaultTransform._13);
+			ctx.addFloat(defaultTransform._21);
+			ctx.addFloat(defaultTransform._22);
+			ctx.addFloat(defaultTransform._23);
+			ctx.addFloat(defaultTransform._31);
+			ctx.addFloat(defaultTransform._32);
+			ctx.addFloat(defaultTransform._33);
+			ctx.addFloat(defaultTransform._41);
+			ctx.addFloat(defaultTransform._42);
+			ctx.addFloat(defaultTransform._43);
+		}
+
 	}
+
+	static var COUNT = 0;
 
 	function customUnserialize( ctx : hxbit.Serializer ) {
 		children = [for( i in 0...ctx.getInt() ) ctx.getKnownRef(Object)];
-		qRot = new h3d.Quat(ctx.getDouble(),ctx.getDouble(),ctx.getDouble(),ctx.getDouble());
+		qRot = new h3d.Quat(ctx.getDouble(), ctx.getDouble(), ctx.getDouble(), ctx.getDouble());
+
+		if( ctx.getBool() ) {
+			defaultTransform = new h3d.Matrix();
+			defaultTransform.loadValues([
+				ctx.getFloat(),
+				ctx.getFloat(),
+				ctx.getFloat(),
+				0,
+				ctx.getFloat(),
+				ctx.getFloat(),
+				ctx.getFloat(),
+				0,
+				ctx.getFloat(),
+				ctx.getFloat(),
+				ctx.getFloat(),
+				0,
+				ctx.getFloat(),
+				ctx.getFloat(),
+				ctx.getFloat(),
+				1
+			]);
+		}
+
+		// init
 		for( c in children )
 			c.parent = this;
 		allocated = false;
 		posChanged = true;
 		absPos = new h3d.Matrix();
 		absPos.identity();
+		if( currentAnimation != null )
+			@:privateAccess currentAnimation.initAndBind(this);
 	}
 	#end
 

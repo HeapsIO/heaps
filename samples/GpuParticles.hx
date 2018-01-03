@@ -39,6 +39,7 @@ class GpuParticles extends SampleApp {
 		addCheck("Sort", function() return g.sortMode == Dynamic, function(v) g.sortMode = v ? Dynamic : None);
 		addCheck("Loop", function() return g.emitLoop, function(v) { g.emitLoop = v; if( !v ) parts.currentTime = 0; });
 		addCheck("Move", function() return moving, function(v) moving = v);
+		addCheck("Relative", function() return g.isRelative, function(v) g.isRelative = v);
 
 		parts.onEnd = function() {
 			engine.backgroundColor = 0xFF000080;

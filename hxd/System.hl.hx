@@ -33,7 +33,11 @@ class System {
 	public static var allowTimeout(get, set) : Bool;
 
 	static var loopFunc : Void -> Void;
+	static var dismissErrors = false;
 
+	#if !usesys
+	static var sentinel : hl.UI.Sentinel;
+	#end
 
 	// -- HL
 	static var currentNativeCursor : hxd.Cursor = Default;
@@ -47,20 +51,40 @@ class System {
 		loopFunc = f;
 	}
 
-	static function mainLoop() : Void {
+	static function mainLoop() : Bool {
+		// process events
+		#if hldx
+		if( !dx.Loop.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
+			return false;
+		#elseif hlsdl
+		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
+			return false;
+		#elseif usesys
+		if( !haxe.System.emitEvents(@:privateAccess hxd.Stage.inst.event) )
+			return false;
+		#end
+
+		// loop
+		timeoutTick();
 		if( loopFunc != null ) loopFunc();
-		#if psgl
-		psgl.Api.present();
+
+		// present
+		#if usesys
+		haxe.System.present();
 		#elseif hlsdl
 		@:privateAccess hxd.Stage.inst.window.present();
 		#end
+
+		return true;
 	}
 
 	public static function start( init : Void -> Void ) : Void {
-		#if psgl
-		if( !psgl.Api.init() ) return;
-		@:privateAccess Stage.inst = new Stage("", psgl.Api.width, psgl.Api.height);
+		#if usesys
+
+		if( !haxe.System.init() ) return;
+		@:privateAccess Stage.inst = new Stage("", haxe.System.width, haxe.System.height);
 		init();
+
 		#else
 		var width = 800;
 		var height = 600;
@@ -73,24 +97,67 @@ class System {
 			width = Std.parseInt(p[0]);
 			height = Std.parseInt(p[1]);
 		}
+		timeoutTick();
 		#if hlsdl
-			sdl.Sdl.tick();
 			sdl.Sdl.init();
 			@:privateAccess Stage.initChars();
 			@:privateAccess Stage.inst = new Stage(title, width, height);
 			init();
-			sdl.Sdl.defaultEventHandler = @:privateAccess Stage.inst.onEvent;
 		#elseif hldx
 			@:privateAccess Stage.inst = new Stage(title, width, height);
 			init();
-			dx.Loop.defaultEventHandler = @:privateAccess Stage.inst.onEvent;
 		#else
 			@:privateAccess Stage.inst = new Stage(title, width, height);
 			init();
 		#end
-
 		#end
-		haxe.MainLoop.add(mainLoop);
+
+		timeoutTick();
+		haxe.Timer.delay(runMainLoop, 0);
+	}
+
+	static function runMainLoop() {
+		while( true ) {
+			try {
+				@:privateAccess haxe.MainLoop.tick();
+				if( !mainLoop() ) break;
+			} catch( e : Dynamic ) {
+				reportError(e);
+			}
+		}
+		Sys.exit(0);
+	}
+
+	public dynamic static function reportError( e : Dynamic ) {
+		var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());
+		var err = try Std.string(e) catch( _ : Dynamic ) "????";
+		Sys.println(err + stack);
+		#if !usesys
+		if( dismissErrors )
+			return;
+
+		var f = new hl.UI.WinLog("Uncaught Exception", 500, 400);
+		f.setTextContent(err+"\n"+stack);
+		var but = new hl.UI.Button(f, "Continue");
+		but.onClick = function() {
+			hl.UI.stopLoop();
+		};
+
+		var but = new hl.UI.Button(f, "Dismiss all");
+		but.onClick = function() {
+			dismissErrors = true;
+			hl.UI.stopLoop();
+		};
+
+		var but = new hl.UI.Button(f, "Exit");
+		but.onClick = function() {
+			Sys.exit(0);
+		};
+
+		while( hl.UI.loop(true) != Quit )
+			timeoutTick();
+		f.destroy();
+		#end
 	}
 
 	public static function setNativeCursor( c : hxd.Cursor ) : Void {
@@ -140,8 +207,8 @@ class System {
 	}
 
 	public static function getDeviceName() : String {
-		#if psgl
-		return psgl.Api.name;
+		#if usesys
+		return haxe.System.name;
 		#elseif hlsdl
 		return "PC/" + sdl.Sdl.getDevices()[0];
 		#elseif hldx
@@ -157,7 +224,7 @@ class System {
 
 	public static function getValue( s : SystemValue ) : Bool {
 		return switch( s ) {
-		#if !psgl
+		#if !usesys
 		case IsWindowed:
 			return true;
 		#end
@@ -188,9 +255,9 @@ class System {
 
 	// getters
 
-	#if psgl
-	static function get_width() : Int return psgl.Api.width;
-	static function get_height() : Int return psgl.Api.height;
+	#if usesys
+	static function get_width() : Int return haxe.System.width;
+	static function get_height() : Int return haxe.System.height;
 	static function get_platform() : Platform return Console;
 	#elseif hldx
 	static function get_width() : Int return dx.Window.getScreenWidth();
@@ -209,30 +276,31 @@ class System {
 	static function get_screenDPI() : Int return 72; // TODO
 
 	public static function timeoutTick() : Void @:privateAccess {
-		#if hldx
-		dx.Loop.sentinel.tick();
-		#elseif hlsdl
-		sdl.Sdl.sentinel.tick();
+		#if !usesys
+		sentinel.tick();
 		#end
 	}
 
 	static function get_allowTimeout() @:privateAccess {
-		#if hldx
-		return !dx.Loop.sentinel.pause;
-		#elseif hlsdl
-		return !sdl.Sdl.sentinel.pause;
-		#else
+		#if (usesys || (haxe_ver < 4))
 		return false;
+		#else
+		return !sentinel.pause;
 		#end
 	}
 
 	static function set_allowTimeout(b) @:privateAccess {
-		#if hldx
-		return dx.Loop.sentinel.pause = !b;
-		#elseif hlsdl
-		return sdl.Sdl.sentinel.pause = !b;
-		#else
+		#if (usesys || (haxe_ver < 4))
 		return false;
+		#else
+		return sentinel.pause = !b;
+		#end
+	}
+
+	static function __init__() {
+		#if !usesys
+		hl.Api.setErrorHandler(function(e) reportError(e)); // initialization error
+		sentinel = new hl.UI.Sentinel(30, function() throw "Program timeout (infinite loop?)");
 		#end
 	}
 

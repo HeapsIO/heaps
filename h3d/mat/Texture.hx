@@ -19,7 +19,7 @@ class Texture {
 	/**
 		Tells if the Driver requires y-flipping the texture pixels before uploading.
 	**/
-	public static inline var nativeFlip = 	#if (hlsdl) true
+	public static inline var nativeFlip = 	#if (hlsdl||usegl) true
 											#elseif (openfl) false
 											#elseif (lime && (cpp || neko || nodejs)) true
 											#else false #end;
@@ -180,17 +180,29 @@ class Texture {
 
 	public function clear( color : Int, alpha = 1. ) {
 		alloc();
-		var p = hxd.Pixels.alloc(width, height, BGRA);
+		var p = hxd.Pixels.alloc(width, height, nativeFormat);
 		var k = 0;
 		var b = color & 0xFF, g = (color >> 8) & 0xFF, r = (color >> 16) & 0xFF, a = Std.int(alpha * 255);
 		if( a < 0 ) a = 0 else if( a > 255 ) a = 255;
+		switch( nativeFormat ) {
+		case RGBA:
+		case BGRA:
+			// flip b/r
+			var tmp = r;
+			r = b;
+			b = tmp;
+		default:
+			throw "TODO";
+		}
 		for( i in 0...width * height ) {
-			p.bytes.set(k++,b);
-			p.bytes.set(k++,g);
 			p.bytes.set(k++,r);
+			p.bytes.set(k++,g);
+			p.bytes.set(k++,b);
 			p.bytes.set(k++,a);
 		}
-		uploadPixels(p);
+		if( nativeFlip ) p.flags.set(FlipY);
+		for( i in 0...(flags.has(Cube) ? 6 : 1) )
+			uploadPixels(p, 0, i);
 		p.dispose();
 	}
 
@@ -245,11 +257,22 @@ class Texture {
 		Downloads the current texture data from the GPU.
 		Beware, this is a very slow operation that shouldn't be done during rendering.
 	**/
-	public function capturePixels() {
+	public function capturePixels( face = 0, mipLevel = 0 ) : hxd.Pixels {
 		#if flash
+		if( flags.has(Cube) ) throw "Can't capture cube texture on this platform";
+		if( face != 0 || mipLevel != 0 ) throw "Can't capture face/mipLevel on this platform";
+		return capturePixelsFlash();
+		#else
+		var old = lastFrame;
+		preventAutoDispose();
+		var pix = mem.driver.capturePixels(this, face, mipLevel);
+		lastFrame = old;
+		return pix;
+		#end
+	}
 
-		var twoPassCapture = true;
-
+	#if flash
+	function capturePixelsFlash() {
 		var e = h3d.Engine.getCurrent();
 		var oldW = e.width, oldH = e.height;
 		var oldF = filter, oldM = mipMap, oldWrap = wrap;
@@ -258,11 +281,8 @@ class Texture {
 		e.driver.clear(new h3d.Vector(0, 0, 0, 0),1,0);
 		var s2d = new h2d.Scene();
 		var b = new h2d.Bitmap(h2d.Tile.fromTexture(this), s2d);
-		var shader = null;
-		if( twoPassCapture ) {
-			shader = new h3d.shader.AlphaChannel();
-			b.addShader(shader); // erase alpha
-		}
+		var shader = new h3d.shader.AlphaChannel();
+		b.addShader(shader); // erase alpha
 		b.blendMode = None;
 
 		mipMap = None;
@@ -272,24 +292,22 @@ class Texture {
 		var pixels = hxd.Pixels.alloc(width, height, ARGB);
 		e.driver.captureRenderBuffer(pixels);
 
-		if( twoPassCapture ) {
-			shader.showAlpha = true;
-			s2d.render(e); // render only alpha channel
-			var alpha = hxd.Pixels.alloc(width, height, ARGB);
-			e.driver.captureRenderBuffer(alpha);
-			var alphaPos = hxd.Pixels.getChannelOffset(alpha.format, A);
-			var redPos = hxd.Pixels.getChannelOffset(alpha.format, R);
-			var bpp = hxd.Pixels.bytesPerPixel(alpha.format);
-			for( y in 0...height ) {
-				var p = y * width * bpp;
-				for( x in 0...width ) {
-					pixels.bytes.set(p + alphaPos, alpha.bytes.get(p + redPos)); // copy alpha value only
-					p += bpp;
-				}
+		shader.showAlpha = true;
+		s2d.render(e); // render only alpha channel
+		var alpha = hxd.Pixels.alloc(width, height, ARGB);
+		e.driver.captureRenderBuffer(alpha);
+		var alphaPos = hxd.Pixels.getChannelOffset(alpha.format, A);
+		var redPos = hxd.Pixels.getChannelOffset(alpha.format, R);
+		var bpp = hxd.Pixels.bytesPerPixel(alpha.format);
+		for( y in 0...height ) {
+			var p = y * width * bpp;
+			for( x in 0...width ) {
+				pixels.bytes.set(p + alphaPos, alpha.bytes.get(p + redPos)); // copy alpha value only
+				p += bpp;
 			}
-			alpha.dispose();
-			pixels.flags.unset(AlphaPremultiplied);
 		}
+		alpha.dispose();
+		pixels.flags.unset(AlphaPremultiplied);
 
 		if( e.width != oldW || e.height != oldH )
 			e.resize(oldW, oldH);
@@ -299,41 +317,9 @@ class Texture {
 		filter = oldF;
 		mipMap = oldM;
 		wrap = oldWrap;
-
-		#else
-
-		var e = h3d.Engine.getCurrent();
-		e.pushTarget(this);
-		@:privateAccess e.flushTarget();
-		var pixels = hxd.Pixels.alloc(width, height, RGBA);
-		e.driver.captureRenderBuffer(pixels);
-		e.popTarget();
-
-		#end
 		return pixels;
 	}
-
-	/*
-
-		// Seems unreliable on flash, not sure why...
-		// eg :
-		//    var t = hxd.Res.tex1.toTexture();
-		//	  t.onLoaded = function() { var s = hxd.Res.tex2.toTexture(); s.onLoaded = function() t.setChannel(A,s,R); }
-		// using setChannel here will clear the texture, for no known reason
-
-	public function setChannel( c : hxd.Pixels.Channel, with : h3d.mat.Texture, ?srcChannel : hxd.Pixels.Channel ) {
-		if( t == null || with.t == null )
-			throw "Can't set disposed or loading texture";
-		var pass = new h3d.mat.Pass("");
-		pass.colorMask = 1 << c.toInt();
-		pass.depth(false, Always);
-		pass.culling = None;
-		if( srcChannel != null && srcChannel != c )
-			pass.addShader(new h3d.shader.ChannelSelect(srcChannel.toInt()));
-		h3d.pass.Copy.run(with, this, null, pass);
-	}
-
-	*/
+	#end
 
 	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
 		var t = new Texture(bmp.width, bmp.height, allocPos);
@@ -370,25 +356,31 @@ class Texture {
 	**/
 	public static function defaultCubeTexture() {
 		var engine = h3d.Engine.getCurrent();
-		var t = @:privateAccess engine.resCache.get(Texture);
+		var t : h3d.mat.Texture = @:privateAccess engine.resCache.get(Texture);
 		if( t != null )
 			return t;
 		t = new Texture(1, 1, [Cube]);
-		t.clear(0);
-		t.realloc = function() t.clear(0);
+		t.clear(0x202020);
+		t.realloc = function() t.clear(0x202020);
 		@:privateAccess engine.resCache.set(Texture,t);
 		return t;
 	}
 
-	static var noiseTextures = new Map<Int,h3d.mat.Texture>();
+	static var noiseTextureKeys = new Map<Int,{}>();
 
 	public static function genNoise(size) {
-		var t = noiseTextures.get(size);
+		var engine = h3d.Engine.getCurrent();
+		var k = noiseTextureKeys.get(size);
+		var t : Texture = k == null ? null : @:privateAccess engine.resCache.get(k);
 		if( t != null && !t.isDisposed() )
 			return t;
+		if( k == null ) {
+			k = {};
+			noiseTextureKeys.set(size, k);
+		}
 		var t = new h3d.mat.Texture(size, size, [NoAlloc]);
 		t.realloc = allocNoise.bind(t,size);
-		noiseTextures.set(size, t);
+		@:privateAccess engine.resCache.set(k, t);
 		return t;
 	}
 

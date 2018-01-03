@@ -4,11 +4,11 @@ class Plan2D extends Primitive {
 
 	function new() {
 	}
-	
+
 	override function triCount() {
 		return 2;
 	}
-	
+
 	override function vertexCount() {
 		return 4;
 	}
@@ -43,9 +43,13 @@ class Plan2D extends Primitive {
 		engine.renderQuadBuffer(buffer);
 	}
 
-	static var inst = null;
 	public static function get() {
-		if( inst == null ) inst = new Plan2D();
+		var engine = h3d.Engine.getCurrent();
+		var inst = @:privateAccess engine.resCache.get(Plan2D);
+		if( inst == null ) {
+			inst = new Plan2D();
+			@:privateAccess engine.resCache.set(Plan2D, inst);
+		}
 		return inst;
 	}
 

@@ -23,6 +23,7 @@ class Text extends Drawable {
 	var glyphs : TileGroup;
 
 	var calcDone:Bool;
+	var calcXMin:Int;
 	var calcYMin:Int;
 	var calcWidth:Int;
 	var calcHeight:Int;
@@ -34,7 +35,7 @@ class Text extends Drawable {
 	var waShader : h3d.shader.WhiteAlpha;
 	#end
 
-	public function new( font : Font, ?parent ) {
+	public function new( font : Font, ?parent : h2d.Sprite ) {
 		super(parent);
 		this.font = font;
 		textAlign = Left;
@@ -131,12 +132,13 @@ class Text extends Drawable {
 
 	public function calcTextWidth( text : hxd.UString ) {
 		if( calcDone ) {
-			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, oy = calcYMin;
+			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, ox = calcXMin, oy = calcYMin;
 			initGlyphs(text, false);
 			var w = calcWidth;
 			calcWidth = ow;
 			calcHeight = oh;
 			calcSizeHeight = osh;
+			calcXMin = ox;
 			calcYMin = oy;
 			return w;
 		} else {
@@ -205,7 +207,7 @@ class Text extends Drawable {
 
 	function initGlyphs( text : hxd.UString, rebuild = true, handleAlign = true, lines : Array<Int> = null ) : Void {
 		if( rebuild ) glyphs.clear();
-		var x = 0, y = 0, xMax = 0, prevChar = -1;
+		var x = 0, y = 0, xMax = 0, xMin = 0, prevChar = -1;
 		var align = handleAlign ? textAlign : Left;
 		switch( align ) {
 		case Center, Right:
@@ -216,10 +218,11 @@ class Text extends Drawable {
 			for( i in 0...lines.length )
 				lines[i] = (max - lines[i]) >> k;
 			x = lines.shift();
+			xMin = x;
 		default:
 		}
 		var dl = font.lineHeight + lineSpacing;
-		var calcLines = !rebuild && lines != null;
+		var calcLines = !handleAlign && !rebuild && lines != null;
 		var yMin = 0;
 		var t = splitText(text);
 		for( i in 0...t.length ) {
@@ -236,26 +239,26 @@ class Text extends Drawable {
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
 				if( calcLines ) lines.push(x);
-				if( rebuild )
-					switch( align ) {
-					case Left:
-						x = 0;
-					case Right, Center:
-						x = lines.shift();
-					}
-				else
+				switch( align ) {
+				case Left:
 					x = 0;
+				case Right, Center:
+					x = lines.shift();
+					if( x < xMin ) xMin = x;
+				}
 				y += dl;
 				prevChar = -1;
 			} else
 				prevChar = cc;
 		}
 		if( calcLines ) lines.push(x);
+		if( x > xMax ) xMax = x;
 
+		calcXMin = xMin;
 		calcYMin = yMin;
-		calcWidth = x > xMax ? x : xMax;
-		calcHeight = y > 0 && x == 0 ? y - lineSpacing : y + font.lineHeight;
-		calcSizeHeight = y > 0 && x == 0 ? y + (font.baseLine - dl) : y + font.baseLine;
+		calcWidth = xMax - xMin;
+		calcHeight = y + font.lineHeight;
+		calcSizeHeight = y + (font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
 	}
 
@@ -305,15 +308,15 @@ class Text extends Drawable {
 		super.getBoundsRec(relativeTo, out, forSize);
 		updateSize();
 		var x, y, w : Float, h;
-		if( forSize ) {
-			x = 0;
+		if ( forSize ) {
+			x = calcXMin;  // TODO: Should be 0 as well for consistency, but currently causes problems with Flows
 			y = 0;
-			w = realMaxWidth >= 0 && textAlign != Left && realMaxWidth > calcWidth ? realMaxWidth : (calcWidth == 0 ? 1 : calcWidth);
+			w = calcWidth;
 			h = calcSizeHeight;
 		} else {
-			x = 0;
+			x = realMaxWidth >= 0 ? 0 : calcXMin;
 			y = calcYMin;
-			w = calcWidth;
+			w = realMaxWidth >= 0 ? realMaxWidth : calcWidth;
 			h = calcHeight - calcYMin;
 		}
 		addBounds(relativeTo, out, x, y, w, h);

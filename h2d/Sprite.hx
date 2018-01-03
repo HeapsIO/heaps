@@ -66,7 +66,7 @@ class Sprite {
 
 	/**
 		This is similar to getBounds(parent), but instead of the full content, it will return
-		the size based on the alignement of the Sprite. For instance for a text, getBounds will returns
+		the size based on the alignement of the Sprite. For instance for a text, getBounds will return
 		the full glyphs size whereas getSize() will ignore the pixels under the baseline.
 	**/
 	public function getSize( ?out : h2d.col.Bounds ) : h2d.col.Bounds {
@@ -103,14 +103,14 @@ class Sprite {
 		return arr;
 	}
 
-	function set_filter(f) {
+	function set_filter(f : h2d.filter.Filter) {
 		if( filter != null && allocated ) filter.unbind(this);
 		filter = f;
 		if( f != null && allocated ) f.bind(this);
 		return f;
 	}
 
-	function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
+	function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) : Void {
 		if( posChanged ) {
 			calcAbsPos();
 			for( c in children )
@@ -195,14 +195,14 @@ class Sprite {
 		out.addPos(x * rA + y * rC, x * rB + y * rD);
 	}
 
-	public function getSpritesCount() {
+	public function getSpritesCount() : Int {
 		var k = 0;
 		for( c in children )
 			k += c.getSpritesCount() + 1;
 		return k;
 	}
 
-	public function localToGlobal( ?pt : h2d.col.Point ) {
+	public function localToGlobal( ?pt : h2d.col.Point ) : h2d.col.Point {
 		syncPos();
 		if( pt == null ) pt = new h2d.col.Point();
 		var px = pt.x * matA + pt.y * matC + absX;
@@ -212,7 +212,7 @@ class Sprite {
 		return pt;
 	}
 
-	public function globalToLocal( pt : h2d.col.Point ) {
+	public function globalToLocal( pt : h2d.col.Point ) : h2d.col.Point {
 		syncPos();
 		pt.x -= absX;
 		pt.y -= absY;
@@ -224,7 +224,7 @@ class Sprite {
 		return pt;
 	}
 
-	function getScene() {
+	function getScene() : Scene {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
 		return Std.instance(p, Scene);
@@ -238,11 +238,11 @@ class Sprite {
 		return b;
 	}
 
-	public function addChild( s : Sprite ) {
+	public function addChild( s : Sprite ) : Void {
 		addChildAt(s, children.length);
 	}
 
-	public function addChildAt( s : Sprite, pos : Int ) {
+	public function addChildAt( s : Sprite, pos : Int ) : Void {
 		if( pos < 0 ) pos = 0;
 		if( pos > children.length ) pos = children.length;
 		var p = this;

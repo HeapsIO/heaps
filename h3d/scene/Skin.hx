@@ -36,7 +36,7 @@ class Joint extends Object {
 		}
 		if( lastFrame != skin.lastFrame ) {
 			lastFrame = skin.lastFrame;
-			absPos.loadFrom(skin.currentAbsPose[index]);
+			absPos.load(skin.currentAbsPose[index]);
 			if( skin.jointsAbsPosInv != null && skin.jointsAbsPosInv._44 != 0 ) {
 				absPos.multiply3x4(absPos, skin.jointsAbsPosInv);
 				absPos.multiply3x4(absPos, parent.absPos);
@@ -164,7 +164,7 @@ class Skin extends MultiMaterial {
 	}
 
 	override function sync( ctx : RenderContext ) {
-		if( !ctx.visibleFlag )
+		if( !ctx.visibleFlag && !alwaysSync )
 			return;
 		syncJoints();
 	}
@@ -242,7 +242,7 @@ class Skin extends MultiMaterial {
 	override function customUnserialize(ctx:hxbit.Serializer) {
 		super.customUnserialize(ctx);
 		var prim = Std.instance(primitive, h3d.prim.HMDModel);
-		if( prim == null ) throw "Cannot load skind primitive " + prim;
+		if( prim == null ) throw "Cannot load skin primitive " + prim;
 		jointsUpdated = true;
 		skinShader = material.mainPass.getShader(h3d.shader.Skin);
 		@:privateAccess {

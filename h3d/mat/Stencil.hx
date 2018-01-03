@@ -3,7 +3,7 @@ import h3d.mat.Data;
 
 @:allow(h3d.mat.Material)
 @:build(hxd.impl.BitsBuilder.build())
-class Stencil implements h3d.impl.Serializable {
+class Stencil implements hxd.impl.Serializable {
 
 	@:s var frontRefBits : Int = 0;
 	@:s var backRefBits  : Int = 0;

@@ -2,7 +2,7 @@ package h3d.mat;
 import h3d.mat.Data;
 import h3d.mat.Pass;
 
-class BaseMaterial implements h3d.impl.Serializable {
+class BaseMaterial implements hxd.impl.Serializable {
 
 	@:s var passes : Pass;
 	@:s public var name : String;

@@ -455,9 +455,13 @@ class LocalFileSystem implements FileSystem {
 		}
 		var content = hxd.File.getBytes(realFile);
 		var hash = haxe.crypto.Sha1.make(content).toHex();
-		if( hxd.File.exists(tmpFile) && hash == Reflect.field(root, e.name) ) {
+		function updateTime() {
 			times.set(path, time);
 			hxd.File.saveBytes(tmpDir + "times.dat", haxe.io.Bytes.ofString(haxe.Serializer.run(times)));
+		}
+
+		if( hxd.File.exists(tmpFile) && hash == Reflect.field(root, e.name) ) {
+			updateTime();
 			return;
 		}
 
@@ -513,7 +517,8 @@ class LocalFileSystem implements FileSystem {
 			conv.srcFilename = null;
 		}
 
-		hxd.File.saveBytes(tmpDir + "hashes.json", haxe.io.Bytes.ofString(haxe.Json.stringify(hashes,"\t")));
+		hxd.File.saveBytes(tmpDir + "hashes.json", haxe.io.Bytes.ofString(haxe.Json.stringify(hashes, "\t")));
+		updateTime();
 	}
 
 }

@@ -12,8 +12,15 @@ class Build {
 	public var pakDiff = false;
 	public var compressSounds = true;
 	public var compressMP3 = false;
+	public var checkJPG = false;
 
 	function new() {
+	}
+
+	function command( cmd : String, ?args : Array<String> ) {
+		var ret = Sys.command(cmd, args);
+		if( ret != 0 )
+			throw cmd + " has failed with exit code " + ret;
 	}
 
 	function buildRec( path : String ) {
@@ -25,8 +32,10 @@ class Build {
 			f.isDirectory = true;
 			f.content = [];
 			for( name in sys.FileSystem.readDirectory(dir) ) {
-				if( name.charCodeAt(0) == ".".code || name.charCodeAt(0) == "_".code ) continue;
-				var s = buildRec(path == "" ? name : path+"/"+name);
+				var fpath = path == "" ? name : path+"/"+name;
+				if( name.charCodeAt(0) == ".".code || (name.charCodeAt(0) == "_".code && sys.FileSystem.isDirectory(fpath)) )
+					continue;
+				var s = buildRec(fpath);
 				if( s != null ) f.content.push(s);
 			}
 		} else {
@@ -35,7 +44,17 @@ class Build {
 				return null;
 			var filePath = fs.getAbsolutePath(fs.get(path));
 			var data = sys.io.File.getBytes(filePath);
-			f.dataPosition = #if pakDiff out.bytes.length #else out.size #end;
+
+			switch( ext ) {
+			case "jpg", "jpeg" if( checkJPG ):
+				try hxd.res.NanoJpeg.decode(data) catch( e : Dynamic ) {
+					Sys.println("\tConverting " + path);
+					command("jpegtran", ["-optimize", "-copy","all", filePath, filePath]);
+					data = sys.io.File.getBytes(filePath);
+				}
+			}
+
+			f.dataPosition = pakDiff ? out.bytes.length : out.size;
 			f.dataSize = data.length;
 			f.checksum = haxe.crypto.Adler32.make(data);
 			out.bytes.push(data);
@@ -96,9 +115,6 @@ class Build {
 
 	function makePak() {
 
-		if( resPath == null ) resPath = "res";
-		if( outPrefix == null ) outPrefix = "res";
-
 		if( !sys.FileSystem.exists(resPath) )
 			throw "'" + resPath + "' resource directory was not found";
 
@@ -147,20 +163,38 @@ class Build {
 	}
 
 	static function main() {
+		var args = Sys.args();
 		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.n") catch( e : Dynamic ) {};
 		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.hl") catch( e : Dynamic ) {};
-		var ext = haxe.macro.Compiler.getDefine("excludeExt");
 		var b = new Build();
-		b.excludedExt = ext == null ? [] : ext.split(",");
-		b.resPath = haxe.macro.Compiler.getDefine("resourcesPath");
 		b.compressSounds = true;
-		b.outPrefix = haxe.macro.Compiler.getDefine("outPrefix");
-		#if pakDiff
-		b.pakDiff = true;
-		#end
-		#if !stb_ogg_sound
-		b.compressMP3 = true;
-		#end
+		while( args.length > 0 ) {
+			var f = args.shift();
+			var pos = f.indexOf("=");
+			if( pos > 0 ) {
+				args.unshift(f.substr(pos + 1));
+				f = f.substr(0, pos);
+			}
+			switch( f ) {
+			case "-mp3":
+				b.compressMP3 = false;
+			case "-wav":
+				b.compressSounds = false;
+			case "-diff":
+				b.pakDiff = true;
+			case "-res" if( args.length > 0 ):
+				b.resPath = args.shift();
+			case "-out" if( args.length > 0 ):
+				b.outPrefix = args.shift();
+			case "-exclude" if( args.length > 0 ):
+				for( ext in args.shift().split(",") )
+					b.excludedExt.push(ext);
+			case "-check-jpg":
+				b.checkJPG = true;
+			default:
+				throw "Unknown parameter " + f;
+			}
+		}
 		b.makePak();
 	}
 

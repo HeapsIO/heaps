@@ -3,7 +3,7 @@ import h3d.mat.Data;
 
 @:allow(h3d.mat.BaseMaterial)
 @:build(hxd.impl.BitsBuilder.build())
-class Pass implements h3d.impl.Serializable {
+class Pass implements hxd.impl.Serializable {
 
 	@:s public var name(default, null) : String;
 	var passId : Int;
@@ -196,14 +196,18 @@ class Pass implements h3d.impl.Serializable {
 
 	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {
 		var shader = scene.renderer.compileShader(this);
-		var toString = toHxsl ? hxsl.Printer.shaderToString.bind(_, true) : hxsl.GlslOut.toGlsl;
-		return "VERTEX=\n" + toString(shader.vertex.data) + "\n\nFRAGMENT=\n" + toString(shader.fragment.data);
+		if( toHxsl ) {
+			var toString = hxsl.Printer.shaderToString.bind(_, true);
+			return "// vertex:\n" + toString(shader.vertex.data) + "\n\nfragment:\n" + toString(shader.fragment.data);
+		} else {
+			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
+		}
 	}
 
 	#if hxbit
 
 	public function customSerialize( ctx : hxbit.Serializer ) {
-		var ctx : h3d.impl.Serializable.SceneSerializer = cast ctx;
+		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
 		var s = shaders;
 		while( s != parentShaders ) {
 			ctx.addShader(s.s);
@@ -212,7 +216,7 @@ class Pass implements h3d.impl.Serializable {
 		ctx.addShader(null);
 	}
 	public function customUnserialize( ctx : hxbit.Serializer ) {
-		var ctx : h3d.impl.Serializable.SceneSerializer = cast ctx;
+		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
 		var head = null;
 		while( true ) {
 			var s = ctx.getShader();

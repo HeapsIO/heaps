@@ -2,8 +2,8 @@ package h3d.anim;
 
 class Transition extends Animation {
 
-	public var anim1 : Animation;
-	public var anim2 : Animation;
+	@:s public var anim1 : Animation;
+	@:s public var anim2 : Animation;
 
 	public function new( transitionName : String, anim1 : Animation, anim2 : Animation ) {
 		var r1 = 1, r2 = 1;
@@ -63,5 +63,13 @@ class Transition extends Animation {
 			tmp = anim2.update(tmp);
 		return rt;
 	}
+
+	#if !(dataOnly || macro)
+	override function initAndBind( obj : h3d.scene.Object ) {
+		super.initAndBind(obj);
+		anim1.initAndBind(obj);
+		anim2.initAndBind(obj);
+	}
+	#end
 
 }
