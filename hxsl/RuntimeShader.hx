@@ -34,6 +34,7 @@ class AllocGlobal {
 class RuntimeShaderData {
 	public var vertex : Bool;
 	public var data : Ast.ShaderData;
+	public var code : String;
 	public var params : AllocParam;
 	public var paramsSize : Int;
 	public var globals : AllocGlobal;
