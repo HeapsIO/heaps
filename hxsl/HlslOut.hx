@@ -645,6 +645,9 @@ class HlslOut {
 
 		decls.push(buf.toString());
 		buf = null;
+
+		s.funs = null;
+
 		return decls.join("\n");
 	}
 

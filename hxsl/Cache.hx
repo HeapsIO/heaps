@@ -37,10 +37,12 @@ class Cache {
 		if( shader != null )
 			return shader;
 		var s = new hxsl.SharedShader("");
-		var v = vars.copy();
-		var id = haxe.crypto.Md5.encode(vars.join(":")).substr(0, 8);
+		var name = "shaderLinker_"+haxe.crypto.Md5.encode(key).substr(0, 8);
+		#if debug
+		name += '[$key]';
+		#end
 		s.data = {
-			name : "shaderLinker_"+id,
+			name : name,
 			vars : [],
 			funs : [],
 		};

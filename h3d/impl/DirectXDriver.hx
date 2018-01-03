@@ -520,7 +520,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData, compileOnly = false ) {
 		var h = new hxsl.HlslOut();
-		var source = h.run(shader.data);
+		var source = shader.code != null ? shader.code : h.run(shader.data);
 		var bytes = try dx.Driver.compileShader(source, "", "main", (shader.vertex?"vs_":"ps_")+shaderVersion, OptimizationLevel3) catch( err : String ) {
 			err = ~/^\(([0-9]+),([0-9]+)-([0-9]+)\)/gm.map(err, function(r) {
 				var line = Std.parseInt(r.matched(1));

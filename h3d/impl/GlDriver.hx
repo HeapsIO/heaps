@@ -223,7 +223,7 @@ class GlDriver extends Driver {
 	function compileShader( glout : ShaderCompiler, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
-		var code = glout.run(shader.data);
+		var code = shader.code != null ? shader.code : glout.run(shader.data);
 		gl.shaderSource(s, code);
 		gl.compileShader(s);
 		var log = gl.getShaderInfoLog(s);
@@ -277,7 +277,7 @@ class GlDriver extends Driver {
 				for( v in shader.fragment.data.vars )
 					switch( v.kind ) {
 					case Output:
-						gl.bindFragDataLocation(p.p, outCount++, glout.varNames.get(v.id));
+						gl.bindFragDataLocation(p.p, outCount++, glout.varNames.exists(v.id) ? glout.varNames.get(v.id) : v.name);
 					default:
 					}
 			}
@@ -325,7 +325,7 @@ class GlDriver extends Driver {
 					case TFloat: 1;
 					default: throw "assert " + v.type;
 					}
-					var index = gl.getAttribLocation(p.p, glout.varNames.get(v.id));
+					var index = gl.getAttribLocation(p.p, glout.varNames.exists(v.id) ? glout.varNames.get(v.id) : v.name);
 					if( index < 0 ) {
 						p.stride += size;
 						continue;

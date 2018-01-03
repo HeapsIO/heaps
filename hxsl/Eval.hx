@@ -15,6 +15,9 @@ class Eval {
 	var constants : Map<Int,TExprDef>;
 	var funMap : Map<TVar,TFunction>;
 	var curFun : TFunction;
+	#if debug
+	var cnames : Array<String> = [];
+	#end
 
 	public function new() {
 		varMap = new Map();
@@ -24,6 +27,13 @@ class Eval {
 
 	public function setConstant( v : TVar, c : Const ) {
 		constants.set(v.id, TConst(c));
+		#if debug
+		cnames.push(v.name+"="+switch(c){
+			case CBool(b): Std.string(b);
+			case CInt(i): Std.string(i);
+			default: "?";
+		});
+		#end
 	}
 
 	function mapVar( v : TVar ) {
@@ -88,8 +98,12 @@ class Eval {
 			curFun = funs[i];
 			curFun.expr = evalExpr(curFun.expr,false);
 		}
+		var name = s.name;
+		#if debug
+		name += "("+cnames.join(",")+")";
+		#end
 		return {
-			name : s.name,
+			name : name,
 			vars : [for( v in s.vars ) mapVar(v)],
 			funs : funs,
 		};

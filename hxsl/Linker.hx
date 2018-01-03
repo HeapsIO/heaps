@@ -509,7 +509,8 @@ class Linker {
 				allocVar(s.vars[i],null).merged.unshift(sreal.vars[i]);
 		}
 
-		return { name : "out", vars : outVars, funs : funs };
+		var outName = #if debug [for(s in shadersData) s.name].join(" + ") #else "out" #end;
+		return { name : outName, vars : outVars, funs : funs };
 	}
 
 }

@@ -132,7 +132,18 @@ class Drawable extends Sprite {
 
 	public function addShader<T:hxsl.Shader>( s : T ) : T {
 		if( s == null ) throw "Can't add null shader";
-		shaders = new hxsl.ShaderList(s, shaders);
+		var n = new hxsl.ShaderList(s);
+
+		var e = shaders;
+		var p = null;
+		while( e != null && e.s.priority > s.priority ){
+			p = e;
+			e = e.next;
+		}
+		if( p == null ) shaders = n;
+		else p.next = n;
+		n.next = e;
+		
 		return s;
 	}
 
