@@ -301,6 +301,7 @@ class System {
 		#if !usesys
 		hl.Api.setErrorHandler(function(e) reportError(e)); // initialization error
 		sentinel = new hl.UI.Sentinel(30, function() throw "Program timeout (infinite loop?)");
+		haxe.MainLoop.add(timeoutTick);
 		#end
 	}
 
