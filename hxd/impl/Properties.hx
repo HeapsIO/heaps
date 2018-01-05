@@ -2,11 +2,11 @@ package hxd.impl;
 
 class Properties {
 
-	function getField(obj : Dynamic, f : String) : Dynamic {
+	public function getField(obj : Dynamic, f : String) : Dynamic {
 		return Reflect.field(obj, f);
 	}
 
-	function setField(obj : Dynamic, f : String, value : Dynamic) {
+	public function setField(obj : Dynamic, f : String, value : Dynamic) {
 		Reflect.setField(obj, f, value);
 	}
 
