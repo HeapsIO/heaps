@@ -739,6 +739,16 @@ class Sprite {
 		return -1;
 	}
 
+	public function getSpriteByName( name : String ) {
+		if( this.name == name )
+			return this;
+		for( c in children ) {
+			var o = c.getSpriteByName(name);
+			if( o != null ) return o;
+		}
+		return null;
+	}
+
 	inline function get_numChildren() {
 		return children.length;
 	}
