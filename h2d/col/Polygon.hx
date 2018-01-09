@@ -149,6 +149,12 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		this.reverse();
 	}
 
+	public function transform(mat: h2d.col.Matrix) {
+		for( i in 0...points.length ) {
+			points[i] = mat.transform(points[i]);
+		}
+	}
+
 	@:noDebug
 	public function contains( p : Point, isConvex = false ) {
 		if( isConvex ) {
