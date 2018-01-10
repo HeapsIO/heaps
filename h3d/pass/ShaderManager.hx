@@ -2,6 +2,8 @@ package h3d.pass;
 
 class ShaderManager {
 
+	public static var STRICT = true;
+
 	public var globals : hxsl.Globals;
 	var shaderCache : hxsl.Cache;
 	var currentOutput : hxsl.ShaderList;
@@ -202,15 +204,15 @@ class ShaderManager {
 			var tid = 0;
 			var p = s.textures2D;
 			while( p != null ) {
-				var t = getParamValue(p, shaders);
+				var t = getParamValue(p, shaders, !STRICT);
 				if( t == null ) t = h3d.mat.Texture.fromColor(0xFF00FF);
 				buf.tex[tid++] = t;
 				p = p.next;
 			}
 			var p = s.texturesCube;
 			while( p != null ) {
-				var t = getParamValue(p, shaders);
-				if( t == null ) t = h3d.mat.Texture.fromColor(0xFF00FF);
+				var t = getParamValue(p, shaders, !STRICT);
+				if( t == null ) t = h3d.mat.Texture.defaultCubeTexture();
 				buf.tex[tid++] = t;
 				p = p.next;
 			}
