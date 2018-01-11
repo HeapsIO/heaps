@@ -18,9 +18,8 @@ class ShadowMap extends Default {
 	public var blur : Blur;
 
 	public function new(size) {
-		super();
+		super("shadow");
 		this.size = size;
-		priority = 9;
 		lightCamera = new h3d.Camera();
 		lightCamera.orthoBounds = new h3d.col.Bounds();
 		shadowMapId = hxsl.Globals.allocID("shadow.map");

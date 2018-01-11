@@ -104,7 +104,7 @@ private class CustomSceneProps extends SceneProps {
 				j.toggleClass("disable");
 			case 1:
 				var p = new Panel(null,pass.name+" shader");
-				var shader = scene.renderer.compileShader(pass);
+				var shader = scene.renderer.debugCompileShader(pass);
 				var toString = hxsl.Printer.shaderToString;
 				var code = toString(shader.vertex.data) + "\n\n" + toString(shader.fragment.data);
 				p.j.html("<pre class='code'>" + colorize(code) + "</pre>");

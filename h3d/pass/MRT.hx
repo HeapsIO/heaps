@@ -10,7 +10,7 @@ class MRTSubPass extends Default {
 	public function new( m, output ) {
 		this.mrt = m;
 		this.output = output;
-		super();
+		super("mrt"+output);
 		this.varId = hxsl.Globals.allocID(mrt.outputNames[output].split(".").pop() + "Map");
 	}
 
@@ -51,7 +51,7 @@ class MRT extends Default {
 		this.clearSameColor = clearSameColor;
 		if( clearDepth ) this.clearDepth = 1.;
 		this.clearColors = clearColors;
-		super();
+		super("mrt");
 	}
 
 	function getOutputName(i:Int) {

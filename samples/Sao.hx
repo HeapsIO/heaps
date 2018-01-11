@@ -2,7 +2,7 @@ import hxd.Math;
 import h3d.pass.ScalableAO;
 import hxd.Key in K;
 
-class CustomRenderer extends h3d.scene.Renderer {
+class CustomRenderer extends h3d.scene.DefaultRenderer {
 
 	public var sao : h3d.pass.ScalableAO;
 	public var saoBlur : h3d.pass.Blur;
@@ -19,13 +19,16 @@ class CustomRenderer extends h3d.scene.Renderer {
 		saoBlur = new h3d.pass.Blur(3, 3, 2);
 		sao.shader.sampleRadius	= 0.2;
 		hasMRT = h3d.Engine.getCurrent().driver.hasFeature(MultipleRenderTargets);
-		if( hasMRT )
-			def = new h3d.pass.MRT([Value("output.color"), PackFloat(Value("output.depth")), PackNormal(Value("output.normal"))], 0, true);
+		if( hasMRT ) {
+			allPasses.remove(defaultPass);
+			defaultPass = new h3d.pass.MRT([Value("output.color"), PackFloat(Value("output.depth")), PackNormal(Value("output.normal"))], 0, true);
+			allPasses.push(defaultPass);
+		}
 	}
 
-	override function renderPass(name, p:h3d.pass.Base, passes) {
-		bench.measure(name);
-		return super.renderPass(name, p, passes);
+	override function renderPass(p:h3d.pass.Base, passes) {
+		bench.measure(p.name);
+		return super.renderPass(p, passes);
 	}
 
 	override function render() {
@@ -35,7 +38,7 @@ class CustomRenderer extends h3d.scene.Renderer {
 			var saoTarget = allocTarget("sao",0,false);
 			setTarget(saoTarget);
 			if( hasMRT )
-				sao.apply(def.getTexture(1), def.getTexture(2), ctx.camera);
+				sao.apply(defaultPass.getTexture(1), defaultPass.getTexture(2), ctx.camera);
 			else
 				sao.apply(depth.getTexture(), normal.getTexture(), ctx.camera);
 			resetTarget();
@@ -43,8 +46,9 @@ class CustomRenderer extends h3d.scene.Renderer {
 			saoBlur.apply(saoTarget, allocTarget("saoBlurTmp", 0, false));
 			bench.measure("saoBlend");
 			if( hasMRT ) h3d.pass.Copy.run(def.getTexture(0), null);
-			h3d.pass.Copy.run(saoTarget, null, mode == 0 ? Multiply : null);
-		}
+			copy(saoTarget, null, mode == 0 ? Multiply : null);
+		} else if( hasMRT )
+			copy(defaultPass.getTexture(0), null);
 	}
 
 }
