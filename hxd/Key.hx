@@ -16,10 +16,20 @@ class Key {
 	public static inline var HOME		= 36;
 	public static inline var LEFT		= 37;
 	public static inline var UP			= 38;
+	// QUOTE (') keyCode is the same as RIGHT
+	//public static inline var QUOTE		= 39;
 	public static inline var RIGHT		= 39;
 	public static inline var DOWN		= 40;
+	public static inline var COMMA		= 44;
 	public static inline var INSERT		= 45;
+	// DOT (.) keyCode is the same as DELETE
+	//public static inline var DOT		= 46;
 	public static inline var DELETE		= 46;
+	public static inline var FSLASH		= 47;
+	public static inline var SEMICOLON	= 59;
+	public static inline var LBRACKET	= 91;
+	public static inline var BSLASH		= 92;
+	public static inline var RBRACKET	= 93;
 
 	public static inline var NUMBER_0	= 48;
 	public static inline var NUMBER_1	= 49;
@@ -31,17 +41,6 @@ class Key {
 	public static inline var NUMBER_7	= 55;
 	public static inline var NUMBER_8	= 56;
 	public static inline var NUMBER_9	= 57;
-
-	public static inline var NUMPAD_0	= 96;
-	public static inline var NUMPAD_1	= 97;
-	public static inline var NUMPAD_2	= 98;
-	public static inline var NUMPAD_3	= 99;
-	public static inline var NUMPAD_4	= 100;
-	public static inline var NUMPAD_5	= 101;
-	public static inline var NUMPAD_6	= 102;
-	public static inline var NUMPAD_7	= 103;
-	public static inline var NUMPAD_8	= 104;
-	public static inline var NUMPAD_9	= 105;
 
 	public static inline var A			= 65;
 	public static inline var B			= 66;
@@ -70,6 +69,24 @@ class Key {
 	public static inline var Y			= 89;
 	public static inline var Z			= 90;
 
+	public static inline var NUMPAD_0	= 96;
+	public static inline var NUMPAD_1	= 97;
+	public static inline var NUMPAD_2	= 98;
+	public static inline var NUMPAD_3	= 99;
+	public static inline var NUMPAD_4	= 100;
+	public static inline var NUMPAD_5	= 101;
+	public static inline var NUMPAD_6	= 102;
+	public static inline var NUMPAD_7	= 103;
+	public static inline var NUMPAD_8	= 104;
+	public static inline var NUMPAD_9	= 105;
+
+	public static inline var NUMPAD_MULT	= 106;
+	public static inline var NUMPAD_ADD		= 107;
+	public static inline var NUMPAD_ENTER	= 108;
+	public static inline var NUMPAD_SUB		= 109;
+	public static inline var NUMPAD_DOT		= 110;
+	public static inline var NUMPAD_DIV		= 111;
+
 	public static inline var F1			= 112;
 	public static inline var F2			= 113;
 	public static inline var F3			= 114;
@@ -83,20 +100,13 @@ class Key {
 	public static inline var F11		= 122;
 	public static inline var F12		= 123;
 
-	public static inline var NUMPAD_MULT = 106;
-	public static inline var NUMPAD_ADD	= 107;
-	public static inline var NUMPAD_ENTER = 108;
-	public static inline var NUMPAD_SUB = 109;
-	public static inline var NUMPAD_DOT = 110;
-	public static inline var NUMPAD_DIV = 111;
-
-	public static inline var MOUSE_LEFT = 0;
-	public static inline var MOUSE_RIGHT = 1;
-	public static inline var MOUSE_MIDDLE = 2;
-	public static inline var MOUSE_BACK = 3;
-	public static inline var MOUSE_FORWARD = 4;
-	public static inline var MOUSE_WHEEL_UP = 5;
-	public static inline var MOUSE_WHEEL_DOWN = 6;
+	public static inline var MOUSE_LEFT			= 0;
+	public static inline var MOUSE_RIGHT		= 1;
+	public static inline var MOUSE_MIDDLE		= 2;
+	public static inline var MOUSE_BACK			= 3;
+	public static inline var MOUSE_FORWARD		= 4;
+	public static inline var MOUSE_WHEEL_UP		= 5;
+	public static inline var MOUSE_WHEEL_DOWN	= 6;
 
 	/** a bit that is set for left keys **/
 	public static inline var LOC_LEFT = 256;
@@ -176,11 +186,13 @@ class Key {
 	static function onEvent( e : Event ) {
 		switch( e.kind ) {
 		case EKeyDown:
+			// trace(e.keyCode);
 			if( !ALLOW_KEY_REPEAT && keyPressed[e.keyCode] > 0 ) return;
 			keyPressed[e.keyCode] = getFrame();
 		case EKeyUp:
 			keyPressed[e.keyCode] = -getFrame();
 		case EPush:
+			// trace(e.keyCode);
 			if( e.button < 5 ) keyPressed[e.button] = getFrame();
 		case ERelease:
 			if( e.button < 5 ) keyPressed[e.button] = -getFrame();
