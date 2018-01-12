@@ -55,6 +55,7 @@ class RuntimeShader {
 	public var fragment : RuntimeShaderData;
 	public var globals : Map<Int,Bool>;
 	public var signature : String;
+	public var spec : { instances : Array<String>, signature : String };
 
 	public function new() {
 		id = UID++;

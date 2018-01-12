@@ -6,13 +6,17 @@ class UniqueChecker {
 
 	var signatures = new Map<String,Int>();
 	var compile : Ast.ShaderData -> String;
-	var previousShaders = new Map<String,Bool>();
+	var previousShaders = new Map<String,String>();
+	var previousSigns = new Map<String,Bool>();
 
 	function new() {
 		var r = ~/^[0-9]+_([A-Fa-f0-9]+)\./;
 		for( f in (try sys.FileSystem.readDirectory("shaders") catch( e : Dynamic ) []) )
-			if( r.match(f) )
-				previousShaders.set(r.matched(1), true);
+			if( r.match(f) ) {
+				var spec = sys.io.File.getContent("shaders/" + f).split("\n")[0];
+				previousShaders.set(spec, r.matched(1));
+				previousSigns.set(r.matched(1), true);
+			}
 	}
 
 	function duplicate( shader : ShaderData ) : ShaderData {
@@ -59,8 +63,15 @@ class UniqueChecker {
 			return;
 		}
 
+		var specKey = shader.spec.instances.toString() + " = " + shader.spec.signature;
+		var prevSign = previousShaders.get(specKey);
+
+		if( prevSign != null && prevSign != sign )
+			Sys.println("**** SAME SPEC GIVES DIFFERENT SIGN " + sign + " != " + prevSign + " *****");
+
+
 		var head = "Shader " + sign;
-		var str = head + "\n\n" + vertexCode+"\n\n" + fragmentCode + "\n\n" + hxsl.Printer.shaderToString(shader.vertex.data, true) + "\n\n" + hxsl.Printer.shaderToString(shader.fragment.data, true);
+		var str = specKey+"\n" + head + "\n\n" + vertexCode+"\n\n" + fragmentCode + "\n\n" + hxsl.Printer.shaderToString(shader.vertex.data, true) + "\n\n" + hxsl.Printer.shaderToString(shader.fragment.data, true);
 
 		sys.io.File.saveContent("shaders/" + shader.id + "_" + sign + ".c", str);
 		signatures.set(sign, shader.id);
@@ -74,10 +85,10 @@ class UniqueChecker {
 			extra = " (" + (v == checkV ? "vertex" : "fragment") + " " + v.type+" with " + v.id + ")";
 		}
 
-		if( previousShaders.exists(sign) )
+		if( previousSigns.exists(sign) )
 			Sys.println("Reuse  " + shader.id+ " "+sign);
 		else
-			Sys.println("Shader " + shader.id+ " "+sign+extra);
+			Sys.println("Shader " + shader.id+ " "+specKey+extra);
 
 		if( checkV != null && checkF != null && checkV.id == checkF.id ) {
 			var v = checkF;

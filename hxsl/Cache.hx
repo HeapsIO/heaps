@@ -38,8 +38,9 @@ class Cache {
 			return shader;
 		var s = new hxsl.SharedShader("");
 		var v = vars.copy();
+		var id = haxe.crypto.Md5.encode(vars.join(":")).substr(0, 8);
 		s.data = {
-			name : "shaderLinker",
+			name : "shaderLinker_"+id,
 			vars : [],
 			funs : [],
 		};
@@ -273,6 +274,8 @@ class Cache {
 		}
 		#end
 
+		r.spec = { instances : @:privateAccess [for( s in shaders ) s.shader.data.name + (s.priority == 0 ? "" : ""+s.priority)+(s.constBits == 0 ? "" : "_"+StringTools.hex(s.constBits))], signature : null };
+		r.spec.signature = haxe.crypto.Md5.encode(r.spec.instances.join(":"));
 		r.signature = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
 
 		var r2 = byID.get(r.signature);
