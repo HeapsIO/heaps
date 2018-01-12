@@ -603,6 +603,8 @@ class HlslOut {
 	}
 
 	function initLocals() {
+		var locals = Lambda.array(locals);
+		locals.sort(function(v1,v2) return v1.id - v2.id);
 		for( v in locals ) {
 			add(STATIC);
 			addVar(v);
