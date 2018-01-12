@@ -419,29 +419,32 @@ class Graphics extends Drawable {
 		flush();
 	}
 
-	public function drawCircle( cx : Float, cy : Float, ray : Float, nsegments = 0 ) {
+	public function drawCircle( cx : Float, cy : Float, radius : Float, nsegments = 0 ) {
 		flush();
 		if( nsegments == 0 )
-			nsegments = Math.ceil(Math.abs(ray * 3.14 * 2 / 4));
+			nsegments = Math.ceil(Math.abs(radius * 3.14 * 2 / 4));
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = Math.PI * 2 / nsegments;
 		for( i in 0...nsegments + 1 ) {
 			var a = i * angle;
-			lineTo(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
+			lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
 		}
 		flush();
 	}
 
-	public function drawPie( cx : Float, cy : Float, ray : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
+	public function drawPie( cx : Float, cy : Float, radius : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
+		if(Math.abs(angleLength) >= Math.PI * 2) {
+			return drawCircle(cx, cy, radius, nsegments);
+		}
 		flush();
 		lineTo(cx, cy);
 		if( nsegments == 0 )
-			nsegments = Math.ceil(Math.abs(ray * angleLength / 4));
+			nsegments = Math.ceil(Math.abs(radius * angleLength / 4));
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = angleLength / (nsegments - 1);
 		for( i in 0...nsegments ) {
 			var a = i * angle + angleStart;
-			lineTo(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
+			lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
 		}
 		lineTo(cx, cy);
 		flush();
