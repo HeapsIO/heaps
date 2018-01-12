@@ -1,12 +1,12 @@
 package h3d.pass;
 
-class CustomOutput extends Default {
+class Output extends Default {
 
 	var outputs : Array<hxsl.Output>;
 
-	public function new( outputs ) {
+	public function new( name, outputs ) {
 		this.outputs = outputs;
-		super();
+		super(name);
 	}
 
 	override function getOutputs() {

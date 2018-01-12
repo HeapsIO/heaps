@@ -27,7 +27,7 @@ class MaterialSetup {
 	}
 
 	public function createRenderer() {
-		return new h3d.scene.Renderer();
+		return new h3d.scene.DefaultRenderer();
 	}
 
 	public function createLightSystem() {

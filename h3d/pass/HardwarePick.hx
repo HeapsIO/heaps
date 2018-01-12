@@ -31,7 +31,7 @@ class HardwarePick extends Default {
 	public var pickedIndex = -1;
 
 	public function new() {
-		super();
+		super("hwpick");
 		material = new h3d.mat.Pass("");
 		material.blend(One, Zero);
 		texOut = new h3d.mat.Texture(3, 3, [Target]);

@@ -30,8 +30,8 @@ class Default extends Base {
 	@global("global.modelView") var globalModelView : h3d.Matrix;
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
 
-	public function new() {
-		super();
+	public function new(name) {
+		super(name);
 		manager = new ShaderManager(getOutputs());
 		tcache = new h3d.impl.TextureCache();
 		shaderIdMap = [];

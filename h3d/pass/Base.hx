@@ -3,10 +3,10 @@ package h3d.pass;
 class Base {
 
 	var ctx : h3d.scene.RenderContext;
-	public var priority : Int = 0;
-	public var forceProcessing : Bool = false;
+	public var name(default, null) : String;
 
-	public function new() {
+	public function new(name) {
+		this.name = name;
 	}
 
 	public function getTexture( index = 0 ) : h3d.mat.Texture {
