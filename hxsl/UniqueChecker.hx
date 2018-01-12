@@ -6,8 +6,13 @@ class UniqueChecker {
 
 	var signatures = new Map<String,Int>();
 	var compile : Ast.ShaderData -> String;
+	var previousShaders = new Map<String,Bool>();
 
 	function new() {
+		var r = ~/^[0-9]+_([A-Fa-f0-9]+)\./;
+		for( f in (try sys.FileSystem.readDirectory("shaders") catch( e : Dynamic ) []) )
+			if( r.match(f) )
+				previousShaders.set(r.matched(1), true);
 	}
 
 	function duplicate( shader : ShaderData ) : ShaderData {
@@ -55,7 +60,8 @@ class UniqueChecker {
 		}
 
 		var head = "Shader " + sign;
-		var str = head + "\n\n" + vertexCode+"\n\n" + fragmentCode + "\n\n" + hxsl.Printer.shaderToString(shader.vertex.data, true)+ "\n\n" + hxsl.Printer.shaderToString(shader.fragment.data, true);
+		var str = head + "\n\n" + vertexCode+"\n\n" + fragmentCode + "\n\n" + hxsl.Printer.shaderToString(shader.vertex.data, true) + "\n\n" + hxsl.Printer.shaderToString(shader.fragment.data, true);
+
 		sys.io.File.saveContent("shaders/" + shader.id + "_" + sign + ".c", str);
 		signatures.set(sign, shader.id);
 
@@ -68,7 +74,10 @@ class UniqueChecker {
 			extra = " (" + (v == checkV ? "vertex" : "fragment") + " " + v.type+" with " + v.id + ")";
 		}
 
-		Sys.println("Shader " + shader.id+ " "+sign+extra);
+		if( previousShaders.exists(sign) )
+			Sys.println("Reuse  " + shader.id+ " "+sign);
+		else
+			Sys.println("Shader " + shader.id+ " "+sign+extra);
 
 		if( checkV != null && checkF != null && checkV.id == checkF.id ) {
 			var v = checkF;
