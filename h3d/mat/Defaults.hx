@@ -10,7 +10,10 @@ class Defaults {
 	// delay initialization if needed only
 	static function get_shadowShader() {
 		var s = shadowShader;
-		if( s == null ) shadowShader = s = new h3d.shader.Shadow();
+		if( s == null ) {
+			shadowShader = s = new h3d.shader.Shadow();
+			shadowShader.priority = -1;
+		}
 		return s;
 	}
 
