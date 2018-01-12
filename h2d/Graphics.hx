@@ -433,7 +433,7 @@ class Graphics extends Drawable {
 	}
 
 	public function drawPie( cx : Float, cy : Float, radius : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
-		if(angleLength >= Math.PI * 2) {
+		if(Math.abs(angleLength) >= Math.PI * 2) {
 			return drawCircle(cx, cy, radius, nsegments);
 		}
 		flush();
