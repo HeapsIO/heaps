@@ -11,6 +11,11 @@ class SearchMap {
 
 class Cache {
 
+	#if shader_debug_dump
+	public static var DEBUG_IDS = false;
+	public static var TRACE = false;
+	#end
+
 	var linkCache : SearchMap;
 	var linkShaders : Map<String, Shader>;
 	var byID : Map<String, RuntimeShader>;
@@ -175,11 +180,32 @@ class Cache {
 		for( s in shaderDatas ) Printer.check(s.inst.shader);
 		#end
 
+		#if shader_debug_dump
+		var shaderId = @:privateAccess RuntimeShader.UID;
+		if( shaderId == 0 ) try sys.FileSystem.createDirectory("shaders") catch( e : Dynamic ) {};
+		var dbg = sys.io.File.write("shaders/"+shaderId+"_dump.c");
+		if( dbg != null ) {
+			dbg.writeString("----- DATAS ----\n\n");
+			for( s in shaderDatas ) {
+				dbg.writeString("\t\t**** " + s.inst.shader.name + (s.p == 0 ? "" : " P="+s.p)+ " *****\n");
+				dbg.writeString(Printer.shaderToString(s.inst.shader,DEBUG_IDS)+"\n\n");
+			}
+		}
+		//TRACE = shaderId == 0;
+		#end
+
 		var linker = new hxsl.Linker();
 		var s = linker.link([for( s in shaderDatas ) s.inst.shader]);
 
 		#if debug
 		Printer.check(s,[for( s in shaderDatas ) s.inst.shader]);
+		#end
+
+		#if shader_debug_dump
+		if( dbg != null ) {
+			dbg.writeString("----- LINK ----\n\n");
+			dbg.writeString(Printer.shaderToString(s,DEBUG_IDS)+"\n\n");
+		}
 		#end
 
 		// params tracking
@@ -202,12 +228,28 @@ class Cache {
 		Printer.check(s.fragment,[prev]);
 		#end
 
+		#if shader_debug_dump
+		if( dbg != null ) {
+			dbg.writeString("----- SPLIT ----\n\n");
+			dbg.writeString(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
+			dbg.writeString(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
+		}
+		#end
+
 		var prev = s;
 		var s = new hxsl.Dce().dce(s.vertex, s.fragment);
 
 		#if debug
 		Printer.check(s.vertex,[prev.vertex]);
 		Printer.check(s.fragment,[prev.fragment]);
+		#end
+
+		#if shader_debug_dump
+		if( dbg != null ) {
+			dbg.writeString("----- DCE ----\n\n");
+			dbg.writeString(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
+			dbg.writeString(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
+		}
 		#end
 
 		var r = new RuntimeShader();
@@ -223,7 +265,16 @@ class Cache {
 		Printer.check(r.fragment.data,[s.fragment]);
 		#end
 
+		#if shader_debug_dump
+		if( dbg != null ) {
+			dbg.writeString("----- FLATTEN ----\n\n");
+			dbg.writeString(Printer.shaderToString(r.vertex.data, DEBUG_IDS) + "\n\n");
+			dbg.writeString(Printer.shaderToString(r.fragment.data,DEBUG_IDS)+"\n\n");
+		}
+		#end
+
 		r.signature = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
+
 		var r2 = byID.get(r.signature);
 		if( r2 != null )
 			r.id = r2.id; // same id but different variable mapping

@@ -260,6 +260,16 @@ class GlDriver extends Driver {
 
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
+
+			#if shader_debug_dump
+			hxsl.UniqueChecker.get().add(shader, function(s) {
+				var out = new ShaderCompiler();
+				out.version = glout.version;
+				out.glES = glout.glES;
+				return out.run(s);
+			});
+			#end
+
 			p.p = gl.createProgram();
 			#if (hlsdl || usegl)
 			if( !glout.glES ) {

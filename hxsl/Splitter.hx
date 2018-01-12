@@ -219,11 +219,13 @@ class Splitter {
 		v.parent = null;
 		var n = varNames.get(v.name);
 		if( n != null && n != v ) {
-			var k = 2;
-			while( varNames.exists(v.name + k) ) {
+			var prefix = v.name;
+			while( prefix.charCodeAt(prefix.length - 1) >= '0'.code && prefix.charCodeAt(prefix.length - 1) <= '9'.code )
+				prefix = prefix.substr(0, -1);
+			var k = prefix == v.name ? 2 : Std.parseInt(v.name.substr(prefix.length));
+			while( varNames.exists(prefix + k) )
 				k++;
-			}
-			v.name += k;
+			v.name = prefix + k;
 		}
 		varNames.set(v.name, v);
 	}
