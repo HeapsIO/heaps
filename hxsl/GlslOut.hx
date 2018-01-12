@@ -575,7 +575,7 @@ class GlslOut {
 		buf = tmp;
 
 		var locals = Lambda.array(locals);
-		locals.sort(function(v1, v2) return v1.id - v2.id);
+		locals.sort(function(v1, v2) return Reflect.compare(v1.name, v2.name));
 		for( v in locals ) {
 			addVar(v);
 			add(";\n");
