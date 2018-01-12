@@ -17,7 +17,7 @@ class Key {
 	public static inline var LEFT		= 37;
 	public static inline var UP			= 38;
 	// QUOTE (') keyCode is the same as RIGHT
-	//public static inline var QUOTE		= 39;
+	//public static inline var QUOTE	= 39;
 	public static inline var RIGHT		= 39;
 	public static inline var DOWN		= 40;
 	public static inline var COMMA		= 44;
@@ -186,13 +186,11 @@ class Key {
 	static function onEvent( e : Event ) {
 		switch( e.kind ) {
 		case EKeyDown:
-			// trace(e.keyCode);
 			if( !ALLOW_KEY_REPEAT && keyPressed[e.keyCode] > 0 ) return;
 			keyPressed[e.keyCode] = getFrame();
 		case EKeyUp:
 			keyPressed[e.keyCode] = -getFrame();
 		case EPush:
-			// trace(e.keyCode);
 			if( e.button < 5 ) keyPressed[e.button] = getFrame();
 		case ERelease:
 			if( e.button < 5 ) keyPressed[e.button] = -getFrame();
