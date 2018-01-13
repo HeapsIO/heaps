@@ -16,20 +16,10 @@ class Key {
 	public static inline var HOME		= 36;
 	public static inline var LEFT		= 37;
 	public static inline var UP			= 38;
-	// QUOTE (') keyCode is the same as RIGHT
-	//public static inline var QUOTE	= 39;
 	public static inline var RIGHT		= 39;
 	public static inline var DOWN		= 40;
-	public static inline var COMMA		= 44;
 	public static inline var INSERT		= 45;
-	// DOT (.) keyCode is the same as DELETE
-	//public static inline var DOT		= 46;
 	public static inline var DELETE		= 46;
-	public static inline var FSLASH		= 47;
-	public static inline var SEMICOLON	= 59;
-	public static inline var LBRACKET	= 91;
-	public static inline var BSLASH		= 92;
-	public static inline var RBRACKET	= 93;
 
 	public static inline var NUMBER_0	= 48;
 	public static inline var NUMBER_1	= 49;
@@ -119,6 +109,60 @@ class Key {
 	public static inline var RCTRL = CTRL | LOC_RIGHT;
 	public static inline var LALT = ALT | LOC_LEFT;
 	public static inline var RALT = ALT | LOC_RIGHT;
+
+	/** Support for Qwerty US layout keys **/
+	#if (hldx || flash || js)
+		public static inline var PAUSE			= 19;
+		public static inline var CAPS_LOCK		= 20;
+		public static inline var NUM_LOCK		= 144;
+		public static inline var SCROLL_LOCK	= 145;
+		public static inline var COMMA			= 188;
+		public static inline var DOT			= 190;
+		public static inline var SLASH			= 191;
+		public static inline var BACKTICK		= 192;
+		public static inline var LBRACKET		= 219;
+		public static inline var BACKSLASH		= 220;
+		public static inline var RBRACKET		= 221;
+		public static inline var QUOTE			= 222;
+
+		/** JS shares most of the keys with hldx and flash, except these **/
+		#if (hldx || flash)
+			public static inline var SEMICOLON	= 186;
+			public static inline var EQUALS		= 187;
+			public static inline var MINUS		= 189;
+		#elseif js
+			public static inline var SEMICOLON	= 59;
+			public static inline var EQUALS		= 61;
+			public static inline var MINUS		= 173;
+		#end
+
+	#elseif hlsdl
+		public static inline var PRINT_SCREEN	= 1070;
+		public static inline var PAUSE			= 1072;
+		public static inline var CAPS_LOCK		= 1057;
+		public static inline var NUM_LOCK		= 1083;
+		public static inline var SCROLL_LOCK	= 1071;
+		public static inline var SEMICOLON		= 59;
+		public static inline var EQUALS			= 61;
+		public static inline var COMMA			= 44;
+		public static inline var SLASH			= 47;
+		public static inline var LBRACKET		= 91;
+		public static inline var BACKSLASH		= 92;
+		public static inline var RBRACKET		= 93;
+		/**
+			MINUS ( - ) key code is the same as INSERT
+			public static inline var MINUS			= 45;
+
+			DOT ( . ) key code is the same as DELETE
+			public static inline var DOT			= 46;
+
+			BACKTICK ( ` ) key code is the same as NUMPAD_0
+			public static inline var BACKTICK		= 96;
+
+			QUOTE ( ' ) key code is the same as RIGHT
+			public static inline var QUOTE			= 39;
+		**/
+	#end
 
 	#if noEngine
 	public static var frameCount = 0;
