@@ -27,6 +27,7 @@ class Checker {
 	var globals : Map<String,{ g : TGlobal, t : Type }>;
 	var curFun : TFunction;
 	var inLoop : Bool;
+	public var inits : Array<{ v : TVar, e : TExpr }>;
 
 	public function new() {
 		globals = new Map();
@@ -141,6 +142,7 @@ class Checker {
 
 	public function check( name : String, shader : Expr ) : ShaderData {
 		vars = new Map();
+		inits = [];
 		inLoop = false;
 
 		var funs = [];
@@ -586,12 +588,25 @@ class Checker {
 						default:
 						}
 				}
-				if( v.expr != null ) error("Cannot initialize variable declaration", v.expr.pos);
+				var einit = null;
+				if( v.expr != null ) {
+					if( v.kind != Param )
+						error("Cannot initialize variable declaration if not @param", v.expr.pos);
+					var e = typeExpr(v.expr, v.type == null ? Value : With(v.type));
+					if( v.type == null )
+						v.type = e.t;
+					else
+						unify(e.t, v.type, v.expr.pos);
+					checkConst(e);
+					einit = e;
+				}
 				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
 				var v = makeVar(v, e.pos);
 				if( isImport && v.kind == Param )
 					continue;
+				if( einit != null )
+					inits.push({ v : v, e : einit });
 				vars.set(v.name, v);
 			}
 		case ECall( { expr : EIdent("import") }, [e]):
@@ -627,6 +642,17 @@ class Checker {
 				checkExpr(sexpr, funs, isImport, true);
 		default:
 			error("This expression is not allowed at shader declaration level", e.pos);
+		}
+	}
+
+	function checkConst( e : TExpr ) {
+		switch( e.e ) {
+		case TConst(_):
+		case TParenthesis(e): checkConst(e);
+		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4) }, args):
+			for( a in args ) checkConst(a);
+		default:
+			error("This expression should be constant", e.p);
 		}
 	}
 
