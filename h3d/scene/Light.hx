@@ -8,7 +8,7 @@ class Light extends Object {
 	@:noCompletion public var next : Light;
 
 	@:s public var priority : Int = 0;
-	public var color(get, never) : h3d.Vector;
+	public var color(get, set) : h3d.Vector;
 	public var enableSpecular(get, set) : Bool;
 
 	function new(shader,?parent) {
@@ -19,6 +19,10 @@ class Light extends Object {
 	// dummy implementation
 	function get_color() {
 		return new h3d.Vector();
+	}
+
+	function set_color(v:h3d.Vector) {
+		return v;
 	}
 
 	function get_enableSpecular() {

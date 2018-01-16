@@ -16,6 +16,10 @@ class DirLight extends Light {
 		return dshader.color;
 	}
 
+	override function set_color(v) {
+		return dshader.color = v;
+	}
+
 	override function get_enableSpecular() {
 		return dshader.enableSpecular;
 	}

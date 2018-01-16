@@ -59,6 +59,17 @@ class Renderer {
 		return h3d.Engine.getCurrent().driver.hasFeature(f);
 	}
 
+	function getDefaultLight<T:h3d.scene.Light>( l : T ) : T {
+		return l;
+	}
+
+	function getLightSystem() : h3d.pass.LightSystem {
+		return ctx.scene.lightSystem;
+	}
+
+	function time( name : String ) {
+	}
+
 	@:access(h3d.scene.Object)
 	function depthSort( passes : h3d.pass.Object, frontToBack = false ) {
 		var p = passes;
@@ -92,6 +103,12 @@ class Renderer {
 	function setTarget( tex ) {
 		if( hasSetTarget ) ctx.engine.popTarget();
 		ctx.engine.pushTarget(tex);
+		hasSetTarget = true;
+	}
+
+	function setTargets<T:h3d.mat.Texture>( textures : Array<T> ) {
+		if( hasSetTarget ) ctx.engine.popTarget();
+		ctx.engine.pushTargets(cast textures);
 		hasSetTarget = true;
 	}
 

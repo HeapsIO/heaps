@@ -17,7 +17,7 @@ class ShadowMap extends Default {
 	public var bias = 0.01;
 	public var blur : Blur;
 
-	public function new(size) {
+	public function new(size=1024) {
 		super("shadow");
 		this.size = size;
 		lightCamera = new h3d.Camera();

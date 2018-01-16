@@ -14,6 +14,10 @@ class PointLight extends Light {
 		return pshader.color;
 	}
 
+	override function set_color(v) {
+		return pshader.color = v;
+	}
+
 	override function get_enableSpecular() {
 		return pshader.enableSpecular;
 	}
