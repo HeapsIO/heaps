@@ -17,6 +17,3 @@ script:
   - cd samples
   - yes | haxelib install all
   - haxe all.hxml
-
-notifications:
-  email: false
