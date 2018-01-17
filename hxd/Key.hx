@@ -97,6 +97,18 @@ class Key {
 	public static inline var MOUSE_FORWARD = 4;
 	public static inline var MOUSE_WHEEL_UP = 5;
 	public static inline var MOUSE_WHEEL_DOWN = 6;
+	
+	public static inline var GRAVE_ACCENT = 192;
+	public static inline var EQUAL_SIGN = 187;
+	public static inline var DASH = 189;
+	public static inline var BRACKET_OPEN = 219;
+	public static inline var BRACKET_CLOSE = 221;
+	public static inline var QUOTE_SINGLE = 222;
+	public static inline var SLASH_FORWARD = 191;
+	
+	public static inline var SEMICOLON = 186;
+	public static inline var COMMA = 188;
+	public static inline var PERIOD = 190;
 
 	/** a bit that is set for left keys **/
 	public static inline var LOC_LEFT = 256;
