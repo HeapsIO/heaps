@@ -352,6 +352,10 @@ class Graphics extends Drawable {
 		doFill = true;
 	}
 
+	/**
+		Position a virtual tile at the given position and scale. Every draw will display a part of this tile relative
+		to these coordinates.
+	**/
 	public function beginTileFill( ?dx : Float, ?dy : Float, ?scaleX : Float, ?scaleY : Float, ?tile : h2d.Tile ) {
 		beginFill(0xFFFFFF);
 		if( dx == null ) dx = 0;
@@ -361,8 +365,10 @@ class Graphics extends Drawable {
 				var tex = this.tile.getTexture();
 				if( tex.width != 1 || tex.height != 1 )
 					throw "All tiles must be of the same texture";
+				this.tile = tile;
 			}
-			this.tile = tile;
+			if( this.tile == null  )
+				this.tile = tile;
 		} else
 			tile = this.tile;
 		if( tile == null )
@@ -381,6 +387,12 @@ class Graphics extends Drawable {
 		md = pixHeight / scaleY;
 		mx = -dx * ma;
 		my = -dy * md;
+	}
+
+	public function drawTile( x : Float, y : Float, tile : h2d.Tile ) {
+		beginTileFill(x, y, tile);
+		drawRect(x, y, tile.width, tile.height);
+		endFill();
 	}
 
 	public function lineStyle( size : Float = 0, color = 0, alpha = 1. ) {
