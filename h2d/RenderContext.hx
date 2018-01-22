@@ -231,6 +231,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.setRenderZone();
 	}
 
+	function drawLayer( layer : Int ) {
+		@:privateAccess scene.drawLayer(this, layer);
+	}
+
 	public function drawScene() {
 		@:privateAccess scene.drawRec(this);
 	}

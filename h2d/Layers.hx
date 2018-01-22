@@ -96,6 +96,21 @@ class Layers extends Sprite {
 		return new hxd.impl.ArrayIterator(a);
 	}
 
+	function drawLayer( ctx : RenderContext, layer : Int ) {
+		if( layer >= layerCount )
+			return;
+		var old = ctx.globalAlpha;
+		ctx.globalAlpha *= alpha;
+		var start = layer == 0 ? 0 : layersIndexes[layer - 1];
+		var max = layersIndexes[layer];
+		if( ctx.front2back ) {
+			for( i in start...max ) children[max - 1 - i].drawRec(ctx);
+		} else {
+			for( i in start...max ) children[i].drawRec(ctx);
+		}
+		ctx.globalAlpha = old;
+	}
+
 	public function ysort( layer : Int ) {
 		if( layer >= layerCount ) return;
 		var start = layer == 0 ? 0 : layersIndexes[layer - 1];
