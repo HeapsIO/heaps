@@ -11,7 +11,7 @@ class Source {
 	public var channel : Channel;
 	public var buffers : Array<Buffer>;
 	
-	public var volume  = 1.;
+	public var volume  = -1.0;
 	public var playing = false;
 	public var start   = 0;
 
@@ -497,6 +497,7 @@ class Manager {
 		if (s.playing) {
 			s.playing = false;
 			driver.stopSource(s.handle);
+			s.volume = -1.0;
 		}
 
 		while(s.buffers.length > 0) unqueueBuffer(s);
