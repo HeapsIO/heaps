@@ -226,12 +226,12 @@ class DriverImpl implements Driver {
 	}
 
 	public function getEffectDriver(type : String) : EffectDriver<Dynamic> {
-		switch(type) {
-			case "pitch"          : return new PitchDriver(this);
-			case "spatialization" : return new SpatializationDriver(this);
-			case "lowpass"        : return new LowPassDriver(this);
-			case "reverb"         : return new ReverbDriver(this);
-			default : throw "nope";
+		return switch(type) {
+			case "pitch"          : new PitchDriver(this);
+			case "spatialization" : new SpatializationDriver(this);
+			case "lowpass"        : new LowPassDriver(this);
+			case "reverb"         : new ReverbDriver(this);
+			default               : new EffectDriver<Dynamic>();
 		}
 	}
 }

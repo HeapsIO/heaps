@@ -86,8 +86,6 @@ class Channel extends ChannelBase {
 	**/
 	public function queueSound( sound : hxd.res.Sound ) {
 		queue.push(sound);
-		//if (manager != null && source != null)
-		//	@:privateAccess manager.syncBuffers(source, this);
 	}
 
 	public function stop() {
