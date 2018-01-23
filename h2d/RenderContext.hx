@@ -45,6 +45,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var renderY : Float;
 	var renderW : Float;
 	var renderH : Float;
+	var currentBlend : BlendMode;
 
 	public function new(scene) {
 		super();
@@ -56,6 +57,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		pass = new h3d.mat.Pass("",null);
 		pass.depth(true, Always);
 		pass.culling = None;
+		currentBlend = Alpha;
+		pass.setBlendMode(currentBlend);
 		baseShader = new h3d.shader.Base2d();
 		baseShader.priority = 100;
 		baseShader.zValue = 0.;
@@ -261,8 +264,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		texture.filter = (currentObj.smooth == null ? defaultSmooth : (currentObj.smooth:Bool)) ? Linear : Nearest;
 		texture.wrap = currentObj.tileWrap ? Repeat : Clamp;
 		var blend = currentObj.blendMode;
-		if( inFilter == currentObj  && blend == Erase ) blend = Add; // add THEN erase
-		pass.setBlendMode(blend);
+		if( inFilter == currentObj && blend == Erase ) blend = Add; // add THEN erase
+		if( blend != currentBlend ) {
+			currentBlend = blend;
+			pass.setBlendMode(blend);
+		}
 		manager.fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);
 		engine.uploadShaderBuffers(buffers, Params);
