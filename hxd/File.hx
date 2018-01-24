@@ -96,6 +96,26 @@ class File {
 				onSelect(sel);
 			});
 			f.browse(filters);
+		#elseif (hl && (haxe_ver >= 4))
+			var path = hl.UI.loadFile({
+				fileName : options.defaultPath,
+				filters : options.fileTypes == null ? null : [for( e in options.fileTypes ) { name : e.name, exts : e.extensions }],
+				title : options.title,
+			});
+			if( path == null ) return;
+			if( options.relativePath ) {
+				var cwd = Sys.getCwd();
+				if( StringTools.startsWith(path, cwd) )
+					path = path.substr(cwd.length);
+			}
+			var b : BrowseSelect = {
+				fileName : path,
+				load : function(onReady) {
+					var data = sys.io.File.getBytes(path);
+					haxe.Timer.delay(function() onReady(data),0);
+				},
+			};
+			onSelect(b);
 		#else
 			throw "Not supported";
 		#end
@@ -144,6 +164,22 @@ class File {
 			});
 			var defaultFile = options.defaultPath;
 			f.save(dataContent.getData(), defaultFile);
+		#elseif (hl && (haxe_ver >= 4))
+			var path = hl.UI.saveFile({
+				fileName : options.defaultPath,
+				title : options.title,
+				filters : options.fileTypes == null ? null : [for( e in options.fileTypes ) { name : e.name, exts : e.extensions }],
+			});
+			if( path == null )
+				return;
+			if( options.relativePath ) {
+				var cwd = Sys.getCwd();
+				if( StringTools.startsWith(path, cwd) )
+					path = path.substr(cwd.length);
+			}
+			if( options.saveFileName != null )
+				options.saveFileName(path);
+			sys.io.File.saveBytes(path, dataContent);
 		#else
 			throw "Not supported";
 		#end
@@ -247,6 +283,9 @@ class File {
 			onLoad(haxe.io.Bytes.ofData(f.data));
 		});
 		f.load(new flash.net.URLRequest(path));
+		#elseif sys
+		var content = try sys.io.File.getBytes(path) catch( e : Dynamic ) { if( onError != null ) onError("" + e); return; };
+		onLoad(content);
 		#else
 		throw "Not supported";
 		#end
