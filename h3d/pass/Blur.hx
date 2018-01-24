@@ -22,6 +22,12 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 	public var passes : Int;
 
 
+	/**
+		How much the blur increases or decreases the color amount (default = 1)
+	**/
+	@range(0, 5, 1) @inspect
+	public var gain(default,set) : Float;
+
 	public var depthBlur(default,set) : {
 		depths : h3d.mat.Texture,
 		normals : h3d.mat.Texture,
@@ -47,6 +53,10 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		return sigma = s;
 	}
 
+	function set_gain(s) {
+		values = null;
+		return gain = s;
+	}
 
 	function set_depthBlur(d) {
 		depthBlur = d;
@@ -78,6 +88,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 			tot += g;
 			if( i > 0 ) tot += g;
 		}
+		tot /= gain;
 		for( i in 0...quality + 1 )
 			values[i] /= tot;
 	}
