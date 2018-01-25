@@ -73,7 +73,7 @@ class Sound extends Resource {
 
 	public function play( ?loop = false, ?volume = 1., ?channelGroup, ?soundGroup ) {
 		lastPlay = haxe.Timer.stamp();
-		channel = hxd.snd.Driver.get().play(this, channelGroup, soundGroup);
+		channel = hxd.snd.Manager.get().play(this, channelGroup, soundGroup);
 		channel.loop = loop;
 		channel.volume = volume;
 		return channel;
