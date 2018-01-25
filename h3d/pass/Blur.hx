@@ -36,11 +36,12 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 
 	var values : Array<Float>;
 
-	public function new(quality = 1, passes = 1, sigma = 1.) {
+	public function new(quality = 1, passes = 1, sigma = 1., gain = 1.) {
 		super(new h3d.shader.Blur());
 		this.quality = quality;
 		this.passes = passes;
 		this.sigma = sigma;
+		this.gain = gain;
 	}
 
 	function set_quality(q) {
