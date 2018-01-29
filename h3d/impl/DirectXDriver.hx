@@ -89,6 +89,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentVBuffers = new hl.NativeArray<dx.Resource>(16);
 	var frame : Int;
 	var currentMaterialBits = -1;
+	var targetsCount = 1;
 
 	var depthStates : Map<Int,DepthStencilState> = new Map();
 	var blendStates : Map<Int,BlendState> = new Map();
@@ -201,8 +202,10 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function clear(?color:h3d.Vector, ?depth:Float, ?stencil:Int) {
-		if( color != null )
-			Driver.clearColor(currentTargets[0], color.r, color.g, color.b, color.a);
+		if( color != null ) {
+			for( i in 0...targetsCount )
+				Driver.clearColor(currentTargets[i], color.r, color.g, color.b, color.a);
+		}
 		if( depth != null || stencil != null )
 			Driver.clearDepthStencilView(currentDepth.view, depth, stencil);
 	}
@@ -580,6 +583,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			curTexture = null;
 			currentDepth = defaultDepth;
 			currentTargets[0] = defaultTarget;
+			targetsCount = 1;
 			Driver.omSetRenderTargets(1, currentTargets, currentDepth.view);
 			viewport[2] = outputWidth;
 			viewport[3] = outputHeight;
@@ -645,6 +649,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			}
 		}
 		Driver.omSetRenderTargets(textures.length, currentTargets, currentDepth == null ? null : currentDepth.view);
+		targetsCount = textures.length;
 
 		viewport[2] = tex.width >> mipLevel;
 		viewport[3] = tex.height >> mipLevel;
