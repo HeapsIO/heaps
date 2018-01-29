@@ -42,6 +42,7 @@ class HMDOut extends BaseLibrary {
 		var uvs = geom.getUVs();
 		var colors = geom.getColors();
 		var mats = geom.getMaterials();
+		var tangents = geom.getTangents(true);
 
 		// remove empty color data
 		if( colors != null ) {
@@ -61,18 +62,21 @@ class HMDOut extends BaseLibrary {
 		];
 		if( normals != null )
 			g.vertexFormat.push(new GeometryFormat("normal", DVec3));
+		if( tangents != null )
+			g.vertexFormat.push(new GeometryFormat("tangent", DVec3));
 		for( i in 0...uvs.length )
 			g.vertexFormat.push(new GeometryFormat("uv" + (i == 0 ? "" : "" + (i + 1)), DVec2));
 		if( colors != null )
 			g.vertexFormat.push(new GeometryFormat("color", DVec3));
 
-		var stride = 3 + (normals == null ? 0 : 3) + uvs.length * 2 + (colors == null ? 0 : 3);
 		if( skin != null ) {
 			if( bonesPerVertex <= 0 || bonesPerVertex > 4 ) throw "assert";
 			g.vertexFormat.push(new GeometryFormat("weights", [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1]));
 			g.vertexFormat.push(new GeometryFormat("indexes", floatSkinIndexes ? [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1] : DBytes4));
-			stride += bonesPerVertex + (floatSkinIndexes ? bonesPerVertex : 1);
 		}
+		var stride = 0;
+		for( f in g.vertexFormat )
+			stride += f.format.getSize();
 		g.vertexStride = stride;
 		g.vertexCount = 0;
 
@@ -125,6 +129,12 @@ class HMDOut extends BaseLibrary {
 					tmpBuf[p++] = nx;
 					tmpBuf[p++] = ny;
 					tmpBuf[p++] = nz;
+				}
+
+				if( tangents != null ) {
+					tmpBuf[p++] = tangents[k * 3];
+					tmpBuf[p++] = tangents[k * 3 + 1];
+					tmpBuf[p++] = tangents[k * 3 + 2];
 				}
 
 				for( tuvs in uvs ) {

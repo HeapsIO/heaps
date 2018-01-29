@@ -3,6 +3,7 @@ package h3d.mat;
 class Material extends BaseMaterial {
 
 	var mshader : h3d.shader.BaseMesh;
+	var normalShader : h3d.shader.NormalMap;
 
 	public var props(default, set) : Any;
 	public var model : hxd.res.Resource;
@@ -15,7 +16,7 @@ class Material extends BaseMaterial {
 	public var specularShader(default, null) : h3d.shader.SpecularTexture;
 	public var texture(get, set) : h3d.mat.Texture;
 	public var specularTexture(get, set) : h3d.mat.Texture;
-	public var normalMap : h3d.mat.Texture;
+	public var normalMap(get,set) : h3d.mat.Texture;
 
 	public var color(get, set) : Vector;
 	public var specularAmount(get, set) : Float;
@@ -154,6 +155,26 @@ class Material extends BaseMaterial {
 				mainPass.addShader(textureShader);
 			}
 			textureShader.texture = t;
+		}
+		return t;
+	}
+
+	function get_normalMap() {
+		return normalShader == null ? null : normalShader.texture;
+	}
+
+	function set_normalMap(t) {
+		if( t == null ) {
+			if( normalShader != null ) {
+				mainPass.removeShader(normalShader);
+				normalShader = null;
+			}
+		} else {
+			if( normalShader == null ) {
+				normalShader = new h3d.shader.NormalMap();
+				mainPass.addShader(normalShader);
+			}
+			normalShader.texture = t;
 		}
 		return t;
 	}

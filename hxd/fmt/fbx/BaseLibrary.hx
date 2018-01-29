@@ -198,6 +198,8 @@ class BaseLibrary {
 				convertPoints(v.getFloats());
 			for( v in g.getAll("LayerElementNormal.Normals") )
 				convertPoints(v.getFloats());
+			for( v in g.getAll("LayerElementNormal.Tangents") )
+				convertPoints(v.getFloats());
 		}
 	}
 
