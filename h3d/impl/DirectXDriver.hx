@@ -268,6 +268,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		return switch( t.format ) {
 		case RGBA: R8G8B8A8_UNORM;
 		case RGBA16F: R16G16B16A16_FLOAT;
+		case RGBA32F: R32G32B32A32_FLOAT;
 		case ALPHA32F: R32_FLOAT;
 		case ALPHA16F: R16_FLOAT;
 		case ALPHA8: R8_UNORM;
