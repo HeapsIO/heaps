@@ -12,6 +12,11 @@ class PointLight extends hxsl.Shader {
 			var position : Vec3;
 		};
 
+		/**
+			Don't use model normal to calculate light amount
+		**/
+		@const var isAmbient : Bool;
+
 		var lightColor : Vec3;
 		var lightPixelColor : Vec3;
 		var transformedPosition : Vec3;
@@ -25,7 +30,7 @@ class PointLight extends hxsl.Shader {
 			var dvec = lightPosition - position;
 			var dist2 = dvec.dot(dvec);
 			var dist = dist2.sqrt();
-			var diff = transformedNormal.dot(dvec).max(0.);
+			var diff : Float =  isAmbient ? 1. : transformedNormal.dot(dvec).max(0.);
 			var factor = 1 / vec3(dist, dist2, dist * dist2).dot(params);
 			if( !enableSpecular )
 				return color * diff * factor;
