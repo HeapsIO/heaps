@@ -253,18 +253,7 @@ class Cache {
 		}
 		#end
 
-		var r = new RuntimeShader();
-		r.vertex = flattenShader(s.vertex, Vertex, paramVars);
-		r.vertex.vertex = true;
-		r.fragment = flattenShader(s.fragment, Fragment, paramVars);
-		r.globals = new Map();
-		initGlobals(r, r.vertex);
-		initGlobals(r, r.fragment);
-
-		#if debug
-		Printer.check(r.vertex.data,[s.vertex]);
-		Printer.check(r.fragment.data,[s.fragment]);
-		#end
+		var r = buildRuntimeShader(s.vertex, s.fragment, paramVars);
 
 		#if shader_debug_dump
 		if( dbg != null ) {
@@ -284,6 +273,22 @@ class Cache {
 		else
 			byID.set(r.signature, r);
 
+		return r;
+	}
+
+	function buildRuntimeShader( vertex : ShaderData, fragment : ShaderData, paramVars ) {
+		var r = new RuntimeShader();
+		r.vertex = flattenShader(vertex, Vertex, paramVars);
+		r.vertex.vertex = true;
+		r.fragment = flattenShader(fragment, Fragment, paramVars);
+		r.globals = new Map();
+		initGlobals(r, r.vertex);
+		initGlobals(r, r.fragment);
+
+		#if debug
+		Printer.check(r.vertex.data,[vertex]);
+		Printer.check(r.fragment.data,[fragment]);
+		#end
 		return r;
 	}
 
