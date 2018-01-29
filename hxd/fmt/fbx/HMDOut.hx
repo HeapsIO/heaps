@@ -474,23 +474,16 @@ class HMDOut extends BaseLibrary {
 				// get texture
 				var texture = getSpecChild(m, "DiffuseColor");
 				if( texture != null ) {
-					var path = texture.get("FileName").props[0].toString();
-					if( path != "" ) {
-						path = path.split("\\").join("/");
-						if( !absoluteTexturePath ) {
-							if( filePath != null && StringTools.startsWith(path.toLowerCase(), filePath) )
-								path = path.substr(filePath.length);
-							else {
-								// relative resource path
-								var k = path.split("/res/");
-								if( k.length > 1 ) {
-									k.shift();
-									path = k.join("/res/");
-								}
-							}
-						}
-						mat.diffuseTexture = path;
-					}
+					var path = makeTexturePath(texture);
+					if( path != null ) mat.diffuseTexture = path;
+				}
+
+				// get other textures
+				mat.normalMap = makeTexturePath(getSpecChild(m, "NormalMap"));
+				mat.specularTexture = makeTexturePath(getSpecChild(m, "SpecularFactor"));
+				if( mat.normalMap != null || mat.specularTexture != null ) {
+					if( mat.props == null ) mat.props = [];
+					mat.props.push(HasExtraTextures);
 				}
 
 				// get alpha map
@@ -504,7 +497,7 @@ class HMDOut extends BaseLibrary {
 							// if that's the same file, we're doing alpha blending
 							if( mat.blendMode == null && ext != "jpg" && ext != "jpeg" ) mat.blendMode = Alpha;
 						} else
-							throw "TODO : alpha texture";
+							throw "Alpha texture that is different from diffuse is not supported in HMD";
 					}
 				}
 
@@ -555,6 +548,28 @@ class HMDOut extends BaseLibrary {
 			else
 				model.materials = [for( id in gdata.materials ) mids[id]];
 		}
+	}
+
+	function makeTexturePath( tex : FbxNode ) {
+		if( tex == null )
+			return null;
+		var path = tex.get("FileName").props[0].toString();
+		if( path == "" )
+			return null;
+		path = path.split("\\").join("/");
+		if( !absoluteTexturePath ) {
+			if( filePath != null && StringTools.startsWith(path.toLowerCase(), filePath) )
+				path = path.substr(filePath.length);
+			else {
+				// relative resource path
+				var k = path.split("/res/");
+				if( k.length > 1 ) {
+					k.shift();
+					path = k.join("/res/");
+				}
+			}
+		}
+		return path;
 	}
 
 	function makeSkin( skin : h3d.anim.Skin, obj : TmpObject ) {

@@ -14,7 +14,8 @@ class Material extends BaseMaterial {
 	public var textureShader(default, null) : h3d.shader.Texture;
 	public var specularShader(default, null) : h3d.shader.SpecularTexture;
 	public var texture(get, set) : h3d.mat.Texture;
-	public var specularTexture(get,set) : h3d.mat.Texture;
+	public var specularTexture(get, set) : h3d.mat.Texture;
+	public var normalMap : h3d.mat.Texture;
 
 	public var color(get, set) : Vector;
 	public var specularAmount(get, set) : Float;
