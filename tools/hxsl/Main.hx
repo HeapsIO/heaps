@@ -49,7 +49,10 @@ class Main {
 		});
 
 		gl = canvas.getContextWebGL();
+		for( ext in ['WEBGL_draw_buffers', 'OES_standard_derivatives', 'OES_texture_float', 'OES_texture_float_linear'] )
+			gl.getExtension(ext);
 
+		out.onkeyup = rebuild;
 		text.onkeyup = rebuild;
 		vars.onkeyup = rebuild;
 
@@ -156,17 +159,13 @@ class Main {
 			codes.set(Link, formatHxsl(linked));
 
 			var split = new hxsl.Splitter().split(linked);
-
 			codes.set(Split, formatHxsl(split.vertex)+"\n\n"+formatHxsl(split.fragment));
 
 			var dce = new hxsl.Dce().dce(split.vertex, split.fragment);
-
 			codes.set(Dce, formatHxsl(dce.vertex) + "\n\n" + formatHxsl(dce.fragment));
 
 			var r = @:privateAccess cache.buildRuntimeShader(dce.vertex, dce.fragment, paramVars);
-
 			codes.set(HXSL, formatHxsl(r.vertex.data) + "\n\n" + formatHxsl(r.fragment.data)); // todo : add mapping of constants to buffers
-
 
 			var glsl = new hxsl.GlslOut();
 			glsl.glES = true;
@@ -178,7 +177,6 @@ class Main {
 				var s = gl.createShader(type);
 				gl.shaderSource(s, source);
 				gl.compileShader(s);
-				var log = gl.getShaderInfoLog(s);
 				if( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
 					var log = gl.getShaderInfoLog(s);
 					var lid = Std.parseInt(log.substr(9));
@@ -186,7 +184,9 @@ class Main {
 					if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
 					var codeLines = code.split("\n");
 					for( i in 0...codeLines.length )
-						codeLines[i] = (i+1) + "\t" + codeLines[i];
+						codeLines[i] = (i + 1) + "\t" + codeLines[i];
+					if( log.indexOf("'GL_EXT_draw_buffers' : extension is not supported") > 0 )
+						throw "Multiple output not supported (upgrade driver)";
 					throw "An error occurred compiling the shaders: " + log + line+"\n\n"+codeLines.join("\n");
 				}
 				return s;
@@ -206,17 +206,17 @@ class Main {
 
 			var hlsl = new hxsl.HlslOut();
 			codes.set(HLSL, hlsl.run(r.vertex.data) + "\n\n" + hlsl.run(r.fragment.data));
-
 			setError("OK");
-
-
 
 		} catch( e : hscript.Expr.Error ) {
 
 			var str = hscript.Printer.errorToString(e);
 			setError(str);
 		} catch( e : hxsl.Ast.Error ) {
-			setError("Line "+code.substr(0,e.pos.min).split("\n").length+": "+e.msg);
+			if( e.pos == null )
+				setError(e.msg);
+			else
+				setError("Line "+code.substr(0,e.pos.min).split("\n").length+": "+e.msg);
 		} catch( e : Dynamic ) {
 			setError("" + e);
 		}
