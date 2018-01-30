@@ -3,16 +3,13 @@ package hxd.snd;
 #if usesys
 typedef SourceHandle = haxe.AudioTypes.SourceHandle;
 typedef BufferHandle = haxe.AudioTypes.BufferHandle;
-#else
+#elseif hlopenal
 typedef SourceHandle = hxd.snd.openal.AudioTypes.SourceHandle;
 typedef BufferHandle = hxd.snd.openal.AudioTypes.BufferHandle;
+#else
+typedef SourceHandle = {};
+typedef BufferHandle = {};
 #end
-
-enum SourceState {
-	Stopped;
-	Playing;
-	Unhandled;
-}
 
 class EffectDriver<T> {
 	public function new() {}
@@ -26,13 +23,12 @@ class EffectDriver<T> {
 }
 
 interface Driver {
-	public function setMasterVolume     (value : Float) : Void;
-	public function setListenerParams   (position : h3d.Vector, direction : h3d.Vector, up : h3d.Vector, ?velocity : h3d.Vector) : Void;
+	public function setMasterVolume      (value : Float) : Void;
+	public function setListenerParams    (position : h3d.Vector, direction : h3d.Vector, up : h3d.Vector, ?velocity : h3d.Vector) : Void;
 
 	public function createSource         () : SourceHandle;
 	public function playSource           (source : SourceHandle) : Void;
 	public function stopSource           (source : SourceHandle) : Void;
-	public function getSourceState       (source : SourceHandle) : SourceState;
 	public function setSourceVolume      (source : SourceHandle, value : Float) : Void;
 	public function destroySource        (source : SourceHandle) : Void; 
 
