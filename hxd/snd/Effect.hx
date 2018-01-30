@@ -18,7 +18,10 @@ class Effect {
 		this.lastStamp  = 0.0;
 
 		@:privateAccess
-		this.driver = hxd.snd.Manager.get().driver.getEffectDriver(type); 
+		var managerDriver = hxd.snd.Manager.get().driver;
+		if (managerDriver != null) {
+			this.driver = managerDriver.getEffectDriver(type); 
+		}
 	}
 
 	// used to evaluate gain midification for virtualization sorting
