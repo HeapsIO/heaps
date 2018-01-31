@@ -36,7 +36,7 @@ class Shadows extends hxd.App {
 		dir = new h3d.scene.DirLight(new h3d.Vector(-0.3, -0.2, -1), s3d);
 		dir.enableSpecular = true;
 
-		shadow = cast(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
+		shadow = s3d.renderer.getPass(h3d.pass.ShadowMap);
 		shadow.blur.passes = 3;
 
 		s3d.camera.pos.set(12, 12, 6);
