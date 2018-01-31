@@ -22,6 +22,7 @@ class Dce {
 
 	var used : Map<Int,VarDeps>;
 	var channelVars : Array<TVar>;
+	var markAsKeep : Bool;
 
 	public function new() {
 	}
@@ -44,31 +45,48 @@ class Dce {
 			if( v.kind == Output )
 				i.keep = true;
 		}
-		for( f in vertex.funs )
-			check(f.expr, []);
-		for( f in fragment.funs )
-			check(f.expr, []);
 
-		for( v in used )
-			if( v.keep )
+		// collect dependencies
+		for( f in vertex.funs )
+			check(f.expr, [], []);
+		for( f in fragment.funs )
+			check(f.expr, [], []);
+
+		var outExprs = [];
+		while( true ) {
+
+			for( v in used )
+				if( v.keep )
+					markRec(v);
+
+			while( inputs.length > 1 && !inputs[inputs.length - 1].used )
+				inputs.pop();
+			for( v in inputs )
 				markRec(v);
 
-		while( inputs.length > 1 && !inputs[inputs.length - 1].used )
-			inputs.pop();
-		for( v in inputs )
-			markRec(v);
+			outExprs = [];
+			for( f in vertex.funs )
+				outExprs.push(mapExpr(f.expr, false));
+			for( f in fragment.funs )
+				outExprs.push(mapExpr(f.expr, false));
+
+			// post add conditional branches
+			markAsKeep = false;
+			for( e in outExprs )
+				checkBranches(e);
+			if( !markAsKeep ) break;
+		}
+
+		for( f in vertex.funs )
+			f.expr = outExprs.shift();
+		for( f in fragment.funs )
+			f.expr = outExprs.shift();
 
 		for( v in used ) {
 			if( v.used ) continue;
 			vertex.vars.remove(v.v);
 			fragment.vars.remove(v.v);
 		}
-
-		for( f in vertex.funs )
-			f.expr = mapExpr(f.expr, false);
-		for( f in fragment.funs )
-			f.expr = mapExpr(f.expr, false);
-
 
 		return {
 			fragment : fragment,
@@ -96,56 +114,56 @@ class Dce {
 		var vd = get(v);
 		for( w in writeTo ) {
 			if( w == null ) {
-				// mark for discard()
-				vd.keep = true;
+				// mark for conditional
+				if( !vd.keep ) {
+					vd.keep = true;
+					markAsKeep = true;
+				}
 				continue;
 			}
 			w.deps.set(v.id, vd);
 		}
 	}
 
-	function hasDiscardRec( e : TExpr ) {
-		switch( e.e ) {
-		case TDiscard: throw new Exit();
-		default:
-			e.iter(hasDiscardRec);
-		}
-	}
-
-	function hasDiscard( e : TExpr ) {
-		try {
-			hasDiscardRec(e);
-			return false;
-		} catch( e : Exit ) {
-			return true;
-		}
-	}
-
-	function check( e : TExpr, writeTo : Array<VarDeps> ) : Void {
+	function check( e : TExpr, writeTo : Array<VarDeps>, isAffected : Array<VarDeps> ) : Void {
 		switch( e.e ) {
 		case TVar(v):
 			link(v, writeTo);
 		case TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _)) }, e):
-			writeTo.push(get(v));
-			check(e, writeTo);
+			var v = get(v);
+			writeTo.push(v);
+			check(e, writeTo, isAffected);
 			writeTo.pop();
+			if( isAffected.indexOf(v) < 0 )
+				isAffected.push(v);
 		case TVarDecl(v, init) if( init != null ):
 			writeTo.push(get(v));
-			check(init, writeTo);
+			check(init, writeTo, isAffected);
 			writeTo.pop();
-		case TIf(e, eif, eelse) if( hasDiscard(eif) || (eelse != null && hasDiscard(eelse)) ):
-			writeTo.push(null);
-			check(e, writeTo);
-			writeTo.pop();
-			check(eif, writeTo);
-			if( eelse != null ) check(eelse, writeTo);
+		case TIf(e, eif, eelse):
+			var affect = [];
+			check(eif, writeTo, affect);
+			if( eelse != null ) check(eelse, writeTo, affect);
+			var len = affect.length;
+			for( v in writeTo )
+				if( affect.indexOf(v) < 0 )
+					affect.push(v);
+			check(e, affect, isAffected);
+			for( i in 0...len ) {
+				var v = affect[i];
+				if( isAffected.indexOf(v) < 0 )
+					isAffected.push(v);
+			}
 		case TFor(v, it, loop):
-			writeTo.push(null);
-			check(it, writeTo);
-			check(loop, writeTo);
-			writeTo.pop();
+			var affect = [];
+			if( writeTo.length > 0 ) throw "assert";
+			check(loop, writeTo, affect);
+			check(it, affect, isAffected);
+			for( v in affect )
+				if( isAffected.indexOf(v) < 0 )
+					isAffected.push(v);
 		case TCall({ e : TGlobal(ChannelRead) }, [{ e : TVar(c) }, uv, { e : TConst(CInt(cid)) }]):
-			check(uv, writeTo);
+			check(uv, writeTo, isAffected);
 			if( channelVars[cid] == null ) {
 				channelVars[cid] = c;
 				link(c, writeTo);
@@ -153,8 +171,19 @@ class Dce {
 				link(channelVars[cid], writeTo);
 			}
 		default:
-			e.iter(check.bind(_, writeTo));
+			e.iter(check.bind(_, writeTo, isAffected));
 		}
+	}
+
+	function checkBranches( e : TExpr ) {
+		// found a branch with side effect left, this condition vars needs to be kept
+		switch( e.e ) {
+		case TIf(cond, _, _):
+			var writeTo = [null];
+			check(cond, writeTo, []);
+		default:
+		}
+		e.iter(checkBranches);
 	}
 
 	function mapExpr( e : TExpr, isVar ) : TExpr {
