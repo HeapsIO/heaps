@@ -269,7 +269,14 @@ class Checker {
 		var ed = switch( e.expr ) {
 		case EConst(c):
 			type = switch( c ) {
-			case CInt(_): TInt;
+			case CInt(i):
+				switch( with ) {
+				case With(TFloat):
+					c = CFloat(i);
+					TFloat;
+				default:
+					TInt;
+				}
 			case CString(_): TString;
 			case CNull: TVoid;
 			case CBool(_): TBool;
@@ -962,27 +969,28 @@ class Checker {
 			if( variants.length > 1 ) efun.t = TFun([f]);
 			return { e : TCall(efun, targs), t : f.ret, p : pos };
 		default:
-			var targs = [for( a in args ) typeExpr(a, Value)];
 			var bestMatch = null, mcount = -1;
 			for( f in sel ) {
-				var m = 0;
-				for( i in 0...targs.length ) {
-					if( !tryUnify(targs[i].t, f.args[i].type) )
+				var outArgs = [];
+				for( i in 0...args.length ) {
+					var a = typeExpr(args[i], With(f.args[i].type));
+					if( !tryUnify(a.t, f.args[i].type) )
 						break;
-					m++;
+					outArgs.push(a);
 				}
-				if( m > mcount ) {
+				if( outArgs.length > mcount ) {
 					bestMatch = f;
-					mcount = m;
-					if( m == targs.length ) {
+					mcount = outArgs.length;
+					if( mcount == args.length ) {
 						efun.t = TFun([f]);
-						return { e : TCall(efun, targs), t : f.ret, p : pos };
+						return { e : TCall(efun, outArgs), t : f.ret, p : pos };
 					}
 				}
 			}
-			for( i in 0...targs.length )
+			for( i in 0...args.length )
 				try {
-					unify(targs[i].t, bestMatch.args[i].type, targs[i].p);
+					var e = typeExpr(args[i], Value);
+					unify(e.t, bestMatch.args[i].type, e.p);
 				} catch( e : Error ) {
 					e.msg += " for argument '" + bestMatch.args[i].name + "'";
 					throw e;
