@@ -25,7 +25,7 @@ class Skin extends SampleApp {
 		}
 		s3d.lightSystem.ambientLight.set(0.4, 0.4, 0.4);
 
-		var shadow = cast(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
+		var shadow = s3d.renderer.getPass(h3d.pass.ShadowMap);
 		shadow.power = 20;
 		shadow.color.setColor(0x301030);
 		dir.enableSpecular = true;
