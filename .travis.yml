@@ -10,10 +10,15 @@ haxe:
 matrix:
   allow_failures:
     - haxe: development
-    
+
+install:
+  - yes | haxelib install all
+  - pushd samples
+  - yes | haxelib install all
+  - popd
+  - haxelib dev heaps .
+  - haxelib list
+
 script:
-  - yes | haxelib install all
   - haxe all.hxml
-  - cd samples
-  - yes | haxelib install all
-  - haxe all.hxml
+  - haxe --cwd samples all.hxml
