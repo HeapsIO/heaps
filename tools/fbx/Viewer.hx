@@ -530,7 +530,7 @@ class Viewer extends hxd.App {
 			var v = props.lights ? 0.5 : 1;
 			s3d.lightSystem.ambientLight.set(v, v, v, 1);
 
-			var shadows = Std.instance(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
+			var shadows = s3d.renderer.getPass(h3d.pass.ShadowMap);
 			shadows.power = 10;
 			var v = props.lights ? 0.2 : 1;
 			shadows.color.set(v, v, v, 1);
