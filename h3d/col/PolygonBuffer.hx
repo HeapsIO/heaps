@@ -97,7 +97,8 @@ class PolygonBuffer implements Collider {
 	function customUnserialize( ctx : hxbit.Serializer ) {
 		var file = ctx.getString();
 		var name = ctx.getString();
-		var lib = hxd.res.Loader.currentInstance.load(file).toHmd();
+		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
+		var lib = ctx.loadHMD(file);
 		var gindex = -1;
 		for( h in lib.header.models )
 			if( h.name == name ) {

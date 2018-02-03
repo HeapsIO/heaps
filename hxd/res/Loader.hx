@@ -28,66 +28,17 @@ class Loader {
 		return new Any(this, fs.get(path));
 	}
 
-	function loadModel( path : String ) : Model {
-		var m : Model = cache.get(path);
-		if( m == null ) {
-			m = new Model(fs.get(path));
-			cache.set(path, m);
+	public function loadCache<T:hxd.res.Resource>( path : String, c : Class<T> ) : T {
+		var res : T = cache.get(path);
+		if( res == null ) {
+			var entry = fs.get(path);
+			var old = currentInstance;
+			currentInstance = this;
+			res = Type.createInstance(c, [entry]);
+			currentInstance = old;
+			cache.set(path, res);
 		}
-		return m;
-	}
-
-	function loadImage( path : String ) : Image {
-		var i : Image = cache.get(path);
-		if( i == null ) {
-			i = new Image(fs.get(path));
-			cache.set(path, i);
-		}
-		return i;
-	}
-
-	function loadSound( path : String ) : Sound {
-		var s : Sound = cache.get(path);
-		if( s == null ) {
-			s = new Sound(fs.get(path));
-			cache.set(path, s);
-		}
-		return s;
-	}
-
-	function loadFont( path : String ) : Font {
-		// no cache necessary (uses FontBuilder which has its own cache)
-		return new Font(fs.get(path));
-	}
-
-	function loadBitmapFont( path : String ) : BitmapFont {
-		var f : BitmapFont = cache.get(path);
-		if( f == null ) {
-			f = new BitmapFont(this,fs.get(path));
-			cache.set(path, f);
-		}
-		return f;
-	}
-
-	function loadData( path : String ) {
-		return new Resource(fs.get(path));
-	}
-
-	function loadTiledMap( path : String ) {
-		return new TiledMap(fs.get(path));
-	}
-
-	function loadAtlas( path : String ) {
-		return new Atlas(fs.get(path));
-	}
-
-	function loadGradients( path : String ) {
-		var g : Gradients = cache.get(path);
-		if( g == null ) {
-			g = new Gradients(fs.get(path));
-			cache.set(path, g);
-		}
-		return g;
+		return res;
 	}
 
 	public function dispose() {

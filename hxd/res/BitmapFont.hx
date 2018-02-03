@@ -5,9 +5,9 @@ class BitmapFont extends Resource {
 	var loader : Loader;
 	var font : h2d.Font;
 
-	public function new(loader, entry) {
+	public function new(entry) {
 		super(entry);
-		this.loader = loader;
+		this.loader = hxd.res.Loader.currentInstance;
 	}
 
 	@:access(h2d.Font)

@@ -515,6 +515,9 @@ class LocalFileSystem implements FileSystem {
 			conv.dstPath = null;
 			conv.srcBytes = null;
 			conv.srcFilename = null;
+			#if !macro
+			hxd.System.timeoutTick();
+			#end
 		}
 
 		hxd.File.saveBytes(tmpDir + "hashes.json", haxe.io.Bytes.ofString(haxe.Json.stringify(hashes, "\t")));

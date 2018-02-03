@@ -4,51 +4,24 @@ import haxe.macro.Expr;
 
 private typedef FileEntry = { e : Expr, t : ComplexType };
 
-enum Platform {
-	Flash;
-	HL;
-	Cpp;
-	JS;
-	Unknown;
-}
-
 class FileTree {
 
 	var path : String;
 	var currentModule : String;
 	var pos : Position;
 	var loaderType : ComplexType;
-	var ignoredExt : Map<String,Bool>;
-	var pairedExt : Map<String,Array<String>>;
+	var extensions : Map<String,{ t : ComplexType, e : Expr }>;
+	var defaultExt : { t : ComplexType, e : Expr };
 	var ignoredPairedExt : Map<String,Array<String>>;
 	var options : EmbedOptions;
 	var embedTypes : Array<String>;
 	var checkTmp : Bool;
-	var platform : Platform;
 
 	public function new(dir) {
 		this.path = resolvePath(dir);
 		currentModule = Std.string(Context.getLocalClass());
 		pos = Context.currentPos();
-		ignoredExt = new Map();
-		ignoredExt.set("gal", true); // graphics gale source
-		ignoredExt.set("lch", true); // labchirp source
-		ignoredExt.set("fla", true); // Adobe flash
-		pairedExt = new Map();
-		pairedExt.set("fnt", ["png"]);
-		pairedExt.set("fbx", ["png","jpg","jpeg","gif"]);
-		pairedExt.set("cdb", ["img"]);
-		pairedExt.set("atlas", ["png"]);
-		platform =
-			if( Context.defined("flash") ) Flash else
-			if( Context.defined("js") ) JS else
-			if( Context.defined("cpp") ) Cpp else
-			if( Context.defined("hl") ) HL else
-			Unknown;
-		if( platform == HL )
-			pairedExt.set("ogg", ["mp3", "wav"]);
-		else
-			pairedExt.set("mp3", ["ogg", "wav"]);
+		defaultExt = { t : macro : hxd.res.Resource, e : macro hxd.res.Resource };
 	}
 
 	public static function resolvePath( ?dir:String ) {
@@ -70,7 +43,7 @@ class FileTree {
 		if( options == null ) options = { };
 		if( options.tmpDir == null ) options.tmpDir = path + "/.tmp/";
 		// if the OGG library is detected, compress as OGG by default, unless compressAsMp3 is set
-		if( options.compressAsMp3 == null ) options.compressAsMp3 = options.compressSounds && !(Context.defined("stb_ogg_sound") || platform == HL);
+		if( options.compressAsMp3 == null ) options.compressAsMp3 = options.compressSounds && !(Context.defined("stb_ogg_sound") || Config.platform == HL);
 		checkTmp = false;
 		this.options = options;
 		embedTypes = [];
@@ -101,7 +74,7 @@ class FileTree {
 				var extParts = f.split(".");
 				var noExt = extParts.shift();
 				var ext = extParts.join(".");
-				if( ignoredExt.exists(ext.toLowerCase()) )
+				if( Config.ignoredExtensions.exists(ext.toLowerCase()) )
 					continue;
 				if( embedFile(fs, f, ext, relPath + "/" + f, path) )
 					Reflect.setField(data, f, true);
@@ -124,7 +97,7 @@ class FileTree {
 		var f = fs.get(relPath.substr(1)); // convert
 		fullPath = fs.getAbsolutePath(f);
 
-		if( platform == Flash ) {
+		if( Config.platform == Flash ) {
 			switch( ext.toLowerCase() ) {
 			case "ttf":
 				Embed.doEmbedFont(name, fullPath, options.fontsChars);
@@ -149,7 +122,7 @@ class FileTree {
 			embedTypes.push("hxd._res." + name);
 		} else {
 			switch( ext.toLowerCase() ) {
-			case "ttf" if( platform == JS ):
+			case "ttf" if( Config.platform == JS ):
 				Embed.doEmbedFont(name, fullPath, options.fontsChars);
 				embedTypes.push("hxd._res." + name);
 				return true;
@@ -208,8 +181,8 @@ class FileTree {
 			});
 		}
 		ignoredPairedExt = new Map();
-		for( e1 in pairedExt.keys() ) {
-			for( e2 in pairedExt.get(e1) ) {
+		for( e1 in Config.pairedExtensions.keys() ) {
+			for( e2 in Config.pairedExtensions.get(e1).split(",") ) {
 				var a = ignoredPairedExt.get(e2);
 				if( a == null ) {
 					a = [];
@@ -217,6 +190,16 @@ class FileTree {
 				}
 				a.push(e1);
 			}
+		}
+		extensions = new Map();
+		for( e in Config.extensions.keys() ) {
+			var t = Config.extensions.get(e).split(".");
+			var expr = { expr : EConst(CIdent(t[0])), pos : pos };
+			for( i in 1...t.length )
+				expr = { expr : EField(expr, t[i]), pos : pos };
+			var ct : ComplexType = TPath({ pack : t, name : t.pop() });
+			for( e in e.split(",") )
+				extensions.set(e, { t : ct, e : expr });
 		}
 		scanRec("", fields, dict);
 		return fields;
@@ -239,17 +222,17 @@ class FileTree {
 			} else {
 				var extParts = f.split(".");
 				var noExt = extParts.shift();
-				ext = extParts.join(".");
-				if( ignoredExt.exists(ext.toLowerCase()) )
+				ext = extParts.join(".").toLowerCase();
+				if( Config.ignoredExtensions.exists(ext) )
 					continue;
 				// when we have a pair file [a,b], ignore file.b if file.a is present
-				var a = ignoredPairedExt.get(ext.toLowerCase());
+				var a = ignoredPairedExt.get(ext);
 				if( a != null ) {
 					var found = false;
 					for( e in a ) {
-						var otherFile = noExt + "." + e;
+						var otherFile = noExt.toLowerCase() + "." + e;
 						for( f in allFiles )
-							if( f == otherFile ) {
+							if( f.toLowerCase() == otherFile ) {
 								found = true;
 								break;
 							}
@@ -257,7 +240,10 @@ class FileTree {
 					}
 					if( found ) continue;
 				}
-				field = handleFile(f, ext, relPath.length == 0 ? f : relPath + "/" + f, path);
+				var ftype = extensions.get(ext);
+				if( ftype == null ) ftype = defaultExt;
+				var epath = { expr : EConst(CString(relPath.length == 0 ? f : relPath + "/" + f)), pos : pos };
+				field = { e : macro loader.loadCache($epath, ${ftype.e}), t : ftype.t };
 				f = noExt;
 			}
 			if( field != null ) {
@@ -266,8 +252,8 @@ class FileTree {
 					fname = "_" + fname;
 				var other = dict.get(fname);
 				if( other != null ) {
-					var pe = pairedExt.get(other.path.split(".").pop().toLowerCase());
-					if( pe != null && Lambda.has(pe,ext.toLowerCase()) )
+					var pe = Config.pairedExtensions.get(other.path.split(".").pop().toLowerCase());
+					if( pe != null && pe.split(",").indexOf(ext) >= 0 )
 						continue;
 					if( other.field == null ) {
 						Context.warning("Resource " + relPath + "/" + f + " is used by both " + relPath + "/" + fileName + " and " + other, pos);
@@ -341,31 +327,6 @@ class FileTree {
 			t : TPath(tpath),
 			e : { expr : ENew(tpath, [macro loader]), pos : pos },
 		};
-	}
-
-	function handleFile( file : String, ext : String, relPath : String, fullPath : String ) : FileEntry {
-		var epath = { expr : EConst(CString(relPath)), pos : pos };
-		switch( ext.toLowerCase() ) {
-		case "jpg", "png", "jpeg", "gif":
-			return { e : macro loader.loadImage($epath), t : macro : hxd.res.Image };
-		case "fbx", "hmd":
-			return { e : macro loader.loadModel($epath), t : macro : hxd.res.Model };
-		case "ttf":
-			return { e : macro loader.loadFont($epath), t : macro : hxd.res.Font };
-		case "fnt":
-			return { e : macro loader.loadBitmapFont($epath), t : macro : hxd.res.BitmapFont };
-		case "wav", "mp3", "ogg":
-			return { e : macro loader.loadSound($epath), t : macro : hxd.res.Sound };
-		case "tmx":
-			return { e : macro loader.loadTiledMap($epath), t : macro : hxd.res.TiledMap };
-		case "atlas":
-			return { e : macro loader.loadAtlas($epath), t : macro : hxd.res.Atlas };
-		case "grd":
-			return { e : macro loader.loadGradients($epath), t : macro : hxd.res.Gradients };
-		default:
-			return { e : macro loader.loadData($epath), t : macro : hxd.res.Resource };
-		}
-		return null;
 	}
 
 	public static function build( ?dir : String ) {
