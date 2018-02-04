@@ -5,7 +5,7 @@ enum Output {
 	Link;
 	Split;
 	Dce;
-	HXSL;
+	Flatten;
 	GLSL;
 	HLSL;
 }
@@ -64,7 +64,7 @@ class Main {
 		str = store.getItem("vars");
 		if( str != null && str != "" ) vars.value = str;
 		str = store.getItem("select");
-		if( str != null && str != "" ) currentOutput = Output.createByName(str);
+		if( str != null && str != "" ) try currentOutput = Output.createByName(str) catch( e : Dynamic ) {};
 		syncOutput();
 
 		rebuild();
@@ -165,7 +165,7 @@ class Main {
 			codes.set(Dce, formatHxsl(dce.vertex) + "\n\n" + formatHxsl(dce.fragment));
 
 			var r = @:privateAccess cache.buildRuntimeShader(dce.vertex, dce.fragment, paramVars);
-			codes.set(HXSL, formatHxsl(r.vertex.data) + "\n\n" + formatHxsl(r.fragment.data)); // todo : add mapping of constants to buffers
+			codes.set(Flatten, formatHxsl(r.vertex.data) + "\n\n" + formatHxsl(r.fragment.data)); // todo : add mapping of constants to buffers
 
 			var glsl = new hxsl.GlslOut();
 			glsl.glES = true;
