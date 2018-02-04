@@ -577,13 +577,13 @@ class Checker {
 			for( e in el )
 				checkExpr(e,funs, isImport, isExtends);
 		case EFunction(f):
-			if( isImport )
+			if( isImport && (f.name == "fragment" || f.name == "vertex" || StringTools.startsWith(f.name,"__init__")) )
 				return;
 			for( f2 in funs.copy() ){
 				if( f2.f.name == f.name && f2.inherit )
 					funs.remove(f2);
 			}
-			funs.push({ f : f, p : e.pos, inherit : isExtends });
+			funs.push({ f : f, p : e.pos, inherit : isExtends || isImport });
 		case EVars(vl):
 			for( v in vl ) {
 				if( v.kind == null ) {
