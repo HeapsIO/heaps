@@ -5,7 +5,12 @@ class GlslOut {
 
 	static var KWD_LIST = [
 		"input", "output", "discard",
-		"dvec2", "dvec3", "dvec4",
+		"dvec2", "dvec3", "dvec4", "hvec2", "hvec3", "hvec4", "fvec2", "fvec3", "fvec4",
+		"int", "float", "bool", "long", "short", "double", "half", "fixed", "unsigned", "superp",
+		"lowp", "mediump", "highp", "precision", "invariant", "discard",
+		"struct", "asm", "union", "template", "this", "packed", "goto", "sizeof","namespace",
+		"noline", "volatile", "external", "flat", "input", "output",
+		"out","attribute","const","uniform","varying","inout","void",
 	];
 	static var KWDS = [for( k in KWD_LIST ) k => true];
 	static var GLOBALS = {
