@@ -30,6 +30,25 @@ class BinaryLoader {
 		loader.addEventListener(flash.events.ProgressEvent.PROGRESS, function(e:flash.events.ProgressEvent) onProgress(Std.int(e.bytesLoaded), Std.int(e.bytesTotal)));
 		loader.load(new flash.net.URLRequest(url));
 		#end
+			
+		#if js
+		var xhr = new js.html.XMLHttpRequest();
+		xhr.open('GET', url, true);
+		xhr.responseType = js.html.XMLHttpRequestResponseType.ARRAYBUFFER;
+		xhr.onerror = function(e) onError(e.target.status);
+		
+		xhr.onload = function(e) {
+			
+			if (xhr.status != 200) {
+				onError(xhr.statusText);
+				return;
+			}
+			onLoaded(haxe.io.Bytes.ofData(xhr.response));
+		}
+		
+		xhr.onprogress = function(e) onProgress(Std.int(e.position), Std.int(e.totalSize));
+		xhr.send();
+		#end
 	}
 
 }
