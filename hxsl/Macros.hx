@@ -86,7 +86,14 @@ class Macros {
 				}),
 				pos : e.p,
 			};
-		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4) }, args):
+		case TCall({ e : TGlobal(g = (Vec2 | Vec3 | Vec4)) }, args):
+			if( args.length == 1 )
+				args = switch( g ) {
+					case Vec2: [args[0], args[0]];
+					case Vec3: [args[0], args[0], args[0]];
+					case Vec4: [args[0], args[0], args[0], args[0]];
+					default: throw "assert";
+				};
 			{
 				expr : ENew({ pack : ["h3d"], name : "Vector" }, [for( a in args ) makeInit(a)]),
 				pos : e.p,
