@@ -156,7 +156,6 @@ class Dce {
 			}
 		case TFor(v, it, loop):
 			var affect = [];
-			if( writeTo.length > 0 ) throw "assert";
 			check(loop, writeTo, affect);
 			check(it, affect, isAffected);
 			for( v in affect )
