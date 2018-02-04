@@ -35,7 +35,7 @@ class BinaryLoader {
 		var xhr = new js.html.XMLHttpRequest();
 		xhr.open('GET', url, true);
 		xhr.responseType = js.html.XMLHttpRequestResponseType.ARRAYBUFFER;
-		xhr.onerror = function(e) onError(e.target.status);
+		xhr.onerror = function(e) onError(xhr.statusText);
 		
 		xhr.onload = function(e) {
 			
