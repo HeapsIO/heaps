@@ -26,6 +26,9 @@ class ShaderManager {
 	@:noDebug
 	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : h3d.shader.Buffers.ShaderBufferData, pos : Int ) {
 		switch( type ) {
+		case TInt:
+			out[pos] = v;
+			return 1;
 		case TFloat:
 			out[pos] = v;
 			return 1;
