@@ -160,7 +160,7 @@ class Driver {
 	public static function get() {
 		if( instance == null ) {
 			instance = new Driver();
-			haxe.MainLoop.add(soundUpdate);
+			haxe.MainLoop.add(soundUpdate) #if (haxe_ver >= 4) .isBlocking = false #end;
 		}
 		return instance;
 	}
@@ -194,7 +194,7 @@ class Driver {
 		AL.deleteBuffers(buffers.length, arrayBytes([for( b in buffers ) b.inst.toInt()]));
 		sources     = [];
 		buffers     = [];
-		
+
 		ALC.makeContextCurrent(null);
 		ALC.destroyContext(alContext);
 		ALC.closeDevice(alDevice);
@@ -377,7 +377,7 @@ class Driver {
 			if( c == null) continue;
 			syncSource(s);
 		}
-		
+
 		var c = channels;
 		while (c != null) {
 			var next = c.next;
@@ -675,7 +675,7 @@ class Driver {
 				prev = prev.next;
 			prev.next = c.next;
 		}
-		
+
 		for (e in c.effects) c.removeEffect(e);
 		if  (c.source != null) releaseSource(c.source);
 
