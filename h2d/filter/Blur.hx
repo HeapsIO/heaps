@@ -15,7 +15,17 @@ class Blur extends Filter {
 	/**
 		The number of blur passes we perform (default = 1)
 	**/
-	public var passes(get,set) : Int;
+	public var passes(get, set) : Int;
+
+	/**
+		How much the blur lighten/darken the image (default = 1)
+	**/
+	public var gain(get, set) : Float;
+
+	/**
+		Increment to use a reduced size temporary texture and make use of hardware blur.
+	**/
+	public var reduceSize : Int = 0;
 
 	var pass : h3d.pass.Blur;
 
@@ -31,16 +41,27 @@ class Blur extends Filter {
 	inline function set_sigma(v) return pass.sigma = v;
 	inline function get_passes() return pass.passes;
 	inline function set_passes(v) return pass.passes = v;
+	inline function get_gain() return pass.gain;
+	inline function set_gain(v) return pass.gain = v;
 
 	override function sync( ctx : RenderContext, s : Sprite ) {
 		boundsExtend = (quality * 2) * passes;
 	}
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
-		var tex = ctx.textures.allocTarget("blurTmp", ctx, t.width, t.height, false);
+		var out = t.getTexture();
+		if( reduceSize > 0 ) {
+			out = ctx.textures.allocTarget("blurOut", ctx, t.width >> reduceSize, t.height >> reduceSize, false);
+			h3d.pass.Copy.run(t.getTexture(), out);
+		}
+		var tex = ctx.textures.allocTarget("blurTmp", ctx,out.width, out.height, false);
 		tex.filter = smooth ? Linear : Nearest;
-		pass.apply(t.getTexture(), tex);
-		return t;
+		pass.apply(out, tex);
+		if( reduceSize <= 0 )
+			return t;
+		var tt = h2d.Tile.fromTexture(out);
+		tt.scaleToSize(t.width, t.height);
+		return tt;
 	}
 
 }
