@@ -89,7 +89,8 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 			tot += g;
 			if( i > 0 ) tot += g;
 		}
-		tot /= gain;
+		if( passes > 0 )
+			tot /= Math.pow(gain,1/passes);
 		for( i in 0...quality + 1 )
 			values[i] /= tot;
 	}
