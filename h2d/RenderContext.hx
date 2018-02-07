@@ -262,7 +262,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( texture == null ) texture = h3d.mat.Texture.fromColor(0xFF00FF);
 		baseShader.texture = texture;
 		texture.filter = (currentObj.smooth == null ? defaultSmooth : (currentObj.smooth:Bool)) ? Linear : Nearest;
-		texture.wrap = currentObj.tileWrap ? Repeat : Clamp;
+		texture.wrap = currentObj.tileWrap && (currentObj.filter == null || inFilter != null) ? Repeat : Clamp;
 		var blend = currentObj.blendMode;
 		if( inFilter == currentObj && blend == Erase ) blend = Add; // add THEN erase
 		if( blend != currentBlend ) {
