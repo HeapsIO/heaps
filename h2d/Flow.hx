@@ -588,8 +588,8 @@ class Flow extends Sprite {
 				if( !c.visible ) continue;
 
 				c.constraintSize(
-					isConstraintWidth && p.constraint ? maxWidth - (p.paddingLeft + p.paddingRight) : -1,
-					isConstraintHeight && p.constraint ? maxHeight - (p.paddingTop + p.paddingBottom) : -1
+					isConstraintWidth && p.constraint ? (maxWidth - (p.paddingLeft + p.paddingRight)) / Math.abs(c.scaleX) : -1,
+					isConstraintHeight && p.constraint ? (maxHeight - (p.paddingTop + p.paddingBottom)) / Math.abs(c.scaleX) : -1
 				);
 
 				var b = c.getSize(tmpBounds);
@@ -709,8 +709,8 @@ class Flow extends Sprite {
 				if( !c.visible ) continue;
 
 				c.constraintSize(
-					isConstraintWidth && p.constraint ? maxWidth - (p.paddingLeft + p.paddingRight) : -1,
-					isConstraintHeight && p.constraint ? maxHeight - (p.paddingTop + p.paddingBottom) : -1
+					isConstraintWidth && p.constraint ? (maxWidth - (p.paddingLeft + p.paddingRight)) / Math.abs(c.scaleX) : -1,
+					isConstraintHeight && p.constraint ? (maxHeight - (p.paddingTop + p.paddingBottom)) / Math.abs(c.scaleY) : -1
 				);
 
 				var b = c.getSize(tmpBounds);
