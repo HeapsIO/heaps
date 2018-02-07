@@ -496,6 +496,28 @@ class Tools {
 		}
 	}
 
+	#if !macro
+	public static function evalConst( e : TExpr ) : Dynamic {
+		return switch( e.e ) {
+		case TConst(c):
+			switch( c ) {
+			case CNull: null;
+			case CBool(b): b;
+			case CInt(i): i;
+			case CFloat(f): f;
+			case CString(s): s;
+			}
+		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4) }, args):
+			var vals = [for( a in args ) evalConst(a)];
+			if( vals.length == 1 )
+				return new Types.Vec(vals[0], vals[0], vals[0], vals[0]);
+			return new Types.Vec(vals[0], vals[1], vals[2], vals[3]);
+		default:
+			throw "Unhandled constant init " + Printer.toString(e);
+		}
+	}
+	#end
+
 }
 
 class Tools2 {

@@ -94,26 +94,6 @@ class Main {
 		}
 	}
 
-	function evalConst( e : hxsl.Ast.TExpr ) : Dynamic {
-		return switch( e.e ) {
-		case TConst(c):
-			switch( c ) {
-			case CNull: null;
-			case CBool(b): b;
-			case CInt(i): i;
-			case CFloat(f): f;
-			case CString(s): s;
-			}
-		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4) }, args):
-			var vals = [for( a in args ) evalConst(a)];
-			if( vals.length == 1 )
-				return new h3d.Vector(vals[0], vals[0], vals[0], vals[0]);
-			return new h3d.Vector(vals[0], vals[1], vals[2], vals[3]);
-		default:
-			throw "Unhandled constant init " + hxsl.Printer.toString(e);
-		}
-	}
-
 	function rebuild() {
 		var code = text.value;
 		var output = out.value;
@@ -151,7 +131,7 @@ class Main {
 			@:privateAccess shared.initialize();
 			var shader = new hxsl.DynamicShader(shared);
 			for( i in checker.inits )
-				shader.hscriptSet(i.v.name, evalConst(i.e));
+				shader.hscriptSet(i.v.name, hxsl.Ast.Tools.evalConst(i.e));
 			for( v in Reflect.fields(vars) )
 				shader.hscriptSet(v, Reflect.field(vars, v));
 
