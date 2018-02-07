@@ -41,6 +41,7 @@ class Graphics extends Mesh {
 
 	public function new(?parent) {
 		bprim = new h3d.prim.BigPrimitive(12);
+		bprim.isStatic = false;
 		super(bprim, null, parent);
 		tmpPoints = [];
 		lineShader = new h3d.shader.LineShader();
