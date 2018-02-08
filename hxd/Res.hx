@@ -14,7 +14,7 @@ class Res {
 	public static macro function initEmbed(?options:haxe.macro.Expr.ExprOf<hxd.res.EmbedOptions>) {
 		return macro hxd.Res.loader = new hxd.res.Loader(hxd.fs.EmbedFileSystem.create(null,$options));
 	}
-	
+
 	#if lime
 	public static macro function initLime() {
 		return macro hxd.Res.loader = new hxd.res.Loader(new hxd.fs.LimeFileSystem());
@@ -32,6 +32,9 @@ class Res {
 		if( dir == null ) dir = "res";
 		return macro {
 			var dir = $v{dir};
+			#if usesys
+			dir = haxe.System.dataPathPrefix + dir;
+			#end
 			var pak = new hxd.fmt.pak.FileSystem();
 			pak.loadPak(dir + ".pak");
 			var i = 1;

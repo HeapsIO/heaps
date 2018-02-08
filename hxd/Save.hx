@@ -17,6 +17,9 @@ class Save {
 
 	#if sys
 	static function savePath( name : String ) {
+		#if usesys
+		name = haxe.System.savePathPrefix + name;
+		#end
 		return name + ".sav";
 	}
 	#end
