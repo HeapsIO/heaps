@@ -20,6 +20,13 @@ class TextureCache {
 		return cache[index];
 	}
 
+	public function getNamed( name : String ) {
+		for( i in 0...position )
+			if( cache[i].name == name )
+				return cache[i];
+		return null;
+	}
+
 	public function set( t, index ) {
 		cache[index] = t;
 	}
