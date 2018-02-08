@@ -267,6 +267,7 @@ class HlslOut {
 			case Mat3:
 				decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
 				decl("float3x3 mat3( float4x3 m ) { return (float3x3)m; }");
+				decl("float3x3 mat3( float3 a, float3 b, float3 c ) { float3x3 m; m._m00_m10_m20 = a; m._m01_m11_m21 = b; m._m02_m12_m22 = c; return m; }");
 			case Mod:
 				declMods();
 			case Pow:
@@ -458,7 +459,7 @@ class HlslOut {
 		if( n != null )
 			return n;
 		n = v.name;
-		if( KWDS.exists(n) )
+		while( KWDS.exists(n) )
 			n = "_" + n;
 		if( allNames.exists(n) ) {
 			var k = 2;
