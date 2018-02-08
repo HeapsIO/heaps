@@ -7,7 +7,6 @@ class Default extends Base {
 	var manager : ShaderManager;
 	var globals(get, never) : hxsl.Globals;
 	var cachedBuffer : h3d.shader.Buffers;
-	var tcache : h3d.impl.TextureCache;
 	var shaderCount : Int = 1;
 	var textureCount : Int = 1;
 	var shaderIdMap : Array<Int>;
@@ -33,7 +32,6 @@ class Default extends Base {
 	public function new(name) {
 		super(name);
 		manager = new ShaderManager(getOutputs());
-		tcache = new h3d.impl.TextureCache();
 		shaderIdMap = [];
 		textureIdMap = [];
 		initGlobals();
@@ -45,19 +43,6 @@ class Default extends Base {
 		#else
 		return false;
 		#end
-	}
-
-	override function getTexture( index = 0 ) : h3d.mat.Texture {
-		return tcache.get(index);
-	}
-
-	override public function setTexture(t:h3d.mat.Texture, index = 0) {
-		tcache.set(t, index);
-	}
-
-	override function dispose() {
-		super.dispose();
-		tcache.dispose();
 	}
 
 	function getOutputs() : Array<hxsl.Output> {

@@ -18,12 +18,10 @@ class Renderer {
 	var passObjects : SMap<PassObjects>;
 	var allPasses : Array<h3d.pass.Base>;
 	var ctx : RenderContext;
-	var tcache : h3d.impl.TextureCache;
 	var hasSetTarget = false;
 
 	public function new() {
 		allPasses = [];
-		tcache = new h3d.impl.TextureCache();
 		passObjects = new SMap();
 	}
 
@@ -31,7 +29,6 @@ class Renderer {
 		for( p in allPasses )
 			p.dispose();
 		passObjects = new SMap();
-		tcache.dispose();
 	}
 
 	public function getPass<T:h3d.pass.Base>( c : Class<T> ) : T {
@@ -93,7 +90,7 @@ class Renderer {
 
 	// for legacy purposes
 	inline function allocTarget( name : String, size = 0, depth = true ) {
-		return tcache.allocTarget(name, ctx, ctx.engine.width >> size, ctx.engine.height >> size, depth);
+		return ctx.textures.allocTarget(name, ctx.engine.width >> size, ctx.engine.height >> size, depth);
 	}
 
 	function copy( from, to, ?blend ) {
@@ -152,6 +149,7 @@ class Renderer {
 			p.setContext(ctx);
 		for( p in passes )
 			passObjects.set(p.name, p);
+		ctx.textures.begin();
 		render();
 		resetTarget();
 		for( p in passes )

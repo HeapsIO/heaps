@@ -18,7 +18,7 @@ class DepthPass extends h3d.pass.Default {
 	}
 
 	override function draw( passes ) {
-		var texture = tcache.allocTarget("depthMap", ctx, ctx.engine.width >> reduceSize, ctx.engine.height >> reduceSize, true);
+		var texture = ctx.textures.allocTarget("depthMap", ctx.engine.width >> reduceSize, ctx.engine.height >> reduceSize, true);
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(enableSky ? 0 : 0xFF0000, 1);
 		passes = super.draw(passes);
@@ -43,7 +43,7 @@ class NormalPass extends h3d.pass.Default {
 	}
 
 	override function draw( passes ) {
-		var texture = tcache.allocTarget("normalMal", ctx, ctx.engine.width, ctx.engine.height);
+		var texture = ctx.textures.allocTarget("normalMal", ctx.engine.width, ctx.engine.height);
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0x808080, 1);
 		passes = super.draw(passes);

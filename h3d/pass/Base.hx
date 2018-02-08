@@ -9,14 +9,6 @@ class Base {
 		this.name = name;
 	}
 
-	public function getTexture( index = 0 ) : h3d.mat.Texture {
-		return null;
-	}
-
-	public function setTexture( t : h3d.mat.Texture, index = 0 ) {
-		throw "Not implemented";
-	}
-
 	public function compileShader( p : h3d.mat.Pass ) : hxsl.RuntimeShader {
 		throw "Not implemented for this pass";
 		return null;

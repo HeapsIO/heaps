@@ -597,7 +597,7 @@ class Sprite {
 
 		if( width <= 0 || height <= 0 || total.xMax < total.xMin ) return;
 
-		var t = ctx.textures.allocTarget("filterTemp", ctx, width, height, false);
+		var t = ctx.textures.allocTarget("filterTemp", width, height, false);
 		ctx.pushTarget(t, xMin, yMin, width, height);
 		ctx.engine.clear(0);
 

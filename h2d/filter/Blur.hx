@@ -51,10 +51,10 @@ class Blur extends Filter {
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
 		var out = t.getTexture();
 		if( reduceSize > 0 ) {
-			out = ctx.textures.allocTarget("blurOut", ctx, t.width >> reduceSize, t.height >> reduceSize, false);
+			out = ctx.textures.allocTarget("blurOut", t.width >> reduceSize, t.height >> reduceSize, false);
 			h3d.pass.Copy.run(t.getTexture(), out);
 		}
-		var tex = ctx.textures.allocTarget("blurTmp", ctx,out.width, out.height, false);
+		var tex = ctx.textures.allocTarget("blurTmp", out.width, out.height, false);
 		tex.filter = smooth ? Linear : Nearest;
 		pass.apply(out, tex);
 		if( reduceSize <= 0 )

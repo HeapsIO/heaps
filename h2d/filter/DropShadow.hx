@@ -21,9 +21,9 @@ class DropShadow extends Glow {
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
 		setParams();
-		var save = ctx.textures.allocTarget("glowSave", ctx, t.width, t.height, false);
+		var save = ctx.textures.allocTarget("glowSave", t.width, t.height, false);
 		h3d.pass.Copy.run(t.getTexture(), save, None);
-		var glowTmpTex = (quality == 0) ? null : ctx.textures.allocTarget("glowTmp", ctx, t.width, t.height, false);
+		var glowTmpTex = (quality == 0) ? null : ctx.textures.allocTarget("glowTmp", t.width, t.height, false);
 		pass.apply(save, glowTmpTex);
 		var dx = Math.round(Math.cos(angle) * distance);
 		var dy = Math.round(Math.sin(angle) * distance);

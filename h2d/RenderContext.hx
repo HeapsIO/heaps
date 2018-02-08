@@ -7,7 +7,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var globalAlpha = 1.;
 	public var buffer : hxd.FloatBuffer;
 	public var bufPos : Int;
-	public var textures : h3d.impl.TextureCache;
 	public var scene : h2d.Scene;
 	public var defaultSmooth : Bool = false;
 	public var killAlpha : Bool;
@@ -66,7 +65,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		targetsStack = [];
 		targetsStackIndex = 0;
 		filterStack = [];
-		textures = new h3d.impl.TextureCache();
 	}
 
 	public function dispose() {
@@ -98,11 +96,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShaderList.next = null;
 		initShaders(baseShaderList);
 		engine.selectMaterial(pass);
-		textures.begin(this);
+		textures.begin();
 	}
 
 	public function allocTarget(name, filter = false, size = 0) {
-		var t = textures.allocTarget(name, this, scene.width >> size, scene.height >> size, false);
+		var t = textures.allocTarget(name, scene.width >> size, scene.height >> size, false);
 		t.filter = filter ? Linear : Nearest;
 		return t;
 	}

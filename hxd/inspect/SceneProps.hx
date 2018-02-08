@@ -106,9 +106,10 @@ class SceneProps {
 		case Textures:
 
 			var props = [];
+			/*
 			var tp = getTextures(@:privateAccess r.tcache);
 			if( tp.length > 0 )
-				props.push(PGroup("Textures",tp));
+				props.push(PGroup("Textures",tp));*/
 
 			for( p in @:privateAccess r.allPasses )
 				props.push(PGroup("Pass " + p.name, getPassProps(p)));
@@ -365,8 +366,8 @@ class SceneProps {
 
 		addDynamicProps(props, p);
 
-		for( t in getTextures(@:privateAccess def.tcache) )
-			props.push(t);
+		//for( t in getTextures(@:privateAccess def.tcache) )
+		//	props.push(t);
 
 		return props;
 	}
