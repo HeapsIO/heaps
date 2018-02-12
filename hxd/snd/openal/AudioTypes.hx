@@ -2,7 +2,6 @@ package hxd.snd.openal;
 
 import hxd.snd.Driver;
 
-#if hlopenal
 typedef AL           = openal.AL;
 typedef ALC          = openal.ALC;
 typedef ALSource     = openal.AL.Source;
@@ -13,19 +12,6 @@ typedef EFX          = openal.EFX;
 typedef ALFilter     = openal.EFX.Filter;
 typedef ALEffect     = openal.EFX.Effect;
 typedef ALEffectSlot = openal.EFX.EffectSlot;
-#else
-// todo remove emulator & implement another driver
-typedef AL           = ALEmulator;
-typedef ALC          = ALEmulator.ALCEmulator;
-typedef ALSource     = ALEmulator.ALSource;
-typedef ALBuffer     = ALEmulator.ALBuffer;
-typedef ALDevice     = ALEmulator.ALDevice;
-typedef ALContext    = ALEmulator.ALContext;
-typedef EFX          = ALEmulator.EFXEmulator;
-typedef ALFilter     = Dynamic;
-typedef ALEffect     = Dynamic;
-typedef ALEffectSlot = Dynamic;
-#end
 
 class BufferHandle {
 	public var inst : ALBuffer;
@@ -86,6 +72,9 @@ class DriverImpl implements Driver {
 		var bytes = getTmpBytes(4);
 		ALC.getIntegerv(device, EFX.MAX_AUXILIARY_SENDS, 1, bytes);
 		maxAuxiliarySends = bytes.getInt32(0);
+
+		if (AL.getError() != AL.NO_ERROR)
+			throw "could not init openAL Driver";
 	}
 
 	public function getTmpBytes(size) {
@@ -142,14 +131,6 @@ class DriverImpl implements Driver {
 
 	public function stopSource(source : SourceHandle) : Void {
 		AL.sourceStop(source.inst);
-	}
-
-	public function getSourceState(source : SourceHandle) : SourceState {
-		return switch (AL.getSourcei(source.inst, AL.SOURCE_STATE)) {
-			case AL.STOPPED : Stopped;
-			case AL.PLAYING : Playing;
-			default : Unhandled;
-		};
 	}
 
 	public function setSourceVolume(source : SourceHandle, value : Float) : Void {
@@ -211,7 +192,10 @@ class DriverImpl implements Driver {
 		bytes.setInt32(0, buffer.inst.toInt());
 		AL.sourceUnqueueBuffers(source.inst, 1, bytes);
 
-		var samples = Std.int(AL.getBufferi(buffer.inst, AL.SIZE) / AL.getBufferi(buffer.inst, AL.BITS) * 4);
+		var size    = AL.getBufferi(buffer.inst, AL.SIZE);
+		var bps     = AL.getBufferi(buffer.inst, AL.BITS) * AL.getBufferi(buffer.inst, AL.CHANNELS) / 8;
+		var samples = Std.int(size / bps);
+
 		if (buffer.isEnd) source.sampleOffset = 0;
 		else source.sampleOffset += samples;
 	}
