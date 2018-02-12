@@ -61,7 +61,7 @@ class Particle implements Data.Randomized {
 		return Data.State.eval(v, time, this, this);
 	}
 
-	public function rand() {
+	public function rand() : Float {
 		if( randValues == null ) randValues = [];
 		if( randValues.length <= randIndex ) randValues.push(Math.random());
 		return randValues[randIndex++];
