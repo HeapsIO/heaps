@@ -53,14 +53,14 @@ class System {
 
 	static function mainLoop() : Bool {
 		// process events
-		#if hldx
+		#if usesys
+		if( !haxe.System.emitEvents(@:privateAccess hxd.Stage.inst.event) )
+			return false;
+		#elseif hldx
 		if( !dx.Loop.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
 			return false;
 		#elseif hlsdl
 		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
-			return false;
-		#elseif usesys
-		if( !haxe.System.emitEvents(@:privateAccess hxd.Stage.inst.event) )
 			return false;
 		#end
 
