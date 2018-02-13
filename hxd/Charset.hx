@@ -22,6 +22,12 @@ class Charset {
 	**/
 	public static var CYRILLIC = "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя—";
 
+	/**
+		Polish support
+	**/
+	public static var POLISH = "ĄĆĘŁŃÓŚŹŻąćęłńóśźż";
+
+
 	public static var DEFAULT_CHARS = ASCII + LATIN1;
 
 	var map : Map<Int,Int>;
