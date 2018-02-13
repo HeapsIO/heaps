@@ -136,14 +136,10 @@ class CameraController extends h3d.scene.Object {
 
 		switch( e.kind ) {
 		case EWheel:
-			if( hxd.Key.isDown(hxd.Key.CTRL) ) {
-				targetOffset.w += e.wheelDelta * fovZoomAmount * 2;
-				if( targetOffset.w >= 179 )
-					targetOffset.w = 179;
-				if( targetOffset.w < 1 )
-					targetOffset.w = 1;
-			} else
-				targetPos.x *= Math.pow(zoomAmount, e.wheelDelta);
+			if( hxd.Key.isDown(hxd.Key.CTRL) )
+				fov(e.wheelDelta * fovZoomAmount * 2);
+			else
+				zoom(e.wheelDelta);
 		case EPush:
 			@:privateAccess scene.events.startDrag(onEvent, function() pushing = -1, e);
 			pushing = e.button;
@@ -157,27 +153,46 @@ class CameraController extends h3d.scene.Object {
 		case EMove:
 			switch( pushing ) {
 			case 0:
-				if( hxd.Key.isDown(hxd.Key.ALT) ) {
-					targetPos.x *= Math.pow(zoomAmount, -((e.relX - pushX) +  (e.relY - pushY)) * 0.03);
-				} else {
-					moveX += e.relX - pushX;
-					moveY += e.relY - pushY;
-				}
+				if( hxd.Key.isDown(hxd.Key.ALT) )
+					zoom(-((e.relX - pushX) +  (e.relY - pushY)) * 0.03);
+				else
+					rot(e.relX - pushX, e.relY - pushY);
 				pushX = e.relX;
 				pushY = e.relY;
 			case 1:
 				var m = 0.001 * curPos.x * panSpeed / 25;
-				var v = new h3d.Vector( -(e.relX - pushX) * m, (e.relY - pushY) * m );
-				scene.camera.update();
-				v.transform3x3(scene.camera.getInverseView());
-				v.w = 0;
-				targetOffset = targetOffset.add(v);
+				pan(-(e.relX - pushX) * m, (e.relY - pushY) * m);
 				pushX = e.relX;
 				pushY = e.relY;
 			default:
 			}
 		default:
 		}
+	}
+	
+	function fov(delta) {
+		targetOffset.w += delta;
+		if( targetOffset.w >= 179 )
+			targetOffset.w = 179;
+		if( targetOffset.w < 1 )
+			targetOffset.w = 1;
+	}
+	
+	function zoom(delta) {
+		targetPos.x *= Math.pow(zoomAmount, delta);
+	}
+	
+	function rot(dx, dy) {
+		moveX += dx;
+		moveY += dy;
+	}
+	
+	function pan(dx, dy) {
+		var v = new h3d.Vector(dx, dy);
+		scene.camera.update();
+		v.transform3x3(scene.camera.getInverseView());
+		v.w = 0;
+		targetOffset = targetOffset.add(v);
 	}
 
 	function syncCamera() {
