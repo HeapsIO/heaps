@@ -190,5 +190,52 @@ class Key {
 		}
 	}
 
+	public static function getKeyName( keyCode : Int ) {
+		var c = keyCode;
+		return switch( c ) {
+		case BACKSPACE: "Backspace";
+		case TAB: "Tab";
+		case ENTER: "Enter";
+		case SHIFT: "Shift";
+		case CTRL: "Ctrl";
+		case ALT: "Alt";
+		case ESCAPE: "Escape";
+		case SPACE: "Space";
+		case PGUP: "PageUp";
+		case PGDOWN: "PageDown";
+		case END: "End";
+		case HOME: "Home";
+		case LEFT: "Left";
+		case UP: "Up";
+		case RIGHT: "Right";
+		case DOWN: "Down";
+		case INSERT: "Insert";
+		case DELETE: "Delete";
+		case NUMPAD_MULT: "NumPad*";
+		case NUMPAD_ADD: "NumPad+";
+		case NUMPAD_ENTER: "NumPadEnter";
+		case NUMPAD_SUB: "NumPad-";
+		case NUMPAD_DOT: "NumPad.";
+		case NUMPAD_DIV: "NumPad/";
+		case LSHIFT: "LShift";
+		case RSHIFT: "RShift";
+		case LCTRL: "LCtrl";
+		case RCTRL: "RCtrl";
+		case LALT: "LAlt";
+		case RALT: "RAlt";
+		default:
+			if( c >= NUMBER_0 && c <= NUMBER_9 )
+				""+(c - NUMBER_0);
+			else if( c >= NUMPAD_0 && c <= NUMPAD_9 )
+				"NumPad"+(c - NUMPAD_0);
+			else if( c >= A && c <= Z )
+				String.fromCharCode("A".code + c - A);
+			else if( c >= F1 && c <= F12 )
+				"F" + (c - F1 + 1);
+			else
+				null;
+		}
+	}
+
 }
 
