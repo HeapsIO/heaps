@@ -36,7 +36,7 @@ class Build {
 			f.content = [];
 			for( name in sys.FileSystem.readDirectory(dir) ) {
 				var fpath = path == "" ? name : path+"/"+name;
-				if( name.charCodeAt(0) == ".".code || (name.charCodeAt(0) == "_".code && sys.FileSystem.isDirectory(fpath)) )
+				if( name.charCodeAt(0) == ".".code || (name.charCodeAt(0) == "_".code && sys.FileSystem.isDirectory(resPath + "/"+fpath)) )
 					continue;
 				var s = buildRec(fpath);
 				if( s != null ) f.content.push(s);
