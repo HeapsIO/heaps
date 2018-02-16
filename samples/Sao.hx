@@ -9,6 +9,7 @@ class CustomRenderer extends h3d.scene.DefaultRenderer {
 	public var mode = 0;
 	public var hasMRT : Bool;
 	var out : h3d.mat.Texture;
+	var mrt : h3d.pass.MRT;
 
 	public var bench = new h3d.impl.Benchmark();
 
@@ -21,7 +22,7 @@ class CustomRenderer extends h3d.scene.DefaultRenderer {
 		hasMRT = h3d.Engine.getCurrent().driver.hasFeature(MultipleRenderTargets);
 		if( hasMRT ) {
 			allPasses.remove(defaultPass);
-			defaultPass = new h3d.pass.MRT([Value("output.color"), PackFloat(Value("output.depth")), PackNormal(Value("output.normal"))], 0, true);
+			defaultPass = mrt = new h3d.pass.MRT([Value("output.color"), PackFloat(Value("output.depth")), PackNormal(Value("output.normal"))], 0, true);
 			allPasses.push(defaultPass);
 		}
 	}
@@ -38,17 +39,17 @@ class CustomRenderer extends h3d.scene.DefaultRenderer {
 			var saoTarget = allocTarget("sao",0,false);
 			setTarget(saoTarget);
 			if( hasMRT )
-				sao.apply(defaultPass.getTexture(1), defaultPass.getTexture(2), ctx.camera);
+				sao.apply(mrt.getTexture(1), mrt.getTexture(2), ctx.camera);
 			else
-				sao.apply(depth.getTexture(), normal.getTexture(), ctx.camera);
+				sao.apply(ctx.textures.get(0), ctx.textures.get(1), ctx.camera);
 			resetTarget();
 			bench.measure("saoBlur");
 			saoBlur.apply(saoTarget, allocTarget("saoBlurTmp", 0, false));
 			bench.measure("saoBlend");
-			if( hasMRT ) h3d.pass.Copy.run(def.getTexture(0), null);
+			if( hasMRT ) h3d.pass.Copy.run(mrt.getTexture(0), null);
 			copy(saoTarget, null, mode == 0 ? Multiply : null);
 		} else if( hasMRT )
-			copy(defaultPass.getTexture(0), null);
+			copy(mrt.getTexture(0), null);
 	}
 
 }
