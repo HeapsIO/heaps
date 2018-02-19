@@ -106,6 +106,30 @@ class KeyFrames extends Mask {
 			var curves = f.timing_curves[index];
 			var c1x = curves[0].x;
 			var c2x = curves[1].x;
+			var c1y = curves[0].y;
+			var c2y = curves[1].y;
+
+			{
+				// For now, force control points to stay within the [0,1] range
+				// See https://github.com/facebookincubator/Keyframes/issues/148
+				if(c1y > 1.0) {
+					c1x /= c1y;
+					c1y = 1.0;
+				}
+				else if(c1y < 0) {
+					c1y = 0;
+				}
+
+				if(c2y > 1.0) {
+					c2x /= c2y;
+					c2y = 1.0;
+				}
+				else if(c2y < 0) {
+					c2y = 0;
+				}
+			}
+
+
 			var count = 0;
 			while( maxT - minT > maxDelta ) {
 				var t = (maxT + minT) * 0.5;
@@ -122,8 +146,6 @@ class KeyFrames extends Mask {
 			var dx = x1 - x0;
 			var xfactor = dx == 0 ? 0.5 : (xVal - x0) / dx;
 
-			var c1y = curves[0].y;
-			var c2y = curves[1].y;
 			var y0 = bezier(c1y, c2y, minT);
 			var y1 = bezier(c1y, c2y, maxT);
 			var y = y0 + (y1 - y0) * xfactor;
