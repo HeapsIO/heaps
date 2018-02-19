@@ -54,7 +54,10 @@ class BigPrimitive extends Primitive {
 				tmpBuf = new hxd.FloatBuffer();
 			else
 				PREV_BUFFER = null;
-			if( isStatic ) tmpBuf.grow(65535 * stride);
+			#if hl
+			if( isStatic )
+			#end
+				tmpBuf.grow(65535 * stride);
 		}
 		if( tmpIdx == null ) {
 			tmpIdx = PREV_INDEX;
