@@ -140,9 +140,9 @@ class KeyFrames extends Mask {
 				bmp.tile.dy = -Std.int(calcValue(1));
 			}
 		case XPosition:
-			l.spr.x = Std.int(calcValue(0));
+			l.spr.x = calcValue(0);
 		case YPosition:
-			l.spr.y = Std.int(calcValue(0));
+			l.spr.y = calcValue(0);
 		case Scale:
 			l.spr.setScale(calcValue(0) / 100.);
 		case Opacity:
