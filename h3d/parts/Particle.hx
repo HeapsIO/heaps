@@ -50,6 +50,13 @@ class Particle implements Data.Randomized {
 	inline function get_alpha() return a;
 	inline function set_alpha(v) return a = v;
 
+	public function setColor( color : Int, alpha = 1. ) {
+		a = alpha;
+		r = ((color >> 16) & 0xFF) / 255.;
+		g = ((color >> 8) & 0xFF) / 255.;
+		b = (color & 0xFF) / 255.;
+	}
+
 	public function remove() {
 		if( parts != null ) {
 			@:privateAccess parts.kill(this);
