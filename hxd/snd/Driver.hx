@@ -3,12 +3,9 @@ package hxd.snd;
 #if usesys
 typedef SourceHandle = haxe.AudioTypes.SourceHandle;
 typedef BufferHandle = haxe.AudioTypes.BufferHandle;
-#elseif hlopenal
+#else
 typedef SourceHandle = hxd.snd.openal.AudioTypes.SourceHandle;
 typedef BufferHandle = hxd.snd.openal.AudioTypes.BufferHandle;
-#else
-typedef SourceHandle = {};
-typedef BufferHandle = {};
 #end
 
 class EffectDriver<T> {

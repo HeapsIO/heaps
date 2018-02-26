@@ -1,12 +1,11 @@
 package hxd.snd.openal;
 
-import hxd.snd.Driver;
 import hxd.snd.openal.AudioTypes;
 import hxd.snd.effect.LowPass;
 
-class LowPassDriver extends EffectDriver<LowPass> {
-	var driver : DriverImpl;
-	var inst   : ALFilter;
+class LowPassDriver extends hxd.snd.Driver.EffectDriver<LowPass> {
+	var driver : Driver;
+	var inst   : openal.EFX.Filter;
 
 	public function new(driver) {
 		super();
@@ -16,7 +15,7 @@ class LowPassDriver extends EffectDriver<LowPass> {
 	override function acquire() : Void {
 		var bytes = driver.getTmpBytes(4);
 		EFX.genFilters(1, bytes);
-		inst = ALFilter.ofInt(bytes.getInt32(0));
+		inst = openal.EFX.Filter.ofInt(bytes.getInt32(0));
 		EFX.filteri(inst, EFX.FILTER_TYPE, EFX.FILTER_LOWPASS);
 	}
 

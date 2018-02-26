@@ -84,8 +84,8 @@ class Manager {
 		try {
 			#if usesys
 			driver = new haxe.AudioTypes.DriverImpl();
-			#elseif hlopenal
-			driver = new hxd.snd.openal.AudioTypes.DriverImpl();
+			#else
+			driver = new hxd.snd.openal.Driver();
 			#end
 		} catch(e : String) {
 			driver = null;
@@ -126,7 +126,7 @@ class Manager {
 		if( instance == null ) {
 			instance = new Manager();
 			instance.updateEvent = haxe.MainLoop.add(instance.update);
-			#if (haxe_ver >= 4) instance.updateEvent.isBlocking = false #end;
+			#if (haxe_ver >= 4) instance.updateEvent.isBlocking = false; #end
 		}
 		return instance;
 	}
@@ -539,7 +539,11 @@ class Manager {
 	var targetChannels : Int;
 
 	function checkTargetFormat(dat : hxd.snd.Data, forceMono = false) {
-		targetRate     = dat.samplingRate;
+		targetRate = dat.samplingRate;
+		#if (!usesys && !hlopenal)
+		// perform resampling to nativechannel frequency
+		targetRate = hxd.snd.openal.Emulator.NATIVE_FREQ;
+		#end
 		targetChannels = forceMono || dat.channels == 1 ? 1 : 2;
 		targetFormat   = switch (dat.sampleFormat) {
 			case UI8 : UI8;

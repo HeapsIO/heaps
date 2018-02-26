@@ -1,15 +1,11 @@
-package hxd.snd;
+package hxd.snd.openal;
 
 private typedef F32 = Float;
 private typedef Bytes = haxe.io.Bytes;
-private typedef Device = ALDevice;
-private typedef Context = ALContext;
-private typedef Buffer = ALBuffer;
-private typedef Source = ALSource;
 
-private class ALChannel extends NativeChannel {
+private class Channel extends NativeChannel {
 
-	var source : ALSource;
+	var source : Source;
 	var startup = 0.;
 	static inline var FADE_START = 10; // prevent clic at startup
 
@@ -76,7 +72,7 @@ private class ALChannel extends NativeChannel {
 
 }
 
-class ALSource {
+class Source {
 
 	// Necessary to prevent stopping the channel while it's still playing
 	// This seems related to some lag in NativeChannel creation and data delivery
@@ -85,7 +81,7 @@ class ALSource {
 	public static var CHANNEL_BUFSIZE = 4096; /* 100 ms latency @44.1Khz */
 
 	static var ID = 0;
-	static var all = new Map<Int,ALSource>();
+	static var all = new Map<Int,Source>();
 
 	public var id : Int;
 	public var chan : hxd.snd.NativeChannel;
@@ -116,7 +112,7 @@ class ALSource {
 	public function play() {
 		if( chan == null ) {
 			playedTime = haxe.Timer.stamp() - currentSample / frequency;
-			chan = new ALChannel(this, CHANNEL_BUFSIZE);
+			chan = new Channel(this, CHANNEL_BUFSIZE);
 		}
 	}
 
@@ -141,9 +137,9 @@ class ALSource {
 }
 
 
-class ALBuffer {
+class Buffer {
 	static var ID = 0;
-	static var all = new Map<Int,ALBuffer>();
+	static var all = new Map<Int,Buffer>();
 
 	public var id : Int;
 	public var data : haxe.ds.Vector<F32>;
@@ -176,7 +172,7 @@ class ALBuffer {
 	On platforms that don't have native support for OpenAL, the Driver uses this
 	emulator that only requires a NativeChannel implementation
 **/
-class ALEmulator {
+class Emulator {
 
 	public static var NATIVE_FREQ : Int = #if js @:privateAccess Std.int(NativeChannel.getContext() == null ? 44100 : NativeChannel.getContext().sampleRate) #else 44100 #end;
 
@@ -329,7 +325,15 @@ class ALEmulator {
 			source.currentSample = 0;
 		case LOOPING:
 			source.loop = value != 0;
+		case SAMPLE_OFFSET:
+            source.currentSample = Std.int(getSourcef(source, SEC_OFFSET) / source.frequency);
+			if( source.playing ) {
+				source.stop(true);
+				source.play();
+			}
 		case SOURCE_RELATIVE:
+			// nothing
+		case EFX.DIRECT_FILTER:
 			// nothing
 		default:
 			throw "Unsupported param 0x" + StringTools.hex(param);
@@ -385,6 +389,8 @@ class ALEmulator {
 				} else
 					break;
 			return count;
+		case SAMPLE_OFFSET:
+            return Std.int(getSourcef(source, SEC_OFFSET) * source.frequency);
 		default:
 			throw "Unsupported param 0x" + StringTools.hex(param);
 		}
@@ -574,7 +580,13 @@ class ALEmulator {
 		throw "TODO";
 	}
 	public static function getBufferi(buffer : Buffer, param : Int ) : Int {
-		throw "TODO";
+		switch( param ) {
+		case SIZE: return buffer.data.length * 4;
+		case BITS: return 32;
+		case CHANNELS : return 2;
+		default:
+			throw "Unsupported param 0x" + StringTools.hex(param);
+		}
 	}
 	public static function getBuffer3i(buffer : Buffer, param : Int, values : Array<Int> ) {
 		throw "TODO";
@@ -689,19 +701,19 @@ class ALEmulator {
 
 
 
-class ALDevice {
+class Device {
 	public function new() {
 	}
 }
 
-class ALContext {
+class Context {
 	public var device : Device;
 	public function new(d) {
 		this.device = d;
 	}
 }
 
-class ALCEmulator {
+class ALC {
 
 	static var ctx : Context = null;
 
@@ -761,7 +773,10 @@ class ALCEmulator {
 		throw "TODO";
 	}
 	public static function getIntegerv (device : Device, param : Int, size : Int, values : Bytes) {
-		throw "TODO";
+		switch (param) {
+			case EFX.MAX_AUXILIARY_SENDS : 0;
+			default : throw "Unsupported param 0x" + StringTools.hex(param);
+		}
 	}
 
 	// Capture function
@@ -819,6 +834,19 @@ class ALCEmulator {
 
 }
 
-class EFXEmulator {
-	//public static function 
+class EFX {
+
+	// Device attributes
+	public static inline var EFX_MAJOR_VERSION                     = 0x20001;
+	public static inline var EFX_MINOR_VERSION                     = 0x20002;
+	public static inline var MAX_AUXILIARY_SENDS                   = 0x20003;
+
+	// Listener properties.
+	public static inline var METERS_PER_UNIT                       = 0x20004;
+
+	// Source properties.
+	public static inline var DIRECT_FILTER                         = 0x20005;	
+	public static inline var FILTER_NULL                           = 0x0000;
+	
 }
+

@@ -5,7 +5,7 @@ import hxd.snd.openal.AudioTypes;
 import hxd.snd.effect.Spatialization;
 
 class SpatializationDriver extends EffectDriver<Spatialization> {
-	var driver : DriverImpl;
+	var driver : Driver;
 
 	public function new(driver) {
 		super();

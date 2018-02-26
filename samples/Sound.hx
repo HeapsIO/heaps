@@ -49,6 +49,9 @@ class Sound extends hxd.App {
 
 		if( music != null ) {
 			slider.value = music.position / music.duration;
+			if( hxd.Key.isPressed(hxd.Key.M) ) {
+				music.mute = !music.mute;
+			}
 		}
 
 		if( hxd.Key.isPressed(hxd.Key.SPACE) ) {
