@@ -82,6 +82,9 @@ class SharedShader {
 		eval.unrollLoops = true;
 		#end
 		var i = new ShaderInstance(eval.eval(data));
+		#if !debug
+		i.shader.name += '($constBits)';
+		#end
 		#if debug
 		Printer.check(i.shader, [data]);
 		#end

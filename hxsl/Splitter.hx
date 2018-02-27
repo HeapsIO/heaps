@@ -159,12 +159,12 @@ class Splitter {
 
 		return {
 			vertex : {
-				name : "vertex",
+				name : #if debug s.name+" vertex" #else "vertex" #end,
 				vars : vvars,
 				funs : [vfun],
 			},
 			fragment : {
-				name : "fragment",
+				name : #if debug s.name+" fragment" #else "fragment" #end,
 				vars : fvars,
 				funs : [ffun],
 			},
