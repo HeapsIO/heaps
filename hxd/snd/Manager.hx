@@ -83,7 +83,7 @@ class Manager {
 	private function new() {
 		try {
 			#if usesys
-			driver = new haxe.AudioTypes.DriverImpl();
+			driver = new haxe.AudioTypes.SoundDriver();
 			#else
 			driver = new hxd.snd.openal.Driver();
 			#end
