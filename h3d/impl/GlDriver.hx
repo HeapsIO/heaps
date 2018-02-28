@@ -223,16 +223,19 @@ class GlDriver extends Driver {
 	function compileShader( glout : ShaderCompiler, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
-		var code = glout.run(shader.data);
-		gl.shaderSource(s, code);
+		if( shader.code == null ){
+			shader.code = glout.run(shader.data);
+			shader.data.funs = null;
+		}
+		gl.shaderSource(s, shader.code);
 		gl.compileShader(s);
 		var log = gl.getShaderInfoLog(s);
 		if ( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
 			var log = gl.getShaderInfoLog(s);
 			var lid = Std.parseInt(log.substr(9));
-			var line = lid == null ? null : code.split("\n")[lid - 1];
+			var line = lid == null ? null : shader.code.split("\n")[lid - 1];
 			if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
-			var codeLines = code.split("\n");
+			var codeLines = shader.code.split("\n");
 			for( i in 0...codeLines.length )
 				codeLines[i] = (i+1) + "\t" + codeLines[i];
 			throw "An error occurred compiling the shaders: " + log + line+"\n\n"+codeLines.join("\n");
@@ -277,7 +280,7 @@ class GlDriver extends Driver {
 				for( v in shader.fragment.data.vars )
 					switch( v.kind ) {
 					case Output:
-						gl.bindFragDataLocation(p.p, outCount++, glout.varNames.get(v.id));
+						gl.bindFragDataLocation(p.p, outCount++, glout.varNames.exists(v.id) ? glout.varNames.get(v.id) : v.name);
 					default:
 					}
 			}
@@ -325,7 +328,7 @@ class GlDriver extends Driver {
 					case TFloat: 1;
 					default: throw "assert " + v.type;
 					}
-					var index = gl.getAttribLocation(p.p, glout.varNames.get(v.id));
+					var index = gl.getAttribLocation(p.p, glout.varNames.exists(v.id) ? glout.varNames.get(v.id) : v.name);
 					if( index < 0 ) {
 						p.stride += size;
 						continue;
