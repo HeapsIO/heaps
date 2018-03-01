@@ -549,7 +549,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		#if debug
-		ctx.debugSource = source;
+		ctx.debugSource = shader.code;
 		#end
 		return { s : ctx, bytes : bytes };
 	}
