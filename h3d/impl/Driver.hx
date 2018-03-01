@@ -202,6 +202,9 @@ class Driver {
 	public function present() {
 	}
 
+	public function end() {
+	}
+
 	public function setDebug( b : Bool ) {
 	}
 

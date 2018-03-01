@@ -284,6 +284,11 @@ class LogDriver extends Driver {
 		d.setRenderTargets(textures);
 	}
 
+	override function end() {
+		log('End');
+		d.end();
+	}
+	
 	override function present() {
 		log('Present');
 		d.present();

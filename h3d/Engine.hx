@@ -283,7 +283,7 @@ class Engine {
 	}
 
 	public function end() {
-		driver.present();
+		driver.end();
 	}
 
 	public function getCurrentTarget() {

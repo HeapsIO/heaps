@@ -69,12 +69,8 @@ class System {
 		if( loopFunc != null ) loopFunc();
 
 		// present
-		#if usesys
-		haxe.System.present();
-		#elseif hlsdl
-		@:privateAccess hxd.Stage.inst.window.present();
-		#end
-
+		var cur = h3d.Engine.getCurrent();
+		if( cur != null ) cur.driver.present();
 		return true;
 	}
 

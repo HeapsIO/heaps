@@ -1031,8 +1031,16 @@ class GlDriver extends Driver {
 		gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
 	}
 
-	override function present() {
+	override function end() {
 		// no gl finish or flush !
+	}
+
+	override function present() {
+		#if hlsdl
+		@:privateAccess hxd.Stage.inst.window.present();
+		#elseif usesys
+		haxe.System.present();
+		#end
 	}
 
 	override function isDisposed() {
@@ -1095,6 +1103,10 @@ class GlDriver extends Driver {
 			gl.viewport(0, 0, bufferWidth, bufferHeight);
 			return;
 		}
+
+		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
+			throw "Invalid depth buffer size : does not match render target size";
+
 		#if js
 		if( mipLevel > 0 ) throw "Cannot render to mipLevel, use upload() instead";
 		#end
