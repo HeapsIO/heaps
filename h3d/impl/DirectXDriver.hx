@@ -206,7 +206,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			for( i in 0...targetsCount )
 				Driver.clearColor(currentTargets[i], color.r, color.g, color.b, color.a);
 		}
-		if( depth != null || stencil != null )
+		if( currentDepth != null && (depth != null || stencil != null) )
 			Driver.clearDepthStencilView(currentDepth.view, depth, stencil);
 	}
 
