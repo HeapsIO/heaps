@@ -28,8 +28,8 @@ class FlowProperties {
 	public var minWidth : Null<Int>;
 	public var minHeight : Null<Int>;
 
-	public var calculatedWidth(default,null) : Float = 0.;
-	public var calculatedHeight(default,null) : Float = 0.;
+	public var calculatedWidth(default,null) : Int = 0;
+	public var calculatedHeight(default,null) : Int = 0;
 
 	public var isBreak(default,null) : Bool;
 
@@ -538,8 +538,8 @@ class Flow extends Sprite {
 		var isConstraintWidth = realMaxWidth >= 0;
 		var isConstraintHeight = realMaxHeight >= 0;
 		// outter size
-		var maxTotWidth = realMaxWidth < 0 ? 100000000 : realMaxWidth;
-		var maxTotHeight = realMaxHeight < 0 ? 100000000 : realMaxHeight;
+		var maxTotWidth = realMaxWidth < 0 ? 100000000 : Math.floor(realMaxWidth);
+		var maxTotHeight = realMaxHeight < 0 ? 100000000 : Math.floor(realMaxHeight);
 		// inner size
 		var maxWidth = maxTotWidth - (paddingLeft + paddingRight + borderWidth * 2);
 		var maxHeight = maxTotHeight - (paddingTop + paddingBottom + borderHeight * 2);
@@ -550,10 +550,10 @@ class Flow extends Sprite {
 			var valign = verticalAlign == null ? Bottom : verticalAlign;
 
 			var startX = paddingLeft + borderWidth;
-			var x : Float = startX;
-			var y : Float = paddingTop + borderHeight;
+			var x = startX;
+			var y = paddingTop + borderHeight;
 			cw = x;
-			var maxLineHeight = 0.;
+			var maxLineHeight = 0;
 			var minLineHeight = this.lineHeight != null ? lineHeight : (this.minHeight != null && !multiline) ? (this.minHeight - (paddingTop + paddingBottom + borderHeight * 2)) : 0;
 			var tmpBounds = tmpBounds;
 			var lastIndex = 0;
@@ -572,7 +572,7 @@ class Flow extends Sprite {
 					c.y = y + p.offsetY + p.paddingTop;
 					switch( a ) {
 					case Bottom:
-						c.y += maxLineHeight - p.calculatedHeight;
+						c.y += maxLineHeight - Std.int(p.calculatedHeight);
 					case Middle:
 						c.y += Std.int((maxLineHeight - p.calculatedHeight) * 0.5);
 					default:
@@ -594,8 +594,8 @@ class Flow extends Sprite {
 
 				var b = c.getSize(tmpBounds);
 				var br = false;
-				p.calculatedWidth = b.xMax + p.paddingLeft + p.paddingRight;
-				p.calculatedHeight = b.yMax + p.paddingTop + p.paddingBottom;
+				p.calculatedWidth = Math.ceil(b.xMax) + p.paddingLeft + p.paddingRight;
+				p.calculatedHeight = Math.ceil(b.yMax) + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 				if( multiline && x + p.calculatedWidth > maxWidth && x > startX ) {
@@ -618,7 +618,7 @@ class Flow extends Sprite {
 			// horizontal align
 			if( minWidth != null && cw < minWidth ) cw = minWidth;
 			var endX = cw - (paddingRight + borderWidth);
-			var xmin : Float = startX, xmax : Float = endX;
+			var xmin = startX, xmax = endX;
 			var midSpace = 0;
 			for( i in 0...children.length ) {
 				var p = properties[i];
@@ -670,10 +670,10 @@ class Flow extends Sprite {
 			var valign = verticalAlign == null ? Top : verticalAlign;
 
 			var startY = paddingTop + borderHeight;
-			var y : Float = startY;
-			var x : Float = paddingLeft + borderWidth;
+			var y = startY;
+			var x = paddingLeft + borderWidth;
 			ch = y;
-			var maxColWidth = 0.;
+			var maxColWidth = 0;
 			var minColWidth = this.colWidth != null ? colWidth : (this.minWidth != null && !multiline) ? (this.minWidth - (paddingLeft + paddingRight + borderWidth * 2)) : 0;
 			var tmpBounds = tmpBounds;
 			var lastIndex = 0;
@@ -716,8 +716,8 @@ class Flow extends Sprite {
 				var b = c.getSize(tmpBounds);
 				var br = false;
 
-				p.calculatedWidth = b.xMax + p.paddingLeft + p.paddingRight;
-				p.calculatedHeight = b.yMax + p.paddingTop + p.paddingBottom;
+				p.calculatedWidth = Math.ceil(b.xMax) + p.paddingLeft + p.paddingRight;
+				p.calculatedHeight = Math.ceil(b.yMax) + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 
@@ -742,8 +742,8 @@ class Flow extends Sprite {
 
 			// vertical align
 			if( minHeight != null && ch < minHeight ) ch = minHeight;
-			var endY = ch - (paddingBottom + borderHeight);
-			var ymin : Float = startY, ymax : Float = endY;
+			var endY : Int = ch - (paddingBottom + borderHeight);
+			var ymin = startY, ymax = endY;
 			var midSpace = 0;
 			for( i in 0...children.length ) {
 				var p = properties[i];
