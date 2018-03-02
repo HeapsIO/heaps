@@ -11,7 +11,7 @@ class Source {
 	public var handle  : SourceHandle;
 	public var channel : Channel;
 	public var buffers : Array<Buffer>;
-	
+
 	public var volume  = -1.0;
 	public var playing = false;
 	public var start   = 0;
@@ -57,7 +57,7 @@ class Manager {
 	public static var STREAM_BUFFER_SAMPLE_COUNT = 44100;
 	public static var MAX_SOURCES                = 16;
 	public static var SOUND_BUFFER_CACHE_SIZE    = 256;
-	
+
 	static var instance : Manager;
 
 	public var masterVolume	: Float;
@@ -77,7 +77,7 @@ class Manager {
 
 	var soundBufferCount  : Int;
 	var soundBufferMap    : Map<String, Buffer>;
-	var freeStreamBuffers : Array<Buffer>; 
+	var freeStreamBuffers : Array<Buffer>;
 	var effectGC          : Array<Effect>;
 
 	private function new() {
@@ -90,7 +90,7 @@ class Manager {
 		} catch(e : String) {
 			driver = null;
 		}
-		
+
 		masterVolume       = 1.0;
 		masterSoundGroup   = new SoundGroup  ("master");
 		masterChannelGroup = new ChannelGroup("master");
@@ -156,7 +156,7 @@ class Manager {
 			for (e in effectGC)          e.driver.release();
 			driver.dispose();
 		}
-		
+
 		sources           = null;
 		soundBufferMap    = null;
 		freeStreamBuffers = null;
@@ -178,7 +178,7 @@ class Manager {
 		c.channelGroup = channelGroup;
 		c.next         = channels;
 		c.isVirtual    = (driver == null);
-		
+
 		channels = c;
 		return c;
 	}
@@ -248,7 +248,7 @@ class Manager {
 					s.start = 0;
 				}
 			}
-			
+
 			// did the source consumed all buffers?
 			if (s.buffers.length == 0) {
 				if (!lastBuffer.isEnd) {
@@ -353,8 +353,8 @@ class Manager {
 			for (s2 in sources) if( s2.channel == null ) {
 				s = s2;
 				break;
-			} 
-			
+			}
+
 			if (s == null) throw "could not get a source";
 			s.channel = c;
 			c.source = s;
@@ -369,12 +369,12 @@ class Manager {
 		// --------------------------------------------------------------------
 		// update source parameters
 		// --------------------------------------------------------------------
-		
+
 		var usedEffects : Effect = null;
 		for (s in sources) {
 			var c = s.channel;
 			if (c == null) continue;
-			
+
 			var v = c.currentVolume;
 			if (s.volume != v) {
 				s.volume = v;
@@ -416,7 +416,7 @@ class Manager {
 		for (s in sources) {
 			var c = s.channel;
 			if (c == null) continue;
-			for (e in c.bindedEffects) e.driver.apply(e, s.handle); 
+			for (e in c.bindedEffects) e.driver.apply(e, s.handle);
 		}
 
 		for (e in effectGC) if (now - e.lastStamp > e.retainTime) {
@@ -424,7 +424,7 @@ class Manager {
 			effectGC.remove(e);
 			break;
 		}
-		
+
 		// --------------------------------------------------------------------
 		// update virtual channels
 		// --------------------------------------------------------------------
@@ -556,7 +556,7 @@ class Manager {
 	function getSoundBuffer(snd : hxd.res.Sound, grp : SoundGroup) : Buffer {
 		var data = snd.getData();
 		var mono = grp.mono;
-		var key  = snd.name;
+		var key  = snd.entry.path;
 
 		if (mono && data.channels != 1) key += "mono";
 		var b = soundBufferMap.get(key);
@@ -569,7 +569,7 @@ class Manager {
 			data.load(function() fillSoundBuffer(b, data, mono));
 			++soundBufferCount;
 		}
-		
+
 		++b.refs;
 		return b;
 	}
