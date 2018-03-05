@@ -85,6 +85,7 @@ class Charset {
 		m("‘".code, "'".code);
 		m("‹".code, "<".code);
 		m("›".code, ">".code);
+		m("–".code, "-".code);
 	}
 
 	public function resolveChar<T>( code : Int, glyphs : Map<Int,T> ) : Null<T> {
