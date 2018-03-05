@@ -55,6 +55,7 @@ class Manager {
 	// Automatically set the channel to streaming mode if its duration exceed this value.
 	public static var STREAM_DURATION            = 5.;
 	public static var STREAM_BUFFER_SAMPLE_COUNT = 44100;
+	public static var BUFFER_QUEUE_LENGTH        = 2;
 	public static var MAX_SOURCES                = 16;
 	public static var SOUND_BUFFER_CACHE_SIZE    = 256;
 
@@ -194,7 +195,7 @@ class Manager {
 				continue;
 			}
 
-			c.position += now - c.lastStamp;
+			c.position += Math.max(now - c.lastStamp, 0.0);
 			c.lastStamp = now;
 
 			var next = c.next; // save next, since we might release this channel
@@ -274,11 +275,19 @@ class Manager {
 			// sync channel position
 			c.sound    = s.buffers[0].sound;
 			c.duration = c.sound.getData().duration;
-			c.position = (s.start + driver.getPlayedSampleCount(s.handle)) / s.buffers[0].sampleRate;
+
+			var playedSamples = driver.getPlayedSampleCount(s.handle);
+			if (playedSamples < 0)  {
+				#if debug
+				throw "playedSamples should positive : bug in driver";
+				#end
+				playedSamples = 0;
+			}
+			c.position = (s.start + playedSamples) / s.buffers[0].sampleRate;
 			c.positionChanged = false;
 
 			// enqueue next buffers
-			if (s.buffers.length < 2) {
+			if (s.buffers.length < BUFFER_QUEUE_LENGTH) {
 				var b = s.buffers[s.buffers.length - 1];
 				if (!b.isEnd) {
 					// next stream buffer
