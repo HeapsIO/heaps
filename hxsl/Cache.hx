@@ -172,9 +172,15 @@ class Cache {
 		var index = 0;
 		for( s in shaders ) {
 			var i = @:privateAccess s.instance;
-			shaderDatas.push( { inst : i, index : index++ } );
+			shaderDatas.push( { inst : i, p : s.priority, index : index++ } );
 		}
 		shaderDatas.reverse(); // default is reverse order
+		/*
+			Our shader list is supposedly already sorted. However some shaders
+			with high priority might be prepended at later stage (eg: Base2D)
+			So let's sort again just in case.
+		*/
+		haxe.ds.ArraySort.sort(shaderDatas, function(s1, s2) return s2.p - s1.p);
 
 		#if debug
 		for( s in shaderDatas ) Printer.check(s.inst.shader);
