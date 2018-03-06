@@ -48,6 +48,15 @@ class RuntimeShaderData {
 	}
 }
 
+class ShaderInstanceDesc {
+	public var shader : SharedShader;
+	public var bits : Int;
+	public function new(shader, bits) {
+		this.shader = shader;
+		this.bits = bits;
+	}
+}
+
 class RuntimeShader {
 
 	static var UID = 0;
@@ -55,8 +64,13 @@ class RuntimeShader {
 	public var vertex : RuntimeShaderData;
 	public var fragment : RuntimeShaderData;
 	public var globals : Map<Int,Bool>;
+
+	/**
+		Signature of the resulting HxSL code.
+		Several shaders with the different specification might still get the same resulting signature.
+	**/
 	public var signature : String;
-	public var spec : { instances : Array<String>, signature : String };
+	public var spec : { instances : Array<ShaderInstanceDesc>, signature : String };
 
 	public function new() {
 		id = UID++;

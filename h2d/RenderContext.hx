@@ -59,7 +59,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		currentBlend = Alpha;
 		pass.setBlendMode(currentBlend);
 		baseShader = new h3d.shader.Base2d();
-		baseShader.priority = 100;
+		baseShader.setPriority(100);
 		baseShader.zValue = 0.;
 		baseShaderList = new hxsl.ShaderList(baseShader);
 		targetsStack = [];

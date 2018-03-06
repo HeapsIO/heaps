@@ -27,7 +27,7 @@ class ScreenFx<T:hxsl.Shader> {
 	}
 
 	public function addShader<T:hxsl.Shader>(s:T) {
-		shaders = new hxsl.ShaderList(s, shaders);
+		shaders = hxsl.ShaderList.addSort(s, shaders);
 		return pass.addShader(s);
 	}
 

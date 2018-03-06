@@ -12,7 +12,7 @@ class Defaults {
 		var s = shadowShader;
 		if( s == null ) {
 			shadowShader = s = new h3d.shader.Shadow();
-			shadowShader.priority = -1;
+			shadowShader.setPriority(-1);
 		}
 		return s;
 	}

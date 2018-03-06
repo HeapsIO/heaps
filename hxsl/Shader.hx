@@ -4,7 +4,7 @@ using hxsl.Ast;
 @:autoBuild(hxsl.Macros.buildShader())
 class Shader {
 
-	public var priority : Int = 0;
+	public var priority(default,null) : Int = 0;
 	var shader : SharedShader;
 	var instance : SharedShader.ShaderInstance;
 	var constBits : Int;
@@ -32,6 +32,13 @@ class Shader {
 				curClass._SHADER = shader;
 			}
 		}
+	}
+
+	/**
+		Shader priority should only be changed *before* the shader is added to a material.
+	**/
+	public function setPriority(v) {
+		priority = v;
 	}
 
 	public function getParamValue( index : Int ) : Dynamic {

@@ -107,11 +107,14 @@ class Pass implements hxd.impl.Serializable {
 	}
 
 	public function addShader<T:hxsl.Shader>(s:T) : T {
-		shaders = new hxsl.ShaderList(s, shaders);
+		shaders = hxsl.ShaderList.addSort(s, shaders);
 		return s;
 	}
 
-	public function addShaderAt<T:hxsl.Shader>(s:T, index:Int) : T {
+	/**
+		Can be used for internal usage
+	**/
+	function addShaderAtIndex<T:hxsl.Shader>(s:T, index:Int) : T {
 		var prev = null;
 		var cur = shaders;
 		while( index > 0 && cur != parentShaders ) {
