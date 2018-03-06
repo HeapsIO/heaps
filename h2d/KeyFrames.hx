@@ -2,9 +2,13 @@ package h2d;
 import hxd.fmt.kframes.Data;
 
 typedef KeyframesLayer = {
+	var id : Int;
 	var name : String;
 	var spr : Sprite;
+	var tiles : Array<h2d.Tile>;
 	var animations : Array<KFAnimation>;
+	var from : Int;
+	var to : Int;
 }
 
 /**
@@ -12,7 +16,7 @@ typedef KeyframesLayer = {
 **/
 class KeyFrames extends Mask {
 
-	var layers : Map<String, KeyframesLayer>;
+	var layers : Array<KeyframesLayer>;
 	var filePrefix : String;
 	var curFrame : Float;
 
@@ -22,6 +26,8 @@ class KeyFrames extends Mask {
 	public var speed : Float = 1.;
 	public var pause : Bool = false;
 	public var loop : Bool = false;
+
+	public var smooth(default,set) = true;
 
 	public function new( file : KeyframesFile, ?filePrefix : String, ?parent ) {
 		super(0,0,parent);
@@ -36,22 +42,36 @@ class KeyFrames extends Mask {
 		this.frameRate = file.frame_rate;
 		this.curFrame = 0;
 
-		layers = new Map();
+		layers = [];
 		for( f in file.features ) {
-			var spr;
+			var spr, tiles = null;
 			if( f.backed_image == null ) {
 				spr = new h2d.Sprite(this);
 			} else {
-				var bmp = new h2d.Bitmap(loadTile(f.backed_image), this);
-				bmp.tile.scaleToSize(f.size.x, f.size.y);
-				bmp.smooth = true;
+				var reg = ~/(.*?)\[([0-9]+)-([0-9]+)\](.*)/;
+				if( reg.match(f.backed_image) ){
+					var from = Std.parseInt(reg.matched(2));
+					var to = Std.parseInt(reg.matched(3));
+					var l = reg.matched(2).length;
+					tiles = [for( i in from...to+1) loadTile(reg.matched(1)+StringTools.lpad(Std.string(i), "0", l)+reg.matched(4))];
+				}else{
+					tiles = [loadTile(f.backed_image)];
+				}
+				
+				for( t in tiles ) t.scaleToSize(f.size.x, f.size.y);
+				var bmp = new h2d.Bitmap(tiles[0], this);
+				bmp.smooth = smooth;
 				if( f.name.toLowerCase().indexOf("(add)") >= 0 )
 					bmp.blendMode = Add;
 				spr = bmp;
 			}
 			var l : KeyframesLayer = {
-				name : f.name,
-				spr : spr,
+				id: f.feature_id,
+				name: f.name,
+				from: f.from_frame == null ? 0 : f.from_frame,
+				to: f.to_frame == null ? file.animation_frame_count : f.to_frame,
+				tiles: tiles,
+				spr: spr,
 				animations : [],
 			};
 			for( f in f.feature_animations ) {
@@ -64,8 +84,17 @@ class KeyFrames extends Mask {
 					l.animations.push(f);
 				}
 			}
-			layers.set(l.name, l);
+			layers.push(l);
 		}
+	}
+
+	public function set_smooth( v : Bool ) : Bool {
+		for( l in layers ){
+			var bmp = Std.instance(l.spr, h2d.Bitmap);
+			if( bmp != null )
+				bmp.smooth = v;
+		}
+		return smooth = v;
 	}
 
 	public function play( speed : Float = 1., startFrame = 0 ) {
@@ -103,7 +132,7 @@ class KeyFrames extends Mask {
 				return u * u * u * 0 + c1 * 3 * t * u * u + c2 * 3 * t * t * u + t * t * t * 1;
 			}
 
-			var curves = f.timing_curves[index];
+			var curves = f.timing_curves[0];
 			var c1x = curves[0].x;
 			var c2x = curves[1].x;
 			var c1y = curves[0].y;
@@ -166,7 +195,8 @@ class KeyFrames extends Mask {
 		case YPosition:
 			l.spr.y = calcValue(0);
 		case Scale:
-			l.spr.setScale(calcValue(0) / 100.);
+			l.spr.scaleX = calcValue(0) / 100.;
+			l.spr.scaleY = calcValue(1) / 100.;
 		case Opacity:
 			l.spr.alpha = calcValue(0) / 100.;
 		case Rotation:
@@ -189,19 +219,40 @@ class KeyFrames extends Mask {
 	}
 
 	public function getLayer( name : String ) {
-		var l = layers.get(name);
-		return l == null ? null : l.spr;
+		var layer = null;
+		for( l in layers ) {
+			if( l.name == name ){
+				layer = l;
+				break;
+			}
+		}
+		return layer == null ? null : layer.spr;
 	}
 
 	override function sync( ctx : RenderContext ) {
 		super.sync(ctx);
 		var prev = curFrame;
-		if( !pause )
+		if( !pause ){
 			curFrame += speed * frameRate * ctx.elapsedTime;
+			if( curFrame > frameCount )
+				curFrame = frameCount;
+		}
 
-		for( l in layers )
+		for( l in layers ){
+			l.spr.visible = curFrame >= l.from && curFrame <= l.to;
+			if( l.spr.visible && l.tiles != null && l.tiles.length > 1 ){
+				var bmp : h2d.Bitmap = cast l.spr;
+				var curTile = hxd.Math.iclamp( Std.int( (curFrame - l.from) * l.tiles.length / (l.to - l.from) ), 0, l.tiles.length );
+				var newTile = l.tiles[curTile];
+				if( bmp.tile != newTile ){
+					newTile.dx = bmp.tile.dx;
+					newTile.dy = bmp.tile.dy;
+					bmp.tile = newTile;
+				}
+			}
 			for( a in l.animations )
 				apply(l, a);
+		}
 
 		if( curFrame < frameCount )
 			return;
