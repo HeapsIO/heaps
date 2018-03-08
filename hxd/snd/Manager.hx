@@ -360,7 +360,7 @@ class Manager {
 			c.source = s;
 
 			checkTargetFormat(c.sound.getData(), c.soundGroup.mono);
-			s.start = Math.round(c.position * targetRate);
+			s.start = Math.ceil(c.position * targetRate);
 			queueBuffer(s, c.sound, s.start);
 			c.positionChanged = false;
 			c = c.next;
