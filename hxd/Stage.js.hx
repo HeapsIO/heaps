@@ -26,12 +26,11 @@ class Stage {
 	function new( ?canvas : js.html.CanvasElement ) : Void {
 		eventTargets = new List();
 		resizeEvents = new List();
-
-		element = canvas == null ? js.Browser.window : canvas;
 		if( canvas == null ) {
 			canvas = cast js.Browser.document.getElementById("webgl");
 			if( canvas == null ) throw "Missing canvas #webgl";
 		}
+		element = canvas == null ? js.Browser.window : canvas;		
 		this.canvas = canvas;
 		canvasPos = canvas.getBoundingClientRect();
 		element.addEventListener("mousedown", onMouseDown);
