@@ -88,6 +88,9 @@ class Trail extends Mesh {
 
 	override function sync(ctx) {
 		super.sync(ctx);
+		if(ctx.elapsedTime == 0)
+			return;
+
 		var curX = absPos._41;
 		var curY = absPos._42;
 		var curZ = absPos._43;
@@ -156,9 +159,16 @@ class Trail extends Mesh {
 		var dist = prev == null ? 0 : hxd.Math.distanceSq(prev.x - curX, prev.y - curY, prev.z - curZ);
 		var e = null;
 		if( dist < movementMax * movementMax ) {
-			e = new TrailElement();
-			e.size = prev == null || dist > movementMin * movementMin ? 1 : 0;
-			points.push(e);
+			/*
+                if we have [0,0,X] sizes points, we don't need to keep pushing 0 sized points, simply replace the latest
+            */
+            if( prev != null && prev.size == 0 && points.length > 2 && points[points.length - 2].size == 0 && dist < movementMin * movementMin )
+                e = prev;
+            else {
+                e = new TrailElement();
+                e.size = prev == null || dist > movementMin * movementMin ? 1 : 0;
+                points.push(e);
+            }
 		} else {
 			e = pending;
 			e.size = 1;
