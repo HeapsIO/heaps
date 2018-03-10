@@ -47,7 +47,9 @@ class Graphics extends Mesh {
 		lineShader = new h3d.shader.LineShader();
 		lineShader.setPriority(-100);
 		material.mainPass.addShader(lineShader);
-		material.mainPass.addShader(new h3d.shader.VertexColorAlpha());
+		var vcolor = new h3d.shader.VertexColorAlpha();
+		vcolor.setPriority(-100);
+		material.mainPass.addShader(vcolor);
 		material.mainPass.culling = None;
 	}
 
