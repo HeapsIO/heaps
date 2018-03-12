@@ -361,6 +361,7 @@ class Manager {
 
 			checkTargetFormat(c.sound.getData(), c.soundGroup.mono);
 			s.start = Math.ceil(c.position * targetRate);
+			if( s.start < 0 ) s.start = 0;
 			queueBuffer(s, c.sound, s.start);
 			c.positionChanged = false;
 			c = c.next;
