@@ -292,6 +292,10 @@ private class LocalEntry extends FileEntry {
 		watchCallback = onChanged;
 	}
 
+	override public function clearWatches() {
+		watchCallback = null;
+		WATCH_LIST.remove(this);
+	}
 }
 
 class LocalFileSystem implements FileSystem {

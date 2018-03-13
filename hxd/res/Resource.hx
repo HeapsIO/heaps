@@ -23,4 +23,8 @@ class Resource {
 		if( LIVE_UPDATE	) entry.watch(onChanged);
 	}
 
+	public function clearWatches() {
+		if( LIVE_UPDATE	)
+			entry.clearWatches();
+	}
 }
