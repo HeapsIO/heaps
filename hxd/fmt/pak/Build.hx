@@ -13,6 +13,7 @@ class Build {
 	public var compressSounds = true;
 	public var compressMP3 = false;
 	public var checkJPG = false;
+	public var checkOGG = false;
 
 	function new() {
 	}
@@ -55,6 +56,10 @@ class Build {
 					command("jpegtran", ["-optimize", "-copy","all", filePath, filePath]);
 					data = sys.io.File.getBytes(filePath);
 				}
+			case "wav", "ogg" if( checkOGG ):
+				var snd = new hxd.snd.OggData(sys.io.File.getBytes(filePath));
+				if( snd.samples == 0 )
+					Sys.println("\t*** ERROR *** " + path + " has 0 samples");
 			}
 
 			f.dataPosition = pakDiff ? out.bytes.length : out.size;
@@ -194,6 +199,8 @@ class Build {
 					b.excludedExt.push(ext);
 			case "-check-jpg":
 				b.checkJPG = true;
+			case "-check-ogg":
+				b.checkOGG = true;
 			default:
 				throw "Unknown parameter " + f;
 			}

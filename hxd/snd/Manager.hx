@@ -170,9 +170,12 @@ class Manager {
 		if (soundGroup   == null) soundGroup   = masterSoundGroup;
 		if (channelGroup == null) channelGroup = masterChannelGroup;
 
+		var sdat = sound.getData();
+		if( sdat.samples == 0 ) throw sound + " has no samples";
+
 		var c = new Channel();
 		c.sound        = sound;
-		c.duration     = sound.getData().duration;
+		c.duration     = sdat.duration;
 		c.manager      = this;
 		c.soundGroup   = soundGroup;
 		c.channelGroup = channelGroup;
