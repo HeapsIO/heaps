@@ -660,5 +660,10 @@ class Manager {
 		c.manager = null;
 		c.effects = null;
 		c.bindedEffects = null;
+		c.currentFade = null;
+		@:privateAccess {
+			var snd = c.sound;
+			if( snd != null && snd.channel == c ) snd.channel = null;
+		}
 	}
 }
