@@ -191,6 +191,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		mapCount = 0;
 		updateResCount = 0;
 		this.frame = frame;
+		setRenderTarget(null);
 	}
 
 	override function isDisposed() {
