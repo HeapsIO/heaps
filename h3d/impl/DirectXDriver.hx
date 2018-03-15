@@ -90,6 +90,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var frame : Int;
 	var currentMaterialBits = -1;
 	var targetsCount = 1;
+	var allowDraw = false;
 
 	var depthStates : Map<Int,DepthStencilState> = new Map();
 	var blendStates : Map<Int,BlendState> = new Map();
@@ -486,12 +487,14 @@ class DirectXDriver extends h3d.impl.Driver {
 			var desc = new RasterizerDesc();
 			desc.fillMode = Solid;
 			desc.cullMode = CULL[Pass.getCulling(bits)];
-			if( pass.culling == Both ) throw "Culling:Both Not supported in DirectX";
 			desc.depthClipEnable = true;
 			desc.scissorEnable = bits & SCISSOR_BIT != 0;
 			raster = Driver.createRasterizerState(desc);
 			rasterStates.set(rasterBits, raster);
 		}
+
+		allowDraw = pass.culling != Both;
+
 		if( raster != currentRasterState ) {
 			currentRasterState = raster;
 			Driver.rsSetState(raster);
@@ -888,6 +891,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
+		if( !allowDraw )
+			return;
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
 			dx.Driver.iaSetIndexBuffer(ibuf.res,false,0);
@@ -910,6 +915,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		None,
 		Back,
 		Front,
+		None,
 	];
 
 	static var BLEND : Array<Blend> = [
