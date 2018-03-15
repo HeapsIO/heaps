@@ -173,6 +173,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 		var buf = Driver.getBackBuffer();
 		defaultTarget = Driver.createRenderTargetView(buf);
+		Driver.clearColor(defaultTarget, 0, 0, 0, 0);
 		buf.release();
 
 		outputWidth = width;
