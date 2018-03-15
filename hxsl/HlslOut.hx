@@ -24,6 +24,7 @@ class HlslOut {
 		m.set(LReflect, "reflect");
 		m.set(Fract, "frac");
 		m.set(Mix, "lerp");
+		m.set(Inversesqrt, "rsqrt");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -500,7 +501,7 @@ class HlslOut {
 			if( v.kind == Output )
 				add(" : " + (isVertex ? SV_POSITION : SV_TARGET + (index++)));
 			else
-				add(" : " + v.name);
+				add(" : " + semanticName(v.name));
 			add(";\n");
 			varAccess.set(v.id, prefix);
 		}
@@ -646,6 +647,12 @@ class HlslOut {
 		decls.push(buf.toString());
 		buf = null;
 		return decls.join("\n");
+	}
+
+	public static function semanticName( name : String ) {
+		if( name.length == 0 || (name.charCodeAt(name.length - 1) >= '0'.code && name.charCodeAt(name.length - 1) <= '9'.code) )
+			name += "_";
+		return name;
 	}
 
 }

@@ -703,7 +703,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			for( v in shader.vertex.data.vars )
 				if( v.kind == Input ) {
 					var e = new LayoutElement();
-					e.semanticName = @:privateAccess v.name.toUtf8();
+					var name = hxsl.HlslOut.semanticName(v.name);
+					e.semanticName = @:privateAccess name.toUtf8();
 					e.inputSlot = layout.length;
 					e.format = switch( v.type ) {
 					case TFloat: R32_FLOAT;
