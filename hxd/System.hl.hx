@@ -127,8 +127,10 @@ class System {
 	public dynamic static function reportError( e : Dynamic ) {
 		var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());
 		var err = try Std.string(e) catch( _ : Dynamic ) "????";
+		#if usesys
+		haxe.System.reportError(err + stack);
+		#else
 		Sys.println(err + stack);
-		#if !usesys
 		if( dismissErrors )
 			return;
 
