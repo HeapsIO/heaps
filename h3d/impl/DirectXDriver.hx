@@ -218,6 +218,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function present() {
+		if( defaultTarget == null ) return;
 		var old = hxd.System.allowTimeout;
 		if( old ) hxd.System.allowTimeout = false;
 		Driver.present(window.vsync ? 1 : 0, None);
