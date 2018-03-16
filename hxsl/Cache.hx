@@ -272,10 +272,11 @@ class Cache {
 
 		for( i in 0...shaderDatas.length ) {
 			var s = shaderDatas[shaderDatas.length - 1 - i];
-			r.spec.instances[i].index = s.index;
+			r.spec.instances[s.index].index = i;
 		}
 
-		r.spec.signature = haxe.crypto.Md5.encode([for( i in r.spec.instances ) i.shader.data.name+"_" + i.bits+"_"+i.index].join(":"));
+		var signParts = [for( i in r.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
+		r.spec.signature = haxe.crypto.Md5.encode(signParts.join(":"));
 		r.signature = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
 
 		var r2 = byID.get(r.signature);
