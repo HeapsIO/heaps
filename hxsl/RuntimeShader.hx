@@ -15,6 +15,12 @@ class AllocParam {
 		this.index = index;
 		this.type = type;
 	}
+	public function clone( resetGID = false ) {
+		var p = new AllocParam(name,pos,instance,index,type);
+		if( perObjectGlobal != null ) p.perObjectGlobal = perObjectGlobal.clone(resetGID);
+		if( next != null ) p.next = next.clone(resetGID);
+		return p;
+	}
 }
 
 class AllocGlobal {
@@ -28,6 +34,12 @@ class AllocGlobal {
 		this.path = path;
 		this.gid = Globals.allocID(path);
 		this.type = type;
+	}
+	public function clone( resetGID = false ) {
+		var g = new AllocGlobal(pos, path, type);
+		if( next != null ) g.next = next.clone(resetGID);
+		if( resetGID ) g.gid = 0;
+		return g;
 	}
 }
 
