@@ -51,6 +51,7 @@ class RuntimeShaderData {
 class ShaderInstanceDesc {
 	public var shader : SharedShader;
 	public var bits : Int;
+	public var index : Int;
 	public function new(shader, bits) {
 		this.shader = shader;
 		this.bits = bits;
