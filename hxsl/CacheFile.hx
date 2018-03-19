@@ -18,7 +18,7 @@ private class NullShader extends hxsl.Shader {
 
 class CacheFile extends Cache {
 
-	static var FILENAME = "res/shaders.cache";
+	public static var FILENAME = "res/shaders.cache";
 
 	var allowCompile : Bool;
 	var recompileRT : Bool;
