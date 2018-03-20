@@ -524,20 +524,38 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 	}
 
+	function getBinaryPayload( code : String ) {
+		var bin = code.indexOf("//BIN=");
+		if( bin < 0 )
+			return null;
+		var end = code.indexOf("#", bin);
+		if( end < 0 )
+			return null;
+		return haxe.crypto.Base64.decode(code.substr(bin + 6, end - bin - 6));
+	}
+
+	function addBinaryPayload( bytes ) {
+		return "\n//BIN=" + haxe.crypto.Base64.encode(bytes) + "#\n";
+	}
+
 	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData, compileOnly = false ) {
 		var h = new hxsl.HlslOut();
 		if( shader.code == null ){
 			shader.code = h.run(shader.data);
 			shader.data.funs = null;
 		}
-		var bytes = try dx.Driver.compileShader(shader.code, "", "main", (shader.vertex?"vs_":"ps_")+shaderVersion, OptimizationLevel3) catch( err : String ) {
-			err = ~/^\(([0-9]+),([0-9]+)-([0-9]+)\)/gm.map(err, function(r) {
-				var line = Std.parseInt(r.matched(1));
-				var char = Std.parseInt(r.matched(2));
-				var end = Std.parseInt(r.matched(3));
-				return "\n<< " + shader.code.split("\n")[line - 1].substr(char-1,end - char + 1) +" >>";
-			});
-			throw "Shader compilation error " + err + "\n\nin\n\n" + shader.code;
+		var bytes = getBinaryPayload(shader.code);
+		if( bytes == null ) {
+			bytes = try dx.Driver.compileShader(shader.code, "", "main", (shader.vertex?"vs_":"ps_") + shaderVersion, OptimizationLevel3) catch( err : String ) {
+				err = ~/^\(([0-9]+),([0-9]+)-([0-9]+)\)/gm.map(err, function(r) {
+					var line = Std.parseInt(r.matched(1));
+					var char = Std.parseInt(r.matched(2));
+					var end = Std.parseInt(r.matched(3));
+					return "\n<< " + shader.code.split("\n")[line - 1].substr(char-1,end - char + 1) +" >>";
+				});
+				throw "Shader compilation error " + err + "\n\nin\n\n" + shader.code;
+			}
+			shader.code += addBinaryPayload(bytes);
 		}
 		if( compileOnly )
 			return { s : null, bytes : bytes };
