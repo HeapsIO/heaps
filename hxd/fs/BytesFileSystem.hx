@@ -61,7 +61,7 @@ class BytesFileEntry extends FileEntry {
 			loader.unload();
 		});
 		loader.loadBytes(bytes.getData());
-		#else
+		#elseif js
 		var mime = switch fullPath.extension().toLowerCase() {
 			case 'jpg' | 'jpeg': 'image/jpeg';
 			case 'png': 'image/png';
@@ -71,6 +71,8 @@ class BytesFileEntry extends FileEntry {
 		var img = new js.html.Image();
 		img.onload = function() onLoaded(new hxd.fs.LoadedBitmap(img));
 		img.src = 'data:$mime;base64,' + haxe.crypto.Base64.encode(bytes);
+		#else
+		throw "Not implemented";
 		#end
 	}
 
