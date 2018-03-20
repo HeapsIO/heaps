@@ -94,6 +94,15 @@ class CacheFile extends Cache {
 		return f.readString(len - 1);
 	}
 
+	function resolveShader( name : String ) : hxsl.Shader {
+		var cl = Type.resolveClass(name);
+		if( cl == null )
+			return null;
+		var shader : hxsl.Shader = Type.createEmptyInstance(cl);
+		@:privateAccess shader.initialize();
+		return shader;
+	}
+
 	function loadShaders() {
 
 		var f = new haxe.io.BytesInput(sys.io.File.getBytes(file));
@@ -148,15 +157,12 @@ class CacheFile extends Cache {
 			var version = readString();
 			var shader = linkMap.get(name);
 			if( shader == null ) {
-				var cl = Type.resolveClass(name);
-				if( cl == null ) {
-					Sys.println("Missing shader " + name);
+				shader = resolveShader(name);
+				if( shader == null ) {
+					log("Missing shader " + name);
 					continue;
 				}
-				shader = Type.createEmptyInstance(cl);
-				@:privateAccess shader.initialize();
 			}
-
 			var shader = @:privateAccess shader.shader;
 			if( getShaderVersion(shader) != version ) {
 				Sys.println("Shader " + name+" version differs");
