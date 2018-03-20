@@ -68,7 +68,7 @@ class CacheFileBuilder {
 	}
 
 	function binaryPayload( data : haxe.io.Bytes ) {
-		return "\nBIN=" + haxe.crypto.Base64.encode(data) + "#";
+		return "\n//BIN=" + haxe.crypto.Base64.encode(data) + "#\n";
 	}
 
 	public function compileShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : String {

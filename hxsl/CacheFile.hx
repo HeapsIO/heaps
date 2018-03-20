@@ -227,8 +227,12 @@ class CacheFile extends Cache {
 				if( sdata == null ) break;
 				var r : RuntimeShader = haxe.Unserializer.run(sdata);
 				var spec = rtMap.get(r.signature);
-				r.signature = spec.signature;
 
+				// shader was modified
+				if( spec == null )
+					continue;
+
+				r.signature = spec.signature;
 				var shaderList = null;
 				spec.inst.reverse();
 				for( i in spec.inst ) {
@@ -454,7 +458,7 @@ class CacheFile extends Cache {
 	**/
 	function cleanRuntime( r : RuntimeShader ) {
 		var rc = new RuntimeShader();
-		rc.id = r.id;
+		rc.id = 0;
 		rc.signature = r.spec.signature; // store by spec, not by sign (dups)
 		rc.vertex = cleanRuntimeData(r.vertex);
 		rc.fragment = cleanRuntimeData(r.fragment);
@@ -498,7 +502,7 @@ class CacheFile extends Cache {
 		Puts things back after we load a cleaned up runtime shader
 	**/
 	function reviveRuntime( r : RuntimeShader ) {
-		@:privateAccess if( RuntimeShader.UID <= r.id ) RuntimeShader.UID = r.id + 1;
+		r.id = @:privateAccess hxsl.RuntimeShader.UID++;
 		r.globals = new Map();
 		reviveRuntimeData(r, r.vertex);
 		reviveRuntimeData(r, r.fragment);
