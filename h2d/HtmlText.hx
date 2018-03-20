@@ -237,12 +237,7 @@ class HtmlText extends Text {
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
 				var e = font.getChar(cc);
-				if (e != null) {
-					xPos += e.getKerningOffset(prevChar);
-					if( rebuild ) glyphs.add(xPos, yPos + dy, e.t);
-					if( yPos == 0 && e.t.dy+dy < calcYMin ) calcYMin = e.t.dy + dy;
-					xPos += e.width + letterSpacing;
-				}
+				
 				if( cc == "\n".code ) {
 					if( xPos > xMax ) xMax = xPos;
 					if( calcLines ) lines.push(xPos);
@@ -257,8 +252,15 @@ class HtmlText extends Text {
 					prevChar = -1;
 					continue;
 				}
-				else
+				else {
+					if (e != null) {
+						xPos += e.getKerningOffset(prevChar);
+						if( rebuild ) glyphs.add(xPos, yPos + dy, e.t);
+						if( yPos == 0 && e.t.dy+dy < calcYMin ) calcYMin = e.t.dy + dy;
+						xPos += e.width + letterSpacing;
+					}
 					prevChar = cc;
+				}
 			}
 		}
 	}
