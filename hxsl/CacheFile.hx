@@ -41,6 +41,9 @@ class CacheFile extends Cache {
 		this.allowCompile = allowCompile;
 		this.recompileRT = recompileRT || allowCompile;
 		this.file = FILENAME;
+		#if usesys
+		this.file = haxe.System.dataPathPrefix + this.file;
+		#end
 		sourceFile = this.file + "." + getPlatformTag();
 		load();
 	}
@@ -83,7 +86,8 @@ class CacheFile extends Cache {
 				save();
 			}
 			log(runtimeShaders.length+" shaders loaded in "+hxd.Math.fmt(haxe.Timer.stamp() - t0)+"s");
-		}
+		} else if( !allowCompile )
+			throw "Missing " + file;
 		if( linkCache.linked == null )
 			linkCache.linked = link(makeDefaultShader());
 		isLoading = false;
