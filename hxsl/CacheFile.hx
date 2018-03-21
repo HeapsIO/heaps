@@ -78,13 +78,21 @@ class CacheFile extends Cache {
 			loadShaders();
 			if( sys.FileSystem.exists(sourceFile) )
 				loadSources();
-			else {
-				if( !allowCompile )
-					throw "Missing " + sourceFile;
-				for( r in runtimeShaders )
-					addSource(r);
-				save();
+			else if( !allowCompile )
+				throw "Missing " + sourceFile;
+
+			if( allowCompile ) {
+				// update missing shader sources (after platform switch)
+				var change = false;
+				for( r in runtimeShaders ) {
+					if( r.vertex.code == null || r.fragment.code == null ) {
+						change = true;
+						addSource(r);
+					}
+				}
+				if( change ) save();
 			}
+
 			log(runtimeShaders.length+" shaders loaded in "+hxd.Math.fmt(haxe.Timer.stamp() - t0)+"s");
 		} else if( !allowCompile )
 			throw "Missing " + file;
@@ -330,9 +338,14 @@ class CacheFile extends Cache {
 		// assign to runtime instances
 		for( r in runtimeShaders ) {
 			var s = compiledSources.get(r.signature);
-			if( s == null ) continue;
+			if( s == null ) {
+				if( !recompileRT ) throw "Shader " + r.signature+" is missing source";
+				continue;
+			}
 			r.vertex.code = sourceMap.get(s.vertex);
 			r.fragment.code = sourceMap.get(s.fragment);
+			if( r.vertex.code == null ) throw "Source " + r.signature + " is missing code " + s.vertex;
+			if( r.fragment.code == null ) throw "Source " + r.signature + " is missing code " + s.fragment;
 		}
 	}
 
