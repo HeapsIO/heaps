@@ -76,6 +76,8 @@ class CacheFile extends Cache {
 			if( sys.FileSystem.exists(sourceFile) )
 				loadSources();
 			else {
+				if( !allowCompile )
+					throw "Missing " + sourceFile;
 				for( r in runtimeShaders )
 					addSource(r);
 				save();
