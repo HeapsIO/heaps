@@ -56,6 +56,7 @@ class CacheFileBuilder {
 	public var shaderLib : Map<String,String> = new Map();
 	public var dxInitDone = false;
 	public var dxShaderVersion = "5_0";
+	var glout : GlslOut;
 
 	public function new() {
 	}
@@ -92,9 +93,12 @@ class CacheFileBuilder {
 			throw "DirectX compilation requires -lib hldx";
 			#end
 		case OpenGL:
-			var out = new GlslOut();
-			out.version = 150;
-			return out.run(rd.data);
+			if( rd.vertex ) {
+				// both vertex and fragment needs to be compiled with the same GlslOut !
+				glout = new GlslOut();
+				glout.version = 150;
+			}
+			return glout.run(rd.data);
 		case PS4:
 			#if hlps
 			var out = new ps.gnm.PsslOut();
