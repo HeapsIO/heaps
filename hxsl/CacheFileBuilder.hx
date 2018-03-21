@@ -4,6 +4,7 @@ enum CacheFilePlatform {
 	DirectX;
 	OpenGL;
 	PS4;
+	XBoxOne;
 }
 
 private class CustomCacheFile extends CacheFile {
@@ -42,6 +43,7 @@ private class CustomCacheFile extends CacheFile {
 		case DirectX: "dx";
 		case OpenGL: "gl";
 		case PS4: "ps4";
+		case XBoxOne: "xboxone";
 		};
 	}
 
@@ -115,6 +117,24 @@ class CacheFileBuilder {
 			#else
 			throw "PS4 compilation requires -lib hlps";
 			#end
+		case XBoxOne:
+			var out = new HlslOut();
+			var code = out.run(rd.data);
+			var tmpFile = "tmp";
+			var tmpSrc = tmpFile + ".hlsl";
+			var tmpOut = tmpFile + ".sb";
+			sys.io.File.saveContent(tmpSrc, code);
+			var args = ["-T", (rd.vertex ? "vs_" : "ps_") + dxShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
+			var p = new sys.io.Process("fxc.exe", args);
+			var error = p.stderr.readAll().toString();
+			var ecode = p.exitCode();
+			if( ecode != 0 )
+				throw "ERROR while compiling " + tmpSrc + "\n" + error;
+			p.close();
+			var data = sys.io.File.getBytes(tmpOut);
+			sys.FileSystem.deleteFile(tmpSrc);
+			sys.FileSystem.deleteFile(tmpOut);
+			return code + binaryPayload(data);
 		}
 		throw "Missing implementation for " + platform;
 	}
@@ -152,6 +172,8 @@ class CacheFileBuilder {
 				builder.platforms.push(DirectX);
 			case "-ps4":
 				builder.platforms.push(PS4);
+			case "-xbox":
+				builder.platforms.push(XBoxOne);
 			default:
 				throw "Unknown parameter " + f;
 			}
