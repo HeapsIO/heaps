@@ -1115,6 +1115,7 @@ class BaseLibrary {
 	}
 
 	function round(v:Float) {
+		if( v != v ) throw "NaN found";
 		return std.Math.fround(v * 131072) / 131072;
 	}
 
