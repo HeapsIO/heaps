@@ -327,7 +327,7 @@ class BaseLibrary {
 		var def = defaultModelMatrixes.get(name);
 		if( def == null ) {
 			def = new DefaultMatrixes();
-			def.wasRemoved = -1;
+			def.wasRemoved = -2;
 			defaultModelMatrixes.set(name, def);
 		}
 	}
@@ -453,9 +453,11 @@ class BaseLibrary {
 		if( def == null )
 			return null;
 		// if it's a move animation on a terminal unskinned joint, let's skip it
-		if( def.wasRemoved != null ) {
-			if( (curveName != "Visibility" && curveName != "UV") || def.wasRemoved == -1 )
-				return null;
+		var isMove = curveName != "Visibility" && curveName != "UV";
+		if( def.wasRemoved != null && (isMove || def.wasRemoved == -1) )
+			return null;
+		// allow not move animations on root model
+		if( def.wasRemoved != null && def.wasRemoved != -2 ) {
 			// apply it on the skin instead
 			model = ids.get(def.wasRemoved);
 			name = model.getName();
