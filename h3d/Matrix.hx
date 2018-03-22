@@ -514,24 +514,27 @@ class Matrix {
 		Extracts Euler rotation angles from rotation matrix
 	**/
 	public function getEulerAngles() {
-		var cy = hxd.Math.sqrt(_11 * _11 + _12 * _12);
+		var m = this.clone();
+		var s = this.getScale();
+		m.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
+		var cy = hxd.Math.sqrt(m._11 * m._11 + m._12 * m._12);
 		if(cy > 0.01) {
 			var v1 = new h3d.Vector(
-				hxd.Math.atan2(_23, _33),
-				hxd.Math.atan2(-_13, cy),
-				hxd.Math.atan2(_12, _11));
+				hxd.Math.atan2(m._23, m._33),
+				hxd.Math.atan2(-m._13, cy),
+				hxd.Math.atan2(m._12, m._11));
 			
 			var v2 = new h3d.Vector(
-				hxd.Math.atan2(-_23, -_33),
-				hxd.Math.atan2(-_13, -cy),
-				hxd.Math.atan2(-_12, -_11));
+				hxd.Math.atan2(-m._23, -m._33),
+				hxd.Math.atan2(-m._13, -cy),
+				hxd.Math.atan2(-m._12, -m._11));
 
 			return v1.lengthSq() < v2.lengthSq() ? v1 : v2;
 		}
 		else {
 			return new h3d.Vector(
-				hxd.Math.atan2(-_32, _22),
-				hxd.Math.atan2(-_13, cy),
+				hxd.Math.atan2(-m._32, m._22),
+				hxd.Math.atan2(-m._13, cy),
 				0.0);
 		}
 	}
