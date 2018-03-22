@@ -34,8 +34,8 @@ class Mesh extends Object {
 		return m;
 	}
 
-	override function getColliderInner() : h3d.col.Collider {
-		return new h3d.col.ObjectCollider(this, primitive.getCollider());
+	override function getLocalCollider() : h3d.col.Collider {
+		return primitive.getCollider();
 	}
 
 	override function draw( ctx : RenderContext ) {

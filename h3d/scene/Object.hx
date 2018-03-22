@@ -404,11 +404,15 @@ class Object implements hxd.impl.Serializable {
 		throw this + " is not a Mesh";
 	}
 
-	public function getCollider() : h3d.col.Collider {
+	/**
+		Build and returns the global absolute recursive collider for the object.
+		Returns null if no collider was found or if ignoreCollide was set to true.
+	**/
+	@:final public function getCollider() : h3d.col.Collider {
 		if( ignoreCollide )
 			return null;
 		var colliders = [];
-		var col = getColliderInner();
+		var col = getGlobalCollider();
 		if( col != null )
 			colliders.push(col);
 		for( obj in children ) {
@@ -428,7 +432,15 @@ class Object implements hxd.impl.Serializable {
 		return new h3d.col.Collider.GroupCollider(colliders);
 	}
 
-	function getColliderInner() : h3d.col.Collider {
+	function getGlobalCollider() : h3d.col.Collider {
+		return new h3d.col.ObjectCollider(this, getLocalCollider());
+	}
+
+	/**
+		Build and returns the local relative not-recursive collider for the object, or null if this object does not have a collider.
+		Does not check for ignoreCollide.
+	**/
+	public function getLocalCollider() : h3d.col.Collider {
 		return null;
 	}
 
