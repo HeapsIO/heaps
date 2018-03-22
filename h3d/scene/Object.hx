@@ -408,6 +408,9 @@ class Object implements hxd.impl.Serializable {
 		if( ignoreCollide )
 			return null;
 		var colliders = [];
+		var col = getColliderInner();
+		if( col != null )
+			colliders.push(col);
 		for( obj in children ) {
 			var c = obj.getCollider();
 			if( c == null ) continue;
@@ -423,6 +426,10 @@ class Object implements hxd.impl.Serializable {
 		if( colliders.length == 1 )
 			return colliders[0];
 		return new h3d.col.Collider.GroupCollider(colliders);
+	}
+
+	function getColliderInner() : h3d.col.Collider {
+		return null;
 	}
 
 	/**
