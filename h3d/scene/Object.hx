@@ -432,8 +432,12 @@ class Object implements hxd.impl.Serializable {
 		return new h3d.col.Collider.GroupCollider(colliders);
 	}
 
-	function getGlobalCollider() : h3d.col.Collider {
-		return new h3d.col.ObjectCollider(this, getLocalCollider());
+	/**
+		Same as getLocalCollider, but returns an absolute collider instead of a local one.
+	**/
+	public function getGlobalCollider() : h3d.col.Collider {
+		var col = getLocalCollider();
+		return col == null ? null : new h3d.col.ObjectCollider(this, col);
 	}
 
 	/**
