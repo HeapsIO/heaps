@@ -37,6 +37,8 @@ typedef KFFeature = {
 	var size : KFSize<Int>;
 	var feature_animations : Array<KFAnimation>;
 	@:optional var backed_image : String;
+	@:optional var from_frame : Int;
+	@:optional var to_frame : Int;
 }
 
 typedef KeyframesFile = {
