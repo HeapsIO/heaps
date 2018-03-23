@@ -19,6 +19,7 @@ class BufferHandle {
 class SourceHandle {
 	public var inst           : Source;
 	public var sampleOffset   : Int;
+	public var playing        : Bool;
 	var nextAuxiliarySend     : Int;
 	var freeAuxiliarySends    : Array<Int>;
 	var effectToAuxiliarySend : Map<Effect, Int>;

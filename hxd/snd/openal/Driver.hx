@@ -85,10 +85,12 @@ class Driver implements hxd.snd.Driver {
 
 	public function playSource(source : SourceHandle) : Void {
 		AL.sourcePlay(source.inst);
+		source.playing = true;
 	}
 
 	public function stopSource(source : SourceHandle) : Void {
 		AL.sourceStop(source.inst);
+		source.playing = false;
 	}
 
 	public function setSourceVolume(source : SourceHandle, value : Float) : Void {
@@ -119,7 +121,10 @@ class Driver implements hxd.snd.Driver {
 	}
 
 	public function getPlayedSampleCount(source : SourceHandle) : Int {
-		return source.sampleOffset + AL.getSourcei(source.inst, AL.SAMPLE_OFFSET);
+		var v = source.sampleOffset + AL.getSourcei(source.inst, AL.SAMPLE_OFFSET);
+		if (v < 0) 
+			v = 0;
+		return v;
 	}
 
 	public function getProcessedBuffers(source : SourceHandle) : Int {
@@ -141,6 +146,8 @@ class Driver implements hxd.snd.Driver {
 			} else {
 				source.sampleOffset = 0;
 			}
+			if (source.playing) 
+				AL.sourcePlay(source.inst);
 		}
 		buffer.isEnd = endOfStream;
 	}
