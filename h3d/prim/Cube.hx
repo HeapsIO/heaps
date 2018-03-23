@@ -87,4 +87,15 @@ class Cube extends Polygon {
 		return h3d.col.Bounds.fromValues(translatedX, translatedY, translatedZ, sizeX * scaled, sizeY * scaled, sizeZ * scaled);
 	}
 
+	public static function defaultUnitCube() {
+		var engine = h3d.Engine.getCurrent();
+		var c : Cube = @:privateAccess engine.resCache.get(Cube);
+		if( c != null )
+			return c;
+		c = new h3d.prim.Cube(1, 1, 1);
+		c.addNormals();
+		c.addUniformUVs(1.0);
+		@:privateAccess engine.resCache.set(Cube, c);
+		return c;
+	}
 }
