@@ -54,7 +54,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return a.x < b.x ? -1 : 1;
 	}
 
-	//see Monotone_chain convex hull algorythm
+	//see Monotone_chain convex hull algorithm
 	public function convexHull() {
 		var len = points.length;
 		if( points.length < 3 )
@@ -179,6 +179,40 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 			}
 			return w != 0;
 		}
+	}
+
+	public function findPoint(pt : h2d.col.Point, distSq : Float) {
+		var closest = null;
+		var minDist = distSq;
+		for(cp in points) {
+			var sqDist = cp.distanceSq(pt);
+			if(sqDist < minDist) {
+				closest = cp;
+				minDist = sqDist;
+			}
+		}
+		return closest;
+	}
+
+	/**
+		Insert a new vertex on the polygon
+	**/
+	public function insertPoint(pt : h2d.col.Point, snapDist : Float) {
+		var snapDistSq = snapDist * snapDist;
+		if(findPoint(pt, snapDistSq) != null)
+			return true;
+		
+		for(i in 0...points.length) {
+			var p1 = points[i];
+			var p2 = points[(i+1)%points.length];
+			var s = new Segment(p1, p2);
+			var distSq = s.distanceSq(pt);
+			if(distSq < snapDistSq) {
+				points.insert(i+1, pt);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public function rayIntersection( r : h2d.col.Ray, ?pt : Point ) {
