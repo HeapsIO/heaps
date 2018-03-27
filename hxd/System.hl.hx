@@ -70,7 +70,7 @@ class System {
 
 		// present
 		var cur = h3d.Engine.getCurrent();
-		if( cur != null ) cur.driver.present();
+		if( cur != null && cur.ready ) cur.driver.present();
 		return true;
 	}
 
