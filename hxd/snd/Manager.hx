@@ -203,6 +203,10 @@ class Manager {
 				c.position -= c.duration;
 				c.onEnd();
 
+				// if we have released the next channel, let's stop here
+				if( next != null && next.manager == null )
+					next = null;
+
 				if (c.queue.length > 0) {
 					c.sound = c.queue.shift();
 					c.duration = c.sound.getData().duration;
@@ -211,6 +215,7 @@ class Manager {
 					break;
 				}
 			}
+
 			c = next;
 		}
 	}
@@ -660,6 +665,11 @@ class Manager {
 	}
 
 	function releaseChannel(c : Channel) {
+
+		// was already released
+		if( c.manager == null )
+			return;
+
 		if (channels == c) {
 			channels = c.next;
 		} else {
