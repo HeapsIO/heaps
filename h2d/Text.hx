@@ -4,6 +4,8 @@ enum Align {
 	Left;
 	Right;
 	Center;
+	MultilineRight;
+	MultilineCenter;
 }
 
 class Text extends Drawable {
@@ -210,11 +212,11 @@ class Text extends Drawable {
 		var x = 0, y = 0, xMax = 0, xMin = 0, prevChar = -1;
 		var align = handleAlign ? textAlign : Left;
 		switch( align ) {
-		case Center, Right:
+		case Center, Right, MultilineCenter, MultilineRight:
 			lines = [];
 			initGlyphs(text, false, false, lines);
-			var max = realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
-			var k = align == Center ? 1 : 0;
+			var max = if( align == MultilineCenter || align == MultilineRight ) calcWidth else realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
+			var k = align == Center || align == MultilineCenter ? 1 : 0;
 			for( i in 0...lines.length )
 				lines[i] = (max - lines[i]) >> k;
 			x = lines.shift();
@@ -242,7 +244,7 @@ class Text extends Drawable {
 				switch( align ) {
 				case Left:
 					x = 0;
-				case Right, Center:
+				case Right, Center, MultilineCenter, MultilineRight:
 					x = lines.shift();
 					if( x < xMin ) xMin = x;
 				}

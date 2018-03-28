@@ -6,6 +6,8 @@ import hxd.Math;
 **/
 class Matrix {
 
+	static var tmp = new Matrix();
+
 	public var a : Float;
 	public var b : Float;
 	public var c : Float;
@@ -20,6 +22,28 @@ class Matrix {
 	public inline function identity() {
 		a = 1; b = 0; c = 0; d = 1;
 		x = 0; y = 0;
+	}
+
+	public inline function initTranslate(x, y) {
+		a = 1; b = 0; c = 0; d = 1;
+		this.x = x;
+		this.y = y;
+	}
+
+	public inline function initScale(sx, sy) {
+		a = sx; b = 0; c = 0; d = sy;
+		x = 0; y = 0;
+	}
+
+	public inline function initRotate(angle) {
+		var cos = Math.cos(angle);
+		var sin = Math.sin(angle);
+		a = cos;
+		b = sin;
+		c = -sin;
+		d = cos;
+		x = 0;
+		y = 0;
 	}
 
 	public function invert() {
@@ -75,6 +99,11 @@ class Matrix {
 		b *= sy;
 		d *= sy;
 		y *= sy;
+	}
+
+	public function rotate(angle: Float) {
+		tmp.initRotate(angle);
+		multiply(this, tmp);
 	}
 
 	public function toString() {

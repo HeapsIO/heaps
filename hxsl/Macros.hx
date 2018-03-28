@@ -73,6 +73,36 @@ class Macros {
 		}
 	}
 
+	static function makeInit( e : Ast.TExpr ) : haxe.macro.Expr {
+		return switch( e.e ) {
+		case TConst(c):
+			{
+				expr : EConst(switch( c ) {
+					case CNull: CIdent("null");
+					case CBool(b): CIdent(b?"true":"false");
+					case CFloat(f): CFloat("" + f);
+					case CInt(i): CInt(""+i);
+					case CString(s): CString(s);
+				}),
+				pos : e.p,
+			};
+		case TCall({ e : TGlobal(g = (Vec2 | Vec3 | Vec4)) }, args):
+			if( args.length == 1 )
+				args = switch( g ) {
+					case Vec2: [args[0], args[0]];
+					case Vec3: [args[0], args[0], args[0]];
+					case Vec4: [args[0], args[0], args[0], args[0]];
+					default: throw "assert";
+				};
+			{
+				expr : ENew({ pack : ["h3d"], name : "Vector" }, [for( a in args ) makeInit(a)]),
+				pos : e.p,
+			}
+		default:
+			Error.t("Unsupported init expr", e.p);
+		}
+	}
+
 	static function getConsts( v : TVar, p : Position, consts : Array<{ pos : Int, bits : Int, v : TVar }> ) {
 		switch( v.type ) {
 		case TStruct(vl):
@@ -103,7 +133,7 @@ class Macros {
 		}
 	}
 
-	static function buildFields( shader : ShaderData, pos : Position ) {
+	static function buildFields( shader : ShaderData, inits : Array<{ v : TVar, e : Ast.TExpr }>, pos : Position ) {
 		var fields = new Array<Field>();
 		var globals = [], consts = [], params = [], eparams = [], tparams = [];
 		for( v in shader.vars ) {
@@ -119,10 +149,14 @@ class Macros {
 					access : [APublic],
 				};
 				var name = v.name + "__";
+				var initVal = null;
+				for( i in inits )
+					if( i.v == v )
+						initVal = i.e;
 				var f2 : Field = {
 					name : name,
 					pos : pos,
-					kind : FVar(t, makeDef(v.type, pos)),
+					kind : FVar(t, initVal != null ? makeInit(initVal) : makeDef(v.type, pos)),
 					meta : [{ name : ":noCompletion", pos : pos }],
 				};
 				var fget : Field = {
@@ -357,7 +391,7 @@ class Macros {
 							name : ":keep",
 							pos : pos,
 						});
-						for( f in buildFields(shader, pos) )
+						for( f in buildFields(shader, check.inits, pos) )
 							if( !supFields.exists(f.name) )
 								fields.push(f);
 					} catch( e : Ast.Error ) {

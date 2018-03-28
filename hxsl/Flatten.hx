@@ -280,19 +280,27 @@ class Flatten {
 			return read(0,pos);
 		default:
 			var size = varSize(t, a.t);
-			if( size <= 4 ) {
-				var k = read(0,pos);
-				if( size == 4 ) {
-					if( a.pos & 3 != 0 ) throw "assert";
-					return k;
-				} else {
-					var sw = [];
-					for( i in 0...size )
-						sw.push(Tools.SWIZ[i + (a.pos & 3)]);
-					return { e : TSwiz(k, sw), t : t, p : pos };
-				}
+			if( size > 4 )
+				return Error.t("Access not supported for " + t.toString(), null);
+			var e = read(0, pos);
+			if( size == 4 ) {
+				if( a.pos & 3 != 0 ) throw "assert";
+			} else {
+				var sw = [];
+				for( i in 0...size )
+					sw.push(Tools.SWIZ[i + (a.pos & 3)]);
+				e = { e : TSwiz(e, sw), t : t, p : pos };
 			}
-			return Error.t("Access not supported for " + t.toString(), null);
+			switch( t ) {
+			case TInt:
+				e.t = TFloat;
+				e = { e : TCall({ e : TGlobal(ToInt), t : TFun([]), p : pos }, [e]), t : t, p : pos };
+			case TVec(size,VInt):
+				e.t = TVec(size,VFloat);
+				e = { e : TCall({ e : TGlobal([IVec2,IVec3,IVec4][size-2]), t : TFun([]), p : pos }, [e]), t : t, p : pos };
+			default:
+			}
+			return e;
 		}
 	}
 
@@ -404,7 +412,7 @@ class Flatten {
 
 	function varSize( v : Type, t : VecType ) {
 		return switch( v ) {
-		case TFloat if( t == VFloat ): 1;
+		case TFloat, TInt if( t == VFloat ): 1;
 		case TVec(n, t2) if( t == t2 ): n;
 		case TMat4 if( t == VFloat ): 16;
 		case TMat3, TMat3x4 if( t == VFloat ): 12;

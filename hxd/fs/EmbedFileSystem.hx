@@ -263,10 +263,21 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 
 	#end
 
+	#if macro
+	static function makeTree( t : hxd.res.FileTree.FileTreeData ) : Dynamic {
+		var o = {};
+		for( d in t.dirs )
+			Reflect.setField(o, d.name, makeTree(d));
+		for( f in t.files )
+			Reflect.setField(o, f.file, true);
+		return o;
+	}
+	#end
+
 	public static macro function create( ?basePath : String, ?options : hxd.res.EmbedOptions ) {
 		var f = new hxd.res.FileTree(basePath);
 		var data = f.embed(options);
-		var sdata = haxe.Serializer.run(data.tree);
+		var sdata = haxe.Serializer.run(makeTree(data.tree));
 		var types = {
 			expr : haxe.macro.Expr.ExprDef.EBlock([for( t in data.types ) haxe.macro.MacroStringTools.toFieldExpr(t.split("."))]),
 			pos : haxe.macro.Context.currentPos(),

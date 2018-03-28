@@ -271,7 +271,7 @@ class Benchmark extends h2d.Graphics {
 		var curTime = 0.;
 		var s = currentStats;
 		while( s != null ) {
-			if( colors.length < count ) {
+			if( colors.length <= count ) {
 				var color = new h3d.Vector();
 				var m = new h3d.Matrix();
 				m.identity();

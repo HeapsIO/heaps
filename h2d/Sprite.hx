@@ -597,7 +597,7 @@ class Sprite {
 
 		if( width <= 0 || height <= 0 || total.xMax < total.xMin ) return;
 
-		var t = ctx.textures.allocTarget("filterTemp", ctx, width, height, false);
+		var t = ctx.textures.allocTarget("filterTemp", width, height, false);
 		ctx.pushTarget(t, xMin, yMin, width, height);
 		ctx.engine.clear(0);
 
@@ -737,6 +737,16 @@ class Sprite {
 			if( children[i] == s )
 				return i;
 		return -1;
+	}
+
+	public function getSpriteByName( name : String ) {
+		if( this.name == name )
+			return this;
+		for( c in children ) {
+			var o = c.getSpriteByName(name);
+			if( o != null ) return o;
+		}
+		return null;
 	}
 
 	inline function get_numChildren() {

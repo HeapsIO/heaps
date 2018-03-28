@@ -7,7 +7,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var globalAlpha = 1.;
 	public var buffer : hxd.FloatBuffer;
 	public var bufPos : Int;
-	public var textures : h3d.impl.TextureCache;
 	public var scene : h2d.Scene;
 	public var defaultSmooth : Bool = false;
 	public var killAlpha : Bool;
@@ -45,6 +44,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var renderY : Float;
 	var renderW : Float;
 	var renderH : Float;
+	var currentBlend : BlendMode;
 
 	public function new(scene) {
 		super();
@@ -56,14 +56,15 @@ class RenderContext extends h3d.impl.RenderContext {
 		pass = new h3d.mat.Pass("",null);
 		pass.depth(true, Always);
 		pass.culling = None;
+		currentBlend = Alpha;
+		pass.setBlendMode(currentBlend);
 		baseShader = new h3d.shader.Base2d();
-		baseShader.priority = 100;
+		baseShader.setPriority(100);
 		baseShader.zValue = 0.;
 		baseShaderList = new hxsl.ShaderList(baseShader);
 		targetsStack = [];
 		targetsStackIndex = 0;
 		filterStack = [];
-		textures = new h3d.impl.TextureCache();
 	}
 
 	public function dispose() {
@@ -95,11 +96,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShaderList.next = null;
 		initShaders(baseShaderList);
 		engine.selectMaterial(pass);
-		textures.begin(this);
+		textures.begin();
 	}
 
 	public function allocTarget(name, filter = false, size = 0) {
-		var t = textures.allocTarget(name, this, scene.width >> size, scene.height >> size, false);
+		var t = textures.allocTarget(name, scene.width >> size, scene.height >> size, false);
 		t.filter = filter ? Linear : Nearest;
 		return t;
 	}
@@ -231,6 +232,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.setRenderZone();
 	}
 
+	function drawLayer( layer : Int ) {
+		@:privateAccess scene.drawLayer(this, layer);
+	}
+
 	public function drawScene() {
 		@:privateAccess scene.drawRec(this);
 	}
@@ -255,10 +260,13 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( texture == null ) texture = h3d.mat.Texture.fromColor(0xFF00FF);
 		baseShader.texture = texture;
 		texture.filter = (currentObj.smooth == null ? defaultSmooth : (currentObj.smooth:Bool)) ? Linear : Nearest;
-		texture.wrap = currentObj.tileWrap ? Repeat : Clamp;
+		texture.wrap = currentObj.tileWrap && (currentObj.filter == null || inFilter != null) ? Repeat : Clamp;
 		var blend = currentObj.blendMode;
-		if( inFilter == currentObj  && blend == Erase ) blend = Add; // add THEN erase
-		pass.setBlendMode(blend);
+		if( inFilter == currentObj && blend == Erase ) blend = Add; // add THEN erase
+		if( blend != currentBlend ) {
+			currentBlend = blend;
+			pass.setBlendMode(blend);
+		}
 		manager.fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);
 		engine.uploadShaderBuffers(buffers, Params);

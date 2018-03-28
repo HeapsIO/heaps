@@ -327,7 +327,7 @@ class Viewer extends hxd.App {
 				reload = [];
 				if( anim ) {
 					if( props.convertHMD || bytes.get(0) == 'H'.code ) {
-						ahmd = fbxToHmd(bytes, false).toHmd();
+						ahmd = fbxToHmd(bytes, false).toModel().toHmd();
 					} else {
 						alib = new hxd.fmt.fbx.Library();
 						var fbx = hxd.fmt.fbx.Parser.parse(bytes.toString());
@@ -379,7 +379,7 @@ class Viewer extends hxd.App {
 
 			var res = fbxToHmd(data, true);
 			curDataSize = res.entry.getBytes().length;
-			curHmd = res.toHmd();
+			curHmd = res.toModel().toHmd();
 
 			obj = curHmd.makeObject(function(name) {
 				var t = new h3d.mat.Texture(1, 1);
@@ -530,7 +530,7 @@ class Viewer extends hxd.App {
 			var v = props.lights ? 0.5 : 1;
 			s3d.lightSystem.ambientLight.set(v, v, v, 1);
 
-			var shadows = Std.instance(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
+			var shadows = s3d.renderer.getPass(h3d.pass.ShadowMap);
 			shadows.power = 10;
 			var v = props.lights ? 0.2 : 1;
 			shadows.color.set(v, v, v, 1);

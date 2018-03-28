@@ -238,8 +238,13 @@ class DynamicText {
 	}
 
 	public static function build( file : String ) {
-		var path = FileTree.resolvePath();
-		var fullPath = path + "/" + file;
+		var paths = FileTree.resolvePaths();
+		var fullPath = null;
+		for( p in paths )
+			if( sys.FileSystem.exists(p + "/" + file) )
+				fullPath = p + "/" + file;
+		if( fullPath == null )
+			fullPath = paths[0] + "/" + file;
 		var content = null, x = null;
 		try {
 			content = sys.io.File.getContent(fullPath);

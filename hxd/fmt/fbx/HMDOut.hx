@@ -42,6 +42,7 @@ class HMDOut extends BaseLibrary {
 		var uvs = geom.getUVs();
 		var colors = geom.getColors();
 		var mats = geom.getMaterials();
+		var tangents = geom.getTangents(true);
 
 		// remove empty color data
 		if( colors != null ) {
@@ -61,18 +62,21 @@ class HMDOut extends BaseLibrary {
 		];
 		if( normals != null )
 			g.vertexFormat.push(new GeometryFormat("normal", DVec3));
+		if( tangents != null )
+			g.vertexFormat.push(new GeometryFormat("tangent", DVec3));
 		for( i in 0...uvs.length )
 			g.vertexFormat.push(new GeometryFormat("uv" + (i == 0 ? "" : "" + (i + 1)), DVec2));
 		if( colors != null )
 			g.vertexFormat.push(new GeometryFormat("color", DVec3));
 
-		var stride = 3 + (normals == null ? 0 : 3) + uvs.length * 2 + (colors == null ? 0 : 3);
 		if( skin != null ) {
 			if( bonesPerVertex <= 0 || bonesPerVertex > 4 ) throw "assert";
 			g.vertexFormat.push(new GeometryFormat("weights", [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1]));
 			g.vertexFormat.push(new GeometryFormat("indexes", floatSkinIndexes ? [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1] : DBytes4));
-			stride += bonesPerVertex + (floatSkinIndexes ? bonesPerVertex : 1);
 		}
+		var stride = 0;
+		for( f in g.vertexFormat )
+			stride += f.format.getSize();
 		g.vertexStride = stride;
 		g.vertexCount = 0;
 
@@ -125,6 +129,12 @@ class HMDOut extends BaseLibrary {
 					tmpBuf[p++] = nx;
 					tmpBuf[p++] = ny;
 					tmpBuf[p++] = nz;
+				}
+
+				if( tangents != null ) {
+					tmpBuf[p++] = tangents[k * 3];
+					tmpBuf[p++] = tangents[k * 3 + 1];
+					tmpBuf[p++] = tangents[k * 3 + 2];
 				}
 
 				for( tuvs in uvs ) {
@@ -474,23 +484,16 @@ class HMDOut extends BaseLibrary {
 				// get texture
 				var texture = getSpecChild(m, "DiffuseColor");
 				if( texture != null ) {
-					var path = texture.get("FileName").props[0].toString();
-					if( path != "" ) {
-						path = path.split("\\").join("/");
-						if( !absoluteTexturePath ) {
-							if( filePath != null && StringTools.startsWith(path.toLowerCase(), filePath) )
-								path = path.substr(filePath.length);
-							else {
-								// relative resource path
-								var k = path.split("/res/");
-								if( k.length > 1 ) {
-									k.shift();
-									path = k.join("/res/");
-								}
-							}
-						}
-						mat.diffuseTexture = path;
-					}
+					var path = makeTexturePath(texture);
+					if( path != null ) mat.diffuseTexture = path;
+				}
+
+				// get other textures
+				mat.normalMap = makeTexturePath(getSpecChild(m, "NormalMap"));
+				mat.specularTexture = makeTexturePath(getSpecChild(m, "SpecularFactor"));
+				if( mat.normalMap != null || mat.specularTexture != null ) {
+					if( mat.props == null ) mat.props = [];
+					mat.props.push(HasExtraTextures);
 				}
 
 				// get alpha map
@@ -504,7 +507,7 @@ class HMDOut extends BaseLibrary {
 							// if that's the same file, we're doing alpha blending
 							if( mat.blendMode == null && ext != "jpg" && ext != "jpeg" ) mat.blendMode = Alpha;
 						} else
-							throw "TODO : alpha texture";
+							throw "Alpha texture that is different from diffuse is not supported in HMD";
 					}
 				}
 
@@ -555,6 +558,28 @@ class HMDOut extends BaseLibrary {
 			else
 				model.materials = [for( id in gdata.materials ) mids[id]];
 		}
+	}
+
+	function makeTexturePath( tex : FbxNode ) {
+		if( tex == null )
+			return null;
+		var path = tex.get("FileName").props[0].toString();
+		if( path == "" )
+			return null;
+		path = path.split("\\").join("/");
+		if( !absoluteTexturePath ) {
+			if( filePath != null && StringTools.startsWith(path.toLowerCase(), filePath) )
+				path = path.substr(filePath.length);
+			else {
+				// relative resource path
+				var k = path.split("/res/");
+				if( k.length > 1 ) {
+					k.shift();
+					path = k.join("/res/");
+				}
+			}
+		}
+		return path;
 	}
 
 	function makeSkin( skin : h3d.anim.Skin, obj : TmpObject ) {

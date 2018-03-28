@@ -80,7 +80,7 @@ private class CustomSceneProps extends SceneProps {
 			case 0:
 				if( index == 0 ) return; // Don't allow toggle base shader
 				if( !pass.removeShader(shader) )
-					pass.addShaderAt(shader, shaders.length - (index + 1));
+					@:privateAccess pass.addShaderAtIndex(shader, shaders.length - (index + 1));
 				j.toggleClass("disable");
 			case 1:
 				var shader = @:privateAccess shader.shader;
@@ -104,7 +104,7 @@ private class CustomSceneProps extends SceneProps {
 				j.toggleClass("disable");
 			case 1:
 				var p = new Panel(null,pass.name+" shader");
-				var shader = scene.renderer.compileShader(pass);
+				var shader = scene.renderer.debugCompileShader(pass);
 				var toString = hxsl.Printer.shaderToString;
 				var code = toString(shader.vertex.data) + "\n\n" + toString(shader.fragment.data);
 				p.j.html("<pre class='code'>" + colorize(code) + "</pre>");

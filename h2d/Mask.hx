@@ -64,6 +64,19 @@ class Mask extends Sprite {
 		var x2 = width * matA + height * matC + absX;
 		var y2 = width * matB + height * matD + absY;
 
+		var tmp;
+		if (x1 > x2) {
+			tmp = x1;
+			x1 = x2;
+			x2 = tmp;
+		}
+
+		if (y1 > y2) {
+			tmp = y1;
+			y1 = y2;
+			y2 = tmp;
+		}
+
 		ctx.flush();
 		if( ctx.hasRenderZone ) {
 			var oldX = ctx.renderX, oldY = ctx.renderY, oldW = ctx.renderW, oldH = ctx.renderH;

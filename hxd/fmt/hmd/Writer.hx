@@ -15,7 +15,7 @@ class Writer {
 		switch( p ) {
 		case CameraFOVY(v):
 			out.writeFloat(v);
-		case HasMaterialFlags:
+		case HasMaterialFlags, HasExtraTextures:
 		}
 	}
 
@@ -136,6 +136,10 @@ class Writer {
 			writeFloat(m.killAlpha == null ? 1 : m.killAlpha);
 			if( m.props != null && m.props.indexOf(HasMaterialFlags) >= 0 )
 				out.writeInt32(m.flags.toInt());
+			if( m.props != null && m.props.indexOf(HasExtraTextures) >= 0 ) {
+				writeName(m.specularTexture);
+				writeName(m.normalMap);
+			}
 		}
 
 		out.writeInt32(d.models.length);

@@ -170,10 +170,20 @@ class Geometry {
 	}
 
 	public function getNormals() {
-		var nrm = root.get("LayerElementNormal.Normals").getFloats();
+		return processVectors("LayerElementNormal", "Normals");
+	}
+
+	public function getTangents( opt = false ) {
+		return processVectors("LayerElementTangent", "Tangents", opt);
+	}
+
+	function processVectors( layer, name, opt = false ) {
+		var vect = root.get(layer + "." + name, opt);
+		if( vect == null ) return null;
+		var nrm = vect.getFloats();
 		// if by-vertice (Maya in some cases, unless maybe "Split per-Vertex Normals" is checked)
 		// let's reindex based on polygon indexes
-		if( root.get("LayerElementNormal.MappingInformationType").props[0].toString() == "ByVertice" ) {
+		if( root.get(layer+".MappingInformationType").props[0].toString() == "ByVertice" ) {
 			var nout = [];
 			for( i in getPolygons() ) {
 				var vid = i;

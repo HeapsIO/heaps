@@ -148,7 +148,7 @@ class MemoryManager {
 		}
 
 		if( !b.flags.has(Managed) ) {
-			var m = new ManagedBuffer(stride, b.vertices);
+			var m = new ManagedBuffer(stride, b.vertices, b.flags.has(Dynamic) ? [Dynamic] : null);
 			#if debug
 			m.next = buffers[0];
 			buffers[0] = m;

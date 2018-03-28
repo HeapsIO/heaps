@@ -16,6 +16,21 @@ class ShaderList {
 	public inline function iterateTo(s) {
 		return new ShaderIterator(this,s);
 	}
+
+	public static function addSort( s : Shader, shaders : ShaderList ) {
+		var prev = null;
+		var hd = shaders;
+		// sort by ascending priority
+		while( hd != null && hd.s.priority < s.priority ) {
+			prev = hd;
+			hd = hd.next;
+		}
+		if( prev == null )
+			return new ShaderList(s, shaders);
+		prev.next = new ShaderList(s, prev.next);
+		return shaders;
+	}
+
 }
 
 private class ShaderIterator {

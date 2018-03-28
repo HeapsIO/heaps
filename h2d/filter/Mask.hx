@@ -41,7 +41,7 @@ class Mask extends AbstractMask {
 		var mask = getMaskTexture(t);
 		if( mask == null )
 			throw "Mask should be rendered before masked object";
-		var out = ctx.textures.allocTarget("maskTmp", ctx, t.width, t.height, false);
+		var out = ctx.textures.allocTarget("maskTmp", t.width, t.height, false);
 		ctx.engine.pushTarget(out);
 		pass.shader.texture = t.getTexture();
 		pass.shader.mask = getMaskTexture(t);

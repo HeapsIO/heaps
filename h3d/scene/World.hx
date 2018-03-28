@@ -165,6 +165,14 @@ class World extends Object {
 		return Alpha;
 	}
 
+	function resolveTexturePath( r : hxd.res.Model, path : String ) {
+		if( hxd.res.Loader.currentInstance.exists(path) )
+			return path;
+		var dir = r.entry.directory;
+		if( dir != "" ) dir += "/";
+		return dir + path.split("/").pop();
+	}
+
 	function resolveSpecularTexture( path : String ) : hxd.res.Image {
 		path =  path.substr(0, path.length - 4) + "spec.jpg";
 		try {
@@ -175,10 +183,7 @@ class World extends Object {
 	}
 
 	function loadMaterialTexture( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
-		var texturePath = r.entry.directory;
-		if( texturePath != "" ) texturePath += "/";
-		texturePath += mat.diffuseTexture.split("/").pop();
-
+		var texturePath = resolveTexturePath(r, mat.diffuseTexture);
 		var m = textures.get(texturePath);
 		if( m != null )
 			return m;

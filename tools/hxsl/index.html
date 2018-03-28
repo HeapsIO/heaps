@@ -1,0 +1,96 @@
+<html>
+
+<body>
+
+<style>
+th, td, p {
+	font-family : "Verdana";
+}
+th {
+	font-weight: normal;
+}
+td, tr {
+	vertical-align : top;
+}
+a {
+	color : #008;
+	text-decoration:none;
+}
+a:hover {
+	text-decoration:underline;
+}
+a.active {
+	font-weight : bold;
+}
+.error {
+	color : #800;
+	font-weight : bold;
+}
+</style>
+
+<table style="width:100%;table-layout:fixed;">
+<tr>
+	<th>
+		<b>HxSL code</b>
+		Outputs: <input type="text" id="outputs" value="output.color"/>
+
+	</th>
+	<th>
+		<a href="#" onclick="show(this)">Input</a>
+		&gt; <a href="#" onclick="show(this)">Link</a>
+		&gt; <a href="#" onclick="show(this)">Split</a>
+		&gt; <a href="#" onclick="show(this)">Dce</a>
+		&gt; <a href="#" onclick="show(this)">Flatten</a>
+		&gt; <a href="#" onclick="show(this)">GLSL</a>
+		| <a href="#" onclick="show(this)">HLSL</a>
+	</th>
+</tr>
+<tr>
+<td style="width:50%; min-width:50%">
+
+<textarea id="hxsl" style="width:100%;height:400px">
+@input var input : {
+	var position : Vec3;
+};
+
+@const var white : Bool;
+@param var modelView : Mat4;
+
+var output : {
+	var color : Vec4;
+	var position : Vec4;
+};
+
+function vertex() {
+	output.position = vec4(input.position,1.) * modelView;
+}
+
+function fragment() {
+	output.color = vec4(white ? 1. : 0.);
+}
+</textarea>
+
+<textarea id="vars" style="width:100%; height: 40px">
+{ white : true }
+</textarea>
+
+<div class="error" id="errorLog">
+</div>
+
+</td>
+
+<td style="width:50%; max-width:50%">
+<div style="border:1px solid #888; display:inline-block; width:100%; margin-left : 5px; height : 400px; overflow:scroll">
+<pre id="display" style="width:100%">
+</pre>
+</div>
+<input type="checkbox" id="varids"/> var-ids
+</td>
+</table>
+
+<canvas id="canvas"></canvas>
+<script src="hxsl.js"></script>
+
+
+</body>
+</html>

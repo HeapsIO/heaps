@@ -26,6 +26,11 @@ class ScreenFx<T:hxsl.Shader> {
 			manager.globals.fastSet(g.gid, g.value);
 	}
 
+	public function addShader<T:hxsl.Shader>(s:T) {
+		shaders = hxsl.ShaderList.addSort(s, shaders);
+		return pass.addShader(s);
+	}
+
 	public function render() {
 		var rts = manager.compileShaders(shaders);
 		engine.selectMaterial(pass);

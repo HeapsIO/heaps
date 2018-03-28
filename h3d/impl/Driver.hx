@@ -42,6 +42,12 @@ typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int };
 typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
 typedef DepthBuffer = { res : dx.Resource, view : dx.Driver.DepthStencilView };
 typedef Query = {};
+#elseif usesys
+typedef IndexBuffer = haxe.GraphicsDriver.IndexBuffer;
+typedef VertexBuffer = haxe.GraphicsDriver.VertexBuffer;
+typedef Texture = haxe.GraphicsDriver.Texture;
+typedef DepthBuffer = haxe.GraphicsDriver.DepthBuffer;
+typedef Query = haxe.GraphicsDriver.Query;
 #else
 typedef IndexBuffer = {};
 typedef VertexBuffer = {};
@@ -194,6 +200,9 @@ class Driver {
 	}
 
 	public function present() {
+	}
+
+	public function end() {
 	}
 
 	public function setDebug( b : Bool ) {

@@ -10,7 +10,7 @@ class TextWidget extends Sprite
 	public var align: Align;
 	public var textField: h2d.Text;
 	public var back: Graphics;
-	
+
 	public function new(parent:h2d.Scene, font: Font, str:String, align:h2d.Text.Align){
 		super(parent);
 		this.align = align;
@@ -21,23 +21,23 @@ class TextWidget extends Sprite
 		tf.textAlign = align;
 		tf.text = str;
 		textField = tf;
-		
+
 		refreshBounds();
 	}
-	
+
 	public function refreshBounds() {
 		back.clear();
 
-		var bounds = textField.getBounds(this);		
+		var bounds = textField.getBounds(this);
 		var size = textField.getSize();
 
 		back.beginFill(0x5050ff,  0.5);
 		back.drawRect(bounds.x, 0, size.width, size.height);
 		back.endFill();
-		
+
 		back.lineStyle(1, 0x50ff50);
 		back.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
-		
+
 		back.lineStyle(1, 0xff5050);
 		back.moveTo(bounds.x, 0);
 		back.lineTo(bounds.x + textField.textWidth, 0);
@@ -52,50 +52,58 @@ class TextWidget extends Sprite
 }
 
 class Text extends hxd.App {
-	
+
 	var textWidgets:Array<TextWidget> = [];
 	var resizeWidgets: Array<TextWidget> = [];
 
 	override function init() {
-		
+
 		// Enable global scaling
 		// s2d.scale(1.25);
 
-		var font = hxd.Res.gravityFont.toFont();
+		var font = hxd.res.DefaultFont.get();
 		// var font = hxd.Res.customFont.toFont();
-		
+
 		var multilineText = "This is a multiline text.\nLorem ipsum dolor";
 		var singleText = "Hello simple text";
-		
+
+		var xpos = 0;
 		var yoffset = 10.0;
 
 		function createWidget(str:String, align:h2d.Text.Align) {
 			var w = new TextWidget(s2d, font, str, align);
+			w.x = xpos;
 			w.y = yoffset;
 			textWidgets.push(w);
 			return w;
 		}
-		
+
 		// Static single and multiline widgets
-		for (a in [Align.Left, Align.Center, Align.Right]) {
+		xpos += 450;
+		for (a in [Align.Left, Align.Center, Align.Right, Align.MultilineCenter, Align.MultilineRight]) {
 			var w = createWidget("", a);
+			var label = new h2d.Text(font, w);
+			label.text = Std.string(a);
+			label.x = 5;
+			label.alpha = 0.5;
 			yoffset += w.textField.textHeight + 10;
 			var w = createWidget(singleText, a);
 			yoffset += w.textField.textHeight + 10;
 			var w = createWidget(multilineText, a);
 			yoffset += w.textField.textHeight + 10;
 		}
-		
+
 		// Resized widgets
-		yoffset += 20;
+		xpos += 200;
+		yoffset = 10;
 		var longText = "Lorem ipsum dolor sit amet, fabulas repudiare accommodare nec ut. Ut nec facete maiestatis, partem debitis eos id, perfecto ocurreret repudiandae cum no.";
-		for (a in [Align.Left, Align.Center, Align.Right]) {			
+		for (a in [Align.Left, Align.Center, Align.Right, Align.MultilineCenter, Align.MultilineRight]) {
 			var w = createWidget(longText, a);
 			w.setMaxWidth(200);
 			resizeWidgets.push(w);
 			yoffset += 100;
 		}
-		
+
 		// Flows
 		function createText(parent:Sprite, str : String, align:Align) {
 			var tf = new h2d.Text(font, parent);
@@ -114,34 +122,34 @@ class Text extends hxd.App {
 			flow.padding = 5;
 			return flow;
 		}
-		
-		
+
+
 		yoffset = 0;
 		var flow = createFlow(s2d);
 		flow.verticalAlign = FlowAlign.Middle;
 		createText(flow, singleText, Align.Left);
 		createText(flow, multilineText, Align.Left);
-		
+
 		yoffset += flow.getBounds().height + 10;
-		
+
 		var flow = createFlow(s2d);
 		flow.y = yoffset;
 		flow.multiline = false;
 		flow.verticalAlign = FlowAlign.Middle;
 		createText(flow, multilineText, Align.Center);
 		createText(flow, multilineText, Align.Right);
-		
+
 		yoffset += flow.getBounds().height + 10;
-		
+
 		var flow = createFlow(s2d);
 		flow.y = yoffset;
 		flow.verticalAlign = FlowAlign.Middle;
 		flow.maxWidth = 150;
 		createText(flow, singleText, Align.Left);
 		createText(flow, multilineText, Align.Center);
-		
+
 		yoffset += flow.getBounds().height + 10;
-		
+
 		var flow = createFlow(s2d);
 		flow.y = yoffset;
 		flow.horizontalAlign = FlowAlign.Middle;
@@ -151,7 +159,7 @@ class Text extends hxd.App {
 		createText(flow, multilineText, Align.Right);
 
 		yoffset += flow.getBounds().height + 10;
-		
+
 		{
 			var flow = createFlow(s2d);
 			flow.y = yoffset;
@@ -164,7 +172,7 @@ class Text extends hxd.App {
 			yoffset += flow.getBounds().height + 10;
 		}
 
-		
+
 		var flow = createFlow(s2d);
 		flow.y = yoffset;
 		flow.x = 100;
@@ -176,17 +184,10 @@ class Text extends hxd.App {
 			var f2 = createFlow(flow);
 			createText(f2, multilineText, Align.Left);
 		}
-		
+
 		onResize();
 	}
-	
 
-	// if we the window has been resized
-	override function onResize() {
-		for (w in textWidgets) {
-			w.x = s2d.width / (2 * s2d.scaleX);
-		}
-	}
 
 	override function update(dt:Float) {
 		for (w in resizeWidgets) {

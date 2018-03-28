@@ -14,6 +14,8 @@ private class AllocatedVar {
 }
 
 private class ShaderInfos {
+	static var UID = 0;
+	public var uid : Int;
 	public var name : String;
 	public var priority : Int;
 	public var body : TExpr;
@@ -28,6 +30,7 @@ private class ShaderInfos {
 	public var marked : Null<Bool>;
 	public function new(n, v) {
 		this.name = n;
+		this.uid = UID++;
 		this.vertex = v;
 		processed = new Map();
 		usedFunctions = [];
@@ -51,7 +54,11 @@ class Linker {
 	}
 
 	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
-		// for( i in 0...debugDepth ) msg = "    " + msg; haxe.Log.trace(msg, pos);
+		#if shader_debug_dump
+		if( Cache.TRACE ) {
+			for( i in 0...debugDepth ) msg = "    " + msg; haxe.Log.trace(msg, pos);
+		}
+		#end
 	}
 
 	function error( msg : String, p : Position ) : Dynamic {
@@ -225,6 +232,8 @@ class Linker {
 	}
 
 	function sortByPriorityDesc( s1 : ShaderInfos, s2 : ShaderInfos ) {
+		if( s1.priority == s2.priority )
+			return s1.uid - s2.uid;
 		return s2.priority - s1.priority;
 	}
 

@@ -23,7 +23,7 @@ class World extends hxd.App {
 		s3d.camera.target.set(72, 72, 0);
 		s3d.camera.pos.set(120, 120, 40);
 
-		shadow = Std.instance(s3d.renderer.getPass("shadow"), h3d.pass.ShadowMap);
+		shadow = s3d.renderer.getPass(h3d.pass.ShadowMap);
 		shadow.size = 2048;
 		shadow.power = 200;
 		shadow.blur.passes = 0;

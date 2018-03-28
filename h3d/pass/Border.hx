@@ -59,4 +59,9 @@ class Border extends ScreenFx<BorderShader> {
 		shader.color.set(1,1,1,1);
 	}
 
+	override function dispose() {
+		super.dispose();
+		this.plan.dispose();
+	}
+
 }

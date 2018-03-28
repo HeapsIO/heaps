@@ -27,6 +27,7 @@ class Checker {
 	var globals : Map<String,{ g : TGlobal, t : Type }>;
 	var curFun : TFunction;
 	var inLoop : Bool;
+	public var inits : Array<{ v : TVar, e : TExpr }>;
 
 	public function new() {
 		globals = new Map();
@@ -141,6 +142,7 @@ class Checker {
 
 	public function check( name : String, shader : Expr ) : ShaderData {
 		vars = new Map();
+		inits = [];
 		inLoop = false;
 
 		var funs = [];
@@ -267,7 +269,14 @@ class Checker {
 		var ed = switch( e.expr ) {
 		case EConst(c):
 			type = switch( c ) {
-			case CInt(_): TInt;
+			case CInt(i):
+				switch( with ) {
+				case With(TFloat):
+					c = CFloat(i);
+					TFloat;
+				default:
+					TInt;
+				}
 			case CString(_): TString;
 			case CNull: TVoid;
 			case CBool(_): TBool;
@@ -568,13 +577,13 @@ class Checker {
 			for( e in el )
 				checkExpr(e,funs, isImport, isExtends);
 		case EFunction(f):
-			if( isImport )
+			if( isImport && (f.name == "fragment" || f.name == "vertex" || StringTools.startsWith(f.name,"__init__")) )
 				return;
 			for( f2 in funs.copy() ){
 				if( f2.f.name == f.name && f2.inherit )
 					funs.remove(f2);
 			}
-			funs.push({ f : f, p : e.pos, inherit : isExtends });
+			funs.push({ f : f, p : e.pos, inherit : isExtends || isImport });
 		case EVars(vl):
 			for( v in vl ) {
 				if( v.kind == null ) {
@@ -586,12 +595,25 @@ class Checker {
 						default:
 						}
 				}
-				if( v.expr != null ) error("Cannot initialize variable declaration", v.expr.pos);
+				var einit = null;
+				if( v.expr != null ) {
+					if( v.kind != Param )
+						error("Cannot initialize variable declaration if not @param", v.expr.pos);
+					var e = typeExpr(v.expr, v.type == null ? Value : With(v.type));
+					if( v.type == null )
+						v.type = e.t;
+					else
+						unify(e.t, v.type, v.expr.pos);
+					checkConst(e);
+					einit = e;
+				}
 				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
 				var v = makeVar(v, e.pos);
 				if( isImport && v.kind == Param )
 					continue;
+				if( einit != null )
+					inits.push({ v : v, e : einit });
 				vars.set(v.name, v);
 			}
 		case ECall( { expr : EIdent("import") }, [e]):
@@ -627,6 +649,17 @@ class Checker {
 				checkExpr(sexpr, funs, isImport, true);
 		default:
 			error("This expression is not allowed at shader declaration level", e.pos);
+		}
+	}
+
+	function checkConst( e : TExpr ) {
+		switch( e.e ) {
+		case TConst(_):
+		case TParenthesis(e): checkConst(e);
+		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4) }, args):
+			for( a in args ) checkConst(a);
+		default:
+			error("This expression should be constant", e.p);
 		}
 	}
 
@@ -936,27 +969,28 @@ class Checker {
 			if( variants.length > 1 ) efun.t = TFun([f]);
 			return { e : TCall(efun, targs), t : f.ret, p : pos };
 		default:
-			var targs = [for( a in args ) typeExpr(a, Value)];
 			var bestMatch = null, mcount = -1;
 			for( f in sel ) {
-				var m = 0;
-				for( i in 0...targs.length ) {
-					if( !tryUnify(targs[i].t, f.args[i].type) )
+				var outArgs = [];
+				for( i in 0...args.length ) {
+					var a = typeExpr(args[i], With(f.args[i].type));
+					if( !tryUnify(a.t, f.args[i].type) )
 						break;
-					m++;
+					outArgs.push(a);
 				}
-				if( m > mcount ) {
+				if( outArgs.length > mcount ) {
 					bestMatch = f;
-					mcount = m;
-					if( m == targs.length ) {
+					mcount = outArgs.length;
+					if( mcount == args.length ) {
 						efun.t = TFun([f]);
-						return { e : TCall(efun, targs), t : f.ret, p : pos };
+						return { e : TCall(efun, outArgs), t : f.ret, p : pos };
 					}
 				}
 			}
-			for( i in 0...targs.length )
+			for( i in 0...args.length )
 				try {
-					unify(targs[i].t, bestMatch.args[i].type, targs[i].p);
+					var e = typeExpr(args[i], Value);
+					unify(e.t, bestMatch.args[i].type, e.p);
 				} catch( e : Error ) {
 					e.msg += " for argument '" + bestMatch.args[i].name + "'";
 					throw e;

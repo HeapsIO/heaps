@@ -31,8 +31,7 @@ class System {
 	static var loopFunc : Void -> Void;
 
 	// FLASH
-	static var loopVar : flash.events.Event -> Void;
-
+	static var hasLoop : Bool;
 
 	public static function getCurrentLoop() : Void -> Void {
 		return loopFunc;
@@ -40,14 +39,20 @@ class System {
 
 	public static function setLoop( f : Void -> Void ) : Void {
 		loopFunc = f;
-		if( loopVar != null )
-			flash.Lib.current.removeEventListener(flash.events.Event.ENTER_FRAME, loopVar);
-		if( f == null )
-			loopVar = null;
-		else {
-			loopVar = function(_) f();
-			flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, loopVar);
+		if( hasLoop ) {
+			hasLoop = false;
+			flash.Lib.current.removeEventListener(flash.events.Event.ENTER_FRAME, onLoop);
 		}
+		if( f != null ) {
+			hasLoop = true;
+			flash.Lib.current.addEventListener(flash.events.Event.ENTER_FRAME, onLoop);
+		}
+	}
+
+	static function onLoop(_) {
+		loopFunc();
+		var e = h3d.Engine.getCurrent();
+		if( e != null ) e.driver.present();
 	}
 
 	public static function start( callb : Void -> Void ) : Void {

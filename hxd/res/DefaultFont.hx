@@ -8,7 +8,9 @@ class DefaultFont {
 		if( fnt == null ) {
 			var BYTES = hxd.res.Embed.getResource("hxd/res/defaultFont.png");
 			var DESC = hxd.res.Embed.getResource("hxd/res/defaultFont.fnt");
-			fnt = new BitmapFont(@:privateAccess BYTES.loader, DESC.entry).toFont();
+			var bmp = new BitmapFont(DESC.entry);
+			@:privateAccess bmp.loader = BYTES.loader;
+			fnt = bmp.toFont();
 			engine.resCache.set(DefaultFont, fnt);
 		}
 		return fnt;

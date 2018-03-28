@@ -107,11 +107,14 @@ class Pass implements hxd.impl.Serializable {
 	}
 
 	public function addShader<T:hxsl.Shader>(s:T) : T {
-		shaders = new hxsl.ShaderList(s, shaders);
+		shaders = hxsl.ShaderList.addSort(s, shaders);
 		return s;
 	}
 
-	public function addShaderAt<T:hxsl.Shader>(s:T, index:Int) : T {
+	/**
+		Can be used for internal usage
+	**/
+	function addShaderAtIndex<T:hxsl.Shader>(s:T, index:Int) : T {
 		var prev = null;
 		var cur = shaders;
 		while( index > 0 && cur != parentShaders ) {
@@ -195,7 +198,7 @@ class Pass implements hxd.impl.Serializable {
 	}
 
 	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {
-		var shader = scene.renderer.compileShader(this);
+		var shader = scene.renderer.debugCompileShader(this);
 		if( toHxsl ) {
 			var toString = hxsl.Printer.shaderToString.bind(_, true);
 			return "// vertex:\n" + toString(shader.vertex.data) + "\n\nfragment:\n" + toString(shader.fragment.data);

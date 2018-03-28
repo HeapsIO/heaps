@@ -89,6 +89,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentVBuffers = new hl.NativeArray<dx.Resource>(16);
 	var frame : Int;
 	var currentMaterialBits = -1;
+	var targetsCount = 1;
+	var allowDraw = false;
 
 	var depthStates : Map<Int,DepthStencilState> = new Map();
 	var blendStates : Map<Int,BlendState> = new Map();
@@ -171,6 +173,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 		var buf = Driver.getBackBuffer();
 		defaultTarget = Driver.createRenderTargetView(buf);
+		Driver.clearColor(defaultTarget, 0, 0, 0, 0);
 		buf.release();
 
 		outputWidth = width;
@@ -190,6 +193,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		mapCount = 0;
 		updateResCount = 0;
 		this.frame = frame;
+		setRenderTarget(null);
 	}
 
 	override function isDisposed() {
@@ -201,9 +205,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function clear(?color:h3d.Vector, ?depth:Float, ?stencil:Int) {
-		if( color != null )
-			Driver.clearColor(currentTargets[0], color.r, color.g, color.b, color.a);
-		if( depth != null || stencil != null )
+		if( color != null ) {
+			for( i in 0...targetsCount )
+				Driver.clearColor(currentTargets[i], color.r, color.g, color.b, color.a);
+		}
+		if( currentDepth != null && (depth != null || stencil != null) )
 			Driver.clearDepthStencilView(currentDepth.view, depth, stencil);
 	}
 
@@ -214,6 +220,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function present() {
+		if( defaultTarget == null ) return;
 		var old = hxd.System.allowTimeout;
 		if( old ) hxd.System.allowTimeout = false;
 		Driver.present(window.vsync ? 1 : 0, None);
@@ -268,6 +275,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		return switch( t.format ) {
 		case RGBA: R8G8B8A8_UNORM;
 		case RGBA16F: R16G16B16A16_FLOAT;
+		case RGBA32F: R32G32B32A32_FLOAT;
 		case ALPHA32F: R32_FLOAT;
 		case ALPHA16F: R16_FLOAT;
 		case ALPHA8: R8_UNORM;
@@ -480,12 +488,14 @@ class DirectXDriver extends h3d.impl.Driver {
 			var desc = new RasterizerDesc();
 			desc.fillMode = Solid;
 			desc.cullMode = CULL[Pass.getCulling(bits)];
-			if( pass.culling == Both ) throw "Culling:Both Not supported in DirectX";
 			desc.depthClipEnable = true;
 			desc.scissorEnable = bits & SCISSOR_BIT != 0;
 			raster = Driver.createRasterizerState(desc);
 			rasterStates.set(rasterBits, raster);
 		}
+
+		allowDraw = pass.culling != Both;
+
 		if( raster != currentRasterState ) {
 			currentRasterState = raster;
 			Driver.rsSetState(raster);
@@ -514,23 +524,44 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 	}
 
+	function getBinaryPayload( code : String ) {
+		var bin = code.indexOf("//BIN=");
+		if( bin < 0 )
+			return null;
+		var end = code.indexOf("#", bin);
+		if( end < 0 )
+			return null;
+		return haxe.crypto.Base64.decode(code.substr(bin + 6, end - bin - 6));
+	}
+
+	function addBinaryPayload( bytes ) {
+		return "\n//BIN=" + haxe.crypto.Base64.encode(bytes) + "#\n";
+	}
+
 	function compileShader( shader : hxsl.RuntimeShader.RuntimeShaderData, compileOnly = false ) {
 		var h = new hxsl.HlslOut();
-		var source = h.run(shader.data);
-		var bytes = try dx.Driver.compileShader(source, "", "main", (shader.vertex?"vs_":"ps_")+shaderVersion, OptimizationLevel3) catch( err : String ) {
-			err = ~/^\(([0-9]+),([0-9]+)-([0-9]+)\)/gm.map(err, function(r) {
-				var line = Std.parseInt(r.matched(1));
-				var char = Std.parseInt(r.matched(2));
-				var end = Std.parseInt(r.matched(3));
-				return "\n<< " + source.split("\n")[line - 1].substr(char-1,end - char + 1) +" >>";
-			});
-			throw "Shader compilation error " + err + "\n\nin\n\n" + source;
+		if( shader.code == null ){
+			shader.code = h.run(shader.data);
+			shader.data.funs = null;
+		}
+		var bytes = getBinaryPayload(shader.code);
+		if( bytes == null ) {
+			bytes = try dx.Driver.compileShader(shader.code, "", "main", (shader.vertex?"vs_":"ps_") + shaderVersion, OptimizationLevel3) catch( err : String ) {
+				err = ~/^\(([0-9]+),([0-9]+)-([0-9]+)\)/gm.map(err, function(r) {
+					var line = Std.parseInt(r.matched(1));
+					var char = Std.parseInt(r.matched(2));
+					var end = Std.parseInt(r.matched(3));
+					return "\n<< " + shader.code.split("\n")[line - 1].substr(char-1,end - char + 1) +" >>";
+				});
+				throw "Shader compilation error " + err + "\n\nin\n\n" + shader.code;
+			}
+			shader.code += addBinaryPayload(bytes);
 		}
 		if( compileOnly )
 			return { s : null, bytes : bytes };
 		var s = shader.vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
 		if( s == null )
-			throw "Failed to create shader\n" + source;
+			throw "Failed to create shader\n" + shader.code;
 
 		var ctx = new ShaderContext(s);
 		ctx.globalsSize = shader.globalsSize;
@@ -542,7 +573,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		#if debug
-		ctx.debugSource = source;
+		ctx.debugSource = shader.code;
 		#end
 		return { s : ctx, bytes : bytes };
 	}
@@ -579,6 +610,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			curTexture = null;
 			currentDepth = defaultDepth;
 			currentTargets[0] = defaultTarget;
+			targetsCount = 1;
 			Driver.omSetRenderTargets(1, currentTargets, currentDepth.view);
 			viewport[2] = outputWidth;
 			viewport[3] = outputHeight;
@@ -644,6 +676,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			}
 		}
 		Driver.omSetRenderTargets(textures.length, currentTargets, currentDepth == null ? null : currentDepth.view);
+		targetsCount = textures.length;
 
 		viewport[2] = tex.width >> mipLevel;
 		viewport[3] = tex.height >> mipLevel;
@@ -688,7 +721,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			for( v in shader.vertex.data.vars )
 				if( v.kind == Input ) {
 					var e = new LayoutElement();
-					e.semanticName = @:privateAccess v.name.toUtf8();
+					var name = hxsl.HlslOut.semanticName(v.name);
+					e.semanticName = @:privateAccess name.toUtf8();
 					e.inputSlot = layout.length;
 					e.format = switch( v.type ) {
 					case TFloat: R32_FLOAT;
@@ -877,6 +911,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
+		if( !allowDraw )
+			return;
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
 			dx.Driver.iaSetIndexBuffer(ibuf.res,false,0);
@@ -899,6 +935,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		None,
 		Back,
 		Front,
+		None,
 	];
 
 	static var BLEND : Array<Blend> = [

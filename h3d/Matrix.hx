@@ -510,6 +510,32 @@ class Matrix {
 		return [_11, _12, _13, _14, _21, _22, _23, _24, _31, _32, _33, _34, _41, _42, _43, _44];
 	}
 
+	/**
+		Extracts Euler rotation angles from rotation matrix
+	**/
+	public function getEulerAngles() {
+		var cy = hxd.Math.sqrt(_11 * _11 + _12 * _12);
+		if(cy > 0.01) {
+			var v1 = new h3d.Vector(
+				hxd.Math.atan2(_23, _33),
+				hxd.Math.atan2(-_13, cy),
+				hxd.Math.atan2(_12, _11));
+			
+			var v2 = new h3d.Vector(
+				hxd.Math.atan2(-_23, -_33),
+				hxd.Math.atan2(-_13, -cy),
+				hxd.Math.atan2(-_12, -_11));
+
+			return v1.lengthSq() < v2.lengthSq() ? v1 : v2;
+		}
+		else {
+			return new h3d.Vector(
+				hxd.Math.atan2(-_32, _22),
+				hxd.Math.atan2(-_13, cy),
+				0.0);
+		}
+	}
+
 	public function toString() {
 		return "MAT=[\n" +
 			"  [ " + Math.fmt(_11) + ", " + Math.fmt(_12) + ", " + Math.fmt(_13) + ", " + Math.fmt(_14) + " ]\n" +

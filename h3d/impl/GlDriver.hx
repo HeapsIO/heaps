@@ -223,16 +223,19 @@ class GlDriver extends Driver {
 	function compileShader( glout : ShaderCompiler, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
-		var code = glout.run(shader.data);
-		gl.shaderSource(s, code);
+		if( shader.code == null ){
+			shader.code = glout.run(shader.data);
+			shader.data.funs = null;
+		}
+		gl.shaderSource(s, shader.code);
 		gl.compileShader(s);
 		var log = gl.getShaderInfoLog(s);
 		if ( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
 			var log = gl.getShaderInfoLog(s);
 			var lid = Std.parseInt(log.substr(9));
-			var line = lid == null ? null : code.split("\n")[lid - 1];
+			var line = lid == null ? null : shader.code.split("\n")[lid - 1];
 			if( line == null ) line = "" else line = "(" + StringTools.trim(line) + ")";
-			var codeLines = code.split("\n");
+			var codeLines = shader.code.split("\n");
 			for( i in 0...codeLines.length )
 				codeLines[i] = (i+1) + "\t" + codeLines[i];
 			throw "An error occurred compiling the shaders: " + log + line+"\n\n"+codeLines.join("\n");
@@ -260,6 +263,16 @@ class GlDriver extends Driver {
 
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
+
+			#if shader_debug_dump
+			hxsl.UniqueChecker.get().add(shader, function(s) {
+				var out = new ShaderCompiler();
+				out.version = glout.version;
+				out.glES = glout.glES;
+				return out.run(s);
+			});
+			#end
+
 			p.p = gl.createProgram();
 			#if (hlsdl || usegl)
 			if( !glout.glES ) {
@@ -267,7 +280,7 @@ class GlDriver extends Driver {
 				for( v in shader.fragment.data.vars )
 					switch( v.kind ) {
 					case Output:
-						gl.bindFragDataLocation(p.p, outCount++, glout.varNames.get(v.id));
+						gl.bindFragDataLocation(p.p, outCount++, glout.varNames.exists(v.id) ? glout.varNames.get(v.id) : v.name);
 					default:
 					}
 			}
@@ -315,7 +328,7 @@ class GlDriver extends Driver {
 					case TFloat: 1;
 					default: throw "assert " + v.type;
 					}
-					var index = gl.getAttribLocation(p.p, glout.varNames.get(v.id));
+					var index = gl.getAttribLocation(p.p, glout.varNames.exists(v.id) ? glout.varNames.get(v.id) : v.name);
 					if( index < 0 ) {
 						p.stride += size;
 						continue;
@@ -1018,8 +1031,16 @@ class GlDriver extends Driver {
 		gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
 	}
 
-	override function present() {
+	override function end() {
 		// no gl finish or flush !
+	}
+
+	override function present() {
+		#if hlsdl
+		@:privateAccess hxd.Stage.inst.window.present();
+		#elseif usesys
+		haxe.System.present();
+		#end
 	}
 
 	override function isDisposed() {
@@ -1082,6 +1103,10 @@ class GlDriver extends Driver {
 			gl.viewport(0, 0, bufferWidth, bufferHeight);
 			return;
 		}
+
+		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
+			throw "Invalid depth buffer size : does not match render target size";
+
 		#if js
 		if( mipLevel > 0 ) throw "Cannot render to mipLevel, use upload() instead";
 		#end

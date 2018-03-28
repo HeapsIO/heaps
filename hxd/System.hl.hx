@@ -53,14 +53,14 @@ class System {
 
 	static function mainLoop() : Bool {
 		// process events
-		#if hldx
+		#if usesys
+		if( !haxe.System.emitEvents(@:privateAccess hxd.Stage.inst.event) )
+			return false;
+		#elseif hldx
 		if( !dx.Loop.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
 			return false;
 		#elseif hlsdl
 		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
-			return false;
-		#elseif usesys
-		if( !haxe.System.emitEvents(@:privateAccess hxd.Stage.inst.event) )
 			return false;
 		#end
 
@@ -69,12 +69,8 @@ class System {
 		if( loopFunc != null ) loopFunc();
 
 		// present
-		#if usesys
-		haxe.System.present();
-		#elseif hlsdl
-		@:privateAccess hxd.Stage.inst.window.present();
-		#end
-
+		var cur = h3d.Engine.getCurrent();
+		if( cur != null ) cur.driver.present();
 		return true;
 	}
 
@@ -131,8 +127,10 @@ class System {
 	public dynamic static function reportError( e : Dynamic ) {
 		var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());
 		var err = try Std.string(e) catch( _ : Dynamic ) "????";
+		#if usesys
+		haxe.System.reportError(err + stack);
+		#else
 		Sys.println(err + stack);
-		#if !usesys
 		if( dismissErrors )
 			return;
 
@@ -301,6 +299,7 @@ class System {
 		#if !usesys
 		hl.Api.setErrorHandler(function(e) reportError(e)); // initialization error
 		sentinel = new hl.UI.Sentinel(30, function() throw "Program timeout (infinite loop?)");
+		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 		#end
 	}
 

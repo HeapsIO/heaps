@@ -41,6 +41,7 @@ typedef Index<T> = Int;
 enum Property<T> {
 	CameraFOVY( v : Float ) : Property<Float>;
 	HasMaterialFlags;
+	HasExtraTextures;
 }
 
 typedef Properties = Null<Array<Property<Dynamic>>>;
@@ -139,6 +140,8 @@ class Material {
 	public var name : String;
 	public var props : Properties;
 	public var diffuseTexture : Null<String>;
+	public var specularTexture : Null<String>;
+	public var normalMap : Null<String>;
 	public var blendMode : h3d.mat.BlendMode;
 	public var culling : h3d.mat.Data.Face;
 	public var killAlpha : Null<Float>;

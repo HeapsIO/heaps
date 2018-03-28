@@ -266,6 +266,10 @@ class Library {
 			mat.texture = loadTexture(m.diffuseTexture);
 			if( mat.texture == null ) mat.texture = h3d.mat.Texture.fromColor(0xFF00FF);
 		}
+		if( m.specularTexture != null )
+			mat.specularTexture = loadTexture(m.specularTexture);
+		if( m.normalMap != null )
+			mat.normalMap = loadTexture(m.normalMap);
 		mat.blendMode = m.blendMode;
 		mat.mainPass.culling = m.culling;
 		if( m.killAlpha != null ) {

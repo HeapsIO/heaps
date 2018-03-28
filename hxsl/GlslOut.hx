@@ -5,7 +5,12 @@ class GlslOut {
 
 	static var KWD_LIST = [
 		"input", "output", "discard",
-		"dvec2", "dvec3", "dvec4",
+		"dvec2", "dvec3", "dvec4", "hvec2", "hvec3", "hvec4", "fvec2", "fvec3", "fvec4",
+		"int", "float", "bool", "long", "short", "double", "half", "fixed", "unsigned", "superp",
+		"lowp", "mediump", "highp", "precision", "invariant", "discard",
+		"struct", "asm", "union", "template", "this", "packed", "goto", "sizeof","namespace",
+		"noline", "volatile", "external", "flat", "input", "output",
+		"out","attribute","const","uniform","varying","inout","void",
 	];
 	static var KWDS = [for( k in KWD_LIST ) k => true];
 	static var GLOBALS = {
@@ -266,11 +271,7 @@ class GlslOut {
 					addValue(e1, tabs);
 					add(" = ");
 				}
-				add("mod(");
-				addValue(e1, tabs);
-				add(",");
-				addValue(e2, tabs);
-				add(")");
+				addExpr({ e : TCall({ e : TGlobal(Mod), t : TFun([]), p : e.p }, [e1, e2]), t : e.t, p : e.p }, tabs);
 			case [OpUShr, _, _]:
 				decl("int _ushr( int i, int j ) { return int(uint(i) >> uint(j)); }");
 				add("_ushr(");
@@ -319,6 +320,13 @@ class GlslOut {
 			} else {
 				add("/*var*/");
 			}
+		case TCall( { e : TGlobal(Mod) }, [v1,v2]) if( e.t == TInt ):
+			decl("int mod( int x, int y ) { return int(mod(float(x),float(y))); }");
+			add("mod(");
+			addValue(v1, tabs);
+			add(",");
+			addValue(v2, tabs);
+			add(")");
 		case TCall( { e : TGlobal(Mat3) }, [e]) if( e.t == TMat3x4 ):
 			decl(MAT34);
 			decl("mat3 _mat3( _mat3x4 v ) { return mat3(v.a.xyz,v.b.xyz,v.c.xyz); }");
@@ -397,7 +405,7 @@ class GlslOut {
 			locals.set(v.id, v);
 			switch( it.e ) {
 			case TBinop(OpInterval, e1, e2):
-				add("for(");
+				add("for(int ");
 				add(v.name+"=");
 				addValue(e1,tabs);
 				add(";"+v.name+"<");
@@ -574,6 +582,8 @@ class GlslOut {
 		exprValues.push(buf.toString());
 		buf = tmp;
 
+		var locals = Lambda.array(locals);
+		locals.sort(function(v1, v2) return Reflect.compare(v1.name, v2.name));
 		for( v in locals ) {
 			addVar(v);
 			add(";\n");

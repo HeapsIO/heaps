@@ -13,6 +13,7 @@ class Build {
 	public var compressSounds = true;
 	public var compressMP3 = false;
 	public var checkJPG = false;
+	public var checkOGG = false;
 
 	function new() {
 	}
@@ -26,6 +27,9 @@ class Build {
 	function buildRec( path : String ) {
 		var dir = resPath + (path == "" ? "" : "/" + path);
 		var f = new File();
+		#if !dataOnly
+		hxd.System.timeoutTick();
+		#end
 		f.name = path.split("/").pop();
 		if( sys.FileSystem.isDirectory(dir) ) {
 			Sys.println(path == "" ? "<root>" : path);
@@ -33,7 +37,7 @@ class Build {
 			f.content = [];
 			for( name in sys.FileSystem.readDirectory(dir) ) {
 				var fpath = path == "" ? name : path+"/"+name;
-				if( name.charCodeAt(0) == ".".code || (name.charCodeAt(0) == "_".code && sys.FileSystem.isDirectory(fpath)) )
+				if( name.charCodeAt(0) == ".".code || (name.charCodeAt(0) == "_".code && sys.FileSystem.isDirectory(resPath + "/"+fpath)) )
 					continue;
 				var s = buildRec(fpath);
 				if( s != null ) f.content.push(s);
@@ -52,6 +56,10 @@ class Build {
 					command("jpegtran", ["-optimize", "-copy","all", filePath, filePath]);
 					data = sys.io.File.getBytes(filePath);
 				}
+			case "wav", "ogg" if( checkOGG ):
+				var snd = new hxd.snd.OggData(sys.io.File.getBytes(filePath));
+				if( snd.samples == 0 )
+					Sys.println("\t*** ERROR *** " + path + " has 0 samples");
 			}
 
 			f.dataPosition = pakDiff ? out.bytes.length : out.size;
@@ -191,6 +199,8 @@ class Build {
 					b.excludedExt.push(ext);
 			case "-check-jpg":
 				b.checkJPG = true;
+			case "-check-ogg":
+				b.checkOGG = true;
 			default:
 				throw "Unknown parameter " + f;
 			}

@@ -17,7 +17,7 @@ class Ambient extends AbstractMask {
 	inline function set_invert(v) return pass.shader.maskInvert = v;
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
-		var out = ctx.textures.allocTarget("ambientTmp", ctx, t.width, t.height, false);
+		var out = ctx.textures.allocTarget("ambientTmp", t.width, t.height, false);
 		pass.apply(t.getTexture(), out, getMaskTexture(t), maskMatrix);
 		return h2d.Tile.fromTexture(out);
 	}

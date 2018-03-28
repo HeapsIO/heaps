@@ -15,6 +15,12 @@ class AllocParam {
 		this.index = index;
 		this.type = type;
 	}
+	public function clone( resetGID = false ) {
+		var p = new AllocParam(name,pos,instance,index,type);
+		if( perObjectGlobal != null ) p.perObjectGlobal = perObjectGlobal.clone(resetGID);
+		if( next != null ) p.next = next.clone(resetGID);
+		return p;
+	}
 }
 
 class AllocGlobal {
@@ -29,11 +35,18 @@ class AllocGlobal {
 		this.gid = Globals.allocID(path);
 		this.type = type;
 	}
+	public function clone( resetGID = false ) {
+		var g = new AllocGlobal(pos, path, type);
+		if( next != null ) g.next = next.clone(resetGID);
+		if( resetGID ) g.gid = 0;
+		return g;
+	}
 }
 
 class RuntimeShaderData {
 	public var vertex : Bool;
 	public var data : Ast.ShaderData;
+	public var code : String;
 	public var params : AllocParam;
 	public var paramsSize : Int;
 	public var globals : AllocGlobal;
@@ -47,6 +60,16 @@ class RuntimeShaderData {
 	}
 }
 
+class ShaderInstanceDesc {
+	public var shader : SharedShader;
+	public var bits : Int;
+	public var index : Int;
+	public function new(shader, bits) {
+		this.shader = shader;
+		this.bits = bits;
+	}
+}
+
 class RuntimeShader {
 
 	static var UID = 0;
@@ -54,7 +77,13 @@ class RuntimeShader {
 	public var vertex : RuntimeShaderData;
 	public var fragment : RuntimeShaderData;
 	public var globals : Map<Int,Bool>;
+
+	/**
+		Signature of the resulting HxSL code.
+		Several shaders with the different specification might still get the same resulting signature.
+	**/
 	public var signature : String;
+	public var spec : { instances : Array<ShaderInstanceDesc>, signature : String };
 
 	public function new() {
 		id = UID++;

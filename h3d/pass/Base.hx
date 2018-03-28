@@ -3,18 +3,10 @@ package h3d.pass;
 class Base {
 
 	var ctx : h3d.scene.RenderContext;
-	public var priority : Int = 0;
-	public var forceProcessing : Bool = false;
+	public var name(default, null) : String;
 
-	public function new() {
-	}
-
-	public function getTexture( index = 0 ) : h3d.mat.Texture {
-		return null;
-	}
-
-	public function setTexture( t : h3d.mat.Texture, index = 0 ) {
-		throw "Not implemented";
+	public function new(name) {
+		this.name = name;
 	}
 
 	public function compileShader( p : h3d.mat.Pass ) : hxsl.RuntimeShader {

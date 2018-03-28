@@ -17,10 +17,9 @@ class ShadowMap extends Default {
 	public var bias = 0.01;
 	public var blur : Blur;
 
-	public function new(size) {
-		super();
+	public function new(size=1024) {
+		super("shadow");
 		this.size = size;
-		priority = 9;
 		lightCamera = new h3d.Camera();
 		lightCamera.orthoBounds = new h3d.col.Bounds();
 		shadowMapId = hxsl.Globals.allocID("shadow.map");
@@ -118,7 +117,7 @@ class ShadowMap extends Default {
 	}
 
 	override function draw( passes ) {
-		var texture = tcache.allocTarget("shadowMap", ctx, size, size, false);
+		var texture = ctx.textures.allocTarget("shadowMap", size, size, false);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
 			if( depth != null ) depth.dispose();
 			depth = new h3d.mat.DepthBuffer(size, size);
@@ -145,7 +144,7 @@ class ShadowMap extends Default {
 		ctx.engine.popTarget();
 
 		if( blur.quality > 0 && blur.passes > 0 )
-			blur.apply(texture, tcache.allocTarget("tmpBlur", ctx, size, size, false), true);
+			blur.apply(texture, ctx.textures.allocTarget("tmpBlur", size, size, false), true);
 
 		ctx.setGlobalID(shadowMapId, { texture : texture });
 		ctx.setGlobalID(shadowProjId, lightCamera.m);

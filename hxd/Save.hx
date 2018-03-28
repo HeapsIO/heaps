@@ -17,6 +17,9 @@ class Save {
 
 	#if sys
 	static function savePath( name : String ) {
+		#if usesys
+		name = haxe.System.savePathPrefix + name;
+		#end
 		return name + ".sav";
 	}
 	#end
@@ -51,16 +54,33 @@ class Save {
 		} catch( e : Dynamic ) {
 			return defValue;
 		}
-		#elseif sys
-		return try loadData(sys.io.File.getContent(savePath(name)), checkSum) catch( e : Dynamic ) defValue;
-		#elseif js
-		return try loadData(js.Browser.window.localStorage.getItem(name), checkSum) catch( e : Dynamic ) defValue;
 		#else
-		return defValue;
+		return try loadData(readSaveData(name), checkSum) catch( e : Dynamic ) defValue;
 		#end
 	}
 
-	public static function delete( name = "save" ) {
+	@:noCompletion public static dynamic function readSaveData( name : String ) : String {
+		#if sys
+		return sys.io.File.getContent(savePath(name));
+		#elseif js
+		return js.Browser.window.localStorage.getItem(name);
+		#else
+		throw "Not implemented";
+		return null;
+		#end
+	}
+
+	@:noCompletion public static dynamic function writeSaveData( name : String, data : String ) {
+		#if sys
+		sys.io.File.saveContent(savePath(name), data);
+		#elseif js
+		js.Browser.window.localStorage.setItem(name, data);
+		#else
+		throw "Not implemented";
+		#end
+	}
+
+	public dynamic static function delete( name = "save" ) {
 		#if flash
 		throw "TODO";
 		#elseif sys
@@ -79,19 +99,11 @@ class Save {
 		getObj(name).setProperty("data", data);
 		try saveObj.flush() catch( e : Dynamic ) throw "Can't write save (disk full ?)";
 		return true;
-		#elseif sys
-		var data = saveData(val,checkSum);
-		var file = savePath(name);
-		try if( sys.io.File.getContent(file) == data ) return false catch( e : Dynamic ) {};
-		sys.io.File.saveContent(file, data);
-		return true;
-		#elseif js
-		var data = saveData(val, checkSum);
-		try if( js.Browser.window.localStorage.getItem(name) == data ) return false catch( e : Dynamic ) {};
-		js.Browser.window.localStorage.setItem(name, data);
-		return true;
 		#else
-		return false;
+		var data = saveData(val,checkSum);
+		try if( readSaveData(name) == data ) return false catch( e : Dynamic ) {};
+		writeSaveData(name, data);
+		return true;
 		#end
 	}
 

@@ -17,8 +17,8 @@ class Cursor implements hxbit.NetworkSerializable {
 		y = 0;
 	}
 
-	public function networkGetOwner() {
-		return this;
+	public function networkAllow( op : hxbit.NetworkSerializable.Operation, propId : Int, client : hxbit.NetworkSerializable ) : Bool {
+		return client == this;
 	}
 
 	function set_x( v : Float ) {

@@ -318,6 +318,10 @@ class Bounds implements Collider {
 	inline function set_ySize(v) { yMax = yMin + v; return v; }
 	inline function set_zSize(v) { zMax = zMin + v; return v; }
 
+	public inline function isEmpty() {
+		return xMax < xMin || yMax < yMin || zMax < zMin;
+	}
+
 	public inline function empty() {
 		xMin = 1e20;
 		xMax = -1e20;

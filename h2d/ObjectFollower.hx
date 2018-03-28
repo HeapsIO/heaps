@@ -1,20 +1,8 @@
 package h2d;
 
-class Scene3D extends Sprite {
-
-	public var scene : h3d.scene.Scene;
-
-	public function new( scene, ?parent ) {
-		super(parent);
-		this.scene = scene;
-	}
-
-	override function draw( ctx : RenderContext ) {
-		scene.render(ctx.engine);
-	}
-
-}
-
+/**
+	Allows a 2D sprite position to follow a 3D object using the current camera.
+**/
 class ObjectFollower extends Sprite {
 
 	public var follow : h3d.scene.Object;

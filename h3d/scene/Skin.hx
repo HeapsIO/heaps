@@ -13,6 +13,25 @@ class Joint extends Object {
 		this.index = j.index;
 	}
 
+	override function getObjectByName(name:String) {
+		var sk = skin.getSkinData();
+		var j = sk.namedJoints.get(name);
+		if( j == null )
+			return null;
+		var cur = sk.allJoints[index];
+		if( cur.index != index ) throw "assert";
+		var jp = j.parent;
+		while( jp != null ) {
+			if( jp == cur ) {
+				var jo = new Joint(skin, j);
+				jo.parent = this;
+				return jo;
+			}
+			jp = jp.parent;
+		}
+		return null;
+	}
+
 	@:access(h3d.scene.Skin)
 	override function syncPos() {
 		// check if one of our parents has changed
@@ -110,7 +129,12 @@ class Skin extends MultiMaterial {
 		return null;
 	}
 
-	override function getCollider() {
+	override function getLocalCollider() {
+		throw "Not implemented";
+		return null;
+	}
+
+	override function getGlobalCollider() {
 		var col = cast(primitive.getCollider(), h3d.col.Collider.OptimizedCollider);
 		cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
 		return new h3d.col.SkinCollider(this, cast(col.b, h3d.col.PolygonBuffer));

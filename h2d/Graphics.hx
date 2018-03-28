@@ -352,6 +352,10 @@ class Graphics extends Drawable {
 		doFill = true;
 	}
 
+	/**
+		Position a virtual tile at the given position and scale. Every draw will display a part of this tile relative
+		to these coordinates.
+	**/
 	public function beginTileFill( ?dx : Float, ?dy : Float, ?scaleX : Float, ?scaleY : Float, ?tile : h2d.Tile ) {
 		beginFill(0xFFFFFF);
 		if( dx == null ) dx = 0;
@@ -361,8 +365,10 @@ class Graphics extends Drawable {
 				var tex = this.tile.getTexture();
 				if( tex.width != 1 || tex.height != 1 )
 					throw "All tiles must be of the same texture";
+				this.tile = tile;
 			}
-			this.tile = tile;
+			if( this.tile == null  )
+				this.tile = tile;
 		} else
 			tile = this.tile;
 		if( tile == null )
@@ -381,6 +387,12 @@ class Graphics extends Drawable {
 		md = pixHeight / scaleY;
 		mx = -dx * ma;
 		my = -dy * md;
+	}
+
+	public function drawTile( x : Float, y : Float, tile : h2d.Tile ) {
+		beginTileFill(x, y, tile);
+		drawRect(x, y, tile.width, tile.height);
+		endFill();
 	}
 
 	public function lineStyle( size : Float = 0, color = 0, alpha = 1. ) {
@@ -419,29 +431,32 @@ class Graphics extends Drawable {
 		flush();
 	}
 
-	public function drawCircle( cx : Float, cy : Float, ray : Float, nsegments = 0 ) {
+	public function drawCircle( cx : Float, cy : Float, radius : Float, nsegments = 0 ) {
 		flush();
 		if( nsegments == 0 )
-			nsegments = Math.ceil(ray * 3.14 * 2 / 4);
+			nsegments = Math.ceil(Math.abs(radius * 3.14 * 2 / 4));
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = Math.PI * 2 / nsegments;
 		for( i in 0...nsegments + 1 ) {
 			var a = i * angle;
-			lineTo(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
+			lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
 		}
 		flush();
 	}
 
-	public function drawPie( cx : Float, cy : Float, ray : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
+	public function drawPie( cx : Float, cy : Float, radius : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
+		if(Math.abs(angleLength) >= Math.PI * 2) {
+			return drawCircle(cx, cy, radius, nsegments);
+		}
 		flush();
 		lineTo(cx, cy);
 		if( nsegments == 0 )
-			nsegments = Math.ceil(Math.abs(ray * angleLength / 4));
+			nsegments = Math.ceil(Math.abs(radius * angleLength / 4));
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = angleLength / (nsegments - 1);
 		for( i in 0...nsegments ) {
 			var a = i * angle + angleStart;
-			lineTo(cx + Math.cos(a) * ray, cy + Math.sin(a) * ray);
+			lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
 		}
 		lineTo(cx, cy);
 		flush();

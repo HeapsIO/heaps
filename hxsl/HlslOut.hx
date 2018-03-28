@@ -24,6 +24,7 @@ class HlslOut {
 		m.set(LReflect, "reflect");
 		m.set(Fract, "frac");
 		m.set(Mix, "lerp");
+		m.set(Inversesqrt, "rsqrt");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -267,6 +268,7 @@ class HlslOut {
 			case Mat3:
 				decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
 				decl("float3x3 mat3( float4x3 m ) { return (float3x3)m; }");
+				decl("float3x3 mat3( float3 a, float3 b, float3 c ) { float3x3 m; m._m00_m10_m20 = a; m._m01_m11_m21 = b; m._m02_m12_m22 = c; return m; }");
 			case Mod:
 				declMods();
 			case Pow:
@@ -458,7 +460,7 @@ class HlslOut {
 		if( n != null )
 			return n;
 		n = v.name;
-		if( KWDS.exists(n) )
+		while( KWDS.exists(n) )
 			n = "_" + n;
 		if( allNames.exists(n) ) {
 			var k = 2;
@@ -499,7 +501,7 @@ class HlslOut {
 			if( v.kind == Output )
 				add(" : " + (isVertex ? SV_POSITION : SV_TARGET + (index++)));
 			else
-				add(" : " + v.name);
+				add(" : " + semanticName(v.name));
 			add(";\n");
 			varAccess.set(v.id, prefix);
 		}
@@ -603,6 +605,8 @@ class HlslOut {
 	}
 
 	function initLocals() {
+		var locals = Lambda.array(locals);
+		locals.sort(function(v1, v2) return Reflect.compare(v1.name, v2.name));
 		for( v in locals ) {
 			add(STATIC);
 			addVar(v);
@@ -643,6 +647,12 @@ class HlslOut {
 		decls.push(buf.toString());
 		buf = null;
 		return decls.join("\n");
+	}
+
+	public static function semanticName( name : String ) {
+		if( name.length == 0 || (name.charCodeAt(name.length - 1) >= '0'.code && name.charCodeAt(name.length - 1) <= '9'.code) )
+			name += "_";
+		return name;
 	}
 
 }

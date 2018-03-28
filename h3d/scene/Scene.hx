@@ -346,7 +346,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				p = p.next;
 			}
 			prev.next = null;
-			passes.push(new Renderer.PassGroup(curPass.pass.name,curPass));
+			passes.push(new Renderer.PassObjects(curPass.pass.name,curPass));
 			curPass = p;
 		}
 

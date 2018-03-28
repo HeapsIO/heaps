@@ -68,6 +68,8 @@ class Engine {
 		driver = new h3d.impl.Stage3dDriver(antiAlias);
 		#elseif hldx
 		driver = new h3d.impl.DirectXDriver();
+		#elseif usesys
+		driver = new haxe.GraphicsDriver(antiAlias);
 		#else
 		#if sys Sys.println #else trace #end("No output driver available.");
 		driver = new h3d.impl.LogDriver(new h3d.impl.NullDriver());
@@ -281,7 +283,7 @@ class Engine {
 	}
 
 	public function end() {
-		driver.present();
+		driver.end();
 	}
 
 	public function getCurrentTarget() {

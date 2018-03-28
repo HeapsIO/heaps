@@ -1,5 +1,7 @@
 package hxd.fs;
 
+using haxe.io.Path;
+
 class BytesFileEntry extends FileEntry {
 
 	var fullPath : String;
@@ -59,8 +61,18 @@ class BytesFileEntry extends FileEntry {
 			loader.unload();
 		});
 		loader.loadBytes(bytes.getData());
+		#elseif js
+		var mime = switch fullPath.extension().toLowerCase() {
+			case 'jpg' | 'jpeg': 'image/jpeg';
+			case 'png': 'image/png';
+			case 'gif': 'image/gif';
+			case _: throw 'Cannot determine image encoding, try adding an extension to the resource path';
+		}
+		var img = new js.html.Image();
+		img.onload = function() onLoaded(new hxd.fs.LoadedBitmap(img));
+		img.src = 'data:$mime;base64,' + haxe.crypto.Base64.encode(bytes);
 		#else
-		throw "TODO";
+		throw "Not implemented";
 		#end
 	}
 

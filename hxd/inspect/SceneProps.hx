@@ -90,7 +90,7 @@ class SceneProps {
 			if( ls.shadowLight != null )
 				props.push(PGroup("DirLight", getObjectProps(ls.shadowLight)));
 
-			var s = Std.instance(r.getPass("shadow", false),h3d.pass.ShadowMap);
+			var s = r.getPass(h3d.pass.ShadowMap);
 			if( s != null ) {
 				props.push(PGroup("Shadows",[
 					PRange("size", 64, 2048, function() return s.size, function(sz) s.size = Std.int(sz), 64),
@@ -106,16 +106,13 @@ class SceneProps {
 		case Textures:
 
 			var props = [];
+			/*
 			var tp = getTextures(@:privateAccess r.tcache);
 			if( tp.length > 0 )
-				props.push(PGroup("Textures",tp));
+				props.push(PGroup("Textures",tp));*/
 
-			var pmap = new Map();
-			for( p in @:privateAccess r.allPasses ) {
-				if( pmap.exists(p.p) ) continue;
-				pmap.set(p.p, true);
-				props.push(PGroup("Pass " + p.name, getPassProps(p.p)));
-			}
+			for( p in @:privateAccess r.allPasses )
+				props.push(PGroup("Pass " + p.name, getPassProps(p)));
 			return props;
 
 		case Core:
@@ -369,8 +366,8 @@ class SceneProps {
 
 		addDynamicProps(props, p);
 
-		for( t in getTextures(@:privateAccess def.tcache) )
-			props.push(t);
+		//for( t in getTextures(@:privateAccess def.tcache) )
+		//	props.push(t);
 
 		return props;
 	}

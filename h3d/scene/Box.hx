@@ -18,6 +18,10 @@ class Box extends Graphics {
 		if( !depth ) material.mainPass.depth(true, Always);
 	}
 
+	override function getLocalCollider() {
+		return null;
+	}
+
 	override function sync(ctx) {
 		if( bounds == null ) {
 			if( prevXMin == -0.5 && prevYMin == -0.5 && prevZMin == -0.5 && prevXMax == 0.5 && prevYMax == 0.5 && prevZMax == 0.5 )

@@ -15,12 +15,18 @@ class Charset {
 	/**
 		The Latin1 (ISO 8859-1) charset (only the extra chars, no the ASCII part) + euro symbol
 	**/
-	public static var LATIN1 = "¡¢£¤¥¦§¨©ª«¬-®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ€";
+	public static var LATIN1 = "¡¢£¤¥¦§¨©ª«¬-®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿœæŒÆ€";
 
 	/**
 		Russian support
 	**/
 	public static var CYRILLIC = "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя—";
+
+	/**
+		Polish support
+	**/
+	public static var POLISH = "ĄĆĘŁŃÓŚŹŻąćęłńóśźż";
+
 
 	public static var DEFAULT_CHARS = ASCII + LATIN1;
 
@@ -79,6 +85,7 @@ class Charset {
 		m("‘".code, "'".code);
 		m("‹".code, "<".code);
 		m("›".code, ">".code);
+		m("–".code, "-".code);
 	}
 
 	public function resolveChar<T>( code : Int, glyphs : Map<Int,T> ) : Null<T> {

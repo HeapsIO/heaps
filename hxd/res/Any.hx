@@ -28,19 +28,15 @@ class Any extends Resource {
 	}
 
 	public function toModel() {
-		return loader.loadModel(entry.path);
-	}
-
-	public function toHmd() {
-		return loader.loadModel(entry.path).toHmd();
+		return loader.loadCache(entry.path, hxd.res.Model);
 	}
 
 	public function toTexture() {
-		return loader.loadImage(entry.path).toTexture();
+		return toImage().toTexture();
 	}
 
 	public function toTile() {
-		return loader.loadImage(entry.path).toTile();
+		return toImage().toTile();
 	}
 
 	public function toText() {
@@ -48,31 +44,21 @@ class Any extends Resource {
 	}
 
 	public function toImage() {
-		return loader.loadImage(entry.path);
+		return loader.loadCache(entry.path, hxd.res.Image);
 	}
 
 	public function toSound() {
-		return loader.loadSound(entry.path);
+		return loader.loadCache(entry.path, hxd.res.Sound);
 	}
 
-	public function toFont() {
-		return loader.loadFont(entry.path);
+	#if hide
+	public function toPrefab() {
+		return loader.loadCache(entry.path, hide.prefab.Resource);
 	}
+	#end
 
-	public function toBitmap() {
-		return loader.loadImage(entry.path).toBitmap();
-	}
-
-	public function toBitmapFont() {
-		return loader.loadBitmapFont(entry.path);
-	}
-
-	public function toTiledMap() {
-		return loader.loadTiledMap(entry.path);
-	}
-
-	public function toAtlas() {
-		return loader.loadAtlas(entry.path);
+	public function to<T:hxd.res.Resource>( c : Class<T> ) : T {
+		return loader.loadCache(entry.path, c);
 	}
 
 	public inline function iterator() {

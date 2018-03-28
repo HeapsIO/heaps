@@ -12,6 +12,8 @@ class Texture {
 	public static var nativeFormat(default,never) : TextureFormat =
 		#if flash
 			BGRA
+		#elseif (usesys && !hldx && !hlsdl && !usegl)
+			haxe.GraphicsDriver.nativeFormat
 		#else
 			RGBA // OpenGL, WebGL
 		#end;
@@ -366,6 +368,26 @@ class Texture {
 		return t;
 	}
 
+	/**
+		Returns a checker texture of size x size, than can be repeated
+	**/
+	public static function genChecker(size) {
+		var engine = h3d.Engine.getCurrent();
+		var k = checkerTextureKeys.get(size);
+		var t : Texture = k == null ? null : @:privateAccess engine.resCache.get(k);
+		if( t != null && !t.isDisposed() )
+			return t;
+		if( k == null ) {
+			k = {};
+			checkerTextureKeys.set(size, k);
+		}
+		var t = new h3d.mat.Texture(size, size, [NoAlloc]);
+		t.realloc = allocChecker.bind(t,size);
+		@:privateAccess engine.resCache.set(k, t);
+		return t;
+	}
+
+	static var checkerTextureKeys = new Map<Int,{}>();
 	static var noiseTextureKeys = new Map<Int,{}>();
 
 	public static function genNoise(size) {
@@ -390,6 +412,18 @@ class Texture {
 			for( y in 0...size ) {
 				var n = Std.random(256);
 				b.setPixel(x, y, 0xFF000000 | n | (n << 8) | (n << 16));
+			}
+		t.uploadBitmap(b);
+		b.dispose();
+	}
+
+	static function allocChecker( t : h3d.mat.Texture, size : Int ) {
+		var b = new hxd.BitmapData(size, size);
+		b.clear(0xFFFFFFFF);
+		for( x in 0...size>>1 )
+			for( y in 0...size>>1 ) {
+				b.setPixel(x, y, 0xFF000000);
+				b.setPixel(x+(size>>1), y+(size>>1), 0xFF000000);
 			}
 		t.uploadBitmap(b);
 		b.dispose();
