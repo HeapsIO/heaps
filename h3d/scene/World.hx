@@ -257,11 +257,13 @@ class World extends Object {
 			if( geom == null ) continue;
 			var pos = m.position.toMatrix();
 			for( mid in 0...m.materials.length ) {
-				var mat = loadMaterialTexture(r, lib.header.materials[m.materials[mid]]);
-				if( mat == null ) continue;
+				var mat = lib.header.materials[m.materials[mid]];
+				if(mat == null || mat.diffuseTexture == null) continue;
+				var wmat = loadMaterialTexture(r, mat);
+				if( wmat == null ) continue;
 				var data = lib.getBuffers(geom, format.fmt, format.defaults, mid);
 
-				var m = new WorldModelGeometry(mat);
+				var m = new WorldModelGeometry(wmat);
 				m.vertexCount = Std.int(data.vertexes.length / model.stride);
 				m.indexCount = data.indexes.length;
 				m.startVertex = startVertex;
@@ -298,8 +300,8 @@ class World extends Object {
 					model.buf.push(n.z * len);
 
 					// uv
-					model.buf.push(u * mat.t.su + mat.t.du);
-					model.buf.push(v * mat.t.sv + mat.t.dv);
+					model.buf.push(u * wmat.t.su + wmat.t.du);
+					model.buf.push(v * wmat.t.sv + wmat.t.dv);
 
 					// extra
 					for( k in 0...extra )
@@ -474,6 +476,15 @@ class World extends Object {
 			initChunkSoil(c);
 			initChunkElements(c);
 		}
+	}
+
+	override public function getBounds( ?b : h3d.col.Bounds, rec = false ) {
+		if( b == null )
+			b = new h3d.col.Bounds();
+		for(c in chunks) {
+			b.add(c.bounds);
+		}
+		return b;
 	}
 
 	#if hxbit
