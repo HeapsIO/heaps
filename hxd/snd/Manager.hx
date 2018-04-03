@@ -560,8 +560,7 @@ class Manager {
 	}
 
 	function bindEffect(c : Channel, s : Source, e : Effect) {
-		var wasInGC = effectGC.remove(e);
-		if (!wasInGC && e.refs == 0) e.driver.acquire();
+		if (e.refs == 0 && !effectGC.remove(e)) e.driver.acquire();
 		++e.refs;
 		e.driver.bind(e, s.handle);
 		c.bindedEffects.push(e);
