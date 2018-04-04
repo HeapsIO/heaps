@@ -226,12 +226,13 @@ class Pixels {
 	public function setFlip( b : Bool ) {
 		#if js if( b == null ) b = false; #end
 		if( flags.has(FlipY) == b ) return;
+		if( this.bpp != 4 ) throw "TODO";
 		willChange();
 		if( b ) flags.set(FlipY) else flags.unset(FlipY);
 		var stride = width * bpp;
 		for( y in 0...height >> 1 ) {
-			var p1 = y * stride;
-			var p2 = (height - 1 - y) * stride;
+			var p1 = y * stride + offset;
+			var p2 = (height - 1 - y) * stride + offset;
 			for( x in 0...stride>>2 ) {
 				var a = bytes.getInt32(p1);
 				var b = bytes.getInt32(p2);
