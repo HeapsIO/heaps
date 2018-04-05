@@ -12,6 +12,8 @@ class Build {
 	public var pakDiff = false;
 	public var compressSounds = true;
 	public var compressMP3 = false;
+	public var compressFont = true;
+	public var compressAtlas = true;
 	public var checkJPG = false;
 	public var checkOGG = false;
 
@@ -131,6 +133,10 @@ class Build {
 			fs.addConvert(new hxd.fs.Convert.ConvertWAV2MP3());
 		else if( compressSounds )
 			fs.addConvert(new hxd.fs.Convert.ConvertWAV2OGG());
+		if( compressAtlas )
+			fs.addConvert(new hxd.fs.ConvertAtlas());
+		if( compressFont )
+			fs.addConvert(new hxd.fs.ConvertFont());
 		fs.onConvert = function(f) Sys.println("\tConverting " + f.path);
 
 		var pak = new Data();
@@ -188,6 +194,10 @@ class Build {
 				b.compressMP3 = false;
 			case "-wav":
 				b.compressSounds = false;
+			case "-atlas":
+				b.compressAtlas = false;
+			case "-font":
+				b.compressFont = false;
 			case "-diff":
 				b.pakDiff = true;
 			case "-res" if( args.length > 0 ):

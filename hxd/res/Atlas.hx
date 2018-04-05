@@ -53,67 +53,107 @@ class Atlas extends Resource {
 			return contents;
 
 		contents = new Map();
-		var lines = entry.getBytes().toString().split("\n");
 
 		var basePath = entry.path.split("/");
 		basePath.pop();
 		var basePath = basePath.join("/");
 		if( basePath.length > 0 ) basePath += "/";
-		while( lines.length > 0 ) {
-			var line = StringTools.trim(lines.shift());
-			if ( line == "" ) continue;
-			var file = hxd.res.Loader.currentInstance.load(basePath + line).toTile();
+
+		switch( entry.getSign() ){
+		case 0x4C544142: // BATL
+			var r = new haxe.io.BytesInput(entry.getBytes());
+			r.position += 4;
+			inline function readString(){
+				var l = r.readByte();
+				if( l == 0xFF ) l = r.readUInt16();
+				return l == 0 ? null : r.readString(l);
+			}
+			while( r.position < r.length ){
+				var file = readString();
+				if( file == null ) break;
+				var tile = hxd.res.Loader.currentInstance.load(basePath + file).toTile();
+				while( r.position < r.length ){
+					var key = readString();
+					if( key == null ) break;
+					var index = r.readUInt16();
+					var tileX = r.readUInt16();
+					var tileY = r.readUInt16();
+					var tileW = r.readUInt16();
+					var tileH = r.readUInt16();
+					var tileDX = r.readUInt16();
+					var tileDY = r.readUInt16();
+					var origW = r.readUInt16();
+					var origH = r.readUInt16();
+
+					var t = tile.sub(tileX, tileY, tileW, tileH, tileDX, tileDY);
+					var tl = contents.get(key);
+					if( tl == null ) {
+						tl = [];
+						contents.set(key, tl);
+					}
+					tl[index] = { t : t, width : origW, height : origH };
+				}
+			}
+
+		default:
+			var lines = entry.getBytes().toString().split("\n");
+
 			while( lines.length > 0 ) {
 				var line = StringTools.trim(lines.shift());
-				if( line == "" ) break;
-				var prop = line.split(": ");
-				if( prop.length > 1 ) continue;
-				var key = line;
-				var tileX = 0, tileY = 0, tileW = 0, tileH = 0, tileDX = 0, tileDY = 0, origW = 0, origH = 0, index = 0;
+				if ( line == "" ) continue;
+				var file = hxd.res.Loader.currentInstance.load(basePath + line).toTile();
 				while( lines.length > 0 ) {
 					var line = StringTools.trim(lines.shift());
+					if( line == "" ) break;
 					var prop = line.split(": ");
-					if( prop.length == 1 ) {
-						lines.unshift(line);
-						break;
+					if( prop.length > 1 ) continue;
+					var key = line;
+					var tileX = 0, tileY = 0, tileW = 0, tileH = 0, tileDX = 0, tileDY = 0, origW = 0, origH = 0, index = 0;
+					while( lines.length > 0 ) {
+						var line = StringTools.trim(lines.shift());
+						var prop = line.split(": ");
+						if( prop.length == 1 ) {
+							lines.unshift(line);
+							break;
+						}
+						var v = prop[1];
+						switch( prop[0] ) {
+						case "rotate":
+							if( v == "true" ) throw "Rotation not supported in atlas";
+						case "xy":
+							var vals = v.split(", ");
+							tileX = Std.parseInt(vals[0]);
+							tileY = Std.parseInt(vals[1]);
+						case "size":
+							var vals = v.split(", ");
+							tileW = Std.parseInt(vals[0]);
+							tileH = Std.parseInt(vals[1]);
+						case "offset":
+							var vals = v.split(", ");
+							tileDX = Std.parseInt(vals[0]);
+							tileDY = Std.parseInt(vals[1]);
+						case "orig":
+							var vals = v.split(", ");
+							origW = Std.parseInt(vals[0]);
+							origH = Std.parseInt(vals[1]);
+						case "index":
+							index = Std.parseInt(v);
+							if( index < 0 ) index = 0;
+						default:
+							trace("Unknown prop " + prop[0]);
+						}
 					}
-					var v = prop[1];
-					switch( prop[0] ) {
-					case "rotate":
-						if( v == "true" ) throw "Rotation not supported in atlas";
-					case "xy":
-						var vals = v.split(", ");
-						tileX = Std.parseInt(vals[0]);
-						tileY = Std.parseInt(vals[1]);
-					case "size":
-						var vals = v.split(", ");
-						tileW = Std.parseInt(vals[0]);
-						tileH = Std.parseInt(vals[1]);
-					case "offset":
-						var vals = v.split(", ");
-						tileDX = Std.parseInt(vals[0]);
-						tileDY = Std.parseInt(vals[1]);
-					case "orig":
-						var vals = v.split(", ");
-						origW = Std.parseInt(vals[0]);
-						origH = Std.parseInt(vals[1]);
-					case "index":
-						index = Std.parseInt(v);
-						if( index < 0 ) index = 0;
-					default:
-						trace("Unknown prop " + prop[0]);
-					}
-				}
-				// offset is bottom-relative
-				tileDY = origH - (tileH + tileDY);
+					// offset is bottom-relative
+					tileDY = origH - (tileH + tileDY);
 
-				var t = file.sub(tileX, tileY, tileW, tileH, tileDX, tileDY);
-				var tl = contents.get(key);
-				if( tl == null ) {
-					tl = [];
-					contents.set(key, tl);
+					var t = file.sub(tileX, tileY, tileW, tileH, tileDX, tileDY);
+					var tl = contents.get(key);
+					if( tl == null ) {
+						tl = [];
+						contents.set(key, tl);
+					}
+					tl[index] = { t : t, width : origW, height : origH };
 				}
-				tl[index] = { t : t, width : origW, height : origH };
 			}
 		}
 		return contents;
