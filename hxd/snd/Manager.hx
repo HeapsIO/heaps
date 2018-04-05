@@ -294,7 +294,7 @@ class Manager {
 			var playedSamples = driver.getPlayedSampleCount(s.handle);
 			if (playedSamples < 0)  {
 				#if debug
-				throw "playedSamples should positive : bug in driver";
+				trace("playedSamples should positive : bug in driver");
 				#end
 				playedSamples = 0;
 			}
