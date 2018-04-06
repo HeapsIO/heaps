@@ -10,8 +10,7 @@ class Build {
 	public var resPath : String = "res";
 	public var outPrefix : String = "res";
 	public var pakDiff = false;
-	public var compressSounds = true;
-	public var compressMP3 = false;
+	public var soundFormat = "ogg";
 	public var checkJPG = false;
 	public var checkOGG = false;
 
@@ -127,10 +126,16 @@ class Build {
 			throw "'" + resPath + "' resource directory was not found";
 
 		fs = new hxd.fs.LocalFileSystem(resPath);
-		if( compressSounds && compressMP3 )
+		switch( soundFormat ) {
+		case "wav":
+			// no convert
+		case "mp3":
 			fs.addConvert(new hxd.fs.Convert.ConvertWAV2MP3());
-		else if( compressSounds )
+		case "ogg":
 			fs.addConvert(new hxd.fs.Convert.ConvertWAV2OGG());
+		default:
+			throw "Unknown sound format " + soundFormat;
+		}
 		fs.onConvert = function(f) Sys.println("\tConverting " + f.path);
 
 		var pak = new Data();
@@ -175,7 +180,6 @@ class Build {
 		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.n") catch( e : Dynamic ) {};
 		try sys.FileSystem.deleteFile("hxd.fmt.pak.Build.hl") catch( e : Dynamic ) {};
 		var b = new Build();
-		b.compressSounds = true;
 		while( args.length > 0 ) {
 			var f = args.shift();
 			var pos = f.indexOf("=");
@@ -184,10 +188,8 @@ class Build {
 				f = f.substr(0, pos);
 			}
 			switch( f ) {
-			case "-mp3":
-				b.compressMP3 = false;
-			case "-wav":
-				b.compressSounds = false;
+			case "-mp3", "-wav", "-ogg":
+				b.soundFormat = f.substr(1);
 			case "-diff":
 				b.pakDiff = true;
 			case "-res" if( args.length > 0 ):
