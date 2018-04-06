@@ -233,7 +233,7 @@ class FileSystem implements hxd.fs.FileSystem {
 		var index = readCache.lastIndexOf(e);
 		if( index < 0 ) {
 			// don't cache if too big wrt our size
-			if( e.openedBytes.length >= (readCacheSize >> 1) )
+			if( e.openedBytes.length > readCacheSize )
 				return;
 			readCache.push(e);
 			e.cachedBytes = e.openedBytes;
