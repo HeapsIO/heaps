@@ -26,17 +26,21 @@ class FileInput extends haxe.io.BytesInput {
 #end
 
 @:allow(hxd.fmt.pak.FileSystem)
+@:access(hxd.fmt.pak.FileSystem)
 private class PakEntry extends FileEntry {
 
+	var fs : FileSystem;
 	var parent : PakEntry;
 	var file : Data.File;
 	var pak : FileInput;
 	var subs : Array<PakEntry>;
 
 	var openedBytes : haxe.io.Bytes;
+	var cachedBytes : haxe.io.Bytes;
 	var bytesPosition : Int;
 
-	public function new(parent, f, p) {
+	public function new(fs, parent, f, p) {
+		this.fs = fs;
 		this.file = f;
 		this.pak = p;
 		this.parent = parent;
@@ -58,23 +62,36 @@ private class PakEntry extends FileEntry {
 
 	override function getSign() {
 		pak.seek(file.dataPosition, SeekBegin);
+		fs.totalReadBytes += 4;
+		fs.totalReadCount++;
 		return pak.readInt32();
 	}
 
 	override function getBytes() {
+		if( cachedBytes != null )
+			return cachedBytes;
 		pak.seek(file.dataPosition, SeekBegin);
+		fs.totalReadBytes += file.dataSize;
+		fs.totalReadCount++;
 		return pak.read(file.dataSize);
 	}
 
 	override function getTmpBytes() {
+		// don't use cacheBytes
 		pak.seek(file.dataPosition, SeekBegin);
 		var tmp = hxd.impl.Tmp.getBytes(file.dataSize);
+		fs.totalReadBytes += file.dataSize;
+		fs.totalReadCount++;
 		pak.readFullBytes(tmp, 0, file.dataSize);
 		return tmp;
 	}
 
 	override function open() {
+		if( openedBytes == null )
+			openedBytes = fs.getCached(this);
 		if( openedBytes == null ) {
+			fs.totalReadBytes += file.dataSize;
+			fs.totalReadCount++;
 			openedBytes = hxd.impl.Tmp.getBytes(file.dataSize);
 			pak.seek(file.dataPosition, SeekBegin);
 			pak.readBytes(openedBytes, 0, file.dataSize);
@@ -84,7 +101,7 @@ private class PakEntry extends FileEntry {
 
 	override function close() {
 		if( openedBytes != null ) {
-			hxd.impl.Tmp.saveBytes(openedBytes);
+			fs.saveCached(this);
 			openedBytes = null;
 		}
 	}
@@ -157,6 +174,11 @@ class FileSystem implements hxd.fs.FileSystem {
 	var root : PakEntry;
 	var dict : Map<String,PakEntry>;
 	var files : Array<FileInput>;
+	var readCache : Array<PakEntry> = [];
+	var currentCacheSize = 0;
+	public var readCacheSize = 8 << 20; // 8 MB of emulated cache
+	public var totalReadBytes = 0;
+	public var totalReadCount = 0;
 
 	public function new() {
 		dict = new Map();
@@ -165,7 +187,7 @@ class FileSystem implements hxd.fs.FileSystem {
 		f.isDirectory = true;
 		f.content = [];
 		files = [];
-		root = new PakEntry(null, f, null);
+		root = new PakEntry(this, null, f, null);
 	}
 
 	public function loadPak( file : String ) {
@@ -192,13 +214,45 @@ class FileSystem implements hxd.fs.FileSystem {
 		files = [];
 	}
 
+	function getCached( e : PakEntry ) {
+		if( readCacheSize == 0 )
+			return null;
+		var index = readCache.lastIndexOf(e);
+		if( index < 0 )
+			return null;
+		if( index != readCache.length - 1 ) {
+			readCache.splice(index, 1);
+			readCache.push(e);
+		}
+		return e.cachedBytes;
+	}
+
+	function saveCached( e : PakEntry ) {
+		if( readCacheSize == 0 )
+			return;
+		var index = readCache.lastIndexOf(e);
+		if( index < 0 ) {
+			// don't cache if too big wrt our size
+			if( e.openedBytes.length >= (readCacheSize >> 1) )
+				return;
+			readCache.push(e);
+			e.cachedBytes = e.openedBytes;
+			currentCacheSize += e.cachedBytes.length;
+		}
+		while( currentCacheSize > readCacheSize ) {
+			var e = readCache.shift();
+			currentCacheSize -= e.cachedBytes.length;
+			e.cachedBytes = null;
+		}
+	}
+
 	function addRec( parent : PakEntry, path : String, f : Data.File, pak : FileInput, delta : Int ) {
 		var ent = dict.get(path);
 		if( ent != null ) {
 			ent.file = f;
 			ent.pak = pak;
 		} else {
-			ent = new PakEntry(parent, f, pak);
+			ent = new PakEntry(this, parent, f, pak);
 			dict.set(path, ent);
 			parent.subs.push(ent);
 		}
