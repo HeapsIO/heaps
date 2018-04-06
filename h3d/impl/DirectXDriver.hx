@@ -448,8 +448,9 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
 		pixels.convert(RGBA);
+		pixels.setFlip(false);
 		if( mipLevel >= t.t.mips ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.t.mips - 1) + ")";
-		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, pixels.bytes, pixels.width << 2, 0);
+		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), pixels.width * hxd.Pixels.bytesPerPixel(pixels.format), 0);
 		updateResCount++;
 	}
 
