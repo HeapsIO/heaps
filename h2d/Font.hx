@@ -55,10 +55,12 @@ class Font {
 	public var charset : hxd.Charset;
 	var glyphs : Map<Int,FontChar>;
 	var defaultChar : FontChar;
+	var initSize:Int;
 
 	function new(name,size) {
 		this.name = name;
 		this.size = size;
+		this.initSize = size;
 		glyphs = new Map();
 		defaultChar = new FontChar(new Tile(null, 0, 0, 0, 0),0);
 		charset = hxd.Charset.getDefault();
@@ -94,13 +96,13 @@ class Font {
 		This is meant to create smoother fonts by creating them with double size while still keeping the original glyph size.
 	**/
 	public function resizeTo( size : Int ) {
-		var ratio = size / this.size;
+		var ratio = size / initSize;
 		for( c in glyphs ) {
 			c.width = Std.int(c.width * ratio);
 			c.t.scaleToSize(Std.int(c.t.width * ratio), Std.int(c.t.height * ratio));
 			c.t.dx = Std.int(c.t.dx * ratio);
 			c.t.dy = Std.int(c.t.dy * ratio);
-		}		
+		}
 		lineHeight = Std.int(lineHeight * ratio);
 		baseLine = Std.int(baseLine * ratio);
 		this.size = size;
