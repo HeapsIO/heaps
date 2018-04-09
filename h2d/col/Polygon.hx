@@ -181,9 +181,9 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		}
 	}
 
-	public function findPoint(pt : h2d.col.Point, distSq : Float) {
+	public function findClosestPoint(pt : h2d.col.Point, maxDist : Float) {
 		var closest = null;
-		var minDist = distSq;
+		var minDist = maxDist * maxDist;
 		for(cp in points) {
 			var sqDist = cp.distanceSq(pt);
 			if(sqDist < minDist) {
@@ -192,27 +192,6 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 			}
 		}
 		return closest;
-	}
-
-	/**
-		Insert a new vertex on the polygon
-	**/
-	public function insertPoint(pt : h2d.col.Point, snapDist : Float) {
-		var snapDistSq = snapDist * snapDist;
-		if(findPoint(pt, snapDistSq) != null)
-			return true;
-		
-		for(i in 0...points.length) {
-			var p1 = points[i];
-			var p2 = points[(i+1)%points.length];
-			var s = new Segment(p1, p2);
-			var distSq = s.distanceSq(pt);
-			if(distSq < snapDistSq) {
-				points.insert(i+1, pt);
-				return true;
-			}
-		}
-		return false;
 	}
 
 	public function rayIntersection( r : h2d.col.Ray, ?pt : Point ) {

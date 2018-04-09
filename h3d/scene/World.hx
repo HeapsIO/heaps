@@ -478,7 +478,7 @@ class World extends Object {
 		}
 	}
 
-	override public function getBounds( ?b : h3d.col.Bounds, rec = false ) {
+	public function getWorldBounds( ?b : h3d.col.Bounds ) {
 		if( b == null )
 			b = new h3d.col.Bounds();
 		for(c in chunks) {
