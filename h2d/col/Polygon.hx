@@ -1,7 +1,7 @@
 package h2d.col;
 import hxd.Math;
 
-@:forward(push,remove)
+@:forward(push,remove,insert)
 abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 
 	public var points(get, never) : Array<Point>;
