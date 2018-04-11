@@ -5,7 +5,15 @@ Heaps
 
 _High Performance Game Framework_
 
-**Heaps** is a cross platform graphics engine designed for high performance games. It's designed to leverage modern GPUs that are commonly available on both desktop and mobile devices. The framework currently supports HTML5 WebGL, Flash Stage3D, native Mobile (iOS and Android) and Desktop with OpenGL.
+**Heaps** is a cross platform graphics engine designed for high performance games. It's designed to leverage modern GPUs that are commonly available on desktop, mobile and consoles.
+
+Heaps is currently working on:
+- HTML5 (requires WebGL)
+- Mobile (iOS, tvOS and Android)
+- Desktop with OpenGL (Win/Linux/OSX) or DirectX (Windows only)
+- Consoles (Nintendo Switch, Sony PS4, XBox One - requires being a registered developer)
+- Flash Stage3D
+
 
 Community
 ---------

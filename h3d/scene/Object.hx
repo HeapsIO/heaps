@@ -12,6 +12,7 @@ package h3d.scene;
 	public var FNoSerialize = 0x100;
 	public var FIgnoreBounds = 0x200;
 	public var FIgnoreCollide = 0x400;
+	public var FIgnoreParentTransform = 0x800;
 	public inline function new() {
 		this = 0;
 	}
@@ -72,19 +73,24 @@ class Object implements hxd.impl.Serializable {
 	public var alwaysSync(get, set) : Bool;
 
 	/**
-		When enable, the culled flag is inherited by children objects.
+		When enabled, the culled flag is inherited by children objects.
 	**/
 	public var inheritCulled(get, set) : Bool;
 
 	/**
-		When enable, the object is ignore when using getCollider()
+		When enabled, the object is ignore when using getCollider()
 	**/
 	public var ignoreCollide(get, set) : Bool;
 
 	/**
-		When enable, the object can be serialized (default : true)
+		When enabled, the object can be serialized (default : true)
 	**/
 	public var allowSerialize(get, set) : Bool;
+
+	/**
+		When enabled, the object will not follow its parent transform
+	**/
+	public var ignoreParentTransform(get, set) : Bool;
 
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
@@ -115,6 +121,7 @@ class Object implements hxd.impl.Serializable {
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
 	inline function get_allowSerialize() return !flags.has(FNoSerialize);
+	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -125,6 +132,7 @@ class Object implements hxd.impl.Serializable {
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
+	inline function set_ignoreParentTransform(b) return flags.set(FIgnoreParentTransform, b);
 
 	public function playAnimation( a : h3d.anim.Animation ) {
 		return currentAnimation = a.createInstance(this);
@@ -487,10 +495,8 @@ class Object implements hxd.impl.Serializable {
 				absPos.tz += follow.absPos.tz;
 			} else
 				absPos.multiply3x4(absPos, follow.absPos);
-		} else {
-			if( parent != null )
-				absPos.multiply3x4inline(absPos, parent.absPos);
-		}
+		} else if( parent != null && !ignoreParentTransform )
+			absPos.multiply3x4inline(absPos, parent.absPos);
 		// animation is applied before every other transform
 		if( defaultTransform != null )
 			absPos.multiply3x4inline(defaultTransform, absPos);

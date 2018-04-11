@@ -100,6 +100,8 @@ class WorldModel {
 class World extends Object {
 	public var worldSize : Int;
 	public var chunkSize : Int;
+	public var originX : Float = 0.;
+	public var originY : Float = 0.;
 
 	/*
 		For each texture loaded, will call resolveSpecularTexture and have separate spec texture.
@@ -111,7 +113,6 @@ class World extends Object {
 	*/
 	public var specularInAlpha = false;
 
-	var chunkBits : Int;
 	var worldStride : Int;
 	var bigTextureSize = 2048;
 	var bigTextureBG = 0xFF8080FF;
@@ -127,12 +128,7 @@ class World extends Object {
 		bigTextures = [];
 		allChunks = [];
 		textures = new Map();
-		this.chunkBits = 1;
-		while( chunkSize > (1 << chunkBits) )
-			chunkBits++;
-		this.chunkSize = 1 << chunkBits;
-		if( worldSize % chunkSize != 0 )
-			throw "World size must be a multiple of chunk size";
+		this.chunkSize = chunkSize;
 		this.worldSize = worldSize;
 		this.worldStride = Math.ceil(worldSize / chunkSize);
 		if( autoCollect )
@@ -261,11 +257,13 @@ class World extends Object {
 			if( geom == null ) continue;
 			var pos = m.position.toMatrix();
 			for( mid in 0...m.materials.length ) {
-				var mat = loadMaterialTexture(r, lib.header.materials[m.materials[mid]]);
-				if( mat == null ) continue;
+				var mat = lib.header.materials[m.materials[mid]];
+				if(mat == null || mat.diffuseTexture == null) continue;
+				var wmat = loadMaterialTexture(r, mat);
+				if( wmat == null ) continue;
 				var data = lib.getBuffers(geom, format.fmt, format.defaults, mid);
 
-				var m = new WorldModelGeometry(mat);
+				var m = new WorldModelGeometry(wmat);
 				m.vertexCount = Std.int(data.vertexes.length / model.stride);
 				m.indexCount = data.indexes.length;
 				m.startVertex = startVertex;
@@ -302,8 +300,8 @@ class World extends Object {
 					model.buf.push(n.z * len);
 
 					// uv
-					model.buf.push(u * mat.t.su + mat.t.du);
-					model.buf.push(v * mat.t.sv + mat.t.dv);
+					model.buf.push(u * wmat.t.su + wmat.t.du);
+					model.buf.push(v * wmat.t.sv + wmat.t.dv);
 
 					// extra
 					for( k in 0...extra )
@@ -321,16 +319,16 @@ class World extends Object {
 	}
 
 	function getChunk( x : Float, y : Float, create = false ) {
-		var ix = Std.int(x) >> chunkBits;
-		var iy = Std.int(y) >> chunkBits;
+		var ix = Std.int((x - originX) / chunkSize);
+		var iy = Std.int((y - originY) / chunkSize);
 		if( ix < 0 ) ix = 0;
 		if( iy < 0 ) iy = 0;
 		var cid = ix + iy * worldStride;
 		var c = chunks[cid];
 		if( c == null && create ) {
 			c = new WorldChunk(ix, iy);
-			c.x = ix * chunkSize;
-			c.y = iy * chunkSize;
+			c.x = ix * chunkSize + originX;
+			c.y = iy * chunkSize + originY;
 			addChild(c.root);
 			chunks[cid] = c;
 			allChunks.push(c);
@@ -342,7 +340,7 @@ class World extends Object {
 		var n = Std.int(worldSize / chunkSize);
 		for(x in 0...n)
 			for(y in 0...n) {
-				var c = getChunk(x * chunkSize, y * chunkSize, true);
+				var c = getChunk(x * chunkSize + originX, y * chunkSize + originY, true);
 				c.bounds.addPoint(new h3d.col.Point(c.x, c.y));
 				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y));
 				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y + chunkSize));
@@ -478,6 +476,15 @@ class World extends Object {
 			initChunkSoil(c);
 			initChunkElements(c);
 		}
+	}
+
+	public function getWorldBounds( ?b : h3d.col.Bounds ) {
+		if( b == null )
+			b = new h3d.col.Bounds();
+		for(c in chunks) {
+			b.add(c.bounds);
+		}
+		return b;
 	}
 
 	#if hxbit

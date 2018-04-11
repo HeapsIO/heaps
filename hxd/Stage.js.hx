@@ -23,11 +23,11 @@ class Stage {
 	var curW : Int;
 	var curH : Int;
 
-	function new( ?canvas : js.html.CanvasElement ) : Void {
+	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
 		eventTargets = new List();
 		resizeEvents = new List();
 
-		element = canvas == null ? js.Browser.window : canvas;
+		element = canvas == null || globalEvents ? js.Browser.window : canvas;
 		if( canvas == null ) {
 			canvas = cast js.Browser.document.getElementById("webgl");
 			if( canvas == null ) throw "Missing canvas #webgl";

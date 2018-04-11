@@ -1,7 +1,7 @@
 package h2d.col;
 import hxd.Math;
 
-@:forward(push,remove)
+@:forward(push,remove,insert)
 abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 
 	public var points(get, never) : Array<Point>;
@@ -54,7 +54,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return a.x < b.x ? -1 : 1;
 	}
 
-	//see Monotone_chain convex hull algorythm
+	//see Monotone_chain convex hull algorithm
 	public function convexHull() {
 		var len = points.length;
 		if( points.length < 3 )
@@ -179,6 +179,19 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 			}
 			return w != 0;
 		}
+	}
+
+	public function findClosestPoint(pt : h2d.col.Point, maxDist : Float) {
+		var closest = null;
+		var minDist = maxDist * maxDist;
+		for(cp in points) {
+			var sqDist = cp.distanceSq(pt);
+			if(sqDist < minDist) {
+				closest = cp;
+				minDist = sqDist;
+			}
+		}
+		return closest;
 	}
 
 	public function rayIntersection( r : h2d.col.Ray, ?pt : Point ) {

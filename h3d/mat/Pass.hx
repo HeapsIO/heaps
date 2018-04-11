@@ -107,6 +107,8 @@ class Pass implements hxd.impl.Serializable {
 	}
 
 	public function addShader<T:hxsl.Shader>(s:T) : T {
+		// throwing an exception will require NG GameServer review
+		if( s == null ) return null;
 		shaders = hxsl.ShaderList.addSort(s, shaders);
 		return s;
 	}
