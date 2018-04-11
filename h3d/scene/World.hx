@@ -2,18 +2,12 @@ package h3d.scene;
 
 class WorldElement {
 	public var model : WorldModel;
-	public var x : Float;
-	public var y : Float;
-	public var z : Float;
-	public var scale : Float;
-	public var rotation : Float;
-	public function new( model, x, y, z, scale = 1., rotation = 0. ) {
+	public var transform : h3d.Matrix;
+	public var optimized : Bool;
+	public function new( model, mat, optimized ) {
 		this.model = model;
-		this.x = x;
-		this.y = y;
-		this.z = z;
-		this.scale = scale;
-		this.rotation = rotation;
+		this.transform = mat;
+		this.optimized = optimized;
 	}
 }
 
@@ -377,7 +371,15 @@ class World extends Object {
 					initMaterial(b, g.m);
 				}
 				var p = Std.instance(b.primitive, h3d.prim.BigPrimitive);
-				p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), e.x, e.y, e.z, e.rotation, e.scale, model.stride);
+
+				if(e.optimized) {
+					var m = e.transform;
+					var scale = m._33;
+					var rotZ = hxd.Math.atan2(m._12 / scale, m._11 / scale);
+					p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), m.tx, m.ty, m.tz, rotZ, scale, model.stride, 0., 0., 1., null);
+				}
+				else
+					p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), 0., 0., 0., 0., 0., model.stride, 0., 0., 1., e.transform);
 			}
 		}
 	}
@@ -392,24 +394,10 @@ class World extends Object {
 		c.buffers = new Map();
 	}
 
-	function updateChunkBounds(c : WorldChunk, model : WorldModel, x : Float, y : Float, z : Float, rotation : Float, scale : Float) {
-		var cosR = Math.cos(rotation);
-		var sinR = Math.sin(rotation);
-
-		inline function addPoint(dx:Float, dy:Float, dz:Float) {
-			var tx = dx * cosR - dy * sinR;
-			var ty = dx * sinR + dy * cosR;
-			c.bounds.addPos(tx * scale + x, ty * scale + y, dz * scale + z);
-		}
-
-		addPoint(model.bounds.xMin, model.bounds.yMin, model.bounds.zMin);
-		addPoint(model.bounds.xMin, model.bounds.yMin, model.bounds.zMax);
-		addPoint(model.bounds.xMin, model.bounds.yMax, model.bounds.zMin);
-		addPoint(model.bounds.xMin, model.bounds.yMax, model.bounds.zMax);
-		addPoint(model.bounds.xMax, model.bounds.yMin, model.bounds.zMin);
-		addPoint(model.bounds.xMax, model.bounds.yMin, model.bounds.zMax);
-		addPoint(model.bounds.xMax, model.bounds.yMax, model.bounds.zMin);
-		addPoint(model.bounds.xMax, model.bounds.yMax, model.bounds.zMax);
+	function updateChunkBounds(c : WorldChunk, model : WorldModel, mat : h3d.Matrix ) {
+		var b = model.bounds.clone();
+		b.transform(mat);
+		c.bounds.add(b);
 	}
 
 	function initMaterial( mesh : h3d.scene.Mesh, mat : WorldMaterial ) {
@@ -460,8 +448,18 @@ class World extends Object {
 
 	public function add( model : WorldModel, x : Float, y : Float, z : Float, scale = 1., rotation = 0. ) {
 		var c = getChunk(x, y, true);
-		c.elements.push(new WorldElement(model, x, y, z, scale, rotation));
-		updateChunkBounds(c, model, x, y, z, rotation, scale);
+		var m = new h3d.Matrix();
+		m.initScale(scale, scale, scale);
+		m.rotate(0, 0, rotation);
+		m.translate(x, y, z);
+		c.elements.push(new WorldElement(model, m, true));
+		updateChunkBounds(c, model, m);
+	}
+
+	public function add2( model : WorldModel, mat : h3d.Matrix ) {
+		var c = getChunk(mat.tx, mat.ty, true);
+		c.elements.push(new WorldElement(model, mat, false));
+		updateChunkBounds(c, model, mat);
 	}
 
 	override function syncRec(ctx:RenderContext) {
