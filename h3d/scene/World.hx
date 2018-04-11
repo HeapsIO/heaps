@@ -256,6 +256,12 @@ class World extends Object {
 			var geom = lib.header.geometries[m.geometry];
 			if( geom == null ) continue;
 			var pos = m.position.toMatrix();
+			var parentIdx = m.parent;
+			while(parentIdx >= 0) {
+				var parent = models[parentIdx];
+				pos.multiply(parent.position.toMatrix(), pos);
+				parentIdx = parent.parent;
+			}
 			for( mid in 0...m.materials.length ) {
 				var mat = lib.header.materials[m.materials[mid]];
 				if(mat == null || mat.diffuseTexture == null) continue;
