@@ -456,7 +456,7 @@ class World extends Object {
 		updateChunkBounds(c, model, m);
 	}
 
-	public function add2( model : WorldModel, mat : h3d.Matrix ) {
+	public function addTransform( model : WorldModel, mat : h3d.Matrix ) {
 		var c = getChunk(mat.tx, mat.ty, true);
 		c.elements.push(new WorldElement(model, mat, false));
 		updateChunkBounds(c, model, mat);

@@ -211,7 +211,7 @@ class BigPrimitive extends Primitive {
 				add(pt.x);
 				add(pt.y);
 				add(pt.z);
-				bounds.addPos(pt.x, pt.y, pt.z);
+				bounds.addPoint(pt);
 			}
 			else {
 				var tx = (x * cr - y * sr) * scale;
