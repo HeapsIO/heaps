@@ -43,7 +43,7 @@ class Charset {
 			map.set(a, b);
 		}
 		// fullwidth unicode to ASCII (if missing)
-		for( i in 1...0x5E )
+		for( i in 0...0x5E )
 			m(0xFF01 + i, 0x21 + i);
 		// Latin1 accents
 		for( i in "À".code..."Æ".code + 1 )
