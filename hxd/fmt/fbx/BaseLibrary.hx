@@ -800,7 +800,8 @@ class BaseLibrary {
 				t += minDT;
 			}
 			allTimes.sort(Reflect.compare);
-			if( allTimes.length != numFrames ) throw "assert";
+			if( allTimes.length > numFrames ) throw 'Animation $animName is not baked on a fixed framerate (detected ${Std.int(sampling)})';
+			if( allTimes.length < numFrames ) throw "assert";
 		}
 
 		var anim = new h3d.anim.LinearAnimation(animName, numFrames, sampling);
