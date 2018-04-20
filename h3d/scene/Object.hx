@@ -627,6 +627,19 @@ class Object implements hxd.impl.Serializable {
 		posChanged = true;
 	}
 
+	public function setTransform( mat : h3d.Matrix ) {
+		var s = mat.getScale();
+		this.x = mat.tx;
+		this.y = mat.ty;
+		this.z = mat.tz;
+		this.scaleX = s.x;
+		this.scaleY = s.y;
+		this.scaleZ = s.z;
+		mat.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
+		qRot.initRotateMatrix(mat);
+		posChanged = true;
+	}
+
 	/*
 		Rotate around the current rotation axis.
 	*/
