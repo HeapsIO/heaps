@@ -113,11 +113,14 @@ class System {
 	}
 
 	static function runMainLoop() {
+		var reportError = function(e) reportError(e);
 		while( true ) {
 			try {
+				hl.Api.setErrorHandler(reportError); // set exception trap
 				@:privateAccess haxe.MainLoop.tick();
 				if( !mainLoop() ) break;
 			} catch( e : Dynamic ) {
+				hl.Api.setErrorHandler(null);
 				reportError(e);
 			}
 		}
