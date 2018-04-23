@@ -657,11 +657,12 @@ class BaseLibrary {
 			if( c == null )
 				continue;
 
-			var data = getChilds(cn, "AnimationCurve");
-			if( data.length == 0 ) continue;
+			var dataCurves = getChilds(cn, "AnimationCurve");
+			if( dataCurves.length == 0 ) continue;
+
 			var cname = cn.getName();
 			// collect all the timestamps
-			var times = data[0].get("KeyTime").getFloats();
+			var times = dataCurves[0].get("KeyTime").getFloats();
 				for( i in 0...times.length ) {
 					var t = times[i];
 					// fix rounding error
@@ -673,9 +674,10 @@ class BaseLibrary {
 					var it = Std.int(t / 200000);
 					allTimes.set(it, t);
 				}
+
 			// handle special curves
-			if( data.length != 3 ) {
-				var values = data[0].get("KeyValueFloat").getFloats();
+			if( dataCurves.length != 3 ) {
+				var values = dataCurves[0].get("KeyValueFloat").getFloats();
 				switch( cname ) {
 				case "Visibility":
 					if( !roundValues(values, 1) )
@@ -716,15 +718,27 @@ class BaseLibrary {
 					continue;
 				default:
 				}
-				throw model.getName()+"."+cname + " has " + data.length + " curves";
 			}
 			// handle TRS curves
 			var data = {
-				x : data[0].get("KeyValueFloat").getFloats(),
-				y : data[1].get("KeyValueFloat").getFloats(),
-				z : data[2].get("KeyValueFloat").getFloats(),
+				x : null,
+				y : null,
+				z : null,
 				t : times,
 			};
+
+			var curves = namedConnect.get(cn.getId());
+			for( cname in curves.keys() ) {
+				var values = ids.get(curves.get(cname)).get("KeyValueFloat").getFloats();
+				switch( cname ) {
+				case "d|X": data.x = values;
+				case "d|Y": data.y = values;
+				case "d|Z": data.z = values;
+				default:
+					throw "Unsupported key name "+cname;
+				}
+			}
+
 			// this can happen when resampling anims due to rounding errors, let's ignore it for now
 			//if( data.y.length != times.length || data.z.length != times.length )
 			//	throw "Unsynchronized curve components on " + model.getName()+"."+cname+" (" + data.x.length + "/" + data.y.length + "/" + data.z.length + ")";
@@ -738,15 +752,22 @@ class BaseLibrary {
 				throw "Unknown curve " + model.getName()+"."+cname;
 			}
 			var hasValue = false;
-			if( roundValues(data.x, def.x, M) )
+			if( data.x != null && roundValues(data.x, def.x, M) )
 				hasValue = true;
-			if( roundValues(data.y, def.y, M) )
+			if( data.y != null && roundValues(data.y, def.y, M) )
 				hasValue = true;
-			if( roundValues(data.z, def.z, M) )
+			if( data.z != null && roundValues(data.z, def.z, M) )
 				hasValue = true;
 			// no meaningful value found
 			if( !hasValue )
 				continue;
+			var keyCount = 0;
+			if( data.x != null ) keyCount = data.x.length;
+			if( data.y != null ) keyCount = data.y.length;
+			if( data.z != null ) keyCount = data.z.length;
+			if( data.x == null ) data.x = [for( i in 0...keyCount ) def.x];
+			if( data.y == null ) data.y = [for( i in 0...keyCount ) def.y];
+			if( data.z == null ) data.z = [for( i in 0...keyCount ) def.z];
 			switch( cname ) {
 			case "T": c.t = data;
 			case "R": c.r = data;
