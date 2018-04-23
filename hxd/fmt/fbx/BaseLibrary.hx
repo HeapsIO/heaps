@@ -92,6 +92,8 @@ class BaseLibrary {
 	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
 	var uvAnims : Map<String, Array<{ t : Float, u : Float, v : Float }>>;
 	var animationEvents : Array<{ frame : Int, data : String }>;
+	
+	public var fileName : String;
 
 	/**
 		The FBX version that was decoded
@@ -125,7 +127,8 @@ class BaseLibrary {
 
 	public var allowVertexColor : Bool = true;
 
-	public function new() {
+	public function new( fileName ) {
+		this.fileName = fileName;
 		root = { name : "Root", props : [], childs : [] };
 		keepJoints = new Map();
 		skipObjects = new Map();
@@ -609,7 +612,7 @@ class BaseLibrary {
 			return lib.loadAnimation(animName);
 		}
 		if( root != null ) {
-			var l = new BaseLibrary();
+			var l = new BaseLibrary(fileName);
 			l.load(root);
 			if( leftHand ) l.leftHandConvert();
 			l.defaultModelMatrixes = defaultModelMatrixes;

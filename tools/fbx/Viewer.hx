@@ -329,7 +329,7 @@ class Viewer extends hxd.App {
 					if( props.convertHMD || bytes.get(0) == 'H'.code ) {
 						ahmd = fbxToHmd(bytes, false).toModel().toHmd();
 					} else {
-						alib = new hxd.fmt.fbx.Library();
+						alib = new hxd.fmt.fbx.Library(sel.fileName);
 						var fbx = hxd.fmt.fbx.Parser.parse(bytes.toString());
 						alib.load(fbx);
 						if( !rightHand )
@@ -355,7 +355,7 @@ class Viewer extends hxd.App {
 		if( data.get(0) == 'H'.code )
 			return hxd.res.Any.fromBytes("model.hmd", data);
 
-		var hmdOut = new hxd.fmt.fbx.HMDOut();
+		var hmdOut = new hxd.fmt.fbx.HMDOut("");
 		hmdOut.absoluteTexturePath = true;
 		hmdOut.loadTextFile(data.toString());
 		var hmd = hmdOut.toHMD(null, includeGeometry);
@@ -392,7 +392,7 @@ class Viewer extends hxd.App {
 
 		} else {
 
-			curFbx = new hxd.fmt.fbx.Library();
+			curFbx = new hxd.fmt.fbx.Library("");
 			curFbx.unskinnedJointsAsObjects = true;
 			var fbx = hxd.fmt.fbx.Parser.parse(data.toString());
 			curFbx.load(fbx);
