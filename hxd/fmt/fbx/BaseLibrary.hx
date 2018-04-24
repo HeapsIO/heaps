@@ -92,7 +92,7 @@ class BaseLibrary {
 	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
 	var uvAnims : Map<String, Array<{ t : Float, u : Float, v : Float }>>;
 	var animationEvents : Array<{ frame : Int, data : String }>;
-	
+
 	public var fileName : String;
 
 	/**
@@ -666,17 +666,17 @@ class BaseLibrary {
 			var cname = cn.getName();
 			// collect all the timestamps
 			var times = dataCurves[0].get("KeyTime").getFloats();
-				for( i in 0...times.length ) {
-					var t = times[i];
-					// fix rounding error
-					if( t % 100 != 0 ) {
-						t += 100 - (t % 100);
-						times[i] = t;
-					}
-					// this should give significant-enough key
-					var it = Std.int(t / 200000);
-					allTimes.set(it, t);
+			for( i in 0...times.length ) {
+				var t = times[i];
+				// fix rounding error
+				if( t % 100 != 0 ) {
+					t += 100 - (t % 100);
+					times[i] = t;
 				}
+				// this should give significant-enough key
+				var it = Std.int(t / 200000);
+				allTimes.set(it, t);
+			}
 
 			// handle special curves
 			if( dataCurves.length != 3 ) {
@@ -748,9 +748,22 @@ class BaseLibrary {
 			// optimize empty animations out
 			var M = 1.0;
 			var def = switch( cname ) {
-			case "T": if( c.def.trans == null ) P0 else c.def.trans;
-			case "R": M = F; if( c.def.rotate == null ) P0 else c.def.rotate;
-			case "S": if( c.def.scale == null ) P1 else c.def.scale;
+			case "T":
+				if( c.def.trans == null ) P0 else c.def.trans;
+			case "R":
+				M = F;
+				if( c.def.rotate == null && c.def.preRot == null ) P0 else
+				if( c.def.rotate == null ) c.def.preRot else
+				if( c.def.preRot == null ) c.def.rotate else
+				{
+					var q = new h3d.Quat(), q2 = new h3d.Quat();
+					q2.initRotate(c.def.preRot.x, c.def.preRot.y, c.def.preRot.z);
+					q.initRotate(c.def.rotate.x, c.def.rotate.y, c.def.rotate.z);
+					q.multiply(q2,q);
+					q.toEuler().toPoint();
+				}
+			case "S":
+				if( c.def.scale == null ) P1 else c.def.scale;
 			default:
 				throw "Unknown curve " + model.getName()+"."+cname;
 			}
@@ -824,7 +837,7 @@ class BaseLibrary {
 				t += minDT;
 			}
 			allTimes.sort(Reflect.compare);
-			if( allTimes.length > numFrames ) throw 'Animation $animName is not baked on a fixed framerate (detected ${Std.int(sampling)})';
+			if( allTimes.length > numFrames ) throw 'Animation $animName($fileName) is not baked on a fixed framerate (detected ${Std.int(sampling)})';
 			if( allTimes.length < numFrames ) throw "assert";
 		}
 
