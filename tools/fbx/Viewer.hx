@@ -175,10 +175,11 @@ class Viewer extends hxd.App {
 			return;
 		case "S".code if( K.isDown(K.CTRL) ):
 			if( curHmd != null ) {
-				var h = curHmd.header;
-				h.data = curHmd.getData();
+				var hmd = K.isDown(K.SHIFT) && ahmd != null ? ahmd : curHmd;
+				var h = hmd.header;
+				h.data = hmd.getData();
 				var data = hxd.fmt.hmd.Dump.toString(h);
-				var path = props.curFile.substr(0, -4) + "_dump.txt";
+				var path = props.curFile.substr(0, -4) + (hmd == ahmd ? "_anim" : "") + "_dump.txt";
 				hxd.File.saveAs(haxe.io.Bytes.ofString(data), { defaultPath : path } );
 			}
 			if( curFbx != null ) {
