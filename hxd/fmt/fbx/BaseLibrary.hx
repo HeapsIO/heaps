@@ -991,7 +991,7 @@ class BaseLibrary {
 				}
 			}
 			if( frames != null )
-				anim.addCurve(c.object, frames, c.r != null || def.rotate != null, c.s != null || def.scale != null);
+				anim.addCurve(c.object, frames, c.r != null || def.rotate != null || def.preRot != null, c.s != null || def.scale != null);
 			if( alpha != null )
 				anim.addAlphaCurve(c.object, alpha);
 			if( uvs != null )
