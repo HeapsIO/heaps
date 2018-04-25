@@ -127,6 +127,11 @@ class BaseLibrary {
 
 	public var allowVertexColor : Bool = true;
 
+	/**
+		Convert centimeters to meters and axis to Z-up (Maya FBX export)
+	**/
+	public var normalizeScaleOrient : Bool = true;
+
 	public function new( fileName ) {
 		this.fileName = fileName;
 		root = { name : "Root", props : [], childs : [] };
@@ -158,6 +163,9 @@ class BaseLibrary {
 		for( c in root.childs )
 			init(c);
 
+		if( normalizeScaleOrient )
+			updateModelScale();
+
 		// init properties
 		for( m in this.root.getAll("Objects.Model") ) {
 			for( p in m.getAll("Properties70.P") )
@@ -182,6 +190,82 @@ class BaseLibrary {
 					}
 				default:
 				}
+		}
+	}
+
+	function updateModelScale() {
+		var unitScale = 1;
+		var originScale = 1;
+		var upAxis = 1;
+		var originAxis = 2;
+		for( p in root.getAll("GlobalSettings.Properties70.P") )
+			switch( p.props[0].toString() ) {
+			case "UnitScaleFactor": unitScale = p.props[4].toInt();
+			case "OriginalUnitScaleFactor": originScale = p.props[4].toInt();
+			case "UpAxis": upAxis = p.props[4].toInt();
+			case "OriginalUpAxis": originAxis = p.props[4].toInt();
+			default:
+			}
+		var scaleFactor = unitScale == 100 && originScale == 1 ? 100 : 1;
+		//axisFlip = upAxis == 2 && originAxis == 1;
+
+		if( scaleFactor == 1 )
+			return;
+
+		// scale on geometry
+		for( g in this.root.getAll("Objects.Geometry.Vertices") ) {
+			switch( g.props[0] ) {
+			case PFloats(v):
+				for( i in 0...v.length )
+					v[i] = v[i] / scaleFactor;
+			default:
+			}
+		}
+		// scale on root models
+		function convertProp(p:Array<FbxProp>) {
+			for( idx in [4,5,6] ) {
+				var v = p[idx].toFloat();
+				p[idx] = PFloat(v * scaleFactor);
+			}
+		}
+		for( m in this.root.getAll("Objects.Model") ) {
+			var isRoot = getParent(m,"Model",true) == null;
+			for( p in m.getAll("Properties70.P") )
+				switch( p.props[0].toString() ) {
+				case "Lcl Scaling" if( isRoot ): convertProp(p.props);
+				case "Lcl Translation", "GeometricTranslation" if( !isRoot ): convertProp(p.props);
+				default:
+				}
+		}
+
+		// scale on skin
+		for( t in this.root.getAll("Objects.Deformer.Transform") ) {
+			switch( t.props[0] ) {
+			case PFloats(v):
+				v[12] /= scaleFactor;
+				v[13] /= scaleFactor;
+				v[14] /= scaleFactor;
+			default:
+			}
+		}
+
+		// scale on animation
+		for( n in this.root.getAll("Objects.AnimationCurveNode") ) {
+			if( n.getName() != "T" ) continue;
+			for( p in n.getAll("Properties70.P") )
+				switch( p.props[0].toString() ) {
+				case "d|X", "d|Y", "d|Z": p.props[4] = PFloat(p.props[4].toFloat() / scaleFactor);
+				default:
+				}
+			for( c in getChilds(n,"AnimationCurve") ) {
+				trace(c.getName());
+				switch( c.get("KeyValueFloat").props[0] ) {
+				case PFloats(v):
+					for( i in 0...v.length )
+						v[i] = v[i] / scaleFactor;
+				default:
+				}
+			}
 		}
 	}
 
@@ -613,6 +697,7 @@ class BaseLibrary {
 		}
 		if( root != null ) {
 			var l = new BaseLibrary(fileName);
+			l.normalizeScaleOrient = normalizeScaleOrient;
 			l.load(root);
 			if( leftHand ) l.leftHandConvert();
 			l.defaultModelMatrixes = defaultModelMatrixes;
