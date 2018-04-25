@@ -207,7 +207,8 @@ class BaseLibrary {
 			default:
 			}
 		var scaleFactor = unitScale == 100 && originScale == 1 ? 100 : 1;
-		//axisFlip = upAxis == 2 && originAxis == 1;
+		var axisFlip = upAxis == 2 && originAxis == 1;
+		// TODO : axisFlip
 
 		if( scaleFactor == 1 )
 			return;
@@ -222,22 +223,23 @@ class BaseLibrary {
 			}
 		}
 		// scale on root models
-		function convertProp(p:Array<FbxProp>) {
-			for( idx in [4,5,6] ) {
-				var v = p[idx].toFloat();
-				p[idx] = PFloat(v * scaleFactor);
-			}
-		}
 		for( m in this.root.getAll("Objects.Model") ) {
 			var isRoot = getParent(m,"Model",true) == null;
 			for( p in m.getAll("Properties70.P") )
 				switch( p.props[0].toString() ) {
-				case "Lcl Scaling" if( isRoot ): convertProp(p.props);
-				case "Lcl Translation", "GeometricTranslation" if( !isRoot ): convertProp(p.props);
+				case "Lcl Scaling" if( isRoot ):
+					for( idx in [4,5,6] ) {
+						var v = p.props[idx].toFloat();
+						p.props[idx] = PFloat(v * scaleFactor);
+					}
+				case "Lcl Translation", "GeometricTranslation" if( !isRoot ):
+					for( idx in [4,5,6] ) {
+						var v = p.props[idx].toFloat();
+						p.props[idx] = PFloat(v / scaleFactor);
+					}
 				default:
 				}
 		}
-
 		// scale on skin
 		for( t in this.root.getAll("Objects.Deformer.Transform") ) {
 			switch( t.props[0] ) {
@@ -248,7 +250,6 @@ class BaseLibrary {
 			default:
 			}
 		}
-
 		// scale on animation
 		for( n in this.root.getAll("Objects.AnimationCurveNode") ) {
 			if( n.getName() != "T" ) continue;
@@ -258,7 +259,6 @@ class BaseLibrary {
 				default:
 				}
 			for( c in getChilds(n,"AnimationCurve") ) {
-				trace(c.getName());
 				switch( c.get("KeyValueFloat").props[0] ) {
 				case PFloats(v):
 					for( i in 0...v.length )
