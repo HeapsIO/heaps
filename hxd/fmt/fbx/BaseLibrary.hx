@@ -703,16 +703,26 @@ class BaseLibrary {
 			l.defaultModelMatrixes = defaultModelMatrixes;
 			return l.loadAnimation(animName);
 		}
-		var animNode = null;
+		var defNode = null;
+		var animNodes = [];
 		for( a in this.root.getAll("Objects.AnimationStack") )
 			if( animName == null || a.getName()	== animName ) {
-				animNode = getChild(a, "AnimationLayer", true);
-				if( animNode != null ) {
-					if( animName == null )
-						animName = a.getName();
-					break;
+				for( n in getChilds(a, "AnimationLayer") ) {
+					defNode = n;
+					if( getChilds(n,"AnimationCurveNode").length > 0 )
+						animNodes.push(n);
 				}
 			}
+		var animNode = switch( animNodes.length ) {
+		case 0:
+			defNode;
+		case 1:
+			var n = animNodes[0];
+			if( animName == null ) animName = getParent(n,"AnimationStack").getName();
+			n;
+		default:
+			throw "Multiple animation layers curves are currently not supported";
+		}
 
 		if( animNode == null ) {
 			if( animName != null )
