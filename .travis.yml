@@ -5,6 +5,8 @@ dist: trusty
 
 haxe:
   - development
+  - "4.0.0-preview.3"
+  - "3.4.7"
   - "3.4.4"
 
 matrix:
