@@ -252,17 +252,23 @@ class BaseLibrary {
 		}
 		// scale on animation
 		for( n in this.root.getAll("Objects.AnimationCurveNode") ) {
-			if( n.getName() != "T" ) continue;
+			var name = n.getName();
+			var model = getParent(n,"Model",true);
+			var isRoot = model != null && getParent(model,"Model",true) == null;
 			for( p in n.getAll("Properties70.P") )
 				switch( p.props[0].toString() ) {
-				case "d|X", "d|Y", "d|Z": p.props[4] = PFloat(p.props[4].toFloat() / scaleFactor);
+				case "d|X", "d|Y", "d|Z" if( name == "T" && !isRoot ): p.props[4] = PFloat(p.props[4].toFloat() / scaleFactor);
+				case "d|X", "d|Y", "d|Z" if( name == "S" && isRoot ): p.props[4] = PFloat(p.props[4].toFloat() * scaleFactor);
 				default:
 				}
 			for( c in getChilds(n,"AnimationCurve") ) {
 				switch( c.get("KeyValueFloat").props[0] ) {
-				case PFloats(v):
+				case PFloats(v) if( name == "T" && !isRoot ):
 					for( i in 0...v.length )
 						v[i] = v[i] / scaleFactor;
+				case PFloats(v) if( name == "S" && isRoot ):
+					for( i in 0...v.length )
+						v[i] = v[i] * scaleFactor;
 				default:
 				}
 			}
