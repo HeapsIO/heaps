@@ -213,14 +213,24 @@ class BaseLibrary {
 		if( scaleFactor == 1 )
 			return;
 
+		function toFloats( n : FbxNode ) {
+			return switch( n.props[0] ) {
+			case PInts(vl):
+				var vl = [for( v in vl ) (v:Float)];
+				n.props[0] = PFloats(vl);
+				vl;
+			case PFloats(vl):
+				vl;
+			default:
+				throw n.props[0]+" should be floats ";
+			}
+		}
+
 		// scale on geometry
 		for( g in this.root.getAll("Objects.Geometry.Vertices") ) {
-			switch( g.props[0] ) {
-			case PFloats(v):
-				for( i in 0...v.length )
-					v[i] = v[i] / scaleFactor;
-			default:
-			}
+			var v = toFloats(g);
+			for( i in 0...v.length )
+				v[i] = v[i] / scaleFactor;
 		}
 		// scale on root models
 		for( m in this.root.getAll("Objects.Model") ) {
@@ -242,13 +252,10 @@ class BaseLibrary {
 		}
 		// scale on skin
 		for( t in this.root.getAll("Objects.Deformer.Transform") ) {
-			switch( t.props[0] ) {
-			case PFloats(v):
-				v[12] /= scaleFactor;
-				v[13] /= scaleFactor;
-				v[14] /= scaleFactor;
-			default:
-			}
+			var m = toFloats(t);
+			m[12] /= scaleFactor;
+			m[13] /= scaleFactor;
+			m[14] /= scaleFactor;
 		}
 		// scale on animation
 		for( n in this.root.getAll("Objects.AnimationCurveNode") ) {
@@ -262,13 +269,14 @@ class BaseLibrary {
 				default:
 				}
 			for( c in getChilds(n,"AnimationCurve") ) {
-				switch( c.get("KeyValueFloat").props[0] ) {
-				case PFloats(v) if( name == "T" && !isRoot ):
-					for( i in 0...v.length )
-						v[i] = v[i] / scaleFactor;
-				case PFloats(v) if( name == "S" && isRoot ):
-					for( i in 0...v.length )
-						v[i] = v[i] * scaleFactor;
+				var vl = toFloats(c.get("KeyValueFloat"));
+				switch( name ) {
+				case "T" if( !isRoot ):
+					for( i in 0...vl.length )
+						vl[i] = vl[i] / scaleFactor;
+				case "S" if( isRoot ):
+					for( i in 0...vl.length )
+						vl[i] = vl[i] * scaleFactor;
 				default:
 				}
 			}
