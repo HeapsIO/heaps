@@ -199,7 +199,7 @@ class BigPrimitive extends Primitive {
 		#end
 		for( i in 0...nvert ) {
 			inline function add(v) tmpBuf[pos++] = v;
-			
+
 			var p = (i + startVert) * stride;
 			var x = buf[p++];
 			var y = buf[p++];
@@ -248,7 +248,7 @@ class BigPrimitive extends Primitive {
 			}
 
 			switch( this.stride ) {
-			case 3:
+			case 3, 6:
 				continue;
 			case 4, 7:
 				add(buf[p++] + deltaU);
