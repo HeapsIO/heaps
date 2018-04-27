@@ -50,6 +50,7 @@ class Engine {
 	var needFlushTarget : Bool;
 	var nullTexture : h3d.mat.Texture;
 	var textureColorCache = new Map<Int,h3d.mat.Texture>();
+	public var ready(default,null) = false;
 	@:allow(hxd.res) var resCache = new Map<{},Dynamic>();
 
 	@:access(hxd.Stage)
@@ -224,6 +225,7 @@ class Engine {
 			onContextLost();
 		else
 			onReady();
+		ready = true;
 	}
 
 	public dynamic function onContextLost() {
