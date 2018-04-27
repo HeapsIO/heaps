@@ -194,6 +194,43 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return closest;
 	}
 
+	/**
+		Return the closest point on the edges of the polygon
+	**/
+	public function projectPoint(pt: h2d.col.Point) {
+		var p1 = points[points.length - 1];
+		var closestProj = null;
+		var minDistSq = 1e10;
+		for(p2 in points) {
+			var proj = new Segment(p1, p2).project(pt);
+			var distSq = proj.distanceSq(pt);
+			if(distSq < minDistSq) {
+				closestProj = proj;
+				minDistSq = distSq;
+			}
+			p1 = p2;
+		}
+		return closestProj;
+	}
+
+	/**
+		Return the squared distance of `pt` to the closest edge if `pt` is outside the polygon, zero otherwise
+	**/
+	public function distanceSq(pt: Point) {
+		var p1 = points[points.length - 1];
+		var minDistSq = 1e10;
+		for(p2 in points) {
+			var s = new Segment(p1, p2);
+			if(s.side(pt) < 0) {
+				var dist = s.distanceSq(pt);
+				if(dist < minDistSq)
+					minDistSq = dist;
+			}
+			p1 = p2;
+		}
+		return minDistSq == 1e10 ? 0. : minDistSq;
+	}
+
 	public function rayIntersection( r : h2d.col.Ray, ?pt : Point ) {
 		var dmin = 1E9;
 		var p0 = points[points.length - 1];
