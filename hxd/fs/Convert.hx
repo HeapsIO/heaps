@@ -45,7 +45,7 @@ class ConvertFBX2HMD extends Convert {
 
 	override function convert() {
 		var fbx = try hxd.fmt.fbx.Parser.parse(srcBytes.toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + srcPath;
-		var hmdout = new hxd.fmt.fbx.HMDOut();
+		var hmdout = new hxd.fmt.fbx.HMDOut(srcPath);
 		hmdout.load(fbx);
 		var isAnim = StringTools.startsWith(srcFilename, "Anim_") || srcFilename.toLowerCase().indexOf("_anim_") > 0;
 		var hmd = hmdout.toHMD(null, !isAnim);

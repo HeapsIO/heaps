@@ -181,9 +181,10 @@ class BigPrimitive extends Primitive {
 		The buffer can have more stride than the BigPrimitive, but not less.
 		It is assumed that the buffer contains [X,Y,Z,NX,NY,NZ,U,V,R,G,B] (depending on his stride) so the different offsets are applied to the corresponding components.
 		However if the stride is 5, we assume [X,Y,Z,U,V]
+		If mat is not null, it overrides dx, dy, dz, rotation, scale
 	**/
 	@:noDebug
-	public function addSub( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, startVert, startTri, nvert, triCount, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1, deltaU = 0., deltaV = 0., color = 1. ) {
+	public function addSub( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, startVert, startTri, nvert, triCount, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1, deltaU = 0., deltaV = 0., color = 1., mat : h3d.Matrix = null) {
 		if( stride < 0 ) stride = this.stride;
 		if( stride < this.stride ) throw "only stride >= " + this.stride+" allowed";
 		begin(nvert, triCount*3);
@@ -197,78 +198,66 @@ class BigPrimitive extends Primitive {
 		var tmpBuf : hl.BytesAccess<hxd.impl.Float32> = hl.Bytes.getArray(tmpBuf.getNative());
 		#end
 		for( i in 0...nvert ) {
+			inline function add(v) tmpBuf[pos++] = v;
+
 			var p = (i + startVert) * stride;
 			var x = buf[p++];
 			var y = buf[p++];
 			var z = buf[p++];
-			var tx = (x * cr - y * sr) * scale;
-			var ty = (x * sr + y * cr) * scale;
 
-			inline function add(v) tmpBuf[pos++] = v;
+			if(mat != null) {
+				var pt = new h3d.col.Point(x, y, z);
+				pt.transform(mat);
+				add(pt.x);
+				add(pt.y);
+				add(pt.z);
+				bounds.addPoint(pt);
+			}
+			else {
+				var tx = (x * cr - y * sr) * scale;
+				var ty = (x * sr + y * cr) * scale;
+				var vx = dx + tx;
+				var vy = dy + ty;
+				var vz = dz + z * scale;
+				add(vx);
+				add(vy);
+				add(vz);
+				bounds.addPos(vx, vy, vz);
+			}
 
-			var vx = dx + tx;
-			var vy = dy + ty;
-			var vz = dz + z * scale;
-			add(vx);
-			add(vy);
-			add(vz);
-			bounds.addPos(vx, vy, vz);
+			if(this.stride >= 6) {
+				var nx = buf[p++];
+				var ny = buf[p++];
+				var nz = buf[p++];
+
+				if(mat != null) {
+					var pt = new h3d.col.Point(nx, ny, nz);
+					pt.transform3x3(mat);
+					pt.normalize();
+					add(pt.x);
+					add(pt.y);
+					add(pt.z);
+				}
+				else {
+					var tnx = nx * cr - ny * sr;
+					var tny = nx * sr + ny * cr;
+					add(tnx);
+					add(tny);
+					add(nz);
+				}
+			}
 
 			switch( this.stride ) {
-			case 3:
+			case 3, 6:
 				continue;
-			case 4:
-				add(buf[p++]);
-			case 5:
-				// assume no normal
+			case 4, 7:
+				add(buf[p++] + deltaU);
+			case 5, 8, 9, 10:
 				add(buf[p++] + deltaU);
 				add(buf[p++] + deltaV);
-			case 6:
-				var nx = buf[p++];
-				var ny = buf[p++];
-				var nz = buf[p++];
-				var tnx = nx * cr - ny * sr;
-				var tny = nx * sr + ny * cr;
-				add(tnx);
-				add(tny);
-				add(nz);
-			case 7:
-				var nx = buf[p++];
-				var ny = buf[p++];
-				var nz = buf[p++];
-				var tnx = nx * cr - ny * sr;
-				var tny = nx * sr + ny * cr;
-				add(tnx);
-				add(tny);
-				add(nz);
-				add(buf[p++] + deltaU);
-			case 8, 9, 10:
-				var nx = buf[p++];
-				var ny = buf[p++];
-				var nz = buf[p++];
-				var tnx = nx * cr - ny * sr;
-				var tny = nx * sr + ny * cr;
-				add(tnx);
-				add(tny);
-				add(nz);
-
-				// UV
-				add(buf[p++] + deltaU);
-				add(buf[p++] + deltaV);
-
 				for( i in 8...this.stride )
 					add(buf[p++]);
-
 			default:
-				var nx = buf[p++];
-				var ny = buf[p++];
-				var nz = buf[p++];
-				var tnx = nx * cr - ny * sr;
-				var tny = nx * sr + ny * cr;
-				add(tnx);
-				add(tny);
-				add(nz);
-
 				// UV
 				add(buf[p++] + deltaU);
 				add(buf[p++] + deltaV);

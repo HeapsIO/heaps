@@ -36,7 +36,7 @@ class FontChar {
 		}
 		return 0;
 	}
-	
+
 	public function clone() {
 		var c = new FontChar(t.clone(), width);
 		c.kerning = kerning;
@@ -56,6 +56,8 @@ class Font {
 	var glyphs : Map<Int,FontChar>;
 	var defaultChar : FontChar;
 	var initSize:Int;
+	var offsetX:Int = 0;
+	var offsetY:Int = 0;
 
 	function new(name,size) {
 		this.name = name;
@@ -74,7 +76,19 @@ class Font {
 		}
 		return c;
 	}
-	
+
+	public function setOffset(x,y) {
+		var dx = x - offsetX;
+		var dy = y - offsetY;
+		if( dx == 0 && dy == 0 ) return;
+		for( g in glyphs ) {
+			g.t.dx += dx;
+			g.t.dy += dy;
+		}
+		this.offsetX += dx;
+		this.offsetY += dy;
+	}
+
 	public function clone() {
 		var f = new Font(name, size);
 		f.baseLine = baseLine;

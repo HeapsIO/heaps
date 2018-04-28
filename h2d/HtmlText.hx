@@ -110,9 +110,11 @@ class HtmlText extends Text {
 		}
 	}
 
+	static var REG_SPACES = ~/[\r\n\t ]+/g;
+	static var REG_HTMLENTITIES = ~/&([A-Za-z]+);/g;
 	function htmlToText( t : hxd.UString )  {
-		t = ~/[\r\n\t ]+/g.replace(t, " ");
-		t = ~/&([A-Za-z]+);/g.map(t, function(r) {
+		t = REG_SPACES.replace(t, " ");
+		t = REG_HTMLENTITIES.map(t, function(r) {
 			switch( r.matched(1).toLowerCase() ) {
 			case "lt": return "<";
 			case "gt": return ">";

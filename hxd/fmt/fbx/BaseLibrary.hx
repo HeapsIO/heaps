@@ -93,6 +93,8 @@ class BaseLibrary {
 	var uvAnims : Map<String, Array<{ t : Float, u : Float, v : Float }>>;
 	var animationEvents : Array<{ frame : Int, data : String }>;
 
+	public var fileName : String;
+
 	/**
 		The FBX version that was decoded
 	**/
@@ -125,7 +127,13 @@ class BaseLibrary {
 
 	public var allowVertexColor : Bool = true;
 
-	public function new() {
+	/**
+		Convert centimeters to meters and axis to Z-up (Maya FBX export)
+	**/
+	public var normalizeScaleOrient : Bool = true;
+
+	public function new( fileName ) {
+		this.fileName = fileName;
 		root = { name : "Root", props : [], childs : [] };
 		keepJoints = new Map();
 		skipObjects = new Map();
@@ -155,6 +163,9 @@ class BaseLibrary {
 		for( c in root.childs )
 			init(c);
 
+		if( normalizeScaleOrient )
+			updateModelScale();
+
 		// init properties
 		for( m in this.root.getAll("Objects.Model") ) {
 			for( p in m.getAll("Properties70.P") )
@@ -179,6 +190,96 @@ class BaseLibrary {
 					}
 				default:
 				}
+		}
+	}
+
+	function updateModelScale() {
+		var unitScale = 1;
+		var originScale = 1;
+		var upAxis = 1;
+		var originAxis = 2;
+		for( p in root.getAll("GlobalSettings.Properties70.P") )
+			switch( p.props[0].toString() ) {
+			case "UnitScaleFactor": unitScale = p.props[4].toInt();
+			case "OriginalUnitScaleFactor": originScale = p.props[4].toInt();
+			case "UpAxis": upAxis = p.props[4].toInt();
+			case "OriginalUpAxis": originAxis = p.props[4].toInt();
+			default:
+			}
+		var scaleFactor = unitScale == 100 && originScale == 1 ? 100 : 1;
+		var axisFlip = upAxis == 2 && originAxis == 1;
+		// TODO : axisFlip
+
+		if( scaleFactor == 1 )
+			return;
+
+		function toFloats( n : FbxNode ) {
+			return switch( n.props[0] ) {
+			case PInts(vl):
+				var vl = [for( v in vl ) (v:Float)];
+				n.props[0] = PFloats(vl);
+				vl;
+			case PFloats(vl):
+				vl;
+			default:
+				throw n.props[0]+" should be floats ";
+			}
+		}
+
+		// scale on geometry
+		for( g in this.root.getAll("Objects.Geometry.Vertices") ) {
+			var v = toFloats(g);
+			for( i in 0...v.length )
+				v[i] = v[i] / scaleFactor;
+		}
+		// scale on root models
+		for( m in this.root.getAll("Objects.Model") ) {
+			var isRoot = getParent(m,"Model",true) == null;
+			for( p in m.getAll("Properties70.P") )
+				switch( p.props[0].toString() ) {
+				case "Lcl Scaling" if( isRoot ):
+					for( idx in [4,5,6] ) {
+						var v = p.props[idx].toFloat();
+						p.props[idx] = PFloat(v * scaleFactor);
+					}
+				case "Lcl Translation", "GeometricTranslation" if( !isRoot ):
+					for( idx in [4,5,6] ) {
+						var v = p.props[idx].toFloat();
+						p.props[idx] = PFloat(v / scaleFactor);
+					}
+				default:
+				}
+		}
+		// scale on skin
+		for( t in this.root.getAll("Objects.Deformer.Transform") ) {
+			var m = toFloats(t);
+			m[12] /= scaleFactor;
+			m[13] /= scaleFactor;
+			m[14] /= scaleFactor;
+		}
+		// scale on animation
+		for( n in this.root.getAll("Objects.AnimationCurveNode") ) {
+			var name = n.getName();
+			var model = getParent(n,"Model",true);
+			var isRoot = model != null && getParent(model,"Model",true) == null;
+			for( p in n.getAll("Properties70.P") )
+				switch( p.props[0].toString() ) {
+				case "d|X", "d|Y", "d|Z" if( name == "T" && !isRoot ): p.props[4] = PFloat(p.props[4].toFloat() / scaleFactor);
+				case "d|X", "d|Y", "d|Z" if( name == "S" && isRoot ): p.props[4] = PFloat(p.props[4].toFloat() * scaleFactor);
+				default:
+				}
+			for( c in getChilds(n,"AnimationCurve") ) {
+				var vl = toFloats(c.get("KeyValueFloat"));
+				switch( name ) {
+				case "T" if( !isRoot ):
+					for( i in 0...vl.length )
+						vl[i] = vl[i] / scaleFactor;
+				case "S" if( isRoot ):
+					for( i in 0...vl.length )
+						vl[i] = vl[i] * scaleFactor;
+				default:
+				}
+			}
 		}
 	}
 
@@ -609,22 +710,33 @@ class BaseLibrary {
 			return lib.loadAnimation(animName);
 		}
 		if( root != null ) {
-			var l = new BaseLibrary();
+			var l = new BaseLibrary(fileName);
+			l.normalizeScaleOrient = normalizeScaleOrient;
 			l.load(root);
 			if( leftHand ) l.leftHandConvert();
 			l.defaultModelMatrixes = defaultModelMatrixes;
 			return l.loadAnimation(animName);
 		}
-		var animNode = null;
+		var defNode = null;
+		var animNodes = [];
 		for( a in this.root.getAll("Objects.AnimationStack") )
 			if( animName == null || a.getName()	== animName ) {
-				animNode = getChild(a, "AnimationLayer", true);
-				if( animNode != null ) {
-					if( animName == null )
-						animName = a.getName();
-					break;
+				for( n in getChilds(a, "AnimationLayer") ) {
+					defNode = n;
+					if( getChilds(n,"AnimationCurveNode").length > 0 )
+						animNodes.push(n);
 				}
 			}
+		var animNode = switch( animNodes.length ) {
+		case 0:
+			defNode;
+		case 1:
+			var n = animNodes[0];
+			if( animName == null ) animName = getParent(n,"AnimationStack").getName();
+			n;
+		default:
+			throw "Multiple animation layers curves are currently not supported";
+		}
 
 		if( animNode == null ) {
 			if( animName != null )
@@ -657,25 +769,27 @@ class BaseLibrary {
 			if( c == null )
 				continue;
 
-			var data = getChilds(cn, "AnimationCurve");
-			if( data.length == 0 ) continue;
+			var dataCurves = getChilds(cn, "AnimationCurve");
+			if( dataCurves.length == 0 ) continue;
+
 			var cname = cn.getName();
 			// collect all the timestamps
-			var times = data[0].get("KeyTime").getFloats();
-				for( i in 0...times.length ) {
-					var t = times[i];
-					// fix rounding error
-					if( t % 100 != 0 ) {
-						t += 100 - (t % 100);
-						times[i] = t;
-					}
-					// this should give significant-enough key
-					var it = Std.int(t / 200000);
-					allTimes.set(it, t);
+			var times = dataCurves[0].get("KeyTime").getFloats();
+			for( i in 0...times.length ) {
+				var t = times[i];
+				// fix rounding error
+				if( t % 100 != 0 ) {
+					t += 100 - (t % 100);
+					times[i] = t;
 				}
+				// this should give significant-enough key
+				var it = Std.int(t / 200000);
+				allTimes.set(it, t);
+			}
+
 			// handle special curves
-			if( data.length != 3 ) {
-				var values = data[0].get("KeyValueFloat").getFloats();
+			if( dataCurves.length != 3 ) {
+				var values = dataCurves[0].get("KeyValueFloat").getFloats();
 				switch( cname ) {
 				case "Visibility":
 					if( !roundValues(values, 1) )
@@ -716,37 +830,69 @@ class BaseLibrary {
 					continue;
 				default:
 				}
-				throw model.getName()+"."+cname + " has " + data.length + " curves";
 			}
 			// handle TRS curves
 			var data = {
-				x : data[0].get("KeyValueFloat").getFloats(),
-				y : data[1].get("KeyValueFloat").getFloats(),
-				z : data[2].get("KeyValueFloat").getFloats(),
+				x : null,
+				y : null,
+				z : null,
 				t : times,
 			};
+
+			var curves = namedConnect.get(cn.getId());
+			for( cname in curves.keys() ) {
+				var values = ids.get(curves.get(cname)).get("KeyValueFloat").getFloats();
+				switch( cname ) {
+				case "d|X": data.x = values;
+				case "d|Y": data.y = values;
+				case "d|Z": data.z = values;
+				default:
+					throw "Unsupported key name "+cname;
+				}
+			}
+
 			// this can happen when resampling anims due to rounding errors, let's ignore it for now
 			//if( data.y.length != times.length || data.z.length != times.length )
 			//	throw "Unsynchronized curve components on " + model.getName()+"."+cname+" (" + data.x.length + "/" + data.y.length + "/" + data.z.length + ")";
 			// optimize empty animations out
 			var M = 1.0;
 			var def = switch( cname ) {
-			case "T": if( c.def.trans == null ) P0 else c.def.trans;
-			case "R": M = F; if( c.def.rotate == null ) P0 else c.def.rotate;
-			case "S": if( c.def.scale == null ) P1 else c.def.scale;
+			case "T":
+				if( c.def.trans == null ) P0 else c.def.trans;
+			case "R":
+				M = F;
+				if( c.def.rotate == null && c.def.preRot == null ) P0 else
+				if( c.def.rotate == null ) c.def.preRot else
+				if( c.def.preRot == null ) c.def.rotate else
+				{
+					var q = new h3d.Quat(), q2 = new h3d.Quat();
+					q2.initRotate(c.def.preRot.x, c.def.preRot.y, c.def.preRot.z);
+					q.initRotate(c.def.rotate.x, c.def.rotate.y, c.def.rotate.z);
+					q.multiply(q2,q);
+					q.toEuler().toPoint();
+				}
+			case "S":
+				if( c.def.scale == null ) P1 else c.def.scale;
 			default:
 				throw "Unknown curve " + model.getName()+"."+cname;
 			}
 			var hasValue = false;
-			if( roundValues(data.x, def.x, M) )
+			if( data.x != null && roundValues(data.x, def.x, M) )
 				hasValue = true;
-			if( roundValues(data.y, def.y, M) )
+			if( data.y != null && roundValues(data.y, def.y, M) )
 				hasValue = true;
-			if( roundValues(data.z, def.z, M) )
+			if( data.z != null && roundValues(data.z, def.z, M) )
 				hasValue = true;
 			// no meaningful value found
 			if( !hasValue )
 				continue;
+			var keyCount = 0;
+			if( data.x != null ) keyCount = data.x.length;
+			if( data.y != null ) keyCount = data.y.length;
+			if( data.z != null ) keyCount = data.z.length;
+			if( data.x == null ) data.x = [for( i in 0...keyCount ) def.x];
+			if( data.y == null ) data.y = [for( i in 0...keyCount ) def.y];
+			if( data.z == null ) data.z = [for( i in 0...keyCount ) def.z];
 			switch( cname ) {
 			case "T": c.t = data;
 			case "R": c.r = data;
@@ -800,7 +946,8 @@ class BaseLibrary {
 				t += minDT;
 			}
 			allTimes.sort(Reflect.compare);
-			if( allTimes.length != numFrames ) throw "assert";
+			if( allTimes.length > numFrames ) throw 'Animation $animName($fileName) is not baked on a fixed framerate (detected ${Std.int(sampling)})';
+			if( allTimes.length < numFrames ) throw "assert";
 		}
 
 		var anim = new h3d.anim.LinearAnimation(animName, numFrames, sampling);
@@ -896,7 +1043,7 @@ class BaseLibrary {
 
 					if( def.preRot != null ) {
 						q2.initRotate(def.preRot.x, def.preRot.y, def.preRot.z);
-						q.multiply(q,q2);
+						q.multiply(q2,q);
 					}
 
 					f.qx = q.x;
@@ -953,7 +1100,7 @@ class BaseLibrary {
 				}
 			}
 			if( frames != null )
-				anim.addCurve(c.object, frames, c.r != null || def.rotate != null, c.s != null || def.scale != null);
+				anim.addCurve(c.object, frames, c.r != null || def.rotate != null || def.preRot != null, c.s != null || def.scale != null);
 			if( alpha != null )
 				anim.addAlphaCurve(c.object, alpha);
 			if( uvs != null )

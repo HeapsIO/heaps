@@ -16,6 +16,7 @@ class BitmapFont extends Resource {
 			return font;
 		var tile = loader.load(entry.path.substr(0, -3) + "png").toTile();
 		var name = entry.path, size = 0, lineHeight = 0, glyphs = new Map();
+		var lastChar = 0;
 		switch( entry.getSign() ) {
 		case 0x6D783F3C: // <?xml : XML file
 			var xml = Xml.parse(entry.getBytes().toString());
@@ -33,10 +34,11 @@ class BitmapFont extends Resource {
 				for( k in c.elements )
 					fc.addKerning(k.att.id.charCodeAt(0), Std.parseInt(k.att.advance));
 				var code = c.att.code;
+				lastChar = code.charCodeAt(0);
 				if( StringTools.startsWith(code, "&#") )
 					glyphs.set(Std.parseInt(code.substr(2,code.length-3)), fc);
 				else
-					glyphs.set(c.att.code.charCodeAt(0), fc);
+					glyphs.set(code.charCodeAt(0), fc);
 			}
 		case 0x6E6F663C:
 			// support for Littera XML format (starts with <font>)
@@ -82,6 +84,12 @@ class BitmapFont extends Resource {
 			font.baseLine = font.lineHeight - 2 - padding;
 		else
 			font.baseLine = a.t.dy + a.t.height - padding;
+
+		var fallback = glyphs.get(0xFFFD); // <?>
+		if( fallback == null )
+			fallback = glyphs.get(0x25A1); // square
+		if( fallback != null )
+			font.defaultChar = fallback;
 
 		return font;
 	}

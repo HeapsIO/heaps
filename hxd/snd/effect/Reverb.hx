@@ -24,16 +24,17 @@ class Reverb extends hxd.snd.Effect {
 	}
 
 	public function loadPreset(preset : ReverbPreset) {
-		room             = preset.room;
-		roomHF           = preset.roomHF;
-		decayTime        = preset.decayTime;
-		decayHFRatio     = preset.decayHFRatio;
-		reflections      = preset.reflections;
-		reflectionsDelay = preset.reflectionsDelay;
-		reverb           = preset.reverb;
-		reverbDelay      = preset.reverbDelay;
-		diffusion        = preset.diffusion;
-		density          = preset.density;
-		hfReference      = preset.hfReference;
+		room              = preset.room;
+		roomHF            = preset.roomHF;
+		roomRolloffFactor = preset.roomRolloffFactor;
+		decayTime         = preset.decayTime;
+		decayHFRatio      = preset.decayHFRatio;
+		reflections       = preset.reflections;
+		reflectionsDelay  = preset.reflectionsDelay;
+		reverb            = preset.reverb;
+		reverbDelay       = preset.reverbDelay;
+		diffusion         = preset.diffusion;
+		density           = preset.density;
+		hfReference       = preset.hfReference;
 	}
 }
