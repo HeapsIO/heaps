@@ -72,7 +72,7 @@ class Engine {
 		#elseif usesys
 		driver = new haxe.GraphicsDriver(antiAlias);
 		#else
-		#if sys Sys.println #else trace #end("No output driver available.");
+		#if sys Sys.println #else trace #end("No output driver available." #if hl + " Compile with -lib hlsdl or -lib hldx" #end);
 		driver = new h3d.impl.LogDriver(new h3d.impl.NullDriver());
 		driver.logEnable = true;
 		#end
