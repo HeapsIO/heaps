@@ -731,9 +731,7 @@ class BaseLibrary {
 		case 0:
 			defNode;
 		case 1:
-			var n = animNodes[0];
-			if( animName == null ) animName = getParent(n,"AnimationStack").getName();
-			n;
+			animNodes[0];
 		default:
 			throw "Multiple animation layers curves are currently not supported";
 		}
@@ -744,6 +742,8 @@ class BaseLibrary {
 			if( uvAnims == null )
 				return null;
 		}
+
+		if( animName == null ) animName = getParent(animNode,"AnimationStack").getName();
 
 		var curves = new Map();
 		var P0 = new Point();
