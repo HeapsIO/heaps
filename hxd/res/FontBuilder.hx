@@ -148,11 +148,12 @@ class FontBuilder {
 			var textChar = options.chars.charAt(i);
 			var w = Math.ceil(ctx.measureText(textChar).width) + 1;
 			if( w == 1 ) continue;
-			var h = this.font.size + 20;
-			surf += (w + 1) * (h + 1);
+			var glyphH = Std.int(this.font.size * 1.3);
+			var h = this.font.size + 5;
+			surf += (w + 1) * (glyphH + 1);
 			if( h > font.lineHeight )
 				font.lineHeight = h;
-			sizes[i] = { w:w, h:h };
+			sizes[i] = { w:w, h:glyphH };
 		}
 		var side = Math.ceil( Math.sqrt(surf) );
 		var width = 1;
