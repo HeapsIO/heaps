@@ -2,18 +2,12 @@ package h3d.scene;
 
 class WorldElement {
 	public var model : WorldModel;
-	public var x : Float;
-	public var y : Float;
-	public var z : Float;
-	public var scale : Float;
-	public var rotation : Float;
-	public function new( model, x, y, z, scale = 1., rotation = 0. ) {
+	public var transform : h3d.Matrix;
+	public var optimized : Bool;
+	public function new( model, mat, optimized ) {
 		this.model = model;
-		this.x = x;
-		this.y = y;
-		this.z = z;
-		this.scale = scale;
-		this.rotation = rotation;
+		this.transform = mat;
+		this.optimized = optimized;
 	}
 }
 
@@ -100,6 +94,8 @@ class WorldModel {
 class World extends Object {
 	public var worldSize : Int;
 	public var chunkSize : Int;
+	public var originX : Float = 0.;
+	public var originY : Float = 0.;
 
 	/*
 		For each texture loaded, will call resolveSpecularTexture and have separate spec texture.
@@ -111,7 +107,6 @@ class World extends Object {
 	*/
 	public var specularInAlpha = false;
 
-	var chunkBits : Int;
 	var worldStride : Int;
 	var bigTextureSize = 2048;
 	var bigTextureBG = 0xFF8080FF;
@@ -127,12 +122,7 @@ class World extends Object {
 		bigTextures = [];
 		allChunks = [];
 		textures = new Map();
-		this.chunkBits = 1;
-		while( chunkSize > (1 << chunkBits) )
-			chunkBits++;
-		this.chunkSize = 1 << chunkBits;
-		if( worldSize % chunkSize != 0 )
-			throw "World size must be a multiple of chunk size";
+		this.chunkSize = chunkSize;
 		this.worldSize = worldSize;
 		this.worldStride = Math.ceil(worldSize / chunkSize);
 		if( autoCollect )
@@ -260,12 +250,20 @@ class World extends Object {
 			var geom = lib.header.geometries[m.geometry];
 			if( geom == null ) continue;
 			var pos = m.position.toMatrix();
+			var parentIdx = m.parent;
+			while(parentIdx >= 0) {
+				var parent = models[parentIdx];
+				pos.multiply(parent.position.toMatrix(), pos);
+				parentIdx = parent.parent;
+			}
 			for( mid in 0...m.materials.length ) {
-				var mat = loadMaterialTexture(r, lib.header.materials[m.materials[mid]]);
-				if( mat == null ) continue;
+				var mat = lib.header.materials[m.materials[mid]];
+				if(mat == null || mat.diffuseTexture == null) continue;
+				var wmat = loadMaterialTexture(r, mat);
+				if( wmat == null ) continue;
 				var data = lib.getBuffers(geom, format.fmt, format.defaults, mid);
 
-				var m = new WorldModelGeometry(mat);
+				var m = new WorldModelGeometry(wmat);
 				m.vertexCount = Std.int(data.vertexes.length / model.stride);
 				m.indexCount = data.indexes.length;
 				m.startVertex = startVertex;
@@ -302,8 +300,8 @@ class World extends Object {
 					model.buf.push(n.z * len);
 
 					// uv
-					model.buf.push(u * mat.t.su + mat.t.du);
-					model.buf.push(v * mat.t.sv + mat.t.dv);
+					model.buf.push(u * wmat.t.su + wmat.t.du);
+					model.buf.push(v * wmat.t.sv + wmat.t.dv);
 
 					// extra
 					for( k in 0...extra )
@@ -321,16 +319,16 @@ class World extends Object {
 	}
 
 	function getChunk( x : Float, y : Float, create = false ) {
-		var ix = Std.int(x) >> chunkBits;
-		var iy = Std.int(y) >> chunkBits;
+		var ix = Std.int((x - originX) / chunkSize);
+		var iy = Std.int((y - originY) / chunkSize);
 		if( ix < 0 ) ix = 0;
 		if( iy < 0 ) iy = 0;
 		var cid = ix + iy * worldStride;
 		var c = chunks[cid];
 		if( c == null && create ) {
 			c = new WorldChunk(ix, iy);
-			c.x = ix * chunkSize;
-			c.y = iy * chunkSize;
+			c.x = ix * chunkSize + originX;
+			c.y = iy * chunkSize + originY;
 			addChild(c.root);
 			chunks[cid] = c;
 			allChunks.push(c);
@@ -342,7 +340,7 @@ class World extends Object {
 		var n = Std.int(worldSize / chunkSize);
 		for(x in 0...n)
 			for(y in 0...n) {
-				var c = getChunk(x * chunkSize, y * chunkSize, true);
+				var c = getChunk(x * chunkSize + originX, y * chunkSize + originY, true);
 				c.bounds.addPoint(new h3d.col.Point(c.x, c.y));
 				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y));
 				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y + chunkSize));
@@ -373,7 +371,15 @@ class World extends Object {
 					initMaterial(b, g.m);
 				}
 				var p = Std.instance(b.primitive, h3d.prim.BigPrimitive);
-				p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), e.x, e.y, e.z, e.rotation, e.scale, model.stride);
+
+				if(e.optimized) {
+					var m = e.transform;
+					var scale = m._33;
+					var rotZ = hxd.Math.atan2(m._12 / scale, m._11 / scale);
+					p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), m.tx, m.ty, m.tz, rotZ, scale, model.stride, 0., 0., 1., null);
+				}
+				else
+					p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), 0., 0., 0., 0., 0., model.stride, 0., 0., 1., e.transform);
 			}
 		}
 	}
@@ -388,24 +394,10 @@ class World extends Object {
 		c.buffers = new Map();
 	}
 
-	function updateChunkBounds(c : WorldChunk, model : WorldModel, x : Float, y : Float, z : Float, rotation : Float, scale : Float) {
-		var cosR = Math.cos(rotation);
-		var sinR = Math.sin(rotation);
-
-		inline function addPoint(dx:Float, dy:Float, dz:Float) {
-			var tx = dx * cosR - dy * sinR;
-			var ty = dx * sinR + dy * cosR;
-			c.bounds.addPos(tx * scale + x, ty * scale + y, dz * scale + z);
-		}
-
-		addPoint(model.bounds.xMin, model.bounds.yMin, model.bounds.zMin);
-		addPoint(model.bounds.xMin, model.bounds.yMin, model.bounds.zMax);
-		addPoint(model.bounds.xMin, model.bounds.yMax, model.bounds.zMin);
-		addPoint(model.bounds.xMin, model.bounds.yMax, model.bounds.zMax);
-		addPoint(model.bounds.xMax, model.bounds.yMin, model.bounds.zMin);
-		addPoint(model.bounds.xMax, model.bounds.yMin, model.bounds.zMax);
-		addPoint(model.bounds.xMax, model.bounds.yMax, model.bounds.zMin);
-		addPoint(model.bounds.xMax, model.bounds.yMax, model.bounds.zMax);
+	function updateChunkBounds(c : WorldChunk, model : WorldModel, mat : h3d.Matrix ) {
+		var b = model.bounds.clone();
+		b.transform(mat);
+		c.bounds.add(b);
 	}
 
 	function initMaterial( mesh : h3d.scene.Mesh, mat : WorldMaterial ) {
@@ -456,8 +448,18 @@ class World extends Object {
 
 	public function add( model : WorldModel, x : Float, y : Float, z : Float, scale = 1., rotation = 0. ) {
 		var c = getChunk(x, y, true);
-		c.elements.push(new WorldElement(model, x, y, z, scale, rotation));
-		updateChunkBounds(c, model, x, y, z, rotation, scale);
+		var m = new h3d.Matrix();
+		m.initScale(scale, scale, scale);
+		m.rotate(0, 0, rotation);
+		m.translate(x, y, z);
+		c.elements.push(new WorldElement(model, m, true));
+		updateChunkBounds(c, model, m);
+	}
+
+	public function addTransform( model : WorldModel, mat : h3d.Matrix ) {
+		var c = getChunk(mat.tx, mat.ty, true);
+		c.elements.push(new WorldElement(model, mat, false));
+		updateChunkBounds(c, model, mat);
 	}
 
 	override function syncRec(ctx:RenderContext) {
@@ -478,6 +480,15 @@ class World extends Object {
 			initChunkSoil(c);
 			initChunkElements(c);
 		}
+	}
+
+	public function getWorldBounds( ?b : h3d.col.Bounds ) {
+		if( b == null )
+			b = new h3d.col.Bounds();
+		for(c in chunks) {
+			b.add(c.bounds);
+		}
+		return b;
 	}
 
 	#if hxbit

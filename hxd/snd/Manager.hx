@@ -16,6 +16,11 @@ class Source {
 	public var playing = false;
 	public var start   = 0;
 
+	public var streamSound : hxd.res.Sound;
+	public var streamBuffer : haxe.io.Bytes;
+	public var streamStart : Int;
+	public var streamPos : Int;
+
 	public function new(driver : Driver) {
 		id      = ID++;
 		handle  = driver.createSource();
@@ -58,6 +63,11 @@ class Manager {
 	public static var BUFFER_QUEUE_LENGTH        = 2;
 	public static var MAX_SOURCES                = 16;
 	public static var SOUND_BUFFER_CACHE_SIZE    = 256;
+
+	/**
+		Allows to decode big streaming buffers over X split frames. 0 to disable
+	**/
+	public static var BUFFER_STREAM_SPLIT        = 16;
 
 	static var instance : Manager;
 
@@ -284,7 +294,7 @@ class Manager {
 			var playedSamples = driver.getPlayedSampleCount(s.handle);
 			if (playedSamples < 0)  {
 				#if debug
-				throw "playedSamples should positive : bug in driver";
+				trace("playedSamples should positive : bug in driver");
 				#end
 				playedSamples = 0;
 			}
@@ -377,7 +387,7 @@ class Manager {
 			c.source = s;
 
 			checkTargetFormat(c.sound.getData(), c.soundGroup.mono);
-			s.start = Math.ceil(c.position * targetRate);
+			s.start = Math.floor(c.position * targetRate);
 			if( s.start < 0 ) s.start = 0;
 			queueBuffer(s, c.sound, s.start);
 			c.positionChanged = false;
@@ -485,6 +495,30 @@ class Manager {
 	// internals
 	// ------------------------------------------------------------------------
 
+	function progressiveDecodeBuffer( s : Source, snd : hxd.res.Sound, start : Int ) {
+		var data = snd.getData();
+		var samples = Math.ceil(STREAM_BUFFER_SAMPLE_COUNT / BUFFER_STREAM_SPLIT);
+		if( s.streamStart != start || s.streamSound != snd ) {
+			s.streamSound = snd;
+			s.streamStart = start;
+			s.streamPos = start;
+		}
+		var end = start + STREAM_BUFFER_SAMPLE_COUNT;
+		if( s.streamPos == end )
+			return true; // already done
+		var bpp = data.getBytesPerSample();
+		var reqSize = STREAM_BUFFER_SAMPLE_COUNT * bpp;
+		if( s.streamBuffer == null || s.streamBuffer.length < reqSize ) {
+			s.streamBuffer = hxd.impl.Tmp.getBytes(reqSize);
+			s.streamPos = start;
+		}
+		var remain = end - s.streamPos;
+		if( remain > samples ) remain = samples;
+		data.decode(s.streamBuffer, (s.streamPos - start) * bpp, s.streamPos, remain);
+		s.streamPos += remain;
+		return s.streamPos == end;
+	}
+
 	function queueBuffer(s : Source, snd : hxd.res.Sound, start : Int) {
 		var data   = snd.getData();
 		var sgroup = s.channel.soundGroup;
@@ -495,12 +529,16 @@ class Manager {
 			b = getSoundBuffer(snd, sgroup);
 			driver.queueBuffer(s.handle, b.handle, start, true);
 		} else {
+
+			// wait until fully decoded
+			if( s.buffers.length > 0 && BUFFER_STREAM_SPLIT > 1 && !progressiveDecodeBuffer(s, snd, start) )
+				return;
+
 			// queue stream buffer
-			b = getStreamBuffer(snd, sgroup, start);
+			b = getStreamBuffer(s, snd, sgroup, start);
 			driver.queueBuffer(s.handle, b.handle, 0, b.isEnd);
 		}
 		s.buffers.push(b);
-		return b;
 	}
 
 	function unqueueBuffer(s : Source) {
@@ -522,8 +560,7 @@ class Manager {
 	}
 
 	function bindEffect(c : Channel, s : Source, e : Effect) {
-		var wasInGC = effectGC.remove(e);
-		if (!wasInGC && e.refs == 0) e.driver.acquire();
+		if (e.refs == 0 && !effectGC.remove(e)) e.driver.acquire();
 		++e.refs;
 		e.driver.bind(e, s.handle);
 		c.bindedEffects.push(e);
@@ -607,7 +644,7 @@ class Manager {
 		buf.samples    = dat.samples;
 	}
 
-	function getStreamBuffer(snd : hxd.res.Sound, grp : SoundGroup, start : Int) : Buffer {
+	function getStreamBuffer( src : Source, snd : hxd.res.Sound, grp : SoundGroup, start : Int) : Buffer {
 		var data = snd.getData();
 
 		var b = freeStreamBuffers.shift();
@@ -629,8 +666,15 @@ class Manager {
 		b.start   = start;
 
 		var size  = samples * data.getBytesPerSample();
-		var bytes = getTmpBytes(size);
-		data.decode(bytes, 0, start, samples);
+		var bytes;
+		if( src.streamSound == snd && src.streamStart == start ) {
+			// finish progressive decoding and use progressive buffer
+			while( !progressiveDecodeBuffer(src, snd, start) ) {};
+			bytes = src.streamBuffer;
+		} else {
+			bytes = getTmpBytes(size);
+			data.decode(bytes, 0, start, samples);
+		}
 
 		if (!checkTargetFormat(data, grp.mono)) {
 			size = samples * targetChannels * Data.formatBytes(targetFormat);

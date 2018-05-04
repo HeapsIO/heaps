@@ -13,6 +13,7 @@ class CameraController extends h3d.scene.Object {
 	public var zoomAmount = 1.15;
 	public var fovZoomAmount = 1.1;
 	public var panSpeed = 1.;
+	public var smooth = 0.6;
 
 	public var lockZPlanes = false;
 
@@ -164,6 +165,10 @@ class CameraController extends h3d.scene.Object {
 				pan(-(e.relX - pushX) * m, (e.relY - pushY) * m);
 				pushX = e.relX;
 				pushY = e.relY;
+			case 2: 
+				rot(e.relX - pushX, e.relY - pushY);
+				pushX = e.relX;
+				pushY = e.relY;
 			default:
 			}
 		default:
@@ -225,7 +230,7 @@ class CameraController extends h3d.scene.Object {
 			if( Math.abs(moveY) < 1 ) moveY = 0;
 		}
 
-		var dt = hxd.Math.min(1, 1 - Math.pow(0.9, ctx.elapsedTime * 60));
+		var dt = hxd.Math.min(1, 1 - Math.pow(smooth, ctx.elapsedTime * 60));
 		var cam = scene.camera;
 		curOffset.lerp(curOffset, targetOffset, dt);
 		curPos.lerp(curPos, targetPos, dt );

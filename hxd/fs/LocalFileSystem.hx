@@ -224,6 +224,7 @@ private class LocalEntry extends FileEntry {
 	var watchTime : Float;
 	static var WATCH_INDEX = 0;
 	static var WATCH_LIST : Array<LocalEntry> = null;
+	static var tmpDir : String = null;
 
 	inline function getModifTime(){
 		#if flash
@@ -240,27 +241,34 @@ private class LocalEntry extends FileEntry {
 			return;
 		}
 		var t = try w.getModifTime() catch( e : Dynamic ) -1;
-		if( t != w.watchTime ) {
-			#if flash
+		if( t == w.watchTime ) return;
+
+		#if flash
 			// check we can write (might be deleted/renamed/currently writing)
 			if( !w.isDirectory )
-			try {
-				var f = new flash.filesystem.FileStream();
-				f.open(w.file, flash.filesystem.FileMode.READ);
-				f.close();
-				f.open(w.file, flash.filesystem.FileMode.APPEND);
-				f.close();
-			} catch( e : Dynamic ) return;
-			#elseif sys
+				try {
+					var f = new flash.filesystem.FileStream();
+					f.open(w.file, flash.filesystem.FileMode.READ);
+					f.close();
+					f.open(w.file, flash.filesystem.FileMode.APPEND);
+					f.close();
+				} catch( e : Dynamic ) return;
+		#elseif sys
+			if( tmpDir == null ) {
+				tmpDir = Sys.getEnv("TEMP");
+				if( tmpDir == null ) tmpDir = Sys.getEnv("TMPDIR");
+				if( tmpDir == null ) tmpDir = Sys.getEnv("TMP");
+			}
+			var lockFile = tmpDir+"/"+w.file.split("/").pop()+".lock";
+			if( sys.FileSystem.exists(lockFile) ) return;
 			if( !w.isDirectory )
 			try {
 				var fp = sys.io.File.append(w.file);
 				fp.close();
 			}catch( e : Dynamic ) return;
-			#end
-			w.watchTime = t;
-			w.watchCallback();
-		}
+		#end
+		w.watchTime = t;
+		w.watchCallback();
 	}
 
 	override function watch( onChanged : Null < Void -> Void > ) {

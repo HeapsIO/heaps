@@ -230,7 +230,7 @@ class Dump {
 		if( file == null ) throw "Missing file argument";
 		var bytes;
 		if( file.split(".").pop().toLowerCase() == "fbx" ) {
-			var l = new hxd.fmt.fbx.HMDOut();
+			var l = new hxd.fmt.fbx.HMDOut(file);
 			l.loadTextFile(sys.io.File.getContent(file));
 			var hmd = l.toHMD(null, !StringTools.startsWith(file.split("\\").join("/").split("/").pop(), "Anim_"));
 			var out = new haxe.io.BytesOutput();
