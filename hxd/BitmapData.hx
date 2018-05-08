@@ -249,61 +249,15 @@ class BitmapData {
 			for( x in x0...x1 + 1 )
 				setPixel(x, y0, color);
 		} else {
-			// Out of bound check //
 			if ( (x0<0 && x1<0) || (y0<0 && y1<0) || (x0>=width && x1>=width) || (y0>=height && y1>=width) )
 				return;
 
-			if ( x0<0 && x1>=0) {
-				y0 = Math.round(y1 - x1 * dy / dx);
-				x0 = 0;
-				dx = x1-x0;
-				dy = y1-y0;
-			} else if ( x1<0 && x0>=0) {
-				y1 = Math.round(y0 - x0 * dy / dx);
-				x1 = 0;
-				dx = x1-x0;
-				dy = y1-y0;
-			}
-			if (x0>=width && x1<width) {
-				x0 = width-1;
-				y0 = Math.round(y1 + (x0-x1) * dy / dx);
-				dx = x1-x0;
-				dy = y1-y0;
-			} else if (x1>=width && x0<width) {
-				x1 = width-1;
-				y1 = Math.round(y0 + (x1-x0) * dy / dx);
-				dx = x1-x0;
-				dy = y1-y0;
-			}
-
-			if ( y0<0 && y1>=0) {
-				x0 = Math.round(x1 - y1 * dx / dy);
-				y0 = 0;
-				dx = x1-x0;
-				dy = y1-y0;
-			} else if ( y1<0 && y0>=0) {
-				x1 = Math.round(x0 - y0 * dx / dy);
-				y1 = 0;
-				dx = x1-x0;
-				dy = y1-y0;
-			}
-			if (x0>=height && x1<height) {
-				y0 = height-1;
-				x0 = Math.round(x1 + (y0-y1) * dx / dy);
-				dx = x1-x0;
-				dy = y1-y0;
-			} else if (y1>=height && y0<height) {
-				y1 = height-1;
-				x1 = Math.round(x0 + (y1-y0) * dx / dy);
-				dx = x1-x0;
-				dy = y1-y0;
-			}
-
-			trace(x0,y0,x1,y1);
-			// End of out of bound checks
-
 			var yc = 1;
 			var xc = 1;
+
+			var start_out = (x0<0 || x0>=width || y0<0 || y0>=height);
+			var end_out   = (x1<0 || x1>=width || y1<0 || y1>=height);
+			var in_view = !start_out;
 
 			if ( dx<0 ) {
 				xc = -1;
@@ -315,30 +269,53 @@ class BitmapData {
 				dy = -dy;
 			}
 
+			var x = x0;
+			var y = y0;
+
 			if ( dx < dy ) {
 				var delta = 2*dx - dy;
 
+				var i = 0;
+
 				for( i in 0 ... dy+1 ) {
-					setPixel(x0, y0, color);
+					if (in_view)
+						setPixel(x, y, color);
+
 					if ( delta > 0) {
-						x0 += xc;
+						x += xc;
 						delta -= 2*dy;
 					}
-					y0 += yc;	
+					y += yc;	
 					delta += 2*dx;
-				}
 
+					if(start_out || end_out) {
+						in_view = (x>=0 && x<width && y>=0 && y<height);
+						if (in_view)	
+							start_out = false;
+						if (!in_view && !start_out && end_out)
+							return;
+					}
+				}
 			} else {
 				var delta = 2*dy - dx;
 
 				for( i in 0 ... dx+1 ) {
-					setPixel(x0, y0, color);
+					if (in_view)
+						setPixel(x, y, color);
 					if ( delta > 0) {
-						y0 += yc;
+						y += yc;
 						delta -= 2*dx;
 					}
-					x0 += xc;	
+					x += xc;	
 					delta += 2*dy;
+
+					if(start_out || end_out) {
+						in_view = (x>=0 && x<width && y>=0 && y<height);
+						if (in_view)
+							start_out = false;
+						if (!in_view && !start_out && end_out)
+							return;
+					}
 				}
 			}
 		}
