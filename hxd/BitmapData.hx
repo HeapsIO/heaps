@@ -265,7 +265,7 @@ class BitmapData {
 			if ( dx < dy ) {
 				var delta = 2*dx - dy;
 
-				for( i in 0 ... dy ) {
+				for( i in 0 ... dy+1 ) {
 					setPixel(x0, y0, color);
 					if ( delta > 0) {
 						x0 += xc;
@@ -278,7 +278,7 @@ class BitmapData {
 			} else {
 				var delta = 2*dy - dx;
 
-				for( i in 0 ... dx ) {
+				for( i in 0 ... dx+1 ) {
 					setPixel(x0, y0, color);
 					if ( delta > 0) {
 						y0 += yc;
