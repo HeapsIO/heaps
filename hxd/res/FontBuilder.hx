@@ -226,8 +226,8 @@ class FontBuilder {
         var dummy = js.Browser.document.createElement("div");
         var dummyText = js.Browser.document.createTextNode(chars);
         dummy.appendChild(dummyText);
-        dummy.style.font = font.name;
         dummy.style.fontSize = font.size + 'px';
+        dummy.style.fontFamily = font.name;
         body.appendChild(dummy);
         var result = dummy.offsetHeight;
         body.removeChild(dummy);
