@@ -249,6 +249,59 @@ class BitmapData {
 			for( x in x0...x1 + 1 )
 				setPixel(x, y0, color);
 		} else {
+			// Out of bound check //
+			if ( (x0<0 && x1<0) || (y0<0 && y1<0) || (x0>=width && x1>=width) || (y0>=height && y1>=width) )
+				return;
+
+			if ( x0<0 && x1>=0) {
+				y0 = Math.round(y1 - x1 * dy / dx);
+				x0 = 0;
+				dx = x1-x0;
+				dy = y1-y0;
+			} else if ( x1<0 && x0>=0) {
+				y1 = Math.round(y0 - x0 * dy / dx);
+				x1 = 0;
+				dx = x1-x0;
+				dy = y1-y0;
+			}
+			if (x0>=width && x1<width) {
+				x0 = width-1;
+				y0 = Math.round(y1 + (x0-x1) * dy / dx);
+				dx = x1-x0;
+				dy = y1-y0;
+			} else if (x1>=width && x0<width) {
+				x1 = width-1;
+				y1 = Math.round(y0 + (x1-x0) * dy / dx);
+				dx = x1-x0;
+				dy = y1-y0;
+			}
+
+			if ( y0<0 && y1>=0) {
+				x0 = Math.round(x1 - y1 * dx / dy);
+				y0 = 0;
+				dx = x1-x0;
+				dy = y1-y0;
+			} else if ( y1<0 && y0>=0) {
+				x1 = Math.round(x0 - y0 * dx / dy);
+				y1 = 0;
+				dx = x1-x0;
+				dy = y1-y0;
+			}
+			if (x0>=height && x1<height) {
+				y0 = height-1;
+				x0 = Math.round(x1 + (y0-y1) * dx / dy);
+				dx = x1-x0;
+				dy = y1-y0;
+			} else if (y1>=height && y0<height) {
+				y1 = height-1;
+				x1 = Math.round(x0 + (y1-y0) * dx / dy);
+				dx = x1-x0;
+				dy = y1-y0;
+			}
+
+			trace(x0,y0,x1,y1);
+			// End of out of bound checks
+
 			var yc = 1;
 			var xc = 1;
 
