@@ -249,7 +249,45 @@ class BitmapData {
 			for( x in x0...x1 + 1 )
 				setPixel(x, y0, color);
 		} else {
-			throw "TODO : brensenham line";
+			var yc = 1;
+			var xc = 1;
+
+			if ( dx<0 ) {
+				xc = -1;
+				dx = -dx;
+			}
+
+			if ( dy<0) {
+				yc = -1;
+				dy = -dy;
+			}
+
+			if ( dx < dy ) {
+				var delta = 2*dx - dy;
+
+				for( i in 0 ... dy ) {
+					setPixel(x0, y0, color);
+					if ( delta > 0) {
+						x0 += xc;
+						delta -= 2*dy;
+					}
+					y0 += yc;	
+					delta += 2*dx;
+				}
+
+			} else {
+				var delta = 2*dy - dx;
+
+				for( i in 0 ... dx ) {
+					setPixel(x0, y0, color);
+					if ( delta > 0) {
+						y0 += yc;
+						delta -= 2*dx;
+					}
+					x0 += xc;	
+					delta += 2*dy;
+				}
+			}
 		}
 	}
 
