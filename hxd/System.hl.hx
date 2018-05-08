@@ -114,6 +114,9 @@ class System {
 
 	static function runMainLoop() {
 		var reportError = function(e) reportError(e);
+		#if hxtelemetry
+		var hxt = new hxtelemetry.HxTelemetry();
+		#end
 		while( true ) {
 			try {
 				hl.Api.setErrorHandler(reportError); // set exception trap
@@ -123,6 +126,9 @@ class System {
 				hl.Api.setErrorHandler(null);
 				reportError(e);
 			}
+			#if hxtelemetry
+			hxt.advance_frame();
+			#end
 		}
 		Sys.exit(0);
 	}
