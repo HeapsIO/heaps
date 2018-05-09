@@ -88,6 +88,9 @@ class MemoryManager {
 		if( mem == 0 ) return;
 
 		while( usedMemory + mem > MAX_MEMORY || bufferCount >= MAX_BUFFERS || (m.vbuf = driver.allocVertexes(m)) == null ) {
+
+			if( driver.isDisposed() ) return;
+
 			var size = usedMemory - freeMemorySize();
 			garbage();
 			cleanManagedBuffers();
@@ -253,6 +256,7 @@ class MemoryManager {
 		var free = cleanTextures(false);
 		t.t = driver.allocTexture(t);
 		if( t.t == null ) {
+			if( driver.isDisposed() ) return;
 			if( !cleanTextures(true) ) throw "Maximum texture memory reached";
 			allocTexture(t);
 			return;
