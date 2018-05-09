@@ -147,7 +147,7 @@ class FontBuilder {
 		// get approx height of font including descent
 		var h = getFontHeight(this.font, 'MgO0pj');
 		// arbritrary safety margin used to ensure that char doesn't get scrambled, probably due to messed up text metrics
-		var xMarg = 5;
+		var xMarg = 10;
 		for( i in 0...options.chars.length ) {
 			var textChar = options.chars.charAt(i);
 			var w = Math.ceil(ctx.measureText(textChar).width) + 1;
