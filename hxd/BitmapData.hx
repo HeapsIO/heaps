@@ -249,6 +249,7 @@ class BitmapData {
 			for( x in x0...x1 + 1 )
 				setPixel(x, y0, color);
 		} else {
+			/************************************************************************************************
 			if ( (x0<0 && x1<0) || (y0<0 && y1<0) || (x0>=width && x1>=width) || (y0>=height && y1>=width) )
 				return;
 
@@ -257,7 +258,7 @@ class BitmapData {
 
 			var start_out = (x0<0 || x0>=width || y0<0 || y0>=height);
 			var end_out   = (x1<0 || x1>=width || y1<0 || y1>=height);
-			var in_view = !start_out;
+			// var in_view = !start_out;
 
 			if ( dx<0 ) {
 				xc = -1;
@@ -269,54 +270,276 @@ class BitmapData {
 				dy = -dy;
 			}
 
+			var d2x = 2*dx;
+			var d2y = 2*dy;
+
 			var x = x0;
 			var y = y0;
 
 			if ( dx < dy ) {
-				var delta = 2*dx - dy;
-
+				var delta = d2x - dy;
 				var i = 0;
 
-				for( i in 0 ... dy+1 ) {
-					if (in_view)
-						setPixel(x, y, color);
+				while( i <= dy ) {
+					setPixel(x, y, color);
 
 					if ( delta > 0) {
 						x += xc;
-						delta -= 2*dy;
+						delta -= d2y;
 					}
 					y += yc;	
-					delta += 2*dx;
-
-					if(start_out || end_out) {
-						in_view = (x>=0 && x<width && y>=0 && y<height);
-						if (in_view)	
-							start_out = false;
-						if (!in_view && !start_out && end_out)
-							return;
-					}
+					delta += d2x;
+					++i;
 				}
 			} else {
-				var delta = 2*dy - dx;
+				var delta = d2y - dx;
 
-				for( i in 0 ... dx+1 ) {
-					if (in_view)
-						setPixel(x, y, color);
-					if ( delta > 0) {
-						y += yc;
-						delta -= 2*dx;
+				var i = 0;
+
+				if (start_out) {
+					if (x<0) { 	// try to go to (0;???)
+						var nx = 0;
+						var ni = nx-x0;
+
+						// @to fix : if i and d2y are too big this may overflow
+						var j = Math.floor( (delta + i * d2y + d2x)/d2x );
+						var ny = y0 + j*yc;
+
+						if (ny>=0 && ny<height) {
+							x=nx;
+							y=ny;
+							i=ni;
+							delta += i*d2y - j*d2x;
+							trace(x,y);
+						} else {
+							trace("Rejecting", nx,ny);
+						}
 					}
-					x += xc;	
-					delta += 2*dy;
+					if(y<0) {	// try to go to (???;0)
+						if (yc<0) return; 		// This is impossible to draw
+						var ny = 0;
+						var j = (ny-y0);
 
-					if(start_out || end_out) {
-						in_view = (x>=0 && x<width && y>=0 && y<height);
-						if (in_view)
-							start_out = false;
-						if (!in_view && !start_out && end_out)
-							return;
+						// @to fix : if j and d2x are too big this may overflow
+						var ni = Math.floor( (j*d2x - delta + d2y) / d2y );
+						var nx = x0 + ni*xc;
+
+						if (nx>=0 && nx<height) {
+							x=nx;
+							y=ny;
+							i=ni;
+							delta += i*d2y - j*d2x;
+							trace(x,y);
+						} else {
+							trace("Rejecting", nx,ny);
+						}
+					}
+					if (x>=width) {   // try to go to (width-1;???)
+						if (xc>0) return; 		// This is impossible to draw
+						var nx = width-1;
+						var ni = x0-nx;
+
+						// @to fix : if i and d2y are too big this may overflow
+						var j = Math.floor( (delta + i * d2y + d2x)/d2x );
+						var ny = y0 + j*yc;
+						if (ny>=0 && ny<height) {
+							x=nx;
+							y=ny;
+							i=ni;
+							delta += i*d2y - j*d2x;
+							trace(x,y);
+						} else {
+							trace("Rejecting", nx,ny);
+						}
+					}
+					if(y>=height) {	// try to go to (???;height-1)
+						if (yc>0) return; 		// This is impossible to draw
+						var ny = height-1;
+						var j = (y0-ny);
+
+						// @to fix : if j and d2x are too big this may overflow
+						var ni = Math.floor( (j*d2x - delta + d2y) / d2y );
+						var nx = x0 + ni*xc;
+						if (nx>=0 && nx<height) {
+							x=nx;
+							y=ny;
+							i=ni;
+							delta += i*d2y - j*d2x;
+							trace(x,y);
+						} else {
+							trace("Rejecting", nx,ny);
+							return; 			// We should'n reject at this point!
+						}
 					}
 				}
+				
+				while( i <= dx ) {
+					//if (in_view)
+					setPixel(x, y, color);
+					if ( delta > 0) {
+						y += yc;
+						delta -= d2x;
+					}
+					x += xc;	
+					delta += d2y;
+
+					if(end_out) {
+						if (x<0 || x>=width || y<0 || y>=height)
+							return;
+						// if (in_view)
+						// 	start_out = false;
+						// if (!in_view && !start_out && end_out)
+						// 	return;
+					}
+
+					++i;
+				}
+			}
+			***********************************************************/
+		
+			// Step 1... = checks for clipping
+			var sx : Int;
+			var sy : Int;
+			var clip_x0 : Int;
+			var clip_y0 : Int;
+			var clip_x1 : Int;
+			var clip_y1 : Int;
+
+			if ( x0<x1 ) {
+				if ( x0>=width || x1 <0 )	return;
+				sx = 1;				
+				clip_x0 = 0;
+				clip_x1 = width-1;
+			} else {
+				if ( x1>=width || x0<0 )	return;
+				sx = -1;
+				x1 = -x1;
+				x0 = -x0;
+				clip_x0 = 1-width;
+				clip_x1 = 0;
+			}
+
+			if ( y0<y1 ) {
+				if ( y0>=height || y1 <0 )	return;
+				sy = 1;
+				clip_y0 = 0;
+				clip_y1 = height-1;
+			} else {
+				if ( y1>=width || y0<0 )	return;
+				sy = -1;
+				y1 = -y1;
+				y0 = -y0;
+				clip_y0 = 1-height;
+				clip_y1 = 0;
+			}
+
+			dx = x1-x0;				// Those are always > 0 because of swappings
+			dy = y1-y0;
+
+			var d2x = dx << 1;		// double steps for bresenham
+			var d2y = dy << 1;
+
+			var x = x0;
+			var y = y0;
+
+			if ( dx >= dy ) { 		// slope in ]0;1]
+				var delta = d2y - dx;
+				var tracing_can_start = false;
+
+				// Clipping on (x0;y0) side
+				if ( y0 < clip_y0 ) {
+					var temp : haxe.Int64 = d2x*(clip_y0-y0) - dx;			// Compute intersection (???;clip_y0)
+					var xinc : haxe.Int64 = (temp / d2y);
+					
+					if( xinc.high != 0 )
+						throw "This should not happen...";
+					trace("Case 1", x,y,xinc.low, x+xinc.low);
+					x += xinc.low;
+
+					if ( x > clip_x1 )	return;
+
+					if ( x >= clip_x0 ) {
+						temp -= xinc * d2y;
+						if( temp.high != 0 )
+							throw "This should not happen...";
+						delta -= temp.low + dx;
+						y = clip_y0;
+
+						if (temp>0) {
+							x += 1;
+							delta += d2y;
+						}
+						tracing_can_start = true;
+					}
+				}
+
+				if( !tracing_can_start && x0 < clip_x0 ) {
+					var temp : haxe.Int64 = d2y*(clip_x0 - x0);				// Compute intersection (clip_x0;???)
+					var yinc : haxe.Int64 = (temp / d2x);
+
+					if( yinc.high != 0 )
+						throw "This should not happen...";
+
+					trace("Case 2", x,y,yinc.low, y+yinc.low);
+					y += yinc.low;
+					temp %= d2x;
+
+					if( temp.high != 0 )
+						throw "This should not happen...";
+
+					if ( y > clip_y1 || ( y == clip_y1 && temp > dx ) )	return;
+
+					x = clip_x0;
+					delta += temp.low;
+
+					if ( temp >= dx ) {
+						++y;
+						delta -= d2x;
+					}
+					//trace("Found", x, y);
+				}
+
+				// If we arrive here, (x;y) is the first point in view and delta was adjusted
+
+				// clipping on (x1;y1) side
+				var xend = x1;
+				if ( y1 > clip_y1 ) {
+					var temp = d2x*(clip_y1-y1) + dx;			// Compute intersection (???;clip_y1)
+					var xinc = Math.floor(temp / d2y);
+					xend += xinc;
+
+					if ( temp - xinc*d2y == 0 )
+                		--xend;
+				}
+				xend = ( xend > clip_x1 ) ? clip_x1 + 1 : xend + 1;
+
+				// Clipping is done
+				if ( sx == -1 ) {
+					x = -x;
+					xend = -xend;
+				}
+				if ( sy == -1 ) {
+					y = -y;
+				}
+
+				//trace("Drawing : ", x,y, xend);
+
+				d2x -= d2y;	// Changing d2x : delta is adjusted only once every loop 
+
+				// Drawing
+				while ( x != xend ) {
+					setPixel(x, y, color);
+
+					if ( delta >= 0 ) {
+                		y += sy;
+                		delta -= d2x;
+           			} else {
+                		delta += d2y;
+            		}
+					x += sx;
+				}
+			} else {				// slope in ]1;+oo[
+				trace("Not implemented");
 			}
 		}
 	}
