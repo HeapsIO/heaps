@@ -249,73 +249,205 @@ class BitmapData {
 			for( x in x0...x1 + 1 )
 				setPixel(x, y0, color);
 		} else {
-			if ( (x0<0 && x1<0) || (y0<0 && y1<0) || (x0>=width && x1>=width) || (y0>=height && y1>=width) )
-				return;
+			var sx : Int;
+			var sy : Int;
+			var clip_x0 : Int;
+			var clip_y0 : Int;
+			var clip_x1 : Int;
+			var clip_y1 : Int;
 
-			var yc = 1;
-			var xc = 1;
-
-			var start_out = (x0<0 || x0>=width || y0<0 || y0>=height);
-			var end_out   = (x1<0 || x1>=width || y1<0 || y1>=height);
-			var in_view = !start_out;
-
-			if ( dx<0 ) {
-				xc = -1;
-				dx = -dx;
+			if ( x0<x1 ) {
+				if ( x0>=width || x1 <0 )	return;
+				sx = 1;
+				clip_x0 = 0;
+				clip_x1 = width-1;
+			} else {
+				if ( x1>=width || x0<0 )	return;
+				sx = -1;
+				x1 = -x1;
+				x0 = -x0;
+				clip_x0 = 1-width;
+				clip_x1 = 0;
 			}
 
-			if ( dy<0) {
-				yc = -1;
-				dy = -dy;
+			if ( y0<y1 ) {
+				if ( y0>=height || y1 <0 )	return;
+				sy = 1;
+				clip_y0 = 0;
+				clip_y1 = height-1;
+			} else {
+				if ( y1>=width || y0<0 )	return;
+				sy = -1;
+				y1 = -y1;
+				y0 = -y0;
+				clip_y0 = 1-height;
+				clip_y1 = 0;
 			}
+
+			dx = x1-x0;				// Those are always > 0 because of swappings
+			dy = y1-y0;
+
+			var d2x = dx << 1;		// double steps for bresenham
+			var d2y = dy << 1;
 
 			var x = x0;
 			var y = y0;
 
-			if ( dx < dy ) {
-				var delta = 2*dx - dy;
+			if ( dx >= dy ) { 		// slope in ]0;1]
+				var delta = d2y - dx;
+				var tracing_can_start = false;
 
-				var i = 0;
+				// Clipping on (x0;y0) side
+				if ( y0 < clip_y0 ) {
+					// Compute intersection (???;clip_y0) using Int64 to avoid overflow
+					var temp : haxe.Int64  = haxe.Int64.ofInt(d2x) * (clip_y0-y0) - dx;
+					var xinc : haxe.Int64 = (temp / d2y);
+					x += haxe.Int64.toInt(xinc);
 
-				for( i in 0 ... dy+1 ) {
-					if (in_view)
-						setPixel(x, y, color);
+					if ( x > clip_x1 )	return;
 
-					if ( delta > 0) {
-						x += xc;
-						delta -= 2*dy;
-					}
-					y += yc;	
-					delta += 2*dx;
+					if ( x >= clip_x0 ) {
+						temp -= xinc * d2y;		// temp should fit a regular Int now
+						delta -= haxe.Int64.toInt(temp) + dx;
+						y = clip_y0;
 
-					if(start_out || end_out) {
-						in_view = (x>=0 && x<width && y>=0 && y<height);
-						if (in_view)	
-							start_out = false;
-						if (!in_view && !start_out && end_out)
-							return;
+						if (temp>0) {
+							x += 1;
+							delta += d2y;
+						}
+						tracing_can_start = true;
 					}
 				}
-			} else {
-				var delta = 2*dy - dx;
 
-				for( i in 0 ... dx+1 ) {
-					if (in_view)
-						setPixel(x, y, color);
-					if ( delta > 0) {
-						y += yc;
-						delta -= 2*dx;
-					}
-					x += xc;	
-					delta += 2*dy;
+				if( !tracing_can_start && x0 < clip_x0 ) {
+					// Compute intersection (clip_x0;???)
+					var temp : haxe.Int64 = haxe.Int64.ofInt(d2y)*(clip_x0 - x0);
+					var yinc : haxe.Int64 = temp / d2x;
+					y += haxe.Int64.toInt(yinc.low);
+					temp %= d2x;
+					if ( y > clip_y1 || ( y == clip_y1 && temp > dx ) )	return;
 
-					if(start_out || end_out) {
-						in_view = (x>=0 && x<width && y>=0 && y<height);
-						if (in_view)
-							start_out = false;
-						if (!in_view && !start_out && end_out)
-							return;
+					x = clip_x0;
+					delta += haxe.Int64.toInt(temp.low);
+
+					if ( temp >= dx ) {
+						++y;
+						delta -= d2x;
 					}
+				}
+				// If we arrive here, (x;y) is the first point in view and delta was adjusted
+
+				// clipping on (x1;y1) side
+				var xend = x1;
+				if ( y1 > clip_y1 ) {
+					// Compute intersection (???;clip_y1)
+					var temp : haxe.Int64 = haxe.Int64.ofInt(d2x) * (clip_y1-y1) + dx;
+					var xinc : haxe.Int64 = temp / d2y;
+					xend += haxe.Int64.toInt(xinc);
+
+					if ( temp - xinc*d2y == 0 )
+                		--xend;
+				}
+				xend = ( xend > clip_x1 ) ? clip_x1 + 1 : xend + 1;
+
+				// Clipping is done
+				if ( sx == -1 ) {
+					x = -x;
+					xend = -xend;
+				}
+				if ( sy == -1 ) {
+					y = -y;
+				}
+
+				d2x -= d2y;	// Changing d2x : delta is adjusted only once every loop
+
+				// Bresenham
+				while ( x != xend ) {
+					setPixel(x, y, color);
+
+					if ( delta >= 0 ) {
+                		y += sy;
+                		delta -= d2x;
+           			} else {
+                		delta += d2y;
+            		}
+					x += sx;
+				}
+			} else {				// slope in ]1;+oo[
+				var delta = d2x - dy;
+				var tracing_can_start = false;
+
+				// Clipping on (x0;y0) side
+				if ( x0 < clip_x0 ) {
+					var temp : haxe.Int64  = haxe.Int64.ofInt(d2y) * (clip_x0-x0) - dy;
+					var yinc : haxe.Int64 = (temp / d2x);
+					y += haxe.Int64.toInt(yinc);
+
+					if ( y > clip_y1 )	return;
+
+					if ( y >= clip_y0 ) {
+						temp -= yinc * d2x;
+						delta -= haxe.Int64.toInt(temp) + dy;
+						x = clip_x0;
+
+						if (temp>0) {
+							y += 1;
+							delta += d2x;
+						}
+						tracing_can_start = true;
+					}
+				}
+
+				if( !tracing_can_start && y0 < clip_y0 ) {
+					var temp : haxe.Int64 = haxe.Int64.ofInt(d2x)*(clip_y0 - y0);
+					var xinc : haxe.Int64 = temp / d2y;
+					x += haxe.Int64.toInt(xinc.low);
+					temp %= d2y;
+					if ( x > clip_x1 || ( x == clip_x1 && temp > dy ) )	return;
+
+					y = clip_y0;
+					delta += haxe.Int64.toInt(temp.low);
+
+					if ( temp >= dy ) {
+						++x;
+						delta -= d2y;
+					}
+				}
+
+				// clipping on (x1;y1) side
+				var yend = y1;
+				if ( x1 > clip_x1 ) {
+					var temp : haxe.Int64 = haxe.Int64.ofInt(d2y) * (clip_x1-x1) + dy;
+					var yinc : haxe.Int64 = temp / d2x;
+					yend += haxe.Int64.toInt(yinc);
+
+					if ( temp - yinc*d2x == 0 )
+                		--yend;
+				}
+				yend = ( yend > clip_y1 ) ? clip_y1 + 1 : yend + 1;
+
+				// Clipping is done
+				if ( sx == -1 ) {
+					x = -x;
+				}
+				if ( sy == -1 ) {
+					y = -y;
+					yend = -yend;
+				}
+
+				d2y -= d2x;	// Changing d2y : delta is adjusted only once every loop
+
+				// Bresenham
+				while ( y != yend ) {
+					setPixel(x, y, color);
+
+					if ( delta >= 0 ) {
+                		x += sx;
+                		delta -= d2y;
+           			} else {
+                		delta += d2x;
+            		}
+					y += sy;
 				}
 			}
 		}
