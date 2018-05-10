@@ -89,7 +89,7 @@ class NativeChannel {
 	var channel : flash.media.SoundChannel;
 	#elseif js
 	static var ctx : js.html.audio.AudioContext;
-	static function getContext() {
+	static function getContext() : js.html.audio.AudioContext {
 		if( ctx == null ) {
 			try {
 				ctx = new js.html.audio.AudioContext();
@@ -97,6 +97,10 @@ class NativeChannel {
 				ctx = untyped __js__('new window.webkitAudioContext()');
 			} catch( e : Dynamic ) {
 				ctx = null;
+			}
+			if( ctx != null ) {
+				if( ctx.state == SUSPENDED ) waitForPageInput();
+				ctx.addEventListener("statechange", function(_) if( ctx.state == SUSPENDED ) waitForPageInput());
 			}
 		}
 		return ctx;
@@ -137,6 +141,29 @@ class NativeChannel {
 	#end
 
 	#if js
+
+	static var waitDiv = null;
+	static function waitForPageInput() {
+		if( waitDiv != null ) waitDiv.remove();
+		// insert invisible div on top of the page to capture events
+		// see https://developers.google.com/web/updates/2017/09/autoplay-policy-changes#webaudio
+		var div = js.Browser.document.createDivElement();
+		div.setAttribute("style","width:100%;height:100%;background:transparent;z-index:9999;position:fixed;left:0;top:0");
+		div.onclick = stopInput;
+		div.onkeydown = stopInput;
+		js.Browser.document.body.addEventListener("keydown",stopInput);
+		js.Browser.document.body.appendChild(div);
+		waitDiv = div;
+	}
+
+	static function stopInput(_) {
+		if( waitDiv == null ) return;
+		waitDiv.remove();
+		waitDiv = null;
+		js.Browser.document.body.removeEventListener("keydown",stopInput);
+		if( ctx != null ) ctx.resume();
+	}
+
 	function onJsSample( event : js.html.audio.AudioProcessingEvent ) {
 		onSample(tmpBuffer);
 		// split the channels and copy to output
