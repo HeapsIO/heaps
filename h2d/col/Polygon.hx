@@ -214,14 +214,16 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	}
 
 	/**
-		Return the squared distance of `pt` to the closest edge if `pt` is outside the polygon, zero otherwise
+		Return the squared distance of `pt` to the closest edge.
+		If outside is `true`, only return a positive value if `pt` is outside the polygon, zero otherwise
+		If outside is `false`, only return a positive value if `pt` is inside the polygon, zero otherwise
 	**/
-	public function distanceSq(pt: Point) {
+	public function distanceSq(pt : Point, ?outside : Bool) {
 		var p1 = points[points.length - 1];
 		var minDistSq = 1e10;
 		for(p2 in points) {
 			var s = new Segment(p1, p2);
-			if(s.side(pt) < 0) {
+			if(outside == null || s.side(pt) < 0 == outside) {
 				var dist = s.distanceSq(pt);
 				if(dist < minDistSq)
 					minDistSq = dist;
