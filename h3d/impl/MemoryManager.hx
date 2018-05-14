@@ -248,7 +248,7 @@ class MemoryManager {
 
 	@:allow(h3d.mat.Texture.dispose)
 	function deleteTexture( t : h3d.mat.Texture ) {
-		textures.remove(t);
+		if( !textures.remove(t) ) return;
 		driver.disposeTexture(t);
 		texMemory -= t.width * t.height * bpp(t);
 	}
@@ -283,7 +283,7 @@ class MemoryManager {
 
 	@:allow(h3d.mat.DepthBuffer.dispose)
 	function deleteDepth( b : h3d.mat.DepthBuffer ) {
-		depths.remove(b);
+		if( !depths.remove(b) ) return;
 		driver.disposeDepthBuffer(b);
 		texMemory -= b.width * b.height * 4;
 	}

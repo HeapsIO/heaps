@@ -16,7 +16,7 @@ class DepthBuffer {
 	public function new( width : Int, height : Int ) {
 		this.width = width;
 		this.height = height;
-		if( width >= 0 ) alloc();
+		if( width > 0 ) alloc();
 	}
 
 	function alloc() {
