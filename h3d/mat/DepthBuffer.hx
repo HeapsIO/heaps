@@ -5,6 +5,7 @@ package h3d.mat;
 **/
 class DepthBuffer {
 
+	@:allow(h3d.impl.MemoryManager)
 	var b : h3d.impl.Driver.DepthBuffer;
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
@@ -15,13 +16,16 @@ class DepthBuffer {
 	public function new( width : Int, height : Int ) {
 		this.width = width;
 		this.height = height;
-		if( width >= 0 )
-			b = h3d.Engine.getCurrent().driver.allocDepthBuffer(this);
+		if( width >= 0 ) alloc();
+	}
+
+	function alloc() {
+		h3d.Engine.getCurrent().mem.allocDepth(this);
 	}
 
 	public function dispose() {
 		if( b != null ) {
-			h3d.Engine.getCurrent().driver.disposeDepthBuffer(this);
+			h3d.Engine.getCurrent().mem.deleteDepth(this);
 			b = null;
 		}
 	}

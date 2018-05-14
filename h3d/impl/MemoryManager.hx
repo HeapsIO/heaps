@@ -12,6 +12,7 @@ class MemoryManager {
 	var buffers : Array<ManagedBuffer>;
 	var indexes : Array<Indexes>;
 	var textures : Array<h3d.mat.Texture>;
+	var depths : Array<h3d.mat.DepthBuffer>;
 
 	public var triIndexes(default,null) : Indexes;
 	public var quadIndexes(default,null) : Indexes;
@@ -27,6 +28,7 @@ class MemoryManager {
 		indexes = new Array();
 		textures = new Array();
 		buffers = new Array();
+		depths = new Array();
 		initIndexes();
 	}
 
@@ -265,6 +267,27 @@ class MemoryManager {
 		texMemory += t.width * t.height * bpp(t);
 	}
 
+	@:allow(h3d.mat.DepthBuffer.alloc)
+	function allocDepth( b : h3d.mat.DepthBuffer ) {
+		var free = cleanTextures(false);
+		b.b = driver.allocDepthBuffer(b);
+		if( b.b == null ) {
+			if( driver.isDisposed() ) return;
+			if( !cleanTextures(true) ) throw "Maximum texture memory reached";
+			allocDepth(b);
+			return;
+		}
+		depths.push(b);
+		texMemory += b.width * b.height * 4;
+	}
+
+	@:allow(h3d.mat.DepthBuffer.dispose)
+	function deleteDepth( b : h3d.mat.DepthBuffer ) {
+		depths.remove(b);
+		driver.disposeDepthBuffer(b);
+		texMemory -= b.width * b.height * 4;
+	}
+
 	// ------------------------------------- DISPOSE ------------------------------------------
 
 	public function onContextLost() {
@@ -279,6 +302,8 @@ class MemoryManager {
 		quadIndexes = null;
 		for( t in textures.copy() )
 			t.dispose();
+		for( b in depths.copy() )
+			b.dispose();
 		for( b in buffers.copy() ) {
 			var b = b;
 			while( b != null ) {
