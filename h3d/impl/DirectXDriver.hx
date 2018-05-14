@@ -287,7 +287,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			extraDepthInst = new h3d.mat.DepthBuffer(0, 0);
 			extraDepthInst.width = outputWidth;
 			extraDepthInst.height = outputHeight;
-			allocDepthBuffer(extraDepthInst);
+			extraDepthInst.b = allocDepthBuffer(extraDepthInst);
 		}
 		return extraDepthInst;
 	}
