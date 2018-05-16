@@ -21,6 +21,11 @@ class Charset {
 		Polish support
 	**/
 	public static var POLISH = "ĄĆĘŁŃÓŚŹŻąćęłńóśźż";
+	
+	/**
+		Turkish support
+	**/
+	public static var TURKISH = "ÂÇĞIİÎÖŞÜÛâçğıİîöşüû";
 
 	/**
 		Contains Hiragana, Katanaga, japanese punctuaction and full width space (0x3000) full width numbers (0-9) and some full width ascii punctuation (!:?%&()-). Does not include full width A-Za-z.
