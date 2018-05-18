@@ -225,7 +225,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( extraDepthInst != null ) @:privateAccess {
 			extraDepthInst.width = width;
 			extraDepthInst.height = height;
-			extraDepthInst.dispose();
+			if( extraDepthInst.b != null ) disposeDepthBuffer(extraDepthInst);
 			extraDepthInst.b = allocDepthBuffer(extraDepthInst);
 		}
 	}
@@ -283,8 +283,12 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function getDefaultDepthBuffer():h3d.mat.DepthBuffer {
-		if( extraDepthInst == null )
-			extraDepthInst = new h3d.mat.DepthBuffer(outputWidth, outputHeight);
+		if( extraDepthInst == null ) @:privateAccess {
+			extraDepthInst = new h3d.mat.DepthBuffer(0, 0);
+			extraDepthInst.width = outputWidth;
+			extraDepthInst.height = outputHeight;
+			extraDepthInst.b = allocDepthBuffer(extraDepthInst);
+		}
 		return extraDepthInst;
 	}
 

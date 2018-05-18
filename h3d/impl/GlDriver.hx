@@ -730,7 +730,12 @@ class GlDriver extends Driver {
 	override function getDefaultDepthBuffer() : h3d.mat.DepthBuffer {
 		if( defaultDepth != null )
 			return defaultDepth;
-		defaultDepth = new h3d.mat.DepthBuffer(bufferWidth, bufferHeight);
+		defaultDepth = new h3d.mat.DepthBuffer(0, 0);
+		@:privateAccess {
+			defaultDepth.width = this.bufferWidth;
+			defaultDepth.height = this.bufferHeight;
+			defaultDepth.b = allocDepthBuffer(defaultDepth);
+		}
 		return defaultDepth;
 	}
 

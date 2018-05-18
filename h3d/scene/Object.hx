@@ -145,8 +145,12 @@ class Object implements hxd.impl.Serializable {
 		return currentAnimation = a;
 	}
 
-	public function stopAnimation() {
+	public function stopAnimation( ?recursive = false ) {
 		currentAnimation = null;
+		if(recursive) {
+			for(c in children)
+				c.stopAnimation(true);
+		}
 	}
 
 	/**
