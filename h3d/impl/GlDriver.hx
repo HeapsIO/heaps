@@ -730,7 +730,12 @@ class GlDriver extends Driver {
 	override function getDefaultDepthBuffer() : h3d.mat.DepthBuffer {
 		if( defaultDepth != null )
 			return defaultDepth;
-		defaultDepth = new h3d.mat.DepthBuffer(bufferWidth, bufferHeight);
+		defaultDepth = new h3d.mat.DepthBuffer(0, 0);
+		@:privateAccess {
+			defaultDepth.width = this.bufferWidth;
+			defaultDepth.height = this.bufferHeight;
+			defaultDepth.b = allocDepthBuffer(defaultDepth);
+		}
 		return defaultDepth;
 	}
 
@@ -881,10 +886,11 @@ class GlDriver extends Driver {
 	inline function streamData(data, pos:Int, length:Int) {
 		#if hl
 		var needed = streamPos + length;
-		if( needed > streamLen ) expandStream(needed);
+		var total = (needed + 7) & ~7; // align on 8 bytes
+		if( total > streamLen ) expandStream(total);
 		streamBytes.blit(streamPos, data, pos, length);
 		data = streamBytes.offset(streamPos);
-		streamPos += length;
+		streamPos = total;
 		#end
 		return data;
 	}

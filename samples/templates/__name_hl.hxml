@@ -1,4 +1,5 @@
 -lib heaps
+-lib hlsdl
 -cp ../..
 -hl ::name::.hl
 -main ::main::
