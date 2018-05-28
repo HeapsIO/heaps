@@ -201,7 +201,11 @@ class Cache {
 		#end
 
 		var linker = new hxsl.Linker();
-		var s = linker.link([for( s in shaderDatas ) s.inst.shader]);
+		var s = try linker.link([for( s in shaderDatas ) s.inst.shader]) catch( e : Error ) {
+			var shaders = [for( s in shaderDatas ) Printer.shaderToString(s.inst.shader)];
+			e.msg += "\n\nin\n\n" + shaders.join("\n-----\n");
+			throw e;
+		}
 
 		#if debug
 		Printer.check(s,[for( s in shaderDatas ) s.inst.shader]);
@@ -227,7 +231,7 @@ class Cache {
 			}
 
 		var prev = s;
-		var s = new hxsl.Splitter().split(s);
+		var s = try new hxsl.Splitter().split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
 
 		#if debug
 		Printer.check(s.vertex,[prev]);

@@ -125,9 +125,9 @@ class Splitter {
 
 		// final check
 		for( v in vvars )
-			checkVar(v, true, vvars);
+			checkVar(v, true, vvars, vfun.expr.p);
 		for( v in fvars )
-			checkVar(v, false, vvars);
+			checkVar(v, false, vvars, ffun.expr.p);
 
 		// support for double mapping v -> v1 -> v2
 		for( v in varMap.keys() ) {
@@ -180,14 +180,14 @@ class Splitter {
 		}
 	}
 
-	function checkVar( v : VarProps, vertex : Bool, vvars : Map<Int,VarProps> ) {
+	function checkVar( v : VarProps, vertex : Bool, vvars : Map<Int,VarProps>, p ) {
 		switch( v.v.kind ) {
 		case Local if( v.requireInit ):
-			throw "Variable " + v.v.name + " is written without being initialized";
+			throw new Error("Variable " + v.v.name + " is used without being initialized", p);
 		case Var:
 			if( !vertex ) {
 				var i = vvars.get(v.v.id);
-				if( i == null || i.write == 0 ) throw "Varying " + v.v.name + " is not written by vertex shader";
+				if( i == null || i.write == 0 ) throw new Error("Varying " + v.v.name + " is not written by vertex shader",p);
 			}
 		default:
 		}
