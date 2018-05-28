@@ -247,8 +247,12 @@ class Linker {
 				continue;
 			if( !parent.write.exists(v.id) )
 				continue;
-			if( s.vertex && parent.vertex == false )
-				continue;
+			if( s.vertex ) {
+				if( parent.vertex == false )
+					continue;
+				if( parent.vertex == null )
+					parent.vertex = true;
+			}
 			debug(s.name + " => " + parent.name + " (" + v.path + ")");
 			s.deps.set(parent, true);
 			debugDepth++;
