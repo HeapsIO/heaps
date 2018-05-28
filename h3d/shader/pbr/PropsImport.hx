@@ -29,7 +29,7 @@ class PropsImport extends hxsl.Shader {
 			depth = normalDepth.w;
 			var pbr = pbrTex.get(uv);
 			metalness = pbr.r;
-			roughness = 1 - pbr.g;
+			roughness = pbr.g;
 			occlusion = pbr.b;
 
 			specularColor = metalness < 0.3 ? vec3(metalness) : albedo;

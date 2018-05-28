@@ -23,7 +23,7 @@ class Renderer extends h3d.scene.Renderer {
 	var output = new h3d.pass.Output("mrt",[
 		Value("output.color"),
 		Vec4([Value("output.normal",3),Value("output.depth",1)]),
-		Vec4([Value("output.metalness"), Value("output.gloss"), Value("output.occlusion"), Const(0)]),
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Const(0)]),
 	]);
 
 	public function new(irrad) {
