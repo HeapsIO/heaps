@@ -125,10 +125,11 @@ class ShadowMap extends Default {
 		texture.depthBuffer = depth;
 		var ct = ctx.camera.target;
 		var slight = ctx.lightSystem.shadowLight;
-		if( slight == null )
+		var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
+		if( ldir == null )
 			lightCamera.target.set(0, 0, -1);
 		else {
-			lightCamera.target.set(slight.direction.x, slight.direction.y, slight.direction.z);
+			lightCamera.target.set(ldir.x, ldir.y, ldir.z);
 			lightCamera.target.normalize();
 		}
 		lightCamera.target.x += ct.x;

@@ -1,4 +1,4 @@
-package h3d.pass;
+package h3d.scene;
 
 @:access(h3d.scene.Light)
 @:access(h3d.scene.Object.absPos)
@@ -10,7 +10,7 @@ class LightSystem {
 	var ambientShader : hxsl.Shader;
 	var lightCount : Int;
 	var ctx : h3d.scene.RenderContext;
-	public var shadowLight : h3d.scene.DirLight;
+	public var shadowLight : h3d.scene.Light;
 	public var ambientLight : h3d.Vector;
 	public var perPixelLighting : Bool = true;
 
@@ -37,7 +37,7 @@ class LightSystem {
 	public function initLights( ctx : h3d.scene.RenderContext ) {
 		lightCount = 0;
 		this.ctx = ctx;
-		var l = ctx.lights, prev = null;
+		var l = ctx.lights, prev : h3d.scene.Light = null;
 		var frustum = new h3d.col.Frustum(ctx.camera.m);
 		var s = new h3d.col.Sphere();
 		while( l != null ) {
@@ -65,9 +65,9 @@ class LightSystem {
 		if( shadowLight == null || shadowLight.parent == null ) {
 			var l = ctx.lights;
 			while( l != null ) {
-				var dl = Std.instance(l, h3d.scene.DirLight);
-				if( dl != null ) {
-					shadowLight = dl;
+				var dir = @:privateAccess l.getShadowDirection();
+				if( dir != null ) {
+					shadowLight = l;
 					break;
 				}
 				l = l.next;
