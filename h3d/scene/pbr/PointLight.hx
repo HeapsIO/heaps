@@ -2,9 +2,7 @@ package h3d.scene.pbr;
 
 class PointLight extends Light {
 
-	var _color : h3d.Vector;
 	var pbr : h3d.shader.pbr.Light.PointLight;
-	@:s public var power : Float = 1.;
 	public var size : Float;
 	/**
 		Alias for uniform scale.
@@ -15,16 +13,7 @@ class PointLight extends Light {
 		pbr = new h3d.shader.pbr.Light.PointLight();
 		super(pbr,parent);
 		range = 10;
-		_color = new h3d.Vector(1,1,1,1);
 		primitive = h3d.prim.Sphere.defaultUnitSphere();
-	}
-
-	override function get_color() {
-		return _color;
-	}
-
-	override function set_color(v:h3d.Vector) {
-		return _color = v;
 	}
 
 	function get_range() {

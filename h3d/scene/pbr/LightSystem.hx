@@ -18,6 +18,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		if( lightPass == null ) {
 			initDone = true;
 			lightPass = new h3d.pass.ScreenFx(r.pbrProps);
+			lightPass.addShader(new h3d.shader.ScreenShader());
 			lightPass.addShader(r.pbrDirect);
 			@:privateAccess lightPass.pass.setBlendMode(Add);
 		}
@@ -29,7 +30,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		while( light != null ) {
 			if( light != shadowLight ) {
 				var light = Std.instance(light, h3d.scene.pbr.Light);
-				if( light != null /*&& light.primitive == null*/ ) {
+				if( light != null && light.primitive == null ) {
 					lightPass.addShader(light.shader);
 					lightPass.render();
 					lightPass.removeShader(light.shader);
