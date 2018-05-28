@@ -4,15 +4,8 @@ private class CopyShader extends h3d.shader.ScreenShader {
 
 	static var SRC = {
 		@param var texture : Sampler2D;
-
-		var pixelColor : Vec4;
-
-		function __init__fragment() {
-			pixelColor = texture.get(calculatedUV);
-		}
-
 		function fragment() {
-			output.color = pixelColor;
+			pixelColor = texture.get(calculatedUV);
 		}
 	}
 }
