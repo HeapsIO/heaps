@@ -27,7 +27,8 @@ class PropsDefinition extends hxsl.Shader {
 		}
 
 		function calcG(v:Vec3) : Float {
-			var k = (roughness + 1).pow(2) / 8;// (roughness * roughness) / 2;
+			var k = (roughness + 1);
+			k *= k;
 			return NdV / (NdV * (1 - k) + k);
 		}
 

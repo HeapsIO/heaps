@@ -183,6 +183,8 @@ class Irradiance  {
 	public var diffuse : h3d.mat.Texture;
 	public var specular : h3d.mat.Texture;
 
+	public var power : Float = 1.;
+
 	public function new(envMap) {
 		this.envMap = envMap;
 		#if (js || flash)

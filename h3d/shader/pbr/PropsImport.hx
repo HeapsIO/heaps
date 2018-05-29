@@ -32,7 +32,10 @@ class PropsImport extends hxsl.Shader {
 			roughness = pbr.g;
 			occlusion = pbr.b;
 
-			specularColor = metalness < 0.3 ? vec3(metalness) : albedo;
+			// specular is calculated in two ways:
+			//    - for metalic surfaces, we use the albedo for reflection
+			//    - for other surfaces, we use the glossiness as a gray input value
+			specularColor = metalness < 0.3 ? vec3(1 - roughness) : albedo;
 
 			// this is the original object transformed position, not our current drawing object one
 			var uv2 = (uv - 0.5) * vec2(2, -2);

@@ -85,7 +85,9 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.pbrTex = pbr;
 		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
 
+		pbrDirect.cameraPosition.load(ctx.camera.pos);
 		pbrOut.shader.cameraPosition.load(ctx.camera.pos);
+		pbrOut.shader.irrPower = irrad.power;
 		pbrOut.shader.irrLut = irrad.lut;
 		pbrOut.shader.irrDiffuse = irrad.diffuse;
 		pbrOut.shader.irrSpecular = irrad.specular;

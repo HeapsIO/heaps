@@ -8,6 +8,7 @@ class Indirect extends PropsDefinition {
 		@param var irrDiffuse : SamplerCube;
 		@param var irrSpecular : SamplerCube;
 		@param var irrSpecularLevels : Float;
+		@param var irrPower : Float;
 
 		function fragment() {
 			var diffuse = irrDiffuse.get(normal).rgb.pow(vec3(2.2)) * albedo;
@@ -19,7 +20,7 @@ class Indirect extends PropsDefinition {
 				Usually indirect diffuse is multiplied by occlusion, but since our occlusion mosly
 				comes from shadow map, we want to keep the diffuse term for colored shadows here.
 			*/
-			var indirect = diffuse + specular;
+			var indirect = (diffuse + specular) * irrPower;
 			pixelColor.rgb += indirect;
 		}
 
@@ -57,11 +58,13 @@ class Direct extends PropsDefinition {
 				// 		f(l,v) = D(h).F(v,h).G(l,v,h) / 4(n.l)(n.v)
 
 				// formulas below from 2013 Siggraph "Real Shading in UE4"
-				var alpha = roughness.pow(2);
+				var alpha = roughness * roughness;
 
 				// D = normal distribution fonction
 				// GGX (Trowbridge-Reitz) "Disney"
-				var D = alpha.pow(2) / (PI * ( NdH.pow(2) * (alpha.pow(2) - 1.) + 1).pow(2));
+				var alpha2 = alpha * alpha;
+				var denom = NdH * NdH * (alpha2 - 1.) + 1;
+				var D = alpha2 / (PI * denom * denom);
 
 				// F = fresnel term
 				// Schlick approx
