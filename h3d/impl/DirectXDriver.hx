@@ -120,7 +120,9 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
+		#if (hldx >= "1.6.0")
 		Driver.setErrorHandler(onDXError);
+		#end
 		reset();
 	}
 
@@ -173,7 +175,9 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function dispose() {
+		#if (hldx >= "1.6.0")
 		Driver.disposeDriver(driver);
+		#end
 		driver = null;
 	}
 
