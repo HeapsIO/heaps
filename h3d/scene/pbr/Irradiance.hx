@@ -229,6 +229,22 @@ class Irradiance  {
 		screen.dispose();
 	}
 
+	#if (js || flash)
+	function _reversebits( i : Int ) : Int {
+		var r = (i << 16) | (i >>> 16);
+		r = ((r & 0x00ff00ff) << 8) | ((r & 0xff00ff00) >>> 8);
+		r = ((r & 0x0f0f0f0f) << 4) | ((r & 0xf0f0f0f0) >>> 4);
+		r = ((r & 0x33333333) << 2) | ((r & 0xcccccccc) >>> 2);
+		r = ((r & 0x55555555) << 1) | ((r & 0xaaaaaaaa) >>> 1);
+		return r;
+	}
+
+	function hammersley( i : Int, max : Int ) : h3d.Vector {
+		var ri = _reversebits(i) * 2.3283064365386963e-10;
+		return new h3d.Vector(i / max, ri);
+	}
+	#end
+
 	function computeIrradiance() {
 
 		var screen = new h3d.pass.ScreenFx(new IrradShader());
