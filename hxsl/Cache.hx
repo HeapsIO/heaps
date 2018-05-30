@@ -13,7 +13,7 @@ class Cache {
 
 	#if shader_debug_dump
 	public static var DEBUG_IDS = false;
-	public static var TRACE = false;
+	public static var TRACE = true;
 	#end
 
 	var linkCache : SearchMap;
@@ -190,6 +190,8 @@ class Cache {
 		var shaderId = @:privateAccess RuntimeShader.UID;
 		if( shaderId == 0 ) try sys.FileSystem.createDirectory("shaders") catch( e : Dynamic ) {};
 		var dbg = sys.io.File.write("shaders/"+shaderId+"_dump.c");
+		var oldTrace = haxe.Log.trace;
+		haxe.Log.trace = function(msg,?pos) dbg.writeString(haxe.Log.formatOutput(msg,pos)+"\n");
 		if( dbg != null ) {
 			dbg.writeString("----- DATAS ----\n\n");
 			for( s in shaderDatas ) {
@@ -288,6 +290,10 @@ class Cache {
 			r.id = r2.id; // same id but different variable mapping
 		else
 			byID.set(r.signature, r);
+
+		#if shader_debug_dump
+		haxe.Log.trace = oldTrace;
+		#end
 
 		return r;
 	}
