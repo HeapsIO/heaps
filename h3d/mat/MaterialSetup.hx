@@ -26,7 +26,7 @@ class MaterialSetup {
 		this.name = name;
 	}
 
-	public function createRenderer() {
+	public function createRenderer() : h3d.scene.Renderer {
 		return new h3d.scene.DefaultRenderer();
 	}
 
