@@ -100,6 +100,7 @@ class Parser {
 					}
 				}
 				props.push(floats == null ? PInts(ints) : PFloats(floats));
+				if (peek()==TColon) except(TColon); // Allow trailing ,
 				except(TBraceClose);
 				break;
 			default:

@@ -161,6 +161,11 @@ class FontBuilder {
 		var height = width;
 		while( width * height >> 1 > surf )
 			height >>= 1;
+			
+		if( innerTex != null ) {
+			width = innerTex.width;
+			height = innerTex.height;
+		}
 
 		var all, done;
 		do {

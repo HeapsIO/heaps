@@ -413,7 +413,7 @@ class LocalFileSystem implements FileSystem {
 		fileCache = new Map();
 	}
 
-	var times : Map<String,Float>;
+	var times : Map<String,Int>;
 	var hashes : Dynamic;
 	var addedPaths = new Map<String,Bool>();
 
@@ -443,10 +443,10 @@ class LocalFileSystem implements FileSystem {
 		#end
 
 		if( times == null ) {
-			times = try haxe.Unserializer.run(hxd.File.getBytes(tmpDir + "times.dat").toString()) catch( e : Dynamic ) new Map<String,Float>();
+			times = try haxe.Unserializer.run(hxd.File.getBytes(tmpDir + "times.dat").toString()) catch( e : Dynamic ) new Map<String,Int>();
 		}
 		var realFile = baseDir + path;
-		var time = std.Math.ffloor(getFileTime(realFile) / 1000);
+		var time = std.Math.floor(getFileTime(realFile) / 1000);
 		if( hxd.File.exists(tmpFile) && time == times.get(path) )
 			return;
 		if( hashes == null ) {

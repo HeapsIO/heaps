@@ -31,6 +31,28 @@ class ScreenFx<T:hxsl.Shader> {
 		return pass.addShader(s);
 	}
 
+	public function removeShader(s:hxsl.Shader) {
+		var prev = null;
+		var cur = shaders;
+		while( cur != null ) {
+			if( cur.s == s ) {
+				if( prev == null ) shaders = cur.next else prev.next = cur.next;
+				return true;
+			}
+			prev = cur;
+			cur = cur.next;
+		}
+		return false;
+	}
+
+	public function getShader<T:hxsl.Shader>(cl:Class<T>) : T {
+		for( s in shaders ) {
+			var si = Std.instance(s, cl);
+			if( si != null ) return si;
+		}
+		return null;
+	}
+
 	public function render() {
 		var rts = manager.compileShaders(shaders);
 		engine.selectMaterial(pass);

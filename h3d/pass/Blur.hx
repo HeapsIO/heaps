@@ -100,6 +100,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		if( (quality <= 0 || passes <= 0 || sigma <= 0) && shader.fixedColor == null ) return;
 
 		if( output == null ) output = src;
+		else h3d.pass.Copy.run(src, output);
 
 		var alloc = tmp == null;
 		if( alloc )
@@ -119,7 +120,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		output.depthBuffer = null;
 		tmp.depthBuffer = null;
 		for( i in 0...passes ) {
-			shader.texture = src;
+			shader.texture = output;
 			shader.pixel.set(1 / src.width, 0);
 			engine.pushTarget(tmp);
 			render();

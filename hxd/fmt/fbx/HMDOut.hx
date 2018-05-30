@@ -490,7 +490,9 @@ class HMDOut extends BaseLibrary {
 
 				// get other textures
 				mat.normalMap = makeTexturePath(getSpecChild(m, "NormalMap"));
-				mat.specularTexture = makeTexturePath(getSpecChild(m, "SpecularFactor"));
+				var spec = getSpecChild(m, "SpecularFactor"); // 3dsMax
+				if( spec == null ) spec = getSpecChild(m, "SpecularColor"); // maya
+				mat.specularTexture = makeTexturePath(spec);
 				if( mat.normalMap != null || mat.specularTexture != null ) {
 					if( mat.props == null ) mat.props = [];
 					mat.props.push(HasExtraTextures);

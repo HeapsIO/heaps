@@ -399,8 +399,14 @@ class Eval {
 			default:
 				if( isVal && eelse != null && eliminateConditionals )
 					TCall( { e : TGlobal(Mix), t : e.t, p : e.p }, [evalExpr(eelse,true), evalExpr(eif,true), { e : TCall( { e : TGlobal(ToFloat), t : TFun([]), p : econd.p }, [econd]), t : TFloat, p : e.p } ]);
-				else
-					TIf(econd, evalExpr(eif,isVal), eelse == null ? null : evalExpr(eelse,isVal));
+				else {
+					eif = evalExpr(eif, isVal);
+					if( eelse != null ) {
+						eelse = evalExpr(eelse,isVal);
+						if( eelse.e.match(TConst(CNull)) ) eelse = null;
+					}
+					TIf(econd, eif, eelse);
+				}
 			}
 		case TBreak:
 			TBreak;

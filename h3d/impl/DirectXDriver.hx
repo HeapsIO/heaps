@@ -70,6 +70,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	var driver : DriverInstance;
 	var shaders : Map<Int,CompiledShader>;
 
+	var hasDeviceError = false;
+
 	var defaultTarget : RenderTargetView;
 	var defaultDepth : DepthBuffer;
 	var defaultDepthInst : h3d.mat.DepthBuffer;
@@ -84,18 +86,18 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentIndex : IndexBuffer;
 	var currentDepth : DepthBuffer;
 	var currentTargets = new hl.NativeArray<RenderTargetView>(16);
-	var vertexShader = new PipelineState(Vertex);
-	var pixelShader = new PipelineState(Pixel);
+	var vertexShader : PipelineState;
+	var pixelShader : PipelineState;
 	var currentVBuffers = new hl.NativeArray<dx.Resource>(16);
 	var frame : Int;
 	var currentMaterialBits = -1;
 	var targetsCount = 1;
 	var allowDraw = false;
 
-	var depthStates : Map<Int,DepthStencilState> = new Map();
-	var blendStates : Map<Int,BlendState> = new Map();
-	var rasterStates : Map<Int,RasterState> = new Map();
-	var samplerStates : Map<Int,SamplerState> = new Map();
+	var depthStates : Map<Int,DepthStencilState>;
+	var blendStates : Map<Int,BlendState>;
+	var rasterStates : Map<Int,RasterState>;
+	var samplerStates : Map<Int,SamplerState>;
 	var currentDepthState : DepthStencilState;
 	var currentBlendState : BlendState;
 	var currentRasterState : RasterState;
@@ -111,13 +113,42 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	var mapCount : Int;
 	var updateResCount : Int;
+	var onContextLost : Void -> Void;
 
 	public var backBufferFormat : dx.Format = R8G8B8A8_UNORM;
 	public var depthStencilFormat : dx.Format = D24_UNORM_S8_UINT;
 
 	public function new() {
-		shaders = new Map();
 		window = @:privateAccess dx.Window.windows[0];
+		#if (hldx >= "1.6.0")
+		Driver.setErrorHandler(onDXError);
+		#end
+		reset();
+	}
+
+	function reset() {
+		allowDraw = false;
+		targetsCount = 1;
+		currentMaterialBits = -1;
+		if( shaders != null ) {
+			for( s in shaders ) {
+				s.fragment.shader.release();
+				s.vertex.shader.release();
+				s.layout.release();
+			}
+		}
+		if( depthStates != null ) for( s in depthStates ) if( s != null ) s.release();
+		if( blendStates != null ) for( s in blendStates ) if( s != null ) s.release();
+		if( rasterStates != null ) for( s in rasterStates ) if( s != null ) s.release();
+		if( samplerStates != null ) for( s in samplerStates ) if( s != null ) s.release();
+		shaders = new Map();
+		depthStates = new Map();
+		blendStates = new Map();
+		rasterStates = new Map();
+		samplerStates = new Map();
+		vertexShader = new PipelineState(Vertex);
+		pixelShader = new PipelineState(Pixel);
+
 		var options : dx.Driver.DriverInitFlags = None;
 		#if debug
 		options |= DebugLayer;
@@ -126,7 +157,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		try
 			driver = Driver.create(window, backBufferFormat, options)
 		catch( e : Dynamic )
-			throw "Failed to initialize DirectX driver (" + e+")";
+			throw "Failed to initialize DirectX driver (" + e + ")";
 
 		if( driver == null ) throw "Failed to initialize DirectX driver";
 
@@ -141,6 +172,20 @@ class DirectXDriver extends h3d.impl.Driver {
 			rects[i] = 0;
 		for( i in 0...BLEND_FACTORS )
 			blendFactors[i] = 0;
+	}
+
+	override function dispose() {
+		#if (hldx >= "1.6.0")
+		Driver.disposeDriver(driver);
+		#end
+		driver = null;
+	}
+
+	function onDXError(code:Int,reason:Int,line:Int) {
+		if( code != 0x887A0005 /*DXGI_ERROR_DEVICE_REMOVED*/ )
+			throw "DXError "+StringTools.hex(code)+" line "+line;
+		//if( !hasDeviceError ) trace("DX_REMOVED "+StringTools.hex(reason)+":"+line);
+		hasDeviceError = true;
 	}
 
 	override function resize(width:Int, height:Int)  {
@@ -184,7 +229,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( extraDepthInst != null ) @:privateAccess {
 			extraDepthInst.width = width;
 			extraDepthInst.height = height;
-			extraDepthInst.dispose();
+			if( extraDepthInst.b != null ) disposeDepthBuffer(extraDepthInst);
 			extraDepthInst.b = allocDepthBuffer(extraDepthInst);
 		}
 	}
@@ -197,10 +242,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function isDisposed() {
-		return false;
+		return hasDeviceError;
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
+		onContextLost = onCreate.bind(true);
 		haxe.Timer.delay(onCreate.bind(false), 1);
 	}
 
@@ -219,17 +265,34 @@ class DirectXDriver extends h3d.impl.Driver {
 		return desc;
 	}
 
+	public function forceDeviceError() {
+		hasDeviceError = true;
+	}
+
 	override function present() {
 		if( defaultTarget == null ) return;
 		var old = hxd.System.allowTimeout;
 		if( old ) hxd.System.allowTimeout = false;
 		Driver.present(window.vsync ? 1 : 0, None);
 		if( old ) hxd.System.allowTimeout = true;
+
+		if( hasDeviceError ) {
+			//trace("OnContextLost");
+			hasDeviceError = false;
+			dispose();
+			reset();
+			onContextLost();
+		}
+
 	}
 
 	override function getDefaultDepthBuffer():h3d.mat.DepthBuffer {
-		if( extraDepthInst == null )
-			extraDepthInst = new h3d.mat.DepthBuffer(outputWidth, outputHeight);
+		if( extraDepthInst == null ) @:privateAccess {
+			extraDepthInst = new h3d.mat.DepthBuffer(0, 0);
+			extraDepthInst.width = outputWidth;
+			extraDepthInst.height = outputHeight;
+			extraDepthInst.b = allocDepthBuffer(extraDepthInst);
+		}
 		return extraDepthInst;
 	}
 
@@ -331,8 +394,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		var tt = t.t;
 		if( tt == null ) return;
 		t.t = null;
-		tt.view.release();
-		tt.res.release();
+		if( tt.view != null ) tt.view.release();
+		if( tt.res != null ) tt.res.release();
 		if( tt.rt != null )
 			for( rt in tt.rt )
 				if( rt != null )
@@ -348,6 +411,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function generateMipMaps(texture:h3d.mat.Texture) {
+		if( hasDeviceError ) return;
 		Driver.generateMips(texture.t.view);
 	}
 
@@ -363,18 +427,22 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function uploadIndexBuffer(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
+		if( hasDeviceError ) return;
 		updateBuffer(i.res, hl.Bytes.getArray(buf.getNative()).offset(bufPos << 1), startIndice << 1, indiceCount << 1);
 	}
 
 	override function uploadIndexBytes(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		if( hasDeviceError ) return;
 		updateBuffer(i.res, @:privateAccess buf.b.offset(bufPos << 1), startIndice << 1, indiceCount << 1);
 	}
 
 	override function uploadVertexBuffer(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
+		if( hasDeviceError ) return;
 		updateBuffer(v.res, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
 	}
 
 	override function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		if( hasDeviceError ) return;
 		updateBuffer(v.res, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
 	}
 
@@ -441,6 +509,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function uploadTextureBitmap(t:h3d.mat.Texture, bmp:hxd.BitmapData, mipLevel:Int, side:Int) {
+		if( hasDeviceError ) return;
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
@@ -449,6 +518,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
 		pixels.convert(RGBA);
 		pixels.setFlip(false);
+		if( hasDeviceError ) return;
 		if( mipLevel >= t.t.mips ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.t.mips - 1) + ")";
 		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), pixels.width * hxd.Pixels.bytesPerPixel(pixels.format), 0);
 		updateResCount++;
@@ -561,8 +631,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( compileOnly )
 			return { s : null, bytes : bytes };
 		var s = shader.vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
-		if( s == null )
+		if( s == null ) {
+			if( hasDeviceError ) return null;
 			throw "Failed to create shader\n" + shader.code;
+		}
 
 		var ctx = new ShaderContext(s);
 		ctx.globalsSize = shader.globalsSize;
@@ -645,6 +717,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			setRenderTarget(null);
 			return;
 		}
+		if( hasDeviceError )
+			return;
 		var tex = textures[0];
 		curTexture = textures[0];
 		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
@@ -652,8 +726,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		currentDepth = @:privateAccess (tex.depthBuffer == null ? null : tex.depthBuffer.b);
 		for( i in 0...textures.length ) {
 			var tex = textures[i];
-			if( tex.t == null )
+			if( tex.t == null ) {
 				tex.alloc();
+				if( hasDeviceError ) return;
+			}
 			if( tex.t.rt == null )
 				throw "Can't render to texture which is not allocated with Target flag";
 			var index = mipLevel * 6 + face;
@@ -713,8 +789,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( s == null ) {
 			s = new CompiledShader();
 			var vertex = compileShader(shader.vertex);
+			var fragment = compileShader(shader.fragment);
+			if( hasDeviceError ) return false;
 			s.vertex = vertex.s;
-			s.fragment = compileShader(shader.fragment).s;
+			s.fragment = fragment.s;
 			s.inputs = [];
 			s.offsets = [];
 
@@ -771,6 +849,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function selectBuffer(buffer:Buffer) {
+		if( hasDeviceError ) return;
 		var vbuf = @:privateAccess buffer.buffer.vbuf;
 		var start = -1, max = -1, position = 0;
 		for( i in 0...currentShader.inputs.length ) {
@@ -787,6 +866,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function selectMultiBuffers(bl:Buffer.BufferOffset) {
+		if( hasDeviceError ) return;
 		var index = 0;
 		var start = -1, max = -1;
 		while( bl != null ) {
@@ -806,6 +886,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
+		if( hasDeviceError ) return;
 		uploadBuffers(vertexShader, currentShader.vertex, buffers.vertex, which);
 		uploadBuffers(pixelShader, currentShader.fragment, buffers.fragment, which);
 	}
@@ -870,6 +951,7 @@ class DirectXDriver extends h3d.impl.Driver {
 				if( t != null && t.t == null && t.realloc != null ) {
 					t.alloc();
 					t.realloc();
+					if( hasDeviceError ) return;
 				}
 				t.lastFrame = frame;
 
