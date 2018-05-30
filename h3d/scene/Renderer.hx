@@ -60,7 +60,7 @@ class Renderer {
 		return l;
 	}
 
-	function getLightSystem() : h3d.pass.LightSystem {
+	function getLightSystem() : h3d.scene.LightSystem {
 		return ctx.scene.lightSystem;
 	}
 
@@ -141,6 +141,9 @@ class Renderer {
 
 	function render() {
 		throw "Not implemented";
+	}
+
+	public function start() {
 	}
 
 	public function process( passes : Array<PassObjects> ) {

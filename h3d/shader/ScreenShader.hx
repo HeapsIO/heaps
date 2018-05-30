@@ -13,7 +13,12 @@ class ScreenShader extends hxsl.Shader {
 			color : Vec4,
 		};
 
+		var pixelColor : Vec4;
 		var calculatedUV : Vec2;
+
+		function __init__() {
+			output.color = pixelColor;
+		}
 
 		function vertex() {
 			calculatedUV = input.uv;

@@ -65,4 +65,16 @@ class Sphere extends Polygon {
 				uvs.push(new UV(1 - x / segsW, y / segsH));
 	}
 
+	public static function defaultUnitSphere() {
+		var engine = h3d.Engine.getCurrent();
+		var s : Sphere = @:privateAccess engine.resCache.get(Sphere);
+		if( s != null )
+			return s;
+		s = new h3d.prim.Sphere(1, 16, 16);
+		s.addNormals();
+		s.addUVs();
+		@:privateAccess engine.resCache.set(Sphere, s);
+		return s;
+	}
+
 }

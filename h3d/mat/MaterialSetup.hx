@@ -31,7 +31,7 @@ class MaterialSetup {
 	}
 
 	public function createLightSystem() {
-		return new h3d.pass.LightSystem();
+		return new h3d.scene.LightSystem();
 	}
 
 	public function initModelMaterial( material : Material ) {

@@ -63,6 +63,8 @@ class Dump {
 			add('Blend : ${m.blendMode}');
 			add('Cull : ${m.culling}');
 			if( m.diffuseTexture != null ) add('Texture : ${m.diffuseTexture}');
+			if( m.specularTexture != null ) add('Specular : ${m.specularTexture}');
+			if( m.normalMap != null ) add('Normal : ${m.normalMap}');
 			if( m.killAlpha != null ) add('KillAlpha : ${m.killAlpha}');
 			addProps(m.props);
 			for( f in flags )

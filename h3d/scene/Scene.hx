@@ -3,7 +3,7 @@ package h3d.scene;
 class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.InteractiveScene {
 
 	public var camera : h3d.Camera;
-	public var lightSystem : h3d.pass.LightSystem;
+	public var lightSystem : LightSystem;
 	public var renderer(default,set) : Renderer;
 	var ctx : RenderContext;
 	var interactives : Array<Interactive>;
@@ -327,6 +327,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.engine = engine;
 		ctx.scene = this;
 		ctx.start();
+		renderer.start();
 
 		syncRec(ctx);
 		emitRec(ctx);
