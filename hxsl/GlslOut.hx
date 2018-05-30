@@ -405,7 +405,7 @@ class GlslOut {
 			locals.set(v.id, v);
 			switch( it.e ) {
 			case TBinop(OpInterval, e1, e2):
-				add("for(int ");
+				add("for(");
 				add(v.name+"=");
 				addValue(e1,tabs);
 				add(";"+v.name+"<");
