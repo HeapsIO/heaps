@@ -27,6 +27,13 @@ class Dce {
 	public function new() {
 	}
 
+	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
+		#if shader_debug_dump
+		if( Cache.TRACE )
+			haxe.Log.trace(msg, pos);
+		#end
+	}
+
 	public function dce( vertex : ShaderData, fragment : ShaderData ) {
 		// collect vars dependencies
 		used = new Map();
@@ -54,6 +61,8 @@ class Dce {
 
 		var outExprs = [];
 		while( true ) {
+
+			debug("DCE LOOP");
 
 			for( v in used )
 				if( v.keep )
@@ -105,6 +114,7 @@ class Dce {
 
 	function markRec( v : VarDeps ) {
 		if( v.used ) return;
+		debug(v.v.name+" is used");
 		v.used = true;
 		for( d in v.deps )
 			markRec(d);
@@ -116,11 +126,13 @@ class Dce {
 			if( w == null ) {
 				// mark for conditional
 				if( !vd.keep ) {
+					debug("Force keep "+vd.v.name);
 					vd.keep = true;
 					markAsKeep = true;
 				}
 				continue;
 			}
+			debug(w.v.name+" depends on "+vd.v.name);
 			w.deps.set(v.id, vd);
 		}
 	}
@@ -136,6 +148,10 @@ class Dce {
 			writeTo.pop();
 			if( isAffected.indexOf(v) < 0 )
 				isAffected.push(v);
+		case TBlock(el):
+			var noWrite = [];
+			for( i in 0...el.length )
+				check(el[i],i < el.length - 1 ? noWrite : writeTo, isAffected);
 		case TVarDecl(v, init) if( init != null ):
 			writeTo.push(get(v));
 			check(init, writeTo, isAffected);
