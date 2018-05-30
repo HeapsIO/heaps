@@ -11,6 +11,17 @@ import js.html.Uint16Array;
 import js.html.Uint8Array;
 import js.html.Float32Array;
 private typedef GL = js.html.webgl.GL;
+private extern class GL2 extends js.html.webgl.GL {
+	// webgl2
+	function drawBuffers( buffers : Array<Int> ) : Void;
+	static inline var RGBA16F = 0x881A;
+	static inline var RGBA32F = 0x8814;
+	static inline var ALPHA16F = 0x881C;
+	static inline var ALPHA32F = 0x8816;
+	static inline var RGBA8	   = 0x8058;
+	static inline var BGRA 		 = 0x80E1;
+	static inline var HALF_FLOAT = 0x140B;
+}
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
 private typedef GLShader = js.html.webgl.Shader;
@@ -107,7 +118,7 @@ class GlDriver extends Driver {
 	var canvas : js.html.CanvasElement;
 	var mrtExt : { function drawBuffersWEBGL( colors : Array<Int> ) : Void; };
 	static var UID = 0;
-	public var gl : js.html.webgl.RenderingContext;
+	public var gl : GL2;
 	#end
 
 	#if (hlsdl||usegl)
@@ -137,17 +148,25 @@ class GlDriver extends Driver {
 	var curTargetMip : Int;
 
 	var debug : Bool;
+	var glDebug : Bool;
 	var boundTextures : Array<Texture> = [];
+	var glES : Null<Float>;
 	var shaderVersion : Null<Int>;
 	var firstShader = true;
 
 	public function new(antiAlias=0) {
 		#if js
 		canvas = @:privateAccess hxd.Stage.getInstance().canvas;
-		gl = canvas.getContextWebGL({alpha:false,antialias:antiAlias>0});
+		var options = {alpha:false,antialias:antiAlias>0};
+		gl = cast canvas.getContext("webgl2",options);
+		if( gl == null )
+			gl = cast canvas.getContextWebGL(options);
 		if( gl == null ) throw "Could not acquire GL context";
 		// debug if webgl_debug.js is included
-		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) gl = untyped WebGLDebugUtils.makeDebugContext(gl);
+		untyped if( __js__('typeof')(WebGLDebugUtils) != "undefined" ) {
+			gl = untyped WebGLDebugUtils.makeDebugContext(gl);
+			glDebug = true;
+		}
 		#if multidriver
 		canvas.setAttribute("class", canvas.getAttribute("class") + " _id_" + (UID++));
 		#end
@@ -157,19 +176,26 @@ class GlDriver extends Driver {
 		curAttribs = 0;
 		curMatBits = -1;
 		defStencil = new Stencil();
-		#if (hlsdl || usegl)
+
 		var v : String = gl.getParameter(GL.VERSION);
-		if( v.indexOf("ES") < 0 ){
+		var reg = ~/ES ([0-9]+\.[0-9]+)/;
+		if( reg.match(v) )
+			glES = Std.parseFloat(reg.matched(1));
+
+		#if !js
+		if( glES == null ) {
 			commonVA = gl.createVertexArray();
 			gl.bindVertexArray( commonVA );
 		}
-
+		#end
 
 		var reg = ~/[0-9]+\.[0-9]+/;
 		var v : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
-		if( v.indexOf("ES") < 0 &&reg.match(v) )
-			shaderVersion = hxd.Math.imin( 150, Math.round( Std.parseFloat(reg.matched(0)) * 100 ) );
+		if( reg.match(v) )
+			shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
 
+		#if !js
+		gl.enable(GL.TEXTURE_CUBE_MAP_SEAMLESS);
 		gl.pixelStorei(GL.PACK_ALIGNMENT, 1);
 		gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1);
 		gl.finish(); // prevent glError() on first bufferData
@@ -256,26 +282,14 @@ class GlDriver extends Driver {
 		if( p == null ) {
 			p = new CompiledProgram();
 			var glout = new ShaderCompiler();
-			if( shaderVersion != null )
-				glout.version = shaderVersion;
-			else
-				glout.glES = true;
-
+			glout.glES = glES;
+			glout.version = shaderVersion;
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 
-			#if shader_debug_dump
-			hxsl.UniqueChecker.get().add(shader, function(s) {
-				var out = new ShaderCompiler();
-				out.version = glout.version;
-				out.glES = glout.glES;
-				return out.run(s);
-			});
-			#end
-
 			p.p = gl.createProgram();
 			#if (hlsdl || usegl)
-			if( !glout.glES ) {
+			if( glES == null ) {
 				var outCount = 0;
 				for( v in shader.fragment.data.vars )
 					switch( v.kind ) {
@@ -621,11 +635,9 @@ class GlDriver extends Driver {
 
 	function getChannels( t : Texture ) {
 		return switch( t.internalFmt ) {
-		#if !js
-		case GL.RGBA32F, GL.RGBA16F: GL.RGBA;
-		case GL.ALPHA16F, GL.ALPHA32F: GL.ALPHA;
-		case GL.RGBA8: GL.BGRA;
-		#end
+		case GL2.RGBA32F, GL2.RGBA16F: GL.RGBA;
+		case GL2.ALPHA16F, GL2.ALPHA32F: GL.ALPHA;
+		case GL2.RGBA8: GL2.BGRA;
 		case GL.RGBA: GL.RGBA;
 		case GL.ALPHA: GL.ALPHA;
 		default: throw "Invalid format " + t.internalFmt;
@@ -635,10 +647,7 @@ class GlDriver extends Driver {
 	override function isSupportedFormat( fmt : h3d.mat.Data.TextureFormat ) {
 		return switch( fmt ) {
 		case RGBA, ALPHA8: true;
-		case RGBA32F: hasFeature(FloatTextures);
-		#if !js
-		case ALPHA16F, ALPHA32F, RGBA16F: hasFeature(FloatTextures);
-		#end
+		case RGBA16F, RGBA32F, ALPHA16F, ALPHA32F: hasFeature(FloatTextures);
 		default: false;
 		}
 	}
@@ -653,25 +662,19 @@ class GlDriver extends Driver {
 		case ALPHA8:
 			tt.internalFmt = GL.ALPHA;
 		case RGBA32F if( hasFeature(FloatTextures) ):
-			#if js
+			tt.internalFmt = GL2.RGBA32F;
 			tt.pixelFmt = GL.FLOAT;
-			#else
-			tt.internalFmt = GL.RGBA32F;
-			tt.pixelFmt = GL.FLOAT;
-			#end
-		#if !js
-		case BGRA:
-			tt.internalFmt = GL.RGBA8;
 		case RGBA16F if( hasFeature(FloatTextures) ):
-			tt.pixelFmt = GL.HALF_FLOAT;
-			tt.internalFmt = GL.RGBA16F;
+			tt.pixelFmt = GL2.HALF_FLOAT;
+			tt.internalFmt = GL2.RGBA16F;
 		case ALPHA16F if( hasFeature(FloatTextures) ):
-			tt.pixelFmt = GL.HALF_FLOAT;
-			tt.internalFmt = GL.ALPHA16F;
+			tt.pixelFmt = GL2.HALF_FLOAT;
+			tt.internalFmt = GL2.ALPHA16F;
 		case ALPHA32F if( hasFeature(FloatTextures) ):
 			tt.pixelFmt = GL.FLOAT;
-			tt.internalFmt = GL.ALPHA32F;
-		#end
+			tt.internalFmt = GL2.ALPHA32F;
+		case BGRA:
+			tt.internalFmt = GL2.RGBA8;
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
@@ -1069,7 +1072,9 @@ class GlDriver extends Driver {
 
 	function setDrawBuffers( k : Int ) {
 		#if js
-		if( mrtExt != null )
+		if( glES >= 3 )
+			gl.drawBuffers(CBUFFERS[k]);
+		else if( mrtExt != null )
 			mrtExt.drawBuffersWEBGL(CBUFFERS[k]);
 		#elseif (hlsdl || usegl)
 		gl.drawBuffers(k, CBUFFERS);
@@ -1113,9 +1118,8 @@ class GlDriver extends Driver {
 		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
 			throw "Invalid depth buffer size : does not match render target size";
 
-		#if js
-		if( mipLevel > 0 ) throw "Cannot render to mipLevel, use upload() instead";
-		#end
+		if( glES == 1 && mipLevel > 0 ) throw "Cannot render to mipLevel in WebGL1, use upload() instead";
+
 		if( tex.t == null )
 			tex.alloc();
 
@@ -1143,6 +1147,14 @@ class GlDriver extends Driver {
 		gl.viewport(0, 0, tex.width >> mipLevel, tex.height >> mipLevel);
 		for( i in 0...boundTextures.length )
 			boundTextures[i] = null;
+
+		#if js
+		if( glDebug ) {
+			var code = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
+			if( code != GL.FRAMEBUFFER_COMPLETE )
+				throw "Invalid frame buffer: "+code;
+		}
+		#end
 	}
 
 	override function setRenderTargets( textures : Array<h3d.mat.Texture> ) {
@@ -1187,21 +1199,31 @@ class GlDriver extends Driver {
 	override function hasFeature( f : Feature ) : Bool {
 		return switch( f ) {
 		#if hl
+
 		case StandardDerivatives, FloatTextures, MultipleRenderTargets, Queries:
-			true; // runtime extension detect required ?
+			true;
+
 		#else
+
+		case StandardDerivatives, MultipleRenderTargets if( glES >= 3 ):
+			true;
+
+		case FloatTextures if( glES >= 3 ):
+			gl.getExtension('EXT_color_buffer_float') != null; // allow render to 16f/32f textures (not standard in webgl 2)
+
 		case StandardDerivatives:
 			gl.getExtension('OES_standard_derivatives') != null;
+
 		case FloatTextures:
-			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null;
+			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null &&
+			gl.getExtension('OES_texture_half_float') != null && gl.getExtension('OES_texture_half_float_linear') != null;
+
 		case MultipleRenderTargets:
-			#if js
 			mrtExt != null || (mrtExt = gl.getExtension('WEBGL_draw_buffers')) != null;
-			#else
-			false; // no support for glDrawBuffers in OpenFL
-			#end
+
 		case Queries:
 			false;
+
 		#end
 		case HardwareAccelerated:
 			true;

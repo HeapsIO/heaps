@@ -266,11 +266,9 @@ class IrradBase extends h3d.shader.ScreenShader {
 	static var SRC = {
 
 		@const var samplesBits : Int;
-		#if (js || flash)
-		@const var SamplesCount : Int;
+		@const var useTable : Bool;
+		@const(1024) var SamplesCount : Int;
 		@param var hammerTbl : Array<Vec4,SamplesCount>;
-		#end
-
 		function _reversebits( i : Int ) : Int {
 			var r = (i << 16) | (i >>> 16);
 			r = ((r & 0x00ff00ff) << 8) | ((r & 0xff00ff00) >>> 8);
@@ -281,12 +279,10 @@ class IrradBase extends h3d.shader.ScreenShader {
 		}
 
 		function hammersley( i : Int, max : Int ) : Vec2 {
-			#if (js || flash)
-			return hammerTbl[i].xy;
-			#else
+			if( useTable )
+				return hammerTbl[i].xy;
 			var ri = _reversebits(i) * 2.3283064365386963e-10;
 			return vec2(float(i) / float(max), ri);
-			#end
 		}
 
 		function importanceSampleGGX( roughness : Float, p : Vec2, n : Vec3 ) : Vec3 {
@@ -359,8 +355,7 @@ class Irradiance extends IrradBase {
 			var n = getNormal();
 			var totalWeight = 1e-10;
 			var numSamples = 1 << samplesBits;
-			#if (js || flash) @:unroll #end
-			for( i in 0...1 << samplesBits ) {
+			for( i in 0...numSamples ) {
 				var p = hammersley(i, numSamples);
 				var l : Vec3;
 				if( isSpecular ) {
@@ -403,8 +398,7 @@ class IrradianceLut extends IrradBase {
 			var n = vec3(0, 0, 1.);
 			var numSamples = 1 << samplesBits;
 			var a = 0., b = 0.;
-			#if (js || flash) @:unroll #end
-			for( i in 0...1 << samplesBits ) {
+			for( i in 0...numSamples ) {
 				var xi = hammersley(i, numSamples);
 				var h = importanceSampleGGX( roughness, xi, n );
 				var l = reflect(-v, h);
@@ -428,6 +422,26 @@ class IrradianceLut extends IrradBase {
 		samplesBits = 10;
 	}
 
+}
+
+class CubeMap extends hxsl.Shader {
+
+	static var SRC = {
+
+		var pixelColor : Vec4;
+		var transformedNormal : Vec3;
+		@param var texture : SamplerCube;
+		@param var lod : Float;
+		function fragment() {
+			pixelColor.rgb *= textureCubeLod(texture,transformedNormal,lod).rgb;
+		}
+
+	}
+
+	public function new(texture) {
+		super();
+		this.texture = texture;
+	}
 }
 
 class Pbr extends hxd.App {
@@ -457,7 +471,7 @@ class Pbr extends hxd.App {
 
 		font = hxd.res.DefaultFont.get();
 
-		#if (js || flash)
+		#if flash
 		new h2d.Text(font, s2d).text = "Not supported on this platform (requires render to mipmap target and fragment textureCubeLod support)";
 		return;
 		#end
@@ -522,15 +536,9 @@ class Pbr extends hxd.App {
 		axis.visible = false;
 
 		var size, ssize;
-		#if (js || flash)
-		sampleBits = 5;
-		size = 16;
-		ssize = 16;
-		#else
 		size = 64;
 		ssize = 256;
 		sampleBits = 10;
-		#end
 
 		computeIrradLut();
 
@@ -545,7 +553,7 @@ class Pbr extends hxd.App {
 		shader.irrDiffuse = irradDiffuse;
 		shader.irrSpecular = irradSpecular;
 
-		var cubeShader = bg.material.mainPass.addShader(new h3d.shader.CubeMap(envMap));
+		var cubeShader = bg.material.mainPass.addShader(new CubeMap(envMap));
 
 		shader.defMetalness = 0.2;
 		shader.defRoughness = 0.5;
@@ -615,7 +623,6 @@ class Pbr extends hxd.App {
 			sphere.visible = !sphere.visible;
 		});
 
-		addChoice("EnvMap", ["Default", "IDiff", "ISpec"], function(i) cubeShader.texture = [envMap, irradDiffuse, irradSpecular][i]);
 		var r = Math.sqrt(2);
 		var cube = new h3d.prim.Cube(r,r,r);
 		cube.unindex();
@@ -624,6 +631,10 @@ class Pbr extends hxd.App {
 		cube.translate( -r * 0.5, -r * 0.5, -r * 0.5);
 		var prims : Array<h3d.prim.Primitive> = [sp, cube];
 		addChoice("Prim", ["Sphere","Cube"], function(i) sphere.primitive = prims[i], prims.indexOf(sphere.primitive));
+
+		addChoice("EnvMap", ["Default", "IDiff", "ISpec"], function(i) cubeShader.texture = [envMap, irradDiffuse, irradSpecular][i]);
+		addSlider("EnvLod", 0, 10, function() return cubeShader.lod, function(v) cubeShader.lod = v);
+
 	}
 
 	function addSeparator() {
@@ -648,15 +659,10 @@ class Pbr extends hxd.App {
 	}
 
 	function computeIrradLut() {
-		var irradLut = new h3d.mat.Texture(128, 128, [Target], #if js RGBA32F #else RGBA16F #end);
+		var irradLut = new h3d.mat.Texture(128, 128, [Target], RGBA16F);
 		irradLut.name = "irradLut";
 		var screen = new h3d.pass.ScreenFx(new IrradianceLut());
 		screen.shader.samplesBits = sampleBits;
-		#if (js || flash)
-		var nsamples = 1 << sampleBits;
-		screen.shader.SamplesCount = nsamples;
-		screen.shader.hammerTbl = [for( i in 0...nsamples ) hammersley(i, nsamples)];
-		#end
 
 		engine.driver.setRenderTarget(irradLut);
 		screen.render();
@@ -669,12 +675,6 @@ class Pbr extends hxd.App {
 		var screen = new h3d.pass.ScreenFx(new Irradiance());
 		screen.shader.samplesBits = sampleBits;
 		screen.shader.envMap = envMap;
-
-		#if (js || flash)
-		var nsamples = 1 << sampleBits;
-		screen.shader.SamplesCount = nsamples;
-		screen.shader.hammerTbl = [for( i in 0...nsamples ) hammersley(i, nsamples)];
-		#end
 
 		for( i in 0...6 ) {
 			screen.shader.face = i;

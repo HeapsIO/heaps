@@ -24,6 +24,7 @@ class GlslOut {
 		m.set(ToFloat, "float");
 		m.set(ToBool, "bool");
 		m.set(Texture2D, "_texture2D");
+		m.set(Texture2DLod, "_texture2DLod");
 		m.set(LReflect, "reflect");
 		m.set(Mat3x4, "_mat3x4");
 		for( g in m )
@@ -41,9 +42,11 @@ class GlslOut {
 	var allNames : Map<String, Int>;
 	var outIndexes : Map<Int, Int>;
 	var intelDriverFix : Bool;
+	var isES(get,never) : Bool;
+	var isES2(get,never) : Bool;
 	public var varNames : Map<Int,String>;
 	public var flipY : Bool;
-	public var glES : Bool;
+	public var glES : Null<Float>;
 	public var version : Null<Int>;
 
 	public function new() {
@@ -51,6 +54,9 @@ class GlslOut {
 		allNames = new Map();
 		flipY = true;
 	}
+
+	inline function get_isES() return glES != null;
+	inline function get_isES2() return glES != null && glES <= 2;
 
 	inline function add( v : Dynamic ) {
 		buf.add(v);
@@ -224,16 +230,27 @@ class GlslOut {
 			case Texture2D:
 				// convert S/T (bottom left) to U/V (top left)
 				// we don't use 1. because of pixel rounding (fixes artifacts in blur)
-				decl('vec4 _texture2D( sampler2D t, vec2 v ) { return ${glES?"texture2D":"texture"}(t,vec2(v.x,${flipY?"0.999999-v.y":"v.y"})); }');
+				decl('vec4 _texture2D( sampler2D t, vec2 v ) { return ${isES2?"texture2D":"texture"}(t,${flipY?'vec2(v.x,0.999999-v.y)':'v'}); }');
 			case TextureCube:
-				if( !glES ) {
+				if( !isES2 ) {
 					add("texture");
 					return;
 				}
+			case Texture2DLod:
+				var tlod = "texture2DLod";
+				if( isES2 ) {
+					decl("#extension GL_EXT_shader_texture_lod : enable");
+					tlod = "texture2DLodEXT";
+				}
+				decl('vec4 _texture2DLod( sampler2D t, vec2 v, float lod ) { return $tlod(t,${flipY?'vec2(v.x,0.999999-v.y)':'v'}); }');
 			case TextureCubeLod:
-				if( !glES ) {
+				if( !isES2 ) {
 					add("textureLod");
 					return;
+				}
+				if( version <= 100 ) {
+					decl("#extension GL_EXT_shader_texture_lod : enable");
+					decl("vec4 textureCubeLod( samplerCube t, vec3 coord, float lod ) { return textureCubeLodEXT(t,coord,lod); }");
 				}
 			default:
 			}
@@ -456,7 +473,7 @@ class GlslOut {
 		if( v.kind == Output ) {
 			if( isVertex )
 				return "gl_Position";
-			if( glES ) {
+			if( isES2 ) {
 				if( outIndexes == null )
 					return "gl_FragColor";
 				return 'gl_FragData[${outIndexes.get(v.id)}]';
@@ -530,11 +547,11 @@ class GlslOut {
 			case Param, Global:
 				add("uniform ");
 			case Input:
-				add( glES ? "attribute " : "in ");
+				add( isES2 ? "attribute " : "in ");
 			case Var:
-				add( glES ? "varying " : (isVertex ? "out " : "in "));
+				add( isES2 ? "varying " : (isVertex ? "out " : "in "));
 			case Output:
-				if( glES ) {
+				if( isES2 ) {
 					outIndexes.set(v.id, outIndex++);
 					continue;
 				}
@@ -562,7 +579,7 @@ class GlslOut {
 
 		if( outIndex < 2 )
 			outIndexes = null;
-		else if( !isVertex && glES )
+		else if( !isVertex && isES2 )
 			decl("#extension GL_EXT_draw_buffers : enable");
 
 		var tmp = buf;
@@ -595,10 +612,10 @@ class GlslOut {
 			add("\n\n");
 		}
 
-		if( version != null )
-			decl("#version " + version);
-		else if( glES )
-			decl("#version 100");
+		if( isES )
+			decl("#version "+version+(version > 150 ? " es" : ""))
+		else if( version != null )
+			decl("#version " + (version > 150 ? 150 : version));
 		else
 			decl("#version 130"); // OpenGL 3.0
 
@@ -610,7 +627,8 @@ class GlslOut {
 	public static function compile( s : ShaderData ) {
 		var out = new GlslOut();
 		#if js
-		out.glES = true;
+		out.glES = 1;
+		out.version = 100;
 		#end
 		return out.run(s);
 	}
