@@ -168,6 +168,11 @@ class Skin extends MultiMaterial {
 			for( m in materials )
 				if( m != null ) {
 					m.mainPass.addShader(skinShader);
+					var old = m.normalMap;
+					if( old != null ) {
+						m.normalMap = null;
+						m.normalMap = old; // re-up normalmap priority (skinShader changes normal)
+					}
 					if( skinData.splitJoints != null ) m.mainPass.dynamicParameters = true;
 				}
 		}
