@@ -1,18 +1,10 @@
 {
-	// See https://go.microsoft.com/fwlink/?LinkId=733558
-	// for the documentation about the tasks.json format
 	"version": "2.0.0",
 	"tasks": [
 		{
 			"type": "hxml",
 			"label": "Build",
 			"file": "::name::_hl.hxml",
-			"problemMatcher": [
-				"$haxe-absolute",
-				"$haxe",
-				"$haxe-error",
-				"$haxe-trace"
-			],
 			"presentation": {
 				"reveal": "never"
 			},
