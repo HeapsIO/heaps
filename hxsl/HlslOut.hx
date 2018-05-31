@@ -182,8 +182,16 @@ class HlslOut {
 		}
 	}
 
-	function addBlock( e : TExpr, tabs : String ) {
-		addExpr(e, tabs);
+	function addBlock( e : TExpr, tabs ) {
+		if( e.e.match(TBlock(_)) )
+			addExpr(e,tabs);
+		else {
+			add("{");
+			addExpr(e,tabs);
+			if( !isBlock(e) )
+				add(";");
+			add("}");
+		}
 	}
 
 	function declMods() {
@@ -389,11 +397,10 @@ class HlslOut {
 			add("if( ");
 			addValue(econd, tabs);
 			add(") ");
-			addExpr(eif, tabs);
+			addBlock(eif, tabs);
 			if( eelse != null ) {
-				if( !isBlock(eif) ) add(";");
 				add(" else ");
-				addExpr(eelse, tabs);
+				addBlock(eelse, tabs);
 			}
 		case TDiscard:
 			add("discard");
@@ -485,6 +492,8 @@ class HlslOut {
 		switch( e.e ) {
 		case TFor(_, _, loop), TWhile(_,loop,true):
 			return isBlock(loop);
+		case TIf(_,eif,eelse):
+			return isBlock(eelse == null ? eif : eelse);
 		case TBlock(_):
 			return true;
 		default:
