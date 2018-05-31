@@ -68,11 +68,11 @@ class Renderer extends h3d.scene.Renderer {
 
 		shadows.draw(get("shadow"));
 
-		var albedo = allocTarget("albedo");
+		var albedo = allocFTarget("albedo");
 		var normal = allocFTarget("normal",0,false);
 		var pbr = allocTarget("pbr",0,false);
 		setTargets([albedo,normal,pbr]);
-		clear(ctx.engine.backgroundColor, 1);
+		clear(0, 1);
 		output.draw(getSort("default", true));
 
 		setTarget(albedo);
@@ -130,6 +130,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		case Slides:
 
+			slides.shader.shadowMap = ctx.textures.getNamed("shadowMap");
 			slides.shader.albedo = albedo;
 			slides.shader.normal = normal;
 			slides.shader.pbr = pbr;

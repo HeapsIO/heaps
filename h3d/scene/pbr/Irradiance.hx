@@ -5,10 +5,6 @@ class IrradBase extends h3d.shader.ScreenShader {
 	static var SRC = {
 
 		@const var samplesBits : Int;
-		#if (js || flash)
-		@const var SamplesCount : Int;
-		@param var hammerTbl : Array<Vec4,SamplesCount>;
-		#end
 
 		function _reversebits( i : Int ) : Int {
 			var r = (i << 16) | (i >>> 16);
@@ -20,12 +16,8 @@ class IrradBase extends h3d.shader.ScreenShader {
 		}
 
 		function hammersley( i : Int, max : Int ) : Vec2 {
-			#if (js || flash)
-			return hammerTbl[i].xy;
-			#else
 			var ri = _reversebits(i) * 2.3283064365386963e-10;
 			return vec2(float(i) / float(max), ri);
-			#end
 		}
 
 		function importanceSampleGGX( roughness : Float, p : Vec2, n : Vec3 ) : Vec3 {
@@ -98,8 +90,7 @@ class IrradShader extends IrradBase {
 			var n = getNormal();
 			var totalWeight = 1e-10;
 			var numSamples = 1 << samplesBits;
-			#if (js || flash) @:unroll #end
-			for( i in 0...1 << samplesBits ) {
+			for( i in 0...numSamples ) {
 				var p = hammersley(i, numSamples);
 				var l : Vec3;
 				if( isSpecular ) {
@@ -142,8 +133,7 @@ class IrradLut extends IrradBase {
 			var n = vec3(0, 0, 1.);
 			var numSamples = 1 << samplesBits;
 			var a = 0., b = 0.;
-			#if (js || flash) @:unroll #end
-			for( i in 0...1 << samplesBits ) {
+			for( i in 0...numSamples ) {
 				var xi = hammersley(i, numSamples);
 				var h = importanceSampleGGX( roughness, xi, n );
 				var l = reflect(-v, h);
@@ -187,21 +177,15 @@ class Irradiance  {
 
 	public function new(envMap) {
 		this.envMap = envMap;
-		#if (js || flash)
-		sampleBits = 5;
-		diffSize = 16;
-		specSize = 16;
-		#else
 		diffSize = 64;
 		specSize = 256;
 		sampleBits = 10;
-		#end
 	}
 
 
 	public function compute() {
 
-		lut = new h3d.mat.Texture(128, 128, [Target], #if js RGBA32F #else RGBA16F #end);
+		lut = new h3d.mat.Texture(128, 128, [Target], RGBA16F);
 		lut.setName("irradLut");
 		diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target]);
 		diffuse.setName("irradDiffuse");
@@ -216,11 +200,6 @@ class Irradiance  {
 	function computeIrradLut() {
 		var screen = new h3d.pass.ScreenFx(new IrradLut());
 		screen.shader.samplesBits = sampleBits;
-		#if (js || flash)
-		var nsamples = 1 << sampleBits;
-		screen.shader.SamplesCount = nsamples;
-		screen.shader.hammerTbl = [for( i in 0...nsamples ) hammersley(i, nsamples)];
-		#end
 
 		var engine = h3d.Engine.getCurrent();
 		engine.driver.setRenderTarget(lut);
@@ -229,7 +208,6 @@ class Irradiance  {
 		screen.dispose();
 	}
 
-	#if (js || flash)
 	function _reversebits( i : Int ) : Int {
 		var r = (i << 16) | (i >>> 16);
 		r = ((r & 0x00ff00ff) << 8) | ((r & 0xff00ff00) >>> 8);
@@ -243,19 +221,12 @@ class Irradiance  {
 		var ri = _reversebits(i) * 2.3283064365386963e-10;
 		return new h3d.Vector(i / max, ri);
 	}
-	#end
 
 	function computeIrradiance() {
 
 		var screen = new h3d.pass.ScreenFx(new IrradShader());
 		screen.shader.samplesBits = sampleBits;
 		screen.shader.envMap = envMap;
-
-		#if (js || flash)
-		var nsamples = 1 << sampleBits;
-		screen.shader.SamplesCount = nsamples;
-		screen.shader.hammerTbl = [for( i in 0...nsamples ) hammersley(i, nsamples)];
-		#end
 
 		var engine = h3d.Engine.getCurrent();
 
