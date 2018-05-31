@@ -72,7 +72,7 @@ class Renderer extends h3d.scene.Renderer {
 		var normal = allocFTarget("normal",0,false);
 		var pbr = allocTarget("pbr",0,false);
 		setTargets([albedo,normal,pbr]);
-		clear(0, 1);
+		clear(ctx.engine.backgroundColor, 1);
 		output.draw(getSort("default", true));
 
 		setTarget(albedo);
