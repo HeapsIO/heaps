@@ -556,6 +556,8 @@ class GlslOut {
 					continue;
 				}
 				if( isVertex ) continue;
+				if( isES )
+					add('layout(location=${outIndex++}) ');
 				add("out ");
 			case Function:
 				continue;
