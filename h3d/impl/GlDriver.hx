@@ -1209,7 +1209,7 @@ class GlDriver extends Driver {
 			true;
 
 		case FloatTextures if( glES >= 3 ):
-			gl.getExtension('EXT_color_buffer_float') != null; // allow render to 16f/32f textures (not standard in webgl 2)
+			gl.getExtension('EXT_color_buffer_float') != null && gl.getExtension("OES_texture_float_linear") != null; // allow render to 16f/32f textures (not standard in webgl 2)
 
 		case StandardDerivatives:
 			gl.getExtension('OES_standard_derivatives') != null;
