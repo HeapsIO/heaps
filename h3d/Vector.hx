@@ -231,9 +231,40 @@ class Vector {
 		return (Std.int(a.clamp() * 255 + 0.499) << 24) | (Std.int(r.clamp() * 255 + 0.499) << 16) | (Std.int(g.clamp() * 255 + 0.499) << 8) | Std.int(b.clamp() * 255 + 0.499);
 	}
 
+	public function toColorHSL() {
+	    var max = hxd.Math.max(hxd.Math.max(r, g), b);
+		var min = hxd.Math.min(hxd.Math.min(r, g), b);
+		var h, s, l = (max + min) / 2.0;
+
+		if(max == min)
+			h = s = 0.0; // achromatic
+		else {
+			var d = max - min;
+			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+			if(max == r) 
+				h = (g - b) / d + (g < b ? 6.0 : 0.0);
+			else if(max == g)
+				h = (b - r) / d + 2.0;
+			else
+				h = (r - g) / d + 4.0;
+			h *= Math.PI / 3.0;
+		}
+
+		return new h3d.Vector(h, s, l, a);
+	}
+
 	public static inline function fromColor( c : Int, scale : Float = 1.0 ) {
 		var s = scale / 255;
 		return new Vector(((c>>16)&0xFF)*s,((c>>8)&0xFF)*s,(c&0xFF)*s,(c >>> 24)*s);
+	}
+
+	public static inline function fromArray(a : Array<Float>) {
+		var r = new Vector();
+		if(a.length > 0) r.x = a[0];
+		if(a.length > 1) r.y = a[1];
+		if(a.length > 2) r.z = a[2];
+		if(a.length > 3) r.w = a[3];
+		return r;
 	}
 
 }
