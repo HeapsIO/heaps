@@ -58,7 +58,13 @@ class Renderer extends h3d.scene.Renderer {
 			pbrLightPass.addShader(pbrDirect);
 			pbrLightPass.addShader(pbrProps);
 			pbrLightPass.blend(One, One);
-			pbrLightPass.depthWrite = false;
+			/*
+				This allows to discard light pixels when there is nothing
+				between light volume and camera. Also prevents light shape
+				to be discarded when the camera is inside its volume.
+			*/
+			pbrLightPass.culling = Front;
+			pbrLightPass.depth(false, Greater);
 			pbrLightPass.enableLights = true;
 		}
 		ctx.pbrLightPass = pbrLightPass;
