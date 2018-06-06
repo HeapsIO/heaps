@@ -24,21 +24,21 @@ class NormalMap extends hxsl.Shader {
 		var transformedPosition : Vec3;
         var transformedNormal : Vec3;
 
-		@var var transformedTangent : Vec3;
+		@var var transformedTangent : Vec4;
 
 		function vertex() {
-			transformedTangent = input.tangent * global.modelView.mat3();
+			transformedTangent = vec4(input.tangent * global.modelView.mat3(),input.tangent.dot(input.tangent) > 0.5 ? 1. : -1.);
 		}
 
 		function fragment() {
 			var n = transformedNormal;
 			var nf = unpackNormal(texture.get(calculatedUV));
-			var tanX = transformedTangent.normalize();
-			tanX.x *= -1;
-			var tanY = n.cross(tanX);
-			transformedNormal = (nf.x * tanX - nf.y * tanY + nf.z * n).normalize();
-        }
-    };
+			var tanX = transformedTangent.xyz.normalize();
+			var tanY = n.cross(tanX) * transformedTangent.w;
+			transformedNormal = (nf.x * tanX + nf.y * tanY + nf.z * n).normalize();
+		}
+
+     };
 
     public function new(?texture) {
         super();

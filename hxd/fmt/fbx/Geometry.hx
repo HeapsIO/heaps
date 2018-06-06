@@ -177,6 +177,10 @@ class Geometry {
 		return processVectors("LayerElementTangent", "Tangents", opt);
 	}
 
+	public function getBinormals( opt = false ) {
+		return processVectors("LayerElementBinormal", "Binormals", opt);
+	}
+
 	function processVectors( layer, name, opt = false ) {
 		var vect = root.get(layer + "." + name, opt);
 		if( vect == null ) return null;

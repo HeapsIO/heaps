@@ -43,6 +43,7 @@ class HMDOut extends BaseLibrary {
 		var colors = geom.getColors();
 		var mats = geom.getMaterials();
 		var tangents = geom.getTangents(true);
+		var biNorm = geom.getBinormals(true);
 
 		// remove empty color data
 		if( colors != null ) {
@@ -135,6 +136,21 @@ class HMDOut extends BaseLibrary {
 					tmpBuf[p++] = tangents[k * 3];
 					tmpBuf[p++] = tangents[k * 3 + 1];
 					tmpBuf[p++] = tangents[k * 3 + 2];
+
+					if( biNorm != null ) {
+
+						// RH
+						var n = new h3d.Vector(normals[k*3], normals[k*3+1], normals[k*3+2]);
+						var t = new h3d.Vector(tangents[k*3], tangents[k*3+1], tangents[k*3+2]);
+						var b = new h3d.Vector(biNorm[k*3], biNorm[k*3+1], biNorm[k*3+2]);
+
+						if( n.cross(t).dot3(b) < 0 ) {
+							// store binormal flip sign in tangent length
+							tmpBuf[p-3] *= 0.5;
+							tmpBuf[p-2] *= 0.5;
+							tmpBuf[p-1] *= 0.5;
+						}
+					}
 				}
 
 				for( tuvs in uvs ) {
