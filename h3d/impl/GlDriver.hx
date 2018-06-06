@@ -191,8 +191,12 @@ class GlDriver extends Driver {
 
 		var reg = ~/[0-9]+\.[0-9]+/;
 		var v : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
-		if( reg.match(v) )
+		if( reg.match(v) ) {
+			#if js
+			glES = Std.parseFloat(reg.matched(0));
+			#end
 			shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
+		}
 
 		#if !js
 		gl.enable(GL.TEXTURE_CUBE_MAP_SEAMLESS);
