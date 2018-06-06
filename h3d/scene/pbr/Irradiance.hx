@@ -166,7 +166,7 @@ class Irradiance  {
 	public var specSize : Int;
 	public var specLevels : Int;
 
-	public var ignoredSpecLevels : Int = 5;
+	public var ignoredSpecLevels : Int = 4;
 
 	public var envMap : h3d.mat.Texture;
 	public var lut : h3d.mat.Texture;
