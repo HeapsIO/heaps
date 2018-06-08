@@ -34,7 +34,98 @@ class HMDOut extends BaseLibrary {
 		return true;
 	}
 
-	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput ) {
+	function buildTangents( geom : hxd.fmt.fbx.Geometry ) {
+		var verts = geom.getVertices();
+		var normals = geom.getNormals();
+		var uvs = geom.getUVs();
+		var index = geom.getIndexes();
+
+		#if (hl && !hl_disable_mikkt)
+		var m = new hl.Format.Mikktspace();
+		m.buffer = new hl.Bytes(8 * 4 * index.vidx.length);
+		m.stride = 8;
+		m.xPos = 0;
+		m.normalPos = 3;
+		m.uvPos = 6;
+
+		m.indexes = new hl.Bytes(4 * index.vidx.length);
+		m.indices = index.vidx.length;
+
+		m.tangents = new hl.Bytes(4 * 4 * index.vidx.length);
+		m.tangentStride = 4;
+		m.tangentPos = 0;
+
+		var out = 0;
+		for( i in 0...index.vidx.length ) {
+			var vidx = index.vidx[i];
+			m.buffer[out++] = verts[vidx*3];
+			m.buffer[out++] = verts[vidx*3+1];
+			m.buffer[out++] = verts[vidx*3+2];
+
+			m.buffer[out++] = normals[i*3];
+			m.buffer[out++] = normals[i*3+1];
+			m.buffer[out++] = normals[i*3+2];
+			var uidx = uvs[0].index[i];
+
+			m.buffer[out++] = uvs[0].values[uidx*2];
+			m.buffer[out++] = uvs[0].values[uidx*2+1];
+
+			m.indexes[i] = i;
+		}
+
+		m.compute();
+		return m.tangents;
+		#elseif (sys || nodejs)
+		var tmp = Sys.getEnv("TMPDIR");
+		if( tmp == null ) tmp = Sys.getEnv("TMP");
+		if( tmp == null ) tmp = Sys.getEnv("TEMP");
+		if( tmp == null ) tmp = ".";
+		var fileName = tmp+"/mikktspace_data"+Date.now().getTime()+"_"+Std.random(0x1000000)+".bin";
+		var outFile = fileName+".out";
+		var outputData = new haxe.io.BytesBuffer();
+		outputData.addInt32(index.vidx.length);
+		outputData.addInt32(8);
+		outputData.addInt32(0);
+		outputData.addInt32(3);
+		outputData.addInt32(6);
+		for( i in 0...index.vidx.length ) {
+			inline function w(v:Float) outputData.addFloat(v);
+			var vidx = index.vidx[i];
+			w(verts[vidx*3]);
+			w(verts[vidx*3+1]);
+			w(verts[vidx*3+2]);
+
+			w(normals[i*3]);
+			w(normals[i*3+1]);
+			w(normals[i*3+2]);
+			var uidx = uvs[0].index[i];
+
+			w(uvs[0].values[uidx*2]);
+			w(uvs[0].values[uidx*2+1]);
+		}
+		outputData.addInt32(index.vidx.length);
+		for( i in 0...index.vidx.length )
+			outputData.addInt32(i);
+		sys.io.File.saveBytes(fileName, outputData.getBytes());
+		var ret = try Sys.command("mikktspace",[fileName,outFile]) catch( e : Dynamic ) -1;
+		if( ret != 0 ) {
+			sys.FileSystem.deleteFile(fileName);
+			throw "Failed to called 'mikktspace' executable required to generate tangent data. Please ensure it's in your PATH";
+		}
+		var bytes = sys.io.File.getBytes(outFile);
+		var arr = [];
+		for( i in 0...index.vidx.length*4 )
+			arr[i] = bytes.getFloat(i << 2);
+		sys.FileSystem.deleteFile(fileName);
+		sys.FileSystem.deleteFile(outFile);
+		return arr;
+		#else
+		throw "Tangent generation is not supported on this platform";
+		return ([] : Array<Float>);
+		#end
+	}
+
+	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput, genTangents : Bool ) {
 		var g = new Geometry();
 
 		var verts = geom.getVertices();
@@ -42,8 +133,6 @@ class HMDOut extends BaseLibrary {
 		var uvs = geom.getUVs();
 		var colors = geom.getColors();
 		var mats = geom.getMaterials();
-		var tangents = geom.getTangents(true);
-		var biNorm = geom.getBinormals(true);
 
 		// remove empty color data
 		if( colors != null ) {
@@ -56,6 +145,9 @@ class HMDOut extends BaseLibrary {
 			if( !hasData )
 				colors = null;
 		}
+
+		// generate tangents
+		var tangents = genTangents ? buildTangents(geom) : null;
 
 		// build format
 		g.vertexFormat = [
@@ -133,23 +225,13 @@ class HMDOut extends BaseLibrary {
 				}
 
 				if( tangents != null ) {
-					tmpBuf[p++] = tangents[k * 3];
-					tmpBuf[p++] = tangents[k * 3 + 1];
-					tmpBuf[p++] = tangents[k * 3 + 2];
-
-					if( biNorm != null ) {
-
-						// RH
-						var n = new h3d.Vector(normals[k*3], normals[k*3+1], normals[k*3+2]);
-						var t = new h3d.Vector(tangents[k*3], tangents[k*3+1], tangents[k*3+2]);
-						var b = new h3d.Vector(biNorm[k*3], biNorm[k*3+1], biNorm[k*3+2]);
-
-						if( n.cross(t).dot3(b) < 0 ) {
-							// store binormal flip sign in tangent length
-							tmpBuf[p-3] *= 0.5;
-							tmpBuf[p-2] *= 0.5;
-							tmpBuf[p-1] *= 0.5;
-						}
+					tmpBuf[p++] = round(tangents[k * 4]);
+					tmpBuf[p++] = round(tangents[k * 4 + 1]);
+					tmpBuf[p++] = round(tangents[k * 4 + 2]);
+					if( tangents[k*4+3] > 0 ) {
+						tmpBuf[p-3] *= 0.5;
+						tmpBuf[p-2] *= 0.5;
+						tmpBuf[p-1] *= 0.5;
 					}
 				}
 
@@ -436,10 +518,13 @@ class HMDOut extends BaseLibrary {
 			if( !o.isMesh ) continue;
 
 			var mids : Array<Int> = [];
+			var hasNormalMap = false;
 			for( m in getChilds(o.model, "Material") ) {
 				var mid = hmat.get(m.getId());
 				if( mid != null ) {
 					mids.push(mid);
+					var m = d.materials[mid];
+					hasNormalMap = m.normalMap != null;
 					continue;
 				}
 				var hasHeapsProps = false;
@@ -506,6 +591,8 @@ class HMDOut extends BaseLibrary {
 
 				// get other textures
 				mat.normalMap = makeTexturePath(getSpecChild(m, "NormalMap"));
+				if( mat.normalMap != null )
+					hasNormalMap = true;
 				var spec = getSpecChild(m, "SpecularFactor"); // 3dsMax
 				if( spec == null ) spec = getSpecChild(m, "SpecularColor"); // maya
 				mat.specularTexture = makeTexturePath(spec);
@@ -555,7 +642,7 @@ class HMDOut extends BaseLibrary {
 
 			var gdata = hgeom.get(g.getId());
 			if( gdata == null ) {
-				var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut);
+				var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut, hasNormalMap);
 				gdata = { gid : d.geometries.length, materials : geom.materials };
 				d.geometries.push(geom.g);
 				hgeom.set(g.getId(), gdata);
