@@ -84,6 +84,8 @@ class Generator {
 			#if !silent
 			Sys.println(name);
 			#end
+			
+			sys.io.File.saveContent('build/$name/$f', sys.io.File.getContent(f));
 
 			var interp = new hscript.Interp();
 			for( f in Reflect.fields(context) )
