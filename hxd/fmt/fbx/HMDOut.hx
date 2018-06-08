@@ -40,7 +40,7 @@ class HMDOut extends BaseLibrary {
 		var uvs = geom.getUVs();
 		var index = geom.getIndexes();
 
-		#if (hl && !hl_disable_mikkt)
+		#if (hl && !hl_disable_mikkt && (haxe_ver >= "4.0"))
 		var m = new hl.Format.Mikktspace();
 		m.buffer = new hl.Bytes(8 * 4 * index.vidx.length);
 		m.stride = 8;
