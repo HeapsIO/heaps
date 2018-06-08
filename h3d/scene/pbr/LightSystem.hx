@@ -3,9 +3,6 @@ package h3d.scene.pbr;
 @:access(h3d.scene.pbr.Light)
 class LightSystem extends h3d.scene.LightSystem {
 
-	var lightPass : h3d.pass.ScreenFx<h3d.shader.pbr.PropsImport>;
-	var initDone = false;
-
 	override function computeLight( obj : h3d.scene.Object, shaders : hxsl.ShaderList ) : hxsl.ShaderList {
 		var light = Std.instance(obj, h3d.scene.pbr.Light);
 		if( light != null )
@@ -13,16 +10,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		return shaders;
 	}
 
-	public function drawLights( r : Renderer ) {
-
-		if( lightPass == null ) {
-			initDone = true;
-			lightPass = new h3d.pass.ScreenFx(r.pbrProps);
-			lightPass.addShader(new h3d.shader.ScreenShader());
-			lightPass.addShader(r.pbrDirect);
-			@:privateAccess lightPass.pass.setBlendMode(Add);
-		}
-
+	public function drawLights( r : Renderer, lightPass : h3d.pass.ScreenFx<Dynamic> ) {
 		var light = @:privateAccess ctx.lights;
 		var currentTarget = ctx.engine.getCurrentTarget();
 		var width = currentTarget == null ? ctx.engine.width : currentTarget.width;

@@ -2,6 +2,7 @@ package h3d.scene.pbr;
 
 enum DisplayMode {
 	Pbr;
+	MatCap;
 	Slides;
 }
 
@@ -11,12 +12,12 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.pbr.Lighting.Indirect());
 	var pbrSun = new h3d.shader.pbr.Light.DirLight();
 	var pbrLightPass : h3d.mat.Pass;
+	var screenLightPass : h3d.pass.ScreenFx<h3d.shader.pbr.PropsImport>;
 	var fxaa = new h3d.pass.FXAA();
 	var shadows = new h3d.pass.ShadowMap(2048);
-	var hasSun = false;
+	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
+	var pbrProps = new h3d.shader.pbr.PropsImport();
 
-	public var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
-	public var pbrProps = new h3d.shader.pbr.PropsImport();
 	public var displayMode : DisplayMode = Pbr;
 	public var irrad : Irradiance;
 
@@ -33,7 +34,6 @@ class Renderer extends h3d.scene.Renderer {
 		shadows.power = 1000;
 		shadows.blur.passes = 1;
 		defaultPass = new h3d.pass.Default("default");
-		pbrDirect.doDiscard = false;
 		pbrOut.addShader(new h3d.shader.ScreenShader());
 		pbrOut.addShader(pbrProps);
 		pbrOut.addShader(new h3d.shader.pbr.Shadow());
@@ -82,10 +82,18 @@ class Renderer extends h3d.scene.Renderer {
 		output.draw(getSort("default", true));
 
 		setTarget(albedo);
-		draw("color");
+		draw("albedo");
+
+		if( displayMode == MatCap ) {
+			clear(0x808080); // gray albedo
+			setTarget(pbr);
+			clear(0xFF00FF); // metal=1, rough=0, occlusion=1
+		}
 
 		var output = allocTarget("hdrOutput", 0, true);
 		setTarget(output);
+		if( ctx.engine.backgroundColor != null )
+			clear(ctx.engine.backgroundColor);
 		pbrProps.albedoTex = albedo;
 		pbrProps.normalTex = normal;
 		pbrProps.pbrTex = pbr;
@@ -119,19 +127,27 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.render();
 
 		var ls = Std.instance(ls, LightSystem);
-		if( ls != null ) ls.drawLights(this);
+		var lpass = screenLightPass;
+		if( lpass == null ) {
+			lpass = new h3d.pass.ScreenFx(pbrProps);
+			lpass.addShader(new h3d.shader.ScreenShader());
+			lpass.addShader(pbrDirect);
+			@:privateAccess lpass.pass.setBlendMode(Add);
+			screenLightPass = lpass;
+		}
+		if( ls != null ) ls.drawLights(this, lpass);
 
 		pbrProps.isScreen = false;
 		draw("lights");
 		pbrProps.isScreen = true;
 
-		draw("late");
+		draw("overlay");
 		resetTarget();
 
 
 		switch( displayMode ) {
 
-		case Pbr:
+		case Pbr, MatCap:
 			fxaa.apply(output);
 
 		case Slides:

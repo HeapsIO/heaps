@@ -1,11 +1,20 @@
 package h3d.mat;
 
 @:enum private abstract DefaultKind(String) {
-	var Opaque = "Opaque";
+	var PBR = "PBR";
+	var Albedo = "Albedo";
+	var Overlay = "Overlay";
+}
+
+@:enum private abstract DefaultBlend(String) {
+	var None = "None";
+	var Alpha = "Alpha";
+	var Add = "Add";
 }
 
 private typedef DefaultProps = {
 	var kind : DefaultKind;
+	var blend : DefaultBlend;
 	var shadows : Bool;
 	var alphaKill : Bool;
 	var culled : Bool;
@@ -31,8 +40,13 @@ class PbrMaterialSetup extends MaterialSetup {
 	override function createRenderer() : h3d.scene.Renderer {
 		var irrad = irrad;
 		if( irrad == null ) {
-			var envMap = new h3d.mat.Texture(16,16,[Cube]);
-			envMap.clear(0x808080);
+			var envMap = new h3d.mat.Texture(4,4,[Cube]);
+			var pix = hxd.Pixels.alloc(envMap.width, envMap.height, RGBA);
+			var COLORS = [0xC08080,0xA08080,0x80C080,0x80A080,0x8080C0,0x808080];
+			for( i in 0...6 ) {
+				pix.clear(COLORS[i]);
+				envMap.uploadPixels(pix,0,i);
+			}
 			irrad = new h3d.scene.pbr.Irradiance(envMap);
 			irrad.compute();
 			this.irrad = irrad;
@@ -50,18 +64,7 @@ class PbrMaterialSetup extends MaterialSetup {
 			props = getDefaults();
 			// use hmd material
 			var props : DefaultProps = props;
-			/*switch( material.blendMode ) {
-			case Alpha:
-				props.kind = Alpha;
-			case Add:
-				props.kind = Add;
-				props.culled = false;
-				props.shadows = false;
-				props.lighted = false;
-			case None:
-			default:
-				throw "Unsupported HMD material " + material.blendMode;
-			}*/
+			// TODO : handle HMD alpha correctly
 		}
 		material.props = props;
 	}
@@ -69,9 +72,18 @@ class PbrMaterialSetup extends MaterialSetup {
 	override function getDefaults( ?type : String ) : Any {
 		var props : DefaultProps;
 		switch( type ) {
+		case "ui":
+			props = {
+				kind : Overlay,
+				blend : Alpha,
+				shadows : false,
+				culled : false,
+				alphaKill : true,
+			};
 		default:
 			props = {
-				kind : Opaque,
+				kind : PBR,
+				blend : None,
 				shadows : true,
 				culled : true,
 				alphaKill : false,
@@ -84,10 +96,23 @@ class PbrMaterialSetup extends MaterialSetup {
 		var props : DefaultProps = m.props;
 		var mainPass = m.mainPass;
 		switch( props.kind ) {
-		case Opaque:
+		case PBR:
+			mainPass.setPassName("default");
+		case Albedo:
+			mainPass.setPassName("albedo");
+		case Overlay:
+			mainPass.setPassName("overlay");
+		}
+		switch( props.blend ) {
+		case None:
 			mainPass.setBlendMode(None);
 			mainPass.depthWrite = true;
-			mainPass.setPassName("default");
+		case Alpha:
+			mainPass.setBlendMode(Alpha);
+			mainPass.depthWrite = false;
+		case Add:
+			mainPass.setBlendMode(Add);
+			mainPass.depthWrite = false;
 		}
 		var tshader = m.textureShader;
 		if( tshader != null ) {
@@ -129,7 +154,17 @@ class PbrMaterialSetup extends MaterialSetup {
 				<dt>Kind</dt>
 				<dd>
 					<select field="kind">
-						<option value="Opaque">Opaque</option>
+						<option value="PBR">PBR</option>
+						<option value="Albedo">Albedo</option>
+						<option value="Overlay">Overlay</option>
+					</select>
+				</dd>
+				<dt>Blend</dt>
+				<dd>
+					<select field="blend">
+						<option value="None">None</option>
+						<option value="Alpha">Alpha</option>
+						<option value="Add">Add</option>
 					</select>
 				</dd>
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
