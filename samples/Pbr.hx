@@ -22,7 +22,7 @@ class Pbr extends SampleApp {
 		new h3d.scene.CameraController(5.5, s3d);
 
 		#if flash
-		new h2d.Text(font, s2d).text = "Not supported on this platform (requires render to mipmap target and fragment textureCubeLod support)";
+		new h2d.Text(getFont(), s2d).text = "Not supported on this platform (requires render to mipmap target and fragment textureCubeLod support)";
 		return;
 		#end
 
