@@ -1,5 +1,7 @@
 package hxd.res;
 
+using Lambda;
+
 class BitmapFont extends Resource {
 
 	var loader : Loader;
@@ -59,6 +61,47 @@ class BitmapFont extends Resource {
 
 				glyphs.set(Std.parseInt(c.att.id), fc);
 			}
+		case 0x6F666E69:
+			// support for Hiero format
+			// https://github.com/libgdx/libgdx
+			entry.getBytes().toString().split('\n').iter(line -> {
+				var fields = line.split(' ');
+				var name = fields.shift();
+				var fieldsValue = fields.map(field -> {
+					var pair = field.split('=');
+					return { name: pair[0], value: pair[1] }; 
+				});
+				switch(name) {
+					case 'info' : fieldsValue.iter(function(field) switch(field.name) {
+						case 'size' : size = Std.parseInt(field.value);
+						case 'face' : name = field.value;
+						default : 
+					});
+					case 'common' : fieldsValue.iter(function(field) switch(field.name) {
+						case 'lineHeight' : lineHeight = Std.parseInt(field.value);
+						default : 
+					});
+					case 'page' :
+					case 'chars' :
+					case 'char' :
+						var id:Int = 0, x:Int = 0, y:Int = 0, width:Int = 0, height:Int = 0, xoffset:Int = 0, yoffset:Int = 0;
+						fieldsValue.iter(function(field) switch(field.name) {
+							case 'id' : id = Std.parseInt(field.value);
+							case 'x' : x = Std.parseInt(field.value);
+							case 'y' : y = Std.parseInt(field.value);
+							case 'width' : width = Std.parseInt(field.value);
+							case 'height' : height = Std.parseInt(field.value);
+							case 'xoffset' : xoffset = Std.parseInt(field.value);
+							case 'yoffset' : yoffset = Std.parseInt(field.value);
+							default : 
+						});
+
+						var t = tile.sub(x, y, width, height, xoffset, yoffset);
+						var fc = new h2d.Font.FontChar(t, width - 1);
+						glyphs.set(id, fc);
+					default :
+				}
+			});
 		case sign:
 			throw "Unknown font signature " + StringTools.hex(sign, 8);
 		}
