@@ -24,6 +24,10 @@ class PbrMaterialSetup extends MaterialSetup {
 
 	public var irrad(get,set) : h3d.scene.pbr.Irradiance;
 
+	public function new(?name="PBR") {
+		super(name);
+	}
+
 	function get_irrad() : h3d.scene.pbr.Irradiance {
 		return @:privateAccess h3d.Engine.getCurrent().resCache.get(h3d.scene.pbr.Irradiance);
 	}
