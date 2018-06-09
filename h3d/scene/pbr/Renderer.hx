@@ -10,6 +10,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	var slides = new h3d.pass.ScreenFx(new h3d.shader.pbr.Slides());
 	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.pbr.Lighting.Indirect());
+	var tonemap = new h3d.pass.ScreenFx(new h3d.shader.pbr.ToneMapping());
 	var pbrSun = new h3d.shader.pbr.Light.DirLight();
 	var pbrLightPass : h3d.mat.Pass;
 	var screenLightPass : h3d.pass.ScreenFx<h3d.shader.pbr.PropsImport>;
@@ -20,6 +21,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	public var displayMode : DisplayMode = Pbr;
 	public var irrad : Irradiance;
+	public var exposure(get,set) : Float;
 
 	var output = new h3d.pass.Output("mrt",[
 		Value("output.color"),
@@ -41,6 +43,9 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(defaultPass);
 		allPasses.push(shadows);
 	}
+
+	inline function get_exposure() return tonemap.shader.exposure;
+	inline function set_exposure(v:Float) return tonemap.shader.exposure = v;
 
 	function allocFTarget( name : String, size = 0, depth = true ) {
 		return ctx.textures.allocTarget(name, ctx.engine.width >> size, ctx.engine.height >> size, depth, RGBA32F);
@@ -141,6 +146,11 @@ class Renderer extends h3d.scene.Renderer {
 		draw("lights");
 		pbrProps.isScreen = true;
 
+		var ldr = allocTarget("ldrOutput",0,true);
+		setTarget(ldr);
+		tonemap.shader.hdrTexture = output;
+		tonemap.render();
+
 		draw("overlay");
 		resetTarget();
 
@@ -148,7 +158,7 @@ class Renderer extends h3d.scene.Renderer {
 		switch( displayMode ) {
 
 		case Pbr, MatCap:
-			fxaa.apply(output);
+			fxaa.apply(ldr);
 
 		case Slides:
 
