@@ -170,7 +170,7 @@ class BaseLibrary {
 		for( m in this.root.getAll("Objects.Model") ) {
 			for( p in m.getAll("Properties70.P") )
 				switch( p.props[0].toString() ) {
-				case "UDP3DSMAX":
+				case "UDP3DSMAX" | "Events":
 					var userProps = p.props[4].toString().split("&cr;&lf;");
 					for( p in userProps ) {
 						var pl = p.split("=");
