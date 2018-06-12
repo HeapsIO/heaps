@@ -12,7 +12,7 @@ class PropsTexture extends hxsl.Shader {
 		function fragment() {
 			var v = texture.get(calculatedUV);
 			output.metalness = v.r;
-			output.roughness = 1 - v.g * v.g;
+			output.roughness = 1 - v.g;
 			output.occlusion = v.b;
 		}
 	}

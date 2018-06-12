@@ -9,7 +9,7 @@ class PropsDefinition extends hxsl.Shader {
 		var metalness : Float;
 		var roughness : Float;
 		var occlusion : Float;
-		var specularColor : Vec3;
+		var pbrSpecularColor : Vec3;
 		var transformedPosition : Vec3;
 
 		var view : Vec3;
@@ -24,12 +24,6 @@ class PropsDefinition extends hxsl.Shader {
 				view = (cameraPosition - transformedPosition).normalize();
 				NdV = normal.dot(view).max(0.);
 			}
-		}
-
-		function calcG(v:Vec3) : Float {
-			var k = (roughness + 1);
-			k *= k;
-			return NdV / (NdV * (1 - k) + k);
 		}
 
 	}

@@ -11,16 +11,21 @@ class Indirect extends PropsDefinition {
 		@param var irrPower : Float;
 
 		function fragment() {
-			var diffuse = irrDiffuse.get(normal).rgb.pow(vec3(2.2)) * albedo;
-			var envSpec = textureCubeLod(irrSpecular, reflect(-view,normal), roughness * irrSpecularLevels).rgb.pow(vec3(2.2));
+			if( normal.dot(normal) <= 0 ) discard;
+
+			var F0 = pbrSpecularColor;
+			var F = F0 + (max(vec3(1 - roughness), F0) - F0) * exp2( ( -5.55473 * NdV - 6.98316) * NdV );
+
+			var diffuse = irrDiffuse.get(normal).rgb * albedo;
+			var envSpec = textureCubeLod(irrSpecular, reflect(-view,normal), roughness * irrSpecularLevels).rgb;
 			var envBRDF = irrLut.get(vec2(roughness, NdV));
-			var specular = envSpec * (specularColor * envBRDF.x + envBRDF.y);
+			var specular = envSpec * (F * envBRDF.x + envBRDF.y);
 			/*
 				// diffuse *= occlusion
 				Usually indirect diffuse is multiplied by occlusion, but since our occlusion mosly
 				comes from shadow map, we want to keep the diffuse term for colored shadows here.
 			*/
-			var indirect = (diffuse + specular) * irrPower;
+			var indirect = (diffuse * (1 - metalness) * (1. - F) + specular) * irrPower;
 			pixelColor.rgb += indirect;
 		}
 
@@ -37,10 +42,8 @@ class Direct extends PropsDefinition {
 		@const var doDiscard : Bool = true;
 
 		function fragment() {
-			if( pbrLightColor.dot(pbrLightColor) > 0.0001 ) {
-				var NdL = normal.dot(pbrLightDirection).max(0.);
-
-				if( NdL <= 0 && doDiscard ) discard;
+			var NdL = normal.dot(pbrLightDirection).max(0.);
+			if( pbrLightColor.dot(pbrLightColor) > 0.0001 && NdL > 0 ) {
 
 				var half = (pbrLightDirection + view).normalize();
 				var NdH = normal.dot(half).max(0.);
@@ -51,7 +54,7 @@ class Direct extends PropsDefinition {
 
 				// ------------- DIRECT LIGHT -------------------------
 
-				var F0 = metalness;
+				var F0 = pbrSpecularColor;
 				var diffuse = albedo * NdL / PI;
 
 				// General Cook-Torrance formula for microfacet BRDF
@@ -70,14 +73,18 @@ class Direct extends PropsDefinition {
 				// Schlick approx
 				// pow 5 optimized with Spherical Gaussian
 				// var F = F0 + (1 - F0) * pow(1 - v.dot(h).min(1.), 5.);
-				var F = F0 + (1.01 - F0) * exp2( ( -5.55473 * VdH - 6.98316) * VdH );
+				var F = F0 + (1. - F0) * exp2( ( -5.55473 * VdH - 6.98316) * VdH );
 
 				// G = geometric attenuation
 				// Schlick (modified for UE4 with k=alpha/2)
-				var G = calcG(pbrLightDirection) * calcG(view);
+				// k = (rough + 1)² / 8
+				var k = (roughness + 1);
+				k *= k;
+				k *= 0.125;
+				var G = (NdV / (NdV * (1 - k) + k)) * (NdL / (NdL * (1 - k) + k));
 
-				var specular = if( NdL > 0.1 && NdV > 0.1 ) (D * F * G / (4 * NdL * NdV)).max(0.) else 0.;
-				direct += (diffuse + specular) * pbrLightColor;
+				var specular = (D * F * G / (4 * NdL * NdV)).max(0.);
+				direct += mix(diffuse * (1 - metalness), specular, F) * pbrLightColor;
 				direct *= occlusion;
 				pixelColor.rgb += direct;
 			} else if( doDiscard )
