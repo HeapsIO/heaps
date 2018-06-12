@@ -52,8 +52,6 @@ class Pbr extends SampleApp {
 		set(4, hxd.Res.top);
 		set(5, hxd.Res.bottom);
 
-		envMap = hxd.Res.defaultEnv.toTexture();
-
 		var axis = new h3d.scene.Graphics(s3d);
 		axis.lineStyle(2, 0xFF0000);
 		axis.lineTo(2, 0, 0);
