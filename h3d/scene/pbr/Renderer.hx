@@ -94,6 +94,8 @@ class Renderer extends h3d.scene.Renderer {
 		setTargets([albedo,normal,pbr]);
 		clear(0, 1);
 		output.draw(getSort("default", true));
+		output.draw(getSort("alpha"));
+		output.draw(get("additive"));
 
 		setTarget(albedo);
 		draw("albedo");
