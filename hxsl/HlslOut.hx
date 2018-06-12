@@ -290,6 +290,8 @@ class HlslOut {
 				decl("float4 packNormal( float3 n ) { return float4((n + 1.) * 0.5,1.); }");
 			case UnpackNormal:
 				decl("float3 unpackNormal( float4 p ) { return normalize(p.xyz * 2. - 1.); }");
+			case Atan:
+				decl("float atan( float y, float x ) { return atan2(y,x); }");
 			default:
 			}
 			add(GLOBALS.get(g));
