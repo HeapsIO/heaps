@@ -7,8 +7,7 @@ class Pbr extends SampleApp {
 	var sphere : h3d.scene.Mesh;
 	var grid : h3d.scene.Object;
 
-	var envMap : h3d.mat.Texture;
-	var irrad : h3d.scene.pbr.Irradiance;
+	var env : h3d.scene.pbr.Environment;
 	var renderer : h3d.scene.pbr.Renderer;
 
 	function new() {
@@ -40,7 +39,7 @@ class Pbr extends SampleApp {
 		fui.verticalSpacing = 5;
 		fui.isVertical = true;
 
-		envMap = new h3d.mat.Texture(512, 512, [Cube]);
+		var envMap = new h3d.mat.Texture(512, 512, [Cube]);
 		envMap.name = "envMap";
 		inline function set(face:Int, res:hxd.res.Image) {
 			var pix = res.getPixels();
@@ -52,6 +51,8 @@ class Pbr extends SampleApp {
 		set(3, hxd.Res.left);
 		set(4, hxd.Res.top);
 		set(5, hxd.Res.bottom);
+
+		envMap = hxd.Res.defaultEnv.toTexture();
 
 		var axis = new h3d.scene.Graphics(s3d);
 		axis.lineStyle(2, 0xFF0000);
@@ -67,22 +68,22 @@ class Pbr extends SampleApp {
 		axis.visible = false;
 		axis.material.mainPass.depthWrite = true;
 
-		irrad = new h3d.scene.pbr.Irradiance(envMap);
-		irrad.compute();
+		env = new h3d.scene.pbr.Environment(envMap);
+		env.compute();
 
 		renderer = cast(s3d.renderer, h3d.scene.pbr.Renderer);
-		renderer.irrad = irrad;
+		renderer.env = env;
 
-		var cubeShader = bg.material.mainPass.addShader(new h3d.shader.pbr.CubeLod(envMap));
+		var cubeShader = bg.material.mainPass.addShader(new h3d.shader.pbr.CubeLod(env.env));
 		var light = new h3d.scene.pbr.PointLight(s3d);
 		light.setPos(30, 10, 40);
 		light.range = 100;
 		light.power = 2;
 
 		var pbrValues = new h3d.shader.pbr.PropsValues(0.2,0.5,0);
-		hue = 0.2;
-		saturation = 0.2;
-		brightness = 0;
+		hue = 0;
+		saturation = 0;
+		brightness = 0.2;
 
 		function addSphere(x,y) {
 			var sphere = new h3d.scene.Mesh(sp, s3d);
@@ -95,20 +96,20 @@ class Pbr extends SampleApp {
 		sphere.material.mainPass.addShader(pbrValues);
 
 		grid = new h3d.scene.Object(s3d);
-		var max = 5;
+		var max = 8;
 		for( x in 0...max )
 			for( y in 0...max ) {
 				var s = addSphere(x - (max - 1) * 0.5, y - (max - 1) * 0.5);
 				grid.addChild(s);
 				s.scale(0.4);
-				s.material.mainPass.addShader(new h3d.shader.pbr.PropsValues( Math.pow(x / (max - 1), 1), Math.pow(y / (max - 1), 1)));
+				s.material.mainPass.addShader(new h3d.shader.pbr.PropsValues( 1 - x / (max - 1), 1 - y / (max - 1) ));
 			}
 		grid.visible = false;
 
 		// camera
 		addSlider("Exposure", function() return renderer.exposure, function(v) renderer.exposure = v, -3, 3);
+		addSlider("Sky", function() return env.power, function(v) env.power = v, 0, 3);
 		addSlider("Light", function() return light.power, function(v) light.power = v, 0, 10);
-
 
 		// material color
 		color = new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFF, 30, 30), fui);
@@ -136,8 +137,10 @@ class Pbr extends SampleApp {
 		var prims : Array<h3d.prim.Primitive> = [sp, cube];
 		addChoice("Prim", ["Sphere","Cube"], function(i) sphere.primitive = prims[i], prims.indexOf(sphere.primitive));
 
-		addChoice("EnvMap", ["Default", "IDiff", "ISpec"], function(i) cubeShader.texture = [envMap, irrad.diffuse, irrad.specular][i]);
-		addSlider("EnvLod", function() return cubeShader.lod, function(v) cubeShader.lod = v, 0, irrad.specLevels);
+		addChoice("EnvMap", ["Default", "IDiff", "ISpec"], function(i) {
+			cubeShader.texture = [env.env, env.diffuse, env.specular][i];
+		});
+		addSlider("EnvLod", function() return cubeShader.lod, function(v) cubeShader.lod = v, 0, env.specLevels);
 
 	}
 

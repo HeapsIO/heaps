@@ -22,28 +22,28 @@ private typedef DefaultProps = {
 
 class PbrMaterialSetup extends MaterialSetup {
 
-	public var irrad(get,set) : h3d.scene.pbr.Irradiance;
+	public var env(get,set) : h3d.scene.pbr.Environment;
 
 	public function new(?name="PBR") {
 		super(name);
 	}
 
-	function get_irrad() : h3d.scene.pbr.Irradiance {
-		return @:privateAccess h3d.Engine.getCurrent().resCache.get(h3d.scene.pbr.Irradiance);
+	function get_env() : h3d.scene.pbr.Environment {
+		return @:privateAccess h3d.Engine.getCurrent().resCache.get(h3d.scene.pbr.Environment);
 	}
 
-	function set_irrad( i : h3d.scene.pbr.Irradiance ) {
+	function set_env( i : h3d.scene.pbr.Environment ) {
 		var cache = @:privateAccess h3d.Engine.getCurrent().resCache;
 		if( i == null )
-			cache.remove(h3d.scene.pbr.Irradiance);
+			cache.remove(h3d.scene.pbr.Environment);
 		else
-			cache.set(h3d.scene.pbr.Irradiance, i);
+			cache.set(h3d.scene.pbr.Environment, i);
 		return i;
 	}
 
 	override function createRenderer() : h3d.scene.Renderer {
-		var irrad = irrad;
-		if( irrad == null ) {
+		var env = env;
+		if( env == null ) {
 			var envMap = new h3d.mat.Texture(4,4,[Cube]);
 			var pix = hxd.Pixels.alloc(envMap.width, envMap.height, RGBA);
 			var COLORS = [0xC08080,0xA08080,0x80C080,0x80A080,0x8080C0,0x808080];
@@ -51,11 +51,11 @@ class PbrMaterialSetup extends MaterialSetup {
 				pix.clear(COLORS[i]);
 				envMap.uploadPixels(pix,0,i);
 			}
-			irrad = new h3d.scene.pbr.Irradiance(envMap);
-			irrad.compute();
-			this.irrad = irrad;
+			env = new h3d.scene.pbr.Environment(envMap);
+			env.compute();
+			this.env = env;
 		}
-		return new h3d.scene.pbr.Renderer(irrad);
+		return new h3d.scene.pbr.Renderer(env);
 	}
 
 	override function createLightSystem() {

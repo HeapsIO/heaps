@@ -88,9 +88,8 @@ class Renderer {
 		ctx.engine.clear(color, depth, stencil);
 	}
 
-	// for legacy purposes
-	inline function allocTarget( name : String, size = 0, depth = true ) {
-		return ctx.textures.allocTarget(name, ctx.engine.width >> size, ctx.engine.height >> size, depth);
+	inline function allocTarget( name : String, size = 0, depth = true, ?format ) {
+		return ctx.textures.allocTarget(name, ctx.engine.width >> size, ctx.engine.height >> size, depth, format);
 	}
 
 	function copy( from, to, ?blend ) {

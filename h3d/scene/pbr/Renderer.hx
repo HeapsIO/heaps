@@ -1,8 +1,21 @@
 package h3d.scene.pbr;
 
 enum DisplayMode {
+	/*
+		Full PBR display
+	*/
 	Pbr;
+	/*
+		Set Albedo = 0x808080
+	*/
+	Env;
+	/*
+		Set Albedo = 0x808080, Roughness = 0, Metalness = 1
+	*/
 	MatCap;
+	/*
+		Debug slides
+	*/
 	Slides;
 }
 
@@ -20,7 +33,7 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrProps = new h3d.shader.pbr.PropsImport();
 
 	public var displayMode : DisplayMode = Pbr;
-	public var irrad : Irradiance;
+	public var env : Environment;
 	public var exposure(get,set) : Float;
 
 	var output = new h3d.pass.Output("mrt",[
@@ -29,9 +42,9 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Const(0)]),
 	]);
 
-	public function new(irrad) {
+	public function new(env) {
 		super();
-		this.irrad = irrad;
+		this.env = env;
 		shadows.bias = 0.0;
 		shadows.power = 1000;
 		shadows.blur.passes = 1;
@@ -46,10 +59,6 @@ class Renderer extends h3d.scene.Renderer {
 
 	inline function get_exposure() return tonemap.shader.exposure;
 	inline function set_exposure(v:Float) return tonemap.shader.exposure = v;
-
-	function allocFTarget( name : String, size = 0, depth = true ) {
-		return ctx.textures.allocTarget(name, ctx.engine.width >> size, ctx.engine.height >> size, depth, RGBA32F);
-	}
 
 	override function debugCompileShader(pass:h3d.mat.Pass) {
 		output.setContext(this.ctx);
@@ -79,8 +88,8 @@ class Renderer extends h3d.scene.Renderer {
 
 		shadows.draw(get("shadow"));
 
-		var albedo = allocFTarget("albedo");
-		var normal = allocFTarget("normal",0,false);
+		var albedo = allocTarget("albedo");
+		var normal = allocTarget("normalDepth",0,false,RGBA32F);
 		var pbr = allocTarget("pbr",0,false);
 		setTargets([albedo,normal,pbr]);
 		clear(0, 1);
@@ -89,13 +98,16 @@ class Renderer extends h3d.scene.Renderer {
 		setTarget(albedo);
 		draw("albedo");
 
+		if( displayMode == Env )
+			clear(0xFF404040);
+
 		if( displayMode == MatCap ) {
-			clear(0x808080); // gray albedo
+			clear(0xFFFFFFFF);
 			setTarget(pbr);
-			clear(0xFF00FF); // metal=1, rough=0, occlusion=1
+			clear(0x00D030FF);
 		}
 
-		var output = allocTarget("hdrOutput", 0, true);
+		var output = allocTarget("hdrOutput", 0, true, RGBA16F);
 		setTarget(output);
 		if( ctx.engine.backgroundColor != null )
 			clear(ctx.engine.backgroundColor);
@@ -106,11 +118,11 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
 		pbrOut.shader.cameraPosition.load(ctx.camera.pos);
-		pbrOut.shader.irrPower = irrad.power;
-		pbrOut.shader.irrLut = irrad.lut;
-		pbrOut.shader.irrDiffuse = irrad.diffuse;
-		pbrOut.shader.irrSpecular = irrad.specular;
-		pbrOut.shader.irrSpecularLevels = irrad.specLevels;
+		pbrOut.shader.irrPower = env.power;
+		pbrOut.shader.irrLut = env.lut;
+		pbrOut.shader.irrDiffuse = env.diffuse;
+		pbrOut.shader.irrSpecular = env.specular;
+		pbrOut.shader.irrSpecularLevels = env.specLevels;
 
 		var ls = getLightSystem();
 		if( ls.shadowLight == null ) {
@@ -129,7 +141,9 @@ class Renderer extends h3d.scene.Renderer {
 		}
 
 		pbrOut.setGlobals(ctx);
+		pbrDirect.doDiscard = false;
 		pbrOut.render();
+		pbrDirect.doDiscard = true;
 
 		var ls = Std.instance(ls, LightSystem);
 		var lpass = screenLightPass;
@@ -157,7 +171,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		switch( displayMode ) {
 
-		case Pbr, MatCap:
+		case Pbr, Env, MatCap:
 			fxaa.apply(ldr);
 
 		case Slides:
