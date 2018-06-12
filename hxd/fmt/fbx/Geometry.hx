@@ -49,7 +49,7 @@ class Geometry {
 		var vl = getVertices();
 		var vcount = Std.int(vl.length / 3);
 		if( g.getGeomMatrix() != null || this.getGeomMatrix() != null )
-			throw "TODO";
+			throw "Cannot merge models with geometric transform";
 
 		// merge vertices
 		for( v in g.getVertices() )
