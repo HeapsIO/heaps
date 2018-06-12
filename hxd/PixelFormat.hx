@@ -9,4 +9,6 @@ enum PixelFormat {
 	ALPHA8;
 	ALPHA16F;
 	ALPHA32F;
+	SRGB;
+	SRGB_ALPHA;
 }

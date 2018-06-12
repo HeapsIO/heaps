@@ -21,6 +21,10 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var RGBA8	   = 0x8058;
 	static inline var BGRA 		 = 0x80E1;
 	static inline var HALF_FLOAT = 0x140B;
+	static inline var SRGB       = 0x8C40;
+	static inline var SRGB8      = 0x8C41;
+	static inline var SRGB_ALPHA = 0x8C42;
+	static inline var SRGB8_ALPHA = 0x8C43;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -639,9 +643,10 @@ class GlDriver extends Driver {
 
 	function getChannels( t : Texture ) {
 		return switch( t.internalFmt ) {
-		case GL2.RGBA32F, GL2.RGBA16F: GL.RGBA;
+		case GL2.RGBA32F, GL2.RGBA16F, GL2.SRGB_ALPHA, GL2.SRGB8_ALPHA: GL.RGBA;
 		case GL2.ALPHA16F, GL2.ALPHA32F: GL.ALPHA;
 		case GL2.RGBA8: GL2.BGRA;
+		case GL2.SRGB, GL2.SRGB8: GL.RGB;
 		case GL.RGBA: GL.RGBA;
 		case GL.ALPHA: GL.ALPHA;
 		default: throw "Invalid format " + t.internalFmt;
@@ -652,6 +657,7 @@ class GlDriver extends Driver {
 		return switch( fmt ) {
 		case RGBA, ALPHA8: true;
 		case RGBA16F, RGBA32F, ALPHA16F, ALPHA32F: hasFeature(FloatTextures);
+		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
 		default: false;
 		}
 	}
@@ -679,6 +685,10 @@ class GlDriver extends Driver {
 			tt.internalFmt = GL2.ALPHA32F;
 		case BGRA:
 			tt.internalFmt = GL2.RGBA8;
+		case SRGB:
+			tt.internalFmt = GL2.SRGB8;
+		case SRGB_ALPHA:
+			tt.internalFmt = GL2.SRGB8_ALPHA;
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
@@ -1204,12 +1214,12 @@ class GlDriver extends Driver {
 		return switch( f ) {
 		#if hl
 
-		case StandardDerivatives, FloatTextures, MultipleRenderTargets, Queries:
+		case StandardDerivatives, FloatTextures, MultipleRenderTargets, Queries, SRGBTextures:
 			true;
 
 		#else
 
-		case StandardDerivatives, MultipleRenderTargets if( glES >= 3 ):
+		case StandardDerivatives, MultipleRenderTargets, SRGBTextures if( glES >= 3 ):
 			true;
 
 		case FloatTextures if( glES >= 3 ):
@@ -1221,6 +1231,9 @@ class GlDriver extends Driver {
 		case FloatTextures:
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null &&
 			gl.getExtension('OES_texture_half_float') != null && gl.getExtension('OES_texture_half_float_linear') != null;
+
+		case SRGBTextures:
+			gl.getExtension('EXT_sRGB') != null;
 
 		case MultipleRenderTargets:
 			mrtExt != null || (mrtExt = gl.getExtension('WEBGL_draw_buffers')) != null;

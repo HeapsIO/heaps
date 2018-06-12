@@ -83,6 +83,10 @@ enum Feature {
 		Does it supports query objects API.
 	*/
 	Queries;
+	/*
+		Supports gamma correct textures
+	*/
+	SRGBTextures;
 }
 
 enum QueryKind {

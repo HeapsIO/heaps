@@ -374,7 +374,7 @@ class Pixels {
 	public static function bytesPerPixel( format : PixelFormat ) {
 		return switch( format ) {
 		case ALPHA8: 1;
-		case ARGB, BGRA, RGBA: 4;
+		case ARGB, BGRA, RGBA, SRGB, SRGB_ALPHA: 4;
 		case RGBA16F: 8;
 		case RGBA32F: 16;
 		case ALPHA16F: 2;
@@ -394,7 +394,7 @@ class Pixels {
 			[1, 2, 3, 0][channel.toInt()];
 		case BGRA:
 			[2, 1, 0, 3][channel.toInt()];
-		case RGBA:
+		case RGBA, SRGB, SRGB_ALPHA:
 			channel.toInt();
 		case RGBA16F:
 			channel.toInt() * 2;
