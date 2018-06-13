@@ -201,7 +201,10 @@ class GlDriver extends Driver {
 			shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
 		}
 
-		#if !js
+		#if js
+		// make sure to enable extensions
+		makeFeatures();
+		#else
 		gl.enable(GL.TEXTURE_CUBE_MAP_SEAMLESS);
 		gl.pixelStorei(GL.PACK_ALIGNMENT, 1);
 		gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1);
@@ -1210,15 +1213,29 @@ class GlDriver extends Driver {
 	}
 
 	override function hasFeature( f : Feature ) : Bool {
-		return switch( f ) {
-		#if hl
+		#if js
+		return features.get(f);
+		#else
+		return true;
+		#end
+	}
 
-		case StandardDerivatives, FloatTextures, MultipleRenderTargets, Queries, SRGBTextures:
+	#if js
+	var features : Map<Feature,Bool> = new Map();
+	function makeFeatures() {
+		for( f in Type.allEnums(Feature) )
+			features.set(f,checkFeature(f));
+	}
+	function checkFeature( f : Feature ) {
+		return switch( f ) {
+
+		case HardwareAccelerated, AllocDepthBuffer:
 			true;
 
-		#else
-
 		case StandardDerivatives, MultipleRenderTargets, SRGBTextures if( glES >= 3 ):
+			true;
+
+		case ShaderModel3 if( glES >= 3 ):
 			true;
 
 		case FloatTextures if( glES >= 3 ):
@@ -1237,16 +1254,11 @@ class GlDriver extends Driver {
 		case MultipleRenderTargets:
 			mrtExt != null || (mrtExt = gl.getExtension('WEBGL_draw_buffers')) != null;
 
-		case Queries:
+		default:
 			false;
-
-		#end
-		case HardwareAccelerated:
-			true;
-		case AllocDepthBuffer:
-			true;
 		}
 	}
+	#end
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
 		if( curTarget == null )

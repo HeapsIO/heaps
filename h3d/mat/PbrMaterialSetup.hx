@@ -42,6 +42,13 @@ class PbrMaterialSetup extends MaterialSetup {
 	}
 
 	override function createRenderer() : h3d.scene.Renderer {
+		#if js
+		// fallback to default renderer (prevent errors)
+		if( !h3d.Engine.getCurrent().driver.hasFeature(ShaderModel3) ) {
+			js.Browser.console.log("Could not initialize PBR Driver: WebGL2 required");
+			return super.createRenderer();
+		}
+		#end
 		var env = env;
 		if( env == null ) {
 			var envMap = new h3d.mat.Texture(4,4,[Cube]);

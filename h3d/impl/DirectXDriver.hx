@@ -660,10 +660,10 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function hasFeature(f:Feature) {
 		return switch(f) {
-		case StandardDerivatives, FloatTextures, AllocDepthBuffer, HardwareAccelerated, MultipleRenderTargets, SRGBTextures:
-			true;
 		case Queries:
 			false;
+		default:
+			true;
 		};
 	}
 

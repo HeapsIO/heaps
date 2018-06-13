@@ -25,6 +25,13 @@ class Pbr extends SampleApp {
 		return;
 		#end
 
+		#if js
+		if( !engine.driver.hasFeature(ShaderModel3) ) {
+			new h2d.Text(getFont(), s2d).text = "WebGL 2.0 support required and not available on this browser.";
+			return;
+		}
+		#end
+
 		var sp = new h3d.prim.Sphere(1, 128, 128);
 		sp.addNormals();
 		sp.addUVs();

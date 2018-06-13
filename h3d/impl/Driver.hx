@@ -87,6 +87,10 @@ enum Feature {
 		Supports gamma correct textures
 	*/
 	SRGBTextures;
+	/*
+		Allows advanced shader operations (webgl2, opengl3+, directx 9.0c+)
+	*/
+	ShaderModel3;
 }
 
 enum QueryKind {
