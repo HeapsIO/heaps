@@ -25,6 +25,7 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var SRGB8      = 0x8C41;
 	static inline var SRGB_ALPHA = 0x8C42;
 	static inline var SRGB8_ALPHA = 0x8C43;
+	static inline var DEPTH_COMPONENT24 = 0x81A6;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -130,15 +131,15 @@ class GlDriver extends Driver {
 	#end
 
 	var commonFB : Framebuffer;
-	var curAttribs : Int;
+	var curAttribs : Int = 0;
 	var curShader : CompiledProgram;
 	var curBuffer : h3d.Buffer;
 	var curIndexBuffer : IndexBuffer;
-	var curMatBits : Int;
-	var curStOpBits : Int;
-	var curStFrBits : Int;
-	var curStBrBits : Int;
-	var curStEnabled : Bool;
+	var curMatBits : Int = -1;
+	var curStOpBits : Int = -1;
+	var curStFrBits : Int = -1;
+	var curStBrBits : Int = -1;
+	var curStEnabled : Bool = false;
 	var defStencil : Stencil;
 	var programs : Map<Int, CompiledProgram>;
 	var frame : Int;
@@ -161,7 +162,7 @@ class GlDriver extends Driver {
 	public function new(antiAlias=0) {
 		#if js
 		canvas = @:privateAccess hxd.Stage.getInstance().canvas;
-		var options = {alpha:false,antialias:antiAlias>0};
+		var options = {alpha:false,stencil:true,antialias:antiAlias>0};
 		gl = cast canvas.getContext("webgl2",options);
 		if( gl == null )
 			gl = cast canvas.getContextWebGL(options);
@@ -177,8 +178,6 @@ class GlDriver extends Driver {
 		#end
 		commonFB = gl.createFramebuffer();
 		programs = new Map();
-		curAttribs = 0;
-		curMatBits = -1;
 		defStencil = new Stencil();
 
 		var v : String = gl.getParameter(GL.VERSION);
@@ -730,7 +729,7 @@ class GlDriver extends Driver {
 	override function allocDepthBuffer( b : h3d.mat.DepthBuffer ) : DepthBuffer {
 		var r = gl.createRenderbuffer();
 		gl.bindRenderbuffer(GL.RENDERBUFFER, r);
-		gl.renderbufferStorage(GL.RENDERBUFFER, #if hl GL.DEPTH_COMPONENT24 #else GL.DEPTH_COMPONENT16 #end, b.width, b.height);
+		gl.renderbufferStorage(GL.RENDERBUFFER, #if js glES >= 3 ? GL2.DEPTH_COMPONENT24 : GL.DEPTH_COMPONENT16 #else GL.DEPTH_COMPONENT24 #end, b.width, b.height);
 		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 		return { r : r #if multidriver, driver : this #end };
 	}
