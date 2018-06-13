@@ -260,7 +260,7 @@ class Library {
 
 	function makeMaterial( model : Model, mid : Int, loadTexture : String -> h3d.mat.Texture ) {
 		var m = header.materials[mid];
-		var mat = new h3d.mat.Material();
+		var mat = h3d.mat.MaterialSetup.current.createMaterial();
 		mat.name = m.name;
 		if( m.diffuseTexture != null ) {
 			mat.texture = loadTexture(m.diffuseTexture);
@@ -271,23 +271,6 @@ class Library {
 		if( m.normalMap != null )
 			mat.normalMap = loadTexture(m.normalMap);
 		mat.blendMode = m.blendMode;
-		mat.mainPass.culling = m.culling;
-		if( m.killAlpha != null ) {
-			var t = mat.mainPass.getShader(h3d.shader.Texture);
-			t.killAlpha = true;
-			t.killAlphaThreshold = m.killAlpha;
-		}
-		if( m.props != null && m.props.indexOf(HasMaterialFlags) >= 0 ) {
-			if( m.flags.has(HasLighting) ) mat.mainPass.enableLights = true;
-			if( m.flags.has(CastShadows) ) mat.castShadows = true;
-			if( m.flags.has(ReceiveShadows) ) mat.receiveShadows = true;
-			if( m.flags.has(IsVolumeDecal) ) {
-				var s = h3d.mat.Defaults.makeVolumeDecal(header.geometries[model.geometry].bounds);
-				mat.mainPass.addShader(s);
-			}
-			if( m.flags.has(TextureWrap) )
-				mat.texture.wrap = Repeat;
-		}
 		return mat;
 	}
 

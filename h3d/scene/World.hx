@@ -220,7 +220,7 @@ class World extends Object {
 		m.blend = getBlend(rt);
 		m.killAlpha = null;
 		m.mat = mat;
-		m.culling = mat.culling != None;
+		m.culling = true;
 		m.updateBits();
 		textures.set(texturePath, m);
 		return m;

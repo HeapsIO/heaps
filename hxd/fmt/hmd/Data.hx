@@ -40,7 +40,6 @@ typedef Index<T> = Int;
 
 enum Property<T> {
 	CameraFOVY( v : Float ) : Property<Float>;
-	HasMaterialFlags;
 	HasExtraTextures;
 }
 
@@ -119,23 +118,7 @@ class Geometry {
 	}
 }
 
-enum MaterialFlag {
-	HasLighting;
-	CastShadows;
-	ReceiveShadows;
-	TextureWrap;
-	IsVolumeDecal;
-}
-
 class Material {
-
-	public static var DEFAULT_FLAGS = {
-		var f = new haxe.EnumFlags();
-		f.set(HasLighting);
-		f.set(CastShadows);
-		f.set(ReceiveShadows);
-		f;
-	}
 
 	public var name : String;
 	public var props : Properties;
@@ -143,9 +126,6 @@ class Material {
 	public var specularTexture : Null<String>;
 	public var normalMap : Null<String>;
 	public var blendMode : h3d.mat.BlendMode;
-	public var culling : h3d.mat.Data.Face;
-	public var killAlpha : Null<Float>;
-	public var flags : haxe.EnumFlags<MaterialFlag>;
 
 	public function new() {
 	}

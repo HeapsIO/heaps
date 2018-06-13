@@ -15,7 +15,7 @@ class Writer {
 		switch( p ) {
 		case CameraFOVY(v):
 			out.writeFloat(v);
-		case HasMaterialFlags, HasExtraTextures:
+		case HasExtraTextures:
 		}
 	}
 
@@ -132,10 +132,8 @@ class Writer {
 			writeName(m.name);
 			writeName(m.diffuseTexture);
 			out.writeByte(m.blendMode.getIndex());
-			out.writeByte(m.culling.getIndex());
-			writeFloat(m.killAlpha == null ? 1 : m.killAlpha);
-			if( m.props != null && m.props.indexOf(HasMaterialFlags) >= 0 )
-				out.writeInt32(m.flags.toInt());
+			out.writeByte(1); // old culling back
+			writeFloat(1); // old killalpha
 			if( m.props != null && m.props.indexOf(HasExtraTextures) >= 0 ) {
 				writeName(m.specularTexture);
 				writeName(m.normalMap);

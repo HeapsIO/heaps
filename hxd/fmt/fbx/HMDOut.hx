@@ -527,7 +527,6 @@ class HMDOut extends BaseLibrary {
 					hasNormalMap = m.normalMap != null;
 					continue;
 				}
-				var hasHeapsProps = false;
 				var mat = new Material();
 				mid = d.materials.length;
 				mids.push(mid);
@@ -535,9 +534,7 @@ class HMDOut extends BaseLibrary {
 				d.materials.push(mat);
 
 				mat.name = m.getName();
-				mat.culling = Back; // don't use FBX Culling infos (OFF by default)
 				mat.blendMode = null;
-				mat.flags = Material.DEFAULT_FLAGS;
 
 				// if there's a slight amount of opacity on the material
 				// it's usually meant to perform additive blending on 3DSMax
@@ -547,38 +544,7 @@ class HMDOut extends BaseLibrary {
 					case "Opacity":
 						var v = pval.toFloat();
 						if( v < 1 && v > 0.98 && mat.blendMode == null ) mat.blendMode = Add;
-					case pname:
-						if( StringTools.startsWith(pname, "3dsMax|heaps|_") ) {
-							hasHeapsProps = true;
-							switch( pname.substr(14) ) {
-							case "blend":
-								mat.blendMode = ([null, None, Alpha, Add, SoftAdd] : Array<h2d.BlendMode>)[pval.toInt() - 1];
-							case "shadows":
-								switch( pval.toInt() ) {
-								case 2:
-									mat.flags.unset(CastShadows);
-									mat.flags.unset(ReceiveShadows);
-								case 3:
-									mat.flags.unset(CastShadows);
-								case 4:
-									mat.flags.unset(ReceiveShadows);
-								}
-							case "lighting":
-								if( pval.toInt() == 0 ) mat.flags.unset(HasLighting);
-							case "twoSided":
-								if( pval.toInt() == 1 ) mat.culling = None;
-							case "killAlpha":
-								if( pval.toInt() == 1 ) mat.killAlpha = 1;
-							case "killAlphaThreshold":
-								if( mat.killAlpha != null ) mat.killAlpha = pval.toFloat();
-							case "decal":
-								if( pval.toInt() == 1 ) mat.flags.set(IsVolumeDecal);
-							case "wrap":
-								if( pval.toInt() == 1 ) mat.flags.set(TextureWrap);
-							case name:
-								throw "Unknown heaps property " + name;
-							}
-						}
+					default:
 					}
 				}
 
@@ -616,10 +582,6 @@ class HMDOut extends BaseLibrary {
 					}
 				}
 
-				if( hasHeapsProps ) {
-					if( mat.props == null ) mat.props = [];
-					mat.props.push(HasMaterialFlags);
-				}
 				if( mat.blendMode == null ) mat.blendMode = None;
 			}
 
@@ -652,7 +614,6 @@ class HMDOut extends BaseLibrary {
 			if( mids.length == 0 ) {
 				var mat = new Material();
 				mat.blendMode = None;
-				mat.culling = Back;
 				mat.name = "default";
 				var mid = d.materials.length;
 				d.materials.push(mat);

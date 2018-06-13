@@ -17,8 +17,6 @@ class Reader {
 		switch( i.readByte() ) {
 		case 0:
 			return CameraFOVY(i.readFloat());
-		case 1:
-			return HasMaterialFlags;
 		case 2:
 			return HasExtraTextures;
 		case unk:
@@ -142,11 +140,8 @@ class Reader {
 			m.name = readName();
 			m.diffuseTexture = readName();
 			m.blendMode = BLEND[i.readByte()];
-			m.culling = CULLING[i.readByte()];
-			m.killAlpha = i.readFloat();
-			if( m.killAlpha == 1 ) m.killAlpha = null;
-			if( m.props != null && m.props.indexOf(HasMaterialFlags) >= 0 )
-				m.flags = haxe.EnumFlags.ofInt(i.readInt32());
+			i.readByte(); // old culling = 1
+			i.readFloat(); // old killalpha = 1
 			if( m.props != null && m.props.indexOf(HasExtraTextures) >= 0 ) {
 				m.specularTexture = readName();
 				m.normalMap = readName();
