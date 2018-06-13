@@ -273,9 +273,9 @@ class Environment  {
 		screen.shader.samplesBits = sampleBits;
 
 		var engine = h3d.Engine.getCurrent();
-		engine.driver.setRenderTarget(lut);
+		engine.pushTarget(lut);
 		screen.render();
-		engine.driver.setRenderTarget(null);
+		engine.popTarget();
 		screen.dispose();
 	}
 
@@ -290,8 +290,9 @@ class Environment  {
 
 		for( i in 0...6 ) {
 			screen.shader.faceMatrix = getCubeMatrix(i);
-			engine.driver.setRenderTarget(diffuse, i);
+			engine.pushTarget(diffuse, i);
 			screen.render();
+			engine.popTarget();
 		}
 
 		screen.shader.isSpecular = true;
@@ -309,11 +310,11 @@ class Environment  {
 				screen.shader.cubeSize = size;
 				screen.shader.cubeScaleFactor = size == 1 ? 0 : (size * size) / Math.pow(size - 1, 3);
 				screen.shader.roughness = j / specLevels;
-				engine.driver.setRenderTarget(specular, i, j);
+				engine.pushTarget(specular, i, j);
 				screen.render();
+				engine.popTarget();
 			}
 		}
-		engine.driver.setRenderTarget(null);
 	}
 
 }

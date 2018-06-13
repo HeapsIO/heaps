@@ -104,9 +104,9 @@ class Renderer extends h3d.scene.Renderer {
 			clear(0xFF404040);
 
 		if( displayMode == MatCap ) {
-			clear(0xFFFFFFFF);
+			clear(0xFF808080);
 			setTarget(pbr);
-			clear(0x00D030FF);
+			clear(0x00FF80FF);
 		}
 
 		var output = allocTarget("hdrOutput", 0, true, RGBA16F);
