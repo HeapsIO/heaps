@@ -27,10 +27,11 @@ class Stencil extends hxd.App {
 			obj.material.color.setColor(0x55C8FF);
 
 			var p = obj.material.mainPass;
+			p.setPassName("alpha");
 			var s = new h3d.mat.Stencil();
 			p.culling = Front;
 			p.enableLights = true;
-			s.setFunc(Both, Equal, 1, 0xFF);
+			s.setFunc(Both, LessEqual, 1, 0xFF);
 			s.setMask(Both, 0x00);
 			p.stencil = s;
 		}
@@ -46,7 +47,7 @@ class Stencil extends hxd.App {
 			var p = obj.material.mainPass;
 			var s = new h3d.mat.Stencil();
 			p.depthWrite = false;
-			p.stencil = new h3d.mat.Stencil();
+			
 			s.setFunc(Both, Always, 1, 0xFF);
 			s.setOp(Both, Keep, Keep, Replace);
 			s.setMask(Both, 0xFF);
