@@ -1,22 +1,36 @@
 package h3d.scene.pbr;
 
-enum DisplayMode {
+@:enum abstract DisplayMode(String) {
 	/*
 		Full PBR display
 	*/
-	Pbr;
+	var Pbr = "Pbr";
 	/*
 		Set Albedo = 0x808080
 	*/
-	Env;
+	var Env = "Env";
 	/*
 		Set Albedo = 0x808080, Roughness = 0, Metalness = 1
 	*/
-	MatCap;
+	var MatCap = "MatCap";
 	/*
 		Debug slides
 	*/
-	Slides;
+	var Debug = "Debug";
+}
+
+@:enum abstract SkyMode(String) {
+	var Hide = "Hide";
+	var Env = "Env";
+	var Irrad = "Irrad";
+}
+
+typedef PbrRenderProps = {
+	var mode : DisplayMode;
+	var env : String;
+	var envPower : Float;
+	var exposure : Float;
+	var sky : SkyMode;
 }
 
 class Renderer extends h3d.scene.Renderer {
@@ -32,6 +46,7 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
 
+	public var skyMode : SkyMode = Hide;
 	public var displayMode : DisplayMode = Pbr;
 	public var env : Environment;
 	public var exposure(get,set) : Float;
@@ -55,6 +70,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(shadows);
+		refreshProps();
 	}
 
 	inline function get_exposure() return tonemap.shader.exposure;
@@ -144,6 +160,9 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrOut.setGlobals(ctx);
 		pbrDirect.doDiscard = false;
+		pbrOut.shader.showSky = skyMode != Hide;
+		pbrOut.shader.skyMap = skyMode == Irrad ? env.diffuse : env.env;
+		pbrOut.shader.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
 		pbrOut.render();
 		pbrDirect.doDiscard = true;
 
@@ -176,7 +195,7 @@ class Renderer extends h3d.scene.Renderer {
 		case Pbr, Env, MatCap:
 			fxaa.apply(ldr);
 
-		case Slides:
+		case Debug:
 
 			slides.shader.shadowMap = ctx.textures.getNamed("shadowMap");
 			slides.shader.albedo = albedo;
@@ -185,7 +204,66 @@ class Renderer extends h3d.scene.Renderer {
 			slides.render();
 
 		}
-
 	}
 
+	// ---- PROPS
+
+	override function getDefaultProps( ?kind : String ):Any {
+		var props : PbrRenderProps = {
+			mode : Pbr,
+			env : null,
+			envPower : 1.,
+			exposure : 1.,
+			sky : Hide,
+		};
+		return props;
+	}
+
+	override function refreshProps() {
+		if( env == null )
+			return;
+		var props : PbrRenderProps = props;
+		if( props.env != null && props.env != env.source.name ) {
+			var t = hxd.res.Loader.currentInstance.load(props.env).toTexture();
+			var prev = env;
+			var env = new h3d.scene.pbr.Environment(t);
+			env.compute();
+			this.env = env;
+			prev.dispose();
+		}
+		displayMode = props.mode;
+		skyMode = props.sky;
+		exposure = props.exposure;
+		env.power = props.envPower;
+	}
+
+	#if js
+	override function editProps() {
+		var props : PbrRenderProps = props;
+		return new js.jquery.JQuery('
+			<dl>
+				<dt>Mode</dt>
+				<dd>
+					<select field="mode">
+						<option value="Pbr">PBR</option>
+						<option value="Env">Env</option>
+						<option value="MatCap">MatCap</option>
+						<option value="Debug">Debug</option>
+					</select>
+				</dd>
+				<dt>Env</dt>
+				<dd>
+					<input type="texturepath" field="env" style="width:165px"/>
+					<select field="sky" style="width:20px">
+						<option value="Hide">Hide</option>
+						<option value="Env">Show</option>
+						<option value="Irrad">Show Irrad</option>
+					</select>
+				</dd>
+				<dt>&nbsp;</dt><dd><input type="range" min="0" max="5" field="envPower"/></dd>
+				<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
+			</dl>
+		');
+	}
+	#end
 }

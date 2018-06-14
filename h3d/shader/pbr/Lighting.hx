@@ -10,25 +10,36 @@ class Indirect extends PropsDefinition {
 		@param var irrSpecularLevels : Float;
 		@param var irrPower : Float;
 
+		@const var showSky : Bool;
+		@param var skyMap : SamplerCube;
+		@param var cameraInvViewProj : Mat4;
+		var calculatedUV : Vec2;
+
 		function fragment() {
-			if( normal.dot(normal) <= 0 ) discard;
+			var isSky = normal.dot(normal) <= 0;
+			if( isSky ) {
+				if( showSky ) {
+					normal = (vec3( (calculatedUV - 0.5) * vec2(10,-10) /*?*/ , 1. ) * cameraInvViewProj.mat3x4()).normalize();
+					pixelColor.rgb = skyMap.get(normal).rgb.pow(vec3(2.)) * irrPower;
+				} else
+					discard;
+			} else {
 
-			var F0 = pbrSpecularColor;
-			var F = F0 + (max(vec3(1 - roughness), F0) - F0) * exp2( ( -5.55473 * NdV - 6.98316) * NdV );
+				var F0 = pbrSpecularColor;
+				var F = F0 + (max(vec3(1 - roughness), F0) - F0) * exp2( ( -5.55473 * NdV - 6.98316) * NdV );
 
-			var diffuse = irrDiffuse.get(normal).rgb * albedo;
-			var envSpec = textureCubeLod(irrSpecular, reflect(-view,normal), roughness * irrSpecularLevels).rgb;
-			var envBRDF = irrLut.get(vec2(roughness, NdV));
-			var specular = envSpec * (F * envBRDF.x + envBRDF.y);
-			/*
-				// diffuse *= occlusion
-				Usually indirect diffuse is multiplied by occlusion, but since our occlusion mosly
-				comes from shadow map, we want to keep the diffuse term for colored shadows here.
-			*/
-			var indirect = (diffuse * (1 - metalness) * (1. - F) + specular) * irrPower;
-			pixelColor.rgb += indirect;
+				var diffuse = irrDiffuse.get(normal).rgb * albedo;
+				var envSpec = textureCubeLod(irrSpecular, reflect(-view,normal), roughness * irrSpecularLevels).rgb;
+				var envBRDF = irrLut.get(vec2(roughness, NdV));
+				var specular = envSpec * (F * envBRDF.x + envBRDF.y);
+
+				/*
+					diffuse *= ao;
+				*/
+				var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
+				pixelColor.rgb += indirect;
+			}
 		}
-
 	};
 
 }
@@ -72,7 +83,7 @@ class Direct extends PropsDefinition {
 				// F = fresnel term
 				// Schlick approx
 				// pow 5 optimized with Spherical Gaussian
-				// var F = F0 + (1 - F0) * pow(1 - v.dot(h).min(1.), 5.);
+				// var F = F0 + (1 - F0) * pow(1 - v.dot(h), 5.);
 				var F = F0 + (1. - F0) * exp2( ( -5.55473 * VdH - 6.98316) * VdH );
 
 				// G = geometric attenuation
