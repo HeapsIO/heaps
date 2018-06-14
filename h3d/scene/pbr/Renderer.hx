@@ -108,7 +108,7 @@ class Renderer extends h3d.scene.Renderer {
 		var normal = allocTarget("normalDepth",0,false,RGBA32F);
 		var pbr = allocTarget("pbr",0,false);
 		setTargets([albedo,normal,pbr]);
-		clear(0, 1);
+		clear(0, 1, 0);
 		output.draw(getSort("default", true));
 		output.draw(getSort("alpha"));
 		output.draw(get("additive"));

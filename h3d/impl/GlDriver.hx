@@ -731,8 +731,17 @@ class GlDriver extends Driver {
 
 	override function allocDepthBuffer( b : h3d.mat.DepthBuffer ) : DepthBuffer {
 		var r = gl.createRenderbuffer();
+		if( b.format == null )
+			@:privateAccess b.format = #if js (glES >= 3 ? Depth24Stencil8 : Depth16) #else Depth24Stencil8 #end;
+		var format = switch( b.format ) {
+		case Depth16: GL.DEPTH_COMPONENT16;
+		case Depth24 #if js if( glES >= 3 ) #end: GL2.DEPTH_COMPONENT24;
+		case Depth24Stencil8: GL.DEPTH_STENCIL;
+		default:
+			throw "Unsupported depth format "+b.format;
+		}
 		gl.bindRenderbuffer(GL.RENDERBUFFER, r);
-		gl.renderbufferStorage(GL.RENDERBUFFER, #if js glES >= 3 ? GL2.DEPTH_COMPONENT24 : GL.DEPTH_COMPONENT16 #else GL.DEPTH_COMPONENT24 #end, b.width, b.height);
+		gl.renderbufferStorage(GL.RENDERBUFFER, format, b.width, b.height);
 		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 		return { r : r #if multidriver, driver : this #end };
 	}
@@ -1156,10 +1165,13 @@ class GlDriver extends Driver {
 		#end
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
 		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, mipLevel);
-		if( tex.depthBuffer != null )
+		if( tex.depthBuffer != null ) {
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r);
-		else
+			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER, tex.depthBuffer.hasStencil() ? @:privateAccess tex.depthBuffer.b.r : null);
+		} else {
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, null);
+			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER, null);
+		}
 		gl.viewport(0, 0, tex.width >> mipLevel, tex.height >> mipLevel);
 		for( i in 0...boundTextures.length )
 			boundTextures[i] = null;

@@ -537,7 +537,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		currentMaterialBits = bits;
 
 		var depthBits = bits & (Pass.depthWrite_mask | Pass.depthTest_mask);
-		if( pass.stencil != null ) throw "TODO";
+		if( pass.stencil != null ) throw "TODO: Stencil support";
 		var depth = depthStates.get(depthBits);
 		if( depth == null ) {
 			var cmp = Pass.getDepthTest(bits);
