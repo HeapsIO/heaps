@@ -331,4 +331,14 @@ class Material extends BaseMaterial {
 	}
 	#end
 
+	/*
+		Shortcut to create a material for the current renderer setup using the specific diffuse texture.
+	*/
+	public static function create( ?tex : h3d.mat.Texture ) {
+		var mat = h3d.mat.MaterialSetup.current.createMaterial();
+		mat.texture = tex;
+		mat.props = mat.getDefaultProps();
+		return mat;
+	}
+
 }
