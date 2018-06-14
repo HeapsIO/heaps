@@ -31,12 +31,7 @@ class ModelCache {
 	}
 
 	public function loadModel( res : hxd.res.Model ) : h3d.scene.Object {
-		var obj = loadLibrary(res).makeObject(loadTexture.bind(res));
-		for( m in obj.getMaterials() ) {
-			m.model = res;
-			h3d.mat.MaterialSetup.current.initModelMaterial(m);
-		}
-		return obj;
+		return loadLibrary(res).makeObject(loadTexture.bind(res));
 	}
 
 	public function loadTexture( model : hxd.res.Model, texturePath ) : h3d.mat.Texture {

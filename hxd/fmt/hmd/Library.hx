@@ -23,15 +23,15 @@ class GeometryBuffer {
 
 class Library {
 
+	public var resource(default,null) : hxd.res.Resource;
 	public var header(default,null) : Data;
-	public var entry(default,null) : hxd.fs.FileEntry;
 	var cachedPrimitives : Array<h3d.prim.HMDModel>;
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
 	var tmp = haxe.io.Bytes.alloc(4);
 
-	public function new(entry, header) {
-		this.entry = entry;
+	public function new(res,  header) {
+		this.resource = res;
 		this.header = header;
 		cachedPrimitives = [];
 		cachedAnimations = new Map();
@@ -39,6 +39,7 @@ class Library {
 	}
 
 	public function getData() {
+		var entry = resource.entry;
 		var b = haxe.io.Bytes.alloc(entry.size - header.dataPosition);
 		entry.open();
 		entry.skip(header.dataPosition);
@@ -141,6 +142,7 @@ class Library {
 
 		var vsize = geom.vertexCount * geom.vertexStride * 4;
 		var vbuf = hxd.impl.Tmp.getBytes(vsize);
+		var entry = resource.entry;
 		entry.open();
 		entry.skip(header.dataPosition + geom.vertexPosition);
 		entry.read(vbuf, 0, vsize);
@@ -260,7 +262,7 @@ class Library {
 
 	function makeMaterial( model : Model, mid : Int, loadTexture : String -> h3d.mat.Texture ) {
 		var m = header.materials[mid];
-		var mat = new h3d.mat.Material();
+		var mat = h3d.mat.MaterialSetup.current.createMaterial();
 		mat.name = m.name;
 		if( m.diffuseTexture != null ) {
 			mat.texture = loadTexture(m.diffuseTexture);
@@ -271,6 +273,10 @@ class Library {
 		if( m.normalMap != null )
 			mat.normalMap = loadTexture(m.normalMap);
 		mat.blendMode = m.blendMode;
+		mat.model = resource;
+		var props = h3d.mat.MaterialSetup.current.loadProps(mat);
+		if( props == null ) props = mat.getDefaultModelProps();
+		mat.props = props;
 		return mat;
 	}
 
@@ -380,7 +386,7 @@ class Library {
 		}
 
 		var l = makeAnimation(a);
-		l.resPath = entry.path;
+		l.resPath = resource.entry.path;
 		cachedAnimations.set(a.name, l);
 		if( name == null ) cachedAnimations.set("", l);
 		return l;
@@ -394,6 +400,7 @@ class Library {
 		l.loop = a.loop;
 		if( a.events != null ) l.setEvents(a.events);
 
+		var entry = resource.entry;
 		entry.open();
 		entry.skip(header.dataPosition + a.dataPosition);
 

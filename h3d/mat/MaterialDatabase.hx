@@ -62,8 +62,8 @@ class MaterialDatabase {
 		Reflect.deleteField(root, name);
 
 		var currentProps = material.props;
-		setup.initModelMaterial(material); // reset to default
-		if( currentProps == null || Std.string(material.props) == Std.string(currentProps) ) {
+		var defaultProps = material.getDefaultModelProps();
+		if( currentProps == null || Std.string(defaultProps) == Std.string(currentProps) ) {
 			// cleanup
 			while( path.length > 0 ) {
 				var name = path.pop();
@@ -75,7 +75,6 @@ class MaterialDatabase {
 		} else {
 			Reflect.setField(root, name, currentProps);
 		}
-		material.props = currentProps;
 		save();
 	}
 

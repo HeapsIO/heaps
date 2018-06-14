@@ -12,7 +12,7 @@ class PassObjects {
 
 private typedef SMap<T> = #if flash haxe.ds.UnsafeStringMap<T> #else Map<String,T> #end
 
-class Renderer {
+class Renderer extends hxd.impl.AnyProps {
 
 	var defaultPass : h3d.pass.Base;
 	var passObjects : SMap<PassObjects>;
@@ -23,6 +23,7 @@ class Renderer {
 	public function new() {
 		allPasses = [];
 		passObjects = new SMap();
+		props = getDefaultProps();
 	}
 
 	public function dispose() {

@@ -50,7 +50,7 @@ class HMDModel extends MeshPrimitive {
 		dispose();
 		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride);
 
-		var entry = @:privateAccess lib.entry;
+		var entry = lib.resource.entry;
 		entry.open();
 
 		entry.skip(dataPosition + data.vertexPosition);
@@ -163,7 +163,7 @@ class HMDModel extends MeshPrimitive {
 			return collider;
 		var poly = new h3d.col.PolygonBuffer();
 		poly.source = {
-			entry : lib.entry,
+			entry : lib.resource.entry,
 			geometryName : null,
 		};
 		for( h in lib.header.models )
@@ -177,7 +177,7 @@ class HMDModel extends MeshPrimitive {
 
 	#if hxbit
 	override function customSerialize(ctx:hxbit.Serializer) {
-		ctx.addString(@:privateAccess lib.entry.path);
+		ctx.addString(lib.resource.entry.path);
 		for( m in lib.header.models )
 			if( lib.header.geometries[m.geometry] == this.data ) {
 				ctx.addString(m.name);

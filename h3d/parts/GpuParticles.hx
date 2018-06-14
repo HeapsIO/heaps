@@ -510,7 +510,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		if( g.name == null )
 			g.name = "Group#" + (groups.length + 1);
 		if( material == null ) {
-			material = new h3d.mat.Material();
+			material = h3d.mat.MaterialSetup.current.createMaterial();
 			material.mainPass.culling = None;
 			material.mainPass.depthWrite = false;
 			material.blendMode = Alpha;

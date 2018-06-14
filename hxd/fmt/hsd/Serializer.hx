@@ -266,7 +266,7 @@ class Serializer extends hxbit.Serializer {
 		}
 		for( o in objs )
 			for( m in o.getMeshes() )
-				h3d.mat.MaterialSetup.current.initMeshAfterLoad(m);
+				h3d.mat.MaterialSetup.current.customMeshInit(m);
 
 		var camera = null;
 		if( getBool() ) {

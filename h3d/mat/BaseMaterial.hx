@@ -2,13 +2,13 @@ package h3d.mat;
 import h3d.mat.Data;
 import h3d.mat.Pass;
 
-class BaseMaterial implements hxd.impl.Serializable {
+class BaseMaterial extends hxd.impl.AnyProps implements hxd.impl.Serializable {
 
 	@:s var passes : Pass;
 	@:s public var name : String;
 	public var mainPass(get, never) : Pass;
 
-	public function new(?shader:hxsl.Shader) {
+	function new(?shader:hxsl.Shader) {
 		if( shader != null )
 			addPass(new Pass("default",null)).addShader(shader);
 	}

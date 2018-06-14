@@ -8,7 +8,10 @@ class Mesh extends Object {
 	public function new( prim, ?mat, ?parent ) {
 		super(parent);
 		this.primitive = prim;
-		if( mat == null ) mat = new h3d.mat.Material(null);
+		if( mat == null ) {
+			mat = h3d.mat.MaterialSetup.current.createMaterial();
+			mat.props = mat.getDefaultProps();
+		}
 		this.material = mat;
 	}
 
