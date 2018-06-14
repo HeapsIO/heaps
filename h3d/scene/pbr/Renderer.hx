@@ -100,6 +100,16 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.pbrLightPass = pbrLightPass;
 	}
 
+	function mainDraw() {
+		output.draw(getSort("default", true));
+		output.draw(getSort("alpha"));
+		output.draw(get("additive"));
+	}
+
+	function postDraw() {
+		draw("overlay");
+	}
+
 	override function render() {
 
 		shadows.draw(get("shadow"));
@@ -109,9 +119,7 @@ class Renderer extends h3d.scene.Renderer {
 		var pbr = allocTarget("pbr",0,false);
 		setTargets([albedo,normal,pbr]);
 		clear(0, 1, 0);
-		output.draw(getSort("default", true));
-		output.draw(getSort("alpha"));
-		output.draw(get("additive"));
+		mainDraw();
 
 		setTarget(albedo);
 		draw("albedo");
@@ -186,7 +194,7 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.shader.hdrTexture = output;
 		tonemap.render();
 
-		draw("overlay");
+		postDraw();
 		resetTarget();
 
 
