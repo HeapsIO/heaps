@@ -213,7 +213,7 @@ class Renderer extends h3d.scene.Renderer {
 			mode : Pbr,
 			env : null,
 			envPower : 1.,
-			exposure : 1.,
+			exposure : 0.,
 			sky : Hide,
 		};
 		return props;

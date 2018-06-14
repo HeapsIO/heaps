@@ -297,8 +297,8 @@ class Material extends BaseMaterial {
 					</select>
 				</dd>
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
-				<dt>Culled</dt><dd><input type="checkbox" field="culled"/></dd>
-				<dt>Lighted</dt><dd><input type="checkbox" field="lighted"/></dd>
+				<dt>Culling</dt><dd><input type="checkbox" field="culling"/></dd>
+				<dt>Light</dt><dd><input type="checkbox" field="light"/></dd>
 			</dl>
 		');
 	}

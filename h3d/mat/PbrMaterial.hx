@@ -27,7 +27,7 @@ class PbrMaterial extends Material {
 			mainPass.setBlendMode(b);
 			mainPass.depthWrite = b == None;
 		}
-		return b;
+		return this.blendMode = b;
 	}
 
 	override function getDefaultProps( ?type : String ) : Any {
@@ -132,7 +132,7 @@ class PbrMaterial extends Material {
 			<dl>
 				<dt>Kind</dt>
 				<dd>
-					<select field="kind">
+					<select field="mode">
 						<option value="PBR">PBR</option>
 						<option value="Albedo">Albedo</option>
 						<option value="Overlay">Overlay</option>
@@ -147,7 +147,7 @@ class PbrMaterial extends Material {
 					</select>
 				</dd>
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
-				<dt>Culled</dt><dd><input type="checkbox" field="culled"/></dd>
+				<dt>Culled</dt><dd><input type="checkbox" field="culling"/></dd>
 				<dt>AlphaKill</dt><dd><input type="checkbox" field="alphaKill"/></dd>
 			</dl>
 		');
