@@ -117,9 +117,9 @@ class Default extends Base {
 		var p = passes;
 		var shaderStart = shaderCount, textureStart = textureCount;
 		while( p != null ) {
-			if( shaderIdMap[p.shader.id] < shaderStart #if !static || shaderIdMap[p.shader.id] == null #end )
+			if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
 				shaderIdMap[p.shader.id] = shaderCount++;
-			if( textureIdMap[p.texture] < textureStart #if !static || textureIdMap[p.shader.id] == null #end )
+			if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
 				textureIdMap[p.texture] = textureCount++;
 			p = p.next;
 		}
