@@ -22,7 +22,7 @@ class PropsValues extends hxsl.Shader {
 
 	};
 
-	public function new(metalness=0.,roughness=1.,occlusion=0.) {
+	public function new(metalness=0.,roughness=1.,occlusion=1.) {
 		super();
 		this.metalness = metalness;
 		this.roughness = roughness;
