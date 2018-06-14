@@ -260,7 +260,7 @@ class Library {
 
 	function makeMaterial( model : Model, mid : Int, loadTexture : String -> h3d.mat.Texture ) {
 		var m = header.materials[mid];
-		var mat = h3d.mat.MaterialSetup.current.createMaterial();
+		var mat = new h3d.mat.Material();
 		mat.name = m.name;
 		if( m.diffuseTexture != null ) {
 			mat.texture = loadTexture(m.diffuseTexture);
