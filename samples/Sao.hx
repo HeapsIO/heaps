@@ -9,22 +9,20 @@ class CustomRenderer extends h3d.scene.DefaultRenderer {
 	public var mode = 0;
 	public var hasMRT : Bool;
 	var out : h3d.mat.Texture;
-	var mrt : h3d.pass.MRT;
+	var mrt : h3d.pass.Output;
 
 	public var bench = new h3d.impl.Benchmark();
 
 	public function new() {
 		super();
 		sao = new h3d.pass.ScalableAO();
-		// TODO : use a special Blur that prevents bluring across depths
 		saoBlur = new h3d.pass.Blur(3, 3, 2);
 		sao.shader.sampleRadius	= 0.2;
+		sao.shader.numSamples = 30;
 		hasMRT = h3d.Engine.getCurrent().driver.hasFeature(MultipleRenderTargets);
-		if( hasMRT ) {
-			allPasses.remove(defaultPass);
-			defaultPass = mrt = new h3d.pass.MRT([Value("output.color"), PackFloat(Value("output.depth")), PackNormal(Value("output.normal"))], 0, true);
-			allPasses.push(defaultPass);
-		}
+		if( !hasMRT ) throw "This sample requires MRT";
+		mrt = new h3d.pass.Output("mrt",[Value("output.color"), PackFloat(Value("output.depth")), PackNormal(Value("output.normal"))]);
+		allPasses.push(mrt);
 	}
 
 	override function renderPass(p:h3d.pass.Base, passes) {
@@ -33,23 +31,26 @@ class CustomRenderer extends h3d.scene.DefaultRenderer {
 	}
 
 	override function render() {
-		super.render();
+		renderPass(shadow,get("shadow"));
+		var color = allocTarget("color");
+		var depth = allocTarget("depth");
+		var normal = allocTarget("normal");
+		setTargets([color,depth,normal]);
+		clear(0,1);
+		mrt.draw(get("default"));
+		resetTarget();
 		if(mode != 1) {
 			bench.measure("sao");
 			var saoTarget = allocTarget("sao",0,false);
 			setTarget(saoTarget);
-			if( hasMRT )
-				sao.apply(mrt.getTexture(1), mrt.getTexture(2), ctx.camera);
-			else
-				sao.apply(ctx.textures.get(0), ctx.textures.get(1), ctx.camera);
-			resetTarget();
+			sao.apply(depth, normal, ctx.camera);
 			bench.measure("saoBlur");
 			saoBlur.apply(saoTarget, allocTarget("saoBlurTmp", 0, false));
 			bench.measure("saoBlend");
-			if( hasMRT ) h3d.pass.Copy.run(mrt.getTexture(0), null);
+			copy(color, null);
 			copy(saoTarget, null, mode == 0 ? Multiply : null);
-		} else if( hasMRT )
-			copy(mrt.getTexture(0), null);
+		} else
+			copy(color, null);
 	}
 
 }
@@ -58,14 +59,6 @@ class Sao extends SampleApp {
 
 	var wscale = 1.;
 	var renderer : CustomRenderer;
-
-	function initMaterial( m : h3d.mat.Material ) {
-		m.mainPass.enableLights = true;
-		if( !Std.instance(s3d.renderer,CustomRenderer).hasMRT ) {
-			m.addPass(new h3d.mat.Pass("depth", m.mainPass));
-			m.addPass(new h3d.mat.Pass("normal", m.mainPass));
-		}
-	}
 
 	override function render(e:h3d.Engine) {
 		renderer.bench.begin();
@@ -88,7 +81,6 @@ class Sao extends SampleApp {
 		floor.addNormals();
 		floor.translate( -5, -5, 0);
 		var m = new h3d.scene.Mesh(floor, s3d);
-		initMaterial(m.material);
 		m.material.color.makeColor(0.35, 0.5, 0.5);
 		m.setScale(wscale);
 
@@ -100,7 +92,6 @@ class Sao extends SampleApp {
 			p.setScale(wscale);
 			p.x = r.srand(3) * wscale;
 			p.y = r.srand(3) * wscale;
-			initMaterial(p.material);
 			p.material.color.makeColor(r.rand() * 0.3, 0.5, 0.5);
 		}
 		s3d.camera.zNear = 0.1 * wscale;
@@ -116,6 +107,7 @@ class Sao extends SampleApp {
 		new h3d.scene.CameraController(s3d).loadFromCamera();
 
 		var c = renderer;
+		//addSlider("Samples", function() return c.sao.shader.numSamples, function(v) c.sao.shader.numSamples = Std.int(v), 0, 40);
 		addSlider("Bias", function() return c.sao.shader.bias, function(v) c.sao.shader.bias = v, 0, 0.3);
 		addSlider("Intensity", function() return c.sao.shader.intensity, function(v) c.sao.shader.intensity = v, 0, 10);
 		addSlider("Radius", function() return c.sao.shader.sampleRadius, function(v) c.sao.shader.sampleRadius = v);
