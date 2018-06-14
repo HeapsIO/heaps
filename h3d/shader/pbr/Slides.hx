@@ -21,7 +21,10 @@ class Slides extends ScreenShader {
 				else
 					output.color = packNormal( normal );
 			} else if( x < 0.5 ) {
-				output.color = vec4( pbr.get(uv).xxx, 1. );
+				if( y < -0.5 )
+					output.color = vec4( pbr.get(uv).zzz, 1. );
+				else
+					output.color = vec4( pbr.get(uv).xxx, 1. );
 			} else {
 				if( y < -0.5 )
 					output.color = vec4( shadowMap.get((uv - 0.75) * 4).xxx, 1.);
