@@ -448,6 +448,8 @@ class Object implements hxd.impl.Serializable {
 		Same as getLocalCollider, but returns an absolute collider instead of a local one.
 	**/
 	public function getGlobalCollider() : h3d.col.Collider {
+		if(ignoreCollide)
+			return null;
 		var col = getLocalCollider();
 		return col == null ? null : new h3d.col.ObjectCollider(this, col);
 	}
