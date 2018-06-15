@@ -126,6 +126,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			p.shaders = null;
 			p.next = null;
 			p.index = 0;
+			p.texture = 0;
 			p = p.nextAlloc;
 		}
 		pool = firstAlloc;
