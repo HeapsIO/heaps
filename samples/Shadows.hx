@@ -45,7 +45,7 @@ class Shadows extends hxd.App {
 
 	override function update( dt : Float ) {
 		time += dt * 0.01;
-		dir.direction.set(Math.cos(time), Math.sin(time) * 2, -1);
+		dir.setDirection(new h3d.Vector(Math.cos(time), Math.sin(time) * 2, -1));
 	}
 
 	static function main() {
