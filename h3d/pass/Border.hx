@@ -55,13 +55,13 @@ class Border extends ScreenFx<BorderShader> {
 		add(width-size, height);
 		add(width, height);
 
-		this.plan = new h3d.prim.RawPrimitive({ vbuf : bbuf, stride : 2, quads : true }, true);
+		this.plane = new h3d.prim.RawPrimitive({ vbuf : bbuf, stride : 2, quads : true }, true);
 		shader.color.set(1,1,1,1);
 	}
 
 	override function dispose() {
 		super.dispose();
-		this.plan.dispose();
+		this.plane.dispose();
 	}
 
 }

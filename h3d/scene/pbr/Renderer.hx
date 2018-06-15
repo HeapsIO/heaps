@@ -159,7 +159,9 @@ class Renderer extends h3d.scene.Renderer {
 				pbrOut.addShader(pbrDirect);
 				pbrOut.addShader(pbrSun);
 			}
+			var pdir = Std.instance(ls.shadowLight, h3d.scene.pbr.DirLight);
 			pbrSun.lightColor.load(ls.shadowLight.color);
+			if( pdir != null ) pbrSun.lightColor.scale3(pdir.power * pdir.power);
 			pbrSun.lightDir.load(@:privateAccess ls.shadowLight.getShadowDirection());
 			pbrSun.lightDir.scale3(-1);
 			pbrSun.lightDir.normalize();

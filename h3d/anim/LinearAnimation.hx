@@ -16,7 +16,7 @@ class LinearFrame {
 	}
 	public function toMatrix() {
 		var m = new h3d.Matrix();
-		new h3d.Quat(qx, qy, qz, qw).saveToMatrix(m);
+		new h3d.Quat(qx, qy, qz, qw).toMatrix(m);
 		m.prependScale(sx, sy, sz);
 		m.translate(tx, ty, tz);
 		return m;

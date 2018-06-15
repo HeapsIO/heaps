@@ -64,7 +64,7 @@ class Stencil extends hxd.App {
 
 	override function update( dt : Float ) {
 		time += 0.01 * dt;
-		root.setRotateAxis (0, 0, 1.0, time);
+		root.setRotationAxis(0, 0, 1.0, time);
 	}
 
 	static function main() {

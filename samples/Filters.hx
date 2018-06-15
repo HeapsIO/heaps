@@ -77,7 +77,7 @@ class Filters extends hxd.App {
 			m.identity();
 			m.colorContrast(0.5);
 			m.colorHue(Math.PI / 4);
-			m.colorSaturation(-0.5);
+			m.colorSaturate(-0.5);
 			spr.filter = new h2d.filter.ColorMatrix(m);
 		case 8:
 			spr.filter = new h2d.filter.Mask(mask);

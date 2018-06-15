@@ -63,7 +63,7 @@ class Lights extends hxd.App {
 			l.z = Math.cos(t * a[(i + 4) % a.length]) * Math.sin(t * a[(i + 6) % a.length]) * 2 - 0.5;
 		}
 
-		dir.direction.set(Math.cos(time * 0.3) * 0.2, Math.sin(time * 0.35) * 0.3 + 0.3, -1);
+		dir.setDirection(new h3d.Vector(Math.cos(time * 0.3) * 0.2, Math.sin(time * 0.35) * 0.3 + 0.3, -1));
 
 	}
 

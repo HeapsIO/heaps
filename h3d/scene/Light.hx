@@ -42,15 +42,6 @@ class Light extends Object {
 		return null;	
 	}
 
-	public function getDirection() : h3d.Vector {
-		return absPos.front();
-	}
-
-	public function setDirection(x: Float, y: Float, z: Float) {
-		qRot.initDirection(new h3d.Vector(x, y, z));
-		posChanged = true;
-	}
-
 	#if hxbit
 	override function customSerialize(ctx:hxbit.Serializer) {
 		super.customSerialize(ctx);

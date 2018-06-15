@@ -66,7 +66,7 @@ class Base3D extends SampleApp {
 		s3d.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, dist * 0.7 * Math.sin(time));
 
 		// rotate the second cube along a given axis + angle
-		obj2.setRotateAxis(-0.5, 2, Math.cos(time), time + Math.PI / 2);
+		obj2.setRotationAxis(-0.5, 2, Math.cos(time), time + Math.PI / 2);
 	}
 
 	static function main() {

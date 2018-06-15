@@ -237,7 +237,7 @@ class Geometry {
 		if( rot == null )
 			m.identity();
 		else
-			m.initRotate(rot.x, rot.y, rot.z);
+			m.initRotation(rot.x, rot.y, rot.z);
 		if( trans != null ) {
 			m.tx += trans.x;
 			m.ty += trans.y;

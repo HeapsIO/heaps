@@ -75,7 +75,7 @@ class Position {
 		var m = new h3d.Matrix();
 		var q = QTMP;
 		loadQuaternion(q);
-		q.saveToMatrix(m);
+		q.toMatrix(m);
 		if( postScale ) {
 			m.translate(x, y, z);
 			m.scale(sx, sy, sz);

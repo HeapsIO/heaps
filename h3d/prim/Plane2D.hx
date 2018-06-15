@@ -1,6 +1,6 @@
 package h3d.prim;
 
-class Plan2D extends Primitive {
+class Plane2D extends Primitive {
 
 	function new() {
 	}
@@ -45,10 +45,10 @@ class Plan2D extends Primitive {
 
 	public static function get() {
 		var engine = h3d.Engine.getCurrent();
-		var inst = @:privateAccess engine.resCache.get(Plan2D);
+		var inst = @:privateAccess engine.resCache.get(Plane2D);
 		if( inst == null ) {
-			inst = new Plan2D();
-			@:privateAccess engine.resCache.set(Plan2D, inst);
+			inst = new Plane2D();
+			@:privateAccess engine.resCache.set(Plane2D, inst);
 		}
 		return inst;
 	}

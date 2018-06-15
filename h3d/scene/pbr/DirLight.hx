@@ -7,8 +7,7 @@ class DirLight extends Light {
 	public function new(?dir: h3d.Vector, ?parent) {
 		pbr = new h3d.shader.pbr.Light.DirLight();
 		super(pbr,parent);
-		if(dir != null)
-			setDirection(dir.x, dir.y, dir.z);
+		if( dir != null ) setDirection(dir);
 	}
 
 	override function get_isSun() {
@@ -20,7 +19,7 @@ class DirLight extends Light {
 	}
 
 	override function getShadowDirection() : h3d.Vector {
-		return getDirection();	
+		return absPos.front();	
 	}
 
 	override function emit(ctx:RenderContext) {

@@ -2,7 +2,6 @@ class Mask extends hxd.App {
 
 	var spr : h2d.Sprite;
 	var spr2 : h2d.Sprite;
-	var cache : h2d.CachedBitmap;
 	var time : Float = 0.;
 
 	override function init() {

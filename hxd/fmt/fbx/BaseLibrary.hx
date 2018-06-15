@@ -868,8 +868,8 @@ class BaseLibrary {
 				if( c.def.preRot == null ) c.def.rotate else
 				{
 					var q = new h3d.Quat(), q2 = new h3d.Quat();
-					q2.initRotate(c.def.preRot.x, c.def.preRot.y, c.def.preRot.z);
-					q.initRotate(c.def.rotate.x, c.def.rotate.y, c.def.rotate.z);
+					q2.initRotation(c.def.preRot.x, c.def.preRot.y, c.def.preRot.z);
+					q.initRotation(c.def.rotate.x, c.def.rotate.y, c.def.rotate.z);
 					q.multiply(q2,q);
 					q.toEuler().toPoint();
 				}
@@ -1037,14 +1037,14 @@ class BaseLibrary {
 
 					if( c.r == null || rp == 0 ) {
 						if( def.rotate != null ) {
-							q.initRotate(def.rotate.x, def.rotate.y, def.rotate.z);
+							q.initRotation(def.rotate.x, def.rotate.y, def.rotate.z);
 						} else
 							q.identity();
 					} else
-						q.initRotate(crx[rp-1], cry[rp-1], crz[rp-1]);
+						q.initRotation(crx[rp-1], cry[rp-1], crz[rp-1]);
 
 					if( def.preRot != null ) {
-						q2.initRotate(def.preRot.x, def.preRot.y, def.preRot.z);
+						q2.initRotation(def.preRot.x, def.preRot.y, def.preRot.z);
 						q.multiply(q2,q);
 					}
 

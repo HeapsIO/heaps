@@ -81,7 +81,7 @@ class Pbr extends SampleApp {
 
 		var cubeShader = bg.material.mainPass.addShader(new h3d.shader.pbr.CubeLod(env.env));
 		var light = new h3d.scene.pbr.PointLight(s3d);
-		light.setPos(30, 10, 40);
+		light.setPosition(30, 10, 40);
 		light.range = 100;
 		light.power = 2;
 
@@ -160,7 +160,7 @@ class Pbr extends SampleApp {
 		var color = new h3d.Vector(1, 0, 0);
 		var m = new h3d.Matrix();
 		m.identity();
-		m.colorSaturation(saturation - 1);
+		m.colorSaturate(saturation - 1);
 		m.colorHue(hue);
 		m.colorLightness(brightness);
 		color.transform3x4(m);

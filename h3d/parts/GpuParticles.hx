@@ -883,7 +883,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				r.normalize();
 				var q = new h3d.Quat();
 				q.initDirection(r);
-				q.saveToMatrix(g.pshader.cameraRotation);
+				q.toMatrix(g.pshader.cameraRotation);
 			}
 			if( g.emitMode == CameraBounds ) {
 				g.pshader.transform.load(camera.getInverseView());

@@ -8,8 +8,7 @@ class DirLight extends Light {
 		dshader = new h3d.shader.DirLight();
 		super(dshader, parent);
 		priority = 100;
-		if(dir != null)
-			setDirection(dir.x, dir.y, dir.z);
+		if( dir != null ) setDirection(dir);
 	}
 
 	override function get_color() {
@@ -29,7 +28,7 @@ class DirLight extends Light {
 	}
 
 	override function getShadowDirection() : h3d.Vector {
-		return getDirection();	
+		return absPos.front();	
 	}
 
 	override function emit(ctx) {
