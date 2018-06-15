@@ -1121,7 +1121,7 @@ class GlDriver extends Driver {
 		var oldMip = curTargetMip;
 		numTargets = 1;
 		setRenderTarget(tex, face, mipLevel);
-		var pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, RGBA);
+		var pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
 		captureRenderBuffer(pixels);
 		setRenderTarget(old, oldFace, oldMip);
 		if( oldCount > 1 ) {
@@ -1276,8 +1276,8 @@ class GlDriver extends Driver {
 		if( curTarget == null )
 			throw "Can't capture main render buffer in GL";
 		#if (js || hl)
-		gl.readPixels(0, 0, pixels.width, pixels.height, GL.RGBA, GL.UNSIGNED_BYTE, @:privateAccess pixels.bytes.b);
-		@:privateAccess pixels.innerFormat = RGBA;
+		gl.readPixels(0, 0, pixels.width, pixels.height, curTarget.t.internalFmt, curTarget.t.pixelFmt, @:privateAccess pixels.bytes.b);
+		@:privateAccess pixels.innerFormat = curTarget.format;
 		pixels.flags.set(FlipY);
 		#end
 	}
