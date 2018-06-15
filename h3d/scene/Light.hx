@@ -39,7 +39,12 @@ class Light extends Object {
 	}
 
 	function getShadowDirection() : h3d.Vector {
-		return null;
+		return absPos.front();
+	}
+
+	public function setDirection(x: Float, y: Float, z: Float) {
+		qRot.initDirection(new h3d.Vector(x, y, z));
+		posChanged = true;
 	}
 
 	#if hxbit
