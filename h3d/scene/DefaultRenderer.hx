@@ -43,7 +43,7 @@ class NormalPass extends h3d.pass.Default {
 	}
 
 	override function draw( passes ) {
-		var texture = ctx.textures.allocTarget("normalMal", ctx.engine.width, ctx.engine.height);
+		var texture = ctx.textures.allocTarget("normalMap", ctx.engine.width, ctx.engine.height);
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0x808080, 1);
 		passes = super.draw(passes);
