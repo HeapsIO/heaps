@@ -46,6 +46,8 @@ class Graphics extends Mesh {
 		tmpPoints = [];
 		lineShader = new h3d.shader.LineShader();
 		lineShader.setPriority(-100);
+		material.shadows = false;
+		material.mainPass.enableLights = false;
 		material.mainPass.addShader(lineShader);
 		var vcolor = new h3d.shader.VertexColorAlpha();
 		vcolor.setPriority(-100);
@@ -271,7 +273,7 @@ class Graphics extends Mesh {
 
 			push(u);
 			push(v);
-
+			
 			push(curR);
 			push(curG);
 			push(curB);
