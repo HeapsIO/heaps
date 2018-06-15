@@ -144,7 +144,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
 		pbrOut.shader.cameraPosition.load(ctx.camera.pos);
-		pbrOut.shader.irrPower = env.power;
+		pbrOut.shader.irrPower = env.power * env.power;
 		pbrOut.shader.irrLut = env.lut;
 		pbrOut.shader.irrDiffuse = env.diffuse;
 		pbrOut.shader.irrSpecular = env.specular;
@@ -268,7 +268,7 @@ class Renderer extends h3d.scene.Renderer {
 						<option value="Irrad">Show Irrad</option>
 					</select>
 				</dd>
-				<dt>&nbsp;</dt><dd><input type="range" min="0" max="5" field="envPower"/></dd>
+				<dt>&nbsp;</dt><dd><input type="range" min="0" max="2" field="envPower"/></dd>
 				<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
 			</dl>
 		');
