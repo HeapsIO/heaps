@@ -62,7 +62,7 @@ class LightSystem {
 		}
 		if( lightCount <= maxLightsPerObject )
 			ctx.lights = haxe.ds.ListSort.sortSingleLinked(ctx.lights, sortLight);
-		if( shadowLight == null || shadowLight.parent == null ) {
+		if( shadowLight == null || !shadowLight.allocated) {
 			var l = ctx.lights;
 			while( l != null ) {
 				var dir = @:privateAccess l.getShadowDirection();
