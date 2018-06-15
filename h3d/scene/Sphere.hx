@@ -38,9 +38,9 @@ class Sphere extends Graphics {
 				lineTo(x, y, z);
 		}
 
-		circle((i, c, s) -> seg(i, c, s, 0));
-		circle((i, c, s) -> seg(i, 0, c, s));
-		circle((i, c, s) -> seg(i, c, 0, s));
+		circle(function(i, c, s) return seg(i, c, s, 0));
+		circle(function(i, c, s) return seg(i, 0, c, s));
+		circle(function(i, c, s) return seg(i, c, 0, s));
 	}
 
 	override function getLocalCollider() {
