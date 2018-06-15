@@ -25,6 +25,29 @@ abstract PixelsARGB(Pixels) to Pixels {
 	}
 }
 
+@:forward(bytes, width, height, offset, flags, clear, dispose, toPNG, clone, toVector, sub, blit)
+abstract PixelsFloat(Pixels) to Pixels {
+
+
+	public inline function getPixelF(x, y) {
+		var pix = ((x + y * this.width) << 4) + this.offset;
+		return new h3d.Vector(this.bytes.getFloat(pix),this.bytes.getFloat(pix+4),this.bytes.getFloat(pix+8),this.bytes.getFloat(pix+12));
+	}
+
+	public inline function setPixelF(x, y, v:h3d.Vector) {
+		var pix = ((x + y * this.width) << 4) + this.offset;
+		this.bytes.setFloat(pix, v.x);
+		this.bytes.setFloat(pix + 4, v.y);
+		this.bytes.setFloat(pix + 8, v.z);
+		this.bytes.setFloat(pix + 12, v.w);
+	}
+
+	@:from public static function fromPixels(p:Pixels) : PixelsFloat {
+		p.convert(RGBA16F);
+		p.setFlip(false);
+		return cast p;
+	}
+}
 
 @:enum abstract Channel(Int) {
 	public var R = 0;
