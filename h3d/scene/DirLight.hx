@@ -4,10 +4,12 @@ class DirLight extends Light {
 
 	var dshader : h3d.shader.DirLight;
 
-	public function new(?parent) {
+	public function new(?dir: h3d.Vector, ?parent) {
 		dshader = new h3d.shader.DirLight();
 		super(dshader, parent);
 		priority = 100;
+		if(dir != null)
+			setDirection(dir.x, dir.y, dir.z);
 	}
 
 	override function get_color() {
@@ -24,6 +26,10 @@ class DirLight extends Light {
 
 	override function set_enableSpecular(b) {
 		return dshader.enableSpecular = b;
+	}
+
+	override function getShadowDirection() : h3d.Vector {
+		return getDirection();	
 	}
 
 	override function emit(ctx) {

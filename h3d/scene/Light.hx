@@ -39,6 +39,10 @@ class Light extends Object {
 	}
 
 	function getShadowDirection() : h3d.Vector {
+		return null;	
+	}
+
+	public function getDirection() : h3d.Vector {
 		return absPos.front();
 	}
 

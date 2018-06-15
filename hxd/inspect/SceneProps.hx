@@ -249,7 +249,10 @@ class SceneProps {
 		props.push(PBool("enableSpecular", function() return l.enableSpecular, function(b) l.enableSpecular = b));
 		var dl = Std.instance(l, h3d.scene.DirLight);
 		if( dl != null )
-			props.push(PFloats("direction", function() return [dl.direction.x, dl.direction.y, dl.direction.z], function(fl) dl.direction.set(fl[0], fl[1], fl[2])));
+			props.push(PFloats("direction", function() {
+				var dir = dl.getDirection();
+				return [dl.x, dl.y, dl.z];
+			}, function(fl) dl.setDirection(fl[0], fl[1], fl[2])));
 		var pl = Std.instance(l, h3d.scene.PointLight);
 		if( pl != null )
 			props.push(PFloats("params", function() return [pl.params.x, pl.params.y, pl.params.z], function(fl) pl.params.set(fl[0], fl[1], fl[2], fl[3])));
