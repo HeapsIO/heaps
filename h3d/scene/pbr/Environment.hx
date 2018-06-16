@@ -30,7 +30,7 @@ class IrradBase extends h3d.shader.ScreenShader {
 			var up = abs(n.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
 			var tanX = normalize(cross(up, n));
 			var tanY = normalize(cross(n, tanX));
-			return tanX * ltan.x + tanY * ltan.y + n * ltan.z;
+			return (tanX * ltan.x + tanY * ltan.y + n * ltan.z).normalize();
 		}
 
 
@@ -61,7 +61,7 @@ class IrradShader extends IrradBase {
 			var up = abs(n.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
 			var tanX = normalize(cross(up, n));
 			var tanY = normalize(cross(n, tanX));
-			return tanX * ltan.x + tanY * ltan.y + n * ltan.z;
+			return (tanX * ltan.x + tanY * ltan.y + n * ltan.z).normalize();
 		}
 
 		function getNormal() : Vec3 {
