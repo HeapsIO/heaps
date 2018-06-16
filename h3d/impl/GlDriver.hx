@@ -1276,7 +1276,7 @@ class GlDriver extends Driver {
 		if( curTarget == null )
 			throw "Can't capture main render buffer in GL";
 		#if (js || hl)
-		gl.readPixels(0, 0, pixels.width, pixels.height, curTarget.t.internalFmt, curTarget.t.pixelFmt, @:privateAccess pixels.bytes.b);
+		gl.readPixels(0, 0, pixels.width, pixels.height, getChannels(curTarget), curTarget.t.pixelFmt, @:privateAccess pixels.bytes.b);
 		@:privateAccess pixels.innerFormat = curTarget.format;
 		pixels.flags.set(FlipY);
 		#end
