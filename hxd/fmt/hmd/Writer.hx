@@ -15,6 +15,7 @@ class Writer {
 		switch( p ) {
 		case CameraFOVY(v):
 			out.writeFloat(v);
+		case Unused_HasMaterialFlags:
 		case HasExtraTextures:
 		}
 	}

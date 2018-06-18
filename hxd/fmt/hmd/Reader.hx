@@ -17,6 +17,8 @@ class Reader {
 		switch( i.readByte() ) {
 		case 0:
 			return CameraFOVY(i.readFloat());
+		case 1:
+			throw "Obsolete HasMaterialFlags";
 		case 2:
 			return HasExtraTextures;
 		case unk:
