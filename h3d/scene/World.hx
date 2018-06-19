@@ -166,7 +166,8 @@ class World extends Object {
 		return Alpha;
 	}
 
-	function resolveTexturePath( r : hxd.res.Model, path : String ) {
+	function resolveTexturePath( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material ) {
+		var path = mat.diffuseTexture;
 		if( hxd.res.Loader.currentInstance.exists(path) )
 			return path;
 		var dir = r.entry.directory;
@@ -174,21 +175,24 @@ class World extends Object {
 		return dir + path.split("/").pop();
 	}
 
-	function resolveSpecularTexture( path : String ) : hxd.res.Image {
-		path =  path.substr(0, path.length - 4) + "spec.jpg";
+	function resolveSpecularTexture( path : String, mat : hxd.fmt.hmd.Data.Material) : hxd.res.Image {
 		try {
-			return hxd.res.Loader.currentInstance.load(path).toImage();
+			return hxd.res.Loader.currentInstance.load(mat.specularTexture).toImage();
 		} catch( e : hxd.res.NotFound ) {
 			return null;
 		}
 	}
 
-	function resolveNormalMap( path : String ) : hxd.res.Image {
-		return null;
+	function resolveNormalMap( path : String, mat : hxd.fmt.hmd.Data.Material) : hxd.res.Image {
+		try {
+			return hxd.res.Loader.currentInstance.load(mat.normalMap).toImage();
+		} catch( e : hxd.res.NotFound ) {
+			return null;
+		}
 	}
 
 	function loadMaterialTexture( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
-		var texturePath = resolveTexturePath(r, mat.diffuseTexture);
+		var texturePath = resolveTexturePath(r, mat);
 		var m = textures.get(texturePath);
 		if( m != null )
 			return m;
@@ -213,7 +217,7 @@ class World extends Object {
 
 		var specTex = null;
 		if( enableSpecular ) {
-			var res = resolveSpecularTexture(texturePath);
+			var res = resolveSpecularTexture(texturePath, mat);
 			if( specularInAlpha ) {
 				if( res != null ) {
 					t.setAlpha(res);
@@ -231,7 +235,7 @@ class World extends Object {
 
 		var normalMap = null;
 		if( enableNormals ) {
-			var res = resolveNormalMap(texturePath);
+			var res = resolveNormalMap(texturePath, mat);
 			if( btex.normal == null )
 				btex.normal = new h3d.mat.BigTexture(-1, bigTextureSize, bigTextureBG);
 			if( res != null )
@@ -438,6 +442,7 @@ class World extends Object {
 		mesh.material.shadows = mat.shadows;
 		mesh.material.mainPass.culling = Back;
 		mesh.material.mainPass.depthWrite = true;
+		mesh.material.mainPass.depthTest = Less;
 
 		for(s in mat.shaders)
 			mesh.material.mainPass.addShader(s);
