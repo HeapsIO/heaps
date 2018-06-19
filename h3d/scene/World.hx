@@ -176,6 +176,8 @@ class World extends Object {
 	}
 
 	function resolveSpecularTexture( path : String, mat : hxd.fmt.hmd.Data.Material) : hxd.res.Image {
+		if(mat.specularTexture == null)
+			return null;
 		try {
 			return hxd.res.Loader.currentInstance.load(mat.specularTexture).toImage();
 		} catch( e : hxd.res.NotFound ) {
@@ -184,6 +186,8 @@ class World extends Object {
 	}
 
 	function resolveNormalMap( path : String, mat : hxd.fmt.hmd.Data.Material) : hxd.res.Image {
+		if(mat.normalMap == null)
+			return null;
 		try {
 			return hxd.res.Loader.currentInstance.load(mat.normalMap).toImage();
 		} catch( e : hxd.res.NotFound ) {
