@@ -109,6 +109,8 @@ class Material extends BaseMaterial {
 		m.castShadows = castShadows;
 		m.receiveShadows = receiveShadows;
 		m.texture = texture;
+		m.specularTexture = specularTexture;
+		m.normalMap = normalMap;
 		if( textureShader != null ) {
 			m.textureShader.additive = textureShader.additive;
 			m.textureShader.killAlpha = textureShader.killAlpha;

@@ -81,6 +81,7 @@ class BaseMaterial extends hxd.impl.AnyProps implements hxd.impl.Serializable {
 		m.mainPass.load(mainPass);
 		// DO NOT clone passes (it's up to the superclass to recreate the passes + shaders)
 		m.name = name;
+		m.props = props;
 		return m;
 	}
 

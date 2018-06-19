@@ -125,6 +125,12 @@ class PbrMaterial extends Material {
 
 	}
 
+	override function clone( ?m : BaseMaterial ) : BaseMaterial {
+		var m = m == null ? new PbrMaterial() : cast m;
+		super.clone(m);
+			return m;
+	}
+
 	#if js
 	override function editProps() {
 		var props : PbrProps = props;
