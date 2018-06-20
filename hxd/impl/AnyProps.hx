@@ -10,6 +10,10 @@ class AnyProps {
 		return p;
 	}
 
+	public function setDefaultProps( kind : String ) {
+		props = getDefaultProps(kind);
+	}
+
 	public function getDefaultProps( ?kind : String ) : Any {
 		return {};
 	}
