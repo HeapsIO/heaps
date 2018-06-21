@@ -144,12 +144,15 @@ class FontBuilder {
 		font.lineHeight = 0;
 		var surf = 0;
 		var sizes = [];
+		// get approx height of font including descent
+		var h = getFontHeight(this.font, 'MgO0pj');
+		// arbritrary safety margin used to ensure that char doesn't get scrambled, probably due to messed up text metrics
+		var xMarg = 10;
 		for( i in 0...options.chars.length ) {
 			var textChar = options.chars.charAt(i);
 			var w = Math.ceil(ctx.measureText(textChar).width) + 1;
 			if( w == 1 ) continue;
-			var h = this.font.size + 5;
-			surf += (w + 1) * (h + 1);
+			surf += (w + (1 + xMarg)) * (h + 1);
 			if( h > font.lineHeight )
 				font.lineHeight = h;
 			sizes[i] = { w:w, h:h };
@@ -183,7 +186,7 @@ class FontBuilder {
 			for( i in 0...options.chars.length ) {
 				var size = sizes[i];
 				if( size == null ) continue;
-				var w = size.w;
+				var w = size.w + xMarg;
 				var h = size.h;
 				if( x + w > width ) {
 					x = 0;
@@ -203,7 +206,7 @@ class FontBuilder {
 				ctx.fillText(options.chars.charAt(i), x, y);
 				var t = new h2d.Tile(innerTex, x, y, w - 1, h - 1);
 				all.push(t);
-				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,w-1));
+				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,w - (1 + xMarg)));
 				// next element
 				if( h > lineH ) lineH = h;
 				x += w + 1;
@@ -222,6 +225,19 @@ class FontBuilder {
 		}
 		return font;
 	}
+
+    function getFontHeight(font:h2d.Font, chars:String) {
+        var body = js.Browser.document.body;
+        var dummy = js.Browser.document.createElement("div");
+        var dummyText = js.Browser.document.createTextNode(chars);
+        dummy.appendChild(dummyText);
+        dummy.style.fontSize = font.size + 'px';
+        dummy.style.fontFamily = font.name;
+        body.appendChild(dummy);
+        var result = dummy.offsetHeight;
+        body.removeChild(dummy);
+        return result;
+    }
 
 	#elseif lime
 
@@ -329,6 +345,9 @@ class FontBuilder {
 	}
 
 	#else
+
+
+
 
 	function build() {
 		throw "Font building not supported on this platform";
