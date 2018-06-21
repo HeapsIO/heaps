@@ -32,6 +32,16 @@ class Charset {
 	**/
 	public static var JP_KANA = "　あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわゐゑをんがぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽゃゅょアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲンガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポヴャぇっッュョァィゥェォ・ー「」、。『』“”！：？％＆（）－０１２３４５６７８９";
 
+    /**
+		Greek support
+	**/
+    public static var GREEK = "ΑαΒβΓγΔδΕεΖζΗηΘθΙιΚκΛλΜμΝνΞξΟοΠπΡρΣσςΤτΥυΦφΧχΨψΩωίΊ";
+
+    /**
+		Currency support
+	**/
+    public static var CURRENCY = "دإ‏؋ek֏ƒKz$₼КМ৳лвبFBsɃрZ¥₡čdjrجمf€£i₵GQp₪₹عاhсом៛₩ك₸₭ل₨lден₮₤V₦/₱ł₲Ди₽b฿ت₴ў₫y";
+
 	/**
 		Special unicode chars (fallback chars)
 	**/
