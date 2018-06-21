@@ -136,7 +136,7 @@ class PbrMaterial extends Material {
 		var props : PbrProps = props;
 		return new js.jquery.JQuery('
 			<dl>
-				<dt>Kind</dt>
+				<dt>Mode</dt>
 				<dd>
 					<select field="mode">
 						<option value="PBR">PBR</option>

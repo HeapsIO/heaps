@@ -33,11 +33,8 @@ class Indirect extends PropsDefinition {
 				var envBRDF = irrLut.get(vec2(roughness, NdV));
 				var specular = envSpec * (F * envBRDF.x + envBRDF.y);
 
-				/*
-					diffuse *= ao;
-				*/
 				var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
-				pixelColor.rgb += indirect;
+				pixelColor.rgb += indirect * occlusion;
 			}
 		}
 	};
@@ -50,7 +47,12 @@ class Direct extends PropsDefinition {
 
 		var pbrLightDirection : Vec3;
 		var pbrLightColor : Vec3;
+		var shadow : Float;
 		@const var doDiscard : Bool = true;
+
+		function __init__fragment() {
+			shadow = 1.;
+		}
 
 		function fragment() {
 			var NdL = normal.dot(pbrLightDirection).max(0.);
@@ -96,8 +98,7 @@ class Direct extends PropsDefinition {
 
 				var specular = (D * F * G / (4 * NdL * NdV)).max(0.);
 				direct += mix(diffuse * (1 - metalness), specular, F) * pbrLightColor;
-				direct *= occlusion;
-				pixelColor.rgb += direct;
+				pixelColor.rgb += direct * shadow;
 			} else if( doDiscard )
 				discard;
 		}

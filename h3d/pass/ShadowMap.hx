@@ -10,12 +10,16 @@ class ShadowMap extends Default {
 	var shadowBiasId : Int;
 	var customDepth : Bool;
 	var depth : h3d.mat.DepthBuffer;
+	var dshader : h3d.shader.DirShadow;
+
 	@ignore public var border : Border;
 	public var size(default,set) : Int;
 	public var color : h3d.Vector;
 	public var power = 10.0;
 	public var bias = 0.01;
 	public var blur : Blur;
+
+	public var shader(default,null) : hxsl.Shader;
 
 	public function new(size=1024) {
 		super("shadow");
@@ -27,6 +31,7 @@ class ShadowMap extends Default {
 		shadowColorId = hxsl.Globals.allocID("shadow.color");
 		shadowPowerId = hxsl.Globals.allocID("shadow.power");
 		shadowBiasId = hxsl.Globals.allocID("shadow.bias");
+		shader = dshader = new h3d.shader.DirShadow();
 		color = new h3d.Vector();
 		blur = new Blur(2, 3);
 		border = new Border(size, size);
@@ -116,6 +121,10 @@ class ShadowMap extends Default {
 		cameraViewProj = lightCamera.m;
 	}
 
+	public function getShadowProj() {
+		return lightCamera.m;
+	}
+
 	override function draw( passes ) {
 		var texture = ctx.textures.allocTarget("shadowMap", size, size, false);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
@@ -147,8 +156,13 @@ class ShadowMap extends Default {
 		if( blur.quality > 0 && blur.passes > 0 )
 			blur.apply(texture, ctx.textures.allocTarget("tmpBlur", size, size, false), true);
 
+		dshader.shadowMap = texture;
+		dshader.shadowBias = bias;
+		dshader.shadowPower = power;
+		dshader.shadowProj = getShadowProj();
+
 		ctx.setGlobalID(shadowMapId, { texture : texture });
-		ctx.setGlobalID(shadowProjId, lightCamera.m);
+		ctx.setGlobalID(shadowProjId, getShadowProj());
 		ctx.setGlobalID(shadowColorId, color);
 		ctx.setGlobalID(shadowPowerId, power);
 		ctx.setGlobalID(shadowBiasId, bias);

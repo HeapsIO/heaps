@@ -25,12 +25,18 @@ package h3d.scene.pbr;
 	var Irrad = "Irrad";
 }
 
+@:enum abstract TonemapMap(String) {
+	var Linear = "Linear";
+	var Reinhard = "Reinhard";
+}
+
 typedef PbrRenderProps = {
 	var mode : DisplayMode;
 	var env : String;
 	var envPower : Float;
 	var exposure : Float;
 	var sky : SkyMode;
+	var tone : TonemapMap;
 }
 
 class Renderer extends h3d.scene.Renderer {
@@ -47,6 +53,7 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrProps = new h3d.shader.pbr.PropsImport();
 
 	public var skyMode : SkyMode = Hide;
+	public var toneMode : TonemapMap = Reinhard;
 	public var displayMode : DisplayMode = Pbr;
 	public var env : Environment;
 	public var exposure(get,set) : Float;
@@ -66,7 +73,6 @@ class Renderer extends h3d.scene.Renderer {
 		defaultPass = new h3d.pass.Default("default");
 		pbrOut.addShader(new h3d.shader.ScreenShader());
 		pbrOut.addShader(pbrProps);
-		pbrOut.addShader(new h3d.shader.pbr.Shadow());
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(shadows);
@@ -154,12 +160,14 @@ class Renderer extends h3d.scene.Renderer {
 		if( ls.shadowLight == null ) {
 			pbrOut.removeShader(pbrDirect);
 			pbrOut.removeShader(pbrSun);
+			pbrOut.removeShader(shadows.shader);
 		} else {
+			var pdir = Std.instance(ls.shadowLight, h3d.scene.pbr.DirLight);
 			if( pbrOut.getShader(h3d.shader.pbr.Light.DirLight) == null ) {
 				pbrOut.addShader(pbrDirect);
 				pbrOut.addShader(pbrSun);
+				pbrOut.addShader(shadows.shader);
 			}
-			var pdir = Std.instance(ls.shadowLight, h3d.scene.pbr.DirLight);
 			pbrSun.lightColor.load(ls.shadowLight.color);
 			if( pdir != null ) pbrSun.lightColor.scale3(pdir.power * pdir.power);
 			pbrSun.lightDir.load(@:privateAccess ls.shadowLight.getShadowDirection());
@@ -193,6 +201,10 @@ class Renderer extends h3d.scene.Renderer {
 
 		var ldr = allocTarget("ldrOutput",0,true);
 		setTarget(ldr);
+		tonemap.shader.mode = switch( toneMode ) {
+		case Linear: 0;
+		case Reinhard: 1;
+		};
 		tonemap.shader.hdrTexture = output;
 		tonemap.render();
 
@@ -225,6 +237,7 @@ class Renderer extends h3d.scene.Renderer {
 			envPower : 1.,
 			exposure : 0.,
 			sky : Hide,
+			tone : Reinhard,
 		};
 		return props;
 	}
@@ -243,6 +256,7 @@ class Renderer extends h3d.scene.Renderer {
 		}
 		displayMode = props.mode;
 		skyMode = props.sky;
+		toneMode = props.tone;
 		exposure = props.exposure;
 		env.power = props.envPower;
 	}
@@ -252,6 +266,13 @@ class Renderer extends h3d.scene.Renderer {
 		var props : PbrRenderProps = props;
 		return new js.jquery.JQuery('
 			<dl>
+				<dt>Tone</dt>
+				<dd>
+					<select field="tone">
+						<option value="Linear">Linear</option>
+						<option value="Reinhard">Reinhard</option>
+					</select>
+				</dd>
 				<dt>Mode</dt>
 				<dd>
 					<select field="mode">

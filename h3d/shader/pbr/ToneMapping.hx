@@ -9,12 +9,20 @@ class ToneMapping extends ScreenShader {
 		@param var exposureExp : Float;
 		@const var isSRBG : Bool;
 
+		@const var mode : Int;
+
 		function fragment() {
 			var color = hdrTexture.get(calculatedUV);
 
-			// reinhard tonemapping
 			color.rgb *= exposureExp;
-			color.rgb = color.rgb / (color.rgb + vec3(1.));
+
+			switch( mode ) {
+			case 0:
+				// linear
+			case 1:
+				// reinhard
+				color.rgb = color.rgb / (color.rgb + vec3(1.));
+			}
 
 			// gamma correct
 			if( !isSRBG ) color.rgb = color.rgb.sqrt();
