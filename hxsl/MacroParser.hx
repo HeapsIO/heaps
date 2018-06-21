@@ -229,7 +229,7 @@ class MacroParser {
 		case EArrayDecl(el):
 			EArrayDecl([for( e in el ) parseExpr(e)]);
 		case ESwitch(e, cases, def):
-			ESwitch(parseExpr(e), [for( c in cases ) { expr : parseExpr(c.expr), values : [for( v in c.values ) parseExpr(v)] }], def == null ? null : parseExpr(def));
+			ESwitch(parseExpr(e), [for( c in cases ) { expr : c.expr == null ? { expr : EBlock([]), pos : c.values[0].pos } : parseExpr(c.expr), values : [for( v in c.values ) parseExpr(v)] }], def == null ? null : parseExpr(def));
 		case EWhile(cond, e, normalWhile):
 			EWhile(parseExpr(cond), parseExpr(e), normalWhile);
 		default:
