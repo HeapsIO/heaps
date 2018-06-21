@@ -346,9 +346,6 @@ class FontBuilder {
 
 	#else
 
-
-
-
 	function build() {
 		throw "Font building not supported on this platform";
 		return null;
