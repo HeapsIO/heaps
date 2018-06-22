@@ -234,6 +234,7 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.shader.mode = switch( toneMode ) {
 		case Linear: 0;
 		case Reinhard: 1;
+		default: 0;
 		};
 		tonemap.shader.hdrTexture = output;
 		tonemap.render();
