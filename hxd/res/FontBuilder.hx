@@ -226,18 +226,18 @@ class FontBuilder {
 		return font;
 	}
 
-    function getFontHeight(font:h2d.Font, chars:String) {
-        var body = js.Browser.document.body;
-        var dummy = js.Browser.document.createElement("div");
-        var dummyText = js.Browser.document.createTextNode(chars);
-        dummy.appendChild(dummyText);
-        dummy.style.fontSize = font.size + 'px';
-        dummy.style.fontFamily = font.name;
-        body.appendChild(dummy);
-        var result = dummy.offsetHeight;
-        body.removeChild(dummy);
-        return result;
-    }
+	function getFontHeight(font:h2d.Font, chars:String) {
+		var body = js.Browser.document.body;
+		var dummy = js.Browser.document.createElement('div');
+		var dummyText = js.Browser.document.createTextNode(chars);
+		dummy.appendChild(dummyText);
+		dummy.style.fontSize = font.size + 'px';
+		dummy.style.fontFamily = font.name;
+		body.appendChild(dummy);
+		var result = dummy.offsetHeight;
+		body.removeChild(dummy);
+		return result;
+	}
 
 	#elseif lime
 
