@@ -71,7 +71,7 @@ class SAO extends ScreenShader {
 				occlusion += sampleAO(vUV, origin, normal, radiusSS, i, randomPatternRotationAngle);
 
 			occlusion = 1.0 - occlusion / float(numSamples);
-			occlusion = clamp(pow(occlusion, 1.0 + intensity), 0.0, 1.0);
+			occlusion = pow(occlusion, 1.0 + intensity).saturate();
 
 			output.color = vec4(occlusion.xxx, 1.);
 		}
