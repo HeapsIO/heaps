@@ -3,7 +3,7 @@ package h3d.pass;
 class ScreenFx<T:hxsl.Shader> {
 
 	public var shader : T;
-	var pass : h3d.mat.Pass;
+	public var pass : h3d.mat.Pass;
 	var manager : ShaderManager;
 	var plane : h3d.prim.Primitive;
 	var engine : h3d.Engine;
