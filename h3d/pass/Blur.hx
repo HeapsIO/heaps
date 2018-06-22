@@ -104,7 +104,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 
 		var alloc = tmp == null;
 		if( alloc )
-			tmp = new h3d.mat.Texture(src.width, src.height, [Target]);
+			tmp = new h3d.mat.Texture(src.width, src.height, [Target], src.format);
 
 		if( values == null ) calcValues();
 
