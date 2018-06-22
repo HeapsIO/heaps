@@ -10,16 +10,8 @@ class DirLight extends Light {
 		if( dir != null ) setDirection(dir);
 	}
 
-	override function get_isSun() {
-		return pbr.isSun;
-	}
-
-	override function set_isSun(b:Bool) {
-		return pbr.isSun = b;
-	}
-
 	override function getShadowDirection() : h3d.Vector {
-		return absPos.front();	
+		return absPos.front();
 	}
 
 	override function emit(ctx:RenderContext) {

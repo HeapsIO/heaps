@@ -25,14 +25,6 @@ class PointLight extends Light {
 		return cullingDistance = v;
 	}
 
-	override function get_isSun() {
-		return pbr.isSun;
-	}
-
-	override function set_isSun(b:Bool) {
-		return pbr.isSun = b;
-	}
-
 	override function draw(ctx) {
 		primitive.render(ctx.engine);
 	}

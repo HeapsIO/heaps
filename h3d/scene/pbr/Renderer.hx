@@ -204,7 +204,6 @@ class Renderer extends h3d.scene.Renderer {
 			pbrSun.lightDir.load(@:privateAccess ls.shadowLight.getShadowDirection());
 			pbrSun.lightDir.scale3(-1);
 			pbrSun.lightDir.normalize();
-			pbrSun.isSun = true;
 		}
 
 		pbrOut.setGlobals(ctx);

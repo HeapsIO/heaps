@@ -20,15 +20,6 @@ class Light extends h3d.scene.Light {
 		return _color = v;
 	}
 
-	function get_isSun() {
-		return false;
-	}
-
-	function set_isSun(b:Bool) {
-		if( b ) throw "Not supported on this light";
-		return b;
-	}
-
 	override function get_enableSpecular() {
 		return true;
 	}

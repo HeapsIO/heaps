@@ -17,8 +17,10 @@ class PropsDefinition extends hxsl.Shader {
 
 		@param var cameraPosition : Vec3;
 		var pixelColor : Vec4;
+		var shadow : Float;
 
 		function __init__fragment() {
+			shadow = 1.;
 			pixelColor = vec4(0.,0.,0.,1.);
 			{
 				view = (cameraPosition - transformedPosition).normalize();

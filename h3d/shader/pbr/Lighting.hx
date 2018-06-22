@@ -47,12 +47,7 @@ class Direct extends PropsDefinition {
 
 		var pbrLightDirection : Vec3;
 		var pbrLightColor : Vec3;
-		var shadow : Float;
 		@const var doDiscard : Bool = true;
-
-		function __init__fragment() {
-			shadow = 1.;
-		}
 
 		function fragment() {
 			var NdL = normal.dot(pbrLightDirection).max(0.);
