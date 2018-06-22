@@ -178,7 +178,18 @@ class Eval {
 			};
 			switch( channelMode ) {
 			case R, G, B, A:
-				return TSwiz(tget, [switch( channelMode ) { case R: X; case G: Y; case B: Z; default: W; }]);
+				return TSwiz(tget, switch( [count,channelMode] ) {
+					case [1,R]: [X];
+					case [1,G]: [Y];
+					case [1,B]: [Z];
+					case [1,A]: [W];
+					case [2,R]: [X,Y];
+					case [2,G]: [Y,Z];
+					case [2,B]: [Z,W];
+					case [3,R]: [X,Y,Z];
+					case [3,G]: [Y,Z,W];
+					default: throw "Invalid channel value "+channelMode+" for "+count+" channels";
+				});
 			case Unknown:
 				var zero = { e : TConst(CFloat(0.)), t : TFloat, p : pos };
 				if( count == 1 )
