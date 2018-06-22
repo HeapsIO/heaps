@@ -30,6 +30,15 @@ package h3d.scene.pbr;
 	var Reinhard = "Reinhard";
 }
 
+typedef SaoProps = {
+	var size : Int;
+	var blur : Int;
+	var samples : Int;
+	var radius : Float;
+	var intensity : Float;
+	var bias : Float;
+}
+
 typedef PbrRenderProps = {
 	var mode : DisplayMode;
 	var env : String;
@@ -37,6 +46,7 @@ typedef PbrRenderProps = {
 	var exposure : Float;
 	var sky : SkyMode;
 	var tone : TonemapMap;
+	var sao : SaoProps;
 }
 
 class Renderer extends h3d.scene.Renderer {
@@ -51,6 +61,9 @@ class Renderer extends h3d.scene.Renderer {
 	var shadows = new h3d.pass.ShadowMap(2048);
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
+	var sao = new h3d.pass.ScalableAO();
+	var saoBlur = new h3d.pass.Blur();
+	var saoCopy = new h3d.pass.Copy();
 
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
@@ -117,6 +130,7 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	override function render() {
+		var props : PbrRenderProps = props;
 
 		shadows.draw(get("shadow"));
 
@@ -129,6 +143,23 @@ class Renderer extends h3d.scene.Renderer {
 
 		setTarget(albedo);
 		draw("albedo");
+
+		if( props.sao != null ) {
+			var sp = props.sao;
+			var saoTex = allocTarget("sao",sp.size,false);
+			setTarget(saoTex);
+			sao.shader.depthTextureChannel = A;
+			sao.shader.normalTextureChannel = R;
+			sao.shader.numSamples = 1 << sp.samples;
+			sao.shader.sampleRadius	= sp.radius;
+			sao.shader.intensity = sp.intensity;
+			sao.shader.bias = sp.bias * sp.bias;
+			sao.apply(normal,normal,ctx.camera);
+			saoBlur.passes = sp.blur;
+			saoBlur.apply(saoTex);
+			saoCopy.pass.setColorMask(false,false,true,false);
+			saoCopy.apply(saoTex, pbr, Multiply);
+		}
 
 		if( displayMode == Env )
 			clear(0xFF404040);
@@ -190,7 +221,7 @@ class Renderer extends h3d.scene.Renderer {
 			lpass = new h3d.pass.ScreenFx(pbrProps);
 			lpass.addShader(new h3d.shader.ScreenShader());
 			lpass.addShader(pbrDirect);
-			@:privateAccess lpass.pass.setBlendMode(Add);
+			lpass.pass.setBlendMode(Add);
 			screenLightPass = lpass;
 		}
 		if( ls != null ) ls.drawLights(this, lpass);
@@ -238,6 +269,7 @@ class Renderer extends h3d.scene.Renderer {
 			exposure : 0.,
 			sky : Hide,
 			tone : Reinhard,
+			sao : null,
 		};
 		return props;
 	}
@@ -264,6 +296,30 @@ class Renderer extends h3d.scene.Renderer {
 	#if js
 	override function editProps() {
 		var props : PbrRenderProps = props;
+		if( props.sao == cast true ) {
+			props.sao = {
+				size : 0,
+				blur : 1,
+				samples : 5,
+				radius : 1,
+				intensity : 1,
+				bias : 0.1,
+			};
+		} else if( props.sao == cast false ) {
+			Reflect.deleteField(props,"sao");
+		}
+
+		var saoProps = props.sao == null ? '' : '
+			<dl>
+			<dt>Intensity</dt><dd><input type="range" min="0" max="10" field="sao.intensity"/></dd>
+			<dt>Radius</dt><dd><input type="range" min="0" max="10" field="sao.radius"/></dd>
+			<dt>Bias</dt><dd><input type="range" min="0" max="0.5" field="sao.bias"/></dd>
+			<dt>Size</dt><dd><input type="range" min="0" max="3" field="sao.size" step="1"/></dd>
+			<dt>Blur</dt><dd><input type="range" min="0" max="5" field="sao.blur" step="1"/></dd>
+			<dt>Samples</dt><dd><input type="range" min="3" max="10" field="sao.samples" step="1"/></dd>
+			</dl>
+		';
+
 		return new js.jquery.JQuery('
 			<dl>
 				<dt>Tone</dt>
@@ -294,6 +350,16 @@ class Renderer extends h3d.scene.Renderer {
 				<dt>&nbsp;</dt><dd><input type="range" min="0" max="2" field="envPower"/></dd>
 				<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
 			</dl>
+
+			<dl>
+				<dt>SAO</dt>
+				<dd>
+					<input type="checkbox" field="sao"/>
+					$saoProps
+				</dd>
+			</dl>
+
+
 		');
 	}
 	#end
