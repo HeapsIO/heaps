@@ -274,7 +274,7 @@ class Library {
 			mat.normalMap = loadTexture(m.normalMap);
 		mat.blendMode = m.blendMode;
 		mat.model = resource;
-		var props = h3d.mat.MaterialSetup.current.loadProps(mat);
+		var props = h3d.mat.MaterialSetup.current.loadMaterialProps(mat);
 		if( props == null ) props = mat.getDefaultModelProps();
 		mat.props = props;
 		return mat;

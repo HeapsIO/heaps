@@ -8,7 +8,7 @@ class MaterialSetup {
 
 	public function new(name) {
 		if( database == null )
-			database = new MaterialDatabase("materials.json");
+			database = new MaterialDatabase();
 		this.name = name;
 	}
 
@@ -24,17 +24,17 @@ class MaterialSetup {
 		return @:privateAccess new h3d.mat.Material();
 	}
 
-	public function loadProps( mat : h3d.mat.Material ) {
-		return database.loadProps(mat, this);
-	}
-
 	public function getDefaults( ?kind : String ) {
 		if( emptyMat == null ) emptyMat = createMaterial();
 		return emptyMat.getDefaultProps(kind);
 	}
 
-	public function saveModelMaterial( material : Material ) {
-		database.saveProps(material, this);
+	public function loadMaterialProps( material : h3d.mat.Material ) {
+		return database.loadMatProps(material, this);
+	}
+
+	public function saveMaterialProps( material : Material ) {
+		database.saveMatProps(material, this);
 	}
 
 	/*

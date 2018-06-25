@@ -2,52 +2,63 @@ package h3d.mat;
 
 class MaterialDatabase {
 
-	public var file(default, null) : String;
-	var db : Dynamic;
+	var db : Map<String,{ v : Dynamic }> = new Map();
 
-	public function new( file : String ) {
-		this.file = file;
+	public function new() {
 	}
 
-	function getPath( material : Material, setup : MaterialSetup ) {
-		var path = material.model == null ? [] : material.model.entry.path.split("/");
-		path.pop();
-		path.push(material.name);
-		path.unshift(setup.name);
+	function getFilePath( model : hxd.res.Resource ) {
+		var file = model.entry.path.split(".");
+		file.pop();
+		var path = file.join(".")+".props";
+		#if (sys || nodejs)
+		var fs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		if( fs != null && !haxe.io.Path.isAbsolute(path) )
+			path = fs.baseDir + "/" + path;
+		#end
 		return path;
 	}
 
-	function load() {
-		db = try haxe.Json.parse(hxd.res.Loader.currentInstance.load(file).toText()) catch( e : hxd.res.NotFound ) { type : "materialDB" };
+	public function getModelData( model : hxd.res.Resource ) {
+		if( model == null )
+			return null;
+		var cached = db.get(model.entry.path);
+		if( cached != null )
+			return cached.v;
+		var file = getFilePath(model);
+		var value = try haxe.Json.parse(hxd.res.Loader.currentInstance.load(file).toText()) catch( e : hxd.res.NotFound ) {};
+		db.set(model.entry.path, { v : value });
+		return value;
 	}
 
-	function save() {
+	function saveData( model : hxd.res.Resource, data : Dynamic ) {
+		var file = getFilePath(model);
 		#if (sys || nodejs)
-		var fs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-		if( fs != null ) {
-			sys.io.File.saveContent(fs.baseDir + "/" + file, haxe.Json.stringify(db, "\t"));
-			return;
-		}
-		#end
+		if( data == null )
+			(try sys.FileSystem.deleteFile(file) catch( e : Dynamic ) {});
+		else
+			sys.io.File.saveContent(file, haxe.Json.stringify(data, "\t"));
+		#else
 		throw "Can't save material props database " + file;
+		#end
 	}
 
-	public function loadProps( material : Material, setup : MaterialSetup ) {
-		if( db == null ) load();
-		var path = getPath(material, setup);
-		var root : Dynamic = db;
-		while( path.length > 0 ) {
-			root = Reflect.field(root, path.shift());
-			if( root == null )
-				return null;
-		}
-		return root;
+	public function loadMatProps( material : Material, setup : MaterialSetup ) {
+		var p : Dynamic = getModelData(material.model);
+		if( p == null ) return p;
+		p = p.materials;
+		if( p == null ) return p;
+		p = Reflect.field(p, setup.name);
+		if( p == null ) return p;
+		return Reflect.field(p, material.name);
 	}
 
-	public function saveProps( material : Material, setup : MaterialSetup ) {
-		if( db == null ) load();
-		var path = getPath(material, setup);
-		var root : Dynamic = db;
+	public function saveMatProps( material : Material, setup : MaterialSetup ) {
+		var path = ["materials", setup.name, material.name];
+		var root : Dynamic = getModelData(material.model);
+		if( root == null )
+			return;
+		var realRoot = root;
 		var prevs = [];
 		for( i in 0...path.length - 1 ) {
 			var next = Reflect.field(root, path[i]);
@@ -75,7 +86,11 @@ class MaterialDatabase {
 		} else {
 			Reflect.setField(root, name, currentProps);
 		}
-		save();
+
+		var file = getFilePath(material.model);
+		if( Reflect.fields(realRoot).length == 0 )
+			realRoot = null;
+		saveData(material.model, realRoot);
 	}
 
 }
