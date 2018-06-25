@@ -32,7 +32,7 @@ class ScreenFx<T:hxsl.Shader> {
 	}
 
 	public function removeShader(s:hxsl.Shader) {
-		var prev = null;
+		var prev : hxsl.ShaderList = null;
 		var cur = shaders;
 		while( cur != null ) {
 			if( cur.s == s ) {
