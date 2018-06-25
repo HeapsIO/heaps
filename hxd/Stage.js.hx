@@ -37,7 +37,7 @@ class Stage {
 		element.addEventListener("mousedown", onMouseDown);
 		element.addEventListener("mousemove", onMouseMove);
 		element.addEventListener("mouseup", onMouseUp);
-		element.addEventListener("mousewheel", onMouseWheel);
+		element.addEventListener("wheel", onMouseWheel);
 		element.addEventListener("touchstart", onTouchStart);
 		element.addEventListener("touchmove", onTouchMove);
 		element.addEventListener("touchend", onTouchEnd);
@@ -64,7 +64,7 @@ class Stage {
 		timer = new haxe.Timer(100);
 		timer.run = checkResize;
 	}
-	
+
 	function checkResize() {
 		canvasPos = canvas.getBoundingClientRect();
 		var cw = this.width, ch = this.height;
@@ -191,9 +191,9 @@ class Stage {
 		event(new Event(EMove, mouseX, mouseY));
 	}
 
-	function onMouseWheel(e:js.html.MouseEvent) {
+	function onMouseWheel(e:js.html.WheelEvent) {
 		var ev = new Event(EWheel, mouseX, mouseY);
-		ev.wheelDelta = untyped -e.wheelDelta / 30.0;
+		ev.wheelDelta = e.deltaY / 120; // browser specific?
 		event(ev);
 	}
 
