@@ -165,6 +165,7 @@ class BigPrimitive extends Primitive {
 		buffers = [];
 		allIndexes = [];
 		bufPos = 0;
+		idxPos = 0;
 		tmpBuf = null;
 		tmpIdx = null;
 	}
