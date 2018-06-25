@@ -62,7 +62,8 @@ class WorldMaterial {
 	}
 	public function updateBits() {
 		bits = (t.t == null ? 0 : t.t.id    << 8)
-			| ((normal == null ? 0 : 1)     << 5)
+			| ((normal == null ? 0 : 1)     << 6)
+			| (blend.getIndex()             << 5)
 			| ((killAlpha == null ? 0 : 1)  << 4)
 			| ((lights ? 1 : 0)             << 3)
 			| ((shadows ? 1 : 0)            << 2)
