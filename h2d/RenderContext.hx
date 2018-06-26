@@ -271,6 +271,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.selectMaterial(pass);
 		engine.uploadShaderBuffers(buffers, Params);
 		engine.uploadShaderBuffers(buffers, Textures);
+		engine.uploadShaderBuffers(buffers, Buffers);
 	}
 
 	@:access(h2d.Drawable)

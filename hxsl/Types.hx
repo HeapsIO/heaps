@@ -8,6 +8,7 @@ typedef Texture = h3d.mat.Texture;
 typedef Sampler2D = h3d.mat.Texture;
 typedef SamplerCube = h3d.mat.Texture;
 typedef ChannelTexture = h3d.mat.Texture;
+typedef Buffer = h3d.Buffer;
 
 class ChannelTools {
 	public static inline function isPackedFormat( c : ChannelTexture ) {

@@ -44,6 +44,7 @@ class GlslOut {
 	var intelDriverFix : Bool;
 	var isES(get,never) : Bool;
 	var isES2(get,never) : Bool;
+	var uniformBuffer : Int = 0;
 	public var varNames : Map<Int,String>;
 	public var flipY : Bool;
 	public var glES : Null<Float>;
@@ -130,6 +131,8 @@ class GlslOut {
 				add(v);
 			}
 			add("]");
+		case TBuffer(_):
+			throw "assert";
 		case TChannel(n):
 			add("channel" + n);
 		}
@@ -149,6 +152,13 @@ class GlslOut {
 			case SConst(n): add(n);
 			}
 			add("]");
+		case TBuffer(t, size):
+			add("uniform_buffer"+(uniformBuffer++));
+			add(" { ");
+			v.type = TArray(t,size);
+			addVar(v);
+			v.type = TBuffer(t,size);
+			add("; }");
 		default:
 			addType(v.type);
 			add(" ");
@@ -541,10 +551,13 @@ class GlslOut {
 		isVertex = f.kind == Vertex;
 
 		var outIndex = 0;
+		uniformBuffer = 0;
 		outIndexes = new Map();
 		for( v in s.vars ) {
 			switch( v.kind ) {
 			case Param, Global:
+				if( v.type.match(TBuffer(_)) )
+					add("layout(std140) ");
 				add("uniform ");
 			case Input:
 				add( isES2 ? "attribute " : "in ");

@@ -22,6 +22,7 @@ private class ShaderContext {
 	public var paramsSize : Int;
 	public var texturesCount : Int;
 	public var textures2DCount : Int;
+	public var bufferCount : Int;
 	public var paramsContent : hl.Bytes;
 	public var globals : dx.Resource;
 	public var params : dx.Resource;
@@ -643,6 +644,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.paramsContent.fill(0, shader.paramsSize * 16, 0xDD);
 		ctx.texturesCount = shader.textures2DCount + shader.texturesCubeCount;
 		ctx.textures2DCount = shader.textures2DCount;
+		ctx.bufferCount = shader.bufferCount;
 		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		#if debug
@@ -935,6 +937,25 @@ class DirectXDriver extends h3d.impl.Driver {
 					}
 				}
 			}
+		case Buffers:
+			var first = -1;
+			var max = -1;
+			for( i in 0...shader.bufferCount ) {
+				var buf = @:privateAccess buffers.buffers[i].buffer.vbuf.res;
+				var tid = i + 2;
+				if( buf != state.buffers[tid] ) {
+					state.buffers[tid] = buf;
+					if( first < 0 ) first = tid;
+					max = tid;
+				}
+			}
+			if( max >= 0 )
+				switch( state.kind ) {
+				case Vertex:
+					Driver.vsSetConstantBuffers(first,max-first+1,state.buffers.getRef().offset(first));
+				case Pixel:
+					Driver.psSetConstantBuffers(first,max-first+1,state.buffers.getRef().offset(first));
+				}
 		case Textures:
 			var start = -1, max = -1;
 			var sstart = -1, smax = -1;

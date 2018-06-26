@@ -55,6 +55,8 @@ class RuntimeShaderData {
 	public var textures2DCount : Int;
 	public var texturesCube : AllocParam;
 	public var texturesCubeCount : Int;
+	public var buffers : AllocParam;
+	public var bufferCount : Int;
 	public var consts : Array<Float>;
 	public function new() {
 	}

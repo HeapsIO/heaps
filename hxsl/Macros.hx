@@ -47,6 +47,8 @@ class Macros {
 			macro : hxsl.Types.ChannelTexture;
 		case TFun(_):
 			throw "assert";
+		case TBuffer(_):
+			macro : hxsl.Types.Buffer;
 		}
 	}
 

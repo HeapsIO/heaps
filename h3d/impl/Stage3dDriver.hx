@@ -664,6 +664,9 @@ class Stage3dDriver extends Driver {
 					curSamplerBits[i] = -1;
 				}
 			}
+		case Buffers:
+			if( curShader.s.fragment.bufferCount + curShader.s.vertex.bufferCount > 0 )
+				throw "Uniform Buffers are not supported";
 		case Params:
 			if( curShader.s.vertex.paramsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.VERTEX, curShader.s.vertex.globalsSize, buffers.vertex.params.toData(), curShader.s.vertex.paramsSize);
 			if( curShader.s.fragment.paramsSize > 0 ) ctx.setProgramConstantsFromVector(flash.display3D.Context3DProgramType.FRAGMENT, curShader.s.fragment.globalsSize, buffers.fragment.params.toData(), curShader.s.fragment.paramsSize);

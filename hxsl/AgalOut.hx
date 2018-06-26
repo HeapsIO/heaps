@@ -800,9 +800,9 @@ class AgalOut {
 		case TInt, TFloat, TVec(_), TBytes(_), TBool: 1;
 		case TMat3, TMat3x4: 3;
 		case TMat4: 4;
-		case TArray(t, SConst(size)): (Tools.size(t) * size + 3) >> 2;
+		case TArray(t, SConst(size)), TBuffer(t, SConst(size)): (Tools.size(t) * size + 3) >> 2;
 		case TStruct(vl): throw "TODO";
-		case TVoid, TString, TSampler2D, TSamplerCube, TFun(_), TArray(_), TChannel(_): throw "assert "+t;
+		case TVoid, TString, TSampler2D, TSamplerCube, TFun(_), TArray(_), TBuffer(_), TChannel(_): throw "assert "+t;
 		}
 	}
 

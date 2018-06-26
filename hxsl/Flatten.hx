@@ -80,6 +80,7 @@ class Flatten {
 		pack(prefix + "Params", Param, params, VFloat);
 		var allVars = globals.concat(params);
 		var textures = packTextures(prefix + "Textures", allVars, TSampler2D).concat(packTextures(prefix+"TexturesCube", allVars, TSamplerCube));
+		packBuffers(allVars);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
 		for( t in textures )
 			t.pos >>= 2;
@@ -359,6 +360,25 @@ class Flatten {
 		return alloc;
 	}
 
+	function packBuffers( vars : Array<TVar> ) {
+		var alloc = new Array<Alloc>();
+		var g : TVar = {
+			id : Tools.allocVarId(),
+			name : "buffers",
+			type : TVoid,
+			kind : Param,
+		};
+		for( v in vars )
+			if( v.type.match(TBuffer(_)) ) {
+				var a = new Alloc(g, null, alloc.length, 1);
+				a.v = v;
+				alloc.push(a);
+				outVars.push(v);
+			}
+		g.type = TArray(TBuffer(TVoid,SConst(0)),SConst(alloc.length));
+		allocData.set(g, alloc);
+	}
+
 	function pack( name : String, kind : VarKind, vars : Array<TVar>, t : VecType ) {
 		var alloc = new Array<Alloc>(), apos = 0;
 		var g : TVar = {
@@ -369,7 +389,7 @@ class Flatten {
 		};
 		for( v in vars ) {
 			switch( v.type ) {
-			case TSampler2D, TSamplerCube, TChannel(_):
+			case TSampler2D, TSamplerCube, TChannel(_), TBuffer(_):
 				continue;
 			default:
 			}

@@ -16,6 +16,7 @@ enum Type {
 	TStruct( vl : Array<TVar> );
 	TFun( variants : Array<FunType> );
 	TArray( t : Type, size : SizeDecl );
+	TBuffer( t : Type, size : SizeDecl );
 	TChannel( size : Int );
 }
 
@@ -373,6 +374,7 @@ class Tools {
 			prefix + "Vec" + size;
 		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
 		case TArray(t, s): toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
+		case TBuffer(t, s): "buffer "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBytes(n): "Bytes" + n;
 		default: t.getName().substr(1);
 		}
@@ -491,8 +493,8 @@ class Tools {
 		case TMat3x4: 12;
 		case TBytes(s): s;
 		case TBool, TString, TSampler2D, TSamplerCube, TFun(_): 0;
-		case TArray(t, SConst(v)): size(t) * v;
-		case TArray(_, SVar(_)): 0;
+		case TArray(t, SConst(v)), TBuffer(t, SConst(v)): size(t) * v;
+		case TArray(_, SVar(_)), TBuffer(_): 0;
 		}
 	}
 

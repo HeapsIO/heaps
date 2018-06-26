@@ -14,6 +14,9 @@ private typedef GL = js.html.webgl.GL;
 private extern class GL2 extends js.html.webgl.GL {
 	// webgl2
 	function drawBuffers( buffers : Array<Int> ) : Void;
+	function getUniformBlockIndex( p : Program, name : String ) : Int;
+	function bindBufferBase( target : Int, index : Int, buffer : js.html.webgl.Buffer ) : Void;
+	function uniformBlockBinding( p : Program, blockIndex : Int, blockBinding : Int ) : Void;
 	static inline var RGBA16F = 0x881A;
 	static inline var RGBA32F = 0x8814;
 	static inline var ALPHA16F = 0x881C;
@@ -26,6 +29,7 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var SRGB_ALPHA = 0x8C42;
 	static inline var SRGB8_ALPHA = 0x8C43;
 	static inline var DEPTH_COMPONENT24 = 0x81A6;
+	static inline var UNIFORM_BUFFER = 0x8A11;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -85,6 +89,7 @@ private class CompiledShader {
 	public var params : Uniform;
 	public var textures : Array<Uniform>;
 	public var cubeTextures : Array<Uniform>;
+	public var buffers : Array<Int>;
 	public var shader : hxsl.RuntimeShader.RuntimeShaderData;
 	public function new(s,vertex,shader) {
 		this.s = s;
@@ -285,6 +290,11 @@ class GlDriver extends Driver {
 		s.params = gl.getUniformLocation(p.p, prefix + "Params");
 		s.textures = [for( i in 0...shader.textures2DCount ) gl.getUniformLocation(p.p, prefix + "Textures[" + i + "]")];
 		s.cubeTextures = [for( i in 0...shader.texturesCubeCount ) gl.getUniformLocation(p.p, prefix + "TexturesCube[" + i + "]")];
+		if( shader.bufferCount > 0 ) {
+			s.buffers = [for( i in 0...shader.bufferCount ) gl.getUniformBlockIndex(p.p,"uniform_buffer"+i)];
+			for( i in 0...shader.bufferCount )
+				gl.uniformBlockBinding(p.p,s.buffers[i],i);
+		}
 	}
 
 	override function selectShader( shader : hxsl.RuntimeShader ) {
@@ -409,6 +419,11 @@ class GlDriver extends Driver {
 				var a = buf.params.subarray(0, s.shader.paramsSize * 4);
 				gl.uniform4fv(s.params, a);
 				#end
+			}
+		case Buffers:
+			if( s.buffers != null ) {
+				for( i in 0...s.buffers.length )
+					gl.bindBufferBase(GL2.UNIFORM_BUFFER, i, @:privateAccess buf.buffers[i].buffer.vbuf.b);
 			}
 		case Textures:
 			var tcount = s.textures.length;

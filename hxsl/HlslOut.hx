@@ -104,7 +104,7 @@ class HlslOut {
 			add(" }");
 		case TFun(_):
 			add("function");
-		case TArray(t, size):
+		case TArray(t, size), TBuffer(t,size):
 			addType(t);
 			add("[");
 			switch( size ) {
@@ -130,7 +130,7 @@ class HlslOut {
 
 	function addVar( v : TVar ) {
 		switch( v.type ) {
-		case TArray(t, size):
+		case TArray(t, size), TBuffer(t,size):
 			var old = v.type;
 			v.type = t;
 			addVar(v);
@@ -548,12 +548,16 @@ class HlslOut {
 
 	function initParams( s : ShaderData ) {
 		var textures = [];
+		var buffers = [];
 		add("cbuffer _params : register(b1) {\n");
 		for( v in s.vars )
 			if( v.kind == Param ) {
 				switch( v.type ) {
 				case TArray(t, _) if( t.isSampler() ):
 					textures.push(v);
+					continue;
+				case TBuffer(_):
+					buffers.push(v);
 					continue;
 				default:
 				}
@@ -562,6 +566,15 @@ class HlslOut {
 				add(";\n");
 			}
 		add("};\n\n");
+
+		var bufCount = 0;
+		for( b in buffers ) {
+			add('cbuffer _buffer$bufCount : register(b${bufCount+2}) { ');
+			addVar(b);
+			add("; };\n");
+			bufCount++;
+		}
+		if( bufCount > 0 ) add("\n");
 
 		for( v in textures ) {
 			switch( v.type ) {

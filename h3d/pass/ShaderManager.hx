@@ -231,6 +231,13 @@ class ShaderManager {
 				buf.tex[tid++] = t;
 				p = p.next;
 			}
+			var p = s.buffers;
+			var bid = 0;
+			while( p != null ) {
+				var b : h3d.Buffer = getParamValue(p, shaders, !STRICT);
+				buf.buffers[bid++] = b;
+				p = p.next;
+			}
 		}
 		fill(buf.vertex, s.vertex);
 		fill(buf.fragment, s.fragment);

@@ -158,6 +158,7 @@ class Default extends Base {
 				manager.fillParams(buf, p.shader, p.shaders);
 				ctx.engine.uploadShaderBuffers(buf, Params);
 				ctx.engine.uploadShaderBuffers(buf, Textures);
+				ctx.engine.uploadShaderBuffers(buf, Buffers);
 			}
 			drawObject(p);
 			p = p.next;

@@ -153,7 +153,10 @@ class MemoryManager {
 		}
 
 		if( !b.flags.has(Managed) ) {
-			var m = new ManagedBuffer(stride, b.vertices, b.flags.has(Dynamic) ? [Dynamic] : null);
+			var flags : Array<h3d.Buffer.BufferFlag> = null;
+			if( b.flags.has(Dynamic) ) { if( flags == null ) flags = []; flags.push(Dynamic); }
+			if( b.flags.has(UniformBuffer) ) { if( flags == null ) flags = []; flags.push(UniformBuffer); }
+ 			var m = new ManagedBuffer(stride, b.vertices, flags);
 			#if debug
 			m.next = buffers[0];
 			buffers[0] = m;

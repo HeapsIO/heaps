@@ -367,6 +367,9 @@ class Cache {
 				case TArray(TVec(4, VFloat), SConst(size)):
 					c.params = out[0];
 					c.paramsSize = size;
+				case TArray(TBuffer(_), _):
+					c.buffers = out[0];
+					c.bufferCount = out.length;
 				default: throw "assert";
 				}
 			case Global:
@@ -391,6 +394,8 @@ class Cache {
 			c.textures2DCount = 0;
 		if( c.texturesCube == null )
 			c.texturesCubeCount = 0;
+		if( c.buffers == null )
+			c.bufferCount = 0;
 		c.data = data;
 		return c;
 	}
