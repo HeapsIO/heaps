@@ -217,6 +217,8 @@ class LogDriver extends Driver {
 			}
 			logVars(currentShader.vertex, buffers.vertex);
 			logVars(currentShader.fragment, buffers.fragment);
+		case Buffers:
+			// TODO
 		case Textures:
 			inline function logVars( s : hxsl.RuntimeShader.RuntimeShaderData, buf : h3d.shader.Buffers.ShaderBuffers ) {
 				var t = s.textures2D;
