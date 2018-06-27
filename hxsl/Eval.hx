@@ -52,18 +52,18 @@ class Eval {
 		switch( v2.type ) {
 		case TStruct(vl):
 			v2.type = TStruct([for( v in vl ) mapVar(v)]);
-		case TArray(t, SVar(vs)):
+		case TArray(t, SVar(vs)), TBuffer(t, SVar(vs)):
 			var c = constants.get(vs.id);
 			if( c != null )
 				switch( c ) {
 				case TConst(CInt(v)):
-					v2.type = TArray(t, SConst(v));
+					v2.type = v2.type.match(TArray(_)) ? TArray(t, SConst(v)) : TBuffer(t, SConst(v));
 				default:
 					Error.t("Integer value expected for array size constant " + vs.name, null);
 				}
 			else {
 				var vs2 = mapVar(vs);
-				v2.type = TArray(t, SVar(vs2));
+				v2.type = v2.type.match(TArray(_)) ? TArray(t, SVar(vs2)) : TBuffer(t, SVar(vs2));
 			}
 		default:
 		}

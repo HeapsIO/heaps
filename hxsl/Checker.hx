@@ -725,8 +725,8 @@ class Checker {
 		return tv;
 	}
 
-	function makeVarType( t : Type, parent : TVar, pos : Position ) {
-		switch( t ) {
+	function makeVarType( vt : Type, parent : TVar, pos : Position ) {
+		switch( vt ) {
 		case TStruct(vl):
 			// mutate to allow TArray to access previously declared vars
 			var vl = vl.copy();
@@ -736,7 +736,7 @@ class Checker {
 				vl[i] = makeVar( { type : v.type, qualifiers : v.qualifiers, name : v.name, kind : v.kind, expr : null }, pos, parent);
 			}
 			return parent.type;
-		case TArray(t, size):
+		case TArray(t, size), TBuffer(t,size):
 			switch( t ) {
 			case TArray(_):
 				error("Multidimentional arrays are not allowed", pos);
@@ -780,9 +780,10 @@ class Checker {
 				if( !v2.isConst() ) error("Array size variable '" + v.name + "'should be a constant", pos);
 				SVar(v2);
 			}
-			return TArray(makeVarType(t,parent,pos), s);
+			t = makeVarType(t,parent,pos);
+			return vt.match(TArray(_)) ? TArray(t, s) : TBuffer(t,s);
 		default:
-			return t;
+			return vt;
 		}
 	}
 
