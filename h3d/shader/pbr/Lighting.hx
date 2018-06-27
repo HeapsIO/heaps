@@ -29,7 +29,7 @@ class Indirect extends PropsDefinition {
 				var F = F0 + (max(vec3(1 - roughness), F0) - F0) * exp2( ( -5.55473 * NdV - 6.98316) * NdV );
 
 				var diffuse = irrDiffuse.get(normal).rgb * albedo;
-				var envSpec = textureCubeLod(irrSpecular, reflect(-view,normal), roughness * irrSpecularLevels).rgb;
+				var envSpec = textureLod(irrSpecular, reflect(-view,normal), roughness * irrSpecularLevels).rgb;
 				var envBRDF = irrLut.get(vec2(roughness, NdV));
 				var specular = envSpec * (F * envBRDF.x + envBRDF.y);
 
