@@ -311,9 +311,13 @@ class GlDriver extends Driver {
 			t = t.next;
 		}
 		if( shader.bufferCount > 0 ) {
+			#if (!hlsdl || (hlsdl >= "1.7"))
 			s.buffers = [for( i in 0...shader.bufferCount ) gl.getUniformBlockIndex(p.p,"uniform_buffer"+i)];
 			for( i in 0...shader.bufferCount )
 				gl.uniformBlockBinding(p.p,s.buffers[i],i);
+			#else
+			throw "Uniform buffers require HL 1.7";
+			#end
 		}
 	}
 
@@ -704,7 +708,7 @@ class GlDriver extends Driver {
 	function getBindType( t : h3d.mat.Texture ) {
 		var isCube = t.flags.has(Cube);
 		var isArray = t.flags.has(IsArray);
-		return isCube ? GL.TEXTURE_CUBE_MAP : isArray ? GL2.TEXTURE_2D_ARRAY : GL.TEXTURE_2D;
+		return isCube ? GL.TEXTURE_CUBE_MAP : isArray ? #if (!hlsdl || (hlsdl >= "1.7")) GL2.TEXTURE_2D_ARRAY #else throw "Texture Array requires HL 1.7" #end : GL.TEXTURE_2D;
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
@@ -749,10 +753,12 @@ class GlDriver extends Driver {
 					break;
 				}
 			}
+		#if (!hlsdl || (hlsdl >= "1.7"))
 		} else if( t.flags.has(IsArray) ) {
 			gl.texImage3D(GL2.TEXTURE_2D_ARRAY, 0, tt.internalFmt, tt.width, tt.height, t.layerCount, 0, getChannels(tt), tt.pixelFmt, null);
 			if( gl.getError() == GL.OUT_OF_MEMORY )
 				outOfMem = true;
+		#end
 		} else {
 			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 			if( gl.getError() == GL.OUT_OF_MEMORY )
@@ -1212,9 +1218,12 @@ class GlDriver extends Driver {
 			throw "Invalid texture context";
 		#end
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
+
+		#if (!hlsdl || (hlsdl >= "1.7"))
 		if( tex.flags.has(IsArray) )
 			gl.framebufferTextureLayer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.t.t, mipLevel, layer);
 		else
+		#end
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 		if( tex.depthBuffer != null ) {
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r);
