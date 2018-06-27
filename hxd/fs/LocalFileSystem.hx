@@ -41,21 +41,6 @@ private class LocalEntry extends FileEntry {
 		#end
 	}
 
-	override function getTmpBytes() {
-		#if flash
-		if( checkExists && !file.exists )
-			return haxe.io.Bytes.alloc(0);
-		var fs = new flash.filesystem.FileStream();
-		fs.open(file, flash.filesystem.FileMode.READ);
-		var bytes = hxd.impl.Tmp.getBytes(fs.bytesAvailable);
-		fs.readBytes(bytes.getData());
-		fs.close();
-		return bytes;
-		#else
-		return sys.io.File.getBytes(file);
-		#end
-	}
-
 	override function getBytes() : haxe.io.Bytes {
 		#if flash
 		if( checkExists && !file.exists )

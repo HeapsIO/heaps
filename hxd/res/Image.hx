@@ -115,13 +115,7 @@ class Image extends Resource {
 			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
 			#if( format >= "3.1.3" )
 			var pdata = png.read();
-			try {
-				format.png.Tools.extract32(pdata, pixels.bytes, flipY);
-			} catch( e : Dynamic ) {
-				// most likely, out of memory
-				hxd.impl.Tmp.freeMemory();
-				format.png.Tools.extract32(pdata, pixels.bytes, flipY);
-			}
+			format.png.Tools.extract32(pdata, pixels.bytes, flipY);
 			if( flipY ) pixels.flags.set(FlipY);
 			#else
 			format.png.Tools.extract32(png.read(), pixels.bytes);
@@ -157,11 +151,9 @@ class Image extends Resource {
 			fmt = BGRA;
 			BGRA;
 		};
-		var dst = hxd.impl.Tmp.getBytes(width * height * 4);
-		if( !hl.Format.decodeJPG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) ) {
-			hxd.impl.Tmp.saveBytes(dst);
+		var dst = haxe.io.Bytes.alloc(width * height * 4);
+		if( !hl.Format.decodeJPG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) )
 			return null;
-		}
 		var pix = new hxd.Pixels(width, height, dst, fmt);
 		if( flipY ) pix.flags.set(FlipY);
 		return pix;
@@ -176,11 +168,9 @@ class Image extends Resource {
 			fmt = BGRA;
 			BGRA;
 		};
-		var dst = hxd.impl.Tmp.getBytes(width * height * 4);
-		if( !hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) ) {
-			hxd.impl.Tmp.saveBytes(dst);
+		var dst = haxe.io.Bytes.alloc(width * height * 4);
+		if( !hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) )
 			return null;
-		}
 		var pix = new hxd.Pixels(width, height, dst, fmt);
 		if( flipY ) pix.flags.set(FlipY);
 		return pix;

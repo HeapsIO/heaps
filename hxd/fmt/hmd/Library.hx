@@ -141,7 +141,7 @@ class Library {
 		}
 
 		var vsize = geom.vertexCount * geom.vertexStride * 4;
-		var vbuf = hxd.impl.Tmp.getBytes(vsize);
+		var vbuf = haxe.io.Bytes.alloc(vsize);
 		var entry = resource.entry;
 		entry.open();
 		entry.skip(header.dataPosition + geom.vertexPosition);
@@ -159,7 +159,7 @@ class Library {
 			entry.skip(ipos * 2);
 			isize = geom.indexCounts[material] * 2;
 		}
-		var ibuf = hxd.impl.Tmp.getBytes(isize);
+		var ibuf = haxe.io.Bytes.alloc(isize);
 		entry.read(ibuf, 0, isize);
 
 		var buf = new GeometryBuffer();
@@ -247,8 +247,6 @@ class Library {
 		}
 
 		entry.close();
-		hxd.impl.Tmp.saveBytes(ibuf);
-		hxd.impl.Tmp.saveBytes(vbuf);
 		return buf;
 	}
 
@@ -412,7 +410,7 @@ class Library {
 					frameCount = 1;
 				var fl = new haxe.ds.Vector<h3d.anim.LinearAnimation.LinearFrame>(frameCount);
 				var size = ((pos ? 3 : 0) + (rot ? 3 : 0) + (scale?3:0)) * 4 * frameCount;
-				var data = hxd.impl.Tmp.getBytes(size);
+				var data = haxe.io.Bytes.alloc(size);
 				entry.read(data, 0, size);
 				var p = 0;
 				for( i in 0...frameCount ) {
@@ -450,38 +448,34 @@ class Library {
 					fl[i] = f;
 				}
 				l.addCurve(o.name, fl, rot, scale);
-				hxd.impl.Tmp.saveBytes(data);
 			}
 			if( o.flags.has(HasUV) ) {
 				var fl = new haxe.ds.Vector(a.frames*2);
 				var size = 2 * 4 * a.frames;
-				var data = hxd.impl.Tmp.getBytes(size);
+				var data = haxe.io.Bytes.alloc(size);
 				entry.read(data, 0, size);
 				for( i in 0...fl.length )
 					fl[i] = data.getFloat(i * 4);
 				l.addUVCurve(o.name, fl);
-				hxd.impl.Tmp.saveBytes(data);
 			}
 			if( o.flags.has(HasAlpha) ) {
 				var fl = new haxe.ds.Vector(a.frames);
 				var size = 4 * a.frames;
-				var data = hxd.impl.Tmp.getBytes(size);
+				var data = haxe.io.Bytes.alloc(size);
 				entry.read(data, 0, size);
 				for( i in 0...fl.length )
 					fl[i] = data.getFloat(i * 4);
 				l.addAlphaCurve(o.name, fl);
-				hxd.impl.Tmp.saveBytes(data);
 			}
 			if( o.flags.has(HasProps) ) {
 				for( p in o.props ) {
 					var fl = new haxe.ds.Vector(a.frames);
 					var size = 4 * a.frames;
-					var data = hxd.impl.Tmp.getBytes(size);
+					var data = haxe.io.Bytes.alloc(size);
 					entry.read(data, 0, size);
 					for( i in 0...fl.length )
 						fl[i] = data.getFloat(i * 4);
 					l.addPropCurve(o.name, p, fl);
-					hxd.impl.Tmp.saveBytes(data);
 				}
 			}
 		}

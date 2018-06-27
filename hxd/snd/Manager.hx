@@ -511,7 +511,7 @@ class Manager {
 		var bpp = data.getBytesPerSample();
 		var reqSize = STREAM_BUFFER_SAMPLE_COUNT * bpp;
 		if( s.streamBuffer == null || s.streamBuffer.length < reqSize ) {
-			s.streamBuffer = hxd.impl.Tmp.getBytes(reqSize);
+			s.streamBuffer = haxe.io.Bytes.alloc(reqSize);
 			s.streamPos = start;
 		}
 		var remain = end - s.streamPos;

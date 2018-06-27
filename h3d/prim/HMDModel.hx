@@ -55,10 +55,9 @@ class HMDModel extends MeshPrimitive {
 
 		entry.skip(dataPosition + data.vertexPosition);
 		var size = data.vertexCount * data.vertexStride * 4;
-		var bytes = hxd.impl.Tmp.getBytes(size);
+		var bytes = haxe.io.Bytes.alloc(size);
 		entry.read(bytes, 0, size);
 		buffer.uploadBytes(bytes, 0, data.vertexCount);
-		hxd.impl.Tmp.saveBytes(bytes);
 
 		indexCount = 0;
 		indexesTriPos = [];
@@ -69,10 +68,9 @@ class HMDModel extends MeshPrimitive {
 		indexes = new h3d.Indexes(indexCount);
 
 		entry.skip(data.indexPosition - (data.vertexPosition + size));
-		var bytes = hxd.impl.Tmp.getBytes(indexCount * 2);
+		var bytes = haxe.io.Bytes.alloc(indexCount * 2);
 		entry.read(bytes, 0, indexCount * 2);
 		indexes.uploadBytes(bytes, 0, indexCount);
-		hxd.impl.Tmp.saveBytes(bytes);
 
 		entry.close();
 

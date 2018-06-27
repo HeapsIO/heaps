@@ -100,7 +100,7 @@ class Pixels {
 	public function sub( x : Int, y : Int, width : Int, height : Int ) {
 		if( x < 0 || y < 0 || x + width > this.width || y + height > this.height )
 			throw "Pixels.sub() outside bounds";
-		var out = hxd.impl.Tmp.getBytes(width * height * bpp);
+		var out = haxe.io.Bytes.alloc(width * height * bpp);
 		var stride = width * bpp;
 		var outP = 0;
 		for( dy in 0...height ) {
@@ -210,24 +210,23 @@ class Pixels {
 		while( tw < w ) tw <<= 1;
 		while( th < h ) th <<= 1;
 		if( w == tw && h == th ) return this;
-		var out = hxd.impl.Tmp.getBytes(tw * th * 4);
+		var out = haxe.io.Bytes.alloc(tw * th * bpp);
 		var p = 0, b = offset;
 		for( y in 0...h ) {
-			out.blit(p, bytes, b, w * 4);
-			p += w * 4;
-			b += w * 4;
-			for( i in 0...tw - w ) {
+			out.blit(p, bytes, b, w * bpp);
+			p += w * bpp;
+			b += w * bpp;
+			for( i in 0...((tw - w) * bpp) >> 2 ) {
 				out.setInt32(p, 0);
 				p += 4;
 			}
 		}
-		for( i in 0...(th - h) * tw ) {
+		for( i in 0...((th - h) * tw * bpp) >> 2 ) {
 			out.setInt32(p, 0);
 			p += 4;
 		}
 		if( copy )
 			return new Pixels(tw, th, out, format);
-		if( !flags.has(ReadOnly) ) hxd.impl.Tmp.saveBytes(bytes);
 		bytes = out;
 		width = tw;
 		height = th;
@@ -236,8 +235,8 @@ class Pixels {
 
 	function copyInner() {
 		var old = bytes;
-		bytes = hxd.impl.Tmp.getBytes(width * height * 4);
-		bytes.blit(0, old, offset, width * height * 4);
+		bytes = haxe.io.Bytes.alloc(width * height * bpp);
+		bytes.blit(0, old, offset, width * height * bpp);
 		offset = 0;
 		flags.unset(ReadOnly);
 	}
@@ -353,10 +352,7 @@ class Pixels {
 	}
 
 	public function dispose() {
-		if( bytes != null ) {
-			if( !flags.has(ReadOnly) ) hxd.impl.Tmp.saveBytes(bytes);
-			bytes = null;
-		}
+		bytes = null;
 	}
 
 	public function toPNG( ?level = 9 ) {
@@ -380,7 +376,7 @@ class Pixels {
 		p.flags.unset(ReadOnly);
 		if( bytes != null ) {
 			var size = width * height * bpp;
-			p.bytes = hxd.impl.Tmp.getBytes(size);
+			p.bytes = haxe.io.Bytes.alloc(size);
 			p.bytes.blit(0, bytes, offset, size);
 		}
 		return p;
@@ -419,7 +415,7 @@ class Pixels {
 	}
 
 	public static function alloc( width, height, format : PixelFormat ) {
-		return new Pixels(width, height, hxd.impl.Tmp.getBytes(width * height * bytesPerPixel(format)), format);
+		return new Pixels(width, height, haxe.io.Bytes.alloc(width * height * bytesPerPixel(format)), format);
 	}
 
 }
