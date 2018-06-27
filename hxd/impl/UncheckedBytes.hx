@@ -9,11 +9,19 @@ abstract UncheckedBytes(InnerData) {
 	}
 
 	@:arrayAccess inline function get( i : Int ) : Int {
+		#if neko
+		return untyped $sget(b,i);
+		#else
 		return this[i];
+		#end
 	}
 
 	@:arrayAccess inline function set( i : Int, v : Int ) : Int {
+		#if neko
+		untyped $sset(b,i,v);
+		#else
 		this[i] = v;
+		#end
 		return v;
 	}
 
