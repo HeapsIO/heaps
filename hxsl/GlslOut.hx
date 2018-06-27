@@ -239,8 +239,8 @@ class GlslOut {
 			case TSamplerCube:
 				if( isES2 )
 					return "textureCube";
-			case var t:
-				throw "Unsupported "+t;
+			default:
+				throw "assert";
 			}
 		case TextureLod:
 			switch( args[0].t ) {
@@ -262,6 +262,7 @@ class GlslOut {
 					return "textureCubeLodEXT";
 				}
 			default:
+				throw "assert";
 			}
 		case Mod if( rt == TInt && isES ):
 			decl("int _imod( int x, int y ) { return int(mod(float(x),float(y))); }");
