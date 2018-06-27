@@ -19,14 +19,14 @@ class ShaderBuffers {
 	public function new( s : hxsl.RuntimeShader.RuntimeShaderData ) {
 		globals = new ShaderBufferData(s.globalsSize<<2);
 		params = new ShaderBufferData(s.paramsSize<<2);
-		tex = new haxe.ds.Vector(s.textures2DCount + s.texturesCubeCount);
+		tex = new haxe.ds.Vector(s.texturesCount);
 		buffers = s.bufferCount > 0 ? new haxe.ds.Vector(s.bufferCount) : null;
 	}
 
 	public function grow( s : hxsl.RuntimeShader.RuntimeShaderData ) {
 		var ng = s.globalsSize << 2;
 		var np = s.paramsSize << 2;
-		var nt = s.textures2DCount + s.texturesCubeCount;
+		var nt = s.texturesCount;
 		var nb = s.bufferCount;
 		if( globals.length < ng ) globals = new ShaderBufferData(ng);
 		if( params.length < np ) params = new ShaderBufferData(np);

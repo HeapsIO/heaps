@@ -79,7 +79,9 @@ class Flatten {
 		pack(prefix + "Globals", Global, globals, VFloat);
 		pack(prefix + "Params", Param, params, VFloat);
 		var allVars = globals.concat(params);
-		var textures = packTextures(prefix + "Textures", allVars, TSampler2D).concat(packTextures(prefix+"TexturesCube", allVars, TSamplerCube));
+		var textures = packTextures(prefix + "Textures", allVars, TSampler2D)
+			.concat(packTextures(prefix+"TexturesCube", allVars, TSamplerCube))
+			.concat(packTextures(prefix+"TexturesArray", allVars, TSampler2DArray));
 		packBuffers(allVars);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
 		for( t in textures )
@@ -277,9 +279,12 @@ class Flatten {
 			var stride = Std.int(a.size / len);
 			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, AIndex(a)); }];
 			return { e : TArrayDecl(earr), t : t, p : pos };
-		case TSampler2D, TSamplerCube, TChannel(_):
-			return read(0,pos);
 		default:
+			if( t.isSampler() ) {
+				var e = read(0, pos);
+				e.t = t;
+				return e;
+			}
 			var size = varSize(t, a.t);
 			if( size > 4 )
 				return Error.t("Access not supported for " + t.toString(), null);
@@ -388,11 +393,8 @@ class Flatten {
 			kind : kind,
 		};
 		for( v in vars ) {
-			switch( v.type ) {
-			case TSampler2D, TSamplerCube, TChannel(_), TBuffer(_):
+			if( v.type.isSampler() || v.type.match(TBuffer(_)) )
 				continue;
-			default:
-			}
 			var size = varSize(v.type, t);
 			var best : Alloc = null;
 			for( a in alloc )

@@ -12,6 +12,7 @@ enum Type {
 	TMat3x4;
 	TBytes( size : Int );
 	TSampler2D;
+	TSampler2DArray;
 	TSamplerCube;
 	TStruct( vl : Array<TVar> );
 	TFun( variants : Array<FunType> );
@@ -198,8 +199,8 @@ enum TGlobal {
 	//MatrixCompMult;
 	//Any;
 	//All;
-	Texture2D;
-	TextureCube;
+	Texture;
+	TextureLod;
 	// ...other texture* operations
 	// constructors
 	ToInt;
@@ -228,8 +229,6 @@ enum TGlobal {
 	DFdx;
 	DFdy;
 	Fwidth;
-	TextureCubeLod;
-	Texture2DLod;
 	ChannelRead;
 	// debug
 	Trace;
@@ -356,7 +355,7 @@ class Tools {
 
 	public static function isSampler( t : Type ) {
 		return switch( t ) {
-		case TSampler2D, TSamplerCube:
+		case TSampler2D, TSamplerCube, TSampler2DArray, TChannel(_):
 			true;
 		default:
 			false;
@@ -492,7 +491,7 @@ class Tools {
 		case TMat4: 16;
 		case TMat3x4: 12;
 		case TBytes(s): s;
-		case TBool, TString, TSampler2D, TSamplerCube, TFun(_): 0;
+		case TBool, TString, TSampler2D, TSampler2DArray, TSamplerCube, TFun(_): 0;
 		case TArray(t, SConst(v)), TBuffer(t, SConst(v)): size(t) * v;
 		case TArray(_, SVar(_)), TBuffer(_): 0;
 		}

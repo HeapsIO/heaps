@@ -611,7 +611,7 @@ class Stage3dDriver extends Driver {
 			shaderChanged = true;
 			curShader = p;
 			// unbind extra textures
-			var tcount : Int = shader.fragment.textures2DCount + shader.fragment.texturesCubeCount + shader.vertex.textures2DCount + shader.vertex.texturesCubeCount;
+			var tcount : Int = shader.fragment.texturesCount + shader.vertex.texturesCount;
 			while( curTextures.length > tcount ) {
 				curTextures.pop();
 				ctx.setTextureAt(curTextures.length, null);
@@ -629,7 +629,7 @@ class Stage3dDriver extends Driver {
 	override function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Textures:
-			for( i in 0...curShader.s.fragment.textures2DCount + curShader.s.fragment.texturesCubeCount ) {
+			for( i in 0...curShader.s.fragment.texturesCount ) {
 				var t = buffers.fragment.tex[i];
 				if( t == null || t.isDisposed() ) {
 					var color = h3d.mat.Defaults.loadingTextureColor;

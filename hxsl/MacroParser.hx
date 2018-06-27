@@ -79,6 +79,7 @@ class MacroParser {
 			case "Mat3x4": return TMat3x4;
 			case "String": return TString;
 			case "Sampler2D": return TSampler2D;
+			case "Sampler2DArray": return TSampler2DArray;
 			case "SamplerCube": return TSamplerCube;
 			case "Bytes2": return TBytes(2);
 			case "Bytes3": return TBytes(3);

@@ -626,13 +626,13 @@ class AgalOut {
 				}
 			}
 			return r;
-		case [Texture2D | TextureCube, [t,uv]]:
-			var t = expr(t);
+		case [Texture, [et,uv]]:
+			var t = expr(et);
 			var uv = expr(uv);
 			var r = allocReg();
 			if( t.t != RTexture ) throw "assert";
 			var flags = [TIgnoreSampler];
-			if( g == TextureCube )
+			if( et.t == TSamplerCube )
 				flags.push(TCube);
 			op(OTex(r, uv, { index : t.index, flags : flags }));
 			return r;
@@ -802,7 +802,7 @@ class AgalOut {
 		case TMat4: 4;
 		case TArray(t, SConst(size)), TBuffer(t, SConst(size)): (Tools.size(t) * size + 3) >> 2;
 		case TStruct(vl): throw "TODO";
-		case TVoid, TString, TSampler2D, TSamplerCube, TFun(_), TArray(_), TBuffer(_), TChannel(_): throw "assert "+t;
+		case TVoid, TString, TSampler2D, TSampler2DArray, TSamplerCube, TFun(_), TArray(_), TBuffer(_), TChannel(_): throw "assert "+t;
 		}
 	}
 

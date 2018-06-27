@@ -17,6 +17,8 @@ private extern class GL2 extends js.html.webgl.GL {
 	function getUniformBlockIndex( p : Program, name : String ) : Int;
 	function bindBufferBase( target : Int, index : Int, buffer : js.html.webgl.Buffer ) : Void;
 	function uniformBlockBinding( p : Program, blockIndex : Int, blockBinding : Int ) : Void;
+	function framebufferTextureLayer( target : Int, attach : Int, t : js.html.webgl.Texture, level : Int, layer : Int ) : Void;
+	function texImage3D(target : Int, level : Int, internalformat : Int, width : Int, height : Int, depth : Int, border : Int, format : Int, type : Int, source : Dynamic) : Void;
 	static inline var RGBA16F = 0x881A;
 	static inline var RGBA32F = 0x8814;
 	static inline var ALPHA16F = 0x881C;
@@ -30,6 +32,7 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var SRGB8_ALPHA = 0x8C43;
 	static inline var DEPTH_COMPONENT24 = 0x81A6;
 	static inline var UNIFORM_BUFFER = 0x8A11;
+	static inline var TEXTURE_2D_ARRAY = 0x8C1A;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -87,8 +90,7 @@ private class CompiledShader {
 	public var vertex : Bool;
 	public var globals : Uniform;
 	public var params : Uniform;
-	public var textures : Array<Uniform>;
-	public var cubeTextures : Array<Uniform>;
+	public var textures : Array<{ u : Uniform, t : hxsl.Ast.Type }>;
 	public var buffers : Array<Int>;
 	public var shader : hxsl.RuntimeShader.RuntimeShaderData;
 	public function new(s,vertex,shader) {
@@ -154,7 +156,7 @@ class GlDriver extends Driver {
 	var bufferHeight : Int;
 	var curTarget : h3d.mat.Texture;
 	var numTargets : Int;
-	var curTargetFace : Int;
+	var curTargetLayer : Int;
 	var curTargetMip : Int;
 
 	var debug : Bool;
@@ -288,8 +290,26 @@ class GlDriver extends Driver {
 		var prefix = s.vertex ? "vertex" : "fragment";
 		s.globals = gl.getUniformLocation(p.p, prefix + "Globals");
 		s.params = gl.getUniformLocation(p.p, prefix + "Params");
-		s.textures = [for( i in 0...shader.textures2DCount ) gl.getUniformLocation(p.p, prefix + "Textures[" + i + "]")];
-		s.cubeTextures = [for( i in 0...shader.texturesCubeCount ) gl.getUniformLocation(p.p, prefix + "TexturesCube[" + i + "]")];
+		s.textures = [];
+		var index = 0;
+		var curT = null;
+		var name = "";
+		var t = shader.textures;
+		while( t != null ) {
+			if( t.type != curT ) {
+				curT = t.type;
+				name = switch( t.type ) {
+				case TSampler2D: "Textures";
+				case TSamplerCube: "TexturesCube";
+				case TSampler2DArray: "TexturesArray";
+				default: throw "Unsupported texture type "+t.type;
+				}
+				index = 0;
+			}
+			s.textures.push({ u : gl.getUniformLocation(p.p, prefix+name+"["+index+"]"), t : curT });
+			index++;
+			t = t.next;
+		}
 		if( shader.bufferCount > 0 ) {
 			s.buffers = [for( i in 0...shader.bufferCount ) gl.getUniformBlockIndex(p.p,"uniform_buffer"+i)];
 			for( i in 0...shader.bufferCount )
@@ -427,15 +447,18 @@ class GlDriver extends Driver {
 			}
 		case Textures:
 			var tcount = s.textures.length;
-			for( i in 0...s.textures.length + s.cubeTextures.length ) {
+			for( i in 0...s.textures.length ) {
 				var t = buf.tex[i];
-				var isCube = i >= tcount;
+				var pt = s.textures[i];
 				if( t == null || t.isDisposed() ) {
-					if( isCube ) {
-						t = h3d.mat.Texture.defaultCubeTexture();
-					} else {
+					switch( pt.t ) {
+					case TSampler2D:
 						var color = h3d.mat.Defaults.loadingTextureColor;
 						t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
+					case TSamplerCube:
+						t = h3d.mat.Texture.defaultCubeTexture();
+					default:
+						throw "Missing texture";
 					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
@@ -444,8 +467,7 @@ class GlDriver extends Driver {
 				}
 				t.lastFrame = frame;
 
-				var pt = isCube ? s.cubeTextures[i - tcount] : s.textures[i];
-				if( pt == null ) continue;
+				if( pt.u == null ) continue;
 				if( boundTextures[i] == t.t ) continue;
 				boundTextures[i] = t.t;
 
@@ -454,9 +476,9 @@ class GlDriver extends Driver {
 					throw "Invalid texture context";
 				#end
 
-				var mode = isCube ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+				var mode = getBindType(t);
 				gl.activeTexture(GL.TEXTURE0 + i);
-				gl.uniform1i(pt, i);
+				gl.uniform1i(pt.u, i);
 				gl.bindTexture(mode, t.t.t);
 				lastActiveIndex = i;
 
@@ -679,9 +701,15 @@ class GlDriver extends Driver {
 		}
 	}
 
+	function getBindType( t : h3d.mat.Texture ) {
+		var isCube = t.flags.has(Cube);
+		var isArray = t.flags.has(IsArray);
+		return isCube ? GL.TEXTURE_CUBE_MAP : isArray ? GL2.TEXTURE_2D_ARRAY : GL.TEXTURE_2D;
+	}
+
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		var tt = gl.createTexture();
-		var bind = t.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+		var bind = getBindType(t);
 		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind #if multidriver, driver : this #end };
 		switch( t.format ) {
 		case RGBA:
@@ -721,6 +749,10 @@ class GlDriver extends Driver {
 					break;
 				}
 			}
+		} else if( t.flags.has(IsArray) ) {
+			gl.texImage3D(GL2.TEXTURE_2D_ARRAY, 0, tt.internalFmt, tt.width, tt.height, t.layerCount, 0, getChannels(tt), tt.pixelFmt, null);
+			if( gl.getError() == GL.OUT_OF_MEMORY )
+				outOfMem = true;
 		} else {
 			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 			if( gl.getError() == GL.OUT_OF_MEMORY )
@@ -843,7 +875,7 @@ class GlDriver extends Driver {
 	}
 
 	override function generateMipMaps( t : h3d.mat.Texture ) {
-		var bind = t.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+		var bind = getBindType(t);
 		gl.bindTexture(bind, t.t.t);
 		gl.generateMipmap(bind);
 		restoreBind();
@@ -940,7 +972,8 @@ class GlDriver extends Driver {
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		var cubic = t.flags.has(Cube);
-		var bind = cubic ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+		var bind = getBindType(t);
+		if( t.flags.has(IsArray) ) throw "TODO:texImage3D";
 		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
 		gl.bindTexture(bind, t.t.t);
 		pixels.convert(t.format);
@@ -1129,16 +1162,16 @@ class GlDriver extends Driver {
 		}
 	}
 
-	override function capturePixels(tex:h3d.mat.Texture, face:Int, mipLevel:Int) {
+	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int) {
 		var old = curTarget;
 		var oldCount = numTargets;
-		var oldFace = curTargetFace;
+		var oldLayer = curTargetLayer;
 		var oldMip = curTargetMip;
 		numTargets = 1;
-		setRenderTarget(tex, face, mipLevel);
+		setRenderTarget(tex, layer, mipLevel);
 		var pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
 		captureRenderBuffer(pixels);
-		setRenderTarget(old, oldFace, oldMip);
+		setRenderTarget(old, oldLayer, oldMip);
 		if( oldCount > 1 ) {
 			setDrawBuffers(oldCount);
 			numTargets = oldCount;
@@ -1146,7 +1179,7 @@ class GlDriver extends Driver {
 		return pixels;
 	}
 
-	override function setRenderTarget( tex : h3d.mat.Texture, face = 0, mipLevel = 0 ) {
+	override function setRenderTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0 ) {
 		unbindTargets();
 		curTarget = tex;
 		if( tex == null ) {
@@ -1164,7 +1197,7 @@ class GlDriver extends Driver {
 			tex.alloc();
 
 		if( tex.flags.has(MipMapped) && !tex.flags.has(WasCleared) ) {
-			var bind = tex.flags.has(Cube) ? GL.TEXTURE_CUBE_MAP : GL.TEXTURE_2D;
+			var bind = getBindType(tex);
 			gl.bindTexture(bind, tex.t.t);
 			gl.generateMipmap(bind);
 			restoreBind();
@@ -1172,14 +1205,17 @@ class GlDriver extends Driver {
 
 		tex.flags.set(WasCleared); // once we draw to, do not clear again
 		tex.lastFrame = frame;
-		curTargetFace = face;
+		curTargetLayer = layer;
 		curTargetMip = mipLevel;
 		#if multidriver
 		if( tex.t.driver != this )
 			throw "Invalid texture context";
 		#end
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
-		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[face] : GL.TEXTURE_2D, tex.t.t, mipLevel);
+		if( tex.flags.has(IsArray) )
+			gl.framebufferTextureLayer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.t.t, mipLevel, layer);
+		else
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 		if( tex.depthBuffer != null ) {
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r);
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER, tex.depthBuffer.hasStencil() ? @:privateAccess tex.depthBuffer.b.r : null);

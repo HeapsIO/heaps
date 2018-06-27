@@ -218,7 +218,7 @@ class Dce {
 			return { e : TConst(CNull), t : e.t, p : e.p };
 		case TCall({ e : TGlobal(ChannelRead) }, [_, uv, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];
-			return { e : TCall({ e : TGlobal(Texture2D), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, uv]), t : TVoid, p : e.p };
+			return { e : TCall({ e : TGlobal(Texture), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, uv]), t : TVoid, p : e.p };
 		case TIf(e, econd, eelse):
 			var e = mapExpr(e, true);
 			var econd = mapExpr(econd, isVar);

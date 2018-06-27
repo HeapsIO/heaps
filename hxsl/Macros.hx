@@ -28,6 +28,8 @@ class Macros {
 			TAnonymous(fields);
 		case TSampler2D:
 			macro : hxsl.Types.Sampler2D;
+		case TSampler2DArray:
+			macro : hxsl.Types.Sampler2DArray;
 		case TSamplerCube:
 			macro : hxsl.Types.SamplerCube;
 		case TMat3, TMat3x4, TMat4:

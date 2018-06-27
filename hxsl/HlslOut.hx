@@ -93,7 +93,7 @@ class HlslOut {
 			add("float4x4");
 		case TMat3x4:
 			add("float4x3");
-		case TSampler2D, TSamplerCube:
+		case TSampler2D, TSamplerCube, TSampler2DArray:
 			add("SamplerState");
 		case TStruct(vl):
 			add("struct { ");
@@ -220,12 +220,12 @@ class HlslOut {
 			var acc = varAccess.get(v.id);
 			if( acc != null ) add(acc);
 			ident(v);
-		case TCall({ e : TGlobal(g = (Texture2D | TextureCube | Texture2DLod | TextureCubeLod)) }, args):
+		case TCall({ e : TGlobal(g = (Texture | TextureLod)) }, args):
 			addValue(args[0], tabs);
 			switch( g ) {
-			case Texture2D, TextureCube:
+			case Texture:
 				add(".Sample(");
-			case Texture2DLod, TextureCubeLod:
+			case TextureLod:
 				add(".SampleLevel(");
 			default:
 				throw "assert";
@@ -584,6 +584,8 @@ class HlslOut {
 					add("Texture2D ");
 				case TSamplerCube:
 					add("TextureCube ");
+				case TSampler2DArray:
+					add("Texture2DArray ");
 				default:
 					throw "Unsupported sampler " + t;
 				}

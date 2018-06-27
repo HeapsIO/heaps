@@ -356,6 +356,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 		var rt = t.flags.has(Target);
 		var isCube = t.flags.has(Cube);
+		var isArray = t.flags.has(IsArray);
 
 		var desc = new Texture2dDesc();
 		desc.width = t.width;
@@ -370,6 +371,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			desc.arraySize = 6;
 			desc.misc |= TextureCube;
 		}
+		if( isArray )
+			desc.arraySize = t.layerCount;
 		if( t.flags.has(MipMapped) && !t.flags.has(ManualMipMapGen) ) {
 			desc.bind |= RenderTarget;
 			desc.misc |= GenerateMips;
@@ -383,7 +386,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 		var vdesc = new ShaderResourceViewDesc();
 		vdesc.format = desc.format;
-		vdesc.dimension = isCube ? TextureCube : Texture2D;
+		vdesc.dimension = isCube ? TextureCube : isArray ? Texture2DArray : Texture2D;
 		vdesc.arraySize = desc.arraySize;
 		vdesc.start = 0; // top mip level
 		vdesc.count = -1; // all mip levels
@@ -477,13 +480,13 @@ class DirectXDriver extends h3d.impl.Driver {
 		tmp.release();
 	}
 
-	override function capturePixels(tex:h3d.mat.Texture, face:Int, mipLevel:Int) : hxd.Pixels {
+	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int) : hxd.Pixels {
 		var pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
-		captureTexPixels(pixels, tex, face, mipLevel);
+		captureTexPixels(pixels, tex, layer, mipLevel);
 		return pixels;
 	}
 
-	function captureTexPixels( pixels: hxd.Pixels, tex:h3d.mat.Texture, face:Int, mipLevel:Int)  {
+	function captureTexPixels( pixels: hxd.Pixels, tex:h3d.mat.Texture, layer:Int, mipLevel:Int)  {
 		var desc = new Texture2dDesc();
 		desc.width = pixels.width;
 		desc.height = pixels.height;
@@ -494,7 +497,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( tmp == null )
 			throw "Capture failed: can't create tmp texture";
 
-		tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.t.mips * face + mipLevel, null);
+		tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.t.mips * layer + mipLevel, null);
 
 		var pitch = 0;
 		var ptr = tmp.map(0, Read, true, pitch);
@@ -642,8 +645,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.paramsSize = shader.paramsSize;
 		ctx.paramsContent = new hl.Bytes(shader.paramsSize * 16);
 		ctx.paramsContent.fill(0, shader.paramsSize * 16, 0xDD);
-		ctx.texturesCount = shader.textures2DCount + shader.texturesCubeCount;
-		ctx.textures2DCount = shader.textures2DCount;
+		ctx.texturesCount = shader.texturesCount;
 		ctx.bufferCount = shader.bufferCount;
 		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
@@ -680,7 +682,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	var tmpTextures = new Array<h3d.mat.Texture>();
-	override function setRenderTarget(tex:Null<h3d.mat.Texture>, face = 0, mipLevel = 0) {
+	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer = 0, mipLevel = 0) {
 		if( tex == null ) {
 			curTexture = null;
 			currentDepth = defaultDepth;
@@ -694,7 +696,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			return;
 		}
 		tmpTextures[0] = tex;
-		_setRenderTargets(tmpTextures, face, mipLevel);
+		_setRenderTargets(tmpTextures, layer, mipLevel);
 	}
 
 	function unbind( res ) {
@@ -714,7 +716,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		_setRenderTargets(textures, 0, 0);
 	}
 
-	function _setRenderTargets( textures:Array<h3d.mat.Texture>, face : Int, mipLevel : Int ) {
+	function _setRenderTargets( textures:Array<h3d.mat.Texture>, layer : Int, mipLevel : Int ) {
 		if( textures.length == 0 ) {
 			setRenderTarget(null);
 			return;
@@ -734,13 +736,13 @@ class DirectXDriver extends h3d.impl.Driver {
 			}
 			if( tex.t.rt == null )
 				throw "Can't render to texture which is not allocated with Target flag";
-			var index = mipLevel * 6 + face;
+			var index = mipLevel * tex.layerCount + layer;
 			var rt = tex.t.rt[index];
 			if( rt == null ) {
-				var cube = tex.flags.has(Cube);
-				var v = new dx.Driver.RenderTargetDesc(getTextureFormat(tex), cube ? Texture2DArray : Texture2D);
+				var arr = tex.flags.has(Cube) || tex.flags.has(IsArray);
+				var v = new dx.Driver.RenderTargetDesc(getTextureFormat(tex), arr ? Texture2DArray : Texture2D);
 				v.mipMap = mipLevel;
-				v.firstSlice = face;
+				v.firstSlice = layer;
 				v.sliceCount = 1;
 				rt = Driver.createRenderTargetView(tex.t.res, v);
 				tex.t.rt[index] = rt;

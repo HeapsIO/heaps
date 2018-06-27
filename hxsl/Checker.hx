@@ -54,14 +54,17 @@ class Checker {
 				genFloat;
 			case Cross:
 				[ { args : [ { name : "a", type : vec3 }, { name : "b", type : vec3 } ], ret : vec3 } ];
-			case Texture2D:
-				[ { args : [ { name : "tex", type : TSampler2D }, { name : "uv", type : vec2 } ], ret : vec4 } ];
-			case Texture2DLod:
-				[ { args : [ { name : "tex", type : TSampler2D }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec4 } ];
-			case TextureCube:
-				[ { args : [ { name : "tex", type : TSamplerCube }, { name : "normal", type : vec3 } ], ret : vec4 } ];
-			case TextureCubeLod:
-				[ { args : [ { name : "tex", type : TSamplerCube }, { name : "normal", type : vec3 }, { name : "lod", type : TFloat } ], ret : vec4 } ];
+			case Texture:
+				[
+					{ args : [ { name : "tex", type : TSampler2D }, { name : "uv", type : vec2 } ], ret : vec4 },
+					{ args : [ { name : "tex", type : TSamplerCube }, { name : "normal", type : vec3 } ], ret : vec4 },
+					{ args : [ { name : "tex", type : TSampler2DArray }, { name : "uv", type : vec3 } ], ret : vec4 },
+				];
+			case TextureLod:
+				[
+					{ args : [ { name : "tex", type : TSampler2D }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec4 },
+					{ args : [ { name : "tex", type : TSamplerCube }, { name : "normal", type : vec3 }, { name : "lod", type : TFloat } ], ret : vec4 },
+				];
 			case ToInt:
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TInt } ];
 			case ToFloat:
@@ -808,8 +811,7 @@ class Checker {
 		var g = globals.get(f);
 		if( g == null ) {
 			var gl : TGlobal = switch( [f, e.t] ) {
-			case ["get", TSampler2D]: Texture2D;
-			case ["get", TSamplerCube]: TextureCube;
+			case ["get", TSampler2D|TSampler2DArray|TSamplerCube]: Texture;
 			case ["get", TChannel(_)]: ChannelRead;
 			default: null;
 			}

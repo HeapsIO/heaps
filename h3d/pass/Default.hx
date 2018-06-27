@@ -81,7 +81,7 @@ class Default extends Base {
 			}
 			p.shader = manager.compileShaders(shaders);
 			p.shaders = shaders;
-			var t = p.shader.fragment.textures2D;
+			var t = p.shader.fragment.textures;
 			if( t == null )
 				p.texture = 0;
 			else {

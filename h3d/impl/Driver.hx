@@ -149,7 +149,7 @@ class Driver {
 	public function captureRenderBuffer( pixels : hxd.Pixels ) {
 	}
 
-	public function capturePixels( tex : h3d.mat.Texture, face : Int, mipLevel : Int ) : hxd.Pixels {
+	public function capturePixels( tex : h3d.mat.Texture, layer : Int, mipLevel : Int ) : hxd.Pixels {
 		throw "Can't capture pixels on this platform";
 		return null;
 	}
@@ -190,7 +190,7 @@ class Driver {
 	public function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
 	}
 
-	public function setRenderTarget( tex : Null<h3d.mat.Texture>, face = 0, mipLevel = 0 ) {
+	public function setRenderTarget( tex : Null<h3d.mat.Texture>, layer = 0, mipLevel = 0 ) {
 	}
 
 	public function setRenderTargets( textures : Array<h3d.mat.Texture> ) {

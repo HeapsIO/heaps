@@ -116,6 +116,10 @@ enum TextureFlags {
 		Allow texture data serialization when found in a scene (for user generated textures)
 	**/
 	Serialize;
+	/**
+		Tells if it's a texture array
+	**/
+	IsArray;
 }
 
 typedef TextureFormat = hxd.PixelFormat;
