@@ -296,13 +296,15 @@ class GlDriver extends Driver {
 		var name = "";
 		var t = shader.textures;
 		while( t != null ) {
-			if( t.type != curT ) {
-				curT = t.type;
-				name = switch( t.type ) {
+			var tt = t.type;
+			if( tt.match(TChannel(_)) ) tt = TSampler2D;
+			if( tt != curT ) {
+				curT = tt;
+				name = switch( tt ) {
 				case TSampler2D: "Textures";
 				case TSamplerCube: "TexturesCube";
 				case TSampler2DArray: "TexturesArray";
-				default: throw "Unsupported texture type "+t.type;
+				default: throw "Unsupported texture type "+tt;
 				}
 				index = 0;
 			}
