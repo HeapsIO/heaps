@@ -271,62 +271,54 @@ class Pixels {
 		if( format == target )
 			return;
 		willChange();
+		var bytes : hxd.impl.UncheckedBytes = bytes;
 		switch( [format, target] ) {
 		case [BGRA, ARGB], [ARGB, BGRA]:
 			// reverse bytes
-			var mem = hxd.impl.Memory.select(bytes);
 			for( i in 0...width*height ) {
 				var p = (i << 2) + offset;
-				var a = mem.b(p);
-				var r = mem.b(p+1);
-				var g = mem.b(p+2);
-				var b = mem.b(p+3);
-				mem.wb(p, b);
-				mem.wb(p+1, g);
-				mem.wb(p+2, r);
-				mem.wb(p+3, a);
+				var a = bytes[p];
+				var r = bytes[p+1];
+				var g = bytes[p+2];
+				var b = bytes[p+3];
+				bytes[p++] = b;
+				bytes[p++] = g;
+				bytes[p++] = r;
+				bytes[p] = a;
 			}
-			mem.end();
 		case [BGRA, RGBA], [RGBA,BGRA]:
-			var mem = hxd.impl.Memory.select(bytes);
 			for( i in 0...width*height ) {
 				var p = (i << 2) + offset;
-				var b = mem.b(p);
-				var r = mem.b(p+2);
-				mem.wb(p, r);
-				mem.wb(p+2, b);
+				var b = bytes[p];
+				var r = bytes[p+2];
+				bytes[p] = r;
+				bytes[p+2] = b;
 			}
-			mem.end();
 
 		case [ARGB, RGBA]:
-			var mem = hxd.impl.Memory.select(bytes);
 			for ( i in 0...width * height ) {
 				var p = (i << 2) + offset;
-				var a = (mem.b(p));
-
-				mem.wb(p, mem.b(p + 1));
-				mem.wb(p + 1, mem.b(p + 2));
-				mem.wb(p + 2, mem.b(p + 3));
-				mem.wb(p + 3, a);
+				var a = bytes[p];
+				bytes[p] = bytes[p+1];
+				bytes[p+1] = bytes[p+2];
+				bytes[p+2] = bytes[p+3];
+				bytes[p+3] = a;
 			}
-			mem.end();
 
 		case [RGBA, ARGB]:
-			var mem = hxd.impl.Memory.select(bytes);
 			for ( i in 0...width * height ) {
 				var p = (i << 2) + offset;
-				var a = (mem.b(p + 3));
-
-				mem.wb(p + 3, mem.b(p + 2));
-				mem.wb(p + 2, mem.b(p + 1));
-				mem.wb(p + 1, mem.b(p));
-				mem.wb(p, a);
+				var a = bytes[p+3];
+				bytes[p+3] = bytes[p+2];
+				bytes[p+2] = bytes[p+1];
+				bytes[p+1] = bytes[p];
+				bytes[p] = a;
 			}
-			mem.end();
 
 		default:
 			throw "Cannot convert from " + format + " to " + target;
 		}
+
 		innerFormat = target;
 	}
 

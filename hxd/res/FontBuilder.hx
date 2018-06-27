@@ -107,18 +107,17 @@ class FontBuilder {
 
 		// let's remove alpha premult (all pixels should be white with alpha)
 		pixels.convert(BGRA);
-		var r = hxd.impl.Memory.select(pixels.bytes);
+		flash.Memory.select(pixels.bytes.getData());
 		for( i in 0...pixels.width * pixels.height ) {
 			var p = i << 2;
-			var b = r.b(p+3);
+			var b = flash.Memory.getByte(p+3);
 			if( b > 0 ) {
-				r.wb(p, 0xFF);
-				r.wb(p + 1, 0xFF);
-				r.wb(p + 2, 0xFF);
-				r.wb(p + 3, b);
+				flash.Memory.setByte(p, 0xFF);
+				flash.Memory.setByte(p + 1, 0xFF);
+				flash.Memory.setByte(p + 2, 0xFF);
+				flash.Memory.setByte(p + 3, b);
 			}
 		}
-		r.end();
 
 		if( innerTex == null ) {
 			innerTex = h3d.mat.Texture.fromPixels(pixels);
@@ -164,7 +163,7 @@ class FontBuilder {
 		var height = width;
 		while( width * height >> 1 > surf )
 			height >>= 1;
-			
+
 		if( innerTex != null ) {
 			width = innerTex.width;
 			height = innerTex.height;
