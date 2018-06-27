@@ -225,10 +225,10 @@ class GlslOut {
 			decl("vec3 unpackNormal( vec4 v ) { return normalize((v.xyz - vec3(0.5)) * vec3(2.)); }");
 		case Texture:
 			switch( args[0].t ) {
-			case TSampler2D, TSampler2DArray if( !flipY ):
+			case TSampler2D, TSampler2DArray, TChannel(_) if( !flipY ):
 				if( isES2 )
 					return "texture2D";
-			case TSampler2D:
+			case TSampler2D, TChannel(_):
 				// convert S/T (bottom left) to U/V (top left)
 				// we don't use 1. because of pixel rounding (fixes artifacts in blur)
 				decl('vec4 _texture2D( sampler2D t, vec2 v ) { return ${isES2?"texture2D":"texture"}(t,vec2(v.x,0.999999-v.y)); }');
@@ -244,12 +244,12 @@ class GlslOut {
 			}
 		case TextureLod:
 			switch( args[0].t ) {
-			case TSampler2D, TSampler2DArray if( !flipY ):
+			case TSampler2D, TSampler2DArray, TChannel(_) if( !flipY ):
 				if( isES2 ) {
 					decl("#extension GL_EXT_shader_texture_lod : enable");
 					return "texture2DLodEXT";
 				}
-			case TSampler2D:
+			case TSampler2D, TChannel(_):
 				var tlod = isES2 ? "texture2DLod" : "textureLod";
 				decl('vec4 _texture2DLod( sampler2D t, vec2 v, float lod ) { return $tlod(t,vec2(v.x,0.999999-v.y)); }');
 				return "_texture2DLod";
