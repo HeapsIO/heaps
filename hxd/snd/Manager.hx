@@ -191,7 +191,8 @@ class Manager {
 		c.soundGroup   = soundGroup;
 		c.channelGroup = channelGroup;
 		c.next         = channels;
-		c.isVirtual    = (driver == null);
+		c.isLoading    = sdat.isLoading();
+		c.isVirtual    = driver == null;
 
 		channels = c;
 		return c;
@@ -200,7 +201,7 @@ class Manager {
 	function updateVirtualChannels(now : Float) {
 		var c = channels;
 		while (c != null) {
-			if (c.pause || !c.isVirtual) {
+			if (c.pause || !c.isVirtual || c.isLoading) {
 				c = c.next;
 				continue;
 			}
@@ -326,7 +327,9 @@ class Manager {
 		var c = channels;
 		while (c != null) {
 			c.calcAudibleGain(now);
-			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || c.audibleGain < 1e-5;
+			if( c.isLoading && !c.sound.getData().isLoading() )
+				c.isLoading = false;
+			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || c.audibleGain < 1e-5 || c.isLoading;
 			c = c.next;
 		}
 

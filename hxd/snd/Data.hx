@@ -15,6 +15,10 @@ class Data {
 
 	public var duration(get, never) : Float;
 
+	public function isLoading() {
+		return false;
+	}
+
 	public function decode( out : haxe.io.Bytes, outPos : Int, sampleStart : Int, sampleCount : Int ) : Void {
 		var bpp = getBytesPerSample();
 		if( sampleStart < 0 || sampleCount < 0 || outPos < 0 || outPos + sampleCount * bpp > out.length ) {
