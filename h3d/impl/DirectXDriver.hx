@@ -500,12 +500,13 @@ class DirectXDriver extends h3d.impl.Driver {
 		tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.t.mips * layer + mipLevel, null);
 
 		var pitch = 0;
+		var bpp = hxd.Pixels.bytesPerPixel(tex.format);
 		var ptr = tmp.map(0, Read, true, pitch);
-		if( pitch == desc.width * 4 )
-			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * 4);
+		if( pitch == desc.width * bpp )
+			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * bpp);
 		else {
 			for( i in 0...desc.height )
-				@:privateAccess pixels.bytes.b.blit(i * desc.width * 4, ptr, i * pitch, desc.width * 4);
+				@:privateAccess pixels.bytes.b.blit(i * desc.width * bpp, ptr, i * pitch, desc.width * bpp);
 		}
 		tmp.unmap(0);
 		tmp.release();
