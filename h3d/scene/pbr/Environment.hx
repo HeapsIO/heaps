@@ -245,25 +245,24 @@ class Environment  {
 	}
 
 	function getCubeMatrix( face : Int ) {
-		var y = #if hldx -1 #else 1 #end;
 		return h3d.Matrix.L(switch( face ) {
 			case 0: [0,0,-1,0,
-					 0,y,0,0,
+					 0,-1,0,0,
 					 1,0,0,0];
 			case 1: [0,0,1,0,
-					 0,y,0,0,
+					 0,-1,0,0,
 					-1,0,0,0];
 			case 2: [1,0,0,0,
-					 0,0,-y,0,
+					 0,0,1,0,
 					 0,1,0,0];
 			case 3: [1,0,0,0,
-					 0,0,y,0,
+					 0,0,-1,0,
 					 0,-1,0,0];
 			case 4: [1,0,0,0,
-					 0,y,0,0,
+					 0,-1,0,0,
 					 0,0,1,0];
 			default: [-1,0,0,0,
-					   0,y,0,0,
+					   0,-1,0,0,
 					   0,0,-1,0];
 		});
 	}
