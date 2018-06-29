@@ -1340,7 +1340,7 @@ class GlDriver extends Driver {
 		#if (js || hl)
 		gl.readPixels(0, 0, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, @:privateAccess pixels.bytes.b);
 		@:privateAccess pixels.innerFormat = curTarget.format;
-		pixels.flags.set(FlipY);
+		if( !curTarget.flags.has(Cube) ) pixels.flags.set(FlipY);
 		#end
 	}
 
