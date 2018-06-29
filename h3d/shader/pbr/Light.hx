@@ -7,9 +7,6 @@ class Light extends hxsl.Shader {
 		var transformedPosition : Vec3;
 		var occlusion : Float;
 
-		/**
-			Tells that we need to keep occlusion / shadow map.
-		**/
 		@param var lightColor = vec3(0.5, 0.5, 0.5);
 
 	};

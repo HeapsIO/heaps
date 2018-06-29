@@ -13,8 +13,8 @@ class DirShadow extends hxsl.Shader {
 		var shadow : Float;
 
 		function fragment() {
-			var shadowPos = transformedPosition * shadowProj * vec3(0.5, -0.5, 1) + vec3(0.5, 0.5, 0);
-			var depth = shadowMap.get(shadowPos.xy);
+			var shadowPos = transformedPosition * shadowProj;
+			var depth = shadowMap.get(screenToUv(shadowPos.xy));
 			var zMax = shadowPos.z.saturate();
 			var delta = (depth + shadowBias).min(zMax) - zMax;
 			shadow = exp( shadowPower * delta ).saturate();

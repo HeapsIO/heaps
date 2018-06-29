@@ -37,8 +37,7 @@ class PropsImport extends hxsl.Shader {
 			pbrSpecularColor = mix(vec3(0.04),albedo,metalness);
 
 			// this is the original object transformed position, not our current drawing object one
-			var uv2 = (uv - 0.5) * vec2(2, -2);
-			var temp = vec4(uv2, depth, 1) * cameraInverseViewProj;
+			var temp = vec4(uvToScreen(uv), depth, 1) * cameraInverseViewProj;
 			var originWS = temp.xyz / temp.w;
 			transformedPosition = originWS;
 		}
