@@ -86,7 +86,7 @@ class Pass implements hxd.impl.Serializable {
 			blend(SrcAlpha, OneMinusSrcAlpha);
 		case Add:
 			blend(SrcAlpha, One);
-		case BlendAdd:
+		case AlphaAdd:
 			blend(One, OneMinusSrcAlpha);
 		case SoftAdd:
 			blend(OneMinusDstColor, One);
