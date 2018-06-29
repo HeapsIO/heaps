@@ -51,9 +51,9 @@ class Base3D extends SampleApp {
 		// set the ambient light to 30%
 		s3d.lightSystem.ambientLight.set(0.3, 0.3, 0.3);
 
-		// activate lights on boss cubes
-		obj1.material.mainPass.enableLights = true;
-		obj2.material.mainPass.enableLights = true;
+		// disable shadows
+		obj1.material.shadows = false;
+		obj2.material.shadows = false;
 	}
 
 	override function update( dt : Float ) {

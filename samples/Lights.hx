@@ -18,7 +18,7 @@ class Lights extends hxd.App {
 			b.scaleX = b.scaleY = Math.random() * 0.5 + 0.2;
 			var k = 1.;
 			b.material.color.setColor(0xFFFFFF);
-			b.material.mainPass.enableLights = true;
+			b.material.shadows = false;
 		}
 
 		var sphere = new h3d.prim.GeoSphere(4);
@@ -36,6 +36,8 @@ class Lights extends hxd.App {
 				lights.push(l);
 				var p = new h3d.scene.Mesh(sphere, l);
 				p.scale(0.03);
+				p.material.shadows = false;
+				p.material.mainPass.enableLights = false;
 				p.material.color.setColor(0xFF000000 | c);
 			}
 		}
