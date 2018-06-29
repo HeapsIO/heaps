@@ -10,6 +10,7 @@ package h3d.mat;
 	var None = "None";
 	var Alpha = "Alpha";
 	var Add = "Add";
+	var BlendAdd = "BlendAdd";
 }
 
 typedef PbrProps = {
@@ -92,6 +93,9 @@ class PbrMaterial extends Material {
 		case Add:
 			mainPass.setBlendMode(Add);
 			mainPass.depthWrite = false;
+		case BlendAdd:
+			mainPass.setBlendMode(BlendAdd);
+			mainPass.depthWrite = false;
 		}
 		var tshader = textureShader;
 		if( tshader != null ) {
@@ -150,6 +154,7 @@ class PbrMaterial extends Material {
 						<option value="None">None</option>
 						<option value="Alpha">Alpha</option>
 						<option value="Add">Add</option>
+						<option value="BlendAdd">BlendAdd</option>
 					</select>
 				</dd>
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
