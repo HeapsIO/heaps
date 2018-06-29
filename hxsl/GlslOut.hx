@@ -44,14 +44,12 @@ class GlslOut {
 	var isES2(get,never) : Bool;
 	var uniformBuffer : Int = 0;
 	public var varNames : Map<Int,String>;
-	public var flipY : Bool;
 	public var glES : Null<Float>;
 	public var version : Null<Int>;
 
 	public function new() {
 		varNames = new Map();
 		allNames = new Map();
-		flipY = true;
 	}
 
 	inline function get_isES() return glES != null;
@@ -225,44 +223,21 @@ class GlslOut {
 			decl("vec3 unpackNormal( vec4 v ) { return normalize((v.xyz - vec3(0.5)) * vec3(2.)); }");
 		case Texture:
 			switch( args[0].t ) {
-			case TSampler2D, TSampler2DArray, TChannel(_) if( !flipY ):
-				if( isES2 )
-					return "texture2D";
-			case TSampler2D, TChannel(_):
-				// convert S/T (bottom left) to U/V (top left)
-				// we don't use 1. because of pixel rounding (fixes artifacts in blur)
-				decl('vec4 _texture2D( sampler2D t, vec2 v ) { return ${isES2?"texture2D":"texture"}(t,vec2(v.x,0.999999-v.y)); }');
-				return "_texture2D";
-			case TSampler2DArray:
-				decl('vec4 _texture2DArr( sampler2DArray t, vec3 v ) { return texture(t,vec3(v.x,0.999999-v.y,v.z)); }');
-				return "_texture2DArr";
-			case TSamplerCube:
-				if( isES2 )
-					return "textureCube";
+			case TSampler2D, TSampler2DArray, TChannel(_) if( isES2 ):
+				return "texture2D";
+			case TSamplerCube if( isES2 ):
+				return "textureCube";
 			default:
-				throw "assert";
 			}
 		case TextureLod:
 			switch( args[0].t ) {
-			case TSampler2D, TSampler2DArray, TChannel(_) if( !flipY ):
-				if( isES2 ) {
-					decl("#extension GL_EXT_shader_texture_lod : enable");
-					return "texture2DLodEXT";
-				}
-			case TSampler2D, TChannel(_):
-				var tlod = isES2 ? "texture2DLod" : "textureLod";
-				decl('vec4 _texture2DLod( sampler2D t, vec2 v, float lod ) { return $tlod(t,vec2(v.x,0.999999-v.y)); }');
-				return "_texture2DLod";
-			case TSampler2DArray:
-				decl('vec4 _texture2DArrLod( sampler2DArray t, vec3 v, float lod ) { return textureLod(t,vec3(v.x,0.999999-v.y,v.z)); }');
-				return "_texture2DArrLod";
-			case TSamplerCube:
-				if( isES2 ) {
-					decl("#extension GL_EXT_shader_texture_lod : enable");
-					return "textureCubeLodEXT";
-				}
+			case TSampler2D, TSampler2DArray, TChannel(_) if( isES2 ):
+				decl("#extension GL_EXT_shader_texture_lod : enable");
+				return "texture2DLodEXT";
+			case TSamplerCube if( isES2 ):
+				decl("#extension GL_EXT_shader_texture_lod : enable");
+				return "textureCubeLodEXT";
 			default:
-				throw "assert";
 			}
 		case Mod if( rt == TInt && isES ):
 			decl("int _imod( int x, int y ) { return int(mod(float(x),float(y))); }");
@@ -271,6 +246,10 @@ class GlslOut {
 			decl(MAT34);
 			decl("mat3 _mat3( _mat3x4 v ) { return mat3(v.a.xyz,v.b.xyz,v.c.xyz); }");
 			return "_mat3";
+		case ScreenToUv:
+			decl("vec2 screenToUv( vec2 v ) { return v * vec2(0.5,0.5) + vec2(0.5,0.5); }");
+		case UvToScreen:
+			decl("vec2 uvToScreen( vec2 v ) { return v * vec2(2.,2.) + vec2(-1., -1.); }");
 		default:
 		}
 		return GLOBALS.get(g);

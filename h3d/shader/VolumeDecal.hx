@@ -19,10 +19,9 @@ class VolumeDecal extends hxsl.Shader {
 		function fragment() {
 			var matrix = camera.inverseViewProj * global.modelViewInverse;
 			var screenPos = projectedPosition.xy / projectedPosition.w;
-			var tuv = screenPos * vec2(0.5, -0.5) + vec2(0.5, 0.5);
 			var ruv = vec4(
 				screenPos,
-				unpack(depthMap.get(tuv)),
+				unpack(depthMap.get(screenToUv(screenPos))),
 				1
 			);
 			var wpos = ruv * matrix;

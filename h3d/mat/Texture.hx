@@ -15,16 +15,8 @@ class Texture {
 		#elseif (usesys && !hldx && !hlsdl && !usegl)
 			haxe.GraphicsDriver.nativeFormat
 		#else
-			RGBA // OpenGL, WebGL
+			RGBA
 		#end;
-
-	/**
-		Tells if the Driver requires y-flipping the texture pixels before uploading.
-	**/
-	public static inline var nativeFlip = 	#if (hlsdl||usegl) true
-											#elseif (openfl) false
-											#elseif (lime && (cpp || neko || nodejs)) true
-											#else false #end;
 
 	var t : h3d.impl.Driver.Texture;
 	var mem : h3d.impl.MemoryManager;
@@ -226,7 +218,6 @@ class Texture {
 				p.bytes.set(k++,b);
 				p.bytes.set(k++,a);
 			}
-			if( nativeFlip ) p.flags.set(FlipY);
 			if( layer < 0 ) {
 				for( i in 0...layerCount )
 					uploadPixels(p, 0, i);

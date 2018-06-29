@@ -106,20 +106,24 @@ class Checker {
 			case DFdx, DFdy, Fwidth:
 				genFloat;
 			case Pack:
-				[ { args : [ { name : "value", type : TFloat } ], ret : TVec(4, VFloat) } ];
+				[ { args : [ { name : "value", type : TFloat } ], ret : vec4 } ];
 			case Unpack:
-				[ { args : [ { name : "value", type : TVec(4, VFloat) } ], ret : TFloat } ];
+				[ { args : [ { name : "value", type : vec4 } ], ret : TFloat } ];
 			case UnpackNormal:
-				[ { args : [ { name : "value", type : TVec(4, VFloat) } ], ret : TVec(3, VFloat) } ];
+				[ { args : [ { name : "value", type : vec4 } ], ret : vec3 } ];
 			case PackNormal:
-				[ { args : [ { name : "value", type : TVec(3, VFloat) } ], ret : TVec(4, VFloat) } ];
+				[ { args : [ { name : "value", type : vec3 } ], ret : vec4 } ];
 			case ChannelRead:
 				[
 					{ args : [ { name : "channel", type : TChannel(1) }, { name : "uv", type : vec2 } ], ret : TFloat },
-					{ args : [ { name : "channel", type : TChannel(2) }, { name : "uv", type : vec2 } ], ret : TVec(2,VFloat) },
-					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 } ], ret : TVec(3,VFloat) },
-					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 } ], ret : TVec(4,VFloat) },
+					{ args : [ { name : "channel", type : TChannel(2) }, { name : "uv", type : vec2 } ], ret : vec2 },
+					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 } ], ret : vec3 },
+					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 } ], ret : vec4 },
 				];
+			case ScreenToUv:
+				[{ args : [{ name : "screenPos", type : vec2 }], ret : vec2 }];
+			case UvToScreen:
+				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
 			case Trace:
 				[];
 			}

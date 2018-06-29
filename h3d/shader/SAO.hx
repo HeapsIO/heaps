@@ -48,7 +48,7 @@ class SAO extends ScreenShader {
 
 		function getPosition( uv : Vec2 ) : Vec3 {
 			var depth = depthTexture.get(uv);
-			var uv2 = (uv - 0.5) * vec2(2, -2);
+			var uv2 = uvToScreen(uv);
 			var temp = vec4(uv2, depth, 1) * cameraInverseViewProj;
 			var originWS = temp.xyz / temp.w;
 			return originWS;

@@ -61,14 +61,14 @@ class BaseMesh extends hxsl.Shader {
 			pixelColor = color;
 			specPower = specularPower;
 			specColor = specularColor * specularAmount;
-			screenUV = (projectedPosition.xy / projectedPosition.w) * vec2(0.5, -0.5) + 0.5;
+			screenUV = screenToUv(projectedPosition.xy / projectedPosition.w);
 			depth = projectedPosition.z / projectedPosition.w;
 		}
 
 		function __init__fragment() {
 			transformedNormal = transformedNormal.normalize();
 			// same as __init__, but will force calculus inside fragment shader, which limits varyings
-			screenUV = (projectedPosition.xy / projectedPosition.w) * vec2(0.5, -0.5) + 0.5;
+			screenUV = screenToUv(projectedPosition.xy / projectedPosition.w);
 			depth = projectedPosition.z / projectedPosition.w; // in case it's used in vertex : we don't want to interpolate in screen space
 			specPower = specularPower;
 			specColor = specularColor * specularAmount;

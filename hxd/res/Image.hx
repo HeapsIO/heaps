@@ -201,7 +201,7 @@ class Image extends Resource {
 			function load() {
 				// immediately loading the PNG is faster than going through loadBitmap
 				tex.alloc();
-				var pixels = getPixels(h3d.mat.Texture.nativeFormat, h3d.mat.Texture.nativeFlip);
+				var pixels = getPixels(h3d.mat.Texture.nativeFormat);
 				if( pixels.width != tex.width || pixels.height != tex.height )
 					pixels.makeSquare();
 				tex.uploadPixels(pixels);

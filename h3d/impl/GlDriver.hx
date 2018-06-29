@@ -902,9 +902,6 @@ class GlDriver extends Driver {
 		} else {
 			var img = bmp.toNative();
 			gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-			#if js
-			gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, 1);
-			#end
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
 			restoreBind();
 		}
@@ -985,14 +982,12 @@ class GlDriver extends Driver {
 		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
 		gl.bindTexture(bind, t.t.t);
 		pixels.convert(t.format);
+		pixels.setFlip(false);
 		#if hl
-		pixels.setFlip(!cubic);
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, streamData(pixels.bytes.getData(),pixels.offset,pixels.width*pixels.height*4));
 		#elseif lime
-		pixels.setFlip(!cubic);
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#else
-		gl.pixelStorei(GL.UNPACK_FLIP_Y_WEBGL, cubic ? 0 : 1);
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#end
 		restoreBind();
@@ -1303,7 +1298,7 @@ class GlDriver extends Driver {
 	function checkFeature( f : Feature ) {
 		return switch( f ) {
 
-		case HardwareAccelerated, AllocDepthBuffer:
+		case HardwareAccelerated, AllocDepthBuffer, BottomLeftCoords:
 			true;
 
 		case StandardDerivatives, MultipleRenderTargets, SRGBTextures if( glES >= 3 ):
@@ -1340,7 +1335,6 @@ class GlDriver extends Driver {
 		#if (js || hl)
 		gl.readPixels(0, 0, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, @:privateAccess pixels.bytes.b);
 		@:privateAccess pixels.innerFormat = curTarget.format;
-		if( !curTarget.flags.has(Cube) ) pixels.flags.set(FlipY);
 		#end
 	}
 

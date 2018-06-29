@@ -225,12 +225,14 @@ enum TGlobal {
 	Unpack;
 	PackNormal;
 	UnpackNormal;
+	ScreenToUv;
+	UvToScreen;
 	// extensions
 	DFdx;
 	DFdy;
 	Fwidth;
+	// debug / internal
 	ChannelRead;
-	// debug
 	Trace;
 }
 

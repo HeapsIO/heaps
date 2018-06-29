@@ -62,8 +62,7 @@ class Blur extends ScreenShader {
 
 		function getPosition( uv : Vec2 ) : Vec3 {
 			var depth = unpack(depthTexture.get(uv));
-			var uv2 = (uv - 0.5) * vec2(2, -2);
-			var temp = vec4(uv2, depth, 1) * cameraInverseViewProj;
+			var temp = vec4(uvToScreen(uv), depth, 1) * cameraInverseViewProj;
 			var originWS = temp.xyz / temp.w;
 			return originWS;
 		}

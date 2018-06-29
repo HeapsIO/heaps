@@ -91,6 +91,10 @@ enum Feature {
 		Allows advanced shader operations (webgl2, opengl3+, directx 9.0c+)
 	*/
 	ShaderModel3;
+	/*
+		Tells if the driver uses bottom-left coordinates for textures.
+	*/
+	BottomLeftCoords;
 }
 
 enum QueryKind {

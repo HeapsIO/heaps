@@ -292,6 +292,10 @@ class HlslOut {
 				decl("float3 unpackNormal( float4 p ) { return normalize(p.xyz * 2. - 1.); }");
 			case Atan:
 				decl("float atan( float y, float x ) { return atan2(y,x); }");
+			case ScreenToUv:
+				decl("float2 screenToUv( float2 v ) { return v * float2(0.5, -0.5) + float2(0.5,0.5); }");
+			case UvToScreen:
+				decl("float2 uvToScreen( float2 v ) { return v * float2(2.,-2.) + float2(-1., 1.); }");
 			default:
 			}
 			add(GLOBALS.get(g));
