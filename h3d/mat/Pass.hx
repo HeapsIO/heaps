@@ -133,6 +133,17 @@ class Pass implements hxd.impl.Serializable {
 		return s;
 	}
 
+	function getShaderIndex(s:hxsl.Shader) : Int {
+		var index = 0;
+		var cur = shaders;
+		while( cur != parentShaders ) {
+			if( cur.s == s ) return index;
+			cur = cur.next;
+			index++;
+		}
+		return -1;
+	}
+
 	public function removeShader(s) {
 		var sl = shaders, prev = null;
 		while( sl != null ) {

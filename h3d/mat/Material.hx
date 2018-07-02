@@ -176,7 +176,10 @@ class Material extends BaseMaterial {
 		} else {
 			if( normalShader == null ) {
 				normalShader = new h3d.shader.NormalMap();
-				mainPass.addShader(normalShader);
+				if( textureShader != null )
+					mainPass.addShaderAtIndex(normalShader, mainPass.getShaderIndex(textureShader));
+				else
+					mainPass.addShader(normalShader);
 			}
 			normalShader.texture = t;
 		}
