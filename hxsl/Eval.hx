@@ -165,10 +165,10 @@ class Eval {
 			TBlock([]);
 		case [ChannelRead, [ { e : TConst(CInt(i)) }, uv ]]:
 			var channel = oldArgs[0];
-			channel.e = switch( channel.e ) {
+			channel = { e : switch( channel.e ) {
 			case TVar(v): TVar(mapVar(v));
 			default: throw "assert";
-			};
+			}, t : channel.t, p : channel.p };
 			var count = switch( channel.t ) { case TChannel(i): i; default: throw "assert"; };
 			var channelMode = hxsl.Channel.createByIndex(i & 7);
 			var tget = {
