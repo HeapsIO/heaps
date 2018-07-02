@@ -166,7 +166,7 @@ class BitmapData {
 			r.x = x;
 			r.y = y;
 			bmp.draw(src.bmp, m, null, flash.display.BlendMode.SCREEN, r, false);
-		case SoftAdd, BlendAdd:
+		case SoftAdd, AlphaAdd:
 			throw "BlendMode not supported";
 		}
 		#else
@@ -192,7 +192,7 @@ class BitmapData {
 			flash.display.BlendMode.MULTIPLY;
 		case Screen:
 			flash.display.BlendMode.SCREEN;
-		case SoftAdd, BlendAdd:
+		case SoftAdd, AlphaAdd:
 			throw "BlendMode not supported";
 		}
 
