@@ -5,6 +5,7 @@ class Polygon extends Primitive {
 
 	public var points : Array<Point>;
 	public var normals : Array<Point>;
+	public var tangents : Array<Point>;
 	public var uvs : Array<UV>;
 	public var idx : hxd.IndexBuffer;
 	public var colors : Array<Point>;
@@ -31,6 +32,8 @@ class Polygon extends Primitive {
 		var size = 3;
 		if( normals != null )
 			size += 3;
+		if( tangents != null )
+			size += 3;
 		if( uvs != null )
 			size += 2;
 		if( colors != null )
@@ -48,6 +51,12 @@ class Polygon extends Primitive {
 				buf.push(n.y);
 				buf.push(n.z);
 			}
+			if( tangents != null ) {
+				var t = tangents[k];
+				buf.push(t.x);
+				buf.push(t.y);
+				buf.push(t.z);
+			}
 			if( uvs != null ) {
 				var t = uvs[k];
 				buf.push(t.u);
@@ -62,7 +71,7 @@ class Polygon extends Primitive {
 		}
 		var flags : Array<h3d.Buffer.BufferFlag> = [];
 		if( idx == null ) flags.push(Triangles);
-		if( normals == null ) flags.push(RawFormat);
+		if( normals == null || tangents != null ) flags.push(RawFormat);
 		buffer = h3d.Buffer.ofFloats(buf, size, flags);
 
 		if( idx != null )
@@ -81,6 +90,12 @@ class Polygon extends Primitive {
 				for( i in 0...idx.length )
 					n.push(normals[idx[i]].clone());
 				normals = n;
+			}
+			if( tangents != null ) {
+				var t = [];
+				for( i in 0...idx.length )
+					t.push(tangents[idx[i]].clone());
+				tangents = t;
 			}
 			if( colors != null ) {
 				var n = [];
@@ -151,6 +166,10 @@ class Polygon extends Primitive {
 			n.normalize();
 	}
 
+	public function addTangents() {
+		throw "Not implemented for this polygon";
+	}
+
 	public function addUVs() {
 		throw "Not implemented for this polygon";
 	}
@@ -212,6 +231,16 @@ class Polygon extends Primitive {
 				ctx.addDouble(p.z);
 			}
 		}
+		if( tangents == null )
+			ctx.addInt(0);
+		else {
+			ctx.addInt(tangents.length);
+			for( p in tangents ) {
+				ctx.addDouble(p.x);
+				ctx.addDouble(p.y);
+				ctx.addDouble(p.z);
+			}
+		}
 		if( uvs == null )
 			ctx.addInt(0);
 		else {
@@ -243,6 +272,7 @@ class Polygon extends Primitive {
 	override function customUnserialize(ctx:hxbit.Serializer) {
 		points = [for( i in 0...ctx.getInt() ) new h3d.col.Point(ctx.getDouble(), ctx.getDouble(), ctx.getDouble())];
 		normals = [for( i in 0...ctx.getInt() ) new h3d.col.Point(ctx.getDouble(), ctx.getDouble(), ctx.getDouble())];
+		tangents = [for( i in 0...ctx.getInt() ) new h3d.col.Point(ctx.getDouble(), ctx.getDouble(), ctx.getDouble())];
 		uvs = [for( i in 0...ctx.getInt() ) new UV(ctx.getDouble(), ctx.getDouble())];
 		if( normals.length == 0 ) normals = null;
 		if( uvs.length == 0 ) uvs = null;
