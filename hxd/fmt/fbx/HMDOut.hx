@@ -228,7 +228,7 @@ class HMDOut extends BaseLibrary {
 					tmpBuf[p++] = round(tangents[k * 4]);
 					tmpBuf[p++] = round(tangents[k * 4 + 1]);
 					tmpBuf[p++] = round(tangents[k * 4 + 2]);
-					if( tangents[k*4+3] > 0 ) {
+					if( tangents[k*4+3] < 0 ) {
 						tmpBuf[p-3] *= 0.5;
 						tmpBuf[p-2] *= 0.5;
 						tmpBuf[p-1] *= 0.5;
