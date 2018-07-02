@@ -161,7 +161,7 @@ class IrradEquiProj extends h3d.shader.ScreenShader {
 		@param var faceMatrix : Mat3;
 
 		function getNormal() : Vec3 {
-			var d = input.uv * 2. - 1.;
+			var d = uvToScreen(input.uv);
 			return (vec3(d,1.) * faceMatrix).normalize();
 		}
 
