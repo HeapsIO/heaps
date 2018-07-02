@@ -11,11 +11,6 @@ class MaterialDatabase {
 		var file = model.entry.path.split(".");
 		file.pop();
 		var path = file.join(".")+".props";
-		#if (sys || nodejs)
-		var fs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-		if( fs != null && !haxe.io.Path.isAbsolute(path) )
-			path = fs.baseDir + "/" + path;
-		#end
 		return path;
 	}
 
@@ -34,6 +29,9 @@ class MaterialDatabase {
 	function saveData( model : hxd.res.Resource, data : Dynamic ) {
 		var file = getFilePath(model);
 		#if (sys || nodejs)
+		var fs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		if( fs != null && !haxe.io.Path.isAbsolute(file) )
+			file = fs.baseDir + file;
 		if( data == null )
 			(try sys.FileSystem.deleteFile(file) catch( e : Dynamic ) {});
 		else
