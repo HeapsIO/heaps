@@ -107,7 +107,7 @@ class Sao extends SampleApp {
 		new h3d.scene.CameraController(s3d).loadFromCamera();
 
 		var c = renderer;
-		//addSlider("Samples", function() return c.sao.shader.numSamples, function(v) c.sao.shader.numSamples = Std.int(v), 0, 40);
+		addSlider("Samples", function() return c.sao.shader.numSamples, function(v) c.sao.shader.numSamples = Std.int(v), 1, 101);
 		addSlider("Bias", function() return c.sao.shader.bias, function(v) c.sao.shader.bias = v, 0, 0.3);
 		addSlider("Intensity", function() return c.sao.shader.intensity, function(v) c.sao.shader.intensity = v, 0, 10);
 		addSlider("Radius", function() return c.sao.shader.sampleRadius, function(v) c.sao.shader.sampleRadius = v);
