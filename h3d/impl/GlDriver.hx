@@ -212,6 +212,8 @@ class GlDriver extends Driver {
 		#if js
 		// make sure to enable extensions
 		makeFeatures();
+		// setup shader optim
+		hxsl.SharedShader.UNROLL_LOOPS = !hasFeature(ShaderModel3);
 		#else
 		gl.enable(GL.TEXTURE_CUBE_MAP_SEAMLESS);
 		gl.pixelStorei(GL.PACK_ALIGNMENT, 1);
