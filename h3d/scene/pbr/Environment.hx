@@ -145,12 +145,6 @@ class IrradLut extends IrradBase {
 			output.color = vec4(a / numSamples, b / numSamples, 0, 1);
 		}
 	}
-
-	public function new() {
-		super();
-		samplesBits = 10;
-	}
-
 }
 
 class IrradEquiProj extends h3d.shader.ScreenShader {
@@ -220,7 +214,7 @@ class Environment  {
 		}
 		diffSize = 64;
 		specSize = 256;
-		sampleBits = 10;
+		sampleBits = 12;
 	}
 
 	public function dispose() {

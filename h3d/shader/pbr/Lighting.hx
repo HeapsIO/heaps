@@ -19,7 +19,7 @@ class Indirect extends PropsDefinition {
 			var isSky = normal.dot(normal) <= 0;
 			if( isSky ) {
 				if( showSky ) {
-					normal = (vec3( (calculatedUV - 0.5) * vec2(10,-10) /*?*/ , 1. ) * cameraInvViewProj.mat3x4()).normalize();
+					normal = (vec3( uvToScreen(calculatedUV) * 5. /*?*/ , 1. ) * cameraInvViewProj.mat3x4()).normalize();
 					pixelColor.rgb = skyMap.get(normal).rgb.pow(vec3(2.)) * irrPower;
 				} else
 					discard;
