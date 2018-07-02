@@ -43,7 +43,6 @@ class NormalMap extends hxsl.Shader {
     public function new(?texture) {
         super();
         this.texture = texture;
-		h3d.Engine.getCurrent().driver.hasFeature(StandardDerivatives);
     }
 
 }
