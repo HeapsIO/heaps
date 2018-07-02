@@ -165,6 +165,7 @@ class GlDriver extends Driver {
 	var glES : Null<Float>;
 	var shaderVersion : Null<Int>;
 	var firstShader = true;
+	var rightHanded = false;
 
 	public function new(antiAlias=0) {
 		#if js
@@ -217,6 +218,14 @@ class GlDriver extends Driver {
 		gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1);
 		gl.finish(); // prevent glError() on first bufferData
 		#end
+	}
+
+	override function setRenderFlag( r : RenderFlag, value : Int ) {
+		switch( r ) {
+		case CameraHandness:
+			rightHanded = value > 0;
+		default:
+		}
 	}
 
 	override function logImpl( str : String ) {
@@ -506,7 +515,15 @@ class GlDriver extends Driver {
 	}
 
 	override function selectMaterial( pass : Pass ) {
-		selectMaterialBits(@:privateAccess pass.bits);
+		var bits = @:privateAccess pass.bits;
+		if( rightHanded ) {
+			switch( pass.culling ) {
+			case Back: bits = (bits & ~Pass.culling_mask) | (2 << Pass.culling_offset);
+			case Front: bits = (bits & ~Pass.culling_mask) | (1 << Pass.culling_offset);
+			default:
+			}
+		}
+		selectMaterialBits(bits);
 		var s = defStencil;
 		if( pass.stencil == null ) {
 			if( curStEnabled ) {

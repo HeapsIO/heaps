@@ -108,12 +108,22 @@ enum QueryKind {
 	Samples;
 }
 
+enum RenderFlag {
+	/**
+		0 = LeftHanded (default), 1 = RightHanded. Affects the meaning of triangle culling value.
+	**/
+	CameraHandness;
+}
+
 class Driver {
 
 	public var logEnable : Bool;
 
 	public function hasFeature( f : Feature ) {
 		return false;
+	}
+
+	public function setRenderFlag( r : RenderFlag, value : Int ) {
 	}
 
 	public function isSupportedFormat( fmt : h3d.mat.Data.TextureFormat ) {

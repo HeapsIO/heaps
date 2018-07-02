@@ -323,6 +323,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		else
 			camera.screenRatio = t.width / t.height;
 		camera.update();
+
+		if( camera.rightHanded )
+			engine.driver.setRenderFlag(CameraHandness,1);
+
 		ctx.camera = camera;
 		ctx.engine = engine;
 		ctx.scene = this;
@@ -369,6 +373,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			}
 		}
 		#end
+
+		if( camera.rightHanded )
+			engine.driver.setRenderFlag(CameraHandness,0);
 
 		ctx.done();
 		ctx.scene = null;
