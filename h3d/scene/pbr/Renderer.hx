@@ -52,13 +52,14 @@ typedef PbrRenderProps = {
 class Renderer extends h3d.scene.Renderer {
 
 	var slides = new h3d.pass.ScreenFx(new h3d.shader.pbr.Slides());
-	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.pbr.Lighting.Indirect());
+	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
 	var tonemap = new h3d.pass.ScreenFx(new h3d.shader.pbr.ToneMapping());
 	var pbrSun = new h3d.shader.pbr.Light.DirLight();
 	var pbrLightPass : h3d.mat.Pass;
-	var screenLightPass : h3d.pass.ScreenFx<h3d.shader.pbr.PropsImport>;
+	var screenLightPass : h3d.pass.ScreenFx<h3d.shader.ScreenShader>;
 	var fxaa = new h3d.pass.FXAA();
 	var shadows = new h3d.pass.ShadowMap(2048);
+	var pbrIndirect = new h3d.shader.pbr.Lighting.Indirect();
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
 	var sao = new h3d.pass.ScalableAO();
@@ -84,7 +85,7 @@ class Renderer extends h3d.scene.Renderer {
 		shadows.power = 1000;
 		shadows.blur.passes = 1;
 		defaultPass = new h3d.pass.Default("default");
-		pbrOut.addShader(new h3d.shader.ScreenShader());
+		pbrOut.addShader(pbrIndirect);
 		pbrOut.addShader(pbrProps);
 		allPasses.push(output);
 		allPasses.push(defaultPass);
@@ -180,12 +181,12 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
-		pbrOut.shader.cameraPosition.load(ctx.camera.pos);
-		pbrOut.shader.irrPower = env.power * env.power;
-		pbrOut.shader.irrLut = env.lut;
-		pbrOut.shader.irrDiffuse = env.diffuse;
-		pbrOut.shader.irrSpecular = env.specular;
-		pbrOut.shader.irrSpecularLevels = env.specLevels;
+		pbrIndirect.cameraPosition.load(ctx.camera.pos);
+		pbrIndirect.irrPower = env.power * env.power;
+		pbrIndirect.irrLut = env.lut;
+		pbrIndirect.irrDiffuse = env.diffuse;
+		pbrIndirect.irrSpecular = env.specular;
+		pbrIndirect.irrSpecularLevels = env.specLevels;
 
 		var ls = getLightSystem();
 		if( ls.shadowLight == null ) {
@@ -208,17 +209,17 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrOut.setGlobals(ctx);
 		pbrDirect.doDiscard = false;
-		pbrOut.shader.showSky = skyMode != Hide;
-		pbrOut.shader.skyMap = skyMode == Irrad ? env.diffuse : env.env;
-		pbrOut.shader.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
+		pbrIndirect.showSky = skyMode != Hide;
+		pbrIndirect.skyMap = skyMode == Irrad ? env.diffuse : env.env;
+		pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
 		pbrOut.render();
 		pbrDirect.doDiscard = true;
 
 		var ls = Std.instance(ls, LightSystem);
 		var lpass = screenLightPass;
 		if( lpass == null ) {
-			lpass = new h3d.pass.ScreenFx(pbrProps);
-			lpass.addShader(new h3d.shader.ScreenShader());
+			lpass = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
+			lpass.addShader(pbrProps);
 			lpass.addShader(pbrDirect);
 			lpass.pass.setBlendMode(Add);
 			screenLightPass = lpass;
