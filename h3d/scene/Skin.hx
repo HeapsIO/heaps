@@ -167,12 +167,10 @@ class Skin extends MultiMaterial {
 				skinShader.MaxBones = maxBones;
 			for( m in materials )
 				if( m != null ) {
-					m.mainPass.addShader(skinShader);
-					var old = m.normalMap;
-					if( old != null ) {
-						m.normalMap = null;
-						m.normalMap = old; // re-up normalmap priority (skinShader changes normal)
-					}
+					if( m.normalMap != null )
+						@:privateAccess m.mainPass.addShaderAtIndex(skinShader, m.mainPass.getShaderIndex(m.normalShader) + 1);
+					else
+						m.mainPass.addShader(skinShader);
 					if( skinData.splitJoints != null ) m.mainPass.dynamicParameters = true;
 				}
 		}

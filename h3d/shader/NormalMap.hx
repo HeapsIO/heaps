@@ -26,7 +26,7 @@ class NormalMap extends hxsl.Shader {
 
 		@var var transformedTangent : Vec4;
 
-		function vertex() {
+		function __init__vertex() {
 			transformedTangent = vec4(input.tangent * global.modelView.mat3(),input.tangent.dot(input.tangent) > 0.5 ? 1. : -1.);
 		}
 
