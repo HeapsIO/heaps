@@ -8,6 +8,12 @@ class BigTextureElement {
 	public var dv : Float;
 	public var su : Float;
 	public var sv : Float;
+
+	public var width(get, never) : Int;
+	function get_width() { return q.width; }
+	public var height(get, never) : Int;
+	function get_height() { return q.height; }
+
 	public function new(t, q, du, dv, su, sv) {
 		this.t = t;
 		this.q = q;
@@ -69,10 +75,12 @@ class BigTexture {
 	var pending : Array<{ t : hxd.res.Image, q : QuadTree, alpha : Bool, skip : Bool }>;
 	var waitTimer : haxe.Timer;
 	var lastEvent : Float;
+	var bgColor : Int;
 
 	public function new(id, size, bgColor = 0xFF8080FF, ?allocPos : h3d.impl.AllocPos ) {
 		this.id = id;
 		this.size = size;
+		this.bgColor = bgColor;
 		space = new QuadTree(0,0,size,size);
 		tex = new h3d.mat.Texture(1, 1, allocPos);
 		tex.flags.set(Serialize);
@@ -134,7 +142,7 @@ class BigTexture {
 		return split(q.tl, sw, sh, rw, rh);
 	}
 
-	function allocPos( w : Int, h : Int ) {
+	public function allocPos( w : Int, h : Int ) {
 		var q = findBest(space, w, h);
 		if( q == null )
 			return null;
@@ -258,8 +266,11 @@ class BigTexture {
 		if( isDone )
 			return;
 		isDone = true;
-		if( allPixels == null )
+		if( allPixels == null ) {
 			allPixels = hxd.Pixels.alloc(size, size, h3d.mat.Texture.nativeFormat);
+			if(bgColor != 0)
+				allPixels.clear(bgColor);
+		}
 		// start loading all
 		function loadRec(q:QuadTree) {
 			if( q == null )
