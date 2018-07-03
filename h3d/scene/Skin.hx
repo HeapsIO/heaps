@@ -74,7 +74,7 @@ class Skin extends MultiMaterial {
 	var jointsUpdated : Bool;
 	var jointsAbsPosInv : h3d.Matrix;
 	var paletteChanged : Bool;
-	var skinShader : h3d.shader.Skin;
+	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
 
 	public var showJoints : Bool;
@@ -155,7 +155,13 @@ class Skin extends MultiMaterial {
 		jointsUpdated = true;
 		primitive = s.primitive;
 		if( shaderInit ) {
-			skinShader = new h3d.shader.Skin();
+			var hasNormalMap = false;
+			for( m in materials )
+				if( m != null && m.normalMap != null ) {
+					hasNormalMap = true;
+					break;
+				}
+			skinShader = hasNormalMap ? new h3d.shader.SkinTangent() : new h3d.shader.Skin();
 			var maxBones = 0;
 			if( skinData.splitJoints != null ) {
 				for( s in skinData.splitJoints )
