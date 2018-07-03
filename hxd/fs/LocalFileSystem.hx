@@ -355,6 +355,35 @@ class LocalFileSystem implements FileSystem {
 		return root;
 	}
 
+	#if (sys || nodejs)
+	var directoryCache : Map<String,Map<String,Bool>> = new Map();
+	#end
+
+	function checkPath( path : String ) {
+		#if (sys || nodejs)
+		// make sure the file is loaded with correct case !
+		var baseDir = new haxe.io.Path(path).dir;
+		var c = directoryCache.get(baseDir);
+		var isNew = false;
+		if( c == null ) {
+			isNew = true;
+			c = new Map();
+			for( f in try sys.FileSystem.readDirectory(baseDir) catch( e : Dynamic ) [] )
+				c.set(f, true);
+			directoryCache.set(baseDir, c);
+		}
+		if( !c.exists(path.substr(baseDir.length+1)) ) {
+			// added since then?
+			if( !isNew ) {
+				directoryCache.remove(baseDir);
+				return checkPath(path);
+			}
+			return false;
+		}
+		#end
+		return true;
+	}
+
 	function open( path : String, check = true ) {
 		var r = fileCache.get(path);
 		if( r != null )
@@ -373,7 +402,7 @@ class LocalFileSystem implements FileSystem {
 		if( f == null )
 			return null;
 		f = f.split("\\").join("/");
-		if( !check || (f == baseDir + path && sys.FileSystem.exists(f)) ) {
+		if( !check || (f == baseDir + path && sys.FileSystem.exists(f) && checkPath(f)) ) {
 			e = new LocalEntry(this, path.split("/").pop(), path, f);
 			convert(e);
 		}
