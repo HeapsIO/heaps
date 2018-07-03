@@ -31,6 +31,11 @@ class PbrMaterial extends Material {
 		return this.blendMode = b;
 	}
 
+	override function set_receiveShadows(b) {
+		// don't add shadows shader here, we are not in forward
+		return receiveShadows = b;
+	}
+
 	override function getDefaultProps( ?type : String ) : Any {
 		var props : PbrProps;
 		switch( type ) {
