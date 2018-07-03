@@ -108,9 +108,8 @@ class PbrMaterial extends Material {
 			tshader.killAlphaThreshold = 0.5;
 		}
 		mainPass.culling = props.culling ? Back : None;
-		shadows = false;
-		castShadows = props.shadows;
-		if( castShadows ) getPass("shadow").culling = mainPass.culling;
+		shadows = props.shadows;
+		if( shadows ) getPass("shadow").culling = mainPass.culling;
 
 		// get values from specular texture
 		var spec = mainPass.getShader(h3d.shader.pbr.PropsTexture);
