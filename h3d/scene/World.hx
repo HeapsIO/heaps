@@ -159,14 +159,13 @@ class World extends Object {
 				new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3),
 				new hxd.fmt.hmd.Data.GeometryFormat("normal", DVec3),
 			],
-			defaults : [null, new h3d.Vector(0,0,1)],
+			defaults : [],
 		};
 		if(enableNormalMaps) {
+			r.defaults[r.fmt.length] = new h3d.Vector(1,0,0);
 			r.fmt.push(new hxd.fmt.hmd.Data.GeometryFormat("tangent", DVec3));
-			r.defaults.push(new h3d.Vector(1,0,0));
 		}
 		r.fmt.push(new hxd.fmt.hmd.Data.GeometryFormat("uv", DVec2));
-		r.defaults.push(null);
 		return r;
 	}
 
