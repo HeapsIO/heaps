@@ -518,7 +518,12 @@ class GlDriver extends Driver {
 
 	override function selectMaterial( pass : Pass ) {
 		var bits = @:privateAccess pass.bits;
-		if( rightHanded ) {
+		/*
+			When rendering to a render target, our output will be flipped in Y to match
+			output texture coordinates. We also need to flip our culling.
+			The result is inverted if we are using a right handed camera.
+		*/
+		if( (curTarget == null) == rightHanded ) {
 			switch( pass.culling ) {
 			case Back: bits = (bits & ~Pass.culling_mask) | (2 << Pass.culling_offset);
 			case Front: bits = (bits & ~Pass.culling_mask) | (1 << Pass.culling_offset);

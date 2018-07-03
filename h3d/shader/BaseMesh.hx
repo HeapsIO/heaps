@@ -8,6 +8,7 @@ class BaseMesh extends hxsl.Shader {
 			var view : Mat4;
 			var proj : Mat4;
 			var position : Vec3;
+			var projFlip : Float;
 			var projDiag : Vec3;
 			var viewProj : Mat4;
 			var inverseViewProj : Mat4;
@@ -75,7 +76,7 @@ class BaseMesh extends hxsl.Shader {
 		}
 
 		function vertex() {
-			output.position = projectedPosition;
+			output.position = projectedPosition * vec4(1, camera.projFlip, 1, 1);
 			pixelTransformedPosition = transformedPosition;
 		}
 

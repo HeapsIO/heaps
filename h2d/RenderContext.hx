@@ -45,6 +45,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	var renderW : Float;
 	var renderH : Float;
 	var currentBlend : BlendMode;
+	var baseFlipY : Float;
+	var targetFlipY : Float;
 
 	public function new(scene) {
 		super();
@@ -83,6 +85,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		stride = 0;
 		curX = 0;
 		curY = 0;
+		targetFlipY = engine.driver.hasFeature(BottomLeftCoords) ? -1 : 1;
+		baseFlipY = engine.getCurrentTarget() != null ? targetFlipY : 1;
 		inFilter = null;
 		curWidth = scene.width;
 		curHeight = scene.height;
@@ -90,7 +94,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		// todo : we might prefer to auto-detect this by running a test and capturing its output
 		baseShader.pixelAlign = #if flash true #else false #end;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
-		baseShader.viewport.set( -scene.width * 0.5, -scene.height * 0.5, 2 / scene.width, -2 / scene.height);
+		baseShader.viewport.set( -scene.width * 0.5, -scene.height * 0.5, 2 / scene.width, -2 * baseFlipY / scene.height);
 		baseShader.filterMatrixA.set(1, 0, 0);
 		baseShader.filterMatrixB.set(0, 1, 0);
 		baseShaderList.next = null;
@@ -154,7 +158,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( width < 0 ) width = t == null ? scene.width : t.width;
 		if( height < 0 ) height = t == null ? scene.height : t.height;
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
-		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);
+		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 * targetFlipY / height);
 		targetsStackIndex++;
 		if( targetsStackIndex > targetsStack.length ){
 			targetsStack.push( { t : t, x : startX, y : startY, w : width, h : height, hasRZ: hasRenderZone, rzX: renderX, rzY:renderY, rzW:renderW, rzH:renderH } );
@@ -193,7 +197,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			var height = tinf == null ? scene.height : tinf.h;
 			initShaders(baseShaderList);
 			baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
-			baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 / height);
+			baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 * (t == null ? baseFlipY : targetFlipY) / height);
 			curX = startX;
 			curY = startY;
 			curWidth = width;

@@ -126,10 +126,6 @@ class Camera {
 		case 4: dz = 1; up.set(0,1,0);
 		case 5: dz = -1; up.set(0,1,0);
 		}
-		#if !hldx
-		rightHanded = true;
-		up.scale3(-1);
-		#end
 		pos.set(0,0,0);
 		target.set(dx,dy,dz);
 		setFovX(90,1);

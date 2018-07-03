@@ -1,25 +1,12 @@
 package h3d.pass;
 
-private class BorderShader extends hxsl.Shader {
+private class BorderShader extends h3d.shader.ScreenShader {
 	static var SRC = {
 
 		@param var color : Vec4;
 
-		@input var input : {
-			var position : Vec2;
-		};
-
-		var output : {
-			var position : Vec4;
-			var color : Vec4;
-		};
-
-		function vertex() {
-			output.position = vec4(input.position, 0, 1);
-		}
-
 		function fragment() {
-			output.color = color;
+			pixelColor = color;
 		}
 
 	}

@@ -1,6 +1,6 @@
 package h3d.pass;
 
-class ScreenFx<T:hxsl.Shader> {
+class ScreenFx<T:h3d.shader.ScreenShader> {
 
 	public var shader : T;
 	public var pass : h3d.mat.Pass;
@@ -10,10 +10,10 @@ class ScreenFx<T:hxsl.Shader> {
 	var shaders : hxsl.ShaderList;
 	var buffers : h3d.shader.Buffers;
 
-	public function new(shader) {
+	public function new(shader, ?output) {
 		this.shader = shader;
 		shaders = new hxsl.ShaderList(shader);
-		manager = new ShaderManager();
+		manager = new ShaderManager(output);
 		pass = new h3d.mat.Pass(Std.string(this), new hxsl.ShaderList(shader));
 		pass.culling = None;
 		pass.depth(false, Always);
@@ -55,6 +55,7 @@ class ScreenFx<T:hxsl.Shader> {
 
 	public function render() {
 		var rts = manager.compileShaders(shaders);
+		shader.flipY = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);
 		if( buffers == null )

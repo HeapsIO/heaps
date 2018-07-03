@@ -247,9 +247,9 @@ class GlslOut {
 			decl("mat3 _mat3( _mat3x4 v ) { return mat3(v.a.xyz,v.b.xyz,v.c.xyz); }");
 			return "_mat3";
 		case ScreenToUv:
-			decl("vec2 screenToUv( vec2 v ) { return v * vec2(0.5,0.5) + vec2(0.5,0.5); }");
+			decl("vec2 screenToUv( vec2 v ) { return v * vec2(0.5,-0.5) + vec2(0.5,0.5); }");
 		case UvToScreen:
-			decl("vec2 uvToScreen( vec2 v ) { return v * vec2(2.,2.) + vec2(-1., -1.); }");
+			decl("vec2 uvToScreen( vec2 v ) { return v * vec2(2.,-2.) + vec2(-1., 1.); }");
 		default:
 		}
 		return GLOBALS.get(g);

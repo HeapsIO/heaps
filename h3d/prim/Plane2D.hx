@@ -15,26 +15,25 @@ class Plane2D extends Primitive {
 
 	override function alloc( engine : h3d.Engine ) {
 		var v = new hxd.FloatBuffer();
-		var y = engine.driver.hasFeature(BottomLeftCoords) ? 1. : 0.;
 		v.push( -1);
 		v.push( -1);
 		v.push( 0);
-		v.push( 1 - y);
+		v.push( 1 );
 
 		v.push( -1);
 		v.push( 1);
 		v.push( 0);
-		v.push( y);
+		v.push( 0);
 
 		v.push( 1);
 		v.push( -1);
 		v.push( 1);
-		v.push( 1 - y);
+		v.push( 1);
 
 		v.push( 1);
 		v.push( 1);
 		v.push( 1);
-		v.push( y);
+		v.push( 0);
 
 		buffer = h3d.Buffer.ofFloats(v, 4, [Quads, RawFormat]);
 	}
