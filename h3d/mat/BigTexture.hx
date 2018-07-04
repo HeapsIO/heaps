@@ -142,7 +142,7 @@ class BigTexture {
 		return split(q.tl, sw, sh, rw, rh);
 	}
 
-	public function allocPos( w : Int, h : Int ) {
+	function allocPos( w : Int, h : Int ) {
 		var q = findBest(space, w, h);
 		if( q == null )
 			return null;
@@ -169,6 +169,14 @@ class BigTexture {
 			return null;
 		var e = new BigTextureElement(this, q, q.x / size, q.y / size, tsize.width / size, tsize.height / size);
 		e.set(t);
+		return e;
+	}
+
+	public function addEmpty( width : Int, height : Int ) {
+		var q = allocPos(width, height);
+		if( q == null )
+			return null;
+		var e = new BigTextureElement(this, q, q.x / size, q.y / size, width / size, height / size);
 		return e;
 	}
 

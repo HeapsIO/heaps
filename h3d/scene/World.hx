@@ -251,7 +251,7 @@ class World extends Object {
 				if( res != null )
 					specTex = btex.spec.add(res);
 				else
-					btex.spec.allocPos(t.width, t.height); // keep UV in-sync
+					specTex = btex.spec.addEmpty(t.width, t.height); // keep UV in-sync
 			}
 		}
 
@@ -264,7 +264,7 @@ class World extends Object {
 			if( res != null )
 				normalMap = btex.normal.add(res);
 			else
-				btex.normal.allocPos(t.width, t.height); // keep UV in-sync
+				normalMap = btex.normal.addEmpty(t.width, t.height); // keep UV in-sync
 		}
 
 		var m = new WorldMaterial();
@@ -339,7 +339,7 @@ class World extends Object {
 					var nx = vl[p++];
 					var ny = vl[p++];
 					var nz = vl[p++];
-					var tx = 0., ty = 0., tz = 0.;
+					var tx = 1., ty = 0., tz = 0.;
 					if(enableNormalMaps) {
 						tx = vl[p++];
 						ty = vl[p++];
@@ -498,9 +498,8 @@ class World extends Object {
 		} else
 			mesh.material.specularAmount = 0;
 
-		if(mat.normal != null) {
+		if(enableNormalMaps)
 			mesh.material.normalMap = mat.normal.t.tex;
-		}
 	}
 
 	override function dispose() {
