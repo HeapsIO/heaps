@@ -35,7 +35,9 @@ class ModelCache {
 	}
 
 	public function loadTexture( model : hxd.res.Model, texturePath ) : h3d.mat.Texture {
-		var fullPath = model.entry.path + "@" + texturePath;
+		var fullPath = texturePath;
+		if(model != null)
+			fullPath = model.entry.path + "@" + fullPath;
 		var t = textures.get(fullPath);
 		if( t != null )
 			return t;
