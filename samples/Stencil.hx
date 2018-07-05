@@ -31,8 +31,7 @@ class Stencil extends hxd.App {
 			p.setPassName("alpha");
 			p.culling = Front;
 			var s = new h3d.mat.Stencil();
-			s.setFunc(Both, LessEqual, 1, 0xFF);
-			s.setMask(Both, 0x00);
+			s.setFunc(LessEqual, 1, 0xFF, 0);
 			p.stencil = s;
 		}
 
@@ -49,9 +48,8 @@ class Stencil extends hxd.App {
 			var s = new h3d.mat.Stencil();
 			p.depthWrite = false;
 
-			s.setFunc(Both, Always, 1, 0xFF);
-			s.setOp(Both, Keep, Keep, Replace);
-			s.setMask(Both, 0xFF);
+			s.setFunc(Always, 1);
+			s.setOp(Keep, Keep, Replace);
 			p.stencil = s;
 		}
 

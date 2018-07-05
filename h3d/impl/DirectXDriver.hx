@@ -92,10 +92,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentVBuffers = new hl.NativeArray<dx.Resource>(16);
 	var frame : Int;
 	var currentMaterialBits = -1;
+	var currentStencilRef = 0;
 	var targetsCount = 1;
 	var allowDraw = false;
 
-	var depthStates : Map<Int,DepthStencilState>;
+	var depthStates : Map<Int,{ def : DepthStencilState, stencils : Array<{ op : Int, mask : Int, state : DepthStencilState }> }>;
 	var blendStates : Map<Int,BlendState>;
 	var rasterStates : Map<Int,RasterState>;
 	var samplerStates : Map<Int,SamplerState>;
@@ -138,7 +139,7 @@ class DirectXDriver extends h3d.impl.Driver {
 				s.layout.release();
 			}
 		}
-		if( depthStates != null ) for( s in depthStates ) if( s != null ) s.release();
+		if( depthStates != null ) for( s in depthStates ) { if( s.def != null ) s.def.release(); for( s in s.stencils ) if( s.state != null ) s.state.release(); }
 		if( blendStates != null ) for( s in blendStates ) if( s != null ) s.release();
 		if( rasterStates != null ) for( s in rasterStates ) if( s != null ) s.release();
 		if( samplerStates != null ) for( s in samplerStates ) if( s != null ) s.release();
@@ -542,20 +543,59 @@ class DirectXDriver extends h3d.impl.Driver {
 		currentMaterialBits = bits;
 
 		var depthBits = bits & (Pass.depthWrite_mask | Pass.depthTest_mask);
-		if( pass.stencil != null ) throw "TODO: Stencil support";
-		var depth = depthStates.get(depthBits);
+		var depths = depthStates.get(depthBits);
+		var depth = null;
+		var st = pass.stencil;
+		if( depths != null ) {
+			if( st == null )
+				depth = depths.def;
+			else {
+				for( s in depths.stencils )
+					@:privateAccess if( s.op == st.opBits && s.mask == (st.maskBits & ~h3d.mat.Stencil.reference_mask) ) {
+						depth = s.state;
+						break;
+					}
+			}
+		}
 		if( depth == null ) {
 			var cmp = Pass.getDepthTest(bits);
 			var desc = new DepthStencilDesc();
 			desc.depthEnable = cmp != 0;
 			desc.depthFunc = COMPARE[cmp];
 			desc.depthWrite = Pass.getDepthWrite(bits) != 0;
+			if( st != null ) {
+				desc.stencilEnable = true;
+				desc.stencilReadMask = st.readMask;
+				desc.stencilWriteMask = st.writeMask;
+				desc.frontFaceFunc = COMPARE[st.frontTest.getIndex()];
+				desc.frontFacePass = STENCIL_OP[st.frontPass.getIndex()];
+				desc.frontFaceFail = STENCIL_OP[st.frontSTfail.getIndex()];
+				desc.frontFaceDepthFail = STENCIL_OP[st.frontDPfail.getIndex()];
+				desc.backFaceFunc = COMPARE[st.backTest.getIndex()];
+				desc.backFacePass = STENCIL_OP[st.backPass.getIndex()];
+				desc.backFaceFail = STENCIL_OP[st.backSTfail.getIndex()];
+				desc.backFaceDepthFail = STENCIL_OP[st.backDPfail.getIndex()];
+			}
 			depth = Driver.createDepthStencilState(desc);
-			depthStates.set(depthBits, depth);
+			if( depths == null ) {
+				depths = { def : null, stencils : [] };
+				depthStates.set(depthBits, depths);
+			}
+			if( pass.stencil == null )
+				depths.def = depth;
+			else
+				depths.stencils.push(@:privateAccess { op : st.opBits, mask : st.maskBits & ~h3d.mat.Stencil.reference_mask, state : depth });
 		}
-		if( depth != currentDepthState ) {
+		if( depth != currentDepthState || (st != null && st.reference != currentStencilRef) ) {
+			var ref = st == null ? 0 : st.reference;
 			currentDepthState = depth;
+			currentStencilRef = ref;
+			#if (hldx < "1.7")
+			if( ref != 0 ) throw "DirectX Stencil support requires HL 1.7+";
 			Driver.omSetDepthStencilState(depth);
+			#else
+			Driver.omSetDepthStencilState(depth, ref);
+			#end
 		}
 
 		var rasterBits = bits & (Pass.culling_mask | SCISSOR_BIT);
@@ -1043,6 +1083,17 @@ class DirectXDriver extends h3d.impl.Driver {
 		Back,
 		Front,
 		None,
+	];
+
+	static var STENCIL_OP : Array<StencilOp> = [
+		Keep,
+		Zero,
+		Replace,
+		IncrSat,
+		Incr,
+		DecrSat,
+		Decr,
+		Invert,
 	];
 
 	static var BLEND : Array<Blend> = [
