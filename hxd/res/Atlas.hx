@@ -71,7 +71,7 @@ class Atlas extends Resource {
 				case "size":
 					var wh = line[1].split(",");
 					var w = Std.parseInt(wh[0]);
-					scale = w / file.width;
+					scale = file.width / w;
 				default:
 				}
 			}
