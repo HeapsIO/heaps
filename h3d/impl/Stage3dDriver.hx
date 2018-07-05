@@ -417,9 +417,9 @@ class Stage3dDriver extends Driver {
 
 	function selectStencilBits( opBits : Int, maskBits : Int ) {
 		var diffOp  = opBits ^ curStOpBits;
-		var diffMask = frBits ^ curStMaskBits;
+		var diffMask = maskBits ^ curStMaskBits;
 
-		if( (diffOp | diffRef) == 0 ) return;
+		if( (diffOp | diffMask) == 0 ) return;
 
 		if( diffOp & (Stencil.frontTest_mask | Stencil.frontSTfail_mask | Stencil.frontDPfail_mask | Stencil.frontPass_mask) != 0 ) {
 			ctx.setStencilActions(
@@ -443,7 +443,7 @@ class Stage3dDriver extends Driver {
 			ctx.setStencilReferenceValue(
 				Stencil.getReference(maskBits),
 				Stencil.getReadMask(maskBits),
-				Stencil.gettWriteMask(maskBits));
+				Stencil.getWriteMask(maskBits));
 		}
 
 		curStOpBits = opBits;
