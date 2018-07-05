@@ -181,11 +181,11 @@ class BigTexture {
 	}
 
 	function uploadPixels( pixels : hxd.Pixels, x : Int, y : Int, alphaChannel ) {
-		var bpp = hxd.Pixels.bytesPerPixel(allPixels.format);
+		var bpp = allPixels.bytesPerPixel;
 		if( alphaChannel ) {
 			var alphaPos = hxd.Pixels.getChannelOffset(allPixels.format, A);
 			var srcRedPos = hxd.Pixels.getChannelOffset(pixels.format, R);
-			var srcBpp = hxd.Pixels.bytesPerPixel(pixels.format);
+			var srcBpp = pixels.bytesPerPixel;
 			for( dy in 0...pixels.height ) {
 				var w = (x + (y + dy) * size) * bpp + alphaPos;
 				var r = dy * pixels.width * srcBpp + srcRedPos;
