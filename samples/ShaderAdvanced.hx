@@ -66,6 +66,19 @@ class ShaderAdvanced extends hxd.App {
 		tarr.textures.clear(0xFF4040,1,0);
 		tarr.textures.clear(0x40FF40,1,1);
 		tarr.textures.clear(0x4040FF,1,2);
+
+		// rgba 32F read/write
+		var tex = new h3d.mat.Texture(1,1,[Target],RGBA32F);
+		tex.clear(0x804020,1);
+		var pixels : hxd.Pixels.PixelsFloat = tex.capturePixels();
+		var color = pixels.getPixelF(0,0).toColor();
+		if( color != 0xFF804020 ) throw StringTools.hex(color);
+		pixels.setPixelF(0,0,new h3d.Vector(1,2,3,4));
+		tex.uploadPixels(pixels);
+		pixels = tex.capturePixels();
+		var v = pixels.getPixelF(0,0);
+		if( v.r != 1 || v.g != 2 || v.b != 3 || v.a != 4 ) throw v.toString();
+
 	}
 
 	override function update(dt:Float) {

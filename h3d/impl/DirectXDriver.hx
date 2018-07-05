@@ -500,7 +500,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.t.mips * layer + mipLevel, null);
 
 		var pitch = 0;
-		var bpp = hxd.Pixels.bytesPerPixel(tex.format);
+		var bpp = hxd.Pixels.getBytesPerPixel(tex.format);
 		var ptr = tmp.map(0, Read, true, pitch);
 		if( pitch == desc.width * bpp )
 			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * bpp);
@@ -521,11 +521,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
-		pixels.convert(RGBA);
+		pixels.convert(t.format);
 		pixels.setFlip(false);
 		if( hasDeviceError ) return;
 		if( mipLevel >= t.t.mips ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.t.mips - 1) + ")";
-		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), pixels.width * hxd.Pixels.bytesPerPixel(pixels.format), 0);
+		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), pixels.width * pixels.bytesPerPixel, 0);
 		updateResCount++;
 	}
 

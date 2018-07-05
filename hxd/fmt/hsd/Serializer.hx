@@ -41,7 +41,7 @@ class Serializer extends hxbit.Serializer {
 			for( face in 0...(t.flags.has(Cube) ? 6 : 1) ) {
 				var pix = t.capturePixels(face);
 				pix.convert(fmt);
-				addBytesSub(pix.bytes, 0, t.width * t.height * hxd.Pixels.bytesPerPixel(pix.format));
+				addBytesSub(pix.bytes, 0, t.width * t.height * pix.bytesPerPixel);
 			}
 			return true;
 		}
