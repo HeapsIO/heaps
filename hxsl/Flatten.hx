@@ -178,6 +178,12 @@ class Flatten {
 			case PackNormal:
 				allocConst(1, e.p);
 				allocConst(0.5, e.p);
+			case ScreenToUv:
+				allocConsts([0.5,0.5], e.p);
+				allocConsts([0.5,-0.5], e.p);
+			case UvToScreen:
+				allocConsts([2,-2], e.p);
+				allocConsts([-1,1], e.p);
 			default:
 			}
 		case TCall( { e : TGlobal(Vec4) }, [ { e : TVar( { kind : Global | Param | Input | Var } ), t : TVec(3, VFloat) }, { e : TConst(CInt(1)) } ]):

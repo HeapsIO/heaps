@@ -695,6 +695,16 @@ class AgalOut {
 			op(OMul(o, swiz(tmp, sw == null ? [X, X, X, X] : [for( _ in sw ) X]), rb));
 			op(OSub(o, ra, o));
 			return o;
+		case [ScreenToUv,[e]]:
+			var r = allocReg();
+			op(OMul(r,expr(e),getConsts([0.5,-0.5])));
+			op(OAdd(r,r,getConsts([0.5,0.5])));
+			return r;
+		case [UvToScreen,[e]]:
+			var r = allocReg();
+			op(OMul(r,expr(e),getConsts([2,-2])));
+			op(OAdd(r,r,getConsts([-1,1])));
+			return r;
 		case [Pack, [e]]:
 			var c = getConsts([1, 255, 255 * 255, 255 * 255 * 255]);
 			var r = allocReg();
