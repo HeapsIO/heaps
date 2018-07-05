@@ -18,19 +18,19 @@ class Stencil extends hxd.App {
 
 		{	// create the top cube
 			var obj = new Mesh(prim, h3d.mat.Material.create(tex), root);
-			obj.material.mainPass.enableLights = true;
+			obj.material.shadows = false;
 		}
 
 		{	// create the cube reflection
 			var obj = new Mesh(prim, h3d.mat.Material.create(tex), root);
 			obj.scaleZ = -1;
 			obj.material.color.setColor(0x55C8FF);
+			obj.material.shadows = false;
 
 			var p = obj.material.mainPass;
 			p.setPassName("alpha");
-			var s = new h3d.mat.Stencil();
 			p.culling = Front;
-			p.enableLights = true;
+			var s = new h3d.mat.Stencil();
 			s.setFunc(Both, LessEqual, 1, 0xFF);
 			s.setMask(Both, 0x00);
 			p.stencil = s;
@@ -43,11 +43,12 @@ class Stencil extends hxd.App {
 
 			var obj = new Mesh(prim, root);
 			obj.material.color.setColor(0x0080C0);
+			obj.material.shadows = false;
 
 			var p = obj.material.mainPass;
 			var s = new h3d.mat.Stencil();
 			p.depthWrite = false;
-			
+
 			s.setFunc(Both, Always, 1, 0xFF);
 			s.setOp(Both, Keep, Keep, Replace);
 			s.setMask(Both, 0xFF);
