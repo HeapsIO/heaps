@@ -155,6 +155,7 @@ class GlDriver extends Driver {
 	var bufferWidth : Int;
 	var bufferHeight : Int;
 	var curTarget : h3d.mat.Texture;
+	var curTargets : Array<h3d.mat.Texture> = [];
 	var numTargets : Int;
 	var curTargetLayer : Int;
 	var curTargetMip : Int;
@@ -1185,10 +1186,12 @@ class GlDriver extends Driver {
 		#end
 	}
 
-	inline function unbindTargets() {
+	function unbindTargets() {
 		if( curTarget != null && numTargets > 1 ) {
-			while( numTargets > 1 )
+			while( numTargets > 1 ) {
 				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0 + (--numTargets), GL.TEXTURE_2D, null, 0);
+				curTargets[numTargets] = null;
+			}
 			setDrawBuffers(1);
 		}
 	}
@@ -1198,12 +1201,20 @@ class GlDriver extends Driver {
 		var oldCount = numTargets;
 		var oldLayer = curTargetLayer;
 		var oldMip = curTargetMip;
-		numTargets = 1;
+		if( oldCount > 1 ) {
+			numTargets = 1;
+			for( i in 1...oldCount )
+				if( curTargets[i] == tex )
+					gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0+i,GL.TEXTURE_2D,null,0);
+		}
 		setRenderTarget(tex, layer, mipLevel);
 		var pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
 		captureRenderBuffer(pixels);
 		setRenderTarget(old, oldLayer, oldMip);
 		if( oldCount > 1 ) {
+			for( i in 1...oldCount )
+				if( curTargets[i] == tex )
+					gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0+i,GL.TEXTURE_2D,tex.t.t,0);
 			setDrawBuffers(oldCount);
 			numTargets = oldCount;
 		}
@@ -1285,6 +1296,7 @@ class GlDriver extends Driver {
 				throw "Invalid texture context";
 			#end
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0 + i, GL.TEXTURE_2D, tex.t.t, 0);
+			curTargets[i] = tex;
 			tex.lastFrame = frame;
 			tex.flags.set(WasCleared); // once we draw to, do not clear again
 		}
