@@ -103,8 +103,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		textures.begin();
 	}
 
-	public function allocTarget(name, filter = false, size = 0) {
-		var t = textures.allocTarget(name, scene.width >> size, scene.height >> size, false);
+	public function allocTarget(name, filter = false) {
+		var t = textures.allocTarget(name, scene.width, scene.height, false);
 		t.filter = filter ? Linear : Nearest;
 		return t;
 	}

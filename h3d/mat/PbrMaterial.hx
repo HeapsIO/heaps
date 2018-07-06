@@ -18,7 +18,8 @@ typedef PbrProps = {
 	var blend : PbrBlend;
 	var shadows : Bool;
 	var culling : Bool;
-	var alphaKill : Bool;
+	@:optional var alphaKill : Bool;
+	@:optional var emissive : Float;
 }
 
 class PbrMaterial extends Material {
@@ -45,7 +46,6 @@ class PbrMaterial extends Material {
 				blend : Alpha,
 				shadows : false,
 				culling : false,
-				alphaKill : false,
 			};
 		case "ui":
 			props = {
@@ -61,7 +61,6 @@ class PbrMaterial extends Material {
 				blend : None,
 				shadows : true,
 				culling : true,
-				alphaKill : false,
 			};
 		}
 		return props;
@@ -112,6 +111,7 @@ class PbrMaterial extends Material {
 		if( shadows ) getPass("shadow").culling = mainPass.culling;
 
 		// get values from specular texture
+		var emit = props.emissive == null ? 0 : props.emissive;
 		var spec = mainPass.getShader(h3d.shader.pbr.PropsTexture);
 		var def = mainPass.getShader(h3d.shader.pbr.PropsValues);
 		if( specularTexture != null ) {
@@ -119,6 +119,7 @@ class PbrMaterial extends Material {
 				spec = new h3d.shader.pbr.PropsTexture();
 				mainPass.addShader(spec);
 			}
+			spec.emissive = emit;
 			spec.texture = specularTexture;
 			if( def != null )
 				mainPass.removeShader(def);
@@ -129,7 +130,9 @@ class PbrMaterial extends Material {
 				def = new h3d.shader.pbr.PropsValues();
 				mainPass.addShader(def);
 			}
+			def.emissive = emit;
 		}
+
 
 	}
 
@@ -142,6 +145,7 @@ class PbrMaterial extends Material {
 	#if js
 	override function editProps() {
 		var props : PbrProps = props;
+		if( props.emissive == 0 ) Reflect.deleteField(props,"emissive");
 		return new js.jquery.JQuery('
 			<dl>
 				<dt>Mode</dt>
@@ -161,6 +165,7 @@ class PbrMaterial extends Material {
 						<option value="AlphaAdd">AlphaAdd</option>
 					</select>
 				</dd>
+				<dt>Emissive</dt><dd><input type="range" min="0" max="10" field="emissive"/></dd>
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
 				<dt>Culled</dt><dd><input type="checkbox" field="culling"/></dd>
 				<dt>AlphaKill</dt><dd><input type="checkbox" field="alphaKill"/></dd>

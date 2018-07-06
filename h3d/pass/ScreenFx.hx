@@ -21,6 +21,10 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 		engine = h3d.Engine.getCurrent();
 	}
 
+	function copy( src, dst ) {
+		h3d.pass.Copy.run(src,dst);
+	}
+
 	public function setGlobals( ctx :  h3d.scene.RenderContext ) {
 		for( g in @:privateAccess ctx.sharedGlobals )
 			manager.globals.fastSet(g.gid, g.value);

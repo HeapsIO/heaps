@@ -6,6 +6,7 @@ class PropsImport extends hxsl.Shader {
 		@param var albedoTex : Sampler2D;
 		@param var normalTex : Sampler2D;
 		@param var pbrTex : Sampler2D;
+		@param var emitTex : Sampler2D;
 		@const var isScreen : Bool = true;
 
 		@param var cameraInverseViewProj : Mat4;
@@ -16,6 +17,7 @@ class PropsImport extends hxsl.Shader {
 		var metalness : Float;
 		var roughness : Float;
 		var occlusion : Float;
+		var emissive : Float;
 		var calculatedUV : Vec2;
 		var transformedPosition : Vec3;
 		var pbrSpecularColor : Vec3;
@@ -33,6 +35,8 @@ class PropsImport extends hxsl.Shader {
 			metalness = pbr.r;
 			roughness = pbr.g;
 			occlusion = pbr.b;
+
+			emissive = emitTex.get(uv).r;
 
 			pbrSpecularColor = mix(vec3(0.04),albedo,metalness);
 

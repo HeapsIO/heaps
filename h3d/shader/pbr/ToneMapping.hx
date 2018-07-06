@@ -8,11 +8,15 @@ class ToneMapping extends ScreenShader {
 		@param var hdrTexture : Sampler2D;
 		@param var exposureExp : Float;
 		@const var isSRBG : Bool;
-
 		@const var mode : Int;
+
+		@const var hasBloom : Bool;
+		@param var bloom : Sampler2D;
 
 		function fragment() {
 			var color = hdrTexture.get(calculatedUV);
+			if( hasBloom )
+				color += bloom.get(calculatedUV);
 
 			color.rgb *= exposureExp;
 

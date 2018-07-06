@@ -15,7 +15,7 @@ class ShadowMap extends Default {
 	@ignore public var border : Border;
 	public var size(default,set) : Int;
 	public var color : h3d.Vector;
-	public var power = 10.0;
+	public var power = 30.0;
 	public var bias = 0.01;
 	public var blur : Blur;
 
@@ -33,7 +33,9 @@ class ShadowMap extends Default {
 		shadowBiasId = hxsl.Globals.allocID("shadow.bias");
 		shader = dshader = new h3d.shader.DirShadow();
 		color = new h3d.Vector();
-		blur = new Blur(2, 3);
+		blur = new Blur(5);
+		blur.quality = 0.5;
+		blur.shader.isDepth = true;
 		border = new Border(size, size);
 		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
 		if( !customDepth ) depth = h3d.mat.DepthBuffer.getDefault();
@@ -153,8 +155,8 @@ class ShadowMap extends Default {
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
-		if( blur.quality > 0 && blur.passes > 0 )
-			blur.apply(texture, ctx.textures.allocTarget("tmpBlur", size, size, false), true);
+		if( blur.radius > 0 )
+			blur.apply(ctx, texture);
 
 		dshader.shadowMap = texture;
 		dshader.shadowBias = bias;

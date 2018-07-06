@@ -89,8 +89,8 @@ class Renderer extends hxd.impl.AnyProps {
 		ctx.engine.clear(color, depth, stencil);
 	}
 
-	inline function allocTarget( name : String, size = 0, depth = true, ?format ) {
-		return ctx.textures.allocTarget(name, ctx.engine.width >> size, ctx.engine.height >> size, depth, format);
+	inline function allocTarget( name : String, depth = true, size = 1., ?format ) {
+		return ctx.textures.allocTarget(name, Math.round(ctx.engine.width * size), Math.round(ctx.engine.height * size), depth, format);
 	}
 
 	function copy( from, to, ?blend ) {

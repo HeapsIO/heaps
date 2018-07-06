@@ -6,7 +6,6 @@ class DepthPass extends h3d.pass.Default {
 
 	var depthMapId : Int;
 	public var enableSky : Bool = false;
-	public var reduceSize : Int = 0;
 
 	public function new() {
 		super("depth");
@@ -18,7 +17,7 @@ class DepthPass extends h3d.pass.Default {
 	}
 
 	override function draw( passes ) {
-		var texture = ctx.textures.allocTarget("depthMap", ctx.engine.width >> reduceSize, ctx.engine.height >> reduceSize, true);
+		var texture = ctx.textures.allocTarget("depthMap", ctx.engine.width, ctx.engine.height, true);
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(enableSky ? 0 : 0xFF0000, 1);
 		passes = super.draw(passes);

@@ -16,7 +16,7 @@ class CustomRenderer extends h3d.scene.DefaultRenderer {
 	public function new() {
 		super();
 		sao = new h3d.pass.ScalableAO();
-		saoBlur = new h3d.pass.Blur(3, 3, 2);
+		saoBlur = new h3d.pass.Blur();
 		sao.shader.sampleRadius	= 0.2;
 		sao.shader.numSamples = 30;
 		hasMRT = h3d.Engine.getCurrent().driver.hasFeature(MultipleRenderTargets);
@@ -41,11 +41,11 @@ class CustomRenderer extends h3d.scene.DefaultRenderer {
 		resetTarget();
 		if(mode != 1) {
 			bench.measure("sao");
-			var saoTarget = allocTarget("sao",0,false);
+			var saoTarget = allocTarget("sao");
 			setTarget(saoTarget);
 			sao.apply(depth, normal, ctx.camera);
 			bench.measure("saoBlur");
-			saoBlur.apply(saoTarget, allocTarget("saoBlurTmp", 0, false));
+			saoBlur.apply(ctx, saoTarget);
 			bench.measure("saoBlend");
 			copy(color, null);
 			copy(saoTarget, null, mode == 0 ? Multiply : null);
@@ -111,7 +111,9 @@ class Sao extends SampleApp {
 		addSlider("Bias", function() return c.sao.shader.bias, function(v) c.sao.shader.bias = v, 0, 0.3);
 		addSlider("Intensity", function() return c.sao.shader.intensity, function(v) c.sao.shader.intensity = v, 0, 10);
 		addSlider("Radius", function() return c.sao.shader.sampleRadius, function(v) c.sao.shader.sampleRadius = v);
-		addSlider("Blur", function() return c.saoBlur.sigma, function(v) c.saoBlur.sigma = v, 0, 3);
+		addSlider("Blur", function() return c.saoBlur.radius, function(v) c.saoBlur.radius = v, 0, 10);
+		addSlider("BlurQuality", function() return c.saoBlur.quality, function(v) c.saoBlur.quality = v);
+		addSlider("BlurLineary", function() return c.saoBlur.linear, function(v) c.saoBlur.linear = v);
 
 		onResize();
 	}
@@ -139,8 +141,6 @@ class Sao extends SampleApp {
 			r.mode = 1;
 		if(K.isPressed(K.NUMBER_3))
 			r.mode = 2;
-		if(K.isPressed("B".code))
-			r.saoBlur.passes = r.saoBlur.passes == 0 ? 3 : 0;
 		#if hl
 		if( K.isPressed("V".code) )
 			@:privateAccess hxd.Stage.getInstance().window.vsync = !hxd.Stage.getInstance().window.vsync;

@@ -20,10 +20,10 @@ class ScreenShader extends hxsl.Shader {
 
 		function __init__() {
 			output.color = pixelColor;
+			calculatedUV = input.uv;
 		}
 
 		function vertex() {
-			calculatedUV = input.uv;
 			output.position = vec4(input.position.x, input.position.y * flipY, 0, 1);
 		}
 	};

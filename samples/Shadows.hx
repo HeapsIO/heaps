@@ -1,6 +1,6 @@
 import hxd.Math;
 
-class Shadows extends hxd.App {
+class Shadows extends SampleApp {
 
 	var time : Float = 0.;
 	var spheres : Array<h3d.scene.Object>;
@@ -8,6 +8,7 @@ class Shadows extends hxd.App {
 	var shadow : h3d.pass.ShadowMap;
 
 	override function init() {
+		super.init();
 
 		var floor = new h3d.prim.Cube(10, 10, 0.1);
 		floor.addNormals();
@@ -37,7 +38,10 @@ class Shadows extends hxd.App {
 		dir.enableSpecular = true;
 
 		shadow = s3d.renderer.getPass(h3d.pass.ShadowMap);
-		shadow.blur.passes = 3;
+		addSlider("Power", function() return shadow.power, function(p) shadow.power = p, 0, 100);
+		addSlider("Radius", function() return shadow.blur.radius, function(r) shadow.blur.radius = r, 0, 20);
+		addSlider("Quality", function() return shadow.blur.quality, function(r) shadow.blur.quality = r);
+		addSlider("Bias", function() return shadow.bias, function(r) shadow.bias = r, 0, 0.1);
 
 		s3d.camera.pos.set(12, 12, 6);
 		new h3d.scene.CameraController(s3d).loadFromCamera();
