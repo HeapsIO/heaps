@@ -26,7 +26,7 @@ class World extends hxd.App {
 		shadow = s3d.renderer.getPass(h3d.pass.ShadowMap);
 		shadow.size = 2048;
 		shadow.power = 200;
-		shadow.blur.passes = 0;
+		shadow.blur.radius= 0;
 		shadow.bias *= 0.1;
 		shadow.color.set(0.7, 0.7, 0.7);
 
