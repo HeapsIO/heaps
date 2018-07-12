@@ -6,7 +6,7 @@ class PropsImport extends hxsl.Shader {
 		@param var albedoTex : Sampler2D;
 		@param var normalTex : Sampler2D;
 		@param var pbrTex : Sampler2D;
-		@param var emitTex : Sampler2D;
+		@param var otherTex : Sampler2D;
 		@const var isScreen : Bool = true;
 
 		@param var cameraInverseViewProj : Mat4;
@@ -28,15 +28,15 @@ class PropsImport extends hxsl.Shader {
 			albedo = albedoTex.get(uv).rgb;
 			albedo *= albedo; // gamma correct
 
-			var normalDepth = normalTex.get(uv);
-			normal = normalDepth.xyz;
-			depth = normalDepth.w;
+			normal = normalTex.get(uv).xyz;
 			var pbr = pbrTex.get(uv);
 			metalness = pbr.r;
 			roughness = pbr.g;
 			occlusion = pbr.b;
 
-			emissive = emitTex.get(uv).r;
+			var other = otherTex.get(uv);
+			emissive = other.r;
+			depth = other.g;
 
 			pbrSpecularColor = mix(vec3(0.04),albedo,metalness);
 

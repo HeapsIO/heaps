@@ -267,7 +267,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var p = hardwarePass;
 			if( p == null )
 				hardwarePass = p = new h3d.pass.HardwarePick();
-			ctx.setGlobal("depthMap", h3d.mat.Texture.fromColor(0xFF00000, 0));
+			ctx.setGlobal("depthMap", { texture : h3d.mat.Texture.fromColor(0xFF00000, 0) });
 			p.pickX = pixelX;
 			p.pickY = pixelY;
 			p.setContext(ctx);

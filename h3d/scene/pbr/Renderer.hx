@@ -96,11 +96,17 @@ class Renderer extends h3d.scene.Renderer {
 	public var exposure(get,set) : Float;
 	public var debugMode = 0;
 
+	static var ALPHA : hxsl.Output = Swiz(Value("output.color"),[W]);
 	var output = new h3d.pass.Output("mrt",[
 		Value("output.color"),
-		Vec4([Value("output.normal",3),Value("output.depth",1)]),
-		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Const(0)]),
-		Vec4([Value("output.emissive"),Const(0),Const(0),Const(0)])
+		Vec4([Value("output.normal",3),ALPHA]),
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
+		Vec4([Value("output.emissive"),Value("output.depth"),Const(0), ALPHA /* ? */])
+	]);
+	var decalsOutput = new h3d.pass.Output("decals",[
+		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
+		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
 	]);
 
 	public function new(env) {
@@ -113,6 +119,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(shadows);
+		allPasses.push(decalsOutput);
 		refreshProps();
 	}
 
@@ -168,12 +175,16 @@ class Renderer extends h3d.scene.Renderer {
 		pbrDirect.enableShadow = props.shadow.enable;
 
 		var albedo = allocTarget("albedo");
-		var normal = allocTarget("normalDepth",false,1.,RGBA32F);
+		var normal = allocTarget("normalDepth",false,1.,RGBA16F);
 		var pbr = allocTarget("pbr",false,1.);
-		var emit = allocTarget("emit",false,1.,RGBA16F);
-		setTargets([albedo,normal,pbr,emit]);
+		var other = allocTarget("other",false,1.,RGBA32F);
+		setTargets([albedo,normal,pbr,other]);
 		clear(0, 1, 0);
 		mainDraw();
+
+		setTargets([albedo,normal,pbr]);
+		ctx.setGlobal("depthMap",{ texture : other, channel : hxsl.Channel.G });
+		decalsOutput.draw(get("decal"));
 
 		setTarget(albedo);
 		draw("albedo");
@@ -191,13 +202,13 @@ class Renderer extends h3d.scene.Renderer {
 			var sp = props.sao;
 			var saoTex = allocTarget("sao",false,sp.size);
 			setTarget(saoTex);
-			sao.shader.depthTextureChannel = A;
+			sao.shader.depthTextureChannel = B;
 			sao.shader.normalTextureChannel = R;
 			sao.shader.numSamples = sp.samples;
 			sao.shader.sampleRadius	= sp.radius;
 			sao.shader.intensity = sp.intensity;
 			sao.shader.bias = sp.bias * sp.bias;
-			sao.apply(normal,normal,ctx.camera);
+			sao.apply(other,normal,ctx.camera);
 			saoBlur.radius = sp.blur;
 			saoBlur.quality = 0.5;
 			saoBlur.apply(ctx, saoTex);
@@ -212,7 +223,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.albedoTex = albedo;
 		pbrProps.normalTex = normal;
 		pbrProps.pbrTex = pbr;
-		pbrProps.emitTex = emit;
+		pbrProps.otherTex = other;
 		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
