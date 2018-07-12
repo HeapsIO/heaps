@@ -14,8 +14,9 @@ class Bloom extends ScreenShader {
 		function fragment() {
 			pixelColor = hdr.get(calculatedUV);
 			var lum = pixelColor.rgb.dot(vec3(0.2126, 0.7152, 0.0722));
-			if( lum < threshold ) pixelColor.rgb = vec3(0.) else pixelColor.rgb *= intensity * (lum - threshold) / lum;
+			if( lum < threshold ) pixelColor.rgb = vec3(0.) else pixelColor.rgb *= (lum - threshold) / lum;
 			pixelColor.rgb += albedo * emissive;
+			pixelColor.rgb *= intensity;
 		}
 
 	};
