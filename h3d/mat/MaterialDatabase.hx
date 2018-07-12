@@ -8,21 +8,18 @@ class MaterialDatabase {
 	}
 
 	function getFilePath( model : hxd.res.Resource ) {
-		var file = model.entry.path.split(".");
-		file.pop();
-		var path = file.join(".")+".props";
-		return path;
+		return model.entry.directory+"/materials.props";
 	}
 
 	public function getModelData( model : hxd.res.Resource ) {
 		if( model == null )
 			return null;
-		var cached = db.get(model.entry.path);
+		var cached = db.get(model.entry.directory);
 		if( cached != null )
 			return cached.v;
 		var file = getFilePath(model);
 		var value = try haxe.Json.parse(hxd.res.Loader.currentInstance.load(file).toText()) catch( e : hxd.res.NotFound ) {};
-		db.set(model.entry.path, { v : value });
+		db.set(model.entry.directory, { v : value });
 		return value;
 	}
 
