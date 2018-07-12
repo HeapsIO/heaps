@@ -93,6 +93,7 @@ class Cube extends Polygon {
 		if( c != null )
 			return c;
 		c = new h3d.prim.Cube(1, 1, 1);
+		c.translate(-0.5,-0.5,-0.5);
 		c.addNormals();
 		c.addUniformUVs(1.0);
 		@:privateAccess engine.resCache.set(Cube, c);
