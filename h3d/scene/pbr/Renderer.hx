@@ -66,6 +66,7 @@ typedef RenderProps = {
 	var bloom : BloomProps;
 	var sao : SaoProps;
 	var shadow : ShadowProps;
+	var emissive : Float;
 }
 
 class Renderer extends h3d.scene.Renderer {
@@ -108,7 +109,6 @@ class Renderer extends h3d.scene.Renderer {
 		defaultPass = new h3d.pass.Default("default");
 		pbrOut.addShader(pbrIndirect);
 		pbrOut.addShader(pbrProps);
-		bloomPass.addShader(pbrProps);
 		slides.addShader(pbrProps);
 		allPasses.push(output);
 		allPasses.push(defaultPass);
@@ -217,6 +217,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
 		pbrIndirect.cameraPosition.load(ctx.camera.pos);
+		pbrIndirect.emissivePower = props.emissive * props.emissive;
 		pbrIndirect.irrPower = env.power * env.power;
 		pbrIndirect.irrLut = env.lut;
 		pbrIndirect.irrDiffuse = env.diffuse;
@@ -343,6 +344,7 @@ class Renderer extends h3d.scene.Renderer {
 			mode : Pbr,
 			env : null,
 			envPower : 1.,
+			emissive : 1.,
 			exposure : 0.,
 			sky : Hide,
 			tone : Reinhard,
@@ -455,6 +457,7 @@ class Renderer extends h3d.scene.Renderer {
 					<br/>
 					<input type="range" min="0" max="2" field="envPower"/>
 				</dd>
+				<dt>Emissive</dt><dd><input type="range" min="0" max="2" field="emissive"></dd>
 				<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
 			</dl>
 			</div>
