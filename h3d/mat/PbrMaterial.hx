@@ -4,6 +4,7 @@ package h3d.mat;
 	var PBR = "PBR";
 	var Albedo = "Albedo";
 	var Overlay = "Overlay";
+	var Decal = "Decal";
 }
 
 @:enum abstract PbrBlend(String) {
@@ -55,6 +56,13 @@ class PbrMaterial extends Material {
 				culling : false,
 				alphaKill : true,
 			};
+		case "decal":
+			props = {
+				mode : Decal,
+				blend : Alpha,
+				shadows : false,
+				culling : true,
+			};
 		default:
 			props = {
 				mode : PBR,
@@ -86,6 +94,19 @@ class PbrMaterial extends Material {
 			mainPass.setPassName("albedo");
 		case Overlay:
 			mainPass.setPassName("overlay");
+		case Decal:
+			mainPass.setPassName("decal");
+			var vd = mainPass.getShader(h3d.shader.VolumeDecal);
+			if( vd == null ) {
+				vd = new h3d.shader.VolumeDecal(1,1);
+				vd.setPriority(-1);
+				mainPass.addShader(vd);
+			}
+			var sv = mainPass.getShader(h3d.shader.pbr.StrengthValues);
+			if( sv == null ) {
+				sv = new h3d.shader.pbr.StrengthValues();
+				mainPass.addShader(sv);
+			}
 		}
 		switch( props.blend ) {
 		case None:
@@ -112,13 +133,13 @@ class PbrMaterial extends Material {
 
 		// get values from specular texture
 		var emit = props.emissive == null ? 0 : props.emissive;
-		var spec = mainPass.getShader(h3d.shader.pbr.PropsTexture);
+		var tex = mainPass.getShader(h3d.shader.pbr.PropsTexture);
 		var def = mainPass.getShader(h3d.shader.pbr.PropsValues);
-		if( spec == null && def == null ) {
+		if( tex == null && def == null ) {
 			def = new h3d.shader.pbr.PropsValues();
 			mainPass.addShader(def);
 		}
-		if( spec != null ) spec.emissive = emit;
+		if( tex != null ) tex.emissive = emit;
 		if( def != null ) def.emissive = emit;
 	}
 
@@ -137,9 +158,9 @@ class PbrMaterial extends Material {
 		if( t != null ) {
 			if( spec == null ) {
 				spec = new h3d.shader.pbr.PropsTexture();
+				spec.emissive = emit;
 				mainPass.addShader(spec);
 			}
-			spec.emissive = emit;
 			spec.texture = t;
 			if( def != null )
 				mainPass.removeShader(def);
@@ -148,9 +169,9 @@ class PbrMaterial extends Material {
 			// default values (if no texture)
 			if( def == null ) {
 				def = new h3d.shader.pbr.PropsValues();
+				def.emissive = emit;
 				mainPass.addShader(def);
 			}
-			def.emissive = emit;
 		}
 		return t;
 	}
