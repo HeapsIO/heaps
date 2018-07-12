@@ -292,6 +292,7 @@ class Cache {
 			byID.set(r.signature, r);
 
 		#if shader_debug_dump
+		if( dbg != null ) dbg.close();
 		haxe.Log.trace = oldTrace;
 		#end
 
