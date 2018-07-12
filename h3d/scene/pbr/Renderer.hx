@@ -202,7 +202,7 @@ class Renderer extends h3d.scene.Renderer {
 			var sp = props.sao;
 			var saoTex = allocTarget("sao",false,sp.size);
 			setTarget(saoTex);
-			sao.shader.depthTextureChannel = B;
+			sao.shader.depthTextureChannel = G;
 			sao.shader.normalTextureChannel = R;
 			sao.shader.numSamples = sp.samples;
 			sao.shader.sampleRadius	= sp.radius;
