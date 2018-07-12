@@ -114,13 +114,33 @@ class PbrMaterial extends Material {
 		var emit = props.emissive == null ? 0 : props.emissive;
 		var spec = mainPass.getShader(h3d.shader.pbr.PropsTexture);
 		var def = mainPass.getShader(h3d.shader.pbr.PropsValues);
-		if( specularTexture != null ) {
+		if( spec == null && def == null ) {
+			def = new h3d.shader.pbr.PropsValues();
+			mainPass.addShader(def);
+		}
+		if( spec != null ) spec.emissive = emit;
+		if( def != null ) def.emissive = emit;
+	}
+
+	override function get_specularTexture() {
+		var spec = mainPass.getShader(h3d.shader.pbr.PropsTexture);
+		return spec == null ? null : spec.texture;
+	}
+
+	override function set_specularTexture(t) {
+		if( specularTexture == t )
+			return t;
+		var props : PbrProps = props;
+		var emit = props == null || props.emissive == null ? 0 : props.emissive;
+		var spec = mainPass.getShader(h3d.shader.pbr.PropsTexture);
+		var def = mainPass.getShader(h3d.shader.pbr.PropsValues);
+		if( t != null ) {
 			if( spec == null ) {
 				spec = new h3d.shader.pbr.PropsTexture();
 				mainPass.addShader(spec);
 			}
 			spec.emissive = emit;
-			spec.texture = specularTexture;
+			spec.texture = t;
 			if( def != null )
 				mainPass.removeShader(def);
 		} else {
@@ -132,8 +152,7 @@ class PbrMaterial extends Material {
 			}
 			def.emissive = emit;
 		}
-
-
+		return t;
 	}
 
 	override function clone( ?m : BaseMaterial ) : BaseMaterial {
