@@ -56,6 +56,24 @@ class ConvertFBX2HMD extends Convert {
 
 }
 
+class Command extends Convert {
+
+	var cmd : String;
+	var args : Array<String>;
+
+	public function new(fr,to,cmd:String,args:Array<String>) {
+		super(fr,to);
+		this.cmd = cmd;
+		this.args = args;
+	}
+	
+	override function convert() {
+		command(cmd,[for( a in args ) if( a == "%SRC" ) srcPath else if( a == "%DST" ) dstPath else a]);
+	}
+	
+}
+
+
 class ConvertWAV2MP3 extends Convert {
 
 	public function new() {
