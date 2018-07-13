@@ -54,7 +54,7 @@ class Stencil implements hxd.impl.Serializable {
 	public function clone() {
 		var s = new Stencil();
 		s.opBits = opBits;
-		s.opBits = maskBits;
+		s.maskBits = maskBits;
 		return s;
 	}
 

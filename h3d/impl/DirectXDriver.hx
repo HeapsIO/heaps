@@ -92,6 +92,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentVBuffers = new hl.NativeArray<dx.Resource>(16);
 	var frame : Int;
 	var currentMaterialBits = -1;
+	var currentStencilMaskBits = -1;
+	var currentStencilOpBits = -1;
 	var currentStencilRef = 0;
 	var targetsCount = 1;
 	var allowDraw = false;
@@ -132,6 +134,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		allowDraw = false;
 		targetsCount = 1;
 		currentMaterialBits = -1;
+		currentStencilMaskBits = -1;
+		currentStencilOpBits = -1;
 		if( shaders != null ) {
 			for( s in shaders ) {
 				s.fragment.shader.release();
@@ -537,10 +541,15 @@ class DirectXDriver extends h3d.impl.Driver {
 
 		if( hasScissor ) bits |= SCISSOR_BIT;
 
-		if( bits == currentMaterialBits )
+		var stOpBits = pass.stencil != null ? @:privateAccess pass.stencil.opBits : -1;
+		var stMaskBits = pass.stencil != null ? @:privateAccess pass.stencil.maskBits : -1;
+
+		if( bits == currentMaterialBits && stOpBits == currentStencilOpBits && stMaskBits == currentStencilMaskBits )
 			return;
 
 		currentMaterialBits = bits;
+		currentStencilOpBits = stOpBits;
+		currentStencilMaskBits = stMaskBits;
 
 		var depthBits = bits & (Pass.depthWrite_mask | Pass.depthTest_mask);
 		var depths = depthStates.get(depthBits);
