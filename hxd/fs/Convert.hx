@@ -109,6 +109,7 @@ class ConvertTGA2PNG extends Convert {
 	}
 
 	override function convert() {
+		#if (sys || nodejs)
 		var input = new haxe.io.BytesInput(sys.io.File.getBytes(srcPath));
 		var r = new format.tga.Reader(input).read();
 		if( r.header.imageType != UncompressedTrueColor || r.header.bitsPerPixel != 32 )
@@ -131,6 +132,9 @@ class ConvertTGA2PNG extends Convert {
 			throw "Not supported "+r.header.imageOrigin;
 		}
 		sys.io.File.saveBytes(dstPath, pix.toPNG());
+		#else
+		throw "Not implemented";
+		#end
 	}
 
 }
