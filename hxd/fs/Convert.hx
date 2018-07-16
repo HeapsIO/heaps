@@ -93,7 +93,11 @@ class ConvertWAV2OGG extends Convert {
 	}
 
 	override function convert() {
-		command("oggenc2", ["--resample", "44100", "-Q", srcPath, "-o", dstPath]);
+		var cmd = "oggenc";
+		#if (sys || nodejs)
+		if( Sys.systemName() == "Windows" ) cmd = "oggenc2";
+		#end
+		command(cmd, ["--resample", "44100", "-Q", srcPath, "-o", dstPath]);
 	}
 
 }
