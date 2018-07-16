@@ -299,6 +299,7 @@ class LocalFileSystem implements FileSystem {
 		baseDir = dir;
 		converts = new Map();
 		addConvert(new Convert.ConvertFBX2HMD());
+		addConvert(new Convert.ConvertTGA2PNG());
 		#if flash
 		var froot = new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + baseDir);
 		if( !froot.exists ) throw "Could not find dir " + dir;

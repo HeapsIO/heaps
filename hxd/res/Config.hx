@@ -18,7 +18,7 @@ class Config {
 		Maps the extension to a given resource class. Example ["wav,mp3,ogg" => "hxd.res.Sound"]
 	**/
 	public static var extensions = [
-		"jpg,png,jpeg,gif" => "hxd.res.Image",
+		"jpg,png,jpeg,gif,tga" => "hxd.res.Image",
 		"fbx,hmd" => "hxd.res.Model",
 		"ttf" => "hxd.res.Font",
 		"fnt" => "hxd.res.BitmapFont",

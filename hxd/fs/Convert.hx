@@ -66,11 +66,11 @@ class Command extends Convert {
 		this.cmd = cmd;
 		this.args = args;
 	}
-	
+
 	override function convert() {
 		command(cmd,[for( a in args ) if( a == "%SRC" ) srcPath else if( a == "%DST" ) dstPath else a]);
 	}
-	
+
 }
 
 
@@ -101,3 +101,37 @@ class ConvertWAV2OGG extends Convert {
 	}
 
 }
+
+class ConvertTGA2PNG extends Convert {
+
+	public function new() {
+		super("tga", "png");
+	}
+
+	override function convert() {
+		var input = new haxe.io.BytesInput(sys.io.File.getBytes(srcPath));
+		var r = new format.tga.Reader(input).read();
+		if( r.header.imageType != UncompressedTrueColor || r.header.bitsPerPixel != 32 )
+			throw "Not supported "+r.header.imageType+"/"+r.header.bitsPerPixel;
+		var w = r.header.width;
+		var h = r.header.height;
+		var pix = hxd.Pixels.alloc(w, h, ARGB);
+		var access : hxd.Pixels.PixelsARGB = pix;
+		var p = 0;
+		for( y in 0...h )
+			for( x in 0...w ) {
+				var c = r.imageData[x + y * w];
+				access.setPixel(x, y, c);
+			}
+		switch( r.header.imageOrigin ) {
+		case BottomLeft:
+			pix.flags.set(FlipY);
+		case TopLeft:
+		default:
+			throw "Not supported "+r.header.imageOrigin;
+		}
+		sys.io.File.saveBytes(dstPath, pix.toPNG());
+	}
+
+}
+
