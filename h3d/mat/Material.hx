@@ -258,22 +258,10 @@ class Material extends BaseMaterial {
 		if( props == null || mainPass == null ) return;
 		var props : DefaultProps = props;
 		switch( props.kind ) {
-		case Opaque, AlphaKill:
-			mainPass.setBlendMode(None);
-			mainPass.depthWrite = true;
-			mainPass.setPassName("default");
-		case Alpha:
-			mainPass.setBlendMode(Alpha);
-			mainPass.depthWrite = true;
-			mainPass.setPassName("alpha");
-		case Add:
-			mainPass.setBlendMode(Add);
-			mainPass.depthWrite = false;
-			mainPass.setPassName("additive");
-		case SoftAdd:
-			mainPass.setBlendMode(SoftAdd);
-			mainPass.depthWrite = false;
-			mainPass.setPassName("additive");
+		case Opaque, AlphaKill: blendMode = None;
+		case Alpha: blendMode = Alpha;
+		case Add: blendMode = Add;
+		case SoftAdd: blendMode = SoftAdd;
 		}
 		var tshader = textureShader;
 		if( tshader != null ) {
