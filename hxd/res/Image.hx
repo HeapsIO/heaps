@@ -5,6 +5,7 @@ package hxd.res;
 	var Jpg = 0;
 	var Png = 1;
 	var Gif = 2;
+	var Tga = 3;
 
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
@@ -86,6 +87,12 @@ class Image extends Resource {
 			width = f.readUInt16();
 			height = f.readUInt16();
 
+		case _ if( entry.extension == "tga" ):
+			format = Tga;
+			f.skip(10);
+			width = f.readUInt16();
+			height = f.readUInt16();
+
 		default:
 			throw "Unsupported texture format " + entry.path;
 		}
@@ -135,6 +142,26 @@ class Image extends Resource {
 			var p = try NanoJpeg.decode(bytes) catch( e : Dynamic ) throw "Failed to decode JPG " + entry.path + " (" + e+")";
 			pixels = new Pixels(p.width, p.height, p.pixels, BGRA);
 			#end
+		case Tga:
+			var bytes = entry.getBytes();
+			var r = new format.tga.Reader(new haxe.io.BytesInput(bytes)).read();
+			if( r.header.imageType != UncompressedTrueColor || r.header.bitsPerPixel != 32 )
+				throw "Not supported "+r.header.imageType+"/"+r.header.bitsPerPixel;
+			var w = r.header.width;
+			var h = r.header.height;
+			pixels = hxd.Pixels.alloc(w, h, ARGB);
+			var access : hxd.Pixels.PixelsARGB = pixels;
+			var p = 0;
+			for( y in 0...h )
+				for( x in 0...w ) {
+					var c = r.imageData[x + y * w];
+					access.setPixel(x, y, c);
+				}
+			switch( r.header.imageOrigin ) {
+			case BottomLeft: pixels.flags.set(FlipY);
+			case TopLeft: // nothing
+			default: throw "Not supported "+r.header.imageOrigin;
+			}
 		}
 		if( fmt != null ) pixels.convert(fmt);
 		if( flipY != null ) pixels.setFlip(flipY);
