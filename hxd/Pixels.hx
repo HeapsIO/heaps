@@ -75,6 +75,7 @@ class Pixels {
 		this.bytes = bytes;
 		this.innerFormat = format;
 		this.offset = offset;
+		flags = haxe.EnumFlags.ofInt(0);
 	}
 
 	public static inline function switchEndian(v) {
