@@ -108,6 +108,16 @@ class Pass implements hxd.impl.Serializable {
 		this.colorMask = (r?1:0) | (g?2:0) | (b?4:0) | (a?8:0);
 	}
 
+	public function setColorChannel( c : hxsl.Channel) {
+		switch( c ) {
+		case R: setColorMask(true, false, false, false);
+		case G: setColorMask(false, true, false, false);
+		case B: setColorMask(false, false, true, false);
+		case A: setColorMask(false, false, false, true);
+		default: throw "Unsupported channel "+c;
+		}
+	}
+
 	public function addShader<T:hxsl.Shader>(s:T) : T {
 		// throwing an exception will require NG GameServer review
 		if( s == null ) return null;

@@ -55,6 +55,11 @@ class TextureCache {
 		return t;
 	}
 
+	public function allocTargetScale( name : String, scale : Float, defaultDepth=true, ?format:hxd.PixelFormat ) {
+		var e = h3d.Engine.getCurrent();
+		return allocTarget(name, Math.ceil(e.width * scale), Math.ceil(e.height * scale), defaultDepth, format);
+	}
+
 	public function dispose() {
 		for( t in cache )
 			t.dispose();

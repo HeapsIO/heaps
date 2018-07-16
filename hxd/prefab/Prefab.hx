@@ -9,7 +9,7 @@ class Prefab {
 	public var source(default, set) : String;
 	public var children(default, null) : Array<Prefab>;
 	public var enabled : Bool = true;
-	public var props : {};
+	public var props : Any;
 
 	public function new(?parent) {
 		this.parent = parent;
