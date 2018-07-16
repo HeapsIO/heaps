@@ -16,13 +16,6 @@ class ContextShared {
 	var cache : h3d.prim.ModelCache;
 	var shaderCache : ShaderDefCache;
 
-	#if editor
-	var scene : hide.comp.Scene;
-	public function getScene() {
-		return scene;
-	}
-	#end
-
 	public function new() {
 		root2d = new h2d.Sprite();
 		root3d = new h3d.scene.Object();
@@ -49,9 +42,6 @@ class ContextShared {
 	}
 
 	public function loadShader( path : String ) : ShaderDef {
-		#if editor
-		return hide.Ide.inst.shaderLoader.loadSharedShader(path);
-		#else
 		var r = shaderCache.get(path);
 		if(r != null)
 			return r;
@@ -63,31 +53,18 @@ class ContextShared {
 		};
 		shaderCache.set(path, r);
 		return r;
-		#end
 	}
 
 	public function loadModel( path : String ) {
-		#if editor
-		return getScene().loadModel(path);
-		#else
 		return cache.loadModel(hxd.res.Loader.currentInstance.load(path).toModel());
-		#end
 	}
 
 	public function loadAnimation( path : String ) {
-		#if editor
-		return getScene().loadAnimation(path);
-		#else
 		return @:privateAccess cache.loadAnimation(hxd.res.Loader.currentInstance.load(path).toModel());
-		#end
 	}
 
 	public function loadTexture( path : String ) {
-		#if editor
-		return getScene().loadTexture("",path);
-		#else
 		return cache.loadTexture(null, path);
-		#end
 	}
 
 }
