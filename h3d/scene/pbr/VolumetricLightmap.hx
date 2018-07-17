@@ -90,7 +90,7 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 
 	public function generateProbes() {
 		var totalProbeCount : Int = probeCount.x * probeCount.y * probeCount.z ;
-		lightProbes.resize(totalProbeCount);
+		lightProbes = [];
 		lastBakedProbeIndex = -1;
 
 		for(i in 0 ... probeCount.x){
