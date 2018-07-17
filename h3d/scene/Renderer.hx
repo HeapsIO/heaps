@@ -19,6 +19,7 @@ class Renderer extends hxd.impl.AnyProps {
 	var allPasses : Array<h3d.pass.Base>;
 	var ctx : RenderContext;
 	var hasSetTarget = false;
+	public var effects : Array<hxd.prefab.rfx.RendererFX> = [];
 
 	public function new() {
 		allPasses = [];

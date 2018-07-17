@@ -30,24 +30,6 @@ package h3d.scene.pbr;
 	var Reinhard = "Reinhard";
 }
 
-typedef SaoProps = {
-	var enable : Bool;
-	var size : Float;
-	var blur : Float;
-	var samples : Int;
-	var radius : Float;
-	var intensity : Float;
-	var bias : Float;
-}
-
-typedef BloomProps = {
-	var enable : Bool;
-	var size : Float;
-	var threshold : Float;
-	var intensity : Float;
-	var blur : Float;
-}
-
 typedef ShadowProps = {
 	var enable : Bool;
 	var power : Float;
@@ -63,8 +45,6 @@ typedef RenderProps = {
 	var exposure : Float;
 	var sky : SkyMode;
 	var tone : TonemapMap;
-	var bloom : BloomProps;
-	var sao : SaoProps;
 	var shadow : ShadowProps;
 	var emissive : Float;
 }
@@ -82,11 +62,6 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrIndirect = new h3d.shader.pbr.Lighting.Indirect();
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
-	var sao = new h3d.pass.ScalableAO();
-	var saoBlur = new h3d.pass.Blur();
-	var saoCopy = new h3d.pass.Copy();
-	var bloomPass = new h3d.pass.ScreenFx(new h3d.shader.pbr.Bloom());
-	var bloomBlur = new h3d.pass.Blur();
 	var hasDebugEvent = false;
 
 	public var skyMode : SkyMode = Hide;
@@ -160,6 +135,12 @@ class Renderer extends h3d.scene.Renderer {
 		draw("overlay");
 	}
 
+	function apply( step : hxd.prefab.rfx.RendererFX.Step ) {
+		for( f in effects )
+			if( f.enabled )
+				f.apply(ctx, step);
+	}
+
 	override function render() {
 		var props : RenderProps = props;
 
@@ -178,12 +159,17 @@ class Renderer extends h3d.scene.Renderer {
 		var normal = allocTarget("normalDepth",false,1.,RGBA16F);
 		var pbr = allocTarget("pbr",false,1.);
 		var other = allocTarget("other",false,1.,RGBA32F);
+
+		ctx.setGlobal("depthMap",{ texture : other, channel : hxsl.Channel.G });
+		ctx.setGlobal("normalMap",{ texture : normal, channel : hxsl.Channel.R });
+		ctx.setGlobal("occlusionMap",{ texture : pbr, channel : hxsl.Channel.B });
+		ctx.setGlobal("bloom",null);
+
 		setTargets([albedo,normal,pbr,other]);
 		clear(0, 1, 0);
 		mainDraw();
 
 		setTargets([albedo,normal,pbr]);
-		ctx.setGlobal("depthMap",{ texture : other, channel : hxsl.Channel.G });
 		decalsOutput.draw(get("decal"));
 
 		setTarget(albedo);
@@ -198,25 +184,10 @@ class Renderer extends h3d.scene.Renderer {
 			clear(0x00FF80FF);
 		}
 
-		if( props.sao.enable ) {
-			var sp = props.sao;
-			var saoTex = allocTarget("sao",false,sp.size);
-			setTarget(saoTex);
-			sao.shader.depthTextureChannel = G;
-			sao.shader.normalTextureChannel = R;
-			sao.shader.numSamples = sp.samples;
-			sao.shader.sampleRadius	= sp.radius;
-			sao.shader.intensity = sp.intensity;
-			sao.shader.bias = sp.bias * sp.bias;
-			sao.apply(other,normal,ctx.camera);
-			saoBlur.radius = sp.blur;
-			saoBlur.quality = 0.5;
-			saoBlur.apply(ctx, saoTex);
-			saoCopy.pass.setColorMask(false,false,true,false);
-			saoCopy.apply(saoTex, pbr, Multiply);
-		}
+		apply(BeforeHdr);
 
 		var hdr = allocTarget("hdrOutput", false, 1, RGBA16F);
+		ctx.setGlobal("hdr", hdr);
 		setTarget(hdr);
 		if( ctx.engine.backgroundColor != null )
 			clear(ctx.engine.backgroundColor);
@@ -277,21 +248,11 @@ class Renderer extends h3d.scene.Renderer {
 		draw("lights");
 		pbrProps.isScreen = true;
 
-		var bloom : h3d.mat.Texture = null;
-		if( props.bloom.enable ) {
-			var pb = props.bloom;
-			bloom = allocTarget("bloom", false, pb.size, RGBA16F);
-			setTarget(bloom);
-			bloomPass.shader.hdr = hdr;
-			bloomPass.shader.threshold = pb.threshold;
-			bloomPass.shader.intensity = pb.intensity;
-			bloomPass.render();
-			bloomBlur.radius = pb.blur;
-			bloomBlur.apply(ctx, bloom);
-		}
+		apply(AfterHdr);
 
 		var ldr = allocTarget("ldrOutput");
 		setTarget(ldr);
+		var bloom = ctx.getGlobal("bloom");
 		tonemap.shader.bloom = bloom;
 		tonemap.shader.hasBloom = bloom != null;
 		tonemap.shader.mode = switch( toneMode ) {
@@ -365,23 +326,7 @@ class Renderer extends h3d.scene.Renderer {
 				blur : 9,
 				bias : 0.1,
 				quality : 0.3,
-			},
-			sao : {
-				enable : false,
-				size : 1,
-				blur : 5,
-				samples : 30,
-				radius : 1,
-				intensity : 1,
-				bias : 0.1,
-			},
-			bloom : {
-				enable : false,
-				size : 0.5,
-				blur : 3,
-				intensity : 1.,
-				threshold : 0.5,
-			},
+			}
 		};
 		return props;
 	}
@@ -416,26 +361,6 @@ class Renderer extends h3d.scene.Renderer {
 			<dt>Quality</dt><dd><input type="range" field="shadow.quality"/></dd>
 			<dt>Bias</dt><dd><input type="range" min="0" max="1" field="shadow.bias"/></dd>
 			</dt>
-		';
-
-		var saoProps = '
-			<dl>
-			<dt>Intensity</dt><dd><input type="range" min="0" max="10" field="sao.intensity"/></dd>
-			<dt>Radius</dt><dd><input type="range" min="0" max="10" field="sao.radius"/></dd>
-			<dt>Bias</dt><dd><input type="range" min="0" max="0.5" field="sao.bias"/></dd>
-			<dt>Size</dt><dd><input type="range" min="0" max="1" field="sao.size"/></dd>
-			<dt>Blur</dt><dd><input type="range" min="0" max="20" field="sao.blur"/></dd>
-			<dt>Samples</dt><dd><input type="range" min="3" max="256" field="sao.samples" step="1"/></dd>
-			</dl>
-		';
-
-		var bloomProps = '
-			<dl>
-			<dt>Intensity</dt><dd><input type="range" min="0" max="2" field="bloom.intensity"/></dd>
-			<dt>Threshold</dt><dd><input type="range" min="0" max="1" field="bloom.threshold"/></dd>
-			<dt>Size</dt><dd><input type="range" min="0" max="1" field="bloom.size"/></dd>
-			<dt>Blur</dt><dd><input type="range" min="0" max="20" field="bloom.blur"/></dd>
-			</dl>
 		';
 
 		return new js.jquery.JQuery('
@@ -478,20 +403,6 @@ class Renderer extends h3d.scene.Renderer {
 					<input type="checkbox" field="shadow.enable"/> Shadows
 				</div>
 				$shadowProps
-			</div>
-
-			<div class="group">
-				<div class="title">
-					<input type="checkbox" field="bloom.enable"/> Bloom
-				</div>
-				$bloomProps
-			</div>
-
-			<div class="group">
-				<div class="title">
-					<input type="checkbox" field="sao.enable"/> SAO
-				</div>
-				$saoProps
 			</div>
 		');
 	}
