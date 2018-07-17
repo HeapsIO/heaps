@@ -2,7 +2,7 @@ package h3d.scene.pbr;
 
 import h3d.scene.pbr.Renderer;
 
-class LightProbeBaker{
+class LightProbeBaker {
 
 	public var useGPU = false;
 	public var environment : h3d.scene.pbr.Environment;
@@ -126,8 +126,25 @@ class LightProbeBaker{
 	}
 
 	function setupEnvMap(resolution : Int){
-		if(envMap == null || resolution != envMap.width)
+		if(envMap == null || resolution != envMap.width ) {
+			if( envMap != null ) envMap.dispose();
 			envMap = new h3d.mat.Texture(resolution, resolution, [Cube, Target], RGBA32F);
+		}
+	}
+
+	public function dispose() {
+		if( envMap != null ) {
+			envMap.dispose();
+			envMap = null;
+		}
+		output0.dispose();
+		output1.dispose();
+		output2.dispose();
+		output3.dispose();
+		output4.dispose();
+		output5.dispose();
+		output6.dispose();
+		output7.dispose();
 	}
 
 	function setupShaderOutput(order : Int){
