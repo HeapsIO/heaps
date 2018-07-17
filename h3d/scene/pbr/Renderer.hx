@@ -266,7 +266,7 @@ class Renderer extends h3d.scene.Renderer {
 			resetTarget();
 			copy(hdr, null);
 			// no warnings
-			for( p in passObjects ) p.rendered = true;
+			for( p in passObjects ) if( p != null ) p.rendered = true;
 			return;
 		}
 
