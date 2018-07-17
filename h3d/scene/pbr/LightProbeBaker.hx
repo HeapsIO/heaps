@@ -7,13 +7,6 @@ class LightProbeBaker {
 	public var useGPU = false;
 	public var environment : h3d.scene.pbr.Environment;
 
-	var output = new h3d.pass.Output("mrt",[
-		Value("output.color"),
-		Vec4([Value("output.normal",3),Value("output.depth",1)]),
-		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Const(0)]),
-		Vec4([Value("output.emissive"),Const(0),Const(0),Const(0)])
-	]);
-
 	var envMap : h3d.mat.Texture;
 	var customCamera = new h3d.Camera();
 	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,1,0,0, -1,-1,1,0]),
@@ -64,8 +57,8 @@ class LightProbeBaker {
 			// Bake a Probe
 			for( f in 0...6 ) {
 				engine.begin();
-				s3d.camera.setCubeMap(f, volumetricLightMap.lightProbes[index].position);
-				s3d.camera.update();
+				customCamera.setCubeMap(f, volumetricLightMap.lightProbes[index].position);
+				customCamera.update();
 				engine.pushTarget(envMap, f);
 				engine.clear(0,1,0);
 				s3d.render(engine);
@@ -85,6 +78,7 @@ class LightProbeBaker {
 		s3d.renderer = oldRenderer;
 		s3d.renderer.renderMode = oldRenderMode;
 
+
 		return time - timeElapsed;
 	}
 
@@ -100,16 +94,15 @@ class LightProbeBaker {
 		var oldRenderMode = renderer.renderMode;
 		s3d.renderer = renderer;
 		s3d.renderer.renderMode = LightProbe;
-		var camera = new h3d.Camera();
-		s3d.camera = camera;
+		s3d.camera = customCamera;
 		var engine = h3d.Engine.getCurrent();
 
 		for( i in 0 ... volumetricLightMap.lightProbes.length){
 			// Render the 6 faces
 			for( f in 0...6 ) {
 				engine.begin();
-				camera.setCubeMap(f, volumetricLightMap.lightProbes[i].position);
-				camera.update();
+				customCamera.setCubeMap(f, volumetricLightMap.lightProbes[i].position);
+				customCamera.update();
 				engine.pushTarget(envMap, f);
 				engine.clear(0,1,0);
 				s3d.render(engine);
@@ -123,6 +116,7 @@ class LightProbeBaker {
 		s3d.camera = oldCamera;
 		s3d.renderer = oldRenderer;
 		s3d.renderer.renderMode = oldRenderMode;
+
 	}
 
 	function setupEnvMap(resolution : Int){

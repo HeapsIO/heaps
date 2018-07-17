@@ -30,6 +30,7 @@ class CameraController extends h3d.scene.Object {
 
 	public function new(?distance,?parent) {
 		super(parent);
+		name = "CameraController";
 		set(distance);
 		flags.set(FNoSerialize,true);
 		toTarget();
