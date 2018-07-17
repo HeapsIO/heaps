@@ -13,8 +13,11 @@ class ContextShared {
 	public var contexts : Map<Prefab,Context>;
 	public var references : Map<Prefab,Array<Context>>;
 	public var cleanups : Array<Void->Void>;
+	public var currentPath : String;
+
 	var cache : h3d.prim.ModelCache;
 	var shaderCache : ShaderDefCache;
+	var bakedData : Map<String, haxe.io.Bytes>;
 
 	public function new() {
 		root2d = new h2d.Sprite();
@@ -65,6 +68,67 @@ class ContextShared {
 
 	public function loadTexture( path : String ) {
 		return cache.loadTexture(null, path);
+	}
+
+	public function loadBakedBytes( file : String ) {
+		if( bakedData == null ) loadBakedData();
+		return bakedData.get(file);
+	}
+
+	public function saveBakedBytes( file : String, bytes : haxe.io.Bytes ) {
+		if( bakedData == null ) loadBakedData();
+		if( bytes == null )
+			bakedData.remove(file);
+		else
+			bakedData.set(file, bytes);
+		var bytes = new haxe.io.BytesOutput();
+		bytes.writeString("BAKE");
+		var keys = Lambda.array({ iterator : bakedData.keys });
+		bytes.writeInt32(keys.length);
+		var headerSize = 8;
+		for( name in keys )
+			headerSize += 2 + name.length + 8;
+		for( name in keys ) {
+			bytes.writeUInt16(name.length);
+			bytes.writeString(name);
+			bytes.writeInt32(headerSize);
+			bytes.writeInt32(bakedData.get(name).length);
+		}
+		for( name in keys )
+			bytes.write(bakedData.get(name));
+		saveBakedFile(bytes.getBytes());
+	}
+
+	function saveBakedFile( bytes : haxe.io.Bytes ) {
+		throw "Don't know how to save baked file";
+	}
+
+	function loadBakedFile() {
+		var path = new haxe.io.Path(currentPath);
+		path.ext = "bake";
+		return try hxd.res.Loader.currentInstance.load(path.toString()).entry.getBytes() catch( e : hxd.res.NotFound ) null;
+	}
+
+	function loadBakedData() {
+		bakedData = new Map();
+		var data = loadBakedFile();
+		if( data == null )
+			return;
+		if( data.getString(0,4) != "BAKE" )
+			throw "Invalid bake file";
+		var count = data.getInt32(4);
+		var pos = 8;
+		for( i in 0...count ) {
+			var len = data.getUInt16(pos);
+			pos += 2;
+			var name = data.getString(pos, len);
+			pos += len;
+			var bytesPos = data.getInt32(pos);
+			pos += 4;
+			var bytesLen = data.getInt32(pos);
+			pos += 4;
+			bakedData.set(name,data.sub(bytesPos,bytesLen));
+		}
 	}
 
 }

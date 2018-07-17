@@ -3,7 +3,6 @@ package h3d.scene.pbr;
 class VolumetricLightmap extends h3d.scene.Mesh {
 
 	public var lightProbes:Array<LightProbe> = [];
-	public var lightProbeBuffer : h3d.Buffer;
 	public var lightProbeTexture : h3d.mat.Texture;
 	public var shOrder : Int = 1;
 	public var voxelSize (default, set) : h3d.Vector;
@@ -34,6 +33,18 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		voxelSize = new h3d.Vector(1,1,1);
 	}
 
+	public function getProbeCount() {
+		return probeCount.x * probeCount.y * probeCount.z;
+	}
+
+	override function onRemove() {
+		super.onRemove();
+		if( lightProbeTexture != null ) {
+			lightProbeTexture.dispose();
+			lightProbeTexture = null;
+		}
+	}
+
 	function set_voxelSize(newSize) :h3d.Vector {
 		voxelSize = newSize;
 		updateProbeCount();
@@ -44,6 +55,25 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		probeCount.set(Std.int(Math.max(1,Math.floor(scaleX/voxelSize.x)) + 1),
 						Std.int(Math.max(1,Math.floor(scaleY/voxelSize.y)) + 1),
 						Std.int(Math.max(1,Math.floor(scaleZ/voxelSize.z)) + 1));
+	}
+
+	public function load( bytes : haxe.io.Bytes ) {
+		bytes = haxe.zip.Uncompress.run(bytes);
+		var count = getProbeCount();
+		if( bytes.length != count * shOrder * shOrder * 4 * 4 )
+			return false;
+		lastBakedProbeIndex = count;
+		lightProbeTexture.uploadPixels(new hxd.Pixels(lightProbeTexture.width, lightProbeTexture.height, bytes, RGBA32F));
+		return true;
+	}
+
+	public function save() : haxe.io.Bytes {
+		var data;
+		if( lightProbeTexture == null )
+			data = haxe.io.Bytes.alloc(0);
+		else
+			data = lightProbeTexture.capturePixels().bytes;
+		return haxe.zip.Compress.run(data,9);
 	}
 
 	override function sync(ctx:RenderContext) {
@@ -107,32 +137,6 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		return (localPos.x >= 0 && localPos.y >= 0 && localPos.z >= 0 && localPos.x <= 1 && localPos.y <= 1 && localPos.z <= 1);
 	}
 
-	// Pack data inside an Uniform Buffer
-	public function packData(){
-		var coefCount : Int = shOrder * shOrder;
-		var size = lightProbes.length;
-		lightProbeBuffer = new h3d.Buffer(size, 4 * coefCount, [UniformBuffer, Dynamic]);
-		var buffer = new hxd.FloatBuffer();
-		var probeIndex : Int = 0;
-		var dataIndex : Int = 0;
-
-		buffer.resize(size * 4);
-
-		while(probeIndex < lightProbes.length) {
-			var index = probeIndex * coefCount * 4;
-			for(i in 0... coefCount) {
-				buffer[index + i * 4 + 0] = lightProbes[probeIndex].sh.coefR[i];
-				buffer[index + i * 4 + 1] = lightProbes[probeIndex].sh.coefG[i];
-				buffer[index + i * 4 + 2] = lightProbes[probeIndex].sh.coefB[i];
-				buffer[index + i * 4 + 3] = 0;
-			}
-			++probeIndex;
-		}
-
-		lightProbeBuffer.uploadVector(buffer, 0, size, 0);
-		shader.lightProbeBuffer = lightProbeBuffer;
-	}
-
 	// Pack data inside a 2D texture
 	public function packDataInsideTexture(){
 		var coefCount : Int = shOrder * shOrder;
@@ -140,6 +144,7 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		var sizeY = probeCount.y * probeCount.z;
 
 		if(lightProbeTexture == null || lightProbeTexture.width != sizeX || lightProbeTexture.height != sizeY){
+			if( lightProbeTexture != null ) lightProbeTexture.dispose();
 			lightProbeTexture = new h3d.mat.Texture(sizeX, sizeY, [Dynamic], RGBA32F);
 			lightProbeTexture.filter = Nearest;
 		}
