@@ -237,6 +237,6 @@ class Prefab {
 			f = f.split(" ")[0].split("-")[0];
 			return f;
 		}
-		return type;
+		return type.split(".").pop();
 	}
 }
