@@ -102,7 +102,7 @@ class Renderer extends hxd.impl.AnyProps {
 	}
 
 	function copy( from, to, ?blend ) {
-		h3d.pass.Copy.run(from, to == null ? ctx.engine.getCurrentTarget() : to, blend);
+		h3d.pass.Copy.run(from, to, blend);
 	}
 
 	function setTarget( tex ) {
