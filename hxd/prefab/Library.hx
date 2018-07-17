@@ -44,14 +44,25 @@ class Library extends Prefab {
 		return ctx;
 	}
 
-	static var registeredElements = new Map<String,Class<Prefab>>();
+	static var registeredElements = new Map<String,{ cl : Class<Prefab> #if editor, inf : hide.prefab.HideProps #end }>();
 
 	public static function getRegistered() {
 		return registeredElements;
 	}
 
+	public static function isOfType( prefabKind : String, cl : Class<Prefab> ) {
+		var inf = registeredElements.get(prefabKind);
+		if( inf == null ) return false;
+		var c : Class<Dynamic> = inf.cl;
+		while( c != null ) {
+			if( c == cl ) return true;
+			c = Type.getSuperClass(c);
+		}
+		return false;
+	}
+
 	public static function register( type : String, cl : Class<Prefab> ) {
-		registeredElements.set(type, cl);
+		registeredElements.set(type, { cl : cl #if editor, inf : Type.createEmptyInstance(cl).getHideProps() #end });
 		return true;
 	}
 

@@ -105,6 +105,7 @@ class Prefab {
 
 	public static function loadRec( v : Dynamic, ?parent : Prefab ) {
 		var pcl = @:privateAccess Library.registeredElements.get(v.type);
+		var pcl = pcl == null ? null : pcl.cl;
 		if( pcl == null ) pcl = hxd.prefab.Unknown;
 		var p = Type.createInstance(pcl, [parent]);
 		p.type = v.type;
