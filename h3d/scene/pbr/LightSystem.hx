@@ -13,7 +13,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		return shaders;
 	}
 
-	public function drawLights( r : Renderer, lightPass : h3d.pass.ScreenFx<Dynamic> ) {
+	public function drawLights( r : h3d.scene.Renderer, lightPass : h3d.pass.ScreenFx<Dynamic> ) {
 		var light = @:privateAccess ctx.lights;
 		var currentTarget = ctx.engine.getCurrentTarget();
 		var width = currentTarget == null ? ctx.engine.width : currentTarget.width;

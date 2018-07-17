@@ -10,7 +10,12 @@ class PassObjects {
 	}
 }
 
-private typedef SMap<T> = #if flash haxe.ds.UnsafeStringMap<T> #else Map<String,T> #end
+private typedef SMap<T> = #if flash haxe.ds.UnsafeStringMap<T> #else Map<String,T> #end;
+
+enum RenderMode{
+	Default;
+	LightProbe;
+}
 
 class Renderer extends hxd.impl.AnyProps {
 
@@ -19,7 +24,9 @@ class Renderer extends hxd.impl.AnyProps {
 	var allPasses : Array<h3d.pass.Base>;
 	var ctx : RenderContext;
 	var hasSetTarget = false;
+
 	public var effects : Array<hxd.prefab.rfx.RendererFX> = [];
+	public var renderMode : RenderMode = Default;
 
 	public function new() {
 		allPasses = [];
@@ -95,7 +102,7 @@ class Renderer extends hxd.impl.AnyProps {
 	}
 
 	function copy( from, to, ?blend ) {
-		h3d.pass.Copy.run(from, to, blend);
+		h3d.pass.Copy.run(from, to == null ? ctx.engine.getCurrentTarget() : to, blend);
 	}
 
 	function setTarget( tex ) {

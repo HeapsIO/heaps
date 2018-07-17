@@ -50,7 +50,6 @@ typedef RenderProps = {
 }
 
 class Renderer extends h3d.scene.Renderer {
-
 	var slides = new h3d.pass.ScreenFx(new h3d.shader.pbr.Slides());
 	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
 	var tonemap = new h3d.pass.ScreenFx(new h3d.shader.pbr.ToneMapping());
@@ -175,22 +174,28 @@ class Renderer extends h3d.scene.Renderer {
 		setTarget(albedo);
 		draw("albedo");
 
-		if( displayMode == Env )
-			clear(0xFF404040);
+		if(renderMode == Default){
+			if( displayMode == Env )
+				clear(0xFF404040);
 
-		if( displayMode == MatCap ) {
-			clear(0xFF808080);
-			setTarget(pbr);
-			clear(0x00FF80FF);
+			if( displayMode == MatCap ) {
+				clear(0xFF808080);
+				setTarget(pbr);
+				clear(0x00FF80FF);
+			}
+
 		}
-
 		apply(BeforeHdr);
+
 
 		var hdr = allocTarget("hdrOutput", false, 1, RGBA16F);
 		ctx.setGlobal("hdr", hdr);
 		setTarget(hdr);
-		if( ctx.engine.backgroundColor != null )
+		if( renderMode == LightProbe )
+			clear(0);
+		else if( ctx.engine.backgroundColor != null )
 			clear(ctx.engine.backgroundColor);
+
 		pbrProps.albedoTex = albedo;
 		pbrProps.normalTex = normal;
 		pbrProps.pbrTex = pbr;
@@ -227,9 +232,18 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrOut.setGlobals(ctx);
 		pbrDirect.doDiscard = false;
-		pbrIndirect.showSky = skyMode != Hide;
-		pbrIndirect.skyMap = skyMode == Irrad ? env.diffuse : env.env;
 		pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
+		switch( renderMode ) {
+		case Default:
+			pbrIndirect.drawIndirect = true;
+			pbrIndirect.showSky = skyMode != Hide;
+			pbrIndirect.skyMap = skyMode == Irrad ? env.diffuse : env.env;
+		case LightProbe:
+			pbrIndirect.drawIndirect = false;
+			pbrIndirect.showSky = true;
+			pbrIndirect.skyMap = env.env;
+		}
+
 		pbrOut.render();
 		pbrDirect.doDiscard = true;
 
@@ -246,6 +260,19 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrProps.isScreen = false;
 		draw("lights");
+
+		if( renderMode == LightProbe ) {
+			pbrProps.isScreen = true;
+			resetTarget();
+			copy(hdr, null);
+			// no warnings
+			for( p in passObjects ) p.rendered = true;
+			return;
+		}
+
+		ctx.extraShaders = new hxsl.ShaderList(pbrProps, null);
+		draw("volumetricLightmap");
+		ctx.extraShaders = null;
 		pbrProps.isScreen = true;
 
 		apply(AfterHdr);
@@ -326,7 +353,7 @@ class Renderer extends h3d.scene.Renderer {
 				blur : 9,
 				bias : 0.1,
 				quality : 0.3,
-			}
+			},
 		};
 		return props;
 	}

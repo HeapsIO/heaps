@@ -116,7 +116,7 @@ class Camera {
 	/**
 		Setup camera for cubemap rendering on the given face.
 	**/
-	public function setCubeMap( face : Int ) {
+	public function setCubeMap( face : Int, position : h3d.Vector ) {
 		var dx = 0, dy = 0, dz = 0;
 		switch( face ) {
 		case 0: dx = 1; up.set(0,1,0);
@@ -126,8 +126,8 @@ class Camera {
 		case 4: dz = 1; up.set(0,1,0);
 		case 5: dz = -1; up.set(0,1,0);
 		}
-		pos.set(0,0,0);
-		target.set(dx,dy,dz);
+		pos.set(position.x,position.y,position.z);
+		target.set(pos.x + dx,pos.y + dy,pos.z + dz);
 		setFovX(90,1);
 	}
 
