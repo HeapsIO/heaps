@@ -167,7 +167,50 @@ class Polygon extends Primitive {
 	}
 
 	public function addTangents() {
-		throw "Not implemented for this polygon";
+		if( normals == null )
+			addNormals();
+		if( uvs == null )
+			addUVs();
+		tangents = [];
+		for( i in 0...points.length )
+			tangents[i] = new Point();
+		var pos = 0;
+		for( i in 0...triCount() ) {
+			var i0, i1, i2;
+			if( idx == null ) {
+				i0 = pos++;
+				i1 = pos++;
+				i2 = pos++;
+			} else {
+				i0 = idx[pos++];
+				i1 = idx[pos++];
+				i2 = idx[pos++];
+			}
+			var p0 = points[i0];
+			var p1 = points[i1];
+			var p2 = points[i2];
+			var uv0 = uvs[i0];
+			var uv1 = uvs[i1];
+			var uv2 = uvs[i2];
+			var n = normals[i0];
+
+			var k0 = p1.sub(p0);
+			var k1 = p2.sub(p0);
+			k0.scale(uv2.v - uv0.v);
+			k1.scale(uv1.v - uv0.v);
+			var t = k0.sub(k1);
+			var b = n.cross(t);
+			b.normalize();
+			t = b.cross(n);
+			t.normalize();
+
+			// add it to each point
+			tangents[i0].x += t.x; tangents[i0].y += t.y; tangents[i0].z += t.z;
+			tangents[i1].x += t.x; tangents[i1].y += t.y; tangents[i1].z += t.z;
+			tangents[i2].x += t.x; tangents[i2].y += t.y; tangents[i2].z += t.z;
+		}
+		for( t in tangents )
+			t.normalize();
 	}
 
 	public function addUVs() {
