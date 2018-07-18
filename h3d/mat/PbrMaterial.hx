@@ -21,6 +21,7 @@ typedef PbrProps = {
 	var culling : Bool;
 	@:optional var alphaKill : Bool;
 	@:optional var emissive : Float;
+	@:optional var parallax : Float;
 }
 
 class PbrMaterial extends Material {
@@ -141,6 +142,19 @@ class PbrMaterial extends Material {
 		}
 		if( tex != null ) tex.emissive = emit;
 		if( def != null ) def.emissive = emit;
+
+		// parallax
+		var ps = mainPass.getShader(h3d.shader.Parallax);
+		if( props.parallax > 0 ) {
+			if( ps == null ) {
+				ps = new h3d.shader.Parallax();
+				mainPass.addShader(ps);
+			}
+			ps.amount = props.parallax;
+			ps.heightMap = specularTexture;
+			ps.heightMapChannel = A;
+		} else if( ps != null )
+			mainPass.removeShader(ps);
 	}
 
 	override function get_specularTexture() {
@@ -173,6 +187,15 @@ class PbrMaterial extends Material {
 				mainPass.addShader(def);
 			}
 		}
+
+
+		// parallax
+		var ps = mainPass.getShader(h3d.shader.Parallax);
+		if( ps != null ) {
+			ps.heightMap = t;
+			ps.heightMapChannel = A;
+		}
+
 		return t;
 	}
 
@@ -206,6 +229,7 @@ class PbrMaterial extends Material {
 					</select>
 				</dd>
 				<dt>Emissive</dt><dd><input type="range" min="0" max="10" field="emissive"/></dd>
+				<dt>Parallax</dt><dd><input type="range" min="0" max="1" field="parallax"/></dd>
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
 				<dt>Culled</dt><dd><input type="checkbox" field="culling"/></dd>
 				<dt>AlphaKill</dt><dd><input type="checkbox" field="alphaKill"/></dd>
