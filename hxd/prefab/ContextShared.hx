@@ -136,7 +136,7 @@ class ContextShared {
 			var ctx = contexts.get(c);
 			if( ctx == null ) continue;
 			if( ctx.local3d == base )
-				getChildRoots(base, c, out);
+				getChildrenRoots(base, c, out);
 			else
 				out.push(ctx.local3d);
 		}
