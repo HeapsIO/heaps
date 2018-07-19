@@ -40,6 +40,38 @@ class Prefab {
 	public function getHideProps() : hide.prefab.HideProps {
 		return { icon : "question-circle", name : "Unknown" };
 	}
+
+	public function setSelected( ctx : hide.prefab.Context, b : Bool ) {
+		var materials = ctx.shared.getMaterials(this);
+
+		if( !b ) {
+			for( m in materials ) {
+				m.mainPass.stencil = null;
+				m.removePass(m.getPass("outline"));
+			}
+			return;
+		}
+
+		var outlineShader = new h3d.shader.Outline();
+		outlineShader.size = 0.12;
+		outlineShader.distance = 0;
+		outlineShader.color.setColor(0xffffff);
+
+		var s1 = new h3d.mat.Stencil();
+		s1.setFunc(Always, 1);
+		s1.setOp(Keep, Keep, Replace);
+
+		var s2 = new h3d.mat.Stencil();
+		s2.setFunc(Greater, 1, 0xFF, 0);
+		for( m in materials ) {
+			m.mainPass.stencil = s1;
+			var p = m.allocPass("outline");
+			p.culling = None;
+			p.depthWrite = false;
+			p.addShader(outlineShader);
+			p.stencil = s2;
+		}
+	}
 	#end
 
 	public inline function iterator() : Iterator<Prefab> {

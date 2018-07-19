@@ -131,4 +131,40 @@ class ContextShared {
 		}
 	}
 
+	public function getObjects<T:h3d.scene.Object>( p : Prefab, c: Class<T> ) : Array<T> {
+		var childObjs = [for(c in p.children) { var ctx = contexts.get(c); if( ctx != null ) ctx.local3d; }];
+		var ret = [];
+		function rec(o : h3d.scene.Object) {
+			var m = Std.instance(o, c);
+			if(m != null) ret.push(m);
+			for( child in o )
+				if( childObjs.indexOf(child) < 0 )
+					rec(child);
+		}
+		rec(contexts.get(p).local3d);
+		return ret;
+	}
+
+	public function getMaterials( p : Prefab ) {
+		var childObjs = [for(c in p.children) { var ctx = contexts.get(c); if( ctx != null ) ctx.local3d; }];
+		var ret = [];
+		function rec(o : h3d.scene.Object) {
+			if( o.isMesh() ) {
+				var m = o.toMesh();
+				var multi = Std.instance(m, h3d.scene.MultiMaterial);
+				if( multi != null ) {
+					for( m in multi.materials )
+						if( m != null )
+							ret.push(m);
+				} else if( m.material != null )
+					ret.push(m.material);
+			}
+			for( child in o )
+				if( childObjs.indexOf(child) < 0 )
+					rec(child);
+		}
+		rec(contexts.get(p).local3d);
+		return ret;
+	}
+
 }
