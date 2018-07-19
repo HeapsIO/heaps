@@ -52,6 +52,7 @@ typedef RenderProps = {
 class Renderer extends h3d.scene.Renderer {
 	var slides = new h3d.pass.ScreenFx(new h3d.shader.pbr.Slides());
 	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
+	var pbrOutIndirect = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
 	var tonemap = new h3d.pass.ScreenFx(new h3d.shader.pbr.ToneMapping());
 	var pbrSun = new h3d.shader.pbr.Light.DirLight();
 	var pbrLightPass : h3d.mat.Pass;
@@ -87,9 +88,14 @@ class Renderer extends h3d.scene.Renderer {
 		super();
 		this.env = env;
 		defaultPass = new h3d.pass.Default("default");
-		pbrOut.addShader(pbrIndirect);
 		pbrOut.addShader(pbrProps);
 		slides.addShader(pbrProps);
+		pbrOutIndirect.addShader(pbrIndirect);
+		pbrOutIndirect.addShader(pbrProps);
+		pbrOutIndirect.pass.setBlendMode(Add);
+		pbrOutIndirect.pass.stencil = new h3d.mat.Stencil();
+		pbrOutIndirect.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
+		pbrOutIndirect.pass.stencil.setOp(Keep, Keep, Keep);
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(shadows);
@@ -188,7 +194,7 @@ class Renderer extends h3d.scene.Renderer {
 		apply(BeforeHdr);
 
 
-		var hdr = allocTarget("hdrOutput", false, 1, RGBA16F);
+		var hdr = allocTarget("hdrOutput", true, 1, RGBA16F);
 		ctx.setGlobal("hdr", hdr);
 		setTarget(hdr);
 		if( renderMode == LightProbe )
@@ -263,6 +269,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		if( renderMode == LightProbe ) {
 			pbrProps.isScreen = true;
+			pbrOutIndirect.render();
 			resetTarget();
 			copy(hdr, null);
 			// no warnings
@@ -273,7 +280,9 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.extraShaders = new hxsl.ShaderList(pbrProps, null);
 		draw("volumetricLightmap");
 		ctx.extraShaders = null;
+
 		pbrProps.isScreen = true;
+		pbrOutIndirect.render();
 
 		apply(AfterHdr);
 
