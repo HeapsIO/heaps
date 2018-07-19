@@ -102,7 +102,7 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 	public function load( bytes : haxe.io.Bytes ) {
 		if( bytes.length == 0 )
 			return false;
-		bytes = haxe.zip.Uncompress.run(bytes);
+		bytes = try haxe.zip.Uncompress.run(bytes) catch( e : Dynamic ) throw e;
 		var count = getProbeCount();
 		if( bytes.length != count * getCoefCount() * 4 * 4 )
 			return false;

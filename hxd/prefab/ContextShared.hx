@@ -94,8 +94,10 @@ class ContextShared {
 			bytes.writeInt32(headerSize);
 			bytes.writeInt32(bakedData.get(name).length);
 		}
-		for( name in keys )
+		for( name in keys ) {
 			bytes.write(bakedData.get(name));
+			bytes.writeByte(0xFE); // stop
+		}
 		saveBakedFile(bytes.getBytes());
 	}
 
@@ -128,6 +130,8 @@ class ContextShared {
 			var bytesLen = data.getInt32(pos);
 			pos += 4;
 			bakedData.set(name,data.sub(bytesPos,bytesLen));
+			if( data.get(bytesPos+bytesLen) != 0xFE )
+				throw "Corrupted bake file";
 		}
 	}
 
@@ -144,7 +148,10 @@ class ContextShared {
 	}
 
 	public function getObjects<T:h3d.scene.Object>( p : Prefab, c: Class<T> ) : Array<T> {
-		var root = contexts.get(p).local3d;
+		var ctx = contexts.get(p);
+		if( ctx == null )
+			return [];
+		var root = ctx.local3d;
 		var childObjs = getChildrenRoots(root, p, []);
 		var ret = [];
 		function rec(o : h3d.scene.Object) {
@@ -159,7 +166,10 @@ class ContextShared {
 	}
 
 	public function getMaterials( p : Prefab ) {
-		var root = contexts.get(p).local3d;
+		var ctx = contexts.get(p);
+		if( ctx == null )
+			return [];
+		var root = ctx.local3d;
 		var childObjs = getChildrenRoots(root, p, []);
 		var ret = [];
 		function rec(o : h3d.scene.Object) {
