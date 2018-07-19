@@ -32,13 +32,13 @@ class LightProbeBaker {
 	public function new(){
 	}
 
-	public function bakePartial(renderer : h3d.scene.Renderer, s3d : Scene, volumetricLightMap : VolumetricLightmap, resolution : Int, time :Float) {
+	public function bake(renderer : h3d.scene.Renderer, s3d : Scene, volumetricLightMap : VolumetricLightmap, resolution : Int, ?time :Float) {
 
 		var timer = haxe.Timer.stamp();
 		var timeElapsed = 0.0;
 
 		var index = volumetricLightMap.lastBakedProbeIndex + 1;
-		if(index > volumetricLightMap.lightProbes.length - 1) return time;
+		if(index > volumetricLightMap.getProbeCount() - 1) return time;
 
 		setupEnvMap(resolution);
 		setupShaderOutput(volumetricLightMap.shOrder);
@@ -52,71 +52,53 @@ class LightProbeBaker {
 		s3d.camera = customCamera;
 		var engine = h3d.Engine.getCurrent();
 
-		while(timeElapsed < time){
+		var coefCount = volumetricLightMap.getCoefCount();
+		var sizeX = volumetricLightMap.probeCount.x * coefCount;
+		var sizeY = volumetricLightMap.probeCount.y * volumetricLightMap.probeCount.z;
+		if(volumetricLightMap.lightProbeTexture == null || volumetricLightMap.lightProbeTexture.width != sizeX || volumetricLightMap.lightProbeTexture.height != sizeY){
+			if( volumetricLightMap.lightProbeTexture != null ) volumetricLightMap.lightProbeTexture.dispose();
+			volumetricLightMap.lightProbeTexture = new h3d.mat.Texture(sizeX, sizeY, [Dynamic], RGBA32F);
+			volumetricLightMap.lightProbeTexture.filter = Nearest;
+		}
+
+		var pixels : hxd.Pixels.PixelsFloat = volumetricLightMap.lightProbeTexture.capturePixels();
+
+		while( (time != null && timeElapsed < time) || time == null){
+			var coords = volumetricLightMap.getProbeCoords(index);
 
 			// Bake a Probe
 			for( f in 0...6 ) {
 				engine.begin();
-				customCamera.setCubeMap(f, volumetricLightMap.lightProbes[index].position);
+				customCamera.setCubeMap(f, volumetricLightMap.getProbePosition(coords));
 				customCamera.update();
 				engine.pushTarget(envMap, f);
 				engine.clear(0,1,0);
 				s3d.render(engine);
 				engine.popTarget();
 			}
-			volumetricLightMap.lightProbes[index].sh = useGPU ? convertEnvIntoSH_GPU(renderer, envMap, volumetricLightMap.shOrder) : convertEnvIntoSH_CPU(envMap, volumetricLightMap.shOrder);
 			volumetricLightMap.lastBakedProbeIndex = index;
 
+			var sh : SphericalHarmonic = useGPU ? convertEnvIntoSH_GPU(renderer, envMap, volumetricLightMap.shOrder) : convertEnvIntoSH_CPU(envMap, volumetricLightMap.shOrder);
+			for(coef in 0... coefCount){
+				var u = coords.x + volumetricLightMap.probeCount.x * coef;
+				var v = coords.y + coords.z * volumetricLightMap.probeCount.y;
+				pixels.setPixelF(u, v, new h3d.Vector(sh.coefR[coef], sh.coefG[coef], sh.coefB[coef], 0));
+			}
+
 			index = volumetricLightMap.lastBakedProbeIndex + 1;
-			if(index > volumetricLightMap.lightProbes.length - 1) break;
+			if(index > volumetricLightMap.getProbeCount() - 1) break;
 
 			timeElapsed = haxe.Timer.stamp() - timer;
 		}
 
+		volumetricLightMap.lightProbeTexture.uploadPixels(pixels, 0, 0);
+
 		// Restore Scene Config
 		s3d.camera = oldCamera;
 		s3d.renderer = oldRenderer;
 		s3d.renderer.renderMode = oldRenderMode;
-
 
 		return time - timeElapsed;
-	}
-
-
-	public function bake(renderer : h3d.scene.Renderer, s3d : Scene, volumetricLightMap : VolumetricLightmap, resolution : Int) {
-
-		setupEnvMap(resolution);
-		setupShaderOutput(volumetricLightMap.shOrder);
-
-		// Save Scene Config
-		var oldRenderer = s3d.renderer;
-		var oldCamera = s3d.camera;
-		var oldRenderMode = renderer.renderMode;
-		s3d.renderer = renderer;
-		s3d.renderer.renderMode = LightProbe;
-		s3d.camera = customCamera;
-		var engine = h3d.Engine.getCurrent();
-
-		for( i in 0 ... volumetricLightMap.lightProbes.length){
-			// Render the 6 faces
-			for( f in 0...6 ) {
-				engine.begin();
-				customCamera.setCubeMap(f, volumetricLightMap.lightProbes[i].position);
-				customCamera.update();
-				engine.pushTarget(envMap, f);
-				engine.clear(0,1,0);
-				s3d.render(engine);
-				engine.popTarget();
-			}
-			volumetricLightMap.lightProbes[i].sh = useGPU ? convertEnvIntoSH_GPU(renderer, envMap, volumetricLightMap.shOrder) : convertEnvIntoSH_CPU(envMap, volumetricLightMap.shOrder);
-			volumetricLightMap.lastBakedProbeIndex = i;
-		}
-
-		// Restore Scene Config
-		s3d.camera = oldCamera;
-		s3d.renderer = oldRenderer;
-		s3d.renderer.renderMode = oldRenderMode;
-
 	}
 
 	function setupEnvMap(resolution : Int){

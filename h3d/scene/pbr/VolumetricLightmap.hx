@@ -2,7 +2,6 @@ package h3d.scene.pbr;
 
 class VolumetricLightmap extends h3d.scene.Mesh {
 
-	public var lightProbes:Array<LightProbe> = [];
 	public var lightProbeTexture : h3d.mat.Texture;
 	public var shOrder : Int = 1;
 	public var voxelSize (default, set) : h3d.Vector;
@@ -27,10 +26,51 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		material.castShadows = false;
 		material.shadows = false;
 		material.mainPass.stencil = new h3d.mat.Stencil();
-		material.mainPass.stencil.setFunc(Equal, 0, 0xFF, 0xFF);
-		material.mainPass.stencil.setOp(Keep, Keep, Increment);
+		material.mainPass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
+		material.mainPass.stencil.setOp(Keep, Keep, Replace);
 		probeCount = new h3d.col.IPoint();
 		voxelSize = new h3d.Vector(1,1,1);
+	}
+
+	public function getProbeSH(coords : h3d.col.IPoint, ?pixels : hxd.Pixels.PixelsFloat ) : SphericalHarmonic {
+
+		if(lightProbeTexture == null)
+			return new SphericalHarmonic(shOrder);
+
+		if(pixels == null)
+			pixels = lightProbeTexture.capturePixels();
+
+		var sh = new SphericalHarmonic(shOrder);
+
+		var coefCount = getCoefCount();
+		for(c in 0...coefCount){
+			var u = coords.x + probeCount.x * c;
+			var v = coords.y + coords.z * probeCount.y;
+			var color = pixels.getPixelF(u, v);
+			sh.coefR[c] = color.r;
+			sh.coefG[c] = color.g;
+			sh.coefB[c] = color.b;
+		}
+
+		return sh;
+	}
+
+	public function getCoefCount() : Int{
+		return shOrder * shOrder;
+	}
+
+	public function getProbePosition(coords : h3d.col.IPoint){
+		var probePos : h3d.Vector = new h3d.Vector( coords.x/(probeCount.x - 1),  coords.y/(probeCount.y - 1), coords.z/(probeCount.z - 1));
+		localToGlobal(probePos);
+		return probePos;
+	}
+
+	public function getProbeCoords(i : Int) : h3d.col.IPoint {
+		var coords = new h3d.col.IPoint();
+		coords.z = Std.int(i / (probeCount.x * probeCount.y));
+		coords.y = Std.int((i - coords.z * probeCount.y * probeCount.x) / (probeCount.x));
+		coords.x = Std.int((i - coords.z * probeCount.y * probeCount.x - coords.y * probeCount.x));
+		return coords;
 	}
 
 	public function getProbeCount() {
@@ -58,11 +98,14 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 	}
 
 	public function load( bytes : haxe.io.Bytes ) {
+		return true;
 		bytes = haxe.zip.Uncompress.run(bytes);
 		var count = getProbeCount();
 		if( bytes.length != count * shOrder * shOrder * 4 * 4 )
 			return false;
 		lastBakedProbeIndex = count;
+		lightProbeTexture = new h3d.mat.Texture(probeCount.x * shOrder * shOrder, probeCount.y * probeCount.z, [Dynamic], RGBA32F);
+		lightProbeTexture.filter = Nearest;
 		lightProbeTexture.uploadPixels(new hxd.Pixels(lightProbeTexture.width, lightProbeTexture.height, bytes, RGBA32F));
 		return true;
 	}
@@ -76,9 +119,13 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		return haxe.zip.Compress.run(data,9);
 	}
 
+	override function emit(ctx:RenderContext){
+		if(lightProbeTexture != null) ctx.emit(this.material, this);
+	}
+
 	override function sync(ctx:RenderContext) {
 		shader.ORDER = shOrder;
-		shader.SIZE = lightProbes.length * shader.ORDER * shader.ORDER;
+		shader.SIZE = getProbeCount() * shader.ORDER * shader.ORDER;
 		shader.lightmapInvPos.load(getInvPos());
 		shader.lightmapSize.load(new h3d.Vector(probeCount.x, probeCount.y, probeCount.z));
 		shader.voxelSize.load(new h3d.Vector(scaleX/(probeCount.x - 1), scaleY/(probeCount.y - 1), scaleZ/(probeCount.z - 1)));
@@ -86,39 +133,6 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		shader.cameraInverseViewProj.load(ctx.camera.getInverseViewProj());
 		shader.cameraPos.load(ctx.camera.pos);
 		shader.strength = strength;
-	}
-
-	public function generateProbes() {
-		var totalProbeCount : Int = probeCount.x * probeCount.y * probeCount.z ;
-		lightProbes = [];
-		lastBakedProbeIndex = -1;
-
-		for(i in 0 ... probeCount.x){
-			for(j in 0 ... probeCount.y){
-				for(k in 0 ... probeCount.z){
-					var index : Int = i + j * probeCount.x + k * probeCount.x * probeCount.y;
-					var probePos : h3d.Vector = new h3d.Vector( i/(probeCount.x - 1),  j/(probeCount.y - 1), k/(probeCount.z - 1));
-					localToGlobal(probePos);
-
-					if(useAlignedProb){
-						var overlappedLightmaps : Array<VolumetricLightmap> = [];
-						// Check if a probe is inside an other lightmap
-						/*for(i in 0 ... volumetricLightmaps.length){
-							if(volumetricLightmaps[i] != this && volumetricLightmaps[i].isInsideVolume(probePos)){
-								overlappedLightmaps.push(volumetricLightmaps[i]);
-							}
-						}*/
-						if(overlappedLightmaps.length > 0){
-							var alignment = getWorldAlignment(overlappedLightmaps);
-							probePos.set(probePos.x - probePos.x % alignment.x, probePos.y - probePos.y % alignment.y, probePos.z - probePos.z % alignment.z);
-						}
-					}
-
-					lightProbes[index] = new h3d.scene.pbr.LightProbe();
-					lightProbes[index].position.set(probePos.x, probePos.y, probePos.z);
-				}
-			}
-		}
 	}
 
 	public function getWorldAlignment(lightmaps : Array<VolumetricLightmap>) : h3d.Vector {
@@ -135,40 +149,5 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		var localPos = worldPos.clone();
 		globalToLocal(localPos);
 		return (localPos.x >= 0 && localPos.y >= 0 && localPos.z >= 0 && localPos.x <= 1 && localPos.y <= 1 && localPos.z <= 1);
-	}
-
-	// Pack data inside a 2D texture
-	public function packDataInsideTexture(){
-		var coefCount : Int = shOrder * shOrder;
-		var sizeX = probeCount.x * coefCount;
-		var sizeY = probeCount.y * probeCount.z;
-
-		if(lightProbeTexture == null || lightProbeTexture.width != sizeX || lightProbeTexture.height != sizeY){
-			if( lightProbeTexture != null ) lightProbeTexture.dispose();
-			lightProbeTexture = new h3d.mat.Texture(sizeX, sizeY, [Dynamic], RGBA32F);
-			lightProbeTexture.filter = Nearest;
-		}
-		var pixels : hxd.Pixels.PixelsFloat = hxd.Pixels.alloc(sizeX, sizeY, RGBA32F);
-
-		for(k in 0 ... probeCount.z){
-			for(j in 0 ... probeCount.y){
-				for(i in 0 ... probeCount.x){
-					var probeIndex : Int = i + j * probeCount.x + k * probeCount.x * probeCount.y;
-					if(probeIndex > lastBakedProbeIndex) {
-						lightProbeTexture.uploadPixels(pixels,0,0);
-						return;
-					}
-					for(coef in 0... coefCount){
-						var u = i + probeCount.x * coef;
-						var v = j + k * probeCount.y;
-						var sh = lightProbes[probeIndex].sh;
-						var	color = new h3d.Vector(lightProbes[probeIndex].sh.coefR[coef], lightProbes[probeIndex].sh.coefG[coef], lightProbes[probeIndex].sh.coefB[coef], 0);
-						pixels.setPixelF(u, v, color);
-					}
-				}
-			}
-		}
-
-		lightProbeTexture.uploadPixels(pixels,0,0);
 	}
 }
