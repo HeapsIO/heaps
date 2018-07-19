@@ -92,18 +92,20 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 	}
 
 	public function updateProbeCount(){
-		probeCount.set(Std.int(Math.max(1,Math.floor(scaleX/voxelSize.x)) + 1),
-						Std.int(Math.max(1,Math.floor(scaleY/voxelSize.y)) + 1),
-						Std.int(Math.max(1,Math.floor(scaleZ/voxelSize.z)) + 1));
+		syncPos();
+		var scale = absPos.getScale();
+		probeCount.set(Std.int(Math.max(1,Math.floor(scale.x/voxelSize.x)) + 1),
+						Std.int(Math.max(1,Math.floor(scale.y/voxelSize.y)) + 1),
+						Std.int(Math.max(1,Math.floor(scale.z/voxelSize.z)) + 1));
 	}
 
 	public function load( bytes : haxe.io.Bytes ) {
-		return true;
 		bytes = haxe.zip.Uncompress.run(bytes);
 		var count = getProbeCount();
 		if( bytes.length != count * shOrder * shOrder * 4 * 4 )
 			return false;
 		lastBakedProbeIndex = count;
+		if( lightProbeTexture != null ) lightProbeTexture.dispose();
 		lightProbeTexture = new h3d.mat.Texture(probeCount.x * shOrder * shOrder, probeCount.y * probeCount.z, [Dynamic], RGBA32F);
 		lightProbeTexture.filter = Nearest;
 		lightProbeTexture.uploadPixels(new hxd.Pixels(lightProbeTexture.width, lightProbeTexture.height, bytes, RGBA32F));
@@ -120,15 +122,18 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 	}
 
 	override function emit(ctx:RenderContext){
-		if(lightProbeTexture != null) ctx.emit(this.material, this);
+		if( lightProbeTexture != null ) super.emit(ctx);
 	}
 
 	override function sync(ctx:RenderContext) {
+		if( lightProbeTexture == null )
+			return;
+		var scale = absPos.getScale();
 		shader.ORDER = shOrder;
 		shader.SIZE = getProbeCount() * shader.ORDER * shader.ORDER;
 		shader.lightmapInvPos.load(getInvPos());
 		shader.lightmapSize.load(new h3d.Vector(probeCount.x, probeCount.y, probeCount.z));
-		shader.voxelSize.load(new h3d.Vector(scaleX/(probeCount.x - 1), scaleY/(probeCount.y - 1), scaleZ/(probeCount.z - 1)));
+		shader.voxelSize.load(new h3d.Vector(scale.x/(probeCount.x - 1), scale.y/(probeCount.y - 1), scale.z/(probeCount.z - 1)));
 		shader.lightProbeTexture = lightProbeTexture;
 		shader.cameraInverseViewProj.load(ctx.camera.getInverseViewProj());
 		shader.cameraPos.load(ctx.camera.pos);
@@ -136,11 +141,13 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 	}
 
 	public function getWorldAlignment(lightmaps : Array<VolumetricLightmap>) : h3d.Vector {
-		var result =  new h3d.Vector(scaleX/(probeCount.x - 1), scaleY/(probeCount.y - 1), scaleZ/(probeCount.z - 1));
+		var scale = absPos.getScale();
+		var result =  new h3d.Vector(scale.x/(probeCount.x - 1), scale.y/(probeCount.y - 1), scale.z/(probeCount.z - 1));
 		for(i in 0...lightmaps.length){
-			result.x = Math.max(result.x, lightmaps[i].scaleX / (lightmaps[i].probeCount.x - 1.0));
-			result.y = Math.max(result.y, lightmaps[i].scaleY / (lightmaps[i].probeCount.y - 1.0));
-			result.z = Math.max(result.z, lightmaps[i].scaleZ / (lightmaps[i].probeCount.z - 1.0));
+			var lsc = lightmaps[i].absPos.getScale();
+			result.x = Math.max(result.x, lsc.x / (lightmaps[i].probeCount.x - 1.0));
+			result.y = Math.max(result.y, lsc.y / (lightmaps[i].probeCount.y - 1.0));
+			result.z = Math.max(result.z, lsc.z / (lightmaps[i].probeCount.z - 1.0));
 		}
 		return result;
 	}
