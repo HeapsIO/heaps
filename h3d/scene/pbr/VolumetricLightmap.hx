@@ -13,6 +13,12 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 
 	var shader : h3d.shader.pbr.VolumetricLightmap;
 
+	function set_voxelSize(newSize) :h3d.Vector {
+		voxelSize = newSize;
+		updateProbeCount();
+		return voxelSize;
+	}
+
 	public function new(?parent) {
 		super(new h3d.prim.Cube(1,1,1,false), null, parent);
 		shader = new h3d.shader.pbr.VolumetricLightmap();
@@ -55,7 +61,7 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		return sh;
 	}
 
-	public function getCoefCount() : Int{
+	public inline function getCoefCount() : Int{
 		return shOrder * shOrder;
 	}
 
@@ -85,12 +91,6 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		}
 	}
 
-	function set_voxelSize(newSize) :h3d.Vector {
-		voxelSize = newSize;
-		updateProbeCount();
-		return voxelSize;
-	}
-
 	public function updateProbeCount(){
 		syncPos();
 		var scale = absPos.getScale();
@@ -100,13 +100,15 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 	}
 
 	public function load( bytes : haxe.io.Bytes ) {
+		if( bytes.length == 0 )
+			return false;
 		bytes = haxe.zip.Uncompress.run(bytes);
 		var count = getProbeCount();
-		if( bytes.length != count * shOrder * shOrder * 4 * 4 )
+		if( bytes.length != count * getCoefCount() * 4 * 4 )
 			return false;
 		lastBakedProbeIndex = count;
 		if( lightProbeTexture != null ) lightProbeTexture.dispose();
-		lightProbeTexture = new h3d.mat.Texture(probeCount.x * shOrder * shOrder, probeCount.y * probeCount.z, [Dynamic], RGBA32F);
+		lightProbeTexture = new h3d.mat.Texture(probeCount.x * getCoefCount(), probeCount.y * probeCount.z, [Dynamic], RGBA32F);
 		lightProbeTexture.filter = Nearest;
 		lightProbeTexture.uploadPixels(new hxd.Pixels(lightProbeTexture.width, lightProbeTexture.height, bytes, RGBA32F));
 		return true;

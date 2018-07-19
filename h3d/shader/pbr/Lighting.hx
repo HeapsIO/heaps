@@ -11,7 +11,8 @@ class Indirect extends PropsDefinition {
 		@param var irrPower : Float;
 
 		@const var showSky : Bool;
-		@const var drawIndirect : Bool;
+		@const var drawIndirectDiffuse : Bool;
+		@const var drawIndirectSpecular : Bool;
 		@param var skyMap : SamplerCube;
 		@param var cameraInvViewProj : Mat4;
 		@param var emissivePower : Float;
@@ -35,8 +36,11 @@ class Indirect extends PropsDefinition {
 				var envBRDF = irrLut.get(vec2(roughness, NdV));
 				var specular = envSpec * (F * envBRDF.x + envBRDF.y);
 
+				if( !drawIndirectDiffuse ) diffuse = vec3(0.);
+				if( !drawIndirectSpecular ) specular = vec3(0.);
+
 				var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
-				if( !drawIndirect ) indirect = vec3(0.);
+
 				pixelColor.rgb += indirect * occlusion + albedo * emissive * emissivePower;
 			}
 		}

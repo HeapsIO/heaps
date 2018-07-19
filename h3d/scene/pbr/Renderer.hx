@@ -94,7 +94,6 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOutIndirect.addShader(pbrProps);
 		pbrOutIndirect.pass.setBlendMode(Add);
 		pbrOutIndirect.pass.stencil = new h3d.mat.Stencil();
-		pbrOutIndirect.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
 		pbrOutIndirect.pass.stencil.setOp(Keep, Keep, Keep);
 		allPasses.push(output);
 		allPasses.push(defaultPass);
@@ -165,6 +164,7 @@ class Renderer extends h3d.scene.Renderer {
 		var pbr = allocTarget("pbr",false,1.);
 		var other = allocTarget("other",false,1.,RGBA32F);
 
+		ctx.setGlobal("albedoMap",{ texture : albedo, channel : hxsl.Channel.R });
 		ctx.setGlobal("depthMap",{ texture : other, channel : hxsl.Channel.G });
 		ctx.setGlobal("normalMap",{ texture : normal, channel : hxsl.Channel.R });
 		ctx.setGlobal("occlusionMap",{ texture : pbr, channel : hxsl.Channel.B });
@@ -241,11 +241,13 @@ class Renderer extends h3d.scene.Renderer {
 		pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
 		switch( renderMode ) {
 		case Default:
-			pbrIndirect.drawIndirect = true;
+			pbrIndirect.drawIndirectDiffuse = true;
+			pbrIndirect.drawIndirectSpecular= true;
 			pbrIndirect.showSky = skyMode != Hide;
 			pbrIndirect.skyMap = skyMode == Irrad ? env.diffuse : env.env;
 		case LightProbe:
-			pbrIndirect.drawIndirect = false;
+			pbrIndirect.drawIndirectDiffuse = false;
+			pbrIndirect.drawIndirectSpecular= false;
 			pbrIndirect.showSky = true;
 			pbrIndirect.skyMap = env.env;
 		}
@@ -282,6 +284,15 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.extraShaders = null;
 
 		pbrProps.isScreen = true;
+
+		pbrIndirect.drawIndirectDiffuse = true;
+		pbrIndirect.drawIndirectSpecular = false;
+		pbrOutIndirect.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
+		pbrOutIndirect.render();
+
+		pbrIndirect.drawIndirectDiffuse = false;
+		pbrIndirect.drawIndirectSpecular = true;
+		pbrOutIndirect.pass.stencil.setFunc(Always);
 		pbrOutIndirect.render();
 
 		apply(AfterHdr);
