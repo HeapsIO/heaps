@@ -434,9 +434,14 @@ class World extends Object {
 		soil.material.shadows = true;
 	}
 
+	function precompute( e : WorldElement ) {
+
+	}
+
 	function initChunkElements( c : WorldChunk ) {
 		for( e in c.elements ) {
 			var model = e.model;
+			precompute(e);
 			for( g in model.geometries ) {
 				var b = c.buffers.get(g.m.bits);
 				if( b == null ) {
