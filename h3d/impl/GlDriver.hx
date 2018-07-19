@@ -1011,7 +1011,7 @@ class GlDriver extends Driver {
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#else
 		var buffer = switch( t.format ) {
-		case RGBA32F: new Float32Array(pixels.bytes.getData());
+		case RGBA32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer);
 		default: bytesToUint8Array(pixels.bytes);
 		}
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
