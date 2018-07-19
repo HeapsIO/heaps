@@ -92,7 +92,9 @@ class ContextShared {
 			bytes.writeUInt16(name.length);
 			bytes.writeString(name);
 			bytes.writeInt32(headerSize);
-			bytes.writeInt32(bakedData.get(name).length);
+			var len = bakedData.get(name).length;
+			bytes.writeInt32(len);
+			headerSize += len + 1;
 		}
 		for( name in keys ) {
 			bytes.write(bakedData.get(name));
