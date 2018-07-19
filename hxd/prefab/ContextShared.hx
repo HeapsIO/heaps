@@ -131,8 +131,21 @@ class ContextShared {
 		}
 	}
 
+	function getChildrenRoots( base : h3d.scene.Object, p : Prefab, out : Array<h3d.scene.Object> ) {
+		for( c in p.children ) {
+			var ctx = contexts.get(c);
+			if( ctx == null ) continue;
+			if( ctx.local3d == base )
+				getChildRoots(base, c, out);
+			else
+				out.push(ctx.local3d);
+		}
+		return out;
+	}
+
 	public function getObjects<T:h3d.scene.Object>( p : Prefab, c: Class<T> ) : Array<T> {
-		var childObjs = [for(c in p.children) { var ctx = contexts.get(c); if( ctx != null ) ctx.local3d; }];
+		var root = contexts.get(p).local3d;
+		var childObjs = getChildrenRoots(root, p, []);
 		var ret = [];
 		function rec(o : h3d.scene.Object) {
 			var m = Std.instance(o, c);
@@ -141,12 +154,13 @@ class ContextShared {
 				if( childObjs.indexOf(child) < 0 )
 					rec(child);
 		}
-		rec(contexts.get(p).local3d);
+		rec(root);
 		return ret;
 	}
 
 	public function getMaterials( p : Prefab ) {
-		var childObjs = [for(c in p.children) { var ctx = contexts.get(c); if( ctx != null ) ctx.local3d; }];
+		var root = contexts.get(p).local3d;
+		var childObjs = getChildrenRoots(root, p, []);
 		var ret = [];
 		function rec(o : h3d.scene.Object) {
 			if( o.isMesh() ) {
@@ -163,7 +177,7 @@ class ContextShared {
 				if( childObjs.indexOf(child) < 0 )
 					rec(child);
 		}
-		rec(contexts.get(p).local3d);
+		rec(root);
 		return ret;
 	}
 
