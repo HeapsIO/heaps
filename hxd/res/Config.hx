@@ -45,11 +45,12 @@ class Config {
 	**/
 	public static var pairedExtensions = [
 		"fnt" => "png",
-		"fbx" => "png,jpg,jpeg,gif",
+		"fbx" => "png,jpg,jpeg,gif,tga",
 		"cdb" => "img",
 		"atlas" => "png",
 		"ogg" => "wav",
 		"mp3" => "wav",
+		"l3d" => "bake",
 	];
 
 	static function defined( name : String ) {
