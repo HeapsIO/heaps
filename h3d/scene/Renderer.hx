@@ -37,6 +37,8 @@ class Renderer extends hxd.impl.AnyProps {
 	public function dispose() {
 		for( p in allPasses )
 			p.dispose();
+		for( f in effects )
+			f.dispose();
 		passObjects = new SMap();
 	}
 

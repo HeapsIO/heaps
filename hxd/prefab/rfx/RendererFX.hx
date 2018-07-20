@@ -17,6 +17,9 @@ class RendererFX extends Prefab {
 	override function load(v:Dynamic) {
 	}
 
+	public function dispose() {
+	}
+
 	#if editor
 	override function getHideProps() : hide.prefab.HideProps {
 		return { name : Type.getClassName(Type.getClass(this)).split(".").pop(), icon : "plus-circle" };
