@@ -10,6 +10,7 @@ class PropsImport extends hxsl.Shader {
 		@const var isScreen : Bool = true;
 
 		@param var cameraInverseViewProj : Mat4;
+		@param var occlusionPower : Float;
 
 		var albedo : Vec3;
 		var depth : Float;
@@ -32,7 +33,7 @@ class PropsImport extends hxsl.Shader {
 			var pbr = pbrTex.get(uv);
 			metalness = pbr.r;
 			roughness = pbr.g;
-			occlusion = pbr.b;
+			occlusion = mix(1, pbr.b, occlusionPower);
 
 			var other = otherTex.get(uv);
 			emissive = other.r;

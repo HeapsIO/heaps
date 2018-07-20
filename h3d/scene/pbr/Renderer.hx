@@ -47,6 +47,7 @@ typedef RenderProps = {
 	var tone : TonemapMap;
 	var shadow : ShadowProps;
 	var emissive : Float;
+	var occlusion : Float;
 }
 
 class Renderer extends h3d.scene.Renderer {
@@ -207,6 +208,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.pbrTex = pbr;
 		pbrProps.otherTex = other;
 		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
+		pbrProps.occlusionPower = props.occlusion * props.occlusion;
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
 		pbrIndirect.cameraPosition.load(ctx.camera.pos);
@@ -365,8 +367,9 @@ class Renderer extends h3d.scene.Renderer {
 			envPower : 1.,
 			emissive : 1.,
 			exposure : 0.,
-			sky : Hide,
-			tone : Reinhard,
+			sky : Irrad,
+			tone : Linear,
+			occlusion : 1.,
 			shadow : {
 				enable : true,
 				power : 40,
@@ -441,6 +444,7 @@ class Renderer extends h3d.scene.Renderer {
 					<input type="range" min="0" max="2" field="envPower"/>
 				</dd>
 				<dt>Emissive</dt><dd><input type="range" min="0" max="2" field="emissive"></dd>
+				<dt>Occlusion</dt><dd><input type="range" min="0" max="2" field="occlusion"></dd>
 				<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
 			</dl>
 			</div>

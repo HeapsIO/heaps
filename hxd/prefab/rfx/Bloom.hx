@@ -5,6 +5,7 @@ typedef BloomProps = {
 	var threshold : Float;
 	var intensity : Float;
 	var blur : Float;
+	var saturation : Float;
 }
 
 class Bloom extends RendererFX {
@@ -19,6 +20,7 @@ class Bloom extends RendererFX {
 			blur : 3,
 			intensity : 1.,
 			threshold : 0.5,
+			saturation: 0,
 		} : BloomProps);
 	}
 
@@ -30,6 +32,8 @@ class Bloom extends RendererFX {
 			bloomPass.shader.hdr = ctx.getGlobal("hdr");
 			bloomPass.shader.threshold = pb.threshold;
 			bloomPass.shader.intensity = pb.intensity;
+			bloomPass.shader.colorMatrix.identity();
+			bloomPass.shader.colorMatrix.colorSaturate(pb.saturation);
 			bloomPass.render();
 			ctx.engine.popTarget();
 
@@ -47,6 +51,7 @@ class Bloom extends RendererFX {
 			<dt>Threshold</dt><dd><input type="range" min="0" max="1" field="threshold"/></dd>
 			<dt>Size</dt><dd><input type="range" min="0" max="1" field="size"/></dd>
 			<dt>Blur</dt><dd><input type="range" min="0" max="20" field="blur"/></dd>
+			<dt>Saturation</dt><dd><input type="range" min="-1" max="1" field="saturation"/></dd>
 			</dl>
 		'),props);
 	}
