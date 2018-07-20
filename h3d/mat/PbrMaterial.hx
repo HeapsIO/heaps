@@ -194,6 +194,8 @@ class PbrMaterial extends Material {
 		if( ps != null ) {
 			ps.heightMap = t;
 			ps.heightMapChannel = A;
+			mainPass.removeShader(ps);
+			mainPass.addShader(ps);
 		}
 
 		return t;
