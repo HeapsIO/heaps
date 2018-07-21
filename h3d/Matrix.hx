@@ -187,14 +187,16 @@ class Matrix {
 	}
 
 	public inline function getPosition( ?v : Vector ) {
-		return new h3d.Vector(_41,_42,_43,_44);
+		if( v == null ) v = new Vector();
+		v.set(_41,_42,_43,_44);
+		return v;
 	}
 
 	public inline function setPosition( v : Vector ) {
-		v.x = _41;
-		v.y = _42;
-		v.z = _43;
-		v.w = _44;
+		_41 = v.x;
+		_42 = v.y;
+		_43 = v.z;
+		_44 = v.w;
 	}
 
 	public function prependTranslation( x = 0., y = 0., z = 0. ) {
