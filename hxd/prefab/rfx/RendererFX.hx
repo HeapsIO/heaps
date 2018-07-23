@@ -7,7 +7,7 @@ enum Step {
 
 class RendererFX extends Prefab {
 
-	public function apply( ctx : h3d.scene.RenderContext, step : Step ) {
+	public function apply( r : h3d.scene.Renderer, step : Step ) {
 	}
 
 	override function save() {

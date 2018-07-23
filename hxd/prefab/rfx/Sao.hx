@@ -27,11 +27,12 @@ class Sao extends RendererFX {
 		} : SaoProps);
 	}
 
-	override function apply( ctx : h3d.scene.RenderContext, step : RendererFX.Step ) {
+	override function apply( r : h3d.scene.Renderer, step : RendererFX.Step ) {
 		if( step == BeforeHdr ) {
 			if( sao == null ) sao = new h3d.pass.ScalableAO();
 			var props : SaoProps = props;
-			var saoTex = ctx.textures.allocTargetScale("sao",props.size,false);
+			var ctx = r.ctx;
+			var saoTex = r.allocTarget("sao",false,props.size);
 			var normal : hxsl.ChannelTexture = ctx.getGlobal("normalMap");
 			var depth : hxsl.ChannelTexture = ctx.getGlobal("depthMap");
 			var occlu : hxsl.ChannelTexture = ctx.getGlobal("occlusionMap");

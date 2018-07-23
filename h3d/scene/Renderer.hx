@@ -17,6 +17,7 @@ enum RenderMode{
 	LightProbe;
 }
 
+@:allow(hxd.prefab.rfx.RendererFX)
 class Renderer extends hxd.impl.AnyProps {
 
 	var defaultPass : h3d.pass.Base;

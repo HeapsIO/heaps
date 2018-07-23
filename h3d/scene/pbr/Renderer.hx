@@ -143,7 +143,7 @@ class Renderer extends h3d.scene.Renderer {
 	function apply( step : hxd.prefab.rfx.RendererFX.Step ) {
 		for( f in effects )
 			if( f.enabled )
-				f.apply(ctx, step);
+				f.apply(this, step);
 	}
 
 	override function render() {

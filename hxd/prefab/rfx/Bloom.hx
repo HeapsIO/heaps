@@ -24,10 +24,11 @@ class Bloom extends RendererFX {
 		} : BloomProps);
 	}
 
-	override function apply(ctx:h3d.scene.RenderContext, step:hxd.prefab.rfx.RendererFX.Step) {
+	override function apply(r:h3d.scene.Renderer, step:hxd.prefab.rfx.RendererFX.Step) {
 		if( step == AfterHdr ) {
 			var pb : BloomProps = props;
-			var bloom = ctx.textures.allocTargetScale("bloom", pb.size, false, RGBA16F);
+			var bloom = r.allocTarget("bloom", false, pb.size, RGBA16F);
+			var ctx = r.ctx;
 			ctx.engine.pushTarget(bloom);
 			bloomPass.shader.hdr = ctx.getGlobal("hdr");
 			bloomPass.shader.threshold = pb.threshold;
