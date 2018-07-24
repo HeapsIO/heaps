@@ -780,7 +780,7 @@ class GlDriver extends Driver {
 			tt.internalFmt = GL.RGB;
 			tt.pixelFmt = GL2.HALF_FLOAT;
 		case RG11B10UF:
-			tt.internalFmt = GL.R11F_G11F_B10F;
+			tt.internalFmt = GL2.R11F_G11F_B10F;
 		case RGB10A2:
 			tt.internalFmt = GL2.RGB10_A2;
 		default:
