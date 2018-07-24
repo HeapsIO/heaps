@@ -25,6 +25,7 @@ class Material extends BaseMaterial {
 	public var shadows(get, set) : Bool;
 	public var castShadows(default, set) : Bool;
 	public var receiveShadows(default, set) : Bool;
+	public var staticShadows(default, set) : Bool;
 
 	public var textureShader(default, null) : h3d.shader.Texture;
 	public var specularShader(default, null) : h3d.shader.SpecularTexture;
@@ -83,7 +84,7 @@ class Material extends BaseMaterial {
 			return v;
 		if( mainPass != null ) {
 			if( v )
-				addPass(new Pass("shadow", null, mainPass));
+				addPass(new Pass("shadow", null, mainPass)).isStatic = staticShadows;
 			else
 				removePass(getPass("shadow"));
 		}
@@ -101,6 +102,12 @@ class Material extends BaseMaterial {
 				mainPass.removeShader(shadows);
 		}
 		return receiveShadows = v;
+	}
+
+	function set_staticShadows(v) {
+		var p = getPass("shadow");
+		if( p != null ) p.isStatic = v;
+		return staticShadows = v;
 	}
 
 	override function clone( ?m : BaseMaterial ) : BaseMaterial {

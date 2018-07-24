@@ -310,6 +310,15 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.scene = null;
 	}
 
+	public function computeStatic() {
+		var old = ctx.elapsedTime;
+		ctx.elapsedTime = 0;
+		ctx.computingStatic = true;
+		render(h3d.Engine.getCurrent());
+		ctx.computingStatic = false;
+		ctx.elapsedTime = old;
+	}
+
 	@:access(h3d.mat.Pass)
 	@:access(h3d.scene.RenderContext)
 	public function render( engine : h3d.Engine ) {

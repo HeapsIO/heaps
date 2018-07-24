@@ -20,6 +20,12 @@ class Pass implements hxd.impl.Serializable {
 	**/
 	@:s public var dynamicParameters : Bool;
 
+	/**
+		Mark the pass as static, this will allow some renderers or shadows to filter it
+		when rendering static/dynamic parts.
+	**/
+	@:s public var isStatic : Bool;
+
 	@:bits(bits) public var culling : Face;
 	@:bits(bits) public var depthWrite : Bool;
 	@:bits(bits) public var depthTest : Compare;

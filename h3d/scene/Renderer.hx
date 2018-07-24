@@ -18,6 +18,7 @@ enum RenderMode{
 }
 
 @:allow(hxd.prefab.rfx.RendererFX)
+@:allow(h3d.pass.Shadows)
 class Renderer extends hxd.impl.AnyProps {
 
 	var defaultPass : h3d.pass.Base;
@@ -154,6 +155,10 @@ class Renderer extends hxd.impl.AnyProps {
 		throw "Not implemented";
 	}
 
+	function computeStatic() {
+		throw "Not implemented";
+	}
+
 	public function start() {
 	}
 
@@ -164,7 +169,10 @@ class Renderer extends hxd.impl.AnyProps {
 		for( p in passes )
 			passObjects.set(p.name, p);
 		ctx.textures.begin();
-		render();
+		if( ctx.computingStatic )
+			computeStatic();
+		else
+			render();
 		resetTarget();
 		for( p in passes )
 			passObjects.set(p.name, null);
