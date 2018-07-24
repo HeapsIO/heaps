@@ -387,12 +387,20 @@ class Pixels {
 
 	public static function getBytesPerPixel( format : PixelFormat ) {
 		return switch( format ) {
-		case ALPHA8: 1;
 		case ARGB, BGRA, RGBA, SRGB, SRGB_ALPHA: 4;
 		case RGBA16F: 8;
 		case RGBA32F: 16;
-		case ALPHA16F: 2;
-		case ALPHA32F: 4;
+		case R8: 1;
+		case R16F: 2;
+		case R32F: 4;
+		case RG8: 2;
+		case RG16F: 4;
+		case RG32F: 8;
+		case RGB8: 3;
+		case RGB16F: 6;
+		case RGB32F: 12;
+		case RGB10A2: 4;
+		case RG11B10UF: 4;
 		}
 	}
 
@@ -402,8 +410,14 @@ class Pixels {
 	**/
 	public static function getChannelOffset( format : PixelFormat, channel : Channel ) {
 		return switch( format ) {
-		case ALPHA8, ALPHA16F, ALPHA32F:
-			if( channel == A ) 0 else -1;
+		case R8, R16F, R32F:
+			if( channel == R ) 0 else -1;
+		case RG8, RG16F, RG32F:
+			var p = getBytesPerPixel(format);
+			[0, p, -1, -1][channel.toInt()];
+		case RGB8, RGB16F, RGB32F:
+			var p = getBytesPerPixel(format);
+			[0, p, p<<1, -1][channel.toInt()];
 		case ARGB:
 			[1, 2, 3, 0][channel.toInt()];
 		case BGRA:
@@ -414,6 +428,8 @@ class Pixels {
 			channel.toInt() * 2;
 		case RGBA32F:
 			channel.toInt() * 4;
+		case RGB10A2, RG11B10UF:
+			throw "Bit packed format";
 		}
 	}
 

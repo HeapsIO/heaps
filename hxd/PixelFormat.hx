@@ -6,9 +6,17 @@ enum PixelFormat {
 	RGBA;
 	RGBA16F;
 	RGBA32F;
-	ALPHA8;
-	ALPHA16F;
-	ALPHA32F;
+	R8;
+	R16F;
+	R32F;
+	RG8;
+	RG16F;
+	RG32F;
+	RGB8;
+	RGB16F;
+	RGB32F;
 	SRGB;
 	SRGB_ALPHA;
+	RGB10A2;
+	RG11B10UF; // unsigned float
 }

@@ -21,8 +21,8 @@ private extern class GL2 extends js.html.webgl.GL {
 	function texImage3D(target : Int, level : Int, internalformat : Int, width : Int, height : Int, depth : Int, border : Int, format : Int, type : Int, source : Dynamic) : Void;
 	static inline var RGBA16F = 0x881A;
 	static inline var RGBA32F = 0x8814;
-	static inline var ALPHA16F = 0x881C;
-	static inline var ALPHA32F = 0x8816;
+	static inline var RED      = 0x1903;
+	static inline var RG       = 0x8227;
 	static inline var RGBA8	   = 0x8058;
 	static inline var BGRA 		 = 0x80E1;
 	static inline var HALF_FLOAT = 0x140B;
@@ -30,6 +30,8 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var SRGB8      = 0x8C41;
 	static inline var SRGB_ALPHA = 0x8C42;
 	static inline var SRGB8_ALPHA = 0x8C43;
+	static inline var R11F_G11F_B10F = 0x8C3A;
+	static inline var RGB10_A2     = 0x8059;
 	static inline var DEPTH_COMPONENT24 = 0x81A6;
 	static inline var UNIFORM_BUFFER = 0x8A11;
 	static inline var TEXTURE_2D_ARRAY = 0x8C1A;
@@ -711,20 +713,26 @@ class GlDriver extends Driver {
 	function getChannels( t : Texture ) {
 		return switch( t.internalFmt ) {
 		case GL2.RGBA32F, GL2.RGBA16F, GL2.SRGB_ALPHA, GL2.SRGB8_ALPHA: GL.RGBA;
-		case GL2.ALPHA16F, GL2.ALPHA32F: GL.ALPHA;
 		case GL2.RGBA8: GL2.BGRA;
 		case GL2.SRGB, GL2.SRGB8: GL.RGB;
 		case GL.RGBA: GL.RGBA;
-		case GL.ALPHA: GL.ALPHA;
+		case GL.RGB: GL.RGB;
+		case GL2.R11F_G11F_B10F: GL.RGB;
+		case GL2.RGB10_A2: GL.RGBA;
+		#if (!hlsdl || (hlsdl >= "1.7"))
+		case GL2.RED: GL2.RED;
+		case GL2.RG: GL2.RG;
+		#end
 		default: throw "Invalid format " + t.internalFmt;
 		}
 	}
 
 	override function isSupportedFormat( fmt : h3d.mat.Data.TextureFormat ) {
 		return switch( fmt ) {
-		case RGBA, ALPHA8: true;
-		case RGBA16F, RGBA32F, ALPHA16F, ALPHA32F: hasFeature(FloatTextures);
+		case RGBA: true;
+		case RGBA16F, RGBA32F: hasFeature(FloatTextures);
 		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
+		case R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
 		default: false;
 		}
 	}
@@ -742,26 +750,39 @@ class GlDriver extends Driver {
 		switch( t.format ) {
 		case RGBA:
 			// default
-		case ALPHA8:
-			tt.internalFmt = GL.ALPHA;
 		case RGBA32F if( hasFeature(FloatTextures) ):
 			tt.internalFmt = GL2.RGBA32F;
 			tt.pixelFmt = GL.FLOAT;
 		case RGBA16F if( hasFeature(FloatTextures) ):
 			tt.pixelFmt = GL2.HALF_FLOAT;
 			tt.internalFmt = GL2.RGBA16F;
-		case ALPHA16F if( hasFeature(FloatTextures) ):
-			tt.pixelFmt = GL2.HALF_FLOAT;
-			tt.internalFmt = GL2.ALPHA16F;
-		case ALPHA32F if( hasFeature(FloatTextures) ):
-			tt.pixelFmt = GL.FLOAT;
-			tt.internalFmt = GL2.ALPHA32F;
 		case BGRA:
 			tt.internalFmt = GL2.RGBA8;
 		case SRGB:
 			tt.internalFmt = GL2.SRGB8;
 		case SRGB_ALPHA:
 			tt.internalFmt = GL2.SRGB8_ALPHA;
+		case RGB8:
+			tt.internalFmt = GL.RGB;
+		#if (!hlsdl || (hlsdl >= "1.7"))
+		case R8:
+			tt.internalFmt = GL2.RED;
+		case RG8:
+			tt.internalFmt = GL2.RG;
+		case R16F:
+			tt.internalFmt = GL2.RED;
+			tt.pixelFmt = GL2.HALF_FLOAT;
+		case RG16F:
+			tt.internalFmt = GL2.RG;
+			tt.pixelFmt = GL2.HALF_FLOAT;
+		#end
+		case RGB16F:
+			tt.internalFmt = GL.RGB;
+			tt.pixelFmt = GL2.HALF_FLOAT;
+		case RG11B10UF:
+			tt.internalFmt = GL.R11F_G11F_B10F;
+		case RGB10A2:
+			tt.internalFmt = GL2.RGB10_A2;
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
@@ -769,24 +790,30 @@ class GlDriver extends Driver {
 		t.flags.unset(WasCleared);
 		gl.bindTexture(bind, tt.t);
 		var outOfMem = false;
+
+		inline function checkError() {
+			var err = gl.getError();
+			if( err == GL.OUT_OF_MEMORY ) {
+				outOfMem = true;
+				return true;
+			}
+			if( err != 0 ) throw "Failed to alloc texture "+t.format+"(error "+err+")";
+			return false;
+		}
+
 		if( t.flags.has(Cube) ) {
 			for( i in 0...6 ) {
 				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
-				if( gl.getError() == GL.OUT_OF_MEMORY ) {
-					outOfMem = true;
-					break;
-				}
+				if( checkError() ) break;
 			}
 		#if (!hlsdl || (hlsdl >= "1.7"))
 		} else if( t.flags.has(IsArray) ) {
 			gl.texImage3D(GL2.TEXTURE_2D_ARRAY, 0, tt.internalFmt, tt.width, tt.height, t.layerCount, 0, getChannels(tt), tt.pixelFmt, null);
-			if( gl.getError() == GL.OUT_OF_MEMORY )
-				outOfMem = true;
+			checkError();
 		#end
 		} else {
 			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
-			if( gl.getError() == GL.OUT_OF_MEMORY )
-				outOfMem = true;
+			checkError();
 		}
 		restoreBind();
 
@@ -1381,6 +1408,8 @@ class GlDriver extends Driver {
 		#end
 		#if (js || hl)
 		gl.readPixels(0, 0, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, buffer);
+		var error = gl.getError();
+		if( error != 0 ) throw "Failed to capture pixels (error "+error+")";
 		@:privateAccess pixels.innerFormat = curTarget.format;
 		#end
 	}

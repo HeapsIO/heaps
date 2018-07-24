@@ -340,14 +340,27 @@ class DirectXDriver extends h3d.impl.Driver {
 		captureTexPixels(pixels, rt, 0, 0);
 	}
 
+	override function isSupportedFormat( fmt : hxd.PixelFormat ) {
+		return switch( fmt ) {
+		case RGB8, RGB16F: false;
+		default: true;
+		}
+	}
+
 	function getTextureFormat( t : h3d.mat.Texture ) : dx.Format {
 		return switch( t.format ) {
 		case RGBA: R8G8B8A8_UNORM;
 		case RGBA16F: R16G16B16A16_FLOAT;
 		case RGBA32F: R32G32B32A32_FLOAT;
-		case ALPHA32F: R32_FLOAT;
-		case ALPHA16F: R16_FLOAT;
-		case ALPHA8: R8_UNORM;
+		case R32F: R32_FLOAT;
+		case R16F: R16_FLOAT;
+		case R8: R8_UNORM;
+		case RG8: R8G8_UNORM;
+		case RG16F: R16G16_FLOAT;
+		case RG32F: R32G32_FLOAT;
+		case RGB32F: R32G32B32_FLOAT;
+		case RGB10A2: R10G10B10A2_UNORM;
+		case RG11B10UF: R11G11B10_FLOAT;
 		default: throw "Unsupported texture format " + t.format;
 		}
 	}
