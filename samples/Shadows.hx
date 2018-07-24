@@ -5,7 +5,7 @@ class Shadows extends SampleApp {
 	var time : Float = 0.;
 	var spheres : Array<h3d.scene.Object>;
 	var dir : h3d.scene.DirLight;
-	var shadow : h3d.pass.ShadowMap;
+	var shadow : h3d.pass.DefaultShadowMap;
 
 	override function init() {
 		super.init();
@@ -37,7 +37,7 @@ class Shadows extends SampleApp {
 		dir = new h3d.scene.DirLight(new h3d.Vector(-0.3, -0.2, -1), s3d);
 		dir.enableSpecular = true;
 
-		shadow = s3d.renderer.getPass(h3d.pass.ShadowMap);
+		shadow = s3d.renderer.getPass(h3d.pass.DefaultShadowMap);
 		addSlider("Power", function() return shadow.power, function(p) shadow.power = p, 0, 100);
 		addSlider("Radius", function() return shadow.blur.radius, function(r) shadow.blur.radius = r, 0, 20);
 		addSlider("Quality", function() return shadow.blur.quality, function(r) shadow.blur.quality = r);

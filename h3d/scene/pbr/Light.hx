@@ -1,15 +1,23 @@
 package h3d.scene.pbr;
 
+enum ShadowMode {
+	None;
+	Dynamic;
+	Static;
+	Mixed;
+}
+
 class Light extends h3d.scene.Light {
 
 	var _color : h3d.Vector;
 	var primitive : h3d.prim.Primitive;
 	@:s public var power : Float = 1.;
-	public var shadows : hxsl.Shader;
+	public var shadows : h3d.pass.Shadows;
 
 	function new(shader,?parent) {
 		super(shader,parent);
 		_color = new h3d.Vector(1,1,1,1);
+		if( shadows == null ) shadows = new h3d.pass.Shadows();
 	}
 
 	override function get_color() {

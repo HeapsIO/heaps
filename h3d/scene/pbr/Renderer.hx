@@ -30,14 +30,6 @@ package h3d.scene.pbr;
 	var Reinhard = "Reinhard";
 }
 
-typedef ShadowProps = {
-	var enable : Bool;
-	var power : Float;
-	var blur : Float;
-	var bias : Float;
-	var quality : Float;
-}
-
 typedef RenderProps = {
 	var mode : DisplayMode;
 	var env : String;
@@ -45,7 +37,6 @@ typedef RenderProps = {
 	var exposure : Float;
 	var sky : SkyMode;
 	var tone : TonemapMap;
-	var shadow : ShadowProps;
 	var emissive : Float;
 	var occlusion : Float;
 }
@@ -59,11 +50,11 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrLightPass : h3d.mat.Pass;
 	var screenLightPass : h3d.pass.ScreenFx<h3d.shader.ScreenShader>;
 	var fxaa = new h3d.pass.FXAA();
-	var shadows = new h3d.pass.ShadowMap(2048);
 	var pbrIndirect = new h3d.shader.pbr.Lighting.Indirect();
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
 	var hasDebugEvent = false;
+	var curDirShadow : hxsl.Shader;
 
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
@@ -98,7 +89,6 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOutIndirect.pass.stencil.setOp(Keep, Keep, Keep);
 		allPasses.push(output);
 		allPasses.push(defaultPass);
-		allPasses.push(shadows);
 		allPasses.push(decalsOutput);
 		refreshProps();
 	}
@@ -146,19 +136,33 @@ class Renderer extends h3d.scene.Renderer {
 				f.apply(this, step);
 	}
 
+	override function computeStatic() {
+		var light = @:privateAccess ctx.lights;
+		var passes = get("shadow");
+		while( light != null ) {
+			var plight = Std.instance(light, h3d.scene.pbr.Light);
+			if( plight != null ) {
+				plight.shadows.setContext(ctx);
+				plight.shadows.computeStatic(passes);
+			}
+			light = light.next;
+		}
+	}
+
 	override function render() {
 		var props : RenderProps = props;
+		var ls = getLightSystem();
 
-		if( props.shadow.enable ) {
-			var sh = props.shadow;
-			shadows.power = sh.power;
-			shadows.blur.radius = sh.blur;
-			shadows.blur.quality = sh.quality;
-			shadows.bias = sh.bias * 0.1;
-			shadows.draw(get("shadow"));
-		} else
-			get("shadow");
-		pbrDirect.enableShadow = props.shadow.enable;
+		var light = @:privateAccess ctx.lights;
+		var passes = get("shadow");
+		while( light != null ) {
+			var plight = Std.instance(light, h3d.scene.pbr.Light);
+			if( plight != null ) {
+				plight.shadows.setContext(ctx);
+				plight.shadows.draw(passes);
+			}
+			light = light.next;
+		}
 
 		var albedo = allocTarget("albedo");
 		var normal = allocTarget("normalDepth",false,1.,RGBA16F);
@@ -190,7 +194,6 @@ class Renderer extends h3d.scene.Renderer {
 				setTarget(pbr);
 				clear(0x00FF80FF);
 			}
-
 		}
 		apply(BeforeHdr);
 
@@ -219,18 +222,26 @@ class Renderer extends h3d.scene.Renderer {
 		pbrIndirect.irrSpecular = env.specular;
 		pbrIndirect.irrSpecularLevels = env.specLevels;
 
-		var ls = getLightSystem();
 		if( ls.shadowLight == null ) {
+			if( curDirShadow != null ) {
+				pbrOut.removeShader(curDirShadow);
+				curDirShadow = null;
+			}
 			pbrOut.removeShader(pbrDirect);
 			pbrOut.removeShader(pbrSun);
-			pbrOut.removeShader(shadows.shader);
 		} else {
 			var pdir = Std.instance(ls.shadowLight, h3d.scene.pbr.DirLight);
+			var pshadow = @:privateAccess pdir == null ? null : pdir.shadows.shader;
+			if( pshadow != curDirShadow ) {
+				if( curDirShadow != null ) pbrOut.removeShader(curDirShadow);
+				curDirShadow = pshadow;
+				if( pshadow != null ) pbrOut.addShader(pshadow);
+			}
 			if( pbrOut.getShader(h3d.shader.pbr.Light.DirLight) == null ) {
-				pbrOut.addShader(shadows.shader);
 				pbrOut.addShader(pbrDirect);
 				pbrOut.addShader(pbrSun);
 			}
+			// works with both pre-pbr DirLight and pbr DirLight
 			pbrSun.lightColor.load(ls.shadowLight.color);
 			if( pdir != null ) pbrSun.lightColor.scale3(pdir.power * pdir.power);
 			pbrSun.lightDir.load(@:privateAccess ls.shadowLight.getShadowDirection());
@@ -254,7 +265,8 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.skyMap = env.env;
 		}
 
-		pbrOut.render();
+		if( ls.shadowLight != null )
+			pbrOut.render();
 		pbrDirect.doDiscard = true;
 
 		var ls = Std.instance(ls, LightSystem);
@@ -369,14 +381,7 @@ class Renderer extends h3d.scene.Renderer {
 			exposure : 0.,
 			sky : Irrad,
 			tone : Linear,
-			occlusion : 1.,
-			shadow : {
-				enable : true,
-				power : 40,
-				blur : 9,
-				bias : 0.1,
-				quality : 0.3,
-			},
+			occlusion : 1.
 		};
 		return props;
 	}
@@ -403,16 +408,6 @@ class Renderer extends h3d.scene.Renderer {
 	#if js
 	override function editProps() {
 		var props : RenderProps = props;
-
-		var shadowProps = '
-			<dl>
-			<dt>Power</dt><dd><input type="range" min="0" max="100" step="0.1" field="shadow.power"/></dd>
-			<dt>Blur</dt><dd><input type="range" min="0" max="20" field="shadow.blur"/></dd>
-			<dt>Quality</dt><dd><input type="range" field="shadow.quality"/></dd>
-			<dt>Bias</dt><dd><input type="range" min="0" max="1" field="shadow.bias"/></dd>
-			</dt>
-		';
-
 		return new js.jquery.JQuery('
 			<div class="group" name="Renderer">
 			<dl>
@@ -447,13 +442,6 @@ class Renderer extends h3d.scene.Renderer {
 				<dt>Occlusion</dt><dd><input type="range" min="0" max="2" field="occlusion"></dd>
 				<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
 			</dl>
-			</div>
-
-			<div class="group">
-				<div class="title">
-					<input type="checkbox" field="shadow.enable"/> Shadows
-				</div>
-				$shadowProps
 			</div>
 		');
 	}

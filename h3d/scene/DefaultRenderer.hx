@@ -52,12 +52,13 @@ class NormalPass extends h3d.pass.Default {
 	}
 
 }
+
 class DefaultRenderer extends Renderer {
 
 	var def(get, never) : h3d.pass.Base;
 	public var depth : h3d.pass.Base = new DepthPass();
 	public var normal : h3d.pass.Base = new NormalPass();
-	public var shadow = new h3d.pass.ShadowMap(1024);
+	public var shadow = new h3d.pass.DefaultShadowMap(1024);
 
 	public function new() {
 		super();

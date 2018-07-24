@@ -90,7 +90,7 @@ class SceneProps {
 			if( ls.shadowLight != null )
 				props.push(PGroup("DirLight", getObjectProps(ls.shadowLight)));
 
-			var s = r.getPass(h3d.pass.ShadowMap);
+			var s = r.getPass(h3d.pass.DefaultShadowMap);
 			if( s != null ) {
 				props.push(PGroup("Shadows",[
 					PRange("size", 64, 2048, function() return s.size, function(sz) s.size = Std.int(sz), 64),
