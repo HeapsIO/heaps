@@ -101,7 +101,11 @@ class Texture {
 	public function clone( ?allocPos : h3d.impl.AllocPos ) {
 		var old = lastFrame;
 		preventAutoDispose();
-		var t = new Texture(width, height, null, format, allocPos);
+		var flags = [];
+		for( f in [Target,Cube,MipMapped,IsArray] )
+			if( this.flags.has(f) )
+				flags.push(f);
+		var t = new Texture(width, height, flags, format, allocPos);
 		h3d.pass.Copy.run(this, t);
 		lastFrame = old;
 		return t;
