@@ -30,11 +30,20 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var SRGB8      = 0x8C41;
 	static inline var SRGB_ALPHA = 0x8C42;
 	static inline var SRGB8_ALPHA = 0x8C43;
+	static inline var R8 		  = 0x8229;
+	static inline var RG8 		  = 0x822B;
+	static inline var R16F 		  = 0x822D;
+	static inline var R32F 		  = 0x822E;
+	static inline var RG16F 	  = 0x822F;
+	static inline var RG32F 	  = 0x8230;
+	static inline var RGB16F 	  = 0x881B;
+	static inline var RGB32F 	  = 0x8815;
 	static inline var R11F_G11F_B10F = 0x8C3A;
 	static inline var RGB10_A2     = 0x8059;
 	static inline var DEPTH_COMPONENT24 = 0x81A6;
 	static inline var UNIFORM_BUFFER = 0x8A11;
 	static inline var TEXTURE_2D_ARRAY = 0x8C1A;
+	static inline var UNSIGNED_INT_2_10_10_10_REV = 0x8368;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -720,8 +729,9 @@ class GlDriver extends Driver {
 		case GL2.R11F_G11F_B10F: GL.RGB;
 		case GL2.RGB10_A2: GL.RGBA;
 		#if (!hlsdl || (hlsdl >= "1.7"))
-		case GL2.RED: GL2.RED;
-		case GL2.RG: GL2.RG;
+		case GL2.RED, GL2.R8, GL2.R16F, GL2.R32F: GL2.RED;
+		case GL2.RG, GL2.RG8, GL2.RG16F, GL2.RG32F: GL2.RG;
+		case GL2.RGB16F, GL2.RGB32F: GL.RGB;
 		#end
 		default: throw "Invalid format " + t.internalFmt;
 		}
@@ -732,7 +742,7 @@ class GlDriver extends Driver {
 		case RGBA: true;
 		case RGBA16F, RGBA32F: hasFeature(FloatTextures);
 		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
-		case R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
+		case R8, RG8, RGB8, R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
 		default: false;
 		}
 	}
@@ -766,23 +776,34 @@ class GlDriver extends Driver {
 			tt.internalFmt = GL.RGB;
 		#if (!hlsdl || (hlsdl >= "1.7"))
 		case R8:
-			tt.internalFmt = GL2.RED;
+			tt.internalFmt = GL2.R8;
 		case RG8:
-			tt.internalFmt = GL2.RG;
+			tt.internalFmt = GL2.RG8;
 		case R16F:
-			tt.internalFmt = GL2.RED;
+			tt.internalFmt = GL2.R16F;
 			tt.pixelFmt = GL2.HALF_FLOAT;
 		case RG16F:
-			tt.internalFmt = GL2.RG;
+			tt.internalFmt = GL2.RG16F;
 			tt.pixelFmt = GL2.HALF_FLOAT;
-		#end
+		case R32F:
+			tt.internalFmt = GL2.R32F;
+			tt.pixelFmt = GL.FLOAT;
+		case RG32F:
+			tt.internalFmt = GL2.RG32F;
+			tt.pixelFmt = GL.FLOAT;
 		case RGB16F:
-			tt.internalFmt = GL.RGB;
+			tt.internalFmt = GL2.RGB16F;
 			tt.pixelFmt = GL2.HALF_FLOAT;
-		case RG11B10UF:
-			tt.internalFmt = GL2.R11F_G11F_B10F;
+		case RGB32F:
+			tt.internalFmt = GL2.RGB32F;
+			tt.pixelFmt = GL.FLOAT;
 		case RGB10A2:
 			tt.internalFmt = GL2.RGB10_A2;
+			tt.pixelFmt = GL2.UNSIGNED_INT_2_10_10_10_REV;
+		#end
+		case RG11B10UF:
+			tt.internalFmt = GL2.R11F_G11F_B10F;
+			tt.pixelFmt = GL.FLOAT;
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
