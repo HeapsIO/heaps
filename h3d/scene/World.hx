@@ -445,7 +445,9 @@ class World extends Object {
 			for( g in model.geometries ) {
 				var b = c.buffers.get(g.m.bits);
 				if( b == null ) {
-					b = new h3d.scene.Mesh(new h3d.prim.BigPrimitive(getStride(model), true), c.root);
+					var bp = new h3d.prim.BigPrimitive(getStride(model), true);
+					bp.hasTangents = enableNormalMaps;
+					b = new h3d.scene.Mesh(bp, c.root);
 					b.name = g.m.name;
 					c.buffers.set(g.m.bits, b);
 					initMaterial(b, g.m);
