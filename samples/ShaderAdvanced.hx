@@ -38,6 +38,56 @@ class ShaderAdvanced extends hxd.App {
 	override function init() {
 		engine.backgroundColor = 0xFF202020;
 
+		// various formats read/write
+		var d = engine.driver;
+		var values : Map<hxd.PixelFormat,String> = [
+			R8 => "ff",
+			RG8 => "ff7f",
+			RGB8 => "ff7f40",
+			RGBA => "ff7f4020",
+			R16F => "003c",
+			RG16F => "003c0038",
+			RGB16F => "003c00380034",
+			RGBA16F => "003c003800340030",
+			R32F => "0000803f",
+			RG32F => "0000803f0000003f",
+			RGB32F => "0000803f0000003f0000803e",
+			RGBA32F => "0000803f0000003f0000803e0000003e",
+			SRGB => #if hlsdl "ffba8800" #else "ffbc8900" #end,
+			SRGB_ALPHA => #if hlsdl "ffba8820" #else "ffbc8920" #end,
+			RGB10A2 => "ffff0710",
+			RG11B10UF => "c0031c68",
+		];
+		for( fmt in hxd.PixelFormat.createAll() ) {
+			if( !d.isSupportedFormat(fmt) ) {
+				trace("Skipping "+fmt);
+				continue;
+			}
+			try {
+				var t = new h3d.mat.Texture(1,1,[Target],fmt);
+				d.setRenderTarget(t);
+				d.clear(new h3d.Vector(1,0.5,0.25,0.125));
+				d.setRenderTarget(null);
+				var pix = t.capturePixels();
+				var hex = pix.bytes.toHex();
+
+				if( values.get(fmt) != hex )
+					throw hex+" should be "+values.get(fmt);
+
+				d.setRenderTarget(t);
+				d.clear(new h3d.Vector(0,0,0,0));
+				d.setRenderTarget(null);
+
+				t.uploadPixels(pix);
+				var pix2 = t.capturePixels();
+				var hex2 = pix2.bytes.toHex();
+				if( hex != hex2 )
+					throw hex+" has been uploaded but we get "+hex2;
+			} catch( e : Dynamic ) {
+ 				trace(fmt,e);
+			}
+		}
+
 		// uniform buffer
 		var bmp = new h2d.Bitmap(h2d.Tile.fromColor(0xFF0000,128,128),s2d);
 		var ubuffer = bmp.addShader(new TestUniformBuffer());
@@ -66,19 +116,6 @@ class ShaderAdvanced extends hxd.App {
 		tarr.textures.clear(0xFF4040,1,0);
 		tarr.textures.clear(0x40FF40,1,1);
 		tarr.textures.clear(0x4040FF,1,2);
-
-		// rgba 32F read/write
-		var tex = new h3d.mat.Texture(1,1,[Target],RGBA32F);
-		tex.clear(0x804020,1);
-		var pixels : hxd.Pixels.PixelsFloat = tex.capturePixels();
-		var color = pixels.getPixelF(0,0).toColor();
-		if( color != 0xFF804020 ) throw StringTools.hex(color);
-		pixels.setPixelF(0,0,new h3d.Vector(1,2,3,4));
-		tex.uploadPixels(pixels);
-		pixels = tex.capturePixels();
-		var v = pixels.getPixelF(0,0);
-		if( v.r != 1 || v.g != 2 || v.b != 3 || v.a != 4 ) throw v.toString();
-
 	}
 
 	override function update(dt:Float) {
