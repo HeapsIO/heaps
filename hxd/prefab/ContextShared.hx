@@ -12,7 +12,6 @@ class ContextShared {
 	public var root3d : h3d.scene.Object;
 	public var contexts : Map<Prefab,Context>;
 	public var references : Map<Prefab,Array<Context>>;
-	public var cleanups : Array<Void->Void>;
 	public var currentPath : String;
 
 	var cache : h3d.prim.ModelCache;
@@ -25,7 +24,6 @@ class ContextShared {
 		contexts = new Map();
 		references = new Map();
 		cache = new h3d.prim.ModelCache();
-		cleanups = [];
 		shaderCache = new ShaderDefCache();
 	}
 
