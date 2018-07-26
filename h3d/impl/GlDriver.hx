@@ -44,6 +44,7 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var UNIFORM_BUFFER = 0x8A11;
 	static inline var TEXTURE_2D_ARRAY = 0x8C1A;
 	static inline var UNSIGNED_INT_2_10_10_10_REV = 0x8368;
+	static inline var UNSIGNED_INT_10F_11F_11F_REV = 0x8C3B;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -800,10 +801,10 @@ class GlDriver extends Driver {
 		case RGB10A2:
 			tt.internalFmt = GL2.RGB10_A2;
 			tt.pixelFmt = GL2.UNSIGNED_INT_2_10_10_10_REV;
-		#end
 		case RG11B10UF:
 			tt.internalFmt = GL2.R11F_G11F_B10F;
-			tt.pixelFmt = GL.FLOAT;
+			tt.pixelFmt = GL.UNSIGNED_INT_10F_11F_11F_REV;
+		#end
 		default:
 			throw "Unsupported texture format "+t.format;
 		}

@@ -342,7 +342,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function isSupportedFormat( fmt : hxd.PixelFormat ) {
 		return switch( fmt ) {
-		case RGB8, RGB16F: false;
+		case RGB8, RGB16F, ARGB, BGRA, SRGB: false;
 		default: true;
 		}
 	}
@@ -361,6 +361,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		case RGB32F: R32G32B32_FLOAT;
 		case RGB10A2: R10G10B10A2_UNORM;
 		case RG11B10UF: R11G11B10_FLOAT;
+		case SRGB_ALPHA: R8G8B8A8_UNORM_SRGB;
 		default: throw "Unsupported texture format " + t.format;
 		}
 	}
