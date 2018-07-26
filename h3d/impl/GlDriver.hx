@@ -677,6 +677,12 @@ class GlDriver extends Driver {
 		if( color != null ) {
 			gl.colorMask(true, true, true, true);
 			if( curMatBits >= 0 ) curMatBits |= Pass.colorMask_mask;
+			#if hlsdl
+			// clear does not take gamma correction into account in GL/Windows
+			if( curTarget != null && curTarget.isSRGB() )
+				gl.clearColor(Math.pow(color.r, 1/2.2), Math.pow(color.g, 1/2.2), Math.pow(color.b, 1/2.2), color.a);
+			else
+			#end
 			gl.clearColor(color.r, color.g, color.b, color.a);
 			bits |= GL.COLOR_BUFFER_BIT;
 		}
@@ -803,7 +809,7 @@ class GlDriver extends Driver {
 			tt.pixelFmt = GL2.UNSIGNED_INT_2_10_10_10_REV;
 		case RG11B10UF:
 			tt.internalFmt = GL2.R11F_G11F_B10F;
-			tt.pixelFmt = GL.UNSIGNED_INT_10F_11F_11F_REV;
+			tt.pixelFmt = GL2.UNSIGNED_INT_10F_11F_11F_REV;
 		#end
 		default:
 			throw "Unsupported texture format "+t.format;
@@ -1058,12 +1064,16 @@ class GlDriver extends Driver {
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, streamData(pixels.bytes.getData(),pixels.offset,pixels.width*pixels.height*pixels.bytesPerPixel));
 		#elseif lime
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
-		#else
+		#elseif js
 		var buffer = switch( t.format ) {
-		case RGBA32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer);
+		case RGBA32F, R32F, RG32F, RGB32F: new js.html.Float32Array(@:privateAccess pixels.bytes.b.buffer);
+		case RGBA16F, R16F, RG16F, RGB16F: new js.html.Uint16Array(@:privateAccess pixels.bytes.b.buffer);
+		case RGB10A2, RG11B10UF: new js.html.Uint32Array(@:privateAccess pixels.bytes.b.buffer);
 		default: bytesToUint8Array(pixels.bytes);
 		}
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+		#else
+		throw "Not implemented";
 		#end
 		restoreBind();
 	}
@@ -1421,8 +1431,9 @@ class GlDriver extends Driver {
 		#if js
 		var buffer : js.html.ArrayBufferView = @:privateAccess pixels.bytes.b;
 		switch( curTarget.format ) {
-		case RGBA32F: buffer = new js.html.Float32Array(buffer.buffer);
-		case RGBA16F: throw "Not supported";
+		case RGBA32F, R32F, RG32F, RGB32F: buffer = new js.html.Float32Array(buffer.buffer);
+		case RGBA16F, R16F, RG16F, RGB16F: buffer = new js.html.Uint16Array(buffer.buffer);
+		case RGB10A2, RG11B10UF: buffer = new js.html.Uint32Array(buffer.buffer);
 		default:
 		}
 		#else
