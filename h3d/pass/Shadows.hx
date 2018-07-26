@@ -56,6 +56,14 @@ class Shadows extends Default {
 		return [Swiz(Value("output.depth",1),[X,X,X,X])];
 	}
 
+	public function loadStaticData( bytes : haxe.io.Bytes ) {
+		return false;
+	}
+
+	public function saveStaticData() : haxe.io.Bytes {
+		return null;
+	}
+
 	public function computeStatic( passes : h3d.pass.Object ) {
 		throw "Not implemented";
 	}

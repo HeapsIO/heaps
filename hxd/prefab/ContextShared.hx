@@ -75,13 +75,18 @@ class ContextShared {
 
 	public function saveBakedBytes( file : String, bytes : haxe.io.Bytes ) {
 		if( bakedData == null ) loadBakedData();
-		if( bytes == null )
-			bakedData.remove(file);
-		else
+		if( bytes == null ) {
+			if( !bakedData.remove(file) )
+				return;
+		} else
 			bakedData.set(file, bytes);
+		var keys = Lambda.array({ iterator : bakedData.keys });
+		if( keys.length == 0 ) {
+			saveBakedFile(null);
+			return;
+		}
 		var bytes = new haxe.io.BytesOutput();
 		bytes.writeString("BAKE");
-		var keys = Lambda.array({ iterator : bakedData.keys });
 		bytes.writeInt32(keys.length);
 		var headerSize = 8;
 		for( name in keys )

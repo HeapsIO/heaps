@@ -117,6 +117,60 @@ class DirShadowMap extends Shadows {
 		dshader.shadowProj = getShadowProj();
 	}
 
+	override function saveStaticData() {
+		if( mode != Mixed && mode != Static )
+			return null;
+		if( staticTexture == null )
+			throw "Data not computed";
+		var bytes = haxe.zip.Compress.run(staticTexture.capturePixels().bytes,9);
+		var buffer = new haxe.io.BytesBuffer();
+		buffer.addInt32(staticTexture.width);
+		buffer.addFloat(lightCamera.pos.x);
+		buffer.addFloat(lightCamera.pos.y);
+		buffer.addFloat(lightCamera.pos.z);
+		buffer.addFloat(lightCamera.target.x);
+		buffer.addFloat(lightCamera.target.y);
+		buffer.addFloat(lightCamera.target.z);
+		buffer.addFloat(lightCamera.orthoBounds.xMin);
+		buffer.addFloat(lightCamera.orthoBounds.yMin);
+		buffer.addFloat(lightCamera.orthoBounds.zMin);
+		buffer.addFloat(lightCamera.orthoBounds.xMax);
+		buffer.addFloat(lightCamera.orthoBounds.yMax);
+		buffer.addFloat(lightCamera.orthoBounds.zMax);
+		buffer.addInt32(bytes.length);
+		buffer.add(bytes);
+		return buffer.getBytes();
+	}
+
+	override function loadStaticData( bytes : haxe.io.Bytes ) {
+		if( (mode != Mixed && mode != Static) || bytes == null )
+			return false;
+		var buffer = new haxe.io.BytesInput(bytes);
+		var size = buffer.readInt32();
+		if( size != this.size )
+			return false;
+		lightCamera.pos.x = buffer.readFloat();
+		lightCamera.pos.y = buffer.readFloat();
+		lightCamera.pos.z = buffer.readFloat();
+		lightCamera.target.x = buffer.readFloat();
+		lightCamera.target.y = buffer.readFloat();
+		lightCamera.target.z = buffer.readFloat();
+		lightCamera.orthoBounds.xMin = buffer.readFloat();
+		lightCamera.orthoBounds.yMin = buffer.readFloat();
+		lightCamera.orthoBounds.zMin = buffer.readFloat();
+		lightCamera.orthoBounds.xMax = buffer.readFloat();
+		lightCamera.orthoBounds.yMax = buffer.readFloat();
+		lightCamera.orthoBounds.zMax = buffer.readFloat();
+		lightCamera.update();
+		var len = buffer.readInt32();
+		var pixels = new hxd.Pixels(size, size, haxe.zip.Uncompress.run(buffer.read(len)), format);
+		if( staticTexture != null ) staticTexture.dispose();
+		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
+		staticTexture.uploadPixels(pixels);
+		syncShader(staticTexture);
+		return true;
+	}
+
 	override function draw( passes ) {
 
 		if( !ctx.computingStatic )
