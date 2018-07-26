@@ -23,6 +23,7 @@ package h3d.scene.pbr;
 	var Hide = "Hide";
 	var Env = "Env";
 	var Irrad = "Irrad";
+	var Background = "Background";
 }
 
 @:enum abstract TonemapMap(String) {
@@ -44,9 +45,7 @@ typedef RenderProps = {
 class Renderer extends h3d.scene.Renderer {
 	var slides = new h3d.pass.ScreenFx(new h3d.shader.pbr.Slides());
 	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
-	var pbrOutIndirect = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
 	var tonemap = new h3d.pass.ScreenFx(new h3d.shader.pbr.ToneMapping());
-	var pbrSun = new h3d.shader.pbr.Light.DirLight();
 	var pbrLightPass : h3d.mat.Pass;
 	var screenLightPass : h3d.pass.ScreenFx<h3d.shader.ScreenShader>;
 	var fxaa = new h3d.pass.FXAA();
@@ -54,7 +53,6 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
 	var hasDebugEvent = false;
-	var curDirShadow : hxsl.Shader;
 
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
@@ -80,13 +78,12 @@ class Renderer extends h3d.scene.Renderer {
 		super();
 		this.env = env;
 		defaultPass = new h3d.pass.Default("default");
-		pbrOut.addShader(pbrProps);
 		slides.addShader(pbrProps);
-		pbrOutIndirect.addShader(pbrIndirect);
-		pbrOutIndirect.addShader(pbrProps);
-		pbrOutIndirect.pass.setBlendMode(Add);
-		pbrOutIndirect.pass.stencil = new h3d.mat.Stencil();
-		pbrOutIndirect.pass.stencil.setOp(Keep, Keep, Keep);
+		pbrOut.addShader(pbrIndirect);
+		pbrOut.addShader(pbrProps);
+		pbrOut.pass.setBlendMode(Add);
+		pbrOut.pass.stencil = new h3d.mat.Stencil();
+		pbrOut.pass.stencil.setOp(Keep, Keep, Keep);
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
@@ -201,10 +198,7 @@ class Renderer extends h3d.scene.Renderer {
 		var hdr = allocTarget("hdrOutput", true, 1, RGBA16F);
 		ctx.setGlobal("hdr", hdr);
 		setTarget(hdr);
-		if( renderMode == LightProbe )
-			clear(0);
-		else if( ctx.engine.backgroundColor != null )
-			clear(ctx.engine.backgroundColor);
+		clear(0);
 
 		pbrProps.albedoTex = albedo;
 		pbrProps.normalTex = normal;
@@ -222,34 +216,6 @@ class Renderer extends h3d.scene.Renderer {
 		pbrIndirect.irrSpecular = env.specular;
 		pbrIndirect.irrSpecularLevels = env.specLevels;
 
-		if( ls.shadowLight == null ) {
-			if( curDirShadow != null ) {
-				pbrOut.removeShader(curDirShadow);
-				curDirShadow = null;
-			}
-			pbrOut.removeShader(pbrDirect);
-			pbrOut.removeShader(pbrSun);
-		} else {
-			var pdir = Std.instance(ls.shadowLight, h3d.scene.pbr.DirLight);
-			var pshadow = @:privateAccess pdir == null ? null : pdir.shadows.shader;
-			if( pshadow != curDirShadow ) {
-				if( curDirShadow != null ) pbrOut.removeShader(curDirShadow);
-				curDirShadow = pshadow;
-				if( pshadow != null ) pbrOut.addShader(pshadow);
-			}
-			if( pbrOut.getShader(h3d.shader.pbr.Light.DirLight) == null ) {
-				pbrOut.addShader(pbrDirect);
-				pbrOut.addShader(pbrSun);
-			}
-			// works with both pre-pbr DirLight and pbr DirLight
-			pbrSun.lightColor.load(ls.shadowLight.color);
-			if( pdir != null ) pbrSun.lightColor.scale3(pdir.power * pdir.power);
-			pbrSun.lightDir.load(@:privateAccess ls.shadowLight.getShadowDirection());
-			pbrSun.lightDir.scale3(-1);
-			pbrSun.lightDir.normalize();
-		}
-
-		pbrOut.setGlobals(ctx);
 		pbrDirect.doDiscard = false;
 		pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
 		switch( renderMode ) {
@@ -257,7 +223,16 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular= true;
 			pbrIndirect.showSky = skyMode != Hide;
-			pbrIndirect.skyMap = skyMode == Irrad ? env.diffuse : env.env;
+			pbrIndirect.skyColor = false;
+			pbrIndirect.skyMap = switch( skyMode ) {
+			case Hide: null;
+			case Env: env.env;
+			case Irrad: env.diffuse;
+			case Background:
+				pbrIndirect.skyColor = true;
+				pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor);
+				null;
+			};
 		case LightProbe:
 			pbrIndirect.drawIndirectDiffuse = false;
 			pbrIndirect.drawIndirectSpecular= false;
@@ -265,8 +240,6 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.skyMap = env.env;
 		}
 
-		if( ls.shadowLight != null )
-			pbrOut.render();
 		pbrDirect.doDiscard = true;
 
 		var ls = Std.instance(ls, LightSystem);
@@ -285,7 +258,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		if( renderMode == LightProbe ) {
 			pbrProps.isScreen = true;
-			pbrOutIndirect.render();
+			pbrOut.render();
 			resetTarget();
 			copy(hdr, null);
 			// no warnings
@@ -299,15 +272,16 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrProps.isScreen = true;
 
-		pbrIndirect.drawIndirectDiffuse = true;
-		pbrIndirect.drawIndirectSpecular = false;
-		pbrOutIndirect.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
-		pbrOutIndirect.render();
-
 		pbrIndirect.drawIndirectDiffuse = false;
 		pbrIndirect.drawIndirectSpecular = true;
-		pbrOutIndirect.pass.stencil.setFunc(Always);
-		pbrOutIndirect.render();
+		pbrOut.pass.stencil.setFunc(Always);
+		pbrOut.render();
+
+		pbrIndirect.showSky = false;
+		pbrIndirect.drawIndirectDiffuse = true;
+		pbrIndirect.drawIndirectSpecular = false;
+		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
+		pbrOut.render();
 
 		apply(AfterHdr);
 
@@ -434,6 +408,7 @@ class Renderer extends h3d.scene.Renderer {
 						<option value="Hide">Hide</option>
 						<option value="Env">Show</option>
 						<option value="Irrad">Show Irrad</option>
+						<option value="Background">Background Color</option>
 					</select>
 					<br/>
 					<input type="range" min="0" max="2" field="envPower"/>

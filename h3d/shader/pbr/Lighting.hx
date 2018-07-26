@@ -11,6 +11,9 @@ class Indirect extends PropsDefinition {
 		@param var irrPower : Float;
 
 		@const var showSky : Bool;
+		@const var skyColor : Bool;
+		@param var skyColorValue : Vec3;
+
 		@const var drawIndirectDiffuse : Bool;
 		@const var drawIndirectSpecular : Bool;
 		@param var skyMap : SamplerCube;
@@ -22,8 +25,12 @@ class Indirect extends PropsDefinition {
 			var isSky = normal.dot(normal) <= 0;
 			if( isSky ) {
 				if( showSky ) {
-					normal = (vec3( uvToScreen(calculatedUV) * 5. /*?*/ , 1. ) * cameraInvViewProj.mat3x4()).normalize();
-					pixelColor.rgb = skyMap.get(normal).rgb.pow(vec3(2.)) * irrPower;
+					if( skyColor ) {
+						pixelColor.rgb = skyColorValue * irrPower;
+					} else {
+						normal = (vec3( uvToScreen(calculatedUV) * 5. /*?*/ , 1. ) * cameraInvViewProj.mat3x4()).normalize();
+						pixelColor.rgb = skyMap.get(normal).rgb.pow(vec3(2.)) * irrPower;
+					}
 				} else
 					discard;
 			} else {
