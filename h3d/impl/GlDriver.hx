@@ -102,7 +102,7 @@ private class CompiledShader {
 	public var vertex : Bool;
 	public var globals : Uniform;
 	public var params : Uniform;
-	public var textures : Array<{ u : Uniform, t : hxsl.Ast.Type }>;
+	public var textures : Array<{ u : Uniform, t : hxsl.Ast.Type, mode : Int }>;
 	public var buffers : Array<Int>;
 	public var shader : hxsl.RuntimeShader.RuntimeShaderData;
 	public function new(s,vertex,shader) {
@@ -316,6 +316,7 @@ class GlDriver extends Driver {
 		s.textures = [];
 		var index = 0;
 		var curT = null;
+		var mode = 0;
 		var name = "";
 		var t = shader.textures;
 		while( t != null ) {
@@ -324,14 +325,14 @@ class GlDriver extends Driver {
 			if( tt != curT ) {
 				curT = tt;
 				name = switch( tt ) {
-				case TSampler2D: "Textures";
-				case TSamplerCube: "TexturesCube";
-				case TSampler2DArray: "TexturesArray";
+				case TSampler2D: mode = GL.TEXTURE_2D; "Textures";
+				case TSamplerCube: mode = GL.TEXTURE_CUBE_MAP; "TexturesCube";
+				case TSampler2DArray: #if (!hlsdl || (hlsdl >= "1.7")) mode = GL2.TEXTURE_2D_ARRAY; #end "TexturesArray";
 				default: throw "Unsupported texture type "+tt;
 				}
 				index = 0;
 			}
-			s.textures.push({ u : gl.getUniformLocation(p.p, prefix+name+"["+index+"]"), t : curT });
+			s.textures.push({ u : gl.getUniformLocation(p.p, prefix+name+"["+index+"]"), t : curT, mode : mode });
 			index++;
 			t = t.next;
 		}
@@ -506,6 +507,8 @@ class GlDriver extends Driver {
 				#end
 
 				var mode = getBindType(t);
+				if( mode != pt.mode )
+					throw "Texture format mismatch: "+t+" should be "+pt.t;
 				gl.activeTexture(GL.TEXTURE0 + i);
 				gl.uniform1i(pt.u, i);
 				gl.bindTexture(mode, t.t.t);
