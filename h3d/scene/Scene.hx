@@ -371,16 +371,17 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		// check that passes have been rendered
 		#if debug
-		for( p in passes ) {
-			if( !p.rendered ) {
-				trace("Pass " + p.name+" has not been rendered : don't know how to handle.");
-				var o = p.passes;
-				while( o != null ) {
-					trace(" used by " + o.obj.name == null ? "" + o.obj : o.obj.name);
-					o = o.next;
+		if( !ctx.computingStatic )
+			for( p in passes ) {
+				if( !p.rendered ) {
+					trace("Pass " + p.name+" has not been rendered : don't know how to handle.");
+					var o = p.passes;
+					while( o != null ) {
+						trace(" used by " + o.obj.name == null ? "" + o.obj : o.obj.name);
+						o = o.next;
+					}
 				}
 			}
-		}
 		#end
 
 		if( camera.rightHanded )
