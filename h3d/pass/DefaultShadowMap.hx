@@ -11,7 +11,7 @@ class DefaultShadowMap extends DirShadowMap {
 	public var color : h3d.Vector;
 
 	public function new(size=1024) {
-		super();
+		super(null);
 		this.size = size;
 		color = new h3d.Vector();
 		mode = Dynamic;

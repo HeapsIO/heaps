@@ -7,14 +7,10 @@ class DirShadowMap extends Shadows {
 	var depth : h3d.mat.DepthBuffer;
 	var dshader : h3d.shader.DirShadow;
 	var border : Border;
-	var staticTexture : h3d.mat.Texture;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
-	public var power = 30.0;
-	public var bias = 0.01;
 
-	public function new() {
-		super();
-
+	public function new( light : h3d.scene.Light ) {
+		super(light);
 		lightCamera = new h3d.Camera();
 		lightCamera.orthoBounds = new h3d.col.Bounds();
 		shader = dshader = new h3d.shader.DirShadow();
@@ -33,13 +29,16 @@ class DirShadowMap extends Shadows {
 			border.dispose();
 			border = new Border(s, s);
 		}
-		return size = s;
+		return super.set_size(s);
 	}
 
 	override function dispose() {
 		super.dispose();
 		if( customDepth && depth != null ) depth.dispose();
-		if( staticTexture != null ) staticTexture.dispose();
+	}
+
+	function getShadowProj() {
+		return lightCamera.m;
 	}
 
 	public dynamic function calcShadowBounds( camera : h3d.Camera ) {
@@ -107,11 +106,15 @@ class DirShadowMap extends Shadows {
 			calcShadowBounds(lightCamera);
 			lightCamera.update();
 		}
-		cameraViewProj = lightCamera.m;
+		cameraViewProj = getShadowProj();
 	}
 
-	public function getShadowProj() {
-		return lightCamera.m;
+	function syncShader(texture) {
+		dshader.shadowMap = texture;
+		dshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
+		dshader.shadowBias = bias;
+		dshader.shadowPower = power;
+		dshader.shadowProj = getShadowProj();
 	}
 
 	override function draw( passes ) {
@@ -123,8 +126,12 @@ class DirShadowMap extends Shadows {
 			case Dynamic:
 				// nothing
 			case Static, Mixed:
-				if( staticTexture == null ) throw "Static texture is missing, call s3d.computeStatic() first";
-				if( mode == Static ) return passes;
+				if( staticTexture == null || staticTexture.isDisposed() )
+					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
+				if( mode == Static ) {
+					syncShader(staticTexture);
+					return passes;
+				}
 			}
 
 		passes = filterPasses(passes);
@@ -138,7 +145,7 @@ class DirShadowMap extends Shadows {
 
 		if( mode != Mixed || ctx.computingStatic ) {
 			var ct = ctx.camera.target;
-			var slight = ctx.lightSystem.shadowLight;
+			var slight = light == null ? ctx.lightSystem.shadowLight : light;
 			var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
 			if( ldir == null )
 				lightCamera.target.set(0, 0, -1);
@@ -172,11 +179,7 @@ class DirShadowMap extends Shadows {
 		if( blur.radius > 0 && (mode != Mixed || !ctx.computingStatic) )
 			blur.apply(ctx, texture);
 
-		dshader.shadowMap = texture;
-		dshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
-		dshader.shadowBias = bias;
-		dshader.shadowPower = power;
-		dshader.shadowProj = getShadowProj();
+		syncShader(texture);
 		return passes;
 	}
 

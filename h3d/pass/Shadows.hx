@@ -10,32 +10,44 @@ enum RenderMode {
 class Shadows extends Default {
 
 	var format : hxd.PixelFormat;
+	var staticTexture : h3d.mat.Texture;
+	var light : h3d.scene.Light;
 	public var mode(default,set) : RenderMode = None;
 	public var size(default,set) : Int = 1024;
 	public var shader(default,null) : hxsl.Shader;
 	public var blur : Blur;
 
-	public function new() {
+	public var power = 30.0;
+	public var bias = 0.01;
+
+	public function new(light) {
 		if( format == null ) format = R16F;
 		if( !h3d.Engine.getCurrent().driver.isSupportedFormat(format) ) format = h3d.mat.Texture.nativeFormat;
 		super("shadows");
+		this.light = light;
 		blur = new Blur(5);
 		blur.quality = 0.5;
 		blur.shader.isDepth = format == h3d.mat.Texture.nativeFormat;
 	}
 
 	function set_mode(m:RenderMode) {
-		if( m != None ) throw "Shadow mode "+m+" not supported for "+this;
+		if( m != None ) throw "Shadow mode "+m+" not supported for "+light;
 		return mode = m;
 	}
 
 	function set_size(s) {
+		if( s != size && staticTexture != null ) {
+			staticTexture.dispose();
+			staticTexture = null;
+		}
 		return size = s;
 	}
 
 	override function dispose() {
 		super.dispose();
 		blur.dispose();
+		// don't set to null
+		if( staticTexture != null ) staticTexture.dispose();
 	}
 
 	override function getOutputs() : Array<hxsl.Output> {
