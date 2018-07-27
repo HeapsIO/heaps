@@ -421,7 +421,7 @@ class HlslOut {
 			locals.set(v.id, v);
 			switch( it.e ) {
 			case TBinop(OpInterval, e1, e2):
-				add("for(");
+				add("[loop] for(");
 				add(v.name+"=");
 				addValue(e1,tabs);
 				add(";"+v.name+"<");
@@ -434,13 +434,13 @@ class HlslOut {
 		case TWhile(e, loop, false):
 			var old = tabs;
 			tabs += "\t";
-			add("do ");
+			add("[loop] do ");
 			addBlock(loop,tabs);
 			add(" while( ");
 			addValue(e,tabs);
 			add(" )");
 		case TWhile(e, loop, _):
-			add("while( ");
+			add("[loop] while( ");
 			addValue(e, tabs);
 			add(" ) ");
 			addBlock(loop,tabs);
