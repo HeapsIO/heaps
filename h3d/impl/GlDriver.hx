@@ -45,6 +45,8 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var TEXTURE_2D_ARRAY = 0x8C1A;
 	static inline var UNSIGNED_INT_2_10_10_10_REV = 0x8368;
 	static inline var UNSIGNED_INT_10F_11F_11F_REV = 0x8C3B;
+	static inline var FUNC_MIN = 0x8807;
+	static inline var FUNC_MAX = 0x8808;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -1550,7 +1552,11 @@ class GlDriver extends Driver {
 	static var OP = [
 		GL.FUNC_ADD,
 		GL.FUNC_SUBTRACT,
-		GL.FUNC_REVERSE_SUBTRACT
+		GL.FUNC_REVERSE_SUBTRACT,
+		#if (!hlsdl || (hlsdl >= "1.7"))
+		GL2.FUNC_MIN,
+		GL2.FUNC_MAX,
+		#end
 	];
 
 	static var CUBE_FACES = [

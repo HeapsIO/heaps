@@ -1162,7 +1162,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		Add,
 		Subtract,
 		RevSubstract,
-		// Min / Max : not supported by Heaps for now
+		Min,
+		Max
 	];
 
 	static var FILTER : Array<Array<Filter>> = [

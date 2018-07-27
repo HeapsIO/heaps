@@ -69,6 +69,8 @@ enum Operation {
 	Add;
 	Sub;
 	ReverseSub;
+	Min;
+	Max;
 }
 
 enum TextureFlags {
