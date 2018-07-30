@@ -35,7 +35,7 @@ class Pass implements hxd.impl.Serializable {
 	@:bits(bits) public var blendAlphaDst : Blend;
 	@:bits(bits) public var blendOp : Operation;
 	@:bits(bits) public var blendAlphaOp : Operation;
-	@:bits(bits, 4) public var colorMask : Int;
+	public var colorMask : Int;
 
 	@:s public var stencil : Stencil;
 

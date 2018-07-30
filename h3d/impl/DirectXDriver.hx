@@ -95,6 +95,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentStencilMaskBits = -1;
 	var currentStencilOpBits = -1;
 	var currentStencilRef = 0;
+	var currentColorMask = -1;
 	var targetsCount = 1;
 	var allowDraw = false;
 
@@ -548,22 +549,24 @@ class DirectXDriver extends h3d.impl.Driver {
 		updateResCount++;
 	}
 
-	static inline var SCISSOR_BIT = 1 << (Pass.colorMask_offset + 4);
+	static inline var SCISSOR_BIT = 1 << (Pass.blendAlphaOp_offset + 4);
 
 	override public function selectMaterial(pass:h3d.mat.Pass) {
 		var bits = @:privateAccess pass.bits;
+		var mask = pass.colorMask;
 
 		if( hasScissor ) bits |= SCISSOR_BIT;
 
 		var stOpBits = pass.stencil != null ? @:privateAccess pass.stencil.opBits : -1;
 		var stMaskBits = pass.stencil != null ? @:privateAccess pass.stencil.maskBits : -1;
 
-		if( bits == currentMaterialBits && stOpBits == currentStencilOpBits && stMaskBits == currentStencilMaskBits )
+		if( bits == currentMaterialBits && stOpBits == currentStencilOpBits && stMaskBits == currentStencilMaskBits && mask == currentColorMask )
 			return;
 
 		currentMaterialBits = bits;
 		currentStencilOpBits = stOpBits;
 		currentStencilMaskBits = stMaskBits;
+		currentColorMask = mask;
 
 		var depthBits = bits & (Pass.depthWrite_mask | Pass.depthTest_mask);
 		var depths = depthStates.get(depthBits);
@@ -640,7 +643,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			Driver.rsSetState(raster);
 		}
 
-		var blendBits = bits & (Pass.blendSrc_mask | Pass.blendDst_mask | Pass.blendAlphaSrc_mask | Pass.blendAlphaDst_mask | Pass.blendOp_mask | Pass.blendAlphaOp_mask | Pass.colorMask_mask);
+		var blendBits = (bits & (Pass.blendSrc_mask | Pass.blendDst_mask | Pass.blendAlphaSrc_mask | Pass.blendAlphaDst_mask | Pass.blendOp_mask | Pass.blendAlphaOp_mask)) | mask;
 		var blend = blendStates.get(blendBits);
 		if( blend == null ) {
 			var desc = new RenderTargetBlendDesc();
@@ -650,7 +653,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			desc.destBlendAlpha = BLEND_ALPHA[Pass.getBlendAlphaDst(bits)];
 			desc.blendOp = BLEND_OP[Pass.getBlendOp(bits)];
 			desc.blendOpAlpha = BLEND_OP[Pass.getBlendAlphaOp(bits)];
-			desc.renderTargetWriteMask = Pass.getColorMask(bits);
+			desc.renderTargetWriteMask = mask;
 			desc.blendEnable = !(desc.srcBlend == One && desc.srcBlendAlpha == One && desc.destBlend == Zero && desc.destBlendAlpha == Zero && desc.blendOp == Add && desc.blendOpAlpha == Add);
 			var tmp = new hl.NativeArray(1);
 			tmp[0] = desc;

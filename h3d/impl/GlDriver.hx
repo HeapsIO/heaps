@@ -164,6 +164,7 @@ class GlDriver extends Driver {
 	var programs : Map<Int, CompiledProgram>;
 	var frame : Int;
 	var lastActiveIndex : Int = 0;
+	var curColorMask = -1;
 
 	var bufferWidth : Int;
 	var bufferHeight : Int;
@@ -548,6 +549,13 @@ class GlDriver extends Driver {
 			}
 		}
 		selectMaterialBits(bits);
+
+		if( curColorMask != pass.colorMask ) {
+			var m = pass.colorMask;
+			gl.colorMask(m & 1 != 0, m & 2 != 0, m & 4 != 0, m & 8 != 0);
+			curColorMask = m;
+		}
+
 		var s = defStencil;
 		if( pass.stencil == null ) {
 			if( curStEnabled ) {
@@ -622,10 +630,6 @@ class GlDriver extends Driver {
 				gl.depthFunc(COMPARE[cmp]);
 			}
 		}
-		if( diff & Pass.colorMask_mask != 0 ) {
-			var m = Pass.getColorMask(bits);
-			gl.colorMask(m & 1 != 0, m & 2 != 0, m & 4 != 0, m & 8 != 0);
-		}
 		curMatBits = bits;
 	}
 
@@ -681,7 +685,7 @@ class GlDriver extends Driver {
 		var bits = 0;
 		if( color != null ) {
 			gl.colorMask(true, true, true, true);
-			if( curMatBits >= 0 ) curMatBits |= Pass.colorMask_mask;
+			curColorMask = 15;
 			#if hlsdl
 			// clear does not take gamma correction into account in GL/Windows
 			if( curTarget != null && curTarget.isSRGB() )
