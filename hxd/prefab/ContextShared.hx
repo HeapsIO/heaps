@@ -13,6 +13,7 @@ class ContextShared {
 	public var contexts : Map<Prefab,Context>;
 	public var references : Map<Prefab,Array<Context>>;
 	public var currentPath : String;
+	public var editorDisplay : Bool;
 
 	var cache : h3d.prim.ModelCache;
 	var shaderCache : ShaderDefCache;
