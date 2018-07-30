@@ -67,5 +67,15 @@ class Library extends Prefab {
 		if( extension != null ) registeredExtensions.set(extension, type);
 		return true;
 	}
+	
+	public static function create( extension : String ) {
+		var type = registeredExtensions.get(extension);
+		var p : hxd.prefab.Prefab;
+		if( type == null )
+			p = new Library();
+		else
+			p = Type.createInstance(registeredElements.get(type).cl,[]);
+		return p;
+	}
 
 }

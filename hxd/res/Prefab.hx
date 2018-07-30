@@ -8,11 +8,7 @@ class Prefab extends hxd.res.Resource {
 		if( lib != null )
 			return lib;
 		var data = haxe.Json.parse(entry.getText());
-		var type = @:privateAccess hxd.prefab.Library.registeredExtensions.get(entry.extension);
-		if( type == null )
-			lib = new hxd.prefab.Library();
-		else
-			lib = Type.createInstance(hxd.prefab.Library.getRegistered().get(type).cl,[]);
+		lib = hxd.prefab.Library.create(entry.extension);
 		lib.load(data);
 		watch(function() lib.reload(haxe.Json.parse(entry.getText())));
 		return lib;
