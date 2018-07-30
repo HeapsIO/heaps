@@ -82,6 +82,7 @@ class Stage3dDriver extends Driver {
 	var flashVersion : Float;
 	var tdisposed : Texture;
 	var defaultDepth : h3d.mat.DepthBuffer;
+	var curColorMask = -1;
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -374,6 +375,13 @@ class Stage3dDriver extends Driver {
 
 	override function selectMaterial( pass : Pass ) {
 		selectMaterialBits(@:privateAccess pass.bits);
+
+		if( pass.colorMask != curColorMask ) {
+			var m = pass.colorMask;
+			ctx.setColorMask(m & 1 != 0, m & 2 != 0, m & 4 != 0, m & 8 != 0);
+			curColorMask = m;
+		}
+
 		var s = pass.stencil != null ? pass.stencil : defStencil;
 		@:privateAccess selectStencilBits(s.opBits, s.maskBits);
 	}
@@ -407,10 +415,6 @@ class Stage3dDriver extends Driver {
 			var write = Pass.getDepthWrite(bits) != 0;
 			var cmp = Pass.getDepthTest(bits);
 			ctx.setDepthTest(write, COMPARE[cmp]);
-		}
-		if( diff & Pass.colorMask_mask != 0 ) {
-			var m = Pass.getColorMask(bits);
-			ctx.setColorMask(m & 1 != 0, m & 2 != 0, m & 4 != 0, m & 8 != 0);
 		}
 		curMatBits = bits;
 	}
