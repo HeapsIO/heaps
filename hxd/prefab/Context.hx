@@ -39,14 +39,6 @@ package hxd.prefab;
 		return c;
 	}
 
-	public dynamic function onError( e : Dynamic ) {
-		#if editor
-		js.Browser.window.alert(e);
-		#else
-		throw e;
-		#end
-	}
-
 	public function loadModel( path : String ) {
 		return shared.loadModel(path);
 	}
@@ -83,7 +75,7 @@ package hxd.prefab;
 			if( v == null ) {
 				var parts2 = path.split(".");
 				for( i in 0...parts.length ) parts2.pop();
-				onError("Object not found " + parts2.join("."));
+				shared.onError("Object not found " + parts2.join("."));
 				return null;
 			}
 			root = v;

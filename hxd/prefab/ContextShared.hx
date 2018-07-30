@@ -28,6 +28,10 @@ class ContextShared {
 		shaderCache = new ShaderDefCache();
 	}
 
+	public function onError( e : Dynamic ) {
+		throw e;
+	}
+
 	public function elements() {
 		return [for(e in contexts.keys()) e];
 	}
