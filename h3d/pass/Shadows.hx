@@ -87,15 +87,6 @@ class Shadows extends Default {
 		var last = null;
 
 		var cur = passes;
-
-		var count = 0;
-		while( cur != null )  {
-			if( cur.pass.isStatic == isStatic )
-				count++;
-			cur = cur.next;
-		}
-		cur = passes;
-
 		while( cur != null ) {
 			if( cur.pass.isStatic == isStatic ) {
 				if( head == null )
@@ -118,16 +109,6 @@ class Shadows extends Default {
 			last.next = head;
 		if( prev != null )
 			prev.next = null;
-
-
-		cur = head;
-		while( cur != null )  {
-			if( cur.pass.isStatic != isStatic ) throw "assert";
-			count--;
-			cur = cur.next;
-		}
-		if( count != 0 ) throw "assert";
-
 		return head;
 	}
 
