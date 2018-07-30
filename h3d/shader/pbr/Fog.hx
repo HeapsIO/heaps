@@ -71,14 +71,14 @@ class Fog extends h3d.shader.ScreenShader {
 		}
 
 		function getFogDensity(pos: Vec3) : Float{
+			var speedOffset = time * speed / tilling;
 			var fadeFactor = 1 - (abs((pos.z - fogHeight) / (fogRange)));
 			fadeFactor *= fadeFactor;
 			fadeFactor = mix(1, fadeFactor, fadeStrength);
-			var turbulenceUV = ((pos.xy / turbulenceTilling) -(pos.z * 0.5)) + time * turbulenceSpeed + time * speed;
-			var turbulence = textureLod(turbulenceText, turbulenceUV * turbulenceScale, 0).rg;
-			var textureOffset = turbulenceIntensity * turbulence;
-			var uv = (pos.xy / tilling) + textureOffset + time * speed;
-			var fog = textureLod(texture, uv, 0).r;
+			var uv = (pos.xy / tilling) + speedOffset;
+			var turbulenceUV = time * turbulenceSpeed + uv /*- (pos.z * 0.5)*/;
+			var turbulence = textureLod(turbulenceText, turbulenceUV * turbulenceScale, 0).rg * turbulenceIntensity;
+			var fog = textureLod(texture, uv + turbulence, 0).r;
 			return fog * density * fadeFactor;
 		}
 

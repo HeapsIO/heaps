@@ -13,7 +13,6 @@ typedef FogProps = {
 
 	var turbulenceText : String;
 	var turbulenceScale : Float;
-	var turbulenceTilling : Float;
 	var turbulenceIntensity : Float;
 	var turbulenceSpeed  : Float;
 
@@ -47,7 +46,6 @@ class Fog extends RendererFX {
 
 				turbulenceText : null,
 				turbulenceScale: 0.0,
-				turbulenceTilling : 1.0,
 				turbulenceIntensity : 0.0,
 				turbulenceSpeed : 0.0,
 
@@ -115,12 +113,11 @@ class Fog extends RendererFX {
 			fogPass.shader.maxStepCount = props.stepCount;
 			fogPass.shader.tilling = new h3d.Vector(props.tilling, props.tilling);
 			fogPass.shader.speed = new h3d.Vector(Math.cos(Math.degToRad(props.direction)) * props.speed, Math.sin(Math.degToRad(props.direction)) * props.speed);
-			fogPass.shader.turbulenceSpeed = new h3d.Vector(props.turbulenceSpeed, props.turbulenceSpeed);
+			fogPass.shader.turbulenceSpeed = new h3d.Vector(props.turbulenceSpeed / 10.0, props.turbulenceSpeed / 10.0);
 			fogPass.shader.time = ctx.time;
 			fogPass.shader.texture = fogTexture == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : fogTexture;
 			fogPass.shader.turbulenceText = fogTurbulence == null ? h3d.mat.Texture.fromColor(0xFFFFFF) : fogTurbulence;
 			fogPass.shader.turbulenceScale = props.turbulenceScale;
-			fogPass.shader.turbulenceTilling = new h3d.Vector(props.turbulenceTilling, props.turbulenceTilling);
 			fogPass.shader.turbulenceIntensity = props.turbulenceIntensity;
 			fogPass.shader.color = h3d.Vector.fromColor(props.color);
 			fogPass.render();
@@ -145,7 +142,7 @@ class Fog extends RendererFX {
 	override function getHideProps() {
 		var p = super.getHideProps();
 		p.allowChildren = function(name) return name == "noise";
-		//p.onChildUpdate = function(p) syncFogTexture();
+		p.onChildUpdate = function(p) syncFogTexture();
 		return p;
 	}
 
@@ -157,7 +154,7 @@ class Fog extends RendererFX {
 			<div class="group" name="Fog">
 				<dt>Color</dt><dd><input type="color" field="color"></dd>
 				<dt>Tilling</dt><dd><input type="range" min="1" max="100" field="tilling"></dd>
-				<dt>Density</dt><dd><input type="range" min="0" max="100" field="density"></dd>
+				<dt>Density</dt><dd><input type="range" min="0" max="2" field="density"></dd>
 				<dt>Height</dt><dd><input type="range" min="-20" max="20" field="height"></dd>
 				<dt>Range</dt><dd><input type="range" min="1" max="10" field="range"></dd>
 				<dt>Fade Strength</dt><dd><input type="range" min="0" max="1" field="fadeStrength"></dd>
@@ -172,7 +169,6 @@ class Fog extends RendererFX {
 			<div class="group" name="Turbulence">
 				<dt>Texture</dt><input type="texturepath" field="turbulenceText"/>
 				<dt>Scale</dt><dd><input type="range" min="0" max="1" field="turbulenceScale"></dd>
-				<dt>Tilling</dt><dd><input type="range" min="0" max="2" field="turbulenceTilling"></dd>
 				<dt>Speed</dt><dd><input type="range" min="0" max="10" field="turbulenceSpeed"></dd>
 				<dt>Intensity</dt><dd><input type="range" min="0" max="1" field="turbulenceIntensity"></dd>
 			</div>
