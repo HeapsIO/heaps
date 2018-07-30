@@ -105,7 +105,7 @@ class Prefab {
 			obj.source = source;
 		if( children.length > 0 )
 			obj.children = [for( s in children ) s.saveRec()];
-		if( props != null )
+		if( props != null && obj.props == null )
 			obj.props = props;
 		return obj;
 	}
