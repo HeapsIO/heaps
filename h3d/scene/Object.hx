@@ -78,6 +78,11 @@ class Object implements hxd.impl.Serializable {
 	public var inheritCulled(get, set) : Bool;
 
 	/**
+		When enabled, the object bounds are ignored when using getBounds()
+	**/
+	public var ignoreBounds(get, set) : Bool;
+
+	/**
 		When enabled, the object is ignore when using getCollider()
 	**/
 	public var ignoreCollide(get, set) : Bool;
@@ -119,6 +124,7 @@ class Object implements hxd.impl.Serializable {
 	inline function get_lightCameraCenter() return flags.has(FLightCameraCenter);
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
+	inline function get_ignoreBounds() return flags.has(FIgnoreBounds);
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
 	inline function get_allowSerialize() return !flags.has(FNoSerialize);
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
@@ -129,6 +135,7 @@ class Object implements hxd.impl.Serializable {
 	inline function set_followPositionOnly(b) return flags.set(FFollowPositionOnly, b);
 	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
 	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
+	inline function set_ignoreBounds(b) return flags.set(FIgnoreBounds, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
