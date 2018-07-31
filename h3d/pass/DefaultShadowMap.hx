@@ -10,7 +10,9 @@ class DefaultShadowMap extends DirShadowMap {
 
 	public var color : h3d.Vector;
 
-	public function new(size=1024) {
+	public function new(size=1024,?format:hxd.PixelFormat) {
+		if( format != null )
+			this.format = format;
 		super(null);
 		this.size = size;
 		color = new h3d.Vector();
