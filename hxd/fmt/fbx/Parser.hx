@@ -160,15 +160,15 @@ class Parser {
 		
 		var props : Array<FbxProp> = new Array();
 		var childs : Array<FbxNode> = new Array();
-		for (i in 0...numProperties) {
+		for ( i in 0...numProperties ) {
 			props.push(readBinaryProperty());
 		}
 		
-		if (pos < nextRecord) {
+		if ( pos < nextRecord ) {
 			do {
 				childs.push(parseBinaryNode());
 			}
-			while (pos + 13 < nextRecord); // There is null-record of 13 bytes afterwards for some reason.
+			while ( pos + 13 < nextRecord ); // There is null-record of 13 bytes afterwards for some reason.
 		}
 		
 		return { name: name, props: props, childs: childs };
@@ -181,13 +181,11 @@ class Parser {
 		var arrayCompressedLen:Int;
 		var arrayBytes:Bytes = null;
 		var arrayBytesPos:Int = 0;
-		inline function readArray(entrySize:Int)
-		{ 
+		inline function readArray(entrySize:Int) {
 			arrayLen = getInt32();
 			arrayEncoding = getInt32();
 			arrayCompressedLen = getInt32();
-			switch(arrayEncoding)
-			{
+			switch( arrayEncoding ) {
 				case 0:
 					arrayBytes = bytes;
 					arrayBytesPos = pos;
@@ -206,7 +204,7 @@ class Parser {
 		// Raw binary data converted to Strings.
 		
 		var type : Int = getByte();
-		switch(type) {
+		switch( type ) {
 			case 'Y'.code:
 				return PInt(getInt16());
 			case 'C'.code:
@@ -224,8 +222,7 @@ class Parser {
 			case 'f'.code:
 				readArray(4);
 				var floats:Array<Float> = new Array();
-				while (arrayLen > 0)
-				{
+				while ( arrayLen > 0 ) {
 					floats.push(arrayBytes.getFloat(arrayBytesPos));
 					arrayBytesPos += 4;
 				}
@@ -233,8 +230,7 @@ class Parser {
 			case 'd'.code:
 				readArray(8);
 				var doubles:Array<Float> = new Array();
-				while (arrayLen > 0)
-				{
+				while ( arrayLen > 0 ) {
 					doubles.push(arrayBytes.getDouble(arrayBytesPos));
 					arrayBytesPos += 8;
 				}
@@ -242,8 +238,7 @@ class Parser {
 			case 'l'.code:
 				readArray(8);
 				var i64s:Array<Int> = new Array();
-				while (arrayLen > 0)
-				{
+				while ( arrayLen > 0 ) {
 					i64s.push(arrayBytes.getInt64(arrayBytesPos).low);
 					arrayBytesPos += 8;
 				}
@@ -251,8 +246,7 @@ class Parser {
 			case 'i'.code:
 				readArray(4);
 				var ints:Array<Int> = new Array();
-				while (arrayLen > 0)
-				{
+				while ( arrayLen > 0 ) {
 					ints.push(arrayBytes.getInt32(arrayBytesPos));
 					arrayBytesPos += 4;
 				}
@@ -260,8 +254,7 @@ class Parser {
 			case 'b'.code:
 				readArray(1);
 				var bools:Array<Int> = new Array();
-				while (arrayLen > 0)
-				{
+				while ( arrayLen > 0 ) {
 					bools.push(arrayBytes.get(arrayBytesPos++));
 				}
 				return PInts(bools);
