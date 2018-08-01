@@ -23,6 +23,9 @@ class MacroParser {
 		case [ { expr : EConst(CInt(a) | CFloat(a)) }, { expr : EConst(CInt(b) | CFloat(b)) } ] if( m.name == "range" ):
 			v.qualifiers.push(Range(Std.parseFloat(a),Std.parseFloat(b)));
 			return;
+		case [ { expr : EConst(CInt(a)) } ] if( m.name == "perInstance" ):
+			v.qualifiers.push(PerInstance(Std.parseInt(a)));
+			return;
 		default:
 			error("Invalid meta parameter for "+m.name, m.pos);
 		}
@@ -53,6 +56,8 @@ class MacroParser {
 			v.qualifiers.push(Precision(High));
 		case "ignore":
 			v.qualifiers.push(Ignore);
+		case "perInstance":
+			v.qualifiers.push(PerInstance(1));
 		default:
 			error("Unsupported qualifier " + m.name, m.pos);
 		}

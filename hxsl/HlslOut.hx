@@ -25,6 +25,8 @@ class HlslOut {
 		m.set(Fract, "frac");
 		m.set(Mix, "lerp");
 		m.set(Inversesqrt, "rsqrt");
+		m.set(VertexID,"_in.vertexID");
+		m.set(InstanceID,"_in.instanceID");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -32,6 +34,8 @@ class HlslOut {
 
 	var SV_POSITION = "SV_POSITION";
 	var SV_TARGET = "SV_TARGET";
+	var SV_VertexID = "SV_VertexID";
+	var SV_InstanceID = "SV_InstanceID";
 	var STATIC = "static ";
 	var buf : StringBuf;
 	var exprIds = 0;
@@ -507,6 +511,12 @@ class HlslOut {
 		}
 	}
 
+	function collectGlobals( m : Map<TGlobal,Bool>, e : TExpr ) {
+		switch( e.e )  {
+		case TGlobal(g): m.set(g,true);
+		default: e.iter(collectGlobals.bind(m));
+		}
+	}
 
 	function initVars( s : ShaderData ) {
 		var index = 0;
@@ -521,12 +531,20 @@ class HlslOut {
 			varAccess.set(v.id, prefix);
 		}
 
+		var foundGlobals = new Map();
+		for( f in s.funs )
+			collectGlobals(foundGlobals, f.expr);
+
 		add("struct s_input {\n");
 		if( !isVertex )
 			add("\tfloat4 __pos__ : "+SV_POSITION+";\n");
 		for( v in s.vars )
 			if( v.kind == Input || (v.kind == Var && !isVertex) )
 				declVar("_in.", v);
+		if( foundGlobals.exists(VertexID) )
+			add("\tuint vertexID : "+SV_VertexID+";\n");
+		if( foundGlobals.exists(InstanceID) )
+			add("\tuint instanceID : "+SV_InstanceID+";\n");
 		add("};\n\n");
 
 		add("struct s_output {\n");

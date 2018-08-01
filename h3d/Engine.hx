@@ -199,6 +199,18 @@ class Engine {
 		}
 	}
 
+	public function renderInstanced( buffers : Buffer.BufferOffset, indexes : Indexes, commands : h3d.impl.InstanceBuffer ) {
+		flushTarget();
+		driver.selectMultiBuffers(buffers);
+		if( indexes.isDisposed() )
+			return;
+		if( commands.commandCount > 0 ) {
+			driver.drawInstanced(indexes.ibuf, commands);
+			drawTriangles += commands.triCount;
+			drawCalls++;
+		}
+	}
+
 	function set_debug(d) {
 		debug = d;
 		driver.setDebug(debug);

@@ -872,6 +872,13 @@ class DirectXDriver extends h3d.impl.Driver {
 				if( v.kind == Input ) {
 					var e = new LayoutElement();
 					var name = hxsl.HlslOut.semanticName(v.name);
+					var perInst = 0;
+					if( v.qualifiers != null )
+						for( q in v.qualifiers )
+							switch( q ) {
+							case PerInstance(k): perInst = k;
+							default:
+							}
 					e.semanticName = @:privateAccess name.toUtf8();
 					e.inputSlot = layout.length;
 					e.format = switch( v.type ) {
@@ -883,7 +890,11 @@ class DirectXDriver extends h3d.impl.Driver {
 					default:
 						throw "Unsupported input type " + hxsl.Ast.Tools.toString(v.type);
 					};
-					e.inputSlotClass = PerVertexData;
+					if( perInst > 0 ) {
+						e.inputSlotClass = PerInstanceData;
+						e.instanceDataStepRate = perInst;
+					} else
+						e.inputSlotClass = PerVertexData;
 					layout.push(e);
 					s.offsets.push(offset);
 					s.inputs.push(v.name);
@@ -1091,6 +1102,25 @@ class DirectXDriver extends h3d.impl.Driver {
 			dx.Driver.iaSetIndexBuffer(ibuf.res,false,0);
 		}
 		dx.Driver.drawIndexed(ntriangles * 3, startIndex, 0);
+	}
+
+	override function allocInstanceBuffer(b:InstanceBuffer, buf : haxe.io.Bytes) {
+		b.data = dx.Driver.createBuffer(b.commandCount * 5 * 4, Default, UnorderedAccess, None, DrawIndirectArgs, 4, buf);
+	}
+
+	override function disposeInstanceBuffer(b:InstanceBuffer) {
+		(b.data : dx.Resource).release();
+		b.data = null;
+	}
+
+	override function drawInstanced(ibuf:IndexBuffer, commands:InstanceBuffer) {
+		if( !allowDraw )
+			return;
+		if( currentIndex != ibuf ) {
+			currentIndex = ibuf;
+			dx.Driver.iaSetIndexBuffer(ibuf.res,false,0);
+		}
+		dx.Driver.drawIndexedInstancedIndirect(commands.data, 0);
 	}
 
 	static var COMPARE : Array<ComparisonFunc> = [

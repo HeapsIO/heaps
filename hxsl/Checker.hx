@@ -126,10 +126,14 @@ class Checker {
 				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
 			case Trace:
 				[];
+			case VertexID, InstanceID:
+				null;
 			}
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );
 		}
+		globals.set("vertexID", { t : TInt, g : VertexID });
+		globals.set("instanceID", { t : TInt, g : InstanceID });
 		globals.set("int", globals.get("toInt"));
 		globals.set("float", globals.get("toFloat"));
 		globals.set("reflect", globals.get("lReflect"));
@@ -705,6 +709,7 @@ class Checker {
 					}
 					if( tv.kind != Global && tv.kind != Param ) error("@const only allowed on parameter or global", pos);
 				case PerObject: if( tv.kind != Global ) error("@perObject only allowed on global", pos);
+				case PerInstance(_): if( tv.kind != Input ) error("@perInstance only allowed on input", pos);
 				case Nullable: if( tv.kind != Param ) error("@nullable only allowed on parameter or global", pos);
 				case Name(_):
 					if( parent != null ) error("Cannot have an explicit name for a structure variable", pos);

@@ -201,6 +201,9 @@ class Driver {
 	public function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 	}
 
+	public function drawInstanced( ibuf : IndexBuffer, commands : h3d.impl.InstanceBuffer ) {
+	}
+
 	public function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
 	}
 
@@ -242,6 +245,9 @@ class Driver {
 		return null;
 	}
 
+	public function allocInstanceBuffer( b : h3d.impl.InstanceBuffer, bytes : haxe.io.Bytes ) {
+	}
+
 	public function disposeTexture( t : h3d.mat.Texture ) {
 	}
 
@@ -249,6 +255,9 @@ class Driver {
 	}
 
 	public function disposeVertexes( v : VertexBuffer ) {
+	}
+
+	public function disposeInstanceBuffer( b : h3d.impl.InstanceBuffer ) {
 	}
 
 	public function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
