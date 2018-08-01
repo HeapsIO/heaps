@@ -310,7 +310,10 @@ class Renderer extends h3d.scene.Renderer {
 		case Debug:
 
 			var shadowMap = ctx.textures.getNamed("shadowMap");
+			if( shadowMap == null )
+				shadowMap = h3d.mat.Texture.fromColor(0);
 			slides.shader.shadowMap = shadowMap;
+			slides.shader.shadowMapChannel = R;
 			slides.render();
 
 			if( !hasDebugEvent ) {
