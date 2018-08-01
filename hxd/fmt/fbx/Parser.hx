@@ -1,4 +1,5 @@
 package hxd.fmt.fbx;
+import haxe.io.Bytes;
 using hxd.fmt.fbx.Data;
 
 private enum Token {
@@ -18,8 +19,10 @@ class Parser {
 
 	var line : Int;
 	var buf : String;
+	var bytes : Bytes;
 	var pos : Int;
 	var token : Null<Token>;
+	var binary : Bool;
 
 	function new() {
 	}
@@ -28,12 +31,33 @@ class Parser {
 		this.buf = str;
 		this.pos = 0;
 		this.line = 1;
+		this.binary = false;
 		token = null;
 		return {
 			name : "Root",
 			props : [PInt(0),PString("Root"),PString("Root")],
 			childs : parseNodes(),
 		};
+	}
+
+	function parseBytes( bytes : Bytes ) : FbxNode {
+		this.bytes = bytes;
+		this.pos = 0;
+		this.line = 0;
+		this.binary = (bytes.getString(0, 20) == "Kaydara FBX Binary  ") && bytes.get(20) == 0;
+		
+		token = null;
+		if (this.binary) {
+			// Skip header, magic [0x1A, 0x00] and version number.
+			this.pos = 21 + 2 + 4;
+			return parseBinaryNode();
+		}
+		
+		return {
+			name: "Root",
+			props : [PInt(0),PString("Root"),PString("Root")],
+			childs : parseNodes(),
+		}
 	}
 
 	function parseNodes() {
@@ -125,6 +149,131 @@ class Parser {
 		return { name : name, props : props, childs : childs };
 	}
 
+	function parseBinaryNode() : FbxNode {
+		
+		var nextRecord = getInt32();
+		var numProperties:Int = getInt32();
+		var propertyListLength:UInt = getInt32();
+		var nameLen:Int = getByte();
+		var name:String = nameLen == 0 ? "Root" : bytes.getString(pos, nameLen);
+		pos += nameLen;
+		
+		var props = [], childs = [];
+		for (i in 0...numProperties) {
+			props.push(readBinaryProperty());
+		}
+		
+		if (pos < nextRecord) {
+			childs = [];
+			do {
+				childs.push(parseBinaryNode());
+				// object record
+			}
+			while (pos + 13 < nextRecord);
+			// There is null-record of 13 bytes afterwards for some reason?
+		}
+		
+		return { name: name, props: props, childs: childs };
+	}
+	
+	function readBinaryProperty() : FbxProp {
+		var type:Int = getByte();
+		
+		var arrayLen : Int = 0;
+		var arrayEncoding:Int;
+		var arrayCompressedLen:Int;
+		var arrayBytes:Bytes = null;
+		var arrayBytesPos:Int = 0;
+		inline function readArray(entrySize:Int)
+		{ 
+			arrayLen = getInt32();
+			arrayEncoding = getInt32();
+			arrayCompressedLen = getInt32();
+			switch(arrayEncoding)
+			{
+				case 0:
+					arrayBytes = bytes;
+					arrayBytesPos = pos;
+					pos += arrayLen * entrySize;
+				case 1:
+					arrayBytesPos = 0;
+					arrayBytes = haxe.zip.Uncompress.run(bytes.sub(pos, arrayCompressedLen));
+					pos += arrayCompressedLen;
+				default:
+					error("Unsupported array encoding: " + arrayEncoding);
+			}
+		}
+		
+		switch(getByte()) {
+			case 'Y'.code:
+				return PInt(getInt16());
+			case 'C'.code:
+				return PInt(getByte());
+			case 'I'.code:
+				return PInt(getInt32());
+			case 'F'.code:
+				return PFloat(getFloat());
+			case 'D'.code:
+				return PFloat(getDouble());
+			case 'L'.code:
+				// Long not supported by parser, try int
+				var i64 : haxe.Int64 = bytes.getInt64(pos);
+				pos += 8;
+				return PInt(i64.low);
+			case 'f'.code:
+				readArray(4);
+				var floats:Array<Float> = new Array();
+				while (arrayLen > 0)
+				{
+					floats.push(arrayBytes.getFloat(arrayBytesPos));
+					arrayBytesPos += 4;
+				}
+				return PFloats(floats);
+			case 'd'.code:
+				readArray(8);
+				var doubles:Array<Float> = new Array();
+				while (arrayLen > 0)
+				{
+					doubles.push(arrayBytes.getDouble(arrayBytesPos));
+					arrayBytesPos += 8;
+				}
+				return PFloats(doubles);
+			case 'l'.code:
+				readArray(8);
+				var i64s:Array<Int> = new Array();
+				while (arrayLen > 0)
+				{
+					i64s.push(arrayBytes.getInt64(arrayBytesPos).low);
+					arrayBytesPos += 8;
+				}
+				return PInts(i64s);
+			case 'i'.code:
+				readArray(4);
+				var ints:Array<Int> = new Array();
+				while (arrayLen > 0)
+				{
+					ints.push(arrayBytes.getInt32(arrayBytesPos));
+					arrayBytesPos += 4;
+				}
+				return PInts(ints);
+			case 'b'.code:
+				readArray(1);
+				var bools:Array<Int> = new Array();
+				while (arrayLen > 0)
+				{
+					bools.push(arrayBytes.get(arrayBytesPos++));
+				}
+				return PInts(bools);
+			case 'S'.code, 'R'.code:
+				var len:Int = getInt32();
+				var s:String = bytes.getString(pos, len);
+				pos += len;
+				return PString(s);
+			default:
+				return error("Unknown property type");
+		}
+	}
+
 	function except( except : Token ) {
 		var t = next();
 		if( !Type.enumEq(t, except) )
@@ -171,6 +320,34 @@ class Parser {
 
 	inline function nextChar() {
 		return StringTools.fastCodeAt(buf, pos++);
+	}
+
+	inline function getInt32() {
+		var i : Int = bytes.getInt32(pos);
+		pos += 4;
+		return i;
+	}
+	
+	inline function getInt16() {
+		var i : Int = bytes.get(pos) | (bytes.get(pos + 1) << 8);
+		pos += 2;
+		return i;
+	}
+	
+	inline function getFloat() {
+		var f : Float = bytes.getFloat(pos);
+		pos += 4;
+		return f;
+	}
+	
+	inline function getDouble() {
+		var d : Float = bytes.getDouble(pos);
+		pos += 4;
+		return d;
+	}
+	
+	inline function getByte() {
+		return bytes.get(pos++);
 	}
 
 	inline function getBuf( pos : Int, len : Int ) {
@@ -267,8 +444,11 @@ class Parser {
 		}
 	}
 
-	public static function parse( text : String ) {
-		return new Parser().parseText(text);
+	public static function parse( data : Bytes ) {
+		if (data.length > 20 && data.getString(0, 20) == "Kaydara FBX Binary  ") {
+			return new Parser().parseBytes(data);
+		}
+		return new Parser().parseText(data.toString());
 	}
 
 }

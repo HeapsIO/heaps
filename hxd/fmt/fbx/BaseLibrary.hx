@@ -1,4 +1,5 @@
 package hxd.fmt.fbx;
+import haxe.io.Bytes;
 using hxd.fmt.fbx.Data;
 import h3d.col.Point;
 
@@ -148,7 +149,7 @@ class BaseLibrary {
 		defaultModelMatrixes = new Map();
 	}
 
-	public function loadTextFile( data : String ) {
+	public function loadTextFile( data : Bytes ) {
 		load(Parser.parse(data));
 	}
 
