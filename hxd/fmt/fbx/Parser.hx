@@ -152,32 +152,29 @@ class Parser {
 	function parseBinaryNode() : FbxNode {
 		
 		var nextRecord = getInt32();
-		var numProperties:Int = getInt32();
-		var propertyListLength:UInt = getInt32();
-		var nameLen:Int = getByte();
-		var name:String = nameLen == 0 ? "Root" : bytes.getString(pos, nameLen);
+		var numProperties : Int = getInt32();
+		var propertyListLength : UInt = getInt32();
+		var nameLen : Int = getByte();
+		var name : String = (nameLen == 0 ? "Root" : bytes.getString(pos, nameLen));
 		pos += nameLen;
 		
-		var props = [], childs = [];
+		var props : Array<FbxProp> = new Array();
+		var childs : Array<FbxNode> = new Array();
 		for (i in 0...numProperties) {
 			props.push(readBinaryProperty());
 		}
 		
 		if (pos < nextRecord) {
-			childs = [];
 			do {
 				childs.push(parseBinaryNode());
-				// object record
 			}
-			while (pos + 13 < nextRecord);
-			// There is null-record of 13 bytes afterwards for some reason?
+			while (pos + 13 < nextRecord); // There is null-record of 13 bytes afterwards for some reason.
 		}
 		
 		return { name: name, props: props, childs: childs };
 	}
 	
 	function readBinaryProperty() : FbxProp {
-		var type:Int = getByte();
 		
 		var arrayLen : Int = 0;
 		var arrayEncoding:Int;
@@ -204,7 +201,12 @@ class Parser {
 			}
 		}
 		
-		switch(getByte()) {
+		// Limitations:
+		// Int64 records only store low 32 bytes as Ints
+		// Raw binary data converted to Strings.
+		
+		var type : Int = getByte();
+		switch(type) {
 			case 'Y'.code:
 				return PInt(getInt16());
 			case 'C'.code:
@@ -216,7 +218,6 @@ class Parser {
 			case 'D'.code:
 				return PFloat(getDouble());
 			case 'L'.code:
-				// Long not supported by parser, try int
 				var i64 : haxe.Int64 = bytes.getInt64(pos);
 				pos += 8;
 				return PInt(i64.low);
@@ -270,7 +271,7 @@ class Parser {
 				pos += len;
 				return PString(s);
 			default:
-				return error("Unknown property type");
+				return error("Unknown property type: " + type + "/" + String.fromCharCode(type));
 		}
 	}
 
