@@ -1120,7 +1120,11 @@ class DirectXDriver extends h3d.impl.Driver {
 			currentIndex = ibuf;
 			dx.Driver.iaSetIndexBuffer(ibuf.res,false,0);
 		}
+		#if (hldx >= "1.7")
 		dx.Driver.drawIndexedInstancedIndirect(commands.data, 0);
+		#else
+		throw "drawInstanced requires HL 1.7+";
+		#end
 	}
 
 	static var COMPARE : Array<ComparisonFunc> = [
