@@ -14,6 +14,7 @@ private typedef GL = js.html.webgl.GL;
 private extern class GL2 extends js.html.webgl.GL {
 	// webgl2
 	function drawBuffers( buffers : Array<Int> ) : Void;
+	function vertexAttribDivisor( index : Int, divisor : Int ) : Void;
 	function drawElementsInstanced( mode : Int, count : Int, type : Int, offset : Int, instanceCount : Int) : Void;
 	function getUniformBlockIndex( p : Program, name : String ) : Int;
 	function bindBufferBase( target : Int, index : Int, buffer : js.html.webgl.Buffer ) : Void;
@@ -120,6 +121,7 @@ private class CompiledAttribute {
 	public var type : Int;
 	public var size : Int;
 	public var offset : Int;
+	public var divisor : Int;
 	public function new() {
 	}
 }
@@ -166,6 +168,7 @@ class GlDriver extends Driver {
 	var frame : Int;
 	var lastActiveIndex : Int = 0;
 	var curColorMask = -1;
+	var currentDivisor : Array<Int> = [for( i in 0...32 ) 0];
 
 	var bufferWidth : Int;
 	var bufferHeight : Int;
@@ -426,6 +429,14 @@ class GlDriver extends Driver {
 					a.size = size;
 					a.index = index;
 					a.offset = p.stride;
+					a.divisor = 0;
+					if( v.qualifiers != null ) {
+						for( q in v.qualifiers )
+							switch( q ) {
+							case PerInstance(n): a.divisor = n;
+							default:
+							}
+					}
 					p.attribs.push(a);
 					p.attribNames.push(v.name);
 					p.stride += size;
@@ -1169,6 +1180,10 @@ class GlDriver extends Driver {
 			for( a in curShader.attribs ) {
 				var pos = a.offset;
 				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, pos * 4);
+				if( currentDivisor[a.index] != a.divisor ) {
+					currentDivisor[a.index] = a.divisor;
+					gl.vertexAttribDivisor(a.index, a.divisor);
+				}
 			}
 		} else {
 			var offset = 8;
@@ -1190,6 +1205,10 @@ class GlDriver extends Driver {
 					if( offset > m.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
 				}
 				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, pos * 4);
+				if( currentDivisor[a.index] != a.divisor ) {
+					currentDivisor[a.index] = a.divisor;
+					gl.vertexAttribDivisor(a.index, a.divisor);
+				}
 			}
 		}
 	}
@@ -1198,6 +1217,10 @@ class GlDriver extends Driver {
 		for( a in curShader.attribs ) {
 			gl.bindBuffer(GL.ARRAY_BUFFER, @:privateAccess buffers.buffer.buffer.vbuf.b);
 			gl.vertexAttribPointer(a.index, a.size, a.type, false, buffers.buffer.buffer.stride * 4, buffers.offset * 4);
+			if( currentDivisor[a.index] != a.divisor ) {
+				currentDivisor[a.index] = a.divisor;
+				gl.vertexAttribDivisor(a.index, a.divisor);
+			}
 			buffers = buffers.next;
 		}
 		curBuffer = null;
@@ -1228,6 +1251,12 @@ class GlDriver extends Driver {
 			data.push(instanceCount);
 		}
 		b.data = data;
+		#elseif( !hsdl || (hlsdl >= "1.7") )
+		var buf = gl.createBuffer();
+		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, buf);
+		gl.bufferData(GL2.DRAW_INDIRECT_BUFFER, b.commandCount * 20, streamData(bytes.getData(),0, b.commandCount * 20), GL.DYNAMIC_DRAW);
+		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
+		b.data = buf;
 		#end
 	}
 
@@ -1245,8 +1274,10 @@ class GlDriver extends Driver {
 		var p = 0;
 		for( i in 0...Std.int(args.length/3) )
 			gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
-		#elseif (!hlsdl || hsdl >= "1.7")
-			throw "TODO";
+		#elseif (!hlsdl || hlsdl >= "1.7")
+		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
+		gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
+		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
 		#end
 	}
 
