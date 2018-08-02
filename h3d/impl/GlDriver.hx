@@ -1153,6 +1153,17 @@ class GlDriver extends Driver {
 		curIndexBuffer = null;
 	}
 
+	inline function updateDivisor( a : CompiledAttribute ) {
+		if( currentDivisor[a.index] != a.divisor ) {
+			#if (!hlsdl || (hlsdl >= "1.7"))
+			currentDivisor[a.index] = a.divisor;
+			gl.vertexAttribDivisor(a.index, a.divisor);
+			#else
+			throw "vertexAttribDivisor requires HL 1.7+";
+			#end
+		}
+	}
+
 	override function selectBuffer( v : h3d.Buffer ) {
 
 		if( v == curBuffer )
@@ -1180,10 +1191,7 @@ class GlDriver extends Driver {
 			for( a in curShader.attribs ) {
 				var pos = a.offset;
 				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, pos * 4);
-				if( currentDivisor[a.index] != a.divisor ) {
-					currentDivisor[a.index] = a.divisor;
-					gl.vertexAttribDivisor(a.index, a.divisor);
-				}
+				updateDivisor(a);
 			}
 		} else {
 			var offset = 8;
@@ -1205,10 +1213,7 @@ class GlDriver extends Driver {
 					if( offset > m.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
 				}
 				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, pos * 4);
-				if( currentDivisor[a.index] != a.divisor ) {
-					currentDivisor[a.index] = a.divisor;
-					gl.vertexAttribDivisor(a.index, a.divisor);
-				}
+				updateDivisor(a);
 			}
 		}
 	}
@@ -1217,10 +1222,7 @@ class GlDriver extends Driver {
 		for( a in curShader.attribs ) {
 			gl.bindBuffer(GL.ARRAY_BUFFER, @:privateAccess buffers.buffer.buffer.vbuf.b);
 			gl.vertexAttribPointer(a.index, a.size, a.type, false, buffers.buffer.buffer.stride * 4, buffers.offset * 4);
-			if( currentDivisor[a.index] != a.divisor ) {
-				currentDivisor[a.index] = a.divisor;
-				gl.vertexAttribDivisor(a.index, a.divisor);
-			}
+			updateDivisor(a);
 			buffers = buffers.next;
 		}
 		curBuffer = null;
@@ -1254,7 +1256,7 @@ class GlDriver extends Driver {
 			data.push(instanceCount);
 		}
 		b.data = data;
-		#elseif( !hsdl || (hlsdl >= "1.7") )
+		#elseif( !hlsdl || (hlsdl >= "1.7") )
 		var buf = gl.createBuffer();
 		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, buf);
 		gl.bufferData(GL2.DRAW_INDIRECT_BUFFER, b.commandCount * 20, streamData(bytes.getData(),0, b.commandCount * 20), GL.DYNAMIC_DRAW);
