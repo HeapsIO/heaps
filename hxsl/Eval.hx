@@ -164,7 +164,7 @@ class Eval {
 				haxe.Log.trace(Printer.toString(a), { fileName : a.p.file, lineNumber : 0, className : null, methodName : null });
 			TBlock([]);
 		case [ChannelRead|ChannelReadLod, _]:
-			var i = switch( args[0].e ) { case TConst(CInt(i)): i; default: throw "assert"; };
+			var i = switch( args[0].e ) { case TConst(CInt(i)): i; default: Error.t("Cannot eval complex channel " + Printer.toString(args[0],true)+" "+constantsToString(), pos); throw "assert"; };
 			var channel = oldArgs[0];
 			channel = { e : switch( channel.e ) {
 			case TVar(v): TVar(mapVar(v));
@@ -205,8 +205,6 @@ class Eval {
 			case PackedNormal:
 				return TCall({ e : TGlobal(UnpackNormal), t:TVoid, p:pos}, [tget]);
 			}
-		case [ChannelRead|ChannelReadLod, [t,_]]:
-			Error.t("Cannot eval complex channel " + Printer.toString(t,true)+" "+constantsToString(), pos);
 		default: null;
 		}
 	}
