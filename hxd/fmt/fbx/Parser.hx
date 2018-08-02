@@ -238,7 +238,6 @@ class Parser {
 		// Raw binary data converted to Strings.
 		
 		var type : Int = getByte();
-		// trace(StringTools.hex(pos), String.fromCharCode(type));
 		switch( type ) {
 			case 'Y'.code:
 				return PInt(getInt16());
@@ -381,11 +380,8 @@ class Parser {
 	}
 	
 	inline function i64ToFloat( i64 : haxe.Int64 ) : Float {
-		// TODO: Find better solution.
 		return (i64.high * 4294967296) + 
 						( (i64.low & 0x80000000) != 0 ? ((i64.low & 0x7fffffff) + 2147483648) : i64.low );
-		// trace(i64, (i64.high * 4294967296) + i64.low, (i64.high * 4294967296) + ((i64.low & 0x7fffffff) + 2147483648));
-		// return Std.parseFloat(Std.string(i64));// (i64.low < 0 ? (-i64.low + 2147483648) : i64.low) + ((i64.high:Float) * 4294967296);
 	}
 	
 	inline function getByte() {
