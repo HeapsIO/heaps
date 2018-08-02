@@ -144,8 +144,7 @@ class Prefab {
 		p.name = v.name;
 		if(v.enabled != null)
 			p.enabled = v.enabled;
-		if(v.props != null)
-			p.props = Reflect.copy(v.props);  // TODO: Recursive?
+		p.props = v.props;
 		if( v.source != null )
 			p.source = v.source;
 		p.load(v);
@@ -272,5 +271,10 @@ class Prefab {
 			return f;
 		}
 		return type.split(".").pop();
+	}
+
+	public function clone() : Prefab {
+		var obj = saveRec();
+		return loadRec(haxe.Json.parse(haxe.Json.stringify(obj)));
 	}
 }
