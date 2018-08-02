@@ -227,7 +227,7 @@ class Dump {
 		var bytes;
 		if( file.split(".").pop().toLowerCase() == "fbx" ) {
 			var l = new hxd.fmt.fbx.HMDOut(file);
-			l.loadTextFile(sys.io.File.getBytes(file));
+			l.loadFile(sys.io.File.getBytes(file));
 			var hmd = l.toHMD(null, !StringTools.startsWith(file.split("\\").join("/").split("/").pop(), "Anim_"));
 			var out = new haxe.io.BytesOutput();
 			new Writer(out).write(hmd);

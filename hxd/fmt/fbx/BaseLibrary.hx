@@ -149,7 +149,7 @@ class BaseLibrary {
 		defaultModelMatrixes = new Map();
 	}
 
-	public function loadTextFile( data : Bytes ) {
+	public function loadFile( data : Bytes ) {
 		load(Parser.parse(data));
 	}
 
