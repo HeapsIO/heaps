@@ -301,9 +301,9 @@ class LogDriver extends Driver {
 		return d.allocTexture(t);
 	}
 
-	override function allocIndexes( count : Int ) : IndexBuffer {
-		log('AllocIndexes $count');
-		return d.allocIndexes(count);
+	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
+		log('AllocIndexes $count $is32');
+		return d.allocIndexes(count,is32);
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {

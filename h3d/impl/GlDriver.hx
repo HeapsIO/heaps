@@ -941,16 +941,14 @@ class GlDriver extends Driver {
 		return { b : b, stride : m.stride #if multidriver, driver : this #end };
 	}
 
-	override function allocIndexes( count : Int ) : IndexBuffer {
+	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
 		var b = gl.createBuffer();
+		var size = is32 ? 4 : 2;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
 		#if js
-		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, count * 2, GL.STATIC_DRAW);
+		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, count * size, GL.STATIC_DRAW);
 		#elseif hl
-		gl.bufferDataSize(GL.ELEMENT_ARRAY_BUFFER, count * 2, GL.STATIC_DRAW);
-		#else
-		var tmp = new Uint16Array(count);
-		gl.bufferData(GL.ELEMENT_ARRAY_BUFFER, tmp, GL.STATIC_DRAW);
+		gl.bufferDataSize(GL.ELEMENT_ARRAY_BUFFER, count * size, GL.STATIC_DRAW);
 		#end
 		var outOfMem = gl.getError() == GL.OUT_OF_MEMORY;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
@@ -959,7 +957,7 @@ class GlDriver extends Driver {
 			gl.deleteBuffer(b);
 			return null;
 		}
-		return b;
+		return { b : b, is32 : is32 };
 	}
 
 	override function disposeTexture( t : h3d.mat.Texture ) {
@@ -973,7 +971,7 @@ class GlDriver extends Driver {
 	}
 
 	override function disposeIndexes( i : IndexBuffer ) {
-		gl.deleteBuffer(i);
+		gl.deleteBuffer(i.b);
 	}
 
 	override function disposeVertexes( v : VertexBuffer ) {
@@ -1127,27 +1125,29 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
-		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
+		var bits = i.is32 ? 2 : 1;
+		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i.b);
 		#if hl
 		var data = #if hl hl.Bytes.getArray(buf.getNative()) #else buf.getNative() #end;
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(data,bufPos*2,indiceCount*2), bufPos * 2 * STREAM_POS, indiceCount * 2);
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, streamData(data,bufPos << bits,indiceCount << bits), (bufPos << bits) * STREAM_POS, indiceCount << bits);
 		#else
 		var buf = new Uint16Array(buf.getNative());
-		var sub = new Uint16Array(buf.buffer, bufPos * 2, indiceCount);
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
+		var sub = new Uint16Array(buf.buffer, bufPos << bits, indiceCount);
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, sub);
 		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		curIndexBuffer = null;
 	}
 
 	override function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
-		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i);
+		var bits = i.is32 ? 2 : 1;
+		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i.b);
 		#if hl
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, streamData(buf.getData(),bufPos * 2, indiceCount * 2), bufPos * 2 * STREAM_POS, indiceCount * 2);
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, streamData(buf.getData(),bufPos << bits, indiceCount << bits), (bufPos << bits) * STREAM_POS, indiceCount << bits);
 		#else
 		var buf = bytesToUint8Array(buf);
-		var sub = new Uint8Array(buf.buffer, bufPos * 2, indiceCount * 2);
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice * 2, sub);
+		var sub = new Uint8Array(buf.buffer, bufPos << bits, indiceCount << bits);
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, sub);
 		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		curIndexBuffer = null;
@@ -1229,9 +1229,12 @@ class GlDriver extends Driver {
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 		if( ibuf != curIndexBuffer ) {
 			curIndexBuffer = ibuf;
-			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
+			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf.b);
 		}
-		gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
+		if( ibuf.is32 )
+			gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_INT, startIndex * 4);
+		else
+			gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
 	}
 
 	override function allocInstanceBuffer( b : InstanceBuffer, bytes : haxe.io.Bytes ) {
@@ -1267,16 +1270,22 @@ class GlDriver extends Driver {
 	override function drawInstanced( ibuf : IndexBuffer, commands : InstanceBuffer ) {
 		if( ibuf != curIndexBuffer ) {
 			curIndexBuffer = ibuf;
-			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
+			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf.b);
 		}
 		#if js
 		var args : Array<Int> = commands.data;
 		var p = 0;
 		for( i in 0...Std.int(args.length/3) )
-			gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
+			if( ibuf.is32 )
+				gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_INT, args[p++], args[p++]);
+			else
+				gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
 		#elseif (!hlsdl || hlsdl >= "1.7")
 		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
-		gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
+		if( ibuf.is32 )
+			gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_INT, null, commands.commandCount, 0);
+		else
+			gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
 		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
 		#end
 	}

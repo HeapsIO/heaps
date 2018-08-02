@@ -250,7 +250,9 @@ class Stage3dDriver extends Driver {
 		return new VertexWrapper(v, buf);
 	}
 
-	override function allocIndexes( count : Int ) : IndexBuffer {
+	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
+		if( is32 )
+			throw "32 bit indexes are not supported";
 		try {
 			return ctx.createIndexBuffer(count);
 		} catch( e : flash.errors.Error ) {

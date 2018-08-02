@@ -216,14 +216,14 @@ class MemoryManager {
 		indexes.remove(i);
 		driver.disposeIndexes(i.ibuf);
 		i.ibuf = null;
-		usedMemory -= i.count * 2;
+		usedMemory -= i.count * (i.is32 ? 4 : 2);
 	}
 
 	@:allow(h3d.Indexes)
 	function allocIndexes( i : Indexes ) {
-		i.ibuf = driver.allocIndexes(i.count);
+		i.ibuf = driver.allocIndexes(i.count,i.is32);
 		indexes.push(i);
-		usedMemory += i.count * 2;
+		usedMemory += i.count * (i.is32 ? 4 : 2);
 	}
 
 

@@ -142,7 +142,8 @@ class ShaderAdvanced extends hxd.App {
 
 		var prim = new h3d.prim.Instanced();
 		var bytes = new haxe.io.BytesOutput();
-		bytes.writeInt32(cube.triCount() * 3);
+		var icount = cube.triCount() * 3;
+		bytes.writeInt32(icount);
 		bytes.writeInt32(16);
 		bytes.writeInt32(0);
 		bytes.writeInt32(0);
@@ -165,6 +166,14 @@ class ShaderAdvanced extends hxd.App {
 		var m = new h3d.scene.Mesh(prim, s3d);
 		m.material.mainPass.addShader(new InstancedOffsetShader());
 		m.material.shadows = false;
+
+		// 32 bits indices
+		var bytes = haxe.io.Bytes.alloc(icount * 4);
+		for( i in 0...icount )
+			bytes.setInt32(i<<2,i);
+		var indexes = new h3d.Indexes(icount,true);
+		indexes.uploadBytes(bytes,0,icount);
+		prim.indexes = indexes;
 	}
 
 	override function update(dt:Float) {

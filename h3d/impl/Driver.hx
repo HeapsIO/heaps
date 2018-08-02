@@ -7,7 +7,7 @@ typedef Texture = flash.display3D.textures.TextureBase;
 typedef DepthBuffer = {};
 typedef Query = {};
 #elseif js
-typedef IndexBuffer = js.html.webgl.Buffer;
+typedef IndexBuffer = { b : js.html.webgl.Buffer, is32 : Bool };
 typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int #if multidriver, driver : Driver #end };
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
 typedef DepthBuffer = { r : js.html.webgl.Renderbuffer #if multidriver, driver : Driver #end };
@@ -25,19 +25,19 @@ typedef Texture = { t : lime.graphics.opengl.GLTexture, width : Int, height : In
 typedef DepthBuffer = { r : lime.graphics.opengl.GLRenderbuffer };
 typedef Query = {};
 #elseif hlsdl
-typedef IndexBuffer = sdl.GL.Buffer;
+typedef IndexBuffer = { b : sdl.GL.Buffer, is32 : Bool };
 typedef VertexBuffer = { b : sdl.GL.Buffer, stride : Int };
 typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef DepthBuffer = { r : sdl.GL.Renderbuffer };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
 #elseif usegl
-typedef IndexBuffer = haxe.GLTypes.Buffer;
+typedef IndexBuffer = { b : haxe.GLTypes.Buffer, is32 : Bool };
 typedef VertexBuffer = { b : haxe.GLTypes.Buffer, stride : Int };
 typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef DepthBuffer = { r : haxe.GLTypes.Renderbuffer };
 typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
 #elseif hldx
-typedef IndexBuffer = { res : dx.Resource, count : Int };
+typedef IndexBuffer = { res : dx.Resource, count : Int, bits : Int };
 typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int };
 typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
 typedef DepthBuffer = { res : dx.Resource, view : dx.Driver.DepthStencilView };
@@ -237,7 +237,7 @@ class Driver {
 		return null;
 	}
 
-	public function allocIndexes( count : Int ) : IndexBuffer {
+	public function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
 		return null;
 	}
 
