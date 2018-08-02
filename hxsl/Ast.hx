@@ -234,6 +234,7 @@ enum TGlobal {
 	Fwidth;
 	// debug / internal
 	ChannelRead;
+	ChannelReadLod;
 	Trace;
 	// instancing
 	VertexID;

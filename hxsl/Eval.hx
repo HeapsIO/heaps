@@ -163,7 +163,8 @@ class Eval {
 			for( a in args )
 				haxe.Log.trace(Printer.toString(a), { fileName : a.p.file, lineNumber : 0, className : null, methodName : null });
 			TBlock([]);
-		case [ChannelRead, [ { e : TConst(CInt(i)) }, uv ]]:
+		case [ChannelRead|ChannelReadLod, _]:
+			var i = switch( args[0].e ) { case TConst(CInt(i)): i; default: throw "assert"; };
 			var channel = oldArgs[0];
 			channel = { e : switch( channel.e ) {
 			case TVar(v): TVar(mapVar(v));
@@ -171,8 +172,12 @@ class Eval {
 			}, t : channel.t, p : channel.p };
 			var count = switch( channel.t ) { case TChannel(i): i; default: throw "assert"; };
 			var channelMode = hxsl.Channel.createByIndex(i & 7);
+			var targs = [channel];
+			for( i in 1...args.length )
+				targs.push(args[i]);
+			targs.push({ e : TConst(CInt(i >> 3)), t : TInt, p : pos });
 			var tget = {
-				e : TCall({ e : TGlobal(ChannelRead), t : TVoid, p : pos }, [channel, uv, { e : TConst(CInt(i >> 3)), t : TInt, p : pos }]),
+				e : TCall({ e : TGlobal(g), t : TVoid, p : pos }, targs),
 				t : TVoid,
 				p : pos,
 			};
@@ -200,7 +205,7 @@ class Eval {
 			case PackedNormal:
 				return TCall({ e : TGlobal(UnpackNormal), t:TVoid, p:pos}, [tget]);
 			}
-		case [ChannelRead, [t,_]]:
+		case [ChannelRead|ChannelReadLod, [t,_]]:
 			Error.t("Cannot eval complex channel " + Printer.toString(t,true)+" "+constantsToString(), pos);
 		default: null;
 		}

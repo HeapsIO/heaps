@@ -120,6 +120,13 @@ class Checker {
 					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 } ], ret : vec3 },
 					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 } ], ret : vec4 },
 				];
+			case ChannelReadLod:
+				[
+					{ args : [ { name : "channel", type : TChannel(1) }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : TFloat },
+					{ args : [ { name : "channel", type : TChannel(2) }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec2 },
+					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec3 },
+					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec4 },
+				];
 			case ScreenToUv:
 				[{ args : [{ name : "screenPos", type : vec2 }], ret : vec2 }];
 			case UvToScreen:
@@ -822,6 +829,8 @@ class Checker {
 			var gl : TGlobal = switch( [f, e.t] ) {
 			case ["get", TSampler2D|TSampler2DArray|TSamplerCube]: Texture;
 			case ["get", TChannel(_)]: ChannelRead;
+			case ["getLod", TSampler2D|TSampler2DArray|TSamplerCube]: TextureLod;
+			case ["getLod", TChannel(_)]: ChannelReadLod;
 			default: null;
 			}
 			if( gl != null )
