@@ -185,6 +185,7 @@ class GlDriver extends Driver {
 	var shaderVersion : Null<Int>;
 	var firstShader = true;
 	var rightHanded = false;
+	var hasMultiIndirect = false;
 
 	public function new(antiAlias=0) {
 		#if js
@@ -206,6 +207,10 @@ class GlDriver extends Driver {
 		commonFB = gl.createFramebuffer();
 		programs = new Map();
 		defStencil = new Stencil();
+
+		#if hl
+		hasMultiIndirect = gl.getConfigParameter(0) > 0;
+		#end
 
 		var v : String = gl.getParameter(GL.VERSION);
 		var reg = ~/ES ([0-9]+\.[0-9]+)/;
@@ -1240,7 +1245,16 @@ class GlDriver extends Driver {
 	}
 
 	override function allocInstanceBuffer( b : InstanceBuffer, bytes : haxe.io.Bytes ) {
-		#if js
+		#if( !js && (!hlsdl || (hlsdl >= "1.7")) )
+		if( hasMultiIndirect ) {
+			var buf = gl.createBuffer();
+			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, buf);
+			gl.bufferData(GL2.DRAW_INDIRECT_BUFFER, b.commandCount * 20, streamData(bytes.getData(),0, b.commandCount * 20), GL.DYNAMIC_DRAW);
+			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
+			b.data = buf;
+			return;
+		}
+		#end
 		var data = [];
 		for( i in 0...b.commandCount ) {
 			var p = i * 5 * 4;
@@ -1250,19 +1264,12 @@ class GlDriver extends Driver {
 			var offVertex = bytes.getInt32(p+12);
 			var offInstance = bytes.getInt32(p+16);
 			if( offVertex != 0 || offInstance != 0 )
-				throw "baseVertex and baseInstance must be zero in JS";
+				throw "baseVertex and baseInstance must be zero on this platform";
 			data.push(indexCount);
 			data.push(offIndex);
 			data.push(instanceCount);
 		}
 		b.data = data;
-		#elseif( !hlsdl || (hlsdl >= "1.7") )
-		var buf = gl.createBuffer();
-		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, buf);
-		gl.bufferData(GL2.DRAW_INDIRECT_BUFFER, b.commandCount * 20, streamData(bytes.getData(),0, b.commandCount * 20), GL.DYNAMIC_DRAW);
-		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
-		b.data = buf;
-		#end
 	}
 
 	override function disposeInstanceBuffer(b:InstanceBuffer) {
@@ -1274,7 +1281,17 @@ class GlDriver extends Driver {
 			curIndexBuffer = ibuf;
 			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf.b);
 		}
-		#if js
+		#if (!js && (!hlsdl || hlsdl >= "1.7"))
+		if( hasMultiIndirect ) {
+			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
+			if( ibuf.is32 )
+				gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_INT, null, commands.commandCount, 0);
+			else
+				gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
+			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
+			return;
+		}
+		#end
 		var args : Array<Int> = commands.data;
 		var p = 0;
 		for( i in 0...Std.int(args.length/3) )
@@ -1282,14 +1299,6 @@ class GlDriver extends Driver {
 				gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_INT, args[p++], args[p++]);
 			else
 				gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
-		#elseif (!hlsdl || hlsdl >= "1.7")
-		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
-		if( ibuf.is32 )
-			gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_INT, null, commands.commandCount, 0);
-		else
-			gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
-		gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
-		#end
 	}
 
 	override function end() {
