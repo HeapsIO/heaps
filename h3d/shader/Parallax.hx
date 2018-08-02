@@ -21,10 +21,13 @@ class Parallax extends hxsl.Shader {
 
 		function fragment() {
 			var viewWS = (camera.position - transformedPosition).normalize();
-			var n = vertexTransformedNormal;
-			var tanX = transformedTangent.xyz.normalize();
-			var tanY = n.cross(tanX);
-			var viewNS = (vec3(viewWS.dot(tanX), viewWS.dot(tanY), viewWS.dot(n)) * global.modelViewInverse.mat3()).normalize();
+			var viewNS : Vec3;
+			{
+				var n = vertexTransformedNormal.normalize();
+				var tanX = transformedTangent.xyz.normalize();
+				var tanY = n.cross(tanX);
+				viewNS = vec3(viewWS.dot(tanX), viewWS.dot(tanY), viewWS.dot(n)).normalize();
+			}
 			if( maxLayers == 0 )
 				calculatedUV += viewNS.xy * heightMap.get(calculatedUV) * amount;
 			else {
