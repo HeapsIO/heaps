@@ -50,14 +50,35 @@ class Parser {
 		if (this.binary) {
 			// Skip header, magic [0x1A, 0x00] and version number.
 			this.pos = 21 + 2 + 4;
-			return parseBinaryNode();
+			var firstNode = parseBinaryNode(getInt32());
+			if (firstNode.name != "") {
+				
+				// Root was omitted, read until all data obtained.
+				var nodes : Array<FbxNode> = [firstNode];
+				var size:Int = getInt32();
+				
+				while (size != 0) {
+					nodes.push(parseBinaryNode(size));
+					size = getInt32();
+				}
+				
+				return {
+					name: "Root",
+					props: [PInt(0), PString("Root"), PString("Root")],
+					childs: nodes
+				};
+			}
+			else 
+			{
+				return firstNode;
+			}
 		}
 		
 		return {
 			name: "Root",
 			props : [PInt(0),PString("Root"),PString("Root")],
 			childs : parseNodes(),
-		}
+		};
 	}
 
 	function parseNodes() {
@@ -148,28 +169,39 @@ class Parser {
 		if( childs == null ) childs = [];
 		return { name : name, props : props, childs : childs };
 	}
-
-	function parseBinaryNode() : FbxNode {
+	
+	function parseBinaryNodes( output : Array<FbxNode> ) {
+		var size : Int = getInt32();
+		while (size != 0)
+		{
+			output.push(parseBinaryNode(size));
+			size = getInt32();
+		}
+	}
+	
+	function parseBinaryNode( nextRecord : Int ) : FbxNode {
 		
-		var nextRecord = getInt32();
 		var numProperties : Int = getInt32();
 		var propertyListLength : UInt = getInt32();
 		var nameLen : Int = getByte();
-		var name : String = (nameLen == 0 ? "Root" : bytes.getString(pos, nameLen));
+		var name : String = (nameLen == 0 ? "" : bytes.getString(pos, nameLen));
 		pos += nameLen;
 		
 		var props : Array<FbxProp> = new Array();
 		var childs : Array<FbxNode> = new Array();
+		
+		var propStart : Int = pos;
+		
 		for ( i in 0...numProperties ) {
 			props.push(readBinaryProperty());
 		}
 		
+		pos = propStart + propertyListLength;
+		
 		if ( pos < nextRecord ) {
-			do {
-				childs.push(parseBinaryNode());
-			}
-			while ( pos + 13 < nextRecord ); // There is null-record of 13 bytes afterwards for some reason.
+			parseBinaryNodes(childs);
 		}
+		pos = nextRecord;
 		
 		return { name: name, props: props, childs: childs };
 	}
@@ -181,10 +213,12 @@ class Parser {
 		var arrayCompressedLen:Int;
 		var arrayBytes:Bytes = null;
 		var arrayBytesPos:Int = 0;
+		
 		inline function readArray(entrySize:Int) {
 			arrayLen = getInt32();
 			arrayEncoding = getInt32();
 			arrayCompressedLen = getInt32();
+			
 			switch( arrayEncoding ) {
 				case 0:
 					arrayBytes = bytes;
@@ -200,10 +234,11 @@ class Parser {
 		}
 		
 		// Limitations:
-		// Int64 records only store low 32 bytes as Ints
+		// Int64 records are converted to Floats with top bits being lost.
 		// Raw binary data converted to Strings.
 		
 		var type : Int = getByte();
+		// trace(StringTools.hex(pos), String.fromCharCode(type));
 		switch( type ) {
 			case 'Y'.code:
 				return PInt(getInt16());
@@ -218,13 +253,14 @@ class Parser {
 			case 'L'.code:
 				var i64 : haxe.Int64 = bytes.getInt64(pos);
 				pos += 8;
-				return PInt(i64.low);
+				return PFloat(i64ToFloat(i64));
 			case 'f'.code:
 				readArray(4);
 				var floats:Array<Float> = new Array();
 				while ( arrayLen > 0 ) {
 					floats.push(arrayBytes.getFloat(arrayBytesPos));
 					arrayBytesPos += 4;
+					arrayLen--;
 				}
 				return PFloats(floats);
 			case 'd'.code:
@@ -233,22 +269,25 @@ class Parser {
 				while ( arrayLen > 0 ) {
 					doubles.push(arrayBytes.getDouble(arrayBytesPos));
 					arrayBytesPos += 8;
+					arrayLen--;
 				}
 				return PFloats(doubles);
 			case 'l'.code:
 				readArray(8);
-				var i64s:Array<Int> = new Array();
+				var i64s:Array<Float> = new Array();
 				while ( arrayLen > 0 ) {
-					i64s.push(arrayBytes.getInt64(arrayBytesPos).low);
+					i64s.push(i64ToFloat(arrayBytes.getInt64(arrayBytesPos)));
 					arrayBytesPos += 8;
+					arrayLen--;
 				}
-				return PInts(i64s);
+				return PFloats(i64s);
 			case 'i'.code:
 				readArray(4);
 				var ints:Array<Int> = new Array();
 				while ( arrayLen > 0 ) {
 					ints.push(arrayBytes.getInt32(arrayBytesPos));
 					arrayBytesPos += 4;
+					arrayLen--;
 				}
 				return PInts(ints);
 			case 'b'.code:
@@ -256,6 +295,7 @@ class Parser {
 				var bools:Array<Int> = new Array();
 				while ( arrayLen > 0 ) {
 					bools.push(arrayBytes.get(arrayBytesPos++));
+					arrayLen--;
 				}
 				return PInts(bools);
 			case 'S'.code, 'R'.code:
@@ -336,8 +376,16 @@ class Parser {
 	
 	inline function getDouble() {
 		var d : Float = bytes.getDouble(pos);
-		pos += 4;
+		pos += 8;
 		return d;
+	}
+	
+	inline function i64ToFloat( i64 : haxe.Int64 ) : Float {
+		// TODO: Find better solution.
+		return (i64.high * 4294967296) + 
+						( (i64.low & 0x80000000) != 0 ? ((i64.low & 0x7fffffff) + 2147483648) : i64.low );
+		// trace(i64, (i64.high * 4294967296) + i64.low, (i64.high * 4294967296) + ((i64.low & 0x7fffffff) + 2147483648));
+		// return Std.parseFloat(Std.string(i64));// (i64.low < 0 ? (-i64.low + 2147483648) : i64.low) + ((i64.high:Float) * 4294967296);
 	}
 	
 	inline function getByte() {
