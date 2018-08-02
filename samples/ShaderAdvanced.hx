@@ -159,8 +159,8 @@ class ShaderAdvanced extends hxd.App {
 			buf.push(i * 0.4);
 			buf.push(i * 0.2);
 		}
-		prim.instanceBuffer = h3d.Buffer.ofFloats(buf,2);
-		prim.defineBuffer("offset",0,true);
+		var instanceBuffer = h3d.Buffer.ofFloats(buf,2);
+		prim.addBuffer("offset",instanceBuffer);
 
 		var m = new h3d.scene.Mesh(prim, s3d);
 		m.material.mainPass.addShader(new InstancedOffsetShader());

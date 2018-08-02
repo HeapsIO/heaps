@@ -25,6 +25,8 @@ class GlslOut {
 		m.set(ToBool, "bool");
 		m.set(LReflect, "reflect");
 		m.set(Mat3x4, "_mat3x4");
+		m.set(VertexID, "gl_VertexID");
+		m.set(InstanceID, "gl_InstanceID");
 		for( g in m )
 			KWDS.set(g, true);
 		m;

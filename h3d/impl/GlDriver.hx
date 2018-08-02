@@ -14,6 +14,7 @@ private typedef GL = js.html.webgl.GL;
 private extern class GL2 extends js.html.webgl.GL {
 	// webgl2
 	function drawBuffers( buffers : Array<Int> ) : Void;
+	function drawElementsInstanced( mode : Int, count : Int, type : Int, offset : Int, instanceCount : Int) : Void;
 	function getUniformBlockIndex( p : Program, name : String ) : Int;
 	function bindBufferBase( target : Int, index : Int, buffer : js.html.webgl.Buffer ) : Void;
 	function uniformBlockBinding( p : Program, blockIndex : Int, blockBinding : Int ) : Void;
@@ -1208,6 +1209,45 @@ class GlDriver extends Driver {
 			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
 		}
 		gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
+	}
+
+	override function allocInstanceBuffer( b : InstanceBuffer, bytes : haxe.io.Bytes ) {
+		#if js
+		var data = [];
+		for( i in 0...b.commandCount ) {
+			var p = i * 5 * 4;
+			var indexCount = bytes.getInt32(p);
+			var instanceCount = bytes.getInt32(p+4);
+			var offIndex = bytes.getInt32(p+8);
+			var offVertex = bytes.getInt32(p+12);
+			var offInstance = bytes.getInt32(p+16);
+			if( offVertex != 0 || offInstance != 0 )
+				throw "baseVertex and baseInstance must be zero in JS";
+			data.push(indexCount);
+			data.push(offIndex);
+			data.push(instanceCount);
+		}
+		b.data = data;
+		#end
+	}
+
+	override function disposeInstanceBuffer(b:InstanceBuffer) {
+		b.data = null;
+	}
+
+	override function drawInstanced( ibuf : IndexBuffer, commands : InstanceBuffer ) {
+		if( ibuf != curIndexBuffer ) {
+			curIndexBuffer = ibuf;
+			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf);
+		}
+		#if js
+		var args : Array<Int> = commands.data;
+		var p = 0;
+		for( i in 0...Std.int(args.length/3) )
+			gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
+		#elseif (!hlsdl || hsdl >= "1.7")
+			throw "TODO";
+		#end
 	}
 
 	override function end() {

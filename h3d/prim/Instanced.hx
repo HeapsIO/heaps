@@ -3,7 +3,6 @@ package h3d.prim;
 class Instanced extends MeshPrimitive {
 
 	public var commands : h3d.impl.InstanceBuffer;
-	public var instanceBuffer : h3d.Buffer;
 
 	public function new() {
 	}
@@ -20,8 +19,8 @@ class Instanced extends MeshPrimitive {
 		}
 	}
 
-	public function defineBuffer( name, offset, isInst = false ) {
-		addBuffer(name, isInst ? instanceBuffer : buffer, offset);
+	public override function addBuffer( name, buffer, offset = 0 ) {
+		super.addBuffer(name, buffer, offset);
 	}
 
 	override function render( engine : h3d.Engine ) {
