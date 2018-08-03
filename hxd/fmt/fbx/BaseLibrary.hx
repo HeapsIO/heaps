@@ -199,7 +199,7 @@ class BaseLibrary {
 		var originScale = 1;
 		var upAxis = 1;
 		var originAxis = 2;
-		for( p in root.getAll("GlobalSettings.Properties70.P") )
+		for( p in root.getAll("GlobalSettings.Properties70.P") ) {			
 			switch( p.props[0].toString() ) {
 			case "UnitScaleFactor": unitScale = p.props[4].toInt();
 			case "OriginalUnitScaleFactor": originScale = p.props[4].toInt();
@@ -207,11 +207,22 @@ class BaseLibrary {
 			case "OriginalUpAxis": originAxis = p.props[4].toInt();
 			default:
 			}
-		var scaleFactor = unitScale == 100 && originScale == 1 ? 100 : 1;
+		}
+		var scaleFactor : Float = unitScale == 100 && originScale == 1 ? 100 : 1;
 		var axisFlip = upAxis == 2 && originAxis == 1;
+		var geometryScaleFactor = scaleFactor;
 		// TODO : axisFlip
 
-		if( scaleFactor == 1 )
+		var app = "";
+		for( p in root.getAll("FBXHeaderExtension.SceneInfo.Properties70.P") )
+			switch( p.props[0].toString() ) {
+			case "LastSaved|ApplicationName": app = p.props[4].toString();
+			default:
+			}
+		if( app.indexOf("Blender") >= 0 && unitScale == 1 && originScale == 1 )
+			scaleFactor *= 0.01; // Blender in meters exports FBX to centimeter
+		
+		if( scaleFactor == 1 && geometryScaleFactor == 1 )
 			return;
 
 		function toFloats( n : FbxNode ) {
@@ -228,12 +239,18 @@ class BaseLibrary {
 		}
 
 		// scale on geometry
-		for( g in this.root.getAll("Objects.Geometry.Vertices") ) {
-			var v = toFloats(g);
-			for( i in 0...v.length )
-				v[i] = v[i] / scaleFactor;
+		if( geometryScaleFactor != 1 ) {
+			for( g in this.root.getAll("Objects.Geometry.Vertices") ) {
+				var v = toFloats(g);
+				for( i in 0...v.length )
+					v[i] = v[i] / geometryScaleFactor;
+			}
 		}
-		// scale on root models
+
+		if( scaleFactor == 1 )
+			return;
+		
+		// scale on root models			
 		for( m in this.root.getAll("Objects.Model") ) {
 			var isRoot = getParent(m,"Model",true) == null;
 			for( p in m.getAll("Properties70.P") )
