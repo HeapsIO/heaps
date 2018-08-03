@@ -40,13 +40,12 @@ class TextureCache {
 		position = 0;
 	}
 
-	public function allocTarget( name : String, width : Int, height : Int, defaultDepth=true, ?format:hxd.PixelFormat ) {
+	public function allocTarget( name : String, width : Int, height : Int, defaultDepth=true, ?format:hxd.PixelFormat, ?flags : Array<h3d.mat.Data.TextureFlags> ) {
 		var t = cache[position];
 		if( format == null ) format = defaultFormat;
 		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.format != format ) {
 			if( t != null ) t.dispose();
-			var flags : Array<h3d.mat.Data.TextureFlags> = [Target];
-			t = new h3d.mat.Texture(width, height, flags, format);
+			t = new h3d.mat.Texture(width, height, flags == null ? [Target] : flags, format);
 			cache[position] = t;
 		}
 		t.depthBuffer = defaultDepth ? defaultDepthBuffer : null;
