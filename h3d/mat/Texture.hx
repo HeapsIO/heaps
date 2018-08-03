@@ -261,7 +261,8 @@ class Texture {
 		if( t != null ) {
 			mem.deleteTexture(this);
 			#if debug
-			this.allocPos.customParams = ["#DISPOSED"];
+			if(this.allocPos != null)
+				this.allocPos.customParams = ["#DISPOSED"];
 			#end
 		}
 	}
