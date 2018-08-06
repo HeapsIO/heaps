@@ -47,6 +47,10 @@ class ContextShared {
 		return ret;
 	}
 
+	public function loadPrefab( path : String ) : Prefab {
+		throw "Not implemented";
+	}
+
 	public function loadShader( path : String ) : ShaderDef {
 		var r = shaderCache.get(path);
 		if(r != null)
