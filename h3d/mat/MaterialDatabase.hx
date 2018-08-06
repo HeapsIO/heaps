@@ -68,7 +68,7 @@ class MaterialDatabase {
 		Reflect.deleteField(root, name);
 
 		var currentProps = material.props;
-		var defaultProps = material.getDefaultModelProps();
+		var defaultProps = material.getDefaultProps();
 		if( currentProps == null || Std.string(defaultProps) == Std.string(currentProps) ) {
 			// cleanup
 			while( path.length > 0 ) {
