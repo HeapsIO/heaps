@@ -13,6 +13,7 @@ class PointLight extends Light {
 		pbr = new h3d.shader.pbr.Light.PointLight();
 		super(pbr,parent);
 		range = 10;
+		shadows = new h3d.pass.PointShadowMap(this, true);
 		primitive = h3d.prim.Sphere.defaultUnitSphere();
 	}
 
@@ -41,6 +42,8 @@ class PointLight extends Light {
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pbr.invLightRange4 = 1 / (range * range * range * range);
 		pbr.pointSize = size;
+
+		super.emit(ctx);
 	}
 
 }

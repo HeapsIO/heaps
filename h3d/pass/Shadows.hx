@@ -50,7 +50,14 @@ class Shadows extends Default {
 		if( staticTexture != null ) staticTexture.dispose();
 	}
 
+	function isUsingWorldDist(){
+		return false;
+	}
+
 	override function getOutputs() : Array<hxsl.Output> {
+		if(isUsingWorldDist())
+			return [Swiz(Value("output.worldDist",1),[X,X,X,X])];
+
 		if( format == h3d.mat.Texture.nativeFormat )
 			return [PackFloat(Value("output.depth"))];
 		return [Swiz(Value("output.depth",1),[X,X,X,X])];

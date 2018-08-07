@@ -34,6 +34,7 @@ class BaseMesh extends hxsl.Shader {
 			var color : Vec4;
 			var depth : Float;
 			var normal : Vec3;
+			var worldDist : Float;
 		};
 
 		var relativePosition : Vec3;
@@ -46,6 +47,7 @@ class BaseMesh extends hxsl.Shader {
 		var screenUV : Vec2;
 		var specPower : Float;
 		var specColor : Vec3;
+		var worldDist : Float;
 
 		@param var color : Vec4;
 		@range(0,100) @param var specularPower : Float;
@@ -64,6 +66,7 @@ class BaseMesh extends hxsl.Shader {
 			specColor = specularColor * specularAmount;
 			screenUV = screenToUv(projectedPosition.xy / projectedPosition.w);
 			depth = projectedPosition.z / projectedPosition.w;
+			worldDist = length(transformedPosition - camera.position) / camera.zFar;
 		}
 
 		function __init__fragment() {
@@ -84,6 +87,7 @@ class BaseMesh extends hxsl.Shader {
 			output.color = pixelColor;
 			output.depth = depth;
 			output.normal = transformedNormal;
+			output.worldDist = worldDist;
 		}
 
 	};

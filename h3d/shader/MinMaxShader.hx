@@ -15,6 +15,23 @@ class MinMaxShader extends ScreenShader {
 		}
 
 	};
+}
 
+class CubeMinMaxShader extends ScreenShader {
 
+	static var SRC = {
+
+		@param var texA : SamplerCube;
+		@param var texB : SamplerCube;
+		@const var isMax : Bool;
+		@param var mat : Mat3x4;
+
+		function fragment() {
+			var dir = vec3(calculatedUV , 1) * mat;
+			var a = texA.get(dir);
+			var b = texB.get(dir);
+			pixelColor = isMax ? max(a,b) : min(a,b);
+		}
+
+	};
 }

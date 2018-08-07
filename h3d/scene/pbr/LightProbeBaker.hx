@@ -8,7 +8,7 @@ class LightProbeBaker {
 	public var environment : h3d.scene.pbr.Environment;
 
 	var envMap : h3d.mat.Texture;
-	var customCamera = new h3d.Camera();
+	var customCamera : h3d.Camera;
 	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,1,0,0, -1,-1,1,0]),
 					h3d.Matrix.L([0,0,1,0, 0,1,0,0, 1,-1,-1,0]),
 	 				h3d.Matrix.L([-1,0,0,0, 0,0,1,0, 1,-1,-1,0]),
@@ -30,6 +30,9 @@ class LightProbeBaker {
 	var textureArray: Array<h3d.mat.Texture>;
 
 	public function new(){
+		customCamera = new h3d.Camera();
+		customCamera.screenRatio = 1.0;
+		customCamera.fovY = 90;
 	}
 
 	public function bake(renderer : h3d.scene.Renderer, s3d : Scene, volumetricLightMap : VolumetricLightmap, resolution : Int, ?time :Float) {

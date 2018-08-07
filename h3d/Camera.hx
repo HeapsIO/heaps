@@ -128,7 +128,6 @@ class Camera {
 		}
 		pos.set(position.x,position.y,position.z);
 		target.set(pos.x + dx,pos.y + dy,pos.z + dz);
-		setFovX(90,1);
 	}
 
 	/**
