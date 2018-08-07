@@ -384,7 +384,7 @@ class World extends Object {
 				}
 
 				for( i in 0...m.indexCount )
-					model.idx.push(data.indexes[i] + startIndex);
+					model.idx.push(data.indexes[i] + startVertex);
 
 				startVertex += m.vertexCount;
 				startIndex += m.indexCount;
