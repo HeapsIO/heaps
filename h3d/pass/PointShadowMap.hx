@@ -55,11 +55,13 @@ class PointShadowMap extends Shadows {
 	}
 
 	function syncShader(texture) {
+		var absPos = light.getAbsPos();
+		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		pshader.shadowMap = texture;
 		pshader.shadowBias = bias;
 		pshader.shadowPower = power;
-		pshader.lightPos = lightCamera.pos;
-		pshader.zFar = lightCamera.zFar;
+		pshader.lightPos = new h3d.Vector(absPos.tx, absPos.ty, absPos.tz);
+		pshader.zFar = pointLight.range;
 	}
 
 	override function saveStaticData() {
@@ -70,9 +72,6 @@ class PointShadowMap extends Shadows {
 
 		var buffer = new haxe.io.BytesBuffer();
 		buffer.addInt32(staticTexture.width);
-		buffer.addFloat(lightCamera.pos.x);
-		buffer.addFloat(lightCamera.pos.y);
-		buffer.addFloat(lightCamera.pos.z);
 
 		for(i in 0 ... 6){
 			var bytes = haxe.zip.Compress.run(staticTexture.capturePixels(i).bytes,9);
@@ -90,11 +89,6 @@ class PointShadowMap extends Shadows {
 		var size = buffer.readInt32();
 		if( size != this.size )
 			return false;
-
-		lightCamera.pos.x = buffer.readFloat();
-		lightCamera.pos.y = buffer.readFloat();
-		lightCamera.pos.z = buffer.readFloat();
-		lightCamera.update();
 
 		if( staticTexture != null ) staticTexture.dispose();
 			staticTexture = new h3d.mat.Texture(size, size, [Target, Cube], format);

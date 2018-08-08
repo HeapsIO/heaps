@@ -30,10 +30,22 @@ class PointLight extends Light {
 		primitive.render(ctx.engine);
 	}
 
-	override function emit(ctx:RenderContext) {
-		if( ctx.pbrLightPass == null )
-			throw "Rendering a pbr light require a PBR compatible scene renderer";
-		ctx.emitPass(ctx.pbrLightPass, this);
+	override function sync(ctx) {
+
+		if(ctx.computingStatic && (shadows.mode == Static ||  shadows.mode == Mixed)){
+			culled = false; // Always render for baking
+		}
+		else{
+			var sphereVolume = new h3d.col.Sphere();
+			sphereVolume.x = pbr.lightPos.x;
+			sphereVolume.y = pbr.lightPos.y;
+			sphereVolume.z = pbr.lightPos.z;
+			sphereVolume.r = this.range;
+			culled = !ctx.camera.getFrustum().hasSphere(sphereVolume);
+		}
+
+		if(culled) return;
+
 		pbr.lightColor.load(_color);
 		var range = hxd.Math.max(range, 1e-10);
 		var size = hxd.Math.min(size, range);
@@ -42,12 +54,13 @@ class PointLight extends Light {
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pbr.invLightRange4 = 1 / (range * range * range * range);
 		pbr.pointSize = size;
-
-		// Frustum Culling
-		var sphereVolume = new h3d.col.Sphere();
-		sphereVolume.r = this.range;
-		if(ctx.camera.getFrustum().hasSphere( sphereVolume))
-			super.emit(ctx);
 	}
 
+	override function emit(ctx:RenderContext) {
+		if( ctx.pbrLightPass == null )
+			throw "Rendering a pbr light require a PBR compatible scene renderer";
+
+		super.emit(ctx);
+		ctx.emitPass(ctx.pbrLightPass, this);
+	}
 }
