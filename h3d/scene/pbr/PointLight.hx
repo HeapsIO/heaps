@@ -43,7 +43,11 @@ class PointLight extends Light {
 		pbr.invLightRange4 = 1 / (range * range * range * range);
 		pbr.pointSize = size;
 
-		super.emit(ctx);
+		// Frustum Culling
+		var sphereVolume = new h3d.col.Sphere();
+		sphereVolume.r = this.range;
+		if(ctx.camera.getFrustum().hasSphere( sphereVolume))
+			super.emit(ctx);
 	}
 
 }
