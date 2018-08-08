@@ -11,9 +11,9 @@ class PointLight extends Light {
 
 	public function new(?parent) {
 		pbr = new h3d.shader.pbr.Light.PointLight();
+		shadows = new h3d.pass.PointShadowMap(this, true);
 		super(pbr,parent);
 		range = 10;
-		shadows = new h3d.pass.PointShadowMap(this, true);
 		primitive = h3d.prim.Sphere.defaultUnitSphere();
 	}
 

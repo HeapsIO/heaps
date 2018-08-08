@@ -8,12 +8,12 @@ class PointShadowMap extends Shadows {
 	var pshader : h3d.shader.PointShadow;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader.CubeMinMaxShader());
 
-	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,1,0,0, -1,-1,1,0]),
-					h3d.Matrix.L([0,0,1,0, 0,1,0,0, 1,-1,-1,0]),
-	 				h3d.Matrix.L([-1,0,0,0, 0,0,1,0, 1,-1,-1,0]),
-	 				h3d.Matrix.L([-1,0,0,0, 0,0,-1,0, 1,1,1,0]),
-				 	h3d.Matrix.L([-1,0,0,0, 0,1,0,0, 1,-1,1,0]),
-				 	h3d.Matrix.L([1,0,0,0, 0,1,0,0, -1,-1,-1,0]) ];
+	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,-1,0,0, 1,0,0,0]),
+					h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
+	 				h3d.Matrix.L([1,0,0,0, 0,0,1,0, 0,1,0,0]),
+	 				h3d.Matrix.L([1,0,0,0, 0,0,-1,0, 0,-1,0,0]),
+				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,1,0,0]),
+				 	h3d.Matrix.L([-1,0,0,0, 0,-1,0,0, 0,0,-1,0]) ];
 
 	public function new( light : h3d.scene.Light, useWorldDist : Bool ) {
 		super(light);
@@ -45,13 +45,6 @@ class PointShadowMap extends Shadows {
 
 	function getShadowProj() {
 		return lightCamera.m;
-	}
-
-	public dynamic function calcShadowBounds( camera : h3d.Camera ) {
-		var pt : Array<h3d.Vector> = camera.getFrustumCorners();
-		for( p in pt) {
-			camera.orthoBounds.addPos(p.x, p.y, p.z);
-		}
 	}
 
 	override function setGlobals() {
@@ -138,7 +131,7 @@ class PointShadowMap extends Shadows {
 			}
 		}
 
-		passes = filterPasses(passes);
+		var passes = filterPasses(passes);
 
 		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, [Target, Cube]);
 		if(depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
@@ -146,9 +139,6 @@ class PointShadowMap extends Shadows {
 				depth = new h3d.mat.DepthBuffer(size, size);
 		}
 		texture.depthBuffer = depth;
-
-		var textureTest = ctx.textures.allocTarget("pointShadowMap", size, size, false, format);
-		textureTest.depthBuffer = depth;
 
 		var merge : h3d.mat.Texture = null;
 		if( mode == Mixed && !ctx.computingStatic )

@@ -4,31 +4,32 @@ private class CubeCopyShader extends h3d.shader.ScreenShader {
 
 	static var SRC = {
 		@param var texture : SamplerCube;
-		@param var mat : Mat3x4;
+		@param var mat : Mat3;
 		function fragment() {
-			pixelColor = texture.get(vec3(calculatedUV, 1) * mat);
+			var uv = calculatedUV * 2.0 - 1.0;
+			pixelColor = texture.get(normalize(vec3(uv, 1) * mat));
 		}
 	}
 }
 
 class CubeCopy extends ScreenFx<CubeCopyShader> {
 
-	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,1,0,0, -1,-1,1,0]),
-					h3d.Matrix.L([0,0,1,0, 0,1,0,0, 1,-1,-1,0]),
-	 				h3d.Matrix.L([-1,0,0,0, 0,0,1,0, 1,-1,-1,0]),
-	 				h3d.Matrix.L([-1,0,0,0, 0,0,-1,0, 1,1,1,0]),
-				 	h3d.Matrix.L([-1,0,0,0, 0,1,0,0, 1,-1,1,0]),
-				 	h3d.Matrix.L([1,0,0,0, 0,1,0,0, -1,-1,-1,0]) ];
+	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,-1,0,0, 1,0,0,0]),
+					h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
+	 				h3d.Matrix.L([1,0,0,0, 0,0,1,0, 0,1,0,0]),
+	 				h3d.Matrix.L([1,0,0,0, 0,0,-1,0, 0,-1,0,0]),
+				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,1,0,0]),
+				 	h3d.Matrix.L([-1,0,0,0, 0,-1,0,0, 0,0,-1,0]) ];
 
 	public function new() {
 		super(new CubeCopyShader());
 	}
 
 	public function apply( from, to, ?blend : h3d.mat.BlendMode, ?customPass : h3d.mat.Pass ) {
+		shader.texture = from;
 		for(i in 0 ... 6){
 			if( to != null )
 				engine.pushTarget(to, i);
-			shader.texture = from;
 			shader.mat = cubeDir[i];
 			if( customPass != null ) {
 				var old = pass;
@@ -45,10 +46,10 @@ class CubeCopy extends ScreenFx<CubeCopyShader> {
 				pass.setBlendMode(blend == null ? None : blend);
 				render();
 			}
-			shader.texture = null;
 			if( to != null )
 				engine.popTarget();
 		}
+		shader.texture = null;
 	}
 
 	public static function run( from : h3d.mat.Texture, to : h3d.mat.Texture, ?blend : h3d.mat.BlendMode, ?pass : h3d.mat.Pass ) {
