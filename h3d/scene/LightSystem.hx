@@ -46,7 +46,7 @@ class LightSystem {
 			s.z = l.absPos._43;
 			s.r = l.cullingDistance;
 
-			if( !frustum.hasSphere(s) ) {
+			if(!ctx.computingStatic && !frustum.hasSphere(s) ) {
 				if( prev == null )
 					ctx.lights = l.next;
 				else

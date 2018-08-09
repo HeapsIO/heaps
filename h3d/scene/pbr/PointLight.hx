@@ -33,20 +33,6 @@ class PointLight extends Light {
 	override function sync(ctx) {
 		super.sync(ctx);
 
-		if(ctx.computingStatic && (shadows.mode == Static ||  shadows.mode == Mixed)){
-			culled = false; // Always render for baking
-		}
-		else{
-			var sphereVolume = new h3d.col.Sphere();
-			sphereVolume.x = absPos.tx;
-			sphereVolume.y = absPos.ty;
-			sphereVolume.z = absPos.tz;
-			sphereVolume.r = this.range;
-			culled = !ctx.camera.getFrustum().hasSphere(sphereVolume);
-		}
-
-		if(culled) return;
-
 		pbr.lightColor.load(_color);
 		var range = hxd.Math.max(range, 1e-10);
 		var size = hxd.Math.min(size, range);
