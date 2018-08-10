@@ -93,6 +93,7 @@ class Dce {
 
 		for( v in used ) {
 			if( v.used ) continue;
+			if( v.v.kind == VarKind.Input) continue;
 			vertex.vars.remove(v.v);
 			fragment.vars.remove(v.v);
 		}
