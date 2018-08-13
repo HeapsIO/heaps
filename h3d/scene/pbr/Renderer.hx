@@ -266,20 +266,17 @@ class Renderer extends h3d.scene.Renderer {
 			return;
 		}
 
-		ctx.extraShaders = new hxsl.ShaderList(pbrProps, null);
+		pbrIndirect.drawIndirectDiffuse = false;
+		pbrIndirect.drawIndirectSpecular = true;
+		ctx.extraShaders = new hxsl.ShaderList(pbrProps, new hxsl.ShaderList(pbrIndirect, null));
 		draw("volumetricLightmap");
 		ctx.extraShaders = null;
 
 		pbrProps.isScreen = true;
 
-		pbrIndirect.drawIndirectDiffuse = false;
-		pbrIndirect.drawIndirectSpecular = true;
-		pbrOut.pass.stencil.setFunc(Always);
-		pbrOut.render();
-
 		pbrIndirect.showSky = false;
 		pbrIndirect.drawIndirectDiffuse = true;
-		pbrIndirect.drawIndirectSpecular = false;
+		pbrIndirect.drawIndirectSpecular = true;
 		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
 		pbrOut.render();
 

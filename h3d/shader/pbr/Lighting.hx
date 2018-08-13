@@ -35,16 +35,20 @@ class Indirect extends PropsDefinition {
 					discard;
 			} else {
 
+				var diffuse = vec3(0.);
+				var specular = vec3(0.);
+
 				var F0 = pbrSpecularColor;
 				var F = F0 + (max(vec3(1 - roughness), F0) - F0) * exp2( ( -5.55473 * NdV - 6.98316) * NdV );
 
-				var diffuse = irrDiffuse.get(normal).rgb * albedo;
-				var envSpec = textureLod(irrSpecular, reflect(-view,normal), roughness * irrSpecularLevels).rgb;
-				var envBRDF = irrLut.get(vec2(roughness, NdV));
-				var specular = envSpec * (F * envBRDF.x + envBRDF.y);
-
-				if( !drawIndirectDiffuse ) diffuse = vec3(0.);
-				if( !drawIndirectSpecular ) specular = vec3(0.);
+				if( drawIndirectDiffuse ){
+					diffuse = irrDiffuse.get(normal).rgb * albedo;
+				}
+				if( drawIndirectSpecular ) {
+					var envSpec = textureLod(irrSpecular, reflect(-view,normal), roughness * irrSpecularLevels).rgb;
+					var envBRDF = irrLut.get(vec2(roughness, NdV));
+					specular = envSpec * (F * envBRDF.x + envBRDF.y);
+				}
 
 				var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
 
