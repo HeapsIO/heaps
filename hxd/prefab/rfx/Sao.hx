@@ -7,6 +7,7 @@ typedef SaoProps = {
 	var radius : Float;
 	var intensity : Float;
 	var bias : Float;
+	var useWorldUV : Bool;
 }
 
 class Sao extends RendererFX {
@@ -24,6 +25,7 @@ class Sao extends RendererFX {
 			radius : 1,
 			intensity : 1,
 			bias : 0.1,
+			useWorldUV : false,
 		} : SaoProps);
 	}
 
@@ -43,6 +45,7 @@ class Sao extends RendererFX {
 			sao.shader.bias = props.bias * props.bias;
 			sao.shader.depthTextureChannel = depth.channel;
 			sao.shader.normalTextureChannel = normal.channel;
+			sao.shader.useWorldUV = props.useWorldUV;
 			sao.apply(depth.texture,normal.texture,ctx.camera);
 			ctx.engine.popTarget();
 
@@ -64,6 +67,7 @@ class Sao extends RendererFX {
 			<dt>Size</dt><dd><input type="range" min="0" max="1" field="size"/></dd>
 			<dt>Blur</dt><dd><input type="range" min="0" max="20" field="blur"/></dd>
 			<dt>Samples</dt><dd><input type="range" min="3" max="256" field="samples" step="1"/></dd>
+			<dt>Use World UV</dt><dd><input type="checkbox" field="useWorldUV"/></dd>
 			</dl>
 		'),props);
 	}

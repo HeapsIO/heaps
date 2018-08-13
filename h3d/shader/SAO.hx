@@ -10,6 +10,7 @@ class SAO extends ScreenShader {
 
 		@range(4,30) @const var numSamples : Int;
 		@range(1,10) @const var numSpiralTurns : Int;
+		@const var useWorldUV : Bool;
 
 		@ignore @param var depthTexture : Channel;
 		@ignore @param var normalTexture : Channel3;
@@ -61,7 +62,9 @@ class SAO extends ScreenShader {
 			var origin = getPosition(vUV);
 			var normal = normalTexture.get(vUV);
 
-			var sampleNoise = noiseTexture.get(vUV * noiseScale / screenRatio).x;
+			var noiseUv : Vec2;
+			noiseUv = useWorldUV ? origin.xy + origin.z : vUV;
+			var sampleNoise = noiseTexture.get(noiseUv).x;
 			var randomPatternRotationAngle = 2.0 * PI * sampleNoise;
 
 			// change from WS to DepthUV space
