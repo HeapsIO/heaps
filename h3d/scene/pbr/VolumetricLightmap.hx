@@ -132,7 +132,6 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 			return;
 		var scale = absPos.getScale();
 		shader.ORDER = shOrder;
-		shader.SIZE = getProbeCount() * shader.ORDER * shader.ORDER;
 		shader.lightmapInvPos.load(getInvPos());
 		shader.lightmapSize.load(new h3d.Vector(probeCount.x, probeCount.y, probeCount.z));
 		shader.voxelSize.load(new h3d.Vector(scale.x/(probeCount.x - 1), scale.y/(probeCount.y - 1), scale.z/(probeCount.z - 1)));

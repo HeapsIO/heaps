@@ -80,9 +80,6 @@ class VolumetricLightmap extends hxsl.Shader {
 		}
 
 		@const var ORDER : Int;
-		@const(327676) var SIZE : Int;
-
-		@param var lightProbeBuffer : Buffer<Vec4,SIZE>;
 		@param var lightProbeTexture : Sampler2D;
 		@param var lightmapInvPos : Mat4;
 		@param var lightmapSize : Vec3;
