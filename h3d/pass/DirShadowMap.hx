@@ -88,12 +88,13 @@ class DirShadowMap extends Shadows {
 
 		if( mode == Dynamic ) {
 			// intersect with frustum bounds
-			var cameraBounds = new h3d.col.Bounds();
 			for( pt in ctx.camera.getFrustumCorners() ) {
 				pt.transform(camera.mcam);
-				cameraBounds.addPos(pt.x, pt.y, pt.z);
+				if( pt.x < bounds.xMin ) bounds.xMin = pt.x;
+				if( pt.x > bounds.xMax ) bounds.xMax = pt.x;
+				if( pt.y < bounds.yMin ) bounds.yMin = pt.y;
+				if( pt.y > bounds.yMax ) bounds.yMax = pt.y;
 			}
-			bounds.intersection(bounds, cameraBounds);
 		}
 
 		bounds.scaleCenter(1.01);
