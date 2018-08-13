@@ -94,6 +94,7 @@ class DirShadowMap extends Shadows {
 				if( pt.x > bounds.xMax ) bounds.xMax = pt.x;
 				if( pt.y < bounds.yMin ) bounds.yMin = pt.y;
 				if( pt.y > bounds.yMax ) bounds.yMax = pt.y;
+				if( pt.z > bounds.zMax ) bounds.zMax = pt.z;
 			}
 		}
 
