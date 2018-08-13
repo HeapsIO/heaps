@@ -127,6 +127,19 @@ class Renderer extends h3d.scene.Renderer {
 		draw("overlay");
 	}
 
+	function drawShadows(){
+		var light = @:privateAccess ctx.lights;
+		var passes = get("shadow");
+		while( light != null ) {
+			var plight = Std.instance(light, h3d.scene.pbr.Light);
+			if( plight != null ) {
+				plight.shadows.setContext(ctx);
+				plight.shadows.draw(passes);
+			}
+			light = light.next;
+		}
+	}
+
 	function apply( step : hxd.prefab.rfx.RendererFX.Step ) {
 		for( f in effects )
 			if( f.enabled )
@@ -150,16 +163,7 @@ class Renderer extends h3d.scene.Renderer {
 		var props : RenderProps = props;
 		var ls = getLightSystem();
 
-		var light = @:privateAccess ctx.lights;
-		var passes = get("shadow");
-		while( light != null ) {
-			var plight = Std.instance(light, h3d.scene.pbr.Light);
-			if( plight != null ) {
-				plight.shadows.setContext(ctx);
-				plight.shadows.draw(passes);
-			}
-			light = light.next;
-		}
+		drawShadows();
 
 		var albedo = allocTarget("albedo");
 		var normal = allocTarget("normalDepth",false,1.,RGBA16F);
