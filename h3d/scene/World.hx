@@ -50,6 +50,7 @@ class WorldMaterial {
 	public var culling : Bool;
 	public var blend : h3d.mat.BlendMode;
 	public var killAlpha : Null<Float>;
+	public var emissive : Null<Float>;
 	public var lights : Bool;
 	public var shadows : Bool;
 	public var shaders : Array<hxsl.Shader>;
@@ -61,10 +62,11 @@ class WorldMaterial {
 		shaders = [];
 	}
 	public function updateBits() {
-		bits = (t.t == null ? 0 : t.t.id    << 9)
-			| ((normal == null ? 0 : 1)     << 8)
-			| (blend.getIndex()             << 5)
-			| ((killAlpha == null ? 0 : 1)  << 4)
+		bits = (t.t == null ? 0 : t.t.id    << 10)
+			| ((normal == null ? 0 : 1)     << 9)
+			| (blend.getIndex()             << 6)
+			| ((killAlpha == null ? 0 : 1)  << 5)
+			| ((emissive == null ? 0 : 1)   << 4)
 			| ((lights ? 1 : 0)             << 3)
 			| ((shadows ? 1 : 0)            << 2)
 			| ((spec == null ? 0 : 1)       << 1)
@@ -273,6 +275,7 @@ class World extends Object {
 		m.normal = normalMap;
 		m.blend = getBlend(rt);
 		m.killAlpha = null;
+		m.emissive = null;
 		m.mat = mat;
 		m.culling = true;
 		m.updateBits();
@@ -493,8 +496,9 @@ class World extends Object {
 		mesh.material.mainPass.depthWrite = true;
 		mesh.material.mainPass.depthTest = Less;
 
-		for(s in mat.shaders)
+		for(s in mat.shaders){
 			mesh.material.mainPass.addShader(s);
+		}
 
 		if( mat.spec != null ) {
 			if( specularInAlpha ) {
@@ -507,6 +511,7 @@ class World extends Object {
 
 		if(enableNormalMaps)
 			mesh.material.normalMap = mat.normal.t.tex;
+
 	}
 
 	override function dispose() {
