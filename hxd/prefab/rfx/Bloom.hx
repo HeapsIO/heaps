@@ -6,6 +6,8 @@ typedef BloomProps = {
 	var intensity : Float;
 	var blur : Float;
 	var saturation : Float;
+	var blurQuality : Float;
+	var blurLinear : Float;
 }
 
 class Bloom extends RendererFX {
@@ -21,6 +23,8 @@ class Bloom extends RendererFX {
 			intensity : 1.,
 			threshold : 0.5,
 			saturation: 0,
+			blurQuality: 1.0,
+			blurLinear : 0.0,
 		} : BloomProps);
 	}
 
@@ -39,6 +43,8 @@ class Bloom extends RendererFX {
 			ctx.engine.popTarget();
 
 			bloomBlur.radius = pb.blur;
+			bloomBlur.quality = pb.blurQuality;
+			bloomBlur.linear = pb.blurLinear;
 			bloomBlur.apply(ctx, bloom);
 			ctx.setGlobal("bloom",bloom);
 		}
@@ -53,6 +59,8 @@ class Bloom extends RendererFX {
 			<dt>Size</dt><dd><input type="range" min="0" max="1" field="size"/></dd>
 			<dt>Blur</dt><dd><input type="range" min="0" max="20" field="blur"/></dd>
 			<dt>Saturation</dt><dd><input type="range" min="-1" max="1" field="saturation"/></dd>
+			<dt>Blur Quality</dt><dd><input type="range" min="0" max="1" field="blurQuality"/></dd>
+			<dt>BLur Linear</dt><dd><input type="range" min="0" max="1" field="blurLinear"/></dd>
 			</dl>
 		'),props);
 	}
