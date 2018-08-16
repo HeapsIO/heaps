@@ -162,11 +162,10 @@ class PointShadowMap extends Shadows {
 				mergePass.render();
 				ctx.engine.popTarget();
 			}
-
-			// To Do
-			//if( blur.radius > 0 && (mode != Mixed || !ctx.computingStatic) )
-				//blur.apply(ctx, texture);
 		}
+
+		if( blur.radius > 0 && (mode != Mixed || !ctx.computingStatic) )
+				blur.apply(ctx, texture);
 
 		if( mode == Mixed && !ctx.computingStatic )
 			texture = merge;

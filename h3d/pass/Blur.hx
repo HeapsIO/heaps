@@ -3,6 +3,13 @@ package h3d.pass;
 @ignore("shader")
 class Blur extends ScreenFx<h3d.shader.Blur> {
 
+	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,-1,0,0, 1,0,0,0]),
+					h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
+	 				h3d.Matrix.L([1,0,0,0, 0,0,1,0, 0,1,0,0]),
+	 				h3d.Matrix.L([1,0,0,0, 0,0,-1,0, 0,-1,0,0]),
+				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,1,0,0]),
+				 	h3d.Matrix.L([-1,0,0,0, 0,-1,0,0, 0,0,-1,0]) ];
+
 	/**
 		How far in pixels the blur will go.
 	**/
@@ -75,12 +82,12 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		var tot = 0.;
 		var qadj = hxd.Math.clamp(quality) * 0.7 + 0.3;
 		var width = radius > 0 ? Math.ceil(hxd.Math.max(radius - 1, 1) * qadj / 2) : 0;
-		var sigma = Math.sqrt(radius) * 2;
+		var sigma = Math.sqrt(radius);
 		for( i in 0...width + 1 ) {
 			var i1 = i * 2;
 			var i2 = i == 0 ? 0 : i * 2 - 1;
 			var g1 = gauss(i1, sigma);
-			var g2 = gauss(i2,sigma);
+			var g2 = gauss(i2, sigma);
 			var g = g1 + g2;
 			values[i] = g;
 			offsets[i] = i == 0 ? 0 : (g1 * i1  + g2 * i2) / (g * i * Math.sqrt(qadj));
@@ -125,25 +132,45 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		if( output == null ) output = src;
 		if( values == null ) calcValues();
 
-		var tmp = ctx.textures.allocTarget(src.name+"BlurTmp",src.width,src.height,false,src.format);
+		var isCube = src.flags.has(Cube);
+		var faceCount = isCube ? 6 : 1;
+		var tmp = ctx.textures.allocTarget(src.name+"BlurTmp", src.width, src.height, false, src.format, isCube ? [Target, Cube] : [Target]);
 
 		shader.Quality = values.length;
 		shader.values = values;
 		shader.offsets = offsets;
 
-		shader.texture = src;
-		shader.pixel.set(1 / src.width, 0);
-		engine.pushTarget(tmp);
-		render();
-		engine.popTarget();
+		if( isCube ) {
+			shader.cubeTexture = src;
+			shader.isCube = true;
+		}
+		else{
+			shader.texture = src;
+			shader.isCube = false;
+		}
 
-		shader.texture = tmp;
+		shader.pixel.set(1 / src.width, 0);
+		for(i in 0 ... faceCount){
+			engine.pushTarget(tmp, i);
+			if( isCube ) shader.cubeDir = cubeDir[i];
+			render();
+			engine.popTarget();
+		}
+
+		if( isCube )
+			shader.cubeTexture = tmp;
+		else
+			shader.texture = tmp;
+
 		shader.pixel.set(0, 1 / src.height);
 		var outDepth = output.depthBuffer;
 		output.depthBuffer = null;
-		engine.pushTarget(output);
-		render();
-		engine.popTarget();
+		for( i in 0 ... faceCount ){
+			engine.pushTarget(output, i);
+			if( isCube ) shader.cubeDir = cubeDir[i];
+			render();
+			engine.popTarget();
+		}
 		output.depthBuffer = outDepth;
 	}
 
