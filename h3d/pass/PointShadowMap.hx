@@ -84,7 +84,7 @@ class PointShadowMap extends Shadows {
 
 	override function loadStaticData( bytes : haxe.io.Bytes ) {
 		if( (mode != Mixed && mode != Static) || bytes == null )
-			return true;
+			return false;
 		var buffer = new haxe.io.BytesInput(bytes);
 		var size = buffer.readInt32();
 		if( size != this.size )
