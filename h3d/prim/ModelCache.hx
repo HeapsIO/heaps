@@ -45,6 +45,8 @@ class ModelCache {
 		try {
 			tres = hxd.res.Loader.currentInstance.load(texturePath);
 		} catch( error : hxd.res.NotFound ) {
+			if(model == null)
+				throw error;
 			// try again to load into the current model directory
 			var path = model.entry.directory;
 			if( path != "" ) path += "/";
