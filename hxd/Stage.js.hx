@@ -192,6 +192,7 @@ class Stage {
 	}
 
 	function onMouseWheel(e:js.html.WheelEvent) {
+		e.preventDefault();
 		var ev = new Event(EWheel, mouseX, mouseY);
 		ev.wheelDelta = e.deltaY / 120; // browser specific?
 		event(ev);
