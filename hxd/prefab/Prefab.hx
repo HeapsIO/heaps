@@ -47,29 +47,17 @@ class Prefab {
 		if( !b ) {
 			for( m in materials ) {
 				m.mainPass.stencil = null;
-				m.removePass(m.getPass("outline"));
+				m.removePass(m.getPass("highlight"));
 			}
 			return;
 		}
 
-		var outlineShader = new h3d.shader.Outline();
-		outlineShader.size = 0.12;
-		outlineShader.distance = 0;
-		outlineShader.color.setColor(0xffffff);
-
-		var s1 = new h3d.mat.Stencil();
-		s1.setFunc(Always, 1);
-		s1.setOp(Keep, Keep, Replace);
-
-		var s2 = new h3d.mat.Stencil();
-		s2.setFunc(Greater, 1, 0xFF, 0);
+		var shader = new h3d.shader.FixedColor(0xffffff);
 		for( m in materials ) {
-			m.mainPass.stencil = s1;
-			var p = m.allocPass("outline");
+			var p = m.allocPass("highlight");
 			p.culling = None;
 			p.depthWrite = false;
-			p.addShader(outlineShader);
-			p.stencil = s2;
+			p.addShader(shader);
 		}
 	}
 	#end
