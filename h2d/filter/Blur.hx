@@ -24,10 +24,10 @@ class Blur extends Filter {
 
 	var pass : h3d.pass.Blur;
 
-	public function new( radius = 1., gain = 1., quality = 1. ) {
+	public function new( radius = 1., gain = 1., quality = 1., linear = 0. ) {
 		super();
 		smooth = true;
-		pass = new h3d.pass.Blur(radius, quality, gain);
+		pass = new h3d.pass.Blur(radius, gain, linear, quality);
 	}
 
 	inline function get_quality() return pass.quality;

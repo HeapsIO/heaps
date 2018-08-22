@@ -38,6 +38,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		this.radius = radius;
 		this.quality = quality;
 		this.gain = gain;
+		this.linear = linear;
 	}
 
 	function set_radius(r) {
