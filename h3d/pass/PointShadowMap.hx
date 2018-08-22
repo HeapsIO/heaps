@@ -2,7 +2,6 @@ package h3d.pass;
 
 class PointShadowMap extends Shadows {
 
-	var lightCamera : h3d.Camera;
 	var customDepth : Bool;
 	var depth : h3d.mat.DepthBuffer;
 	var pshader : h3d.shader.PointShadow;
@@ -43,8 +42,8 @@ class PointShadowMap extends Shadows {
 		return true;
 	}
 
-	function getShadowProj() {
-		return lightCamera.m;
+	override function getShadowTex() {
+		return pshader.shadowMap;
 	}
 
 	override function setGlobals() {

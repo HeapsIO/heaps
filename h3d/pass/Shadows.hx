@@ -9,6 +9,7 @@ enum RenderMode {
 
 class Shadows extends Default {
 
+	var lightCamera : h3d.Camera;
 	var format : hxd.PixelFormat;
 	var staticTexture : h3d.mat.Texture;
 	var light : h3d.scene.Light;
@@ -48,6 +49,14 @@ class Shadows extends Default {
 		blur.dispose();
 		// don't set to null
 		if( staticTexture != null ) staticTexture.dispose();
+	}
+
+	public function getShadowProj() {
+		return lightCamera.m;
+	}
+
+	public function getShadowTex() {
+		return null;
 	}
 
 	function isUsingWorldDist(){

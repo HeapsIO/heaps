@@ -1,26 +1,25 @@
 package h3d.shader;
 
-class PointShadow extends hxsl.Shader {
+class SpotShadow extends hxsl.Shader {
 
 	static var SRC = {
 
 		@const var enable : Bool;
 
-		@param var shadowMap : SamplerCube;
-		@param var lightPos : Vec3;
+		@param var shadowMap : Channel;
+		@param var shadowProj : Mat4;
 		@param var shadowPower : Float;
 		@param var shadowBias : Float;
-		@param var zFar : Float;
 
 		var transformedPosition : Vec3;
 		var shadow : Float;
 
 		function fragment() {
 			if( enable ) {
-				var posToLight = transformedPosition.xyz - lightPos;
-				var dir = normalize(posToLight.xyz);
-				var depth = shadowMap.get(dir).r * zFar;
-				var zMax = length(posToLight);
+				var shadowPos = vec4(transformedPosition, 1.0) * shadowProj;
+				var shadowScreenPos = shadowPos.xyz / shadowPos.w;
+				var depth = shadowMap.get(screenToUv(shadowScreenPos.xy));
+				var zMax = shadowScreenPos.z.saturate();
 				var delta = (depth + shadowBias).min(zMax) - zMax;
 				shadow = exp( shadowPower * delta ).saturate();
 			}

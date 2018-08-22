@@ -1,7 +1,9 @@
 package h3d.shader.pbr;
 
 class Light extends hxsl.Shader {
+
 	static var SRC = {
+
 		var pbrLightDirection : Vec3;
 		var pbrLightColor : Vec3;
 		var transformedPosition : Vec3;
@@ -12,6 +14,42 @@ class Light extends hxsl.Shader {
 	};
 }
 
+class SpotLight extends Light {
+
+	static var SRC = {
+
+		@param var spotDir : Vec3;
+		@param var lightPos : Vec3;
+		@param var angle : Float;
+		@param var fallOff : Float;
+		@param var invLightRange4 : Float; // 1 / range^4
+		@param var range : Float;
+
+		function fragment() {
+			pbrLightDirection = normalize(lightPos - transformedPosition);
+
+			var theta = dot(pbrLightDirection, -spotDir);
+			var epsilon = fallOff - angle;
+			var intensity = clamp((theta - angle) / epsilon, 0.0, 1.0);
+
+			var delta = lightPos - transformedPosition;
+			/*
+				UE4 [Karis12] "Real Shading in Unreal Engine 4"
+				Modified with pointSize
+			*/
+			var dist = delta.dot(delta);
+			var falloff = saturate(1 - dist*dist * invLightRange4);
+			if( range > 0 ) {
+				dist = (dist.sqrt() - range).max(0.);
+				dist *= dist;
+			}
+			falloff *= falloff;
+			falloff *= 1 / (dist + 1);
+
+			pbrLightColor = lightColor * intensity * falloff;
+		}
+	}
+}
 
 class PointLight extends Light {
 
@@ -38,11 +76,8 @@ class PointLight extends Light {
 			falloff *= 1 / (dist + 1);
 			pbrLightColor = lightColor * falloff;
 		}
-
 	};
-
 }
-
 
 class DirLight extends Light {
 
@@ -54,7 +89,5 @@ class DirLight extends Light {
 			pbrLightDirection = lightDir;
 			pbrLightColor = lightColor;
 		}
-
 	};
-
 }
