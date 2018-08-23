@@ -24,13 +24,13 @@ class SpotLight extends Light {
 		@param var fallOff : Float;
 		@param var invLightRange4 : Float; // 1 / range^4
 		@param var range : Float;
+		@param var lightProj : Mat4;
+
+		@const var useCookie : Bool;
+		@param var cookieTex : Sampler2D;
 
 		function fragment() {
 			pbrLightDirection = normalize(lightPos - transformedPosition);
-
-			var theta = dot(pbrLightDirection, -spotDir);
-			var epsilon = fallOff - angle;
-			var intensity = clamp((theta - angle) / epsilon, 0.0, 1.0);
 
 			var delta = lightPos - transformedPosition;
 			/*
@@ -46,7 +46,22 @@ class SpotLight extends Light {
 			falloff *= falloff;
 			falloff *= 1 / (dist + 1);
 
-			pbrLightColor = lightColor * intensity * falloff;
+			pbrLightColor = lightColor * falloff;
+
+			if(useCookie){
+				var posLightSpace = vec4(transformedPosition, 1.0) * lightProj;
+				var posUV = screenToUv(posLightSpace.xy/posLightSpace.w);
+				if(posUV.x > 1 || posUV.x < 0 || posUV.y > 1 || posUV.y < 0)
+					discard;
+				var cookie = cookieTex.get(posUV).rgba;
+				pbrLightColor *= cookie.rgb * cookie.a;
+			}
+			else{
+				var theta = dot(pbrLightDirection, -spotDir);
+				var epsilon = fallOff - angle;
+				var intensity = clamp((theta - angle) / epsilon, 0.0, 1.0);
+				pbrLightColor *= intensity;
+			}
 		}
 	}
 }

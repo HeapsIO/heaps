@@ -12,6 +12,7 @@ class SpotShadowMap extends Shadows {
 		super(light);
 		lightCamera = new h3d.Camera();
 		lightCamera.screenRatio = 1.0;
+		lightCamera.zNear = 3.0;
 		shader = sshader = new h3d.shader.SpotShadow();
 		border = new Border(size, size);
 		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
@@ -99,6 +100,7 @@ class SpotShadowMap extends Shadows {
 				if( staticTexture == null || staticTexture.isDisposed() )
 					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
 				if( mode == Static ) {
+					updateCamera();
 					syncShader(staticTexture);
 					return passes;
 				}
@@ -114,14 +116,7 @@ class SpotShadowMap extends Shadows {
 		texture.depthBuffer = depth;
 
 		if( mode != Mixed || ctx.computingStatic ) {
-			var absPos = light.getAbsPos();
-			var spotLight = cast(light, h3d.scene.pbr.SpotLight);
-			var ldir = absPos.front();
-			lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
-			lightCamera.target.set(absPos.tx + ldir.x, absPos.ty + ldir.y, absPos.tz + ldir.z);
-			lightCamera.fovY = spotLight.angle * 2.0;
-			lightCamera.zFar = spotLight.maxRange;
-			lightCamera.update();
+			updateCamera();
 		}
 
 		ctx.engine.pushTarget(texture);
@@ -145,6 +140,17 @@ class SpotShadowMap extends Shadows {
 
 		syncShader(texture);
 		return passes;
+	}
+
+	function updateCamera(){
+		var absPos = light.getAbsPos();
+		var spotLight = cast(light, h3d.scene.pbr.SpotLight);
+		var ldir = absPos.front();
+		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
+		lightCamera.target.set(absPos.tx + ldir.x, absPos.ty + ldir.y, absPos.tz + ldir.z);
+		lightCamera.fovY = spotLight.angle;
+		lightCamera.zFar = spotLight.maxRange;
+		lightCamera.update();
 	}
 
 	override function computeStatic( passes : h3d.pass.Object ) {
