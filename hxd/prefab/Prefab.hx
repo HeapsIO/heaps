@@ -202,13 +202,17 @@ class Prefab {
 	}
 
 	public function getAll<T:Prefab>( cl : Class<T>, ?arr: Array<T> ) : Array<T> {
+		return findAll(function(p) return p.to(cl));
+	}
+
+	public function findAll<T>( f : Prefab -> Null<T>, ?arr : Array<T> ) : Array<T> {
 		if(arr == null)
 			arr = [];
-		for(c in children) {
-			var i = c.to(cl);
-			if(i != null)
-				arr.push(i);
-			c.getAll(cl, arr);
+		for( c in children ) {
+			var v = f(c);
+			if( v != null )
+				arr.push(v);
+			c.findAll(f, arr);
 		}
 		return arr;
 	}
