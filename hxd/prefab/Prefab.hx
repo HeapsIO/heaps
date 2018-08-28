@@ -233,7 +233,7 @@ class Prefab {
 		return arr;
 	}
 
-	public function visitChildren(func: hide.prefab.Prefab->Bool) {
+	public function visitChildren(func: Prefab->Bool) {
 		for(c in children) {
 			if(func(c))
 				c.visitChildren(func);
