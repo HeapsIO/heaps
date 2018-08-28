@@ -143,9 +143,9 @@ class Prefab {
 		return p;
 	}
 
-	public function makeInstanceRec( ctx : Context ) {
+	public function makeInstanceRec( ctx : Context ) : Context {
 		if(!enabled)
-			return;
+			return ctx;
 		if( ctx == null ) {
 			ctx = new Context();
 			ctx.init();
@@ -153,6 +153,7 @@ class Prefab {
 		ctx = makeInstance(ctx);
 		for( c in children )
 			c.makeInstanceRec(ctx);
+		return ctx;
 	}
 
 	#if castle
@@ -230,6 +231,13 @@ class Prefab {
 		for(c in children)
 			c.flatten(cl, arr);
 		return arr;
+	}
+
+	public function visitChildren(func: hide.prefab.Prefab->Bool) {
+		for(c in children) {
+			if(func(c))
+				c.visitChildren(func);
+		}
 	}
 
 	public function getParent<T:Prefab>( c : Class<T> ) : Null<T> {
