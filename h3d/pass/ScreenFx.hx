@@ -1,24 +1,32 @@
 package h3d.pass;
 
-class ScreenFx<T:hxsl.Shader> {
+class ScreenFx<T:h3d.shader.ScreenShader> {
 
 	public var shader : T;
-	var pass : h3d.mat.Pass;
+	public var pass : h3d.mat.Pass;
 	var manager : ShaderManager;
-	var plan : h3d.prim.Primitive;
-	var engine : h3d.Engine;
+	var plane : h3d.prim.Primitive;
+	var _engine : h3d.Engine;
+	var engine(get,never) : h3d.Engine;
 	var shaders : hxsl.ShaderList;
 	var buffers : h3d.shader.Buffers;
 
-	public function new(shader) {
+	public function new(shader, ?output) {
 		this.shader = shader;
 		shaders = new hxsl.ShaderList(shader);
-		manager = new ShaderManager();
+		manager = new ShaderManager(output);
 		pass = new h3d.mat.Pass(Std.string(this), new hxsl.ShaderList(shader));
 		pass.culling = None;
 		pass.depth(false, Always);
-		plan = h3d.prim.Plan2D.get();
-		engine = h3d.Engine.getCurrent();
+	}
+
+	function get_engine() {
+		if( _engine == null ) _engine = h3d.Engine.getCurrent();
+		return _engine;
+	}
+
+	function copy( src, dst ) {
+		h3d.pass.Copy.run(src,dst);
 	}
 
 	public function setGlobals( ctx :  h3d.scene.RenderContext ) {
@@ -31,8 +39,33 @@ class ScreenFx<T:hxsl.Shader> {
 		return pass.addShader(s);
 	}
 
+	public function removeShader(s:hxsl.Shader) {
+		var prev : hxsl.ShaderList = null;
+		var cur = shaders;
+		while( cur != null ) {
+			if( cur.s == s ) {
+				if( prev == null ) shaders = cur.next else prev.next = cur.next;
+				return true;
+			}
+			prev = cur;
+			cur = cur.next;
+		}
+		return false;
+	}
+
+	public function getShader<T:hxsl.Shader>(cl:Class<T>) : T {
+		for( s in shaders ) {
+			var si = Std.instance(s, cl);
+			if( si != null ) return si;
+		}
+		return null;
+	}
+
 	public function render() {
+		if( plane == null )
+			plane = h3d.prim.Plane2D.get();
 		var rts = manager.compileShaders(shaders);
+		shader.flipY = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);
 		if( buffers == null )
@@ -44,7 +77,7 @@ class ScreenFx<T:hxsl.Shader> {
 		engine.uploadShaderBuffers(buffers, Globals);
 		engine.uploadShaderBuffers(buffers, Params);
 		engine.uploadShaderBuffers(buffers, Textures);
-		plan.render(engine);
+		plane.render(engine);
 	}
 
 	public function dispose() {

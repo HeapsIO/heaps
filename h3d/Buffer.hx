@@ -25,6 +25,10 @@ enum BufferFlag {
 		Used internaly
 	**/
 	NoAlloc;
+	/**
+		Used for shader input buffer
+	**/
+	UniformBuffer;
 }
 
 class Buffer {

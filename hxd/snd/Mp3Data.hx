@@ -61,6 +61,11 @@ class Mp3Data extends Data {
 
 
 	#if js
+
+	override function isLoading() {
+		return buffer == null;
+	}
+
 	override public function load(onEnd:Void->Void) {
 		if( buffer != null ) onEnd() else this.onEnd = onEnd;
 	}

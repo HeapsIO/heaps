@@ -151,10 +151,22 @@ class ShaderManager {
 		return 0;
 	}
 
+	function shaderInfo( shaders : hxsl.ShaderList, path : String ) {
+		var name = path.split(".").pop();
+		while( shaders != null ) {
+			var inst = @:privateAccess shaders.s.instance;
+			for( v in inst.shader.vars )
+				if( v.name == name )
+					return shaders.s.toString();
+			shaders = shaders.next;
+		}
+		return "(not found)";
+	}
+
 	public inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList, opt = false ) : Dynamic {
 		if( p.perObjectGlobal != null ) {
 			var v : Dynamic = globals.fastGet(p.perObjectGlobal.gid);
-			if( v == null ) throw "Missing global value " + p.perObjectGlobal.path;
+			if( v == null ) throw "Missing global value " + p.perObjectGlobal.path+" for shader "+shaderInfo(shaders,p.perObjectGlobal.path);
 			if( p.type.match(TChannel(_)) )
 				return v.texture;
 			return v;
@@ -205,18 +217,16 @@ class ShaderManager {
 				p = p.next;
 			}
 			var tid = 0;
-			var p = s.textures2D;
+			var p = s.textures;
 			while( p != null ) {
-				var t = getParamValue(p, shaders, !STRICT);
-				if( t == null ) t = h3d.mat.Texture.fromColor(0xFF00FF);
-				buf.tex[tid++] = t;
+				buf.tex[tid++] = getParamValue(p, shaders, !STRICT);
 				p = p.next;
 			}
-			var p = s.texturesCube;
+			var p = s.buffers;
+			var bid = 0;
 			while( p != null ) {
-				var t = getParamValue(p, shaders, !STRICT);
-				if( t == null ) t = h3d.mat.Texture.defaultCubeTexture();
-				buf.tex[tid++] = t;
+				var b : h3d.Buffer = getParamValue(p, shaders, !STRICT);
+				buf.buffers[bid++] = b;
 				p = p.next;
 			}
 		}

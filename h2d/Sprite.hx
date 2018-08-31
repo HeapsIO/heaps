@@ -433,7 +433,7 @@ class Sprite {
 
 	function emitTile( ctx : RenderContext, tile : h2d.Tile ) {
 		if( nullDrawable == null )
-			nullDrawable = new h2d.Drawable(null);
+			nullDrawable = @:privateAccess new h2d.Drawable(null);
 		if( !ctx.hasBuffering() ) {
 			nullDrawable.absX = absX;
 			nullDrawable.absY = absY;
@@ -709,7 +709,7 @@ class Sprite {
 		y += dy * Math.sin(rotation);
 	}
 
-	public inline function setPos( x : Float, y : Float ) {
+	public inline function setPosition( x : Float, y : Float ) {
 		this.x = x;
 		this.y = y;
 	}

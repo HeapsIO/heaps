@@ -162,7 +162,7 @@ class Quat {
 		}
 	}
 
-	public function initRotate( ax : Float, ay : Float, az : Float ) {
+	public function initRotation( ax : Float, ay : Float, az : Float ) {
 		var sinX = ( ax * 0.5 ).sin();
 		var cosX = ( ax * 0.5 ).cos();
 		var sinY = ( ay * 0.5 ).sin();
@@ -186,12 +186,6 @@ class Quat {
 		y = y2;
 		z = z2;
 		w = w2;
-	}
-
-	public function toMatrix() {
-		var m = new Matrix();
-		saveToMatrix(m);
-		return m;
 	}
 
 	public function toEuler() {
@@ -257,10 +251,15 @@ class Quat {
 		return x * q.x + y * q.y + z * q.z + w * q.w;
 	}
 
+	public inline function getDirection() {
+		return new h3d.Vector(1 - 2 * ( y * y + z * z ), 2 * ( x * y - z * w ), 2 * ( x * z + y * w ));
+	}
+
 	/**
 		Save to a Left-Handed matrix
 	**/
-	public function saveToMatrix( m : h3d.Matrix ) {
+	public function toMatrix( ?m : h3d.Matrix ) {
+		if( m == null ) m = new h3d.Matrix();
 		var xx = x * x;
 		var xy = x * y;
 		var xz = x * z;

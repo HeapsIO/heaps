@@ -12,6 +12,7 @@ class MemoryManager {
 	var buffers : Array<ManagedBuffer>;
 	var indexes : Array<Indexes>;
 	var textures : Array<h3d.mat.Texture>;
+	var depths : Array<h3d.mat.DepthBuffer>;
 
 	public var triIndexes(default,null) : Indexes;
 	public var quadIndexes(default,null) : Indexes;
@@ -27,6 +28,7 @@ class MemoryManager {
 		indexes = new Array();
 		textures = new Array();
 		buffers = new Array();
+		depths = new Array();
 		initIndexes();
 	}
 
@@ -88,6 +90,9 @@ class MemoryManager {
 		if( mem == 0 ) return;
 
 		while( usedMemory + mem > MAX_MEMORY || bufferCount >= MAX_BUFFERS || (m.vbuf = driver.allocVertexes(m)) == null ) {
+
+			if( driver.isDisposed() ) return;
+
 			var size = usedMemory - freeMemorySize();
 			garbage();
 			cleanManagedBuffers();
@@ -148,7 +153,10 @@ class MemoryManager {
 		}
 
 		if( !b.flags.has(Managed) ) {
-			var m = new ManagedBuffer(stride, b.vertices, b.flags.has(Dynamic) ? [Dynamic] : null);
+			var flags : Array<h3d.Buffer.BufferFlag> = null;
+			if( b.flags.has(Dynamic) ) { if( flags == null ) flags = []; flags.push(Dynamic); }
+			if( b.flags.has(UniformBuffer) ) { if( flags == null ) flags = []; flags.push(UniformBuffer); }
+ 			var m = new ManagedBuffer(stride, b.vertices, flags);
 			#if debug
 			m.next = buffers[0];
 			buffers[0] = m;
@@ -208,14 +216,14 @@ class MemoryManager {
 		indexes.remove(i);
 		driver.disposeIndexes(i.ibuf);
 		i.ibuf = null;
-		usedMemory -= i.count * 2;
+		usedMemory -= i.count * (i.is32 ? 4 : 2);
 	}
 
 	@:allow(h3d.Indexes)
 	function allocIndexes( i : Indexes ) {
-		i.ibuf = driver.allocIndexes(i.count);
+		i.ibuf = driver.allocIndexes(i.count,i.is32);
 		indexes.push(i);
-		usedMemory += i.count * 2;
+		usedMemory += i.count * (i.is32 ? 4 : 2);
 	}
 
 
@@ -243,7 +251,7 @@ class MemoryManager {
 
 	@:allow(h3d.mat.Texture.dispose)
 	function deleteTexture( t : h3d.mat.Texture ) {
-		textures.remove(t);
+		if( !textures.remove(t) ) return;
 		driver.disposeTexture(t);
 		texMemory -= t.width * t.height * bpp(t);
 	}
@@ -253,12 +261,34 @@ class MemoryManager {
 		var free = cleanTextures(false);
 		t.t = driver.allocTexture(t);
 		if( t.t == null ) {
+			if( driver.isDisposed() ) return;
 			if( !cleanTextures(true) ) throw "Maximum texture memory reached";
 			allocTexture(t);
 			return;
 		}
 		textures.push(t);
 		texMemory += t.width * t.height * bpp(t);
+	}
+
+	@:allow(h3d.mat.DepthBuffer.alloc)
+	function allocDepth( b : h3d.mat.DepthBuffer ) {
+		var free = cleanTextures(false);
+		b.b = driver.allocDepthBuffer(b);
+		if( b.b == null ) {
+			if( driver.isDisposed() ) return;
+			if( !cleanTextures(true) ) throw "Maximum texture memory reached";
+			allocDepth(b);
+			return;
+		}
+		depths.push(b);
+		texMemory += b.width * b.height * 4;
+	}
+
+	@:allow(h3d.mat.DepthBuffer.dispose)
+	function deleteDepth( b : h3d.mat.DepthBuffer ) {
+		if( !depths.remove(b) ) return;
+		driver.disposeDepthBuffer(b);
+		texMemory -= b.width * b.height * 4;
 	}
 
 	// ------------------------------------- DISPOSE ------------------------------------------
@@ -275,6 +305,8 @@ class MemoryManager {
 		quadIndexes = null;
 		for( t in textures.copy() )
 			t.dispose();
+		for( b in depths.copy() )
+			b.dispose();
 		for( b in buffers.copy() ) {
 			var b = b;
 			while( b != null ) {

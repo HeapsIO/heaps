@@ -4,7 +4,7 @@ package hxd;
 #if hlsdl
 import sdl.Event;
 import sdl.GameController;
-#elseif usesys
+#elseif (usesys && !hlmesa)
 import haxe.GameController;
 #elseif hldx
 import dx.GameController;

@@ -104,11 +104,10 @@ class NanoJpeg {
 	}
 
 	inline function alloc( nbytes : Int ) {
-		return hxd.impl.Tmp.getBytes(nbytes);
+		return haxe.io.Bytes.alloc(nbytes);
 	}
 
 	inline function free( bytes : haxe.io.Bytes ) {
-		hxd.impl.Tmp.saveBytes(bytes);
 	}
 
 	function njInit( bytes, pos, size, filter ) {

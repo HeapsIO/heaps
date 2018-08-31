@@ -21,6 +21,7 @@ class BigPrimitive extends Primitive {
 	var allocPos : h3d.impl.AllocPos;
 	#end
 
+	public var hasTangents = false;
 	public var isStatic = true;
 
 	static var PREV_BUFFER : hxd.FloatBuffer;
@@ -54,11 +55,11 @@ class BigPrimitive extends Primitive {
 				tmpBuf = new hxd.FloatBuffer();
 			else
 				PREV_BUFFER = null;
-			#if hl
 			if( isStatic )
-			#end
 				tmpBuf.grow(65535 * stride);
 		}
+		if( !isStatic )
+			tmpBuf.grow(vcount * stride + bufPos);
 		if( tmpIdx == null ) {
 			tmpIdx = PREV_INDEX;
 			if( tmpIdx == null )
@@ -165,6 +166,7 @@ class BigPrimitive extends Primitive {
 		buffers = [];
 		allIndexes = [];
 		bufPos = 0;
+		idxPos = 0;
 		tmpBuf = null;
 		tmpIdx = null;
 	}
@@ -180,6 +182,7 @@ class BigPrimitive extends Primitive {
 		Adds a buffer to the primitive, with custom position,scale,rotation.
 		The buffer can have more stride than the BigPrimitive, but not less.
 		It is assumed that the buffer contains [X,Y,Z,NX,NY,NZ,U,V,R,G,B] (depending on his stride) so the different offsets are applied to the corresponding components.
+		If hasTangent=true, we have [TX,TY,TZ] just after normal.
 		However if the stride is 5, we assume [X,Y,Z,U,V]
 		If mat is not null, it overrides dx, dy, dz, rotation, scale
 	**/
@@ -247,7 +250,33 @@ class BigPrimitive extends Primitive {
 				}
 			}
 
-			switch( this.stride ) {
+			var stride = this.stride;
+			if( hasTangents ) {
+				var tx = buf[p++];
+				var ty = buf[p++];
+				var tz = buf[p++];
+
+				if(mat != null) {
+					var pt = new h3d.col.Point(tx, ty, tz);
+					var len = pt.lengthSq();
+					pt.transform3x3(mat);
+					pt.normalize();
+					if( len < 0.5 ) pt.scale(0.5);
+					add(pt.x);
+					add(pt.y);
+					add(pt.z);
+				}
+				else {
+					var tnx = tx * cr - ty * sr;
+					var tny = tx * sr + ty * cr;
+					add(tnx);
+					add(tny);
+					add(tz);
+				}
+				stride -= 3;
+			}
+
+			switch( stride ) {
 			case 3, 6:
 				continue;
 			case 4, 7:
@@ -255,7 +284,7 @@ class BigPrimitive extends Primitive {
 			case 5, 8, 9, 10:
 				add(buf[p++] + deltaU);
 				add(buf[p++] + deltaV);
-				for( i in 8...this.stride )
+				for( i in 8...stride )
 					add(buf[p++]);
 			default:
 				// UV
@@ -267,7 +296,7 @@ class BigPrimitive extends Primitive {
 				add(buf[p++] * color);
 				add(buf[p++] * color);
 
-				for( i in 11...this.stride )
+				for( i in 11...stride )
 					add(buf[p++]);
 			}
 		}

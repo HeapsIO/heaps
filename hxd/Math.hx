@@ -246,4 +246,17 @@ class Math {
 		return r >= 0 ? r : r + modulo;
 	}
 
+	/**
+	 * Convert degrees to radians
+	**/
+	public static inline function degToRad( deg : Float) {
+		return deg * PI / 180.0;
+	}
+
+	/**
+	 * Convert radians to degrees
+	 */
+	public static inline function radToDeg( rad : Float) {
+		return rad * 180.0 / PI;
+	}
 }

@@ -76,8 +76,8 @@ class Shader {
 					c = c.next;
 					continue;
 				}
-				var v : { texture : hxsl.Types.ChannelTexture, channel : hxsl.Channel } = v;
-				var sel : hxsl.Channel = v.channel;
+				var v : hxsl.ChannelTexture = v;
+				var sel = v.channel;
 				if( v.texture == null )
 					sel = Unknown
 				else if( sel == null || sel == Unknown ) {

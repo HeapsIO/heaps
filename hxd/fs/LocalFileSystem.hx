@@ -41,21 +41,6 @@ private class LocalEntry extends FileEntry {
 		#end
 	}
 
-	override function getTmpBytes() {
-		#if flash
-		if( checkExists && !file.exists )
-			return haxe.io.Bytes.alloc(0);
-		var fs = new flash.filesystem.FileStream();
-		fs.open(file, flash.filesystem.FileMode.READ);
-		var bytes = hxd.impl.Tmp.getBytes(fs.bytesAvailable);
-		fs.readBytes(bytes.getData());
-		fs.close();
-		return bytes;
-		#else
-		return sys.io.File.getBytes(file);
-		#end
-	}
-
 	override function getBytes() : haxe.io.Bytes {
 		#if flash
 		if( checkExists && !file.exists )
@@ -240,7 +225,7 @@ private class LocalEntry extends FileEntry {
 			WATCH_INDEX = 0;
 			return;
 		}
-		var t = try w.getModifTime() catch( e : Dynamic ) -1;
+		var t = try w.getModifTime() catch( e : Dynamic ) -1.;
 		if( t == w.watchTime ) return;
 
 		#if flash
@@ -314,6 +299,7 @@ class LocalFileSystem implements FileSystem {
 		baseDir = dir;
 		converts = new Map();
 		addConvert(new Convert.ConvertFBX2HMD());
+		addConvert(new Convert.ConvertTGA2PNG());
 		#if flash
 		var froot = new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + baseDir);
 		if( !froot.exists ) throw "Could not find dir " + dir;
@@ -370,6 +356,35 @@ class LocalFileSystem implements FileSystem {
 		return root;
 	}
 
+	#if (sys || nodejs)
+	var directoryCache : Map<String,Map<String,Bool>> = new Map();
+	#end
+
+	function checkPath( path : String ) {
+		#if (sys || nodejs)
+		// make sure the file is loaded with correct case !
+		var baseDir = new haxe.io.Path(path).dir;
+		var c = directoryCache.get(baseDir);
+		var isNew = false;
+		if( c == null ) {
+			isNew = true;
+			c = new Map();
+			for( f in try sys.FileSystem.readDirectory(baseDir) catch( e : Dynamic ) [] )
+				c.set(f, true);
+			directoryCache.set(baseDir, c);
+		}
+		if( !c.exists(path.substr(baseDir.length+1)) ) {
+			// added since then?
+			if( !isNew ) {
+				directoryCache.remove(baseDir);
+				return checkPath(path);
+			}
+			return false;
+		}
+		#end
+		return true;
+	}
+
 	function open( path : String, check = true ) {
 		var r = fileCache.get(path);
 		if( r != null )
@@ -388,7 +403,7 @@ class LocalFileSystem implements FileSystem {
 		if( f == null )
 			return null;
 		f = f.split("\\").join("/");
-		if( !check || (f == baseDir + path && sys.FileSystem.exists(f)) ) {
+		if( !check || (f == baseDir + path && sys.FileSystem.exists(f) && checkPath(f)) ) {
 			e = new LocalEntry(this, path.split("/").pop(), path, f);
 			convert(e);
 		}
@@ -413,7 +428,7 @@ class LocalFileSystem implements FileSystem {
 		fileCache = new Map();
 	}
 
-	var times : Map<String,Float>;
+	var times : Map<String,Int>;
 	var hashes : Dynamic;
 	var addedPaths = new Map<String,Bool>();
 
@@ -443,10 +458,10 @@ class LocalFileSystem implements FileSystem {
 		#end
 
 		if( times == null ) {
-			times = try haxe.Unserializer.run(hxd.File.getBytes(tmpDir + "times.dat").toString()) catch( e : Dynamic ) new Map<String,Float>();
+			times = try haxe.Unserializer.run(hxd.File.getBytes(tmpDir + "times.dat").toString()) catch( e : Dynamic ) new Map<String,Int>();
 		}
 		var realFile = baseDir + path;
-		var time = std.Math.ffloor(getFileTime(realFile) / 1000);
+		var time = std.Math.floor(getFileTime(realFile) / 1000);
 		if( hxd.File.exists(tmpFile) && time == times.get(path) )
 			return;
 		if( hashes == null ) {

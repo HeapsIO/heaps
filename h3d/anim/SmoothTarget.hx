@@ -102,7 +102,7 @@ class SmoothTarget extends Animation {
 				q1.set(m._12, m._13, m._21, m._23);
 				var sx = m._11, sy = m._22, sz = m._33;
 				var tx = m.tx, ty = m.ty, tz = m.tz;
-				q1.saveToMatrix(m);
+				q1.toMatrix(m);
 				m._11 *= sx;
 				m._12 *= sx;
 				m._13 *= sx;
@@ -122,7 +122,7 @@ class SmoothTarget extends Animation {
 				q1.set(m._12, m._13, m._21, m._23);
 				qout.lerp(o.q, q1, 1 - blend, true);
 				qout.normalize();
-				qout.saveToMatrix(mout);
+				qout.toMatrix(mout);
 
 				var sx = lerp(o.sx, m._11, blend);
 				var sy = lerp(o.sy, m._22, blend);

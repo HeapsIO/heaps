@@ -78,6 +78,11 @@ class Object implements hxd.impl.Serializable {
 	public var inheritCulled(get, set) : Bool;
 
 	/**
+		When enabled, the object bounds are ignored when using getBounds()
+	**/
+	public var ignoreBounds(get, set) : Bool;
+
+	/**
 		When enabled, the object is ignore when using getCollider()
 	**/
 	public var ignoreCollide(get, set) : Bool;
@@ -119,6 +124,7 @@ class Object implements hxd.impl.Serializable {
 	inline function get_lightCameraCenter() return flags.has(FLightCameraCenter);
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
+	inline function get_ignoreBounds() return flags.has(FIgnoreBounds);
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
 	inline function get_allowSerialize() return !flags.has(FNoSerialize);
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
@@ -129,6 +135,7 @@ class Object implements hxd.impl.Serializable {
 	inline function set_followPositionOnly(b) return flags.set(FFollowPositionOnly, b);
 	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
 	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
+	inline function set_ignoreBounds(b) return flags.set(FIgnoreBounds, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
@@ -145,8 +152,12 @@ class Object implements hxd.impl.Serializable {
 		return currentAnimation = a;
 	}
 
-	public function stopAnimation() {
+	public function stopAnimation( ?recursive = false ) {
 		currentAnimation = null;
+		if(recursive) {
+			for(c in children)
+				c.stopAnimation(true);
+		}
 	}
 
 	/**
@@ -444,6 +455,8 @@ class Object implements hxd.impl.Serializable {
 		Same as getLocalCollider, but returns an absolute collider instead of a local one.
 	**/
 	public function getGlobalCollider() : h3d.col.Collider {
+		if(ignoreCollide)
+			return null;
 		var col = getLocalCollider();
 		return col == null ? null : new h3d.col.ObjectCollider(this, col);
 	}
@@ -473,7 +486,7 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	function calcAbsPos() {
-		qRot.saveToMatrix(absPos);
+		qRot.toMatrix(absPos);
 		// prepend scale
 		absPos._11 *= scaleX;
 		absPos._12 *= scaleX;
@@ -620,7 +633,7 @@ class Object implements hxd.impl.Serializable {
 		return v;
 	}
 
-	public inline function setPos( x : Float, y : Float, z : Float ) {
+	public inline function setPosition( x : Float, y : Float, z : Float ) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -645,19 +658,28 @@ class Object implements hxd.impl.Serializable {
 	*/
 	public function rotate( rx : Float, ry : Float, rz : Float ) {
 		var qTmp = new h3d.Quat();
-		qTmp.initRotate(rx, ry, rz);
+		qTmp.initRotation(rx, ry, rz);
 		qRot.multiply(qTmp,qRot);
 		posChanged = true;
 	}
 
-	public function setRotate( rx : Float, ry : Float, rz : Float ) {
-		qRot.initRotate(rx, ry, rz);
+	public function setRotation( rx : Float, ry : Float, rz : Float ) {
+		qRot.initRotation(rx, ry, rz);
 		posChanged = true;
 	}
 
-	public function setRotateAxis( ax : Float, ay : Float, az : Float, angle : Float ) {
+	public function setRotationAxis( ax : Float, ay : Float, az : Float, angle : Float ) {
 		qRot.initRotateAxis(ax, ay, az, angle);
 		posChanged = true;
+	}
+
+	public function setDirection( v : h3d.Vector ) {
+		qRot.initDirection(v);
+		posChanged = true;
+	}
+
+	public function getDirection() {
+		return qRot.getDirection();
 	}
 
 	public function getRotationQuat() {

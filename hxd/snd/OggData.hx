@@ -87,44 +87,26 @@ private class BytesOutput extends haxe.io.Output {
 
 	var bytes : haxe.io.Bytes;
 	var position : Int;
-	#if flash
-	var m : hxd.impl.Memory.MemoryReader;
-	#end
 
 	public function new() {
 	}
 
 	public function done() {
-		#if flash
-		m.end();
-		#end
 	}
 
 	public function init( bytes : haxe.io.Bytes, position : Int ) {
 		this.bytes = bytes;
 		this.position = position;
-		#if flash
-		m = hxd.impl.Memory.select(bytes);
-		#end
 	}
 
 	override function writeFloat(f) {
-		#if flash
-		m.wfloat(position, f);
-		#else
 		bytes.setFloat(position, f);
-		#end
 		position += 4;
 	}
 
 	override function writeInt16(i) {
-		#if flash
-		m.wb(position++, i >> 8);
-		m.wb(position++, i);
-		#else
 		bytes.setUInt16(position, i);
 		position += 2;
-		#end
 	}
 
 }

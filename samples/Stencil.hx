@@ -17,21 +17,21 @@ class Stencil extends hxd.App {
 		var tex = hxd.Res.hxlogo.toTexture();
 
 		{	// create the top cube
-			var obj = new Mesh(prim, new h3d.mat.Material(tex), root);
-			obj.material.mainPass.enableLights = true;
+			var obj = new Mesh(prim, h3d.mat.Material.create(tex), root);
+			obj.material.shadows = false;
 		}
 
 		{	// create the cube reflection
-			var obj = new Mesh(prim, new h3d.mat.Material(tex), root);
+			var obj = new Mesh(prim, h3d.mat.Material.create(tex), root);
 			obj.scaleZ = -1;
 			obj.material.color.setColor(0x55C8FF);
+			obj.material.shadows = false;
 
 			var p = obj.material.mainPass;
-			var s = new h3d.mat.Stencil();
+			p.setPassName("alpha");
 			p.culling = Front;
-			p.enableLights = true;
-			s.setFunc(Both, Equal, 1, 0xFF);
-			s.setMask(Both, 0x00);
+			var s = new h3d.mat.Stencil();
+			s.setFunc(LessEqual, 1, 0xFF, 0);
 			p.stencil = s;
 		}
 
@@ -42,14 +42,14 @@ class Stencil extends hxd.App {
 
 			var obj = new Mesh(prim, root);
 			obj.material.color.setColor(0x0080C0);
+			obj.material.shadows = false;
 
 			var p = obj.material.mainPass;
 			var s = new h3d.mat.Stencil();
 			p.depthWrite = false;
-			p.stencil = new h3d.mat.Stencil();
-			s.setFunc(Both, Always, 1, 0xFF);
-			s.setOp(Both, Keep, Keep, Replace);
-			s.setMask(Both, 0xFF);
+
+			s.setFunc(Always, 1);
+			s.setOp(Keep, Keep, Replace);
 			p.stencil = s;
 		}
 
@@ -63,7 +63,7 @@ class Stencil extends hxd.App {
 
 	override function update( dt : Float ) {
 		time += 0.01 * dt;
-		root.setRotateAxis (0, 0, 1.0, time);
+		root.setRotationAxis(0, 0, 1.0, time);
 	}
 
 	static function main() {

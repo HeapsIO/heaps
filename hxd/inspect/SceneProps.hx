@@ -90,7 +90,7 @@ class SceneProps {
 			if( ls.shadowLight != null )
 				props.push(PGroup("DirLight", getObjectProps(ls.shadowLight)));
 
-			var s = r.getPass(h3d.pass.ShadowMap);
+			var s = r.getPass(h3d.pass.DefaultShadowMap);
 			if( s != null ) {
 				props.push(PGroup("Shadows",[
 					PRange("size", 64, 2048, function() return s.size, function(sz) s.size = Std.int(sz), 64),
@@ -249,7 +249,10 @@ class SceneProps {
 		props.push(PBool("enableSpecular", function() return l.enableSpecular, function(b) l.enableSpecular = b));
 		var dl = Std.instance(l, h3d.scene.DirLight);
 		if( dl != null )
-			props.push(PFloats("direction", function() return [dl.direction.x, dl.direction.y, dl.direction.z], function(fl) dl.direction.set(fl[0], fl[1], fl[2])));
+			props.push(PFloats("direction", function() {
+				var dir = dl.getDirection();
+				return [dl.x, dl.y, dl.z];
+			}, function(fl) dl.setDirection(new h3d.Vector(fl[0], fl[1], fl[2]))));
 		var pl = Std.instance(l, h3d.scene.PointLight);
 		if( pl != null )
 			props.push(PFloats("params", function() return [pl.params.x, pl.params.y, pl.params.z], function(fl) pl.params.set(fl[0], fl[1], fl[2], fl[3])));

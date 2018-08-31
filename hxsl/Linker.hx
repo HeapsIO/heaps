@@ -228,6 +228,7 @@ class Linker {
 		s.body = mapExprVar(e);
 		shaders.push(s);
 		curShader = null;
+		debug("Adding shader "+name+" with priority "+p);
 		return s;
 	}
 
@@ -247,8 +248,12 @@ class Linker {
 				continue;
 			if( !parent.write.exists(v.id) )
 				continue;
-			if( s.vertex && parent.vertex == false )
-				continue;
+			if( s.vertex ) {
+				if( parent.vertex == false )
+					continue;
+				if( parent.vertex == null )
+					parent.vertex = true;
+			}
 			debug(s.name + " => " + parent.name + " (" + v.path + ")");
 			s.deps.set(parent, true);
 			debugDepth++;
@@ -359,6 +364,11 @@ class Linker {
 
 		// create shader segments
 		var priority = 0;
+		var initPrio = {
+			init : [-3000],
+			vert : [-2000],
+			frag : [-1000],
+		};
 		for( s in shadersData ) {
 			for( f in s.funs ) {
 				var v = allocVar(f.ref, f.expr.p);
@@ -368,19 +378,19 @@ class Linker {
 					addShader(s.name + "." + (v.kind == Vertex ? "vertex" : "fragment"), v.kind == Vertex, f.expr, priority);
 
 				case Init:
+					var prio : Array<Int>;
 					var status : Null<Bool> = switch( f.ref.name ) {
-					case "__init__vertex": true;
-					case "__init__fragment": false;
-					default: null;
+					case "__init__vertex": prio = initPrio.vert; true;
+					case "__init__fragment": prio = initPrio.frag; false;
+					default: prio = initPrio.init; null;
 					}
 					switch( f.expr.e ) {
 					case TBlock(el):
 						var index = 0;
-						var priority = -el.length;
 						for( e in el )
-							addShader(s.name+"."+f.ref.name+(index++),status,e, priority++);
+							addShader(s.name+"."+f.ref.name+(index++),status,e, prio[0]++);
 					default:
-						addShader(s.name+"."+f.ref.name,status,f.expr, -1);
+						addShader(s.name+"."+f.ref.name,status,f.expr, prio[0]++);
 					}
 				case Helper:
 					throw "Unexpected helper function in linker "+v.v.name;

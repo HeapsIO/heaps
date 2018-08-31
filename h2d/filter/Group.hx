@@ -24,7 +24,9 @@ class Group extends Filter {
 		this.boundsExtend = 0;
 		for( f in filters ) {
 			f.sync(ctx, s);
-			if( f.boundsExtend > boundsExtend ) boundsExtend = f.boundsExtend;
+			if(f.boundsExtend > 0) {
+				boundsExtend += f.boundsExtend;
+			}
 			if( !f.autoBounds ) autoBounds = false;
 		}
 	}

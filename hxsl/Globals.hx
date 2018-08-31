@@ -76,5 +76,8 @@ class Globals {
 		}
 		return id;
 	}
+	public static function getIDName( id : Int ) : String {
+		return ALL[id];
+	}
 
 }

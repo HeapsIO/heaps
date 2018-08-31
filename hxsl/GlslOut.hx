@@ -23,9 +23,10 @@ class GlslOut {
 		m.set(ToInt, "int");
 		m.set(ToFloat, "float");
 		m.set(ToBool, "bool");
-		m.set(Texture2D, "_texture2D");
 		m.set(LReflect, "reflect");
 		m.set(Mat3x4, "_mat3x4");
+		m.set(VertexID, "gl_VertexID");
+		m.set(InstanceID, "gl_InstanceID");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -41,16 +42,20 @@ class GlslOut {
 	var allNames : Map<String, Int>;
 	var outIndexes : Map<Int, Int>;
 	var intelDriverFix : Bool;
+	var isES(get,never) : Bool;
+	var isES2(get,never) : Bool;
+	var uniformBuffer : Int = 0;
 	public var varNames : Map<Int,String>;
-	public var flipY : Bool;
-	public var glES : Bool;
+	public var glES : Null<Float>;
 	public var version : Null<Int>;
 
 	public function new() {
 		varNames = new Map();
 		allNames = new Map();
-		flipY = true;
 	}
+
+	inline function get_isES() return glES != null;
+	inline function get_isES2() return glES != null && glES <= 2;
 
 	inline function add( v : Dynamic ) {
 		buf.add(v);
@@ -101,6 +106,10 @@ class GlslOut {
 			add("_mat3x4");
 		case TSampler2D:
 			add("sampler2D");
+		case TSampler2DArray:
+			add("sampler2DArray");
+			if( isES )
+				decl("precision lowp sampler2DArray;");
 		case TSamplerCube:
 			add("samplerCube");
 		case TStruct(vl):
@@ -124,6 +133,8 @@ class GlslOut {
 				add(v);
 			}
 			add("]");
+		case TBuffer(_):
+			throw "assert";
 		case TChannel(n):
 			add("channel" + n);
 		}
@@ -143,6 +154,13 @@ class GlslOut {
 			case SConst(n): add(n);
 			}
 			add("]");
+		case TBuffer(t, size):
+			add("uniform_buffer"+(uniformBuffer++));
+			add(" { ");
+			v.type = TArray(t,size);
+			addVar(v);
+			v.type = TBuffer(t,size);
+			add("; }");
 		default:
 			addType(v.type);
 			add(" ");
@@ -191,6 +209,54 @@ class GlslOut {
 		addExpr(e, tabs);
 	}
 
+	function getFunName( g : TGlobal, args : Array<TExpr>, rt : Type ) {
+		switch( g ) {
+		case Mat3x4:
+			decl(MAT34);
+		case DFdx, DFdy, Fwidth:
+			decl("#extension GL_OES_standard_derivatives:enable");
+		case Pack:
+			decl("vec4 pack( float v ) { vec4 color = fract(v * vec4(1, 255, 255.*255., 255.*255.*255.)); return color - color.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.); }");
+		case Unpack:
+			decl("float unpack( vec4 color ) { return dot(color,vec4(1., 1. / 255., 1. / (255. * 255.), 1. / (255. * 255. * 255.))); }");
+		case PackNormal:
+			decl("vec4 packNormal( vec3 v ) { return vec4((v + vec3(1.)) * vec3(0.5),1.); }");
+		case UnpackNormal:
+			decl("vec3 unpackNormal( vec4 v ) { return normalize((v.xyz - vec3(0.5)) * vec3(2.)); }");
+		case Texture:
+			switch( args[0].t ) {
+			case TSampler2D, TSampler2DArray, TChannel(_) if( isES2 ):
+				return "texture2D";
+			case TSamplerCube if( isES2 ):
+				return "textureCube";
+			default:
+			}
+		case TextureLod:
+			switch( args[0].t ) {
+			case TSampler2D, TSampler2DArray, TChannel(_) if( isES2 ):
+				decl("#extension GL_EXT_shader_texture_lod : enable");
+				return "texture2DLodEXT";
+			case TSamplerCube if( isES2 ):
+				decl("#extension GL_EXT_shader_texture_lod : enable");
+				return "textureCubeLodEXT";
+			default:
+			}
+		case Mod if( rt == TInt && isES ):
+			decl("int _imod( int x, int y ) { return int(mod(float(x),float(y))); }");
+			return "_imod";
+		case Mat3 if( args[0].t == TMat3x4 ):
+			decl(MAT34);
+			decl("mat3 _mat3( _mat3x4 v ) { return mat3(v.a.xyz,v.b.xyz,v.c.xyz); }");
+			return "_mat3";
+		case ScreenToUv:
+			decl("vec2 screenToUv( vec2 v ) { return v * vec2(0.5,-0.5) + vec2(0.5,0.5); }");
+		case UvToScreen:
+			decl("vec2 uvToScreen( vec2 v ) { return v * vec2(2.,-2.) + vec2(-1., 1.); }");
+		default:
+		}
+		return GLOBALS.get(g);
+	}
+
 	function addExpr( e : TExpr, tabs : String ) {
 		switch( e.e ) {
 		case TConst(c):
@@ -208,35 +274,6 @@ class GlslOut {
 		case TVar(v):
 			ident(v);
 		case TGlobal(g):
-			switch( g ) {
-			case Mat3x4:
-				decl(MAT34);
-			case DFdx, DFdy, Fwidth:
-				decl("#extension GL_OES_standard_derivatives:enable");
-			case Pack:
-				decl("vec4 pack( float v ) { vec4 color = fract(v * vec4(1, 255, 255.*255., 255.*255.*255.)); return color - color.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.); }");
-			case Unpack:
-				decl("float unpack( vec4 color ) { return dot(color,vec4(1., 1. / 255., 1. / (255. * 255.), 1. / (255. * 255. * 255.))); }");
-			case PackNormal:
-				decl("vec4 packNormal( vec3 v ) { return vec4((v + vec3(1.)) * vec3(0.5),1.); }");
-			case UnpackNormal:
-				decl("vec3 unpackNormal( vec4 v ) { return normalize((v.xyz - vec3(0.5)) * vec3(2.)); }");
-			case Texture2D:
-				// convert S/T (bottom left) to U/V (top left)
-				// we don't use 1. because of pixel rounding (fixes artifacts in blur)
-				decl('vec4 _texture2D( sampler2D t, vec2 v ) { return ${glES?"texture2D":"texture"}(t,vec2(v.x,${flipY?"0.999999-v.y":"v.y"})); }');
-			case TextureCube:
-				if( !glES ) {
-					add("texture");
-					return;
-				}
-			case TextureCubeLod:
-				if( !glES ) {
-					add("textureLod");
-					return;
-				}
-			default:
-			}
 			add(GLOBALS.get(g));
 		case TParenthesis(e):
 			add("(");
@@ -320,25 +357,17 @@ class GlslOut {
 			} else {
 				add("/*var*/");
 			}
-		case TCall( { e : TGlobal(Mod) }, [v1,v2]) if( e.t == TInt ):
-			decl("int mod( int x, int y ) { return int(mod(float(x),float(y))); }");
-			add("mod(");
-			addValue(v1, tabs);
-			add(",");
-			addValue(v2, tabs);
-			add(")");
-		case TCall( { e : TGlobal(Mat3) }, [e]) if( e.t == TMat3x4 ):
-			decl(MAT34);
-			decl("mat3 _mat3( _mat3x4 v ) { return mat3(v.a.xyz,v.b.xyz,v.c.xyz); }");
-			add("_mat3(");
-			addValue(e, tabs);
-			add(")");
 		case TCall( { e : TGlobal(Saturate) }, [e]):
 			add("clamp(");
 			addValue(e, tabs);
 			add(", 0., 1.)");
-		case TCall(e, args):
-			addValue(e, tabs);
+		case TCall(v, args):
+			switch( v.e ) {
+			case TGlobal(g):
+				add(getFunName(g,args, e.t));
+			default:
+				addValue(v, tabs);
+			}
 			add("(");
 			var first = true;
 			for( e in args ) {
@@ -405,7 +434,7 @@ class GlslOut {
 			locals.set(v.id, v);
 			switch( it.e ) {
 			case TBinop(OpInterval, e1, e2):
-				add("for(int ");
+				add("for(");
 				add(v.name+"=");
 				addValue(e1,tabs);
 				add(";"+v.name+"<");
@@ -456,7 +485,7 @@ class GlslOut {
 		if( v.kind == Output ) {
 			if( isVertex )
 				return "gl_Position";
-			if( glES ) {
+			if( isES2 ) {
 				if( outIndexes == null )
 					return "gl_FragColor";
 				return 'gl_FragData[${outIndexes.get(v.id)}]';
@@ -524,21 +553,26 @@ class GlslOut {
 		isVertex = f.kind == Vertex;
 
 		var outIndex = 0;
+		uniformBuffer = 0;
 		outIndexes = new Map();
 		for( v in s.vars ) {
 			switch( v.kind ) {
 			case Param, Global:
+				if( v.type.match(TBuffer(_)) )
+					add("layout(std140) ");
 				add("uniform ");
 			case Input:
-				add( glES ? "attribute " : "in ");
+				add( isES2 ? "attribute " : "in ");
 			case Var:
-				add( glES ? "varying " : (isVertex ? "out " : "in "));
+				add( isES2 ? "varying " : (isVertex ? "out " : "in "));
 			case Output:
-				if( glES ) {
+				if( isES2 ) {
 					outIndexes.set(v.id, outIndex++);
 					continue;
 				}
 				if( isVertex ) continue;
+				if( isES )
+					add('layout(location=${outIndex++}) ');
 				add("out ");
 			case Function:
 				continue;
@@ -562,7 +596,7 @@ class GlslOut {
 
 		if( outIndex < 2 )
 			outIndexes = null;
-		else if( !isVertex && glES )
+		else if( !isVertex && isES2 )
 			decl("#extension GL_EXT_draw_buffers : enable");
 
 		var tmp = buf;
@@ -595,10 +629,10 @@ class GlslOut {
 			add("\n\n");
 		}
 
-		if( version != null )
-			decl("#version " + version);
-		else if( glES )
-			decl("#version 100");
+		if( isES )
+			decl("#version " + (version < 100 ? 100 : version) + (version > 150 ? " es" : ""));
+		else if( version != null )
+			decl("#version " + (version > 150 ? 150 : version));
 		else
 			decl("#version 130"); // OpenGL 3.0
 
@@ -610,7 +644,8 @@ class GlslOut {
 	public static function compile( s : ShaderData ) {
 		var out = new GlslOut();
 		#if js
-		out.glES = true;
+		out.glES = 1;
+		out.version = 100;
 		#end
 		return out.run(s);
 	}

@@ -5,7 +5,9 @@ class Build {
 
 	var fs : hxd.fs.LocalFileSystem;
 	var out : { bytes : Array<haxe.io.Bytes>, size : Int };
-
+	
+	
+	public var converts : Array<hxd.fs.Convert> = [];
 	public var excludedExt : Array<String> = [];
 	public var resPath : String = "res";
 	public var outPrefix : String = "res";
@@ -126,6 +128,8 @@ class Build {
 			throw "'" + resPath + "' resource directory was not found";
 
 		fs = new hxd.fs.LocalFileSystem(resPath);
+		for( c in converts )
+			fs.addConvert(c);
 		switch( soundFormat ) {
 		case "wav":
 			// no convert
@@ -203,6 +207,8 @@ class Build {
 				b.checkJPG = true;
 			case "-check-ogg":
 				b.checkOGG = true;
+			case "-pngcrush":
+				b.converts.push(new hxd.fs.Convert.Command("png","crush.png","pngcrush",["-s","%SRC","%DST"]));
 			default:
 				throw "Unknown parameter " + f;
 			}

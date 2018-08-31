@@ -10,9 +10,16 @@ class PassObjects {
 	}
 }
 
-private typedef SMap<T> = #if flash haxe.ds.UnsafeStringMap<T> #else Map<String,T> #end
+private typedef SMap<T> = #if flash haxe.ds.UnsafeStringMap<T> #else Map<String,T> #end;
 
-class Renderer {
+enum RenderMode{
+	Default;
+	LightProbe;
+}
+
+@:allow(hxd.prefab.rfx.RendererFX)
+@:allow(h3d.pass.Shadows)
+class Renderer extends hxd.impl.AnyProps {
 
 	var defaultPass : h3d.pass.Base;
 	var passObjects : SMap<PassObjects>;
@@ -20,14 +27,20 @@ class Renderer {
 	var ctx : RenderContext;
 	var hasSetTarget = false;
 
+	public var effects : Array<hxd.prefab.rfx.RendererFX> = [];
+	public var renderMode : RenderMode = Default;
+
 	public function new() {
 		allPasses = [];
 		passObjects = new SMap();
+		props = getDefaultProps();
 	}
 
 	public function dispose() {
 		for( p in allPasses )
 			p.dispose();
+		for( f in effects )
+			f.dispose();
 		passObjects = new SMap();
 	}
 
@@ -60,7 +73,7 @@ class Renderer {
 		return l;
 	}
 
-	function getLightSystem() : h3d.pass.LightSystem {
+	function getLightSystem() : h3d.scene.LightSystem {
 		return ctx.scene.lightSystem;
 	}
 
@@ -88,9 +101,8 @@ class Renderer {
 		ctx.engine.clear(color, depth, stencil);
 	}
 
-	// for legacy purposes
-	inline function allocTarget( name : String, size = 0, depth = true ) {
-		return ctx.textures.allocTarget(name, ctx.engine.width >> size, ctx.engine.height >> size, depth);
+	inline function allocTarget( name : String, depth = true, size = 1., ?format ) {
+		return ctx.textures.allocTarget(name, Math.round(ctx.engine.width * size), Math.round(ctx.engine.height * size), depth, format);
 	}
 
 	function copy( from, to, ?blend ) {
@@ -143,6 +155,13 @@ class Renderer {
 		throw "Not implemented";
 	}
 
+	function computeStatic() {
+		throw "Not implemented";
+	}
+
+	public function start() {
+	}
+
 	public function process( passes : Array<PassObjects> ) {
 		hasSetTarget = false;
 		for( p in allPasses )
@@ -150,7 +169,10 @@ class Renderer {
 		for( p in passes )
 			passObjects.set(p.name, p);
 		ctx.textures.begin();
-		render();
+		if( ctx.computingStatic )
+			computeStatic();
+		else
+			render();
 		resetTarget();
 		for( p in passes )
 			passObjects.set(p.name, null);

@@ -1,5 +1,7 @@
 -lib heaps
--cp ../..
 -js ::name::.js
 -main ::main::
+-cp ../..
+-cp .
+-debug
 ::params::

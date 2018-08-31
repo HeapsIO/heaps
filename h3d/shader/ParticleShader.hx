@@ -58,7 +58,7 @@ class ParticleShader extends hxsl.Shader {
 
 	public function new() {
 		super();
-		rotationAxis.initRotateAxis(new h3d.Vector(1, 0, 0), Math.PI / 2);
+		rotationAxis.initRotationAxis(new h3d.Vector(1, 0, 0), Math.PI / 2);
 	}
 
 }

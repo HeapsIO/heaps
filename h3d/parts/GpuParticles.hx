@@ -510,7 +510,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		if( g.name == null )
 			g.name = "Group#" + (groups.length + 1);
 		if( material == null ) {
-			material = new h3d.mat.Material();
+			material = h3d.mat.MaterialSetup.current.createMaterial();
 			material.mainPass.culling = None;
 			material.mainPass.depthWrite = false;
 			material.blendMode = Alpha;
@@ -883,7 +883,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				r.normalize();
 				var q = new h3d.Quat();
 				q.initDirection(r);
-				q.saveToMatrix(g.pshader.cameraRotation);
+				q.toMatrix(g.pshader.cameraRotation);
 			}
 			if( g.emitMode == CameraBounds ) {
 				g.pshader.transform.load(camera.getInverseView());

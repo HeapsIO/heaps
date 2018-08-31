@@ -4,9 +4,9 @@ class Light extends Object {
 
 	var shader : hxsl.Shader;
 	var objectDistance : Float; // used internaly
-	@:s var cullingDistance : Float = 1e10;
-	@:noCompletion public var next : Light;
+	@:noCompletion public var next : Light; // used internaly (public to allow sorting)
 
+	@:s var cullingDistance : Float = 1e10;
 	@:s public var priority : Int = 0;
 	public var color(get, set) : h3d.Vector;
 	public var enableSpecular(get, set) : Bool;
@@ -36,6 +36,10 @@ class Light extends Object {
 
 	override function emit(ctx:RenderContext) {
 		ctx.emitLight(this);
+	}
+
+	function getShadowDirection() : h3d.Vector {
+		return null;	
 	}
 
 	#if hxbit

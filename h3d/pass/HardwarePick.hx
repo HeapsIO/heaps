@@ -69,7 +69,7 @@ class HardwarePick extends Default {
 		while( cur != null ) {
 			// force all materials to use opaque blend
 			@:privateAccess {
-				var mask = h3d.mat.Pass.blendSrc_mask | h3d.mat.Pass.blendDst_mask | h3d.mat.Pass.blendAlphaDst_mask | h3d.mat.Pass.blendAlphaSrc_mask | h3d.mat.Pass.blendOp_mask | h3d.mat.Pass.blendAlphaOp_mask | h3d.mat.Pass.colorMask_mask;
+				var mask = h3d.mat.Pass.blendSrc_mask | h3d.mat.Pass.blendDst_mask | h3d.mat.Pass.blendAlphaDst_mask | h3d.mat.Pass.blendAlphaSrc_mask | h3d.mat.Pass.blendOp_mask | h3d.mat.Pass.blendAlphaOp_mask;
 				cur.pass.bits &= ~mask;
 				cur.pass.bits |= material.bits & mask;
 			}

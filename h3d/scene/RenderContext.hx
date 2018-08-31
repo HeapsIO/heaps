@@ -15,9 +15,11 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var camera : h3d.Camera;
 	public var scene : Scene;
 	public var drawPass : ObjectPass;
+	public var pbrLightPass : h3d.mat.Pass;
+	public var computingStatic : Bool;
 
 	var sharedGlobals : Array<SharedGlobal>;
-	public var lightSystem : h3d.pass.LightSystem;
+	public var lightSystem : h3d.scene.LightSystem;
 	public var uploadParams : Void -> Void;
 	public var extraShaders : hxsl.ShaderList;
 	public var visibleFlag : Bool;
@@ -125,6 +127,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			p.shaders = null;
 			p.next = null;
 			p.index = 0;
+			p.texture = 0;
 			p = p.nextAlloc;
 		}
 		pool = firstAlloc;

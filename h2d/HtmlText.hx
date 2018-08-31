@@ -1,13 +1,17 @@
 package h2d;
 
+import h2d.Text;
+
 class HtmlText extends Text {
 
 	var elements : Array<Sprite> = [];
 	var xPos : Int;
 	var yPos : Int;
 	var xMax : Int;
+	var xMin : Int;
 	var sizePos : Int;
 	var dropMatrix : h3d.shader.ColorMatrix;
+	var prevChar : Int;
 
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
@@ -47,22 +51,48 @@ class HtmlText extends Text {
 			elements = [];
 		}
 		glyphs.setDefaultColor(textColor);
+		
 		xPos = 0;
+		xMin = 0;
+		
+		var align = handleAlign ? textAlign : Left;
+		switch( align ) {
+			case Center, Right, MultilineCenter, MultilineRight:
+				lines = [];
+				initGlyphs(text, false, false, lines);
+				var max = if( align == MultilineCenter || align == MultilineRight ) calcWidth else realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
+				var k = align == Center || align == MultilineCenter ? 1 : 0;
+				for( i in 0...lines.length )
+					lines[i] = (max - lines[i]) >> k;
+				xPos = lines.shift();
+				xMin = xPos;
+			default:
+		}
+		
 		yPos = 0;
 		xMax = 0;
 		sizePos = 0;
 		calcYMin = 0;
+		
 		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
+		
 		var sizes = [];
+		prevChar = -1;
 		for( e in doc )
-			buildSizes(e,sizes);
+			buildSizes(e, sizes);
+		
+		prevChar = -1;
 		for( e in doc )
-			addNode(e, font, rebuild, sizes);
+			addNode(e, font, rebuild, handleAlign, sizes, lines);
+		
+		if (!handleAlign && !rebuild && lines != null) lines.push(xPos);
+		if( xPos > xMax ) xMax = xPos;
 
 		var x = xPos, y = yPos;
-		calcWidth = x > xMax ? x : xMax;
-		calcHeight = y > 0 && x == 0 ? y - lineSpacing : y + font.lineHeight;
-		calcSizeHeight = y > 0 && x == 0 ? y + (font.baseLine - font.lineHeight - lineSpacing) : y + font.baseLine;
+		calcXMin = xMin;
+		calcWidth = xMax - xMin;
+		calcHeight = y + font.lineHeight;
+		calcSizeHeight = y + (font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
 	}
 
@@ -91,22 +121,20 @@ class HtmlText extends Text {
 			font = prevFont;
 		} else {
 			var text = htmlToText(e.nodeValue);
-			var prevChar = -1;
-			var xPos = 0;
+			var xp = 0;
 			for( i in 0...text.length ) {
 				var cc = text.charCodeAt(i);
-				var stop = false;
 				var e = font.getChar(cc);
 				var sz = e.getKerningOffset(prevChar) + e.width;
 				if( cc == "\n".code || font.charset.isBreakChar(cc) ) {
 					if( cc != "\n".code && !font.charset.isSpace(cc) )
-						xPos += sz;
-					sizes.push( -(xPos + 1));
+						xp += sz;
+					sizes.push( -(xp + 1));
 					return;
 				}
-				xPos += sz + letterSpacing;
+				xp += sz + letterSpacing;
 			}
-			sizes.push(xPos);
+			sizes.push(xp);
 		}
 	}
 
@@ -138,8 +166,10 @@ class HtmlText extends Text {
 		return size;
 	}
 
-	function addNode( e : Xml, font : Font, rebuild : Bool, sizes : Array<Int> ) {
+	function addNode( e : Xml, font : Font, rebuild : Bool, handleAlign:Bool, sizes : Array<Int>, ?lines : Array<Int> = null ) {
 		sizePos++;
+		var calcLines = !handleAlign && !rebuild && lines != null;
+		var align = handleAlign ? textAlign : Left;
 		if( e.nodeType == Xml.Element ) {
 			var prevColor = null, prevGlyphs = null;
 			switch( e.nodeName.toLowerCase() ) {
@@ -167,8 +197,16 @@ class HtmlText extends Text {
 				}
 			case "br":
 				if( xPos > xMax ) xMax = xPos;
-				xPos = 0;
+				if( calcLines ) lines.push(xPos);
+				switch( align ) {
+					case Left:
+						xPos = 0;
+					case Right, Center, MultilineCenter, MultilineRight:
+						xPos = lines.shift();
+						if( xPos < xMin ) xMin = xPos;
+				}
 				yPos += font.lineHeight + lineSpacing;
+				prevChar = -1;
 			case "img":
 				var i = loadImage(e.get("src"));
 				if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
@@ -190,30 +228,41 @@ class HtmlText extends Text {
 			default:
 			}
 			for( child in e )
-				addNode(child, font, rebuild, sizes);
+				addNode(child, font, rebuild, handleAlign, sizes, lines);
 			if( prevGlyphs != null )
 				glyphs = prevGlyphs;
 			if( prevColor != null )
 				@:privateAccess glyphs.curColor.load(prevColor);
 		} else {
 			var t = splitText(htmlToText(e.nodeValue), xPos, remainingSize(sizes));
-			var prevChar = -1;
 			var dy = this.font.baseLine - font.baseLine;
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
+				var e = font.getChar(cc);
+				
 				if( cc == "\n".code ) {
 					if( xPos > xMax ) xMax = xPos;
-					xPos = 0;
+					if( calcLines ) lines.push(xPos);
+					switch( align ) {
+						case Left:
+							xPos = 0;
+						case Right, Center, MultilineCenter, MultilineRight:
+							xPos = lines.shift();
+							if( xPos < xMin ) xMin = xPos;
+					}
 					yPos += font.lineHeight + lineSpacing;
 					prevChar = -1;
 					continue;
 				}
-				var e = font.getChar(cc);
-				xPos += e.getKerningOffset(prevChar);
-				if( rebuild ) glyphs.add(xPos, yPos + dy, e.t);
-				if( yPos == 0 && e.t.dy+dy < calcYMin ) calcYMin = e.t.dy + dy;
-				xPos += e.width + letterSpacing;
-				prevChar = cc;
+				else {
+					if (e != null) {
+						xPos += e.getKerningOffset(prevChar);
+						if( rebuild ) glyphs.add(xPos, yPos + dy, e.t);
+						if( yPos == 0 && e.t.dy+dy < calcYMin ) calcYMin = e.t.dy + dy;
+						xPos += e.width + letterSpacing;
+					}
+					prevChar = cc;
+				}
 			}
 		}
 	}

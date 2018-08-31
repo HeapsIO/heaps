@@ -202,7 +202,7 @@ class Trail extends Mesh {
 			var p1 = points[i];
 			var dist2 = hxd.Math.distanceSq(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z);
 			left.load(leftSave);
-			p0.q.saveToMatrix(absPos);
+			p0.q.toMatrix(absPos);
 			left.transform3x3(absPos);
 
 			var n = left.cross(delta);

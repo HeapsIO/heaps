@@ -10,6 +10,8 @@ class MacroHelper {
 		switch( e.expr ) {
 		case EConst(CIdent("gl")):
 			e.expr = EConst(CIdent("GL"));
+		case EConst(CIdent("GL2")):
+			e.expr = EConst(CIdent("GL"));
 		default:
 			haxe.macro.ExprTools.iter(e, replaceGLLoop);
 		}
@@ -21,6 +23,8 @@ class MacroHelper {
 			switch( f.kind ) {
 			case FFun(f):
 				if( f.expr != null ) replaceGLLoop(f.expr);
+			case FVar(_,e):
+				if( e != null ) replaceGLLoop(e);
 			default:
 			}
 		return fields;

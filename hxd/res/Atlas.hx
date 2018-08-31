@@ -62,7 +62,19 @@ class Atlas extends Resource {
 		while( lines.length > 0 ) {
 			var line = StringTools.trim(lines.shift());
 			if ( line == "" ) continue;
+			var scale = 1.;
 			var file = hxd.res.Loader.currentInstance.load(basePath + line).toTile();
+			while( lines.length > 0 ) {
+				if( lines[0].indexOf(":") < 0 ) break;
+				var line = StringTools.trim(lines.shift()).split(": ");
+				switch( line[0] ) {
+				case "size":
+					var wh = line[1].split(",");
+					var w = Std.parseInt(wh[0]);
+					scale = file.width / w;
+				default:
+				}
+			}
 			while( lines.length > 0 ) {
 				var line = StringTools.trim(lines.shift());
 				if( line == "" ) break;
@@ -107,7 +119,8 @@ class Atlas extends Resource {
 				// offset is bottom-relative
 				tileDY = origH - (tileH + tileDY);
 
-				var t = file.sub(tileX, tileY, tileW, tileH, tileDX, tileDY);
+				var t = file.sub(Std.int(tileX * scale), Std.int(tileY * scale), Std.int(tileW * scale), Std.int(tileH * scale), tileDX, tileDY);
+				if( scale != 1 ) t.scaleToSize(tileW, tileH);
 				var tl = contents.get(key);
 				if( tl == null ) {
 					tl = [];

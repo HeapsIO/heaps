@@ -166,7 +166,7 @@ class BitmapData {
 			r.x = x;
 			r.y = y;
 			bmp.draw(src.bmp, m, null, flash.display.BlendMode.SCREEN, r, false);
-		case SoftAdd:
+		case SoftAdd, AlphaAdd:
 			throw "BlendMode not supported";
 		}
 		#else
@@ -192,7 +192,7 @@ class BitmapData {
 			flash.display.BlendMode.MULTIPLY;
 		case Screen:
 			flash.display.BlendMode.SCREEN;
-		case SoftAdd:
+		case SoftAdd, AlphaAdd:
 			throw "BlendMode not supported";
 		}
 
@@ -418,7 +418,7 @@ class BitmapData {
 		var p = new Pixels(width, height, this.data.data.buffer, RGBA);
 		return p;
 		#else
-		var out = hxd.impl.Tmp.getBytes(data.width * data.height * 4);
+		var out = haxe.io.Bytes.alloc(data.width * data.height * 4);
 		for( i in 0...data.width*data.height )
 			out.setInt32(i << 2, data.pixels[i]);
 		return new Pixels(data.width, data.height, out, BGRA);

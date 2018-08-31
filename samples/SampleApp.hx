@@ -101,6 +101,33 @@ class SampleApp extends hxd.App {
 		return i;
 	}
 
+	function addChoice( text, choices, callb, value = 0 ) {
+		var font = getFont();
+		var i = new h2d.Interactive(110, font.lineHeight, fui);
+		i.backgroundColor = 0xFF808080;
+		fui.getProperties(i).paddingLeft = 20;
+
+		var t = new h2d.Text(font, i);
+		t.maxWidth = i.width;
+		t.text = text+":"+choices[value];
+		t.textAlign = Center;
+
+		i.onClick = function(_) {
+			value++;
+			value %= choices.length;
+			callb(value);
+			t.text = text + ":" + choices[value];
+		};
+		i.onOver = function(_) {
+			t.textColor = 0xFFFFFF;
+		};
+		i.onOut = function(_) {
+			t.textColor = 0xEEEEEE;
+		};
+		i.onOut(null);
+		return i;
+	}
+
 	function addText(text="") {
 		var tf = new h2d.Text(getFont(), fui);
 		tf.text = text;
