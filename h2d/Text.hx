@@ -233,11 +233,7 @@ class Text extends Drawable {
 			var offs = e.getKerningOffset(prevChar);
 			var esize = e.width + offs;
 			// if the next word goes past the max width, change it into a newline
-			if( e != null ) {
-				if( rebuild ) glyphs.add(x + offs, y, e.t);
-				if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
-				x += esize + letterSpacing;
-			}
+			
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
 				if( calcLines ) lines.push(x);
@@ -250,8 +246,14 @@ class Text extends Drawable {
 				}
 				y += dl;
 				prevChar = -1;
-			} else
+			} else {
+				if( e != null ) {
+					if( rebuild ) glyphs.add(x + offs, y, e.t);
+					if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
+					x += esize + letterSpacing;
+				}
 				prevChar = cc;
+			}
 		}
 		if( calcLines ) lines.push(x);
 		if( x > xMax ) xMax = x;
