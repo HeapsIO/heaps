@@ -1,6 +1,6 @@
 package h3d.shader;
 
-class Skin extends hxsl.Shader {
+class Skin extends SkinBase {
 
 	static var SRC = {
 
@@ -11,17 +11,9 @@ class Skin extends hxsl.Shader {
 			var indexes : Bytes4;
 		};
 
-		var relativePosition : Vec3;
-		var transformedPosition : Vec3;
-		var transformedNormal : Vec3;
-
-		@const var MaxBones : Int;
-		@ignore @param var bonesMatrixes : Array<Mat3x4,MaxBones>;
+		var transformedTangent : Vec4;
 
 		function vertex() {
-			#if floatSkinIndexes
-			error("TODO : access bonesMatrixes as vertex array");
-			#else
 			transformedPosition =
 				(relativePosition * bonesMatrixes[input.indexes.x]) * input.weights.x +
 				(relativePosition * bonesMatrixes[input.indexes.y]) * input.weights.y +
@@ -30,14 +22,8 @@ class Skin extends hxsl.Shader {
 				(input.normal * mat3(bonesMatrixes[input.indexes.x])) * input.weights.x +
 				(input.normal * mat3(bonesMatrixes[input.indexes.y])) * input.weights.y +
 				(input.normal * mat3(bonesMatrixes[input.indexes.z])) * input.weights.z);
-			#end
 		}
 
-	}
-
-	public function new() {
-		super();
-		MaxBones = 34;
-	}
+	};
 
 }

@@ -14,25 +14,10 @@ class Shadow extends hxsl.Shader {
 		var transformedPosition : Vec3;
 		var pixelTransformedPosition : Vec3;
 		@private var shadowPos : Vec3;
-		@const var perPixel : Bool;
-
-		function vertex() {
-			if( !perPixel ) shadowPos = transformedPosition * shadow.proj * vec3(0.5, -0.5, 1) + vec3(0.5, 0.5, 0);
-		}
 
 		function fragment() {
-
-			var shadowPos = if( perPixel ) pixelTransformedPosition * shadow.proj * vec3(0.5, -0.5, 1) + vec3(0.5, 0.5, 0) else shadowPos;
-
-			var depth = shadow.map.get(shadowPos.xy);
-
-			#if false
-			// TODO : integrate surface-based bias
-			cosTheta = N.L
-			float bias = 0.005*tan(acos(cosTheta));
-			bias = clamp(bias, 0, 0.01)
-			#end
-
+			var shadowPos = pixelTransformedPosition * shadow.proj;
+			var depth = shadow.map.get(screenToUv(shadowPos.xy));
 			var zMax = shadowPos.z.saturate();
 			var delta = (depth + shadow.bias).min(zMax) - zMax;
 			var shade = exp( shadow.power * delta  ).saturate();

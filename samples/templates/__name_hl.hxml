@@ -1,7 +1,8 @@
 -lib heaps
 -lib hlsdl
--cp ../..
 -hl ::name::.hl
 -main ::main::
 -D windowSize=1024x768
+-cp ../..
+-cp .
 ::params::

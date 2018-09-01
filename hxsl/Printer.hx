@@ -60,6 +60,7 @@ class Printer {
 				case Precision(p): p.getName().toLowerCase() + "p";
 				case Range(min, max): "range(" + min + "," + max + ")";
 				case Ignore: "ignore";
+				case PerInstance(n): "perInstance("+n+")";
 				}) + " ");
 		}
 		if( v.kind != defKind )

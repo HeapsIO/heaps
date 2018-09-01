@@ -1,9 +1,0 @@
--swf fbxViewer.swf
--swf-header 800:600:60:000000
---flash-strict
--swf-version 16.0
--main Viewer
--lib heaps
--lib air3
--dce full
--D native_trace

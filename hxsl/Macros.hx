@@ -28,6 +28,8 @@ class Macros {
 			TAnonymous(fields);
 		case TSampler2D:
 			macro : hxsl.Types.Sampler2D;
+		case TSampler2DArray:
+			macro : hxsl.Types.Sampler2DArray;
 		case TSamplerCube:
 			macro : hxsl.Types.SamplerCube;
 		case TMat3, TMat3x4, TMat4:
@@ -44,9 +46,11 @@ class Macros {
 			var t = makeType(t);
 			macro : Array<$t>;
 		case TChannel(_):
-			macro : hxsl.Types.ChannelTexture;
+			macro : hxsl.Types.ChannelTextureType;
 		case TFun(_):
 			throw "assert";
+		case TBuffer(_):
+			macro : hxsl.Types.Buffer;
 		}
 	}
 

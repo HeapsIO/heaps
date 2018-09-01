@@ -5,6 +5,7 @@ package hxd.res;
 	var Jpg = 0;
 	var Png = 1;
 	var Gif = 2;
+	var Tga = 3;
 
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
@@ -86,6 +87,12 @@ class Image extends Resource {
 			width = f.readUInt16();
 			height = f.readUInt16();
 
+		case _ if( entry.extension == "tga" ):
+			format = Tga;
+			f.skip(10);
+			width = f.readUInt16();
+			height = f.readUInt16();
+
 		default:
 			throw "Unsupported texture format " + entry.path;
 		}
@@ -115,13 +122,7 @@ class Image extends Resource {
 			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
 			#if( format >= "3.1.3" )
 			var pdata = png.read();
-			try {
-				format.png.Tools.extract32(pdata, pixels.bytes, flipY);
-			} catch( e : Dynamic ) {
-				// most likely, out of memory
-				hxd.impl.Tmp.freeMemory();
-				format.png.Tools.extract32(pdata, pixels.bytes, flipY);
-			}
+			format.png.Tools.extract32(pdata, pixels.bytes, flipY);
 			if( flipY ) pixels.flags.set(FlipY);
 			#else
 			format.png.Tools.extract32(png.read(), pixels.bytes);
@@ -141,6 +142,26 @@ class Image extends Resource {
 			var p = try NanoJpeg.decode(bytes) catch( e : Dynamic ) throw "Failed to decode JPG " + entry.path + " (" + e+")";
 			pixels = new Pixels(p.width, p.height, p.pixels, BGRA);
 			#end
+		case Tga:
+			var bytes = entry.getBytes();
+			var r = new format.tga.Reader(new haxe.io.BytesInput(bytes)).read();
+			if( r.header.imageType != UncompressedTrueColor || r.header.bitsPerPixel != 32 )
+				throw "Not supported "+r.header.imageType+"/"+r.header.bitsPerPixel;
+			var w = r.header.width;
+			var h = r.header.height;
+			pixels = hxd.Pixels.alloc(w, h, ARGB);
+			var access : hxd.Pixels.PixelsARGB = pixels;
+			var p = 0;
+			for( y in 0...h )
+				for( x in 0...w ) {
+					var c = r.imageData[x + y * w];
+					access.setPixel(x, y, c);
+				}
+			switch( r.header.imageOrigin ) {
+			case BottomLeft: pixels.flags.set(FlipY);
+			case TopLeft: // nothing
+			default: throw "Not supported "+r.header.imageOrigin;
+			}
 		}
 		if( fmt != null ) pixels.convert(fmt);
 		if( flipY != null ) pixels.setFlip(flipY);
@@ -157,11 +178,9 @@ class Image extends Resource {
 			fmt = BGRA;
 			BGRA;
 		};
-		var dst = hxd.impl.Tmp.getBytes(width * height * 4);
-		if( !hl.Format.decodeJPG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) ) {
-			hxd.impl.Tmp.saveBytes(dst);
+		var dst = haxe.io.Bytes.alloc(width * height * 4);
+		if( !hl.Format.decodeJPG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) )
 			return null;
-		}
 		var pix = new hxd.Pixels(width, height, dst, fmt);
 		if( flipY ) pix.flags.set(FlipY);
 		return pix;
@@ -176,11 +195,9 @@ class Image extends Resource {
 			fmt = BGRA;
 			BGRA;
 		};
-		var dst = hxd.impl.Tmp.getBytes(width * height * 4);
-		if( !hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) ) {
-			hxd.impl.Tmp.saveBytes(dst);
+		var dst = haxe.io.Bytes.alloc(width * height * 4);
+		if( !hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) )
 			return null;
-		}
 		var pix = new hxd.Pixels(width, height, dst, fmt);
 		if( flipY ) pix.flags.set(FlipY);
 		return pix;
@@ -211,7 +228,7 @@ class Image extends Resource {
 			function load() {
 				// immediately loading the PNG is faster than going through loadBitmap
 				tex.alloc();
-				var pixels = getPixels(h3d.mat.Texture.nativeFormat, h3d.mat.Texture.nativeFlip);
+				var pixels = getPixels(h3d.mat.Texture.nativeFormat);
 				if( pixels.width != tex.width || pixels.height != tex.height )
 					pixels.makeSquare();
 				tex.uploadPixels(pixels);

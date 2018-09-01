@@ -191,7 +191,8 @@ class Manager {
 		c.soundGroup   = soundGroup;
 		c.channelGroup = channelGroup;
 		c.next         = channels;
-		c.isVirtual    = (driver == null);
+		c.isLoading    = sdat.isLoading();
+		c.isVirtual    = driver == null;
 
 		channels = c;
 		return c;
@@ -200,7 +201,7 @@ class Manager {
 	function updateVirtualChannels(now : Float) {
 		var c = channels;
 		while (c != null) {
-			if (c.pause || !c.isVirtual) {
+			if (c.pause || !c.isVirtual || c.isLoading) {
 				c = c.next;
 				continue;
 			}
@@ -309,7 +310,9 @@ class Manager {
 					queueBuffer(s, b.sound, b.start + b.samples);
 				} else if (c.queue.length > 0) {
 					// queue next sound buffer
-					queueBuffer(s, c.queue.shift(), 0);
+					var snd = c.queue[0];
+					if( queueBuffer(s, snd, 0) )
+						c.queue.shift();
 				} else if (c.loop) {
 					// requeue last played sound
 					queueBuffer(s, b.sound, 0);
@@ -324,7 +327,9 @@ class Manager {
 		var c = channels;
 		while (c != null) {
 			c.calcAudibleGain(now);
-			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || c.audibleGain < 1e-5;
+			if( c.isLoading && !c.sound.getData().isLoading() )
+				c.isLoading = false;
+			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || c.audibleGain < 1e-5 || c.isLoading;
 			c = c.next;
 		}
 
@@ -509,7 +514,7 @@ class Manager {
 		var bpp = data.getBytesPerSample();
 		var reqSize = STREAM_BUFFER_SAMPLE_COUNT * bpp;
 		if( s.streamBuffer == null || s.streamBuffer.length < reqSize ) {
-			s.streamBuffer = hxd.impl.Tmp.getBytes(reqSize);
+			s.streamBuffer = haxe.io.Bytes.alloc(reqSize);
 			s.streamPos = start;
 		}
 		var remain = end - s.streamPos;
@@ -532,13 +537,14 @@ class Manager {
 
 			// wait until fully decoded
 			if( s.buffers.length > 0 && BUFFER_STREAM_SPLIT > 1 && !progressiveDecodeBuffer(s, snd, start) )
-				return;
+				return false;
 
 			// queue stream buffer
 			b = getStreamBuffer(s, snd, sgroup, start);
 			driver.queueBuffer(s.handle, b.handle, 0, b.isEnd);
 		}
 		s.buffers.push(b);
+		return true;
 	}
 
 	function unqueueBuffer(s : Source) {

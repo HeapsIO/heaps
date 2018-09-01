@@ -3,7 +3,6 @@ using hxd.fmt.fbx.Data;
 
 class Library extends BaseLibrary {
 
-
 	public function makeObject( ?textureLoader : String -> FbxNode -> h3d.mat.Material ) : h3d.scene.Object {
 		var scene = new h3d.scene.Object();
 		var hgeom = new Map();
@@ -14,7 +13,7 @@ class Library extends BaseLibrary {
 			textureLoader = function(_,_) {
 				if( tmpTex == null )
 					tmpTex = h3d.mat.Texture.fromColor(0xFF00FF);
-				return new h3d.mat.Material(tmpTex);
+				return h3d.mat.Material.create(tmpTex);
 			}
 		}
 
@@ -57,7 +56,7 @@ class Library extends BaseLibrary {
 				while( tmats.length > lastAdded )
 					tmats.pop();
 				if( tmats.length == 0 )
-					tmats.push(new h3d.mat.Material(h3d.mat.Texture.fromColor(0xFF00FF)));
+					tmats.push(h3d.mat.Material.create(h3d.mat.Texture.fromColor(0xFF00FF)));
 				// create object
 				if( tmats.length == 1 )
 					o.obj = new h3d.scene.Mesh(prim, tmats[0], scene);

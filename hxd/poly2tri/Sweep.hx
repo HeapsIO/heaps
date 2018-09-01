@@ -84,11 +84,11 @@ class Sweep
 
 		var p1:Point = triangle.pointCCW(point);
 		var o1:Int   = Orientation.orient2d(eq, p1, ep);
-		if (o1 == Orientation.COLLINEAR) throw 'Sweep.edgeEvent: Collinear not supported!';
+		if (o1 == Orientation.COLLINEAR) throw 'Sweep.edgeEvent: Collinear not supported (${p1.x}, ${p1.y})';
 
 		var p2:Point = triangle.pointCW(point);
 		var o2:Int   = Orientation.orient2d(eq, p2, ep);
-		if (o2 == Orientation.COLLINEAR) throw'Sweep.edgeEvent: Collinear not supported!';
+		if (o2 == Orientation.COLLINEAR) throw'Sweep.edgeEvent: Collinear not supported (${p2.x}, ${p2.y})';
 
 		if (o1 == o2)
 		{

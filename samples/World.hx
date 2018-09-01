@@ -3,7 +3,7 @@ import hxd.Key in K;
 class World extends hxd.App {
 
 	var world : h3d.scene.World;
-	var shadow :h3d.pass.ShadowMap;
+	var shadow :h3d.pass.DefaultShadowMap;
 
 	override function init() {
 
@@ -23,10 +23,10 @@ class World extends hxd.App {
 		s3d.camera.target.set(72, 72, 0);
 		s3d.camera.pos.set(120, 120, 40);
 
-		shadow = s3d.renderer.getPass(h3d.pass.ShadowMap);
+		shadow = s3d.renderer.getPass(h3d.pass.DefaultShadowMap);
 		shadow.size = 2048;
 		shadow.power = 200;
-		shadow.blur.passes = 0;
+		shadow.blur.radius= 0;
 		shadow.bias *= 0.1;
 		shadow.color.set(0.7, 0.7, 0.7);
 

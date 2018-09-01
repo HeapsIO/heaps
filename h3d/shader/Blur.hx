@@ -11,6 +11,7 @@ class Blur extends ScreenShader {
 		@param @const var Quality : Int;
 		@param @const var isDepth : Bool;
 		@param var values : Array<Float,Quality>;
+		@param var offsets : Array<Float,Quality>;
 		@param var pixel : Vec2;
 
 		@const var hasFixedColor : Bool;
@@ -21,6 +22,10 @@ class Blur extends ScreenShader {
 		@param @const var hasNormal : Bool;
 		@param var normalTexture : Sampler2D;
 
+		@param @const var isCube : Bool;
+		@param var cubeTexture : SamplerCube;
+		@param var cubeDir : Mat3;
+
 		function fragment() {
 			if( isDepthDependant ) {
 				var pcur = getPosition(input.uv);
@@ -28,7 +33,7 @@ class Blur extends ScreenShader {
 				var color = vec4(0, 0, 0, 0);
 				var ncur = unpackNormal(normalTexture.get(input.uv));
 				@unroll for( i in -Quality + 1...Quality ) {
-					var uv = input.uv + pixel * float(i);
+					var uv = input.uv + pixel * offsets[i < 0 ? -i : i];
 					var c = texture.get(uv);
 					var p = getPosition(uv);
 					var d = (p - pcur).dot(p - pcur);
@@ -42,13 +47,17 @@ class Blur extends ScreenShader {
 			}
 			else if( isDepth ) {
 				var val = 0.;
-				@unroll for( i in -Quality + 1...Quality )
-					val += unpack(texture.get(input.uv + pixel * float(i))) * values[i < 0 ? -i : i];
+				@unroll for( i in -Quality + 1...Quality ){
+					if( isCube ) val += unpack(cubeTexture.get(vec3((input.uv + pixel * offsets[i < 0 ? -i : i] * i )* 2.0 - 1.0, 1) * cubeDir)) * values[i < 0 ? -i : i];
+					else val += unpack(texture.get(input.uv + pixel * offsets[i < 0 ? -i : i] * i)) * values[i < 0 ? -i : i];
+				}
 				output.color = pack(val.min(0.9999999));
 			} else {
 				var color = vec4(0, 0, 0, 0);
-				@unroll for( i in -Quality + 1...Quality )
-					color += texture.get(input.uv + pixel * float(i)) * values[i < 0 ? -i : i];
+				@unroll for( i in -Quality + 1...Quality ){
+					if( isCube ) color += cubeTexture.get(vec3((input.uv + pixel * offsets[i < 0 ? -i : i] * i )* 2.0 - 1.0, 1) * cubeDir) * values[i < 0 ? -i : i];
+					else color += texture.get(input.uv + pixel * offsets[i < 0 ? -i : i] * i) * values[i < 0 ? -i : i];
+				}
 				output.color = color;
 			}
 			if( hasFixedColor ) {
@@ -62,8 +71,7 @@ class Blur extends ScreenShader {
 
 		function getPosition( uv : Vec2 ) : Vec3 {
 			var depth = unpack(depthTexture.get(uv));
-			var uv2 = (uv - 0.5) * vec2(2, -2);
-			var temp = vec4(uv2, depth, 1) * cameraInverseViewProj;
+			var temp = vec4(uvToScreen(uv), depth, 1) * cameraInverseViewProj;
 			var originWS = temp.xyz / temp.w;
 			return originWS;
 		}

@@ -54,7 +54,7 @@ class NullDriver extends Driver {
 		return cast {};
 	}
 
-	override function allocIndexes( count : Int ) : IndexBuffer {
+	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
 		return cast {};
 	}
 

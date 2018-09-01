@@ -27,13 +27,13 @@ class Base3D extends SampleApp {
 		var tex = hxd.Res.hxlogo.toTexture();
 
 		// create a material with this texture
-		var mat = new h3d.mat.Material(tex);
+		var mat = h3d.mat.Material.create(tex);
 
 		// our first cube mesh on the 3D scene with our created material
 		obj1 = new Mesh(prim, mat, s3d);
 
 		// creates another cube, this time with no texture
-		obj2 = new Mesh(prim, new h3d.mat.Material(), s3d);
+		obj2 = new Mesh(prim, s3d);
 
 		// set the second cube color
 		obj2.material.color.setColor(0xFFB280);
@@ -51,9 +51,9 @@ class Base3D extends SampleApp {
 		// set the ambient light to 30%
 		s3d.lightSystem.ambientLight.set(0.3, 0.3, 0.3);
 
-		// activate lights on boss cubes
-		obj1.material.mainPass.enableLights = true;
-		obj2.material.mainPass.enableLights = true;
+		// disable shadows
+		obj1.material.shadows = false;
+		obj2.material.shadows = false;
 	}
 
 	override function update( dt : Float ) {
@@ -66,7 +66,7 @@ class Base3D extends SampleApp {
 		s3d.camera.pos.set(Math.cos(time) * dist, Math.sin(time) * dist, dist * 0.7 * Math.sin(time));
 
 		// rotate the second cube along a given axis + angle
-		obj2.setRotateAxis(-0.5, 2, Math.cos(time), time + Math.PI / 2);
+		obj2.setRotationAxis(-0.5, 2, Math.cos(time), time + Math.PI / 2);
 	}
 
 	static function main() {

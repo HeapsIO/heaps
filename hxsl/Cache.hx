@@ -13,7 +13,7 @@ class Cache {
 
 	#if shader_debug_dump
 	public static var DEBUG_IDS = false;
-	public static var TRACE = false;
+	public static var TRACE = true;
 	#end
 
 	var linkCache : SearchMap;
@@ -190,6 +190,8 @@ class Cache {
 		var shaderId = @:privateAccess RuntimeShader.UID;
 		if( shaderId == 0 ) try sys.FileSystem.createDirectory("shaders") catch( e : Dynamic ) {};
 		var dbg = sys.io.File.write("shaders/"+shaderId+"_dump.c");
+		var oldTrace = haxe.Log.trace;
+		haxe.Log.trace = function(msg,?pos) dbg.writeString(haxe.Log.formatOutput(msg,pos)+"\n");
 		if( dbg != null ) {
 			dbg.writeString("----- DATAS ----\n\n");
 			for( s in shaderDatas ) {
@@ -289,6 +291,11 @@ class Cache {
 		else
 			byID.set(r.signature, r);
 
+		#if shader_debug_dump
+		if( dbg != null ) dbg.close();
+		haxe.Log.trace = oldTrace;
+		#end
+
 		return r;
 	}
 
@@ -332,7 +339,9 @@ class Cache {
 		var flat = new Flatten();
 		var c = new RuntimeShaderData();
 		var data = flat.flatten(s, kind, constsToGlobal);
+		var textures = [];
 		c.consts = flat.consts;
+		c.texturesCount = 0;
 		for( g in flat.allocData.keys() ) {
 			var alloc = flat.allocData.get(g);
 			switch( g.kind ) {
@@ -352,15 +361,15 @@ class Cache {
 				for( i in 0...out.length - 1 )
 					out[i].next = out[i + 1];
 				switch( g.type ) {
-				case TArray(TSampler2D, _):
-					c.textures2D = out[0];
-					c.textures2DCount = out.length;
-				case TArray(TSamplerCube, _):
-					c.texturesCube = out[0];
-					c.texturesCubeCount = out.length;
+				case TArray(t, _) if( t.isSampler() ):
+					textures.push({ t : t, all : out });
+					c.texturesCount += out.length;
 				case TArray(TVec(4, VFloat), SConst(size)):
 					c.params = out[0];
 					c.paramsSize = size;
+				case TArray(TBuffer(_), _):
+					c.buffers = out[0];
+					c.bufferCount = out.length;
 				default: throw "assert";
 				}
 			case Global:
@@ -377,14 +386,22 @@ class Cache {
 			default: throw "assert";
 			}
 		}
+		if( textures.length > 0 ) {
+			// relink in order based on type
+			textures.sort(function(t1,t2) return t1.t.getIndex() - t2.t.getIndex());
+			c.textures = textures[0].all[0];
+			for( i in 1...textures.length ) {
+				var prevAll = textures[i-1].all;
+				var prev = prevAll[prevAll.length - 1];
+				prev.next = textures[i].all[0];
+			}
+		}
 		if( c.globals == null )
 			c.globalsSize = 0;
 		if( c.params == null )
 			c.paramsSize = 0;
-		if( c.textures2D == null )
-			c.textures2DCount = 0;
-		if( c.texturesCube == null )
-			c.texturesCubeCount = 0;
+		if( c.buffers == null )
+			c.bufferCount = 0;
 		c.data = data;
 		return c;
 	}

@@ -52,18 +52,18 @@ class Eval {
 		switch( v2.type ) {
 		case TStruct(vl):
 			v2.type = TStruct([for( v in vl ) mapVar(v)]);
-		case TArray(t, SVar(vs)):
+		case TArray(t, SVar(vs)), TBuffer(t, SVar(vs)):
 			var c = constants.get(vs.id);
 			if( c != null )
 				switch( c ) {
 				case TConst(CInt(v)):
-					v2.type = TArray(t, SConst(v));
+					v2.type = v2.type.match(TArray(_)) ? TArray(t, SConst(v)) : TBuffer(t, SConst(v));
 				default:
 					Error.t("Integer value expected for array size constant " + vs.name, null);
 				}
 			else {
 				var vs2 = mapVar(vs);
-				v2.type = TArray(t, SVar(vs2));
+				v2.type = v2.type.match(TArray(_)) ? TArray(t, SVar(vs2)) : TBuffer(t, SVar(vs2));
 			}
 		default:
 		}
@@ -163,22 +163,38 @@ class Eval {
 			for( a in args )
 				haxe.Log.trace(Printer.toString(a), { fileName : a.p.file, lineNumber : 0, className : null, methodName : null });
 			TBlock([]);
-		case [ChannelRead, [ { e : TConst(CInt(i)) }, uv ]]:
+		case [ChannelRead|ChannelReadLod, _]:
+			var i = switch( args[0].e ) { case TConst(CInt(i)): i; default: Error.t("Cannot eval complex channel " + Printer.toString(args[0],true)+" "+constantsToString(), pos); throw "assert"; };
 			var channel = oldArgs[0];
-			channel.e = switch( channel.e ) {
+			channel = { e : switch( channel.e ) {
 			case TVar(v): TVar(mapVar(v));
 			default: throw "assert";
-			};
+			}, t : channel.t, p : channel.p };
 			var count = switch( channel.t ) { case TChannel(i): i; default: throw "assert"; };
 			var channelMode = hxsl.Channel.createByIndex(i & 7);
+			var targs = [channel];
+			for( i in 1...args.length )
+				targs.push(args[i]);
+			targs.push({ e : TConst(CInt(i >> 3)), t : TInt, p : pos });
 			var tget = {
-				e : TCall({ e : TGlobal(ChannelRead), t : TVoid, p : pos }, [channel, uv, { e : TConst(CInt(i >> 3)), t : TInt, p : pos }]),
+				e : TCall({ e : TGlobal(g), t : TVoid, p : pos }, targs),
 				t : TVoid,
 				p : pos,
 			};
 			switch( channelMode ) {
 			case R, G, B, A:
-				return TSwiz(tget, [switch( channelMode ) { case R: X; case G: Y; case B: Z; default: W; }]);
+				return TSwiz(tget, switch( [count,channelMode] ) {
+					case [1,R]: [X];
+					case [1,G]: [Y];
+					case [1,B]: [Z];
+					case [1,A]: [W];
+					case [2,R]: [X,Y];
+					case [2,G]: [Y,Z];
+					case [2,B]: [Z,W];
+					case [3,R]: [X,Y,Z];
+					case [3,G]: [Y,Z,W];
+					default: throw "Invalid channel value "+channelMode+" for "+count+" channels";
+				});
 			case Unknown:
 				var zero = { e : TConst(CFloat(0.)), t : TFloat, p : pos };
 				if( count == 1 )
@@ -189,8 +205,6 @@ class Eval {
 			case PackedNormal:
 				return TCall({ e : TGlobal(UnpackNormal), t:TVoid, p:pos}, [tget]);
 			}
-		case [ChannelRead, [t,_]]:
-			Error.t("Cannot eval complex channel " + Printer.toString(t,true)+" "+constantsToString(), pos);
 		default: null;
 		}
 	}

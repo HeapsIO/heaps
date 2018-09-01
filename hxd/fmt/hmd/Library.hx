@@ -23,15 +23,15 @@ class GeometryBuffer {
 
 class Library {
 
+	public var resource(default,null) : hxd.res.Resource;
 	public var header(default,null) : Data;
-	public var entry(default,null) : hxd.fs.FileEntry;
 	var cachedPrimitives : Array<h3d.prim.HMDModel>;
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
 	var tmp = haxe.io.Bytes.alloc(4);
 
-	public function new(entry, header) {
-		this.entry = entry;
+	public function new(res,  header) {
+		this.resource = res;
 		this.header = header;
 		cachedPrimitives = [];
 		cachedAnimations = new Map();
@@ -39,6 +39,7 @@ class Library {
 	}
 
 	public function getData() {
+		var entry = resource.entry;
 		var b = haxe.io.Bytes.alloc(entry.size - header.dataPosition);
 		entry.open();
 		entry.skip(header.dataPosition);
@@ -140,7 +141,8 @@ class Library {
 		}
 
 		var vsize = geom.vertexCount * geom.vertexStride * 4;
-		var vbuf = hxd.impl.Tmp.getBytes(vsize);
+		var vbuf = haxe.io.Bytes.alloc(vsize);
+		var entry = resource.entry;
 		entry.open();
 		entry.skip(header.dataPosition + geom.vertexPosition);
 		entry.read(vbuf, 0, vsize);
@@ -157,7 +159,7 @@ class Library {
 			entry.skip(ipos * 2);
 			isize = geom.indexCounts[material] * 2;
 		}
-		var ibuf = hxd.impl.Tmp.getBytes(isize);
+		var ibuf = haxe.io.Bytes.alloc(isize);
 		entry.read(ibuf, 0, isize);
 
 		var buf = new GeometryBuffer();
@@ -245,8 +247,6 @@ class Library {
 		}
 
 		entry.close();
-		hxd.impl.Tmp.saveBytes(ibuf);
-		hxd.impl.Tmp.saveBytes(vbuf);
 		return buf;
 	}
 
@@ -260,7 +260,7 @@ class Library {
 
 	function makeMaterial( model : Model, mid : Int, loadTexture : String -> h3d.mat.Texture ) {
 		var m = header.materials[mid];
-		var mat = new h3d.mat.Material();
+		var mat = h3d.mat.MaterialSetup.current.createMaterial();
 		mat.name = m.name;
 		if( m.diffuseTexture != null ) {
 			mat.texture = loadTexture(m.diffuseTexture);
@@ -271,23 +271,10 @@ class Library {
 		if( m.normalMap != null )
 			mat.normalMap = loadTexture(m.normalMap);
 		mat.blendMode = m.blendMode;
-		mat.mainPass.culling = m.culling;
-		if( m.killAlpha != null ) {
-			var t = mat.mainPass.getShader(h3d.shader.Texture);
-			t.killAlpha = true;
-			t.killAlphaThreshold = m.killAlpha;
-		}
-		if( m.props != null && m.props.indexOf(HasMaterialFlags) >= 0 ) {
-			if( m.flags.has(HasLighting) ) mat.mainPass.enableLights = true;
-			if( m.flags.has(CastShadows) ) mat.castShadows = true;
-			if( m.flags.has(ReceiveShadows) ) mat.receiveShadows = true;
-			if( m.flags.has(IsVolumeDecal) ) {
-				var s = h3d.mat.Defaults.makeVolumeDecal(header.geometries[model.geometry].bounds);
-				mat.mainPass.addShader(s);
-			}
-			if( m.flags.has(TextureWrap) )
-				mat.texture.wrap = Repeat;
-		}
+		mat.model = resource;
+		var props = h3d.mat.MaterialSetup.current.loadMaterialProps(mat);
+		if( props == null ) props = mat.getDefaultModelProps();
+		mat.props = props;
 		return mat;
 	}
 
@@ -397,7 +384,7 @@ class Library {
 		}
 
 		var l = makeAnimation(a);
-		l.resPath = entry.path;
+		l.resPath = resource.entry.path;
 		cachedAnimations.set(a.name, l);
 		if( name == null ) cachedAnimations.set("", l);
 		return l;
@@ -411,6 +398,7 @@ class Library {
 		l.loop = a.loop;
 		if( a.events != null ) l.setEvents(a.events);
 
+		var entry = resource.entry;
 		entry.open();
 		entry.skip(header.dataPosition + a.dataPosition);
 
@@ -422,7 +410,7 @@ class Library {
 					frameCount = 1;
 				var fl = new haxe.ds.Vector<h3d.anim.LinearAnimation.LinearFrame>(frameCount);
 				var size = ((pos ? 3 : 0) + (rot ? 3 : 0) + (scale?3:0)) * 4 * frameCount;
-				var data = hxd.impl.Tmp.getBytes(size);
+				var data = haxe.io.Bytes.alloc(size);
 				entry.read(data, 0, size);
 				var p = 0;
 				for( i in 0...frameCount ) {
@@ -460,38 +448,34 @@ class Library {
 					fl[i] = f;
 				}
 				l.addCurve(o.name, fl, rot, scale);
-				hxd.impl.Tmp.saveBytes(data);
 			}
 			if( o.flags.has(HasUV) ) {
 				var fl = new haxe.ds.Vector(a.frames*2);
 				var size = 2 * 4 * a.frames;
-				var data = hxd.impl.Tmp.getBytes(size);
+				var data = haxe.io.Bytes.alloc(size);
 				entry.read(data, 0, size);
 				for( i in 0...fl.length )
 					fl[i] = data.getFloat(i * 4);
 				l.addUVCurve(o.name, fl);
-				hxd.impl.Tmp.saveBytes(data);
 			}
 			if( o.flags.has(HasAlpha) ) {
 				var fl = new haxe.ds.Vector(a.frames);
 				var size = 4 * a.frames;
-				var data = hxd.impl.Tmp.getBytes(size);
+				var data = haxe.io.Bytes.alloc(size);
 				entry.read(data, 0, size);
 				for( i in 0...fl.length )
 					fl[i] = data.getFloat(i * 4);
 				l.addAlphaCurve(o.name, fl);
-				hxd.impl.Tmp.saveBytes(data);
 			}
 			if( o.flags.has(HasProps) ) {
 				for( p in o.props ) {
 					var fl = new haxe.ds.Vector(a.frames);
 					var size = 4 * a.frames;
-					var data = hxd.impl.Tmp.getBytes(size);
+					var data = haxe.io.Bytes.alloc(size);
 					entry.read(data, 0, size);
 					for( i in 0...fl.length )
 						fl[i] = data.getFloat(i * 4);
 					l.addPropCurve(o.name, p, fl);
-					hxd.impl.Tmp.saveBytes(data);
 				}
 			}
 		}

@@ -49,7 +49,7 @@ class Geometry {
 		var vl = getVertices();
 		var vcount = Std.int(vl.length / 3);
 		if( g.getGeomMatrix() != null || this.getGeomMatrix() != null )
-			throw "TODO";
+			throw "Cannot merge models with geometric transform";
 
 		// merge vertices
 		for( v in g.getVertices() )
@@ -177,6 +177,10 @@ class Geometry {
 		return processVectors("LayerElementTangent", "Tangents", opt);
 	}
 
+	public function getBinormals( opt = false ) {
+		return processVectors("LayerElementBinormal", "Binormals", opt);
+	}
+
 	function processVectors( layer, name, opt = false ) {
 		var vect = root.get(layer + "." + name, opt);
 		if( vect == null ) return null;
@@ -233,7 +237,7 @@ class Geometry {
 		if( rot == null )
 			m.identity();
 		else
-			m.initRotate(rot.x, rot.y, rot.z);
+			m.initRotation(rot.x, rot.y, rot.z);
 		if( trans != null ) {
 			m.tx += trans.x;
 			m.ty += trans.y;

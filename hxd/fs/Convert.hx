@@ -44,7 +44,7 @@ class ConvertFBX2HMD extends Convert {
 	}
 
 	override function convert() {
-		var fbx = try hxd.fmt.fbx.Parser.parse(srcBytes.toString()) catch( e : Dynamic ) throw Std.string(e) + " in " + srcPath;
+		var fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch( e : Dynamic ) throw Std.string(e) + " in " + srcPath;
 		var hmdout = new hxd.fmt.fbx.HMDOut(srcPath);
 		hmdout.load(fbx);
 		var isAnim = StringTools.startsWith(srcFilename, "Anim_") || srcFilename.toLowerCase().indexOf("_anim_") > 0;
@@ -55,6 +55,24 @@ class ConvertFBX2HMD extends Convert {
 	}
 
 }
+
+class Command extends Convert {
+
+	var cmd : String;
+	var args : Array<String>;
+
+	public function new(fr,to,cmd:String,args:Array<String>) {
+		super(fr,to);
+		this.cmd = cmd;
+		this.args = args;
+	}
+
+	override function convert() {
+		command(cmd,[for( a in args ) if( a == "%SRC" ) srcPath else if( a == "%DST" ) dstPath else a]);
+	}
+
+}
+
 
 class ConvertWAV2MP3 extends Convert {
 
@@ -75,7 +93,49 @@ class ConvertWAV2OGG extends Convert {
 	}
 
 	override function convert() {
-		command("oggenc2", ["--resample", "44100", "-Q", srcPath, "-o", dstPath]);
+		var cmd = "oggenc";
+		#if (sys || nodejs)
+		if( Sys.systemName() == "Windows" ) cmd = "oggenc2";
+		#end
+		command(cmd, ["--resample", "44100", "-Q", srcPath, "-o", dstPath]);
 	}
 
 }
+
+class ConvertTGA2PNG extends Convert {
+
+	public function new() {
+		super("tga", "png");
+	}
+
+	override function convert() {
+		#if (sys || nodejs)
+		var input = new haxe.io.BytesInput(sys.io.File.getBytes(srcPath));
+		var r = new format.tga.Reader(input).read();
+		if( r.header.imageType != UncompressedTrueColor || r.header.bitsPerPixel != 32 )
+			throw "Not supported "+r.header.imageType+"/"+r.header.bitsPerPixel;
+		var w = r.header.width;
+		var h = r.header.height;
+		var pix = hxd.Pixels.alloc(w, h, ARGB);
+		var access : hxd.Pixels.PixelsARGB = pix;
+		var p = 0;
+		for( y in 0...h )
+			for( x in 0...w ) {
+				var c = r.imageData[x + y * w];
+				access.setPixel(x, y, c);
+			}
+		switch( r.header.imageOrigin ) {
+		case BottomLeft:
+			pix.flags.set(FlipY);
+		case TopLeft:
+		default:
+			throw "Not supported "+r.header.imageOrigin;
+		}
+		sys.io.File.saveBytes(dstPath, pix.toPNG());
+		#else
+		throw "Not implemented";
+		#end
+	}
+
+}
+

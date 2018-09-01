@@ -20,6 +20,7 @@ class Channel extends ChannelBase {
 	var audibleGain     : Float;
 	var lastStamp       : Float;
 	var isVirtual       : Bool;
+	var isLoading		: Bool;
 	var positionChanged : Bool;
 	var queue           : Array<hxd.res.Sound>;
 

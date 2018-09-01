@@ -4,12 +4,12 @@ import h3d.mat.Data;
 private class TargetTmp {
 	public var t : h3d.mat.Texture;
 	public var next : TargetTmp;
-	public var face : Int;
+	public var layer : Int;
 	public var mipLevel : Int;
-	public function new(t, n, f, m) {
+	public function new(t, n, l, m) {
 		this.t = t;
 		this.next = n;
-		this.face = f;
+		this.layer = l;
 		this.mipLevel = m;
 	}
 }
@@ -45,7 +45,7 @@ class Engine {
 	var targetTmp : TargetTmp;
 	var targetStack : TargetTmp;
 	var currentTargetTex : h3d.mat.Texture;
-	var currentTargetFace : Int;
+	var currentTargetLayer : Int;
 	var currentTargetMip : Int;
 	var needFlushTarget : Bool;
 	var nullTexture : h3d.mat.Texture;
@@ -199,6 +199,18 @@ class Engine {
 		}
 	}
 
+	public function renderInstanced( buffers : Buffer.BufferOffset, indexes : Indexes, commands : h3d.impl.InstanceBuffer ) {
+		flushTarget();
+		driver.selectMultiBuffers(buffers);
+		if( indexes.isDisposed() )
+			return;
+		if( commands.commandCount > 0 ) {
+			driver.drawInstanced(indexes.ibuf, commands);
+			drawTriangles += commands.triCount;
+			drawCalls++;
+		}
+	}
+
 	function set_debug(d) {
 		debug = d;
 		driver.setDebug(debug);
@@ -292,16 +304,16 @@ class Engine {
 		return targetStack == null ? null : targetStack.t;
 	}
 
-	public function pushTarget( tex : h3d.mat.Texture, face = 0, mipLevel = 0 ) {
+	public function pushTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0 ) {
 		var c = targetTmp;
 		if( c == null )
-			c = new TargetTmp(tex, targetStack, face, mipLevel);
+			c = new TargetTmp(tex, targetStack, layer, mipLevel);
 		else {
 			targetTmp = c.next;
 			c.t = tex;
 			c.next = targetStack;
 			c.mipLevel = mipLevel;
-			c.face = face;
+			c.layer = layer;
 		}
 		targetStack = c;
 		updateNeedFlush();
@@ -312,7 +324,7 @@ class Engine {
 		if( t == null )
 			needFlushTarget = currentTargetTex != null;
 		else
-			needFlushTarget = currentTargetTex != t.t || currentTargetFace != t.face || currentTargetMip != t.mipLevel;
+			needFlushTarget = currentTargetTex != t.t || currentTargetLayer != t.layer || currentTargetMip != t.mipLevel;
 	}
 
 	public function pushTargets( textures : Array<h3d.mat.Texture> ) {
@@ -345,9 +357,9 @@ class Engine {
 			driver.setRenderTarget(null);
 			currentTargetTex = null;
 		} else {
-			driver.setRenderTarget(t.t, t.face, t.mipLevel);
+			driver.setRenderTarget(t.t, t.layer, t.mipLevel);
 			currentTargetTex = t.t;
-			currentTargetFace = t.face;
+			currentTargetLayer = t.layer;
 			currentTargetMip = t.mipLevel;
 		}
 		needFlushTarget = false;

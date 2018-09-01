@@ -2,6 +2,7 @@
 *.swf
 *.js
 *.js.map
+*.obj
 bin
 .tmp
 /hxd/net/inspect.min.css
@@ -9,3 +10,5 @@ bin
 /samples/build
 /*.xml
 .vscode
+/tools/mikktspace/out
+*.exe

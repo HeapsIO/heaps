@@ -1,11 +1,16 @@
 package h3d.shader;
 
+/**
+	Screen space ambient occlusion.
+	Uses "Scalable Ambient Obscurance" [McGuire12]
+**/
 class SAO extends ScreenShader {
 
 	static var SRC = {
 
 		@range(4,30) @const var numSamples : Int;
 		@range(1,10) @const var numSpiralTurns : Int;
+		@const var useWorldUV : Bool;
 
 		@ignore @param var depthTexture : Channel;
 		@ignore @param var normalTexture : Channel3;
@@ -44,7 +49,7 @@ class SAO extends ScreenShader {
 
 		function getPosition( uv : Vec2 ) : Vec3 {
 			var depth = depthTexture.get(uv);
-			var uv2 = (uv - 0.5) * vec2(2, -2);
+			var uv2 = uvToScreen(uv);
 			var temp = vec4(uv2, depth, 1) * cameraInverseViewProj;
 			var originWS = temp.xyz / temp.w;
 			return originWS;
@@ -57,7 +62,9 @@ class SAO extends ScreenShader {
 			var origin = getPosition(vUV);
 			var normal = normalTexture.get(vUV);
 
-			var sampleNoise = noiseTexture.get(vUV * noiseScale / screenRatio).x;
+			var noiseUv : Vec2;
+			noiseUv = useWorldUV ? origin.xy + origin.z : vUV;
+			var sampleNoise = noiseTexture.get(noiseUv).x;
 			var randomPatternRotationAngle = 2.0 * PI * sampleNoise;
 
 			// change from WS to DepthUV space
@@ -67,7 +74,7 @@ class SAO extends ScreenShader {
 				occlusion += sampleAO(vUV, origin, normal, radiusSS, i, randomPatternRotationAngle);
 
 			occlusion = 1.0 - occlusion / float(numSamples);
-			occlusion = clamp(pow(occlusion, 1.0 + intensity), 0.0, 1.0);
+			occlusion = pow(occlusion, 1.0 + intensity).saturate();
 
 			output.color = vec4(occlusion.xxx, 1.);
 		}

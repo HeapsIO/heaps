@@ -18,7 +18,7 @@ class Config {
 		Maps the extension to a given resource class. Example ["wav,mp3,ogg" => "hxd.res.Sound"]
 	**/
 	public static var extensions = [
-		"jpg,png,jpeg,gif" => "hxd.res.Image",
+		"jpg,png,jpeg,gif,tga" => "hxd.res.Image",
 		"fbx,hmd" => "hxd.res.Model",
 		"ttf" => "hxd.res.Font",
 		"fnt" => "hxd.res.BitmapFont",
@@ -26,6 +26,7 @@ class Config {
 		"tmx" => "hxd.res.TiledMap",
 		"atlas" => "hxd.res.Atlas",
 		"grd" => "hxd.res.Gradients",
+		"prefab" => "hxd.res.Prefab"
 	];
 
 	/**
@@ -45,11 +46,12 @@ class Config {
 	**/
 	public static var pairedExtensions = [
 		"fnt" => "png",
-		"fbx" => "png,jpg,jpeg,gif",
+		"fbx" => "png,jpg,jpeg,gif,tga",
 		"cdb" => "img",
 		"atlas" => "png",
 		"ogg" => "wav",
 		"mp3" => "wav",
+		"l3d" => "bake",
 	];
 
 	static function defined( name : String ) {

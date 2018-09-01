@@ -6,9 +6,11 @@ class PropsImport extends hxsl.Shader {
 		@param var albedoTex : Sampler2D;
 		@param var normalTex : Sampler2D;
 		@param var pbrTex : Sampler2D;
+		@param var otherTex : Sampler2D;
 		@const var isScreen : Bool = true;
 
 		@param var cameraInverseViewProj : Mat4;
+		@param var occlusionPower : Float;
 
 		var albedo : Vec3;
 		var depth : Float;
@@ -16,30 +18,31 @@ class PropsImport extends hxsl.Shader {
 		var metalness : Float;
 		var roughness : Float;
 		var occlusion : Float;
+		var emissive : Float;
 		var calculatedUV : Vec2;
 		var transformedPosition : Vec3;
-		var specularColor : Vec3;
+		var pbrSpecularColor : Vec3;
 		var screenUV : Vec2; // BaseMesh
 
 		function fragment() {
 			var uv = isScreen ? calculatedUV : screenUV;
 			albedo = albedoTex.get(uv).rgb;
-			var normalDepth = normalTex.get(uv);
-			normal = normalDepth.xyz;
-			depth = normalDepth.w;
+			albedo *= albedo; // gamma correct
+
+			normal = normalTex.get(uv).xyz;
 			var pbr = pbrTex.get(uv);
 			metalness = pbr.r;
 			roughness = pbr.g;
-			occlusion = pbr.b;
+			occlusion = mix(1, pbr.b, occlusionPower);
 
-			// specular is calculated in two ways:
-			//    - for metalic surfaces, we use the albedo for reflection
-			//    - for other surfaces, we use the glossiness as a gray input value
-			specularColor = metalness < 0.3 ? vec3(1 - roughness) : albedo;
+			var other = otherTex.get(uv);
+			emissive = other.r;
+			depth = other.g;
+
+			pbrSpecularColor = mix(vec3(0.04),albedo,metalness);
 
 			// this is the original object transformed position, not our current drawing object one
-			var uv2 = (uv - 0.5) * vec2(2, -2);
-			var temp = vec4(uv2, depth, 1) * cameraInverseViewProj;
+			var temp = vec4(uvToScreen(uv), depth, 1) * cameraInverseViewProj;
 			var originWS = temp.xyz / temp.w;
 			transformedPosition = originWS;
 		}

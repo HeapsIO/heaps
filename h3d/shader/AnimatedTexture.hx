@@ -18,6 +18,7 @@ class AnimatedTexture extends hxsl.Shader {
 		@global var global : {
 			var time : Float;
 		};
+		@param var startFrame : Float = 0.0;
 		@param var speed : Float;
 		@param var frameDivision : Vec2;
 		@param var totalFrames : Float;
@@ -30,16 +31,16 @@ class AnimatedTexture extends hxsl.Shader {
 
 		function vertex() {
 
-			var frame = (global.time - startTime) * speed;
+			var frame = (global.time - startTime) * speed + float(int(startFrame));
 			blendFactor = frame.fract();
 			frame -= blendFactor;
 			if( loop ) frame %= totalFrames else frame = min(frame, totalFrames - 1);
 			var nextFrame = if( loop ) (frame + 1) % totalFrames else min(frame + 1, totalFrames - 1);
 
-			var delta = vec2( frame % frameDivision.x, float(int(frame / frameDivision.x)) ) / frameDivision;
-			calculatedUV = input.uv + delta;
-			var delta = vec2( nextFrame % frameDivision.x, float(int(nextFrame / frameDivision.x)) ) / frameDivision;
-			calculatedUV2 = input.uv + delta;
+			var delta = vec2( frame % frameDivision.x, float(int(frame / frameDivision.x)) );
+			calculatedUV = (input.uv + delta) / frameDivision;
+			var delta = vec2( nextFrame % frameDivision.x, float(int(nextFrame / frameDivision.x)) );
+			calculatedUV2 = (input.uv + delta) / frameDivision;
 		}
 
 		function __init__fragment() {

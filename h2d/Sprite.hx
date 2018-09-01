@@ -709,7 +709,7 @@ class Sprite {
 		y += dy * Math.sin(rotation);
 	}
 
-	public inline function setPos( x : Float, y : Float ) {
+	public inline function setPosition( x : Float, y : Float ) {
 		this.x = x;
 		this.y = y;
 	}

@@ -30,6 +30,7 @@ class CameraController extends h3d.scene.Object {
 
 	public function new(?distance,?parent) {
 		super(parent);
+		name = "CameraController";
 		set(distance);
 		flags.set(FNoSerialize,true);
 		toTarget();
@@ -165,7 +166,7 @@ class CameraController extends h3d.scene.Object {
 				pan(-(e.relX - pushX) * m, (e.relY - pushY) * m);
 				pushX = e.relX;
 				pushY = e.relY;
-			case 2: 
+			case 2:
 				rot(e.relX - pushX, e.relY - pushY);
 				pushX = e.relX;
 				pushY = e.relY;
@@ -174,7 +175,7 @@ class CameraController extends h3d.scene.Object {
 		default:
 		}
 	}
-	
+
 	function fov(delta) {
 		targetOffset.w += delta;
 		if( targetOffset.w >= 179 )
@@ -182,16 +183,16 @@ class CameraController extends h3d.scene.Object {
 		if( targetOffset.w < 1 )
 			targetOffset.w = 1;
 	}
-	
+
 	function zoom(delta) {
 		targetPos.x *= Math.pow(zoomAmount, delta);
 	}
-	
+
 	function rot(dx, dy) {
 		moveX += dx;
 		moveY += dy;
 	}
-	
+
 	function pan(dx, dy) {
 		var v = new h3d.Vector(dx, dy);
 		scene.camera.update();
@@ -213,6 +214,11 @@ class CameraController extends h3d.scene.Object {
 	}
 
 	override function sync(ctx:RenderContext) {
+
+		if( !ctx.visibleFlag && !alwaysSync ) {
+			super.sync(ctx);
+			return;
+		}
 
 		if( moveX != 0 ) {
 			targetPos.y += moveX * 0.003 * rotateSpeed;

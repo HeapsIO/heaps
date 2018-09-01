@@ -23,6 +23,9 @@ class MacroParser {
 		case [ { expr : EConst(CInt(a) | CFloat(a)) }, { expr : EConst(CInt(b) | CFloat(b)) } ] if( m.name == "range" ):
 			v.qualifiers.push(Range(Std.parseFloat(a),Std.parseFloat(b)));
 			return;
+		case [ { expr : EConst(CInt(a)) } ] if( m.name == "perInstance" ):
+			v.qualifiers.push(PerInstance(Std.parseInt(a)));
+			return;
 		default:
 			error("Invalid meta parameter for "+m.name, m.pos);
 		}
@@ -53,6 +56,8 @@ class MacroParser {
 			v.qualifiers.push(Precision(High));
 		case "ignore":
 			v.qualifiers.push(Ignore);
+		case "perInstance":
+			v.qualifiers.push(PerInstance(1));
 		default:
 			error("Unsupported qualifier " + m.name, m.pos);
 		}
@@ -79,6 +84,7 @@ class MacroParser {
 			case "Mat3x4": return TMat3x4;
 			case "String": return TString;
 			case "Sampler2D": return TSampler2D;
+			case "Sampler2DArray": return TSampler2DArray;
 			case "SamplerCube": return TSamplerCube;
 			case "Bytes2": return TBytes(2);
 			case "Bytes3": return TBytes(3);
@@ -88,7 +94,7 @@ class MacroParser {
 			case "Channel3": return TChannel(3);
 			case "Channel4": return TChannel(4);
 			}
-		case TPath( { pack : [], name : "Array", sub : null, params : [t, size] } ):
+		case TPath( { pack : [], name : name = ("Array"|"Buffer"), sub : null, params : [t, size] } ):
 			var t = switch( t ) {
 			case TPType(t): parseType(t, pos);
 			default: null;
@@ -102,7 +108,7 @@ class MacroParser {
 			default: null;
 			}
 			if( t != null && size != null )
-				return TArray(t, size);
+				return name == "Array" ? TArray(t, size) : TBuffer(t,size);
 		case TAnonymous(fl):
 			return TStruct([for( f in fl ) {
 				switch( f.kind ) {
@@ -229,7 +235,7 @@ class MacroParser {
 		case EArrayDecl(el):
 			EArrayDecl([for( e in el ) parseExpr(e)]);
 		case ESwitch(e, cases, def):
-			ESwitch(parseExpr(e), [for( c in cases ) { expr : parseExpr(c.expr), values : [for( v in c.values ) parseExpr(v)] }], def == null ? null : parseExpr(def));
+			ESwitch(parseExpr(e), [for( c in cases ) { expr : c.expr == null ? { expr : EBlock([]), pos : c.values[0].pos } : parseExpr(c.expr), values : [for( v in c.values ) parseExpr(v)] }], def == null ? null : parseExpr(def));
 		case EWhile(cond, e, normalWhile):
 			EWhile(parseExpr(cond), parseExpr(e), normalWhile);
 		default:

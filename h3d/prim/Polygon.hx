@@ -1,10 +1,11 @@
 package h3d.prim;
 import h3d.col.Point;
 
-class Polygon extends Primitive {
+class Polygon extends MeshPrimitive {
 
 	public var points : Array<Point>;
 	public var normals : Array<Point>;
+	public var tangents : Array<Point>;
 	public var uvs : Array<UV>;
 	public var idx : hxd.IndexBuffer;
 	public var colors : Array<Point>;
@@ -29,12 +30,28 @@ class Polygon extends Primitive {
 		dispose();
 
 		var size = 3;
-		if( normals != null )
+		var names = ["position"];
+		var positions = [0];
+		if( normals != null ) {
+			names.push("normal");
+			positions.push(size);
 			size += 3;
-		if( uvs != null )
+		}
+		if( tangents != null ) {
+			names.push("tangent");
+			positions.push(size);
+			size += 3;
+		}
+		if( uvs != null ) {
+			names.push("uv");
+			positions.push(size);
 			size += 2;
-		if( colors != null )
+		}
+		if( colors != null ) {
+			names.push("color");
+			positions.push(size);
 			size += 3;
+		}
 
 		var buf = new hxd.FloatBuffer();
 		for( k in 0...points.length ) {
@@ -47,6 +64,12 @@ class Polygon extends Primitive {
 				buf.push(n.x);
 				buf.push(n.y);
 				buf.push(n.z);
+			}
+			if( tangents != null ) {
+				var t = tangents[k];
+				buf.push(t.x);
+				buf.push(t.y);
+				buf.push(t.z);
 			}
 			if( uvs != null ) {
 				var t = uvs[k];
@@ -62,8 +85,11 @@ class Polygon extends Primitive {
 		}
 		var flags : Array<h3d.Buffer.BufferFlag> = [];
 		if( idx == null ) flags.push(Triangles);
-		if( normals == null ) flags.push(RawFormat);
+		if( normals == null || tangents != null ) flags.push(RawFormat);
 		buffer = h3d.Buffer.ofFloats(buf, size, flags);
+
+		for( i in 0...names.length )
+			addBuffer(names[i], buffer, positions[i]);
 
 		if( idx != null )
 			indexes = h3d.Indexes.alloc(idx);
@@ -81,6 +107,12 @@ class Polygon extends Primitive {
 				for( i in 0...idx.length )
 					n.push(normals[idx[i]].clone());
 				normals = n;
+			}
+			if( tangents != null ) {
+				var t = [];
+				for( i in 0...idx.length )
+					t.push(tangents[idx[i]].clone());
+				tangents = t;
 			}
 			if( colors != null ) {
 				var n = [];
@@ -151,6 +183,53 @@ class Polygon extends Primitive {
 			n.normalize();
 	}
 
+	public function addTangents() {
+		if( normals == null )
+			addNormals();
+		if( uvs == null )
+			addUVs();
+		tangents = [];
+		for( i in 0...points.length )
+			tangents[i] = new Point();
+		var pos = 0;
+		for( i in 0...triCount() ) {
+			var i0, i1, i2;
+			if( idx == null ) {
+				i0 = pos++;
+				i1 = pos++;
+				i2 = pos++;
+			} else {
+				i0 = idx[pos++];
+				i1 = idx[pos++];
+				i2 = idx[pos++];
+			}
+			var p0 = points[i0];
+			var p1 = points[i1];
+			var p2 = points[i2];
+			var uv0 = uvs[i0];
+			var uv1 = uvs[i1];
+			var uv2 = uvs[i2];
+			var n = normals[i0];
+
+			var k0 = p1.sub(p0);
+			var k1 = p2.sub(p0);
+			k0.scale(uv2.v - uv0.v);
+			k1.scale(uv1.v - uv0.v);
+			var t = k0.sub(k1);
+			var b = n.cross(t);
+			b.normalize();
+			t = b.cross(n);
+			t.normalize();
+
+			// add it to each point
+			tangents[i0].x += t.x; tangents[i0].y += t.y; tangents[i0].z += t.z;
+			tangents[i1].x += t.x; tangents[i1].y += t.y; tangents[i1].z += t.z;
+			tangents[i2].x += t.x; tangents[i2].y += t.y; tangents[i2].z += t.z;
+		}
+		for( t in tangents )
+			t.normalize();
+	}
+
 	public function addUVs() {
 		throw "Not implemented for this polygon";
 	}
@@ -194,6 +273,18 @@ class Polygon extends Primitive {
 		return poly;
 	}
 
+	override function render( engine : h3d.Engine ) {
+		if( buffer == null || buffer.isDisposed() )
+			alloc(engine);
+		var bufs = getBuffers(engine);
+		if( indexes != null )
+			engine.renderMultiBuffers(bufs, indexes);
+		else if( buffer.flags.has(Quads) )
+			engine.renderMultiBuffers(bufs, engine.mem.quadIndexes, 0, triCount());
+		else
+			engine.renderMultiBuffers(bufs, engine.mem.triIndexes, 0, triCount());
+	}
+
 	#if hxbit
 	override function customSerialize(ctx:hxbit.Serializer) {
 		ctx.addInt(points.length);
@@ -207,6 +298,16 @@ class Polygon extends Primitive {
 		else {
 			ctx.addInt(normals.length);
 			for( p in normals ) {
+				ctx.addDouble(p.x);
+				ctx.addDouble(p.y);
+				ctx.addDouble(p.z);
+			}
+		}
+		if( tangents == null )
+			ctx.addInt(0);
+		else {
+			ctx.addInt(tangents.length);
+			for( p in tangents ) {
 				ctx.addDouble(p.x);
 				ctx.addDouble(p.y);
 				ctx.addDouble(p.z);
@@ -243,6 +344,7 @@ class Polygon extends Primitive {
 	override function customUnserialize(ctx:hxbit.Serializer) {
 		points = [for( i in 0...ctx.getInt() ) new h3d.col.Point(ctx.getDouble(), ctx.getDouble(), ctx.getDouble())];
 		normals = [for( i in 0...ctx.getInt() ) new h3d.col.Point(ctx.getDouble(), ctx.getDouble(), ctx.getDouble())];
+		tangents = [for( i in 0...ctx.getInt() ) new h3d.col.Point(ctx.getDouble(), ctx.getDouble(), ctx.getDouble())];
 		uvs = [for( i in 0...ctx.getInt() ) new UV(ctx.getDouble(), ctx.getDouble())];
 		if( normals.length == 0 ) normals = null;
 		if( uvs.length == 0 ) uvs = null;

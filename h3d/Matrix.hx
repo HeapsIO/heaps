@@ -51,7 +51,7 @@ class Matrix {
 		_41 = 0.0; _42 = 0.0; _43 = 0.0; _44 = 1.0;
 	}
 
-	public function initRotateX( a : Float ) {
+	public function initRotationX( a : Float ) {
 		var cos = Math.cos(a);
 		var sin = Math.sin(a);
 		_11 = 1.0; _12 = 0.0; _13 = 0.0; _14 = 0.0;
@@ -60,7 +60,7 @@ class Matrix {
 		_41 = 0.0; _42 = 0.0; _43 = 0.0; _44 = 1.0;
 	}
 
-	public function initRotateY( a : Float ) {
+	public function initRotationY( a : Float ) {
 		var cos = Math.cos(a);
 		var sin = Math.sin(a);
 		_11 = cos; _12 = 0.0; _13 = -sin; _14 = 0.0;
@@ -69,7 +69,7 @@ class Matrix {
 		_41 = 0.0; _42 = 0.0; _43 = 0.0; _44 = 1.0;
 	}
 
-	public function initRotateZ( a : Float ) {
+	public function initRotationZ( a : Float ) {
 		var cos = Math.cos(a);
 		var sin = Math.sin(a);
 		_11 = cos; _12 = sin; _13 = 0.0; _14 = 0.0;
@@ -78,7 +78,7 @@ class Matrix {
 		_41 = 0.0; _42 = 0.0; _43 = 0.0; _44 = 1.0;
 	}
 
-	public function initTranslate( x = 0., y = 0., z = 0. ) {
+	public function initTranslation( x = 0., y = 0., z = 0. ) {
 		_11 = 1.0; _12 = 0.0; _13 = 0.0; _14 = 0.0;
 		_21 = 0.0; _22 = 1.0; _23 = 0.0; _24 = 0.0;
 		_31 = 0.0; _32 = 0.0; _33 = 1.0; _34 = 0.0;
@@ -92,7 +92,7 @@ class Matrix {
 		_41 = 0.0; _42 = 0.0; _43 = 0.0; _44 = 1.0;
 	}
 
-	public function initRotateAxis( axis : Vector, angle : Float ) {
+	public function initRotationAxis( axis : Vector, angle : Float ) {
 		var cos = Math.cos(angle), sin = Math.sin(angle);
 		var cos1 = 1 - cos;
 		var x = -axis.x, y = -axis.y, z = -axis.z;
@@ -117,7 +117,7 @@ class Matrix {
 		_41 = 0.; _42 = 0.; _43 = 0.; _44 = 1.;
 	}
 
-	public function initRotate( x : Float, y : Float, z : Float ) {
+	public function initRotation( x : Float, y : Float, z : Float ) {
 		var cx = Math.cos(x);
 		var sx = Math.sin(x);
 		var cy = Math.cos(y);
@@ -176,27 +176,30 @@ class Matrix {
 
 	public function rotate( x, y, z ) {
 		var tmp = tmp;
-		tmp.initRotate(x,y,z);
+		tmp.initRotation(x,y,z);
 		multiply(this, tmp);
 	}
 
 	public function rotateAxis( axis, angle ) {
 		var tmp = tmp;
-		tmp.initRotateAxis(axis, angle);
+		tmp.initRotationAxis(axis, angle);
 		multiply(this, tmp);
 	}
 
-	public inline function pos( ?v : Vector ) {
-		if( v == null )
-			return new Vector( _41, _42 , _43 , _44 );
-		v.x = _41;
-		v.y = _42;
-		v.z = _43;
-		v.w = _44;
+	public inline function getPosition( ?v : Vector ) {
+		if( v == null ) v = new Vector();
+		v.set(_41,_42,_43,_44);
 		return v;
 	}
 
-	public function prependTranslate( x = 0., y = 0., z = 0. ) {
+	public inline function setPosition( v : Vector ) {
+		_41 = v.x;
+		_42 = v.y;
+		_43 = v.z;
+		_44 = v.w;
+	}
+
+	public function prependTranslation( x = 0., y = 0., z = 0. ) {
 		var vx = _11 * x + _21 * y + _31 * z + _41;
 		var vy = _12 * x + _22 * y + _32 * z + _42;
 		var vz = _13 * x + _23 * y + _33 * z + _43;
@@ -220,15 +223,15 @@ class Matrix {
 		return v;
 	}
 
-	public function prependRotate( x, y, z ) {
+	public function prependRotation( x, y, z ) {
 		var tmp = tmp;
-		tmp.initRotate(x,y,z);
+		tmp.initRotation(x,y,z);
 		multiply(tmp, this);
 	}
 
-	public function prependRotateAxis( axis, angle ) {
+	public function prependRotationAxis( axis, angle ) {
 		var tmp = tmp;
-		tmp.initRotateAxis(axis, angle);
+		tmp.initRotationAxis(axis, angle);
 		multiply(tmp, this);
 	}
 
@@ -523,7 +526,7 @@ class Matrix {
 				hxd.Math.atan2(m._23, m._33),
 				hxd.Math.atan2(-m._13, cy),
 				hxd.Math.atan2(m._12, m._11));
-			
+
 			var v2 = new h3d.Vector(
 				hxd.Math.atan2(-m._23, -m._33),
 				hxd.Math.atan2(-m._13, -cy),
@@ -581,7 +584,7 @@ class Matrix {
 		multiply3x4(this, tmp);
 	}
 
-	public function colorSaturation( sat : Float ) {
+	public function colorSaturate( sat : Float ) {
 		sat += 1;
 		var is = 1 - sat;
 		var r = is * lumR;
@@ -721,13 +724,13 @@ class Matrix {
 
 	public static function T( x = 0., y = 0., z = 0. ) {
 		var m = new Matrix();
-		m.initTranslate(x, y, z);
+		m.initTranslation(x, y, z);
 		return m;
 	}
 
 	public static function R(x,y,z) {
 		var m = new Matrix();
-		m.initRotate(x,y,z);
+		m.initRotation(x,y,z);
 		return m;
 	}
 

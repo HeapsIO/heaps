@@ -17,7 +17,8 @@ class Copy extends ScreenFx<CopyShader> {
 	}
 
 	public function apply( from, to, ?blend : h3d.mat.BlendMode, ?customPass : h3d.mat.Pass ) {
-		engine.pushTarget(to);
+		if( to != null )
+			engine.pushTarget(to);
 		shader.texture = from;
 		if( customPass != null ) {
 			var old = pass;
@@ -35,7 +36,8 @@ class Copy extends ScreenFx<CopyShader> {
 			render();
 		}
 		shader.texture = null;
-		engine.popTarget();
+		if( to != null )
+			engine.popTarget();
 	}
 
 	public static function run( from : h3d.mat.Texture, to : h3d.mat.Texture, ?blend : h3d.mat.BlendMode, ?pass : h3d.mat.Pass ) {

@@ -10,18 +10,18 @@ class Filters extends hxd.App {
 	override function init() {
 		engine.backgroundColor = 0x002000;
 
+		mask = new h2d.Graphics(s2d);
+		mask.beginFill(0xFF0000, 0.5);
+		mask.drawCircle(0, 0, 60);
+		mask.x = s2d.width*0.5-20;
+		mask.y = s2d.height*0.5-50;
+
 		spr = new h2d.Sprite(s2d);
 		spr.x = s2d.width * 0.5;
 		spr.y = s2d.height * 0.5;
 
 		bmp = new h2d.Bitmap(hxd.Res.hxlogo.toTile(), spr);
 		bmp.colorKey = 0xFFFFFF;
-
-		mask = new h2d.Graphics(spr);
-		mask.beginFill(0xFF0000, 0.5);
-		mask.drawCircle(0, 0, 60);
-		mask.x = -20;
-		mask.y = -50;
 
 		disp = hxd.Res.normalmap.toTile();
 		setFilters(6);
@@ -57,11 +57,11 @@ class Filters extends hxd.App {
 		case 0:
 			spr.filter = null;
 		case 1:
-			spr.filter = new h2d.filter.Blur(2, 1, 100);
+			spr.filter = new h2d.filter.Blur(5);
 		case 2:
-			spr.filter = new h2d.filter.Glow(0xFFFFFF, 100, 2);
+			spr.filter = new h2d.filter.Glow(0xFFFFFF, 100, 5);
 		case 3:
-			spr.filter = new h2d.filter.DropShadow(8,Math.PI/4,0,1,2,2);
+			spr.filter = new h2d.filter.DropShadow(8,Math.PI/4);
 		case 4:
 			spr.filter = new h2d.filter.Displacement(disp,4,4);
 		case 5:
@@ -69,15 +69,15 @@ class Filters extends hxd.App {
 			g.knockout = true;
 			spr.filter = g;
 		case 6:
-			var g = new h2d.filter.Glow(0xFFA500, 50, 2, 2);
+			var g = new h2d.filter.Glow(0xFFA500, 50, 2);
 			g.knockout = true;
-			spr.filter = new h2d.filter.Group([g, new h2d.filter.Displacement(disp, 3, 3), new h2d.filter.Blur(3, 2, 0.8), new h2d.filter.DropShadow(8, Math.PI / 4, 0, 1, 3, 3, 0.5)]);
+			spr.filter = new h2d.filter.Group([g, new h2d.filter.Displacement(disp, 3, 3), new h2d.filter.Blur(3), new h2d.filter.DropShadow(8, Math.PI / 4)]);
 		case 7:
 			var m = new h3d.Matrix();
 			m.identity();
 			m.colorContrast(0.5);
 			m.colorHue(Math.PI / 4);
-			m.colorSaturation(-0.5);
+			m.colorSaturate(-0.5);
 			spr.filter = new h2d.filter.ColorMatrix(m);
 		case 8:
 			spr.filter = new h2d.filter.Mask(mask);

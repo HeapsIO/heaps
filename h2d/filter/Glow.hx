@@ -7,8 +7,8 @@ class Glow extends Blur {
 	public var knockout : Bool;
 	public var smoothColor : Bool;
 
-	public function new( color : Int = 0xFFFFFF, alpha = 1., quality = 1, passes = 1, sigma = 1., smoothColor = false ) {
-		super(quality, passes, sigma);
+	public function new( color : Int = 0xFFFFFF, alpha = 1., radius = 1., gain = 1., quality = 1., smoothColor = false ) {
+		super(radius, gain, quality);
 		this.color = color;
 		this.alpha = alpha;
 		this.smoothColor = smoothColor;
@@ -25,7 +25,7 @@ class Glow extends Blur {
 		setParams();
 		var save = ctx.textures.allocTarget("glowSave", t.width, t.height, false);
 		h3d.pass.Copy.run(t.getTexture(), save, None);
-		pass.apply(t.getTexture(), ctx.textures.allocTarget("glowTmp", t.width, t.height, false));
+		pass.apply(ctx, t.getTexture());
 		if( knockout )
 			h3d.pass.Copy.run(save, t.getTexture(), Erase);
 		else

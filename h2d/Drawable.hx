@@ -76,7 +76,7 @@ class Drawable extends Sprite {
 			}
 			m.identity();
 			if( col.hue != null ) m.colorHue(col.hue);
-			if( col.saturation != null ) m.colorSaturation(col.saturation);
+			if( col.saturation != null ) m.colorSaturate(col.saturation);
 			if( col.contrast != null ) m.colorContrast(col.contrast);
 			if( col.lightness != null ) m.colorLightness(col.lightness);
 			if( col.gain != null ) m.colorGain(col.gain.color, col.gain.alpha);

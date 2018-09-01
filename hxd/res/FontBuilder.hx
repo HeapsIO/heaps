@@ -107,18 +107,17 @@ class FontBuilder {
 
 		// let's remove alpha premult (all pixels should be white with alpha)
 		pixels.convert(BGRA);
-		var r = hxd.impl.Memory.select(pixels.bytes);
+		flash.Memory.select(pixels.bytes.getData());
 		for( i in 0...pixels.width * pixels.height ) {
 			var p = i << 2;
-			var b = r.b(p+3);
+			var b = flash.Memory.getByte(p+3);
 			if( b > 0 ) {
-				r.wb(p, 0xFF);
-				r.wb(p + 1, 0xFF);
-				r.wb(p + 2, 0xFF);
-				r.wb(p + 3, b);
+				flash.Memory.setByte(p, 0xFF);
+				flash.Memory.setByte(p + 1, 0xFF);
+				flash.Memory.setByte(p + 2, 0xFF);
+				flash.Memory.setByte(p + 3, b);
 			}
 		}
-		r.end();
 
 		if( innerTex == null ) {
 			innerTex = h3d.mat.Texture.fromPixels(pixels);
@@ -144,12 +143,15 @@ class FontBuilder {
 		font.lineHeight = 0;
 		var surf = 0;
 		var sizes = [];
+		// get approx height of font including descent
+		var h = getFontHeight(this.font, 'MgO0pj');
+		// arbritrary safety margin used to ensure that char doesn't get scrambled, probably due to messed up text metrics
+		var xMarg = 10;
 		for( i in 0...options.chars.length ) {
 			var textChar = options.chars.charAt(i);
 			var w = Math.ceil(ctx.measureText(textChar).width) + 1;
 			if( w == 1 ) continue;
-			var h = this.font.size + 5;
-			surf += (w + 1) * (h + 1);
+			surf += (w + (1 + xMarg)) * (h + 1);
 			if( h > font.lineHeight )
 				font.lineHeight = h;
 			sizes[i] = { w:w, h:h };
@@ -161,7 +163,7 @@ class FontBuilder {
 		var height = width;
 		while( width * height >> 1 > surf )
 			height >>= 1;
-			
+
 		if( innerTex != null ) {
 			width = innerTex.width;
 			height = innerTex.height;
@@ -183,7 +185,7 @@ class FontBuilder {
 			for( i in 0...options.chars.length ) {
 				var size = sizes[i];
 				if( size == null ) continue;
-				var w = size.w;
+				var w = size.w + xMarg;
 				var h = size.h;
 				if( x + w > width ) {
 					x = 0;
@@ -203,7 +205,7 @@ class FontBuilder {
 				ctx.fillText(options.chars.charAt(i), x, y);
 				var t = new h2d.Tile(innerTex, x, y, w - 1, h - 1);
 				all.push(t);
-				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,w-1));
+				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,w - (1 + xMarg)));
 				// next element
 				if( h > lineH ) lineH = h;
 				x += w + 1;
@@ -221,6 +223,19 @@ class FontBuilder {
 			innerTex.uploadBitmap(rbmp);
 		}
 		return font;
+	}
+
+	function getFontHeight(font:h2d.Font, chars:String) {
+		var body = js.Browser.document.body;
+		var dummy = js.Browser.document.createElement('div');
+		var dummyText = js.Browser.document.createTextNode(chars);
+		dummy.appendChild(dummyText);
+		dummy.style.fontSize = font.size + 'px';
+		dummy.style.fontFamily = font.name;
+		body.appendChild(dummy);
+		var result = dummy.offsetHeight;
+		body.removeChild(dummy);
+		return result;
 	}
 
 	#elseif lime

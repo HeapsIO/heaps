@@ -20,6 +20,12 @@ class Pass implements hxd.impl.Serializable {
 	**/
 	@:s public var dynamicParameters : Bool;
 
+	/**
+		Mark the pass as static, this will allow some renderers or shadows to filter it
+		when rendering static/dynamic parts.
+	**/
+	@:s public var isStatic : Bool;
+
 	@:bits(bits) public var culling : Face;
 	@:bits(bits) public var depthWrite : Bool;
 	@:bits(bits) public var depthTest : Compare;
@@ -29,7 +35,7 @@ class Pass implements hxd.impl.Serializable {
 	@:bits(bits) public var blendAlphaDst : Blend;
 	@:bits(bits) public var blendOp : Operation;
 	@:bits(bits) public var blendAlphaOp : Operation;
-	@:bits(bits, 4) public var colorMask : Int;
+	public var colorMask : Int;
 
 	@:s public var stencil : Stencil;
 
@@ -86,6 +92,8 @@ class Pass implements hxd.impl.Serializable {
 			blend(SrcAlpha, OneMinusSrcAlpha);
 		case Add:
 			blend(SrcAlpha, One);
+		case AlphaAdd:
+			blend(One, OneMinusSrcAlpha);
 		case SoftAdd:
 			blend(OneMinusDstColor, One);
 		case Multiply:
@@ -104,6 +112,16 @@ class Pass implements hxd.impl.Serializable {
 
 	public function setColorMask(r, g, b, a) {
 		this.colorMask = (r?1:0) | (g?2:0) | (b?4:0) | (a?8:0);
+	}
+
+	public function setColorChannel( c : hxsl.Channel) {
+		switch( c ) {
+		case R: setColorMask(true, false, false, false);
+		case G: setColorMask(false, true, false, false);
+		case B: setColorMask(false, false, true, false);
+		case A: setColorMask(false, false, false, true);
+		default: throw "Unsupported channel "+c;
+		}
 	}
 
 	public function addShader<T:hxsl.Shader>(s:T) : T {
@@ -129,6 +147,17 @@ class Pass implements hxd.impl.Serializable {
 		else
 			prev.next = new hxsl.ShaderList(s, cur);
 		return s;
+	}
+
+	function getShaderIndex(s:hxsl.Shader) : Int {
+		var index = 0;
+		var cur = shaders;
+		while( cur != parentShaders ) {
+			if( cur.s == s ) return index;
+			cur = cur.next;
+			index++;
+		}
+		return -1;
 	}
 
 	public function removeShader(s) {

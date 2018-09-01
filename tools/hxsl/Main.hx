@@ -170,8 +170,15 @@ class Main {
 			var r = @:privateAccess cache.buildRuntimeShader(dce.vertex, dce.fragment, paramVars);
 			codes.set(Flatten, formatHxsl(r.vertex.data) + "\n\n" + formatHxsl(r.fragment.data)); // todo : add mapping of constants to buffers
 
+		
 			var glsl = new hxsl.GlslOut();
-			glsl.glES = true;
+			var reg = ~/[0-9]+\.[0-9]+/;
+			var version : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
+			if( reg.match(version) ) {
+				glsl.glES = Std.parseFloat(reg.matched(0));
+				glsl.version = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
+			}
+			
 			var vertexSource = glsl.run(r.vertex.data);
 			var fragmentSource = glsl.run(r.fragment.data);
 			codes.set(GLSL, vertexSource+"\n\n" + fragmentSource);
