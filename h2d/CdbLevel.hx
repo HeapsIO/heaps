@@ -86,8 +86,7 @@ class LevelGroup {
 		tiles = [];
 
 		for (i in 0...height) {
-			for (j in 0...width)
-			{
+			for (j in 0...width) {
 				tiles.push(tileset.tile.sub((x + j) * sz, (y + i) * sz, sz, sz));
 			}
 		}
