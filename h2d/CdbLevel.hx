@@ -404,7 +404,6 @@ class CdbLevel extends Layers {
 					var o = new LevelObject(t, s.x, s.y, s.w, s.h);
 					t.objects[o.id] = o;
 				case Group:
-					trace(s);
 					var name = s.opts.name;
 					if (name != null) {
 						var g = new LevelGroup(name, t, s.x, s.y, s.w, s.h);
