@@ -1,14 +1,14 @@
 package h2d.filter;
 
 class Outline extends Filter {
-	public var size(default, set) : Int;
+	public var size(default, set) : Float;
 	public var color(default, set) : Int;
 	public var quality(default, set) : Float;
 	public var multiplyAlpha(default, set) : Bool;
 
 	var pass : h3d.pass.Outline;
 
-	public function new(size = 4, color = 0xFF000000, quality = 0.3, multiplyAlpha = true) {
+	public function new(size = 4.0, color = 0xFF000000, quality = 0.3, multiplyAlpha = true) {
 		super();
 		smooth = true;
 		pass = new h3d.pass.Outline(size, color, quality, multiplyAlpha);

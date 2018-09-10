@@ -2,12 +2,12 @@ package h3d.pass;
 
 @ignore("shader")
 class Outline extends ScreenFx<h3d.shader.Outline2D> {
-	public var size(default, set) : Int;
+	public var size(default, set) : Float;
 	public var color(default, set) : Int;
 	public var quality(default, set) : Float;
 	public var multiplyAlpha(default, set) : Bool;
 
-	public function new(size = 4, color = 0xFF000000, quality = 0.3, multiplyAlpha = true) {
+	public function new(size = 4.0, color = 0xFF000000, quality = 0.3, multiplyAlpha = true) {
 		super(new h3d.shader.Outline2D());
 		this.size = size;
 		this.color = color;
