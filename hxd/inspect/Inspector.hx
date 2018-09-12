@@ -95,16 +95,16 @@ class Inspector {
 
 		scenePanel = new ScenePanel("s3d", scene);
 		logPanel = new Panel("log", "Log");
-		resPanel = new ResPanel("res", hxd.res.Loader.currentInstance);
-
-		resPanel.dock(Left, 0.2);
-		scenePanel.dock(Fill, null, resPanel);
+		//resPanel = new ResPanel("res", hxd.res.Loader.currentInstance);
+		//resPanel.dock(Left, 0.2);
+		//scenePanel.dock(Fill, null, resPanel);
+		scenePanel.dock(Left, 0.2);
 		logPanel.dock(Down, 0.3);
 		getPropsPanel();
 
 		addPanel("Scene", function() return scenePanel);
 		addPanel("Properties", function() return getPropsPanel());
-		addPanel("Resources", function() return resPanel);
+		//addPanel("Resources", function() return resPanel);
 		addPanel("Log", function() return logPanel);
 
 		addTool("Load...", "download", load, "Load settings");
