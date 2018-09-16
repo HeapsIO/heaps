@@ -17,6 +17,7 @@ class Stage {
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
+	public var isFocused(get, never) : Bool;
 
 	#if hlsdl
 	var window : sdl.Window;
@@ -128,6 +129,8 @@ class Stage {
 		return b;
 	}
 
+	function get_isFocused() : Bool return !wasBlurred;
+
 	var wasBlurred : Bool;
 
 	function onEvent( e : #if hldx dx.Event #else sdl.Event #end ) : Bool {
@@ -148,8 +151,10 @@ class Stage {
 				}
 				#end
 				wasBlurred = false;
+				event(new Event(EFocus));
 			case Blur:
 				wasBlurred = true;
+				event(new Event(EFocusLost));
 				#if hldx
 				// release all keys
 				var ev = new Event(EKeyUp);
@@ -314,6 +319,8 @@ class Stage {
 		return haxe.System.vsync = b;
 	}
 
+	function get_isFocused() : Bool return false;
+
 	#else
 
 	function get_vsync() : Bool return true;
@@ -321,6 +328,8 @@ class Stage {
 	function set_vsync( b : Bool ) : Bool {
 		return true;
 	}
+
+	function get_isFocused() : Bool return false;
 
 	#end
 

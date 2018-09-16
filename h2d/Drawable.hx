@@ -10,7 +10,7 @@ typedef ColorAdjust = {
 
 class Drawable extends Sprite {
 
-	public var color(default,null) : h3d.Vector;
+	public var color(default,default) : h3d.Vector;
 	public var blendMode : BlendMode;
 	public var smooth : Null<Bool>;
 	public var tileWrap(default, set) : Bool;

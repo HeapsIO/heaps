@@ -223,6 +223,9 @@ class Key {
 		case RCTRL: "RCtrl";
 		case LALT: "LAlt";
 		case RALT: "RAlt";
+		case MOUSE_LEFT: "MouseLeft";
+		case MOUSE_MIDDLE: "MouseMiddle";
+		case MOUSE_RIGHT: "MouseRight";
 		default:
 			if( c >= NUMBER_0 && c <= NUMBER_9 )
 				""+(c - NUMBER_0);

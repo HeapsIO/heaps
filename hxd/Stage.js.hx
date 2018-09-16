@@ -11,6 +11,7 @@ class Stage {
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
+	public var isFocused(get, never) : Bool;
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
@@ -22,6 +23,8 @@ class Stage {
 
 	var curW : Int;
 	var curH : Int;
+
+	var focused = true;
 
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
 		eventTargets = new List();
@@ -44,6 +47,8 @@ class Stage {
 		element.addEventListener("keydown", onKeyDown);
 		element.addEventListener("keyup", onKeyUp);
 		element.addEventListener("keypress", onKeyPress);
+		element.addEventListener("blur", onFocus.bind(false));
+		element.addEventListener("focus", onFocus.bind(true));
 		if( element == canvas ) {
 			canvas.setAttribute("tabindex","1"); // allow focus
 			canvas.style.outline = 'none';
@@ -252,4 +257,10 @@ class Stage {
 		event(ev);
 	}
 
+	function onFocus(b: Bool) {
+		event(new Event(b ? EFocus : EFocusLost));
+		focused = b;
+	}
+
+	function get_isFocused() : Bool return focused;
 }

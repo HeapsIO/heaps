@@ -138,7 +138,7 @@ class Material extends BaseMaterial {
 			case Alpha:
 				mainPass.depthWrite = true;
 				mainPass.setPassName("alpha");
-			case Add, AlphaAdd, SoftAdd, Multiply, Erase, Screen:
+			case Add, AlphaAdd, SoftAdd, Multiply, Erase, Screen, Sub, Max:
 				mainPass.depthWrite = false;
 				mainPass.setPassName("additive");
 			}
