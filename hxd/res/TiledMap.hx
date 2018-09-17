@@ -1,4 +1,9 @@
 package hxd.res;
+#if (haxe_ver < 4)
+import haxe.xml.Fast in Access;
+#else
+import haxe.xml.Access;
+#end
 
 typedef TiledMapLayer = {
 	var data : Array<Int>;
@@ -18,7 +23,7 @@ class TiledMap extends Resource {
 	public function toMap() : TiledMapData {
 		var data = entry.getBytes().toString();
 		var base = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"));
-		var x = new haxe.xml.Fast(Xml.parse(data).firstElement());
+		var x = new Access(Xml.parse(data).firstElement());
 		var layers = [];
 		for( l in x.nodes.layer ) {
 			var data = StringTools.trim(l.node.data.innerData);

@@ -57,8 +57,8 @@ class Globals {
 		return i;
 	}
 
-	static var ALL;
-	static var MAP;
+	static var ALL : Array<String>;
+	static var MAP : #if flash haxe.ds.UnsafeStringMap<Int> #else Map<String,Int> #end;
 	public static function allocID( path : String ) {
 		if( MAP == null ) {
 			#if flash

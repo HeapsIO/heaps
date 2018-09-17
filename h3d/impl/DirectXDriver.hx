@@ -545,8 +545,13 @@ class DirectXDriver extends h3d.impl.Driver {
 			depthStates.set(depthBits, depth);
 		}
 		if( depth != currentDepthState ) {
-			currentDepthState = depth;
+			currentDepthState = depth;			
+			if( pass.stencil != null && (pass.stencil.frontRef != 0 || pass.stencil.backRef != 0) ) throw "DirectX Stencil support requires a more recent Heaps";
+			#if (hldx < "1.7")
 			Driver.omSetDepthStencilState(depth);
+			#else
+			Driver.omSetDepthStencilState(depth, 0);
+			#end
 		}
 
 		var rasterBits = bits & (Pass.culling_mask | SCISSOR_BIT);
