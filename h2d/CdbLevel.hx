@@ -73,9 +73,10 @@ class LevelGroup {
 	public var y : Int;
 	public var width : Int;
 	public var height : Int;
-	public var tiles : Array<h2d.Tile>;
+	public var tile : h2d.Tile;
+	public var value : Dynamic;
 
-	public function new(name, tset, x, y, w, h) {
+	public function new(name, tset, x, y, w, h, val) {
 		this.tileset = tset;
 		this.x = x;
 		this.y = y;
@@ -83,13 +84,8 @@ class LevelGroup {
 		width = w;
 		height = h;
 		var sz = tileset.size;
-		tiles = [];
-
-		for (i in 0...height) {
-			for (j in 0...width) {
-				tiles.push(tileset.tile.sub((x + j) * sz, (y + i) * sz, sz, sz));
-			}
-		}
+		tile = tileset.tile.sub(x * sz, y * sz, w * sz, h * sz);
+		value = val;
 	}
 }
 
@@ -405,7 +401,7 @@ class CdbLevel extends Layers {
 				case Group:
 					var name = s.opts.name;
 					if (name != null) {
-						var g = new LevelGroup(name, t, s.x, s.y, s.w, s.h);
+						var g = new LevelGroup(name, t, s.x, s.y, s.w, s.h, s.opts.value);
 						t.groups.set(name, g);
 					}
 				case Ground, Border, Tile:
