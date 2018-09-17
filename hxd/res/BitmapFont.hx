@@ -1,4 +1,9 @@
 package hxd.res;
+#if (haxe_ver < 4)
+import haxe.xml.Fast in Access;
+#else
+import haxe.xml.Access;
+#end
 
 class BitmapFont extends Resource {
 
@@ -21,7 +26,7 @@ class BitmapFont extends Resource {
 			var xml = Xml.parse(entry.getBytes().toString());
 			// support only the FontBuilder/Divo format
 			// export with FontBuilder https://github.com/andryblack/fontbuilder/downloads
-			var xml = new haxe.xml.Fast(xml.firstElement());
+			var xml = new Access(xml.firstElement());
 			size = Std.parseInt(xml.att.size);
 			lineHeight = Std.parseInt(xml.att.height);
 			name = xml.att.family;
@@ -42,7 +47,7 @@ class BitmapFont extends Resource {
 			// support for Littera XML format (starts with <font>)
 			// http://kvazars.com/littera/
 			var xml = Xml.parse(entry.getBytes().toString());
-			var xml = new haxe.xml.Fast(xml.firstElement());
+			var xml = new Access(xml.firstElement());
 			size = Std.parseInt(xml.node.info.att.size);
 			lineHeight = Std.parseInt(xml.node.common.att.lineHeight);
 			name = xml.node.info.att.face;
