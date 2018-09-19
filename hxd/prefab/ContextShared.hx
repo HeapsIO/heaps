@@ -77,6 +77,10 @@ class ContextShared {
 		return cache.loadTexture(null, path);
 	}
 
+	public function loadBytes( file : String) : haxe.io.Bytes {
+		return try hxd.res.Loader.currentInstance.load(file).entry.getBytes() catch( e : hxd.res.NotFound ) null;
+	}
+
 	public function loadBakedBytes( file : String ) {
 		if( bakedData == null ) loadBakedData();
 		return bakedData.get(file);
@@ -113,6 +117,19 @@ class ContextShared {
 			bytes.writeByte(0xFE); // stop
 		}
 		saveBakedFile(bytes.getBytes());
+	}
+
+	public function saveTexture( file : String, bytes : haxe.io.Bytes , dir : String, ext : String) {
+		var path = new haxe.io.Path("");
+		path.dir = dir + "/";
+		path.file = file;
+		path.ext = ext;
+
+		if(!sys.FileSystem.isDirectory( hide.Ide.inst.getPath(dir)))
+			sys.FileSystem.createDirectory( hide.Ide.inst.getPath(dir));
+
+		var file = hide.Ide.inst.getPath(path.toString());
+		sys.io.File.saveBytes(file, bytes);
 	}
 
 	function saveBakedFile( bytes : haxe.io.Bytes ) {
