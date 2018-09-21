@@ -33,6 +33,9 @@ To compile:
 
 Project files for [Visual Studio Code](https://code.visualstudio.com/) are also generated.
 
-----
-* [Official website](http://heaps.io)
-* [Documentation](https://github.com/ncannasse/heaps/wiki)
+Get started!
+---------
+* [Official website](https://heaps.io)
+* [Live samples with source code](https://heaps.io/samples/)
+* [Documentation](https://heaps.io/documentation/getting-started/)
+* [API documentation](https://heaps.io/api/)
