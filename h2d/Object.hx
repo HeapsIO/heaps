@@ -1,6 +1,11 @@
 package h2d;
 import hxd.Math;
 
+/**
+	h2d.Object is the base 2D class that all scene tree elements inherit from.
+	It can be used to create a virtual container that does not display anything but can contain other objects
+	so the various transforms are inherited to its children.
+**/
 @:allow(h2d.Tools)
 class Object {
 

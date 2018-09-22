@@ -24,6 +24,11 @@ package h3d.scene;
 	}
 }
 
+/**
+	h3d.scene.Object is the base 3D class that all scene tree elements inherit from.
+	It can be used to create a virtual container that does not display anything but can contain other objects
+	so the various transforms are inherited to its children.
+**/
 class Object implements hxd.impl.Serializable {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
