@@ -1,4 +1,5 @@
 package h3d.scene.pbr;
+#if false
 
 class Tile extends h3d.scene.Mesh {
 
@@ -349,3 +350,4 @@ class Terrain extends Object {
 }
 
 
+#end
