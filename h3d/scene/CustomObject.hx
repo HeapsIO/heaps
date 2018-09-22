@@ -11,8 +11,8 @@ class CustomObject extends Object {
 		this.material = mat;
 	}
 
-	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
-		b = super.getBounds(b, rec);
+	override function getBoundsRec( b : h3d.col.Bounds ) {
+		b = super.getBounds(b);
 		var tmp = primitive.getBounds().clone();
 		tmp.transform(absPos);
 		b.add(tmp);
