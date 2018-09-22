@@ -1,6 +1,6 @@
 package hxd.fmt.pak;
 
-class Loader extends h2d.Sprite {
+class Loader extends h2d.Object {
 
 	var onDone : Void -> Void;
 	var cur : hxd.net.BinaryLoader;
@@ -52,7 +52,7 @@ class Loader extends h2d.Sprite {
 					onDone();
 				}
 				return;
-			} 
+			}
 			fs.addPak(f);
 			resCount++;
 			f.close();

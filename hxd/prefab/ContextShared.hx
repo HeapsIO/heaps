@@ -8,7 +8,7 @@ typedef ShaderDef = {
 typedef ShaderDefCache = Map<String, ShaderDef>;
 
 class ContextShared {
-	public var root2d : h2d.Sprite;
+	public var root2d : h2d.Object;
 	public var root3d : h3d.scene.Object;
 	public var contexts : Map<Prefab,Context>;
 	public var references : Map<Prefab,Array<Context>>;
@@ -20,7 +20,7 @@ class ContextShared {
 	var bakedData : Map<String, haxe.io.Bytes>;
 
 	public function new() {
-		root2d = new h2d.Sprite();
+		root2d = new h2d.Object();
 		root3d = new h3d.scene.Object();
 		contexts = new Map();
 		references = new Map();

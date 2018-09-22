@@ -1,6 +1,6 @@
 package h2d;
 
-class Mask extends Sprite {
+class Mask extends Object {
 
 	public var width : Int;
 	public var height : Int;

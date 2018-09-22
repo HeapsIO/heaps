@@ -102,7 +102,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) : Bool {
-		var s : Sprite = cast i;
+		var s : Object = cast i;
 		while( s != null ) {
 			if( !s.visible ) return false;
 			s = s.parent;
@@ -142,7 +142,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 			// check visibility
 			var visible = true;
-			var p : Sprite = i;
+			var p : Object = i;
 			while( p != null ) {
 				if( !p.visible ) {
 					visible = false;
@@ -228,7 +228,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 			// check visibility
 			var visible = true;
-			var p : Sprite = i;
+			var p : Object = i;
 			while( p != null ) {
 				if( !p.visible ) {
 					visible = false;
@@ -292,7 +292,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:allow(h2d)
 	function addEventTarget(i:Interactive) {
 		// sort by which is over the other in the scene hierarchy
-		inline function getLevel(i:Sprite) {
+		inline function getLevel(i:Object) {
 			var lv = 0;
 			while( i != null ) {
 				i = i.parent;
@@ -300,7 +300,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			}
 			return lv;
 		}
-		inline function indexOf(p:Sprite, i:Sprite) {
+		inline function indexOf(p:Object, i:Object) {
 			var id = -1;
 			for( k in 0...p.children.length )
 				if( p.children[k] == i ) {
@@ -311,12 +311,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 		var level = getLevel(i);
 		for( index in 0...interactive.length ) {
-			var i1 : Sprite = i;
-			var i2 : Sprite = interactive[index];
+			var i1 : Object = i;
+			var i2 : Object = interactive[index];
 			var lv1 = level;
 			var lv2 = getLevel(i2);
-			var p1 : Sprite = i1;
-			var p2 : Sprite = i2;
+			var p1 : Object = i1;
+			var p2 : Object = i2;
 			while( lv1 > lv2 ) {
 				i1 = p1;
 				p1 = p1.parent;
@@ -358,7 +358,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.elapsedTime = v;
 	}
 
-	function drawImplTo( s : Sprite, t : h3d.mat.Texture ) {
+	function drawImplTo( s : Object, t : h3d.mat.Texture ) {
 
 		if( !t.flags.has(Target) ) throw "Can only draw to texture created with Target flag";
 		var needClear = !t.flags.has(WasCleared);

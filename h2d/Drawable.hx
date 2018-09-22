@@ -8,7 +8,7 @@ typedef ColorAdjust = {
 	?gain : { color : Int, alpha : Float },
 };
 
-class Drawable extends Sprite {
+class Drawable extends Object {
 
 	public var color(default,default) : h3d.Vector;
 	public var blendMode : BlendMode;
@@ -20,7 +20,7 @@ class Drawable extends Sprite {
 
 	var shaders : hxsl.ShaderList;
 
-	function new(parent : h2d.Sprite) {
+	function new(parent : h2d.Object) {
 		super(parent);
 		blendMode = Alpha;
 		color = new h3d.Vector(1, 1, 1, 1);

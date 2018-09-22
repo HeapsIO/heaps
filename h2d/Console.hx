@@ -16,7 +16,7 @@ typedef ConsoleArgDesc = {
 	?opt : Bool,
 }
 
-class Console extends h2d.Sprite {
+class Console extends h2d.Object {
 
 	public static var HIDE_LOG_TIMEOUT = 3.;
 

@@ -16,7 +16,7 @@ class Anim extends Drawable {
 	public var fading : Bool = false;
 	var curFrame : Float;
 
-	public function new( ?frames : Array<Tile>, ?speed : Float, ?parent : h2d.Sprite ) {
+	public function new( ?frames : Array<Tile>, ?speed : Float, ?parent : h2d.Object ) {
 		super(parent);
 		this.frames = frames == null ? [] : frames;
 		this.curFrame = 0;
@@ -42,7 +42,7 @@ class Anim extends Drawable {
 		return curFrame;
 	}
 
-	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
+	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		var tile = getFrame();
 		if( tile != null ) addBounds(relativeTo, out, tile.dx, tile.dy, tile.width, tile.height);

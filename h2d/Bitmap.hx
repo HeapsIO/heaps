@@ -4,7 +4,7 @@ class Bitmap extends Drawable {
 
 	public var tile : Tile;
 
-	public function new( ?tile : Tile, ?parent : h2d.Sprite ) {
+	public function new( ?tile : Tile, ?parent : h2d.Object ) {
 		super(parent);
 		this.tile = tile;
 	}
@@ -15,7 +15,7 @@ class Bitmap extends Drawable {
 		return tileWrap = b;
 	}
 
-	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
+	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		if( tile != null ) addBounds(relativeTo, out, tile.dx, tile.dy, tile.width, tile.height);
 	}

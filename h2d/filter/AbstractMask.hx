@@ -24,9 +24,9 @@ class AbstractMask extends Filter {
 	var hide : Hide;
 	var maskMatrix : h2d.col.Matrix;
 	var tmpMatrix : h2d.col.Matrix;
-	var obj : h2d.Sprite;
+	var obj : h2d.Object;
 	var bindCount : Int;
-	public var mask(default, set) : h2d.Sprite;
+	public var mask(default, set) : h2d.Object;
 	public var maskVisible(default, set) : Bool;
 
 	function new(mask) {
@@ -42,19 +42,19 @@ class AbstractMask extends Filter {
 		return maskVisible = b;
 	}
 
-	override function bind(s:Sprite) {
+	override function bind(s:Object) {
 		bindCount++;
 		if( bindCount == 1 )
 			this.mask = mask;
 	}
 
-	override function unbind(s:Sprite) {
+	override function unbind(s:Object) {
 		bindCount--;
 		if( bindCount == 0 )
 			this.mask = mask;
 	}
 
-	function set_mask(m:h2d.Sprite) {
+	function set_mask(m:h2d.Object) {
 		if( mask != null ) {
 			if( mask.filter == hide )
 				mask.filter = null;
@@ -95,7 +95,7 @@ class AbstractMask extends Filter {
 		return t;
 	}
 
-	override function sync( ctx : RenderContext, obj : h2d.Sprite ) {
+	override function sync( ctx : RenderContext, obj : h2d.Object ) {
 		this.obj = obj;
 		if( mask == null || hide.frame != ctx.frame ) {
 			var p = obj;
