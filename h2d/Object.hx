@@ -10,23 +10,58 @@ class Object {
 	var parentContainer : Object;
 
 	/**
-		The parent `Sprite` in the scene tree.
+		The parent object in the scene tree.
 	**/
 	public var parent(default, null) : Object;
+
 	/**
-		How many immediate children this sprite has.
+		How many immediate children this object has.
 	**/
 	public var numChildren(get, never) : Int;
 
-	public var x(default,set) : Float;
-	public var y(default, set) : Float;
-	public var scaleX(default,set) : Float;
-	public var scaleY(default,set) : Float;
-	public var rotation(default, set) : Float;
-	public var visible(default, set) : Bool;
+	/**
+		The name of the object, can be used to retrieve an object within a tree by using `getObjectByName` (default null)
+	**/
 	public var name : String;
+
+	/**
+		The x position (in pixels) of the object relative to its parent.
+	**/
+	public var x(default,set) : Float;
+
+	/**
+		The y position (in pixels) of the object relative to its parent.
+	**/
+	public var y(default, set) : Float;
+
+	/**
+		The amount of horizontal scaling of this object (default 1.0)
+	**/
+	public var scaleX(default,set) : Float;
+
+	/**
+		The amount of vertical scaling of this object (default 1.0)
+	**/
+	public var scaleY(default,set) : Float;
+
+	/**
+		The rotation angle of this object, in radians.
+	**/
+	public var rotation(default, set) : Float;
+
+	/**
+		Is the object and its children are displayed on screen (default true).
+	**/
+	public var visible(default, set) : Bool;
+
+	/**
+		The amount of transparency of the Object (default 1.0)
+	**/
 	public var alpha : Float = 1.;
 
+	/**
+		The post process filter for this object.
+	**/
 	public var filter(default,set) : h2d.filter.Filter;
 
 	var matA : Float;
@@ -40,6 +75,9 @@ class Object {
 	var allocated : Bool;
 	var lastFrame : Int;
 
+	/**
+		Create a new empty object, and adds it to the parent object if not null.
+	**/
 	public function new( ?parent : Object ) {
 		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
 		x = 0; y = 0; scaleX = 1; scaleY = 1; rotation = 0;
@@ -51,9 +89,9 @@ class Object {
 	}
 
 	/**
-		Returns the bounds of the sprite for its whole content, recursively.
+		Return the bounds of the object for its whole content, recursively.
 		If relativeTo is null, it will return the bounds in the absolute coordinates.
-		If not, it will return the bounds relative to the specified sprite coordinates.
+		If not, it will return the bounds relative to the specified object coordinates.
 		You can pass an already allocated bounds or getBounds will allocate one for you and return it.
 	**/
 	public function getBounds( ?relativeTo : Object, ?out : h2d.col.Bounds ) : h2d.col.Bounds {
@@ -72,8 +110,8 @@ class Object {
 	}
 
 	/**
-		This is similar to getBounds(parent), but instead of the full content, it will return
-		the size based on the alignement of the Sprite. For instance for a text, getBounds will return
+		Similar to getBounds(parent), but instead of the full content, it will return
+		the size based on the alignement of the object. For instance for a text, getBounds will return
 		the full glyphs size whereas getSize() will ignore the pixels under the baseline.
 	**/
 	public function getSize( ?out : h2d.col.Bounds ) : h2d.col.Bounds {
@@ -89,6 +127,9 @@ class Object {
 		return out;
 	}
 
+	/**
+		Find a single object in the tree by calling `f` on each and returning the first not-null value returned, or null if not found.
+	**/
 	public function find<T>( f : Object -> Null<T> ) : Null<T> {
 		var v = f(this);
 		if( v != null )
@@ -100,6 +141,9 @@ class Object {
 		return null;
 	}
 
+	/**
+		Find several objects in the tree by calling `f` on each and returning all the not-null values returned.
+	**/
 	public function findAll<T>( f : Object -> Null<T>, ?arr : Array<T> ) : Array<T> {
 		if( arr == null ) arr = [];
 		var v = f(this);
@@ -202,13 +246,19 @@ class Object {
 		out.addPos(x * rA + y * rC, x * rB + y * rD);
 	}
 
-	public function getSpritesCount() : Int {
+	/**
+		Return the total number of children, recursively.
+	**/
+	public function getObjectsCount() : Int {
 		var k = 0;
 		for( c in children )
-			k += c.getSpritesCount() + 1;
+			k += c.getObjectsCount() + 1;
 		return k;
 	}
 
+	/**
+		Convert a local position (or [0,0] if pt is null) relative to the object origin into an absolute screen position, applying all the inherited transforms.
+	**/
 	public function localToGlobal( ?pt : h2d.col.Point ) : h2d.col.Point {
 		syncPos();
 		if( pt == null ) pt = new h2d.col.Point();
@@ -219,6 +269,9 @@ class Object {
 		return pt;
 	}
 
+	/**
+		Convert an absolute screen position into a local position relative to the object origin, applying all the inherited transforms.
+	**/
 	public function globalToLocal( pt : h2d.col.Point ) : h2d.col.Point {
 		syncPos();
 		pt.x -= absX;
@@ -245,10 +298,16 @@ class Object {
 		return b;
 	}
 
+	/**
+		Add a child object at the end of the children list.
+	**/
 	public function addChild( s : Object ) : Void {
 		addChildAt(s, children.length);
 	}
 
+	/**
+		Insert a child object at the specified position of the children list.
+	**/
 	public function addChildAt( s : Object, pos : Int ) : Void {
 		if( pos < 0 ) pos = 0;
 		if( pos > children.length ) pos = children.length;
@@ -317,6 +376,9 @@ class Object {
 		m.y = absY;
 	}
 
+	/**
+		Remove the given object from our immediate children list if it's part of it.
+	**/
 	public function removeChild( s : Object ) {
 		if( children.remove(s) ) {
 			if( s.allocated ) s.onRemove();
@@ -333,6 +395,9 @@ class Object {
 			s.setParentContainer(c);
 	}
 
+	/**
+		Remove all children from our immediate children list
+	**/
 	public function removeChildren() {
 		while( numChildren>0 )
 			removeChild( getChildAt(0) );
@@ -346,6 +411,9 @@ class Object {
 		if( this != null && parent != null ) parent.removeChild(this);
 	}
 
+	/**
+		Draw the object and all its children into the given Texture
+	**/
 	public function drawTo( t : h3d.mat.Texture ) {
 		var s = getScene();
 		var needDispose = s == null;
@@ -509,7 +577,7 @@ class Object {
 	}
 
 	/**
-		Will clip a local bounds with our global viewport
+		Clip a local bounds with our global viewport
 	**/
 	function clipBounds( ctx : RenderContext, bounds : h2d.col.Bounds ) {
 		var view = ctx.tmpBounds;
@@ -711,46 +779,70 @@ class Object {
 		return rotation = v;
 	}
 
+	/**
+		Move the object by the specied amount along its current direction (rotation angle).
+	**/
 	public function move( dx : Float, dy : Float ) {
 		x += dx * Math.cos(rotation);
 		y += dy * Math.sin(rotation);
 	}
 
+	/**
+		Set the position of the object relative to its parent.
+	**/
 	public inline function setPosition( x : Float, y : Float ) {
 		this.x = x;
 		this.y = y;
 	}
 
+	/**
+		Rotate the object by the given angle (in radians)
+	**/
 	public inline function rotate( v : Float ) {
 		rotation += v;
 	}
 
+	/**
+		Scale uniformly the object by the given factor.
+	**/
 	public inline function scale( v : Float ) {
 		scaleX *= v;
 		scaleY *= v;
 	}
 
+	/**
+		Set the uniform scale for the object.
+	**/
 	public inline function setScale( v : Float ) {
 		scaleX = v;
 		scaleY = v;
 	}
 
+	/**
+		Return the `n`th element among our immediate children list, or null if there is no.
+	**/
 	public inline function getChildAt( n ) {
 		return children[n];
 	}
 
-	public function getChildIndex( s ) {
+	/**
+		Return the index of the object `o` within our immediate children list, or `-1` if it is not part of our children list.
+	**/
+	public function getChildIndex( o ) {
 		for( i in 0...children.length )
-			if( children[i] == s )
+			if( children[i] == o )
 				return i;
 		return -1;
 	}
 
-	public function getSpriteByName( name : String ) {
+	/**
+		Search for an object recursively by name, return null if not found.
+	**/
+	public function getObjectByName( name : String ) {
 		if( this.name == name )
 			return this;
 		for( c in children ) {
-			var o = c.getSpriteByName(name);
+			var o = c.getObjectByName(name);
 			if( o != null ) return o;
 		}
 		return null;
@@ -760,6 +852,9 @@ class Object {
 		return children.length;
 	}
 
+	/**
+		Return an iterator over this object immediate children
+	**/
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator(children);
 	}
