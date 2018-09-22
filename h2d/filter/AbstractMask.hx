@@ -100,7 +100,7 @@ class AbstractMask extends Filter {
 		if( mask == null || hide.frame != ctx.frame ) {
 			var p = obj;
 			while( p != null ) {
-				if( p == mask ) throw "You can't mask with one of the sprite parents";
+				if( p == mask ) throw "You can't mask with one of the object parents";
 				p = p.parent;
 			}
 			hide.input = null;

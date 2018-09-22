@@ -118,7 +118,7 @@ class LevelLayer {
 	public var name : String;
 
 	/**
-		CdbLevel extends Layers: this index will tell in which sprite layer this LevelLayer content is added to.
+		CdbLevel extends Layers: this index will tell in which object layer this LevelLayer content is added to.
 	**/
 	public var layerIndex(default,null) : Int;
 
