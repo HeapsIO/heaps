@@ -32,6 +32,10 @@ class System {
 
 	// JS
 	static var loopInit = false;
+	static var customCursor:hxd.Cursor.CustomCursor;
+	static var customCursorFrame:Int;
+	static var customCursorDelay:Float;
+	static var customCursorTime:Float;
 
 	public static function getCurrentLoop() : Void -> Void {
 		return loopFunc;
@@ -52,6 +56,26 @@ class System {
 			window.mozRequestAnimationFrame;
 		rqf(browserLoop);
 		if( loopFunc != null ) loopFunc();
+		if ( customCursor != null ) {
+			var newTime : Float = customCursorTime + hxd.Timer.deltaT;
+			var delay : Float = customCursorDelay;
+			var index : Int = customCursorFrame;
+			while( newTime >= delay )
+			{
+				newTime -= delay;
+				index++;
+			}
+			customCursorTime = newTime;
+			
+			if ( index >= customCursor.frames.length ) index %= customCursor.frames.length;
+			if ( index != customCursorFrame ) {
+				customCursorFrame = index;
+				var canvas = @:privateAccess hxd.Stage.getInstance().canvas;
+				if ( canvas != null ) {
+					canvas.style.cursor = customCursor.alloc[index];
+				}
+			}
+		}
 	}
 
 	public static function start( callb : Void -> Void ) : Void {
@@ -60,6 +84,7 @@ class System {
 
 	public static function setNativeCursor( c : Cursor ) : Void {
 		var canvas = @:privateAccess hxd.Stage.getInstance().canvas;
+		customCursor = null;
 		if( canvas != null ) {
 			canvas.style.cursor = switch( c ) {
 			case Default: "default";
@@ -69,11 +94,17 @@ class System {
 			case Hide: "none";
 			case Custom(cur):
 				if ( cur.alloc == null ) {
-					if ( cur.frames.length > 1 ) throw "Animated cursor not supported";
 					cur.alloc = new Array();
 					for ( frame in cur.frames ) {
 						cur.alloc.push("url(\"" + frame.toNative().canvas.toDataURL("image/png") + "\") " + cur.offsetX + " " + cur.offsetY + ", default");
 					}
+				}
+				if (cur.frames.length > 1)
+				{
+					customCursor = cur;
+					customCursorDelay = cur.speed == 0 ? 0.1 : 1 / cur.speed;
+					customCursorFrame = 0;
+					customCursorTime = 0;
 				}
 				cur.alloc[0];
 			};
