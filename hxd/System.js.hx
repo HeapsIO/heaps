@@ -68,12 +68,10 @@ class System {
 			case TextInput: "text";
 			case Hide: "none";
 			case Custom(cur):
-				if (cur.alloc == null)
-				{
-					if (cur.frames.length > 1) throw "Animated cursor not supported";
+				if ( cur.alloc == null ) {
+					if ( cur.frames.length > 1 ) throw "Animated cursor not supported";
 					cur.alloc = new Array();
-					for (frame in cur.frames)
-					{
+					for ( frame in cur.frames ) {
 						cur.alloc.push("url(\"" + frame.toNative().canvas.toDataURL("image/png") + "\") " + cur.offsetX + " " + cur.offsetY + ", default");
 					}
 				}
