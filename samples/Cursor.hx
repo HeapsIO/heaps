@@ -24,9 +24,6 @@ class Cursor extends hxd.App {
 			i.backgroundColor = Std.random(0x1000000) | 0xFF000000;
 
 			var supported = true;
-			#if js
-			if( c.match(Custom(_)) ) supported = false;
-			#end
 
 			if( !supported ) {
 				tf.textColor = 0xFF0000;
