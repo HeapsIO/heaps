@@ -67,7 +67,15 @@ class System {
 			case Move: "move";
 			case TextInput: "text";
 			case Hide: "none";
-			case Custom(_): throw "Custom cursor not supported";
+			case Custom(cur):
+				if ( cur.alloc == null ) {
+					if ( cur.frames.length > 1 ) throw "Animated cursor not supported";
+					cur.alloc = new Array();
+					for ( frame in cur.frames ) {
+						cur.alloc.push("url(\"" + frame.toNative().canvas.toDataURL("image/png") + "\") " + cur.offsetX + " " + cur.offsetY + ", default");
+					}
+				}
+				cur.alloc[0];
 			};
 		}
 	}
