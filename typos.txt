@@ -1,0 +1,51 @@
+https://github.com/HeapsIO/heaps/wiki/Hello-World#create-hello-world-example
+Code : either the class should be Hello or the code of main() should be new Main()
+
+https://github.com/HeapsIO/heaps/wiki/Hello-World#compile-and-run
+misspelled preLaunchTask (missing u)
+
+https://github.com/HeapsIO/heaps/wiki/Drawable#drawable
+Second sentence “Each Drawable …” is missing the closing parenthesis after Bitmap
+Paragraph regarding color should end with “appear darker.” instead of “appear more dark.”
+Paragraph regarding blendmode, “color when its drawn on the screen.” should be “color when it is drawn on the screen.”
+Paragraph regarding blendMode - None : “written as-it.” should be “written as-is.”
+Paragraph regarding blendMode - None : “nothing showing being them” should be “nothing displayed behind them”.
+Paragraph regarding shaders : “Shaders are be introduced here.” should be “Shaders are introduced here.”
+
+https://github.com/HeapsIO/heaps/wiki/Graphics#drawing-graphics
+Code should be either : 
+//Draw a rectangle at 10,10 that is 300 pixels wide and 300 pixels tall
+customGraphics.drawRect(10, 10, 300, 300);
+Or
+//Draw a rectangle at 10,10 that is 300 pixels wide and 200 pixels tall
+customGraphics.drawRect(10, 10, 300, 200);
+The above code will produce the following - missing image
+The above code will produce the following series of tiled logos - missing image
+
+https://github.com/HeapsIO/heaps/wiki/H2D-Shaders#base-2d-values
+“When in doubt, can look these up” should be “When in doubt, you can look these up”
+
+https://github.com/HeapsIO/heaps/wiki/Sprites
+The whole section is deprecated, Sprite is now Object
+
+https://github.com/HeapsIO/heaps/wiki/GPU-Particles#gpu-particles
+Third sentence, first word is missing a letter “e”, it should be “Setting up” instead of “Stting up”
+
+https://github.com/HeapsIO/heaps/wiki/GPU-Particles#customizing-particles
+Last sentence of the section - missing image
+
+https://github.com/HeapsIO/heaps/wiki/Lights#direction-lights
+Code sample is missing syntax coloring
+
+https://github.com/HeapsIO/heaps/wiki/Materials#material-basics
+Second paragraph, second sentence.
+“By default materials area specific color (white)” should be “By default materials are of a specific color (white)”
+Sentence right after the first sample - missing image
+Sentence right after the seconde sample - missing image
+
+https://github.com/HeapsIO/heaps/wiki/Materials#blend-modes
+last sentence right after the sample - missing image
+
+
+
+
