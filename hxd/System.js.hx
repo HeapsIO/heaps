@@ -32,10 +32,8 @@ class System {
 
 	// JS
 	static var loopInit = false;
-	static var customCursor:hxd.Cursor.CustomCursor;
-	static var customCursorFrame:Int;
-	static var customCursorDelay:Float;
-	static var customCursorTime:Float;
+	static var currentNativeCursor:hxd.Cursor;
+	static var currentCustomCursor:hxd.Cursor.CustomCursor;
 
 	public static function getCurrentLoop() : Void -> Void {
 		return loopFunc;
@@ -56,26 +54,6 @@ class System {
 			window.mozRequestAnimationFrame;
 		rqf(browserLoop);
 		if( loopFunc != null ) loopFunc();
-		if ( customCursor != null ) {
-			var newTime : Float = customCursorTime + hxd.Timer.deltaT;
-			var delay : Float = customCursorDelay;
-			var index : Int = customCursorFrame;
-			while( newTime >= delay )
-			{
-				newTime -= delay;
-				index++;
-			}
-			customCursorTime = newTime;
-			
-			if ( index >= customCursor.frames.length ) index %= customCursor.frames.length;
-			if ( index != customCursorFrame ) {
-				customCursorFrame = index;
-				var canvas = @:privateAccess hxd.Stage.getInstance().canvas;
-				if ( canvas != null ) {
-					canvas.style.cursor = customCursor.alloc[index];
-				}
-			}
-		}
 	}
 
 	public static function start( callb : Void -> Void ) : Void {
@@ -83,8 +61,11 @@ class System {
 	}
 
 	public static function setNativeCursor( c : Cursor ) : Void {
+		if( c.equals(currentNativeCursor) )
+			return;
+		currentNativeCursor = c;
+		currentCustomCursor = null;
 		var canvas = @:privateAccess hxd.Stage.getInstance().canvas;
-		customCursor = null;
 		if( canvas != null ) {
 			canvas.style.cursor = switch( c ) {
 			case Default: "default";
@@ -99,14 +80,11 @@ class System {
 						cur.alloc.push("url(\"" + frame.toNative().canvas.toDataURL("image/png") + "\") " + cur.offsetX + " " + cur.offsetY + ", default");
 					}
 				}
-				if (cur.frames.length > 1)
-				{
-					customCursor = cur;
-					customCursorDelay = cur.speed == 0 ? 0.1 : 1 / cur.speed;
-					customCursorFrame = 0;
-					customCursorTime = 0;
+				if ( cur.frames.length > 1 ) {
+					currentCustomCursor = cur;
+					cur.reset();
 				}
-				cur.alloc[0];
+				cur.alloc[cur.frameIndex];
 			};
 		}
 	}
@@ -126,6 +104,18 @@ class System {
 	public static function exit() : Void {
 	}
 
+	static function updateCursor() : Void {
+		if ( currentCustomCursor != null ) {
+			var change = currentCustomCursor.update(hxd.Timer.deltaT);
+			if ( change != -1 ) {
+				var canvas = @:privateAccess hxd.Stage.getInstance().canvas;
+				if ( canvas != null ) {
+					canvas.style.cursor = currentCustomCursor.alloc[change];
+				}
+			}
+		}
+	}
+	
 	// getters
 
 	static function get_width() : Int return Math.round(js.Browser.document.body.clientWidth * js.Browser.window.devicePixelRatio);
@@ -135,5 +125,9 @@ class System {
 	static function get_screenDPI() : Int return 72;
 	static function get_allowTimeout() return false;
 	static function set_allowTimeout(b) return false;
-
+	
+	static function __init__() : Void {
+		haxe.MainLoop.add(updateCursor, -1);
+	}
+	
 }
