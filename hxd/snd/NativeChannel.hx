@@ -152,6 +152,7 @@ class NativeChannel {
 		div.onclick = stopInput;
 		div.onkeydown = stopInput;
 		js.Browser.document.body.addEventListener("keydown",stopInput);
+		js.Browser.document.body.addEventListener("touchend",stopInput);
 		js.Browser.document.body.appendChild(div);
 		waitDiv = div;
 	}
@@ -161,6 +162,7 @@ class NativeChannel {
 		waitDiv.remove();
 		waitDiv = null;
 		js.Browser.document.body.removeEventListener("keydown",stopInput);
+		js.Browser.document.body.removeEventListener("touchend",stopInput);
 		if( ctx != null ) ctx.resume();
 	}
 

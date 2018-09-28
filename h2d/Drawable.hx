@@ -8,19 +8,51 @@ typedef ColorAdjust = {
 	?gain : { color : Int, alpha : Float },
 };
 
-class Drawable extends Sprite {
+/**
+	h2d.Drawable is the base class for all 2D objects that will draw something on screen.
+	Unlike Object base class, all properties of Drawable only apply to the current object and are not inherited by its children.
+**/
+class Drawable extends Object {
 
-	public var color(default,null) : h3d.Vector;
+	/**
+		The color multiplier for the object. Can be used to adjust individually each of the four channels R,G,B,A (default [1,1,1,1])
+	**/
+	public var color(default,default) : h3d.Vector;
+
+	/**
+		The blendMode of the object (default Alpha)
+	**/
 	public var blendMode : BlendMode;
+
+	/**
+		By enabling smoothing, scaling the object up or down will use hardware bilinear filtering resulting in less crisp aspect.
+		By default smooth is null and then Scene.defaultSmooth value is used.
+	**/
 	public var smooth : Null<Bool>;
+
+	/**
+		By enabling tile wrapping, you can have tiles which size exceed the texture size and will repeat instead of displaying clamped pixels.
+	**/
 	public var tileWrap(default, set) : Bool;
+
+	/**
+		Setting a colorKey color value will discard all pixels that have this exact color in the tile.
+	**/
 	public var colorKey(default, set) : Null<Int>;
+
+	/**
+		Setting a colorMatrix will apply a color transformation. See also `adjustColor`.
+	**/
 	public var colorMatrix(get, set) : Null<h3d.Matrix>;
+
+	/**
+		Setting colorAdd will add the amount of color of each channel R,G,B,A to the object pixels.
+	**/
 	public var colorAdd(get, set) : Null<h3d.Vector>;
 
 	var shaders : hxsl.ShaderList;
 
-	function new(parent : h2d.Sprite) {
+	function new(parent : h2d.Object) {
 		super(parent);
 		blendMode = Alpha;
 		color = new h3d.Vector(1, 1, 1, 1);
@@ -65,6 +97,9 @@ class Drawable extends Sprite {
 		return colorKey = v;
 	}
 
+	/**
+		Set the `colorMatrix` value by specifying which effects to apply. Calling adjustColor() reset the colorMatrix to `null`
+	**/
 	public function adjustColor( ?col : ColorAdjust ) : Void {
 		if( col == null )
 			colorMatrix = null;
@@ -104,6 +139,9 @@ class Drawable extends Sprite {
 		return m;
 	}
 
+	/**
+		Return the built shader code, can be used for debugging shader assembly
+	**/
 	public function getDebugShaderCode( toHxsl = true ) {
 		var shader = @:privateAccess {
 			var ctx = getScene().ctx;
@@ -117,6 +155,9 @@ class Drawable extends Sprite {
 		}
 	}
 
+	/**
+		Return the first shader of the given shader class among the object shaders
+	**/
 	public function getShader< T:hxsl.Shader >( stype : Class<T> ) : T {
 		if (shaders != null) for( s in shaders ) {
 			var s = Std.instance(s, stype);
@@ -126,16 +167,25 @@ class Drawable extends Sprite {
 		return null;
 	}
 
+	/**
+		Return all object shaders
+	**/
 	public inline function getShaders() {
 		return shaders.iterator();
 	}
 
+	/**
+		Add a shader to the object shaders
+	**/
 	public function addShader<T:hxsl.Shader>( s : T ) : T {
 		if( s == null ) throw "Can't add null shader";
 		shaders = hxsl.ShaderList.addSort(s, shaders);
 		return s;
 	}
 
+	/**
+		Remove a shader from the object shaders, returns true if found or false if it was not part of our shaders.
+	**/
 	public function removeShader( s : hxsl.Shader ) {
 		var prev = null, cur = shaders;
 		while( cur != null ) {

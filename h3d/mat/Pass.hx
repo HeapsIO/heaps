@@ -88,20 +88,36 @@ class Pass implements hxd.impl.Serializable {
 		switch( b ) {
 		case None:
 			blend(One, Zero);
+			blendOp = Add;
 		case Alpha:
 			blend(SrcAlpha, OneMinusSrcAlpha);
+			blendOp = Add;
 		case Add:
 			blend(SrcAlpha, One);
+			blendOp = Add;
 		case AlphaAdd:
 			blend(One, OneMinusSrcAlpha);
+			blendOp = Add;
 		case SoftAdd:
 			blend(OneMinusDstColor, One);
+			blendOp = Add;
 		case Multiply:
 			blend(DstColor, Zero);
 		case Erase:
 			blend(Zero, OneMinusSrcColor);
+			blendOp = Add;
 		case Screen:
 			blend(One, OneMinusSrcColor);
+			blendOp = Add;
+		case Sub:
+			blend(SrcAlpha, One);
+			blendOp = ReverseSub;
+		case Max:
+			this.blendSrc = SrcColor;
+			this.blendAlphaSrc = SrcAlpha;
+			this.blendDst = DstColor;
+			this.blendAlphaDst = DstAlpha;
+			blendOp = Max;
 		}
 	}
 

@@ -1,9 +1,9 @@
 package h2d;
 
 /**
-	Allows a 2D sprite position to follow a 3D object using the current camera.
+	Allows a 2D object position to follow a 3D object using the current camera.
 **/
-class ObjectFollower extends Sprite {
+class ObjectFollower extends Object {
 
 	public var follow : h3d.scene.Object;
 	public var pixelSnap = true;

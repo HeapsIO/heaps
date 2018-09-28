@@ -16,11 +16,23 @@ class PropsValues extends hxsl.Shader {
 		@param var occlusion : Float;
 		@param var emissive : Float;
 
+		var metalnessValue : Float;
+		var roughnessValue : Float;
+		var occlusionValue : Float;
+		var emissiveValue : Float;
+
+		function __init__() {
+			metalnessValue = metalness;
+			roughnessValue = roughness;
+			occlusionValue = occlusion;
+			emissiveValue = emissive;
+		}
+
 		function fragment() {
-			output.metalness = metalness;
-			output.roughness = roughness;
-			output.occlusion = occlusion;
-			output.emissive = emissive;
+			output.metalness = metalnessValue;
+			output.roughness = roughnessValue;
+			output.occlusion = occlusionValue;
+			output.emissive = emissiveValue;
 		}
 
 	};

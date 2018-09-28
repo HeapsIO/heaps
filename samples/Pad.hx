@@ -48,7 +48,7 @@ class Pad extends hxd.App {
 
 }
 
-class PadUI extends h2d.Sprite {
+class PadUI extends h2d.Object {
 
 	var tfName : h2d.Text;
 
@@ -64,7 +64,7 @@ class PadUI extends h2d.Sprite {
 
 	var pad : hxd.Pad;
 
-	public function new( p : hxd.Pad, parent : h2d.Sprite ){
+	public function new( p : hxd.Pad, parent : h2d.Object ){
 		super( parent );
 
 		pad = p;

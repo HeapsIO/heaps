@@ -28,7 +28,7 @@ private class State {
 }
 
 private class DepthEntry {
-	public var spr   : Sprite;
+	public var spr   : Object;
 	public var depth : Float;
 	public var keep  : Bool;
 	public var next  : DepthEntry;
@@ -36,7 +36,7 @@ private class DepthEntry {
 }
 
 class DepthMap {
-	var map      : Map<Sprite, DepthEntry>;
+	var map      : Map<Object, DepthEntry>;
 	var curIndex : Int;
 	var free     : DepthEntry;
 	var first    : DepthEntry;
@@ -45,7 +45,7 @@ class DepthMap {
 		map = new Map();
 	}
 
-	function push(spr : Sprite) {
+	function push(spr : Object) {
 		var e = map.get(spr);
 		if (e == null) {
 			if (free != null) {
@@ -64,7 +64,7 @@ class DepthMap {
 		e.depth = curIndex++;
 	}
 
-	function populate(spr : Sprite) {
+	function populate(spr : Object) {
 		for (c in spr) {
 			if (!c.visible) continue;
 			push(c);
@@ -72,7 +72,7 @@ class DepthMap {
 		}
 	}
 
-	public function build(spr : Sprite) {
+	public function build(spr : Object) {
 		curIndex = 0;
 
 		var e = first;
@@ -105,7 +105,7 @@ class DepthMap {
 		}
 	}
 
-	inline public function getDepth(spr : Sprite) {
+	inline public function getDepth(spr : Object) {
 		return map.get(spr).depth;
 	}
 
@@ -125,8 +125,8 @@ class ZGroup extends Layers
 	var normalState : State;
 	var transpState : State;
 	var opaqueState : State;
-	var onEnterFilterCached : Sprite -> Bool;
-	var onLeaveFilterCached : Sprite -> Void;
+	var onEnterFilterCached : Object -> Bool;
+	var onLeaveFilterCached : Object -> Void;
 
 	public function new(?p) {
 		super(p);
@@ -190,13 +190,13 @@ class ZGroup extends Layers
 		return true;
 	}
 
-	function onEnterFilter(spr : Sprite) {
+	function onEnterFilter(spr : Object) {
 		if (ctx.front2back) return false; // opaque pass : do not render the filter
 		normalState.applyTo(ctx);
 		return true;
 	}
 
-	function onLeaveFilter(spr : Sprite) {
+	function onLeaveFilter(spr : Object) {
 		transpState.applyTo(ctx);
 	}
 }

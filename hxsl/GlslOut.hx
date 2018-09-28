@@ -630,7 +630,7 @@ class GlslOut {
 		}
 
 		if( isES )
-			decl("#version "+version+(version > 150 ? " es" : ""))
+			decl("#version " + (version < 100 ? 100 : version) + (version > 150 ? " es" : ""));
 		else if( version != null )
 			decl("#version " + (version > 150 ? 150 : version));
 		else

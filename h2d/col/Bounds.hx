@@ -20,7 +20,9 @@ class Bounds {
 	}
 
 	public inline function toIBounds( scale = 1. ) {
-		return IBounds.fromValues(Math.floor(x * scale), Math.floor(y * scale), Math.floor(width * scale), Math.floor(height * scale));
+		var ix = Math.floor(x * scale);
+		var iy = Math.floor(y * scale);
+		return IBounds.fromValues(ix, iy, Math.ceil(xMax * scale) - ix, Math.ceil(yMax * scale) - iy);
 	}
 
 	public inline function intersects( b : Bounds ) {

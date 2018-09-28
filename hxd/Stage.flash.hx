@@ -11,6 +11,7 @@ class Stage {
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
+	public var isFocused(get, never) : Bool;
 
 	// FLASH
 	var stage : flash.display.Stage;
@@ -291,6 +292,7 @@ class Stage {
 		event(ev);
 	}
 
+	function get_isFocused() : Bool return false;
 
 }
 

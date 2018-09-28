@@ -11,6 +11,7 @@ class Stage {
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
+	public var isFocused(get, never) : Bool;
 
 	function new() : Void {
 		eventTargets = new List();
@@ -98,5 +99,7 @@ class Stage {
 		if( !b ) throw "Can't disable vsync on this platform";
 		return true;
 	}
+
+	function get_isFocused() : Bool return true;
 
 }

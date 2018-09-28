@@ -24,10 +24,10 @@ class Blur extends Filter {
 
 	var pass : h3d.pass.Blur;
 
-	public function new( radius = 1., gain = 1., quality = 1. ) {
+	public function new( radius = 1., gain = 1., quality = 1., linear = 0. ) {
 		super();
 		smooth = true;
-		pass = new h3d.pass.Blur(radius, quality, gain);
+		pass = new h3d.pass.Blur(radius, gain, linear, quality);
 	}
 
 	inline function get_quality() return pass.quality;
@@ -39,7 +39,7 @@ class Blur extends Filter {
 	inline function get_linear() return pass.linear;
 	inline function set_linear(v) return pass.linear = v;
 
-	override function sync( ctx : RenderContext, s : Sprite ) {
+	override function sync( ctx : RenderContext, s : Object ) {
 		boundsExtend = radius * 2;
 	}
 

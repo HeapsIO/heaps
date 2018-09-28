@@ -8,7 +8,7 @@ typedef ShaderDef = {
 typedef ShaderDefCache = Map<String, ShaderDef>;
 
 class ContextShared {
-	public var root2d : h2d.Sprite;
+	public var root2d : h2d.Object;
 	public var root3d : h3d.scene.Object;
 	public var contexts : Map<Prefab,Context>;
 	public var references : Map<Prefab,Array<Context>>;
@@ -20,7 +20,7 @@ class ContextShared {
 	var bakedData : Map<String, haxe.io.Bytes>;
 
 	public function new() {
-		root2d = new h2d.Sprite();
+		root2d = new h2d.Object();
 		root3d = new h3d.scene.Object();
 		contexts = new Map();
 		references = new Map();
@@ -77,6 +77,10 @@ class ContextShared {
 		return cache.loadTexture(null, path);
 	}
 
+	public function loadBytes( file : String) : haxe.io.Bytes {
+		return try hxd.res.Loader.currentInstance.load(file).entry.getBytes() catch( e : hxd.res.NotFound ) null;
+	}
+
 	public function loadBakedBytes( file : String ) {
 		if( bakedData == null ) loadBakedData();
 		return bakedData.get(file);
@@ -113,6 +117,10 @@ class ContextShared {
 			bytes.writeByte(0xFE); // stop
 		}
 		saveBakedFile(bytes.getBytes());
+	}
+
+	public function saveTexture( file : String, bytes : haxe.io.Bytes , dir : String, ext : String) {
+		throw "Don't know how to save texture";
 	}
 
 	function saveBakedFile( bytes : haxe.io.Bytes ) {

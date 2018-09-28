@@ -47,8 +47,8 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var TEXTURE_2D_ARRAY = 0x8C1A;
 	static inline var UNSIGNED_INT_2_10_10_10_REV = 0x8368;
 	static inline var UNSIGNED_INT_10F_11F_11F_REV = 0x8C3B;
-	static inline var FUNC_MIN = 0x8807;
-	static inline var FUNC_MAX = 0x8808;
+	static inline var FUNC_MIN = 0x8007;
+	static inline var FUNC_MAX = 0x8008;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -518,8 +518,10 @@ class GlDriver extends Driver {
 				t.lastFrame = frame;
 
 				if( pt.u == null ) continue;
-				if( boundTextures[i] == t.t ) continue;
-				boundTextures[i] = t.t;
+
+				var idx = s.vertex ? i : curShader.vertex.textures.length + i;
+				if( boundTextures[idx] == t.t ) continue;
+				boundTextures[idx] = t.t;
 
 				#if multidriver
 				if( t.t.driver != this )
@@ -529,10 +531,10 @@ class GlDriver extends Driver {
 				var mode = getBindType(t);
 				if( mode != pt.mode )
 					throw "Texture format mismatch: "+t+" should be "+pt.t;
-				gl.activeTexture(GL.TEXTURE0 + i);
-				gl.uniform1i(pt.u, i);
+				gl.activeTexture(GL.TEXTURE0 + idx);
+				gl.uniform1i(pt.u, idx);
 				gl.bindTexture(mode, t.t.t);
-				lastActiveIndex = i;
+				lastActiveIndex = idx;
 
 				var mip = Type.enumIndex(t.mipMap);
 				var filter = Type.enumIndex(t.filter);

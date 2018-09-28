@@ -1,6 +1,6 @@
 package h2d;
 
-class Layers extends Sprite {
+class Layers extends Object {
 
 	// the per-layer insert position
 	var layersIndexes : Array<Int>;
@@ -20,7 +20,7 @@ class Layers extends Sprite {
 		return addChildAt(s, layer);
 	}
 
-	override function addChildAt( s : Sprite, layer : Int ) {
+	override function addChildAt( s : Object, layer : Int ) {
 		if( s.parent == this ) {
 			var old = s.allocated;
 			s.allocated = false;
@@ -35,7 +35,7 @@ class Layers extends Sprite {
 			layersIndexes[i]++;
 	}
 
-	override function removeChild( s : Sprite ) {
+	override function removeChild( s : Object ) {
 		for( i in 0...children.length ) {
 			if( children[i] == s ) {
 				children.splice(i, 1);
@@ -51,7 +51,7 @@ class Layers extends Sprite {
 		}
 	}
 
-	public function under( s : Sprite ) {
+	public function under( s : Object ) {
 		for( i in 0...children.length )
 			if( children[i] == s ) {
 				var pos = 0;
@@ -70,7 +70,7 @@ class Layers extends Sprite {
 			}
 	}
 
-	public function over( s : Sprite ) {
+	public function over( s : Object ) {
 		for( i in 0...children.length )
 			if( children[i] == s ) {
 				for( l in layersIndexes )
@@ -84,7 +84,7 @@ class Layers extends Sprite {
 			}
 	}
 
-	public function getLayer( layer : Int ) : Iterator<Sprite> {
+	public function getLayer( layer : Int ) : Iterator<Object> {
 		var a;
 		if( layer >= layerCount )
 			a = [];

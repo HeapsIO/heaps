@@ -5,10 +5,10 @@ import h2d.Graphics;
 import h2d.Object;
 import h2d.Text.Align;
 
-class TextWidget extends Object
+class HtmlTextWidget extends Object
 {
 	public var align: Align;
-	public var textField: h2d.Text;
+	public var textField: h2d.HtmlText;
 	public var back: Graphics;
 
 	public function new(parent:h2d.Scene, font: Font, str:String, align:h2d.Text.Align){
@@ -16,7 +16,7 @@ class TextWidget extends Object
 		this.align = align;
 		back = new Graphics(this);
 
-		var tf = new h2d.Text(font, this);
+		var tf = new h2d.HtmlText(font, this);
 		tf.textColor = 0xffffff;
 		tf.textAlign = align;
 		tf.text = str;
@@ -51,27 +51,27 @@ class TextWidget extends Object
 	}
 }
 
-class Text extends hxd.App {
+class HtmlText extends hxd.App {
 
-	var textWidgets:Array<TextWidget> = [];
-	var resizeWidgets: Array<TextWidget> = [];
+	var textWidgets:Array<HtmlTextWidget> = [];
+	var resizeWidgets: Array<HtmlTextWidget> = [];
 
 	override function init() {
-
+		
 		// Enable global scaling
 		// s2d.scale(1.25);
 
 		var font = hxd.res.DefaultFont.get();
 		// var font = hxd.Res.customFont.toFont();
 
-		var multilineText = "This is a multiline text.\nLorem ipsum dolor";
+		var multilineText = "This is a multiline <font color=\"#FF00FF\">text.<br/>Lorem</font> ipsum dolor";
 		var singleText = "Hello simple text";
 
 		var xpos = 0;
 		var yoffset = 10.0;
 
 		function createWidget(str:String, align:h2d.Text.Align) {
-			var w = new TextWidget(s2d, font, str, align);
+			var w = new HtmlTextWidget(s2d, font, str, align);
 			w.x = xpos;
 			w.y = yoffset;
 			textWidgets.push(w);
@@ -82,7 +82,7 @@ class Text extends hxd.App {
 		xpos += 450;
 		for (a in [Align.Left, Align.Center, Align.Right, Align.MultilineCenter, Align.MultilineRight]) {
 			var w = createWidget("", a);
-			var label = new h2d.Text(font, w);
+			var label = new h2d.HtmlText(font, w);
 			label.text = Std.string(a);
 			label.x = 5;
 			label.alpha = 0.5;
@@ -96,17 +96,18 @@ class Text extends hxd.App {
 		// Resized widgets
 		xpos += 200;
 		yoffset = 10;
-		var longText = "Lorem ipsum dolor sit amet, fabulas repudiare accommodare nec ut. Ut nec facete maiestatis, partem debitis eos id, perfecto ocurreret repudiandae cum no.";
+		var longText = "Lorem ipsum dolor sit amet, fabulas repudiare accommodare nec ut.<br />Ut nec facete maiestatis, <font color=\"#FF00FF\">partem debitis eos id</font>, perfecto ocurreret repudiandae cum no.";
+		//var longText = "Lorem ipsum dolor sit amet, fabulas repudiare accommodare nec ut.Ut nec facete maiestatis, <font color=\"#FF00FF\">partem debitis eos id</font>, perfecto ocurreret repudiandae cum no.";
 		for (a in [Align.Left, Align.Center, Align.Right, Align.MultilineCenter, Align.MultilineRight]) {
 			var w = createWidget(longText, a);
 			w.setMaxWidth(200);
 			resizeWidgets.push(w);
 			yoffset += 100;
 		}
-
+		
 		// Flows
 		function createText(parent:Object, str : String, align:Align) {
-			var tf = new h2d.Text(font, parent);
+			var tf = new h2d.HtmlText(font, parent);
 			tf.textColor = 0xffffff;
 			tf.textAlign = align;
 			tf.text = str;
@@ -197,7 +198,7 @@ class Text extends hxd.App {
 
 	static function main() {
 		hxd.Res.initEmbed();
-		new Text();
+		new HtmlText();
 	}
 
 }

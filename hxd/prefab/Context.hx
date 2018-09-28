@@ -2,7 +2,7 @@ package hxd.prefab;
 
 @:final class Context {
 
-	public var local2d : h2d.Sprite;
+	public var local2d : h2d.Object;
 	public var local3d : h3d.scene.Object;
 	public var shared : ContextShared;
 	public var cleanup : Void -> Void;

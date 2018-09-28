@@ -7,8 +7,8 @@ class DropShadow extends Glow {
 	public var angle : Float;
 	var alphaPass = new h3d.mat.Pass("");
 
-	public function new( distance : Float = 4., angle : Float = 0.785, color : Int = 0, alpha = 1., radius : Float = 1., gain : Float = 1, quality = 1. ) {
-		super(color, alpha, radius, gain, quality);
+	public function new( distance : Float = 4., angle : Float = 0.785, color : Int = 0, alpha = 1., radius : Float = 1., gain : Float = 1, quality = 1., smoothColor = false ) {
+		super(color, alpha, radius, gain, quality, smoothColor);
 		this.distance = distance;
 		this.angle = angle;
 		alphaPass.addShader(new h3d.shader.UVDelta());

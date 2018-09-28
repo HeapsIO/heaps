@@ -47,29 +47,17 @@ class Prefab {
 		if( !b ) {
 			for( m in materials ) {
 				m.mainPass.stencil = null;
-				m.removePass(m.getPass("outline"));
+				m.removePass(m.getPass("highlight"));
 			}
 			return;
 		}
 
-		var outlineShader = new h3d.shader.Outline();
-		outlineShader.size = 0.12;
-		outlineShader.distance = 0;
-		outlineShader.color.setColor(0xffffff);
-
-		var s1 = new h3d.mat.Stencil();
-		s1.setFunc(Always, 1);
-		s1.setOp(Keep, Keep, Replace);
-
-		var s2 = new h3d.mat.Stencil();
-		s2.setFunc(Greater, 1, 0xFF, 0);
+		var shader = new h3d.shader.FixedColor(0xffffff);
 		for( m in materials ) {
-			m.mainPass.stencil = s1;
-			var p = m.allocPass("outline");
+			var p = m.allocPass("highlight");
 			p.culling = None;
 			p.depthWrite = false;
-			p.addShader(outlineShader);
-			p.stencil = s2;
+			p.addShader(shader);
 		}
 	}
 	#end
@@ -155,9 +143,9 @@ class Prefab {
 		return p;
 	}
 
-	public function makeInstanceRec( ctx : Context ) {
+	public function makeInstanceRec( ctx : Context ) : Context {
 		if(!enabled)
-			return;
+			return ctx;
 		if( ctx == null ) {
 			ctx = new Context();
 			ctx.init();
@@ -165,6 +153,7 @@ class Prefab {
 		ctx = makeInstance(ctx);
 		for( c in children )
 			c.makeInstanceRec(ctx);
+		return ctx;
 	}
 
 	#if castle
@@ -214,13 +203,17 @@ class Prefab {
 	}
 
 	public function getAll<T:Prefab>( cl : Class<T>, ?arr: Array<T> ) : Array<T> {
+		return findAll(function(p) return p.to(cl));
+	}
+
+	public function findAll<T>( f : Prefab -> Null<T>, ?arr : Array<T> ) : Array<T> {
 		if(arr == null)
 			arr = [];
-		for(c in children) {
-			var i = c.to(cl);
-			if(i != null)
-				arr.push(i);
-			c.getAll(cl, arr);
+		for( c in children ) {
+			var v = f(c);
+			if( v != null )
+				arr.push(v);
+			c.findAll(f, arr);
 		}
 		return arr;
 	}
@@ -238,6 +231,13 @@ class Prefab {
 		for(c in children)
 			c.flatten(cl, arr);
 		return arr;
+	}
+
+	public function visitChildren(func: Prefab->Bool) {
+		for(c in children) {
+			if(func(c))
+				c.visitChildren(func);
+		}
 	}
 
 	public function getParent<T:Prefab>( c : Class<T> ) : Null<T> {

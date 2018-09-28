@@ -9,4 +9,6 @@ enum BlendMode {
 	Multiply;
 	Erase;
 	Screen;
+	Sub;
+	Max;
 }

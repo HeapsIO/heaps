@@ -2,7 +2,7 @@ import hxd.Key in K;
 
 class Filters extends hxd.App {
 
-	var spr : h2d.Sprite;
+	var obj : h2d.Object;
 	var bmp : h2d.Bitmap;
 	var mask : h2d.Graphics;
 	var disp : h2d.Tile;
@@ -16,11 +16,11 @@ class Filters extends hxd.App {
 		mask.x = s2d.width*0.5-20;
 		mask.y = s2d.height*0.5-50;
 
-		spr = new h2d.Sprite(s2d);
-		spr.x = s2d.width * 0.5;
-		spr.y = s2d.height * 0.5;
+		obj = new h2d.Object(s2d);
+		obj.x = s2d.width * 0.5;
+		obj.y = s2d.height * 0.5;
 
-		bmp = new h2d.Bitmap(hxd.Res.hxlogo.toTile(), spr);
+		bmp = new h2d.Bitmap(hxd.Res.hxlogo.toTile(), obj);
 		bmp.colorKey = 0xFFFFFF;
 
 		disp = hxd.Res.normalmap.toTile();
@@ -36,14 +36,14 @@ class Filters extends hxd.App {
 			if( K.isPressed(K.NUMBER_0 + i) || K.isPressed(K.NUMPAD_0+i) )
 				setFilters(i);
 		if( K.isPressed(K.NUMPAD_ADD) ) {
-			spr.scale(1.25);
+			obj.scale(1.25);
 			bmp.scale(1 / 1.25);
 		}
 		if( K.isPressed(K.NUMPAD_SUB) ) {
-			spr.scale(1 / 1.25);
+			obj.scale(1 / 1.25);
 			bmp.scale(1.25);
-			if( spr.scaleX < 1 ) {
-				spr.setScale(1);
+			if( obj.scaleX < 1 ) {
+				obj.setScale(1);
 				bmp.setScale(1);
 			}
 		}
@@ -55,32 +55,32 @@ class Filters extends hxd.App {
 	function setFilters(i) {
 		switch( i ) {
 		case 0:
-			spr.filter = null;
+			obj.filter = null;
 		case 1:
-			spr.filter = new h2d.filter.Blur(5);
+			obj.filter = new h2d.filter.Blur(5);
 		case 2:
-			spr.filter = new h2d.filter.Glow(0xFFFFFF, 100, 5);
+			obj.filter = new h2d.filter.Glow(0xFFFFFF, 100, 5);
 		case 3:
-			spr.filter = new h2d.filter.DropShadow(8,Math.PI/4);
+			obj.filter = new h2d.filter.DropShadow(8,Math.PI/4);
 		case 4:
-			spr.filter = new h2d.filter.Displacement(disp,4,4);
+			obj.filter = new h2d.filter.Displacement(disp,4,4);
 		case 5:
 			var g = new h2d.filter.Glow(0xFFFFFF, 100, 2);
 			g.knockout = true;
-			spr.filter = g;
+			obj.filter = g;
 		case 6:
 			var g = new h2d.filter.Glow(0xFFA500, 50, 2);
 			g.knockout = true;
-			spr.filter = new h2d.filter.Group([g, new h2d.filter.Displacement(disp, 3, 3), new h2d.filter.Blur(3), new h2d.filter.DropShadow(8, Math.PI / 4)]);
+			obj.filter = new h2d.filter.Group([g, new h2d.filter.Displacement(disp, 3, 3), new h2d.filter.Blur(3), new h2d.filter.DropShadow(8, Math.PI / 4)]);
 		case 7:
 			var m = new h3d.Matrix();
 			m.identity();
 			m.colorContrast(0.5);
 			m.colorHue(Math.PI / 4);
 			m.colorSaturate(-0.5);
-			spr.filter = new h2d.filter.ColorMatrix(m);
+			obj.filter = new h2d.filter.ColorMatrix(m);
 		case 8:
-			spr.filter = new h2d.filter.Mask(mask);
+			obj.filter = new h2d.filter.Mask(mask);
 		}
 	}
 

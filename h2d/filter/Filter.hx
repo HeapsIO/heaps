@@ -9,16 +9,16 @@ class Filter {
 	function new() {
 	}
 
-	public function sync( ctx : RenderContext, s : Sprite ) {
+	public function sync( ctx : RenderContext, s : Object ) {
 	}
 
-	public function bind( s : Sprite ) {
+	public function bind( s : Object ) {
 	}
 
-	public function unbind( s : Sprite ) {
+	public function unbind( s : Object ) {
 	}
 
-	public function getBounds( s : Sprite, bounds : h2d.col.Bounds ) {
+	public function getBounds( s : Object, bounds : h2d.col.Bounds ) {
 		s.getBounds(s, bounds);
 		bounds.xMin -= boundsExtend;
 		bounds.yMin -= boundsExtend;

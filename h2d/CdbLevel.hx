@@ -30,6 +30,7 @@ class LevelTileset {
 	public var tile : h2d.Tile;
 	public var tiles : Array<h2d.Tile>;
 	public var objects : Array<LevelObject>;
+	public var groups : Map<String, LevelGroup>;
 	public var tilesProps(get, never) : Array<Dynamic>;
 	var props :	cdb.Data.TilesetProps;
 	var tileBuilder : cdb.TileBuilder;
@@ -65,6 +66,29 @@ class LevelObject {
 	}
 }
 
+class LevelGroup {
+	public var tileset : LevelTileset;
+	public var name : String;
+	public var x : Int;
+	public var y : Int;
+	public var width : Int;
+	public var height : Int;
+	public var tile : h2d.Tile;
+	public var value : Dynamic;
+
+	public function new(name, tset, x, y, w, h, val) {
+		this.tileset = tset;
+		this.x = x;
+		this.y = y;
+		this.name = name;
+		width = w;
+		height = h;
+		var sz = tileset.size;
+		tile = tileset.tile.sub(x * sz, y * sz, w * sz, h * sz);
+		value = val;
+	}
+}
+
 class LevelObjectInstance {
 	public var x : Int;
 	public var y : Int;
@@ -94,7 +118,7 @@ class LevelLayer {
 	public var name : String;
 
 	/**
-		CdbLevel extends Layers: this index will tell in which sprite layer this LevelLayer content is added to.
+		CdbLevel extends Layers: this index will tell in which object layer this LevelLayer content is added to.
 	**/
 	public var layerIndex(default,null) : Int;
 
@@ -364,6 +388,7 @@ class CdbLevel extends Layers {
 		t.tile = t.res.toTile();
 		t.tiles = t.tile.gridFlatten(t.size);
 		t.objects = [];
+		t.groups = new Map<String, LevelGroup>();
 		var tprops = Reflect.field(levelsProps.tileSets, ldat.file);
 		@:privateAccess t.props = tprops;
 		if( tprops != null ) {
@@ -374,7 +399,11 @@ class CdbLevel extends Layers {
 					var o = new LevelObject(t, s.x, s.y, s.w, s.h);
 					t.objects[o.id] = o;
 				case Group:
-					// TODO : save props
+					var name = s.opts.name;
+					if (name != null) {
+						var g = new LevelGroup(name, t, s.x, s.y, s.w, s.h, s.opts.value);
+						t.groups.set(name, g);
+					}
 				case Ground, Border, Tile:
 					// nothing
 				}
