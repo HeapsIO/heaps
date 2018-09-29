@@ -759,7 +759,8 @@ class BaseLibrary {
 		case 1:
 			animNodes[0];
 		default:
-			throw "Multiple animation layers curves are currently not supported";
+			trace("Multiple animation layers curves are currently not supported");
+			animNodes[0];
 		}
 
 		if( animNode == null ) {
@@ -873,7 +874,7 @@ class BaseLibrary {
 				case "d|Y": data.y = values;
 				case "d|Z": data.z = values;
 				default:
-					throw "Unsupported key name "+cname;
+					trace("Unsupported key name "+cname);
 				}
 			}
 
@@ -900,7 +901,8 @@ class BaseLibrary {
 			case "S":
 				if( c.def.scale == null ) P1 else c.def.scale;
 			default:
-				throw "Unknown curve " + model.getName()+"."+cname;
+				trace("Unknown curve " + model.getName()+"."+cname);
+				continue;
 			}
 			var hasValue = false;
 			if( data.x != null && roundValues(data.x, def.x, M) )
