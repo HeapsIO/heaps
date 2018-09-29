@@ -612,7 +612,11 @@ class Manager {
 		targetFormat   = switch (dat.sampleFormat) {
 			case UI8 : UI8;
 			case I16 : I16;
+			#if js
+			case F32 : F32;
+			#else 
 			case F32 : I16;
+			#end
 		}
 		return targetChannels == dat.channels && targetFormat == dat.sampleFormat && targetRate == dat.samplingRate;
 	}
