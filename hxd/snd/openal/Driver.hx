@@ -115,7 +115,11 @@ class Driver implements hxd.snd.Driver {
 		var alFormat = switch (format) {
 			case UI8 : channelCount == 1 ? AL.FORMAT_MONO8  : AL.FORMAT_STEREO8;
 			case I16 : channelCount == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
+			#if (js)
 			case F32 : channelCount == 1 ? AL.FORMAT_MONOF32 : AL.FORMAT_STEREOF32;
+			#else
+			case F32 : channelCount == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
+			#end
 		}
 		AL.bufferData(buffer.inst, alFormat, data, size, samplingRate);
 	}
