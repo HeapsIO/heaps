@@ -18,7 +18,8 @@ Heaps is currently working on:
 Community
 ---------
 
-Join us on Gitter <https://gitter.im/heapsio/Lobby>
+Ask questions or discuss on <https://community.heaps.io>
+Chat on Gitter <https://gitter.im/heapsio/Lobby>
 
 Samples
 -------
