@@ -443,6 +443,19 @@ class Graphics extends Drawable {
 		}
 		flush();
 	}
+	
+	public function drawEllipse( cx : Float, cy : Float, radiusX : Float, radiusY : Float, nsegments = 0 ) {
+		flush();
+		if( nsegments == 0 )
+			nsegments = Math.ceil(Math.abs(radiusY * 3.14 * 2 / 4));
+		if( nsegments < 3 ) nsegments = 3;
+		var angle = Math.PI * 2 / nsegments;
+		for( i in 0...nsegments + 1 ) {
+			var a = i * angle;
+			lineTo(cx + Math.cos(a) * radiusX, cy + Math.sin(a) * radiusY);
+		}
+		flush();
+	}
 
 	public function drawPie( cx : Float, cy : Float, radius : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
 		if(Math.abs(angleLength) >= Math.PI * 2) {
