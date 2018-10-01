@@ -164,6 +164,7 @@ class Dropdown extends Flow {
 
 	function set_canEdit(b) {
 		if( !b ) close();
+		alpha = b ? 1 : 0.7;
 		return canEdit = b;
 	}
 
