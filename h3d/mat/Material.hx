@@ -282,7 +282,7 @@ class Material extends BaseMaterial {
 			getPass("shadow").culling = mainPass.culling;
 	}
 
-	#if js
+	#if editor
 	override function editProps() {
 		return new js.jquery.JQuery('
 			<dl>

@@ -383,7 +383,7 @@ class Renderer extends h3d.scene.Renderer {
 		env.power = props.envPower;
 	}
 
-	#if js
+	#if editor
 	override function editProps() {
 		var props : RenderProps = props;
 		return new js.jquery.JQuery('

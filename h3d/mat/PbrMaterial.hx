@@ -207,7 +207,7 @@ class PbrMaterial extends Material {
 			return m;
 	}
 
-	#if js
+	#if editor
 	override function editProps() {
 		var props : PbrProps = props;
 		if( props.emissive == 0 ) Reflect.deleteField(props,"emissive");
