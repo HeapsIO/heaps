@@ -28,7 +28,7 @@ class Outline extends Filter {
 
 	inline function set_multiplyAlpha(v) return pass.multiplyAlpha = v;
 
-	override function sync(ctx : RenderContext, s : Sprite) {
+	override function sync(ctx : RenderContext, s : Object) {
 		boundsExtend = pass.size * 2;
 	}
 
