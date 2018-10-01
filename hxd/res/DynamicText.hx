@@ -3,11 +3,6 @@ package hxd.res;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 #end
-#if (haxe_ver < 4)
-import haxe.xml.Fast in Access;
-#else
-import haxe.xml.Access;
-#end
 
 abstract NoArg({}) {
 }
@@ -24,7 +19,7 @@ abstract Key<T>(String) {
 class DynamicText {
 
 	public static function parse( data : String ) : Dynamic {
-		var x = new Access(Xml.parse(data).firstElement());
+		var x = new haxe.xml.Fast(Xml.parse(data).firstElement());
 		var obj = {};
 		for( e in x.elements )
 			Reflect.setField(obj, e.att.id, parseXmlData(e));
@@ -32,7 +27,7 @@ class DynamicText {
 	}
 
 	public static function apply( obj : Dynamic, data : String, ?onMissing ) {
-		var x = new Access(Xml.parse(data).firstElement());
+		var x = new haxe.xml.Fast(Xml.parse(data).firstElement());
 		applyRec([], obj, x, onMissing);
 	}
 
@@ -70,7 +65,7 @@ class DynamicText {
 		return parseText(str);
 	}
 
-	public static function applyRec( path : Array<String>, obj : Dynamic, data : Access, onMissing ) {
+	public static function applyRec( path : Array<String>, obj : Dynamic, data : haxe.xml.Fast, onMissing ) {
 		var fields = new Map();
 		for( f in Reflect.fields(obj) ) fields.set(f, true);
 		if( data != null )
@@ -123,7 +118,7 @@ class DynamicText {
 		}
 	}
 
-	static function parseXmlData( x : Access ) : Dynamic {
+	static function parseXmlData( x : haxe.xml.Fast ) : Dynamic {
 		switch( x.name ) {
 		case "g":
 			var first = x.elements.hasNext() ? x.elements.next() : null;
@@ -183,7 +178,7 @@ class DynamicText {
 		return Context.makePosition({ min : index, max : index + str.length, file : pos.file });
 	}
 
-	static function typeFromXml( x : Access, pos : { file : String, content : String, pos : Position } ) {
+	static function typeFromXml( x : haxe.xml.Fast, pos : { file : String, content : String, pos : Position } ) {
 		switch( x.name ) {
 		case "g":
 			var first = x.elements.next();
@@ -262,7 +257,7 @@ class DynamicText {
 		var fields = Context.getBuildFields();
 		var pos = Context.currentPos();
 		var fpos = { file : fullPath, content : content.toLowerCase(), pos : pos };
-		for( x in new Access(x.firstElement()).elements ) {
+		for( x in new haxe.xml.Fast(x.firstElement()).elements ) {
 			var id = x.att.id;
 			var t = typeFromXml(x, fpos);
 			fields.push( {
