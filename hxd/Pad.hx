@@ -12,7 +12,17 @@ import dx.GameController;
 private typedef Event = {
 }
 private class GameController {
+	public static var NUM_AXES = 0;
+	public static var NUM_BUTTONS = 0;
+	public static var CONFIG : Dynamic = {};
 	public var name : String;
+	public var index : Int;
+	public function getButtons() return 0;
+	public function getAxis(i:Int) return 0;
+	public function update() {}
+	public function rumble( strength : Float, time : Float ) {}
+	public static function init() {}
+	public static function detect(_) {}
 }
 #end
 #end
