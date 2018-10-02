@@ -444,15 +444,18 @@ class Graphics extends Drawable {
 		flush();
 	}
 	
-	public function drawEllipse( cx : Float, cy : Float, radiusX : Float, radiusY : Float, nsegments = 0 ) {
+	public function drawEllipse( cx : Float, cy : Float, radiusX : Float, radiusY : Float, rotationAngle : Float = 0, nsegments = 0 ) {
 		flush();
 		if( nsegments == 0 )
 			nsegments = Math.ceil(Math.abs(radiusY * 3.14 * 2 / 4));
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = Math.PI * 2 / nsegments;
+		var x1, y1;
 		for( i in 0...nsegments + 1 ) {
 			var a = i * angle;
-			lineTo(cx + Math.cos(a) * radiusX, cy + Math.sin(a) * radiusY);
+			x1 = Math.cos(a) * Math.cos(rotationAngle) * radiusX - Math.sin(a) * Math.sin(rotationAngle) * radiusY;
+			y1 = Math.cos(rotationAngle) * Math.sin(a) * radiusY + Math.cos(a) * Math.sin(rotationAngle) * radiusX;
+			lineTo(cx + x1, cy + y1);
 		}
 		flush();
 	}
