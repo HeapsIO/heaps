@@ -26,14 +26,14 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	var events : hxd.SceneEvents;
 	var hitInteractives : Array<Interactive>;
 	var eventListeners : Array<hxd.Event -> Void>;
-	var stage : hxd.Stage;
+	var window : hxd.Window;
 
 	/**
 		Create a new scene. A default 3D scene is already available in `hxd.App.s3d`
 	**/
 	public function new() {
 		super(null);
-		stage = hxd.Stage.getInstance();
+		window = hxd.Window.getInstance();
 		eventListeners = [];
 		hitInteractives = [];
 		interactives = [];
@@ -117,8 +117,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		if( hitInteractives.length == 0 ) {
 
-			var screenX = (event.relX / stage.width - 0.5) * 2;
-			var screenY = -(event.relY / stage.height - 0.5) * 2;
+			var screenX = (event.relX / window.width - 0.5) * 2;
+			var screenY = -(event.relY / window.height - 0.5) * 2;
 			var p0 = camera.unproject(screenX, screenY, 0);
 			var p1 = camera.unproject(screenX, screenY, 1);
 			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());

@@ -15,7 +15,7 @@ interface Interactive {
 
 class SceneEvents {
 
-	var stage : hxd.Stage;
+	var window : hxd.Window;
 	var scenes : Array<InteractiveScene>;
 
 	var currentOver : Interactive;
@@ -32,13 +32,13 @@ class SceneEvents {
 	var checkPos = new hxd.Event(ECheck);
 	var onOut = new hxd.Event(EOut);
 
-	public function new( ?stage ) {
+	public function new( ?window ) {
 		scenes = [];
 		pendingEvents = [];
 		pushList = [];
-		if( stage == null ) stage = hxd.Stage.getInstance();
-		this.stage = stage;
-		stage.addEventTarget(onEvent);
+		if( window == null ) window = hxd.Window.getInstance();
+		this.window = window;
+		window.addEventTarget(onEvent);
 	}
 
 	function onRemove(i) {
@@ -61,7 +61,7 @@ class SceneEvents {
 	}
 
 	public function dispose() {
-		stage.removeEventTarget(onEvent);
+		window.removeEventTarget(onEvent);
 	}
 
 	public function focus( i : Interactive ) {

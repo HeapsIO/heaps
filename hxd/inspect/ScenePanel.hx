@@ -271,15 +271,15 @@ class ScenePanel extends Panel {
 		btPick = j.find(".bt_pick");
 		btPick.click(function(_) {
 			btPick.toggleClass("active");
-			var stage = hxd.Stage.getInstance();
+			var window = hxd.Window.getInstance();
 			if( !btPick.hasClass("active") ) {
 				currentPick = null;
 				lastPickEvent = null;
-				stage.removeEventTarget(onPickEvent);
+				window.removeEventTarget(onPickEvent);
 				return;
 			}
 			lastPickEvent = 0;
-			stage.addEventTarget(onPickEvent);
+			window.addEventTarget(onPickEvent);
 		});
 	}
 
@@ -355,8 +355,8 @@ class ScenePanel extends Panel {
 			sceneObjects.pop().dispose();
 		var frame = h3d.Engine.getCurrent().frameCount;
 		if( lastPickEvent != null && lastPickEvent < frame - 1 ) {
-			var stage = hxd.Stage.getInstance();
-			var e = new hxd.Event(EMove, stage.mouseX, stage.mouseY);
+			var window = hxd.Window.getInstance();
+			var e = new hxd.Event(EMove, window.mouseX, window.mouseY);
 			haxe.Timer.delay(function() { if( lastPickEvent == null ) return; onPickEvent(e); }, 0); // flash don't like to capture while rendering
 		}
 	}

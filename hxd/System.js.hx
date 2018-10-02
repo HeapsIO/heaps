@@ -27,7 +27,7 @@ class System {
 
 	public static function timeoutTick() : Void {
 	}
-	
+
 	static var loopFunc : Void -> Void;
 
 	// JS
@@ -65,7 +65,7 @@ class System {
 			return;
 		currentNativeCursor = c;
 		currentCustomCursor = null;
-		var canvas = @:privateAccess hxd.Stage.getInstance().canvas;
+		var canvas = @:privateAccess hxd.Window.getInstance().canvas;
 		if( canvas != null ) {
 			canvas.style.cursor = switch( c ) {
 			case Default: "default";
@@ -108,14 +108,14 @@ class System {
 		if ( currentCustomCursor != null ) {
 			var change = currentCustomCursor.update(hxd.Timer.deltaT);
 			if ( change != -1 ) {
-				var canvas = @:privateAccess hxd.Stage.getInstance().canvas;
+				var canvas = @:privateAccess hxd.Window.getInstance().canvas;
 				if ( canvas != null ) {
 					canvas.style.cursor = currentCustomCursor.alloc[change];
 				}
 			}
 		}
 	}
-	
+
 	// getters
 
 	static function get_width() : Int return Math.round(js.Browser.document.body.clientWidth * js.Browser.window.devicePixelRatio);
@@ -125,9 +125,9 @@ class System {
 	static function get_screenDPI() : Int return 72;
 	static function get_allowTimeout() return false;
 	static function set_allowTimeout(b) return false;
-	
+
 	static function __init__() : Void {
 		haxe.MainLoop.add(updateCursor, -1);
 	}
-	
+
 }

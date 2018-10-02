@@ -55,13 +55,13 @@ class System {
 	static function mainLoop() : Bool {
 		// process events
 		#if usesys
-		if( !haxe.System.emitEvents(@:privateAccess hxd.Stage.inst.event) )
+		if( !haxe.System.emitEvents(@:privateAccess hxd.Window.inst.event) )
 			return false;
 		#elseif hldx
-		if( !dx.Loop.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
+		if( !dx.Loop.processEvents(@:privateAccess hxd.Window.inst.onEvent) )
 			return false;
 		#elseif hlsdl
-		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
+		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Window.inst.onEvent) )
 			return false;
 		#end
 
@@ -79,7 +79,7 @@ class System {
 		#if usesys
 
 		if( !haxe.System.init() ) return;
-		@:privateAccess Stage.inst = new Stage("", haxe.System.width, haxe.System.height);
+		@:privateAccess Window.inst = new Window("", haxe.System.width, haxe.System.height);
 		init();
 
 		#else
@@ -97,14 +97,14 @@ class System {
 		timeoutTick();
 		#if hlsdl
 			sdl.Sdl.init();
-			@:privateAccess Stage.initChars();
-			@:privateAccess Stage.inst = new Stage(title, width, height);
+			@:privateAccess Window.initChars();
+			@:privateAccess Window.inst = new Window(title, width, height);
 			init();
 		#elseif hldx
-			@:privateAccess Stage.inst = new Stage(title, width, height);
+			@:privateAccess Window.inst = new Window(title, width, height);
 			init();
 		#else
-			@:privateAccess Stage.inst = new Stage(title, width, height);
+			@:privateAccess Window.inst = new Window(title, width, height);
 			init();
 		#end
 		#end
@@ -220,7 +220,7 @@ class System {
 		}
 		#end
 	}
-	
+
 	#if (hlsdl || hldx)
 	static function updateCursor() : Void {
 		if (currentCustomCursor != null)

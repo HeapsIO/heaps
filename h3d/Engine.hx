@@ -40,7 +40,7 @@ class Engine {
 	var lastTime : Float;
 	var antiAlias : Int;
 	var tmpVector = new h3d.Vector();
-	var stage : hxd.Stage;
+	var window : hxd.Window;
 
 	var targetTmp : TargetTmp;
 	var targetStack : TargetTmp;
@@ -53,16 +53,16 @@ class Engine {
 	public var ready(default,null) = false;
 	@:allow(hxd.res) var resCache = new Map<{},Dynamic>();
 
-	@:access(hxd.Stage)
+	@:access(hxd.Window)
 	public function new( hardware = true, aa = 0 ) {
 		this.hardware = hardware;
 		this.antiAlias = aa;
 		this.autoResize = true;
 		fullScreen = !hxd.System.getValue(IsWindowed);
-		stage = hxd.Stage.getInstance();
+		window = hxd.Window.getInstance();
 		realFps = hxd.System.getDefaultFrameRate();
 		lastTime = haxe.Timer.stamp();
-		stage.addResizeEvent(onStageResize);
+		window.addResizeEvent(onWindowResize);
 		#if (js || cpp || hlsdl || usegl)
 		driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif flash
@@ -220,8 +220,8 @@ class Engine {
 	function onCreate( disposed ) {
 		setCurrent();
 		if( autoResize ) {
-			width = stage.width;
-			height = stage.height;
+			width = window.width;
+			height = window.height;
 		}
 		if( disposed )
 			mem.onContextLost();
@@ -246,9 +246,9 @@ class Engine {
 	public dynamic function onReady() {
 	}
 
-	function onStageResize() {
+	function onWindowResize() {
 		if( autoResize && !driver.isDisposed() ) {
-			var w = stage.width, h = stage.height;
+			var w = window.width, h = window.height;
 			if( w != width || h != height )
 				resize(w, h);
 			onResized();
@@ -258,7 +258,7 @@ class Engine {
 	function set_fullScreen(v) {
 		fullScreen = v;
 		if( mem != null && hxd.System.getValue(IsWindowed) )
-			stage.setFullScreen(v);
+			window.setFullScreen(v);
 		return v;
 	}
 
@@ -400,7 +400,7 @@ class Engine {
 
 	public function dispose() {
 		driver.dispose();
-		stage.removeResizeEvent(onStageResize);
+		window.removeResizeEvent(onWindowResize);
 	}
 
 	function get_fps() {

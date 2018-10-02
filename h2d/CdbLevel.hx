@@ -296,6 +296,11 @@ class CdbLevel extends Layers {
 		return collide;
 	}
 
+	override function getBoundsRec(relativeTo:Object, out:h2d.col.Bounds, forSize:Bool) {
+		redraw();
+		super.getBoundsRec(relativeTo, out, forSize);
+	}
+
 	public function buildStringProperty( name : String ) {
 		var collide = null;
 		for( l in layers ) {

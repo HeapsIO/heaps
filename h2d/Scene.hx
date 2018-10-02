@@ -46,7 +46,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	var interactive : Array<Interactive>;
 	var eventListeners : Array< hxd.Event -> Void >;
 	var ctx : RenderContext;
-	var stage : hxd.Stage;
+	var window : hxd.Window;
 	@:allow(h2d.Interactive)
 	var events : hxd.SceneEvents;
 
@@ -61,7 +61,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		height = e.height;
 		interactive = new Array();
 		eventListeners = new Array();
-		stage = hxd.Stage.getInstance();
+		window = hxd.Window.getInstance();
 		posChanged = true;
 	}
 
@@ -79,8 +79,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	function set_zoom(v:Int) {
 		var e = h3d.Engine.getCurrent();
-		var twidth = Math.ceil(stage.width / v);
-		var theight = Math.ceil(stage.height / v);
+		var twidth = Math.ceil(window.width / v);
+		var theight = Math.ceil(window.height / v);
 		var totalWidth = twidth * v;
 		var totalHeight = theight * v;
 		// increase back buffer size if necessary
@@ -115,19 +115,19 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	inline function screenXToLocal(mx:Float) {
-		return mx * width / (stage.width * scaleX) - x;
+		return mx * width / (window.width * scaleX) - x;
 	}
 
 	inline function screenYToLocal(my:Float) {
-		return my * height / (stage.height * scaleY) - y;
+		return my * height / (window.height * scaleY) - y;
 	}
 
 	function get_mouseX() {
-		return screenXToLocal(stage.mouseX);
+		return screenXToLocal(window.mouseX);
 	}
 
 	function get_mouseY() {
-		return screenYToLocal(stage.mouseY);
+		return screenYToLocal(window.mouseY);
 	}
 
 	@:dox(hide) @:noCompletion

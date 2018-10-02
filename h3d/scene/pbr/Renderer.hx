@@ -319,22 +319,22 @@ class Renderer extends h3d.scene.Renderer {
 
 			if( !hasDebugEvent ) {
 				hasDebugEvent = true;
-				hxd.Stage.getInstance().addEventTarget(onEvent);
+				hxd.Window.getInstance().addEventTarget(onEvent);
 			}
 
 		}
 
 		if( hasDebugEvent && displayMode != Debug ) {
 			hasDebugEvent = false;
-			hxd.Stage.getInstance().removeEventTarget(onEvent);
+			hxd.Window.getInstance().removeEventTarget(onEvent);
 		}
 	}
 
 	function onEvent(e:hxd.Event) {
 		if( e.kind == EPush && e.button == 2 ) {
-			var st = hxd.Stage.getInstance();
-			var x = Std.int((e.relX / st.width) * 4);
-			var y = Std.int((e.relY / st.height) * 4);
+			var win = hxd.Window.getInstance();
+			var x = Std.int((e.relX / win.width) * 4);
+			var y = Std.int((e.relY / win.height) * 4);
 			if( slides.shader.mode != Full ) {
 				slides.shader.mode = Full;
 			} else {

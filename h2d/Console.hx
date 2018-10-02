@@ -76,11 +76,11 @@ class Console extends h2d.Object {
 
 	override function onAdd() {
 		super.onAdd();
-		@:privateAccess getScene().stage.addEventTarget(onEvent);
+		@:privateAccess getScene().window.addEventTarget(onEvent);
 	}
 
 	override function onRemove() {
-		@:privateAccess getScene().stage.removeEventTarget(onEvent);
+		@:privateAccess getScene().window.removeEventTarget(onEvent);
 		super.onRemove();
 	}
 

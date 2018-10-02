@@ -6,7 +6,7 @@ import hxd.Key in K;
 #end
 
 //@:coreApi
-class Stage {
+class Window {
 
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
@@ -333,8 +333,8 @@ class Stage {
 
 	#end
 
-	static var inst : Stage = null;
-	public static function getInstance() : Stage {
+	static var inst : Window = null;
+	public static function getInstance() : Window {
 		return inst;
 	}
 }
