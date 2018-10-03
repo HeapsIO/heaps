@@ -1,21 +1,39 @@
 package h3d.scene;
 
+/**
+	h3d.scene.Scene is the root class for a 3D scene. All root objects are added to it before being drawn on screen.
+**/
 class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.InteractiveScene {
 
+	/**
+		The scene current camera.
+	**/
 	public var camera : h3d.Camera;
+
+	/**
+		The scene light system. Can be customized.
+	**/
 	public var lightSystem : LightSystem;
+
+	/**
+		The scene renderer. Can be customized.
+	**/
 	public var renderer(default,set) : Renderer;
+
 	var ctx : RenderContext;
 	var interactives : Array<Interactive>;
 	@:allow(h3d.scene.Interactive)
 	var events : hxd.SceneEvents;
 	var hitInteractives : Array<Interactive>;
 	var eventListeners : Array<hxd.Event -> Void>;
-	var stage : hxd.Stage;
+	var window : hxd.Window;
 
+	/**
+		Create a new scene. A default 3D scene is already available in `hxd.App.s3d`
+	**/
 	public function new() {
 		super(null);
-		stage = hxd.Stage.getInstance();
+		window = hxd.Window.getInstance();
 		eventListeners = [];
 		hitInteractives = [];
 		interactives = [];
@@ -29,14 +47,20 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		lightSystem = h3d.mat.MaterialSetup.current.createLightSystem();
 	}
 
-	@:noCompletion public function setEvents(events) {
+	@:noCompletion @:dox(hide) public function setEvents(events) {
 		this.events = events;
 	}
 
+	/**
+		Add an event listener that will capture all events not caught by an h2d.Interactive
+	**/
 	public function addEventListener( f : hxd.Event -> Void ) {
 		eventListeners.push(f);
 	}
 
+	/**
+		Remove a previously added event listener, return false it was not part of our event listeners.
+	**/
 	public function removeEventListener( f : hxd.Event -> Void ) {
 		for( e in eventListeners )
 			if( Reflect.compareMethods(e, f) ) {
@@ -46,6 +70,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		return false;
 	}
 
+	@:dox(hide) @:noCompletion
 	public function dispatchListeners(event:hxd.Event) {
 		for( l in eventListeners ) {
 			l(event);
@@ -67,12 +92,14 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		return 1;
 	}
 
+	@:dox(hide) @:noCompletion
 	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
 		var i : Interactive = cast to;
 		// TODO : compute relX/Y/Z
 		i.handleEvent(event);
 	}
 
+	@:dox(hide) @:noCompletion
 	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) {
 		var o : Object = cast i;
 		while( o != null ) {
@@ -82,6 +109,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		return true;
 	}
 
+	@:dox(hide) @:noCompletion
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) {
 
 		if( interactives.length == 0 )
@@ -89,8 +117,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		if( hitInteractives.length == 0 ) {
 
-			var screenX = (event.relX / stage.width - 0.5) * 2;
-			var screenY = -(event.relY / stage.height - 0.5) * 2;
+			var screenX = (event.relX / window.width - 0.5) * 2;
+			var screenY = -(event.relY / window.height - 0.5) * 2;
 			var p0 = camera.unproject(screenX, screenY, 0);
 			var p1 = camera.unproject(screenX, screenY, 1);
 			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
@@ -225,6 +253,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			@:privateAccess events.onRemove(i);
 	}
 
+	/**
+		Before render() or sync() are called, allow to set how much time has elapsed (in seconds) since the last frame in order to update scene animations.
+		This is managed automatically by hxd.App
+	**/
 	public function setElapsedTime( elapsedTime ) {
 		ctx.elapsedTime = elapsedTime;
 	}
@@ -289,7 +321,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
-		Only sync without rendering
+		Synchronize the scene without rendering, updating all objects and animations by the given amount of time, in seconds.
 	**/
 	public function syncOnly( et : Float ) {
 		var engine = h3d.Engine.getCurrent();
@@ -310,6 +342,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.scene = null;
 	}
 
+	/**
+		Perform a rendering with `RendererContext.computingStatic=true`, allowing the computation of static shadow maps, etc.
+	**/
 	public function computeStatic() {
 		var old = ctx.elapsedTime;
 		ctx.elapsedTime = 0;
@@ -319,6 +354,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.elapsedTime = old;
 	}
 
+	/**
+		Render the scene on screen. Internal usage only.
+	**/
 	@:access(h3d.mat.Pass)
 	@:access(h3d.scene.RenderContext)
 	public function render( engine : h3d.Engine ) {
@@ -393,7 +431,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.engine = null;
 	}
 
-
+	/**
+		Serialize the scene content as HSD bytes (see hxd.fmt.hsd package). Requires -lib hxbit
+	**/
 	public function serializeScene() : haxe.io.Bytes {
 		#if hxbit
 		var s = new hxd.fmt.hsd.Serializer();

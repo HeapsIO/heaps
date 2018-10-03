@@ -393,7 +393,7 @@ class TileGroup extends Drawable {
 	public var rangeMin : Int;
 	public var rangeMax : Int;
 
-	public function new(t : Tile, ?parent : h2d.Sprite) {
+	public function new(t : Tile, ?parent : h2d.Object) {
 		super(parent);
 		tile = t;
 		rangeMin = rangeMax = -1;
@@ -401,7 +401,7 @@ class TileGroup extends Drawable {
 		content = new TileLayerContent();
 	}
 
-	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
+	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		addBounds(relativeTo, out, content.xMin, content.yMin, content.xMax - content.xMin, content.yMax - content.yMin);
 	}

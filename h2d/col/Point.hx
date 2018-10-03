@@ -12,7 +12,7 @@ class Point {
 	}
 
 	public inline function toIPoint( scale = 1. ) {
-		return new IPoint(Math.floor(x * scale), Math.floor(y * scale));
+		return new IPoint(Math.round(x * scale), Math.round(y * scale));
 	}
 
 	public inline function distanceSq( p : Point ) {

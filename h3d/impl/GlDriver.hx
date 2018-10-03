@@ -189,7 +189,7 @@ class GlDriver extends Driver {
 
 	public function new(antiAlias=0) {
 		#if js
-		canvas = @:privateAccess hxd.Stage.getInstance().canvas;
+		canvas = @:privateAccess hxd.Window.getInstance().canvas;
 		var options = {alpha:false,stencil:true,antialias:antiAlias>0};
 		gl = cast canvas.getContext("webgl2",options);
 		if( gl == null )
@@ -1309,7 +1309,7 @@ class GlDriver extends Driver {
 
 	override function present() {
 		#if hlsdl
-		@:privateAccess hxd.Stage.inst.window.present();
+		@:privateAccess hxd.Window.inst.window.present();
 		#elseif usesys
 		haxe.System.present();
 		#end

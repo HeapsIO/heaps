@@ -17,17 +17,26 @@ class CustomCursor {
 	var offsetX : Int;
 	var offsetY : Int;
 	#if hlsdl
-	var alloc : sdl.Cursor;
+	var alloc : Array<sdl.Cursor>;
 	#elseif hldx
-	var alloc : dx.Cursor;
+	var alloc : Array<dx.Cursor>;
 	#elseif flash
 	static var UID = 0;
 	var name : String;
 	var alloc : flash.ui.MouseCursorData;
+	#elseif js
+	var alloc : Array<String>;
 	#else
 	var alloc : Dynamic;
 	#end
-
+	
+	// Heaps-side cursor animation for target that do not support native animated cursors.
+	#if (hlsdl || hldx || js)
+	var frameDelay : Float;
+	var frameTime : Float;
+	var frameIndex : Int;
+	#end
+	
 	public function new( frames, speed, offsetX, offsetY ) {
 		this.frames = frames;
 		this.speed = speed;
@@ -36,7 +45,37 @@ class CustomCursor {
 		#if flash
 		name = "custom_" + UID++;
 		#end
+		#if (hlsdl || hldx || js)
+		frameDelay = 1 / speed;
+		frameTime = 0;
+		frameIndex = 0;
+		#end
 	}
+	
+	#if (hlsdl || hldx || js)
+	public function reset() : Void {
+		frameTime = 0;
+		frameIndex = 0;
+	}
+	
+	public function update( dt : Float ) : Int {
+		var newTime : Float = frameTime + dt;
+		var delay : Float = frameDelay;
+		var index : Int = frameIndex;
+		while( newTime >= delay ) {
+			newTime -= delay;
+			index++;
+		}
+		frameTime = newTime;
+		
+		if ( index >= frames.length ) index %= frames.length;
+		if ( index != frameIndex ) {
+			frameIndex = index;
+			return index;
+		}
+		return -1;
+	}
+	#end
 
 	public function dispose() {
 		for( f in frames )
@@ -44,11 +83,17 @@ class CustomCursor {
 		frames = [];
 		if( alloc != null ) {
 			#if hlsdl
-			alloc.free();
+			for (cur in alloc) {
+				cur.free();
+			}
 			#elseif flash
 			flash.ui.Mouse.unregisterCursor(name);
 			#elseif hldx
-			alloc.destroy();
+			for (cur in alloc) {
+				cur.destroy();
+			}
+			#elseif js
+			// alloc set to null below.
 			#else
 			throw "TODO";
 			#end

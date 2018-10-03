@@ -13,8 +13,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var front2back : Bool;
 
 	public var onBeginDraw : h2d.Drawable->Bool; // return false to cancel drawing
-	public var onEnterFilter : h2d.Sprite->Bool;
-	public var onLeaveFilter : h2d.Sprite->Void;
+	public var onEnterFilter : h2d.Object->Bool;
+	public var onLeaveFilter : h2d.Object->Void;
 
 	public var tmpBounds = new h2d.col.Bounds();
 	var texture : h3d.mat.Texture;
@@ -31,8 +31,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float }>;
 	var targetsStackIndex : Int;
 	var hasUVPos : Bool;
-	var filterStack : Array<h2d.Sprite>;
-	var inFilter : Sprite;
+	var filterStack : Array<h2d.Object>;
+	var inFilter : Object;
 
 	var curX : Int;
 	var curY : Int;
@@ -133,7 +133,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( targetsStackIndex != 0 ) throw "Missing popTarget()";
 	}
 
-	public function pushFilter( spr : h2d.Sprite ) {
+	public function pushFilter( spr : h2d.Object ) {
 		if( filterStack.length == 0 && onEnterFilter != null )
 			if( !onEnterFilter(spr) ) return false;
 		filterStack.push(spr);

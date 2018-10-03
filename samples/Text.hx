@@ -2,10 +2,10 @@ import h2d.Drawable;
 import h2d.Flow;
 import h2d.Font;
 import h2d.Graphics;
-import h2d.Sprite;
+import h2d.Object;
 import h2d.Text.Align;
 
-class TextWidget extends Sprite
+class TextWidget extends Object
 {
 	public var align: Align;
 	public var textField: h2d.Text;
@@ -105,7 +105,7 @@ class Text extends hxd.App {
 		}
 
 		// Flows
-		function createText(parent:Sprite, str : String, align:Align) {
+		function createText(parent:Object, str : String, align:Align) {
 			var tf = new h2d.Text(font, parent);
 			tf.textColor = 0xffffff;
 			tf.textAlign = align;
@@ -114,7 +114,7 @@ class Text extends hxd.App {
 			return tf;
 		}
 
-		function createFlow(parent:Sprite) {
+		function createFlow(parent:Object) {
 			var flow = new Flow(parent);
 			flow.debug = true;
 			flow.horizontalSpacing = 5;

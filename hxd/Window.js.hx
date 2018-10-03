@@ -1,6 +1,6 @@
 package hxd;
 
-class Stage {
+class Window {
 
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
@@ -132,9 +132,9 @@ class Stage {
 		inst = this;
 	}
 
-	static var inst : Stage = null;
-	public static function getInstance() : Stage {
-		if( inst == null ) inst = new Stage();
+	static var inst : Window = null;
+	public static function getInstance() : Window {
+		if( inst == null ) inst = new Window();
 		return inst;
 	}
 

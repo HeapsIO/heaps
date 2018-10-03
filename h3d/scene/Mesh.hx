@@ -1,26 +1,44 @@
 package h3d.scene;
 
+/**
+	h3d.scene.Mesh is the base class for all 3D objects displayed on screen.
+	Unlike Object base class, all properties of Mesh only apply to the current object and are not inherited by its children.
+**/
 class Mesh extends Object {
 
+	/**
+		The primitive of the mesh: the list of vertexes and indices necessary to display the mesh.
+	**/
 	public var primitive : h3d.prim.Primitive;
+
+	/**
+		The material of the mesh: the properties used to display it (texture, color, shaders, etc.)
+	**/
 	public var material : h3d.mat.Material;
 
-	public function new( prim, ?mat, ?parent ) {
+	/**
+		Creates a new mesh with given primitive, material and parent object.
+		If material is not specified, a new default material is created for the current renderer.
+	**/
+	public function new( primitive, ?material, ?parent ) {
 		super(parent);
-		this.primitive = prim;
-		if( mat == null ) {
-			mat = h3d.mat.MaterialSetup.current.createMaterial();
-			mat.props = mat.getDefaultProps();
+		this.primitive = primitive;
+		if( material == null ) {
+			material = h3d.mat.MaterialSetup.current.createMaterial();
+			material.props = material.getDefaultProps();
 		}
-		this.material = mat;
+		this.material = material;
 	}
 
+	/**
+		Return all materials for the current object.
+	**/
 	public function getMeshMaterials() {
 		return [material];
 	}
 
-	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
-		b = super.getBounds(b, rec);
+	override function getBoundsRec( b : h3d.col.Bounds ) {
+		b = super.getBoundsRec(b);
 		if( primitive == null || flags.has(FIgnoreBounds) )
 			return b;
 		var tmp = primitive.getBounds().clone();

@@ -39,7 +39,7 @@ class Blur extends Filter {
 	inline function get_linear() return pass.linear;
 	inline function set_linear(v) return pass.linear = v;
 
-	override function sync( ctx : RenderContext, s : Sprite ) {
+	override function sync( ctx : RenderContext, s : Object ) {
 		boundsExtend = radius * 2;
 	}
 

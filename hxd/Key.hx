@@ -150,7 +150,7 @@ class Key {
 			dispose();
 		initDone = true;
 		keyPressed = [];
-		Stage.getInstance().addEventTarget(onEvent);
+		Window.getInstance().addEventTarget(onEvent);
 		#if flash
 		flash.Lib.current.stage.addEventListener(flash.events.Event.DEACTIVATE, onDeactivate);
 		#end
@@ -158,7 +158,7 @@ class Key {
 
 	public static function dispose() {
 		if( initDone ) {
-			Stage.getInstance().removeEventTarget(onEvent);
+			Window.getInstance().removeEventTarget(onEvent);
 			#if flash
 			flash.Lib.current.stage.removeEventListener(flash.events.Event.DEACTIVATE, onDeactivate);
 			#end

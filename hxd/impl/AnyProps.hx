@@ -21,7 +21,7 @@ class AnyProps {
 	public function refreshProps() {
 	}
 
-	#if js
+	#if editor
 	public function editProps() {
 		return new js.jquery.JQuery('<p>No properties for this object</p>');
 	}

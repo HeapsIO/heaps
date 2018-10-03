@@ -69,7 +69,7 @@ class Library extends Prefab {
 	}
 	
 	public static function create( extension : String ) {
-		var type = registeredExtensions.get(extension);
+		var type = getPrefabType(extension);
 		var p : hxd.prefab.Prefab;
 		if( type == null )
 			p = new Library();
@@ -77,5 +77,12 @@ class Library extends Prefab {
 			p = Type.createInstance(registeredElements.get(type).cl,[]);
 		return p;
 	}
+
+	public static function getPrefabType(path: String) {
+		var extension = path.split(".").pop().toLowerCase();
+		return registeredExtensions.get(extension);
+	}
+
+	static var _ = hxd.prefab.Library.register("prefab", Library, "prefab");
 
 }

@@ -1,26 +1,58 @@
 package h2d;
 import hxd.Math;
 
+/**
+	h2d.Scene is the root class for a 2D scene. All root objects are added to it before being drawn on screen.
+**/
 class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.InteractiveScene {
 
+	/**
+		The current width (in pixels) of the scene. Can change if the screen gets resized.
+	**/
 	public var width(default,null) : Int;
+
+	/**
+		The current height (in pixels) of the scene. Can change if the screen gets resized.
+	**/
 	public var height(default, null) : Int;
 
+	/**
+		The current mouse X coordinates (in pixel) relative to the scene.
+	**/
 	public var mouseX(get, null) : Float;
+
+	/**
+		The current mouse Y coordinates (in pixel) relative to the scene.
+	**/
 	public var mouseY(get, null) : Float;
 
+	/**
+		The zoom factor of the scene, allows to set a fixed x2, x4 etc. zoom for pixel art
+		When setting a zoom > 0, the scene resize will be automaticaly managed.
+	**/
 	public var zoom(get, set) : Int;
+
+	/**
+		Set the default value for `h2d.Drawable.smooth` (default: false)
+	**/
 	public var defaultSmooth(get, set) : Bool;
+
+	/**
+		The scene current renderer. Can be customized.
+	**/
 	public var renderer(get, set) : RenderContext;
 
 	var fixedSize : Bool;
 	var interactive : Array<Interactive>;
 	var eventListeners : Array< hxd.Event -> Void >;
 	var ctx : RenderContext;
-	var stage : hxd.Stage;
+	var window : hxd.Window;
 	@:allow(h2d.Interactive)
 	var events : hxd.SceneEvents;
 
+	/**
+		Create a new scene. A default 2D scene is already available in `hxd.App.s2d`
+	**/
 	public function new() {
 		super(null);
 		var e = h3d.Engine.getCurrent();
@@ -29,13 +61,14 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		height = e.height;
 		interactive = new Array();
 		eventListeners = new Array();
-		stage = hxd.Stage.getInstance();
+		window = hxd.Window.getInstance();
 		posChanged = true;
 	}
 
 	inline function get_defaultSmooth() return ctx.defaultSmooth;
 	inline function set_defaultSmooth(v) return ctx.defaultSmooth = v;
 
+	@:dox(hide) @:noCompletion
 	public function setEvents(events : hxd.SceneEvents) {
 		this.events = events;
 	}
@@ -46,8 +79,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	function set_zoom(v:Int) {
 		var e = h3d.Engine.getCurrent();
-		var twidth = Math.ceil(stage.width / v);
-		var theight = Math.ceil(stage.height / v);
+		var twidth = Math.ceil(window.width / v);
+		var theight = Math.ceil(window.height / v);
 		var totalWidth = twidth * v;
 		var totalHeight = theight * v;
 		// increase back buffer size if necessary
@@ -60,6 +93,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	function get_renderer() return ctx;
 	function set_renderer(v) { ctx = v; return v; }
 
+	/**
+		Set the fixed size for the scene, will prevent automatic scene resizing when screen size changes.
+	**/
 	public function setFixedSize( w : Int, h : Int ) {
 		width = w;
 		height = h;
@@ -67,6 +103,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		posChanged = true;
 	}
 
+	@:dox(hide) @:noCompletion
 	public function checkResize() {
 		if( fixedSize ) return;
 		var engine = h3d.Engine.getCurrent();
@@ -78,21 +115,22 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	inline function screenXToLocal(mx:Float) {
-		return mx * width / (stage.width * scaleX) - x;
+		return mx * width / (window.width * scaleX) - x;
 	}
 
 	inline function screenYToLocal(my:Float) {
-		return my * height / (stage.height * scaleY) - y;
+		return my * height / (window.height * scaleY) - y;
 	}
 
 	function get_mouseX() {
-		return screenXToLocal(stage.mouseX);
+		return screenXToLocal(window.mouseX);
 	}
 
 	function get_mouseY() {
-		return screenYToLocal(stage.mouseY);
+		return screenYToLocal(window.mouseY);
 	}
 
+	@:dox(hide) @:noCompletion
 	public function dispatchListeners( event : hxd.Event ) {
 		screenToLocal(event);
 		for( l in eventListeners ) {
@@ -101,8 +139,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 	}
 
+	@:dox(hide) @:noCompletion
 	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) : Bool {
-		var s : Sprite = cast i;
+		var s : Object = cast i;
 		while( s != null ) {
 			if( !s.visible ) return false;
 			s = s.parent;
@@ -110,6 +149,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		return true;
 	}
 
+	/**
+		Return the topmost visible Interactive at the specific coordinates
+	**/
 	public function getInteractive( x : Float, y : Float ) : Interactive {
 		var rx = x * matA + y * matB + absX;
 		var ry = x * matC + y * matD + absY;
@@ -142,7 +184,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 			// check visibility
 			var visible = true;
-			var p : Sprite = i;
+			var p : Object = i;
 			while( p != null ) {
 				if( !p.visible ) {
 					visible = false;
@@ -166,6 +208,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		e.relY = ry;
 	}
 
+	@:dox(hide) @:noCompletion
 	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
 		var i : Interactive = cast to;
 		screenToLocal(event);
@@ -192,6 +235,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		i.handleEvent(event);
 	}
 
+	@:dox(hide) @:noCompletion
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
 		screenToLocal(event);
 		var rx = event.relX;
@@ -228,7 +272,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 			// check visibility
 			var visible = true;
-			var p : Sprite = i;
+			var p : Object = i;
 			while( p != null ) {
 				if( !p.visible ) {
 					visible = false;
@@ -253,10 +297,16 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		return null;
 	}
 
+	/**
+		Add an event listener that will capture all events not caught by an h2d.Interactive
+	**/
 	public function addEventListener( f : hxd.Event -> Void ) {
 		eventListeners.push(f);
 	}
 
+	/**
+		Remove a previously added event listener, return false it was not part of our event listeners.
+	**/
 	public function removeEventListener( f : hxd.Event -> Void ) {
 		for( e in eventListeners )
 			if( Reflect.compareMethods(e, f) ) {
@@ -266,17 +316,28 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		return false;
 	}
 
-	public function startDrag( f : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
+	/**
+		Start a drag and drop operation, sending all events to `onEvent` instead of the scene until `stopDrag()` is called.
+		@param	onCancel	If defined, will be called when stopDrag is called
+		@param	refEvent	For touch events, only capture events that matches the reference event touchId
+	**/
+	public function startDrag( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
 		events.startDrag(function(e) {
 			screenToLocal(e);
-			f(e);
+			onEvent(e);
 		},onCancel, refEvent);
 	}
 
+	/**
+		Stop the current drag and drop operation
+	**/
 	public function stopDrag() {
 		events.stopDrag();
 	}
 
+	/**
+		Get the currently focused Interactive
+	**/
 	public function getFocus() : Interactive {
 		if( events == null )
 			return null;
@@ -292,7 +353,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:allow(h2d)
 	function addEventTarget(i:Interactive) {
 		// sort by which is over the other in the scene hierarchy
-		inline function getLevel(i:Sprite) {
+		inline function getLevel(i:Object) {
 			var lv = 0;
 			while( i != null ) {
 				i = i.parent;
@@ -300,7 +361,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			}
 			return lv;
 		}
-		inline function indexOf(p:Sprite, i:Sprite) {
+		inline function indexOf(p:Object, i:Object) {
 			var id = -1;
 			for( k in 0...p.children.length )
 				if( p.children[k] == i ) {
@@ -311,12 +372,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 		var level = getLevel(i);
 		for( index in 0...interactive.length ) {
-			var i1 : Sprite = i;
-			var i2 : Sprite = interactive[index];
+			var i1 : Object = i;
+			var i2 : Object = interactive[index];
 			var lv1 = level;
 			var lv2 = getLevel(i2);
-			var p1 : Sprite = i1;
-			var p2 : Sprite = i2;
+			var p1 : Object = i1;
+			var p2 : Object = i2;
 			while( lv1 > lv2 ) {
 				i1 = p1;
 				p1 = p1.parent;
@@ -348,17 +409,24 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			@:privateAccess events.onRemove(i);
 	}
 
+	/**
+		Dispose the scene and all its children, freeing used GPU memory
+	**/
 	public function dispose() {
 		if( allocated )
 			onRemove();
 		ctx.dispose();
 	}
 
+	/**
+		Before render() or sync() are called, allow to set how much time has elapsed (in seconds) since the last frame in order to update scene animations.
+		This is managed automatically by hxd.App
+	**/
 	public function setElapsedTime( v : Float ) {
 		ctx.elapsedTime = v;
 	}
 
-	function drawImplTo( s : Sprite, t : h3d.mat.Texture ) {
+	function drawImplTo( s : Object, t : h3d.mat.Texture ) {
 
 		if( !t.flags.has(Target) ) throw "Can only draw to texture created with Target flag";
 		var needClear = !t.flags.has(WasCleared);
@@ -374,6 +442,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.engine.frameCount--;
 	}
 
+	/**
+		Synchronize the scene without rendering, updating all objects and animations by the given amount of time, in seconds.
+	**/
 	public function syncOnly( et : Float ) {
 		var engine = h3d.Engine.getCurrent();
 		setElapsedTime(et);
@@ -384,6 +455,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		sync(ctx);
 	}
 
+	/**
+		Render the scene on screen. Internal usage only.
+	**/
 	public function render( engine : h3d.Engine ) {
 		ctx.engine = engine;
 		ctx.frame++;
@@ -407,6 +481,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		super.sync(ctx);
 	}
 
+	/**
+		Capture the scene into a texture and render the resulting Bitmap
+	**/
 	public function captureBitmap( ?target : Tile ) {
 		var engine = h3d.Engine.getCurrent();
 		if( target == null ) {

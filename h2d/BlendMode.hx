@@ -11,4 +11,5 @@ enum BlendMode {
 	Screen;
 	Sub;
 	Max;
+	Min;
 }

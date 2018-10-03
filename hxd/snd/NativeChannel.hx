@@ -105,6 +105,10 @@ class NativeChannel {
 		}
 		return ctx;
 	}
+	// Pool implemented to workaround memory leak in chromium browsers:
+	// https://bugs.chromium.org/p/chromium/issues/detail?id=379753
+	static var pool : Map<Int, Array<js.html.audio.ScriptProcessorNode>> = new Map();
+	
 	var sproc : js.html.audio.ScriptProcessorNode;
 	var tmpBuffer : haxe.io.Float32Array;
 	#elseif lime_openal
@@ -121,7 +125,12 @@ class NativeChannel {
 		#elseif js
 		var ctx = getContext();
 		if( ctx == null ) return;
-		sproc = ctx.createScriptProcessor(bufferSamples, 2, 2);
+		var sprocPool = pool.get(bufferSamples);
+		if ( sprocPool != null && sprocPool.length > 0 ) {
+			sproc = sprocPool.pop();
+		} else {
+			sproc = ctx.createScriptProcessor(bufferSamples, 2, 2);
+		}
 		tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
 		sproc.connect(ctx.destination);
 		sproc.onaudioprocess = onJsSample;
@@ -152,6 +161,7 @@ class NativeChannel {
 		div.onclick = stopInput;
 		div.onkeydown = stopInput;
 		js.Browser.document.body.addEventListener("keydown",stopInput);
+		js.Browser.document.body.addEventListener("touchend",stopInput);
 		js.Browser.document.body.appendChild(div);
 		waitDiv = div;
 	}
@@ -161,6 +171,7 @@ class NativeChannel {
 		waitDiv.remove();
 		waitDiv = null;
 		js.Browser.document.body.removeEventListener("keydown",stopInput);
+		js.Browser.document.body.removeEventListener("touchend",stopInput);
 		if( ctx != null ) ctx.resume();
 	}
 
@@ -188,6 +199,13 @@ class NativeChannel {
 		}
 		#elseif js
 		if( sproc != null ) {
+			var sprocPool = pool.get(bufferSamples);
+			if (sprocPool == null) {
+				sprocPool = [sproc];
+				pool.set(bufferSamples, sprocPool);
+			} else {
+				sprocPool.push(sproc);
+			}
 			sproc.disconnect();
 			sproc = null;
 		}

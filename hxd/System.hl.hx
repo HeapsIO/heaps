@@ -41,6 +41,7 @@ class System {
 
 	// -- HL
 	static var currentNativeCursor : hxd.Cursor = Default;
+	static var currentCustomCursor : hxd.Cursor.CustomCursor;
 	static var cursorVisible = true;
 
 	public static function getCurrentLoop() : Void -> Void {
@@ -54,13 +55,13 @@ class System {
 	static function mainLoop() : Bool {
 		// process events
 		#if usesys
-		if( !haxe.System.emitEvents(@:privateAccess hxd.Stage.inst.event) )
+		if( !haxe.System.emitEvents(@:privateAccess hxd.Window.inst.event) )
 			return false;
 		#elseif hldx
-		if( !dx.Loop.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
+		if( !dx.Loop.processEvents(@:privateAccess hxd.Window.inst.onEvent) )
 			return false;
 		#elseif hlsdl
-		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Stage.inst.onEvent) )
+		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Window.inst.onEvent) )
 			return false;
 		#end
 
@@ -78,7 +79,7 @@ class System {
 		#if usesys
 
 		if( !haxe.System.init() ) return;
-		@:privateAccess Stage.inst = new Stage("", haxe.System.width, haxe.System.height);
+		@:privateAccess Window.inst = new Window("", haxe.System.width, haxe.System.height);
 		init();
 
 		#else
@@ -96,14 +97,14 @@ class System {
 		timeoutTick();
 		#if hlsdl
 			sdl.Sdl.init();
-			@:privateAccess Stage.initChars();
-			@:privateAccess Stage.inst = new Stage(title, width, height);
+			@:privateAccess Window.initChars();
+			@:privateAccess Window.inst = new Window(title, width, height);
 			init();
 		#elseif hldx
-			@:privateAccess Stage.inst = new Stage(title, width, height);
+			@:privateAccess Window.inst = new Window(title, width, height);
 			init();
 		#else
-			@:privateAccess Stage.inst = new Stage(title, width, height);
+			@:privateAccess Window.inst = new Window(title, width, height);
 			init();
 		#end
 		#end
@@ -172,6 +173,7 @@ class System {
 		if( c.equals(currentNativeCursor) )
 			return;
 		currentNativeCursor = c;
+		currentCustomCursor = null;
 		if( c == Hide ) {
 			cursorVisible = false;
 			Cursor.show(false);
@@ -191,19 +193,25 @@ class System {
 			throw "assert";
 		case Custom(c):
 			if( c.alloc == null ) {
-				if( c.frames.length > 1 ) throw "Animated cursor not supported";
-				var pixels = c.frames[0].getPixels();
-				pixels.convert(BGRA);
-				#if hlsdl
-				var surf = sdl.Surface.fromBGRA(pixels.bytes, pixels.width, pixels.height);
-				c.alloc = sdl.Cursor.create(surf, c.offsetX, c.offsetY);
-				surf.free();
-				#elseif hldx
-				c.alloc = dx.Cursor.createCursor(pixels.width, pixels.height, pixels.bytes, c.offsetX, c.offsetY);
-				#end
-				pixels.dispose();
+				c.alloc = new Array();
+				for ( frame in c.frames ) {
+					var pixels = frame.getPixels();
+					pixels.convert(BGRA);
+					#if hlsdl
+					var surf = sdl.Surface.fromBGRA(pixels.bytes, pixels.width, pixels.height);
+					c.alloc.push(sdl.Cursor.create(surf, c.offsetX, c.offsetY));
+					surf.free();
+					#elseif hldx
+					c.alloc.push(dx.Cursor.createCursor(pixels.width, pixels.height, pixels.bytes, c.offsetX, c.offsetY));
+					#end
+					pixels.dispose();
+				}
 			}
-			cur = c.alloc;
+			if ( c.frames.length > 1 ) {
+				currentCustomCursor = c;
+				c.reset();
+			}
+			cur = c.alloc[c.frameIndex];
 		}
 		cur.set();
 		if( !cursorVisible ) {
@@ -212,6 +220,18 @@ class System {
 		}
 		#end
 	}
+
+	#if (hlsdl || hldx)
+	static function updateCursor() : Void {
+		if (currentCustomCursor != null)
+		{
+			var change = currentCustomCursor.update(hxd.Timer.deltaT);
+			if (change != -1) {
+				currentCustomCursor.alloc[change].set();
+			}
+		}
+	}
+	#end
 
 	public static function getDeviceName() : String {
 		#if usesys
@@ -309,6 +329,9 @@ class System {
 		hl.Api.setErrorHandler(function(e) reportError(e)); // initialization error
 		sentinel = new hl.UI.Sentinel(30, function() throw "Program timeout (infinite loop?)");
 		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
+		#end
+		#if (hlsdl || hldx)
+		haxe.MainLoop.add(updateCursor, -1);
 		#end
 	}
 

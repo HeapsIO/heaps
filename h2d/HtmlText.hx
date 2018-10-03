@@ -4,7 +4,7 @@ import h2d.Text;
 
 class HtmlText extends Text {
 
-	var elements : Array<Sprite> = [];
+	var elements : Array<Object> = [];
 	var xPos : Int;
 	var yPos : Int;
 	var xMax : Int;
@@ -51,10 +51,10 @@ class HtmlText extends Text {
 			elements = [];
 		}
 		glyphs.setDefaultColor(textColor);
-		
+
 		xPos = 0;
 		xMin = 0;
-		
+
 		var align = handleAlign ? textAlign : Left;
 		switch( align ) {
 			case Center, Right, MultilineCenter, MultilineRight:
@@ -68,23 +68,23 @@ class HtmlText extends Text {
 				xMin = xPos;
 			default:
 		}
-		
+
 		yPos = 0;
 		xMax = 0;
 		sizePos = 0;
 		calcYMin = 0;
-		
+
 		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
-		
+
 		var sizes = [];
 		prevChar = -1;
 		for( e in doc )
 			buildSizes(e, sizes);
-		
+
 		prevChar = -1;
 		for( e in doc )
 			addNode(e, font, rebuild, handleAlign, sizes, lines);
-		
+
 		if (!handleAlign && !rebuild && lines != null) lines.push(xPos);
 		if( xPos > xMax ) xMax = xPos;
 
@@ -239,7 +239,7 @@ class HtmlText extends Text {
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
 				var e = font.getChar(cc);
-				
+
 				if( cc == "\n".code ) {
 					if( xPos > xMax ) xMax = xPos;
 					if( calcLines ) lines.push(xPos);
@@ -274,7 +274,7 @@ class HtmlText extends Text {
 		return c;
 	}
 
-	override function getBoundsRec( relativeTo : Sprite, out : h2d.col.Bounds, forSize : Bool ) {
+	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
 		if( forSize )
 			for( i in elements )
 				if( Std.is(i,h2d.Bitmap) )

@@ -16,7 +16,7 @@ typedef ConsoleArgDesc = {
 	?opt : Bool,
 }
 
-class Console extends h2d.Sprite {
+class Console extends h2d.Object {
 
 	public static var HIDE_LOG_TIMEOUT = 3.;
 
@@ -76,11 +76,11 @@ class Console extends h2d.Sprite {
 
 	override function onAdd() {
 		super.onAdd();
-		@:privateAccess getScene().stage.addEventTarget(onEvent);
+		@:privateAccess getScene().window.addEventTarget(onEvent);
 	}
 
 	override function onRemove() {
-		@:privateAccess getScene().stage.removeEventTarget(onEvent);
+		@:privateAccess getScene().window.removeEventTarget(onEvent);
 		super.onRemove();
 	}
 

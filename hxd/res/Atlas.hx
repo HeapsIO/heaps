@@ -128,6 +128,10 @@ class Atlas extends Resource {
 				}
 				tl[index] = { t : t, width : origW, height : origH };
 			}
+			
+			// remove first element if index started at 1 instead of 0
+			for( tl in contents )
+				if( tl.length > 1 && tl[0] == null ) tl.shift();
 		}
 		return contents;
 	}

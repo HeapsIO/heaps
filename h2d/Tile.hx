@@ -73,7 +73,7 @@ class Tile {
 		dy = -dy - height;
 	}
 
-	public function setPos(x : Int, y : Int) : Void {
+	public function setPosition(x : Int, y : Int) : Void {
 		this.x = x;
 		this.y = y;
 		var tex = innerTex;

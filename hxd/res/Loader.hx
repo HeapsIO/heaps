@@ -37,7 +37,10 @@ class Loader {
 			res = Type.createInstance(c, [entry]);
 			currentInstance = old;
 			cache.set(path, res);
-		}
+		} else {
+			if( Std.instance(res,c) == null )
+				throw path+" has been reintrepreted from "+Type.getClass(res)+" to "+c;
+		}			
 		return res;
 	}
 
