@@ -86,38 +86,63 @@ class Pass implements hxd.impl.Serializable {
 
 	public function setBlendMode( b : BlendMode ) {
 		switch( b ) {
-		case None:
+		case None: // Out = 1 * Src + 0 * Dst
 			blend(One, Zero);
 			blendOp = Add;
-		case Alpha:
+			blendAlphaOp = Add;
+		case Alpha: // Out = SrcA * Src + (1 - SrcA) * Dst
 			blend(SrcAlpha, OneMinusSrcAlpha);
 			blendOp = Add;
-		case Add:
+			blendAlphaOp = Add;
+		case Add: // Out = SrcA * Src + 1 * Dst
 			blend(SrcAlpha, One);
 			blendOp = Add;
-		case AlphaAdd:
+			blendAlphaOp = Add;
+		case AlphaAdd: // Out = Src + (1 - SrcA) * Dst
 			blend(One, OneMinusSrcAlpha);
 			blendOp = Add;
-		case SoftAdd:
+			blendAlphaOp = Add;
+		case SoftAdd: // Out = (1 - Dst) * Src + 1 * Dst
 			blend(OneMinusDstColor, One);
 			blendOp = Add;
-		case Multiply:
+			blendAlphaOp = Add;
+		case Multiply: // Out = Dst * Src + 0 * Dst
 			blend(DstColor, Zero);
-		case Erase:
+			blendOp = Add;
+			blendAlphaOp = Add;
+		case Erase: // Out = 0 * Src + (1 - Srb) * Dst
 			blend(Zero, OneMinusSrcColor);
 			blendOp = Add;
-		case Screen:
+			blendAlphaOp = Add;
+		case Screen: // Out = 1 * Src + (1 - Srb) * Dst
 			blend(One, OneMinusSrcColor);
 			blendOp = Add;
-		case Sub:
+			blendAlphaOp = Add;
+		case Sub: // Out = 1 * Dst - SrcA * Src
 			blend(SrcAlpha, One);
 			blendOp = ReverseSub;
-		case Max:
-			this.blendSrc = SrcColor;
-			this.blendAlphaSrc = SrcAlpha;
-			this.blendDst = DstColor;
-			this.blendAlphaDst = DstAlpha;
+			blendAlphaOp = ReverseSub;
+
+		// The output color min/max of the source and dest colors.
+		// The blend parameters Src and Dst are ignored for this equation.
+		case Max: // Out = MAX( Src, Dst )
+			blendSrc = Zero;
+			blendAlphaSrc = Zero;
+			blendDst = Zero;
+			blendAlphaDst = Zero;
+			blendAlphaSrc = Zero;
+			blendAlphaDst = Zero;
+			blendAlphaOp = Max;
 			blendOp = Max;
+		case Min: // Out = MIN( Src, Dst )
+			blendSrc = Zero;
+			blendAlphaSrc = Zero;
+			blendDst = Zero;
+			blendAlphaDst = Zero;
+			blendAlphaSrc = Zero;
+			blendAlphaDst = Zero;
+			blendAlphaOp = Min;
+			blendOp = Min;
 		}
 	}
 
