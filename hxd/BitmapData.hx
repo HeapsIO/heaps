@@ -300,15 +300,15 @@ class BitmapData {
 				// Clipping on (x0;y0) side
 				if ( y0 < clip_y0 ) {
 					// Compute intersection (???;clip_y0) using float to avoid overflow
-					var temp : Float  = Float(d2x) * (clip_y0-y0) - dx;
-					var xinc : temp / d2y;
-					x += Float.toInt(xinc);
+					var temp : Float  = d2x * (clip_y0-y0) - dx;
+					var xinc : Float = temp / d2y;
+					x += Std.int(xinc);
 
 					if ( x > clip_x1 )	return;
 
 					if ( x >= clip_x0 ) {
-						temp -= xinc * d2y;		// temp should fit a regular Int now
-						delta -= Float.toInt(temp) + dx;
+						temp -= xinc * d2y;
+						delta -= Std.int(temp) + dx;
 						y = clip_y0;
 
 						if (temp>0) {
@@ -321,14 +321,14 @@ class BitmapData {
 
 				if( !tracing_can_start && x0 < clip_x0 ) {
 					// Compute intersection (clip_x0;???)
-					var temp : Float = Float(d2y)*(clip_x0 - x0);
+					var temp : Float = d2y*(clip_x0 - x0);
 					var yinc = temp / d2x;
-					y += Float.toInt(yinc);
+					y += Std.int(yinc);
 					temp %= d2x;
 					if ( y > clip_y1 || ( y == clip_y1 && temp > dx ) )	return;
 
 					x = clip_x0;
-					delta += Float.toInt(temp);
+					delta += Std.int(temp);
 
 					if ( temp >= dx ) {
 						++y;
@@ -341,9 +341,9 @@ class BitmapData {
 				var xend = x1;
 				if ( y1 > clip_y1 ) {
 					// Compute intersection (???;clip_y1)
-					var temp = Float(d2x) * (clip_y1-y1) + dx;
+					var temp : Float = d2x * (clip_y1-y1) + dx;
 					var xinc = temp / d2y;
-					xend += Float.toInt(xinc);
+					xend += Std.int(xinc);
 
 					if ( temp - xinc*d2y == 0 )
                 		--xend;
@@ -379,15 +379,15 @@ class BitmapData {
 
 				// Clipping on (x0;y0) side
 				if ( x0 < clip_x0 ) {
-					var temp = Float(d2y) * (clip_x0-x0) - dy;
+					var temp : Float = d2y * (clip_x0-x0) - dy;
 					var yinc = (temp / d2x);
-					y += Float.toInt(yinc);
+					y += Std.int(yinc);
 
 					if ( y > clip_y1 )	return;
 
 					if ( y >= clip_y0 ) {
 						temp -= yinc * d2x;
-						delta -= Float.toInt(temp) + dy;
+						delta -= Std.int(temp) + dy;
 						x = clip_x0;
 
 						if (temp>0) {
@@ -399,14 +399,14 @@ class BitmapData {
 				}
 
 				if( !tracing_can_start && y0 < clip_y0 ) {
-					var temp = Float(d2x)*(clip_y0 - y0);
+					var temp : Float = d2x*(clip_y0 - y0);
 					var xinc = temp / d2y;
-					x += Float.toInt(xinc);
+					x += Std.int(xinc);
 					temp %= d2y;
 					if ( x > clip_x1 || ( x == clip_x1 && temp > dy ) )	return;
 
 					y = clip_y0;
-					delta += Float.toInt(temp);
+					delta += Std.int(temp);
 
 					if ( temp >= dy ) {
 						++x;
@@ -417,9 +417,9 @@ class BitmapData {
 				// clipping on (x1;y1) side
 				var yend = y1;
 				if ( x1 > clip_x1 ) {
-					var temp = Float(d2y) * (clip_x1-x1) + dy;
+					var temp : Float = d2y * (clip_x1-x1) + dy;
 					var yinc = temp / d2x;
-					yend += Float(yinc);
+					yend += Std.int(yinc);
 
 					if ( temp - yinc*d2x == 0 )
                 		--yend;
