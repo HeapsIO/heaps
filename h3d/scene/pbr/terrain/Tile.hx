@@ -80,7 +80,8 @@ class Tile extends h3d.scene.Mesh {
 		if(surfaceWeights.length != surfaceCount || surfaceWeights[0].width != getTerrain().weightMapResolution){
 			var oldArray = surfaceWeights;
 			surfaceWeights = new Array<h3d.mat.Texture>();
-			surfaceWeights.resize(surfaceCount);
+			//surfaceWeights.resize(surfaceCount);
+			surfaceWeights = [for (i in 0...surfaceCount) null];
 			for(i in 0 ... surfaceWeights.length){
 				surfaceWeights[i] = new h3d.mat.Texture(getTerrain().weightMapResolution, getTerrain().weightMapResolution, [Target], R8);
 				surfaceWeights[i].wrap = Clamp;
@@ -365,30 +366,26 @@ class Tile extends h3d.scene.Mesh {
 		var pixels : hxd.Pixels.PixelsFloat = null;
 		if(heightMap != null)
 			pixels = getHeightPixels();
-		if(grid.normals == null) grid.normals = new Array();
-		grid.normals.resize(grid.points.length);
-		for( i in 0 ... grid.points.length){
-			if(grid.normals[i] == null) grid.normals[i] = new h3d.col.Point();
-			grid.normals[i].x = 0; grid.normals[i].y = 0; grid.normals[i].z = 0;
-		}
-		var t0 = new h3d.col.Point();
-		var t1 = new h3d.col.Point();
-		var t2 = new h3d.col.Point();
+		if(grid.normals == null) grid.normals = new Array<h3d.col.Point>();
+		grid.normals = [
+		for (i in 0...grid.points.length){
+			if(i < grid.normals.length){
+				grid.normals[i].set(0,0,0);
+				grid.normals[i];
+			} else
+				new h3d.col.Point();
+		}];
+
+		var t0 = new h3d.col.Point(); var t1 = new h3d.col.Point(); var t2 = new h3d.col.Point();
 		var pos = 0;
 		for( i in 0...grid.triCount() ) {
 			var i0, i1, i2;
 			if( grid.idx == null ) {
-				i0 = pos++;
-				i1 = pos++;
-				i2 = pos++;
+				i0 = pos++; i1 = pos++; i2 = pos++;
 			} else {
-				i0 = grid.idx[pos++];
-				i1 = grid.idx[pos++];
-				i2 = grid.idx[pos++];
+				i0 = grid.idx[pos++]; i1 = grid.idx[pos++]; i2 = grid.idx[pos++];
 			}
-			t0.load(grid.points[i0]);
-			t1.load(grid.points[i1]);
-			t2.load(grid.points[i2]);
+			t0.load(grid.points[i0]); t1.load(grid.points[i1]); t2.load(grid.points[i2]);
 			if(pixels != null){
 				t0.z += getHeight(t0.x / getTerrain().tileSize, t0.y / getTerrain().tileSize, pixels);
 				t1.z += getHeight(t1.x / getTerrain().tileSize, t1.y / getTerrain().tileSize, pixels);

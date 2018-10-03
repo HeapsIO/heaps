@@ -170,7 +170,7 @@ class Terrain extends hxsl.Shader {
 			// Output
 			normal = vec4(unpackNormal(normal), 0.0);
 			pixelColor = vec4(albedo, 0.0);
-			//transformedNormal = normalize(normal.xyz) * TBN;
+			transformedNormal = normalize(normal.xyz) * TBN;
 			roughnessValue = 1 - pbr.g * pbr.g;
 			metalnessValue = pbr.r;
 			occlusionValue = pbr.b;
