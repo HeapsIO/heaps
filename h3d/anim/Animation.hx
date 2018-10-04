@@ -141,6 +141,7 @@ class Animation implements hxd.impl.Serializable {
 				if( j != null ) {
 					a.targetSkin = currentSkin;
 					a.targetJoint = j.index;
+					continue;
 				}
 			}
 			var obj = base.getObjectByName(a.objectName);
