@@ -239,11 +239,12 @@ class NativeChannel {
 		}
 		#elseif js
 		if ( front != null ) {
-			current.stop();
+			current.disconnect();
 			current.removeEventListener("ended", swap);
 			current = null;
 			
 			queued.removeEventListener("ended", swap);
+			queued.disconnect();
 			queued.stop();
 			queued = null;
 			
