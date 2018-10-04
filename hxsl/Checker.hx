@@ -762,6 +762,8 @@ class Checker {
 			case TStruct(_):
 				error("Array of structures are not allowed", pos);
 			default:
+				if( t.isSampler() )
+					error("Array of textures are not allowed, use Sampler2DArray instead", pos);
 			}
 			var s = switch( size ) {
 			case SConst(_): size;
