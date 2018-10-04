@@ -583,7 +583,7 @@ class World extends Object {
 		return b;
 	}
 
-	#if hxbit
+	#if (hxbit && !macro && heaps_enable_serialize)
 	override function customUnserialize(ctx:hxbit.Serializer) {
 		super.customUnserialize(ctx);
 		allChunks = [];

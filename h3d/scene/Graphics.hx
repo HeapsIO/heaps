@@ -273,7 +273,7 @@ class Graphics extends Mesh {
 
 			push(u);
 			push(v);
-			
+
 			push(curR);
 			push(curG);
 			push(curB);
@@ -297,7 +297,7 @@ class Graphics extends Mesh {
 		curZ = z;
 	}
 
-	#if hxbit
+	#if (hxbit && !macro && heaps_enable_serialize)
 	override function customUnserialize(ctx:hxbit.Serializer) {
 		super.customUnserialize(ctx);
 		lineShader = material.mainPass.getShader(h3d.shader.LineShader);

@@ -39,10 +39,10 @@ class Light extends Object {
 	}
 
 	function getShadowDirection() : h3d.Vector {
-		return null;	
+		return null;
 	}
 
-	#if hxbit
+	#if (hxbit && !macro && heaps_enable_serialize)
 	override function customSerialize(ctx:hxbit.Serializer) {
 		super.customSerialize(ctx);
 		ctx.addDouble(color.x);

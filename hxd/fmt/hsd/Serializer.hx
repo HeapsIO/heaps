@@ -301,8 +301,12 @@ class Serializer extends hxbit.Serializer {
 
 		var objs = includeRoot ? [obj] : [for( o in obj ) if( o.allowSerialize ) o];
 		addInt(objs.length);
+		#if heaps_enable_serialize
 		for( o in objs )
 			addAnyRef(o);
+		#else
+		throw "HSD support requires -D heaps_enable_serialize";
+		#end
 
 		addBool(camera != null);
 		if( camera != null ) {

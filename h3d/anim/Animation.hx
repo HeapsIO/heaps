@@ -261,7 +261,7 @@ class Animation implements hxd.impl.Serializable {
 		return name;
 	}
 
-	#if (hxbit && !macro)
+	#if (hxbit && !macro && heaps_enable_serialize)
 	public function unserialize(ctx) {
 		super.unserialize(ctx);
 		if( objects == null ) objects = [];

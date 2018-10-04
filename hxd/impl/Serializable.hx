@@ -1,6 +1,6 @@
 package hxd.impl;
 
-#if (!hxbit || macro)
+#if (!hxbit || macro || !heaps_enable_serialize)
 
 // disable serialization support
 private interface NoSerializeSupport {

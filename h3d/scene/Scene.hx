@@ -443,7 +443,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		#end
 	}
 
-	#if hxbit
+	#if (hxbit && !macro && heaps_enable_serialize)
 	override function customSerialize(ctx:hxbit.Serializer) {
 		throw this + " should not be serialized";
 	}
