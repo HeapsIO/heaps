@@ -789,6 +789,7 @@ class GlDriver extends Driver {
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
+		discardError();
 		var tt = gl.createTexture();
 		var bind = getBindType(t);
 		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind #if multidriver, driver : this #end };
@@ -927,7 +928,12 @@ class GlDriver extends Driver {
 		return defaultDepth;
 	}
 
+	inline function discardError() {
+		gl.getError(); // make sure to reset error flag
+	}
+
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
+		discardError();
 		var b = gl.createBuffer();
 		gl.bindBuffer(GL.ARRAY_BUFFER, b);
 		if( m.size * m.stride == 0 ) throw "assert";
@@ -949,6 +955,7 @@ class GlDriver extends Driver {
 	}
 
 	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
+		discardError();
 		var b = gl.createBuffer();
 		var size = is32 ? 4 : 2;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
@@ -1530,6 +1537,7 @@ class GlDriver extends Driver {
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
 		if( curTarget == null )
 			throw "Can't capture main render buffer in GL";
+		discardError();
 		#if js
 		var buffer : js.html.ArrayBufferView = @:privateAccess pixels.bytes.b;
 		switch( curTarget.format ) {
