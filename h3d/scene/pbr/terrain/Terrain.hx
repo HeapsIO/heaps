@@ -92,21 +92,17 @@ class Terrain extends Object {
 		grid = new h3d.prim.Grid( cellCount, cellCount, cellSize, cellSize);
 		grid.addUVs();
 		grid.addNormals();
-
 		for(tile in tiles){
 			tile.x = tile.tileX * tileSize;
 			tile.y = tile.tileY * tileSize;
 			tile.refreshMesh();
 		}
-
-		for(tile in tiles){
+		for(tile in tiles)
 			tile.blendEdges();
-		}
 	}
 
 	public function refreshTex(){
 		for(tile in tiles){
-			tile.surfaceCount = surfaces.length;
 			tile.refresh();
 		}
 	}
@@ -126,6 +122,22 @@ class Terrain extends Object {
 		return tile;
 	}
 
+	public function addTile(tile : Tile, ?replace = false){
+		for(t in tiles){
+			if(tile == t) return;
+			if(tile.tileX == t.tileX && tile.tileY == t.tileY){
+				if(replace){
+					removeTile(t);
+					break;
+				}else
+					return;
+			}
+		}
+		tile.parent = this;
+		tiles.push(tile);
+		addChild(tile);
+	}
+
 	public function removeTileAt(x : Int, y : Int) : Bool {
 		var t = getTile(x,y);
 		if(t == null){
@@ -140,6 +152,12 @@ class Terrain extends Object {
 		var r = tiles.remove(t);
 		if(r) t.remove();
 		return r;
+	}
+
+	public function getTileIndex(t : Tile) : Int {
+		for(i in 0 ... tiles.length)
+			if(t == tiles[i]) return i;
+		return -1;
 	}
 
 	public function getTile(x : Int, y : Int) : Tile {

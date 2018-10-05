@@ -5,11 +5,10 @@ class Terrain extends hxsl.Shader {
 	static var SRC = {
 
 		@:import h3d.shader.BaseMesh;
+		@const var SHOW_GRID : Bool;
+		@const var SURFACE_COUNT : Int;
 
-		@param var previewTex : Sampler2D;
-		@param var heightMap : Sampler2D;
 		@param var heightMapSize : Float;
-		@param var surfaceIndexMap : Sampler2D;
 		@param var primSize : Float;
 		@param var cellSize : Float;
 
@@ -17,24 +16,22 @@ class Terrain extends hxsl.Shader {
 		@param var normalTextures : Sampler2DArray;
 		@param var pbrTextures : Sampler2DArray;
 		@param var weightTextures : Sampler2DArray;
-		@param var weightCount : Int;
+		@param var surfaceIndexMap : Sampler2D;
+		@param var heightMap : Sampler2D;
+		@param var surfaceParams : Array<Vec4, SURFACE_COUNT>;
+		@param var secondSurfaceParams : Array<Vec4, SURFACE_COUNT>;
+
 		@param var heightBlendStrength : Float;
 		@param var heightBlendSharpness : Float;
-
 		@param var parallaxAmount : Float;
 		@param var minStep : Int;
 		@param var maxStep : Int;
-
-		@param var surfaceParams : Array<Vec4, 8>;
-		@param var secondSurfaceParams : Array<Vec4, 8>;
 		@param var tileIndex : Vec2;
-
-		@const var showGrid : Bool;
 
 		var calculatedUV : Vec2;
 		var terrainUV : Vec2;
 		var TBN : Mat3;
-		var worldNormal : Vec3;
+
 		var emissiveValue : Float;
 		var metalnessValue : Float;
 		var roughnessValue : Float;
@@ -117,7 +114,7 @@ class Terrain extends hxsl.Shader {
 			var albedo = vec3(0);
 			var normal = vec4(0,0,0,0);
 			var pbr = vec4(0);
-			var weightSum = 0 + heightBlendSharpness * 0;
+			var weightSum = 0.0;
 
 			// Keep the surface with the heightest weight for sharpness
 			var maxAlbedo = vec3(0);
@@ -146,17 +143,17 @@ class Terrain extends hxsl.Shader {
 			normal /= vec4(weightSum);
 
 			// Find the max
-			var maxW = clamp(ceil(b1 - curMaxWeight), 0 ,1);
+			var maxW = clamp(ceil(b1 - curMaxWeight), 0, 1);
 			curMaxWeight = mix(curMaxWeight, b1, maxW);
 			maxAlbedo = mix(maxAlbedo, albedo1, maxW);
 			maxPbr = mix(maxPbr, pbr1, maxW);
 			maxNormal = mix(maxNormal, normal1, maxW);
-			maxW = clamp(ceil(b2 - curMaxWeight), 0 ,1);
+			maxW = clamp(ceil(b2 - curMaxWeight), 0, 1);
 			curMaxWeight = mix(curMaxWeight, b2, maxW);
 			maxAlbedo = mix(maxAlbedo, albedo2, maxW);
 			maxPbr = mix(maxPbr, pbr2, maxW);
 			maxNormal = mix(maxNormal, normal2, maxW);
-			maxW = clamp(ceil(b3 - curMaxWeight), 0 ,1);
+			maxW = clamp(ceil(b3 - curMaxWeight), 0,1);
 			curMaxWeight = mix(curMaxWeight, b3, maxW);
 			maxAlbedo = mix(maxAlbedo, albedo3, maxW);
 			maxPbr = mix(maxPbr, pbr3, maxW);
@@ -164,19 +161,19 @@ class Terrain extends hxsl.Shader {
 
 			// Sharpness
 			albedo = mix(albedo, maxAlbedo, heightBlendSharpness);
-			pbr = mix(normal, maxPbr, heightBlendSharpness);
+			pbr = mix(pbr, maxPbr, heightBlendSharpness);
 			normal = mix(normal, maxNormal, heightBlendSharpness);
 
 			// Output
 			normal = vec4(unpackNormal(normal), 0.0);
-			pixelColor = vec4(albedo, 0.0);
+			pixelColor = vec4(albedo, 1.0);
 			transformedNormal = normalize(normal.xyz) * TBN;
 			roughnessValue = 1 - pbr.g * pbr.g;
 			metalnessValue = pbr.r;
 			occlusionValue = pbr.b;
 			emissiveValue = 0;
 
-			if(showGrid){
+			if(SHOW_GRID){
 				var gridColor = vec4(1,0,0,1);
 				var tileEdgeColor = vec4(1,1,0,1);
 				var grid : Vec2 = ((input.position.xy.mod(cellSize) / cellSize ) - 0.5) * 2.0;
@@ -192,5 +189,6 @@ class Terrain extends hxsl.Shader {
 			}
 		}
 	};
+
 }
 
