@@ -54,7 +54,7 @@ private class ParticleShader extends hxsl.Shader {
 
 @:access(h2d.ParticleGroup)
 private class Particle extends h2d.SpriteBatch.BatchElement {
-
+	
 	var group : ParticleGroup;
 	public var vx : Float;
 	public var vy : Float;
@@ -63,6 +63,9 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 	public var maxLife : Float;
 	public var life : Float;
 	public var delay : Float;
+	
+	public var originX : Float;
+	public var originY : Float;
 
 	public function new(group) {
 		super(null);
@@ -86,8 +89,8 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 		vx += group.gravity * et * group.sinGravityAngle;
 		vy += group.gravity * et * group.cosGravityAngle;
 
-		x += vx * et;
-		y += vy * et;
+		x = (originX - group.compensate.x) + vx * et;
+		y = (originY - group.compensate.y) + vy * et;
 		life += et;
 
 		if( group.rotAuto )
@@ -112,7 +115,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 
 		if( group.animationRepeat > 0 )
 			this.t = group.tiles[Std.int(t * group.tiles.length * group.animationRepeat) % group.tiles.length];
-
+		
 		if( t > 1 ) {
 			if( group.emitLoop ) {
 				@:privateAccess group.init(this);
@@ -128,6 +131,8 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 @:access(h2d.SpriteBatch)
 class ParticleGroup {
 
+	static var pt:h2d.col.Point = new h2d.col.Point();
+	
 	static var FIELDS = null;
 	static function getFields( inst : ParticleGroup ) {
 		if( FIELDS != null )
@@ -197,6 +202,10 @@ class ParticleGroup {
 	public var animationRepeat(default,set) : Float	= 1;
 	public var texture(default,set) : h3d.mat.Texture;
 	public var colorGradient(default,set) : h3d.mat.Texture;
+	
+	/** Should partcles follow the emitter or stay in place? **/
+	public var isRelative(default, set) : Bool = true;
+	var compensate:h2d.col.Point = new h2d.col.Point();
 
 	inline function set_enable(v) { enable = v; if( !v ) { batch.clear(); needRebuild = true; }; return v; }
 	inline function set_sortMode(v) { needRebuild = true; return sortMode = v; }
@@ -239,7 +248,8 @@ class ParticleGroup {
 	inline function set_frameDivisionX(v) { frameDivisionX = v; makeTiles(); return v; }
 	inline function set_frameDivisionY(v) { frameDivisionY = v; makeTiles(); return v; }
 	inline function set_animationRepeat(v) return animationRepeat = v;
-
+	inline function set_isRelative(v) { needRebuild = true; return isRelative = v; }
+	
 	public function new(p) {
 		this.parts = p;
 		batch = new SpriteBatch(null, p);
@@ -300,7 +310,7 @@ class ParticleGroup {
 			life = 1e10;
 		p.x = dx;
 		p.y = dy;
-
+		
 		switch( g.emitMode ) {
 			case Point:
 				p.vx = srand();
@@ -341,6 +351,16 @@ class ParticleGroup {
 				p.y = yy;
 		}
 
+		if ( isRelative ) {
+			p.originX = p.x;
+			p.originY = p.y;
+		} else {
+			pt.set(p.x, p.y);
+			batch.localToGlobal(pt);
+			p.originX = pt.x;
+			p.originY = pt.y;
+		}
+		
 		p.scale = size;
 		p.rotation = rot;
 		p.vSize = g.sizeIncr;
@@ -351,6 +371,13 @@ class ParticleGroup {
 		p.vy *= speed;
 		p.life = 0;
 		p.maxLife = life;
+	}
+	
+	public function update() {
+		compensate.set(0, 0);
+		if ( !isRelative ) {
+			batch.localToGlobal(compensate);
+		}
 	}
 
 	public function save() {
@@ -443,14 +470,17 @@ class Particles extends Drawable {
 	}
 
 	override function sync(ctx:RenderContext) {
-		super.sync(ctx);
 		var hasPart = false;
 		for( g in groups ) {
-			if( g.needRebuild && g.enable )
-				g.rebuild();
+			if ( g.enable ) {
+				if ( g.needRebuild )
+					g.rebuild();
+				g.update();
+			}
 			if( @:privateAccess g.batch.first != null )
 				hasPart = true;
 		}
+		super.sync(ctx);
 		if( !hasPart )
 			onEnd();
 	}
