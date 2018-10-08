@@ -108,13 +108,13 @@ class NativeChannel {
 	// Avoid excessive buffer allocation when playing many sounds.
 	// bufferSamples is constant and never change at runtime, so it's safe to use general pool.
 	static var pool : Array<js.html.audio.AudioBuffer> = new Array();
+	static var bufferPool : Array<haxe.io.Float32Array> = new Array();
 	
 	var front : js.html.audio.AudioBuffer;
 	var back : js.html.audio.AudioBuffer;
 	var current : js.html.audio.AudioBufferSourceNode;
 	var queued : js.html.audio.AudioBufferSourceNode;
-	var time : Float;
-	// TODO: Pool tmpBuffer as well?
+	var time : Float; // Mandatory for proper buffer sync, otherwise produces gaps in playback due to innacurate timings.
 	var tmpBuffer : haxe.io.Float32Array;
 	#elseif lime_openal
 	var channel : ALChannel;
@@ -131,12 +131,14 @@ class NativeChannel {
 		var ctx = getContext();
 		if( ctx == null ) return;
 		
-		if (pool.length > 0) front = pool.pop();
+		if ( pool.length > 0 ) front = pool.pop();
 		else front = ctx.createBuffer(2, bufferSamples, ctx.sampleRate);
-		if (pool.length > 0) back = pool.pop();
+		if ( pool.length > 0 ) back = pool.pop();
 		else back = ctx.createBuffer(2, bufferSamples, ctx.sampleRate);
 		
-		tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
+		if ( bufferPool.length > 0 ) tmpBuffer = bufferPool.pop();
+		else tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
+		
 		fill(front);
 		fill(back);
 		
@@ -149,8 +151,9 @@ class NativeChannel {
 		queued.addEventListener("ended", swap);
 		queued.connect(ctx.destination);
 		
-		current.start();
-		time = ctx.currentTime + front.duration;
+		var currTime : Float = ctx.currentTime;
+		current.start(currTime);
+		time = currTime + front.duration;
 		queued.start(time);
 		
 		#elseif lime_openal
@@ -252,6 +255,9 @@ class NativeChannel {
 			front = null;
 			pool.push(back);
 			back = null;
+			
+			bufferPool.push(tmpBuffer);
+			tmpBuffer = null;
 		}
 		#elseif lime_openal
 		if( channel != null ) {
