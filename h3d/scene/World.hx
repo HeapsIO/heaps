@@ -524,6 +524,8 @@ class World extends Object {
 			b.diffuse.dispose();
 			if(b.spec != null)
 				b.spec.dispose();
+			if(b.normal != null)
+				b.normal.dispose();
 		}
 		bigTextures = [];
 		textures = new Map();
