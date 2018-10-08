@@ -99,6 +99,11 @@ class Texture {
 	}
 
 	public function clone( ?allocPos : h3d.impl.AllocPos ) {
+		if( t == null ) {
+			if( realloc == null ) throw "Can't clone disposed texture";
+			alloc();
+			realloc();
+		}
 		var old = lastFrame;
 		preventAutoDispose();
 		var flags = [];
