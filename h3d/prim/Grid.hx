@@ -33,8 +33,8 @@ class Grid extends Polygon {
 	override function addUVs() {
 		uvs = [];
 		for(i in 0 ... points.length){
-			var y = hxd.Math.floor(i / width);
-			var x = i - y * width;
+			var y = hxd.Math.floor(i / (width + 1));
+			var x = i - y * (width + 1);
 			uvs.push(new UV(x/width,y/height));
 		}
 	}
