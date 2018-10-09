@@ -63,9 +63,6 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 	public var maxLife : Float;
 	public var life : Float;
 	public var delay : Float;
-	
-	public var originX : Float;
-	public var originY : Float;
 
 	public function new(group) {
 		super(null);
@@ -89,8 +86,8 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 		vx += group.gravity * et * group.sinGravityAngle;
 		vy += group.gravity * et * group.cosGravityAngle;
 
-		x = (originX - group.compensate.x) + vx * et;
-		y = (originY - group.compensate.y) + vy * et;
+		x += vx * et;
+		y += vy * et;
 		life += et;
 
 		if( group.rotAuto )
@@ -205,7 +202,6 @@ class ParticleGroup {
 	
 	/** Should partcles follow the emitter or stay in place? **/
 	public var isRelative(default, set) : Bool = true;
-	var compensate:h2d.col.Point = new h2d.col.Point();
 
 	inline function set_enable(v) { enable = v; if( !v ) { batch.clear(); needRebuild = true; }; return v; }
 	inline function set_sortMode(v) { needRebuild = true; return sortMode = v; }
@@ -351,14 +347,11 @@ class ParticleGroup {
 				p.y = yy;
 		}
 
-		if ( isRelative ) {
-			p.originX = p.x;
-			p.originY = p.y;
-		} else {
+		if ( !isRelative ) {
 			pt.set(p.x, p.y);
 			batch.localToGlobal(pt);
-			p.originX = pt.x;
-			p.originY = pt.y;
+			p.x += pt.x;
+			p.y += pt.y;
 		}
 		
 		p.scale = size;
@@ -373,13 +366,6 @@ class ParticleGroup {
 		p.maxLife = life;
 	}
 	
-	public function update() {
-		compensate.set(0, 0);
-		if ( !isRelative ) {
-			batch.localToGlobal(compensate);
-		}
-	}
-
 	public function save() {
 		var o : Dynamic = {};
 		for( f in getFields(this) )
@@ -470,17 +456,14 @@ class Particles extends Drawable {
 	}
 
 	override function sync(ctx:RenderContext) {
+		super.sync(ctx);
 		var hasPart = false;
 		for( g in groups ) {
-			if ( g.enable ) {
-				if ( g.needRebuild )
-					g.rebuild();
-				g.update();
-			}
+			if ( g.needRebuild && g.enable )
+				g.rebuild();
 			if( @:privateAccess g.batch.first != null )
 				hasPart = true;
 		}
-		super.sync(ctx);
 		if( !hasPart )
 			onEnd();
 	}
@@ -493,7 +476,17 @@ class Particles extends Drawable {
 				pshader.hasGradient = g.colorGradient != null && g.colorGradient.height == 1;
 				pshader.has2DGradient = g.colorGradient != null && g.colorGradient.height > 1;
 				blendMode = g.batch.blendMode;
-				g.batch.drawWith(ctx, this);
+				if ( g.isRelative ) {
+					g.batch.drawWith(ctx, this);
+				} else {
+					var realX : Float = absX;
+					absX = 0;
+					var realY : Float = absY;
+					absY = 0;
+					g.batch.drawWith(ctx, this);
+					absX = realX;
+					absY = realY;
+				}
 			}
 		blendMode = old;
 	}
