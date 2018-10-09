@@ -46,7 +46,13 @@ class BinaryLoader {
 			onLoaded(haxe.io.Bytes.ofData(xhr.response));
 		}
 		
-		xhr.onprogress = function(e) onProgress(Std.int(e.position), Std.int(e.totalSize));
+		xhr.onprogress = function(e) {
+			#if (haxe_ver >= 4)
+			onProgress(Std.int(js.Syntax.code("{0}.loaded || {0}.position", e)), Std.int(js.Syntax.code("{0}.total || {0}.totalSize", e)));
+			#else
+			onProgress(Std.int(untyped __js__("{0}.loaded || {0}.position", e)), Std.int(untyped __js__("{0}.total || {0}.totalSize", e)));
+			#end
+		}
 		xhr.send();
 		#end
 	}
