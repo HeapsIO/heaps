@@ -94,7 +94,11 @@ class NativeChannel {
 			try {
 				ctx = new js.html.audio.AudioContext();
 			} catch( e : Dynamic ) try {
+				#if (haxe_ver >= 4)
+				ctx = js.Syntax.code('new window.webkitAudioContext()');
+				#else
 				ctx = untyped __js__('new window.webkitAudioContext()');
+				#end
 			} catch( e : Dynamic ) {
 				ctx = null;
 			}
@@ -105,11 +109,16 @@ class NativeChannel {
 		}
 		return ctx;
 	}
-	// Pool implemented to workaround memory leak in chromium browsers:
-	// https://bugs.chromium.org/p/chromium/issues/detail?id=379753
-	static var pool : Map<Int, Array<js.html.audio.ScriptProcessorNode>> = new Map();
+	// Avoid excessive buffer allocation when playing many sounds.
+	// bufferSamples is constant and never change at runtime, so it's safe to use general pool.
+	static var pool : Array<js.html.audio.AudioBuffer> = new Array();
+	static var bufferPool : Array<haxe.io.Float32Array> = new Array();
 	
-	var sproc : js.html.audio.ScriptProcessorNode;
+	var front : js.html.audio.AudioBuffer;
+	var back : js.html.audio.AudioBuffer;
+	var current : js.html.audio.AudioBufferSourceNode;
+	var queued : js.html.audio.AudioBufferSourceNode;
+	var time : Float; // Mandatory for proper buffer sync, otherwise produces gaps in playback due to innacurate timings.
 	var tmpBuffer : haxe.io.Float32Array;
 	#elseif lime_openal
 	var channel : ALChannel;
@@ -125,15 +134,32 @@ class NativeChannel {
 		#elseif js
 		var ctx = getContext();
 		if( ctx == null ) return;
-		var sprocPool = pool.get(bufferSamples);
-		if ( sprocPool != null && sprocPool.length > 0 ) {
-			sproc = sprocPool.pop();
-		} else {
-			sproc = ctx.createScriptProcessor(bufferSamples, 2, 2);
-		}
-		tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
-		sproc.connect(ctx.destination);
-		sproc.onaudioprocess = onJsSample;
+		
+		if ( pool.length > 0 ) front = pool.pop();
+		else front = ctx.createBuffer(2, bufferSamples, ctx.sampleRate);
+		if ( pool.length > 0 ) back = pool.pop();
+		else back = ctx.createBuffer(2, bufferSamples, ctx.sampleRate);
+		
+		if ( bufferPool.length > 0 ) tmpBuffer = bufferPool.pop();
+		else tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
+		
+		fill(front);
+		fill(back);
+		
+		current = ctx.createBufferSource();
+		current.buffer = front;
+		current.addEventListener("ended", swap);
+		current.connect(ctx.destination);
+		queued = ctx.createBufferSource();
+		queued.buffer = back;
+		queued.addEventListener("ended", swap);
+		queued.connect(ctx.destination);
+		
+		var currTime : Float = ctx.currentTime;
+		current.start(currTime);
+		time = currTime + front.duration;
+		queued.start(time);
+		
 		#elseif lime_openal
 		channel = new ALChannel(bufferSamples, this);
 		#end
@@ -174,18 +200,39 @@ class NativeChannel {
 		js.Browser.document.body.removeEventListener("touchend",stopInput);
 		if( ctx != null ) ctx.resume();
 	}
-
-	function onJsSample( event : js.html.audio.AudioProcessingEvent ) {
+	
+	function swap( event : js.html.Event ) {
+		var tmp = front;
+		front = back;
+		back = tmp;
+		fill(tmp);
+		
+		current.removeEventListener("ended", swap);
+		// current.disconnect(); // Should not be required as it's a one-shot object by design.
+		current = queued;
+		var ctx = getContext();
+		queued = ctx.createBufferSource();
+		queued.buffer = tmp;
+		queued.addEventListener("ended", swap);
+		queued.connect(ctx.destination);
+		
+		time += front.duration;
+		queued.start(time);
+	}
+	
+	inline function fill( buffer : js.html.audio.AudioBuffer ) {
 		onSample(tmpBuffer);
 		// split the channels and copy to output
 		var r = 0;
-		var left = event.outputBuffer.getChannelData(0);
-		var right = event.outputBuffer.getChannelData(1);
-		for( i in 0...bufferSamples ) {
+		var left = buffer.getChannelData(0);
+		var right = buffer.getChannelData(1);
+		for ( i in 0...bufferSamples )
+		{
 			left[i] = tmpBuffer[r++];
 			right[i] = tmpBuffer[r++];
 		}
 	}
+	
 	#end
 
 	function onSample( out : haxe.io.Float32Array ) {
@@ -198,16 +245,23 @@ class NativeChannel {
 			channel = null;
 		}
 		#elseif js
-		if( sproc != null ) {
-			var sprocPool = pool.get(bufferSamples);
-			if (sprocPool == null) {
-				sprocPool = [sproc];
-				pool.set(bufferSamples, sprocPool);
-			} else {
-				sprocPool.push(sproc);
-			}
-			sproc.disconnect();
-			sproc = null;
+		if ( front != null ) {
+			current.disconnect();
+			current.removeEventListener("ended", swap);
+			current = null;
+			
+			queued.removeEventListener("ended", swap);
+			queued.disconnect();
+			queued.stop();
+			queued = null;
+			
+			pool.push(front);
+			front = null;
+			pool.push(back);
+			back = null;
+			
+			bufferPool.push(tmpBuffer);
+			tmpBuffer = null;
 		}
 		#elseif lime_openal
 		if( channel != null ) {

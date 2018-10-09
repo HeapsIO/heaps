@@ -78,7 +78,7 @@ class Source {
 	// This seems related to some lag in NativeChannel creation and data delivery
 	static inline var STOP_DELAY = #if js 200 #else 0 #end;
 
-	public static var CHANNEL_BUFSIZE = 4096; /* 100 ms latency @44.1Khz */
+	public static var CHANNEL_BUFSIZE = #if js 8192 #else 4096 #end; /* 100 ms latency @44.1Khz */
 
 	static var ID = 0;
 	static var all = new Map<Int,Source>();
