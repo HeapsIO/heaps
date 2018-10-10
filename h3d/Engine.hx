@@ -365,6 +365,11 @@ class Engine {
 		needFlushTarget = false;
 	}
 
+	public function clearF( color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
+		flushTarget();
+		driver.clear(color, depth, stencil);
+	}
+
 	public function clear( ?color : Int, ?depth : Float, ?stencil : Int ) {
 		if( color != null )
 			tmpVector.setColor(color);
