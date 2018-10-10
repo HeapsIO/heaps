@@ -7,6 +7,8 @@ class Terrain extends hxsl.Shader {
 		@:import h3d.shader.BaseMesh;
 		@const var SHOW_GRID : Bool;
 		@const var SURFACE_COUNT : Int;
+		@const var CHECKER : Bool;
+		@const var COMPLEXITY : Bool;
 
 		@param var heightMapSize : Float;
 		@param var primSize : Float;
@@ -85,30 +87,21 @@ class Terrain extends hxsl.Shader {
 		function fragment() {
 			// Extract participating surfaces from the pixel
 			var texIndex = surfaceIndexMap.get(calculatedUV).rgb;
+
 			var i1 : Int = int(texIndex.r * 255);
-			var i2 : Int = int(texIndex.g * 255);
-			var i3 : Int = int(texIndex.b * 255);
 			var uv1 = getPOMUV(calculatedUV, i1);
-			var uv2 = getPOMUV(calculatedUV, i2);
-			var uv3 = getPOMUV(calculatedUV, i3);
 			var surfaceUV1 = getsurfaceUV(i1, uv1);
-			var surfaceUV2 = getsurfaceUV(i2, uv2);
-			var surfaceUV3 = getsurfaceUV(i3, uv3);
 			var pbr1 = pbrTextures.get(surfaceUV1).rgba;
-			var pbr2 = pbrTextures.get(surfaceUV2).rgba;
-			var pbr3 = pbrTextures.get(surfaceUV3).rgba;
 			var albedo1 = albedoTextures.get(surfaceUV1).rgb;
-			var albedo2 = albedoTextures.get(surfaceUV2).rgb;
-			var albedo3 = albedoTextures.get(surfaceUV3).rgb;
 			var normal1 = normalTextures.get(surfaceUV1).rgba;
-			var normal2 = normalTextures.get(surfaceUV2).rgba;
-			var normal3 = normalTextures.get(surfaceUV3).rgba;
 			var h1 = pbr1.a;
-			var h2 = pbr2.a;
-			var h3 = pbr3.a;
-			var aw1 = weightTextures.get(vec3(uv1, i1)).r;
-			var aw2 = weightTextures.get(vec3(uv2, i2)).r;
-			var aw3 = weightTextures.get(vec3(uv3, i3)).r;
+			var aw1 = weightTextures.get(vec3(calculatedUV, i1)).r;
+
+			var i2 : Int = int(texIndex.g * 255);
+			var aw2 = weightTextures.get(vec3(calculatedUV, i2)).r;
+
+			var i3 : Int = int(texIndex.b * 255);
+			var aw3 = weightTextures.get(vec3(calculatedUV, i3)).r;
 
 			// Sum of each surface
 			var albedo = vec3(0);
@@ -123,24 +116,11 @@ class Terrain extends hxsl.Shader {
 			var curMaxWeight = -1.0;
 
 			// Alpha / Height Blend
-			var b1 = mix(aw1, aw1 * h1, heightBlendStrength);
-			var b2 = mix(aw2, aw2 * h2, heightBlendStrength);
-			var b3 = mix(aw3, aw3 * h3, heightBlendStrength);
+			var b1 = 0.0, b2 = 0.0, b3 = 0.0;
+			b1 = mix(aw1, aw1 * h1, heightBlendStrength);
 			albedo += albedo1 * b1;
-			albedo += albedo2 * b2;
-			albedo += albedo3 * b3;
 			pbr += pbr1 * b1;
-			pbr += pbr2 * b2;
-			pbr += pbr3 * b3;
 			normal += normal1 * b1;
-			normal += normal2 * b2;
-			normal += normal3 * b3;
-
-			// Normalisation
-			weightSum = b1 + b2 + b3;
-			albedo /= vec3(weightSum);
-			pbr /= vec4(weightSum);
-			normal /= vec4(weightSum);
 
 			// Find the max
 			var maxW = clamp(ceil(b1 - curMaxWeight), 0, 1);
@@ -148,16 +128,48 @@ class Terrain extends hxsl.Shader {
 			maxAlbedo = mix(maxAlbedo, albedo1, maxW);
 			maxPbr = mix(maxPbr, pbr1, maxW);
 			maxNormal = mix(maxNormal, normal1, maxW);
-			maxW = clamp(ceil(b2 - curMaxWeight), 0, 1);
-			curMaxWeight = mix(curMaxWeight, b2, maxW);
-			maxAlbedo = mix(maxAlbedo, albedo2, maxW);
-			maxPbr = mix(maxPbr, pbr2, maxW);
-			maxNormal = mix(maxNormal, normal2, maxW);
-			maxW = clamp(ceil(b3 - curMaxWeight), 0,1);
-			curMaxWeight = mix(curMaxWeight, b3, maxW);
-			maxAlbedo = mix(maxAlbedo, albedo3, maxW);
-			maxPbr = mix(maxPbr, pbr3, maxW);
-			maxNormal = mix(maxNormal, normal3, maxW);
+
+			if(aw2 > 0){
+				var uv2 = getPOMUV(calculatedUV, i2);
+				var surfaceUV2 = getsurfaceUV(i2, uv2);
+				var pbr2 = pbrTextures.get(surfaceUV2).rgba;
+				var albedo2 = albedoTextures.get(surfaceUV2).rgb;
+				var normal2 = normalTextures.get(surfaceUV2).rgba;
+				var h2 = pbr2.a;
+				b2 = mix(aw2, aw2 * h2, heightBlendStrength);
+				albedo += albedo2 * b2;
+				pbr += pbr2 * b2;
+				normal += normal2 * b2;
+				maxW = clamp(ceil(b2 - curMaxWeight), 0, 1);
+				curMaxWeight = mix(curMaxWeight, b2, maxW);
+				maxAlbedo = mix(maxAlbedo, albedo2, maxW);
+				maxPbr = mix(maxPbr, pbr2, maxW);
+				maxNormal = mix(maxNormal, normal2, maxW);
+			}
+
+			if(aw3 > 0){
+				var uv3 = getPOMUV(calculatedUV, i3);
+				var surfaceUV3 = getsurfaceUV(i3, uv3);
+				var pbr3 = pbrTextures.get(surfaceUV3).rgba;
+				var albedo3 = albedoTextures.get(surfaceUV3).rgb;
+				var normal3 = normalTextures.get(surfaceUV3).rgba;
+				var h3 = pbr3.a;
+				b3 = mix(aw3, aw3 * h3, heightBlendStrength);
+				albedo += albedo3 * b3;
+				pbr += pbr3 * b3;
+				normal += normal3 * b3;
+				maxW = clamp(ceil(b3 - curMaxWeight), 0,1);
+				curMaxWeight = mix(curMaxWeight, b3, maxW);
+				maxAlbedo = mix(maxAlbedo, albedo3, maxW);
+				maxPbr = mix(maxPbr, pbr3, maxW);
+				maxNormal = mix(maxNormal, normal3, maxW);
+			}
+
+			// Normalisation
+			weightSum = b1 + b2 + b3;
+			albedo /= vec3(weightSum);
+			pbr /= vec4(weightSum);
+			normal /= vec4(weightSum);
 
 			// Sharpness
 			albedo = mix(albedo, maxAlbedo, heightBlendSharpness);
@@ -173,6 +185,27 @@ class Terrain extends hxsl.Shader {
 			occlusionValue = pbr.b;
 			emissiveValue = 0;
 
+			// DEBUG
+			if(CHECKER){
+				var tile = abs(abs(floor(input.position.x)) % 2 - abs(floor(input.position.y)) % 2);
+				pixelColor = vec4(mix(vec3(0.4), vec3(0.1), tile), 1.0);
+				transformedNormal = vec3(0,0,1) * TBN;
+				roughnessValue = mix(0.9, 0.6, tile);
+				metalnessValue = mix(0.4, 0, tile);
+				occlusionValue = 1;
+				emissiveValue = 0;
+			}
+			else if(COMPLEXITY){
+				var blendCount = 0 + weightTextures.get(vec3(0)).r * 0;
+				for(i in 0 ... SURFACE_COUNT)
+					blendCount += ceil(weightTextures.get(vec3(calculatedUV, i)).r);
+				pixelColor = vec4(mix(vec3(0,1,0), vec3(1,0,0), blendCount / 3.0) , 1);
+				transformedNormal = vec3(0,0,1) * TBN;
+				emissiveValue = 1;
+				roughnessValue = 1;
+				metalnessValue = 0;
+				occlusionValue = 1;
+			}
 			if(SHOW_GRID){
 				var gridColor = vec4(1,0,0,1);
 				var tileEdgeColor = vec4(1,1,0,1);

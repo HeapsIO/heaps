@@ -28,6 +28,7 @@ class Tile extends h3d.scene.Mesh {
 		this.x = x * getTerrain().tileSize;
 		this.y = y * getTerrain().tileSize;
 		refreshMesh();
+		name = "tile_" + x + "_" + y;
 	}
 
 	function set_heightMap(v){
@@ -51,7 +52,7 @@ class Tile extends h3d.scene.Mesh {
 			if(grid != null) grid.dispose();
 		 	grid = new h3d.prim.Grid( getTerrain().cellCount, getTerrain().cellCount, getTerrain().cellSize, getTerrain().cellSize);
 			primitive = grid;
-			grid.addUVs();
+			//grid.addUVs(); // Not currently used
 		}
 		computeNormals();
 	}
@@ -117,9 +118,9 @@ class Tile extends h3d.scene.Mesh {
 				if(i < oldArray.length && oldArray[i] != null)
 					getTerrain().copyPass.apply(oldArray[i], surfaceWeights[i]);
 			}
+			generateWeightArray();
 			for(i in 0 ... oldArray.length)
 				if( oldArray[i] != null) oldArray[i].dispose();
-			generateWeightArray();
 		}
 	}
 
@@ -483,8 +484,12 @@ class Tile extends h3d.scene.Mesh {
 	}
 
 	override function sync(ctx:RenderContext) {
+		if( getTerrain().surfaceArray == null || getTerrain().surfaces.length == 0) return;
+
 		shader.SHOW_GRID = getTerrain().showGrid;
 		shader.SURFACE_COUNT = getTerrain().surfaces.length;
+		shader.CHECKER = getTerrain().showChecker;
+		shader.COMPLEXITY = getTerrain().showComplexity;
 
 		shader.heightMapSize = heightMap.width;
 		shader.primSize = getTerrain().tileSize;

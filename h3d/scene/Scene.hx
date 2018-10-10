@@ -27,6 +27,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	var hitInteractives : Array<Interactive>;
 	var eventListeners : Array<hxd.Event -> Void>;
 	var window : hxd.Window;
+	#if debug
+	public var checkPasses = true;
+	#end
 
 	/**
 		Create a new scene. A default 3D scene is already available in `hxd.App.s3d`
@@ -409,7 +412,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		// check that passes have been rendered
 		#if debug
-		if( !ctx.computingStatic )
+		if( !ctx.computingStatic && checkPasses)
 			for( p in passes ) {
 				if( !p.rendered ) {
 					trace("Pass " + p.name+" has not been rendered : don't know how to handle.");
