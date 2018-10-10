@@ -96,6 +96,7 @@ class Tile extends h3d.scene.Mesh {
 				getTerrain().copyPass.apply(oldHeightMap, heightMap);
 				oldHeightMap.dispose();
 			}
+			needNewPixelCapture = true;
 		}
 
 		if(surfaceIndexMap == null || surfaceIndexMap.width != getTerrain().weightMapResolution){
@@ -119,6 +120,7 @@ class Tile extends h3d.scene.Mesh {
 					getTerrain().copyPass.apply(oldArray[i], surfaceWeights[i]);
 			}
 			generateWeightArray();
+
 			for(i in 0 ... oldArray.length)
 				if( oldArray[i] != null) oldArray[i].dispose();
 		}
