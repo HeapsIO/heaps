@@ -54,7 +54,7 @@ private class ParticleShader extends hxsl.Shader {
 
 @:access(h2d.ParticleGroup)
 private class Particle extends h2d.SpriteBatch.BatchElement {
-	
+
 	var group : ParticleGroup;
 	public var vx : Float;
 	public var vy : Float;
@@ -112,7 +112,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 
 		if( group.animationRepeat > 0 )
 			this.t = group.tiles[Std.int(t * group.tiles.length * group.animationRepeat) % group.tiles.length];
-		
+
 		if( t > 1 ) {
 			if( group.emitLoop ) {
 				@:privateAccess group.init(this);
@@ -126,10 +126,9 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 }
 
 @:access(h2d.SpriteBatch)
+@:access(h2d.Object)
 class ParticleGroup {
 
-	static var pt:h2d.col.Point = new h2d.col.Point();
-	
 	static var FIELDS = null;
 	static function getFields( inst : ParticleGroup ) {
 		if( FIELDS != null )
@@ -306,7 +305,7 @@ class ParticleGroup {
 			life = 1e10;
 		p.x = dx;
 		p.y = dy;
-		
+
 		switch( g.emitMode ) {
 			case Point:
 				p.vx = srand();
@@ -347,13 +346,6 @@ class ParticleGroup {
 				p.y = yy;
 		}
 
-		if ( !isRelative ) {
-			pt.set(p.x, p.y);
-			batch.localToGlobal(pt);
-			p.x += pt.x;
-			p.y += pt.y;
-		}
-		
 		p.scale = size;
 		p.rotation = rot;
 		p.vSize = g.sizeIncr;
@@ -364,8 +356,23 @@ class ParticleGroup {
 		p.vy *= speed;
 		p.life = 0;
 		p.maxLife = life;
+
+		if ( !isRelative ) {
+			// Less this.parts access
+			var parts = this.parts;
+			// calcAbsPos() was already called, because during both rebuild() and Particle.update()
+			// called during sync() call which calls this function if required before any of this happens.
+			//parts.syncPos();
+
+			p.x += p.x * parts.matA + p.y * parts.matC + parts.absX;
+			p.y += p.x * parts.matB + p.y * parts.matD + parts.absY;
+			p.scaleX = Math.sqrt((parts.matA * parts.matA) + (parts.matC * parts.matC)) * size;
+			p.scaleY = Math.sqrt((parts.matB * parts.matB) + (parts.matD * parts.matD)) * size;
+			p.rotation += Math.acos(parts.matA / p.scaleX);
+		}
+
 	}
-	
+
 	public function save() {
 		var o : Dynamic = {};
 		for( f in getFields(this) )
@@ -470,6 +477,13 @@ class Particles extends Drawable {
 
 	override function draw(ctx:RenderContext) {
 		var old = blendMode;
+		var realX : Float = absX;
+		var realY : Float = absY;
+		var realA : Float = matA;
+		var realB : Float = matB;
+		var realC : Float = matC;
+		var realD : Float = matD;
+
 		for( g in groups )
 			if( g.enable ) {
 				pshader.gradient = g.colorGradient;
@@ -479,11 +493,17 @@ class Particles extends Drawable {
 				if ( g.isRelative ) {
 					g.batch.drawWith(ctx, this);
 				} else {
-					var realX : Float = absX;
-					absX = 0;
-					var realY : Float = absY;
-					absY = 0;
+					matA = 1;
+					matB = 0;
+					matC = 0;
+					matD = 1;
+					absX = this.x;
+					absY = this.y;
 					g.batch.drawWith(ctx, this);
+					matA = realA;
+					matB = realB;
+					matC = realC;
+					matD = realD;
 					absX = realX;
 					absY = realY;
 				}
