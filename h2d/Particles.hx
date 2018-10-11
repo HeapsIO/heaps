@@ -497,8 +497,8 @@ class Particles extends Drawable {
 					matB = 0;
 					matC = 0;
 					matD = 1;
-					absX = this.x;
-					absY = this.y;
+					absX = 0;
+					absY = 0;
 					g.batch.drawWith(ctx, this);
 					matA = realA;
 					matB = realB;
