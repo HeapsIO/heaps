@@ -56,7 +56,7 @@ class FlowProperties {
 
 class Flow extends Object {
 
-	static var tmpBounds = new h2d.col.Bounds();
+	var tmpBounds = new h2d.col.Bounds();
 
 	/**
 		If some sub element gets resized, you need to set reflow to true in order to force
@@ -555,7 +555,6 @@ class Flow extends Object {
 			cw = x;
 			var maxLineHeight = 0;
 			var minLineHeight = this.lineHeight != null ? lineHeight : (this.minHeight != null && !multiline) ? (this.minHeight - (paddingTop + paddingBottom + borderHeight * 2)) : 0;
-			var tmpBounds = tmpBounds;
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
@@ -675,7 +674,6 @@ class Flow extends Object {
 			ch = y;
 			var maxColWidth = 0;
 			var minColWidth = this.colWidth != null ? colWidth : (this.minWidth != null && !multiline) ? (this.minWidth - (paddingLeft + paddingRight + borderWidth * 2)) : 0;
-			var tmpBounds = tmpBounds;
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
