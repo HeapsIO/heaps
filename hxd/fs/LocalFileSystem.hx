@@ -595,7 +595,7 @@ class LocalFileSystem implements FileSystem {
 	public function dispose() {
 	}
 
-	public function dir( path : String ) :  Array<FileEntry> {
+	public function dir( path : String ) : Array<FileEntry> {
 		return null;
 	}
 }
