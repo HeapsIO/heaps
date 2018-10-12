@@ -47,23 +47,23 @@ class ContextShared {
 		return ret;
 	}
 
-	public function loadDir(p : hide.prefab.Prefab, ?dir : String ) : Array<hxd.res.Any> {
+	public function loadDir(p : String, ?dir : String ) : Array<hxd.res.Any> {
 		var datPath = new haxe.io.Path(currentPath);
 		datPath.ext = "dat";
-		var path = datPath.toString() + "/" + p.name;
+		var path = datPath.toString() + "/" + p;
 		if(dir != null) path += "/" + dir;
 		return try hxd.res.Loader.currentInstance.dir(path) catch( e : hxd.res.NotFound ) null;
 	}
 
-	public function loadPrefabDat(file : String, ext : String, p : hide.prefab.Prefab) : hxd.res.Any {
+	public function loadPrefabDat(file : String, ext : String, p : String) : hxd.res.Any {
 		var datPath = new haxe.io.Path(currentPath);
 		datPath.ext = "dat";
-		var path = new haxe.io.Path(datPath.toString() + "/" + p.name + "/" + file);
+		var path = new haxe.io.Path(datPath.toString() + "/" + p + "/" + file);
 		path.ext = ext;
 		return try hxd.res.Loader.currentInstance.load(path.toString()) catch( e : hxd.res.NotFound ) null;
 	}
 
-	public function savePrefabDat(file : String, ext : String, p : hide.prefab.Prefab, bytes : haxe.io.Bytes ) {
+	public function savePrefabDat(file : String, ext : String, p : String, bytes : haxe.io.Bytes ) {
 		throw "Not implemented";
 	}
 
