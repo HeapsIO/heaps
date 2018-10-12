@@ -364,8 +364,8 @@ class ParticleGroup {
 			// called during sync() call which calls this function if required before any of this happens.
 			//parts.syncPos();
 
-			p.x += p.x * parts.matA + p.y * parts.matC + parts.absX;
-			p.y += p.x * parts.matB + p.y * parts.matD + parts.absY;
+			p.x = p.x * parts.matA + p.y * parts.matC + parts.absX;
+			p.y = p.x * parts.matB + p.y * parts.matD + parts.absY;
 			p.scaleX = Math.sqrt((parts.matA * parts.matA) + (parts.matC * parts.matC)) * size;
 			p.scaleY = Math.sqrt((parts.matB * parts.matB) + (parts.matD * parts.matD)) * size;
 			p.rotation += Math.acos(parts.matA / p.scaleX);
