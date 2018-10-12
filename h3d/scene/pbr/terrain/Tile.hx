@@ -111,7 +111,7 @@ class Tile extends h3d.scene.Mesh {
 			}
 		}
 
-		if(surfaceWeights.length != getTerrain().surfaces.length || surfaceWeights[0].width != getTerrain().weightMapResolution){
+		if( getTerrain().surfaces.length > 0 && (surfaceWeights.length != getTerrain().surfaces.length || surfaceWeights[0].width != getTerrain().weightMapResolution)){
 			var oldArray = surfaceWeights;
 			surfaceWeights = new Array<h3d.mat.Texture>();
 			surfaceWeights = [for (i in 0...getTerrain().surfaces.length) null];
@@ -449,22 +449,27 @@ class Tile extends h3d.scene.Mesh {
 	public function getHeight(u : Float, v : Float){
 		var pixels = getHeightPixels();
 		if(heightMap.filter == Linear){
-			var coordsX = hxd.Math.max(0, u * (heightMap.width - 1) - 0.5);
-			var coordsY =  hxd.Math.max(0, v * (heightMap.width - 1) - 0.5);
-			var x = hxd.Math.floor(coordsX);
-			var y = hxd.Math.floor(coordsY);
-			var ratioX = coordsX - x;
-			var ratioY = coordsY - y;
-			var oppositeU = 1 - ratioX;
-			var oppositeV = 1 - ratioY;
-			var result = (pixels.getPixelF(x, y).r * oppositeU + pixels.getPixelF( Std.int(hxd.Math.min(x + 1, pixels.width)), y).r * ratioX) * oppositeV +
-                   (pixels.getPixelF(x,  Std.int(hxd.Math.min(y + 1, pixels.height))).r * oppositeU +
-				   pixels.getPixelF(Std.int(hxd.Math.min(x + 1, pixels.width)), Std.int(hxd.Math.min(y + 1, pixels.height))).r * ratioX) * ratioY;
-			return result;
+			inline function getPix(u, v){
+				return pixels.getPixelF(Std.int(hxd.Math.clamp(u, 0, pixels.width - 1)), Std.int(hxd.Math.clamp(v, 0, pixels.height - 1))).r;
+			}
+			var px = u * (heightMap.width - 1) + 0.5;
+            var py = v * (heightMap.width - 1) + 0.5;
+			var pxi = hxd.Math.floor(px);
+            var pyi = hxd.Math.floor(py);
+			var c00 = getPix(pxi, pyi);
+			var c10 = getPix(pxi + 1, pyi);
+			var c01 = getPix(pxi, pyi + 1);
+			var c11 = getPix(pxi + 1, pyi + 1);
+			var wx = px - pxi;
+			var wy = py - pyi;
+			var a = c00 * (1 - wx) + c10 * wx;
+			var b = c01 * (1 - wx) + c11 * wx;
+			return a * (1 - wy) + b * wy;
+
 		}
 		else{
-			var x = hxd.Math.floor(u * (heightMap.width - 2));
-			var y = hxd.Math.floor(v * (heightMap.height - 2));
+			var x = hxd.Math.floor(u * (heightMap.width - 1) + 0.5);
+			var y = hxd.Math.floor(v * (heightMap.height - 1) + 0.5);
 			return pixels.getPixelF(x, y).r;
 		}
 	}
@@ -477,7 +482,7 @@ class Tile extends h3d.scene.Mesh {
 	}
 
 	override function emit(ctx:RenderContext){
-		if( getTerrain().surfaceArray == null || getTerrain().surfaces.length == 0) return;
+		if(!isReady()) return;
 		var bounds = getBounds();
 		bounds.zMax = 10000;
 		bounds.zMin = -10000;
@@ -489,7 +494,7 @@ class Tile extends h3d.scene.Mesh {
 	}
 
 	override function sync(ctx:RenderContext) {
-		if( getTerrain().surfaceArray == null || getTerrain().surfaces.length == 0) return;
+		if(!isReady()) return;
 
 		shader.SHOW_GRID = getTerrain().showGrid;
 		shader.SURFACE_COUNT = getTerrain().surfaces.length;
@@ -515,5 +520,16 @@ class Tile extends h3d.scene.Mesh {
 		shader.maxStep = getTerrain().parallaxMaxStep;
 		shader.heightBlendStrength = getTerrain().heightBlendStrength;
 		shader.heightBlendSharpness = getTerrain().heightBlendSharpness;
+	}
+
+	function isReady(){
+		if( getTerrain().surfaceArray == null || getTerrain().surfaces.length == 0 || surfaceWeights.length != getTerrain().surfaces.length)
+			return false;
+		if(heightMap == null)
+			return false;
+		for(i in 0 ... surfaceWeights.length)
+			if(surfaceWeights[i] == null)
+				return false;
+		return true;
 	}
 }

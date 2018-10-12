@@ -29,6 +29,16 @@ class Terrain extends Object {
 		copyPass = new h3d.pass.Copy();
 	}
 
+	public function getHeight(pos : h3d.Vector) : Float {
+		var z = 0.0;
+		var t = getTileAtWorldPos(pos);
+		if(t != null){
+			var pos = t.globalToLocal(pos.clone());
+			z = t.getHeight(pos.x / tileSize, pos.y / tileSize);
+		}
+		return z;
+	}
+
 	public function getSurface(i : Int) : Surface{
 		if(i < surfaces.length)
 				return surfaces[i];
@@ -169,6 +179,7 @@ class Terrain extends Object {
 	}
 
 	public function getTileAtWorldPos(pos : h3d.Vector) : Tile {
+		var pos = globalToLocal(pos.clone());
 		var result : Tile = null;
 		var tileX = Math.floor(pos.x / tileSize);
 		var tileY = Math.floor(pos.y / tileSize);
@@ -178,6 +189,7 @@ class Terrain extends Object {
 	}
 
 	public function createTileAtWorldPos(pos : h3d.Vector) : Tile {
+		var pos = globalToLocal(pos.clone());
 		var tileX = Math.floor(pos.x / tileSize);
 		var tileY = Math.floor(pos.y / tileSize);
 		var result = getTile(tileX, tileY);

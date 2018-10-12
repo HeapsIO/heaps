@@ -550,6 +550,20 @@ class LocalFileSystem implements FileSystem {
 		updateTime();
 	}
 
+	public function dir( path : String ) : Array<FileEntry> {
+		#if flash
+		throw "Not Supported";
+		return null;
+		#end
+		if( !sys.FileSystem.exists(baseDir + path) || !sys.FileSystem.isDirectory(baseDir + path) )
+			throw new NotFound(baseDir + path);
+		var files = sys.FileSystem.readDirectory(baseDir + path);
+		var r : Array<FileEntry> = [];
+		for(f in files)
+			r.push(new LocalEntry(this, f, path + "/" + f, baseDir + path + "/" + f));
+		return r;
+	}
+
 }
 
 #else
@@ -581,6 +595,9 @@ class LocalFileSystem implements FileSystem {
 	public function dispose() {
 	}
 
+	public function dir( path : String ) : Array<hxd.res.Any> {
+		return null;
+	}
 }
 
 #end

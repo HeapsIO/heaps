@@ -288,4 +288,10 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	public function dispose() {
 	}
 
+	public function dir( path : String ) : Array<FileEntry> {
+		if( !isDirectory(path) )
+			throw new NotFound(path);
+		return subFiles(path)
+	}
+
 }

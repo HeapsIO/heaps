@@ -40,8 +40,9 @@ class Terrain extends hxsl.Shader {
 		var occlusionValue : Float;
 
 		function vertex() {
-			terrainUV = input.position.xy / primSize * (heightMapSize - 1) / heightMapSize + 0.5 / heightMapSize;
 			calculatedUV = input.position.xy / primSize;
+			var terrainUV = (calculatedUV * (heightMapSize - 1)) / heightMapSize;
+			terrainUV += 0.5 / heightMapSize;
 			transformedPosition += (vec3(0,0, heightMap.get(terrainUV).r) * global.modelView.mat3());
 			TBN = mat3(normalize(cross(transformedNormal, vec3(0,1,0))), normalize(cross(transformedNormal,vec3(-1,0,0))), transformedNormal);
 		}
