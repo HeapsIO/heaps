@@ -228,7 +228,7 @@ class CameraController extends h3d.scene.Object {
 
 		if( moveY != 0 ) {
 			targetPos.z -= moveY * 0.003 * rotateSpeed;
-			var E = 1e-8;
+			var E = 2e-5;
 			var bound = Math.PI - E;
 			if( targetPos.z < E ) targetPos.z = E;
 			if( targetPos.z > bound ) targetPos.z = bound;
