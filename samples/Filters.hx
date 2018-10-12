@@ -49,7 +49,7 @@ class Filters extends hxd.App {
 		}
 		bmp.x = -bmp.tile.width * 0.5 * bmp.scaleX;
 		bmp.y = -bmp.tile.height * 0.5 * bmp.scaleY;
-		disp.scrollDiscrete(0.02 * dt, 0.04 * dt);
+		disp.scrollDiscrete(1.2 * dt, 2.4 * dt);
 	}
 
 	function setFilters(i) {

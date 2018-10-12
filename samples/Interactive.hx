@@ -111,7 +111,7 @@ class Interactive extends hxd.App {
 	}
 
 	override function update(dt:Float) {
-		obj.rotate(0, 0, 0.002 * dt);
+		obj.rotate(0, 0, 0.12 * dt);
 	}
 
 

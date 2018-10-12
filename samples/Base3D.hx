@@ -59,7 +59,7 @@ class Base3D extends SampleApp {
 	override function update( dt : Float ) {
 
 		// time is flying...
-		time += 0.01 * dt;
+		time += 0.6 * dt;
 
 		// move the camera position around the two cubes
 		var dist = 5;

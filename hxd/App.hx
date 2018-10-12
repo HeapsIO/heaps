@@ -33,7 +33,6 @@ class App implements h3d.IDrawable {
 	**/
 	public var sevents(default,null) : hxd.SceneEvents;
 
-	public var wantedFPS(get, set) : Float;
 	var isDisposed : Bool;
 
 	public function new() {
@@ -51,9 +50,6 @@ class App implements h3d.IDrawable {
 		}
 	}
 
-	function get_wantedFPS() return hxd.Timer.wantedFPS;
-	function set_wantedFPS(fps) return hxd.Timer.wantedFPS = fps;
-
 	/**
 		Screen resize callback.
 
@@ -63,6 +59,10 @@ class App implements h3d.IDrawable {
 	function onResize() {
 	}
 
+	/**
+		Switch either the 2d or 3d scene with another instance, both in terms of rendering and event handling.
+		If you call disposePrevious, it will call dispose() on the previous scene.
+	**/
 	public function setScene( scene : hxd.SceneEvents.InteractiveScene, disposePrevious = true ) {
 		var new2D = Std.instance(scene, h2d.Scene);
 		var new3D = Std.instance(scene, h3d.scene.Scene);
@@ -158,10 +158,11 @@ class App implements h3d.IDrawable {
 		hxd.Timer.update();
 		sevents.checkEvents();
 		if( isDisposed ) return;
-		update(hxd.Timer.tmod);
+		update(hxd.Timer.dt);
 		if( isDisposed ) return;
-		s2d.setElapsedTime(Timer.tmod/60);
-		s3d.setElapsedTime(Timer.tmod / 60);
+		var dt = hxd.Timer.dt; // fetch again in case it's been modified in update()
+		s2d.setElapsedTime(dt);
+		s3d.setElapsedTime(dt);
 		engine.render(this);
 	}
 

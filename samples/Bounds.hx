@@ -41,7 +41,7 @@ class Bounds extends hxd.App {
 		g.clear();
 		for( i in 0...boxes.length ) {
 			var b = boxes[i];
-			b.rotate( (i + 1) * dt * 0.001 );
+			b.rotate( (i + 1) * dt * 0.06 );
 			b.setScale(1 + Math.sin(time * 0.1 / (i + 2)) * 0.2);
 			var b = b.getBounds();
 			g.beginFill((colors[i]>>2)&0x3F3F3F);

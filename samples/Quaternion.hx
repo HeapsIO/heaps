@@ -65,7 +65,7 @@ class Quaternion extends hxd.App {
 	var time = 0.;
 
 	override function update(dt:Float) {
-		time += dt * 0.01;
+		time += dt * 0.6;
 		var q = new h3d.Quat();
 		var d = new h3d.Vector( Math.cos(time), Math.sin(time), Math.cos(time / 3) * 0.1);
 		q.initDirection(d);

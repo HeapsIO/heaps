@@ -48,7 +48,7 @@ class Shadows extends SampleApp {
 	}
 
 	override function update( dt : Float ) {
-		time += dt * 0.01;
+		time += dt * 0.6;
 		dir.setDirection(new h3d.Vector(Math.cos(time), Math.sin(time) * 2, -1));
 	}
 

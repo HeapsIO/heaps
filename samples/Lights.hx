@@ -54,7 +54,7 @@ class Lights extends hxd.App {
 	}
 
 	override function update( dt : Float ) {
-		time += 0.002 * dt;
+		time += 0.12 * dt;
 
 		var a = [0.4, 0.2, 0.5, 0.8, 1.2, 0.5, 0.7];
 		for( i in 0...lights.length ) {
