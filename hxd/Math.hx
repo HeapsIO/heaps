@@ -65,7 +65,7 @@ class Math {
 	}
 
 	public static inline function scaleTime( v : Float, et : Float ) {
-		return std.Math.pow(v,et / hxd.Timer.wantedFPS) * hxd.Timer.wantedFPS;
+		return std.Math.pow(v,et * hxd.Timer.wantedFPS);
 	}
 
 	public static inline function cos( f : Float ) {
