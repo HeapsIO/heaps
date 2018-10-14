@@ -364,11 +364,20 @@ class ParticleGroup {
 			// called during sync() call which calls this function if required before any of this happens.
 			//parts.syncPos();
 
-			p.x = p.x * parts.matA + p.y * parts.matC + parts.absX;
-			p.y = p.x * parts.matB + p.y * parts.matD + parts.absY;
+			var px = p.x;
+			p.x = px * parts.matA + p.y * parts.matC + parts.absX;
+			p.y = px * parts.matB + p.y * parts.matD + parts.absY;
 			p.scaleX = Math.sqrt((parts.matA * parts.matA) + (parts.matC * parts.matC)) * size;
 			p.scaleY = Math.sqrt((parts.matB * parts.matB) + (parts.matD * parts.matD)) * size;
-			p.rotation += Math.acos(parts.matA / p.scaleX);
+			var rot = Math.atan2(parts.matB / p.scaleY, parts.matA / p.scaleX);
+			p.rotation += rot;
+			
+			// Also rotate velocity.
+			var cos = Math.cos(rot);
+			var sin = Math.sin(rot);
+			px = p.vx;
+			p.vx = px * cos - p.vy * sin;
+			p.vy = px * sin + p.vy * cos;
 		}
 
 	}
