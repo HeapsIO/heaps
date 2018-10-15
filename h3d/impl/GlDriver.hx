@@ -370,7 +370,7 @@ class GlDriver extends Driver {
 			p.fragment = compileShader(glout,shader.fragment);
 
 			p.p = gl.createProgram();
-			#if (hlsdl || usegl)
+			#if ((hlsdl || usegl) && !hlmesa)
 			if( glES == null ) {
 				var outCount = 0;
 				for( v in shader.fragment.data.vars )
