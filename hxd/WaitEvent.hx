@@ -46,10 +46,13 @@ class WaitEvent {
 	}
 
 	public function update(dt:Float) {
-		if( updateList.length == 0 ) return;
-		for( f in updateList.copy() )
-			if( f(dt) )
+		var i = 0;
+		while (i < updateList.length) {
+			var f = updateList[i];
+			if(f(dt))
 				updateList.remove(f);
+			else
+				++i;
+		}
 	}
-
 }
