@@ -65,7 +65,7 @@ class Timer {
 		elapsedTime = newTime - lastTimeStamp;
 		lastTimeStamp = newTime;
 		if( elapsedTime < maxDeltaTime )
-			currentDT = Math.lerp(currentDT, elapsedTime, smoothFactor);
+			currentDT = Math.lerp(elapsedTime, currentDT, smoothFactor);
 		else
 			elapsedTime = 1 / wantedFPS;
 		dt = currentDT;
