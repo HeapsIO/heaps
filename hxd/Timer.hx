@@ -72,11 +72,11 @@ class Timer {
 	}
 
 	inline static function get_tmod() {
-		return dt / wantedFPS;
+		return dt * wantedFPS;
 	}
 
 	inline static function set_tmod(v:Float) {
-		dt = v * wantedFPS;
+		dt = v / wantedFPS;
 		return v;
 	}
 
