@@ -40,11 +40,13 @@ class Video extends Drawable {
 	var playTime : Float;
 	var videoTime : Float;
 	var frameReady : Bool;
+	var loopVideo : Bool;
 
 	public var videoWidth(default, null) : Int;
 	public var videoHeight(default, null) : Int;
 	public var playing(default, null) : Bool;
 	public var time(get, null) : Float;
+	public var loop(get, set) : Bool;
 
 	public function new(?parent) {
 		super(parent);
@@ -59,7 +61,23 @@ class Video extends Drawable {
 	}
 
 	public function get_time() {
+		#if js
+		return playing ? v.currentTime : 0;
+		#else
 		return playing ? haxe.Timer.stamp() - playTime : 0;
+		#end
+	}
+	
+	public inline function get_loop() {
+		return loopVideo;
+	}
+	
+	public function set_loop(value : Bool) : Bool {
+		#if js
+		return v.loop = loopVideo = value;
+		#else
+		return loopVideo = value;
+		#end
 	}
 
 	public function dispose() {
@@ -71,6 +89,8 @@ class Video extends Drawable {
 		pixels = null;
 		#elseif js
 		if ( v != null ) {
+			v.removeEventListener("ended", endHandler, true);
+			v.removeEventListener("error", errorHandler, true);
 			if (!v.paused) v.pause();
 			v = null;
 		}
@@ -109,7 +129,7 @@ class Video extends Drawable {
 		v = js.Browser.document.createVideoElement();
 		v.autoplay = true;
 		v.muted = true;
-		v.loop = true;
+		v.loop = loopVideo;
 		
 		videoPlaying = false;
 		videoTimeupdate = false;
@@ -117,6 +137,8 @@ class Video extends Drawable {
 		
 		v.addEventListener("playing", checkReady, true);
 		v.addEventListener("timeupdate", checkReady, true);
+		v.addEventListener("ended", endHandler, true);
+		v.addEventListener("error", errorHandler, true);
 		v.src = path;
 		v.play();
 		#else
@@ -125,6 +147,15 @@ class Video extends Drawable {
 	}
 	
 	#if js
+	
+	function errorHandler(e : js.html.Event) {
+		onError(v.error.code + ": " + v.error.message);
+	}
+	
+	function endHandler(e : js.html.Event) {
+		onEnd();
+	}
+	
 	function checkReady(e : js.html.Event) {
 		if (e.type == "playing") {
 			videoPlaying = true;
