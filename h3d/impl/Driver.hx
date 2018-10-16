@@ -95,6 +95,10 @@ enum Feature {
 		Tells if the driver uses bottom-left coordinates for textures.
 	*/
 	BottomLeftCoords;
+	/*
+		Supports rendering in wireframe mode.
+	*/
+	Wireframe;
 }
 
 enum QueryKind {

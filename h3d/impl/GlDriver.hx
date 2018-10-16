@@ -186,6 +186,8 @@ class GlDriver extends Driver {
 	var firstShader = true;
 	var rightHanded = false;
 	var hasMultiIndirect = false;
+	
+	var drawMode : Int;
 
 	public function new(antiAlias=0) {
 		#if js
@@ -232,6 +234,8 @@ class GlDriver extends Driver {
 			#end
 			shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
 		}
+
+		drawMode = GL.TRIANGLES;
 
 		#if js
 		// make sure to enable extensions
@@ -576,6 +580,7 @@ class GlDriver extends Driver {
 		}
 
 		var s = defStencil;
+		drawMode = pass.wireframe ? GL.LINE_LOOP : GL.TRIANGLES;
 		if( pass.stencil == null ) {
 			if( curStEnabled ) {
 				gl.disable(GL.STENCIL_TEST);
@@ -1248,9 +1253,9 @@ class GlDriver extends Driver {
 			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf.b);
 		}
 		if( ibuf.is32 )
-			gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_INT, startIndex * 4);
+			gl.drawElements(drawMode, ntriangles * 3, GL.UNSIGNED_INT, startIndex * 4);
 		else
-			gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
+			gl.drawElements(drawMode, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
 	}
 
 	override function allocInstanceBuffer( b : InstanceBuffer, bytes : haxe.io.Bytes ) {
@@ -1294,9 +1299,9 @@ class GlDriver extends Driver {
 		if( hasMultiIndirect ) {
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
 			if( ibuf.is32 )
-				gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_INT, null, commands.commandCount, 0);
+				gl.multiDrawElementsIndirect(drawMode, GL.UNSIGNED_INT, null, commands.commandCount, 0);
 			else
-				gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
+				gl.multiDrawElementsIndirect(drawMode, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
 			return;
 		}
@@ -1305,9 +1310,9 @@ class GlDriver extends Driver {
 		var p = 0;
 		for( i in 0...Std.int(args.length/3) )
 			if( ibuf.is32 )
-				gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_INT, args[p++], args[p++]);
+				gl.drawElementsInstanced(drawMode, args[p++], GL.UNSIGNED_INT, args[p++], args[p++]);
 			else
-				gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
+				gl.drawElementsInstanced(drawMode, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
 	}
 
 	override function end() {
@@ -1503,7 +1508,7 @@ class GlDriver extends Driver {
 	function checkFeature( f : Feature ) {
 		return switch( f ) {
 
-		case HardwareAccelerated, AllocDepthBuffer, BottomLeftCoords:
+		case HardwareAccelerated, AllocDepthBuffer, BottomLeftCoords, Wireframe:
 			true;
 
 		case StandardDerivatives, MultipleRenderTargets, SRGBTextures if( glES >= 3 ):
