@@ -1534,7 +1534,7 @@ class GlDriver extends Driver {
 	}
 	
 	// Draws video element directly onto Texture. Used for video rendering.
-	public function uploadTextureVideoElement( t : h3d.mat.Texture, v : js.html.VideoElement, mipLevel : Int, side : Int ) {
+	private function uploadTextureVideoElement( t : h3d.mat.Texture, v : js.html.VideoElement, mipLevel : Int, side : Int ) {
 		var cubic = t.flags.has(Cube);
 		var bind = getBindType(t);
 		if( t.flags.has(IsArray) ) throw "TODO:texImage3D";

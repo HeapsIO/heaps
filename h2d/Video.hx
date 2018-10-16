@@ -176,7 +176,7 @@ class Video extends Drawable {
 			#elseif js
 			texture.alloc();
 			texture.checkSize(videoWidth, videoHeight, 0);
-			cast (@:privateAccess texture.mem.driver, h3d.impl.GlDriver).uploadTextureVideoElement(texture, v, 0, 0);
+			@:privateAccess cast (@:privateAccess texture.mem.driver, h3d.impl.GlDriver).uploadTextureVideoElement(texture, v, 0, 0);
 			texture.flags.set(WasCleared);
 			texture.checkMipMapGen(0, 0);
 			#end
