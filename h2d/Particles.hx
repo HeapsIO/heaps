@@ -126,6 +126,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 }
 
 @:access(h2d.SpriteBatch)
+@:access(h2d.Object)
 class ParticleGroup {
 
 	static var FIELDS = null;
@@ -197,6 +198,9 @@ class ParticleGroup {
 	public var animationRepeat(default,set) : Float	= 1;
 	public var texture(default,set) : h3d.mat.Texture;
 	public var colorGradient(default,set) : h3d.mat.Texture;
+	
+	/** Should partcles follow the emitter or stay in place? **/
+	public var isRelative(default, set) : Bool = true;
 
 	inline function set_enable(v) { enable = v; if( !v ) { batch.clear(); needRebuild = true; }; return v; }
 	inline function set_sortMode(v) { needRebuild = true; return sortMode = v; }
@@ -239,7 +243,8 @@ class ParticleGroup {
 	inline function set_frameDivisionX(v) { frameDivisionX = v; makeTiles(); return v; }
 	inline function set_frameDivisionY(v) { frameDivisionY = v; makeTiles(); return v; }
 	inline function set_animationRepeat(v) return animationRepeat = v;
-
+	inline function set_isRelative(v) { needRebuild = true; return isRelative = v; }
+	
 	public function new(p) {
 		this.parts = p;
 		batch = new SpriteBatch(null, p);
@@ -351,6 +356,30 @@ class ParticleGroup {
 		p.vy *= speed;
 		p.life = 0;
 		p.maxLife = life;
+
+		if ( !isRelative ) {
+			// Less this.parts access
+			var parts = this.parts;
+			// calcAbsPos() was already called, because during both rebuild() and Particle.update()
+			// called during sync() call which calls this function if required before any of this happens.
+			//parts.syncPos();
+
+			var px = p.x;
+			p.x = px * parts.matA + p.y * parts.matC + parts.absX;
+			p.y = px * parts.matB + p.y * parts.matD + parts.absY;
+			p.scaleX = Math.sqrt((parts.matA * parts.matA) + (parts.matC * parts.matC)) * size;
+			p.scaleY = Math.sqrt((parts.matB * parts.matB) + (parts.matD * parts.matD)) * size;
+			var rot = Math.atan2(parts.matB / p.scaleY, parts.matA / p.scaleX);
+			p.rotation += rot;
+			
+			// Also rotate velocity.
+			var cos = Math.cos(rot);
+			var sin = Math.sin(rot);
+			px = p.vx;
+			p.vx = px * cos - p.vy * sin;
+			p.vy = px * sin + p.vy * cos;
+		}
+
 	}
 
 	public function save() {
@@ -446,7 +475,7 @@ class Particles extends Drawable {
 		super.sync(ctx);
 		var hasPart = false;
 		for( g in groups ) {
-			if( g.needRebuild && g.enable )
+			if ( g.needRebuild && g.enable )
 				g.rebuild();
 			if( @:privateAccess g.batch.first != null )
 				hasPart = true;
@@ -457,13 +486,36 @@ class Particles extends Drawable {
 
 	override function draw(ctx:RenderContext) {
 		var old = blendMode;
+		var realX : Float = absX;
+		var realY : Float = absY;
+		var realA : Float = matA;
+		var realB : Float = matB;
+		var realC : Float = matC;
+		var realD : Float = matD;
+
 		for( g in groups )
 			if( g.enable ) {
 				pshader.gradient = g.colorGradient;
 				pshader.hasGradient = g.colorGradient != null && g.colorGradient.height == 1;
 				pshader.has2DGradient = g.colorGradient != null && g.colorGradient.height > 1;
 				blendMode = g.batch.blendMode;
-				g.batch.drawWith(ctx, this);
+				if ( g.isRelative ) {
+					g.batch.drawWith(ctx, this);
+				} else {
+					matA = 1;
+					matB = 0;
+					matC = 0;
+					matD = 1;
+					absX = 0;
+					absY = 0;
+					g.batch.drawWith(ctx, this);
+					matA = realA;
+					matB = realB;
+					matC = realC;
+					matD = realD;
+					absX = realX;
+					absY = realY;
+				}
 			}
 		blendMode = old;
 	}
