@@ -28,12 +28,12 @@ class Video extends Drawable {
 	#if hl
 	static var INIT_DONE = false;
 	var v : VideoImpl;
+	var pixels : hxd.Pixels;
 	#elseif js
 	var v : js.html.VideoElement;
 	var videoPlaying : Bool;
 	var videoTimeupdate : Bool;
 	var onReady : Void->Void;
-	var pixels : hxd.Pixels;
 	#end
 	var texture : h3d.mat.Texture;
 	var tile : h2d.Tile;
