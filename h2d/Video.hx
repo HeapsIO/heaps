@@ -28,8 +28,13 @@ class Video extends Drawable {
 	#if hl
 	static var INIT_DONE = false;
 	var v : VideoImpl;
-	#end
+	#elseif js
+	var v : js.html.VideoElement;
+	var videoPlaying : Bool;
+	var videoTimeupdate : Bool;
+	var onReady : Void->Void;
 	var pixels : hxd.Pixels;
+	#end
 	var texture : h3d.mat.Texture;
 	var tile : h2d.Tile;
 	var playTime : Float;
@@ -63,13 +68,18 @@ class Video extends Drawable {
 			v.close();
 			v = null;
 		};
+		pixels = null;
+		#elseif js
+		if ( v != null ) {
+			if (!v.paused) v.pause();
+			v = null;
+		}
 		#end
 		if( texture != null ) {
 			texture.dispose();
 			texture = null;
 		}
 		tile = null;
-		pixels = null;
 		videoWidth = 0;
 		videoHeight = 0;
 		time = 0;
@@ -95,38 +105,90 @@ class Video extends Drawable {
 		playTime = haxe.Timer.stamp();
 		videoTime = 0.;
 		if( onReady != null ) onReady();
+		#elseif js
+		v = js.Browser.document.createVideoElement();
+		v.autoplay = true;
+		v.muted = true;
+		v.loop = true;
+		
+		videoPlaying = false;
+		videoTimeupdate = false;
+		this.onReady = onReady;
+		
+		v.addEventListener("playing", checkReady, true);
+		v.addEventListener("timeupdate", checkReady, true);
+		v.src = path;
+		v.play();
 		#else
 		onError("Video not supported on this platform");
 		#end
 	}
+	
+	#if js
+	function checkReady(e : js.html.Event) {
+		if (e.type == "playing") {
+			videoPlaying = true;
+			v.removeEventListener("playing", checkReady, true);
+		} else {
+			videoTimeupdate = true;
+			v.removeEventListener("timeupdate", checkReady, true);
+		}
+		
+		if (videoPlaying && videoTimeupdate) {
+			frameReady = true;
+			videoWidth = v.videoWidth;
+			videoHeight = v.videoHeight;
+			playing = true;
+			playTime = haxe.Timer.stamp();
+			videoTime = 0.0;
+			if ( onReady != null )
+			{
+				onReady();
+				onReady = null;
+			}
+		}
+	}
+	#end
 
 	override function draw(ctx:RenderContext) {
 		if( tile != null )
 			ctx.drawTile(this, tile);
 	}
 
-
+	#if js
+	@:access(h3d.mat.Texture)
+	#end
 	override function sync(ctx:RenderContext) {
 		if( !playing )
 			return;
 		if( texture == null ) {
 			var w = videoWidth, h = videoHeight;
-			pixels = new hxd.Pixels(w, h, haxe.io.Bytes.alloc(w * h * 4), h3d.mat.Texture.nativeFormat);
 			texture = new h3d.mat.Texture(w, h);
 			tile = h2d.Tile.fromTexture(texture);
+			#if hl
+			pixels = new hxd.Pixels(w, h, haxe.io.Bytes.alloc(w * h * 4), h3d.mat.Texture.nativeFormat);
+			#end
 		}
 		if( frameReady ) {
+			#if hl
 			texture.uploadPixels(pixels);
 			frameReady = false;
+			#elseif js
+			texture.alloc();
+			texture.checkSize(videoWidth, videoHeight, 0);
+			cast (@:privateAccess texture.mem.driver, h3d.impl.GlDriver).uploadTextureVideoElement(texture, v, 0, 0);
+			texture.flags.set(WasCleared);
+			texture.checkMipMapGen(0, 0);
+			#end
 		}
+		#if hl
 		if( time >= videoTime ) {
-			#if hl
 			var t = 0.;
 			v.decodeFrame(pixels.bytes, t);
 			videoTime = t;
-			#end
 			frameReady = true; // delay decode/upload for more reliable FPS
 		}
+		#end
 	}
 
 }
