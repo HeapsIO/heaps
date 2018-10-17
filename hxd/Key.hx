@@ -130,15 +130,15 @@ class Key {
 	}
 
 	public static inline function getFrame() {
-		return hxd.Timer.frameCount + 1;
+		return hxd.Timer.frameCount;
 	}
 
 	public static function isPressed( code : Int ) {
-		return keyPressed[code] == getFrame();
+		return keyPressed[code] == getFrame() - 1;
 	}
 
 	public static function isReleased( code : Int ) {
-		return keyPressed[code] == -getFrame();
+		return keyPressed[code] == -getFrame() + 1;
 	}
 
 	public static function initialize() {
