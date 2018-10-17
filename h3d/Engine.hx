@@ -34,7 +34,6 @@ class Engine {
 	public var fullScreen(default, set) : Bool;
 
 	public var fps(get, never) : Float;
-	public var frameCount : Int = 0;
 
 	var realFps : Float;
 	var lastTime : Float;
@@ -278,7 +277,6 @@ class Engine {
 		if( driver.isDisposed() )
 			return false;
 		// init
-		frameCount++;
 		drawTriangles = 0;
 		shaderSwitches = 0;
 		drawCalls = 0;
@@ -287,7 +285,7 @@ class Engine {
 		#if usesys
 		haxe.System.beginFrame();
 		#end
-		driver.begin(frameCount);
+		driver.begin(hxd.Timer.frameCount);
 		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
 		return true;
 	}

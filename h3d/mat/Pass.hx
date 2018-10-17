@@ -2,7 +2,9 @@ package h3d.mat;
 import h3d.mat.Data;
 
 @:allow(h3d.mat.BaseMaterial)
+#if !macro
 @:build(hxd.impl.BitsBuilder.build())
+#end
 class Pass implements hxd.impl.Serializable {
 
 	@:s public var name(default, null) : String;
