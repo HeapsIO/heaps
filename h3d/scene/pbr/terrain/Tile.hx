@@ -93,6 +93,7 @@ class Tile extends h3d.scene.Mesh {
 			heightMap.wrap = Clamp;
 			heightMap.filter = Linear;
 			heightMap.preventAutoDispose();
+			heightMap.realloc = null;
 			if(oldHeightMap != null){
 				getTerrain().copyPass.apply(oldHeightMap, heightMap);
 				oldHeightMap.dispose();
@@ -105,6 +106,7 @@ class Tile extends h3d.scene.Mesh {
 			surfaceIndexMap = new h3d.mat.Texture(getTerrain().weightMapResolution, getTerrain().weightMapResolution, [Target], RGBA);
 			surfaceIndexMap.filter = Nearest;
 			surfaceIndexMap.preventAutoDispose();
+			surfaceIndexMap.realloc = null;
 			if(oldSurfaceIndexMap != null){
 				getTerrain().copyPass.apply(oldSurfaceIndexMap, surfaceIndexMap);
 				oldSurfaceIndexMap.dispose();
@@ -119,6 +121,7 @@ class Tile extends h3d.scene.Mesh {
 				surfaceWeights[i] = new h3d.mat.Texture(getTerrain().weightMapResolution, getTerrain().weightMapResolution, [Target], R8);
 				surfaceWeights[i].wrap = Clamp;
 				surfaceWeights[i].preventAutoDispose();
+				surfaceWeights[i].realloc = null;
 				if(i < oldArray.length && oldArray[i] != null)
 					getTerrain().copyPass.apply(oldArray[i], surfaceWeights[i]);
 			}
