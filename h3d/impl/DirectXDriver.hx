@@ -550,7 +550,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		updateResCount++;
 	}
 
-	static inline var SCISSOR_BIT = 1 << (Pass.blendAlphaOp_offset + 4);
+	static inline var SCISSOR_BIT = Pass.reserved_mask;
 
 	override public function selectMaterial(pass:h3d.mat.Pass) {
 		var bits = @:privateAccess pass.bits;

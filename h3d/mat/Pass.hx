@@ -39,6 +39,9 @@ class Pass implements hxd.impl.Serializable {
 
 	@:s public var stencil : Stencil;
 
+	// one bit for internal engine usage
+	@:bits(bits) @:noCompletion var reserved : Bool;
+
 	public function new(name, ?shaders, ?parent) {
 		this.parentPass = parent;
 		this.shaders = shaders;
