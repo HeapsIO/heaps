@@ -62,7 +62,9 @@ class Engine {
 		realFps = hxd.System.getDefaultFrameRate();
 		lastTime = haxe.Timer.stamp();
 		window.addResizeEvent(onWindowResize);
-		#if (js || cpp || hlsdl || usegl)
+		#if macro
+		driver = new h3d.impl.NullDriver();
+		#elseif (js || cpp || hlsdl || usegl)
 		driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver(antiAlias);

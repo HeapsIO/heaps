@@ -272,6 +272,7 @@ class Pass implements hxd.impl.Serializable {
 		return p;
 	}
 
+	#if !macro
 	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {
 		var shader = scene.renderer.debugCompileShader(this);
 		if( toHxsl ) {
@@ -281,6 +282,7 @@ class Pass implements hxd.impl.Serializable {
 			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
 		}
 	}
+	#end
 
 	#if hxbit
 
