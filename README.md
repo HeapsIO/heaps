@@ -1,4 +1,4 @@
-# Heaps  
+# Heaps
 _High Performance Game Framework_
 
 [![Build Status](https://travis-ci.org/HeapsIO/heaps.svg?branch=master)](https://travis-ci.org/HeapsIO/heaps)
@@ -35,8 +35,8 @@ To compile:
 Project files for [Visual Studio Code](https://code.visualstudio.com/) are also generated.
 
 Get started!
----------
-* [Official website](https://heaps.io)
+------------
+* [Installation](https://heaps.io/documentation/installation.html)
 * [Live samples with source code](https://heaps.io/samples/)
-* [Documentation](https://heaps.io/documentation/getting-started/)
+* [Documentation](https://heaps.io/documentation/readme.html)
 * [API documentation](https://heaps.io/api/)
