@@ -38,5 +38,5 @@ Get started!
 ------------
 * [Installation](https://heaps.io/documentation/installation.html)
 * [Live samples with source code](https://heaps.io/samples/)
-* [Documentation](https://heaps.io/documentation/readme.html)
+* [Documentation](https://heaps.io/documentation/home.html)
 * [API documentation](https://heaps.io/api/)
