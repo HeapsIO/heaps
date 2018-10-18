@@ -283,8 +283,7 @@ class Pass implements hxd.impl.Serializable {
 			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
 		}
 	}
-	#end
-
+	
 	#if hxbit
 
 	public function customSerialize( ctx : hxbit.Serializer ) {
@@ -313,6 +312,8 @@ class Pass implements hxd.impl.Serializable {
 		setPassName(name);
 		loadBits(bits);
 	}
+	#end
+
 	#end
 
 }

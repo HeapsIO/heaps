@@ -52,6 +52,7 @@ class Font {
 	public var baseLine(default, null) : Int;
 	public var lineHeight(default, null) : Int;
 	public var tile(default,null) : h2d.Tile;
+	public var tilePath(default,null) : String;
 	public var charset : hxd.Charset;
 	var glyphs : Map<Int,FontChar>;
 	var nullChar : FontChar;
@@ -67,6 +68,8 @@ class Font {
 		glyphs = new Map();
 		defaultChar = nullChar = new FontChar(new Tile(null, 0, 0, 0, 0),0);
 		charset = hxd.Charset.getDefault();
+		if (name != null)
+			this.tilePath = haxe.io.Path.withExtension(name, "png");
 	}
 
 	public inline function getChar( code : Int ) {
