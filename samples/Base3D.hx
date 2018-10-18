@@ -7,6 +7,7 @@ class Base3D extends SampleApp {
 	var obj2 : Mesh;
 
 	override function init() {
+		super.init();
 
 		// creates a new unit cube
 		var prim = new h3d.prim.Cube();
@@ -54,6 +55,10 @@ class Base3D extends SampleApp {
 		// disable shadows
 		obj1.material.shadows = false;
 		obj2.material.shadows = false;
+		
+		if (engine.driver.hasFeature(Wireframe)) {
+			addCheck("Wireframe", function() { return obj2.material.mainPass.wireframe; }, function(v) { obj2.material.mainPass.wireframe = v; });
+		}
 	}
 
 	override function update( dt : Float ) {

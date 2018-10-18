@@ -186,6 +186,8 @@ class GlDriver extends Driver {
 	var firstShader = true;
 	var rightHanded = false;
 	var hasMultiIndirect = false;
+	
+	var drawMode : Int;
 
 	public function new(antiAlias=0) {
 		#if js
@@ -232,6 +234,8 @@ class GlDriver extends Driver {
 			#end
 			shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
 		}
+
+		drawMode = GL.TRIANGLES;
 
 		#if js
 		// make sure to enable extensions
@@ -597,6 +601,22 @@ class GlDriver extends Driver {
 		if( curMatBits < 0 ) diff = -1;
 		if( diff == 0 )
 			return;
+
+		var wireframe = bits & Pass.wireframe_mask != 0;
+		#if hlsdl
+		if ( wireframe ) {
+			gl.polygonMode(GL.FRONT_AND_BACK, GL.LINE);
+			// Force set to cull = None
+			bits = (bits & ~Pass.culling_mask);
+			diff |= Pass.culling_mask;
+		} else {
+			gl.polygonMode(GL.FRONT_AND_BACK, GL.FILL);
+		}
+		#else
+		// Not entirely accurate wireframe, but the best possible on WebGL.
+		drawMode = wireframe ? GL.LINE_STRIP : GL.TRIANGLES;
+		#end
+		
 		if( diff & Pass.culling_mask != 0 ) {
 			var cull = Pass.getCulling(bits);
 			if( cull == 0 )
@@ -1248,9 +1268,9 @@ class GlDriver extends Driver {
 			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf.b);
 		}
 		if( ibuf.is32 )
-			gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_INT, startIndex * 4);
+			gl.drawElements(drawMode, ntriangles * 3, GL.UNSIGNED_INT, startIndex * 4);
 		else
-			gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
+			gl.drawElements(drawMode, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
 	}
 
 	override function allocInstanceBuffer( b : InstanceBuffer, bytes : haxe.io.Bytes ) {
@@ -1294,9 +1314,9 @@ class GlDriver extends Driver {
 		if( hasMultiIndirect ) {
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
 			if( ibuf.is32 )
-				gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_INT, null, commands.commandCount, 0);
+				gl.multiDrawElementsIndirect(drawMode, GL.UNSIGNED_INT, null, commands.commandCount, 0);
 			else
-				gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
+				gl.multiDrawElementsIndirect(drawMode, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
 			return;
 		}
@@ -1305,9 +1325,9 @@ class GlDriver extends Driver {
 		var p = 0;
 		for( i in 0...Std.int(args.length/3) )
 			if( ibuf.is32 )
-				gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_INT, args[p++], args[p++]);
+				gl.drawElementsInstanced(drawMode, args[p++], GL.UNSIGNED_INT, args[p++], args[p++]);
 			else
-				gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
+				gl.drawElementsInstanced(drawMode, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
 	}
 
 	override function end() {
@@ -1503,7 +1523,7 @@ class GlDriver extends Driver {
 	function checkFeature( f : Feature ) {
 		return switch( f ) {
 
-		case HardwareAccelerated, AllocDepthBuffer, BottomLeftCoords:
+		case HardwareAccelerated, AllocDepthBuffer, BottomLeftCoords, Wireframe:
 			true;
 
 		case StandardDerivatives, MultipleRenderTargets, SRGBTextures if( glES >= 3 ):
