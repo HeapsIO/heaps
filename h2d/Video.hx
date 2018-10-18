@@ -28,18 +28,25 @@ class Video extends Drawable {
 	#if hl
 	static var INIT_DONE = false;
 	var v : VideoImpl;
-	#end
 	var pixels : hxd.Pixels;
+	#elseif js
+	var v : js.html.VideoElement;
+	var videoPlaying : Bool;
+	var videoTimeupdate : Bool;
+	var onReady : Void->Void;
+	#end
 	var texture : h3d.mat.Texture;
 	var tile : h2d.Tile;
 	var playTime : Float;
 	var videoTime : Float;
 	var frameReady : Bool;
+	var loopVideo : Bool;
 
 	public var videoWidth(default, null) : Int;
 	public var videoHeight(default, null) : Int;
 	public var playing(default, null) : Bool;
 	public var time(get, null) : Float;
+	public var loop(get, set) : Bool;
 
 	public function new(?parent) {
 		super(parent);
@@ -54,7 +61,23 @@ class Video extends Drawable {
 	}
 
 	public function get_time() {
+		#if js
+		return playing ? v.currentTime : 0;
+		#else
 		return playing ? haxe.Timer.stamp() - playTime : 0;
+		#end
+	}
+	
+	public inline function get_loop() {
+		return loopVideo;
+	}
+	
+	public function set_loop(value : Bool) : Bool {
+		#if js
+		return v.loop = loopVideo = value;
+		#else
+		return loopVideo = value;
+		#end
 	}
 
 	public function dispose() {
@@ -63,13 +86,20 @@ class Video extends Drawable {
 			v.close();
 			v = null;
 		};
+		pixels = null;
+		#elseif js
+		if ( v != null ) {
+			v.removeEventListener("ended", endHandler, true);
+			v.removeEventListener("error", errorHandler, true);
+			if (!v.paused) v.pause();
+			v = null;
+		}
 		#end
 		if( texture != null ) {
 			texture.dispose();
 			texture = null;
 		}
 		tile = null;
-		pixels = null;
 		videoWidth = 0;
 		videoHeight = 0;
 		time = 0;
@@ -95,38 +125,105 @@ class Video extends Drawable {
 		playTime = haxe.Timer.stamp();
 		videoTime = 0.;
 		if( onReady != null ) onReady();
+		#elseif js
+		v = js.Browser.document.createVideoElement();
+		v.autoplay = true;
+		v.muted = true;
+		v.loop = loopVideo;
+		
+		videoPlaying = false;
+		videoTimeupdate = false;
+		this.onReady = onReady;
+		
+		v.addEventListener("playing", checkReady, true);
+		v.addEventListener("timeupdate", checkReady, true);
+		v.addEventListener("ended", endHandler, true);
+		v.addEventListener("error", errorHandler, true);
+		v.src = path;
+		v.play();
 		#else
 		onError("Video not supported on this platform");
 		#end
 	}
+	
+	#if js
+	
+	function errorHandler(e : js.html.Event) {
+		#if (haxe_ver >= 4)
+		onError(v.error.code + ": " + v.error.message);
+		#else 
+		onError(Std.string(v.error.code));
+		#end
+	}
+	
+	function endHandler(e : js.html.Event) {
+		onEnd();
+	}
+	
+	function checkReady(e : js.html.Event) {
+		if (e.type == "playing") {
+			videoPlaying = true;
+			v.removeEventListener("playing", checkReady, true);
+		} else {
+			videoTimeupdate = true;
+			v.removeEventListener("timeupdate", checkReady, true);
+		}
+		
+		if (videoPlaying && videoTimeupdate) {
+			frameReady = true;
+			videoWidth = v.videoWidth;
+			videoHeight = v.videoHeight;
+			playing = true;
+			playTime = haxe.Timer.stamp();
+			videoTime = 0.0;
+			if ( onReady != null )
+			{
+				onReady();
+				onReady = null;
+			}
+		}
+	}
+	#end
 
 	override function draw(ctx:RenderContext) {
 		if( tile != null )
 			ctx.drawTile(this, tile);
 	}
 
-
+	#if js
+	@:access(h3d.mat.Texture)
+	#end
 	override function sync(ctx:RenderContext) {
 		if( !playing )
 			return;
 		if( texture == null ) {
 			var w = videoWidth, h = videoHeight;
-			pixels = new hxd.Pixels(w, h, haxe.io.Bytes.alloc(w * h * 4), h3d.mat.Texture.nativeFormat);
 			texture = new h3d.mat.Texture(w, h);
 			tile = h2d.Tile.fromTexture(texture);
+			#if hl
+			pixels = new hxd.Pixels(w, h, haxe.io.Bytes.alloc(w * h * 4), h3d.mat.Texture.nativeFormat);
+			#end
 		}
 		if( frameReady ) {
+			#if hl
 			texture.uploadPixels(pixels);
 			frameReady = false;
+			#elseif js
+			texture.alloc();
+			texture.checkSize(videoWidth, videoHeight, 0);
+			@:privateAccess cast (@:privateAccess texture.mem.driver, h3d.impl.GlDriver).uploadTextureVideoElement(texture, v, 0, 0);
+			texture.flags.set(WasCleared);
+			texture.checkMipMapGen(0, 0);
+			#end
 		}
+		#if hl
 		if( time >= videoTime ) {
-			#if hl
 			var t = 0.;
 			v.decodeFrame(pixels.bytes, t);
 			videoTime = t;
-			#end
 			frameReady = true; // delay decode/upload for more reliable FPS
 		}
+		#end
 	}
 
 }

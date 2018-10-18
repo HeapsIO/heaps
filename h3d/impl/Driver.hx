@@ -1,6 +1,12 @@
 package h3d.impl;
 
-#if flash
+#if macro
+typedef IndexBuffer = {};
+typedef VertexBuffer = {};
+typedef Texture = {};
+typedef DepthBuffer = {};
+typedef Query = {};
+#elseif flash
 typedef IndexBuffer = flash.display3D.IndexBuffer3D;
 typedef VertexBuffer = Stage3dDriver.VertexWrapper;
 typedef Texture = flash.display3D.textures.TextureBase;

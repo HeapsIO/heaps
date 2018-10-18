@@ -43,7 +43,7 @@ class Terrain extends hxsl.Shader {
 			calculatedUV = input.position.xy / primSize;
 			var terrainUV = (calculatedUV * (heightMapSize - 1)) / heightMapSize;
 			terrainUV += 0.5 / heightMapSize;
-			transformedPosition += (vec3(0,0, heightMap.get(terrainUV).r) * global.modelView.mat3());
+			transformedPosition += (vec3(0,0, textureLod(heightMap, terrainUV, 0).r) * global.modelView.mat3());
 			TBN = mat3(normalize(cross(transformedNormal, vec3(0,1,0))), normalize(cross(transformedNormal,vec3(-1,0,0))), transformedNormal);
 		}
 
@@ -61,12 +61,12 @@ class Terrain extends hxsl.Shader {
 			var numLayers = mix(float(maxStep), float(minStep), abs(viewNS.z));
 			var layerDepth = 1 / numLayers;
 			var curLayerDepth = 0.;
-			var delta = (viewNS.xy / viewNS.z) * parallaxAmount / numLayers * 1.0/surfaceParams[surfaceIndex].x;
+			var delta = (viewNS.xy / viewNS.z) * parallaxAmount / numLayers * 1.0 / surfaceParams[surfaceIndex].x;
 			var curUV = uv;
 			var curDepth = 1 - pbrTextures.get(getsurfaceUV(surfaceIndex, curUV)).a;
 			while( curLayerDepth < curDepth ) {
 				curUV += delta;
-				curDepth =  1 - pbrTextures.get(getsurfaceUV(surfaceIndex, curUV)).a;
+				curDepth =  1 - pbrTextures.getLod( getsurfaceUV(surfaceIndex, curUV), 0).a;
 				curLayerDepth += layerDepth;
 			}
 			var prevUV = curUV - delta;

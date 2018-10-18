@@ -2,7 +2,9 @@ package h3d.mat;
 import h3d.mat.Data;
 
 @:allow(h3d.mat.BaseMaterial)
+#if !macro
 @:build(hxd.impl.BitsBuilder.build())
+#end
 class Pass implements hxd.impl.Serializable {
 
 	@:s public var name(default, null) : String;
@@ -39,6 +41,9 @@ class Pass implements hxd.impl.Serializable {
 	public var colorMask : Int;
 
 	@:s public var stencil : Stencil;
+
+	// one bit for internal engine usage
+	@:bits(bits) @:noCompletion var reserved : Bool;
 
 	public function new(name, ?shaders, ?parent) {
 		this.parentPass = parent;
@@ -268,6 +273,7 @@ class Pass implements hxd.impl.Serializable {
 		return p;
 	}
 
+	#if !macro
 	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {
 		var shader = scene.renderer.debugCompileShader(this);
 		if( toHxsl ) {
@@ -277,6 +283,7 @@ class Pass implements hxd.impl.Serializable {
 			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
 		}
 	}
+	#end
 
 	#if hxbit
 

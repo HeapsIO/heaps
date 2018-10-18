@@ -1537,6 +1537,23 @@ class GlDriver extends Driver {
 			false;
 		}
 	}
+	
+	// Draws video element directly onto Texture. Used for video rendering.
+	private function uploadTextureVideoElement( t : h3d.mat.Texture, v : js.html.VideoElement, mipLevel : Int, side : Int ) {
+		var cubic = t.flags.has(Cube);
+		var bind = getBindType(t);
+		if( t.flags.has(IsArray) ) throw "TODO:texImage3D";
+		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
+		gl.bindTexture(bind, t.t.t);
+		if (glES >= 3) {
+			// WebGL2 support
+			gl.texImage2D(face, mipLevel, t.t.internalFmt, v.videoWidth, v.videoHeight, 0, getChannels(t.t), t.t.pixelFmt, untyped v);
+		} else {
+			gl.texImage2D(face, mipLevel, t.t.internalFmt, t.t.internalFmt, t.t.pixelFmt, v);
+		}
+		restoreBind();
+	}
+	
 	#end
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {

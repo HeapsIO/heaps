@@ -2,7 +2,7 @@ package h3d.col;
 
 class TriPlane implements Collider {
 
-	public var next : TriPlane;
+	public var next : TriPlane = null;
 
 	var p0x : Float;
 	var p0y : Float;
@@ -53,6 +53,44 @@ class TriPlane implements Collider {
 		invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
 	}
 
+	public inline function clone() {
+		var clone = new TriPlane();
+		clone.load(this);
+		if(next != null)
+			clone.next = next.clone();
+		return clone;
+	}
+
+	public inline function load( tp : TriPlane ) {
+		p0x = tp.p0x;
+		p0y = tp.p0y;
+		p0z = tp.p0z;
+		d1x = tp.d1x;
+		d1y = tp.d1y;
+		d1z = tp.d1z;
+		d2x = tp.d2x;
+		d2y = tp.d2y;
+		d2z = tp.d2z;
+		dot00 = tp.dot00;
+		dot01 = tp.dot01;
+		dot11 = tp.dot11;
+		invDenom = tp.invDenom;
+		nx = tp.nx;
+		ny = tp.ny;
+		nz = tp.nz;
+		d = tp.d;
+	}
+
+	public function transform( m : h3d.Matrix ){
+		var p0 = new Point(p0x, p0y, p0z);
+		var p1 = new Point(d1x + p0x, d1y + p0y, d1z + p0z);
+		var p2 = new Point(d2x + p0x, d2y + p0y, d2z + p0z);
+		p0.transform(m);
+		p1.transform(m);
+		p2.transform(m);
+		init(p0, p1, p2);
+	}
+
 	public inline function contains( p : Point ) {
 		return isPointInTriangle(p.x, p.y, p.z);
 	}
@@ -94,6 +132,10 @@ class TriPlane implements Collider {
 
 		// Check if point is in triangle
 		return (u >= 0) && (v >= 0) && (u + v < 1);
+	}
+
+	public function getPoints() : Array<Point> {
+		return [new Point(p0x, p0y, p0z), new Point(d1x + p0x, d1y + p0y, d1z + p0z), new Point(d2x + p0x, d2y + p0y, d2z + p0z)];
 	}
 
 	#if (hxbit && !macro)
@@ -138,6 +180,31 @@ class Polygon implements Collider {
 	public function isConvex() {
 		// TODO : check + cache result
 		return true;
+	}
+
+	public function clone() : h3d.col.Polygon {
+		var clone = new h3d.col.Polygon();
+		clone.triPlanes = new TriPlane();
+		clone.triPlanes = triPlanes.clone();
+		return clone;
+	}
+
+	public function transform( m : h3d.Matrix ) {
+		var t = triPlanes;
+		while( t != null ) {
+			t.transform(m);
+			t = t.next;
+		}
+	}
+
+	public function getPoints() : Array<Point> {
+		var ret : Array<Point> = [];
+		var t = triPlanes;
+		while( t != null ) {
+			ret = ret.concat(t.getPoints());
+			t = t.next;
+		}
+		return ret;
 	}
 
 	public function contains( p : Point ) {

@@ -2,7 +2,9 @@ package h3d.mat;
 import h3d.mat.Data;
 
 @:allow(h3d.mat.Material)
+#if !macro
 @:build(hxd.impl.BitsBuilder.build())
+#end
 class Stencil implements hxd.impl.Serializable {
 
 	@:s var maskBits  : Int = 0;
