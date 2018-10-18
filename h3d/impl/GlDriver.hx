@@ -580,7 +580,7 @@ class GlDriver extends Driver {
 		}
 
 		var s = defStencil;
-		drawMode = pass.wireframe ? GL.LINE_LOOP : GL.TRIANGLES;
+		drawMode = pass.wireframe ? GL.LINE_STRIP : GL.TRIANGLES;
 		if( pass.stencil == null ) {
 			if( curStEnabled ) {
 				gl.disable(GL.STENCIL_TEST);
