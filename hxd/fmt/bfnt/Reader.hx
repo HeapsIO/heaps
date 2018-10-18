@@ -1,11 +1,8 @@
 package hxd.fmt.bfnt;
 
-import hxd.fmt.bfnt.Data;
 import haxe.io.Input;
 
-#if !macro
 @:access(h2d.Font)
-#end
 class Reader {
 	
 	var i : Input;
@@ -14,23 +11,24 @@ class Reader {
 		this.i = i;
 	}
 	
-	public function read( tile: TileReference ) : FontDescriptor {
+	public function read( resolveTile: String -> h2d.Tile ) : h2d.Font {
 		
 		if (i.readString(4) != "BFNT" || i.readByte() != 0) throw "Not a BFNT file!";
 		
-		var font : FontDescriptor = null;
+		var font : h2d.Font = null;
 		
 		switch (i.readByte()) {
 			case 1:
-				font = new FontDescriptor(i.readString(i.readUInt16()), i.readInt16());
-				font.tile = tile;
+				font = new h2d.Font(i.readString(i.readUInt16()), i.readInt16());
+				font.tilePath = i.readString(i.readUInt16());
+				var tile = font.tile = resolveTile(font.tilePath);
 				font.lineHeight = i.readInt16();
 				font.baseLine = i.readInt16();
 				var defaultChar = i.readInt32();
 				var id : Int;
 				while ( ( id = i.readInt32() ) != 0 ) {
 					var t = tile.sub(i.readUInt16(), i.readUInt16(), i.readUInt16(), i.readUInt16(), i.readInt16(), i.readInt16());
-					var glyph = new FontCharDescriptor(t, i.readInt16());
+					var glyph = new h2d.Font.FontChar(t, i.readInt16());
 					font.glyphs.set(id, glyph);
 					if (id == defaultChar) font.defaultChar = glyph;
 					
@@ -46,8 +44,8 @@ class Reader {
 		return font;
 	}
 	
-	public static inline function parse(bytes : haxe.io.Bytes, tile : TileReference ) : FontDescriptor {
-		return new Reader(new haxe.io.BytesInput(bytes)).read(tile);
+	public static inline function parse(bytes : haxe.io.Bytes, resolveTile : String -> h2d.Tile ) : h2d.Font {
+		return new Reader(new haxe.io.BytesInput(bytes)).read(resolveTile);
 	}
 
 }

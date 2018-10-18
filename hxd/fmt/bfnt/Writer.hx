@@ -1,17 +1,14 @@
 package hxd.fmt.bfnt;
 
-import hxd.fmt.bfnt.Data;
 import haxe.io.Output;
 
-#if !macro
 @:access(h2d.Font)
-#end
 class Writer {
 	
 	static inline var VERSION : Int = 1;
 	// V1 format:
 	// [BFNT][0x00][0x01]
-	// [name_len:u2][name:name_len][size:i2][lineHeight:i2][baseLine:i2]
+	// [name_len:u2][name:name_len][size:i2][tile_len:u2][tile_path:tile_len][lineHeight:i2][baseLine:i2]
 	// [defaultChar:i4] or [useNullChar:0x00000000]
 	// [glyph]
 	//   [id:i4][x:u2][y:u2][width:u2][height:u2][xoffset:i2][yoffset:i2][xadvance:i2]
@@ -26,12 +23,13 @@ class Writer {
 		this.out = out;
 	}
 	
-	public function write( font : FontDescriptor ) {
+	public function write( font : h2d.Font ) {
 		out.writeString("BFNT");
 		out.writeByte(0);
 		out.writeByte(VERSION);
 		writeString(font.name);
 		out.writeInt16(font.size);
+		writeString(font.tilePath);
 		out.writeInt16(font.lineHeight);
 		out.writeInt16(font.baseLine);
 		if (font.defaultChar != font.nullChar) {

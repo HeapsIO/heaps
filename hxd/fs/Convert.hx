@@ -141,15 +141,11 @@ class ConvertTGA2PNG extends Convert {
 
 class ConvertFNT2BFNT extends Convert {
 	
-	var emptyTile : hxd.fmt.bfnt.Data.TileReference;
+	var emptyTile : h2d.Tile;
 	
 	public function new() {
 		// Fake tile create subs before discarding the font.
-		#if macro
-		emptyTile = @:privateAccess new hxd.fmt.bfnt.Data.TileReference(0, 0, 0, 0, 0, 0);
-		#else
-		emptyTile = @:privateAccess new hxd.fmt.bfnt.Data.TileReference(null, 0, 0, 0, 0, 0, 0);
-		#end
+		emptyTile = @:privateAccess new h2d.Tile(null, 0, 0, 0, 0, 0, 0);
 		super("fnt", "bfnt");
 	}
 	
@@ -161,7 +157,7 @@ class ConvertFNT2BFNT extends Convert {
 		save(out.getBytes());
 	}
 	
-	function resolveTile( path : String ) : hxd.fmt.bfnt.Data.TileReference {
+	function resolveTile( path : String ) : h2d.Tile {
 		#if sys
 		if (!sys.FileSystem.exists(path)) throw "Could not resolve BitmapFont texture reference at path: " + path;
 		#end
