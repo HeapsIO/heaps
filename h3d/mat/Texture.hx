@@ -116,8 +116,12 @@ class Texture {
 				flags.push(f);
 		var t = new Texture(width, height, flags, format, allocPos);
 		t.name = this.name;
-		if(this.flags.has(Cube)) h3d.pass.CubeCopy.run(this, t);
-		else h3d.pass.Copy.run(this, t);
+		#if !macro
+		if(this.flags.has(Cube))
+			h3d.pass.CubeCopy.run(this, t);
+		else
+		#end
+			h3d.pass.Copy.run(this, t);
 		lastFrame = old;
 		return t;
 	}

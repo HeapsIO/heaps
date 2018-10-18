@@ -305,7 +305,7 @@ class ScenePanel extends Panel {
 	function onPickEvent( e : hxd.Event ) {
 		switch( e.kind ) {
 		case EMove:
-			lastPickEvent = h3d.Engine.getCurrent().frameCount;
+			lastPickEvent = hxd.Timer.frameCount;
 			var obj = scene.hardwarePick(e.relX, e.relY);
 			currentPick = obj == null ? null : obj.toMesh();
 		case EPush:
@@ -353,7 +353,7 @@ class ScenePanel extends Panel {
 		syncRec(scene, this);
 		while( sceneObjects.length > scenePosition )
 			sceneObjects.pop().dispose();
-		var frame = h3d.Engine.getCurrent().frameCount;
+		var frame = hxd.Timer.frameCount;
 		if( lastPickEvent != null && lastPickEvent < frame - 1 ) {
 			var window = hxd.Window.getInstance();
 			var e = new hxd.Event(EMove, window.mouseX, window.mouseY);

@@ -1,5 +1,17 @@
 package h3d.pass;
 
+#if macro
+
+class Copy {
+
+	public static function run( from : h3d.mat.Texture, to : h3d.mat.Texture, ?blend : h3d.mat.BlendMode, ?pass : h3d.mat.Pass ) {
+		throw "assert";
+	}
+
+}
+
+#else
+
 private class CopyShader extends h3d.shader.ScreenShader {
 
 	static var SRC = {
@@ -53,3 +65,5 @@ class Copy extends ScreenFx<CopyShader> {
 	}
 
 }
+
+#end

@@ -15,7 +15,6 @@ class Terrain extends Object {
 	public var parallaxMaxStep : Int;
 	public var heightBlendStrength : Float;
 	public var heightBlendSharpness : Float;
-	public var grid (default, null) : h3d.prim.Grid;
 	public var copyPass (default, null): h3d.pass.Copy;
 	public var tiles (default, null) : Array<Tile> = [];
 	public var surfaces (default, null) : Array<Surface> = [];
@@ -23,17 +22,15 @@ class Terrain extends Object {
 
 	public function new(?parent){
 		super(parent);
-		grid = new h3d.prim.Grid( cellCount, cellCount, cellSize, cellSize);
-		grid.addUVs();
-		grid.addNormals();
 		copyPass = new h3d.pass.Copy();
 	}
 
-	public function getHeight(pos : h3d.Vector) : Float {
+	public function getHeight(x : Float, y : Float) : Float {
 		var z = 0.0;
-		var t = getTileAtWorldPos(pos);
+		var t = getTileAtWorldPos(x, y);
 		if(t != null){
-			var pos = t.globalToLocal(pos.clone());
+			tmpVec.set(x, y);
+			var pos = t.globalToLocal(tmpVec);
 			z = t.getHeight(pos.x / tileSize, pos.y / tileSize);
 		}
 		return z;
@@ -99,10 +96,6 @@ class Terrain extends Object {
 	}
 
 	public function refreshMesh(){
-		if(grid != null) grid.dispose();
-		grid = new h3d.prim.Grid( cellCount, cellCount, cellSize, cellSize);
-		grid.addUVs();
-		grid.addNormals();
 		for(tile in tiles){
 			tile.x = tile.tileX * tileSize;
 			tile.y = tile.tileY * tileSize;
@@ -178,8 +171,8 @@ class Terrain extends Object {
 		return result;
 	}
 
-	public function getTileAtWorldPos(pos : h3d.Vector) : Tile {
-		var pos = globalToLocal(pos.clone());
+	public function getTileAtWorldPos(x : Float, y : Float) : Tile {
+		var pos = toLocalPos(x, y);
 		var result : Tile = null;
 		var tileX = Math.floor(pos.x / tileSize);
 		var tileY = Math.floor(pos.y / tileSize);
@@ -188,16 +181,16 @@ class Terrain extends Object {
 		return result;
 	}
 
-	public function createTileAtWorldPos(pos : h3d.Vector) : Tile {
-		var pos = globalToLocal(pos.clone());
+	public function createTileAtWorldPos(x : Float, y : Float) : Tile {
+		var pos = toLocalPos(x, y);
 		var tileX = Math.floor(pos.x / tileSize);
 		var tileY = Math.floor(pos.y / tileSize);
 		var result = getTile(tileX, tileY);
 		return result == null ? createTile(tileX, tileY) : result;
 	}
 
-	public function getTiles(pos : h3d.Vector, range : Float, ?create = false) : Array<Tile> {
-		var pos = globalToLocal(pos.clone());
+	public function getTiles(x : Float, y : Float, range : Float, ?create = false) : Array<Tile> {
+		var pos = toLocalPos(x, y);
 		if(create != null && create){
 			var maxTileX = Math.floor((pos.x + range)/ tileSize);
 			var minTileX = Math.floor((pos.x - range)/ tileSize);
@@ -228,6 +221,13 @@ class Terrain extends Object {
 				res.push(tile);
 		}
 		return res;
+	}
+
+	static var tmpVec = new h3d.Vector();
+	inline function toLocalPos(x : Float, y : Float) {
+		tmpVec.set(x, y);
+		globalToLocal(tmpVec);
+		return tmpVec;
 	}
 }
 

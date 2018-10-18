@@ -418,7 +418,9 @@ class World extends Object {
 		var n = Std.int(worldSize / chunkSize);
 		for(x in 0...n)
 			for(y in 0...n) {
-				var c = getChunk(x * chunkSize + originX, y * chunkSize + originY, true);
+				var c = getChunk(x * chunkSize + originX, y * chunkSize + originY);
+				if(c == null)
+					continue;
 				c.bounds.addPoint(new h3d.col.Point(c.x, c.y));
 				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y));
 				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y + chunkSize));

@@ -12,7 +12,11 @@ class Video extends hxd.App {
 			tf.textColor = 0xFF0000;
 		};
 		function start() {
+			#if hl
 			video.load("testVideo.avi");
+			#elseif js
+			video.load("testVideo.mp4");
+			#end
 		}
 		video.onEnd = start;
 		start();

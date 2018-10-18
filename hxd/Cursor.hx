@@ -16,7 +16,9 @@ class CustomCursor {
 	var speed : Float;
 	var offsetX : Int;
 	var offsetY : Int;
-	#if hlsdl
+	#if macro
+	var alloc : Array<Dynamic>;
+	#elseif hlsdl
 	var alloc : Array<sdl.Cursor>;
 	#elseif hldx
 	var alloc : Array<dx.Cursor>;
@@ -29,14 +31,14 @@ class CustomCursor {
 	#else
 	var alloc : Dynamic;
 	#end
-	
+
 	// Heaps-side cursor animation for target that do not support native animated cursors.
 	#if (hlsdl || hldx || js)
 	var frameDelay : Float;
 	var frameTime : Float;
 	var frameIndex : Int;
 	#end
-	
+
 	public function new( frames, speed, offsetX, offsetY ) {
 		this.frames = frames;
 		this.speed = speed;
@@ -51,13 +53,13 @@ class CustomCursor {
 		frameIndex = 0;
 		#end
 	}
-	
+
 	#if (hlsdl || hldx || js)
 	public function reset() : Void {
 		frameTime = 0;
 		frameIndex = 0;
 	}
-	
+
 	public function update( dt : Float ) : Int {
 		var newTime : Float = frameTime + dt;
 		var delay : Float = frameDelay;
@@ -67,7 +69,7 @@ class CustomCursor {
 			index++;
 		}
 		frameTime = newTime;
-		
+
 		if ( index >= frames.length ) index %= frames.length;
 		if ( index != frameIndex ) {
 			frameIndex = index;
