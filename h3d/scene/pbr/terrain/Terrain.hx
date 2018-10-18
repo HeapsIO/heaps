@@ -15,7 +15,6 @@ class Terrain extends Object {
 	public var parallaxMaxStep : Int;
 	public var heightBlendStrength : Float;
 	public var heightBlendSharpness : Float;
-	public var grid (default, null) : h3d.prim.Grid;
 	public var copyPass (default, null): h3d.pass.Copy;
 	public var tiles (default, null) : Array<Tile> = [];
 	public var surfaces (default, null) : Array<Surface> = [];
@@ -23,9 +22,6 @@ class Terrain extends Object {
 
 	public function new(?parent){
 		super(parent);
-		grid = new h3d.prim.Grid( cellCount, cellCount, cellSize, cellSize);
-		grid.addUVs();
-		grid.addNormals();
 		copyPass = new h3d.pass.Copy();
 	}
 
@@ -99,10 +95,6 @@ class Terrain extends Object {
 	}
 
 	public function refreshMesh(){
-		if(grid != null) grid.dispose();
-		grid = new h3d.prim.Grid( cellCount, cellCount, cellSize, cellSize);
-		grid.addUVs();
-		grid.addNormals();
 		for(tile in tiles){
 			tile.x = tile.tileX * tileSize;
 			tile.y = tile.tileY * tileSize;
