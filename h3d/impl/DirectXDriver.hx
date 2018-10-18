@@ -629,8 +629,13 @@ class DirectXDriver extends h3d.impl.Driver {
 		var raster = rasterStates.get(rasterBits);
 		if( raster == null ) {
 			var desc = new RasterizerDesc();
-			desc.fillMode = pass.wireframe ? WireFrame : Solid;
-			desc.cullMode = CULL[Pass.getCulling(bits)];
+			if ( pass.wireframe ) {
+				desc.fillMode = WireFrame;
+				desc.cullMode = None;
+			} else {
+				desc.fillMode = Solid;
+				desc.cullMode = CULL[Pass.getCulling(bits)];
+			}
 			desc.depthClipEnable = true;
 			desc.scissorEnable = bits & SCISSOR_BIT != 0;
 			raster = Driver.createRasterizerState(desc);
