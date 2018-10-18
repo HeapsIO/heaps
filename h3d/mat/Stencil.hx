@@ -65,7 +65,7 @@ class Stencil implements hxd.impl.Serializable {
 		maskBits = s.maskBits;
 	}
 
-	#if hxbit
+	#if (!macro && hxbit)
 	public function customSerialize( ctx : hxbit.Serializer ) {
 	}
 	public function customUnserialize( ctx : hxbit.Serializer ) {
