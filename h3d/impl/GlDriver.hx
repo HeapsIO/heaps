@@ -580,7 +580,6 @@ class GlDriver extends Driver {
 		}
 
 		var s = defStencil;
-		drawMode = pass.wireframe ? GL.LINE_STRIP : GL.TRIANGLES;
 		if( pass.stencil == null ) {
 			if( curStEnabled ) {
 				gl.disable(GL.STENCIL_TEST);
@@ -602,6 +601,22 @@ class GlDriver extends Driver {
 		if( curMatBits < 0 ) diff = -1;
 		if( diff == 0 )
 			return;
+
+		var wireframe = bits & Pass.wireframe_mask != 0;
+		#if hlsdl
+		if ( wireframe ) {
+			gl.polygonMode(GL.FRONT_AND_BACK, GL.LINE);
+			// Force set to cull = None
+			bits = (bits & ~Pass.culling_mask);
+			diff |= Pass.culling_mask;
+		} else {
+			gl.polygonMode(GL.FRONT_AND_BACK, GL.FILL);
+		}
+		#else
+		// Not entirely accurate wireframe, but the best possible on WebGL.
+		drawMode = wireframe ? GL.LINE_STRIP : GL.TRIANGLES;
+		#end
+		
 		if( diff & Pass.culling_mask != 0 ) {
 			var cull = Pass.getCulling(bits);
 			if( cull == 0 )
