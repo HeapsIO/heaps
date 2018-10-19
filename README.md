@@ -19,7 +19,8 @@ Community
 ---------
 
 Ask questions or discuss on <https://community.heaps.io>
-Chat on Gitter <https://gitter.im/heapsio/Lobby>
+
+Chat on Discord <https://discord.gg/sWCGm33> or Gitter <https://gitter.im/heapsio/Lobby>
 
 Samples
 -------
