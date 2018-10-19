@@ -59,6 +59,11 @@ class Blur extends ScreenShader {
 					else color += texture.get(input.uv + pixel * offsets[i < 0 ? -i : i] * i) * values[i < 0 ? -i : i];
 				}
 				output.color = color;
+
+				if( isCube ){
+					var ref = cubeTexture.get(vec3(input.uv * 2.0 - 1.0, 1) * cubeDir);
+					output.color = max(color,ref);
+				}
 			}
 			if( hasFixedColor ) {
 				output.color.rgb = fixedColor.rgb;

@@ -1552,7 +1552,7 @@ class GlDriver extends Driver {
 			false;
 		}
 	}
-	
+
 	// Draws video element directly onto Texture. Used for video rendering.
 	private function uploadTextureVideoElement( t : h3d.mat.Texture, v : js.html.VideoElement, mipLevel : Int, side : Int ) {
 		var cubic = t.flags.has(Cube);
@@ -1568,7 +1568,7 @@ class GlDriver extends Driver {
 		}
 		restoreBind();
 	}
-	
+
 	#end
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {

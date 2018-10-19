@@ -43,6 +43,7 @@ class Camera {
 
 	var minv : Matrix;
 	var miview : Matrix;
+	var miproj : Matrix;
 	var needInv : Bool;
 
 	public function new( fovY = 25., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
@@ -111,6 +112,19 @@ class Camera {
 		if( miview._44 == 0 )
 			miview.initInverse(mcam);
 		return miview;
+	}
+
+	/**
+		Returns the inverse of the camera matrix proj only. Cache the result until the next update().
+	**/
+	public function getInverseProj() {
+		if( miproj == null ) {
+			miproj = new h3d.Matrix();
+			miproj._44 = 0;
+		}
+		if( miproj._44 == 0 )
+			miproj.initInverse(mproj);
+		return miproj;
 	}
 
 	/**
