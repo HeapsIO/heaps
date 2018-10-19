@@ -443,7 +443,7 @@ class Graphics extends Drawable {
 		}
 		flush();
 	}
-
+	
 	public function drawEllipse( cx : Float, cy : Float, radiusX : Float, radiusY : Float, rotationAngle : Float = 0, nsegments = 0 ) {
 		flush();
 		if( nsegments == 0 )

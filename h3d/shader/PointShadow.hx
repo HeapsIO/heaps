@@ -21,16 +21,8 @@ class PointShadow extends hxsl.Shader {
 				var dir = normalize(posToLight.xyz);
 				var depth = shadowMap.get(dir).r * zFar;
 				var zMax = length(posToLight);
-
 				var delta = (depth + shadowBias).min(zMax) - zMax;
 				shadow = exp( shadowPower * delta ).saturate();
-
-				var dist =  1 - (abs(zMax - depth) / shadowPower);
-				var lightDist = (zMax / shadowPower);
-
-				var factor = dist * lightDist;
-
-				shadow = depth + shadowBias < zMax ? clamp( 1 - dist, 0, 1) : 1;
 			}
 		}
 	}

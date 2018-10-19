@@ -25,7 +25,6 @@ class Default extends Base {
 	@global("camera.projFlip") var cameraProjFlip : Float = ctx.engine.driver.hasFeature(BottomLeftCoords) && ctx.engine.getCurrentTarget() != null ? -1 : 1;
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix = ctx.camera.m;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix = ctx.camera.getInverseViewProj();
-	@global("camera.inverseProj") var cameraInverseProj : h3d.Matrix = ctx.camera.getInverseProj();
 	@global("global.time") var globalTime : Float = ctx.time;
 	@global("global.pixelSize") var pixelSize : h3d.Vector = new h3d.Vector(2 / ctx.engine.width, 2 / ctx.engine.height);
 	@global("global.modelView") var globalModelView : h3d.Matrix;
