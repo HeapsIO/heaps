@@ -229,6 +229,9 @@ class BitmapData {
 		#end
 	}
 
+	/* Line plotting using Yevgeny P. Kuzmin. - Bresenham's Line Generation Algorithm with Built-in Clipping. Computer Graphics Forum, 14(5):275-280, 2005.
+ 	 *  see: https://stackoverflow.com/questions/40884680/how-to-use-bresenhams-line-drawing-algorithm-with-clipping/40902741#40902741 )
+	 */
 	public function line( x0 : Int, y0 : Int, x1 : Int, y1 : Int, color : Int ) {
 		var dx = x1 - x0;
 		var dy = y1 - y0;
@@ -238,6 +241,8 @@ class BitmapData {
 				y0 = y1;
 				y1 = tmp;
 			}
+			if (y0<0) y0=0;
+			if (y1>height-1) y1=height-1;
 			for( y in y0...y1 + 1 )
 				setPixel(x0, y, color);
 		} else if( dy == 0 ) {
@@ -246,6 +251,8 @@ class BitmapData {
 				x0 = x1;
 				x1 = tmp;
 			}
+			if (x0<0) x0=0;
+			if (x1>width-1) x1=width-1;
 			for( x in x0...x1 + 1 )
 				setPixel(x, y0, color);
 		} else {
@@ -300,9 +307,9 @@ class BitmapData {
 				// Clipping on (x0;y0) side
 				if ( y0 < clip_y0 ) {
 					// Compute intersection (???;clip_y0) using float to avoid overflow
-					var temp : Float  = d2x;
+					var temp : Float = d2x;
 					temp = temp * (clip_y0-y0) - dx;
-					var xinc : Float = temp / d2y;
+					var xinc = temp / d2y;
 					x += Std.int(xinc);
 
 					if ( x > clip_x1 ) return;
