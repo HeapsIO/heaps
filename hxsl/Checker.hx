@@ -64,6 +64,7 @@ class Checker {
 				[
 					{ args : [ { name : "tex", type : TSampler2D }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec4 },
 					{ args : [ { name : "tex", type : TSamplerCube }, { name : "normal", type : vec3 }, { name : "lod", type : TFloat } ], ret : vec4 },
+					{ args : [ { name : "tex", type : TSampler2DArray }, { name : "uv", type : vec3 }, { name : "lod", type : TFloat } ], ret : vec4 },
 				];
 			case ToInt:
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TInt } ];
@@ -762,6 +763,8 @@ class Checker {
 			case TStruct(_):
 				error("Array of structures are not allowed", pos);
 			default:
+				if( t.isSampler() )
+					error("Array of textures are not allowed, use Sampler2DArray instead", pos);
 			}
 			var s = switch( size ) {
 			case SConst(_): size;

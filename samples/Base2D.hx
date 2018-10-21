@@ -59,7 +59,7 @@ class Base2D extends hxd.App {
 
 	override function update(dt:Float) {
 		// rotate our object every frame
-		if( obj != null ) obj.rotation += 0.01 * dt;
+		if( obj != null ) obj.rotation += 0.6 * dt;
 	}
 
 	static function main() {

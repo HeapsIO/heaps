@@ -81,7 +81,7 @@ class GroupCollider implements Collider {
 	}
 
 
-	#if (hxbit && !macro)
+	#if (hxbit && !macro && heaps_enable_serialize)
 
 	function customSerialize(ctx:hxbit.Serializer) {
 		ctx.addInt(colliders.length);

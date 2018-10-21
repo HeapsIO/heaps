@@ -300,6 +300,7 @@ class LocalFileSystem implements FileSystem {
 		converts = new Map();
 		addConvert(new Convert.ConvertFBX2HMD());
 		addConvert(new Convert.ConvertTGA2PNG());
+		addConvert(new Convert.ConvertFNT2BFNT());
 		#if flash
 		var froot = new flash.filesystem.File(flash.filesystem.File.applicationDirectory.nativePath + "/" + baseDir);
 		if( !froot.exists ) throw "Could not find dir " + dir;
@@ -550,6 +551,20 @@ class LocalFileSystem implements FileSystem {
 		updateTime();
 	}
 
+	public function dir( path : String ) : Array<FileEntry> {
+		#if flash
+		throw "Not Supported";
+		return null;
+		#end
+		if( !sys.FileSystem.exists(baseDir + path) || !sys.FileSystem.isDirectory(baseDir + path) )
+			throw new NotFound(baseDir + path);
+		var files = sys.FileSystem.readDirectory(baseDir + path);
+		var r : Array<FileEntry> = [];
+		for(f in files)
+			r.push(new LocalEntry(this, f, path + "/" + f, baseDir + path + "/" + f));
+		return r;
+	}
+
 }
 
 #else
@@ -581,6 +596,9 @@ class LocalFileSystem implements FileSystem {
 	public function dispose() {
 	}
 
+	public function dir( path : String ) : Array<FileEntry> {
+		return null;
+	}
 }
 
 #end

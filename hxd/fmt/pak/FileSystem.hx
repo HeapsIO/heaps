@@ -267,4 +267,8 @@ class FileSystem implements hxd.fs.FileSystem {
 		return dict.exists(path);
 	}
 
+	public function dir( path : String ) : Array<FileEntry> {
+		throw "Not Supported";
+	}
+
 }

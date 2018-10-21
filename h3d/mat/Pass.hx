@@ -2,7 +2,9 @@ package h3d.mat;
 import h3d.mat.Data;
 
 @:allow(h3d.mat.BaseMaterial)
+#if !macro
 @:build(hxd.impl.BitsBuilder.build())
+#end
 class Pass implements hxd.impl.Serializable {
 
 	@:s public var name(default, null) : String;
@@ -35,9 +37,13 @@ class Pass implements hxd.impl.Serializable {
 	@:bits(bits) public var blendAlphaDst : Blend;
 	@:bits(bits) public var blendOp : Operation;
 	@:bits(bits) public var blendAlphaOp : Operation;
+	@:bits(bits) public var wireframe : Bool;
 	public var colorMask : Int;
 
 	@:s public var stencil : Stencil;
+
+	// one bit for internal engine usage
+	@:bits(bits) @:noCompletion var reserved : Bool;
 
 	public function new(name, ?shaders, ?parent) {
 		this.parentPass = parent;
@@ -231,8 +237,6 @@ class Pass implements hxd.impl.Serializable {
 	public function getShaderByName( name : String ) : hxsl.Shader {
 		var s = shaders;
 		while( s != parentShaders ) {
-			if( Std.is(s.s, hxsl.DynamicShader) )
-				trace(@:privateAccess s.s.shader.data.name);
 			if( @:privateAccess s.s.shader.data.name == name )
 				return s.s;
 			s = s.next;
@@ -269,6 +273,7 @@ class Pass implements hxd.impl.Serializable {
 		return p;
 	}
 
+	#if !macro
 	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {
 		var shader = scene.renderer.debugCompileShader(this);
 		if( toHxsl ) {
@@ -278,7 +283,7 @@ class Pass implements hxd.impl.Serializable {
 			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
 		}
 	}
-
+	
 	#if hxbit
 
 	public function customSerialize( ctx : hxbit.Serializer ) {
@@ -307,6 +312,8 @@ class Pass implements hxd.impl.Serializable {
 		setPassName(name);
 		loadBits(bits);
 	}
+	#end
+
 	#end
 
 }

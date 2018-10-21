@@ -186,6 +186,8 @@ class GlDriver extends Driver {
 	var firstShader = true;
 	var rightHanded = false;
 	var hasMultiIndirect = false;
+	
+	var drawMode : Int;
 
 	public function new(antiAlias=0) {
 		#if js
@@ -232,6 +234,8 @@ class GlDriver extends Driver {
 			#end
 			shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
 		}
+
+		drawMode = GL.TRIANGLES;
 
 		#if js
 		// make sure to enable extensions
@@ -370,7 +374,7 @@ class GlDriver extends Driver {
 			p.fragment = compileShader(glout,shader.fragment);
 
 			p.p = gl.createProgram();
-			#if (hlsdl || usegl)
+			#if ((hlsdl || usegl) && !hlmesa)
 			if( glES == null ) {
 				var outCount = 0;
 				for( v in shader.fragment.data.vars )
@@ -597,6 +601,22 @@ class GlDriver extends Driver {
 		if( curMatBits < 0 ) diff = -1;
 		if( diff == 0 )
 			return;
+
+		var wireframe = bits & Pass.wireframe_mask != 0;
+		#if hlsdl
+		if ( wireframe ) {
+			gl.polygonMode(GL.FRONT_AND_BACK, GL.LINE);
+			// Force set to cull = None
+			bits = (bits & ~Pass.culling_mask);
+			diff |= Pass.culling_mask;
+		} else {
+			gl.polygonMode(GL.FRONT_AND_BACK, GL.FILL);
+		}
+		#else
+		// Not entirely accurate wireframe, but the best possible on WebGL.
+		drawMode = wireframe ? GL.LINE_STRIP : GL.TRIANGLES;
+		#end
+		
 		if( diff & Pass.culling_mask != 0 ) {
 			var cull = Pass.getCulling(bits);
 			if( cull == 0 )
@@ -789,6 +809,7 @@ class GlDriver extends Driver {
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
+		discardError();
 		var tt = gl.createTexture();
 		var bind = getBindType(t);
 		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind #if multidriver, driver : this #end };
@@ -927,7 +948,12 @@ class GlDriver extends Driver {
 		return defaultDepth;
 	}
 
+	inline function discardError() {
+		gl.getError(); // make sure to reset error flag
+	}
+
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
+		discardError();
 		var b = gl.createBuffer();
 		gl.bindBuffer(GL.ARRAY_BUFFER, b);
 		if( m.size * m.stride == 0 ) throw "assert";
@@ -949,6 +975,7 @@ class GlDriver extends Driver {
 	}
 
 	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
+		discardError();
 		var b = gl.createBuffer();
 		var size = is32 ? 4 : 2;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, b);
@@ -1241,9 +1268,9 @@ class GlDriver extends Driver {
 			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf.b);
 		}
 		if( ibuf.is32 )
-			gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_INT, startIndex * 4);
+			gl.drawElements(drawMode, ntriangles * 3, GL.UNSIGNED_INT, startIndex * 4);
 		else
-			gl.drawElements(GL.TRIANGLES, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
+			gl.drawElements(drawMode, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
 	}
 
 	override function allocInstanceBuffer( b : InstanceBuffer, bytes : haxe.io.Bytes ) {
@@ -1287,9 +1314,9 @@ class GlDriver extends Driver {
 		if( hasMultiIndirect ) {
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
 			if( ibuf.is32 )
-				gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_INT, null, commands.commandCount, 0);
+				gl.multiDrawElementsIndirect(drawMode, GL.UNSIGNED_INT, null, commands.commandCount, 0);
 			else
-				gl.multiDrawElementsIndirect(GL.TRIANGLES, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
+				gl.multiDrawElementsIndirect(drawMode, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
 			return;
 		}
@@ -1298,9 +1325,9 @@ class GlDriver extends Driver {
 		var p = 0;
 		for( i in 0...Std.int(args.length/3) )
 			if( ibuf.is32 )
-				gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_INT, args[p++], args[p++]);
+				gl.drawElementsInstanced(drawMode, args[p++], GL.UNSIGNED_INT, args[p++], args[p++]);
 			else
-				gl.drawElementsInstanced(GL.TRIANGLES, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
+				gl.drawElementsInstanced(drawMode, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
 	}
 
 	override function end() {
@@ -1496,7 +1523,7 @@ class GlDriver extends Driver {
 	function checkFeature( f : Feature ) {
 		return switch( f ) {
 
-		case HardwareAccelerated, AllocDepthBuffer, BottomLeftCoords:
+		case HardwareAccelerated, AllocDepthBuffer, BottomLeftCoords, Wireframe:
 			true;
 
 		case StandardDerivatives, MultipleRenderTargets, SRGBTextures if( glES >= 3 ):
@@ -1525,11 +1552,29 @@ class GlDriver extends Driver {
 			false;
 		}
 	}
+	
+	// Draws video element directly onto Texture. Used for video rendering.
+	private function uploadTextureVideoElement( t : h3d.mat.Texture, v : js.html.VideoElement, mipLevel : Int, side : Int ) {
+		var cubic = t.flags.has(Cube);
+		var bind = getBindType(t);
+		if( t.flags.has(IsArray) ) throw "TODO:texImage3D";
+		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
+		gl.bindTexture(bind, t.t.t);
+		if (glES >= 3) {
+			// WebGL2 support
+			gl.texImage2D(face, mipLevel, t.t.internalFmt, v.videoWidth, v.videoHeight, 0, getChannels(t.t), t.t.pixelFmt, untyped v);
+		} else {
+			gl.texImage2D(face, mipLevel, t.t.internalFmt, t.t.internalFmt, t.t.pixelFmt, v);
+		}
+		restoreBind();
+	}
+	
 	#end
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
 		if( curTarget == null )
 			throw "Can't capture main render buffer in GL";
+		discardError();
 		#if js
 		var buffer : js.html.ArrayBufferView = @:privateAccess pixels.bytes.b;
 		switch( curTarget.format ) {

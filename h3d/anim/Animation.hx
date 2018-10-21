@@ -35,10 +35,11 @@ class Animation implements hxd.impl.Serializable {
 	@:s public var pause : Bool;
 	@:s public var loop : Bool;
 
+	public var events(default, null) : Array<Array<String>>;
+
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
 	var isSync : Bool;
-	var events : Array<Array<String>>;
 	var lastEvent : Int;
 
 	function new(name, frameCount, sampling) {
@@ -141,6 +142,7 @@ class Animation implements hxd.impl.Serializable {
 				if( j != null ) {
 					a.targetSkin = currentSkin;
 					a.targetJoint = j.index;
+					continue;
 				}
 			}
 			var obj = base.getObjectByName(a.objectName);
@@ -260,7 +262,7 @@ class Animation implements hxd.impl.Serializable {
 		return name;
 	}
 
-	#if (hxbit && !macro)
+	#if (hxbit && !macro && heaps_enable_serialize)
 	public function unserialize(ctx) {
 		super.unserialize(ctx);
 		if( objects == null ) objects = [];

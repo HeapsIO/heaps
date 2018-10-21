@@ -130,19 +130,15 @@ class Key {
 	}
 
 	public static inline function getFrame() {
-		#if noEngine
-		return frameCount;
-		#else
-		return h3d.Engine.getCurrent().frameCount + 1;
-		#end
+		return hxd.Timer.frameCount + 1;
 	}
 
 	public static function isPressed( code : Int ) {
-		return keyPressed[code] == getFrame();
+		return keyPressed[code] == getFrame() - 1;
 	}
 
 	public static function isReleased( code : Int ) {
-		return keyPressed[code] == -getFrame();
+		return keyPressed[code] == -getFrame() + 1;
 	}
 
 	public static function initialize() {

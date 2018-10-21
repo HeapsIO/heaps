@@ -139,3 +139,28 @@ class ConvertTGA2PNG extends Convert {
 
 }
 
+class ConvertFNT2BFNT extends Convert {
+	
+	var emptyTile : h2d.Tile;
+	
+	public function new() {
+		// Fake tile create subs before discarding the font.
+		emptyTile = @:privateAccess new h2d.Tile(null, 0, 0, 0, 0, 0, 0);
+		super("fnt", "bfnt");
+	}
+	
+	override public function convert()
+	{
+		var font = hxd.fmt.bfnt.FontParser.parse(srcBytes, srcPath, resolveTile);
+		var out = new haxe.io.BytesOutput();
+		new hxd.fmt.bfnt.Writer(out).write(font);
+		save(out.getBytes());
+	}
+	
+	function resolveTile( path : String ) : h2d.Tile {
+		#if sys
+		if (!sys.FileSystem.exists(path)) throw "Could not resolve BitmapFont texture reference at path: " + path;
+		#end
+		return emptyTile;
+	}
+}

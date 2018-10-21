@@ -114,7 +114,7 @@ class ShaderAdvanced extends hxd.App {
 		ubuffer.colorMatrix = new h3d.Buffer(4,4,[UniformBuffer,Dynamic]);
 		var hue : Float = 0.;
 		updates.push(function(dt) {
-			hue += dt * 0.1;
+			hue += dt * 6;
 			var m = new h3d.Matrix();
 			m.identity();
 			m.colorHue(hue);
@@ -130,7 +130,7 @@ class ShaderAdvanced extends hxd.App {
 		var tarr = bmp.addShader(new TestTextureArray());
 		bmp.x = 128;
 		updates.push(function(dt) {
-			tarr.time += dt / 60;
+			tarr.time += dt;
 		});
 		tarr.textures = new h3d.mat.TextureArray(1,1,3,[Target]);
 		tarr.textures.clear(0xFF4040,1,0);

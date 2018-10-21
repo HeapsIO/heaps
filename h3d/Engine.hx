@@ -34,7 +34,6 @@ class Engine {
 	public var fullScreen(default, set) : Bool;
 
 	public var fps(get, never) : Float;
-	public var frameCount : Int = 0;
 
 	var realFps : Float;
 	var lastTime : Float;
@@ -63,7 +62,9 @@ class Engine {
 		realFps = hxd.System.getDefaultFrameRate();
 		lastTime = haxe.Timer.stamp();
 		window.addResizeEvent(onWindowResize);
-		#if (js || cpp || hlsdl || usegl)
+		#if macro
+		driver = new h3d.impl.NullDriver();
+		#elseif (js || cpp || hlsdl || usegl)
 		driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver(antiAlias);
@@ -278,7 +279,6 @@ class Engine {
 		if( driver.isDisposed() )
 			return false;
 		// init
-		frameCount++;
 		drawTriangles = 0;
 		shaderSwitches = 0;
 		drawCalls = 0;
@@ -287,7 +287,7 @@ class Engine {
 		#if usesys
 		haxe.System.beginFrame();
 		#end
-		driver.begin(frameCount);
+		driver.begin(hxd.Timer.frameCount);
 		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
 		return true;
 	}
@@ -363,6 +363,11 @@ class Engine {
 			currentTargetMip = t.mipLevel;
 		}
 		needFlushTarget = false;
+	}
+
+	public function clearF( color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
+		flushTarget();
+		driver.clear(color, depth, stencil);
 	}
 
 	public function clear( ?color : Int, ?depth : Float, ?stencil : Int ) {

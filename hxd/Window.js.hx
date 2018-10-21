@@ -34,6 +34,8 @@ class Window {
 		if( canvas == null ) {
 			canvas = cast js.Browser.document.getElementById("webgl");
 			if( canvas == null ) throw "Missing canvas #webgl";
+			if( canvas.getAttribute("globalEvents") == "0" )
+				element = canvas;
 		}
 		this.canvas = canvas;
 		canvasPos = canvas.getBoundingClientRect();

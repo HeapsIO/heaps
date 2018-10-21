@@ -106,4 +106,8 @@ class MultiFileSystem implements FileSystem {
 			f.dispose();
 	}
 
+	public function dir( path : String ) : Array<FileEntry> {
+		throw "Not Supported";
+	}
+
 }

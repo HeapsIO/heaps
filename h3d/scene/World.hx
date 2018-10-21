@@ -418,7 +418,9 @@ class World extends Object {
 		var n = Std.int(worldSize / chunkSize);
 		for(x in 0...n)
 			for(y in 0...n) {
-				var c = getChunk(x * chunkSize + originX, y * chunkSize + originY, true);
+				var c = getChunk(x * chunkSize + originX, y * chunkSize + originY);
+				if(c == null)
+					continue;
 				c.bounds.addPoint(new h3d.col.Point(c.x, c.y));
 				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y));
 				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y + chunkSize));
@@ -524,6 +526,8 @@ class World extends Object {
 			b.diffuse.dispose();
 			if(b.spec != null)
 				b.spec.dispose();
+			if(b.normal != null)
+				b.normal.dispose();
 		}
 		bigTextures = [];
 		textures = new Map();
@@ -583,7 +587,7 @@ class World extends Object {
 		return b;
 	}
 
-	#if hxbit
+	#if (hxbit && !macro && heaps_enable_serialize)
 	override function customUnserialize(ctx:hxbit.Serializer) {
 		super.customUnserialize(ctx);
 		allChunks = [];

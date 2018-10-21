@@ -18,8 +18,8 @@ class Mask extends hxd.App {
 	}
 
 	override function update(dt:Float) {
-		time += dt/60;
-		obj.rotation += 0.01 * dt;
+		time += dt;
+		obj.rotation += 0.6 * dt;
 	}
 
 	static function main() {

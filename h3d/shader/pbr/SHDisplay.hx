@@ -46,6 +46,7 @@ class SHDisplay extends hxsl.Shader {
 		@param var shCoefsRed : Array<Float,SIZE>;
 		@param var shCoefsGreen : Array<Float,SIZE>;
 		@param var shCoefsBlue : Array<Float,SIZE>;
+		@param var strength : Float;
 
 		var transformedNormal : Vec3;
 
@@ -55,8 +56,13 @@ class SHDisplay extends hxsl.Shader {
 
 		function fragment() {
 			var normal = vec4(transformedNormal.x, transformedNormal.y, transformedNormal.z, 1.0);
-			output.color = vec4(computeIrradiance(normal.xyz) / 3.14, 1.0);
+			output.color = vec4(computeIrradiance(normal.xyz) / 3.14 * strength, 1.0);
 		}
+	}
+
+	public function new(){
+		super();
+		strength = 1.0;
 	}
 
 }

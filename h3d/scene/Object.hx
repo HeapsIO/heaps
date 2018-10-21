@@ -899,7 +899,7 @@ class Object implements hxd.impl.Serializable {
 			c.dispose();
 	}
 
-	#if hxbit
+	#if (hxbit && !macro && heaps_enable_serialize)
 	function customSerialize( ctx : hxbit.Serializer ) {
 
 		var children = [for( o in children ) if( o.allowSerialize ) o];

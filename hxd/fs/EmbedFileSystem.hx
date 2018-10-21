@@ -222,7 +222,7 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		return path == "." ? [] : path.split("/");
 	}
 
-	function subFiles( path : String ) : Array<FileEntry> {
+	function  subFiles( path : String ) : Array<FileEntry> {
 		var r = root;
 		for( p in splitPath(path) )
 			r = Reflect.field(r, p);
@@ -286,6 +286,10 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	}
 
 	public function dispose() {
+	}
+
+	public function dir( path : String ) : Array<FileEntry> {
+		throw "Not Supported";
 	}
 
 }

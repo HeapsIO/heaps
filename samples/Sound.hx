@@ -39,7 +39,7 @@ class Sound extends hxd.App {
 	}
 
 	override function update(dt:Float) {
-		time += dt/60;
+		time += dt;
 		if( time > 1 ) {
 			time--;
 			hxd.Res.sound_fx.play();

@@ -2,7 +2,9 @@ package h3d.mat;
 import h3d.mat.Data;
 
 @:allow(h3d.mat.Material)
+#if !macro
 @:build(hxd.impl.BitsBuilder.build())
+#end
 class Stencil implements hxd.impl.Serializable {
 
 	@:s var maskBits  : Int = 0;
@@ -63,7 +65,7 @@ class Stencil implements hxd.impl.Serializable {
 		maskBits = s.maskBits;
 	}
 
-	#if hxbit
+	#if (!macro && hxbit)
 	public function customSerialize( ctx : hxbit.Serializer ) {
 	}
 	public function customUnserialize( ctx : hxbit.Serializer ) {

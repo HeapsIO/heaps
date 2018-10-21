@@ -303,7 +303,7 @@ class GlslOut {
 				add(",");
 				addValue(e2, tabs);
 				add(")");
-			case [OpAssignOp(OpMod) | OpMod, _, _]:
+			case [OpAssignOp(OpMod) | OpMod, _, _] if( e.t != TInt ):
 				if( op.match(OpAssignOp(_)) ) {
 					addValue(e1, tabs);
 					add(" = ");

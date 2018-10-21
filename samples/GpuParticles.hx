@@ -59,7 +59,7 @@ class GpuParticles extends SampleApp {
 	override function update(dt:Float) {
 
 		if( moving ) {
-			time += dt * 0.01;
+			time += dt * 0.6;
 			parts.x = Math.cos(time) * 5;
 			parts.y = Math.sin(time) * 5;
 		}

@@ -113,4 +113,9 @@ class BytesFileSystem implements FileSystem {
 	public function dispose() {
 	}
 
+	public function dir( path : String ) : Array<FileEntry> {
+		throw "Not implemented";
+		return null;
+	}
+
 }

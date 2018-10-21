@@ -161,7 +161,7 @@ class Eval {
 		case [ToFloat, [ { e : TConst(CInt(i)) } ]]: TConst(CFloat(i));
 		case [Trace, args]:
 			for( a in args )
-				haxe.Log.trace(Printer.toString(a), { fileName : a.p.file, lineNumber : 0, className : null, methodName : null });
+				haxe.Log.trace(Printer.toString(a), { fileName : #if macro haxe.macro.Context.getPosInfos(a.p).file #else a.p.file #end, lineNumber : 0, className : null, methodName : null });
 			TBlock([]);
 		case [ChannelRead|ChannelReadLod, _]:
 			var i = switch( args[0].e ) { case TConst(CInt(i)): i; default: Error.t("Cannot eval complex channel " + Printer.toString(args[0],true)+" "+constantsToString(), pos); throw "assert"; };

@@ -98,7 +98,16 @@ class Texture {
 		return format.match(SRGB | SRGB_ALPHA);
 	}
 
+	function checkAlloc() {
+		if( t == null && realloc != null ) {
+			alloc();
+			realloc();
+		}
+	}
+
 	public function clone( ?allocPos : h3d.impl.AllocPos ) {
+		checkAlloc();
+		if( t == null ) throw "Can't clone disposed texture";
 		var old = lastFrame;
 		preventAutoDispose();
 		var flags = [];
@@ -107,8 +116,12 @@ class Texture {
 				flags.push(f);
 		var t = new Texture(width, height, flags, format, allocPos);
 		t.name = this.name;
-		if(this.flags.has(Cube)) h3d.pass.CubeCopy.run(this, t);
-		else h3d.pass.Copy.run(this, t);
+		#if !macro
+		if(this.flags.has(Cube))
+			h3d.pass.CubeCopy.run(this, t);
+		else
+		#end
+			h3d.pass.Copy.run(this, t);
 		lastFrame = old;
 		return t;
 	}
@@ -274,6 +287,8 @@ class Texture {
 		BEWARE : if the texture is a cached image (hxd.res.Image), the swap will affect the cache!
 	**/
 	public function swapTexture( t : Texture ) {
+		checkAlloc();
+		t.checkAlloc();
 		if( isDisposed() || t.isDisposed() )
 			throw "One of the two texture is disposed";
 		var tmp = this.t;

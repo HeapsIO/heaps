@@ -24,6 +24,10 @@ enum PartEmitMode {
 		A box, parametrized with emitDist and emitDistY
 	**/
 	Box;
+	/**
+		A box, parametrized with emitAngle and emitDistance
+	**/
+	Direction;
 }
 
 private class ParticleShader extends hxsl.Shader {
@@ -126,6 +130,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 }
 
 @:access(h2d.SpriteBatch)
+@:access(h2d.Object)
 class ParticleGroup {
 
 	static var FIELDS = null;
@@ -161,7 +166,8 @@ class ParticleGroup {
 	public var emitStartDist(default, set) : Float = 0.;
 	public var emitDist(default, set) : Float	= 50.;
 	public var emitDistY(default, set) : Float	= 50.;
-	public var emitAngle(default,set) : Float 	= -0.5;
+	public var emitAngle(default, set) : Float 	= -0.5;
+	public var emitDirectionAsAngle(default, set) : Bool = false;
 	public var emitSync(default, set) : Float	= 0;
 	public var emitDelay(default, set) : Float	= 0;
 
@@ -197,49 +203,64 @@ class ParticleGroup {
 	public var animationRepeat(default,set) : Float	= 1;
 	public var texture(default,set) : h3d.mat.Texture;
 	public var colorGradient(default,set) : h3d.mat.Texture;
+	
+	/** Should partcles follow the emitter or stay in place? **/
+	public var isRelative(default, set) : Bool = true;
+	/** Should group rebuild on parameters change.
+		Note that some parameters take immediate effect on the existing particles, and some would force rebuild reagrdless.
+		Parameters that take immediate effect:
+		speedIncr, gravity, gravityAngle, fadeIn, fadeOut, fadePower, rotAuto, rotInit, incrX, incrY, emitLoop, blendMode
+		Parameters that will always force rebuild:
+		enable, sortMode, isRelative, texture, frameCount, frameDivisionX, frameDivisionY, nparts
+		Parameters that newer cause rebuild:
+		blendMode, colorGradient, animationRepeat
+	**/
+	public var rebuildOnChange : Bool = true;
 
 	inline function set_enable(v) { enable = v; if( !v ) { batch.clear(); needRebuild = true; }; return v; }
 	inline function set_sortMode(v) { needRebuild = true; return sortMode = v; }
 	inline function set_blendMode(v) { batch.blendMode = v; return blendMode = v; }
-	inline function set_size(v) { needRebuild = true; return size = v; }
-	inline function set_sizeRand(v) { needRebuild = true; return sizeRand = v; }
-	inline function set_sizeIncr(v) { needRebuild = true; return sizeIncr = v; }
-	inline function set_incrX(v) { needRebuild = true; return incrX = v; }
-	inline function set_incrY(v) { needRebuild = true; return incrY = v; }
-	inline function set_speed(v) { needRebuild = true; return speed = v; }
-	inline function set_speedIncr(v) { needRebuild = true; return speedIncr = v; }
-	inline function set_gravity(v) { needRebuild = true; return gravity = v; }
+	inline function set_size(v) { if (rebuildOnChange) needRebuild = true; return size = v; }
+	inline function set_sizeRand(v) { if (rebuildOnChange) needRebuild = true; return sizeRand = v; }
+	inline function set_sizeIncr(v) { if (rebuildOnChange) needRebuild = true; return sizeIncr = v; }
+	inline function set_incrX(v) { if (rebuildOnChange) needRebuild = true; return incrX = v; }
+	inline function set_incrY(v) { if (rebuildOnChange) needRebuild = true; return incrY = v; }
+	inline function set_speed(v) { if (rebuildOnChange) needRebuild = true; return speed = v; }
+	inline function set_speedIncr(v) { if (rebuildOnChange) needRebuild = true; return speedIncr = v; }
+	inline function set_gravity(v) { if (rebuildOnChange) needRebuild = true; return gravity = v; }
 	inline function set_gravityAngle(v : Float) {
-		needRebuild = true;
+		if (rebuildOnChange) needRebuild = true;
 		cosGravityAngle = Math.cos(v * Math.PI * 0.5);
 		sinGravityAngle = Math.sin(v * Math.PI * 0.5);
 		return gravityAngle = v;
 	}
 
-	inline function set_speedRand(v) { needRebuild = true; return speedRand = v; }
-	inline function set_life(v) { needRebuild = true; return life = v; }
-	inline function set_lifeRand(v) { needRebuild = true; return lifeRand = v; }
+	inline function set_speedRand(v) { if (rebuildOnChange) needRebuild = true; return speedRand = v; }
+	inline function set_life(v) { if (rebuildOnChange) needRebuild = true; return life = v; }
+	inline function set_lifeRand(v) { if (rebuildOnChange) needRebuild = true; return lifeRand = v; }
 	inline function set_nparts(n) { needRebuild = true; return nparts = n; }
-	inline function set_dx(v) { needRebuild = true; return dx = v; }
-	inline function set_dy(v) { needRebuild = true; return dy = v; }
-	inline function set_emitLoop(v) { needRebuild = true; return emitLoop = v; }
-	inline function set_emitMode(v) { needRebuild = true; return emitMode = v; }
-	inline function set_emitStartDist(v) { needRebuild = true; return emitStartDist = v; }
-	inline function set_emitDist(v) { needRebuild = true; return emitDist = v; }
-	inline function set_emitDistY(v) { needRebuild = true; return emitDistY = v; }
-	inline function set_emitAngle(v) { needRebuild = true; return emitAngle = v; }
-	inline function set_emitSync(v) { needRebuild = true; return emitSync = v; }
-	inline function set_emitDelay(v) { needRebuild = true; return emitDelay = v; }
-	inline function set_rotInit(v) { needRebuild = true; return rotInit = v; }
-	inline function set_rotSpeed(v) { needRebuild = true; return rotSpeed = v; }
-	inline function set_rotSpeedRand(v) { needRebuild = true; return rotSpeedRand = v; }
+	inline function set_dx(v) { if (rebuildOnChange) needRebuild = true; return dx = v; }
+	inline function set_dy(v) { if (rebuildOnChange) needRebuild = true; return dy = v; }
+	inline function set_emitLoop(v) { if (rebuildOnChange) needRebuild = true; return emitLoop = v; }
+	inline function set_emitMode(v) { if (rebuildOnChange) needRebuild = true; return emitMode = v; }
+	inline function set_emitStartDist(v) { if (rebuildOnChange) needRebuild = true; return emitStartDist = v; }
+	inline function set_emitDist(v) { if (rebuildOnChange) needRebuild = true; return emitDist = v; }
+	inline function set_emitDistY(v) { if (rebuildOnChange) needRebuild = true; return emitDistY = v; }
+	inline function set_emitAngle(v) { if (rebuildOnChange) needRebuild = true; return emitAngle = v; }
+	inline function set_emitDirectionAsAngle(v) { if (rebuildOnChange) needRebuild = true; return emitDirectionAsAngle = v; }
+	inline function set_emitSync(v) { if (rebuildOnChange) needRebuild = true; return emitSync = v; }
+	inline function set_emitDelay(v) { if (rebuildOnChange) needRebuild = true; return emitDelay = v; }
+	inline function set_rotInit(v) { if (rebuildOnChange) needRebuild = true; return rotInit = v; }
+	inline function set_rotSpeed(v) { if (rebuildOnChange) needRebuild = true; return rotSpeed = v; }
+	inline function set_rotSpeedRand(v) { if (rebuildOnChange) needRebuild = true; return rotSpeedRand = v; }
 	inline function set_texture(t) { texture = t; makeTiles(); return t; }
 	inline function set_colorGradient(t) { colorGradient = t; return t; }
 	inline function set_frameCount(v) { frameCount = v; makeTiles(); return v; }
 	inline function set_frameDivisionX(v) { frameDivisionX = v; makeTiles(); return v; }
 	inline function set_frameDivisionY(v) { frameDivisionY = v; makeTiles(); return v; }
 	inline function set_animationRepeat(v) return animationRepeat = v;
-
+	inline function set_isRelative(v) { needRebuild = true; return isRelative = v; }
+	
 	public function new(p) {
 		this.parts = p;
 		batch = new SpriteBatch(null, p);
@@ -339,6 +360,15 @@ class ParticleGroup {
 				var yy = sinA * (p.x - dx) + cosA * (p.y - dy) + dy;
 				p.x = xx;
 				p.y = yy;
+
+			case Direction:
+				speed = Math.abs(speed);
+				p.vx = Math.cos(g.emitAngle);
+				p.vy = Math.sin(g.emitAngle);
+				
+				var r = g.emitStartDist + g.emitDist * rand();
+				p.x += r * Math.cos(g.emitAngle - Math.PI / 2);
+				p.y += r * Math.sin(g.emitAngle - Math.PI / 2);
 		}
 
 		p.scale = size;
@@ -351,6 +381,33 @@ class ParticleGroup {
 		p.vy *= speed;
 		p.life = 0;
 		p.maxLife = life;
+
+		var rot = emitDirectionAsAngle ? Math.atan2(p.vy, p.vx) : srand() * Math.PI * g.rotInit;
+		p.rotation = rot;
+
+		if ( !isRelative ) {
+			// Less this.parts access
+			var parts = this.parts;
+			// calcAbsPos() was already called, because during both rebuild() and Particle.update()
+			// called during sync() call which calls this function if required before any of this happens.
+			//parts.syncPos();
+
+			var px = p.x;
+			p.x = px * parts.matA + p.y * parts.matC + parts.absX;
+			p.y = px * parts.matB + p.y * parts.matD + parts.absY;
+			p.scaleX = Math.sqrt((parts.matA * parts.matA) + (parts.matC * parts.matC)) * size;
+			p.scaleY = Math.sqrt((parts.matB * parts.matB) + (parts.matD * parts.matD)) * size;
+			var rot = Math.atan2(parts.matB / p.scaleY, parts.matA / p.scaleX);
+			p.rotation += rot;
+			
+			// Also rotate velocity.
+			var cos = Math.cos(rot);
+			var sin = Math.sin(rot);
+			px = p.vx;
+			p.vx = px * cos - p.vy * sin;
+			p.vy = px * sin + p.vy * cos;
+		}
+
 	}
 
 	public function save() {
@@ -446,7 +503,7 @@ class Particles extends Drawable {
 		super.sync(ctx);
 		var hasPart = false;
 		for( g in groups ) {
-			if( g.needRebuild && g.enable )
+			if ( g.needRebuild && g.enable )
 				g.rebuild();
 			if( @:privateAccess g.batch.first != null )
 				hasPart = true;
@@ -457,13 +514,36 @@ class Particles extends Drawable {
 
 	override function draw(ctx:RenderContext) {
 		var old = blendMode;
+		var realX : Float = absX;
+		var realY : Float = absY;
+		var realA : Float = matA;
+		var realB : Float = matB;
+		var realC : Float = matC;
+		var realD : Float = matD;
+
 		for( g in groups )
 			if( g.enable ) {
 				pshader.gradient = g.colorGradient;
 				pshader.hasGradient = g.colorGradient != null && g.colorGradient.height == 1;
 				pshader.has2DGradient = g.colorGradient != null && g.colorGradient.height > 1;
 				blendMode = g.batch.blendMode;
-				g.batch.drawWith(ctx, this);
+				if ( g.isRelative ) {
+					g.batch.drawWith(ctx, this);
+				} else {
+					matA = 1;
+					matB = 0;
+					matC = 0;
+					matD = 1;
+					absX = 0;
+					absY = 0;
+					g.batch.drawWith(ctx, this);
+					matA = realA;
+					matB = realB;
+					matC = realC;
+					matD = realD;
+					absX = realX;
+					absY = realY;
+				}
 			}
 		blendMode = old;
 	}

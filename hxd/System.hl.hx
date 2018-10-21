@@ -225,7 +225,7 @@ class System {
 	static function updateCursor() : Void {
 		if (currentCustomCursor != null)
 		{
-			var change = currentCustomCursor.update(hxd.Timer.deltaT);
+			var change = currentCustomCursor.update(hxd.Timer.elapsedTime);
 			if (change != -1) {
 				currentCustomCursor.alloc[change].set();
 			}

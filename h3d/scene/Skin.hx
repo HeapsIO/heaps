@@ -271,7 +271,7 @@ class Skin extends MultiMaterial {
 		}
 	}
 
-	#if hxbit
+	#if (hxbit && !macro && heaps_enable_serialize)
 	override function customUnserialize(ctx:hxbit.Serializer) {
 		super.customUnserialize(ctx);
 		var prim = Std.instance(primitive, h3d.prim.HMDModel);
