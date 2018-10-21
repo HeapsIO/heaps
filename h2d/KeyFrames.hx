@@ -4,7 +4,7 @@ import hxd.fmt.kframes.Data;
 typedef KeyframesLayer = {
 	var id : Int;
 	var name : String;
-	var spr : Sprite;
+	var spr : Object;
 	var tiles : Array<h2d.Tile>;
 	var animations : Array<KFAnimation>;
 	var from : Int;
@@ -46,7 +46,7 @@ class KeyFrames extends Mask {
 		for( f in file.features ) {
 			var spr, tiles = null;
 			if( f.backed_image == null ) {
-				spr = new h2d.Sprite(this);
+				spr = new h2d.Object(this);
 			} else {
 				var reg = ~/(.*?)\[([0-9]+)-([0-9]+)\](.*)/;
 				if( reg.match(f.backed_image) ){
@@ -57,7 +57,7 @@ class KeyFrames extends Mask {
 				}else{
 					tiles = [loadTile(f.backed_image)];
 				}
-				
+
 				for( t in tiles ) t.scaleToSize(f.size.x, f.size.y);
 				var bmp = new h2d.Bitmap(tiles[0], this);
 				bmp.smooth = smooth;

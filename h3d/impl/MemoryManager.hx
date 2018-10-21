@@ -153,7 +153,10 @@ class MemoryManager {
 		}
 
 		if( !b.flags.has(Managed) ) {
-			var m = new ManagedBuffer(stride, b.vertices, b.flags.has(Dynamic) ? [Dynamic] : null);
+			var flags : Array<h3d.Buffer.BufferFlag> = null;
+			if( b.flags.has(Dynamic) ) { if( flags == null ) flags = []; flags.push(Dynamic); }
+			if( b.flags.has(UniformBuffer) ) { if( flags == null ) flags = []; flags.push(UniformBuffer); }
+ 			var m = new ManagedBuffer(stride, b.vertices, flags);
 			#if debug
 			m.next = buffers[0];
 			buffers[0] = m;
@@ -213,14 +216,14 @@ class MemoryManager {
 		indexes.remove(i);
 		driver.disposeIndexes(i.ibuf);
 		i.ibuf = null;
-		usedMemory -= i.count * 2;
+		usedMemory -= i.count * (i.is32 ? 4 : 2);
 	}
 
 	@:allow(h3d.Indexes)
 	function allocIndexes( i : Indexes ) {
-		i.ibuf = driver.allocIndexes(i.count);
+		i.ibuf = driver.allocIndexes(i.count,i.is32);
 		indexes.push(i);
-		usedMemory += i.count * 2;
+		usedMemory += i.count * (i.is32 ? 4 : 2);
 	}
 
 

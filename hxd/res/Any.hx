@@ -51,11 +51,9 @@ class Any extends Resource {
 		return loader.loadCache(entry.path, hxd.res.Sound);
 	}
 
-	#if hide
 	public function toPrefab() {
-		return loader.loadCache(entry.path, hide.prefab.Resource);
+		return loader.loadCache(entry.path, hxd.res.Prefab);
 	}
-	#end
 
 	public function to<T:hxd.res.Resource>( c : Class<T> ) : T {
 		return loader.loadCache(entry.path, c);

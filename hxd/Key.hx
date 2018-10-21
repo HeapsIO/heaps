@@ -150,7 +150,7 @@ class Key {
 			dispose();
 		initDone = true;
 		keyPressed = [];
-		Stage.getInstance().addEventTarget(onEvent);
+		Window.getInstance().addEventTarget(onEvent);
 		#if flash
 		flash.Lib.current.stage.addEventListener(flash.events.Event.DEACTIVATE, onDeactivate);
 		#end
@@ -158,7 +158,7 @@ class Key {
 
 	public static function dispose() {
 		if( initDone ) {
-			Stage.getInstance().removeEventTarget(onEvent);
+			Window.getInstance().removeEventTarget(onEvent);
 			#if flash
 			flash.Lib.current.stage.removeEventListener(flash.events.Event.DEACTIVATE, onDeactivate);
 			#end
@@ -223,6 +223,9 @@ class Key {
 		case RCTRL: "RCtrl";
 		case LALT: "LAlt";
 		case RALT: "RAlt";
+		case MOUSE_LEFT: "MouseLeft";
+		case MOUSE_MIDDLE: "MouseMiddle";
+		case MOUSE_RIGHT: "MouseRight";
 		default:
 			if( c >= NUMBER_0 && c <= NUMBER_9 )
 				""+(c - NUMBER_0);

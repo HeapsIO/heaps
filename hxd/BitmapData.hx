@@ -166,7 +166,7 @@ class BitmapData {
 			r.x = x;
 			r.y = y;
 			bmp.draw(src.bmp, m, null, flash.display.BlendMode.SCREEN, r, false);
-		case SoftAdd:
+		case SoftAdd, AlphaAdd, Sub, Max, Min:
 			throw "BlendMode not supported";
 		}
 		#else
@@ -192,7 +192,7 @@ class BitmapData {
 			flash.display.BlendMode.MULTIPLY;
 		case Screen:
 			flash.display.BlendMode.SCREEN;
-		case SoftAdd:
+		case SoftAdd, AlphaAdd, Sub, Max, Min:
 			throw "BlendMode not supported";
 		}
 
@@ -229,6 +229,9 @@ class BitmapData {
 		#end
 	}
 
+	/* Line plotting using Yevgeny P. Kuzmin. - Bresenham's Line Generation Algorithm with Built-in Clipping. Computer Graphics Forum, 14(5):275-280, 2005.
+ 	 *  see: https://stackoverflow.com/questions/40884680/how-to-use-bresenhams-line-drawing-algorithm-with-clipping/40902741#40902741 )
+	 */
 	public function line( x0 : Int, y0 : Int, x1 : Int, y1 : Int, color : Int ) {
 		var dx = x1 - x0;
 		var dy = y1 - y0;
@@ -238,6 +241,8 @@ class BitmapData {
 				y0 = y1;
 				y1 = tmp;
 			}
+			if (y0<0) y0=0;
+			if (y1>height-1) y1=height-1;
 			for( y in y0...y1 + 1 )
 				setPixel(x0, y, color);
 		} else if( dy == 0 ) {
@@ -246,6 +251,8 @@ class BitmapData {
 				x0 = x1;
 				x1 = tmp;
 			}
+			if (x0<0) x0=0;
+			if (x1>width-1) x1=width-1;
 			for( x in x0...x1 + 1 )
 				setPixel(x, y0, color);
 		} else {
@@ -257,12 +264,12 @@ class BitmapData {
 			var clip_y1 : Int;
 
 			if ( x0<x1 ) {
-				if ( x0>=width || x1 <0 )	return;
+				if ( x0>=width || x1 <0 )   return;
 				sx = 1;
 				clip_x0 = 0;
 				clip_x1 = width-1;
 			} else {
-				if ( x1>=width || x0<0 )	return;
+				if ( x1>=width || x0<0 ) 	return;
 				sx = -1;
 				x1 = -x1;
 				x0 = -x0;
@@ -271,12 +278,12 @@ class BitmapData {
 			}
 
 			if ( y0<y1 ) {
-				if ( y0>=height || y1 <0 )	return;
+				if ( y0>=height || y1 <0 ) return;
 				sy = 1;
 				clip_y0 = 0;
 				clip_y1 = height-1;
 			} else {
-				if ( y1>=width || y0<0 )	return;
+				if ( y1>=width || y0<0 ) return;
 				sy = -1;
 				y1 = -y1;
 				y0 = -y0;
@@ -299,16 +306,17 @@ class BitmapData {
 
 				// Clipping on (x0;y0) side
 				if ( y0 < clip_y0 ) {
-					// Compute intersection (???;clip_y0) using Int64 to avoid overflow
-					var temp : haxe.Int64  = haxe.Int64.ofInt(d2x) * (clip_y0-y0) - dx;
-					var xinc : haxe.Int64 = (temp / d2y);
-					x += haxe.Int64.toInt(xinc);
+					// Compute intersection (???;clip_y0) using float to avoid overflow
+					var temp : Float = d2x;
+					temp = temp * (clip_y0-y0) - dx;
+					var xinc = temp / d2y;
+					x += Std.int(xinc);
 
-					if ( x > clip_x1 )	return;
+					if ( x > clip_x1 ) return;
 
 					if ( x >= clip_x0 ) {
-						temp -= xinc * d2y;		// temp should fit a regular Int now
-						delta -= haxe.Int64.toInt(temp) + dx;
+						temp -= xinc * d2y;
+						delta -= Std.int(temp) + dx;
 						y = clip_y0;
 
 						if (temp>0) {
@@ -321,14 +329,15 @@ class BitmapData {
 
 				if( !tracing_can_start && x0 < clip_x0 ) {
 					// Compute intersection (clip_x0;???)
-					var temp : haxe.Int64 = haxe.Int64.ofInt(d2y)*(clip_x0 - x0);
-					var yinc : haxe.Int64 = temp / d2x;
-					y += haxe.Int64.toInt(yinc.low);
+					var temp : Float = d2y;
+					temp *= (clip_x0 - x0);
+					var yinc = temp / d2x;
+					y += Std.int(yinc);
 					temp %= d2x;
-					if ( y > clip_y1 || ( y == clip_y1 && temp > dx ) )	return;
+					if ( y > clip_y1 || ( y == clip_y1 && temp > dx ) ) return;
 
 					x = clip_x0;
-					delta += haxe.Int64.toInt(temp.low);
+					delta += Std.int(temp);
 
 					if ( temp >= dx ) {
 						++y;
@@ -341,9 +350,10 @@ class BitmapData {
 				var xend = x1;
 				if ( y1 > clip_y1 ) {
 					// Compute intersection (???;clip_y1)
-					var temp : haxe.Int64 = haxe.Int64.ofInt(d2x) * (clip_y1-y1) + dx;
-					var xinc : haxe.Int64 = temp / d2y;
-					xend += haxe.Int64.toInt(xinc);
+					var temp : Float = d2x;
+					temp = temp * (clip_y1-y1) + dx;
+					var xinc = temp / d2y;
+					xend += Std.int(xinc);
 
 					if ( temp - xinc*d2y == 0 )
                 		--xend;
@@ -379,15 +389,16 @@ class BitmapData {
 
 				// Clipping on (x0;y0) side
 				if ( x0 < clip_x0 ) {
-					var temp : haxe.Int64  = haxe.Int64.ofInt(d2y) * (clip_x0-x0) - dy;
-					var yinc : haxe.Int64 = (temp / d2x);
-					y += haxe.Int64.toInt(yinc);
+					var temp : Float = d2y;
+					temp = temp * (clip_x0-x0) - dy;
+					var yinc = (temp / d2x);
+					y += Std.int(yinc);
 
 					if ( y > clip_y1 )	return;
 
 					if ( y >= clip_y0 ) {
 						temp -= yinc * d2x;
-						delta -= haxe.Int64.toInt(temp) + dy;
+						delta -= Std.int(temp) + dy;
 						x = clip_x0;
 
 						if (temp>0) {
@@ -399,14 +410,15 @@ class BitmapData {
 				}
 
 				if( !tracing_can_start && y0 < clip_y0 ) {
-					var temp : haxe.Int64 = haxe.Int64.ofInt(d2x)*(clip_y0 - y0);
-					var xinc : haxe.Int64 = temp / d2y;
-					x += haxe.Int64.toInt(xinc.low);
+					var temp : Float = d2x;
+					temp *= (clip_y0 - y0);
+					var xinc = temp / d2y;
+					x += Std.int(xinc);
 					temp %= d2y;
-					if ( x > clip_x1 || ( x == clip_x1 && temp > dy ) )	return;
+					if ( x > clip_x1 || ( x == clip_x1 && temp > dy ) ) return;
 
 					y = clip_y0;
-					delta += haxe.Int64.toInt(temp.low);
+					delta += Std.int(temp);
 
 					if ( temp >= dy ) {
 						++x;
@@ -417,9 +429,10 @@ class BitmapData {
 				// clipping on (x1;y1) side
 				var yend = y1;
 				if ( x1 > clip_x1 ) {
-					var temp : haxe.Int64 = haxe.Int64.ofInt(d2y) * (clip_x1-x1) + dy;
-					var yinc : haxe.Int64 = temp / d2x;
-					yend += haxe.Int64.toInt(yinc);
+					var temp : Float = d2y;
+					temp = temp * (clip_x1-x1) + dy;
+					var yinc = temp / d2x;
+					yend += Std.int(yinc);
 
 					if ( temp - yinc*d2x == 0 )
                 		--yend;
@@ -618,7 +631,7 @@ class BitmapData {
 		var p = new Pixels(width, height, this.data.data.buffer, RGBA);
 		return p;
 		#else
-		var out = hxd.impl.Tmp.getBytes(data.width * data.height * 4);
+		var out = haxe.io.Bytes.alloc(data.width * data.height * 4);
 		for( i in 0...data.width*data.height )
 			out.setInt32(i << 2, data.pixels[i]);
 		return new Pixels(data.width, data.height, out, BGRA);

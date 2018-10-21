@@ -1,13 +1,13 @@
 package h2d;
 
-private class Fake extends Sprite {
+private class Fake extends Object {
 	var dd : Dropdown;
 	public function new(dd : Dropdown) {
 		super(dd);
 		this.dd = dd;
 	}
 
-	override function getBoundsRec(relativeTo:Sprite, out:h2d.col.Bounds, forSize:Bool) {
+	override function getBoundsRec(relativeTo:Object, out:h2d.col.Bounds, forSize:Bool) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		if (dd.selectedItem >= 0) {
 			var item = @:privateAccess dd.items[dd.selectedItem];
@@ -31,7 +31,7 @@ private class Fake extends Sprite {
 }
 
 class Dropdown extends Flow {
-	var items : Array<h2d.Sprite>;
+	var items : Array<h2d.Object>;
 	var fake : Fake;
 	var cursor : h2d.Bitmap;
 	var arrow : h2d.Bitmap;
@@ -154,7 +154,7 @@ class Dropdown extends Flow {
 		return tileOverItem = t;
 	}
 
-	public function addItem(s : Sprite) {
+	public function addItem(s : Object) {
 		items.push(s);
 		dropdownList.addChild(s);
 		var width = Std.int(dropdownList.getSize().width);
@@ -164,6 +164,7 @@ class Dropdown extends Flow {
 
 	function set_canEdit(b) {
 		if( !b ) close();
+		alpha = b ? 1 : 0.7;
 		return canEdit = b;
 	}
 
@@ -209,9 +210,9 @@ class Dropdown extends Flow {
 	public dynamic function onClose() {
 	}
 
-	public dynamic function onOverItem(item : Sprite) {
+	public dynamic function onOverItem(item : Object) {
 	}
 
-	public dynamic function onOutItem(item : Sprite) {
+	public dynamic function onOutItem(item : Object) {
 	}
 }

@@ -129,9 +129,9 @@ class LogDriver extends Driver {
 				str = ~/((fragment)|(vertex))Textures\[([0-9]+)\]/g.map(str, function(r) {
 					var name = null;
 					var cid = Std.parseInt(r.matched(4));
-					var t = shader.textures2D;
+					var t = shader.textures;
 					while( t != null ) {
-						if( t.pos == cid )
+						if( t.pos == cid && t.type == TSampler2D )
 							return t.name;
 						t = t.next;
 					}
@@ -140,9 +140,9 @@ class LogDriver extends Driver {
 				str = ~/((fragment)|(vertex))TexturesCube\[([0-9]+)\]/g.map(str, function(r) {
 					var name = null;
 					var cid = Std.parseInt(r.matched(4));
-					var t = shader.texturesCube;
+					var t = shader.textures;
 					while( t != null ) {
-						if( t.pos == cid )
+						if( t.pos == cid && t.type == TSamplerCube )
 							return t.name;
 						t = t.next;
 					}
@@ -217,16 +217,13 @@ class LogDriver extends Driver {
 			}
 			logVars(currentShader.vertex, buffers.vertex);
 			logVars(currentShader.fragment, buffers.fragment);
+		case Buffers:
+			// TODO
 		case Textures:
 			inline function logVars( s : hxsl.RuntimeShader.RuntimeShaderData, buf : h3d.shader.Buffers.ShaderBuffers ) {
-				var t = s.textures2D;
+				var t = s.textures;
 				while( t != null ) {
 					log('Set ${s.vertex ? "Vertex" : "Fragment"} Texture@${t.pos} ' + t.name+"=" + textureInfos(buf.tex,t.pos));
-					t = t.next;
-				}
-				t = s.texturesCube;
-				while( t != null ) {
-					log('Set ${s.vertex ? "Vertex" : "Fragment"} TextureCube@${t.pos} ' + t.name+"=" + textureInfos(buf.tex,t.pos + s.textures2DCount));
 					t = t.next;
 				}
 			}
@@ -288,7 +285,7 @@ class LogDriver extends Driver {
 		log('End');
 		d.end();
 	}
-	
+
 	override function present() {
 		log('Present');
 		d.present();
@@ -304,9 +301,9 @@ class LogDriver extends Driver {
 		return d.allocTexture(t);
 	}
 
-	override function allocIndexes( count : Int ) : IndexBuffer {
-		log('AllocIndexes $count');
-		return d.allocIndexes(count);
+	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
+		log('AllocIndexes $count $is32');
+		return d.allocIndexes(count,is32);
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {

@@ -36,6 +36,8 @@ class ShaderConst {
 
 class SharedShader {
 
+	public static var UNROLL_LOOPS = #if flash true #else false #end;
+
 	public var data : ShaderData;
 	public var globals : Array<ShaderGlobal>;
 	public var consts : ShaderConst;
@@ -78,9 +80,7 @@ class SharedShader {
 		#if flash
 		eval.eliminateConditionals = true;
 		#end
-		#if (js || flash)
-		eval.unrollLoops = true;
-		#end
+		eval.unrollLoops = UNROLL_LOOPS;
 		var i = new ShaderInstance(eval.eval(data));
 		#if debug
 		Printer.check(i.shader, [data]);

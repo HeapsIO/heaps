@@ -76,23 +76,13 @@ private class PakEntry extends FileEntry {
 		return pak.read(file.dataSize);
 	}
 
-	override function getTmpBytes() {
-		// don't use cacheBytes
-		pak.seek(file.dataPosition, SeekBegin);
-		var tmp = hxd.impl.Tmp.getBytes(file.dataSize);
-		fs.totalReadBytes += file.dataSize;
-		fs.totalReadCount++;
-		pak.readFullBytes(tmp, 0, file.dataSize);
-		return tmp;
-	}
-
 	override function open() {
 		if( openedBytes == null )
 			openedBytes = fs.getCached(this);
 		if( openedBytes == null ) {
 			fs.totalReadBytes += file.dataSize;
 			fs.totalReadCount++;
-			openedBytes = hxd.impl.Tmp.getBytes(file.dataSize);
+			openedBytes = haxe.io.Bytes.alloc(file.dataSize);
 			pak.seek(file.dataPosition, SeekBegin);
 			pak.readBytes(openedBytes, 0, file.dataSize);
 		}

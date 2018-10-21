@@ -20,6 +20,12 @@ class Pass implements hxd.impl.Serializable {
 	**/
 	@:s public var dynamicParameters : Bool;
 
+	/**
+		Mark the pass as static, this will allow some renderers or shadows to filter it
+		when rendering static/dynamic parts.
+	**/
+	@:s public var isStatic : Bool;
+
 	@:bits(bits) public var culling : Face;
 	@:bits(bits) public var depthWrite : Bool;
 	@:bits(bits) public var depthTest : Compare;
@@ -29,7 +35,7 @@ class Pass implements hxd.impl.Serializable {
 	@:bits(bits) public var blendAlphaDst : Blend;
 	@:bits(bits) public var blendOp : Operation;
 	@:bits(bits) public var blendAlphaOp : Operation;
-	@:bits(bits, 4) public var colorMask : Int;
+	public var colorMask : Int;
 
 	@:s public var stencil : Stencil;
 
@@ -80,20 +86,63 @@ class Pass implements hxd.impl.Serializable {
 
 	public function setBlendMode( b : BlendMode ) {
 		switch( b ) {
-		case None:
+		case None: // Out = 1 * Src + 0 * Dst
 			blend(One, Zero);
-		case Alpha:
+			blendOp = Add;
+			blendAlphaOp = Add;
+		case Alpha: // Out = SrcA * Src + (1 - SrcA) * Dst
 			blend(SrcAlpha, OneMinusSrcAlpha);
-		case Add:
+			blendOp = Add;
+			blendAlphaOp = Add;
+		case Add: // Out = SrcA * Src + 1 * Dst
 			blend(SrcAlpha, One);
-		case SoftAdd:
+			blendOp = Add;
+			blendAlphaOp = Add;
+		case AlphaAdd: // Out = Src + (1 - SrcA) * Dst
+			blend(One, OneMinusSrcAlpha);
+			blendOp = Add;
+			blendAlphaOp = Add;
+		case SoftAdd: // Out = (1 - Dst) * Src + 1 * Dst
 			blend(OneMinusDstColor, One);
-		case Multiply:
+			blendOp = Add;
+			blendAlphaOp = Add;
+		case Multiply: // Out = Dst * Src + 0 * Dst
 			blend(DstColor, Zero);
-		case Erase:
+			blendOp = Add;
+			blendAlphaOp = Add;
+		case Erase: // Out = 0 * Src + (1 - Srb) * Dst
 			blend(Zero, OneMinusSrcColor);
-		case Screen:
+			blendOp = Add;
+			blendAlphaOp = Add;
+		case Screen: // Out = 1 * Src + (1 - Srb) * Dst
 			blend(One, OneMinusSrcColor);
+			blendOp = Add;
+			blendAlphaOp = Add;
+		case Sub: // Out = 1 * Dst - SrcA * Src
+			blend(SrcAlpha, One);
+			blendOp = ReverseSub;
+			blendAlphaOp = ReverseSub;
+
+		// The output color min/max of the source and dest colors.
+		// The blend parameters Src and Dst are ignored for this equation.
+		case Max: // Out = MAX( Src, Dst )
+			blendSrc = Zero;
+			blendAlphaSrc = Zero;
+			blendDst = Zero;
+			blendAlphaDst = Zero;
+			blendAlphaSrc = Zero;
+			blendAlphaDst = Zero;
+			blendAlphaOp = Max;
+			blendOp = Max;
+		case Min: // Out = MIN( Src, Dst )
+			blendSrc = Zero;
+			blendAlphaSrc = Zero;
+			blendDst = Zero;
+			blendAlphaDst = Zero;
+			blendAlphaSrc = Zero;
+			blendAlphaDst = Zero;
+			blendAlphaOp = Min;
+			blendOp = Min;
 		}
 	}
 
@@ -104,6 +153,16 @@ class Pass implements hxd.impl.Serializable {
 
 	public function setColorMask(r, g, b, a) {
 		this.colorMask = (r?1:0) | (g?2:0) | (b?4:0) | (a?8:0);
+	}
+
+	public function setColorChannel( c : hxsl.Channel) {
+		switch( c ) {
+		case R: setColorMask(true, false, false, false);
+		case G: setColorMask(false, true, false, false);
+		case B: setColorMask(false, false, true, false);
+		case A: setColorMask(false, false, false, true);
+		default: throw "Unsupported channel "+c;
+		}
 	}
 
 	public function addShader<T:hxsl.Shader>(s:T) : T {
@@ -129,6 +188,17 @@ class Pass implements hxd.impl.Serializable {
 		else
 			prev.next = new hxsl.ShaderList(s, cur);
 		return s;
+	}
+
+	function getShaderIndex(s:hxsl.Shader) : Int {
+		var index = 0;
+		var cur = shaders;
+		while( cur != parentShaders ) {
+			if( cur.s == s ) return index;
+			cur = cur.next;
+			index++;
+		}
+		return -1;
 	}
 
 	public function removeShader(s) {

@@ -114,11 +114,6 @@ class Video extends Drawable {
 			pixels = new hxd.Pixels(w, h, haxe.io.Bytes.alloc(w * h * 4), h3d.mat.Texture.nativeFormat);
 			texture = new h3d.mat.Texture(w, h);
 			tile = h2d.Tile.fromTexture(texture);
-			if( h3d.mat.Texture.nativeFlip ) {
-				pixels.flags.set(FlipY);
-				tile.flipY();
-				tile.dy = 0;
-			}
 		}
 		if( frameReady ) {
 			texture.uploadPixels(pixels);

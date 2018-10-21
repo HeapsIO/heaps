@@ -221,7 +221,7 @@ private class FlashSocketOutput extends SocketOutput {
 		f();
 	}
 
-	override function writeString( str : String ) {
+	override function writeString( str : String #if (haxe_ver >= 4) , ?encoding :  haxe.io.Encoding #end ) {
 		s.writeUTFBytes(str);
 		f();
 	}

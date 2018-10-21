@@ -8,6 +8,7 @@ class BaseMesh extends hxsl.Shader {
 			var view : Mat4;
 			var proj : Mat4;
 			var position : Vec3;
+			var projFlip : Float;
 			var projDiag : Vec3;
 			var viewProj : Mat4;
 			var inverseViewProj : Mat4;
@@ -33,6 +34,7 @@ class BaseMesh extends hxsl.Shader {
 			var color : Vec4;
 			var depth : Float;
 			var normal : Vec3;
+			var worldDist : Float;
 		};
 
 		var relativePosition : Vec3;
@@ -45,6 +47,7 @@ class BaseMesh extends hxsl.Shader {
 		var screenUV : Vec2;
 		var specPower : Float;
 		var specColor : Vec3;
+		var worldDist : Float;
 
 		@param var color : Vec4;
 		@range(0,100) @param var specularPower : Float;
@@ -61,21 +64,22 @@ class BaseMesh extends hxsl.Shader {
 			pixelColor = color;
 			specPower = specularPower;
 			specColor = specularColor * specularAmount;
-			screenUV = (projectedPosition.xy / projectedPosition.w) * vec2(0.5, -0.5) + 0.5;
+			screenUV = screenToUv(projectedPosition.xy / projectedPosition.w);
 			depth = projectedPosition.z / projectedPosition.w;
+			worldDist = length(transformedPosition - camera.position) / camera.zFar;
 		}
 
 		function __init__fragment() {
 			transformedNormal = transformedNormal.normalize();
 			// same as __init__, but will force calculus inside fragment shader, which limits varyings
-			screenUV = (projectedPosition.xy / projectedPosition.w) * vec2(0.5, -0.5) + 0.5;
+			screenUV = screenToUv(projectedPosition.xy / projectedPosition.w);
 			depth = projectedPosition.z / projectedPosition.w; // in case it's used in vertex : we don't want to interpolate in screen space
 			specPower = specularPower;
 			specColor = specularColor * specularAmount;
 		}
 
 		function vertex() {
-			output.position = projectedPosition;
+			output.position = projectedPosition * vec4(1, camera.projFlip, 1, 1);
 			pixelTransformedPosition = transformedPosition;
 		}
 
@@ -83,6 +87,7 @@ class BaseMesh extends hxsl.Shader {
 			output.color = pixelColor;
 			output.depth = depth;
 			output.normal = transformedNormal;
+			output.worldDist = worldDist;
 		}
 
 	};

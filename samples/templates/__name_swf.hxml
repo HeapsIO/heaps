@@ -1,7 +1,8 @@
 -lib heaps
--cp ../..
 -swf ::name::.swf
 -swf-header 1280:800:60:FFFFFF
 -swf-version 15.0
 -main ::main::
+-cp ../..
+-cp .
 ::params::

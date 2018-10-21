@@ -15,16 +15,8 @@ class Texture {
 		#elseif (usesys && !hldx && !hlsdl && !usegl)
 			haxe.GraphicsDriver.nativeFormat
 		#else
-			RGBA // OpenGL, WebGL
+			RGBA
 		#end;
-
-	/**
-		Tells if the Driver requires y-flipping the texture pixels before uploading.
-	**/
-	public static inline var nativeFlip = 	#if (hlsdl||usegl) true
-											#elseif (openfl) false
-											#elseif (lime && (cpp || neko || nodejs)) true
-											#else false #end;
 
 	var t : h3d.impl.Driver.Texture;
 	var mem : h3d.impl.MemoryManager;
@@ -44,6 +36,7 @@ class Texture {
 	public var mipMap(default,set) : MipMap;
 	public var filter(default,set) : Filter;
 	public var wrap(default, set) : Wrap;
+	public var layerCount(get, never) : Int;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when
@@ -92,16 +85,30 @@ class Texture {
 		if( !this.flags.has(NoAlloc) ) alloc();
 	}
 
+	function get_layerCount() {
+		return flags.has(Cube) ? 6 : 1;
+	}
+
 	public function alloc() {
 		if( t == null )
 			mem.allocTexture(this);
 	}
 
+	public function isSRGB() {
+		return format.match(SRGB | SRGB_ALPHA);
+	}
+
 	public function clone( ?allocPos : h3d.impl.AllocPos ) {
 		var old = lastFrame;
 		preventAutoDispose();
-		var t = new Texture(width, height, null, format, allocPos);
-		h3d.pass.Copy.run(this, t);
+		var flags = [];
+		for( f in [Target,Cube,MipMapped,IsArray] )
+			if( this.flags.has(f) )
+				flags.push(f);
+		var t = new Texture(width, height, flags, format, allocPos);
+		t.name = this.name;
+		if(this.flags.has(Cube)) h3d.pass.CubeCopy.run(this, t);
+		else h3d.pass.Copy.run(this, t);
 		lastFrame = old;
 		return t;
 	}
@@ -180,32 +187,50 @@ class Texture {
 			alloc();
 	}
 
-	public function clear( color : Int, alpha = 1. ) {
+	public function clear( color : Int, alpha = 1., ?layer = -1 ) {
 		alloc();
-		var p = hxd.Pixels.alloc(width, height, nativeFormat);
-		var k = 0;
-		var b = color & 0xFF, g = (color >> 8) & 0xFF, r = (color >> 16) & 0xFF, a = Std.int(alpha * 255);
-		if( a < 0 ) a = 0 else if( a > 255 ) a = 255;
-		switch( nativeFormat ) {
-		case RGBA:
-		case BGRA:
-			// flip b/r
-			var tmp = r;
-			r = b;
-			b = tmp;
-		default:
-			throw "TODO";
+		if( flags.has(Target) #if (usegl || hlsdl || js) || true #end ) {
+			var engine = h3d.Engine.getCurrent();
+			color |= Std.int(hxd.Math.clamp(alpha)*255) << 24;
+			if( layer < 0 ) {
+				for( i in 0...layerCount ) {
+					engine.pushTarget(this, i);
+					engine.clear(color);
+					engine.popTarget();
+				}
+			} else {
+				engine.pushTarget(this, layer);
+				engine.clear(color);
+				engine.popTarget();
+			}
+		} else {
+			var p = hxd.Pixels.alloc(width, height, nativeFormat);
+			var k = 0;
+			var b = color & 0xFF, g = (color >> 8) & 0xFF, r = (color >> 16) & 0xFF, a = Std.int(alpha * 255);
+			if( a < 0 ) a = 0 else if( a > 255 ) a = 255;
+			switch( nativeFormat ) {
+			case RGBA:
+			case BGRA:
+				// flip b/r
+				var tmp = r;
+				r = b;
+				b = tmp;
+			default:
+				throw "TODO";
+			}
+			for( i in 0...width * height ) {
+				p.bytes.set(k++,r);
+				p.bytes.set(k++,g);
+				p.bytes.set(k++,b);
+				p.bytes.set(k++,a);
+			}
+			if( layer < 0 ) {
+				for( i in 0...layerCount )
+					uploadPixels(p, 0, i);
+			} else
+				uploadPixels(p, 0, layer);
+			p.dispose();
 		}
-		for( i in 0...width * height ) {
-			p.bytes.set(k++,r);
-			p.bytes.set(k++,g);
-			p.bytes.set(k++,b);
-			p.bytes.set(k++,a);
-		}
-		if( nativeFlip ) p.flags.set(FlipY);
-		for( i in 0...(flags.has(Cube) ? 6 : 1) )
-			uploadPixels(p, 0, i);
-		p.dispose();
 	}
 
 	inline function checkSize(width, height, mip) {
@@ -213,32 +238,33 @@ class Texture {
 			throw "Invalid upload size : " + width + "x" + height + " should be " + (this.width >> mip) + "x" + (this.height >> mip);
 	}
 
-	function checkMipMapGen(mipLevel,side) {
-		if( mipLevel == 0 && flags.has(MipMapped) && !flags.has(ManualMipMapGen) && (!flags.has(Cube) || side == 5) )
+	function checkMipMapGen(mipLevel,layer) {
+		if( mipLevel == 0 && flags.has(MipMapped) && !flags.has(ManualMipMapGen) && (!flags.has(Cube) || layer == 5) )
 			mem.driver.generateMipMaps(this);
 	}
 
-	public function uploadBitmap( bmp : hxd.BitmapData, mipLevel = 0, side = 0 ) {
+	public function uploadBitmap( bmp : hxd.BitmapData, mipLevel = 0, layer = 0 ) {
 		alloc();
 		checkSize(bmp.width, bmp.height, mipLevel);
-		mem.driver.uploadTextureBitmap(this, bmp, mipLevel, side);
+		mem.driver.uploadTextureBitmap(this, bmp, mipLevel, layer);
 		flags.set(WasCleared);
-		checkMipMapGen(mipLevel, side);
+		checkMipMapGen(mipLevel, layer);
 	}
 
-	public function uploadPixels( pixels : hxd.Pixels, mipLevel = 0, side = 0 ) {
+	public function uploadPixels( pixels : hxd.Pixels, mipLevel = 0, layer = 0 ) {
 		alloc();
 		checkSize(pixels.width, pixels.height, mipLevel);
-		mem.driver.uploadTexturePixels(this, pixels, mipLevel, side);
+		mem.driver.uploadTexturePixels(this, pixels, mipLevel, layer);
 		flags.set(WasCleared);
-		checkMipMapGen(mipLevel, side);
+		checkMipMapGen(mipLevel, layer);
 	}
 
 	public function dispose() {
 		if( t != null ) {
 			mem.deleteTexture(this);
 			#if debug
-			this.allocPos.customParams = ["#DISPOSED"];
+			if(this.allocPos != null)
+				this.allocPos.customParams = ["#DISPOSED"];
 			#end
 		}
 	}
@@ -300,7 +326,7 @@ class Texture {
 		e.driver.captureRenderBuffer(alpha);
 		var alphaPos = hxd.Pixels.getChannelOffset(alpha.format, A);
 		var redPos = hxd.Pixels.getChannelOffset(alpha.format, R);
-		var bpp = hxd.Pixels.bytesPerPixel(alpha.format);
+		var bpp = alpha.bytesPerPixel;
 		for( y in 0...height ) {
 			var p = y * width * bpp;
 			for( x in 0...width ) {

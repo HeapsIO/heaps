@@ -74,7 +74,7 @@ class Skin extends MultiMaterial {
 	var jointsUpdated : Bool;
 	var jointsAbsPosInv : h3d.Matrix;
 	var paletteChanged : Bool;
-	var skinShader : h3d.shader.Skin;
+	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
 
 	public var showJoints : Bool;
@@ -93,8 +93,8 @@ class Skin extends MultiMaterial {
 		return s;
 	}
 
-	override function getBounds( ?b : h3d.col.Bounds, rec = false ) {
-		b = super.getBounds(b, rec);
+	override function getBoundsRec( b : h3d.col.Bounds ) {
+		b = super.getBoundsRec(b);
 		var tmp = primitive.getBounds().clone();
 		var b0 = skinData.allJoints[0];
 		// not sure if that's the good joint
@@ -155,7 +155,13 @@ class Skin extends MultiMaterial {
 		jointsUpdated = true;
 		primitive = s.primitive;
 		if( shaderInit ) {
-			skinShader = new h3d.shader.Skin();
+			var hasNormalMap = false;
+			for( m in materials )
+				if( m != null && m.normalMap != null ) {
+					hasNormalMap = true;
+					break;
+				}
+			skinShader = hasNormalMap ? new h3d.shader.SkinTangent() : new h3d.shader.Skin();
 			var maxBones = 0;
 			if( skinData.splitJoints != null ) {
 				for( s in skinData.splitJoints )
@@ -167,7 +173,10 @@ class Skin extends MultiMaterial {
 				skinShader.MaxBones = maxBones;
 			for( m in materials )
 				if( m != null ) {
-					m.mainPass.addShader(skinShader);
+					if( m.normalMap != null )
+						@:privateAccess m.mainPass.addShaderAtIndex(skinShader, m.mainPass.getShaderIndex(m.normalShader) + 1);
+					else
+						m.mainPass.addShader(skinShader);
 					if( skinData.splitJoints != null ) m.mainPass.dynamicParameters = true;
 				}
 		}

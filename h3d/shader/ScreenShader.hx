@@ -8,6 +8,8 @@ class ScreenShader extends hxsl.Shader {
 			uv : Vec2,
 		};
 
+		@param var flipY : Float;
+
 		var output : {
 			position : Vec4,
 			color : Vec4,
@@ -18,11 +20,11 @@ class ScreenShader extends hxsl.Shader {
 
 		function __init__() {
 			output.color = pixelColor;
+			calculatedUV = input.uv;
 		}
 
 		function vertex() {
-			calculatedUV = input.uv;
-			output.position = vec4(input.position, 0, 1);
+			output.position = vec4(input.position.x, input.position.y * flipY, 0, 1);
 		}
 	};
 

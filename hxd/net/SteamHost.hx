@@ -229,7 +229,7 @@ class SteamService {
 	public static function start( ?host : SteamHost ) {
 		if( inst == null ) {
 			inst = new SteamService();
-			steam.Networking.startP2P(inst);
+			steam.Networking.startP2P({ onData : inst.onData, onConnectionRequest: inst.onConnectionRequest, onConnectionError: inst.onConnectionError });
 		}
 		if( host != null )
 			hosts.push(host);

@@ -35,6 +35,7 @@ class Particles extends h3d.scene.Mesh {
 
 	public function new( ?texture, ?parent) {
 		super(null, null, parent);
+		material.props = material.getDefaultProps("particles3D");
 		sortMode = Back;
 		pshader = new h3d.shader.ParticleShader();
 		pshader.isAbsolute = true;

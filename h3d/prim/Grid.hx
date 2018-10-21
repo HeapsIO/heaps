@@ -2,12 +2,16 @@ package h3d.prim;
 
 class Grid extends Polygon {
 
-	var width : Int;
-	var height : Int;
+	public var width (default, null) : Int;
+	public var height (default, null)  : Int;
+	public var cellWidth (default, null) : Float;
+	public var cellHeight (default, null)  : Float;
 
 	public function new( width : Int, height : Int, cellWidth = 1., cellHeight = 1. ) {
 		this.width = width;
 		this.height = height;
+		this.cellWidth = width;
+		this.cellHeight = height;
 
 		var idx = new hxd.IndexBuffer();
 		for( y in 0...height )
@@ -27,18 +31,11 @@ class Grid extends Polygon {
 	}
 
 	override function addUVs() {
-		unindex();
 		uvs = [];
-		for( y in 0...height ) {
-			for( x in 0...width ) {
-				uvs.push(new UV(x/width,     y/height));
-				uvs.push(new UV((x+1)/width, y/height));
-				uvs.push(new UV(x/width,     (y+1)/height));
-
-				uvs.push(new UV((x+1)/width, y/height));
-				uvs.push(new UV((x+1)/width, (y+1)/height));
-				uvs.push(new UV(x/width,     (y+1)/height));				
-			}
+		for(i in 0 ... points.length){
+			var y = hxd.Math.floor(i / width);
+			var x = i - y * width;
+			uvs.push(new UV(x/width,y/height));
 		}
 	}
 

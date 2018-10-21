@@ -454,9 +454,9 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		groups = [];
 	}
 
-	override function getBounds(?b:h3d.col.Bounds, rec = false) {
+	override function getBoundsRec(b:h3d.col.Bounds) {
 		if( flags.has(FIgnoreBounds) )
-			return super.getBounds(b, rec);
+			return super.getBoundsRec(b);
 		for( g in groups )
 			if( g.needRebuild ) {
 				var s = getScene();
@@ -469,7 +469,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				}
 				break;
 			}
-		return super.getBounds(b, rec);
+		return super.getBoundsRec(b);
 	}
 
 	public dynamic function onEnd() {
@@ -510,7 +510,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		if( g.name == null )
 			g.name = "Group#" + (groups.length + 1);
 		if( material == null ) {
-			material = new h3d.mat.Material();
+			material = h3d.mat.MaterialSetup.current.createMaterial();
 			material.mainPass.culling = None;
 			material.mainPass.depthWrite = false;
 			material.blendMode = Alpha;
@@ -883,7 +883,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				r.normalize();
 				var q = new h3d.Quat();
 				q.initDirection(r);
-				q.saveToMatrix(g.pshader.cameraRotation);
+				q.toMatrix(g.pshader.cameraRotation);
 			}
 			if( g.emitMode == CameraBounds ) {
 				g.pshader.transform.load(camera.getInverseView());

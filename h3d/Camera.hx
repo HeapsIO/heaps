@@ -114,6 +114,23 @@ class Camera {
 	}
 
 	/**
+		Setup camera for cubemap rendering on the given face.
+	**/
+	public function setCubeMap( face : Int, position : h3d.Vector ) {
+		var dx = 0, dy = 0, dz = 0;
+		switch( face ) {
+		case 0: dx = 1; up.set(0,1,0);
+		case 1: dx = -1; up.set(0,1,0);
+		case 2: dy = 1; up.set(0,0,-1);
+		case 3: dy = -1; up.set(0,0,1);
+		case 4: dz = 1; up.set(0,1,0);
+		case 5: dz = -1; up.set(0,1,0);
+		}
+		pos.set(position.x,position.y,position.z);
+		target.set(pos.x + dx,pos.y + dy,pos.z + dz);
+	}
+
+	/**
 		Transforms a 2D screen position into the 3D one according to the current camera.
 		The screenX and screenY values must be in the [-1,1] range.
 		The camZ value represents the normalized z in the frustum in the [0,1] range.

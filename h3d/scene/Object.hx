@@ -24,29 +24,79 @@ package h3d.scene;
 	}
 }
 
+/**
+	h3d.scene.Object is the base 3D class that all scene tree elements inherit from.
+	It can be used to create a virtual container that does not display anything but can contain other objects
+	so the various transforms are inherited to its children.
+**/
 class Object implements hxd.impl.Serializable {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 
 	@:s var flags : ObjectFlags;
 	var children : Array<Object>;
+
+	/**
+		The parent object in the scene tree.
+	**/
 	public var parent(default, null) : Object;
+
+	/**
+		How many immediate children this object has.
+	**/
 	public var numChildren(get, never) : Int;
 
+	/**
+		The name of the object, can be used to retrieve an object within a tree by using `getObjectByName` (default null)
+	**/
 	@:s public var name : Null<String>;
+
+	/**
+		The x position of the object relative to its parent.
+	**/
 	@:s public var x(default,set) : Float;
+
+	/**
+		The y position of the object relative to its parent.
+	**/
 	@:s public var y(default, set) : Float;
+
+	/**
+		The z position of the object relative to its parent.
+	**/
 	@:s public var z(default, set) : Float;
+
+	/**
+		The amount of scaling along the X axis of this object (default 1.0)
+	**/
 	@:s public var scaleX(default,set) : Float;
+
+	/**
+		The amount of scaling along the Y axis of this object (default 1.0)
+	**/
 	@:s public var scaleY(default, set) : Float;
+
+	/**
+		The amount of scaling along the Z axis of this object (default 1.0)
+	**/
 	@:s public var scaleZ(default,set) : Float;
+
+
+	/**
+		Is the object and its children are displayed on screen (default true).
+	**/
 	public var visible(get, set) : Bool;
+
 	var allocated(get,set) : Bool;
 
 	/**
 		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
 	**/
 	@:s public var follow(default, set) : Object;
+
+	/**
+		When follow is set, only follow the position and ignore both scale and rotation.
+	**/
 	public var followPositionOnly(get, set) : Bool;
 
 	/**
@@ -55,12 +105,6 @@ class Object implements hxd.impl.Serializable {
 	**/
 	public var defaultTransform(default, set) : h3d.Matrix;
 	@:s public var currentAnimation(default, null) : h3d.anim.Animation;
-
-	/**
-		When selecting the lights to apply to this object, we will use the camera target as reference
-		instead of the object absolute position. This is useful for very large objects so they can get good lighting.
-	**/
-	public var lightCameraCenter(get, set) : Bool;
 
 	/**
 		Inform that the object is not to be displayed and his animation doesn't have to be sync. Unlike visible, this doesn't apply to children unless inheritCulled is set to true.
@@ -78,7 +122,12 @@ class Object implements hxd.impl.Serializable {
 	public var inheritCulled(get, set) : Bool;
 
 	/**
-		When enabled, the object is ignore when using getCollider()
+		When enabled, the object bounds are ignored when using getBounds()
+	**/
+	public var ignoreBounds(get, set) : Bool;
+
+	/**
+		When enabled, the object is ignored when using getCollider()
 	**/
 	public var ignoreCollide(get, set) : Bool;
 
@@ -92,12 +141,21 @@ class Object implements hxd.impl.Serializable {
 	**/
 	public var ignoreParentTransform(get, set) : Bool;
 
+	/**
+		When selecting the lights to apply to this object, we will use the camera target as reference
+		instead of the object absolute position. This is useful for very large objects so they can get good lighting.
+	**/
+	public var lightCameraCenter(get, set) : Bool;
+
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
 	var posChanged(get,set) : Bool;
 	var lastFrame : Int;
 
+	/**
+		Create a new empty object, and adds it to the parent object if not null.
+	**/
 	public function new( ?parent : Object ) {
 		flags = new ObjectFlags();
 		absPos = new h3d.Matrix();
@@ -119,6 +177,7 @@ class Object implements hxd.impl.Serializable {
 	inline function get_lightCameraCenter() return flags.has(FLightCameraCenter);
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
+	inline function get_ignoreBounds() return flags.has(FIgnoreBounds);
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
 	inline function get_allowSerialize() return !flags.has(FNoSerialize);
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
@@ -129,22 +188,29 @@ class Object implements hxd.impl.Serializable {
 	inline function set_followPositionOnly(b) return flags.set(FFollowPositionOnly, b);
 	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
 	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
+	inline function set_ignoreBounds(b) return flags.set(FIgnoreBounds, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
 	inline function set_ignoreParentTransform(b) return flags.set(FIgnoreParentTransform, b);
 
+	/**
+		Create an animation instance bound to the object, set it as currentAnimation and play it.
+	**/
 	public function playAnimation( a : h3d.anim.Animation ) {
 		return currentAnimation = a.createInstance(this);
 	}
 
 	/**
-		Changes the current animation. This animation should be an instance that was created by playAnimation!
+		Change the current animation. This animation should be an instance that was previously created by playAnimation.
 	**/
 	public function switchToAnimation( a : h3d.anim.Animation ) {
 		return currentAnimation = a;
 	}
 
+	/**
+		Stop the current animation. If recursive is set to true, all children will also stop their animation
+	**/
 	public function stopAnimation( ?recursive = false ) {
 		currentAnimation = null;
 		if(recursive) {
@@ -177,6 +243,9 @@ class Object implements hxd.impl.Serializable {
 				c.applyAnimationTransform();
 	}
 
+	/**
+		Return the total number of children, recursively.
+	**/
 	public function getObjectsCount() {
 		var k = 0;
 		for( c in children )
@@ -184,6 +253,9 @@ class Object implements hxd.impl.Serializable {
 		return k;
 	}
 
+	/**
+		Search for a material recursively by name, return it or null if not found.
+	**/
 	public function getMaterialByName( name : String ) : h3d.mat.Material {
 		for( o in children ) {
 			var m = o.getMaterialByName(name);
@@ -192,6 +264,9 @@ class Object implements hxd.impl.Serializable {
 		return null;
 	}
 
+	/**
+		Find a single object in the tree by calling `f` on each and returning the first not-null value returned, or null if not found.
+	**/
 	public function find<T>( f : Object -> Null<T> ) : Null<T> {
 		var v = f(this);
 		if( v != null )
@@ -203,6 +278,9 @@ class Object implements hxd.impl.Serializable {
 		return null;
 	}
 
+	/**
+		Find several objects in the tree by calling `f` on each and returning all the not-null values returned.
+	**/
 	public function findAll<T>( f : Object -> Null<T>, ?arr : Array<T> ) : Array<T> {
 		if( arr == null ) arr = [];
 		var v = f(this);
@@ -213,6 +291,9 @@ class Object implements hxd.impl.Serializable {
 		return arr;
 	}
 
+	/**
+		Return all materials in the tree.
+	**/
 	public function getMaterials( ?a : Array<h3d.mat.Material> ) {
 		if( a == null ) a = [];
 		for( o in children )
@@ -221,7 +302,7 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
-		Transform a point from the local object coordinates to the global ones. The point is modified and returned.
+		Convert a local position (or [0,0] if pt is null) relative to the object origin into an absolute global position, applying all the inherited transforms.
 	**/
 	public function localToGlobal( ?pt : h3d.Vector ) {
 		syncPos();
@@ -231,7 +312,7 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
-		Transform a point from the global coordinates to the object local ones. The point is modified and returned.
+		Convert an absolute global position into a local position relative to the object origin, applying all the inherited transforms.
 	**/
 	public function globalToLocal( pt : h3d.Vector ) {
 		pt.transform3x4(getInvPos());
@@ -253,13 +334,17 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
-		Return the bounds of this object, in absolute position.
+		Return the bounds of this object and all its children, in absolute global coordinates.
 	**/
-	public function getBounds( ?b : h3d.col.Bounds, rec = false ) {
-		if( !rec )
-			syncPos();
+	@:final public function getBounds( ?b : h3d.col.Bounds ) {
 		if( b == null )
 			b = new h3d.col.Bounds();
+		if( parent != null )
+			parent.syncPos();
+		return getBoundsRec(b);
+	}
+
+	function getBoundsRec( b : h3d.col.Bounds ) {
 		if( posChanged ) {
 			for( c in children )
 				c.posChanged = true;
@@ -267,10 +352,13 @@ class Object implements hxd.impl.Serializable {
 			calcAbsPos();
 		}
 		for( c in children )
-			c.getBounds(b, true);
+			c.getBoundsRec(b);
 		return b;
 	}
 
+	/**
+		Return all meshes part of this tree
+	**/
 	public function getMeshes( ?out : Array<Mesh> ) {
 		if( out == null ) out = [];
 		var m = Std.instance(this, Mesh);
@@ -280,10 +368,16 @@ class Object implements hxd.impl.Serializable {
 		return out;
 	}
 
+	/**
+		Search for an mesh recursively by name, return null if not found.
+	**/
 	public function getMeshByName( name : String) {
 		return Std.instance(getObjectByName(name), Mesh);
 	}
 
+	/**
+		Search for an object recursively by name, return null if not found.
+	**/
 	public function getObjectByName( name : String ) {
 		if( this.name == name )
 			return this;
@@ -294,6 +388,9 @@ class Object implements hxd.impl.Serializable {
 		return null;
 	}
 
+	/**
+		Make a copy of the object and all its children.
+	**/
 	public function clone( ?o : Object ) : Object {
 		if( o == null ) o = new Object();
 		#if debug
@@ -320,10 +417,16 @@ class Object implements hxd.impl.Serializable {
 		return o;
 	}
 
+	/**
+		Add a child object at the end of the children list.
+	**/
 	public function addChild( o : Object ) {
 		addChildAt(o, children.length);
 	}
 
+	/**
+		Insert a child object at the specified position of the children list.
+	**/
 	public function addChildAt( o : Object, pos : Int ) {
 		if( pos < 0 ) pos = 0;
 		if( pos > children.length ) pos = children.length;
@@ -353,6 +456,9 @@ class Object implements hxd.impl.Serializable {
 		}
 	}
 
+	/**
+		Iterate on all mesh that are currently visible and not culled in the tree. Call `callb` for each mesh found.
+	**/
 	public function iterVisibleMeshes( callb : Mesh -> Void ) {
 		if( !visible || (culled && inheritCulled) )
 			return;
@@ -383,6 +489,9 @@ class Object implements hxd.impl.Serializable {
 			c.onRemove();
 	}
 
+	/**
+		Remove the given object from our immediate children list if it's part of it.
+	**/
 	public function removeChild( o : Object ) {
 		if( children.remove(o) ) {
 			if( o.allocated ) o.onRemove();
@@ -391,7 +500,26 @@ class Object implements hxd.impl.Serializable {
 		}
 	}
 
-	function getScene() {
+	/**
+		Remove all children from our immediate children list
+	**/
+	public function removeChildren() {
+		while( numChildren>0 )
+			removeChild( getChildAt(0) );
+	}
+
+	/**
+		Same as parent.removeChild(this), but does nothing if parent is null.
+		In order to capture add/removal from scene, you can override onAdd/onRemove/onParentChanged
+	**/
+	public inline function remove() {
+		if( this != null && parent != null ) parent.removeChild(this);
+	}
+
+	/**
+		Return the Scene this object is part of, or null if not added to a Scene.
+	**/
+	public function getScene() {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
 		return Std.instance(p, Scene);
@@ -405,10 +533,16 @@ class Object implements hxd.impl.Serializable {
 		return absPos;
 	}
 
+	/**
+		Tell if the object is a Mesh.
+	**/
 	public inline function isMesh() {
 		return Std.instance(this, Mesh) != null;
 	}
 
+	/**
+		If the object is a Mesh, return the corresponding Mesh. If not, throw an exception.
+	**/
 	public function toMesh() : Mesh {
 		var m = Std.instance(this, Mesh);
 		if( m != null )
@@ -417,7 +551,7 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
-		Build and returns the global absolute recursive collider for the object.
+		Build and return the global absolute recursive collider for the object.
 		Returns null if no collider was found or if ignoreCollide was set to true.
 	**/
 	@:final public function getCollider() : h3d.col.Collider {
@@ -448,6 +582,8 @@ class Object implements hxd.impl.Serializable {
 		Same as getLocalCollider, but returns an absolute collider instead of a local one.
 	**/
 	public function getGlobalCollider() : h3d.col.Collider {
+		if(ignoreCollide)
+			return null;
 		var col = getLocalCollider();
 		return col == null ? null : new h3d.col.ObjectCollider(this, col);
 	}
@@ -460,14 +596,6 @@ class Object implements hxd.impl.Serializable {
 		return null;
 	}
 
-	/**
-		Same as parent.removeChild(this), but does nothing if parent is null.
-		In order to capture add/removal from scene, you can override onAdd/onRemove/onParentChanged
-	**/
-	public inline function remove() {
-		if( this != null && parent != null ) parent.removeChild(this);
-	}
-
 	function draw( ctx : RenderContext ) {
 	}
 
@@ -477,7 +605,7 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	function calcAbsPos() {
-		qRot.saveToMatrix(absPos);
+		qRot.toMatrix(absPos);
 		// prepend scale
 		absPos._11 *= scaleX;
 		absPos._12 *= scaleX;
@@ -624,13 +752,19 @@ class Object implements hxd.impl.Serializable {
 		return v;
 	}
 
-	public inline function setPos( x : Float, y : Float, z : Float ) {
+	/**
+		Set the position of the object relative to its parent.
+	**/
+	public inline function setPosition( x : Float, y : Float, z : Float ) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
 		posChanged = true;
 	}
 
+	/**
+		Set the position, scale and rotation of the object relative to its parent based on the specified transform matrix.
+	**/
 	public function setTransform( mat : h3d.Matrix ) {
 		var s = mat.getScale();
 		this.x = mat.tx;
@@ -644,35 +778,67 @@ class Object implements hxd.impl.Serializable {
 		posChanged = true;
 	}
 
-	/*
-		Rotate around the current rotation axis.
-	*/
+	/**
+		Rotate around the current rotation axis by the specified angles (in radian).
+	**/
 	public function rotate( rx : Float, ry : Float, rz : Float ) {
 		var qTmp = new h3d.Quat();
-		qTmp.initRotate(rx, ry, rz);
+		qTmp.initRotation(rx, ry, rz);
 		qRot.multiply(qTmp,qRot);
 		posChanged = true;
 	}
 
-	public function setRotate( rx : Float, ry : Float, rz : Float ) {
-		qRot.initRotate(rx, ry, rz);
+	/**
+		Set the rotation using the specified angles (in radian).
+	**/
+	public function setRotation( rx : Float, ry : Float, rz : Float ) {
+		qRot.initRotation(rx, ry, rz);
 		posChanged = true;
 	}
 
-	public function setRotateAxis( ax : Float, ay : Float, az : Float, angle : Float ) {
+	/**
+		Set the rotation using the specified axis and angle of rotation around it (in radian).
+	**/
+	public function setRotationAxis( ax : Float, ay : Float, az : Float, angle : Float ) {
 		qRot.initRotateAxis(ax, ay, az, angle);
 		posChanged = true;
 	}
 
+	/**
+		Set the rotation using the specified look at direction
+	**/
+	public function setDirection( v : h3d.Vector ) {
+		qRot.initDirection(v);
+		posChanged = true;
+	}
+
+	/**
+		Return the direction in which the object rotation is currently oriented to
+	**/
+	public function getDirection() {
+		return qRot.getDirection();
+	}
+
+	/**
+		Return the quaternion representing the current object rotation.
+		Dot not modify as it's not a copy.
+	**/
 	public function getRotationQuat() {
 		return qRot;
 	}
 
+	/**
+		Set the quaternion representing the current object rotation.
+		Dot not modify the value afterwards as no copy is made.
+	**/
 	public function setRotationQuat(q) {
 		qRot = q;
 		posChanged = true;
 	}
 
+	/**
+		Scale uniformly the object by the given factor.
+	**/
 	public inline function scale( v : Float ) {
 		scaleX *= v;
 		scaleY *= v;
@@ -680,6 +846,9 @@ class Object implements hxd.impl.Serializable {
 		posChanged = true;
 	}
 
+	/**
+		Set the uniform scale for the object.
+	**/
 	public inline function setScale( v : Float ) {
 		scaleX = v;
 		scaleY = v;
@@ -687,22 +856,44 @@ class Object implements hxd.impl.Serializable {
 		posChanged = true;
 	}
 
+	/**
+		Return both class name and object name if any.
+	**/
 	public function toString() {
 		return Type.getClassName(Type.getClass(this)).split(".").pop() + (name == null ? "" : "(" + name + ")");
 	}
 
+	/**
+		Return the `n`th element among our immediate children list, or null if there is no.
+	**/
 	public inline function getChildAt( n ) {
 		return children[n];
+	}
+
+	/**
+		Return the index of the object `o` within our immediate children list, or `-1` if it is not part of our children list.
+	**/
+	public function getChildIndex( o ) {
+		for( i in 0...children.length )
+			if( children[i] == o )
+				return i;
+		return -1;
 	}
 
 	inline function get_numChildren() {
 		return children.length;
 	}
 
+	/**
+		Return an iterator over this object immediate children
+	**/
 	public inline function iterator() : hxd.impl.ArrayIterator<Object> {
 		return new hxd.impl.ArrayIterator(children);
 	}
 
+	/**
+		Free the GPU memory for this object and its children
+	**/
 	public function dispose() {
 		for( c in children )
 			c.dispose();

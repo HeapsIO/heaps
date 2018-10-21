@@ -39,7 +39,7 @@ class Light extends Object {
 	}
 
 	function getShadowDirection() : h3d.Vector {
-		return null;
+		return null;	
 	}
 
 	#if hxbit

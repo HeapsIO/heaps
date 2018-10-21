@@ -54,14 +54,17 @@ class Checker {
 				genFloat;
 			case Cross:
 				[ { args : [ { name : "a", type : vec3 }, { name : "b", type : vec3 } ], ret : vec3 } ];
-			case Texture2D:
-				[ { args : [ { name : "tex", type : TSampler2D }, { name : "uv", type : vec2 } ], ret : vec4 } ];
-			case Texture2DLod:
-				[ { args : [ { name : "tex", type : TSampler2D }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec4 } ];
-			case TextureCube:
-				[ { args : [ { name : "tex", type : TSamplerCube }, { name : "normal", type : vec3 } ], ret : vec4 } ];
-			case TextureCubeLod:
-				[ { args : [ { name : "tex", type : TSamplerCube }, { name : "normal", type : vec3 }, { name : "lod", type : TFloat } ], ret : vec4 } ];
+			case Texture:
+				[
+					{ args : [ { name : "tex", type : TSampler2D }, { name : "uv", type : vec2 } ], ret : vec4 },
+					{ args : [ { name : "tex", type : TSamplerCube }, { name : "normal", type : vec3 } ], ret : vec4 },
+					{ args : [ { name : "tex", type : TSampler2DArray }, { name : "uv", type : vec3 } ], ret : vec4 },
+				];
+			case TextureLod:
+				[
+					{ args : [ { name : "tex", type : TSampler2D }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec4 },
+					{ args : [ { name : "tex", type : TSamplerCube }, { name : "normal", type : vec3 }, { name : "lod", type : TFloat } ], ret : vec4 },
+				];
 			case ToInt:
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TInt } ];
 			case ToFloat:
@@ -103,26 +106,41 @@ class Checker {
 			case DFdx, DFdy, Fwidth:
 				genFloat;
 			case Pack:
-				[ { args : [ { name : "value", type : TFloat } ], ret : TVec(4, VFloat) } ];
+				[ { args : [ { name : "value", type : TFloat } ], ret : vec4 } ];
 			case Unpack:
-				[ { args : [ { name : "value", type : TVec(4, VFloat) } ], ret : TFloat } ];
+				[ { args : [ { name : "value", type : vec4 } ], ret : TFloat } ];
 			case UnpackNormal:
-				[ { args : [ { name : "value", type : TVec(4, VFloat) } ], ret : TVec(3, VFloat) } ];
+				[ { args : [ { name : "value", type : vec4 } ], ret : vec3 } ];
 			case PackNormal:
-				[ { args : [ { name : "value", type : TVec(3, VFloat) } ], ret : TVec(4, VFloat) } ];
+				[ { args : [ { name : "value", type : vec3 } ], ret : vec4 } ];
 			case ChannelRead:
 				[
 					{ args : [ { name : "channel", type : TChannel(1) }, { name : "uv", type : vec2 } ], ret : TFloat },
-					{ args : [ { name : "channel", type : TChannel(2) }, { name : "uv", type : vec2 } ], ret : TVec(2,VFloat) },
-					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 } ], ret : TVec(3,VFloat) },
-					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 } ], ret : TVec(4,VFloat) },
+					{ args : [ { name : "channel", type : TChannel(2) }, { name : "uv", type : vec2 } ], ret : vec2 },
+					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 } ], ret : vec3 },
+					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 } ], ret : vec4 },
 				];
+			case ChannelReadLod:
+				[
+					{ args : [ { name : "channel", type : TChannel(1) }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : TFloat },
+					{ args : [ { name : "channel", type : TChannel(2) }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec2 },
+					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec3 },
+					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec4 },
+				];
+			case ScreenToUv:
+				[{ args : [{ name : "screenPos", type : vec2 }], ret : vec2 }];
+			case UvToScreen:
+				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
 			case Trace:
 				[];
+			case VertexID, InstanceID:
+				null;
 			}
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );
 		}
+		globals.set("vertexID", { t : TInt, g : VertexID });
+		globals.set("instanceID", { t : TInt, g : InstanceID });
 		globals.set("int", globals.get("toInt"));
 		globals.set("float", globals.get("toFloat"));
 		globals.set("reflect", globals.get("lReflect"));
@@ -532,7 +550,7 @@ class Checker {
 			default: unify(e2.t, TInt, e2.p);
 			}
 			switch( e1.t ) {
-			case TArray(t, size):
+			case TArray(t, size), TBuffer(t,size):
 				switch( [size, e2.e] ) {
 				case [SConst(v), TConst(CInt(i))] if( i >= v ):
 					error("Indexing outside array bounds", e.pos);
@@ -698,6 +716,7 @@ class Checker {
 					}
 					if( tv.kind != Global && tv.kind != Param ) error("@const only allowed on parameter or global", pos);
 				case PerObject: if( tv.kind != Global ) error("@perObject only allowed on global", pos);
+				case PerInstance(_): if( tv.kind != Input ) error("@perInstance only allowed on input", pos);
 				case Nullable: if( tv.kind != Param ) error("@nullable only allowed on parameter or global", pos);
 				case Name(_):
 					if( parent != null ) error("Cannot have an explicit name for a structure variable", pos);
@@ -725,8 +744,8 @@ class Checker {
 		return tv;
 	}
 
-	function makeVarType( t : Type, parent : TVar, pos : Position ) {
-		switch( t ) {
+	function makeVarType( vt : Type, parent : TVar, pos : Position ) {
+		switch( vt ) {
 		case TStruct(vl):
 			// mutate to allow TArray to access previously declared vars
 			var vl = vl.copy();
@@ -736,7 +755,7 @@ class Checker {
 				vl[i] = makeVar( { type : v.type, qualifiers : v.qualifiers, name : v.name, kind : v.kind, expr : null }, pos, parent);
 			}
 			return parent.type;
-		case TArray(t, size):
+		case TArray(t, size), TBuffer(t,size):
 			switch( t ) {
 			case TArray(_):
 				error("Multidimentional arrays are not allowed", pos);
@@ -780,9 +799,10 @@ class Checker {
 				if( !v2.isConst() ) error("Array size variable '" + v.name + "'should be a constant", pos);
 				SVar(v2);
 			}
-			return TArray(makeVarType(t,parent,pos), s);
+			t = makeVarType(t,parent,pos);
+			return vt.match(TArray(_)) ? TArray(t, s) : TBuffer(t,s);
 		default:
-			return t;
+			return vt;
 		}
 	}
 
@@ -807,9 +827,10 @@ class Checker {
 		var g = globals.get(f);
 		if( g == null ) {
 			var gl : TGlobal = switch( [f, e.t] ) {
-			case ["get", TSampler2D]: Texture2D;
-			case ["get", TSamplerCube]: TextureCube;
+			case ["get", TSampler2D|TSampler2DArray|TSamplerCube]: Texture;
 			case ["get", TChannel(_)]: ChannelRead;
+			case ["getLod", TSampler2D|TSampler2DArray|TSamplerCube]: TextureLod;
+			case ["getLod", TChannel(_)]: ChannelReadLod;
 			default: null;
 			}
 			if( gl != null )

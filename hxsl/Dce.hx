@@ -27,6 +27,13 @@ class Dce {
 	public function new() {
 	}
 
+	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
+		#if shader_debug_dump
+		if( Cache.TRACE )
+			haxe.Log.trace(msg, pos);
+		#end
+	}
+
 	public function dce( vertex : ShaderData, fragment : ShaderData ) {
 		// collect vars dependencies
 		used = new Map();
@@ -54,6 +61,8 @@ class Dce {
 
 		var outExprs = [];
 		while( true ) {
+
+			debug("DCE LOOP");
 
 			for( v in used )
 				if( v.keep )
@@ -84,6 +93,7 @@ class Dce {
 
 		for( v in used ) {
 			if( v.used ) continue;
+			if( v.v.kind == VarKind.Input) continue;
 			vertex.vars.remove(v.v);
 			fragment.vars.remove(v.v);
 		}
@@ -105,6 +115,7 @@ class Dce {
 
 	function markRec( v : VarDeps ) {
 		if( v.used ) return;
+		debug(v.v.name+" is used");
 		v.used = true;
 		for( d in v.deps )
 			markRec(d);
@@ -116,11 +127,13 @@ class Dce {
 			if( w == null ) {
 				// mark for conditional
 				if( !vd.keep ) {
+					debug("Force keep "+vd.v.name);
 					vd.keep = true;
 					markAsKeep = true;
 				}
 				continue;
 			}
+			debug(w.v.name+" depends on "+vd.v.name);
 			w.deps.set(v.id, vd);
 		}
 	}
@@ -136,6 +149,10 @@ class Dce {
 			writeTo.pop();
 			if( isAffected.indexOf(v) < 0 )
 				isAffected.push(v);
+		case TBlock(el):
+			var noWrite = [];
+			for( i in 0...el.length )
+				check(el[i],i < el.length - 1 ? noWrite : writeTo, isAffected);
 		case TVarDecl(v, init) if( init != null ):
 			writeTo.push(get(v));
 			check(init, writeTo, isAffected);
@@ -163,6 +180,15 @@ class Dce {
 					isAffected.push(v);
 		case TCall({ e : TGlobal(ChannelRead) }, [{ e : TVar(c) }, uv, { e : TConst(CInt(cid)) }]):
 			check(uv, writeTo, isAffected);
+			if( channelVars[cid] == null ) {
+				channelVars[cid] = c;
+				link(c, writeTo);
+			} else {
+				link(channelVars[cid], writeTo);
+			}
+		case TCall({ e : TGlobal(ChannelReadLod) }, [{ e : TVar(c) }, uv, lod, { e : TConst(CInt(cid)) }]):
+			check(uv, writeTo, isAffected);
+			check(lod, writeTo, isAffected);
 			if( channelVars[cid] == null ) {
 				channelVars[cid] = c;
 				link(c, writeTo);
@@ -202,7 +228,10 @@ class Dce {
 			return { e : TConst(CNull), t : e.t, p : e.p };
 		case TCall({ e : TGlobal(ChannelRead) }, [_, uv, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];
-			return { e : TCall({ e : TGlobal(Texture2D), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, uv]), t : TVoid, p : e.p };
+			return { e : TCall({ e : TGlobal(Texture), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(uv,true)]), t : TVoid, p : e.p };
+		case TCall({ e : TGlobal(ChannelReadLod) }, [_, uv, lod, { e : TConst(CInt(cid)) }]):
+			var c = channelVars[cid];
+			return { e : TCall({ e : TGlobal(TextureLod), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(uv,true), mapExpr(lod,true)]), t : TVoid, p : e.p };
 		case TIf(e, econd, eelse):
 			var e = mapExpr(e, true);
 			var econd = mapExpr(econd, isVar);

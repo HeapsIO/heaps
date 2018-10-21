@@ -54,22 +54,16 @@ class Dump {
 			prefix = "";
 		}
 		if( h.geometries.length > 0 ) add('');
-		var flags = MaterialFlag.createAll();
 		for( k in 0...h.materials.length ) {
 			var m = h.materials[k];
 			add('@$k MATERIAL');
 			prefix += "\t";
 			if( m.name != null ) add('Name : ${m.name}');
 			add('Blend : ${m.blendMode}');
-			add('Cull : ${m.culling}');
 			if( m.diffuseTexture != null ) add('Texture : ${m.diffuseTexture}');
 			if( m.specularTexture != null ) add('Specular : ${m.specularTexture}');
 			if( m.normalMap != null ) add('Normal : ${m.normalMap}');
-			if( m.killAlpha != null ) add('KillAlpha : ${m.killAlpha}');
 			addProps(m.props);
-			for( f in flags )
-				if( m.flags.has(f) )
-					add(f);
 			prefix = "";
 		}
 		if( h.materials.length > 0 ) add('');
@@ -233,7 +227,7 @@ class Dump {
 		var bytes;
 		if( file.split(".").pop().toLowerCase() == "fbx" ) {
 			var l = new hxd.fmt.fbx.HMDOut(file);
-			l.loadTextFile(sys.io.File.getContent(file));
+			l.loadFile(sys.io.File.getBytes(file));
 			var hmd = l.toHMD(null, !StringTools.startsWith(file.split("\\").join("/").split("/").pop(), "Anim_"));
 			var out = new haxe.io.BytesOutput();
 			new Writer(out).write(hmd);

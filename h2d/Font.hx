@@ -54,6 +54,7 @@ class Font {
 	public var tile(default,null) : h2d.Tile;
 	public var charset : hxd.Charset;
 	var glyphs : Map<Int,FontChar>;
+	var nullChar : FontChar;
 	var defaultChar : FontChar;
 	var initSize:Int;
 	var offsetX:Int = 0;
@@ -64,7 +65,7 @@ class Font {
 		this.size = size;
 		this.initSize = size;
 		glyphs = new Map();
-		defaultChar = new FontChar(new Tile(null, 0, 0, 0, 0),0);
+		defaultChar = nullChar = new FontChar(new Tile(null, 0, 0, 0, 0),0);
 		charset = hxd.Charset.getDefault();
 	}
 
@@ -72,7 +73,8 @@ class Font {
 		var c = glyphs.get(code);
 		if( c == null ) {
 			c = charset.resolveChar(code, glyphs);
-			if( c == null ) c = defaultChar;
+			if( c == null )
+				c = code == "\r".code || code == "\n".code ? nullChar : defaultChar;
 		}
 		return c;
 	}

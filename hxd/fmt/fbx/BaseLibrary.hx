@@ -1,6 +1,13 @@
 package hxd.fmt.fbx;
+import haxe.io.Bytes;
 using hxd.fmt.fbx.Data;
 import h3d.col.Point;
+
+#if (haxe_ver < 4)
+import haxe.xml.Fast in Access;
+#else
+import haxe.xml.Access;
+#end
 
 class TmpObject {
 	public var index : Int;
@@ -148,7 +155,7 @@ class BaseLibrary {
 		defaultModelMatrixes = new Map();
 	}
 
-	public function loadTextFile( data : String ) {
+	public function loadFile( data : Bytes ) {
 		load(Parser.parse(data));
 	}
 
@@ -170,7 +177,7 @@ class BaseLibrary {
 		for( m in this.root.getAll("Objects.Model") ) {
 			for( p in m.getAll("Properties70.P") )
 				switch( p.props[0].toString() ) {
-				case "UDP3DSMAX":
+				case "UDP3DSMAX" | "Events":
 					var userProps = p.props[4].toString().split("&cr;&lf;");
 					for( p in userProps ) {
 						var pl = p.split("=");
@@ -179,12 +186,12 @@ class BaseLibrary {
 						switch( pname ) {
 						case "UV" if( pval != "" ):
 							var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid UV data in " + m.getName();
-							var frames = [for( f in new haxe.xml.Fast(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { t : Std.parseFloat(f[0]) * 9622116.25, u : Std.parseFloat(f[1]), v : Std.parseFloat(f[2]) }} ];
+							var frames = [for( f in new Access(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { t : Std.parseFloat(f[0]) * 9622116.25, u : Std.parseFloat(f[1]), v : Std.parseFloat(f[2]) }} ];
 							if( uvAnims == null ) uvAnims = new Map();
 							uvAnims.set(m.getName(), frames);
 						case "Events":
 							var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid Events data in " + m.getName();
-							animationEvents = [for( f in new haxe.xml.Fast(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { frame : Std.parseInt(f.shift()), data : StringTools.trim(f.join(" ")) }} ];
+							animationEvents = [for( f in new Access(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { frame : Std.parseInt(f.shift()), data : StringTools.trim(f.join(" ")) }} ];
 						default:
 						}
 					}
@@ -198,7 +205,7 @@ class BaseLibrary {
 		var originScale = 1;
 		var upAxis = 1;
 		var originAxis = 2;
-		for( p in root.getAll("GlobalSettings.Properties70.P") )
+		for( p in root.getAll("GlobalSettings.Properties70.P") ) {			
 			switch( p.props[0].toString() ) {
 			case "UnitScaleFactor": unitScale = p.props[4].toInt();
 			case "OriginalUnitScaleFactor": originScale = p.props[4].toInt();
@@ -206,11 +213,22 @@ class BaseLibrary {
 			case "OriginalUpAxis": originAxis = p.props[4].toInt();
 			default:
 			}
-		var scaleFactor = unitScale == 100 && originScale == 1 ? 100 : 1;
+		}
+		var scaleFactor : Float = unitScale == 100 && originScale == 1 ? 100 : 1;
 		var axisFlip = upAxis == 2 && originAxis == 1;
+		var geometryScaleFactor = scaleFactor;
 		// TODO : axisFlip
 
-		if( scaleFactor == 1 )
+		var app = "";
+		for( p in root.getAll("FBXHeaderExtension.SceneInfo.Properties70.P") )
+			switch( p.props[0].toString() ) {
+			case "LastSaved|ApplicationName": app = p.props[4].toString();
+			default:
+			}
+		if( app.indexOf("Blender") >= 0 && unitScale == 1 && originScale == 1 )
+			scaleFactor *= 0.01; // Blender in meters exports FBX to centimeter
+		
+		if( scaleFactor == 1 && geometryScaleFactor == 1 )
 			return;
 
 		function toFloats( n : FbxNode ) {
@@ -227,12 +245,18 @@ class BaseLibrary {
 		}
 
 		// scale on geometry
-		for( g in this.root.getAll("Objects.Geometry.Vertices") ) {
-			var v = toFloats(g);
-			for( i in 0...v.length )
-				v[i] = v[i] / scaleFactor;
+		if( geometryScaleFactor != 1 ) {
+			for( g in this.root.getAll("Objects.Geometry.Vertices") ) {
+				var v = toFloats(g);
+				for( i in 0...v.length )
+					v[i] = v[i] / geometryScaleFactor;
+			}
 		}
-		// scale on root models
+
+		if( scaleFactor == 1 )
+			return;
+		
+		// scale on root models			
 		for( m in this.root.getAll("Objects.Model") ) {
 			var isRoot = getParent(m,"Model",true) == null;
 			for( p in m.getAll("Properties70.P") )
@@ -299,7 +323,9 @@ class BaseLibrary {
 				convertPoints(v.getFloats());
 			for( v in g.getAll("LayerElementNormal.Normals") )
 				convertPoints(v.getFloats());
-			for( v in g.getAll("LayerElementNormal.Tangents") )
+			for( v in g.getAll("LayerElementTangent.Tangents") )
+				convertPoints(v.getFloats());
+			for( v in g.getAll("LayerElementBinormal.Binormals") )
 				convertPoints(v.getFloats());
 		}
 	}
@@ -733,7 +759,8 @@ class BaseLibrary {
 		case 1:
 			animNodes[0];
 		default:
-			throw "Multiple animation layers curves are currently not supported";
+			trace("Multiple animation layers curves are currently not supported");
+			animNodes[0];
 		}
 
 		if( animNode == null ) {
@@ -847,7 +874,7 @@ class BaseLibrary {
 				case "d|Y": data.y = values;
 				case "d|Z": data.z = values;
 				default:
-					throw "Unsupported key name "+cname;
+					trace("Unsupported key name "+cname);
 				}
 			}
 
@@ -866,15 +893,16 @@ class BaseLibrary {
 				if( c.def.preRot == null ) c.def.rotate else
 				{
 					var q = new h3d.Quat(), q2 = new h3d.Quat();
-					q2.initRotate(c.def.preRot.x, c.def.preRot.y, c.def.preRot.z);
-					q.initRotate(c.def.rotate.x, c.def.rotate.y, c.def.rotate.z);
+					q2.initRotation(c.def.preRot.x, c.def.preRot.y, c.def.preRot.z);
+					q.initRotation(c.def.rotate.x, c.def.rotate.y, c.def.rotate.z);
 					q.multiply(q2,q);
 					q.toEuler().toPoint();
 				}
 			case "S":
 				if( c.def.scale == null ) P1 else c.def.scale;
 			default:
-				throw "Unknown curve " + model.getName()+"."+cname;
+				trace("Unknown curve " + model.getName()+"."+cname);
+				continue;
 			}
 			var hasValue = false;
 			if( data.x != null && roundValues(data.x, def.x, M) )
@@ -1035,14 +1063,14 @@ class BaseLibrary {
 
 					if( c.r == null || rp == 0 ) {
 						if( def.rotate != null ) {
-							q.initRotate(def.rotate.x, def.rotate.y, def.rotate.z);
+							q.initRotation(def.rotate.x, def.rotate.y, def.rotate.z);
 						} else
 							q.identity();
 					} else
-						q.initRotate(crx[rp-1], cry[rp-1], crz[rp-1]);
+						q.initRotation(crx[rp-1], cry[rp-1], crz[rp-1]);
 
 					if( def.preRot != null ) {
-						q2.initRotate(def.preRot.x, def.preRot.y, def.preRot.z);
+						q2.initRotation(def.preRot.x, def.preRot.y, def.preRot.z);
 						q.multiply(q2,q);
 					}
 

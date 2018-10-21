@@ -45,10 +45,12 @@ class WorldMaterial {
 	public var bits : Int;
 	public var t : h3d.mat.BigTexture.BigTextureElement;
 	public var spec : h3d.mat.BigTexture.BigTextureElement;
+	public var normal : h3d.mat.BigTexture.BigTextureElement;
 	public var mat : hxd.fmt.hmd.Data.Material;
 	public var culling : Bool;
 	public var blend : h3d.mat.BlendMode;
 	public var killAlpha : Null<Float>;
+	public var emissive : Null<Float>;
 	public var lights : Bool;
 	public var shadows : Bool;
 	public var shaders : Array<hxsl.Shader>;
@@ -60,7 +62,15 @@ class WorldMaterial {
 		shaders = [];
 	}
 	public function updateBits() {
-		bits = (t.t == null ? 0 : t.t.id << 8) | (blend.getIndex() << 5) | ((killAlpha == null ? 0 : 1) << 4) | ((lights ? 1 : 0) << 3) | ((shadows ? 1 : 0) << 2) | ((spec == null ? 0 : 1) << 1) | (culling ? 1 : 0);
+		bits = (t.t == null ? 0 : t.t.id    << 10)
+			| ((normal == null ? 0 : 1)     << 9)
+			| (blend.getIndex()             << 6)
+			| ((killAlpha == null ? 0 : 1)  << 5)
+			| ((emissive == null ? 0 : 1)   << 4)
+			| ((lights ? 1 : 0)             << 3)
+			| ((shadows ? 1 : 0)            << 2)
+			| ((spec == null ? 0 : 1)       << 1)
+			| (culling ? 1 : 0);
 	}
 }
 
@@ -102,6 +112,10 @@ class World extends Object {
 	*/
 	public var enableSpecular = false;
 	/*
+		For each texture loaded, will call resolveNormalMap and have separate normal texture.
+	*/
+	public var enableNormalMaps = false;
+	/*
 		When enableSpecular=true, will store the specular value in the alpha channel instead of a different texture.
 		This will erase alpha value of transparent textures, so should only be used if specular is only on opaque models.
 	*/
@@ -109,11 +123,14 @@ class World extends Object {
 
 	var worldStride : Int;
 	var bigTextureSize = 2048;
-	var bigTextureBG = 0xFF8080FF;
+	var defaultDiffuseBG = 0;
+	var defaultNormalBG = 0x8080FF;
+	var defaultSpecularBG = 0;
+
 	var soilColor = 0x408020;
 	var chunks : Array<WorldChunk>;
 	var allChunks : Array<WorldChunk>;
-	var bigTextures : Array<{ diffuse : h3d.mat.BigTexture, spec : h3d.mat.BigTexture }>;
+	var bigTextures : Array<{ diffuse : h3d.mat.BigTexture, spec : h3d.mat.BigTexture, normal : h3d.mat.BigTexture }>;
 	var textures : Map<String, WorldMaterial>;
 
 	public function new( chunkSize : Int, worldSize : Int, ?parent, ?autoCollect = true ) {
@@ -139,14 +156,19 @@ class World extends Object {
 	}
 
 	function buildFormat() {
-		return {
+		var r = {
 			fmt : [
 				new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3),
 				new hxd.fmt.hmd.Data.GeometryFormat("normal", DVec3),
-				new hxd.fmt.hmd.Data.GeometryFormat("uv", DVec2),
 			],
 			defaults : [],
 		};
+		if(enableNormalMaps) {
+			r.defaults[r.fmt.length] = new h3d.Vector(1,0,0);
+			r.fmt.push(new hxd.fmt.hmd.Data.GeometryFormat("tangent", DVec3));
+		}
+		r.fmt.push(new hxd.fmt.hmd.Data.GeometryFormat("uv", DVec2));
+		return r;
 	}
 
 	function getBlend( r : hxd.res.Image ) : h3d.mat.BlendMode {
@@ -155,7 +177,8 @@ class World extends Object {
 		return Alpha;
 	}
 
-	function resolveTexturePath( r : hxd.res.Model, path : String ) {
+	function resolveTexturePath( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material ) {
+		var path = mat.diffuseTexture;
 		if( hxd.res.Loader.currentInstance.exists(path) )
 			return path;
 		var dir = r.entry.directory;
@@ -163,17 +186,28 @@ class World extends Object {
 		return dir + path.split("/").pop();
 	}
 
-	function resolveSpecularTexture( path : String ) : hxd.res.Image {
-		path =  path.substr(0, path.length - 4) + "spec.jpg";
+	function resolveSpecularTexture( path : String, mat : hxd.fmt.hmd.Data.Material) : hxd.res.Image {
+		if(mat.specularTexture == null)
+			return null;
 		try {
-			return hxd.res.Loader.currentInstance.load(path).toImage();
+			return hxd.res.Loader.currentInstance.load(mat.specularTexture).toImage();
+		} catch( e : hxd.res.NotFound ) {
+			return null;
+		}
+	}
+
+	function resolveNormalMap( path : String, mat : hxd.fmt.hmd.Data.Material) : hxd.res.Image {
+		if(mat.normalMap == null)
+			return null;
+		try {
+			return hxd.res.Loader.currentInstance.load(mat.normalMap).toImage();
 		} catch( e : hxd.res.NotFound ) {
 			return null;
 		}
 	}
 
 	function loadMaterialTexture( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
-		var texturePath = resolveTexturePath(r, mat.diffuseTexture);
+		var texturePath = resolveTexturePath(r, mat);
 		var m = textures.get(texturePath);
 		if( m != null )
 			return m;
@@ -189,16 +223,25 @@ class World extends Object {
 			}
 		}
 		if( t == null ) {
-			var b = new h3d.mat.BigTexture(bigTextures.length, bigTextureSize, bigTextureBG);
-			btex = { diffuse : b, spec : null };
+			var b = new h3d.mat.BigTexture(bigTextures.length, bigTextureSize, defaultDiffuseBG);
+			btex = { diffuse : b, spec : null, normal : null };
 			bigTextures.unshift( btex );
 			t = b.add(rt);
 			if( t == null ) throw "Texture " + texturePath + " is too big";
 		}
 
+		inline function checkSize(res:hxd.res.Image) {
+			if(res != null) {
+				var size = res.getSize();
+				if(size.width != t.width || size.height != t.height)
+					throw 'Texture ${res.entry.path} has different size from diffuse (${size.width}x${size.height})';
+			}
+		}
+
 		var specTex = null;
 		if( enableSpecular ) {
-			var res = resolveSpecularTexture(texturePath);
+			var res = resolveSpecularTexture(texturePath, mat);
+			checkSize(res);
 			if( specularInAlpha ) {
 				if( res != null ) {
 					t.setAlpha(res);
@@ -206,21 +249,35 @@ class World extends Object {
 				}
 			} else {
 				if( btex.spec == null )
-					btex.spec = new h3d.mat.BigTexture(-1, bigTextureSize, bigTextureBG);
+					btex.spec = new h3d.mat.BigTexture(-1, bigTextureSize, defaultSpecularBG);
 				if( res != null )
 					specTex = btex.spec.add(res);
 				else
-					@:privateAccess btex.spec.allocPos(t.t.tex.width, t.t.tex.height); // keep UV in-sync
+					specTex = btex.spec.addEmpty(t.width, t.height); // keep UV in-sync
 			}
+		}
+
+		var normalMap = null;
+		if( enableNormalMaps ) {
+			var res = resolveNormalMap(texturePath, mat);
+			checkSize(res);
+			if( btex.normal == null )
+				btex.normal = new h3d.mat.BigTexture(-1, bigTextureSize, defaultNormalBG);
+			if( res != null )
+				normalMap = btex.normal.add(res);
+			else
+				normalMap = btex.normal.addEmpty(t.width, t.height); // keep UV in-sync
 		}
 
 		var m = new WorldMaterial();
 		m.t = t;
 		m.spec = specTex;
+		m.normal = normalMap;
 		m.blend = getBlend(rt);
 		m.killAlpha = null;
+		m.emissive = null;
 		m.mat = mat;
-		m.culling = mat.culling != None;
+		m.culling = true;
 		m.updateBits();
 		textures.set(texturePath, m);
 		return m;
@@ -231,6 +288,8 @@ class World extends Object {
 			b.diffuse.done();
 			if(b.spec != null)
 				b.spec.done();
+			if(b.normal != null)
+				b.normal.done();
 		}
 	}
 
@@ -273,6 +332,9 @@ class World extends Object {
 				var vl = data.vertexes;
 				var p = 0;
 				var extra = model.stride - 8;
+				if(enableNormalMaps)
+					extra -= 3;
+
 				for( i in 0...m.vertexCount ) {
 					var x = vl[p++];
 					var y = vl[p++];
@@ -280,6 +342,12 @@ class World extends Object {
 					var nx = vl[p++];
 					var ny = vl[p++];
 					var nz = vl[p++];
+					var tx = 1., ty = 0., tz = 0.;
+					if(enableNormalMaps) {
+						tx = vl[p++];
+						ty = vl[p++];
+						tz = vl[p++];
+					}
 					var u = vl[p++];
 					var v = vl[p++];
 
@@ -299,6 +367,16 @@ class World extends Object {
 					model.buf.push(n.y * len);
 					model.buf.push(n.z * len);
 
+					if( enableNormalMaps ) {
+						var t = new h3d.Vector(tx, ty, tz);
+						var tlen = t.length();
+						t.transform3x3(pos);
+						var len = tlen * hxd.Math.invSqrt(n.lengthSq());
+						model.buf.push(t.x * len);
+						model.buf.push(t.y * len);
+						model.buf.push(t.z * len);
+					}
+
 					// uv
 					model.buf.push(u * wmat.t.su + wmat.t.du);
 					model.buf.push(v * wmat.t.sv + wmat.t.dv);
@@ -309,7 +387,7 @@ class World extends Object {
 				}
 
 				for( i in 0...m.indexCount )
-					model.idx.push(data.indexes[i] + startIndex);
+					model.idx.push(data.indexes[i] + startVertex);
 
 				startVertex += m.vertexCount;
 				startIndex += m.indexCount;
@@ -359,13 +437,20 @@ class World extends Object {
 		soil.material.shadows = true;
 	}
 
+	function precompute( e : WorldElement ) {
+
+	}
+
 	function initChunkElements( c : WorldChunk ) {
 		for( e in c.elements ) {
 			var model = e.model;
+			precompute(e);
 			for( g in model.geometries ) {
 				var b = c.buffers.get(g.m.bits);
 				if( b == null ) {
-					b = new h3d.scene.Mesh(new h3d.prim.BigPrimitive(getStride(model), true), c.root);
+					var bp = new h3d.prim.BigPrimitive(getStride(model), true);
+					bp.hasTangents = enableNormalMaps;
+					b = new h3d.scene.Mesh(bp, c.root);
 					b.name = g.m.name;
 					c.buffers.set(g.m.bits, b);
 					initMaterial(b, g.m);
@@ -407,10 +492,13 @@ class World extends Object {
 		mesh.material.textureShader.killAlphaThreshold = mat.killAlpha;
 		mesh.material.mainPass.enableLights = mat.lights;
 		mesh.material.shadows = mat.shadows;
-		mesh.material.mainPass.culling = mat.culling ? Back : None;
+		mesh.material.mainPass.culling = Back;
+		mesh.material.mainPass.depthWrite = true;
+		mesh.material.mainPass.depthTest = Less;
 
-		for(s in mat.shaders)
+		for(s in mat.shaders){
 			mesh.material.mainPass.addShader(s);
+		}
 
 		if( mat.spec != null ) {
 			if( specularInAlpha ) {
@@ -420,6 +508,10 @@ class World extends Object {
 				mesh.material.specularTexture = mat.spec.t.tex;
 		} else
 			mesh.material.specularAmount = 0;
+
+		if(enableNormalMaps)
+			mesh.material.normalMap = mat.normal.t.tex;
+
 	}
 
 	override function dispose() {

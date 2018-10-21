@@ -6,11 +6,13 @@ class Indexes {
 
 	var mem : h3d.impl.MemoryManager;
 	var ibuf : h3d.impl.Driver.IndexBuffer;
+	public var is32(default,null) : Bool;
 	public var count(default,null) : Int;
 
-	public function new(count) {
+	public function new(count,is32=false) {
 		this.mem = h3d.Engine.getCurrent().mem;
 		this.count = count;
+		this.is32 = is32;
 		mem.allocIndexes(this);
 	}
 
