@@ -63,8 +63,8 @@ class SAO extends ScreenShader {
 			var normal = normalTexture.get(vUV);
 
 			var noiseUv : Vec2;
-			noiseUv = useWorldUV ? origin.xy + origin.z : vUV;
-			var sampleNoise = noiseTexture.get(noiseUv).x;
+			noiseUv = useWorldUV ? origin.xy + origin.z : vUV / screenRatio;
+			var sampleNoise = noiseTexture.get(noiseUv * noiseScale).x;
 			var randomPatternRotationAngle = 2.0 * PI * sampleNoise;
 
 			// change from WS to DepthUV space
