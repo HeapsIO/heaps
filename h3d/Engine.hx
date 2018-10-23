@@ -284,7 +284,7 @@ class Engine {
 		drawCalls = 0;
 		targetStack = null;
 		needFlushTarget = currentTargetTex != null;
-		#if usesys
+		#if (usesys && !macro)
 		haxe.System.beginFrame();
 		#end
 		driver.begin(hxd.Timer.frameCount);
