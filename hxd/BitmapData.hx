@@ -230,7 +230,7 @@ class BitmapData {
 	}
 
 	/* Line plotting using Yevgeny P. Kuzmin. - Bresenham's Line Generation Algorithm with Built-in Clipping. Computer Graphics Forum, 14(5):275-280, 2005.
- 	 *  see: https://stackoverflow.com/questions/40884680/how-to-use-bresenhams-line-drawing-algorithm-with-clipping/40902741#40902741 )
+ 	 * see: https://stackoverflow.com/questions/40884680/how-to-use-bresenhams-line-drawing-algorithm-with-clipping/40902741#40902741 )
 	 */
 	public function line( x0 : Int, y0 : Int, x1 : Int, y1 : Int, color : Int ) {
 		var dx = x1 - x0;
@@ -264,12 +264,12 @@ class BitmapData {
 			var clip_y1 : Int;
 
 			if ( x0<x1 ) {
-				if ( x0>=width || x1 <0 )   return;
+				if ( x0>=width || x1 <0 ) return;
 				sx = 1;
 				clip_x0 = 0;
 				clip_x1 = width-1;
 			} else {
-				if ( x1>=width || x0<0 ) 	return;
+				if ( x1>=width || x0<0 ) return;
 				sx = -1;
 				x1 = -x1;
 				x0 = -x0;
@@ -356,7 +356,7 @@ class BitmapData {
 					xend += Std.int(xinc);
 
 					if ( temp - xinc*d2y == 0 )
-                		--xend;
+						--xend;
 				}
 				xend = ( xend > clip_x1 ) ? clip_x1 + 1 : xend + 1;
 
@@ -376,11 +376,11 @@ class BitmapData {
 					setPixel(x, y, color);
 
 					if ( delta >= 0 ) {
-                		y += sy;
-                		delta -= d2x;
-           			} else {
-                		delta += d2y;
-            		}
+						y += sy;
+						delta -= d2x;
+					} else {
+						delta += d2y;
+					}
 					x += sx;
 				}
 			} else {				// slope in ]1;+oo[
@@ -394,7 +394,7 @@ class BitmapData {
 					var yinc = (temp / d2x);
 					y += Std.int(yinc);
 
-					if ( y > clip_y1 )	return;
+					if ( y > clip_y1 ) return;
 
 					if ( y >= clip_y0 ) {
 						temp -= yinc * d2x;
@@ -435,7 +435,7 @@ class BitmapData {
 					yend += Std.int(yinc);
 
 					if ( temp - yinc*d2x == 0 )
-                		--yend;
+						--yend;
 				}
 				yend = ( yend > clip_y1 ) ? clip_y1 + 1 : yend + 1;
 
@@ -455,11 +455,11 @@ class BitmapData {
 					setPixel(x, y, color);
 
 					if ( delta >= 0 ) {
-                		x += sx;
-                		delta -= d2y;
-           			} else {
-                		delta += d2x;
-            		}
+						x += sx;
+						delta -= d2y;
+					} else {
+						delta += d2x;
+					}
 					y += sy;
 				}
 			}
@@ -669,7 +669,7 @@ class BitmapData {
 		var src = pixels.bytes;
 		var i = 0;
 		for( y in 0...height ){
-			for( x in 0...width  ){
+			for( x in 0...width ){
 				data.setPixel32( x, y, src.getInt32(i<<2) );
 				i++;
 			}
