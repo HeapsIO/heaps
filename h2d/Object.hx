@@ -65,6 +65,12 @@ class Object {
 	public var alpha : Float = 1.;
 
 	/**
+		Should the Object follow camera or stay static relative to the screen (default true).
+		This value is automatically set to false when added to an object tree that does not follow camera.
+	**/
+	public var followCamera : Bool;
+
+	/**
 		The post process filter for this object.
 	**/
 	public var filter(default,set) : h2d.filter.Filter;
@@ -86,6 +92,7 @@ class Object {
 	public function new( ?parent : Object ) {
 		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
 		x = 0; y = 0; scaleX = 1; scaleY = 1; rotation = 0;
+		followCamera = true;
 		posChanged = parent != null;
 		visible = true;
 		children = [];
@@ -357,6 +364,7 @@ class Object {
 	// kept for internal init
 	function onAdd() {
 		allocated = true;
+		if (parent != null && !parent.followCamera) followCamera = false;
 		if( filter != null )
 			filter.bind(this);
 		for( c in children )

@@ -97,6 +97,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.viewport.set( -scene.width * 0.5, -scene.height * 0.5, 2 / scene.width, -2 * baseFlipY / scene.height);
 		baseShader.filterMatrixA.set(1, 0, 0);
 		baseShader.filterMatrixB.set(0, 1, 0);
+		baseShader.cameraMatrixA.set(1, 0, 0);
+		baseShader.cameraMatrixB.set(0, 1, 0);
 		baseShaderList.next = null;
 		initShaders(baseShaderList);
 		engine.selectMaterial(pass);
@@ -236,12 +238,25 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.setRenderZone();
 	}
 
+	@:access(h2d.Camera)
+	public function setCamera( cam : h2d.Camera) {
+		baseShader.cameraMatrixA.set(cam.matA, cam.matC, cam.absX);
+		baseShader.cameraMatrixB.set(cam.matB, cam.matD, cam.absY);
+	}
+
+	public function clearCamera() {
+		baseShader.cameraMatrixA.set(1, 0, 0);
+		baseShader.cameraMatrixB.set(0, 1, 0);
+	}
+
 	function drawLayer( layer : Int ) {
 		@:privateAccess scene.drawLayer(this, layer);
 	}
 
 	public function drawScene() {
+		setCamera(scene.camera);
 		@:privateAccess scene.drawRec(this);
+		clearCamera();
 	}
 
 	public inline function flush() {
@@ -391,13 +406,14 @@ class RenderContext extends h3d.impl.RenderContext {
 			if( @:privateAccess s.instance != prevInst )
 				shaderChanged = true;
 		}
-		if( objShaders != null || curShaders != null || baseShader.isRelative != isRelative || baseShader.hasUVPos != hasUVPos || baseShader.killAlpha != killAlpha )
+		if( objShaders != null || curShaders != null || baseShader.isRelative != isRelative || baseShader.followCamera != obj.followCamera || baseShader.hasUVPos != hasUVPos || baseShader.killAlpha != killAlpha )
 			shaderChanged = true;
 		if( shaderChanged ) {
 			flush();
 			baseShader.hasUVPos = hasUVPos;
 			baseShader.isRelative = isRelative;
 			baseShader.killAlpha = killAlpha;
+			baseShader.followCamera = obj.followCamera;
 			baseShader.updateConstants(manager.globals);
 			baseShaderList.next = obj.shaders;
 			initShaders(baseShaderList);

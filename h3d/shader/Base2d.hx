@@ -39,6 +39,10 @@ class Base2d extends hxsl.Shader {
 		@param var halfPixelInverse : Vec2;
 		@param var viewport : Vec4;
 
+		@param var cameraMatrixA : Vec3;
+		@param var cameraMatrixB : Vec3;
+		@const var followCamera : Bool;
+
 		var outputPosition : Vec4;
 
 		function __init__() {
@@ -49,6 +53,11 @@ class Base2d extends hxsl.Shader {
 				absolutePosition.zw = spritePosition.zw;
 			} else
 				absolutePosition = spritePosition;
+			if ( followCamera ) {
+				absolutePosition.x = vec3(absolutePosition.xy,1).dot(cameraMatrixA);
+				absolutePosition.y = vec3(absolutePosition.xy,1).dot(cameraMatrixB);
+			}
+
 			calculatedUV = hasUVPos ? input.uv * uvPos.zw + uvPos.xy : input.uv;
 			pixelColor = isRelative ? color * input.color : input.color;
 			textureColor = texture.get(calculatedUV);
