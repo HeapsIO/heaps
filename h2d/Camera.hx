@@ -27,9 +27,10 @@ class Camera {
 	private var absX : Float;
 	private var absY : Float;
 
-	/** Should camera X/Y coordinates be rounded?
+	/**
+		Should camera X/Y coordinates be rounded?
 		Note: This only applies on matrix and does not reflect on x/y/centerX/centerY.
-		**/
+	**/
 	public var pixelSnap : Bool;
 
 	public function new(pixelSnap:Bool = true, scene:Scene) {
@@ -38,27 +39,23 @@ class Camera {
 		this.scene = scene;
 	}
 
-	inline function get_centerX() : Float {
-		return this.x + halfWidth;
-	}
-
-	inline function get_centerY() : Float {
-		return this.y + halfHeight;
-	}
+	inline function get_centerX() { return this.x + halfWidth; }
+	inline function get_centerY() { return this.y + halfHeight; }
 
 	inline function set_centerX(v : Float) : Float {
-		return this.x = v - halfWidth;
+		this.x = v - halfWidth;
+		return v;
 	}
-
 	inline function set_centerY(v : Float) : Float {
-		return this.y = v - halfHeight;
+		this.y = v - halfHeight;
+		return v;
 	}
 
-	inline function set_x(v : Float) : Float { posChanged = true; return x = v; }
-	inline function set_y(v : Float) : Float { posChanged = true; return y = v; }
-	inline function set_scaleX(v : Float) : Float { posChanged = true; return scaleX = v; }
-	inline function set_scaleY(v : Float) : Float { posChanged = true; return scaleY = v; }
-	inline function set_rotation(v : Float) : Float { posChanged = true; return rotation = v; }
+	inline function set_x(v) { posChanged = true; return x = v; }
+	inline function set_y(v) { posChanged = true; return y = v; }
+	inline function set_scaleX(v) { posChanged = true; return scaleX = v; }
+	inline function set_scaleY(v) { posChanged = true; return scaleY = v; }
+	inline function set_rotation(v) { posChanged = true; return rotation = v; }
 
 	@:access(h2d.Scene)
 	private function sync(ctx:RenderContext)
@@ -93,6 +90,7 @@ class Camera {
 			}
 			absX = -x * scene.matA + -y * scene.matC + scene.absX;
 			absY = -x * scene.matB + -y * scene.matD + scene.absY;
+			posChanged = false;
 		}
 	}
 

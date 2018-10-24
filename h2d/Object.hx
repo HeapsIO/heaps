@@ -67,6 +67,7 @@ class Object {
 	/**
 		Should the Object follow camera or stay static relative to the screen (default true).
 		This value is automatically set to false when added to an object tree that does not follow camera.
+		Mixing Objects that do both leads to undefined results, please add them separately onto Scene.
 	**/
 	public var followCamera : Bool;
 
