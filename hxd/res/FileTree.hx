@@ -221,7 +221,9 @@ class FileTree {
 					args : [],
 					ret : loaderType,
 					expr : macro {
-						return hxd.res.Loader.currentInstance;
+						var l = hxd.res.Loader.currentInstance;
+						if( l == null ) throw "Resource loader not initialized: call to hxd.Res.initXXX() required";
+						return l;
 					}
 				}),
 				pos : pos
