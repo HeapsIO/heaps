@@ -3,7 +3,7 @@
 	"url" : "http://heaps.io",
 	"license" : "BSD",
     "description" : "The GPU Game Framework",
-    "version" : "1.4.0",
+    "version" : "1.5.0",
 	"releasenote" : "",
 	"contributors" : ["ncannasse"],
 	"dependencies" : { "format" : "" }
