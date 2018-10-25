@@ -30,7 +30,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		The zoom factor of the scene, allows to set a fixed x2, x4 etc. zoom for pixel art
 		When setting a zoom > 0, the scene resize will be automaticaly managed.
 	**/
-	public var zoom(get, set) : Int;
+	public var zoom(default, set) : Int = 0;
 
 	/**
 		Set the default value for `h2d.Drawable.smooth` (default: false)
@@ -73,10 +73,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		this.events = events;
 	}
 
-	function get_zoom() {
-		return Std.int(h3d.Engine.getCurrent().width / width);
-	}
-
 	function set_zoom(v:Int) {
 		var e = h3d.Engine.getCurrent();
 		var twidth = Math.ceil(window.width / v);
@@ -87,7 +83,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( totalWidth != e.width || totalHeight != e.height )
 			e.resize(totalWidth, totalHeight);
 		setFixedSize(twidth, theight);
-		return v;
+		return zoom = v;
 	}
 
 	function get_renderer() return ctx;
@@ -105,12 +101,14 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	@:dox(hide) @:noCompletion
 	public function checkResize() {
-		if( fixedSize ) return;
+		if( fixedSize && zoom == 0 ) return;
 		var engine = h3d.Engine.getCurrent();
-		if( width != engine.width || height != engine.height ) {
+		var scale = zoom == 0 ? 1 : zoom;
+		if( width * scale != engine.width || height * scale != engine.height ) {
 			width = engine.width;
 			height = engine.height;
 			posChanged = true;
+			if( zoom != 0 ) this.zoom = zoom;
 		}
 	}
 
@@ -472,11 +470,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	override function sync( ctx : RenderContext ) {
 		if( !allocated )
 			onAdd();
-		if( !fixedSize && (width != ctx.engine.width || height != ctx.engine.height) ) {
-			width = ctx.engine.width;
-			height = ctx.engine.height;
-			posChanged = true;
-		}
+		checkResize();
 		super.sync(ctx);
 	}
 
