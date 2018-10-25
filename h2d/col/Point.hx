@@ -77,6 +77,11 @@ class Point {
 		this.y = y;
 	}
 
+	public inline function load( p : h2d.col.Point ) {
+		this.x = p.x;
+		this.y = p.y;
+	}
+
 	public inline function scale( f : Float ) {
 		x *= f;
 		y *= f;
