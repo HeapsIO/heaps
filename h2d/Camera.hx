@@ -34,9 +34,13 @@ class Camera {
 	public var pixelSnap : Bool;
 
 	public function new(pixelSnap:Bool = true, scene:Scene) {
-		halfWidth = halfHeight = height = width = 0;
 		this.pixelSnap = pixelSnap;
 		this.scene = scene;
+		this.width = scene.width;
+		this.height = scene.height;
+		this.halfWidth = width / 2;
+		this.halfHeight = height / 2;
+		this.posChanged = true;
 	}
 
 	inline function get_centerX() { return this.x + halfWidth; }
