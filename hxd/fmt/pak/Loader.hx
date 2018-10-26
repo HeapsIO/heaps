@@ -4,7 +4,7 @@ class Loader extends h2d.Object {
 
 	var onDone : Void -> Void;
 	var cur : hxd.net.BinaryLoader;
-	var resCount : Int;
+	var resCount : Int = 0;
 	var fs : FileSystem;
 	var s2d : h2d.Scene;
 	var bg : h2d.Graphics;
