@@ -240,8 +240,8 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	@:access(h2d.Camera)
 	public function setCamera( cam : h2d.Camera) {
-		baseShader.cameraMatrixA.set(cam.matA, cam.matC, cam.absX);
-		baseShader.cameraMatrixB.set(cam.matB, cam.matD, cam.absY);
+		baseShader.cameraMatrixA.set(cam.camA, cam.camC, cam.camX);
+		baseShader.cameraMatrixB.set(cam.camB, cam.camD, cam.camY);
 	}
 
 	public function clearCamera() {
@@ -254,9 +254,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function drawScene() {
-		setCamera(scene.camera);
 		@:privateAccess scene.drawRec(this);
-		clearCamera();
 	}
 
 	public inline function flush() {
@@ -302,6 +300,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
 		baseShader.absoluteMatrixA.set(obj.matA, obj.matC, obj.absX);
 		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
+		baseShader.cameraScroll.set(obj.absScrollX, obj.absScrollY);
 		beforeDraw();
 		return true;
 	}
@@ -371,6 +370,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.height * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
 		baseShader.absoluteMatrixB.set(tile.width * obj.matB, tile.height * obj.matD, obj.absY + tile.dx * obj.matB + tile.dy * obj.matD);
 		baseShader.uvPos.set(tile.u, tile.v, tile.u2 - tile.u, tile.v2 - tile.v);
+		baseShader.cameraScroll.set(obj.absScrollX, obj.absScrollY);
 		beforeDraw();
 		if( fixedBuffer == null || fixedBuffer.isDisposed() ) {
 			fixedBuffer = new h3d.Buffer(4, 8, [Quads, RawFormat]);
@@ -406,14 +406,13 @@ class RenderContext extends h3d.impl.RenderContext {
 			if( @:privateAccess s.instance != prevInst )
 				shaderChanged = true;
 		}
-		if( objShaders != null || curShaders != null || baseShader.isRelative != isRelative || baseShader.followCamera != obj.followCamera || baseShader.hasUVPos != hasUVPos || baseShader.killAlpha != killAlpha )
+		if( objShaders != null || curShaders != null || baseShader.isRelative != isRelative || baseShader.hasUVPos != hasUVPos || baseShader.killAlpha != killAlpha )
 			shaderChanged = true;
 		if( shaderChanged ) {
 			flush();
 			baseShader.hasUVPos = hasUVPos;
 			baseShader.isRelative = isRelative;
 			baseShader.killAlpha = killAlpha;
-			baseShader.followCamera = obj.followCamera;
 			baseShader.updateConstants(manager.globals);
 			baseShaderList.next = obj.shaders;
 			initShaders(baseShaderList);

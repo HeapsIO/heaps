@@ -65,11 +65,19 @@ class Object {
 	public var alpha : Float = 1.;
 
 	/**
-		Should the Object follow camera or stay static relative to the screen (default true).
-		This value is automatically set to false when added to an object tree that does not follow camera.
-		Mixing Objects that do both leads to undefined results, please add them separately onto Scene.
+		Horizontal scroll factor of Object relative to camera. (default 1.0)
+		This value is affected by parent objects.
+		Note that this is only a visual change and does not affect actual position,
+		use case of this variable is to allow parallaxing of objects.
 	**/
-	public var followCamera : Bool;
+	public var camScrollX(default, set) : Float;
+	/**
+		Vertical scroll factor of Object relative to camera. (default 1.0)
+		This value is affected by parent objects.
+		Note that this is only a visual change and does not affect actual position,
+		use case of this variable is to allow parallaxing of objects.
+	**/
+	public var camScrollY(default, set) : Float;
 
 	/**
 		The post process filter for this object.
@@ -82,6 +90,8 @@ class Object {
 	var matD : Float;
 	var absX : Float;
 	var absY : Float;
+	var absScrollX : Float;
+	var absScrollY : Float;
 
 	var posChanged : Bool;
 	var allocated : Bool;
@@ -93,7 +103,7 @@ class Object {
 	public function new( ?parent : Object ) {
 		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
 		x = 0; y = 0; scaleX = 1; scaleY = 1; rotation = 0;
-		followCamera = true;
+		camScrollX = 1; camScrollY = 1;
 		posChanged = parent != null;
 		visible = true;
 		children = [];
@@ -365,7 +375,6 @@ class Object {
 	// kept for internal init
 	function onAdd() {
 		allocated = true;
-		if (parent != null && !parent.followCamera) followCamera = false;
 		if( filter != null )
 			filter.bind(this);
 		for( c in children )
@@ -495,6 +504,8 @@ class Object {
 			}
 			absX = x;
 			absY = y;
+			absScrollX = camScrollX;
+			absScrollY = camScrollY;
 		} else {
 			// M(rel) = S . R . T
 			// M(abs) = M(rel) . P(abs)
@@ -517,6 +528,8 @@ class Object {
 			}
 			absX = x * parent.matA + y * parent.matC + parent.absX;
 			absY = x * parent.matB + y * parent.matD + parent.absY;
+			absScrollX = camScrollX * parent.camScrollX;
+			absScrollY = camScrollY * parent.camScrollY;
 		}
 	}
 
@@ -791,6 +804,16 @@ class Object {
 	inline function set_rotation(v) {
 		posChanged = true;
 		return rotation = v;
+	}
+
+	inline function set_camScrollX(v) {
+		posChanged = true;
+		return camScrollX = v;
+	}
+
+	inline function set_camScrollY(v) {
+		posChanged = true;
+		return camScrollY = v;
 	}
 
 	/**

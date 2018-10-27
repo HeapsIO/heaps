@@ -1,12 +1,6 @@
 package h2d;
 
-class Camera {
-
-	public var x(default, set) : Float = 0;
-	public var y(default, set) : Float = 0;
-	public var scaleX(default, set) : Float = 1;
-	public var scaleY(default, set) : Float = 1;
-	public var rotation(default, set) : Float = 0;
+class Camera extends h2d.Object {
 
 	/** X position of the camera screen center point. **/
 	public var centerX(get, set) : Float;
@@ -18,29 +12,21 @@ class Camera {
 	private var halfWidth : Float;
 	private var halfHeight : Float;
 	private var scene : Scene;
-	private var posChanged : Bool;
 
-	private var matA : Float;
-	private var matB : Float;
-	private var matC : Float;
-	private var matD : Float;
-	private var absX : Float;
-	private var absY : Float;
+	private var camA : Float;
+	private var camB : Float;
+	private var camC : Float;
+	private var camD : Float;
+	private var camX : Float;
+	private var camY : Float;
 
-	/**
-		Should camera X/Y coordinates be rounded?
-		Note: This only applies on matrix and does not reflect on x/y/centerX/centerY.
-	**/
-	public var pixelSnap : Bool;
-
-	public function new(pixelSnap:Bool = true, scene:Scene) {
-		this.pixelSnap = pixelSnap;
+	public function new(scene : h2d.Scene) {
+		super(scene);
 		this.scene = scene;
 		this.width = scene.width;
 		this.height = scene.height;
-		this.halfWidth = width / 2;
-		this.halfHeight = height / 2;
-		this.posChanged = true;
+		this.halfWidth = width * 0.5;
+		this.halfHeight = height * 0.5;
 	}
 
 	inline function get_centerX() { return this.x + halfWidth; }
@@ -55,47 +41,57 @@ class Camera {
 		return v;
 	}
 
-	inline function set_x(v) { posChanged = true; return x = v; }
-	inline function set_y(v) { posChanged = true; return y = v; }
-	inline function set_scaleX(v) { posChanged = true; return scaleX = v; }
-	inline function set_scaleY(v) { posChanged = true; return scaleY = v; }
-	inline function set_rotation(v) { posChanged = true; return rotation = v; }
-
-	@:access(h2d.Scene)
-	private function sync(ctx:RenderContext)
+	override private function calcAbsPos()
 	{
-		if (width != scene.width || height != scene.height) {
-			var newX = this.x + halfWidth;
-			var newY = this.y + halfHeight;
+		if( rotation == 0 ) {
+			camA = scaleX * scene.matA;
+			camB = scaleX * scene.matB;
+			camC = scaleY * scene.matC;
+			camD = scaleY * scene.matD;
+		} else {
+			var cr = Math.cos(rotation);
+			var sr = Math.sin(rotation);
+			var tmpA = scaleX * cr;
+			var tmpB = scaleX * sr;
+			var tmpC = scaleY * -sr;
+			var tmpD = scaleY * cr;
+			camA = tmpA * scene.matA + tmpB * scene.matC;
+			camB = tmpA * scene.matB + tmpB * scene.matD;
+			camC = tmpC * scene.matA + tmpD * scene.matC;
+			camD = tmpC * scene.matB + tmpD * scene.matD;
+		}
+		camX = -x * scene.matA + -y * scene.matC + scene.absX;
+		camY = -x * scene.matB + -y * scene.matD + scene.absY;
+	}
+
+	override private function sync(ctx : RenderContext)
+	{
+		if (scene.width != width || scene.height != height) {
+			// TODO: Anchor point
+			var oldX = this.x + halfWidth;
+			var oldY = this.y + halfHeight;
 			this.width = scene.width;
 			this.height = scene.height;
 			this.halfWidth = width * 0.5;
 			this.halfHeight = height * 0.5;
-			this.x = newX - halfWidth;
-			this.y = newY - halfHeight;
+			this.x = oldX - halfWidth;
+			this.y = oldY - halfHeight;
 		}
-		if (posChanged) {
-			if( rotation == 0 ) {
-				matA = scaleX * scene.matA;
-				matB = scaleX * scene.matB;
-				matC = scaleY * scene.matC;
-				matD = scaleY * scene.matD;
-			} else {
-				var cr = Math.cos(rotation);
-				var sr = Math.sin(rotation);
-				var tmpA = scaleX * cr;
-				var tmpB = scaleX * sr;
-				var tmpC = scaleY * -sr;
-				var tmpD = scaleY * cr;
-				matA = tmpA * scene.matA + tmpB * scene.matC;
-				matB = tmpA * scene.matB + tmpB * scene.matD;
-				matC = tmpC * scene.matA + tmpD * scene.matC;
-				matD = tmpC * scene.matB + tmpD * scene.matD;
-			}
-			absX = -x * scene.matA + -y * scene.matC + scene.absX;
-			absY = -x * scene.matB + -y * scene.matD + scene.absY;
-			posChanged = false;
-		}
+		super.sync(ctx);
 	}
 
+	override private function drawRec(ctx : RenderContext)
+	{
+		if ( !visible ) return;
+
+		if (posChanged) {
+			calcAbsPos();
+			for ( c in children )
+				c.posChanged = true;
+			posChanged = false;
+		}
+		ctx.setCamera(this);
+		super.drawRec(ctx);
+		ctx.clearCamera();
+	}
 }

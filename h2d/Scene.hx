@@ -42,8 +42,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	public var renderer(get, set) : RenderContext;
 
-	public var camera : Camera;
-
 	var fixedSize : Bool;
 	var interactive : Array<Interactive>;
 	var eventListeners : Array< hxd.Event -> Void >;
@@ -64,7 +62,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		interactive = new Array();
 		eventListeners = new Array();
 		window = hxd.Window.getInstance();
-		camera = new Camera(true, this);
 		posChanged = true;
 	}
 
@@ -472,7 +469,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.end();
 	}
 
-	@:access(h2d.Camera)
 	override function sync( ctx : RenderContext ) {
 		if( !allocated )
 			onAdd();
@@ -481,7 +477,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			height = ctx.engine.height;
 			posChanged = true;
 		}
-		camera.sync(ctx);
 		super.sync(ctx);
 	}
 
