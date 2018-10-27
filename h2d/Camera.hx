@@ -77,21 +77,38 @@ class Camera extends h2d.Object {
 			this.x = oldX - halfWidth;
 			this.y = oldY - halfHeight;
 		}
+		checkPosChanged();
 		super.sync(ctx);
+	}
+
+	// Camera never triggers `posChanged` on children if it's `posChanged` is true.
+	// Hence it have to intercept all cases `hxd.Object` would do that.
+	inline function checkPosChanged() {
+		if (posChanged) {
+			calcAbsPos();
+			posChanged = false;
+		}
 	}
 
 	override private function drawRec(ctx : RenderContext)
 	{
 		if ( !visible ) return;
 
-		if (posChanged) {
-			calcAbsPos();
-			for ( c in children )
-				c.posChanged = true;
-			posChanged = false;
-		}
+		checkPosChanged();
 		ctx.setCamera(this);
 		super.drawRec(ctx);
 		ctx.clearCamera();
+	}
+
+	override private function getBoundsRec(relativeTo:Object, out:h2d.col.Bounds, forSize:Bool)
+	{
+		checkPosChanged();
+		super.getBoundsRec(relativeTo, out, forSize);
+	}
+
+	override private function syncPos()
+	{
+		if ( parent != null ) parent.syncPos();
+		checkPosChanged();
 	}
 }
