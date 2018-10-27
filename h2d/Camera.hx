@@ -9,6 +9,10 @@ class Camera extends h2d.Object {
 
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
+	public var horizontalRatio(default, set) : Float;
+	public var verticalRatio(default, set) : Float;
+	var ratioChanged : Bool;
+
 	var halfWidth : Float;
 	var halfHeight : Float;
 	var scene : Scene;
@@ -20,17 +24,16 @@ class Camera extends h2d.Object {
 	var camX : Float;
 	var camY : Float;
 
-	public function new( ?scene : h2d.Scene ) {
-		super(scene);
-		this.scene = scene;
-		if ( scene != null ) {
-			this.width = scene.width;
-			this.height = scene.height;
-			this.halfWidth = width * 0.5;
-			this.halfHeight = height * 0.5;
-		} else {
-			this.width = 0; this.height = 0;
-			this.halfWidth = 0; this.halfHeight = 0;
+	public function new( ?parent : h2d.Object, horizontalRatio : Float = 1, verticalRatio : Float = 1 ) {
+		super(parent);
+		this.horizontalRatio = horizontalRatio;
+		this.verticalRatio = verticalRatio;
+		this.width = 0; this.height = 0;
+		this.halfWidth = 0; this.halfHeight = 0;
+		ratioChanged = true;
+		if ( parent != null ) {
+			this.scene = parent.getScene();
+			if (scene != parent && !Std.is(parent, MultiCamera)) throw "Camera can be added only to Scene or MultiCamera!";
 		}
 	}
 
@@ -46,10 +49,20 @@ class Camera extends h2d.Object {
 		return v;
 	}
 
+	inline function set_horizontalRatio( v ) {
+		ratioChanged = true;
+		return horizontalRatio = hxd.Math.clamp(v, 0, 1);
+	}
+	
+	inline function set_verticalRatio( v ) {
+		ratioChanged = true;
+		return verticalRatio = hxd.Math.clamp(v, 0, 1);
+	}
+
 	override private function onAdd()
 	{
-		if ( !Std.is(parent, h2d.Scene) ) throw "Camera can be added only to h2d.Scene!";
-		this.scene = cast parent;
+		this.scene = parent.getScene();
+		if (parent != scene && !Std.is(parent, MultiCamera)) throw "Camera can be added only to Scene or MultiCamera!";
 		super.onAdd();
 	}
 
@@ -104,28 +117,20 @@ class Camera extends h2d.Object {
 
 	override private function sync( ctx : RenderContext )
 	{
-		if ( scene.width != width || scene.height != height ) {
+		if ( scene != null && (ratioChanged || scene.width != width || scene.height != height) ) {
 			// TODO: Anchor point
 			var oldX = this.x + halfWidth;
 			var oldY = this.y + halfHeight;
-			this.width = scene.width;
-			this.height = scene.height;
+			this.width = Math.round(scene.width * horizontalRatio);
+			this.height = Math.round(scene.height * verticalRatio);
 			this.halfWidth = width * 0.5;
 			this.halfHeight = height * 0.5;
 			this.x = oldX - halfWidth;
 			this.y = oldY - halfHeight;
+			this.ratioChanged = false;
 		}
 		checkPosChanged();
 		super.sync(ctx);
-	}
-
-	// Camera never triggers `posChanged` on children if it's `posChanged` is true.
-	// Hence it have to intercept all cases `hxd.Object` would do that.
-	inline function checkPosChanged() {
-		if (posChanged) {
-			calcAbsPos();
-			posChanged = false;
-		}
 	}
 
 	override private function drawRec( ctx : RenderContext )
@@ -149,4 +154,14 @@ class Camera extends h2d.Object {
 		if ( parent != null ) parent.syncPos();
 		checkPosChanged();
 	}
+
+	// Camera never triggers `posChanged` on children if it's `posChanged` is true.
+	// Hence it have to intercept all cases `hxd.Object` would do that.
+	inline function checkPosChanged() {
+		if (posChanged) {
+			calcAbsPos();
+			posChanged = false;
+		}
+	}
+
 }
