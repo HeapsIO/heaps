@@ -9,18 +9,18 @@ class Camera extends h2d.Object {
 
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
-	private var halfWidth : Float;
-	private var halfHeight : Float;
-	private var scene : Scene;
+	var halfWidth : Float;
+	var halfHeight : Float;
+	var scene : Scene;
 
-	private var camA : Float;
-	private var camB : Float;
-	private var camC : Float;
-	private var camD : Float;
-	private var camX : Float;
-	private var camY : Float;
+	var camA : Float;
+	var camB : Float;
+	var camC : Float;
+	var camD : Float;
+	var camX : Float;
+	var camY : Float;
 
-	public function new(?scene : h2d.Scene) {
+	public function new( ?scene : h2d.Scene ) {
 		super(scene);
 		this.scene = scene;
 		if ( scene != null ) {
@@ -37,11 +37,11 @@ class Camera extends h2d.Object {
 	inline function get_centerX() { return this.x + halfWidth; }
 	inline function get_centerY() { return this.y + halfHeight; }
 
-	inline function set_centerX(v : Float) : Float {
+	inline function set_centerX( v : Float ) {
 		this.x = v - halfWidth;
 		return v;
 	}
-	inline function set_centerY(v : Float) : Float {
+	inline function set_centerY( v : Float ) {
 		this.y = v - halfHeight;
 		return v;
 	}
@@ -61,7 +61,7 @@ class Camera extends h2d.Object {
 
 	override private function calcAbsPos()
 	{
-		if (scene == null) {
+		if ( scene == null ) {
 			var cr, sr;
 			if( rotation == 0 ) {
 				cr = 1.; sr = 0.;
@@ -102,9 +102,9 @@ class Camera extends h2d.Object {
 		}
 	}
 
-	override private function sync(ctx : RenderContext)
+	override private function sync( ctx : RenderContext )
 	{
-		if (scene.width != width || scene.height != height) {
+		if ( scene.width != width || scene.height != height ) {
 			// TODO: Anchor point
 			var oldX = this.x + halfWidth;
 			var oldY = this.y + halfHeight;
@@ -128,7 +128,7 @@ class Camera extends h2d.Object {
 		}
 	}
 
-	override private function drawRec(ctx : RenderContext)
+	override private function drawRec( ctx : RenderContext )
 	{
 		if ( !visible ) return;
 
@@ -138,7 +138,7 @@ class Camera extends h2d.Object {
 		ctx.clearCamera();
 	}
 
-	override private function getBoundsRec(relativeTo:Object, out:h2d.col.Bounds, forSize:Bool)
+	override private function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool )
 	{
 		checkPosChanged();
 		super.getBoundsRec(relativeTo, out, forSize);
