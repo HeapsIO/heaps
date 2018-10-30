@@ -9,7 +9,7 @@ enum FlowAlign {
 }
 
 /**
- * Flow properties which will be applied to elements added to Flow object.
+ * Flow properties which will be applied to elements added to `h2d.Flow` object.
  */
 @:allow(h2d.Flow)
 class FlowProperties {
@@ -60,11 +60,11 @@ class FlowProperties {
 /**
  * Container object which behaves like flexbox container in CSS.
  * Could be usefull when you want to place objects without worrying about setting their coordinates manually 
- * (for example, in for automatic layout of UI elements).
- * This object will take care about it, so none of the added object will overlap others. Each object will be placed after another,
+ * (for example, for automatic layout of UI elements).
+ * This object will take care about it, so none of the added objects will overlap others. Each object will be placed after another,
  * and when `width` or `height` (depends on `isVertical` property value) becomes bigger than `maxWidth` or `maxHeight` 
  * then new line or new column will be started to place next objects.
- * You'll just need to call `rewlow()` method and all objects will be positioned for you.
+ * Don't forget to call `reflow()` method after adding/removing objects from container and all objects will be positioned automatically.
  */
 class Flow extends Object {
 
@@ -106,7 +106,7 @@ class Flow extends Object {
 
 	/**
 	 * Height of each line of objects inside this flow controller.
-	 * If you set it to value other than 0 and `isVertical` to false (which is by default),
+	 * If set to value other than 0 and `isVertical` is `false` (which is by default),
 	 * then height of each line will be equal to that value.
 	 * Default value of `null` means that the height of line will be equal to the biggest height of object added to this line.
 	 */
@@ -215,7 +215,7 @@ class Flow extends Object {
 
 	/**
 		Get the per-element properties. Returns null if the element is not currently part of the flow.
-		You can then change flow properties for element, so it will behave slightly different from anothers.
+		Properties of returned object can be changed, so corresponding `h2d.Object` could be placed slightly different from anothers.
 	**/
 	public function getProperties( e : h2d.Object ) {
 		needReflow = true; // properties might be changed
