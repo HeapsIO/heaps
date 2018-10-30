@@ -8,6 +8,9 @@ enum FlowAlign {
 	Bottom;
 }
 
+/**
+ * Flow properties which will be applied to elements added to Flow object.
+ */
 @:allow(h2d.Flow)
 class FlowProperties {
 
@@ -54,6 +57,15 @@ class FlowProperties {
 
 }
 
+/**
+ * Container object which behaves like flexbox container in CSS.
+ * Could be usefull when you want to place objects without worrying about setting their coordinates manually 
+ * (for example, in for automatic layout of UI elements).
+ * This object will take care about it, so none of the added object will overlap others. Each object will be placed after another,
+ * and when `width` or `height` (depends on `isVertical` property value) becomes bigger than `maxWidth` or `maxHeight` 
+ * then new line or new column will be started to place next objects.
+ * You'll just need to call `rewlow()` method and all objects will be positioned for you.
+ */
 class Flow extends Object {
 
 	var tmpBounds = new h2d.col.Bounds();
@@ -78,11 +90,26 @@ class Flow extends Object {
 	**/
 	public var verticalAlign(default,set) : Null<FlowAlign>;
 
+	/**
+	 * Min width. Flow's width won't be less than this value, even when the total width of added objects is less than this value.
+	 */
 	public var minWidth(default, set) : Null<Int>;
+	/**
+	 * Min height. Flow's height won't be less than this value, even when the total height of added objects is less than this value.
+	 */
 	public var minHeight(default, set) : Null<Int>;
+	/**
+	 * Max width. If total width of added objects is bigger than `maxWidth` and `multiline` is set to true, then new line will be started to place objects
+	 */
 	public var maxWidth(default, set) : Null<Int>;
 	public var maxHeight(default, set) : Null<Int>;
 
+	/**
+	 * Height of each line of objects inside this flow controller.
+	 * If you set it to value other than 0 and `isVertical` to false (which is by default),
+	 * then height of each line will be equal to that value.
+	 * Default value of `null` means that the height of line will be equal to the biggest height of object added to this line.
+	 */
 	public var lineHeight(default, set) : Null<Int>;
 	public var colWidth(default, set) : Null<Int>;
 
@@ -188,6 +215,7 @@ class Flow extends Object {
 
 	/**
 		Get the per-element properties. Returns null if the element is not currently part of the flow.
+		You can then change flow properties for element, so it will behave slightly different from anothers.
 	**/
 	public function getProperties( e : h2d.Object ) {
 		needReflow = true; // properties might be changed
