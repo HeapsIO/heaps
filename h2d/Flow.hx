@@ -16,24 +16,47 @@ class FlowProperties {
 
 	var elt : Object;
 
+	/**
+		Padding values for object.
+	**/
 	public var paddingLeft = 0;
 	public var paddingTop = 0;
 	public var paddingRight = 0;
 	public var paddingBottom = 0;
 
-	public var isAbsolute(default,set) = false;
+	/**
+	 * Says whether element's position is calculated by Flow container, or it will use position set by user.
+	 * It is false by default, which means automatic position calculations.
+	 */
+	public var isAbsolute(default, set) = false;
+	
+	/**
+	 * Object alignment.
+	 */
 	public var horizontalAlign : Null<FlowAlign>;
 	public var verticalAlign : Null<FlowAlign>;
 
+	/**
+	 * Element offset. Affects element position.
+	 */
 	public var offsetX = 0;
 	public var offsetY = 0;
 
+	/**
+	 * Min size for element.
+	 */
 	public var minWidth : Null<Int>;
 	public var minHeight : Null<Int>;
 
+	/**
+	 * Calculated size for element.
+	 */
 	public var calculatedWidth(default,null) : Int = 0;
 	public var calculatedHeight(default,null) : Int = 0;
 
+	/**
+	 * Whether this object will start new line or let Flow container decide how to place next element
+	 */
 	public var isBreak(default,null) : Bool;
 
 	/**
@@ -45,6 +68,11 @@ class FlowProperties {
 		this.elt = elt;
 	}
 
+	/**
+	 * Set both vertical and horizantal alignment in one function call
+	 * @param	vertical		new value for vertical alignment
+	 * @param	horizontal		new value for horizontal alignment
+	 */
 	public inline function align(vertical, horizontal) {
 		this.verticalAlign = vertical;
 		this.horizontalAlign = horizontal;
@@ -64,7 +92,6 @@ class FlowProperties {
  * This object will take care about it, so none of the added objects will overlap others. Each object will be placed after another,
  * and when `width` or `height` (depends on `isVertical` property value) becomes bigger than `maxWidth` or `maxHeight` 
  * then new line or new column will be started to place next objects.
- * Don't forget to call `reflow()` method after adding/removing objects from container and all objects will be positioned automatically.
  */
 class Flow extends Object {
 
@@ -91,22 +118,19 @@ class Flow extends Object {
 	public var verticalAlign(default,set) : Null<FlowAlign>;
 
 	/**
-	 * Min width. Flow's width won't be less than this value, even when the total width of added objects is less than this value.
+	 * Min size of Flow container. Flow's size won't be less than these values, even when the total size of added objects is less than this value.
 	 */
 	public var minWidth(default, set) : Null<Int>;
-	/**
-	 * Min height. Flow's height won't be less than this value, even when the total height of added objects is less than this value.
-	 */
 	public var minHeight(default, set) : Null<Int>;
 	/**
-	 * Max width. If total width of added objects is bigger than `maxWidth` and `multiline` is set to true, then new line will be started to place objects
+	 * Max size of Flow container.
 	 */
 	public var maxWidth(default, set) : Null<Int>;
 	public var maxHeight(default, set) : Null<Int>;
 
 	/**
 	 * Height of each line of objects inside this flow controller.
-	 * If set to value other than 0 and `isVertical` is `false` (which is by default),
+	 * If set to value other than `0` and `isVertical` is `false` (which is by default),
 	 * then height of each line will be equal to that value.
 	 * Default value of `null` means that the height of line will be equal to the biggest height of object added to this line.
 	 */
@@ -114,13 +138,13 @@ class Flow extends Object {
 	public var colWidth(default, set) : Null<Int>;
 
 	/**
-		Enabling overflow will treat maxWidth/maxHeight and lineHeight/colWidth constraints as absolute : bigger elements will overflow instead of expanding the limit.
-	**/
+	 * Enabling overflow will treat maxWidth/maxHeight and lineHeight/colWidth constraints as absolute : bigger elements will overflow instead of expanding the limit.
+	 **/
 	public var overflow(default, set) : Bool = false;
 
 	/**
-		Will set all padding values at the same time.
-	**/
+	 * Will set all padding values at the same time.
+	 **/
 	public var padding(never, set) : Int;
 	public var paddingHorizontal(never, set) : Int;
 	public var paddingVertical(never, set) : Int;
@@ -130,24 +154,24 @@ class Flow extends Object {
 	public var paddingBottom(default, set) : Int = 0;
 
 	/**
-		The horizontal space between two flowed elements.
-	**/
+	 * The horizontal space between two flowed elements.
+	 **/
 	public var horizontalSpacing(default, set) : Int = 0;
 
 	/**
-		The vertical space between two flowed elements.
-	**/
+	 * The vertical space between two flowed elements.
+	 **/
 	public var verticalSpacing(default, set) : Int = 0;
 
 	/**
-		Set enableInteractive to true to create an h2d.Interactive accessible through
-		the interactive field which will automatically cover the whole Flow area.
-	**/
+	 * Set enableInteractive to true to create an h2d.Interactive accessible through
+	 * the interactive field which will automatically cover the whole Flow area.
+	 **/
 	public var enableInteractive(default, set) : Bool;
 
 	/**
-		See enableInteractive.
-	**/
+	 * See enableInteractive.
+	 **/
 	public var interactive(default, null) : h2d.Interactive;
 
 	/**
@@ -159,43 +183,44 @@ class Flow extends Object {
 	public var borderHeight(default, set) : Int = 0;
 
 	/**
-		Calculate the client width, which is the innner size of the flow without the borders and padding.
-	**/
+	 * Calculate the client width, which is the innner size of the flow without the borders and padding.
+	 **/
 	public var innerWidth(get, never) : Int;
 	/**
-		Calculate the client height, which is the innner size of the flow without the borders and padding.
-	**/
+	 * Calculate the client height, which is the innner size of the flow without the borders and padding.
+	 **/
 	public var innerHeight(get, never) : Int;
 
 	/**
-		Flow total width (inlcudes borders and paddings)
-	**/
+	 * Flow total width (inlcudes borders and paddings)
+	 **/
 	public var outerWidth(get, never) : Int;
 	/**
-		Flow total height (inlcudes borders and paddings)
-	**/
+	 * Flow total height (inlcudes borders and paddings)
+	 **/
 	public var outerHeight(get, never) : Int;
 
 	/**
-		By default, elements will be flowed horizontaly, then in several lines if maxWidth is reached.
-		You can instead flow them vertically, then to next column is maxHeight is reached by setting the isVertical flag to true.
-	**/
+	 * By default, elements will be flowed horizontaly, then in several lines if maxWidth is reached.
+	 * You can instead flow them vertically, then to next column is maxHeight is reached by setting the isVertical flag to true.
+	 * If total width of added objects is bigger than `maxWidth` and `multiline` is set to true, then new line will be started to place objects.
+	 */
 	public var isVertical(default, set) : Bool;
 
 	/**
-		When isInline is set to false, the flow size will be reported based on its bounds instead of its calculated size.
-		See getSize() documentation.
-	**/
+	 * When isInline is set to false, the flow size will be reported based on its bounds instead of its calculated size.
+	 * See getSize() documentation.
+	 **/
 	public var isInline = true;
 
 	/**
-		When set to true, the debug will display red box around the flow, green box for the client space and blue boxes for each element.
-	**/
+	 * When set to true, the debug will display red box around the flow, green box for the client space and blue boxes for each element.
+	 **/
 	public var debug(default, set) : Bool;
 
 	/**
-		When set to true, uses specified lineHeight/colWidth instead of maxWidth/maxHeight for alignment.
-	**/
+	 * When set to true, uses specified lineHeight/colWidth instead of maxWidth/maxHeight for alignment.
+	 **/
 	public var multiline(default,set) : Bool = false;
 
 	var background : h2d.ScaleGrid;
@@ -214,9 +239,9 @@ class Flow extends Object {
 	}
 
 	/**
-		Get the per-element properties. Returns null if the element is not currently part of the flow.
-		Properties of returned object can be changed, so corresponding `h2d.Object` could be placed slightly different from anothers.
-	**/
+	 * Get the per-element properties. Returns null if the element is not currently part of the flow.
+	 * Properties of returned object can be changed, so corresponding `h2d.Object` could be placed slightly different from anothers.
+	 **/
 	public function getProperties( e : h2d.Object ) {
 		needReflow = true; // properties might be changed
 		return properties[getChildIndex(e)];
@@ -373,10 +398,10 @@ class Flow extends Object {
 	}
 
 	/**
-		Adds some spacing by either increasing the padding of the latest
-		non absolute element or the padding of the flow if no element was found.
-		The padding affected depends on the isVertical property.
-	**/
+	 * Adds some spacing by either increasing the padding of the latest
+	 * non absolute element or the padding of the flow if no element was found.
+	 * The padding affected depends on the isVertical property.
+	 **/
 	public function addSpacing( v : Int ) {
 		var last = properties.length - 1;
 		while( last >= 0 && properties[last].isAbsolute )
@@ -556,9 +581,9 @@ class Flow extends Object {
 	}
 
 	/**
-		Call to force all flowed elements position to be updated.
-		See needReflow for more informations.
-	**/
+	 * Call to force all flowed elements position to be updated.
+	 * See needReflow for more informations.
+	 **/
 	public function reflow() {
 
 		onBeforeReflow();
@@ -862,14 +887,14 @@ class Flow extends Object {
 	}
 
 	/**
-		Called before each reflow() is done.
-	**/
+	 * Called before each reflow() is done.
+	 **/
 	public dynamic function onBeforeReflow() {
 	}
 
 	/**
-		Called after each time a reflow() was done.
-	**/
+	 * Called after each time a reflow() was done.
+	 **/
 	public dynamic function onAfterReflow() {
 	}
 
