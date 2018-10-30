@@ -41,11 +41,14 @@ class Layers extends Object {
 				children.splice(i, 1);
 				if( s.allocated ) s.onRemove();
 				s.parent = null;
+				s.posChanged = true;
+				if( s.parentContainer != null ) s.setParentContainer(null);
 				var k = layerCount - 1;
 				while( k >= 0 && layersIndexes[k] > i ) {
 					layersIndexes[k]--;
 					k--;
 				}
+				onContentChanged();
 				break;
 			}
 		}
