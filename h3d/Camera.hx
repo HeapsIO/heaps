@@ -41,6 +41,8 @@ class Camera {
 
 	public var follow : { pos : h3d.scene.Object, target : h3d.scene.Object };
 
+	public var frustum(default, null) = new h3d.col.Frustum();
+
 	var minv : Matrix;
 	var miview : Matrix;
 	var needInv : Bool;
@@ -173,13 +175,13 @@ class Camera {
 		}
 		makeCameraMatrix(mcam);
 		makeFrustumMatrix(mproj);
+		
 		m.multiply(mcam, mproj);
+		
 		needInv = true;
 		if( miview != null ) miview._44 = 0;
-	}
 
-	public function getFrustum() {
-		return new h3d.col.Frustum(m);
+		frustum.loadMatrix(m);
 	}
 
 	public function getFrustumCorners() : Array<h3d.Vector> {

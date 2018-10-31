@@ -28,6 +28,13 @@ class Plane {
 		return d;
 	}
 
+	public inline function load( p : Plane ) {
+		nx = p.nx;
+		ny = p.ny;
+		nz = p.nz;
+		d = p.d;
+	}
+
 	public function transform( m : h3d.Matrix ) {
 		var m2 = new h3d.Matrix();
 		m2.initInverse(m);
@@ -100,15 +107,15 @@ class Plane {
 		return new Plane(n.x,n.y,n.z,n.dot(p));
 	}
 
-	public static inline function X(v:Float) {
+	public static inline function X(v:Float=0.0) {
 		return new Plane( 1, 0, 0, v );
 	}
 
-	public static inline function Y(v:Float) {
+	public static inline function Y(v:Float=0.0) {
 		return new Plane( 0, 1, 0, v );
 	}
 
-	public static inline function Z(v:Float) {
+	public static inline function Z(v:Float=0.0) {
 		return new Plane( 0, 0, 1, v );
 	}
 
