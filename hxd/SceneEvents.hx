@@ -31,6 +31,7 @@ class SceneEvents {
 	var focusLost = new hxd.Event(EFocusLost);
 	var checkPos = new hxd.Event(ECheck);
 	var onOut = new hxd.Event(EOut);
+	var isOut = false;
 
 	public function new( ?window ) {
 		scenes = [];
@@ -246,6 +247,19 @@ class SceneEvents {
 						checkFocused = true;
 						checkFocus();
 					}
+				case EOver:
+					isOut = false;
+					continue;
+				case EOut:
+					// leave window
+					isOut = true;
+					if( currentOver != null ) {
+						onOut.cancel = false;
+						currentOver.handleEvent(onOut);
+						if( !onOut.cancel )
+							currentOver = null;
+					}
+					continue;
 				default:
 				}
 
@@ -269,7 +283,7 @@ class SceneEvents {
 		if( !checkFocused )
 			checkFocus();
 
-		if( !checkMoved && currentDrag == null ) {
+		if( !checkMoved && !isOut && currentDrag == null ) {
 			checkPos.relX = mouseX;
 			checkPos.relY = mouseY;
 			checkPos.touchId = lastTouch;

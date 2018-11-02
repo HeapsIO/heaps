@@ -164,6 +164,10 @@ class Window {
 						event(ev);
 					}
 				#end
+			case Enter:
+				event(new Event(EOver));
+			case Leave:
+				event(new Event(EOut));
 			default:
 			}
 		case MouseDown:
