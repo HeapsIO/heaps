@@ -20,10 +20,24 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	var mouseDownButton : Int = -1;
 	var parentMask : Mask;
 
-	public function new(width, height, ?parent) {
+	/**
+		Detailed shape collider for Interactive.
+	**/
+	public var shape : h2d.col.Collider;
+	/**
+		Detailed shape X offset from Interactive.
+	**/
+	public var shapeX : Float = 0;
+	/**
+		Detailed shape Y offset from Interactive.
+	**/
+	public var shapeY : Float = 0;
+
+	public function new(width, height, ?parent, ?shape) {
 		super(parent);
 		this.width = width;
 		this.height = height;
+		this.shape = shape;
 		cursor = Button;
 	}
 
