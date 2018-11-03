@@ -22,6 +22,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	/**
 		Detailed shape collider for Interactive.
+		Keep in mind that shape parts that are out of [0, 0, width, height] bounds will never interact with the mouse.
 	**/
 	public var shape : h2d.col.Collider;
 	/**
