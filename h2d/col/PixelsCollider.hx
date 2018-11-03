@@ -32,6 +32,15 @@ class PixelsCollider implements Collider {
 	public var collideOnAny : Bool;
 
 	/**
+		Horizontal stretch of pixels to check for collision. (default : 1)
+	**/
+	public var scaleX : Float = 1;
+	/**
+		Vertical stretch of pixels to check for collision. (default : 1)
+	**/
+	public var scaleY : Float = 1;
+
+	/**
 		Create new BitmapCollider with specified bitmap, channel cutoff values and check mode.
 	**/
 	public function new(pixels: hxd.Pixels, alphaCutoff:Int = 127, redCutoff:Int = 255, greenCutoff = 255, blueCutoff = 255, collideOnAny = true) {
@@ -44,8 +53,8 @@ class PixelsCollider implements Collider {
 	}
 
 	public function contains( p : Point ) {
-		var ix : Int = Math.round(p.x);
-		var iy : Int = Math.round(p.y);
+		var ix : Int = Math.floor(p.x / scaleX);
+		var iy : Int = Math.floor(p.y / scaleY);
 		if ( pixels == null || ix < 0 || iy < 0 || ix >= pixels.width || iy >= pixels.height ) return false;
 		var pixel = pixels.getPixel(ix, iy);
 		if ( collideOnAny ) {
