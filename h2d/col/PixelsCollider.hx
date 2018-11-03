@@ -1,12 +1,12 @@
 package h2d.col;
 
 /**
-	A BitmapData collider. Checks for pixel color value under point to be above the cutoff value.
+	A Pixels collider. Checks for pixel color value under point to be above the cutoff value.
 	Note that it checks as `channel > cutoff`, not `channel >= cutoff`, hence value of 255 will always be considered below cutoff.
 **/
-class BitmapCollider implements Collider {
+class PixelsCollider implements Collider {
 
-	public var bitmap : hxd.BitmapData;
+	public var pixels : hxd.Pixels;
 
 	/**
 		The red channel cutoff value in range of -1...255 (default : 255)
@@ -34,8 +34,8 @@ class BitmapCollider implements Collider {
 	/**
 		Create new BitmapCollider with specified bitmap, channel cutoff values and check mode.
 	**/
-	public function new(bitmap: hxd.BitmapData, alphaCutoff:Int = 127, redCutoff:Int = 255, greenCutoff = 255, blueCutoff = 255, collideOnAny = true) {
-		this.bitmap = bitmap;
+	public function new(pixels: hxd.Pixels, alphaCutoff:Int = 127, redCutoff:Int = 255, greenCutoff = 255, blueCutoff = 255, collideOnAny = true) {
+		this.pixels = pixels;
 		this.alphaCutoff = alphaCutoff;
 		this.redCutoff = redCutoff;
 		this.greenCutoff = greenCutoff;
@@ -46,8 +46,8 @@ class BitmapCollider implements Collider {
 	public function contains( p : Point ) {
 		var ix : Int = Math.round(p.x);
 		var iy : Int = Math.round(p.y);
-		if ( bitmap == null || ix < 0 || iy < 0 || ix >= bitmap.width || iy >= bitmap.height ) return false;
-		var pixel = bitmap.getPixel(ix, iy);
+		if ( pixels == null || ix < 0 || iy < 0 || ix >= pixels.width || iy >= pixels.height ) return false;
+		var pixel = pixels.getPixel(ix, iy);
 		if ( collideOnAny ) {
 			return (pixel >>> 24       ) > alphaCutoff ||
 			       (pixel >>> 16 & 0xff) > blueCutoff ||
