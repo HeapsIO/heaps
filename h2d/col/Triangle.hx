@@ -1,6 +1,6 @@
 package h2d.col;
 
-class Triangle {
+class Triangle implements Collider {
 
 	static inline var UNDEF = 1.1315e-17;
 
@@ -42,6 +42,13 @@ class Triangle {
 		var s = area * (a.y * c.x - a.x * c.y + (c.y - a.y) * p.x + (a.x - c.x) * p.y);
 		var t = area * (a.x * b.y - a.y * b.x + (a.y - b.y) * p.x + (b.x - a.x) * p.y);
 		return new h3d.col.Point(1 - s - t, s, t);
+	}
+
+	public function contains( p : Point ) {
+		var area = getInvArea() * 0.5;
+		var s = area * (a.y * c.x - a.x * c.y + (c.y - a.y) * p.x + (a.x - c.x) * p.y);
+		var t = area * (a.x * b.y - a.y * b.x + (a.y - b.y) * p.x + (b.x - a.x) * p.y);
+		return s >= 0 && t >= 0 && s + t < 1;
 	}
 
 }

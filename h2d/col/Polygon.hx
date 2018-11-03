@@ -48,6 +48,10 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return b;
 	}
 
+	public function getCollider(isConvex : Bool = false) {
+		return new PolygonCollider([this], isConvex);
+	}
+
 	inline function xSort(a : Point, b : Point) {
 		if(a.x == b.x)
 			return a.y < b.y ? -1 : 1;

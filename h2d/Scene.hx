@@ -49,6 +49,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	var window : hxd.Window;
 	@:allow(h2d.Interactive)
 	var events : hxd.SceneEvents;
+	var shapePoint : h2d.col.Point;
 
 	/**
 		Create a new scene. A default 2D scene is already available in `hxd.App.s2d`
@@ -61,6 +62,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		height = e.height;
 		interactive = new Array();
 		eventListeners = new Array();
+		shapePoint = new h2d.col.Point();
 		window = hxd.Window.getInstance();
 		posChanged = true;
 	}
@@ -153,6 +155,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public function getInteractive( x : Float, y : Float ) : Interactive {
 		var rx = x * matA + y * matB + absX;
 		var ry = x * matC + y * matD + absY;
+		var pt = shapePoint;
 		for( i in interactive ) {
 
 			var dx = rx - i.absX;
@@ -191,6 +194,11 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				p = p.parent;
 			}
 			if( !visible ) continue;
+
+			if (i.shape != null) {
+				pt.set((kx / max) * i.width + i.shapeX, (ky / max) * i.height + i.shapeY);
+				if ( !i.shape.contains(pt) ) continue;
+			}
 
 			return i;
 		}
@@ -239,6 +247,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		var rx = event.relX;
 		var ry = event.relY;
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
+		var pt = shapePoint;
 		for( idx in index...interactive.length ) {
 			var i = interactive[idx];
 			if( i == null ) break;
@@ -279,6 +288,11 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				p = p.parent;
 			}
 			if( !visible ) continue;
+
+			if (i.shape != null) {
+				pt.set((kx / max) * i.width + i.shapeX, (ky / max) * i.height + i.shapeY);
+				if ( !i.shape.contains(pt) ) continue;
+			}
 
 			event.relX = (kx / max) * i.width;
 			event.relY = (ky / max) * i.height;
