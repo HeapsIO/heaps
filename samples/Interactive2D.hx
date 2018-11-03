@@ -49,7 +49,7 @@ class Interactive2D extends SampleApp {
 			new Point(64, 16), 
 		]);
 		// Polygon collider can be used both for single polygon or for multiple polygons at once.
-		polygonShape = new PolygonCollider(poly);
+		polygonShape = poly.getCollider();
 		triangleShape = new Triangle(new Point(64, 0), new Point(128, 128), new Point(0, 128));
 		circleShape = new Circle(64, 64, 64);
 		rectShape = new RoundRect(rectWidth, rectY+rectHeight, rectWidth*2, rectHeight*2, 0);
