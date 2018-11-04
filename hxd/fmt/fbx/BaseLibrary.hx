@@ -730,6 +730,17 @@ class BaseLibrary {
 		return hasValue;
 	}
 
+	/**
+		Returns an array of names with all animations present in FBX file.
+	**/
+	public function getAnimationNames() : Array<String> {
+		var names = [];
+		for ( a in this.root.getAll("Objects.AnimationStack") ) {
+			names.push(a.getName());
+		}
+		return names;
+	}
+
 	public function loadAnimation( ?animName : String, ?root : FbxNode, ?lib : BaseLibrary ) : h3d.anim.Animation {
 		if( lib != null ) {
 			lib.defaultModelMatrixes = defaultModelMatrixes;
