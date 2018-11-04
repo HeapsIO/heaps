@@ -805,9 +805,11 @@ class HMDOut extends BaseLibrary {
 
 		addModels(includeGeometry);
 
-		var anim = loadAnimation();
-		if( anim != null )
+		var names = getAnimationNames();
+		for ( animName in names ) {
+			var anim = loadAnimation(animName);
 			d.animations.push(makeAnimation(anim));
+		}
 
 		d.data = dataOut.getBytes();
 		return d;
