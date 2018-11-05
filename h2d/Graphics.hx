@@ -431,6 +431,35 @@ class Graphics extends Drawable {
 		flush();
 	}
 
+	public function drawRoundedRect( x : Float, y : Float, w : Float, h : Float, radius : Float ) {
+		if (radius <= 0) {
+			return drawRect(x, y, w, h);
+		}
+		x += radius;
+		y += radius;
+		w -= radius * 2;
+		h -= radius * 2;
+		flush();
+		var nsegments = Math.ceil(Math.abs(radius * hxd.Math.degToRad(90) / 4));
+		var angle = hxd.Math.degToRad(90) / (nsegments - 1);
+		inline function corner(x, y, angleStart) {
+		for ( i in 0...nsegments) {
+			var a = i * angle + hxd.Math.degToRad(angleStart);
+			lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius);
+		}
+		}
+		lineTo(x, y - radius);
+		lineTo(x + w, y - radius);
+		corner(x + w, y, 270);
+		lineTo(x + w + radius, y + h);
+		corner(x + w, y + h, 0);
+		lineTo(x, y + h + radius);
+		corner(x, y + h, 90);
+		lineTo(x - radius, y);
+		corner(x, y, 180);
+		flush();
+	}
+
 	public function drawCircle( cx : Float, cy : Float, radius : Float, nsegments = 0 ) {
 		flush();
 		if( nsegments == 0 )
