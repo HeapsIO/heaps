@@ -808,7 +808,8 @@ class HMDOut extends BaseLibrary {
 		var names = getAnimationNames();
 		for ( animName in names ) {
 			var anim = loadAnimation(animName);
-			d.animations.push(makeAnimation(anim));
+			if(anim != null)
+				d.animations.push(makeAnimation(anim));
 		}
 
 		d.data = dataOut.getBytes();
