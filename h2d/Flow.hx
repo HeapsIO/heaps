@@ -409,14 +409,10 @@ class Flow extends Object {
 	}
 
 	override function removeChildren() {
-		super.removeChildren();
-		if( background != null ) {
-			addChild(background);
-			properties[properties.length - 1].isAbsolute = true;
-		}
-		if( interactive != null ) {
-			addChild(interactive);
-			properties[properties.length - 1].isAbsolute = true;
+		var k = 0;
+		while( numChildren>k ) {
+			var c = getChildAt(k);
+			if( c == background || c == interactive ) k++; else removeChild(c);
 		}
 	}
 
