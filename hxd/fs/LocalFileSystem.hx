@@ -552,7 +552,7 @@ class LocalFileSystem implements FileSystem {
 	}
 
 	public function dir( path : String ) : Array<FileEntry> {
-		#if sys
+		#if (sys || nodejs)
 		if( !sys.FileSystem.exists(baseDir + path) || !sys.FileSystem.isDirectory(baseDir + path) )
 			throw new NotFound(baseDir + path);
 		var files = sys.FileSystem.readDirectory(baseDir + path);
