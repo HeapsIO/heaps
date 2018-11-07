@@ -252,18 +252,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			var i = interactive[idx];
 			if( i == null ) break;
 
-			// check visibility
-			var visible = true;
-			var p : Object = i;
-			while( p != null ) {
-				if( !p.visible ) {
-					visible = false;
-					break;
-				}
-				p = p.parent;
-			}
-			if( !visible ) continue;
-
 			var dx = rx - i.absX;
 			var dy = ry - i.absY;
 
@@ -274,8 +262,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				       (-dx * i.matB + dy * i.matA) * i.invDet + i.shapeY);
 				if ( !i.shape.contains(pt) ) continue;
 
-				event.relX = pt.x - i.shapeX;
-				event.relY = pt.y - i.shapeY;
+				dx = pt.x - i.shapeX;
+				dy = pt.y - i.shapeY;
 
 			} else {
 				// Check AABB for width/height Interactive.
@@ -302,9 +290,24 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				if( ky >= max || kx >= max )
 					continue;
 
-				event.relX = (kx / max) * i.width;
-				event.relY = (ky / max) * i.height;
+				dx = (kx / max) * i.width;
+				dy = (ky / max) * i.height;
 			}
+
+			// check visibility
+			var visible = true;
+			var p : Object = i;
+			while( p != null ) {
+				if( !p.visible ) {
+					visible = false;
+					break;
+				}
+				p = p.parent;
+			}
+			if( !visible ) continue;
+
+			event.relX = dx;
+			event.relY = dy;
 
 			i.handleEvent(event);
 
