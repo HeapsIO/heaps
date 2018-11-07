@@ -300,11 +300,17 @@ class Parser {
 					arrayLen--;
 				}
 				return PInts(bools);
-			case 'S'.code, 'R'.code:
+			case 'S'.code:
 				var len:Int = getInt32();
 				var s:String = bytes.getString(pos, len);
 				pos += len;
 				return PString(s);
+			case 'R'.code:
+				var len:Int = getInt32();
+				var data = Bytes.alloc(len);
+				data.blit(0, bytes, pos, len);
+				pos += len;
+				return PBinary(data);
 			default:
 				return error("Unknown property type: " + type + "/" + String.fromCharCode(type));
 		}
