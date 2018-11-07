@@ -7,6 +7,7 @@ enum FbxProp {
 	PIdent( i : String );
 	PInts( v : Array<Int> );
 	PFloats( v : Array<Float> );
+	PBinary( v : haxe.io.Bytes );
 }
 
 typedef FbxNode = {
@@ -124,6 +125,14 @@ class FbxTools {
 		if( n == null ) throw "null prop";
 		return switch( n ) {
 		case PString(v): v;
+		default: throw "Invalid prop " + n;
+		}
+	}
+
+	public static function toBinary( n : FbxProp ) {
+		if ( n == null ) throw "null prop";
+		return switch( n ) {
+		case PBinary(v): v;
 		default: throw "Invalid prop " + n;
 		}
 	}

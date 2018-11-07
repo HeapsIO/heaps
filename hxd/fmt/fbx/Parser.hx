@@ -307,12 +307,10 @@ class Parser {
 				return PString(s);
 			case 'R'.code:
 				var len:Int = getInt32();
-				// Nothing uses this apart from occasional metadata, make an issue if for some reason
-				// you need to parse those properties.
-				// Disabled handling as PString due to JS target being angry on wrong codepoints.
-				trace("FBX parser warning: Skipped Raw binary data for binary property! At position: " + pos + ", size: " + len);
+				var data = Bytes.alloc(len);
+				data.blit(0, bytes, pos, len);
 				pos += len;
-				return PString("");
+				return PBinary(data);
 			default:
 				return error("Unknown property type: " + type + "/" + String.fromCharCode(type));
 		}
