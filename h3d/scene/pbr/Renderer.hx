@@ -198,7 +198,6 @@ class Renderer extends h3d.scene.Renderer {
 		}
 		apply(BeforeHdr);
 
-
 		var hdr = allocTarget("hdrOutput", true, 1, RGBA16F);
 		ctx.setGlobal("hdr", hdr);
 		setTarget(hdr);
@@ -239,8 +238,9 @@ class Renderer extends h3d.scene.Renderer {
 			};
 		case LightProbe:
 			pbrIndirect.drawIndirectDiffuse = false;
-			pbrIndirect.drawIndirectSpecular= false;
+			pbrIndirect.drawIndirectSpecular = false;
 			pbrIndirect.showSky = true;
+			pbrIndirect.skyColor = false;
 			pbrIndirect.skyMap = env.env;
 		}
 
@@ -284,6 +284,8 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
 		pbrOut.render();
 
+		draw("BeforeTonemapping");
+
 		apply(AfterHdr);
 
 		var ldr = allocTarget("ldrOutput");
@@ -301,7 +303,6 @@ class Renderer extends h3d.scene.Renderer {
 
 		postDraw();
 		resetTarget();
-
 
 		switch( displayMode ) {
 
