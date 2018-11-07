@@ -99,6 +99,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.filterMatrixB.set(0, 1, 0);
 		baseShader.cameraMatrixA.set(1, 0, 0);
 		baseShader.cameraMatrixB.set(0, 1, 0);
+		baseShader.cameraScroll.set(1, 1);
 		baseShaderList.next = null;
 		initShaders(baseShaderList);
 		engine.selectMaterial(pass);
@@ -249,6 +250,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.cameraMatrixB.set(0, 1, 0);
 	}
 
+	public function setParallax( dx : Float, dy : Float ) {
+		baseShader.cameraScroll.set(dx, dy);
+	}
+
 	function drawLayer( layer : Int ) {
 		@:privateAccess scene.drawLayer(this, layer);
 	}
@@ -300,7 +305,6 @@ class RenderContext extends h3d.impl.RenderContext {
 			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
 		baseShader.absoluteMatrixA.set(obj.matA, obj.matC, obj.absX);
 		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
-		baseShader.cameraScroll.set(obj.absScrollX, obj.absScrollY);
 		beforeDraw();
 		return true;
 	}
@@ -370,7 +374,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.height * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
 		baseShader.absoluteMatrixB.set(tile.width * obj.matB, tile.height * obj.matD, obj.absY + tile.dx * obj.matB + tile.dy * obj.matD);
 		baseShader.uvPos.set(tile.u, tile.v, tile.u2 - tile.u, tile.v2 - tile.v);
-		baseShader.cameraScroll.set(obj.absScrollX, obj.absScrollY);
 		beforeDraw();
 		if( fixedBuffer == null || fixedBuffer.isDisposed() ) {
 			fixedBuffer = new h3d.Buffer(4, 8, [Quads, RawFormat]);
