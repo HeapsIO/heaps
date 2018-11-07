@@ -431,7 +431,7 @@ class Graphics extends Drawable {
 		flush();
 	}
 
-	public function drawRoundedRect( x : Float, y : Float, w : Float, h : Float, radius : Float ) {
+	public function drawRoundedRect( x : Float, y : Float, w : Float, h : Float, radius : Float, nsegments = 0 ) {
 		if (radius <= 0) {
 			return drawRect(x, y, w, h);
 		}
@@ -440,7 +440,9 @@ class Graphics extends Drawable {
 		w -= radius * 2;
 		h -= radius * 2;
 		flush();
-		var nsegments = Math.ceil(Math.abs(radius * hxd.Math.degToRad(90) / 4));
+		if( nsegments == 0 )
+			nsegments = Math.ceil(Math.abs(radius * hxd.Math.degToRad(90) / 4));
+		if( nsegments < 3 ) nsegments = 3;
 		var angle = hxd.Math.degToRad(90) / (nsegments - 1);
 		inline function corner(x, y, angleStart) {
 		for ( i in 0...nsegments) {
