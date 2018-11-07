@@ -255,27 +255,44 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			var dx = rx - i.absX;
 			var dy = ry - i.absY;
 
-			var w1 = i.width * i.matA;
-			var h1 = i.width * i.matC;
-			var ky = h1 * dx + w1 * dy;
+			if ( i.shape != null ) {
+				// Check collision for Shape Interactive.
 
-			// up line
-			if( ky < 0 )
-				continue;
+				pt.set(( dx * i.matD - dy * i.matC) * i.invDet + i.shapeX,
+				       (-dx * i.matB + dy * i.matA) * i.invDet + i.shapeY);
+				if ( !i.shape.contains(pt) ) continue;
 
-			var w2 = i.height * i.matB;
-			var h2 = i.height * i.matD;
-			var kx = w2 * dy + h2 * dx;
+				dx = pt.x - i.shapeX;
+				dy = pt.y - i.shapeY;
 
-			// left line
-			if( kx < 0 )
-				continue;
+			} else {
+				// Check AABB for width/height Interactive.
 
-			var max = w1 * h2 - h1 * w2;
+				var w1 = i.width * i.matA;
+				var h1 = i.width * i.matC;
+				var ky = h1 * dx + w1 * dy;
 
-			// bottom/right
-			if( ky >= max || kx >= max )
-				continue;
+				// up line
+				if( ky < 0 )
+					continue;
+
+				var w2 = i.height * i.matB;
+				var h2 = i.height * i.matD;
+				var kx = w2 * dy + h2 * dx;
+
+				// left line
+				if( kx < 0 )
+					continue;
+
+				var max = w1 * h2 - h1 * w2;
+
+				// bottom/right
+				if( ky >= max || kx >= max )
+					continue;
+
+				dx = (kx / max) * i.width;
+				dy = (ky / max) * i.height;
+			}
 
 			// check visibility
 			var visible = true;
@@ -289,13 +306,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			}
 			if( !visible ) continue;
 
-			if (i.shape != null) {
-				pt.set((kx / max) * i.width + i.shapeX, (ky / max) * i.height + i.shapeY);
-				if ( !i.shape.contains(pt) ) continue;
-			}
+			event.relX = dx;
+			event.relY = dy;
 
-			event.relX = (kx / max) * i.width;
-			event.relY = (ky / max) * i.height;
 			i.handleEvent(event);
 
 			if( event.cancel ) {
