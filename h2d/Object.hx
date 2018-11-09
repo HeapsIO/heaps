@@ -726,9 +726,20 @@ class Object {
 			return;
 
 		ctx.globalAlpha = oldAlpha * alpha;
-		emitTile(ctx, finalTile);
+		emitFilterTile(ctx, finalTile);
 		ctx.globalAlpha = oldAlpha;
 		ctx.flush();
+	}
+
+	function emitFilterTile( ctx, tile ) {
+		if( filter.blendMode != null ) {
+			if( nullDrawable == null )
+				nullDrawable = @:privateAccess new h2d.Drawable(null);
+			nullDrawable.blendMode = filter.blendMode;
+		}
+		emitTile(ctx, tile);
+		if( filter.blendMode != null )
+			nullDrawable.blendMode = Alpha;
 	}
 
 	function drawRec( ctx : RenderContext ) {

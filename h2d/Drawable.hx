@@ -190,6 +190,13 @@ class Drawable extends Object {
 		return false;
 	}
 
+	override function emitFilterTile( ctx, tile ) {
+		var oldBlend = blendMode;
+		if( filter.blendMode != null ) blendMode = filter.blendMode;
+		emitTile(ctx, tile);
+		if( filter.blendMode != null ) blendMode = oldBlend;
+	}
+
 	override function emitTile( ctx : RenderContext, tile : Tile ) {
 		if( tile == null )
 			tile = new Tile(null, 0, 0, 5, 5);
