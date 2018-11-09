@@ -1,6 +1,14 @@
 package h3d;
 import hxd.Math;
 
+typedef ColorAdjust = {
+	?saturation : Float,
+	?lightness : Float,
+	?hue : Float,
+	?contrast : Float,
+	?gain : { color : Int, alpha : Float },
+};
+
 @:noDebug
 class Matrix {
 
@@ -706,6 +714,14 @@ class Matrix {
 		zero();
 		_44 = alpha;
 		colorAdd(c);
+	}
+
+	public function adjustColor( col : ColorAdjust ) {
+		if( col.hue != null ) colorHue(col.hue);
+		if( col.saturation != null ) colorSaturate(col.saturation);
+		if( col.contrast != null ) colorContrast(col.contrast);
+		if( col.lightness != null ) colorLightness(col.lightness);
+		if( col.gain != null ) colorGain(col.gain.color, col.gain.alpha);
 	}
 
 	// STATICS
