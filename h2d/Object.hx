@@ -70,8 +70,8 @@ class Object {
 	public var filter(default,set) : h2d.filter.Filter;
 
 	/**
-		The blendMode of the object (default Alpha). 
-		If there is no filter active, only apply to the current object (not inherited by children)  
+		The blendMode of the object (default Alpha).
+		If there is no filter active, only apply to the current object (not inherited by children)
 		If there is a filter active, tells how the filter is blended with background.
 	**/
 	public var blendMode : BlendMode;
@@ -741,6 +741,7 @@ class Object {
 			ctx.globalAlpha = oldAlpha;
 			ctx.flush();
 			ctx.inFilterBlend = null;
+			ctx.currentBlend = null;
 		}
 	}
 
