@@ -60,11 +60,16 @@ class Window {
 				e.stopPropagation();
 				e.preventDefault();
 			});
-			element.oncontextmenu = canvas.oncontextmenu = function(e){
+			canvas.oncontextmenu = function(e){
 				e.stopPropagation();
 				e.preventDefault();
 				return false;
 			};
+			element.addEventListener("contextmenu",function(e) {
+				e.stopPropagation();
+				e.preventDefault();
+				return false;
+			});
 		}
 		curW = this.width;
 		curH = this.height;
