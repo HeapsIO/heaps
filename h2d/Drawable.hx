@@ -12,11 +12,6 @@ class Drawable extends Object {
 	public var color(default,default) : h3d.Vector;
 
 	/**
-		The blendMode of the object (default Alpha)
-	**/
-	public var blendMode : BlendMode;
-
-	/**
 		By enabling smoothing, scaling the object up or down will use hardware bilinear filtering resulting in less crisp aspect.
 		By default smooth is null and then Scene.defaultSmooth value is used.
 	**/
@@ -46,7 +41,6 @@ class Drawable extends Object {
 
 	function new(parent : h2d.Object) {
 		super(parent);
-		blendMode = Alpha;
 		color = new h3d.Vector(1, 1, 1, 1);
 	}
 
@@ -188,13 +182,6 @@ class Drawable extends Object {
 			cur = cur.next;
 		}
 		return false;
-	}
-
-	override function emitFilterTile( ctx, tile ) {
-		var oldBlend = blendMode;
-		if( filter.blendMode != null ) blendMode = filter.blendMode;
-		emitTile(ctx, tile);
-		if( filter.blendMode != null ) blendMode = oldBlend;
 	}
 
 	override function emitTile( ctx : RenderContext, tile : Tile ) {

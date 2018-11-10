@@ -69,6 +69,13 @@ class Object {
 	**/
 	public var filter(default,set) : h2d.filter.Filter;
 
+	/**
+		The blendMode of the object (default Alpha). 
+		If there is no filter active, only apply to the current object (not inherited by children)  
+		If there is a filter active, tells how the filter is blended with background.
+	**/
+	public var blendMode : BlendMode;
+
 	var matA : Float;
 	var matB : Float;
 	var matC : Float;
@@ -86,6 +93,7 @@ class Object {
 	public function new( ?parent : Object ) {
 		matA = 1; matB = 0; matC = 0; matD = 1; absX = 0; absY = 0;
 		x = 0; y = 0; scaleX = 1; scaleY = 1; rotation = 0;
+		blendMode = Alpha;
 		posChanged = parent != null;
 		visible = true;
 		children = [];
@@ -725,21 +733,15 @@ class Object {
 		if( finalTile == null )
 			return;
 
-		ctx.globalAlpha = oldAlpha * alpha;
-		emitFilterTile(ctx, finalTile);
-		ctx.globalAlpha = oldAlpha;
-		ctx.flush();
-	}
-
-	function emitFilterTile( ctx, tile ) {
-		if( filter.blendMode != null ) {
-			if( nullDrawable == null )
-				nullDrawable = @:privateAccess new h2d.Drawable(null);
-			nullDrawable.blendMode = filter.blendMode;
+		@:privateAccess {
+			ctx.currentBlend = null;
+			ctx.inFilterBlend = blendMode;
+			ctx.globalAlpha = oldAlpha * alpha;
+			emitTile(ctx, finalTile);
+			ctx.globalAlpha = oldAlpha;
+			ctx.flush();
+			ctx.inFilterBlend = null;
 		}
-		emitTile(ctx, tile);
-		if( filter.blendMode != null )
-			nullDrawable.blendMode = Alpha;
 	}
 
 	function drawRec( ctx : RenderContext ) {

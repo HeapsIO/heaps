@@ -9,11 +9,6 @@ class Filter {
 	public var boundsExtend : Float = 0.;
 	public var smooth = false;
 
-	/**
-		When set, will use this blend mode when merging the filtered output to screen.
-	**/
-	public var blendMode : Null<h2d.BlendMode>;
-
 	function new() {
 	}
 
