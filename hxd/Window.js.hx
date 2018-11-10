@@ -60,7 +60,7 @@ class Window {
 				e.stopPropagation();
 				e.preventDefault();
 			});
-			canvas.oncontextmenu = function(e){
+			element.oncontextmenu = canvas.oncontextmenu = function(e){
 				e.stopPropagation();
 				e.preventDefault();
 				return false;
