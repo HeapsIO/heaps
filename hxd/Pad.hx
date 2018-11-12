@@ -129,10 +129,10 @@ class Pad {
 		dpadDown : 13,
 		dpadLeft : 14,
 		dpadRight : 15,
-		analogX : 16,
-		analogY : 17,
-		ranalogX : 18,
-		ranalogY : 19,
+		analogX : 17,
+		analogY : 18,
+		ranalogX : 19,
+		ranalogY : 20,
 		names : ["A","B","X","Y","LB","RB","LT","RT","Select","Start","LCLK","RCLK","DUp","DDown","DLeft","DRight","LX","LY","RX","RY"],
 	};
 	#end
