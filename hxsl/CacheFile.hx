@@ -503,16 +503,13 @@ class CacheFile extends Cache {
 			}
 		rc.paramsSize = r.paramsSize;
 		rc.globalsSize = r.globalsSize;
-		rc.textures2DCount = r.textures2DCount;
-		rc.texturesCubeCount = r.texturesCubeCount;
+		rc.texturesCount = r.texturesCount;
 		if( r.params != null )
 			rc.params = r.params.clone(true);
 		if( r.globals != null )
 			rc.globals = r.globals.clone(true);
-		if( r.textures2D != null )
-			rc.textures2D = r.textures2D.clone(true);
-		if( r.texturesCube != null )
-			rc.texturesCube = r.texturesCube.clone(true);
+		if( r.textures != null )
+			rc.textures = r.textures.clone(true);
 		return rc;
 	}
 
@@ -539,8 +536,7 @@ class CacheFile extends Cache {
 			rvParam(a.next);
 		}
 		rvParam(rd.params);
-		rvParam(rd.textures2D);
-		rvParam(rd.texturesCube);
+		rvParam(rd.textures);
 		rvGlobal(rd.globals);
 		initGlobals(r, rd);
 	}
