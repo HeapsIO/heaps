@@ -85,20 +85,30 @@ class FontParser {
 				font.name = xml.att.family;
 				font.size = font.initSize = Std.parseInt(xml.att.size);
 				font.lineHeight = Std.parseInt(xml.att.height);
-				var lastChar = 0;
+				inline function parseCode( code : String ) : Int {
+					return StringTools.startsWith(code, "&#") ? Std.parseInt(code.substr(2,code.length-3)) : code.charCodeAt(0);
+				}
+				var kernings = [];
 				for( c in xml.elements ) {
 					var r = c.att.rect.split(" ");
 					var o = c.att.offset.split(" ");
 					var t = tile.sub(Std.parseInt(r[0]), Std.parseInt(r[1]), Std.parseInt(r[2]), Std.parseInt(r[3]), Std.parseInt(o[0]), Std.parseInt(o[1]));
 					var fc = new h2d.Font.FontChar(t, Std.parseInt(c.att.width) - 1);
-					for( k in c.elements )
-						fc.addKerning(k.att.id.charCodeAt(0), Std.parseInt(k.att.advance));
-					var code = c.att.code;
-					lastChar = code.charCodeAt(0);
-					if( StringTools.startsWith(code, "&#") )
-						glyphs.set(Std.parseInt(code.substr(2,code.length-3)), fc);
-					else
-						glyphs.set(code.charCodeAt(0), fc);
+					var code = parseCode(c.att.code);
+					for( k in c.elements ){
+						var next = parseCode(k.att.id);
+						var adv = Std.parseInt(k.att.advance);
+						if( glyphs.exists(next) )
+							glyphs.get(next).addKerning(code, adv);
+						else
+							kernings.push({prev: code, next: next, adv: adv});
+					}
+					glyphs.set(code, fc);
+				}
+				for( k in kernings ){
+					var g = glyphs.get(k.next);
+					if( g == null ) continue;
+					g.addKerning(k.prev, k.adv);
 				}
 			}
 		case 0x6F666E69:
