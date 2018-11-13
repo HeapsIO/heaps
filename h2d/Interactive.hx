@@ -1,10 +1,23 @@
 package h2d;
 
+@:allow(h2d.Scene)
 class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
+	/**
+		Width of the Interactive. Ignored if `shape` is set.
+	**/
 	public var width : Float;
+	/**
+		Height of the Interactive. Ignored if `shape` is set.
+	**/
 	public var height : Float;
+	/**
+		Cursor used when Interactive is under mouse cursor ( default : Button )
+	**/
 	public var cursor(default,set) : hxd.Cursor;
+	/**
+		Should object collision be in rectangle or ellipse form? Ignored if `shape` is set.
+	**/
 	public var isEllipse : Bool;
 	/**
 		Set the default `cancel` mode (see `hxd.Event`), default to false.
@@ -19,11 +32,27 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
 	var parentMask : Mask;
+	var invDet : Float;
 
-	public function new(width, height, ?parent) {
+	/**
+		Detailed shape collider for Interactive.
+		If set, `width` and `height` properties are ignored for collision checks.
+	**/
+	public var shape : h2d.col.Collider;
+	/**
+		Detailed shape X offset from Interactive.
+	**/
+	public var shapeX : Float = 0;
+	/**
+		Detailed shape Y offset from Interactive.
+	**/
+	public var shapeY : Float = 0;
+
+	public function new(width, height, ?parent, ?shape) {
 		super(parent);
 		this.width = width;
 		this.height = height;
+		this.shape = shape;
 		cursor = Button;
 	}
 
@@ -108,7 +137,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 				p = @:privateAccess p.parentMask;
 			}
 		}
-		if( isEllipse && checkBounds(e) ) {
+		if(shape == null && isEllipse && checkBounds(e) ) {
 			var cx = width * 0.5, cy = height * 0.5;
 			var dx = (e.relX - cx) / cx;
 			var dy = (e.relY - cy) / cy;
@@ -167,6 +196,12 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		}
 	}
 
+	override private function calcAbsPos()
+	{
+		super.calcAbsPos();
+		invDet = 1 / (matA * matD - matB * matC);
+	}
+
 	function set_cursor(c) {
 		this.cursor = c;
 		if( isOver() && cursor != null )
@@ -176,25 +211,13 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	function eventToLocal( e : hxd.Event ) {
 		// convert scene event to our local space
-		var rx = e.relX, ry = e.relY;
-
 		var i = this;
 
-		var dx = rx - i.absX;
-		var dy = ry - i.absY;
+		var dx = e.relX - i.absX;
+		var dy = e.relY - i.absY;
 
-		var w1 = i.width * i.matA;
-		var h1 = i.width * i.matC;
-		var ky = h1 * dx - w1 * dy;
-
-		var w2 = i.height * i.matB;
-		var h2 = i.height * i.matD;
-		var kx = w2 * dy - h2 * dx;
-
-		var max = h1 * w2 - w1 * h2;
-
-		e.relX = (kx / max) * i.width;
-		e.relY = (ky / max) * i.height;
+		e.relX = ( dx * i.matD - dy * i.matC) * i.invDet;
+		e.relY = (-dx * i.matB + dy * i.matA) * i.invDet;
 	}
 
 	public function startDrag(callb,?onCancel) {

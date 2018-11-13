@@ -1,13 +1,5 @@
 package h2d;
 
-typedef ColorAdjust = {
-	?saturation : Float,
-	?lightness : Float,
-	?hue : Float,
-	?contrast : Float,
-	?gain : { color : Int, alpha : Float },
-};
-
 /**
 	h2d.Drawable is the base class for all 2D objects that will draw something on screen.
 	Unlike Object base class, all properties of Drawable only apply to the current object and are not inherited by its children.
@@ -18,11 +10,6 @@ class Drawable extends Object {
 		The color multiplier for the object. Can be used to adjust individually each of the four channels R,G,B,A (default [1,1,1,1])
 	**/
 	public var color(default,default) : h3d.Vector;
-
-	/**
-		The blendMode of the object (default Alpha)
-	**/
-	public var blendMode : BlendMode;
 
 	/**
 		By enabling smoothing, scaling the object up or down will use hardware bilinear filtering resulting in less crisp aspect.
@@ -54,7 +41,6 @@ class Drawable extends Object {
 
 	function new(parent : h2d.Object) {
 		super(parent);
-		blendMode = Alpha;
 		color = new h3d.Vector(1, 1, 1, 1);
 	}
 
@@ -100,7 +86,7 @@ class Drawable extends Object {
 	/**
 		Set the `colorMatrix` value by specifying which effects to apply. Calling adjustColor() reset the colorMatrix to `null`
 	**/
-	public function adjustColor( ?col : ColorAdjust ) : Void {
+	public function adjustColor( ?col : h3d.Matrix.ColorAdjust ) : Void {
 		if( col == null )
 			colorMatrix = null;
 		else {
@@ -110,11 +96,7 @@ class Drawable extends Object {
 				colorMatrix = m;
 			}
 			m.identity();
-			if( col.hue != null ) m.colorHue(col.hue);
-			if( col.saturation != null ) m.colorSaturate(col.saturation);
-			if( col.contrast != null ) m.colorContrast(col.contrast);
-			if( col.lightness != null ) m.colorLightness(col.lightness);
-			if( col.gain != null ) m.colorGain(col.gain.color, col.gain.alpha);
+			m.adjustColor(col);
 		}
 	}
 

@@ -27,6 +27,30 @@ private class GameController {
 #end
 #end
 
+typedef PadConfig = {
+	analogX : Int,
+	analogY : Int,
+	ranalogX : Int,
+	ranalogY : Int,
+	A : Int,
+	B : Int,
+	X : Int,
+	Y : Int,
+	LB : Int,
+	RB : Int,
+	LT : Int,
+	RT : Int,
+	back : Int,
+	start : Int,
+	analogClick : Int,
+	ranalogClick : Int,
+	dpadUp : Int,
+	dpadDown : Int,
+	dpadLeft : Int,
+	dpadRight : Int,
+	names : Array<String>,
+}
+
 class Pad {
 
 	#if flash
@@ -117,7 +141,7 @@ class Pad {
 	public static var ANALOG_BUTTON_THRESHOLDS = { press: 0.3, release: 0.25 };
 	#end
 
-	public static var DEFAULT_CONFIG =
+	public static var DEFAULT_CONFIG : PadConfig =
 		#if hlsdl CONFIG_SDL
 		#elseif flash CONFIG_XBOX
 		#elseif (hldx || usesys) GameController.CONFIG
@@ -388,7 +412,7 @@ class Pad {
 			default:
 		}
 	}
-	
+
 	static function syncPads(){
 		for( p in pads )
 			for( i in 0...p.buttons.length )

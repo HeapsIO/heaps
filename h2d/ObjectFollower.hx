@@ -7,6 +7,7 @@ class ObjectFollower extends Object {
 
 	public var follow : h3d.scene.Object;
 	public var pixelSnap = true;
+	public var followVisibility = false;
 	public var offsetX = 0.;
 	public var offsetY = 0.;
 	public var offsetZ = 0.;
@@ -29,7 +30,7 @@ class ObjectFollower extends Object {
 		var p = scene.camera.project(absPos._41 + offsetX, absPos._42 + offsetY, absPos._43 + offsetZ, width, height, pixelSnap);
 		x = p.x;
 		y = p.y;
-		visible = p.z > 0;
+		visible = p.z > 0 && (follow.visible || !followVisibility);
 	}
 
 	override function calcAbsPos() {

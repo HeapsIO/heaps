@@ -38,6 +38,8 @@ class Image extends Resource {
 	**/
 	public static var DEFAULT_ASYNC = false;
 
+	static var ENABLE_AUTO_WATCH = true;
+
 	var tex : h3d.mat.Texture;
 	var inf : { width : Int, height : Int, format : ImageFormat };
 
@@ -234,7 +236,8 @@ class Image extends Resource {
 				tex.uploadPixels(pixels);
 				pixels.dispose();
 				tex.realloc = loadTexture;
-				watch(watchCallb);
+				if(ENABLE_AUTO_WATCH)
+					watch(watchCallb);
 			}
 			if( entry.isAvailable )
 				load();
@@ -263,7 +266,9 @@ class Image extends Resource {
 					tex.waitLoads = null;
 					for( f in arr ) f();
 				}
-				watch(watchCallb);
+
+				if(ENABLE_AUTO_WATCH)
+					watch(watchCallb);
 			});
 		}
 	}

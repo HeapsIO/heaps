@@ -408,6 +408,14 @@ class Flow extends Object {
 		}
 	}
 
+	override function removeChildren() {
+		var k = 0;
+		while( numChildren>k ) {
+			var c = getChildAt(k);
+			if( c == background || c == interactive ) k++; else removeChild(c);
+		}
+	}
+
 	override function sync(ctx:RenderContext) {
 		if( needReflow ) reflow();
 		super.sync(ctx);

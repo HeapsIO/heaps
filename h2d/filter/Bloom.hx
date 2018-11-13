@@ -6,8 +6,8 @@ class Bloom extends Blur {
 	public var amount(get, set) : Float;
 	public var power(get, set) : Float;
 
-	public function new( power = 2., amount = 1., quality = 2, passes = 1, sigma = 1. ) {
-		super(quality, passes, sigma);
+	public function new( power = 2., amount = 1., radius = 1., gain = 1., quality = 1. ) {
+		super(radius,gain,quality);
 		bloom = new h3d.pass.ScreenFx(new h3d.shader.Bloom());
 		bloom.shader.power = power;
 		bloom.shader.amount = amount;

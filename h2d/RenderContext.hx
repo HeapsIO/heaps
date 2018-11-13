@@ -33,6 +33,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var hasUVPos : Bool;
 	var filterStack : Array<h2d.Object>;
 	var inFilter : Object;
+	var inFilterBlend : BlendMode;
 
 	var curX : Int;
 	var curY : Int;
@@ -58,8 +59,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		pass = new h3d.mat.Pass("",null);
 		pass.depth(true, Always);
 		pass.culling = None;
-		currentBlend = Alpha;
-		pass.setBlendMode(currentBlend);
 		baseShader = new h3d.shader.Base2d();
 		baseShader.setPriority(100);
 		baseShader.zValue = 0.;
@@ -182,6 +181,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		curY = startY;
 		curWidth = width;
 		curHeight = height;
+		currentBlend = null;
 		if( hasRenderZone ) clearRenderZone();
 	}
 
@@ -285,9 +285,22 @@ class RenderContext extends h3d.impl.RenderContext {
 		texture.wrap = currentObj.tileWrap && (currentObj.filter == null || inFilter != null) ? Repeat : Clamp;
 		var blend = currentObj.blendMode;
 		if( inFilter == currentObj && blend == Erase ) blend = Add; // add THEN erase
+		if( inFilterBlend != null ) blend = inFilterBlend;
 		if( blend != currentBlend ) {
 			currentBlend = blend;
 			pass.setBlendMode(blend);
+			#if flash
+			// flash does not allow blend separate operations
+			// this will get us good color but wrong alpha
+			#else
+			// accummulate correctly alpha values
+			if( blend == Alpha || blend == Add ) {
+				pass.blendAlphaSrc = One;
+				// when merging
+				if( inFilterBlend != null )
+					pass.blendSrc = One;
+			}
+			#end
 		}
 		manager.fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);

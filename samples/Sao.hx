@@ -44,6 +44,7 @@ class CustomRenderer extends h3d.scene.DefaultRenderer {
 			var saoTarget = allocTarget("sao");
 			setTarget(saoTarget);
 			sao.apply(depth, normal, ctx.camera);
+			resetTarget();
 			bench.measure("saoBlur");
 			saoBlur.apply(ctx, saoTarget);
 			bench.measure("saoBlend");
@@ -141,10 +142,8 @@ class Sao extends SampleApp {
 			r.mode = 1;
 		if(K.isPressed(K.NUMBER_3))
 			r.mode = 2;
-		#if hl
 		if( K.isPressed("V".code) )
-			@:privateAccess hxd.Stage.getInstance().window.vsync = !hxd.Stage.getInstance().window.vsync;
-		#end
+			hxd.Window.getInstance().vsync = !hxd.Window.getInstance().vsync;
 	}
 
 	static function main() {

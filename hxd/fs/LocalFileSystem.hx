@@ -552,10 +552,7 @@ class LocalFileSystem implements FileSystem {
 	}
 
 	public function dir( path : String ) : Array<FileEntry> {
-		#if flash
-		throw "Not Supported";
-		return null;
-		#end
+		#if (sys || nodejs)
 		if( !sys.FileSystem.exists(baseDir + path) || !sys.FileSystem.isDirectory(baseDir + path) )
 			throw new NotFound(baseDir + path);
 		var files = sys.FileSystem.readDirectory(baseDir + path);
@@ -563,6 +560,10 @@ class LocalFileSystem implements FileSystem {
 		for(f in files)
 			r.push(new LocalEntry(this, f, path + "/" + f, baseDir + path + "/" + f));
 		return r;
+		#else
+		throw "Not Supported";
+		return null;
+		#end
 	}
 
 }

@@ -217,7 +217,7 @@ class Terrain extends Object {
 				bounds.zMax = 10000;
 				bounds.zMin = -10000;
 			}
-			if(c.getFrustum().hasBounds(bounds))
+			if(c.frustum.hasBounds(bounds))
 				res.push(tile);
 		}
 		return res;

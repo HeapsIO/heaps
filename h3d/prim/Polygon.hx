@@ -231,7 +231,9 @@ class Polygon extends MeshPrimitive {
 	}
 
 	public function addUVs() {
-		throw "Not implemented for this polygon";
+		uvs = [];
+		for( i in 0 ... points.length )
+			uvs[i] = new UV(points[i].x, points[i].y);
 	}
 
 	public function uvScale( su : Float, sv : Float ) {

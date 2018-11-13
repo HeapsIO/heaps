@@ -113,7 +113,6 @@ class MemoryManager {
 		m.vbuf = null;
 		usedMemory -= m.size * m.stride * 4;
 		bufferCount--;
-		#if debug
 		if( !m.flags.has(Managed) ) {
 			var c = buffers[0], prev : ManagedBuffer = null;
 			while( c != null ) {
@@ -125,7 +124,6 @@ class MemoryManager {
 				c = c.next;
 			}
 		}
-		#end
 	}
 
 	@:allow(h3d.Buffer)
@@ -157,10 +155,8 @@ class MemoryManager {
 			if( b.flags.has(Dynamic) ) { if( flags == null ) flags = []; flags.push(Dynamic); }
 			if( b.flags.has(UniformBuffer) ) { if( flags == null ) flags = []; flags.push(UniformBuffer); }
  			var m = new ManagedBuffer(stride, b.vertices, flags);
-			#if debug
 			m.next = buffers[0];
 			buffers[0] = m;
-			#end
 			if( !m.allocBuffer(b) ) throw "assert";
 			return;
 		}

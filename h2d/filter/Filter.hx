@@ -1,5 +1,8 @@
 package h2d.filter;
 
+/**
+	The base filter class, you can extend it in order to define your own filters, although ShaderFilter will be the most straightforward way to define simple custom filter.
+**/
 class Filter {
 
 	public var autoBounds = true;

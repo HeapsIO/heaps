@@ -28,6 +28,10 @@ abstract Polygons(Array<Polygon>) from Array<Polygon> to Array<Polygon> {
 		return b;
 	}
 
+	public function getCollider(isConvex : Bool = false) {
+		return new PolygonCollider(this, isConvex);
+	}
+
 	public function contains( p : Point, isConvex = false ) {
 		for( pl in polygons )
 			if( pl.contains(p, isConvex) )

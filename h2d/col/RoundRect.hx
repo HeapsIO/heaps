@@ -1,6 +1,6 @@
 package h2d.col;
 
-class RoundRect {
+class RoundRect implements Collider {
 
 	public var x : Float;
 	public var y : Float;
@@ -71,6 +71,10 @@ class RoundRect {
 			py = -(y + tl2 * dy - p.y);
 		}
 		return new Point(px, py);
+	}
+
+	public function contains( p : Point ) {
+		return inside(p);
 	}
 
 }

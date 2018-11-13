@@ -229,6 +229,9 @@ class BitmapData {
 		#end
 	}
 
+	/* Line plotting using Yevgeny P. Kuzmin. - Bresenham's Line Generation Algorithm with Built-in Clipping. Computer Graphics Forum, 14(5):275-280, 2005.
+ 	 * see: https://stackoverflow.com/questions/40884680/how-to-use-bresenhams-line-drawing-algorithm-with-clipping/40902741#40902741 )
+	 */
 	public function line( x0 : Int, y0 : Int, x1 : Int, y1 : Int, color : Int ) {
 		var dx = x1 - x0;
 		var dy = y1 - y0;
@@ -238,6 +241,8 @@ class BitmapData {
 				y0 = y1;
 				y1 = tmp;
 			}
+			if (y0<0) y0=0;
+			if (y1>height-1) y1=height-1;
 			for( y in y0...y1 + 1 )
 				setPixel(x0, y, color);
 		} else if( dy == 0 ) {
@@ -246,10 +251,218 @@ class BitmapData {
 				x0 = x1;
 				x1 = tmp;
 			}
+			if (x0<0) x0=0;
+			if (x1>width-1) x1=width-1;
 			for( x in x0...x1 + 1 )
 				setPixel(x, y0, color);
 		} else {
-			throw "TODO : brensenham line";
+			var sx : Int;
+			var sy : Int;
+			var clip_x0 : Int;
+			var clip_y0 : Int;
+			var clip_x1 : Int;
+			var clip_y1 : Int;
+
+			if ( x0<x1 ) {
+				if ( x0>=width || x1 <0 ) return;
+				sx = 1;
+				clip_x0 = 0;
+				clip_x1 = width-1;
+			} else {
+				if ( x1>=width || x0<0 ) return;
+				sx = -1;
+				x1 = -x1;
+				x0 = -x0;
+				clip_x0 = 1-width;
+				clip_x1 = 0;
+			}
+
+			if ( y0<y1 ) {
+				if ( y0>=height || y1 <0 ) return;
+				sy = 1;
+				clip_y0 = 0;
+				clip_y1 = height-1;
+			} else {
+				if ( y1>=width || y0<0 ) return;
+				sy = -1;
+				y1 = -y1;
+				y0 = -y0;
+				clip_y0 = 1-height;
+				clip_y1 = 0;
+			}
+
+			dx = x1-x0;				// Those are always > 0 because of swappings
+			dy = y1-y0;
+
+			var d2x = dx << 1;		// double steps for bresenham
+			var d2y = dy << 1;
+
+			var x = x0;
+			var y = y0;
+
+			if ( dx >= dy ) { 		// slope in ]0;1]
+				var delta = d2y - dx;
+				var tracing_can_start = false;
+
+				// Clipping on (x0;y0) side
+				if ( y0 < clip_y0 ) {
+					// Compute intersection (???;clip_y0) using float to avoid overflow
+					var temp : Float = d2x;
+					temp = temp * (clip_y0-y0) - dx;
+					var xinc = temp / d2y;
+					x += Std.int(xinc);
+
+					if ( x > clip_x1 ) return;
+
+					if ( x >= clip_x0 ) {
+						temp -= xinc * d2y;
+						delta -= Std.int(temp) + dx;
+						y = clip_y0;
+
+						if (temp>0) {
+							x += 1;
+							delta += d2y;
+						}
+						tracing_can_start = true;
+					}
+				}
+
+				if( !tracing_can_start && x0 < clip_x0 ) {
+					// Compute intersection (clip_x0;???)
+					var temp : Float = d2y;
+					temp *= (clip_x0 - x0);
+					var yinc = temp / d2x;
+					y += Std.int(yinc);
+					temp %= d2x;
+					if ( y > clip_y1 || ( y == clip_y1 && temp > dx ) ) return;
+
+					x = clip_x0;
+					delta += Std.int(temp);
+
+					if ( temp >= dx ) {
+						++y;
+						delta -= d2x;
+					}
+				}
+				// If we arrive here, (x;y) is the first point in view and delta was adjusted
+
+				// clipping on (x1;y1) side
+				var xend = x1;
+				if ( y1 > clip_y1 ) {
+					// Compute intersection (???;clip_y1)
+					var temp : Float = d2x;
+					temp = temp * (clip_y1-y1) + dx;
+					var xinc = temp / d2y;
+					xend += Std.int(xinc);
+
+					if ( temp - xinc*d2y == 0 )
+						--xend;
+				}
+				xend = ( xend > clip_x1 ) ? clip_x1 + 1 : xend + 1;
+
+				// Clipping is done
+				if ( sx == -1 ) {
+					x = -x;
+					xend = -xend;
+				}
+				if ( sy == -1 ) {
+					y = -y;
+				}
+
+				d2x -= d2y;	// Changing d2x : delta is adjusted only once every loop
+
+				// Bresenham
+				while ( x != xend ) {
+					setPixel(x, y, color);
+
+					if ( delta >= 0 ) {
+						y += sy;
+						delta -= d2x;
+					} else {
+						delta += d2y;
+					}
+					x += sx;
+				}
+			} else {				// slope in ]1;+oo[
+				var delta = d2x - dy;
+				var tracing_can_start = false;
+
+				// Clipping on (x0;y0) side
+				if ( x0 < clip_x0 ) {
+					var temp : Float = d2y;
+					temp = temp * (clip_x0-x0) - dy;
+					var yinc = (temp / d2x);
+					y += Std.int(yinc);
+
+					if ( y > clip_y1 ) return;
+
+					if ( y >= clip_y0 ) {
+						temp -= yinc * d2x;
+						delta -= Std.int(temp) + dy;
+						x = clip_x0;
+
+						if (temp>0) {
+							y += 1;
+							delta += d2x;
+						}
+						tracing_can_start = true;
+					}
+				}
+
+				if( !tracing_can_start && y0 < clip_y0 ) {
+					var temp : Float = d2x;
+					temp *= (clip_y0 - y0);
+					var xinc = temp / d2y;
+					x += Std.int(xinc);
+					temp %= d2y;
+					if ( x > clip_x1 || ( x == clip_x1 && temp > dy ) ) return;
+
+					y = clip_y0;
+					delta += Std.int(temp);
+
+					if ( temp >= dy ) {
+						++x;
+						delta -= d2y;
+					}
+				}
+
+				// clipping on (x1;y1) side
+				var yend = y1;
+				if ( x1 > clip_x1 ) {
+					var temp : Float = d2y;
+					temp = temp * (clip_x1-x1) + dy;
+					var yinc = temp / d2x;
+					yend += Std.int(yinc);
+
+					if ( temp - yinc*d2x == 0 )
+						--yend;
+				}
+				yend = ( yend > clip_y1 ) ? clip_y1 + 1 : yend + 1;
+
+				// Clipping is done
+				if ( sx == -1 ) {
+					x = -x;
+				}
+				if ( sy == -1 ) {
+					y = -y;
+					yend = -yend;
+				}
+
+				d2y -= d2x;	// Changing d2y : delta is adjusted only once every loop
+
+				// Bresenham
+				while ( y != yend ) {
+					setPixel(x, y, color);
+
+					if ( delta >= 0 ) {
+						x += sx;
+						delta -= d2y;
+					} else {
+						delta += d2x;
+					}
+					y += sy;
+				}
+			}
 		}
 	}
 
@@ -456,7 +669,7 @@ class BitmapData {
 		var src = pixels.bytes;
 		var i = 0;
 		for( y in 0...height ){
-			for( x in 0...width  ){
+			for( x in 0...width ){
 				data.setPixel32( x, y, src.getInt32(i<<2) );
 				i++;
 			}

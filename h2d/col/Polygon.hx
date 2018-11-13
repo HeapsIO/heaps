@@ -1,7 +1,7 @@
 package h2d.col;
 import hxd.Math;
 
-@:forward(push,remove,insert)
+@:forward(push,remove,insert,copy)
 abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 
 	public var points(get, never) : Array<Point>;
@@ -46,6 +46,10 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		for( p in points )
 			b.addPoint(p);
 		return b;
+	}
+
+	public function getCollider(isConvex : Bool = false) {
+		return new PolygonCollider([this], isConvex);
 	}
 
 	inline function xSort(a : Point, b : Point) {

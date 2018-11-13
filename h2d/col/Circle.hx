@@ -1,7 +1,7 @@
 package h2d.col;
 import hxd.Math;
 
-class Circle {
+class Circle implements Collider {
 
 	public var x : Float;
 	public var y : Float;
@@ -66,6 +66,10 @@ class Circle {
 
 	public function toString() {
 		return '{${Math.fmt(x)},${Math.fmt(y)},${Math.fmt(ray)}}';
+	}
+
+	public function contains( p : Point ) : Bool {
+		return distanceSq(p) == 0;
 	}
 
 }

@@ -35,7 +35,7 @@ class LightProbeBaker {
 		customCamera.fovY = 90;
 	}
 
-	public function bake(renderer : h3d.scene.Renderer, s3d : Scene, volumetricLightMap : VolumetricLightmap, resolution : Int, ?time :Float) {
+	public function bake(s3d : Scene, volumetricLightMap : VolumetricLightmap, resolution : Int, ?time :Float) {
 
 		var timer = haxe.Timer.stamp();
 		var timeElapsed = 0.0;
@@ -45,12 +45,11 @@ class LightProbeBaker {
 
 		setupEnvMap(resolution);
 		setupShaderOutput(volumetricLightMap.shOrder);
+		var pbrRenderer = Std.instance(s3d.renderer, h3d.scene.pbr.Renderer);
 
 		// Save Scene Config
-		var oldRenderer = s3d.renderer;
 		var oldCamera = s3d.camera;
-		var oldRenderMode = renderer.renderMode;
-		s3d.renderer = renderer;
+		var oldRenderMode = s3d.renderer.renderMode;
 		s3d.renderer.renderMode = LightProbe;
 		s3d.camera = customCamera;
 		var engine = h3d.Engine.getCurrent();
@@ -81,7 +80,7 @@ class LightProbeBaker {
 			}
 			volumetricLightMap.lastBakedProbeIndex = index;
 
-			var sh : SphericalHarmonic = useGPU ? convertEnvIntoSH_GPU(renderer, envMap, volumetricLightMap.shOrder) : convertEnvIntoSH_CPU(envMap, volumetricLightMap.shOrder);
+			var sh : SphericalHarmonic = useGPU ? convertEnvIntoSH_GPU(pbrRenderer, envMap, volumetricLightMap.shOrder) : convertEnvIntoSH_CPU(envMap, volumetricLightMap.shOrder);
 			for(coef in 0... coefCount){
 				var u = coords.x + volumetricLightMap.probeCount.x * coef;
 				var v = coords.y + coords.z * volumetricLightMap.probeCount.y;
@@ -98,7 +97,6 @@ class LightProbeBaker {
 
 		// Restore Scene Config
 		s3d.camera = oldCamera;
-		s3d.renderer = oldRenderer;
 		s3d.renderer.renderMode = oldRenderMode;
 
 		return time - timeElapsed;

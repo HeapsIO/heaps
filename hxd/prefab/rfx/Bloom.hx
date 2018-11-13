@@ -60,7 +60,7 @@ class Bloom extends RendererFX {
 			<dt>Blur</dt><dd><input type="range" min="0" max="20" field="blur"/></dd>
 			<dt>Saturation</dt><dd><input type="range" min="-1" max="1" field="saturation"/></dd>
 			<dt>Blur Quality</dt><dd><input type="range" min="0" max="1" field="blurQuality"/></dd>
-			<dt>BLur Linear</dt><dd><input type="range" min="0" max="1" field="blurLinear"/></dd>
+			<dt>Blur Linear</dt><dd><input type="range" min="0" max="1" field="blurLinear"/></dd>
 			</dl>
 		'),props);
 	}

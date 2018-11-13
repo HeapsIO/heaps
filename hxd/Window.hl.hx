@@ -164,6 +164,14 @@ class Window {
 						event(ev);
 					}
 				#end
+			case Enter:
+				#if hldx
+				// reset cursor to default
+				dx.Cursor.createSystem(Arrow).set();
+				#end
+				event(new Event(EOver));
+			case Leave:
+				event(new Event(EOut));
 			default:
 			}
 		case MouseDown:

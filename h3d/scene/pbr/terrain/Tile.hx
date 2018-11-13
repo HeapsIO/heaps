@@ -484,15 +484,15 @@ class Tile extends h3d.scene.Mesh {
 			if( surfaceWeights[i] != null) surfaceWeights[i].dispose();
 	}
 
+	var cachedBounds : h3d.col.Bounds;
 	override function emit(ctx:RenderContext){
 		if(!isReady()) return;
-		var bounds = getBounds();
-		bounds.zMax = 10000;
-		bounds.zMin = -10000;
-		if(bounds != null){
-			if(ctx.camera.getFrustum().hasBounds(bounds))
-				super.emit(ctx);
-		}else
+		if(cachedBounds == null) {
+			cachedBounds = getBounds();
+			cachedBounds.zMax = 10000;  // TODO: Use real low/high Z values
+			cachedBounds.zMin = -10000;
+		}		
+		if(ctx.camera.frustum.hasBounds(cachedBounds))
 			super.emit(ctx);
 	}
 
@@ -517,7 +517,7 @@ class Tile extends h3d.scene.Mesh {
 
 		shader.surfaceParams = getTerrain().surfaceArray.params;
 		shader.secondSurfaceParams = getTerrain().surfaceArray.secondParams;
-		shader.tileIndex = new h3d.Vector(tileX, tileY);
+		shader.tileIndex.set(tileX, tileY); // = new h3d.Vector(tileX, tileY);
 		shader.parallaxAmount = getTerrain().parallaxAmount;
 		shader.minStep = getTerrain().parallaxMinStep;
 		shader.maxStep = getTerrain().parallaxMaxStep;

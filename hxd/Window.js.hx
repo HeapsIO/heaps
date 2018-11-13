@@ -65,6 +65,11 @@ class Window {
 				e.preventDefault();
 				return false;
 			};
+			element.addEventListener("contextmenu",function(e) {
+				e.stopPropagation();
+				e.preventDefault();
+				return false;
+			});
 		}
 		curW = this.width;
 		curH = this.height;
@@ -173,6 +178,8 @@ class Window {
 	}
 
 	function onMouseDown(e:js.html.MouseEvent) {
+		if(e.clientX != curMouseX || e.clientY != curMouseY)
+			onMouseMove(e);
 		var ev = new Event(EPush, mouseX, mouseY);
 		ev.button = switch( e.button ) {
 			case 1: 2;
@@ -183,6 +190,8 @@ class Window {
 	}
 
 	function onMouseUp(e:js.html.MouseEvent) {
+		if(e.clientX != curMouseX || e.clientY != curMouseY)
+			onMouseMove(e);
 		var ev = new Event(ERelease, mouseX, mouseY);
 		ev.button = switch( e.button ) {
 			case 1: 2;

@@ -10,13 +10,24 @@ class Frustum {
 	public var pfar : Plane;
 	public var checkNearFar : Bool = true;
 
-	public function new( mvp : h3d.Matrix ) {
-		pleft = Plane.frustumLeft(mvp);
-		pright = Plane.frustumRight(mvp);
-		ptop = Plane.frustumTop(mvp);
-		pbottom = Plane.frustumBottom(mvp);
-		pnear = Plane.frustumNear(mvp);
-		pfar = Plane.frustumFar(mvp);
+	public function new( ?mvp : h3d.Matrix ) {
+		pleft = Plane.X();
+		pright = Plane.X();
+		ptop = Plane.X();
+		pbottom = Plane.X();
+		pnear = Plane.X();
+		pfar = Plane.X();
+		if(mvp != null)
+			loadMatrix(mvp);
+	}
+
+	public function loadMatrix( mvp : h3d.Matrix ) {
+		pleft.load(Plane.frustumLeft(mvp));
+		pright.load(Plane.frustumRight(mvp));
+		ptop.load(Plane.frustumTop(mvp));
+		pbottom.load(Plane.frustumBottom(mvp));
+		pnear.load(Plane.frustumNear(mvp));
+		pfar.load(Plane.frustumFar(mvp));
 		pleft.normalize();
 		pright.normalize();
 		ptop.normalize();
