@@ -383,7 +383,7 @@ class TextInput extends Text {
 		interactive.visible = false;
 		interactive.draw(ctx);
 		super.drawRec(ctx);
-		interactive.visible = true;
+		interactive.visible = old;
 	}
 
 	function get_backgroundColor() return interactive.backgroundColor;
