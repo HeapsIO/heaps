@@ -4,6 +4,8 @@ import h2d.Text;
 
 class HtmlText extends Text {
 
+	public var condenseWhite(default,set) : Bool = true;
+
 	var elements : Array<Object> = [];
 	var xPos : Int;
 	var yPos : Int;
@@ -124,8 +126,8 @@ class HtmlText extends Text {
 			var xp = 0;
 			for( i in 0...text.length ) {
 				var cc = text.charCodeAt(i);
-				var e = font.getChar(cc);
-				var sz = e.getKerningOffset(prevChar) + e.width;
+				var fc = font.getChar(cc);
+				var sz = fc.getKerningOffset(prevChar) + fc.width;
 				if( cc == "\n".code || font.charset.isBreakChar(cc) ) {
 					if( cc != "\n".code && !font.charset.isSpace(cc) )
 						xp += sz;
@@ -139,17 +141,9 @@ class HtmlText extends Text {
 	}
 
 	static var REG_SPACES = ~/[\r\n\t ]+/g;
-	static var REG_HTMLENTITIES = ~/&([A-Za-z]+);/g;
 	function htmlToText( t : hxd.UString )  {
-		t = REG_SPACES.replace(t, " ");
-		t = REG_HTMLENTITIES.map(t, function(r) {
-			switch( r.matched(1).toLowerCase() ) {
-			case "lt": return "<";
-			case "gt": return ">";
-			case "nbsp": return String.fromCharCode(0xA0);
-			default: return r.matched(0);
-			}
-		});
+		if (condenseWhite)
+			t = REG_SPACES.replace(t, " ");
 		return t;
 	}
 
@@ -238,8 +232,6 @@ class HtmlText extends Text {
 			var dy = this.font.baseLine - font.baseLine;
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
-				var e = font.getChar(cc);
-
 				if( cc == "\n".code ) {
 					if( xPos > xMax ) xMax = xPos;
 					if( calcLines ) lines.push(xPos);
@@ -255,11 +247,12 @@ class HtmlText extends Text {
 					continue;
 				}
 				else {
-					if (e != null) {
-						xPos += e.getKerningOffset(prevChar);
-						if( rebuild ) glyphs.add(xPos, yPos + dy, e.t);
-						if( yPos == 0 && e.t.dy+dy < calcYMin ) calcYMin = e.t.dy + dy;
-						xPos += e.width + letterSpacing;
+					var fc = font.getChar(cc);
+					if (fc != null) {
+						xPos += fc.getKerningOffset(prevChar);
+						if( rebuild ) glyphs.add(xPos, yPos + dy, fc.t);
+						if( yPos == 0 && fc.t.dy+dy < calcYMin ) calcYMin = fc.t.dy + dy;
+						xPos += fc.width + letterSpacing;
 					}
 					prevChar = cc;
 				}
@@ -272,6 +265,14 @@ class HtmlText extends Text {
 		this.textColor = c;
 		rebuild();
 		return c;
+	}
+
+	function set_condenseWhite(value: Bool) {
+		if ( this.condenseWhite != value ) {
+			this.condenseWhite = value;
+			rebuild();
+		}
+		return value;
 	}
 
 	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
