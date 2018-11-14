@@ -535,4 +535,8 @@ class Tile extends h3d.scene.Mesh {
 				return false;
 		return true;
 	}
+
+	override function getLocalCollider():h3d.col.Collider {
+		return null;
+	}
 }
