@@ -82,6 +82,10 @@ class Prefab {
 	public function updateInstance( ctx : Context, ?propName : String ) {
 	}
 
+	public function removeInstance( ctx : Context ) : Bool {
+		return false;
+	}
+
 	public function saveRec() : {} {
 		var obj : Dynamic = save();
 		obj.type = type;
