@@ -53,8 +53,6 @@ class Base2d extends hxsl.Shader {
 				absolutePosition.zw = spritePosition.zw;
 			} else
 				absolutePosition = spritePosition;
-			absolutePosition.x = vec3(absolutePosition.xy,1).dot(vec3(cameraMatrixA.xy, cameraMatrixA.z * cameraScroll.x));
-			absolutePosition.y = vec3(absolutePosition.xy,1).dot(vec3(cameraMatrixB.xy, cameraMatrixB.z * cameraScroll.y));
 
 			calculatedUV = hasUVPos ? input.uv * uvPos.zw + uvPos.xy : input.uv;
 			pixelColor = isRelative ? color * input.color : input.color;
@@ -70,6 +68,10 @@ class Base2d extends hxsl.Shader {
 				tmp.dot(filterMatrixB),
 				absolutePosition.zw
 			);
+			tmp = vec3(outputPosition.xy, 1);
+			outputPosition.x = tmp.dot(vec3(cameraMatrixA.xy, -cameraMatrixA.z * cameraScroll.x));
+			outputPosition.y = tmp.dot(vec3(cameraMatrixB.xy, -cameraMatrixB.z * cameraScroll.y));
+
 			// transform to viewport
 			outputPosition.xy = (outputPosition.xy + viewport.xy) * viewport.zw;
 			// http://msdn.microsoft.com/en-us/library/windows/desktop/bb219690(v=vs.85).aspx
