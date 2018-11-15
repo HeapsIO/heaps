@@ -30,6 +30,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	public var backgroundColor : Null<Int>;
 	public var enableRightButton : Bool;
 	var scene : Scene;
+	var camera : Camera;
 	var mouseDownButton : Int = -1;
 	var parentMask : Mask;
 	var invDet : Float;
@@ -57,7 +58,8 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	override function onAdd() {
-		this.scene = getScene();
+		this.camera = getCamera();
+		this.scene = camera != null ? camera.getScene() : getScene();
 		if( scene != null ) scene.addEventTarget(this);
 		updateMask();
 		super.onAdd();
@@ -95,6 +97,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	override function onRemove() {
+		camera = null;
 		if( scene != null ) {
 			scene.removeEventTarget(this, true);
 			scene = null;

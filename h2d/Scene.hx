@@ -252,8 +252,18 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			var i = interactive[idx];
 			if( i == null ) break;
 
-			var dx = rx - i.absX;
-			var dy = ry - i.absY;
+			var dx, dy;
+
+			if ( i.camera != null ) {
+				var cam = i.camera;
+				var camX = rx + cam.camX;
+				var camY = ry + cam.camY;
+				dx = (camX * cam.camD - camY * cam.camC) * cam.invDet - i.absX;
+				dy = (-camX * cam.camB + camY * cam.camA) * cam.invDet - i.absY;
+			} else {
+				dx = rx - i.absX;
+				dy = ry - i.absY;
+			}
 
 			if ( i.shape != null ) {
 				// Check collision for Shape Interactive.

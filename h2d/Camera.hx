@@ -2,14 +2,16 @@ package h2d;
 
 /**
 	A 2D camera object allowing for robust and easy camera access.
-	Note that while camera is "scalable" it does not mask the objects that are outside of camera boundaries.
+	Camera automatically compensates it's position to remain on the anchoring point when scene is resized.
+	Note that while it is "scalable" it does not mask the objects that are outside of camera boundaries.
 **/
+@:allow(h2d.Scene)
 class Camera extends h2d.Object {
 
-	/** X position of the camera screen center point. **/
-	public var centerX(get, set) : Float;
-	/** Y position of the camera screen center point. **/
-	public var centerY(get, set) : Float;
+	/** X position of the camera anchor point. **/
+	public var viewX(get, set) : Float;
+	/** Y position of the camera anchor point. **/
+	public var viewY(get, set) : Float;
 
 	/** Current camera width. Cannot be set directly, please use `horizontalRatio`. **/
 	public var width(default, null) : Int;
@@ -19,12 +21,21 @@ class Camera extends h2d.Object {
 	public var horizontalRatio(default, set) : Float;
 	/** Percent value of vertical camera size relative to s2d size. (default : 1) **/
 	public var verticalRatio(default, set) : Float;
-	var ratioChanged : Bool;
+	/** Horizontal anchor position inside ratio boundaries used for anchoring and resize compensation. ( default : 0.5 ) **/
+	public var anchorX(default, set) : Float;
+	/** Vertical anchor position inside ratio boundaries used for anchoring and resize compensation. ( default : 0.5 ) **/
+	public var anchorY(default, set) : Float;
 
+	/**
+		Object, which position camera should follow.
+	**/
+	public var follow : Object;
+
+	var ratioChanged : Bool;
 	var sceneWidth : Int;
 	var sceneHeight : Int;
-	var halfWidth : Float;
-	var halfHeight : Float;
+	var anchorWidth : Float;
+	var anchorHeight : Float;
 	var scene : Scene;
 
 	var camA : Float;
@@ -33,13 +44,16 @@ class Camera extends h2d.Object {
 	var camD : Float;
 	var camX : Float;
 	var camY : Float;
+	var invDet : Float;
 
-	public function new( ?parent : h2d.Object, horizontalRatio : Float = 1, verticalRatio : Float = 1 ) {
+	public function new( ?parent : h2d.Object, horizontalRatio : Float = 1, verticalRatio : Float = 1, anchorX : Float = 0.5, anchorY : Float = 0.5 ) {
 		super(parent);
 		this.horizontalRatio = horizontalRatio;
 		this.verticalRatio = verticalRatio;
+		this.anchorX = anchorX;
+		this.anchorY = anchorY;
 		this.width = 0; this.height = 0;
-		this.halfWidth = 0; this.halfHeight = 0;
+		this.anchorWidth = 0; this.anchorHeight = 0;
 		this.sceneWidth = 0; this.sceneHeight = 0;
 		ratioChanged = true;
 		if ( parent != null ) {
@@ -47,15 +61,15 @@ class Camera extends h2d.Object {
 		}
 	}
 
-	inline function get_centerX() { return this.x + halfWidth; }
-	inline function get_centerY() { return this.y + halfHeight; }
+	inline function get_viewX() { return this.x + anchorWidth; }
+	inline function get_viewY() { return this.y + anchorHeight; }
 
-	inline function set_centerX( v : Float ) {
-		this.x = v - halfWidth;
+	inline function set_viewX( v : Float ) {
+		this.x = v - anchorWidth;
 		return v;
 	}
-	inline function set_centerY( v : Float ) {
-		this.y = v - halfHeight;
+	inline function set_viewY( v : Float ) {
+		this.y = v - anchorHeight;
 		return v;
 	}
 
@@ -67,6 +81,18 @@ class Camera extends h2d.Object {
 	inline function set_verticalRatio( v ) {
 		ratioChanged = true;
 		return verticalRatio = hxd.Math.clamp(v, 0, 1);
+	}
+
+	inline function set_anchorX( v ) {
+		anchorX = hxd.Math.clamp(v, 0, 1);
+		anchorWidth = sceneWidth * anchorX;
+		return anchorX;
+	}
+
+	inline function set_anchorY( v ) {
+		anchorY = hxd.Math.clamp(v, 0, 1);
+		anchorHeight = sceneHeight * anchorY;
+		return anchorY;
 	}
 
 	override private function onAdd()
@@ -91,8 +117,8 @@ class Camera extends h2d.Object {
 				camB = 0;
 				camC = 0;
 				camD = scaleY;
-				camX = x - halfWidth + halfWidth * scaleX;
-				camY = y - halfHeight + halfHeight * scaleY;
+				camX = x - anchorWidth + anchorWidth * scaleX;
+				camY = y - anchorHeight + anchorHeight * scaleY;
 			} else {
 				cr = Math.cos(rotation);
 				sr = Math.sin(rotation);
@@ -100,8 +126,8 @@ class Camera extends h2d.Object {
 				camB = scaleX * sr;
 				camC = scaleY * -sr;
 				camD = scaleY * cr;
-				camX = x - halfWidth + (halfWidth * camA + halfHeight * camC);
-				camY = y - halfHeight + (halfWidth * camB + halfHeight * camD);
+				camX = x - anchorWidth + (anchorWidth * camA + anchorHeight * camC);
+				camY = y - anchorHeight + (anchorWidth * camB + anchorHeight * camD);
 			}
 		} else {
 			if( rotation == 0 ) {
@@ -110,8 +136,8 @@ class Camera extends h2d.Object {
 				camC = scaleY * scene.matC;
 				camD = scaleY * scene.matD;
 
-				var cx = x - halfWidth + halfWidth * scaleX;
-				var cy = y - halfHeight + halfHeight * scaleY;
+				var cx = x - anchorWidth + anchorWidth * scaleX;
+				var cy = y - anchorHeight + anchorHeight * scaleY;
 				camX = cx * scene.matA + cy * scene.matC + scene.absX;
 				camY = cx * scene.matB + cy * scene.matD + scene.absY;
 			} else {
@@ -126,32 +152,39 @@ class Camera extends h2d.Object {
 				camC = tmpC * scene.matA + tmpD * scene.matC;
 				camD = tmpC * scene.matB + tmpD * scene.matD;
 
-				var cx = x - halfWidth + (halfWidth * tmpA + halfHeight * tmpC);
-				var cy = y - halfHeight + (halfWidth * tmpB + halfHeight * tmpD);
+				var cx = x - anchorWidth + (anchorWidth * tmpA + anchorHeight * tmpC);
+				var cy = y - anchorHeight + (anchorWidth * tmpB + anchorHeight * tmpD);
 				camX = cx * scene.matA + cy * scene.matC + scene.absX;
 				camY = cx * scene.matB + cy * scene.matD + scene.absY;
 			}
 		}
+		invDet = 1 / (camA * camD - camB * camC);
 	}
 
 	override private function sync( ctx : RenderContext )
 	{
 		if ( scene != null && (ratioChanged || scene.width != sceneWidth || scene.height != sceneHeight) ) {
-			// TODO: Anchor point for resize compensation.
-			var oldX = this.x + halfWidth;
-			var oldY = this.y + halfHeight;
+			var oldX = this.x + anchorWidth;
+			var oldY = this.y + anchorHeight;
 			this.sceneWidth = scene.width;
 			this.sceneHeight = scene.height;
 			this.width = Math.round(scene.width * horizontalRatio);
 			this.height = Math.round(scene.height * verticalRatio);
-			this.halfWidth = width * 0.5;
-			this.halfHeight = height * 0.5;
-			this.x = oldX - halfWidth;
-			this.y = oldY - halfHeight;
+			this.anchorWidth = width * anchorX;
+			this.anchorHeight = height * anchorY;
+			this.x = oldX - anchorWidth;
+			this.y = oldY - anchorHeight;
 			this.ratioChanged = false;
 		}
 		checkPosChanged();
 		super.sync(ctx);
+
+		if ( follow != null ) {
+			var fx = follow.x - anchorWidth;
+			var fy = follow.y - anchorHeight;
+			viewX = fx * camA + fy * camC + anchorWidth;
+			viewY = fx * camB + fy * camD + anchorHeight;
+		}
 	}
 
 	override private function drawRec( ctx : RenderContext )
@@ -187,13 +220,13 @@ class Camera extends h2d.Object {
 
 	inline function initScene() {
 		this.scene = parent.getScene();
-		if (scene != parent && !Std.is(parent, MultiCamera)) throw "Camera can be added only to Scene or MultiCamera!";
-		if (sceneWidth == 0)
+		if ( scene != parent && !Std.is(parent, MultiCamera) ) throw "Camera can be added only to Scene or MultiCamera!";
+		if ( sceneWidth == 0 )
 		{
 			sceneWidth = scene.width;
 			sceneHeight = scene.height;
-			halfWidth = sceneWidth * .5;
-			halfHeight = sceneHeight * .5;
+			anchorWidth = sceneWidth * anchorX;
+			anchorHeight = sceneHeight * anchorY;
 		}
 	}
 
