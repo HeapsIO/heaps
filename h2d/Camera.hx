@@ -6,6 +6,7 @@ package h2d;
 	Note that while it is "scalable" it does not mask the objects that are outside of camera boundaries.
 **/
 @:allow(h2d.Scene)
+@:allow(h2d.MultiCamera)
 class Camera extends h2d.Object {
 
 	/** X position of the camera anchor point. **/
