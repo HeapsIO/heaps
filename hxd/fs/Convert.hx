@@ -2,6 +2,12 @@ package hxd.fs;
 
 class Convert {
 
+	/**
+		Custom list of converts that should be used in FileSystem.
+		Should be added in hxml `--macro` to ensure proper function.
+	**/
+	public static var converts : Array<Convert> = new Array();
+
 	public var sourceExt(default,null) : String;
 	public var destExt(default,null) : String;
 
