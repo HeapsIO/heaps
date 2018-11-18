@@ -2,6 +2,38 @@ package hxd.fs;
 
 class Convert {
 
+	/**
+		Custom list of converts that should be used in FileSystem.
+		Should be added in hxml `--macro` to ensure proper function.
+		Example of adding a Convert:
+		```haxe
+		static function initCustomConverts() {
+			hxd.fs.Convert.converts.push("path.to.my.Convert");
+			hxd.fs.Convert.converts.push("path.to.my.OtherConvert");
+		}
+		```
+		Adn in hxml:
+		`--macro path.to.my.MacroScript.initCustomConverts()`
+	**/
+	public static var converts:Array<String> = new Array();
+
+	static macro function getConverts() : haxe.macro.Expr {
+		var exprs:Array<haxe.macro.Expr> = new Array();
+		var pos = haxe.macro.Context.currentPos();
+		
+		for ( p in converts ) {
+			var t = haxe.macro.Context.getType(p);
+			var ct = haxe.macro.TypeTools.toComplexType(t);
+			switch (ct) {
+				case TPath(t):
+					var newExpr : haxe.macro.Expr = { expr: ENew(t, []), pos: pos };
+					exprs.push(macro addConvert($newExpr));
+				default:
+			}
+		}
+		return macro $b{exprs}
+	}
+
 	public var sourceExt(default,null) : String;
 	public var destExt(default,null) : String;
 
