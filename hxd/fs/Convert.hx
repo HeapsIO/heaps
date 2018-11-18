@@ -16,7 +16,7 @@ class Convert {
 		`--macro path.to.my.MacroScript.initCustomConverts()`
 	**/
 	public static var converts:Array<String> = new Array();
-	
+
 	static macro function getConverts() : haxe.macro.Expr {
 		var exprs:Array<haxe.macro.Expr> = new Array();
 		var pos = haxe.macro.Context.currentPos();
@@ -30,9 +30,6 @@ class Convert {
 					exprs.push(macro addConvert($newExpr));
 				default:
 			}
-			
-			// trace(macro new $t);
-			// exprs.push(macro addConvert(new $t));
 		}
 		return macro $b{exprs}
 	}
