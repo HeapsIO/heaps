@@ -35,7 +35,7 @@ class Animation implements hxd.impl.Serializable {
 	@:s public var pause : Bool;
 	@:s public var loop : Bool;
 
-	public var events(default, null) : Array<Array<String>>;
+	var events : Array<Array<String>>;
 
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
@@ -96,6 +96,10 @@ class Animation implements hxd.impl.Serializable {
 		else
 			events[frame].push(data);
 	}
+
+	public function getEvents() return events;
+
+	public function getObjects() return objects;
 
 	public function setFrame( f : Float ) {
 		frame = f;
