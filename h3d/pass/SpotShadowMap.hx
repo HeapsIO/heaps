@@ -107,6 +107,7 @@ class SpotShadowMap extends Shadows {
 			}
 
 		passes = filterPasses(passes);
+		updateCamera();
 
 		var texture = ctx.textures.allocTarget("shadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
@@ -114,10 +115,6 @@ class SpotShadowMap extends Shadows {
 			depth = new h3d.mat.DepthBuffer(size, size);
 		}
 		texture.depthBuffer = depth;
-
-		if( mode != Mixed || ctx.computingStatic ) {
-			updateCamera();
-		}
 
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
