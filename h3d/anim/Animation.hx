@@ -35,7 +35,7 @@ class Animation implements hxd.impl.Serializable {
 	@:s public var pause : Bool;
 	@:s public var loop : Bool;
 
-	var events : Array<Array<String>>;
+	public var events(default, null) : Array<Array<String>>;
 
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
