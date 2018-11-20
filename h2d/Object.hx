@@ -297,7 +297,7 @@ class Object {
 		return pt;
 	}
 
-	function getScene() : Scene {
+	public function getScene() : Scene {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
 		return Std.instance(p, Scene);
