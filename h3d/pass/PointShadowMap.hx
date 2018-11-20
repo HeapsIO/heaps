@@ -141,6 +141,11 @@ class PointShadowMap extends Shadows {
 
 			var pointLight = cast(light, h3d.scene.pbr.PointLight);
 
+			var absPos = light.getAbsPos();
+			lightCamera.setCubeMap(i, new h3d.Vector(absPos.tx, absPos.ty, absPos.tz));
+			lightCamera.zFar = pointLight.range;
+			lightCamera.update();
+
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
 			passes = super.draw(passes);
