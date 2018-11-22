@@ -18,7 +18,7 @@ class Tile extends h3d.scene.Mesh {
 	var heightmapPixels : hxd.Pixels.PixelsFloat;
 	var shader : h3d.shader.pbr.Terrain;
 
-	public function new(x : Int, y : Int , ?parent){
+	public function new( x : Int, y : Int , ?parent ){
 		super(null, null, parent);
 		this.tileX = x;
 		this.tileY = y;
@@ -27,7 +27,6 @@ class Tile extends h3d.scene.Mesh {
 		material.mainPass.culling = None;
 		this.x = x * getTerrain().tileSize;
 		this.y = y * getTerrain().tileSize;
-		refreshMesh();
 		name = "tile_" + x + "_" + y;
 	}
 
@@ -435,9 +434,9 @@ class Tile extends h3d.scene.Mesh {
 				t2.z += getHeight(t2.x / getTerrain().tileSize, t2.y / getTerrain().tileSize);
 			}
 			var n1 = t1.sub(t0);
-			n1.normalize();
+			n1.normalizeFast();
 			var n2 = t2.sub(t0);
-			n2.normalize();
+			n2.normalizeFast();
 			var n = n1.cross(n2);
 			grid.normals[i0].x += n.x; grid.normals[i0].y += n.y; grid.normals[i0].z += n.z;
 			grid.normals[i1].x += n.x; grid.normals[i1].y += n.y; grid.normals[i1].z += n.z;
@@ -491,7 +490,15 @@ class Tile extends h3d.scene.Mesh {
 			cachedBounds = getBounds();
 			cachedBounds.zMax = 10000;  // TODO: Use real low/high Z values
 			cachedBounds.zMin = -10000;
-		}		
+
+			var maxZ : Float;
+			var minZ : Float;
+			var vertexCount = grid.width + 1;
+
+			/*for( p in grid.points ){
+				var h = getHeight(p.)
+			}*/
+		}
 		if(ctx.camera.frustum.hasBounds(cachedBounds))
 			super.emit(ctx);
 	}
