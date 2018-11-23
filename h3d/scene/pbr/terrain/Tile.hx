@@ -448,9 +448,9 @@ class Tile extends h3d.scene.Mesh {
 		needAlloc = true;
 	}
 
-	public function getHeight(u : Float, v : Float){
+	public function getHeight(u : Float, v : Float, ?fast = false){
 		var pixels = getHeightPixels();
-		if(heightMap.filter == Linear){
+		if(heightMap.filter == Linear && !fast){
 			inline function getPix(u, v){
 				return pixels.getPixelF(Std.int(hxd.Math.clamp(u, 0, pixels.width - 1)), Std.int(hxd.Math.clamp(v, 0, pixels.height - 1))).r;
 			}
@@ -488,16 +488,16 @@ class Tile extends h3d.scene.Mesh {
 		if(!isReady()) return;
 		if(cachedBounds == null) {
 			cachedBounds = getBounds();
-			cachedBounds.zMax = 10000;  // TODO: Use real low/high Z values
-			cachedBounds.zMin = -10000;
+			cachedBounds.zMax = 0;
+			cachedBounds.zMin = 0;
 
-			var maxZ : Float;
-			var minZ : Float;
-			var vertexCount = grid.width + 1;
-
-			/*for( p in grid.points ){
-				var h = getHeight(p.)
-			}*/
+			for( u in 0 ... heightMap.width ){
+				for( v in 0 ... heightMap.height ){
+					var h = getHeight(u, v, true);
+					cachedBounds.zMin = cachedBounds.zMin > h ? h : cachedBounds.zMin;
+					cachedBounds.zMax = cachedBounds.zMax < h ? h : cachedBounds.zMax;
+				}
+			}
 		}
 		if(ctx.camera.frustum.hasBounds(cachedBounds))
 			super.emit(ctx);
