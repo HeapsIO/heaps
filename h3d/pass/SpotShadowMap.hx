@@ -96,17 +96,19 @@ class SpotShadowMap extends Shadows {
 				return passes;
 			case Dynamic:
 				// nothing
-			case Static, Mixed:
+			case Mixed:
 				if( staticTexture == null || staticTexture.isDisposed() )
 					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
-				if( mode == Static ) {
-					updateCamera();
-					syncShader(staticTexture);
-					return passes;
-				}
+			case Static:
+				if( staticTexture == null || staticTexture.isDisposed() )
+					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
+				updateCamera();
+				syncShader(staticTexture);
+				return passes;
 			}
 
 		passes = filterPasses(passes);
+		updateCamera();
 
 		var texture = ctx.textures.allocTarget("shadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
@@ -115,17 +117,17 @@ class SpotShadowMap extends Shadows {
 		}
 		texture.depthBuffer = depth;
 
-		if( mode != Mixed || ctx.computingStatic ) {
-			updateCamera();
-		}
-
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
 		passes = super.draw(passes);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
-		if( mode == Mixed && !ctx.computingStatic ) {
+		if( blur.radius > 0 )
+			blur.apply(ctx, texture);
+
+		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
+		if( mode == Mixed && !ctx.computingStatic && validBakedTexture ) {
 			var merge = ctx.textures.allocTarget("shadowMap", size, size, false, format);
 			mergePass.shader.texA = texture;
 			mergePass.shader.texB = staticTexture;
@@ -134,9 +136,6 @@ class SpotShadowMap extends Shadows {
 			ctx.engine.popTarget();
 			texture = merge;
 		}
-
-		if( blur.radius > 0 && (mode != Mixed || !ctx.computingStatic) )
-			blur.apply(ctx, texture);
 
 		syncShader(texture);
 		return passes;

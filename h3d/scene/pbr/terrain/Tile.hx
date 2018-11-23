@@ -18,7 +18,7 @@ class Tile extends h3d.scene.Mesh {
 	var heightmapPixels : hxd.Pixels.PixelsFloat;
 	var shader : h3d.shader.pbr.Terrain;
 
-	public function new(x : Int, y : Int , ?parent){
+	public function new( x : Int, y : Int , ?parent ){
 		super(null, null, parent);
 		this.tileX = x;
 		this.tileY = y;
@@ -27,7 +27,6 @@ class Tile extends h3d.scene.Mesh {
 		material.mainPass.culling = None;
 		this.x = x * getTerrain().tileSize;
 		this.y = y * getTerrain().tileSize;
-		refreshMesh();
 		name = "tile_" + x + "_" + y;
 	}
 
@@ -435,9 +434,9 @@ class Tile extends h3d.scene.Mesh {
 				t2.z += getHeight(t2.x / getTerrain().tileSize, t2.y / getTerrain().tileSize);
 			}
 			var n1 = t1.sub(t0);
-			n1.normalize();
+			n1.normalizeFast();
 			var n2 = t2.sub(t0);
-			n2.normalize();
+			n2.normalizeFast();
 			var n = n1.cross(n2);
 			grid.normals[i0].x += n.x; grid.normals[i0].y += n.y; grid.normals[i0].z += n.z;
 			grid.normals[i1].x += n.x; grid.normals[i1].y += n.y; grid.normals[i1].z += n.z;
@@ -449,9 +448,9 @@ class Tile extends h3d.scene.Mesh {
 		needAlloc = true;
 	}
 
-	public function getHeight(u : Float, v : Float){
+	public function getHeight(u : Float, v : Float, ?fast = false){
 		var pixels = getHeightPixels();
-		if(heightMap.filter == Linear){
+		if(heightMap.filter == Linear && !fast){
 			inline function getPix(u, v){
 				return pixels.getPixelF(Std.int(hxd.Math.clamp(u, 0, pixels.width - 1)), Std.int(hxd.Math.clamp(v, 0, pixels.height - 1))).r;
 			}
@@ -489,9 +488,17 @@ class Tile extends h3d.scene.Mesh {
 		if(!isReady()) return;
 		if(cachedBounds == null) {
 			cachedBounds = getBounds();
-			cachedBounds.zMax = 10000;  // TODO: Use real low/high Z values
-			cachedBounds.zMin = -10000;
-		}		
+			cachedBounds.zMax = 0;
+			cachedBounds.zMin = 0;
+
+			for( u in 0 ... heightMap.width ){
+				for( v in 0 ... heightMap.height ){
+					var h = getHeight(u, v, true);
+					cachedBounds.zMin = cachedBounds.zMin > h ? h : cachedBounds.zMin;
+					cachedBounds.zMax = cachedBounds.zMax < h ? h : cachedBounds.zMax;
+				}
+			}
+		}
 		if(ctx.camera.frustum.hasBounds(cachedBounds))
 			super.emit(ctx);
 	}

@@ -115,10 +115,15 @@ class PointShadowMap extends Shadows {
 			switch( mode ) {
 			case None:
 				return passes;
-			case Dynamic:	// nothing
-			case Mixed:		// nothing
+			case Dynamic:
+				// nothing
+			case Mixed:
+				if( staticTexture == null || staticTexture.isDisposed() )
+					staticTexture = createDefaultShadowMap();
 			case Static:
-				if( staticTexture == null || staticTexture.isDisposed() ) staticTexture = createDefaultShadowMap();
+				if( staticTexture == null || staticTexture.isDisposed() )
+					staticTexture = createDefaultShadowMap();
+				updateCamera();
 				syncShader(staticTexture);
 				return passes;
 			}
@@ -133,27 +138,30 @@ class PointShadowMap extends Shadows {
 		}
 		texture.depthBuffer = depth;
 
+		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
 		var merge : h3d.mat.Texture = null;
-		if( mode == Mixed && !ctx.computingStatic )
+		if( mode == Mixed && !ctx.computingStatic && validBakedTexture)
 			merge = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, [Target, Cube]);
 
 		for(i in 0 ... 6){
-
 			var pointLight = cast(light, h3d.scene.pbr.PointLight);
 
-			if( mode != Mixed || ctx.computingStatic ) {
-				var absPos = light.getAbsPos();
-				lightCamera.setCubeMap(i, new h3d.Vector(absPos.tx, absPos.ty, absPos.tz));
-				lightCamera.zFar = pointLight.range;
-				lightCamera.update();
-			}
+			var absPos = light.getAbsPos();
+			lightCamera.setCubeMap(i, new h3d.Vector(absPos.tx, absPos.ty, absPos.tz));
+			lightCamera.zFar = pointLight.range;
+			lightCamera.update();
 
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
 			passes = super.draw(passes);
 			ctx.engine.popTarget();
+		}
 
-			if( mode == Mixed && !ctx.computingStatic ) {
+		if( blur.radius > 0 )
+			blur.apply(ctx, texture);
+
+		if( mode == Mixed && !ctx.computingStatic && merge != null ) {
+			for(i in 0 ... 6){
 				mergePass.shader.texA = texture;
 				mergePass.shader.texB = staticTexture;
 				mergePass.shader.mat = cubeDir[i];
@@ -161,16 +169,17 @@ class PointShadowMap extends Shadows {
 				mergePass.render();
 				ctx.engine.popTarget();
 			}
-		}
-
-		if( blur.radius > 0 && (mode != Mixed || !ctx.computingStatic) )
-				blur.apply(ctx, texture);
-
-		if( mode == Mixed && !ctx.computingStatic )
 			texture = merge;
+		}
 
 		syncShader(texture);
 		return passes;
+	}
+
+	function updateCamera(){
+		var absPos = light.getAbsPos();
+		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
+		lightCamera.update();
 	}
 
 	override function computeStatic( passes : h3d.pass.Object ) {

@@ -1,9 +1,9 @@
 package h3d.scene.pbr.terrain;
 
 class Surface {
-	public var albedo (default, set) : h3d.mat.Texture;
-	public var normal (default, set) : h3d.mat.Texture;
-	public var pbr (default, set) : h3d.mat.Texture;
+	public var albedo : h3d.mat.Texture;
+	public var normal : h3d.mat.Texture;
+	public var pbr : h3d.mat.Texture;
 	public var tilling = 1.0;
 	public var offset : h3d.Vector;
 	public var angle = 0.0;
@@ -19,28 +19,6 @@ class Surface {
 		if(albedo != null) albedo.dispose();
 		if(normal != null) normal.dispose();
 		if(pbr != null) pbr.dispose();
-	}
-
-	function set_albedo(t : h3d.mat.Texture){
-		return albedo = swap(albedo, t);
-	}
-
-	function set_normal(t : h3d.mat.Texture){
-		return normal = swap(normal, t);
-	}
-
-	function set_pbr(t : h3d.mat.Texture){
-		return pbr = swap(pbr, t);
-	}
-
-	function swap(a : h3d.mat.Texture, b : h3d.mat.Texture) : h3d.mat.Texture {
-		if(a != null) a.dispose();
-		if(b != null){
-			var r = b.clone();
-			r.wrap = Repeat;
-			return r;
-		}
-		return null;
 	}
 }
 
