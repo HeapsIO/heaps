@@ -136,6 +136,8 @@ class Tile extends h3d.scene.Mesh {
 			if(surfaceWeightArray != null) surfaceWeightArray.dispose();
 			surfaceWeightArray = new h3d.mat.TextureArray(getTerrain().weightMapResolution, getTerrain().weightMapResolution, surfaceWeights.length, [Target], R8);
 			surfaceWeightArray.wrap = Clamp;
+			surfaceWeightArray.preventAutoDispose();
+			surfaceWeightArray.realloc = null;
 		}
 		for(i in 0 ... surfaceWeights.length)
 			if(surfaceWeights[i] != null) getTerrain().copyPass.apply(surfaceWeights[i], surfaceWeightArray, None, null, i);
