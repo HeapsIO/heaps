@@ -29,7 +29,7 @@ In order to compile the samples, go to the `samples` directory and run `haxe gen
 
 To compile:
 - For JS/WebGL: run `haxe [sample]_js.hxml`, then open `index.html` to run
-- For HashLink: run `haxe -lib hlsdl|hldx [sample]_hl.hxml` then run `hl <sample>.hl` to run (can use both SDL and DirectX libraries)
+- For HashLink: run `haxe [sample]_hl.hxml` then run `hl <sample>.hl` to run (will use SDL, replace `-lib hlsdl` by `-lib hldx` in hxml to use DirectX)
 - For Flash: run `haxe [sample]_swf.hxml`, then open `<sample>.swf` to run
 - For Consoles, contact us: nicolas@haxe.org
 
