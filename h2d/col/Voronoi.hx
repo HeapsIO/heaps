@@ -1577,8 +1577,8 @@ class Voronoi {
 		var eid = 0;
 		for( e in edges ) {
 			e.id = eid++;
-			e.lCell = pointCell.get(e.lPoint);
-			e.rCell = pointCell.get(e.rPoint);
+			e.lCell = e.lPoint == null ? null : pointCell.get(e.lPoint);
+			e.rCell = e.rPoint == null ? null : pointCell.get(e.rPoint);
 		}
 
 		// to measure execution time
