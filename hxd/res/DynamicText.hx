@@ -43,6 +43,10 @@ class DynamicText {
 			onMissing(path.join(".") + " is missing");
 			return null;
 		}
+		if( Std.is(old,Array) ) {
+			onMissing(path.join(".")+" should be a group");
+			return null;
+		}
 		var strOld : String = if( Reflect.isFunction(old) ) old({}) else old;
 		if( strOld == null ) {
 			onMissing(path.join(".") + " is no longer used");
@@ -86,14 +90,25 @@ class DynamicText {
 				fields.remove(id);
 			case "g":
 				var id = x.att.id;
-				var sub : Dynamic = Reflect.field(obj, id);
-				if( sub == null ) continue;
-				var first = x.elements.next();
-				// build structure
+				if( id == null ) {
+					onMissing(path.join(".") +" group is missing id");
+					continue;
+				}
 				path.push(id);
-				if( first != null && first.has.id ) {
-					applyRec(path, sub, x, onMissing);
-				} else {
+				fields.remove(id);
+				var sub : Dynamic = Reflect.field(obj, id);
+				if( sub == null ) {
+					onMissing(path.join(".") +" is no longer used");
+					path.pop();
+					continue;
+				}
+				if( Std.is(sub,String) ) {
+					onMissing(path.join(".") +" should be a text and not a group");
+					path.pop();
+					continue;
+				}
+				// build structure
+				if( Std.is(sub,Array) ) {
 					var elements : Array<Dynamic> = sub;
 					var data = [for( e in x.elements ) e];
 					for( i in 0...elements.length ) {
@@ -111,9 +126,10 @@ class DynamicText {
 						}
 						path.pop();
 					}
-				}
+				} else
+					applyRec(path, sub, x, onMissing);
+
 				path.pop();
-				fields.remove(id);
 			}
 		}
 		for( f in fields.keys() ) {
