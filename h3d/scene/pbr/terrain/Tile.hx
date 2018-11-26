@@ -450,8 +450,9 @@ class Tile extends h3d.scene.Mesh {
 		needAlloc = true;
 	}
 
-	public function getHeight(u : Float, v : Float, ?fast = false){
+	public function getHeight(u : Float, v : Float, ?fast = false) : Float {
 		var pixels = getHeightPixels();
+		if(pixels == null) return 0.0;
 		if(heightMap.filter == Linear && !fast){
 			inline function getPix(u, v){
 				return pixels.getPixelF(Std.int(hxd.Math.clamp(u, 0, pixels.width - 1)), Std.int(hxd.Math.clamp(v, 0, pixels.height - 1))).r;
@@ -486,20 +487,23 @@ class Tile extends h3d.scene.Mesh {
 	}
 
 	var cachedBounds : h3d.col.Bounds;
-	override function emit(ctx:RenderContext){
+	var cachedHeightBound : Bool = false;
+	override function emit( ctx:RenderContext ){
 		if(!isReady()) return;
 		if(cachedBounds == null) {
 			cachedBounds = getBounds();
 			cachedBounds.zMax = 0;
 			cachedBounds.zMin = 0;
-
+		}
+		if(cachedBounds != null && cachedHeightBound == false && heightMap != null){
 			for( u in 0 ... heightMap.width ){
 				for( v in 0 ... heightMap.height ){
-					var h = getHeight(u, v, true);
+					var h = getHeight(u / heightMap.width, v / heightMap.height, true);
 					cachedBounds.zMin = cachedBounds.zMin > h ? h : cachedBounds.zMin;
 					cachedBounds.zMax = cachedBounds.zMax < h ? h : cachedBounds.zMax;
 				}
 			}
+			cachedHeightBound = true;
 		}
 		if(ctx.camera.frustum.hasBounds(cachedBounds))
 			super.emit(ctx);
@@ -537,10 +541,10 @@ class Tile extends h3d.scene.Mesh {
 	function isReady(){
 		if( getTerrain().surfaceArray == null || getTerrain().surfaces.length == 0 || surfaceWeights.length != getTerrain().surfaces.length)
 			return false;
-		if(heightMap == null)
+		if( heightMap == null )
 			return false;
-		for(i in 0 ... surfaceWeights.length)
-			if(surfaceWeights[i] == null)
+		for( i in 0 ... surfaceWeights.length )
+			if( surfaceWeights[i] == null )
 				return false;
 		return true;
 	}
