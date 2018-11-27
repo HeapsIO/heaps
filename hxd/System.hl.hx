@@ -253,7 +253,12 @@ class System {
 		return switch( s ) {
 		#if !usesys
 		case IsWindowed:
-			return true;
+			platform == PC;
+		case IsMobile:
+			platform == IOS || platform == Android;
+		case IsTouch:
+			// TODO: check PC touch screens?
+			platform == IOS || platform == Android;
 		#end
 		default:
 			return false;
@@ -293,7 +298,12 @@ class System {
 	#elseif hlsdl
 	static function get_width() : Int return sdl.Sdl.getScreenWidth();
 	static function get_height() : Int return sdl.Sdl.getScreenHeight();
-	static function get_platform() : Platform return PC; // TODO : Xbox ?
+	static function get_platform() : Platform return switch Sys.systemName() {
+														case 'Windows' | 'Linux'| 'Mac': PC;
+														case 'iOS' | 'tvOS': IOS;
+														case 'Android': Android;
+														default: PC;
+													}
 	#else
 	static function get_width() : Int return 800;
 	static function get_height() : Int return 600;
