@@ -19,8 +19,8 @@ class Node {
 		return j == null || j.length == 0;
 	}
 
-	function getJRoot() {
-		return @:privateAccess Inspector.current.jroot;
+	function getJRoot() : vdom.JQuery {
+		return null;
 	}
 
 	function initContent() {
