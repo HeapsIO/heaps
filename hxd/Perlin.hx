@@ -79,6 +79,18 @@ class Perlin {
 		return gx * (x - ix) + gy * (y - iy) + gz * (z - iz);
 	}
 
+	inline function gradient1DAt( x : Float, ix : Int, seed : Int ) {
+		var index = seed * 1013 + (ix%repeat) * 1619;
+		index = ((index ^ (index >>> 8)) & 0xFF);
+		#if flash
+		index <<= 5;
+		var gx = double(index);
+		#else
+		var gx = gradients[index << 2];
+		#end
+		return gx * (x - ix);
+	}
+
 	inline function gradientAt( x : Float, y : Float, ix : Int, iy : Int, seed : Int ) {
 		var index = seed * 1013 + (ix%repeat) * 1619 + (iy%repeat) * 31337;
 		index = ((index ^ (index >>> 8)) & 0xFF);
@@ -118,6 +130,13 @@ class Perlin {
 		return linear(v1, v2, zs);
 	}
 
+	public function gradient1D( seed : Int, x : Float ) {
+		var ix = Std.int(x), xs = scurve(x - ix);
+		var ga = gradient1DAt(x, ix, seed);
+		var gb = gradient1DAt(x, ix + 1, seed);
+		return linear(ga, gb, xs);
+	}
+
 	public function gradient( seed : Int, x : Float, y : Float ) {
 		return inlineGradient(seed, x, y);
 	}
@@ -140,6 +159,17 @@ class Perlin {
 			k *= persist;
 			x *= lacunarity;
 			y *= lacunarity;
+		}
+		return v;
+	}
+
+	public function perlin1D( seed : Int, x : Float, octaves : Int, persist : Float = 0.5, lacunarity = 2.0 ) {
+		var v = 0.;
+		var k = 1.;
+		for( i in 0...octaves ) {
+			v += gradient1D(seed + i, x) * k;
+			k *= persist;
+			x *= lacunarity;
 		}
 		return v;
 	}
