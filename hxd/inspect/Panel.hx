@@ -69,7 +69,7 @@ class Panel extends Node {
 	}
 
 	override function getJRoot() {
-		if( j == null ) return @:privateAccess inspect.jroot;
+		if( j == null ) return super.getJRoot();
 		return j;
 	}
 

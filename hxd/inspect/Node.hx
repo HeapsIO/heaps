@@ -8,6 +8,8 @@ class Node {
 	public var j : vdom.JQuery;
 	var childs : Array<Node>;
 
+	static var currentJRoot : vdom.JQuery = null;
+
 	public function new( name, ?parent ) {
 		childs = [];
 		initContent();
@@ -20,7 +22,7 @@ class Node {
 	}
 
 	function getJRoot() : vdom.JQuery {
-		return null;
+		return currentJRoot;
 	}
 
 	function initContent() {

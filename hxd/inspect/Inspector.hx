@@ -36,7 +36,7 @@ class Tool {
 class Inspector {
 
 	static var CSS = hxd.res.Embed.getFileContent("hxd/inspect/inspect.css");
-	static var current : Inspector;
+	static var current(default,set) : Inspector;
 
 	public static function getCurrent() return current;
 
@@ -82,7 +82,10 @@ class Inspector {
 		init();
 	}
 
-
+	static function set_current(i:Inspector) {
+		@:privateAccess Node.currentJRoot = i == null ? null : i.jroot;
+		return current = i;
+	}
 
 	function init() {
 		jroot = J(props.getRoot());
@@ -92,6 +95,7 @@ class Inspector {
 			</ul>
 		');
 		jroot.attr("title", "Inspect");
+		current = this;
 
 		scenePanel = new ScenePanel("s3d", scene);
 		logPanel = new Panel("log", "Log");
