@@ -27,7 +27,7 @@ class System {
 	public static var width(get,never) : Int;
 	public static var height(get, never) : Int;
 	public static var lang(get, never) : String;
-	public static var platform(get, never) : Platform;
+	public static var platform(get, null) : Platform;
 	public static var screenDPI(get,never) : Float;
 	public static var setCursor = setNativeCursor;
 	public static var allowTimeout(get, set) : Bool;
@@ -253,7 +253,12 @@ class System {
 		return switch( s ) {
 		#if !usesys
 		case IsWindowed:
-			return true;
+			platform == PC;
+		case IsMobile:
+			platform == IOS || platform == Android;
+		case IsTouch:
+			// TODO: check PC touch screens?
+			platform == IOS || platform == Android;
 		#end
 		default:
 			return false;
@@ -293,7 +298,16 @@ class System {
 	#elseif hlsdl
 	static function get_width() : Int return sdl.Sdl.getScreenWidth();
 	static function get_height() : Int return sdl.Sdl.getScreenHeight();
-	static function get_platform() : Platform return PC; // TODO : Xbox ?
+	static function get_platform() : Platform {
+		if (platform == null)
+			platform = switch Sys.systemName() {
+						case 'Windows' | 'Linux'| 'Mac': PC;
+						case 'iOS' | 'tvOS': IOS;
+						case 'Android': Android;
+						default: PC;
+					}
+		return platform;
+	}
 	#else
 	static function get_width() : Int return 800;
 	static function get_height() : Int return 600;
