@@ -21,6 +21,27 @@ class Key {
 	public static inline var INSERT		= 45;
 	public static inline var DELETE		= 46;
 
+	public static inline var EQUALS = 187;
+	public static inline var MINUS = 189;
+	public static inline var TILDE = 192;
+	public static inline var BRACKET_LEFT = 219;
+	public static inline var BRACKET_RIGHT = 221;
+	public static inline var SEMICOLON = 186;
+	public static inline var QUOTE = 222;
+	public static inline var BACKSLASH = 220;
+	public static inline var COMMA = 188;
+	public static inline var PERIOD = 190;
+	public static inline var SLASH = 191;
+	public static inline var INTL_BACKSLASH = 226; // Backslash located next to left shift on some keyboards.
+	public static inline var LEFT_WINDOW_KEY = 91;
+	public static inline var RIGHT_WINDOW_KEY = 92;
+	public static inline var CONTEXT_MENU = 93;
+
+	public static inline var PAUSE_BREAK = 19;
+	public static inline var CAPS_LOCK = 20;
+	public static inline var NUM_LOCK = 144;
+	public static inline var SCROLL_LOCK = 145;
+
 	public static inline var NUMBER_0	= 48;
 	public static inline var NUMBER_1	= 49;
 	public static inline var NUMBER_2	= 50;
@@ -82,6 +103,19 @@ class Key {
 	public static inline var F10		= 121;
 	public static inline var F11		= 122;
 	public static inline var F12		= 123;
+	// Extended F keys
+	public static inline var F13		= 124;
+	public static inline var F14		= 125;
+	public static inline var F15		= 126;
+	public static inline var F16		= 127;
+	public static inline var F17		= 128;
+	public static inline var F18		= 129;
+	public static inline var F19		= 130;
+	public static inline var F20		= 131;
+	public static inline var F21		= 132;
+	public static inline var F22		= 133;
+	public static inline var F23		= 134;
+	public static inline var F24		= 135;
 
 	public static inline var NUMPAD_MULT = 106;
 	public static inline var NUMPAD_ADD	= 107;
@@ -219,6 +253,25 @@ class Key {
 		case RCTRL: "RCtrl";
 		case LALT: "LAlt";
 		case RALT: "RAlt";
+		case TILDE: "Tilde";
+		case MINUS: "Minus";
+		case EQUALS: "Equals";
+		case BRACKET_LEFT: "BracketLeft";
+		case BRACKET_RIGHT: "BacketRight";
+		case SEMICOLON: "Semicolon";
+		case QUOTE: "Quote";
+		case BACKSLASH: "Backslash";
+		case COMMA: "Comma";
+		case PERIOD: "Period";
+		case SLASH: "Slash";
+		case INTL_BACKSLASH: "IntlBackslash";
+		case LEFT_WINDOW_KEY: "LeftWindowKey";
+		case RIGHT_WINDOW_KEY: "RightWindowKey";
+		case CONTEXT_MENU: "ContextMenu";
+		case PAUSE_BREAK: "PauseBreak";
+		case CAPS_LOCK: "CapsLock";
+		case SCROLL_LOCK: "ScrollLock";
+		case NUM_LOCK: "NumLock";
 		case MOUSE_LEFT: "MouseLeft";
 		case MOUSE_MIDDLE: "MouseMiddle";
 		case MOUSE_RIGHT: "MouseRight";
@@ -229,7 +282,7 @@ class Key {
 				"NumPad"+(c - NUMPAD_0);
 			else if( c >= A && c <= Z )
 				String.fromCharCode("A".code + c - A);
-			else if( c >= F1 && c <= F12 )
+			else if( c >= F1 && c <= F24 )
 				"F" + (c - F1 + 1);
 			else
 				null;
