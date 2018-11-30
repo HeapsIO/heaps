@@ -80,6 +80,9 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 				visible = true;
 			else {
 				visible = false;
+				if(!group.isRelative) {
+					group.init(this);
+				}
 				return true;
 			}
 		}
