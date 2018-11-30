@@ -12,7 +12,7 @@ class Texture {
 	public static var nativeFormat(default,never) : TextureFormat =
 		#if flash
 			BGRA
-		#elseif (usesys && !hldx && !hlsdl && !usegl)
+		#elseif (usesys && !hldx && !hlsdl && !usegl && !macro)
 			haxe.GraphicsDriver.nativeFormat
 		#else
 			RGBA
