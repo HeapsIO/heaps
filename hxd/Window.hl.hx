@@ -279,6 +279,8 @@ class Window {
 			addKey(97 + i, K.A + i);
 		for( i in 0...12 )
 			addKey(1058 + i, K.F1 + i);
+		for( i in 0...12 )
+			addKey(1104 + i, K.F13 + i);
 
 		// NUMPAD
 		addKey(1084, K.NUMPAD_DIV);
@@ -302,6 +304,8 @@ class Window {
 			1228 => K.RCTRL,
 			1226 => K.LALT,
 			1230 => K.RALT,
+			1227 => K.LEFT_WINDOW_KEY,
+			1231 => K.RIGHT_WINDOW_KEY,
 			// K.ESCAPE
 			// K.SPACE
 			1075 => K.PGUP,
@@ -323,6 +327,26 @@ class Window {
 			1086 => K.NUMPAD_SUB,
 			1099 => K.NUMPAD_DOT,
 			1084 => K.NUMPAD_DIV,
+			
+			39 => K.QUOTE,
+			44 => K.COMMA,
+			45 => K.MINUS,
+			46 => K.PERIOD,
+			47 => K.SLASH,
+			59 => K.SEMICOLON,
+			61 => K.EQUALS,
+			91 => K.BRACKET_LEFT,
+			92 => K.BACKSLASH,
+			93 => K.BRACKET_RIGHT,
+			96 => K.TILDE,
+			1101 => K.CONTEXT_MENU,
+			1057 => K.CAPS_LOCK,
+			1071 => K.SCROLL_LOCK,
+			1072 => K.PAUSE_BREAK,
+			1083 => K.NUM_LOCK,
+			// Because hlsdl uses sym code, instead of scancode - INTL_BACKSLASH always reports 0x5C, e.g. regular slash.
+			//none => K.INTL_BACKSLASH
+			//1070 => K.PRINT_SCREEN
 		];
 		for( sdl in keys.keys() )
 			addKey(sdl, keys.get(sdl));

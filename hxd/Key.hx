@@ -2,6 +2,8 @@ package hxd;
 
 class Key {
 
+	// SDL note: Because SDL uses different mapping, it should be set accordingly in the Window.hl.hx in `initChars` function.
+
 	public static inline var BACKSPACE	= 8;
 	public static inline var TAB		= 9;
 	public static inline var ENTER		= 13;
@@ -32,10 +34,11 @@ class Key {
 	public static inline var COMMA = 188;
 	public static inline var PERIOD = 190;
 	public static inline var SLASH = 191;
-	public static inline var INTL_BACKSLASH = 226; // Backslash located next to left shift on some keyboards.
+	public static inline var INTL_BACKSLASH = 226; // Backslash located next to left shift on some keyboards. Warning: Not available on HLSDL.
 	public static inline var LEFT_WINDOW_KEY = 91;
 	public static inline var RIGHT_WINDOW_KEY = 92;
 	public static inline var CONTEXT_MENU = 93;
+	// public static inline var PRINT_SCREEN = // Only available on SDL
 
 	public static inline var PAUSE_BREAK = 19;
 	public static inline var CAPS_LOCK = 20;
