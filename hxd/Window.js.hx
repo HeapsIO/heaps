@@ -54,6 +54,10 @@ class Window {
 		if( element == canvas ) {
 			canvas.setAttribute("tabindex","1"); // allow focus
 			canvas.style.outline = 'none';
+			canvas.addEventListener("keydown", function(e) {
+				e.stopPropagation();
+				e.preventDefault();
+			});
 		} else {
 			canvas.addEventListener("mousedown", function(e) {
 				onMouseDown(e);
