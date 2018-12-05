@@ -733,11 +733,17 @@ class Object {
 		if( finalTile == null )
 			return;
 
+		ctx.globalAlpha = oldAlpha;
+		drawFiltered(ctx, finalTile);
+	}
+
+	function drawFiltered( ctx : RenderContext, tile : h2d.Tile ) {
 		@:privateAccess {
+			var oldAlpha = ctx.globalAlpha;
 			ctx.currentBlend = null;
 			ctx.inFilterBlend = blendMode;
-			ctx.globalAlpha = oldAlpha * alpha;
-			emitTile(ctx, finalTile);
+			ctx.globalAlpha *= alpha;
+			emitTile(ctx, tile);
 			ctx.globalAlpha = oldAlpha;
 			ctx.flush();
 			ctx.inFilterBlend = null;
