@@ -291,13 +291,21 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.uploadShaderBuffers(buffers, Buffers);
 	}
 
+	inline function setupColor( obj : h2d.Drawable ) {
+		if( inFilter == obj )
+			baseShader.color.set(1,1,1,1);
+		else if( inFilterBlend != null ) {
+			// alpha premult
+			var alpha = obj.color.a * globalAlpha;
+			baseShader.color.set(obj.color.r * alpha, obj.color.g * alpha, obj.color.b * alpha, alpha);
+		} else
+			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
+	}
+
 	@:access(h2d.Drawable)
 	public function beginDrawObject( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
 		if ( !beginDraw(obj, texture, true) ) return false;
-		if( inFilter == obj )
-			baseShader.color.set(1,1,1,1);
-		else
-			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
+		setupColor(obj);
 		baseShader.absoluteMatrixA.set(obj.matA, obj.matC, obj.absX);
 		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
 		beforeDraw();
@@ -362,10 +370,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 		if( !beginDraw(obj, tile.getTexture(), true, true) ) return false;
 
-		if( inFilter == obj )
-			baseShader.color.set(1, 1, 1, 1);
-		else
-			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
+		setupColor(obj);
 		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.height * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
 		baseShader.absoluteMatrixB.set(tile.width * obj.matB, tile.height * obj.matD, obj.absY + tile.dx * obj.matB + tile.dy * obj.matD);
 		baseShader.uvPos.set(tile.u, tile.v, tile.u2 - tile.u, tile.v2 - tile.v);
