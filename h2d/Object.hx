@@ -762,7 +762,7 @@ class Object {
 				c.posChanged = true;
 			posChanged = false;
 		}
-		if( filter != null ) {
+		if( filter != null && filter.enable ) {
 			drawFilters(ctx);
 		} else {
 			var old = ctx.globalAlpha;

@@ -4,9 +4,23 @@ class Group extends Filter {
 
 	var filters : Array<Filter>;
 
-	public function new( filters : Array<Filter> ) {
+	public function new( ?filters : Array<Filter> ) {
 		super();
-		this.filters = filters.copy();
+		this.filters = filters == null ? [] : filters;
+	}
+	
+	override function get_enable() {
+		if( !enable ) return false;
+		for( f in filters ) if( enable ) return true;
+		return false;
+	}
+	
+	public function add( f : Filter ) {
+		filters.push(f);
+	}
+
+	public function remove( f : Filter ) {
+		return filters.remove(f);
 	}
 
 	override function bind(s:Object) {
