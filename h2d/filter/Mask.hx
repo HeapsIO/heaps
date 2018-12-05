@@ -14,7 +14,8 @@ private class MaskShader extends h3d.shader.ScreenShader {
 			var color = texture.get(input.uv);
 			var uv = vec3(input.uv, 1);
 			var k = mask.get( vec2(uv.dot(maskMatA), uv.dot(maskMatB)) );
-			output.color = vec4(color.rgb, color.a * (smoothAlpha ? k.a : float(k.a>0)));
+			var alpha = smoothAlpha ? k.a : float(k.a>0);
+			output.color = color * alpha;
 		}
 
 	};
