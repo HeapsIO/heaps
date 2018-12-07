@@ -19,15 +19,6 @@ class EffectDriver<T> {
 	public function unbind  (e : T, source : SourceHandle) : Void {};
 }
 
-class BufferData {
-	public var data : haxe.io.Bytes;
-	public var size : Int;
-	public var format : Data.SampleFormat;
-	public var channelCount : Int;
-	public var samplingRate : Int;
-	public function new() {}
-}
-
 interface Driver {
 	public function setMasterVolume      (value : Float) : Void;
 	public function setListenerParams    (position : h3d.Vector, direction : h3d.Vector, up : h3d.Vector, ?velocity : h3d.Vector) : Void;
@@ -36,10 +27,10 @@ interface Driver {
 	public function playSource           (source : SourceHandle) : Void;
 	public function stopSource           (source : SourceHandle) : Void;
 	public function setSourceVolume      (source : SourceHandle, value : Float) : Void;
-	public function destroySource        (source : SourceHandle) : Void;
+	public function destroySource        (source : SourceHandle) : Void; 
 
 	public function createBuffer         () : BufferHandle;
-	public function setBufferData        (buffer : BufferHandle, data:BufferData) : Void;
+	public function setBufferData        (buffer : BufferHandle, data : haxe.io.Bytes, size : Int, format : Data.SampleFormat, channelCount : Int, samplingRate : Int) : Void;
 	public function destroyBuffer        (buffer : BufferHandle) : Void;
 
 	public function queueBuffer          (source : SourceHandle, buffer : BufferHandle, sampleStart : Int, endOfStream : Bool) : Void;

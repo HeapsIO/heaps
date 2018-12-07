@@ -90,7 +90,6 @@ class Manager {
 	var soundBufferMap    : Map<String, Buffer>;
 	var freeStreamBuffers : Array<Buffer>;
 	var effectGC          : Array<Effect>;
-	var bdata = new BufferData();
 
 	private function new() {
 		try {
@@ -615,7 +614,7 @@ class Manager {
 			case I16 : I16;
 			#if js
 			case F32 : F32;
-			#else
+			#else 
 			case F32 : I16;
 			#end
 		}
@@ -650,15 +649,7 @@ class Manager {
 		var length = dat.samples * dat.getBytesPerSample();
 		var bytes  = getTmpBytes(length);
 		dat.decode(bytes, 0, 0, dat.samples);
-
-		bdata.data = bytes;
-		bdata.size = length;
-		bdata.format = targetFormat;
-		bdata.channelCount = targetChannels;
-		bdata.samplingRate = targetRate;
-		driver.setBufferData(buf.handle, bdata);
-		bdata.data = null;
-
+		driver.setBufferData(buf.handle, bytes, length, targetFormat, targetChannels, targetRate);
 		buf.sampleRate = targetRate;
 		buf.samples    = dat.samples;
 	}
@@ -702,13 +693,7 @@ class Manager {
 			bytes = resampleBytes;
 		}
 
-		bdata.data = bytes;
-		bdata.size = size;
-		bdata.format = targetFormat;
-		bdata.channelCount = targetChannels;
-		bdata.samplingRate = targetRate;
-		driver.setBufferData(b.handle, bdata);
-		bdata.data = null;
+		driver.setBufferData(b.handle, bytes, size, targetFormat, targetChannels, targetRate);
 		b.sampleRate = targetRate;
 		return b;
 	}

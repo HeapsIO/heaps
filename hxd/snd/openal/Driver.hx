@@ -110,23 +110,23 @@ class Driver implements hxd.snd.Driver {
 		bytes.setInt32(0, buffer.inst.toInt());
 		AL.deleteBuffers(1, bytes);
 	}
-
-	public function setBufferData(buffer : BufferHandle, data : Driver.BufferData) : Void {
-		var alFormat = switch (data.format) {
-			case UI8 : data.channelCount == 1 ? AL.FORMAT_MONO8  : AL.FORMAT_STEREO8;
-			case I16 : data.channelCount == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
+	
+	public function setBufferData(buffer : BufferHandle, data : haxe.io.Bytes, size : Int, format : Data.SampleFormat, channelCount : Int, samplingRate : Int) : Void {
+		var alFormat = switch (format) {
+			case UI8 : channelCount == 1 ? AL.FORMAT_MONO8  : AL.FORMAT_STEREO8;
+			case I16 : channelCount == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
 			#if (js)
-			case F32 : data.channelCount == 1 ? AL.FORMAT_MONOF32 : AL.FORMAT_STEREOF32;
+			case F32 : channelCount == 1 ? AL.FORMAT_MONOF32 : AL.FORMAT_STEREOF32;
 			#else
-			case F32 : data.channelCount == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
+			case F32 : channelCount == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
 			#end
 		}
-		AL.bufferData(buffer.inst, alFormat, data.data, data.size, data.samplingRate);
+		AL.bufferData(buffer.inst, alFormat, data, size, samplingRate);
 	}
 
 	public function getPlayedSampleCount(source : SourceHandle) : Int {
 		var v = source.sampleOffset + AL.getSourcei(source.inst, AL.SAMPLE_OFFSET);
-		if (v < 0)
+		if (v < 0) 
 			v = 0;
 		return v;
 	}
@@ -134,7 +134,7 @@ class Driver implements hxd.snd.Driver {
 	public function getProcessedBuffers(source : SourceHandle) : Int {
 		return AL.getSourcei(source.inst, AL.BUFFERS_PROCESSED);
 	}
-
+	
 	public function queueBuffer(source : SourceHandle, buffer : BufferHandle, sampleStart : Int, endOfStream : Bool) : Void {
 		var bytes = getTmpBytes(4);
 		bytes.setInt32(0, buffer.inst.toInt());
@@ -150,12 +150,12 @@ class Driver implements hxd.snd.Driver {
 			} else {
 				source.sampleOffset = 0;
 			}
-			if (source.playing)
+			if (source.playing) 
 				AL.sourcePlay(source.inst);
 		}
 		buffer.isEnd = endOfStream;
 	}
-
+	
 	public function unqueueBuffer(source : SourceHandle, buffer : BufferHandle) : Void {
 		var bytes = getTmpBytes(4);
 		bytes.setInt32(0, buffer.inst.toInt());
@@ -168,10 +168,10 @@ class Driver implements hxd.snd.Driver {
 		if (buffer.isEnd) source.sampleOffset = 0;
 		else source.sampleOffset += samples;
 	}
-
+	
 	public function update() : Void {
 	}
-
+	
 	public function dispose() : Void {
 		ALC.makeContextCurrent(null);
 		ALC.destroyContext(context);
