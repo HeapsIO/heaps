@@ -33,6 +33,16 @@ class SceneEvents {
 	var onOut = new hxd.Event(EOut);
 	var isOut = false;
 
+	/**
+	 * enablePhysicalMouse : enable mouse movements of system mouse, set it to false anse use setMousePos instead to manually set mouse position
+	 */
+	public var enablePhysicalMouse = true;
+
+	/**
+	 * enable/disable per frame check of elements under mouse (default:true)
+	 */
+	public var mouseCheckMove = true;
+
 	public function new( ?window ) {
 		scenes = [];
 		pendingEvents = [];
@@ -40,6 +50,11 @@ class SceneEvents {
 		if( window == null ) window = hxd.Window.getInstance();
 		this.window = window;
 		window.addEventTarget(onEvent);
+	}
+
+	public function setMousePos( xPos, yPos ) {
+		mouseX = xPos;
+		mouseY = yPos;
 	}
 
 	function onRemove(i) {
@@ -224,7 +239,7 @@ class SceneEvents {
 
 	public function checkEvents() {
 		var old = pendingEvents;
-		var checkMoved = false;
+		var checkMoved = !mouseCheckMove;
 		var checkFocused = currentFocus == null;
 		if( old.length > 0 ) {
 			pendingEvents = [];
@@ -308,6 +323,7 @@ class SceneEvents {
 	}
 
 	function onEvent( e : hxd.Event ) {
+		if( !enablePhysicalMouse && e.kind == EMove ) return;
 		pendingEvents.push(e);
 	}
 
