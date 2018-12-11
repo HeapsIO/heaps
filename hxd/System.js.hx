@@ -127,6 +127,7 @@ class System {
 	static function set_allowTimeout(b) return false;
 
 	static function __init__() : Void {
+		@:privateAccess Window.initChars();
 		haxe.MainLoop.add(updateCursor, -1);
 	}
 
