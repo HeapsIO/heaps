@@ -120,6 +120,7 @@ class Terrain extends Object {
 		var tile = getTile(x,y);
 		if(tile == null){
 			tile = new Tile(x, y, this);
+			tile.refreshMesh();
 			tile.refresh();
 			tiles.push(tile);
 		}

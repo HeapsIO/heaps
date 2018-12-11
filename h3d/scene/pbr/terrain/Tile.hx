@@ -539,6 +539,8 @@ class Tile extends h3d.scene.Mesh {
 	}
 
 	function isReady(){
+		if(primitive == null)
+			return false;
 		if( getTerrain().surfaceArray == null || getTerrain().surfaces.length == 0 || surfaceWeights.length != getTerrain().surfaces.length)
 			return false;
 		if( heightMap == null )
