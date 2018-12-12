@@ -17,7 +17,7 @@ class Helpers extends hxd.App {
 		new AxesHelper( s3d );
 		new GridHelper( s3d, 10, 10 );
 
-		var prim = new h3d.prim.Cube( true );
+		var prim = new h3d.prim.Cube( 1, 1, 1, true );
 		prim.unindex();
 		prim.addNormals();
 		prim.addUVs();
