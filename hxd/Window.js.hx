@@ -254,7 +254,8 @@ class Window {
 
 	function onKeyUp(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
-		var mapped : Null<Int> = CODEMAP.get(e.code);
+		// Untyped for older Haxe compat.
+		var mapped : Null<Int> = CODEMAP.get(untyped e.code);
 		if ( mapped != null )
 			ev.keyCode = mapped;
 		else
@@ -264,7 +265,7 @@ class Window {
 
 	function onKeyDown(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyDown, mouseX, mouseY);
-		var mapped : Null<Int> = CODEMAP.get(e.code);
+		var mapped : Null<Int> = CODEMAP.get(untyped e.code);
 		if ( mapped != null )
 			ev.keyCode = mapped;
 		else
