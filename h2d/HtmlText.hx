@@ -14,6 +14,7 @@ class HtmlText extends Text {
 	var sizePos : Int;
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
+	var newLine : Bool;
 
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
@@ -80,17 +81,19 @@ class HtmlText extends Text {
 
 		var sizes = [];
 		prevChar = -1;
+		newLine = true;
 		for( e in doc )
 			buildSizes(e, sizes);
 
 		prevChar = -1;
+		newLine = true;
 		for( e in doc )
 			addNode(e, font, rebuild, handleAlign, sizes, lines);
 
 		if (!handleAlign && !rebuild && lines != null) lines.push(xPos);
 		if( xPos > xMax ) xMax = xPos;
 
-		var x = xPos, y = yPos;
+		var y = yPos;
 		calcXMin = xMin;
 		calcWidth = xMax - xMin;
 		calcHeight = y + font.lineHeight;
@@ -101,12 +104,21 @@ class HtmlText extends Text {
 	function buildSizes( e : Xml, sizes : Array<Int> ) {
 		if( e.nodeType == Xml.Element ) {
 			var len = 0, prevFont = font;
-			switch( e.nodeName.toLowerCase() ) {
+			var nodeName = e.nodeName.toLowerCase();
+			switch( nodeName ) {
+			case "p":
+				if ( !newLine )
+				{
+					len = -1; // break
+					newLine = true;
+				}
 			case "br":
 				len = -1; // break
+				newLine = true;
 			case "img":
 				var i = loadImage(e.get("src"));
 				len = (i == null ? 8 : i.width) + letterSpacing;
+				newLine = false;
 			case "font":
 				for( a in e.attributes() ) {
 					var v = e.get(a);
@@ -120,8 +132,15 @@ class HtmlText extends Text {
 			sizes.push(len);
 			for( child in e )
 				buildSizes(child, sizes);
+			switch( nodeName ) {
+			case "p":
+				sizes.push( -1);// break
+				newLine = true;
+			default:
+			}
 			font = prevFont;
 		} else {
+			newLine = false;
 			var text = htmlToText(e.nodeValue);
 			var xp = 0;
 			for( i in 0...text.length ) {
@@ -166,7 +185,23 @@ class HtmlText extends Text {
 		var align = handleAlign ? textAlign : Left;
 		if( e.nodeType == Xml.Element ) {
 			var prevColor = null, prevGlyphs = null;
-			switch( e.nodeName.toLowerCase() ) {
+			function makeLineBreak()
+			{
+				if( xPos > xMax ) xMax = xPos;
+				if( calcLines ) lines.push(xPos);
+				switch( align ) {
+					case Left:
+						xPos = 0;
+					case Right, Center, MultilineCenter, MultilineRight:
+						xPos = lines.shift();
+						if( xPos < xMin ) xMin = xPos;
+				}
+				yPos += font.lineHeight + lineSpacing;
+				prevChar = -1;
+				newLine = true;
+			}
+			var nodeName = e.nodeName.toLowerCase();
+			switch( nodeName ) {
 			case "font":
 				for( a in e.attributes() ) {
 					var v = e.get(a);
@@ -189,19 +224,34 @@ class HtmlText extends Text {
 					default:
 					}
 				}
-			case "br":
-				if( xPos > xMax ) xMax = xPos;
-				if( calcLines ) lines.push(xPos);
-				switch( align ) {
-					case Left:
-						xPos = 0;
-					case Right, Center, MultilineCenter, MultilineRight:
-						xPos = lines.shift();
-						if( xPos < xMin ) xMin = xPos;
+			case "p":
+			/*
+				??need lines != null even if Left==textAlign
+					for( a in e.attributes() ) {
+						switch( a.toLowerCase() ) {
+						case "align":
+							var v = e.get(a);
+							if ( v != null )
+							switch( v.toLowerCase() ) {
+							case "left":
+								new_align = Left;
+							case "center":
+								new_align = Center;
+							case "right":
+								new_align = Right;
+							//?justify
+							}
+						default:
+						}
+					}
 				}
-				yPos += font.lineHeight + lineSpacing;
-				prevChar = -1;
+			*/
+				if ( !newLine )
+					makeLineBreak();
+			case "br":
+				makeLineBreak();
 			case "img":
+				newLine = false;
 				var i = loadImage(e.get("src"));
 				if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
 				if( realMaxWidth >= 0 && xPos + i.width + letterSpacing + remainingSize(sizes) > realMaxWidth && xPos > 0 ) {
@@ -223,11 +273,17 @@ class HtmlText extends Text {
 			}
 			for( child in e )
 				addNode(child, font, rebuild, handleAlign, sizes, lines);
+			switch( nodeName ) {
+			case "p":
+				makeLineBreak();
+			default:
+			}
 			if( prevGlyphs != null )
 				glyphs = prevGlyphs;
 			if( prevColor != null )
 				@:privateAccess glyphs.curColor.load(prevColor);
 		} else {
+			newLine = false;
 			var t = splitText(htmlToText(e.nodeValue), xPos, remainingSize(sizes));
 			var dy = this.font.baseLine - font.baseLine;
 			for( i in 0...t.length ) {
