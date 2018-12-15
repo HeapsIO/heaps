@@ -297,7 +297,7 @@ class Object {
 		return pt;
 	}
 
-	function getScene() : Scene {
+	public function getScene() : Scene {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
 		return Std.instance(p, Scene);
@@ -733,11 +733,17 @@ class Object {
 		if( finalTile == null )
 			return;
 
+		ctx.globalAlpha = oldAlpha;
+		drawFiltered(ctx, finalTile);
+	}
+
+	function drawFiltered( ctx : RenderContext, tile : h2d.Tile ) {
 		@:privateAccess {
+			var oldAlpha = ctx.globalAlpha;
 			ctx.currentBlend = null;
 			ctx.inFilterBlend = blendMode;
-			ctx.globalAlpha = oldAlpha * alpha;
-			emitTile(ctx, finalTile);
+			ctx.globalAlpha *= alpha;
+			emitTile(ctx, tile);
 			ctx.globalAlpha = oldAlpha;
 			ctx.flush();
 			ctx.inFilterBlend = null;
@@ -756,7 +762,7 @@ class Object {
 				c.posChanged = true;
 			posChanged = false;
 		}
-		if( filter != null ) {
+		if( filter != null && filter.enable ) {
 			drawFilters(ctx);
 		} else {
 			var old = ctx.globalAlpha;

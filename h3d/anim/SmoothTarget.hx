@@ -36,7 +36,7 @@ class SmoothTarget extends Animation {
 
 	function initObjects() {
 		objects = [];
-		for( o in target.objects ) {
+		for( o in target.getObjects() ) {
 			var mat = null;
 			var s = new SmoothObject(o.objectName);
 			s.targetObject = o.targetObject;
@@ -79,14 +79,18 @@ class SmoothTarget extends Animation {
 		frame = target.frame;
 	}
 
-	function getObjects() : Array<SmoothObject> {
+	override function getEvents() {
+		return target.getEvents();
+	}
+
+	function getSmoothObjects() : Array<SmoothObject> {
 		return cast objects;
 	}
 
 	@:noDebug
 	override function sync( decompose = false ) {
 		if( decompose ) throw "assert";
-		var objects = getObjects();
+		var objects = getSmoothObjects();
 		var q1 = new h3d.Quat(), qout = new h3d.Quat();
 		target.sync(true);
 		for( o in objects ) {
@@ -150,10 +154,10 @@ class SmoothTarget extends Animation {
 	override function initAndBind( obj : h3d.scene.Object ) {
 		super.initAndBind(obj);
 		target.initAndBind(obj);
-		var old : Array<SmoothObject> = getObjects();
+		var old : Array<SmoothObject> = getSmoothObjects();
 		initObjects();
 		var index = 0;
-		var objects = [for( o in getObjects() ) o.objectName => o];
+		var objects = [for( o in getSmoothObjects() ) o.objectName => o];
 
 		for( i in 0...old.length ) {
 			var o = old[i];

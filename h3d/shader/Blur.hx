@@ -43,7 +43,7 @@ class Blur extends ScreenShader {
 					c = mix(c, ccur, ((d - 0.001).max(0.) * 100000).min(1.));
 					color += c * values[i < 0 ? -i : i];
 				}
-				output.color = color;
+				pixelColor = color;
 			}
 			else if( isDepth ) {
 				var val = 0.;
@@ -51,21 +51,21 @@ class Blur extends ScreenShader {
 					if( isCube ) val += unpack(cubeTexture.get(vec3((input.uv + pixel * offsets[i < 0 ? -i : i] * i )* 2.0 - 1.0, 1) * cubeDir)) * values[i < 0 ? -i : i];
 					else val += unpack(texture.get(input.uv + pixel * offsets[i < 0 ? -i : i] * i)) * values[i < 0 ? -i : i];
 				}
-				output.color = pack(val.min(0.9999999));
+				pixelColor = pack(val.min(0.9999999));
 			} else {
 				var color = vec4(0, 0, 0, 0);
 				@unroll for( i in -Quality + 1...Quality ){
 					if( isCube ) color += cubeTexture.get(vec3((input.uv + pixel * offsets[i < 0 ? -i : i] * i )* 2.0 - 1.0, 1) * cubeDir) * values[i < 0 ? -i : i];
 					else color += texture.get(input.uv + pixel * offsets[i < 0 ? -i : i] * i) * values[i < 0 ? -i : i];
 				}
-				output.color = color;
+				pixelColor = color;
 			}
 			if( hasFixedColor ) {
-				output.color.rgb = fixedColor.rgb;
 				if( smoothFixedColor )
-					output.color.a *= fixedColor.a;
+					pixelColor.a *= fixedColor.a;
 				else
-					output.color.a = fixedColor.a * float(output.color.a > 0);
+					pixelColor.a = fixedColor.a * float(pixelColor.a > 0);
+				pixelColor.rgb = fixedColor.rgb * pixelColor.a; // premult required for 2D filters
 			}
 		}
 

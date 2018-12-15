@@ -26,6 +26,16 @@ class ModelCache {
 		if( lib == null ) {
 			lib = res.toHmd();
 			models.set(path, lib);
+
+			function loadHideData( path : String ) : hxd.fmt.hmd.Library.HideData {
+				var parts = path.split("/");
+				parts.pop();
+				var propsPath = parts.join("/") + "/model.props";
+				if(!hxd.res.Loader.currentInstance.exists(propsPath)) return null;
+				var props = hxd.res.Loader.currentInstance.load(propsPath).toText();
+				return haxe.Json.parse(props);
+			}
+			lib.hideData = loadHideData(path);
 		}
 		return lib;
 	}

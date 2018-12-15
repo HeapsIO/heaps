@@ -97,6 +97,10 @@ class Animation implements hxd.impl.Serializable {
 			events[frame].push(data);
 	}
 
+	public function getEvents() return events;
+
+	public function getObjects() return objects;
+
 	public function setFrame( f : Float ) {
 		frame = f;
 		lastEvent = -1;

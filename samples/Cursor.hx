@@ -20,7 +20,7 @@ class Cursor extends hxd.App {
 		if (animationSupported)
 		{
 			var bmp2 = new hxd.BitmapData(32, 32);
-			bmp2.clear(0x80FF0000);
+			bmp2.clear(0x80800000);
 			bmp2.line(0, 0, 31, 0, 0xFFFFFFFF);
 			bmp2.line(0, 0, 0, 31, 0xFF0000FF);
 			bmp2.line(0, 31, 31, 31, 0xFFFF0000);
@@ -40,6 +40,8 @@ class Cursor extends hxd.App {
 			i.y = pos++ * 20;
 			i.cursor = c;
 			i.backgroundColor = Std.random(0x1000000) | 0xFF000000;
+			i.onOver = function(_) tf.alpha = 0.5;
+			i.onOut = function(_) tf.alpha = 1;
 			
 			switch(c) {
 				case Custom(cur):

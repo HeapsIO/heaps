@@ -185,7 +185,7 @@ class Pad {
 
 	function get_name() {
 		if( index < 0 ) return "Dummy GamePad";
-		#if (flash || hl)
+		#if (flash || hldx || hlsdl || usesys)
 		return d.name;
 		#elseif js
 		return d.id;

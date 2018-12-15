@@ -8,6 +8,8 @@ class Node {
 	public var j : vdom.JQuery;
 	var childs : Array<Node>;
 
+	static var currentJRoot : vdom.JQuery = null;
+
 	public function new( name, ?parent ) {
 		childs = [];
 		initContent();
@@ -19,8 +21,8 @@ class Node {
 		return j == null || j.length == 0;
 	}
 
-	function getJRoot() {
-		return @:privateAccess Inspector.current.jroot;
+	function getJRoot() : vdom.JQuery {
+		return currentJRoot;
 	}
 
 	function initContent() {

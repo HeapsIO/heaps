@@ -69,6 +69,13 @@ class Drawable extends Object {
 		return c;
 	}
 
+	override function drawFiltered(ctx:RenderContext, tile:Tile) {
+		var old = shaders;
+		shaders = null;
+		super.drawFiltered(ctx, tile);
+		shaders = old;
+	}
+
 	function set_colorKey(v:Null<Int>) {
 		var s = getShader(h3d.shader.ColorKey);
 		if( s == null ) {

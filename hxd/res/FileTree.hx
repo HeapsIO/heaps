@@ -143,7 +143,7 @@ class FileTree {
 			if( options.compressAsMp3 )
 				fs.addConvert(new hxd.fs.Convert.ConvertWAV2MP3());
 			else if( options.compressSounds )
-				fs.addConvert(new hxd.fs.Convert.ConvertWAV2MP3());
+				fs.addConvert(new hxd.fs.Convert.ConvertWAV2OGG());
 			fs.tmpDir = options.tmpDir;
 			fs.onConvert = function(f) Sys.println("Converting " + f.path);
 			embedRec(tree, path, fs);

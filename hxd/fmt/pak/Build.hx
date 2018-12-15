@@ -192,6 +192,23 @@ class Build {
 				f = f.substr(0, pos);
 			}
 			switch( f ) {
+			case "-x" if( args.length > 0 ):
+				var pakFile = args.shift();
+				var bytes = sys.io.File.getBytes(pakFile);
+				var pak = new hxd.fmt.pak.Reader(new haxe.io.BytesInput(bytes)).readHeader();
+				var baseDir = pakFile.substr(0,-4);				
+				function extractRec(f:hxd.fmt.pak.Data.File, dir) {
+					if( f.isDirectory ) {
+						var dir = f.name == "" ? dir : dir+"/"+f.name;
+						try sys.FileSystem.createDirectory(dir) catch( e : Dynamic ) {};
+						for( c in f.content )
+							extractRec(c,dir);
+					} else {
+						sys.io.File.saveBytes(dir+"/"+f.name,bytes.sub(pak.headerSize + f.dataPosition,f.dataSize));
+					}
+				}
+				extractRec(pak.root, baseDir);
+				Sys.exit(0);
 			case "-mp3", "-wav", "-ogg":
 				b.soundFormat = f.substr(1);
 			case "-diff":

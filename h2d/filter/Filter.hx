@@ -8,9 +8,13 @@ class Filter {
 	public var autoBounds = true;
 	public var boundsExtend : Float = 0.;
 	public var smooth = false;
+	@:isVar public var enable(get,set) = true;
 
 	function new() {
 	}
+	
+	function get_enable() return enable;
+	function set_enable(v) return enable = v;
 
 	public function sync( ctx : RenderContext, s : Object ) {
 	}
