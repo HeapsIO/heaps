@@ -252,7 +252,6 @@ class Window {
 
 	function onKeyUp(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
-		// Untyped for older Haxe compat.
 		ev.keyCode = e.keyCode;
 		event(ev);
 	}
