@@ -303,17 +303,6 @@ class Object {
 		return Std.instance(p, Scene);
 	}
 
-	function getCamera() : Camera {
-		var p = this;
-		var c;
-		while ( p.parent != null ) {
-			c = Std.instance(p, Camera);
-			if (c != null) return c;
-			p = p.parent;
-		}
-		return null;
-	}
-
 	function set_visible(b) {
 		if( visible == b )
 			return b;

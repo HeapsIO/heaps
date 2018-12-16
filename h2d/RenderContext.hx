@@ -96,9 +96,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.viewport.set( -scene.width * 0.5, -scene.height * 0.5, 2 / scene.width, -2 * baseFlipY / scene.height);
 		baseShader.filterMatrixA.set(1, 0, 0);
 		baseShader.filterMatrixB.set(0, 1, 0);
-		baseShader.cameraMatrixA.set(1, 0, 0);
-		baseShader.cameraMatrixB.set(0, 1, 0);
-		baseShader.cameraScroll.set(1, 1);
 		baseShaderList.next = null;
 		initShaders(baseShaderList);
 		engine.selectMaterial(pass);
@@ -237,21 +234,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	public inline function clearRenderZone() {
 		hasRenderZone = false;
 		engine.setRenderZone();
-	}
-
-	@:access(h2d.Camera)
-	public function setCamera( cam : h2d.Camera) {
-		baseShader.cameraMatrixA.set(cam.camA, cam.camC, cam.camX);
-		baseShader.cameraMatrixB.set(cam.camB, cam.camD, cam.camY);
-	}
-
-	public function clearCamera() {
-		baseShader.cameraMatrixA.set(1, 0, 0);
-		baseShader.cameraMatrixB.set(0, 1, 0);
-	}
-
-	public function setParallax( dx : Float, dy : Float ) {
-		baseShader.cameraScroll.set(dx, dy);
 	}
 
 	function drawLayer( layer : Int ) {
