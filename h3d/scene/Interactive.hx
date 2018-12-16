@@ -87,9 +87,9 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 			mouseDownButton = -1;
 		case EReleaseOutside:
 			if( enableRightButton || e.button == 0 ) {
-				e.kind = ERelease;
 				onRelease(e);
-				e.kind = EReleaseOutside;
+				if ( mouseDownButton == e.button )
+					onReleaseOutside(e);
 			}
 			mouseDownButton = -1;
 		case EOver:
@@ -143,18 +143,40 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		return scene != null && scene.events != null && @:privateAccess scene.events.currentFocus == this;
 	}
 
+	/** Sent when mouse enters Interactive hitbox area. **/
 	public dynamic function onOver( e : hxd.Event ) {
 	}
 
+	/** Sent when mouse exits Interactive hitbox area. **/
 	public dynamic function onOut( e : hxd.Event ) {
 	}
 
+	/** Sent when Interactive is pressed by user. **/
 	public dynamic function onPush( e : hxd.Event ) {
 	}
 
+	/**
+		Sent on multiple conditions.
+		A. Always sent if user releases mouse while it is inside Interactive hitbox area.
+			This happends regardless if that Interactive was pressed prior or not.
+		B. Sent before `onReleaseOutside` if this Interactive was pressed, but released outside it's bounds.
+		For first case `event.kind` will be `ERelease`, for second case - `EReleaseOutside`.
+		See `onClick` and `onReleaseOutside` functions for separate events that trigger only when user interacts with this particular Interactive.
+	**/
 	public dynamic function onRelease( e : hxd.Event ) {
 	}
 
+	/**
+		Sent when user presses Interactive, moves mouse outside and releases it.
+		This event fired only on Interactive that user pressed, but released mouse after moving it outside of Interactive hitbox area.
+	**/
+	public dynamic function onReleaseOutside( e : hxd.Event ) {
+	}
+
+	/**
+		Sent when Interactive is clicked by user.
+		This event fired only on Interactive that user pressed and released when mouse is inside Interactive hitbox area.
+	**/
 	public dynamic function onClick( e : hxd.Event ) {
 	}
 
