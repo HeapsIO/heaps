@@ -2,6 +2,8 @@ package hxd;
 
 class Key {
 
+	// SDL note: Because SDL uses different mapping, it should be set accordingly in the Window.hl.hx in `initChars` function.
+
 	public static inline var BACKSPACE	= 8;
 	public static inline var TAB		= 9;
 	public static inline var ENTER		= 13;
@@ -20,6 +22,28 @@ class Key {
 	public static inline var DOWN		= 40;
 	public static inline var INSERT		= 45;
 	public static inline var DELETE		= 46;
+
+	public static inline var QWERTY_EQUALS = 187;
+	public static inline var QWERTY_MINUS = 189;
+	public static inline var QWERTY_TILDE = 192;
+	public static inline var QWERTY_BRACKET_LEFT = 219;
+	public static inline var QWERTY_BRACKET_RIGHT = 221;
+	public static inline var QWERTY_SEMICOLON = 186;
+	public static inline var QWERTY_QUOTE = 222;
+	public static inline var QWERTY_BACKSLASH = 220;
+	public static inline var QWERTY_COMMA = 188;
+	public static inline var QWERTY_PERIOD = 190;
+	public static inline var QWERTY_SLASH = 191;
+	public static inline var INTL_BACKSLASH = 226; // Backslash located next to left shift on some keyboards. Warning: Not available on HLSDL.
+	public static inline var LEFT_WINDOW_KEY = 91;
+	public static inline var RIGHT_WINDOW_KEY = 92;
+	public static inline var CONTEXT_MENU = 93;
+	// public static inline var PRINT_SCREEN = // Only available on SDL
+
+	public static inline var PAUSE_BREAK = 19;
+	public static inline var CAPS_LOCK = 20;
+	public static inline var NUM_LOCK = 144;
+	public static inline var SCROLL_LOCK = 145;
 
 	public static inline var NUMBER_0	= 48;
 	public static inline var NUMBER_1	= 49;
@@ -82,6 +106,19 @@ class Key {
 	public static inline var F10		= 121;
 	public static inline var F11		= 122;
 	public static inline var F12		= 123;
+	// Extended F keys
+	public static inline var F13		= 124;
+	public static inline var F14		= 125;
+	public static inline var F15		= 126;
+	public static inline var F16		= 127;
+	public static inline var F17		= 128;
+	public static inline var F18		= 129;
+	public static inline var F19		= 130;
+	public static inline var F20		= 131;
+	public static inline var F21		= 132;
+	public static inline var F22		= 133;
+	public static inline var F23		= 134;
+	public static inline var F24		= 135;
 
 	public static inline var NUMPAD_MULT = 106;
 	public static inline var NUMPAD_ADD	= 107;
@@ -219,6 +256,25 @@ class Key {
 		case RCTRL: "RCtrl";
 		case LALT: "LAlt";
 		case RALT: "RAlt";
+		case QWERTY_TILDE: "Tilde";
+		case QWERTY_MINUS: "Minus";
+		case QWERTY_EQUALS: "Equals";
+		case QWERTY_BRACKET_LEFT: "BracketLeft";
+		case QWERTY_BRACKET_RIGHT: "BacketRight";
+		case QWERTY_SEMICOLON: "Semicolon";
+		case QWERTY_QUOTE: "Quote";
+		case QWERTY_BACKSLASH: "Backslash";
+		case QWERTY_COMMA: "Comma";
+		case QWERTY_PERIOD: "Period";
+		case QWERTY_SLASH: "Slash";
+		case INTL_BACKSLASH: "IntlBackslash";
+		case LEFT_WINDOW_KEY: "LeftWindowKey";
+		case RIGHT_WINDOW_KEY: "RightWindowKey";
+		case CONTEXT_MENU: "ContextMenu";
+		case PAUSE_BREAK: "PauseBreak";
+		case CAPS_LOCK: "CapsLock";
+		case SCROLL_LOCK: "ScrollLock";
+		case NUM_LOCK: "NumLock";
 		case MOUSE_LEFT: "MouseLeft";
 		case MOUSE_MIDDLE: "MouseMiddle";
 		case MOUSE_RIGHT: "MouseRight";
@@ -229,7 +285,7 @@ class Key {
 				"NumPad"+(c - NUMPAD_0);
 			else if( c >= A && c <= Z )
 				String.fromCharCode("A".code + c - A);
-			else if( c >= F1 && c <= F12 )
+			else if( c >= F1 && c <= F24 )
 				"F" + (c - F1 + 1);
 			else
 				null;
