@@ -26,8 +26,6 @@ class Window {
 
 	var focused = true;
 
-	static var CODEMAP : Map<String, Int> = new Map();
-
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
 		eventTargets = new List();
 		resizeEvents = new List();
@@ -255,21 +253,13 @@ class Window {
 	function onKeyUp(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
 		// Untyped for older Haxe compat.
-		var mapped : Null<Int> = CODEMAP.get(untyped e.code);
-		if ( mapped != null )
-			ev.keyCode = mapped;
-		else
-			ev.keyCode = e.keyCode;
+		ev.keyCode = e.keyCode;
 		event(ev);
 	}
 
 	function onKeyDown(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyDown, mouseX, mouseY);
-		var mapped : Null<Int> = CODEMAP.get(untyped e.code);
-		if ( mapped != null )
-			ev.keyCode = mapped;
-		else
-			ev.keyCode = e.keyCode;
+		ev.keyCode = e.keyCode;
 		event(ev);
 	}
 
@@ -285,80 +275,4 @@ class Window {
 	}
 
 	function get_isFocused() : Bool return focused;
-
-	static function initChars() : Void {
-		
-		inline function addKey(name : String, keyCode : Int) {
-			CODEMAP[name] = keyCode;
-		}
-
-		// A-Z
-		for( i in 0...26 )
-			addKey("Key" + String.fromCharCode("A".code + i), Key.A + i);
-		// F1-F24
-		for( i in 0...24 )
-			addKey("F" + (i+1), Key.F1 + i);
-
-		// Numpad and digits
-		for ( i in 0...10 ) {
-			addKey("Digit" + i, Key.NUMBER_0 + i);
-			addKey("Numpad" + i, Key.NUMPAD_0 + i);
-		}
-
-		addKey("NumpadDivide", Key.NUMPAD_DIV);
-		addKey("NumpadMultiply", Key.NUMPAD_MULT);
-		addKey("NumpadSubstract", Key.NUMPAD_SUB);
-		addKey("NumpadAdd", Key.NUMPAD_ADD);
-		addKey("NumpadEnter", Key.NUMPAD_ENTER);
-		addKey("NumpadDecimal", Key.NUMPAD_DOT);
-
-		//
-		addKey("Escape", Key.ESCAPE);
-		addKey("Backquote", Key.TILDE);
-		addKey("Minus", Key.MINUS);
-		addKey("Equal", Key.EQUALS);
-		addKey("Backspace", Key.BACKSPACE);
-		addKey("Tab", Key.TAB);
-		addKey("BracketLeft", Key.BRACKET_LEFT);
-		addKey("BracketRight", Key.BRACKET_RIGHT);
-		addKey("Enter", Key.ENTER);
-		addKey("Semicolon", Key.SEMICOLON);
-		addKey("Quote", Key.QUOTE);
-		addKey("Backslash", Key.BACKSLASH);
-		addKey("IntlBackslash", Key.INTL_BACKSLASH);
-		addKey("Comma", Key.COMMA);
-		addKey("Period", Key.PERIOD);
-		addKey("Slash", Key.SLASH);
-		addKey("Space", Key.SPACE);
-
-		addKey("ControlLeft", Key.LCTRL);
-		addKey("ControlRight", Key.RCTRL);
-		addKey("ShiftLeft", Key.LSHIFT);
-		addKey("ShiftRight", Key.RSHIFT);
-		addKey("AltLeft", Key.LALT);
-		addKey("AltRight", Key.RALT);
-		
-		addKey("CapsLock", Key.CAPS_LOCK);
-		addKey("NumLock", Key.NUM_LOCK);
-		addKey("ScrollLock", Key.SCROLL_LOCK);
-
-		addKey("ArrowUp", Key.UP);
-		addKey("ArrowLeft", Key.LEFT);
-		addKey("ArrowRight", Key.RIGHT);
-		addKey("ArrowDown", Key.DOWN);
-
-		// addKey("PrintScreen", Key.PRINT_SCREEN);
-		addKey("Pause", Key.PAUSE_BREAK);
-
-		addKey("Insert", Key.INSERT);
-		addKey("Home", Key.HOME);
-		addKey("PageUp", Key.PGUP);
-		addKey("Delete", Key.DELETE);
-		addKey("End", Key.END);
-		addKey("PageDown", Key.PGDOWN);
-		addKey("MetaLeft", Key.LEFT_WINDOW_KEY);
-		addKey("MetaRight", Key.RIGHT_WINDOW_KEY);
-		addKey("ContextMenu", Key.CONTEXT_MENU);
-	}
-
 }
