@@ -100,7 +100,7 @@ class Text extends Drawable {
 			emitTile(ctx, h2d.Tile.fromColor(0xFF00FF, 16, 16));
 			return;
 		}
-		if ( !calcDone ) initGlyphs(text, false);
+		if ( !calcDone && text != null && font != null ) initGlyphs(text);
 
 		if( dropShadow != null ) {
 			var oldX = absX, oldY = absY;
