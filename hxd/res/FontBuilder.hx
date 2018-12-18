@@ -186,6 +186,7 @@ class FontBuilder {
 				if( size == null ) continue;
 				var w = size.w;
 				var h = size.h;
+				if( h > lineH ) lineH = h;
 				// Whatever the first character is it will always have x and y value 0
 				if( x + w > width || i == 0) {
 					x = 0;
@@ -208,7 +209,6 @@ class FontBuilder {
 				all.push(t);
 				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,w - 1));
 				// next element
-				if( h > lineH ) lineH = h;
 				x += w + 1;
 			}
 		} while ( !done );
