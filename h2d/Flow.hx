@@ -552,6 +552,9 @@ class Flow extends Object {
 		var maxWidth = maxTotWidth - (paddingLeft + paddingRight + borderWidth * 2);
 		var maxHeight = maxTotHeight - (paddingTop + paddingBottom + borderHeight * 2);
 
+		if( debug )
+			debugGraphics.clear();
+
 		var cw, ch;
 		if( !isVertical ) {
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
@@ -818,7 +821,6 @@ class Flow extends Object {
 		needReflow = false;
 
 		if( debug ) {
-			debugGraphics.clear();
 			if( debugGraphics != children[children.length - 1] ) {
 				addChild(debugGraphics); // always on-top
 				needReflow = false;
