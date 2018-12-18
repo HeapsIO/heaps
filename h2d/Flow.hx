@@ -441,6 +441,10 @@ class Flow extends Object {
 		var oldW = realMaxWidth, oldH = realMaxHeight;
 		realMaxWidth = if( maxWidth == null ) constraintWidth else if( constraintWidth < 0 ) maxWidth else hxd.Math.min(maxWidth, constraintWidth);
 		realMaxHeight = if( maxHeight == null ) constraintHeight else if( constraintHeight < 0 ) maxHeight else hxd.Math.min(maxHeight, constraintHeight);
+		if( minWidth != null && realMaxWidth < minWidth && realMaxWidth >= 0 )
+			realMaxWidth = minWidth;
+		if( minHeight != null && realMaxHeight < minHeight && realMaxWidth >= 0 )
+			realMaxHeight = minHeight;
 		if( realMaxWidth != oldW || realMaxHeight != oldH )
 			needReflow = true;
 	}
@@ -449,14 +453,18 @@ class Flow extends Object {
 		if( minWidth == w )
 			return w;
 		needReflow = true;
-		return minWidth = w;
+		minWidth = w;
+		updateConstraint();
+		return w;
 	}
 
 	function set_minHeight(h) {
 		if( minHeight == h )
 			return h;
 		needReflow = true;
-		return minHeight = h;
+		minHeight = h;
+		updateConstraint();
+		return h;
 	}
 
 	function set_horizontalSpacing(s) {
