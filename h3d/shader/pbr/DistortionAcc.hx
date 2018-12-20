@@ -1,4 +1,4 @@
-package shader;
+package h3d.shader.pbr;
 
 /* Need a RG16F or RG32F Target*/
 
