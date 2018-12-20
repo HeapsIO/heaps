@@ -2,7 +2,7 @@ package h3d.shader.pbr;
 
 /* Need a RG16F or RG32F Target*/
 
-class Distortion extends hxsl.Shader {
+class DistortionAcc extends hxsl.Shader {
 
 	static var SRC = {
 
