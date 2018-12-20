@@ -7,7 +7,7 @@ class Emissive extends hxsl.Shader {
 		@param var emissive : Float;
 
 		function fragment() {
-			pixelColor.rgb += pixelColor.rgb * emissive * pixelColor.a;
+			pixelColor.rgb = max(pixelColor.rgb, pixelColor.rgb + pixelColor.rgb * emissive * pixelColor.a);
 		}
 
 	};

@@ -6,6 +6,7 @@ package h3d.mat;
 	var Overlay = "Overlay";
 	var Decal = "Decal";
 	var BeforeTonemapping = "BeforeTonemapping";
+	var Distortion = "Distortion";
 }
 
 @:enum abstract PbrBlend(String) {
@@ -99,6 +100,9 @@ class PbrMaterial extends Material {
 			var e = mainPass.getShader(h3d.shader.Emissive);
 			if( e == null ) e = mainPass.addShader(new h3d.shader.Emissive(props.emissive));
 			e.emissive = props.emissive;
+		case Distortion:
+			mainPass.setPassName("Distortion");
+			mainPass.depthWrite = false;
 		case Overlay:
 			mainPass.setPassName("overlay");
 		case Decal:
@@ -226,6 +230,8 @@ class PbrMaterial extends Material {
 						<option value="BeforeTonemapping">Before Tonemapping</option>
 						<option value="Albedo">Albedo</option>
 						<option value="Overlay">Overlay</option>
+						<option value="Distortion">Distortion</option>
+						<option value="Decal">Decal</option>
 					</select>
 				</dd>
 				<dt>Blend</dt>

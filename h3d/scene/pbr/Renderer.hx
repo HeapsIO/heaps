@@ -61,6 +61,7 @@ class Renderer extends h3d.scene.Renderer {
 	public var exposure(get,set) : Float;
 	public var debugMode = 0;
 
+
 	static var ALPHA : hxsl.Output = Swiz(Value("output.color"),[W]);
 	var output = new h3d.pass.Output("mrt",[
 		Value("output.color"),
@@ -288,16 +289,24 @@ class Renderer extends h3d.scene.Renderer {
 
 		apply(AfterHdr);
 
+		var distortion = allocTarget("distortion", true, 1.0, RGBA16F);
+		distortion.clear(0x000000);
+		setTarget(distortion);
+		draw("Distortion");
+
 		var ldr = allocTarget("ldrOutput");
 		setTarget(ldr);
 		var bloom = ctx.getGlobal("bloom");
 		tonemap.shader.bloom = bloom;
 		tonemap.shader.hasBloom = bloom != null;
-		tonemap.shader.mode = switch( toneMode ) {
-		case Linear: 0;
-		case Reinhard: 1;
-		default: 0;
-		};
+		tonemap.shader.distortion = distortion;
+		tonemap.shader.hasDistortion = distortion != null;
+		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
+		tonemap.shader.mode =	switch( toneMode ) {
+									case Linear: 0;
+									case Reinhard: 1;
+									default: 0;
+								};
 		tonemap.shader.hdrTexture = hdr;
 		tonemap.render();
 

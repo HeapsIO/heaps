@@ -12,8 +12,18 @@ class ToneMapping extends ScreenShader {
 
 		@const var hasBloom : Bool;
 		@param var bloom : Sampler2D;
+		@const var hasDistortion : Bool;
+		@param var distortion : Sampler2D;
+		@param var pixelSize : Vec2;
 
 		function fragment() {
+
+			if(hasDistortion){
+				var baseUV = calculatedUV;
+				var distortionVal = distortion.get(baseUV).rg;
+				calculatedUV = baseUV + distortionVal ;
+			}
+
 			var color = hdrTexture.get(calculatedUV);
 			if( hasBloom )
 				color += bloom.get(calculatedUV);
@@ -40,6 +50,8 @@ class ToneMapping extends ScreenShader {
 	public function new() {
 		super();
 		exposure = 0;
+		hasDistortion = false;
+		hasBloom = false;
 	}
 
 	function set_exposure(v) {
