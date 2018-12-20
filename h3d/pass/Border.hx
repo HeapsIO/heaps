@@ -42,13 +42,13 @@ class Border extends ScreenFx<BorderShader> {
 		add(width-size, height);
 		add(width, height);
 
-		this.plane = new h3d.prim.RawPrimitive({ vbuf : bbuf, stride : 2, quads : true }, true);
+		this.primitive = new h3d.prim.RawPrimitive({ vbuf : bbuf, stride : 2, quads : true }, true);
 		shader.color.set(1,1,1,1);
 	}
 
 	override function dispose() {
 		super.dispose();
-		this.plane.dispose();
+		this.primitive.dispose();
 	}
 
 }

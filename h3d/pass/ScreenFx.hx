@@ -4,8 +4,8 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 
 	public var shader : T;
 	public var pass : h3d.mat.Pass;
+	public var primitive : h3d.prim.Primitive;
 	var manager : ShaderManager;
-	var plane : h3d.prim.Primitive;
 	var _engine : h3d.Engine;
 	var engine(get,never) : h3d.Engine;
 	var shaders : hxsl.ShaderList;
@@ -62,8 +62,8 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 	}
 
 	public function render() {
-		if( plane == null )
-			plane = h3d.prim.Plane2D.get();
+		if( primitive == null )
+			primitive = h3d.prim.Plane2D.get();
 		var rts = manager.compileShaders(shaders);
 		shader.flipY = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
 		engine.selectMaterial(pass);
@@ -77,7 +77,7 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 		engine.uploadShaderBuffers(buffers, Globals);
 		engine.uploadShaderBuffers(buffers, Params);
 		engine.uploadShaderBuffers(buffers, Textures);
-		plane.render(engine);
+		primitive.render(engine);
 	}
 
 	public function dispose() {
