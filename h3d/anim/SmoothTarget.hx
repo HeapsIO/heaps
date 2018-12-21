@@ -87,11 +87,13 @@ class SmoothTarget extends Animation {
 		return cast objects;
 	}
 
+
+	var q1 : Quat = new h3d.Quat();
+	var qout : Quat = new h3d.Quat();
 	@:noDebug
 	override function sync( decompose = false ) {
 		if( decompose ) throw "assert";
 		var objects = getSmoothObjects();
-		var q1 = new h3d.Quat(), qout = new h3d.Quat();
 		target.sync(true);
 		for( o in objects ) {
 			var m = @:privateAccess if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] else if( o.targetObject != null ) o.targetObject.defaultTransform else null;
