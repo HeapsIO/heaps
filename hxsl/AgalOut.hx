@@ -751,6 +751,25 @@ class AgalOut {
 			op(OAbs(r2, r2));
 			op(OAdd(r, r, r2));
 			return r;
+		case [Smoothstep, [e0, e1, x]]:
+			//:x = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+			var edge0 = expr(e0);
+			var edge1 = expr(e1);
+			var r = allocReg(ret);
+			var t = allocReg(ret);
+			op(OMov(r, expr(x)));
+			op(OMov(t, edge1));
+			op(OSub(r, r, edge0));
+			op(OSub(t, t, edge0));
+			op(ORcp(t, t));
+			op(OMul(r, r, t));
+			op(OSat(r, r));
+			//:return x * x * (3 - 2 * x);
+			op(OMul(t, r, getConst(2.0)));
+			op(OMul(r, r, r));
+			op(OSub(t, getConst(3.0), t));
+			op(OMul(r, r, t));
+			return r;
 		default:
 		}
 
