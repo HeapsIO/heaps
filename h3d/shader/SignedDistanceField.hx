@@ -26,14 +26,12 @@ class SignedDistanceField extends hxsl.Shader {
 			var textureSample : Vec4 = textureColor;
 			var distance : Float;
 
-			if (channel == 4) {
-				distance = median(textureSample.r, textureSample.g, textureSample.b);
-			} else {
-				distance = if (channel == 0) textureSample.r;
-					else if (channel == 1) textureSample.g;
-					else if (channel == 2) textureSample.b;
-					else textureSample.a;
-			}
+			distance = if (channel == 0) textureSample.r;
+				else if (channel == 1) textureSample.g;
+				else if (channel == 2) textureSample.b;
+				else if (channel == 3) textureSample.a;
+				else median(textureSample.r, textureSample.g, textureSample.b);
+			
 			output.color = vec4(color.rgb, color.a * smoothstep(alphaCutoff - smoothing, alphaCutoff + smoothing, distance));
 		}
 	}
