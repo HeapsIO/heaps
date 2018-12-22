@@ -173,12 +173,7 @@ class Driver {
 	public function captureRenderBuffer( pixels : hxd.Pixels ) {
 	}
 
-	public function capturePixels( tex : h3d.mat.Texture, layer : Int, mipLevel : Int ) : hxd.Pixels {
-		throw "Can't capture pixels on this platform";
-		return null;
-	}
-
-	public function captureSubPixels( tex : h3d.mat.Texture, layer : Int, mipLevel : Int, region : h2d.col.IBounds) : hxd.Pixels {
+	public function capturePixels( tex : h3d.mat.Texture, layer : Int, mipLevel : Int, ?region : h2d.col.IBounds ) : hxd.Pixels {
 		throw "Can't capture pixels on this platform";
 		return null;
 	}

@@ -501,20 +501,19 @@ class DirectXDriver extends h3d.impl.Driver {
 		tmp.release();
 	}
 
-	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int) : hxd.Pixels {
-		var pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
-		captureTexPixels(pixels, tex, layer, mipLevel);
-		return pixels;
-	}
-
-	override public function captureSubPixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, region:h2d.col.IBounds):hxd.Pixels
-	{
-		if (region.xMax > tex.width) region.xMax = tex.width;
-		if (region.yMax > tex.height) region.yMax = tex.height;
-		if (region.xMin < 0) region.xMin = 0;
-		if (region.yMin < 0) region.yMin = 0;
-		var pixels = hxd.Pixels.alloc(region.width >> mipLevel, region.height >> mipLevel, tex.format);
-		captureTexPixels(pixels, tex, layer, mipLevel, region.xMin, region.yMin);
+	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, ?region:h2d.col.IBounds) : hxd.Pixels {
+		var pixels : hxd.Pixels;
+		if (region != null) {
+			if (region.xMax > tex.width) region.xMax = tex.width;
+			if (region.yMax > tex.height) region.yMax = tex.height;
+			if (region.xMin < 0) region.xMin = 0;
+			if (region.yMin < 0) region.yMin = 0;
+			pixels = hxd.Pixels.alloc(region.width >> mipLevel, region.height >> mipLevel, tex.format);
+			captureTexPixels(pixels, tex, layer, mipLevel, region.xMin, region.yMin);
+		} else {
+			pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
+			captureTexPixels(pixels, tex, layer, mipLevel);
+		}
 		return pixels;
 	}
 

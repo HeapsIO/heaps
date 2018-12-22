@@ -309,7 +309,7 @@ class Texture {
 		#else
 		var old = lastFrame;
 		preventAutoDispose();
-		var pix = region != null ? mem.driver.captureSubPixels(this, face, mipLevel, region) : mem.driver.capturePixels(this, face, mipLevel);
+		var pix = mem.driver.capturePixels(this, face, mipLevel, region);
 		lastFrame = old;
 		return pix;
 		#end
