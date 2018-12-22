@@ -184,6 +184,9 @@ class Flatten {
 			case UvToScreen:
 				allocConsts([2,-2], e.p);
 				allocConsts([-1,1], e.p);
+			case Smoothstep:
+				allocConst(2.0, e.p);
+				allocConst(3.0, e.p);
 			default:
 			}
 		case TCall( { e : TGlobal(Vec4) }, [ { e : TVar( { kind : Global | Param | Input | Var } ), t : TVec(3, VFloat) }, { e : TConst(CInt(1)) } ]):
