@@ -78,10 +78,16 @@ class Text extends Drawable {
 						sdfAdded = false;
 					}
 				case SignedDistanceField(channel, buffer, gamma):
+					#if flash
+					throw "SignedDistanceField fonts are not supported on flash target.";
+					#end
 					initSdf(buffer, gamma);
 					sdfShader.multiChannel = false;
 					sdfShader.channel = channel;
 				case MultiChannelSDF(buffer, gamma):
+					#if flash
+					throw "SignedDistanceField fonts are not supported on flash target.";
+					#end
 					initSdf(buffer, gamma);
 					sdfShader.multiChannel = true;
 			}
