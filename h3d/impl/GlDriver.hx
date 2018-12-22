@@ -1592,7 +1592,7 @@ class GlDriver extends Driver {
 		captureSubRenderBuffer(pixels, 0, 0);
 	}
 
-	inline function captureSubRenderBuffer( pixels : hxd.Pixels, x : Int, y : Int ) {
+	function captureSubRenderBuffer( pixels : hxd.Pixels, x : Int, y : Int ) {
 		if( curTarget == null )
 			throw "Can't capture main render buffer in GL";
 		discardError();
