@@ -1382,7 +1382,24 @@ class GlDriver extends Driver {
 		}
 	}
 
-	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int) {
+	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, ?region:h2d.col.IBounds) {
+		
+		var pixels : hxd.Pixels;
+		var x : Int, y : Int;
+		if (region != null) {
+			if (region.xMax > tex.width) region.xMax = tex.width;
+			if (region.yMax > tex.height) region.yMax = tex.height;
+			if (region.xMin < 0) region.xMin = 0;
+			if (region.yMin < 0) region.yMin = 0;
+			pixels = hxd.Pixels.alloc(region.width >> mipLevel, region.height >> mipLevel, tex.format);
+			x = region.xMin;
+			y = region.yMin;
+		} else {
+			pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
+			x = 0;
+			y = 0;
+		}
+		
 		var old = curTarget;
 		var oldCount = numTargets;
 		var oldLayer = curTargetLayer;
@@ -1394,8 +1411,7 @@ class GlDriver extends Driver {
 					gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0+i,GL.TEXTURE_2D,null,0);
 		}
 		setRenderTarget(tex, layer, mipLevel);
-		var pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
-		captureRenderBuffer(pixels);
+		captureSubRenderBuffer(pixels, x, y);
 		setRenderTarget(old, oldLayer, oldMip);
 		if( oldCount > 1 ) {
 			for( i in 1...oldCount )
@@ -1573,6 +1589,10 @@ class GlDriver extends Driver {
 	#end
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
+		captureSubRenderBuffer(pixels, 0, 0);
+	}
+
+	function captureSubRenderBuffer( pixels : hxd.Pixels, x : Int, y : Int ) {
 		if( curTarget == null )
 			throw "Can't capture main render buffer in GL";
 		discardError();
@@ -1588,7 +1608,7 @@ class GlDriver extends Driver {
 		var buffer = @:privateAccess pixels.bytes.b;
 		#end
 		#if (js || hl)
-		gl.readPixels(0, 0, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, buffer);
+		gl.readPixels(x, y, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, buffer);
 		var error = gl.getError();
 		if( error != 0 ) throw "Failed to capture pixels (error "+error+")";
 		@:privateAccess pixels.innerFormat = curTarget.format;

@@ -501,13 +501,23 @@ class DirectXDriver extends h3d.impl.Driver {
 		tmp.release();
 	}
 
-	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int) : hxd.Pixels {
-		var pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
-		captureTexPixels(pixels, tex, layer, mipLevel);
+	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, ?region:h2d.col.IBounds) : hxd.Pixels {
+		var pixels : hxd.Pixels;
+		if (region != null) {
+			if (region.xMax > tex.width) region.xMax = tex.width;
+			if (region.yMax > tex.height) region.yMax = tex.height;
+			if (region.xMin < 0) region.xMin = 0;
+			if (region.yMin < 0) region.yMin = 0;
+			pixels = hxd.Pixels.alloc(region.width >> mipLevel, region.height >> mipLevel, tex.format);
+			captureTexPixels(pixels, tex, layer, mipLevel, region.xMin, region.yMin);
+		} else {
+			pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
+			captureTexPixels(pixels, tex, layer, mipLevel);
+		}
 		return pixels;
 	}
 
-	function captureTexPixels( pixels: hxd.Pixels, tex:h3d.mat.Texture, layer:Int, mipLevel:Int)  {
+	function captureTexPixels( pixels: hxd.Pixels, tex:h3d.mat.Texture, layer:Int, mipLevel:Int, x : Int = 0, y : Int = 0)  {
 		var desc = new Texture2dDesc();
 		desc.width = pixels.width;
 		desc.height = pixels.height;
@@ -518,7 +528,17 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( tmp == null )
 			throw "Capture failed: can't create tmp texture";
 
-		tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.t.mips * layer + mipLevel, null);
+		if (x != 0 || y != 0) {
+			box.left = x;
+			box.right = x + desc.width;
+			box.top = y;
+			box.bottom = y + desc.height;
+			box.back = 1;
+			box.front = 0;
+			tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.t.mips * layer + mipLevel, box);
+		} else {
+			tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.t.mips * layer + mipLevel, null);
+		}
 
 		var pitch = 0;
 		var bpp = hxd.Pixels.getBytesPerPixel(tex.format);
