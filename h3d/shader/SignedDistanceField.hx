@@ -12,10 +12,13 @@ class SignedDistanceField extends hxsl.Shader {
 		// Mode of operation - single-channel or multi-channel.
 		@const var channel : Int = 0;
 		/**
-			Variable used to determine the border of the field. ( default : 0.5 ) 
+			Variable used to determine the edge of the field. ( default : 0.5 ) 
 			Can be used to provide cheaper Outline for Text compared to Filter usage.
 		**/
 		@param var alphaCutoff : Float = 0.5;
+		/**
+			Determines smoothing of the edge. Lower value is sharper.
+		**/
 		@param var smoothing : Float = 0.04166666666666666666666666666667; // 1/24
 
 		function median(r : Float, g : Float, b : Float) : Float {

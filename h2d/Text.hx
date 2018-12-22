@@ -37,7 +37,6 @@ class Text extends Drawable {
 	var waShader : h3d.shader.WhiteAlpha;
 	#end
 	var sdfShader : h3d.shader.SignedDistanceField;
-	var sdfAdded : Bool;
 
 	public function new( font : Font, ?parent : h2d.Object ) {
 		super(parent);
@@ -67,9 +66,6 @@ class Text extends Drawable {
 						sdfShader = null;
 					}
 				case SignedDistanceField(channel, alphaCutoff, smoothing):
-					#if flash
-					throw "SignedDistanceField fonts are not supported on flash target.";
-					#end
 					if ( sdfShader == null ) {
 						sdfShader = new h3d.shader.SignedDistanceField();
 						addShader(sdfShader);
