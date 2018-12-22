@@ -26,8 +26,9 @@ class BitmapFont extends Resource {
 	/**
 		Load and cache Signed Distance Field font with specified size, channel, buffer and gamma. ( default : initial size, red, 0.5, 1 / 32 )
 		For more information on SDF texture generation refer to this page: https://github.com/libgdx/libgdx/wiki/Distance-field-fonts
+		For more information on MSDF texture generation refer to this page: https://github.com/Chlumsky/msdfgen
 	**/
-	public function toSdfFont(?size:Int, channel : Int = 0, buffer : Float = 0.5, gamma : Float = 1 / 32 ) {
+	public function toSdfFont(?size:Int, channel : h3d.shader.SignedDistanceField.SDFChannel = 0, buffer : Float = 0.5, gamma : Float = 1 / 32 ) {
 		if ( sdfFonts == null ) sdfFonts = new Array();
 		if ( size == null ) size = toFont().size;
 		for ( font in sdfFonts ) {
@@ -41,29 +42,6 @@ class BitmapFont extends Resource {
 		}
 		var font : h2d.Font = hxd.fmt.bfnt.FontParser.parse(entry.getBytes(), entry.path, resolveSdfTile);
 		font.type = h2d.Font.FontType.SignedDistanceField(channel, buffer, gamma);
-		font.resizeTo(size);
-		sdfFonts.push(font);
-		return font;
-	}
-
-	/**
-		Load and cache Multi-Channel Signed Distance Font with specified size, channel, buffer and gamma. ( default : initial size, 0.5, 1 / 32 )
-		For more information of MSDF texture generation refer to this page: https://github.com/Chlumsky/msdfgen
-	**/
-	public function toMsdfFont(?size:Int, buffer : Float = 0.5, gamma : Float = 1 / 32 ) {
-		if ( sdfFonts == null ) sdfFonts = new Array();
-		if ( size == null ) size = toFont().size;
-		for ( font in sdfFonts ) {
-			switch ( font.type ) {
-				case MultiChannelSDF(fbuffer, fgamma):
-					if (font.size == size && fbuffer == buffer && fgamma == gamma ) {
-						return font;
-					}
-				default:
-			}
-		}
-		var font : h2d.Font = hxd.fmt.bfnt.FontParser.parse(entry.getBytes(), entry.path, resolveSdfTile);
-		font.type = h2d.Font.FontType.MultiChannelSDF(buffer, gamma);
 		font.resizeTo(size);
 		sdfFonts.push(font);
 		return font;

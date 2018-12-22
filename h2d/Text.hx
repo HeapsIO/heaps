@@ -60,36 +60,23 @@ class Text extends Drawable {
 				if( waShader != null ) removeShader( waShader );
 			}
 			#end
-			inline function initSdf(buffer : Float, gamma : Float) {
-				if ( sdfShader == null ) {
-					sdfShader = new h3d.shader.SignedDistanceField();
-				}
-				if ( !sdfAdded ) {
-					addShader(sdfShader);
-					sdfAdded = true;
-				}
-				sdfShader.buffer = buffer;
-				sdfShader.gamma = gamma;
-			}
 			switch( font.type ) {
 				case BitmapFont:
-					if ( sdfAdded ) {
+					if ( sdfShader != null ) {
 						removeShader(sdfShader);
-						sdfAdded = false;
+						sdfShader = null;
 					}
 				case SignedDistanceField(channel, buffer, gamma):
 					#if flash
 					throw "SignedDistanceField fonts are not supported on flash target.";
 					#end
-					initSdf(buffer, gamma);
-					sdfShader.multiChannel = false;
+					if ( sdfShader == null ) {
+						sdfShader = new h3d.shader.SignedDistanceField();
+						addShader(sdfShader);
+					}
+					sdfShader.buffer = buffer;
+					sdfShader.gamma = gamma;
 					sdfShader.channel = channel;
-				case MultiChannelSDF(buffer, gamma):
-					#if flash
-					throw "SignedDistanceField fonts are not supported on flash target.";
-					#end
-					initSdf(buffer, gamma);
-					sdfShader.multiChannel = true;
 			}
 		}
 		if( glyphs != null ) glyphs.remove();
@@ -137,7 +124,7 @@ class Text extends Drawable {
 		}
 		if ( !calcDone && text != null && font != null ) initGlyphs(text);
 
-		if (sdfAdded) sdfShader.color = this.color;
+		if( sdfShader != null ) sdfShader.color = this.color;
 		if( dropShadow != null ) {
 			var oldX = absX, oldY = absY;
 			absX += dropShadow.dx * matA + dropShadow.dy * matC;

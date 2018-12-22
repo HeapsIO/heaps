@@ -1,5 +1,19 @@
 package h3d.shader;
 
+/** Channel reading method for SDF. **/
+@:enum abstract SDFChannel(Int) from Int to Int {
+	/** Use red channel of a texture to determine distance. **/
+	var Red = 0;
+	/** Use green channel of a texture to determine distance. **/
+	var Green = 1;
+	/** Use blue channel of a texture to determine distance. **/
+	var Blue = 2;
+	/** Use alpha channel of a texture to determine distance. **/
+	var Alpha = 3;
+	/** Use RGB channels of a texture to determine distance. See here for details: https://github.com/Chlumsky/msdfgen **/
+	var MultiChannel = 4;
+}
+
 class SignedDistanceField extends hxsl.Shader {
 
 	static var SRC = {
@@ -10,11 +24,7 @@ class SignedDistanceField extends hxsl.Shader {
 		@param var color : Vec4;
 
 		// Mode of operation - single-channel or multi-channel.
-		// Single-channel mode: Read from specified channel (default: red)
-		// Multi-channel mode: Read from RGB to produce image.
-		@const var multiChannel : Bool = false;
-		// Channel to read in single-channel mode.
-		@const var channel : Int = 0; // 0123 = RGBA
+		@const var channel : Int = 0;
 		@param var buffer : Float = 0.5;
 		@param var gamma : Float = 0.04166666666666666666666666666667; // 1/24
 
@@ -26,7 +36,7 @@ class SignedDistanceField extends hxsl.Shader {
 			var textureSample : Vec4 = textureColor;
 			var distance : Float;
 
-			if (multiChannel) {
+			if (channel == 4) {
 				distance = median(textureSample.r, textureSample.g, textureSample.b);
 			} else {
 				distance = if (channel == 0) textureSample.r;

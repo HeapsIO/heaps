@@ -48,9 +48,7 @@ class FontChar {
 enum FontType {
 	BitmapFont;
 	/** Signed Distance Field font. Channel indexes are in RGBA order. See here for info: https://github.com/libgdx/libgdx/wiki/Distance-field-fonts **/
-	SignedDistanceField(channel : Int, buffer : Float, gamma : Float);
-	/** Multi-Channel Signed Distance Field font. See here for info: https://github.com/Chlumsky/msdfgen **/
-	MultiChannelSDF(buffer : Float, gamma : Float);
+	SignedDistanceField(channel : h3d.shader.SignedDistanceField.SDFChannel, buffer : Float, gamma : Float);
 }
 
 class Font {
