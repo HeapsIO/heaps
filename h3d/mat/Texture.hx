@@ -300,15 +300,16 @@ class Texture {
 		Downloads the current texture data from the GPU.
 		Beware, this is a very slow operation that shouldn't be done during rendering.
 	**/
-	public function capturePixels( face = 0, mipLevel = 0 ) : hxd.Pixels {
+	public function capturePixels( face = 0, mipLevel = 0, ?region:h2d.col.IBounds ) : hxd.Pixels {
 		#if flash
 		if( flags.has(Cube) ) throw "Can't capture cube texture on this platform";
+		if( region != null ) throw "Can't capture texture region on this platform";
 		if( face != 0 || mipLevel != 0 ) throw "Can't capture face/mipLevel on this platform";
 		return capturePixelsFlash();
 		#else
 		var old = lastFrame;
 		preventAutoDispose();
-		var pix = mem.driver.capturePixels(this, face, mipLevel);
+		var pix = region != null ? mem.driver.captureSubPixels(this, face, mipLevel, region) : mem.driver.capturePixels(this, face, mipLevel);
 		lastFrame = old;
 		return pix;
 		#end
