@@ -45,6 +45,14 @@ class FontChar {
 
 }
 
+enum FontType {
+	BitmapFont;
+	/** Signed Distance Field font. Channel indexes are in RGBA order. See here for info: https://github.com/libgdx/libgdx/wiki/Distance-field-fonts **/
+	SignedDistanceField(channel : Int, buffer : Float, gamma : Float);
+	/** Multi-Channel Signed Distance Field font. See here for info: https://github.com/Chlumsky/msdfgen **/
+	MultiChannelSDF(buffer : Float, gamma : Float);
+}
+
 class Font {
 
 	public var name(default, null) : String;
@@ -53,6 +61,7 @@ class Font {
 	public var lineHeight(default, null) : Int;
 	public var tile(default,null) : h2d.Tile;
 	public var tilePath(default,null) : String;
+	public var type : FontType;
 	public var charset : hxd.Charset;
 	var glyphs : Map<Int,FontChar>;
 	var nullChar : FontChar;
@@ -61,7 +70,7 @@ class Font {
 	var offsetX:Int = 0;
 	var offsetY:Int = 0;
 
-	function new(name,size) {
+	function new(name,size,?type) {
 		this.name = name;
 		this.size = size;
 		this.initSize = size;
@@ -70,6 +79,10 @@ class Font {
 		charset = hxd.Charset.getDefault();
 		if (name != null)
 			this.tilePath = haxe.io.Path.withExtension(name, "png");
+		if (type == null)
+			this.type = BitmapFont;
+		else
+			this.type = type;
 	}
 
 	public inline function getChar( code : Int ) {

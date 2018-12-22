@@ -36,6 +36,8 @@ class Text extends Drawable {
 	#if lime
 	var waShader : h3d.shader.WhiteAlpha;
 	#end
+	var sdfShader : h3d.shader.SignedDistanceField;
+	var sdfAdded : Bool;
 
 	public function new( font : Font, ?parent : h2d.Object ) {
 		super(parent);
@@ -50,13 +52,40 @@ class Text extends Drawable {
 	function set_font(font) {
 		if( this.font == font ) return font;
 		this.font = font;
-		#if lime
-		if( font.tile.getTexture().format == ALPHA ){
-			if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
-		}else{
-			if( waShader != null ) removeShader( waShader );
+		if ( font != null ) {
+			#if lime
+			if( font.tile.getTexture().format == ALPHA ){
+				if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
+			}else{
+				if( waShader != null ) removeShader( waShader );
+			}
+			#end
+			inline function initSdf(buffer : Float, gamma : Float) {
+				if ( sdfShader == null ) {
+					sdfShader = new h3d.shader.SignedDistanceField();
+				}
+				if ( !sdfAdded ) {
+					addShader(sdfShader);
+					sdfAdded = true;
+				}
+				sdfShader.buffer = buffer;
+				sdfShader.gamma = gamma;
+			}
+			switch( font.type ) {
+				case BitmapFont:
+					if ( sdfAdded ) {
+						removeShader(sdfShader);
+						sdfAdded = false;
+					}
+				case SignedDistanceField(channel, buffer, gamma):
+					initSdf(buffer, gamma);
+					sdfShader.multiChannel = false;
+					sdfShader.channel = channel;
+				case MultiChannelSDF(buffer, gamma):
+					initSdf(buffer, gamma);
+					sdfShader.multiChannel = true;
+			}
 		}
-		#end
 		if( glyphs != null ) glyphs.remove();
 		glyphs = new TileGroup(font == null ? null : font.tile, this);
 		glyphs.visible = false;
@@ -102,6 +131,7 @@ class Text extends Drawable {
 		}
 		if ( !calcDone && text != null && font != null ) initGlyphs(text);
 
+		if (sdfAdded) sdfShader.color = this.color;
 		if( dropShadow != null ) {
 			var oldX = absX, oldY = absY;
 			absX += dropShadow.dx * matA + dropShadow.dy * matC;
