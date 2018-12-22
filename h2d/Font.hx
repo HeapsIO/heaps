@@ -45,10 +45,24 @@ class FontChar {
 
 }
 
+/** Channel reading method for SDF. **/
+@:enum abstract SDFChannel(Int) from Int to Int {
+	/** Use red channel of a texture to determine distance. **/
+	var Red = 0;
+	/** Use green channel of a texture to determine distance. **/
+	var Green = 1;
+	/** Use blue channel of a texture to determine distance. **/
+	var Blue = 2;
+	/** Use alpha channel of a texture to determine distance. **/
+	var Alpha = 3;
+	/** Use RGB channels of a texture to determine distance. See here for details: https://github.com/Chlumsky/msdfgen **/
+	var MultiChannel = 4;
+}
+
 enum FontType {
 	BitmapFont;
 	/** Signed Distance Field font. Channel indexes are in RGBA order. See here for info: https://github.com/libgdx/libgdx/wiki/Distance-field-fonts **/
-	SignedDistanceField(channel : h3d.shader.SignedDistanceField.SDFChannel, buffer : Float, gamma : Float);
+	SignedDistanceField(channel : SDFChannel, alphaCutoff : Float, smoothing : Float);
 }
 
 class Font {

@@ -66,7 +66,7 @@ class Text extends Drawable {
 						removeShader(sdfShader);
 						sdfShader = null;
 					}
-				case SignedDistanceField(channel, buffer, gamma):
+				case SignedDistanceField(channel, alphaCutoff, smoothing):
 					#if flash
 					throw "SignedDistanceField fonts are not supported on flash target.";
 					#end
@@ -74,8 +74,8 @@ class Text extends Drawable {
 						sdfShader = new h3d.shader.SignedDistanceField();
 						addShader(sdfShader);
 					}
-					sdfShader.buffer = buffer;
-					sdfShader.gamma = gamma;
+					sdfShader.alphaCutoff = alphaCutoff;
+					sdfShader.smoothing = smoothing;
 					sdfShader.channel = channel;
 			}
 		}

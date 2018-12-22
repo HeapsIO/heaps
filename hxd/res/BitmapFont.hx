@@ -24,24 +24,24 @@ class BitmapFont extends Resource {
 	}
 
 	/**
-		Load and cache Signed Distance Field font with specified size, channel, buffer and gamma. ( default : initial size, red, 0.5, 1 / 32 )
+		Load and cache Signed Distance Field font with specified size, channel, alphaCutoff and smoothing. ( default : initial size, red, 0.5, 1 / 32 )
 		For more information on SDF texture generation refer to this page: https://github.com/libgdx/libgdx/wiki/Distance-field-fonts
 		For more information on MSDF texture generation refer to this page: https://github.com/Chlumsky/msdfgen
 	**/
-	public function toSdfFont(?size:Int, channel : h3d.shader.SignedDistanceField.SDFChannel = 0, buffer : Float = 0.5, gamma : Float = 1 / 32 ) {
+	public function toSdfFont(?size:Int, channel : h2d.Font.SDFChannel = 0, alphaCutoff : Float = 0.5, smoothing : Float = 1 / 32 ) {
 		if ( sdfFonts == null ) sdfFonts = new Array();
 		if ( size == null ) size = toFont().size;
 		for ( font in sdfFonts ) {
 			switch ( font.type ) {
-				case SignedDistanceField(fchannel, fbuffer, fgamma):
-					if (font.size == size && fchannel == channel && fbuffer == buffer && fgamma == gamma ) {
+				case SignedDistanceField(fchannel, falphaCutoff, fsmoothing):
+					if (font.size == size && fchannel == channel && falphaCutoff == alphaCutoff && fsmoothing == smoothing ) {
 						return font;
 					}
 				default:
 			}
 		}
 		var font : h2d.Font = hxd.fmt.bfnt.FontParser.parse(entry.getBytes(), entry.path, resolveSdfTile);
-		font.type = h2d.Font.FontType.SignedDistanceField(channel, buffer, gamma);
+		font.type = h2d.Font.FontType.SignedDistanceField(channel, alphaCutoff, smoothing);
 		font.resizeTo(size);
 		sdfFonts.push(font);
 		return font;

@@ -1,19 +1,5 @@
 package h3d.shader;
 
-/** Channel reading method for SDF. **/
-@:enum abstract SDFChannel(Int) from Int to Int {
-	/** Use red channel of a texture to determine distance. **/
-	var Red = 0;
-	/** Use green channel of a texture to determine distance. **/
-	var Green = 1;
-	/** Use blue channel of a texture to determine distance. **/
-	var Blue = 2;
-	/** Use alpha channel of a texture to determine distance. **/
-	var Alpha = 3;
-	/** Use RGB channels of a texture to determine distance. See here for details: https://github.com/Chlumsky/msdfgen **/
-	var MultiChannel = 4;
-}
-
 class SignedDistanceField extends hxsl.Shader {
 
 	static var SRC = {
@@ -25,8 +11,12 @@ class SignedDistanceField extends hxsl.Shader {
 
 		// Mode of operation - single-channel or multi-channel.
 		@const var channel : Int = 0;
-		@param var buffer : Float = 0.5;
-		@param var gamma : Float = 0.04166666666666666666666666666667; // 1/24
+		/**
+			Variable used to determine the border of the field. ( default : 0.5 ) 
+			Can be used to provide cheaper Outline for Text compared to Filter usage.
+		**/
+		@param var alphaCutoff : Float = 0.5;
+		@param var smoothing : Float = 0.04166666666666666666666666666667; // 1/24
 
 		function median(r : Float, g : Float, b : Float) : Float {
 			return max(min(r, g), min(max(r, g), b));
@@ -44,7 +34,7 @@ class SignedDistanceField extends hxsl.Shader {
 					else if (channel == 2) textureSample.b;
 					else textureSample.a;
 			}
-			output.color = vec4(color.rgb, color.a * smoothstep(buffer - gamma, buffer + gamma, distance));
+			output.color = vec4(color.rgb, color.a * smoothstep(alphaCutoff - smoothing, alphaCutoff + smoothing, distance));
 		}
 	}
 
