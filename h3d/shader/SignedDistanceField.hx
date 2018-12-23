@@ -6,9 +6,6 @@ class SignedDistanceField extends hxsl.Shader {
 		
 		@:import h3d.shader.Base2d;
 
-		// Output color of the shader. Due to how HXSL works, it's not possible to retreive object tinting.
-		@param var color : Vec4;
-
 		// Mode of operation - single-channel or multi-channel.
 		@const var channel : Int = 0;
 		/**
@@ -35,7 +32,7 @@ class SignedDistanceField extends hxsl.Shader {
 				else if (channel == 3) textureSample.a;
 				else median(textureSample.r, textureSample.g, textureSample.b);
 			
-			output.color = vec4(color.rgb, color.a * smoothstep(alphaCutoff - smoothing, alphaCutoff + smoothing, distance));
+			textureColor = vec4(1.0, 1.0, 1.0, smoothstep(alphaCutoff - smoothing, alphaCutoff + smoothing, distance));
 		}
 	}
 

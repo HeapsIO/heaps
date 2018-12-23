@@ -120,7 +120,6 @@ class Text extends Drawable {
 		}
 		if ( !calcDone && text != null && font != null ) initGlyphs(text);
 
-		if( sdfShader != null ) sdfShader.color = this.color;
 		if( dropShadow != null ) {
 			var oldX = absX, oldY = absY;
 			absX += dropShadow.dx * matA + dropShadow.dy * matC;
