@@ -10,7 +10,7 @@ abstract UStringImpl(String) from String to String {
 	public var length(get,never) : Int;
 
 	inline function get_length() : Int {
-		return this.length;
+		return haxe.Utf8.length(this);
 	}
 
 	@:op(a + b) inline static function add( a : UStringImpl, b : UStringImpl ) : String {
