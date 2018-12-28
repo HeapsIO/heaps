@@ -36,6 +36,7 @@ class Text extends Drawable {
 	#if lime
 	var waShader : h3d.shader.WhiteAlpha;
 	#end
+	var sdfShader : h3d.shader.SignedDistanceField;
 
 	public function new( font : Font, ?parent : h2d.Object ) {
 		super(parent);
@@ -50,13 +51,30 @@ class Text extends Drawable {
 	function set_font(font) {
 		if( this.font == font ) return font;
 		this.font = font;
-		#if lime
-		if( font.tile.getTexture().format == ALPHA ){
-			if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
-		}else{
-			if( waShader != null ) removeShader( waShader );
+		if ( font != null ) {
+			#if lime
+			if( font.tile.getTexture().format == ALPHA ){
+				if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
+			}else{
+				if( waShader != null ) removeShader( waShader );
+			}
+			#end
+			switch( font.type ) {
+				case BitmapFont:
+					if ( sdfShader != null ) {
+						removeShader(sdfShader);
+						sdfShader = null;
+					}
+				case SignedDistanceField(channel, alphaCutoff, smoothing):
+					if ( sdfShader == null ) {
+						sdfShader = new h3d.shader.SignedDistanceField();
+						addShader(sdfShader);
+					}
+					sdfShader.alphaCutoff = alphaCutoff;
+					sdfShader.smoothing = smoothing;
+					sdfShader.channel = channel;
+			}
 		}
-		#end
 		if( glyphs != null ) glyphs.remove();
 		glyphs = new TileGroup(font == null ? null : font.tile, this);
 		glyphs.visible = false;

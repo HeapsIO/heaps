@@ -45,6 +45,26 @@ class FontChar {
 
 }
 
+/** Channel reading method for SDF. **/
+@:enum abstract SDFChannel(Int) from Int to Int {
+	/** Use red channel of a texture to determine distance. **/
+	var Red = 0;
+	/** Use green channel of a texture to determine distance. **/
+	var Green = 1;
+	/** Use blue channel of a texture to determine distance. **/
+	var Blue = 2;
+	/** Use alpha channel of a texture to determine distance. **/
+	var Alpha = 3;
+	/** Use RGB channels of a texture to determine distance. See here for details: https://github.com/Chlumsky/msdfgen **/
+	var MultiChannel = 4;
+}
+
+enum FontType {
+	BitmapFont;
+	/** Signed Distance Field font. Channel indexes are in RGBA order. See here for info: https://github.com/libgdx/libgdx/wiki/Distance-field-fonts **/
+	SignedDistanceField(channel : SDFChannel, alphaCutoff : Float, smoothing : Float);
+}
+
 class Font {
 
 	public var name(default, null) : String;
@@ -53,6 +73,7 @@ class Font {
 	public var lineHeight(default, null) : Int;
 	public var tile(default,null) : h2d.Tile;
 	public var tilePath(default,null) : String;
+	public var type : FontType;
 	public var charset : hxd.Charset;
 	var glyphs : Map<Int,FontChar>;
 	var nullChar : FontChar;
@@ -61,7 +82,7 @@ class Font {
 	var offsetX:Int = 0;
 	var offsetY:Int = 0;
 
-	function new(name,size) {
+	function new(name,size,?type) {
 		this.name = name;
 		this.size = size;
 		this.initSize = size;
@@ -70,6 +91,10 @@ class Font {
 		charset = hxd.Charset.getDefault();
 		if (name != null)
 			this.tilePath = haxe.io.Path.withExtension(name, "png");
+		if (type == null)
+			this.type = BitmapFont;
+		else
+			this.type = type;
 	}
 
 	public inline function getChar( code : Int ) {

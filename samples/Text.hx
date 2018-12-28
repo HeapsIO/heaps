@@ -55,6 +55,7 @@ class Text extends hxd.App {
 
 	var textWidgets:Array<TextWidget> = [];
 	var resizeWidgets: Array<TextWidget> = [];
+	var sdfText:h2d.Text;
 
 	override function init() {
 
@@ -207,6 +208,13 @@ class Text extends hxd.App {
 			tf.maxWidth = 400;
 			tf = createText(flow, "FontBuilder Divo format", Align.Left, hxd.Res.customFont.toFont());
 			tf.maxWidth = 400;
+
+			// Signed Distance Field textures can be another way to do scalable fonts apart from rasterizing every single size used.
+			// They also look nice when rotated.
+			// See here for details: https://github.com/libgdx/libgdx/wiki/Distance-field-fonts
+			sdfText = createText(flow, "Signed Distance Field texture", Align.Left, hxd.Res.sdf_font.toSdfFont(null, 3));
+			sdfText.smooth = true; // Smoothing is mandatory when scaling SDF textures.
+			sdfText.maxWidth = 400;
 		}
 
 		onResize();
@@ -217,6 +225,7 @@ class Text extends hxd.App {
 		for (w in resizeWidgets) {
 			w.setMaxWidth(Std.int(300 + Math.sin(haxe.Timer.stamp() * 0.5) * 100.0));
 		}
+		sdfText.setScale(0.5 + (Math.cos(haxe.Timer.stamp() * 0.5) + 1) * .5);
 	}
 
 	static function main() {
