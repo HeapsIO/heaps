@@ -65,12 +65,8 @@ class Config {
 			if( defined("cpp") ) Cpp else
 			if( defined("hl") ) HL else
 			Unknown;
-		switch( pf ) {
-		case HL:
-			ignoredExtensions.set("mp3", true);
-		default:
+		if ( pf != HL )
 			ignoredExtensions.set("ogg", true);
-		}
 		return pf;
 	}
 

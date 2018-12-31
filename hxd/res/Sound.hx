@@ -14,14 +14,8 @@ class Sound extends Resource {
 
 	public static function supportedFormat( fmt : SoundFormat ) {
 		return switch( fmt ) {
-		case Wav:
+		case Wav, Mp3:
 			return true;
-		case Mp3:
-			#if (flash || js)
-			return true;
-			#else
-			return false;
-			#end
 		case OggVorbis:
 			#if (hl || stb_ogg_sound)
 			return true;
