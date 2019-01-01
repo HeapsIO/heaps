@@ -1,6 +1,7 @@
-class Cursor extends hxd.App {
+class Cursor extends SampleApp {
 	
 	override function init() {
+		super.init();
 
 		engine.backgroundColor = 0xFF202020;
 
@@ -30,7 +31,7 @@ class Cursor extends hxd.App {
 		}
 		
 		var cursors : Array<hxd.Cursor> = [Default,Button,Move,TextInput,Hide,Custom(new hxd.Cursor.CustomCursor([bmp],10,16,16)),Custom(new hxd.Cursor.CustomCursor(animatedFrames,10,16,16))];
-		var pos = 0;
+		var pos = 3;
 		for( c in cursors ) {
 			var i = new h2d.Interactive(120, 20, s2d);
 			var tf = new h2d.Text(hxd.res.DefaultFont.get(), i);
@@ -57,6 +58,20 @@ class Cursor extends hxd.App {
 				default:
 			}
 		}
+
+		// It's possible to override default cursors by Custom ones.
+		// Useful when game utilizes stylized cursors for everything.
+		var doOverride = false;
+		var defOverride = new hxd.BitmapData(10, 10);
+		defOverride.line(0, 0, 5, 0, 0xffff0000);
+		defOverride.line(0, 1, 0, 5, 0xffff0000);
+		defOverride.line(0, 0, 10, 10, 0xffff0000);
+
+		addText("Override Default cursor by Custom");
+		addCheck("Enable", function() { return doOverride; }, function(v) {
+			doOverride = v;
+			hxd.Cursor.CustomCursor.setCursorOverride(Default, v ? new hxd.Cursor.CustomCursor([defOverride],10,0,0) : null);
+		});
 	}
 
 	static function main() {

@@ -12,6 +12,25 @@ enum Cursor {
 @:allow(hxd.System)
 class CustomCursor {
 
+	static var cursorOverrides:Map<Cursor, Cursor> = new Map();
+
+	/**
+		Allows to override default cursors by custom ones.
+		Custom and Hide cursor cannot be overriden.
+		Passing `null` to as `by` will remove cursor override.
+	**/
+	public static function setCursorOverride(cur:Cursor, by:CustomCursor):Void {
+		switch( cur ) {
+			case Custom(_), Hide:
+				// Ignore, can't override.
+			default:
+				if ( by == null )
+					cursorOverrides.remove(cur);
+				else
+					cursorOverrides.set(cur, Custom(by));
+		}
+	}
+
 	var frames : Array<hxd.BitmapData>;
 	var speed : Float;
 	var offsetX : Int;

@@ -179,6 +179,8 @@ class System {
 			Cursor.show(false);
 			return;
 		}
+		var overrideCursor = hxd.Cursor.CustomCursor.cursorOverrides.get(c);
+		if (overrideCursor != null) c = overrideCursor;
 		var cur : Cursor;
 		switch( c ) {
 		case Default:

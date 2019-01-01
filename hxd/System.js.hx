@@ -67,6 +67,8 @@ class System {
 		currentCustomCursor = null;
 		var canvas = @:privateAccess hxd.Window.getInstance().canvas;
 		if( canvas != null ) {
+			var overrideCursor = hxd.Cursor.CustomCursor.cursorOverrides.get(c);
+			if (overrideCursor != null) c = overrideCursor;
 			canvas.style.cursor = switch( c ) {
 			case Default: "default";
 			case Button: "pointer";

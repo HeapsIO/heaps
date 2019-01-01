@@ -60,6 +60,8 @@ class System {
 	}
 
 	public static function setNativeCursor( c : Cursor ) : Void {
+		var overrideCursor = hxd.Cursor.CustomCursor.cursorOverrides.get(c);
+		if (overrideCursor != null) c = overrideCursor;
 		flash.ui.Mouse.cursor = switch( c ) {
 		case Default: "auto";
 		case Button: "button";
