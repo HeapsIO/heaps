@@ -1,10 +1,10 @@
 package h2d.filter;
 
 class Outline extends Filter {
-	public var size(default, set) : Float;
-	public var color(default, set) : Int;
-	public var quality(default, set) : Float;
-	public var multiplyAlpha(default, set) : Bool;
+	public var size(get, set) : Float;
+	public var color(get, set) : Int;
+	public var quality(get, set) : Float;
+	public var multiplyAlpha(get, set) : Bool;
 
 	var pass : h3d.pass.Outline;
 
@@ -25,6 +25,8 @@ class Outline extends Filter {
 	inline function get_quality() return pass.quality;
 
 	inline function set_quality(v) return pass.quality = v;
+
+	inline function get_multiplyAlpha() return pass.multiplyAlpha;
 
 	inline function set_multiplyAlpha(v) return pass.multiplyAlpha = v;
 
