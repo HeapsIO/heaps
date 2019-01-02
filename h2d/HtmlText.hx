@@ -83,7 +83,7 @@ class HtmlText extends Text {
 		prevChar = -1;
 		newLine = true;
 		for( e in doc )
-			buildSizes(e, sizes);
+			buildSizes(e, font, sizes);
 
 		prevChar = -1;
 		newLine = true;
@@ -101,9 +101,9 @@ class HtmlText extends Text {
 		calcDone = true;
 	}
 
-	function buildSizes( e : Xml, sizes : Array<Int> ) {
+	function buildSizes( e : Xml, font : Font, sizes : Array<Int> ) {
 		if( e.nodeType == Xml.Element ) {
-			var len = 0, prevFont = font;
+			var len = 0;
 			var nodeName = e.nodeName.toLowerCase();
 			switch( nodeName ) {
 			case "p":
@@ -131,14 +131,13 @@ class HtmlText extends Text {
 			}
 			sizes.push(len);
 			for( child in e )
-				buildSizes(child, sizes);
+				buildSizes(child, font, sizes);
 			switch( nodeName ) {
 			case "p":
 				sizes.push( -1);// break
 				newLine = true;
 			default:
 			}
-			font = prevFont;
 		} else {
 			newLine = false;
 			var text = htmlToText(e.nodeValue);
@@ -219,6 +218,18 @@ class HtmlText extends Text {
 						if( prevGlyphs == null ) prevGlyphs = glyphs;
 						var prev = glyphs;
 						glyphs = new TileGroup(font == null ? null : font.tile, this);
+						if ( font != null ) {
+							switch( font.type ) {
+								case SignedDistanceField(channel, alphaCutoff, smoothing):
+									var shader = new h3d.shader.SignedDistanceField();
+									shader.channel = channel;
+									shader.alphaCutoff = alphaCutoff;
+									shader.smoothing = smoothing;
+									glyphs.smooth = true;
+									glyphs.addShader(shader);
+								default:
+							}
+						}
 						@:privateAccess glyphs.curColor.load(prev.curColor);
 						elements.push(glyphs);
 					default:
