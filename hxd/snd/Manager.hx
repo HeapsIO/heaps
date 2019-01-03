@@ -90,6 +90,7 @@ class Manager {
 	var soundBufferMap    : Map<String, Buffer>;
 	var freeStreamBuffers : Array<Buffer>;
 	var effectGC          : Array<Effect>;
+	var hasMasterVolume   : Bool;
 
 	private function new() {
 		try {
@@ -103,6 +104,7 @@ class Manager {
 		}
 
 		masterVolume       = 1.0;
+		hasMasterVolume    = driver.hasFeature(MasterVolume);
 		masterSoundGroup   = new SoundGroup  ("master");
 		masterChannelGroup = new ChannelGroup("master");
 		listener           = new Listener();
@@ -401,11 +403,12 @@ class Manager {
 		// --------------------------------------------------------------------
 
 		var usedEffects : Effect = null;
+		var gain = hasMasterVolume ? 1. : masterVolume;
 		for (s in sources) {
 			var c = s.channel;
 			if (c == null) continue;
 
-			var v = c.currentVolume;
+			var v = c.currentVolume * gain;
 			if (s.volume != v) {
 				s.volume = v;
 				driver.setSourceVolume(s.handle, v);
@@ -471,7 +474,7 @@ class Manager {
 		listener.direction.normalize();
 		listener.up.normalize();
 
-		driver.setMasterVolume(masterVolume);
+		if( hasMasterVolume ) driver.setMasterVolume(masterVolume);
 		driver.setListenerParams(listener.position, listener.direction, listener.up, listener.velocity);
 
 		driver.update();
