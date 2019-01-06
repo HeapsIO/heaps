@@ -315,6 +315,8 @@ class SceneEvents {
 	}
 
 	public function stopDrag() {
+		if( currentDrag != null && currentDrag.onCancel != null )
+			currentDrag.onCancel();
 		currentDrag = null;
 	}
 
