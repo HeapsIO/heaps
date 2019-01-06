@@ -14,6 +14,7 @@ class Mp3Data extends Data {
 	var buffer : haxe.io.Bytes;
 	var onEnd : Void -> Void;
 	#elseif hl
+	var bytes : haxe.io.Bytes;
 	var frameOffsets:Array<Int>;
 	var frameSamples:Array<Int>; // Sample offset of a frame.
 	var reader : Mp3File;
@@ -72,6 +73,7 @@ class Mp3Data extends Data {
 
 		#elseif hl
 
+		this.bytes = bytes;
 		// Re-reading MP3 to find offsets to each frame in file for seeking.
 		frameOffsets = new Array();
 		frameSamples = new Array();
@@ -187,9 +189,6 @@ class Mp3Data extends Data {
 		}
 		if ( currentSample < targetSample ) {
 			var frameStart = frameSamples[currentFrame];
-			var len = out.length;
-			var fpos = (currentSample - frameStart) * 4 * channels;
-			var flen = (targetSample - currentSample) * channels * 4;
 			out.blit(outPos, frame, (currentSample - frameStart) * 4 * channels, (targetSample - currentSample) * channels * 4);
 			currentSample = targetSample;
 		}
@@ -202,7 +201,7 @@ class Mp3Data extends Data {
 
 	function seekFrame(to:Int) {
 		currentFrame = to;
-		var samples : Int = mp3_decode_frame(reader, frameOffsets[to], frame, frame.length, 0);
+		var samples : Int = mp3_decode_frame(reader, bytes, bytes.length, frameOffsets[to], frame, frame.length, 0);
 		frameEnd = frameSamples[to] + samples;
 	}
 	
@@ -210,7 +209,7 @@ class Mp3Data extends Data {
 		return null;
 	}
 
-	@:hlNative("fmt", "mp3_decode_frame") static function mp3_decode_frame( o : Mp3File, position : Int, output : hl.Bytes, size : Int, offset : Int ) : Int {
+	@:hlNative("fmt", "mp3_decode_frame") static function mp3_decode_frame( o : Mp3File, bytes : hl.Bytes, size : Int, position : Int, output : hl.Bytes, outputSize : Int, offset : Int ) : Int {
 		return 0;
 	}
 
