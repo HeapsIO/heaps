@@ -65,8 +65,14 @@ class Config {
 			if( defined("cpp") ) Cpp else
 			if( defined("hl") ) HL else
 			Unknown;
-		if ( pf != HL )
-			ignoredExtensions.set("ogg", true);
+		switch( pf ) {
+			case HL:
+				#if heaps_enable_hl_mp3
+				ignoredExtensions.set("mp3", true);
+				#end
+			default:
+				ignoredExtensions.set("ogg", true);
+		}
 		return pf;
 	}
 
