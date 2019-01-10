@@ -357,7 +357,7 @@ class CdbLevel extends Layers {
 				var curY = -1;
 				var content = null;
 				for( o in objects ) {
-					var baseY = o.y + o.obj.tile.height;
+					var baseY = o.y + Std.int(o.obj.tile.height);
 					if( baseY != curY ) {
 						curY = baseY;
 						content = byY[baseY];
