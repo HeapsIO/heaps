@@ -28,7 +28,7 @@ class Displacement extends Filter {
 	}
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
-		var out = ctx.textures.allocTarget("displacementOutput", t.width, t.height, false);
+		var out = ctx.textures.allocTarget("displacementOutput", Std.int(t.width), Std.int(t.height), false);
 		ctx.engine.pushTarget(out);
 		var s = disp.shader;
 		s.texture = t.getTexture();

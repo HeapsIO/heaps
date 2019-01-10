@@ -2,7 +2,7 @@ package h2d;
 
 class Kerning {
 	public var prevChar : Int;
-	public var offset : Int;
+	public var offset : Float;
 	public var next : Null<Kerning>;
 	public function new(c, o) {
 		this.prevChar = c;
@@ -13,7 +13,7 @@ class Kerning {
 class FontChar {
 
 	public var t : h2d.Tile;
-	public var width : Int;
+	public var width : Float;
 	var kerning : Null<Kerning>;
 
 	public function new(t,w) {
@@ -39,7 +39,18 @@ class FontChar {
 
 	public function clone() {
 		var c = new FontChar(t.clone(), width);
-		c.kerning = kerning;
+		// Clone entire kerning tree in case Font got resized.
+		var k = kerning;
+		if ( k != null ) {
+			var kc = new Kerning(k.prevChar, k.offset);
+			c.kerning = kc;
+			k = k.next;
+			while ( k != null ) {
+				var kn = new Kerning(k.prevChar, k.offset);
+				kc = kc.next = kn;
+				k = k.next;
+			}
+		}
 		return c;
 	}
 
@@ -69,8 +80,8 @@ class Font {
 
 	public var name(default, null) : String;
 	public var size(default, null) : Int;
-	public var baseLine(default, null) : Int;
-	public var lineHeight(default, null) : Int;
+	public var baseLine(default, null) : Float;
+	public var lineHeight(default, null) : Float;
 	public var tile(default,null) : h2d.Tile;
 	public var tilePath(default,null) : String;
 	public var type : FontType;
@@ -79,10 +90,10 @@ class Font {
 	var nullChar : FontChar;
 	var defaultChar : FontChar;
 	var initSize:Int;
-	var offsetX:Int = 0;
-	var offsetY:Int = 0;
+	var offsetX:Float = 0;
+	var offsetY:Float = 0;
 
-	function new(name,size,?type) {
+	function new(name : String, size : Int, ?type : FontType) {
 		this.name = name;
 		this.size = size;
 		this.initSize = size;
@@ -107,7 +118,7 @@ class Font {
 		return c;
 	}
 
-	public function setOffset(x,y) {
+	public function setOffset( x : Float, y :Float ) {
 		var dx = x - offsetX;
 		var dy = y - offsetY;
 		if( dx == 0 && dy == 0 ) return;
@@ -142,13 +153,18 @@ class Font {
 	public function resizeTo( size : Int ) {
 		var ratio = size / initSize;
 		for( c in glyphs ) {
-			c.width = Std.int(c.width * ratio);
-			c.t.scaleToSize(Std.int(c.t.width * ratio), Std.int(c.t.height * ratio));
-			c.t.dx = Std.int(c.t.dx * ratio);
-			c.t.dy = Std.int(c.t.dy * ratio);
+			c.width *= ratio;
+			c.t.scaleToSize(c.t.width * ratio, c.t.height * ratio);
+			c.t.dx *= ratio;
+			c.t.dy *= ratio;
+			var k = @:privateAccess c.kerning;
+			while ( k != null ) {
+				k.offset *= ratio;
+				k = k.next;
+			}
 		}
-		lineHeight = Std.int(lineHeight * ratio);
-		baseLine = Std.int(baseLine * ratio);
+		lineHeight = lineHeight * ratio;
+		baseLine = baseLine * ratio;
 		this.size = size;
 	}
 

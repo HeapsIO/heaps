@@ -15,8 +15,8 @@ class ScaleGrid extends h2d.TileGroup {
 		super(tile,parent);
 		borderWidth = borderW;
 		borderHeight = borderH;
-		width = tile.width;
-		height = tile.height;
+		width = Std.int(tile.width);
+		height = Std.int(tile.height);
 	}
 
 	function set_tileBorders(b) {

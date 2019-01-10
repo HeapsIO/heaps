@@ -17,13 +17,13 @@ class TextInput extends Text {
 
 	var interactive : h2d.Interactive;
 	var cursorText : String;
-	var cursorX : Int;
+	var cursorX : Float;
 	var cursorXIndex : Int;
 	var cursorBlink = 0.;
 	var cursorScroll = 0;
-	var scrollX = 0;
-	var selectionPos : Int;
-	var selectionSize : Int;
+	var scrollX = 0.;
+	var selectionPos : Float;
+	var selectionSize : Float;
 	var undo : Array<TextHistoryElement> = [];
 	var redo : Array<TextHistoryElement> = [];
 	var lastChange = 0.;
@@ -259,7 +259,7 @@ class TextInput extends Text {
 		return f;
 	}
 
-	override function initGlyphs(text:hxd.UString, rebuild = true, handleAlign = true, lines:Array<Int> = null):Void {
+	override function initGlyphs(text:hxd.UString, rebuild = true, handleAlign = true, lines:Array<Float> = null):Void {
 		super.initGlyphs(text, rebuild, handleAlign, lines);
 		if( rebuild ) {
 			this.calcWidth += cursorTile.width; // cursor end pos
