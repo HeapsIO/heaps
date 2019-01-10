@@ -7,9 +7,9 @@ class Quads extends Primitive {
 	var uvs : Array<UV>;
 	var normals : Array<Point>;
 
-  /**
-  * You have to pass vertices in this order: top left, top right, bottom left, bottom right
-  */
+	/**
+	* You have to pass vertices in this order: top left, top right, bottom left, bottom right
+	*/
 	public function new( pts, ?uvs, ?normals ) {
 		this.pts = pts;
 		this.uvs = uvs;
@@ -56,9 +56,6 @@ class Quads extends Primitive {
 		}
 	}
 
-  /**
-  * Warning : not implemented
-  */
 	public function addNormals() {
 		throw "Not implemented";
 	}
