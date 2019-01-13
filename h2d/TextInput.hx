@@ -259,7 +259,7 @@ class TextInput extends Text {
 		return f;
 	}
 
-	override function initGlyphs(text:hxd.UString, rebuild = true, handleAlign = true, lines:Array<Float> = null):Void {
+	override function initGlyphs(text:hxd.UString, rebuild = true, handleAlign = true, lines:Array<Int> = null):Void {
 		super.initGlyphs(text, rebuild, handleAlign, lines);
 		if( rebuild ) {
 			this.calcWidth += cursorTile.width; // cursor end pos

@@ -227,7 +227,7 @@ class Text extends Drawable {
 		return lines.join("\n");
 	}
 
-	function initGlyphs( text : hxd.UString, rebuild = true, handleAlign = true, lines : Array<Float> = null ) : Void {
+	function initGlyphs( text : hxd.UString, rebuild = true, handleAlign = true, lines : Array<Int> = null ) : Void {
 		if( rebuild ) glyphs.clear();
 		var x = 0., y = 0., xMax = 0., xMin = 0., prevChar = -1;
 		var align = handleAlign ? textAlign : Left;
@@ -235,10 +235,10 @@ class Text extends Drawable {
 		case Center, Right, MultilineCenter, MultilineRight:
 			lines = [];
 			initGlyphs(text, false, false, lines);
-			var max = if( align == MultilineCenter || align == MultilineRight ) calcWidth else realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
-			var k = align == Center || align == MultilineCenter ? 0.5 : 1;
+			var max = if( align == MultilineCenter || align == MultilineRight ) hxd.Math.ceil(calcWidth) else realMaxWidth < 0 ? 0 : hxd.Math.ceil(realMaxWidth);
+			var k = align == Center || align == MultilineCenter ? 1 : 0;
 			for( i in 0...lines.length )
-				lines[i] = (max - lines[i]) * k;
+				lines[i] = (max - lines[i]) >> k;
 			x = lines.shift();
 			xMin = x;
 		default:
@@ -256,7 +256,7 @@ class Text extends Drawable {
 
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
-				if( calcLines ) lines.push(x);
+				if( calcLines ) lines.push(Std.int(x));
 				switch( align ) {
 				case Left:
 					x = 0;
@@ -275,7 +275,7 @@ class Text extends Drawable {
 				prevChar = cc;
 			}
 		}
-		if( calcLines ) lines.push(x);
+		if( calcLines ) lines.push(Std.int(x));
 		if( x > xMax ) xMax = x;
 
 		calcXMin = xMin;

@@ -47,7 +47,7 @@ class HtmlText extends Text {
 		return font;
 	}
 
-	override function initGlyphs( text : String, rebuild = true, handleAlign = true, ?lines : Array<Float> ) {
+	override function initGlyphs( text : String, rebuild = true, handleAlign = true, ?lines : Array<Int> ) {
 		if( rebuild ) {
 			glyphs.clear();
 			for( e in elements ) e.remove();
@@ -63,10 +63,10 @@ class HtmlText extends Text {
 			case Center, Right, MultilineCenter, MultilineRight:
 				lines = [];
 				initGlyphs(text, false, false, lines);
-				var max = if( align == MultilineCenter || align == MultilineRight ) calcWidth else realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
-				var k = align == Center || align == MultilineCenter ? 0.5 : 1;
+				var max = if( align == MultilineCenter || align == MultilineRight ) hxd.Math.ceil(calcWidth) else realMaxWidth < 0 ? 0 : hxd.Math.ceil(realMaxWidth);
+				var k = align == Center || align == MultilineCenter ? 1 : 0;
 				for( i in 0...lines.length )
-					lines[i] = (max - lines[i]) * k;
+					lines[i] = (max - lines[i]) >> k;
 				xPos = lines.shift();
 				xMin = xPos;
 			default:
@@ -90,7 +90,7 @@ class HtmlText extends Text {
 		for( e in doc )
 			addNode(e, font, rebuild, handleAlign, sizes, lines);
 
-		if (!handleAlign && !rebuild && lines != null) lines.push(xPos);
+		if (!handleAlign && !rebuild && lines != null) lines.push(hxd.Math.ceil(xPos));
 		if( xPos > xMax ) xMax = xPos;
 
 		var y = yPos;
@@ -178,7 +178,7 @@ class HtmlText extends Text {
 		return size;
 	}
 
-	function addNode( e : Xml, font : Font, rebuild : Bool, handleAlign:Bool, sizes : Array<Float>, ?lines : Array<Float> = null ) {
+	function addNode( e : Xml, font : Font, rebuild : Bool, handleAlign:Bool, sizes : Array<Float>, ?lines : Array<Int> = null ) {
 		sizePos++;
 		var calcLines = !handleAlign && !rebuild && lines != null;
 		var align = handleAlign ? textAlign : Left;
@@ -187,7 +187,7 @@ class HtmlText extends Text {
 			function makeLineBreak()
 			{
 				if( xPos > xMax ) xMax = xPos;
-				if( calcLines ) lines.push(xPos);
+				if( calcLines ) lines.push(hxd.Math.ceil(xPos));
 				switch( align ) {
 					case Left:
 						xPos = 0;
@@ -301,7 +301,7 @@ class HtmlText extends Text {
 				var cc = t.charCodeAt(i);
 				if( cc == "\n".code ) {
 					if( xPos > xMax ) xMax = xPos;
-					if( calcLines ) lines.push(xPos);
+					if( calcLines ) lines.push(hxd.Math.ceil(xPos));
 					switch( align ) {
 						case Left:
 							xPos = 0;
