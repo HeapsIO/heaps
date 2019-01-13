@@ -16,7 +16,7 @@ class ColorMatrix extends Filter {
 	inline function set_matrix(m) return pass.matrix = m;
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
-		var tout = ctx.textures.allocTarget("colorMatrixOut", Std.int(t.width), Std.int(t.height), false);
+		var tout = ctx.textures.allocTarget("colorMatrixOut", hxd.Math.ceil(t.width), hxd.Math.ceil(t.height), false);
 		pass.apply(t.getTexture(), tout);
 		return h2d.Tile.fromTexture(tout);
 	}

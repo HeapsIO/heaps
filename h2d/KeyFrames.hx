@@ -187,8 +187,8 @@ class KeyFrames extends Mask {
 		case AnchorPoint:
 			var bmp = Std.instance(l.spr, h2d.Bitmap);
 			if( bmp != null ) {
-				bmp.tile.dx = -Std.int(calcValue(0));
-				bmp.tile.dy = -Std.int(calcValue(1));
+				bmp.tile.dx = -calcValue(0);
+				bmp.tile.dy = -calcValue(1);
 			}
 		case XPosition:
 			l.spr.x = calcValue(0);

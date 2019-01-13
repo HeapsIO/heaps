@@ -25,7 +25,7 @@ class Glow extends Blur {
 		setParams();
 		var tex = t.getTexture();
 		var old = tex.filter;
-		var save = ctx.textures.allocTarget("glowSave", Std.int(t.width), Std.int(t.height), false);
+		var save = ctx.textures.allocTarget("glowSave", hxd.Math.ceil(t.width), hxd.Math.ceil(t.height), false);
 		h3d.pass.Copy.run(tex, save, None);
 		tex.filter = Linear;
 		pass.apply(ctx, tex);

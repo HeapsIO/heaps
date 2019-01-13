@@ -20,7 +20,7 @@ class Bloom extends Blur {
 	inline function set_power(v) return bloom.shader.power = v;
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
-		var dst = ctx.textures.allocTarget("dest", Std.int(t.width), Std.int(t.height), false);
+		var dst = ctx.textures.allocTarget("dest", hxd.Math.ceil(t.width), hxd.Math.ceil(t.height), false);
 		h3d.pass.Copy.run(t.getTexture(), dst);
 		var blurred = super.draw(ctx, t);
 		bloom.shader.texture = blurred.getTexture();
