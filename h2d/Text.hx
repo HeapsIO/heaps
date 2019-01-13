@@ -16,8 +16,8 @@ class Text extends Drawable {
 	public var maxWidth(default, set) : Null<Float>;
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
 
-	public var textWidth(get, null) : Int;
-	public var textHeight(get, null) : Int;
+	public var textWidth(get, null) : Float;
+	public var textHeight(get, null) : Float;
 	public var textAlign(default, set) : Align;
 	public var letterSpacing(default, set) : Float;
 	public var lineSpacing(default,set) : Float;
@@ -292,12 +292,12 @@ class Text extends Drawable {
 
 	function get_textHeight() {
 		updateSize();
-		return Math.ceil(calcHeight);
+		return calcHeight;
 	}
 
 	function get_textWidth() {
 		updateSize();
-		return Math.ceil(calcWidth);
+		return calcWidth;
 	}
 
 	function set_maxWidth(w) {
