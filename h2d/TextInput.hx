@@ -255,7 +255,7 @@ class TextInput extends Text {
 		super.set_font(f);
 		cursorTile = h2d.Tile.fromColor(0xFFFFFF, 1, font.size);
 		cursorTile.dy = 2;
-		selectionTile = h2d.Tile.fromColor(0x3399FF, 0, font.lineHeight);
+		selectionTile = h2d.Tile.fromColor(0x3399FF, 0, hxd.Math.ceil(font.lineHeight));
 		return f;
 	}
 
