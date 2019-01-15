@@ -7,6 +7,9 @@ class LightProbeBaker {
 	public var useGPU = false;
 	public var environment : h3d.scene.pbr.Environment;
 
+	var context : hide.prefab.Context;
+	var offScreenScene : h3d.scene.Scene = null;
+
 	var envMap : h3d.mat.Texture;
 	var customCamera : h3d.Camera;
 	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,1,0,0, -1,-1,1,0]),
@@ -19,23 +22,100 @@ class LightProbeBaker {
 	function getSwiz(name,comp) : hxsl.Output { return Swiz(Value(name,3),[comp]); }
 
 	var computeSH : h3d.pass.ScreenFx<h3d.shader.pbr.ComputeSH>;
-	var output0 = new h3d.mat.Texture(1, 1, [Target], RGBA32F);
-	var output1 = new h3d.mat.Texture(1, 1, [Target], RGBA32F);
-	var output2 = new h3d.mat.Texture(1, 1, [Target], RGBA32F);
-	var output3 = new h3d.mat.Texture(1, 1, [Target], RGBA32F);
-	var output4 = new h3d.mat.Texture(1, 1, [Target], RGBA32F);
-	var output5 = new h3d.mat.Texture(1, 1, [Target], RGBA32F);
-	var output6 = new h3d.mat.Texture(1, 1, [Target], RGBA32F);
-	var output7 = new h3d.mat.Texture(1, 1, [Target], RGBA32F);
+	var output0 : h3d.mat.Texture;
+	var output1 : h3d.mat.Texture;
+	var output2 : h3d.mat.Texture;
+	var output3 : h3d.mat.Texture;
+	var output4 : h3d.mat.Texture;
+	var output5 : h3d.mat.Texture;
+	var output6 : h3d.mat.Texture;
+	var output7 : h3d.mat.Texture;
 	var textureArray: Array<h3d.mat.Texture>;
 
 	public function new(){
 		customCamera = new h3d.Camera();
 		customCamera.screenRatio = 1.0;
 		customCamera.fovY = 90;
+		customCamera.zFar = 100;
+		context = new hide.prefab.Context();
 	}
 
-	public function bake(s3d : Scene, volumetricLightMap : VolumetricLightmap, resolution : Int, ?time :Float) {
+	public function dispose() {
+		if( envMap != null ) {
+			envMap.dispose();
+			envMap = null;
+		}
+		if(output0 != null) output0.dispose();
+		if(output1 != null) output1.dispose();
+		if(output2 != null) output2.dispose();
+		if(output3 != null) output3.dispose();
+		if(output4 != null) output4.dispose();
+		if(output5 != null) output5.dispose();
+		if(output6 != null) output6.dispose();
+		if(output7 != null) output7.dispose();
+		if(prim!= null) prim.dispose();
+		if(offScreenScene != null) offScreenScene.dispose();
+	}
+
+	public function initScene( sceneData : hide.prefab.Prefab, shared : hide.prefab.ContextShared, scene : hide.comp.Scene ) {
+		if(offScreenScene != null) offScreenScene.dispose();
+		offScreenScene = new h3d.scene.Scene();
+
+		var newShared = new hide.prefab.ContextShared(scene);
+		newShared.currentPath = shared.currentPath;
+		//newShared.cache = @:privateAccess hxd.res.Loader.currentInstance.cache;
+		//@:privateAccess newShared.shaderCache =  @:privateAccess hide.Ide.inst.shaderLoader.shaderCache;
+		context.shared = newShared;
+		context.shared.root3d = offScreenScene;
+		context.local3d = offScreenScene;
+
+		var whiteList = [ "level3d", "object", "model", "material", "light"];
+		function keep( p : hxd.prefab.Prefab ) {
+			for( f in whiteList )
+				if( f == p.type ) return true;
+			return false;
+		}
+		function filter( p : hxd.prefab.Prefab ) {
+			for( c in p.children ) {
+				if(!keep(c))
+					sceneData.children.remove(c);
+			}
+			for( c in p.children )
+					filter(c);
+		}
+		filter(sceneData);
+		sceneData.makeInstance(context);
+
+		/*function disableFaceCulling( o : Object ){
+			for( m in o.getMaterials() )
+				m.mainPass.culling = None;
+			for( i in 0 ... o.numChildren)
+				disableFaceCulling(o.getChildAt(i));
+		}
+		disableFaceCulling(offScreenScene);*/
+
+		offScreenScene.renderer.renderMode = LightProbe;
+		offScreenScene.camera = customCamera;
+	}
+
+	function setupScene( scene : Scene ){
+		var engine = h3d.Engine.getCurrent();
+		var ctx = @:privateAccess scene.ctx;
+
+		if( customCamera.rightHanded )
+			engine.driver.setRenderFlag(CameraHandness,1);
+
+		ctx.camera = customCamera;
+		ctx.engine = engine;
+		ctx.scene = scene;
+		ctx.start();
+		scene.renderer.start();
+		ctx.lightSystem = @:privateAccess scene.lightSystem;
+		ctx.lightSystem.initLights(ctx);
+	}
+
+	var pixels : hxd.Pixels.PixelsFloat = null;
+	public function bake( volumetricLightMap : VolumetricLightmap, resolution : Int, ?time :Float ) {
 
 		var timer = haxe.Timer.stamp();
 		var timeElapsed = 0.0;
@@ -44,30 +124,26 @@ class LightProbeBaker {
 		if(index > volumetricLightMap.getProbeCount() - 1) return time;
 
 		setupEnvMap(resolution);
-		setupShaderOutput(volumetricLightMap.shOrder);
-		var pbrRenderer = Std.instance(s3d.renderer, h3d.scene.pbr.Renderer);
-
-		// Save Scene Config
-		var oldCamera = s3d.camera;
-		var oldRenderMode = s3d.renderer.renderMode;
-		s3d.renderer.renderMode = LightProbe;
-		s3d.camera = customCamera;
-		var engine = h3d.Engine.getCurrent();
+		setupShaderOutput(volumetricLightMap.shOrder, volumetricLightMap.getProbeCount() );
 
 		var coefCount = volumetricLightMap.getCoefCount();
 		var sizeX = volumetricLightMap.probeCount.x * coefCount;
 		var sizeY = volumetricLightMap.probeCount.y * volumetricLightMap.probeCount.z;
-		if(volumetricLightMap.lightProbeTexture == null || volumetricLightMap.lightProbeTexture.width != sizeX || volumetricLightMap.lightProbeTexture.height != sizeY){
+		if( volumetricLightMap.lightProbeTexture == null || volumetricLightMap.lightProbeTexture.width != sizeX || volumetricLightMap.lightProbeTexture.height != sizeY ) {
 			if( volumetricLightMap.lightProbeTexture != null ) volumetricLightMap.lightProbeTexture.dispose();
 			volumetricLightMap.lightProbeTexture = new h3d.mat.Texture(sizeX, sizeY, [Dynamic], RGBA32F);
 			volumetricLightMap.lightProbeTexture.filter = Nearest;
 		}
 
-		var pixels : hxd.Pixels.PixelsFloat = volumetricLightMap.lightProbeTexture.capturePixels();
+		if( pixels == null || pixels.width != sizeX || pixels.height != sizeY){
+			if( pixels != null ) pixels.dispose();
+			var bytes = haxe.io.Bytes.alloc(volumetricLightMap.getProbeCount() * volumetricLightMap.getCoefCount() * 4 * 4);
+			pixels = new hxd.Pixels(sizeX, sizeY, bytes, RGBA32F, 0);
+		}
 
-		while( (time != null && timeElapsed < time) || time == null){
+		var engine = h3d.Engine.getCurrent();
+		while( ( time != null && timeElapsed < time) || time == null ) {
 			var coords = volumetricLightMap.getProbeCoords(index);
-
 			// Bake a Probe
 			for( f in 0...6 ) {
 				engine.begin();
@@ -75,58 +151,74 @@ class LightProbeBaker {
 				customCamera.update();
 				engine.pushTarget(envMap, f);
 				engine.clear(0,1,0);
-				s3d.render(engine);
+				offScreenScene.render(engine);
 				engine.popTarget();
 			}
 			volumetricLightMap.lastBakedProbeIndex = index;
 
-			var sh : SphericalHarmonic = useGPU ? convertEnvIntoSH_GPU(pbrRenderer, envMap, volumetricLightMap.shOrder) : convertEnvIntoSH_CPU(envMap, volumetricLightMap.shOrder);
-			for(coef in 0... coefCount){
-				var u = coords.x + volumetricLightMap.probeCount.x * coef;
-				var v = coords.y + coords.z * volumetricLightMap.probeCount.y;
-				pixels.setPixelF(u, v, new h3d.Vector(sh.coefR[coef], sh.coefG[coef], sh.coefB[coef], 0));
+			var pbrRenderer = Std.instance(offScreenScene.renderer, h3d.scene.pbr.Renderer);
+			if( useGPU ) {
+				drawSHIntoTexture(pbrRenderer, envMap, volumetricLightMap.shOrder, index);
+			}
+			else {
+				var pbrRenderer = Std.instance(offScreenScene.renderer, h3d.scene.pbr.Renderer);
+				var sh : SphericalHarmonic = convertEnvIntoSH_CPU(envMap, volumetricLightMap.shOrder);
+				for( coef in 0 ... coefCount ) {
+					var u = coords.x + volumetricLightMap.probeCount.x * coef;
+					var v = coords.y + coords.z * volumetricLightMap.probeCount.y;
+					pixels.setPixelF(u, v, new h3d.Vector(sh.coefR[coef], sh.coefG[coef], sh.coefB[coef], 0));
+				}
 			}
 
 			index = volumetricLightMap.lastBakedProbeIndex + 1;
-			if(index > volumetricLightMap.getProbeCount() - 1) break;
+			if( index > volumetricLightMap.getProbeCount() - 1 ) {
+				if( useGPU ) convertOuputTexturesIntoSH(volumetricLightMap, pixels);
+				volumetricLightMap.lightProbeTexture.uploadPixels(pixels, 0, 0);
+				break;
+			}
 
 			timeElapsed = haxe.Timer.stamp() - timer;
 		}
 
-		volumetricLightMap.lightProbeTexture.uploadPixels(pixels, 0, 0);
-
-		// Restore Scene Config
-		s3d.camera = oldCamera;
-		s3d.renderer.renderMode = oldRenderMode;
-
 		return time - timeElapsed;
 	}
 
-	function setupEnvMap(resolution : Int){
-		if(envMap == null || resolution != envMap.width ) {
+	function setupEnvMap( resolution : Int ) {
+		if( envMap == null || resolution != envMap.width ) {
 			if( envMap != null ) envMap.dispose();
 			envMap = new h3d.mat.Texture(resolution, resolution, [Cube, Target], RGBA32F);
 		}
 	}
 
-	public function dispose() {
-		if( envMap != null ) {
-			envMap.dispose();
-			envMap = null;
+	function setupShaderOutput( order : Int, probeCount: Int ) {
+
+		if( order > 3 || order <= 0 ){ throw "Not Supported"; return; }
+
+		if( !useGPU )
+			probeCount = 1;
+
+		if( order >= 1 && (output0 == null || output0.width != probeCount)){
+			if(output0 != null) output0.dispose();
+			output0 = new h3d.mat.Texture(probeCount, 1, [Target], RGBA32F);
 		}
-		output0.dispose();
-		output1.dispose();
-		output2.dispose();
-		output3.dispose();
-		output4.dispose();
-		output5.dispose();
-		output6.dispose();
-		output7.dispose();
-	}
-
-	function setupShaderOutput(order : Int){
-
-		if(order > 3 || order <= 0){ throw "Not Supported"; return; }
+		if( order >= 2 && (output1 == null || output1.width != probeCount)){
+			if(output1 != null) output1.dispose();
+			if(output2 != null) output2.dispose();
+			if(output3 != null) output3.dispose();
+			output1 = new h3d.mat.Texture(probeCount, 1, [Target], RGBA32F);
+			output2 = new h3d.mat.Texture(probeCount, 1, [Target], RGBA32F);
+			output3 = new h3d.mat.Texture(probeCount, 1, [Target], RGBA32F);
+		}
+		if( order >= 3 && (output4 == null || output4.width != probeCount)){
+			if(output4 != null) output4.dispose();
+			if(output5 != null) output5.dispose();
+			if(output6 != null) output6.dispose();
+			if(output7 != null) output7.dispose();
+			output4 = new h3d.mat.Texture(probeCount, 1, [Target], RGBA32F);
+			output5 = new h3d.mat.Texture(probeCount, 1, [Target], RGBA32F);
+			output6 = new h3d.mat.Texture(probeCount, 1, [Target], RGBA32F);
+			output7 = new h3d.mat.Texture(probeCount, 1, [Target], RGBA32F);
+		}
 
 		switch(order){
 			case 1:
@@ -155,8 +247,24 @@ class LightProbeBaker {
 		}
 	}
 
-	function convertEnvIntoSH_GPU(renderer : h3d.scene.Renderer, env : h3d.mat.Texture, order : Int) : SphericalHarmonic {
-		var t0 = haxe.Timer.stamp();
+	var prim : h3d.prim.Plane2D;
+	function drawSHIntoTexture(renderer : h3d.scene.Renderer, env : h3d.mat.Texture, order : Int, probeIndex: Int) {
+		if( prim == null ){
+			prim = new h3d.prim.Plane2D();
+		}
+
+		function setPrimPos( index : Int ){
+			var v = new hxd.FloatBuffer();
+			var pixelSize = (1.0 / output0.width);
+			var translation =  pixelSize * index * 2;
+			var posX = -1.0 + translation;
+			v.push( posX ) ; v.push( -1 ); v.push(0); v.push(0);
+			v.push( posX ); v.push( 1 ); v.push(0); v.push(0);
+			v.push( posX + pixelSize * 2 ); v.push( -1 ); v.push(0); v.push(0);
+			v.push( posX + pixelSize * 2 ); v.push( 1 ); v.push(0); v.push(0);
+			prim.buffer = h3d.Buffer.ofFloats(v, 4, [Quads, RawFormat]);
+		}
+		setPrimPos(probeIndex);
 
 		@:privateAccess renderer.ctx.engine = h3d.Engine.getCurrent();
 		@:privateAccess renderer.setTargets(textureArray);
@@ -164,40 +272,51 @@ class LightProbeBaker {
 		computeSH.shader.width = env.width;
 		computeSH.shader.environment = env;
 		computeSH.shader.cubeDir = cubeDir;
+		computeSH.primitive = prim;
 		computeSH.render();
 		@:privateAccess renderer.resetTarget();
 		@:privateAccess renderer.ctx.engine.flushTarget();
+	}
 
-		var sphericalHarmonic = new SphericalHarmonic(order);
+	function convertOuputTexturesIntoSH( volumetricLightMap : VolumetricLightmap, pixelsOut : hxd.Pixels.PixelsFloat ) {
+
+		var order = volumetricLightMap.shOrder;
+		var sh = new SphericalHarmonic(order);
 		var coefCount = order * order;
 		var maxCoef : Int = Std.int(Math.min(8, coefCount));
 
-		for(i in 0...maxCoef){
-			var pixel : hxd.Pixels.PixelsFloat = textureArray[i].capturePixels();
-			var coefs : h3d.Vector = pixel.getPixelF(0, 0);
-			sphericalHarmonic.coefR[i] = coefs.r;
-			sphericalHarmonic.coefG[i] = coefs.g;
-			sphericalHarmonic.coefB[i] = coefs.b;
-			// Last coefs is inside the alpha channel
-			if( order == 3 ){
-				if( i == 0 ){ sphericalHarmonic.coefR[8] = coefs.a; }
-				if( i == 1 ){ sphericalHarmonic.coefG[8] = coefs.a; }
-				if( i == 2 ){ sphericalHarmonic.coefB[8] = coefs.a; }
+		for(coef in 0 ... maxCoef){
+			var pixels : hxd.Pixels.PixelsFloat = textureArray[coef].capturePixels();
+			for( index in 0 ... pixels.width){
+				var coefs : h3d.Vector = pixels.getPixelF(index, 0);
+				var coords = volumetricLightMap.getProbeCoords(index);
+				var u = coords.x + volumetricLightMap.probeCount.x * coef;
+				var v = coords.y + coords.z * volumetricLightMap.probeCount.y;
+				pixelsOut.setPixelF(u, v, new h3d.Vector(coefs.r, coefs.g, coefs.b, 0));
+
+				// Last coefs is inside the alpha channel
+				if( order == 3 ){
+					var u = coords.x + volumetricLightMap.probeCount.x * 8;
+					var v = coords.y + coords.z * volumetricLightMap.probeCount.y;
+					var prev = pixelsOut.getPixelF(u, v);
+					if( coef == 0 ){ prev.r = coefs.a; }
+					if( coef == 1 ){ prev.g = coefs.a; }
+					if( coef == 2 ){ prev.b = coefs.a; }
+					pixelsOut.setPixelF(u, v, prev);
+				}
 			}
 		}
-		//trace("SH compute time GPU", haxe.Timer.stamp() - t0);
-		return sphericalHarmonic;
 	}
 
-	function convertEnvIntoSH_CPU(env : h3d.mat.Texture, order : Int) : SphericalHarmonic {
+	function convertEnvIntoSH_CPU( env : h3d.mat.Texture, order : Int ) : SphericalHarmonic {
 		var coefCount = order * order;
 		var sphericalHarmonic = new SphericalHarmonic(order);
 		var face : hxd.Pixels.PixelsFloat;
 		var weightSum = 0.0;
 		var invWidth = 1.0 / env.width;
-		var shData : Array<Float> = [for (value in 0...coefCount) 0];
+		var shData : Array<Float> = [for ( value in 0...coefCount ) 0];
 
-		for(f in 0...6){
+		for( f in 0...6 ){
 			face = env.capturePixels(f, 0);
 			for (u in 0...face.width) {
 				var fU : Float = (u / face.width ) * 2 - 1;// Texture coordinate U in range [-1 to 1]
@@ -222,7 +341,7 @@ class LightProbeBaker {
 		}
 		// Final scale for coefficients
 		var normProj = (4.0 * Math.PI) / weightSum;
-		for(i in 0...coefCount){
+		for( i in 0...coefCount ){
 			sphericalHarmonic.coefR[i] *= normProj;
 			sphericalHarmonic.coefG[i] *= normProj;
 			sphericalHarmonic.coefB[i] *= normProj;
@@ -230,7 +349,7 @@ class LightProbeBaker {
 		return sphericalHarmonic;
 	}
 
-	inline function evalSH(order:Int, dir:h3d.Vector, shData : Array<Float>) {
+	inline function evalSH( order : Int, dir : h3d.Vector, shData : Array<Float> ) {
 		for (l in 0...order) {
        		for (m in -l...l+1) {
 				shData[getIndex(l, m)] = evalCoef(l, m, dir);
@@ -238,13 +357,13 @@ class LightProbeBaker {
 		}
 	}
 
-	inline function getIndex(l : Int, m :Int) : Int {
+	inline function getIndex( l : Int, m :Int ) : Int {
 		return l * (l + 1) + m;
 	}
 
-	inline function getDir(u: Float, v:Float, face:Int) : h3d.Vector {
+	inline function getDir( u : Float, v : Float, face : Int ) : h3d.Vector {
 		var dir = new h3d.Vector();
-		switch(face) {
+		switch( face ) {
 			case 0: dir.x = -1.0; dir.y = -1.0 + v; dir.z = 1.0 - u;
 			case 1: dir.x = 1.0; dir.y = -1.0 + v; dir.z = -1.0 + u;
 			case 2: dir.x = 1.0 - u; dir.y = -1.0; dir.z = -1.0 + v;
@@ -257,7 +376,7 @@ class LightProbeBaker {
 		return dir;
 	}
 
-	inline function evalCoef(l : Int, m : Int, dir: h3d.Vector) : Float{
+	inline function evalCoef( l : Int, m : Int, dir : h3d.Vector ) : Float {
 		// Coef from Stupid Spherical Harmonics (SH) Peter-Pike Sloan Microsoft Corporation
 		return switch [l,m] {
 			case[0,0]:	0.282095; // 0.5 * sqrt(1/pi)
