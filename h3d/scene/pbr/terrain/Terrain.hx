@@ -25,6 +25,37 @@ class Terrain extends Object {
 		copyPass = new h3d.pass.Copy();
 	}
 
+	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
+		var o = new Terrain();
+		o.tileSize = tileSize;
+		o.cellSize = cellSize;
+		o.cellCount = cellCount;
+		o.heightMapResolution = heightMapResolution;
+		o.weightMapResolution = weightMapResolution;
+		o.showGrid = showGrid;
+		o.showChecker = showChecker;
+		o.showComplexity = showComplexity;
+		o.parallaxAmount = parallaxAmount;
+		o.parallaxMinStep = parallaxMinStep;
+		o.parallaxMaxStep = parallaxMaxStep;
+		o.heightBlendStrength = heightBlendStrength;
+		o.heightBlendSharpness = heightBlendSharpness;
+
+		o.tiles.resize(tiles.length);
+		for( i in 0...tiles.length ){
+			o.tiles[i] = Std.instance(tiles[i].clone(), Tile);
+			o.tiles[i].parent = o;
+		}
+
+		o.surfaces.resize(surfaces.length);
+		for( i in 0...surfaces.length )
+			o.surfaces[i] = surfaces[i].clone();
+
+		o.surfaceArray = surfaceArray.clone();
+
+		return o;
+	}
+
 	public function getHeight(x : Float, y : Float) : Float {
 		var z = 0.0;
 		var t = getTileAtWorldPos(x, y);

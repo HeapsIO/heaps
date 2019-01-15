@@ -30,6 +30,26 @@ class Tile extends h3d.scene.Mesh {
 		name = "tile_" + x + "_" + y;
 	}
 
+	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
+		var o = new Tile(tileX, tileY, parent);
+		o.heightMap = heightMap.clone();
+		o.surfaceIndexMap = surfaceIndexMap.clone();
+
+		o.surfaceWeights.resize(surfaceWeights.length);
+		for( i in 0...surfaceWeights.length )
+			o.surfaceWeights[i] = surfaceWeights[i].clone();
+
+		o.surfaceWeightArray = new h3d.mat.TextureArray(getTerrain().weightMapResolution, getTerrain().weightMapResolution, surfaceWeights.length, [Target], R8);
+		o.surfaceWeightArray.wrap = Clamp;
+		o.surfaceWeightArray.preventAutoDispose();
+		o.surfaceWeightArray.realloc = null;
+		for(i in 0 ... surfaceWeights.length)
+			if(surfaceWeights[i] != null) getTerrain().copyPass.apply(surfaceWeights[i], o.surfaceWeightArray, None, null, i);
+
+		o.heightmapPixels = heightmapPixels.clone();
+		return o;
+	}
+
 	function set_heightMap(v){
 		shader.heightMap = v;
 		return heightMap = v;

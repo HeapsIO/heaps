@@ -15,6 +15,14 @@ class Surface {
 		this.offset = new h3d.Vector(0);
 	}
 
+	public function clone() : Surface {
+		var o = new Surface(albedo, normal, pbr);
+		o.tilling = tilling;
+		o.offset.load(offset);
+		o.angle = angle;
+		return o;
+	}
+
 	public function dispose() {
 		if(albedo != null) albedo.dispose();
 		if(normal != null) normal.dispose();
@@ -36,6 +44,11 @@ class SurfaceArray {
 		albedo.wrap = Repeat;
 		normal.wrap = Repeat;
 		pbr.wrap = Repeat;
+	}
+
+	public function clone() : SurfaceArray {
+		var o = new SurfaceArray(albedo.layerCount, albedo.width);
+		return o;
 	}
 
 	public function dispose() {

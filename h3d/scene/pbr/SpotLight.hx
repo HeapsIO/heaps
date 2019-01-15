@@ -21,6 +21,18 @@ class SpotLight extends Light {
 		lightProj.screenRatio = 1.0;
 	}
 
+	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
+		var sl = o == null ? new SpotLight(null) : cast o;
+		super.clone(sl);
+		sl.range = range;
+		sl.maxRange = maxRange;
+		sl.angle = angle;
+		sl.fallOff = fallOff;
+		sl.cookie = cookie;
+		sl.lightProj.load(lightProj);
+		return sl;
+	}
+
 	function get_maxRange() {
 		return cullingDistance;
 	}

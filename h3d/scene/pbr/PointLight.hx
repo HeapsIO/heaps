@@ -17,6 +17,14 @@ class PointLight extends Light {
 		primitive = h3d.prim.Sphere.defaultUnitSphere();
 	}
 
+	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
+		var pl = o == null ? new PointLight(null) : cast o;
+		super.clone(pl);
+		pl.size = size;
+		pl.range = range;
+		return pl;
+	}
+
 	function get_range() {
 		return cullingDistance;
 	}

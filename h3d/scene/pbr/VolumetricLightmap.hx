@@ -42,6 +42,17 @@ class VolumetricLightmap extends h3d.scene.Mesh {
 		voxelSize = new h3d.Vector(1,1,1);
 	}
 
+	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
+		var vm = o == null ? new VolumetricLightmap(null) : cast o;
+		vm.shOrder = shOrder;
+		vm.strength = strength;
+		vm.useAlignedProb = useAlignedProb;
+		vm.lightProbeTexture = lightProbeTexture != null ? lightProbeTexture.clone() : null;
+		vm.probeCount.load(probeCount);
+		vm.voxelSize.load(voxelSize);
+		return vm;
+	}
+
 	public function getProbeSH(coords : h3d.col.IPoint, ?pixels : hxd.Pixels.PixelsFloat ) : SphericalHarmonic {
 
 		if(lightProbeTexture == null)
