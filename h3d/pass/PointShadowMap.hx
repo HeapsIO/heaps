@@ -90,7 +90,8 @@ class PointShadowMap extends Shadows {
 			return false;
 
 		if( staticTexture != null ) staticTexture.dispose();
-			staticTexture = new h3d.mat.Texture(size, size, [Target, Cube], format);
+		staticTexture = new h3d.mat.Texture(size, size, [Target, Cube], format);
+		staticTexture.name = "staticTexture";
 
 		for(i in 0 ... 6){
 			var len = buffer.readInt32();
@@ -102,10 +103,10 @@ class PointShadowMap extends Shadows {
 	}
 
 	function createDefaultShadowMap(){
-		var tex = new h3d.mat.Texture(1,1, [Cube,Target], format);
-		for(i in 0 ... 6){
+		var tex = new h3d.mat.Texture(1,1, [Target,Cube], format);
+		tex.name = "defaultStaticTexture";
+		for(i in 0 ... 6)
 			tex.clear(0xFFFFFF, i);
-		}
 		return tex;
 	}
 
@@ -141,7 +142,7 @@ class PointShadowMap extends Shadows {
 		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
 		var merge : h3d.mat.Texture = null;
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture)
-			merge = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, [Target, Cube]);
+			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, [Target, Cube]);
 
 		for(i in 0 ... 6){
 			var pointLight = cast(light, h3d.scene.pbr.PointLight);
@@ -149,6 +150,7 @@ class PointShadowMap extends Shadows {
 			var absPos = light.getAbsPos();
 			lightCamera.setCubeMap(i, new h3d.Vector(absPos.tx, absPos.ty, absPos.tz));
 			lightCamera.zFar = pointLight.range;
+			lightCamera.zNear = pointLight.zNear;
 			lightCamera.update();
 
 			ctx.engine.pushTarget(texture, i);
