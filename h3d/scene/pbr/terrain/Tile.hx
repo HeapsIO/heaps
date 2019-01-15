@@ -35,9 +35,8 @@ class Tile extends h3d.scene.Mesh {
 		o.heightMap = heightMap.clone();
 		o.surfaceIndexMap = surfaceIndexMap.clone();
 
-		o.surfaceWeights.resize(surfaceWeights.length);
 		for( i in 0...surfaceWeights.length )
-			o.surfaceWeights[i] = surfaceWeights[i].clone();
+			o.surfaceWeights.push(surfaceWeights[i].clone());
 
 		o.surfaceWeightArray = new h3d.mat.TextureArray(getTerrain().weightMapResolution, getTerrain().weightMapResolution, surfaceWeights.length, [Target], R8);
 		o.surfaceWeightArray.wrap = Clamp;

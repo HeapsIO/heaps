@@ -41,15 +41,14 @@ class Terrain extends Object {
 		o.heightBlendStrength = heightBlendStrength;
 		o.heightBlendSharpness = heightBlendSharpness;
 
-		o.tiles.resize(tiles.length);
 		for( i in 0...tiles.length ){
-			o.tiles[i] = Std.instance(tiles[i].clone(), Tile);
-			o.tiles[i].parent = o;
+			var t = Std.instance(tiles[i].clone(), Tile);
+			t.parent = o;
+			o.tiles.push(t);
 		}
 
-		o.surfaces.resize(surfaces.length);
 		for( i in 0...surfaces.length )
-			o.surfaces[i] = surfaces[i].clone();
+			o.surfaces.push(surfaces[i].clone());
 
 		o.surfaceArray = surfaceArray.clone();
 
