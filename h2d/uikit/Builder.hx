@@ -7,10 +7,8 @@ class Builder {
 
 	public var errors : Array<String> = [];
 	var path : Array<String> = [];
-	var props : Property.PropertyParser;
 
 	public function new() {
-		props = new Property.PropertyParser();
 	}
 
 	function error( msg : String ) {
@@ -50,20 +48,23 @@ class Builder {
 						path.pop();
 						continue;
 					}
-					var p = props.parse(a, pval);
+					var p = Property.get(a.toLowerCase());
 					if( p == null ) {
-						path.push(a);
-						error("Invalid attribute value '"+v+"'");
-						path.pop();
-						continue;
-					}
-					if( p == PUnknown ) {
 						path.push(a);
 						error("Unknown attribute");
 						path.pop();
 						continue;
 					}
-					if( !inst.setProp(p) )
+					var value : Dynamic;
+					try {
+						value = p.parser(pval);
+					} catch( e : Property.InvalidProperty ) {
+						path.push(a);
+						error("Invalid attribute value"+(e.message == null ? "" : " ("+e.message+")"));
+						path.pop();
+						continue;
+					}
+					if( !inst.setAttribute(p,value) )
 						error("Unsupported attribute "+a);
 				}
 				root = inst;

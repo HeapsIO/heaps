@@ -8,7 +8,7 @@ class Element {
 	public var classes : Array<String>;
 	public var parent : Element;
 	public var children : Array<Element> = [];
-	public var style : Array<Property> = [];
+	public var style : Array<Property.PValue<Dynamic>> = [];
 	var needStyleRefresh : Bool = true;
 
 	public function new(obj,component,?parent) {
@@ -26,14 +26,40 @@ class Element {
 		obj.remove();
 	}
 
-	public function setProp( p : Property ) {
-		switch( p ) {
-		case PClasses(cl):
-			classes = cl.copy();
+	public function setAttribute<P>( p : Property<P>, value : P ) {
+		if( p.id == pclass.id ) {
+			classes = cast value;
+			classes = classes.copy();
 			needStyleRefresh = true;
 			return true;
+		}
+		var handler = component.getHandler(p);
+		if( handler == null )
+			return false;
+		var found = false;
+		for( s in style )
+			if( s.p == p ) {
+				style.remove(s);
+				s.v = value;
+				style.push(s);
+				found = true;
+				break;
+			}
+		if( !found )
+			style.push(new Property.PValue(p,value));
+		handler(obj,value);
+		return true;
+	}
+
+	static var pclass = new Property("class", parseClass, []);
+	static function parseClass( v : CssParser.Value ) {
+		return switch( v ) {
+		case VIdent(i):
+			return [i];
+		case VGroup(l):
+			return [for( v in l ) switch(v) { case VIdent(i): i; default: throw new Property.InvalidProperty(); }];
 		default:
-			return component.handleProp(obj, p);
+			throw new Property.InvalidProperty();
 		}
 	}
 

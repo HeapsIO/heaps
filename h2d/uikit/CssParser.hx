@@ -46,7 +46,7 @@ class CssClass {
 	}
 }
 
-typedef CssSheet = Array<{ classes : Array<CssClass>, style : Array<Property> }>;
+typedef CssSheet = Array<{ classes : Array<CssClass>, style : Array<Property.PValue<Dynamic>> }>;
 
 class CssParser {
 
@@ -55,11 +55,9 @@ class CssParser {
 
 	var spacesTokens : Bool;
 	var tokens : Array<Token>;
-	var pparser : Property.PropertyParser;
 	public var warnings : Array<{ start : Int, end : Int, msg : String }>;
 
 	public function new() {
-		this.pparser = new Property.PropertyParser();
 	}
 
 	function error( msg : String ) {
@@ -156,21 +154,14 @@ class CssParser {
 			var name = readIdent();
 			expect(TDblDot);
 			var value = readValue();
-			var imp = false;
-			switch( value ) {
-			case VLabel("important", val):
-				imp = true;
-				value = val;
-			default:
-			}
-			var p = pparser.parse(name, value);
+			var p = Property.get(name);
 			if( p == null )
-				warnings.push({ start : start, end : pos, msg : "Invalid property value "+valueStr(value) });
-			else if( p == PUnknown )
 				warnings.push({ start : start, end : pos, msg : "Unknown property "+name });
-			else {
-				if( imp ) p = PImportant(p);
-				style.push(p);
+			else try {
+				var value = p.parser(value);
+				style.push(new Property.PValue(p,value));
+			} catch( e : Property.InvalidProperty ) {
+				warnings.push({ start : start, end : pos, msg : "Invalid property value "+valueStr(value)+(e.message == null ? "" : "("+e.message+")") });
 			}
 			if( isToken(eof) )
 				break;
@@ -183,6 +174,7 @@ class CssParser {
 		this.css = css;
 		pos = 0;
 		tokens = [];
+		warnings = [];
 		var rules = [];
 		while( true ) {
 			if( isToken(TEof) )

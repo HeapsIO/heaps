@@ -4,7 +4,7 @@ private class Rule {
 	public var id : Int;
 	public var priority : Int;
 	public var cl : CssParser.CssClass;
-	public var properties : Array<Property>;
+	public var properties : Array<Property.PValue<Dynamic>>;
 	public function new() {
 	}
 }
@@ -39,16 +39,6 @@ class CssEngine {
 
 	public function add( sheet : CssParser.CssSheet ) {
 		for( r in sheet ) {
-			var important = [];
-			for( p in r.style ) {
-				switch( p ) {
-				case PImportant(p): important.push(p);
-				default:
-				}
-			}
-			var style = r.style;
-			if( important.length != 0 )
-				style = [for( p in r.style ) if( !p.match(PImportant(_)) ) p];
 			for( cl in r.classes ) {
 				var nids = 0, nothers = 0, nnodes = 0;
 				var c = cl;
@@ -60,24 +50,12 @@ class CssEngine {
 					c = c.parent;
 				}
 				var priority = (nids << 16) | (nothers << 8) | nnodes;
-
-				if( style.length > 0 ) {
-					var rule = new Rule();
-					rule.id = rules.length;
-					rule.cl = cl;
-					rule.properties = style;
-					rule.priority = priority;
-					rules.push(rule);
-				}
-
-				if( important.length > 0 ) {
-					var rule = new Rule();
-					rule.id = rules.length;
-					rule.cl = cl;
-					rule.properties = important;
-					rule.priority = (1<<24) | priority;
-					rules.push(rule);
-				}
+				var rule = new Rule();
+				rule.id = rules.length;
+				rule.cl = cl;
+				rule.properties = r.style;
+				rule.priority = priority;
+				rules.push(rule);
 			}
 		}
 		needSort = true;
