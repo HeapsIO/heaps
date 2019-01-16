@@ -176,11 +176,11 @@ class DirShadowMap extends Shadows {
 
 		if( !ctx.computingStatic )
 			switch( mode ) {
-			case None:
+			case None, Mixed:
 				return passes;
 			case Dynamic:
 				// nothing
-			case Static, Mixed:
+			case Static:
 				if( staticTexture == null || staticTexture.isDisposed() ){
 					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
 					staticTexture.name = "defaultDirShadowMap";
