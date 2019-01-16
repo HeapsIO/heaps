@@ -27,10 +27,10 @@ class Cylinder extends Quads {
 		for( s in 0...segs ) {
 			var u = s / segs;
 			var u2 = (s + 1) / segs;
-			uvs.push(new UV(u, 1));
-			uvs.push(new UV(u2, 1));
 			uvs.push(new UV(u, 0));
 			uvs.push(new UV(u2, 0));
+			uvs.push(new UV(u, 1));
+			uvs.push(new UV(u2, 1));
 		}
 	}
 
