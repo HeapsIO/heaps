@@ -2,11 +2,13 @@ package h2d.uikit;
 
 class Element {
 
+	public var id : String;
 	public var obj : h2d.Object;
 	public var component : Component<Dynamic>;
-	public var classes : Array<String> = [];
+	public var classes : Array<String>;
 	public var parent : Element;
 	public var children : Array<Element> = [];
+	public var style : Array<Property> = [];
 	var needStyleRefresh : Bool = true;
 
 	public function new(obj,component,?parent) {
@@ -25,7 +27,6 @@ class Element {
 	}
 
 	public function setProp( p : Property ) {
-		trace( Std.string(p) );
 		switch( p ) {
 		case PClasses(cl):
 			classes = cl.copy();

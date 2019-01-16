@@ -46,6 +46,8 @@ class CssClass {
 	}
 }
 
+typedef CssSheet = Array<{ classes : Array<CssClass>, style : Array<Property> }>;
+
 class CssParser {
 
 	var css : String;
@@ -53,8 +55,11 @@ class CssParser {
 
 	var spacesTokens : Bool;
 	var tokens : Array<Token>;
+	var pparser : Property.PropertyParser;
+	public var warnings : Array<{ start : Int, end : Int, msg : String }>;
 
 	public function new() {
+		this.pparser = new Property.PropertyParser();
 	}
 
 	function error( msg : String ) {
@@ -110,6 +115,7 @@ class CssParser {
 		this.css = css;
 		pos = 0;
 		tokens = [];
+		warnings = [];
 		return parseStyle(TEof);
 	}
 
@@ -117,6 +123,7 @@ class CssParser {
 		this.css = valueStr;
 		pos = 0;
 		tokens = [];
+		warnings = [];
 		var v = readValue();
 		expect(TEof);
 		return v;
@@ -145,10 +152,26 @@ class CssParser {
 		while( true ) {
 			if( isToken(eof) )
 				break;
-			var r = readIdent();
+			var start = pos;
+			var name = readIdent();
 			expect(TDblDot);
-			var v = readValue();
-			style.push({ name : r, value : v });
+			var value = readValue();
+			var imp = false;
+			switch( value ) {
+			case VLabel("important", val):
+				imp = true;
+				value = val;
+			default:
+			}
+			var p = pparser.parse(name, value);
+			if( p == null )
+				warnings.push({ start : start, end : pos, msg : "Invalid property value "+valueStr(value) });
+			else if( p == PUnknown )
+				warnings.push({ start : start, end : pos, msg : "Unknown property "+name });
+			else {
+				if( imp ) p = PImportant(p);
+				style.push(p);
+			}
 			if( isToken(eof) )
 				break;
 			expect(TSemicolon);
@@ -156,7 +179,7 @@ class CssParser {
 		return style;
 	}
 
-	public function parseRules( css : String ) {
+	public function parseSheet( css : String ) : CssSheet {
 		this.css = css;
 		pos = 0;
 		tokens = [];

@@ -40,6 +40,7 @@ enum Property {
 	// Bitmap
 	PSource( res : hxd.res.Any );
 	// Other
+	PImportant( p : Property );
 	PCustom( name : String, value : Dynamic );
 	PUnknown;
 }
