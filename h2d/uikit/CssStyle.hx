@@ -122,6 +122,8 @@ class CssStyle {
 
 	public static function ruleMatch( c : CssParser.CssClass, e : Element ) {
 		if( c.pseudoClass != null ) {
+			if( e.classes == null )
+				return false;
 			var pc = ":" + c.pseudoClass;
 			var found = false;
 			for( cc in e.classes )
