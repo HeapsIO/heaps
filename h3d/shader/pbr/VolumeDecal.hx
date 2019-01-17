@@ -147,7 +147,7 @@ class VolumeDecal extends hxsl.Shader {
 				strength.b = pbrStrength;
 			}
 
-			output.color = pixelColor;
+			//output.color = pixelColor; // Allow override
 			output.normal = transformedNormal;
 			output.metalness = prbValues.r;
 			output.roughness = prbValues.g;
