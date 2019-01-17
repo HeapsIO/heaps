@@ -1,6 +1,89 @@
 package h3d.shader.pbr;
 
-class VolumeDecal extends hxsl.Shader {
+class DecalOverlay extends hxsl.Shader {
+	static var SRC = {
+
+		@global var global : {
+			var time : Float;
+			var pixelSize : Vec2;
+			@perObject var modelView : Mat4;
+			@perObject var modelViewInverse : Mat4;
+		};
+
+		@global var camera : {
+			var view : Mat4;
+			var proj : Mat4;
+			var position : Vec3;
+			var projFlip : Float;
+			var projDiag : Vec3;
+			var viewProj : Mat4;
+			var inverseViewProj : Mat4;
+			var zNear : Float;
+			var zFar : Float;
+			@var var dir : Vec3;
+		};
+
+		var output : {
+			color : Vec4
+		};
+
+		@const var CENTERED : Bool;
+
+		@global var depthMap : Channel;
+
+		@param var scale : Vec3;
+		@param var minBound : Vec3;
+		@param var maxBound : Vec3;
+		@param var maxAngle : Float;
+		@param var fadePower : Float;
+		@param var fadeStart : Float;
+		@param var fadeEnd : Float;
+		@param var emissive : Float;
+
+		@param var colorTexture : Sampler2D;
+
+		var calculatedUV : Vec2;
+		var pixelColor : Vec4;
+		var pixelTransformedPosition : Vec3;
+		var projectedPosition : Vec4;
+
+		function outsideBounds() : Bool {
+			return (pixelTransformedPosition.x < minBound.x || pixelTransformedPosition.x > maxBound.x ||
+					pixelTransformedPosition.y < minBound.y || pixelTransformedPosition.y > maxBound.y ||
+			 		pixelTransformedPosition.z < minBound.z || pixelTransformedPosition.z > maxBound.z );
+		}
+
+		function fragment() {
+
+			var matrix = camera.inverseViewProj * global.modelViewInverse;
+			var screenPos = projectedPosition.xy / projectedPosition.w;
+			var depth = depthMap.get(screenToUv(screenPos));
+			var ruv = vec4( screenPos, depth, 1 );
+			var wpos = ruv * matrix;
+			var ppos = ruv * camera.inverseViewProj;
+
+			pixelTransformedPosition = ppos.xyz / ppos.w;
+			var pos = (wpos.xyz / wpos.w);
+			calculatedUV = pos.xy;
+			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(pos.z) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
+
+			if( CENTERED )
+				calculatedUV += 0.5;
+
+			if(	outsideBounds() )
+				discard;
+
+			var color = colorTexture.get(calculatedUV);
+			pixelColor = color + color * emissive;
+		}
+	}
+
+	public function new( ) {
+		super();
+	}
+}
+
+class DecalPBR extends hxsl.Shader {
 
 	static var SRC = {
 

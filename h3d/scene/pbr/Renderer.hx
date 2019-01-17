@@ -42,10 +42,21 @@ typedef RenderProps = {
 	var occlusion : Float;
 }
 
+class DepthCopy extends h3d.shader.ScreenShader {
+
+	static var SRC = {
+		@ignore @param var depthTexture : Channel;
+		function fragment() {
+			pixelColor = vec4(depthTexture.get(calculatedUV));
+		}
+	}
+}
+
 class Renderer extends h3d.scene.Renderer {
 	var slides = new h3d.pass.ScreenFx(new h3d.shader.pbr.Slides());
 	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
 	var tonemap = new h3d.pass.ScreenFx(new h3d.shader.pbr.ToneMapping());
+	var depthCopy = new h3d.pass.ScreenFx(new DepthCopy());
 	var pbrLightPass : h3d.mat.Pass;
 	var screenLightPass : h3d.pass.ScreenFx<h3d.shader.ScreenShader>;
 	var fxaa = new h3d.pass.FXAA();
@@ -66,8 +77,7 @@ class Renderer extends h3d.scene.Renderer {
 		Value("output.color"),
 		Vec4([Value("output.normal",3),ALPHA]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
-		Vec4([Value("output.emissive"),Const(0),Const(0), ALPHA /* ? */]),
-		Vec4([Value("output.depth"), Const(0),Const(0),Const(0)])
+		Vec4([Value("output.emissive"),Value("output.depth"),Const(0), ALPHA /* ? */])
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
@@ -75,6 +85,7 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
 		Vec4([Value("output.emissive"), Const(0), Const(0), Const(1)]),
 	]);
+
 
 	public function new(env) {
 		super();
@@ -113,7 +124,7 @@ class Renderer extends h3d.scene.Renderer {
 				to be discarded when the camera is inside its volume.
 			*/
 			pbrLightPass.culling = Front;
-			pbrLightPass.depth(false, Greater);
+			pbrLightPass.depth(false, GreaterEqual);
 			pbrLightPass.enableLights = true;
 		}
 		ctx.pbrLightPass = pbrLightPass;
@@ -167,21 +178,28 @@ class Renderer extends h3d.scene.Renderer {
 
 		drawShadows();
 
-		var albedo = allocTarget("albedo");
-		var normal = allocTarget("normalDepth",false,1.,RGBA16F);
+		var albedo = allocTarget("albedo", true, 1.);
+		var normal = allocTarget("normal",false,1.,RGBA16F);
 		var pbr = allocTarget("pbr",false,1.);
 		var other = allocTarget("other",false,1.,RGBA32F);
-		var depth = allocTarget("depth",false,1.,R32F);
 
 		ctx.setGlobal("albedoMap",{ texture : albedo, channel : hxsl.Channel.R });
-		ctx.setGlobal("depthMap",{ texture : depth, channel : hxsl.Channel.R });
+		ctx.setGlobal("depthMap",{ texture : other, channel : hxsl.Channel.G });
 		ctx.setGlobal("normalMap",{ texture : normal, channel : hxsl.Channel.R });
 		ctx.setGlobal("occlusionMap",{ texture : pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("bloom",null);
 
-		setTargets([albedo,normal,pbr,other,depth]);
+		setTargets([albedo,normal,pbr,other]);
 		clear(0, 1, 0);
 		mainDraw();
+
+		var depth = allocTarget("depth",false,1.,R32F);
+		var depthMap = ctx.getGlobal("depthMap");
+		depthCopy.shader.depthTexture = depthMap.texture;
+		depthCopy.shader.depthTextureChannel = depthMap.channel;
+		setTargets([depth]);
+		depthCopy.render();
+		ctx.setGlobal("depthMap",{ texture : depth, channel : hxsl.Channel.R });
 
 		setTargets([albedo,normal,pbr,other]);
 		decalsOutput.draw(get("decal"));
