@@ -61,18 +61,19 @@ class Renderer extends h3d.scene.Renderer {
 	public var exposure(get,set) : Float;
 	public var debugMode = 0;
 
-
 	static var ALPHA : hxsl.Output = Swiz(Value("output.color"),[W]);
 	var output = new h3d.pass.Output("mrt",[
 		Value("output.color"),
 		Vec4([Value("output.normal",3),ALPHA]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
-		Vec4([Value("output.emissive"),Value("output.depth"),Const(0), ALPHA /* ? */])
+		Vec4([Value("output.emissive"),Const(0),Const(0), ALPHA /* ? */]),
+		Vec4([Value("output.depth"), Const(0),Const(0),Const(0)])
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
+		Vec4([Value("output.emissive"), Const(0), Const(0), Const(1)]),
 	]);
 
 	public function new(env) {
@@ -170,18 +171,19 @@ class Renderer extends h3d.scene.Renderer {
 		var normal = allocTarget("normalDepth",false,1.,RGBA16F);
 		var pbr = allocTarget("pbr",false,1.);
 		var other = allocTarget("other",false,1.,RGBA32F);
+		var depth = allocTarget("depth",false,1.,R32F);
 
 		ctx.setGlobal("albedoMap",{ texture : albedo, channel : hxsl.Channel.R });
-		ctx.setGlobal("depthMap",{ texture : other, channel : hxsl.Channel.G });
+		ctx.setGlobal("depthMap",{ texture : depth, channel : hxsl.Channel.R });
 		ctx.setGlobal("normalMap",{ texture : normal, channel : hxsl.Channel.R });
 		ctx.setGlobal("occlusionMap",{ texture : pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("bloom",null);
 
-		setTargets([albedo,normal,pbr,other]);
+		setTargets([albedo,normal,pbr,other,depth]);
 		clear(0, 1, 0);
 		mainDraw();
 
-		setTargets([albedo,normal,pbr]);
+		setTargets([albedo,normal,pbr,other]);
 		decalsOutput.draw(get("decal"));
 
 		setTarget(albedo);
