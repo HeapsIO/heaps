@@ -115,21 +115,13 @@ class VolumeDecal extends hxsl.Shader {
 			if(	outsideBounds() )
 				discard;
 
-			strength = vec4(0);
-			prbValues = vec4(0);
+			strength = vec4(0,0,0,0);
+			prbValues = vec4(0,0,0,0);
 
 			if( USE_ALBEDO ) {
 				var albedo = albedoTexture.get(calculatedUV);
 				pixelColor = albedo;
 				strength.r = albedoStrength;
-			}
-
-			if( USE_PBR ) {
-				var pbr = pbrTexture.get(calculatedUV).rgb;
-				prbValues.r = pbr.r;
-				prbValues.g = 1 - pbr.g * pbr.g;
-				prbValues.b = pbr.b;
-				strength.g = pbrStrength;
 			}
 
 			if( USE_NORMAL ) {
@@ -144,7 +136,15 @@ class VolumeDecal extends hxsl.Shader {
 				var tanX = worldTangent.xyz.normalize();
 				var tanY = n.cross(tanX) * -1;
 				transformedNormal = (nf.x * tanX + nf.y * tanY + nf.z * n).normalize();
-				strength.b = normalStrength;
+				strength.g = normalStrength;
+			}
+
+			if( USE_PBR ) {
+				var pbr = pbrTexture.get(calculatedUV).rgb;
+				prbValues.r = pbr.r;
+				prbValues.g = 1 - pbr.g * pbr.g;
+				prbValues.b = pbr.b;
+				strength.b = pbrStrength;
 			}
 
 			output.color = pixelColor;
