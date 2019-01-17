@@ -30,7 +30,7 @@ class Component<T:h2d.Object> {
 		return switch( v ) { case VIdent(v): v; default: invalidProp(); }
 	}
 
-	function parseColor( v : CssParser.Value ) : Null<Int> {
+	function parseColor( v : CssParser.Value ) {
 		switch( v ) {
 		case VHex(h,color):
 			if( h.length == 3 ) {
@@ -48,14 +48,17 @@ class Component<T:h2d.Object> {
 		}
 	}
 
+	function loadResource( path : String ) {
+		return try hxd.res.Loader.currentInstance.load(path) catch( e : hxd.res.NotFound ) invalidProp("Resource not found "+path);
+	}
+
 	function parseTile( v : CssParser.Value ) {
 		try {
 			var c = parseColor(v);
 			return h2d.Tile.fromColor(c,1,1,(c>>>24)/255);
 		} catch( e : InvalidProperty ) {
 			var path = parsePath(v);
-			var res = try hxd.res.Loader.currentInstance.load(path) catch( e : hxd.res.NotFound ) invalidProp("Resource not found "+path);
-			return res.toTile();
+			return loadResource(path).toTile();
 		}
 	}
 
@@ -80,6 +83,10 @@ class Component<T:h2d.Object> {
 		return v.match(VIdent("auto")) ? null : either(v);
 	}
 
+	function parseNone<T>( either : CssParser.Value -> T, v : CssParser.Value ) : Null<T> {
+		return v.match(VIdent("none")) ? null : either(v);
+	}
+
 	function parseInt( v : CssParser.Value ) : Null<Int> {
 		return switch( v ) {
 		case VInt(i): i;
@@ -92,6 +99,64 @@ class Component<T:h2d.Object> {
 		case VInt(i): i;
 		case VFloat(f): f;
 		default: invalidProp();
+		}
+	}
+
+	function parseXY( v : CssParser.Value ) {
+		return switch( v ) {
+		case VGroup([x,y]): { x : parseFloat(x), y : parseFloat(y) };
+		default: invalidProp();
+		}
+	}
+
+	function parseHAlign( value ) : h2d.Flow.FlowAlign {
+		switch( parseIdent(value) ) {
+		case "auto":
+			return null;
+		case "middle":
+			return Middle;
+		case "left":
+			return Left;
+		case "right":
+			return Right;
+		default:
+			return invalidProp();
+		}
+	}
+
+	function parseVAlign( value ) : h2d.Flow.FlowAlign {
+		switch( parseIdent(value) ) {
+		case "auto":
+			return null;
+		case "middle":
+			return Middle;
+		case "top":
+			return Top;
+		case "bottom":
+			return Bottom;
+		default:
+			return invalidProp();
+		}
+	}
+
+	function parseAlign( value : CssParser.Value ) {
+		switch( value ) {
+		case VIdent("auto"):
+			return { h : null, v : null };
+		case VIdent(_):
+			try {
+				return { h : parseHAlign(value), v : null };
+			} catch( e : InvalidProperty ) {
+				return { h : null, v : parseVAlign(value) };
+			}
+		case VGroup([h,v]):
+			try {
+				return { h : parseHAlign(h), v : parseVAlign(v) };
+			} catch( e : InvalidProperty ) {
+				return { h : parseHAlign(v), v : parseVAlign(h) };
+			}
+		default:
+			return invalidProp();
 		}
 	}
 

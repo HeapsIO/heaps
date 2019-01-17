@@ -34,13 +34,18 @@ class Builder {
 		return doc;
 	}
 
-	function buildRec( x : Xml, root : Element ) {
+	function buildRec( x : Xml, root : Element ) : Element {
+		var inst = null;
 		switch( x.nodeType ) {
 		case Comment, DocType, ProcessingInstruction, Document:
 			// nothing
 		case CData, PCData:
 			if( !IS_EMPTY.match(x.nodeValue) ) {
 				// add text
+				var txml = Xml.createElement("text");
+				inst = buildRec(txml, root);
+				if( inst != null )
+					inst.setAttribute(Property.get("text"), StringTools.trim(x.nodeValue));
 			}
 		case Element:
 			path.push(x.nodeName);
@@ -48,7 +53,7 @@ class Builder {
 			if( comp == null ) {
 				error("Unknown node");
 			} else {
-				var inst = new Element(comp.make(root == null ? null : root.obj), comp, root);
+				inst = new Element(comp.make(root == null ? null : root.obj), comp, root);
 				var css = new CssParser();
 				for( a in x.attributes() ) {
 					var v = x.get(a);
@@ -77,13 +82,12 @@ class Builder {
 					if( !inst.setAttribute(p,value) )
 						error("Unsupported attribute "+a+" in");
 				}
-				root = inst;
 			}
 			for( e in x )
-				buildRec(e, root);
+				buildRec(e, inst == null ? root : inst);
 			path.pop();
 		}
-		return root;
+		return inst;
 	}
 
 }

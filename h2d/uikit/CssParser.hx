@@ -48,6 +48,15 @@ class CssClass {
 
 typedef CssSheet = Array<{ classes : Array<CssClass>, style : Array<Property.PValue<Dynamic>> }>;
 
+class CssParserError {
+	public var message : String;
+	public var position : Int;
+	public function new(msg,pos) {
+		this.message = msg;
+		this.position = pos;
+	}
+}
+
 class CssParser {
 
 	var css : String;
@@ -61,7 +70,7 @@ class CssParser {
 	}
 
 	function error( msg : String ) {
-		throw msg;
+		throw new CssParserError(msg,pos);
 	}
 
 	function unexpected( t : Token ) : Dynamic {
