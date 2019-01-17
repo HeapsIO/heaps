@@ -4,13 +4,16 @@ private class Rule {
 	public var id : Int;
 	public var priority : Int;
 	public var cl : CssParser.CssClass;
-	public var properties : Array<Property.PValue<Dynamic>>;
+	public var style : Array<Property.PValue<Dynamic>>;
+	public var next : Rule;
 	public function new() {
 	}
 }
 
 @:access(h2d.uikit.Element)
-class CssEngine {
+class CssStyle {
+
+	static var TAG = 0;
 
 	var rules : Array<Rule>;
 	var needSort = true;
@@ -20,21 +23,77 @@ class CssEngine {
 	}
 
 	function sortByPriority(r1:Rule, r2:Rule) {
-		var dp = r1.priority - r2.priority;
-		return dp == 0 ? r1.id - r2.id : dp;
+		var dp = r2.priority - r1.priority;
+		return dp == 0 ? r2.id - r1.id : dp;
 	}
 
-	public function applyStyle( e : Element ) {
+	function applyStyle( e : Element, force : Bool ) {
 		if( needSort ) {
 			needSort = false;
 			rules.sort(sortByPriority);
 		}
-		if( e.needStyleRefresh ) {
+		if( e.needStyleRefresh || force ) {
 			e.needStyleRefresh = false;
+			var head = null;
+			var tag = ++TAG;
+			for( p in e.style )
+				p.p.tag = tag;
 			for( r in rules ) {
 				if( !ruleMatch(r.cl,e) ) continue;
+				var match = false;
+				for( p in r.style )
+					if( p.p.tag != tag ) {
+						p.p.tag = tag;
+						match = true;
+					}
+				if( match ) {
+					r.next = head;
+					head = r;
+				}
 			}
+			// reset to default previously set properties that are no longer used
+			var changed = false;
+			var ntag = ++TAG;
+			var i = e.currentSet.length - 1;
+			while( i >= 0 ) {
+				var p = e.currentSet[i--];
+				if( p.tag == tag )
+					p.tag = ntag;
+				else {
+					changed = true;
+					e.currentSet.remove(p);
+					e.component.getHandler(p)(e.obj,p.defaultValue);
+				}
+			}
+			// apply new properties
+			var r = head;
+			while( r != null ) {
+				for( p in r.style ) {
+					var pr = p.p;
+					var h = e.component.getHandler(pr);
+					if( h == null ) continue;
+					h(e.obj, p.v);
+					changed = true;
+					if( pr.tag != ntag ) {
+						e.currentSet.push(pr);
+						pr.tag = ntag;
+					}
+				}
+				var n = r.next;
+				r.next = null;
+				r = n;
+			}
+			// reapply style properties
+			if( changed )
+				for( p in e.style ) {
+					var h = e.component.getHandler(p.p);
+					if( h != null ) h(e.obj, p.v);
+				}
+			// parent style has changed, we need to sync children
+			force = true;
 		}
+		for( c in e.children )
+			applyStyle(c, force);
 	}
 
 	public function add( sheet : CssParser.CssSheet ) {
@@ -53,7 +112,7 @@ class CssEngine {
 				var rule = new Rule();
 				rule.id = rules.length;
 				rule.cl = cl;
-				rule.properties = r.style;
+				rule.style = r.style;
 				rule.priority = priority;
 				rules.push(rule);
 			}
@@ -85,7 +144,7 @@ class CssEngine {
 			if( !found )
 				return false;
 		}
-		if( c.node != null && c.node != e.obj.name )
+		if( c.node != null && c.node != e.component.name )
 			return false;
 		if( c.id != null && c.id != e.id )
 			return false;

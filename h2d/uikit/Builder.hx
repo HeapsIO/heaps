@@ -12,21 +12,31 @@ class Builder {
 	}
 
 	function error( msg : String ) {
-		errors.push(path.join(".")+": "+msg);
+		errors.push(msg+" "+path.join("."));
 	}
 
 	function loadTile( path : String ) {
 		return hxd.res.Loader.currentInstance.load(path).toTile();
 	}
 
-	public function build( x : Xml, ?root : Element ) {
-		if( root == null )
-			root = new Element(new h2d.Flow(), Component.get("flow"));
+	public function build( x : Xml ) : Document {
+		var doc = new Document();
 		switch( x.nodeType ) {
 		case Document:
-			for( e in x )
-				build(e, root);
-		case Comment, DocType, ProcessingInstruction:
+			for( e in x ) {
+				var e = buildRec(e, null);
+				if( e != null ) doc.elements.push(e);
+			}
+		default:
+			var e = buildRec(x, null);
+			if( e != null ) doc.elements.push(e);
+		}
+		return doc;
+	}
+
+	function buildRec( x : Xml, root : Element ) {
+		switch( x.nodeType ) {
+		case Comment, DocType, ProcessingInstruction, Document:
 			// nothing
 		case CData, PCData:
 			if( !IS_EMPTY.match(x.nodeValue) ) {
@@ -36,9 +46,9 @@ class Builder {
 			path.push(x.nodeName);
 			var comp = @:privateAccess Component.COMPONENTS.get(x.nodeName);
 			if( comp == null ) {
-				error("Uknown node");
+				error("Unknown node");
 			} else {
-				var inst = new Element(comp.make(root.obj), comp, root);
+				var inst = new Element(comp.make(root == null ? null : root.obj), comp, root);
 				var css = new CssParser();
 				for( a in x.attributes() ) {
 					var v = x.get(a);
@@ -60,17 +70,17 @@ class Builder {
 						value = p.parser(pval);
 					} catch( e : Property.InvalidProperty ) {
 						path.push(a);
-						error("Invalid attribute value"+(e.message == null ? "" : " ("+e.message+")"));
+						error("Invalid attribute value"+(e.message == null ? "" : " ("+e.message+") for"));
 						path.pop();
 						continue;
 					}
 					if( !inst.setAttribute(p,value) )
-						error("Unsupported attribute "+a);
+						error("Unsupported attribute "+a+" in");
 				}
 				root = inst;
 			}
 			for( e in x )
-				build(e, root);
+				buildRec(e, root);
 			path.pop();
 		}
 		return root;

@@ -12,7 +12,7 @@ class Property<T> {
 	public var id(default,null) : Int;
 	public var defaultValue(default,null) : T;
 	public var parser(default,null) : CssParser.Value -> Dynamic;
-	var tag : Int = 0;
+	@:allow(h2d.uikit.CssStyle) var tag : Int = 0;
 
 	public function new(name,parser,def) {
 		if( MAP.exists(name) )

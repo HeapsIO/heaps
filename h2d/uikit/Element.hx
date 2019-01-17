@@ -9,6 +9,7 @@ class Element {
 	public var parent : Element;
 	public var children : Array<Element> = [];
 	public var style : Array<Property.PValue<Dynamic>> = [];
+	var currentSet : Array<Property<Dynamic>> = [];
 	var needStyleRefresh : Bool = true;
 
 	public function new(obj,component,?parent) {
@@ -45,8 +46,10 @@ class Element {
 				found = true;
 				break;
 			}
-		if( !found )
+		if( !found ) {
+			currentSet.push(p);
 			style.push(new Property.PValue(p,value));
+		}
 		handler(obj,value);
 		return true;
 	}
