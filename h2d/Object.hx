@@ -362,6 +362,12 @@ class Object {
 			c.onParentChanged();
 	}
 
+	// called when underlying Layers (Scene or otherwise) change the order of the rendering.
+	function onOrderChanged() {
+		for ( c in children )
+			c.onOrderChanged();
+	}
+
 	// kept for internal init
 	function onAdd() {
 		allocated = true;

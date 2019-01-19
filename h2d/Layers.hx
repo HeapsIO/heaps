@@ -69,7 +69,9 @@ class Layers extends Object {
 					p--;
 				}
 				children[pos] = s;
-				break;
+				// Force Interactive to reattach to scene in order to keep interaction order.
+				s.onOrderChanged();
+				return;
 			}
 	}
 
@@ -81,9 +83,11 @@ class Layers extends Object {
 						for( p in i...l-1 )
 							children[p] = children[p + 1];
 						children[l - 1] = s;
-						break;
+						// Force Interactive to reattach to scene in order to keep interaction order.
+						s.onOrderChanged();
+						return;
 					}
-				break;
+				return;
 			}
 	}
 
@@ -133,6 +137,7 @@ class Layers extends Object {
 					p--;
 				}
 				children[p + 1] = c;
+				c.onOrderChanged();
 			} else
 				ymax = c.y;
 			pos++;
