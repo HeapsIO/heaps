@@ -129,13 +129,13 @@ class Layers extends Object {
 	/**
 		Moves Object to specified index on it's layer.
 	**/
-	public function moveTo( s : Object, index : Int ) {
+	public function moveChild( s : Object, index : Int ) {
 		for( i in 0...children.length )
 			if ( children[i] == s ) {
 				var pos = 0;
 				for ( l in layersIndexes )
 					if ( l > i ) {
-						if ( (l - pos) >= index ) index = l - pos - 1;
+						if ( index >= (l - pos) ) index = l - pos - 1;
 						break;
 					} else {
 						pos = l;
@@ -149,7 +149,7 @@ class Layers extends Object {
 					}
 				} else { // over
 					pos += index;
-					for ( p in i...pos-1 )
+					for ( p in i...pos )
 						children[p] = children[p + 1];
 				}
 				children[pos] = s;
