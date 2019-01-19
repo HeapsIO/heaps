@@ -54,6 +54,9 @@ class Layers extends Object {
 		}
 	}
 
+	/**
+		Moves Object to the bottom of its layer (rendered first, behind the other Objects in layer).
+	**/
 	public function under( s : Object ) {
 		for( i in 0...children.length )
 			if( children[i] == s ) {
@@ -75,6 +78,9 @@ class Layers extends Object {
 			}
 	}
 
+	/**
+		Moves Object to the top of its layer (rendered last, in front of other Objects in layer).
+	**/
 	public function over( s : Object ) {
 		for( i in 0...children.length )
 			if( children[i] == s ) {
@@ -91,6 +97,11 @@ class Layers extends Object {
 			}
 	}
 
+	/**
+		Returns Iterator of objects contained in specified layer.  
+		Returns empty iterator if layer does not exists.  
+		Objects added or removed from Layers during iteration are not added/removed from the Iterator.
+	**/
 	public function getLayer( layer : Int ) : Iterator<Object> {
 		var a;
 		if( layer >= layerCount )
@@ -101,6 +112,19 @@ class Layers extends Object {
 			a = children.slice(start, max);
 		}
 		return new hxd.impl.ArrayIterator(a);
+	}
+
+	/**
+		Find the layer on which child object resides.  
+		Always returns 0 if provided Object is not a child of Layers.
+	**/
+	public function getChildLayer( s : Object ) : Int {
+		if ( s.parent != this ) return 0;
+
+		var index = children.indexOf(s);
+		for ( i in 0...layerCount )
+			if ( layersIndexes[i] > index ) return i - 1;
+		return layerCount - 1;
 	}
 
 	function drawLayer( ctx : RenderContext, layer : Int ) {
@@ -118,6 +142,9 @@ class Layers extends Object {
 		ctx.globalAlpha = old;
 	}
 
+	/**
+		Sorts specified layer based on Y value of it's Objects.
+	**/
 	public function ysort( layer : Int ) {
 		if( layer >= layerCount ) return;
 		var start = layer == 0 ? 0 : layersIndexes[layer - 1];
