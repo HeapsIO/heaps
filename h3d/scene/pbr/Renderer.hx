@@ -174,9 +174,6 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function render() {
 		var props : RenderProps = props;
-		var ls = getLightSystem();
-
-		drawShadows();
 
 		var albedo = allocTarget("albedo", true, 1.);
 		var normal = allocTarget("normal",false,1.,RGBA16F);
@@ -188,6 +185,10 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("normalMap",{ texture : normal, channel : hxsl.Channel.R });
 		ctx.setGlobal("occlusionMap",{ texture : pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("bloom",null);
+
+		var ls = Std.instance(getLightSystem(), LightSystem);
+		if( ls != null ) ls.init(this);
+		drawShadows();
 
 		setTargets([albedo,normal,pbr,other]);
 		clear(0, 1, 0);
@@ -267,7 +268,6 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrDirect.doDiscard = true;
 
-		var ls = Std.instance(ls, LightSystem);
 		var lpass = screenLightPass;
 		if( lpass == null ) {
 			lpass = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
@@ -276,10 +276,13 @@ class Renderer extends h3d.scene.Renderer {
 			lpass.pass.setBlendMode(Add);
 			screenLightPass = lpass;
 		}
-		if( ls != null ) ls.drawLights(this, lpass);
 
+		// Draw DirLight, screenShader
+		pbrProps.isScreen = true;
+		if( ls != null )  ls.drawScreenLights(this, lpass);
+		// Draw others lights with their primitive
 		pbrProps.isScreen = false;
-		draw("lights");
+		draw(pbrLightPass.name);
 
 		if( renderMode == LightProbe ) {
 			pbrProps.isScreen = true;

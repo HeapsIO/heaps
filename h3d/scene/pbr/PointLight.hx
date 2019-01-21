@@ -53,8 +53,23 @@ class PointLight extends Light {
 	}
 
 	override function emit(ctx:RenderContext) {
+
+		if( ctx.computingStatic ){
+			super.emit(ctx);
+			return;
+		}
+
 		if( ctx.pbrLightPass == null )
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
+
+		var s = new h3d.col.Sphere();
+		s.x = absPos._41;
+		s.y = absPos._42;
+		s.z = absPos._43;
+		s.r = cullingDistance;
+
+		if( !ctx.camera.frustum.hasSphere(s) )
+			return;
 
 		super.emit(ctx);
 		ctx.emitPass(ctx.pbrLightPass, this);

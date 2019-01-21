@@ -174,7 +174,7 @@ class DirShadowMap extends Shadows {
 
 	override function draw( passes ) {
 
-		if( !ctx.computingStatic )
+		if( !ctx.computingStatic ){
 			switch( mode ) {
 			case None, Mixed:
 				return passes;
@@ -190,8 +190,9 @@ class DirShadowMap extends Shadows {
 					return passes;
 				}
 			}
+		}
 
-		passes = filterPasses(passes);
+		var passes = filterPasses(passes);
 
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
