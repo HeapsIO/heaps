@@ -5,12 +5,11 @@ dist: trusty
 
 haxe:
   - development
-  - "3.4.7"
-  - "3.4.4"
+  - "4.0.0-preview5"
 
 matrix:
   allow_failures:
-    - haxe: development
+    - haxe: "3.4.7"
 
 install:
   - yes | haxelib install all
