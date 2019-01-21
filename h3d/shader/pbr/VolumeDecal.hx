@@ -65,7 +65,7 @@ class DecalOverlay extends hxsl.Shader {
 			pixelTransformedPosition = ppos.xyz / ppos.w;
 			var pos = (wpos.xyz / wpos.w);
 			calculatedUV = pos.xy;
-			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(pos.z) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
+			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(pos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
 
 			if( CENTERED )
 				calculatedUV += 0.5;
@@ -75,6 +75,7 @@ class DecalOverlay extends hxsl.Shader {
 
 			var color = colorTexture.get(calculatedUV);
 			pixelColor = color + color * emissive;
+			pixelColor.a *= fadeFactor;
 		}
 	}
 
@@ -117,6 +118,7 @@ class DecalPBR extends hxsl.Shader {
 			albedoStrength : Float,
 			normalStrength : Float,
 			pbrStrength : Float,
+			emissiveStrength : Float,
 		};
 
 		@const var CENTERED : Bool;
@@ -190,7 +192,7 @@ class DecalPBR extends hxsl.Shader {
 			pixelTransformedPosition = ppos.xyz / ppos.w;
 			var pos = (wpos.xyz / wpos.w);
 			calculatedUV = pos.xy;
-			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(pos.z) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
+			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(pos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
 
 			if( CENTERED )
 				calculatedUV += 0.5;
@@ -235,10 +237,11 @@ class DecalPBR extends hxsl.Shader {
 			output.metalness = prbValues.r;
 			output.roughness = prbValues.g;
 			output.occlusion = prbValues.b;
-			output.emissive = emissive * pixelColor.a;
+			output.emissive = emissive;
 			output.albedoStrength = strength.r * fadeFactor;
 			output.normalStrength = strength.g * fadeFactor;
 			output.pbrStrength = strength.b * fadeFactor;
+			output.emissiveStrength = fadeFactor;
 		}
 	};
 
