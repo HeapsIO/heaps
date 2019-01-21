@@ -102,7 +102,8 @@ class Layers extends Object {
 				}
 				children[pos] = s;
 				// Force Interactive to reattach to scene in order to keep interaction order.
-				s.onOrderChanged();
+				if ( s.allocated )
+					s.onHierarchyMoved(false);
 				return;
 			}
 	}
@@ -119,7 +120,8 @@ class Layers extends Object {
 							children[p] = children[p + 1];
 						children[l - 1] = s;
 						// Force Interactive to reattach to scene in order to keep interaction order.
-						s.onOrderChanged();
+						if ( s.allocated )
+							s.onHierarchyMoved(false);
 						return;
 					}
 				return;
@@ -153,7 +155,8 @@ class Layers extends Object {
 						children[p] = children[p + 1];
 				}
 				children[pos] = s;
-				s.onOrderChanged();
+				if ( s.allocated )
+					s.onHierarchyMoved(false);
 				return;
 			}
 	}
@@ -238,7 +241,8 @@ class Layers extends Object {
 					p--;
 				}
 				children[p + 1] = c;
-				c.onOrderChanged();
+				if ( c.allocated )
+					c.onHierarchyMoved(false);
 			} else
 				ymax = c.y;
 			pos++;

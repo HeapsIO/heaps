@@ -72,21 +72,15 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		if( backgroundColor != null || forSize ) addBounds(relativeTo, out, 0, 0, Std.int(width), Std.int(height));
 	}
 
-	override function onParentChanged() {
-		super.onParentChanged();
+	override private function onHierarchyMoved(parentChanged:Bool)
+	{
+		super.onHierarchyMoved(parentChanged);
 		if( scene != null ) {
 			scene.removeEventTarget(this);
 			scene.addEventTarget(this);
 		}
-		updateMask();
-	}
-
-	override function onOrderChanged() {
-		super.onOrderChanged();
-		if (scene != null) {
-			scene.removeEventTarget(this);
-			scene.addEventTarget(this);
-		}
+		if ( parentChanged )
+			updateMask();
 	}
 
 	function updateMask() {
