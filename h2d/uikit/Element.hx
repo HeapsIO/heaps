@@ -1,5 +1,12 @@
 package h2d.uikit;
 
+enum SetAttributeResult {
+	Ok;
+	Unknown;
+	Unsupported;
+	InvalidValue( ?msg : String );
+}
+
 class Element {
 
 	public var id : String;
@@ -8,8 +15,8 @@ class Element {
 	public var classes : Array<String>;
 	public var parent : Element;
 	public var children : Array<Element> = [];
-	public var style : Array<Property.PValue<Dynamic>> = [];
-	var currentSet : Array<Property<Dynamic>> = [];
+	var style : Array<{ p : Property, value : Any }> = [];
+	var currentSet : Array<Property> = [];
 	var needStyleRefresh : Bool = true;
 
 	public function new(obj,component,?parent) {
@@ -27,43 +34,60 @@ class Element {
 		obj.remove();
 	}
 
-	public function setAttribute<P>( p : Property<P>, value : P ) {
+	/*
+	public function initAttributes( attr : haxe.DynamicAccess<String> ) {
+		var p = new CssParser();
+		for( a in attr.keys() ) {
+			var h = component.getHandler()
+			var v = attr.get(a);
+			var value = p.parseValue(v);
+		}
+	}*/
+
+	public function setAttribute( p : String, value : CssValue ) : SetAttributeResult {
+		var p = Property.get(p,false);
+		if( p == null )
+			return Unknown;
 		if( p.id == pclass.id ) {
-			classes = cast value;
-			classes = classes.copy();
+			switch( value ) {
+			case VIdent(i): classes = [i];
+			case VGroup(vl): classes = [for( v in vl ) switch( v ) { case VIdent(i): i; default: return InvalidValue(); }];
+			default: return InvalidValue();
+			}
 			needStyleRefresh = true;
-			return true;
+			return Ok;
 		}
 		var handler = component.getHandler(p);
 		if( handler == null )
-			return false;
+			return Unsupported;
+		var v : Dynamic;
+		try {
+			v = handler.parser(value);
+		} catch( e : Property.InvalidProperty ) {
+			return InvalidValue(e.message);
+		}
 		var found = false;
 		for( s in style )
 			if( s.p == p ) {
+				s.value = v;
 				style.remove(s);
-				s.v = value;
 				style.push(s);
 				found = true;
 				break;
 			}
 		if( !found ) {
-			currentSet.push(p);
-			style.push(new Property.PValue(p,value));
+			style.push({ p : p , value : v });
+			for( s in currentSet )
+				if( s == p ) {
+					found = true;
+					break;
+				}
+			if( !found ) currentSet.push(p);
 		}
-		handler(obj,value);
-		return true;
+		handler.apply(obj,v);
+		return Ok;
 	}
 
-	static var pclass = new Property("class", parseClass, []);
-	static function parseClass( v : CssParser.Value ) {
-		return switch( v ) {
-		case VIdent(i):
-			return [i];
-		case VGroup(l):
-			return [for( v in l ) switch(v) { case VIdent(i): i; default: throw new Property.InvalidProperty(); }];
-		default:
-			throw new Property.InvalidProperty();
-		}
-	}
+	static var pclass = Property.get("class");
 
 }

@@ -1,4 +1,5 @@
 package h2d.uikit;
+import h2d.uikit.CssValue;
 
 enum Token {
 	TIdent( i : String );
@@ -22,20 +23,6 @@ enum Token {
 	TStar;
 }
 
-enum Value {
-	VIdent( i : String );
-	VString( s : String );
-	VUnit( v : Float, unit : String );
-	VFloat( v : Float );
-	VInt( v : Int );
-	VHex( h : String, v : Int );
-	VList( l : Array<Value> );
-	VGroup( l : Array<Value> );
-	VCall( f : String, vl : Array<Value> );
-	VLabel( v : String, val : Value );
-	VSlash;
-}
-
 class CssClass {
 	public var parent : Null<CssClass>;
 	public var node : Null<String>;
@@ -46,16 +33,7 @@ class CssClass {
 	}
 }
 
-typedef CssSheet = Array<{ classes : Array<CssClass>, style : Array<Property.PValue<Dynamic>> }>;
-
-class CssParserError {
-	public var message : String;
-	public var position : Int;
-	public function new(msg,pos) {
-		this.message = msg;
-		this.position = pos;
-	}
-}
+typedef CssSheet = Array<{ classes : Array<CssClass>, style : Array<{ p : Property, value : CssValue }> }>;
 
 class CssParser {
 
@@ -70,7 +48,7 @@ class CssParser {
 	}
 
 	function error( msg : String ) {
-		throw new CssParserError(msg,pos);
+		throw new Error(msg,pos);
 	}
 
 	function unexpected( t : Token ) : Dynamic {
@@ -163,15 +141,11 @@ class CssParser {
 			var name = readIdent();
 			expect(TDblDot);
 			var value = readValue();
-			var p = Property.get(name);
+			var p = Property.get(name, false);
 			if( p == null )
 				warnings.push({ start : start, end : pos, msg : "Unknown property "+name });
-			else try {
-				var value = p.parser(value);
-				style.push(new Property.PValue(p,value));
-			} catch( e : Property.InvalidProperty ) {
-				warnings.push({ start : start, end : pos, msg : "Invalid property value "+valueStr(value)+(e.message == null ? "" : "("+e.message+")") });
-			}
+			else
+				style.push({ p : p, value : value });
 			if( isToken(eof) )
 				break;
 			expect(TSemicolon);
@@ -184,7 +158,7 @@ class CssParser {
 		pos = 0;
 		tokens = [];
 		warnings = [];
-		var rules = [];
+		var rules : CssSheet = [];
 		while( true ) {
 			if( isToken(TEof) )
 				break;
@@ -270,7 +244,7 @@ class CssParser {
 		}
 	}
 
-	function readValue(?opt)  : Value {
+	function readValue(?opt) : CssValue {
 		var t = readToken();
 		var v = switch( t ) {
 		case TSharp:
@@ -334,7 +308,7 @@ class CssParser {
 		};
 	}
 
-	function readValueNext( v : Value ) : Value {
+	function readValueNext( v : CssValue ) : CssValue {
 		var t = readToken();
 		return switch( t ) {
 		case TPOpen:

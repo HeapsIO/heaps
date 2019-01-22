@@ -7,37 +7,30 @@ class InvalidProperty {
 	}
 }
 
-class Property<T> {
+class Property {
 	public var name(default,null) : String;
 	public var id(default,null) : Int;
-	public var defaultValue(default,null) : T;
-	public var parser(default,null) : CssParser.Value -> Dynamic;
 	@:allow(h2d.uikit.CssStyle) var tag : Int = 0;
 
-	public function new(name,parser,def) {
-		if( MAP.exists(name) )
-			throw "Duplicate property "+name;
+	function new(name) {
 		this.id = ALL.length;
 		this.name = name;
-		this.defaultValue = def;
-		this.parser = parser;
 		ALL.push(this);
 		MAP.set(name, this);
 	}
 
-	public static function get( name : String ) {
-		return MAP.get(name);
+	public static function get( name : String, create = true ) {
+		if( MAP == null ) {
+			MAP = new Map();
+			ALL = [];
+		}
+		var p = MAP.get(name);
+		if( p == null && create )
+			p = new Property(name);
+		return p;
 	}
-	static var ALL = new Array<Property<Dynamic>>();
-	static var MAP = new Map<String, Property<Dynamic>>();
 
-}
+	static var ALL : Array<Property>;
+	static var MAP : Map<String, Property>;
 
-class PValue<T> {
-	public var p : Property<T>;
-	public var v : T;
-	public function new(p,v) {
-		this.p = p;
-		this.v = v;
-	}
 }

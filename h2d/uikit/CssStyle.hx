@@ -1,10 +1,21 @@
 package h2d.uikit;
 
+private class RuleStyle {
+	public var p : Property;
+	public var value : CssValue;
+	public var lastHandler : Component.PropertyHandler<Dynamic,Dynamic>;
+	public var lastValue : Dynamic;
+	public function new(p,value) {
+		this.p = p;
+		this.value = value;
+	}
+}
+
 private class Rule {
 	public var id : Int;
 	public var priority : Int;
 	public var cl : CssParser.CssClass;
-	public var style : Array<Property.PValue<Dynamic>>;
+	public var style : Array<RuleStyle>;
 	public var next : Rule;
 	public function new() {
 	}
@@ -36,8 +47,8 @@ class CssStyle {
 			e.needStyleRefresh = false;
 			var head = null;
 			var tag = ++TAG;
-			for( p in e.style )
-				p.p.tag = tag;
+			for( p in e.currentSet )
+				p.tag = tag;
 			for( r in rules ) {
 				if( !ruleMatch(r.cl,e) ) continue;
 				var match = false;
@@ -62,7 +73,8 @@ class CssStyle {
 				else {
 					changed = true;
 					e.currentSet.remove(p);
-					e.component.getHandler(p)(e.obj,p.defaultValue);
+					var h = e.component.getHandler(p);
+					h.apply(e.obj,h.defaultValue);
 				}
 			}
 			// apply new properties
@@ -72,7 +84,17 @@ class CssStyle {
 					var pr = p.p;
 					var h = e.component.getHandler(pr);
 					if( h == null ) continue;
-					h(e.obj, p.v);
+					if( p.lastHandler != h ) {
+						try {
+							var value = h.parser(p.value);
+							p.lastHandler = h;
+							p.lastValue = value;
+						} catch( e : Property.InvalidProperty ) {
+							// invalid property
+							continue;
+						}
+					}
+					h.apply(e.obj, p.lastValue);
 					changed = true;
 					if( pr.tag != ntag ) {
 						e.currentSet.push(pr);
@@ -87,7 +109,7 @@ class CssStyle {
 			if( changed )
 				for( p in e.style ) {
 					var h = e.component.getHandler(p.p);
-					if( h != null ) h(e.obj, p.v);
+					if( h != null ) h.apply(e.obj, p.value);
 				}
 			// parent style has changed, we need to sync children
 			force = true;
@@ -112,7 +134,7 @@ class CssStyle {
 				var rule = new Rule();
 				rule.id = rules.length;
 				rule.cl = cl;
-				rule.style = r.style;
+				rule.style = [for( s in r.style ) new RuleStyle(s.p,s.value)];
 				rule.priority = priority;
 				rules.push(rule);
 			}

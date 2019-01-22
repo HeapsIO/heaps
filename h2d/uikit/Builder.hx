@@ -45,7 +45,7 @@ class Builder {
 				var txml = Xml.createElement("text");
 				inst = buildRec(txml, root);
 				if( inst != null )
-					inst.setAttribute(Property.get("text"), StringTools.trim(x.nodeValue));
+					inst.setAttribute("text", VString(StringTools.trim(x.nodeValue)));
 			}
 		case Element:
 			path.push(x.nodeName);
@@ -63,24 +63,19 @@ class Builder {
 						path.pop();
 						continue;
 					}
-					var p = Property.get(a.toLowerCase());
-					if( p == null ) {
+					switch( inst.setAttribute(a.toLowerCase(),pval) ) {
+					case Ok:
+					case Unknown:
 						path.push(a);
 						error("Unknown attribute");
 						path.pop();
-						continue;
-					}
-					var value : Dynamic;
-					try {
-						value = p.parser(pval);
-					} catch( e : Property.InvalidProperty ) {
-						path.push(a);
-						error("Invalid attribute value"+(e.message == null ? "" : " ("+e.message+") for"));
-						path.pop();
-						continue;
-					}
-					if( !inst.setAttribute(p,value) )
+					case Unsupported:
 						error("Unsupported attribute "+a+" in");
+					case InvalidValue(msg):
+						path.push(a);
+						error("Invalid attribute value"+(msg == null ? "" : " ("+msg+") for"));
+						path.pop();
+					}
 				}
 			}
 			for( e in x )

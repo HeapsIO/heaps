@@ -1,36 +1,47 @@
 package h2d.uikit;
 import h2d.uikit.Property;
 
+class PropertyHandler<O,P> {
+
+	public var defaultValue(default,null) : P;
+	public var parser(default,null) : CssValue -> P;
+	public var apply(default,null) : O -> P -> Void;
+
+	public function new(parser,def,apply) {
+		this.parser = parser;
+		this.defaultValue = def;
+		this.apply = apply;
+	}
+}
+
 class Component<T:h2d.Object> {
 
 	public var name : String;
-	public var cl : Class<T>;
 	public var make : h2d.Object -> T;
 	public var parent : Component<Dynamic>;
-	var propsHandler : Array<T -> Dynamic -> Void>;
+	var propsHandler : Array<PropertyHandler<T,Dynamic>>;
 
-	public function new(name, cl, make, parent) {
+	public function new(name, make, parent) {
 		this.name = name;
-		this.cl = cl;
 		this.make = make;
 		this.parent = parent;
 		propsHandler = parent == null ? [] : cast parent.propsHandler.copy();
 		COMPONENTS.set(name, this);
 	}
 
-	public inline function getHandler<P>( p : Property<P> ) : T -> P -> Void {
-		return propsHandler[p.id];
+	public inline function getHandler<P>( p : Property ) : PropertyHandler<T,P> {
+		return cast propsHandler[p.id];
 	}
 
 	function invalidProp( ?msg ) : Dynamic {
 		throw new InvalidProperty(msg);
 	}
 
-	function parseIdent( v : CssParser.Value ) {
+	function parseIdent( v : CssValue ) {
 		return switch( v ) { case VIdent(v): v; default: invalidProp(); }
 	}
 
-	function parseColor( v : CssParser.Value ) {
+	function parseColor( v : CssValue ) {
 		switch( v ) {
 		case VHex(h,color):
 			if( h.length == 3 ) {
@@ -52,7 +63,7 @@ class Component<T:h2d.Object> {
 		return try hxd.res.Loader.currentInstance.load(path) catch( e : hxd.res.NotFound ) invalidProp("Resource not found "+path);
 	}
 
-	function parseTile( v : CssParser.Value ) {
+	function parseTile( v : CssValue) {
 		try {
 			var c = parseColor(v);
 			return h2d.Tile.fromColor(c,1,1,(c>>>24)/255);
@@ -62,7 +73,7 @@ class Component<T:h2d.Object> {
 		}
 	}
 
-	function parsePath( v : CssParser.Value ) {
+	function parsePath( v : CssValue ) {
 		return switch( v ) {
 		case VString(v): v;
 		case VIdent(v): v;
@@ -71,7 +82,7 @@ class Component<T:h2d.Object> {
 		}
 	}
 
-	function parseBool( v : CssParser.Value ) : Null<Bool> {
+	function parseBool( v : CssValue ) : Null<Bool> {
 		return switch( v ) {
 		case VIdent("true") | VInt(1): true;
 		case VIdent("false") | VInt(0): false;
@@ -79,22 +90,22 @@ class Component<T:h2d.Object> {
 		}
 	}
 
-	function parseAuto<T>( either : CssParser.Value -> T, v : CssParser.Value ) : Null<T> {
+	function parseAuto<T>( either : CssValue -> T, v : CssValue ) : Null<T> {
 		return v.match(VIdent("auto")) ? null : either(v);
 	}
 
-	function parseNone<T>( either : CssParser.Value -> T, v : CssParser.Value ) : Null<T> {
+	function parseNone<T>( either : CssValue -> T, v : CssValue ) : Null<T> {
 		return v.match(VIdent("none")) ? null : either(v);
 	}
 
-	function parseInt( v : CssParser.Value ) : Null<Int> {
+	function parseInt( v : CssValue ) : Null<Int> {
 		return switch( v ) {
 		case VInt(i): i;
 		default: invalidProp();
 		}
 	}
 
-	function parseFloat( v : CssParser.Value ) : Float {
+	function parseFloat( v : CssValue ) : Float {
 		return switch( v ) {
 		case VInt(i): i;
 		case VFloat(f): f;
@@ -102,7 +113,7 @@ class Component<T:h2d.Object> {
 		}
 	}
 
-	function parseXY( v : CssParser.Value ) {
+	function parseXY( v : CssValue ) {
 		return switch( v ) {
 		case VGroup([x,y]): { x : parseFloat(x), y : parseFloat(y) };
 		default: invalidProp();
@@ -139,7 +150,7 @@ class Component<T:h2d.Object> {
 		}
 	}
 
-	function parseAlign( value : CssParser.Value ) {
+	function parseAlign( value : CssValue ) {
 		switch( value ) {
 		case VIdent("auto"):
 			return { h : null, v : null };
@@ -160,7 +171,7 @@ class Component<T:h2d.Object> {
 		}
 	}
 
-	function parseBox( v : CssParser.Value ) {
+	function parseBox( v : CssValue ) {
 		switch( v ) {
 		case VInt(v):
 			return { top : v, right : v, bottom : v, left : v };
@@ -175,12 +186,8 @@ class Component<T:h2d.Object> {
 		}
 	}
 
-	inline function defineProp<P>( name : String, parser : CssParser.Value -> P, def : P ) {
-		return new Property<P>(name, parser, def);
-	}
-
-	function addHandler<P>( p : Property<P>, f : T -> P -> Void ) {
-		propsHandler[p.id] = f;
+	function addHandler<P>( p : String, parser : CssValue -> P, def : P, apply : T -> P -> Void ) {
+		propsHandler[Property.get(p).id] = new PropertyHandler(parser,def,apply);
 	}
 
 	public static function get( name : String ) {
