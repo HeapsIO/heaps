@@ -20,35 +20,6 @@ class Layers extends Object {
 		return addChildAt(s, layer);
 	}
 
-	/**
-		Adds an Object to specified layer and specified index of that layer.
-	**/
-	public function addAt(s : Object, layer : Int, index : Int) {
-		if ( layer >= layerCount ) {
-			add(s, layer);
-			return;
-		}
-
-		if ( s.parent == this ) {
-			var old = s.allocated;
-			s.allocated = false;
-			removeChild(s);
-			s.allocated = old;
-		}
-		if ( index <= 0 ) {
-			super.addChildAt(s, layer == 0 ? 0 : layersIndexes[layer - 1]);
-		} else {
-			var start = layer == 0 ? 0 : layersIndexes[layer - 1];
-			if (layersIndexes[layer] - start >= index)
-				super.addChildAt(s, layersIndexes[layer]);
-			else
-				super.addChildAt(s, start + index);
-		}
-
-		for ( i in layer...layerCount )
-			layersIndexes[i]++;
-	}
-
 	override function addChildAt( s : Object, layer : Int ) {
 		if( s.parent == this ) {
 			var old = s.allocated;
@@ -129,39 +100,6 @@ class Layers extends Object {
 	}
 
 	/**
-		Moves Object to specified index on it's layer.
-	**/
-	public function moveChild( s : Object, index : Int ) {
-		for( i in 0...children.length )
-			if ( children[i] == s ) {
-				var pos = 0;
-				for ( l in layersIndexes )
-					if ( l > i ) {
-						if ( index >= (l - pos) ) index = l - pos - 1;
-						break;
-					} else {
-						pos = l;
-					}
-				if ( (i - pos) > index ) { // under
-					if ( index > 0 ) pos += index;
-					var p = i;
-					while ( p > pos ) {
-						children[p] = children[p - 1];
-						p--;
-					}
-				} else { // over
-					pos += index;
-					for ( p in i...pos )
-						children[p] = children[p + 1];
-				}
-				children[pos] = s;
-				if ( s.allocated )
-					s.onHierarchyMoved(false);
-				return;
-			}
-	}
-
-	/**
 		Returns Iterator of objects contained in specified layer.  
 		Returns empty iterator if layer does not exists.  
 		Objects added or removed from Layers during iteration are not added/removed from the Iterator.
@@ -188,19 +126,6 @@ class Layers extends Object {
 		var index = children.indexOf(s);
 		for ( i in 0...layerCount )
 			if ( layersIndexes[i] > index ) return i;
-		return -1;
-	}
-
-	/**
-		Finds the index of a child in it's layer.  
-		Always returns -1 if provided Object is not a child of Layer.
-	**/
-	public function getChildLayerIndex( s : Object ) : Int {
-		if ( s.parent != this ) return -1;
-
-		var index = children.indexOf(s);
-		for ( i in 0...layerCount )
-			if ( layersIndexes[i] > index ) return (i == 0 ? index : index - layersIndexes[i - 1]);
 		return -1;
 	}
 
