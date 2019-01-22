@@ -12,9 +12,10 @@ class Mask extends Object {
 		this.height = height;
 	}
 
-	override function onParentChanged() {
-		super.onParentChanged();
-		updateMask();
+	override private function onHierarchyMoved(parentChanged:Bool) {
+		super.onHierarchyMoved(parentChanged);
+		if ( parentChanged )
+			updateMask();
 	}
 
 	override function onAdd() {
