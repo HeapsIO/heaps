@@ -430,6 +430,8 @@ class CdbLevel extends Layers {
 	}
 
 	function loadLayer( ldat : LayerSpec ) : LevelLayer {
+		if( ldat.data == null )
+			return null;
 		var t = resolveTileset(ldat.data);
 		if( t == null )
 			return null;
