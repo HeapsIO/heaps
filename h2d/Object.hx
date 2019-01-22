@@ -357,18 +357,9 @@ class Object {
 	}
 
 	// called when we're allocated already but moved in hierarchy
-	function onHierarchyMoved( parentChanged:Bool ) {
+	function onHierarchyMoved( parentChanged : Bool ) {
 		for ( c in children )
 			c.onHierarchyMoved(parentChanged);
-		// Compat
-		if ( parentChanged )
-			onParentChanged();
-	}
-
-	/**
-		Kept for compatibility, use `onHierarchyMoved` instead.
-	**/
-	function onParentChanged() {
 	}
 
 	// kept for internal init
