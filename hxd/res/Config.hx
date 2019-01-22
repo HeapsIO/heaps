@@ -67,7 +67,9 @@ class Config {
 			Unknown;
 		switch( pf ) {
 		case HL:
+			#if !heaps_enable_hl_mp3
 			ignoredExtensions.set("mp3", true);
+			#end
 		default:
 			ignoredExtensions.set("ogg", true);
 		}
