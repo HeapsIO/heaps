@@ -8,7 +8,7 @@ class Error {
 	public function new( messsage, pmin = -1, pmax = -1 ) {
 		this.message = messsage;
 		this.pmin = pmin;
-		this.pmax = pmax < 0 ? pmin : pmax;
+		this.pmax = pmax < 0 ? pmin + 1 : pmax;
 	}
 
 	public function toString() {

@@ -2,6 +2,77 @@ package h2d.uikit;
 import h2d.uikit.Property;
 import h2d.uikit.CssValue;
 
+class CustomParser extends CssValue.ValueParser {
+
+	function parseScale( value ) {
+		switch( value ) {
+		case VGroup([x,y]):
+			return { x : parseFloat(x), y : parseFloat(y) };
+		default:
+			var s = parseFloat(value);
+			return { x : s, y : s };
+		}
+	}
+
+}
+
+#if !macro
+@:uiComp("object") @:parser(h2d.uikit.BaseComponents.CustomParser)
+class ObjectComp implements h2d.uikit.Component.ComponentDecl<h2d.Object> {
+
+	@:p(ident) var name : String;
+	@:p var x : Float;
+	@:p var y : Float;
+	@:p var alpha : Float = 1;
+	@:p var rotation : Float;
+	@:p var visible : Bool;
+	@:p(scale) var scale : { x : Float, y : Float };
+	@:p var blend : h2d.BlendMode = Alpha;
+
+/*
+	function set_rotation(v) {
+		this.rotation = v * Math.PI / 180;
+	}
+
+	function set_scale(v) {
+		this.scaleX = v.x;
+		this.scaleY = v.y;
+	}
+*/
+
+}
+
+@:uiComp("drawable")
+class DrawableComp extends ObjectComp implements h2d.uikit.Component.ComponentDecl<h2d.Drawable> {
+}
+
+@:uiComp("bitmap")
+class BitmapComp extends DrawableComp implements h2d.uikit.Component.ComponentDecl<h2d.Bitmap> {
+
+	public static function create( parent : h2d.Object ) {
+		return new h2d.Bitmap(h2d.Tile.fromColor(0xFF00FF,32,32,0.5),parent);
+	}
+
+}
+
+@:uiComp("flow")
+class FlowComp extends DrawableComp implements h2d.uikit.Component.ComponentDecl<h2d.Flow> {
+
+	@:p(vAlign) var content_valign : h2d.Flow.FlowAlign;
+
+}
+
+@:uiComp("text")
+class TextComp extends DrawableComp implements h2d.uikit.Component.ComponentDecl<h2d.Text> {
+
+	public static function create( parent : h2d.Object ) {
+		return new h2d.Text(hxd.res.DefaultFont.get(),parent);
+	}
+
+}
+
+
+/*
 final class Object2D extends Component<h2d.Object> {
 
 	function new() {
@@ -100,25 +171,6 @@ final class Object2D extends Component<h2d.Object> {
 			return true;
 		default:
 			return invalidProp();
-		}
-	}
-
-	function parseScale( value ) {
-		switch( value ) {
-		case VGroup([x,y]):
-			return { x : parseFloat(x), y : parseFloat(y) };
-		default:
-			var s = parseFloat(value);
-			return { x : s, y : s };
-		}
-	}
-
-	function parseBlend( value ) : h2d.BlendMode {
-		return switch( parseIdent(value) ) {
-		case "add": Add;
-		case "alpha": Alpha;
-		case "none": None;
-		default: invalidProp();
 		}
 	}
 
@@ -255,4 +307,5 @@ final class Text extends Component<h2d.Text> {
 
 	static var inst = new Text();
 
-}
+}*/
+#end

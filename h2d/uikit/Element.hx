@@ -34,20 +34,32 @@ class Element {
 		obj.remove();
 	}
 
-	/*
 	public function initAttributes( attr : haxe.DynamicAccess<String> ) {
-		var p = new CssParser();
+		var parser = new CssParser();
 		for( a in attr.keys() ) {
-			var h = component.getHandler()
-			var v = attr.get(a);
-			var value = p.parseValue(v);
+			var p = Property.get(a,false);
+			if( p == null ) continue;
+			var h = component.getHandler(p);
+			if( h == null && p != pclass && p != pid ) continue;
+			setAttribute(a, parser.parseValue(attr.get(a)));
 		}
-	}*/
+	}
 
 	public function setAttribute( p : String, value : CssValue ) : SetAttributeResult {
 		var p = Property.get(p,false);
 		if( p == null )
 			return Unknown;
+		if( p.id == pid.id ) {
+			switch( value ) {
+			case VIdent(i):
+				if( id != i ) {
+					id = i;
+					needStyleRefresh = true;
+				}
+			default: return InvalidValue();
+			}
+			return Ok;
+		}
 		if( p.id == pclass.id ) {
 			switch( value ) {
 			case VIdent(i): classes = [i];
@@ -89,5 +101,13 @@ class Element {
 	}
 
 	static var pclass = Property.get("class");
+	static var pid = Property.get("id");
+	public static function create( comp : String, attributes : haxe.DynamicAccess<String>, ?parent : Element, ?value : h2d.Object ) {
+		var c = Component.get(comp);
+		if( c == null ) throw "Unknown component "+comp;
+		var e = new Element(value == null ? c.make(parent == null ? null : parent.obj) : value, c, parent);
+		if( attributes != null ) e.initAttributes(attributes);
+		return e;
+	}
 
 }
