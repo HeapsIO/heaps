@@ -31,7 +31,6 @@ class DecalOverlay extends hxsl.Shader {
 
 		@global var depthMap : Channel;
 
-		@param var scale : Vec3;
 		@param var minBound : Vec3;
 		@param var maxBound : Vec3;
 		@param var maxAngle : Float;
@@ -132,7 +131,6 @@ class DecalPBR extends hxsl.Shader {
 
 		@global var depthMap : Channel;
 
-		@param var scale : Vec3;
 		@param var normal : Vec3;
 		@param var tangent : Vec3;
 

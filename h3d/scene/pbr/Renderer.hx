@@ -308,14 +308,14 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
 		pbrOut.render();
 
-		draw("BeforeTonemapping");
+		draw("beforeTonemapping");
 
 		apply(AfterHdr);
 
 		var distortion = allocTarget("distortion", true, 1.0, RGBA16F);
 		distortion.clear(0x000000);
 		setTarget(distortion);
-		draw("Distortion");
+		draw("bistortion");
 
 		var ldr = allocTarget("ldrOutput");
 		setTarget(ldr);
