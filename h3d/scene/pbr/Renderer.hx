@@ -83,7 +83,7 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
-		Vec4([Value("output.emissive"), Const(0), Const(0), Const(1)]),
+		Vec4([Value("output.emissive"),Value("output.depth"), Const(0), Const(1)])
 	]);
 
 
@@ -315,7 +315,7 @@ class Renderer extends h3d.scene.Renderer {
 		var distortion = allocTarget("distortion", true, 1.0, RGBA16F);
 		distortion.clear(0x000000);
 		setTarget(distortion);
-		draw("bistortion");
+		draw("distortion");
 
 		var ldr = allocTarget("ldrOutput");
 		setTarget(ldr);

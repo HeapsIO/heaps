@@ -73,7 +73,7 @@ class DecalOverlay extends hxsl.Shader {
 				discard;
 
 			var color = colorTexture.get(calculatedUV);
-			pixelColor = color + color * emissive;
+			pixelColor.rgb = color.rgb + color.rgb * emissive;
 			pixelColor.a *= fadeFactor;
 		}
 	}
@@ -118,6 +118,7 @@ class DecalPBR extends hxsl.Shader {
 			normalStrength : Float,
 			pbrStrength : Float,
 			emissiveStrength : Float,
+			depth : Float,
 		};
 
 		@const var CENTERED : Bool;
@@ -240,6 +241,7 @@ class DecalPBR extends hxsl.Shader {
 			output.normalStrength = strength.g * fadeFactor;
 			output.pbrStrength = strength.b * fadeFactor;
 			output.emissiveStrength = fadeFactor;
+			output.depth = depth;
 		}
 	};
 
