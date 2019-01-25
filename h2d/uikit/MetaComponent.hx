@@ -24,6 +24,7 @@ class MetaComponent extends Component<Dynamic> {
 	public var setExprs : Map<String, Expr> = new Map();
 	var parser : h2d.uikit.CssValue.ValueParser;
 	var classType : ClassType;
+	var baseClass : ClassType;
 
 	public function new( t : Type ) {
 		classType = switch( t ) {
@@ -63,6 +64,7 @@ class MetaComponent extends Component<Dynamic> {
 		for( i in c.interfaces )
 			if( i.t.toString() == "h2d.uikit.ComponentDecl" )
 				baseT = i.params[0];
+		baseClass = switch( baseT.follow() ) { case TInst(c,_): c.get(); default: throw "assert"; };
 		baseType = baseT.toComplexType();
 
 		for( f in fields ) {
@@ -269,7 +271,7 @@ class MetaComponent extends Component<Dynamic> {
 
 	public function buildRuntimeComponent() {
 		var cname = runtimeName(name);
-		var hasCreateMethod = false;
+		var createMethod = null;
 		var parentExpr;
 		if( parent == null )
 			parentExpr = macro null;
@@ -283,7 +285,7 @@ class MetaComponent extends Component<Dynamic> {
 			if( !f.kind.match(FMethod(_)) )
 				continue;
 			if( f.name == "create" )
-				hasCreateMethod = true;
+				createMethod = f;
 			else if( StringTools.startsWith(f.name,"set_") )
 				setters.set(fieldToProp(f.name.substr(4)), true);
 		}
@@ -291,15 +293,33 @@ class MetaComponent extends Component<Dynamic> {
 		var classPath = classType.module.split(".");
 		if( classType.name != classPath[classPath.length-1] ) classPath.push(classType.name);
 
-		if( hasCreateMethod ) {
+		var newType;
+		if( createMethod != null ) {
 			path = classPath.concat(["create"]);
-		} else
+			newType = createMethod.type;
+		} else {
 			path = switch( baseType ) {
-			case TPath(p): p.pack.concat([p.name, "new"]);
+			case TPath(p):
+				var path = p.pack.copy();
+				path.push(p.name);
+				if( p.sub != null ) path.push(p.sub);
+				path.push("new");
+				path;
 			default: throw "assert";
 			}
+			newType = baseClass.constructor.get().type;
+		}
 
-		var newExpr = haxe.macro.MacroStringTools.toFieldExpr(path);
+		var newExpr = haxe.macro.MacroStringTools.toFieldExpr(path, classType.pos);
+		switch( newType.follow() ) {
+		case TFun(args,_):
+			args.pop(); // parent
+			if( args.length > 0 ) {
+				error("TODO: constructor arguments support", classType.pos);
+			}
+		default:
+		}
+
 		var handlers = [];
 		for( i in 0...propsHandler.length ) {
 			var h = propsHandler[i];
