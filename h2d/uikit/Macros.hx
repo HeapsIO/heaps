@@ -53,6 +53,8 @@ class Macros {
 			var comp = COMPONENTS.get(name);
 			if( comp == null )
 				error("Unknown component "+name, m.pmin, m.pmax);
+			var avalues = [];
+			var aexprs = [];
 			for( attr in m.attributes ) {
 				var p = Property.get(attr.name, false);
 				if( p == null ) {
@@ -64,15 +66,28 @@ class Macros {
 					error("Component "+comp.name+" does not handle property "+p.name, attr.pmin, attr.pmin + attr.name.length);
 					continue;
 				}
-				var css = try new CssParser().parseValue(attr.value) catch( e : Error ) error("Invalid CSS ("+e.message+")", attr.vmin + e.pmin, attr.vmin + e.pmax);
-				try {
-					if( h.parser == null ) throw new Property.InvalidProperty("Null parser");
-					h.parser(css);
-				} catch( e : Property.InvalidProperty ) {
-					error("Invalid "+comp.name+"."+p.name+" value '"+attr.value+"'"+(e.message == null ? "" : " ("+e.message+")"), attr.vmin, attr.pmax);
+				switch( attr.value ) {
+				case RawValue(aval):
+					var css = try new CssParser().parseValue(aval) catch( e : Error ) error("Invalid CSS ("+e.message+")", attr.vmin + e.pmin, attr.vmin + e.pmax);
+					try {
+						if( h.parser == null ) throw new Property.InvalidProperty("Null parser");
+						h.parser(css);
+					} catch( e : Property.InvalidProperty ) {
+						error("Invalid "+comp.name+"."+p.name+" value '"+attr.value+"'"+(e.message == null ? "" : " ("+e.message+")"), attr.vmin, attr.pmax);
+					}
+					avalues.push({ attr : attr.name, value : aval });
+				case Code(e):
+					var mc = Std.instance(comp, MetaComponent);
+					var eset = null;
+					while( mc != null ) {
+						eset = mc.setExprs.get(p.name);
+						if( eset != null ) break;
+						mc = cast(mc.parent, MetaComponent);
+					}
+					aexprs.push({ expr : EMeta({ pos : e.pos, name : ":privateAccess" }, { expr : ECall(eset,[macro cast tmp.obj,e]), pos : e.pos }), pos : e.pos });
 				}
 			}
-			var attributes = { expr : EObjectDecl([for( m in m.attributes ) { field : m.name, expr : { expr : EConst(CString(m.value)), pos : pos } }]), pos : pos };
+			var attributes = { expr : EObjectDecl([for( m in avalues ) { field : m.attr, expr : { expr : EConst(CString(m.value)), pos : pos } }]), pos : pos };
 			var ct = comp.baseType;
 			var exprs : Array<Expr> = if( isRoot )
 				[
@@ -82,12 +97,12 @@ class Macros {
 				];
 			else
 				[macro var tmp = h2d.uikit.Element.create($v{name},$attributes, tmp)];
-			for( a in m.attributes ) {
-				// check parsing
-				var css = try new CssParser().parseValue(a.value) catch( e : Error ) { e.pmin += a.pmin; e.pmax += a.pmax; throw e; }
-				// check name
+			for( a in m.attributes )
 				if( a.name == "name" ) {
-					var field = a.value;
+					var field = switch( a.value ) {
+					case RawValue(v): v;
+					default: continue;
+					}
 					exprs.push(macro this.$field = cast tmp.obj);
 					fields.push({
 						name : field,
@@ -96,7 +111,8 @@ class Macros {
 						kind : FVar(ct),
 					});
 				}
-			}
+			for( e in aexprs )
+				exprs.push(e);
 			for( c in m.children ) {
 				var e = buildComponentsInit(c, fields, pos);
 				if( e != null ) exprs.push(e);
@@ -120,24 +136,36 @@ class Macros {
 				case FVar(_,{ expr : EMeta(_,{ expr : EConst(CString(str)) }), pos : pos }):
 					try {
 						var p = new MarkupParser();
-						var root = p.parse(str).children[0];
+						var pinf = Context.getPosInfos(pos);
+						var root = p.parse(str,pinf.file,pinf.min).children[0];
 
-						var expr = buildComponentsInit(root, fields, pos, true);
+						var initExpr = buildComponentsInit(root, fields, pos, true);
 						fields = fields.concat((macro class {
 							public var document : h2d.uikit.Document;
 							public function setStyle( style : h2d.uikit.CssStyle ) {
 								document.setStyle(style);
 							}
 						}).fields);
-						fields.push({
-							name : "initComponent",
-							pos : pos,
-							kind : FFun({
-								args : [],
-								ret : null,
-								expr : expr,
-							}),
-						});
+
+						var found = false;
+						for( f in fields )
+							if( f.name == "new" ) {
+								switch( f.kind ) {
+								case FFun(f):
+									function replace( e : Expr ) {
+										switch( e.expr ) {
+										case ECall({ expr : EConst(CIdent("initComponent")) },[]): e.expr = initExpr.expr; found = true;
+										default: haxe.macro.ExprTools.iter(e, replace);
+										}
+									}
+									replace(f.expr);
+									if( !found ) Context.error("Constructor missing initComponent() call", f.expr.pos);
+									break;
+								default:
+								}
+							}
+						if( !found )
+							Context.error("Missing constructor", Context.currentPos());
 
 					} catch( e : Error ) {
 						Context.error(e.message, makePos(pos,e.pmin,e.pmax));

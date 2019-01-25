@@ -29,11 +29,16 @@ enum MarkupKind {
 	Text( text : String );
 }
 
+enum AttributeValue {
+	RawValue( v : String );
+	Code( v : haxe.macro.Expr );
+}
+
 typedef Markup = {
 	var kind : MarkupKind;
 	var pmin : Int;
 	var pmax : Int;
-	var ?attributes : Array<{ name : String, value : String, pmin : Int, vmin : Int, pmax : Int }>;
+	var ?attributes : Array<{ name : String, value : AttributeValue, pmin : Int, vmin : Int, pmax : Int }>;
 	var ?children : Array<Markup>;
 }
 
@@ -49,22 +54,45 @@ class MarkupParser {
 		h;
 	}
 
+	var fileName : String;
+	var filePos : Int;
+
 	public function new() {
 	}
 
-	public function parse(str:String) {
+	public function parse(str:String,fileName:String,filePos:Int) {
 		var p : Markup = {
 			kind : Node(null),
 			pmin : 0,
 			pmax : 0,
 			children : [],
 		};
+		this.fileName = fileName;
+		this.filePos = filePos;
 		doParse(str, 0, p);
 		return p;
 	}
 
-	function error( msg : String, position : Int, pmax = -1 ) {
+	function error( msg : String, position : Int, pmax = -1 ) : Dynamic {
 		throw new Error(msg, position, pmax);
+		return null;
+	}
+
+	function parseAttr( val : String, start : Int ) {
+		var v = StringTools.trim(val);
+		if( v.length == 0 || v.charCodeAt(0) != "$".code )
+			return RawValue(val);
+		#if macro
+		if( v.charCodeAt(1) == "{".code && v.charCodeAt(v.length-1) == "}".code )
+			v = v.substr(2,v.length - 3);
+		else
+			v = v.substr(1);
+		start += val.indexOf(v);
+		var e = try haxe.macro.Context.parseInlineString(v,haxe.macro.Context.makePosition({ min : filePos + start, max : filePos + start + v.length, file : fileName })) catch( e : Dynamic ) error(""+e, start, start + v.length);
+		return Code(e);
+		#else
+		error("Unsupported runtime code attribute", start, start + val.length);
+		#end
 	}
 
 	function doParse(str:String, p:Int = 0, ?parent:Markup):Int {
@@ -263,7 +291,7 @@ class MarkupParser {
 							buf.addSub(str, start, p - start);
 							var val = buf.toString();
 							buf = new StringBuf();
-							obj.attributes.push({ name : aname, value : val, pmin : attr_start, vmin : start, pmax : p });
+							obj.attributes.push({ name : aname, value : parseAttr(val,start), pmin : attr_start, vmin : start, pmax : p });
 							state = IGNORE_SPACES;
 							next = BODY;
 					}

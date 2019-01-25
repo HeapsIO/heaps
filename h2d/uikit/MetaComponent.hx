@@ -21,6 +21,7 @@ class MetaComponent extends Component<Dynamic> {
 
 	public var baseType : ComplexType;
 	public var parserType : ComplexType;
+	public var setExprs : Map<String, Expr> = new Map();
 	var parser : h2d.uikit.CssValue.ValueParser;
 	var classType : ClassType;
 
@@ -311,6 +312,7 @@ class MetaComponent extends Component<Dynamic> {
 			var def = h.defaultValue == null ? macro null : h.defaultValue;
 			var expr = macro addHandler($v{p.name},@:privateAccess ${h.parserExpr},($def : $ptype),@:privateAccess $set);
 			setPosRec(expr,h.position);
+			setExprs.set(p.name, set);
 			handlers.push(expr);
 		}
 
