@@ -105,7 +105,10 @@ class CustomParser extends CssValue.ValueParser {
 		}
 	}
 
-
+	#if !macro
+	// force macros to be run in order to init base components
+	static var _ = @:privateAccess Macros.init();
+	#end
 
 }
 

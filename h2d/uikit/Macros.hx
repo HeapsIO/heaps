@@ -8,6 +8,10 @@ import h2d.uikit.Error;
 
 class Macros {
 
+	static macro function init() {
+		return macro null;
+	}
+
 	#if macro
 
 	@:persistent static var COMPONENTS = new Map<String, h2d.uikit.MetaComponent>();
