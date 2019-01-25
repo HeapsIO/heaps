@@ -32,7 +32,7 @@ class Cache {
 		Creates a shader that generate the output requested.
 	**/
 	public function getLinkShader( vars : Array<Output> ) {
-		var key = vars.join(",");
+		var key = [for( v in vars ) Std.string(v)].join(",");
 		var shader = linkShaders.get(key);
 		if( shader != null )
 			return shader;
