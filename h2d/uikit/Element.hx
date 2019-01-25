@@ -34,6 +34,10 @@ class Element {
 		obj.remove();
 	}
 
+	function initStyle( p : String, value : Dynamic ) {
+		style.push({ p : Property.get(p), value : value });
+	}
+
 	public function initAttributes( attr : haxe.DynamicAccess<String> ) {
 		var parser = new CssParser();
 		for( a in attr.keys() ) {

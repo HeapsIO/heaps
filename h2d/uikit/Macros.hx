@@ -84,7 +84,9 @@ class Macros {
 						if( eset != null ) break;
 						mc = cast(mc.parent, MetaComponent);
 					}
-					aexprs.push({ expr : EMeta({ pos : e.pos, name : ":privateAccess" }, { expr : ECall(eset,[macro cast tmp.obj,e]), pos : e.pos }), pos : e.pos });
+					aexprs.push(macro var attrib = $e);
+					aexprs.push({ expr : EMeta({ pos : e.pos, name : ":privateAccess" }, { expr : ECall(eset,[macro cast tmp.obj,macro attrib]), pos : e.pos }), pos : e.pos });
+					aexprs.push(macro @:privateAccess tmp.initStyle($v{p.name},attrib));
 				}
 			}
 			var attributes = { expr : EObjectDecl([for( m in avalues ) { field : m.attr, expr : { expr : EConst(CString(m.value)), pos : pos } }]), pos : pos };
