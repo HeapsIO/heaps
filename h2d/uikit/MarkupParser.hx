@@ -12,6 +12,7 @@ enum abstract MToken(Int) {
 	var EQUALS;
 	var ATTVAL_BEGIN;
 	var ATTRIB_VAL;
+	var ATTRIB_VAL_CODE;
 	var CHILDS;
 	var CLOSE;
 	var WAIT_END;
@@ -82,12 +83,16 @@ class MarkupParser {
 		var v = StringTools.trim(val);
 		if( v.length == 0 || v.charCodeAt(0) != "$".code )
 			return RawValue(val);
-		#if macro
 		if( v.charCodeAt(1) == "{".code && v.charCodeAt(v.length-1) == "}".code )
 			v = v.substr(2,v.length - 3);
 		else
 			v = v.substr(1);
 		start += val.indexOf(v);
+		return parseCode(v, start);
+	}
+
+	function parseCode( v : String, start : Int ) {
+		#if macro
 		var e = try haxe.macro.Context.parseInlineString(v,haxe.macro.Context.makePosition({ min : filePos + start, max : filePos + start + v.length, file : fileName })) catch( e : Dynamic ) error(""+e, start, start + v.length);
 		return Code(e);
 		#else
@@ -103,6 +108,7 @@ class MarkupParser {
 		var start = 0;
 		var nsubs = 0;
 		var nbrackets = 0;
+		var nbraces = 0;
 		var attr_start = 0;
 		var c = str.fastCodeAt(p);
 		var buf = new StringBuf();
@@ -274,6 +280,10 @@ class MarkupParser {
 							state = ATTRIB_VAL;
 							start = p + 1;
 							attrValQuote = c;
+						case '{'.code:
+							state = ATTRIB_VAL_CODE;
+							start = p + 1;
+							nbraces = 1;
 						default:
 							error("Expected \"", p);
 					}
@@ -294,6 +304,18 @@ class MarkupParser {
 							obj.attributes.push({ name : aname, value : parseAttr(val,start), pmin : attr_start, vmin : start, pmax : p });
 							state = IGNORE_SPACES;
 							next = BODY;
+					}
+				case ATTRIB_VAL_CODE:
+					switch( c ) {
+					case '{'.code:
+						nbraces++;
+					case '}'.code:
+						nbraces--;
+						if( nbraces == 0 ) {
+							obj.attributes.push({ name : aname, value : parseCode(str.substr(start, p-start),start), pmin : attr_start, vmin : start, pmax : p });
+							state = IGNORE_SPACES;
+							next = BODY;
+						}
 					}
 				case CHILDS:
 					p = doParse(str, p, obj);
