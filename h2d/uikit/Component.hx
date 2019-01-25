@@ -6,12 +6,18 @@ typedef BaseObject = #if macro Dynamic #else h2d.Object #end;
 class PropertyHandler<O,P> {
 
 	public var parser(default,null) : CssValue -> P;
-	#if macro
-	public var defaultValue(default,null) : haxe.macro.Expr;
-	public var type(default,null) : haxe.macro.Expr.ComplexType;
-	#else
+	#if !macro
 	public var defaultValue(default,null) : P;
 	public var apply(default,null) : O -> P -> Void;
+	#end
+
+
+	#if macro
+	public var defaultValue : haxe.macro.Expr;
+	public var type : haxe.macro.Expr.ComplexType;
+	public var position : haxe.macro.Expr.Position;
+	public var parserExpr : haxe.macro.Expr;
+	public var fieldName : String;
 	#end
 
 	public function new(parser,def,applyType) {
@@ -48,13 +54,15 @@ class Component<T:BaseObject> {
 	}
 
 	function addHandler<P>( p : String, parser : CssValue -> P, def : #if macro haxe.macro.Expr #else P #end, applyType : #if macro haxe.macro.Expr.ComplexType #else T -> P -> Void #end ) {
-		propsHandler[Property.get(p).id] = new PropertyHandler(parser,def,applyType);
+		var ph = new PropertyHandler(parser,def,applyType);
+		propsHandler[Property.get(p).id] = ph;
+		return ph;
 	}
 
 	public static function get( name : String ) {
 		return COMPONENTS.get(name);
 	}
 
-	static var COMPONENTS = new Map<String,Component<Dynamic>>();
+	@:persistent static var COMPONENTS = new Map<String,Component<Dynamic>>();
 
 }

@@ -109,6 +109,8 @@ class CssParser {
 		pos = 0;
 		tokens = [];
 		warnings = [];
+		if( isToken(TEof) )
+			return VString("");
 		var v = readValue();
 		expect(TEof);
 		return v;

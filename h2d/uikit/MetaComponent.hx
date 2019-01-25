@@ -1,7 +1,7 @@
 package h2d.uikit;
 import haxe.macro.Type;
 import haxe.macro.Expr;
-using haxe.macro.TypeTools;
+using haxe.macro.Tools;
 
 class MetaError {
 	public var message : String;
@@ -10,6 +10,11 @@ class MetaError {
 		this.message = msg;
 		this.position = pos;
 	}
+}
+
+enum ParserMode {
+	PNone;
+	PAuto;
 }
 
 class MetaComponent extends Component<Dynamic> {
@@ -49,8 +54,8 @@ class MetaComponent extends Component<Dynamic> {
 
 		initParser(c);
 		if( name == "object" ) {
-			addHandler("class", parser.parseArray.bind(parser.parseIdent), null, null);
-			addHandler("id", parser.parseIdent, null, null);
+			addHandler("class", parser.parseArray.bind(parser.parseIdent), null, macro : String);
+			addHandler("id", parser.parseIdent, null, macro : String);
 		}
 
 		var baseT = t;
@@ -108,30 +113,49 @@ class MetaComponent extends Component<Dynamic> {
 
 	function defineField( f : ClassField ) {
 		var pm = f.meta.extract(":p")[0];
-		var t = f.type.follow();
-		var parser = null;
-		var def = null;
+		var propType = f.type.toComplexType();
+		var t = f.type;
+		while( true )
+			switch( t ) {
+			case TType(_), TLazy(_): t = t.follow(true);
+			default: break;
+			}
+		var prop = null;
+		var parserMode = PNone;
 
 		if( pm.params.length > 0 )
 			switch( pm.params[0].expr ) {
+			case EConst(CIdent("none")):
+				parserMode = PNone;
+			case EConst(CIdent("auto")):
+				parserMode = PAuto;
 			case EConst(CIdent(name)):
 				var fname = "parse"+name.charAt(0).toUpperCase()+name.substr(1);
 				var meth = Reflect.field(this.parser,fname);
 				if( meth == null )
-					error("Unknown parser "+name, pm.params[0].pos);
-				parser = function(css:CssValue) : Dynamic {
-					return Reflect.callMethod(this.parser,meth,[css]);
+					error(parserType.toString()+" has no field "+fname, pm.params[0].pos);
+				prop = {
+					def : null,
+					expr : macro (parser.$fname : h2d.uikit.CssValue -> $propType),
+					value : function(css:CssValue) : Dynamic {
+						return Reflect.callMethod(this.parser,meth,[css]);
+					}
 				};
 			default:
 			}
 
-		if( parser == null )
-			parser = parserFromType(t, f.pos);
+		if( prop == null ) {
+			prop = parserFromType(t, f.pos, parserMode);
+			if( prop == null ) error("Unsupported type "+t.toString()+", use custom parser", f.pos);
+		} else {
+			var pdef = parserFromType(t, f.pos, parserMode);
+			if( pdef != null ) prop.def = pdef.def;
+		}
 
 		switch( f.expr() ) {
 		case null:
 		case { expr : TConst(c), pos : pos }:
-			def = { expr : EConst(switch( c ) {
+			prop.def = { expr : EConst(switch( c ) {
 				case TString(s): CString(s);
 				case TInt(i): CInt(""+i);
 				case TFloat(f): CFloat(f);
@@ -140,34 +164,83 @@ class MetaComponent extends Component<Dynamic> {
 				default: error("Unsupported constant", pos);
 			}), pos : pos };
 		case { expr : TField(_,FEnum(en,ef)), pos : pos }:
-			def = { expr : EConst(CIdent(ef.name)), pos : pos };
+			prop.def = { expr : EConst(CIdent(ef.name)), pos : pos };
 		default:
 			error("Invalid default expr", f.pos);
 		}
-		addHandler(f.name.split("_").join("-"), parser, def, t.toComplexType());
+
+		var h = addHandler(fieldToProp(f.name), prop.value, prop.def, propType);
+		h.position = f.pos;
+		h.fieldName = f.name;
+		h.parserExpr = prop.expr;
 	}
 
-	function parserFromType( t : Type, pos : Position ) : CssValue -> Dynamic {
+	function fieldToProp( name : String ) {
+		if( name.toUpperCase() == name )
+			return name.toLowerCase();
+		var out = new StringBuf();
+		for( i in 0...name.length ) {
+			var c = name.charCodeAt(i);
+			if( c >= "A".code && c <= "Z".code ) {
+				if( i > 0 ) out.addChar("-".code);
+				out.addChar(c - "A".code + "a".code);
+			} else
+				out.addChar(c);
+		}
+		return out.toString().split("_").join("-");
+	}
+
+	function makeTypeExpr( t : BaseType, pos : Position ) {
+		var path = t.module.split(".");
+		if( t.name != path[path.length-1] ) path.push(t.name);
+		return haxe.macro.MacroStringTools.toFieldExpr(path);
+	}
+
+	function parserFromType( t : Type, pos : Position, mode : ParserMode ) : { expr : Expr, value : CssValue -> Dynamic, def : Expr } {
 		switch( t ) {
-		case TAbstract(a,_):
+		case TAbstract(a,params):
 			switch( a.toString() ) {
-			case "Int": return parser.parseInt;
-			case "Float": return parser.parseFloat;
-			case "Bool": return parser.parseBool;
+			case "Int": return { expr : macro parser.parseInt, value : parser.parseInt, def : macro 0 };
+			case "Float": return { expr : macro parser.parseFloat, value : parser.parseFloat, def : macro 0. };
+			case "Bool": return { expr : macro parser.parseBool, value : parser.parseBool, def : macro false };
+			case "Null":
+				var p = parserFromType(params[0],pos,mode);
+				if( p != null && p.def != null ) {
+					switch( mode ) {
+					case PNone:
+						p.expr = macro parser.parseNone.bind(${p.expr});
+						p.value = parser.parseNone.bind(p.value);
+					case PAuto:
+						p.expr = macro parser.parseAuto.bind(${p.expr});
+						p.value = parser.parseAuto.bind(p.value);
+					}
+				}
+				return p;
+			default:
+			}
+		case TInst(c,_):
+			switch( c.toString() ) {
+			case "String":
+				return  { expr : macro parser.parseString, value : parser.parseString, def : null };
 			default:
 			}
 		case TEnum(en,_):
 			var idents = [for( n in en.get().names ) n.toLowerCase()];
-			return function(css:CssValue) {
-				return switch( css ) {
-				case VIdent(i) if( idents.indexOf(i) >= 0 ): true;
-				case VIdent(v): parser.invalidProp(v+" should be "+idents.join("|"));
-				default: parser.invalidProp();
-				}
+			var enexpr = makeTypeExpr(en.get(), pos);
+			return {
+				expr : macro parser.makeEnumParser($enexpr),
+				value : function(css:CssValue) {
+					return switch( css ) {
+					case VIdent(i) if( idents.indexOf(i) >= 0 ): true;
+					case VIdent(v): parser.invalidProp(v+" should be "+idents.join("|"));
+					default: parser.invalidProp();
+					}
+				},
+				def : null,
 			};
 		default:
 		}
-		return error("Unsupported type "+t.toString()+", use custom parser", pos);
+		return null;
 	}
 
 	function getCompName( c : ClassType ) {
@@ -188,6 +261,11 @@ class MetaComponent extends Component<Dynamic> {
 		return "Comp"+name.charAt(0).toUpperCase()+name.substr(1);
 	}
 
+	static function setPosRec( e : haxe.macro.Expr, p : Position ) {
+		e.pos = p;
+		haxe.macro.ExprTools.iter(e, function(e) setPosRec(e,p));
+	}
+
 	public function buildRuntimeComponent() {
 		var cname = runtimeName(name);
 		var hasCreateMethod = false;
@@ -199,13 +277,21 @@ class MetaComponent extends Component<Dynamic> {
 			parentExpr = macro @:privateAccess h2d.uikit.$parentName.inst;
 		}
 		var path;
-
-		for( f in classType.statics.get() )
-			if( f.name == "create" && f.kind.match(FMethod(_)) )
+		var setters = new Map();
+		for( f in classType.statics.get() ) {
+			if( !f.kind.match(FMethod(_)) )
+				continue;
+			if( f.name == "create" )
 				hasCreateMethod = true;
+			else if( StringTools.startsWith(f.name,"set_") )
+				setters.set(fieldToProp(f.name.substr(4)), true);
+		}
+
+		var classPath = classType.module.split(".");
+		if( classType.name != classPath[classPath.length-1] ) classPath.push(classType.name);
 
 		if( hasCreateMethod ) {
-			path = classType.module.split(".").concat([classType.name,"create"]);
+			path = classPath.concat(["create"]);
 		} else
 			path = switch( baseType ) {
 			case TPath(p): p.pack.concat([p.name, "new"]);
@@ -213,12 +299,35 @@ class MetaComponent extends Component<Dynamic> {
 			}
 
 		var newExpr = haxe.macro.MacroStringTools.toFieldExpr(path);
+		var handlers = [];
+		for( i in 0...propsHandler.length ) {
+			var h = propsHandler[i];
+			if( h == null || h.position == null ) continue;
+			var p = @:privateAccess Property.ALL[i];
+			if( parent != null && parent.propsHandler[i] == h && !setters.exists(p.name) ) continue;
+			var ptype = h.type;
+			var fname = h.fieldName;
+			var set = setters.exists(p.name) ? haxe.macro.MacroStringTools.toFieldExpr(classPath.concat(["set_"+fname])) : macro function(o:$baseType,v:$ptype) o.$fname = v;
+			var def = h.defaultValue == null ? macro null : h.defaultValue;
+			var expr = macro addHandler($v{p.name},@:privateAccess ${h.parserExpr},($def : $ptype),@:privateAccess $set);
+			setPosRec(expr,h.position);
+			handlers.push(expr);
+		}
+
+		var parserClass = switch( parserType ) {
+		case TPath(t): t;
+		default: throw "assert";
+		}
 		var fields = (macro class {
+			var parser : $parserType;
 			function new() {
 				super($v{this.name},@:privateAccess $newExpr,$parentExpr);
+				parser = new $parserClass();
+				$b{handlers};
 			}
 			static var inst = new h2d.uikit.$cname();
 		}).fields;
+
 		var td : TypeDefinition = {
 			pos : classType.pos,
 			pack : ["h2d","uikit"],

@@ -37,11 +37,19 @@ class Element {
 	public function initAttributes( attr : haxe.DynamicAccess<String> ) {
 		var parser = new CssParser();
 		for( a in attr.keys() ) {
+			var ret;
 			var p = Property.get(a,false);
-			if( p == null ) continue;
-			var h = component.getHandler(p);
-			if( h == null && p != pclass && p != pid ) continue;
-			setAttribute(a, parser.parseValue(attr.get(a)));
+			if( p == null )
+				ret = Unknown;
+			else {
+				var h = component.getHandler(p);
+				if( h == null && p != pclass && p != pid )
+					ret = Unsupported;
+				else
+					ret = setAttribute(a, parser.parseValue(attr.get(a)));
+			}
+			if( ret != Ok )
+				Sys.println(component.name+"."+a+"> "+ret);
 		}
 	}
 

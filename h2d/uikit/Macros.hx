@@ -28,7 +28,6 @@ class Macros {
 		var t = Context.resolveType(type, pos);
 		try {
 			var mt = new h2d.uikit.MetaComponent(t);
-			if( COMPONENTS.exists(mt.name) ) Context.error("Duplicate component "+mt.name, pos);
 			var td = mt.buildRuntimeComponent();
 			Context.defineType(td);
 			COMPONENTS.set(mt.name, mt);

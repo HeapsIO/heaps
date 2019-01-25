@@ -30,7 +30,7 @@ class Property {
 		return p;
 	}
 
-	static var ALL : Array<Property>;
-	static var MAP : Map<String, Property>;
+	@:persistent static var ALL : Array<Property>;
+	@:persistent static var MAP : Map<String, Property>;
 
 }

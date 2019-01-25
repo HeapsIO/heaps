@@ -28,6 +28,14 @@ class ValueParser {
 		return switch( v ) { case VIdent(v): v; default: invalidProp(); }
 	}
 
+	public function parseString( v : CssValue ) {
+		return switch( v ) {
+		case VIdent(i): i;
+		case VString(s): s;
+		default: invalidProp();
+		}
+	}
+
 	public function parseColor( v : CssValue ) {
 		switch( v ) {
 		case VHex(h,color):
@@ -44,6 +52,13 @@ class ValueParser {
 		default:
 			return invalidProp();
 		}
+	}
+
+	function parseColorF( v : CssValue ) : h3d.Vector {
+		var c = parseColor(v);
+		var v = new h3d.Vector();
+		v.setColor(c);
+		return v;
 	}
 
 	function loadResource( path : String ) {
@@ -120,57 +135,6 @@ class ValueParser {
 		}
 	}
 
-	public function parseHAlign( value ) : #if macro Bool #else h2d.Flow.FlowAlign #end {
-		switch( parseIdent(value) ) {
-		case "auto":
-			return null;
-		case "middle":
-			return #if macro true #else Middle #end;
-		case "left":
-			return #if macro true #else Left #end;
-		case "right":
-			return #if macro true #else Right #end;
-		case x:
-			return invalidProp(x+" should be auto|left|middle|right");
-		}
-	}
-
-	public function parseVAlign( value ) : #if macro Bool #else h2d.Flow.FlowAlign #end {
-		switch( parseIdent(value) ) {
-		case "auto":
-			return null;
-		case "middle":
-			return #if macro true #else Middle #end;
-		case "top":
-			return #if macro true #else Top #end;
-		case "bottom":
-			return #if macro true #else Bottom #end;
-		case x:
-			return invalidProp(x+" should be auto|top|middle|bottom");
-		}
-	}
-
-	public function parseAlign( value : CssValue ) {
-		switch( value ) {
-		case VIdent("auto"):
-			return { h : null, v : null };
-		case VIdent(_):
-			try {
-				return { h : parseHAlign(value), v : null };
-			} catch( e : InvalidProperty ) {
-				return { h : null, v : parseVAlign(value) };
-			}
-		case VGroup([h,v]):
-			try {
-				return { h : parseHAlign(h), v : parseVAlign(v) };
-			} catch( e : InvalidProperty ) {
-				return { h : parseHAlign(v), v : parseVAlign(h) };
-			}
-		default:
-			return invalidProp();
-		}
-	}
-
 	public function parseBox( v : CssValue ) {
 		switch( v ) {
 		case VInt(v):
@@ -184,6 +148,28 @@ class ValueParser {
 		default:
 			return invalidProp();
 		}
+	}
+
+	public function makeEnumParser<T:EnumValue>( e : Enum<T> ) : CssValue -> T {
+		var h = new Map();
+		var all = [];
+		for( v in e.createAll() ) {
+			var id = v.getName().toLowerCase();
+			h.set(id, v);
+			all.push(id);
+		}
+		var choices = all.join("|");
+		return function( v : CssValue ) {
+			return switch( v ) {
+			case VIdent(i):
+				var v = h.get(i);
+				if( v == null ) invalidProp(i+" should be "+choices);
+				return v;
+			default:
+				invalidProp();
+			}
+		}
+
 	}
 
 }
