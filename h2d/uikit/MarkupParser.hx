@@ -96,7 +96,7 @@ class MarkupParser {
 		var e = try haxe.macro.Context.parseInlineString(v,haxe.macro.Context.makePosition({ min : filePos + start, max : filePos + start + v.length, file : fileName })) catch( e : Dynamic ) error(""+e, start, start + v.length);
 		return Code(e);
 		#else
-		return error("Unsupported runtime code attribute", start, start + val.length);
+		return error("Unsupported runtime code attribute", start, start + v.length);
 		#end
 	}
 
