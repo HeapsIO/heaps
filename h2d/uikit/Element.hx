@@ -48,8 +48,10 @@ class Element {
 				else
 					ret = setAttribute(a, parser.parseValue(attr.get(a)));
 			}
+			#if sys
 			if( ret != Ok )
 				Sys.println(component.name+"."+a+"> "+ret);
+			#end
 		}
 	}
 
