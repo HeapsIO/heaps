@@ -128,18 +128,18 @@ class Tile {
 	/**
 		Split horizontaly or verticaly the number of given frames
 	**/
-	public function split( frames : Int = 0, vertical = false ) : Array<Tile> {
+	public function split( frames : Int = 0, vertical = false, subpixel = false ) : Array<Tile> {
 		var tl = [];
 		if( vertical ) {
 			if( frames == 0 )
 				frames = Std.int(height / width);
-			var stride = Std.int(height / frames);
+			var stride = subpixel ? height / frames : Std.int(height / frames);
 			for( i in 0...frames )
 				tl.push(sub(0, i * stride, width, stride));
 		} else {
 			if( frames == 0 )
 				frames = Std.int(width / height);
-			var stride = Std.int(width / frames);
+			var stride = subpixel ? width / frames : Std.int(width / frames);
 			for( i in 0...frames )
 				tl.push(sub(i * stride, 0, stride, height));
 		}
@@ -150,14 +150,14 @@ class Tile {
 		Split the tile into a list of tiles of Size x Size pixels.
 		Unlike grid which is X/Y ordered, gridFlatten returns a single dimensional array ordered in Y/X.
 	**/
-	public function gridFlatten( size : Int, dx = 0., dy = 0. ) : Array<Tile> {
+	public function gridFlatten( size : Float, dx = 0., dy = 0. ) : Array<Tile> {
 		return [for( y in 0...Std.int(height / size) ) for( x in 0...Std.int(width / size) ) sub(x * size, y * size, size, size, dx, dy)];
 	}
 
 	/**
 		Split the tile into a list of tiles of Size x Size pixels.
 	**/
-	public function grid( size : Int, dx = 0., dy = 0. ) : Array<Array<Tile>> {
+	public function grid( size : Float, dx = 0., dy = 0. ) : Array<Array<Tile>> {
 		return [for( x in 0...Std.int(width / size) ) [for( y in 0...Std.int(height / size) ) sub(x * size, y * size, size, size, dx, dy)]];
 	}
 
@@ -182,7 +182,7 @@ class Tile {
 	}
 
 
-	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?alpha = 1., ?allocPos : h3d.impl.AllocPos ) : Tile {
+	public static function fromColor( color : Int, ?width = 1., ?height = 1., ?alpha = 1., ?allocPos : h3d.impl.AllocPos ) : Tile {
 		var t = new Tile(h3d.mat.Texture.fromColor(color,alpha,allocPos),0,0,1,1);
 		// scale to size
 		t.width = width;

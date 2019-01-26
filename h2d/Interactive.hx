@@ -64,12 +64,12 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	override function draw( ctx : RenderContext ) {
-		if( backgroundColor != null ) emitTile(ctx, h2d.Tile.fromColor(backgroundColor, Std.int(width), Std.int(height), (backgroundColor>>>24)/255 ));
+		if( backgroundColor != null ) emitTile(ctx, h2d.Tile.fromColor(backgroundColor, width, height, (backgroundColor>>>24)/255 ));
 	}
 
 	override function getBoundsRec( relativeTo, out, forSize ) {
 		super.getBoundsRec(relativeTo, out, forSize);
-		if( backgroundColor != null || forSize ) addBounds(relativeTo, out, 0, 0, Std.int(width), Std.int(height));
+		if( backgroundColor != null || forSize ) addBounds(relativeTo, out, 0, 0, width, height);
 	}
 
 	override function onParentChanged() {
