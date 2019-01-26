@@ -177,7 +177,6 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			if( !e.cancel && cursor != null )
 				hxd.System.setCursor(cursor);
 		case EOut:
-			mouseDownButton = -1;
 			onOut(e);
 			if( !e.cancel )
 				hxd.System.setCursor(Default);
