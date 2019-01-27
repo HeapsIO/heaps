@@ -1,5 +1,5 @@
 package h2d.uikit;
 
-@:autoBuild(h2d.uikit.Macros.buildObject())
-interface Object {
+@:autoBuild(h2d.uikit.InitComponents.initOnce())
+interface Object extends uikit.Object {
 }

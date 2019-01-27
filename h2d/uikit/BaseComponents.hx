@@ -1,6 +1,6 @@
 package h2d.uikit;
-import h2d.uikit.Property;
-import h2d.uikit.CssValue;
+import uikit.Property;
+import uikit.CssValue;
 
 class CustomParser extends CssValue.ValueParser {
 
@@ -22,6 +22,34 @@ class CustomParser extends CssValue.ValueParser {
 			return true;
 		default:
 			return invalidProp();
+		}
+	}
+
+
+	function parseColorF( v : CssValue ) : h3d.Vector {
+		var c = parseColor(v);
+		var v = new h3d.Vector();
+		v.setColor(c);
+		return v;
+	}
+
+	function loadResource( path : String ) {
+		#if macro
+		// TODO : compile-time path check?
+		return true;
+		#else
+		return try hxd.res.Loader.currentInstance.load(path) catch( e : hxd.res.NotFound ) invalidProp("Resource not found "+path);
+		#end
+	}
+
+	public function parseTile( v : CssValue) {
+		try {
+			var c = parseColor(v);
+			return #if macro true #else h2d.Tile.fromColor(c,1,1,(c>>>24)/255) #end;
+		} catch( e : InvalidProperty ) {
+			var path = parsePath(v);
+			var p = loadResource(path);
+			return #if macro p #else p.toTile() #end;
 		}
 	}
 
@@ -105,16 +133,11 @@ class CustomParser extends CssValue.ValueParser {
 		}
 	}
 
-	#if !macro
-	// force macros to be run in order to init base components
-	static var _ = @:privateAccess Macros.init();
-	#end
-
 }
 
 #if !macro
 @:uiComp("object") @:parser(h2d.uikit.BaseComponents.CustomParser)
-class ObjectComp implements h2d.uikit.Component.ComponentDecl<h2d.Object> {
+class ObjectComp implements uikit.Component.ComponentDecl<h2d.Object> {
 
 	@:p(ident) var name : String;
 	@:p var x : Float;
@@ -247,7 +270,7 @@ class ObjectComp implements h2d.uikit.Component.ComponentDecl<h2d.Object> {
 }
 
 @:uiComp("drawable")
-class DrawableComp extends ObjectComp implements h2d.uikit.Component.ComponentDecl<h2d.Drawable> {
+class DrawableComp extends ObjectComp implements uikit.Component.ComponentDecl<h2d.Drawable> {
 
 	@:p(colorF) var color : h3d.Vector;
 	@:p(auto) var smooth : Null<Bool>;
@@ -259,7 +282,7 @@ class DrawableComp extends ObjectComp implements h2d.uikit.Component.ComponentDe
 }
 
 @:uiComp("bitmap")
-class BitmapComp extends DrawableComp implements h2d.uikit.Component.ComponentDecl<h2d.Bitmap> {
+class BitmapComp extends DrawableComp implements uikit.Component.ComponentDecl<h2d.Bitmap> {
 
 	@:p(tile) var src : h2d.Tile;
 
@@ -274,7 +297,7 @@ class BitmapComp extends DrawableComp implements h2d.uikit.Component.ComponentDe
 }
 
 @:uiComp("text")
-class TextComp extends DrawableComp implements h2d.uikit.Component.ComponentDecl<h2d.Text> {
+class TextComp extends DrawableComp implements uikit.Component.ComponentDecl<h2d.Text> {
 
 	@:p var text : String = "";
 	@:p(font) var font : h2d.Font;
@@ -300,7 +323,7 @@ class TextComp extends DrawableComp implements h2d.uikit.Component.ComponentDecl
 
 
 @:uiComp("flow")
-class FlowComp extends DrawableComp implements h2d.uikit.Component.ComponentDecl<h2d.Flow> {
+class FlowComp extends DrawableComp implements uikit.Component.ComponentDecl<h2d.Flow> {
 
 	@:p(auto) var width : Null<Int>;
 	@:p(auto) var height : Null<Int>;
