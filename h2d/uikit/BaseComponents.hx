@@ -267,6 +267,12 @@ class ObjectComp implements uikit.Component.ComponentDecl<h2d.Object> {
 		if( p != null ) p.minHeight = v;
 	}
 
+	static var init = {
+		uikit.Element.addElement = function(e, parent) (parent.obj : h2d.Object).addChild(e.obj);
+		uikit.Element.removeElement = function(e) (e.obj : h2d.Object).remove();
+		true;
+	}
+
 }
 
 @:uiComp("drawable")
