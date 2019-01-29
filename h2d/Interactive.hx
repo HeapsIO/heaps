@@ -246,7 +246,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	public function isOver() {
-		return scene != null && scene.events != null && @:privateAccess scene.events.currentOver == this;
+		return scene != null && scene.events != null && @:privateAccess scene.events.overList.indexOf(this) != -1;
 	}
 
 	public function hasFocus() {

@@ -97,7 +97,6 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 			if( !e.cancel && cursor != null )
 				hxd.System.setCursor(cursor);
 		case EOut:
-			mouseDownButton = -1;
 			onOut(e);
 			if( !e.cancel )
 				hxd.System.setCursor(Default);
@@ -136,7 +135,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	}
 
 	public function isOver() {
-		return scene != null && scene.events != null && @:privateAccess scene.events.currentOver == this;
+		return scene != null && scene.events != null && @:privateAccess scene.events.overList.indexOf(this) != -1;
 	}
 
 	public function hasFocus() {
