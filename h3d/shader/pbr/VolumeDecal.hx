@@ -31,8 +31,6 @@ class DecalOverlay extends hxsl.Shader {
 
 		@global var depthMap : Channel;
 
-		@param var minBound : Vec3;
-		@param var maxBound : Vec3;
 		@param var maxAngle : Float;
 		@param var fadePower : Float;
 		@param var fadeStart : Float;
@@ -45,11 +43,10 @@ class DecalOverlay extends hxsl.Shader {
 		var pixelColor : Vec4;
 		var pixelTransformedPosition : Vec3;
 		var projectedPosition : Vec4;
+		var localPos : Vec3;
 
 		function outsideBounds() : Bool {
-			return (pixelTransformedPosition.x < minBound.x || pixelTransformedPosition.x > maxBound.x ||
-					pixelTransformedPosition.y < minBound.y || pixelTransformedPosition.y > maxBound.y ||
-			 		pixelTransformedPosition.z < minBound.z || pixelTransformedPosition.z > maxBound.z );
+			return ( localPos.x > 0.5 || localPos.x < -0.5 || localPos.y > 0.5 || localPos.y < -0.5 || localPos.z > 0.5 || localPos.z < -0.5 );
 		}
 
 		function fragment() {
@@ -62,9 +59,9 @@ class DecalOverlay extends hxsl.Shader {
 			var ppos = ruv * camera.inverseViewProj;
 
 			pixelTransformedPosition = ppos.xyz / ppos.w;
-			var pos = (wpos.xyz / wpos.w);
-			calculatedUV = pos.xy;
-			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(pos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
+			localPos = (wpos.xyz / wpos.w);
+			calculatedUV = localPos.xy;
+			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(localPos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
 
 			if( CENTERED )
 				calculatedUV += 0.5;
