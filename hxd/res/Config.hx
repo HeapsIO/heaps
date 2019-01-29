@@ -71,7 +71,9 @@ class Config {
 			ignoredExtensions.set("mp3", true);
 			#end
 		default:
+			#if !stb_ogg_sound
 			ignoredExtensions.set("ogg", true);
+			#end
 		}
 		return pf;
 	}
