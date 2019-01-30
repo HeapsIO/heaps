@@ -90,24 +90,8 @@ class Sound extends Resource {
 			if (old.channels != data.channels || old.samples != data.samples || old.sampleFormat != data.sampleFormat || old.samplingRate != data.samplingRate) {
 				var manager = hxd.snd.Manager.get();
 				for ( ch in manager.getAll(this) ) {
-					// Attempt to restart sound
-					var beff = ch.bindedEffects.copy();
-					var eff = ch.effects.copy();
-					var fade = ch.currentFade;
-					ch.stop();
-					var nch = manager.play(this, ch.channelGroup, ch.soundGroup);
-					nch.loop = ch.loop;
-					nch.currentFade = fade;
-					nch.currentVolume = ch.currentVolume;
-					nch.effects = eff;
-					nch.bindedEffects = beff;
-					nch.audibleGain = ch.audibleGain;
-					nch.pause = ch.pause;
-					nch.mute = ch.mute;
-					nch.priority = ch.priority;
-					nch.queue = ch.queue;
-					nch.position = ch.position;
-					
+					ch.duration = data.duration;
+					ch.position = ch.position;
 				}
 			}
 		}
