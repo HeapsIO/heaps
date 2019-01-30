@@ -154,7 +154,7 @@ class Manager {
 	**/
 	public function getAll( sound : hxd.res.Sound ) : Iterator<Channel> {
 		var ch = channels;
-		var result = new Array<Channel>;
+		var result = new Array<Channel>();
 		while ( ch != null ) {
 			if ( ch.sound == sound )
 				result.push(ch);
