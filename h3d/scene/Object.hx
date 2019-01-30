@@ -622,9 +622,10 @@ class Object implements hxd.impl.Serializable {
 		if( follow != null ) {
 			follow.syncPos();
 			if( followPositionOnly ) {
-				absPos.tx += follow.absPos.tx;
-				absPos.ty += follow.absPos.ty;
-				absPos.tz += follow.absPos.tz;
+				absPos.multiply3x4inline(absPos, parent.absPos);
+				absPos.tx = x + follow.absPos.tx;
+				absPos.ty = y + follow.absPos.ty;
+				absPos.tz = z + follow.absPos.tz;
 			} else
 				absPos.multiply3x4(absPos, follow.absPos);
 		} else if( parent != null && !ignoreParentTransform )
