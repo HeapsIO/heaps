@@ -557,8 +557,8 @@ class Flow extends Object {
 		var maxTotWidth = realMaxWidth < 0 ? 100000000 : Math.floor(realMaxWidth);
 		var maxTotHeight = realMaxHeight < 0 ? 100000000 : Math.floor(realMaxHeight);
 		// inner size
-		var maxWidth = maxTotWidth - (paddingLeft + paddingRight + borderWidth * 2);
-		var maxHeight = maxTotHeight - (paddingTop + paddingBottom + borderHeight * 2);
+		var maxInWidth = maxTotWidth - (paddingLeft + paddingRight + borderWidth * 2);
+		var maxInHeight = maxTotHeight - (paddingTop + paddingBottom + borderHeight * 2);
 
 		if( debug )
 			debugGraphics.clear();
@@ -606,8 +606,8 @@ class Flow extends Object {
 				if( !c.visible ) continue;
 
 				c.constraintSize(
-					isConstraintWidth && p.constraint ? (maxWidth - (p.paddingLeft + p.paddingRight)) / Math.abs(c.scaleX) : -1,
-					isConstraintHeight && p.constraint ? (maxHeight - (p.paddingTop + p.paddingBottom)) / Math.abs(c.scaleX) : -1
+					isConstraintWidth && p.constraint ? maxInWidth / Math.abs(c.scaleX) : -1,
+					isConstraintHeight && p.constraint ? maxInHeight / Math.abs(c.scaleX) : -1
 				);
 
 				var b = c.getSize(tmpBounds);
@@ -616,7 +616,7 @@ class Flow extends Object {
 				p.calculatedHeight = Math.ceil(b.yMax) + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
-				if( multiline && x + p.calculatedWidth > maxWidth && x > startX ) {
+				if( multiline && x - startX + p.calculatedWidth > maxInWidth && x - startX > 0 ) {
 					br = true;
 					alignLine(i);
 					y += maxLineHeight + verticalSpacing;
@@ -726,8 +726,8 @@ class Flow extends Object {
 				if( !c.visible ) continue;
 
 				c.constraintSize(
-					isConstraintWidth && p.constraint ? (maxWidth - (p.paddingLeft + p.paddingRight)) / Math.abs(c.scaleX) : -1,
-					isConstraintHeight && p.constraint ? (maxHeight - (p.paddingTop + p.paddingBottom)) / Math.abs(c.scaleY) : -1
+					isConstraintWidth && p.constraint ? maxInWidth / Math.abs(c.scaleX) : -1,
+					isConstraintHeight && p.constraint ? maxInHeight / Math.abs(c.scaleY) : -1
 				);
 
 				var b = c.getSize(tmpBounds);
@@ -738,7 +738,7 @@ class Flow extends Object {
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 
-				if( multiline && y + p.calculatedHeight > maxHeight && y > startY ) {
+				if( multiline && y - startY + p.calculatedHeight > maxInHeight && y - startY > 0 ) {
 					br = true;
 					alignLine(i);
 					x += maxColWidth + horizontalSpacing;
