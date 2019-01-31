@@ -371,8 +371,15 @@ class Flow extends Object {
 		if( forSize ) {
 			if( !isInline )
 				super.getBoundsRec(relativeTo, out, true);
-			if( calculatedWidth != 0 )
+			if( calculatedWidth != 0 ) {
+				if( posChanged ) {
+					calcAbsPos();
+					for( c in children )
+						c.posChanged = true;
+					posChanged = false;
+				}
 				addBounds(relativeTo, out, 0, 0, calculatedWidth, calculatedHeight);
+			}
 		} else
 			super.getBoundsRec(relativeTo, out, forSize);
 	}
