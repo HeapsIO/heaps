@@ -412,7 +412,7 @@ class Flow extends Object {
 		var k = 0;
 		while( numChildren>k ) {
 			var c = getChildAt(k);
-			if( c == background || c == interactive ) k++; else removeChild(c);
+			if( c == background || c == interactive || c == debugGraphics ) k++; else removeChild(c);
 		}
 	}
 
