@@ -1,6 +1,6 @@
-package h2d.uikit;
-import uikit.Property;
-import uikit.CssValue;
+package h2d.domkit;
+import domkit.Property;
+import domkit.CssValue;
 
 class CustomParser extends CssValue.ValueParser {
 
@@ -136,8 +136,8 @@ class CustomParser extends CssValue.ValueParser {
 }
 
 #if !macro
-@:uiComp("object") @:parser(h2d.uikit.BaseComponents.CustomParser)
-class ObjectComp implements uikit.Component.ComponentDecl<h2d.Object> {
+@:uiComp("object") @:parser(h2d.domkit.BaseComponents.CustomParser)
+class ObjectComp implements domkit.Component.ComponentDecl<h2d.Object> {
 
 	@:p(ident) var name : String;
 	@:p var x : Float;
@@ -268,15 +268,15 @@ class ObjectComp implements uikit.Component.ComponentDecl<h2d.Object> {
 	}
 
 	static var init = {
-		uikit.Element.addElement = function(e, parent) (parent.obj : h2d.Object).addChild(e.obj);
-		uikit.Element.removeElement = function(e) (e.obj : h2d.Object).remove();
+		domkit.Element.addElement = function(e, parent) (parent.obj : h2d.Object).addChild(e.obj);
+		domkit.Element.removeElement = function(e) (e.obj : h2d.Object).remove();
 		true;
 	}
 
 }
 
 @:uiComp("drawable")
-class DrawableComp extends ObjectComp implements uikit.Component.ComponentDecl<h2d.Drawable> {
+class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Drawable> {
 
 	@:p(colorF) var color : h3d.Vector;
 	@:p(auto) var smooth : Null<Bool>;
@@ -288,7 +288,7 @@ class DrawableComp extends ObjectComp implements uikit.Component.ComponentDecl<h
 }
 
 @:uiComp("bitmap")
-class BitmapComp extends DrawableComp implements uikit.Component.ComponentDecl<h2d.Bitmap> {
+class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Bitmap> {
 
 	@:p(tile) var src : h2d.Tile;
 
@@ -303,7 +303,7 @@ class BitmapComp extends DrawableComp implements uikit.Component.ComponentDecl<h
 }
 
 @:uiComp("text")
-class TextComp extends DrawableComp implements uikit.Component.ComponentDecl<h2d.Text> {
+class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Text> {
 
 	@:p var text : String = "";
 	@:p(font) var font : h2d.Font;
@@ -329,7 +329,7 @@ class TextComp extends DrawableComp implements uikit.Component.ComponentDecl<h2d
 
 
 @:uiComp("flow")
-class FlowComp extends DrawableComp implements uikit.Component.ComponentDecl<h2d.Flow> {
+class FlowComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Flow> {
 
 	@:p(auto) var width : Null<Int>;
 	@:p(auto) var height : Null<Int>;

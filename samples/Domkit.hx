@@ -1,5 +1,5 @@
 
-class View extends h2d.Flow implements h2d.uikit.Object {
+class View extends h2d.Flow implements h2d.domkit.Object {
 
 	static var SRC =
 	<flow background="#024" padding="20" min-width="200" content-halign={align}>
@@ -13,8 +13,8 @@ class View extends h2d.Flow implements h2d.uikit.Object {
 
 }
 
-//PARAM=-lib uikit
-class Uikit extends hxd.App {
+//PARAM=-lib domkit
+class Domkit extends hxd.App {
 
 	var center : h2d.Flow;
 
@@ -33,7 +33,7 @@ class Uikit extends hxd.App {
 	}
 
 	static function main() {
-		new Uikit();
+		new Domkit();
 	}
 
 }
