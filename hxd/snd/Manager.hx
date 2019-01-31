@@ -149,6 +149,20 @@ class Manager {
 			channels.stop();
 	}
 
+	/**
+		Returns iterator with all active instances of a Sound at the call time.
+	**/
+	public function getAll( sound : hxd.res.Sound ) : Iterator<Channel> {
+		var ch = channels;
+		var result = new Array<Channel>();
+		while ( ch != null ) {
+			if ( ch.sound == sound )
+				result.push(ch);
+			ch = ch.next;
+		}
+		return new hxd.impl.ArrayIterator(result);
+	}
+
 	public function cleanCache() {
 		for (k in soundBufferMap.keys()) {
 			var b = soundBufferMap.get(k);

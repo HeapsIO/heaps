@@ -8,6 +8,8 @@ enum SoundFormat {
 
 class Sound extends Resource {
 
+	static var ENABLE_AUTO_WATCH = true;
+
 	var data : hxd.snd.Data;
 	var channel : hxd.snd.Channel;
 	public var lastPlay(default, null) = 0.;
@@ -50,6 +52,8 @@ class Sound extends Resource {
 		}
 		if( data == null )
 			throw "Unsupported sound format " + entry.path;
+		if ( ENABLE_AUTO_WATCH )
+			watch(watchCallb);
 		return data;
 	}
 
@@ -75,6 +79,22 @@ class Sound extends Resource {
 
 	public static function startWorker() {
 		return false;
+	}
+
+	@:access(hxd.snd.ChannelBase)
+	function watchCallb() {
+		var old = this.data;
+		this.data = null;
+		var data = getData();
+		if (old != null) {
+			if (old.channels != data.channels || old.samples != data.samples || old.sampleFormat != data.sampleFormat || old.samplingRate != data.samplingRate) {
+				var manager = hxd.snd.Manager.get();
+				for ( ch in manager.getAll(this) ) {
+					ch.duration = data.duration;
+					ch.position = ch.position;
+				}
+			}
+		}
 	}
 
 }
