@@ -139,7 +139,7 @@ class CustomParser extends CssValue.ValueParser {
 @:uiComp("object") @:parser(h2d.domkit.BaseComponents.CustomParser)
 class ObjectComp implements domkit.Component.ComponentDecl<h2d.Object> {
 
-	@:p(ident) var name : String;
+	@:p(name) var name : String;
 	@:p var x : Float;
 	@:p var y : Float;
 	@:p var alpha : Float = 1;
