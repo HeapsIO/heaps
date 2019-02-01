@@ -17,6 +17,10 @@ package h3d.scene.pbr;
 		Debug slides
 	*/
 	var Debug = "Debug";
+	/*
+		Distortion
+	*/
+	var Distortion = "Distortion";
 }
 
 @:enum abstract SkyMode(String) {
@@ -341,8 +345,11 @@ class Renderer extends h3d.scene.Renderer {
 		case Pbr, Env, MatCap:
 			fxaa.apply(ldr);
 
-		case Debug:
+		case Distortion:
+			resetTarget();
+			copy( distortion, null);
 
+		case Debug:
 			var shadowMap = ctx.textures.getNamed("shadowMap");
 			if( shadowMap == null )
 				shadowMap = h3d.mat.Texture.fromColor(0);
@@ -436,6 +443,7 @@ class Renderer extends h3d.scene.Renderer {
 						<option value="Env">Env</option>
 						<option value="MatCap">MatCap</option>
 						<option value="Debug">Debug</option>
+						<option value="Distortion">Distortion</option>
 					</select>
 				</dd>
 				<dt>Env</dt>
