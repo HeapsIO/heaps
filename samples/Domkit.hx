@@ -1,8 +1,7 @@
-
 class View extends h2d.Flow implements h2d.domkit.Object {
 
 	static var SRC =
-	<flow background="#024" padding="20" min-width="200" content-halign={align}>
+	<flow class="mybox" min-width="200" content-halign={align}>
 		Hello World
 	</flow>;
 
@@ -19,12 +18,14 @@ class Domkit extends hxd.App {
 	var center : h2d.Flow;
 
 	override function init() {
-		var view = new View(Right);
 		center = new h2d.Flow(s2d);
 		center.horizontalAlign = center.verticalAlign = Middle;
-
-		center.addChild(view.document.root.obj);
 		onResize();
+		var view = new View(Right, center);
+
+		var style = new h2d.domkit.Style();
+		style.load(hxd.Res.style);
+		style.applyTo(view);
 	}
 
 	override function onResize() {
@@ -33,6 +34,12 @@ class Domkit extends hxd.App {
 	}
 
 	static function main() {
+		#if hl
+		hxd.res.Resource.LIVE_UPDATE = true;
+		hxd.Res.initLocal();
+		#else
+		hxd.Res.initEmbed();
+		#end
 		new Domkit();
 	}
 

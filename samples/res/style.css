@@ -1,0 +1,8 @@
+.mybox {
+	background: #080;
+	padding: -10;
+}
+
+flow.mybox {
+	padding: 10;
+}
