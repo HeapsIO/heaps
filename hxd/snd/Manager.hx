@@ -104,7 +104,7 @@ class Manager {
 		}
 
 		masterVolume       = 1.0;
-		hasMasterVolume    = driver.hasFeature(MasterVolume);
+		hasMasterVolume    = driver == null ? true : driver.hasFeature(MasterVolume);
 		masterSoundGroup   = new SoundGroup  ("master");
 		masterChannelGroup = new ChannelGroup("master");
 		listener           = new Listener();
