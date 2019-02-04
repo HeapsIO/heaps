@@ -137,7 +137,7 @@ class CustomParser extends CssValue.ValueParser {
 
 #if !macro
 @:uiComp("object") @:parser(h2d.domkit.BaseComponents.CustomParser)
-class ObjectComp implements domkit.Component.ComponentDecl<h2d.Object> {
+class ObjectComp implements h2d.domkit.Object implements domkit.Component.ComponentDecl<h2d.Object> {
 
 	@:p(name) var name : String;
 	@:p var x : Float;

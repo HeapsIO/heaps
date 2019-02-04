@@ -14,13 +14,13 @@ class Style extends domkit.CssStyle {
 		resources.push(r);
 		add(new domkit.CssParser().parseSheet(r.entry.getText()));
 		for( o in currentObjects )
-			o.document.setStyle(this);
+			getDocument(o).setStyle(this);
 	}
 
 	public function applyTo( obj ) {
 		currentObjects.remove(obj);
 		currentObjects.push(obj);
-		obj.document.setStyle(this);
+		getDocument(obj).setStyle(this);
 	}
 
 	function remove(obj) {
@@ -37,7 +37,11 @@ class Style extends domkit.CssStyle {
 			add(new domkit.CssParser().parseSheet(txt));
 		}
 		for( o in currentObjects )
-			o.document.setStyle(this);
+			getDocument(o).setStyle(this);
+	}
+
+	function getDocument( o : h2d.domkit.Object ) : domkit.Document<h2d.Object> {
+		return (o : Dynamic).document;
 	}
 
 }

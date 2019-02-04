@@ -12,7 +12,7 @@ class ViewComp extends h2d.Flow implements h2d.domkit.Object {
 		}
 	</flow>;
 
-	public function new(align,icons:Array<h2d.Tile>,?parent) {
+	public function new(align:h2d.Flow.FlowAlign,icons:Array<h2d.Tile>,?parent) {
 		super(parent);
 		initComponent();
 	}

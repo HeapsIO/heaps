@@ -9,16 +9,19 @@ class InitComponents {
 		return null;
 	}
 
-	public static function register() {
+	public static function build() {
 		var fields = haxe.macro.Context.getBuildFields();
-		//var file = haxe.macro.Context.getPosInfos(haxe.macro.Context.currentPos()).file;
-		fields = fields.concat((macro class {
-			override function onRemove() {
-				super.onRemove();
-				var style = Std.instance(document.style, h2d.domkit.Style);
-				if( style != null ) @:privateAccess style.remove(this);
+		for( f in fields )
+			if( f.name == "document" ) {
+				fields = fields.concat((macro class {
+					override function onRemove() {
+						super.onRemove();
+						var style = Std.instance(document.style, h2d.domkit.Style);
+						if( style != null ) @:privateAccess style.remove(this);
+					}
+				}).fields);
+				break;
 			}
-		}).fields);
 		return fields;
 	}
 }
