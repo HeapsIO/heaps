@@ -29,6 +29,12 @@ enum GpuEmitMode {
 		A cone, parametrized with emitAngle and emitDistance
 	**/
 	Cone;
+
+	/**
+		A disc, emit in one direction
+	**/
+	Disc;
+
 	/**
 		The GpuParticles specified volumeBounds
 	**/
@@ -125,6 +131,7 @@ class GpuPartGroup {
 	public var emitAngle(default,set) : Float 	= 1.5;
 	public var emitSync(default, set) : Float	= 0;
 	public var emitDelay(default, set) : Float	= 0;
+	public var emitOnBorder(default, set) : Bool = false;
 
 
 	public var clipBounds : Bool				= false;
@@ -177,6 +184,7 @@ class GpuPartGroup {
 	inline function set_emitAngle(v) { needRebuild = true; return emitAngle = v; }
 	inline function set_emitSync(v) { needRebuild = true; return emitSync = v; }
 	inline function set_emitDelay(v) { needRebuild = true; return emitDelay = v; }
+	inline function set_emitOnBorder(v) { needRebuild = true; return emitOnBorder = v; }
 	inline function set_rotInit(v) { needRebuild = true; return rotInit = v; }
 	inline function set_rotSpeed(v) { needRebuild = true; return rotSpeed = v; }
 	inline function set_rotSpeedRand(v) { needRebuild = true; return rotSpeedRand = v; }
@@ -283,6 +291,17 @@ class GpuPartGroup {
 				bounds.addPos(d, d, -zmin);
 			}
 
+		case Disc:
+			var start = emitStartDist + emitDist;
+			var maxDist = speedMin * (1 + speedIncr * life) * life - gravity * life * life;
+			var phi = emitAngle + Math.PI/2;
+			var zMinMax = maxDist * Math.sin(phi);
+			var xyMinMax = Math.abs(maxDist * Math.cos(phi)) + start;
+
+			bounds.addPos(0, 0, zMinMax);
+			bounds.addPos(xyMinMax, xyMinMax, 0);
+			bounds.addPos(-xyMinMax, -xyMinMax, 0);
+
 		case ParentBounds, VolumeBounds, CameraBounds:
 			var d = speed * (1 + speedIncr * life) * life;
 			var max = (1 + emitDist) * 0.5;
@@ -313,7 +332,6 @@ class GpuPartGroup {
 
 		switch( g.emitMode ) {
 		case Point:
-
 			v.x = srand();
 			v.y = srand();
 			v.z = srand();
@@ -334,6 +352,22 @@ class GpuPartGroup {
 			p.x = v.x * r;
 			p.y = v.y * r;
 			p.z = v.z * r;
+
+		case Disc:
+
+			var phi = g.emitAngle;
+			var theta = rand() * Math.PI * 2;
+			if( g.emitAngle < 0 ) phi += Math.PI;
+
+			v.x = Math.sin(phi) * Math.cos(theta);
+			v.y = Math.sin(phi) * Math.sin(theta);
+			v.z = Math.cos(phi);
+
+			v.normalizeFast();
+			var r = g.emitStartDist + g.emitDist * (emitOnBorder ? 1 : Math.sqrt(rand()));
+			p.x = Math.cos(theta) * r;
+			p.y = Math.sin(theta) * r;
+			p.z = 0;
 
 		case ParentBounds, VolumeBounds, CameraBounds:
 
@@ -613,7 +647,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				case VolumeBounds, CameraBounds:
 					ebounds = volumeBounds;
 					if( ebounds == null ) ebounds = volumeBounds = h3d.col.Bounds.fromValues( -1, -1, -1, 2, 2, 2 );
-				case Cone, Point:
+				case Cone, Point, Disc:
 					ebounds = null;
 				}
 			}
