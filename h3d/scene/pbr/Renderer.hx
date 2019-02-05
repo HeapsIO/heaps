@@ -44,6 +44,7 @@ typedef RenderProps = {
 	var tone : TonemapMap;
 	var emissive : Float;
 	var occlusion : Float;
+	var shadows : Bool;
 }
 
 class DepthCopy extends h3d.shader.ScreenShader {
@@ -75,6 +76,7 @@ class Renderer extends h3d.scene.Renderer {
 	public var env : Environment;
 	public var exposure(get,set) : Float;
 	public var debugMode = 0;
+	public var shadows = true;
 
 	static var ALPHA : hxsl.Output = Swiz(Value("output.color"),[W]);
 	var output = new h3d.pass.Output("mrt",[
@@ -147,6 +149,8 @@ class Renderer extends h3d.scene.Renderer {
 	function drawShadows(){
 		var light = @:privateAccess ctx.lights;
 		var passes = get("shadow");
+		if(!shadows)
+			passes = null;
 		while( light != null ) {
 			var plight = Std.instance(light, h3d.scene.pbr.Light);
 			if( plight != null ) {
@@ -399,7 +403,8 @@ class Renderer extends h3d.scene.Renderer {
 			exposure : 0.,
 			sky : Irrad,
 			tone : Linear,
-			occlusion : 1.
+			occlusion : 1.,
+			shadows: true
 		};
 		return props;
 	}
@@ -421,6 +426,7 @@ class Renderer extends h3d.scene.Renderer {
 		toneMode = props.tone;
 		exposure = props.exposure;
 		env.power = props.envPower;
+		shadows = props.shadows;
 	}
 
 	#if editor
@@ -461,6 +467,7 @@ class Renderer extends h3d.scene.Renderer {
 				<dt>Emissive</dt><dd><input type="range" min="0" max="2" field="emissive"></dd>
 				<dt>Occlusion</dt><dd><input type="range" min="0" max="2" field="occlusion"></dd>
 				<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
+				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"></dd>
 			</dl>
 			</div>
 		');
