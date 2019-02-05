@@ -1,12 +1,5 @@
 package h3d.scene.pbr;
 
-enum ShadowMode {
-	None;
-	Dynamic;
-	Static;
-	Mixed;
-}
-
 class Light extends h3d.scene.Light {
 
 	var _color : h3d.Vector;
