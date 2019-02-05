@@ -14,6 +14,18 @@ class CustomParser extends CssValue.ValueParser {
 		}
 	}
 
+	function parseDimension( value ) {
+		switch( value ) {
+		case VGroup([x,y]):
+			return { x : parseFloat(x), y : parseFloat(y) };
+		case VIdent("none"):
+			return null;
+		default:
+			var s = parseFloat(value);
+			return { x : s, y : s };
+		}
+	}
+
 	function parsePosition( value ) {
 		switch( value ) {
 		case VIdent("auto"):
@@ -336,11 +348,16 @@ class FlowComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	@:p var maxHeight : Null<Int>;
 	@:p(flowBackground) var background : { tile : h2d.Tile, borderW : Int, borderH : Int };
 	@:p var debug : Bool;
+	@:p var vertical : Bool;
+	@:p var multiline : Bool;
 	@:p(box) var padding : { left : Int, right : Int, top : Int, bottom : Int };
 	@:p var paddingLeft : Int;
 	@:p var paddingRight : Int;
 	@:p var paddingTop : Int;
 	@:p var paddingBottom : Int;
+	@:p var hspacing : Int;
+	@:p var vspacing : Int;
+	@:p(dimension) var spacing : { x: Float, y: Float };
 
 	@:p(align) var contentAlign : { h : h2d.Flow.FlowAlign, v : h2d.Flow.FlowAlign };
 	@:p(vAlign) var contentValign : h2d.Flow.FlowAlign;
@@ -401,6 +418,27 @@ class FlowComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 		}
 	}
 
+	static function set_vertical( o : h2d.Flow, v ) {
+		o.isVertical = v;
+	}
+
+	static function set_hspacing( o : h2d.Flow, v ) {
+		o.horizontalSpacing = v;
+	}
+
+	static function set_vspacing( o : h2d.Flow, v) {
+		o.verticalSpacing = v;
+	}
+
+	static function set_spacing( o : h2d.Flow, v ) {
+		if(v == null) {
+			o.horizontalSpacing = o.verticalSpacing = 0;
+		}
+		else {
+			o.horizontalSpacing = Std.int(v.x);
+			o.verticalSpacing = Std.int(v.y);
+		}
+	}
 }
 
 #end
