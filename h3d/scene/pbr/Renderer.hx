@@ -320,7 +320,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		apply(AfterHdr);
 
-		var distortion = allocTarget("distortion", true, 1.0, RGBA16F);
+		var distortion = allocTarget("distortion", true, 1.0, RG16F);
 		distortion.clear(0x000000);
 		setTarget(distortion);
 		draw("distortion");

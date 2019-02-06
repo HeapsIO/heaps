@@ -115,7 +115,7 @@ class DecalPBR extends hxsl.Shader {
 			normalStrength : Float,
 			pbrStrength : Float,
 			emissiveStrength : Float,
-			depth : Float,
+			//depth : Float,
 		};
 
 		@const var CENTERED : Bool;
@@ -152,6 +152,8 @@ class DecalPBR extends hxsl.Shader {
 		var pixelColor : Vec4;
 		var prbValues : Vec4;
 		var strength : Vec4;
+		var localPos : Vec3;
+		var alpha : Float;
 
 		function __init__vertex() {
 			transformedNormal = (normal * global.modelView.mat3()).normalize();
@@ -171,9 +173,7 @@ class DecalPBR extends hxsl.Shader {
 		}
 
 		function outsideBounds() : Bool {
-			return (pixelTransformedPosition.x < minBound.x || pixelTransformedPosition.x > maxBound.x ||
-					pixelTransformedPosition.y < minBound.y || pixelTransformedPosition.y > maxBound.y ||
-			 		pixelTransformedPosition.z < minBound.z || pixelTransformedPosition.z > maxBound.z );
+			return ( localPos.x > 0.5 || localPos.x < -0.5 || localPos.y > 0.5 || localPos.y < -0.5 || localPos.z > 0.5 || localPos.z < -0.5 );
 		}
 
 		function fragment() {
@@ -184,11 +184,12 @@ class DecalPBR extends hxsl.Shader {
 			var ruv = vec4( screenPos, depth, 1 );
 			var wpos = ruv * matrix;
 			var ppos = ruv * camera.inverseViewProj;
+			alpha = 1.0;
 
 			pixelTransformedPosition = ppos.xyz / ppos.w;
-			var pos = (wpos.xyz / wpos.w);
-			calculatedUV = pos.xy;
-			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(pos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
+			localPos = (wpos.xyz / wpos.w);
+			calculatedUV = localPos.xy;
+			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(localPos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
 
 			if( CENTERED )
 				calculatedUV += 0.5;
@@ -202,7 +203,8 @@ class DecalPBR extends hxsl.Shader {
 			if( USE_ALBEDO ) {
 				var albedo = albedoTexture.get(calculatedUV);
 				pixelColor = albedo;
-				strength.r = albedoStrength;
+				strength.r = albedoStrength * albedo.a;
+				alpha = albedo.a;
 			}
 
 			if( USE_NORMAL ) {
@@ -217,15 +219,15 @@ class DecalPBR extends hxsl.Shader {
 				var tanX = worldTangent.xyz.normalize();
 				var tanY = n.cross(tanX) * -1;
 				transformedNormal = (nf.x * tanX + nf.y * tanY + nf.z * n).normalize();
-				strength.g = normalStrength;
+				strength.g = normalStrength * alpha;
 			}
 
 			if( USE_PBR ) {
-				var pbr = pbrTexture.get(calculatedUV).rgb;
+				var pbr = pbrTexture.get(calculatedUV).rgba;
 				prbValues.r = pbr.r;
 				prbValues.g = 1 - pbr.g * pbr.g;
 				prbValues.b = pbr.b;
-				strength.b = pbrStrength;
+				strength.b = pbrStrength * alpha;
 			}
 
 			//output.color = pixelColor; // Allow override
@@ -233,12 +235,12 @@ class DecalPBR extends hxsl.Shader {
 			output.metalness = prbValues.r;
 			output.roughness = prbValues.g;
 			output.occlusion = prbValues.b;
-			output.emissive = emissive;
+			output.emissive = emissive * alpha;
 			output.albedoStrength = strength.r * fadeFactor;
 			output.normalStrength = strength.g * fadeFactor;
 			output.pbrStrength = strength.b * fadeFactor;
-			output.emissiveStrength = fadeFactor;
-			output.depth = depth;
+			output.emissiveStrength = 0;
+			//output.depth = 0; // Dont draw depth again
 		}
 	};
 
