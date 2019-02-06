@@ -52,6 +52,7 @@ class Config {
 		"ogg" => "wav",
 		"mp3" => "wav",
 		"l3d" => "bake",
+		"css" => "less",
 	];
 
 	static function defined( name : String ) {
