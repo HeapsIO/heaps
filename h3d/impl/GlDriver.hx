@@ -1097,10 +1097,11 @@ class GlDriver extends Driver {
 		#if hl
 		var needed = streamPos + length;
 		var total = (needed + 7) & ~7; // align on 8 bytes
+		var alen = total - streamPos;
 		if( total > streamLen ) expandStream(total);
 		streamBytes.blit(streamPos, data, pos, length);
 		data = streamBytes.offset(streamPos);
-		streamPos = total;
+		streamPos += alen;
 		#end
 		return data;
 	}
