@@ -349,6 +349,7 @@ class FlowComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	@:p(flowBackground) var background : { tile : h2d.Tile, borderW : Int, borderH : Int };
 	@:p var debug : Bool;
 	@:p var vertical : Bool;
+	@:p var horizontal : Bool;
 	@:p var multiline : Bool;
 	@:p(box) var padding : { left : Int, right : Int, top : Int, bottom : Int };
 	@:p var paddingLeft : Int;
@@ -420,6 +421,10 @@ class FlowComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 
 	static function set_vertical( o : h2d.Flow, v ) {
 		o.isVertical = v;
+	}
+
+	static function set_horizontal( o : h2d.Flow, v ) {
+		o.isVertical = !v;
 	}
 
 	static function set_hspacing( o : h2d.Flow, v ) {
