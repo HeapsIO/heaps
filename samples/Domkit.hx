@@ -8,7 +8,7 @@ class ViewComp extends h2d.Flow implements h2d.domkit.Object {
 		Hello World
 		${
 			for( i in icons )
-				<bitmap src={i} name="icons[]"/>
+				<bitmap src={i} id="icons[]"/>
 		}
 	</flow>;
 
@@ -21,7 +21,7 @@ class ViewComp extends h2d.Flow implements h2d.domkit.Object {
 
 class ViewContainer extends h2d.Flow implements h2d.domkit.Object {
 
-	static var SRC = <flow><view(align,[]) name="view"/></flow>;
+	static var SRC = <flow><view(align,[]) id="view"/></flow>;
 
 	public function new(align,?parent) {
 		super(parent);
