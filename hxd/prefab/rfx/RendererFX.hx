@@ -3,6 +3,7 @@ package hxd.prefab.rfx;
 enum Step {
 	BeforeHdr;
 	AfterHdr;
+	Final;
 }
 
 class RendererFX extends Prefab {

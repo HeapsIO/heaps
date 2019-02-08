@@ -342,7 +342,9 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.render();
 
 		postDraw();
+		apply(Final);
 		resetTarget();
+
 
 		switch( displayMode ) {
 
