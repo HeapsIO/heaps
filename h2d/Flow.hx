@@ -606,6 +606,17 @@ class Flow extends Object {
 				lastIndex = maxIndex;
 			}
 
+			inline function remSize(from: Int) {
+				var size = 0;
+				for( j in from...children.length ) {
+					var p = properties[j];
+					if( p.isAbsolute || !children[j].visible ) continue;
+					if( p.isBreak ) break;
+					size += horizontalSpacing + p.calculatedWidth;
+				}
+				return size;
+			}
+
 			for( i in 0...children.length ) {
 				var p = properties[i];
 				if( p.isAbsolute ) continue;
@@ -657,22 +668,16 @@ class Flow extends Object {
 				var align = p.horizontalAlign == null ? halign : p.horizontalAlign;
 				switch( align ) {
 				case Right:
-					if( midSpace != 0 ) {
+					if( midSpace == 0 ) {
+						var remSize = p.calculatedWidth + remSize(i + 1);
+						midSpace = xmax - remSize;
 						xmin += midSpace;
-						midSpace = 0;
 					}
-					xmax -= p.calculatedWidth;
-					px = xmax;
-					xmax -= horizontalSpacing;
+					px = xmin;
+					xmin += p.calculatedWidth + horizontalSpacing;
 				case Middle:
 					if( midSpace == 0 ) {
-						var remSize = p.calculatedWidth;
-						for( j in i + 1...children.length ) {
-							var p = properties[j];
-							if( p.isAbsolute || !children[j].visible ) continue;
-							if( p.isBreak ) break;
-							remSize += horizontalSpacing + p.calculatedWidth;
-						}
+						var remSize = p.calculatedWidth + remSize(i + 1);
 						midSpace = Std.int(((xmax - xmin) - remSize) * 0.5);
 						xmin += midSpace;
 					}
@@ -723,6 +728,17 @@ class Flow extends Object {
 					}
 				}
 				lastIndex = maxIndex;
+			}
+
+			inline function remSize(from: Int) {
+				var size = 0;
+				for( j in from...children.length ) {
+					var p = properties[j];
+					if( p.isAbsolute || !children[j].visible ) continue;
+					if( p.isBreak ) break;
+					size += verticalSpacing + p.calculatedHeight;
+				}
+				return size;
 			}
 
 			for( i in 0...children.length ) {
@@ -781,22 +797,16 @@ class Flow extends Object {
 				var align = p.verticalAlign == null ? valign : p.verticalAlign;
 				switch( align ) {
 				case Bottom:
-					if( midSpace != 0 ) {
+					if( midSpace == 0 ) {
+						var remSize = p.calculatedHeight + remSize(i + 1);
+						midSpace = ymax - remSize;
 						ymin += midSpace;
-						midSpace = 0;
 					}
-					ymax -= p.calculatedHeight;
-					py = ymax;
-					ymax -= verticalSpacing;
+					py = ymin;
+					ymin += p.calculatedHeight + verticalSpacing;
 				case Middle:
 					if( midSpace == 0 ) {
-						var remSize = p.calculatedHeight;
-						for( j in i + 1...children.length ) {
-							var p = properties[j];
-							if( p.isAbsolute || !children[j].visible ) continue;
-							if( p.isBreak ) break;
-							remSize += verticalSpacing + p.calculatedHeight;
-						}
+						var remSize = p.calculatedHeight + remSize(i + 1);
 						midSpace = Std.int(((ymax - ymin) - remSize) * 0.5);
 						ymin += midSpace;
 					}
