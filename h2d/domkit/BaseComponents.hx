@@ -328,6 +328,7 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	@:p(none) var maxWidth : Null<Int>;
 	@:p var textAlign : h2d.Text.Align = Left;
 	@:p(textShadow) var textShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
+	@:p(color) var textColor: Int;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.Text(hxd.res.DefaultFont.get(),parent);
