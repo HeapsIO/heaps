@@ -56,8 +56,16 @@ class CustomParser extends CssValue.ValueParser {
 
 	public function parseTile( v : CssValue) {
 		try {
-			var c = parseColor(v);
-			return #if macro true #else h2d.Tile.fromColor(c,1,1,(c>>>24)/255) #end;
+			switch( v ) {
+			case VGroup([color,w,h]):
+				var c = parseColor(color);
+				var w = parseInt(w);
+				var h = parseInt(h);
+				return #if macro true #else h2d.Tile.fromColor(c,w,h,(c>>>24)/255) #end;
+			default:
+				var c = parseColor(v);
+				return #if macro true #else h2d.Tile.fromColor(c,1,1,(c>>>24)/255) #end;
+			}
 		} catch( e : InvalidProperty ) {
 			var path = parsePath(v);
 			var p = loadResource(path);
@@ -157,6 +165,8 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var rotation : Float;
 	@:p var visible : Bool;
 	@:p(scale) var scale : { x : Float, y : Float };
+	@:p var scaleX : Float;
+	@:p var scaleY : Float;
 	@:p var blend : h2d.BlendMode = Alpha;
 
 	// flow properties
