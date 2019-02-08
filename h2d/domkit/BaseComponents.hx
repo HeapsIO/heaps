@@ -180,8 +180,13 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	}
 
 	static function set_scale(o:h2d.Object,v) {
-		o.scaleX = v.x;
-		o.scaleY = v.y;
+		if(v != null) {
+			o.scaleX = v.x;
+			o.scaleY = v.y;
+		}
+		else {
+			o.setScale(1);
+		}
 	}
 
 	static function set_blend(o:h2d.Object, b:h2d.BlendMode) {
