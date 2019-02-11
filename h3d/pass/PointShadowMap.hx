@@ -144,7 +144,14 @@ class PointShadowMap extends Shadows {
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture)
 			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, [Target, Cube]);
 
+		var pointLight = cast(light, h3d.scene.pbr.PointLight);
+		var absPos = light.getAbsPos();
+		var lightBounds = new h3d.col.Bounds();
+		lightBounds.addPoint( new h3d.col.Point(absPos.tx + pointLight.range, absPos.ty + pointLight.range, absPos.tz + pointLight.range));
+		lightBounds.addPoint( new h3d.col.Point(absPos.tx - pointLight.range, absPos.ty - pointLight.range, absPos.tz - pointLight.range));
+
 		for(i in 0 ... 6){
+
 			var pointLight = cast(light, h3d.scene.pbr.PointLight);
 
 			var absPos = light.getAbsPos();
@@ -155,7 +162,8 @@ class PointShadowMap extends Shadows {
 
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
-			passes = super.draw(passes);
+			passes = customDraw(passes, lightBounds);
+
 			ctx.engine.popTarget();
 		}
 
@@ -175,6 +183,75 @@ class PointShadowMap extends Shadows {
 		}
 
 		syncShader(texture);
+		return passes;
+	}
+
+	@:access(h3d.scene)
+	function customDraw( passes : Object, lightBounds : h3d.col.Bounds) {
+		for( g in ctx.sharedGlobals )
+			globals.fastSet(g.gid, g.value);
+		setGlobals();
+		setupShaders(passes);
+		var p = passes;
+		var shaderStart = shaderCount, textureStart = textureCount;
+		while( p != null ) {
+			if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
+				shaderIdMap[p.shader.id] = shaderCount++;
+			if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
+				textureIdMap[p.texture] = textureCount++;
+			p = p.next;
+		}
+		if( sortPasses )
+			passes = haxe.ds.ListSort.sortSingleLinked(passes, function(o1:Object, o2:Object) {
+				var d = shaderIdMap[o1.shader.id] - shaderIdMap[o2.shader.id];
+				if( d != 0 ) return d;
+				return textureIdMap[o1.texture] - textureIdMap[o2.texture];
+			});
+		ctx.uploadParams = uploadParams;
+		var p = passes;
+		var buf = cachedBuffer, prevShader = null;
+		var drawTri = 0, drawCalls = 0, shaderSwitches = 0;
+		if( ctx.engine.driver.logEnable ) {
+			if( logEnable ) log("Pass " + (passes == null ? "???" : passes.pass.name) + " start");
+			drawTri = ctx.engine.drawTriangles;
+			drawCalls = ctx.engine.drawCalls;
+			shaderSwitches = ctx.engine.shaderSwitches;
+		}
+		while( p != null ) {
+
+			if( !lightCamera.frustum.hasBounds(p.obj.getBounds())) {
+				p = p.next;
+				continue;
+			}
+
+			if( logEnable ) log("Render " + p.obj + "." + p.pass.name);
+			globalModelView = p.obj.absPos;
+			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
+				globalModelViewInverse = p.obj.getInvPos();
+			if( prevShader != p.shader ) {
+				prevShader = p.shader;
+				ctx.engine.selectShader(p.shader);
+				if( buf == null )
+					buf = cachedBuffer = new h3d.shader.Buffers(p.shader);
+				else
+					buf.grow(p.shader);
+				manager.fillGlobals(buf, p.shader);
+				ctx.engine.uploadShaderBuffers(buf, Globals);
+			}
+			if( !p.pass.dynamicParameters ) {
+				manager.fillParams(buf, p.shader, p.shaders);
+				ctx.engine.uploadShaderBuffers(buf, Params);
+				ctx.engine.uploadShaderBuffers(buf, Textures);
+				ctx.engine.uploadShaderBuffers(buf, Buffers);
+			}
+			drawObject(p);
+			p = p.next;
+		}
+		if( logEnable ) {
+			log("Pass " + (passes == null ? "???" : passes.pass.name) + " end");
+			log("\t" + (ctx.engine.drawTriangles - drawTri) + " tri " + (ctx.engine.drawCalls - drawCalls) + " calls " + (ctx.engine.shaderSwitches - shaderSwitches) + " shaders");
+		}
+		ctx.nextPass();
 		return passes;
 	}
 
