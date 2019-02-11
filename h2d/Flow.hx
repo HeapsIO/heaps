@@ -171,6 +171,11 @@ class Flow extends Object {
 	**/
 	public var multiline(default,set) : Bool = false;
 
+	/**
+		When set to true, children are aligned in reverse order
+	**/
+	public var reverse(default,set) : Bool = false;
+
 	var background : h2d.ScaleGrid;
 	var debugGraphics : h2d.Graphics;
 	var properties : Array<FlowProperties> = [];
@@ -241,6 +246,13 @@ class Flow extends Object {
 			return v;
 		needReflow = true;
 		return multiline = v;
+	}
+
+	function set_reverse(v) {
+		if( reverse == v )
+			return v;
+		needReflow = true;
+		return reverse = v;
 	}
 
 	function set_needReflow(v) {
@@ -570,6 +582,13 @@ class Flow extends Object {
 		if( debug )
 			debugGraphics.clear();
 
+		inline function childAt(i: Int) {
+			return children[ reverse ? children.length - i - 1 : i ];
+		}
+		inline function propAt(i: Int) {
+			return properties[ reverse ? children.length - i - 1 : i ];
+		}
+
 		var cw, ch;
 		if( !isVertical ) {
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
@@ -589,9 +608,9 @@ class Flow extends Object {
 				else if( overflow && minLineHeight != 0 )
 					maxLineHeight = minLineHeight;
 				for( i in lastIndex...maxIndex ) {
-					var p = properties[i];
+					var p = propAt(i);
 					if( p.isAbsolute ) continue;
-					var c = children[i];
+					var c = childAt(i);
 					if( !c.visible ) continue;
 					var a = p.verticalAlign != null ? p.verticalAlign : valign;
 					c.y = y + p.offsetY + p.paddingTop;
@@ -606,10 +625,21 @@ class Flow extends Object {
 				lastIndex = maxIndex;
 			}
 
+			inline function remSize(from: Int) {
+				var size = 0;
+				for( j in from...children.length ) {
+					var p = propAt(j);
+					if( p.isAbsolute || !childAt(j).visible ) continue;
+					if( p.isBreak ) break;
+					size += horizontalSpacing + p.calculatedWidth;
+				}
+				return size;
+			}
+
 			for( i in 0...children.length ) {
-				var p = properties[i];
+				var p = propAt(i);
 				if( p.isAbsolute ) continue;
-				var c = children[i];
+				var c = childAt(i);
 				if( !c.visible ) continue;
 
 				c.constraintSize(
@@ -646,8 +676,8 @@ class Flow extends Object {
 			var xmin = startX, xmax = endX;
 			var midSpace = 0;
 			for( i in 0...children.length ) {
-				var p = properties[i];
-				if( p.isAbsolute || !children[i].visible ) continue;
+				var p = propAt(i);
+				if( p.isAbsolute || !childAt(i).visible ) continue;
 				if( p.isBreak ) {
 					xmin = startX;
 					xmax = endX;
@@ -657,22 +687,16 @@ class Flow extends Object {
 				var align = p.horizontalAlign == null ? halign : p.horizontalAlign;
 				switch( align ) {
 				case Right:
-					if( midSpace != 0 ) {
+					if( midSpace == 0 ) {
+						var remSize = p.calculatedWidth + remSize(i + 1);
+						midSpace = xmax - remSize;
 						xmin += midSpace;
-						midSpace = 0;
 					}
-					xmax -= p.calculatedWidth;
-					px = xmax;
-					xmax -= horizontalSpacing;
+					px = xmin;
+					xmin += p.calculatedWidth + horizontalSpacing;
 				case Middle:
 					if( midSpace == 0 ) {
-						var remSize = p.calculatedWidth;
-						for( j in i + 1...children.length ) {
-							var p = properties[j];
-							if( p.isAbsolute || !children[j].visible ) continue;
-							if( p.isBreak ) break;
-							remSize += horizontalSpacing + p.calculatedWidth;
-						}
+						var remSize = p.calculatedWidth + remSize(i + 1);
 						midSpace = Std.int(((xmax - xmin) - remSize) * 0.5);
 						xmin += midSpace;
 					}
@@ -686,7 +710,7 @@ class Flow extends Object {
 					px = xmin;
 					xmin += p.calculatedWidth + horizontalSpacing;
 				}
-				children[i].x = px + p.offsetX + p.paddingLeft;
+				childAt(i).x = px + p.offsetX + p.paddingLeft;
 			}
 
 		} else {
@@ -708,9 +732,9 @@ class Flow extends Object {
 				else if( overflow && minColWidth != 0 )
 					maxColWidth = minColWidth;
 				for( i in lastIndex...maxIndex ) {
-					var p = properties[i];
+					var p = propAt(i);
 					if( p.isAbsolute ) continue;
-					var c = children[i];
+					var c = childAt(i);
 					if( !c.visible ) continue;
 					var a = p.horizontalAlign != null ? p.horizontalAlign : halign;
 					c.x = x + p.offsetX + p.paddingLeft;
@@ -725,11 +749,22 @@ class Flow extends Object {
 				lastIndex = maxIndex;
 			}
 
+			inline function remSize(from: Int) {
+				var size = 0;
+				for( j in from...children.length ) {
+					var p = propAt(j);
+					if( p.isAbsolute || !childAt(j).visible ) continue;
+					if( p.isBreak ) break;
+					size += verticalSpacing + p.calculatedHeight;
+				}
+				return size;
+			}
+
 			for( i in 0...children.length ) {
-				var p = properties[i];
+				var p = propAt(i);
 				if( p.isAbsolute ) continue;
 
-				var c = children[i];
+				var c = childAt(i);
 				if( !c.visible ) continue;
 
 				c.constraintSize(
@@ -770,8 +805,8 @@ class Flow extends Object {
 			var ymin = startY, ymax = endY;
 			var midSpace = 0;
 			for( i in 0...children.length ) {
-				var p = properties[i];
-				if( p.isAbsolute || !children[i].visible ) continue;
+				var p = propAt(i);
+				if( p.isAbsolute || !childAt(i).visible ) continue;
 				if( p.isBreak ) {
 					ymin = startY;
 					ymax = endY;
@@ -781,22 +816,16 @@ class Flow extends Object {
 				var align = p.verticalAlign == null ? valign : p.verticalAlign;
 				switch( align ) {
 				case Bottom:
-					if( midSpace != 0 ) {
+					if( midSpace == 0 ) {
+						var remSize = p.calculatedHeight + remSize(i + 1);
+						midSpace = ymax - remSize;
 						ymin += midSpace;
-						midSpace = 0;
 					}
-					ymax -= p.calculatedHeight;
-					py = ymax;
-					ymax -= verticalSpacing;
+					py = ymin;
+					ymin += p.calculatedHeight + verticalSpacing;
 				case Middle:
 					if( midSpace == 0 ) {
-						var remSize = p.calculatedHeight;
-						for( j in i + 1...children.length ) {
-							var p = properties[j];
-							if( p.isAbsolute || !children[j].visible ) continue;
-							if( p.isBreak ) break;
-							remSize += verticalSpacing + p.calculatedHeight;
-						}
+						var remSize = p.calculatedHeight + remSize(i + 1);
 						midSpace = Std.int(((ymax - ymin) - remSize) * 0.5);
 						ymin += midSpace;
 					}
@@ -810,7 +839,7 @@ class Flow extends Object {
 					py = ymin;
 					ymin += p.calculatedHeight + verticalSpacing;
 				}
-				children[i].y = py + p.offsetY + p.paddingTop;
+				childAt(i).y = py + p.offsetY + p.paddingTop;
 			}
 		}
 
@@ -846,8 +875,8 @@ class Flow extends Object {
 			}
 			debugGraphics.lineStyle(1, 0x0080FF);
 			for( i in 0...children.length ) {
-				var p = properties[i];
-				var c = children[i];
+				var p = propAt(i);
+				var c = childAt(i);
 				if( p.isAbsolute || !c.visible ) continue;
 				debugGraphics.drawRect(c.x, c.y, p.calculatedWidth, p.calculatedHeight);
 			}
