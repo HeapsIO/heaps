@@ -174,7 +174,7 @@ class Flow extends Object {
 	/**
 		When set to true, children are aligned in reverse order
 	**/
-	public var reverse(default,set) : Bool = true;
+	public var reverse(default,set) : Bool = false;
 
 	var background : h2d.ScaleGrid;
 	var debugGraphics : h2d.Graphics;
