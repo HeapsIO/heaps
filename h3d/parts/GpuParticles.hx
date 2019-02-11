@@ -553,6 +553,8 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				material.props = g.getMaterialProps();
 				material.name = g.name;
 			}
+		} else {
+			this.material = material;
 		}
 		material.mainPass.addShader(g.pshader);
 		if( index == null )
