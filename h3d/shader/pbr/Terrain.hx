@@ -61,7 +61,7 @@ class Terrain extends hxsl.Shader {
 			var numLayers = mix(float(maxStep), float(minStep), abs(viewNS.z));
 			var layerDepth = 1 / numLayers;
 			var curLayerDepth = 0.;
-			var delta = (viewNS.xy / viewNS.z) * parallaxAmount / numLayers * 1.0 / surfaceParams[surfaceIndex].x;
+			var delta = (viewNS.xy / viewNS.z) * parallaxAmount / numLayers;
 			var curUV = uv;
 			var curDepth = 1 - pbrTextures.get(getsurfaceUV(surfaceIndex, curUV)).a;
 			while( curLayerDepth < curDepth ) {
