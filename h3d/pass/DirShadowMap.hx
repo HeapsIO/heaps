@@ -176,23 +176,23 @@ class DirShadowMap extends Shadows {
 
 		if( !ctx.computingStatic ){
 			switch( mode ) {
-			case None, Mixed:
-				return passes;
+			case None:
+				return;
 			case Dynamic:
 				// nothing
-			case Static:
+			case Static, Mixed:
 				if( staticTexture == null || staticTexture.isDisposed() ){
 					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
 					staticTexture.name = "defaultDirShadowMap";
 				}
 				if( mode == Static ) {
 					syncShader(staticTexture);
-					return passes;
+					return;
 				}
 			}
 		}
 
-		var passes = filterPasses(passes);
+		filterPasses(passes);
 
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
@@ -220,7 +220,7 @@ class DirShadowMap extends Shadows {
 
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
-		passes = super.draw(passes);
+		super.draw(passes);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
@@ -238,10 +238,9 @@ class DirShadowMap extends Shadows {
 			blur.apply(ctx, texture);
 
 		syncShader(texture);
-		return passes;
 	}
 
-	override function computeStatic( passes : h3d.pass.Object ) {
+	override function computeStatic( passes : h3d.pass.PassList ) {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);

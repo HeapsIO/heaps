@@ -21,8 +21,7 @@ class Base {
 	public function dispose() {
 	}
 
-	public function draw( passes : Object ) {
-		return passes;
+	public function draw( passes : PassList ) {
 	}
 
 }

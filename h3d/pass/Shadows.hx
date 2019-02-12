@@ -80,52 +80,24 @@ class Shadows extends Default {
 		return null;
 	}
 
-	public function computeStatic( passes : h3d.pass.Object ) {
+	public function computeStatic( passes : h3d.pass.PassList ) {
 		throw "Not implemented";
 	}
 
-	function filterPasses( passes : h3d.pass.Object ) : h3d.pass.Object {
-		var isStatic : Bool;
+	function filterPasses( passes : h3d.pass.PassList ) {
 		switch( mode ) {
 		case None:
-			return null;
+			passes.clear();
 		case Dynamic:
-			if( ctx.computingStatic ) return null;
-			return passes;
+			if( ctx.computingStatic ) passes.clear();
 		case Mixed:
-			isStatic = ctx.computingStatic;
+			passes.filter(function(p) return p.pass.isStatic == ctx.computingStatic);
 		case Static:
-			if( !ctx.computingStatic ) return null;
-			isStatic = true;
+			if( ctx.computingStatic )
+				passes.filter(function(p) return p.pass.isStatic == true);
+			else
+				passes.clear();
 		}
-		var head = null;
-		var prev = null;
-		var last = null;
-
-		var cur = passes;
-		while( cur != null ) {
-			if( cur.pass.isStatic == isStatic ) {
-				if( head == null )
-					head = prev = cur;
-				else {
-					prev.next = cur;
-					prev = cur;
-				}
-			} else {
-				if( last == null )
-					last = cur;
-				else {
-					last.next = cur;
-					last = cur;
-				}
-			}
-			cur = cur.next;
-		}
-		if( last != null )
-			last.next = head;
-		if( prev != null )
-			prev.next = null;
-		return head;
 	}
 
 }

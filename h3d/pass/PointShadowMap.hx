@@ -115,7 +115,7 @@ class PointShadowMap extends Shadows {
 		if( !ctx.computingStatic ){
 			switch( mode ) {
 			case None:
-				return passes;
+				return;
 			case Dynamic:
 				// nothing
 			case Mixed:
@@ -126,13 +126,13 @@ class PointShadowMap extends Shadows {
 					staticTexture = createDefaultShadowMap();
 				updateCamera();
 				syncShader(staticTexture);
-				return passes;
+				return;
 			}
 		}
 
-		var passes = filterPasses(passes);
+		filterPasses(passes);
 
-		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, [Target, Cube]);
+		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
 		if(depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
 				if( depth != null ) depth.dispose();
 				depth = new h3d.mat.DepthBuffer(size, size);
@@ -142,7 +142,7 @@ class PointShadowMap extends Shadows {
 		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
 		var merge : h3d.mat.Texture = null;
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture)
-			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, [Target, Cube]);
+			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, true);
 
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		var absPos = light.getAbsPos();
@@ -162,7 +162,7 @@ class PointShadowMap extends Shadows {
 
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
-			passes = customDraw(passes, lightBounds);
+			customDraw(passes, lightBounds);
 
 			ctx.engine.popTarget();
 		}
@@ -183,48 +183,36 @@ class PointShadowMap extends Shadows {
 		}
 
 		syncShader(texture);
-		return passes;
 	}
 
 	@:access(h3d.scene)
-	function customDraw( passes : Object, lightBounds : h3d.col.Bounds) {
+	function customDraw( passes : h3d.pass.PassList, lightBounds : h3d.col.Bounds) {
+		if( passes == null )
+			return;
 		for( g in ctx.sharedGlobals )
 			globals.fastSet(g.gid, g.value);
 		setGlobals();
 		setupShaders(passes);
-		var p = passes;
 		var shaderStart = shaderCount, textureStart = textureCount;
-		while( p != null ) {
+		for( p in passes ) {
 			if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
 				shaderIdMap[p.shader.id] = shaderCount++;
 			if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
 				textureIdMap[p.texture] = textureCount++;
-			p = p.next;
 		}
 		if( sortPasses )
-			passes = haxe.ds.ListSort.sortSingleLinked(passes, function(o1:Object, o2:Object) {
+			passes.sort(function(o1, o2) {
 				var d = shaderIdMap[o1.shader.id] - shaderIdMap[o2.shader.id];
 				if( d != 0 ) return d;
 				return textureIdMap[o1.texture] - textureIdMap[o2.texture];
 			});
 		ctx.uploadParams = uploadParams;
-		var p = passes;
 		var buf = cachedBuffer, prevShader = null;
-		var drawTri = 0, drawCalls = 0, shaderSwitches = 0;
-		if( ctx.engine.driver.logEnable ) {
-			if( logEnable ) log("Pass " + (passes == null ? "???" : passes.pass.name) + " start");
-			drawTri = ctx.engine.drawTriangles;
-			drawCalls = ctx.engine.drawCalls;
-			shaderSwitches = ctx.engine.shaderSwitches;
-		}
-		while( p != null ) {
+		for( p in passes ) {
 
-			if( !lightCamera.frustum.hasBounds(p.obj.getBounds())) {
-				p = p.next;
+			if( !lightCamera.frustum.hasBounds(p.obj.getBounds()))
 				continue;
-			}
 
-			if( logEnable ) log("Render " + p.obj + "." + p.pass.name);
 			globalModelView = p.obj.absPos;
 			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
 				globalModelViewInverse = p.obj.getInvPos();
@@ -245,14 +233,8 @@ class PointShadowMap extends Shadows {
 				ctx.engine.uploadShaderBuffers(buf, Buffers);
 			}
 			drawObject(p);
-			p = p.next;
-		}
-		if( logEnable ) {
-			log("Pass " + (passes == null ? "???" : passes.pass.name) + " end");
-			log("\t" + (ctx.engine.drawTriangles - drawTri) + " tri " + (ctx.engine.drawCalls - drawCalls) + " calls " + (ctx.engine.shaderSwitches - shaderSwitches) + " shaders");
 		}
 		ctx.nextPass();
-		return passes;
 	}
 
 	function updateCamera(){
@@ -261,7 +243,7 @@ class PointShadowMap extends Shadows {
 		lightCamera.update();
 	}
 
-	override function computeStatic( passes : h3d.pass.Object ) {
+	override function computeStatic( passes : h3d.pass.PassList ) {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);

@@ -1,11 +1,11 @@
 package h3d.pass;
 
-class Object {
+class PassObject {
+	@:noCompletion public var next : PassObject;
+	var nextAlloc : PassObject;
 	public var pass : h3d.mat.Pass;
 	public var obj : h3d.scene.Object;
 	public var index : Int;
-	public var next : Object;
-	public var nextAlloc : Object;
 
 	// cache
 	public var shaders : hxsl.ShaderList;
@@ -13,6 +13,6 @@ class Object {
 	public var depth : Float;
 	public var texture : Int = 0;
 
-	public function new() {
+	function new() {
 	}
 }

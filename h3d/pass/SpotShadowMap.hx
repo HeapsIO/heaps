@@ -93,7 +93,7 @@ class SpotShadowMap extends Shadows {
 		if( !ctx.computingStatic )
 			switch( mode ) {
 			case None:
-				return passes;
+				return;
 			case Dynamic:
 				// nothing
 			case Mixed:
@@ -104,10 +104,10 @@ class SpotShadowMap extends Shadows {
 					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
 				updateCamera();
 				syncShader(staticTexture);
-				return passes;
+				return;
 			}
 
-		passes = filterPasses(passes);
+		filterPasses(passes);
 		updateCamera();
 
 		var texture = ctx.textures.allocTarget("shadowMap", size, size, false, format);
@@ -119,7 +119,7 @@ class SpotShadowMap extends Shadows {
 
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
-		passes = super.draw(passes);
+		super.draw(passes);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
@@ -138,7 +138,6 @@ class SpotShadowMap extends Shadows {
 		}
 
 		syncShader(texture);
-		return passes;
 	}
 
 	function updateCamera(){
@@ -152,7 +151,7 @@ class SpotShadowMap extends Shadows {
 		lightCamera.update();
 	}
 
-	override function computeStatic( passes : h3d.pass.Object ) {
+	override function computeStatic( passes : h3d.pass.PassList ) {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);

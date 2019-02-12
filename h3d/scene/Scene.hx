@@ -296,9 +296,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.lightSystem = null;
 
 		var found = null;
-		var passes = @:privateAccess ctx.passes;
+		var passes = new h3d.pass.PassList(@:privateAccess ctx.passes);
 
-		if( passes != null ) {
+		if( !passes.isEmpty() ) {
 			var p = hardwarePass;
 			if( p == null )
 				hardwarePass = p = new h3d.pass.HardwarePick();
@@ -306,14 +306,13 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			p.pickX = pixelX;
 			p.pickY = pixelY;
 			p.setContext(ctx);
-			@:privateAccess ctx.passes = passes = p.draw(passes);
-			if( p.pickedIndex >= 0 ) {
-				while( p.pickedIndex > 0 ) {
-					p.pickedIndex--;
-					passes = passes.next;
-				}
-				found = passes.obj;
-			}
+			p.draw(passes);
+			if( p.pickedIndex >= 0 )
+				for( po in passes )
+					if( p.pickedIndex-- == 0 ) {
+						found = po.obj;
+						break;
+					}
 		}
 
 		ctx.done();
@@ -401,7 +400,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				p = p.next;
 			}
 			prev.next = null;
-			passes.push(new Renderer.PassObjects(curPass.pass.name,curPass));
+			var pobjs = new Renderer.PassObjects();
+			pobjs.name = curPass.pass.name;
+			pobjs.passes.init(curPass);
+			passes.push(pobjs);
 			curPass = p;
 		}
 

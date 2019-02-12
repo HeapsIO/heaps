@@ -1,5 +1,4 @@
 package h3d.scene;
-import h3d.pass.Object in ObjectPass;
 
 private class SharedGlobal {
 	public var gid : Int;
@@ -14,7 +13,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	public var camera : h3d.Camera;
 	public var scene : Scene;
-	public var drawPass : ObjectPass;
+	public var drawPass : h3d.pass.PassObject;
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
 
@@ -24,11 +23,11 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var extraShaders : hxsl.ShaderList;
 	public var visibleFlag : Bool;
 
-	var pool : ObjectPass;
-	var firstAlloc : ObjectPass;
+	var allocPool : h3d.pass.PassObject;
+	var allocFirst : h3d.pass.PassObject;
 	var cachedShaderList : Array<hxsl.ShaderList>;
 	var cachedPos : Int;
-	var passes : ObjectPass;
+	var passes : h3d.pass.PassObject;
 	var lights : Light;
 
 	public function new() {
@@ -84,14 +83,14 @@ class RenderContext extends h3d.impl.RenderContext {
 		sharedGlobals.push(new SharedGlobal(gid, value));
 	}
 
-	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) {
-		var o = pool;
+	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) @:privateAccess {
+		var o = allocPool;
 		if( o == null ) {
-			o = new ObjectPass();
-			o.nextAlloc = firstAlloc;
-			firstAlloc = o;
+			o = new h3d.pass.PassObject();
+			o.nextAlloc = allocFirst;
+			allocFirst = o;
 		} else
-			pool = o.nextAlloc;
+			allocPool = o.nextAlloc;
 		o.pass = pass;
 		o.obj = obj;
 		o.next = passes;
@@ -119,7 +118,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		drawPass = null;
 		uploadParams = null;
 		// move passes to pool, and erase data
-		var p = firstAlloc;
+		var p = allocFirst;
 		while( p != null ) {
 			p.obj = null;
 			p.pass = null;
@@ -128,9 +127,9 @@ class RenderContext extends h3d.impl.RenderContext {
 			p.next = null;
 			p.index = 0;
 			p.texture = 0;
-			p = p.nextAlloc;
+			p = @:privateAccess p.nextAlloc;
 		}
-		pool = firstAlloc;
+		allocPool = allocFirst;
 		for( c in cachedShaderList ) {
 			c.s = null;
 			c.next = null;
