@@ -86,108 +86,111 @@ class Terrain extends hxsl.Shader {
 		}
 
 		function fragment() {
-			// Extract participating surfaces from the pixel
-			var texIndex = surfaceIndexMap.get(calculatedUV).rgb;
 
-			var i1 : Int = int(texIndex.r * 255);
-			var uv1 = getPOMUV(calculatedUV, i1);
-			var surfaceUV1 = getsurfaceUV(i1, uv1);
-			var pbr1 = pbrTextures.get(surfaceUV1).rgba;
-			var albedo1 = albedoTextures.get(surfaceUV1).rgb;
-			var normal1 = normalTextures.get(surfaceUV1).rgba;
-			var h1 = pbr1.a;
-			var aw1 = weightTextures.get(vec3(calculatedUV, i1)).r;
+			if( !CHECKER && !COMPLEXITY ) {
+				// Extract participating surfaces from the pixel
+				var texIndex = surfaceIndexMap.get(calculatedUV).rgb;
 
-			var i2 : Int = int(texIndex.g * 255);
-			var aw2 = weightTextures.get(vec3(calculatedUV, i2)).r;
+				var i1 : Int = int(texIndex.r * 255);
+				var uv1 = getPOMUV(calculatedUV, i1);
+				var surfaceUV1 = getsurfaceUV(i1, uv1);
+				var pbr1 = pbrTextures.get(surfaceUV1).rgba;
+				var albedo1 = albedoTextures.get(surfaceUV1).rgb;
+				var normal1 = normalTextures.get(surfaceUV1).rgba;
+				var h1 = pbr1.a;
+				var aw1 = weightTextures.get(vec3(calculatedUV, i1)).r;
 
-			var i3 : Int = int(texIndex.b * 255);
-			var aw3 = weightTextures.get(vec3(calculatedUV, i3)).r;
+				var i2 : Int = int(texIndex.g * 255);
+				var aw2 = weightTextures.get(vec3(calculatedUV, i2)).r;
 
-			// Sum of each surface
-			var albedo = vec3(0);
-			var normal = vec4(0,0,0,0);
-			var pbr = vec4(0);
-			var weightSum = 0.0;
+				var i3 : Int = int(texIndex.b * 255);
+				var aw3 = weightTextures.get(vec3(calculatedUV, i3)).r;
 
-			// Keep the surface with the heightest weight for sharpness
-			var maxAlbedo = vec3(0);
-			var maxPbr = vec4(0);
-			var maxNormal = vec4(0);
-			var curMaxWeight = -1.0;
+				// Sum of each surface
+				var albedo = vec3(0);
+				var normal = vec4(0,0,0,0);
+				var pbr = vec4(0);
+				var weightSum = 0.0;
 
-			// Alpha / Height Blend
-			var b1 = 0.0, b2 = 0.0, b3 = 0.0;
-			b1 = mix(aw1, aw1 * h1, heightBlendStrength);
-			albedo += albedo1 * b1;
-			pbr += pbr1 * b1;
-			normal += normal1 * b1;
+				// Keep the surface with the heightest weight for sharpness
+				var maxAlbedo = vec3(0);
+				var maxPbr = vec4(0);
+				var maxNormal = vec4(0);
+				var curMaxWeight = -1.0;
 
-			// Find the max
-			var maxW = clamp(ceil(b1 - curMaxWeight), 0, 1);
-			curMaxWeight = mix(curMaxWeight, b1, maxW);
-			maxAlbedo = mix(maxAlbedo, albedo1, maxW);
-			maxPbr = mix(maxPbr, pbr1, maxW);
-			maxNormal = mix(maxNormal, normal1, maxW);
+				// Alpha / Height Blend
+				var b1 = 0.0, b2 = 0.0, b3 = 0.0;
+				b1 = mix(aw1, aw1 * h1, heightBlendStrength);
+				albedo += albedo1 * b1;
+				pbr += pbr1 * b1;
+				normal += normal1 * b1;
 
-			if(aw2 > 0){
-				var uv2 = getPOMUV(calculatedUV, i2);
-				var surfaceUV2 = getsurfaceUV(i2, uv2);
-				var pbr2 = pbrTextures.get(surfaceUV2).rgba;
-				var albedo2 = albedoTextures.get(surfaceUV2).rgb;
-				var normal2 = normalTextures.get(surfaceUV2).rgba;
-				var h2 = pbr2.a;
-				b2 = mix(aw2, aw2 * h2, heightBlendStrength);
-				albedo += albedo2 * b2;
-				pbr += pbr2 * b2;
-				normal += normal2 * b2;
-				maxW = clamp(ceil(b2 - curMaxWeight), 0, 1);
-				curMaxWeight = mix(curMaxWeight, b2, maxW);
-				maxAlbedo = mix(maxAlbedo, albedo2, maxW);
-				maxPbr = mix(maxPbr, pbr2, maxW);
-				maxNormal = mix(maxNormal, normal2, maxW);
+				// Find the max
+				var maxW = clamp(ceil(b1 - curMaxWeight), 0, 1);
+				curMaxWeight = mix(curMaxWeight, b1, maxW);
+				maxAlbedo = mix(maxAlbedo, albedo1, maxW);
+				maxPbr = mix(maxPbr, pbr1, maxW);
+				maxNormal = mix(maxNormal, normal1, maxW);
+
+				if(aw2 > 0){
+					var uv2 = getPOMUV(calculatedUV, i2);
+					var surfaceUV2 = getsurfaceUV(i2, uv2);
+					var pbr2 = pbrTextures.get(surfaceUV2).rgba;
+					var albedo2 = albedoTextures.get(surfaceUV2).rgb;
+					var normal2 = normalTextures.get(surfaceUV2).rgba;
+					var h2 = pbr2.a;
+					b2 = mix(aw2, aw2 * h2, heightBlendStrength);
+					albedo += albedo2 * b2;
+					pbr += pbr2 * b2;
+					normal += normal2 * b2;
+					maxW = clamp(ceil(b2 - curMaxWeight), 0, 1);
+					curMaxWeight = mix(curMaxWeight, b2, maxW);
+					maxAlbedo = mix(maxAlbedo, albedo2, maxW);
+					maxPbr = mix(maxPbr, pbr2, maxW);
+					maxNormal = mix(maxNormal, normal2, maxW);
+				}
+
+				if(aw3 > 0){
+					var uv3 = getPOMUV(calculatedUV, i3);
+					var surfaceUV3 = getsurfaceUV(i3, uv3);
+					var pbr3 = pbrTextures.get(surfaceUV3).rgba;
+					var albedo3 = albedoTextures.get(surfaceUV3).rgb;
+					var normal3 = normalTextures.get(surfaceUV3).rgba;
+					var h3 = pbr3.a;
+					b3 = mix(aw3, aw3 * h3, heightBlendStrength);
+					albedo += albedo3 * b3;
+					pbr += pbr3 * b3;
+					normal += normal3 * b3;
+					maxW = clamp(ceil(b3 - curMaxWeight), 0,1);
+					curMaxWeight = mix(curMaxWeight, b3, maxW);
+					maxAlbedo = mix(maxAlbedo, albedo3, maxW);
+					maxPbr = mix(maxPbr, pbr3, maxW);
+					maxNormal = mix(maxNormal, normal3, maxW);
+				}
+
+				// Normalisation
+				weightSum = b1 + b2 + b3;
+				albedo /= vec3(weightSum);
+				pbr /= vec4(weightSum);
+				normal /= vec4(weightSum);
+
+				// Sharpness
+				albedo = mix(albedo, maxAlbedo, heightBlendSharpness);
+				pbr = mix(pbr, maxPbr, heightBlendSharpness);
+				normal = mix(normal, maxNormal, heightBlendSharpness);
+
+				// Output
+				normal = vec4(unpackNormal(normal), 0.0);
+				pixelColor = vec4(albedo, 1.0);
+				transformedNormal = normalize(normal.xyz) * TBN;
+				roughnessValue = 1 - pbr.g * pbr.g;
+				metalnessValue = pbr.r;
+				occlusionValue = pbr.b;
+				emissiveValue = 0;
 			}
-
-			if(aw3 > 0){
-				var uv3 = getPOMUV(calculatedUV, i3);
-				var surfaceUV3 = getsurfaceUV(i3, uv3);
-				var pbr3 = pbrTextures.get(surfaceUV3).rgba;
-				var albedo3 = albedoTextures.get(surfaceUV3).rgb;
-				var normal3 = normalTextures.get(surfaceUV3).rgba;
-				var h3 = pbr3.a;
-				b3 = mix(aw3, aw3 * h3, heightBlendStrength);
-				albedo += albedo3 * b3;
-				pbr += pbr3 * b3;
-				normal += normal3 * b3;
-				maxW = clamp(ceil(b3 - curMaxWeight), 0,1);
-				curMaxWeight = mix(curMaxWeight, b3, maxW);
-				maxAlbedo = mix(maxAlbedo, albedo3, maxW);
-				maxPbr = mix(maxPbr, pbr3, maxW);
-				maxNormal = mix(maxNormal, normal3, maxW);
-			}
-
-			// Normalisation
-			weightSum = b1 + b2 + b3;
-			albedo /= vec3(weightSum);
-			pbr /= vec4(weightSum);
-			normal /= vec4(weightSum);
-
-			// Sharpness
-			albedo = mix(albedo, maxAlbedo, heightBlendSharpness);
-			pbr = mix(pbr, maxPbr, heightBlendSharpness);
-			normal = mix(normal, maxNormal, heightBlendSharpness);
-
-			// Output
-			normal = vec4(unpackNormal(normal), 0.0);
-			pixelColor = vec4(albedo, 1.0);
-			transformedNormal = normalize(normal.xyz) * TBN;
-			roughnessValue = 1 - pbr.g * pbr.g;
-			metalnessValue = pbr.r;
-			occlusionValue = pbr.b;
-			emissiveValue = 0;
 
 			// DEBUG
-			if(CHECKER){
+			if( CHECKER ) {
 				var tile = abs(abs(floor(input.position.x)) % 2 - abs(floor(input.position.y)) % 2);
 				pixelColor = vec4(mix(vec3(0.4), vec3(0.1), tile), 1.0);
 				transformedNormal = vec3(0,0,1) * TBN;
@@ -196,7 +199,7 @@ class Terrain extends hxsl.Shader {
 				occlusionValue = 1;
 				emissiveValue = 0;
 			}
-			else if(COMPLEXITY){
+			else if( COMPLEXITY ) {
 				var blendCount = 0 + weightTextures.get(vec3(0)).r * 0;
 				for(i in 0 ... SURFACE_COUNT)
 					blendCount += ceil(weightTextures.get(vec3(calculatedUV, i)).r);
@@ -207,7 +210,7 @@ class Terrain extends hxsl.Shader {
 				metalnessValue = 0;
 				occlusionValue = 1;
 			}
-			if(SHOW_GRID){
+			if( SHOW_GRID ) {
 				var gridColor = vec4(1,0,0,1);
 				var tileEdgeColor = vec4(1,1,0,1);
 				var grid : Vec2 = ((input.position.xy.mod(cellSize) / cellSize ) - 0.5) * 2.0;
