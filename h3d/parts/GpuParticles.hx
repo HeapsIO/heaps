@@ -548,14 +548,12 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			material.mainPass.culling = None;
 			material.mainPass.depthWrite = false;
 			material.blendMode = Alpha;
-			if( this.material == null ) this.material = material;
 			if( g.material != null ) {
 				material.props = g.getMaterialProps();
 				material.name = g.name;
 			}
-		} else {
-			this.material = material;
 		}
+		if( this.material == null ) this.material = material;
 		material.mainPass.addShader(g.pshader);
 		if( index == null )
 			index = groups.length;
