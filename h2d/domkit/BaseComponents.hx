@@ -356,7 +356,7 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 
 
 @:uiComp("flow")
-class FlowComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Flow> {
+class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Flow> {
 
 	@:p(auto) var width : Null<Int>;
 	@:p(auto) var height : Null<Int>;
