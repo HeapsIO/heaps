@@ -38,6 +38,8 @@ package h3d.scene.pbr;
 typedef RenderProps = {
 	var mode : DisplayMode;
 	var env : String;
+	var colorGradingLUT : String;
+	var colorGradingLUTSize : Int;
 	var envPower : Float;
 	var exposure : Float;
 	var sky : SkyMode;
@@ -72,6 +74,8 @@ class Renderer extends h3d.scene.Renderer {
 
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
+	public var colorgGradingLUT : h3d.mat.Texture;
+	public var colorGradingLUTSize : Int;
 	public var displayMode : DisplayMode = Pbr;
 	public var env : Environment;
 	public var exposure(get,set) : Float;
@@ -327,11 +331,17 @@ class Renderer extends h3d.scene.Renderer {
 
 		var ldr = allocTarget("ldrOutput");
 		setTarget(ldr);
+		ctx.setGlobal("hdr", hdr);
 		var bloom = ctx.getGlobal("bloom");
 		tonemap.shader.bloom = bloom;
 		tonemap.shader.hasBloom = bloom != null;
 		tonemap.shader.distortion = distortion;
 		tonemap.shader.hasDistortion = distortion != null;
+		tonemap.shader.hasColorGrading = colorgGradingLUT != null;
+		if( colorgGradingLUT != null  ){
+			tonemap.shader.colorGradingLUT = colorgGradingLUT;
+			tonemap.shader.lutSize = colorGradingLUTSize;
+		}
 		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
 		tonemap.shader.mode =	switch( toneMode ) {
 									case Linear: 0;
@@ -344,7 +354,6 @@ class Renderer extends h3d.scene.Renderer {
 		postDraw();
 		apply(Final);
 		resetTarget();
-
 
 		switch( displayMode ) {
 
@@ -367,7 +376,6 @@ class Renderer extends h3d.scene.Renderer {
 				hasDebugEvent = true;
 				hxd.Window.getInstance().addEventTarget(onEvent);
 			}
-
 		}
 
 		if( hasDebugEvent && displayMode != Debug ) {
@@ -400,6 +408,8 @@ class Renderer extends h3d.scene.Renderer {
 		var props : RenderProps = {
 			mode : Pbr,
 			env : null,
+			colorGradingLUT : null,
+			colorGradingLUTSize : 1,
 			envPower : 1.,
 			emissive : 1.,
 			exposure : 0.,
@@ -429,6 +439,12 @@ class Renderer extends h3d.scene.Renderer {
 		exposure = props.exposure;
 		env.power = props.envPower;
 		shadows = props.shadows;
+
+		if( props.colorGradingLUT != null )
+			colorgGradingLUT = hxd.res.Loader.currentInstance.load(props.colorGradingLUT).toTexture();
+		else
+			colorgGradingLUT = null;
+		colorGradingLUTSize = props.colorGradingLUTSize;
 	}
 
 	#if editor
@@ -444,6 +460,10 @@ class Renderer extends h3d.scene.Renderer {
 						<option value="Reinhard">Reinhard</option>
 					</select>
 				</dd>
+
+				<dt>Color Grading LUT</dt><input type="texturepath" field="colorGradingLUT" style="width:165px"/>
+				<dt>LUT Size</dt><dd><input step="1" type="range" min="0" max="32" field="colorGradingLUTSize"></dd>
+
 				<dt>Mode</dt>
 				<dd>
 					<select field="mode">
@@ -454,6 +474,7 @@ class Renderer extends h3d.scene.Renderer {
 						<option value="Distortion">Distortion</option>
 					</select>
 				</dd>
+
 				<dt>Env</dt>
 				<dd>
 					<input type="texturepath" field="env" style="width:165px"/>
