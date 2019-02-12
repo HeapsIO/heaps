@@ -48,7 +48,7 @@ class ToneMapping extends ScreenShader {
 			if( !isSRBG ) color.rgb = color.rgb.sqrt();
 
 			if( hasColorGrading ) {
-				var uv = color.rgb;
+				var uv = min(color.rgb, vec3(1,1,1));
 				var sliceSize = 1.0 / lutSize;
 				var slicePixelSize = sliceSize / lutSize;
 				var sliceInnerSize = slicePixelSize * (lutSize - 1.0);
