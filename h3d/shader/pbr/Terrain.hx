@@ -39,40 +39,39 @@ class Terrain extends hxsl.Shader {
 		var roughnessValue : Float;
 		var occlusionValue : Float;
 
+		var tangentViewPos : Vec3;
+		var tangentFragPos : Vec3;
+
 		function vertex() {
 			calculatedUV = input.position.xy / primSize;
 			var terrainUV = (calculatedUV * (heightMapSize - 1)) / heightMapSize;
 			terrainUV += 0.5 / heightMapSize;
 			transformedPosition += (vec3(0,0, textureLod(heightMap, terrainUV, 0).r) * global.modelView.mat3());
 			TBN = mat3(normalize(cross(transformedNormal, vec3(0,1,0))), normalize(cross(transformedNormal,vec3(-1,0,0))), transformedNormal);
+			tangentViewPos = TBN * camera.position;
+			tangentFragPos = TBN * transformedPosition;
 		}
 
 		function getPOMUV( uv : Vec2, surfaceIndex : Int) : Vec2 {
-			var viewWS = (camera.position - transformedPosition).normalize();
-			var viewNS : Vec3;
-			{
-				var n = transformedNormal.normalize();
-				var transformedTangent = normalize(cross(transformedNormal, vec3(0,1,0)));
-				var tanX = transformedTangent.xyz.normalize();
-				var tanY = n.cross(tanX);
-				viewNS = vec3(viewWS.dot(tanX), viewWS.dot(tanY), viewWS.dot(n)).normalize();
-			}
-
-			var numLayers = mix(float(maxStep), float(minStep), abs(viewNS.z));
+			var viewDir = normalize(tangentViewPos - tangentFragPos);
+			var numLayers = mix(float(maxStep), float(minStep), viewDir.dot(transformedNormal));
 			var layerDepth = 1 / numLayers;
 			var curLayerDepth = 0.;
-			var delta = (viewNS.xy / viewNS.z) * parallaxAmount / numLayers;
+			var delta = (viewDir.xy / viewDir.z) * parallaxAmount / numLayers;
 			var curUV = uv;
 			var curDepth = 1 - pbrTextures.get(getsurfaceUV(surfaceIndex, curUV)).a;
+			var prevDepth = 1.0;
 			while( curLayerDepth < curDepth ) {
 				curUV += delta;
-				curDepth =  1 - pbrTextures.getLod( getsurfaceUV(surfaceIndex, curUV), 0).a;
+				prevDepth = curDepth;
+				curDepth = 1 - pbrTextures.getLod(getsurfaceUV(surfaceIndex, curUV), 0).a;
 				curLayerDepth += layerDepth;
 			}
 			var prevUV = curUV - delta;
 			var after = curDepth - curLayerDepth;
-			var before = (1 - pbrTextures.get(vec3(prevUV, surfaceIndex)).a) - curLayerDepth + layerDepth;
-			return mix(curUV, prevUV, after / (after - before));
+			var before = prevDepth - curLayerDepth + layerDepth;
+			var w = after / (after - before);
+			return mix(curUV, prevUV, w);
 		}
 
 		function getsurfaceUV(i : Int, uv : Vec2) : Vec3 {
