@@ -85,7 +85,7 @@ class SceneProps {
 			if( fls != null )
 				props.push(PGroup("LightSystem",[
 					PRange("maxLightsPerObject", 0, 10, function() return fls.maxLightsPerObject, function(s) fls.maxLightsPerObject = Std.int(s), 1),
-					PColor("ambientLight", false, function() return fls.ambientLight, function(v) fls.ambientLight = v),
+					PColor("ambientLight", false, function() return fls.ambientLight, function(v) fls.ambientLight.load(v)),
 					PBool("perPixelLighting", function() return fls.perPixelLighting, function(b) fls.perPixelLighting = b),
 				]));
 
