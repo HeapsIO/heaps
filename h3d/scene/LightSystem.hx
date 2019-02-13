@@ -2,7 +2,7 @@ package h3d.scene;
 
 class LightSystem {
 
-	public var drawPasses(default,null) : Int = 0;
+	public var drawPasses : Int = 0;
 	public var ambientLight(default,null) : h3d.Vector;
 	public var shadowLight : h3d.scene.Light;
 
