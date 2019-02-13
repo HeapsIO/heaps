@@ -3,7 +3,7 @@
 class Interactive extends hxd.App {
 
 	var rnd : hxd.Rand;
-	var light : h3d.scene.DirLight;
+	var light : h3d.scene.fwd.DirLight;
 	var obj : h3d.scene.Object;
 	var b : h2d.Interactive;
 
@@ -37,9 +37,10 @@ class Interactive extends hxd.App {
 	}
 
 	override function init() {
-		light = new h3d.scene.DirLight(new h3d.Vector( 0.3, -0.4, -0.9), s3d);
+		light = new h3d.scene.fwd.DirLight(new h3d.Vector( 0.3, -0.4, -0.9), s3d);
 		light.enableSpecular = true;
 		light.color.set(0.28, 0.28, 0.28);
+
 		s3d.lightSystem.ambientLight.set(0.74, 0.74, 0.74);
 
 		rnd = new hxd.Rand(5);

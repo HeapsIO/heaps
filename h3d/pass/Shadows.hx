@@ -84,7 +84,32 @@ class Shadows extends Default {
 		throw "Not implemented";
 	}
 
+	function createDefaultShadowMap() {
+		var tex = h3d.mat.Texture.fromColor(0xFFFFFF);
+		tex.name = "defaultShadowMap";
+		return tex;
+	}
+
+	function syncShader( texture : h3d.mat.Texture ) {
+	}
+
 	function filterPasses( passes : h3d.pass.PassList ) {
+		if( !ctx.computingStatic ){
+			switch( mode ) {
+			case None:
+				return false;
+			case Dynamic:
+				// nothing
+			case Mixed:
+				if( staticTexture == null || staticTexture.isDisposed() )
+					staticTexture = createDefaultShadowMap();
+			case Static:
+				if( staticTexture == null || staticTexture.isDisposed() )
+					staticTexture = createDefaultShadowMap();
+				syncShader(staticTexture);
+				return false;
+			}
+		}
 		switch( mode ) {
 		case None:
 			passes.clear();
@@ -98,6 +123,7 @@ class Shadows extends Default {
 			else
 				passes.clear();
 		}
+		return true;
 	}
 
 }

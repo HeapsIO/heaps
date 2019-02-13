@@ -3,8 +3,8 @@ import hxd.Math;
 class PointLights extends hxd.App {
 
 	var time : Float = 0.;
-	var lights : Array<h3d.scene.PointLight>;
-	var dir : h3d.scene.DirLight;
+	var lights : Array<h3d.scene.fwd.PointLight>;
+	var dir : h3d.scene.fwd.DirLight;
 
 	override function init() {
 		var prim = new h3d.prim.Cube();
@@ -27,7 +27,7 @@ class PointLights extends hxd.App {
 		var colors = [0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF00FF, 0xFFFF00, 0x00FFFF];
 		for( c in colors ) {
 			for( i in 0...3 ) {
-				var l = new h3d.scene.PointLight(s3d);
+				var l = new h3d.scene.fwd.PointLight(s3d);
 				l.x = Math.srand() * 3;
 				l.y = Math.srand() * 3;
 				l.z = Math.srand() * 2 - 0.5;
@@ -44,7 +44,7 @@ class PointLights extends hxd.App {
 		s3d.camera.zNear = 2;
 
 
-		dir = new h3d.scene.DirLight(new h3d.Vector(0.2, 0.3, -1), s3d);
+		dir = new h3d.scene.fwd.DirLight(new h3d.Vector(0.2, 0.3, -1), s3d);
 		dir.color.set(0.1, 0.1, 0.1);
 
 		s3d.lightSystem.ambientLight.set(0, 0, 0);

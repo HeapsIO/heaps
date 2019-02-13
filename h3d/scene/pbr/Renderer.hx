@@ -198,8 +198,6 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("occlusionMap",{ texture : pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("bloom",null);
 
-		var ls = Std.instance(getLightSystem(), LightSystem);
-		if( ls != null ) ls.init(this);
 		drawShadows();
 
 		setTargets([albedo,normal,pbr,other]);
@@ -291,7 +289,9 @@ class Renderer extends h3d.scene.Renderer {
 
 		// Draw DirLight, screenShader
 		pbrProps.isScreen = true;
-		if( ls != null )  ls.drawScreenLights(this, lpass);
+		var ls = Std.instance(getLightSystem(), LightSystem);
+		if( ls != null )
+			ls.drawScreenLights(this, lpass);
 		// Draw others lights with their primitive
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);

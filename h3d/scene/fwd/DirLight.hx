@@ -1,4 +1,4 @@
-package h3d.scene;
+package h3d.scene.fwd;
 
 class DirLight extends Light {
 
@@ -28,7 +28,7 @@ class DirLight extends Light {
 	}
 
 	override function getShadowDirection() : h3d.Vector {
-		return absPos.front();	
+		return absPos.front();
 	}
 
 	override function emit(ctx) {

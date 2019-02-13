@@ -50,7 +50,7 @@ class SpotShadowMap extends Shadows {
 		cameraViewProj = getShadowProj();
 	}
 
-	function syncShader(texture) {
+	override function syncShader(texture) {
 		sshader.shadowMap = texture;
 		sshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		sshader.shadowBias = bias;
@@ -89,25 +89,9 @@ class SpotShadowMap extends Shadows {
 	}
 
 	override function draw( passes ) {
+		if( !filterPasses(passes) )
+			return;
 
-		if( !ctx.computingStatic )
-			switch( mode ) {
-			case None:
-				return;
-			case Dynamic:
-				// nothing
-			case Mixed:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
-			case Static:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
-				updateCamera();
-				syncShader(staticTexture);
-				return;
-			}
-
-		filterPasses(passes);
 		updateCamera();
 
 		var texture = ctx.textures.allocTarget("shadowMap", size, size, false, format);

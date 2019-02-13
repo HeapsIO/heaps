@@ -109,7 +109,7 @@ class DirShadowMap extends Shadows {
 		cameraViewProj = getShadowProj();
 	}
 
-	function syncShader(texture) {
+	override function syncShader(texture) {
 		dshader.shadowMap = texture;
 		dshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		dshader.shadowBias = bias;
@@ -173,26 +173,8 @@ class DirShadowMap extends Shadows {
 	}
 
 	override function draw( passes ) {
-
-		if( !ctx.computingStatic ){
-			switch( mode ) {
-			case None:
-				return;
-			case Dynamic:
-				// nothing
-			case Static, Mixed:
-				if( staticTexture == null || staticTexture.isDisposed() ){
-					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
-					staticTexture.name = "defaultDirShadowMap";
-				}
-				if( mode == Static ) {
-					syncShader(staticTexture);
-					return;
-				}
-			}
-		}
-
-		filterPasses(passes);
+		if( !filterPasses(passes) )
+			return;
 
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {

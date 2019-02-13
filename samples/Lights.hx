@@ -4,8 +4,9 @@ class Lights extends SampleApp {
 
 	var lights : Array<h3d.scene.pbr.Light>;
 	var movingObjects : Array<{ m : h3d.scene.Mesh, pos : Float, ray : Float, speed : Float }> = [];
-	var curLight : Int = 2;
+	var curLight : Int = 0;
 	var bitmap : h2d.Bitmap;
+	var inf : h2d.Text;
 
 	override function init() {
 		super.init();
@@ -16,8 +17,9 @@ class Lights extends SampleApp {
 		var prim = new h3d.prim.Grid(100,100,1,1);
 		prim.addNormals();
 		prim.addUVs();
+		
 		var floor = new h3d.scene.Mesh(prim, s3d);
-		floor.material.removePass(floor.material.getPass("shadow"));
+		floor.material.castShadows = false;
 		floor.x = -50;
 		floor.y = -50;
 
@@ -96,6 +98,8 @@ class Lights extends SampleApp {
 		bitmap = new h2d.Bitmap(null, s2d);
 		bitmap.scale(192 / 1024);
 		bitmap.filter = h2d.filter.ColorMatrix.grayed();
+
+		inf = addText();
 	}
 
 	override function update(dt:Float) {
@@ -108,6 +112,7 @@ class Lights extends SampleApp {
 		var tex = light == null ? null : light.shadows.getShadowTex();
 		bitmap.tile = tex == null || tex.flags.has(Cube) ? null : h2d.Tile.fromTexture(tex);
 		bitmap.x = s2d.width - (bitmap.tile == null ? 0 : bitmap.tile.width) * bitmap.scaleX;
+		inf.text = "Shadows Draw calls: "+ s3d.lightSystem.drawPasses;
 	}
 
 	static function main() {

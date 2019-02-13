@@ -3,36 +3,12 @@ package h3d.scene.pbr;
 @:access(h3d.scene.pbr.Light)
 class LightSystem extends h3d.scene.LightSystem {
 
-	public function init( r : h3d.scene.Renderer ) {
-		this.ctx = @:privateAccess r.ctx;
-	}
-
 	override function computeLight( obj : h3d.scene.Object, shaders : hxsl.ShaderList ) : hxsl.ShaderList {
 		var light = Std.instance(obj, h3d.scene.pbr.Light);
 		if( light != null ) {
 			shaders = ctx.allocShaderList(light.shader, shaders);
-			if( light.shadows.shader != null && light.shadows.mode != None ){
-
-				var pointShadow = Std.instance(light.shadows.shader, h3d.shader.PointShadow );
-				if(pointShadow != null && pointShadow.shadowMap == null){
-					throw "Rendering a pbr pointlight with shadows, without the shadowMap";
-					return shaders;
-				}
-
-				var dirShadow = Std.instance(light.shadows.shader, h3d.shader.DirShadow );
-				if(dirShadow != null && dirShadow.shadowMap == null){
-					throw "Rendering a pbr dirLight with shadows, without the shadowMap";
-					return shaders;
-				}
-
-				var spotShadow = Std.instance(light.shadows.shader, h3d.shader.SpotShadow );
-				if(spotShadow != null && spotShadow.shadowMap == null){
-					throw "Rendering a pbr spotLight with shadows, without the shadowMap";
-					return shaders;
-				}
-
+			if( light.shadows.shader != null && light.shadows.mode != None )
 				shaders = ctx.allocShaderList(light.shadows.shader, shaders);
-			}
 		}
 		return shaders;
 	}

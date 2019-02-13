@@ -53,7 +53,7 @@ class PointShadowMap extends Shadows {
 		cameraPos = lightCamera.pos;
 	}
 
-	function syncShader(texture) {
+	override function syncShader(texture) {
 		var absPos = light.getAbsPos();
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		pshader.shadowMap = texture;
@@ -102,40 +102,22 @@ class PointShadowMap extends Shadows {
 		return true;
 	}
 
-	function createDefaultShadowMap(){
+	override function createDefaultShadowMap() {
 		var tex = new h3d.mat.Texture(1,1, [Target,Cube], format);
-		tex.name = "defaultStaticTexture";
+		tex.name = "defaultCubeShadowMap";
 		for(i in 0 ... 6)
 			tex.clear(0xFFFFFF, i);
 		return tex;
 	}
 
 	override function draw( passes ) {
-
-		if( !ctx.computingStatic ){
-			switch( mode ) {
-			case None:
-				return;
-			case Dynamic:
-				// nothing
-			case Mixed:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = createDefaultShadowMap();
-			case Static:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = createDefaultShadowMap();
-				updateCamera();
-				syncShader(staticTexture);
-				return;
-			}
-		}
-
-		filterPasses(passes);
+		if( !filterPasses(passes) )
+			return;
 
 		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
 		if(depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
-				if( depth != null ) depth.dispose();
-				depth = new h3d.mat.DepthBuffer(size, size);
+			if( depth != null ) depth.dispose();
+			depth = new h3d.mat.DepthBuffer(size, size);
 		}
 		texture.depthBuffer = depth;
 
@@ -146,15 +128,8 @@ class PointShadowMap extends Shadows {
 
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		var absPos = light.getAbsPos();
-		var lightBounds = new h3d.col.Bounds();
-		lightBounds.addPoint( new h3d.col.Point(absPos.tx + pointLight.range, absPos.ty + pointLight.range, absPos.tz + pointLight.range));
-		lightBounds.addPoint( new h3d.col.Point(absPos.tx - pointLight.range, absPos.ty - pointLight.range, absPos.tz - pointLight.range));
 
 		for(i in 0 ... 6){
-
-			var pointLight = cast(light, h3d.scene.pbr.PointLight);
-
-			var absPos = light.getAbsPos();
 			lightCamera.setCubeMap(i, new h3d.Vector(absPos.tx, absPos.ty, absPos.tz));
 			lightCamera.zFar = pointLight.range;
 			lightCamera.zNear = pointLight.zNear;
@@ -162,8 +137,7 @@ class PointShadowMap extends Shadows {
 
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
-			customDraw(passes, lightBounds);
-
+			super.draw(passes);
 			ctx.engine.popTarget();
 		}
 
@@ -183,58 +157,6 @@ class PointShadowMap extends Shadows {
 		}
 
 		syncShader(texture);
-	}
-
-	@:access(h3d.scene)
-	function customDraw( passes : h3d.pass.PassList, lightBounds : h3d.col.Bounds) {
-		if( passes == null )
-			return;
-		for( g in ctx.sharedGlobals )
-			globals.fastSet(g.gid, g.value);
-		setGlobals();
-		setupShaders(passes);
-		var shaderStart = shaderCount, textureStart = textureCount;
-		for( p in passes ) {
-			if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
-				shaderIdMap[p.shader.id] = shaderCount++;
-			if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
-				textureIdMap[p.texture] = textureCount++;
-		}
-		if( sortPasses )
-			passes.sort(function(o1, o2) {
-				var d = shaderIdMap[o1.shader.id] - shaderIdMap[o2.shader.id];
-				if( d != 0 ) return d;
-				return textureIdMap[o1.texture] - textureIdMap[o2.texture];
-			});
-		ctx.uploadParams = uploadParams;
-		var buf = cachedBuffer, prevShader = null;
-		for( p in passes ) {
-
-			if( !lightCamera.frustum.hasBounds(p.obj.getBounds()))
-				continue;
-
-			globalModelView = p.obj.absPos;
-			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
-				globalModelViewInverse = p.obj.getInvPos();
-			if( prevShader != p.shader ) {
-				prevShader = p.shader;
-				ctx.engine.selectShader(p.shader);
-				if( buf == null )
-					buf = cachedBuffer = new h3d.shader.Buffers(p.shader);
-				else
-					buf.grow(p.shader);
-				manager.fillGlobals(buf, p.shader);
-				ctx.engine.uploadShaderBuffers(buf, Globals);
-			}
-			if( !p.pass.dynamicParameters ) {
-				manager.fillParams(buf, p.shader, p.shaders);
-				ctx.engine.uploadShaderBuffers(buf, Params);
-				ctx.engine.uploadShaderBuffers(buf, Textures);
-				ctx.engine.uploadShaderBuffers(buf, Buffers);
-			}
-			drawObject(p);
-		}
-		ctx.nextPass();
 	}
 
 	function updateCamera(){
