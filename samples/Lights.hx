@@ -1,9 +1,34 @@
 import hxd.Math;
 
+class CustomLS extends h3d.scene.pbr.LightSystem {
+
+	var s3d : h3d.scene.Object;
+
+	public function new(s3d) {
+		super();
+		this.s3d = s3d;
+	}
+
+	override function cullObjectsForLight(light:h3d.scene.pbr.Light) {
+		var pl = Std.instance(light, h3d.scene.pbr.PointLight);
+		if( pl != null )
+			for( o in s3d ) {
+				var dx = o.x - pl.x;
+				var dy = o.y - pl.y;
+				var dz = o.z - pl.z;
+				var d = dx*dx+dy*dy+dz*dz;
+				var r = pl.range + o.scaleX;
+				o.culled = d > r * r;
+				o.cullingBits = 16; // don't project any shadows on top plane of the light
+			}
+	}
+
+}
+
 class Lights extends SampleApp {
 
 	var lights : Array<h3d.scene.pbr.Light>;
-	var movingObjects : Array<{ m : h3d.scene.Mesh, pos : Float, ray : Float, speed : Float }> = [];
+	var movingObjects : Array<{ m : h3d.scene.Mesh, cx : Float, cy : Float, pos : Float, ray : Float, speed : Float }> = [];
 	var curLight : Int = 0;
 	var bitmap : h2d.Bitmap;
 	var inf : h2d.Text;
@@ -17,7 +42,7 @@ class Lights extends SampleApp {
 		var prim = new h3d.prim.Grid(100,100,1,1);
 		prim.addNormals();
 		prim.addUVs();
-		
+
 		var floor = new h3d.scene.Mesh(prim, s3d);
 		floor.material.castShadows = false;
 		floor.x = -50;
@@ -48,13 +73,15 @@ class Lights extends SampleApp {
 			m.material.color.normalize();
 			m.scale(0.5 + Math.random() * 4);
 			m.z = 2 + Math.random() * 5;
-			movingObjects.push({ m : m, pos : Math.random() * Math.PI * 2, ray : 8 + Math.random() * 50, speed : (0.5 + Math.random()) * 0.2 });
+			var cx = (Math.random() - 0.5) * 20;
+			var cy = (Math.random() - 0.5) * 20;
+			movingObjects.push({ m : m, pos : Math.random() * Math.PI * 2, cx : cx, cy : cy, ray : 8 + Math.random() * 50, speed : (0.5 + Math.random()) * 0.2 });
 		}
 
 		var pt = new h3d.scene.pbr.PointLight(s3d);
 		pt.setPosition(0,0,15);
-		pt.range = 70;
-		pt.color.scale3(10);
+		pt.range = 40;
+		pt.color.scale3(20);
 
 		var sp = new h3d.scene.pbr.SpotLight(s3d);
 		sp.setPosition(-30,-30,30);
@@ -95,6 +122,11 @@ class Lights extends SampleApp {
 				l.shadows.mode = modes[sh];
 		});
 
+		var baseLS = s3d.lightSystem;
+		addCheck("DynCulling", function() return s3d.lightSystem != baseLS, function(b) {
+			s3d.lightSystem = b ? new CustomLS(s3d) : baseLS;
+		});
+
 		bitmap = new h2d.Bitmap(null, s2d);
 		bitmap.scale(192 / 1024);
 		bitmap.filter = h2d.filter.ColorMatrix.grayed();
@@ -105,14 +137,19 @@ class Lights extends SampleApp {
 	override function update(dt:Float) {
 		for( m in movingObjects ) {
 			m.pos += m.speed / m.ray;
-			m.m.x = Math.cos(m.pos) * m.ray;
-			m.m.y = Math.sin(m.pos) * m.ray;
+			m.m.x = m.cx + Math.cos(m.pos) * m.ray;
+			m.m.y = m.cy + Math.sin(m.pos) * m.ray;
 		}
 		var light = lights[curLight];
 		var tex = light == null ? null : light.shadows.getShadowTex();
 		bitmap.tile = tex == null || tex.flags.has(Cube) ? null : h2d.Tile.fromTexture(tex);
 		bitmap.x = s2d.width - (bitmap.tile == null ? 0 : bitmap.tile.width) * bitmap.scaleX;
 		inf.text = "Shadows Draw calls: "+ s3d.lightSystem.drawPasses;
+
+		for( o in s3d ) {
+			o.culled = false;
+			o.cullingBits = 0;
+		}
 	}
 
 	static function main() {

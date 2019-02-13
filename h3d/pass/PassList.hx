@@ -17,23 +17,55 @@ class PassListIterator {
 
 @:access(h3d.pass.PassObject)
 class PassList {
+
 	var current : PassObject;
-	var whole : PassObject;
-	var lastWhole : PassObject;
+	var discarded : PassObject;
+	var lastDisc : PassObject;
 
 	public function new(?current) {
 		init(current);
 	}
 
+	/**
+		Set the passes and empty the discarded list
+	**/
 	public inline function init(pass) {
 		current = pass;
-		whole = lastWhole = null;
+		discarded = lastDisc = null;
 	}
 
+	/**
+		Put back discarded passes into the pass list
+	**/
 	public inline function reset() {
-		if( whole != null ) {
-			current = whole;
-			whole = lastWhole = null;
+		if( discarded != null ) {
+			lastDisc.next = current;
+			current = discarded;
+			discarded = lastDisc = null;
+		}
+	}
+
+	/**
+		Save the discarded list, allow to perfom some filters, then call "load" to restore passes
+	**/
+	public inline function save() {
+		return lastDisc;
+	}
+
+	/**
+		load state that was save() before
+	**/
+	public inline function load( p : PassObject ) {
+		if( lastDisc != p ) {
+			lastDisc.next = current;
+			if( p == null ) {
+				current = discarded;
+				discarded = null;
+			} else {
+				current = p.next;
+				p.next = null;
+			}
+			lastDisc = p;
 		}
 	}
 
@@ -41,26 +73,34 @@ class PassList {
 		return current == null;
 	}
 
+	/**
+		Put all passes into discarded list
+	**/
 	public function clear() {
-		if( whole == null )
-			whole = current;
-		else if( current != null ) {
-			lastWhole.next = current;
-			lastWhole = current;
-		}
+		if( current == null )
+			return;
+		if( discarded == null )
+			discarded = current;
+		else
+			lastDisc.next = current;
+		var p = current;
+		while( p.next != null ) p = p.next;
+		lastDisc = p;
 		current = null;
 	}
 
 	public inline function sort( f : PassObject -> PassObject -> Int ) {
 		current = haxe.ds.ListSort.sortSingleLinked(current, f);
-		if( lastWhole != null ) lastWhole.next = current;
 	}
 
+	/**
+		Filter current passes, add results to discarded list
+	**/
 	public inline function filter( f : PassObject -> Bool ) {
 		var head = null;
 		var prev = null;
-		var discarded = whole;
-		var discardedQueue = lastWhole;
+		var disc = discarded;
+		var discQueue = lastDisc;
 		var cur = current;
 		while( cur != null ) {
 			if( f(cur) ) {
@@ -71,26 +111,33 @@ class PassList {
 					prev = cur;
 				}
 			} else {
-				if( discarded == null )
-					discarded = discardedQueue = cur;
+				if( disc == null )
+					disc = discQueue = cur;
 				else {
-					discardedQueue.next = cur;
-					discardedQueue = cur;
+					discQueue.next = cur;
+					discQueue = cur;
 				}
 			}
 			cur = cur.next;
 		}
 		if( prev != null )
 			prev.next = null;
-		if( discardedQueue != null )
-			discardedQueue.next = head;
+		if( discQueue != null )
+			discQueue.next = null;
 		current = head;
-		whole = discarded;
-		lastWhole = discardedQueue;
+		discarded = disc;
+		lastDisc = discQueue;
 	}
 
 	public inline function iterator() {
 		return new PassListIterator(current);
+	}
+
+	/**
+		Iterate on all discarded elements, if any
+	**/
+	public inline function getFiltered() {
+		return new PassListIterator(discarded);
 	}
 
 }

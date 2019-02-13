@@ -150,33 +150,16 @@ class Renderer extends h3d.scene.Renderer {
 		draw("overlay");
 	}
 
-	/**
-		This can be overriden in order to mark meshes as culled=true so their shadows
-		doesn't get drawn for this specific light.
-	**/
-	public function cullObjectsForLight( light : Light ) {
-	}
-
-	function drawShadows(){
+	function drawShadows( ls : LightSystem ) {
 		var light = @:privateAccess ctx.lights;
 		var passes = get("shadow");
-		if(!shadows)
-			passes = null;
+		if( !shadows )
+			passes.clear();
 		while( light != null ) {
 			var plight = Std.instance(light, h3d.scene.pbr.Light);
-			if( plight != null ) drawLightShadows(plight, passes);
+			if( plight != null ) ls.drawLight(plight, passes);
 			light = light.next;
 		}
-	}
-
-	function drawLightShadows( light : Light, passes : h3d.pass.PassList ) {
-		light.shadows.setContext(ctx);
-		for( p in passes )
-			p.obj.culled = false;
-		cullObjectsForLight(light);
-		passes.filter(function(p) return !p.obj.culled);
-		light.shadows.draw(passes);
-		passes.reset();
 	}
 
 	function apply( step : hxd.prefab.rfx.RendererFX.Step ) {
@@ -212,8 +195,9 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("occlusionMap",{ texture : pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("bloom",null);
 
+		var ls = Std.instance(getLightSystem(), LightSystem);
 		var count = ctx.engine.drawCalls;
-		drawShadows();
+		if( ls != null ) drawShadows(ls);
 		ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
 
 		setTargets([albedo,normal,pbr,other]);
@@ -305,7 +289,6 @@ class Renderer extends h3d.scene.Renderer {
 
 		// Draw DirLight, screenShader
 		pbrProps.isScreen = true;
-		var ls = Std.instance(getLightSystem(), LightSystem);
 		if( ls != null ) {
 			var count = ctx.engine.drawCalls;
 			ls.drawScreenLights(this, lpass);

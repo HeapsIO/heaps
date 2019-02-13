@@ -13,6 +13,23 @@ class LightSystem extends h3d.scene.LightSystem {
 		return shaders;
 	}
 
+	/**
+		This can be overriden in order to mark meshes as culled=true so their shadows
+		doesn't get drawn for this specific light.
+	**/
+	public function cullObjectsForLight( light : Light ) {
+	}
+
+	public function drawLight( light : Light, passes : h3d.pass.PassList ) {
+		light.shadows.setContext(ctx);
+		cullObjectsForLight(light);
+		passes.filter(function(p) return !p.obj.culled);
+		light.shadows.draw(passes);
+		for( p in passes.getFiltered() )
+			p.obj.culled = false;
+		passes.reset();
+	}
+
 	public function drawScreenLights( r : h3d.scene.Renderer, lightPass : h3d.pass.ScreenFx<Dynamic> ) {
 		var plight = @:privateAccess ctx.lights;
 		var currentTarget = ctx.engine.getCurrentTarget();
