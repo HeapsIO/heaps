@@ -121,7 +121,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		uploadParams = null;
 		// move passes to pool, and erase data
 		var p = allocFirst;
-		while( p != null ) {
+		while( p != null && p != allocPool ) {
 			p.obj = null;
 			p.pass = null;
 			p.shader = null;
@@ -131,6 +131,9 @@ class RenderContext extends h3d.impl.RenderContext {
 			p.texture = 0;
 			p = @:privateAccess p.nextAlloc;
 		}
+		// one pooled object was not used this frame, let's gc unused one by one
+		if( allocPool != null )
+			allocFirst = allocFirst.next;
 		allocPool = allocFirst;
 		for( c in cachedShaderList ) {
 			c.s = null;
