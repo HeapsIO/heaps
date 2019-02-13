@@ -1384,7 +1384,7 @@ class GlDriver extends Driver {
 	}
 
 	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, ?region:h2d.col.IBounds) {
-		
+
 		var pixels : hxd.Pixels;
 		var x : Int, y : Int;
 		if (region != null) {
@@ -1400,7 +1400,7 @@ class GlDriver extends Driver {
 			x = 0;
 			y = 0;
 		}
-		
+
 		var old = curTarget;
 		var oldCount = numTargets;
 		var oldLayer = curTargetLayer;
@@ -1436,7 +1436,7 @@ class GlDriver extends Driver {
 		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
 			throw "Invalid depth buffer size : does not match render target size";
 
-		if( glES == 1 && mipLevel > 0 ) throw "Cannot render to mipLevel in WebGL1, use upload() instead";
+		if( mipLevel > 0 && glES == 1 ) throw "Cannot render to mipLevel in WebGL1, use upload() instead";
 
 		if( tex.t == null )
 			tex.alloc();

@@ -26,6 +26,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
 	var cachedShaderList : Array<hxsl.ShaderList>;
+	var cachedPassObjects : Array<Renderer.PassObjects>;
 	var cachedPos : Int;
 	var passes : h3d.pass.PassObject;
 	var lights : Light;
@@ -33,6 +34,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function new() {
 		super();
 		cachedShaderList = [];
+		cachedPassObjects = [];
 	}
 
 	@:access(h3d.mat.Pass)

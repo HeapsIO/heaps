@@ -12,6 +12,7 @@ class Default extends Base {
 	var shaderIdMap : Array<Int>;
 	var textureIdMap : Array<Int>;
 	var sortPasses = true;
+	var uploadParamsClosure : Void -> Void;
 
 	inline function get_globals() return manager.globals;
 
@@ -34,6 +35,7 @@ class Default extends Base {
 		manager = new ShaderManager(getOutputs());
 		shaderIdMap = [];
 		textureIdMap = [];
+		uploadParamsClosure = uploadParams;
 		initGlobals();
 	}
 
@@ -119,7 +121,7 @@ class Default extends Base {
 				if( d != 0 ) return d;
 				return textureIdMap[o1.texture] - textureIdMap[o2.texture];
 			});
-		ctx.uploadParams = uploadParams;
+		ctx.uploadParams = uploadParamsClosure;
 		var buf = cachedBuffer, prevShader = null;
 		for( p in passes ) {
 			globalModelView = p.obj.absPos;
