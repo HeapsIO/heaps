@@ -689,7 +689,7 @@ class Flow extends Object {
 				case Right:
 					if( midSpace == 0 ) {
 						var remSize = p.calculatedWidth + remSize(i + 1);
-						midSpace = xmax - remSize;
+						midSpace = (xmax - xmin) - remSize;
 						xmin += midSpace;
 					}
 					px = xmin;
@@ -818,7 +818,7 @@ class Flow extends Object {
 				case Bottom:
 					if( midSpace == 0 ) {
 						var remSize = p.calculatedHeight + remSize(i + 1);
-						midSpace = ymax - remSize;
+						midSpace = (ymax - ymin) - remSize;
 						ymin += midSpace;
 					}
 					py = ymin;
