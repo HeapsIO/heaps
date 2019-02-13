@@ -363,6 +363,8 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var maxWidth : Null<Int>;
 	@:p var maxHeight : Null<Int>;
 	@:p(flowBackground) var background : { tile : h2d.Tile, borderW : Int, borderH : Int };
+	@:p var backgroundAlpha : Float;
+	@:p var backgroundSmooth : Bool;
 	@:p var debug : Bool;
 	@:p var vertical : Bool;
 	@:p var horizontal : Bool;
@@ -422,6 +424,20 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 			o.borderWidth = v.borderW;
 			o.borderHeight = v.borderH;
 		}
+	}
+
+	static function set_backgroundAlpha( o : h2d.Flow, v ) {
+		var bg = @:privateAccess o.background;
+		if(bg == null)
+			return;
+		bg.alpha = v;
+	}
+
+	static function set_backgroundSmooth( o : h2d.Flow, v ) {
+		var bg = @:privateAccess o.background;
+		if(bg == null)
+			return;
+		bg.smooth = v;
 	}
 
 	static function set_padding( o : h2d.Flow, v ) {
