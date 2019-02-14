@@ -23,6 +23,7 @@ class Renderer extends hxd.impl.AnyProps {
 	var defaultPass : h3d.pass.Base;
 	var passObjects : SMap<PassObjects>;
 	var allPasses : Array<h3d.pass.Base>;
+	var emptyPasses = new h3d.pass.PassList();
 	var ctx : RenderContext;
 	var hasSetTarget = false;
 
@@ -130,14 +131,14 @@ class Renderer extends hxd.impl.AnyProps {
 
 	function get( name : String ) {
 		var p = passObjects.get(name);
-		if( p == null ) return null;
+		if( p == null ) return emptyPasses;
 		p.rendered = true;
 		return p.passes;
 	}
 
 	function getSort( name : String, front2Back = false ) {
 		var p = passObjects.get(name);
-		if( p == null ) return null;
+		if( p == null ) return emptyPasses;
 		depthSort(p.passes, front2Back);
 		p.rendered = true;
 		return p.passes;

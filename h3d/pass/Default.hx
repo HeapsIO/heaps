@@ -102,7 +102,7 @@ class Default extends Base {
 
 	@:access(h3d.scene)
 	override function draw( passes : h3d.pass.PassList ) {
-		if( passes == null )
+		if( passes.isEmpty() )
 			return;
 		for( g in ctx.sharedGlobals )
 			globals.fastSet(g.gid, g.value);
