@@ -38,7 +38,7 @@ private class CompiledShader {
 	public var vertex : ShaderContext;
 	public var fragment : ShaderContext;
 	public var layout : Layout;
-	public var inputs : Array<String>;
+	public var inputs : InputNames;
 	public var offsets : Array<Int>;
 	public function new() {
 	}
@@ -887,10 +887,10 @@ class DirectXDriver extends h3d.impl.Driver {
 			s = new CompiledShader();
 			var vertex = compileShader(shader.vertex);
 			var fragment = compileShader(shader.fragment);
+			var inputs = [];
 			if( hasDeviceError ) return false;
 			s.vertex = vertex.s;
 			s.fragment = fragment.s;
-			s.inputs = [];
 			s.offsets = [];
 
 			var layout = [], offset = 0;
@@ -923,7 +923,7 @@ class DirectXDriver extends h3d.impl.Driver {
 						e.inputSlotClass = PerVertexData;
 					layout.push(e);
 					s.offsets.push(offset);
-					s.inputs.push(v.name);
+					inputs.push(v.name);
 
 					var size = switch( v.type ) {
 					case TVec(n, _): n;
@@ -938,6 +938,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			var n = new hl.NativeArray(layout.length);
 			for( i in 0...layout.length )
 				n[i] = layout[i];
+			s.inputs = InputNames.get(inputs);
 			s.layout = Driver.createInputLayout(n, vertex.bytes, vertex.bytes.length);
 			if( s.layout == null )
 				throw "Failed to create input layout";
@@ -952,7 +953,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		return true;
 	}
 
-	override function getShaderInputNames():Array<String> {
+	override function getShaderInputNames() : InputNames {
 		return currentShader.inputs;
 	}
 
@@ -960,7 +961,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( hasDeviceError ) return;
 		var vbuf = @:privateAccess buffer.buffer.vbuf;
 		var start = -1, max = -1, position = 0;
-		for( i in 0...currentShader.inputs.length ) {
+		for( i in 0...currentShader.inputs.names.length ) {
 			if( currentVBuffers[i] != vbuf.res || offsets[i] != currentShader.offsets[i] << 2 ) {
 				currentVBuffers[i] = vbuf.res;
 				strides[i] = buffer.buffer.stride << 2;

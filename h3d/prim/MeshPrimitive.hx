@@ -3,8 +3,7 @@ package h3d.prim;
 class MeshPrimitive extends Primitive {
 
 	var bufferCache : Map<Int,h3d.Buffer.BufferOffset>;
-	var prevNames : Array<String>;
-	var prevBuffers : h3d.Buffer.BufferOffset;
+	var layouts : Map<Int,h3d.Buffer.BufferOffset>;
 
 	function allocBuffer( engine : h3d.Engine, name : String ) {
 		return null;
@@ -31,17 +30,20 @@ class MeshPrimitive extends Primitive {
 			for( b in bufferCache )
 				b.dispose();
 		bufferCache = null;
-		prevNames = null;
+		layouts = null;
 	}
 
 	function getBuffers( engine : h3d.Engine ) {
 		if( bufferCache == null )
 			bufferCache = new Map();
-		var names = @:privateAccess engine.driver.getShaderInputNames();
-		if( names == prevNames )
-			return prevBuffers;
-		var buffers = null, prev = null;
-		for( name in names ) {
+		if( layouts == null )
+			layouts = new Map();
+		var inputs = @:privateAccess engine.driver.getShaderInputNames();
+		var buffers = layouts.get(inputs.id);
+		if( buffers != null )
+			return buffers;
+		var prev = null;
+		for( name in inputs.names ) {
 			var id = hxsl.Globals.allocID(name);
 			var b = bufferCache.get(id);
 			if( b == null ) {
@@ -49,7 +51,7 @@ class MeshPrimitive extends Primitive {
 				if( b == null ) throw "Buffer " + name + " is not available";
 				bufferCache.set(id, b);
 			}
-			b.next = null;
+			b = b.clone();
 			if( prev == null ) {
 				buffers = prev = b;
 			} else {
@@ -57,8 +59,8 @@ class MeshPrimitive extends Primitive {
 				prev = b;
 			}
 		}
-		prevNames = names;
-		return prevBuffers = buffers;
+		layouts.set(inputs.id, buffers);
+		return buffers;
 	}
 
 	override function render( engine : h3d.Engine ) {

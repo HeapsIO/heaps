@@ -131,7 +131,7 @@ private class CompiledProgram {
 	public var vertex : CompiledShader;
 	public var fragment : CompiledShader;
 	public var stride : Int;
-	public var attribNames : Array<String>;
+	public var inputs : InputNames;
 	public var attribs : Array<CompiledAttribute>;
 	public function new() {
 	}
@@ -283,7 +283,7 @@ class GlDriver extends Driver {
 	}
 
 	override function getShaderInputNames() {
-		return curShader.attribNames;
+		return curShader.inputs;
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
@@ -415,7 +415,7 @@ class GlDriver extends Driver {
 			firstShader = false;
 			initShader(p, p.vertex, shader.vertex);
 			initShader(p, p.fragment, shader.fragment);
-			p.attribNames = [];
+			var attribNames = [];
 			p.attribs = [];
 			p.stride = 0;
 			for( v in shader.vertex.data.vars )
@@ -447,10 +447,11 @@ class GlDriver extends Driver {
 							}
 					}
 					p.attribs.push(a);
-					p.attribNames.push(v.name);
+					attribNames.push(v.name);
 					p.stride += size;
 				default:
 				}
+			p.inputs = InputNames.get(attribNames);
 			programs.set(shader.id, p);
 		}
 		if( curShader == p ) return false;
@@ -1233,7 +1234,7 @@ class GlDriver extends Driver {
 			for( i in 0...curShader.attribs.length ) {
 				var a = curShader.attribs[i];
 				var pos;
-				switch( curShader.attribNames[i] ) {
+				switch( curShader.inputs.names[i] ) {
 				case "position":
 					pos = 0;
 				case "normal":
