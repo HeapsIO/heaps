@@ -53,6 +53,7 @@ class Dropdown extends Flow {
 		minHeight = maxHeight = 21;
 		paddingLeft = 5;
 		verticalAlign = Middle;
+		reverse = true;
 
 		tileOverItem = h2d.Tile.fromColor(0x303030, 1, 1);
 		tileArrow = tileArrowOpen = h2d.Tile.fromColor(0x404040, maxHeight - 2, maxHeight - 2);
