@@ -1,30 +1,5 @@
 import hxd.Math;
 
-class CustomLS extends h3d.scene.pbr.LightSystem {
-
-	var s3d : h3d.scene.Object;
-
-	public function new(s3d) {
-		super();
-		this.s3d = s3d;
-	}
-
-	override function cullObjectsForLight(light:h3d.scene.pbr.Light) {
-		var pl = Std.instance(light, h3d.scene.pbr.PointLight);
-		if( pl != null )
-			for( o in s3d ) {
-				var dx = o.x - pl.x;
-				var dy = o.y - pl.y;
-				var dz = o.z - pl.z;
-				var d = dx*dx+dy*dy+dz*dz;
-				var r = pl.range + o.scaleX;
-				o.culled = d > r * r;
-				o.cullingBits = 16; // don't project any shadows on top plane of the light
-			}
-	}
-
-}
-
 class Lights extends SampleApp {
 
 	var lights : Array<h3d.scene.pbr.Light>;
@@ -32,6 +7,23 @@ class Lights extends SampleApp {
 	var curLight : Int = 0;
 	var bitmap : h2d.Bitmap;
 	var inf : h2d.Text;
+	var dynCullingEnable = true;
+
+	function addCullingCollider() {
+		dynCullingEnable = true;
+		for( o in s3d ) {
+			if( o.cullingCollider != null ) continue;
+			var absPos = o.getAbsPos();
+			o.cullingCollider = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, hxd.Math.max(o.scaleZ, hxd.Math.max(o.scaleX, o.scaleY)));
+		}
+	}
+
+	function removeCullingCollider() {
+		dynCullingEnable = false;
+		for( o in s3d ) {
+			o.cullingCollider = null;
+		}
+	}
 
 	override function init() {
 		super.init();
@@ -63,6 +55,9 @@ class Lights extends SampleApp {
 				m.y = Std.random(80) - 40;
 			} while( m.x * m.x + m.y * m.y < 25 + m.scaleX * m.scaleX );
 			m.material.getPass("shadow").isStatic = true;
+
+			var absPos = m.getAbsPos();
+			m.cullingCollider = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, hxd.Math.max(m.scaleZ, hxd.Math.max(m.scaleX, m.scaleY)));
 		}
 
 		var sp = new h3d.prim.Sphere(1,16,16);
@@ -75,6 +70,10 @@ class Lights extends SampleApp {
 			m.z = 2 + Math.random() * 5;
 			var cx = (Math.random() - 0.5) * 20;
 			var cy = (Math.random() - 0.5) * 20;
+
+			var absPos = m.getAbsPos();
+			m.cullingCollider = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, hxd.Math.max(m.scaleZ, hxd.Math.max(m.scaleX, m.scaleY)));
+
 			movingObjects.push({ m : m, pos : Math.random() * Math.PI * 2, cx : cx, cy : cy, ray : 8 + Math.random() * 50, speed : (0.5 + Math.random()) * 0.2 });
 		}
 
@@ -87,6 +86,8 @@ class Lights extends SampleApp {
 		sp.setPosition(-30,-30,30);
 		sp.setDirection(new h3d.Vector(1,2,-5));
 		sp.range = 70;
+		sp.maxRange = 70;
+		sp.angle = 70;
 		sp.color.scale3(10);
 
 		lights = [
@@ -123,8 +124,9 @@ class Lights extends SampleApp {
 		});
 
 		var baseLS = s3d.lightSystem;
-		addCheck("DynCulling", function() return s3d.lightSystem != baseLS, function(b) {
-			s3d.lightSystem = b ? new CustomLS(s3d) : baseLS;
+		addCheck("DynCulling", function() return dynCullingEnable, function(b) {
+			dynCullingEnable = !dynCullingEnable;
+			dynCullingEnable ? addCullingCollider() : removeCullingCollider();
 		});
 
 		bitmap = new h2d.Bitmap(null, s2d);
@@ -139,6 +141,15 @@ class Lights extends SampleApp {
 			m.pos += m.speed / m.ray;
 			m.m.x = m.cx + Math.cos(m.pos) * m.ray;
 			m.m.y = m.cy + Math.sin(m.pos) * m.ray;
+
+			var cc = Std.instance(m.m.cullingCollider, h3d.col.Sphere);
+			if( cc != null ) {
+				var absPos = m.m.getAbsPos();
+				cc.x = absPos.tx;
+				cc.y = absPos.ty;
+				cc.z = absPos.tz;
+				cc.r = hxd.Math.max(m.m.scaleZ, hxd.Math.max(m.m.scaleX, m.m.scaleY));
+			}
 		}
 		var light = lights[curLight];
 		var tex = light == null ? null : light.shadows.getShadowTex();
@@ -148,7 +159,6 @@ class Lights extends SampleApp {
 
 		for( o in s3d ) {
 			o.culled = false;
-			o.cullingBits = 0;
 		}
 	}
 
