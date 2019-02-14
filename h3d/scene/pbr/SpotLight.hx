@@ -16,6 +16,8 @@ class SpotLight extends Light {
 		shadows = new h3d.pass.SpotShadowMap(this);
 		super(pbr,parent);
 		range = 10;
+		maxRange = 10;
+		angle = 45;
 		generatePrim();
 		lightProj = new h3d.Camera();
 		lightProj.screenRatio = 1.0;
