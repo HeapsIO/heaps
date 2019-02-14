@@ -133,7 +133,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 		// one pooled object was not used this frame, let's gc unused one by one
 		if( allocPool != null )
-			allocFirst = allocFirst.next;
+			allocFirst = @:privateAccess allocFirst.nextAlloc;
 		allocPool = allocFirst;
 		for( c in cachedShaderList ) {
 			c.s = null;
