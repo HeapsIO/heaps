@@ -6,13 +6,11 @@ class Default extends Base {
 
 	var manager : ShaderManager;
 	var globals(get, never) : hxsl.Globals;
-	var cachedBuffer : h3d.shader.Buffers;
 	var shaderCount : Int = 1;
 	var textureCount : Int = 1;
 	var shaderIdMap : Array<Int>;
 	var textureIdMap : Array<Int>;
 	var sortPasses = true;
-	var uploadParamsClosure : Void -> Void;
 
 	inline function get_globals() return manager.globals;
 
@@ -35,7 +33,6 @@ class Default extends Base {
 		manager = new ShaderManager(getOutputs());
 		shaderIdMap = [];
 		textureIdMap = [];
-		uploadParamsClosure = uploadParams;
 		initGlobals();
 	}
 
@@ -84,12 +81,6 @@ class Default extends Base {
 		}
 	}
 
-	function uploadParams() {
-		manager.fillParams(cachedBuffer, ctx.drawPass.shader, ctx.drawPass.shaders);
-		ctx.engine.uploadShaderBuffers(cachedBuffer, Params);
-		ctx.engine.uploadShaderBuffers(cachedBuffer, Textures);
-	}
-
 	inline function log( str : String ) {
 		ctx.engine.driver.log(str);
 	}
@@ -108,21 +99,22 @@ class Default extends Base {
 			globals.fastSet(g.gid, g.value);
 		setGlobals();
 		setupShaders(passes);
-		var shaderStart = shaderCount, textureStart = textureCount;
-		for( p in passes ) {
-			if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
-				shaderIdMap[p.shader.id] = shaderCount++;
-			if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
-				textureIdMap[p.texture] = textureCount++;
-		}
-		if( sortPasses )
+		if( sortPasses ) {
+			var shaderStart = shaderCount, textureStart = textureCount;
+			for( p in passes ) {
+				if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
+					shaderIdMap[p.shader.id] = shaderCount++;
+				if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
+					textureIdMap[p.texture] = textureCount++;
+			}
 			passes.sort(function(o1, o2) {
 				var d = shaderIdMap[o1.shader.id] - shaderIdMap[o2.shader.id];
 				if( d != 0 ) return d;
 				return textureIdMap[o1.texture] - textureIdMap[o2.texture];
 			});
-		ctx.uploadParams = uploadParamsClosure;
-		var buf = cachedBuffer, prevShader = null;
+		}
+		ctx.currentManager = manager;
+		var buf = ctx.shaderBuffers, prevShader = null;
 		for( p in passes ) {
 			globalModelView = p.obj.absPos;
 			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
@@ -131,7 +123,7 @@ class Default extends Base {
 				prevShader = p.shader;
 				ctx.engine.selectShader(p.shader);
 				if( buf == null )
-					buf = cachedBuffer = new h3d.shader.Buffers(p.shader);
+					buf = ctx.shaderBuffers = new h3d.shader.Buffers(p.shader);
 				else
 					buf.grow(p.shader);
 				manager.fillGlobals(buf, p.shader);

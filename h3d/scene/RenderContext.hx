@@ -19,9 +19,9 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	var sharedGlobals : Array<SharedGlobal>;
 	public var lightSystem : h3d.scene.LightSystem;
-	public var uploadParams : Void -> Void;
 	public var extraShaders : hxsl.ShaderList;
 	public var visibleFlag : Bool;
+	public var shaderBuffers : h3d.shader.Buffers;
 
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
@@ -30,6 +30,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var cachedPos : Int;
 	var passes : h3d.pass.PassObject;
 	var lights : Light;
+	var currentManager : h3d.pass.ShaderManager;
 
 	public function new() {
 		super();
@@ -52,7 +53,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		drawPass = null;
 		passes = null;
 		lights = null;
-		uploadParams = null;
 		cachedPos = 0;
 		visibleFlag = true;
 		time += elapsedTime;
@@ -116,9 +116,14 @@ class RenderContext extends h3d.impl.RenderContext {
 		lights = l;
 	}
 
+	public function uploadParams() {
+		currentManager.fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
+		engine.uploadShaderBuffers(shaderBuffers, Params);
+		engine.uploadShaderBuffers(shaderBuffers, Textures);
+	}
+
 	public function done() {
 		drawPass = null;
-		uploadParams = null;
 		// move passes to pool, and erase data
 		var p = allocFirst;
 		while( p != null && p != allocPool ) {
