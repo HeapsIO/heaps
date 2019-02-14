@@ -114,6 +114,11 @@ class PointShadowMap extends Shadows {
 		if( !filterPasses(passes) )
 			return;
 
+		var pointLight = cast(light, h3d.scene.pbr.PointLight);
+		var absPos = light.getAbsPos();
+		var sp = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, pointLight.range);
+		passes.filter(function(p) return p.obj.cullingCollider == null || p.obj.cullingCollider.inSphere(sp));
+
 		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
 		if(depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
@@ -126,8 +131,6 @@ class PointShadowMap extends Shadows {
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture)
 			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, true);
 
-		var pointLight = cast(light, h3d.scene.pbr.PointLight);
-		var absPos = light.getAbsPos();
 		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
 		lightCamera.zFar = pointLight.range;
 		lightCamera.zNear = pointLight.zNear;
@@ -139,8 +142,7 @@ class PointShadowMap extends Shadows {
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
 			var save = passes.save();
-			var bit = 1 << i;
-			passes.filter(function(p) return p.obj.cullingBits & bit == 0);
+			passes.filter(function(p) return p.obj.cullingCollider == null || p.obj.cullingCollider.inFrustum(lightCamera.frustum));
 			super.draw(passes);
 			passes.load(save);
 			ctx.engine.popTarget();

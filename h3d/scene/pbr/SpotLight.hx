@@ -120,9 +120,21 @@ class SpotLight extends Light {
 		}
 	}
 
+	var s = new h3d.col.Sphere();
+	var d = new h3d.Vector();
 	override function emit(ctx:RenderContext) {
 		if( ctx.pbrLightPass == null )
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
+
+		d.load(absPos.front());
+		d.scale3(maxRange / 2.0);
+		s.x = absPos.tx + d.x;
+		s.y = absPos.ty + d.y;
+		s.z = absPos.tz + d.z;
+		s.r = maxRange / 2.0;
+
+		if( !ctx.camera.frustum.hasSphere(s) )
+			return;
 
 		super.emit(ctx);
 		ctx.emitPass(ctx.pbrLightPass, this);

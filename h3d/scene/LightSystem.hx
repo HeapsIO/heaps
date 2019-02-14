@@ -16,13 +16,9 @@ class LightSystem {
 	public function initGlobals( globals : hxsl.Globals ) {
 	}
 
-	public function initLights( ctx : h3d.scene.RenderContext ) @:privateAccess {
-		lightCount = 0;
-		this.ctx = ctx;
-
+	function cullLights() @:privateAccess  {
 		// remove lights which cullingDistance is outside of frustum
 		var l = ctx.lights, prev : h3d.scene.Light = null;
-		var frustum = new h3d.col.Frustum(ctx.camera.m);
 		var s = new h3d.col.Sphere();
 		while( l != null ) {
 			s.x = l.absPos._41;
@@ -30,7 +26,7 @@ class LightSystem {
 			s.z = l.absPos._43;
 			s.r = l.cullingDistance;
 
-			if( l.cullingDistance > 0 && !ctx.computingStatic && !frustum.hasSphere(s) ) {
+			if( l.cullingDistance > 0 && !ctx.computingStatic && !ctx.camera.frustum.hasSphere(s) ) {
 				if( prev == null )
 					ctx.lights = l.next;
 				else
@@ -44,7 +40,12 @@ class LightSystem {
 			prev = l;
 			l = l.next;
 		}
+	}
 
+	public function initLights( ctx : h3d.scene.RenderContext ) @:privateAccess {
+		lightCount = 0;
+		this.ctx = ctx;
+		cullLights();
 		if( shadowLight == null || !shadowLight.allocated) {
 			var l = ctx.lights;
 			while( l != null ) {

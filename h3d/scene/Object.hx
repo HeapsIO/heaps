@@ -13,8 +13,6 @@ package h3d.scene;
 	public var FIgnoreBounds = 0x200;
 	public var FIgnoreCollide = 0x400;
 	public var FIgnoreParentTransform = 0x800;
-	public var FCullingPlansBits = 0x1000;
-	public var FCullingPlansBitsLast = 0x20000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -114,11 +112,6 @@ class Object implements hxd.impl.Serializable {
 	public var culled(get, set) : Bool;
 
 	/**
-		Six additional bits that are used for point lights culling. Tells in which planes the object should be culled
-	**/
-	public var cullingBits(get,set) : Int;
-
-	/**
 		When an object is not visible or culled, its animation does not get synchronized unless you set alwaysSync=true
 	**/
 	public var alwaysSync(get, set) : Bool;
@@ -154,6 +147,9 @@ class Object implements hxd.impl.Serializable {
 	**/
 	public var lightCameraCenter(get, set) : Bool;
 
+
+	public var cullingCollider : h3d.col.Collider;
+
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
@@ -188,7 +184,6 @@ class Object implements hxd.impl.Serializable {
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
 	inline function get_allowSerialize() return !flags.has(FNoSerialize);
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
-	inline function get_cullingBits() return (flags.toInt() >> 12) & 63;
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -201,7 +196,6 @@ class Object implements hxd.impl.Serializable {
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
 	inline function set_ignoreParentTransform(b) return flags.set(FIgnoreParentTransform, b);
-	inline function set_cullingBits(b) { flags = new ObjectFlags((flags.toInt() & ~0x3F000) | (b << 12)); return b; }
 
 	/**
 		Create an animation instance bound to the object, set it as currentAnimation and play it.

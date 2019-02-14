@@ -26,6 +26,11 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 		return transform.inFrustum(p);
 	}
 
+	public function inSphere( s : Sphere ) {
+		throw "Not implemented";
+		return false;
+	}
+
 	public function rayIntersection(r, bestMatch) {
 		applyTransform();
 		return transform.rayIntersection(r, bestMatch);

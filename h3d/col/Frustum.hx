@@ -76,6 +76,18 @@ class Frustum {
 		pfar.normalize();
 	}
 
+	public function hasPoint( p : Point ) {
+		if( pleft.distance(p) < 0 ) return false;
+		if( pright.distance(p) < 0 ) return false;
+		if( ptop.distance(p) < 0 ) return false;
+		if( pbottom.distance(p) < 0 ) return false;
+		if( checkNearFar ) {
+			if( pnear.distance(p) < 0 ) return false;
+			if( pfar.distance(p) < 0 ) return false;
+		}
+		return true;
+	}
+
 	public function hasSphere( s : Sphere ) {
 		var p = s.getCenter();
 		if( pleft.distance(p) < -s.r ) return false;

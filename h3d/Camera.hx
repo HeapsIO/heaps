@@ -41,7 +41,7 @@ class Camera {
 
 	public var follow : { pos : h3d.scene.Object, target : h3d.scene.Object };
 
-	public var frustum(default, null) = new h3d.col.Frustum();
+	public var frustum(default, null) : h3d.col.Frustum;
 
 	var minv : Matrix;
 	var miview : Matrix;
@@ -60,6 +60,7 @@ class Camera {
 		m = new Matrix();
 		mcam = new Matrix();
 		mproj = new Matrix();
+		frustum = new h3d.col.Frustum();
 		update();
 	}
 
