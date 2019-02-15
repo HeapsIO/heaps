@@ -83,7 +83,7 @@ class Renderer extends h3d.scene.Renderer {
 	public var shadows = true;
 
 	static var ALPHA : hxsl.Output = Swiz(Value("output.color"),[W]);
-	var output = new h3d.pass.Output("mrt",[
+	var output = new h3d.pass.Output("default",[
 		Value("output.color"),
 		Vec4([Value("output.normal",3),ALPHA]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
@@ -100,7 +100,7 @@ class Renderer extends h3d.scene.Renderer {
 	public function new(env) {
 		super();
 		this.env = env;
-		defaultPass = new h3d.pass.Default("default");
+		defaultPass = new h3d.pass.Default("color");
 		slides.addShader(pbrProps);
 		pbrOut.addShader(pbrIndirect);
 		pbrOut.addShader(pbrProps);
