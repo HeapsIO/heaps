@@ -8,10 +8,14 @@ class Sphere implements Collider {
 	public var r : Float;
 
 	public inline function new(x=0., y=0., z=0., r=0.) {
-		this.x = x;
-		this.y = y;
-		this.z = z;
-		this.r = r;
+		load(x, y, z, r);
+	}
+
+	public inline function load(sx=0., sy=0., sz=0., sr=0.) {
+		this.x = sx;
+		this.y = sy;
+		this.z = sz;
+		this.r = sr;
 	}
 
 	public inline function getCenter() {
