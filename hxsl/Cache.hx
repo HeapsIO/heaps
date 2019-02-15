@@ -18,6 +18,7 @@ class Cache {
 
 	var linkCache : SearchMap;
 	var linkShaders : Map<String, Shader>;
+	var batchShaders : Map<Int, SharedShader>;
 	var byID : Map<String, RuntimeShader>;
 	public var constsToGlobal : Bool;
 
@@ -25,6 +26,7 @@ class Cache {
 		constsToGlobal = false;
 		linkCache = new SearchMap();
 		linkShaders = new Map();
+		batchShaders = new Map();
 		byID = new Map();
 	}
 
@@ -37,7 +39,7 @@ class Cache {
 		if( shader != null )
 			return shader;
 		var s = new hxsl.SharedShader("");
-		var id = haxe.crypto.Md5.encode(vars.join(":")).substr(0, 8);
+		var id = haxe.crypto.Md5.encode(key).substr(0, 8);
 		s.data = {
 			name : "shaderLinker_"+id,
 			vars : [],
@@ -149,7 +151,7 @@ class Cache {
 	}
 
 	@:noDebug
-	public function link( shaders : hxsl.ShaderList ) {
+	public function link( shaders : hxsl.ShaderList, batchMode : Bool ) {
 		var c = linkCache;
 		for( s in shaders ) {
 			var i = @:privateAccess s.instance;
@@ -162,11 +164,11 @@ class Cache {
 			c = cs;
 		}
 		if( c.linked == null )
-			c.linked = compileRuntimeShader(shaders);
+			c.linked = compileRuntimeShader(shaders, batchMode);
 		return c.linked;
 	}
 
-	function compileRuntimeShader( shaders : hxsl.ShaderList ) {
+	function compileRuntimeShader( shaders : hxsl.ShaderList, batchMode : Bool ) {
 		var shaderDatas = [];
 		var index = 0;
 		for( s in shaders ) {
@@ -201,7 +203,7 @@ class Cache {
 		//TRACE = shaderId == 0;
 		#end
 
-		var linker = new hxsl.Linker();
+		var linker = new hxsl.Linker(batchMode);
 		var s = try linker.link([for( s in shaderDatas ) s.inst.shader]) catch( e : Error ) {
 			var shaders = [for( s in shaderDatas ) Printer.shaderToString(s.inst.shader)];
 			e.msg += "\n\nin\n\n" + shaders.join("\n-----\n");
@@ -233,6 +235,12 @@ class Cache {
 
 		var prev = s;
 		var s = try new hxsl.Splitter().split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
+
+		if( batchMode ) {
+			for( v in s.vertex.vars )
+				if( v.qualifiers != null && v.qualifiers.indexOf(PerObject) >= 0 )
+					v.kind = Local;
+		}
 
 		#if debug
 		Printer.check(s.vertex,[prev]);
@@ -403,6 +411,129 @@ class Cache {
 			c.bufferCount = 0;
 		c.data = data;
 		return c;
+	}
+
+	public function makeBatchShader( rt : RuntimeShader ) : BatchShader {
+		var sh = batchShaders.get(rt.id);
+		if( sh == null ) {
+			sh = createBatchShader(rt);
+			batchShaders.set(rt.id,sh);
+		}
+		var shader = std.Type.createEmptyInstance(BatchShader);
+		@:privateAccess shader.shader = sh;
+		return shader;
+	}
+
+	function createBatchShader( rt : RuntimeShader ) {
+		var s = new hxsl.SharedShader("");
+		var id = rt.signature.substr(0, 8);
+
+		function declVar( name, t, kind ) : TVar {
+			return {
+				id : Tools.allocVarId(),
+				type : t,
+				name : name,
+				kind : kind,
+			};
+		}
+
+		var pos = null;
+		var vcount = declVar("Batch_Count",TInt,Param);
+		var vbuffer = declVar("Batch_Buffer",TBuffer(TVec(4,VFloat),SVar(vcount)),Param);
+		var voffset = declVar("Batch_Offset", TInt, Local);
+		var ebuffer = { e : TVar(vbuffer), p : pos, t : vbuffer.type };
+		var eoffset = { e : TVar(voffset), p : pos, t : voffset.type };
+		var tvec4 = TVec(4,VFloat);
+		var countBits = 12;
+		vcount.qualifiers = [Const(1 << countBits)];
+
+		s.data = {
+			name : "batchShader_"+id,
+			vars : [vcount,vbuffer,voffset],
+			funs : [],
+		};
+
+		var stride = rt.vertex.paramsSize + rt.fragment.paramsSize;
+		var parentVars = new Map();
+		var swiz = [[X],[Y],[Z],[W]];
+
+		function readOffset( index : Int ) : TExpr {
+			return { e : TArray(ebuffer,{ e : TBinop(OpAdd,eoffset,{ e : TConst(CInt(index)), t : TInt, p : pos }), t : TInt, p : pos }), t : tvec4, p : pos };
+		}
+
+		function extractVar( v : AllocParam, offset : Int ) {
+			var vreal : TVar = declVar(v.name, v.type, Local);
+			if( v.perObjectGlobal != null ) {
+				var path = v.perObjectGlobal.path.split(".");
+				path.pop();
+				var cur = vreal;
+				while( path.length > 0 ) {
+					var key = path.join(".");
+					var name = path.pop();
+					var vp = parentVars.get(path);
+					if( vp == null ) {
+						vp = declVar(name,TStruct([]),Local);
+						parentVars.set(path,vp);
+					}
+					switch( vp.type ) {
+					case TStruct(vl): vl.push(cur);
+					default:
+					}
+					cur.parent = vp;
+					cur = vp;
+				}
+			}
+			s.data.vars.push(vreal);
+			var index = (v.pos>>2) + offset;
+			var extract = switch( v.type ) {
+			case TMat4:
+				{ p : pos, t : v.type, e : TCall({ e : TGlobal(Mat4), t : TVoid, p : pos },[
+					readOffset(index),
+					readOffset(index + 1),
+					readOffset(index + 2),
+					readOffset(index + 3),
+				]) };
+			case TVec(4,VFloat):
+				readOffset(index);
+			case TFloat:
+				{ p : pos, t : v.type, e : TSwiz(readOffset(index),swiz[v.pos&3]) }
+			default:
+				throw "Unsupported batch var type "+v.type;
+			}
+			return { p : pos, e : TBinop(OpAssign, { e : TVar(vreal), p : pos, t : v.type }, extract), t : TVoid };
+		}
+
+		var exprs = [];
+		var p = rt.vertex.params;
+		while( p != null ) {
+			exprs.push(extractVar(p,0));
+			p = p.next;
+		}
+
+		var p = rt.fragment.params;
+		while( p != null ) {
+			exprs.push(extractVar(p,rt.vertex.paramsSize));
+			p = p.next;
+		}
+
+		exprs.unshift({
+			p : pos,
+			e : TBinop(OpAssign, eoffset, { p : pos, t : TInt, e : TBinop(OpMult,{ e : TGlobal(InstanceID), t : TInt, p : pos },{ e : TConst(CInt(stride)), p : pos, t : TInt }) }),
+			t : TVoid,
+		});
+
+		var fv : TVar = declVar("init",TFun([]), Function);
+		var f : TFunction = {
+			kind : Init,
+			ref : fv,
+			args : [],
+			ret : TVoid,
+			expr : { e : TBlock(exprs), p : pos, t : TVoid },
+		};
+		s.data.funs.push(f);
+		s.consts = new SharedShader.ShaderConst(vcount,0,countBits);
+
+		return s;
 	}
 
 	static var INST : Cache;

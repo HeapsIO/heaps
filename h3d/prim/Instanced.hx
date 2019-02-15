@@ -19,6 +19,7 @@ class Instanced extends MeshPrimitive {
 		}
 	}
 
+	// make public
 	public override function addBuffer( name, buffer, offset = 0 ) {
 		super.addBuffer(name, buffer, offset);
 	}
