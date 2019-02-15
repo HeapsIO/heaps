@@ -16,7 +16,6 @@ class ColorMult extends hxsl.Shader {
 //PARAM=-lib hide
 class FxView extends hxd.App {
 
-	var fx : hide.prefab.fx.FX.FXAnimation;
 
 	override function init() {
 		var prefab = hxd.Res.hideEffect.load();
@@ -31,11 +30,18 @@ class FxView extends hxd.App {
 		shared.root3d = s3d;
 		ctx.init();
 
-		var i = prefab.makeInstance(ctx);
-		fx = cast(i.local3d, hide.prefab.fx.FX.FXAnimation);
-		fx.onEnd = function() fx.setTime(0);
+		function play() {
+			var i = prefab.makeInstance(ctx);
+			var fx = cast(i.local3d, hide.prefab.fx.FX.FXAnimation);
+			fx.onEnd = function() {
+				fx.remove();
+				play();
+			};
+		}
+		play();
 
 		new h3d.scene.CameraController(20,s3d);
+
 	}
 
 	static function main() {
