@@ -1,33 +1,13 @@
 package h3d.scene;
 
-private enum abstract BatchType(Int) {
-	var TFloat;
-	var TVec2;
-	var TVec3;
-	var TVec4;
-	var TMat4;
-	var TPad1;
-	var TPad2;
-	var TPad3;
-	var TModelView;
-	var TModelViewInverse;
-}
-
-private class BatchParam {
-	public var next : BatchParam;
-	public var shader : hxsl.Shader;
-	public var index : Int;
-	public var type : BatchType;
-	public function new() {
-	}
-}
-
 private class BatchData {
 
 	public var count : Int;
 	public var buffer : h3d.Buffer;
 	public var data : hxd.FloatBuffer;
-	public var params : BatchParam;
+	public var params : hxsl.RuntimeShader.AllocParam;
+	public var shader : hxsl.BatchShader;
+	public var shaders : hxsl.ShaderList;
 	public var next : BatchData;
 
 	public function new() {
@@ -49,6 +29,8 @@ class MeshBatch extends Mesh {
 	var commandBytes = haxe.io.Bytes.alloc(20);
 	var dataBuffer : h3d.Buffer;
 	var dataPasses : BatchData;
+	var modelViewID = hxsl.Globals.allocID("global.modelView");
+	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 
 	/**
 		Set if shader list or shader constants has changed, before calling begin()
@@ -74,15 +56,34 @@ class MeshBatch extends Mesh {
 			if( ctx == null ) throw "Could't find renderer pass "+p.name;
 
 			var manager = cast(ctx,h3d.pass.Default).manager;
-			var rt = manager.compileShaders(p.getShadersRec(),false);
+			var shaders = p.getShadersRec();
+			var rt = manager.compileShaders(shaders,false);
 
 			var shader = manager.shaderCache.makeBatchShader(rt);
 
 			var b = new BatchData();
-			b.count = 4;
+			b.count = rt.vertex.paramsSize + rt.fragment.paramsSize;
+			b.params = rt.fragment.params.clone();
+
+			var hd = b.params;
+			while( hd != null ) {
+				hd.pos += rt.vertex.paramsSize << 2;
+				hd = hd.next;
+			}
+
+			if( b.params == null )
+				b.params = rt.vertex.params;
+			else if( rt.vertex != null ) {
+				var vl = rt.vertex.params.clone();
+				var hd = vl;
+				while( vl.next != null ) vl = vl.next;
+				vl.next = b.params;
+				b.params = hd;
+			}
+
 			var tot = b.count * shaderInstances;
-			b.params = new BatchParam();
-			b.params.type = TModelView;
+			b.shader = shader;
+			b.shaders = shaders;
 			b.buffer = new h3d.Buffer(tot,4,[UniformBuffer,Dynamic]);
 			b.data = new hxd.FloatBuffer(tot * 4);
 			dataPasses = b;
@@ -108,57 +109,70 @@ class MeshBatch extends Mesh {
 	function syncData( data : BatchData ) {
 		var p = data.params;
 		var buf = data.data;
-		var pos = data.count * curInstances * 4;
-		inline function addMatrix(m:h3d.Matrix) {
-			buf[pos++] = m._11;
-			buf[pos++] = m._21;
-			buf[pos++] = m._31;
-			buf[pos++] = m._41;
-			buf[pos++] = m._12;
-			buf[pos++] = m._22;
-			buf[pos++] = m._32;
-			buf[pos++] = m._42;
-			buf[pos++] = m._13;
-			buf[pos++] = m._23;
-			buf[pos++] = m._33;
-			buf[pos++] = m._43;
-			buf[pos++] = m._14;
-			buf[pos++] = m._24;
-			buf[pos++] = m._34;
-			buf[pos++] = m._44;
-		}
+		var startPos = data.count * curInstances * 4;
+		var curInstance = -1;
+		var curShader : hxsl.Shader = null;
 		while( p != null ) {
+			var pos = startPos + p.pos;
+			inline function addMatrix(m:h3d.Matrix) {
+				buf[pos++] = m._11;
+				buf[pos++] = m._21;
+				buf[pos++] = m._31;
+				buf[pos++] = m._41;
+				buf[pos++] = m._12;
+				buf[pos++] = m._22;
+				buf[pos++] = m._32;
+				buf[pos++] = m._42;
+				buf[pos++] = m._13;
+				buf[pos++] = m._23;
+				buf[pos++] = m._33;
+				buf[pos++] = m._43;
+				buf[pos++] = m._14;
+				buf[pos++] = m._24;
+				buf[pos++] = m._34;
+				buf[pos++] = m._44;
+			}
+			if( p.perObjectGlobal != null ) {
+				if( p.perObjectGlobal.gid == modelViewID ) {
+					addMatrix(absPos);
+				} else if( p.perObjectGlobal.gid == modelViewInverseID ) {
+					addMatrix(getInvPos());
+				} else
+					throw "Unsupported global param "+p.perObjectGlobal.path;
+				p = p.next;
+				continue;
+			}
+			if( p.instance != curInstance ) {
+				curInstance = p.instance;
+				var index = curInstance;
+				var si = data.shaders;
+				while( --index > 0 ) si = si.next;
+				curShader = si.s;
+			}
 			switch( p.type ) {
+			case TVec(size, _):
+				var v : h3d.Vector = curShader.getParamValue(p.index);
+				switch( size ) {
+				case 2:
+					buf[pos++] = v.x;
+					buf[pos++] = v.y;
+				case 3:
+					buf[pos++] = v.x;
+					buf[pos++] = v.y;
+					buf[pos++] = v.z;
+				default:
+					buf[pos++] = v.x;
+					buf[pos++] = v.y;
+					buf[pos++] = v.z;
+					buf[pos++] = v.w;
+				}
 			case TFloat:
-				buf[pos++] = p.shader.getParamFloatValue(p.index);
-			case TVec2:
-				var v : h3d.Vector = p.shader.getParamValue(p.index);
-				buf[pos++] = v.x;
-				buf[pos++] = v.y;
-			case TVec3:
-				var v : h3d.Vector = p.shader.getParamValue(p.index);
-				buf[pos++] = v.x;
-				buf[pos++] = v.y;
-				buf[pos++] = v.z;
-			case TVec4:
-				var v : h3d.Vector = p.shader.getParamValue(p.index);
-				buf[pos++] = v.x;
-				buf[pos++] = v.y;
-				buf[pos++] = v.z;
-				buf[pos++] = v.w;
+				buf[pos++] = curShader.getParamFloatValue(p.index);
 			case TMat4:
-				var m : h3d.Matrix  = p.shader.getParamValue(p.index);
+				var m : h3d.Matrix = curShader.getParamValue(p.index);
 				addMatrix(m);
-			case TModelView:
-				addMatrix(absPos);
-			case TModelViewInverse:
-				addMatrix(getInvPos());
-			case TPad1:
-				pos++;
-			case TPad2:
-				pos+=2;
-			case TPad3:
-				pos+=3;
+			default:
+				throw "Unsupported batch type "+p.type;
 			}
 			p = p.next;
 		}
