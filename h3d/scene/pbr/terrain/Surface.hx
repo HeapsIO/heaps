@@ -7,6 +7,7 @@ class Surface {
 	public var tilling = 1.0;
 	public var offset : h3d.Vector;
 	public var angle = 0.0;
+	public var heightScale = 1.0;
 
 	public function new(?albedo : h3d.mat.Texture, ?normal : h3d.mat.Texture, ?pbr : h3d.mat.Texture){
 		this.albedo = albedo;
@@ -20,6 +21,7 @@ class Surface {
 		o.tilling = tilling;
 		o.offset.load(offset);
 		o.angle = angle;
+		o.heightScale = heightScale;
 		return o;
 	}
 

@@ -14,7 +14,7 @@ class Terrain extends Object {
 	public var parallaxMinStep : Int;
 	public var parallaxMaxStep : Int;
 	public var heightBlendStrength : Float;
-	public var heightBlendSharpness : Float;
+	public var blendSharpness : Float;
 	public var copyPass (default, null): h3d.pass.Copy;
 	public var tiles (default, null) : Array<Tile> = [];
 	public var surfaces (default, null) : Array<Surface> = [];
@@ -39,7 +39,7 @@ class Terrain extends Object {
 		o.parallaxMinStep = parallaxMinStep;
 		o.parallaxMaxStep = parallaxMaxStep;
 		o.heightBlendStrength = heightBlendStrength;
-		o.heightBlendSharpness = heightBlendSharpness;
+		o.blendSharpness = blendSharpness;
 
 		for( i in 0...tiles.length ){
 			var t = Std.instance(tiles[i].clone(), Tile);
@@ -113,7 +113,7 @@ class Terrain extends Object {
 	public function updateSurfaceParams(){
 		for(i in 0 ... surfaces.length){
 			surfaceArray.params[i] = new h3d.Vector(surfaces[i].tilling, surfaces[i].offset.x, surfaces[i].offset.y, hxd.Math.degToRad(surfaces[i].angle));
-			surfaceArray.secondParams[i] = new h3d.Vector(0, 0, 0, 0);
+			surfaceArray.secondParams[i] = new h3d.Vector(surfaces[i].heightScale, 0, 0, 0);
 		}
 	}
 

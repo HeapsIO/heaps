@@ -25,6 +25,7 @@ class Tile extends h3d.scene.Mesh {
 		shader = new h3d.shader.pbr.Terrain();
 		material.mainPass.addShader(shader);
 		material.mainPass.culling = None;
+		material.shadows = false;
 		this.x = x * getTerrain().tileSize;
 		this.y = y * getTerrain().tileSize;
 		name = "tile_" + x + "_" + y;
@@ -535,6 +536,7 @@ class Tile extends h3d.scene.Mesh {
 		shader.SURFACE_COUNT = getTerrain().surfaces.length;
 		shader.CHECKER = getTerrain().showChecker;
 		shader.COMPLEXITY = getTerrain().showComplexity;
+		shader.PARALLAX = getTerrain().parallaxAmount != 0;
 
 		shader.heightMapSize = heightMap.width;
 		shader.primSize = getTerrain().tileSize;
@@ -555,7 +557,7 @@ class Tile extends h3d.scene.Mesh {
 			shader.minStep = getTerrain().parallaxMinStep;
 			shader.maxStep = getTerrain().parallaxMaxStep;
 			shader.heightBlendStrength = getTerrain().heightBlendStrength;
-			shader.heightBlendSharpness = getTerrain().heightBlendSharpness;
+			shader.blendSharpness = getTerrain().blendSharpness;
 		}
 	}
 
