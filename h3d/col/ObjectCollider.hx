@@ -33,7 +33,12 @@ class ObjectCollider implements Collider implements hxd.impl.Serializable {
 		return b;
 	}
 
-	public function inFrustum( mvp : h3d.Matrix ) {
+	public function inFrustum( f : Frustum ) {
+		throw "Not implemented";
+		return false;
+	}
+
+	public function inSphere( s : Sphere ) {
 		throw "Not implemented";
 		return false;
 	}

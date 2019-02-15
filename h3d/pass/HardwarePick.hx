@@ -63,17 +63,13 @@ class HardwarePick extends Default {
 		fixedColor.colorID.setColor(0xFF000000 | (++colorID));
 	}
 
-	override function draw(passes:Object) {
+	override function draw(passes:h3d.pass.PassList) {
 
-		var cur = passes;
-		while( cur != null ) {
+		for( cur in passes ) @:privateAccess {
 			// force all materials to use opaque blend
-			@:privateAccess {
-				var mask = h3d.mat.Pass.blendSrc_mask | h3d.mat.Pass.blendDst_mask | h3d.mat.Pass.blendAlphaDst_mask | h3d.mat.Pass.blendAlphaSrc_mask | h3d.mat.Pass.blendOp_mask | h3d.mat.Pass.blendAlphaOp_mask;
-				cur.pass.bits &= ~mask;
-				cur.pass.bits |= material.bits & mask;
-			}
-			cur = cur.next;
+			var mask = h3d.mat.Pass.blendSrc_mask | h3d.mat.Pass.blendDst_mask | h3d.mat.Pass.blendAlphaDst_mask | h3d.mat.Pass.blendAlphaSrc_mask | h3d.mat.Pass.blendOp_mask | h3d.mat.Pass.blendAlphaOp_mask;
+			cur.pass.bits &= ~mask;
+			cur.pass.bits |= material.bits & mask;
 		}
 		colorID = 0;
 
@@ -82,12 +78,11 @@ class HardwarePick extends Default {
 		ctx.engine.pushTarget(texOut);
 		ctx.engine.clear(0xFF000000, 1);
 		ctx.extraShaders = ctx.allocShaderList(fixedColor);
-		var passes = super.draw(passes);
+		super.draw(passes);
 		ctx.extraShaders = null;
 		ctx.engine.popTarget();
 
-		var cur = passes;
-		while( cur != null ) {
+		for( cur in passes ) {
 			// will reset bits
 			cur.pass.blendSrc = cur.pass.blendSrc;
 			cur.pass.blendDst = cur.pass.blendDst;
@@ -96,13 +91,11 @@ class HardwarePick extends Default {
 			cur.pass.blendAlphaDst = cur.pass.blendAlphaDst;
 			cur.pass.blendAlphaOp = cur.pass.blendAlphaOp;
 			cur.pass.colorMask = cur.pass.colorMask;
-			cur = cur.next;
 		}
 
 		ctx.engine.clear(null, null, 0);
 		var pix = texOut.capturePixels();
 		pickedIndex = (pix.getPixel(pix.width>>1, pix.height>>1) & 0xFFFFFF) - 1;
-		return passes;
 	}
 
 }

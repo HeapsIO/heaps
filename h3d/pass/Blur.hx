@@ -135,7 +135,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 
 		var isCube = src.flags.has(Cube);
 		var faceCount = isCube ? 6 : 1;
-		var tmp = ctx.textures.allocTarget(src.name+"BlurTmp", src.width, src.height, false, src.format, isCube ? [Target, Cube] : [Target]);
+		var tmp = ctx.textures.allocTarget(src.name+"BlurTmp", src.width, src.height, false, src.format, isCube);
 
 		shader.Quality = values.length;
 		shader.values = values;

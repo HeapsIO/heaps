@@ -13,11 +13,11 @@ class MaterialSetup {
 	}
 
 	public function createRenderer() : h3d.scene.Renderer {
-		return new h3d.scene.DefaultRenderer();
+		return new h3d.scene.fwd.Renderer();
 	}
 
-	public function createLightSystem() {
-		return new h3d.scene.LightSystem();
+	public function createLightSystem() : h3d.scene.LightSystem {
+		return new h3d.scene.fwd.LightSystem();
 	}
 
 	public function createMaterial() {

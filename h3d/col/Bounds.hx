@@ -18,20 +18,14 @@ class Bounds implements Collider {
 		empty();
 	}
 
-	public function inFrustum( mvp : Matrix ) {
-		if( testPlane(Plane.frustumLeft(mvp)) < 0 )
-			return false;
-		if( testPlane(Plane.frustumRight(mvp)) < 0 )
-			return false;
-		if( testPlane(Plane.frustumBottom(mvp)) < 0 )
-			return false;
-		if( testPlane(Plane.frustumTop(mvp)) < 0 )
-			return false;
-		if( testPlane(Plane.frustumNear(mvp)) < 0 )
-			return false;
-		if( testPlane(Plane.frustumFar(mvp)) < 0 )
-			return false;
-		return true;
+	public inline function inFrustum( f : Frustum ) {
+		return f.hasBounds(this);
+	}
+
+	public inline function inSphere( s : Sphere ) {
+		var c = new Point(s.x,s.y,s.z);
+		var p = new Point(Math.max(xMin, Math.min(s.x, xMax)), Math.max(yMin, Math.min(s.y, yMax)), Math.max(zMin, Math.min(s.z, zMax)));
+		return c.distanceSq(p) < s.r*s.r;
 	}
 
 	inline function testPlane( p : Plane ) {

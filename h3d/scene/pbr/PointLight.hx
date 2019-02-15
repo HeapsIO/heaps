@@ -35,7 +35,7 @@ class PointLight extends Light {
 		return cullingDistance = v;
 	}
 
-	override function draw(ctx) {
+	override function draw(ctx:RenderContext) {
 		primitive.render(ctx.engine);
 	}
 
@@ -52,9 +52,9 @@ class PointLight extends Light {
 		pbr.pointSize = size;
 	}
 
+	var s = new h3d.col.Sphere();
 	override function emit(ctx:RenderContext) {
-
-		if( ctx.computingStatic ){
+		if( ctx.computingStatic ) {
 			super.emit(ctx);
 			return;
 		}
@@ -62,7 +62,6 @@ class PointLight extends Light {
 		if( ctx.pbrLightPass == null )
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
 
-		var s = new h3d.col.Sphere();
 		s.x = absPos._41;
 		s.y = absPos._42;
 		s.z = absPos._43;

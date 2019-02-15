@@ -31,7 +31,6 @@ class DefaultShadowMap extends DirShadowMap {
 		ctx.setGlobalID(shadowColorId, color);
 		ctx.setGlobalID(shadowPowerId, power);
 		ctx.setGlobalID(shadowBiasId, bias);
-		return passes;
 	}
 
 }

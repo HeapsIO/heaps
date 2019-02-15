@@ -41,7 +41,7 @@ class Camera {
 
 	public var follow : { pos : h3d.scene.Object, target : h3d.scene.Object };
 
-	public var frustum(default, null) = new h3d.col.Frustum();
+	public var frustum(default, null) : h3d.col.Frustum;
 
 	var minv : Matrix;
 	var miview : Matrix;
@@ -60,6 +60,7 @@ class Camera {
 		m = new Matrix();
 		mcam = new Matrix();
 		mproj = new Matrix();
+		frustum = new h3d.col.Frustum();
 		update();
 	}
 
@@ -118,7 +119,7 @@ class Camera {
 	/**
 		Setup camera for cubemap rendering on the given face.
 	**/
-	public function setCubeMap( face : Int, position : h3d.Vector ) {
+	public function setCubeMap( face : Int, ?position : h3d.Vector ) {
 		var dx = 0, dy = 0, dz = 0;
 		switch( face ) {
 		case 0: dx = 1; up.set(0,1,0);
@@ -128,7 +129,8 @@ class Camera {
 		case 4: dz = 1; up.set(0,1,0);
 		case 5: dz = -1; up.set(0,1,0);
 		}
-		pos.set(position.x,position.y,position.z);
+		if( position != null )
+			pos.load(position);
 		target.set(pos.x + dx,pos.y + dy,pos.z + dz);
 	}
 
@@ -175,9 +177,9 @@ class Camera {
 		}
 		makeCameraMatrix(mcam);
 		makeFrustumMatrix(mproj);
-		
+
 		m.multiply(mcam, mproj);
-		
+
 		needInv = true;
 		if( miview != null ) miview._44 = 0;
 
@@ -235,10 +237,11 @@ class Camera {
 		// in leftHanded the z axis is positive else it's negative
 		// this way we make sure that our [ax,ay,-az] matrix follow the same handness as our world
 		// We build a transposed version of Matrix.lookAt
-		var az = rightHanded ? pos.sub(target) : target.sub(pos);
-		az.normalize();
+		var az = target.sub(pos);
+		if( rightHanded ) az.scale3(-1);
+		az.normalizeFast();
 		var ax = up.cross(az);
-		ax.normalize();
+		ax.normalizeFast();
 		if( ax.length() == 0 ) {
 			ax.x = az.y;
 			ax.y = az.z;

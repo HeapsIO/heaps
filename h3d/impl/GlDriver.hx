@@ -131,7 +131,7 @@ private class CompiledProgram {
 	public var vertex : CompiledShader;
 	public var fragment : CompiledShader;
 	public var stride : Int;
-	public var attribNames : Array<String>;
+	public var inputs : InputNames;
 	public var attribs : Array<CompiledAttribute>;
 	public function new() {
 	}
@@ -283,7 +283,7 @@ class GlDriver extends Driver {
 	}
 
 	override function getShaderInputNames() {
-		return curShader.attribNames;
+		return curShader.inputs;
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
@@ -415,7 +415,7 @@ class GlDriver extends Driver {
 			firstShader = false;
 			initShader(p, p.vertex, shader.vertex);
 			initShader(p, p.fragment, shader.fragment);
-			p.attribNames = [];
+			var attribNames = [];
 			p.attribs = [];
 			p.stride = 0;
 			for( v in shader.vertex.data.vars )
@@ -447,10 +447,11 @@ class GlDriver extends Driver {
 							}
 					}
 					p.attribs.push(a);
-					p.attribNames.push(v.name);
+					attribNames.push(v.name);
 					p.stride += size;
 				default:
 				}
+			p.inputs = InputNames.get(attribNames);
 			programs.set(shader.id, p);
 		}
 		if( curShader == p ) return false;
@@ -1233,7 +1234,7 @@ class GlDriver extends Driver {
 			for( i in 0...curShader.attribs.length ) {
 				var a = curShader.attribs[i];
 				var pos;
-				switch( curShader.attribNames[i] ) {
+				switch( curShader.inputs.names[i] ) {
 				case "position":
 					pos = 0;
 				case "normal":
@@ -1384,7 +1385,7 @@ class GlDriver extends Driver {
 	}
 
 	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, ?region:h2d.col.IBounds) {
-		
+
 		var pixels : hxd.Pixels;
 		var x : Int, y : Int;
 		if (region != null) {
@@ -1400,7 +1401,7 @@ class GlDriver extends Driver {
 			x = 0;
 			y = 0;
 		}
-		
+
 		var old = curTarget;
 		var oldCount = numTargets;
 		var oldLayer = curTargetLayer;
@@ -1436,7 +1437,7 @@ class GlDriver extends Driver {
 		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
 			throw "Invalid depth buffer size : does not match render target size";
 
-		if( glES == 1 && mipLevel > 0 ) throw "Cannot render to mipLevel in WebGL1, use upload() instead";
+		if( mipLevel > 0 && glES == 1 ) throw "Cannot render to mipLevel in WebGL1, use upload() instead";
 
 		if( tex.t == null )
 			tex.alloc();

@@ -15,10 +15,12 @@ class SpotLight extends Light {
 		pbr = new h3d.shader.pbr.Light.SpotLight();
 		shadows = new h3d.pass.SpotShadowMap(this);
 		super(pbr,parent);
-		range = 10;
 		generatePrim();
 		lightProj = new h3d.Camera();
 		lightProj.screenRatio = 1.0;
+		range = 10;
+		maxRange = 10;
+		angle = 45;
 	}
 
 	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
@@ -93,7 +95,7 @@ class SpotLight extends Light {
 		return absPos.front();
 	}
 
-	override function draw(ctx) {
+	override function draw(ctx:RenderContext) {
 		primitive.render(ctx.engine);
 	}
 
@@ -120,9 +122,21 @@ class SpotLight extends Light {
 		}
 	}
 
+	var s = new h3d.col.Sphere();
+	var d = new h3d.Vector();
 	override function emit(ctx:RenderContext) {
 		if( ctx.pbrLightPass == null )
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
+
+		d.load(absPos.front());
+		d.scale3(maxRange / 2.0);
+		s.x = absPos.tx + d.x;
+		s.y = absPos.ty + d.y;
+		s.z = absPos.tz + d.z;
+		s.r = maxRange / 2.0;
+
+		if( !ctx.camera.frustum.hasSphere(s) )
+			return;
 
 		super.emit(ctx);
 		ctx.emitPass(ctx.pbrLightPass, this);

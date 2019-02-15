@@ -53,7 +53,7 @@ class PointShadowMap extends Shadows {
 		cameraPos = lightCamera.pos;
 	}
 
-	function syncShader(texture) {
+	override function syncShader(texture) {
 		var absPos = light.getAbsPos();
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		pshader.shadowMap = texture;
@@ -102,68 +102,49 @@ class PointShadowMap extends Shadows {
 		return true;
 	}
 
-	function createDefaultShadowMap(){
+	override function createDefaultShadowMap() {
 		var tex = new h3d.mat.Texture(1,1, [Target,Cube], format);
-		tex.name = "defaultStaticTexture";
+		tex.name = "defaultCubeShadowMap";
 		for(i in 0 ... 6)
 			tex.clear(0xFFFFFF, i);
 		return tex;
 	}
 
 	override function draw( passes ) {
+		if( !filterPasses(passes) )
+			return;
 
-		if( !ctx.computingStatic ){
-			switch( mode ) {
-			case None:
-				return passes;
-			case Dynamic:
-				// nothing
-			case Mixed:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = createDefaultShadowMap();
-			case Static:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = createDefaultShadowMap();
-				updateCamera();
-				syncShader(staticTexture);
-				return passes;
-			}
-		}
+		var pointLight = cast(light, h3d.scene.pbr.PointLight);
+		var absPos = light.getAbsPos();
+		var sp = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, pointLight.range);
+		cullPasses(passes,function(col) return col.inSphere(sp));
 
-		var passes = filterPasses(passes);
-
-		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, [Target, Cube]);
+		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
 		if(depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
-				if( depth != null ) depth.dispose();
-				depth = new h3d.mat.DepthBuffer(size, size);
+			if( depth != null ) depth.dispose();
+			depth = new h3d.mat.DepthBuffer(size, size);
 		}
 		texture.depthBuffer = depth;
 
 		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
 		var merge : h3d.mat.Texture = null;
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture)
-			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, [Target, Cube]);
+			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, true);
 
-		var pointLight = cast(light, h3d.scene.pbr.PointLight);
-		var absPos = light.getAbsPos();
-		var lightBounds = new h3d.col.Bounds();
-		lightBounds.addPoint( new h3d.col.Point(absPos.tx + pointLight.range, absPos.ty + pointLight.range, absPos.tz + pointLight.range));
-		lightBounds.addPoint( new h3d.col.Point(absPos.tx - pointLight.range, absPos.ty - pointLight.range, absPos.tz - pointLight.range));
+		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
+		lightCamera.zFar = pointLight.range;
+		lightCamera.zNear = pointLight.zNear;
 
-		for(i in 0 ... 6){
-
-			var pointLight = cast(light, h3d.scene.pbr.PointLight);
-
-			var absPos = light.getAbsPos();
-			lightCamera.setCubeMap(i, new h3d.Vector(absPos.tx, absPos.ty, absPos.tz));
-			lightCamera.zFar = pointLight.range;
-			lightCamera.zNear = pointLight.zNear;
+		for( i in 0...6 ) {
+			lightCamera.setCubeMap(i);
 			lightCamera.update();
 
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
-			passes = customDraw(passes, lightBounds);
-
+			var save = passes.save();
+			cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
+			super.draw(passes);
+			passes.load(save);
 			ctx.engine.popTarget();
 		}
 
@@ -183,76 +164,6 @@ class PointShadowMap extends Shadows {
 		}
 
 		syncShader(texture);
-		return passes;
-	}
-
-	@:access(h3d.scene)
-	function customDraw( passes : Object, lightBounds : h3d.col.Bounds) {
-		for( g in ctx.sharedGlobals )
-			globals.fastSet(g.gid, g.value);
-		setGlobals();
-		setupShaders(passes);
-		var p = passes;
-		var shaderStart = shaderCount, textureStart = textureCount;
-		while( p != null ) {
-			if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
-				shaderIdMap[p.shader.id] = shaderCount++;
-			if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
-				textureIdMap[p.texture] = textureCount++;
-			p = p.next;
-		}
-		if( sortPasses )
-			passes = haxe.ds.ListSort.sortSingleLinked(passes, function(o1:Object, o2:Object) {
-				var d = shaderIdMap[o1.shader.id] - shaderIdMap[o2.shader.id];
-				if( d != 0 ) return d;
-				return textureIdMap[o1.texture] - textureIdMap[o2.texture];
-			});
-		ctx.uploadParams = uploadParams;
-		var p = passes;
-		var buf = cachedBuffer, prevShader = null;
-		var drawTri = 0, drawCalls = 0, shaderSwitches = 0;
-		if( ctx.engine.driver.logEnable ) {
-			if( logEnable ) log("Pass " + (passes == null ? "???" : passes.pass.name) + " start");
-			drawTri = ctx.engine.drawTriangles;
-			drawCalls = ctx.engine.drawCalls;
-			shaderSwitches = ctx.engine.shaderSwitches;
-		}
-		while( p != null ) {
-
-			if( !lightCamera.frustum.hasBounds(p.obj.getBounds())) {
-				p = p.next;
-				continue;
-			}
-
-			if( logEnable ) log("Render " + p.obj + "." + p.pass.name);
-			globalModelView = p.obj.absPos;
-			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
-				globalModelViewInverse = p.obj.getInvPos();
-			if( prevShader != p.shader ) {
-				prevShader = p.shader;
-				ctx.engine.selectShader(p.shader);
-				if( buf == null )
-					buf = cachedBuffer = new h3d.shader.Buffers(p.shader);
-				else
-					buf.grow(p.shader);
-				manager.fillGlobals(buf, p.shader);
-				ctx.engine.uploadShaderBuffers(buf, Globals);
-			}
-			if( !p.pass.dynamicParameters ) {
-				manager.fillParams(buf, p.shader, p.shaders);
-				ctx.engine.uploadShaderBuffers(buf, Params);
-				ctx.engine.uploadShaderBuffers(buf, Textures);
-				ctx.engine.uploadShaderBuffers(buf, Buffers);
-			}
-			drawObject(p);
-			p = p.next;
-		}
-		if( logEnable ) {
-			log("Pass " + (passes == null ? "???" : passes.pass.name) + " end");
-			log("\t" + (ctx.engine.drawTriangles - drawTri) + " tri " + (ctx.engine.drawCalls - drawCalls) + " calls " + (ctx.engine.shaderSwitches - shaderSwitches) + " shaders");
-		}
-		ctx.nextPass();
-		return passes;
 	}
 
 	function updateCamera(){
@@ -261,7 +172,7 @@ class PointShadowMap extends Shadows {
 		lightCamera.update();
 	}
 
-	override function computeStatic( passes : h3d.pass.Object ) {
+	override function computeStatic( passes : h3d.pass.PassList ) {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);

@@ -78,7 +78,7 @@ class Terrain extends hxsl.Shader {
 			var angle = surfaceParams[i].w;
 			var offset = vec2(surfaceParams[i].y, surfaceParams[i].z);
 			var tilling = surfaceParams[i].x;
-			var worldUV = vec2((uv + tileIndex) * tilling) + offset;
+			var worldUV = (uv + tileIndex) * tilling + offset;
 			var res = vec2( worldUV.x * cos(angle) - worldUV.y * sin(angle) , worldUV.y * cos(angle) + worldUV.x * sin(angle));
 			var surfaceUV = vec3(res, i);
 			return surfaceUV;

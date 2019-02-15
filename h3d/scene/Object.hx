@@ -13,8 +13,8 @@ package h3d.scene;
 	public var FIgnoreBounds = 0x200;
 	public var FIgnoreCollide = 0x400;
 	public var FIgnoreParentTransform = 0x800;
-	public inline function new() {
-		this = 0;
+	public inline function new(value) {
+		this = value;
 	}
 	public inline function toInt() return this;
 	public inline function has(f:ObjectFlags) return this & f.toInt() != 0;
@@ -147,6 +147,9 @@ class Object implements hxd.impl.Serializable {
 	**/
 	public var lightCameraCenter(get, set) : Bool;
 
+
+	public var cullingCollider : h3d.col.Collider;
+
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
@@ -157,7 +160,7 @@ class Object implements hxd.impl.Serializable {
 		Create a new empty object, and adds it to the parent object if not null.
 	**/
 	public function new( ?parent : Object ) {
-		flags = new ObjectFlags();
+		flags = new ObjectFlags(0);
 		absPos = new h3d.Matrix();
 		absPos.identity();
 		x = 0; y = 0; z = 0; scaleX = 1; scaleY = 1; scaleZ = 1;

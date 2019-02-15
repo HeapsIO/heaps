@@ -80,52 +80,65 @@ class Shadows extends Default {
 		return null;
 	}
 
-	public function computeStatic( passes : h3d.pass.Object ) {
+	public function computeStatic( passes : h3d.pass.PassList ) {
 		throw "Not implemented";
 	}
 
-	function filterPasses( passes : h3d.pass.Object ) : h3d.pass.Object {
-		var isStatic : Bool;
+	function createDefaultShadowMap() {
+		var tex = h3d.mat.Texture.fromColor(0xFFFFFF);
+		tex.name = "defaultShadowMap";
+		return tex;
+	}
+
+	function syncShader( texture : h3d.mat.Texture ) {
+	}
+
+	function filterPasses( passes : h3d.pass.PassList ) {
+		if( !ctx.computingStatic ){
+			switch( mode ) {
+			case None:
+				return false;
+			case Dynamic:
+				// nothing
+			case Mixed:
+				if( staticTexture == null || staticTexture.isDisposed() )
+					staticTexture = createDefaultShadowMap();
+			case Static:
+				if( staticTexture == null || staticTexture.isDisposed() )
+					staticTexture = createDefaultShadowMap();
+				syncShader(staticTexture);
+				return false;
+			}
+		}
 		switch( mode ) {
 		case None:
-			return null;
+			passes.clear();
 		case Dynamic:
-			if( ctx.computingStatic ) return null;
-			return passes;
+			if( ctx.computingStatic ) passes.clear();
 		case Mixed:
-			isStatic = ctx.computingStatic;
+			passes.filter(function(p) return p.pass.isStatic == ctx.computingStatic);
 		case Static:
-			if( !ctx.computingStatic ) return null;
-			isStatic = true;
+			if( ctx.computingStatic )
+				passes.filter(function(p) return p.pass.isStatic == true);
+			else
+				passes.clear();
 		}
-		var head = null;
-		var prev = null;
-		var last = null;
+		return true;
+	}
 
-		var cur = passes;
-		while( cur != null ) {
-			if( cur.pass.isStatic == isStatic ) {
-				if( head == null )
-					head = prev = cur;
-				else {
-					prev.next = cur;
-					prev = cur;
-				}
-			} else {
-				if( last == null )
-					last = cur;
-				else {
-					last.next = cur;
-					last = cur;
-				}
+	inline function cullPasses( passes : h3d.pass.PassList, f : h3d.col.Collider -> Bool ) {
+		var prevCollider = null;
+		var prevResult = true;
+		passes.filter(function(p) {
+			var col = p.obj.cullingCollider;
+			if( col == null )
+				return true;
+			if( col != prevCollider ) {
+				prevCollider = col;
+				prevResult = f(col);
 			}
-			cur = cur.next;
-		}
-		if( last != null )
-			last.next = head;
-		if( prev != null )
-			prev.next = null;
-		return head;
+			return prevResult;
+		});
 	}
 
 }

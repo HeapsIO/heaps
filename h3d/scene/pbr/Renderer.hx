@@ -150,17 +150,14 @@ class Renderer extends h3d.scene.Renderer {
 		draw("overlay");
 	}
 
-	function drawShadows(){
+	function drawShadows( ls : LightSystem ) {
 		var light = @:privateAccess ctx.lights;
 		var passes = get("shadow");
-		if(!shadows)
-			passes = null;
+		if( !shadows )
+			passes.clear();
 		while( light != null ) {
 			var plight = Std.instance(light, h3d.scene.pbr.Light);
-			if( plight != null ) {
-				plight.shadows.setContext(ctx);
-				plight.shadows.draw(passes);
-			}
+			if( plight != null ) ls.drawLight(plight, passes);
 			light = light.next;
 		}
 	}
@@ -199,8 +196,9 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("bloom",null);
 
 		var ls = Std.instance(getLightSystem(), LightSystem);
-		if( ls != null ) ls.init(this);
-		drawShadows();
+		var count = ctx.engine.drawCalls;
+		if( ls != null ) drawShadows(ls);
+		ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
 
 		setTargets([albedo,normal,pbr,other]);
 		clear(0, 1, 0);
@@ -291,7 +289,12 @@ class Renderer extends h3d.scene.Renderer {
 
 		// Draw DirLight, screenShader
 		pbrProps.isScreen = true;
-		if( ls != null )  ls.drawScreenLights(this, lpass);
+		if( ls != null ) {
+			var count = ctx.engine.drawCalls;
+			ls.drawScreenLights(this, lpass);
+			ctx.lightSystem.drawPasses += ctx.engine.drawCalls - count;
+		}
+
 		// Draw others lights with their primitive
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);
