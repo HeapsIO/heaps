@@ -24,7 +24,7 @@ class ShaderManager {
 	}
 
 	@:noDebug
-	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : h3d.shader.Buffers.ShaderBufferData, pos : Int ) {
+	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) {
 		switch( type ) {
 		case TInt:
 			out[pos] = v;
@@ -163,6 +163,14 @@ class ShaderManager {
 		return "(not found)";
 	}
 
+	inline function getPtr( data : h3d.shader.Buffers.ShaderBufferData ) {
+		#if hl
+		return (hl.Bytes.getArray((cast data : Array<Single>)) : hl.BytesAccess<hl.F32>);
+		#else
+		return data;
+		#end
+	}
+
 	public inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList, opt = false ) : Dynamic {
 		if( p.perObjectGlobal != null ) {
 			var v : Dynamic = globals.fastGet(p.perObjectGlobal.gid);
@@ -182,17 +190,18 @@ class ShaderManager {
 	public function fillGlobals( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader ) {
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var g = s.globals;
+			var ptr = getPtr(buf.globals);
 			while( g != null ) {
 				var v = globals.fastGet(g.gid);
 				if( v == null ) {
 					if( g.path == "__consts__" ) {
-						fillRec(s.consts, g.type, buf.globals, g.pos);
+						fillRec(s.consts, g.type, ptr, g.pos);
 						g = g.next;
 						continue;
 					}
 					throw "Missing global value " + g.path;
 				}
-				fillRec(v, g.type, buf.globals, g.pos);
+				fillRec(v, g.type, ptr, g.pos);
 				g = g.next;
 			}
 		}
@@ -201,19 +210,34 @@ class ShaderManager {
 	}
 
 	public function fillParams( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
+		var curInstance = -1;
+		var curInstanceValue = null;
+		inline function getInstance( index : Int ) {
+			if( curInstance == index )
+				return curInstanceValue;
+			var si = shaders;
+			curInstance = index;
+			while( --index > 0 ) si = si.next;
+			curInstanceValue = si.s;
+			return curInstanceValue;
+		}
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var p = s.params;
+			var ptr = getPtr(buf.params);
 			while( p != null ) {
-				if( p.type == TFloat && p.perObjectGlobal == null ) {
-					var si = shaders;
-					var n = p.instance;
-					while( --n > 0 ) si = si.next;
-					buf.params[p.pos] = si.s.getParamFloatValue(p.index);
-					p = p.next;
-					continue;
-				}
-				var v : Dynamic = getParamValue(p, shaders);
-				fillRec(v, p.type, buf.params, p.pos);
+				var v : Dynamic;
+				if( p.perObjectGlobal == null ) {
+					if( p.type == TFloat ) {
+						var i = getInstance(p.instance);
+						ptr[p.pos] = i.getParamFloatValue(p.index);
+						p = p.next;
+						continue;
+					}
+					v = getInstance(p.instance).getParamValue(p.index);
+					if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
+				} else
+					v = getParamValue(p, shaders);
+				fillRec(v, p.type, ptr, p.pos);
 				p = p.next;
 			}
 			var tid = 0;
