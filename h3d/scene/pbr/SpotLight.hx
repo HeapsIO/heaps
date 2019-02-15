@@ -95,7 +95,7 @@ class SpotLight extends Light {
 		return absPos.front();
 	}
 
-	override function draw(ctx) {
+	override function draw(ctx:RenderContext) {
 		primitive.render(ctx.engine);
 	}
 

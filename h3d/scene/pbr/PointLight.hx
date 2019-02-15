@@ -35,7 +35,7 @@ class PointLight extends Light {
 		return cullingDistance = v;
 	}
 
-	override function draw(ctx) {
+	override function draw(ctx:RenderContext) {
 		primitive.render(ctx.engine);
 	}
 
