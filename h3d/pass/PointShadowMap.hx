@@ -117,7 +117,7 @@ class PointShadowMap extends Shadows {
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		var absPos = light.getAbsPos();
 		var sp = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, pointLight.range);
-		passes.filter(function(p) return p.obj.cullingCollider == null || p.obj.cullingCollider.inSphere(sp));
+		cullPasses(passes,function(col) return col.inSphere(sp));
 
 		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
 		if(depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
@@ -142,7 +142,7 @@ class PointShadowMap extends Shadows {
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
 			var save = passes.save();
-			passes.filter(function(p) return p.obj.cullingCollider == null || p.obj.cullingCollider.inFrustum(lightCamera.frustum));
+			cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 			super.draw(passes);
 			passes.load(save);
 			ctx.engine.popTarget();
