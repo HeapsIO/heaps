@@ -7,7 +7,7 @@ private class BatchData {
 	public var data : hxd.FloatBuffer;
 	public var params : hxsl.RuntimeShader.AllocParam;
 	public var shader : hxsl.BatchShader;
-	public var shaders : hxsl.ShaderList;
+	public var shaders : Array<hxsl.Shader>;
 	public var pass : h3d.mat.Pass;
 	public var next : BatchData;
 
@@ -76,9 +76,7 @@ class MeshBatch extends Mesh {
 		var scene = getScene();
 		cleanPasses();
 		shaderInstances = maxInstances;
-		var passes = material.getPasses();
-		passes.reverse(); // do sub passes BEFORE main pass (to prevent take into account injected batch shader)
-		for( p in passes ) @:privateAccess {
+		for( p in material.getPasses() ) @:privateAccess {
 			var ctx = scene.renderer.getPassByName(p.name);
 			if( ctx == null ) throw "Could't find renderer pass "+p.name;
 
@@ -111,17 +109,28 @@ class MeshBatch extends Mesh {
 			var tot = b.count * shaderInstances;
 			b.shader = shader;
 			b.pass = p;
-			b.shaders = shaders;
+			b.shaders = [null/*link shader*/];
 			b.buffer = new h3d.Buffer(tot,4,[UniformBuffer,Dynamic]);
 			b.data = new hxd.FloatBuffer(tot * 4);
 			b.next = dataPasses;
 			dataPasses = b;
 
+			var sl = shaders;
+			while( sl != null ) {
+				b.shaders.push(sl.s);
+				sl = sl.next;
+			}
+
 			shader.Batch_Count = tot;
 			shader.Batch_Buffer = b.buffer;
 			shader.constBits = tot;
 			shader.updateConstants(null);
-			p.addShader(shader);
+		}
+		// add batch shaders
+		var p = dataPasses;
+		while( p != null ) {
+			p.pass.addShader(p.shader);
+			p = p.next;
 		}
 	}
 
@@ -139,9 +148,8 @@ class MeshBatch extends Mesh {
 	function syncData( data : BatchData ) {
 		var p = data.params;
 		var buf = data.data;
+		var shaders = data.shaders;
 		var startPos = data.count * curInstances * 4;
-		var curInstance = -1;
-		var curShader : hxsl.Shader = null;
 		while( p != null ) {
 			var pos = startPos + p.pos;
 			inline function addMatrix(m:h3d.Matrix) {
@@ -172,13 +180,7 @@ class MeshBatch extends Mesh {
 				p = p.next;
 				continue;
 			}
-			if( p.instance != curInstance ) {
-				curInstance = p.instance;
-				var index = curInstance;
-				var si = data.shaders;
-				while( --index > 0 ) si = si.next;
-				curShader = si.s;
-			}
+			var curShader = shaders[p.instance];
 			switch( p.type ) {
 			case TVec(size, _):
 				var v : h3d.Vector = curShader.getParamValue(p.index);
