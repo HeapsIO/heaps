@@ -110,6 +110,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
+		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
 	}
 
