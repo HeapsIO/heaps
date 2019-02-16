@@ -28,6 +28,7 @@ class Window {
 	var globalEvents : Bool;
 
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
+		var customCanvas = canvas != null;
 		eventTargets = new List();
 		resizeEvents = new List();
 
@@ -43,8 +44,12 @@ class Window {
 		focused = globalEvents;
 		element = globalEvents ? js.Browser.window : canvas;
 		canvasPos = canvas.getBoundingClientRect();
-		// always add mousemove on window (track mouse even when outside of component)
-		js.Browser.window.addEventListener("mousemove", onMouseMove);
+		// add mousemove on window (track mouse even when outside of component)
+		// unless we're having a custom canvas (prevent leaking the listener)
+		if( customCanvas )
+			canvas.addEventListener("mousemove", onMouseMove);
+		else
+			js.Browser.window.addEventListener("mousemove", onMouseMove);
 		element.addEventListener("mousedown", onMouseDown);
 		element.addEventListener("mouseup", onMouseUp);
 		element.addEventListener("wheel", onMouseWheel);
@@ -62,7 +67,7 @@ class Window {
 			return false;
 		};
 		if( globalEvents ) {
-			// make first mousedown on canvas trigger
+			// make first mousedown on canvas trigger event
 			canvas.addEventListener("mousedown", function(e) {
 				onMouseDown(e);
 				e.stopPropagation();
