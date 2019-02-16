@@ -410,7 +410,7 @@ class GlDriver extends Driver {
 					return selectShader(shader);
 				}
 				#end
-				throw "Program linkage failure: "+log+"\nVertex=\n"+glout.run(shader.vertex.data)+"\n\nFragment=\n"+glout.run(shader.fragment.data);
+				throw "Program linkage failure: "+log+"\nVertex=\n"+shader.vertex.code+"\n\nFragment=\n"+shader.fragment.code;
 			}
 			firstShader = false;
 			initShader(p, p.vertex, shader.vertex);
