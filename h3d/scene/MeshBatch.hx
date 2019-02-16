@@ -8,6 +8,7 @@ private class BatchData {
 	public var params : hxsl.RuntimeShader.AllocParam;
 	public var shader : hxsl.BatchShader;
 	public var shaders : hxsl.ShaderList;
+	public var pass : h3d.mat.Pass;
 	public var next : BatchData;
 
 	public function new() {
@@ -46,12 +47,38 @@ class MeshBatch extends Mesh {
 		commandBytes.setInt32(0, primitive.indexes == null ? primitive.triCount() * 3 : primitive.indexes.count);
 	}
 
+	override function onRemove() {
+		super.onRemove();
+		cleanPasses();
+	}
+
+	override function dispose() {
+		super.dispose();
+		cleanPasses();
+	}
+
+	function cleanPasses() {
+		while( dataPasses != null ) {
+			dataPasses.pass.removeShader(dataPasses.shader);
+			dataPasses.buffer.dispose();
+			dataPasses = dataPasses.next;
+		}
+		if( instanced.commands != null ) {
+			instanced.commands.dispose();
+			instanced.commands = null;
+			lastInstances = 0;
+		}
+		shaderInstances = 0;
+		shadersChanged = true;
+	}
+
 	function initShadersMapping() {
 		var scene = getScene();
-		if( dataPasses != null ) throw "TODO:remove previous shaders";
-		dataPasses = null;
+		cleanPasses();
 		shaderInstances = maxInstances;
-		for( p in material.getPasses() ) @:privateAccess {
+		var passes = material.getPasses();
+		passes.reverse(); // do sub passes BEFORE main pass (to prevent take into account injected batch shader)
+		for( p in passes ) @:privateAccess {
 			var ctx = scene.renderer.getPassByName(p.name);
 			if( ctx == null ) throw "Could't find renderer pass "+p.name;
 
@@ -63,7 +90,7 @@ class MeshBatch extends Mesh {
 
 			var b = new BatchData();
 			b.count = rt.vertex.paramsSize + rt.fragment.paramsSize;
-			b.params = rt.fragment.params.clone();
+			b.params = rt.fragment.params == null ? null : rt.fragment.params.clone();
 
 			var hd = b.params;
 			while( hd != null ) {
@@ -83,6 +110,7 @@ class MeshBatch extends Mesh {
 
 			var tot = b.count * shaderInstances;
 			b.shader = shader;
+			b.pass = p;
 			b.shaders = shaders;
 			b.buffer = new h3d.Buffer(tot,4,[UniformBuffer,Dynamic]);
 			b.data = new hxd.FloatBuffer(tot * 4);
@@ -90,7 +118,8 @@ class MeshBatch extends Mesh {
 
 			shader.Batch_Count = tot;
 			shader.Batch_Buffer = b.buffer;
-			@:privateAccess shader.constBits = tot;
+			shader.constBits = tot;
+			shader.updateConstants(null);
 			p.addShader(shader);
 		}
 	}
@@ -191,6 +220,7 @@ class MeshBatch extends Mesh {
 
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
+		if( curInstances == 0 ) return;
 		var p = dataPasses;
 		while( p != null ) {
 			p.buffer.uploadVector(p.data,0,curInstances * p.count);
@@ -202,6 +232,11 @@ class MeshBatch extends Mesh {
 			instanced.commands = new h3d.impl.InstanceBuffer(1,commandBytes);
 			lastInstances = curInstances;
 		}
+	}
+
+	override function emit(ctx:RenderContext) {
+		if( curInstances == 0 ) return;
+		super.emit(ctx);
 	}
 
 }
