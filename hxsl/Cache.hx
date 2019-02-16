@@ -532,6 +532,7 @@ class Cache {
 		};
 		s.data.funs.push(f);
 		s.consts = new SharedShader.ShaderConst(vcount,0,countBits);
+		s.consts.globalId = 0;
 
 		return s;
 	}
