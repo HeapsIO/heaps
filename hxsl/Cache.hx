@@ -444,7 +444,7 @@ class Cache {
 		var ebuffer = { e : TVar(vbuffer), p : pos, t : vbuffer.type };
 		var eoffset = { e : TVar(voffset), p : pos, t : voffset.type };
 		var tvec4 = TVec(4,VFloat);
-		var countBits = 12;
+		var countBits = 16;
 		vcount.qualifiers = [Const(1 << countBits)];
 
 		s.data = {

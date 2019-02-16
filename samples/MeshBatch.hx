@@ -8,8 +8,8 @@ class MeshInst {
 	public var speed : Float;
 
 	public function new() {
-		x = Math.random() * 20 - 10;
-		y = Math.random() * 20 - 10;
+		x = Math.random() * 40 - 20;
+		y = Math.random() * 40 - 20;
 		scale = 0.01;
 		speed = 1 + Math.random();
 		rot = Math.random() * Math.PI * 2;
@@ -20,7 +20,7 @@ class MeshInst {
 	public function update(dt:Float) {
 		scale += speed * dt;
 		rot += Math.abs(speed) * dt;
-		if( scale > speed && speed > 1 )
+		if( speed > 1 && scale > Math.sqrt(speed) )
 			speed *= -1;
 		return scale > 0;
 	}
@@ -40,15 +40,16 @@ class MeshBatch extends hxd.App {
 		cube.addNormals();
 		s3d.lightSystem.ambientLight.set(0.5,0.5,0.5);
 		batch = new h3d.scene.MeshBatch(cube,s3d);
-		batch.material.shadows = false;
 		meshes = [];
 		new h3d.scene.CameraController(20,s3d);
 	}
 
 	override function update(dt:Float) {
-		while( Std.random(meshes.length>>3) == 0 )
+		while( meshes.length < 680 )
 			meshes.push(new MeshInst());
-		batch.begin(128);
+		if( Std.random(100) == 0 )
+			batch.shadersChanged = true;
+		batch.begin(680);
 		for( m in meshes.copy() ) {
 			if( !m.update(dt) ) {
 				meshes.remove(m);
