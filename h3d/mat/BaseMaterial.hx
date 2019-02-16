@@ -55,7 +55,7 @@ class BaseMaterial extends hxd.impl.AnyProps implements hxd.impl.Serializable {
 			out.push(p);
 			p = p.nextPass;
 		}
-		return out.iterator();
+		return out;
 	}
 
 	public function getPass( name : String ) : Pass {
