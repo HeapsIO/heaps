@@ -153,7 +153,7 @@ private class CustomSceneProps extends SceneProps {
 				if( r.name != null && !meshes.remove(r) && r.isMesh() && ((o == null && (panel.showHidden || (r.visible && !r.culled))) || chunk.root == o) ) {
 					var m = r.toMesh();
 					var inf = extraMap.get(r.name);
-					var npass = Lambda.count({ iterator : m.material.getPasses });
+					var npass = m.material.getPasses().length;
 					if( inf == null ) {
 						inf = { count : 0, pass : npass, tri : 0, name : r.name, e : null, g : null };
 						all.push(inf);
