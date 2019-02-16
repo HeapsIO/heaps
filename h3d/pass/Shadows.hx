@@ -24,7 +24,7 @@ class Shadows extends Default {
 	public function new(light) {
 		if( format == null ) format = R16F;
 		if( !h3d.Engine.getCurrent().driver.isSupportedFormat(format) ) format = h3d.mat.Texture.nativeFormat;
-		super("shadows");
+		super("shadow");
 		this.light = light;
 		blur = new Blur(5);
 		blur.quality = 0.5;
