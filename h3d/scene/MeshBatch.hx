@@ -114,6 +114,7 @@ class MeshBatch extends Mesh {
 			b.shaders = shaders;
 			b.buffer = new h3d.Buffer(tot,4,[UniformBuffer,Dynamic]);
 			b.data = new hxd.FloatBuffer(tot * 4);
+			b.next = dataPasses;
 			dataPasses = b;
 
 			shader.Batch_Count = tot;

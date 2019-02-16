@@ -139,7 +139,7 @@ private class CustomSceneProps extends SceneProps {
 							if( g.m.bits == mid ) {
 								var inf = emap.get(g);
 								if( inf == null ) {
-									inf = { count : 0, pass : Lambda.count({ iterator : buf.material.getPasses }), tri : 0, name : e.model.r.name, e : e, g : g };
+									inf = { count : 0, pass : buf.material.getPasses().length, tri : 0, name : e.model.r.name, e : e, g : g };
 									all.push(inf);
 									emap.set(g, inf);
 								}
