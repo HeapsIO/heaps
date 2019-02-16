@@ -24,23 +24,28 @@ class Window {
 	var curW : Int;
 	var curH : Int;
 
-	var focused = true;
+	var focused : Bool;
+	var globalEvents : Bool;
 
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
 		eventTargets = new List();
 		resizeEvents = new List();
 
-		element = canvas == null || globalEvents ? js.Browser.window : canvas;
 		if( canvas == null ) {
 			canvas = cast js.Browser.document.getElementById("webgl");
 			if( canvas == null ) throw "Missing canvas #webgl";
-			if( canvas.getAttribute("globalEvents") == "0" )
-				element = canvas;
+			if( canvas.getAttribute("globalEvents") == "1" )
+				globalEvents = true;
 		}
+
 		this.canvas = canvas;
+		this.globalEvents = globalEvents;
+		focused = globalEvents;
+		element = globalEvents ? js.Browser.window : canvas;
 		canvasPos = canvas.getBoundingClientRect();
+		// always add mousemove on window (track mouse even when outside of component)
+		js.Browser.window.addEventListener("mousemove", onMouseMove);
 		element.addEventListener("mousedown", onMouseDown);
-		element.addEventListener("mousemove", onMouseMove);
 		element.addEventListener("mouseup", onMouseUp);
 		element.addEventListener("wheel", onMouseWheel);
 		element.addEventListener("touchstart", onTouchStart);
@@ -51,25 +56,28 @@ class Window {
 		element.addEventListener("keypress", onKeyPress);
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
-		if( element == canvas ) {
-			canvas.setAttribute("tabindex","1"); // allow focus
-			canvas.style.outline = 'none';
-		} else {
+		canvas.oncontextmenu = function(e){
+			e.stopPropagation();
+			e.preventDefault();
+			return false;
+		};
+		if( globalEvents ) {
+			// make first mousedown on canvas trigger
 			canvas.addEventListener("mousedown", function(e) {
 				onMouseDown(e);
 				e.stopPropagation();
 				e.preventDefault();
 			});
-			canvas.oncontextmenu = function(e){
-				e.stopPropagation();
-				e.preventDefault();
-				return false;
-			};
 			element.addEventListener("contextmenu",function(e) {
 				e.stopPropagation();
 				e.preventDefault();
 				return false;
 			});
+		} else {
+			// allow focus
+			if( canvas.getAttribute("tabindex") == null )
+				canvas.setAttribute("tabindex","1");
+			canvas.style.outline = 'none';
 		}
 		curW = this.width;
 		curH = this.height;
@@ -254,18 +262,30 @@ class Window {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		event(ev);
+		if( !globalEvents ) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 	}
 
 	function onKeyDown(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyDown, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		event(ev);
+		if( !globalEvents ) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 	}
 
 	function onKeyPress(e:js.html.KeyboardEvent) {
 		var ev = new Event(ETextInput, mouseX, mouseY);
 		ev.charCode = e.charCode;
 		event(ev);
+		if( !globalEvents ) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 	}
 
 	function onFocus(b: Bool) {
