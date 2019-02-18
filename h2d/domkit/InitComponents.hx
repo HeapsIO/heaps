@@ -8,7 +8,7 @@ class InitComponents {
 		domkit.Macros.registerComponentsPath("$Comp");
 		// force base components to be built before custom components
 		@:privateAccess domkit.Macros.preload = [
-			for( o in ["Object","Bitmap","Text","Flow"] )
+			for( o in ["Object","Bitmap","Text","Flow","Mask"] )
 				'h2d.domkit.BaseComponents.${o}Comp'
 		];
 		return null;

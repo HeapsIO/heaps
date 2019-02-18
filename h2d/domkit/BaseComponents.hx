@@ -313,6 +313,16 @@ class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<
 	}
 }
 
+@:uiComp("mask")
+class MaskComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Mask> {
+	@:p var width : Int;
+	@:p var height : Int;
+
+	static function create( parent : h2d.Object ) {
+		return new h2d.Mask(0,0,parent);
+	}
+}
+
 @:uiComp("bitmap")
 class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Bitmap> {
 
