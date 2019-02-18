@@ -64,9 +64,9 @@ class Terrain extends hxsl.Shader {
 
 		function getDepth( i : Vec3,  uv : Vec2 ) : Vec3 {
 			var depth = vec3(0);
-			if( w.x > 0 ) depth.x = pbrTextures.getLod(getsurfaceUV(i.x, uv), 0).a * secondSurfaceParams[i.x].x;
-			if( w.y > 0 ) depth.y = pbrTextures.getLod(getsurfaceUV(i.y, uv), 0).a * secondSurfaceParams[i.y].x;
-			if( w.z > 0 ) depth.z = pbrTextures.getLod(getsurfaceUV(i.z, uv), 0).a * secondSurfaceParams[i.z].x;
+			if( w.x > 0 ) depth.x = pbrTextures.getLod(getsurfaceUV(i.x, uv), 0).a - secondSurfaceParams[i.x].x;
+			if( w.y > 0 ) depth.y = pbrTextures.getLod(getsurfaceUV(i.y, uv), 0).a - secondSurfaceParams[i.y].x;
+			if( w.z > 0 ) depth.z = pbrTextures.getLod(getsurfaceUV(i.z, uv), 0).a - secondSurfaceParams[i.z].x;
 			return 1 - depth;
 		}
 
@@ -88,7 +88,7 @@ class Terrain extends hxsl.Shader {
 					curUV += delta;
 					prevDepth = curDepth;
 					depth = getDepth(i, curUV);
-					curDepth = curDepth = depth.dot(w);
+					curDepth = depth.dot(w);
 					curLayerDepth += layerDepth;
 				}
 				var prevUV = curUV - delta;
@@ -147,7 +147,7 @@ class Terrain extends hxsl.Shader {
 				var pbr3 = pbrTextures.get(surfaceUV3).rgba;
 
 				// Height Blend
-				var h = vec3(pbr1.a * secondSurfaceParams[i.x].x, pbr2.a *secondSurfaceParams[i.y].x, pbr3.a * secondSurfaceParams[i.z].x );
+				var h = vec3(pbr1.a - secondSurfaceParams[i.x].x, pbr2.a - secondSurfaceParams[i.y].x, pbr3.a - secondSurfaceParams[i.z].x );
 				w = mix(w, vec3(w.x*h.x, w.y*h.y, w.z*h.z), heightBlendStrength);
 
 				// Sharpness
