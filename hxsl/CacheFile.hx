@@ -96,8 +96,18 @@ class CacheFile extends Cache {
 			log(runtimeShaders.length+" shaders loaded in "+hxd.Math.fmt(haxe.Timer.stamp() - t0)+"s");
 		} else if( !allowCompile )
 			throw "Missing " + file;
-		if( linkCache.linked == null )
-			linkCache.linked = link(makeDefaultShader());
+		if( linkCache.linked == null ) {
+			var rt = link(makeDefaultShader());
+			linkCache.linked = rt;
+			if( rt.vertex.code == null || rt.fragment.code == null ) {
+				if( !allowCompile ) throw "Missing default shader code";
+				waitCount++;
+				haxe.Timer.delay(function() {
+					h3d.Engine.getCurrent().selectShader(rt);
+					addNewShader(rt);
+				}, 1000);
+			}
+		}
 		isLoading = false;
 	}
 
