@@ -12,6 +12,7 @@ class Window {
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
+	public var propagateKeyEvents : Bool;
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
@@ -25,7 +26,6 @@ class Window {
 	var curH : Int;
 
 	var focused : Bool;
-	var globalEvents : Bool;
 
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
 		var customCanvas = canvas != null;
@@ -40,7 +40,7 @@ class Window {
 		}
 
 		this.canvas = canvas;
-		this.globalEvents = globalEvents;
+		this.propagateKeyEvents = globalEvents;
 		focused = globalEvents;
 		element = globalEvents ? js.Browser.window : canvas;
 		canvasPos = canvas.getBoundingClientRect();
@@ -267,7 +267,7 @@ class Window {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		event(ev);
-		if( !globalEvents ) {
+		if( !propagateKeyEvents ) {
 			e.preventDefault();
 			e.stopPropagation();
 		}
@@ -277,7 +277,7 @@ class Window {
 		var ev = new Event(EKeyDown, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		event(ev);
-		if( !globalEvents ) {
+		if( !propagateKeyEvents ) {
 			e.preventDefault();
 			e.stopPropagation();
 		}
@@ -287,7 +287,7 @@ class Window {
 		var ev = new Event(ETextInput, mouseX, mouseY);
 		ev.charCode = e.charCode;
 		event(ev);
-		if( !globalEvents ) {
+		if( !propagateKeyEvents ) {
 			e.preventDefault();
 			e.stopPropagation();
 		}
