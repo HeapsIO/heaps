@@ -331,7 +331,10 @@ class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<
 	@:p var tileWrap : Bool;
 
 	static function set_color( o : h2d.Drawable, v ) {
-		o.color.load(v);
+		if(v != null)
+			o.color.load(v);
+		else
+			o.color.set(1,1,1);
 	}
 }
 
