@@ -125,12 +125,34 @@ class CustomParser extends CssValue.ValueParser {
 	}
 
 	public function parseFont( value : CssValue ) {
-		var path = parsePath(value);
+		var path = null;
+		var sdf = null;
+		switch(value) {
+			case VGroup(args):
+				path = parsePath(args[0]);
+				sdf = {
+					size: parseInt(args[1]),
+					channel: args.length >= 3 ? switch(args[2]) {
+						case VIdent("red"): h2d.Font.SDFChannel.Red;
+						case VIdent("green"): h2d.Font.SDFChannel.Green;
+						case VIdent("blue"): h2d.Font.SDFChannel.Blue;
+						case VIdent("multi"): h2d.Font.SDFChannel.MultiChannel;
+						default: h2d.Font.SDFChannel.Alpha;
+					} : h2d.Font.SDFChannel.Alpha,
+					cutoff: args.length >= 4 ? parseFloat(args[3]) : 0.5,
+					smooth: args.length >= 5 ? parseFloat(args[4]) : 1.0/32.0
+				};
+			default:
+				path = parsePath(value);
+		}
 		var res = loadResource(path);
 		#if macro
 		return res;
 		#else
-		return res.to(hxd.res.BitmapFont).toFont();
+		if(sdf != null)
+			return res.to(hxd.res.BitmapFont).toSdfFont(sdf.size, sdf.channel, sdf.cutoff, sdf.smooth);
+		else
+			return res.to(hxd.res.BitmapFont).toFont();
 		#end
 	}
 
