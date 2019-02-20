@@ -57,6 +57,8 @@ class CustomParser extends CssValue.ValueParser {
 	public function parseTile( v : CssValue) {
 		try {
 			switch( v ) {
+			case VIdent("none"):
+				return null;
 			case VGroup([color,w,h]):
 				var c = parseColor(color);
 				var w = parseInt(w);
