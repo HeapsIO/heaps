@@ -61,8 +61,8 @@ class TextureCache {
 		return allocTarget(name, Math.ceil(e.width * scale), Math.ceil(e.height * scale), defaultDepth, format);
 	}
 
-	public function allocTileTarget( name : String, tile : h2d.Tile, defaultDepth=false, ?format:hxd.PixelFormat, ?flags:Array<h3d.mat.Data.TextureFlags> ) {
-		return allocTarget( name, tile.iwidth, tile.iheight, defaultDepth, format, flags );
+	public function allocTileTarget( name : String, tile : h2d.Tile, defaultDepth=false, ?format:hxd.PixelFormat ) {
+		return allocTarget( name, tile.iwidth, tile.iheight, defaultDepth, format );
 	}
 
 	public function dispose() {
