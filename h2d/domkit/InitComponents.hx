@@ -15,7 +15,7 @@ class InitComponents {
 	}
 
 	public static function build() {
-		var fields = haxe.macro.Context.getBuildFields();
+		var fields = domkit.Macros.buildObject();
 		for( f in fields )
 			if( f.name == "document" ) {
 				fields = fields.concat((macro class {
