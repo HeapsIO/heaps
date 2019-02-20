@@ -152,7 +152,7 @@ class ShaderAdvanced extends hxd.App {
 		prim.setMesh(cube);
 		prim.commands = new h3d.impl.InstanceBuffer(1, bytes.getBytes());
 
-		new h3d.scene.DirLight(new h3d.Vector(-1,-2,-5),s3d);
+		new h3d.scene.fwd.DirLight(new h3d.Vector(-1,-2,-5),s3d);
 		new h3d.scene.CameraController(s3d).loadFromCamera();
 
 		var buf = new hxd.FloatBuffer();

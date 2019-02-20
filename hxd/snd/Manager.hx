@@ -104,7 +104,7 @@ class Manager {
 		}
 
 		masterVolume       = 1.0;
-		hasMasterVolume    = driver.hasFeature(MasterVolume);
+		hasMasterVolume    = driver == null ? true : driver.hasFeature(MasterVolume);
 		masterSoundGroup   = new SoundGroup  ("master");
 		masterChannelGroup = new ChannelGroup("master");
 		listener           = new Listener();
@@ -147,6 +147,20 @@ class Manager {
 	public function stopAll() {
 		while( channels != null )
 			channels.stop();
+	}
+
+	/**
+		Returns iterator with all active instances of a Sound at the call time.
+	**/
+	public function getAll( sound : hxd.res.Sound ) : Iterator<Channel> {
+		var ch = channels;
+		var result = new Array<Channel>();
+		while ( ch != null ) {
+			if ( ch.sound == sound )
+				result.push(ch);
+			ch = ch.next;
+		}
+		return new hxd.impl.ArrayIterator(result);
 	}
 
 	public function cleanCache() {
@@ -617,7 +631,7 @@ class Manager {
 			case I16 : I16;
 			#if js
 			case F32 : F32;
-			#else 
+			#else
 			case F32 : I16;
 			#end
 		}

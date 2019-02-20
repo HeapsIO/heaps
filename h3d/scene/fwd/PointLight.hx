@@ -1,4 +1,4 @@
-package h3d.scene;
+package h3d.scene.fwd;
 
 class PointLight extends Light {
 

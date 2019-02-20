@@ -9,6 +9,7 @@ class Terrain extends hxsl.Shader {
 		@const var SURFACE_COUNT : Int;
 		@const var CHECKER : Bool;
 		@const var COMPLEXITY : Bool;
+		@const var PARALLAX : Bool;
 
 		@param var heightMapSize : Float;
 		@param var primSize : Float;
@@ -24,7 +25,8 @@ class Terrain extends hxsl.Shader {
 		@param var secondSurfaceParams : Array<Vec4, SURFACE_COUNT>;
 
 		@param var heightBlendStrength : Float;
-		@param var heightBlendSharpness : Float;
+		@param var blendSharpness : Float;
+
 		@param var parallaxAmount : Float;
 		@param var minStep : Int;
 		@param var maxStep : Int;
@@ -39,155 +41,78 @@ class Terrain extends hxsl.Shader {
 		var roughnessValue : Float;
 		var occlusionValue : Float;
 
+		var tangentViewPos : Vec3;
+		var tangentFragPos : Vec3;
+
 		function vertex() {
 			calculatedUV = input.position.xy / primSize;
 			var terrainUV = (calculatedUV * (heightMapSize - 1)) / heightMapSize;
 			terrainUV += 0.5 / heightMapSize;
 			transformedPosition += (vec3(0,0, textureLod(heightMap, terrainUV, 0).r) * global.modelView.mat3());
 			TBN = mat3(normalize(cross(transformedNormal, vec3(0,1,0))), normalize(cross(transformedNormal,vec3(-1,0,0))), transformedNormal);
+			tangentViewPos = TBN * camera.position;
+			tangentFragPos = TBN * transformedPosition;
 		}
 
-		function getPOMUV( uv : Vec2, surfaceIndex : Int) : Vec2 {
-			var viewWS = (camera.position - transformedPosition).normalize();
-			var viewNS : Vec3;
-			{
-				var n = transformedNormal.normalize();
-				var transformedTangent = normalize(cross(transformedNormal, vec3(0,1,0)));
-				var tanX = transformedTangent.xyz.normalize();
-				var tanY = n.cross(tanX);
-				viewNS = vec3(viewWS.dot(tanX), viewWS.dot(tanY), viewWS.dot(n)).normalize();
-			}
-
-			var numLayers = mix(float(maxStep), float(minStep), abs(viewNS.z));
-			var layerDepth = 1 / numLayers;
-			var curLayerDepth = 0.;
-			var delta = (viewNS.xy / viewNS.z) * parallaxAmount / numLayers * 1.0 / surfaceParams[surfaceIndex].x;
-			var curUV = uv;
-			var curDepth = 1 - pbrTextures.get(getsurfaceUV(surfaceIndex, curUV)).a;
-			while( curLayerDepth < curDepth ) {
-				curUV += delta;
-				curDepth =  1 - pbrTextures.getLod( getsurfaceUV(surfaceIndex, curUV), 0).a;
-				curLayerDepth += layerDepth;
-			}
-			var prevUV = curUV - delta;
-			var after = curDepth - curLayerDepth;
-			var before = (1 - pbrTextures.get(vec3(prevUV, surfaceIndex)).a) - curLayerDepth + layerDepth;
-			return mix(curUV, prevUV, after / (after - before));
+		function getWeight( i : Vec3,  uv : Vec2 ) : Vec3 {
+			var weight = vec3(0);
+			weight.x = weightTextures.getLod(vec3(uv, i.x), 0).r;
+			if( i.y != i.x ) weight.y = weightTextures.getLod(vec3(uv, i.y), 0).r;
+			if( i.z != i.x ) weight.z = weightTextures.getLod(vec3(uv, i.z), 0).r;
+			return weight;
 		}
 
-		function getsurfaceUV(i : Int, uv : Vec2) : Vec3 {
-			var angle = surfaceParams[i].w;
-			var offset = vec2(surfaceParams[i].y, surfaceParams[i].z);
-			var tilling = surfaceParams[i].x;
-			var worldUV = vec2((uv + tileIndex) * tilling) + offset;
+		function getDepth( i : Vec3,  uv : Vec2 ) : Vec3 {
+			var depth = vec3(0);
+			if( w.x > 0 ) depth.x = pbrTextures.getLod(getsurfaceUV(i.x, uv), 0).a - secondSurfaceParams[i.x].x;
+			if( w.y > 0 ) depth.y = pbrTextures.getLod(getsurfaceUV(i.y, uv), 0).a - secondSurfaceParams[i.y].x;
+			if( w.z > 0 ) depth.z = pbrTextures.getLod(getsurfaceUV(i.z, uv), 0).a - secondSurfaceParams[i.z].x;
+			return 1 - depth;
+		}
+
+		var w : Vec3;
+		function getPOMUV( i : Vec3, uv : Vec2 ) : Vec2 {
+			if( !PARALLAX )
+				return uv;
+			else {
+				var viewDir = normalize(tangentViewPos - tangentFragPos);
+				var numLayers = mix(float(maxStep), float(minStep), viewDir.dot(transformedNormal));
+				var layerDepth = 1 / numLayers;
+				var curLayerDepth = 0.;
+				var delta = (viewDir.xy / viewDir.z) * parallaxAmount / numLayers;
+				var curUV = uv;
+				var depth = getDepth(i, curUV);
+				var curDepth = depth.dot(w);
+				var prevDepth = 0.;
+				while( curLayerDepth < curDepth ) {
+					curUV += delta;
+					prevDepth = curDepth;
+					depth = getDepth(i, curUV);
+					curDepth = depth.dot(w);
+					curLayerDepth += layerDepth;
+				}
+				var prevUV = curUV - delta;
+				var after = curDepth - curLayerDepth;
+				var before = prevDepth - curLayerDepth + layerDepth;
+				var pomUV = mix(curUV, prevUV,  after / (after - before));
+				return pomUV;
+			}
+		}
+
+		function getsurfaceUV( i : Float, uv : Vec2 ) : Vec3 {
+			var id = int(i);
+			var angle = surfaceParams[id].w;
+			var offset = vec2(surfaceParams[id].y, surfaceParams[id].z);
+			var tilling = surfaceParams[id].x;
+			var worldUV = (uv + tileIndex) * tilling + offset;
 			var res = vec2( worldUV.x * cos(angle) - worldUV.y * sin(angle) , worldUV.y * cos(angle) + worldUV.x * sin(angle));
 			var surfaceUV = vec3(res, i);
 			return surfaceUV;
 		}
 
 		function fragment() {
-			// Extract participating surfaces from the pixel
-			var texIndex = surfaceIndexMap.get(calculatedUV).rgb;
 
-			var i1 : Int = int(texIndex.r * 255);
-			var uv1 = getPOMUV(calculatedUV, i1);
-			var surfaceUV1 = getsurfaceUV(i1, uv1);
-			var pbr1 = pbrTextures.get(surfaceUV1).rgba;
-			var albedo1 = albedoTextures.get(surfaceUV1).rgb;
-			var normal1 = normalTextures.get(surfaceUV1).rgba;
-			var h1 = pbr1.a;
-			var aw1 = weightTextures.get(vec3(calculatedUV, i1)).r;
-
-			var i2 : Int = int(texIndex.g * 255);
-			var aw2 = weightTextures.get(vec3(calculatedUV, i2)).r;
-
-			var i3 : Int = int(texIndex.b * 255);
-			var aw3 = weightTextures.get(vec3(calculatedUV, i3)).r;
-
-			// Sum of each surface
-			var albedo = vec3(0);
-			var normal = vec4(0,0,0,0);
-			var pbr = vec4(0);
-			var weightSum = 0.0;
-
-			// Keep the surface with the heightest weight for sharpness
-			var maxAlbedo = vec3(0);
-			var maxPbr = vec4(0);
-			var maxNormal = vec4(0);
-			var curMaxWeight = -1.0;
-
-			// Alpha / Height Blend
-			var b1 = 0.0, b2 = 0.0, b3 = 0.0;
-			b1 = mix(aw1, aw1 * h1, heightBlendStrength);
-			albedo += albedo1 * b1;
-			pbr += pbr1 * b1;
-			normal += normal1 * b1;
-
-			// Find the max
-			var maxW = clamp(ceil(b1 - curMaxWeight), 0, 1);
-			curMaxWeight = mix(curMaxWeight, b1, maxW);
-			maxAlbedo = mix(maxAlbedo, albedo1, maxW);
-			maxPbr = mix(maxPbr, pbr1, maxW);
-			maxNormal = mix(maxNormal, normal1, maxW);
-
-			if(aw2 > 0){
-				var uv2 = getPOMUV(calculatedUV, i2);
-				var surfaceUV2 = getsurfaceUV(i2, uv2);
-				var pbr2 = pbrTextures.get(surfaceUV2).rgba;
-				var albedo2 = albedoTextures.get(surfaceUV2).rgb;
-				var normal2 = normalTextures.get(surfaceUV2).rgba;
-				var h2 = pbr2.a;
-				b2 = mix(aw2, aw2 * h2, heightBlendStrength);
-				albedo += albedo2 * b2;
-				pbr += pbr2 * b2;
-				normal += normal2 * b2;
-				maxW = clamp(ceil(b2 - curMaxWeight), 0, 1);
-				curMaxWeight = mix(curMaxWeight, b2, maxW);
-				maxAlbedo = mix(maxAlbedo, albedo2, maxW);
-				maxPbr = mix(maxPbr, pbr2, maxW);
-				maxNormal = mix(maxNormal, normal2, maxW);
-			}
-
-			if(aw3 > 0){
-				var uv3 = getPOMUV(calculatedUV, i3);
-				var surfaceUV3 = getsurfaceUV(i3, uv3);
-				var pbr3 = pbrTextures.get(surfaceUV3).rgba;
-				var albedo3 = albedoTextures.get(surfaceUV3).rgb;
-				var normal3 = normalTextures.get(surfaceUV3).rgba;
-				var h3 = pbr3.a;
-				b3 = mix(aw3, aw3 * h3, heightBlendStrength);
-				albedo += albedo3 * b3;
-				pbr += pbr3 * b3;
-				normal += normal3 * b3;
-				maxW = clamp(ceil(b3 - curMaxWeight), 0,1);
-				curMaxWeight = mix(curMaxWeight, b3, maxW);
-				maxAlbedo = mix(maxAlbedo, albedo3, maxW);
-				maxPbr = mix(maxPbr, pbr3, maxW);
-				maxNormal = mix(maxNormal, normal3, maxW);
-			}
-
-			// Normalisation
-			weightSum = b1 + b2 + b3;
-			albedo /= vec3(weightSum);
-			pbr /= vec4(weightSum);
-			normal /= vec4(weightSum);
-
-			// Sharpness
-			albedo = mix(albedo, maxAlbedo, heightBlendSharpness);
-			pbr = mix(pbr, maxPbr, heightBlendSharpness);
-			normal = mix(normal, maxNormal, heightBlendSharpness);
-
-			// Output
-			normal = vec4(unpackNormal(normal), 0.0);
-			pixelColor = vec4(albedo, 1.0);
-			transformedNormal = normalize(normal.xyz) * TBN;
-			roughnessValue = 1 - pbr.g * pbr.g;
-			metalnessValue = pbr.r;
-			occlusionValue = pbr.b;
-			emissiveValue = 0;
-
-			// DEBUG
-			if(CHECKER){
+			if( CHECKER ) {
 				var tile = abs(abs(floor(input.position.x)) % 2 - abs(floor(input.position.y)) % 2);
 				pixelColor = vec4(mix(vec3(0.4), vec3(0.1), tile), 1.0);
 				transformedNormal = vec3(0,0,1) * TBN;
@@ -196,7 +121,7 @@ class Terrain extends hxsl.Shader {
 				occlusionValue = 1;
 				emissiveValue = 0;
 			}
-			else if(COMPLEXITY){
+			else if( COMPLEXITY ) {
 				var blendCount = 0 + weightTextures.get(vec3(0)).r * 0;
 				for(i in 0 ... SURFACE_COUNT)
 					blendCount += ceil(weightTextures.get(vec3(calculatedUV, i)).r);
@@ -207,7 +132,61 @@ class Terrain extends hxsl.Shader {
 				metalnessValue = 0;
 				occlusionValue = 1;
 			}
-			if(SHOW_GRID){
+			else {
+				var i = surfaceIndexMap.get(calculatedUV).rgb * 255;
+				w = getWeight(i, calculatedUV);
+				var pomUV = getPOMUV(i, calculatedUV);
+				if( PARALLAX ) w = getWeight(i, pomUV);
+				var h = vec3(0);
+				var surfaceUV1 = getsurfaceUV(i.x, pomUV);
+				var surfaceUV2 = getsurfaceUV(i.y, pomUV);
+				var surfaceUV3 = getsurfaceUV(i.z, pomUV);
+				var pbr1 = vec3(0), pbr2 = vec3(0), pbr3 = vec3(0);
+				var pbr1 = pbrTextures.get(surfaceUV1).rgba;
+				var pbr2 = pbrTextures.get(surfaceUV2).rgba;
+				var pbr3 = pbrTextures.get(surfaceUV3).rgba;
+
+				// Height Blend
+				var h = vec3(pbr1.a - secondSurfaceParams[i.x].x, pbr2.a - secondSurfaceParams[i.y].x, pbr3.a - secondSurfaceParams[i.z].x );
+				w = mix(w, vec3(w.x*h.x, w.y*h.y, w.z*h.z), heightBlendStrength);
+
+				// Sharpness
+				var m = max(w.x, max(w.y, w.z));
+				var mw = ceil(w - m + 0.01);
+				w = mix( w, mw, blendSharpness);
+
+				// Blend
+				var albedo = vec3(0);
+				var normal = vec4(0,0,0,0);
+				var pbr = vec4(0);
+				if( w.x > 0 ) {
+					albedo += albedoTextures.get(surfaceUV1).rgb * w.x;
+					normal += normalTextures.get(surfaceUV1).rgba * w.x;
+				}
+				if( w.y > 0 ) {
+					albedo += albedoTextures.get(surfaceUV2).rgb * w.y;
+					normal += normalTextures.get(surfaceUV2).rgba * w.y;
+				}
+				if( w.z > 0 ) {
+					albedo += albedoTextures.get(surfaceUV3).rgb * w.z;
+					normal += normalTextures.get(surfaceUV3).rgba * w.z;
+				}
+				var wSum = w.x + w.y + w.z;
+				albedo /= wSum;
+				pbr = (pbr1 * w.x + pbr2 * w.y + pbr3 * w.z) / wSum;
+				normal /= wSum;
+
+				// Output
+				normal = vec4(unpackNormal(normal), 0.0);
+				pixelColor = vec4(albedo, 1.0);
+				transformedNormal = normalize(normal.xyz) * TBN;
+				roughnessValue = 1 - pbr.g * pbr.g;
+				metalnessValue = pbr.r;
+				occlusionValue = pbr.b;
+				emissiveValue = 0;
+			}
+
+			if( SHOW_GRID ) {
 				var gridColor = vec4(1,0,0,1);
 				var tileEdgeColor = vec4(1,1,0,1);
 				var grid : Vec2 = ((input.position.xy.mod(cellSize) / cellSize ) - 0.5) * 2.0;

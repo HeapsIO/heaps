@@ -87,6 +87,9 @@ class Window {
 		#if (hldx || hlsdl)
 		window.resize(width, height);
 		#end
+		windowWidth = width;
+		windowHeight = height;
+		for( f in resizeEvents ) f();
 	}
 
 	public function setFullScreen( v : Bool ) : Void {
@@ -327,7 +330,7 @@ class Window {
 			1086 => K.NUMPAD_SUB,
 			1099 => K.NUMPAD_DOT,
 			1084 => K.NUMPAD_DIV,
-			
+
 			39 => K.QWERTY_QUOTE,
 			44 => K.QWERTY_COMMA,
 			45 => K.QWERTY_MINUS,

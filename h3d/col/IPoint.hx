@@ -23,4 +23,10 @@ class IPoint {
 		this.z = z;
 	}
 
+	public inline function load( p : IPoint ) {
+		this.x = p.x;
+		this.y = p.y;
+		this.z = p.z;
+	}
+
 }

@@ -18,6 +18,19 @@ class Box extends Graphics {
 		if( !depth ) material.mainPass.depth(true, Always);
 	}
 
+	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
+		var b = o == null ? new Box(color, bounds.clone(), material.mainPass.depthWrite, null) : cast o;
+		super.clone(b);
+		b.bounds = bounds.clone();
+		b.prevXMin = prevXMin;
+		b.prevYMin = prevYMin;
+		b.prevZMin = prevZMin;
+		b.prevXMax = prevXMax;
+		b.prevYMax = prevYMax;
+		b.prevZMax = prevZMax;
+		return b;
+	}
+
 	override function getLocalCollider() {
 		return null;
 	}

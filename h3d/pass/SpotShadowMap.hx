@@ -50,7 +50,7 @@ class SpotShadowMap extends Shadows {
 		cameraViewProj = getShadowProj();
 	}
 
-	function syncShader(texture) {
+	override function syncShader(texture) {
 		sshader.shadowMap = texture;
 		sshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		sshader.shadowBias = bias;
@@ -89,26 +89,11 @@ class SpotShadowMap extends Shadows {
 	}
 
 	override function draw( passes ) {
+		if( !filterPasses(passes) )
+			return;
 
-		if( !ctx.computingStatic )
-			switch( mode ) {
-			case None:
-				return passes;
-			case Dynamic:
-				// nothing
-			case Mixed:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
-			case Static:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
-				updateCamera();
-				syncShader(staticTexture);
-				return passes;
-			}
-
-		passes = filterPasses(passes);
 		updateCamera();
+		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 
 		var texture = ctx.textures.allocTarget("shadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
@@ -119,7 +104,7 @@ class SpotShadowMap extends Shadows {
 
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
-		passes = super.draw(passes);
+		super.draw(passes);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
@@ -138,7 +123,6 @@ class SpotShadowMap extends Shadows {
 		}
 
 		syncShader(texture);
-		return passes;
 	}
 
 	function updateCamera(){
@@ -152,7 +136,7 @@ class SpotShadowMap extends Shadows {
 		lightCamera.update();
 	}
 
-	override function computeStatic( passes : h3d.pass.Object ) {
+	override function computeStatic( passes : h3d.pass.PassList ) {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);

@@ -25,7 +25,7 @@ class AbstractMask extends Filter {
 	var maskMatrix : h2d.col.Matrix;
 	var tmpMatrix : h2d.col.Matrix;
 	var obj : h2d.Object;
-	var bindCount : Int;
+	var bindCount : Int = 0;
 	public var mask(default, set) : h2d.Object;
 	public var maskVisible(default, set) : Bool;
 

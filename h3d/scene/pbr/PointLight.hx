@@ -4,6 +4,7 @@ class PointLight extends Light {
 
 	var pbr : h3d.shader.pbr.Light.PointLight;
 	public var size : Float;
+	public var zNear : Float = 0.02;
 	/**
 		Alias for uniform scale.
 	**/
@@ -17,6 +18,14 @@ class PointLight extends Light {
 		primitive = h3d.prim.Sphere.defaultUnitSphere();
 	}
 
+	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
+		var pl = o == null ? new PointLight(null) : cast o;
+		super.clone(pl);
+		pl.size = size;
+		pl.range = range;
+		return pl;
+	}
+
 	function get_range() {
 		return cullingDistance;
 	}
@@ -26,7 +35,7 @@ class PointLight extends Light {
 		return cullingDistance = v;
 	}
 
-	override function draw(ctx) {
+	override function draw(ctx:RenderContext) {
 		primitive.render(ctx.engine);
 	}
 
@@ -43,9 +52,23 @@ class PointLight extends Light {
 		pbr.pointSize = size;
 	}
 
+	var s = new h3d.col.Sphere();
 	override function emit(ctx:RenderContext) {
+		if( ctx.computingStatic ) {
+			super.emit(ctx);
+			return;
+		}
+
 		if( ctx.pbrLightPass == null )
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
+
+		s.x = absPos._41;
+		s.y = absPos._42;
+		s.z = absPos._43;
+		s.r = cullingDistance;
+
+		if( !ctx.camera.frustum.hasSphere(s) )
+			return;
 
 		super.emit(ctx);
 		ctx.emitPass(ctx.pbrLightPass, this);

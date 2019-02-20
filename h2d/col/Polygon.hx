@@ -135,6 +135,8 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	}
 
 	public function isConvex() {
+		if(points.length < 3) return true;
+
 		var p1 = points[points.length - 2];
 		var p2 = points[points.length - 1];
 		var p3 = points[0];

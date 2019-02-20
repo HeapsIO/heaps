@@ -81,11 +81,13 @@ class SceneProps {
 
 			var ls = scene.lightSystem;
 			var props = [];
-			props.push(PGroup("LightSystem",[
-				PRange("maxLightsPerObject", 0, 10, function() return ls.maxLightsPerObject, function(s) ls.maxLightsPerObject = Std.int(s), 1),
-				PColor("ambientLight", false, function() return ls.ambientLight, function(v) ls.ambientLight = v),
-				PBool("perPixelLighting", function() return ls.perPixelLighting, function(b) ls.perPixelLighting = b),
-			]));
+			var fls = Std.instance(ls, h3d.scene.fwd.LightSystem);
+			if( fls != null )
+				props.push(PGroup("LightSystem",[
+					PRange("maxLightsPerObject", 0, 10, function() return fls.maxLightsPerObject, function(s) fls.maxLightsPerObject = Std.int(s), 1),
+					PColor("ambientLight", false, function() return fls.ambientLight, function(v) fls.ambientLight.load(v)),
+					PBool("perPixelLighting", function() return fls.perPixelLighting, function(b) fls.perPixelLighting = b),
+				]));
 
 			if( ls.shadowLight != null )
 				props.push(PGroup("DirLight", getObjectProps(ls.shadowLight)));
@@ -247,13 +249,13 @@ class SceneProps {
 		props.push(PColor("color", false, function() return l.color, function(c) l.color.load(c)));
 		props.push(PRange("priority", 0, 10, function() return l.priority, function(p) l.priority = Std.int(p),1));
 		props.push(PBool("enableSpecular", function() return l.enableSpecular, function(b) l.enableSpecular = b));
-		var dl = Std.instance(l, h3d.scene.DirLight);
+		var dl = Std.instance(l, h3d.scene.fwd.DirLight);
 		if( dl != null )
 			props.push(PFloats("direction", function() {
 				var dir = dl.getDirection();
 				return [dl.x, dl.y, dl.z];
 			}, function(fl) dl.setDirection(new h3d.Vector(fl[0], fl[1], fl[2]))));
-		var pl = Std.instance(l, h3d.scene.PointLight);
+		var pl = Std.instance(l, h3d.scene.fwd.PointLight);
 		if( pl != null )
 			props.push(PFloats("params", function() return [pl.params.x, pl.params.y, pl.params.z], function(fl) pl.params.set(fl[0], fl[1], fl[2], fl[3])));
 		return PGroup("Light", props);

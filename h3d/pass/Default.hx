@@ -6,13 +6,11 @@ class Default extends Base {
 
 	var manager : ShaderManager;
 	var globals(get, never) : hxsl.Globals;
-	var cachedBuffer : h3d.shader.Buffers;
 	var shaderCount : Int = 1;
 	var textureCount : Int = 1;
 	var shaderIdMap : Array<Int>;
 	var textureIdMap : Array<Int>;
 	var sortPasses = true;
-	var logEnable(get, never) : Bool;
 
 	inline function get_globals() return manager.globals;
 
@@ -38,26 +36,18 @@ class Default extends Base {
 		initGlobals();
 	}
 
-	inline function get_logEnable() {
-		#if debug
-		return ctx.engine.driver.logEnable;
-		#else
-		return false;
-		#end
-	}
-
 	function getOutputs() : Array<hxsl.Output> {
 		return [Value("output.color")];
 	}
 
 	override function compileShader( p : h3d.mat.Pass ) {
-		var o = new Object();
+		var o = @:privateAccess new h3d.pass.PassObject();
 		o.pass = p;
-		setupShaders(o);
-		return manager.compileShaders(o.shaders);
+		setupShaders(new h3d.pass.PassList(o));
+		return manager.compileShaders(o.shaders, p.batchMode);
 	}
 
-	function processShaders( p : Object, shaders : hxsl.ShaderList ) {
+	function processShaders( p : h3d.pass.PassObject, shaders : hxsl.ShaderList ) {
 		var p = ctx.extraShaders;
 		while( p != null ) {
 			shaders = ctx.allocShaderList(p.s, shaders);
@@ -67,10 +57,9 @@ class Default extends Base {
 	}
 
 	@:access(h3d.scene)
-	function setupShaders( passes : Object ) {
-		var p = passes;
+	function setupShaders( passes : h3d.pass.PassList ) {
 		var lightInit = false;
-		while( p != null ) {
+		for( p in passes ) {
 			var shaders = p.pass.getShadersRec();
 			shaders = processShaders(p, shaders);
 			if( p.pass.enableLights && ctx.lightSystem != null ) {
@@ -80,7 +69,7 @@ class Default extends Base {
 				}
 				shaders = ctx.lightSystem.computeLight(p.obj, shaders);
 			}
-			p.shader = manager.compileShaders(shaders);
+			p.shader = manager.compileShaders(shaders, p.pass.batchMode);
 			p.shaders = shaders;
 			var t = p.shader.fragment.textures;
 			if( t == null )
@@ -89,59 +78,44 @@ class Default extends Base {
 				var t : h3d.mat.Texture = manager.getParamValue(t, shaders, true);
 				p.texture = t == null ? 0 : t.id;
 			}
-			p = p.next;
 		}
-	}
-
-	function uploadParams() {
-		manager.fillParams(cachedBuffer, ctx.drawPass.shader, ctx.drawPass.shaders);
-		ctx.engine.uploadShaderBuffers(cachedBuffer, Params);
-		ctx.engine.uploadShaderBuffers(cachedBuffer, Textures);
 	}
 
 	inline function log( str : String ) {
 		ctx.engine.driver.log(str);
 	}
 
-	function drawObject( p : Object ) {
+	function drawObject( p : h3d.pass.PassObject ) {
 		ctx.drawPass = p;
 		ctx.engine.selectMaterial(p.pass);
 		@:privateAccess p.obj.draw(ctx);
 	}
 
 	@:access(h3d.scene)
-	override function draw( passes : Object ) {
+	override function draw( passes : h3d.pass.PassList ) {
+		if( passes.isEmpty() )
+			return;
 		for( g in ctx.sharedGlobals )
 			globals.fastSet(g.gid, g.value);
 		setGlobals();
 		setupShaders(passes);
-		var p = passes;
-		var shaderStart = shaderCount, textureStart = textureCount;
-		while( p != null ) {
-			if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
-				shaderIdMap[p.shader.id] = shaderCount++;
-			if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
-				textureIdMap[p.texture] = textureCount++;
-			p = p.next;
-		}
-		if( sortPasses )
-			passes = haxe.ds.ListSort.sortSingleLinked(passes, function(o1:Object, o2:Object) {
+		if( sortPasses ) {
+			var shaderStart = shaderCount, textureStart = textureCount;
+			for( p in passes ) {
+				if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
+					shaderIdMap[p.shader.id] = shaderCount++;
+				if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
+					textureIdMap[p.texture] = textureCount++;
+			}
+			passes.sort(function(o1, o2) {
 				var d = shaderIdMap[o1.shader.id] - shaderIdMap[o2.shader.id];
 				if( d != 0 ) return d;
 				return textureIdMap[o1.texture] - textureIdMap[o2.texture];
 			});
-		ctx.uploadParams = uploadParams;
-		var p = passes;
-		var buf = cachedBuffer, prevShader = null;
-		var drawTri = 0, drawCalls = 0, shaderSwitches = 0;
-		if( ctx.engine.driver.logEnable ) {
-			if( logEnable ) log("Pass " + (passes == null ? "???" : passes.pass.name) + " start");
-			drawTri = ctx.engine.drawTriangles;
-			drawCalls = ctx.engine.drawCalls;
-			shaderSwitches = ctx.engine.shaderSwitches;
 		}
-		while( p != null ) {
-			if( logEnable ) log("Render " + p.obj + "." + p.pass.name);
+		ctx.currentManager = manager;
+		var buf = ctx.shaderBuffers, prevShader = null;
+		for( p in passes ) {
 			globalModelView = p.obj.absPos;
 			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
 				globalModelViewInverse = p.obj.getInvPos();
@@ -149,7 +123,7 @@ class Default extends Base {
 				prevShader = p.shader;
 				ctx.engine.selectShader(p.shader);
 				if( buf == null )
-					buf = cachedBuffer = new h3d.shader.Buffers(p.shader);
+					buf = ctx.shaderBuffers = new h3d.shader.Buffers(p.shader);
 				else
 					buf.grow(p.shader);
 				manager.fillGlobals(buf, p.shader);
@@ -162,14 +136,8 @@ class Default extends Base {
 				ctx.engine.uploadShaderBuffers(buf, Buffers);
 			}
 			drawObject(p);
-			p = p.next;
-		}
-		if( logEnable ) {
-			log("Pass " + (passes == null ? "???" : passes.pass.name) + " end");
-			log("\t" + (ctx.engine.drawTriangles - drawTri) + " tri " + (ctx.engine.drawCalls - drawCalls) + " calls " + (ctx.engine.shaderSwitches - shaderSwitches) + " shaders");
 		}
 		ctx.nextPass();
-		return passes;
 	}
 
 }

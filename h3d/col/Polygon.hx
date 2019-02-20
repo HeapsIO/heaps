@@ -99,7 +99,12 @@ class TriPlane implements Collider {
 		return nx * p.x + ny * p.y + nz * p.z - d >= 0;
 	}
 
-	public function inFrustum( m : h3d.Matrix ) {
+	public function inFrustum( f : Frustum ) {
+		throw "Not implemented";
+		return false;
+	}
+
+	public function inSphere( s : Sphere ) {
 		throw "Not implemented";
 		return false;
 	}
@@ -233,7 +238,12 @@ class Polygon implements Collider {
 		return best;
 	}
 
-	public function inFrustum( m : h3d.Matrix ) {
+	public function inFrustum( f : Frustum ) {
+		throw "Not implemented";
+		return false;
+	}
+
+	public function inSphere( s : Sphere ) {
 		throw "Not implemented";
 		return false;
 	}

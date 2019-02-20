@@ -96,12 +96,12 @@ class PbrMaterial extends Material {
 		case Albedo:
 			mainPass.setPassName("albedo");
 		case BeforeTonemapping:
-			mainPass.setPassName("BeforeTonemapping");
+			mainPass.setPassName("beforeTonemapping");
 			var e = mainPass.getShader(h3d.shader.Emissive);
 			if( e == null ) e = mainPass.addShader(new h3d.shader.Emissive(props.emissive));
 			e.emissive = props.emissive;
 		case Distortion:
-			mainPass.setPassName("Distortion");
+			mainPass.setPassName("distortion");
 			mainPass.depthWrite = false;
 		case Overlay:
 			mainPass.setPassName("overlay");

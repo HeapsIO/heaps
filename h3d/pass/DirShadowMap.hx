@@ -90,7 +90,7 @@ class DirShadowMap extends Shadows {
 			var cameraBounds = new h3d.col.Bounds();
 			for( pt in ctx.camera.getFrustumCorners() ) {
 				pt.transform(camera.mcam);
-				cameraBounds.addPos(pt.x, pt.y, pt.z);				
+				cameraBounds.addPos(pt.x, pt.y, pt.z);
 			}
 			cameraBounds.zMin = bounds.zMin;
 			bounds.intersection(bounds, cameraBounds);
@@ -109,7 +109,7 @@ class DirShadowMap extends Shadows {
 		cameraViewProj = getShadowProj();
 	}
 
-	function syncShader(texture) {
+	override function syncShader(texture) {
 		dshader.shadowMap = texture;
 		dshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		dshader.shadowBias = bias;
@@ -167,30 +167,16 @@ class DirShadowMap extends Shadows {
 		if( staticTexture != null ) staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
 		staticTexture.uploadPixels(pixels);
+		staticTexture.name = "defaultDirShadowMap";
 		syncShader(staticTexture);
 		return true;
 	}
 
 	override function draw( passes ) {
+		if( !filterPasses(passes) )
+			return;
 
-		if( !ctx.computingStatic )
-			switch( mode ) {
-			case None:
-				return passes;
-			case Dynamic:
-				// nothing
-			case Static, Mixed:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
-				if( mode == Static ) {
-					syncShader(staticTexture);
-					return passes;
-				}
-			}
-
-		passes = filterPasses(passes);
-
-		var texture = ctx.textures.allocTarget("shadowMap", size, size, false, format);
+		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
 			if( depth != null ) depth.dispose();
 			depth = new h3d.mat.DepthBuffer(size, size);
@@ -216,12 +202,12 @@ class DirShadowMap extends Shadows {
 
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
-		passes = super.draw(passes);
+		super.draw(passes);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
 		if( mode == Mixed && !ctx.computingStatic ) {
-			var merge = ctx.textures.allocTarget("shadowMap", size, size, false, format);
+			var merge = ctx.textures.allocTarget("mergedDirShadowMap", size, size, false, format);
 			mergePass.shader.texA = texture;
 			mergePass.shader.texB = staticTexture;
 			ctx.engine.pushTarget(merge);
@@ -234,10 +220,9 @@ class DirShadowMap extends Shadows {
 			blur.apply(ctx, texture);
 
 		syncShader(texture);
-		return passes;
 	}
 
-	override function computeStatic( passes : h3d.pass.Object ) {
+	override function computeStatic( passes : h3d.pass.PassList ) {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);

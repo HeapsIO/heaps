@@ -130,9 +130,17 @@ class System {
 			#if hxtelemetry
 			hxt.advance_frame();
 			#end
+			#if hot_reload
+			check_reload();
+			#end
 		}
 		Sys.exit(0);
 	}
+	
+	#if hot_reload
+	@:hlNative("std","sys_check_reload")
+	static function check_reload() return false;
+	#end
 
 	public dynamic static function reportError( e : Dynamic ) {
 		var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());

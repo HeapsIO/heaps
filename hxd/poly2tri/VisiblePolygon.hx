@@ -38,7 +38,7 @@ class VisiblePolygon
 		if (!this.triangulated) return null;
 
 		var vertices = new Array();
-		var ids = new Array();
+		var ids = new Map();
 
 		for (i in 0...sweepContext.points.length)
 		{

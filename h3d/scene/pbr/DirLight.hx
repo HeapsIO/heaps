@@ -11,6 +11,12 @@ class DirLight extends Light {
 		if( dir != null ) setDirection(dir);
 	}
 
+	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
+		var dl = o == null ? new DirLight(null) : cast o;
+		super.clone(dl);
+		return dl;
+	}
+
 	override function getShadowDirection() : h3d.Vector {
 		return absPos.front();
 	}

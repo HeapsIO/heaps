@@ -17,6 +17,10 @@ package h3d.scene.pbr;
 		Debug slides
 	*/
 	var Debug = "Debug";
+	/*
+		Distortion
+	*/
+	var Distortion = "Distortion";
 }
 
 @:enum abstract SkyMode(String) {
@@ -34,18 +38,32 @@ package h3d.scene.pbr;
 typedef RenderProps = {
 	var mode : DisplayMode;
 	var env : String;
+	var colorGradingLUT : String;
+	var colorGradingLUTSize : Int;
 	var envPower : Float;
 	var exposure : Float;
 	var sky : SkyMode;
 	var tone : TonemapMap;
 	var emissive : Float;
 	var occlusion : Float;
+	var shadows : Bool;
+}
+
+class DepthCopy extends h3d.shader.ScreenShader {
+
+	static var SRC = {
+		@ignore @param var depthTexture : Channel;
+		function fragment() {
+			pixelColor = vec4(depthTexture.get(calculatedUV));
+		}
+	}
 }
 
 class Renderer extends h3d.scene.Renderer {
 	var slides = new h3d.pass.ScreenFx(new h3d.shader.pbr.Slides());
 	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
 	var tonemap = new h3d.pass.ScreenFx(new h3d.shader.pbr.ToneMapping());
+	var depthCopy = new h3d.pass.ScreenFx(new DepthCopy());
 	var pbrLightPass : h3d.mat.Pass;
 	var screenLightPass : h3d.pass.ScreenFx<h3d.shader.ScreenShader>;
 	var fxaa = new h3d.pass.FXAA();
@@ -56,14 +74,16 @@ class Renderer extends h3d.scene.Renderer {
 
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
+	public var colorgGradingLUT : h3d.mat.Texture;
+	public var colorGradingLUTSize : Int;
 	public var displayMode : DisplayMode = Pbr;
 	public var env : Environment;
 	public var exposure(get,set) : Float;
 	public var debugMode = 0;
-
+	public var shadows = true;
 
 	static var ALPHA : hxsl.Output = Swiz(Value("output.color"),[W]);
-	var output = new h3d.pass.Output("mrt",[
+	var output = new h3d.pass.Output("default",[
 		Value("output.color"),
 		Vec4([Value("output.normal",3),ALPHA]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
@@ -73,12 +93,14 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
+		Vec4([Value("output.emissive"),Value("output.depth"), Const(0), Const(1)])
 	]);
+
 
 	public function new(env) {
 		super();
 		this.env = env;
-		defaultPass = new h3d.pass.Default("default");
+		defaultPass = new h3d.pass.Default("color");
 		slides.addShader(pbrProps);
 		pbrOut.addShader(pbrIndirect);
 		pbrOut.addShader(pbrProps);
@@ -88,6 +110,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
+		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
 	}
 
@@ -112,7 +135,7 @@ class Renderer extends h3d.scene.Renderer {
 				to be discarded when the camera is inside its volume.
 			*/
 			pbrLightPass.culling = Front;
-			pbrLightPass.depth(false, Greater);
+			pbrLightPass.depth(false, GreaterEqual);
 			pbrLightPass.enableLights = true;
 		}
 		ctx.pbrLightPass = pbrLightPass;
@@ -128,15 +151,14 @@ class Renderer extends h3d.scene.Renderer {
 		draw("overlay");
 	}
 
-	function drawShadows(){
+	function drawShadows( ls : LightSystem ) {
 		var light = @:privateAccess ctx.lights;
 		var passes = get("shadow");
+		if( !shadows )
+			passes.clear();
 		while( light != null ) {
 			var plight = Std.instance(light, h3d.scene.pbr.Light);
-			if( plight != null ) {
-				plight.shadows.setContext(ctx);
-				plight.shadows.draw(passes);
-			}
+			if( plight != null ) ls.drawLight(plight, passes);
 			light = light.next;
 		}
 	}
@@ -162,12 +184,9 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function render() {
 		var props : RenderProps = props;
-		var ls = getLightSystem();
 
-		drawShadows();
-
-		var albedo = allocTarget("albedo");
-		var normal = allocTarget("normalDepth",false,1.,RGBA16F);
+		var albedo = allocTarget("albedo", true, 1.);
+		var normal = allocTarget("normal",false,1.,RGBA16F);
 		var pbr = allocTarget("pbr",false,1.);
 		var other = allocTarget("other",false,1.,RGBA32F);
 
@@ -177,11 +196,24 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("occlusionMap",{ texture : pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("bloom",null);
 
+		var ls = Std.instance(getLightSystem(), LightSystem);
+		var count = ctx.engine.drawCalls;
+		if( ls != null ) drawShadows(ls);
+		ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
+
 		setTargets([albedo,normal,pbr,other]);
 		clear(0, 1, 0);
 		mainDraw();
 
-		setTargets([albedo,normal,pbr]);
+		var depth = allocTarget("depth",false,1.,R32F);
+		var depthMap = ctx.getGlobal("depthMap");
+		depthCopy.shader.depthTexture = depthMap.texture;
+		depthCopy.shader.depthTextureChannel = depthMap.channel;
+		setTargets([depth]);
+		depthCopy.render();
+		ctx.setGlobal("depthMap",{ texture : depth, channel : hxsl.Channel.R });
+
+		setTargets([albedo,normal,pbr,other]);
 		decalsOutput.draw(get("decal"));
 
 		setTarget(albedo);
@@ -247,7 +279,6 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrDirect.doDiscard = true;
 
-		var ls = Std.instance(ls, LightSystem);
 		var lpass = screenLightPass;
 		if( lpass == null ) {
 			lpass = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
@@ -256,10 +287,18 @@ class Renderer extends h3d.scene.Renderer {
 			lpass.pass.setBlendMode(Add);
 			screenLightPass = lpass;
 		}
-		if( ls != null ) ls.drawLights(this, lpass);
 
+		// Draw DirLight, screenShader
+		pbrProps.isScreen = true;
+		if( ls != null ) {
+			var count = ctx.engine.drawCalls;
+			ls.drawScreenLights(this, lpass);
+			ctx.lightSystem.drawPasses += ctx.engine.drawCalls - count;
+		}
+
+		// Draw others lights with their primitive
 		pbrProps.isScreen = false;
-		draw("lights");
+		draw(pbrLightPass.name);
 
 		if( renderMode == LightProbe ) {
 			pbrProps.isScreen = true;
@@ -285,22 +324,28 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
 		pbrOut.render();
 
-		draw("BeforeTonemapping");
+		draw("beforeTonemapping");
 
 		apply(AfterHdr);
 
-		var distortion = allocTarget("distortion", true, 1.0, RGBA16F);
+		var distortion = allocTarget("distortion", true, 1.0, RG16F);
 		distortion.clear(0x000000);
 		setTarget(distortion);
-		draw("Distortion");
+		draw("distortion");
 
 		var ldr = allocTarget("ldrOutput");
 		setTarget(ldr);
+		ctx.setGlobal("hdr", hdr);
 		var bloom = ctx.getGlobal("bloom");
 		tonemap.shader.bloom = bloom;
 		tonemap.shader.hasBloom = bloom != null;
 		tonemap.shader.distortion = distortion;
 		tonemap.shader.hasDistortion = distortion != null;
+		tonemap.shader.hasColorGrading = colorgGradingLUT != null;
+		if( colorgGradingLUT != null  ){
+			tonemap.shader.colorGradingLUT = colorgGradingLUT;
+			tonemap.shader.lutSize = colorGradingLUTSize;
+		}
 		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
 		tonemap.shader.mode =	switch( toneMode ) {
 									case Linear: 0;
@@ -311,6 +356,7 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.render();
 
 		postDraw();
+		apply(Final);
 		resetTarget();
 
 		switch( displayMode ) {
@@ -318,8 +364,11 @@ class Renderer extends h3d.scene.Renderer {
 		case Pbr, Env, MatCap:
 			fxaa.apply(ldr);
 
-		case Debug:
+		case Distortion:
+			resetTarget();
+			copy( distortion, null);
 
+		case Debug:
 			var shadowMap = ctx.textures.getNamed("shadowMap");
 			if( shadowMap == null )
 				shadowMap = h3d.mat.Texture.fromColor(0);
@@ -331,7 +380,6 @@ class Renderer extends h3d.scene.Renderer {
 				hasDebugEvent = true;
 				hxd.Window.getInstance().addEventTarget(onEvent);
 			}
-
 		}
 
 		if( hasDebugEvent && displayMode != Debug ) {
@@ -364,12 +412,15 @@ class Renderer extends h3d.scene.Renderer {
 		var props : RenderProps = {
 			mode : Pbr,
 			env : null,
+			colorGradingLUT : null,
+			colorGradingLUTSize : 1,
 			envPower : 1.,
 			emissive : 1.,
 			exposure : 0.,
 			sky : Irrad,
 			tone : Linear,
-			occlusion : 1.
+			occlusion : 1.,
+			shadows: true
 		};
 		return props;
 	}
@@ -391,6 +442,13 @@ class Renderer extends h3d.scene.Renderer {
 		toneMode = props.tone;
 		exposure = props.exposure;
 		env.power = props.envPower;
+		shadows = props.shadows;
+
+		if( props.colorGradingLUT != null )
+			colorgGradingLUT = hxd.res.Loader.currentInstance.load(props.colorGradingLUT).toTexture();
+		else
+			colorgGradingLUT = null;
+		colorGradingLUTSize = props.colorGradingLUTSize;
 	}
 
 	#if editor
@@ -406,6 +464,10 @@ class Renderer extends h3d.scene.Renderer {
 						<option value="Reinhard">Reinhard</option>
 					</select>
 				</dd>
+
+				<dt>Color Grading LUT</dt><input type="texturepath" field="colorGradingLUT" style="width:165px"/>
+				<dt>LUT Size</dt><dd><input step="1" type="range" min="0" max="32" field="colorGradingLUTSize"></dd>
+
 				<dt>Mode</dt>
 				<dd>
 					<select field="mode">
@@ -413,8 +475,10 @@ class Renderer extends h3d.scene.Renderer {
 						<option value="Env">Env</option>
 						<option value="MatCap">MatCap</option>
 						<option value="Debug">Debug</option>
+						<option value="Distortion">Distortion</option>
 					</select>
 				</dd>
+
 				<dt>Env</dt>
 				<dd>
 					<input type="texturepath" field="env" style="width:165px"/>
@@ -430,6 +494,7 @@ class Renderer extends h3d.scene.Renderer {
 				<dt>Emissive</dt><dd><input type="range" min="0" max="2" field="emissive"></dd>
 				<dt>Occlusion</dt><dd><input type="range" min="0" max="2" field="occlusion"></dd>
 				<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
+				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"></dd>
 			</dl>
 			</div>
 		');

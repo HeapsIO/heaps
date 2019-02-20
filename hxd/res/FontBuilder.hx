@@ -146,11 +146,13 @@ class FontBuilder {
 		var sizes = [];
 		// get approx height of font including descent
 		var h = getFontHeight(this.font, 'MgO0pj');
+		// arbritrary safety margin used to ensure that char doesn't get scrambled, probably due to messed up text metrics
+		var xMarg = 10;
 		for( i in 0...options.chars.length ) {
 			var textChar = options.chars.charAt(i);
 			var w = Math.ceil(ctx.measureText(textChar).width) + 1;
 			if( w == 1 ) continue;
-			surf += (w + 1) * (h + 1);
+			surf += (w + 1 + xMarg) * (h + 1);
 			if( h > font.lineHeight )
 				font.lineHeight = h;
 			sizes[i] = { w:w, h:h };
@@ -184,7 +186,7 @@ class FontBuilder {
 			for( i in 0...options.chars.length ) {
 				var size = sizes[i];
 				if( size == null ) continue;
-				var w = size.w;
+				var w = size.w + xMarg;
 				var h = size.h;
 				if( h > lineH ) lineH = h;
 				// Whatever the first character is it will always have x and y value 0
@@ -207,7 +209,7 @@ class FontBuilder {
 				// Since we're using bottom textBaseline we need to subtract the height from the y position
 				var t = new h2d.Tile(innerTex, x, y-h, w - 1, h - 1);
 				all.push(t);
-				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,w - 1));
+				font.glyphs.set(options.chars.charCodeAt(i), new h2d.Font.FontChar(t,w - (1 + xMarg)));
 				// next element
 				x += w + 1;
 			}

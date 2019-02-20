@@ -53,7 +53,7 @@ class PointShadowMap extends Shadows {
 		cameraPos = lightCamera.pos;
 	}
 
-	function syncShader(texture) {
+	override function syncShader(texture) {
 		var absPos = light.getAbsPos();
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		pshader.shadowMap = texture;
@@ -90,7 +90,8 @@ class PointShadowMap extends Shadows {
 			return false;
 
 		if( staticTexture != null ) staticTexture.dispose();
-			staticTexture = new h3d.mat.Texture(size, size, [Target, Cube], format);
+		staticTexture = new h3d.mat.Texture(size, size, [Target, Cube], format);
+		staticTexture.name = "staticTexture";
 
 		for(i in 0 ... 6){
 			var len = buffer.readInt32();
@@ -101,59 +102,49 @@ class PointShadowMap extends Shadows {
 		return true;
 	}
 
-	function createDefaultShadowMap(){
-		var tex = new h3d.mat.Texture(1,1, [Cube,Target], format);
-		for(i in 0 ... 6){
+	override function createDefaultShadowMap() {
+		var tex = new h3d.mat.Texture(1,1, [Target,Cube], format);
+		tex.name = "defaultCubeShadowMap";
+		for(i in 0 ... 6)
 			tex.clear(0xFFFFFF, i);
-		}
 		return tex;
 	}
 
 	override function draw( passes ) {
+		if( !filterPasses(passes) )
+			return;
 
-		if( !ctx.computingStatic ){
-			switch( mode ) {
-			case None:
-				return passes;
-			case Dynamic:
-				// nothing
-			case Mixed:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = createDefaultShadowMap();
-			case Static:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = createDefaultShadowMap();
-				updateCamera();
-				syncShader(staticTexture);
-				return passes;
-			}
-		}
+		var pointLight = cast(light, h3d.scene.pbr.PointLight);
+		var absPos = light.getAbsPos();
+		var sp = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, pointLight.range);
+		cullPasses(passes,function(col) return col.inSphere(sp));
 
-		var passes = filterPasses(passes);
-
-		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, [Target, Cube]);
+		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
 		if(depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
-				if( depth != null ) depth.dispose();
-				depth = new h3d.mat.DepthBuffer(size, size);
+			if( depth != null ) depth.dispose();
+			depth = new h3d.mat.DepthBuffer(size, size);
 		}
 		texture.depthBuffer = depth;
 
 		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
 		var merge : h3d.mat.Texture = null;
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture)
-			merge = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, [Target, Cube]);
+			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, true);
 
-		for(i in 0 ... 6){
-			var pointLight = cast(light, h3d.scene.pbr.PointLight);
+		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
+		lightCamera.zFar = pointLight.range;
+		lightCamera.zNear = pointLight.zNear;
 
-			var absPos = light.getAbsPos();
-			lightCamera.setCubeMap(i, new h3d.Vector(absPos.tx, absPos.ty, absPos.tz));
-			lightCamera.zFar = pointLight.range;
+		for( i in 0...6 ) {
+			lightCamera.setCubeMap(i);
 			lightCamera.update();
 
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
-			passes = super.draw(passes);
+			var save = passes.save();
+			cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
+			super.draw(passes);
+			passes.load(save);
 			ctx.engine.popTarget();
 		}
 
@@ -173,7 +164,6 @@ class PointShadowMap extends Shadows {
 		}
 
 		syncShader(texture);
-		return passes;
 	}
 
 	function updateCamera(){
@@ -182,7 +172,7 @@ class PointShadowMap extends Shadows {
 		lightCamera.update();
 	}
 
-	override function computeStatic( passes : h3d.pass.Object ) {
+	override function computeStatic( passes : h3d.pass.PassList ) {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);
