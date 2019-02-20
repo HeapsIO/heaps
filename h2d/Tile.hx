@@ -194,7 +194,7 @@ class Tile {
 	}
 
 
-	public static function fromColor( color : Int, ?width = 1., ?height = 1., ?alpha = 1., ?allocPos : h3d.impl.AllocPos ) : Tile {
+	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?alpha = 1., ?allocPos : h3d.impl.AllocPos ) : Tile {
 		var t = new Tile(h3d.mat.Texture.fromColor(color,alpha,allocPos),0,0,1,1);
 		// scale to size
 		t.width = width;
