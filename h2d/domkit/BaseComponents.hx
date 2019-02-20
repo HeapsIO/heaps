@@ -405,8 +405,10 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var backgroundSmooth : Bool;
 	@:p(colorF) var backgroundColor : h3d.Vector;
 	@:p var debug : Bool;
+	@:p var layout : h2d.Flow.FlowLayout;
 	@:p var vertical : Bool;
 	@:p var horizontal : Bool;
+	@:p var stack : Bool;
 	@:p var multiline : Bool;
 	@:p(box) var padding : { left : Int, right : Int, top : Int, bottom : Int };
 	@:p var paddingLeft : Int;
@@ -497,12 +499,20 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 		}
 	}
 
+	static function set_layout( o : h2d.Flow, v ) {
+		o.layout = v;
+	}
+
 	static function set_vertical( o : h2d.Flow, v ) {
-		o.isVertical = v;
+		o.layout = v ? Vertical : Horizontal;
 	}
 
 	static function set_horizontal( o : h2d.Flow, v ) {
-		o.isVertical = !v;
+		o.layout = Horizontal;  // setting false resets to default
+	}
+
+	static function set_stack( o : h2d.Flow, v ) {
+		o.layout = v ? Stack : Horizontal;
 	}
 
 	static function set_hspacing( o : h2d.Flow, v ) {

@@ -8,6 +8,12 @@ enum FlowAlign {
 	Bottom;
 }
 
+enum FlowLayout {
+	Horizontal;
+	Vertical;
+	Stack;
+}
+
 @:allow(h2d.Flow)
 class FlowProperties {
 
@@ -150,10 +156,15 @@ class Flow extends Object {
 	public var outerHeight(get, never) : Int;
 
 	/**
-		By default, elements will be flowed horizontaly, then in several lines if maxWidth is reached.
-		You can instead flow them vertically, then to next column is maxHeight is reached by setting the isVertical flag to true.
+		When set to `Horizontal` (default), children are aligned horizontally from left to right (right to left using `reverse`).
+		When set to `Vertical`, children are aligned vertically from tom to bottom (bottom to top using `reverse`).
+		When set to `Stack`, children are aligned independently (`reverse` has no effect).
+		Both `Horizontal` and `Vertical` alignments can overflow to the next row/column if the available space is constrained.
 	**/
-	public var isVertical(default, set) : Bool;
+	public var layout(default, set) : FlowLayout = Horizontal;
+
+	@:deprecated("isVertical is replaced by layout=Vertical")
+	public var isVertical(get, set) : Bool;
 
 	/**
 		When isInline is set to false, the flow size will be reported based on its bounds instead of its calculated size.
@@ -199,11 +210,20 @@ class Flow extends Object {
 		return properties[getChildIndex(e)];
 	}
 
-	function set_isVertical(v) {
-		if( isVertical == v )
+	function set_layout(v) {
+		if(layout == v)
 			return v;
 		needReflow = true;
-		return isVertical = v;
+		return layout = v;
+	}
+
+	function get_isVertical() {
+		return layout == Vertical;
+	}
+
+	function set_isVertical(v) {
+		layout = v ? Vertical : Horizontal;
+		return v;
 	}
 
 	function set_horizontalAlign(v) {
@@ -365,16 +385,19 @@ class Flow extends Object {
 		var last = properties.length - 1;
 		while( last >= 0 && properties[last].isAbsolute )
 			last--;
-		if( isVertical ) {
-			if( last >= 0 )
-				properties[last].paddingBottom += v;
-			else
-				paddingTop += v;
-		} else {
-			if( last >= 0 )
-				properties[last].paddingRight += v;
-			else
-				paddingLeft += v;
+		switch (layout) {
+			case Horizontal:
+				if( last >= 0 )
+					properties[last].paddingRight += v;
+				else
+					paddingLeft += v;
+
+			case Vertical:
+				if( last >= 0 )
+					properties[last].paddingBottom += v;
+				else
+					paddingTop += v;
+			case Stack:
 		}
 	}
 
@@ -590,7 +613,8 @@ class Flow extends Object {
 		}
 
 		var cw, ch;
-		if( !isVertical ) {
+		switch(layout) {
+		case Horizontal:
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
 			var valign = verticalAlign == null ? Bottom : verticalAlign;
 
@@ -713,8 +737,7 @@ class Flow extends Object {
 				childAt(i).x = px + p.offsetX + p.paddingLeft;
 			}
 
-		} else {
-
+		case Vertical:
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
 			var valign = verticalAlign == null ? Top : verticalAlign;
 
@@ -840,6 +863,70 @@ class Flow extends Object {
 					ymin += p.calculatedHeight + verticalSpacing;
 				}
 				childAt(i).y = py + p.offsetY + p.paddingTop;
+			}
+		case Stack:
+			var halign = horizontalAlign == null ? Left : horizontalAlign;
+			var valign = verticalAlign == null ? Top : verticalAlign;
+
+			var maxChildW = minWidth;
+			var maxChildH = minHeight;
+
+			for( i in 0...children.length ) {
+				var c = childAt(i);
+				if( !c.visible ) continue;
+				var p = propAt(i);
+				if( p.isAbsolute ) continue;
+
+				c.constraintSize(
+					isConstraintWidth && p.constraint ? maxInWidth / Math.abs(c.scaleX) : -1,
+					isConstraintHeight && p.constraint ? maxInHeight / Math.abs(c.scaleY) : -1
+				);
+
+				var b = c.getSize(tmpBounds);
+				p.calculatedWidth = Math.ceil(b.xMax) + p.paddingLeft + p.paddingRight;
+				p.calculatedHeight = Math.ceil(b.yMax) + p.paddingTop + p.paddingBottom;
+				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
+				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
+				if( p.calculatedWidth > maxChildW ) maxChildW = p.calculatedWidth;
+				if( p.calculatedHeight > maxChildH ) maxChildH = p.calculatedHeight;
+			}
+
+			var xmin = paddingLeft + borderWidth;
+			var xmax = xmin + maxChildW;
+			var ymin = paddingTop + borderWidth;
+			var ymax = ymin + maxChildH;
+			cw = xmax + paddingRight + borderWidth;
+			ch = ymax + paddingBottom + borderWidth;
+
+			for( i in 0...children.length ) {
+				var c = childAt(i);
+				if( !c.visible ) continue;
+				var p = propAt(i);
+				if( p.isAbsolute ) continue;
+
+				var valign = p.verticalAlign == null ? valign : p.verticalAlign;
+				var halign = p.horizontalAlign == null ? halign : p.horizontalAlign;
+
+				var px = switch( halign ) {
+				case Right:
+					xmax - p.calculatedWidth;
+				case Middle:
+					xmin + ((xmax - xmin) - p.calculatedWidth) * 0.5;
+				default:
+					xmin;
+				}
+
+				var py = switch( valign ) {
+				case Bottom:
+					ymax - p.calculatedHeight;
+				case Middle:
+					ymin + ((ymax - ymin) - p.calculatedHeight) * 0.5;
+				default:
+					ymin;
+				}
+
+				c.x = px + p.offsetX + p.paddingLeft;
+				c.y = py + p.offsetY + p.paddingTop;
 			}
 		}
 
