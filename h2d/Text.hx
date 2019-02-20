@@ -256,7 +256,7 @@ class Text extends Drawable {
 
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
-				if( calcLines ) lines.push(Std.int(x));
+				if( calcLines ) lines.push(Math.ceil(x));
 				switch( align ) {
 				case Left:
 					x = 0;
@@ -275,7 +275,7 @@ class Text extends Drawable {
 				prevChar = cc;
 			}
 		}
-		if( calcLines ) lines.push(Std.int(x));
+		if( calcLines ) lines.push(Math.ceil(x));
 		if( x > xMax ) xMax = x;
 
 		calcXMin = xMin;
