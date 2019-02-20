@@ -27,7 +27,7 @@ class Tile {
 	inline function get_iwidth() return Math.ceil(width + x) - ix;
 
 	public var iheight(get,never) : Int;
-	inline function get_iheight() return Std.ceil(height + y) - iy;
+	inline function get_iheight() return Math.ceil(height + y) - iy;
 
 	function new(tex : h3d.mat.Texture, x : Float, y : Float, w : Float, h : Float, dx : Float=0, dy : Float=0) {
 		this.innerTex = tex;
