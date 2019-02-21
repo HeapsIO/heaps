@@ -1,9 +1,10 @@
 package hxd.prefab.rfx;
 
 enum Step {
-	BeforeHdr;
-	AfterHdr;
-	Final;
+	BeforeLighting;
+	BeforeTonemapping;
+	AfterTonemapping;
+	AfterUI;
 }
 
 class RendererFX extends Prefab {

@@ -29,7 +29,7 @@ class Bloom extends RendererFX {
 	}
 
 	override function apply(r:h3d.scene.Renderer, step:hxd.prefab.rfx.RendererFX.Step) {
-		if( step == AfterHdr ) {
+		if( step == BeforeTonemapping ) {
 			var pb : BloomProps = props;
 			var bloom = r.allocTarget("bloom", false, pb.size, RGBA16F);
 			var ctx = r.ctx;

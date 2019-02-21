@@ -40,6 +40,7 @@ typedef RenderProps = {
 	var env : String;
 	var colorGradingLUT : String;
 	var colorGradingLUTSize : Int;
+	var enableColorGrading : Bool;
 	var envPower : Float;
 	var exposure : Float;
 	var sky : SkyMode;
@@ -76,6 +77,7 @@ class Renderer extends h3d.scene.Renderer {
 	public var toneMode : TonemapMap = Reinhard;
 	public var colorgGradingLUT : h3d.mat.Texture;
 	public var colorGradingLUTSize : Int;
+	public var enableColorGrading : Bool;
 	public var displayMode : DisplayMode = Pbr;
 	public var env : Environment;
 	public var exposure(get,set) : Float;
@@ -239,7 +241,7 @@ class Renderer extends h3d.scene.Renderer {
 				clear(0x00FF80FF);
 			}
 		}
-		apply(BeforeHdr);
+		apply(BeforeLighting);
 
 		var hdr = allocTarget("hdrOutput", true, 1, RGBA16F);
 		ctx.setGlobal("hdr", hdr);
@@ -335,8 +337,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.render();
 
 		draw("beforeTonemapping");
-
-		apply(AfterHdr);
+		apply(BeforeTonemapping);
 
 		var distortion = allocTarget("distortion", true, 1.0, RG16F);
 		distortion.clear(0x000000);
@@ -345,18 +346,25 @@ class Renderer extends h3d.scene.Renderer {
 
 		var ldr = allocTarget("ldrOutput");
 		setTarget(ldr);
-		ctx.setGlobal("hdr", hdr);
+		ctx.setGlobal("ldr", ldr);
 		var bloom = ctx.getGlobal("bloom");
+
+		// Bloom Params
 		tonemap.shader.bloom = bloom;
 		tonemap.shader.hasBloom = bloom != null;
+
+		// Distortion Params
 		tonemap.shader.distortion = distortion;
 		tonemap.shader.hasDistortion = distortion != null;
-		tonemap.shader.hasColorGrading = colorgGradingLUT != null;
-		if( colorgGradingLUT != null  ){
+
+		// Color Grading Params
+		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
+		tonemap.shader.hasColorGrading = enableColorGrading && colorgGradingLUT != null;
+		if( colorgGradingLUT != null ) {
 			tonemap.shader.colorGradingLUT = colorgGradingLUT;
 			tonemap.shader.lutSize = colorGradingLUTSize;
 		}
-		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
+
 		tonemap.shader.mode =	switch( toneMode ) {
 									case Linear: 0;
 									case Reinhard: 1;
@@ -365,8 +373,12 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.shader.hdrTexture = hdr;
 		tonemap.render();
 
+		apply(AfterTonemapping);
+
 		postDraw();
-		apply(Final);
+
+		apply(AfterUI);
+
 		resetTarget();
 
 		switch( displayMode ) {
@@ -424,6 +436,7 @@ class Renderer extends h3d.scene.Renderer {
 			env : null,
 			colorGradingLUT : null,
 			colorGradingLUTSize : 1,
+			enableColorGrading: true,
 			envPower : 1.,
 			emissive : 1.,
 			exposure : 0.,
@@ -459,6 +472,7 @@ class Renderer extends h3d.scene.Renderer {
 		else
 			colorgGradingLUT = null;
 		colorGradingLUTSize = props.colorGradingLUTSize;
+		enableColorGrading = props.enableColorGrading;
 	}
 
 	#if editor
@@ -467,16 +481,6 @@ class Renderer extends h3d.scene.Renderer {
 		return new js.jquery.JQuery('
 			<div class="group" name="Renderer">
 			<dl>
-				<dt>Tone</dt>
-				<dd>
-					<select field="tone">
-						<option value="Linear">Linear</option>
-						<option value="Reinhard">Reinhard</option>
-					</select>
-				</dd>
-
-				<dt>Color Grading LUT</dt><input type="texturepath" field="colorGradingLUT" style="width:165px"/>
-				<dt>LUT Size</dt><dd><input step="1" type="range" min="0" max="32" field="colorGradingLUTSize"></dd>
 
 				<dt>Mode</dt>
 				<dd>
@@ -489,22 +493,43 @@ class Renderer extends h3d.scene.Renderer {
 					</select>
 				</dd>
 
-				<dt>Env</dt>
-				<dd>
-					<input type="texturepath" field="env" style="width:165px"/>
-					<select field="sky" style="width:20px">
-						<option value="Hide">Hide</option>
-						<option value="Env">Show</option>
-						<option value="Irrad">Show Irrad</option>
-						<option value="Background">Background Color</option>
-					</select>
-					<br/>
-					<input type="range" min="0" max="2" field="envPower"/>
-				</dd>
-				<dt>Emissive</dt><dd><input type="range" min="0" max="2" field="emissive"></dd>
-				<dt>Occlusion</dt><dd><input type="range" min="0" max="2" field="occlusion"></dd>
-				<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
-				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"></dd>
+				<div class="group" name="Tone Mapping">
+					<dt>Tone</dt>
+					<dd>
+						<select field="tone">
+							<option value="Linear">Linear</option>
+							<option value="Reinhard">Reinhard</option>
+						</select>
+					</dd>
+				</div>
+
+				<div class="group" name="Color Grading">
+					<dt>LUT</dt><dd><input type="texturepath" field="colorGradingLUT" style="width:165px"/></dd>
+					<dt>LUT Size</dt><dd><input step="1" type="range" min="0" max="32" field="colorGradingLUTSize"></dd>
+					<dt>Enable</dt><dd><input type="checkbox" field="enableColorGrading"></dd>
+				</div>
+
+				<div class="group" name="Environment">
+					<dt>Env</dt>
+						<dd>
+							<input type="texturepath" field="env" style="width:165px"/>
+							<select field="sky" style="width:20px">
+								<option value="Hide">Hide</option>
+								<option value="Env">Show</option>
+								<option value="Irrad">Show Irrad</option>
+								<option value="Background">Background Color</option>
+							</select>
+							<br/>
+							<input type="range" min="0" max="2" field="envPower"/>
+						</dd>
+				</div>
+
+				<div class="group" name="Params">
+					<dt>Emissive</dt><dd><input type="range" min="0" max="2" field="emissive"></dd>
+					<dt>Occlusion</dt><dd><input type="range" min="0" max="2" field="occlusion"></dd>
+					<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
+					<dt>Shadows</dt><dd><input type="checkbox" field="shadows"></dd>
+				</div>
 			</dl>
 			</div>
 		');
