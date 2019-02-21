@@ -348,7 +348,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			if( cx < -tr || cy < -tr || cx - tr > curWidth || cy - tr > curHeight ) return false;
 		} else {
 			var xMin = 1e20, yMin = 1e20, xMax = -1e20, yMax = -1e20;
-			inline function calc(x:Int, y:Int) {
+			inline function calc(x:Float, y:Float) {
 				var px = (x + tile.dx) * matA + (y + tile.dy) * matC;
 				var py = (x + tile.dx) * matB + (y + tile.dy) * matD;
 				if( px < xMin ) xMin = px;

@@ -7,10 +7,10 @@ class HtmlText extends Text {
 	public var condenseWhite(default,set) : Bool = true;
 
 	var elements : Array<Object> = [];
-	var xPos : Int;
-	var yPos : Int;
-	var xMax : Int;
-	var xMin : Int;
+	var xPos : Float;
+	var yPos : Float;
+	var xMax : Float;
+	var xMin : Float;
 	var sizePos : Int;
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
@@ -63,7 +63,7 @@ class HtmlText extends Text {
 			case Center, Right, MultilineCenter, MultilineRight:
 				lines = [];
 				initGlyphs(text, false, false, lines);
-				var max = if( align == MultilineCenter || align == MultilineRight ) calcWidth else realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
+				var max = if( align == MultilineCenter || align == MultilineRight ) hxd.Math.ceil(calcWidth) else realMaxWidth < 0 ? 0 : hxd.Math.ceil(realMaxWidth);
 				var k = align == Center || align == MultilineCenter ? 1 : 0;
 				for( i in 0...lines.length )
 					lines[i] = (max - lines[i]) >> k;
@@ -79,7 +79,7 @@ class HtmlText extends Text {
 
 		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
 
-		var sizes = [];
+		var sizes = new Array<Float>();
 		prevChar = -1;
 		newLine = true;
 		for( e in doc )
@@ -90,7 +90,7 @@ class HtmlText extends Text {
 		for( e in doc )
 			addNode(e, font, rebuild, handleAlign, sizes, lines);
 
-		if (!handleAlign && !rebuild && lines != null) lines.push(xPos);
+		if (!handleAlign && !rebuild && lines != null) lines.push(hxd.Math.ceil(xPos));
 		if( xPos > xMax ) xMax = xPos;
 
 		var y = yPos;
@@ -101,9 +101,9 @@ class HtmlText extends Text {
 		calcDone = true;
 	}
 
-	function buildSizes( e : Xml, font : Font, sizes : Array<Int> ) {
+	function buildSizes( e : Xml, font : Font, sizes : Array<Float> ) {
 		if( e.nodeType == Xml.Element ) {
-			var len = 0;
+			var len = 0.;
 			var nodeName = e.nodeName.toLowerCase();
 			switch( nodeName ) {
 			case "p":
@@ -141,7 +141,7 @@ class HtmlText extends Text {
 		} else {
 			newLine = false;
 			var text = htmlToText(e.nodeValue);
-			var xp = 0;
+			var xp = 0.;
 			for( i in 0...text.length ) {
 				var cc = text.charCodeAt(i);
 				var fc = font.getChar(cc);
@@ -165,8 +165,8 @@ class HtmlText extends Text {
 		return t;
 	}
 
-	function remainingSize( sizes : Array<Int> ) {
-		var size = 0;
+	function remainingSize( sizes : Array<Float> ) {
+		var size = 0.;
 		for( i in sizePos...sizes.length ) {
 			var s = sizes[i];
 			if( s < 0 ) {
@@ -178,7 +178,7 @@ class HtmlText extends Text {
 		return size;
 	}
 
-	function addNode( e : Xml, font : Font, rebuild : Bool, handleAlign:Bool, sizes : Array<Int>, ?lines : Array<Int> = null ) {
+	function addNode( e : Xml, font : Font, rebuild : Bool, handleAlign:Bool, sizes : Array<Float>, ?lines : Array<Int> = null ) {
 		sizePos++;
 		var calcLines = !handleAlign && !rebuild && lines != null;
 		var align = handleAlign ? textAlign : Left;
@@ -187,7 +187,7 @@ class HtmlText extends Text {
 			function makeLineBreak()
 			{
 				if( xPos > xMax ) xMax = xPos;
-				if( calcLines ) lines.push(xPos);
+				if( calcLines ) lines.push(hxd.Math.ceil(xPos));
 				switch( align ) {
 					case Left:
 						xPos = 0;
@@ -301,7 +301,7 @@ class HtmlText extends Text {
 				var cc = t.charCodeAt(i);
 				if( cc == "\n".code ) {
 					if( xPos > xMax ) xMax = xPos;
-					if( calcLines ) lines.push(xPos);
+					if( calcLines ) lines.push(hxd.Math.ceil(xPos));
 					switch( align ) {
 						case Left:
 							xPos = 0;

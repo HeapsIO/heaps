@@ -16,20 +16,20 @@ class Text extends Drawable {
 	public var maxWidth(default, set) : Null<Float>;
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
 
-	public var textWidth(get, null) : Int;
-	public var textHeight(get, null) : Int;
+	public var textWidth(get, null) : Float;
+	public var textHeight(get, null) : Float;
 	public var textAlign(default, set) : Align;
-	public var letterSpacing(default, set) : Int;
-	public var lineSpacing(default,set) : Int;
+	public var letterSpacing(default, set) : Float;
+	public var lineSpacing(default,set) : Float;
 
 	var glyphs : TileGroup;
 
 	var calcDone:Bool;
-	var calcXMin:Int;
-	var calcYMin:Int;
-	var calcWidth:Int;
-	var calcHeight:Int;
-	var calcSizeHeight:Int;
+	var calcXMin:Float;
+	var calcYMin:Float;
+	var calcWidth:Float;
+	var calcHeight:Float;
+	var calcSizeHeight:Float;
 	var constraintWidth:Float = -1;
 	var realMaxWidth:Float = -1;
 
@@ -43,7 +43,7 @@ class Text extends Drawable {
 		this.font = font;
 		textAlign = Left;
 		letterSpacing = 1;
-        lineSpacing = 0;
+		lineSpacing = 0;
 		text = "";
 		textColor = 0xFFFFFF;
 	}
@@ -170,7 +170,7 @@ class Text extends Drawable {
 		}
 	}
 
-	public function splitText( text : hxd.UString, leftMargin = 0, afterData = 0 ) {
+	public function splitText( text : hxd.UString, leftMargin = 0., afterData = 0. ) {
 		if( realMaxWidth < 0 )
 			return text;
 		var lines = [], rest = text, restPos = 0;
@@ -229,13 +229,13 @@ class Text extends Drawable {
 
 	function initGlyphs( text : hxd.UString, rebuild = true, handleAlign = true, lines : Array<Int> = null ) : Void {
 		if( rebuild ) glyphs.clear();
-		var x = 0, y = 0, xMax = 0, xMin = 0, prevChar = -1;
+		var x = 0., y = 0., xMax = 0., xMin = 0., prevChar = -1;
 		var align = handleAlign ? textAlign : Left;
 		switch( align ) {
 		case Center, Right, MultilineCenter, MultilineRight:
 			lines = [];
 			initGlyphs(text, false, false, lines);
-			var max = if( align == MultilineCenter || align == MultilineRight ) calcWidth else realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
+			var max = if( align == MultilineCenter || align == MultilineRight ) hxd.Math.ceil(calcWidth) else realMaxWidth < 0 ? 0 : hxd.Math.ceil(realMaxWidth);
 			var k = align == Center || align == MultilineCenter ? 1 : 0;
 			for( i in 0...lines.length )
 				lines[i] = (max - lines[i]) >> k;
@@ -245,7 +245,7 @@ class Text extends Drawable {
 		}
 		var dl = font.lineHeight + lineSpacing;
 		var calcLines = !handleAlign && !rebuild && lines != null;
-		var yMin = 0;
+		var yMin = 0.;
 		var t = splitText(text);
 		for( i in 0...t.length ) {
 			var cc = t.charCodeAt(i);
@@ -256,7 +256,7 @@ class Text extends Drawable {
 
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
-				if( calcLines ) lines.push(x);
+				if( calcLines ) lines.push(Math.ceil(x));
 				switch( align ) {
 				case Left:
 					x = 0;
@@ -275,7 +275,7 @@ class Text extends Drawable {
 				prevChar = cc;
 			}
 		}
-		if( calcLines ) lines.push(x);
+		if( calcLines ) lines.push(Math.ceil(x));
 		if( x > xMax ) xMax = x;
 
 		calcXMin = xMin;
@@ -334,7 +334,7 @@ class Text extends Drawable {
 		var x, y, w : Float, h;
 		if ( forSize ) {
 			x = calcXMin;  // TODO: Should be 0 as well for consistency, but currently causes problems with Flows
-			y = 0;
+			y = 0.;
 			w = calcWidth;
 			h = calcSizeHeight;
 		} else {

@@ -71,12 +71,12 @@ class Matrix {
 		return new Point(pt.x * a + pt.y * c + x, pt.x * b + pt.y * d + y);
 	}
 
-	public inline function translate(x, y) {
+	public inline function translate( x : Float, y : Float ) {
 		this.x += x;
 		this.y += y;
 	}
 
-	public inline function prependTranslate( x, y ) {
+	public inline function prependTranslate( x : Float, y : Float ) {
 		this.x += a * x + c * y;
 		this.y += b * x + d * y;
 	}
