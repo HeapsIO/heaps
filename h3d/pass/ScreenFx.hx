@@ -64,8 +64,8 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 	public function render() {
 		if( primitive == null )
 			primitive = h3d.prim.Plane2D.get();
-		var rts = manager.compileShaders(shaders);
 		shader.flipY = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
+		var rts = manager.compileShaders(shaders);
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);
 		if( buffers == null )

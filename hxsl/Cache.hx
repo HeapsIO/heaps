@@ -495,6 +495,15 @@ class Cache {
 				]) };
 			case TVec(4,VFloat):
 				readOffset(index);
+			case TVec(3,VFloat):
+				{ p : pos, t : v.type, e : TSwiz(readOffset(index),v.pos&3 == 0 ? [X,Y,Z] : [Y,Z,W]) };
+			case TVec(2,VFloat):
+				var swiz = switch( v.pos & 3 ) {
+				case 0: [X,Y];
+				case 1: [Y,Z];
+				default: [Z,W];
+				}
+				{ p : pos, t : v.type, e : TSwiz(readOffset(index),swiz) };
 			case TFloat:
 				{ p : pos, t : v.type, e : TSwiz(readOffset(index),swiz[v.pos&3]) }
 			default:

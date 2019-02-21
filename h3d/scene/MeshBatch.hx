@@ -34,6 +34,12 @@ class MeshBatch extends Mesh {
 	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 
 	/**
+	 * 	If set, use this position in emitInstance() instead MeshBatch absolute position
+	**/
+	public var worldPosition : Matrix;
+	var invWorldPosition : Matrix;
+
+	/**
 		Set if shader list or shader constants has changed, before calling begin()
 	**/
 	public var shadersChanged = true;
@@ -74,6 +80,7 @@ class MeshBatch extends Mesh {
 
 	function initShadersMapping() {
 		var scene = getScene();
+		if( scene == null ) return;
 		cleanPasses();
 		shaderInstances = maxInstances;
 		for( p in material.getPasses() ) @:privateAccess {
@@ -150,6 +157,7 @@ class MeshBatch extends Mesh {
 		var buf = data.data;
 		var shaders = data.shaders;
 		var startPos = data.count * curInstances * 4;
+		var calcInv = false;
 		while( p != null ) {
 			var pos = startPos + p.pos;
 			inline function addMatrix(m:h3d.Matrix) {
@@ -172,9 +180,18 @@ class MeshBatch extends Mesh {
 			}
 			if( p.perObjectGlobal != null ) {
 				if( p.perObjectGlobal.gid == modelViewID ) {
-					addMatrix(absPos);
+					addMatrix(worldPosition != null ? worldPosition : absPos);
 				} else if( p.perObjectGlobal.gid == modelViewInverseID ) {
-					addMatrix(getInvPos());
+					if( worldPosition == null )
+						addMatrix(getInvPos());
+					else {
+						if( !calcInv ) {
+							calcInv = true;
+							if( invWorldPosition == null ) invWorldPosition = new h3d.Matrix();
+							invWorldPosition.initInverse(worldPosition);
+						}
+						addMatrix(invWorldPosition);
+					}
 				} else
 					throw "Unsupported global param "+p.perObjectGlobal.path;
 				p = p.next;

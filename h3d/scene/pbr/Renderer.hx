@@ -122,6 +122,16 @@ class Renderer extends h3d.scene.Renderer {
 		return output.compileShader(pass);
 	}
 
+	override function getPassByName(name:String):h3d.pass.Base {
+		switch( name ) {
+		case "overlay", "beforeTonemapping", "albedo", "distortion":
+			return defaultPass;
+		case "alpha", "additive":
+			return output;
+		}
+		return super.getPassByName(name);
+	}
+
 	override function start() {
 		if( pbrLightPass == null ) {
 			pbrLightPass = new h3d.mat.Pass("lights");
