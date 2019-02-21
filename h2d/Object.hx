@@ -347,7 +347,7 @@ class Object {
 			if( !s.allocated )
 				s.onAdd();
 			else
-				s.onParentChanged();
+				s.onHierarchyMoved(true);
 		}
 		onContentChanged();
 	}
@@ -357,9 +357,9 @@ class Object {
 	}
 
 	// called when we're allocated already but moved in hierarchy
-	function onParentChanged() {
-		for( c in children )
-			c.onParentChanged();
+	function onHierarchyMoved( parentChanged : Bool ) {
+		for ( c in children )
+			c.onHierarchyMoved(parentChanged);
 	}
 
 	// kept for internal init
@@ -418,7 +418,7 @@ class Object {
 
 	/**
 		Same as parent.removeChild(this), but does nothing if parent is null.
-		In order to capture add/removal from scene, you can override onAdd/onRemove/onParentChanged
+		In order to capture add/removal from scene, you can override onAdd/onRemove/onHierarchyMoved
 	**/
 	public inline function remove() {
 		if( this != null && parent != null ) parent.removeChild(this);

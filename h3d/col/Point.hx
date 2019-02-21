@@ -19,20 +19,8 @@ class Point {
 		z *= v;
 	}
 
-	public function inFrustum( mvp : Matrix ) {
-		if( !Plane.frustumLeft(mvp).side(this) )
-			return false;
-		if( !Plane.frustumRight(mvp).side(this) )
-			return false;
-		if( !Plane.frustumBottom(mvp).side(this) )
-			return false;
-		if( !Plane.frustumTop(mvp).side(this) )
-			return false;
-		if( !Plane.frustumNear(mvp).side(this) )
-			return false;
-		if( !Plane.frustumFar(mvp).side(this) )
-			return false;
-		return true;
+	public inline function inFrustum( f : Frustum ) {
+		return f.hasPoint(this);
 	}
 
 	public inline function set(x, y, z) {

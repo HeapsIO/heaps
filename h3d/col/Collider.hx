@@ -7,8 +7,8 @@ interface Collider extends hxd.impl.Serializable.StructSerializable {
 	**/
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float;
 	public function contains( p : Point ) : Bool;
-	public function inFrustum( mvp : h3d.Matrix ) : Bool;
-
+	public function inFrustum( f : Frustum ) : Bool;
+	public function inSphere( s : Sphere ) : Bool;
 }
 
 
@@ -32,10 +32,13 @@ class OptimizedCollider implements hxd.impl.Serializable implements Collider {
 		return a.contains(p) && b.contains(p);
 	}
 
-	public function inFrustum( mvp : h3d.Matrix ) {
-		return a.inFrustum(mvp) && b.inFrustum(mvp);
+	public function inFrustum( f : Frustum ) {
+		return a.inFrustum(f) && b.inFrustum(f);
 	}
 
+	public function inSphere( s : Sphere ) {
+		return a.inSphere(s) && b.inSphere(s);
+	}
 
 	#if (hxbit && !macro)
 	function customSerialize(ctx:hxbit.Serializer) {
@@ -73,13 +76,19 @@ class GroupCollider implements Collider {
 		return false;
 	}
 
-	public function inFrustum( mvp : h3d.Matrix ) {
+	public function inFrustum( f : Frustum ) {
 		for( c in colliders )
-			if( c.inFrustum(mvp) )
+			if( c.inFrustum(f) )
 				return true;
 		return false;
 	}
 
+	public function inSphere( s : Sphere ) {
+		for( c in colliders )
+			if( c.inSphere(s) )
+				return true;
+		return false;
+	}
 
 	#if (hxbit && !macro && heaps_enable_serialize)
 

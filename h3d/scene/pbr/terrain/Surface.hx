@@ -7,12 +7,22 @@ class Surface {
 	public var tilling = 1.0;
 	public var offset : h3d.Vector;
 	public var angle = 0.0;
+	public var heightBias = 0.0;
 
 	public function new(?albedo : h3d.mat.Texture, ?normal : h3d.mat.Texture, ?pbr : h3d.mat.Texture){
 		this.albedo = albedo;
 		this.normal = normal;
 		this.pbr = pbr;
 		this.offset = new h3d.Vector(0);
+	}
+
+	public function clone() : Surface {
+		var o = new Surface(albedo, normal, pbr);
+		o.tilling = tilling;
+		o.offset.load(offset);
+		o.angle = angle;
+		o.heightBias = heightBias;
+		return o;
 	}
 
 	public function dispose() {
@@ -36,6 +46,11 @@ class SurfaceArray {
 		albedo.wrap = Repeat;
 		normal.wrap = Repeat;
 		pbr.wrap = Repeat;
+	}
+
+	public function clone() : SurfaceArray {
+		var o = new SurfaceArray(albedo.layerCount, albedo.width);
+		return o;
 	}
 
 	public function dispose() {

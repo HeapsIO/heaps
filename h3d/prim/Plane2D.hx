@@ -2,7 +2,7 @@ package h3d.prim;
 
 class Plane2D extends Primitive {
 
-	function new() {
+	public function new() {
 	}
 
 	override function triCount() {

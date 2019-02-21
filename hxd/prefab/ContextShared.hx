@@ -76,6 +76,7 @@ class ContextShared {
 		if(r != null)
 			return r;
 		var cl = Type.resolveClass(path.split("/").join("."));
+		if(cl == null) return null;
 		var shader = new hxsl.SharedShader(Reflect.field(cl, "SRC"));
 		r = {
 			shader: shader,

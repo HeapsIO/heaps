@@ -8,10 +8,14 @@ class Sphere implements Collider {
 	public var r : Float;
 
 	public inline function new(x=0., y=0., z=0., r=0.) {
-		this.x = x;
-		this.y = y;
-		this.z = z;
-		this.r = r;
+		load(x, y, z, r);
+	}
+
+	public inline function load(sx=0., sy=0., sz=0., sr=0.) {
+		this.x = sx;
+		this.y = sy;
+		this.z = sz;
+		this.r = sr;
 	}
 
 	public inline function getCenter() {
@@ -43,33 +47,12 @@ class Sphere implements Collider {
 		return 1 - t;
 	}
 
-	public function inFrustum( mvp : Matrix ) {
-		var p = getCenter();
-		var pl = Plane.frustumLeft(mvp);
-		pl.normalize();
-		if( pl.distance(p) < -r )
-			return false;
-		var pl = Plane.frustumRight(mvp);
-		pl.normalize();
-		if( pl.distance(p) < -r )
-			return false;
-		var pl = Plane.frustumBottom(mvp);
-		pl.normalize();
-		if( pl.distance(p) < -r )
-			return false;
-		var pl = Plane.frustumTop(mvp);
-		pl.normalize();
-		if( pl.distance(p) < -r )
-			return false;
-		var pl = Plane.frustumNear(mvp);
-		pl.normalize();
-		if( pl.distance(p) < -r )
-			return false;
-		var pl = Plane.frustumNear(mvp);
-		pl.normalize();
-		if( pl.distance(p) < -r )
-			return false;
-		return true;
+	public inline function inFrustum( f : Frustum ) {
+		return f.hasSphere(this);
+	}
+
+	public inline function inSphere( s : Sphere ) {
+		return new Point(x,y,z).distanceSq(new Point(s.x,s.y,s.z)) < (s.r + r)*(s.r + r);
 	}
 
 	public function toString() {

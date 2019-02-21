@@ -90,6 +90,7 @@ class Manager {
 	var soundBufferMap    : Map<String, Buffer>;
 	var freeStreamBuffers : Array<Buffer>;
 	var effectGC          : Array<Effect>;
+	var hasMasterVolume   : Bool;
 
 	private function new() {
 		try {
@@ -103,6 +104,7 @@ class Manager {
 		}
 
 		masterVolume       = 1.0;
+		hasMasterVolume    = driver == null ? true : driver.hasFeature(MasterVolume);
 		masterSoundGroup   = new SoundGroup  ("master");
 		masterChannelGroup = new ChannelGroup("master");
 		listener           = new Listener();
@@ -145,6 +147,20 @@ class Manager {
 	public function stopAll() {
 		while( channels != null )
 			channels.stop();
+	}
+
+	/**
+		Returns iterator with all active instances of a Sound at the call time.
+	**/
+	public function getAll( sound : hxd.res.Sound ) : Iterator<Channel> {
+		var ch = channels;
+		var result = new Array<Channel>();
+		while ( ch != null ) {
+			if ( ch.sound == sound )
+				result.push(ch);
+			ch = ch.next;
+		}
+		return new hxd.impl.ArrayIterator(result);
 	}
 
 	public function cleanCache() {
@@ -404,11 +420,12 @@ class Manager {
 		// --------------------------------------------------------------------
 
 		var usedEffects : Effect = null;
+		var gain = hasMasterVolume ? 1. : masterVolume;
 		for (s in sources) {
 			var c = s.channel;
 			if (c == null) continue;
 
-			var v = c.currentVolume;
+			var v = c.currentVolume * gain;
 			if (s.volume != v) {
 				s.volume = v;
 				driver.setSourceVolume(s.handle, v);
@@ -474,7 +491,7 @@ class Manager {
 		listener.direction.normalize();
 		listener.up.normalize();
 
-		driver.setMasterVolume(masterVolume);
+		if( hasMasterVolume ) driver.setMasterVolume(masterVolume);
 		driver.setListenerParams(listener.position, listener.direction, listener.up, listener.velocity);
 
 		driver.update();
@@ -614,7 +631,7 @@ class Manager {
 			case I16 : I16;
 			#if js
 			case F32 : F32;
-			#else 
+			#else
 			case F32 : I16;
 			#end
 		}

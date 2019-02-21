@@ -38,4 +38,8 @@ class PbrMaterialSetup extends MaterialSetup {
 		return @:privateAccess new PbrMaterial();
 	}
 
+	public static function set() {
+		MaterialSetup.current = new PbrMaterialSetup();
+	}
+
 }

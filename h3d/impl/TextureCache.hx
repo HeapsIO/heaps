@@ -40,12 +40,14 @@ class TextureCache {
 		position = 0;
 	}
 
-	public function allocTarget( name : String, width : Int, height : Int, defaultDepth=true, ?format:hxd.PixelFormat, ?flags : Array<h3d.mat.Data.TextureFlags> ) {
+	public function allocTarget( name : String, width : Int, height : Int, defaultDepth=true, ?format:hxd.PixelFormat, isCube = false ) {
 		var t = cache[position];
 		if( format == null ) format = defaultFormat;
-		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.format != format ) {
+		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.format != format || isCube != t.flags.has(Cube) ) {
 			if( t != null ) t.dispose();
-			t = new h3d.mat.Texture(width, height, flags == null ? [Target] : flags, format);
+			var flags : Array<h3d.mat.Data.TextureFlags> = [Target];
+			if( isCube ) flags.push(Cube);
+			t = new h3d.mat.Texture(width, height, flags, format);
 			cache[position] = t;
 		}
 		t.depthBuffer = defaultDepth ? defaultDepthBuffer : null;
@@ -57,6 +59,10 @@ class TextureCache {
 	public function allocTargetScale( name : String, scale : Float, defaultDepth=true, ?format:hxd.PixelFormat ) {
 		var e = h3d.Engine.getCurrent();
 		return allocTarget(name, Math.ceil(e.width * scale), Math.ceil(e.height * scale), defaultDepth, format);
+	}
+
+	public function allocTileTarget( name : String, tile : h2d.Tile, defaultDepth=false, ?format:hxd.PixelFormat ) {
+		return allocTarget( name, tile.iwidth, tile.iheight, defaultDepth, format );
 	}
 
 	public function dispose() {

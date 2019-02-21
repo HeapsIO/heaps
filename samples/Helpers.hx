@@ -2,6 +2,7 @@
 import hxd.Res;
 import h3d.Vector;
 import h3d.scene.*;
+import h3d.scene.fwd.*;
 
 class Helpers extends hxd.App {
 
@@ -35,7 +36,7 @@ class Helpers extends hxd.App {
 
 		var pointLightColors =  [0xEB304D,0x7FC309,0x288DF9];
 		for( i in 0...pointLightColors.length ) {
-			var l = new h3d.scene.PointLight( s3d );
+			var l = new PointLight( s3d );
 			l.enableSpecular = true;
 			l.color.setColor( pointLightColors[i] );
 			pointLights.push( l );
@@ -111,7 +112,7 @@ class GridHelper extends h3d.scene.Graphics {
 
 class PointLightHelper extends h3d.scene.Mesh {
 
-	public function new( light : h3d.scene.PointLight, sphereSize = 0.5 ) {
+	public function new( light : h3d.scene.fwd.PointLight, sphereSize = 0.5 ) {
 		var prim = new h3d.prim.Sphere( sphereSize, 4, 2 );
 		prim.addNormals();
 		prim.addUVs();

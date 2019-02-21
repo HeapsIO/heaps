@@ -8,6 +8,7 @@ import h3d.mat.Data;
 class Pass implements hxd.impl.Serializable {
 
 	@:s public var name(default, null) : String;
+	var flags : Int;
 	var passId : Int;
 	@:s var bits : Int = 0;
 	@:s var parentPass : Pass;
@@ -15,18 +16,20 @@ class Pass implements hxd.impl.Serializable {
 	var shaders : hxsl.ShaderList;
 	@:s var nextPass : Pass;
 
-	@:s public var enableLights : Bool;
+	@:bits(flags) public var enableLights : Bool;
 	/**
 		Inform the pass system that the parameters will be modified in object draw() command,
 		so they will be manually uploaded by calling RenderContext.uploadParams.
 	**/
-	@:s public var dynamicParameters : Bool;
+	@:bits(flags) public var dynamicParameters : Bool;
 
 	/**
 		Mark the pass as static, this will allow some renderers or shadows to filter it
 		when rendering static/dynamic parts.
 	**/
-	@:s public var isStatic : Bool;
+	@:bits(flags) public var isStatic : Bool;
+
+	@:bits(flags) var batchMode : Bool; // for MeshBatch
 
 	@:bits(bits) public var culling : Face;
 	@:bits(bits) public var depthWrite : Bool;
@@ -283,7 +286,7 @@ class Pass implements hxd.impl.Serializable {
 			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
 		}
 	}
-	
+
 	#if hxbit
 
 	public function customSerialize( ctx : hxbit.Serializer ) {

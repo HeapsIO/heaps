@@ -112,7 +112,7 @@ class PadUI extends h2d.Object {
 
 		buttons = new Map();
 
-		var x = 0;
+		var x = 0.;
 		for( n in ["A","B","X","Y","LB","RB","LT","RT","back","start","dpadUp","dpadDown","dpadLeft","dpadRight"] ){
 			var t = new h2d.Text(fnt,this);
 			x += 20;
@@ -120,7 +120,7 @@ class PadUI extends h2d.Object {
 			t.y = 140;
 			t.text = n;
 			t.alpha = 0.1;
-			var bg = new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFF, t.textWidth, 8), t);
+			var bg = new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFF, hxd.Math.ceil(t.textWidth), 8), t);
 			bg.y = 10;
 			bg.alpha = 0;
 			buttons.set(n, { tf : t, bg : bg });

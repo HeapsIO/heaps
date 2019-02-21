@@ -17,13 +17,13 @@ class TextInput extends Text {
 
 	var interactive : h2d.Interactive;
 	var cursorText : String;
-	var cursorX : Int;
+	var cursorX : Float;
 	var cursorXIndex : Int;
 	var cursorBlink = 0.;
 	var cursorScroll = 0;
-	var scrollX = 0;
-	var selectionPos : Int;
-	var selectionSize : Int;
+	var scrollX = 0.;
+	var selectionPos : Float;
+	var selectionSize : Float;
 	var undo : Array<TextHistoryElement> = [];
 	var redo : Array<TextHistoryElement> = [];
 	var lastChange = 0.;
@@ -255,7 +255,7 @@ class TextInput extends Text {
 		super.set_font(f);
 		cursorTile = h2d.Tile.fromColor(0xFFFFFF, 1, font.size);
 		cursorTile.dy = 2;
-		selectionTile = h2d.Tile.fromColor(0x3399FF, 0, font.lineHeight);
+		selectionTile = h2d.Tile.fromColor(0x3399FF, 0, hxd.Math.ceil(font.lineHeight));
 		return f;
 	}
 

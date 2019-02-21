@@ -4,6 +4,10 @@ class Unknown extends Prefab {
 
 	var data : Dynamic;
 
+	public function getPrefabType() {
+		return data.type;
+	}
+
 	override function load(v:Dynamic) {
 		this.data = v;
 	}

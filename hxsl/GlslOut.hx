@@ -214,6 +214,10 @@ class GlslOut {
 		switch( g ) {
 		case Mat3x4:
 			decl(MAT34);
+			if( args.length == 1 ) {
+				decl("_mat3x4 mat_to_34( mat4 m ) { return _mat3x4(m[0],m[1],m[2]); }");
+				return "mat_to_34";
+			}
 		case DFdx, DFdy, Fwidth:
 			decl("#extension GL_OES_standard_derivatives:enable");
 		case Pack:
@@ -570,7 +574,7 @@ class GlslOut {
 		outIndex = 0;
 		uniformBuffer = 0;
 		outIndexes = new Map();
-		for( v in s.vars ) 
+		for( v in s.vars )
 			initVar(v);
 		add("\n");
 

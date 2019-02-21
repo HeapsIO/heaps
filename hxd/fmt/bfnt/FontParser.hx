@@ -117,7 +117,7 @@ class FontParser {
 			var lines = bytes.toString().split("\n");
 			
 			// BMFont pads values with spaces, littera doesn't.
-			var reg = ~/ *?([0-9a-zA-Z]+)=("[^"]+"|.+?)(?: |$)/;
+			var reg = ~/ *?([0-9a-zA-Z]+)=("[^"]+"|.+?)(?:[ \r]|$)/;
 			var idx : Int;
 			
 			inline function next() : Void {
@@ -260,10 +260,10 @@ class FontParser {
 		font.tile = tile;
 
 		if ( font.baseLine == 0 ) {
-			var padding = 0;
+			var padding : Float = 0;
 			var space = glyphs.get(" ".code);
 			if( space != null )
-				padding = (space.t.height >> 1);
+				padding = (space.t.height * .5);
 
 			var a = glyphs.get("A".code);
 			if( a == null )

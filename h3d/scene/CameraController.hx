@@ -76,6 +76,8 @@ class CameraController extends h3d.scene.Object {
 		targetPos.set(r, Math.atan2(pos.y, pos.x), Math.acos(pos.z / r));
 		targetPos.x *= targetOffset.w;
 
+		curOffset.w = scene.camera.fovY;
+
 		if( !animate )
 			toTarget();
 		else

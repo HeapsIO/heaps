@@ -19,7 +19,12 @@ class EffectDriver<T> {
 	public function unbind  (e : T, source : SourceHandle) : Void {};
 }
 
+enum DriverFeature {
+	MasterVolume;
+}
+
 interface Driver {
+	public function hasFeature           (d : DriverFeature) : Bool;
 	public function setMasterVolume      (value : Float) : Void;
 	public function setListenerParams    (position : h3d.Vector, direction : h3d.Vector, up : h3d.Vector, ?velocity : h3d.Vector) : Void;
 

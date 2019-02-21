@@ -1,5 +1,4 @@
 package h3d.scene;
-import h3d.pass.Object in ObjectPass;
 
 private class SharedGlobal {
 	public var gid : Int;
@@ -14,26 +13,29 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	public var camera : h3d.Camera;
 	public var scene : Scene;
-	public var drawPass : ObjectPass;
+	public var drawPass : h3d.pass.PassObject;
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
 
 	var sharedGlobals : Array<SharedGlobal>;
 	public var lightSystem : h3d.scene.LightSystem;
-	public var uploadParams : Void -> Void;
 	public var extraShaders : hxsl.ShaderList;
 	public var visibleFlag : Bool;
+	public var shaderBuffers : h3d.shader.Buffers;
 
-	var pool : ObjectPass;
-	var firstAlloc : ObjectPass;
+	var allocPool : h3d.pass.PassObject;
+	var allocFirst : h3d.pass.PassObject;
 	var cachedShaderList : Array<hxsl.ShaderList>;
+	var cachedPassObjects : Array<Renderer.PassObjects>;
 	var cachedPos : Int;
-	var passes : ObjectPass;
+	var passes : h3d.pass.PassObject;
 	var lights : Light;
+	var currentManager : h3d.pass.ShaderManager;
 
 	public function new() {
 		super();
 		cachedShaderList = [];
+		cachedPassObjects = [];
 	}
 
 	@:access(h3d.mat.Pass)
@@ -51,7 +53,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		drawPass = null;
 		passes = null;
 		lights = null;
-		uploadParams = null;
 		cachedPos = 0;
 		visibleFlag = true;
 		time += elapsedTime;
@@ -84,14 +85,14 @@ class RenderContext extends h3d.impl.RenderContext {
 		sharedGlobals.push(new SharedGlobal(gid, value));
 	}
 
-	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) {
-		var o = pool;
+	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) @:privateAccess {
+		var o = allocPool;
 		if( o == null ) {
-			o = new ObjectPass();
-			o.nextAlloc = firstAlloc;
-			firstAlloc = o;
+			o = new h3d.pass.PassObject();
+			o.nextAlloc = allocFirst;
+			allocFirst = o;
 		} else
-			pool = o.nextAlloc;
+			allocPool = o.nextAlloc;
 		o.pass = pass;
 		o.obj = obj;
 		o.next = passes;
@@ -115,12 +116,17 @@ class RenderContext extends h3d.impl.RenderContext {
 		lights = l;
 	}
 
+	public function uploadParams() {
+		currentManager.fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
+		engine.uploadShaderBuffers(shaderBuffers, Params);
+		engine.uploadShaderBuffers(shaderBuffers, Textures);
+	}
+
 	public function done() {
 		drawPass = null;
-		uploadParams = null;
 		// move passes to pool, and erase data
-		var p = firstAlloc;
-		while( p != null ) {
+		var p = allocFirst;
+		while( p != null && p != allocPool ) {
 			p.obj = null;
 			p.pass = null;
 			p.shader = null;
@@ -128,9 +134,12 @@ class RenderContext extends h3d.impl.RenderContext {
 			p.next = null;
 			p.index = 0;
 			p.texture = 0;
-			p = p.nextAlloc;
+			p = @:privateAccess p.nextAlloc;
 		}
-		pool = firstAlloc;
+		// one pooled object was not used this frame, let's gc unused one by one
+		if( allocPool != null )
+			allocFirst = @:privateAccess allocFirst.nextAlloc;
+		allocPool = allocFirst;
 		for( c in cachedShaderList ) {
 			c.s = null;
 			c.next = null;

@@ -117,7 +117,7 @@ class Image extends Resource {
 			#elseif hl
 			if( fmt == null ) fmt = BGRA;
 			pixels = decodePNG(bytes, inf.width, inf.height, fmt, flipY);
-			if( pixels == null ) throw "Failed to decode JPG " + entry.path;
+			if( pixels == null ) throw "Failed to decode PNG " + entry.path;
 			#else
 			var png = new format.png.Reader(new haxe.io.BytesInput(bytes));
 			png.checkCRC = false;

@@ -30,6 +30,11 @@ class ComputeSH extends h3d.shader.ScreenShader {
 		var coefL21Final : Vec3;
 		var coefL22Final : Vec3;
 
+		function vertex(){
+			var position = vec3(input.position.x, input.position.y * flipY, 0);
+			output.position = vec4(position, 1.0);
+		}
+
 		function evalSH(dir:Vec3) {
 
 			if (ORDER >= 1){

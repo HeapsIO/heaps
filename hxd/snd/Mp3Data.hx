@@ -1,5 +1,11 @@
 package hxd.snd;
 
+#if hl
+
+private typedef Mp3File = hl.Abstract<"fmt_mp3">;
+
+#end
+
 class Mp3Data extends Data {
 
 	#if flash
@@ -7,6 +13,15 @@ class Mp3Data extends Data {
 	#elseif js
 	var buffer : haxe.io.Bytes;
 	var onEnd : Void -> Void;
+	#elseif hl
+	var bytes : haxe.io.Bytes;
+	var frameOffsets:Array<Int>;
+	var frameSamples:Array<Int>; // Sample offset of a frame.
+	var reader : Mp3File;
+	var frame : haxe.io.Bytes;
+	var currentFrame : Int;
+	var currentSample : Int;
+	var frameEnd : Int;
 	#end
 
 	public function new( bytes : haxe.io.Bytes ) {
@@ -55,6 +70,36 @@ class Mp3Data extends Data {
 		var decodedRate = Std.int(ctx.sampleRate);
 		samples = Math.ceil(samples * decodedRate / samplingRate);
 		samplingRate = decodedRate;
+
+		#elseif hl
+
+		this.bytes = bytes;
+		// Re-reading MP3 to find offsets to each frame in file for seeking.
+		frameOffsets = new Array();
+		frameSamples = new Array();
+		var byteInput = new haxe.io.BytesInput(bytes);
+		var reader = new format.mp3.Reader(byteInput);
+		var ft;
+		var totalSamples : Int = 0;
+		while ( (ft = reader.seekFrame()) == FT_MP3 ) {
+			var header = reader.readFrameHeader();
+			if ( header != null && !format.mp3.Tools.isInvalidFrameHeader(header) ) {
+				// TODO: Layer I support. Layer I frames contain only 384 frames.
+				var len = format.mp3.Tools.getSampleDataSizeHdr(header);
+				if ( byteInput.length - byteInput.position >= len ) {
+					frameOffsets.push(byteInput.position - 4);
+					frameSamples.push(totalSamples);
+					totalSamples += format.mp3.Tools.getSampleCountHdr(header);
+					byteInput.position += len;
+				}
+			}
+		}
+
+		this.frame = haxe.io.Bytes.alloc(1152*channels*4); // 2 channels, F32.
+		this.currentSample = -1;
+		this.frameEnd = -1;
+		this.currentFrame = -1;
+		this.reader = mp3_open(bytes, bytes.length);
 
 		#end
 	}
@@ -119,9 +164,55 @@ class Mp3Data extends Data {
 		} else {
 			out.blit(outPos, buffer, sampleStart * 4 * channels, sampleCount * 4 * channels);
 		}
+		#elseif hl
+		if ( currentSample != sampleStart ) {
+			var i = frameSamples.length - 1;
+			while ( i >= 0 ) {
+				if ( frameSamples[i] <= sampleStart ) {
+					if ( this.currentFrame != i ) {
+						seekFrame(i);
+						this.currentSample = sampleStart;
+					}
+					break;
+				}
+				i--;
+			}
+		}
+		var targetSample = sampleStart + sampleCount;
+		while (frameEnd <= targetSample) {
+			var frameStart = frameSamples[currentFrame];
+			var offset = (frameEnd - currentSample) * 4 * channels;
+			out.blit(outPos, frame, (currentSample - frameStart) * 4 * channels, offset);
+			currentSample = frameEnd;
+			outPos += offset;
+			seekFrame(currentFrame + 1);
+		}
+		if ( currentSample < targetSample ) {
+			var frameStart = frameSamples[currentFrame];
+			out.blit(outPos, frame, (currentSample - frameStart) * 4 * channels, (targetSample - currentSample) * channels * 4);
+			currentSample = targetSample;
+		}
 		#else
 		throw "MP3 decoding is not available for this platform";
 		#end
 	}
+
+	#if hl
+
+	function seekFrame(to:Int) {
+		currentFrame = to;
+		var samples : Int = mp3_decode_frame(reader, bytes, bytes.length, frameOffsets[to], frame, frame.length, 0);
+		frameEnd = frameSamples[to] + samples;
+	}
+	
+	@:hlNative("fmt", "mp3_open") static function mp3_open( bytes : hl.Bytes, size : Int ) : Mp3File {
+		return null;
+	}
+
+	@:hlNative("fmt", "mp3_decode_frame") static function mp3_decode_frame( o : Mp3File, bytes : hl.Bytes, size : Int, position : Int, output : hl.Bytes, outputSize : Int, offset : Int ) : Int {
+		return 0;
+	}
+
+	#end
 
 }

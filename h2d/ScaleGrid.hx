@@ -6,8 +6,8 @@ class ScaleGrid extends h2d.TileGroup {
 	public var borderWidth(default,set) : Int;
 	public var borderHeight(default,set) : Int;
 
-	public var width(default,set) : Int;
-	public var height(default,set) : Int;
+	public var width(default,set) : Float;
+	public var height(default,set) : Float;
 
 	public var tileBorders(default, set) : Bool;
 

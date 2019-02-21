@@ -46,6 +46,8 @@ class Channel extends ChannelBase {
 	function set_position(v : Float) {
 		lastStamp = haxe.Timer.stamp();
 		positionChanged = true;
+		if (v > duration) v = duration;
+		else if (v < 0) v = 0;
 		return position = v;
 	}
 
