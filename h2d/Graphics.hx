@@ -26,6 +26,8 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	var index : hxd.IndexBuffer;
 
 	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes }>;
+	var bufferDirty : Bool;
+	var indexDirty : Bool;
 
 	public function new() {
 		buffers = [];
@@ -33,6 +35,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	public inline function addIndex(i) {
 		index.push(i);
+		indexDirty = true;
 	}
 
 	public inline function add( x : Float, y : Float, u : Float, v : Float, r : Float, g : Float, b : Float, a : Float ) {
@@ -44,6 +47,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		tmp.push(g);
 		tmp.push(b);
 		tmp.push(a);
+		bufferDirty = true;
 	}
 
 	public function next() {
@@ -65,6 +69,8 @@ private class GraphicsContent extends h3d.prim.Primitive {
 			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = h3d.Buffer.ofFloats(b.buf, 8, [RawFormat]);
 			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = h3d.Indexes.alloc(b.idx);
 		}
+		bufferDirty = false;
+		indexDirty = false;
 	}
 
 	override function render( engine : h3d.Engine ) {
@@ -76,7 +82,20 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	}
 
 	public inline function flush() {
-		if( buffer == null || buffer.isDisposed() ) alloc(h3d.Engine.getCurrent());
+		if( buffer == null || buffer.isDisposed() ) {
+			alloc(h3d.Engine.getCurrent());
+		} else {
+			if ( bufferDirty ) {
+				buffer.dispose();
+				buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat]);
+				bufferDirty = false;
+			}
+			if ( indexDirty ) {
+				indexes.dispose();
+				indexes = h3d.Indexes.alloc(index);
+				indexDirty = false;
+			}
+		}
 	}
 
 	override function dispose() {
