@@ -62,7 +62,7 @@ class Dropdown extends Flow {
 		borderHeight = borderWidth = 1;
 
 		dropdownList = new Flow(this);
-		dropdownList.isVertical = true;
+		dropdownList.layout = Vertical;
 		dropdownList.borderHeight = dropdownList.borderWidth = 1;
 		dropdownList.paddingLeft = paddingLeft;
 		dropdownList.visible = false;
