@@ -15,6 +15,7 @@ class HtmlText extends Text {
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
 	var newLine : Bool;
+	var doc:Xml;
 
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
@@ -52,24 +53,18 @@ class HtmlText extends Text {
 			glyphs.clear();
 			for( e in elements ) e.remove();
 			elements = [];
+			doc = null;
 		}
 		glyphs.setDefaultColor(textColor);
 
 		xPos = 0;
 		xMin = 0;
+		if ( doc == null ) doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
 
-		var align = handleAlign ? textAlign : Left;
-		switch( align ) {
-			case Center, Right, MultilineCenter, MultilineRight:
-				lines = [];
-				initGlyphs(text, false, false, lines);
-				var max = if( align == MultilineCenter || align == MultilineRight ) calcWidth else realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
-				var k = align == Center || align == MultilineCenter ? 1 : 0;
-				for( i in 0...lines.length )
-					lines[i] = (max - lines[i]) >> k;
-				xPos = lines.shift();
-				xMin = xPos;
-			default:
+		if ( handleAlign ) {
+			// Calculate line sizes.
+			lines = [];
+			initGlyphs(text, false, false, lines);
 		}
 
 		yPos = 0;
@@ -77,18 +72,17 @@ class HtmlText extends Text {
 		sizePos = 0;
 		calcYMin = 0;
 
-		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
-
 		var sizes = [];
 		prevChar = -1;
 		newLine = true;
 		for( e in doc )
-			buildSizes(e, sizes);
+			buildSizes(e, sizes, font);
 
 		prevChar = -1;
 		newLine = true;
+		if ( handleAlign ) nextLine(textAlign, lines.shift());
 		for( e in doc )
-			addNode(e, font, rebuild, handleAlign, sizes, lines);
+			addNode(e, font, textAlign, rebuild, handleAlign, sizes, lines);
 
 		if (!handleAlign && !rebuild && lines != null) lines.push(xPos);
 		if( xPos > xMax ) xMax = xPos;
@@ -101,17 +95,14 @@ class HtmlText extends Text {
 		calcDone = true;
 	}
 
-	function buildSizes( e : Xml, sizes : Array<Int> ) {
+	function buildSizes( e : Xml, sizes : Array<Int>, font : Font ) {
 		if( e.nodeType == Xml.Element ) {
-			var len = 0, prevFont = font;
+			var len = 0;
 			var nodeName = e.nodeName.toLowerCase();
 			switch( nodeName ) {
 			case "p":
-				if ( !newLine )
-				{
-					len = -1; // break
-					newLine = true;
-				}
+				len = -1;
+				newLine = true;
 			case "br":
 				len = -1; // break
 				newLine = true;
@@ -131,14 +122,15 @@ class HtmlText extends Text {
 			}
 			sizes.push(len);
 			for( child in e )
-				buildSizes(child, sizes);
+				buildSizes(child, sizes, font);
 			switch( nodeName ) {
 			case "p":
-				sizes.push( -1);// break
-				newLine = true;
+				if ( !newLine ) {
+					sizes.push( -1);// break
+					newLine = true;
+				}
 			default:
 			}
-			font = prevFont;
 		} else {
 			newLine = false;
 			var text = htmlToText(e.nodeValue);
@@ -166,6 +158,20 @@ class HtmlText extends Text {
 		return t;
 	}
 
+	inline function nextLine( align : Align, size : Int )
+	{
+		switch( align ) {
+			case Left:
+				xPos = 0;
+			case Right, Center, MultilineCenter, MultilineRight:
+				var max = if( align == MultilineCenter || align == MultilineRight ) calcWidth else realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
+				var k = align == Center || align == MultilineCenter ? 1 : 0;
+				xMin = xPos;
+				xPos = (max - size) >> k;
+				if( xPos < xMin ) xMin = xPos;
+		}
+	}
+
 	function remainingSize( sizes : Array<Int> ) {
 		var size = 0;
 		for( i in sizePos...sizes.length ) {
@@ -179,22 +185,19 @@ class HtmlText extends Text {
 		return size;
 	}
 
-	function addNode( e : Xml, font : Font, rebuild : Bool, handleAlign:Bool, sizes : Array<Int>, ?lines : Array<Int> = null ) {
+	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, handleAlign:Bool, sizes : Array<Int>, ?lines : Array<Int> = null ) {
 		sizePos++;
 		var calcLines = !handleAlign && !rebuild && lines != null;
-		var align = handleAlign ? textAlign : Left;
 		if( e.nodeType == Xml.Element ) {
 			var prevColor = null, prevGlyphs = null;
 			function makeLineBreak()
 			{
 				if( xPos > xMax ) xMax = xPos;
 				if( calcLines ) lines.push(xPos);
-				switch( align ) {
-					case Left:
-						xPos = 0;
-					case Right, Center, MultilineCenter, MultilineRight:
-						xPos = lines.shift();
-						if( xPos < xMin ) xMin = xPos;
+				if ( handleAlign ) {
+					nextLine(align, lines.shift());
+				} else {
+					xPos = 0;
 				}
 				yPos += font.lineHeight + lineSpacing;
 				prevChar = -1;
@@ -219,35 +222,47 @@ class HtmlText extends Text {
 						if( prevGlyphs == null ) prevGlyphs = glyphs;
 						var prev = glyphs;
 						glyphs = new TileGroup(font == null ? null : font.tile, this);
+						if ( font != null ) {
+							switch ( font.type ) {
+								case SignedDistanceField(channel, alphaCutoff, smoothing):
+									var shader = new h3d.shader.SignedDistanceField();
+									shader.channel = channel;
+									shader.alphaCutoff = alphaCutoff;
+									shader.smoothing = smoothing;
+									glyphs.addShader(shader);
+									glyphs.smooth = true;
+								default:
+							}
+						}
 						@:privateAccess glyphs.curColor.load(prev.curColor);
 						elements.push(glyphs);
 					default:
 					}
 				}
 			case "p":
-			/*
-				??need lines != null even if Left==textAlign
+				if ( handleAlign ) {
 					for( a in e.attributes() ) {
 						switch( a.toLowerCase() ) {
-						case "align":
-							var v = e.get(a);
-							if ( v != null )
-							switch( v.toLowerCase() ) {
-							case "left":
-								new_align = Left;
-							case "center":
-								new_align = Center;
-							case "right":
-								new_align = Right;
-							//?justify
-							}
-						default:
+							case "align":
+								var v = e.get(a);
+								if ( v != null )
+								switch( v.toLowerCase() ) {
+								case "left":
+									align = Left;
+								case "center":
+									align = Center;
+								case "right":
+									align = Right;
+								//?justify
+								}
+							default:
 						}
 					}
 				}
-			*/
 				if ( !newLine )
 					makeLineBreak();
+				else
+					nextLine(align, lines[0]);
 			case "br":
 				makeLineBreak();
 			case "img":
@@ -272,10 +287,13 @@ class HtmlText extends Text {
 			default:
 			}
 			for( child in e )
-				addNode(child, font, rebuild, handleAlign, sizes, lines);
+				addNode(child, font, align, rebuild, handleAlign, sizes, lines);
 			switch( nodeName ) {
 			case "p":
-				makeLineBreak();
+				if ( !newLine ) {
+					makeLineBreak();
+					sizePos++;
+				}
 			default:
 			}
 			if( prevGlyphs != null )
@@ -291,13 +309,7 @@ class HtmlText extends Text {
 				if( cc == "\n".code ) {
 					if( xPos > xMax ) xMax = xPos;
 					if( calcLines ) lines.push(xPos);
-					switch( align ) {
-						case Left:
-							xPos = 0;
-						case Right, Center, MultilineCenter, MultilineRight:
-							xPos = lines.shift();
-							if( xPos < xMin ) xMin = xPos;
-					}
+					nextLine(align, lines.shift());
 					yPos += font.lineHeight + lineSpacing;
 					prevChar = -1;
 					continue;
