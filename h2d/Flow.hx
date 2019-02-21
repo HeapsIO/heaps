@@ -226,7 +226,7 @@ class Flow extends Object {
 		if(layout == v)
 			return v;
 		needReflow = true;
-		return layout = v;
+		return layout = v == null ? Horizontal : v;
 	}
 
 	function get_isVertical() {
@@ -943,7 +943,7 @@ class Flow extends Object {
 				case Right:
 					xmax - p.calculatedWidth;
 				case Middle:
-					xmin + ((xmax - xmin) - p.calculatedWidth) * 0.5;
+					xmin + Std.int(((xmax - xmin) - p.calculatedWidth) * 0.5);
 				default:
 					xmin;
 				}
@@ -952,7 +952,7 @@ class Flow extends Object {
 				case Bottom:
 					ymax - p.calculatedHeight;
 				case Middle:
-					ymin + ((ymax - ymin) - p.calculatedHeight) * 0.5;
+					ymin + Std.int(((ymax - ymin) - p.calculatedHeight) * 0.5);
 				default:
 					ymin;
 				}
