@@ -56,10 +56,6 @@ class Quads extends Primitive {
 		}
 	}
 
-	public function addNormals() {
-		throw "Not implemented";
-	}
-
 	override function alloc( engine : Engine ) {
 		dispose();
 		var v = new hxd.FloatBuffer();
