@@ -1041,11 +1041,11 @@ class Checker {
 		case OpAssign, OpAssignOp(_): throw "assert";
 		case OpMult, OpAdd, OpSub, OpDiv, OpMod:
 			switch( [op, e1.t, e2.t] ) {
-			case [OpMult,TVec(4,VFloat), TMat4], [OpMult,TMat4, TVec(4,VFloat)]:
+			case [OpMult,TVec(4,VFloat), TMat4]:
 				vec4;
 			case [OpMult,TVec(3,VFloat), TMat3x4]:
 				vec3;
-			case [OpMult,TMat3, TVec(3,VFloat)], [OpMult, TVec(3,VFloat), TMat3]:
+			case [OpMult, TVec(3,VFloat), TMat3]:
 				vec3;
 			case [_, TInt, TInt]: TInt;
 			case [_, TFloat, TFloat]: TFloat;
