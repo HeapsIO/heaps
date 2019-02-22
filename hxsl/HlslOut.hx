@@ -251,13 +251,13 @@ class HlslOut {
 			add(")");
 		case TCall(e = { e : TGlobal(g) }, args):
 			switch( [g,args.length] ) {
-			case [Vec2, 1]:
+			case [Vec2, 1] if( args[0].t == TFloat ):
 				decl("float2 vec2( float v ) { return float2(v,v); }");
 				add("vec2");
-			case [Vec3, 1]:
+			case [Vec3, 1] if( args[0].t == TFloat ):
 				decl("float3 vec3( float v ) { return float3(v,v,v); }");
 				add("vec3");
-			case [Vec4, 1]:
+			case [Vec4, 1] if( args[0].t == TFloat ):
 				decl("float4 vec4( float v ) { return float4(v,v,v,v); }");
 				add("vec4");
 			default:
