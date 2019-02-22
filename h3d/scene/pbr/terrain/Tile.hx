@@ -15,6 +15,7 @@ class Tile extends h3d.scene.Mesh {
 	public var grid (default, null) : h3d.prim.Grid;
 	public var needAlloc = false;
 	public var needNewPixelCapture = false;
+	public var insideFrustrum = false;
 	var heightmapPixels : hxd.Pixels.PixelsFloat;
 	var shader : h3d.shader.pbr.Terrain;
 
@@ -508,8 +509,7 @@ class Tile extends h3d.scene.Mesh {
 
 	var cachedBounds : h3d.col.Bounds;
 	var cachedHeightBound : Bool = false;
-	override function emit( ctx:RenderContext ){
-		if( !isReady() ) return;
+	function computeBounds() {
 		if( cachedBounds == null ) {
 			cachedBounds = getBounds();
 			cachedBounds.zMax = 0;
@@ -523,9 +523,20 @@ class Tile extends h3d.scene.Mesh {
 					cachedBounds.zMax = cachedBounds.zMax < h ? h : cachedBounds.zMax;
 				}
 			}
+			var absPos = getAbsPos();
+			cachedBounds.zMax += absPos.tz;
+			cachedBounds.zMin += absPos.tz;
 			cachedHeightBound = true;
 		}
-		if( ctx.camera.frustum.hasBounds(cachedBounds) )
+	}
+
+	public dynamic function beforeEmit() {};
+	override function emit( ctx:RenderContext ){
+		if( !isReady() ) return;
+		computeBounds();
+		insideFrustrum = ctx.camera.frustum.hasBounds(cachedBounds);
+		beforeEmit();
+		if( insideFrustrum )
 			super.emit(ctx);
 	}
 

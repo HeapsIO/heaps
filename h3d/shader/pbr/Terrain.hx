@@ -50,8 +50,8 @@ class Terrain extends hxsl.Shader {
 			terrainUV += 0.5 / heightMapSize;
 			transformedPosition += (vec3(0,0, textureLod(heightMap, terrainUV, 0).r) * global.modelView.mat3());
 			TBN = mat3(normalize(cross(transformedNormal, vec3(0,1,0))), normalize(cross(transformedNormal,vec3(-1,0,0))), transformedNormal);
-			tangentViewPos = TBN * camera.position;
-			tangentFragPos = TBN * transformedPosition;
+			tangentViewPos = camera.position * TBN;
+			tangentFragPos = transformedPosition * TBN;
 		}
 
 		function getWeight( i : Vec3,  uv : Vec2 ) : Vec3 {
@@ -88,7 +88,7 @@ class Terrain extends hxsl.Shader {
 				while( curLayerDepth < curDepth ) {
 					curUV += delta;
 					prevDepth = curDepth;
-					i = surfaceIndexMap.get(curUV).rgb * 255;
+					i = surfaceIndexMap.getLod(curUV, 0).rgb * 255;
 					w = getWeight(i, curUV);
 					depth = getDepth(i, curUV);
 					curDepth = depth.dot(w);
@@ -109,7 +109,7 @@ class Terrain extends hxsl.Shader {
 			var tilling = surfaceParams[id].x;
 			var worldUV = (uv + tileIndex) * tilling + offset;
 			var res = vec2( worldUV.x * cos(angle) - worldUV.y * sin(angle) , worldUV.y * cos(angle) + worldUV.x * sin(angle));
-			var surfaceUV = vec3(res, i);
+			var surfaceUV = vec3(res % 1, i);
 			return surfaceUV;
 		}
 
