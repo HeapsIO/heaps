@@ -64,13 +64,14 @@ class Terrain extends hxsl.Shader {
 
 		function getDepth( i : Vec3,  uv : Vec2 ) : Vec3 {
 			var depth = vec3(0);
-			if( w.x > 0 ) depth.x = pbrTextures.getLod(getsurfaceUV(i.x, uv), 0).a - secondSurfaceParams[i.x].x;
-			if( w.y > 0 ) depth.y = pbrTextures.getLod(getsurfaceUV(i.y, uv), 0).a - secondSurfaceParams[i.y].x;
-			if( w.z > 0 ) depth.z = pbrTextures.getLod(getsurfaceUV(i.z, uv), 0).a - secondSurfaceParams[i.z].x;
+			if( w.x > 0 ) depth.x = pbrTextures.getLod(getsurfaceUV(i.x, uv), 0).a;
+			if( w.y > 0 ) depth.y = pbrTextures.getLod(getsurfaceUV(i.y, uv), 0).a;
+			if( w.z > 0 ) depth.z = pbrTextures.getLod(getsurfaceUV(i.z, uv), 0).a;
 			return 1 - depth;
 		}
 
 		var w : Vec3;
+		var i : Vec3;
 		function getPOMUV( i : Vec3, uv : Vec2 ) : Vec2 {
 			if( !PARALLAX )
 				return uv;
@@ -87,6 +88,8 @@ class Terrain extends hxsl.Shader {
 				while( curLayerDepth < curDepth ) {
 					curUV += delta;
 					prevDepth = curDepth;
+					i = surfaceIndexMap.get(curUV).rgb * 255;
+					w = getWeight(i, curUV);
 					depth = getDepth(i, curUV);
 					curDepth = depth.dot(w);
 					curLayerDepth += layerDepth;
@@ -133,47 +136,55 @@ class Terrain extends hxsl.Shader {
 				occlusionValue = 1;
 			}
 			else {
-				var i = surfaceIndexMap.get(calculatedUV).rgb * 255;
+				i = surfaceIndexMap.get(calculatedUV).rgb * 255;
 				w = getWeight(i, calculatedUV);
 				var pomUV = getPOMUV(i, calculatedUV);
-				if( PARALLAX ) w = getWeight(i, pomUV);
+				if( PARALLAX ) {
+					i = surfaceIndexMap.get(pomUV).rgb * 255;
+					w = getWeight(i, pomUV);
+				}
 				var h = vec3(0);
 				var surfaceUV1 = getsurfaceUV(i.x, pomUV);
 				var surfaceUV2 = getsurfaceUV(i.y, pomUV);
 				var surfaceUV3 = getsurfaceUV(i.z, pomUV);
-				var pbr1 = vec3(0), pbr2 = vec3(0), pbr3 = vec3(0);
-				var pbr1 = pbrTextures.get(surfaceUV1).rgba;
-				var pbr2 = pbrTextures.get(surfaceUV2).rgba;
-				var pbr3 = pbrTextures.get(surfaceUV3).rgba;
+				var pbr1 = vec4(0), pbr2 = vec4(0), pbr3 = vec4(0);
+				if( w.x > 0 ) pbr1 = pbrTextures.get(surfaceUV1).rgba;
+				if( w.y > 0 ) pbr2 = pbrTextures.get(surfaceUV2).rgba;
+				if( w.z > 0 ) pbr3 = pbrTextures.get(surfaceUV3).rgba;
 
 				// Height Blend
-				var h = vec3(pbr1.a - secondSurfaceParams[i.x].x, pbr2.a - secondSurfaceParams[i.y].x, pbr3.a - secondSurfaceParams[i.z].x );
-				w = mix(w, vec3(w.x*h.x, w.y*h.y, w.z*h.z), heightBlendStrength);
+				var h = vec3( 	secondSurfaceParams[i.x].x + pbr1.a * (secondSurfaceParams[i.x].y - secondSurfaceParams[i.x].x),
+								secondSurfaceParams[i.y].x + pbr2.a * (secondSurfaceParams[i.y].y - secondSurfaceParams[i.y].x),
+								secondSurfaceParams[i.z].x + pbr3.a * (secondSurfaceParams[i.z].y - secondSurfaceParams[i.z].x));
+				w = mix(w, vec3(w.x * h.x, w.y * h.y, w.z * h.z), heightBlendStrength);
 
 				// Sharpness
 				var m = max(w.x, max(w.y, w.z));
 				var mw = ceil(w - m + 0.01);
-				w = mix( w, mw, blendSharpness);
+				w = mix(w, mw, blendSharpness);
 
 				// Blend
 				var albedo = vec3(0);
-				var normal = vec4(0,0,0,0);
+				var normal = vec4(0);
 				var pbr = vec4(0);
 				if( w.x > 0 ) {
 					albedo += albedoTextures.get(surfaceUV1).rgb * w.x;
 					normal += normalTextures.get(surfaceUV1).rgba * w.x;
+					pbr += pbr1 * w.x;
 				}
 				if( w.y > 0 ) {
 					albedo += albedoTextures.get(surfaceUV2).rgb * w.y;
 					normal += normalTextures.get(surfaceUV2).rgba * w.y;
+					pbr += pbr2 * w.y;
 				}
 				if( w.z > 0 ) {
 					albedo += albedoTextures.get(surfaceUV3).rgb * w.z;
 					normal += normalTextures.get(surfaceUV3).rgba * w.z;
+					pbr += pbr3 * w.z;
 				}
 				var wSum = w.x + w.y + w.z;
 				albedo /= wSum;
-				pbr = (pbr1 * w.x + pbr2 * w.y + pbr3 * w.z) / wSum;
+				pbr /= wSum;
 				normal /= wSum;
 
 				// Output

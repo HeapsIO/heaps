@@ -552,7 +552,7 @@ class Tile extends h3d.scene.Mesh {
 
 			shader.surfaceParams = getTerrain().surfaceArray.params;
 			shader.secondSurfaceParams = getTerrain().surfaceArray.secondParams;
-			shader.tileIndex.set(tileX, tileY); // = new h3d.Vector(tileX, tileY);
+			shader.tileIndex.set(tileX, tileY);
 			shader.parallaxAmount = getTerrain().parallaxAmount;
 			shader.minStep = getTerrain().parallaxMinStep;
 			shader.maxStep = getTerrain().parallaxMaxStep;
