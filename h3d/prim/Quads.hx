@@ -31,6 +31,16 @@ class Quads extends Primitive {
 		return pts.length;
 	}
 
+	public function transform( m : h3d.Matrix ) {
+		for( p in pts )
+			p.transform(m);
+		if( normals != null )
+			for( n in normals ) {
+				n.transform3x3(m);
+				n.normalize();
+			}
+	}
+
 	public function scale( x : Float, y : Float, z : Float ) {
 		for( p in pts ) {
 			p.x *= x;
