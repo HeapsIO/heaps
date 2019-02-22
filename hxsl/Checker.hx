@@ -27,10 +27,18 @@ class Checker {
 	var globals : Map<String,{ g : TGlobal, t : Type }>;
 	var curFun : TFunction;
 	var inLoop : Bool;
+	var inWhile : Bool;
 	public var inits : Array<{ v : TVar, e : TExpr }>;
 
 	public function new() {
-		globals = new Map();
+		globals = initGlobals();
+	}
+
+	static var GLOBALS = null;
+	static function initGlobals() {
+		var globals = GLOBALS;
+		if( GLOBALS != null ) return GLOBALS;
+		var globals = new Map();
 		var genType = [TFloat, vec2, vec3, vec4];
 		var baseType = [TFloat, TBool, TInt];
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
@@ -148,6 +156,8 @@ class Checker {
 		globals.remove("lReflect");
 		globals.remove("toInt");
 		globals.remove("toFloat");
+		GLOBALS = globals;
+		return globals;
 	}
 
 	function error( msg : String, pos : Position ) : Dynamic {
@@ -163,6 +173,7 @@ class Checker {
 		vars = new Map();
 		inits = [];
 		inLoop = false;
+		inWhile = false;
 
 		var funs = [];
 		checkExpr(shader, funs, false, false);
@@ -530,10 +541,12 @@ class Checker {
 		case EWhile(cond, loop, normalWhile):
 			type = TVoid;
 			var cond = typeWith(cond, TBool);
-			var oldL = inLoop;
+			var oldL = inLoop, oldW = inWhile;
 			inLoop = true;
+			inWhile = true;
 			var loop = typeExpr(loop, NoValue);
 			inLoop = oldL;
+			inWhile = oldW;
 			TWhile(cond, loop, normalWhile);
 		case EContinue:
 			if( !inLoop ) error("Continue outside loop", e.pos);
@@ -836,8 +849,10 @@ class Checker {
 			case ["getLod", TChannel(_)]: ChannelReadLod;
 			default: null;
 			}
-			if( gl != null )
+			if( gl != null ) {
+				if( f == "get" && inWhile ) error("Cannot use .get() in while loop, use .getLod instead", pos);
 				g = globals.get(gl.toString());
+			}
 		}
 		if( g != null ) {
 			switch( g.t ) {
