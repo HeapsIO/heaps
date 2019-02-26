@@ -14,6 +14,7 @@ package h3d.mat;
 	var Alpha = "Alpha";
 	var Add = "Add";
 	var AlphaAdd = "AlphaAdd";
+	var Multiply = "Multiply";
 }
 
 typedef PbrProps = {
@@ -83,6 +84,7 @@ class PbrMaterial extends Material {
 		case None: None;
 		case Alpha: Alpha;
 		case Add: Add;
+		case Multiply: Multiply;
 		default: throw "Unsupported Model blendMode "+blendMode;
 		}
 		return props;
@@ -131,6 +133,9 @@ class PbrMaterial extends Material {
 			mainPass.depthWrite = false;
 		case AlphaAdd:
 			mainPass.setBlendMode(AlphaAdd);
+			mainPass.depthWrite = false;
+		case Multiply:
+			mainPass.setBlendMode(Multiply);
 			mainPass.depthWrite = false;
 		}
 		var tshader = textureShader;
@@ -241,6 +246,7 @@ class PbrMaterial extends Material {
 						<option value="Alpha">Alpha</option>
 						<option value="Add">Add</option>
 						<option value="AlphaAdd">AlphaAdd</option>
+						<option value="Multiply">Multiply</option>
 					</select>
 				</dd>
 				<dt>Emissive</dt><dd><input type="range" min="0" max="10" field="emissive"/></dd>
