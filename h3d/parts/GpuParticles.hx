@@ -31,11 +31,6 @@ enum GpuEmitMode {
 	Cone;
 
 	/**
-		A disc, emit in one direction
-	**/
-	Disc;
-
-	/**
 		The GpuParticles specified volumeBounds
 	**/
 	VolumeBounds;
@@ -47,6 +42,11 @@ enum GpuEmitMode {
 		Same as VolumeBounds, but in Camera space, not world space.
 	**/
 	CameraBounds;
+
+	/**
+		A disc, emit in one direction
+	**/
+	Disc;
 }
 
 private class GpuPart {
