@@ -15,10 +15,10 @@ class Terrain extends Object {
 	public var parallaxMaxStep : Int;
 	public var heightBlendStrength : Float;
 	public var blendSharpness : Float;
-	public var copyPass (default, null): h3d.pass.Copy;
-	public var tiles (default, null) : Array<Tile> = [];
-	public var surfaces (default, null) : Array<Surface> = [];
-	public var surfaceArray (default, null) : h3d.scene.pbr.terrain.Surface.SurfaceArray;
+	public var tiles: Array<Tile> = [];
+	public var surfaces : Array<Surface> = [];
+	public var surfaceArray : h3d.scene.pbr.terrain.Surface.SurfaceArray;
+	public var copyPass : h3d.pass.Copy;
 
 	public function new(?parent){
 		super(parent);
@@ -93,7 +93,7 @@ class Terrain extends Object {
 		return surfaces[surfaces.length - 1];
 	}
 
-	public function generateSurfaceArray(){
+	public function generateSurfaceArray() {
 		if(surfaces.length == 0) return;
 		var surfaceSize = 1;
 		for(i in 0 ... surfaces.length)

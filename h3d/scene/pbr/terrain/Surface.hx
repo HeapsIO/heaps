@@ -38,13 +38,15 @@ class SurfaceArray {
 	public var albedo : h3d.mat.TextureArray;
 	public var normal : h3d.mat.TextureArray;
 	public var pbr : h3d.mat.TextureArray;
+	public var surfaceCount : Int;
 	public var params : Array<h3d.Vector> = [];
 	public var secondParams : Array<h3d.Vector> = [];
 
-	public function new(count, res){
-		albedo = new h3d.mat.TextureArray(res, res, count, [Target]);
-		normal = new h3d.mat.TextureArray(res, res, count, [Target]);
-		pbr = new h3d.mat.TextureArray(res, res, count, [Target]);
+	public function new( count, res ) {
+		surfaceCount = count;
+		albedo = new h3d.mat.TextureArray(res, res, count, [Target], RGBA);
+		normal = new h3d.mat.TextureArray(res, res, count, [Target], RGBA);
+		pbr = new h3d.mat.TextureArray(res, res, count, [Target], RGBA);
 		albedo.wrap = Repeat;
 		normal.wrap = Repeat;
 		pbr.wrap = Repeat;

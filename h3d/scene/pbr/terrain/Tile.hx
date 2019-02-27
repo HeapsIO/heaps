@@ -133,10 +133,10 @@ class Tile extends h3d.scene.Mesh {
 			}
 		}
 
-		if( getTerrain().surfaces.length > 0 && (surfaceWeights.length != getTerrain().surfaces.length || surfaceWeights[0].width != getTerrain().weightMapResolution) ) {
+		if( getTerrain().surfaceArray.surfaceCount > 0 && (surfaceWeights.length != getTerrain().surfaceArray.surfaceCount || surfaceWeights[0].width != getTerrain().weightMapResolution) ) {
 			var oldArray = surfaceWeights;
 			surfaceWeights = new Array<h3d.mat.Texture>();
-			surfaceWeights = [for( i in 0...getTerrain().surfaces.length ) null];
+			surfaceWeights = [for( i in 0...getTerrain().surfaceArray.surfaceCount ) null];
 			for( i in 0 ... surfaceWeights.length ) {
 				surfaceWeights[i] = new h3d.mat.Texture(getTerrain().weightMapResolution, getTerrain().weightMapResolution, [Target], R8);
 				surfaceWeights[i].wrap = Clamp;
@@ -544,7 +544,7 @@ class Tile extends h3d.scene.Mesh {
 		if( !isReady() ) return;
 
 		shader.SHOW_GRID = getTerrain().showGrid;
-		shader.SURFACE_COUNT = getTerrain().surfaces.length;
+		shader.SURFACE_COUNT = getTerrain().surfaceArray.surfaceCount;
 		shader.CHECKER = getTerrain().showChecker;
 		shader.COMPLEXITY = getTerrain().showComplexity;
 		shader.PARALLAX = getTerrain().parallaxAmount != 0;
@@ -577,7 +577,7 @@ class Tile extends h3d.scene.Mesh {
 			return false;
 
 		if( !getTerrain().showChecker || getTerrain().showComplexity ) {
-			if( getTerrain().surfaceArray == null || getTerrain().surfaces.length == 0 || surfaceWeights.length != getTerrain().surfaces.length )
+			if( getTerrain().surfaceArray == null || getTerrain().surfaceArray.surfaceCount == 0 || surfaceWeights.length != getTerrain().surfaceArray.surfaceCount )
 				return false;
 
 			for( i in 0 ... surfaceWeights.length )

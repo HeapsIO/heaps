@@ -34,7 +34,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	/**
 		Create a new scene. A default 3D scene is already available in `hxd.App.s3d`
 	**/
-	public function new() {
+	public function new( ?createRenderer = true, ?createLightSystem = true ) {
 		super(null);
 		window = hxd.Window.getInstance();
 		eventListeners = [];
@@ -46,8 +46,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( engine != null )
 			camera.screenRatio = engine.width / engine.height;
 		ctx = new RenderContext();
-		renderer = h3d.mat.MaterialSetup.current.createRenderer();
-		lightSystem = h3d.mat.MaterialSetup.current.createLightSystem();
+		if( createRenderer ) renderer = h3d.mat.MaterialSetup.current.createRenderer();
+		if( createLightSystem ) lightSystem = h3d.mat.MaterialSetup.current.createLightSystem();
 	}
 
 	@:noCompletion @:dox(hide) public function setEvents(events) {
@@ -413,8 +413,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 
 		// send to rendered
-		ctx.lightSystem = lightSystem;
-		lightSystem.initLights(ctx);
+		if( lightSystem != null ) {
+			ctx.lightSystem = lightSystem;
+			lightSystem.initLights(ctx);
+		}
 		renderer.process(passes);
 
 		// check that passes have been rendered
