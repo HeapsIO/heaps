@@ -119,6 +119,10 @@ class Pass implements hxd.impl.Serializable {
 			blend(DstColor, Zero);
 			blendOp = Add;
 			blendAlphaOp = Add;
+		case AlphaMultiply: // Out = Dst * Src + (1 - SrcA) * Dst
+			blend(DstColor, OneMinusSrcAlpha);
+			blendOp = Add;
+			blendAlphaOp = Add;
 		case Erase: // Out = 0 * Src + (1 - Srb) * Dst
 			blend(Zero, OneMinusSrcColor);
 			blendOp = Add;

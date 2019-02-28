@@ -15,6 +15,7 @@ package h3d.mat;
 	var Add = "Add";
 	var AlphaAdd = "AlphaAdd";
 	var Multiply = "Multiply";
+	var AlphaMultiply = "AlphaMultiply";
 }
 
 typedef PbrProps = {
@@ -90,7 +91,16 @@ class PbrMaterial extends Material {
 		return props;
 	}
 
+	function resetProps() {
+		// Remove superfluous shader
+		mainPass.removeShader(mainPass.getShader(h3d.shader.VolumeDecal));
+		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.StrengthValues));
+		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.AlphaMultiply));
+		mainPass.removeShader(mainPass.getShader(h3d.shader.Parallax));
+	}
+
 	override function refreshProps() {
+		resetProps();
 		var props : PbrProps = props;
 		switch( props.mode ) {
 		case PBR:
@@ -136,6 +146,14 @@ class PbrMaterial extends Material {
 			mainPass.depthWrite = false;
 		case Multiply:
 			mainPass.setBlendMode(Multiply);
+			mainPass.depthWrite = false;
+		case AlphaMultiply:
+			if( mainPass.getShader(h3d.shader.pbr.AlphaMultiply) == null ) {
+				var s = new h3d.shader.pbr.AlphaMultiply();
+				s.setPriority(-1);
+				mainPass.addShader(s);
+			}
+			mainPass.setBlendMode(AlphaMultiply);
 			mainPass.depthWrite = false;
 		}
 		var tshader = textureShader;
@@ -247,6 +265,7 @@ class PbrMaterial extends Material {
 						<option value="Add">Add</option>
 						<option value="AlphaAdd">AlphaAdd</option>
 						<option value="Multiply">Multiply</option>
+						<option value="AlphaMultiply">AlphaMultiply</option>
 					</select>
 				</dd>
 				<dt>Emissive</dt><dd><input type="range" min="0" max="10" field="emissive"/></dd>
