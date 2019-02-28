@@ -148,7 +148,7 @@ class Driver implements hxd.snd.Driver {
 		AL.sourceQueueBuffers(source.inst, 1, bytes);
 
 		if (AL.getError() != AL.NO_ERROR)
-			throw "Failed to queue buffers : format differs";
+			throw "Failed to queue buffers: " + StringTools.hex(AL.getError());
 
 		if (AL.getSourcei(source.inst, AL.SOURCE_STATE) == AL.STOPPED) {
 			if (sampleStart > 0) {
