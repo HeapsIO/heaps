@@ -70,7 +70,7 @@ package hxd.prefab;
 				}
 			if( v == null ) {
 				v = root.getObjectByName(pname);
-				if( v != null && v.parent != root ) v = null;
+				//if( v != null && v.parent != root ) v = null; ??
 			}
 			if( v == null ) {
 				var parts2 = path.split(".");
