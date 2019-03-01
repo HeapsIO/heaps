@@ -6,7 +6,10 @@ class DistanceFog extends ScreenShader {
 
 		@param var startDistance : Float;
 		@param var endDistance : Float;
-		@param var density : Float;
+		@param var startOpacity : Float;
+		@param var endOpacity: Float;
+		@param var startColorDistance : Float;
+		@param var endColorDistance : Float;
 		@param var startColor : Vec3;
 		@param var endColor : Vec3;
 
@@ -28,12 +31,13 @@ class DistanceFog extends ScreenShader {
 			var calculatedUV = input.uv;
 			var origin = getPosition(calculatedUV);
 			var distance = (origin - cameraPos).length();
-
-			var fog = clamp((distance - startDistance) / (endDistance - startDistance), 0, 1);
-			var fogColor = mix(startColor, endColor, fog);
-			var fogDensity = mix(0, density, fog);
-
-			pixelColor = vec4(fogColor,fogDensity);
+			if( startDistance > distance ) discard;
+			var opacityFactor = (distance - startDistance) / (endDistance - startDistance);
+			var colorFactor = (distance - startColorDistance) / (endColorDistance - startColorDistance);
+			var fogColor = mix(startColor, endColor, colorFactor);
+			var fogOpacity = mix(startOpacity, endOpacity, opacityFactor);
+			if( fogOpacity <= 0 ) discard;
+			pixelColor = vec4(fogColor, fogOpacity);
 		}
 	};
 

@@ -159,6 +159,10 @@ class Renderer extends h3d.scene.Renderer {
 		output.draw(get("additive"));
 	}
 
+	function drawHDR() {
+
+	}
+
 	function postDraw() {
 		draw("overlay");
 	}
@@ -336,6 +340,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
 		pbrOut.render();
 
+		drawHDR();
 		draw("beforeTonemapping");
 		apply(BeforeTonemapping);
 
