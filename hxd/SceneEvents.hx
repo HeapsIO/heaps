@@ -158,30 +158,8 @@ class SceneEvents {
 
 				if( checkOver ) {
 					if ( fillOver ) {
-						var idx = 0;
-						while ( idx < overList.length ) {
-							var o = overList[idx];
-							if ( o == i ) {
-								if ( idx < overIndex ) {
-									do {
-										overList[idx] = overList[idx + 1];
-										idx++;
-									} while ( idx < overIndex );
-									overList[overIndex] = o;
-								} else if ( idx > overIndex ) {
-									do {
-										overList[idx] = overList[idx - 1];
-										idx--;
-									} while ( idx > overIndex );
-									overList[overIndex] = o;
-								}
-								handled = true;
-								fillOver = i.propagateEvents;
-								break;
-							}
-							idx++;
-						}
-						if ( !handled ) {
+						var idx = overList.indexOf(i);
+						if ( idx == -1 ) {
 							var oldPropagate = event.propagate;
 							var oldKind = event.kind;
 							event.kind = EOver;
@@ -196,8 +174,29 @@ class SceneEvents {
 							event.propagate = oldPropagate;
 							event.cancel = false;
 						} else {
-							handled = false;
+							var o = overList[idx];
+							if ( idx < overIndex ) {
+								do {
+									overList[idx] = overList[idx + 1];
+									idx++;
+								} while ( idx < overIndex );
+								overList[overIndex] = o;
+							} else if ( idx > overIndex ) {
+								do {
+									overList[idx] = overList[idx - 1];
+									idx--;
+								} while ( idx > overIndex );
+								overList[overIndex] = o;
+							}
+							fillOver = i.propagateEvents;
 							overIndex++;
+						}
+						var idx = 0;
+						while ( idx < overList.length ) {
+							var o = overList[idx];
+							if ( o == i ) {
+							}
+							idx++;
 						}
 					}
 				} else {
@@ -229,20 +228,19 @@ class SceneEvents {
 		if( cancelFocus && currentFocus != null )
 			blur();
 
-		if( checkOver ) {
-			if ( overIndex < overList.length ) {
-				do {
-					onOut.cancel = false;
-					overList[overIndex].handleEvent(onOut);
-					if ( !onOut.cancel ) {
-						overList.remove(overList[overIndex]);
-						continue;
-					}
-					overIndex++;
-				} while ( overIndex < overList.length );
-				if ( overList.length > 0 ) {
-					hxd.System.setCursor(overList[0].cursor);
+		if( checkOver && overIndex < overList.length ) {
+			var idx = overList.length - 1;
+			do {
+				onOut.cancel = false;
+				overList[idx].handleEvent(onOut);
+				if ( !onOut.cancel ) {
+					overList.remove(overList[idx]);
+					continue;
 				}
+				idx--;
+			} while ( idx > overIndex );
+			if ( overList.length > 0 ) {
+				hxd.System.setCursor(overList[0].cursor);
 			}
 		}
 
@@ -307,15 +305,15 @@ class SceneEvents {
 				case EOut:
 					// leave window
 					isOut = true;
-					var i = 0;
-					while ( i < overList.length ) {
+					var i = overList.length - 1;
+					while ( i >= 0 ) {
 						onOut.cancel = false;
 						overList[i].handleEvent(onOut);
 						if ( !onOut.cancel ) {
 							overList.remove(overList[i]);
 							continue;
 						}
-						i++;
+						i--;
 					}
 					continue;
 				default:
