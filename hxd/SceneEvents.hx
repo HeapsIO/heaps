@@ -63,12 +63,8 @@ class SceneEvents {
 	function onRemove(i) {
 		if( i == currentFocus )
 			currentFocus = null;
-		if ( overList.remove(i) ) {
-			if ( overList.length == 0 )
-				hxd.System.setCursor(Default);
-			else 
-				hxd.System.setCursor(overList[0].cursor);
-		}
+		if ( overList.remove(i) )
+			selectCursor();
 		pushList.remove(i);
 	}
 
@@ -125,7 +121,7 @@ class SceneEvents {
 	function emitEvent( event : hxd.Event ) {
 		var oldX = event.relX, oldY = event.relY;
 		var handled = false;
-		var checkOver = false, fillOver = false, checkPush = false, cancelFocus = false;
+		var checkOver = false, fillOver = false, checkPush = false, cancelFocus = false, updateCursor = false;
 		var overIndex : Int = 0;
 		switch( event.kind ) {
 		case EMove, ECheck:
@@ -169,6 +165,7 @@ class SceneEvents {
 								overList.insert(overIndex, i);
 								overIndex++;
 								fillOver = event.propagate;
+								updateCursor = true;
 							}
 							event.kind = oldKind;
 							event.propagate = oldPropagate;
@@ -181,12 +178,14 @@ class SceneEvents {
 									idx++;
 								} while ( idx < overIndex );
 								overList[overIndex] = o;
+								updateCursor = true;
 							} else if ( idx > overIndex ) {
 								do {
 									overList[idx] = overList[idx - 1];
 									idx--;
 								} while ( idx > overIndex );
 								overList[overIndex] = o;
+								updateCursor = true;
 							}
 							fillOver = i.propagateEvents;
 							overIndex++;
@@ -239,10 +238,10 @@ class SceneEvents {
 				}
 				idx--;
 			} while ( idx > overIndex );
-			if ( overList.length > 0 ) {
-				hxd.System.setCursor(overList[0].cursor);
-			}
+			updateCursor = true;
 		}
+		if ( updateCursor )
+			selectCursor();
 
 		if( !handled && event != checkPos ) {
 			if( event.kind == EPush )
@@ -301,6 +300,7 @@ class SceneEvents {
 					}
 				case EOver:
 					isOut = false;
+					selectCursor();
 					continue;
 				case EOut:
 					// leave window
@@ -315,6 +315,7 @@ class SceneEvents {
 						}
 						i--;
 					}
+					selectCursor();
 					continue;
 				default:
 				}
@@ -363,6 +364,21 @@ class SceneEvents {
 
 	public function getFocus() {
 		return currentFocus;
+	}
+
+	public function updateCursor( i : Interactive ) {
+		if ( overList.indexOf(i) != -1 ) selectCursor();
+	}
+
+	function selectCursor() {
+		var cur : hxd.Cursor = Default;
+		for ( o in overList ) {
+			if ( o.cursor != null ) {
+				cur = o.cursor;
+				break;
+			}
+		}
+		hxd.System.setCursor(cur);
 	}
 
 	function onEvent( e : hxd.Event ) {
