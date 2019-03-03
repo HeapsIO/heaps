@@ -236,8 +236,7 @@ class SceneEvents {
 					overList.remove(overList[idx]);
 					continue;
 				}
-				idx--;
-			} while ( idx > overIndex );
+			} while ( --idx >= overIndex );
 			updateCursor = true;
 		}
 		if ( updateCursor )
