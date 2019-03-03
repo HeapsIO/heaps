@@ -190,13 +190,6 @@ class SceneEvents {
 							fillOver = i.propagateEvents;
 							overIndex++;
 						}
-						var idx = 0;
-						while ( idx < overList.length ) {
-							var o = overList[idx];
-							if ( o == i ) {
-							}
-							idx++;
-						}
 					}
 				} else {
 					if( checkPush ) {
@@ -304,17 +297,19 @@ class SceneEvents {
 				case EOut:
 					// leave window
 					isOut = true;
-					var i = overList.length - 1;
-					while ( i >= 0 ) {
-						onOut.cancel = false;
-						overList[i].handleEvent(onOut);
-						if ( !onOut.cancel ) {
-							overList.remove(overList[i]);
-							continue;
+					if ( overList.length > 0 ) {
+						var i = overList.length - 1;
+						while ( i >= 0 ) {
+							onOut.cancel = false;
+							overList[i].handleEvent(onOut);
+							if ( !onOut.cancel ) {
+								overList.remove(overList[i]);
+								continue;
+							}
+							i--;
 						}
-						i--;
+						selectCursor();
 					}
-					selectCursor();
 					continue;
 				default:
 				}
