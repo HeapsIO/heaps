@@ -8,7 +8,7 @@ class Pad extends hxd.App {
 		l = [];
 		flow = new h2d.Flow(s2d);
 		flow.padding = 20;
-		flow.isVertical = true;
+		flow.layout = Vertical;
 
 		tf = new h2d.Text(hxd.res.DefaultFont.get(), flow);
 		tf.text = "Waiting for pad...";

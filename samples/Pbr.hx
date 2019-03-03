@@ -44,7 +44,7 @@ class Pbr extends SampleApp {
 		fui = new h2d.Flow(s2d);
 		fui.y = 5;
 		fui.verticalSpacing = 5;
-		fui.isVertical = true;
+		fui.layout = Vertical;
 
 		var envMap = new h3d.mat.Texture(512, 512, [Cube]);
 		envMap.name = "envMap";

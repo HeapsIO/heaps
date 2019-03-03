@@ -4,7 +4,7 @@ class SampleApp extends hxd.App {
 
 	override function init() {
 		fui = new h2d.Flow(s2d);
-		fui.isVertical = true;
+		fui.layout = Vertical;
 		fui.verticalSpacing = 5;
 		fui.padding = 10;
 	}
