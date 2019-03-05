@@ -9,7 +9,7 @@ class Prefab extends hxd.res.Resource {
 			return lib;
 		var data = haxe.Json.parse(entry.getText());
 		lib = hxd.prefab.Library.create(entry.extension);
-		lib.load(data);
+		lib.loadData(data);
 		watch(function() lib.reload(haxe.Json.parse(entry.getText())));
 		return lib;
 	}
