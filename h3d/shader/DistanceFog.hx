@@ -32,8 +32,8 @@ class DistanceFog extends ScreenShader {
 			var origin = getPosition(calculatedUV);
 			var distance = (origin - cameraPos).length();
 			if( startDistance > distance ) discard;
-			var opacityFactor = (distance - startDistance) / (endDistance - startDistance);
-			var colorFactor = (distance - startColorDistance) / (endColorDistance - startColorDistance);
+			var opacityFactor = clamp((distance - startDistance) / (endDistance - startDistance), 0, 1);
+			var colorFactor = clamp((distance - startColorDistance) / (endColorDistance - startColorDistance), 0, 1);
 			var fogColor = mix(startColor, endColor, colorFactor);
 			var fogOpacity = mix(startOpacity, endOpacity, opacityFactor);
 			if( fogOpacity <= 0 ) discard;
