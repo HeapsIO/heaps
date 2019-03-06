@@ -94,8 +94,7 @@ class Renderer extends h3d.scene.Renderer {
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
-		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
-		Vec4([Value("output.emissive"),Value("output.depth"), Const(0), Const(1)])
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")])
 	]);
 
 
@@ -229,7 +228,7 @@ class Renderer extends h3d.scene.Renderer {
 		depthCopy.render();
 		ctx.setGlobal("depthMap",{ texture : depth, channel : hxsl.Channel.R });
 
-		setTargets([albedo,normal,pbr,other]);
+		setTargets([albedo,normal,pbr]);
 		decalsOutput.draw(get("decal"));
 
 		setTarget(albedo);

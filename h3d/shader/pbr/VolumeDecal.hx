@@ -110,12 +110,9 @@ class DecalPBR extends hxsl.Shader {
 			metalness : Float,
 			roughness : Float,
 			occlusion : Float,
-			emissive : Float,
 			albedoStrength : Float,
 			normalStrength : Float,
 			pbrStrength : Float,
-			emissiveStrength : Float,
-			//depth : Float,
 		};
 
 		@const var CENTERED : Bool;
@@ -138,7 +135,6 @@ class DecalPBR extends hxsl.Shader {
 		@param var fadePower : Float;
 		@param var fadeStart : Float;
 		@param var fadeEnd : Float;
-		@param var emissive : Float;
 
 		@param var albedoTexture : Sampler2D;
 		@param var normalTexture : Sampler2D;
@@ -235,12 +231,9 @@ class DecalPBR extends hxsl.Shader {
 			output.metalness = prbValues.r;
 			output.roughness = prbValues.g;
 			output.occlusion = prbValues.b;
-			output.emissive = emissive * alpha;
 			output.albedoStrength = strength.r * fadeFactor;
 			output.normalStrength = strength.g * fadeFactor;
 			output.pbrStrength = strength.b * fadeFactor;
-			output.emissiveStrength = 0;
-			//output.depth = 0; // Dont draw depth again
 		}
 	};
 
