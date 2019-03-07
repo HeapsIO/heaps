@@ -32,7 +32,7 @@ class Indirect extends PropsDefinition {
 						normal = (vec3( uvToScreen(calculatedUV) * 5. /*?*/ , 1. ) * cameraInvViewProj.mat3x4()).normalize();
 						color = skyMap.get(normal).rgb;
 					}
-					pixelColor.rgb = (color * color) * irrPower;
+					pixelColor.rgb += (color * color) * irrPower;
 				} else
 					discard;
 			} else {
@@ -53,7 +53,6 @@ class Indirect extends PropsDefinition {
 				}
 
 				var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
-
 				pixelColor.rgb += indirect * occlusion + albedo * emissive * emissivePower;
 			}
 		}
@@ -78,13 +77,10 @@ class Direct extends PropsDefinition {
 				var NdH = normal.dot(half).max(0.);
 				var VdH = view.dot(half).max(0.);
 
-				// diffuse BRDF
-				var direct : Vec3 = vec3(0.);
-
 				// ------------- DIRECT LIGHT -------------------------
 
 				var F0 = pbrSpecularColor;
-				var diffuse = albedo * NdL / PI;
+				var diffuse = albedo / PI;
 
 				// General Cook-Torrance formula for microfacet BRDF
 				// 		f(l,v) = D(h).F(v,h).G(l,v,h) / 4(n.l)(n.v)
@@ -116,7 +112,7 @@ class Direct extends PropsDefinition {
 				var G_Att = (1 / (NdV * (1 - k) + k)) * (1 / (NdL * (1 - k) + k)) * 0.25;
 				var specular = (D * F * G_Att).max(0.);
 
-				direct += mix(diffuse * (1 - metalness), specular, F) * pbrLightColor;
+				var direct = (diffuse * (1 - metalness) * (1 - F) + specular) * pbrLightColor * NdL;
 				pixelColor.rgb += direct * shadow;
 			} else if( doDiscard )
 				discard;
