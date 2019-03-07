@@ -108,9 +108,12 @@ class Direct extends PropsDefinition {
 				var k = (roughness + 1);
 				k *= k;
 				k *= 0.125;
-				var G = (NdV / (NdV * (1 - k) + k)) * (NdL / (NdL * (1 - k) + k));
 
-				var specular = (D * F * G / (4 * NdL * NdV)).max(0.);
+				//var G = (1 / (NdV * (1 - k) + k)) * (1 / (NdL * (1 - k) + k)) * NdL * NdV;
+				//var Att = 1 / (4 * NdL * NdV);
+				var G_Att = (1 / (NdV * (1 - k) + k)) * (1 / (NdL * (1 - k) + k)) * 0.25;
+				var specular = (D * F * G_Att).max(0.);
+
 				direct += mix(diffuse * (1 - metalness), specular, F) * pbrLightColor;
 				pixelColor.rgb += direct * shadow;
 			} else if( doDiscard )
