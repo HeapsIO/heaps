@@ -108,6 +108,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.pass.setBlendMode(Add);
 		pbrOut.pass.stencil = new h3d.mat.Stencil();
 		pbrOut.pass.stencil.setOp(Keep, Keep, Keep);
+		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80); // ignore already drawn volumetricLightMap areas
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
@@ -333,10 +334,8 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrProps.isScreen = true;
 
-		pbrIndirect.showSky = false;
 		pbrIndirect.drawIndirectDiffuse = true;
 		pbrIndirect.drawIndirectSpecular = true;
-		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
 		pbrOut.render();
 
 		drawHDR();
