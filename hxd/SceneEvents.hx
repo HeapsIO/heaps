@@ -302,10 +302,8 @@ class SceneEvents {
 						while ( i >= 0 ) {
 							onOut.cancel = false;
 							overList[i].handleEvent(onOut);
-							if ( !onOut.cancel ) {
+							if ( !onOut.cancel )
 								overList.remove(overList[i]);
-								continue;
-							}
 							i--;
 						}
 						selectCursor();
