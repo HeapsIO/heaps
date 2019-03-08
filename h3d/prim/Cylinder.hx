@@ -26,8 +26,8 @@ class Cylinder extends Quads {
 			var n1 = new Point(Math.cos(a2), Math.sin(a2), 0);
 			normals.push(n0);
 			normals.push(n1);
-			normals.push(n0);
-			normals.push(n1);
+			normals.push(n0.clone());
+			normals.push(n1.clone());
 		}
 		super(pts,normals);
 	}
