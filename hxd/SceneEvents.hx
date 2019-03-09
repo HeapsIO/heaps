@@ -9,6 +9,8 @@ interface InteractiveScene {
 }
 
 interface Interactive {
+	public var propagateEvents : Bool;
+	public var cursor(default, set) : hxd.Cursor;
 	public function handleEvent( e : Event ) : Void;
 	public function getInteractiveScene() : InteractiveScene;
 }
@@ -18,7 +20,7 @@ class SceneEvents {
 	var window : hxd.Window;
 	var scenes : Array<InteractiveScene>;
 
-	var currentOver : Interactive;
+	var overList : Array<Interactive>;
 	var currentFocus : Interactive;
 
 	var pendingEvents : Array<hxd.Event>;
@@ -47,6 +49,7 @@ class SceneEvents {
 		scenes = [];
 		pendingEvents = [];
 		pushList = [];
+		overList = [];
 		if( window == null ) window = hxd.Window.getInstance();
 		this.window = window;
 		window.addEventTarget(onEvent);
@@ -60,10 +63,8 @@ class SceneEvents {
 	function onRemove(i) {
 		if( i == currentFocus )
 			currentFocus = null;
-		if( i == currentOver ) {
-			currentOver = null;
-			hxd.System.setCursor(Default);
-		}
+		if ( overList.remove(i) )
+			selectCursor();
 		pushList.remove(i);
 	}
 
@@ -120,9 +121,12 @@ class SceneEvents {
 	function emitEvent( event : hxd.Event ) {
 		var oldX = event.relX, oldY = event.relY;
 		var handled = false;
-		var checkOver = false, checkPush = false, cancelFocus = false;
+		var checkOver = false, fillOver = false, checkPush = false, cancelFocus = false, updateCursor = false;
+		var overIndex : Int = 0;
 		switch( event.kind ) {
-		case EMove, ECheck: checkOver = true;
+		case EMove, ECheck:
+			checkOver = true;
+			fillOver = true;
 		case EPush: cancelFocus = true; checkPush = true;
 		case ERelease: checkPush = true;
 		case EKeyUp, EKeyDown, ETextInput, EWheel:
@@ -149,28 +153,44 @@ class SceneEvents {
 				}
 
 				if( checkOver ) {
-					if( currentOver != i ) {
-						onOut.cancel = false;
-						if( currentOver != null )
-							currentOver.handleEvent(onOut);
-						if( !onOut.cancel ) {
-							var old = event.propagate;
+					if ( fillOver ) {
+						var idx = overList.indexOf(i);
+						if ( idx == -1 ) {
+							var oldPropagate = event.propagate;
 							var oldKind = event.kind;
 							event.kind = EOver;
 							event.cancel = false;
 							i.handleEvent(event);
-							if( event.cancel )
-								currentOver = null;
-							else {
-								currentOver = i;
-								checkOver = false;
+							if ( !event.cancel ) {
+								overList.insert(overIndex, i);
+								overIndex++;
+								fillOver = event.propagate;
+								updateCursor = true;
 							}
 							event.kind = oldKind;
+							event.propagate = oldPropagate;
 							event.cancel = false;
-							event.propagate = old;
+						} else {
+							var o = overList[idx];
+							if ( idx < overIndex ) {
+								do {
+									overList[idx] = overList[idx + 1];
+									idx++;
+								} while ( idx < overIndex );
+								overList[overIndex] = o;
+								updateCursor = true;
+							} else if ( idx > overIndex ) {
+								do {
+									overList[idx] = overList[idx - 1];
+									idx--;
+								} while ( idx > overIndex );
+								overList[overIndex] = o;
+								updateCursor = true;
+							}
+							fillOver = i.propagateEvents;
+							overIndex++;
 						}
-					} else
-						checkOver = false;
+					}
 				} else {
 					if( checkPush ) {
 						if( event.kind == EPush )
@@ -200,12 +220,20 @@ class SceneEvents {
 		if( cancelFocus && currentFocus != null )
 			blur();
 
-		if( checkOver && currentOver != null ) {
-			onOut.cancel = false;
-			currentOver.handleEvent(onOut);
-			if( !onOut.cancel )
-				currentOver = null;
+		if( checkOver && overIndex < overList.length ) {
+			var idx = overList.length - 1;
+			do {
+				onOut.cancel = false;
+				overList[idx].handleEvent(onOut);
+				if ( !onOut.cancel ) {
+					overList.remove(overList[idx]);
+					continue;
+				}
+			} while ( --idx >= overIndex );
+			updateCursor = true;
 		}
+		if ( updateCursor )
+			selectCursor();
 
 		if( !handled && event != checkPos ) {
 			if( event.kind == EPush )
@@ -264,15 +292,21 @@ class SceneEvents {
 					}
 				case EOver:
 					isOut = false;
+					selectCursor();
 					continue;
 				case EOut:
 					// leave window
 					isOut = true;
-					if( currentOver != null ) {
-						onOut.cancel = false;
-						currentOver.handleEvent(onOut);
-						if( !onOut.cancel )
-							currentOver = null;
+					if ( overList.length > 0 ) {
+						var i = overList.length - 1;
+						while ( i >= 0 ) {
+							onOut.cancel = false;
+							overList[i].handleEvent(onOut);
+							if ( !onOut.cancel )
+								overList.remove(overList[i]);
+							i--;
+						}
+						selectCursor();
 					}
 					continue;
 				default:
@@ -322,6 +356,21 @@ class SceneEvents {
 
 	public function getFocus() {
 		return currentFocus;
+	}
+
+	public function updateCursor( i : Interactive ) {
+		if ( overList.indexOf(i) != -1 ) selectCursor();
+	}
+
+	function selectCursor() {
+		var cur : hxd.Cursor = Default;
+		for ( o in overList ) {
+			if ( o.cursor != null ) {
+				cur = o.cursor;
+				break;
+			}
+		}
+		hxd.System.setCursor(cur);
 	}
 
 	function onEvent( e : hxd.Event ) {
