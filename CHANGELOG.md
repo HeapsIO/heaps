@@ -26,6 +26,7 @@ Other:
 * [js] heaps now defaults to canvas instead of window for events
 * review hxd.prefab.Prefab API
 * added mp3 sound support
+* added S3TC dds texture support
 * new samples : Camera2D, Domkit, Flows, FXView, Interactive2D, MeshBatch, Lights
 
 ## 1.5.0 (October 25, 2018)
