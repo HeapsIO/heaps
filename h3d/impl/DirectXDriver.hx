@@ -364,6 +364,17 @@ class DirectXDriver extends h3d.impl.Driver {
 		case RGB10A2: R10G10B10A2_UNORM;
 		case RG11B10UF: R11G11B10_FLOAT;
 		case SRGB_ALPHA: R8G8B8A8_UNORM_SRGB;
+		case S3TC(n):
+			switch( n ) {
+			case 1: BC1_UNORM;
+			case 2: BC2_UNORM;
+			case 3: BC3_UNORM;
+			case 4: BC4_UNORM;
+			case 5: BC5_UNORM;
+			case 6: BC6H_UF16;
+			case 7: BC7_UNORM;
+			default: throw "assert";
+			}
 		default: throw "Unsupported texture format " + t.format;
 		}
 	}
@@ -541,7 +552,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 
 		var pitch = 0;
-		var bpp = hxd.Pixels.getBytesPerPixel(tex.format);
+		var bpp = hxd.Pixels.calcStride(1, tex.format);
 		var ptr = tmp.map(0, Read, true, pitch);
 		if( pitch == desc.width * bpp )
 			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * bpp);
@@ -566,7 +577,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		pixels.setFlip(false);
 		if( hasDeviceError ) return;
 		if( mipLevel >= t.t.mips ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.t.mips - 1) + ")";
-		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), pixels.width * pixels.bytesPerPixel, 0);
+		var stride = pixels.stride;
+		switch( t.format ) {
+		case S3TC(n): stride = pixels.width * ((n == 1 || n == 4) ? 2 : 4); // "uncompressed" stride ?
+		default:
+		}
+		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), stride, 0);
 		updateResCount++;
 	}
 

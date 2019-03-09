@@ -62,11 +62,12 @@ abstract PixelsFloat(Pixels) to Pixels {
 class Pixels {
 	public var bytes : haxe.io.Bytes;
 	public var format(get,never) : PixelFormat;
-	public var width : Int;
-	public var height : Int;
+	public var width(default,null) : Int;
+	public var height(default,null) : Int;
+	public var stride(default,null) : Int;
 	public var offset : Int;
 	public var flags: haxe.EnumFlags<Flags>;
-	public var bytesPerPixel(default,null) : Int;
+	var bytesPerPixel : Int;
 	var innerFormat(default, set) : PixelFormat;
 
 	public function new(width : Int, height : Int, bytes : haxe.io.Bytes, format : hxd.PixelFormat, offset = 0) {
@@ -90,7 +91,8 @@ class Pixels {
 
 	function set_innerFormat(fmt) {
 		this.innerFormat = fmt;
-		bytesPerPixel = getBytesPerPixel(fmt);
+		stride = calcStride(width,fmt);
+		bytesPerPixel = calcStride(1,fmt);
 		return fmt;
 	}
 
@@ -101,8 +103,8 @@ class Pixels {
 	public function sub( x : Int, y : Int, width : Int, height : Int ) {
 		if( x < 0 || y < 0 || x + width > this.width || y + height > this.height )
 			throw "Pixels.sub() outside bounds";
-		var out = haxe.io.Bytes.alloc(width * height * bytesPerPixel);
-		var stride = width * bytesPerPixel;
+		var out = haxe.io.Bytes.alloc(height * stride);
+		var stride = calcStride(width, format);
 		var outP = 0;
 		for( dy in 0...height ) {
 			var p = (x + yflip(y + dy) * this.width) * bytesPerPixel + offset;
@@ -124,7 +126,9 @@ class Pixels {
 		willChange();
 		src.convert(format);
 		var bpp = bytesPerPixel;
-		var stride = width * bpp;
+		if( bpp == 0 )
+			throw "assert";
+		var stride = calcStride(width, format);
 		for( dy in 0...height ) {
 			var srcP = (srcX + src.yflip(dy + srcY) * src.width) * bpp + src.offset;
 			var dstP = (x + yflip(dy + y) * this.width) * bpp + offset;
@@ -238,8 +242,8 @@ class Pixels {
 
 	function copyInner() {
 		var old = bytes;
-		bytes = haxe.io.Bytes.alloc(width * height * bytesPerPixel);
-		bytes.blit(0, old, offset, width * height * bytesPerPixel);
+		bytes = haxe.io.Bytes.alloc(height * stride);
+		bytes.blit(0, old, offset, height * stride);
 		offset = 0;
 		flags.unset(ReadOnly);
 	}
@@ -253,7 +257,6 @@ class Pixels {
 		if( flags.has(FlipY) == b ) return;
 		willChange();
 		if( b ) flags.set(FlipY) else flags.unset(FlipY);
-		var stride = width * bytesPerPixel;
 		if( stride%4 != 0 ) invalidFormat();
 		for( y in 0...height >> 1 ) {
 			var p1 = y * stride + offset;
@@ -317,6 +320,9 @@ class Pixels {
 				bytes[p] = a;
 			}
 
+		case [S3TC(a),S3TC(b)] if( a == b ):
+			// nothing
+
 		default:
 			throw "Cannot convert from " + format + " to " + target;
 		}
@@ -378,15 +384,15 @@ class Pixels {
 		p.flags = flags;
 		p.flags.unset(ReadOnly);
 		if( bytes != null ) {
-			var size = width * height * bytesPerPixel;
+			var size = height * stride;
 			p.bytes = haxe.io.Bytes.alloc(size);
 			p.bytes.blit(0, bytes, offset, size);
 		}
 		return p;
 	}
 
-	public static function getBytesPerPixel( format : PixelFormat ) {
-		return switch( format ) {
+	public static function calcStride( width : Int, format : PixelFormat ) {
+		return width * switch( format ) {
 		case ARGB, BGRA, RGBA, SRGB, SRGB_ALPHA: 4;
 		case RGBA16F: 8;
 		case RGBA32F: 16;
@@ -401,8 +407,14 @@ class Pixels {
 		case RGB32F: 12;
 		case RGB10A2: 4;
 		case RG11B10UF: 4;
+		case S3TC(n):
+			if( n == 1 || n == 4 )
+				return width >> 1;
+			1;
 		}
 	}
+
+	static var S3TC_SIZES = [0,-1,1,1,-1,1,1,1];
 
 	/**
 		Returns the byte offset for the requested channel (0=R,1=G,2=B,3=A)
@@ -413,10 +425,10 @@ class Pixels {
 		case R8, R16F, R32F:
 			if( channel == R ) 0 else -1;
 		case RG8, RG16F, RG32F:
-			var p = getBytesPerPixel(format);
+			var p = calcStride(1,format);
 			[0, p, -1, -1][channel.toInt()];
 		case RGB8, RGB16F, RGB32F:
-			var p = getBytesPerPixel(format);
+			var p = calcStride(1,format);
 			[0, p, p<<1, -1][channel.toInt()];
 		case ARGB:
 			[1, 2, 3, 0][channel.toInt()];
@@ -430,11 +442,13 @@ class Pixels {
 			channel.toInt() * 4;
 		case RGB10A2, RG11B10UF:
 			throw "Bit packed format";
+		case S3TC(_):
+			throw "Not supported";
 		}
 	}
 
 	public static function alloc( width, height, format : PixelFormat ) {
-		return new Pixels(width, height, haxe.io.Bytes.alloc(width * height * getBytesPerPixel(format)), format);
+		return new Pixels(width, height, haxe.io.Bytes.alloc(height * calcStride(width, format)), format);
 	}
 
 }

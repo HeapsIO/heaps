@@ -6,6 +6,7 @@ package hxd.res;
 	var Png = 1;
 	var Gif = 2;
 	var Tga = 3;
+	var Dds = 4;
 
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
@@ -41,7 +42,7 @@ class Image extends Resource {
 	static var ENABLE_AUTO_WATCH = true;
 
 	var tex : h3d.mat.Texture;
-	var inf : { width : Int, height : Int, format : ImageFormat };
+	var inf : { width : Int, height : Int, format : ImageFormat, bc : Int };
 
 	public function getFormat() {
 		getSize();
@@ -52,7 +53,7 @@ class Image extends Resource {
 		if( inf != null )
 			return inf;
 		var f = new hxd.fs.FileInput(entry);
-		var width = 0, height = 0, format;
+		var width = 0, height = 0, format, bc = 0;
 		var head = try f.readUInt16() catch( e : haxe.io.Eof ) 0;
 		switch( head ) {
 		case 0xD8FF: // JPG
@@ -89,6 +90,45 @@ class Image extends Resource {
 			width = f.readUInt16();
 			height = f.readUInt16();
 
+		case 0x4444: // DDS
+			format = Dds;
+			f.skip(10);
+			width = f.readInt32();
+			height = f.readInt32();
+			f.skip(16*4);
+			var fourCC = f.readInt32();
+			switch( fourCC & 0xFFFFFF ) {
+			case 0x545844: /* DXT */
+				var dxt = (fourCC >>> 24) - "0".code;
+				bc = switch( dxt ) {
+				case 1: 1;
+				case 2,3: 2;
+				case 4,5: 3;
+				default: 0;
+				}
+			case 0x495441: /* ATI */
+				var v = (fourCC >>> 24) - "0".code;
+				bc = switch( v ) {
+				case 1: 4;
+				case 2: 5;
+				default: 0;
+				}
+			case _ if( fourCC == 0x30315844 /* DX10 */ ):
+				f.skip(40);
+				var dxgi = f.readInt32(); // DXGI_FORMAT_xxxx value
+				switch( dxgi ) {
+				case 95: // BC6H_UF16
+					bc = 6;
+				case 98: // BC7_UNORM
+					bc = 7;
+				default:
+					throw entry.path+" has unsupported DXGI format "+dxgi;
+				}
+			}
+
+			if( bc == 0 )
+				throw entry.path+" has unsupported 4CC "+String.fromCharCode(fourCC&0xFF)+String.fromCharCode((fourCC>>8)&0xFF)+String.fromCharCode((fourCC>>16)&0xFF)+String.fromCharCode(fourCC>>>24);
+
 		case _ if( entry.extension == "tga" ):
 			format = Tga;
 			f.skip(10);
@@ -99,7 +139,7 @@ class Image extends Resource {
 			throw "Unsupported texture format " + entry.path;
 		}
 		f.close();
-		inf = { width : width, height : height, format : format };
+		inf = { width : width, height : height, format : format, bc : bc };
 		return inf;
 	}
 
@@ -164,6 +204,9 @@ class Image extends Resource {
 			case TopLeft: // nothing
 			default: throw "Not supported "+r.header.imageOrigin;
 			}
+		case Dds:
+			var bytes = entry.getBytes();
+			pixels = new hxd.Pixels(inf.width, inf.height, bytes, S3TC(inf.bc), 128 + (inf.bc >= 6 ? 20 : 0));
 		}
 		if( fmt != null ) pixels.convert(fmt);
 		if( flipY != null ) pixels.setFlip(flipY);
@@ -230,7 +273,7 @@ class Image extends Resource {
 			function load() {
 				// immediately loading the PNG is faster than going through loadBitmap
 				tex.alloc();
-				var pixels = getPixels(h3d.mat.Texture.nativeFormat);
+				var pixels = getPixels(tex.format);
 				if( pixels.width != tex.width || pixels.height != tex.height )
 					pixels.makeSquare();
 				tex.uploadPixels(pixels);
@@ -285,7 +328,10 @@ class Image extends Resource {
 			width = tw;
 			height = th;
 		}
-		tex = new h3d.mat.Texture(width, height, [NoAlloc]);
+		var format = h3d.mat.Texture.nativeFormat;
+		if( inf.format == Dds )
+			format = S3TC(inf.bc);
+		tex = new h3d.mat.Texture(width, height, [NoAlloc], format);
 		if( DEFAULT_FILTER != Linear ) tex.filter = DEFAULT_FILTER;
 		tex.setName(entry.path);
 		loadTexture();

@@ -33,9 +33,9 @@ class TextureChannels extends Texture {
 	function setPixelsInner( c : hxd.Pixels.Channel, src : hxd.Pixels, srcChannel : hxd.Pixels.Channel ) {
 		if( src.width != width || src.height != height )
 			throw "Size mismatch : " + src.width + "x" + src.height + " should be " + width + "x" + height;
-		var bpp = pixels.bytesPerPixel;
+		var bpp = @:privateAccess pixels.bytesPerPixel;
 		var off = hxd.Pixels.getChannelOffset(pixels.format, c);
-		var srcBpp = src.bytesPerPixel;
+		var srcBpp = @:privateAccess src.bytesPerPixel;
 		var srcOff = hxd.Pixels.getChannelOffset(src.format, srcChannel);
 		for( y in 0...height ) {
 			var r = (y * src.width * srcBpp) + srcOff;
