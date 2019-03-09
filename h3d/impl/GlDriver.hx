@@ -7,9 +7,7 @@ import h3d.mat.Data;
 #if (js||cpp||hlsdl||usegl)
 
 #if js
-import js.html.Uint16Array;
-import js.html.Uint8Array;
-import js.html.Float32Array;
+import hxd.impl.TypedArray;
 private typedef GL = js.html.webgl.GL;
 private extern class GL2 extends js.html.webgl.GL {
 	// webgl2
@@ -1134,9 +1132,9 @@ class GlDriver extends Driver {
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#elseif js
 		var buffer = switch( t.format ) {
-		case RGBA32F, R32F, RG32F, RGB32F: new js.html.Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
-		case RGBA16F, R16F, RG16F, RGB16F: new js.html.Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
-		case RGB10A2, RG11B10UF: new js.html.Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
+		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
+		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
+		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
 		default: bytesToUint8Array(pixels.bytes,pixels.offset);
 		}
 		if( t.format.match(S3TC(_)) )
@@ -1611,11 +1609,11 @@ class GlDriver extends Driver {
 			throw "Can't capture main render buffer in GL";
 		discardError();
 		#if js
-		var buffer : js.html.ArrayBufferView = @:privateAccess pixels.bytes.b;
+		var buffer : ArrayBufferView = @:privateAccess pixels.bytes.b;
 		switch( curTarget.format ) {
-		case RGBA32F, R32F, RG32F, RGB32F: buffer = new js.html.Float32Array(buffer.buffer);
-		case RGBA16F, R16F, RG16F, RGB16F: buffer = new js.html.Uint16Array(buffer.buffer);
-		case RGB10A2, RG11B10UF: buffer = new js.html.Uint32Array(buffer.buffer);
+		case RGBA32F, R32F, RG32F, RGB32F: buffer = new Float32Array(buffer.buffer);
+		case RGBA16F, R16F, RG16F, RGB16F: buffer = new Uint16Array(buffer.buffer);
+		case RGB10A2, RG11B10UF: buffer = new Uint32Array(buffer.buffer);
 		default:
 		}
 		#else
