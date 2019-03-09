@@ -9,7 +9,7 @@ class Mesh extends Object {
 	/**
 		The primitive of the mesh: the list of vertexes and indices necessary to display the mesh.
 	**/
-	public var primitive : h3d.prim.Primitive;
+	public var primitive(default, set) : h3d.prim.Primitive;
 
 	/**
 		The material of the mesh: the properties used to display it (texture, color, shaders, etc.)
@@ -80,7 +80,8 @@ class Mesh extends Object {
 	}
 
 	override function dispose() {
-		if( primitive != null ) primitive.dispose();
+		if( primitive != null && primitive.refCount == 1 )
+			primitive.dispose();
 		super.dispose();
 	}
 
@@ -96,5 +97,25 @@ class Mesh extends Object {
 		material = ctx.getKnownRef(h3d.mat.Material);
 	}
 	#end
+
+	override private function onAdd()
+	{
+		super.onAdd();
+		if ( primitive != null ) primitive.incref();
+	}
+
+	override private function onRemove()
+	{
+		if ( primitive != null ) primitive.decref();
+		super.onRemove();
+	}
+
+	function set_primitive( prim : h3d.prim.Primitive ) : h3d.prim.Primitive {
+		if ( prim != this.primitive && allocated ) {
+			if (this.primitive != null) this.primitive.decref();
+			if (prim != null) prim.incref();
+		}
+		return this.primitive = prim;
+	}
 
 }

@@ -259,6 +259,7 @@ class Library {
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
 		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this);
+		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
 		return p;
 	}
