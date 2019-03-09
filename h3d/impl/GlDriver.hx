@@ -892,7 +892,7 @@ class GlDriver extends Driver {
 			checkError();
 		} else {
 			#if js
-			if( !t.format.match(BC(_)) )
+			if( !t.format.match(S3TC(_)) )
 			#end
 			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 			checkError();
