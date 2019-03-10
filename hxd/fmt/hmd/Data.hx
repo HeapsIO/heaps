@@ -178,7 +178,7 @@ enum AnimationFlag {
 	HasScale;
 	HasUV;
 	HasAlpha;
-	SinglePosition;
+	SingleFrame;
 	HasProps;
 	Reserved;
 }
@@ -188,6 +188,16 @@ class AnimationObject {
 	public var flags : haxe.EnumFlags<AnimationFlag>;
 	public var props : Array<String>;
 	public function new() {
+	}
+	public function getStride() {
+		var stride = 0;
+		if( flags.has(HasPosition) ) stride += 3;
+		if( flags.has(HasRotation) ) stride += 4;
+		if( flags.has(HasScale) ) stride += 3;
+		if( flags.has(HasUV) ) stride += 2;
+		if( flags.has(HasAlpha) ) stride += 1;
+		if( flags.has(HasProps) ) stride += props.length;
+		return stride;
 	}
 }
 
@@ -214,7 +224,7 @@ class Animation {
 
 class Data {
 
-	public static inline var CURRENT_VERSION = 2;
+	public static inline var CURRENT_VERSION = 3;
 
 	public var version : Int;
 	public var props : Properties;

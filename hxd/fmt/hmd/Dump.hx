@@ -184,27 +184,57 @@ class Dump {
 			add('@$k ANIMATION');
 			prefix += '\t';
 			d.position = a.dataPosition;
+			var animStride = 0;
+			var prefixTotal = 0;
+			for( o in a.objects ) {
+				var stride = o.getStride();
+				if( o.flags.has(SingleFrame) )
+					prefixTotal += stride;
+				else
+					animStride += stride;
+			}
+			var firstFramePos = 0;
+			var animPos = 0;
 			for( o in a.objects ) {
 				var frames = a.frames;
 				var stride = 0;
 				if( o.flags.has(HasPosition) )
 					stride += 3;
 				if( o.flags.has(HasRotation) )
-					stride += 3;
+					stride += h.version < 3 ? 3 : 4;
 				if( o.flags.has(HasScale) )
 					stride += 3;
-				if( o.flags.has(SinglePosition) )
+				if( o.flags.has(SingleFrame) )
 					frames = 1;
-				if( stride > 0 )
-					add('${o.name} Position : '+Std.string([for( i in 0...frames ) [for( j in 0...stride ) d.readFloat()]]));
-				if( o.flags.has(HasUV) )
-					add('${o.name} UV : '+Std.string([for( i in 0...a.frames ) [for( j in 0...2 ) d.readFloat()]]));
-				if( o.flags.has(HasAlpha) )
-					add('${o.name} Alpha : '+Std.string([for( i in 0...a.frames ) d.readFloat()]));
-				if( o.flags.has(HasProps) ) {
-					for( p in o.props )
-						add('${o.name} $p : '+Std.string([for( i in 0...a.frames ) d.readFloat()]));
+				inline function setFrame(f,offset) {
+					if( h.version < 3 ) return;
+					if( o.flags.has(SingleFrame) )
+						d.position = a.dataPosition + (firstFramePos + offset) * 4;
+					else
+						d.position = a.dataPosition + (animStride * f + prefixTotal + offset + animPos) * 4;
 				}
+				if( stride > 0 )
+					add('${o.name} Position : '+Std.string([for( i in 0...frames ) { setFrame(i,0); [for( j in 0...stride ) d.readFloat()]; }]));
+				if( h.version < 3 )
+					frames = a.frames;
+				if( o.flags.has(HasUV) ) {
+					add('${o.name} UV : '+Std.string([for( i in 0...frames ) { setFrame(i,stride); [for( j in 0...2 ) d.readFloat()]; }]));
+					stride += 2;
+				}
+				if( o.flags.has(HasAlpha) ) {
+					add('${o.name} Alpha : '+Std.string([for( i in 0...frames ) { setFrame(i,stride); d.readFloat(); }]));
+					stride += 1;
+				}
+				if( o.flags.has(HasProps) ) {
+					for( p in o.props ) {
+						add('${o.name} $p : '+Std.string([for( i in 0...frames ) { setFrame(i,stride); d.readFloat(); }]));
+						stride += 1;
+					}
+				}
+				if( o.flags.has(SingleFrame) )
+					firstFramePos += stride;
+				else
+					animPos += stride;
 			}
 			prefix = '';
 		}

@@ -710,6 +710,38 @@ class HMDOut extends BaseLibrary {
 		dataOut.writeFloat( f == 0 ? 0 : f ); // prevent negative zero
 	}
 
+	function writeFrame( o : h3d.anim.LinearAnimation.LinearObject, fid : Int ) {
+		if( d.version < 3 ) return;
+		if( o.frames != null ) {
+			var f = o.frames[fid];
+			if( o.hasPosition ) {
+				writeFloat(f.tx);
+				writeFloat(f.ty);
+				writeFloat(f.tz);
+			}
+			if( o.hasRotation ) {
+				var ql = Math.sqrt(f.qx * f.qx + f.qy * f.qy + f.qz * f.qz + f.qw * f.qw);
+				writeFloat(round(f.qx / ql));
+				writeFloat(round(f.qy / ql));
+				writeFloat(round(f.qz / ql));
+				writeFloat(round(f.qw / ql));
+			}
+			if( o.hasScale ) {
+				writeFloat(f.sx);
+				writeFloat(f.sy);
+				writeFloat(f.sz);
+			}
+		}
+		if( o.uvs != null ) {
+			writeFloat(o.uvs[fid<<1]);
+			writeFloat(o.uvs[(fid<<1)+1]);
+		}
+		if( o.alphas != null )
+			writeFloat(o.alphas[fid]);
+		if( o.propValues != null )
+			writeFloat(o.propValues[fid]);
+	}
+
 	function makeAnimation( anim : h3d.anim.Animation ) {
 		var a = new Animation();
 		a.name = anim.name;
@@ -723,57 +755,80 @@ class HMDOut extends BaseLibrary {
 			a.events = [for( a in animationEvents ) { var e = new AnimationEvent(); e.frame = a.frame; e.data = a.data; e; } ];
 		var objects : Array<h3d.anim.LinearAnimation.LinearObject> = cast @:privateAccess anim.objects;
 		objects.sort(function(o1, o2) return Reflect.compare(o1.objectName, o2.objectName));
+
+		var animatedObjects = [];
 		for( obj in objects ) {
 			var o = new AnimationObject();
+			var count = 0;
 			o.name = obj.objectName;
 			o.flags = new haxe.EnumFlags();
 			o.props = [];
 			if( obj.frames != null ) {
-				o.flags.set(HasPosition);
+				count = obj.frames.length;
+				if( obj.hasPosition || d.version < 3 )
+					o.flags.set(HasPosition);
 				if( obj.hasRotation )
 					o.flags.set(HasRotation);
 				if( obj.hasScale )
 					o.flags.set(HasScale);
-				if( obj.frames.length == 1 )
-					o.flags.set(SinglePosition);
-				for( f in obj.frames ) {
-					if( o.flags.has(HasPosition) ) {
-						writeFloat(f.tx);
-						writeFloat(f.ty);
-						writeFloat(f.tz);
-					}
-					if( o.flags.has(HasRotation) ) {
-						var ql = Math.sqrt(f.qx * f.qx + f.qy * f.qy + f.qz * f.qz + f.qw * f.qw);
-						if( f.qw < 0 ) ql = -ql;
-						writeFloat(round(f.qx / ql));
-						writeFloat(round(f.qy / ql));
-						writeFloat(round(f.qz / ql));
-					}
-					if( o.flags.has(HasScale) ) {
-						writeFloat(f.sx);
-						writeFloat(f.sy);
-						writeFloat(f.sz);
+				if( d.version < 3 ) {
+					for( f in obj.frames ) {
+						if( o.flags.has(HasPosition) ) {
+							writeFloat(f.tx);
+							writeFloat(f.ty);
+							writeFloat(f.tz);
+						}
+						if( o.flags.has(HasRotation) ) {
+							var ql = Math.sqrt(f.qx * f.qx + f.qy * f.qy + f.qz * f.qz + f.qw * f.qw);
+							if( f.qw < 0 ) ql = -ql;
+							writeFloat(round(f.qx / ql));
+							writeFloat(round(f.qy / ql));
+							writeFloat(round(f.qz / ql));
+						}
+						if( o.flags.has(HasScale) ) {
+							writeFloat(f.sx);
+							writeFloat(f.sy);
+							writeFloat(f.sz);
+						}
 					}
 				}
 			}
 			if( obj.uvs != null ) {
 				o.flags.set(HasUV);
-				for( f in obj.uvs )
-					writeFloat(f);
-			}
+				if( count == 0 ) count = obj.uvs.length else if( count != obj.uvs.length ) throw "assert";
+				if( d.version < 3 )
+					for( f in obj.uvs )
+						writeFloat(f);
+				}
 			if( obj.alphas != null ) {
 				o.flags.set(HasAlpha);
-				for( f in obj.alphas )
-					writeFloat(f);
+				if( count == 0 ) count = obj.alphas.length else if( count != obj.alphas.length ) throw "assert";
+				if( d.version < 3 )
+					for( f in obj.alphas )
+						writeFloat(f);
 			}
 			if( obj.propValues != null ) {
 				o.flags.set(HasProps);
 				o.props.push(obj.propName);
-				for( f in obj.propValues )
-					writeFloat(f);
+				if( count == 0 ) count = obj.propValues.length else if( count != obj.propValues.length ) throw "assert";
+				if( d.version < 3 )
+					for( f in obj.propValues )
+						writeFloat(f);
+			}
+			if( count == 0 )
+				throw "assert"; // no data ?
+			if( count == 1 ) {
+				o.flags.set(SingleFrame);
+				writeFrame(obj,0);
+			} else {
+				if( count != anim.frameCount ) throw "assert";
+				animatedObjects.push(obj);
 			}
 			a.objects.push(o);
 		}
+		for( i in 0...anim.frameCount )
+			for( obj in animatedObjects )
+				writeFrame(obj,i);
 		return a;
 	}
 
@@ -795,7 +850,11 @@ class HMDOut extends BaseLibrary {
 		this.filePath = filePath;
 
 		d = new Data();
+		#if hmd_version
+		d.version = Std.parseInt(#if macro haxe.macro.Context.definedValue("hmd_version") #else haxe.macro.Compiler.getDefine("hmd_version") #end);
+		#else
 		d.version = Data.CURRENT_VERSION;
+		#end
 		d.geometries = [];
 		d.materials = [];
 		d.models = [];
