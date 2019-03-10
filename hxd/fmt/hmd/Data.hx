@@ -192,7 +192,7 @@ class AnimationObject {
 	public function getStride() {
 		var stride = 0;
 		if( flags.has(HasPosition) ) stride += 3;
-		if( flags.has(HasRotation) ) stride += 4;
+		if( flags.has(HasRotation) ) stride += 3;
 		if( flags.has(HasScale) ) stride += 3;
 		if( flags.has(HasUV) ) stride += 2;
 		if( flags.has(HasAlpha) ) stride += 1;

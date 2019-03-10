@@ -28,7 +28,7 @@ class BufferObject extends AnimatedObject {
 	public function getStride() {
 		var stride = 0;
 		if( layout.has(Position) ) stride += 3;
-		if( layout.has(Rotation) ) stride += 4;
+		if( layout.has(Rotation) ) stride += 3;
 		if( layout.has(Scale) ) stride += 3;
 		if( layout.has(UV) ) stride += 2;
 		if( layout.has(Alpha) ) stride += 1;
@@ -180,11 +180,12 @@ class BufferAnimation extends Animation {
 					var q1x : Float32 = data[offset1++];
 					var q1y : Float32 = data[offset1++];
 					var q1z : Float32 = data[offset1++];
-					var q1w : Float32 = data[offset1++];
+					var q1w : Float32 = Math.sqrt(hxd.Math.abs(1 - (q1x*q1x+q1y*q1y+q1z*q1z)));
 					var q2x : Float32 = data[offset2++];
 					var q2y : Float32 = data[offset2++];
 					var q2z : Float32 = data[offset2++];
-					var q2w : Float32 = data[offset2++];
+					var q2w : Float32 = Math.sqrt(hxd.Math.abs(1 - (q2x*q2x+q2y*q2y+q2z*q2z)));
+
 					// qlerp nearest
 					var dot = q1x * q2x + q1y * q2y + q1z * q2z + q1w * q2w;
 					var q2 = dot < 0 ? -k2 : k2;

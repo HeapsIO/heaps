@@ -425,7 +425,7 @@ class Library {
 			}
 			if( o.flags.has(HasRotation) ) {
 				c.layout.set(Rotation);
-				stride += 4 * sm;
+				stride += 3 * sm;
 			}
 			if( o.flags.has(HasScale) ) {
 				c.layout.set(Scale);
