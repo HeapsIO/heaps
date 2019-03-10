@@ -186,7 +186,7 @@ class BufferAnimation extends Animation {
 					var q2z : Float32 = data[offset2++];
 					var q2w : Float32 = data[offset2++];
 					// qlerp nearest
-					var dot = q1x * q1x + q1y * q2y + q1z * q2z + q1w * q2w;
+					var dot = q1x * q2x + q1y * q2y + q1z * q2z + q1w * q2w;
 					var q2 = dot < 0 ? -k2 : k2;
 					var qx = q1x * k1 + q2x * q2;
 					var qy = q1y * k1 + q2y * q2;
