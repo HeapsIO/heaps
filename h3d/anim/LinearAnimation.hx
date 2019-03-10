@@ -36,6 +36,7 @@ class LinearObject extends AnimatedObject {
 	public var propCurrentValue : Float;
 	override function clone() : AnimatedObject {
 		var o = new LinearObject(objectName);
+		o.hasPosition = hasPosition;
 		o.hasRotation = hasRotation;
 		o.hasScale = hasScale;
 		o.frames = frames;
@@ -56,9 +57,10 @@ class LinearAnimation extends Animation {
 		syncFrame = -1;
 	}
 
-	public function addCurve( objName, frames, hasRot, hasScale ) {
+	public function addCurve( objName, frames, hasPos, hasRot, hasScale ) {
 		var f = new LinearObject(objName);
 		f.frames = frames;
+		f.hasPosition = hasPos;
 		f.hasRotation = hasRot;
 		f.hasScale = hasScale;
 		objects.push(f);

@@ -539,7 +539,7 @@ class Library {
 					}
 					fl[i] = f;
 				}
-				l.addCurve(o.name, fl, rot, scale);
+				l.addCurve(o.name, fl, true, rot, scale);
 			}
 			if( o.flags.has(HasUV) ) {
 				var fl = new haxe.ds.Vector(a.frames*2);

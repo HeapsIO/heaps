@@ -29,6 +29,7 @@ class TmpObject {
 private class AnimCurve {
 	public var def : DefaultMatrixes;
 	public var object : String;
+	public var isJoint : Bool;
 	public var t : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
 	public var r : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
 	public var s : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
@@ -595,6 +596,7 @@ class BaseLibrary {
 		}
 		if( c == null ) {
 			c = new AnimCurve(def, name);
+			c.isJoint = model.getType() == "LimbNode";
 			curves.set(model.getId(), c);
 		}
 		return c;
@@ -1139,8 +1141,16 @@ class BaseLibrary {
 					fov[f] = c.fov.v[fovp - 1];
 				}
 			}
-			if( frames != null )
-				anim.addCurve(c.object, frames, c.r != null || def.rotate != null || def.preRot != null, c.s != null || def.scale != null);
+			if( frames != null ) {
+				var hasTrans = c.t != null;
+				var hasRot = c.r != null || def.rotate != null || def.preRot != null;
+				var hasScale = c.s != null || def.scale != null;
+				if( !hasTrans && def.trans != null )
+					hasTrans = !c.isJoint;
+				if( !hasTrans && !hasRot && !hasScale )
+					hasTrans = true; // force reset
+				anim.addCurve(c.object, frames, hasTrans, hasRot, hasScale);
+			}
 			if( alpha != null )
 				anim.addAlphaCurve(c.object, alpha);
 			if( uvs != null )
