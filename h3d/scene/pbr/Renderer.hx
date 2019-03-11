@@ -339,6 +339,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.render();
 
 		drawHDR();
+		draw("beforeTonemappingDecal");
 		draw("beforeTonemapping");
 		apply(BeforeTonemapping);
 
