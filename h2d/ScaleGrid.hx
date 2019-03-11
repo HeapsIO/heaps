@@ -20,30 +20,35 @@ class ScaleGrid extends h2d.TileGroup {
 	}
 
 	function set_tileBorders(b) {
+		if( tileBorders == b ) return b;
 		this.tileBorders = b;
 		clear();
 		return b;
 	}
 
 	function set_width(w) {
+		if( width == w ) return w;
 		this.width = w;
 		clear();
 		return w;
 	}
 
 	function set_height(h) {
+		if( height == h ) return h;
 		this.height = h;
 		clear();
 		return h;
 	}
 
 	function set_borderWidth(w) {
+		if( borderWidth == w ) return w;
 		this.borderWidth = w;
 		clear();
 		return w;
 	}
 
 	function set_borderHeight(h) {
+		if( borderHeight == h ) return h;
 		this.borderHeight = h;
 		clear();
 		return h;
