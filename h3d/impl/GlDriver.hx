@@ -1322,7 +1322,7 @@ class GlDriver extends Driver {
 			curIndexBuffer = ibuf;
 			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf.b);
 		}
-		#if (!js && (!hlsdl || hlsdl >= "1.7"))
+		#if !js
 		if( hasMultiIndirect ) {
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
 			if( ibuf.is32 )
