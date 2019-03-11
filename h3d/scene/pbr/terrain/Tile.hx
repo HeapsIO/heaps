@@ -530,13 +530,13 @@ class Tile extends h3d.scene.Mesh {
 		}
 	}
 
-	public dynamic function beforeEmit() {};
+	public dynamic function beforeEmit() : Bool { return true; };
 	override function emit( ctx:RenderContext ){
 		if( !isReady() ) return;
 		computeBounds();
 		insideFrustrum = ctx.camera.frustum.hasBounds(cachedBounds);
-		beforeEmit();
-		if( insideFrustrum )
+		var b = beforeEmit();
+		if( b && insideFrustrum )
 			super.emit(ctx);
 	}
 
