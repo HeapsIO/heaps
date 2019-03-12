@@ -48,8 +48,14 @@ class SurfaceArray {
 		normal = new h3d.mat.TextureArray(res, res, count, [Target], RGBA);
 		pbr = new h3d.mat.TextureArray(res, res, count, [Target], RGBA);
 		albedo.wrap = Repeat;
+		albedo.realloc = null;
+		albedo.preventAutoDispose();
 		normal.wrap = Repeat;
+		normal.realloc = null;
+		normal.preventAutoDispose();
 		pbr.wrap = Repeat;
+		pbr.realloc = null;
+		pbr.preventAutoDispose();
 	}
 
 	public function clone() : SurfaceArray {
