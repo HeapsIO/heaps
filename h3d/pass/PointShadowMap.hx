@@ -92,6 +92,8 @@ class PointShadowMap extends Shadows {
 		if( staticTexture != null ) staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target, Cube], format);
 		staticTexture.name = "staticTexture";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 
 		for(i in 0 ... 6){
 			var len = buffer.readInt32();

@@ -167,7 +167,9 @@ class DirShadowMap extends Shadows {
 		if( staticTexture != null ) staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
 		staticTexture.uploadPixels(pixels);
-		staticTexture.name = "defaultDirShadowMap";
+		staticTexture.name = "staticTexture";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		syncShader(staticTexture);
 		return true;
 	}

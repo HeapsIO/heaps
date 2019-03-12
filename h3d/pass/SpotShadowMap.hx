@@ -83,6 +83,9 @@ class SpotShadowMap extends Shadows {
 		var pixels = new hxd.Pixels(size, size, haxe.zip.Uncompress.run(buffer.read(len)), format);
 		if( staticTexture != null ) staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
+		staticTexture.name = "staticTexture";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		staticTexture.uploadPixels(pixels);
 		syncShader(staticTexture);
 		return true;
