@@ -28,9 +28,11 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes }>;
 	var bufferDirty : Bool;
 	var indexDirty : Bool;
+	var allocPos : h3d.impl.AllocPos;
 
-	public function new() {
+	public function new(allocPos) {
 		buffers = [];
+		this.allocPos = allocPos;
 	}
 
 	public inline function addIndex(i) {
@@ -63,7 +65,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	override function alloc( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
-		buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat]);
+		buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat], allocPos);
 		indexes = h3d.Indexes.alloc(index);
 		for( b in buffers ) {
 			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = h3d.Buffer.ofFloats(b.buf, 8, [RawFormat]);
@@ -149,9 +151,9 @@ class Graphics extends Drawable {
 	public var tile : h2d.Tile;
 	public var bevel = 0.25; //0 = not beveled, 1 = always beveled
 
-	public function new(?parent) {
+	public function new(?parent,?allocPos) {
 		super(parent);
-		content = new GraphicsContent();
+		content = new GraphicsContent(allocPos);
 		tile = h2d.Tile.fromColor(0xFFFFFF);
 		clear();
 	}
