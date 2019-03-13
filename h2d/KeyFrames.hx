@@ -27,6 +27,11 @@ class KeyFrames extends Mask {
 	public var pause : Bool = false;
 	public var loop : Bool = false;
 
+	/**
+		When looping, will interpolate between last frame and first frame (default: false)
+	**/
+	public var loopInterpolate : Bool = false;
+
 	public var smooth(default,set) = true;
 
 	public function new( file : KeyframesFile, ?filePrefix : String, ?parent ) {
@@ -58,7 +63,9 @@ class KeyFrames extends Mask {
 					tiles = [loadTile(f.backed_image)];
 				}
 
-				for( t in tiles ) t.scaleToSize(f.size.x, f.size.y);
+				if (f.size != null) {
+					for( t in tiles ) t.scaleToSize(f.size.x, f.size.y);
+				}
 				var bmp = new h2d.Bitmap(tiles[0], this);
 				bmp.smooth = smooth;
 				if( f.name.toLowerCase().indexOf("(add)") >= 0 )
@@ -112,12 +119,21 @@ class KeyFrames extends Mask {
 		}
 		var cur = f.key_values[index];
 		var next = f.key_values[index + 1];
+		var yVal;
 		var xVal;
 		if( next == null ) {
-			next = cur;
-			xVal = 0.;
-		} else
-			xVal = (curFrame - cur.start_frame) / (next.start_frame - cur.start_frame);
+			if( loop && loopInterpolate ) {
+				next = f.key_values[0];
+				yVal = ((next.start_frame + frameCount) - cur.start_frame);
+				xVal = (curFrame - cur.start_frame) / yVal;
+			} else {
+				next = cur;
+				xVal = 0.;
+			}
+		} else {
+			yVal = (next.start_frame - cur.start_frame);
+			xVal = (curFrame - cur.start_frame) / yVal;
+		}
 
 		function calcValue( index : Int ) : Float {
 			var v0 = cur.data[index];
@@ -125,7 +141,7 @@ class KeyFrames extends Mask {
 
 			var minT = 0.;
 			var maxT = 1.;
-			var maxDelta = 1 / (next.start_frame - cur.start_frame);
+			var maxDelta = 1 / yVal;
 
 			inline function bezier(c1:Float, c2:Float, t:Float) {
 				var u = 1 - t;
