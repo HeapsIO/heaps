@@ -29,7 +29,6 @@ class TmpObject {
 private class AnimCurve {
 	public var def : DefaultMatrixes;
 	public var object : String;
-	public var isJoint : Bool;
 	public var t : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
 	public var r : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
 	public var s : { t : Array<Float>, x : Array<Float>, y : Array<Float>, z : Array<Float> };
@@ -49,6 +48,8 @@ class DefaultMatrixes {
 	public var rotate : Null<Point>;
 	public var preRot : Null<Point>;
 	public var wasRemoved : Null<Int>;
+
+	public var transPos : h3d.Matrix;
 
 	public function new() {
 	}
@@ -596,7 +597,6 @@ class BaseLibrary {
 		}
 		if( c == null ) {
 			c = new AnimCurve(def, name);
-			c.isJoint = model.getType() == "LimbNode";
 			curves.set(model.getId(), c);
 		}
 		return c;
@@ -1145,10 +1145,9 @@ class BaseLibrary {
 				var hasTrans = c.t != null;
 				var hasRot = c.r != null || def.rotate != null || def.preRot != null;
 				var hasScale = c.s != null || def.scale != null;
-				if( !hasTrans && def.trans != null )
-					hasTrans = !c.isJoint;
-				if( !hasTrans && !hasRot && !hasScale )
-					hasTrans = true; // force reset
+				// force position for objects unless it's default to skin
+				if( !hasTrans && def.transPos == null )
+					hasTrans = true;
 				anim.addCurve(c.object, frames, hasTrans, hasRot, hasScale);
 			}
 			if( alpha != null )
@@ -1286,8 +1285,7 @@ class BaseLibrary {
 				geom.setSkin(skin);
 				hskins.set(def.getId(), skin);
 			}
-			j.transPos = h3d.Matrix.L(subDef.get("Transform").getFloats());
-			if( leftHand ) DefaultMatrixes.rightHandToLeft(j.transPos);
+			j.transPos = defMat.transPos;
 
 			var weights = subDef.getAll("Weights");
 			if( weights.length > 0 ) {
@@ -1314,6 +1312,39 @@ class BaseLibrary {
 	function round(v:Float) {
 		if( v != v ) throw "NaN found";
 		return std.Math.fround(v * 131072) / 131072;
+	}
+
+	function updateDefaultMatrix( model : FbxNode, d : DefaultMatrixes ) {
+		// default matrix should be skinning position (not frame 0 objects position)
+		var subDef = getParent(model, "Deformer", true);
+		if( subDef == null )
+			return; // exporting without model will not export Deformer :'(
+
+		var transPos = h3d.Matrix.L(subDef.get("Transform").getFloats());
+		if( leftHand ) DefaultMatrixes.rightHandToLeft(transPos);
+		d.transPos = transPos;
+
+		var m = new h3d.Matrix();
+		m.initInverse(transPos);
+
+		var parentNode = getParent(model, "Model", true);
+		if( parentNode != null ) {
+			var mparent = getDefaultMatrixes(parentNode);
+			if( mparent.transPos != null ) {
+				var m2 = new h3d.Matrix();
+				m2.multiply(m, mparent.transPos);
+				m = m2;
+			}
+		}
+
+		// we have  d.toMatrix(leftHand) == m  (in skin position only)
+		// revert m to feed default matrix
+		if( leftHand ) DefaultMatrixes.rightHandToLeft(m); // undo LH/RH transform
+
+		var dist = d.trans == null ? m.getPosition().length() : hxd.Math.distance(d.trans.x - m._41, d.trans.y - m._42, d.trans.z - m._43);
+		if( dist > 1e-2 )
+			d.trans = new h3d.col.Point(m._41, m._42, m._43);
+		d.rotate = null; // skin position = always rotate 0 (?)
 	}
 
 	function getDefaultMatrixes( model : FbxNode ) {
@@ -1345,6 +1376,9 @@ class BaseLibrary {
 					d.scale = null;
 			default:
 			}
+		if( model.getType() == "LimbNode" )
+			updateDefaultMatrix(model, d);
+
 		defaultModelMatrixes.set(name, d);
 		return d;
 	}

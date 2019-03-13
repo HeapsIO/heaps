@@ -35,7 +35,10 @@ class Dump {
 		add('HMD v${h.version}');
 		prefix = "\t";
 		add("Header : " + hxd.Math.fmt(h.dataPosition/1024) + " KB");
-		add("Data : " + hxd.Math.fmt(h.data.length / 1024) + " KB");
+		if( h.data == null )
+			add("No Data");
+		else
+			add("Data : " + hxd.Math.fmt(h.data.length / 1024) + " KB");
 		addProps(h.props);
 		prefix = "";
 		add("");
@@ -154,6 +157,11 @@ class Dump {
 		}
 
 		if( h.animations.length > 0 ) add("");
+
+		if( h.data == null ) {
+			add("DONE");
+			return buf.toString();
+		}
 
 		// ---- DUMP DATA ----
 
