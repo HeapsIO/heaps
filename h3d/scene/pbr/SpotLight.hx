@@ -125,6 +125,11 @@ class SpotLight extends Light {
 	var s = new h3d.col.Sphere();
 	var d = new h3d.Vector();
 	override function emit(ctx:RenderContext) {
+		if( ctx.computingStatic ) {
+			super.emit(ctx);
+			return;
+		}
+
 		if( ctx.pbrLightPass == null )
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
 
