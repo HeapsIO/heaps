@@ -136,7 +136,7 @@ class System {
 		}
 		Sys.exit(0);
 	}
-	
+
 	#if hot_reload
 	@:hlNative("std","sys_check_reload")
 	static function check_reload() return false;
@@ -197,7 +197,7 @@ class System {
 			cur = Cursor.createSystem(SizeALL);
 		case TextInput:
 			cur = Cursor.createSystem(IBeam);
-		case Hide:
+		case Callback(_), Hide:
 			throw "assert";
 		case Custom(c):
 			if( c.alloc == null ) {

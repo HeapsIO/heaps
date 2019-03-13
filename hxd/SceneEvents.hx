@@ -370,7 +370,10 @@ class SceneEvents {
 				break;
 			}
 		}
-		hxd.System.setCursor(cur);
+		switch( cur ) {
+		case Callback(f): f();
+		default: hxd.System.setCursor(cur);
+		}
 	}
 
 	function onEvent( e : hxd.Event ) {

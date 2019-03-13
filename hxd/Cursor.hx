@@ -7,6 +7,10 @@ enum Cursor {
 	TextInput;
 	Hide;
 	Custom( custom : CustomCursor );
+	/**
+		When this cursor is selected, call the function itself, which can handle complex logic and is responsible to call hxd.System.setCursor
+	**/
+	Callback( f : Void -> Void );
 }
 
 @:allow(hxd.System)

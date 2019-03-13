@@ -73,6 +73,7 @@ class System {
 			case Move: "move";
 			case TextInput: "text";
 			case Hide: "none";
+			case Callback(_): throw "assert";
 			case Custom(cur):
 				if ( cur.alloc == null ) {
 					cur.alloc = new Array();
