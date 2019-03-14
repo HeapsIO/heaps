@@ -432,7 +432,10 @@ class Object {
 		var needDispose = s == null;
 		if( s == null ) s = new h2d.Scene();
 		@:privateAccess s.drawImplTo(this, t);
-		if( needDispose ) s.dispose();
+		if( needDispose ) {
+			s.dispose();
+			onRemove();
+		}
 	}
 
 	function draw( ctx : RenderContext ) {
