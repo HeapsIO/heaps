@@ -146,6 +146,7 @@ class GlDriver extends Driver {
 	var mrtExt : { function drawBuffersWEBGL( colors : Array<Int> ) : Void; };
 	static var UID = 0;
 	public var gl : GL2;
+	public static var ALLOW_WEBGL2 = true;
 	#end
 
 	#if (hlsdl||usegl)
@@ -192,7 +193,8 @@ class GlDriver extends Driver {
 		#if js
 		canvas = @:privateAccess hxd.Window.getInstance().canvas;
 		var options = {alpha:false,stencil:true,antialias:antiAlias>0};
-		gl = cast canvas.getContext("webgl2",options);
+		if(ALLOW_WEBGL2) 
+			gl = cast canvas.getContext("webgl2",options);
 		if( gl == null )
 			gl = cast canvas.getContextWebGL(options);
 		if( gl == null ) throw "Could not acquire GL context";
