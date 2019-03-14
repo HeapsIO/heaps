@@ -795,7 +795,7 @@ class HMDOut extends BaseLibrary {
 			}
 			if( obj.uvs != null ) {
 				o.flags.set(HasUV);
-				if( count == 0 ) count = obj.uvs.length else if( count != obj.uvs.length ) throw "assert";
+				if( count == 0 ) count = obj.uvs.length>>1 else if( count != obj.uvs.length>>1 ) throw "assert";
 				if( d.version < 3 )
 					for( f in obj.uvs )
 						writeFloat(f);
