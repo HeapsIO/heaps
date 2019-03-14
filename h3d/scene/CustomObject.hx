@@ -36,12 +36,6 @@ class CustomObject extends Object {
 		ctx.emit(material, this);
 	}
 
-	override function dispose() {
-		if ( primitive != null && primitive.refCount == 1 )
-			primitive.dispose();
-		super.dispose();
-	}
-
 	override private function onAdd()
 	{
 		super.onAdd();

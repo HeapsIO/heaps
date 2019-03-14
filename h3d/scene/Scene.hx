@@ -235,8 +235,12 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		return s;
 	}
 
-	override function dispose() {
-		super.dispose();
+	/**
+		Free the GPU memory for this Scene and its children
+	**/
+	public function dispose() {
+		if ( allocated )
+			onRemove();
 		if( hardwarePass != null ) {
 			hardwarePass.dispose();
 			hardwarePass = null;

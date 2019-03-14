@@ -79,12 +79,6 @@ class Mesh extends Object {
 		return super.getMaterials(a);
 	}
 
-	override function dispose() {
-		if( primitive != null && primitive.refCount == 1 )
-			primitive.dispose();
-		super.dispose();
-	}
-
 	#if (hxbit && !macro && heaps_enable_serialize)
 	override function customSerialize(ctx:hxbit.Serializer) {
 		super.customSerialize(ctx);

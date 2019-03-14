@@ -895,14 +895,6 @@ class Object implements hxd.impl.Serializable {
 		return new hxd.impl.ArrayIterator(children);
 	}
 
-	/**
-		Free the GPU memory for this object and its children
-	**/
-	public function dispose() {
-		for( c in children )
-			c.dispose();
-	}
-
 	#if (hxbit && !macro && heaps_enable_serialize)
 	function customSerialize( ctx : hxbit.Serializer ) {
 

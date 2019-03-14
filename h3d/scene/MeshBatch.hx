@@ -58,11 +58,6 @@ class MeshBatch extends Mesh {
 		cleanPasses();
 	}
 
-	override function dispose() {
-		super.dispose();
-		cleanPasses();
-	}
-
 	function cleanPasses() {
 		while( dataPasses != null ) {
 			dataPasses.pass.removeShader(dataPasses.shader);
