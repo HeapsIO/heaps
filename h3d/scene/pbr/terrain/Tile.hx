@@ -500,7 +500,7 @@ class Tile extends h3d.scene.Mesh {
 		}
 	}
 
-	public override function dispose() {
+	public function dispose() {
 		if( heightMap != null ) heightMap.dispose();
 		if( surfaceIndexMap != null ) surfaceIndexMap.dispose();
 		for( i in 0 ... surfaceWeights.length )
