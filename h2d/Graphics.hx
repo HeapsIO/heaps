@@ -3,14 +3,18 @@ import hxd.Math;
 
 private typedef GraphicsPoint = hxd.poly2tri.Point;
 
-private class GPoint {
+class GPoint {
 	public var x : Float;
 	public var y : Float;
 	public var r : Float;
 	public var g : Float;
 	public var b : Float;
 	public var a : Float;
-	public function new(x, y, r, g, b, a) {
+
+	public function new() {
+	}
+
+	public function load(x, y, r, g, b, a ){
 		this.x = x;
 		this.y = y;
 		this.r = r;
@@ -151,7 +155,7 @@ class Graphics extends Drawable {
 	public var tile : h2d.Tile;
 	public var bevel = 0.25; //0 = not beveled, 1 = always beveled
 
-	public function new(?parent,?allocPos) {
+	public function new(?parent,?allocPos:h3d.impl.AllocPos) {
 		super(parent);
 		content = new GraphicsContent(allocPos);
 		tile = h2d.Tile.fromColor(0xFFFFFF);
@@ -206,10 +210,14 @@ class Graphics extends Drawable {
 		if( !closed ) {
 			var prevLast = pts[last - 1];
 			if( prevLast == null ) prevLast = p;
-			pts.push(new GPoint(prev.x * 2 - prevLast.x, prev.y * 2 - prevLast.y, 0, 0, 0, 0));
+			var gp = new GPoint();
+			gp.load(prev.x * 2 - prevLast.x, prev.y * 2 - prevLast.y, 0, 0, 0, 0);
+			pts.push(gp);
 			var pNext = pts[1];
 			if( pNext == null ) pNext = p;
-			prev = new GPoint(p.x * 2 - pNext.x, p.y * 2 - pNext.y, 0, 0, 0, 0);
+			var gp = new GPoint();
+			gp.load(p.x * 2 - pNext.x, p.y * 2 - pNext.y, 0, 0, 0, 0);
+			prev = gp;
 		} else if( p != prev ) {
 			count--;
 			last--;
@@ -495,7 +503,7 @@ class Graphics extends Drawable {
 		}
 		flush();
 	}
-	
+
 	public function drawEllipse( cx : Float, cy : Float, radiusX : Float, radiusY : Float, rotationAngle : Float = 0, nsegments = 0 ) {
 		flush();
 		if( nsegments == 0 )
@@ -541,7 +549,9 @@ class Graphics extends Drawable {
 		if( y > yMax ) yMax = y;
 		if( doFill )
 			content.add(x, y, u, v, r, g, b, a);
-		tmpPoints.push(new GPoint(x, y, lineR, lineG, lineB, lineA));
+		var gp = new GPoint();
+		gp.load(x, y, lineR, lineG, lineB, lineA);
+		tmpPoints.push(gp);
 	}
 
 	override function draw(ctx:RenderContext) {
