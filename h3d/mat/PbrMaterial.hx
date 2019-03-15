@@ -18,11 +18,23 @@ package h3d.mat;
 	var AlphaMultiply = "AlphaMultiply";
 }
 
+@:enum abstract PbrDepthTest(String) {
+	var Less = "Less";
+	var LessEqual = "LessEqual";
+	var Greater = "Greater";
+	var GreaterEqual = "GreaterEqual";
+	var Always = "Always";
+	var Never = "Never";
+	var Equal = "Equal";
+	var NotEqual= "NotEqual";
+}
+
 typedef PbrProps = {
 	var mode : PbrMode;
 	var blend : PbrBlend;
 	var shadows : Bool;
 	var culling : Bool;
+	var depthTest : PbrDepthTest;
 	@:optional var alphaKill : Bool;
 	@:optional var emissive : Float;
 	@:optional var parallax : Float;
@@ -52,6 +64,7 @@ class PbrMaterial extends Material {
 				blend : Alpha,
 				shadows : false,
 				culling : false,
+				depthTest : Less,
 			};
 		case "ui":
 			props = {
@@ -60,6 +73,7 @@ class PbrMaterial extends Material {
 				shadows : false,
 				culling : false,
 				alphaKill : true,
+				depthTest : Less,
 			};
 		case "decal":
 			props = {
@@ -67,6 +81,7 @@ class PbrMaterial extends Material {
 				blend : Alpha,
 				shadows : false,
 				culling : true,
+				depthTest : Less,
 			};
 		default:
 			props = {
@@ -74,6 +89,7 @@ class PbrMaterial extends Material {
 				blend : None,
 				shadows : true,
 				culling : true,
+				depthTest : Less,
 			};
 		}
 		return props;
@@ -82,11 +98,21 @@ class PbrMaterial extends Material {
 	override function getDefaultModelProps() : Any {
 		var props : PbrProps = getDefaultProps();
 		props.blend = switch( blendMode ) {
-		case None: None;
-		case Alpha: Alpha;
-		case Add: Add;
-		case Multiply: Multiply;
-		default: throw "Unsupported Model blendMode "+blendMode;
+			case None: None;
+			case Alpha: Alpha;
+			case Add: Add;
+			case Multiply: Multiply;
+			default: throw "Unsupported Model blendMode "+blendMode;
+		}
+		props.depthTest = switch (mainPass.depthTest) {
+			case Always: Always;
+			case Never: Never;
+			case Equal: Equal;
+			case NotEqual: NotEqual;
+			case Greater: Greater;
+			case GreaterEqual: GreaterEqual;
+			case Less: Less;
+			case LessEqual: LessEqual;
 		}
 		return props;
 	}
@@ -97,6 +123,7 @@ class PbrMaterial extends Material {
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.StrengthValues));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.AlphaMultiply));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.Parallax));
+		if( !Reflect.hasField(props, "depthTest") ) Reflect.setField(props, "depthTest", Less);
 	}
 
 	override function refreshProps() {
@@ -165,6 +192,18 @@ class PbrMaterial extends Material {
 		shadows = props.shadows;
 		if( shadows ) getPass("shadow").culling = mainPass.culling;
 
+		mainPass.depthTest = switch (props.depthTest) {
+			case Less: Less;
+			case LessEqual: LessEqual;
+			case Greater: Greater;
+			case GreaterEqual: GreaterEqual;
+			case Always: Always;
+			case Never: Never;
+			case Equal: Equal;
+			case NotEqual : NotEqual;
+			default: Less;
+		}
+
 		// get values from specular texture
 		var emit = props.emissive == null ? 0 : props.emissive;
 		var tex = mainPass.getShader(h3d.shader.pbr.PropsTexture);
@@ -188,6 +227,7 @@ class PbrMaterial extends Material {
 			ps.heightMapChannel = A;
 		} else if( ps != null )
 			mainPass.removeShader(ps);
+
 	}
 
 	override function get_specularTexture() {
@@ -266,6 +306,19 @@ class PbrMaterial extends Material {
 						<option value="AlphaAdd">AlphaAdd</option>
 						<option value="Multiply">Multiply</option>
 						<option value="AlphaMultiply">AlphaMultiply</option>
+					</select>
+				</dd>
+				<dt>Depth Test</dt>
+				<dd>
+					<select field="depthTest">
+						<option value="Less">Less</option>
+						<option value="LessEqual">LessEqual</option>
+						<option value="Greater">Greater</option>
+						<option value="GreaterEqual">GreaterEqual</option>
+						<option value="Always">Always</option>
+						<option value="Never">Never</option>
+						<option value="Equal">Equal</option>
+						<option value="NotEqual">NotEqual</option>
 					</select>
 				</dd>
 				<dt>Emissive</dt><dd><input type="range" min="0" max="10" field="emissive"/></dd>
