@@ -966,10 +966,12 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	override function serialize( ctx : hxbit.Serializer ) {
 		var old = primitive;
 		var oldMat = materials;
+		if ( old != null ) old.incref();
 		primitive = null;
 		materials = [];
 		super.serialize(ctx);
 		primitive = old;
+		if ( old != null ) old.decref();
 		materials = oldMat;
 	}
 	override function customSerialize(ctx:hxbit.Serializer) {

@@ -17,6 +17,12 @@ class Primitive implements hxd.impl.Serializable {
 	public var indexes : Indexes;
 
 	/**
+		Current amount of references to this Primitive.  
+		Use `incref` and `decref` methods to affect this value. If it reaches 0, it will be atuomatically disposed.
+	**/
+	public var refCount(default, null) : Int = 0;
+
+	/**
 		The number of triangles the primitive has.
 	**/
 	public function triCount() {
@@ -44,6 +50,27 @@ class Primitive implements hxd.impl.Serializable {
 	public function getBounds() : h3d.col.Bounds {
 		throw "not implemented for "+this;
 		return null;
+	}
+
+	/**
+		Increase reference count of the Primitive.
+	**/
+	public function incref():Void
+	{
+		refCount++;
+	}
+
+	/**
+		Decrease reference count of the Primitive.  
+		If recount reaches zero, Primitive is automatically disposed when last referencing mesh is removed from scene.
+	**/
+	public function decref():Void
+	{
+		refCount--;
+		if ( refCount <= 0 ) {
+			refCount = 0;
+			dispose();
+		}
 	}
 
 	/**
