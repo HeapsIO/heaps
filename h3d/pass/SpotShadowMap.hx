@@ -12,7 +12,7 @@ class SpotShadowMap extends Shadows {
 		super(light);
 		lightCamera = new h3d.Camera();
 		lightCamera.screenRatio = 1.0;
-		lightCamera.zNear = 3.0;
+		lightCamera.zNear = 0.01;
 		shader = sshader = new h3d.shader.SpotShadow();
 		border = new Border(size, size);
 		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
@@ -56,6 +56,9 @@ class SpotShadowMap extends Shadows {
 		sshader.shadowBias = bias;
 		sshader.shadowPower = power;
 		sshader.shadowProj = getShadowProj();
+		sshader.shadowRes.set(texture.width,texture.height);
+		sshader.pcfScale = pcfScale;
+		sshader.PCF = pcf;
 	}
 
 	override function saveStaticData() {
