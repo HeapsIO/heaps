@@ -9,13 +9,14 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
-	public var mouseLock(get, set) : Bool;
+	public var windowLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 	public var propagateKeyEvents : Bool;
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
+	var lockCallback : Float->Float->Void;
 
 	var canvas : js.html.CanvasElement;
 	var element : js.html.EventTarget;
@@ -148,6 +149,16 @@ class Window {
 	public function setFullScreen( v : Bool ) : Void {
 	}
 
+	public function lockPointer( callback : Float->Float->Void ) : Void {
+		lockCallback = callback;
+		canvas.requestPointerLock();
+	}
+
+	public function unlockPointer() : Void {
+		if (js.Browser.document.pointerLockElement == canvas)
+			js.Browser.document.exitPointerLock();
+	}
+
 	public function setCurrent() {
 		inst = this;
 	}
@@ -167,18 +178,18 @@ class Window {
 	}
 
 	function get_mouseX() {
-		return Math.round((curMouseX - canvasPos.left) * js.Browser.window.devicePixelRatio);
+		return lockCallback == null ? Math.round((curMouseX - canvasPos.left) * js.Browser.window.devicePixelRatio) : -1;
 	}
 
 	function get_mouseY() {
-		return Math.round((curMouseY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+		return lockCallback == null ? Math.round((curMouseY - canvasPos.top) * js.Browser.window.devicePixelRatio) : -1;
 	}
 
-	function get_mouseLock() : Bool {
+	function get_windowLock() : Bool {
 		return false;
 	}
 
-	function set_mouseLock( v : Bool ) : Bool {
+	function set_windowLock( v : Bool ) : Bool {
 		if( v ) throw "Not implemented";
 		return false;
 	}
@@ -191,6 +202,8 @@ class Window {
 	}
 
 	function onMouseDown(e:js.html.MouseEvent) {
+		if ( lockCallback != null && js.Browser.document.pointerLockElement != canvas )
+			canvas.requestPointerLock();
 		if(e.clientX != curMouseX || e.clientY != curMouseY)
 			onMouseMove(e);
 		var ev = new Event(EPush, mouseX, mouseY);
@@ -217,7 +230,10 @@ class Window {
 	function onMouseMove(e:js.html.MouseEvent) {
 		curMouseX = e.clientX;
 		curMouseY = e.clientY;
-		event(new Event(EMove, mouseX, mouseY));
+		if ( lockCallback != null )
+			lockCallback(e.movementX * js.Browser.window.devicePixelRatio, e.movementY * js.Browser.window.devicePixelRatio);
+		else
+			event(new Event(EMove, mouseX, mouseY));
 	}
 
 	function onMouseWheel(e:js.html.WheelEvent) {

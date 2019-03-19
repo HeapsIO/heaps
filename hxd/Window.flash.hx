@@ -9,7 +9,7 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
-	public var mouseLock(get, set) : Bool;
+	public var windowLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
@@ -156,11 +156,11 @@ class Window {
 		return stage.stageHeight;
 	}
 
-	inline function get_mouseLock() {
+	inline function get_windowLock() {
 		return stage.mouseLock;
 	}
 
-	inline function set_mouseLock(v) {
+	inline function set_windowLock(v) {
 		return stage.mouseLock = v;
 	}
 

@@ -15,7 +15,7 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
-	public var mouseLock(get, set) : Bool;
+	public var windowLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
@@ -30,6 +30,7 @@ class Window {
 	var windowHeight = 600;
 	var curMouseX = 0;
 	var curMouseY = 0;
+	var lockCallback : Float->Float->Void;
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
 
@@ -98,12 +99,24 @@ class Window {
 		#end
 	}
 
+	public function lockPointer( callback : Float->Float->Void ) : Void {
+		//if hlsdl
+		// if hldx
+		lockCallback = callback;
+	}
+
+	public function unlockPointer() : Void {
+		//if hlsdl
+		//if hldx
+		lockCallback = null;
+	}
+
 	function get_mouseX() : Int {
-		return curMouseX;
+		return lockCallback == null ? curMouseX : -1;
 	}
 
 	function get_mouseY() : Int {
-		return curMouseY;
+		return lockCallback == null ? curMouseY : -1;
 	}
 
 	function get_width() : Int {
@@ -114,11 +127,11 @@ class Window {
 		return windowHeight;
 	}
 
-	function get_mouseLock() : Bool {
+	function get_windowLock() : Bool {
 		return false;
 	}
 
-	function set_mouseLock(v:Bool) : Bool {
+	function set_windowLock(v:Bool) : Bool {
 		if( v ) throw "Not implemented";
 		return false;
 	}

@@ -9,7 +9,10 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
-	public var mouseLock(get, set) : Bool;
+	/**
+		Locks the mouse inside window borders.
+	**/
+	public var windowLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
@@ -62,6 +65,16 @@ class Window {
 	public function setFullScreen( v : Bool ) : Void {
 	}
 
+	/**
+		Locks pointer inside window, hiding it and allowing free mouse movement.  
+		When enabled, mouseX and mouseY always report -1, and callback will receive relative mouse movement instead.
+	**/
+	public function lockPointer( callback : Float->Float->Void ) : Void {
+	}
+
+	public function unlockPointer() : Void {
+	}
+
 	static var inst : Window = null;
 	public static function getInstance() : Window {
 		if( inst == null ) inst = new Window();
@@ -84,11 +97,11 @@ class Window {
 		return 0;
 	}
 
-	function get_mouseLock() : Bool {
+	function get_windowLock() : Bool {
 		return false;
 	}
 
-	function set_mouseLock( v : Bool ) : Bool {
+	function set_windowLock( v : Bool ) : Bool {
 		if( v ) throw "Not implemented";
 		return false;
 	}
