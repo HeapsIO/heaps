@@ -15,7 +15,7 @@ enum Type {
 	TSampler2DArray;
 	TSamplerCube;
 	TStruct( vl : Array<TVar> );
-	TFun( variants : #if macro Array<FunType> #else {} #end );
+	TFun( variants : Array<FunType> );
 	TArray( t : Type, size : SizeDecl );
 	TBuffer( t : Type, size : SizeDecl );
 	TChannel( size : Int );
