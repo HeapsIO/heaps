@@ -10,7 +10,7 @@ class Surface {
 	public var minHeight = 0.0;
 	public var maxHeight = 1.0;
 
-	public function new(?albedo : h3d.mat.Texture, ?normal : h3d.mat.Texture, ?pbr : h3d.mat.Texture){
+	public function new( ?albedo : h3d.mat.Texture, ?normal : h3d.mat.Texture, ?pbr : h3d.mat.Texture ) {
 		this.albedo = albedo;
 		this.normal = normal;
 		this.pbr = pbr;
@@ -28,9 +28,9 @@ class Surface {
 	}
 
 	public function dispose() {
-		if(albedo != null) albedo.dispose();
-		if(normal != null) normal.dispose();
-		if(pbr != null) pbr.dispose();
+		if( albedo != null ) albedo.dispose();
+		if( normal != null ) normal.dispose();
+		if( pbr != null ) pbr.dispose();
 	}
 }
 
@@ -64,8 +64,8 @@ class SurfaceArray {
 	}
 
 	public function dispose() {
-		if(albedo != null) albedo.dispose();
-		if(normal != null) normal.dispose();
-		if(pbr != null) pbr.dispose();
+		if( albedo != null ) albedo.dispose();
+		if( normal != null ) normal.dispose();
+		if( pbr != null ) pbr.dispose();
 	}
 }

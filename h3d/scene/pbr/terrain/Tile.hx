@@ -32,6 +32,13 @@ class Tile extends h3d.scene.Mesh {
 		name = "tile_" + x + "_" + y;
 	}
 
+	override function onRemove() {
+		if( heightMap != null ) heightMap.dispose();
+		if( surfaceIndexMap != null ) surfaceIndexMap.dispose();
+		for( i in 0 ... surfaceWeights.length )
+			if( surfaceWeights[i] != null ) surfaceWeights[i].dispose();
+	}
+
 	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
 		var o = new Tile(tileX, tileY, parent);
 		o.heightMap = heightMap.clone();
@@ -106,7 +113,7 @@ class Tile extends h3d.scene.Mesh {
 		computeEdgesNormals();
 	}
 
-	public function refresh(){
+	public function refresh() {
 		if( heightMap == null || heightMap.width != getTerrain().heightMapResolution + 1 ) {
 			var oldHeightMap = heightMap;
 			heightMap = new h3d.mat.Texture(getTerrain().heightMapResolution + 1, getTerrain().heightMapResolution + 1, [Target], RGBA32F );
@@ -164,7 +171,7 @@ class Tile extends h3d.scene.Mesh {
 			if( surfaceWeights[i] != null ) getTerrain().copyPass.apply(surfaceWeights[i], surfaceWeightArray, None, null, i);
 	}
 
-	public function computeEdgesHeight(flag : haxe.EnumFlags<Direction>){
+	public function computeEdgesHeight( flag : haxe.EnumFlags<Direction> ) {
 
 		if( heightMap == null ) return;
 		var pixels : hxd.Pixels.PixelsFloat = getHeightPixels();
@@ -471,7 +478,7 @@ class Tile extends h3d.scene.Mesh {
 		needAlloc = true;
 	}
 
-	public function getHeight(u : Float, v : Float, ?fast = false) : Float {
+	public function getHeight( u : Float, v : Float, ?fast = false ) : Float {
 		var pixels = getHeightPixels();
 		if( pixels == null ) return 0.0;
 		if( heightMap.filter == Linear && !fast ) {
@@ -499,14 +506,6 @@ class Tile extends h3d.scene.Mesh {
 			return pixels.getPixelF(x, y).r;
 		}
 	}
-
-	public function dispose() {
-		if( heightMap != null ) heightMap.dispose();
-		if( surfaceIndexMap != null ) surfaceIndexMap.dispose();
-		for( i in 0 ... surfaceWeights.length )
-			if( surfaceWeights[i] != null ) surfaceWeights[i].dispose();
-	}
-
 	var cachedBounds : h3d.col.Bounds;
 	var cachedHeightBound : Bool = false;
 	function computeBounds() {
@@ -515,7 +514,7 @@ class Tile extends h3d.scene.Mesh {
 			cachedBounds.zMax = 0;
 			cachedBounds.zMin = 0;
 		}
-		if( cachedBounds != null && cachedHeightBound == false && heightMap != null ){
+		if( cachedBounds != null && cachedHeightBound == false && heightMap != null ) {
 			for( u in 0 ... heightMap.width ) {
 				for( v in 0 ... heightMap.height ) {
 					var h = getHeight(u / heightMap.width, v / heightMap.height, true);
@@ -531,7 +530,7 @@ class Tile extends h3d.scene.Mesh {
 	}
 
 	public dynamic function beforeEmit() : Bool { return true; };
-	override function emit( ctx:RenderContext ){
+	override function emit( ctx:RenderContext ) {
 		if( !isReady() ) return;
 		computeBounds();
 		insideFrustrum = ctx.camera.frustum.hasBounds(cachedBounds);
@@ -553,7 +552,7 @@ class Tile extends h3d.scene.Mesh {
 		shader.primSize = getTerrain().tileSize;
 		shader.cellSize = getTerrain().cellSize;
 
-		if( !shader.CHECKER && !shader.COMPLEXITY ){
+		if( !shader.CHECKER && !shader.COMPLEXITY ) {
 			shader.albedoTextures = getTerrain().surfaceArray.albedo;
 			shader.normalTextures = getTerrain().surfaceArray.normal;
 			shader.pbrTextures = getTerrain().surfaceArray.pbr;
@@ -572,7 +571,7 @@ class Tile extends h3d.scene.Mesh {
 		}
 	}
 
-	function isReady(){
+	function isReady() {
 		if( primitive == null )
 			return false;
 
