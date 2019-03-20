@@ -101,6 +101,7 @@ class BaseLibrary {
 	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
 	var uvAnims : Map<String, Array<{ t : Float, u : Float, v : Float }>>;
 	var animationEvents : Array<{ frame : Int, data : String }>;
+	var isMaya : Bool;
 
 	public var fileName : String;
 
@@ -168,6 +169,12 @@ class BaseLibrary {
 		version = root.get("FBXHeaderExtension.FBXVersion").props[0].toInt() / 1000;
 		if( Std.int(version) != 7 )
 			throw "FBX Version 7.x required : use FBX 2010 export";
+
+		for( p in root.getAll("FBXHeaderExtension.SceneInfo.Properties70.P") )
+			if( p.props[0].toString() == "Original|ApplicationName" ) {
+				isMaya = p.props[4].toString().toLowerCase().indexOf("maya") >= 0;
+				break;
+			}
 
 		for( c in root.childs )
 			init(c);
@@ -1324,27 +1331,71 @@ class BaseLibrary {
 		if( leftHand ) DefaultMatrixes.rightHandToLeft(transPos);
 		d.transPos = transPos;
 
-		var m = new h3d.Matrix();
-		m.initInverse(transPos);
+		/*
+			This code was meant to reconstruct the default matrix,
+			not based on the first animation frame but based on the
+			model bind pose.
 
-		var parentNode = getParent(model, "Model", true);
-		if( parentNode != null ) {
-			var mparent = getDefaultMatrixes(parentNode);
-			if( mparent.transPos != null ) {
-				var m2 = new h3d.Matrix();
-				m2.multiply(m, mparent.transPos);
-				m = m2;
+			It seems works correctly although in Maya it does not seem
+			possible to reconstruct exactly the bind pose rotation
+			(have to set it to null manualy)
+
+			However it is a bit complex and potentially error prone.
+			It also gives slighly different results in terms of translation
+			(between reconstructed bind pose and first animation frame)
+			that forces some extra position data in animation because of the
+			small delta.
+
+			I prefer to disable for now, it could still be useful if having
+			some animations with a constant translation that is only
+			set on first animation frame - this will be removed from animation data
+			instead of kept for overriding bind pose.
+		*/
+
+		/*
+		var m = new h3d.Matrix();
+		var parent = getParent(model, "Model", true);
+		m.identity();
+		while( parent != null ) {
+			var mp = getDefaultMatrixes(parent);
+			if( mp.transPos != null ) {
+				var inv = new h3d.Matrix();
+				inv.initInverse(mp.transPos);
+				m.multiply(m, inv);
+				break;
 			}
+			if( isMaya ) break;
+			m.multiply(m, mp.toMatrix(leftHand));
+			parent = getParent(parent, "Model", true);
 		}
+		m.multiply(m, transPos);
+		m.invert();
 
 		// we have  d.toMatrix(leftHand) == m  (in skin position only)
 		// revert m to feed default matrix
 		if( leftHand ) DefaultMatrixes.rightHandToLeft(m); // undo LH/RH transform
 
-		var dist = d.trans == null ? m.getPosition().length() : hxd.Math.distance(d.trans.x - m._41, d.trans.y - m._42, d.trans.z - m._43);
+		var trans = m.getPosition().toPoint();
+		var tlen = trans.length();
+		var dist = d.trans == null ? tlen : d.trans.sub(trans).length();
 		if( dist > 1e-2 )
-			d.trans = new h3d.col.Point(m._41, m._42, m._43);
-		d.rotate = null; // skin position = always rotate 0 (?)
+			d.trans = tlen < 1e-3 ? null : trans;
+
+		var q = new h3d.Quat();
+		q.initRotateMatrix(m);
+
+		var rot = q.toEuler().toPoint();
+		if( hxd.Math.abs(rot.x) < 1e-4 ) rot.x = 0;
+		if( hxd.Math.abs(rot.y) < 1e-4 ) rot.y = 0;
+		if( hxd.Math.abs(rot.z) < 1e-4 ) rot.z = 0;
+
+		var rlen = rot.length();
+		var dist = d.rotate == null ? rlen : d.rotate.sub(rot).length();
+		if( dist > 1e-3 )
+			d.rotate = rlen < 1e-3 ? null : rot;
+		if( isMaya )
+			d.rotate = null;
+		*/
 	}
 
 	function getDefaultMatrixes( model : FbxNode ) {
