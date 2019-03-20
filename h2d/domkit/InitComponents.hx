@@ -23,6 +23,12 @@ class InitComponents {
 						super.onRemove();
 						var style = Std.instance(document.style, h2d.domkit.Style);
 						if( style != null ) @:privateAccess style.remove(this);
+						// make sure it's also removed from document
+						var elt = document.get(this);
+						if( elt != null && elt.parent != null ) {
+							elt.parent.children.remove(elt);
+							@:privateAccess elt.parent = null;
+						}
 					}
 				}).fields);
 				break;
