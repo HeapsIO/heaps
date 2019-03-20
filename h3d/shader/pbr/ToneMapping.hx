@@ -61,7 +61,7 @@ class ToneMapping extends ScreenShader {
 				var s0 = vec2(xOffset + (blueSlice0 * sliceSize), yOffset);
 				var s1 = vec2(xOffset + (blueSlice1 * sliceSize), yOffset);
 				var slice0Color = texture(colorGradingLUT, s0).rgb;
-				var slice1Color = texture(colorGradingLUT, s1)).rgb;
+				var slice1Color = texture(colorGradingLUT, s1).rgb;
 				var bOffset = frac(uv.b * innerWidth, 1.0);
 				var result = mix(slice0Color, slice1Color, bOffset);
 				color.rgb = result;
