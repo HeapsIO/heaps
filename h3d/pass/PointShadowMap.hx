@@ -61,6 +61,15 @@ class PointShadowMap extends Shadows {
 		pshader.shadowPower = power;
 		pshader.lightPos = new h3d.Vector(absPos.tx, absPos.ty, absPos.tz);
 		pshader.zFar = pointLight.range;
+
+		// ESM
+		pshader.USE_ESM = samplingKind == ESM;
+		pshader.shadowPower = power;
+
+		// PCF
+		pshader.USE_PCF = samplingKind == PCF;
+		pshader.pcfScale = pcfScale / 100.0;
+		pshader.pcfQuality = pcfQuality;
 	}
 
 	override function saveStaticData() {

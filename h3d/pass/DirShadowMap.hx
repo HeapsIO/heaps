@@ -115,9 +115,16 @@ class DirShadowMap extends Shadows {
 		dshader.shadowBias = bias;
 		dshader.shadowPower = power;
 		dshader.shadowProj = getShadowProj();
+
+		//ESM
+		dshader.USE_ESM = samplingKind == ESM;
+		dshader.shadowPower = power;
+
+		// PCF
+		dshader.USE_PCF = samplingKind == PCF;
 		dshader.shadowRes.set(texture.width,texture.height);
 		dshader.pcfScale = pcfScale;
-		dshader.PCF = pcf;
+		dshader.pcfQuality = pcfQuality;
 	}
 
 	override function saveStaticData() {
