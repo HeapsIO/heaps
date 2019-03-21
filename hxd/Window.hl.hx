@@ -100,13 +100,19 @@ class Window {
 	}
 
 	public function lockPointer( callback : Float->Float->Void ) : Void {
-		//if hlsdl
-		// if hldx
+		#if hlsdl
+		sdl.Sdl.setRelativeMouseMode(true);
+		#else
+		throw "Not supported";
+		#end
 		lockCallback = callback;
 	}
 
 	public function unlockPointer() : Void {
 		//if hlsdl
+		#if hlsdl
+		sdl.Sdl.setRelativeMouseMode(false);
+		#end
 		//if hldx
 		lockCallback = null;
 	}
@@ -214,7 +220,12 @@ class Window {
 		case MouseMove if (!hxd.System.getValue(IsTouch)):
 			curMouseX = e.mouseX;
 			curMouseY = e.mouseY;
-			eh = new Event(EMove, e.mouseX, e.mouseY);
+			#if hlsdl
+			if ( lockCallback != null )
+				lockCallback(e.mouseXRel, e.mouseYRel);
+			else
+			#end
+				eh = new Event(EMove, e.mouseX, e.mouseY);
 		case MouseWheel:
 			eh = new Event(EWheel, mouseX, mouseY);
 			eh.wheelDelta = -e.wheelDelta;
