@@ -11,11 +11,11 @@ class HtmlText extends Text {
 	var yPos : Float;
 	var xMax : Float;
 	var xMin : Float;
+	var imageCache : Map<String, Tile>;
 	var sizePos : Int;
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
 	var newLine : Bool;
-	var doc:Xml;
 
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
@@ -48,24 +48,16 @@ class HtmlText extends Text {
 		return font;
 	}
 
-	override function initGlyphs( text : String, rebuild = true, handleAlign = true, ?lines : Array<Int> ) {
+	override function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) {
 			glyphs.clear();
 			for( e in elements ) e.remove();
 			elements = [];
-			doc = null;
 		}
 		glyphs.setDefaultColor(textColor);
 
-		xPos = 0;
-		xMin = 0;
-		if ( doc == null ) doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
-
-		if ( handleAlign ) {
-			// Calculate line sizes.
-			lines = [];
-			initGlyphs(text, false, false, lines);
-		}
+		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
+		imageCache = new Map();
 
 		yPos = 0;
 		xMax = 0;
@@ -78,15 +70,21 @@ class HtmlText extends Text {
 		for( e in doc )
 			buildSizes(e, font, sizes);
 
+		var max = 0.;
+		for ( lw in sizes ) {
+			if ( lw > max ) max = lw;
+		}
+		calcWidth = max;
+
 		prevChar = -1;
 		newLine = true;
-		if ( handleAlign ) nextLine(textAlign, lines.shift());
-		for( e in doc )
-			addNode(e, font, textAlign, rebuild, handleAlign, sizes, lines);
-
-		if (!handleAlign && !rebuild && lines != null) lines.push(hxd.Math.ceil(xPos));
+		nextLine(textAlign, sizes[0]);
+		for ( e in doc )
+			addNode(e, font, textAlign, rebuild, sizes);
+		
 		if( xPos > xMax ) xMax = xPos;
 
+		imageCache = null;
 		var y = yPos;
 		calcXMin = xMin;
 		calcWidth = xMax - xMin;
@@ -95,21 +93,39 @@ class HtmlText extends Text {
 		calcDone = true;
 	}
 
-	function buildSizes( e : Xml, font : Font, sizes : Array<Float> ) {
+	// TODO: Calculate line heights to allow proper line height adjustment based on baseline.
+	function buildSizes( e : Xml, font : Font, lines : Array<Float>/*, heights : Array<Float> */ ) {
 		if( e.nodeType == Xml.Element ) {
-			var len = 0.;
 			var nodeName = e.nodeName.toLowerCase();
 			switch( nodeName ) {
 			case "p":
-				len = -1;
-				newLine = true;
+				if ( !newLine ) {
+					lines.push(0);
+					newLine = true;
+					prevChar = -1;
+				}
 			case "br":
-				len = -1; // break
+				lines.push(0);
 				newLine = true;
+				prevChar = -1;
 			case "img":
-				var i = loadImage(e.get("src"));
-				len = (i == null ? 8 : i.width) + letterSpacing;
+				var src = e.get("src");
+				var i : Tile = imageCache.get(src);
+				if ( i == null ) {
+					i = loadImage(src);
+					if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
+					imageCache.set(src, i);
+				}
+				if ( lines.length == 0 ) lines.push(0);
+
+				var size = lines[lines.length - 1] + i.width + letterSpacing;
+				if (realMaxWidth >= 0 && size > realMaxWidth && lines[lines.length - 1] > 0) {
+					lines.push(i.width);
+				} else {
+					lines[lines.length - 1] = size;
+				}
 				newLine = false;
+				prevChar = -1;
 			case "font":
 				for( a in e.attributes() ) {
 					var v = e.get(a);
@@ -120,34 +136,26 @@ class HtmlText extends Text {
 				}
 			default:
 			}
-			sizes.push(len);
 			for( child in e )
-				buildSizes(child, font, sizes);
+				buildSizes(child, font, lines);
 			switch( nodeName ) {
 			case "p":
 				if ( !newLine ) {
-					sizes.push( -1);// break
+					lines.push(0);
 					newLine = true;
+					prevChar = -1;
 				}
 			default:
 			}
 		} else {
 			newLine = false;
-			var text = htmlToText(e.nodeValue);
-			var xp = 0.;
-			for( i in 0...text.length ) {
-				var cc = text.charCodeAt(i);
-				var fc = font.getChar(cc);
-				var sz = fc.getKerningOffset(prevChar) + fc.width;
-				if( cc == "\n".code || font.charset.isBreakChar(cc) ) {
-					if( cc != "\n".code && !font.charset.isSpace(cc) )
-						xp += sz;
-					sizes.push( -(xp + 1));
-					return;
-				}
-				xp += sz + letterSpacing;
+			var text = splitText(htmlToText(e.nodeValue), lines.length == 0 ? 0 : lines.pop(), 0, font, lines, prevChar);
+			if ( text.length > 0 ) {
+				var lastChar = text.charCodeAt(text.length - 1);
+				prevChar = lastChar == "\n".code ? -1 : lastChar;
 			}
-			sizes.push(xp);
+			// Save node value
+			e.nodeValue = text;
 		}
 	}
 
@@ -158,51 +166,30 @@ class HtmlText extends Text {
 		return t;
 	}
 
-	inline function nextLine( align : Align, size : Int )
+	inline function nextLine( align : Align, size : Float )
 	{
 		switch( align ) {
 			case Left:
 				xPos = 0;
 			case Right, Center, MultilineCenter, MultilineRight:
 				var max = if( align == MultilineCenter || align == MultilineRight ) hxd.Math.ceil(calcWidth) else calcWidth < 0 ? 0 : hxd.Math.ceil(realMaxWidth);
-				var k = align == Center || align == MultilineCenter ? 1 : 0;
+				var k = align == Center || align == MultilineCenter ? 0.5 : 1;
 				xMin = xPos;
-				xPos = (max - size) >> k;
+				xPos = Math.ffloor((max - size) * k);
 				if( xPos < xMin ) xMin = xPos;
 		}
 	}
 
-	function remainingSize( sizes : Array<Float> ) {
-		var size = 0.;
-		for( i in sizePos...sizes.length ) {
-			var s = sizes[i];
-			if( s < 0 ) {
-				size += -s - 1;
-				return size;
-			}
-			size += s;
+	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, sizes : Array<Float> ) {
+		inline function makeLineBreak()
+		{
+			if( xPos > xMax ) xMax = xPos;
+			nextLine(align, sizes[++sizePos]);
+			yPos += font.lineHeight + lineSpacing;
 		}
-		return size;
-	}
-
-	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, handleAlign:Bool, sizes : Array<Float>, ?lines : Array<Int> = null ) {
-		sizePos++;
-		var calcLines = !handleAlign && !rebuild && lines != null;
 		if( e.nodeType == Xml.Element ) {
 			var prevColor = null, prevGlyphs = null;
-			function makeLineBreak()
-			{
-				if( xPos > xMax ) xMax = xPos;
-				if( calcLines ) lines.push(hxd.Math.ceil(xPos));
-				if ( handleAlign ) {
-					nextLine(align, lines.shift());
-				} else {
-					xPos = 0;
-				}
-				yPos += font.lineHeight + lineSpacing;
-				prevChar = -1;
-				newLine = true;
-			}
+			var oldAlign = align;
 			var nodeName = e.nodeName.toLowerCase();
 			switch( nodeName ) {
 			case "font":
@@ -240,39 +227,42 @@ class HtmlText extends Text {
 					}
 				}
 			case "p":
-				if ( handleAlign ) {
-					for( a in e.attributes() ) {
-						switch( a.toLowerCase() ) {
-							case "align":
-								var v = e.get(a);
-								if ( v != null )
-								switch( v.toLowerCase() ) {
-								case "left":
-									align = Left;
-								case "center":
-									align = Center;
-								case "right":
-									align = Right;
-								//?justify
-								}
-							default:
-						}
+				for( a in e.attributes() ) {
+					switch( a.toLowerCase() ) {
+						case "align":
+							var v = e.get(a);
+							if ( v != null )
+							switch( v.toLowerCase() ) {
+							case "left":
+								align = Left;
+							case "center":
+								align = Center;
+							case "right":
+								align = Right;
+							case "multiline-center":
+								align = MultilineCenter;
+							case "multiline-right":
+								align = MultilineRight;
+							//?justify
+							}
+						default:
 					}
 				}
-				if ( !newLine )
+				if ( !newLine ) {
 					makeLineBreak();
-				else
-					nextLine(align, lines[0]);
+					newLine = true;
+					prevChar = -1;
+				} else {
+					nextLine(align, sizes[sizePos]);
+				}
 			case "br":
 				makeLineBreak();
+				newLine = true;
+				prevChar = -1;
 			case "img":
-				newLine = false;
-				var i = loadImage(e.get("src"));
-				if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
-				if( realMaxWidth >= 0 && xPos + i.width + letterSpacing + remainingSize(sizes) > realMaxWidth && xPos > 0 ) {
-					if( xPos > xMax ) xMax = xPos;
-					xPos = 0;
-					yPos += font.lineHeight + lineSpacing;
+				var i : Tile = imageCache.get(e.get("src"));
+				if( realMaxWidth >= 0 && xPos + i.width + letterSpacing > realMaxWidth && xPos > 0 ) {
+					makeLineBreak();
 				}
 				var py = yPos + font.baseLine - i.height;
 				if( py + i.dy < calcYMin )
@@ -283,16 +273,23 @@ class HtmlText extends Text {
 					b.y = py;
 					elements.push(b);
 				}
+				newLine = false;
+				prevChar = -1;
 				xPos += i.width + letterSpacing;
 			default:
 			}
 			for( child in e )
-				addNode(child, font, align, rebuild, handleAlign, sizes, lines);
+				addNode(child, font, align, rebuild, sizes);
+			align = oldAlign;
 			switch( nodeName ) {
 			case "p":
-				if ( !newLine ) {
+				if ( newLine ) {
+					nextLine(align, sizes[sizePos]);
+				} else if ( sizePos < sizes.length - 2 || sizes[sizePos + 1] != 0 ) {
+					// Condition avoid extra empty line if <p> was the last tag.
 					makeLineBreak();
-					sizePos++;
+					newLine = true;
+					prevChar = -1;
 				}
 			default:
 			}
@@ -302,15 +299,12 @@ class HtmlText extends Text {
 				@:privateAccess glyphs.curColor.load(prevColor);
 		} else {
 			newLine = false;
-			var t = splitText(htmlToText(e.nodeValue), xPos, remainingSize(sizes));
+			var t = e.nodeValue;
 			var dy = this.font.baseLine - font.baseLine;
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
 				if( cc == "\n".code ) {
-					if( xPos > xMax ) xMax = xPos;
-					if( calcLines ) lines.push(hxd.Math.ceil(xPos));
-					nextLine(align, lines.shift());
-					yPos += font.lineHeight + lineSpacing;
+					makeLineBreak();
 					prevChar = -1;
 					continue;
 				}

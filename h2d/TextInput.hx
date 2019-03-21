@@ -259,8 +259,8 @@ class TextInput extends Text {
 		return f;
 	}
 
-	override function initGlyphs(text:hxd.UString, rebuild = true, handleAlign = true, lines:Array<Int> = null):Void {
-		super.initGlyphs(text, rebuild, handleAlign, lines);
+	override function initGlyphs(text:hxd.UString, rebuild = true):Void {
+		super.initGlyphs(text, rebuild);
 		if( rebuild ) {
 			this.calcWidth += cursorTile.width; // cursor end pos
 			if( inputWidth != null && this.calcWidth > inputWidth ) this.calcWidth = inputWidth;

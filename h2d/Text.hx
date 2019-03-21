@@ -170,26 +170,42 @@ class Text extends Drawable {
 		}
 	}
 
-	public function splitText( text : hxd.UString, leftMargin = 0., afterData = 0. ) {
-		if( realMaxWidth < 0 )
-			return text;
-		var lines = [], rest = text, restPos = 0;
-		var x = leftMargin, prevChar = -1;
+	/**
+		Word-wrap the text based on this Text settings.  
+		@param text String to word-wrap.
+		@param leftMargin Starting x offset of the first line.
+		@param afterData Minimum remaining space required at the end of the line.
+		@param font Optional overriding font to use instead of currently set.
+		@param sizes Optional line width array. Will be populated with sizes of split lines if present. Sizes will include both `leftMargin` in it's first line entry.
+		@param prevChar Optional character code for concatenation purposes (proper kernings).
+	**/
+	public function splitText( text : hxd.UString, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
+		var maxWidth = realMaxWidth;
+		if( maxWidth < 0 ) {
+			if ( sizes == null ) 
+				return text;
+			else 
+				maxWidth = Math.POSITIVE_INFINITY;
+		}
+		if ( font == null ) font = this.font;
+		var lines = [], restPos = 0;
+		var x = leftMargin;
 		for( i in 0...text.length ) {
 			var cc = text.charCodeAt(i);
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
 			if( font.charset.isBreakChar(cc) ) {
-				if( lines.length == 0 && leftMargin > 0 && x > realMaxWidth ) {
+				if( lines.length == 0 && leftMargin > 0 && x > maxWidth ) {
 					lines.push("");
+					if ( sizes != null ) sizes.push(leftMargin);
 					x -= leftMargin;
 				}
 				var size = x + esize + letterSpacing; /* TODO : no letter spacing */
 				var k = i + 1, max = text.length;
 				var prevChar = prevChar;
 				var breakFound = false;
-				while( size <= realMaxWidth && k < max ) {
+				while( size <= maxWidth && k < max ) {
 					var cc = text.charCodeAt(k++);
 					if( font.charset.isSpace(cc) || cc == '\n'.code ) {
 						breakFound = true;
@@ -200,7 +216,7 @@ class Text extends Drawable {
 					prevChar = cc;
 					if( font.charset.isBreakChar(cc) ) break;
 				}
-				if( size > realMaxWidth || (!breakFound && size + afterData > realMaxWidth) ) {
+				if( size > maxWidth || (!breakFound && size + afterData > maxWidth) ) {
 					newline = true;
 					if( font.charset.isSpace(cc) ){
 						lines.push(text.substr(restPos, i - restPos));
@@ -208,6 +224,7 @@ class Text extends Drawable {
 					}else{
 						lines.push(text.substr(restPos, i + 1 - restPos));
 					}
+					if ( sizes != null ) sizes.push(x);
 					restPos = i + 1;
 				}
 			}
@@ -220,33 +237,41 @@ class Text extends Drawable {
 				prevChar = cc;
 		}
 		if( restPos < text.length ) {
-			if( lines.length == 0 && leftMargin > 0 && x + afterData - letterSpacing > realMaxWidth )
+			if( lines.length == 0 && leftMargin > 0 && x + afterData - letterSpacing > maxWidth ) {
 				lines.push("");
+				if ( sizes != null ) sizes.push(0);
+			}
 			lines.push(text.substr(restPos, text.length - restPos));
+			if ( sizes != null ) sizes.push(x);
 		}
 		return lines.join("\n");
 	}
 
-	function initGlyphs( text : hxd.UString, rebuild = true, handleAlign = true, lines : Array<Int> = null ) : Void {
+	function initGlyphs( text : hxd.UString, rebuild = true ) : Void {
 		if( rebuild ) glyphs.clear();
-		var x = 0., y = 0., xMax = 0., xMin = 0., prevChar = -1;
-		var align = handleAlign ? textAlign : Left;
+		var x = 0., y = 0., xMax = 0., xMin = 0., yMin = 0., prevChar = -1, linei = 0;
+		var align = textAlign;
+		var lines = new Array<Float>();
+		var dl = font.lineHeight + lineSpacing;
+		var t = splitText(text, 0, 0, lines);
+
+		for ( lw in lines ) {
+			if ( lw > x ) x = lw;
+		}
+		calcWidth = x;
+
 		switch( align ) {
 		case Center, Right, MultilineCenter, MultilineRight:
-			lines = [];
-			initGlyphs(text, false, false, lines);
 			var max = if( align == MultilineCenter || align == MultilineRight ) hxd.Math.ceil(calcWidth) else realMaxWidth < 0 ? 0 : hxd.Math.ceil(realMaxWidth);
-			var k = align == Center || align == MultilineCenter ? 1 : 0;
+			var k = align == Center || align == MultilineCenter ? 0.5 : 1;
 			for( i in 0...lines.length )
-				lines[i] = (max - lines[i]) >> k;
-			x = lines.shift();
+				lines[i] = Math.ffloor((max - lines[i]) * k);
+			x = lines[0];
 			xMin = x;
-		default:
+		case Left:
+			x = 0;
 		}
-		var dl = font.lineHeight + lineSpacing;
-		var calcLines = !handleAlign && !rebuild && lines != null;
-		var yMin = 0.;
-		var t = splitText(text);
+		
 		for( i in 0...t.length ) {
 			var cc = t.charCodeAt(i);
 			var e = font.getChar(cc);
@@ -256,12 +281,11 @@ class Text extends Drawable {
 
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
-				if( calcLines ) lines.push(Math.ceil(x));
 				switch( align ) {
 				case Left:
 					x = 0;
 				case Right, Center, MultilineCenter, MultilineRight:
-					x = lines.shift();
+					x = lines[++linei];
 					if( x < xMin ) xMin = x;
 				}
 				y += dl;
@@ -275,7 +299,6 @@ class Text extends Drawable {
 				prevChar = cc;
 			}
 		}
-		if( calcLines ) lines.push(Math.ceil(x));
 		if( x > xMax ) xMax = x;
 
 		calcXMin = xMin;
