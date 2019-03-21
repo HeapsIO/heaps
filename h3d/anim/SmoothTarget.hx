@@ -108,6 +108,7 @@ class SmoothTarget extends Animation {
 				q1.set(m._12, m._13, m._21, m._23);
 				var sx = m._11, sy = m._22, sz = m._33;
 				var tx = m.tx, ty = m.ty, tz = m.tz;
+				var m14 = m._14, m24 = m._24, m34 = m._34; // backup (used in BufferedAnimation)
 				q1.toMatrix(m);
 				m._11 *= sx;
 				m._12 *= sx;
@@ -118,6 +119,9 @@ class SmoothTarget extends Animation {
 				m._31 *= sz;
 				m._32 *= sz;
 				m._33 *= sz;
+				m._14 = m14;
+				m._24 = m24;
+				m._34 = m34;
 
 				m.tx = tx;
 				m.ty = ty;
