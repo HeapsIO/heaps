@@ -44,6 +44,7 @@ class HlslOut {
 	var decls : Array<String>;
 	var isVertex : Bool;
 	var allNames : Map<String, Int>;
+	var samplers : Map<Int, Int>;
 	public var varNames : Map<Int,String>;
 
 	var varAccess : Map<Int,String>;
@@ -97,8 +98,12 @@ class HlslOut {
 			add("float4x4");
 		case TMat3x4:
 			add("float4x3");
-		case TSampler2D, TSamplerCube, TSampler2DArray:
-			add("SamplerState");
+		case TSampler2D:
+			add("Texture2D");
+		case TSamplerCube:
+			add("TextureCube");
+		case TSampler2DArray:
+			add("Texture2DArray");
 		case TStruct(vl):
 			add("struct { ");
 			for( v in vl ) {
@@ -144,8 +149,6 @@ class HlslOut {
 			addType(v.type);
 			add(" ");
 			ident(v);
-			if( v.type.isSampler() )
-				add("SS");
 		}
 	}
 
@@ -234,15 +237,17 @@ class HlslOut {
 			default:
 				throw "assert";
 			}
-			switch( args[0].e ) {
-			case TArray(e,index):
-				addValue(e, tabs);
-				add("SS[");
-				addValue(index, tabs);
-				add("]");
-			default:
-				addValue(args[0], tabs);
-				add("SS");
+			var offset = 0;
+			var expr = switch( args[0].e ) {
+			case TArray(e,{ e : TConst(CInt(i)) }): offset = i; e;
+			default: args[0];
+			}
+			switch( expr.e ) {
+			case TVar(v):
+				var samplerIndex = samplers.get(v.id);
+				if( samplerIndex == null ) throw "assert";
+				add('__Samplers[${samplerIndex+offset}]');
+			default: throw "assert";
 			}
 			for( i in 1...args.length ) {
 				add(",");
@@ -578,11 +583,11 @@ class HlslOut {
 				switch( v.type ) {
 				case TArray(t, _) if( t.isSampler() ):
 					textures.push(v);
-					continue;
 				case TBuffer(_):
 					buffers.push(v);
 					continue;
 				default:
+					if( v.type.isSampler() ) textures.push(v);
 				}
 				add("\t");
 				addVar(v);
@@ -599,27 +604,22 @@ class HlslOut {
 		}
 		if( bufCount > 0 ) add("\n");
 
+
+		var samplerCount = 0;
 		for( v in textures ) {
+			samplers.set(v.id, samplerCount);
 			switch( v.type ) {
 			case TArray(t, size):
-				switch( t ) {
-				case TSampler2D:
-					add("Texture2D ");
-				case TSamplerCube:
-					add("TextureCube ");
-				case TSampler2DArray:
-					add("Texture2DArray ");
-				default:
-					throw "Unsupported sampler " + t;
-				}
-				add(v.name);
-				addArraySize(size);
-				add(";\n");
-				addVar(v);
-				add(";\n");
+				samplerCount += switch( size ) {
+				case SConst(i): i;
+				default: throw "assert";
+				};
 			default:
+				samplerCount++;
 			}
 		}
+		if( samplerCount > 0 )
+			add('SamplerState __Samplers[$samplerCount];\n');
 	}
 
 	function initStatics( s : ShaderData ) {
@@ -680,6 +680,7 @@ class HlslOut {
 		isVertex = f.kind == Vertex;
 
 		varAccess = new Map();
+		samplers = new Map();
 		initVars(s);
 		initGlobals(s);
 		initParams(s);
