@@ -40,16 +40,38 @@ class TextureCache {
 		position = 0;
 	}
 
+	function lookupTarget( name, width, height, format, isCube ) {
+		var t = cache[position];
+		// look for a suitable candidate
+		for( i in position+1...cache.length ) {
+			var t2 = cache[i];
+			if( t2 != null && !t2.isDisposed() && t2.width == width && t2.height == height && t2.format == format && isCube == t2.flags.has(Cube) ) {
+				// swap
+				cache[position] = t2;
+				cache[i] = t;
+				return t2;
+			}
+		}
+		// same name, most likely resolution changed, dispose before allocating new
+		if( t != null && t.name == name ) {
+			t.dispose();
+			t = null;
+		}
+		var flags : Array<h3d.mat.Data.TextureFlags> = [Target];
+		if( isCube ) flags.push(Cube);
+		var newt = new h3d.mat.Texture(width, height, flags, format);
+		if( t != null )
+			cache.insert(position,newt);
+		else
+			cache[position] = newt;
+		return newt;
+	}
+
 	public function allocTarget( name : String, width : Int, height : Int, defaultDepth=true, ?format:hxd.PixelFormat, isCube = false ) {
 		var t = cache[position];
 		if( format == null ) format = defaultFormat;
-		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.format != format || isCube != t.flags.has(Cube) ) {
-			if( t != null ) t.dispose();
-			var flags : Array<h3d.mat.Data.TextureFlags> = [Target];
-			if( isCube ) flags.push(Cube);
-			t = new h3d.mat.Texture(width, height, flags, format);
-			cache[position] = t;
-		}
+		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.format != format || isCube != t.flags.has(Cube) )
+			t = lookupTarget(name,width,height,format,isCube);
 		t.depthBuffer = defaultDepth ? defaultDepthBuffer : null;
 		t.setName(name);
 		position++;
