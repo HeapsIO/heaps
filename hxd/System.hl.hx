@@ -287,7 +287,7 @@ class System {
 	static var _lang : String;
 	static function get_lang() : String {
 		if( _lang == null ) {
-			var str = @:privateAccess String.fromUCS2(getLocale());
+			var str = @:privateAccess Sys.makePath(getLocale());
 			_lang = ~/[.@_-]/g.split(str)[0];
 		}
 		return _lang;
