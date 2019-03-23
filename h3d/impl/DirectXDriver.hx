@@ -125,9 +125,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
-		#if (hldx >= "1.6.0")
 		Driver.setErrorHandler(onDXError);
-		#end
 		reset();
 	}
 
@@ -182,9 +180,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function dispose() {
-		#if (hldx >= "1.6.0")
 		Driver.disposeDriver(driver);
-		#end
 		driver = null;
 	}
 
@@ -653,12 +649,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			var ref = st == null ? 0 : st.reference;
 			currentDepthState = depth;
 			currentStencilRef = ref;
-			#if (hldx < "1.7")
-			if( ref != 0 ) throw "DirectX Stencil support requires HL 1.7+";
-			Driver.omSetDepthStencilState(depth);
-			#else
 			Driver.omSetDepthStencilState(depth, ref);
-			#end
 		}
 
 		var rasterBits = bits & (Pass.culling_mask | SCISSOR_BIT | Pass.wireframe_mask);
@@ -1163,11 +1154,10 @@ class DirectXDriver extends h3d.impl.Driver {
 			currentIndex = ibuf;
 			dx.Driver.iaSetIndexBuffer(ibuf.res,ibuf.bits == 2,0);
 		}
-		#if (hldx >= "1.7")
-		dx.Driver.drawIndexedInstancedIndirect(commands.data, 0);
-		#else
-		throw "drawInstanced requires HL 1.7+";
-		#end
+		if( commands.data == null )
+			dx.Driver.drawIndexedInstanced(commands.indexCount, commands.commandCount, 0, 0, 0);
+		else
+			dx.Driver.drawIndexedInstancedIndirect(commands.data, 0);
 	}
 
 	static var COMPARE : Array<ComparisonFunc> = [

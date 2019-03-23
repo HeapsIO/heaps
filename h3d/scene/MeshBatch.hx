@@ -25,11 +25,10 @@ class MeshBatch extends Mesh {
 	var instanced : h3d.prim.Instanced;
 	var curInstances : Int = 0;
 	var maxInstances : Int = 0;
-	var lastInstances : Int = 0;
 	var shaderInstances : Int = 0;
-	var commandBytes = haxe.io.Bytes.alloc(20);
 	var dataBuffer : h3d.Buffer;
 	var dataPasses : BatchData;
+	var indexCount : Int;
 	var modelViewID = hxsl.Globals.allocID("global.modelView");
 	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 
@@ -46,11 +45,12 @@ class MeshBatch extends Mesh {
 
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
+		instanced.commands = new h3d.impl.InstanceBuffer();
 		instanced.setMesh(primitive);
 		super(instanced, material, parent);
 		for( p in this.material.getPasses() )
 			@:privateAccess p.batchMode = true;
-		commandBytes.setInt32(0, primitive.indexes == null ? primitive.triCount() * 3 : primitive.indexes.count);
+		indexCount = primitive.indexes == null ? primitive.triCount() * 3 : primitive.indexes.count;
 	}
 
 	override function onRemove() {
@@ -64,11 +64,7 @@ class MeshBatch extends Mesh {
 			dataPasses.buffer.dispose();
 			dataPasses = dataPasses.next;
 		}
-		if( instanced.commands != null ) {
-			instanced.commands.dispose();
-			instanced.commands = null;
-			lastInstances = 0;
-		}
+		instanced.commands.dispose();
 		shaderInstances = 0;
 		shadersChanged = true;
 	}
@@ -241,12 +237,7 @@ class MeshBatch extends Mesh {
 			p.buffer.uploadVector(p.data,0,curInstances * p.count);
 			p = p.next;
 		}
-		if( curInstances != lastInstances ) {
-			if( instanced.commands != null ) instanced.commands.dispose();
-			commandBytes.setInt32(4,curInstances);
-			instanced.commands = new h3d.impl.InstanceBuffer(1,commandBytes);
-			lastInstances = curInstances;
-		}
+		instanced.commands.setCommand(curInstances,indexCount);
 	}
 
 	override function emit(ctx:RenderContext) {

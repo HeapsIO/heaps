@@ -193,7 +193,7 @@ class GlDriver extends Driver {
 		#if js
 		canvas = @:privateAccess hxd.Window.getInstance().canvas;
 		var options = {alpha:false,stencil:true,antialias:antiAlias>0};
-		if(ALLOW_WEBGL2) 
+		if(ALLOW_WEBGL2)
 			gl = cast canvas.getContext("webgl2",options);
 		if( gl == null )
 			gl = cast canvas.getContextWebGL(options);
@@ -1325,23 +1325,20 @@ class GlDriver extends Driver {
 			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf.b);
 		}
 		#if !js
-		if( hasMultiIndirect ) {
+		if( hasMultiIndirect && commands.data != null ) {
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
-			if( ibuf.is32 )
-				gl.multiDrawElementsIndirect(drawMode, GL.UNSIGNED_INT, null, commands.commandCount, 0);
-			else
-				gl.multiDrawElementsIndirect(drawMode, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
+			gl.multiDrawElementsIndirect(drawMode, ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
 			return;
 		}
 		#end
 		var args : Array<Int> = commands.data;
-		var p = 0;
-		for( i in 0...Std.int(args.length/3) )
-			if( ibuf.is32 )
-				gl.drawElementsInstanced(drawMode, args[p++], GL.UNSIGNED_INT, args[p++], args[p++]);
-			else
-				gl.drawElementsInstanced(drawMode, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
+		if( args != null ) {
+			var p = 0;
+			for( i in 0...Std.int(args.length/3) )
+				gl.drawElementsInstanced(drawMode, args[p++], ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, args[p++], args[p++]);
+		} else
+			gl.drawElementsInstanced(drawMode, commands.indexCount, ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, 0, commands.commandCount);
 	}
 
 	override function end() {
