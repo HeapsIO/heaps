@@ -27,6 +27,12 @@ class HlslOut {
 		m.set(Inversesqrt, "rsqrt");
 		m.set(VertexID,"_in.vertexID");
 		m.set(InstanceID,"_in.instanceID");
+		m.set(IVec2, "int2");
+		m.set(IVec3, "int3");
+		m.set(IVec4, "int3");
+		m.set(BVec2, "bool2");
+		m.set(BVec3, "bool3");
+		m.set(BVec4, "bool4");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -249,6 +255,28 @@ class HlslOut {
 				addValue(args[i],tabs);
 			}
 			add(")");
+		case TCall({ e : TGlobal(g = (Texel | TexelLod)) }, args):
+			addValue(args[0], tabs);
+			add(".Load(");
+			switch ( args[1].t ) {
+				case TSampler2D:
+					add("int3(");
+				case TSampler2DArray:
+					add("int4(");
+				default:
+					throw "assert";
+			}
+			addValue(args[1],tabs);
+			switch( g ) {
+				case Texel:
+					add(", 0");
+				case TexelLod:
+					add(", ");
+					addValue(args[2],tabs);
+				default:
+					throw "assert";
+			}
+			add("))");
 		case TCall(e = { e : TGlobal(g) }, args):
 			switch( [g,args.length] ) {
 			case [Vec2, 1] if( args[0].t == TFloat ):
