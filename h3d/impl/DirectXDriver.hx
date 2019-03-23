@@ -1185,7 +1185,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		IncrSat,
 		Incr,
 		DecrSat,
-		#if (hldx < "1.7.0") Desc #else Decr #end,
+		Decr,
 		Invert,
 	];
 
