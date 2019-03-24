@@ -1155,10 +1155,10 @@ class DirectXDriver extends h3d.impl.Driver {
 			dx.Driver.iaSetIndexBuffer(ibuf.res,ibuf.bits == 2,0);
 		}
 		if( commands.data == null ) {
-			#if (hldx >= "1.10")
-			dx.Driver.drawIndexedInstanced(commands.indexCount, commands.commandCount, 0, 0, 0);
-			#else
+			#if( (hldx == "1.8.0") || (hldx == "1.9.0") )
 			throw "Requires HLDX 1.10+";
+			#else
+			dx.Driver.drawIndexedInstanced(commands.indexCount, commands.commandCount, 0, 0, 0);
 			#end
 		} else
 			dx.Driver.drawIndexedInstancedIndirect(commands.data, 0);
