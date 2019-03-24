@@ -291,6 +291,7 @@ class Cache {
 		var signParts = [for( i in r.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
 		r.spec.signature = haxe.crypto.Md5.encode(signParts.join(":"));
 		r.signature = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
+		r.batchMode = batchMode;
 
 		var r2 = byID.get(r.signature);
 		if( r2 != null )
