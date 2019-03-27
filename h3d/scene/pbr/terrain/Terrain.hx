@@ -154,6 +154,16 @@ class Terrain extends Object {
 		refreshTex();
 	}
 
+	public function createEmptyTile(x : Int, y : Int) : Tile {
+		var tile = getTile(x,y);
+		if(tile == null){
+			tile = new Tile(x, y, this);
+			tile.refreshMesh();
+			tiles.push(tile);
+		}
+		return tile;
+	}
+
 	public function createTile( x : Int, y : Int ) : Tile {
 		var tile = getTile(x,y);
 		if( tile == null ) {
