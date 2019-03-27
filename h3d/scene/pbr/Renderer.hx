@@ -153,10 +153,38 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.pbrLightPass = pbrLightPass;
 	}
 
+	inline function cullPasses( passes : h3d.pass.PassList, f : h3d.col.Collider -> Bool ) {
+		var prevCollider = null;
+		var prevResult = true;
+		passes.filter(function(p) {
+			var col = p.obj.cullingCollider;
+			if( col == null )
+				return true;
+			if( col != prevCollider ) {
+				prevCollider = col;
+				prevResult = f(col);
+			}
+			return prevResult;
+		});
+	}
+
+	override function draw( name : String ) {
+		var passes = get(name);
+		cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
+		defaultPass.draw(passes);
+		passes.reset();
+	}
+
+	function renderPass(p:h3d.pass.Base, passes) {
+		cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
+		p.draw(passes);
+		passes.reset();
+	}
+
 	function mainDraw() {
-		output.draw(getSort("default", true));
-		output.draw(getSort("alpha"));
-		output.draw(get("additive"));
+		renderPass(output, getSort("default", true));
+		renderPass(output, getSort("alpha"));
+		renderPass(output, get("additive"));
 	}
 
 	function drawHDR() {
@@ -230,7 +258,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("depthMap",{ texture : depth, channel : hxsl.Channel.R });
 
 		setTargets([albedo,normal,pbr]);
-		decalsOutput.draw(get("decal"));
+		renderPass(decalsOutput, get("decal"));
 
 		setTarget(albedo);
 		draw("albedo");
