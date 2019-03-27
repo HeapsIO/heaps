@@ -538,7 +538,15 @@ class Pad {
 	#elseif js
 
 	static function syncPads() {
-		try js.Browser.navigator.getGamepads() catch( e : Dynamic ) {};
+		var freshPads : Array<js.html.Gamepad> = [];
+		try freshPads = js.Browser.navigator.getGamepads() catch( e : Dynamic ) {}; 
+		if ( freshPads.length > 0 ) {
+			for ( i in 0...freshPads.length ) {
+				if ( pads[i] != null ) {
+					pads[i].d = freshPads[i];
+				}
+			}
+		}
 		for( p in pads ) {
 			for( i in 0...p.d.buttons.length ) {
 				p.prevButtons[i] = p.buttons[i];
