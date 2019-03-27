@@ -298,6 +298,8 @@ class FileTree {
 		}
 
 		for( d in tree.dirs ) {
+			if( d.name.indexOf(".") >= 0 )
+				continue; // ignore directories containing a dot (only for ident generation)
 			if( fident.exists(d.ident) ) {
 				Context.warning("Directory " + d.relPath + " ignored because of " + fident.get(d.ident), pos);
 				continue;
