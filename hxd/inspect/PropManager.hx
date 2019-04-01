@@ -520,7 +520,7 @@ class PropManager extends vdom.Client {
 			var delay = false;
 			jprop.click(function(_) {
 				if( delay ) return;
-				jprop.special("colorPick", [get().toColor(), alpha], function(c) {
+				jprop.special("colorPick", [get().toColor(), alpha], function(c:Dynamic) {
 					if( jprop.get() == null || jprop.get().id < 0 )
 						return true;
 					delay = true;
