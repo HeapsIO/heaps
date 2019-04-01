@@ -24,7 +24,7 @@ class Quads extends Primitive {
 	}
 
 	override function triCount() {
-		return pts.length * 2;
+		return pts.length >> 1;
 	}
 
 	override function vertexCount() {
