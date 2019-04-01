@@ -94,6 +94,42 @@ class Quads extends Primitive {
 		buffer = h3d.Buffer.ofFloats(v, size, flags);
 	}
 
+	public function addNormals() {
+		// make per-point normal
+		normals = new Array();
+		var points = pts;
+		for( i in 0...points.length )
+			normals[i] = new Point();
+		var pos = 0;
+		for( i in 0...points.length>>2 ) {
+			var i = i << 2;
+			var i0 = i, i1 = i+1, i2 = i+2;
+			var p0 = points[i0];
+			var p1 = points[i1];
+			var p2 = points[i2];
+			// this is the per-face normal
+			var n = p1.sub(p0).cross(p2.sub(p0));
+			// add it to each point
+			normals[i0].x += n.x; normals[i0].y += n.y; normals[i0].z += n.z;
+			normals[i1].x += n.x; normals[i1].y += n.y; normals[i1].z += n.z;
+			normals[i2].x += n.x; normals[i2].y += n.y; normals[i2].z += n.z;
+
+			var i0 = i+3, i1 = i+2, i2 = i+1;
+			var p0 = points[i0];
+			var p1 = points[i1];
+			var p2 = points[i2];
+			// this is the per-face normal
+			var n = p1.sub(p0).cross(p2.sub(p0));
+			// add it to each point
+			normals[i0].x += n.x; normals[i0].y += n.y; normals[i0].z += n.z;
+			normals[i1].x += n.x; normals[i1].y += n.y; normals[i1].z += n.z;
+			normals[i2].x += n.x; normals[i2].y += n.y; normals[i2].z += n.z;
+		}
+		// normalize all normals
+		for( n in normals )
+			n.normalize();
+	}
+
 	public function getPoints() {
 		return pts;
 	}
