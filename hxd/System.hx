@@ -52,6 +52,11 @@ class System {
 	public static function start( callb : Void -> Void ) : Void {
 	}
 
+	/**
+		Sets currently shown cursor.
+		This method designated to be used by custom `hxd.System.setCursor`.
+		Calling it outside of atuomated Interactive cursor update system leads to undefined behavior, and not adviced.
+	**/
 	public static function setNativeCursor( c : Cursor ) : Void {
 	}
 
