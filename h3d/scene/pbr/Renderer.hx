@@ -243,7 +243,7 @@ class Renderer extends h3d.scene.Renderer {
 		var ls = Std.instance(getLightSystem(), LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
-		ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
+		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
 
 		setTargets([albedo,normal,pbr,other]);
 		clear(0, 1, 0);
