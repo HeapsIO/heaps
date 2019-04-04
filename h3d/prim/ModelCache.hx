@@ -1,8 +1,12 @@
 package h3d.prim;
 
+typedef HideProps = {
+	var animations : haxe.DynamicAccess<{ events : Array<{ frame : Int, data : String }> }>;
+}
+
 class ModelCache {
 
-	var models : Map<String, hxd.fmt.hmd.Library>;
+	var models : Map<String, { lib : hxd.fmt.hmd.Library, props : HideProps }>;
 	var textures : Map<String, h3d.mat.Texture>;
 	var anims : Map<String, h3d.anim.Animation>;
 
@@ -20,28 +24,29 @@ class ModelCache {
 		textures = new Map();
 	}
 
-	public function loadLibrary( res : hxd.res.Model ) : hxd.fmt.hmd.Library {
-		var path = res.entry.path;
-		var lib = models.get(path);
-		if( lib == null ) {
-			lib = res.toHmd();
-			models.set(path, lib);
+	public function loadLibrary(res) : hxd.fmt.hmd.Library {
+		return loadLibraryData(res).lib;
+	}
 
-			function loadHideData( path : String ) : hxd.fmt.hmd.Library.HideData {
-				var parts = path.split("/");
+	function loadLibraryData( res : hxd.res.Model ) {
+		var path = res.entry.path;
+		var m = models.get(path);
+		if( m == null ) {
+			var props = try {
+				var parts = path.split(".");
 				parts.pop();
-				var propsPath = parts.join("/") + "/model.props";
-				if(!hxd.res.Loader.currentInstance.exists(propsPath)) return null;
-				var props = hxd.res.Loader.currentInstance.load(propsPath).toText();
-				return haxe.Json.parse(props);
-			}
-			lib.hideData = loadHideData(path);
+				parts.push("props");
+				haxe.Json.parse(hxd.res.Loader.currentInstance.load(parts.join(".")).toText());
+			} catch( e : hxd.res.NotFound )
+				null;
+			m = { lib : res.toHmd(), props : props };
 		}
-		return lib;
+		return m;
 	}
 
 	public function loadModel( res : hxd.res.Model ) : h3d.scene.Object {
-		return loadLibrary(res).makeObject(loadTexture.bind(res));
+		var m = loadLibraryData(res);
+		return m.lib.makeObject(loadTexture.bind(res));
 	}
 
 	public function loadTexture( model : hxd.res.Model, texturePath ) : h3d.mat.Texture {
@@ -84,19 +89,33 @@ class ModelCache {
 		return t;
 	}
 
-	public function loadAnimation( anim : hxd.res.Model, ?name : String ) : h3d.anim.Animation {
+	public function loadAnimation( anim : hxd.res.Model, ?name : String, ?forModel : hxd.res.Model ) : h3d.anim.Animation {
 		var path = anim.entry.path;
 		if( name != null ) path += ":" + name;
 		var a = anims.get(path);
 		if( a != null )
 			return a;
-		a = initAnimation(anim,name);
+		a = initAnimation(anim,name,forModel);
 		anims.set(path, a);
 		return a;
 	}
 
-	function initAnimation( anim : hxd.res.Model, name : String ) {
-		return loadLibrary(anim).loadAnimation(name);
+	function setAnimationProps( a : h3d.anim.Animation, resName : String, props : HideProps ) {
+		if( props == null || props.animations == null ) return;
+		var n = props.animations.get(resName);
+		if( n != null && n.events != null )
+			a.setEvents(n.events);
+	}
+
+	function initAnimation( res : hxd.res.Model, name : String, ?forModel : hxd.res.Model ) {
+		var m = loadLibraryData(res);
+		var a = m.lib.loadAnimation(name);
+		setAnimationProps(a, res.name, m.props);
+		if( forModel != null ) {
+			var m = loadLibraryData(forModel);
+			setAnimationProps(a, res.name, m.props);
+		}
+		return a;
 	}
 
 }
