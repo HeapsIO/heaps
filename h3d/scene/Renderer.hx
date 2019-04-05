@@ -16,7 +16,7 @@ enum RenderMode{
 	LightProbe;
 }
 
-@:allow(hxd.prefab.rfx.RendererFX)
+@:allow(hrt.prefab.rfx.RendererFX)
 @:allow(h3d.pass.Shadows)
 class Renderer extends hxd.impl.AnyProps {
 
@@ -27,7 +27,8 @@ class Renderer extends hxd.impl.AnyProps {
 	var ctx : RenderContext;
 	var hasSetTarget = false;
 
-	public var effects : Array<hxd.prefab.rfx.RendererFX> = [];
+	public var effects : Array<h3d.impl.RendererFX> = [];
+	
 	public var renderMode : RenderMode = Default;
 
 	public function new() {

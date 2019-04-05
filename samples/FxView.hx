@@ -1,5 +1,5 @@
-import hide.prefab.fx.FX;
-import hide.prefab.l3d.Polygon;
+import hrt.prefab.fx.FX;
+import hrt.prefab.l3d.Polygon;
 
 class ColorMult extends hxsl.Shader {
 	static var SRC = {
@@ -19,20 +19,20 @@ class FxView extends hxd.App {
 
 	override function init() {
 		var prefab = hxd.Res.hideEffect.load();
-		var unk = prefab.getOpt(hxd.prefab.Unknown);
+		var unk = prefab.getOpt(hrt.prefab.Unknown);
 		if( unk != null )
 			throw "Prefab "+unk.getPrefabType()+" was not compiled";
 
-		var ctx = new hxd.prefab.Context();
-		var shared = new hxd.prefab.ContextShared();
+		var ctx = new hrt.prefab.Context();
+		var shared = new hrt.prefab.ContextShared();
 		ctx.shared = shared;
 		shared.root2d = s2d;
 		shared.root3d = s3d;
 		ctx.init();
 
 		function play() {
-			var i = prefab.makeInstance(ctx);
-			var fx = cast(i.local3d, hide.prefab.fx.FX.FXAnimation);
+			var i = prefab.make(ctx);
+			var fx = cast(i.local3d, hrt.prefab.fx.FX.FXAnimation);
 			fx.onEnd = function() {
 				fx.remove();
 				play();
