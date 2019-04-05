@@ -85,7 +85,7 @@ class Prefab {
 	/**
 		Allows to customize how the prefab instance changes when selected/unselected within Hide
 	**/
-	public function setSelected( ctx : hide.prefab.Context, b : Bool ) {
+	public function setSelected( ctx : Context, b : Bool ) {
 		var materials = ctx.shared.getMaterials(this);
 
 		if( !b ) {
