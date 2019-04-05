@@ -26,7 +26,9 @@ class Config {
 		"tmx" => "hxd.res.TiledMap",
 		"atlas" => "hxd.res.Atlas",
 		"grd" => "hxd.res.Gradients",
-		"prefab,fx,l3d" => "hxd.res.Prefab"
+		#if hide
+		"prefab,fx,l3d" => "hrt.res.Prefab"
+		#end
 	];
 
 	/**
