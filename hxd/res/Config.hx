@@ -27,7 +27,7 @@ class Config {
 		"atlas" => "hxd.res.Atlas",
 		"grd" => "hxd.res.Gradients",
 		#if hide
-		"prefab,fx,l3d" => "hrt.res.Prefab"
+		"prefab,fx,l3d" => "hxd.res.Prefab"
 		#end
 	];
 
