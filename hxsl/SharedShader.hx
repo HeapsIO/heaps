@@ -54,7 +54,7 @@ class SharedShader {
 		initialize();
 	}
 
-	function initialize() {
+	public function initialize() {
 		for( v in data.vars )
 			browseVar(v);
 		// don't try to optimize if consts is null, we need to do a few things in Eval
