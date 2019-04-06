@@ -491,7 +491,7 @@ class BitmapData {
 		canvas.width = w;
 		canvas.height = h;
 		var ctx = canvas.getContext2d();
-		ctx.drawImage(this.ctx.canvas, x, y);
+		ctx.drawImage(this.ctx.canvas, x, y, w, h, 0, 0, w, h);
 		return fromNative(ctx);
 		#elseif lime
 		notImplemented();
