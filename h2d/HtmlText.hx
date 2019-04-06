@@ -65,10 +65,12 @@ class HtmlText extends Text {
 		calcYMin = 0;
 
 		var sizes = new Array<Float>();
+		var heights = [0.];
+		var baseLines = [0.];
 		prevChar = -1;
 		newLine = true;
 		for( e in doc )
-			buildSizes(e, font, sizes);
+			buildSizes(e, font, sizes, heights, baseLines);
 
 		var max = 0.;
 		for ( lw in sizes ) {
@@ -80,7 +82,7 @@ class HtmlText extends Text {
 		newLine = true;
 		nextLine(textAlign, sizes[0]);
 		for ( e in doc )
-			addNode(e, font, textAlign, rebuild, sizes);
+			addNode(e, font, textAlign, rebuild, sizes, heights, baseLines);
 		
 		if( xPos > xMax ) xMax = xPos;
 
@@ -94,18 +96,22 @@ class HtmlText extends Text {
 	}
 
 	// TODO: Calculate line heights to allow proper line height adjustment based on baseline.
-	function buildSizes( e : Xml, font : Font, lines : Array<Float>/*, heights : Array<Float> */ ) {
+	function buildSizes( e : Xml, font : Font, lines : Array<Float>, heights : Array<Float>, baseLines : Array<Float> ) {
 		if( e.nodeType == Xml.Element ) {
 			var nodeName = e.nodeName.toLowerCase();
 			switch( nodeName ) {
 			case "p":
 				if ( !newLine ) {
 					lines.push(0);
+					heights.push(0);
+					baseLines.push(0);
 					newLine = true;
 					prevChar = -1;
 				}
 			case "br":
 				lines.push(0);
+				heights.push(0);
+				baseLines.push(0);
 				newLine = true;
 				prevChar = -1;
 			case "img":
@@ -121,12 +127,20 @@ class HtmlText extends Text {
 				var size = lines[lines.length - 1] + i.width + letterSpacing;
 				if (realMaxWidth >= 0 && size > realMaxWidth && lines[lines.length - 1] > 0) {
 					lines.push(i.width);
+					heights.push(i.height);
+					baseLines.push(i.height);
 				} else {
 					lines[lines.length - 1] = size;
+					var idx = heights.length - 1;
+					if ( heights[idx] < i.height )
+						heights[idx] = i.height;
+					if ( baseLines[idx] < i.height )
+						baseLines[idx] = i.height;
 				}
 				newLine = false;
 				prevChar = -1;
 			case "font":
+				var size : Null<Int> = null;
 				for( a in e.attributes() ) {
 					var v = e.get(a);
 					switch( a.toLowerCase() ) {
@@ -137,11 +151,13 @@ class HtmlText extends Text {
 			default:
 			}
 			for( child in e )
-				buildSizes(child, font, lines);
+				buildSizes(child, font, lines, heights, baseLines);
 			switch( nodeName ) {
 			case "p":
 				if ( !newLine ) {
 					lines.push(0);
+					heights.push(0);
+					baseLines.push(0);
 					newLine = true;
 					prevChar = -1;
 				}
@@ -154,6 +170,16 @@ class HtmlText extends Text {
 				var lastChar = text.charCodeAt(text.length - 1);
 				prevChar = lastChar == "\n".code ? -1 : lastChar;
 			}
+			var idx = heights.length - 1;
+			if ( heights[idx] < font.lineHeight )
+				heights[idx] = font.lineHeight;
+			if ( baseLines[idx] < font.baseLine )
+				baseLines[idx] = font.baseLine;
+			while ( heights.length < lines.length ) {
+				heights.push(font.lineHeight);
+				baseLines.push(font.baseLine);
+			}
+				
 			// Save node value
 			e.nodeValue = text;
 		}
@@ -180,12 +206,12 @@ class HtmlText extends Text {
 		}
 	}
 
-	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, sizes : Array<Float> ) {
+	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, sizes : Array<Float>, heights : Array<Float>, baseLines : Array<Float> ) {
 		inline function makeLineBreak()
 		{
 			if( xPos > xMax ) xMax = xPos;
+			yPos += heights[sizePos] + lineSpacing;
 			nextLine(align, sizes[++sizePos]);
-			yPos += font.lineHeight + lineSpacing;
 		}
 		if( e.nodeType == Xml.Element ) {
 			var prevColor = null, prevGlyphs = null;
@@ -264,7 +290,7 @@ class HtmlText extends Text {
 				if( realMaxWidth >= 0 && xPos + i.width + letterSpacing > realMaxWidth && xPos > 0 ) {
 					makeLineBreak();
 				}
-				var py = yPos + font.baseLine - i.height;
+				var py = yPos + baseLines[sizePos] - i.height;
 				if( py + i.dy < calcYMin )
 					calcYMin = py + i.dy;
 				if( rebuild ) {
@@ -279,7 +305,7 @@ class HtmlText extends Text {
 			default:
 			}
 			for( child in e )
-				addNode(child, font, align, rebuild, sizes);
+				addNode(child, font, align, rebuild, sizes, heights, baseLines);
 			align = oldAlign;
 			switch( nodeName ) {
 			case "p":
@@ -300,7 +326,7 @@ class HtmlText extends Text {
 		} else {
 			newLine = false;
 			var t = e.nodeValue;
-			var dy = this.font.baseLine - font.baseLine;
+			var dy = baseLines[sizePos] - font.baseLine;
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
 				if( cc == "\n".code ) {
