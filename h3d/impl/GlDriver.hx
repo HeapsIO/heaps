@@ -188,6 +188,12 @@ class GlDriver extends Driver {
 	var maxCompressedTexturesSupport = 0;
 
 	var drawMode : Int;
+	
+	/**
+		Perform OUT_OF_MEMORY checks when allocating textures/buffers.
+		Default true, except in WebGL (false)
+	**/
+	public static var outOfMemoryCheck = #if js false #else true #end;
 
 	public function new(antiAlias=0) {
 		#if js
@@ -873,6 +879,7 @@ class GlDriver extends Driver {
 		var outOfMem = false;
 
 		inline function checkError() {
+			if( !outOfMemoryCheck ) return false;
 			var err = gl.getError();
 			if( err == GL.OUT_OF_MEMORY ) {
 				outOfMem = true;
@@ -954,7 +961,7 @@ class GlDriver extends Driver {
 	}
 
 	inline function discardError() {
-		gl.getError(); // make sure to reset error flag
+		if( outOfMemoryCheck ) gl.getError(); // make sure to reset error flag
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
@@ -970,7 +977,7 @@ class GlDriver extends Driver {
 		var tmp = new Uint8Array(m.size * m.stride * 4);
 		gl.bufferData(GL.ARRAY_BUFFER, tmp, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#end
-		var outOfMem = gl.getError() == GL.OUT_OF_MEMORY;
+		var outOfMem = outOfMemoryCheck && gl.getError() == GL.OUT_OF_MEMORY;
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		if( outOfMem ) {
 			gl.deleteBuffer(b);
@@ -989,7 +996,7 @@ class GlDriver extends Driver {
 		#elseif hl
 		gl.bufferDataSize(GL.ELEMENT_ARRAY_BUFFER, count * size, GL.STATIC_DRAW);
 		#end
-		var outOfMem = gl.getError() == GL.OUT_OF_MEMORY;
+		var outOfMem = outOfMemoryCheck && gl.getError() == GL.OUT_OF_MEMORY;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		curIndexBuffer = null;
 		if( outOfMem ) {
