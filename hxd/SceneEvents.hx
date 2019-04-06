@@ -45,6 +45,11 @@ class SceneEvents {
 	 */
 	public var mouseCheckMove = true;
 
+	/**
+	 * Default cursor when there is no Interactive present under cursor.
+	 */
+	public var defaultCursor : Cursor = Default;
+
 	public function new( ?window ) {
 		scenes = [];
 		pendingEvents = [];
@@ -363,7 +368,7 @@ class SceneEvents {
 	}
 
 	function selectCursor() {
-		var cur : hxd.Cursor = Default;
+		var cur : hxd.Cursor = defaultCursor;
 		for ( o in overList ) {
 			if ( o.cursor != null ) {
 				cur = o.cursor;
