@@ -68,8 +68,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		filterStack = [];
 	}
 
-	public function dispose() {
-		textures.dispose();
+	override function dispose() {
+		super.dispose();
 		if( fixedBuffer != null ) fixedBuffer.dispose();
 	}
 
