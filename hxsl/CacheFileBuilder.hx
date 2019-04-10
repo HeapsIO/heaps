@@ -168,7 +168,7 @@ class CacheFileBuilder {
 					var data = try haxe.crypto.Base64.decode(s) catch( e : Dynamic ) continue;
 					var len = data.get(3);
 					var name = data.getString(4,len);
-					builder.shaderLib.set(name, s);						
+					builder.shaderLib.set(name, s);
 				}
 			case "-gl":
 				builder.platforms.push(OpenGL);
@@ -183,6 +183,7 @@ class CacheFileBuilder {
 			}
 		}
 		builder.run();
+		Sys.exit(0);
 	}
 
 }

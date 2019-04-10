@@ -93,7 +93,7 @@ class CacheFile extends Cache {
 				// update missing shader sources (after platform switch)
 				for( r in runtimeShaders )
 					if( r.vertex.code == null || r.fragment.code == null )
-						wait.push(addSource.bind(r));
+						wait.push(r);
 			}
 
 			log(runtimeShaders.length+" shaders loaded in "+hxd.Math.fmt(haxe.Timer.stamp() - t0)+"s");
@@ -103,19 +103,15 @@ class CacheFile extends Cache {
 			var rt = link(makeDefaultShader(), false);
 			linkCache.linked = rt;
 			if( rt.vertex.code == null || rt.fragment.code == null ) {
+				wait.push(rt);
 				if( !allowCompile ) throw "Missing default shader code";
-				waitCount++;
-				wait.push(function() {
-					h3d.Engine.getCurrent().selectShader(rt);
-					addNewShader(rt);
-				});
 			}
 		}
 		if( wait.length > 0 ) {
+			waitCount += wait.length;
 			haxe.Timer.delay(function() {
-				for( w in wait )
-					w();
-				save();
+				for( r in wait )
+					addNewShader(r);
 			},1000); // wait until engine correctly initialized
 		}
 		isLoading = false;
@@ -673,7 +669,8 @@ class CacheFile extends Cache {
 	}
 
 	function addNewShader( s : RuntimeShader ) {
-		runtimeShaders.push(s);
+		if( runtimeShaders.indexOf(s) < 0 )
+			runtimeShaders.push(s);
 		addSource(s);
 		for( i in s.spec.instances ) {
 			var inst = shaders.get(i.shader.data.name);
