@@ -219,7 +219,7 @@ class Splitter {
 			uniqueName(v);
 			if( v.kind == Local && oldName != v.name ) {
 				// variable renamed : restore its name and create a new one
-				var nv = {
+				var nv : TVar = {
 					id : Tools.allocVarId(),
 					name : v.name,
 					kind : v.kind,
