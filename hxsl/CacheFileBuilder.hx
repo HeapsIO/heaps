@@ -57,6 +57,7 @@ class CacheFileBuilder {
 	public var dxInitDone = false;
 	public var dxShaderVersion = "5_0";
 	var glout : GlslOut;
+	var hasCompiled : Bool;
 
 	public function new() {
 	}
@@ -65,8 +66,10 @@ class CacheFileBuilder {
 		for( p in platforms ) {
 			Sys.println("Generating shaders for " + p);
 			this.platform = p;
+			hasCompiled = false;
 			var cache = new CustomCacheFile(this);
 			@:privateAccess cache.save();
+			if( hasCompiled ) Sys.println("");
 		}
 	}
 
@@ -75,6 +78,7 @@ class CacheFileBuilder {
 	}
 
 	public function compileShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : String {
+		hasCompiled = true;
 		Sys.print(".");
 		switch( platform ) {
 		case DirectX:
@@ -182,7 +186,7 @@ class CacheFileBuilder {
 				throw "Unknown parameter " + f;
 			}
 		}
-		builder.run();
+		builder.run();		
 		Sys.exit(0);
 	}
 
