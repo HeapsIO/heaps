@@ -116,6 +116,11 @@ class Renderer extends h3d.scene.Renderer {
 		refreshProps();
 	}
 
+	override function dispose() {
+		super.dispose();
+		env.dispose();
+	}
+
 	inline function get_exposure() return tonemap.shader.exposure;
 	inline function set_exposure(v:Float) return tonemap.shader.exposure = v;
 
