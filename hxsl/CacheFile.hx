@@ -237,7 +237,7 @@ class CacheFile extends Cache {
 			}];
 			var sign = readString();
 			if( missingShader ) continue;
-
+			//log("Loading shader "+[for( i in inst ) (i.shader == null ? i.batch : i.shader.shader.data.name)+(i.bits == 0 ? "" : ":"+StringTools.hex(i.bits))].toString());
 			runtimes.push({ signature : sign, specSign : specSign, inst: inst });
 		}
 
@@ -272,6 +272,7 @@ class CacheFile extends Cache {
 					shaderList = new hxsl.ShaderList(s, shaderList);
 				}
 				if( r == null ) continue;
+				//log("Recompile "+[for( s in shaderList ) shaderName(s)]);
 				var rt = link(shaderList, batchMode); // will compile + update linkMap
 				if( rt.spec.signature != r.specSign )
 					throw "assert";
@@ -646,8 +647,37 @@ class CacheFile extends Cache {
 		Sys.println(str);
 	}
 
+	function shaderName( s : hxsl.Shader ) @:privateAccess {
+		var name = s.instance.shader.name;
+		if( s.constBits != 0 )
+			name += ":" + StringTools.hex(s.constBits);
+		if( s.priority != 0 )
+			name += "("+s.priority+")";
+		if( s.constBits != 0 ) {
+			var c = s.shader.consts;
+			var consts = [];
+			while( c != null ) {
+				var bits = (s.constBits >> c.pos) & ((1 << c.bits) - 1);
+				if( bits > 0 ) {
+					switch( c.v.type ) {
+					case TBool:
+						consts.push(c.v.name);
+					case TChannel(_):
+						consts.push(c.v.name+"="+hxsl.Channel.createByIndex(bits&7)+"@"+(bits>>3));
+					default:
+						consts.push(c.v.name+"="+bits);
+					}
+				}
+				c = c.next;
+			}
+			if( consts.length > 0 )
+				name += consts.toString();
+		}
+		return name;
+	}
+
 	public dynamic function onMissingShader(shaders:hxsl.ShaderList) {
-		log("Missing shader " + [for( s in shaders ) @:privateAccess s.instance.shader.name+":" + s.priority]);
+		log("Missing shader " + [for( s in shaders ) shaderName(s)]);
 		return link(null, false); // default fallback
 	}
 
