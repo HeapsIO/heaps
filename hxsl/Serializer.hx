@@ -415,9 +415,13 @@ class Serializer {
 			expr : readExpr(),
 		};
 	}
+	
+	static var SIGN = 0x8B741D; // will be encoded to HXSL
 
 	public function unserialize( data : String ) : ShaderData {
 		input = new haxe.io.BytesInput(haxe.crypto.Base64.decode(data,false));
+		if( input.readByte() != (SIGN & 0xFF) || input.readByte() != (SIGN >> 8) & 0xFF || input.readByte() != (SIGN >> 16) & 0xFF )
+			throw "Invalid HXSL data";
 		varMap = new Map();
 		types = [];
 		return {
@@ -432,6 +436,9 @@ class Serializer {
 		idMap = new Map();
 		typeIdMap = new Map();
 		out = new haxe.io.BytesBuffer();
+		out.addByte(SIGN & 0xFF);
+		out.addByte((SIGN >> 8) & 0xFF);
+		out.addByte((SIGN >> 16) & 0xFF);
 		writeString(s.name);
 		writeArr(s.vars, writeVar);
 		writeArr(s.funs, writeFun);
