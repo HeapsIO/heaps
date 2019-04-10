@@ -14,8 +14,8 @@ class SpotLight extends Light {
 	public function new(?parent) {
 		pbr = new h3d.shader.pbr.Light.SpotLight();
 		shadows = new h3d.pass.SpotShadowMap(this);
+		primitive = spotLightPrim();
 		super(pbr,parent);
-		generatePrim();
 		lightProj = new h3d.Camera();
 		lightProj.screenRatio = 1.0;
 		range = 10;
@@ -52,7 +52,7 @@ class SpotLight extends Light {
 		return angle = v;
 	}
 
-	function generatePrim(){
+	function generatePrim() {
 		var points = new Array<h3d.col.Point>();
 
 		// Left
@@ -81,7 +81,17 @@ class SpotLight extends Light {
 
 		var prim = new h3d.prim.Polygon(points);
 		prim.addNormals();
-		primitive = prim;
+		return prim;
+	}
+
+	public static function spotLightPrim() {
+		var engine = h3d.Engine.getCurrent();
+		var p : Polygon = @:privateAccess engine.resCache.get(SpotLight);
+		if( p != null )
+			return p;
+		p = generatePrim();
+		@:privateAccess engine.resCache.set(SpotLight, p);
+		return p;
 	}
 
 	function generateLightProj(){
