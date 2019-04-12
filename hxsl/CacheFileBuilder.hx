@@ -133,7 +133,7 @@ class CacheFileBuilder {
 			var tmpOut = tmpFile + ".sb";
 			sys.io.File.saveContent(tmpSrc, code);
 			var args = ["-T", (rd.vertex ? "vs_" : "ps_") + dxShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
-			var p = new sys.io.Process("fxc.exe", args);
+			var p = new sys.io.Process(Sys.getEnv("XboxOneXDKLatest")+ "xdk\\FXC\\amd64\\fxc.exe", args);
 			var error = p.stderr.readAll().toString();
 			var ecode = p.exitCode();
 			if( ecode != 0 )
