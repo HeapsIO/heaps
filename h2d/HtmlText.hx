@@ -95,7 +95,6 @@ class HtmlText extends Text {
 		calcDone = true;
 	}
 
-	// TODO: Calculate line heights to allow proper line height adjustment based on baseline.
 	function buildSizes( e : Xml, font : Font, lines : Array<Float>, heights : Array<Float>, baseLines : Array<Float> ) {
 		if( e.nodeType == Xml.Element ) {
 			var nodeName = e.nodeName.toLowerCase();
