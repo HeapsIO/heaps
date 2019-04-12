@@ -327,9 +327,6 @@ class LocalFileSystem implements FileSystem {
 		#end
 		if( exePath != null ) exePath.pop();
 		var froot = exePath == null ? baseDir : sys.FileSystem.fullPath(exePath.join("/") + "/" + baseDir);
-		#if (usesys && !macro)
-		froot = haxe.System.dataPathPrefix + froot;
-		#end
 		if( froot == null || !sys.FileSystem.exists(froot) || !sys.FileSystem.isDirectory(froot) ) {
 			froot = sys.FileSystem.fullPath(baseDir);
 			if( froot == null || !sys.FileSystem.exists(froot) || !sys.FileSystem.isDirectory(froot) )

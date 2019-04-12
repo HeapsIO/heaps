@@ -42,9 +42,6 @@ class CacheFile extends Cache {
 		this.allowCompile = allowCompile;
 		this.recompileRT = recompileRT || allowCompile;
 		this.file = FILENAME;
-		#if usesys
-		this.file = haxe.System.dataPathPrefix + this.file;
-		#end
 		sourceFile = this.file + "." + getPlatformTag();
 		load();
 	}
