@@ -40,6 +40,7 @@ class ModelCache {
 			} catch( e : hxd.res.NotFound )
 				null;
 			m = { lib : res.toHmd(), props : props };
+			models.set(path, m);
 		}
 		return m;
 	}
