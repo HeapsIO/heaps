@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.2" tiledversion="1.2.3" orientation="orthogonal" renderorder="left-down" width="20" height="30" tilewidth="16" tileheight="16" infinite="0" nextlayerid="5" nextobjectid="1">
+ <tileset firstgid="1" name="tilemap" tilewidth="16" tileheight="16" tilecount="486" columns="27">
+  <image source="tiles.png" width="432" height="288"/>
+ </tileset>
+ <layer id="1" name="Roads" width="20" height="30">
+  <data encoding="base64" compression="zlib">
+   eJxTZWBgUAViNSA+x8jAcB6ILwCxNpAvSwZWHcHmbQaaswWIt1JgngMUO6K5Tx3IdyYDT2dE4CtAvAuILzOiiqPjaXjkNpGBN+KRO0sGPoPE3gnEV4F4B5TPxUA+5kYLcwGk+CUHY0sTlJqHnmZHzRs1b9S8UfNGzRuc5gEAzcisrw==
+  </data>
+ </layer>
+ <layer id="2" name="Buildings" width="20" height="30">
+  <data encoding="base64" compression="zlib">
+   eJzt1LFuQVEcBnB3kWgnrdVQia14hZrQUU1qKkY1YTJgwdQatEPbd9AO6DNgwFt4CZ/kk9ycnHvu6bk3HcQ/+eUk31++/GO4gYD77CBk6dGZoGaXbt8NfhfTZDJRhfOc9sRd5OFBomDYV4NnibqirwiPghJ3fRhIDBV9DWgKWtyF4QqubSLMnfpe4FUw4u4WspCzuWfu1NeGDnSpx+ywy0ACkjYp5k597/ABn/TFzPS+H5jCjObMjvfJ+lT3rWANG9oyO+yeoAwVmypz2dx5kJb0vVlmxny3wjf52zIz4fsr9C0tMwu+c6HvwoNLyf/n9j1QkY1qpxqdvr/c5Vef3/f9d98e+35l3A==
+  </data>
+ </layer>
+ <layer id="3" name="Features" width="20" height="30">
+  <data encoding="base64" compression="zlib">
+   eJxjYBgFo2AUjALiQTYjJqYEtDFiYlLdQCnAZ38OIyYmBAIZUTGloBloRisjgkYBUL4lIyp/FIwCaoLVQLyGAF5LgnnHgPg4AXxiiJsHAJyoLE8=
+  </data>
+ </layer>
+ <layer id="4" name="Props" width="20" height="30">
+  <data encoding="base64" compression="zlib">
+   eJxjYBgFlAIjRkyx2VjEKAEHqGvcsASzaBTmIgTM9WPEThMDXpLqKAJuINX+gQTfB9oBQOBK5bCqxmOeBAV2eQL1ekGx9xCJ36EOZtKpDJckwx5i9YgC1ekBsS4Q60MxiC86wGnIgwT7kwfArdRyHwD+bQxy
+  </data>
+ </layer>
+</map>
