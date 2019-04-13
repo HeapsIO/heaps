@@ -7,8 +7,8 @@ class Tiled extends hxd.App {
 	var obj:h2d.Object;
 
 	override function init() {
-		var tiledMapData = hxd.res.tileMap.toMap();
-		var tiles = hxd.res.tiles.toTile();
+		var tiledMapData = hxd.Res.tileMap.toMap();
+		var tiles = hxd.Res.tiles.toTile();
 
 		drawLayer(tiledMapData, tiles, 0, TILE_SIZE);
 		drawLayer(tiledMapData, tiles, 1, TILE_SIZE);
