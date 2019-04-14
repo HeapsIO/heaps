@@ -2,19 +2,89 @@ package h2d;
 import hxd.Math;
 
 /**
+	Scaling mode of the 2D Scene.
+**/
+enum ScaleMode
+{
+	/**
+		Fills entire screen. `width` and `height` of Scene will match window size. Default scaling mode.
+	**/
+	Fill;
+	/**
+		Stretches the Scene to fill entire screen. This behavior is same as old `setFixedSize` method.
+	**/
+	Stretch(width : Int, height : Int);
+	/**
+		Preserves aspect-ratio when scaling the Scene.  
+		If `centerViewport` is `true` - Scene will be centered relative to window size.
+	**/
+	KeepAspect(width : Int, height : Int, centerViewport : Bool);
+	/**
+		Same as KeepAspect, but using integer scaling.
+	**/
+	KeepPixelSize(width : Int, height : Int, centerViewport : Bool);
+	/**
+		Forces exact dimensions disregarding size of the window.
+	**/
+	Exact(width : Int, height : Int, zoom : Float, centerViewport : Bool);
+	/**
+		Same as Fill, but scales Scene according to `level`. This mode resizes Engine in some cases.
+	**/
+	Zoom(level : Float);
+	/**
+		Same as KeepAspect, but instead of fixed `width`/`height` it will be adjusted to fill entire screen. This mode resizes Engine in some cases.
+	**/
+	EnsureArea(width : Int, height : Int);
+	/**
+		Same as EnsureArea, but using integer scaling. This mode resizes Engine in some cases.
+	**/
+	EnsurePixelArea(width : Int, height : Int);
+}
+
+/**
 	h2d.Scene is the root class for a 2D scene. All root objects are added to it before being drawn on screen.
 **/
 class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.InteractiveScene {
 
 	/**
-		The current width (in pixels) of the scene. Can change if the screen gets resized.
+		The current width (in pixels) of the scene. Can change if the screen gets resized or `scaleMode` changes.
 	**/
 	public var width(default,null) : Int;
 
 	/**
-		The current height (in pixels) of the scene. Can change if the screen gets resized.
+		The current height (in pixels) of the scene. Can change if the screen gets resized or `scaleMode` changes.
 	**/
 	public var height(default, null) : Int;
+
+	/**
+		Horizontal viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.  
+		Offset is in internal Scene resolution pixels.
+	**/
+	public var viewportX(default, null) : Float;
+	/**
+		Vertical viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.  
+		Offset is in internal Scene resolution pixels.
+	**/
+	public var viewportY(default, null) : Float;
+	/**
+		Physical vertical viewport offset relative to the center of the window. Assigned if the screen gets resized or `scaleMode` changes.  
+		Offset is in internal Scene resolution pixels.
+	**/
+	public var offsetX : Float;
+	/**
+		Physical horizontal viewport offset relative to the center of the window. Assigned if the screen gets resized or `scaleMode` changes.  
+		Offset is in internal Scene resolution pixels.
+	**/
+	public var offsetY : Float;
+
+	/**
+		Horizontal ratio of the window used by the Scene (including scaling). Can change if the screen gets resized or `scaleMode` changes.
+	**/
+	public var ratioX(default, null) : Float;
+	/**
+		Vertical ratio of the window used by the Scene (including scaling). Can change if the screen gets resized or `scaleMode` changes.
+	**/
+	public var ratioY(default, null) : Float;
 
 	/**
 		The current mouse X coordinates (in pixel) relative to the scene.
@@ -30,7 +100,16 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		The zoom factor of the scene, allows to set a fixed x2, x4 etc. zoom for pixel art
 		When setting a zoom > 0, the scene resize will be automaticaly managed.
 	**/
-	public var zoom(default, set) : Int = 0;
+	@:deprecated("zoom is deprecated, use scaleMode = Zoom(v) instead")
+	public var zoom(get, set) : Int;
+
+	/**
+		Scene scaling mode. ( default : Fill )
+		Important thing to keep in mind - Scene does not restrict rendering to it's scaled size and
+		graphics can render outside of it. However `drawTile` does check for those bounds and 
+		will clip out tiles that are outside of the scene bounds.
+	**/
+	public var scaleMode(default, set) : ScaleMode = Fill;
 
 	/**
 		Set the default value for `h2d.Drawable.smooth` (default: false)
@@ -42,7 +121,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	public var renderer(get, set) : RenderContext;
 
-	var fixedSize : Bool;
 	var interactive : Array<Interactive>;
 	var eventListeners : Array< hxd.Event -> Void >;
 	var ctx : RenderContext;
@@ -60,6 +138,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx = new RenderContext(this);
 		width = e.width;
 		height = e.height;
+		offsetX = 0;
+		offsetY = 0;
+		ratioX = 1;
+		ratioY = 1;
+		viewportX = 0;
+		viewportY = 0;
 		interactive = new Array();
 		eventListeners = new Array();
 		shapePoint = new h2d.col.Point();
@@ -75,17 +159,22 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		this.events = events;
 	}
 
+	function get_zoom() : Int {
+		return switch ( scaleMode ) {
+			case Zoom(level): Std.int(level);
+			default: 0;
+		}
+	}
+
 	function set_zoom(v:Int) {
-		var e = h3d.Engine.getCurrent();
-		var twidth = Math.ceil(window.width / v);
-		var theight = Math.ceil(window.height / v);
-		var totalWidth = twidth * v;
-		var totalHeight = theight * v;
-		// increase back buffer size if necessary
-		if( totalWidth != e.width || totalHeight != e.height )
-			e.resize(totalWidth, totalHeight);
-		setFixedSize(twidth, theight);
-		return zoom = v;
+		scaleMode = Zoom(v);
+		return v;
+	}
+
+	function set_scaleMode( v : ScaleMode ) {
+		scaleMode = v;
+		checkResize();
+		return v;
 	}
 
 	function get_renderer() return ctx;
@@ -94,32 +183,113 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	/**
 		Set the fixed size for the scene, will prevent automatic scene resizing when screen size changes.
 	**/
+	@:deprecated("setFixedSize is deprecated, use scaleMode = Strech(w, h) instead")
 	public function setFixedSize( w : Int, h : Int ) {
-		width = w;
-		height = h;
-		fixedSize = true;
-		posChanged = true;
+		scaleMode = Stretch(w, h);
 	}
 
 	@:dox(hide) @:noCompletion
 	public function checkResize() {
-		if( fixedSize && zoom == 0 ) return;
 		var engine = h3d.Engine.getCurrent();
-		var scale = zoom == 0 ? 1 : zoom;
-		if( width * scale != engine.width || height * scale != engine.height ) {
-			width = engine.width;
-			height = engine.height;
-			posChanged = true;
-			if( zoom != 0 ) this.zoom = zoom;
+		inline function calcRatio( scale : Float ) {
+			ratioX = (width * scale) / engine.width;
+			ratioY = (height * scale) / engine.height;
 		}
+
+		inline function calcViewport( center : Bool, zoom : Float ) {
+			if ( center ) {
+				offsetX = 0;
+				offsetY = 0;
+				viewportX = (engine.width - width * zoom) / (2 * zoom);
+				viewportY = (engine.height - height * zoom) / (2 * zoom);
+			} else {
+				offsetX = (engine.width - width * zoom) / (2 * zoom);
+				offsetY = (engine.height - height * zoom) / (2 * zoom);
+				viewportX = 0;
+				viewportY = 0;
+			}
+		}
+		inline function zeroViewport() {
+			offsetX = 0;
+			offsetY = 0;
+			viewportX = 0;
+			viewportY = 0;
+		}
+
+		switch ( scaleMode ) {
+			case Fill:
+				width = engine.width;
+				height = engine.height;
+				ratioX = 1;
+				ratioY = 1;
+				zeroViewport();
+			case Stretch(_width, _height):
+				width = _width;
+				height = _height;
+				ratioX = 1;
+				ratioY = 1;
+				zeroViewport();
+			case KeepAspect(_width, _height, centerViewport):
+				width = _width;
+				height = _height;
+				var zoom = Math.min(engine.width / _width, engine.height / _height);
+				calcRatio(zoom);
+				calcViewport(centerViewport, zoom);
+			case KeepPixelSize(_width, _height, centerViewport):
+				width = _width;
+				height = _height;
+				var zoom = Std.int(Math.min(engine.width / _width, engine.height / _height));
+				if (zoom == 0) zoom = 1;
+				calcRatio(zoom);
+				calcViewport(centerViewport, zoom);
+			case Exact(_width, _height, zoom, centerViewport):
+				width = _width;
+				height = _height;
+				calcRatio(zoom);
+				calcViewport(centerViewport, zoom);
+			case Zoom(level):
+				width = Math.ceil(engine.width / level);
+				height = Math.ceil(engine.height / level);
+				var bufWidth = Math.ceil(width * level);
+				var bufHeight = Math.ceil(height * level);
+				if (engine.width != bufWidth || engine.height != bufHeight) {
+					engine.resize(bufWidth, bufHeight);
+				}
+				calcRatio(level);
+				zeroViewport();
+			case EnsureArea(_width, _height):
+				var zoom = Math.min(engine.width / _width, engine.height / _height);
+				width = Math.ceil(engine.width / zoom);
+				height = Math.ceil(engine.height / zoom);
+				var bufWidth = Math.ceil(width * zoom);
+				var bufHeight = Math.ceil(height * zoom);
+				if (engine.width != bufWidth || engine.height != bufHeight) {
+					engine.resize(bufWidth, bufHeight);
+				}
+				calcRatio(zoom);
+				zeroViewport();
+			case EnsurePixelArea(_width, _height):
+				var zoom = Std.int(Math.min(engine.width / _width, engine.height / _height));
+				if (zoom == 0) zoom = 1;
+				width = Math.ceil(engine.width / zoom);
+				height = Math.ceil(engine.height / zoom);
+				var bufWidth = Math.ceil(width * zoom);
+				var bufHeight = Math.ceil(height * zoom);
+				if (engine.width != bufWidth || engine.height != bufHeight) {
+					engine.resize(bufWidth, bufHeight);
+				}
+				calcRatio(zoom);
+				zeroViewport();
+		}
+		posChanged = true;
 	}
 
 	inline function screenXToLocal(mx:Float) {
-		return mx * width / (window.width * scaleX) - x;
+		return mx * width / (window.width * ratioX * scaleX) - x - viewportX;
 	}
 
 	inline function screenYToLocal(my:Float) {
-		return my * height / (window.height * scaleY) - y;
+		return my * height / (window.height * ratioY * scaleY) - y - viewportY;
 	}
 
 	function get_mouseX() {
@@ -497,8 +667,20 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	override function sync( ctx : RenderContext ) {
 		if( !allocated )
 			onAdd();
-		checkResize();
 		super.sync(ctx);
+	}
+
+	override function onAdd()
+	{
+		checkResize();
+		super.onAdd();
+		window.addResizeEvent(checkResize);
+	}
+
+	override function onRemove()
+	{
+		super.onRemove();
+		window.removeResizeEvent(checkResize);
 	}
 
 	/**
@@ -515,14 +697,28 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		var tex = target.getTexture();
 		engine.pushTarget(tex);
-		var ow = width, oh = height, of = fixedSize;
-		setFixedSize(tex.width, tex.height);
+		var ow = width, oh = height, ox = offsetX, oy = offsetY;
+		var ovx = viewportX, ovy = viewportY, orx = ratioX, ory = ratioY;
+		width = tex.width;
+		height = tex.height;
+		ratioX = 1;
+		ratioY = 1;
+		offsetX = 0;
+		offsetY = 0;
+		viewportX = 0;
+		viewportY = 0;
+		posChanged = true;
 		render(engine);
 		engine.popTarget();
 
 		width = ow;
 		height = oh;
-		fixedSize = of;
+		ratioX = orx;
+		ratioY = ory;
+		offsetX = ox;
+		offsetY = oy;
+		viewportX = ovx;
+		viewportY = ovy;
 		posChanged = true;
 		engine.setRenderZone();
 		engine.end();
