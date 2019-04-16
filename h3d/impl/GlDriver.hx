@@ -422,6 +422,7 @@ class GlDriver extends Driver {
 			var attribNames = [];
 			p.attribs = [];
 			p.stride = 0;
+			var lastIndex = 0;
 			for( v in shader.vertex.data.vars )
 				switch( v.kind ) {
 				case Input:
@@ -434,9 +435,9 @@ class GlDriver extends Driver {
 					}
 					var index = gl.getAttribLocation(p.p, glout.varNames.exists(v.id) ? glout.varNames.get(v.id) : v.name);
 					if( index < 0 ) {
-						p.stride += size;
-						continue;
+						index = lastIndex+1;
 					}
+					lastIndex = index;
 					var a = new CompiledAttribute();
 					a.type = t;
 					a.size = size;
@@ -1153,7 +1154,6 @@ class GlDriver extends Driver {
 		#else
 		throw "Not implemented";
 		#end
-		t.flags.set(WasCleared);
 		restoreBind();
 	}
 
