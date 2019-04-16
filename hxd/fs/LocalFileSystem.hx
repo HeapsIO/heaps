@@ -481,6 +481,9 @@ class LocalFileSystem implements FileSystem {
 			times = try haxe.Unserializer.run(hxd.File.getBytes(tmpDir + "times.dat").toString()) catch( e : Dynamic ) new Map<String,Int>();
 		}
 		var realFile = baseDir + path;
+		if( !hxd.File.exists(realFile) ) {
+			return;
+		}
 		var time = std.Math.floor(getFileTime(realFile) / 1000);
 		if( hxd.File.exists(tmpFile) && time == times.get(path) )
 			return;
