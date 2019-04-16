@@ -580,6 +580,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), stride, 0);
 		updateResCount++;
+		t.flags.set(WasCleared);
 	}
 
 	static inline var SCISSOR_BIT = Pass.reserved_mask;

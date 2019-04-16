@@ -1153,6 +1153,7 @@ class GlDriver extends Driver {
 		#else
 		throw "Not implemented";
 		#end
+		t.flags.set(WasCleared);
 		restoreBind();
 	}
 
