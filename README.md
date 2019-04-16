@@ -2,6 +2,7 @@
 _High Performance Game Framework_
 
 [![Build Status](https://travis-ci.org/HeapsIO/heaps.svg?branch=master)](https://travis-ci.org/HeapsIO/heaps)
+[![](https://img.shields.io/discord/162395145352904705.svg?logo=discord)](https://discordapp.com/invite/0uEuWH3spjck73Lo)
 
 [![Heaps.io logo](https://raw.githubusercontent.com/HeapsIO/heaps.io/master/assets/logo/logo-heaps-color.png)](http://heaps.io)
 
