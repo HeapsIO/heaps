@@ -51,7 +51,6 @@ class GlslOut {
 	var isES(get,never) : Bool;
 	var isES2(get,never) : Bool;
 	var uniformBuffer : Int = 0;
-	var inIndex : Int = 0;
 	var outIndex : Int = 0;
 	public var varNames : Map<Int,String>;
 	public var glES : Null<Float>;
@@ -560,8 +559,6 @@ class GlslOut {
 				add("layout(std140) ");
 			add("uniform ");
 		case Input:
-			if( isES )
-				add('layout(location=${inIndex++}) ');
 			add( isES2 ? "attribute " : "in ");
 		case Var:
 			add( isES2 ? "varying " : (isVertex ? "out " : "in "));
@@ -594,7 +591,6 @@ class GlslOut {
 	}
 
 	function initVars( s : ShaderData ){
-		inIndex = 0;
 		outIndex = 0;
 		uniformBuffer = 0;
 		outIndexes = new Map();

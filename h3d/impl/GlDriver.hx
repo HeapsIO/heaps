@@ -131,6 +131,7 @@ private class CompiledProgram {
 	public var stride : Int;
 	public var inputs : InputNames;
 	public var attribs : Array<CompiledAttribute>;
+	public var hasAttribIndex : Array<Bool>;
 	public function new() {
 	}
 }
@@ -154,7 +155,7 @@ class GlDriver extends Driver {
 	#end
 
 	var commonFB : Framebuffer;
-	var curAttribs : Int = 0;
+	var curAttribs : Array<Bool> = new Array<Bool>();
 	var curShader : CompiledProgram;
 	var curBuffer : h3d.Buffer;
 	var curIndexBuffer : IndexBuffer;
@@ -188,7 +189,7 @@ class GlDriver extends Driver {
 	var maxCompressedTexturesSupport = 0;
 
 	var drawMode : Int;
-	
+
 	/**
 		Perform OUT_OF_MEMORY checks when allocating textures/buffers.
 		Default true, except in WebGL (false)
@@ -282,7 +283,7 @@ class GlDriver extends Driver {
 		this.frame = frame;
 		resetStream();
 		#if cpp
-		curAttribs = 0;
+		curAttribs = new Array<Bool>();
 		curMatBits = -1;
 		#end
 		gl.useProgram(null);
@@ -421,11 +422,12 @@ class GlDriver extends Driver {
 			initShader(p, p.fragment, shader.fragment);
 			var attribNames = [];
 			p.attribs = [];
+			p.hasAttribIndex = [];
 			p.stride = 0;
-			var lastIndex = 0;
 			for( v in shader.vertex.data.vars )
 				switch( v.kind ) {
 				case Input:
+					curAttribs.push(false);
 					var t = GL.FLOAT;
 					var size = switch( v.type ) {
 					case TVec(n, _): n;
@@ -435,9 +437,10 @@ class GlDriver extends Driver {
 					}
 					var index = gl.getAttribLocation(p.p, glout.varNames.exists(v.id) ? glout.varNames.get(v.id) : v.name);
 					if( index < 0 ) {
-						index = lastIndex+1;
+						p.hasAttribIndex.push(false);
+						p.stride += size;
+						continue;
 					}
-					lastIndex = index;
 					var a = new CompiledAttribute();
 					a.type = t;
 					a.size = size;
@@ -452,6 +455,7 @@ class GlDriver extends Driver {
 							}
 					}
 					p.attribs.push(a);
+					p.hasAttribIndex.push(true);
 					attribNames.push(v.name);
 					p.stride += size;
 				default:
@@ -462,12 +466,19 @@ class GlDriver extends Driver {
 		if( curShader == p ) return false;
 
 		gl.useProgram(p.p);
-		for( i in curAttribs...p.attribs.length ) {
-			gl.enableVertexAttribArray(i);
-			curAttribs++;
-		}
-		while( curAttribs > p.attribs.length )
-			gl.disableVertexAttribArray(--curAttribs);
+
+		for( a in p.attribs )
+			if( !curAttribs[a.index] ) {
+				gl.enableVertexAttribArray(a.index);
+				curAttribs[a.index] = true;
+			}
+
+		for( i in 0...curAttribs.length )
+			if( curAttribs[i] && !p.hasAttribIndex[i] ) {
+				gl.disableVertexAttribArray(i);
+				curAttribs[i] = false;
+			}
+
 		curShader = p;
 		curBuffer = null;
 		for( i in 0...boundTextures.length )
@@ -1154,6 +1165,7 @@ class GlDriver extends Driver {
 		#else
 		throw "Not implemented";
 		#end
+		t.flags.set(WasCleared);
 		restoreBind();
 	}
 
