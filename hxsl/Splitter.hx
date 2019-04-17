@@ -27,6 +27,7 @@ class Splitter {
 		var vfun = null, vvars = new Map();
 		var ffun = null, fvars = new Map();
 		varNames = new Map();
+		varMap = new Map();
 		for( f in s.funs )
 			switch( f.kind ) {
 			case Vertex:
@@ -40,7 +41,6 @@ class Splitter {
 			default:
 				throw "assert";
 			}
-		varMap = new Map();
 		for( inf in Lambda.array(vvars) ) {
 			var v = inf.v;
 			switch( v.kind ) {
@@ -198,6 +198,12 @@ class Splitter {
 		case TVar(v):
 			var v2 = varMap.get(v);
 			v2 == null ? e : { e : TVar(v2), t : e.t, p : e.p };
+		case TVarDecl(v, init):
+			var v2 = varMap.get(v);
+			v2 == null ? e.map(mapVars) : { e : TVarDecl(v2,mapVars(init)), t : e.t, p : e.p };
+		case TFor(v, it, loop):
+			var v2 = varMap.get(v);
+			v2 == null ? e.map(mapVars) : { e : TFor(v2,mapVars(it),mapVars(loop)), t : e.t, p : e.p };
 		default:
 			e.map(mapVars);
 		}
@@ -206,9 +212,25 @@ class Splitter {
 	function get( v : TVar ) {
 		var i = vars.get(v.id);
 		if( i == null ) {
+			var v2 = varMap.get(v);
+			if( v2 != null )
+				return get(v2);
+			var oldName = v.name;
+			uniqueName(v);
+			if( v.kind == Local && oldName != v.name ) {
+				// variable renamed : restore its name and create a new one
+				var nv : TVar = {
+					id : Tools.allocVarId(),
+					name : v.name,
+					kind : v.kind,
+					type : v.type,
+				};
+				varMap.set(v,nv);
+				v.name = oldName;
+				v = nv;
+			}
 			i = new VarProps(v);
 			vars.set(v.id, i);
-			uniqueName(v);
 		}
 		return i;
 	}

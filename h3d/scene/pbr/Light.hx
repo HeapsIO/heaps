@@ -14,6 +14,11 @@ class Light extends h3d.scene.Light {
 		if( shadows == null ) shadows = new h3d.pass.Shadows(this);
 	}
 
+	override function onRemove() {
+		super.onRemove();
+		if( shadows != null ) shadows.dispose();
+	}
+
 	override function sync(ctx) {
 		super.sync(ctx);
 		if(isMainLight){

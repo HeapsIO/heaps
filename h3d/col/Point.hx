@@ -29,6 +29,10 @@ class Point {
 		this.z = z;
 	}
 
+	public inline function multiply( f : Float ) {
+		return new Point(x * f, y * f, z * f);
+	}
+
 	public inline function sub( p : Point ) {
 		return new Point(x - p.x, y - p.y, z - p.z);
 	}

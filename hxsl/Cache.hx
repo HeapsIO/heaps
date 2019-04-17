@@ -291,6 +291,7 @@ class Cache {
 		var signParts = [for( i in r.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
 		r.spec.signature = haxe.crypto.Md5.encode(signParts.join(":"));
 		r.signature = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
+		r.batchMode = batchMode;
 
 		var r2 = byID.get(r.signature);
 		if( r2 != null )
@@ -495,6 +496,15 @@ class Cache {
 				]) };
 			case TVec(4,VFloat):
 				readOffset(index);
+			case TVec(3,VFloat):
+				{ p : pos, t : v.type, e : TSwiz(readOffset(index),v.pos&3 == 0 ? [X,Y,Z] : [Y,Z,W]) };
+			case TVec(2,VFloat):
+				var swiz = switch( v.pos & 3 ) {
+				case 0: [X,Y];
+				case 1: [Y,Z];
+				default: [Z,W];
+				}
+				{ p : pos, t : v.type, e : TSwiz(readOffset(index),swiz) };
 			case TFloat:
 				{ p : pos, t : v.type, e : TSwiz(readOffset(index),swiz[v.pos&3]) }
 			default:

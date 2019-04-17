@@ -31,11 +31,6 @@ enum GpuEmitMode {
 	Cone;
 
 	/**
-		A disc, emit in one direction
-	**/
-	Disc;
-
-	/**
 		The GpuParticles specified volumeBounds
 	**/
 	VolumeBounds;
@@ -47,6 +42,11 @@ enum GpuEmitMode {
 		Same as VolumeBounds, but in Camera space, not world space.
 	**/
 	CameraBounds;
+
+	/**
+		A disc, emit in one direction
+	**/
+	Disc;
 }
 
 private class GpuPart {
@@ -966,10 +966,12 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	override function serialize( ctx : hxbit.Serializer ) {
 		var old = primitive;
 		var oldMat = materials;
+		if ( old != null ) old.incref();
 		primitive = null;
 		materials = [];
 		super.serialize(ctx);
 		primitive = old;
+		if ( old != null ) old.decref();
 		materials = oldMat;
 	}
 	override function customSerialize(ctx:hxbit.Serializer) {

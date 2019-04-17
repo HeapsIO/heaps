@@ -83,6 +83,7 @@ class RuntimeShader {
 		Several shaders with the different specification might still get the same resulting signature.
 	**/
 	public var signature : String;
+	public var batchMode : Bool;
 	public var spec : { instances : Array<ShaderInstanceDesc>, signature : String };
 
 	public function new() {

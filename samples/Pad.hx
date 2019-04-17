@@ -8,7 +8,7 @@ class Pad extends hxd.App {
 		l = [];
 		flow = new h2d.Flow(s2d);
 		flow.padding = 20;
-		flow.isVertical = true;
+		flow.layout = Vertical;
 
 		tf = new h2d.Text(hxd.res.DefaultFont.get(), flow);
 		tf.text = "Waiting for pad...";
@@ -131,7 +131,7 @@ class PadUI extends h2d.Object {
 
 	var wasPressed = false;
 	public function update(){
-		var conf = hxd.Pad.DEFAULT_CONFIG;
+		var conf = pad.config;
 		main.x = 20 + 50 + pad.xAxis * 50;
 		main.y = 20 + 50 + pad.yAxis * 50;
 

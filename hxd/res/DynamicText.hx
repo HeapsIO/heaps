@@ -31,14 +31,16 @@ class DynamicText {
 		return obj;
 	}
 
-	public static function apply( obj : Dynamic, data : String, ?onMissing ) {
+	public static function apply( obj : Dynamic, data : String, ?reference : String, ?onMissing ) {
 		var x = new Access(Xml.parse(data).firstElement());
-		applyRec([], obj, x, onMissing);
+		var ref = reference == null ? null : new Access(Xml.parse(reference).firstElement());
+		applyRec([], obj, x, ref, onMissing);
 	}
 
 	static var r_attr = ~/::([A-Za-z0-9]+)::/g;
 
-	static function applyText( path : Array<String>, old : Dynamic, str : String, onMissing ) {
+	static function applyText( path : Array<String>, old : Dynamic, x : Access, ref : Access, onMissing ) {
+		var str = x == null ? null : x.innerHTML;
 		if( str == null ) {
 			onMissing(path.join(".") + " is missing");
 			return null;
@@ -69,67 +71,82 @@ class DynamicText {
 				onMissing(path.join(".") + " is missing param '" + p + "'");
 				ok = false;
 			}
+		if( ref != null && ref.innerHTML != strOld ) {
+			onMissing(path.join(".") +" ignored since has changed");
+			ok = false;
+		}
 		if( !ok )
 			return null;
 		return parseText(str);
 	}
 
-	public static function applyRec( path : Array<String>, obj : Dynamic, data : Access, onMissing ) {
+	public static function applyRec( path : Array<String>, obj : Dynamic, data : Access, ref : Access, onMissing ) {
 		var fields = new Map();
 		for( f in Reflect.fields(obj) ) fields.set(f, true);
-		if( data != null )
-		for( x in data.elements ) {
-			switch( x.name ) {
-			case "t":
-				var id = x.att.id;
-				path.push(id);
-				var vnew = applyText(path, Reflect.field(obj, id), x.innerHTML, onMissing);
-				if( vnew != null )
-					Reflect.setField(obj, id, vnew);
-				path.pop();
-				fields.remove(id);
-			case "g":
-				var id = x.att.id;
-				if( id == null ) {
-					onMissing(path.join(".") +" group is missing id");
-					continue;
+		var refIds = null;
+		if( data != null ) {
+			if( ref != null ) {
+				refIds = new Map();
+				for( x in ref.elements ) {
+					var id = x.att.id;
+					if( id != null ) refIds.set(id, x);
 				}
-				path.push(id);
-				fields.remove(id);
-				var sub : Dynamic = Reflect.field(obj, id);
-				if( sub == null ) {
-					onMissing(path.join(".") +" is no longer used");
+			}
+			for( x in data.elements ) {
+				switch( x.name ) {
+				case "t":
+					var id = x.att.id;
+					path.push(id);
+					var vnew = applyText(path, Reflect.field(obj, id), x, ref == null ? null : refIds.get(id), onMissing);
+					if( vnew != null )
+						Reflect.setField(obj, id, vnew);
 					path.pop();
-					continue;
-				}
-				if( Std.is(sub,String) ) {
-					onMissing(path.join(".") +" should be a text and not a group");
-					path.pop();
-					continue;
-				}
-				// build structure
-				if( Std.is(sub,Array) ) {
-					var elements : Array<Dynamic> = sub;
-					var data = [for( e in x.elements ) e];
-					for( i in 0...elements.length ) {
-						var e = elements[i];
-						path.push("[" + i + "]");
-						if( Std.is(e, Array) ) {
-							trace("TODO");
-						} else if( Std.is(e, String) ) {
-							var enew = applyText(path, e, data[i] == null ? null : data[i].innerHTML, onMissing);
-							if( enew != null )
-								elements[i] = enew;
-						} else {
-							//trace(e);
-							applyRec(path, elements[i], data[i], onMissing);
-						}
-						path.pop();
+					fields.remove(id);
+				case "g":
+					var id = x.att.id;
+					if( id == null ) {
+						onMissing(path.join(".") +" group is missing id");
+						continue;
 					}
-				} else
-					applyRec(path, sub, x, onMissing);
+					path.push(id);
+					fields.remove(id);
+					var sub : Dynamic = Reflect.field(obj, id);
+					if( sub == null ) {
+						onMissing(path.join(".") +" is no longer used");
+						path.pop();
+						continue;
+					}
+					if( Std.is(sub,String) ) {
+						onMissing(path.join(".") +" should be a text and not a group");
+						path.pop();
+						continue;
+					}
+					// build structure
+					var ref = ref == null ? null : refIds.get(id);
+					if( Std.is(sub,Array) ) {
+						var elements : Array<Dynamic> = sub;
+						var data = [for( e in x.elements ) e];
+						var dataRef = ref == null ? null : [for( e in ref.elements ) e];
+						for( i in 0...elements.length ) {
+							var e = elements[i];
+							path.push("[" + i + "]");
+							if( Std.is(e, Array) ) {
+								trace("TODO");
+							} else if( Std.is(e, String) ) {
+								var enew = applyText(path, e, data[i], dataRef == null ? null : dataRef[i], onMissing);
+								if( enew != null )
+									elements[i] = enew;
+							} else {
+								//trace(e);
+								applyRec(path, elements[i], data[i], dataRef == null ? null : dataRef[i], onMissing);
+							}
+							path.pop();
+						}
+					} else
+						applyRec(path, sub, x, ref, onMissing);
 
-				path.pop();
+					path.pop();
+				}
 			}
 		}
 		for( f in fields.keys() ) {
@@ -315,9 +332,9 @@ class DynamicText {
 			public static function load( data : String ) {
 				DATA = hxd.res.DynamicText.parse(data);
 			}
-			public static function applyLang( data : String, ?onMissing ) {
+			public static function applyLang( data : String, ?reference, ?onMissing ) {
 				if( onMissing == null ) onMissing = function(msg) trace(msg);
-				hxd.res.DynamicText.apply(DATA,data,onMissing);
+				hxd.res.DynamicText.apply(DATA,data,reference,onMissing);
 			}
 		};
 		for( f in c.fields )

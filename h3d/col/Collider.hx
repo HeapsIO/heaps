@@ -4,6 +4,7 @@ interface Collider extends hxd.impl.Serializable.StructSerializable {
 
 	/**
 		Returns the distance of intersection between the ray and the collider, or negative if no collision.
+		If bestMatch is false, only negative/positive value needs to be returned, with no additional precision.
 	**/
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float;
 	public function contains( p : Point ) : Bool;

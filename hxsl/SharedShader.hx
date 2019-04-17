@@ -50,7 +50,7 @@ class SharedShader {
 		globals = [];
 		if( src == "" )
 			return;
-		data = haxe.Unserializer.run(src);
+		data = new hxsl.Serializer().unserialize(src);
 		initialize();
 	}
 

@@ -25,13 +25,18 @@ class MeshBatch extends Mesh {
 	var instanced : h3d.prim.Instanced;
 	var curInstances : Int = 0;
 	var maxInstances : Int = 0;
-	var lastInstances : Int = 0;
 	var shaderInstances : Int = 0;
-	var commandBytes = haxe.io.Bytes.alloc(20);
 	var dataBuffer : h3d.Buffer;
 	var dataPasses : BatchData;
+	var indexCount : Int;
 	var modelViewID = hxsl.Globals.allocID("global.modelView");
 	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
+
+	/**
+	 * 	If set, use this position in emitInstance() instead MeshBatch absolute position
+	**/
+	public var worldPosition : Matrix;
+	var invWorldPosition : Matrix;
 
 	/**
 		Set if shader list or shader constants has changed, before calling begin()
@@ -40,20 +45,16 @@ class MeshBatch extends Mesh {
 
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
+		instanced.commands = new h3d.impl.InstanceBuffer();
 		instanced.setMesh(primitive);
 		super(instanced, material, parent);
 		for( p in this.material.getPasses() )
 			@:privateAccess p.batchMode = true;
-		commandBytes.setInt32(0, primitive.indexes == null ? primitive.triCount() * 3 : primitive.indexes.count);
+		indexCount = primitive.indexes == null ? primitive.triCount() * 3 : primitive.indexes.count;
 	}
 
 	override function onRemove() {
 		super.onRemove();
-		cleanPasses();
-	}
-
-	override function dispose() {
-		super.dispose();
 		cleanPasses();
 	}
 
@@ -63,17 +64,14 @@ class MeshBatch extends Mesh {
 			dataPasses.buffer.dispose();
 			dataPasses = dataPasses.next;
 		}
-		if( instanced.commands != null ) {
-			instanced.commands.dispose();
-			instanced.commands = null;
-			lastInstances = 0;
-		}
+		instanced.commands.dispose();
 		shaderInstances = 0;
 		shadersChanged = true;
 	}
 
 	function initShadersMapping() {
 		var scene = getScene();
+		if( scene == null ) return;
 		cleanPasses();
 		shaderInstances = maxInstances;
 		for( p in material.getPasses() ) @:privateAccess {
@@ -150,6 +148,7 @@ class MeshBatch extends Mesh {
 		var buf = data.data;
 		var shaders = data.shaders;
 		var startPos = data.count * curInstances * 4;
+		var calcInv = false;
 		while( p != null ) {
 			var pos = startPos + p.pos;
 			inline function addMatrix(m:h3d.Matrix) {
@@ -172,9 +171,18 @@ class MeshBatch extends Mesh {
 			}
 			if( p.perObjectGlobal != null ) {
 				if( p.perObjectGlobal.gid == modelViewID ) {
-					addMatrix(absPos);
+					addMatrix(worldPosition != null ? worldPosition : absPos);
 				} else if( p.perObjectGlobal.gid == modelViewInverseID ) {
-					addMatrix(getInvPos());
+					if( worldPosition == null )
+						addMatrix(getInvPos());
+					else {
+						if( !calcInv ) {
+							calcInv = true;
+							if( invWorldPosition == null ) invWorldPosition = new h3d.Matrix();
+							invWorldPosition.initInverse(worldPosition);
+						}
+						addMatrix(invWorldPosition);
+					}
 				} else
 					throw "Unsupported global param "+p.perObjectGlobal.path;
 				p = p.next;
@@ -229,12 +237,7 @@ class MeshBatch extends Mesh {
 			p.buffer.uploadVector(p.data,0,curInstances * p.count);
 			p = p.next;
 		}
-		if( curInstances != lastInstances ) {
-			if( instanced.commands != null ) instanced.commands.dispose();
-			commandBytes.setInt32(4,curInstances);
-			instanced.commands = new h3d.impl.InstanceBuffer(1,commandBytes);
-			lastInstances = curInstances;
-		}
+		instanced.commands.setCommand(curInstances,indexCount);
 	}
 
 	override function emit(ctx:RenderContext) {

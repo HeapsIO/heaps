@@ -15,15 +15,6 @@ class Save {
 	}
 	#end
 
-	#if sys
-	static function savePath( name : String ) {
-		#if usesys
-		name = haxe.System.savePathPrefix + name;
-		#end
-		return name + ".sav";
-	}
-	#end
-
 	static function makeCRC( data : String ) {
 		return haxe.crypto.Sha1.encode(data + haxe.crypto.Sha1.encode(data + "s*al!t")).substr(4, 32);
 	}
@@ -61,7 +52,7 @@ class Save {
 
 	@:noCompletion public static dynamic function readSaveData( name : String ) : String {
 		#if sys
-		return sys.io.File.getContent(savePath(name));
+		return sys.io.File.getContent(name+".sav");
 		#elseif js
 		return js.Browser.window.localStorage.getItem(name);
 		#else
@@ -72,7 +63,7 @@ class Save {
 
 	@:noCompletion public static dynamic function writeSaveData( name : String, data : String ) {
 		#if sys
-		sys.io.File.saveContent(savePath(name), data);
+		sys.io.File.saveContent(name+".sav", data);
 		#elseif js
 		js.Browser.window.localStorage.setItem(name, data);
 		#else
@@ -84,7 +75,7 @@ class Save {
 		#if flash
 		throw "TODO";
 		#elseif sys
-		try sys.FileSystem.deleteFile(savePath(name)) catch( e : Dynamic ) {}
+		try sys.FileSystem.deleteFile(name+".sav") catch( e : Dynamic ) {}
 		#elseif js
 		try js.Browser.window.localStorage.removeItem(name) catch( e : Dynamic ) {}
 		#end

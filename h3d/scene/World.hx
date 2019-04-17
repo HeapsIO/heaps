@@ -37,7 +37,6 @@ class WorldChunk {
 
 	public function dispose() {
 		root.remove();
-		root.dispose();
 	}
 }
 
@@ -294,7 +293,7 @@ class World extends Object {
 	}
 
 	@:noDebug
-	public function loadModel( r : hxd.res.Model ) : WorldModel {
+	public function loadModel( r : hxd.res.Model, ?filter : hxd.fmt.hmd.Data.Model -> Bool) : WorldModel {
 		var lib = r.toHmd();
 		var models = lib.header.models;
 		var format = buildFormat();
@@ -306,6 +305,12 @@ class World extends Object {
 
 		var startVertex = 0, startIndex = 0;
 		for( m in models ) {
+
+			// Name filtering
+			if( filter != null && !filter(m) ) {
+				continue;
+			}
+
 			var geom = lib.header.geometries[m.geometry];
 			if( geom == null ) continue;
 			var pos = m.position.toMatrix();
@@ -475,7 +480,6 @@ class World extends Object {
 		if( !c.initialized ) return;
 		c.initialized = false;
 		for( b in c.buffers ) {
-			b.dispose();
 			b.remove();
 		}
 		c.buffers = new Map();
@@ -516,8 +520,11 @@ class World extends Object {
 
 	}
 
-	override function dispose() {
-		super.dispose();
+	/**
+		Dispose the World instance.
+		Note: Only chunked world objects will be disposed. Any objects added to World object will be disposed when World is removed from scene or scene is disposed.
+	**/
+	public function dispose() {
 		for( c in allChunks )
 			c.dispose();
 		allChunks = [];

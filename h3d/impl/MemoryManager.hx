@@ -386,10 +386,10 @@ class MemoryManager {
 			while( buf != null ) {
 				var b = buf.allocHead;
 				while( b != null ) {
-					var key = b.allocPos.fileName + ":" + b.allocPos.lineNumber;
+					var key = b.allocPos == null ? "null" : b.allocPos.fileName + ":" + b.allocPos.lineNumber;
 					var inf = h.get(key);
 					if( inf == null ) {
-						inf = { file : b.allocPos.fileName, line : b.allocPos.lineNumber, count : 0, size : 0, tex : false };
+						inf = { file : b.allocPos != null ? b.allocPos.fileName : "", line : b.allocPos != null ? b.allocPos.lineNumber : 0, count : 0, size : 0, tex : false };
 						h.set(key, inf);
 						all.push(inf);
 					}

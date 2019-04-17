@@ -31,6 +31,7 @@ class CacheFile extends Cache {
 	var shaders : Map<String,{ shader : SharedShader, version : String }> = new Map();
 	var runtimeShaders : Array<RuntimeShader> = [];
 	var linkers : Array<{ shader : Shader, vars : Array<hxsl.Output> }> = [];
+	var batchers : Array<{ shader : SharedShader, rt : RuntimeShader }> = [];
 
 	// sources
 	var compiledSources : Map<String,{ vertex : String, fragment : String }> = new Map();
@@ -41,9 +42,6 @@ class CacheFile extends Cache {
 		this.allowCompile = allowCompile;
 		this.recompileRT = recompileRT || allowCompile;
 		this.file = FILENAME;
-		#if usesys
-		this.file = haxe.System.dataPathPrefix + this.file;
-		#end
 		sourceFile = this.file + "." + getPlatformTag();
 		load();
 	}
@@ -69,11 +67,18 @@ class CacheFile extends Cache {
 		return shader;
 	}
 
+	override function createBatchShader( rt ) {
+		var b = super.createBatchShader(rt);
+		batchers.push({ rt : rt, shader : b });
+		return b;
+	}
+
 	static var HEX = "0123456789abcdef";
 
 	function load() {
 		isLoading = true;
 		var t0 = haxe.Timer.stamp();
+		var wait = [];
 		if( sys.FileSystem.exists(file) ) {
 			loadShaders();
 			if( sys.FileSystem.exists(sourceFile) )
@@ -83,30 +88,33 @@ class CacheFile extends Cache {
 
 			if( allowCompile ) {
 				// update missing shader sources (after platform switch)
-				var change = false;
-				for( r in runtimeShaders ) {
-					if( r.vertex.code == null || r.fragment.code == null ) {
-						change = true;
-						addSource(r);
-					}
-				}
-				if( change ) save();
+				for( r in runtimeShaders )
+					if( r.vertex.code == null || r.fragment.code == null )
+						wait.push(r);
 			}
 
 			log(runtimeShaders.length+" shaders loaded in "+hxd.Math.fmt(haxe.Timer.stamp() - t0)+"s");
 		} else if( !allowCompile )
 			throw "Missing " + file;
 		if( linkCache.linked == null ) {
-			var rt = link(makeDefaultShader());
+			var rt = link(makeDefaultShader(), false);
 			linkCache.linked = rt;
 			if( rt.vertex.code == null || rt.fragment.code == null ) {
+				wait.push(rt);
 				if( !allowCompile ) throw "Missing default shader code";
-				waitCount++;
-				haxe.Timer.delay(function() {
-					h3d.Engine.getCurrent().selectShader(rt);
-					addNewShader(rt);
-				}, 1000);
 			}
+		}
+		if( wait.length > 0 ) {
+			waitCount += wait.length;
+			#if hlmulti
+			for( r in wait )
+				addNewShader(r);
+			#else
+			haxe.Timer.delay(function() {
+				for( r in wait )
+					addNewShader(r);
+			},1000); // wait until engine correctly initialized
+			#end
 		}
 		isLoading = false;
 	}
@@ -173,6 +181,16 @@ class CacheFile extends Cache {
 			linkMap.set(name, shader);
 		}
 
+		batchers = [];
+		var batchMap = new Map();
+		while( true ) {
+			skip();
+			var name = readString();
+			if( name == null ) break;
+			var rt = readString();
+			batchMap.set(name, rt);
+		}
+
 		shaders = new Map();
 		while( true ) {
 			skip();
@@ -207,26 +225,42 @@ class CacheFile extends Cache {
 			var inst = [for( i in 0...f.readByte() ) {
 				var name = readString();
 				var shader = shaders.get(name);
-				if( shader == null ) missingShader = true;
-				{ shader : shader, bits : readIntHex(), index : f.readByte() };
+				var batch = null;
+				if( shader == null ) {
+					batch = batchMap.get(name);
+					if( batch == null ) missingShader = true;
+				}
+				{ shader : shader, batch : batch, bits : readIntHex(), index : f.readByte() };
 			}];
 			var sign = readString();
 			if( missingShader ) continue;
-
+			//log("Loading shader "+[for( i in inst ) (i.shader == null ? i.batch : i.shader.shader.data.name)+(i.bits == 0 ? "" : ":"+StringTools.hex(i.bits))].toString());
 			runtimes.push({ signature : sign, specSign : specSign, inst: inst });
 		}
 
 
 		// recompile or load runtime shaders
 		runtimeShaders = [];
+		var rttMap = new Map<String,RuntimeShader>();
 		if( recompileRT ) {
 
 			for( r in runtimes ) {
 				var shaderList = null;
+				var batchMode = false;
 				r.inst.reverse();
 				for( i in r.inst ) {
 					var s = Type.createEmptyInstance(hxsl.Shader);
 					@:privateAccess {
+						if( i.shader == null ) {
+							var rt = rttMap.get(i.batch);
+							if( rt == null ) {
+								r = null; // was modified
+								break;
+							}
+							var sh = makeBatchShader(rt);
+							i.shader = { version : null, shader : sh.shader };
+							batchMode = true;
+						}
 						s.constBits = i.bits;
 						s.shader = i.shader.shader;
 						s.instance = i.shader.shader.getInstance(i.bits);
@@ -234,10 +268,13 @@ class CacheFile extends Cache {
 					}
 					shaderList = new hxsl.ShaderList(s, shaderList);
 				}
-				var rt = link(shaderList); // will compile + update linkMap
+				if( r == null ) continue;
+				//log("Recompile "+[for( s in shaderList ) shaderName(s)]);
+				var rt = link(shaderList, batchMode); // will compile + update linkMap
 				if( rt.spec.signature != r.specSign )
 					throw "assert";
 				runtimeShaders.push(rt);
+				rttMap.set(r.specSign, rt);
 			}
 
 		} else {
@@ -262,6 +299,16 @@ class CacheFile extends Cache {
 				for( i in spec.inst ) {
 					var s = Type.createEmptyInstance(hxsl.Shader);
 					@:privateAccess {
+						if( i.shader == null ) {
+							var rt = rttMap.get(i.batch);
+							if( rt == null ) {
+								r = null; // was modified
+								break;
+							}
+							var sh = makeBatchShader(rt);
+							i.shader = { version : null, shader : sh.shader };
+							r.batchMode = true;
+						}
 						// pseudo instance
 						var scache = i.shader.shader.instanceCache;
 						var inst = scache.get(i.bits);
@@ -276,9 +323,11 @@ class CacheFile extends Cache {
 					}
 					shaderList = new hxsl.ShaderList(s, shaderList);
 				}
+				if( r == null ) continue;
 				addToCache(r, shaderList);
 				reviveRuntime(r);
 				runtimeShaders.push(r);
+				rttMap.set(spec.specSign, r);
 			}
 
 		}
@@ -411,6 +460,16 @@ class CacheFile extends Cache {
 		separator();
 		writeString(null);
 
+		// batchers
+		batchers.sort(function(l1, l2) return @:privateAccess Reflect.compare(l1.shader.data.name,l2.shader.data.name));
+		for( b in batchers ) {
+			separator();
+			writeString(@:privateAccess b.shader.data.name);
+			writeString(@:privateAccess b.rt.spec.signature);
+		}
+		separator();
+		writeString(null);
+
 		// shaders
 		var shaders = [for( s in shaders ) s];
 		shaders.sort(function(s1, s2) return Reflect.compare(s1.version, s2.version));
@@ -514,12 +573,15 @@ class CacheFile extends Cache {
 		rc.paramsSize = r.paramsSize;
 		rc.globalsSize = r.globalsSize;
 		rc.texturesCount = r.texturesCount;
+		rc.bufferCount = r.bufferCount;
 		if( r.params != null )
 			rc.params = r.params.clone(true);
 		if( r.globals != null )
 			rc.globals = r.globals.clone(true);
 		if( r.textures != null )
 			rc.textures = r.textures.clone(true);
+		if( r.buffers != null )
+			rc.buffers = r.buffers.clone(true);
 		return rc;
 	}
 
@@ -547,11 +609,14 @@ class CacheFile extends Cache {
 		}
 		rvParam(rd.params);
 		rvParam(rd.textures);
+		rvParam(rd.buffers);
 		rvGlobal(rd.globals);
 		initGlobals(r, rd);
 	}
 
 	function sortBySpec( r1 : RuntimeShader, r2 : RuntimeShader ) {
+		if( r1.batchMode != r2.batchMode )
+			return r1.batchMode ? 1 : -1;
 		var minLen = hxd.Math.imin(r1.spec.instances.length, r2.spec.instances.length);
 		for( i in 0...minLen ) {
 			var i1 = r1.spec.instances[i];
@@ -579,21 +644,50 @@ class CacheFile extends Cache {
 		Sys.println(str);
 	}
 
+	function shaderName( s : hxsl.Shader ) @:privateAccess {
+		var name = s.instance.shader.name;
+		if( s.constBits != 0 )
+			name += ":" + StringTools.hex(s.constBits);
+		if( s.priority != 0 )
+			name += "("+s.priority+")";
+		if( s.constBits != 0 ) {
+			var c = s.shader.consts;
+			var consts = [];
+			while( c != null ) {
+				var bits = (s.constBits >> c.pos) & ((1 << c.bits) - 1);
+				if( bits > 0 ) {
+					switch( c.v.type ) {
+					case TBool:
+						consts.push(c.v.name);
+					case TChannel(_):
+						consts.push(c.v.name+"="+hxsl.Channel.createByIndex(bits&7)+"@"+(bits>>3));
+					default:
+						consts.push(c.v.name+"="+bits);
+					}
+				}
+				c = c.next;
+			}
+			if( consts.length > 0 )
+				name += consts.toString();
+		}
+		return name;
+	}
+
 	public dynamic function onMissingShader(shaders:hxsl.ShaderList) {
-		log("Missing shader " + [for( s in shaders ) @:privateAccess s.instance.shader.name+":" + s.priority]);
-		return link(null); // default fallback
+		log("Missing shader " + [for( s in shaders ) shaderName(s)]);
+		return link(null, false); // default fallback
 	}
 
 	public dynamic function onNewShader(r:RuntimeShader) {
 		log("Compiled " + [for( i in r.spec.instances ) i.shader.data.name+(i.bits == 0 ? "" : ":" + StringTools.hex(i.bits))].join(" "));
 	}
 
-	override function compileRuntimeShader(shaders:hxsl.ShaderList) {
+	override function compileRuntimeShader(shaders:hxsl.ShaderList, batchMode) {
 		if( isLoading )
-			return super.compileRuntimeShader(shaders);
+			return super.compileRuntimeShader(shaders, batchMode);
 		if( allowCompile ) {
 			// was not found in previous cache, let's compile and cache it
-			var s = super.compileRuntimeShader(shaders);
+			var s = super.compileRuntimeShader(shaders, batchMode);
 			onNewShader(s);
 			waitCount++;
 			haxe.Timer.delay(function() addNewShader(s), 0);
@@ -607,11 +701,14 @@ class CacheFile extends Cache {
 	}
 
 	function addNewShader( s : RuntimeShader ) {
-		runtimeShaders.push(s);
+		if( runtimeShaders.indexOf(s) < 0 )
+			runtimeShaders.push(s);
 		addSource(s);
 		for( i in s.spec.instances ) {
 			var inst = shaders.get(i.shader.data.name);
 			if( inst == null ) {
+				if( s.batchMode && StringTools.startsWith(i.shader.data.name,"batchShader_") )
+					continue;
 				var version = getShaderVersion(i.shader);
 				inst = { shader : i.shader, version : version };
 				shaders.set(i.shader.data.name, inst);

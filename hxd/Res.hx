@@ -35,9 +35,6 @@ class Res {
 			file = "res";
 		return macro {
 			var file = $v{file};
-			#if usesys
-			file = haxe.System.dataPathPrefix + file;
-			#end
 			var pak = new hxd.fmt.pak.FileSystem();
 			pak.loadPak(file + ".pak");
 			var i = 1;

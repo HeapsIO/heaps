@@ -125,7 +125,7 @@ class Mp3Data extends Data {
 		}
 
 		var right = buf.numberOfChannels < 2 ? left : buf.getChannelData(1);
-		var join = new js.html.Float32Array(left.length * 2);
+		var join = new hxd.impl.TypedArray.Float32Array(left.length * 2);
 		var w = 0;
 		for( i in 0...buf.length ) {
 			join[w++] = left[i];

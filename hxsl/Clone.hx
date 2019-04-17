@@ -42,7 +42,7 @@ class Clone {
 		case TArray(t, size):
 			return TArray(ttype(t), switch( size ) { case SConst(_): size; case SVar(v): SVar(tvar(v)); } );
 		case TFun(vars):
-			return TFun([for( v in vars ) { args : [for( a in v.args ) { name : a.name, type : ttype(a.type) } ], ret : ttype(v.ret) }]);
+			return TFun(#if macro [for( v in vars ) { args : [for( a in v.args ) { name : a.name, type : ttype(a.type) } ], ret : ttype(v.ret) }] #else vars #end);
 		default:
 			return t;
 		}

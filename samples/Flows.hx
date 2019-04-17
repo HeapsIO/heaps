@@ -167,7 +167,7 @@ class Flows extends hxd.App {
 			flow.minWidth = 400;
 			flow.verticalAlign = FlowAlign.Top;
 			flow.horizontalAlign = FlowAlign.Left;
-			flow.isVertical = true;
+			flow.layout = Vertical;
 
 			var subFlow = createFlowSimple(flow, 0, 0);
 			subFlow.minHeight = 100;
@@ -188,7 +188,7 @@ class Flows extends hxd.App {
 			var subFlow;
 
 			flow = createFlowSimple(s2d, xoffset, yoffset);
-			flow.isVertical = true;
+			flow.layout = Vertical;
 
 			subFlow = createFlowSimple(flow, 0, 0);
 			createFlow(subFlow, 1, "TopLeft", FlowAlign.Top, FlowAlign.Left);
@@ -215,13 +215,13 @@ class Flows extends hxd.App {
 			
 			var flow;
 			
-			function generateFlowsWithThreeFlowsWithThreeChilds(xoffset : Float, yoffset : Float, vAlign : FlowAlign, isVertical : Bool) {
+			function generateFlowsWithThreeFlowsWithThreeChilds(vAlign : FlowAlign, layout) {
 
-				function generateFlowThreeChilds(xoffset : Float , yoffset : Float, vAlign : FlowAlign, hAlign: FlowAlign, isVertical : Bool) : Flow {
+				function generateFlowThreeChilds(hAlign: FlowAlign) : Flow {
 					var flow = createFlowSimple(s2d, xoffset, yoffset);
 					flow.verticalAlign = vAlign;
 					flow.horizontalAlign = hAlign;
-					flow.isVertical = isVertical;
+					flow.layout = layout;
 					createFlow(flow, 0, "A", FlowAlign.Middle, FlowAlign.Middle, 50);
 					createFlow(flow, 3, "B", FlowAlign.Middle, FlowAlign.Middle, 50);
 					createFlow(flow, 8, "C", FlowAlign.Middle, FlowAlign.Middle, 50);
@@ -232,17 +232,17 @@ class Flows extends hxd.App {
 				}
 				while (reversedFlow.pop() != null) {};
 				
-				var flow = generateFlowThreeChilds(xoffset, yoffset, vAlign, FlowAlign.Left, isVertical);
+				var flow = generateFlowThreeChilds(FlowAlign.Left);
 				reversedFlow.push(flow);
 				currentFlows.push(flow);
 
 				xoffset += flow.getBounds().width + spaceX;
-				flow = generateFlowThreeChilds(xoffset, yoffset, vAlign, FlowAlign.Middle, isVertical);
+				flow = generateFlowThreeChilds(FlowAlign.Middle);
 				reversedFlow.push(flow);
 				currentFlows.push(flow);
 
 				xoffset += flow.getBounds().width + spaceX;
-				flow = generateFlowThreeChilds(xoffset, yoffset, vAlign, FlowAlign.Right, isVertical);
+				flow = generateFlowThreeChilds(FlowAlign.Right);
 				reversedFlow.push(flow);
 				currentFlows.push(flow);
 				
@@ -250,24 +250,24 @@ class Flows extends hxd.App {
 			}
 
 			// Are Not Vertical
-			flow = generateFlowsWithThreeFlowsWithThreeChilds(xoffset, yoffset, FlowAlign.Top, false);
+			flow = generateFlowsWithThreeFlowsWithThreeChilds(Top, Horizontal);
 			
 			yoffset += flow.getBounds().height + spaceY;
-			flow = generateFlowsWithThreeFlowsWithThreeChilds(xoffset, yoffset, FlowAlign.Middle, false);
+			flow = generateFlowsWithThreeFlowsWithThreeChilds(Middle, Horizontal);
 			
 			yoffset += flow.getBounds().height + spaceY;
-			flow = generateFlowsWithThreeFlowsWithThreeChilds(xoffset, yoffset, FlowAlign.Bottom, false);
+			flow = generateFlowsWithThreeFlowsWithThreeChilds(Bottom, Horizontal);
 
 			// Are Vertical
 			yoffset += flow.getBounds().height + spaceY;
 			xoffset = spaceX;
-			flow = generateFlowsWithThreeFlowsWithThreeChilds(xoffset, yoffset, FlowAlign.Top, true);
+			flow = generateFlowsWithThreeFlowsWithThreeChilds(Top, Vertical);
 			
 			yoffset += flow.getBounds().height + spaceY;
-			flow = generateFlowsWithThreeFlowsWithThreeChilds(xoffset, yoffset, FlowAlign.Middle, true);
+			flow = generateFlowsWithThreeFlowsWithThreeChilds(Middle, Vertical);
 			
 			yoffset += flow.getBounds().height + spaceY;
-			flow = generateFlowsWithThreeFlowsWithThreeChilds(xoffset, yoffset, FlowAlign.Bottom, true);
+			flow = generateFlowsWithThreeFlowsWithThreeChilds(Bottom, Vertical);
 		}
 
 		function screen5() : Void {
@@ -294,7 +294,7 @@ class Flows extends hxd.App {
 
 			flow = createFlowSimple(s2d, xoffset, yoffset);
 			flow.maxHeight = 200;
-			flow.isVertical = true;
+			flow.layout = Vertical;
 			flow.multiline = true;
 
 			createFlow(flow, 1, "A", FlowAlign.Middle, FlowAlign.Middle);
@@ -332,7 +332,7 @@ class Flows extends hxd.App {
 
 			flow = createFlowSimple(s2d, xoffset, yoffset);
 			flow.minWidth = 150;
-			flow.isVertical = true;
+			flow.layout = Vertical;
 			currentFlows.push(flow);
 
 			while (hAlignChildFlow.pop() != null) {};

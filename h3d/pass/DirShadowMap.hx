@@ -34,6 +34,7 @@ class DirShadowMap extends Shadows {
 	override function dispose() {
 		super.dispose();
 		if( customDepth && depth != null ) depth.dispose();
+		border.dispose();
 	}
 
 	public override function getShadowTex() {
@@ -115,6 +116,16 @@ class DirShadowMap extends Shadows {
 		dshader.shadowBias = bias;
 		dshader.shadowPower = power;
 		dshader.shadowProj = getShadowProj();
+
+		//ESM
+		dshader.USE_ESM = samplingKind == ESM;
+		dshader.shadowPower = power;
+
+		// PCF
+		dshader.USE_PCF = samplingKind == PCF;
+		dshader.shadowRes.set(texture.width,texture.height);
+		dshader.pcfScale = pcfScale;
+		dshader.pcfQuality = pcfQuality;
 	}
 
 	override function saveStaticData() {
@@ -167,7 +178,9 @@ class DirShadowMap extends Shadows {
 		if( staticTexture != null ) staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
 		staticTexture.uploadPixels(pixels);
-		staticTexture.name = "defaultDirShadowMap";
+		staticTexture.name = "staticTexture";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		syncShader(staticTexture);
 		return true;
 	}

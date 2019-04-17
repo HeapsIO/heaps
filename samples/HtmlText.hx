@@ -155,7 +155,7 @@ class HtmlText extends hxd.App {
 		flow.y = yoffset;
 		flow.horizontalAlign = FlowAlign.Middle;
 		flow.maxWidth = 150;
-		flow.isVertical = true;
+		flow.layout = Vertical;
 		createText(flow, singleText, Align.Left);
 		createText(flow, multilineText, Align.Right);
 
@@ -167,7 +167,7 @@ class HtmlText extends hxd.App {
 			flow.horizontalAlign = FlowAlign.Left;
 			flow.maxWidth = 360;
 			flow.horizontalSpacing = 8;
-			flow.isVertical = false;
+			flow.layout = Horizontal;
 			var f = createText(flow, "short text", Align.Right);
 			createText(flow, singleText, Align.Left);
 			yoffset += flow.getBounds().height + 10;
@@ -178,7 +178,7 @@ class HtmlText extends hxd.App {
 		flow.y = yoffset;
 		flow.x = 100;
 		flow.horizontalAlign = FlowAlign.Middle;
-		flow.isVertical = true;
+		flow.layout = Vertical;
 		{
 			var f1 = createFlow(flow);
 			createText(f1, multilineText, Align.Left);

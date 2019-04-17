@@ -26,6 +26,12 @@ class Capsule implements Collider {
 		var RD = r.getDir();
 
 		var ABdotAB = AB.dot(AB);
+
+		if (ABdotAB == 0) {
+			tmpSphere.load(this.a.x, this.a.y, this.a.z, this.r);
+			return tmpSphere.rayIntersection(r, bestMatch);
+		}
+
 		var m = AB.dot(RD) / ABdotAB;
 		var n = AB.dot(AO) / ABdotAB;
 

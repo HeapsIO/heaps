@@ -9,10 +9,11 @@ class SpotShadowMap extends Shadows {
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
 
 	public function new( light : h3d.scene.Light ) {
+		format = R32F;
 		super(light);
 		lightCamera = new h3d.Camera();
 		lightCamera.screenRatio = 1.0;
-		lightCamera.zNear = 3.0;
+		lightCamera.zNear = 0.01;
 		shader = sshader = new h3d.shader.SpotShadow();
 		border = new Border(size, size);
 		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
@@ -39,6 +40,7 @@ class SpotShadowMap extends Shadows {
 	override function dispose() {
 		super.dispose();
 		if( customDepth && depth != null ) depth.dispose();
+		border.dispose();
 	}
 
 	public override function getShadowTex() {
@@ -54,8 +56,17 @@ class SpotShadowMap extends Shadows {
 		sshader.shadowMap = texture;
 		sshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		sshader.shadowBias = bias;
-		sshader.shadowPower = power;
 		sshader.shadowProj = getShadowProj();
+
+		//ESM
+		sshader.USE_ESM = samplingKind == ESM;
+		sshader.shadowPower = power;
+
+		// PCF
+		sshader.USE_PCF = samplingKind == PCF;
+		sshader.shadowRes.set(texture.width,texture.height);
+		sshader.pcfScale = pcfScale;
+		sshader.pcfQuality = pcfQuality;
 	}
 
 	override function saveStaticData() {
@@ -83,6 +94,9 @@ class SpotShadowMap extends Shadows {
 		var pixels = new hxd.Pixels(size, size, haxe.zip.Uncompress.run(buffer.read(len)), format);
 		if( staticTexture != null ) staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
+		staticTexture.name = "staticTexture";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		staticTexture.uploadPixels(pixels);
 		syncShader(staticTexture);
 		return true;

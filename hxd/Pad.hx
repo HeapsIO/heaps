@@ -110,7 +110,7 @@ class Pad {
 
 	#if js
 	/**
-		Standard mapping
+	 	Standard mapping
 	**/
 	public static var CONFIG_JS_STD = {
 		A : 0,
@@ -135,6 +135,75 @@ class Pad {
 		ranalogY : 20,
 		names : ["A","B","X","Y","LB","RB","LT","RT","Select","Start","LCLK","RCLK","DUp","DDown","DLeft","DRight","LX","LY","RX","RY"],
 	};
+	/**
+	  	Mapping for Dualshock 4
+	**/
+	public static var CONFIG_JS_DS4 = {
+		A : 0,
+		B : 1,
+		X : 2,
+		Y : 3,
+		LB : 4,
+		RB : 5,
+		LT : 6,
+		RT : 7,
+		back : 8,
+		start : 9,
+		analogClick : 10,
+		ranalogClick : 11,
+		dpadUp : 12,
+		dpadDown : 13,
+		dpadLeft : 14,
+		dpadRight : 15,
+		analogX : 18,
+		analogY : 19,
+		ranalogX : 20,
+		ranalogY : 21,
+		names : ["A","B","X","Y","LB","RB","LT","RT","Select","Start","LCLK","RCLK","DUp","DDown","DLeft","DRight","LX","LY","RX","RY"],
+	};
+	/**
+	  	Mapping for Dualshock 4 (Firefox)
+
+		D-Pad isn't working
+	**/
+	public static var CONFIG_JS_DS4_FF = {
+		A : 1,
+		B : 2,
+		X : 0,
+		Y : 3,
+		LB : 4,
+		RB : 5,
+		LT : 6, //21 for analog
+		RT : 7, //22 for analog
+		back : 8,
+		start : 9,
+		analogClick : 10,
+		ranalogClick : 11,
+		//touchpad button : 13
+		dpadUp : 9000,
+		dpadDown : 9000,
+		dpadLeft : 9000,
+		dpadRight : 9000,
+		analogX : 18,
+		analogY : 19,
+		ranalogX : 20,
+		ranalogY : 23,
+		names : ["A","B","X","Y","LB","RB","LT","RT","Select","Start","LCLK","RCLK","DUp","DDown","DLeft","DRight","LX","LY","RX","RY"],
+	};
+
+	public static function pickConfig( name : String ) : PadConfig {
+		return switch ( name ){
+			//Chrome, DS4 - both revs
+			case "Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 05c4)" |
+			"Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 09cc)":
+				return CONFIG_JS_DS4;
+			//Firefox, DS4 - both revs
+			case "054c-05c4-Wireless Controller" | "054c-09cc-Wireless Controller":
+				return CONFIG_JS_DS4_FF;
+			default:
+				return CONFIG_JS_STD;
+		}
+	}
 	#end
 
 	#if hl
@@ -151,6 +220,7 @@ class Pad {
 	public var connected(default, null) = true;
 	public var name(get, never) : String;
 	public var index : Int = -1;
+	public var config : PadConfig = DEFAULT_CONFIG;
 	public var xAxis : Float = 0.;
 	public var yAxis : Float = 0.;
 	public var buttons : Array<Bool> = [];
@@ -314,6 +384,7 @@ class Pad {
 			js.Browser.window.addEventListener("gamepadconnected", function(p) {
 				var pad = new hxd.Pad();
 				pad.d = p.gamepad;
+				pad.config = pickConfig(pad.d.id);
 				pad.index = pad.d.index;
 				pads.set(pad.d.index, pad);
 				waitPad(pad);
@@ -467,7 +538,15 @@ class Pad {
 	#elseif js
 
 	static function syncPads() {
-		try js.Browser.navigator.getGamepads() catch( e : Dynamic ) {};
+		var freshPads : Array<js.html.Gamepad> = [];
+		try freshPads = js.Browser.navigator.getGamepads() catch( e : Dynamic ) {}; 
+		if ( freshPads.length > 0 ) {
+			for ( i in 0...freshPads.length ) {
+				if ( pads[i] != null ) {
+					pads[i].d = freshPads[i];
+				}
+			}
+		}
 		for( p in pads ) {
 			for( i in 0...p.d.buttons.length ) {
 				p.prevButtons[i] = p.buttons[i];

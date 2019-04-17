@@ -207,14 +207,25 @@ private class LocalEntry extends FileEntry {
 
 	var watchCallback : Void -> Void;
 	var watchTime : Float;
+	#if (flash && air3)
+	var convertedFile : flash.filesystem.File;
+	#else
+	var convertedFile : String;
+	#end
 	static var WATCH_INDEX = 0;
 	static var WATCH_LIST : Array<LocalEntry> = null;
 	static var tmpDir : String = null;
 
 	inline function getModifTime(){
 		#if flash
+		if (convertedFile != null) {
+			return convertedFile.modificationDate.getTime();
+		}
 		return file.modificationDate.getTime();
 		#else
+		if (convertedFile != null) {
+			return sys.FileSystem.stat(convertedFile).mtime.getTime();
+		}
 		return sys.FileSystem.stat(file).mtime.getTime();
 		#end
 	}
@@ -282,7 +293,7 @@ private class LocalEntry extends FileEntry {
 			WATCH_LIST.push(this);
 		}
 		watchTime = getModifTime();
-		watchCallback = onChanged;
+		watchCallback = function() { fs.convert(this); onChanged(); }
 	}
 
 }
@@ -327,9 +338,6 @@ class LocalFileSystem implements FileSystem {
 		#end
 		if( exePath != null ) exePath.pop();
 		var froot = exePath == null ? baseDir : sys.FileSystem.fullPath(exePath.join("/") + "/" + baseDir);
-		#if (usesys && !macro)
-		froot = haxe.System.dataPathPrefix + froot;
-		#end
 		if( froot == null || !sys.FileSystem.exists(froot) || !sys.FileSystem.isDirectory(froot) ) {
 			froot = sys.FileSystem.fullPath(baseDir);
 			if( froot == null || !sys.FileSystem.exists(froot) || !sys.FileSystem.isDirectory(froot) )
@@ -456,6 +464,9 @@ class LocalFileSystem implements FileSystem {
 		var conv = converts.get(ext);
 		if( conv == null )
 			return;
+		if (e.convertedFile == null) {
+			e.convertedFile = e.file;
+		}
 
 		var path = e.path;
 		var tmpFile = tmpDir + path.substr(0, -ext.length) + conv.destExt;

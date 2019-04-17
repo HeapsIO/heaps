@@ -7,6 +7,12 @@ enum RenderMode {
 	Mixed;
 }
 
+enum ShadowSamplingKind {
+		None;
+		PCF;
+		ESM;
+	}
+
 class Shadows extends Default {
 
 	var lightCamera : h3d.Camera;
@@ -18,8 +24,11 @@ class Shadows extends Default {
 	public var shader(default,null) : hxsl.Shader;
 	public var blur : Blur;
 
+	public var samplingKind : ShadowSamplingKind = None;
 	public var power = 30.0;
 	public var bias = 0.01;
+	public var pcfQuality = 1;
+	public var pcfScale = 1.0;
 
 	public function new(light) {
 		if( format == null ) format = R16F;

@@ -6,33 +6,29 @@ class Channel extends ChannelBase {
 
 	@:noCompletion public var next : Channel;
 	var manager : Manager;
-	var source  : Manager.Source;
-	var id      : Int;
+	var source : Manager.Source;
+	var id : Int;
 
-	public var sound     	(default, null) : hxd.res.Sound;
-	public var duration     (default, null) : Float;
-	public var soundGroup   (default, null) : SoundGroup;
-	public var channelGroup (default, null) : ChannelGroup;
-	public var position     (default, set)  : Float;
-	public var pause        (default, set)  : Bool;
-	public var loop : Bool;
+	public var sound(default, null) : hxd.res.Sound;
+	public var duration(default, null) : Float;
+	public var soundGroup(default, null) : SoundGroup;
+	public var channelGroup(default, null) : ChannelGroup;
 
-	var audibleGain     : Float;
-	var lastStamp       : Float;
-	var isVirtual       : Bool;
-	var isLoading		: Bool;
-	var positionChanged : Bool;
-	var queue           : Array<hxd.res.Sound>;
+	public var position(default, set) = 0.0;
+	public var pause(default, set) = false;
+	public var loop = false;
+	public var allowVirtual = true;
+
+	var audibleGain = 1.0;
+	var lastStamp = 0.0;
+	var isVirtual = false;
+	var isLoading = false;
+	var positionChanged = false;
+	var queue : Array<hxd.res.Sound> = [];
 
 	function new() {
 		super();
-		id          = ID++;
-		pause       = false;
-		isVirtual   = false;
-		loop        = false;
-		queue       = [];
-		position    = 0.0;
-		audibleGain = 1.0;
+		id = ID++;
 	}
 
 	/**
@@ -93,5 +89,9 @@ class Channel extends ChannelBase {
 
 	public function stop() {
 		if (manager != null) @:privateAccess manager.releaseChannel(this);
+	}
+
+	public function isReleased() {
+		return manager == null;
 	}
 }

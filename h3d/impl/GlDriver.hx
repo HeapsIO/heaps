@@ -7,9 +7,7 @@ import h3d.mat.Data;
 #if (js||cpp||hlsdl||usegl)
 
 #if js
-import js.html.Uint16Array;
-import js.html.Uint8Array;
-import js.html.Float32Array;
+import hxd.impl.TypedArray;
 private typedef GL = js.html.webgl.GL;
 private extern class GL2 extends js.html.webgl.GL {
 	// webgl2
@@ -148,6 +146,7 @@ class GlDriver extends Driver {
 	var mrtExt : { function drawBuffersWEBGL( colors : Array<Int> ) : Void; };
 	static var UID = 0;
 	public var gl : GL2;
+	public static var ALLOW_WEBGL2 = true;
 	#end
 
 	#if (hlsdl||usegl)
@@ -186,14 +185,22 @@ class GlDriver extends Driver {
 	var firstShader = true;
 	var rightHanded = false;
 	var hasMultiIndirect = false;
+	var maxCompressedTexturesSupport = 0;
 
 	var drawMode : Int;
+	
+	/**
+		Perform OUT_OF_MEMORY checks when allocating textures/buffers.
+		Default true, except in WebGL (false)
+	**/
+	public static var outOfMemoryCheck = #if js false #else true #end;
 
 	public function new(antiAlias=0) {
 		#if js
 		canvas = @:privateAccess hxd.Window.getInstance().canvas;
 		var options = {alpha:false,stencil:true,antialias:antiAlias>0};
-		gl = cast canvas.getContext("webgl2",options);
+		if(ALLOW_WEBGL2)
+			gl = cast canvas.getContext("webgl2",options);
 		if( gl == null )
 			gl = cast canvas.getContextWebGL(options);
 		if( gl == null ) throw "Could not acquire GL context";
@@ -212,6 +219,7 @@ class GlDriver extends Driver {
 
 		#if hlsdl
 		hasMultiIndirect = gl.getConfigParameter(0) > 0;
+		maxCompressedTexturesSupport = 3;
 		#end
 
 		var v : String = gl.getParameter(GL.VERSION);
@@ -343,7 +351,7 @@ class GlDriver extends Driver {
 				name = switch( tt ) {
 				case TSampler2D: mode = GL.TEXTURE_2D; "Textures";
 				case TSamplerCube: mode = GL.TEXTURE_CUBE_MAP; "TexturesCube";
-				case TSampler2DArray: #if (!hlsdl || (hlsdl >= "1.7")) mode = GL2.TEXTURE_2D_ARRAY; #end "TexturesArray";
+				case TSampler2DArray: mode = GL2.TEXTURE_2D_ARRAY; "TexturesArray";
 				default: throw "Unsupported texture type "+tt;
 				}
 				index = 0;
@@ -353,13 +361,9 @@ class GlDriver extends Driver {
 			t = t.next;
 		}
 		if( shader.bufferCount > 0 ) {
-			#if (!hlsdl || (hlsdl >= "1.7"))
 			s.buffers = [for( i in 0...shader.bufferCount ) gl.getUniformBlockIndex(p.p,"uniform_buffer"+i)];
 			for( i in 0...shader.bufferCount )
 				gl.uniformBlockBinding(p.p,s.buffers[i],i);
-			#else
-			throw "Uniform buffers require HL 1.7";
-			#end
 		}
 	}
 
@@ -784,11 +788,10 @@ class GlDriver extends Driver {
 		case GL.RGB: GL.RGB;
 		case GL2.R11F_G11F_B10F: GL.RGB;
 		case GL2.RGB10_A2: GL.RGBA;
-		#if (!hlsdl || (hlsdl >= "1.7"))
 		case GL2.RED, GL2.R8, GL2.R16F, GL2.R32F: GL2.RED;
 		case GL2.RG, GL2.RG8, GL2.RG16F, GL2.RG32F: GL2.RG;
 		case GL2.RGB16F, GL2.RGB32F: GL.RGB;
-		#end
+		case 0x83F1, 0x83F2, 0x83F3: GL.RGBA;
 		default: throw "Invalid format " + t.internalFmt;
 		}
 	}
@@ -799,6 +802,7 @@ class GlDriver extends Driver {
 		case RGBA16F, RGBA32F: hasFeature(FloatTextures);
 		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
 		case R8, RG8, RGB8, R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
+		case S3TC(n): n <= maxCompressedTexturesSupport;
 		default: false;
 		}
 	}
@@ -806,7 +810,7 @@ class GlDriver extends Driver {
 	function getBindType( t : h3d.mat.Texture ) {
 		var isCube = t.flags.has(Cube);
 		var isArray = t.flags.has(IsArray);
-		return isCube ? GL.TEXTURE_CUBE_MAP : isArray ? #if (!hlsdl || (hlsdl >= "1.7")) GL2.TEXTURE_2D_ARRAY #else throw "Texture Array requires HL 1.7" #end : GL.TEXTURE_2D;
+		return isCube ? GL.TEXTURE_CUBE_MAP : isArray ? GL2.TEXTURE_2D_ARRAY : GL.TEXTURE_2D;
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
@@ -831,7 +835,6 @@ class GlDriver extends Driver {
 			tt.internalFmt = GL2.SRGB8_ALPHA;
 		case RGB8:
 			tt.internalFmt = GL.RGB;
-		#if (!hlsdl || (hlsdl >= "1.7"))
 		case R8:
 			tt.internalFmt = GL2.R8;
 		case RG8:
@@ -860,7 +863,13 @@ class GlDriver extends Driver {
 		case RG11B10UF:
 			tt.internalFmt = GL2.R11F_G11F_B10F;
 			tt.pixelFmt = GL2.UNSIGNED_INT_10F_11F_11F_REV;
-		#end
+		case S3TC(n) if( n <= maxCompressedTexturesSupport ):
+			switch( n ) {
+			case 1: tt.internalFmt = 0x83F1; // COMPRESSED_RGBA_S3TC_DXT1_EXT
+			case 2:	tt.internalFmt = 0x83F2; // COMPRESSED_RGBA_S3TC_DXT3_EXT
+			case 3: tt.internalFmt = 0x83F3; // COMPRESSED_RGBA_S3TC_DXT5_EXT
+			default: throw "Unsupported texture format "+t.format;
+			}
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
@@ -870,6 +879,7 @@ class GlDriver extends Driver {
 		var outOfMem = false;
 
 		inline function checkError() {
+			if( !outOfMemoryCheck ) return false;
 			var err = gl.getError();
 			if( err == GL.OUT_OF_MEMORY ) {
 				outOfMem = true;
@@ -884,12 +894,13 @@ class GlDriver extends Driver {
 				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 				if( checkError() ) break;
 			}
-		#if (!hlsdl || (hlsdl >= "1.7"))
 		} else if( t.flags.has(IsArray) ) {
 			gl.texImage3D(GL2.TEXTURE_2D_ARRAY, 0, tt.internalFmt, tt.width, tt.height, t.layerCount, 0, getChannels(tt), tt.pixelFmt, null);
 			checkError();
-		#end
 		} else {
+			#if js
+			if( !t.format.match(S3TC(_)) )
+			#end
 			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 			checkError();
 		}
@@ -950,7 +961,7 @@ class GlDriver extends Driver {
 	}
 
 	inline function discardError() {
-		gl.getError(); // make sure to reset error flag
+		if( outOfMemoryCheck ) gl.getError(); // make sure to reset error flag
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
@@ -966,7 +977,7 @@ class GlDriver extends Driver {
 		var tmp = new Uint8Array(m.size * m.stride * 4);
 		gl.bufferData(GL.ARRAY_BUFFER, tmp, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#end
-		var outOfMem = gl.getError() == GL.OUT_OF_MEMORY;
+		var outOfMem = outOfMemoryCheck && gl.getError() == GL.OUT_OF_MEMORY;
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		if( outOfMem ) {
 			gl.deleteBuffer(b);
@@ -985,7 +996,7 @@ class GlDriver extends Driver {
 		#elseif hl
 		gl.bufferDataSize(GL.ELEMENT_ARRAY_BUFFER, count * size, GL.STATIC_DRAW);
 		#end
-		var outOfMem = gl.getError() == GL.OUT_OF_MEMORY;
+		var outOfMem = outOfMemoryCheck && gl.getError() == GL.OUT_OF_MEMORY;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		curIndexBuffer = null;
 		if( outOfMem ) {
@@ -1040,11 +1051,11 @@ class GlDriver extends Driver {
 	}
 
 	#if !hl
-	inline static function bytesToUint8Array( b : haxe.io.Bytes ) : Uint8Array {
+	inline static function bytesToUint8Array( b : haxe.io.Bytes, offset = 0 ) : Uint8Array {
 		#if (lime && !js)
-		return new Uint8Array(b);
+		return new Uint8Array(b,offset);
 		#else
-		return new Uint8Array(b.getData());
+		return new Uint8Array(b.getData(),offset);
 		#end
 	}
 	#end
@@ -1116,17 +1127,29 @@ class GlDriver extends Driver {
 		pixels.convert(t.format);
 		pixels.setFlip(false);
 		#if hl
-		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, streamData(pixels.bytes.getData(),pixels.offset,pixels.width*pixels.height*pixels.bytesPerPixel));
+		var dataLen = pixels.height*pixels.stride;
+		var stream = streamData(pixels.bytes.getData(),pixels.offset,dataLen);
+		if( t.format.match(S3TC(_)) ) {
+			#if( (hlsdl == "1.8.0") || (hlsdl == "1.9.0") )
+			throw "Compressed textures require hlsdl 1.10+";
+			#else
+			gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, dataLen, stream);
+			#end
+		} else
+			gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, stream);
 		#elseif lime
 		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#elseif js
 		var buffer = switch( t.format ) {
-		case RGBA32F, R32F, RG32F, RGB32F: new js.html.Float32Array(@:privateAccess pixels.bytes.b.buffer);
-		case RGBA16F, R16F, RG16F, RGB16F: new js.html.Uint16Array(@:privateAccess pixels.bytes.b.buffer);
-		case RGB10A2, RG11B10UF: new js.html.Uint32Array(@:privateAccess pixels.bytes.b.buffer);
-		default: bytesToUint8Array(pixels.bytes);
+		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
+		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
+		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
+		default: bytesToUint8Array(pixels.bytes,pixels.offset);
 		}
-		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+		if( t.format.match(S3TC(_)) )
+			gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
+		else
+			gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
 		#else
 		throw "Not implemented";
 		#end
@@ -1191,12 +1214,8 @@ class GlDriver extends Driver {
 
 	inline function updateDivisor( a : CompiledAttribute ) {
 		if( currentDivisor[a.index] != a.divisor ) {
-			#if (!hlsdl || (hlsdl >= "1.7"))
 			currentDivisor[a.index] = a.divisor;
 			gl.vertexAttribDivisor(a.index, a.divisor);
-			#else
-			throw "vertexAttribDivisor requires HL 1.7+";
-			#end
 		}
 	}
 
@@ -1276,7 +1295,7 @@ class GlDriver extends Driver {
 	}
 
 	override function allocInstanceBuffer( b : InstanceBuffer, bytes : haxe.io.Bytes ) {
-		#if( !js && (!hlsdl || (hlsdl >= "1.7")) )
+		#if hl
 		if( hasMultiIndirect ) {
 			var buf = gl.createBuffer();
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, buf);
@@ -1312,24 +1331,21 @@ class GlDriver extends Driver {
 			curIndexBuffer = ibuf;
 			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf.b);
 		}
-		#if (!js && (!hlsdl || hlsdl >= "1.7"))
-		if( hasMultiIndirect ) {
+		#if !js
+		if( hasMultiIndirect && commands.data != null ) {
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
-			if( ibuf.is32 )
-				gl.multiDrawElementsIndirect(drawMode, GL.UNSIGNED_INT, null, commands.commandCount, 0);
-			else
-				gl.multiDrawElementsIndirect(drawMode, GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
+			gl.multiDrawElementsIndirect(drawMode, ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
 			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
 			return;
 		}
 		#end
 		var args : Array<Int> = commands.data;
-		var p = 0;
-		for( i in 0...Std.int(args.length/3) )
-			if( ibuf.is32 )
-				gl.drawElementsInstanced(drawMode, args[p++], GL.UNSIGNED_INT, args[p++], args[p++]);
-			else
-				gl.drawElementsInstanced(drawMode, args[p++], GL.UNSIGNED_SHORT, args[p++], args[p++]);
+		if( args != null ) {
+			var p = 0;
+			for( i in 0...Std.int(args.length/3) )
+				gl.drawElementsInstanced(drawMode, args[p++], ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, args[p++], args[p++]);
+		} else
+			gl.drawElementsInstanced(drawMode, commands.indexCount, ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, 0, commands.commandCount);
 	}
 
 	override function end() {
@@ -1459,11 +1475,9 @@ class GlDriver extends Driver {
 		#end
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
 
-		#if (!hlsdl || (hlsdl >= "1.7"))
 		if( tex.flags.has(IsArray) )
 			gl.framebufferTextureLayer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.t.t, mipLevel, layer);
 		else
-		#end
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 		if( tex.depthBuffer != null ) {
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r);
@@ -1538,6 +1552,8 @@ class GlDriver extends Driver {
 	function makeFeatures() {
 		for( f in Type.allEnums(Feature) )
 			features.set(f,checkFeature(f));
+		if( gl.getExtension("WEBGL_compressed_texture_s3tc") != null )
+			maxCompressedTexturesSupport = 3;
 	}
 	function checkFeature( f : Feature ) {
 		return switch( f ) {
@@ -1599,11 +1615,11 @@ class GlDriver extends Driver {
 			throw "Can't capture main render buffer in GL";
 		discardError();
 		#if js
-		var buffer : js.html.ArrayBufferView = @:privateAccess pixels.bytes.b;
+		var buffer : ArrayBufferView = @:privateAccess pixels.bytes.b;
 		switch( curTarget.format ) {
-		case RGBA32F, R32F, RG32F, RGB32F: buffer = new js.html.Float32Array(buffer.buffer);
-		case RGBA16F, R16F, RG16F, RGB16F: buffer = new js.html.Uint16Array(buffer.buffer);
-		case RGB10A2, RG11B10UF: buffer = new js.html.Uint32Array(buffer.buffer);
+		case RGBA32F, R32F, RG32F, RGB32F: buffer = new Float32Array(buffer.buffer);
+		case RGBA16F, R16F, RG16F, RGB16F: buffer = new Uint16Array(buffer.buffer);
+		case RGB10A2, RG11B10UF: buffer = new Uint32Array(buffer.buffer);
 		default:
 		}
 		#else
@@ -1718,10 +1734,8 @@ class GlDriver extends Driver {
 		GL.FUNC_ADD,
 		GL.FUNC_SUBTRACT,
 		GL.FUNC_REVERSE_SUBTRACT,
-		#if (!hlsdl || (hlsdl >= "1.7"))
 		GL2.FUNC_MIN,
-		GL2.FUNC_MAX,
-		#end
+		GL2.FUNC_MAX
 	];
 
 	static var CUBE_FACES = [

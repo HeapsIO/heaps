@@ -63,6 +63,7 @@ class Manager {
 	public static var BUFFER_QUEUE_LENGTH        = 2;
 	public static var MAX_SOURCES                = 16;
 	public static var SOUND_BUFFER_CACHE_SIZE    = 256;
+	public static var VIRTUAL_VOLUME_THRESHOLD   = 1e-5;
 
 	/**
 		Allows to decode big streaming buffers over X split frames. 0 to disable
@@ -345,7 +346,7 @@ class Manager {
 			c.calcAudibleGain(now);
 			if( c.isLoading && !c.sound.getData().isLoading() )
 				c.isLoading = false;
-			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || c.audibleGain < 1e-5 || c.isLoading;
+			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || (c.allowVirtual && c.audibleGain < VIRTUAL_VOLUME_THRESHOLD) || c.isLoading;
 			c = c.next;
 		}
 

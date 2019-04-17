@@ -40,6 +40,7 @@ typedef RenderProps = {
 	var env : String;
 	var colorGradingLUT : String;
 	var colorGradingLUTSize : Int;
+	var enableColorGrading : Bool;
 	var envPower : Float;
 	var exposure : Float;
 	var sky : SkyMode;
@@ -76,6 +77,7 @@ class Renderer extends h3d.scene.Renderer {
 	public var toneMode : TonemapMap = Reinhard;
 	public var colorgGradingLUT : h3d.mat.Texture;
 	public var colorGradingLUTSize : Int;
+	public var enableColorGrading : Bool;
 	public var displayMode : DisplayMode = Pbr;
 	public var env : Environment;
 	public var exposure(get,set) : Float;
@@ -92,8 +94,7 @@ class Renderer extends h3d.scene.Renderer {
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
-		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
-		Vec4([Value("output.emissive"),Value("output.depth"), Const(0), Const(1)])
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")])
 	]);
 
 
@@ -107,11 +108,17 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.pass.setBlendMode(Add);
 		pbrOut.pass.stencil = new h3d.mat.Stencil();
 		pbrOut.pass.stencil.setOp(Keep, Keep, Keep);
+		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80); // ignore already drawn volumetricLightMap areas
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
 		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
+	}
+
+	override function dispose() {
+		super.dispose();
+		env.dispose();
 	}
 
 	inline function get_exposure() return tonemap.shader.exposure;
@@ -120,6 +127,16 @@ class Renderer extends h3d.scene.Renderer {
 	override function debugCompileShader(pass:h3d.mat.Pass) {
 		output.setContext(this.ctx);
 		return output.compileShader(pass);
+	}
+
+	override function getPassByName(name:String):h3d.pass.Base {
+		switch( name ) {
+		case "overlay", "beforeTonemapping", "albedo", "distortion":
+			return defaultPass;
+		case "alpha", "additive":
+			return output;
+		}
+		return super.getPassByName(name);
 	}
 
 	override function start() {
@@ -141,10 +158,42 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.pbrLightPass = pbrLightPass;
 	}
 
+	inline function cullPasses( passes : h3d.pass.PassList, f : h3d.col.Collider -> Bool ) {
+		var prevCollider = null;
+		var prevResult = true;
+		passes.filter(function(p) {
+			var col = p.obj.cullingCollider;
+			if( col == null )
+				return true;
+			if( col != prevCollider ) {
+				prevCollider = col;
+				prevResult = f(col);
+			}
+			return prevResult;
+		});
+	}
+
+	override function draw( name : String ) {
+		var passes = get(name);
+		cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
+		defaultPass.draw(passes);
+		passes.reset();
+	}
+
+	function renderPass(p:h3d.pass.Base, passes) {
+		cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
+		p.draw(passes);
+		passes.reset();
+	}
+
 	function mainDraw() {
-		output.draw(getSort("default", true));
-		output.draw(getSort("alpha"));
-		output.draw(get("additive"));
+		renderPass(output, getSort("default", true));
+		renderPass(output, getSort("alpha"));
+		renderPass(output, get("additive"));
+	}
+
+	function drawHDR() {
+
 	}
 
 	function postDraw() {
@@ -163,7 +212,7 @@ class Renderer extends h3d.scene.Renderer {
 		}
 	}
 
-	function apply( step : hxd.prefab.rfx.RendererFX.Step ) {
+	function apply( step : h3d.impl.RendererFX.Step ) {
 		for( f in effects )
 			if( f.enabled )
 				f.apply(this, step);
@@ -199,7 +248,7 @@ class Renderer extends h3d.scene.Renderer {
 		var ls = Std.instance(getLightSystem(), LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
-		ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
+		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
 
 		setTargets([albedo,normal,pbr,other]);
 		clear(0, 1, 0);
@@ -213,8 +262,8 @@ class Renderer extends h3d.scene.Renderer {
 		depthCopy.render();
 		ctx.setGlobal("depthMap",{ texture : depth, channel : hxsl.Channel.R });
 
-		setTargets([albedo,normal,pbr,other]);
-		decalsOutput.draw(get("decal"));
+		setTargets([albedo,normal,pbr]);
+		renderPass(decalsOutput, get("decal"));
 
 		setTarget(albedo);
 		draw("albedo");
@@ -229,7 +278,7 @@ class Renderer extends h3d.scene.Renderer {
 				clear(0x00FF80FF);
 			}
 		}
-		apply(BeforeHdr);
+		apply(BeforeLighting);
 
 		var hdr = allocTarget("hdrOutput", true, 1, RGBA16F);
 		ctx.setGlobal("hdr", hdr);
@@ -318,15 +367,14 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrProps.isScreen = true;
 
-		pbrIndirect.showSky = false;
 		pbrIndirect.drawIndirectDiffuse = true;
 		pbrIndirect.drawIndirectSpecular = true;
-		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80);
 		pbrOut.render();
 
+		drawHDR();
+		draw("beforeTonemappingDecal");
 		draw("beforeTonemapping");
-
-		apply(AfterHdr);
+		apply(BeforeTonemapping);
 
 		var distortion = allocTarget("distortion", true, 1.0, RG16F);
 		distortion.clear(0x000000);
@@ -335,18 +383,25 @@ class Renderer extends h3d.scene.Renderer {
 
 		var ldr = allocTarget("ldrOutput");
 		setTarget(ldr);
-		ctx.setGlobal("hdr", hdr);
+		ctx.setGlobal("ldr", ldr);
 		var bloom = ctx.getGlobal("bloom");
+
+		// Bloom Params
 		tonemap.shader.bloom = bloom;
 		tonemap.shader.hasBloom = bloom != null;
+
+		// Distortion Params
 		tonemap.shader.distortion = distortion;
 		tonemap.shader.hasDistortion = distortion != null;
-		tonemap.shader.hasColorGrading = colorgGradingLUT != null;
-		if( colorgGradingLUT != null  ){
+
+		// Color Grading Params
+		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
+		tonemap.shader.hasColorGrading = enableColorGrading && colorgGradingLUT != null;
+		if( colorgGradingLUT != null ) {
 			tonemap.shader.colorGradingLUT = colorgGradingLUT;
 			tonemap.shader.lutSize = colorGradingLUTSize;
 		}
-		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
+
 		tonemap.shader.mode =	switch( toneMode ) {
 									case Linear: 0;
 									case Reinhard: 1;
@@ -355,8 +410,12 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.shader.hdrTexture = hdr;
 		tonemap.render();
 
+		apply(AfterTonemapping);
+
 		postDraw();
-		apply(Final);
+
+		apply(AfterUI);
+
 		resetTarget();
 
 		switch( displayMode ) {
@@ -414,6 +473,7 @@ class Renderer extends h3d.scene.Renderer {
 			env : null,
 			colorGradingLUT : null,
 			colorGradingLUTSize : 1,
+			enableColorGrading: true,
 			envPower : 1.,
 			emissive : 1.,
 			exposure : 0.,
@@ -449,6 +509,7 @@ class Renderer extends h3d.scene.Renderer {
 		else
 			colorgGradingLUT = null;
 		colorGradingLUTSize = props.colorGradingLUTSize;
+		enableColorGrading = props.enableColorGrading;
 	}
 
 	#if editor
@@ -457,16 +518,6 @@ class Renderer extends h3d.scene.Renderer {
 		return new js.jquery.JQuery('
 			<div class="group" name="Renderer">
 			<dl>
-				<dt>Tone</dt>
-				<dd>
-					<select field="tone">
-						<option value="Linear">Linear</option>
-						<option value="Reinhard">Reinhard</option>
-					</select>
-				</dd>
-
-				<dt>Color Grading LUT</dt><input type="texturepath" field="colorGradingLUT" style="width:165px"/>
-				<dt>LUT Size</dt><dd><input step="1" type="range" min="0" max="32" field="colorGradingLUTSize"></dd>
 
 				<dt>Mode</dt>
 				<dd>
@@ -479,22 +530,43 @@ class Renderer extends h3d.scene.Renderer {
 					</select>
 				</dd>
 
-				<dt>Env</dt>
-				<dd>
-					<input type="texturepath" field="env" style="width:165px"/>
-					<select field="sky" style="width:20px">
-						<option value="Hide">Hide</option>
-						<option value="Env">Show</option>
-						<option value="Irrad">Show Irrad</option>
-						<option value="Background">Background Color</option>
-					</select>
-					<br/>
-					<input type="range" min="0" max="2" field="envPower"/>
-				</dd>
-				<dt>Emissive</dt><dd><input type="range" min="0" max="2" field="emissive"></dd>
-				<dt>Occlusion</dt><dd><input type="range" min="0" max="2" field="occlusion"></dd>
-				<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
-				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"></dd>
+				<div class="group" name="Tone Mapping">
+					<dt>Tone</dt>
+					<dd>
+						<select field="tone">
+							<option value="Linear">Linear</option>
+							<option value="Reinhard">Reinhard</option>
+						</select>
+					</dd>
+				</div>
+
+				<div class="group" name="Color Grading">
+					<dt>LUT</dt><dd><input type="texturepath" field="colorGradingLUT" style="width:165px"/></dd>
+					<dt>LUT Size</dt><dd><input step="1" type="range" min="0" max="32" field="colorGradingLUTSize"></dd>
+					<dt>Enable</dt><dd><input type="checkbox" field="enableColorGrading"></dd>
+				</div>
+
+				<div class="group" name="Environment">
+					<dt>Env</dt>
+						<dd>
+							<input type="texturepath" field="env" style="width:165px"/>
+							<select field="sky" style="width:20px">
+								<option value="Hide">Hide</option>
+								<option value="Env">Show</option>
+								<option value="Irrad">Show Irrad</option>
+								<option value="Background">Background Color</option>
+							</select>
+							<br/>
+							<input type="range" min="0" max="2" field="envPower"/>
+						</dd>
+				</div>
+
+				<div class="group" name="Params">
+					<dt>Emissive</dt><dd><input type="range" min="0" max="2" field="emissive"></dd>
+					<dt>Occlusion</dt><dd><input type="range" min="0" max="2" field="occlusion"></dd>
+					<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
+					<dt>Shadows</dt><dd><input type="checkbox" field="shadows"></dd>
+				</div>
 			</dl>
 			</div>
 		');

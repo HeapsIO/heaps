@@ -16,4 +16,7 @@ class RenderContext {
 		textures = new h3d.impl.TextureCache(this);
 	}
 
+	public function dispose() {
+		textures.dispose();
+	}
 }

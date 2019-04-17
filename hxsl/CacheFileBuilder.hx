@@ -57,6 +57,7 @@ class CacheFileBuilder {
 	public var dxInitDone = false;
 	public var dxShaderVersion = "5_0";
 	var glout : GlslOut;
+	var hasCompiled : Bool;
 
 	public function new() {
 	}
@@ -65,8 +66,10 @@ class CacheFileBuilder {
 		for( p in platforms ) {
 			Sys.println("Generating shaders for " + p);
 			this.platform = p;
+			hasCompiled = false;
 			var cache = new CustomCacheFile(this);
 			@:privateAccess cache.save();
+			if( hasCompiled ) Sys.println("");
 		}
 	}
 
@@ -75,6 +78,7 @@ class CacheFileBuilder {
 	}
 
 	public function compileShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : String {
+		hasCompiled = true;
 		Sys.print(".");
 		switch( platform ) {
 		case DirectX:
@@ -129,7 +133,7 @@ class CacheFileBuilder {
 			var tmpOut = tmpFile + ".sb";
 			sys.io.File.saveContent(tmpSrc, code);
 			var args = ["-T", (rd.vertex ? "vs_" : "ps_") + dxShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
-			var p = new sys.io.Process("fxc.exe", args);
+			var p = new sys.io.Process(Sys.getEnv("XboxOneXDKLatest")+ "xdk\\FXC\\amd64\\fxc.exe", args);
 			var error = p.stderr.readAll().toString();
 			var ecode = p.exitCode();
 			if( ecode != 0 )
@@ -163,11 +167,11 @@ class CacheFileBuilder {
 				CacheFile.FILENAME = getArg();
 			case "-lib":
 				var lib = new format.hl.Reader().read(new haxe.io.BytesInput(sys.io.File.getBytes(getArg())));
-				var r_shader = ~/^oy4:namey([0-9]+):/;
 				for( s in lib.strings ) {
-					if( !r_shader.match(s) ) continue;
-					var len = Std.parseInt(r_shader.matched(1));
-					var name = r_shader.matchedRight().substr(0, len);
+					if( !StringTools.startsWith(s,"HXSL") ) continue;
+					var data = try haxe.crypto.Base64.decode(s) catch( e : Dynamic ) continue;
+					var len = data.get(3);
+					var name = data.getString(4,len);
 					builder.shaderLib.set(name, s);
 				}
 			case "-gl":
@@ -182,7 +186,8 @@ class CacheFileBuilder {
 				throw "Unknown parameter " + f;
 			}
 		}
-		builder.run();
+		builder.run();		
+		Sys.exit(0);
 	}
 
 }

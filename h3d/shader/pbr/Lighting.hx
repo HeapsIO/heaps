@@ -25,12 +25,14 @@ class Indirect extends PropsDefinition {
 			var isSky = normal.dot(normal) <= 0;
 			if( isSky ) {
 				if( showSky ) {
-					if( skyColor ) {
-						pixelColor.rgb = skyColorValue * irrPower;
-					} else {
+					var color : Vec3;
+					if( skyColor )
+						color = skyColorValue;
+					else {
 						normal = (vec3( uvToScreen(calculatedUV) * 5. /*?*/ , 1. ) * cameraInvViewProj.mat3x4()).normalize();
-						pixelColor.rgb = skyMap.get(normal).rgb.pow(vec3(2.)) * irrPower;
+						color = skyMap.get(normal).rgb;
 					}
+					pixelColor.rgb += (color * color) * irrPower;
 				} else
 					discard;
 			} else {
@@ -51,7 +53,6 @@ class Indirect extends PropsDefinition {
 				}
 
 				var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
-
 				pixelColor.rgb += indirect * occlusion + albedo * emissive * emissivePower;
 			}
 		}
@@ -76,13 +77,10 @@ class Direct extends PropsDefinition {
 				var NdH = normal.dot(half).max(0.);
 				var VdH = view.dot(half).max(0.);
 
-				// diffuse BRDF
-				var direct : Vec3 = vec3(0.);
-
 				// ------------- DIRECT LIGHT -------------------------
 
 				var F0 = pbrSpecularColor;
-				var diffuse = albedo * NdL / PI;
+				var diffuse = albedo / PI;
 
 				// General Cook-Torrance formula for microfacet BRDF
 				// 		f(l,v) = D(h).F(v,h).G(l,v,h) / 4(n.l)(n.v)
@@ -108,10 +106,13 @@ class Direct extends PropsDefinition {
 				var k = (roughness + 1);
 				k *= k;
 				k *= 0.125;
-				var G = (NdV / (NdV * (1 - k) + k)) * (NdL / (NdL * (1 - k) + k));
 
-				var specular = (D * F * G / (4 * NdL * NdV)).max(0.);
-				direct += mix(diffuse * (1 - metalness), specular, F) * pbrLightColor;
+				//var G = (1 / (NdV * (1 - k) + k)) * (1 / (NdL * (1 - k) + k)) * NdL * NdV;
+				//var Att = 1 / (4 * NdL * NdV);
+				var G_Att = (1 / (NdV * (1 - k) + k)) * (1 / (NdL * (1 - k) + k)) * 0.25;
+				var specular = (D * F * G_Att).max(0.);
+
+				var direct = (diffuse * (1 - metalness) * (1 - F) + specular) * pbrLightColor * NdL;
 				pixelColor.rgb += direct * shadow;
 			} else if( doDiscard )
 				discard;

@@ -24,6 +24,7 @@ class Animation implements hxd.impl.Serializable {
 	static inline var EPSILON = 0.000001;
 
 	@:s public var name : String;
+	@:s public var resourcePath : String;
 	@:s public var frameCount(default, null) : Int;
 	@:s public var sampling(default,null) : Float;
 	@:s public var frame(default, null) : Float;
@@ -116,6 +117,7 @@ class Animation implements hxd.impl.Serializable {
 		a.loop = loop;
 		a.pause = pause;
 		a.events = events;
+		a.resourcePath = resourcePath;
 		return a;
 	}
 
@@ -270,6 +272,16 @@ class Animation implements hxd.impl.Serializable {
 	public function unserialize(ctx) {
 		super.unserialize(ctx);
 		if( objects == null ) objects = [];
+	}
+
+	function customSerialize(ctx:hxbit.Serializer) {
+	}
+
+	function customUnserialize(ctx:hxbit.Serializer) {
+		var l = cast(ctx, hxd.fmt.hsd.Serializer).loadAnimation(resourcePath);
+		var objects = [for( a in l.objects ) a.clone()];
+		l.clone(this);
+		this.objects = objects;
 	}
 	#end
 

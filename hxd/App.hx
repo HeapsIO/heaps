@@ -93,6 +93,14 @@ class App implements h3d.IDrawable {
 		this.s2d = s2d;
 	}
 
+	function setScene3D( s3d : h3d.scene.Scene, disposePrevious = true ) {
+		sevents.removeScene(this.s3d);
+		sevents.addScene(s3d);
+		if ( disposePrevious )
+			this.s3d.dispose();
+		this.s3d = s3d;
+	}
+
 	public function render(e:h3d.Engine) {
 		s3d.render(e);
 		s2d.render(e);

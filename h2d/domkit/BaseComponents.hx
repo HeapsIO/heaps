@@ -176,7 +176,6 @@ class CustomParser extends CssValue.ValueParser {
 			{ tile : parseTile(value), borderW : 0, borderH : 0 };
 		}
 	}
-
 }
 
 #if !macro
@@ -418,6 +417,8 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var hspacing : Int;
 	@:p var vspacing : Int;
 	@:p(dimension) var spacing : { x: Float, y: Float };
+	@:p var fillWidth: Bool;
+	@:p var fillHeight: Bool;
 
 	@:p(align) var contentAlign : { h : h2d.Flow.FlowAlign, v : h2d.Flow.FlowAlign };
 	@:p(vAlign) var contentValign : h2d.Flow.FlowAlign;
@@ -531,6 +532,14 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 			o.horizontalSpacing = Std.int(v.x);
 			o.verticalSpacing = Std.int(v.y);
 		}
+	}
+
+	static function set_fillWidth( o : h2d.Flow, v ) {
+		o.fillWidth = v;
+	}
+
+	static function set_fillHeight( o : h2d.Flow, v ) {
+		o.fillHeight = v;
 	}
 }
 
