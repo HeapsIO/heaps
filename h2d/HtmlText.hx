@@ -160,11 +160,13 @@ class HtmlText extends Text {
 				} else {
 					lines[lines.length - 1] = size;
 					var idx = heights.length - 1;
-					if ( baseLines[idx] < i.height ) {
-						// Assumption: baseLine < lineHeight always true.
-						heights[idx] = i.height + (heights[idx] - baseLines[idx]);
-						baseLines[idx] = i.height;
+					var grow = i.height - i.dy - baseLines[idx];
+					if ( grow > 0 ) {
+						baseLines[idx] += grow;
+						heights[idx] += grow;
 					}
+					grow = baseLines[idx] + i.dy;
+					if ( heights[idx] < grow ) heights[idx] = grow;
 				}
 				newLine = false;
 				prevChar = -1;
