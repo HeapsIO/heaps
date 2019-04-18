@@ -239,7 +239,8 @@ class Text extends Drawable {
 		if( restPos < text.length ) {
 			if( lines.length == 0 && leftMargin > 0 && x + afterData - letterSpacing > maxWidth ) {
 				lines.push("");
-				if ( sizes != null ) sizes.push(0);
+				if ( sizes != null ) sizes.push(leftMargin);
+				x -= leftMargin;
 			}
 			lines.push(text.substr(restPos, text.length - restPos));
 			if ( sizes != null ) sizes.push(x);
