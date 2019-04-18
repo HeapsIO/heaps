@@ -468,7 +468,7 @@ class GlDriver extends Driver {
 		gl.useProgram(p.p);
 
 		for( a in p.attribs )
-			if( curAttribs[a.index] == null || !curAttribs[a.index] ) {
+			if( !curAttribs[a.index] ) {
 				gl.enableVertexAttribArray(a.index);
 				curAttribs[a.index] = true;
 				if (maxIdxCurAttribs < a.index) {
@@ -478,7 +478,7 @@ class GlDriver extends Driver {
 
 		var lastIdxCurAttribTrue = 0;
 		for( i in 0...maxIdxCurAttribs+1 ) {
-			if( curAttribs[i] && (p.hasAttribIndex[i] == null || !p.hasAttribIndex[i]) ) {
+			if( curAttribs[i] && !p.hasAttribIndex[i]) {
 				gl.disableVertexAttribArray(i);
 				curAttribs[i] = false;
 			} else if (curAttribs[i]) {
