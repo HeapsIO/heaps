@@ -156,6 +156,7 @@ class GlDriver extends Driver {
 
 	var commonFB : Framebuffer;
 	var curAttribs : Array<Bool> = new Array<Bool>();
+	var maxIdxCurAttribs : Int = 0;
 	var curShader : CompiledProgram;
 	var curBuffer : h3d.Buffer;
 	var curIndexBuffer : IndexBuffer;
@@ -284,6 +285,7 @@ class GlDriver extends Driver {
 		resetStream();
 		#if cpp
 		curAttribs = new Array<Bool>();
+		maxIdxCurAttribs = 0;
 		curMatBits = -1;
 		#end
 		gl.useProgram(null);
@@ -427,7 +429,6 @@ class GlDriver extends Driver {
 			for( v in shader.vertex.data.vars )
 				switch( v.kind ) {
 				case Input:
-					curAttribs.push(false);
 					var t = GL.FLOAT;
 					var size = switch( v.type ) {
 					case TVec(n, _): n;
@@ -437,7 +438,6 @@ class GlDriver extends Driver {
 					}
 					var index = gl.getAttribLocation(p.p, glout.varNames.exists(v.id) ? glout.varNames.get(v.id) : v.name);
 					if( index < 0 ) {
-						p.hasAttribIndex.push(false);
 						p.stride += size;
 						continue;
 					}
@@ -455,7 +455,7 @@ class GlDriver extends Driver {
 							}
 					}
 					p.attribs.push(a);
-					p.hasAttribIndex.push(true);
+					p.hasAttribIndex[a.index] = true;
 					attribNames.push(v.name);
 					p.stride += size;
 				default:
@@ -468,16 +468,24 @@ class GlDriver extends Driver {
 		gl.useProgram(p.p);
 
 		for( a in p.attribs )
-			if( !curAttribs[a.index] ) {
+			if( curAttribs[a.index] == null || !curAttribs[a.index] ) {
 				gl.enableVertexAttribArray(a.index);
 				curAttribs[a.index] = true;
+				if (maxIdxCurAttribs < a.index) {
+					maxIdxCurAttribs = a.index;
+				}
 			}
 
-		for( i in 0...curAttribs.length )
-			if( curAttribs[i] && !p.hasAttribIndex[i] ) {
+		var lastIdxCurAttribTrue = 0;
+		for( i in 0...maxIdxCurAttribs+1 ) {
+			if( curAttribs[i] && (p.hasAttribIndex[i] == null || !p.hasAttribIndex[i]) ) {
 				gl.disableVertexAttribArray(i);
 				curAttribs[i] = false;
+			} else if (curAttribs[i]) {
+				lastIdxCurAttribTrue = i;
 			}
+		}
+		maxIdxCurAttribs = lastIdxCurAttribTrue;
 
 		curShader = p;
 		curBuffer = null;
