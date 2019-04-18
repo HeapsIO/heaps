@@ -185,6 +185,34 @@ class HtmlText extends hxd.App {
 			var f2 = createFlow(flow);
 			createText(f2, multilineText, Align.Left);
 		}
+		yoffset += flow.getBounds().height + 10;
+
+		var tagShowcase = "HtmlText supports next tags:" +
+		"<p>&lt;p&gt; tag:<p align='center'>Forces line breaks before and after.</p><p align='right'>It also supports `align` property.</p></p>" + 
+		"<p>&lt;br/&gt; tag: Makes a<br/>line break</p>" + 
+		"<p>&lt;font&gt; tag: Allows to control <font color='#ff00ff'>color</font>, <font opacity='0.8'>op</font><font opacity='0.6'>ac</font><font opacity='0.4'>it</font><font opacity='0.2'>y</font> and <font face='myFontFace'>face</font> properties.</p>" +
+		"<p>&lt;img src='...'/&gt; tag: Allows to insert a Tile <img src='logo'/> into html text</p>";
+		var flow = createFlow(s2d);
+		flow.y = yoffset;
+		flow.maxWidth = 360;
+		var text = createText(flow, tagShowcase, Align.Left);
+		text.maxWidth = 360;
+		text.loadFont = function( face : String ) : h2d.Font {
+			if ( face == 'myFontFace' ) {
+				var font = hxd.res.DefaultFont.get().clone();
+				font.resizeTo(font.size * 2);
+				return font;
+			}
+			return null;
+		}
+		text.loadImage = function( src : String ) : h2d.Tile {
+			if ( src == "logo" ) {
+				var t = hxd.Res.hxlogo.toTile();
+				t.scaleToSize(16, 16);
+				return t;
+			}
+			return null;
+		}
 
 		onResize();
 	}

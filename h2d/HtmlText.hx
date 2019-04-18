@@ -4,6 +4,20 @@ import h2d.Text;
 
 class HtmlText extends Text {
 
+	/**
+		A default method HtmlText uses to load images for `<img>` tag. See `HtmlText.loadImage` for details.
+	**/
+	public static dynamic function defaultLoadImage( url : String ) : h2d.Tile {
+		return null;
+	}
+
+	/**
+		A default method HtmlText uses to load fonts for `<font>` tags with `face` attribute. See `HtmlText.loadFont` for details.
+	**/
+	public static dynamic function defaultLoadFont( name : String ) : h2d.Font {
+		return null;
+	}
+
 	public var condenseWhite(default,set) : Bool = true;
 
 	var elements : Array<Object> = [];
@@ -40,12 +54,23 @@ class HtmlText extends Text {
 		glyphs.drawWith(ctx,this);
 	}
 
+	/**
+		Method that should return `h2d.Tile` instance for `<img>` tags. By default calls `HtmlText.defaultLoadImage` method.  
+		Loaded Tiles are temporary cached internally and if text contains multiple same images - this method will be called only once. Cache is invalidated whenever text changes.
+		@param url A value contained in `src` attribute.
+	**/
 	public dynamic function loadImage( url : String ) : Tile {
-		return null;
+		return defaultLoadImage(url);
 	}
 
+	/**
+		Method that should return `h2d.Font` instance for `<font>` tags with `face` attribute. By default calls `HtmlText.defaultLoadFont` method.  
+		HtmlText does not cache font instances and it's recommended to perform said caching from outside.
+		@param name A value contained in `face` attribute.
+		@returns Method should return loaded font instance or `null`. If `null` is returned - currently active font is used.
+	**/
 	public dynamic function loadFont( name : String ) : Font {
-		return font;
+		return defaultLoadFont(name);
 	}
 
 	override function initGlyphs( text : String, rebuild = true ) {
@@ -61,6 +86,7 @@ class HtmlText extends Text {
 
 		yPos = 0;
 		xMax = 0;
+		xMin = Math.POSITIVE_INFINITY;
 		sizePos = 0;
 		calcYMin = 0;
 
@@ -90,8 +116,8 @@ class HtmlText extends Text {
 		var y = yPos;
 		calcXMin = xMin;
 		calcWidth = xMax - xMin;
-		calcHeight = y + font.lineHeight;
-		calcSizeHeight = y + (font.baseLine > 0 ? font.baseLine : font.lineHeight);
+		calcHeight = y + heights[sizePos];
+		calcSizeHeight = y + baseLines[sizePos];//(font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
 	}
 
@@ -114,6 +140,9 @@ class HtmlText extends Text {
 				newLine = true;
 				prevChar = -1;
 			case "img":
+				// TODO: Support width/height attributes
+				// Support max-width/max-height attributes (downscale)
+				// Support min-width/min-height attributes (upscale)
 				var src = e.get("src");
 				var i : Tile = imageCache.get(src);
 				if ( i == null ) {
@@ -131,10 +160,11 @@ class HtmlText extends Text {
 				} else {
 					lines[lines.length - 1] = size;
 					var idx = heights.length - 1;
-					if ( heights[idx] < i.height )
-						heights[idx] = i.height;
-					if ( baseLines[idx] < i.height )
+					if ( baseLines[idx] < i.height ) {
+						// Assumption: baseLine < lineHeight always true.
+						heights[idx] = i.height + (heights[idx] - baseLines[idx]);
 						baseLines[idx] = i.height;
+					}
 				}
 				newLine = false;
 				prevChar = -1;
@@ -196,10 +226,10 @@ class HtmlText extends Text {
 		switch( align ) {
 			case Left:
 				xPos = 0;
+				if (xMin > 0) xMin = 0;
 			case Right, Center, MultilineCenter, MultilineRight:
 				var max = if( align == MultilineCenter || align == MultilineRight ) hxd.Math.ceil(calcWidth) else calcWidth < 0 ? 0 : hxd.Math.ceil(realMaxWidth);
 				var k = align == Center || align == MultilineCenter ? 0.5 : 1;
-				xMin = xPos;
 				xPos = Math.ffloor((max - size) * k);
 				if( xPos < xMin ) xMin = xPos;
 		}
@@ -231,10 +261,10 @@ class HtmlText extends Text {
 						@:privateAccess glyphs.curColor.a *= Std.parseFloat(v);
 					case "face":
 						font = loadFont(v);
-						if( prevGlyphs == null ) prevGlyphs = glyphs;
-						var prev = glyphs;
-						glyphs = new TileGroup(font == null ? null : font.tile, this);
 						if ( font != null ) {
+							if( prevGlyphs == null ) prevGlyphs = glyphs;
+							var prev = glyphs;
+							glyphs = new TileGroup(font.tile, this);
 							switch( font.type ) {
 								case SignedDistanceField(channel, alphaCutoff, smoothing):
 									var shader = new h3d.shader.SignedDistanceField();
@@ -245,9 +275,9 @@ class HtmlText extends Text {
 									glyphs.addShader(shader);
 								default:
 							}
+							@:privateAccess glyphs.curColor.load(prev.curColor);
+							elements.push(glyphs);
 						}
-						@:privateAccess glyphs.curColor.load(prev.curColor);
-						elements.push(glyphs);
 					default:
 					}
 				}
@@ -330,6 +360,7 @@ class HtmlText extends Text {
 				var cc = t.charCodeAt(i);
 				if( cc == "\n".code ) {
 					makeLineBreak();
+					dy = baseLines[sizePos] - font.baseLine;
 					prevChar = -1;
 					continue;
 				}
