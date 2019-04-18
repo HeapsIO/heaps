@@ -159,6 +159,7 @@ class HtmlText extends Text {
 					baseLines.push(i.height);
 				} else {
 					lines[lines.length - 1] = size;
+					#if !heaps_legacy_html_img
 					var idx = heights.length - 1;
 					var grow = i.height - i.dy - baseLines[idx];
 					if ( grow > 0 ) {
@@ -167,6 +168,7 @@ class HtmlText extends Text {
 					}
 					grow = baseLines[idx] + i.dy;
 					if ( heights[idx] < grow ) heights[idx] = grow;
+					#end
 				}
 				newLine = false;
 				prevChar = -1;
