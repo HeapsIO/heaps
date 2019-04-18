@@ -155,8 +155,13 @@ class HtmlText extends Text {
 				var size = lines[lines.length - 1] + i.width + letterSpacing;
 				if (realMaxWidth >= 0 && size > realMaxWidth && lines[lines.length - 1] > 0) {
 					lines.push(i.width);
+					#if !heaps_legacy_html_img
 					heights.push(i.height);
 					baseLines.push(i.height);
+					#else
+					heights.push(font.lineHeight);
+					baseLines.push(font.baseLine);
+					#end
 				} else {
 					lines[lines.length - 1] = size;
 					#if !heaps_legacy_html_img
