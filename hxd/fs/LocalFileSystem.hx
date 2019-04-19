@@ -561,7 +561,7 @@ class LocalFileSystem implements FileSystem {
 			conv.srcFilename = e.name;
 			if (times.get(path) == null) {
 				conv.convert();
-			} else { // reload
+			} else {
 				try { conv.convert(); } catch (e : Dynamic) { trace("Reload file: " + e); }
 			}
 			conv.srcPath = null;
