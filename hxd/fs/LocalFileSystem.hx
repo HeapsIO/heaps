@@ -559,11 +559,10 @@ class LocalFileSystem implements FileSystem {
 			conv.dstPath = tmpFile;
 			conv.srcBytes = content;
 			conv.srcFilename = e.name;
-			try {
+			if (times.get(path) == null) {
 				conv.convert();
-			} catch (ex : Dynamic) {
-				if (times.get(path) == null)
-					throw ex;
+			} else { // reload
+				try { conv.convert(); } catch (e : Dynamic) { trace("Reload file: " + e); }
 			}
 			conv.srcPath = null;
 			conv.dstPath = null;
