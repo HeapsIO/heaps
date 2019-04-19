@@ -2,6 +2,21 @@ package h2d;
 
 import h2d.Text;
 
+enum LineHeightMode {
+	/**
+		Accurate line height calculations. Each line will adjust it's height according to it's contents.
+	**/
+	Accurate;
+	/**
+		Only text adjusts line heights, and `<img>` tags do not affect it (partial legacy behavior).
+	**/
+	TextOnly;
+	/**
+		Legacy line height mode. When used, line heights are remain constant based on `HtmlText.font` variable.
+	**/
+	Constant;
+}
+
 class HtmlText extends Text {
 
 	/**
@@ -19,6 +34,12 @@ class HtmlText extends Text {
 	}
 
 	public var condenseWhite(default,set) : Bool = true;
+
+	/**
+		Line height calculation mode controls how much space lines take up vertically. ( default : Accurate )  
+		Changing mode to `Constant` restores legacy behavior of HtmlText.
+	**/
+	public var lineHeightMode(default,set) : LineHeightMode = Accurate;
 
 	var elements : Array<Object> = [];
 	var xPos : Float;
@@ -123,22 +144,24 @@ class HtmlText extends Text {
 
 	function buildSizes( e : Xml, font : Font, lines : Array<Float>, heights : Array<Float>, baseLines : Array<Float> ) {
 		if( e.nodeType == Xml.Element ) {
+
+			inline function makeLineBreak() {
+				var fontInfo = lineHeightMode == Constant ? this.font : font;
+				lines.push(0);
+				heights.push(fontInfo.lineHeight);
+				baseLines.push(fontInfo.baseLine);
+				newLine = true;
+				prevChar = -1;
+			}
+
 			var nodeName = e.nodeName.toLowerCase();
 			switch( nodeName ) {
 			case "p":
 				if ( !newLine ) {
-					lines.push(0);
-					heights.push(0);
-					baseLines.push(0);
-					newLine = true;
-					prevChar = -1;
+					makeLineBreak();
 				}
 			case "br":
-				lines.push(0);
-				heights.push(0);
-				baseLines.push(0);
-				newLine = true;
-				prevChar = -1;
+				makeLineBreak();
 			case "img":
 				// TODO: Support width/height attributes
 				// Support max-width/max-height attributes (downscale)
@@ -155,25 +178,29 @@ class HtmlText extends Text {
 				var size = lines[lines.length - 1] + i.width + letterSpacing;
 				if (realMaxWidth >= 0 && size > realMaxWidth && lines[lines.length - 1] > 0) {
 					lines.push(i.width);
-					#if !heaps_legacy_html_img
-					heights.push(i.height);
-					baseLines.push(i.height);
-					#else
-					heights.push(font.lineHeight);
-					baseLines.push(font.baseLine);
-					#end
+					switch ( lineHeightMode ) {
+						case Accurate:
+							heights.push(i.height);
+							baseLines.push(i.height);
+						case TextOnly:
+							heights.push(font.lineHeight);
+							baseLines.push(font.baseLine);
+						case Constant:
+							heights.push(this.font.lineHeight);
+							baseLines.push(this.font.baseLine);
+					}
 				} else {
 					lines[lines.length - 1] = size;
-					#if !heaps_legacy_html_img
-					var idx = heights.length - 1;
-					var grow = i.height - i.dy - baseLines[idx];
-					if ( grow > 0 ) {
-						baseLines[idx] += grow;
-						heights[idx] += grow;
+					if ( lineHeightMode == Accurate ) {
+						var idx = heights.length - 1;
+						var grow = i.height - i.dy - baseLines[idx];
+						if ( grow > 0 ) {
+							baseLines[idx] += grow;
+							heights[idx] += grow;
+						}
+						grow = baseLines[idx] + i.dy;
+						if ( heights[idx] < grow ) heights[idx] = grow;
 					}
-					grow = baseLines[idx] + i.dy;
-					if ( heights[idx] < grow ) heights[idx] = grow;
-					#end
 				}
 				newLine = false;
 				prevChar = -1;
@@ -193,11 +220,7 @@ class HtmlText extends Text {
 			switch( nodeName ) {
 			case "p":
 				if ( !newLine ) {
-					lines.push(0);
-					heights.push(0);
-					baseLines.push(0);
-					newLine = true;
-					prevChar = -1;
+					makeLineBreak();
 				}
 			default:
 			}
@@ -208,14 +231,22 @@ class HtmlText extends Text {
 				var lastChar = text.charCodeAt(text.length - 1);
 				prevChar = lastChar == "\n".code ? -1 : lastChar;
 			}
-			var idx = heights.length - 1;
-			if ( heights[idx] < font.lineHeight )
-				heights[idx] = font.lineHeight;
-			if ( baseLines[idx] < font.baseLine )
-				baseLines[idx] = font.baseLine;
-			while ( heights.length < lines.length ) {
-				heights.push(font.lineHeight);
-				baseLines.push(font.baseLine);
+			if ( lineHeightMode == Constant ) {
+				while ( heights.length < lines.length ) {
+					heights.push( this.font.lineHeight );
+					baseLines.push( this.font.lineHeight );
+				}
+			} else {
+				// TODO: Should adjust lineHeight in offset to bottom of baseLine.
+				var idx = heights.length - 1;
+				if ( heights[idx] < font.lineHeight )
+					heights[idx] = font.lineHeight;
+				if ( baseLines[idx] < font.baseLine )
+					baseLines[idx] = font.baseLine;
+				while ( heights.length < lines.length ) {
+					heights.push(font.lineHeight);
+					baseLines.push(font.baseLine);
+				}
 			}
 				
 			// Save node value
@@ -400,6 +431,14 @@ class HtmlText extends Text {
 			rebuild();
 		}
 		return value;
+	}
+
+	function set_lineHeightMode(v) {
+		if ( this.lineHeightMode != v ) {
+			this.lineHeightMode = v;
+			rebuild();
+		}
+		return v;
 	}
 
 	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
