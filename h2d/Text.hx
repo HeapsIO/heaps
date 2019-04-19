@@ -224,13 +224,13 @@ class Text extends Drawable {
 					}else{
 						lines.push(text.substr(restPos, i + 1 - restPos));
 					}
-					if ( sizes != null ) sizes.push(x);
 					restPos = i + 1;
 				}
 			}
-			if( e != null )
+			if( e != null && cc != '\n'.code )
 				x += esize + letterSpacing;
 			if( newline ) {
+				if ( sizes != null ) sizes.push(x);
 				x = 0;
 				prevChar = -1;
 			} else

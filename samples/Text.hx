@@ -216,6 +216,21 @@ class Text extends hxd.App {
 			sdfText.maxWidth = 400;
 		}
 
+		yoffset += flow.getBounds().height + 35;
+
+		{
+			var flow = createFlow(s2d);
+			flow.y = yoffset;
+			flow.horizontalAlign = FlowAlign.Left;
+			flow.horizontalSpacing = 15;
+			flow.layout = Horizontal;
+			createText(flow, "LEFT: It is a text with a new line added after THAT\nto test the alignment", Align.Left);
+			createText(flow, "CENTER: It is a text with a new line added after THAT\nto test the alignment", Align.Center);
+			createText(flow, "RIGHT: It is a text with a new line added after THAT\nto test the alignment", Align.Right);
+			createText(flow, "MULTICENTER: It is a text with a new line added after THAT\nto test the alignment", Align.MultilineCenter);
+			createText(flow, "MULTIRIGHT: It is a text with a new line added after THAT\nto test the alignment", Align.MultilineRight);
+		}
+
 		onResize();
 	}
 
