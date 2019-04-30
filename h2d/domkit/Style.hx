@@ -31,8 +31,15 @@ class Style extends domkit.CssStyle {
 
 	override function onInvalidProperty(e:domkit.Element<Dynamic>, s:domkit.CssStyle.RuleStyle, msg:String) {
 		if( errors != null ) {
+			var path = s.p.name;
+			var ee = e;
+			while(ee != null) {
+				path = (ee.id != null ? "#" + ee.id : ee.component.name) + "." + path;
+				ee = ee.parent;
+			}
+
 			if( msg == null ) msg = "Invalid property value '"+(domkit.CssParser.valueStr(s.value))+"'";
-			errors.push(msg+" for "+e.component.name+"."+s.p.name);
+			errors.push(msg+" for " + path);
 		}
 	}
 
