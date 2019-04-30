@@ -36,6 +36,8 @@ class CacheFile extends Cache {
 	// sources
 	var compiledSources : Map<String,{ vertex : String, fragment : String }> = new Map();
 	var allSources : Map<String,String> = new Map();
+	
+	public var allowSave = #if usesys false #else true #end;
 
 	public function new( allowCompile, recompileRT = false ) {
 		super();
@@ -409,6 +411,8 @@ class CacheFile extends Cache {
 	}
 
 	function save() {
+		if( !allowSave ) return;
+		
 		var out = new haxe.io.BytesOutput();
 		out.writeInt32(1); // version
 
@@ -537,7 +541,6 @@ class CacheFile extends Cache {
 		writeString(null);
 
 		sys.io.File.saveBytes(sourceFile, out.getBytes());
-
 	}
 
 	/**
