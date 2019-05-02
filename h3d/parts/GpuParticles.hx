@@ -494,7 +494,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 	override function onRemove() {
 		super.onRemove();
 		for( p in primitives )
-			if( p != null ) p.decref();
+			if( p != null ) p.dispose();
 	}
 
 	override function getBoundsRec(b:h3d.col.Bounds) {
