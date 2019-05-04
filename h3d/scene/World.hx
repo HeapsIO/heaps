@@ -84,6 +84,14 @@ class WorldModelGeometry {
 	}
 }
 
+enum OptAlgorithm {
+	None;
+	/**
+		Sort triangles by Z descending
+	**/
+	TopDown;
+}
+
 class WorldModel {
 	public var r : hxd.res.Model;
 	public var stride : Int;
@@ -98,6 +106,66 @@ class WorldModel {
 		this.geometries = [];
 		bounds = new h3d.col.Bounds();
 	}
+
+	public function optimize( algo : OptAlgorithm ) {
+		switch( algo ) {
+		case None:
+		case TopDown:
+			var vertexCount = Std.int(buf.length/stride);
+			var vertexRemap = new haxe.ds.Vector(vertexCount);
+			var indexRemap = new hxd.IndexBuffer(idx.length);
+			var vidx = 0;
+			var iidx = 0;
+			for( i in 0...vertexCount )
+				vertexRemap[i] = -1;
+			for( g in geometries ) {
+				var triCount = Std.int(g.indexCount/3);
+				var triZ = new Array<Float>();
+				var triIndexes = new Array<Int>();
+				if( g.startIndex != iidx ) throw "assert";
+				triZ[triCount-1] = 0;
+				triIndexes[triCount-1] = 0;
+				for( i in 0...triCount ) {
+					var base = g.startIndex + i*3;
+					var z1 = buf[idx[base++] * stride + 2];
+					var z2 = buf[idx[base++] * stride + 2];
+					var z3 = buf[idx[base++] * stride + 2];
+					var zmin = z1;
+					if( z2 < zmin ) zmin = z2;
+					if( z3 < zmin ) zmin = z3;
+					triIndexes[i] = i;
+					triZ[i] = zmin;
+				}
+				haxe.ds.ArraySort.sort(triIndexes, function(i1,i2) {
+					return triZ[i1] < triZ[i2] ? 1 : -1;
+				});
+				for( i in 0...triCount ) {
+					var i2 = triIndexes[i];
+					var base = g.startIndex + i2 * 3;
+					for( j in 0...3 ) {
+						var v = idx[base++];
+						var nv = vertexRemap[v];
+						if( nv < 0 ) {
+							nv = vidx++;
+							vertexRemap[v] = nv;
+						}
+						indexRemap[iidx++] = nv;
+					}
+				}
+			}
+			var bufRemap = new hxd.FloatBuffer(vertexCount*stride);
+			for( v in 0...vertexCount ) {
+				var nv = vertexRemap[v];
+				var readPos = v * stride;
+				var writePos = nv * stride;
+				for( i in 0...stride )
+					bufRemap[writePos++] = buf[readPos++];
+			}
+			this.idx = indexRemap;
+			this.buf = bufRemap;
+		}
+	}
+
 }
 
 class World extends Object {
