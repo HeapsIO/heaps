@@ -5,7 +5,15 @@ class FileEntry {
 	public var name(default, null) : String;
 	public var path(get, never) : String;
 	public var directory(get, never) : String;
+	/**
+		Real extension of file referenced by FileEntry in lowercase.
+	**/
 	public var extension(get, never) : String;
+	/**
+		Full extension chain of file referenced by FileEntry in lowercase.  
+		For `file.extra.ext` it will return full extension chain - `extra.ext` while `extension` property will return only `ext`.
+	**/
+	public var fullExtension(get, never) : String;
 	public var size(get, never) : Int;
 	public var isDirectory(get, never) : Bool;
 	public var isAvailable(get, never) : Bool;
@@ -37,13 +45,17 @@ class FileEntry {
 	function get_path() : String { throw "path() not implemented"; return null; };
 
 	function get_directory() {
-		var p = path.split("/");
-		p.pop();
-		return p.join("/");
+		var idx = path.lastIndexOf("/");
+		return idx == -1 ? "" : path.substr(0, idx);
 	}
 
 	function get_extension() {
-		var np = name.split(".");
-		return np.length == 1 ? "" : np.pop().toLowerCase();
+		var idx = name.lastIndexOf(".");
+		return idx == -1 ? "" : name.substr(idx+1).toLowerCase();
+	}
+
+	function get_fullExtension() {
+		var idx = name.indexOf(".");
+		return idx == -1 ? "" : name.substr(idx+1).toLowerCase();
 	}
 }

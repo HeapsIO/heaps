@@ -460,8 +460,12 @@ class LocalFileSystem implements FileSystem {
 	}
 
 	function convert( e : LocalEntry ) {
-		var ext = e.extension;
+		var ext = e.fullExtension;
 		var conv = converts.get(ext);
+		if ( conv == null ) {
+			ext = e.extension;
+			conv = converts.get(ext);
+		}
 		if( conv == null )
 			return;
 		if (e.convertedFile == null) {
