@@ -293,7 +293,7 @@ private class LocalEntry extends FileEntry {
 			WATCH_LIST.push(this);
 		}
 		watchTime = getModifTime();
-		watchCallback = function() { fs.convert(this); onChanged(); }
+		watchCallback = function() { fs.convert(this, true); onChanged(); }
 	}
 
 }
@@ -459,7 +459,7 @@ class LocalFileSystem implements FileSystem {
 		#end
 	}
 
-	function convert( e : LocalEntry ) {
+	function convert( e : LocalEntry, ?reloading : Bool ) {
 		var ext = e.extension;
 		var conv = converts.get(ext);
 		if( conv == null )
@@ -553,13 +553,24 @@ class LocalFileSystem implements FileSystem {
 		}
 		#end
 
+		var conversionFailed = false;
+
 		if( !skipConvert ) {
 			onConvert(e);
 			conv.srcPath = realFile;
 			conv.dstPath = tmpFile;
 			conv.srcBytes = content;
 			conv.srcFilename = e.name;
-			conv.convert();
+			if (reloading) {
+				try {
+					conv.convert();
+				} catch (e : Dynamic) {
+					trace("File conversion failed: " + realFile);
+					conversionFailed = true;
+				}
+			} else {
+				conv.convert();
+			}
 			conv.srcPath = null;
 			conv.dstPath = null;
 			conv.srcBytes = null;
@@ -569,8 +580,11 @@ class LocalFileSystem implements FileSystem {
 			#end
 		}
 
-		hxd.File.saveBytes(tmpDir + "hashes.json", haxe.io.Bytes.ofString(haxe.Json.stringify(hashes, "\t")));
-		updateTime();
+		if (!conversionFailed) {
+			hxd.File.saveBytes(tmpDir + "hashes.json", haxe.io.Bytes.ofString(haxe.Json.stringify(hashes, "\t")));
+			updateTime();
+		}
+
 	}
 
 	public function dir( path : String ) : Array<FileEntry> {
