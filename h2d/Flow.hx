@@ -924,9 +924,11 @@ class Flow extends Object {
 			}
 
 			var xmin = paddingLeft + borderWidth;
-			var xmax = hxd.Math.imax(xmin + maxChildW, realMinWidth - (paddingRight + borderWidth));
 			var ymin = paddingTop + borderWidth;
-			var ymax = hxd.Math.imax(ymin + maxChildH, realMinHeight - (paddingBottom + borderWidth));
+			var xmax = if(realMaxWidth > 0 && overflow) Math.floor(realMaxWidth - (paddingRight + borderWidth))
+				else hxd.Math.imax(xmin + maxChildW, realMinWidth - (paddingRight + borderWidth));
+			var ymax = if(realMaxWidth > 0 && overflow) Math.floor(realMaxHeight - (paddingBottom + borderWidth))
+				else hxd.Math.imax(ymin + maxChildH, realMinHeight - (paddingBottom + borderWidth));
 			cw = xmax + paddingRight + borderWidth;
 			ch = ymax + paddingBottom + borderWidth;
 
