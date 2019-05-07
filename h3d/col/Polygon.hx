@@ -1,5 +1,6 @@
 package h3d.col;
 
+@:allow(h3d.col.Polygon)
 class TriPlane implements Collider {
 
 	public var next : TriPlane = null;
@@ -210,6 +211,19 @@ class Polygon implements Collider {
 			t = t.next;
 		}
 		return ret;
+	}
+
+	public function getBounds(?bnds: h3d.col.Bounds) : h3d.col.Bounds {
+		if(bnds == null) bnds = new h3d.col.Bounds();
+		bnds.empty();
+		var t = triPlanes;
+		while( t != null ) {
+			bnds.addPos(t.p0x, t.p0y, t.p0z);
+			bnds.addPos(t.d1x + t.p0x, t.d1y + t.p0y, t.d1z + t.p0z);
+			bnds.addPos(t.d2x + t.p0x, t.d2y + t.p0y, t.d2z + t.p0z);
+			t = t.next;
+		}
+		return bnds;
 	}
 
 	public function contains( p : Point ) {
