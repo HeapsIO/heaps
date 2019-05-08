@@ -5,6 +5,7 @@ enum CacheFilePlatform {
 	OpenGL;
 	PS4;
 	XBoxOne;
+	NX;
 }
 
 private class CustomCacheFile extends CacheFile {
@@ -45,6 +46,7 @@ private class CustomCacheFile extends CacheFile {
 		case OpenGL: "gl";
 		case PS4: "ps4";
 		case XBoxOne: "xboxone";
+		case NX: "nx";
 		};
 	}
 
@@ -144,6 +146,12 @@ class CacheFileBuilder {
 			sys.FileSystem.deleteFile(tmpSrc);
 			sys.FileSystem.deleteFile(tmpOut);
 			return code + binaryPayload(data);
+		case NX:
+			#if hlnx
+			if( rd.vertex )
+				glout = new haxe.GlslOut();
+			return glout.run(rd.data);
+			#end
 		}
 		throw "Missing implementation for " + platform;
 	}
@@ -183,6 +191,8 @@ class CacheFileBuilder {
 				builder.platforms.push(PS4);
 			case "-xbox":
 				builder.platforms.push(XBoxOne);
+			case "-nx":
+				builder.platforms.push(NX);
 			default:
 				throw "Unknown parameter " + f;
 			}
