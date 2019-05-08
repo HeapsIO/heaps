@@ -36,7 +36,7 @@ class CacheFile extends Cache {
 	// sources
 	var compiledSources : Map<String,{ vertex : String, fragment : String }> = new Map();
 	var allSources : Map<String,String> = new Map();
-	
+
 	public var allowSave = #if usesys false #else true #end;
 
 	public function new( allowCompile, recompileRT = false ) {
@@ -412,7 +412,7 @@ class CacheFile extends Cache {
 
 	function save() {
 		if( !allowSave ) return;
-		
+
 		var out = new haxe.io.BytesOutput();
 		out.writeInt32(1); // version
 
@@ -706,7 +706,7 @@ class CacheFile extends Cache {
 	function addNewShader( s : RuntimeShader ) {
 		if( runtimeShaders.indexOf(s) < 0 )
 			runtimeShaders.push(s);
-		addSource(s);
+		if( allowSave ) addSource(s);
 		for( i in s.spec.instances ) {
 			var inst = shaders.get(i.shader.data.name);
 			if( inst == null ) {
