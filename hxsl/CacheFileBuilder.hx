@@ -16,7 +16,11 @@ private class CustomCacheFile extends CacheFile {
 	public function new(build) {
 		this.build = build;
 		super(true, true);
+	}
+	
+	override function load() {
 		allowSave = true;
+		super.load();
 	}
 
 	override function addSource(r:RuntimeShader) {
