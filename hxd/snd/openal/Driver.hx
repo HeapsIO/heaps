@@ -155,6 +155,7 @@ class Driver implements hxd.snd.Driver {
 				AL.sourcei(source.inst, AL.SAMPLE_OFFSET, sampleStart);
 				source.sampleOffset = -sampleStart;
 			} else {
+				AL.sourcei(source.inst, AL.SAMPLE_OFFSET, 0);
 				source.sampleOffset = 0;
 			}
 			if (source.playing)
