@@ -43,7 +43,7 @@ class App implements h3d.IDrawable {
 			haxe.Timer.delay(setup, 0);
 		} else {
 			hxd.System.start(function() {
-				this.engine = engine = new h3d.Engine();
+				this.engine = engine = @:privateAccess new h3d.Engine();
 				engine.onReady = setup;
 				engine.init();
 			});

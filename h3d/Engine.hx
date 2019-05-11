@@ -51,11 +51,14 @@ class Engine {
 	var textureColorCache = new Map<Int,h3d.mat.Texture>();
 	public var ready(default,null) = false;
 	@:allow(hxd.res) var resCache = new Map<{},Dynamic>();
+	
+	public static var SOFTWARE_DRIVER = false;
+	public static var ANTIALIASING = 0;
 
 	@:access(hxd.Window)
-	public function new( hardware = true, aa = 0 ) {
-		this.hardware = hardware;
-		this.antiAlias = aa;
+	function new() {
+		this.hardware = !SOFTWARE_DRIVER;
+		this.antiAlias = ANTIALIASING;
 		this.autoResize = true;
 		fullScreen = !hxd.System.getValue(IsWindowed);
 		window = hxd.Window.getInstance();
