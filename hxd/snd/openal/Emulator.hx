@@ -174,7 +174,13 @@ class Buffer {
 **/
 class Emulator {
 
-	public static var NATIVE_FREQ : Int = #if js @:privateAccess Std.int(NativeChannel.getContext() == null ? 44100 : NativeChannel.getContext().sampleRate) #else 44100 #end;
+	public static var NATIVE_FREQ(get,never) : Int;
+	static var CACHED_FREQ : Null<Int>;
+	static function get_NATIVE_FREQ() {
+		if( CACHED_FREQ == null )
+			CACHED_FREQ = #if js @:privateAccess Std.int(NativeChannel.getContext() == null ? 44100 : NativeChannel.getContext().sampleRate) #else 44100 #end;
+		return CACHED_FREQ;
+	}
 
 	// api
 
@@ -845,8 +851,8 @@ class EFX {
 	public static inline var METERS_PER_UNIT                       = 0x20004;
 
 	// Source properties.
-	public static inline var DIRECT_FILTER                         = 0x20005;	
+	public static inline var DIRECT_FILTER                         = 0x20005;
 	public static inline var FILTER_NULL                           = 0x0000;
-	
+
 }
 
