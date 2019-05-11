@@ -338,9 +338,9 @@ class Text extends Drawable {
 			w = calcWidth;
 			h = calcSizeHeight;
 		} else {
-			x = realMaxWidth >= 0 ? 0 : calcXMin;
+			x = calcXMin;
 			y = calcYMin;
-			w = realMaxWidth >= 0 ? realMaxWidth : calcWidth;
+			w = calcWidth;
 			h = calcHeight - calcYMin;
 		}
 		addBounds(relativeTo, out, x, y, w, h);
