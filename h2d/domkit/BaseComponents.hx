@@ -388,7 +388,15 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	static function set_textShadow( t : h2d.Text, v ) {
 		t.dropShadow = v;
 	}
+}
 
+@:uiComp("html-text")
+class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2d.HtmlText> {
+	@:p var condenseWhite : Bool;
+
+	static function create( parent : h2d.Object ) {
+		return new h2d.HtmlText(hxd.res.DefaultFont.get(),parent);
+	}
 }
 
 
@@ -487,7 +495,10 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 		var bg = @:privateAccess o.background;
 		if(bg == null)
 			return;
-		bg.color.load(v);
+		if(v == null)
+			bg.color.set(1,1,1,1);
+		else
+			bg.color.load(v);
 	}
 
 	static function set_padding( o : h2d.Flow, v ) {
