@@ -740,7 +740,7 @@ class CacheFile extends Cache {
 			// shader was selected by not compiled by driver, let's force-compile it by hand!
 			if( s.vertex.code == null || s.fragment.code == null ) {
 				var engine = h3d.Engine.getCurrent();
-				if( engine == null ) engine = new h3d.Engine();
+				if( engine == null ) engine = @:privateAccess new h3d.Engine();
 				engine.driver.selectShader(s);
 			}
 			if( s.vertex.code == null || s.fragment.code == null )
