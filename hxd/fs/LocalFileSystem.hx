@@ -179,7 +179,7 @@ class LocalEntry extends FileEntry {
 			WATCH_LIST.push(this);
 		}
 		watchTime = getModifTime();
-		watchCallback = function() { fs.convert.run(this, true); onChanged(); }
+		watchCallback = function() { fs.convert.run(this); onChanged(); }
 	}
 
 }
@@ -195,7 +195,6 @@ class LocalFileSystem implements FileSystem {
 		baseDir = dir;
 		if( configuration == null )
 			configuration = "default";
-		convert = new FileConverter(dir, configuration);
 
 		#if (macro && haxe_ver >= 4.0)
 		var exePath = null;
@@ -215,6 +214,7 @@ class LocalFileSystem implements FileSystem {
 		}
 		baseDir = froot.split("\\").join("/");
 		if( !StringTools.endsWith(baseDir, "/") ) baseDir += "/";
+		convert = new FileConverter(baseDir, configuration);
 		root = new LocalEntry(this, "root", null, baseDir);
 	}
 

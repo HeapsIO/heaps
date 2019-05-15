@@ -135,7 +135,7 @@ class FileTree {
 		var tree = scan();
 		for( path in paths ) {
 			var fs = new hxd.fs.LocalFileSystem(path,options.configuration);
-			fs.convert.onConvert = function(f) Sys.println("Converting " + f.path);
+			fs.convert.onConvert = function(c) Sys.println("Converting " + c.srcPath);
 			embedRec(tree, path, fs);
 		}
 		return { tree : tree, types : embedTypes };
