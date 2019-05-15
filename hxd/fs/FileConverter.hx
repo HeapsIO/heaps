@@ -2,152 +2,272 @@ package hxd.fs;
 
 #if (sys || nodejs)
 
+typedef ConvertConfig = {
+	var obj : Dynamic;
+	var rules : Array<ConvertRule>;
+}
+
+typedef ConvertRule = { pt : ConvertPattern, cmd : ConvertCommand };
+
+enum ConvertPattern {
+	Filename( name : String );
+	Regexp( r : EReg );
+	Ext( e : String );
+}
+
+typedef ConvertCommand = {
+	var conv : Array<Convert>;
+	var ?params : Dynamic;
+	var ?paramsStr : String;
+	var ?then : ConvertCommand;
+}
+
 class FileConverter {
 
 	public var configuration(default,null) : String;
 
 	var baseDir : String;
 	var tmpDir : String;
+	var configs : Map<String,ConvertConfig> = new Map();
+	var defaultConfig : ConvertConfig;
+	var cache : Map<String,Array<{ out : String, time : Int, hash : String  }>>;
 
 	public function new(baseDir,configuration) {
 		this.baseDir = baseDir;
 		this.configuration = configuration;
-
-		tmpDir = baseDir + ".tmp/";
-		try sys.FileSystem.createDirectory(tmpDir) catch( e : Dynamic ) {};
+		tmpDir = ".tmp/";
+		// this is the default converts config, it can be override in per-directory props.json
+		defaultConfig = makeConfig({
+			"fs.convert" : {
+				"wav" : "ogg",
+				"fbx" : "hmd",
+				"tga" : "png",
+				"fnt" : "bfnt",
+			}
+		});
 	}
 
-	public dynamic function onConvert( e : FileEntry ) {
+	public dynamic function onConvert( c : Convert ) {
 	}
 
-	var times : Map<String,Int>;
-	var hashes : Dynamic;
-	var addedPaths = new Map<String,Bool>();
+	function makeConfig( obj : Dynamic ) {
+		var cfg : ConvertConfig = {
+			obj : obj,
+			rules : [],
+		};
+		var def = Reflect.field(obj,"fs.convert");
+		var conf = Reflect.field(obj,"fs.convert."+configuration);
+		var merge = mergeRec(def, conf);
+		for( f in Reflect.fields(merge) ) {
+			var cmd = makeCommmand(Reflect.field(merge,f));
+			var pt = if( f.charCodeAt(0) == "^".code ) Regexp(new EReg(f,"")) else if( ~/^[a-zA-Z0-9]+/.match(f) ) Ext(f.toLowerCase()) else Filename(f);
+			cfg.rules.push({ pt : pt, cmd : cmd });
+		}
+		cfg.rules.sort(sortByRulePiority);
+		return cfg;
+	}
+
+	static function sortByRulePiority( r1 : ConvertRule, r2 : ConvertRule ) {
+		return r1.pt.getIndex() - r2.pt.getIndex();
+	}
+
+	function loadConvert( name : String ) {
+		var c = @:privateAccess Convert.converts.get(name);
+		if( c == null ) throw "No convert has been registered with name/extension '"+name+"'";
+		return c;
+	}
+
+	function makeCommmand( obj : Dynamic ) : ConvertCommand {
+		if( Std.is(obj,String) )
+			return { conv : loadConvert(obj) };
+		if( obj.convert == null )
+			throw "Missing 'convert' in "+obj;
+		var cmd : ConvertCommand = { conv : loadConvert(obj.convert) };
+		for( f in Reflect.fields(obj) ) {
+			var value : Dynamic = Reflect.field(obj,f);
+			switch( f ) {
+			case "convert": //
+			case "then": cmd.then = makeCommmand(value);
+			default:
+				if( cmd.params == null ) cmd.params = {};
+				if( Reflect.isObject(value) && !Std.is(value,String) ) throw "Invalid parameter value "+f+"="+value;
+				Reflect.setField(cmd.params, f, value);
+			}
+		}
+		if( cmd.params != null ) {
+			var fl = Reflect.fields(cmd.params);
+			fl.sort(Reflect.compare);
+			cmd.paramsStr = [for( f in fl ) f+"_"+Reflect.field(cmd.params,f)].join("_");
+		}
+		return cmd;
+	}
+
+	function mergeRec( a : Dynamic, b : Dynamic ) {
+		if( b == null ) return a;
+		if( a == null ) return b;
+		var cp = {};
+		for( f in Reflect.fields(a) ) {
+			var va = Reflect.field(a,f);
+			if( Reflect.hasField(b,f) ) {
+				var vb = Reflect.field(b,f);
+				if( Reflect.isObject(vb) ) vb = mergeRec(va,vb);
+				Reflect.setField(cp,f,vb);
+				continue;
+			}
+			Reflect.setField(cp,f,va);
+		}
+		for( f in Reflect.fields(b) )
+			if( !Reflect.hasField(cp,f) )
+				Reflect.setField(cp, f, Reflect.field(b,f));
+		return cp;
+	}
 
 	function getFileTime( filePath : String ) : Float {
 		return sys.FileSystem.stat(filePath).mtime.getTime();
 	}
 
-	public function run( e : LocalFileSystem.LocalEntry, ?reloading : Bool ) {
-		/*
-		var ext = e.extension;
-		var conv = converts.get(ext);
-		if( conv == null )
+	function loadConfig( dir : String ) : ConvertConfig {
+		var c = configs.get(dir);
+		if( c != null ) return c;
+		var dirPos = dir.lastIndexOf("/");
+		var parent = dir == "" ? defaultConfig : loadConfig(dirPos < 0 ? "" : dir.substr(0,dirPos));
+		var propsFile = (dir == "" ? baseDir : baseDir + dir + "/")+"props.json";
+		if( !sys.FileSystem.exists(propsFile) ) {
+			c = parent;
+		} else {
+			var content = sys.io.File.getContent(propsFile);
+			var obj = try haxe.Json.parse(content) catch( e : Dynamic ) throw "Failed to parse "+propsFile+"("+e+")";
+			var fullObj = mergeRec(parent.obj, obj);
+			c = makeConfig(fullObj);
+		}
+		configs.set(dir, c);
+		return c;
+	}
+
+	function getConvertRule( path : String ) : ConvertRule {
+		var dirPos = path.lastIndexOf("/");
+		var cfg = loadConfig(dirPos < 0 ? "" : path.substr(0,dirPos));
+		var name = dirPos < 0 ? path : path.substr(dirPos + 1);
+		var ext = name.split(".").pop().toLowerCase();
+		for( r in cfg.rules )
+			switch( r.pt ) {
+			case Filename(f): if( name == f ) return r;
+			case Regexp(reg): if( reg.match(name) || reg.match(path) ) return r;
+			case Ext(e): if( ext == e ) return r;
+			}
+		return null;
+	}
+
+	public function run( e : LocalFileSystem.LocalEntry ) {
+		var rule = getConvertRule(e.path);
+		if( rule == null )
 			return;
 		if( e.originalFile == null )
 			e.originalFile = e.file;
+		else
+			e.file = e.originalFile;
+		e.file = e.file.substr(baseDir.length);
+		runConvert(e, rule.cmd, rule.pt.match(Ext(_)));
+	}
 
-		var path = e.path;
-		var tmpFile = tmpDir + path.substr(0, -ext.length) + conv.destExt;
+	function runConvert( e : LocalFileSystem.LocalEntry, cmd : ConvertCommand, replaceExt : Bool = false ) {
+		var outFile = tmpDir;
+		var ext = e.extension;
+		if( replaceExt )
+			outFile += e.path.substr(0, -(ext.length + 1));
+		else
+			outFile += e.path;
+		if( cmd.paramsStr != null )
+			outFile += "."+cmd.paramsStr;
+		var conv = null;
+		for( c in cmd.conv )
+			if( c.sourceExt == ext ) {
+				conv = c;
+				break;
+			}
+		if( conv == null )
+			throw "No converter is registered that can convert "+e.path+" to "+cmd.conv[0].destExt;
+		outFile += "."+conv.destExt;
+		convertAndCache(e, outFile, conv, cmd.params);
+		if( cmd.then != null ) {
+			e.file = outFile;
+			runConvert(e, cmd.then);
+		}
+		e.file = baseDir + outFile;
+	}
 
-		e.file = tmpFile;
+	function convertAndCache( e : LocalFileSystem.LocalEntry, outFile : String, conv : Convert, params : Dynamic ) {
+		if( cache == null )
+			cache = try haxe.Unserializer.run(sys.io.File.getContent(baseDir + tmpDir + "cache.dat")) catch( e : Dynamic ) new Map();
+		var entry = cache.get(e.file);
+		var needInsert = false;
+		if( entry == null ) {
+			entry = [];
+			needInsert = true;
+		}
+		function saveCache() {
+			if( needInsert ) cache.set(e.file, entry);
+			sys.FileSystem.createDirectory(baseDir + tmpDir);
+			sys.io.File.saveContent(baseDir + tmpDir + "cache.dat", haxe.Serializer.run(cache));
+		}
 
-		if( times == null ) {
-			times = try haxe.Unserializer.run(hxd.File.getBytes(tmpDir + "times.dat").toString()) catch( e : Dynamic ) new Map<String,Int>();
-		}
-		var realFile = baseDir + path;
-		if( !hxd.File.exists(realFile) ) {
-			return;
-		}
-		var time = std.Math.floor(getFileTime(realFile) / 1000);
-		if( hxd.File.exists(tmpFile) && time == times.get(path) )
-			return;
-		if( hashes == null ) {
-			hashes = try haxe.Json.parse(hxd.File.getBytes(tmpDir + "hashes.json").toString()) catch( e : Dynamic ) {};
-		}
-		var root : Dynamic = hashes;
-		var topDir = new haxe.io.Path(path).dir;
-		if( topDir != null ) {
-			for( p in topDir.split("/") ) {
-				var f = Reflect.field(root, p);
-				if( f == null ) {
-					f = {};
-					Reflect.setField(root, p, f);
-				}
-				root = f;
+		var match = null;
+		for( e in entry ) {
+			if( e.out == outFile ) {
+				match = e;
+				break;
 			}
 		}
-		var content = hxd.File.getBytes(realFile);
+		if( match == null ) {
+			match = {
+				out : outFile,
+				time : 0,
+				hash : "",
+			};
+			entry.push(match);
+		}
+		var fullPath = baseDir + e.file;
+		var fullOutPath = baseDir + outFile;
+
+		if( !sys.FileSystem.exists(fullPath) ) throw "Missing "+fullPath;
+
+		var time = std.Math.floor(getFileTime(fullPath) / 1000);
+		var alreadyGen = sys.FileSystem.exists(fullOutPath);
+
+		if( match.time == time && alreadyGen )
+			return; // not changed (time stamp)
+
+		var content = hxd.File.getBytes(fullPath);
 		var hash = haxe.crypto.Sha1.make(content).toHex();
-		function updateTime() {
-			times.set(path, time);
-			hxd.File.saveBytes(tmpDir + "times.dat", haxe.io.Bytes.ofString(haxe.Serializer.run(times)));
+		if( match.hash == hash && alreadyGen ) {
+			match.time = time;
+			saveCache();
+			return; // not changed (hash)
 		}
 
-		if( hxd.File.exists(tmpFile) && hash == Reflect.field(root, e.name) ) {
-			updateTime();
-			return;
-		}
+		sys.FileSystem.createDirectory(fullOutPath.substr(0, fullOutPath.lastIndexOf("/")));
 
-		Reflect.setField(root, e.name, hash);
+		conv.srcPath = fullPath;
+		conv.dstPath = fullOutPath;
+		conv.srcBytes = content;
+		conv.originalFilename = e.name;
+		conv.params = params;
+		onConvert(conv);
+		conv.convert();
+		conv.srcPath = null;
+		conv.dstPath = null;
+		conv.srcBytes = null;
+		conv.originalFilename = null;
+		#if !macro
+		hxd.System.timeoutTick();
+		#end
 
-		var skipConvert = false;
+		if( !sys.FileSystem.exists(fullOutPath) )
+			throw "Converted output file "+fullOutPath+" was not created";
 
-		// prepare output dir
-		var parts = path.split("/");
-		parts.pop();
-		for( i in 0...parts.length ) {
-			var path = parts.slice(0, i + 1).join("/");
-			sys.FileSystem.createDirectory(tmpDir + path);
-		}
-
-		// previous repo compatibility
-		if( !sys.FileSystem.exists(tmpFile) ) {
-			var oldPath = tmpDir + "R_" + ~/[^A-Za-z0-9_]/g.replace(path, "_") + "." + conv.destExt;
-			if( sys.FileSystem.exists(oldPath) && sys.FileSystem.exists(".svn") ) {
-				oldPath = sys.FileSystem.fullPath(oldPath).split("\\").join("/"); // was wrong case !
-				var cwd = Sys.getCwd();
-				inline function command(cmd) {
-					Sys.println("> "+cmd);
-					var code = Sys.command(cmd);
-					if( code != 0 )
-						throw "Command '" + cmd + "' failed with exit code " + code;
-				}
-				var parts = path.split("/");
-				parts.pop();
-				for( i in 0...parts.length ) {
-					var path = parts.slice(0, i + 1).join("/");
-					if( addedPaths.exists(path) ) continue;
-					addedPaths.set(path, true);
-					try command("svn add " + tmpDir.substr(cwd.length) + path) catch( e : Dynamic ) {};
-				}
-				command("svn move " + oldPath.substr(cwd.length) + " " + tmpFile.substr(cwd.length));
-				skipConvert = true;
-			}
-		}
-
-		var conversionFailed = false;
-
-		if( !skipConvert ) {
-			onConvert(e);
-			conv.srcPath = realFile;
-			conv.dstPath = tmpFile;
-			conv.srcBytes = content;
-			conv.srcFilename = e.name;
-			if (reloading) {
-				try {
-					conv.convert();
-				} catch (e : Dynamic) {
-					trace("File conversion failed: " + realFile);
-					conversionFailed = true;
-				}
-			} else {
-				conv.convert();
-			}
-			conv.srcPath = null;
-			conv.dstPath = null;
-			conv.srcBytes = null;
-			conv.srcFilename = null;
-			#if !macro
-			hxd.System.timeoutTick();
-			#end
-		}
-
-		if (!conversionFailed) {
-			hxd.File.saveBytes(tmpDir + "hashes.json", haxe.io.Bytes.ofString(haxe.Json.stringify(hashes, "\t")));
-			updateTime();
-		}
-		*/
+		match.time = time;
+		match.hash = hash;
+		saveCache();
 	}
 
 }
