@@ -1,38 +1,7 @@
 package hxd.fs;
 
+@:keep @:keepSub
 class Convert {
-
-	/**
-		Custom list of converts that should be used in FileSystem.
-		Should be added in hxml `--macro` to ensure proper function.
-		Example of adding a Convert:
-		```haxe
-		static function initCustomConverts() {
-			hxd.fs.Convert.converts.push("path.to.my.Convert");
-			hxd.fs.Convert.converts.push("path.to.my.OtherConvert");
-		}
-		```
-		Adn in hxml:
-		`--macro path.to.my.MacroScript.initCustomConverts()`
-	**/
-	public static var converts:Array<String> = new Array();
-
-	static macro function getConverts() : haxe.macro.Expr {
-		var exprs:Array<haxe.macro.Expr> = new Array();
-		var pos = haxe.macro.Context.currentPos();
-		
-		for ( p in converts ) {
-			var t = haxe.macro.Context.getType(p);
-			var ct = haxe.macro.TypeTools.toComplexType(t);
-			switch (ct) {
-				case TPath(t):
-					var newExpr : haxe.macro.Expr = { expr: ENew(t, []), pos: pos };
-					exprs.push(macro addConvert($newExpr));
-				default:
-			}
-		}
-		return macro $b{exprs}
-	}
 
 	public var sourceExt(default,null) : String;
 	public var destExt(default,null) : String;
@@ -67,6 +36,18 @@ class Convert {
 		#end
 	}
 
+	static var converts = new Map<String,Array<Convert>>();
+	public static function register( c : Convert ) : Int {
+		var dest = converts.get(c.destExt);
+		if( dest == null ) {
+			dest = [];
+			converts.set(c.destExt, dest);
+		}
+		dest.push(c);
+		return 0;
+	}
+
+
 }
 
 class ConvertFBX2HMD extends Convert {
@@ -85,6 +66,8 @@ class ConvertFBX2HMD extends Convert {
 		new hxd.fmt.hmd.Writer(out).write(hmd);
 		save(out.getBytes());
 	}
+
+	static var _ = register(new ConvertFBX2HMD());
 
 }
 
@@ -116,6 +99,8 @@ class ConvertWAV2MP3 extends Convert {
 		command("lame", ["--resample", "44100", "--silent", "-h", srcPath, dstPath]);
 	}
 
+	static var _ = register(new ConvertWAV2MP3());
+
 }
 
 class ConvertWAV2OGG extends Convert {
@@ -131,6 +116,8 @@ class ConvertWAV2OGG extends Convert {
 		#end
 		command(cmd, ["--resample", "44100", "-Q", srcPath, "-o", dstPath]);
 	}
+
+	static var _ = register(new ConvertWAV2OGG());
 
 }
 
@@ -169,18 +156,20 @@ class ConvertTGA2PNG extends Convert {
 		#end
 	}
 
+	static var _ = register(new ConvertTGA2PNG());
+
 }
 
 class ConvertFNT2BFNT extends Convert {
-	
+
 	var emptyTile : h2d.Tile;
-	
+
 	public function new() {
 		// Fake tile create subs before discarding the font.
 		emptyTile = @:privateAccess new h2d.Tile(null, 0, 0, 0, 0, 0, 0);
 		super("fnt", "bfnt");
 	}
-	
+
 	override public function convert()
 	{
 		var font = hxd.fmt.bfnt.FontParser.parse(srcBytes, srcPath, resolveTile);
@@ -188,11 +177,14 @@ class ConvertFNT2BFNT extends Convert {
 		new hxd.fmt.bfnt.Writer(out).write(font);
 		save(out.getBytes());
 	}
-	
+
 	function resolveTile( path : String ) : h2d.Tile {
 		#if sys
 		if (!sys.FileSystem.exists(path)) throw "Could not resolve BitmapFont texture reference at path: " + path;
 		#end
 		return emptyTile;
 	}
+
+	static var _ = register(new ConvertFNT2BFNT());
+
 }

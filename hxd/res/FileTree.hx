@@ -128,19 +128,13 @@ class FileTree {
 
 	public function embed(options:EmbedOptions) {
 		if( options == null ) options = { };
-		// if the OGG library is detected, compress as OGG by default, unless compressAsMp3 is set
-		if( options.compressAsMp3 == null ) options.compressAsMp3 = options.compressSounds && !(Context.defined("stb_ogg_sound") || Config.platform == HL);
 		checkTmp = false;
 		this.options = options;
 		embedTypes = [];
 
 		var tree = scan();
 		for( path in paths ) {
-			var fs = new hxd.fs.LocalFileSystem(path);
-			if( options.compressAsMp3 )
-				fs.convert.add(new hxd.fs.Convert.ConvertWAV2MP3());
-			else if( options.compressSounds )
-				fs.convert.add(new hxd.fs.Convert.ConvertWAV2OGG());
+			var fs = new hxd.fs.LocalFileSystem(path,options.configuration);
 			fs.convert.onConvert = function(f) Sys.println("Converting " + f.path);
 			embedRec(tree, path, fs);
 		}

@@ -4,32 +4,17 @@ package hxd.fs;
 
 class FileConverter {
 
+	public var configuration(default,null) : String;
+
 	var baseDir : String;
 	var tmpDir : String;
-	var converts : Map<String, hxd.fs.Convert> = new Map();
 
-	public function new(baseDir) {
+	public function new(baseDir,configuration) {
 		this.baseDir = baseDir;
+		this.configuration = configuration;
 
 		tmpDir = baseDir + ".tmp/";
 		try sys.FileSystem.createDirectory(tmpDir) catch( e : Dynamic ) {};
-
-		add(new Convert.ConvertFBX2HMD());
-		add(new Convert.ConvertTGA2PNG());
-		add(new Convert.ConvertFNT2BFNT());
-
-		#if macro
-		// In macro context just resolve classes.
-		for ( p in Convert.converts ) {
-			add(Type.createInstance(Type.resolveClass(p), []));
-		}
-		#else
-		@:privateAccess Convert.getConverts();
-		#end
-	}
-
-	public function add( c : Convert ) {
-		converts.set(c.sourceExt, c);
 	}
 
 	public dynamic function onConvert( e : FileEntry ) {
@@ -44,6 +29,7 @@ class FileConverter {
 	}
 
 	public function run( e : LocalFileSystem.LocalEntry, ?reloading : Bool ) {
+		/*
 		var ext = e.extension;
 		var conv = converts.get(ext);
 		if( conv == null )
@@ -161,7 +147,7 @@ class FileConverter {
 			hxd.File.saveBytes(tmpDir + "hashes.json", haxe.io.Bytes.ofString(haxe.Json.stringify(hashes, "\t")));
 			updateTime();
 		}
-
+		*/
 	}
 
 }
