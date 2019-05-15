@@ -191,9 +191,11 @@ class LocalFileSystem implements FileSystem {
 	public var baseDir(default,null) : String;
 	public var convert(default,null) : FileConverter;
 
-	public function new( dir : String ) {
+	public function new( dir : String, configuration : String ) {
 		baseDir = dir;
-		convert = new FileConverter(dir);
+		if( configuration == null )
+			configuration = "default";
+		convert = new FileConverter(dir, configuration);
 
 		#if (macro && haxe_ver >= 4.0)
 		var exePath = null;
