@@ -7,7 +7,7 @@ typedef ConvertConfig = {
 	var rules : Array<ConvertRule>;
 }
 
-typedef ConvertRule = { pt : ConvertPattern, cmd : ConvertCommand };
+typedef ConvertRule = { pt : ConvertPattern, cmd : ConvertCommand, priority : Int };
 
 enum ConvertPattern {
 	Filename( name : String );
@@ -61,33 +61,39 @@ class FileConverter {
 		for( f in Reflect.fields(merge) ) {
 			var cmd = makeCommmand(Reflect.field(merge,f));
 			var pt = if( f.charCodeAt(0) == "^".code ) Regexp(new EReg(f,"")) else if( ~/^[a-zA-Z0-9]+/.match(f) ) Ext(f.toLowerCase()) else Filename(f);
-			cfg.rules.push({ pt : pt, cmd : cmd });
+			cfg.rules.push({ pt : pt, cmd : cmd.cmd, priority : cmd.priority });
 		}
 		cfg.rules.sort(sortByRulePiority);
 		return cfg;
 	}
 
 	static function sortByRulePiority( r1 : ConvertRule, r2 : ConvertRule ) {
+		if( r1.priority != r2.priority )
+			return r2.priority - r1.priority;
 		return r1.pt.getIndex() - r2.pt.getIndex();
 	}
 
 	function loadConvert( name : String ) {
+		if( name == "" )
+			return null; // disable convert
 		var c = @:privateAccess Convert.converts.get(name);
 		if( c == null ) throw "No convert has been registered with name/extension '"+name+"'";
 		return c;
 	}
 
-	function makeCommmand( obj : Dynamic ) : ConvertCommand {
+	function makeCommmand( obj : Dynamic ) : { cmd : ConvertCommand, priority : Int } {
 		if( Std.is(obj,String) )
-			return { conv : loadConvert(obj) };
+			return { cmd : { conv : loadConvert(obj) }, priority : 0 };
 		if( obj.convert == null )
 			throw "Missing 'convert' in "+obj;
 		var cmd : ConvertCommand = { conv : loadConvert(obj.convert) };
+		var priority = 0;
 		for( f in Reflect.fields(obj) ) {
 			var value : Dynamic = Reflect.field(obj,f);
 			switch( f ) {
 			case "convert": //
-			case "then": cmd.then = makeCommmand(value);
+			case "then": cmd.then = makeCommmand(value).cmd;
+			case "priority": priority = value;
 			default:
 				if( cmd.params == null ) cmd.params = {};
 				if( Reflect.isObject(value) && !Std.is(value,String) ) throw "Invalid parameter value "+f+"="+value;
@@ -99,7 +105,7 @@ class FileConverter {
 			fl.sort(Reflect.compare);
 			cmd.paramsStr = [for( f in fl ) f+"_"+Reflect.field(cmd.params,f)].join("_");
 		}
-		return cmd;
+		return { cmd : cmd, priority : priority };
 	}
 
 	function mergeRec( a : Dynamic, b : Dynamic ) {
@@ -160,12 +166,12 @@ class FileConverter {
 
 	public function run( e : LocalFileSystem.LocalEntry ) {
 		var rule = getConvertRule(e.path);
-		if( rule == null )
-			return;
 		if( e.originalFile == null )
 			e.originalFile = e.file;
 		else
 			e.file = e.originalFile;
+		if( rule == null || rule.cmd == null )
+			return;
 		e.file = e.file.substr(baseDir.length);
 		runConvert(e, rule.cmd, rule.pt.match(Ext(_)));
 	}
