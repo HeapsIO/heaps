@@ -21,7 +21,9 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 		return transform.contains(p);
 	}
 
-	public function inFrustum(p) {
+	public function inFrustum(p, ?m : h3d.Matrix ) {
+		if( m != null )
+			throw "Not implemented";
 		applyTransform();
 		return transform.inFrustum(p);
 	}

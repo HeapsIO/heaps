@@ -225,8 +225,9 @@ class Matrix {
 		_44 = vw;
 	}
 
-	public inline function getScale() {
-		var v = new Vector();
+	public inline function getScale(?v: h3d.Vector) {
+		if(v == null)
+			v = new Vector();
 		v.x = Math.sqrt(_11 * _11 + _12 * _12 + _13 * _13);
 		v.y = Math.sqrt(_21 * _21 + _22 * _22 + _23 * _23);
 		v.z = Math.sqrt(_31 * _31 + _32 * _32 + _33 * _33);

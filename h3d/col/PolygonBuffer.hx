@@ -41,7 +41,7 @@ class PolygonBuffer implements Collider {
 		return true;
 	}
 
-	public function inFrustum( f : Frustum ) {
+	public function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
 		throw "Not implemented";
 		return false;
 	}

@@ -19,7 +19,7 @@ class Point {
 		z *= v;
 	}
 
-	public inline function inFrustum( f : Frustum ) {
+	public inline function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
 		return f.hasPoint(this);
 	}
 
