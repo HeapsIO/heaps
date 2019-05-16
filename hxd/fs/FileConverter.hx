@@ -72,7 +72,7 @@ class FileConverter {
 	}
 
 	function loadConvert( name : String ) {
-		if( name == "" ) return null;
+		if( name == "none" ) return null;
 		var c = @:privateAccess Convert.converts.get(name);
 		if( c == null ) throw "No convert has been registered with name/extension '"+name+"'";
 		return c;
