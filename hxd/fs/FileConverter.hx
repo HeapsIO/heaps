@@ -177,7 +177,7 @@ class FileConverter {
 	function runConvert( e : LocalFileSystem.LocalEntry, cmd : ConvertCommand, replaceExt : Bool = false ) {
 		var outFile = tmpDir;
 		var ext = e.extension;
-		if( replaceExt )
+		if( replaceExt && cmd.paramsStr == null && cmd.then == null )
 			outFile += e.path.substr(0, -(ext.length + 1));
 		else
 			outFile += e.path;
