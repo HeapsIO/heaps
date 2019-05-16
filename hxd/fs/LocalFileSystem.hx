@@ -138,6 +138,7 @@ class LocalEntry extends FileEntry {
 		var t = try w.getModifTime() catch( e : Dynamic ) -1.;
 		if( t == w.watchTime ) return;
 
+		#if sys
 		if( tmpDir == null ) {
 			tmpDir = Sys.getEnv("TEMP");
 			if( tmpDir == null ) tmpDir = Sys.getEnv("TMPDIR");
@@ -150,6 +151,7 @@ class LocalEntry extends FileEntry {
 			var fp = sys.io.File.append(w.file);
 			fp.close();
 		}catch( e : Dynamic ) return;
+		#end
 
 		w.watchTime = t;
 		w.watchCallback();
