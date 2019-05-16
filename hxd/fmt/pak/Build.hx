@@ -9,7 +9,7 @@ class Build {
 
 	public var excludedExt : Array<String> = [];
 	public var resPath : String = "res";
-	public var outPrefix : String = "res";
+	public var outPrefix : String;
 	public var pakDiff = false;
 	public var checkJPG = false;
 	public var checkOGG = false;
@@ -205,6 +205,10 @@ class Build {
 			default:
 				throw "Unknown parameter " + f;
 			}
+		}
+		if( b.outPrefix == null ) {
+			b.outPrefix = "res";
+			if( b.configuration != "default" ) b.outPrefix += "."+b.configuration;
 		}
 		b.makePak();
 	}
