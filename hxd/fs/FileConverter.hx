@@ -40,7 +40,6 @@ class FileConverter {
 		defaultConfig = makeConfig({
 			"fs.convert" : {
 				"fbx" : "hmd",
-				"tga" : "png",
 				"fnt" : "bfnt",
 			}
 		});
