@@ -85,7 +85,7 @@ class Pbr extends SampleApp {
 		light.range = 100;
 		light.power = 2;
 
-		var pbrValues = new h3d.shader.pbr.PropsValues(0.2,0.5,0);
+		var pbrValues = new h3d.shader.pbr.PropsValues(0.2,0.5);
 		hue = 0;
 		saturation = 0;
 		brightness = 0.2;
