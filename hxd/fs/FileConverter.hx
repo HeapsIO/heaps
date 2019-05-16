@@ -39,7 +39,6 @@ class FileConverter {
 		// this is the default converts config, it can be override in per-directory props.json
 		defaultConfig = makeConfig({
 			"fs.convert" : {
-				"wav" : "ogg",
 				"fbx" : "hmd",
 				"tga" : "png",
 				"fnt" : "bfnt",
@@ -60,7 +59,7 @@ class FileConverter {
 		var merge = mergeRec(def, conf);
 		for( f in Reflect.fields(merge) ) {
 			var cmd = makeCommmand(Reflect.field(merge,f));
-			var pt = if( f.charCodeAt(0) == "^".code ) Regexp(new EReg(f,"")) else if( ~/^[a-zA-Z0-9]+/.match(f) ) Ext(f.toLowerCase()) else Filename(f);
+			var pt = if( f.charCodeAt(0) == "^".code ) Regexp(new EReg(f,"")) else if( ~/^[a-zA-Z0-9]+$/.match(f) ) Ext(f.toLowerCase()) else Filename(f);
 			cfg.rules.push({ pt : pt, cmd : cmd.cmd, priority : cmd.priority });
 		}
 		cfg.rules.sort(sortByRulePiority);
@@ -74,8 +73,7 @@ class FileConverter {
 	}
 
 	function loadConvert( name : String ) {
-		if( name == "" )
-			return null; // disable convert
+		if( name == "" ) return null;
 		var c = @:privateAccess Convert.converts.get(name);
 		if( c == null ) throw "No convert has been registered with name/extension '"+name+"'";
 		return c;
@@ -116,7 +114,7 @@ class FileConverter {
 			var va = Reflect.field(a,f);
 			if( Reflect.hasField(b,f) ) {
 				var vb = Reflect.field(b,f);
-				if( Reflect.isObject(vb) ) vb = mergeRec(va,vb);
+				if( Type.typeof(vb) == TObject && Type.typeof(va) == TObject ) vb = mergeRec(va,vb);
 				Reflect.setField(cp,f,vb);
 				continue;
 			}
@@ -170,7 +168,7 @@ class FileConverter {
 			e.originalFile = e.file;
 		else
 			e.file = e.originalFile;
-		if( rule == null || rule.cmd == null )
+		if( rule == null || rule.cmd.conv == null )
 			return;
 		e.file = e.file.substr(baseDir.length);
 		runConvert(e, rule.cmd, rule.pt.match(Ext(_)));
