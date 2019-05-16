@@ -166,6 +166,8 @@ class BigTexture {
 	public function add( t : hxd.res.Image ) {
 		var tsize = t.getSize();
 		var q = allocPos(tsize.width,tsize.height);
+		if( t.getFormat() == Dds )
+			throw "BigTexture does not support DDS for "+t.entry.path;
 		if( q == null )
 			return null;
 		var e = new BigTextureElement(this, q, q.x / size, q.y / size, tsize.width / size, tsize.height / size);

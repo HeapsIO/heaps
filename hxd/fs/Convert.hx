@@ -211,7 +211,9 @@ class CompressIMG extends Convert {
 
 	static var _ = Convert.register([
 		new CompressIMG("png","dds"),
-		new CompressIMG("jpg","dds")
+		new CompressIMG("tga","dds"),
+		new CompressIMG("jpg","dds"),
+		new CompressIMG("jpeg","dds")
 	]);
 
 }

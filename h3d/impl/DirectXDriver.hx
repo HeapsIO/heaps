@@ -390,6 +390,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		desc.width = t.width;
 		desc.height = t.height;
 		desc.format = getTextureFormat(t);
+
+		if( t.format.match(S3TC(_)) && (t.width & 3 != 0 || t.height & 3 != 0) )
+			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
+
 		desc.usage = Default;
 		desc.bind = ShaderResource;
 		desc.mipLevels = mips;
