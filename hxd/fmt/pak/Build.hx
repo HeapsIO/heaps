@@ -5,14 +5,12 @@ class Build {
 
 	var fs : hxd.fs.LocalFileSystem;
 	var out : { bytes : Array<haxe.io.Bytes>, size : Int };
-	
-	
-	public var converts : Array<hxd.fs.Convert> = [];
+	var configuration : String;
+
 	public var excludedExt : Array<String> = [];
 	public var resPath : String = "res";
 	public var outPrefix : String = "res";
 	public var pakDiff = false;
-	public var soundFormat = "ogg";
 	public var checkJPG = false;
 	public var checkOGG = false;
 
@@ -51,12 +49,6 @@ class Build {
 			var data = sys.io.File.getBytes(filePath);
 
 			switch( ext ) {
-			case "jpg", "jpeg" if( checkJPG ):
-				try hxd.res.NanoJpeg.decode(data) catch( e : Dynamic ) {
-					Sys.println("\tConverting " + path);
-					command("jpegtran", ["-optimize", "-copy","all", filePath, filePath]);
-					data = sys.io.File.getBytes(filePath);
-				}
 			case "wav", "ogg" if( checkOGG ):
 				var snd = new hxd.snd.OggData(sys.io.File.getBytes(filePath));
 				if( snd.samples == 0 )
@@ -127,20 +119,8 @@ class Build {
 		if( !sys.FileSystem.exists(resPath) )
 			throw "'" + resPath + "' resource directory was not found";
 
-		fs = new hxd.fs.LocalFileSystem(resPath);
-		for( c in converts )
-			fs.addConvert(c);
-		switch( soundFormat ) {
-		case "wav":
-			// no convert
-		case "mp3":
-			fs.addConvert(new hxd.fs.Convert.ConvertWAV2MP3());
-		case "ogg":
-			fs.addConvert(new hxd.fs.Convert.ConvertWAV2OGG());
-		default:
-			throw "Unknown sound format " + soundFormat;
-		}
-		fs.onConvert = function(f) Sys.println("\tConverting " + f.path);
+		fs = new hxd.fs.LocalFileSystem(resPath, configuration);
+		fs.convert.onConvert = function(c) Sys.println("\tConverting " + c.srcPath);
 
 		var pak = new Data();
 		out = { bytes : [], size : 0 };
@@ -196,7 +176,7 @@ class Build {
 				var pakFile = args.shift();
 				var bytes = sys.io.File.getBytes(pakFile);
 				var pak = new hxd.fmt.pak.Reader(new haxe.io.BytesInput(bytes)).readHeader();
-				var baseDir = pakFile.substr(0,-4);				
+				var baseDir = pakFile.substr(0,-4);
 				function extractRec(f:hxd.fmt.pak.Data.File, dir) {
 					if( f.isDirectory ) {
 						var dir = f.name == "" ? dir : dir+"/"+f.name;
@@ -209,8 +189,6 @@ class Build {
 				}
 				extractRec(pak.root, baseDir);
 				Sys.exit(0);
-			case "-mp3", "-wav", "-ogg":
-				b.soundFormat = f.substr(1);
 			case "-diff":
 				b.pakDiff = true;
 			case "-res" if( args.length > 0 ):
@@ -220,12 +198,10 @@ class Build {
 			case "-exclude" if( args.length > 0 ):
 				for( ext in args.shift().split(",") )
 					b.excludedExt.push(ext);
-			case "-check-jpg":
-				b.checkJPG = true;
 			case "-check-ogg":
 				b.checkOGG = true;
-			case "-pngcrush":
-				b.converts.push(new hxd.fs.Convert.Command("png","crush.png","pngcrush",["-s","%SRC","%DST"]));
+			case "-config" if( args.length > 0 ):
+				b.configuration = args.shift();
 			default:
 				throw "Unknown parameter " + f;
 			}
