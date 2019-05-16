@@ -40,8 +40,21 @@ class ObjectCollider implements Collider implements hxd.impl.Serializable {
 	}
 
 	public function inSphere( s : Sphere ) {
-		throw "Not implemented";
-		return false;
+		var invMat = obj.getInvPos();
+		var oldX = s.x, oldY = s.y, oldZ = s.z, oldR = s.r;
+		var center = s.getCenter();
+		center.transform(invMat);
+		var scale = invMat.getScale();
+		s.x = center.x;
+		s.y = center.y;
+		s.z = center.z;
+		s.r *= Math.max(Math.max(scale.x, scale.y), scale.z);
+		var res = collider.inSphere(s);
+		s.x = oldX;
+		s.y = oldY;
+		s.z = oldZ;
+		s.r = oldR;
+		return res;
 	}
 
 	#if hxbit

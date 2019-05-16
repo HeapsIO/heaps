@@ -52,14 +52,15 @@ class Sphere implements Collider {
 		return f.hasSphere(this);
 	}
 
-	var tmpVec = new h3d.Vector();
 	function inFrustumMatrix( f : Frustum, m : h3d.Matrix ) {
 		var oldX = x, oldY = y, oldZ = z, oldR = r;
-		m.getScale(tmpVec);
-		x += m.tx;
-		y += m.ty;
-		z += m.tz;
-		r *= Math.max(Math.max(tmpVec.x, tmpVec.y), tmpVec.z);
+		var v = getCenter();
+		v.transform(m);
+		x = v.x;
+		y = v.y;
+		z = v.z;
+		var scale = m.getScale();
+		r *= Math.max(Math.max(scale.x, scale.y), scale.z);
 		var res = f.hasSphere(this);
 		x = oldX;
 		y = oldY;
