@@ -1,11 +1,21 @@
 package h3d.pass;
 
+enum CubeFaceFlag {
+	Right;
+	Left;
+	Back;
+	Front;
+	Top;
+	Bottom;
+}
+
 class PointShadowMap extends Shadows {
 
 	var customDepth : Bool;
 	var depth : h3d.mat.DepthBuffer;
 	var pshader : h3d.shader.PointShadow;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader.CubeMinMaxShader());
+	public var faceMask(default, null) : haxe.EnumFlags<CubeFaceFlag>;
 
 	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,-1,0,0, 1,0,0,0]),
 					h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
@@ -22,6 +32,13 @@ class PointShadowMap extends Shadows {
 		shader = pshader = new h3d.shader.PointShadow();
 		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
 		if( !customDepth ) depth = h3d.mat.DepthBuffer.getDefault();
+
+		faceMask.set(Front);
+		faceMask.set(Back);
+		faceMask.set(Top);
+		faceMask.set(Bottom);
+		faceMask.set(Left);
+		faceMask.set(Right);
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
@@ -152,6 +169,12 @@ class PointShadowMap extends Shadows {
 
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
+
+			if( !faceMask.has(CubeFaceFlag.createByIndex(i)) ) {
+				ctx.engine.popTarget();
+				continue;
+			}
+
 			var save = passes.save();
 			cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 			super.draw(passes);
@@ -163,7 +186,8 @@ class PointShadowMap extends Shadows {
 			blur.apply(ctx, texture);
 
 		if( mode == Mixed && !ctx.computingStatic && merge != null ) {
-			for(i in 0 ... 6){
+			for( i in 0 ... 6 ) {
+				if( !faceMask.has(CubeFaceFlag.createByIndex(i)) ) continue;
 				mergePass.shader.texA = texture;
 				mergePass.shader.texB = staticTexture;
 				mergePass.shader.mat = cubeDir[i];
