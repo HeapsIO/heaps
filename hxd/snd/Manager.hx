@@ -417,7 +417,6 @@ class Manager {
 			s.start = Math.floor(c.position * targetRate);
 			if( s.start < 0 ) s.start = 0;
 			queueBuffer(s, c.sound, s.start);
-			s.handle.sampleOffset = 0;
 			c.positionChanged = false;
 			c = c.next;
 		}
