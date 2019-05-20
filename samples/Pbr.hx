@@ -47,7 +47,6 @@ class Pbr extends SampleApp {
 		fui.layout = Vertical;
 
 		var envMap = new h3d.mat.Texture(512, 512, [Cube]);
-		envMap.name = "envMap";
 		inline function set(face:Int, res:hxd.res.Image) {
 			var pix = res.getPixels();
 			envMap.uploadPixels(pix, 0, face);
