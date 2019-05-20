@@ -565,7 +565,7 @@ class Manager {
 
 			// queue stream buffer
 			b = getStreamBuffer(s, snd, sgroup, start);
-			driver.queueBuffer(s.handle, b.handle, start, b.isEnd);
+			driver.queueBuffer(s.handle, b.handle, 0, b.isEnd);
 		}
 		s.buffers.push(b);
 		return true;
