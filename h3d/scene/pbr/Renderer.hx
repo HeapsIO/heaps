@@ -75,7 +75,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
-	public var colorgGradingLUT : h3d.mat.Texture;
+	public var colorGradingLUT : h3d.mat.Texture;
 	public var colorGradingLUTSize : Int;
 	public var enableColorGrading : Bool;
 	public var displayMode : DisplayMode = Pbr;
@@ -396,9 +396,9 @@ class Renderer extends h3d.scene.Renderer {
 
 		// Color Grading Params
 		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
-		tonemap.shader.hasColorGrading = enableColorGrading && colorgGradingLUT != null;
-		if( colorgGradingLUT != null ) {
-			tonemap.shader.colorGradingLUT = colorgGradingLUT;
+		tonemap.shader.hasColorGrading = enableColorGrading && colorGradingLUT != null;
+		if( colorGradingLUT != null ) {
+			tonemap.shader.colorGradingLUT = colorGradingLUT;
 			tonemap.shader.lutSize = colorGradingLUTSize;
 		}
 
@@ -505,9 +505,9 @@ class Renderer extends h3d.scene.Renderer {
 		shadows = props.shadows;
 
 		if( props.colorGradingLUT != null )
-			colorgGradingLUT = hxd.res.Loader.currentInstance.load(props.colorGradingLUT).toTexture();
+			colorGradingLUT = hxd.res.Loader.currentInstance.load(props.colorGradingLUT).toTexture();
 		else
-			colorgGradingLUT = null;
+			colorGradingLUT = null;
 		colorGradingLUTSize = props.colorGradingLUTSize;
 		enableColorGrading = props.enableColorGrading;
 	}
