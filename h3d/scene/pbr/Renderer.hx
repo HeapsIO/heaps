@@ -175,13 +175,15 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function draw( name : String ) {
 		var passes = get(name);
-		cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
+		if(!ctx.computingStatic)
+			cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
 		defaultPass.draw(passes);
 		passes.reset();
 	}
 
 	function renderPass(p:h3d.pass.Base, passes) {
-		cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
+		if(!ctx.computingStatic)
+			cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
 		p.draw(passes);
 		passes.reset();
 	}
