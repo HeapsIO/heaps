@@ -555,7 +555,7 @@ class Manager {
 		if (data.duration <= STREAM_DURATION) {
 			// queue sound buffer
 			b = getSoundBuffer(snd, sgroup, start, (s.channel.loop) ? snd.sampleStopLoop : 0);
-			driver.queueBuffer(s.handle, b.handle, start, true);
+			driver.queueBuffer(s.handle, b.handle, 0, true);
 		} else {
 
 			// wait until fully decoded
