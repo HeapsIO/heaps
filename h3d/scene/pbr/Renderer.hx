@@ -228,6 +228,7 @@ class Renderer extends h3d.scene.Renderer {
 			if( plight != null ) {
 				plight.shadows.setContext(ctx);
 				plight.shadows.computeStatic(passes);
+				passes.reset();
 			}
 			light = light.next;
 		}
