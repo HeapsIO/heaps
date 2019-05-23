@@ -21,6 +21,8 @@ class SceneEvents {
 	var scenes : Array<InteractiveScene>;
 
 	var overList : Array<Interactive>;
+	var overIndex : Int = -1;
+	var outIndex : Int = -1;
 	var currentFocus : Interactive;
 
 	var pendingEvents : Array<hxd.Event>;
@@ -68,8 +70,18 @@ class SceneEvents {
 	function onRemove(i) {
 		if( i == currentFocus )
 			currentFocus = null;
-		if ( overList.remove(i) )
+		if( overIndex >= 0 ) {
+			var index = overList.indexOf(i);
+			if( index >= 0 ) {
+				// onRemove is triggered which we are dispatching events
+				// let's carefully update indexes
+				outIndex--;
+				if( index < overIndex ) overIndex--;
+			}
+		} else {
+			overList.remove(i);
 			selectCursor();
+		}
 		pushList.remove(i);
 	}
 
@@ -127,7 +139,7 @@ class SceneEvents {
 		var oldX = event.relX, oldY = event.relY;
 		var handled = false;
 		var checkOver = false, fillOver = false, checkPush = false, cancelFocus = false, updateCursor = false;
-		var overIndex : Int = 0;
+		overIndex = 0;
 		switch( event.kind ) {
 		case EMove, ECheck:
 			checkOver = true;
@@ -226,17 +238,19 @@ class SceneEvents {
 			blur();
 
 		if( checkOver && overIndex < overList.length ) {
-			var idx = overList.length - 1;
+			outIndex = overList.length - 1;
 			do {
 				onOut.cancel = false;
-				overList[idx].handleEvent(onOut);
+				overList[outIndex].handleEvent(onOut);
 				if ( !onOut.cancel ) {
-					overList.remove(overList[idx]);
+					overList.remove(overList[outIndex]);
 					continue;
 				}
-			} while ( --idx >= overIndex );
+			} while ( --outIndex >= overIndex );
 			updateCursor = true;
 		}
+		overIndex = -1;
+
 		if ( updateCursor )
 			selectCursor();
 
